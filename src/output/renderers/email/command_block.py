@@ -16,17 +16,17 @@ from services.trip_command_processor import command_rows
 def render_commands_plain(kind: str = "route", *, lang: Lang = "de") -> str:
     """Klartext-Block: Kopfzeile plus eine Zeile je Befehl.
 
-    ``lang`` (Issue #2665) betrifft Kopfzeile, Eyebrow und Hinweis; die
-    Befehlszeilen aus ``command_rows`` stellt P10 (#2673) um."""
+    ``lang`` (Issue #2665) betrifft Kopfzeile, Eyebrow und Hinweis, seit
+    P10 (#2673) auch die Befehlszeilen (englische Woerter und Beschreibungen)."""
     zeilen = [f"── {t('mail.befehle.titel', lang)} ──"]
-    for label, beschreibung in command_rows(kind):
+    for label, beschreibung in command_rows(kind, lang=lang):
         zeilen.append(f"  {label:<20} – {beschreibung}")
     return "\n".join(zeilen)
 
 
 def render_commands_html(kind: str = "route", *, lang: Lang = "de") -> str:
     """HTML-Block (JSX EmailPreview L185-200): Befehlsgrid + Hinweis."""
-    cmds = command_rows(kind)
+    cmds = command_rows(kind, lang=lang)
     rows = []
     for i in range(0, len(cmds), 3):
         tds = ""

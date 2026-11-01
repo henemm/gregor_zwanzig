@@ -1,0 +1,34 @@
+----- telegram_unbekannt -----
+[Unbekannter Befehl]
+
+Das war kein bekannter Befehl.
+Verfügbar: HEUTE, MORGEN, JETZT, GEWITTER, STRECKE, RUHETAG, STATUS, PAUSE, SKIP, STOP, WEITER, HILFE, KUERZEL, STARTDATUM, REPORT
+Wetter-Größen im Stundenverlauf: Kürzel senden (HILFE zeigt alle).
+English: send HELP
+----- telegram_unbekannt_nach_name -----
+[Unbekannter Befehl]
+
+Das war kein bekannter Befehl.
+Verfügbar: HEUTE, MORGEN, JETZT, GEWITTER, STRECKE, RUHETAG, STATUS, PAUSE, SKIP, STOP, WEITER, HILFE, KUERZEL, STARTDATUM, REPORT
+Wetter-Größen im Stundenverlauf: Kürzel senden (HILFE zeigt alle).
+English: send HELP
+----- telegram_laden -----
+[⏳]
+
+⏳ Wetter wird geladen...
+=====
+[[Golden Trip] Timeline heute]
+
+📋 Timeline · Heute (29.10)
+
+🕐 23:59 · 900 m
+   🌡 12–12 °C  💨 18 km/h  🌧 7.2 mm  ⛈ mittel
+----- email_trip_nicht_gefunden -----
+[[Gibtsnicht] Trip nicht gefunden]
+
+Kein Trip mit Name 'Gibtsnicht' gefunden.
+Bitte pruefen ob der Trip-Name korrekt ist.
+----- telegram_mehrdeutig -----
+[Error]
+
+Ambiguous: Golden Trip (Trip), Golden Vergleich (comparison). Reply with name, e.g. 'Golden Trip pause'.

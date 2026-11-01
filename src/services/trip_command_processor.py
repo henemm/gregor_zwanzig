@@ -29,6 +29,8 @@ from app.loader import (
     update_trip,
 )
 from services.file_lock import LockTimeout
+from app.thunder_scale import thunder_label
+from i18n import Lang, fmt_date, resolve_user_lang, t, tn
 from app.metric_catalog import (
     get_all_metrics,
     get_metric,
@@ -282,44 +284,47 @@ class _Befehl(NamedTuple):
     #: #2282 S2: Beschreibung am Ortsvergleich (Hilfe, Mail-Befehlsblock);
     #: gesetzt ⇒ dort auch ohne Argumentform.
     beschreibung_de_vergleich: str = ""
+    #: #2673: englische Beschreibungen (Langform-Hilfe, Mail-Befehlsblock).
+    beschreibung_en: str = ""
+    beschreibung_en_vergleich: str = ""
+
+
+def _befehl(wort: str, wort_en: str, arg: str, wirkung_en: str, kinds: frozenset,
+            arg_en: str = "", wirkung_en_vergleich: str = "", *,
+            vergleich: bool = False) -> _Befehl:
+    """#2673: Beschreibungen aus dem Katalog ``inbound.befehl.<wort>.*``;
+    Woerter, Argumentformen und Kurzform-Wirkungen bleiben Protokoll-Literale."""
+    def _text(element: str, lang: Lang) -> str:
+        return t(f"inbound.befehl.{wort}.{element}", lang)
+
+    vgl = "beschreibung_vergleich"
+    return _Befehl(
+        wort, wort_en, arg, _text("beschreibung", "de"), wirkung_en, kinds, arg_en,
+        wirkung_en_vergleich, _text(vgl, "de") if vergleich else "",
+        _text("beschreibung", "en"), _text(vgl, "en") if vergleich else "",
+    )
 
 
 _COMMAND_SPECS: tuple[_Befehl, ...] = (
-    _Befehl("heute", "today", "", "Wetter der heutigen Etappe",
-            "today's stage weather", _BEIDE_KINDS, "", "today",
-            "Vergleich für heute jetzt senden"),
-    _Befehl("morgen", "tomorrow", "", "Wetter der morgigen Etappe",
-            "tomorrow's stage weather", _BEIDE_KINDS, "", "tomorrow",
-            "Vergleich für morgen jetzt senden"),
-    _Befehl("jetzt", "now", "", "Nowcast Regen/Gewitter nächste ~2h (auch NOW)",
-            "rain/storm next 2h", _ROUTE_ONLY),
-    _Befehl("gewitter", "storms", "", "Gewittergefahr heutige Etappe",
-            "storm risk today", _ROUTE_ONLY),
-    _Befehl("strecke", "route", "[km]", "Regen-Ereignisflächen entlang der Reststrecke",
-            "rain areas ahead", _ROUTE_ONLY, "km"),
-    _Befehl("ruhetag", "restday", "[N]", "Etappen um N Tage verschieben (Standard: 1)",
-            "shift stages n days", _ROUTE_ONLY, "n"),
-    _Befehl("status", "status", "", "Heute und kommende Etappen",
-            "today + next stages", _ROUTE_ONLY),
-    _Befehl("pause", "pause", "[2d / 12h]", "Briefings für Dauer unterbrechen",
-            "no briefings 2 days/12H", _BEIDE_KINDS, "2D", "no briefings until RESUME"),
-    _Befehl("skip", "skip", "", "Nächstes Briefing überspringen",
-            "skip next briefing", _ROUTE_ONLY),
-    _Befehl("stop", "stop", "", "Briefings dauerhaft deaktivieren (auch ABBRUCH)",
-            "end briefings", _ROUTE_ONLY),
-    _Befehl("weiter", "resume", "", "Briefings reaktivieren",
-            "restart briefings", _BEIDE_KINDS),
-    _Befehl("hilfe", "help", "", "Diese Hilfe anzeigen (auch HELP)",
-            "this list", _BEIDE_KINDS),
-    _Befehl("kuerzel", "codes", "", "Kürzel-Bedeutungen anzeigen (auch CODES)",
-            "code meanings", _BEIDE_KINDS),
-    _Befehl("startdatum", "startdate", "JJJJ-MM-TT",
-            "Startdatum des Trips setzen, alle Etappen verschieben",
-            "move start", _ROUTE_ONLY, "date"),
-    _Befehl("report", "report", "[morning / evening]",
-            "Briefing jetzt senden (Standard: morning)",
-            "send now", _BEIDE_KINDS, "evening", "all",
-            "Vergleich jetzt an alle Kanäle senden"),
+    _befehl("heute", "today", "", "today's stage weather", _BEIDE_KINDS, "", "today",
+            vergleich=True),
+    _befehl("morgen", "tomorrow", "", "tomorrow's stage weather", _BEIDE_KINDS, "",
+            "tomorrow", vergleich=True),
+    _befehl("jetzt", "now", "", "rain/storm next 2h", _ROUTE_ONLY),
+    _befehl("gewitter", "storms", "", "storm risk today", _ROUTE_ONLY),
+    _befehl("strecke", "route", "[km]", "rain areas ahead", _ROUTE_ONLY, "km"),
+    _befehl("ruhetag", "restday", "[N]", "shift stages n days", _ROUTE_ONLY, "n"),
+    _befehl("status", "status", "", "today + next stages", _ROUTE_ONLY),
+    _befehl("pause", "pause", "[2d / 12h]", "no briefings 2 days/12H", _BEIDE_KINDS,
+            "2D", "no briefings until RESUME"),
+    _befehl("skip", "skip", "", "skip next briefing", _ROUTE_ONLY),
+    _befehl("stop", "stop", "", "end briefings", _ROUTE_ONLY),
+    _befehl("weiter", "resume", "", "restart briefings", _BEIDE_KINDS),
+    _befehl("hilfe", "help", "", "this list", _BEIDE_KINDS),
+    _befehl("kuerzel", "codes", "", "code meanings", _BEIDE_KINDS),
+    _befehl("startdatum", "startdate", "JJJJ-MM-TT", "move start", _ROUTE_ONLY, "date"),
+    _befehl("report", "report", "[morning / evening]", "send now", _BEIDE_KINDS,
+            "evening", "all", vergleich=True),
 )
 
 # #2417 AC-2: die englischen Woerter wirken wie ihr deutsches Pendant --
@@ -327,9 +332,29 @@ _COMMAND_SPECS: tuple[_Befehl, ...] = (
 _BARE_KEYWORD_MAP.update({
     s.wort_en: _BARE_KEYWORD_MAP.get(s.wort, s.wort) for s in _COMMAND_SPECS
 })
+# #2673 (Glossar, Tech-Lead-Entscheid F001): ABBRUCH/CANCEL -- Alias von STOP,
+# keine eigene Zeile in _COMMAND_SPECS -- gelten NUR als ganze Befehlszeile
+# ("Cancel", "/abbruch", "CANCEL!"), nie als erstes Wort eines Satzes
+# ("Cancel my rest day please"). STOP bleibt unveraendert in _BARE_KEYWORD_MAP.
+_NUR_ALS_GANZE_ZEILE = {"abbruch": "abbruch", "cancel": "abbruch"}
 
 
-def command_rows(kind: str = "route") -> list[tuple[str, str]]:
+def ganzzeilen_befehl(zeile: str) -> Optional[str]:
+    """Interner Schluessel, wenn ``zeile`` (ohne Zitat-/Slash-Praefix,
+    unsichtbare Zeichen und Satzzeichen am Ende) GENAU ein Nur-ganze-Zeile-
+    Wort ist, sonst ``None``."""
+    teile = _ohne_praefix(zeile).split()
+    if len(teile) != 1:
+        return None
+    return _NUR_ALS_GANZE_ZEILE.get(_bereinigtes_bare_keyword(teile[0]).lower())
+
+
+def _argumentform(s: _Befehl, lang: Lang) -> str:
+    """Argumentform der Langform; nur ``JJJJ-MM-TT`` ist sprachabhaengig."""
+    return t("inbound.befehl.startdatum.arg", lang) if s.wort == "startdatum" else s.arg
+
+
+def command_rows(kind: str = "route", *, lang: Lang = "de") -> list[tuple[str, str]]:
     """(Befehl inkl. Argumentform, Beschreibung) je Eintrag — z.B.
     ``("PAUSE [2d / 12h]", "Briefings für Dauer unterbrechen")``.
 
@@ -339,12 +364,18 @@ def command_rows(kind: str = "route") -> list[tuple[str, str]]:
     """
     # Ortsvergleich pausiert unbefristet (AC-29 #2417): PAUSE ohne Dauer.
     # #2282 S2: REPORT/HEUTE/MORGEN mit eigenem Vergleichs-Wortlaut, ohne Argument.
-    vergleich = kind == "vergleich"
-    return [
-        (f"{s.wort.upper()} {'' if vergleich and (s.wort == 'pause' or s.beschreibung_de_vergleich) else s.arg}".strip(),
-         (s.beschreibung_de_vergleich if vergleich else "") or s.beschreibung_de)
-        for s in _COMMAND_SPECS if kind in s.kinds
-    ]
+    # #2673: ``lang="en"`` zeigt die englischen Woerter (``wort_en``) und
+    # Beschreibungen; ``de`` ist byte-gleich zu vorher.
+    vergleich, en = kind == "vergleich", lang == "en"
+    zeilen = []
+    for s in _COMMAND_SPECS:
+        if kind not in s.kinds:
+            continue
+        vgl = (s.beschreibung_en_vergleich if en else s.beschreibung_de_vergleich) if vergleich else ""
+        arg = "" if vergleich and (s.wort == "pause" or vgl) else _argumentform(s, lang)
+        zeilen.append((f"{(s.wort_en if en else s.wort).upper()} {arg}".strip(),
+                       vgl or (s.beschreibung_en if en else s.beschreibung_de)))
+    return zeilen
 
 
 def bare_keywords() -> frozenset[str]:
@@ -366,22 +397,48 @@ def command_overview(en: bool = False) -> str:
     return ", ".join((s.wort_en if en else s.wort).upper() for s in _COMMAND_SPECS)
 
 
-def unknown_command_body(prefix: str, en: bool = False) -> str:
+def unknown_command_body(prefix: str, en: bool = False, *, lang: Lang = "de") -> str:
     """Fehlertext bei unbekanntem Kommando — aus derselben Quelle wie die
     Erkennung. Genutzt von beiden Fehlerwegen des Prozessors UND vom
     Telegram-Reader; der Verweis auf HILFE traegt die Wetter-Groessen nach,
     deren volle Katalogliste jede Fehlermeldung sprengen wuerde. ``en``
-    (#2417 Abschnitt H): englische Fassung fuer Kurzform-Kanaele."""
+    (#2417 Abschnitt H): englische Fassung fuer Kurzform-Kanaele. ``lang``
+    (#2673): Langform in der Kontosprache."""
     if en:
         return (
             f"{prefix}\nCommands: {command_overview(en=True)}\n"
             "Weather codes: send a code (CODES lists them)."
         )
-    return (
-        f"{prefix}\n"
-        f"Verfügbar: {command_overview()}\n"
-        "Wetter-Größen im Stundenverlauf: Kürzel senden (HILFE zeigt alle)."
-    )
+    liste = command_overview(en=lang == "en")
+    return (f"{prefix}\n{t('inbound.unbekannt.verfuegbar', lang, liste=liste)}\n"
+            f"{t('inbound.unbekannt.wetter', lang)}")
+
+
+def hilfe_langform(kind: str = "route", *, lang: Lang = "de") -> str:
+    """Langform-Hilfe (#2673): Befehle aus ``command_rows``, beim Trip dazu die
+    Wetter-Groessen aus ``get_all_metrics()`` (Name ``metric.label(lang)``,
+    Kuerzel ``col_label``/``sms_code`` unveraendert). ``de`` byte-gleich."""
+    zeilen = [t("inbound.hilfe.kopf", lang), ""]
+    # AC-29 (#2417): Vergleichs-PAUSE ohne Dauer -- steckt in command_rows.
+    for label, beschreibung in command_rows(kind, lang=lang):
+        zeilen.append(f"  {label:<21} – {beschreibung}")
+    if kind == "vergleich":
+        return "\n".join(zeilen)
+    zeilen += ["", t("inbound.hilfe.wetter_kopf", lang), ""]
+    for metric in get_all_metrics():
+        einheit = metric.display_unit or metric.unit
+        # Zweitschreibweise nur zeigen, wenn sie eine ANDERE ist —
+        # `UV / UV` waere eine Auswahl ohne Unterschied.
+        zweit = (
+            metric.sms_code
+            if normalize_command_word(metric.sms_code)
+            not in ("", normalize_command_word(metric.col_label))
+            else ""
+        )
+        kuerzel = f"{metric.col_label} / {zweit}".rstrip(" /")
+        zeilen.append(
+            f"  {kuerzel:<16} – {metric.label(lang)}" + (f" ({einheit})" if einheit else ""))
+    return "\n".join(zeilen)
 
 
 def hilfe_kurzform(kind: str = "route") -> str:
@@ -494,47 +551,37 @@ _PAUSE_DURATION_RE = re.compile(r"^(\d+)\s*([dh]?)$")
 _QUERY_KEYS = {"glance", "heute", "morgen", "heute_gewitter",
                "timeline_heute", "timeline_morgen"}
 
-_GLANCE_BUTTONS = {
-    "inline_keyboard": [[
-        {"text": "📋 Timeline heute", "callback_data": "tl_today"},
-        {"text": "📋 Timeline morgen", "callback_data": "tl_tomorrow"},
-    ]]
-}
+def _glance_buttons(lang: Lang = "de") -> dict:
+    """Knoepfe der Glance-Antwort (#2673: Beschriftung in ``lang``,
+    ``callback_data`` unveraendert)."""
+    return {"inline_keyboard": [[
+        {"text": t("inbound.knopf.timeline_heute", lang), "callback_data": "tl_today"},
+        {"text": t("inbound.knopf.timeline_morgen", lang), "callback_data": "tl_tomorrow"},
+    ]]}
 
-_HEUTE_BUTTONS = {
-    "inline_keyboard": [
-        [
-            {"text": "⏱ Stunden", "callback_data": "dd_hours_today"},
-            {"text": "⛈ Gewitter", "callback_data": "dd_thunder_today"},
-            {"text": "💨 Wind", "callback_data": "dd_wind_today"},
-            {"text": "🌧 Regen", "callback_data": "dd_precip_today"},
-        ],
-        [{"text": "🕐 Timeline", "callback_data": "tl_today"}],
-    ]
-}
 
-_MORGEN_BUTTONS = {
-    "inline_keyboard": [
+def _tag_buttons(tag: str, lang: Lang = "de") -> dict:
+    """Knoepfe der heute-/morgen-Antwort, ``tag`` = ``today``/``tomorrow``."""
+    return {"inline_keyboard": [
         [
-            {"text": "⏱ Stunden", "callback_data": "dd_hours_tomorrow"},
-            {"text": "⛈ Gewitter", "callback_data": "dd_thunder_tomorrow"},
-            {"text": "💨 Wind", "callback_data": "dd_wind_tomorrow"},
-            {"text": "🌧 Regen", "callback_data": "dd_precip_tomorrow"},
+            {"text": t("inbound.knopf.stunden", lang), "callback_data": f"dd_hours_{tag}"},
+            {"text": t("inbound.knopf.gewitter", lang), "callback_data": f"dd_thunder_{tag}"},
+            {"text": "💨 Wind", "callback_data": f"dd_wind_{tag}"},
+            {"text": t("inbound.knopf.regen", lang), "callback_data": f"dd_precip_{tag}"},
         ],
-        [{"text": "🕐 Timeline", "callback_data": "tl_tomorrow"}],
-    ]
-}
+        [{"text": "🕐 Timeline", "callback_data": f"tl_{tag}"}],
+    ]}
 
 # Kreis-Emoji je Ampelband der Stufe (`thunder_ampel_band`, metric_format.py) --
 # das Symbol stellt das Band dar, es ist keine zweite Stufen-Zuordnung.
 _BAND_EMOJI = {"green": "🟢", "yellow": "🟡", "orange": "🟠", "red": "🔴"}
 
 
-def _thunder_words() -> dict:
-    """Stufenname -> deutsches Wort, bei JEDEM Aufruf frisch aus
-    ``THUNDER_LABEL_DE`` abgeleitet (Issue #2010: die fruehere Wert-Kopie war
-    auf "mäßig"/"keins" abgedriftet)."""
-    return {level.name: label for level, label in THUNDER_LABEL_DE.items()}
+def _thunder_words(lang: Lang = "de") -> dict:
+    """Stufenname -> Wort in ``lang``, bei JEDEM Aufruf frisch aus der
+    kanonischen Tabelle (``thunder_label``) abgeleitet (Issue #2010: die
+    fruehere Wert-Kopie war auf "mäßig"/"keins" abgedriftet)."""
+    return {level.name: thunder_label(level, lang=lang) for level in THUNDER_LABEL_DE}
 
 
 def _thunder_symbols() -> dict:
@@ -551,11 +598,7 @@ def _thunder_symbols() -> dict:
 # (`trip_report_scheduler.py:1495-1501`, #1007). Der Text sagt deshalb
 # ausschliesslich die ZUSTELLUNG des Briefings zu — ein Versprechen, dass sich
 # die Timeline-Ansicht danach fuelle, waere falsch und erzeugte eine
-# Frustschleife (Kontext-Risiko 5).
-_BRIEFING_HINWEIS = {
-    "today": "mit /heute wird dir das Briefing für heute sofort zugestellt",
-    "tomorrow": "mit /morgen wird dir das Briefing für morgen sofort zugestellt",
-}
+# Frustschleife (Kontext-Risiko 5). #2673: Katalog ``inbound.abruf.hinweis_<tag>``.
 
 # Issue #1818 (Adversary-Finding F005): die Groessen, aus denen die vier
 # Formatierer ihre Tagesaussage bauen -- `_fmt_timeline` zeigt genau
@@ -612,20 +655,21 @@ _DRILLDOWN_PATTERN = re.compile(r"^dd_(thunder|wind|precip)_(today|tomorrow)$")
 _HOURS_PATTERN = re.compile(r"^dd_hours_(today|tomorrow)$")
 
 
-def _thunder_fmt(value, *, with_emoji: bool = True) -> str:
+def _thunder_fmt(value, *, with_emoji: bool = True, lang: Lang = "de") -> str:
     """Formatiert ThunderLevel (Enum oder String nach Roundtrip) als deutsches Label.
 
     Issue #1222 AC-6: E-Mail/SMS bekommen KEIN Kreis-Emoji (nur das Wort),
     Telegram bleibt byte-identisch mit Emoji.
     """
-    _MAP_PLAIN = _thunder_words()
+    _MAP_PLAIN = _thunder_words(lang)
     _symbole = _thunder_symbols()
     _MAP_EMOJI = {k: f"{_symbole[k]} {wort}" for k, wort in _MAP_PLAIN.items()}
+    keine = t("inbound.antwort.keine_daten", lang)
     if value is None:
-        return "· keine Daten"
+        return keine
     key = value.value if hasattr(value, "value") else str(value)
     _map = _MAP_EMOJI if with_emoji else _MAP_PLAIN
-    return _map.get(key, "· keine Daten")
+    return _map.get(key, keine)
 
 
 def _local_midnight(day: date, tz) -> datetime:
@@ -675,30 +719,35 @@ _DRILLDOWN_TOKEN_EMOJI: dict[str, str] = {
 }
 
 
-def _metric_formatter(metric):
+def _metric_formatter(metric, lang: Lang = "de"):
     """Formatierer EINER Katalog-Groesse — die Wahl haengt an EIGENSCHAFTEN
     des Eintrags, nicht an seiner Kennung (Spec "Formatierer folgt aus dem
     Katalogeintrag").
 
     Die erste Pruefung geht bewusst auf ``is_level`` und nicht auf
     ``metric.id == "thunder"``: eine kuenftige zweite Stufengroesse wird damit
-    ohne Codeaenderung an dieser Stelle mitgetragen.
+    ohne Codeaenderung an dieser Stelle mitgetragen. ``lang`` (#2673):
+    Fehlanzeige, Stufenwort und Niederschlagsart in der Kontosprache.
     """
+    keine = t("inbound.antwort.keine_daten", lang)
     if metric.is_level:
-        return _thunder_fmt
+        return lambda value, *, with_emoji=True: _thunder_fmt(
+            value, with_emoji=with_emoji, lang=lang)
     if metric.dp_field == "wind_direction_deg":
         def _compass(value, *, with_emoji: bool = True) -> str:
             if value is None:
-                return "· keine Daten"
+                return keine
             return degrees_to_compass(value)
         return _compass
     if metric.dp_field == "precip_type":
         def _precip_type(value, *, with_emoji: bool = True) -> str:
             if value is None:
-                return "· keine Daten"
+                return keine
             name = value.value if hasattr(value, "value") else str(value)
             name = name.rsplit(".", 1)[-1]
-            return PRECIP_TYPE_LABEL_DE.get(name, "· keine Daten")
+            if name not in PRECIP_TYPE_LABEL_DE:
+                return keine
+            return t(f"inbound.niederschlagsart.{name.lower()}", lang)
         return _precip_type
     if metric.dp_field == "dni_wm2":
         # Issue #2167: der Katalog fuehrt `sunshine` mit unit="h", das Rohfeld
@@ -716,7 +765,7 @@ def _metric_formatter(metric):
 
         def _sonnenstunden(value, *, with_emoji: bool = True) -> str:
             if value is None:
-                return "· keine Daten"
+                return keine
             anteil = WeatherMetricsService.dni_to_sunny_fraction(
                 value, dni_min, dni_max
             )
@@ -725,7 +774,7 @@ def _metric_formatter(metric):
 
     def _katalog(value, *, with_emoji: bool = True) -> str:
         if value is None:
-            return "· keine Daten"
+            return keine
         return format_value(metric.id, value)
     return _katalog
 
@@ -923,46 +972,28 @@ _ON_DEMAND_FAILURE_EN = {
 
 
 def _on_demand_failure_body(outcome: str, label: str, target_date: date,
-                            en: bool = False, objekt: str = "Trip") -> str:
+                            en: bool = False, objekt: str = "Trip", *,
+                            lang: Lang = "de") -> str:
     """Formatiert den Antworttext für einen nicht-erfolgreichen On-Demand-Versand.
 
     outcome: "no_stage" | "no_weather" | "no_channels" | "channels_unreachable"
     | "already_in_progress" (alles außer "sent"). ``en``: #2417 Abschnitt H.
     ``objekt`` (#2282 S2): "Trip" oder "Ortsvergleich" — dieselbe Tabelle.
+    ``lang`` (#2673): Langform-Text ``inbound.fehler.versand.<outcome>`` in der
+    Kontosprache; die Kurzform (``en``) bleibt die Platzform-Tabelle oben.
+    Eigene Texte fuer ``channels_unreachable`` (#1403 AC-4, nicht mit
+    ``no_channels`` verwechselbar) und ``already_in_progress`` (#1756 AC-9);
+    unbekannte Ergebnisse fallen auf ``no_stage``.
     """
     human_date = f"{target_date:%d.%m.%Y}"
     if en:
         vorlage = _ON_DEMAND_FAILURE_EN.get(outcome, _ON_DEMAND_FAILURE_EN["no_stage"])
         o = "trip" if objekt == "Trip" else "comparison"
         return vorlage.format(label=label, d=human_date, o=o)
-    if outcome == "no_weather":
-        return (
-            f"{label} ({human_date}): Wetterdaten aktuell nicht verfügbar — "
-            "bitte später erneut versuchen."
-        )
-    if outcome == "no_channels":
-        return (
-            f"Keine Versandkanäle für diesen {objekt} aktiv — Briefing nicht "
-            f"gesendet. Kanäle im {objekt}-Editor aktivieren."
-        )
-    # Issue #1403 AC-4: Versandweg konfiguriert, aber technisch nicht
-    # erreichbar (z.B. Telegram ohne gültige Bot-Verbindung) — eigene
-    # Meldung, damit sie sich nicht mit "no_channels" (Konfiguration)
-    # verwechseln lässt.
-    if outcome == "channels_unreachable":
-        return (
-            f"Versandweg für diesen {objekt} konfiguriert, aber nicht erreichbar "
-            "— Briefing nicht gesendet. Verbindung prüfen."
-        )
-    # Issue #1756 AC-9: Kollisionsfall (Lock belegt) darf nicht mit "keine
-    # Etappe" verwechselt werden.
-    if outcome == "already_in_progress":
-        return f"{label} ({human_date}): Versand läuft bereits — bitte kurz warten."
-    if outcome == "invalid_preset":
-        return (f"{label} ({human_date}): Ortsvergleich nicht ladbar oder Orte "
-                "gelöscht — Orte im Ortsvergleich prüfen.")
-    # "no_stage" (Default/Fallback)
-    return f"{label} ({human_date}): Keine Etappe geplant"
+    schluessel = outcome if outcome in _ON_DEMAND_FAILURE_EN else "no_stage"
+    datum = fmt_date(target_date, "en") if lang == "en" else human_date
+    obj = t("inbound.objekt.trip" if objekt == "Trip" else "inbound.objekt.vergleich", lang)
+    return t(f"inbound.fehler.versand.{schluessel}", lang, label=label, datum=datum, objekt=obj)
 
 
 # ---------------------------------------------------------------------------
@@ -1098,12 +1129,49 @@ def _schreibe_dauer(name: str, kanal: str, trip_id: Optional[str], t0: float) ->
 class TripCommandProcessor:
     """Processes trip commands from any inbound channel."""
 
-    #: #2417: Antwortsprache der laufenden Nachricht (Premium-SMS immer
-    #: englisch, Telegram laut Reader, E-Mail deutsch).
+    #: #2417: Kurzform-Kanal-Flag der laufenden Nachricht (Premium-SMS immer,
+    #: Telegram laut Reader) -- Platzform, keine Sprache (ADR-0042).
     _en = False
+    #: #2673: Kontosprache der laufenden Nachricht. Nur Platzhalter-Default;
+    #: ``process()`` setzt sie je Aufruf aus ``msg.user_id`` (nie global).
+    _lang: Lang = "de"
 
-    def _t(self, de: str, en: str) -> str:
-        return en if self._en else de
+    @property
+    def _sprache(self) -> Lang:
+        """Sprache der Texte OHNE Kurzform-Pendant: auf Kurzform-Kanaelen
+        unveraendert deutsch (PO-Vorgabe: Kurzform in jeder Sprache wie
+        bisher), sonst die Kontosprache."""
+        return "de" if self._en else self._lang
+
+    def _m(self, key: str, **params: object) -> str:
+        """Antworttext MIT Kurzform-Pendant: Kurzform-Kanal = englischer
+        Katalogtext (wie bisher die en-Branche), sonst die Kontosprache."""
+        return t(f"inbound.{key}", "en" if self._en else self._lang, **params)
+
+    def _m_n(self, key: str, count: int, **params: object) -> str:
+        return tn(f"inbound.{key}", count, "en" if self._en else self._lang, **params)
+
+    def _ml(self, key: str, **params: object) -> str:
+        """Antworttext OHNE Kurzform-Pendant (s. ``_sprache``)."""
+        return t(f"inbound.{key}", self._sprache, **params)
+
+    def _datum(self, d, muster: str) -> str:
+        """Kurzform und ``de``: ``muster`` wie bisher; Langform ``en``:
+        ``Thu 29 Oct`` (ADR-0104 Nr. 6)."""
+        return fmt_date(d, "en") if self._sprache == "en" else format(d, muster)
+
+    @property
+    def _etappe_en(self) -> bool:
+        return self._en or self._lang == "en"
+
+    def _trip_nicht_gefunden(self, command: str, trip_name: str, **kw) -> CommandResult:
+        return CommandResult(
+            success=False, command=command,
+            confirmation_subject=self._ml("antwort.trip_nicht_gefunden.betreff",
+                                          trip_name=trip_name),
+            confirmation_body=self._ml("antwort.trip_nicht_gefunden.text", trip_name=trip_name),
+            trip_name=trip_name, **kw,
+        )
 
     def process(self, msg: InboundMessage) -> CommandResult:
         """Parse, validate, and execute a trip command.
@@ -1116,6 +1184,8 @@ class TripCommandProcessor:
         """
         t0 = time.monotonic()
         self._en = msg.englisch or msg.channel in _KURZFORM_KANAELE
+        # #2673: Kontosprache je Nachricht aus DEREN Nutzer (kein "default").
+        self._lang = resolve_user_lang(msg.user_id)
         try:
             ergebnis = self._process(msg)
         except Exception:
@@ -1123,12 +1193,8 @@ class TripCommandProcessor:
                 "Kommando %r fuer Trip %r: unerwarteter Fehler", msg.body, msg.trip_name)
             ergebnis = CommandResult(
                 success=False, command="error",
-                confirmation_subject=self._t("Befehl fehlgeschlagen", "Command failed"),
-                confirmation_body=self._t(
-                    "Befehl konnte nicht sicher ausgefuehrt werden. Bitte mit "
-                    "STATUS pruefen, bevor du ihn erneut sendest.",
-                    "Command could not be run safely. Please check with STATUS "
-                    "before you send it again."),
+                confirmation_subject=self._m("antwort.fehler.betreff"),
+                confirmation_body=self._m("antwort.fehler.text"),
                 trip_name=msg.trip_name,
             )
         self._logge_dauer(msg, t0)
@@ -1178,11 +1244,9 @@ class TripCommandProcessor:
                 return self._metrik_antwort(metrik, msg)
             return CommandResult(
                 success=False, command="unknown",
-                confirmation_subject=self._t("Unbekannter Befehl", "Unknown command"),
+                confirmation_subject=self._m("unbekannt.betreff"),
                 confirmation_body=unknown_command_body(
-                    self._t("Befehlsformat: ### key: value", "Unknown command."),
-                    en=self._en,
-                ),
+                    self._m("unbekannt.format"), en=self._en, lang=self._lang),
                 trip_name=msg.trip_name,
             )
 
@@ -1198,12 +1262,7 @@ class TripCommandProcessor:
             day_token = hm.group(1)
             trip = self._find_trip(msg.trip_name, msg.user_id)
             if not trip:
-                return CommandResult(
-                    success=False, command=actual_hours_token,
-                    confirmation_subject=f"[{msg.trip_name}] Trip nicht gefunden",
-                    confirmation_body=f"Kein Trip mit Name '{msg.trip_name}' gefunden.",
-                    trip_name=msg.trip_name,
-                )
+                return self._trip_nicht_gefunden(actual_hours_token, msg.trip_name)
             return self._handle_hours_drilldown(
                 trip, day_token, msg.received_at, msg.user_id, msg.channel
             )
@@ -1220,12 +1279,7 @@ class TripCommandProcessor:
             metric, day_token = m.group(1), m.group(2)
             trip = self._find_trip(msg.trip_name, msg.user_id)
             if not trip:
-                return CommandResult(
-                    success=False, command=actual_drilldown_token,
-                    confirmation_subject=f"[{msg.trip_name}] Trip nicht gefunden",
-                    confirmation_body=f"Kein Trip mit Name '{msg.trip_name}' gefunden.",
-                    trip_name=msg.trip_name,
-                )
+                return self._trip_nicht_gefunden(actual_drilldown_token, msg.trip_name)
             return self._handle_drilldown(
                 trip, metric, day_token, msg.received_at, msg.user_id, msg.channel
             )
@@ -1240,13 +1294,9 @@ class TripCommandProcessor:
         if actual_query_key is not None:
             trip = self._find_trip(msg.trip_name, msg.user_id)
             if not trip:
-                return CommandResult(
-                    success=False, command=actual_query_key,
-                    confirmation_subject=f"[{msg.trip_name}] Trip nicht gefunden",
-                    confirmation_body=f"Kein Trip mit Name '{msg.trip_name}' gefunden.",
-                    trip_name=msg.trip_name,
-                    reply_markup=_GLANCE_BUTTONS,
-                )
+                return self._trip_nicht_gefunden(
+                    actual_query_key, msg.trip_name,
+                    reply_markup=_glance_buttons(self._sprache))
             return self._handle_query(
                 trip, actual_query_key, msg.received_at, msg.user_id,
                 channel=msg.channel,
@@ -1274,24 +1324,18 @@ class TripCommandProcessor:
                 return self._metrik_antwort(metrik, msg)
             return CommandResult(
                 success=False, command=key,
-                confirmation_subject=self._t(
-                    f"[{msg.trip_name}] Unbekannter Befehl", f"[{msg.trip_name}] Unknown command"),
+                confirmation_subject=self._m("unbekannt.betreff_ziel", trip_name=msg.trip_name),
                 confirmation_body=unknown_command_body(
-                    self._t(f"'{key}' ist kein gueltiger Befehl.", "Unknown command."),
-                    en=self._en,
-                ),
+                    "Unknown command." if self._en
+                    else self._m("unbekannt.kein_befehl", wort=key),
+                    en=self._en, lang=self._lang),
                 trip_name=msg.trip_name,
             )
 
         # 2. Lookup trip
         trip = self._find_trip(msg.trip_name, msg.user_id)
         if not trip:
-            return CommandResult(
-                success=False, command=key,
-                confirmation_subject=f"[{msg.trip_name}] Trip nicht gefunden",
-                confirmation_body=f"Kein Trip mit Name '{msg.trip_name}' gefunden.",
-                trip_name=msg.trip_name,
-            )
+            return self._trip_nicht_gefunden(key, msg.trip_name)
 
         # 3. Dispatch
         # Issue #1727 S5a (ADR-0044): "heute" ist der ORTStag DIESER Tour, nicht
@@ -1323,8 +1367,8 @@ class TripCommandProcessor:
         # Should not reach here due to whitelist check above
         return CommandResult(
             success=False, command=key,
-            confirmation_subject="Fehler",
-            confirmation_body="Interner Fehler.",
+            confirmation_subject=self._ml("antwort.intern.betreff"),
+            confirmation_body=self._ml("antwort.intern.text"),
         )
 
     def _parse_command(self, body: str) -> tuple[Optional[str], Optional[str]]:
@@ -1342,6 +1386,9 @@ class TripCommandProcessor:
             if internal is not None:
                 rest = parts[1].strip() if len(parts) > 1 else None
                 return internal, rest or None
+        ganz = ganzzeilen_befehl(first_line)
+        if ganz is not None:
+            return ganz, None
         return None, None
 
     # -----------------------------------------------------------------------
@@ -1392,11 +1439,11 @@ class TripCommandProcessor:
 
             erg = resolve_active_target(
                 [trip_treffer], [preset_treffer], msg.received_at, channel=msg.channel,
-                englisch=self._en,
+                englisch=self._en, lang=self._lang,
             )
             return CommandResult(
                 success=False, command="mehrdeutig",
-                confirmation_subject=self._t("Mehrdeutig", "Ambiguous"),
+                confirmation_subject=self._m("antwort.mehrdeutig"),
                 confirmation_body=erg.text,
                 trip_name=msg.trip_name,
             )
@@ -1443,14 +1490,10 @@ class TripCommandProcessor:
                 success=True, command="hilfe", confirmation_subject="Help",
                 confirmation_body=hilfe_kurzform(kind),
             )
-        zeilen = ["Verfügbare Befehle:", ""]
-        # AC-29 (#2417): Vergleichs-PAUSE ohne Dauer -- steckt in command_rows.
-        for label, beschreibung in command_rows(kind):
-            zeilen.append(f"  {label:<21} – {beschreibung}")
         return CommandResult(
             success=True, command="hilfe",
-            confirmation_subject="Hilfe",
-            confirmation_body="\n".join(zeilen),
+            confirmation_subject=self._m("hilfe.betreff"),
+            confirmation_body=hilfe_langform(kind, lang=self._lang),
         )
 
     def _show_codes(self, kind: str = "route") -> CommandResult:
@@ -1460,8 +1503,9 @@ class TripCommandProcessor:
         Ortsvergleich, ``kind="vergleich"``)."""
         return CommandResult(
             success=True, command="kuerzel",
-            confirmation_subject=self._t("Kürzel", "Codes"),
-            confirmation_body=codes_text(self._en, vergleich=(kind == "vergleich")),
+            confirmation_subject=self._m("hilfe.kuerzel_betreff"),
+            # #2673: Langform-en bekommt die englischen Bedeutungen (Kuerzel gleich).
+            confirmation_body=codes_text(self._etappe_en, vergleich=(kind == "vergleich")),
         )
 
     def _compare_ortstag(self, preset_id: str, msg: InboundMessage) -> date:
@@ -1499,20 +1543,21 @@ class TripCommandProcessor:
             erg = {"status": "invalid_preset"}
         outcome = "sent" if erg["status"] == "ok" else erg["status"]
         if key == "report":
-            titel = (self._t("Report gesendet", "Report sent") if outcome == "sent"
-                     else self._t("Report nicht gesendet", "Report not sent"))
+            titel = self._m("antwort.report_betreff."
+                            + ("gesendet" if outcome == "sent" else "nicht_gesendet"))
             body = self._report_reply_body(outcome, "morning")
         else:
-            titel = self._t(key.title(), "Today" if key == "heute" else "Tomorrow")
-            body = (self._t(f"{titel}-Briefing wird gesendet.", f"{titel} briefing is being sent.")
+            titel = self._m(f"antwort.tag.{key}")
+            body = (self._m("antwort.briefing_gesendet", tag=titel)
                     if outcome == "sent" else _on_demand_failure_body(
-                        outcome, titel, zieltag, en=self._en, objekt="Ortsvergleich"))
+                        outcome, titel, zieltag, en=self._en, objekt="Ortsvergleich",
+                        lang=self._lang))
         fehlend = [*erg.get("fehlende_orte", []), *erg.get("orte_ohne_wetter", [])]
         if fehlend:
-            body += "\n" + self._t("Ohne Daten: ", "No data: ") + ", ".join(fehlend)
+            body += "\n" + self._m("antwort.ohne_daten", liste=", ".join(fehlend))
         return CommandResult(
             success=outcome == "sent", command=key,
-            confirmation_subject=f"[{name}] {self._t('Ortsvergleich', 'Comparison')} {titel}",
+            confirmation_subject=self._m("vergleich.betreff", trip_name=name, titel=titel),
             confirmation_body=body, trip_name=name,
             suppress_email_reply=outcome == "sent" and key != "report",
         )
@@ -1520,19 +1565,14 @@ class TripCommandProcessor:
     def _compare_unavailable(self, befehl: str, name: str) -> CommandResult:
         """Generische Ablehnung fuer alle Trip-only-Befehle am Vergleich
         (AC-11) — Wortlaut aus derselben Quelle (``_COMMAND_SPECS``-Filter)."""
-        if self._en:
+        wort = befehl
+        if self._etappe_en:  # englische Antwort nennt das englische Wort
             intern = {_BARE_KEYWORD_MAP.get(s.wort, s.wort): s.wort_en for s in _COMMAND_SPECS}
             wort = intern.get(befehl, befehl)
-            return CommandResult(
-                success=False, command=befehl,
-                confirmation_subject=f"[{name}] Command not available",
-                confirmation_body=f"'{wort}' is not available for location comparisons.",
-                trip_name=name,
-            )
         return CommandResult(
             success=False, command=befehl,
-            confirmation_subject=f"[{name}] Befehl nicht verfügbar",
-            confirmation_body=f"'{befehl}' gibt es beim Ortsvergleich nicht.",
+            confirmation_subject=self._m("vergleich.nicht_verfuegbar.betreff", trip_name=name),
+            confirmation_body=self._m("vergleich.nicht_verfuegbar.text", wort=wort),
             trip_name=name,
         )
 
@@ -1553,19 +1593,11 @@ class TripCommandProcessor:
                 raise _SpeicherFehler(self._compare_erneut_senden(name, "pause"))
         except _SpeicherFehler as e:
             return e.result
-        hinweis = self._t(
-            " Eine angegebene Dauer wird nicht ausgewertet.",
-            " A given duration is ignored.",
-        ) if hatte_dauer else ""
+        hinweis = self._m("vergleich.pause.hinweis") if hatte_dauer else ""
         return CommandResult(
             success=True, command="pause",
-            confirmation_subject=self._t(
-                f"[{name}] Ortsvergleich pausiert", f"[{name}] Comparison paused"),
-            confirmation_body=self._t(
-                f"Ortsvergleich '{name}' pausiert unbefristet, bis du WEITER "
-                f"sendest.{hinweis}",
-                f"Comparison '{name}' paused until you send RESUME.{hinweis}",
-            ),
+            confirmation_subject=self._m("vergleich.pause.betreff", trip_name=name),
+            confirmation_body=self._m("vergleich.pause.text", trip_name=name, hinweis=hinweis),
             trip_name=name,
         )
 
@@ -1573,13 +1605,8 @@ class TripCommandProcessor:
         """#2158: Compare-Datei gerade gesperrt -- Fehler an den Nutzer."""
         return CommandResult(
             success=False, command=command,
-            confirmation_subject=self._t(
-                f"[{name}] Bitte erneut senden", f"[{name}] Please send again"),
-            confirmation_body=self._t(
-                "Befehl nicht ausgefuehrt: Der Ortsvergleich wird gerade "
-                "geaendert. Bitte in einer Minute erneut senden.",
-                "Command not executed: the comparison is being changed right "
-                "now. Please send it again in a minute."),
+            confirmation_subject=self._m("antwort.gesperrt.betreff", trip_name=name),
+            confirmation_body=self._m("antwort.gesperrt.text_vergleich"),
             trip_name=name,
         )
 
@@ -1593,15 +1620,12 @@ class TripCommandProcessor:
         fortgesetzt = status == "resumed"
         return CommandResult(
             success=fortgesetzt, command="weiter",
-            confirmation_subject=(
-                self._t(f"[{name}] Ortsvergleich fortgesetzt",
-                        f"[{name}] Comparison resumed") if fortgesetzt
-                else self._t(f"[{name}] Ortsvergleich", f"[{name}] Comparison")),
-            confirmation_body=(
-                self._t(f"Ortsvergleich '{name}' wieder aktiv.",
-                        f"Comparison '{name}' active again.") if fortgesetzt
-                else self._t(f"Ortsvergleich '{name}' ist nicht pausiert.",
-                             f"Comparison '{name}' is not paused.")),
+            confirmation_subject=self._m(
+                "vergleich.weiter." + ("betreff" if fortgesetzt else "betreff_neutral"),
+                trip_name=name),
+            confirmation_body=self._m(
+                "vergleich.weiter." + ("text" if fortgesetzt else "nicht_pausiert"),
+                trip_name=name),
             trip_name=name,
         )
 
@@ -1661,13 +1685,10 @@ class TripCommandProcessor:
         # Einzeiler-Aggregat mehr) — eigener Zweig VOR dem Timeline-Setup, da
         # der Scheduler die Wetterdaten selbst holt (keine WeatherExtractor-
         # Timeline nötig).
-        if query_key == "heute":
+        if query_key in ("heute", "morgen"):
             return self._trigger_on_demand(
-                trip, "morning", "Heute", user_id, channel=channel,
-            )
-        elif query_key == "morgen":
-            return self._trigger_on_demand(
-                trip, "evening", "Morgen", user_id, channel=channel,
+                trip, "morning" if query_key == "heute" else "evening",
+                self._m(f"antwort.tag.{query_key}"), user_id, channel=channel,
             )
 
         from services.weather_extractor import WeatherExtractor
@@ -1693,8 +1714,8 @@ class TripCommandProcessor:
                              "timeline_morgen"):
             return CommandResult(
                 success=False, command=query_key,
-                confirmation_subject="Fehler",
-                confirmation_body="Unbekannter Query-Key.",
+                confirmation_subject=self._ml("antwort.intern.betreff"),
+                confirmation_body=self._ml("antwort.intern.query"),
                 trip_name=trip.name,
             )
 
@@ -1714,22 +1735,22 @@ class TripCommandProcessor:
                 or self._aggregate_day(timeline, tomorrow, tz_morgen))
             fehlen = not timeline.available or (
                 not agg_vorhanden and (luecke_heute or luecke_morgen))
-            buttons = _GLANCE_BUTTONS
+            buttons = _glance_buttons(self._sprache)
         elif query_key == "heute_gewitter":
             body = self._fmt_gewitter(timeline, today, tz_heute, trip=trip,
                                       channel=channel)
-            subject = self._t(f"[{trip.name}] Gewitter heute", f"[{trip.name}] Storms today")
+            subject = self._m("abruf.gewitter_betreff", trip_name=trip.name)
             fehlen = luecke_heute
         elif query_key == "timeline_heute":
-            body = self._fmt_timeline(timeline, today, self._t("Heute", "Today"), "today",
+            body = self._fmt_timeline(timeline, today, self._m("antwort.tag.heute"), "today",
                                       tz_heute, trip=trip, channel=channel)
-            subject = f"[{trip.name}] Timeline {self._t('heute', 'today')}"
+            subject = f"[{trip.name}] Timeline {self._m('antwort.tag_klein.heute')}"
             fehlen = luecke_heute
             buttons = self._timeline_buttons(timeline, today, "today", tz_heute)
         else:
-            body = self._fmt_timeline(timeline, tomorrow, self._t("Morgen", "Tomorrow"),
+            body = self._fmt_timeline(timeline, tomorrow, self._m("antwort.tag.morgen"),
                                       "tomorrow", tz_morgen, trip=trip, channel=channel)
-            subject = f"[{trip.name}] Timeline {self._t('morgen', 'tomorrow')}"
+            subject = f"[{trip.name}] Timeline {self._m('antwort.tag_klein.morgen')}"
             fehlen = luecke_morgen
             buttons = self._timeline_buttons(timeline, tomorrow, "tomorrow", tz_morgen)
         return CommandResult(
@@ -1778,19 +1799,18 @@ class TripCommandProcessor:
         """
         from services.trip_report_scheduler import TripReportSchedulerService
         query_key = "heute" if report_type == "morning" else "morgen"
-        buttons = _HEUTE_BUTTONS if report_type == "morning" else _MORGEN_BUTTONS
+        buttons = _tag_buttons("today" if report_type == "morning" else "tomorrow",
+                               self._sprache)
         service = TripReportSchedulerService(user_id=user_id)
         ergebnis = service.send_on_demand_report(
             trip, report_type, restrict_to_channel=channel,
         )
-        if self._en:  # #2417 Abschnitt H
-            label = {"Heute": "Today", "Morgen": "Tomorrow"}.get(label, label)
         if ergebnis.outcome != "sent":
             return CommandResult(
                 success=ergebnis.outcome == "sent", command=query_key,
                 confirmation_subject=f"[{trip.name}] {label}",
                 confirmation_body=_on_demand_failure_body(
-                    ergebnis.outcome, label, ergebnis.zieltag, en=self._en,
+                    ergebnis.outcome, label, ergebnis.zieltag, en=self._en, lang=self._lang,
                 ),
                 trip_name=trip.name,
                 reply_markup=buttons,
@@ -1798,8 +1818,7 @@ class TripCommandProcessor:
         return CommandResult(
             success=ergebnis.outcome == "sent", command=query_key,
             confirmation_subject=f"[{trip.name}] {label}",
-            confirmation_body=self._t(f"{label}-Briefing wird gesendet.",
-                                      f"{label} briefing is being sent."),
+            confirmation_body=self._m("antwort.briefing_gesendet", tag=label),
             trip_name=trip.name,
             reply_markup=buttons,
             suppress_email_reply=True,
@@ -1829,8 +1848,8 @@ class TripCommandProcessor:
         # einer dritten Kurzliste. Das Emoji bleibt Button-Zugabe.
         definition = get_metric(_DRILLDOWN_TOKEN_METRIC[metric])
         field = definition.dp_field
-        header = f"{_DRILLDOWN_TOKEN_EMOJI[metric]} {definition.label_de}"
-        fmt = _metric_formatter(definition)
+        header = f"{_DRILLDOWN_TOKEN_EMOJI[metric]} {definition.label(self._sprache)}"
+        fmt = _metric_formatter(definition, self._sprache)
 
         from_time, hours, day_date, tz = self._day_window(trip, day_token, received_at)
 
@@ -1853,16 +1872,12 @@ class TripCommandProcessor:
         # #1405 S4a: EIN Return -- `res.available` waehlt Text UND `success`.
         markup = None
         if not res.available:
-            subject = self._t(
-                f"[{trip.name}] Keine stündlichen Daten", f"[{trip.name}] No hourly data")
-            body = self._t(
-                "Keine stündlichen Daten verfügbar. "
-                "Bitte einen Report anfordern um aktuelle Daten zu laden.",
-                "No hourly data available. Please request a briefing to load data.",
-            )
+            subject = self._m("abruf.keine_stunden.betreff", trip_name=trip.name)
+            body = self._m("abruf.keine_stunden.text")
         else:
-            subject = self._t(f"[{trip.name}] {header} stündlich",
-                              f"[{trip.name}] {_kurzform_kuerzel(definition)}")
+            subject = (f"[{trip.name}] {_kurzform_kuerzel(definition)}" if self._en
+                       else self._ml("abruf.stuendlich_betreff", trip_name=trip.name,
+                                     groesse=header))
             # #2417 AC-5: Telegram-Kurzform bekommt die sprachneutrale Kurzform.
             if _ist_kurzform_kanal(channel) or self._en:
                 body = self._format_drilldown_kurzform(
@@ -1873,7 +1888,8 @@ class TripCommandProcessor:
                     res, header, fmt, tz, with_emoji=with_emoji, hail_by_ts=hail_by_ts,
                 )
             back = "tl_today" if day_token == "today" else "tl_tomorrow"
-            markup = {"inline_keyboard": [[{"text": "⬅️ Zurück", "callback_data": back}]]}
+            markup = {"inline_keyboard": [[{"text": self._ml("knopf.zurueck"),
+                                            "callback_data": back}]]}
         return CommandResult(
             success=res.available,
             command=f"dd_{metric}_{day_token}",
@@ -1887,12 +1903,7 @@ class TripCommandProcessor:
         """Ad-hoc-Abruf EINER Katalog-Groesse (Issue #2134)."""
         trip = self._find_trip(msg.trip_name, msg.user_id)
         if not trip:
-            return CommandResult(
-                success=False, command=f"metrik_{metric_id}",
-                confirmation_subject=f"[{msg.trip_name}] Trip nicht gefunden",
-                confirmation_body=f"Kein Trip mit Name '{msg.trip_name}' gefunden.",
-                trip_name=msg.trip_name,
-            )
+            return self._trip_nicht_gefunden(f"metrik_{metric_id}", msg.trip_name)
         return self._handle_metric_drilldown(
             trip, metric_id, "today", msg.received_at, msg.user_id, msg.channel,
         )
@@ -1927,7 +1938,8 @@ class TripCommandProcessor:
         # #2417 Abschnitt H: Telegram-Kurzform bekommt dieselbe sprachneutrale
         # Kurzform (eigene Pruefung, _KURZFORM_KANAELE bleibt unveraendert, AC-7).
         kurzform = _ist_kurzform_kanal(channel) or self._en
-        betreff = f"[{trip.name}] " + (_kurzform_kuerzel(metric) if self._en else metric.label_de)
+        name = metric.label(self._sprache)
+        betreff = f"[{trip.name}] " + (_kurzform_kuerzel(metric) if self._en else name)
         # #1405 S4a: `traegt` waehlt Ohne-Werte-Text UND `success` (ein Return).
         traegt = _traegt_werte(res)
         if traegt and tageswert:
@@ -1938,7 +1950,7 @@ class TripCommandProcessor:
                 confirmation_subject=betreff,
                 confirmation_body=(
                     f"{_kurzform_kuerzel(metric)}{_kurzform_wert(metric, wert)}" if kurzform
-                    else f"{metric.label_de} ({day_date:%d.%m.}): {format_value(metric.id, wert)}"
+                    else f"{name} ({self._datum(day_date, '%d.%m.')}): {format_value(metric.id, wert)}"
                 ),
                 trip_name=trip.name,
             )
@@ -1949,9 +1961,7 @@ class TripCommandProcessor:
             subject = betreff
             body = (
                 fold_ascii(f"{_kurzform_kuerzel(metric)} no data")
-                if kurzform else
-                f"{metric.label_de}: für diesen Ort und Zeitraum nicht "
-                f"verfügbar (keine stündlichen Werte vorhanden)."
+                if kurzform else self._ml("abruf.nicht_verfuegbar", groesse=name)
             )
         else:
             if kurzform:
@@ -1960,13 +1970,14 @@ class TripCommandProcessor:
                 )
             else:
                 body = self._format_drilldown(
-                    res, metric.label_de, _metric_formatter(metric), tz,
+                    res, name, _metric_formatter(metric, self._sprache), tz,
                     with_emoji=(channel == "telegram"),
                 )
             back = "tl_today" if day_token == "today" else "tl_tomorrow"
-            subject = betreff if self._en else f"[{trip.name}] {metric.label_de} stündlich"
+            subject = betreff if self._en else self._ml(
+                "abruf.stuendlich_betreff", trip_name=trip.name, groesse=name)
             markup = {"inline_keyboard": [
-                [{"text": "⬅️ Zurück", "callback_data": back}]
+                [{"text": self._ml("knopf.zurueck"), "callback_data": back}]
             ]}
         return CommandResult(
             success=traegt, command=f"metrik_{metric_id}",
@@ -1994,14 +2005,15 @@ class TripCommandProcessor:
 
         from_time, hours, today_date, tz = self._day_window(trip, day_token, received_at)
         if day_token == "today":
-            back_btn, back_cb, label = "⬅️ /heute", "heute", self._t("Heute", "Today")
+            back_cb, label = "heute", self._m("antwort.tag.heute")
         else:
-            back_btn, back_cb, label = "⬅️ /morgen", "morgen", self._t("Morgen", "Tomorrow")
+            back_cb, label = "morgen", self._m("antwort.tag.morgen")
+        back_btn = self._ml(f"knopf.zurueck_{back_cb}")  # callback_data bleibt
 
         # Issue #2010: dieselbe abgeleitete Quelle wie `_thunder_fmt` statt
         # einer eigenen Verzweigung mit eigenen Woertern. #2417: englisch die
         # Stufenbedeutung aus hazard_symbols.
-        thunder_karte = _thunder_symbols() if with_emoji else _thunder_words()
+        thunder_karte = _thunder_symbols() if with_emoji else _thunder_words(self._sprache)
         if self._en:
             thunder_karte = {k: self._stufe_en(k) for k in thunder_karte}
 
@@ -2015,10 +2027,10 @@ class TripCommandProcessor:
 
         # (Name, Feld, Formatierer, Spaltenbreite, Fehlzeichen)
         spalten = (
-            (self._t("Temperatur", "Temp"), "t2m_c", lambda v: f"{v:.0f}°C", 7, "?°C"),
+            (self._m("abruf.spalte_temperatur"), "t2m_c", lambda v: f"{v:.0f}°C", 7, "?°C"),
             ("Wind",        "wind10m_kmh",   lambda v: f"{v:.0f}km/h",  8, "?"),
-            (self._t("Regen", "Rain"), "precip_1h_mm", lambda v: f"{v:.1f}mm", 6, "?"),
-            (self._t("Gewitter", "Storms"), "thunder_level", _t_sym,    0, "—"),
+            (self._m("abruf.spalte_regen"), "precip_1h_mm", lambda v: f"{v:.1f}mm", 6, "?"),
+            (self._m("abruf.spalte_gewitter"), "thunder_level", _t_sym,    0, "—"),
         )
 
         ex = WeatherExtractor(user_id)
@@ -2036,19 +2048,15 @@ class TripCommandProcessor:
         # #1405 S4a: EIN Return -- `nutzbar` waehlt Text UND `success`.
         markup = None
         if not nutzbar:
-            subject = self._t(
-                f"[{trip.name}] Keine stündlichen Daten", f"[{trip.name}] No hourly data")
-            body = self._t(
-                "Keine stündlichen Daten verfügbar. "
-                "Bitte einen Report anfordern um aktuelle Daten zu laden.",
-                "No hourly data available. Please request a briefing to load data.",
-            )
+            subject = self._m("abruf.keine_stunden.betreff", trip_name=trip.name)
+            body = self._m("abruf.keine_stunden.text")
         else:
             karte = {
                 feld: {p.ts: p.value for p in res.points}
                 for feld, res in ergebnis.items()
             }
-            lines = [f"📅 {self._t('Stunden', 'Hours')} · {label} ({today_date:%d.%m})", ""]
+            lines = [f"📅 {self._m('abruf.stunden')} · {label} "
+                     f"({self._datum(today_date, '%d.%m')})", ""]
             for pt in ergebnis[nutzbar[0][1]].points:
                 zellen = []
                 for _name, feld, fmt, breite, leer in nutzbar:
@@ -2058,12 +2066,9 @@ class TripCommandProcessor:
                 lines.append(f"{h}  " + " ".join(zellen).rstrip())
             if fehlend:
                 lines.append("")
-                lines.append(
-                    ", ".join(s[0] for s in fehlend)
-                    + self._t(": nicht verfügbar (keine Daten für diesen Zeitraum).",
-                              ": not available (no data for this period).")
-                )
-            subject = f"[{trip.name}] {self._t('Stunden', 'Hours')} {label}"
+                lines.append(self._m("abruf.stunden_fehlen",
+                                     liste=", ".join(s[0] for s in fehlend)))
+            subject = f"[{trip.name}] {self._m('abruf.stunden')} {label}"
             body = "\n".join(lines)
             markup = {"inline_keyboard": [[{"text": back_btn, "callback_data": back_cb}]]}
         return CommandResult(
@@ -2145,12 +2150,12 @@ class TripCommandProcessor:
         from output.metric_format import format_hail_note
 
         hail_by_ts = hail_by_ts or {}
-        lines = [f"{header} — Verlauf"]
+        lines = [self._ml("abruf.verlauf", groesse=header)]
         groups = _gruppiere_wechselpunkte(
             res.points,
             lambda pt: (
                 fmt(pt.value, with_emoji=with_emoji),
-                format_hail_note(hail_by_ts.get(pt.ts)) or "",
+                format_hail_note(hail_by_ts.get(pt.ts), lang=self._sprache) or "",
             ),
         )
 
@@ -2298,7 +2303,7 @@ class TripCommandProcessor:
         )
 
     def _tagesaussage_ohne_daten(self, trip: Optional[Trip], target_date: date,
-                                 day_token: str, *, zusatz: str = "") -> str:
+                                 day_token: str, *, gewitter: bool = False) -> str:
         """Was ueber ``target_date`` zu sagen ist, wenn KEINE Wetterdaten
         vorliegen (Issue #1818).
 
@@ -2317,11 +2322,14 @@ class TripCommandProcessor:
             if convert_trip_to_segments(trip, target_date):
                 if self._en:
                     return "no weather data yet - send TODAY/TOMORROW for a briefing."
-                hinweis = _BRIEFING_HINWEIS.get(day_token)
-                if hinweis:
-                    return f"noch keine Wetterdaten — {hinweis}."
-                return "noch keine Wetterdaten."
-        return "no stage planned." if self._en else f"Keine Etappe geplant{zusatz}"
+                if day_token in ("today", "tomorrow"):
+                    return self._ml("abruf.keine_daten_hinweis",
+                                    hinweis=self._ml(f"abruf.hinweis_{day_token}"))
+                return self._ml("abruf.keine_daten")
+        if self._en:
+            return "no stage planned."
+        zusatz = self._ml("abruf.kein_gewitter_status") if gewitter else ""
+        return self._ml("abruf.keine_etappe") + zusatz
 
     def _aggregate_day(self, timeline, target_date, tz) -> Optional[dict]:
         """Aggregiere Timeline-Punkte für target_date. None wenn keine Punkte.
@@ -2386,7 +2394,8 @@ class TripCommandProcessor:
             precip = f"{agg['precip']:.1f}" if agg.get('precip') else "0.0"
             return (f"{label}: T {t_min}/{t_max}C, wind {wind} km/h, rain {precip}mm, "
                     f"storms {self._stufe_en(agg['thunder'], agg.get('hail_flag'))}")
-        thunder_label = _thunder_words().get(agg['thunder'].value if agg['thunder'] else "NONE", "?")
+        lang = self._sprache
+        thunder_label = _thunder_words(lang).get(agg['thunder'].value if agg['thunder'] else "NONE", "?")
         # Issue #1680 S3 (Spec D3, abgeloeste Entscheidung): die tragende(n)
         # Zutat(en) der oben gezeigten Tagesstufe -- aus DEMSELBEN Aggregat,
         # das auch `agg['thunder']` traegt (`_aggregate_day()`, EINE Rechnung
@@ -2402,19 +2411,19 @@ class TripCommandProcessor:
         from output.metric_format import thunder_signal_label
         zeige_herkunft = channel not in ("sms", "premium_sms")
         _traeger = agg.get("thunder_signals") if zeige_herkunft else None
-        _herkunft = ", ".join(thunder_signal_label(n) for n in _traeger or [])
+        _herkunft = ", ".join(thunder_signal_label(n, lang=lang) for n in _traeger or [])
         if _herkunft:
             thunder_label = f"{thunder_label} · {_herkunft}"
         # Issue #2205 (AC-13/14): Hagelaussage aus DEMSELBEN Aggregat, nach der
         # Herkunft -- wie `_fmt_gewitter()`, auf allen Kanaelen.
         from output.metric_format import format_hail_note
-        _hagel = format_hail_note(agg.get("hail_flag"))
+        _hagel = format_hail_note(agg.get("hail_flag"), lang=lang)
         if _hagel:
             thunder_label = f"{thunder_label} · {_hagel}"
         precip = f"{agg['precip']:.1f}" if agg.get('precip') else "0.0"
         return (
             f"{label}: 🌡 {t_min}–{t_max}°C  💨 {wind} km/h  "
-            f"🌧 {precip}mm  ⛈ Gewitter: {thunder_label}"
+            f"🌧 {precip}mm  ⛈ {self._ml('abruf.gewitter_wort')}: {thunder_label}"
         )
 
     def _stufe_en(self, thunder, hail_flag=None) -> str:
@@ -2425,11 +2434,7 @@ class TripCommandProcessor:
         return f"{wort}, hail" if hail_flag is True else wort
 
     def _kein_snapshot(self) -> str:
-        return self._t(
-            "Kein Wetter-Snapshot verfügbar. "
-            "Bitte einen Report anfordern um aktuelle Daten zu laden.",
-            "No weather data available. Please request a briefing to load data.",
-        )
+        return self._m("abruf.kein_snapshot")
 
     def _fmt_glance(self, timeline, today, tomorrow, tz_heute, tz_morgen,
                     *, trip: Optional[Trip] = None,
@@ -2445,9 +2450,10 @@ class TripCommandProcessor:
             return self._kein_snapshot()
         agg_heute = self._aggregate_day(timeline, today, tz_heute)
         agg_morgen = self._aggregate_day(timeline, tomorrow, tz_morgen)
-        lines = [self._t("🗓 Glance — heute & morgen", "Glance - today & tomorrow"), ""]
-        l_heute = f"{self._t('heute', 'today')} ({today:%d.%m})"
-        l_morgen = f"{self._t('morgen', 'tomorrow')} ({tomorrow:%d.%m})"
+        kopf = "Glance - today & tomorrow" if self._en else self._ml("abruf.glance_kopf")
+        lines = [kopf, ""]
+        l_heute = f"{self._m('antwort.tag_klein.heute')} ({self._datum(today, '%d.%m')})"
+        l_morgen = f"{self._m('antwort.tag_klein.morgen')} ({self._datum(tomorrow, '%d.%m')})"
         if agg_heute:
             lines.append(self._fmt_day_agg(agg_heute, l_heute, channel=channel))
         else:
@@ -2470,18 +2476,19 @@ class TripCommandProcessor:
             return self._kein_snapshot()
         agg = self._aggregate_day(timeline, today, tz)
         if not agg:
-            return f"{self._t('Heute', 'Today')} ({today:%d.%m}): " + self._tagesaussage_ohne_daten(
-                trip, today, "today", zusatz=" — kein Gewitter-Status.")
+            return (f"{self._m('antwort.tag.heute')} ({self._datum(today, '%d.%m')}): "
+                    + self._tagesaussage_ohne_daten(trip, today, "today", gewitter=True))
         thunder = agg["thunder"]
         if self._en:  # #2417 Abschnitt H
             return f"Storm risk today ({today:%d.%m}): {self._stufe_en(thunder, agg.get('hail_flag'))}"
-        label = _thunder_words().get(thunder.value if thunder else "NONE", "?")
+        lang = self._sprache
+        label = _thunder_words(lang).get(thunder.value if thunder else "NONE", "?")
         # Issue #1475 S5a: derselbe geteilte Textbaustein wie in den Mail-
         # Renderern (#1481 DRY, call-time Import) -- rein deskriptiv NEBEN der
         # Gewitterstufe, ohne Handlungsempfehlung (ADR-0007, Spec AC-8). Bei
         # "unbekannt"/"nein" bleibt die Antwort zeichengleich zu bisher.
         from output.metric_format import format_hail_note, thunder_signal_label
-        hail_note = format_hail_note(agg.get("hail_flag"))
+        hail_note = format_hail_note(agg.get("hail_flag"), lang=lang)
         suffix = f" · {hail_note}" if hail_note else ""
         # Issue #1680 S2: die tragende(n) Zutat(en) der oben gezeigten Stufe --
         # additiv VOR dem Hagel-Suffix, rein deskriptiv ohne Bewertung
@@ -2495,10 +2502,11 @@ class TripCommandProcessor:
         # Sicherung weg und wird durch diesen Guard ersetzt.
         zeige_herkunft = channel not in ("sms", "premium_sms")
         traeger = agg.get("thunder_signals") if zeige_herkunft else None
-        herkunft = ", ".join(thunder_signal_label(n) for n in traeger or [])
+        herkunft = ", ".join(thunder_signal_label(n, lang=lang) for n in traeger or [])
         if herkunft:
             suffix = f" · {herkunft}{suffix}"
-        return f"⛈ Gewitter heute ({today:%d.%m}): {label}{suffix}"
+        return self._ml("abruf.gewitter_zeile", datum=self._datum(today, "%d.%m"),
+                        stufe=label) + suffix
 
     def _fmt_timeline(self, timeline, target_date, label: str, day_token: str, tz,
                       *, trip: Optional[Trip] = None,
@@ -2514,20 +2522,18 @@ class TripCommandProcessor:
         ``:%H:%M`` auf dem UTC-Zeitstempel mehr.
         """
         if not timeline.available:
-            return self._t(
-                "Kein Wetter-Snapshot verfügbar. "
-                "Bitte einen Report anfordern um aktuelle Wetterdaten zu laden.",
-                self._kein_snapshot(),
-            )
+            return self._m("abruf.kein_snapshot_timeline")
         pts = sorted(
             [p for p in timeline.points if local_dt(p.arrival_time, tz).date() == target_date],
             key=lambda p: p.arrival_time,
         )
+        tag = self._datum(target_date, "%d.%m")
         if not pts:
-            return f"{label} ({target_date:%d.%m}): " + self._tagesaussage_ohne_daten(
+            return f"{label} ({tag}): " + self._tagesaussage_ohne_daten(
                 trip, target_date, day_token)
 
-        lines = [f"📋 Timeline · {label} ({target_date:%d.%m})", ""]
+        lang = self._sprache
+        lines = [f"📋 Timeline · {label} ({tag})", ""]
         for p in pts:
             if p.elevation_m is not None:
                 lines.append(f"🕐 {local_fmt(p.arrival_time, tz)} · {int(p.elevation_m)} m")
@@ -2539,7 +2545,7 @@ class TripCommandProcessor:
             wind = f"{m.wind_max_kmh:.0f}" if m.wind_max_kmh is not None else "?"
             precip = f"{m.precip_sum_mm:.1f}" if m.precip_sum_mm is not None else "0.0"
             thunder = m.thunder_level_max
-            t_label = _thunder_words().get(thunder.value if thunder else "NONE", "?")
+            t_label = _thunder_words(lang).get(thunder.value if thunder else "NONE", "?")
             if self._en:  # #2417 AC-5: Stufe englisch, Herkunft/Hagel entfallen
                 t_label = self._stufe_en(thunder.value if thunder else "NONE")
                 lines.append(f"   🌡 {t_min}–{t_max} °C  💨 {wind} km/h  "
@@ -2562,12 +2568,12 @@ class TripCommandProcessor:
             zeige_herkunft = channel not in ("sms", "premium_sms")
             _traeger = (getattr(m, "thunder_level_max_signals", None)
                         if zeige_herkunft else None)
-            _herkunft = ", ".join(thunder_signal_label(n) for n in _traeger or [])
+            _herkunft = ", ".join(thunder_signal_label(n, lang=lang) for n in _traeger or [])
             if _herkunft:
                 t_label = f"{t_label} · {_herkunft}"
             # Issue #2205 (AC-13/14): Hagel DIESES Wegpunkts, aus demselben `m`.
             from output.metric_format import format_hail_note
-            _hagel = format_hail_note(getattr(m, "hail_flag", None))
+            _hagel = format_hail_note(getattr(m, "hail_flag", None), lang=lang)
             if _hagel:
                 t_label = f"{t_label} · {_hagel}"
             lines.append(
@@ -2580,7 +2586,7 @@ class TripCommandProcessor:
         """Drilldown-Buttons je kritischer Metrik + immer Zurück."""
         from app.models import ThunderLevel
         from output.metric_format import thunder_ordinal
-        back = {"text": "⬅️ Zurück", "callback_data": "glance"}
+        back = {"text": self._ml("knopf.zurueck"), "callback_data": "glance"}
         agg = self._aggregate_day(timeline, target_date, tz) if timeline.available else None
         if not agg:
             return {"inline_keyboard": [[back]]}
@@ -2591,11 +2597,13 @@ class TripCommandProcessor:
         # nicht. thunder_ordinal() statt eigener Liste.
         thunder = agg["thunder"]
         if thunder is not None and thunder_ordinal(thunder) >= thunder_ordinal(ThunderLevel.MED):
-            drilldown.append({"text": "🔍 Gewitter", "callback_data": f"dd_thunder_{day_token}"})
+            drilldown.append({"text": self._ml("knopf.drill_gewitter"),
+                              "callback_data": f"dd_thunder_{day_token}"})
         if agg["wind_max"] is not None and agg["wind_max"] >= 40:
             drilldown.append({"text": "🔍 Wind", "callback_data": f"dd_wind_{day_token}"})
         if (agg["pop"] or 0) >= 30 or (agg["precip"] or 0) >= 1.0:
-            drilldown.append({"text": "🔍 Niederschlag", "callback_data": f"dd_precip_{day_token}"})
+            drilldown.append({"text": self._ml("knopf.drill_niederschlag"),
+                              "callback_data": f"dd_precip_{day_token}"})
 
         rows = []
         if drilldown:
@@ -2618,10 +2626,9 @@ class TripCommandProcessor:
         if self._is_already_applied(trip.id, "ruhetag", command_date, user_id):
             return CommandResult(
                 success=False, command="ruhetag",
-                confirmation_subject=self._t(
-                    f"[{trip.name}] Ruhetag bereits eingetragen", f"[{trip.name}] Rest day already set"),
-                confirmation_body=self._t("Ruhetag wurde heute bereits eingetragen.",
-                                          "A rest day was already added today."),
+                confirmation_subject=self._m("antwort.ruhetag_bereits.betreff",
+                                             trip_name=trip.name),
+                confirmation_body=self._m("antwort.ruhetag_bereits.text"),
                 trip_name=trip.name,
             )
 
@@ -2632,7 +2639,7 @@ class TripCommandProcessor:
                 if stage.date > command_date:
                     new_date = stage.date + timedelta(days=shift_days)
                     new_stages.append(dataclasses.replace(stage, date=new_date))
-                    shifts.append(StageShift(current.numbered_stage_label(stage, en=self._en), stage.date, new_date))
+                    shifts.append(StageShift(current.numbered_stage_label(stage, en=self._etappe_en), stage.date, new_date))
                 else:
                     new_stages.append(stage)
             return shifts, new_stages
@@ -2641,9 +2648,9 @@ class TripCommandProcessor:
         if not shifts:
             return CommandResult(
                 success=False, command="ruhetag",
-                confirmation_subject=self._t(f"[{trip.name}] Keine Etappen", f"[{trip.name}] No stages"),
-                confirmation_body=self._t("Keine zukuenftigen Etappen zum Verschieben.",
-                                          "No future stages to shift."),
+                confirmation_subject=self._m("antwort.keine_etappen.betreff",
+                                             trip_name=trip.name),
+                confirmation_body=self._m("antwort.keine_etappen.text"),
                 trip_name=trip.name,
             )
 
@@ -2664,9 +2671,9 @@ class TripCommandProcessor:
         except _NothingToChange:
             return CommandResult(
                 success=False, command="ruhetag",
-                confirmation_subject=self._t(f"[{trip.name}] Keine Etappen", f"[{trip.name}] No stages"),
-                confirmation_body=self._t("Keine zukuenftigen Etappen zum Verschieben.",
-                                          "No future stages to shift."),
+                confirmation_subject=self._m("antwort.keine_etappen.betreff",
+                                             trip_name=trip.name),
+                confirmation_body=self._m("antwort.keine_etappen.text"),
                 trip_name=trip.name,
             )
         shifts = applied["shifts"]
@@ -2677,26 +2684,20 @@ class TripCommandProcessor:
             self._append_command_log(trip.id, "ruhetag", command_date, user_id)
         except Exception as exc:
             logger.warning(
-                "Ruhetag gespeichert, Nebenschaden (Snapshot/Befehls-Log) "
-                "fehlgeschlagen fuer Trip %s: %s", trip.id, exc)
+                "Ruhetag gespeichert, Nebenschaden (Snapshot/Befehls-Log) "  # i18n-log
+                "fehlgeschlagen fuer Trip %s: %s", trip.id, exc)  # i18n-log
 
-        tage_wort = self._t("Tag" if shift_days == 1 else "Tage",
-                            "day" if shift_days == 1 else "days")
-        lines = [self._t(f"Ruhetag eingetragen: +{shift_days} {tage_wort}.",
-                         f"Rest day added: +{shift_days} {tage_wort}."), ""]
-        lines.append(self._t("Verschobene Etappen:", "Shifted stages:"))
+        lines = [self._m_n("antwort.ruhetag_eingetragen", shift_days), ""]
+        lines.append(self._m("antwort.ruhetag.verschoben"))
         for s in shifts:
-            lines.append(
-                f"  {s.stage_name}: {s.old_date:%d.%m.%Y} -> {s.new_date:%d.%m.%Y}"
-            )
+            lines.append(f"  {s.stage_name}: {self._datum(s.old_date, '%d.%m.%Y')} -> "
+                         f"{self._datum(s.new_date, '%d.%m.%Y')}")
         lines.append("")
-        lines.append(self._t("Naechster Report kommt planmaessig.",
-                             "Next briefing comes as scheduled."))
+        lines.append(self._m("antwort.ruhetag.naechster"))
 
         return CommandResult(
             success=True, command="ruhetag",
-            confirmation_subject=self._t(
-                f"[{trip.name}] Ruhetag bestaetigt", f"[{trip.name}] Rest day confirmed"),
+            confirmation_subject=self._m("antwort.ruhetag.betreff", trip_name=trip.name),
             confirmation_body="\n".join(lines),
             trip_name=trip.name, shifts=shifts,
         )
@@ -2709,8 +2710,8 @@ class TripCommandProcessor:
         if report_type not in ("morning", "evening"):
             return CommandResult(
                 success=False, command="report",
-                confirmation_subject=f"[{trip.name}] Ungueltiger Report-Typ",
-                confirmation_body=f"Report-Typ '{report_type}' unbekannt. Erlaubt: morning, evening",
+                confirmation_subject=self._ml("antwort.report.typ_betreff", trip_name=trip.name),
+                confirmation_body=self._ml("antwort.report.typ_text", typ=report_type),
                 trip_name=trip.name,
             )
 
@@ -2723,10 +2724,8 @@ class TripCommandProcessor:
         except Exception as e:  # noqa: BLE001 — Antwort statt Absturz (AC-23)
             logger.error(f"report command failed for trip {trip.id}: {e}")
             outcome = "error"
-        if outcome == "sent":
-            subject = self._t("Report gesendet", "Report sent")
-        else:
-            subject = self._t("Report nicht gesendet", "Report not sent")
+        subject = self._m("antwort.report_betreff."
+                          + ("gesendet" if outcome == "sent" else "nicht_gesendet"))
         return CommandResult(
             success=outcome == "sent", command="report",
             confirmation_subject=f"[{trip.name}] {subject}",
@@ -2737,30 +2736,10 @@ class TripCommandProcessor:
     def _report_reply_body(self, outcome: str, report_type: str) -> str:
         """Issue #1405 S1 (AC-22): eigener Klartext je Ergebnis; nur `sent`
         meldet einen Versand."""
-        typ = report_type.title()
-        texte = {
-            "sent": (f"{typ} Report wird jetzt gesendet.",
-                     f"{typ} report is being sent now."),
-            "no_stage": (f"{typ} Report nicht gesendet: heute ist keine Etappe geplant.",
-                         f"{typ} report not sent: no stage planned for today."),
-            "no_weather": (f"{typ} Report nicht gesendet: keine Wetterdaten verfuegbar.",
-                           f"{typ} report not sent: no weather data available."),
-            "no_channels": (f"{typ} Report nicht gesendet: kein Versandweg aktiv.",
-                            f"{typ} report not sent: no delivery channel enabled."),
-            "channels_unreachable": (
-                f"{typ} Report nicht gesendet: Versandweg konfiguriert, aber nicht erreichbar.",
-                f"{typ} report not sent: delivery channel configured but unreachable."),
-            "already_in_progress": (
-                f"{typ} Report nicht gesendet: ein Versand laeuft bereits.",
-                f"{typ} report not sent: a delivery is already in progress."),
-            "invalid_preset": (
-                f"{typ} Report nicht gesendet: Ortsvergleich nicht ladbar oder Orte geloescht.",
-                f"{typ} report not sent: comparison not loadable or its places were deleted."),
-        }
-        de, en = texte.get(outcome, (
-            f"{typ} Report nicht gesendet: interner Fehler beim Ausloesen.",
-            f"{typ} report not sent: internal error while triggering."))
-        return self._t(de, en)
+        bekannt = ("sent", "no_stage", "no_weather", "no_channels", "channels_unreachable",
+                   "already_in_progress", "invalid_preset")
+        schluessel = outcome if outcome in bekannt else "fehler"
+        return self._m(f"antwort.report.{schluessel}", typ=report_type.title())
 
     def _shift_start(
         self, trip: Trip, value: Optional[str], user_id: str,
@@ -2769,9 +2748,9 @@ class TripCommandProcessor:
         if not value:
             return CommandResult(
                 success=False, command="startdatum",
-                confirmation_subject=f"[{trip.name}] Fehlendes Datum",
-                confirmation_body=self._t("Bitte Datum angeben: STARTDATUM JJJJ-MM-TT",
-                                          "Please give a date: STARTDATE YYYY-MM-DD"),
+                confirmation_subject=self._ml("antwort.startdatum.fehlt_betreff",
+                                              trip_name=trip.name),
+                confirmation_body=self._m("antwort.startdatum.fehlt_text"),
                 trip_name=trip.name,
             )
         try:
@@ -2779,10 +2758,9 @@ class TripCommandProcessor:
         except ValueError:
             return CommandResult(
                 success=False, command="startdatum",
-                confirmation_subject=f"[{trip.name}] Ungueltiges Datum",
-                confirmation_body=self._t(
-                    f"'{value}' ist kein gueltiges Datum. Format: STARTDATUM JJJJ-MM-TT",
-                    f"'{value}' is not a valid date. Format: STARTDATE YYYY-MM-DD"),
+                confirmation_subject=self._ml("antwort.startdatum.ungueltig_betreff",
+                                              trip_name=trip.name),
+                confirmation_body=self._m("antwort.startdatum.ungueltig_text", wert=value),
                 trip_name=trip.name,
             )
 
@@ -2796,7 +2774,7 @@ class TripCommandProcessor:
             for stage in fresh.stages:
                 new_date = stage.date + delta
                 new_stages.append(dataclasses.replace(stage, date=new_date))
-                shifts_.append(StageShift(fresh.numbered_stage_label(stage, en=self._en), stage.date, new_date))
+                shifts_.append(StageShift(fresh.numbered_stage_label(stage, en=self._etappe_en), stage.date, new_date))
             applied["old_start"] = old
             applied["shifts"] = shifts_
             return dataclasses.replace(fresh, stages=new_stages)
@@ -2808,17 +2786,16 @@ class TripCommandProcessor:
         old_start, shifts = applied["old_start"], applied["shifts"]
         self._delete_snapshot(trip.id, user_id)
 
-        lines = [self._t(
-            f"Startdatum verschoben: {old_start:%d.%m.%Y} -> {new_start:%d.%m.%Y}",
-            f"Start date moved: {old_start:%d.%m.%Y} -> {new_start:%d.%m.%Y}",
-        ), ""]
-        lines.append(self._t("Neue Etappen-Daten:", "New stage dates:"))
+        lines = [self._m("antwort.startdatum.verschoben",
+                         alt=self._datum(old_start, "%d.%m.%Y"),
+                         neu=self._datum(new_start, "%d.%m.%Y")), ""]
+        lines.append(self._m("antwort.startdatum.neue_daten"))
         for s in shifts:
-            lines.append(f"  {s.stage_name}: {s.new_date:%d.%m.%Y}")
+            lines.append(f"  {s.stage_name}: {self._datum(s.new_date, '%d.%m.%Y')}")
 
         return CommandResult(
             success=True, command="startdatum",
-            confirmation_subject=f"[{trip.name}] " + self._t("Startdatum geaendert", "Start date changed"),
+            confirmation_subject=f"[{trip.name}] " + self._m("antwort.startdatum.betreff"),
             confirmation_body="\n".join(lines),
             trip_name=trip.name, shifts=shifts,
         )
@@ -2843,7 +2820,8 @@ class TripCommandProcessor:
         strich = "-" if self._en else "–"  # #2417 AC-30: GSM-7 auf Kurzform-Kanaelen
         for stage in trip.stages:
             if stage.date >= today:
-                lines.append(f"  {stage.date:%d.%m.%Y} {strich} {trip.numbered_stage_label(stage, en=self._en)}")
+                lines.append(f"  {self._datum(stage.date, '%d.%m.%Y')} {strich} "
+                             f"{trip.numbered_stage_label(stage, en=self._etappe_en)}")
         return CommandResult(
             success=True, command="status",
             confirmation_subject=f"[{trip.name}] Status",
@@ -2861,37 +2839,7 @@ class TripCommandProcessor:
         erscheinen. Kanalunabhängig identisch — auch per E-Mail (PO-Vorgabe 2).
         #2417 AC-8: auf Kurzform-Kanaelen die englische HELP-Kurzform.
         """
-        if self._en:
-            return self._show_help_for_kind("route")
-        zeilen = ["Verfügbare Befehle:", ""]
-        for label, beschreibung in command_rows():
-            zeilen.append(f"  {label:<21} – {beschreibung}")
-        zeilen += [
-            "",
-            "Wetter-Größen (Kürzel senden → Stundenverlauf):",
-            "",
-        ]
-        for metric in get_all_metrics():
-            einheit = metric.display_unit or metric.unit
-            # Zweitschreibweise nur zeigen, wenn sie eine ANDERE ist —
-            # `UV / UV` waere eine Auswahl ohne Unterschied.
-            zweit = (
-                metric.sms_code
-                if normalize_command_word(metric.sms_code)
-                not in ("", normalize_command_word(metric.col_label))
-                else ""
-            )
-            kuerzel = f"{metric.col_label} / {zweit}".rstrip(" /")
-            zeilen.append(
-                f"  {kuerzel:<16} – {metric.label_de}"
-                + (f" ({einheit})" if einheit else "")
-            )
-        body = "\n".join(zeilen)
-        return CommandResult(
-            success=True, command="hilfe",
-            confirmation_subject="Hilfe",
-            confirmation_body=body,
-        )
+        return self._show_help_for_kind("route")
 
     def _show_columns_info(self) -> CommandResult:
         """Antwort auf den Aktionen-Bubble-Button "📊 Spalten" (Issue #1001 F002).
@@ -2912,12 +2860,9 @@ class TripCommandProcessor:
         host = resolve_public_host(Settings())
         return CommandResult(
             success=True, command="columns",
-            confirmation_subject="Spalten",
-            confirmation_body=(
-                f"Spalten-Konfiguration ist nur im Trip-Editor möglich:\n{host}"
-                if host
-                else "Spalten-Konfiguration ist nur im Trip-Editor möglich."
-            ),
+            confirmation_subject=self._ml("antwort.spalten.betreff"),
+            confirmation_body=(self._ml("antwort.spalten.text_host", host=host) if host
+                               else self._ml("antwort.spalten.text")),
         )
 
     def _apply_pause(
@@ -2927,43 +2872,27 @@ class TripCommandProcessor:
         if not value:
             return CommandResult(
                 success=False, command="pause",
-                confirmation_subject=self._t(
-                    f"[{trip.name}] PAUSE: Dauer fehlt", f"[{trip.name}] PAUSE: duration missing"),
-                confirmation_body=self._t(
-                    "Bitte Dauer angeben, z.B. PAUSE 2d oder PAUSE 12h.\n"
-                    "Format: N d (Tage) oder N h (Stunden).",
-                    "Please give a duration, e.g. PAUSE 2d or PAUSE 12h.\n"
-                    "Format: N d (days) or N h (hours).",
-                ),
+                confirmation_subject=self._m("antwort.pause.fehlt_betreff", trip_name=trip.name),
+                confirmation_body=self._m("antwort.pause.fehlt_text"),
                 trip_name=trip.name,
             )
         if not trip.report_config:
-            return CommandResult(
-                success=False, command="pause",
-                confirmation_subject=f"[{trip.name}] Kein report_config",
-                confirmation_body="Für diesen Trip ist kein Berichts-Zeitplan konfiguriert.",
-                trip_name=trip.name,
-            )
+            return self._kein_zeitplan(trip, "pause")
         m = _PAUSE_DURATION_RE.match(value.strip())
         if not m:
             return CommandResult(
                 success=False, command="pause",
-                confirmation_subject=f"[{trip.name}] PAUSE: Ungültige Dauer",
-                confirmation_body=(
-                    f"'{value}' ist keine gültige Dauer.\n"
-                    "Beispiele: PAUSE 2d (2 Tage) oder PAUSE 12h (12 Stunden)."
-                ),
+                confirmation_subject=self._ml("antwort.pause.ungueltig_betreff",
+                                              trip_name=trip.name),
+                confirmation_body=self._ml("antwort.pause.ungueltig_text", wert=value),
                 trip_name=trip.name,
             )
         n = int(m.group(1))
         if n <= 0:
             return CommandResult(
                 success=False, command="pause",
-                confirmation_subject=f"[{trip.name}] PAUSE: Dauer muss > 0 sein",
-                confirmation_body=(
-                    "Die Pause-Dauer muss größer als 0 sein.\n"
-                    "Beispiele: PAUSE 2d (2 Tage) oder PAUSE 12h (12 Stunden)."
-                ),
+                confirmation_subject=self._ml("antwort.pause.null_betreff", trip_name=trip.name),
+                confirmation_body=self._ml("antwort.pause.null_text"),
                 trip_name=trip.name,
             )
         unit = m.group(2) or "d"
@@ -2981,28 +2910,17 @@ class TripCommandProcessor:
             return e.result
         return CommandResult(
             success=True, command="pause",
-            confirmation_subject=self._t(
-                f"[{trip.name}] Briefings pausiert", f"[{trip.name}] Briefings paused"),
-            confirmation_body=self._t(
-                f"Briefings für '{trip.name}' pausiert bis "
-                f"{paused_until.strftime('%d.%m.%Y %H:%M')} UTC.\n"
-                "Zum Fortsetzen: STOP (dauerhaft) oder warte bis die Pause abläuft.",
-                f"Briefings for '{trip.name}' paused until "
-                f"{paused_until.strftime('%d.%m.%Y %H:%M')} UTC.\n"
-                "The pause ends by itself; STOP ends briefings for good.",
-            ),
+            confirmation_subject=self._m("antwort.pause.betreff", trip_name=trip.name),
+            confirmation_body=self._m(
+                "antwort.pause.text", trip_name=trip.name,
+                bis=self._datum(paused_until, "%d.%m.%Y") + paused_until.strftime(" %H:%M")),
             trip_name=trip.name,
         )
 
     def _apply_skip(self, trip: Trip, user_id: str) -> CommandResult:
         """Skip the next scheduled send (one-shot, idempotent)."""
         if not trip.report_config:
-            return CommandResult(
-                success=False, command="skip",
-                confirmation_subject=f"[{trip.name}] Kein report_config",
-                confirmation_body="Für diesen Trip ist kein Berichts-Zeitplan konfiguriert.",
-                trip_name=trip.name,
-            )
+            return self._kein_zeitplan(trip, "skip")
         try:
             self._speichere(
                 trip, user_id, "skip",
@@ -3012,15 +2930,16 @@ class TripCommandProcessor:
             return e.result
         return CommandResult(
             success=True, command="skip",
-            confirmation_subject=self._t(
-                f"[{trip.name}] Nächster Versand übersprungen",
-                f"[{trip.name}] Next briefing skipped"),
-            confirmation_body=self._t(
-                f"Das nächste Briefing für '{trip.name}' wird übersprungen.\n"
-                "Danach läuft der Zeitplan wieder normal.",
-                f"The next briefing for '{trip.name}' will be skipped.\n"
-                "After that the schedule runs as usual.",
-            ),
+            confirmation_subject=self._m("antwort.skip.betreff", trip_name=trip.name),
+            confirmation_body=self._m("antwort.skip.text", trip_name=trip.name),
+            trip_name=trip.name,
+        )
+
+    def _kein_zeitplan(self, trip: Trip, command: str) -> CommandResult:
+        return CommandResult(
+            success=False, command=command,
+            confirmation_subject=self._ml("antwort.kein_zeitplan.betreff", trip_name=trip.name),
+            confirmation_body=self._ml("antwort.kein_zeitplan.text"),
             trip_name=trip.name,
         )
 
@@ -3040,11 +2959,9 @@ class TripCommandProcessor:
         link_line = f"{url}\n" if url else ""
         return CommandResult(
             success=True, command="config",
-            confirmation_subject=f"[{trip.name}] Trip-Einstellungen",
-            confirmation_body=(
-                f"Einstellungen für '{trip.name}':\n{link_line}\n"
-                "Dort kannst du Zeitplan, Kanäle und Alarm-Schwellen anpassen."
-            ),
+            confirmation_subject=self._ml("antwort.config.betreff", trip_name=trip.name),
+            confirmation_body=self._ml("antwort.config.text", trip_name=trip.name,
+                                       link=link_line),
             trip_name=trip.name,
         )
 
@@ -3070,15 +2987,9 @@ class TripCommandProcessor:
         if not stage or not stage.waypoints:
             return CommandResult(
                 success=False, command="now",
-                confirmation_subject=self._t(
-                    f"[{trip.name}] Kein heutiger Standort", f"[{trip.name}] No stage today"),
-                confirmation_body=self._t(
-                    "Keine heutige Etappe gefunden. "
-                    "Aktueller Position/Standort unbekannt — "
-                    "bitte Etappenplan prüfen.",
-                    "No stage found for today. Current position unknown - "
-                    "please check the stage plan.",
-                ),
+                confirmation_subject=self._m("antwort.kein_standort.betreff",
+                                             trip_name=trip.name),
+                confirmation_body=self._m("antwort.kein_standort.text"),
                 trip_name=trip.name,
             )
         # Issue #2052: gemessen wird am AUFENTHALTSORT, nicht am Etappenstart.
@@ -3131,7 +3042,7 @@ class TripCommandProcessor:
         from utils.timezone import tz_for_coords
 
         body = svc.format_now_text(
-            result, tz=tz_for_coords(pos.lat, pos.lon), englisch=self._en,
+            result, tz=tz_for_coords(pos.lat, pos.lon), englisch=self._etappe_en,
         )
         # #1405 S4a (AC-12 Ergaenzung): "Regen-Kurzfristpruefung aktuell nicht
         # moeglich" (data_unavailable) ist KEIN Erfolg -- derselbe Befund waehlt
@@ -3141,17 +3052,13 @@ class TripCommandProcessor:
             confirmation_subject=f"[{trip.name}] Nowcast",
             confirmation_body=body,
             trip_name=trip.name,
-            reply_markup={"inline_keyboard": [[{"text": "🔄 Aktualisieren", "callback_data": "now"}]]},
+            reply_markup={"inline_keyboard": [[{"text": self._ml("knopf.aktualisieren"),
+                                                "callback_data": "now"}]]},
         )
 
     def _nowcast_text(self) -> str:
         """#1405 S4a: ehrliche Antwort, wenn der Nowcast nichts geliefert hat."""
-        return self._t(
-            "Nowcast nicht verfügbar — Regen-Kurzfristprüfung aktuell nicht "
-            "möglich. Bitte selbst beobachten.",
-            "Nowcast not available - short-term rain check not possible right "
-            "now. Please watch the sky yourself.",
-        )
+        return self._m("antwort.nowcast.fehlt")
 
     def _nowcast_ausfall(self, trip: Trip, command: str) -> CommandResult:
         """#1405 S4a: Fehlerantwort fuer ``jetzt``/``strecke`` bei Quellenausfall."""
@@ -3198,15 +3105,9 @@ class TripCommandProcessor:
         if resolved is None:
             return CommandResult(  # AC-18: wortgleich zu _show_now
                 success=False, command="strecke",
-                confirmation_subject=self._t(
-                    f"[{trip.name}] Kein heutiger Standort", f"[{trip.name}] No stage today"),
-                confirmation_body=self._t(
-                    "Keine heutige Etappe gefunden. "
-                    "Aktueller Position/Standort unbekannt — "
-                    "bitte Etappenplan prüfen.",
-                    "No stage found for today. Current position unknown - "
-                    "please check the stage plan.",
-                ),
+                confirmation_subject=self._m("antwort.kein_standort.betreff",
+                                             trip_name=trip.name),
+                confirmation_body=self._m("antwort.kein_standort.text"),
                 trip_name=trip.name,
             )
         active, segment_date = resolved
@@ -3214,20 +3115,10 @@ class TripCommandProcessor:
         if not active.distance_measured:
             # AC-17: geprueft VOR jedem Nowcast-Aufruf -- kein Budget wird
             # fuer eine Antwort verbraucht, die ohnehin nicht kommen kann.
-            body = self._t(
-                "Kilometrierung für die heutige Etappe nicht verfügbar — "
-                "keine Streckenangabe möglich."
-                if value is None else
-                "Kilometrierung für die heutige Etappe nicht verfügbar — "
-                "die km-Angabe kann nicht ausgewertet werden.",
-                "No distance data for today's stage - no route info possible."
-                if value is None else
-                "No distance data for today's stage - the km value cannot be used.",
-            )
+            body = self._m("strecke.km_fehlt" if value is None else "strecke.km_fehlt_wert")
             return CommandResult(
                 success=False, command="strecke",
-                confirmation_subject=self._t(
-                    f"[{trip.name}] Kilometrierung fehlt", f"[{trip.name}] No distance data"),
+                confirmation_subject=self._m("strecke.km_fehlt_betreff", trip_name=trip.name),
                 confirmation_body=body,
                 trip_name=trip.name,
             )
@@ -3245,15 +3136,11 @@ class TripCommandProcessor:
             if start_km is None or not (seg_start_km <= start_km <= seg_end_km):
                 return CommandResult(
                     success=False, command="strecke",
-                    confirmation_subject=self._t(
-                        f"[{trip.name}] Ungültige km-Angabe", f"[{trip.name}] Invalid km"),
-                    confirmation_body=self._t(
-                        "Ungültige km-Angabe. Gültiger Bereich für die "
-                        f"aktuelle Etappe: {int(round(seg_start_km))}"
-                        f"–{int(round(seg_end_km))} km.",
-                        f"Invalid km. Valid range for the current stage: "
-                        f"{int(round(seg_start_km))}-{int(round(seg_end_km))} km.",
-                    ),
+                    confirmation_subject=self._m("strecke.ungueltig_betreff",
+                                                 trip_name=trip.name),
+                    confirmation_body=self._m("strecke.ungueltig_text",
+                                              von=int(round(seg_start_km)),
+                                              bis=int(round(seg_end_km))),
                     trip_name=trip.name,
                 )
             points = points_from_km(trip, active, segment_date, start_km)
@@ -3289,8 +3176,7 @@ class TripCommandProcessor:
 
         spanne = _geprueft_spanne(points, ergebnisse)
         geprueft_zeile = (
-            self._t("Geprüft", "Checked")
-            + f": km {int(round(spanne[0]))}-{int(round(spanne[1]))}."
+            self._m("strecke.geprueft", von=int(round(spanne[0])), bis=int(round(spanne[1])))
             if spanne is not None else ""
         )
 
@@ -3305,31 +3191,26 @@ class TripCommandProcessor:
         if keine_daten:
             body = self._nowcast_text()
         elif len(points) > 1 and folgepunkte and all(e is None for e in folgepunkte):
-            body = self._t(
-                "Ausdehnung entlang der Reststrecke konnte nicht ermittelt "
-                "werden — nur der Startpunkt lieferte Daten.",
-                "Rain extent along the route could not be determined - only "
-                "the start point returned data.",
-            )
+            body = self._m("strecke.nur_start")
             if geprueft_zeile:
                 body = f"{body} {geprueft_zeile}"
         else:
             zonen = tuple(derive_rain_zones(points, ergebnisse))
             if not zonen:
-                body = self._t("Kein Regen entlang des geprüften Abschnitts erkannt.",
-                               "No rain found along the checked section.")
+                body = self._m("strecke.kein_regen")
             else:
                 tz = tz_for_coords(points[0].lat, points[0].lon)
                 body = (
-                    _fmt_strecke_email(zonen, tz, now_utc) if channel == "email"
-                    else _fmt_strecke_telegram(zonen, tz, now_utc, en=self._en)
+                    _fmt_strecke_email(zonen, tz, now_utc, en=self._etappe_en)
+                    if channel == "email"
+                    else _fmt_strecke_telegram(zonen, tz, now_utc, en=self._etappe_en)
                 )
             if geprueft_zeile:
                 trenner = "\n" if zonen else " "
                 body = f"{body}{trenner}{geprueft_zeile}"
         return CommandResult(
             success=not keine_daten, command="strecke",
-            confirmation_subject=f"[{trip.name}] Strecke",
+            confirmation_subject=self._ml("strecke.betreff", trip_name=trip.name),
             confirmation_body=body,
             trip_name=trip.name,
         )
@@ -3347,10 +3228,8 @@ class TripCommandProcessor:
 
         return CommandResult(
             success=True, command="abbruch",
-            confirmation_subject=self._t(f"[{trip.name}] Trip beendet", f"[{trip.name}] Trip ended"),
-            confirmation_body=self._t(
-                f"Reports fuer '{trip.name}' deaktiviert. Gute Heimreise!",
-                f"Briefings for '{trip.name}' turned off. Safe trip home!"),
+            confirmation_subject=self._m("antwort.trip_beendet.betreff", trip_name=trip.name),
+            confirmation_body=self._m("antwort.trip_beendet.text", trip_name=trip.name),
             trip_name=trip.name,
         )
 
@@ -3367,11 +3246,8 @@ class TripCommandProcessor:
 
         return CommandResult(
             success=True, command="weiter",
-            confirmation_subject=self._t(
-                f"[{trip.name}] Briefings reaktiviert", f"[{trip.name}] Briefings restarted"),
-            confirmation_body=self._t(
-                f"Reports fuer '{trip.name}' wieder aktiviert. Viel Erfolg auf der Tour!",
-                f"Briefings for '{trip.name}' active again. Enjoy the trip!"),
+            confirmation_subject=self._m("antwort.weiter.betreff", trip_name=trip.name),
+            confirmation_body=self._m("antwort.weiter.text", trip_name=trip.name),
             trip_name=trip.name,
         )
 
@@ -3404,26 +3280,17 @@ class TripCommandProcessor:
             logger.warning("Kommando %s: Sperre fuer Trip %s nicht erhalten", command, trip.id)
             raise _SpeicherFehler(CommandResult(
                 success=False, command=command,
-                confirmation_subject=self._t(
-                    f"[{trip.name}] Bitte erneut senden",
-                    f"[{trip.name}] Please send again"),
-                confirmation_body=self._t(
-                    "Befehl nicht ausgefuehrt: Der Trip wird gerade geaendert. "
-                    "Bitte in einer Minute erneut senden.",
-                    "Command not executed: the trip is being changed right now. "
-                    "Please send it again in a minute."),
+                confirmation_subject=self._m("antwort.gesperrt.betreff", trip_name=trip.name),
+                confirmation_body=self._m("antwort.gesperrt.text"),
                 trip_name=trip.name,
             ))
         except LoaderError as e:
             logger.error("Kommando %s: Trip %s nicht speicherbar: %s", command, trip.id, e)
             raise _SpeicherFehler(CommandResult(
                 success=False, command=command,
-                confirmation_subject=self._t(
-                    f"[{trip.name}] Nicht gespeichert", f"[{trip.name}] Not saved"),
-                confirmation_body=self._t(
-                    "Der Trip konnte nicht gespeichert werden. Bitte spaeter "
-                    "erneut senden.",
-                    "The trip could not be saved. Please send again later."),
+                confirmation_subject=self._m("antwort.nicht_gespeichert.betreff",
+                                             trip_name=trip.name),
+                confirmation_body=self._m("antwort.nicht_gespeichert.text"),
                 trip_name=trip.name,
             ))
 
@@ -3504,7 +3371,7 @@ def _geprueft_spanne(
     return (min(kms), max(kms))
 
 
-def _fmt_strecke_email(zonen: tuple, tz, now_utc: datetime) -> str:
+def _fmt_strecke_email(zonen: tuple, tz, now_utc: datetime, en: bool = False) -> str:
     """Tabellarische Zeile je Zone: km-Spanne, Zeitspanne, Intensitaet,
     Quelle (Issue #2051 S4, E3). `now_utc` ist der Abrufzeitpunkt, gegen den
     die relativen `onset_minutes`/`event_end_minutes` in absolute HH:MM
@@ -3516,7 +3383,7 @@ def _fmt_strecke_email(zonen: tuple, tz, now_utc: datetime) -> str:
     ist ein interner Schluessel, kein Nutzertext (team-lead-Entscheidung: die
     Klartext-Uebersetzung ist Teil von E2, keine Testanpassung darf sie
     umgehen)."""
-    from services.radar_service import RadarNowcastService
+    from services.radar_service import _INTENSITY_EN, RadarNowcastService
 
     svc = RadarNowcastService()
     zeilen = []
@@ -3528,7 +3395,9 @@ def _fmt_strecke_email(zonen: tuple, tz, now_utc: datetime) -> str:
         )
         zeilen.append(
             f"km {int(round(z.km_from))}-{int(round(z.km_to))}: "
-            f"{beginn}-{ende}, {z.intensity_label}, {svc.source_label(z.source)}"
+            f"{beginn}-{ende}, "
+            f"{_INTENSITY_EN.get(z.intensity_label, z.intensity_label) if en else z.intensity_label}, "
+            f"{svc.source_label(z.source)}"
         )
     return "\n".join(zeilen)
 

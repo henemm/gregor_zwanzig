@@ -121,19 +121,12 @@ def render_briefing(lang: str | None = None, *, email_format: str = "compact",
 
 
 def ohne_spaetere_pakete(text: str) -> str:
-    """Entfernt Befehlszeilen (P10), Amtliche-Warnung-Zeilen (P6) und die
-    Wochentags-Kuerzel des Zeitplaners (P9b) -- nichts sonst."""
+    """Entfernt Amtliche-Warnung-Zeilen (P6) und die Wochentags-Kuerzel des
+    Zeitplaners (P9b) -- nichts sonst. Die Befehlszeilen sind seit P10
+    (#2673) englisch und bleiben drin."""
     zeilen = text.split("\n")
     raus: list[str] = []
-    in_befehlen = False
     for z in zeilen:
-        if z.startswith("── ") and z.endswith(" ──"):
-            in_befehlen = True
-            raus.append(z)
-            continue
-        if in_befehlen and z.startswith("  "):
-            continue
-        in_befehlen = False
         if "Amtliche Warnung:" in z:
             continue
         raus.append(re.sub(r"^(Fr|Sa|So|Mo|Di)\s", "", z))

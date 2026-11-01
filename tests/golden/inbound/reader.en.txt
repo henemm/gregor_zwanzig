@@ -1,0 +1,32 @@
+----- telegram_unbekannt -----
+[Unknown command]
+
+That was not a known command.
+Available: TODAY, TOMORROW, NOW, STORMS, ROUTE, RESTDAY, STATUS, PAUSE, SKIP, STOP, RESUME, HELP, CODES, STARTDATE, REPORT
+Weather values in the hourly view: send a code (HELP lists them all).
+----- telegram_unbekannt_nach_name -----
+[Unknown command]
+
+That was not a known command.
+Available: TODAY, TOMORROW, NOW, STORMS, ROUTE, RESTDAY, STATUS, PAUSE, SKIP, STOP, RESUME, HELP, CODES, STARTDATE, REPORT
+Weather values in the hourly view: send a code (HELP lists them all).
+----- telegram_laden -----
+[⏳]
+
+⏳ Loading weather...
+=====
+[[Golden Trip] Timeline today]
+
+📋 Timeline · Today (Thu 29 Oct)
+
+🕐 23:59 · 900 m
+   🌡 12–12 °C  💨 18 km/h  🌧 7.2 mm  ⛈ medium
+----- email_trip_nicht_gefunden -----
+[[Gibtsnicht] Trip not found]
+
+No trip named 'Gibtsnicht' found.
+Please check that the trip name is correct.
+----- telegram_mehrdeutig -----
+[Error]
+
+Ambiguous: Golden Trip (Trip), Golden Vergleich (comparison). Reply with name, e.g. 'Golden Trip pause'.

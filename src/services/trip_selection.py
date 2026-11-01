@@ -34,6 +34,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import TYPE_CHECKING
 
+from i18n import Lang, t
 from services.compare_alert_guard import is_silenced
 from services.trip_day import trip_local_today
 from utils.ascii_fold import fold_ascii
@@ -41,26 +42,25 @@ from utils.ascii_fold import fold_ascii
 if TYPE_CHECKING:
     from app.trip import Trip
 
-KEIN_KANDIDAT_TEXT = "Kein aktiver Trip oder Ortsvergleich gefunden."
+# Issue #2673: Texte aus dem Katalog ``inbound.ziel.*``; die Konstanten bleiben
+# als Bestandsnamen (deutsch bzw. englisch) erhalten.
+KEIN_KANDIDAT_TEXT = t("inbound.ziel.kein_kandidat", "de")
 
 # Issue #2417 AC-4/AC-17: bewusst ANDERER Text als KEIN_KANDIDAT_TEXT — hier
 # existiert etwas (mindestens ein Ortsvergleich), nur adressiert dieser
 # Befehl ausschliesslich Trips. Kanalgleich (kein kanalspezifischer Zusatz).
-KEIN_AKTIVES_ZIEL_TEXT = (
-    "Kein aktiver Trip. Dieser Befehl gilt nur für Trips, nicht für "
-    "Ortsvergleiche."
-)
-
-_LABEL = {"route": "Trip", "vergleich": "Vergleich"}
+KEIN_AKTIVES_ZIEL_TEXT = t("inbound.ziel.kein_aktives_ziel", "de")
 
 # #2417 Kurzform englisch (Abschnitt H): englische Fassungen fuer
 # Premium-SMS (immer) und Telegram im Kurzform-Stil.
-KEIN_KANDIDAT_TEXT_EN = "No active trip or location comparison found."
-KEIN_AKTIVES_ZIEL_TEXT_EN = (
-    "No active trip. This command only works for trips, not for location "
-    "comparisons."
-)
-_LABEL_EN = {"route": "Trip", "vergleich": "comparison"}
+KEIN_KANDIDAT_TEXT_EN = t("inbound.ziel.kein_kandidat", "en")
+KEIN_AKTIVES_ZIEL_TEXT_EN = t("inbound.ziel.kein_aktives_ziel", "en")
+
+
+def _antwortsprache(englisch: bool, channel: str, lang: Lang) -> Lang:
+    """Kurzform (Premium-SMS, Telegram-Kurzstil) antwortet in jeder
+    Kontosprache englisch wie bisher (#2417); sonst die Kontosprache."""
+    return "en" if englisch or channel == "premium_sms" else lang
 
 # Issue #2417 Implementation Details: Befehlsklassen, die der Reader VOR der
 # Zielaufloesung erkennt (interne Reader-Schluessel nach Bare-Keyword-/
@@ -173,16 +173,16 @@ def _gsm7_sicher(text: str) -> str:
 
 
 def _rueckfrage_text(kandidaten: list[tuple[str, str]], channel: str,
-                     en: bool = False) -> str:
+                     lang: Lang = "de") -> str:
     """Rueckfrage-Text bei Mehrdeutigkeit (Issue #2282 Abschnitt 1). Fuer
     ``channel == "premium_sms"`` werden die NAMEN zuerst GSM-7-sicher
     gefaltet (F003) und dann gekuerzt (Boden 4 Zeichen), nie die Anzahl der
     Kandidaten oder die Woerter Trip/Vergleich (AC-15). Telegram bleibt
     unveraendert (kein 160-Zeichen-Limit, volle Namen)."""
     if channel != "premium_sms":
-        return _rueckfrage_mit_laenge(kandidaten, None, en)
+        return _rueckfrage_mit_laenge(kandidaten, None, lang)
 
-    en = True  # Premium-SMS ist immer englisch (wie resolve_active_target)
+    en: Lang = "en"  # Premium-SMS ist immer englisch (wie resolve_active_target)
     sicher = [(k, _gsm7_sicher(n)) for k, n in kandidaten]
     laengen = [len(n) for _, n in sicher if n]
     max_laenge = max(laengen, default=4)
@@ -206,21 +206,19 @@ def _namen_eindeutig(kandidaten: list[tuple[str, str]], laenge: int) -> bool:
 
 
 def _rueckfrage_mit_laenge(kandidaten: list[tuple[str, str]], laenge: int | None,
-                           en: bool = False) -> str:
+                           lang: Lang = "de") -> str:
     def _kuerzen(n: str) -> str:
         return n if laenge is None else n[:laenge]
 
-    label = _LABEL_EN if en else _LABEL
-    liste = ", ".join(f"{_kuerzen(n)} ({label[k]})" for k, n in kandidaten)
+    liste = ", ".join(
+        f"{_kuerzen(n)} ({t(f'inbound.ziel.label_{k}', lang)})" for k, n in kandidaten)
     beispiel = _kuerzen(kandidaten[0][1]) if kandidaten else ""
-    if en:
-        return f"Ambiguous: {liste}. Reply with name, e.g. '{beispiel} pause'."
-    return f"Mehrdeutig: {liste}. Mit Namen antworten, z.B. '{beispiel} pause'."
+    return t("inbound.ziel.rueckfrage", lang, liste=liste, beispiel=beispiel)
 
 
 def resolve_active_target(
     trips: "list[Trip]", presets: list[dict], now_utc: datetime, *, channel: str,
-    englisch: bool = False, pausierte_ausblenden: bool = False,
+    englisch: bool = False, lang: Lang = "de", pausierte_ausblenden: bool = False,
 ) -> ZielErgebnis:
     """Kind-neutrale Auswahl UND alle drei Ergebnistexte in einer Funktion
     (Issue #2282 Abschnitt 1). Laedt selbst nichts — ``trips``/``presets``
@@ -233,7 +231,7 @@ def resolve_active_target(
       0 Trip, >=2 Vergleiche      -> mehrdeutig
       0 Trip, 0 Vergleiche        -> keiner
     """
-    en = englisch or channel == "premium_sms"
+    sprache = _antwortsprache(englisch, channel, lang)
     trip = pick_active_trip(trips, now_utc)
     heute = now_utc.date()
     vergleiche = [p for p in presets if _vergleich_ist_aktiv(p, heute)]
@@ -250,18 +248,18 @@ def resolve_active_target(
         return ZielErgebnis(kind="vergleich", target=vergleiche[0], text=None)
     if not trip and not vergleiche:
         return ZielErgebnis(kind=None, target=None,
-                            text=KEIN_KANDIDAT_TEXT_EN if en else KEIN_KANDIDAT_TEXT)
+                            text=t("inbound.ziel.kein_kandidat", sprache))
 
     kandidaten: list[tuple[str, str]] = []
     if trip:
         kandidaten.append(("route", trip.name))
     kandidaten += [("vergleich", p.get("name", "")) for p in vergleiche]
-    return ZielErgebnis(kind=None, target=None, text=_rueckfrage_text(kandidaten, channel, en))
+    return ZielErgebnis(kind=None, target=None, text=_rueckfrage_text(kandidaten, channel, sprache))
 
 
 def resolve_trip_only_target(
     trips: "list[Trip]", presets: list[dict], now_utc: datetime,
-    *, channel: str = "", englisch: bool = False,
+    *, channel: str = "", englisch: bool = False, lang: Lang = "de",
 ) -> ZielErgebnis:
     """Zielaufloesung fuer Befehle, die NUR einen Trip adressieren koennen
     (Issue #2417 Implementation Details Punkt 4: `_ROUTE_ONLY`, Metrik-
@@ -272,23 +270,20 @@ def resolve_trip_only_target(
       kein Trip, >=1 aktiver Vergleich    -> KEIN_AKTIVES_ZIEL_TEXT (AC-17)
       kein Trip, kein Vergleich           -> KEIN_KANDIDAT_TEXT (unveraendert)
     """
-    en = englisch or channel == "premium_sms"
+    sprache = _antwortsprache(englisch, channel, lang)
     trip = pick_active_trip(trips, now_utc)
     if trip is not None:
         return ZielErgebnis(kind="route", target=trip, text=None)
 
     heute = now_utc.date()
     vergleiche = [p for p in presets if _vergleich_ist_aktiv(p, heute)]
-    if vergleiche:
-        return ZielErgebnis(kind=None, target=None,
-                            text=KEIN_AKTIVES_ZIEL_TEXT_EN if en else KEIN_AKTIVES_ZIEL_TEXT)
-    return ZielErgebnis(kind=None, target=None,
-                        text=KEIN_KANDIDAT_TEXT_EN if en else KEIN_KANDIDAT_TEXT)
+    schluessel = "kein_aktives_ziel" if vergleiche else "kein_kandidat"
+    return ZielErgebnis(kind=None, target=None, text=t(f"inbound.ziel.{schluessel}", sprache))
 
 
 def resolve_command_target(
     key: str | None, trips: "list[Trip]", presets: list[dict], now_utc: datetime,
-    *, channel: str, englisch: bool = False,
+    *, channel: str, englisch: bool = False, lang: Lang = "de",
 ) -> ZielErgebnis:
     """Geteilte Klassifizierungs-/Auflösungsfunktion fuer Telegram- UND
     Premium-SMS-Reader (Issue #2417 AC-18): ``key`` ist der bereits
@@ -312,8 +307,8 @@ def resolve_command_target(
     """
     if key in _BEIDE_KINDS_ONLY_SCHLUESSEL:
         return resolve_active_target(
-            trips, presets, now_utc, channel=channel, englisch=englisch,
+            trips, presets, now_utc, channel=channel, englisch=englisch, lang=lang,
             pausierte_ausblenden=key in _PAUSIERTE_AUSBLENDEN_SCHLUESSEL,
         )
     return resolve_trip_only_target(trips, presets, now_utc, channel=channel,
-                                    englisch=englisch)
+                                    englisch=englisch, lang=lang)

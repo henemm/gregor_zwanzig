@@ -143,13 +143,13 @@ HELD BACK — as you set it up
 
 
 ── Reply commands ──
-  HEUTE                – Vergleich für heute jetzt senden
-  MORGEN               – Vergleich für morgen jetzt senden
-  PAUSE                – Briefings für Dauer unterbrechen
-  WEITER               – Briefings reaktivieren
-  HILFE                – Diese Hilfe anzeigen (auch HELP)
-  KUERZEL              – Kürzel-Bedeutungen anzeigen (auch CODES)
-  REPORT               – Vergleich jetzt an alle Kanäle senden
+  TODAY                – Send the comparison for today now
+  TOMORROW             – Send the comparison for tomorrow now
+  PAUSE                – Pause briefings for a while
+  RESUME               – Turn briefings back on
+  HELP                 – Show this help
+  CODES                – Show what the codes mean
+  REPORT               – Send the comparison to all channels now
 
 ---
 Gregor Zwanzig

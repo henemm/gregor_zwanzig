@@ -65,15 +65,13 @@ def _abschnitte(text: str) -> dict[str, str]:
 
 def _sprachpflichtig(text: str) -> str:
     """Alles ausser SMS und Telegram-Kurzform (PO-Korrektur 2026-10-31: in
-    jeder Sprache wie bisher) und dem Antwort-Kommando-Block (P10, #2673)."""
-    from i18n import t
-
+    jeder Sprache wie bisher). Der Antwort-Kommando-Block zaehlt seit P10
+    (#2673) mit."""
     behalten = []
     for name, inhalt in _abschnitte(text).items():
         if name.endswith(".sms") or name == "vergleich_kurzform.telegram":
             continue
-        behalten.append(inhalt.split(f"── {t('mail.befehle.titel', 'en')} ──")[0]
-                        .split(f"── {t('mail.befehle.titel', 'de')} ──")[0])
+        behalten.append(inhalt)
     return "\n".join(behalten)
 
 

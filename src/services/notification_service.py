@@ -2258,18 +2258,20 @@ class NotificationService:
     # ------------------------------------------------------------------
 
     def send_command_reply_email(
-        self, result: CommandResult, settings: Settings,
+        self, result: CommandResult, settings: Settings, *, lang: str = "de",
     ) -> bool:
         """Sendet eine Command-Bestätigung per E-Mail.
 
         Issue #1405 S4b: ``True`` = zugestellt, ``False`` = Versand gescheitert
-        (der Posteingang-Lauf zaehlt das als Fehler).
+        (der Posteingang-Lauf zaehlt das als Fehler). ``lang`` (#2673): Sprache
+        des Inhalts fuer den Kopf ``X-GZ-Lang``.
         """
         try:
             EmailOutput(settings).send(
                 subject=result.confirmation_subject,
                 body=result.confirmation_body,
                 html=False,
+                lang=lang,
             )
             logger.info(f"Confirmation sent: {result.confirmation_subject}")
         except Exception as e:

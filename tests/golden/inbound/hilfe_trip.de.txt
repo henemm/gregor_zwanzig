@@ -1,0 +1,51 @@
+[Hilfe]
+
+Verfügbare Befehle:
+
+  HEUTE                 – Wetter der heutigen Etappe
+  MORGEN                – Wetter der morgigen Etappe
+  JETZT                 – Nowcast Regen/Gewitter nächste ~2h (auch NOW)
+  GEWITTER              – Gewittergefahr heutige Etappe
+  STRECKE [km]          – Regen-Ereignisflächen entlang der Reststrecke
+  RUHETAG [N]           – Etappen um N Tage verschieben (Standard: 1)
+  STATUS                – Heute und kommende Etappen
+  PAUSE [2d / 12h]      – Briefings für Dauer unterbrechen
+  SKIP                  – Nächstes Briefing überspringen
+  STOP                  – Briefings dauerhaft deaktivieren (auch ABBRUCH)
+  WEITER                – Briefings reaktivieren
+  HILFE                 – Diese Hilfe anzeigen (auch HELP)
+  KUERZEL               – Kürzel-Bedeutungen anzeigen (auch CODES)
+  STARTDATUM JJJJ-MM-TT – Startdatum des Trips setzen, alle Etappen verschieben
+  REPORT [morning / evening] – Briefing jetzt senden (Standard: morning)
+
+Wetter-Größen (Kürzel senden → Stundenverlauf):
+
+  Temp / T         – Temperatur (°C)
+  Night            – Nacht-Tiefsttemperatur (°C)
+  DayMin / L       – Tages-Tiefsttemperatur (Gehzeit) (°C)
+  DayMax           – Tages-Höchsttemperatur (Gehzeit) (°C)
+  Feels / TF       – Gefühlte Temperatur (°C)
+  NightF / FN      – Gefühlte Nacht-Tiefsttemperatur (°C)
+  DayMinF / FL     – Gefühlte Tages-Tiefsttemperatur (Gehzeit) (°C)
+  DayMaxF / FD     – Gefühlte Tages-Höchsttemperatur (Gehzeit) (°C)
+  Humid / HU       – Luftfeuchtigkeit (%)
+  Dew / DP         – Taupunkt (°C)
+  Wind / W         – Wind (km/h)
+  Gust / G         – Böen (km/h)
+  WDir / WD        – Windrichtung (°)
+  Rain / R         – Niederschlag (mm)
+  Rain% / PR       – Regenwahrscheinlichkeit (%)
+  Thdr / TH        – Gewitter
+  SnowL / SL       – Schneefallgrenze (m)
+  PType / PT       – Niederschlagsart
+  Cloud / CT       – Bewölkung (%)
+  CldLow / CL      – Tiefe Wolken (%)
+  CldMid / CM      – Mittelhohe Wolken (%)
+  CldHi / CH       – Hohe Wolken (%)
+  Visib / VS       – Sichtweite (km)
+  Sun / SU         – Sonnenstunden (h)
+  UV               – UV-Index
+  Press / HP       – Luftdruck (hPa)
+  0°Line / FZ      – Nullgradgrenze (m)
+  SnowH / SD       – Schneehöhe (cm)
+  NewSn / NS       – Neuschnee (cm)

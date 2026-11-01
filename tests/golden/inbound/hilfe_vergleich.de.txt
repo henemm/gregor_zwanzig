@@ -1,0 +1,11 @@
+[Hilfe]
+
+Verfügbare Befehle:
+
+  HEUTE                 – Vergleich für heute jetzt senden
+  MORGEN                – Vergleich für morgen jetzt senden
+  PAUSE                 – Briefings für Dauer unterbrechen
+  WEITER                – Briefings reaktivieren
+  HILFE                 – Diese Hilfe anzeigen (auch HELP)
+  KUERZEL               – Kürzel-Bedeutungen anzeigen (auch CODES)
+  REPORT                – Vergleich jetzt an alle Kanäle senden

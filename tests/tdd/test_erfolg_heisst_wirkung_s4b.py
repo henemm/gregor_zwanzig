@@ -334,7 +334,7 @@ def test_ac3_fehler_im_inneren_ablauf_zaehlt_obwohl_gelesen(monkeypatch, user_id
     regulaer = lege_lage_an(user_ids, "L2")
 
     class _WerfenderVersand(reader_mod.NotificationService):
-        def send_command_reply_email(self, result, settings):
+        def send_command_reply_email(self, result, settings, lang="de"):
             if (settings.mail_to or "").lower() == kaputt.mail_to.lower():
                 raise RuntimeError("Antwortversand gestoert (tdd-1405-s4b AC-3)")
             return super().send_command_reply_email(result, settings)

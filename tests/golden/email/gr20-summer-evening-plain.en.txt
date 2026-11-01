@@ -34,21 +34,21 @@ GR20 E3: 18–20°C, feels 12–13°C, moderate rain max 11:00, moderate wind 20
 
 
 ── Reply commands ──
-  HEUTE                – Wetter der heutigen Etappe
-  MORGEN               – Wetter der morgigen Etappe
-  JETZT                – Nowcast Regen/Gewitter nächste ~2h (auch NOW)
-  GEWITTER             – Gewittergefahr heutige Etappe
-  STRECKE [km]         – Regen-Ereignisflächen entlang der Reststrecke
-  RUHETAG [N]          – Etappen um N Tage verschieben (Standard: 1)
-  STATUS               – Heute und kommende Etappen
-  PAUSE [2d / 12h]     – Briefings für Dauer unterbrechen
-  SKIP                 – Nächstes Briefing überspringen
-  STOP                 – Briefings dauerhaft deaktivieren (auch ABBRUCH)
-  WEITER               – Briefings reaktivieren
-  HILFE                – Diese Hilfe anzeigen (auch HELP)
-  KUERZEL              – Kürzel-Bedeutungen anzeigen (auch CODES)
-  STARTDATUM JJJJ-MM-TT – Startdatum des Trips setzen, alle Etappen verschieben
-  REPORT [morning / evening] – Briefing jetzt senden (Standard: morning)
+  TODAY                – Weather for today's stage
+  TOMORROW             – Weather for tomorrow's stage
+  NOW                  – Rain and thunderstorm nowcast for the next ~2h
+  STORMS               – Thunderstorm risk for today's stage
+  ROUTE [km]           – Rain areas along the rest of the route
+  RESTDAY [N]          – Shift stages by N days (default: 1)
+  STATUS               – Today and upcoming stages
+  PAUSE [2d / 12h]     – Pause briefings for a while
+  SKIP                 – Skip the next briefing
+  STOP                 – Turn briefings off for good (also CANCEL)
+  RESUME               – Turn briefings back on
+  HELP                 – Show this help
+  CODES                – Show what the codes mean
+  STARTDATE YYYY-MM-DD – Set the trip start date and shift all stages
+  REPORT [morning / evening] – Send the briefing now (default: morning)
 
 Units: Temp, TmpMin, Feels °C · Wind, Gust km/h · Rain mm · SnowL m · Cloud % · Sun h
 Columns: Temp = Temperature · TmpMin = Low temperature alert · Feels = Feels-like temperature · Gust = Wind gusts · Rain = Precipitation · Thdr = Thunderstorm · SnowL = Snow line · Cloud = Cloud cover · Sun = Sunshine hours

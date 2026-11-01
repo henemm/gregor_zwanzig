@@ -31,8 +31,8 @@ KATALOG = Path(__file__).resolve().parents[1] / "src" / "i18n" / "messages"
 _EIGENNAMEN = (*ORTE.values(), "Météo-France", "WSL-Institut für Schnee- und Lawinenforschung SLF",
                "Innsbruck-Land", "Golden-Vergleich", "Zeitueberschreitung beim Abruf",
                "Ort Brenner nicht erreichbar")
-# Fremde Pakete im Ortsvergleich-Fall: Antwort-Kommandos (P10, #2673).
-_FREMDE_ZEILEN = ("Vergleich für", "Briefings für", "Kürzel-Bedeutungen", "alle Kanäle senden")
+# Antwort-Kommandos: seit P10 (#2673) in Nutzersprache, keine Ausnahme mehr.
+_FREMDE_ZEILEN: tuple[str, ...] = ()
 
 
 def sichtbar(html: str) -> list[str]:
