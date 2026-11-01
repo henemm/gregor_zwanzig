@@ -93,6 +93,10 @@ const NB = (local_time: string, slot: string) => ({
 const html = (komp: unknown, data: Record<string, unknown>) =>
 	ohneKommentare(render(komp as never, { props: { data } as never }).body);
 
+const SEITEN = { cockpit: Cockpit, trips: TripListe, compare: CompareListe, locations: OrteListe, archiv: ArchivSeite };
+/** Rendert eine der Seiten dieses Pakets mit den Daten eines Loaders. */
+export const seiteRendern = (seite: keyof typeof SEITEN, data: Record<string, unknown>) => html(SEITEN[seite], data);
+
 /** Die Faelle der Golden-Fixture (Spec Implementation Details 9) plus Planung und Orte. */
 export const FAELLE: Record<string, () => string> = {
 	cockpit_trip: () =>
