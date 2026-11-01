@@ -284,8 +284,7 @@ Fehlerantworten der Go-API, die über `handler.WriteError`/`WriteErrorWith` lauf
 | `/api/trips/{id}/weather-config` | GET, PUT |
 | `/api/webhooks/mail/{secret}` | POST | — sitzungsfrei, Bearer (Stalwart), #2439
 | `/api/webhooks/sms/{secret}` | POST | — sitzungsfrei, HMAC-SHA256-Signatur (seven.io), #2439
-| `/api/webhooks/telegram/inbound` | POST | — sitzungsfrei, registrierte URL; einziger Auth-Träger Header `X-Telegram-Bot-Api-Secret-Token`, #1814
-| `/api/webhooks/telegram/{secret}` | POST | — Übergang (gleicher Handler, Pfad wird nicht gelesen); entfällt nach Neuregistrierung, #1814
+| `/api/webhooks/telegram/inbound` | POST | — sitzungsfrei, registrierte URL; einziger Auth-Träger Header `X-Telegram-Bot-Api-Secret-Token`, #1814 (frühere Route mit Secret im Pfad entfernt, #1814 Scheibe 2)
 
 (Stand 2026-10-08: 101 Pfade, 123 Routen-Registrierungen; #2439 fügt die zwei Webhook-Pfade
 `/api/webhooks/sms/{secret}` und `/api/webhooks/mail/{secret}` hinzu, nicht neu nachgezählt; nachgezählt per `chi.Walk` und
