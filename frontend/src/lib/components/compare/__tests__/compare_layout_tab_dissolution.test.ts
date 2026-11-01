@@ -77,6 +77,8 @@ const doneTabs = (p: CompareNewProgress) => tailDone(COMPARE_TAIL, tailOf(p));
 
 const here = dirname(fileURLToPath(import.meta.url));
 const HUB = join(here, '..', 'CompareTabs.svelte');
+const HUB_UEBERSICHT = join(here, '..', '..', 'shared', 'hub-uebersicht', 'HubUebersicht.svelte');
+const HUB_MODELL = join(here, '..', '..', 'shared', 'hub-uebersicht', 'hubUebersichtModell.ts');
 const NEW_EDITOR = join(here, '..', '..', 'compare-new', 'CompareNewEditor.svelte');
 const METRICS_TAB = join(here, '..', '..', 'shared', 'WeatherMetricsTab.svelte');
 
@@ -308,6 +310,16 @@ describe('Stundenverlauf-Steuerung: neue Heimat + Speicherweg', () => {
 // ── AC-4: keine Orts-Kappungs-Behauptung mehr im Hub ────────────────────────
 
 describe('AC-4: keine Behauptung einer Orts-Kappung je Kanal', () => {
+	// Issue #2682: die Übersicht steht im geteilten Baustein — die Negativ-Zusicherung gilt
+	// fuer CompareTabs UND HubUebersicht samt Modell-Texten (sonst vakuum durch den Umzug).
+	test('die Attrappen-Texte des Layout-Reiters stehen nicht in der geteilten Übersicht', () => {
+		const texts = [...renderedTexts(ast(HUB_UEBERSICHT)), readFileSync(HUB_MODELL, 'utf-8')];
+		for (const pattern of [/Telegram\s*·\s*max\s*\d+/i, /kappt\s+je\s+Kanal/i, /Spalten\s+pro\s+Kanal/i, /Übersicht\s+pro\s+Kanal/i]) {
+			const hit = texts.find((t) => pattern.test(t));
+			assert.equal(hit === undefined, true, `HubUebersicht/Modell zeigt eine Orts-Kappung je Kanal (${pattern}).`);
+		}
+	});
+
 	test('die Attrappen-Texte des Layout-Reiters sind aus dem Hub verschwunden', () => {
 		const texts = renderedTexts(ast(HUB));
 		const forbidden = [

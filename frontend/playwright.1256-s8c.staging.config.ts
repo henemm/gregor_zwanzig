@@ -23,7 +23,9 @@ export default defineConfig({
 		{ name: 'setup', testMatch: /feat-1256-s8c\.staging\.setup\.ts/ },
 		{
 			name: 'chromium',
-			testMatch: [/compare-hub-fidelity-s8c\.spec\.ts/],
+			// #2682: Versand-Historie/„Zuletzt raus" der geteilten Übersicht (VH-1..VH-4).
+			// Nur /e2e-verify gegen Staging — VH-3 versendet echt, gehoert NICHT in ci_e2e_specs.txt.
+			testMatch: [/compare-hub-fidelity-s8c\.spec\.ts/, /hub-uebersicht-versand-historie\.spec\.ts/],
 			dependencies: ['setup'],
 			use: { storageState: 'playwright/.auth/staging-1256-s8c.json' }
 		}

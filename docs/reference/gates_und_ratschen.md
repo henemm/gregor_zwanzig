@@ -277,15 +277,14 @@ setzt die Trip/Ortsvergleich-Teilung für E2E-Specs durch, die die Pendant-Sperr
   `ALTLAST_MAX`. Fällt eine Spec weg (z. B. Löschscheibe #2243), muss ihr Eintrag im selben PR raus.
 - **ALTLAST leer (S4, 2026-10-30):** `ALTLAST = frozenset()`, `ALTLAST_MAX = 0`. Acht Altdateien sind
   gelöscht (Zusicherungen in `hub-anlegen-ablauf`, `hub-liste-seitenrahmen` und den erweiterten
-  `hub-*`-Specs), sechs tragen einen `gz-eigenstaendig:`-Kopf (`compare-new-vorlage`,
+  `hub-*`-Specs), fünf tragen einen `gz-eigenstaendig:`-Kopf (`compare-new-vorlage`,
   `issue-1080-compare-new-url`, `compare-layout-tab-dissolution`, `compare-flow-navigation`,
-  `compare-editor-fidelity-s8d`, `compare-hub-fidelity-s8c`). Jede neue Compare-only-Spec ist ab jetzt
+  `compare-editor-fidelity-s8d`; `compare-hub-fidelity-s8c` trug ihn als sechste bis #2682). Jede neue Compare-only-Spec ist ab jetzt
   sofort rot: entweder `HUB_KINDS`-Schleife oder ein Kopf, dessen Begründung **wahr** ist und das
   Trip-Pendant nennt (ein Kopf ist kein Freibrief; er wird bei jeder Änderung der Datei mitgeprüft).
-- **Dokumentierte Vergleichs-Eigenheit außerhalb des CLAUDE.md-Katalogs:** die Übersicht des
-  Vergleichs-Hubs (Summary-Karten, mobiler Chevron-Stack, Status-Kurzform, Versand-Karte,
-  `CompareTabs.svelte`) hat keinen Gegenpart im Trip-Hub (`trip-detail/HubOverview.svelte`). Ihre Fälle
-  bleiben mit Kopf in `compare-hub-fidelity-s8c`; das Angleichen ist Produktarbeit, Nebenbefund #1199.
+- **Hub-Übersicht geteilt (#2682):** die Übersicht beider Hubs ist EIN Baustein
+  (`frontend/src/lib/components/shared/hub-uebersicht/`, `context="route"|"vergleich"`);
+  `compare-hub-fidelity-s8c` trägt keinen Kopf mehr und prüft per `HUB_KINDS`-Schleife beide Arten.
 
 Neue Paritäts-Specs nutzen die dünnen Helfer `HubKind`/`HUB_KINDS`/`seedHub`/`openHub`/`hubApiPath`
 (`frontend/e2e/helpers.ts`); Selektor-Unterschiede stehen als `HUB_SEL[kind]` im Spec, nicht im Helfer.
