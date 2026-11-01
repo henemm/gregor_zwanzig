@@ -28,6 +28,7 @@
 	} from '$lib/components/compare/subscriptionHelpers.js';
 	import { subscriptionActions, subscriptionLifecycle } from '$lib/components/shared/subscriptionActions.js';
 	import { setPaused, deleteSubscription, sendSubscription } from '$lib/components/shared/subscriptionExec.js';
+	import { t, tr, type MessageKey } from '$lib/i18n/index.js';
 
 	let { data } = $props();
 	let presets: ComparePreset[] = $state(data.presets ?? []);
@@ -43,10 +44,11 @@
 	// Mobiles Aktionsblatt (Issue #2278 AC-2/AC-14: geteilter Baustein wie beim Trip)
 	let actionPreset: ComparePreset | null = $state(null);
 
-	const STATUS_LABEL: Record<CompareStatus, string> = {
-		active: 'aktiv',
-		paused: 'pausiert',
-		draft: 'draft'
+	// #2652 (i18n F3): Statuswoerter aus dem Katalog (listen.status.*, wie die Trip-Liste).
+	const STATUS_KEY: Record<CompareStatus, MessageKey> = {
+		active: 'listen.status.aktiv',
+		paused: 'listen.status.pausiert',
+		draft: 'listen.status.draft'
 	};
 	function compareDot(status: CompareStatus): string {
 		if (status === 'active') return 'var(--g-good)';
@@ -54,18 +56,18 @@
 		return 'var(--g-ink-4)';
 	}
 
-	const compareColumns = [
+	const compareColumns = $derived([
 		{
 			key: 'name',
-			header: 'Name',
+			header: $t('listen.spalte.name'),
 			width: '1.5fr',
 			render: (row: unknown) => {
 				const p = row as ComparePreset;
 				const status = deriveStatusFromPreset(p);
 				return {
 					nameCell: {
-						name: p.name || '(ohne Namen)',
-						statusLabel: STATUS_LABEL[status],
+						name: p.name || $t('listen.vergleiche.ohne_namen'),
+						statusLabel: $t(STATUS_KEY[status]),
 						dotColor: compareDot(status),
 						statusTestid: 'compare-status-pill'
 					}
@@ -74,42 +76,42 @@
 		},
 		{
 			key: 'orte',
-			header: 'Orte',
+			header: $t('listen.spalte.orte'),
 			width: '0.7fr',
 			mono: true,
 			render: (row: unknown) => presetLocationsLabel(row as ComparePreset)
 		},
 		{
 			key: 'profil',
-			header: 'Profil',
+			header: $t('listen.spalte.profil'),
 			width: '0.9fr',
 			render: (row: unknown) => presetProfileLabel((row as ComparePreset).profil) || '—'
 		},
 		{
 			key: 'kanaele',
-			header: 'Kanäle',
+			header: $t('listen.spalte.kanaele'),
 			width: '1fr',
 			render: (row: unknown) => ({ pills: presetChannels(row as ComparePreset) })
 		},
 		{
 			key: 'zeitplan',
-			header: 'Zeitplan',
+			header: $t('listen.spalte.zeitplan'),
 			width: '1.2fr',
 			render: (row: unknown) => {
 				const p = row as ComparePreset;
 				if (deriveStatusFromPreset(p) === 'draft') {
-					return { lines: ['Setup unvollständig', ''] };
+					return { lines: [$t('bausteine.abo.setup_unvollstaendig'), ''] };
 				}
 				const rel = relativeLastSent(p.letzter_versand);
-				return { lines: [presetTileScheduleLabel(p), rel ? `zuletzt ${rel}` : ''] };
+				return { lines: [presetTileScheduleLabel(p), rel ? $t('bausteine.abo.zuletzt', { zeit: rel }) : ''] };
 			}
 		}
-	];
+	]);
 
 	function compareRowPrimary(row: unknown) {
 		const p = row as ComparePreset;
 		return deriveStatusFromPreset(p) === 'active'
-			? { label: 'Briefing senden', onClick: () => (sendTarget = p) }
+			? { label: tr('listen.aktion.briefing_senden'), onClick: () => (sendTarget = p) }
 			: null;
 	}
 
@@ -138,7 +140,7 @@
 				presets = presets.map((p) => (p.id === preset.id ? updated : p));
 			}
 		} catch {
-			error = 'Status-Änderung fehlgeschlagen. Bitte versuche es erneut.';
+			error = tr('listen.meldung.status_fehlgeschlagen');
 		}
 	}
 
@@ -151,7 +153,7 @@
 		sendInfo = null;
 		// Issue #2124: geteilter Laufzustand (compare:<id>) + Klassifikation.
 		const o = await sendSubscription('vergleich', target.id);
-		if (o.kind === 'ok') sendInfo = 'Briefing wurde versendet.';
+		if (o.kind === 'ok') sendInfo = tr('listen.meldung.versendet');
 		else error = o.message;
 	}
 
@@ -163,7 +165,7 @@
 			await deleteSubscription('vergleich', target.id);
 			presets = presets.filter((p) => p.id !== target.id);
 		} catch {
-			error = 'Löschen fehlgeschlagen. Bitte versuche es erneut.';
+			error = tr('listen.meldung.loeschen_fehlgeschlagen');
 		}
 		deleteTarget = null;
 	}
@@ -203,7 +205,7 @@
 </script>
 
 {#snippet neuerVergleichMobil()}
-	<Btn href="/compare/new" variant="ghost" size="sm" data-testid="compare-list-new-mobile">+ Neuer Vergleich</Btn>
+	<Btn href="/compare/new" variant="ghost" size="sm" data-testid="compare-list-new-mobile">{$t('onboarding.willkommen.neuer_vergleich')}</Btn>
 {/snippet}
 
 <div style="background: var(--g-paper)">
@@ -212,16 +214,13 @@
 		<div class="hidden desktop:block" style="padding: 32px 40px 60px">
 			<div style="display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 28px">
 				<div>
-					<Eyebrow>Workspace · Orts-Vergleiche</Eyebrow>
-					<h1 style="font-size: 32px; font-weight: 600; letter-spacing: -0.025em; margin-top: 4px">Orts-Vergleiche</h1>
+					<Eyebrow>{$t('listen.vergleiche.eyebrow')}</Eyebrow>
+					<h1 style="font-size: 32px; font-weight: 600; letter-spacing: -0.025em; margin-top: 4px">{$t('listen.vergleiche.titel')}</h1>
 					<div style="font-size: 14px; color: var(--g-ink-3); margin-top: 6px; max-width: 620px">
-						Stehende Monitore: dieselben Orte im Blick. Briefings wie beim Trip —
-						Morgen-Briefing für heute, Abend-Briefing für morgen, zur gewählten
-						Uhrzeit. Werte nebeneinander, ohne Ranking. Einmal eingerichtet, läuft
-						jeder Vergleich, bis du ihn stoppst.
+						{$t('listen.vergleiche.intro')}
 					</div>
 				</div>
-				<Btn variant="primary" href="/compare/new">+ Neuer Vergleich</Btn>
+				<Btn variant="primary" href="/compare/new">{$t('onboarding.willkommen.neuer_vergleich')}</Btn>
 			</div>
 
 			<!-- Suche — Desktop-only (Issue #582; Issue #1256 S8d AC-3 entfernt sie mobil) -->
@@ -233,16 +232,16 @@
 				<input
 					type="text"
 					bind:value={searchQuery}
-					placeholder="Suchen…"
+					placeholder={$t('listen.suche.platzhalter')}
 					style="width: 100%; padding: 9px 14px 9px 34px; border: 1px solid var(--g-rule); border-radius: var(--g-r-pill); background: var(--g-card); font-size: 13px; font-family: var(--g-font-sans); color: var(--g-ink); outline: none; box-sizing: border-box"
 				/>
 			</div>
 
 			<!-- Stats-Zeile — Stat-Molecule (Issue #582) -->
 			<div style="display: flex; gap: 24px; margin-bottom: 22px; padding-bottom: 16px; border-bottom: 1px solid var(--g-rule-soft)">
-				<Stat label="Aktiv"    value={counts.active} layout="inline" tone="accent" mono/>
-				<Stat label="Pausiert" value={counts.paused} layout="inline" mono/>
-				<Stat label="Drafts"   value={counts.draft}  layout="inline" mono/>
+				<Stat label={$t('listen.stat.aktiv')} value={counts.active} layout="inline" tone="accent" mono/>
+				<Stat label={$t('listen.stat.pausiert')} value={counts.paused} layout="inline" mono/>
+				<Stat label={$t('listen.stat.drafts')} value={counts.draft} layout="inline" mono/>
 			</div>
 
 			<!-- Desktop-Übersicht über das geteilte ListTable-Organism (Issue #1277) -->
@@ -266,15 +265,15 @@
 				rowPrimary={compareRowPrimary}
 				onAction={onCompareAction}
 				emptyText={searchQuery
-					? `Keine Vergleiche für »${searchQuery}« gefunden.`
-					: 'Noch keine Vergleiche angelegt.'}
+					? $t('listen.leer.vergleich_suche', { suche: searchQuery })
+					: $t('listen.leer.vergleich')}
 				rowTestid={(row) => `compare-tile-${(row as ComparePreset).id}`}
 				menuTestid={() => 'compare-row-kebab'}
 			/>
 
 			<!-- Footer-Zähler (Issue #582) -->
 			<div style="margin-top: 16px; font-size: 11px; color: var(--g-ink-4); font-family: var(--g-font-mono); letter-spacing: 0.06em">
-				{filteredPresets.length} von {presets.length} Vergleichen
+				{$t('listen.zaehler.vergleiche', { gefiltert: filteredPresets.length, gesamt: presets.length })}
 			</div>
 		</div>
 
@@ -282,24 +281,23 @@
 		     hebt das main-px-4 (S8-Falle Doppel-Padding) auf, bevor die eigene
 		     12/16/24-Polsterung greift — Netto-Abstand bleibt 16px. -->
 		<div class="desktop:hidden -mx-4" style="padding: 12px 16px 24px">
-			<PageHeader eyebrow="Workspace · {presets.length}" title="Orts-Vergleiche" right={neuerVergleichMobil} compact />
+			<PageHeader eyebrow={$t('listen.workspace_anzahl', { anzahl: presets.length })} title={$t('listen.vergleiche.titel')} right={neuerVergleichMobil} compact />
 			<div style="font-size: 13px; color: var(--g-ink-3); line-height: 1.5; margin: 14px 0">
-				Stehende Monitore: dieselben Orte im Blick. Briefings wie beim Trip —
-				morgens für heute, abends für morgen. Ohne Ranking — läuft, bis du stoppst.
+				{$t('listen.vergleiche.intro_mobil')}
 			</div>
 
 			<!-- Stats (Stat-Molecule, inline, kompakt — JSX-M Z.42-44) -->
 			<div style="display: flex; gap: 20px; padding: 4px 2px 16px; border-bottom: 1px solid var(--g-rule-soft); margin-bottom: 16px">
-				<Stat label="Aktiv"    value={counts.active} layout="inline" size="sm" tone="accent" mono/>
-				<Stat label="Pausiert" value={counts.paused} layout="inline" size="sm" mono/>
-				<Stat label="Drafts"   value={counts.draft}  layout="inline" size="sm" mono/>
+				<Stat label={$t('listen.stat.aktiv')} value={counts.active} layout="inline" size="sm" tone="accent" mono/>
+				<Stat label={$t('listen.stat.pausiert')} value={counts.paused} layout="inline" size="sm" mono/>
+				<Stat label={$t('listen.stat.drafts')} value={counts.draft} layout="inline" size="sm" mono/>
 			</div>
 
 			<!-- Mobiler Kachel-Stack (#493): vertikal, unter 900 px -->
 			<div style="display: flex; flex-direction: column; gap: 10px">
 				{#if presets.length === 0}
 					<Card padding={40} style="text-align: center; color: var(--g-ink-3); font-size: 13px">
-						Noch keine Vergleiche angelegt.
+						{$t('listen.leer.vergleich')}
 					</Card>
 				{:else}
 					<StatusFilterPills active={mobileFilter} counts={pillCounts} onSelect={(v) => { mobileFilter = v; }} />
@@ -321,9 +319,9 @@
 <!-- Lösch-/Versand-Bestätigung (aus dem gelöschten Kachel-Grid übernommen) -->
 <ConfirmDialog
 	open={deleteTarget !== null}
-	title="Vergleich löschen?"
-	description={'"' + (deleteTarget?.name ?? '') + '" wird unwiderruflich gelöscht.'}
-	confirmLabel="Löschen"
+	title={$t('listen.dialog.vergleich_loeschen')}
+	description={$t('listen.dialog.unwiderruflich', { name: deleteTarget?.name ?? '' })}
+	confirmLabel={$t('listen.aktion.loeschen')}
 	confirmVariant="destructive"
 	onConfirm={confirmDelete}
 	onCancel={() => (deleteTarget = null)}

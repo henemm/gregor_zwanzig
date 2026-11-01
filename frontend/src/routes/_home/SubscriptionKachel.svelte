@@ -11,6 +11,7 @@
 	import type { ComparePreset, Trip } from '$lib/types.js';
 	import { kachelActions } from './kachelActions.js';
 	import { reportChannels } from './cockpitHelpers.js';
+	import { locale } from '$lib/i18n/index.js';
 
 	interface Props {
 		kind: SubscriptionKind;
@@ -34,6 +35,11 @@
 			: presetChannels(sub as ComparePreset)
 	);
 	const hub = $derived((kind === 'trip' ? '/trips/' : '/compare/') + sub.id);
+	// #2652 (i18n F3): Aktions-Label folgt der Sprache ohne Neuladen.
+	const actions = $derived.by(() => {
+		void $locale;
+		return kachelActions();
+	});
 </script>
 
 <SubscriptionCard
@@ -44,7 +50,7 @@
 	{channels}
 	{nextSend}
 	{lastSent}
-	actions={kachelActions()}
+	{actions}
 	onclick={() => goto(hub)}
 	onAction={(id) => {
 		if (id === 'edit') goto(hub);

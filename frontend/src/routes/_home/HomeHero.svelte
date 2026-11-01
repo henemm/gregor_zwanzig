@@ -9,6 +9,7 @@
 	import type { Snippet } from 'svelte';
 	import { Card, Dot, Eyebrow } from '$lib/components/atoms';
 	import type { SubscriptionKind } from '$lib/components/shared/subscriptionTabs.js';
+	import { t } from '$lib/i18n/index.js';
 
 	interface Props {
 		kind: SubscriptionKind;
@@ -28,10 +29,11 @@
 	let { kind, id, name, href, subtitle = '', channels, nextSend = null, pills, details, actions, aside }: Props =
 		$props();
 
-	const OEFFNEN: Record<SubscriptionKind, string> = {
-		trip: 'Trip öffnen →',
-		vergleich: 'Vergleich öffnen →'
-	};
+	// #2652 (i18n F3): $derived, damit der Link auf einen Sprachwechsel reagiert.
+	const OEFFNEN: Record<SubscriptionKind, string> = $derived({
+		trip: $t('home.hero.oeffnen.trip'),
+		vergleich: $t('home.hero.oeffnen.vergleich')
+	});
 </script>
 
 <!-- 2-Spalten-Grid: links Hero-Karte + Schnellaktionen, rechts kind-eigene Spalte (aside) -->
@@ -86,7 +88,7 @@
 						style:text-transform="uppercase"
 						style:letter-spacing="0.1em"
 						style:margin-bottom="5px"
-					>Nächster Versand</div>
+					>{$t('home.hero.naechster_versand')}</div>
 					<div style:font-size="15px" style:font-weight="600">{nextSend ?? '—'}</div>
 				</div>
 			</div>
@@ -104,7 +106,7 @@
 			style:flex-wrap="wrap"
 		>
 			<div style:display="flex" style:align-items="center" style:gap="16px">
-				<Eyebrow>Kanäle</Eyebrow>
+				<Eyebrow>{$t('home.hero.kanaele')}</Eyebrow>
 				<div style:display="flex" style:gap="14px">
 					{#each channels as ch (ch)}
 						<span
@@ -137,8 +139,8 @@
 	{#if actions}
 		<div>
 			<div style:margin-bottom="12px">
-				<Eyebrow style="margin-bottom: 4px">Schnell eingreifen</Eyebrow>
-				<div style:font-size="17px" style:font-weight="600">Schnellaktionen</div>
+				<Eyebrow style="margin-bottom: 4px">{$t('home.hero.schnell_eingreifen')}</Eyebrow>
+				<div style:font-size="17px" style:font-weight="600">{$t('home.hero.schnellaktionen')}</div>
 			</div>
 			<div style:display="flex" style:flex-direction="column" style:gap="10px">
 				{@render actions()}
