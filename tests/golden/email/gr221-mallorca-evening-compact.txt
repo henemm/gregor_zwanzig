@@ -1,0 +1,19 @@
+WETTER-BRIEFING
+GR221 Mallorca - Evening Report
+GR221 Tag1
+11.07.2026
+
+== Metriken-Ueberblick ==
+  18-19C - Max 16:00
+  gef. 11.8-12.8C - Max 16:00
+  Wind >10 km/h ab 04:00 - max 19 (16:00)
+  ! Boeen >20 km/h ab 04:00 - max 44 (16:00)
+  kein Regen
+  kein Gewitter
+  50% bewoelkt - Max 11:00
+  Sonne 3.0h
+
+----------------------------------------
+Generated: 2026-04-28 12:00 UTC
+Data: openmeteo (arome_france)
+Etappen-Briefing - Kompakt - openmeteo

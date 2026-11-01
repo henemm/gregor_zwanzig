@@ -1,0 +1,173 @@
+----- unbekannt_schluessel -----
+[[Golden Trip] Unbekannter Befehl]
+
+'foo' ist kein gueltiger Befehl.
+Verfügbar: HEUTE, MORGEN, JETZT, GEWITTER, STRECKE, RUHETAG, STATUS, PAUSE, SKIP, STOP, WEITER, HILFE, KUERZEL, STARTDATUM, REPORT
+Wetter-Größen im Stundenverlauf: Kürzel senden (HILFE zeigt alle).
+----- glance -----
+[[Golden Trip] Glance]
+
+🗓 Glance — heute & morgen
+
+heute (29.10): 🌡 12–12°C  💨 18 km/h  🌧 7.2mm  ⛈ Gewitter: mittel
+morgen (30.10): Keine Etappe geplant
+----- timeline_heute -----
+[[Golden Trip] Timeline heute]
+
+📋 Timeline · Heute (29.10)
+
+🕐 23:59 · 900 m
+   🌡 12–12 °C  💨 18 km/h  🌧 7.2 mm  ⛈ mittel
+----- timeline_morgen -----
+[[Golden Trip] Timeline morgen]
+
+Morgen (30.10): Keine Etappe geplant
+----- gewitter_heute -----
+[[Golden Trip] Gewitter heute]
+
+⛈ Gewitter heute (29.10): mittel
+----- stunden_heute -----
+[[Golden Trip] Stunden Heute]
+
+📅 Stunden · Heute (29.10)
+
+05  12°C    18km/h   0.4mm  🟠
+06  12°C    18km/h   0.4mm  🟠
+07  12°C    18km/h   0.4mm  🟠
+08  12°C    18km/h   0.4mm  🟠
+09  12°C    18km/h   0.4mm  🟠
+10  12°C    18km/h   0.4mm  🟠
+11  12°C    18km/h   0.4mm  🟠
+12  12°C    18km/h   0.4mm  🟠
+13  12°C    18km/h   0.4mm  🟠
+14  12°C    18km/h   0.4mm  🟠
+15  12°C    18km/h   0.4mm  🟠
+16  12°C    18km/h   0.4mm  🟠
+----- drilldown_gewitter -----
+[[Golden Trip] ⛈️ Gewitter stündlich]
+
+⛈️ Gewitter — Verlauf
+05:00–16:00  🟠 mittel
+----- metrik_temp -----
+[[Golden Trip] Temperatur stündlich]
+
+Temperatur — Verlauf
+05:00–16:00  12°C
+----- metrik_uv -----
+[[Golden Trip] UV-Index]
+
+UV-Index: für diesen Ort und Zeitraum nicht verfügbar (keine stündlichen Werte vorhanden).
+----- morgen_keine_etappe -----
+[[Golden Trip] Morgen]
+
+Morgen (30.10.2026): Keine Etappe geplant
+----- report_typ -----
+[[Golden Trip] Ungueltiger Report-Typ]
+
+Report-Typ 'abends' unbekannt. Erlaubt: morning, evening
+----- kuerzel_vergleich -----
+[Kürzel]
+
+Kürzel
+Wetter: T Temperatur, D Tageshöchstwert, N Nacht, L Tagestiefstwert, TF gefühlt, FD/FL/FN = D/L/N gefühlt, R Regen mm, PR Regenwahrscheinlichkeit %, TH Gewitter, TH+ Gewitter Folge-Etappe, W Wind km/h, G Böen, WD Windrichtung, HU Luftfeuchte, DP Taupunkt, CP Gewitterenergie, PT Niederschlagsart, SL Schneefallgrenze m, NS24+ Neuschnee 24h, CT/CL/CM/CH Bewölkung gesamt/tief/mittel/hoch, VS Sicht, SU Sonnenstunden, UV UV-Index, HP Luftdruck, FZ Nullgradgrenze m.
+Weitere: SD Schneehöhe, C Vorhersage-Verlässlichkeit, Z:/MAX/M: Brandzonen/Höchststufe/Massive.
+Format: E4 Etappe 4, 23@5 über der Schwelle ab 5 Uhr, (24@7) Spitze, D13/27 Tiefst/Höchst, +HL Hagel, - nichts, ? keine Daten.
+Warnungen nach !: TS Gewitter, FO Hochwasser, RA Starkregen, WG Wind, SN Schnee, AW Lawine, AV Lawinenstufe, IC Glätte, HT Hitze, CD Kälte, FR Waldbrand, AB Sperrung. L/M/H niedrig/mittel/hoch. VR:VT: Météo-France-Risiko Regen/Gewitter. X? keine Warndaten.
+----- vergleich_status -----
+[[Golden Vergleich] Befehl nicht verfügbar]
+
+'status' gibt es beim Ortsvergleich nicht.
+----- vergleich_pause -----
+[[Golden Vergleich] Ortsvergleich pausiert]
+
+Ortsvergleich 'Golden Vergleich' pausiert unbefristet, bis du WEITER sendest. Eine angegebene Dauer wird nicht ausgewertet.
+----- vergleich_weiter -----
+[[Golden Vergleich] Ortsvergleich fortgesetzt]
+
+Ortsvergleich 'Golden Vergleich' wieder aktiv.
+----- vergleich_weiter_nicht_pausiert -----
+[[Golden Vergleich] Ortsvergleich]
+
+Ortsvergleich 'Golden Vergleich' ist nicht pausiert.
+----- pause_ohne_dauer -----
+[[Golden Trip] PAUSE: Dauer fehlt]
+
+Bitte Dauer angeben, z.B. PAUSE 2d oder PAUSE 12h.
+Format: N d (Tage) oder N h (Stunden).
+----- pause_ungueltig -----
+[[Golden Trip] PAUSE: Ungültige Dauer]
+
+'xx' ist keine gültige Dauer.
+Beispiele: PAUSE 2d (2 Tage) oder PAUSE 12h (12 Stunden).
+----- pause_null -----
+[[Golden Trip] PAUSE: Dauer muss > 0 sein]
+
+Die Pause-Dauer muss größer als 0 sein.
+Beispiele: PAUSE 2d (2 Tage) oder PAUSE 12h (12 Stunden).
+----- pause -----
+[[Golden Trip] Briefings pausiert]
+
+Briefings für 'Golden Trip' pausiert bis 31.10.2026 04:00 UTC.
+Zum Fortsetzen: STOP (dauerhaft) oder warte bis die Pause abläuft.
+----- skip -----
+[[Golden Trip] Nächster Versand übersprungen]
+
+Das nächste Briefing für 'Golden Trip' wird übersprungen.
+Danach läuft der Zeitplan wieder normal.
+----- weiter -----
+[[Golden Trip] Briefings reaktiviert]
+
+Reports fuer 'Golden Trip' wieder aktiviert. Viel Erfolg auf der Tour!
+----- spalten -----
+[Spalten]
+
+Spalten-Konfiguration ist nur im Trip-Editor möglich.
+----- startdatum_fehlt -----
+[[Golden Trip] Fehlendes Datum]
+
+Bitte Datum angeben: STARTDATUM JJJJ-MM-TT
+----- startdatum_ungueltig -----
+[[Golden Trip] Ungueltiges Datum]
+
+'2026-13-01' ist kein gueltiges Datum. Format: STARTDATUM JJJJ-MM-TT
+----- startdatum -----
+[[Golden Trip] Startdatum geaendert]
+
+Startdatum verschoben: 28.10.2026 -> 02.11.2026
+
+Neue Etappen-Daten:
+  Etappe 1: Innsbruck - Stubai: 02.11.2026
+  Etappe 2: Stubai - Neustift: 03.11.2026
+  Etappe 3: Neustift - Elfer: 07.11.2026
+----- ziel_kein_kandidat -----
+Kein aktiver Trip oder Ortsvergleich gefunden.
+----- ziel_kein_aktives -----
+Kein aktiver Trip. Dieser Befehl gilt nur für Trips, nicht für Ortsvergleiche.
+----- command_rows_route -----
+HEUTE | Wetter der heutigen Etappe
+MORGEN | Wetter der morgigen Etappe
+JETZT | Nowcast Regen/Gewitter nächste ~2h (auch NOW)
+GEWITTER | Gewittergefahr heutige Etappe
+STRECKE [km] | Regen-Ereignisflächen entlang der Reststrecke
+RUHETAG [N] | Etappen um N Tage verschieben (Standard: 1)
+STATUS | Heute und kommende Etappen
+PAUSE [2d / 12h] | Briefings für Dauer unterbrechen
+SKIP | Nächstes Briefing überspringen
+STOP | Briefings dauerhaft deaktivieren (auch ABBRUCH)
+WEITER | Briefings reaktivieren
+HILFE | Diese Hilfe anzeigen (auch HELP)
+KUERZEL | Kürzel-Bedeutungen anzeigen (auch CODES)
+STARTDATUM JJJJ-MM-TT | Startdatum des Trips setzen, alle Etappen verschieben
+REPORT [morning / evening] | Briefing jetzt senden (Standard: morning)
+----- command_rows_vergleich -----
+HEUTE | Vergleich für heute jetzt senden
+MORGEN | Vergleich für morgen jetzt senden
+PAUSE | Briefings für Dauer unterbrechen
+WEITER | Briefings reaktivieren
+HILFE | Diese Hilfe anzeigen (auch HELP)
+KUERZEL | Kürzel-Bedeutungen anzeigen (auch CODES)
+REPORT | Vergleich jetzt an alle Kanäle senden
+----- unknown_command_body -----
+Prefix.
+Verfügbar: HEUTE, MORGEN, JETZT, GEWITTER, STRECKE, RUHETAG, STATUS, PAUSE, SKIP, STOP, WEITER, HILFE, KUERZEL, STARTDATUM, REPORT
+Wetter-Größen im Stundenverlauf: Kürzel senden (HILFE zeigt alle).

@@ -89,9 +89,11 @@ from functools import lru_cache
 from pathlib import Path
 
 import pytest
+
 from bs4 import BeautifulSoup
 
 from app.loader import _parse_display_config
+from i18n import t as _t  # #2666: Telegram-Label in _PLAIN_ROWS ist ein Katalogschluessel
 from app.metric_catalog import (
     _METRICS, build_default_display_config, format_metric_value, get_all_metrics,
     get_alert_label, get_cmp, get_metric, get_sms_code, summary_field_for,
@@ -4377,7 +4379,7 @@ def _s7_pruefe_kanal_reihenfolge(
         )
     elif kanal == "telegram":
         zellen = telegram_zellen(ausgabe)
-        erwartet = [_PLAIN_ROWS_BY_ID[m][1] for m in ids]
+        erwartet = [_t(_PLAIN_ROWS_BY_ID[m][1]) for m in ids]
         # Das GANZE Label tragen, nie nur sein erstes Wort (Adversary S7 F001):
         # "Gefuehlte Temp. min"/"Gefuehlte Temp. max" und "Wolken"/"Wolken
         # tief" teilen sich den Wortanfang -- ein Wortanfang-Vergleich hielte
@@ -4481,7 +4483,7 @@ def test_ac_s7_5c_telegram_vergleich_faengt_praefix_kollision():
     fuer richtig, der Label-Vergleich schlaegt an. Ohne diese Achse waere der
     Fix eine Vermutung."""
     ids = ["wind_chill_min", "wind_chill_max"]
-    erwartet = [_PLAIN_ROWS_BY_ID[m][1] for m in ids]
+    erwartet = [_t(_PLAIN_ROWS_BY_ID[m][1]) for m in ids]
     assert len(set(e.split(" ")[0] for e in erwartet)) == 1, (
         f"Vakuum: {ids} teilen sich ihren Wortanfang nicht mehr ({erwartet}) "
         "-- die Gegenprobe pruefte dann eine Kollision, die es nicht gibt"
@@ -4524,7 +4526,7 @@ def test_ac_s7_5d_telegram_vergleich_faengt_die_wolken_kollision(ids):
     Vertauschungen statt nur der umgekehrten Folge, und der Tripel-Fall
     zusaetzlich zum Paar: bei zwei Elementen liesse sich ein Fang noch mit dem
     Sonderfall der Vollvertauschung erklaeren, bei drei nicht mehr."""
-    erwartet = [_PLAIN_ROWS_BY_ID[m][1] for m in ids]
+    erwartet = [_t(_PLAIN_ROWS_BY_ID[m][1]) for m in ids]
     assert len({e.split(" ")[0] for e in erwartet}) == 1, (
         f"Vakuum: {ids} teilen sich ihren Wortanfang nicht mehr ({erwartet}) "
         "-- die Gegenprobe pruefte dann eine Kollision, die es nicht gibt"
@@ -4790,8 +4792,8 @@ def test_ac_s7_8a_compare_telegram_folgt_der_reihenfolge(metric_id):
     Auswahl maesse der Test die 7-Spalten-Kappung statt der Reihenfolge
     (``CHANNEL_LIMITS["telegram"]["max_table_cols"]``)."""
     partner = partner_von(metric_id)
-    label_m = _PLAIN_ROWS_BY_ID[metric_id][1]
-    label_p = _PLAIN_ROWS_BY_ID[partner][1]
+    label_m = _t(_PLAIN_ROWS_BY_ID[metric_id][1])
+    label_p = _t(_PLAIN_ROWS_BY_ID[partner][1])
     assert label_m != label_p, (
         f"Vakuum: {metric_id!r} und {partner!r} teilen sich das Telegram-Label"
     )

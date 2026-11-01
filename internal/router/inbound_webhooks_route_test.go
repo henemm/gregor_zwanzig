@@ -40,11 +40,12 @@ func webhookPost(r http.Handler, pfad string) *httptest.ResponseRecorder {
 }
 
 func TestInboundWebhooks_SitzungsfreiErreichbar_FalschesSecretIst403(t *testing.T) {
-	r, _ := s2Router(t, s2Optionen{statusToken: s2Token})
+	// Issue #2163: Werte gelten ueber config.Load, also VOR dem Router-Aufbau.
 	t.Setenv("SEVEN_WEBHOOK_PATH_SECRET", "richtig-sms-pfad")
 	t.Setenv("SEVEN_WEBHOOK_SIGNING_KEY", "signing-key-test")
 	t.Setenv("STALWART_WEBHOOK_PATH_SECRET", "richtig-mail-pfad")
 	t.Setenv("STALWART_WEBHOOK_SECRET", "stalwart-secret-test")
+	r, _ := s2Router(t, s2Optionen{statusToken: s2Token})
 
 	for _, pfad := range []string{"/api/webhooks/sms/falsch", "/api/webhooks/mail/falsch"} {
 		w := webhookPost(r, pfad)
@@ -56,11 +57,12 @@ func TestInboundWebhooks_SitzungsfreiErreichbar_FalschesSecretIst403(t *testing.
 }
 
 func TestInboundWebhooks_EnvFehlt_503StattSitzungsabweisung(t *testing.T) {
-	r, _ := s2Router(t, s2Optionen{statusToken: s2Token})
 	for _, k := range []string{"SEVEN_WEBHOOK_PATH_SECRET", "SEVEN_WEBHOOK_SIGNING_KEY",
 		"STALWART_WEBHOOK_PATH_SECRET", "STALWART_WEBHOOK_SECRET"} {
 		t.Setenv(k, "")
+		t.Setenv("GZ_"+k, "")
 	}
+	r, _ := s2Router(t, s2Optionen{statusToken: s2Token})
 
 	for _, pfad := range []string{"/api/webhooks/sms/irgendwas", "/api/webhooks/mail/irgendwas"} {
 		w := webhookPost(r, pfad)

@@ -1,0 +1,38 @@
+[GR20 Golden] entire route · ORANGE Moderate thunderstorm warning (Thu)
+
+===== ✂ =====
+
+Moderate thunderstorm warning reported.
+
+1 official warning
+
+Warning level: ORANGE (middle of three) — scale YELLOW · ORANGE · RED
+Hazard: Moderate thunderstorm warning
+Valid: Thu 29 Oct · 11:00–20:00
+Route: entire route
+Source: MeteoAlarm — Lienz.
+The warning covers the entire route.
+
+As of today 06:00 · retrieved from MeteoAlarm
+
+GR20 Golden · Official warning · MeteoAlarm
+
+===== ✂ =====
+
+<b>GR20 Golden · entire route · Warning level ORANGE (2/3)</b>
+🟠 Moderate thunderstorm warning · Thu 29 Oct · 11:00–20:00
+MeteoAlarm
+
+===== ✂ =====
+
+ges.Route: !TS:M Do11-20
+
+===== ✂ =====
+
+ORANGE — Moderate thunderstorm warning
+Region: Lienz
+Valid: Thu 29.10. 11:00 – Thu 29.10. 20:00
+
+===== ✂ =====
+
+Official warning: Moderate thunderstorm warning (Thu 29 Oct · 10:00–19:00)

@@ -20,12 +20,13 @@ from datetime import datetime, timedelta, timezone
 from typing import Optional
 
 from app.config import Settings
+from i18n import Lang, resolve_user_lang
 from app.loader import load_all_locations
 from providers.enrichment_health import (
     OUTCOME_OK, OUTCOME_UNAVAILABLE, PATH_ALERT_FETCH, log_enrichment_call,
 )
 from services import alert_channel_threshold, alert_daily_limit, alert_log
-from services import alert_retry_backoff
+from services import alert_retry_backoff, parallel_fetch
 import services.alert_urgency as alert_urgency
 from services.alert_gate import check_briefing_imminent
 from services.alert_preset import _PRESET_TABLE
@@ -79,6 +80,22 @@ _SUMMARY_KEY_TO_CATALOG_ID: dict[str, str] = {
 }
 
 
+def run_deadline_from(started_at: float) -> float:
+    """Issue #1539 S6: Lauf-Frist ab Laufbeginn (ADR-0038). Die Konstante wird
+    zur Laufzeit aus `services.trip_alert` gelesen (dieselbe wie S3)."""
+    from services import trip_alert
+
+    return started_at + trip_alert.ALERT_RUN_DEADLINE_SECONDS
+
+
+def preset_deadline(run_deadline_at: Optional[float]) -> float:
+    """Issue #1539 S6: Frist je Preset (60 s wie S3), nie spaeter als die Lauf-Frist."""
+    from services import trip_alert
+
+    marke = time.monotonic() + trip_alert.FRESH_WEATHER_DEFAULT_DEADLINE_SECONDS
+    return marke if run_deadline_at is None else min(marke, run_deadline_at)
+
+
 class CompareAlertService:
     """Wertet frisches Wetter je Compare-Preset/Ort gegen den Δ-Anker aus und
     versendet Deviation-Alert-Mails an die Preset-Empfänger."""
@@ -93,6 +110,8 @@ class CompareAlertService:
     ) -> None:
         self._settings = settings if settings else Settings().with_user_profile(user_id)
         self._user_id = user_id
+        # Issue #2672: Sprache EINMAL je Dienstobjekt (Nutzer), kein Modulzustand.
+        self._lang: Lang = resolve_user_lang(user_id)
         self._weather_source = weather_source or CompareLocationWeatherSource()
         self._mail_sink = mail_sink
         self._snapshot_service = CompareWeatherSnapshotService(user_id=user_id)
@@ -168,12 +187,18 @@ class CompareAlertService:
     # Issue #1539 S0: Messung des letzten Laufs (Router -> checked/duration_s).
     last_checked_count: int = 0
     last_duration_s: float = 0.0
+    # Issue #1539 S6: Lauf-Frist (absolut, monotonic); None = keine Lauf-Frist.
+    _run_deadline_at: Optional[float] = None
 
     def check_all_compare_presets(self) -> int:
         """Kompatibilitaets-Huelle: Anzahl Preset-Laeufe mit Versand; die Zahl
         der gescheiterten Presets steht danach in ``last_failed_count``."""
         started_at = time.monotonic()
-        sent, self.last_failed_count = self._check_all_counted()
+        self._run_deadline_at = run_deadline_from(started_at)
+        try:
+            sent, self.last_failed_count = self._check_all_counted()
+        finally:
+            self._run_deadline_at = None
         self.last_duration_s = time.monotonic() - started_at
         logger.info(
             f"compare_alert: Lauf beendet nach {self.last_duration_s:.3f}s fuer "
@@ -283,7 +308,7 @@ class CompareAlertService:
 
         # Issue #1467 S2 AG2: Ruhezeit VOR den Wetterabruf ziehen — bisher
         # prüfte nur die Engine (`DeviationAlertEngine.evaluate()`), NACH
-        # dem Fetch in `_evaluate_one_location()`. Muster übernommen aus
+        # dem Fetch in `_detect_triggered_locations()`. Muster übernommen aus
         # `compare_official_alert.py:105-113`. Dieselbe geteilte Funktion
         # wie dort (`DeviationAlertEngine.is_quiet_hours`) — keine zweite
         # Fassung. Sperrzeit/Tageslimit oben wurden nur GELESEN, hier wird
@@ -444,6 +469,7 @@ class CompareAlertService:
                 reference_at = format_reference_at(
                     first_anchor_fetched_at,
                     tz_for_coords(first_loc.lat, first_loc.lon),
+                    lang=self._lang,
                 )
             notif_result = notification_service.send_multi_location_deviation_alert(
                 entities=entities,
@@ -579,8 +605,11 @@ class CompareAlertService:
     ) -> list[dict]:
         """Wertet jeden Ort des Presets gegen den Δ-Anker aus (Detect-Phase,
         kein Versand). Sammelt alle Treffer für den nachfolgenden gebündelten
-        Versand (Issue #1170)."""
-        triggered: list[dict] = []
+        Versand (Issue #1170).
+
+        #1539 S6: vorbereiten seriell, NUR der Frisch-Abruf parallel, bewerten
+        seriell -- alles Schreibende im Hauptfaden, in Eingabereihenfolge."""
+        plan: list[tuple[str, Optional[dict]]] = []
         for location_id in location_ids:
             loc = all_locations.get(location_id)
             if loc is None:
@@ -589,16 +618,22 @@ class CompareAlertService:
                 )
                 continue
             try:
-                entry = self._evaluate_one_location(
-                    preset_id, location_id, loc, config, day_window,
-                    preset=preset,
-                )
+                plan.append((location_id, self._vorbereite_ort(
+                    preset_id, location_id, loc, config, day_window, preset=preset,
+                )))
             except Exception as e:
-                logger.error(f"Compare-Alert check failed for {preset_id}/{location_id}: {e}")
-                log_enrichment_call(
-                    PATH_ALERT_FETCH, OUTCOME_UNAVAILABLE,
-                    unit=f"{self._user_id}/{preset_id}/{location_id}",
-                )
+                self._ort_gescheitert(preset_id, location_id, e)
+        outcomes = iter(parallel_fetch.fetch_ordered(
+            [a for _, a in plan if a is not None], self._abruf,
+            provider="open_meteo", deadline_at=preset_deadline(self._run_deadline_at),
+        ))
+        triggered: list[dict] = []
+        for location_id, auftrag in plan:
+            entry, grund = None, None
+            if auftrag is not None:  # None: Anker zu alt, kein Abruf (wie bisher OK)
+                entry, grund = self._auswerten(preset_id, auftrag, next(outcomes), config)
+            if grund is not None:
+                self._ort_gescheitert(preset_id, location_id, grund)
                 continue
             log_enrichment_call(
                 PATH_ALERT_FETCH, OUTCOME_OK,
@@ -608,13 +643,50 @@ class CompareAlertService:
                 triggered.append(entry)
         return triggered
 
+    def _auswerten(self, preset_id: str, auftrag: dict, out, config) -> tuple:
+        """Phase 3 je Ort: `(Treffer|None, Fehlergrund|None)`; `skipped` ist nie still."""
+        if out.error is not None or out.skipped:
+            return None, out.error if out.error is not None else f"skipped ({out.skipped})"
+        try:
+            return self._bewerte_ort(preset_id, auftrag, out.value, config), None
+        except Exception as e:
+            return None, e
+
+    def _ort_gescheitert(self, preset_id: str, location_id: str, grund) -> None:
+        """Teilausfall EINES Ortes: laut loggen und buchen, die anderen laufen weiter."""
+        logger.error(f"Compare-Alert check failed for {preset_id}/{location_id}: {grund}")
+        log_enrichment_call(
+            PATH_ALERT_FETCH, OUTCOME_UNAVAILABLE,
+            unit=f"{self._user_id}/{preset_id}/{location_id}",
+        )
+
     def _evaluate_one_location(
         self, preset_id: str, location_id: str, loc, config,
         day_window: tuple[int, int], preset: Optional[dict] = None,
     ) -> Optional[dict]:
-        """Δ-Auswertung für EINEN Ort — reine Detect-Logik ohne Versand/
-        State-Update (das übernimmt `_finalize_triggered_state()` NUR für
-        tatsächlich versendete Treffer, Issue #1170)."""
+        """Serielle Δ-Auswertung EINES Ortes aus denselben Teilen wie der
+        parallele Lauf (#1539 S6): vorbereiten -> Frisch-Abruf -> bewerten."""
+        auftrag = self._vorbereite_ort(
+            preset_id, location_id, loc, config, day_window, preset=preset,
+        )
+        if auftrag is None:
+            return None
+        return self._bewerte_ort(preset_id, auftrag, self._abruf(auftrag), config)
+
+    def _abruf(self, auftrag: dict):
+        """Worker (#1539 S6): NUR der Frisch-Abruf, kein geteilter Zustand."""
+        loc = auftrag["loc"]
+        return self._weather_source.fetch(
+            auftrag["location_id"], loc.lat, loc.lon,
+            auftrag["start_hour"], auftrag["end_hour"], **auftrag["zusatz"],
+        )
+
+    def _vorbereite_ort(
+        self, preset_id: str, location_id: str, loc, config,
+        day_window: tuple[int, int], preset: Optional[dict] = None,
+    ) -> Optional[dict]:
+        """Phase 1 (Hauptfaden): Anker laden, fehlende Basis protokollieren,
+        Abruf-Parameter bilden. `None`, wenn der Ort ohne Abruf ausfaellt."""
         cached = self._snapshot_service.load(preset_id, location_id)
         if cached and self._anchor_too_old(cached[0], preset_id, location_id):
             ankerzeit = cached[0].fetched_at
@@ -648,11 +720,17 @@ class CompareAlertService:
         zusatz = {"elevation_m": loc.elevation_m, "user_id": self._user_id}
         if anchor_target_date is not None:
             zusatz["target_date"] = anchor_target_date
-        fresh_point = self._weather_source.fetch(
-            location_id, loc.lat, loc.lon, start_hour, end_hour, **zusatz
-        )
+        return {"location_id": location_id, "loc": loc, "cached": cached,
+                "start_hour": start_hour, "end_hour": end_hour, "zusatz": zusatz}
 
-        entity_id = f"{preset_id}:{location_id}"
+    def _bewerte_ort(
+        self, preset_id: str, auftrag: dict, fresh_point, config,
+    ) -> Optional[dict]:
+        """Phase 3 (Hauptfaden): Δ-Auswertung ohne Versand/State-Update (das
+        übernimmt `_finalize_triggered_state()` NUR für tatsächlich versendete
+        Treffer, Issue #1170)."""
+        loc, cached = auftrag["loc"], auftrag["cached"]
+        entity_id = f"{preset_id}:{auftrag['location_id']}"
         state_svc = AlertStateService(user_id=self._user_id)
         alert_state = state_svc.load(entity_id)
 
@@ -868,6 +946,7 @@ class CompareAlertService:
         `compare_preset_access.notification_service_for_preset`."""
         return notification_service_for_preset(
             self._settings, self._user_id, preset, log_label="Compare-Alert:",
+            lang=self._lang,
         )
 
     def _load_presets(self) -> list[dict]:

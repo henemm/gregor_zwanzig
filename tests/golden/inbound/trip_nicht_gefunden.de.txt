@@ -1,0 +1,3 @@
+[[Gibtsnicht] Trip nicht gefunden]
+
+Kein Trip mit Name 'Gibtsnicht' gefunden.

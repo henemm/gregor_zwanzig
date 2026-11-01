@@ -612,6 +612,8 @@ def _normalisiere(text: str, *uids: str) -> str:
         text = text.replace(uid, "<UID>")
     text = re.sub(r"\d{4}-\d{2}-\d{2} \d{2}:\d{2} UTC", "<STEMPEL-UTC>", text)
     text = re.sub(r"\b(?:Mo|Di|Mi|Do|Fr|Sa|So)\b", "<WT>", text)
+    # #2669 AC-8: Telegram-Ausblick traegt Wochentag + Datum (``Fr 30.10.``).
+    text = re.sub(r"<WT> \d{2}\.\d{2}\.(?= )", "<WT> <TT.MM.>", text)
     text = re.sub(r"\d{2}\.\d{2}\.\d{4}", "<DATUM>", text)
     text = re.sub(r"(<WT> · (?:<DATUM> · )?)\d{2}:\d{2}(?: [A-Z]{3,4})?", r"\1<UHR>", text)
     return text

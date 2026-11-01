@@ -71,11 +71,13 @@ _MAIL_FIELDS: dict = {
 # Der Wochentag ist der einzige kalenderabhaengige Bestandteil des Blocks. Er
 # wird auf BEIDEN Seiten des Referenzvergleichs maskiert (laengengleich: alle
 # deutschen Kuerzel sind zweistellig), alles uebrige bleibt byte-genau.
-_WEEKDAY_RE = re.compile(r"^(Mo|Di|Mi|Do|Fr|Sa|So)\b", re.MULTILINE)
+# #2669 AC-8: die Telegram-Ausblickzeile traegt zusaetzlich das Datum
+# (``Do 30.10.``); es wird als ``TT.MM.`` maskiert.
+_WEEKDAY_RE = re.compile(r"^(Mo|Di|Mi|Do|Fr|Sa|So)(?:( \d\d\.\d\d\.)|\b)", re.MULTILINE)
 
 
 def maskiere_wochentage(text: str) -> str:
-    return _WEEKDAY_RE.sub("XX", text)
+    return _WEEKDAY_RE.sub(lambda m: "XX TT.MM." if m.group(2) else "XX", text)
 
 
 def _settings(user_id: str):

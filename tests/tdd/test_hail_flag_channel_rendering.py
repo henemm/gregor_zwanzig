@@ -232,7 +232,8 @@ def test_ac7_mail_renderer_und_gewitter_kommando_rufen_denselben_helfer(
     sentinel = "SENTINEL-HAGEL-1475-DRY-PROBE"
     monkeypatch.setattr(
         metric_format, "format_hail_note",
-        lambda flag: sentinel if flag else None, raising=False,
+        # #2664: der Helfer nimmt zusaetzlich ``lang`` (nur Schluesselwort).
+        lambda flag, **_kw: sentinel if flag else None, raising=False,
     )
 
     dc = build_default_display_config()

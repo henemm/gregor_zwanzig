@@ -128,14 +128,14 @@ def _recorded_settings(module):
     recorded: list[dict] = []
 
     class _Recording(_Real):
-        def __init__(self, settings=None, user_id="default"):
+        def __init__(self, settings=None, user_id="default", *, lang=None):
             recorded.append({
                 "mail_to": getattr(settings, "mail_to", None),
                 "telegram_chat_id": getattr(settings, "telegram_chat_id", None),
                 "sms_to": getattr(settings, "sms_to", None),
                 "user_id": user_id,
             })
-            super().__init__(settings, user_id)
+            super().__init__(settings, user_id, lang=lang)
 
     ziele = [m for m in (module, compare_preset_access)
              if getattr(m, "NotificationService", None) is not None]

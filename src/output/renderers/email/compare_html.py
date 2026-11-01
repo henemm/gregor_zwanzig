@@ -25,10 +25,13 @@ from datetime import date, datetime, timezone
 from typing import Optional
 from zoneinfo import ZoneInfo
 
-from app.metric_catalog import aggregation_label_de, get_metric
+from app.metric_catalog import aggregation_label, get_metric
 from app.models import Corridor, ThunderLevel
 from app.profile import ActivityProfile
+from app.thunder_scale import thunder_label
 from app.user import ComparisonResult, LocationResult
+from i18n import Lang, t
+from i18n.format import fmt_date_numeric, fmt_weekday
 from output.renderers.compare_hourly_metric_ids import (
     HOURLY_DEFAULT_METRIC_IDS, HOURLY_MERGE_ONLY_METRIC_IDS,
     hourly_selectable_metric_ids,
@@ -47,15 +50,13 @@ from output.renderers.email.design_tokens import (
 )
 from output.renderers.email.outlook import build_outlook_row, render_outlook_table
 from output.renderers.email.profile_signature import profile_signature
-from output.metric_format import (
-    THUNDER_LABEL_DE, format_value, severity_for, thunder_ampel_band,
-)
+from output.metric_format import format_value, severity_for, thunder_ampel_band
 from utils.geo import degrees_to_compass
 from utils.timezone import (
     UTC, local_dt, local_hour, local_stamp, location_tz, tz_abbrev,
 )
 from output.renderers.alert.official_alerts import (
-    _LEVEL_WORDS, OfficialAlertNotice, official_alert_source_label,
+    OfficialAlertNotice, _alert_text, _level_word, official_alert_source_label,
     render_official_alerts_html, render_warn_block,
 )
 from services.official_alerts.models import comparable_level
@@ -157,18 +158,9 @@ def _sev_visibility(v: float) -> str:
 
 
 
-_WEEKDAY_ABBR = ["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"]
-
-# Format-Vorbild html.py:1160-1161 -- lokale Kopie statt Import (eigenstaendiges
-# Compare-Vokabular, s. Spec-Modul-Docstring), NONE rendert als "—" (kein Wert).
-# Issue #1474: LOW-Zeile ergaenzt; MED/HIGH-Woerter aus der geteilten Quelle
-# (metric_format.THUNDER_LABEL_DE) -- NUR NONE bleibt lokal ("—" statt "kein").
-_THUNDER_LEVEL_LABEL = {
-    "NONE": "—",
-    "LOW": THUNDER_LABEL_DE["LOW"],
-    "MED": THUNDER_LABEL_DE["MED"],
-    "HIGH": THUNDER_LABEL_DE["HIGH"],
-}
+# Issue #1474/#2666: LOW/MED/HIGH-Woerter aus der geteilten Quelle
+# (``thunder_scale.thunder_label``, je Sprache) -- NUR NONE bleibt lokal ("—"
+# statt "kein"). Wochentage kommen aus ``i18n.format.fmt_weekday``.
 # Issue #1491: die Ordnung stammt jetzt aus der EINEN geteilten Zuordnung
 # (metric_format.thunder_ampel_band) statt aus einem eigenen Woerterbuch --
 # uebersetzt ueber dieselbe _LEVEL_TO_COMPARE-Palette wie die anderen
@@ -204,6 +196,7 @@ def _fmt_visibility(v) -> str:
 
 def _fmt_thunder(
     v, hail: Optional[bool] = None, signals: Optional[list[str]] = None,
+    *, lang: Lang = "de",
 ) -> str:
     """Gewitterstufen-Label des Ortsvergleichs.
 
@@ -232,12 +225,12 @@ def _fmt_thunder(
     if v is None:
         return "—"
     key = v.value if hasattr(v, "value") else str(v)
-    label = _THUNDER_LEVEL_LABEL.get(key, "—")
+    label = "—" if key == "NONE" else thunder_label(key, lang=lang, default="—")
     from output.metric_format import format_hail_note, thunder_signal_label
     teile = [label]
     if signals:
-        teile.append(", ".join(thunder_signal_label(s) for s in signals))
-    note = format_hail_note(hail)
+        teile.append(", ".join(thunder_signal_label(s, lang=lang) for s in signals))
+    note = format_hail_note(hail, lang=lang)
     if note:
         teile.append(note)
     return " · ".join(teile)
@@ -257,21 +250,29 @@ def _sev_rain_safe(v) -> str:
     return _sev_rain(v or 0.0)
 
 
-_PRECIP_TYPE_LABEL = {
-    "RAIN": "Regen",
-    "SNOW": "Schnee",
-    "MIXED": "Mischniederschlag",
-    "FREEZING_RAIN": "Eisregen",
-}
+# Compare-eigene Woerter (Katalog ``vergleich.niederschlagsart.*``, Issue #2666).
+_PRECIP_TYPE_KEYS = frozenset({"RAIN", "SNOW", "MIXED", "FREEZING_RAIN"})
 
 
-def _fmt_precip_type(v) -> str:
-    """Niederschlagsart-TAGESWERT (Issue #1324): PrecipType-Enum -> deutsches
-    Label, analog ``_fmt_thunder``."""
+def _fmt_precip_type(v, *, lang: Lang = "de") -> str:
+    """Niederschlagsart-TAGESWERT (Issue #1324): PrecipType-Enum -> Wort in
+    ``lang``, analog ``_fmt_thunder``."""
     if v is None:
         return "—"
     key = v.value if hasattr(v, "value") else str(v)
-    return _PRECIP_TYPE_LABEL.get(key, "—")
+    if key not in _PRECIP_TYPE_KEYS:
+        return "—"
+    return t(f"vergleich.niederschlagsart.{key.lower()}", lang)
+
+
+def fmt_word_cell(fmt, value, lang: Lang, hail=None, signals=None) -> str:
+    """Zelltext ueber ``fmt``; die zwei Wort-Formatierer bekommen ``lang``
+    (Gewitter zusaetzlich Hagel/Zutaten), alle anderen bleiben Zahlen."""
+    if fmt is _fmt_thunder:
+        return fmt(value, hail, signals, lang=lang)
+    if fmt is _fmt_precip_type:
+        return fmt(value, lang=lang)
+    return fmt(value)
 
 
 def _fmt_visibility_overview(v) -> str:
@@ -319,7 +320,8 @@ def _fmt_visibility_overview(v) -> str:
 # Zeilen existieren, ihre Reihenfolge, "aggregation", "sev" und die drei
 # "fmt"-Ausnahmen fuer Nicht-Zahlwerte bzw. die m->km-Umrechnung.
 CV2_METRICS = [
-    {"key": "warn", "label": "Amtliche Warnungen", "kind": "warn"},
+    {"key": "warn", "label": "Amtliche Warnungen", "kind": "warn",
+     "label_key": "vergleich.zeile.amtliche_warnungen"},
     {"key": "temp_max", "metric_id": "temperature", "aggregation": "max",
      "sev": _sev_temp},
     {"key": "wind_max", "metric_id": "wind", "aggregation": "max",
@@ -464,7 +466,9 @@ def _build_hour_metrics() -> list[dict]:
 HOUR_METRICS = _build_hour_metrics()
 
 
-def derive_row_labels(rows: list[dict], form: str = "short") -> list[dict]:
+def derive_row_labels(
+    rows: list[dict], form: str = "short", *, lang: Lang = "de",
+) -> list[dict]:
     """Issue #1401 Scheibe A2b: Beschriftung der Mail-Tabellenzeilen aus dem
     zentralen Wetter-Namensregister ableiten statt sie zu tippen.
 
@@ -516,13 +520,13 @@ def derive_row_labels(rows: list[dict], form: str = "short") -> list[dict]:
             f"sind nur 'short' (englische Kurzform, Stundentabelle) und 'long' "
             f"(ausgeschriebener deutscher Registername, Uebersichtstabelle)"
         )
-    lang = form == "long"
+    lang_long = form == "long"  # Issue #2666: ``lang`` ist jetzt die Sprache
 
     def _base(row: dict) -> str:
         if not row.get("metric_id"):
-            return row.get("label", "")
+            return t(row["label_key"], lang) if row.get("label_key") else row.get("label", "")
         metric = get_metric(row["metric_id"])
-        return metric.label_de if lang else metric.col_label
+        return metric.label(lang) if lang_long else metric.col_label
 
     labels = [_base(row) for row in rows]
     mehrfach = {label for label in labels if labels.count(label) > 1}
@@ -530,8 +534,8 @@ def derive_row_labels(rows: list[dict], form: str = "short") -> list[dict]:
     for row, label in zip(rows, labels):
         if label in mehrfach and row.get("aggregation"):
             zusatz = row["aggregation"]
-            if lang:
-                zusatz = aggregation_label_de(zusatz) or zusatz
+            if lang_long:
+                zusatz = aggregation_label(zusatz, lang) or zusatz
             label = f"{label} {zusatz}"
         abgeleitet: dict = {}
         if row.get("metric_id"):
@@ -555,28 +559,29 @@ def derive_row_labels(rows: list[dict], form: str = "short") -> list[dict]:
 # Warn-Kürzel-Mapping (dünner Anzeige-Layer über OfficialAlert.hazard)
 # ---------------------------------------------------------------------------
 
-def _warn_short(alert) -> tuple[str, str]:
+def _warn_short(alert, lang: Lang = "de") -> tuple[str, str]:
     """(Kuerzel-Text, Severity) je hazard. Fallback: alert.label ungekuerzt."""
     if alert.hazard == "extreme_heat":
-        return "Hitze", "warn"
+        return t("vergleich.warnchip.hitze", lang), "warn"
     if alert.hazard == "wildfire_risk":
         sev = {2: "caution", 3: "warn", 4: "danger"}.get(alert.level, "warn")
-        return f"Brand · {alert.level}", sev
+        return t("vergleich.warnchip.brand", lang, stufe=alert.level), sev
     if alert.hazard == "access_ban":
-        return "Zugang", "caution"
+        return t("vergleich.warnchip.zugang", lang), "caution"
     if alert.hazard == "flood":
         sev = {2: "caution", 3: "warn", 4: "danger"}.get(alert.level, "warn")
-        return "Hochwasser", sev
+        return t("vergleich.warnchip.hochwasser", lang), sev
     if alert.hazard == "avalanche":
         sev = {2: "caution", 3: "warn", 4: "danger"}.get(alert.level, "warn")
-        return "Lawine", sev
+        return t("vergleich.warnchip.lawine", lang), sev
     if alert.hazard == "avalanche_bulletin":
         # Issue #1441: Originalstufe 1-5 (ersatzweise `level`), jede Stufe explizit
         # -- Stufe 5 nie schwaecher als 4, Stufe 1 eine Info.
         stufe = alert.native_level if alert.native_level is not None else alert.level
         sev = {1: "info", 2: "caution", 3: "warn", 4: "danger", 5: "danger"}.get(stufe, "danger")
-        return f"Lawine {stufe}", sev
-    return alert.label, "info"
+        return t("vergleich.warnchip.lawine_stufe", lang, stufe=stufe), sev
+    # Issue #2668: ausser Deutsch der Anzeige-Titel der amtlichen Warnung (Sprachblock).
+    return _alert_text(alert, lang), "info"
 
 
 def _dedup_alerts(alerts: list) -> list:
@@ -588,7 +593,7 @@ def _dedup_alerts(alerts: list) -> list:
     return [a for a, _ in dedupe_official_alerts([(a, []) for a in alerts])]
 
 
-def _render_warn_cell(alerts: list) -> str:
+def _render_warn_cell(alerts: list, lang: Lang = "de") -> str:
     """Warn-Zellen-Inhalt: gestapelte Kuerzel-Chips oder '—' bei keiner Warnung.
 
     Block-Divs statt Flexbox (Outlook-fest, AC-8) -- stapeln sich von selbst.
@@ -598,7 +603,7 @@ def _render_warn_cell(alerts: list) -> str:
     chips = []
     seen: set[tuple[str, str, str, tuple[str, str]]] = set()
     for alert in alerts:
-        short, _sev = _warn_short(alert)
+        short, _sev = _warn_short(alert, lang)
         bg, fg = _ALERT_LEVEL_CELL.get(alert.level, _ALERT_LEVEL_CELL[4])
         # Issue #1451: NAMESPACED Identitaet wie `dedupe_official_alerts` --
         # ohne sie kollabieren Warnungen VERSCHIEDENER Regionen zu einem Chip.
@@ -738,7 +743,7 @@ def _fmt_metric(value, decimals, unit: str) -> str:
 
 def _render_overview_row(
     m: dict, locations: list[LocationResult], marks: dict | None = None,
-    summaries: dict | None = None,
+    summaries: dict | None = None, lang: Lang = "de",
 ) -> str:
     marks = marks or {}
     summaries = summaries or {}
@@ -750,7 +755,7 @@ def _render_overview_row(
     cells = [label_cell]
     for loc in locations:
         if m["key"] == "warn":
-            content = "—" if loc.error is not None else _render_warn_cell(_dedup_alerts(loc.official_alerts))
+            content = "—" if loc.error is not None else _render_warn_cell(_dedup_alerts(loc.official_alerts), lang)
             cells.append(
                 f'<td style="text-align:center;padding:7px 5px;vertical-align:middle;'
                 f'border-right:1px solid #f0ece1;">{content}</td>'
@@ -775,10 +780,10 @@ def _render_overview_row(
             # Ortes durchgereicht — alle anderen Zeilen bleiben unveraendert.
             # Issue #1680 S1: dazu die tragenden Zutaten DIESES Ortes.
             summary = summaries.get(id(loc))
-            text = fmt_fn(value, loc_hail_flag(loc, summary),
-                          loc_thunder_signals(loc, summary))
+            text = fmt_word_cell(fmt_fn, value, lang, loc_hail_flag(loc, summary),
+                                 loc_thunder_signals(loc, summary))
         elif fmt_fn:
-            text = fmt_fn(value)
+            text = fmt_word_cell(fmt_fn, value, lang)
         else:
             text = _fmt_metric(value, m.get("decimals"), m.get("unit", ""))
         marked = _is_marked(marks.get(m["key"]), value)
@@ -792,7 +797,7 @@ def _render_overview_row(
     return f'<tr style="border-bottom:1px solid #f0ece1;">{"".join(cells)}</tr>'
 
 
-def _visible_metrics(enabled_metrics: list[str] | None) -> list[dict]:
+def _visible_metrics(enabled_metrics: list[str] | None, lang: Lang = "de") -> list[dict]:
     """Issue #1104: filtert die NUMERISCHEN Uebersichts-Zeilen auf
     ``enabled_metrics`` (Liste von Renderer-Metrik-IDs wie "wind_max"). Die
     Warn-Zeile ("Amtliche Warnungen") ist immer sichtbar UND immer erste
@@ -811,10 +816,10 @@ def _visible_metrics(enabled_metrics: list[str] | None) -> list[dict]:
     Ableitung, es gibt keine zweite Namensliste."""
     warn_row = [m for m in CV2_METRICS if m["key"] == "warn"]
     if enabled_metrics is None:
-        return derive_row_labels(CV2_METRICS, form="long")
+        return derive_row_labels(CV2_METRICS, form="long", lang=lang)
     by_key = {m["key"]: m for m in CV2_METRICS}
     ordered = [by_key[k] for k in enabled_metrics if k in by_key and k != "warn"]
-    return derive_row_labels(warn_row + ordered, form="long")
+    return derive_row_labels(warn_row + ordered, form="long", lang=lang)
 
 
 def rowless_count(enabled_metrics: list[str] | None, row_keys) -> int:
@@ -829,11 +834,11 @@ def rowless_count(enabled_metrics: list[str] | None, row_keys) -> int:
     )
 
 
-def _render_selection_gap_html(count: int) -> str:
+def _render_selection_gap_html(count: int, lang: Lang = "de") -> str:
     """Hinweiszeile unter der Uebersichtstabelle (Issue #1405 S3); leer bei 0."""
     from output.renderers.channel_layout import selection_gap_notice
 
-    notice = selection_gap_notice(count, scope="vergleich")
+    notice = selection_gap_notice(count, scope="vergleich", lang=lang)
     if not notice:
         return ""
     return (
@@ -847,10 +852,12 @@ def _render_overview_table(
     enabled_metrics: list[str] | None = None,
     corridors: list[Corridor] | None = None,
     unresolved_count: int = 0,
+    lang: Lang = "de",
 ) -> str:
     header_cells = [
         f'<th style="text-align:left;padding:9px 5px;font-size:10px;'
-        f'color:{G_INK_FAINT};border-right:1px solid #f0ece1;">Metrik</th>'
+        f'color:{G_INK_FAINT};border-right:1px solid #f0ece1;">'
+        f'{t("vergleich.uebersicht.spalte_metrik", lang)}</th>'
     ]
     for loc in locations:
         name = _html.escape(loc.location.name)
@@ -864,7 +871,7 @@ def _render_overview_table(
         f'{"".join(header_cells)}</tr>'
     )
     marks = _mark_lookup(corridors, FRONTEND_TO_RENDERER_METRIC_ID)
-    visible = _visible_metrics(enabled_metrics)
+    visible = _visible_metrics(enabled_metrics, lang)
     # Tages-Aggregate EINMAL je Ort ableiten (nicht je Zeile x Ort) -- nur wenn
     # ueberhaupt eine Zeile davon lebt.
     summaries: dict = {}
@@ -873,7 +880,9 @@ def _render_overview_table(
             id(loc): _daily_summary(loc)
             for loc in locations if loc.error is None and loc.hourly_data
         }
-    rows = "".join(_render_overview_row(m, locations, marks, summaries) for m in visible)
+    rows = "".join(
+        _render_overview_row(m, locations, marks, summaries, lang) for m in visible
+    )
     table = (
         f'<table cellspacing="0" cellpadding="0" style="width:100%;min-width:760px;'
         f'border-collapse:collapse;font-family:{FONT_DATA};'
@@ -884,11 +893,11 @@ def _render_overview_table(
     return (
         f'<div style="overflow-x:auto;-webkit-overflow-scrolling:touch;'
         f'margin-top:12px;border:1px solid #e6e1d3;">{table}</div>'
-        + _render_selection_gap_html(gap + unresolved_count)
+        + _render_selection_gap_html(gap + unresolved_count, lang)
     )
 
 
-def _render_warn_banner(locations: list[LocationResult]) -> str:
+def _render_warn_banner(locations: list[LocationResult], lang: Lang = "de") -> str:
     """Aggregat-WarnBlock-Banner (Issue #1216): geteilter embedded WarnBlock mit
     Orts-Scope. Nennt die höchste amtliche Stufe + den führenden Ort („höchste
     Stufe ROT · Marseille") und zählt die betroffenen Orte je Gefahr („6 von 7
@@ -912,12 +921,14 @@ def _render_warn_banner(locations: list[LocationResult]) -> str:
                     a.level == leading_alert.level and a.hazard == leading_alert.hazard
                     and comparable_level(a) > comparable_level(leading_alert))):
                 leading_alert, leading_loc = a, loc
-    word = _LEVEL_WORDS.get(leading_alert.level, ("🔴", "ROT"))[1]
-    count_line = f"höchste Stufe {word} · {leading_loc.location.name}"
+    word = _level_word(leading_alert.level, lang)
+    count_line = t("vergleich.warn.hoechste_stufe", lang, stufe=word,
+                   ort=leading_loc.location.name)
     if leading_alert.hazard == "avalanche_bulletin":
         # Issue #1441: keine Awareness-Leiter/Ampelwort fuer die EAWS-Skala.
         stufe = leading_alert.native_level or leading_alert.level
-        count_line = f"Lawinenstufe {stufe} · {leading_loc.location.name}"
+        count_line = t("vergleich.warn.lawinenstufe", lang, stufe=stufe,
+                       ort=leading_loc.location.name)
 
     # Je Gefahr die höchststufige Warnung, Meter nach Stufe absteigend.
     by_hazard: dict = {}
@@ -930,7 +941,7 @@ def _render_warn_banner(locations: list[LocationResult]) -> str:
     for a in sorted(by_hazard.values(), key=lambda x: -x.level):
         hz_locs = [loc for loc in alerted if any(x.hazard == a.hazard for x in loc.official_alerts)]
         if len(hz_locs) > 1:
-            chip = f"{len(hz_locs)} von {total} Orten"
+            chip = t("vergleich.warn.n_von_m_orten", lang, n=len(hz_locs), gesamt=total)
         else:
             chip = hz_locs[0].location.name if hz_locs else ""
         notices.append(OfficialAlertNotice(
@@ -940,9 +951,9 @@ def _render_warn_banner(locations: list[LocationResult]) -> str:
 
     return render_warn_block(
         notices, variant="embedded",
-        source_label=official_alert_source_label(leading_alert.source),
+        source_label=official_alert_source_label(leading_alert.source, lang=lang),
         source_url=getattr(leading_alert, "url", None), count_line=count_line,
-        tz=location_tz(leading_loc.location),
+        tz=location_tz(leading_loc.location), lang=lang,
     )
 
 
@@ -1026,7 +1037,7 @@ def _should_merge_wind_dir(hourly_metrics: list[str] | None) -> bool:
 
 def _render_hour_row(
     dp, visible: list[dict], marks: dict, merge_wind_dir: bool = False,
-    *, tz: ZoneInfo,
+    *, tz: ZoneInfo, lang: Lang = "de",
 ) -> str:
     # Issue #1237 (AC-1): nur die Stunde ("07"), kein Minutenanteil -- identisch
     # zur bereits korrekten Trip-Briefing-Formatierung (helpers.dp_to_row).
@@ -1056,10 +1067,10 @@ def _render_hour_row(
             # `comparison._sms_metric_cell()` -> `_fmt_overview_cell(...,
             # include_origin=False)` und erreicht diese Aufrufstelle nie
             # (PO-Entscheidung, aktiv abgewaehlt -- s. dortigen Kommentar).
-            text = m["fmt"](value, getattr(dp, "hail_flag", None),
-                            getattr(dp, "thunder_level_signals", None))
+            text = fmt_word_cell(m["fmt"], value, lang, getattr(dp, "hail_flag", None),
+                                 getattr(dp, "thunder_level_signals", None))
         else:
-            text = m["fmt"](value)
+            text = fmt_word_cell(m["fmt"], value, lang)
         # Issue #1335 Scheibe 1 (AC-3): Windrichtung als Kompass-Text an die
         # Wind-Zelle angehaengt, analog Trip-Muster (helpers.py:648-651) --
         # keine eigene Spalte.
@@ -1077,22 +1088,23 @@ def _render_hour_row(
 
 def _render_hour_table(
     loc: LocationResult, hourly_metrics: list[str] | None = None,
-    corridors: list[Corridor] | None = None,
+    corridors: list[Corridor] | None = None, lang: Lang = "de",
 ) -> str:
     visible = _visible_hour_metrics(hourly_metrics)
     merge_wind_dir = _should_merge_wind_dir(hourly_metrics)
     marks = _mark_lookup(corridors, CORRIDOR_METRIC_TO_HOUR_KEY)
     tz = location_tz(loc.location)  # Issue #1378 — EIN Aufloeser (E3)
-    columns = ["Zeit"] + [m["label"] for m in visible]
+    columns = [t("vergleich.stunden.zeit", lang)] + [m["label"] for m in visible]
+    # Issue #2666: Ausrichtung nach Position (erste Spalte = Zeit), nicht Wort.
     ths = "".join(
-        f'<th style="text-align:{"left" if col == "Zeit" else "center"};padding:6px 4px;'
+        f'<th style="text-align:{"left" if i == 0 else "center"};padding:6px 4px;'
         f'font-size:11px;color:{G_INK};font-weight:600;border-right:1px solid #f0ece1;">'
         f'{col}</th>'
-        for col in columns
+        for i, col in enumerate(columns)
     )
     header = f'<tr style="background:{G_PAPER};border-bottom:1px solid #e6e1d3;">{ths}</tr>'
     rows = "".join(
-        _render_hour_row(dp, visible, marks, merge_wind_dir, tz=tz)
+        _render_hour_row(dp, visible, marks, merge_wind_dir, tz=tz, lang=lang)
         for dp in loc.hourly_data
     )
     table = (
@@ -1148,7 +1160,7 @@ def _location_heading(
 
 def _render_location_section(
     loc: LocationResult, index: int, hourly_metrics: list[str] | None = None,
-    corridors: list[Corridor] | None = None,
+    corridors: list[Corridor] | None = None, lang: Lang = "de",
 ) -> str:
     """Ort-Kopf + Langform-Warn-Streifen + Stundentabelle. Entfaellt bei Fehler
     bzw. fehlenden Stundendaten (SPEC §4)."""
@@ -1164,20 +1176,17 @@ def _render_location_section(
         # Issue #1134: Dedup identischer Warnungen. Issue #1056 v2.0: Badge-
         # Farbe ist amtstreu level-basiert (kein severity_fn mehr).
         strip = render_official_alerts_html(
-            [("", _dedup_alerts(loc.official_alerts))],
+            [("", _dedup_alerts(loc.official_alerts))], lang=lang,
         )
     return (
         f'<div style="padding:{20 if index else 14}px 24px 0;">'
-        f'{header}{strip}{_render_hour_table(loc, hourly_metrics, corridors)}</div>'
+        f'{header}{strip}{_render_hour_table(loc, hourly_metrics, corridors, lang)}</div>'
     )
 
 
 # ---------------------------------------------------------------------------
 # Epic #1301 B4 — 3-Tage-Ausblick je Ort (geteilter Renderer/Zeilenbau)
 # ---------------------------------------------------------------------------
-
-_WEEKDAYS_DE_OUTLOOK = ["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"]
-
 
 def _group_by_calendar_day(points: list, tz: ZoneInfo, cap: int = 3) -> list[tuple]:
     """Gruppiert eine flache Punktliste nach Kalendertag, Cap auf `cap` Tage.
@@ -1196,6 +1205,7 @@ def _group_by_calendar_day(points: list, tz: ZoneInfo, cap: int = 3) -> list[tup
 def _build_location_outlook_rows(
     loc: LocationResult, outlook_metrics: list[dict] | None = None,
     outlook_metric_formats: dict[str, bool] | None = None,
+    lang: Lang = "de",
 ) -> list[dict]:
     """AC-5/AC-8: bis zu 3 Tages-Zeilen aus `outlook_hourly_data`, ueber
     denselben Aggregator (`summarize_points`) und denselben Zeilenbau
@@ -1220,7 +1230,7 @@ def _build_location_outlook_rows(
     rows = []
     for day, day_points in _group_by_calendar_day(loc.outlook_hourly_data, tz):
         summary = summarize_points(day_points)
-        weekday = _WEEKDAYS_DE_OUTLOOK[day.weekday()]
+        weekday = fmt_weekday(day, lang)
         rows.append(build_outlook_row(
             summary, day_points, weekday, tz, metrics=outlook_metrics,
             # Issue #2049: der Ortsvergleich hat kein `trip_display_config`,
@@ -1234,11 +1244,14 @@ def _build_location_outlook_rows(
 
 # Issue #1368: der Block hiess bisher wie der Stundenblock darueber ("ORT
 # <Name>") und war damit fuer den Empfaenger nicht als Ausblick erkennbar.
+# Issue #2666: der Renderer liest ``vergleich.ausblick.titel`` (je Sprache);
+# die Konstante bleibt als deutscher Wert fuer Bestands-Importe.
 OUTLOOK_HEADING = "3-Tages-Ausblick"
 
 
 def _render_outlook_unavailable(
     loc: LocationResult, index: int, with_location: bool = False,
+    lang: Lang = "de",
 ) -> str:
     """Fix #1505: benannter Ausblick-Zustand statt stillem ``""``.
 
@@ -1254,12 +1267,12 @@ def _render_outlook_unavailable(
         OutlookState, render_outlook_state_html,
     )
 
-    title = (
-        f"{loc.location.name} · {OUTLOOK_HEADING}" if with_location
-        else OUTLOOK_HEADING
+    heading = t("vergleich.ausblick.titel", lang)
+    title = f"{loc.location.name} · {heading}" if with_location else heading
+    header = _location_heading(
+        loc, None, eyebrow=t("vergleich.ausblick.eyebrow", lang), title=title,
     )
-    header = _location_heading(loc, None, eyebrow="AUSBLICK", title=title)
-    hint = render_outlook_state_html(OutlookState.UNAVAILABLE)
+    hint = render_outlook_state_html(OutlookState.UNAVAILABLE, lang=lang)
     return (
         f'<div style="padding:{20 if index else 14}px 24px 0;">'
         f'{header}{hint}</div>'
@@ -1271,6 +1284,7 @@ def _render_location_outlook(
     outlook_metrics: list[dict] | None = None,
     with_location: bool = False,
     outlook_metric_formats: dict[str, bool] | None = None,
+    lang: Lang = "de",
 ) -> str:
     """AC-5/AC-9: Ausblick-Tabelle je Ort; entfaellt fail-soft bei Fehler
     bzw. leerem `outlook_hourly_data` (kein Crash, restliche Mail
@@ -1287,22 +1301,21 @@ def _render_location_outlook(
     benannten Zustand (``OutlookState.UNAVAILABLE``) ueber den geteilten
     Baustein aus #1486 (kein Compare-eigener Nachbau)."""
     if loc.error is not None or not loc.outlook_hourly_data:
-        return _render_outlook_unavailable(loc, index, with_location)
+        return _render_outlook_unavailable(loc, index, with_location, lang)
     rows = _build_location_outlook_rows(
-        loc, outlook_metrics, outlook_metric_formats)
+        loc, outlook_metrics, outlook_metric_formats, lang)
     if not rows:
-        return _render_outlook_unavailable(loc, index, with_location)
+        return _render_outlook_unavailable(loc, index, with_location, lang)
     # Issue #1378: dieselbe angeschriebene Zeitbasis wie beim Stundenblock
     # (geteilter Kopfbau, kein zweiter) — auch die Ausblick-Tageszeilen
     # und ihre @-Stunden-Tokens stehen in dieser Zeitbasis.
-    title = (
-        f"{loc.location.name} · {OUTLOOK_HEADING}" if with_location
-        else OUTLOOK_HEADING
-    )
+    heading = t("vergleich.ausblick.titel", lang)
+    title = f"{loc.location.name} · {heading}" if with_location else heading
     header = _location_heading(
-        loc, loc.outlook_hourly_data[0].ts, eyebrow="AUSBLICK", title=title,
+        loc, loc.outlook_hourly_data[0].ts,
+        eyebrow=t("vergleich.ausblick.eyebrow", lang), title=title,
     )
-    table = render_outlook_table(rows, show_acc=False, metrics=outlook_metrics)
+    table = render_outlook_table(rows, show_acc=False, metrics=outlook_metrics, lang=lang)
     return (
         f'<div style="padding:{20 if index else 14}px 24px 0;">'
         f'{header}{table}</div>'
@@ -1338,16 +1351,16 @@ def _render_warning_banner(warning_text: str) -> str:
     )
 
 
-def _render_header(result: ComparisonResult, sig, tz: ZoneInfo) -> str:
-    label_text = f"ORTS-VERGLEICH · {_html.escape(sig.eyebrow)}"
+def _render_header(result: ComparisonResult, sig, tz: ZoneInfo, lang: Lang = "de") -> str:
+    label_text = f"{t('vergleich.kopf.titel', lang)} · {_html.escape(sig.eyebrow)}"
     label_style = (
         f"font-family:{FONT_DATA};font-size:10px;"
         f"color:{G_ACCENT};letter-spacing:0.08em;"
         f"text-transform:uppercase;margin:0 0 6px 0;"
     )
 
-    weekday = _WEEKDAY_ABBR[result.target_date.weekday()]
-    date_str = result.target_date.strftime("%d.%m.%Y")
+    weekday = fmt_weekday(result.target_date, lang)
+    date_str = fmt_date_numeric(result.target_date, lang)
     # Issue #1268: keine Zeitfenster-Angabe mehr in der Kopfzeile — die
     # Bewertung laeuft immer ueber den ganzen Tag, es gibt nichts zu zeigen.
     date_line = f"{weekday}, {date_str}"
@@ -1382,10 +1395,14 @@ def _render_header(result: ComparisonResult, sig, tz: ZoneInfo) -> str:
             f'</td>'
         )
 
+    profil, orte, erstellt = (
+        t("vergleich.kopf.profil", lang), t("vergleich.kopf.orte", lang),
+        t("vergleich.kopf.erstellt", lang),
+    )
     desktop_cells = (
-        _cell("Profil", profil_val, "33%")
-        + _cell("Orte", orte_val, "33%")
-        + _cell("Erstellt", erstellt_val, "34%")
+        _cell(profil, profil_val, "33%")
+        + _cell(orte, orte_val, "33%")
+        + _cell(erstellt, erstellt_val, "34%")
     )
     desktop_table = (
         f'<table class="header-stats-desktop" cellspacing="0" cellpadding="0" '
@@ -1393,8 +1410,8 @@ def _render_header(result: ComparisonResult, sig, tz: ZoneInfo) -> str:
         f'<tr>{desktop_cells}</tr></table>'
     )
 
-    mobile_row1 = _cell("Profil", profil_val, "50%") + _cell("Orte", orte_val, "50%")
-    mobile_row2 = _cell("Erstellt", erstellt_val, "100%")
+    mobile_row1 = _cell(profil, profil_val, "50%") + _cell(orte, orte_val, "50%")
+    mobile_row2 = _cell(erstellt, erstellt_val, "100%")
     mobile_table = (
         f'<table class="header-stats-mobile" cellspacing="0" cellpadding="0" '
         f'style="display:none;width:100%;margin-top:14px;border-collapse:collapse;">'
@@ -1425,7 +1442,7 @@ def _render_section_head(accent: str, title: str, hint: str) -> str:
     )
 
 
-def _units_legend_text(visible: list[dict]) -> str:
+def _units_legend_text(visible: list[dict], lang: Lang = "de") -> str:
     """Issue #1237 (AC-2): Einheiten-Zeile fuer die sichtbaren Stunden-Spalten.
     Einheit je Spalte kommt aus dem Metrik-Katalog (`display_unit`, sonst
     `unit`), formatiert vom geteilten Helfer `helpers.format_units_legend` --
@@ -1439,12 +1456,12 @@ def _units_legend_text(visible: list[dict]) -> str:
         if mdef is None:
             continue
         pairs.append((m["label"], mdef.display_unit if mdef.display_unit else mdef.unit))
-    return format_units_legend(pairs)
+    return format_units_legend(pairs, lang=lang)
 
 
 def _column_legend_text(
     visible: list[dict], outlook_metrics: list[dict] | None = None,
-    outlook_enabled: bool = False,
+    outlook_enabled: bool = False, lang: Lang = "de",
 ) -> str:
     """Issue #1472 (AC-1/AC-8): Spalten-Zeile fuer die sichtbaren Stunden-
     Spalten -- 'Spalten: Thdr = Gewitter · Visib = Sichtweite'.
@@ -1466,16 +1483,16 @@ def _column_legend_text(
     from output.renderers.email.helpers import format_column_legend, outlook_legend_pairs
 
     kurz = derive_row_labels(visible, form="short")
-    lang = derive_row_labels(visible, form="long")
-    pairs = [(k["label"], lng["label"]) for k, lng in zip(kurz, lang)]
+    lang_form = derive_row_labels(visible, form="long", lang=lang)
+    pairs = [(k["label"], lng["label"]) for k, lng in zip(kurz, lang_form)]
     if outlook_enabled:
-        pairs += outlook_legend_pairs(outlook_metrics)
-    return format_column_legend(pairs)
+        pairs += outlook_legend_pairs(outlook_metrics, lang=lang)
+    return format_column_legend(pairs, lang=lang)
 
 
 def _render_units_legend(
     hourly_metrics: list[str] | None, outlook_metrics: list[dict] | None = None,
-    outlook_enabled: bool = False,
+    outlook_enabled: bool = False, lang: Lang = "de",
 ) -> str:
     """Einheiten-Legende UNTER der Stundentabelle (nicht im Spaltenkopf) --
     die Spaltenkoepfe bleiben 'Zeit'/'Sicht' (AC-2). Issue #1472: darunter die
@@ -1485,8 +1502,8 @@ def _render_units_legend(
     visible = _visible_hour_metrics(hourly_metrics)
     blocks = ""
     for text in (
-        _units_legend_text(visible),
-        _column_legend_text(visible, outlook_metrics, outlook_enabled),
+        _units_legend_text(visible, lang),
+        _column_legend_text(visible, outlook_metrics, outlook_enabled, lang),
     ):
         if not text:
             continue
@@ -1500,8 +1517,15 @@ def _render_units_legend(
 def _render_legend(
     hourly_metrics: list[str] | None = None, hourly_enabled: bool = True,
     outlook_metrics: list[dict] | None = None, outlook_enabled: bool = False,
+    lang: Lang = "de",
 ) -> str:
-    items = [("#2f8a3e", "unkritisch"), ("#e3b008", "Achtung"), ("#e07b1a", "Warnung"), ("#c52a22", "Gefahr")]
+    # Issue #2666: dieselben Stufenwoerter wie die Trip-Legende (mail.legende.risk_*).
+    items = [
+        (color, t(f"mail.legende.risk_{stufe}", lang)) for color, stufe in (
+            ("#2f8a3e", "gruen"), ("#e3b008", "gelb"), ("#e07b1a", "orange"),
+            ("#c52a22", "rot"),
+        )
+    ]
     dots = "".join(
         f'<span style="display:inline-block;margin-right:16px;font-family:{FONT_DATA};'
         f'font-size:10px;color:{G_INK_MUTED};">'
@@ -1512,7 +1536,7 @@ def _render_legend(
     # #2136/ADR-0068 (AC-5): die Legende bleibt sichtbar, sobald der Ausblick
     # sichtbar ist -- auch wenn die Stundentabelle abgeschaltet ist.
     units = (
-        _render_units_legend(hourly_metrics, outlook_metrics, outlook_enabled)
+        _render_units_legend(hourly_metrics, outlook_metrics, outlook_enabled, lang)
         if hourly_enabled or outlook_enabled else ""
     )
     return (
@@ -1520,13 +1544,15 @@ def _render_legend(
         f'margin-top:22px;font-family:{FONT_DATA};font-size:10px;color:{G_INK_MUTED};">'
         f'<span style="font-weight:600;color:{G_INK_FAINT};letter-spacing:0.08em;'
         f'text-transform:uppercase;margin-right:16px;">Risk</span>{dots}'
-        f'<span style="color:{G_INK_FAINT};">Warn-Kürzel: Hitze · Brand·Stufe · Zugang</span>'
+        f'<span style="color:{G_INK_FAINT};">{t("vergleich.legende.warn_kuerzel", lang)}</span>'
         f'{units}'
         f'</div>'
     )
 
 
-def _compute_next_send(preset: Optional[dict], locations_by_id: dict) -> Optional[str]:
+def _compute_next_send(
+    preset: Optional[dict], locations_by_id: dict, lang: Lang = "de",
+) -> Optional[str]:
     """Issue #1969 (AC-26/AC-27): KEINE eigene Rechnung mehr — die zentrale
     Ableitung ``next_compare_briefing`` mit ``strict_after=True`` (der gerade
     laufende Versand zaehlt nicht als naechster). Slots, Wochentag, ``end_date``
@@ -1543,33 +1569,39 @@ def _compute_next_send(preset: Optional[dict], locations_by_id: dict) -> Optiona
     if nb.get("at") is None:
         return None
     tag = date.fromisoformat(nb["local_date"])
-    return f'{tag.strftime("%d.%m.%Y")} {nb["local_time"]} {nb["tz_abbr"]}'
+    return f'{fmt_date_numeric(tag, lang)} {nb["local_time"]} {nb["tz_abbr"]}'
 
 
-def _render_abo_footer(preset_name, preset, locations_by_id: dict, location_count: int, sig) -> str:
-    name = _html.escape(preset_name) if preset_name else "Ortsvergleich"
-    next_send = _compute_next_send(preset, locations_by_id) or "—"
+def _render_abo_footer(
+    preset_name, preset, locations_by_id: dict, location_count: int, sig,
+    lang: Lang = "de",
+) -> str:
+    name = _html.escape(preset_name) if preset_name else t("vergleich.fuss.abo_name", lang)
+    next_send = _compute_next_send(preset, locations_by_id, lang) or "—"
+    abo_zeile = t("vergleich.fuss.abo_zeile", lang, n=location_count,
+                  profil=_html.escape(sig.eyebrow))
     return (
         f'<div style="padding:20px 24px;background:{G_PAPER};border-top:1px solid #e6e1d3;">'
         f'<table style="width:100%;border-collapse:collapse;"><tr>'
         f'<td style="vertical-align:top;width:50%;">'
         f'<span style="font-family:{FONT_DATA};font-size:10px;color:{G_INK_FAINT};'
-        f'text-transform:uppercase;letter-spacing:0.1em;">Dieses Abo</span>'
+        f'text-transform:uppercase;letter-spacing:0.1em;">{t("vergleich.fuss.dieses_abo", lang)}</span>'
         f'<div style="font-size:14px;font-weight:600;margin-top:4px;color:{G_INK};">{name}</div>'
         f'<div style="font-size:11px;color:{G_INK_MUTED};margin-top:4px;'
         f'font-family:{FONT_DATA};line-height:1.6;">'
-        f'{location_count} Orte · Profil {_html.escape(sig.eyebrow)}</div>'
+        f'{abo_zeile}</div>'
         f'</td>'
         f'<td style="vertical-align:top;width:50%;">'
         f'<span style="font-family:{FONT_DATA};font-size:10px;color:{G_INK_FAINT};'
-        f'text-transform:uppercase;letter-spacing:0.1em;">Nächster Versand</span>'
+        f'text-transform:uppercase;letter-spacing:0.1em;">'
+        f'{t("vergleich.fuss.naechster_versand", lang)}</span>'
         f'<div style="font-size:14px;font-weight:600;margin-top:4px;'
         f'font-family:{FONT_DATA};color:{G_INK};">{next_send}</div>'
         f'</td></tr></table></div>'
     )
 
 
-def _render_app_footer() -> str:
+def _render_app_footer(lang: Lang = "de") -> str:
     # Issue #1241/warnmail-Spec AC-5 (Befund 4a): dezente Herkunfts-Fußzeile
     # (SSoT-Helper) -- keine per-Ort-Provider-Info hier verfügbar (Known
     # Limitation der Spec), fester Fallback "Open-Meteo" (ADR-0029) statt
@@ -1578,19 +1610,22 @@ def _render_app_footer() -> str:
         build_origin_footer, render_origin_footer_html,
     )
     origin_html = render_origin_footer_html(build_origin_footer(
-        "compare", source="Open-Meteo",
+        "compare", source="Open-Meteo", lang=lang,
     ))
     return (
         f'<div style="padding:16px 24px 20px;background:{G_INK};color:#9a978d;'
         f'font-size:11px;font-family:{FONT_DATA};">'
         f'<span style="color:#ffffff;font-weight:600;letter-spacing:0.06em;">GREGOR ZWANZIG</span>'
-        f' <span style="color:#5a5750;">·</span> Orts-Vergleich'
+        f' <span style="color:#5a5750;">·</span> {t("vergleich.kopf.titel_kurz", lang)}'
         f'<div style="margin-top:8px;padding-top:8px;border-top:1px solid #3a3835;font-size:10px;">'
         f'<a href="#" style="color:{G_ACCENT};text-decoration:none;margin-right:16px;">'
-        f'Vergleich in App öffnen →</a>'
-        f'<a href="#" style="color:#9a978d;text-decoration:none;margin-right:16px;">Abo bearbeiten</a>'
-        f'<a href="#" style="color:#9a978d;text-decoration:none;margin-right:16px;">Orte ändern</a>'
-        f'<a href="#" style="color:#9a978d;text-decoration:none;">Abmelden</a>'
+        f'{t("vergleich.fuss.app_oeffnen", lang)}</a>'
+        f'<a href="#" style="color:#9a978d;text-decoration:none;margin-right:16px;">'
+        f'{t("vergleich.fuss.abo_bearbeiten", lang)}</a>'
+        f'<a href="#" style="color:#9a978d;text-decoration:none;margin-right:16px;">'
+        f'{t("vergleich.fuss.orte_aendern", lang)}</a>'
+        f'<a href="#" style="color:#9a978d;text-decoration:none;">'
+        f'{t("vergleich.fuss.abmelden", lang)}</a>'
         f'</div></div>'
         + origin_html
     )
@@ -1631,6 +1666,7 @@ def render_compare_html(
     undelivered: list | None = None,
     preset: Optional[dict] = None,
     unresolved_count: int = 0,
+    lang: Lang = "de",
 ) -> str:
     """Rendert ComparisonResult als HTML-Mail (v2-Layout, Issue #1110).
 
@@ -1688,6 +1724,8 @@ def render_compare_html(
             Renderer-Zuordnung (``CompareRenderOptions.unresolved_by_channel``).
             Zusammen mit den Groessen ohne Zeilendefinition als Hinweiszeile
             unter der Uebersichtstabelle; bei 0 kein Hinweis.
+        lang: Issue #2666 -- Sprache aller Nutzertexte (``de`` byte-gleich zu
+            vorher); Kurzformen der Stundentabelle bleiben (ADR-0042).
 
     Returns:
         HTML-String (DOCTYPE bis </html>).
@@ -1698,39 +1736,44 @@ def render_compare_html(
     `TypeError` statt still zu wirken wie eine Einstellung.
     """
     warnings = warnings or []
-    sig = profile_signature(profile)
+    sig = profile_signature(profile, lang=lang)
     locations = location_render_order(result.locations)
 
     # Issue #1378 (AC-4): Kopfzeilen-Zeitbasis = Ortszeit des ERSTGENANNTEN
     # Ortes der konfigurierten Reihenfolge (`location_render_order`, #1359) --
     # nicht alphabetisch, nicht Serverzeit.
     header_tz = location_tz(locations[0].location) if locations else UTC
-    header_html = _render_header(result, sig, header_tz)
+    header_html = _render_header(result, sig, header_tz, lang)
     warnings_html = "".join(_render_warning_banner(w) for w in warnings)
-    warn_banner_html = _render_warn_banner(locations)
+    warn_banner_html = _render_warn_banner(locations, lang)
     # Issue #1349 (Scheibe 3) — geteilter Baustein aus unavailable_hint.py,
     # kein Nachbau. Nur bei gesetztem Flag aufgerufen (AC-2 Byte-Identitaet).
     from output.renderers.email.unavailable_hint import (
         any_official_alerts_unavailable, render_official_alerts_unavailable_html,
     )
     unavailable_banner_html = (
-        render_official_alerts_unavailable_html()
+        render_official_alerts_unavailable_html(lang=lang)
         if any_official_alerts_unavailable(locations) else ""
     )
 
+    overview_head = (
+        t("vergleich.abschnitt.uebersicht", lang), t("vergleich.uebersicht.titel", lang),
+        t("vergleich.uebersicht.scrollen", lang),
+    )
     overview_html = (
         f'<div style="padding:6px 24px 0;">'
-        f'{_render_section_head("ÜBERSICHT", "Alle Orte · gewählte Metriken", "← scrollen")}'
-        f'{_render_overview_table(locations, enabled_metrics, corridors, unresolved_count)}</div>'
+        f'{_render_section_head(*overview_head)}'
+        f'{_render_overview_table(locations, enabled_metrics, corridors, unresolved_count, lang)}</div>'
     )
     # Issue #1278 (Nebenbefund, AC-12): die dritte Angabe war fest "09–16 Uhr" --
     # ein toter Rest des mit #1268 abgeschafften Zeitfensters. Die Bewertung
     # laeuft seit #1268 ueber den ganzen Tag; die Angabe behauptete eine
     # Einschraenkung, die es nicht gibt. Ersatzlos leer (analog zur bereits
     # entfernten Zeitfenster-Zeile im Klartext-Header, comparison.py:77).
+    hourly_head = (t("vergleich.abschnitt.stunden", lang), t("vergleich.stunden.titel", lang), "")
     hourly_head_html = (
         f'<div style="padding:26px 24px 0;">'
-        f'{_render_section_head("STUNDEN", "Stundenverlauf · alle Orte", "")}</div>'
+        f'{_render_section_head(*hourly_head)}</div>'
     ) if hourly_enabled else ""
 
     # Issue #1323: der 3-Tage-Ausblick je Ort (Epic #1301 B4) steht direkt
@@ -1741,7 +1784,7 @@ def render_compare_html(
     # bei fehlenden Daten "").
     def _per_location(loc, i: int) -> str:
         section = (
-            _render_location_section(loc, i, hourly_metrics, corridors)
+            _render_location_section(loc, i, hourly_metrics, corridors, lang)
             if hourly_enabled else ""
         )
         if not outlook_enabled:
@@ -1752,7 +1795,7 @@ def render_compare_html(
         # ortslos.
         return section + _render_location_outlook(
             loc, i, outlook_metrics, with_location=not section,
-            outlook_metric_formats=outlook_metric_formats,
+            outlook_metric_formats=outlook_metric_formats, lang=lang,
         )
 
     per_location_html = "".join(
@@ -1766,22 +1809,22 @@ def render_compare_html(
         has_undelivered, render_undelivered_html,
     )
     undelivered_html = (
-        render_undelivered_html(undelivered, tz=header_tz)
+        render_undelivered_html(undelivered, tz=header_tz, lang=lang)
         if has_undelivered(undelivered) else ""
     )
 
     legend_html = _render_legend(
-        hourly_metrics, hourly_enabled, outlook_metrics, outlook_enabled,
+        hourly_metrics, hourly_enabled, outlook_metrics, outlook_enabled, lang,
     )
     abo_html = _render_abo_footer(
         preset_name,
         preset,
         {lr.location.id: lr.location for lr in locations},
-        len(locations), sig,
+        len(locations), sig, lang,
     )
     from output.renderers.email.command_block import render_commands_html
-    commands_html = render_commands_html("vergleich")
-    app_footer_html = _render_app_footer()
+    commands_html = render_commands_html("vergleich", lang=lang)
+    app_footer_html = _render_app_footer(lang)
 
     # Nur nicht-leere Bloecke einreihen (kein Doppel-Newline durch leeren
     # Warn-Lead/keine Warnungen, analog zur Anti-Erosion-Regel aus #1034).
@@ -1814,11 +1857,11 @@ th, td {{ vertical-align:top; }}
 </style>"""
 
     return f"""<!DOCTYPE html>
-<html lang="de">
+<html lang="{'en' if lang == 'en' else 'de'}">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Orts-Vergleich</title>
+<title>{t('vergleich.kopf.titel_kurz', lang)}</title>
 {WEB_FONT_LINK}
 {style_block}
 </head>

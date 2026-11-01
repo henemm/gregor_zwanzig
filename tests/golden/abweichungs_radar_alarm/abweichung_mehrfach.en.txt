@@ -1,0 +1,33 @@
+
+----- betreff -----
+[GR20 Golden] Segment 3–4, 🏁 Destination · ↑ 4 over threshold: Gusts 72 km/h, Thunder high, Precip 12.5 mm
+----- klartext -----
+5 values above the alert threshold
+
+↑ 4 over threshold
+
+Gusts · Segment 3 · peak hour tomorrow 15:00 · Change 27 · Threshold 20: 45 ↑ 72 km/h above
+14:00 | 40 → 66
+15:00 | 45 → 72
+affected 13:00–18:00
+Thunder · Segment 3 · peak hour 17:00 · Change 2 levels · Threshold 1 level: light ↑ high · Hail: yes above
+Precip · Segment 3 · more rain than forecast · Change 8.5 · Threshold 5: 4 ↑ 12.5 mm above
+Freezing lvl · Segment 4 · peak hour in 2 days 09:00 · Change 550 · Threshold 300: 2,400 ↓ 1,850 m above
+Temp · 🏁 Destination · peak hour was 3 days ago 12:00 · below threshold: 12 → 10 °C
+
+Precip onset: 14:00 → 11:30 (2.5 h earlier · Segment 3)
+
+As of today 06:00 · compared with the last briefing · Segment 3–4, 🏁 Destination
+
+Deviation alert · Open-Meteo
+----- telegram -----
+<b>GR20 Golden · Segment 3–4, 🏁 Destination · 4 over threshold</b>
+Gusts Segment 3 · peak hour tomorrow 15:00 45→72 km/h · Thunder Segment 3 · peak hour 17:00 light→high · Hail: yes · Precip Segment 3 · more rain than forecast 4→12.5 mm · Freezing lvl Segment 4 · peak hour in 2 days 09:00 2,400→1,850 m · Temp 🏁 Destination · peak hour was 3 days ago 12:00 12→10 °C
+Gusts
+14:00 | 40 → 66
+15:00 | 45 → 72
+affected 13:00–18:00
+Precip onset: 14:00 → 11:30 (2.5 h earlier · Segment 3)
+As of today 06:00 · compared with the last briefing
+----- sms -----
+S3-4 Seg 3-4, Ziel: G45->72@Do15 13-18 TH:L->H+HL@17 R4->12@Mi16 Rest6@Fr20 FZ2400->1850@Sa09 T12->10@Mo12 R11:30 2,5 h früher

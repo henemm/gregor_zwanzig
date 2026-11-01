@@ -371,7 +371,8 @@ _BESTAND: tuple[tuple[str, str, str], ...] = (
     (_R + "email/html.py", "severities", "schluessel"),
     ("src/services/compare_alert.py", "_SUMMARY_KEY_TO_CATALOG_ID", "wert"),
     ("src/services/day_comparison.py", "_METRIC_ID_TO_ENTRY_ATTR", "schluessel"),
-    ("src/services/day_comparison.py", "_DIRECTION_WORDS", "schluessel"),
+    # #2666: Richtungswoerter liegen im Katalog, die Kennungsmenge bleibt hier.
+    ("src/services/day_comparison.py", "_DIRECTION_METRICS", "element"),
     ("src/services/day_comparison.py", "_DISPLAY_SALIENCE_OVERRIDES", "schluessel"),
     # Issue #2134: die drei Bestands-Callback-Token der Telegram-Buttons
     # (`dd_thunder_today` …) auf Katalog-Kennungen. Die Schluessel sind fremdes

@@ -76,7 +76,7 @@ def _aufzeichner_installieren(monkeypatch) -> Mitschrift:
         def __init__(self, settings) -> None: ...
 
         def send(self, subject, body, html=True, plain_text_body=None, to=None,
-                 mail_type=None, mail_format=None, compare_hourly_enabled=None):
+                 mail_type=None, mail_format=None, compare_hourly_enabled=None, lang="de"):
             _buchen("email", subject)
 
     class _Sms:  # #1412 S4b: Empfaenger kommt als recipient=

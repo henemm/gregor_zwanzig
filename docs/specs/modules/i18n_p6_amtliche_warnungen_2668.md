@@ -2,7 +2,7 @@
 entity_id: i18n_p6_amtliche_warnungen_2668
 type: module
 created: 2026-10-30
-updated: 2026-10-30
+updated: 2026-10-31
 status: approved
 version: "1.0"
 tags: [i18n, epic-2644, issue-2668, python, model-haiku]
@@ -30,7 +30,7 @@ Wer Englisch gewählt hat, bekommt amtliche Warnungen (Standalone-Warnmail, Warn
 > **Querschnitts-Prüfpunkte:**
 > - **Trip/Ortsvergleich-Teilung:** Alle Warn-Bausteine sind bereits geteilt (Trip und Ortsvergleich nutzen `render_warn_block`, `build_*_official_alert_notices`, `render_official_alerts_html`, ADR-0011). Es entsteht kein Compare-Pendant; alle Texte liegen in `warnung.*`. Der compare-eigene Anteil (`compare_official_alert.py`) reicht `lang` nur durch.
 > - **Mandantentrennung:** Zwischengespeicherte Warnungen sind nutzerübergreifend gemeinsam. Der Test AC-6 beweist mit **zwei Nutzern verschiedener Sprache auf demselben Cache-Objekt**, dass jeder Nutzer seine Sprache sieht und der gemeinsame Zustand unverändert bleibt. `user_id` und `resolve_user_lang(user_id)` kommen aus dem Auth-Kontext in P9b; dieses Paket nimmt `lang` nur als Parameter.
-> - **Kanäle:** Alarm-/Briefing-Inhalt. Alle vier: E-Mail (HTML/Klartext, `render_official_alert_html`, `render_official_alert_mail_plain`, Warn-Block), Telegram (`render_official_alert_telegram`, `render_official_allclear_telegram`; **in diesem Paket erledigt**, P7 prüft nur), SMS (`render_official_alert_sms`, Kürzel bleiben) und Premium-SMS (derselbe SMS-Text).
+> - **Kanäle:** Alarm-/Briefing-Inhalt. Alle vier: E-Mail (HTML/Klartext, `render_official_alert_html`, `render_official_alert_mail_plain`, Warn-Block), Telegram (`render_official_alert_telegram`, `render_official_allclear_telegram`; **in diesem Paket erledigt**, P7 prüft nur), SMS (`render_official_alert_sms`) und Premium-SMS (derselbe SMS-Text) bleiben in jeder Sprache byte-gleich zu heute (**PO-Korrektur 2026-10-31**, ADR-0104 Präzisierung).
 
 ### Affected Files
 
@@ -75,7 +75,7 @@ Wer Englisch gewählt hat, bekommt amtliche Warnungen (Standalone-Warnmail, Warn
 
 **Katalog-Namensraum:** `warnung` (`src/i18n/messages/{de,en}/warnung.json`). Nur diese beiden Dateien anfassen. das im Glossar verbotene Produktwort ist untersagt.
 
-**Signaturen (Abschnitt 4):** `*, lang: Lang = "de"` keyword-only an jeder Text erzeugenden Funktion (`_display_label(alert, *, lang="de")`, `_format_validity(alert, tz=None, *, lang="de")`, `render_official_alert_html(...)`, `render_official_alert_mail_plain(...)`, `render_warn_block(...)`, `render_official_alert_telegram(...)`, `render_official_alert_sms(...)`, `build_official_alert_notices(...)`, `build_compare_official_alert_notices(...)`, `official_alert_authority_notes(alerts, *, lang="de")`, die `render_official_allclear_*`-Funktionen). Kein Modul-Zustand. `_de_weekday_short(dt)` bleibt als dünner Wrapper auf `fmt_weekday(dt, "de")` erhalten (bis P9b ihn in `trip_alert.py` ablöst); neu `_weekday_short(dt, lang)`.
+**Signaturen (Abschnitt 4):** `*, lang: Lang = "de"` keyword-only an jeder Text erzeugenden Funktion (`_display_label(alert, *, lang="de")`, `_format_validity(alert, tz=None, *, lang="de")`, `render_official_alert_html(...)`, `render_official_alert_mail_plain(...)`, `render_warn_block(...)`, `render_official_alert_telegram(...)`, `build_official_alert_notices(...)`, `build_compare_official_alert_notices(...)`, `official_alert_authority_notes(alerts, *, lang="de")`, die `render_official_allclear_*`-Funktionen). Kein Modul-Zustand. **PO-Korrektur 2026-10-31:** `render_official_alert_sms`, `render_official_alert_sms_with_allclears` und `render_official_allclear_sms_block` bekommen KEIN `lang`; der SMS-Text ist in jeder Sprache byte-gleich zu heute. Geteilte Helfer, die auch die SMS speisen (`sms_scope` der Notice-Builder), liefern für die SMS weiterhin den bisherigen Wert. `_de_weekday_short(dt)` bleibt als dünner Wrapper auf `fmt_weekday(dt, "de")` erhalten (bis P9b ihn in `trip_alert.py` ablöst); neu `_weekday_short(dt, lang)`.
 
 **Beispiel-Schlüssel (de wörtlich wie heute, en laut Glossar):**
 
@@ -171,7 +171,7 @@ Wichtig: `_LEVEL_WORDS` wird auch von `compare_html.py:915` gelesen (`_LEVEL_WOR
 ## Expected Behavior
 
 - **Input:** Liste `OfficialAlert` (aus dem gemeinsamen Cache oder Test-Objekten), Trip- oder Ortsvergleich-Kontext, `lang`.
-- **Output:** Warnmail (HTML + Klartext), Warn-Block in Briefing und Ortsvergleich, Telegram- und SMS-Text, Entwarnung. `de` byte-gleich zu heute. `en`: Rahmen, Stufen- und Gefahrenwörter, Gültigkeit, Quelle, Entwarnung englisch; angezeigter Behördentext aus dem `en`-Block, falls vorhanden, sonst Quellsprache mit Hinweis `Source text in <Sprache>`; Namen, Kürzel und Stufenbuchstaben unverändert.
+- **Output:** Warnmail (HTML + Klartext), Warn-Block in Briefing und Ortsvergleich, Telegram- und SMS-Text, Entwarnung. `de` byte-gleich zu heute; der SMS-Text ist in jeder Sprache byte-gleich zu heute (PO-Korrektur 2026-10-31). `en`: Rahmen, Stufen- und Gefahrenwörter, Gültigkeit, Quelle, Entwarnung englisch; angezeigter Behördentext aus dem `en`-Block, falls vorhanden, sonst Quellsprache mit Hinweis `Source text in <Sprache>`; Namen, Kürzel und Stufenbuchstaben unverändert.
 - **Side effects:** Keine. Der Cache und die `OfficialAlert`-Objekte werden nie verändert (frozen); `label` und Dedup-Schlüssel bleiben.
 
 ## Acceptance Criteria
@@ -182,7 +182,7 @@ Wichtig: `_LEVEL_WORDS` wird auch von `compare_html.py:915` gelesen (`_LEVEL_WOR
 - **AC-2:** Given eine Warnung, deren einziger Sprachblock Französisch ist und deren Behördentext angezeigt wird (Label mit Detail-Trenner `—`, z. B. `Orages — Chablais`), und Sprache `en` / When die Warnmail gerendert wird / Then ist der Rahmen englisch, der Behördentext bleibt französisch und der Hinweis `Source text in French` aus dem Katalog steht in Mail und Telegram, nicht in der SMS.
   - Test: tests/test_amtliche_warnungen_sprachblock.py — Hinweis über `t("warnung.hinweis.quelltext_sprache", "en", sprache=t("warnung.sprache.fr", "en"))`; kein Hinweis in `render_official_alert_sms`; kein Hinweis, wenn nur das Katalog-Typ-Wort angezeigt wird.
 
-- **AC-3:** Given Sprache `de` / When alle Golden-Fälle (einzelne Warnung, gemischte Stufen, Lawinen-Lagebericht, Entwarnung) über E-Mail, Telegram und SMS gerendert werden / Then ist jede Ausgabe byte-gleich zu den vorab eingecheckten `*.de.*`-Dateien.
+- **AC-3:** Given Sprache `de` / When alle Golden-Fälle (einzelne Warnung, gemischte Stufen, Lawinen-Lagebericht, Entwarnung) über E-Mail, Telegram und SMS gerendert werden / Then ist jede Ausgabe byte-gleich zu den vorab eingecheckten `*.de.*`-Dateien; der SMS-Text ist in jeder Sprache byte-gleich zu heute (auch mit Sprache `en`, PO-Korrektur 2026-10-31).
   - Test: tests/golden/test_amtliche_warnungen_golden.py — Byte-Vergleich je Fall und Kanal.
 
 - **AC-4:** Given Sprache `en` / When eine Warnung des Typs Waldbrand-Gefahr aus `meteo_forets.py` (Label `Waldbrand-Gefahr — Stufe 3`, Département `Haute-Corse`) und eine Zugangssperre (`Zugang gesperrt — Monts Toulonnais`) gerendert werden / Then lauten die Titel `Wildfire risk` und `Access closed — Monts Toulonnais`, das Quell-Stufen-Suffix `Stufe 3` erscheint nicht, und Département- und Massivname bleiben unverändert.
@@ -194,7 +194,7 @@ Wichtig: `_LEVEL_WORDS` wird auch von `compare_html.py:915` gelesen (`_LEVEL_WOR
 - **AC-6:** Given zwei Nutzer, `golden-en` (Sprache `en`) und `golden-de` (Sprache `de`), die dieselbe zwischengespeicherte Warnung (dasselbe Objekt) erhalten / When beide nacheinander (`en`, dann `de`, dann `en`) rendern / Then sieht jeder seine Sprache, die Objekte und ihre `label`/Dedup-Schlüssel sind danach unverändert, und der Melde-Gedächtnis-Schlüssel ist für beide gleich.
   - Test: tests/test_amtliche_warnungen_sprachblock.py — gleiche Instanz, drei Aufrufe, Vergleich von `official_alert_state_key` vor und nach dem Rendern.
 
-- **AC-7:** Given Sprache `en` und der Lawinen-Lagebericht (EAWS Stufe 3) / When Mail und SMS gerendert werden / Then lautet die Stufe `Avalanche level 3 (considerable)`, der SLF-Behördenname bleibt unverändert, und die SMS-Token (Kürzel, Stufenbuchstabe) sind identisch zur deutschen SMS.
+- **AC-7:** Given Sprache `en` und der Lawinen-Lagebericht (EAWS Stufe 3) / When Mail und SMS gerendert werden / Then lautet die Stufe `Avalanche level 3 (considerable)`, der SLF-Behördenname bleibt unverändert, und der SMS-Text ist in jeder Sprache byte-gleich zu heute (PO-Korrektur 2026-10-31).
   - Test: tests/test_amtliche_warnungen_zweisprachig.py — Vergleich der SMS-Token zwischen den Sprachen, Stufenwort über `t("warnung.eaws.erheblich", "en")`.
 
 ## Known Limitations
@@ -214,3 +214,4 @@ Wichtig: `_LEVEL_WORDS` wird auch von `compare_html.py:915` gelesen (`_LEVEL_WOR
 ## Changelog
 
 - 2026-10-30: Initial spec created (Planung Epic #2644)
+- 2026-10-31: PO-Korrektur 2026-10-31 (ADR-0104 Präzisierung): SMS und Premium-SMS ausgenommen, SMS-Text in jeder Sprache byte-gleich zu heute; `render_official_alert_sms` ohne `lang`.

@@ -28,7 +28,15 @@ const TABS_FILE = join(COMPARE_DIR, 'CompareTabs.svelte');
 const PAGE_FILE = join(COMPARE_DIR, '..', '..', '..', 'routes', 'compare', '[id]', '+page.svelte');
 const SECTION_H_FILE = join(COMPARE_DIR, '..', 'atoms', 'SectionH.svelte');
 
+// Issue #2682: die Übersicht ist nach shared/hub-uebersicht/ umgezogen — die Übersichts-Fälle
+// (AC-3, AC-5..AC-8) lesen dort: Texte im Modell, Markup im Baustein. Gleich streng, nur der
+// Pfad folgt (Spec feat_2682 AC-18); Orte-Reiter- und Schreibpfad-Fälle bleiben an CompareTabs.
+const HU_FILE = join(COMPARE_DIR, '..', 'shared', 'hub-uebersicht', 'HubUebersicht.svelte');
+const MODELL_FILE = join(COMPARE_DIR, '..', 'shared', 'hub-uebersicht', 'hubUebersichtModell.ts');
+
 const tabs = () => readFileSync(TABS_FILE, 'utf-8');
+const baustein = () => readFileSync(HU_FILE, 'utf-8');
+const modell = () => readFileSync(MODELL_FILE, 'utf-8');
 const page = () => readFileSync(PAGE_FILE, 'utf-8');
 
 // Issue #1360 (Scheibe S1a von Epic #1372): die Fidelity-Pruefungen zum
@@ -43,7 +51,7 @@ describe('AC-3: Orte-SummaryCard „+N weitere" (jsx:159)', () => {
 		// Bewusst „{…} weitere" (interpolierte Restanzahl) — das vorbestehende
 		// „Keine weiteren gespeicherten Orte" (Add-Panel) darf NICHT matchen.
 		assert.match(
-			tabs(),
+			modell(),
 			/\}\s+weitere/,
 			'AC-3 FAIL: „+N weitere"-Suffix fehlt auf der Orte-Karte (Ist: nackter slice(0,3)-Join)'
 		);
@@ -58,7 +66,7 @@ describe('AC-3: Orte-SummaryCard „+N weitere" (jsx:159)', () => {
 
 describe('AC-5: Versand-SummaryCard Draft-Sonderfall (jsx:175-177)', () => {
 	test('Draft-Titel und Draft-Copy vorhanden', () => {
-		const code = tabs();
+		const code = modell();
 		assert.ok(code.includes('Noch nicht geplant'), 'AC-5 FAIL: Draft-Titel „Noch nicht geplant" fehlt');
 		assert.ok(
 			// #1743: kein Reiter „Versand" mehr — die Copy verweist auf den Abschnitt unter Wetter-Metriken.
@@ -69,11 +77,11 @@ describe('AC-5: Versand-SummaryCard Draft-Sonderfall (jsx:175-177)', () => {
 });
 
 describe('AC-6: Wertebereiche-Karte Profil-Label (jsx:163)', () => {
-	test('presetProfileLabel wird in CompareTabs verwendet', () => {
+	test('presetProfileLabel wird im Modell der Übersicht verwendet (#2682: vorher CompareTabs)', () => {
 		assert.match(
-			tabs(),
-			/presetProfileLabel/,
-			'AC-6 FAIL: CompareTabs nutzt presetProfileLabel nicht — Karte zeigt rohes preset.profil'
+			modell(),
+			/presetProfileLabel\(/,
+			'AC-6 FAIL: hubUebersichtModell nutzt presetProfileLabel nicht — Karte zeigt rohes preset.profil'
 		);
 	});
 });
@@ -81,13 +89,13 @@ describe('AC-6: Wertebereiche-Karte Profil-Label (jsx:163)', () => {
 describe('AC-7: mobiler Chevron-Summary-Stack (screen-compare-detail-mobile.jsx:87-93,276-293)', () => {
 	test('gestapelte Chevron-Zeilen mit Testid vorhanden', () => {
 		assert.match(
-			tabs(),
+			baustein(),
 			/data-testid="hub-summary-row-mobile"/,
 			'AC-7 FAIL: keine mobilen Chevron-Summary-Zeilen (hub-summary-row-mobile) — Ist: 2×2-Grid auch mobil'
 		);
 	});
 	test('mobile Draft-Kurztexte der Versand-Zeile vorhanden', () => {
-		const code = tabs();
+		const code = modell();
 		assert.ok(code.includes('Nicht geplant'), 'AC-7 FAIL: mobile Draft-Kurzform „Nicht geplant" fehlt');
 		assert.ok(code.includes('Aktivierung offen'), 'AC-7 FAIL: mobile Draft-Desc „Aktivierung offen" fehlt');
 	});
@@ -96,7 +104,7 @@ describe('AC-7: mobiler Chevron-Summary-Stack (screen-compare-detail-mobile.jsx:
 describe('AC-8: mobile Status-Kurzform (screen-compare-detail-mobile.jsx:81)', () => {
 	test('Kurzform „Läuft autom." vorhanden', () => {
 		assert.match(
-			tabs(),
+			modell(),
 			/Läuft autom\./,
 			'AC-8 FAIL: mobile Status-Kurzform „Läuft autom." fehlt (Ist: Langform „Läuft automatisch")'
 		);

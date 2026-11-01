@@ -120,6 +120,9 @@ Budget-Gate wurde nie angelegt. Dieses Dokument schließt beide Lücken.
   Testabdeckung, nicht Kür.
 - Der UTC-Tagesschnitt bleibt bewusst UTC, nicht die Zeitzone des Nutzers: das Kontingent hängt
   am Konto des Anbieters, nicht am Kalender des Nutzers.
-- Drei Pfade (`comparison_engine.py`, `forecast.py`, `trip_forecast.py`) umgehen Cache **und**
-  Gate weiterhin vollständig und fließen in keinen der beiden Töpfe ein — derselbe Scope-
-  Schnitt wie in `fix_1329_forecast_cache_budget.md`.
+- Zwei Pfade (`forecast.py`, `trip_forecast.py`) umgehen Cache **und** Gate weiterhin
+  vollständig und fließen in keinen der beiden Töpfe ein — derselbe Scope-Schnitt wie in
+  `fix_1329_forecast_cache_budget.md`. Stand 2026-10-31 (#2234): der Ortsvergleich
+  (`comparison_engine.py`, Vorschau/Versand/Sofortvergleich) gehört nicht mehr dazu, er holt
+  die Grundvorhersage über den geteilten Cache (Priorität `user_briefing`, nie gedrosselt),
+  siehe `fix_2234_compare_forecast_cache.md`.

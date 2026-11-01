@@ -2,7 +2,7 @@
 entity_id: i18n_p7_telegram_2669
 type: module
 created: 2026-10-30
-updated: 2026-10-30
+updated: 2026-10-31
 status: approved
 version: "1.0"
 tags: [i18n, epic-2644, issue-2669, python, docs, model-haiku]
@@ -187,6 +187,21 @@ parts.append(t("telegram.fuss.sicht", lang, wort=vis_word))
 - **AC-7:** Given der Staging-Test-Nutzer mit gesetzter Sprache `en` / When ein Briefing per Handversand an den Test-Chat gesendet wird / Then ist die zugestellte Telegram-Nachricht englisch, und die Sprache des Nutzers steht danach wieder auf `de` (auch bei Fehlschlag).
   - Test: scripts/staging_e2e_telegram_en.py — Live-Lauf in `/e2e-verify` (kein Mock); Rücksetzen im `finally` wird durch einen erzwungenen Fehlschlag-Lauf geprüft.
 
+- **AC-8:** Given der Ausblick (`Outlook`) mit Tagen am Donnerstag 30.10. und je einmal Sprache `de` und `en` / When die Ausblick-Zeilen gerendert werden / Then lautet das Datum auf Deutsch `Do 30.10.` und auf Englisch `Thu 30 Oct` (über `fmt_date(..., "kurz")` aus dem i18n-Kern, nicht mehr mit fest verdrahteten Wochentagen); die Kopfzeile nutzt weiter das numerische Datum aus P4.
+  - Test: tests/test_telegram_briefing_zweisprachig.py — prüft beide Datumsformen in den Ausblick-Zeilen byte-genau; `de` ist zusätzlich Teil der Golden-Datei.
+
+- **AC-9:** Given die Katalogdateien `telegram.json` für `de` und `en` / When ihre Schlüsselmengen verglichen werden / Then sind beide Mengen identisch (kein Schlüssel nur in einer Sprache, Plural-Schlüssel `.one`/`.other` in beiden), und keiner der Schlüssel hat einen leeren Wert.
+  - Test: tests/test_telegram_briefing_zweisprachig.py — Schlüsselparität de/en; zusätzlich der globale Paritätstest aus P1 bleibt grün.
+
+- **AC-10:** Given zwei verschiedene Nutzer mit je eigener Sprache (Nutzer A `en`, Nutzer B `de`, `user_id` jeweils aus dem Kontext, nie `"default"`) / When für beide nacheinander und in vertauschter Reihenfolge das Telegram-Briefing aufgebaut wird (Sprache über `resolve_user_lang(user_id)`) / Then erhält A nur englische und B nur deutsche Bubbles, und keine Ausgabe enthält Daten oder Sprache des anderen Nutzers.
+  - Test: tests/test_telegram_briefing_zweisprachig.py — zwei Nutzerverzeichnisse mit unterschiedlicher Sprache, Aufruf ohne `user_id` schlägt fehl statt auf `"default"` zu fallen.
+
+- **AC-11:** Given die Ratsche gegen hartkodierte Nutzertexte (P11) und ihre Allowlist `tests/fixtures/i18n_python_allowlist.json` / When die Umstellung abgeschlossen ist / Then enthält die Allowlist keinen Eintrag mehr für `src/output/renderers/narrow.py`, und die Ratsche meldet in `narrow.py` keinen Treffer.
+  - Test: Ratschen-Test (P11) — beide Richtungen: Treffer ohne Eintrag und Eintrag ohne Treffer; ist die Allowlist noch nicht vorhanden, prüft der Test die Treffer-Freiheit von `narrow.py` direkt.
+
+- **AC-12:** Given Sprache `en` / When Bubbles mit Protokoll-Token gerendert werden (Kürzel wie `compact_label`, Slash- und Button-Befehle, `col_label`, `sms_code`) / Then bleiben diese Token (ADR-0042 Klasse 1) byte-gleich zu `de`; `tests/test_metric_tokens_eingefroren.py` bleibt grün.
+  - Test: tests/test_telegram_briefing_zweisprachig.py und tests/test_metric_tokens_eingefroren.py.
+
 ## Known Limitations
 
 - Das Bot-Menü (`BOT_COMMANDS`, `setMyCommands`) ist botweit und bleibt deutsch mit den englischen Zusatzbefehlen aus #2417; Telegram erlaubt keine Sprache je Nutzer ohne Chat-Scope. Antworten auf Befehle (`HILFE`, `KUERZEL`/`CODES`, Schaltflächen-Beschriftungen) gehören zu P10 (#2673).
@@ -195,6 +210,8 @@ parts.append(t("telegram.fuss.sicht", lang, wort=vis_word))
 - Annahme: `report_type.title()` (`Morning`/`Evening`) bleibt in beiden Sprachen unverändert (heute schon englisch).
 - Annahme: Das Live-Skript ist neu, weil `.claude/hooks/e2e_telegram_live.py` nur das Close-Gate (Test-Chat gesetzt) prüft und keine Nachricht sendet.
 - Bis P9a/P9b sendet das System weiter deutsch (keine Durchreichung von `lang`).
+- **Abhängigkeit Kopfdatum (Folgeschritt P4 #2666):** Bei der Umsetzung von P7 lag `fmt_date_numeric` (P4) noch nicht vor. Die Kopfzeile bleibt daher in beiden Sprachen numerisch (`29.10.2026`, `local_fmt(..., "%d.%m.%Y")`). Die englische Form (`29 Oct 2026`) stellt P4 bzw. ein Folgeschritt nach P4 in `render_telegram_bubbles` um; P7 baut keinen eigenen Datumsformatierer. Ebenso stehen bis P4/P6 die Gewitterstufen-Wörter und der Warnungs-Rahmen noch auf Deutsch (AC-5-Rahmen als `xfail(strict=True)` markiert).
+- **Nutzerwirkung erst nach P2–P6 und P9a/P9b (#2671/#2672):** P7 macht den Renderer sprachfähig; englische Telegram-Briefings erreichen Nutzer erst, wenn P9a/P9b `lang` durchreichen und P2–P6 ihre geteilten Bausteine sprachfähig gemacht haben. Der Live-Test AC-7 (`scripts/staging_e2e_telegram_en.py`) folgt dort.
 
 ## Architektur-Entscheidung (ADR)
 
@@ -204,3 +221,5 @@ parts.append(t("telegram.fuss.sicht", lang, wort=vis_word))
 ## Changelog
 
 - 2026-10-30: Initial spec created (Planung Epic #2644)
+- 2026-10-31: AC-8 bis AC-12 ergänzt (Datumsformat, Schlüsselparität, Cross-User, Allowlist, Protokoll-Token)
+- 2026-10-31: Known Limitations um Abhängigkeit Kopfdatum (P4) und Nutzerwirkung erst nach P2–P6/P9a/P9b ergänzt (Adversary F004)

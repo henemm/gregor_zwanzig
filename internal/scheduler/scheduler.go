@@ -345,7 +345,7 @@ func New(cfg *config.Config, st *store.Store) (*Scheduler, error) {
 		{"*/15 * * * *", s.alertChecks, "alert_checks", "Alert Checks (every 15 min)", nil},
 		{"*/5 * * * *", s.inboundCommands, "inbound_command_poll", "Inbound Command Poll (every 5min)", nil},
 		// Issue #637: inbound_telegram_poll entfernt — Telegram-Eingang läuft jetzt
-		// push-basiert über den Webhook (POST /api/webhooks/telegram/{secret}).
+		// push-basiert über den Webhook (POST /api/webhooks/telegram/inbound, #1814).
 		// Issue #1628 S0 / #2261 A-2 S2: 5-Min-Takt mit Offset 3 (Minuten 3, 8,
 		// ... 58) -- kollidiert nie mit den */5-/*/15-Jobs und :00, weicht der
 		// Open-Meteo-Lastspitze :00/:30 aus. NUR diese zwei Radar-Jobs.
@@ -368,9 +368,22 @@ func New(cfg *config.Config, st *store.Store) (*Scheduler, error) {
 
 // Start begins cron scheduling.
 func (s *Scheduler) Start() {
+	// Issue #2163 Punkt 9: Zahlen aus den registrierten Eintraegen, gezaehlt
+	// wie Status() (Eintrag mit Teiljobs = mehrere Zeilen, ohne Meta = eine).
+	entries := s.cron.Entries()
+	lines := 0
+	s.mu.RLock()
+	for _, e := range entries {
+		if metas, ok := s.entryJobsLocked(e.ID); ok {
+			lines += len(metas)
+		} else {
+			lines++
+		}
+	}
+	s.mu.RUnlock()
 	s.cron.Start()
 	s.running.Store(true)
-	log.Printf("[scheduler] Started: 9 cron entries (10 jobs), timezone %s", s.cron.Location())
+	log.Printf("[scheduler] Started: %d cron entries (%d jobs), timezone %s", len(entries), lines, s.cron.Location())
 }
 
 // Stop gracefully shuts down the scheduler and waits for running jobs.

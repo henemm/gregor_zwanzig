@@ -1,0 +1,50 @@
+◯ WEATHER BRIEFING
+GR20 - Morning Report
+GR20 E1
+11.07.2026
+
+GR20 E1: 17–18°C, feels 11–12°C, ⛅, heavy rain max 8:00, moderate wind 17 km/h, gusts up to 70 km/h from 8:00, ⚡ possible 4:00–13:00
+
+━━ Metrics overview ━━
+  17–18°C · Max 12:00
+  feels 11.2–12.0°C · Max 12:00
+  Wind >10 km/h from 04:00 · max 17 (12:00)
+  Wind gusts >20 km/h from 04:00 · max 70 (08:00)
+  Rain from 08:00 · 18.5 mm
+  Thunderstorm medium from 04:00 · strongest 04:00
+  50% cloud cover · Max 08:00
+  Sun 2.5h
+
+━━ Segment 1: km 0.0–0.0 | 08:00–12:00 | ↑400m → 1200m ━━
+  Time   Temp   Feels   Wind   Gust   Rain   Thdr     SnowL   Cloud   Sun   TmpMin 
+  -----  -----  ------  -----  -----  -----  -------  ------  ------  ----  -------
+  08     16.8   11.2    15     70     18.5   medium   –       ⛅       –     16.8   
+  09     17.1   11.4    16     37     0.0    medium   –       ⛅       –     17.1   
+  10     17.4   11.6    16     38     0.0    medium   –       ⛅       –     17.4   
+  11     17.7   11.8    16     39     0.0    medium   –       ⛅       –     17.7   
+  12     18.0   12.0    17     40     0.0    medium   –       ⛅       –     18.0   
+
+
+── Reply commands ──
+  TODAY                – Weather for today's stage
+  TOMORROW             – Weather for tomorrow's stage
+  NOW                  – Rain and thunderstorm nowcast for the next ~2h
+  STORMS               – Thunderstorm risk for today's stage
+  ROUTE [km]           – Rain areas along the rest of the route
+  RESTDAY [N]          – Shift stages by N days (default: 1)
+  STATUS               – Today and upcoming stages
+  PAUSE [2d / 12h]     – Pause briefings for a while
+  SKIP                 – Skip the next briefing
+  STOP                 – Turn briefings off for good (also CANCEL)
+  RESUME               – Turn briefings back on
+  HELP                 – Show this help
+  CODES                – Show what the codes mean
+  STARTDATE YYYY-MM-DD – Set the trip start date and shift all stages
+  REPORT [morning / evening] – Send the briefing now (default: morning)
+
+Units: Temp, TmpMin, Feels °C · Wind, Gust km/h · Rain mm · SnowL m · Cloud % · Sun h
+Columns: Temp = Temperature · TmpMin = Low temperature alert · Feels = Feels-like temperature · Gust = Wind gusts · Rain = Precipitation · Thdr = Thunderstorm · SnowL = Snow line · Cloud = Cloud cover · Sun = Sunshine hours
+------------------------------------------------------------
+Generated: 2026-04-28 12:00 UTC
+Data: openmeteo (arome_france)
+Stage briefing · full version · openmeteo

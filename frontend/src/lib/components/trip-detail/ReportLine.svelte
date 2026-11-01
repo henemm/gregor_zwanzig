@@ -53,7 +53,7 @@
 	>{time}</span>
 	<div style="display: flex; gap: 3px; align-items: center;">
 		{#each channels as ch}
-			<ChannelDot kind={ch as 'email' | 'telegram' | 'sms'} />
+			<ChannelDot kind={ch as 'email' | 'telegram' | 'sms' | 'premium_sms'} />
 		{/each}
 	</div>
 </div>

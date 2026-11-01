@@ -1,0 +1,4 @@
+=== RUN   TestBriefingHealthCountsMixedTripAndCompareEntries
+--- PASS: TestBriefingHealthCountsMixedTripAndCompareEntries (0.00s)
+PASS
+ok  	github.com/henemm/gregor-api/internal/scheduler	0.007s

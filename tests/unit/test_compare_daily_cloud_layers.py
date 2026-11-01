@@ -74,7 +74,7 @@ def _run_comparison_engine(raw_data: list[ForecastDataPoint]) -> LocationResult:
     loc = _location()
     original_fetch = ce_mod.fetch_forecast_for_location
 
-    def recorded_fetch(location, hours=len(raw_data), settings=None):  # echte Funktion
+    def recorded_fetch(location, hours=len(raw_data), settings=None, user_id=None):  # echte Funktion
         return {
             "location": location,
             "error": None,

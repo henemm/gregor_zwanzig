@@ -110,6 +110,19 @@ def _pick_preferred_entry(entries: list[dict]) -> dict:
     return entries[0]
 
 
+def _label_by_lang(entries: list[dict]) -> tuple[tuple[str, str], ...]:
+    """Issue #2668: (Sprachcode, Text) je Sprachblock der Gruppe -- erster
+    Block je Sprache gewinnt, leerer Text zaehlt nicht. Die Auswahl nach
+    Nutzersprache trifft erst der Renderer (Cache ist nutzeruebergreifend)."""
+    out: dict[str, str] = {}
+    for entry in entries:
+        text = entry.get("event") or entry.get("headline")
+        code = entry["lang"][:2].lower()
+        if code and text and code not in out:
+            out[code] = text
+    return tuple(out.items())
+
+
 def _collect_cap_info_entries(cap_source: "str | bytes") -> list[dict]:
     """Sammelt jeden ``<info>``-Block einer CAP-XML-Antwort als normalisiertes
     Dict (Issue #1445 S1: XML-spezifische Haelfte des ehemaligen
@@ -199,6 +212,8 @@ def _group_and_map_info_entries(entries: list[dict]) -> list[OfficialAlert]:
                     valid_from=_parse_iso(onset),
                     valid_to=_parse_iso(expires),
                     region_label=area_desc,
+                    label_by_lang=_label_by_lang(groups[key]),
+                    label_lang=preferred["lang"][:2].lower(),
                 )
             )
         except Exception:

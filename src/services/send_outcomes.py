@@ -2,40 +2,34 @@
 
 Spec: docs/specs/modules/feat_2280_handversand_endpoint.md (AC-9)
 
-EINE Zuordnung Code -> (HTTP-Status, deutscher Text) und EINE Ableitung des
+EINE Zuordnung Code -> (HTTP-Status, Katalogschluessel) und EINE Ableitung des
 Versand-Ausgangs aus einem ``NotificationResult`` — geteilt von Trip und
 Ortsvergleich, damit beide Flaechen denselben Code mit demselben Text melden.
-Texte mit Platzhaltern werden mit ``str.format`` gefuellt.
+Issue #2671: der Text kommt in der Nutzersprache aus ``versand.ergebnis.<code>``;
+``code`` bleibt der stabile Vertrag mit dem Frontend.
 """
 from __future__ import annotations
 
+from i18n import Lang, t
+
 SEND_OUTCOMES: dict[str, tuple[int, str]] = {
-    "kind_required": (400, "Briefing-Art fehlt oder ist ungültig (erlaubt: route, vergleich)"),
-    "not_found": (404, "Briefing {entity_id} nicht gefunden"),
-    "already_in_progress": (409, "Versand läuft bereits — bitte warten"),
-    "no_stage": (
-        422, "Kein Briefing für {report_type} — keine Etappendaten für das aktuelle Datum",
-    ),
-    "no_weather": (422, "Kein Briefing versendet — keine Wetterdaten verfügbar"),
-    "no_channels": (
-        422,
-        "Kein Briefing versendet — kein Versandweg aktiv "
-        "(E-Mail, Telegram und SMS sind alle deaktiviert)",
-    ),
-    "channels_unreachable": (
-        422,
-        "Kein Briefing versendet — Versandweg konfiguriert, aber nicht "
-        "einsatzbereit (Kanal technisch nicht erreichbar)",
-    ),
-    "invalid_report_type": (
-        422, "Ungültiger Berichtstyp {report_type} (erlaubt: morning, evening)",
-    ),
-    "smtp_not_configured": (422, "E-Mail-Versand (SMTP) ist für diesen Nutzer nicht eingerichtet"),
-    # Ortsvergleich nicht versendbar (z.B. alle Orte geloescht, #2216) — der
-    # Grund kommt aus dem Versand selbst.
-    "invalid_preset": (422, "Ortsvergleich nicht versendbar: {reason}"),
-    # Unerwarteter Fehler im Versand (Ausnahme, Traceback im Log) — bewusst 500.
-    "send_failed": (500, "Versand fehlgeschlagen — interner Fehler, bitte später erneut versuchen"),
+    code: (status, f"versand.ergebnis.{code}")
+    for code, status in (
+        ("kind_required", 400),
+        ("not_found", 404),
+        ("already_in_progress", 409),
+        ("no_stage", 422),
+        ("no_weather", 422),
+        ("no_channels", 422),
+        ("channels_unreachable", 422),
+        ("invalid_report_type", 422),
+        ("smtp_not_configured", 422),
+        # Ortsvergleich nicht versendbar (z.B. alle Orte geloescht, #2216) —
+        # der Grund kommt aus dem Versand selbst.
+        ("invalid_preset", 422),
+        # Unerwarteter Fehler im Versand (Ausnahme, Traceback im Log) — bewusst 500.
+        ("send_failed", 500),
+    )
 }
 
 
@@ -51,6 +45,21 @@ class SendOutcomeError(ValueError):
         self.code = code
 
 
+class InvalidPresetError(ValueError):
+    """Ortsvergleich nicht versendbar, Grund als Katalogschluessel (#2672).
+
+    Der Text der Ausnahme bleibt die deutsche Fassung (Log, Bestand); die
+    Fehlerantwort an den Nutzer rendert ``reason_text(lang)``."""
+
+    def __init__(self, reason_key: str, **values) -> None:
+        self.reason_key = reason_key
+        self.values = {k: str(v) for k, v in values.items()}
+        super().__init__(self.reason_text("de"))
+
+    def reason_text(self, lang: Lang) -> str:
+        return t(self.reason_key, lang, **self.values)
+
+
 def outcome_from_result(result) -> str:
     """``NotificationResult`` -> ``"no_channels"`` | ``"channels_unreachable"`` | ``"sent"``."""
     if result.no_channel_configured:
@@ -60,7 +69,7 @@ def outcome_from_result(result) -> str:
     return "sent"
 
 
-def error_body(code: str, **values: str) -> tuple[int, dict]:
-    """(HTTP-Status, ``{"detail": <Text>, "code": <code>}``) aus dem Vokabular."""
-    status, template = SEND_OUTCOMES[code]
-    return status, {"detail": template.format(**values), "code": code}
+def error_body(code: str, *, lang: Lang = "de", **values: str) -> tuple[int, dict]:
+    """(HTTP-Status, ``{"detail": <Text in lang>, "code": <code>}``) aus dem Vokabular."""
+    status, key = SEND_OUTCOMES[code]
+    return status, {"detail": t(key, lang, **values), "code": code}

@@ -1,0 +1,19 @@
+WEATHER BRIEFING
+GR20 - Morning Report
+GR20 E1
+11.07.2026
+
+== Metrics overview ==
+  17-18C - Max 12:00
+  feels 11.2-12.0C - Max 12:00
+  Wind >10 km/h from 04:00 - max 17 (12:00)
+  !!! Wind gusts >20 km/h from 04:00 - max 70 (08:00)
+  !!! Rain from 08:00 - 18.5 mm
+  !! Thunderstorm medium from 04:00 - strongest 04:00
+  50% cloud cover - Max 08:00
+  Sun 2.5h
+
+----------------------------------------
+Generated: 2026-04-28 12:00 UTC
+Data: openmeteo (arome_france)
+Stage briefing - compact - openmeteo

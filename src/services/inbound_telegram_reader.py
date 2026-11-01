@@ -18,6 +18,7 @@ from urllib.parse import urlsplit
 from app.config import Settings, resolve_public_host
 from app.loader import compare_preset_to_dict, load_all_trips, load_compare_presets
 from app.trip import Trip
+from i18n import Lang, resolve_user_lang, t
 from lib.go_internal import post_internal
 from output.channels.recipient import _current_inbound_sender
 from output.channels.seven_io_base import mask_number
@@ -29,6 +30,7 @@ from services.trip_command_processor import (
     TripCommandProcessor,
     befehl_markieren,
     befehl_messung,
+    ganzzeilen_befehl,
     _BARE_KEYWORD_MAP,
     _erste_zeile,
     _erstes_wort,
@@ -50,6 +52,14 @@ from services.trip_selection import (
 )
 
 logger = logging.getLogger(__name__)
+
+
+def _registrierungs_hinweis(host: str | None) -> str:
+    """Hinweis fuer einen Chat ohne Konto (#1019) -- deutsch, denn ohne Konto
+    gibt es keine Kontosprache (#2673 Annahme 4)."""
+    if host:
+        return t("inbound.telegram.registrierung.text_host", "de", host=host)
+    return t("inbound.telegram.registrierung.text", "de")
 
 def _bare_public_host(settings: Settings) -> str | None:
     """Blosser Host ohne Schema — fuer die Fliesstext-Erwaehnung in Chat-Antworten."""
@@ -204,12 +214,8 @@ class InboundTelegramReader:
             host = _bare_public_host(settings)
             mid = self._notification_service.send_telegram_message(
                 chat_id=chat_id,
-                subject="Registrierung erforderlich",
-                body=(
-                    "Dieser Chat ist noch nicht mit einem Gregor-Zwanzig-Konto "
-                    "verknuepft. Sende /start gefolgt von deinem Token (zu finden "
-                    f"im Account-Bereich{f' auf {host}' if host else ''})."
-                ),
+                subject=t("inbound.telegram.registrierung.betreff", "de"),
+                body=_registrierungs_hinweis(host),
                 # #2168/#1412 S4a: Antwort an den fragenden Chat (inbound_reply).
                 settings=settings,
             )
@@ -222,6 +228,8 @@ class InboundTelegramReader:
         # vorher zwei knapp versetzte datetime.now()-Aufrufe, die an der
         # Tagesgrenze auf verschiedene Ortstage fallen konnten.
         now_utc = datetime.now(tz=timezone.utc)
+        # #2673: Kontosprache EINMAL je Nachricht, aus dem Konto dieses Chats.
+        lang = resolve_user_lang(user_id)
         trips = load_all_trips(user_id)
         presets = [compare_preset_to_dict(p) for p in load_compare_presets(user_id)]
 
@@ -234,7 +242,7 @@ class InboundTelegramReader:
             key, body = self._command_body(rest)
             if key is None:
                 befehl_markieren(None)
-                self._send_unknown_command(chat_id, user_settings)
+                self._send_unknown_command(chat_id, user_settings, lang)
                 return True
             # Adversary F001-Nachtrag (#2282 Fix-Loop 2): match_leading_name
             # kennt Kind/Objekt des Treffers bereits -- direkt uebernehmen,
@@ -254,7 +262,7 @@ class InboundTelegramReader:
             )
             self._dispatch_and_reply(
                 key, inbound, chat_id, user_settings,
-                ladehinweis_erlaubt=(name_kind == "route"),
+                ladehinweis_erlaubt=(name_kind == "route"), lang=lang,
             )
             return True
 
@@ -267,7 +275,7 @@ class InboundTelegramReader:
         key, body = self._command_body(text)
         if key is None:
             befehl_markieren(None)
-            self._send_unknown_command(chat_id, user_settings)
+            self._send_unknown_command(chat_id, user_settings, lang)
             return True
 
         # #2417 AC-5/Abschnitt H: ohne eindeutiges Ziel folgt die Sprache dem
@@ -280,13 +288,15 @@ class InboundTelegramReader:
         else:
             ziel = resolve_command_target(
                 key, trips, presets, now_utc, channel="telegram", englisch=englisch,
+                lang=lang,
             )
             if ziel.kind is None:
                 befehl_markieren(key)
                 # Issue #2282 AC-5: identischer Text wie Premium-SMS, kein
                 # Host-Zusatz mehr (der wuerde die Kanalgleichheit brechen).
                 mid = self._notification_service.send_telegram_message(
-                    chat_id=chat_id, subject="Error" if englisch else "Fehler",
+                    chat_id=chat_id,
+                    subject=t("inbound.antwort.intern.betreff", "en" if englisch else lang),
                     body=ziel.text, settings=user_settings,
                 )
                 if mid is not None:
@@ -315,19 +325,21 @@ class InboundTelegramReader:
         )
         self._dispatch_and_reply(
             key, inbound, chat_id, user_settings,
-            ladehinweis_erlaubt=ladehinweis_erlaubt,
+            ladehinweis_erlaubt=ladehinweis_erlaubt, lang=lang,
         )
         return True
 
-    def _send_unknown_command(self, chat_id: str, user_settings: Settings) -> None:
+    def _send_unknown_command(self, chat_id: str, user_settings: Settings,
+                              lang: Lang = "de") -> None:
         mid = self._notification_service.send_telegram_message(
             chat_id=chat_id,
-            subject="Unbekannter Befehl",
+            subject=t("inbound.unbekannt.betreff", lang),
             # Issue #2134: derselbe abgeleitete Text wie im Prozessor —
             # vorher war das die achte, eigenstaendig gepflegte Liste.
-            # #2417 AC-19: weder Ziel noch Wort -> deutsch mit englischem Hinweis.
-            body=unknown_command_body("Das war kein bekannter Befehl.")
-            + "\nEnglish: send HELP",
+            # #2417 AC-19: weder Ziel noch Wort -> Kontosprache; deutsch mit
+            # englischem Hinweis (#2673: der Hinweis entfaellt fuer en).
+            body=unknown_command_body(t("inbound.unbekannt.telegram", lang), lang=lang)
+            + ("\nEnglish: send HELP" if lang == "de" else ""),
             settings=user_settings,
         )
         if mid is not None:
@@ -335,7 +347,7 @@ class InboundTelegramReader:
 
     def _dispatch_and_reply(
         self, key: str, inbound: InboundMessage, chat_id: str, user_settings: Settings,
-        *, ladehinweis_erlaubt: bool = True,
+        *, ladehinweis_erlaubt: bool = True, lang: Lang = "de",
     ) -> None:
         """Fuehrt `process()` aus und schickt die Antwort — Query-Keys mit
         Lade-Zwischennachricht (AC-4), sonst direkt. Extrahiert aus
@@ -364,10 +376,7 @@ class InboundTelegramReader:
             # #2417 AC-4/AC-19: die Sprache ist bereits ermittelt
             # (inbound.englisch) -- auf Kurzform-Kanaelen ist JEDE Antwort
             # englisch, auch diese Zwischennachricht.
-            loading_body = (
-                "⏳ Loading weather..." if inbound.englisch
-                else "⏳ Wetter wird geladen..."
-            )
+            loading_body = t("inbound.telegram.laden", "en" if inbound.englisch else lang)
             loading_mid = self._notification_service.send_telegram_message(
                 chat_id=chat_id,
                 subject="⏳",
@@ -444,7 +453,7 @@ class InboundTelegramReader:
                         callback_query_id=cq_id, settings=settings,
                     )
             except Exception as e:
-                logger.warning(f"answerCallbackQuery fehlgeschlagen: {e}")
+                logger.warning(f"answerCallbackQuery fehlgeschlagen: {e}")  # i18n-log
             return True
         try:
             # #1019: unbekannter Absender (kein User-Match) erhaelt auch beim
@@ -457,11 +466,7 @@ class InboundTelegramReader:
                     self._notification_service.edit_telegram_message_text(
                         chat_id=chat_id,
                         message_id=message_id,
-                        text=(
-                            "Dieser Chat ist noch nicht mit einem Gregor-Zwanzig-Konto "
-                            "verknuepft. Sende /start gefolgt von deinem Token (zu finden "
-                            f"im Account-Bereich{f' auf {host}' if host else ''})."
-                        ),
+                        text=_registrierungs_hinweis(host),
                         settings=settings,
                     )
                 return True
@@ -503,10 +508,12 @@ class InboundTelegramReader:
         else:
             trips = load_all_trips(user_id)
             presets = [compare_preset_to_dict(p) for p in load_compare_presets(user_id)]
+            lang = resolve_user_lang(user_id)  # #2673: Kontosprache dieses Chats
             if data == "act_pause":
-                ziel = resolve_active_target(trips, presets, now_utc, channel="telegram")
+                ziel = resolve_active_target(trips, presets, now_utc, channel="telegram",
+                                             lang=lang)
             else:
-                ziel = resolve_trip_only_target(trips, presets, now_utc)
+                ziel = resolve_trip_only_target(trips, presets, now_utc, lang=lang)
             if ziel.kind is None:
                 befehl_markieren(*_ParseNurProcessor()._parse_command(body))
                 # AC-22: sichtbare Antwort statt stillem No-Op.
@@ -621,35 +628,32 @@ class InboundTelegramReader:
             if resp.status_code == 200:
                 logger.info(f"Telegram chat_id {mask_number(chat_id)} via token registriert")
                 try:
+                    # /start: das Konto entsteht erst jetzt -- deutsch (Annahme 4).
                     self._notification_service.send_telegram_message(
                         chat_id=chat_id,
-                        subject="Verbunden",
-                        body="✓ Du bist jetzt mit Gregor verbunden! Sende 'hilfe' für verfügbare Befehle.",
+                        subject=t("inbound.telegram.verbunden.betreff", "de"),
+                        body=t("inbound.telegram.verbunden.text", "de"),
                         settings=settings,
                     )
                 except Exception as ce:
-                    logger.warning(f"Bestätigungsnachricht fehlgeschlagen: {ce}")
+                    logger.warning(f"Bestätigungsnachricht fehlgeschlagen: {ce}")  # i18n-log
             elif resp.status_code == 409:
                 # Issue #2141: die Chat-ID gehört bereits einem anderen Konto.
                 # Ohne Rückmeldung wäre das aus Nutzersicht ein Stillstand.
                 logger.warning(
-                    f"telegram-connect: chat_id {mask_number(chat_id)} bereits mit einem anderen Konto verknüpft"
+                    f"telegram-connect: chat_id {mask_number(chat_id)} bereits mit einem anderen Konto verknüpft"  # i18n-log
                 )
                 try:
                     self._notification_service.send_telegram_message(
                         chat_id=chat_id,
-                        subject="Verbinden nicht möglich",
-                        body=(
-                            "Dieser Chat ist bereits mit einem anderen Gregor-Konto verbunden. "
-                            "Trenne die Verbindung zuerst im Konto-Bereich des anderen Kontos "
-                            "und sende danach erneut /start."
-                        ),
+                        subject=t("inbound.telegram.konflikt.betreff", "de"),
+                        body=t("inbound.telegram.konflikt.text", "de"),
                         settings=settings,
                     )
                 except Exception as ce:
-                    logger.warning(f"Konflikt-Nachricht fehlgeschlagen: {ce}")
+                    logger.warning(f"Konflikt-Nachricht fehlgeschlagen: {ce}")  # i18n-log
             elif resp.status_code in (401, 503):
-                logger.error(f"telegram-connect abgelehnt (HTTP {resp.status_code}) -- Core-Geheimnis prüfen")
+                logger.error(f"telegram-connect abgelehnt (HTTP {resp.status_code}) -- Core-Geheimnis prüfen")  # i18n-log
             else:
                 logger.warning(f"telegram-connect returned {resp.status_code}")
         except Exception as e:
@@ -729,6 +733,14 @@ class InboundTelegramReader:
         # koennte z.B. eine Distanzangabe verstuemmelt werden).
         key = _ohne_satzzeichen_am_wortende(parts[0])
         value = parts[1].strip() if len(parts) > 1 else None
+
+        # #2673 F001: ABBRUCH/CANCEL nur als ganze Zeile -- als erstes Wort
+        # eines Satzes ("abbruch der pause bitte") kein Befehl.
+        ganz = ganzzeilen_befehl(first_line)
+        if ganz is not None:
+            return ganz, None
+        if key in ("abbruch", "cancel"):
+            return None, None
 
         # Bare keyword → resolve via shared _BARE_KEYWORD_MAP (channel-agnostic)
         if key in _BARE_KEYWORD_MAP:

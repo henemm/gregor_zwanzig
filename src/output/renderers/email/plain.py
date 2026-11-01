@@ -21,6 +21,7 @@ if TYPE_CHECKING:
     from output.renderers.email.outlook_state_hint import OutlookState
     from services.day_comparison import DayComparison
 from app.profile import ActivityProfile
+from i18n import Lang, t
 # Issue #2134: EINE Quelle fuer den Befehlssatz. Import-Richtung ist etabliert
 # und zirkelfrei (`renderers/narrow.py:52` holt sich ACTIONS_BUBBLE_BUTTONS aus
 # demselben Modul); die Gegenrichtung existiert nicht.
@@ -60,10 +61,11 @@ from output.renderers.email.outlook_state_hint import (
 
 def _render_text_table(rows: list[dict], *, friendly_keys: set[str],
                        format_modes: Optional[dict[str, str]] = None,
-                       col_order: Optional[list[str]] = None) -> str:
+                       col_order: Optional[list[str]] = None,
+                       lang: Lang = "de") -> str:
     """Plain-text table from row dicts."""
     if not rows:
-        return "  (keine Daten)"
+        return f"  {t('mail.tabelle.keine_daten', lang)}"
     cols = visible_cols(rows)
     if col_order:
         # Fix #1575 Scheibe 2: dieselbe ordered+remaining-Merge-Logik wie
@@ -79,7 +81,7 @@ def _render_text_table(rows: list[dict], *, friendly_keys: set[str],
         for r in rows:
             val_str = (
                 fmt_val(key, r.get(key), friendly_keys=friendly_keys,
-                        row=r, format_modes=format_modes)
+                        row=r, format_modes=format_modes, lang=lang)
                 if key != "time" else r["time"]
             )
             w = max(w, len(val_str))
@@ -94,7 +96,7 @@ def _render_text_table(rows: list[dict], *, friendly_keys: set[str],
             val_str = (
                 r["time"] if key == "time"
                 else fmt_val(key, r.get(key), friendly_keys=friendly_keys,
-                             row=r, format_modes=format_modes)
+                             row=r, format_modes=format_modes, lang=lang)
             )
             parts.append(val_str.ljust(w))
         lines.append(f"  {'  '.join(parts)}")
@@ -134,6 +136,7 @@ def render_plain(
     trip_metrics_altbestand: bool = True,
     undelivered: Optional[list] = None,
     starkregen_hint_text: Optional[str] = None,
+    lang: Lang = "de",
     **_ignored,
 ) -> str:
     """Render full plain-text e-mail body. Pure function.
@@ -145,7 +148,7 @@ def render_plain(
     Issue #1331/#1334 F002: ``has_gap`` ist ein expliziter Parameter (Default
     False) — s. ``render_html`` fuer die Begruendung.
     """
-    sig = profile_signature(profile)
+    sig = profile_signature(profile, lang=lang)
     # Fix #1575 Scheibe 2: einmal berechnen, an beide Aufrufstellen von
     # _render_text_table() durchreichen (Segment- UND Nacht-Tabelle, AC-7).
     _col_order = resolve_metric_col_order(dc)
@@ -184,7 +187,7 @@ def render_plain(
     )
     _day_comparison_line = summarize_day_comparison(
         day_comparison,
-        selected_metrics=_selected_metrics_for_vortag,
+        selected_metrics=_selected_metrics_for_vortag, lang=lang,
     )
     if _day_comparison_line:
         lines.append(_day_comparison_line)
@@ -211,9 +214,9 @@ def render_plain(
             segments, _pill_metric_ids, _sms_mention_thresholds, tz=tz,
             night_weather=night_weather, has_gap=has_gap,
             day_window_start_hour=day_window_start_hour,
-            day_window_end_hour=day_window_end_hour,
+            day_window_end_hour=day_window_end_hour, lang=lang,
         )
-        lines.append("━━ Metriken-Überblick ━━")
+        lines.append(f"━━ {t('mail.pille.ueberschrift', lang)} ━━")
         for _lbl, _tone in _plain_pills:
             _sym = tone_symbol(_tone)
             lines.append(f"  {_sym + ' ' if _sym else ''}{_lbl}")
@@ -222,35 +225,26 @@ def render_plain(
     # Issue #122 / F12: Stabilitäts-Label (vor dem Konfidenz-Hinweis).
     # Issue #721: show_outlook gates the entire outlook block (stability + trend).
     if show_outlook and stability_result is not None and show_stability:
-        stability_texts = {
-            "STABIL": (
-                "Wetterlage: STABIL — Die Großwetterlage ist stabil. "
-                "Prognosen für die nächsten Etappen sind verlässlich."
-            ),
-            "WECHSELHAFT": (
-                "Wetterlage: WECHSELHAFT — Die Lage ist im Übergang. "
-                "Prognosen ab Tag 3 mit Vorsicht behandeln."
-            ),
-            "FRAGIL": (
-                "Wetterlage: FRAGIL — Schnelle Frontverlagerung möglich. "
-                "Prognosen ab Tag 2 konservativ planen."
-            ),
-        }
+        # Issue #2665: dieselben Schluessel wie HTML (``mail.stabilitaet.*``).
+        # Unbekanntes Label: KeyError wie bisher (HTML-Zweig ebenso).
+        _key = {"STABIL": "stabil", "WECHSELHAFT": "wechselhaft",
+                "FRAGIL": "fragil"}[stability_result.label]
         lines.append("---")
-        lines.append(stability_texts[stability_result.label])
+        # i18n-dynamic: mail.stabilitaet.
+        lines.append(t(f"mail.stabilitaet.{_key}", lang))
         lines.append("---")
         lines.append("")
 
     # Issue #121 / AC-12 + AC-13: confidence hint (only when uncertain).
     confidence_hint = build_confidence_hint(
-        segments, now=datetime.now(tz), tz=tz,
+        segments, now=datetime.now(tz), tz=tz, lang=lang,
     )
     if confidence_hint:
         lines.append(confidence_hint)
         lines.append("")
 
     if changes:
-        lines.append("━━ Wetteränderungen ━━")
+        lines.append(f"━━ {t('mail.aenderungen.ueberschrift', lang)} ━━")
         for c in changes:
             label = build_segment_label(c, segments, tz=tz)
             lines.append(f"  {format_change_line(c, label)}")
@@ -259,15 +253,15 @@ def render_plain(
     # Issue #1087: amtliche Warnungen, gemeinsamer Renderer (Epic #1073 Punkt 6).
     _alert_entries = collect_trip_alert_entries(segments)
     if _alert_entries:
-        lines.append("━━ Amtliche Warnungen ━━")
-        for _line in render_official_alerts_plain(_alert_entries):
+        lines.append(f"━━ {t('mail.warnungen.ueberschrift', lang)} ━━")
+        for _line in render_official_alerts_plain(_alert_entries, lang=lang):
             lines.append(f"  ⚠️ {_line}")
         lines.append("")
 
     # Issue #1348: Hinweis "amtliche Warnungen nicht abrufbar" — orthogonal zu
     # echten Warnungen, nur bei gesetztem Ausfall-Flag (Byte-Gleichheit sonst).
     if any_official_alerts_unavailable(segments):
-        lines.append(f"  {render_official_alerts_unavailable_plain()}")
+        lines.append(f"  {render_official_alerts_unavailable_plain(lang=lang)}")
         lines.append("")
 
     # Issue #1439: Starkregen-Kurzfristhinweis (planmaessiger Pfad).
@@ -278,14 +272,14 @@ def render_plain(
     for seg_data, rows in zip(segments, seg_tables):
         seg = seg_data.segment
         if seg_data.has_error:
-            lines.append(f"━━ Segment {seg.segment_id}: WETTERDATEN NICHT VERFUEGBAR ━━")
-            lines.append("  Anbieter-Fehler nach 5 Versuchen")
+            lines.append(f"━━ {t('mail.segment.fehler_titel_plain', lang, id=seg.segment_id)} ━━")
+            lines.append(f"  {t('mail.segment.fehler_detail', lang)}")
             lines.append("")
             continue
         s_elev = int(seg.start_point.elevation_m or 0)
         e_elev = int(seg.end_point.elevation_m or 0)
         if seg.segment_id == "Ziel":
-            lines.append(f"━━ \U0001f3c1 Wetter am Ziel: {local_fmt(seg.start_time, tz)}–{local_fmt(display_end_time(seg), tz)} | {s_elev}m ━━")
+            lines.append(f"━━ \U0001f3c1 {t('mail.ziel.zeile', lang)}: {local_fmt(seg.start_time, tz)}–{local_fmt(display_end_time(seg), tz)} | {s_elev}m ━━")
         else:
             elev_arrow = "↑" if e_elev >= s_elev else "↓"
             _km_range = format_km_range(
@@ -295,17 +289,19 @@ def render_plain(
             lines.append(f"━━ Segment {seg.segment_id}: {_km_range} | {local_fmt(seg.start_time, tz)}–{local_fmt(seg.end_time, tz)} | {elev_arrow}{s_elev}m → {e_elev}m ━━")
         lines.append(_render_text_table(rows, friendly_keys=friendly_keys,
                                          format_modes=format_modes,
-                                         col_order=_col_order))
+                                         col_order=_col_order, lang=lang))
         lines.append("")
 
     if night_rows:
         last_seg = segments[-1].segment
-        lines.append(f"━━ Nacht am Ziel ({int(last_seg.end_point.elevation_m or 0)}m) ━━")
-        lines.append(f"Ankunft {local_fmt(display_end_time(last_seg), tz)} → Morgen 06:00")
+        _hoehe = int(last_seg.end_point.elevation_m or 0)
+        lines.append(f"━━ {t('mail.nacht.am_ziel', lang, hoehe=_hoehe)} ━━")
+        lines.append(t("mail.nacht.ankunft", lang,
+                       zeit=local_fmt(display_end_time(last_seg), tz)))
         lines.append(_render_text_table(night_rows, friendly_keys=friendly_keys,
-                                         col_order=_col_order))
+                                         col_order=_col_order, lang=lang))
         if any(mc.enabled and mc.metric_id in ("temperature", "freezing_level") for mc in dc.metrics):
-            lines.append("  * Temperatur/Nullgradgrenze: Minimum im 2h-Block")
+            lines.append(f"  {t('mail.nacht.hinweis_minimum', lang)}")
         lines.append("")
 
     # Issue #1720 S1: DASSELBE Ergebnis wie im HTML-Zweig, weil beide es vom
@@ -333,7 +329,7 @@ def render_plain(
                 # hinter der ganzen Zeile klebte am Nacht-Halbsatz bzw. doppelte.
                 _thunder_lines.append(f"  {fc['date']}: {icon}{fc['text']}")
         if _thunder_lines:
-            lines.append("━━ Gewitter-Vorschau ━━")
+            lines.append(f"━━ {t('mail.gewitter.vorschau_titel', lang)} ━━")
             lines.extend(_thunder_lines)
             lines.append("")
 
@@ -342,7 +338,7 @@ def render_plain(
         # extrahiert (Trip/Compare-Teilungs-Invariante) -- show_acc=True
         # bleibt zeichengleich zum bisherigen Inline-Verhalten.
         lines.append(render_outlook_plain(multi_day_trend, show_acc=True,
-                                          metrics=_outlook_metrics))
+                                          metrics=_outlook_metrics, lang=lang))
     elif (
         show_outlook
         and outlook_state is not None
@@ -350,8 +346,9 @@ def render_plain(
     ):
         # Fix #1486: der Ausblick entfaellt nicht mehr wortlos, er sagt warum.
         # Aufrufer ohne `outlook_state` (Default None) bleiben unveraendert.
-        lines.append("━━ Nächste Etappen ━━")
-        lines.append(render_outlook_state_plain(outlook_state, outlook_horizon_days))
+        lines.append(f"━━ {t('mail.ausblick.naechste_etappen', lang)} ━━")
+        lines.append(render_outlook_state_plain(outlook_state, outlook_horizon_days,
+                                                lang=lang))
         lines.append("")
 
     # Issue #1461 S3b-1: was seit dem letzten Briefing einen Kanal NICHT
@@ -359,7 +356,7 @@ def render_plain(
     # erscheint gar nichts -> Zeichen-Gleichheit im Normalfall.
     if has_undelivered(undelivered):
         lines.append("")
-        lines.append(render_undelivered_plain(undelivered, tz=tz))
+        lines.append(render_undelivered_plain(undelivered, tz=tz, lang=lang))
         lines.append("")
 
     # Antwort-Kommandos (Issue #731: abruf-zentrierter Grundbefehlssatz).
@@ -367,11 +364,11 @@ def render_plain(
     # Erkennung, der HTML-Block und beide Fehlertexte. Vorher fehlte STRECKE
     # hier und zusätzlich RUHETAG im HTML.
     lines.append("")
-    lines.append(render_commands_plain("route"))
+    lines.append(render_commands_plain("route", lang=lang))
     lines.append("")
 
     all_rows = [r for tbl in seg_tables for r in tbl]
-    legend_text = build_units_legend(all_rows) if all_rows else ""
+    legend_text = build_units_legend(all_rows, lang=lang) if all_rows else ""
     if legend_text:
         lines.append(legend_text)
     # Issue #1472: zweite Legenden-Zeile, die die englischen Spaltenkuerzel
@@ -380,7 +377,8 @@ def render_plain(
     # Mail sichtbaren Kuerzel -- `outlook_active`/`_outlook_metrics` sind
     # bereits weiter oben fuer den Ausblick-Block selbst aufgeloest.
     column_legend_text = (
-        build_column_legend(all_rows, _outlook_metrics, outlook_active=outlook_active)
+        build_column_legend(all_rows, _outlook_metrics, outlook_active=outlook_active,
+                            lang=lang)
         if all_rows or outlook_active else ""
     )
     if column_legend_text:
@@ -397,11 +395,11 @@ def render_plain(
     # Die Segmentauswahl ist GETEILT (`select_fallback_meta`) und durchsucht
     # alle Etappen — `segments[0]` verschwieg eine Vertretung, die erst eine
     # spaetere Etappe betraf.
-    lines.extend(build_fallback_lines(select_fallback_meta(segments)))
+    lines.extend(build_fallback_lines(select_fallback_meta(segments), lang=lang))
     # Issue #1241/warnmail-Spec AC-5 (Befund 4a): Herkunfts-Fußzeile
     # (SSoT-Helper) -- Zeile 2 zeigt die echte Datenquelle
     # (`segments[0].provider`), nicht mehr den internen Renderer-Pfad.
     lines.append(render_origin_footer_text(build_origin_footer(
-        "trip-briefing", "full", source=segments[0].provider,
+        "trip-briefing", "full", source=segments[0].provider, lang=lang,
     )))
     return "\n".join(lines)

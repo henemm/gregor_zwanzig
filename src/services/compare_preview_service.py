@@ -59,8 +59,12 @@ class ComparePreviewService:
         from output.renderers.comparison import render_compare_sms, render_compare_telegram
         from services.scheduler_dispatch_service import build_compare_preset_subject
 
+        from i18n import resolve_user_lang
+
         ctx = self._prepare(preset_id, user_id=user_id, target_date=target_date)
-        html_body, _text_body = self._render_email(ctx)
+        # Issue #2672: die Vorschau spricht die Sprache des Nutzers wie der Versand.
+        lang = resolve_user_lang(user_id)
+        html_body, _text_body = self._render_email(ctx, lang=lang)
         # Issue #1703 S8: die Vorschau zeigt je Kanal DIESELBE Auswahl wie der
         # Versand -- kanal-eigene Uebersichts-Liste statt der gemeinsamen.
         telegram = render_compare_telegram(
@@ -69,6 +73,7 @@ class ComparePreviewService:
             preset_name=ctx["name"],
             # Issue #1405 S3: dieselbe Zahl wie im Versand (Vorschau luegt nicht).
             unresolved_count=ctx["opts"].unresolved_by_channel.get("telegram", 0),
+            lang=lang,
         )
         sms = render_compare_sms(
             ctx["result"],
@@ -76,7 +81,7 @@ class ComparePreviewService:
             unresolved_count=ctx["opts"].unresolved_by_channel.get("sms", 0),
         )
         return {
-            "subject": build_compare_preset_subject(ctx["name"], ctx["target_date"]),
+            "subject": build_compare_preset_subject(ctx["name"], ctx["target_date"], lang=lang),
             "email_html": html_body,
             "telegram": telegram,
             "sms": sms,
@@ -134,6 +139,7 @@ class ComparePreviewService:
             profile=profile,
             official_alerts_enabled=preset.get("official_alerts_enabled", True),
             call_source="vergleich",
+            user_id=user_id,  # Issue #2234: Budget beim ausloesenden Nutzer
         )
         return {
             "preset": preset,
@@ -144,7 +150,7 @@ class ComparePreviewService:
             "target_date": resolved_date,
         }
 
-    def _render_email(self, ctx: dict) -> tuple[str, str]:
+    def _render_email(self, ctx: dict, *, lang: str = "de") -> tuple[str, str]:
         from output.renderers.comparison import render_compare_email
 
         opts = ctx["opts"]
@@ -166,6 +172,7 @@ class ComparePreviewService:
             # die Roh/Einfach-Zuordnung muss beide Wege gehen.
             outlook_metric_formats=opts.outlook_metric_formats,
             unresolved_count=opts.unresolved_by_channel.get("email", 0),
+            lang=lang,
         )
 
     def _load_preset(self, preset_id: str, *, user_id: str) -> dict:

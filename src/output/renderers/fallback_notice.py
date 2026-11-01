@@ -21,6 +21,8 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Optional, Tuple
 
+from i18n import Lang, t
+
 if TYPE_CHECKING:  # pragma: no cover - nur fuer Typpruefer
     from app.models import ForecastMeta
 
@@ -84,7 +86,24 @@ _METRIK_KLARTEXT: dict[str, str] = {
     "hail_potential_grau_gsp": "Hagelsignal",
 }
 
-_GEWITTER_OHNE_QUELLE = "Gewitterdaten von einer Ersatzquelle (gröbere Auflösung)"
+# Deutscher Referenzwert; die Zeilen kommen sprachabhaengig aus dem Katalog
+# (``mail.fallback.*``, Issue #2665). Quellennamen sind Eigennamen und bleiben.
+_GEWITTER_OHNE_QUELLE = t("mail.fallback.gewitter_ohne_quelle", "de")
+
+
+def _zusatz_text(zusatz: str, lang: Lang) -> str:
+    """Zusatz zur Quelle in ``lang`` -- heute nur "gröbere Auflösung"."""
+    if zusatz == _MODELL_KLARTEXT["eu_direct"][1]:
+        return t("mail.fallback.groeber", lang)
+    return zusatz
+
+
+def _metrik_text(metrik: str, lang: Lang) -> str:
+    """Klartext einer Metrikkennung; unbekannte Kennung roh (R7)."""
+    if metrik not in _METRIK_KLARTEXT:
+        return metrik
+    # i18n-dynamic: mail.fallback.metrik.
+    return t(f"mail.fallback.metrik.{metrik}", lang)
 
 
 def _gewitter_felder() -> Optional[frozenset]:
@@ -153,7 +172,7 @@ def select_fallback_meta(segments) -> Optional["ForecastMeta"]:
     return None
 
 
-def build_fallback_lines(meta: Optional["ForecastMeta"]) -> list:
+def build_fallback_lines(meta: Optional["ForecastMeta"], *, lang: Lang = "de") -> list:
     """Liefert 0, 1 oder 2 fertige Klartext-Zeilen zur Herkunfts-Vertretung.
 
     Reine Funktion, kein Rendering-Format -- die drei Renderer entscheiden
@@ -198,11 +217,11 @@ def build_fallback_lines(meta: Optional["ForecastMeta"]) -> list:
         # Eine Ableitung ueber Koordinaten/``thunder_routing`` waere eigene
         # Fachlogik im Ausgabe-Kanal (ADR-0025-Verstoss) und unterbleibt.
         if hat_wetter or not modell:
-            lines.append(_GEWITTER_OHNE_QUELLE)
+            lines.append(t("mail.fallback.gewitter_ohne_quelle", lang))
         else:
             name, zusatz = _quelle_klartext(modell)
-            klammer = " (%s)" % zusatz if zusatz else ""
-            lines.append("Gewitterdaten von Ersatzquelle: %s%s" % (name, klammer))
+            klammer = " (%s)" % _zusatz_text(zusatz, lang) if zusatz else ""
+            lines.append(t("mail.fallback.gewitter_quelle", lang, name=name) + klammer)
 
     if hat_wetter:
         # R4 — Metrikliste ABZUEGLICH der Gewitter-Feldnamen: die stehen dort
@@ -218,13 +237,13 @@ def build_fallback_lines(meta: Optional["ForecastMeta"]) -> list:
         for m in metriken if trennbar else []:
             if m in gewitter_felder:
                 continue
-            klartext = _METRIK_KLARTEXT.get(m, m)  # R7: Rohwert statt KeyError
+            klartext = _metrik_text(m, lang)  # R7: Rohwert statt KeyError
             if klartext not in rest:
                 rest.append(klartext)
         name, _zusatz = _quelle_klartext(modell)
         # R4/#1145 — leere Restliste: Klammer entfaellt ERSATZLOS. Kein "()",
         # kein " : "-Artefakt, kein Doppelpunkt ohne Inhalt.
         klammer = " (%s)" % ", ".join(rest) if rest else ""
-        lines.append("Einzelne Wetterwerte von Ersatzmodell: %s%s" % (name, klammer))
+        lines.append(t("mail.fallback.wetter_modell", lang, name=name) + klammer)
 
     return lines

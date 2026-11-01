@@ -67,6 +67,30 @@ Made with Natural Earth. Free vector and raster map data @ naturalearthdata.com 
   Mariehamn. Finnland nutzt stattdessen die Zonengeometrie unten (Land + See).
 - **Verwendung:** `meteoalarm_feed._in_outline()` für `MeteoAlarmFeedSource("NO"/"SE")`.
 
+## `meteoalarm_outlines_uk.geojson.json` — Landesumriss Vereinigtes Königreich, Issue #1442 S3b
+
+Made with Natural Earth. Free vector and raster map data @ naturalearthdata.com (**gemeinfrei**).
+
+- **Herkunft:** dieselbe ZIP wie der Nordics-Umriss
+  (`https://naciscdn.org/naturalearth/10m/cultural/ne_10m_admin_0_countries.zip`, Natural Earth
+  **5.1.1**), erneut abgerufen am 2026-10-31, sha256 identisch
+  (`ce1ac7036499a0edd641fbc093cd209a98f96a49d2eca8480aaacad35138a7f6`) — zur Laufzeit wird nichts
+  nachgeladen.
+- **Umfang:** ein Feature, `properties.id` = `GB` (Auswahl `ADM0_A3` = `GBR`), `MultiPolygon`
+  `[lon, lat]`, 4 Nachkommastellen. Enthalten: England, Schottland, Wales, **Nordirland** und alle
+  Inseln des `GBR`-Datensatzes (Shetland, Orkney, Hebriden, St Kilda, Scilly); kein
+  Schwerpunkt-Filter wie bei den Nordics.
+- **Bewusst verändert:** vereinigt, **um 0,1° aufgeweitet** (shapely `buffer(0.1)`), dann
+  `simplify(0.01)`. Zweck: `covers()` lieber zu groß als zu klein (Küste, Inseln). Gemessen: London,
+  Edinburgh, Lerwick, Kirkwall, Stornoway, Belfast, Cardiff, Inverness, Holyhead, Penzance, Oxford,
+  Manchester innen; Dublin, Letterkenny, Paris, Calais, Douglas und St Helier außen. Der Puffer reicht
+  an der irischen Grenze einige Kilometer nach Irland (z. B. Dundalk innen) — Folge höchstens ein
+  Abruf mit „keine Warnung", weil `fetch()` nur die Feed-Polygone des UK-Feeds auswertet.
+- **Nicht abgedeckt:** die **Kanalinseln** (Jersey, Guernsey) und die **Isle of Man** sind in Natural
+  Earth eigene `ADM0`-Einheiten (nicht `GBR`) und bewusst nicht enthalten. Irland (IE) ist nicht im
+  Scope.
+- **Verwendung:** `meteoalarm_feed._in_outline()` für `MeteoAlarmFeedSource("GB")`.
+
 ## `meteoalarm_zones_FI.geojson.json` — MeteoAlarm-Warnzonen Finnland (`EMMA_ID`), Issue #1442 S2
 
 Zonengeometrie: EUMETNET-MeteoAlarm, Datei `geocodes.json` (offizielle Zuordnung `EMMA_ID` →
@@ -196,3 +220,95 @@ Antrag in `docs/specs/data_sources.md`). Die drei Feeds (`feeds-portugal`, `feed
   `unknown_zone`); dann `geocodes.json` neu ziehen und mit denselben Parametern neu bauen.
 - **Verwendung:** `meteoalarm_feed._zones_for_point("PT"|"NL"|"PL", …)` für `covers()` UND `fetch()` von
   `MeteoAlarmFeedSource("PT"/"NL"/"PL")` (gemeinsamer Zonenweg `_fetch_zones` mit FI/ES).
+
+## `meteoalarm_zones_BE.geojson.json` — MeteoAlarm-Warnzonen Belgien (`EMMA_ID` + Zuordnung `NUTS2`), Issue #1442 S3c
+
+Gleiche Quelle und gleiche **ungeklärte Lizenz** wie die FI/ES/PT/NL/PL-Auszüge (gebündelt im
+bestehenden Antrag in `docs/specs/data_sources.md`). Der Feed `feeds-belgium` trägt keine Polygone und
+mischt je Warnung zwei Kennungsarten: meist nur `NUTS2` (Provinz, z. B. `BE23`), einige nur `EMMA_ID`
+(`BE004`, `BE801`). Geometrie ist allein `geocodes.json`; `NUTS2` wird im Code über eine Tabelle zur
+`EMMA_ID` übersetzt (keine zweite Geometriequelle).
+
+- **Herkunft:** MeteoAlarm `geocodes.json`, Google-Drive-Datei-ID `16s24hYHfYQhKMNcP1hpgQmg13Yb8j0hV`,
+  39 256 854 Byte, sha256 `0c8fe7b9af4f86c72f1c28bb9cea02f673fee6d45d02681713e6ad3ebd615dd0`
+  (identisch zur FI/ES/PT/NL/PL-Quelle, vor dem Bau am 2026-10-31 geprüft). Eingecheckt ist nur der
+  Auszug `type` = `EMMA_ID`, `code` mit Präfix `BE`; `properties.id` = `EMMA_ID`, `properties.name` =
+  Name laut `geocodes.json` (unverändert; `BE801` hat dort keinen Klarnamen, Name = Code).
+
+  | Datei | Zonen | davon Wasser (unverändert) | Byte | sha256 |
+  |---|---|---|---|---|
+  | `meteoalarm_zones_BE.geojson.json` | 10 | 1: `BE801` (Küstenstreifen) | 5 775 | `b8cf2dba8649ad4e83418f08ae4a8b04f154183fc27540f1abee26fb3a454c2b` |
+
+  | EMMA_ID | Name | EMMA_ID | Name |
+  |---|---|---|---|
+  | `BE001` | Luxembourg | `BE006` | Namur |
+  | `BE002` | Antwerpen | `BE007` | Limburg |
+  | `BE003` | Oost Vlaanderen | `BE008` | Liege |
+  | `BE004` | Brabant (Brüssel + Vlaams-Brabant + Brabant Wallon) | `BE009` | West Vlaanderen |
+  | `BE005` | Hainaut | `BE801` | Küstenstreifen (Wasser) |
+
+### Zuordnungstabelle NUTS2 → EMMA_ID (`meteoalarm_feed._BE_NUTS2_TO_EMMA`)
+
+Namensabgleich Feed-`areaDesc` (nl-BE/en-GB) gegen die Namen in `geocodes.json`, 2026-10-31:
+
+| NUTS2 | Provinz | EMMA_ID |
+|---|---|---|
+| `BE21` | Antwerpen | `BE002` |
+| `BE22` | Limburg | `BE007` |
+| `BE23` | Oost-Vlaanderen | `BE003` |
+| `BE25` | West-Vlaanderen | `BE009` |
+| `BE32` | Hainaut | `BE005` |
+| `BE33` | Liège | `BE008` |
+| `BE34` | Luxembourg | `BE001` |
+| `BE35` | Namur | `BE006` |
+| `BE10` | Brüssel | `BE004` |
+| `BE24` | Vlaams-Brabant | `BE004` |
+| `BE31` | Brabant Wallon | `BE004` |
+
+Die Übersetzung wirkt **nur für Land BE** und nur an der einen Einsammelstelle der Kennungen
+(`_zone_ids_for_alert`, speist Warnung UND Drift-Wächter); alle anderen Länder lesen unverändert ihren
+einen Geocode-Namen. EMMA kennt nur das ungeteilte „Brabant": eine reine `BE24`- oder `BE31`-Warnung
+gilt auch in Brüssel und im jeweils anderen Brabant (höchstens eine Warnung zu viel, nie eine zu wenig).
+Ein unbekannter NUTS2-Code bleibt roh in der Kennungsmenge (gilt als „andere Zone", kein Ausfall) und
+landet im Drift-Journal.
+
+### Aufweitung, Seezonen-Regel, Messwerte
+
+- **Bewusst verändert:** Landzonen **um 0,1° aufgeweitet** (`buffer(0.1)`, NL/PL: 0,05°) und mit
+  `simplify(0.005, preserve_topology=True)` vereinfacht; alle Koordinaten auf 4 Nachkommastellen.
+- **Seezonen-Regel BE:** Nummer ≥ 800, also nur `BE801` (Küstenstreifen, Umschlagrechteck
+  51,09–51,65°N / 2,43–3,36°E) ist Wasser und bleibt **unverändert, nicht aufgeweitet**.
+- **Warum 0,1° statt 0,05°** (Messung 2026-10-31, nur Build-Zeit, nichts davon eingecheckt): Die
+  EMMA-Provinzzonen stimmen mit den amtlichen NUTS2-Flächen zu 85–97 % überein. Gitterprüfung (0,01°)
+  über 38 977 belgische Landpunkte gegen eine Referenz-Landmaske: roh 945 Punkte ohne Zone (2,4 %),
+  mit 0,05° Aufweitung 124 (0,3 %), mit 0,1° 12 (0,03 %; nur Randstreifen bei 49,64–49,71°N /
+  5,88–5,90°E und bei 51,45°N / 5,09°E). Die Referenzmaske war ein Mess-Hilfsmittel und liegt nicht im
+  Repo; der Kern-Test (AC-3) prüft mit einem im Test erzeugten, nach innen gezogenen Umriss.
+- **Testorte (roh → gebaut):** Brüssel, Leuven, Wavre `BE004` → `BE004`; Ostende, Knokke, Küste 5 km
+  (51,28/2,80) roh nur `BE801` → `BE009`+`BE801`; Arlon (49,68/5,81) roh **in keiner Zone** →
+  `BE001`; Bouillon `BE001` → `BE001`+`BE006`; Mechelen `BE004` → `BE002`+`BE004`; Eupen `BE008`,
+  Bastogne/Virton `BE001`, Gent `BE003`, Namur `BE006` unverändert. Nordsee 30 km vor der Küste
+  (51,60/2,60), Luxemburg-Stadt und Amsterdam liegen in keiner Zone. Grenzstreifen: Aachen trifft
+  aufgeweitet `BE008`, Lille `BE009`, Maastricht `BE007`+`BE008` — folgenlos, weil der BE-Feed nur
+  belgische Zonen führt (Maastricht: NL ist vor BE registriert). Überlappende Zonen liefern beide
+  Warnungen, jede genau einmal.
+
+### Bau, Verzicht auf GISCO, Drift, Grenzen
+
+- **Skript-Parameter** (einmaliger Bau, shapely nur dafür): dasselbe Skript wie PT/NL/PL mit zwei
+  BE-Ergänzungen — erwartete Zonenzahl `ANZAHL["BE"] = 10` und Seezonen-Regel wie NL (Nummer ≥ 800):
+  `uv run --no-project --with shapely python -I build_zones.py geocodes.json BE out.json 0.1 0.005 4`.
+- **Kein Eurostat GISCO / NUTS:** Die naheliegende NUTS2-Geometrie (GISCO NUTS-2021) wird **nicht**
+  verwendet und nicht eingecheckt. Die GISCO-Seite erlaubt die Verwaltungsgrenzen nur unter der
+  Bedingung „will not be used for commercial purposes", also nur nicht-kommerziell; ein
+  Multi-User-Produkt kann das nicht tragen. GISCO diente ausschließlich als Build-Zeit-Messhilfe
+  (Flächenvergleich, Gitterprüfung oben).
+- **Drift:** unbekannte Feed-Kennung (weder Zone der Datei noch Schlüssel der Tabelle) ⇒ Drift-Wächter
+  (`log_zone_drift`, Service `meteoalarm_feed:BE`, `unknown_zone`); dann Tabelle bzw. Datei manuell
+  nachführen (`geocodes.json` neu ziehen, mit denselben Parametern neu bauen).
+- **Known Limitations:** Brabant vergröbert (s. Tabelle); Provinzgrenzen unscharf, Aufweitung lässt
+  Zonen überlappen; Restlücken ~0,03 % am Rand (dort schweigt die Quelle folgenlos); Nordsee jenseits
+  `BE801` bewusst ohne Zuständigkeit; Höhenband ignoriert; Lizenz von `geocodes.json` ungeklärt
+  (gebündelter Antrag).
+- **Verwendung:** `meteoalarm_feed._zones_for_point("BE", …)` für `covers()` UND `fetch()` von
+  `MeteoAlarmFeedSource("BE")` (gemeinsamer Zonenweg `_fetch_zones`).

@@ -1,0 +1,33 @@
+ORTS-VERGLEICH — Golden-Vergleich
+Datum: 29.10.2026
+
+Innsbruck
+   Temp max 11°C · Regen 2.4 mm · Gewitter — · Niederschlagsart Regen · Böen 38 km/h · Regenwahrscheinlichkeit 70% · Wind 26 km/h
+   … +3 weitere Wettergrößen je Ort (Telegram-Limit) — vollständig per E-Mail
+   … +1 gewählte Wettergrößen ohne Wert an diesem Ort
+Lienz
+   Temp max 12°C · Regen 5.4 mm · Gewitter mittel · CAPE, Blitzdichte · Hagel: ja · Niederschlagsart Regen · Böen 39 km/h · Regenwahrscheinlichkeit 70% · Wind 26 km/h
+   … +3 weitere Wettergrößen je Ort (Telegram-Limit) — vollständig per E-Mail
+   … +1 gewählte Wettergrößen ohne Wert an diesem Ort
+Kufstein
+   Temp max 13°C · Regen 8.4 mm · Gewitter — · Niederschlagsart Mischniederschlag · Böen 40 km/h · Regenwahrscheinlichkeit 70% · Wind 26 km/h
+   … +3 weitere Wettergrößen je Ort (Telegram-Limit) — vollständig per E-Mail
+   … +1 gewählte Wettergrößen ohne Wert an diesem Ort
+Brenner
+   Fehler: Zeitueberschreitung beim Abruf
+----
+ORTS-VERGLEICH
+Datum: 29.10.2026
+
+Innsbruck
+   keine Werte
+Lienz
+   keine Werte
+Kufstein
+   keine Werte
+Brenner
+   Fehler: Zeitueberschreitung beim Abruf
+----
+Keine Vergleichsdaten verfügbar.
+----
+Vergleich 29.10.: Innsbruck D 11C R 2.4 mm TH - PT Regen G 38 km/h PR 70% W 26 km/h FZ 2400 m HU 72% SU 4.0h ?1 +3 Orte

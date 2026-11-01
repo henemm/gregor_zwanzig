@@ -90,7 +90,7 @@ def compare_preview_point(
     fetch: Optional[Callable] = None, deadline: Optional[float] = None,
 ):
     """(frischer Punkt, Anker-Punkt) eines Orts dieses Nutzers -- dieselbe
-    Quelle und dieselben Argumente wie `compare_alert._evaluate_one_location`.
+    Quelle und dieselben Argumente wie `compare_alert._vorbereite_ort`/`_abruf`.
     `(None, None)` ohne Anker oder bei scheiterndem Frisch-Abruf."""
     from services.compare_alert import CompareAlertService
     from services.compare_location_weather_source import CompareLocationWeatherSource

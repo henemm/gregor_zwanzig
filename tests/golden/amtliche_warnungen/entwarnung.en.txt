@@ -1,0 +1,55 @@
+All clear Thunderstorm 3→1 +1 more
+
+===== ✂ =====
+
+All clear
+Thunderstorm · Innsbruck-Land · Segment 1: Level 3 → 1
+Heat · Var · Route: Level 3 → ended
+
+As of today 06:00 · retrieved from GeoSphere Austria
+
+GR20 Golden · Official warning · GeoSphere Austria
+
+===== ✂ =====
+
+<b>GR20 Golden · All clear</b>
+Thunderstorm · Innsbruck-Land · Segment 1: Level 3 → 1
+Heat · Var · Route: Level 3 → ended
+
+===== ✂ =====
+
+<b>All clear</b>
+Thunderstorm · Innsbruck-Land · Segment 1: Level 3 → 1
+Heat · Var · Route: Level 3 → ended
+
+===== ✂ =====
+
++TS:M>- HT:M>0
+
+===== ✂ =====
+
+Storm and Heavy rain reported for only Hyères.
+
+2 official warnings
+
+Warning level: ORANGE (middle of three) — scale YELLOW · ORANGE · RED
+Hazard: Storm
+Valid: Thu 29 Oct · 23:00 – Fri 30 Oct 04:00
+Locations: Hyères
+Hazard: Heavy rain
+Valid: Fri 30 Oct · 07:00–13:00
+Locations: Hyères
+Source: GeoSphere Austria — Var.
+Only affects Hyères, not all locations.
+
+All clear
+Thunderstorm · Innsbruck-Land · Segment 1: Level 3 → 1
+Heat · Var · Route: Level 3 → ended
+
+As of today 06:00 · retrieved from GeoSphere Austria
+
+GR20 Golden · Official warning · GeoSphere Austria
+
+===== ✂ =====
+
+nur Hyeres: !WG:M Do23-Fr04 RA:M Fr07-13 +TS:M>- Seg 1 HT:M>0 Route

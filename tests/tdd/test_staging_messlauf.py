@@ -27,7 +27,7 @@ F1 Kalt-Marker (Journalzeilen, Logger-Format ``%s``):
 F2 Dauerzeile ``befehl=%s kanal=%s trip=%s dauer_ms=%d`` (src/services/trip_command_processor.py:
    1050-1054); hinter ``trip=`` steht die Trip-ID (``msg.resolved_preset_id`` bzw.
    ``_find_trip(...).id``, Z. 1108-1111), NICHT der Name.
-F3 Telegram-Webhook: ``POST /api/webhooks/telegram/{secret}`` (internal/router/router.go:171);
+F3 Telegram-Webhook: ``POST /api/webhooks/telegram/inbound`` (internal/router/router.go; Alt-Route {secret} seit #1814 S2 entfernt);
    das Pfadsegment wird NICHT geprueft, nur der Header ``X-Telegram-Bot-Api-Secret-Token``
    gegen ``TELEGRAM_WEBHOOK_SECRET`` (internal/handler/telegram_webhook.go); Go antwortet
    IMMER 200 nach Weiterleitung an den Kern ``/api/internal/telegram-webhook``
@@ -719,7 +719,7 @@ class _Welt:
                 self.besitzer.pop(tid)
                 self.geloeschte_trips.append(tid)
                 return 204, {}
-        m = re.fullmatch(r"/api/webhooks/telegram/[^/]+", pfad)
+        m = re.fullmatch(r"/api/webhooks/telegram/inbound", pfad)  # #1814 S2: Alt-Route {secret} entfernt
         if m and method == "POST":
             return self._webhook(headers, body)
         return 404, {"error": "not_found"}
@@ -1065,7 +1065,9 @@ def test_telegram_serie_fuenfzehn_updates_mit_secret_und_eindeutigen_update_ids(
     assert len(set(ids)) == len(ids), "update_id wiederholt (Dedup-Treffer)"
     assert not any(e["duplikat"] for e in alle)
     hooks = [a for a in welt.anfragen if "/api/webhooks/telegram/" in a["url"]]
+    assert hooks, "kein Telegram-Webhook-Aufruf gesehen"
     for a in hooks:
+        assert a["url"].endswith("/api/webhooks/telegram/inbound"), f"Alt-Pfad benutzt: {a['url']}"
         kopf = {k.lower(): v for k, v in a["headers"].items()}
         assert kopf.get("x-telegram-bot-api-secret-token") == WEBHOOK_SECRET
         assert WEBHOOK_SECRET not in a["url"], "Secret steht in der Webhook-URL"
@@ -1309,7 +1311,7 @@ _ERLAUBT = [
     ("GET", r"/api/trips"), ("POST", r"/api/trips"),
     ("GET", r"/api/trips/(?P<id>[^/]+)"), ("PUT", r"/api/trips/(?P<id>[^/]+)"),
     ("DELETE", r"/api/trips/(?P<id>[^/]+)"),
-    ("POST", r"/api/webhooks/telegram/[^/]+"),
+    ("POST", r"/api/webhooks/telegram/inbound"),
 ]
 
 

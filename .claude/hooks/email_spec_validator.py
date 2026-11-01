@@ -45,8 +45,12 @@ def _write_validation_log(
     workflow_id: "str | None" = None,
     max_age_minutes: "int | None" = None,
     ignore_mail_age_reason: "str | None" = None,
+    warnings: "list | None" = None,
 ) -> None:
     """Issue #465 (B2): Strukturiertes Validator-Log YAML.
+
+    Issue #2663: ``warnings`` (z. B. fehlender Kopf X-GZ-Lang) steht immer im
+    Log, auch leer -- eine Warnung kippt den Exit-Code nicht.
 
     Schreibt in ``.claude/workflows/_log/<ts>_<wf>_email_validation.yaml``.
     Fail-soft: jeder Fehler wird unterdrueckt, damit der Validator-Exit-Code
@@ -96,6 +100,7 @@ def _write_validation_log(
             "passed": bool(success),
             "error_count": len(errors),
             "errors": list(errors),
+            "warnings": list(warnings or []),
             "min_locations_checked": int(min_locations),
             # Issue #1408 AC-5: Zustand der Altersschranke ist Teil jedes Laufs.
             # Adversary F001: NICHT nur das Abschalten wird sichtbar, sondern
@@ -500,7 +505,9 @@ def fetch_latest_email() -> str:
 # class="matrix-table" mehr -- die Uebersichtstabelle wird stattdessen ueber
 # ihre erste Datenzeile "Amtliche Warnungen" identifiziert (CV2_METRICS[0],
 # immer sichtbar, auch bei preset-gefilterten Metriken, #1104).
-_OVERVIEW_WARN_LABEL = "Amtliche Warnungen"
+# Issue #2663: die Beschriftung kommt aus dem Katalog in der Sprache von
+# X-GZ-Lang (_overview_warn_label(lang)); _OVERVIEW_WARN_LABEL (unten, nach
+# dem src-Import) bleibt die deutsche Fassung fuer Bestandsaufrufer.
 _TABLE_RE = re.compile(r'<table[^>]*>(.*?)</table>', re.DOTALL)
 
 # v2-Stunden-Spaltenvertrag (compare_html.py:HOUR_METRICS), Issue #1106:
@@ -551,11 +558,26 @@ _TABLE_RE = re.compile(r'<table[^>]*>(.*?)</table>', re.DOTALL)
 _REPO_SRC = Path(__file__).resolve().parents[2] / "src"
 if str(_REPO_SRC) not in sys.path:
     sys.path.insert(0, str(_REPO_SRC))
+from app.metric_catalog import aggregation_label as _aggregation_label  # noqa: E402
 from app.metric_catalog import get_metric as _get_metric  # noqa: E402
+from i18n import t as _t  # noqa: E402
 from output.renderers.compare_hourly_metric_ids import (  # noqa: E402
     HOURLY_MERGE_ONLY_METRIC_IDS as _HOURLY_MERGE_ONLY,
     hourly_selectable_metric_ids as _hourly_selectable_metric_ids,
 )
+
+
+def _overview_warn_label(lang: str = "de") -> str:
+    """Erste Datenzeile der Uebersichtstabelle (Katalog, #2663)."""
+    return _t("vergleich.zeile.amtliche_warnungen", lang)
+
+
+def _hour_time_label(lang: str = "de") -> str:
+    """Feste erste Spalte der Stundentabelle (Katalog, #2663)."""
+    return _t("vergleich.stunden.zeit", lang)
+
+
+_OVERVIEW_WARN_LABEL = _overview_warn_label("de")
 
 # Genau die Groessen, die der Renderer als Stundenspalte ueberhaupt erzeugen
 # kann -- dieselbe Rechnung wie `compare_html._build_hour_metrics()`: Register
@@ -571,8 +593,9 @@ _HOUR_VALUE_COLUMN_LABELS = sorted({
 })
 
 _HOUR_COLUMNS_V2 = [
-    # Feste erste Spalte der Stundentabelle (keine Wettergroesse).
-    "Zeit",
+    # Feste erste Spalte der Stundentabelle (keine Wettergroesse); #2663: aus
+    # dem Katalog, hier die deutsche Fassung (hour_columns(lang) fuer en).
+    _hour_time_label("de"),
     # Registerfassung (#1406 B): die Kurzform jeder Groesse, die eine
     # Wert-Spalte bekommen kann. Deckt die 9 bisherigen Spalten (Temp/Feels/
     # Wind/Gust/Rain/UV/Thdr/Rain%/Visib) und die 13 neu waehlbaren (Humid,
@@ -584,6 +607,12 @@ _HOUR_COLUMNS_V2 = [
     # sein soll -- eine geschlossene Menge aus dem Register.
     *_HOUR_VALUE_COLUMN_LABELS,
 ]
+
+
+def hour_columns(lang: str = "de") -> list:
+    """``_HOUR_COLUMNS_V2`` in ``lang``: nur die Zeit-Spalte ist sprachabhaengig,
+    die Kuerzel (``col_label``) sind in beiden Sprachen gleich (ADR-0042)."""
+    return [_hour_time_label(lang), *_HOUR_VALUE_COLUMN_LABELS]
 
 # Negativ-Check: Score-/Winner-Sprache ist im v2-Vertrag ein Verstoss (kein
 # Ranking mehr, s. compare_html.py-Docstring "Kein Score/Ranking/Winner-Card").
@@ -647,50 +676,66 @@ _SCORE_WINNER_RE = re.compile(
 # test_compare_mail_overview_plausibility_coverage.py::
 # test_ac4_exemption_set_is_declared_and_complete fest -- sie faellt sowohl bei
 # einem fehlenden als auch bei einem ueberzaehligen Schluessel.
-_OVERVIEW_METRIC_CHECKS = {
-    "Temperatur Maximum": (re.compile(r'^-?\d+°C$'), (-40, 55)),
-    "Temperatur Minimum": (re.compile(r'^-?\d+°C$'), (-40, 55)),
-    # Kollisionsfreie Form: nur EINE der beiden Auswertungen gewaehlt -> die
-    # Zeile traegt den blanken Namen. Bereich = Vereinigung beider (identisch).
-    "Temperatur": (re.compile(r'^-?\d+°C$'), (-40, 55)),
-    "Wind": (re.compile(r'^\d+ km/h$'), (0, 250)),
-    "Böen": (re.compile(r'^\d+ km/h$'), (0, 300)),
-    "Windrichtung": (re.compile(r'^\d+ °$'), (0, 360)),
-    "Niederschlag": (re.compile(r'^\d+\.\d mm$'), (0, 300)),
-    "Regenwahrscheinlichkeit": (re.compile(r'^\d+%$'), (0, 100)),
-    "Sonnenstunden": (re.compile(r'^\d+\.\d h$'), (0, 24)),
-    "Bewölkung": (re.compile(r'^\d+%$'), (0, 100)),
-    "Tiefe Wolken": (re.compile(r'^\d+%$'), (0, 100)),
-    "Mittelhohe Wolken": (re.compile(r'^\d+%$'), (0, 100)),
-    "Hohe Wolken": (re.compile(r'^\d+%$'), (0, 100)),
-    "UV-Index": (re.compile(r'^\d+$'), (0, 16)),
+# Issue #2663: die Schluessel entstehen aus dem Register in der Sprache der
+# Mail (``label(lang)`` + ``aggregation_label(agg, lang)``) -- Regex und
+# Wertebereich sind unveraendert je Zeile. ``None`` = kollisionsfreie Form
+# (blanker Name, nur EINE der beiden Auswertungen gewaehlt).
+_OVERVIEW_METRIC_SPEC = [
+    ("temperature", "max", r'^-?\d+°C$', (-40, 55)),
+    ("temperature", "min", r'^-?\d+°C$', (-40, 55)),
+    # Kollisionsfreie Form: Bereich = Vereinigung beider (identisch).
+    ("temperature", None, r'^-?\d+°C$', (-40, 55)),
+    ("wind", None, r'^\d+ km/h$', (0, 250)),
+    ("gust", None, r'^\d+ km/h$', (0, 300)),
+    ("wind_direction", None, r'^\d+ °$', (0, 360)),
+    ("precipitation", None, r'^\d+\.\d mm$', (0, 300)),
+    ("rain_probability", None, r'^\d+%$', (0, 100)),
+    ("sunshine", None, r'^\d+\.\d h$', (0, 24)),
+    ("cloud_total", None, r'^\d+%$', (0, 100)),
+    ("cloud_low", None, r'^\d+%$', (0, 100)),
+    ("cloud_mid", None, r'^\d+%$', (0, 100)),
+    ("cloud_high", None, r'^\d+%$', (0, 100)),
+    ("uv_index", None, r'^\d+$', (0, 16)),
     # Sicht: Modelle deckeln die Sichtweite meist weit darunter; 100 km ist
     # grosszuegig, aber nicht mehr sinnfrei (#1404 PO-Vorgabe).
-    "Sichtweite": (re.compile(r'^\d+\.\d km$'), (0, 100)),
-    "Schneehöhe": (re.compile(r'^\d+ cm$'), (0, 1000)),
-    "Neuschnee": (re.compile(r'^\d+ cm$'), (0, 300)),
-    "Schneefallgrenze": (re.compile(r'^\d+ m$'), (0, 5000)),
+    ("visibility", None, r'^\d+\.\d km$', (0, 100)),
+    ("snow_depth", None, r'^\d+ cm$', (0, 1000)),
+    ("fresh_snow", None, r'^\d+ cm$', (0, 300)),
+    ("snowfall_limit", None, r'^\d+ m$', (0, 5000)),
     # Issue #1585: die CAPE-Zeile ist ersatzlos entfallen -- CAPE ist zentral
     # nicht mehr waehlbar und wird in der Uebersicht nicht mehr gerendert. Ein
     # Eintrag hier waere ab jetzt ein Pruefer fuer eine Zeile, die es nicht
     # gibt; genau das faengt test_ac4_exemption_set_is_declared_and_complete
-    # (Mengengleichung gegen die tatsaechliche Renderer-Ausgabe). Fuer jede
-    # verbleibende Zeile prueft der Validator unveraendert.
-    "Nullgradgrenze": (re.compile(r'^\d+ m$'), (0, 6000)),
+    # (Mengengleichung gegen die tatsaechliche Renderer-Ausgabe).
+    ("freezing_level", None, r'^\d+ m$', (0, 6000)),
     # Windchill unterschreitet die Lufttemperatur -> untere Grenze weiter als
     # bei der Lufttemperatur.
-    "Gefühlte Temperatur Minimum": (re.compile(r'^-?\d+°C$'), (-50, 50)),
-    "Gefühlte Temperatur Maximum": (re.compile(r'^-?\d+°C$'), (-50, 55)),
+    ("wind_chill", "min", r'^-?\d+°C$', (-50, 50)),
+    ("wind_chill", "max", r'^-?\d+°C$', (-50, 55)),
     # Kollisionsfreie Form: zur Pruefzeit ist nicht bekannt, welche der beiden
     # Auswertungen hinter der zusatzlosen Zeile steckt -> untere Grenze von
     # Minimum (-50), obere von Maximum (55).
-    "Gefühlte Temperatur": (re.compile(r'^-?\d+°C$'), (-50, 55)),
-    "Luftfeuchtigkeit": (re.compile(r'^\d+%$'), (0, 100)),
-    "Taupunkt": (re.compile(r'^-?\d+°C$'), (-40, 35)),
+    ("wind_chill", None, r'^-?\d+°C$', (-50, 55)),
+    ("humidity", None, r'^\d+%$', (0, 100)),
+    ("dewpoint", None, r'^-?\d+°C$', (-40, 35)),
     # Luftdruck: deckt Meereshoehe UND hochalpine Stationsdruecke ab, daher
     # breit -- entsprechend schwacher Waechter (Spec, Known Limitations).
-    "Luftdruck": (re.compile(r'^\d+ hPa$'), (500, 1085)),
-}
+    ("pressure", None, r'^\d+ hPa$', (500, 1085)),
+]
+
+
+def overview_metric_checks(lang: str = "de") -> dict:
+    """Zeilenbeschriftung in ``lang`` -> (Format-Regex, Wertebereich)."""
+    checks = {}
+    for metric_id, aggregation, pattern, bereich in _OVERVIEW_METRIC_SPEC:
+        label = _get_metric(metric_id).label(lang)
+        if aggregation is not None:
+            label = f"{label} {_aggregation_label(aggregation, lang)}"
+        checks[label] = (re.compile(pattern), bereich)
+    return checks
+
+
+_OVERVIEW_METRIC_CHECKS = overview_metric_checks("de")
 
 # Issue #1404 (AC-4): die AUSGESPROCHENE Ausnahme-Menge. Diese Zeilen tragen
 # keinen Zahlenwert; "keine Pruefung" ist fuer sie richtig -- aber es muss
@@ -716,11 +761,16 @@ _OVERVIEW_METRIC_CHECKS = {
 # 26 geprueft + 3 ausgenommen = 29 = 27 Renderer-Zeilen + 2 kollisionsfreie
 # Formen; ein Test haelt diese Rechnung EXAKT fest (nicht als Teilmenge), er
 # faellt also auch bei einem ueberzaehligen Schluessel.
-_OVERVIEW_NO_CHECK_LABELS = {
-    _OVERVIEW_WARN_LABEL,
-    "Gewitter",
-    "Niederschlagsart",
-}
+def overview_no_check_labels(lang: str = "de") -> set:
+    """Die ausgesprochene Ausnahme-Menge in ``lang`` (#2663: aus Katalog/Register)."""
+    return {
+        _overview_warn_label(lang),
+        _get_metric("thunder").label(lang),
+        _get_metric("precip_type").label(lang),
+    }
+
+
+_OVERVIEW_NO_CHECK_LABELS = overview_no_check_labels("de")
 
 
 def _extract_rows_from_table_html(table_inner: str) -> List[List[str]]:
@@ -733,20 +783,22 @@ def _extract_rows_from_table_html(table_inner: str) -> List[List[str]]:
     return rows
 
 
-def extract_table_rows(body: str) -> List[List[str]]:
+def extract_table_rows(body: str, lang: str = "de") -> List[List[str]]:
     """Findet die v2-Uebersichtstabelle ueber ihre erste Datenzeile
     "Amtliche Warnungen" (Issue #1108) -- ersetzt die alte
-    class="matrix-table"-Erkennung, die im v2-Renderer nicht mehr existiert."""
+    class="matrix-table"-Erkennung, die im v2-Renderer nicht mehr existiert.
+    #2663: die Beschriftung der Zeile in der Sprache ``lang``."""
+    warn_label = _overview_warn_label(lang)
     for match in _TABLE_RE.finditer(body):
         rows = _extract_rows_from_table_html(match.group(1))
-        if len(rows) >= 2 and rows[1] and rows[1][0].strip() == _OVERVIEW_WARN_LABEL:
+        if len(rows) >= 2 and rows[1] and rows[1][0].strip() == warn_label:
             return rows
     return []
 
 
-def extract_locations(body: str) -> List[str]:
+def extract_locations(body: str, lang: str = "de") -> List[str]:
     """Extract location names from comparison table header."""
-    rows = extract_table_rows(body)
+    rows = extract_table_rows(body, lang)
     if not rows:
         return []
 
@@ -762,7 +814,8 @@ def extract_locations(body: str) -> List[str]:
     return locations
 
 
-def _find_location_hour_table(body: str, location_name: str, occurrence: int = 0):
+def _find_location_hour_table(body: str, location_name: str, occurrence: int = 0,
+                              lang: str = "de"):
     """Findet die Stundentabelle eines Ortes ueber den vorausgehenden
     "ORT <Name>"-Kopf (_render_location_section, Issue #1108) -- ersetzt die
     alte CSS-Klassen-Erkennung. `occurrence` waehlt bei gleichnamigen Orten
@@ -790,14 +843,15 @@ def _find_location_hour_table(body: str, location_name: str, occurrence: int = 0
     # Tabelle (Legende/Abo-/App-Footer) eingesammelt -> falsche Fehlermeldung
     # statt "nicht gefunden". Legende/Footer haben nie "Zeit" als erste Spalte.
     section = body[match.end():section_end]
+    time_label = _hour_time_label(lang)
     for table_match in re.finditer(r'<table[^>]*>(.*?)</table>', section, re.DOTALL):
         rows = _extract_rows_from_table_html(table_match.group(1))
-        if rows and rows[0] and rows[0][0].strip() == "Zeit":
+        if rows and rows[0] and rows[0][0].strip() == time_label:
             return rows[0], rows[1:]
     return None
 
 
-def validate_structure(body: str, hourly_enabled: bool = True) -> List[str]:
+def validate_structure(body: str, hourly_enabled: bool = True, *, lang: str = "de") -> List[str]:
     """Validate email structure against the v2-Vertrag (Issue #1108/#1110,
     Spalten-Konfigurierbarkeit #1106, freie Spaltenreihenfolge #1381):
     Uebersichtstabelle (Warn-Zeile + >=1 numerische Zeile), Stundentabellen fuer
@@ -806,12 +860,14 @@ def validate_structure(body: str, hourly_enabled: bool = True) -> List[str]:
     Reihenfolge frei, aber mail-weit einheitlich), kein Score-/Winner-Vertrag
     mehr."""
     errors: List[str] = []
+    allowed_cols = hour_columns(lang)
+    time_label = _hour_time_label(lang)
 
-    rows = extract_table_rows(body)
+    rows = extract_table_rows(body, lang)
     if not rows:
         errors.append(
             f"STRUKTUR: Uebersichtstabelle nicht gefunden (erste Datenzeile "
-            f"'{_OVERVIEW_WARN_LABEL}' fehlt)"
+            f"'{_overview_warn_label(lang)}' fehlt)"
         )
     elif len(rows) < 2:
         errors.append(
@@ -819,7 +875,7 @@ def validate_structure(body: str, hourly_enabled: bool = True) -> List[str]:
             f"erwartet: Warn-Zeile + mindestens 1 numerische Metrik-Zeile"
         )
 
-    locations = extract_locations(body)
+    locations = extract_locations(body, lang)
     if rows and not locations:
         errors.append("STRUKTUR: Keine Orte in der Uebersichtstabelle-Kopfzeile gefunden")
 
@@ -844,7 +900,7 @@ def validate_structure(body: str, hourly_enabled: bool = True) -> List[str]:
         for name in locations:
             occurrence = occurrence_counts.get(name, 0)
             occurrence_counts[name] = occurrence + 1
-            table = _find_location_hour_table(body, name, occurrence)
+            table = _find_location_hour_table(body, name, occurrence, lang)
             if table is None:
                 errors.append(
                     f"STRUKTUR: Stundentabelle fuer Ort '{name}' (Vorkommen {occurrence + 1}) nicht gefunden"
@@ -854,10 +910,10 @@ def validate_structure(body: str, hourly_enabled: bool = True) -> List[str]:
             # Issue #1106: Teilmengen-Pruefung statt Exakt-Vergleich.
             # Mindestspalten-Regel: "Zeit" muss erste Spalte sein UND es muss
             # mindestens eine Wert-Spalte daneben existieren (sonst sinnlose Config).
-            if not header_cols or header_cols[0] != "Zeit" or len(header_cols) < 2:
+            if not header_cols or header_cols[0] != time_label or len(header_cols) < 2:
                 errors.append(
                     f"STRUKTUR: Stundentabelle fuer Ort '{name}' (Vorkommen {occurrence + 1}) "
-                    f"verletzt die Mindestspalten-Regel (Zeit + mind. 1 Wert-Spalte), "
+                    f"verletzt die Mindestspalten-Regel ({time_label} + mind. 1 Wert-Spalte), "
                     f"Spalten {header_cols}"
                 )
                 continue
@@ -868,12 +924,12 @@ def validate_structure(body: str, hourly_enabled: bool = True) -> List[str]:
             # treten zwei ausdrueckliche Pruefungen, die benennen, WELCHE Spalte
             # stoert -- sie halten das, was die Projektion bisher nur als
             # Nebeneffekt leistete. NICHT wieder eine Reihenfolge einbauen.
-            unknown_cols = [c for c in header_cols if c not in _HOUR_COLUMNS_V2]
+            unknown_cols = [c for c in header_cols if c not in allowed_cols]
             if unknown_cols:
                 errors.append(
                     f"STRUKTUR: Stundentabelle fuer Ort '{name}' (Vorkommen {occurrence + 1}) "
                     f"enthaelt unbekannte Spalte(n) {unknown_cols} -- zulaessig sind nur "
-                    f"{_HOUR_COLUMNS_V2}"
+                    f"{allowed_cols}"
                 )
             duplicate_cols = sorted(
                 {c for c in header_cols if header_cols.count(c) > 1},
@@ -909,11 +965,11 @@ def validate_structure(body: str, hourly_enabled: bool = True) -> List[str]:
     return errors
 
 
-def validate_location_count(body: str, min_expected: int = 3) -> List[str]:
+def validate_location_count(body: str, min_expected: int = 3, *, lang: str = "de") -> List[str]:
     """Validate number of locations."""
     errors = []
 
-    locations = extract_locations(body)
+    locations = extract_locations(body, lang)
 
     if len(locations) < min_expected:
         errors.append(
@@ -924,7 +980,7 @@ def validate_location_count(body: str, min_expected: int = 3) -> List[str]:
     return errors
 
 
-def validate_plausibility(body: str) -> List[str]:
+def validate_plausibility(body: str, *, lang: str = "de") -> List[str]:
     """v2 (Issue #1108): Wertebereichs-Pruefung der Uebersichtstabellen-
     Metrikzeilen (_OVERVIEW_METRIC_CHECKS -- seit #1404 24, seit #1420 46
     numerische Zeilen als Alt+Neu-Uebergangs-Union, s.
@@ -933,13 +989,14 @@ def validate_plausibility(body: str) -> List[str]:
     als Fehlwert-Fallback zulaessig; die 5 nicht-numerischen Zeilen
     (_OVERVIEW_NO_CHECK_LABELS) bleiben ausdruecklich unbewertet."""
     errors = []
-    rows = extract_table_rows(body)
+    rows = extract_table_rows(body, lang)
+    checks = overview_metric_checks(lang)
 
     for row in rows[1:]:
         if not row:
             continue
         label = row[0].strip()
-        check = _OVERVIEW_METRIC_CHECKS.get(label)
+        check = checks.get(label)
         if check is None:
             continue
         _, (lo, hi) = check
@@ -960,7 +1017,7 @@ def validate_plausibility(body: str) -> List[str]:
     return errors
 
 
-def validate_format(body: str) -> List[str]:
+def validate_format(body: str, *, lang: str = "de") -> List[str]:
     """v2 (Issue #1108): Format-Check der Uebersichtstabellen-Metrikzeilen
     (z. B. 'N°C', 'N km/h') statt der alten englischen Zeilen-Labels
     (Wind/Gusts, Sunny Hours). "—" bleibt als Fehlwert-Fallback zulaessig.
@@ -969,13 +1026,14 @@ def validate_format(body: str) -> List[str]:
     `fix_1420_validator_uebersichtslabels.md`); die 5 nicht-numerischen
     bleiben ausdruecklich unbewertet."""
     errors = []
-    rows = extract_table_rows(body)
+    rows = extract_table_rows(body, lang)
+    checks = overview_metric_checks(lang)
 
     for row in rows[1:]:
         if not row:
             continue
         label = row[0].strip()
-        check = _OVERVIEW_METRIC_CHECKS.get(label)
+        check = checks.get(label)
         if check is None:
             continue
         pattern, _ = check
@@ -992,7 +1050,8 @@ def validate_format(body: str) -> List[str]:
     return errors
 
 
-def validate_hourly_table(body: str, time_start: int = 9, time_end: int = 16) -> List[str]:
+def validate_hourly_table(body: str, time_start: int = 9, time_end: int = 16, *,
+                          lang: str = "de") -> List[str]:
     """v2 (Issue #1108): Vollstaendigkeits-Check pro Ort (ueber die zugehoerige
     Stundentabelle, _find_location_hour_table) statt globaler String-Presence
     im gesamten Body -- ein fehlender Ort/eine fehlende Stunde ist damit
@@ -1009,10 +1068,10 @@ def validate_hourly_table(body: str, time_start: int = 9, time_end: int = 16) ->
 
     # Adversary F002: Vorkommens-Index statt immer nur das erste Vorkommen.
     occurrence_counts: dict = {}
-    for name in extract_locations(body):
+    for name in extract_locations(body, lang):
         occurrence = occurrence_counts.get(name, 0)
         occurrence_counts[name] = occurrence + 1
-        table = _find_location_hour_table(body, name, occurrence)
+        table = _find_location_hour_table(body, name, occurrence, lang)
         if table is None:
             continue  # bereits von validate_structure() gemeldet
         _header, data_rows = table
@@ -1032,12 +1091,14 @@ def run_validation(
     subject_contains: "str | None" = None,
     max_age_minutes: "int | None" = None,
     ignore_mail_age_reason: "str | None" = None,
+    warnungen: "list | None" = None,
 ) -> Tuple[bool, List[str]]:
     """Run all validations and return (success, errors).
 
     Issue #1408: reicht Betreffs-Filter und Altersschranke an die Mail-Auswahl
     durch. Ohne die neuen Argumente unveraendertes Verhalten (AC-4), lediglich
-    mit aktiver Standard-Altersgrenze."""
+    mit aktiver Standard-Altersgrenze. Issue #2663: das Urteil faellt
+    ``validate_message``; Warnungen landen in ``warnungen``."""
     try:
         msg = _fetch_latest_message(
             subject_contains=subject_contains,
@@ -1047,19 +1108,43 @@ def run_validation(
     except Exception as e:
         return False, [f"FEHLER: E-Mail konnte nicht geladen werden: {e}"]
 
+    return validate_message(msg, min_locations=min_locations, warnungen=warnungen)
+
+
+# Issue #2663: Schluessel, an denen die Sprache des Inhalts erkennbar ist.
+_LANG_MARKER_KEYS = ["vergleich.zeile.amtliche_warnungen", "vergleich.stunden.zeit"]
+
+
+def validate_message(
+    msg, min_locations: int = 3, warnungen: "list | None" = None,
+) -> Tuple[bool, List[str]]:
+    """Alle Pruefungen einer geparsten Compare-Mail in der Sprache ihres Kopfes
+    ``X-GZ-Lang`` (Issue #2663). Fehlt der Kopf: ``de`` + Warnung."""
+    import _mail_lang  # lazy: Validator bleibt ohne Hilfsmodul ladbar (Log-Tests)
+
+    try:
+        lang, hinweise = _mail_lang.mail_lang(msg)
+    except ValueError as exc:
+        return False, [f"SPRACHE: {exc}"]
+    if warnungen is not None:
+        warnungen.extend(hinweise)
+
     body = _extract_html_body(msg)
     # Fehlender Header (Alt-Mails vor diesem Feature) oder Wert != "false"
     # => True (bisheriges strenges Verhalten bleibt der sichere Default).
     hourly_enabled = msg.get("X-GZ-Compare-Hourly-Enabled") != "false"
 
     all_errors = []
+    widerspruch = _mail_lang.widerspruch(body, lang, _LANG_MARKER_KEYS)
+    if widerspruch:
+        all_errors.append(widerspruch)
 
     # Run all validators
-    all_errors.extend(validate_structure(body, hourly_enabled=hourly_enabled))
-    all_errors.extend(validate_location_count(body, min_locations))
-    all_errors.extend(validate_plausibility(body))
-    all_errors.extend(validate_format(body))
-    all_errors.extend(validate_hourly_table(body))
+    all_errors.extend(validate_structure(body, hourly_enabled=hourly_enabled, lang=lang))
+    all_errors.extend(validate_location_count(body, min_locations, lang=lang))
+    all_errors.extend(validate_plausibility(body, lang=lang))
+    all_errors.extend(validate_format(body, lang=lang))
+    all_errors.extend(validate_hourly_table(body, lang=lang))
 
     return len(all_errors) == 0, all_errors
 
@@ -1108,6 +1193,12 @@ def main():
         help="Altersschranke bewusst abschalten -- verlangt eine nicht-leere "
              "Begruendung, die im Validator-Log landet",
     )
+    parser.add_argument(
+        "--eml",
+        metavar="PFAD",
+        default=None,
+        help="Mail aus dieser .eml-Datei pruefen statt per IMAP (#2663)",
+    )
     args = parser.parse_args()
 
     # Fail-fast, analog `qa_gate.py --no-visual "<Grund>"`: der Schutz laesst
@@ -1146,12 +1237,25 @@ def main():
     print("=" * 70)
     print()
 
-    success, errors = run_validation(
-        args.min_locations,
-        subject_contains=args.subject_contains,
-        max_age_minutes=args.max_age_minutes,
-        ignore_mail_age_reason=args.ignore_mail_age,
-    )
+    warnungen: list = []
+    if args.eml:
+        # Issue #2663: Mail aus Datei statt IMAP (Fixtures ohne Netz pruefbar).
+        try:
+            msg = email.message_from_bytes(Path(args.eml).read_bytes())
+        except OSError as exc:
+            print(f"FEHLER: --eml {args.eml!r} nicht lesbar: {exc}")
+            sys.exit(2)
+        success, errors = validate_message(msg, args.min_locations, warnungen=warnungen)
+    else:
+        success, errors = run_validation(
+            args.min_locations,
+            subject_contains=args.subject_contains,
+            max_age_minutes=args.max_age_minutes,
+            ignore_mail_age_reason=args.ignore_mail_age,
+            warnungen=warnungen,
+        )
+    for hinweis in warnungen:
+        print(f"WARNUNG: {hinweis}", file=sys.stderr)
 
     # Issue #465 (B2): Strukturiertes Log VOR sys.exit() schreiben (fail-soft).
     # Issue #1408 (AC-5): Zustand der Altersschranke immer mitschreiben.
@@ -1161,6 +1265,7 @@ def main():
         min_locations=args.min_locations,
         max_age_minutes=args.max_age_minutes,
         ignore_mail_age_reason=args.ignore_mail_age,
+        warnings=warnungen,
     )
 
     if success:

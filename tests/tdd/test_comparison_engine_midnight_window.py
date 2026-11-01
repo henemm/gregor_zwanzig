@@ -64,7 +64,7 @@ def _run_engine_with_window(time_window: tuple[int, int]):
     loc = _location()
     original_fetch = ce_mod.fetch_forecast_for_location
 
-    def recorded_fetch(location, hours=48, settings=None):  # echte Funktion
+    def recorded_fetch(location, hours=48, settings=None, user_id=None):  # echte Funktion
         return {
             "location": location,
             "error": None,

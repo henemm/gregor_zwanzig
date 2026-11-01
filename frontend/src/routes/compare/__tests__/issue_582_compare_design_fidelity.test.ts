@@ -31,6 +31,7 @@ const LIST_PAGE    = join(ROUTES_COMPARE, 'compare', '+page.svelte');
 const HUB_PAGE     = join(ROUTES_COMPARE, 'compare', '[id]', '+page.svelte');
 const COMPARE_TABS = join(COMPARE_DIR, 'CompareTabs.svelte');
 const MTABBAR      = join(COMPARE_DIR, '..', 'mobile', 'MTabBar.svelte');
+const HUB_UEBERSICHT = join(COMPARE_DIR, '..', 'shared', 'hub-uebersicht', 'HubUebersicht.svelte');
 
 // ═══════════════════════════════════════════════════════════════════
 // Block A — Compare-Liste
@@ -183,18 +184,22 @@ describe('AC-5: Compare-Hub — Tab-Buttons mit Underline statt Segmented', () =
 describe('AC-6: Übersicht-Tab — Monitoring-Streifen + SummaryCard-Grid', () => {
 	// #1743 (AC-28): der Verifikations-Hinweis mit „Vorschau prüfen →" entfaellt samt
 	// Vorschau-Reiter; Zusicherung jetzt: kein Hinweis-Streifen mit Vorschau-Sprung mehr.
-	test('AC-6a (#1743): kein Verifikations-Hinweis mit Vorschau-Sprung mehr', () => {
-		const src = readFileSync(COMPARE_TABS, 'utf-8');
-		assert.doesNotMatch(
-			src,
-			/border-left:\s*3px solid var\(--g-accent\)/,
-			'Verifikations-Hinweis-Streifen (border-left 3px g-accent) steht noch im Hub'
-		);
-		assert.doesNotMatch(src, />\s*Vorschau prüfen/, 'Knopf „Vorschau prüfen" steht noch im Hub');
-	});
+	// Issue #2682: die Übersicht ist der geteilte Baustein HUB_UEBERSICHT — Positiv-Fälle lesen dort,
+	// die Negativ-Zusicherung gilt für CompareTabs UND den Baustein (darf nicht vakuum werden).
+	for (const [name, datei] of [['CompareTabs', COMPARE_TABS], ['HubUebersicht', HUB_UEBERSICHT]] as const) {
+		test(`AC-6a (#1743): kein Verifikations-Hinweis mit Vorschau-Sprung mehr (${name})`, () => {
+			const src = readFileSync(datei, 'utf-8');
+			assert.doesNotMatch(
+				src,
+				/border-left:\s*3px solid var\(--g-accent\)/,
+				'Verifikations-Hinweis-Streifen (border-left 3px g-accent) steht noch im Hub'
+			);
+			assert.doesNotMatch(src, />\s*Vorschau prüfen/, 'Knopf „Vorschau prüfen" steht noch im Hub');
+		});
+	}
 
 	test('AC-6b: Übersicht-Tab hat SummaryCard mit "Bearbeiten →" Link', () => {
-		const src = readFileSync(COMPARE_TABS, 'utf-8');
+		const src = readFileSync(HUB_UEBERSICHT, 'utf-8');
 		assert.match(
 			src,
 			/Bearbeiten\s*→|Bearbeiten\s*&rarr;/,
@@ -203,7 +208,7 @@ describe('AC-6: Übersicht-Tab — Monitoring-Streifen + SummaryCard-Grid', () =
 	});
 
 	test('AC-6c: Monitoring-Streifen hat 4 Stat-Felder (gap: 40px)', () => {
-		const src = readFileSync(COMPARE_TABS, 'utf-8');
+		const src = readFileSync(HUB_UEBERSICHT, 'utf-8');
 		assert.match(
 			src,
 			/gap.*40|40.*gap/,

@@ -29,7 +29,7 @@ def normalize_segment_id(value) -> str | None:
     return text or None
 
 
-def format_segment_reference(segment_ids: list[str]) -> str:
+def format_segment_reference(segment_ids: list[str], *, lang: str = "de") -> str:
     """Issue #1200: kompakter Segment-/Etappen-Bezug fuer die Standalone-
     Alert-Mail. Numerische IDs werden sortiert, zusammenhaengende Laeufe als
     Range ('Segment 3–5'), sonst als Aufzaehlung ('Segment 3, 5'). `"Ziel"`
@@ -53,8 +53,10 @@ def format_segment_reference(segment_ids: list[str]) -> str:
             other.append(s)
 
     total = len(numeric) + len(other) + (1 if has_ziel else 0)
+    from i18n import t
+
     if total > 4:
-        return f"{total} Segmente"
+        return t("alarm.segment.anzahl", lang, n=total)
 
     parts: list[str] = []
     if numeric:
@@ -65,12 +67,13 @@ def format_segment_reference(segment_ids: list[str]) -> str:
             parts.extend(str(n) for n in numeric)
     parts.extend(other)
 
-    main_part = "Segment " + ", ".join(parts) if parts else ""
+    main_part = t("alarm.segment.liste", lang, liste=", ".join(parts)) if parts else ""
+    ziel = f"🏁 {t('alarm.segment.ziel', lang)}"
 
     if main_part and has_ziel:
-        return f"{main_part}, 🏁 Ziel"
+        return f"{main_part}, {ziel}"
     if has_ziel:
-        return "🏁 Ziel"
+        return ziel
     return main_part
 
 
@@ -90,7 +93,7 @@ def _renderable_segment_ids(segment_ids) -> list[str]:
 
 def format_alert_location(
     location_label: str | None, segment_ids, km_from: float, km_to: float,
-    km_measured: bool = False,
+    km_measured: bool = False, *, lang: str = "de",
 ) -> str:
     """Die Ortsangabe eines Alarms — DIE gemeinsame Aufloesungsreihenfolge
     (Issue #1744 AC-3, erweitert um Issue #2036):
@@ -122,7 +125,7 @@ def format_alert_location(
             return f"km {a}-{b}"
     ids = _renderable_segment_ids(segment_ids)
     if ids:
-        reference = format_segment_reference(ids)
+        reference = format_segment_reference(ids, lang=lang)
         if reference:
             return reference
     return f"km {int(round(km_from))}–{int(round(km_to))}"

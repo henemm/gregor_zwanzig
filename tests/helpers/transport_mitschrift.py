@@ -72,7 +72,7 @@ def aufzeichner_installieren(monkeypatch) -> Kanalmitschrift:
             self._s = settings
 
         def send(self, subject, body, html=True, plain_text_body=None, to=None,
-                 mail_type=None, mail_format=None, compare_hourly_enabled=None):
+                 mail_type=None, mail_format=None, compare_hourly_enabled=None, lang="de"):
             # Ohne `to=` faellt `EmailOutput` auf `settings.mail_to` zurueck
             # (email.py:647-650) -- genau die Aufloesung, die AC-7 (Kanaltreue)
             # prueft.

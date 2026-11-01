@@ -1,0 +1,21 @@
+
+----- betreff -----
+[GR20 Golden] Segment 2 · Gewitter ab Fr15:40 · letzter Regen gegen morgen 17:10 · Radar reicht bis 09:00
+----- klartext -----
+Gewitter ab Fr15:40
+
+Radar-Nowcast
+
+Wo & wann: Segment 2 · ab morgen 15:40 · letzter Regen gegen morgen 17:10 · Radar reicht bis 09:00
+Intensität: Starker Hagel/Gewitter
+Quelle: Radar (DWD)
+
+Stand: heute 06:00
+Cooldown: Du erhältst diese Warnung höchstens einmal in 1 Stunde. Bei Meldungen aus anderen Quellen (amtliche Warnung/Radar) greift dieser Cooldown nicht.
+
+Regen-/Gewitter-Alarm · Radar (DWD)
+----- telegram -----
+<b>GR20 Golden · Segment 2 · Gewitter ab Fr15:40</b>
+morgen 15:40 · letzter Regen gegen morgen 17:10 · Radar reicht bis 09:00 · Starker Hagel/Gewitter · Radar (DWD)
+----- sms -----
+Seg 2: TH@Fr15:40@Fr17:10 R2.5

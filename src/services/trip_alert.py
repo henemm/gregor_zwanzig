@@ -15,6 +15,7 @@ from datetime import date, datetime, timedelta, timezone
 from typing import TYPE_CHECKING, Iterable, List, Optional
 
 from app.config import Settings
+from i18n import Lang, resolve_user_lang, t
 from app.models import SegmentWeatherData, WeatherChange
 from services import alert_channel_threshold, alert_daily_limit, alert_input_capture, alert_log
 from services import alert_retry_backoff
@@ -532,6 +533,9 @@ class TripAlertService:
     # Issue #1539 S3: Klassen-Default der Lauf-Frist -- auch per `__new__`
     # erzeugte Instanzen (Bestandstests) haben keinen gesetzten Lauf.
     _run_deadline_at: Optional[float] = None
+    # Issue #2672: nur Platzhalter fuer per ``__new__`` gebaute Instanzen
+    # (Bestandstests); ``__init__`` setzt die Sprache JE NUTZER.
+    _lang: Lang = "de"
 
     def __init__(
         self,
@@ -554,7 +558,11 @@ class TripAlertService:
                        (DI seam for AC-4/AC-6; replaces SMTP when set)
         """
         self._settings = settings if settings else Settings().with_user_profile(user_id)
-        self._notification_service = NotificationService(self._settings, user_id)
+        # Issue #2672: Sprache EINMAL je Nutzer (Dienstobjekt), kein Modulzustand.
+        self._lang: Lang = resolve_user_lang(user_id)
+        self._notification_service = NotificationService(
+            self._settings, user_id, lang=self._lang,
+        )
         self._change_detector = WeatherChangeDetectionService()
         self._throttle_hours = throttle_hours
         self._user_id = user_id
@@ -904,6 +912,7 @@ class TripAlertService:
                     cached_weather[0].segment.start_point.lat,
                     cached_weather[0].segment.start_point.lon,
                 ),
+                lang=self._lang,
             )
 
         # Issue #2050 S4c: der Δ-Zweig an der quellenuebergreifenden
@@ -2660,12 +2669,10 @@ class TripAlertService:
                     logger.warning(f"No channel configured; skipping radar alert for {trip.id}")
                     continue
 
-                # Cooldown-Anzeige
-                if cooldown_min % 60 == 0:
-                    n = cooldown_min // 60
-                    cooldown_display = f"{n} Stunde" if n == 1 else f"{n} Stunden"
-                else:
-                    cooldown_display = f"{cooldown_min} Minuten"
+                # Cooldown-Anzeige (Issue #2672: geteilter Baustein in Nutzersprache)
+                from services.radar_alert_service import cooldown_text
+
+                cooldown_display = cooldown_text(cooldown_min, lang=self._lang)
 
                 # Issue #952 (reopened): kurzes Intensitäts-Label (kein format_now_text-Satz
                 # mehr — der Renderer haengt selbst "ab {onset_time}" an). Briefing-Kontext
@@ -2678,11 +2685,11 @@ class TripAlertService:
                 # die Fallunterscheidung bleibt trotzdem explizit, damit die Aussage
                 # auch dann richtig ist, wenn die Unterdrückung oben je gelockert wird.
                 if _briefing_announced and result.is_convective:
-                    _briefing_context = "bereits angekündigt — jetzt akut"
+                    _briefing_context = t("alarm.kontext.akut", self._lang)
                 elif _briefing_announced:
-                    _briefing_context = "bereits angekündigt"
+                    _briefing_context = t("alarm.kontext.angekuendigt", self._lang)
                 else:
-                    _briefing_context = "nicht angekündigt"
+                    _briefing_context = t("alarm.kontext.nicht_angekuendigt", self._lang)
                 # F002: Anzeige-Kontext mitten im Satz ("leichter Regen") -- erstes
                 # Zeichen kleinschreiben; intensity_to_text() selbst bleibt Title-Case
                 # (andere Caller nutzen es am Satzanfang). Alle Labels beginnen mit
@@ -2868,14 +2875,15 @@ class TripAlertService:
                 # -- ein Δ-Vorgaenger ist KEINE amtliche Warnung, die alte,
                 # hartkodierte Formulierung waere fuer ihn falsch.
                 if _identity_gate.is_addendum:
-                    _bezug = (
-                        "Ergänzung zur gemeldeten Wetterabweichung"
+                    _bezug = t(
+                        "alarm.nachtrag.abweichung"
                         if _identity_gate.addendum_source == "deviation"
-                        else "Ergänzung zur amtlichen Warnung"
+                        else "alarm.nachtrag.amtlich", self._lang,
                     )
                     if _identity_gate.addendum_reported_at is not None:
-                        _bezug += (
-                            f" von {local_fmt(_identity_gate.addendum_reported_at, tz)}"
+                        _bezug += t(
+                            "alarm.nachtrag.von", self._lang,
+                            zeit=local_fmt(_identity_gate.addendum_reported_at, tz),
                         )
                     _radar_request = replace(_radar_request, addendum_reference=_bezug)
 

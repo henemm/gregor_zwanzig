@@ -242,7 +242,7 @@ def take_screenshot(
                     page.wait_for_load_state("networkidle", timeout=15000)
                     page.fill("input[name='username']", app_user)
                     page.fill("input[name='password']", app_pass)
-                    page.click("button[type='submit']")
+                    page.get_by_role("button", name="Anmelden", exact=True).click()
                     page.wait_for_load_state("networkidle", timeout=15000)
                 except Exception as e:
                     print(f"Login warning (continuing): {e}", file=sys.stderr)

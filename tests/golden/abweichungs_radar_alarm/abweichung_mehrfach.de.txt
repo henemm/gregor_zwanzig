@@ -1,0 +1,33 @@
+
+----- betreff -----
+[GR20 Golden] Segment 3–4, 🏁 Ziel · ↑ 4 über Schwelle: Böen 72 km/h, Gewitter hoch, Niedersch 12,5 mm
+----- klartext -----
+5 Werte über der Alarm-Schwelle
+
+↑ 4 über Schwelle
+
+Böen · Segment 3 · stärkste Stunde morgen 15:00 · Änderung 27 · Schwelle 20: 45 ↑ 72 km/h über
+14:00 | 40 → 66
+15:00 | 45 → 72
+betroffen 13:00–18:00
+Gewitter · Segment 3 · stärkste Stunde 17:00 · Änderung 2 Stufen · Schwelle 1 Stufe: leicht ↑ hoch · Hagel: ja über
+Niedersch · Segment 3 · mehr Regen als angekündigt · Änderung 8,5 · Schwelle 5: 4 ↑ 12,5 mm über
+Nullgradgrenze · Segment 4 · stärkste Stunde in 2 Tagen 09:00 · Änderung 550 · Schwelle 300: 2.400 ↓ 1.850 m über
+Temp · 🏁 Ziel · stärkste Stunde war vor 3 Tagen 12:00 · unter Schwelle: 12 → 10 °C
+
+Niedersch-Beginn: 14:00 → 11:30 (2,5 h früher · Segment 3)
+
+Stand: heute 06:00 · verglichen mit dem letzten Briefing · Segment 3–4, 🏁 Ziel
+
+Abweichungs-Alarm · Open-Meteo
+----- telegram -----
+<b>GR20 Golden · Segment 3–4, 🏁 Ziel · 4 über Schwelle</b>
+Böen Segment 3 · stärkste Stunde morgen 15:00 45→72 km/h · Gewitter Segment 3 · stärkste Stunde 17:00 leicht→hoch · Hagel: ja · Niedersch Segment 3 · mehr Regen als angekündigt 4→12,5 mm · Nullgradgrenze Segment 4 · stärkste Stunde in 2 Tagen 09:00 2.400→1.850 m · Temp 🏁 Ziel · stärkste Stunde war vor 3 Tagen 12:00 12→10 °C
+Böen
+14:00 | 40 → 66
+15:00 | 45 → 72
+betroffen 13:00–18:00
+Niedersch-Beginn: 14:00 → 11:30 (2,5 h früher · Segment 3)
+Stand: heute 06:00 · verglichen mit dem letzten Briefing
+----- sms -----
+S3-4 Seg 3-4, Ziel: G45->72@Do15 13-18 TH:L->H+HL@17 R4->12@Mi16 Rest6@Fr20 FZ2400->1850@Sa09 T12->10@Mo12 R11:30 2,5 h früher

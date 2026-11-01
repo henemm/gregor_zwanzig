@@ -1,0 +1,172 @@
+----- unbekannt_schluessel -----
+[[Golden Trip] Unknown command]
+
+'foo' is not a valid command.
+Available: TODAY, TOMORROW, NOW, STORMS, ROUTE, RESTDAY, STATUS, PAUSE, SKIP, STOP, RESUME, HELP, CODES, STARTDATE, REPORT
+Weather values in the hourly view: send a code (HELP lists them all).
+----- glance -----
+[[Golden Trip] Glance]
+
+🗓 Glance — today & tomorrow
+
+today (Thu 29 Oct): 🌡 12–12°C  💨 18 km/h  🌧 7.2mm  ⛈ Thunderstorm: medium
+tomorrow (Fri 30 Oct): No stage planned
+----- timeline_heute -----
+[[Golden Trip] Timeline today]
+
+📋 Timeline · Today (Thu 29 Oct)
+
+🕐 23:59 · 900 m
+   🌡 12–12 °C  💨 18 km/h  🌧 7.2 mm  ⛈ medium
+----- timeline_morgen -----
+[[Golden Trip] Timeline tomorrow]
+
+Tomorrow (Fri 30 Oct): No stage planned
+----- gewitter_heute -----
+[[Golden Trip] Storms today]
+
+⛈ Thunderstorm today (Thu 29 Oct): medium
+----- stunden_heute -----
+[[Golden Trip] Hours Today]
+
+📅 Hours · Today (Thu 29 Oct)
+
+05  12°C    18km/h   0.4mm  🟠
+06  12°C    18km/h   0.4mm  🟠
+07  12°C    18km/h   0.4mm  🟠
+08  12°C    18km/h   0.4mm  🟠
+09  12°C    18km/h   0.4mm  🟠
+10  12°C    18km/h   0.4mm  🟠
+11  12°C    18km/h   0.4mm  🟠
+12  12°C    18km/h   0.4mm  🟠
+13  12°C    18km/h   0.4mm  🟠
+14  12°C    18km/h   0.4mm  🟠
+15  12°C    18km/h   0.4mm  🟠
+16  12°C    18km/h   0.4mm  🟠
+----- drilldown_gewitter -----
+[[Golden Trip] ⛈️ Thunderstorm hourly]
+
+⛈️ Thunderstorm — hourly view
+05:00–16:00  🟠 medium
+----- metrik_temp -----
+[[Golden Trip] Temperature hourly]
+
+Temperature — hourly view
+05:00–16:00  12°C
+----- metrik_uv -----
+[[Golden Trip] UV index]
+
+UV index: not available for this place and period (no hourly values).
+----- morgen_keine_etappe -----
+[[Golden Trip] Tomorrow]
+
+Tomorrow (Fri 30 Oct): No stage planned
+----- report_typ -----
+[[Golden Trip] Invalid report type]
+
+Report type 'abends' unknown. Allowed: morning, evening
+----- kuerzel_vergleich -----
+[Codes]
+
+Weather: T temp, D day max, N night, L day min, TF feels like, FD/FL/FN = D/L/N feels like, R rain mm, PR rain %, TH thunder, TH+ next stage, W wind km/h, G gusts, WD wind dir, HU humidity, DP dew point, CP storm energy, PT precip type, SL snow line m, NS24+ new snow 24h, CT/CL/CM/CH clouds total/low/mid/high, VS visibility, SU sun h, UV index, HP pressure, FZ 0C level m.
+More: SD snow depth, C confidence, Z:/MAX/M: fire zones/top level/massifs.
+Format: E4 stage 4, 23@5 over limit from 5h, (24@7) peak, D13/27 min/max, +HL hail, - none, ? no data.
+Alerts after !: TS storm, FO flood, RA heavy rain, WG wind, SN snow, AW avalanche, AV avalanche level, IC ice, HT heat, CD cold, FR fire, AB closure. L/M/H low/mid/high. VR:VT: MF rain/storm risk. X? no data.
+----- vergleich_status -----
+[[Golden Vergleich] Command not available]
+
+'status' is not available for location comparisons.
+----- vergleich_pause -----
+[[Golden Vergleich] Comparison paused]
+
+Comparison 'Golden Vergleich' paused until you send RESUME. A given duration is ignored.
+----- vergleich_weiter -----
+[[Golden Vergleich] Comparison resumed]
+
+Comparison 'Golden Vergleich' active again.
+----- vergleich_weiter_nicht_pausiert -----
+[[Golden Vergleich] Comparison]
+
+Comparison 'Golden Vergleich' is not paused.
+----- pause_ohne_dauer -----
+[[Golden Trip] PAUSE: duration missing]
+
+Please give a duration, e.g. PAUSE 2d or PAUSE 12h.
+Format: N d (days) or N h (hours).
+----- pause_ungueltig -----
+[[Golden Trip] PAUSE: invalid duration]
+
+'xx' is not a valid duration.
+Examples: PAUSE 2d (2 days) or PAUSE 12h (12 hours).
+----- pause_null -----
+[[Golden Trip] PAUSE: duration must be > 0]
+
+The pause must be longer than 0.
+Examples: PAUSE 2d (2 days) or PAUSE 12h (12 hours).
+----- pause -----
+[[Golden Trip] Briefings paused]
+
+Briefings for 'Golden Trip' paused until Sat 31 Oct 04:00 UTC.
+The pause ends by itself; STOP ends briefings for good.
+----- skip -----
+[[Golden Trip] Next briefing skipped]
+
+The next briefing for 'Golden Trip' will be skipped.
+After that the schedule runs as usual.
+----- weiter -----
+[[Golden Trip] Briefings restarted]
+
+Briefings for 'Golden Trip' active again. Enjoy the trip!
+----- spalten -----
+[Columns]
+
+Columns can only be set in the trip editor.
+----- startdatum_fehlt -----
+[[Golden Trip] Missing date]
+
+Please give a date: STARTDATE YYYY-MM-DD
+----- startdatum_ungueltig -----
+[[Golden Trip] Invalid date]
+
+'2026-13-01' is not a valid date. Format: STARTDATE YYYY-MM-DD
+----- startdatum -----
+[[Golden Trip] Start date changed]
+
+Start date moved: Wed 28 Oct -> Mon 2 Nov
+
+New stage dates:
+  Stage 1: Innsbruck - Stubai: Mon 2 Nov
+  Stage 2: Stubai - Neustift: Tue 3 Nov
+  Stage 3: Neustift - Elfer: Sat 7 Nov
+----- ziel_kein_kandidat -----
+No active trip or location comparison found.
+----- ziel_kein_aktives -----
+No active trip. This command only works for trips, not for location comparisons.
+----- command_rows_route -----
+TODAY | Weather for today's stage
+TOMORROW | Weather for tomorrow's stage
+NOW | Rain and thunderstorm nowcast for the next ~2h
+STORMS | Thunderstorm risk for today's stage
+ROUTE [km] | Rain areas along the rest of the route
+RESTDAY [N] | Shift stages by N days (default: 1)
+STATUS | Today and upcoming stages
+PAUSE [2d / 12h] | Pause briefings for a while
+SKIP | Skip the next briefing
+STOP | Turn briefings off for good (also CANCEL)
+RESUME | Turn briefings back on
+HELP | Show this help
+CODES | Show what the codes mean
+STARTDATE YYYY-MM-DD | Set the trip start date and shift all stages
+REPORT [morning / evening] | Send the briefing now (default: morning)
+----- command_rows_vergleich -----
+TODAY | Send the comparison for today now
+TOMORROW | Send the comparison for tomorrow now
+PAUSE | Pause briefings for a while
+RESUME | Turn briefings back on
+HELP | Show this help
+CODES | Show what the codes mean
+REPORT | Send the comparison to all channels now
+----- unknown_command_body -----
+Prefix.
+Available: TODAY, TOMORROW, NOW, STORMS, ROUTE, RESTDAY, STATUS, PAUSE, SKIP, STOP, RESUME, HELP, CODES, STARTDATE, REPORT
+Weather values in the hourly view: send a code (HELP lists them all).

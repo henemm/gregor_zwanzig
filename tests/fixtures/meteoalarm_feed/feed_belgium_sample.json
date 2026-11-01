@@ -1,0 +1,3391 @@
+{
+ "warnings": [
+  {
+   "alert": {
+    "code": [
+     "MCP:v2.0"
+    ],
+    "identifier": "2.49.0.0.56.0.BE.20261024195121.1618968",
+    "incidents": "Alert",
+    "info": [
+     {
+      "area": [
+       {
+        "areaDesc": "Oost-Vlaanderen",
+        "geocode": [
+         {
+          "value": "BE23",
+          "valueName": "NUTS2"
+         }
+        ]
+       }
+      ],
+      "category": [
+       "Met"
+      ],
+      "certainty": "Likely",
+      "description": "Er worden hoge waterstanden verwacht: 5,60 t.e.m. 6,20 m TAW in Oostende of 6,60 t.e.m. 7,20 m TAW in Antwerpen. Wees waakzaam.",
+      "event": "Gele waarschuwing voor stormtij",
+      "expires": "2026-10-26T05:00:00+01:00",
+      "headline": "Gele waarschuwing voor stormtij in België - Oost-Vlaanderen",
+      "instruction": "Be vigilant",
+      "language": "nl-BE",
+      "onset": "2026-10-26T02:00:00+01:00",
+      "parameter": [
+       {
+        "value": "2; yellow; Moderate",
+        "valueName": "awareness_level"
+       },
+       {
+        "value": "7; coastalevent",
+        "valueName": "awareness_type"
+       },
+       {
+        "value": "7; coastalevent may threat public safety and/or damage infrastructure",
+        "valueName": "impacts"
+       }
+      ],
+      "responseType": [
+       "None"
+      ],
+      "senderName": "Koninklijk Meteorologisch Instituut van België",
+      "severity": "Moderate",
+      "urgency": "Future",
+      "web": "https://www.meteo.be/nl/weer/waarschuwingen/overzichtskaart-belgie"
+     },
+     {
+      "area": [
+       {
+        "areaDesc": "Flandre Orientale",
+        "geocode": [
+         {
+          "value": "BE23",
+          "valueName": "NUTS2"
+         }
+        ]
+       }
+      ],
+      "category": [
+       "Met"
+      ],
+      "certainty": "Likely",
+      "description": "Nous prévoyons un niveau d’eau élevé: DNG 5,60 à 6,20 m à Ostende ou DNG 6,60 à 7,20 m à Anvers. Soyez vigilants.",
+      "event": "Avertissement jaune marée forte",
+      "expires": "2026-10-26T05:00:00+01:00",
+      "headline": "Avertissement jaune marée forte en Belgique - Flandre Orientale",
+      "instruction": "Be vigilant",
+      "language": "fr-BE",
+      "onset": "2026-10-26T02:00:00+01:00",
+      "parameter": [
+       {
+        "value": "2; yellow; Moderate",
+        "valueName": "awareness_level"
+       },
+       {
+        "value": "7; coastalevent",
+        "valueName": "awareness_type"
+       },
+       {
+        "value": "7; coastalevent may threat public safety and/or damage infrastructure",
+        "valueName": "impacts"
+       }
+      ],
+      "responseType": [
+       "None"
+      ],
+      "senderName": "Institut Royal Météorologique de Belgique",
+      "severity": "Moderate",
+      "urgency": "Future",
+      "web": "https://www.meteo.be/fr/meteo/avertissements/carte-de-belgique"
+     },
+     {
+      "area": [
+       {
+        "areaDesc": "East Flanders",
+        "geocode": [
+         {
+          "value": "BE23",
+          "valueName": "NUTS2"
+         }
+        ]
+       }
+      ],
+      "category": [
+       "Met"
+      ],
+      "certainty": "Likely",
+      "description": "High tides are expected: TAW 5,60 to 6,20 m in Ostend or TAW 6,60 to 7,20 m in Antwerp. Be careful.",
+      "event": "Yellow warning for storm surge",
+      "expires": "2026-10-26T05:00:00+01:00",
+      "headline": "Yellow warning for storm surge in Belgium - East Flanders",
+      "instruction": "Be vigilant",
+      "language": "en-GB",
+      "onset": "2026-10-26T02:00:00+01:00",
+      "parameter": [
+       {
+        "value": "2; yellow; Moderate",
+        "valueName": "awareness_level"
+       },
+       {
+        "value": "7; coastalevent",
+        "valueName": "awareness_type"
+       },
+       {
+        "value": "7; coastalevent may threat public safety and/or damage infrastructure",
+        "valueName": "impacts"
+       }
+      ],
+      "responseType": [
+       "None"
+      ],
+      "senderName": "Royal Meteorological Institute of Belgium",
+      "severity": "Moderate",
+      "urgency": "Future",
+      "web": "https://www.meteo.be/en/weather/warnings/overview-belgium"
+     },
+     {
+      "area": [
+       {
+        "areaDesc": "Ostflandern",
+        "geocode": [
+         {
+          "value": "BE23",
+          "valueName": "NUTS2"
+         }
+        ]
+       }
+      ],
+      "category": [
+       "Met"
+      ],
+      "certainty": "Likely",
+      "description": "Es wird ein erhöhter Wasserstand erwartet: TAW 5,60 bis 6,20 m in Ostende oder TAW 6,60 bis 7,20 m in Antwerpen. Seien Sie vorsichtig.",
+      "event": "Gelbe Warnung fur Sturmflut",
+      "expires": "2026-10-26T05:00:00+01:00",
+      "headline": "Gelbe Warnung fur Sturmflut in Belgien - Ostflandern",
+      "instruction": "Be vigilant",
+      "language": "de-DE",
+      "onset": "2026-10-26T02:00:00+01:00",
+      "parameter": [
+       {
+        "value": "2; yellow; Moderate",
+        "valueName": "awareness_level"
+       },
+       {
+        "value": "7; coastalevent",
+        "valueName": "awareness_type"
+       },
+       {
+        "value": "7; coastalevent may threat public safety and/or damage infrastructure",
+        "valueName": "impacts"
+       }
+      ],
+      "responseType": [
+       "None"
+      ],
+      "senderName": "Königliche Meteorologische Institut van Belgien",
+      "severity": "Moderate",
+      "urgency": "Future",
+      "web": "https://www.meteo.be/de/wetter/warnungen/belgien"
+     }
+    ],
+    "msgType": "Alert",
+    "scope": "Public",
+    "sender": "kmi-irm",
+    "sent": "2026-10-26T05:00:00+01:00",
+    "status": "Actual"
+   },
+   "uuid": "9257c43e-fa47-491a-bdfd-60e90aa07b28"
+  },
+  {
+   "alert": {
+    "code": [
+     "MCP:v2.0"
+    ],
+    "identifier": "2.49.0.0.56.0.BE.20261024195121.1618969",
+    "incidents": "Alert",
+    "info": [
+     {
+      "area": [
+       {
+        "areaDesc": "Antwerpen",
+        "geocode": [
+         {
+          "value": "BE21",
+          "valueName": "NUTS2"
+         }
+        ]
+       }
+      ],
+      "category": [
+       "Met"
+      ],
+      "certainty": "Likely",
+      "description": "Er worden hoge waterstanden verwacht: 5,60 t.e.m. 6,20 m TAW in Oostende of 6,60 t.e.m. 7,20 m TAW in Antwerpen. Wees waakzaam.",
+      "event": "Gele waarschuwing voor stormtij",
+      "expires": "2026-10-26T05:00:00+01:00",
+      "headline": "Gele waarschuwing voor stormtij in België - Antwerpen",
+      "instruction": "Be vigilant",
+      "language": "nl-BE",
+      "onset": "2026-10-26T02:00:00+01:00",
+      "parameter": [
+       {
+        "value": "2; yellow; Moderate",
+        "valueName": "awareness_level"
+       },
+       {
+        "value": "7; coastalevent",
+        "valueName": "awareness_type"
+       },
+       {
+        "value": "7; coastalevent may threat public safety and/or damage infrastructure",
+        "valueName": "impacts"
+       }
+      ],
+      "responseType": [
+       "None"
+      ],
+      "senderName": "Koninklijk Meteorologisch Instituut van België",
+      "severity": "Moderate",
+      "urgency": "Future",
+      "web": "https://www.meteo.be/nl/weer/waarschuwingen/overzichtskaart-belgie"
+     },
+     {
+      "area": [
+       {
+        "areaDesc": "Anvers",
+        "geocode": [
+         {
+          "value": "BE21",
+          "valueName": "NUTS2"
+         }
+        ]
+       }
+      ],
+      "category": [
+       "Met"
+      ],
+      "certainty": "Likely",
+      "description": "Nous prévoyons un niveau d’eau élevé: DNG 5,60 à 6,20 m à Ostende ou DNG 6,60 à 7,20 m à Anvers. Soyez vigilants.",
+      "event": "Avertissement jaune marée forte",
+      "expires": "2026-10-26T05:00:00+01:00",
+      "headline": "Avertissement jaune marée forte en Belgique - Anvers",
+      "instruction": "Be vigilant",
+      "language": "fr-BE",
+      "onset": "2026-10-26T02:00:00+01:00",
+      "parameter": [
+       {
+        "value": "2; yellow; Moderate",
+        "valueName": "awareness_level"
+       },
+       {
+        "value": "7; coastalevent",
+        "valueName": "awareness_type"
+       },
+       {
+        "value": "7; coastalevent may threat public safety and/or damage infrastructure",
+        "valueName": "impacts"
+       }
+      ],
+      "responseType": [
+       "None"
+      ],
+      "senderName": "Institut Royal Météorologique de Belgique",
+      "severity": "Moderate",
+      "urgency": "Future",
+      "web": "https://www.meteo.be/fr/meteo/avertissements/carte-de-belgique"
+     },
+     {
+      "area": [
+       {
+        "areaDesc": "Antwerp",
+        "geocode": [
+         {
+          "value": "BE21",
+          "valueName": "NUTS2"
+         }
+        ]
+       }
+      ],
+      "category": [
+       "Met"
+      ],
+      "certainty": "Likely",
+      "description": "High tides are expected: TAW 5,60 to 6,20 m in Ostend or TAW 6,60 to 7,20 m in Antwerp. Be careful.",
+      "event": "Yellow warning for storm surge",
+      "expires": "2026-10-26T05:00:00+01:00",
+      "headline": "Yellow warning for storm surge in Belgium - Antwerp",
+      "instruction": "Be vigilant",
+      "language": "en-GB",
+      "onset": "2026-10-26T02:00:00+01:00",
+      "parameter": [
+       {
+        "value": "2; yellow; Moderate",
+        "valueName": "awareness_level"
+       },
+       {
+        "value": "7; coastalevent",
+        "valueName": "awareness_type"
+       },
+       {
+        "value": "7; coastalevent may threat public safety and/or damage infrastructure",
+        "valueName": "impacts"
+       }
+      ],
+      "responseType": [
+       "None"
+      ],
+      "senderName": "Royal Meteorological Institute of Belgium",
+      "severity": "Moderate",
+      "urgency": "Future",
+      "web": "https://www.meteo.be/en/weather/warnings/overview-belgium"
+     },
+     {
+      "area": [
+       {
+        "areaDesc": "Antwerpen",
+        "geocode": [
+         {
+          "value": "BE21",
+          "valueName": "NUTS2"
+         }
+        ]
+       }
+      ],
+      "category": [
+       "Met"
+      ],
+      "certainty": "Likely",
+      "description": "Es wird ein erhöhter Wasserstand erwartet: TAW 5,60 bis 6,20 m in Ostende oder TAW 6,60 bis 7,20 m in Antwerpen. Seien Sie vorsichtig.",
+      "event": "Gelbe Warnung fur Sturmflut",
+      "expires": "2026-10-26T05:00:00+01:00",
+      "headline": "Gelbe Warnung fur Sturmflut in Belgien - Antwerpen",
+      "instruction": "Be vigilant",
+      "language": "de-DE",
+      "onset": "2026-10-26T02:00:00+01:00",
+      "parameter": [
+       {
+        "value": "2; yellow; Moderate",
+        "valueName": "awareness_level"
+       },
+       {
+        "value": "7; coastalevent",
+        "valueName": "awareness_type"
+       },
+       {
+        "value": "7; coastalevent may threat public safety and/or damage infrastructure",
+        "valueName": "impacts"
+       }
+      ],
+      "responseType": [
+       "None"
+      ],
+      "senderName": "Königliche Meteorologische Institut van Belgien",
+      "severity": "Moderate",
+      "urgency": "Future",
+      "web": "https://www.meteo.be/de/wetter/warnungen/belgien"
+     }
+    ],
+    "msgType": "Alert",
+    "scope": "Public",
+    "sender": "kmi-irm",
+    "sent": "2026-10-26T05:00:00+01:00",
+    "status": "Actual"
+   },
+   "uuid": "cfa13dca-15bc-4ba4-bd12-59b829ad7420"
+  },
+  {
+   "alert": {
+    "code": [
+     "MCP:v2.0"
+    ],
+    "identifier": "2.49.0.0.56.0.BE.20261031060158.1619001",
+    "incidents": "Alert",
+    "info": [
+     {
+      "area": [
+       {
+        "areaDesc": "Oost-Vlaanderen",
+        "geocode": [
+         {
+          "value": "BE23",
+          "valueName": "NUTS2"
+         }
+        ]
+       }
+      ],
+      "category": [
+       "Met"
+      ],
+      "certainty": "Likely",
+      "description": "Er wordt verspreide mist met een zicht van maximaal 500 m verwacht, lokaal kan het zicht lager dan 200 m zijn. Hou voldoende afstand met de wagen en pas uw snelheid aan. Wees waakzaam.",
+      "event": "Gele waarschuwing voor mist",
+      "expires": "2026-10-31T11:00:00+01:00",
+      "headline": "Gele waarschuwing voor mist in België - Oost-Vlaanderen",
+      "instruction": "Be vigilant",
+      "language": "nl-BE",
+      "onset": "2026-10-31T07:00:00+01:00",
+      "parameter": [
+       {
+        "value": "2; yellow; Moderate",
+        "valueName": "awareness_level"
+       },
+       {
+        "value": "4; Fog",
+        "valueName": "awareness_type"
+       },
+       {
+        "value": "4; Fog may threat public safety and/or damage infrastructure",
+        "valueName": "impacts"
+       }
+      ],
+      "responseType": [
+       "None"
+      ],
+      "senderName": "Koninklijk Meteorologisch Instituut van België",
+      "severity": "Moderate",
+      "urgency": "Immediate",
+      "web": "https://www.meteo.be/nl/weer/waarschuwingen/overzichtskaart-belgie"
+     },
+     {
+      "area": [
+       {
+        "areaDesc": "Flandre Orientale",
+        "geocode": [
+         {
+          "value": "BE23",
+          "valueName": "NUTS2"
+         }
+        ]
+       }
+      ],
+      "category": [
+       "Met"
+      ],
+      "certainty": "Likely",
+      "description": "Nous prévoyons du brouillard répandu avec une visibilité de moins de 500 m. Veuillez adapter vos distances et votre vitesse. Localement, la visibilité peut être inférieure à 200 m. Soyez vigilants.",
+      "event": "Avertissement jaune brouillard",
+      "expires": "2026-10-31T11:00:00+01:00",
+      "headline": "Avertissement jaune brouillard en Belgique - Flandre Orientale",
+      "instruction": "Be vigilant",
+      "language": "fr-BE",
+      "onset": "2026-10-31T07:00:00+01:00",
+      "parameter": [
+       {
+        "value": "2; yellow; Moderate",
+        "valueName": "awareness_level"
+       },
+       {
+        "value": "4; Fog",
+        "valueName": "awareness_type"
+       },
+       {
+        "value": "4; Fog may threat public safety and/or damage infrastructure",
+        "valueName": "impacts"
+       }
+      ],
+      "responseType": [
+       "None"
+      ],
+      "senderName": "Institut Royal Météorologique de Belgique",
+      "severity": "Moderate",
+      "urgency": "Immediate",
+      "web": "https://www.meteo.be/fr/meteo/avertissements/carte-de-belgique"
+     },
+     {
+      "area": [
+       {
+        "areaDesc": "East Flanders",
+        "geocode": [
+         {
+          "value": "BE23",
+          "valueName": "NUTS2"
+         }
+        ]
+       }
+      ],
+      "category": [
+       "Met"
+      ],
+      "certainty": "Likely",
+      "description": "Widespread fog with a visibility of maximum 500 m is expected and visibility may locally be less than 200 m. Keep sufficient distance with the car and adjust your speed. Be careful.",
+      "event": "Yellow warning for fog",
+      "expires": "2026-10-31T11:00:00+01:00",
+      "headline": "Yellow warning for fog in Belgium - East Flanders",
+      "instruction": "Be vigilant",
+      "language": "en-GB",
+      "onset": "2026-10-31T07:00:00+01:00",
+      "parameter": [
+       {
+        "value": "2; yellow; Moderate",
+        "valueName": "awareness_level"
+       },
+       {
+        "value": "4; Fog",
+        "valueName": "awareness_type"
+       },
+       {
+        "value": "4; Fog may threat public safety and/or damage infrastructure",
+        "valueName": "impacts"
+       }
+      ],
+      "responseType": [
+       "None"
+      ],
+      "senderName": "Royal Meteorological Institute of Belgium",
+      "severity": "Moderate",
+      "urgency": "Immediate",
+      "web": "https://www.meteo.be/en/weather/warnings/overview-belgium"
+     },
+     {
+      "area": [
+       {
+        "areaDesc": "Ostflandern",
+        "geocode": [
+         {
+          "value": "BE23",
+          "valueName": "NUTS2"
+         }
+        ]
+       }
+      ],
+      "category": [
+       "Met"
+      ],
+      "certainty": "Likely",
+      "description": "Es wird weitverbreitet Nebel mit Sichtweiten unter 500 m erwartet, aber sehr lokal kann die Sichtweite weniger als 200 m betragen. Halten Sie Abstand und reduzieren Sie Ihre Fahrgeschwindigkeit. Seien Sie vorsichtig.",
+      "event": "Gelbe Warnung fur Nebel",
+      "expires": "2026-10-31T11:00:00+01:00",
+      "headline": "Gelbe Warnung fur Nebel in Belgien - Ostflandern",
+      "instruction": "Be vigilant",
+      "language": "de-DE",
+      "onset": "2026-10-31T07:00:00+01:00",
+      "parameter": [
+       {
+        "value": "2; yellow; Moderate",
+        "valueName": "awareness_level"
+       },
+       {
+        "value": "4; Fog",
+        "valueName": "awareness_type"
+       },
+       {
+        "value": "4; Fog may threat public safety and/or damage infrastructure",
+        "valueName": "impacts"
+       }
+      ],
+      "responseType": [
+       "None"
+      ],
+      "senderName": "Königliche Meteorologische Institut van Belgien",
+      "severity": "Moderate",
+      "urgency": "Immediate",
+      "web": "https://www.meteo.be/de/wetter/warnungen/belgien"
+     }
+    ],
+    "msgType": "Alert",
+    "scope": "Public",
+    "sender": "kmi-irm",
+    "sent": "2026-10-31T07:05:00+01:00",
+    "status": "Actual"
+   },
+   "uuid": "c03b9abb-cf76-4baf-bc99-1090dc14c2f5"
+  },
+  {
+   "alert": {
+    "code": [
+     "MCP:v2.0"
+    ],
+    "identifier": "2.49.0.0.56.0.BE.20261031060158.1618999",
+    "incidents": "Alert",
+    "info": [
+     {
+      "area": [
+       {
+        "areaDesc": "Kust",
+        "geocode": [
+         {
+          "value": "BE801",
+          "valueName": "EMMA_ID"
+         }
+        ]
+       }
+      ],
+      "category": [
+       "Met"
+      ],
+      "certainty": "Likely",
+      "description": "Er wordt verspreide mist met een zicht van maximaal 500 m verwacht, lokaal kan het zicht lager dan 200 m zijn. Hou voldoende afstand met de wagen en pas uw snelheid aan. Wees waakzaam.",
+      "event": "Gele waarschuwing voor mist",
+      "expires": "2026-10-31T12:00:00+01:00",
+      "headline": "Gele waarschuwing voor mist in België - Kust",
+      "instruction": "Be vigilant",
+      "language": "nl-BE",
+      "onset": "2026-10-31T07:00:00+01:00",
+      "parameter": [
+       {
+        "value": "2; yellow; Moderate",
+        "valueName": "awareness_level"
+       },
+       {
+        "value": "4; Fog",
+        "valueName": "awareness_type"
+       },
+       {
+        "value": "4; Fog may threat public safety and/or damage infrastructure",
+        "valueName": "impacts"
+       }
+      ],
+      "responseType": [
+       "None"
+      ],
+      "senderName": "Koninklijk Meteorologisch Instituut van België",
+      "severity": "Moderate",
+      "urgency": "Immediate",
+      "web": "https://www.meteo.be/nl/weer/waarschuwingen/overzichtskaart-belgie"
+     },
+     {
+      "area": [
+       {
+        "areaDesc": "La Côte",
+        "geocode": [
+         {
+          "value": "BE801",
+          "valueName": "EMMA_ID"
+         }
+        ]
+       }
+      ],
+      "category": [
+       "Met"
+      ],
+      "certainty": "Likely",
+      "description": "Nous prévoyons du brouillard répandu avec une visibilité de moins de 500 m. Veuillez adapter vos distances et votre vitesse. Localement, la visibilité peut être inférieure à 200 m. Soyez vigilants.",
+      "event": "Avertissement jaune brouillard",
+      "expires": "2026-10-31T12:00:00+01:00",
+      "headline": "Avertissement jaune brouillard en Belgique - La Côte",
+      "instruction": "Be vigilant",
+      "language": "fr-BE",
+      "onset": "2026-10-31T07:00:00+01:00",
+      "parameter": [
+       {
+        "value": "2; yellow; Moderate",
+        "valueName": "awareness_level"
+       },
+       {
+        "value": "4; Fog",
+        "valueName": "awareness_type"
+       },
+       {
+        "value": "4; Fog may threat public safety and/or damage infrastructure",
+        "valueName": "impacts"
+       }
+      ],
+      "responseType": [
+       "None"
+      ],
+      "senderName": "Institut Royal Météorologique de Belgique",
+      "severity": "Moderate",
+      "urgency": "Immediate",
+      "web": "https://www.meteo.be/fr/meteo/avertissements/carte-de-belgique"
+     },
+     {
+      "area": [
+       {
+        "areaDesc": "Coastal zone",
+        "geocode": [
+         {
+          "value": "BE801",
+          "valueName": "EMMA_ID"
+         }
+        ]
+       }
+      ],
+      "category": [
+       "Met"
+      ],
+      "certainty": "Likely",
+      "description": "Widespread fog with a visibility of maximum 500 m is expected and visibility may locally be less than 200 m. Keep sufficient distance with the car and adjust your speed. Be careful.",
+      "event": "Yellow warning for fog",
+      "expires": "2026-10-31T12:00:00+01:00",
+      "headline": "Yellow warning for fog in Belgium - Coastal zone",
+      "instruction": "Be vigilant",
+      "language": "en-GB",
+      "onset": "2026-10-31T07:00:00+01:00",
+      "parameter": [
+       {
+        "value": "2; yellow; Moderate",
+        "valueName": "awareness_level"
+       },
+       {
+        "value": "4; Fog",
+        "valueName": "awareness_type"
+       },
+       {
+        "value": "4; Fog may threat public safety and/or damage infrastructure",
+        "valueName": "impacts"
+       }
+      ],
+      "responseType": [
+       "None"
+      ],
+      "senderName": "Royal Meteorological Institute of Belgium",
+      "severity": "Moderate",
+      "urgency": "Immediate",
+      "web": "https://www.meteo.be/en/weather/warnings/overview-belgium"
+     },
+     {
+      "area": [
+       {
+        "areaDesc": "Küste",
+        "geocode": [
+         {
+          "value": "BE801",
+          "valueName": "EMMA_ID"
+         }
+        ]
+       }
+      ],
+      "category": [
+       "Met"
+      ],
+      "certainty": "Likely",
+      "description": "Es wird weitverbreitet Nebel mit Sichtweiten unter 500 m erwartet, aber sehr lokal kann die Sichtweite weniger als 200 m betragen. Halten Sie Abstand und reduzieren Sie Ihre Fahrgeschwindigkeit. Seien Sie vorsichtig.",
+      "event": "Gelbe Warnung fur Nebel",
+      "expires": "2026-10-31T12:00:00+01:00",
+      "headline": "Gelbe Warnung fur Nebel in Belgien - Küste",
+      "instruction": "Be vigilant",
+      "language": "de-DE",
+      "onset": "2026-10-31T07:00:00+01:00",
+      "parameter": [
+       {
+        "value": "2; yellow; Moderate",
+        "valueName": "awareness_level"
+       },
+       {
+        "value": "4; Fog",
+        "valueName": "awareness_type"
+       },
+       {
+        "value": "4; Fog may threat public safety and/or damage infrastructure",
+        "valueName": "impacts"
+       }
+      ],
+      "responseType": [
+       "None"
+      ],
+      "senderName": "Königliche Meteorologische Institut van Belgien",
+      "severity": "Moderate",
+      "urgency": "Immediate",
+      "web": "https://www.meteo.be/de/wetter/warnungen/belgien"
+     }
+    ],
+    "msgType": "Alert",
+    "scope": "Public",
+    "sender": "kmi-irm",
+    "sent": "2026-10-31T07:05:00+01:00",
+    "status": "Actual"
+   },
+   "uuid": "58d255ac-9adf-460a-8966-7f7bc2f97445"
+  },
+  {
+   "alert": {
+    "code": [
+     "MCP:v2.0"
+    ],
+    "identifier": "2.49.0.0.56.0.BE.20261031060158.1619004",
+    "incidents": "Alert",
+    "info": [
+     {
+      "area": [
+       {
+        "areaDesc": "Brabant",
+        "geocode": [
+         {
+          "value": "BE004",
+          "valueName": "EMMA_ID"
+         }
+        ]
+       }
+      ],
+      "category": [
+       "Met"
+      ],
+      "certainty": "Likely",
+      "description": "Er wordt verspreide mist met een zicht van maximaal 500 m verwacht, lokaal kan het zicht lager dan 200 m zijn. Hou voldoende afstand met de wagen en pas uw snelheid aan. Wees waakzaam.",
+      "event": "Gele waarschuwing voor mist",
+      "expires": "2026-10-31T11:00:00+01:00",
+      "headline": "Gele waarschuwing voor mist in België - Brabant",
+      "instruction": "Be vigilant",
+      "language": "nl-BE",
+      "onset": "2026-10-31T07:00:00+01:00",
+      "parameter": [
+       {
+        "value": "2; yellow; Moderate",
+        "valueName": "awareness_level"
+       },
+       {
+        "value": "4; Fog",
+        "valueName": "awareness_type"
+       },
+       {
+        "value": "4; Fog may threat public safety and/or damage infrastructure",
+        "valueName": "impacts"
+       }
+      ],
+      "responseType": [
+       "None"
+      ],
+      "senderName": "Koninklijk Meteorologisch Instituut van België",
+      "severity": "Moderate",
+      "urgency": "Immediate",
+      "web": "https://www.meteo.be/nl/weer/waarschuwingen/overzichtskaart-belgie"
+     },
+     {
+      "area": [
+       {
+        "areaDesc": "Brabant",
+        "geocode": [
+         {
+          "value": "BE004",
+          "valueName": "EMMA_ID"
+         }
+        ]
+       }
+      ],
+      "category": [
+       "Met"
+      ],
+      "certainty": "Likely",
+      "description": "Nous prévoyons du brouillard répandu avec une visibilité de moins de 500 m. Veuillez adapter vos distances et votre vitesse. Localement, la visibilité peut être inférieure à 200 m. Soyez vigilants.",
+      "event": "Avertissement jaune brouillard",
+      "expires": "2026-10-31T11:00:00+01:00",
+      "headline": "Avertissement jaune brouillard en Belgique - Brabant",
+      "instruction": "Be vigilant",
+      "language": "fr-BE",
+      "onset": "2026-10-31T07:00:00+01:00",
+      "parameter": [
+       {
+        "value": "2; yellow; Moderate",
+        "valueName": "awareness_level"
+       },
+       {
+        "value": "4; Fog",
+        "valueName": "awareness_type"
+       },
+       {
+        "value": "4; Fog may threat public safety and/or damage infrastructure",
+        "valueName": "impacts"
+       }
+      ],
+      "responseType": [
+       "None"
+      ],
+      "senderName": "Institut Royal Météorologique de Belgique",
+      "severity": "Moderate",
+      "urgency": "Immediate",
+      "web": "https://www.meteo.be/fr/meteo/avertissements/carte-de-belgique"
+     },
+     {
+      "area": [
+       {
+        "areaDesc": "Brabant",
+        "geocode": [
+         {
+          "value": "BE004",
+          "valueName": "EMMA_ID"
+         }
+        ]
+       }
+      ],
+      "category": [
+       "Met"
+      ],
+      "certainty": "Likely",
+      "description": "Widespread fog with a visibility of maximum 500 m is expected and visibility may locally be less than 200 m. Keep sufficient distance with the car and adjust your speed. Be careful.",
+      "event": "Yellow warning for fog",
+      "expires": "2026-10-31T11:00:00+01:00",
+      "headline": "Yellow warning for fog in Belgium - Brabant",
+      "instruction": "Be vigilant",
+      "language": "en-GB",
+      "onset": "2026-10-31T07:00:00+01:00",
+      "parameter": [
+       {
+        "value": "2; yellow; Moderate",
+        "valueName": "awareness_level"
+       },
+       {
+        "value": "4; Fog",
+        "valueName": "awareness_type"
+       },
+       {
+        "value": "4; Fog may threat public safety and/or damage infrastructure",
+        "valueName": "impacts"
+       }
+      ],
+      "responseType": [
+       "None"
+      ],
+      "senderName": "Royal Meteorological Institute of Belgium",
+      "severity": "Moderate",
+      "urgency": "Immediate",
+      "web": "https://www.meteo.be/en/weather/warnings/overview-belgium"
+     },
+     {
+      "area": [
+       {
+        "areaDesc": "Brabant",
+        "geocode": [
+         {
+          "value": "BE004",
+          "valueName": "EMMA_ID"
+         }
+        ]
+       }
+      ],
+      "category": [
+       "Met"
+      ],
+      "certainty": "Likely",
+      "description": "Es wird weitverbreitet Nebel mit Sichtweiten unter 500 m erwartet, aber sehr lokal kann die Sichtweite weniger als 200 m betragen. Halten Sie Abstand und reduzieren Sie Ihre Fahrgeschwindigkeit. Seien Sie vorsichtig.",
+      "event": "Gelbe Warnung fur Nebel",
+      "expires": "2026-10-31T11:00:00+01:00",
+      "headline": "Gelbe Warnung fur Nebel in Belgien - Brabant",
+      "instruction": "Be vigilant",
+      "language": "de-DE",
+      "onset": "2026-10-31T07:00:00+01:00",
+      "parameter": [
+       {
+        "value": "2; yellow; Moderate",
+        "valueName": "awareness_level"
+       },
+       {
+        "value": "4; Fog",
+        "valueName": "awareness_type"
+       },
+       {
+        "value": "4; Fog may threat public safety and/or damage infrastructure",
+        "valueName": "impacts"
+       }
+      ],
+      "responseType": [
+       "None"
+      ],
+      "senderName": "Königliche Meteorologische Institut van Belgien",
+      "severity": "Moderate",
+      "urgency": "Immediate",
+      "web": "https://www.meteo.be/de/wetter/warnungen/belgien"
+     }
+    ],
+    "msgType": "Alert",
+    "scope": "Public",
+    "sender": "kmi-irm",
+    "sent": "2026-10-31T07:05:00+01:00",
+    "status": "Actual"
+   },
+   "uuid": "4e25870d-739d-4240-9650-7c49de4e663b"
+  },
+  {
+   "alert": {
+    "code": [
+     "MCP:v2.0"
+    ],
+    "identifier": "2.49.0.0.56.0.BE.20261031070505.1619011",
+    "incidents": "Update",
+    "info": [
+     {
+      "area": [
+       {
+        "areaDesc": "Brabant",
+        "geocode": [
+         {
+          "value": "BE004",
+          "valueName": "EMMA_ID"
+         }
+        ]
+       }
+      ],
+      "category": [
+       "Met"
+      ],
+      "certainty": "Likely",
+      "description": "Geen verhoogde waakzaamheid is benodigd",
+      "effective": "2026-10-31T07:05:05+01:00",
+      "event": "Groene waarschuwing voor mist",
+      "expires": "2026-10-31T11:00:00+01:00",
+      "headline": "Groene waarschuwing voor mist in België - Brabant",
+      "instruction": "Be vigilant",
+      "language": "nl-BE",
+      "onset": "2026-10-31T07:05:05+01:00",
+      "parameter": [
+       {
+        "value": "1; Green; Minor",
+        "valueName": "awareness_level"
+       },
+       {
+        "value": "4; Fog",
+        "valueName": "awareness_type"
+       },
+       {
+        "value": "4; Fog may threat public safety and/or damage infrastructure",
+        "valueName": "impacts"
+       }
+      ],
+      "responseType": [
+       "None"
+      ],
+      "senderName": "Koninklijk Meteorologisch Instituut van België",
+      "severity": "Moderate",
+      "urgency": "Immediate",
+      "web": "https://www.meteo.be/nl/weer/waarschuwingen/overzichtskaart-belgie"
+     },
+     {
+      "area": [
+       {
+        "areaDesc": "Brabant",
+        "geocode": [
+         {
+          "value": "BE004",
+          "valueName": "EMMA_ID"
+         }
+        ]
+       }
+      ],
+      "category": [
+       "Met"
+      ],
+      "certainty": "Likely",
+      "description": "Aucune attention particulière nécessaire",
+      "effective": "2026-10-31T07:05:05+01:00",
+      "event": "Avertissement verte brouillard",
+      "expires": "2026-10-31T11:00:00+01:00",
+      "headline": "Avertissement verte brouillard en Belgique - Brabant",
+      "instruction": "Be vigilant",
+      "language": "fr-BE",
+      "onset": "2026-10-31T07:05:05+01:00",
+      "parameter": [
+       {
+        "value": "1; Green; Minor",
+        "valueName": "awareness_level"
+       },
+       {
+        "value": "4; Fog",
+        "valueName": "awareness_type"
+       },
+       {
+        "value": "4; Fog may threat public safety and/or damage infrastructure",
+        "valueName": "impacts"
+       }
+      ],
+      "responseType": [
+       "None"
+      ],
+      "senderName": "Institut Royal Météorologique de Belgique",
+      "severity": "Moderate",
+      "urgency": "Immediate",
+      "web": "https://www.meteo.be/fr/meteo/avertissements/carte-de-belgique"
+     },
+     {
+      "area": [
+       {
+        "areaDesc": "Brabant",
+        "geocode": [
+         {
+          "value": "BE004",
+          "valueName": "EMMA_ID"
+         }
+        ]
+       }
+      ],
+      "category": [
+       "Met"
+      ],
+      "certainty": "Likely",
+      "description": "No special attention necessary",
+      "effective": "2026-10-31T07:05:05+01:00",
+      "event": "Green warning for fog",
+      "expires": "2026-10-31T11:00:00+01:00",
+      "headline": "Green warning for fog in Belgium - Brabant",
+      "instruction": "Be vigilant",
+      "language": "en-GB",
+      "onset": "2026-10-31T07:05:05+01:00",
+      "parameter": [
+       {
+        "value": "1; Green; Minor",
+        "valueName": "awareness_level"
+       },
+       {
+        "value": "4; Fog",
+        "valueName": "awareness_type"
+       },
+       {
+        "value": "4; Fog may threat public safety and/or damage infrastructure",
+        "valueName": "impacts"
+       }
+      ],
+      "responseType": [
+       "None"
+      ],
+      "senderName": "Royal Meteorological Institute of Belgium",
+      "severity": "Moderate",
+      "urgency": "Immediate",
+      "web": "https://www.meteo.be/en/weather/warnings/overview-belgium"
+     },
+     {
+      "area": [
+       {
+        "areaDesc": "Brabant",
+        "geocode": [
+         {
+          "value": "BE004",
+          "valueName": "EMMA_ID"
+         }
+        ]
+       }
+      ],
+      "category": [
+       "Met"
+      ],
+      "certainty": "Likely",
+      "description": "Keine besondere Aufmerkzamheit notwendig",
+      "effective": "2026-10-31T07:05:05+01:00",
+      "event": "Grüne Warnung fur Nebel",
+      "expires": "2026-10-31T11:00:00+01:00",
+      "headline": "Grüne Warnung fur Nebel in Belgien - Brabant",
+      "instruction": "Be vigilant",
+      "language": "de-DE",
+      "onset": "2026-10-31T07:05:05+01:00",
+      "parameter": [
+       {
+        "value": "1; Green; Minor",
+        "valueName": "awareness_level"
+       },
+       {
+        "value": "4; Fog",
+        "valueName": "awareness_type"
+       },
+       {
+        "value": "4; Fog may threat public safety and/or damage infrastructure",
+        "valueName": "impacts"
+       }
+      ],
+      "responseType": [
+       "None"
+      ],
+      "senderName": "Königliche Meteorologische Institut van Belgien",
+      "severity": "Moderate",
+      "urgency": "Immediate",
+      "web": "https://www.meteo.be/de/wetter/warnungen/belgien"
+     }
+    ],
+    "msgType": "Update",
+    "references": "kmi-irm,2.49.0.0.56.0.BE.20261031042503.1618990,2026-10-31T05:30:00+01:00",
+    "scope": "Public",
+    "sender": "kmi-irm",
+    "sent": "2026-10-31T05:30:00+01:00",
+    "status": "Actual"
+   },
+   "uuid": "28f3bc60-cb6e-4571-bf94-0c6dadd8c55b"
+  },
+  {
+   "alert": {
+    "code": [
+     "MCP:v2.0"
+    ],
+    "identifier": "2.49.0.0.56.0.BE.SYNTH-BE23",
+    "incidents": "Alert",
+    "info": [
+     {
+      "area": [
+       {
+        "areaDesc": "SYNTH BE23",
+        "geocode": [
+         {
+          "valueName": "NUTS2",
+          "value": "BE23"
+         }
+        ]
+       }
+      ],
+      "category": [
+       "Met"
+      ],
+      "certainty": "Likely",
+      "description": "Er worden hoge waterstanden verwacht: 5,60 t.e.m. 6,20 m TAW in Oostende of 6,60 t.e.m. 7,20 m TAW in Antwerpen. Wees waakzaam.",
+      "event": "Gele waarschuwing voor stormtij",
+      "expires": "2026-11-01T23:59:00+01:00",
+      "headline": "Gele waarschuwing voor stormtij in België - Oost-Vlaanderen",
+      "instruction": "Be vigilant",
+      "language": "nl-BE",
+      "onset": "2026-10-30T01:00:00+01:00",
+      "parameter": [
+       {
+        "value": "2; yellow; Moderate",
+        "valueName": "awareness_level"
+       },
+       {
+        "value": "1; wind",
+        "valueName": "awareness_type"
+       },
+       {
+        "value": "1; wind may threat public safety and/or damage infrastructure",
+        "valueName": "impacts"
+       }
+      ],
+      "responseType": [
+       "None"
+      ],
+      "senderName": "Koninklijk Meteorologisch Instituut van België",
+      "severity": "Moderate",
+      "urgency": "Future",
+      "web": "https://www.meteo.be/nl/weer/waarschuwingen/overzichtskaart-belgie"
+     },
+     {
+      "area": [
+       {
+        "areaDesc": "SYNTH BE23",
+        "geocode": [
+         {
+          "valueName": "NUTS2",
+          "value": "BE23"
+         }
+        ]
+       }
+      ],
+      "category": [
+       "Met"
+      ],
+      "certainty": "Likely",
+      "description": "Nous prévoyons un niveau d’eau élevé: DNG 5,60 à 6,20 m à Ostende ou DNG 6,60 à 7,20 m à Anvers. Soyez vigilants.",
+      "event": "Avertissement jaune marée forte",
+      "expires": "2026-11-01T23:59:00+01:00",
+      "headline": "Avertissement jaune marée forte en Belgique - Flandre Orientale",
+      "instruction": "Be vigilant",
+      "language": "fr-BE",
+      "onset": "2026-10-30T01:00:00+01:00",
+      "parameter": [
+       {
+        "value": "2; yellow; Moderate",
+        "valueName": "awareness_level"
+       },
+       {
+        "value": "1; wind",
+        "valueName": "awareness_type"
+       },
+       {
+        "value": "1; wind may threat public safety and/or damage infrastructure",
+        "valueName": "impacts"
+       }
+      ],
+      "responseType": [
+       "None"
+      ],
+      "senderName": "Institut Royal Météorologique de Belgique",
+      "severity": "Moderate",
+      "urgency": "Future",
+      "web": "https://www.meteo.be/fr/meteo/avertissements/carte-de-belgique"
+     },
+     {
+      "area": [
+       {
+        "areaDesc": "SYNTH BE23",
+        "geocode": [
+         {
+          "valueName": "NUTS2",
+          "value": "BE23"
+         }
+        ]
+       }
+      ],
+      "category": [
+       "Met"
+      ],
+      "certainty": "Likely",
+      "description": "High tides are expected: TAW 5,60 to 6,20 m in Ostend or TAW 6,60 to 7,20 m in Antwerp. Be careful.",
+      "event": "Yellow warning for storm surge",
+      "expires": "2026-11-01T23:59:00+01:00",
+      "headline": "Yellow warning for storm surge in Belgium - East Flanders",
+      "instruction": "Be vigilant",
+      "language": "en-GB",
+      "onset": "2026-10-30T01:00:00+01:00",
+      "parameter": [
+       {
+        "value": "2; yellow; Moderate",
+        "valueName": "awareness_level"
+       },
+       {
+        "value": "1; wind",
+        "valueName": "awareness_type"
+       },
+       {
+        "value": "1; wind may threat public safety and/or damage infrastructure",
+        "valueName": "impacts"
+       }
+      ],
+      "responseType": [
+       "None"
+      ],
+      "senderName": "Royal Meteorological Institute of Belgium",
+      "severity": "Moderate",
+      "urgency": "Future",
+      "web": "https://www.meteo.be/en/weather/warnings/overview-belgium"
+     },
+     {
+      "area": [
+       {
+        "areaDesc": "SYNTH BE23",
+        "geocode": [
+         {
+          "valueName": "NUTS2",
+          "value": "BE23"
+         }
+        ]
+       }
+      ],
+      "category": [
+       "Met"
+      ],
+      "certainty": "Likely",
+      "description": "Es wird ein erhöhter Wasserstand erwartet: TAW 5,60 bis 6,20 m in Ostende oder TAW 6,60 bis 7,20 m in Antwerpen. Seien Sie vorsichtig.",
+      "event": "Gelbe Warnung fur Sturmflut",
+      "expires": "2026-11-01T23:59:00+01:00",
+      "headline": "Gelbe Warnung fur Sturmflut in Belgien - Ostflandern",
+      "instruction": "Be vigilant",
+      "language": "de-DE",
+      "onset": "2026-10-30T01:00:00+01:00",
+      "parameter": [
+       {
+        "value": "2; yellow; Moderate",
+        "valueName": "awareness_level"
+       },
+       {
+        "value": "1; wind",
+        "valueName": "awareness_type"
+       },
+       {
+        "value": "1; wind may threat public safety and/or damage infrastructure",
+        "valueName": "impacts"
+       }
+      ],
+      "responseType": [
+       "None"
+      ],
+      "senderName": "Königliche Meteorologische Institut van Belgien",
+      "severity": "Moderate",
+      "urgency": "Future",
+      "web": "https://www.meteo.be/de/wetter/warnungen/belgien"
+     }
+    ],
+    "msgType": "Alert",
+    "scope": "Public",
+    "sender": "kmi-irm",
+    "sent": "2026-10-30T00:00:00+01:00",
+    "status": "Actual"
+   },
+   "uuid": "9257c43e-fa47-491a-bdfd-60e90aa07b28"
+  },
+  {
+   "alert": {
+    "code": [
+     "MCP:v2.0"
+    ],
+    "identifier": "2.49.0.0.56.0.BE.SYNTH-BE004-ORANGE",
+    "incidents": "Alert",
+    "info": [
+     {
+      "area": [
+       {
+        "areaDesc": "SYNTH BE004-ORANGE",
+        "geocode": [
+         {
+          "valueName": "EMMA_ID",
+          "value": "BE004"
+         }
+        ]
+       }
+      ],
+      "category": [
+       "Met"
+      ],
+      "certainty": "Likely",
+      "description": "Er worden hoge waterstanden verwacht: 5,60 t.e.m. 6,20 m TAW in Oostende of 6,60 t.e.m. 7,20 m TAW in Antwerpen. Wees waakzaam.",
+      "event": "Gele waarschuwing voor stormtij",
+      "expires": "2026-11-01T23:59:00+01:00",
+      "headline": "Gele waarschuwing voor stormtij in België - Oost-Vlaanderen",
+      "instruction": "Be vigilant",
+      "language": "nl-BE",
+      "onset": "2026-10-30T01:00:00+01:00",
+      "parameter": [
+       {
+        "value": "3; orange; Severe",
+        "valueName": "awareness_level"
+       },
+       {
+        "value": "1; wind",
+        "valueName": "awareness_type"
+       },
+       {
+        "value": "1; wind may threat public safety and/or damage infrastructure",
+        "valueName": "impacts"
+       }
+      ],
+      "responseType": [
+       "None"
+      ],
+      "senderName": "Koninklijk Meteorologisch Instituut van België",
+      "severity": "Severe",
+      "urgency": "Future",
+      "web": "https://www.meteo.be/nl/weer/waarschuwingen/overzichtskaart-belgie"
+     },
+     {
+      "area": [
+       {
+        "areaDesc": "SYNTH BE004-ORANGE",
+        "geocode": [
+         {
+          "valueName": "EMMA_ID",
+          "value": "BE004"
+         }
+        ]
+       }
+      ],
+      "category": [
+       "Met"
+      ],
+      "certainty": "Likely",
+      "description": "Nous prévoyons un niveau d’eau élevé: DNG 5,60 à 6,20 m à Ostende ou DNG 6,60 à 7,20 m à Anvers. Soyez vigilants.",
+      "event": "Avertissement jaune marée forte",
+      "expires": "2026-11-01T23:59:00+01:00",
+      "headline": "Avertissement jaune marée forte en Belgique - Flandre Orientale",
+      "instruction": "Be vigilant",
+      "language": "fr-BE",
+      "onset": "2026-10-30T01:00:00+01:00",
+      "parameter": [
+       {
+        "value": "3; orange; Severe",
+        "valueName": "awareness_level"
+       },
+       {
+        "value": "1; wind",
+        "valueName": "awareness_type"
+       },
+       {
+        "value": "1; wind may threat public safety and/or damage infrastructure",
+        "valueName": "impacts"
+       }
+      ],
+      "responseType": [
+       "None"
+      ],
+      "senderName": "Institut Royal Météorologique de Belgique",
+      "severity": "Severe",
+      "urgency": "Future",
+      "web": "https://www.meteo.be/fr/meteo/avertissements/carte-de-belgique"
+     },
+     {
+      "area": [
+       {
+        "areaDesc": "SYNTH BE004-ORANGE",
+        "geocode": [
+         {
+          "valueName": "EMMA_ID",
+          "value": "BE004"
+         }
+        ]
+       }
+      ],
+      "category": [
+       "Met"
+      ],
+      "certainty": "Likely",
+      "description": "High tides are expected: TAW 5,60 to 6,20 m in Ostend or TAW 6,60 to 7,20 m in Antwerp. Be careful.",
+      "event": "Yellow warning for storm surge",
+      "expires": "2026-11-01T23:59:00+01:00",
+      "headline": "Yellow warning for storm surge in Belgium - East Flanders",
+      "instruction": "Be vigilant",
+      "language": "en-GB",
+      "onset": "2026-10-30T01:00:00+01:00",
+      "parameter": [
+       {
+        "value": "3; orange; Severe",
+        "valueName": "awareness_level"
+       },
+       {
+        "value": "1; wind",
+        "valueName": "awareness_type"
+       },
+       {
+        "value": "1; wind may threat public safety and/or damage infrastructure",
+        "valueName": "impacts"
+       }
+      ],
+      "responseType": [
+       "None"
+      ],
+      "senderName": "Royal Meteorological Institute of Belgium",
+      "severity": "Severe",
+      "urgency": "Future",
+      "web": "https://www.meteo.be/en/weather/warnings/overview-belgium"
+     },
+     {
+      "area": [
+       {
+        "areaDesc": "SYNTH BE004-ORANGE",
+        "geocode": [
+         {
+          "valueName": "EMMA_ID",
+          "value": "BE004"
+         }
+        ]
+       }
+      ],
+      "category": [
+       "Met"
+      ],
+      "certainty": "Likely",
+      "description": "Es wird ein erhöhter Wasserstand erwartet: TAW 5,60 bis 6,20 m in Ostende oder TAW 6,60 bis 7,20 m in Antwerpen. Seien Sie vorsichtig.",
+      "event": "Gelbe Warnung fur Sturmflut",
+      "expires": "2026-11-01T23:59:00+01:00",
+      "headline": "Gelbe Warnung fur Sturmflut in Belgien - Ostflandern",
+      "instruction": "Be vigilant",
+      "language": "de-DE",
+      "onset": "2026-10-30T01:00:00+01:00",
+      "parameter": [
+       {
+        "value": "3; orange; Severe",
+        "valueName": "awareness_level"
+       },
+       {
+        "value": "1; wind",
+        "valueName": "awareness_type"
+       },
+       {
+        "value": "1; wind may threat public safety and/or damage infrastructure",
+        "valueName": "impacts"
+       }
+      ],
+      "responseType": [
+       "None"
+      ],
+      "senderName": "Königliche Meteorologische Institut van Belgien",
+      "severity": "Severe",
+      "urgency": "Future",
+      "web": "https://www.meteo.be/de/wetter/warnungen/belgien"
+     }
+    ],
+    "msgType": "Alert",
+    "scope": "Public",
+    "sender": "kmi-irm",
+    "sent": "2026-10-30T00:00:00+01:00",
+    "status": "Actual"
+   },
+   "uuid": "9257c43e-fa47-491a-bdfd-60e90aa07b28"
+  },
+  {
+   "alert": {
+    "code": [
+     "MCP:v2.0"
+    ],
+    "identifier": "2.49.0.0.56.0.BE.SYNTH-BE801",
+    "incidents": "Alert",
+    "info": [
+     {
+      "area": [
+       {
+        "areaDesc": "SYNTH BE801",
+        "geocode": [
+         {
+          "valueName": "EMMA_ID",
+          "value": "BE801"
+         }
+        ]
+       }
+      ],
+      "category": [
+       "Met"
+      ],
+      "certainty": "Likely",
+      "description": "Er worden hoge waterstanden verwacht: 5,60 t.e.m. 6,20 m TAW in Oostende of 6,60 t.e.m. 7,20 m TAW in Antwerpen. Wees waakzaam.",
+      "event": "Gele waarschuwing voor stormtij",
+      "expires": "2026-11-01T23:59:00+01:00",
+      "headline": "Gele waarschuwing voor stormtij in België - Oost-Vlaanderen",
+      "instruction": "Be vigilant",
+      "language": "nl-BE",
+      "onset": "2026-10-30T01:00:00+01:00",
+      "parameter": [
+       {
+        "value": "2; yellow; Moderate",
+        "valueName": "awareness_level"
+       },
+       {
+        "value": "1; wind",
+        "valueName": "awareness_type"
+       },
+       {
+        "value": "1; wind may threat public safety and/or damage infrastructure",
+        "valueName": "impacts"
+       }
+      ],
+      "responseType": [
+       "None"
+      ],
+      "senderName": "Koninklijk Meteorologisch Instituut van België",
+      "severity": "Moderate",
+      "urgency": "Future",
+      "web": "https://www.meteo.be/nl/weer/waarschuwingen/overzichtskaart-belgie"
+     },
+     {
+      "area": [
+       {
+        "areaDesc": "SYNTH BE801",
+        "geocode": [
+         {
+          "valueName": "EMMA_ID",
+          "value": "BE801"
+         }
+        ]
+       }
+      ],
+      "category": [
+       "Met"
+      ],
+      "certainty": "Likely",
+      "description": "Nous prévoyons un niveau d’eau élevé: DNG 5,60 à 6,20 m à Ostende ou DNG 6,60 à 7,20 m à Anvers. Soyez vigilants.",
+      "event": "Avertissement jaune marée forte",
+      "expires": "2026-11-01T23:59:00+01:00",
+      "headline": "Avertissement jaune marée forte en Belgique - Flandre Orientale",
+      "instruction": "Be vigilant",
+      "language": "fr-BE",
+      "onset": "2026-10-30T01:00:00+01:00",
+      "parameter": [
+       {
+        "value": "2; yellow; Moderate",
+        "valueName": "awareness_level"
+       },
+       {
+        "value": "1; wind",
+        "valueName": "awareness_type"
+       },
+       {
+        "value": "1; wind may threat public safety and/or damage infrastructure",
+        "valueName": "impacts"
+       }
+      ],
+      "responseType": [
+       "None"
+      ],
+      "senderName": "Institut Royal Météorologique de Belgique",
+      "severity": "Moderate",
+      "urgency": "Future",
+      "web": "https://www.meteo.be/fr/meteo/avertissements/carte-de-belgique"
+     },
+     {
+      "area": [
+       {
+        "areaDesc": "SYNTH BE801",
+        "geocode": [
+         {
+          "valueName": "EMMA_ID",
+          "value": "BE801"
+         }
+        ]
+       }
+      ],
+      "category": [
+       "Met"
+      ],
+      "certainty": "Likely",
+      "description": "High tides are expected: TAW 5,60 to 6,20 m in Ostend or TAW 6,60 to 7,20 m in Antwerp. Be careful.",
+      "event": "Yellow warning for storm surge",
+      "expires": "2026-11-01T23:59:00+01:00",
+      "headline": "Yellow warning for storm surge in Belgium - East Flanders",
+      "instruction": "Be vigilant",
+      "language": "en-GB",
+      "onset": "2026-10-30T01:00:00+01:00",
+      "parameter": [
+       {
+        "value": "2; yellow; Moderate",
+        "valueName": "awareness_level"
+       },
+       {
+        "value": "1; wind",
+        "valueName": "awareness_type"
+       },
+       {
+        "value": "1; wind may threat public safety and/or damage infrastructure",
+        "valueName": "impacts"
+       }
+      ],
+      "responseType": [
+       "None"
+      ],
+      "senderName": "Royal Meteorological Institute of Belgium",
+      "severity": "Moderate",
+      "urgency": "Future",
+      "web": "https://www.meteo.be/en/weather/warnings/overview-belgium"
+     },
+     {
+      "area": [
+       {
+        "areaDesc": "SYNTH BE801",
+        "geocode": [
+         {
+          "valueName": "EMMA_ID",
+          "value": "BE801"
+         }
+        ]
+       }
+      ],
+      "category": [
+       "Met"
+      ],
+      "certainty": "Likely",
+      "description": "Es wird ein erhöhter Wasserstand erwartet: TAW 5,60 bis 6,20 m in Ostende oder TAW 6,60 bis 7,20 m in Antwerpen. Seien Sie vorsichtig.",
+      "event": "Gelbe Warnung fur Sturmflut",
+      "expires": "2026-11-01T23:59:00+01:00",
+      "headline": "Gelbe Warnung fur Sturmflut in Belgien - Ostflandern",
+      "instruction": "Be vigilant",
+      "language": "de-DE",
+      "onset": "2026-10-30T01:00:00+01:00",
+      "parameter": [
+       {
+        "value": "2; yellow; Moderate",
+        "valueName": "awareness_level"
+       },
+       {
+        "value": "1; wind",
+        "valueName": "awareness_type"
+       },
+       {
+        "value": "1; wind may threat public safety and/or damage infrastructure",
+        "valueName": "impacts"
+       }
+      ],
+      "responseType": [
+       "None"
+      ],
+      "senderName": "Königliche Meteorologische Institut van Belgien",
+      "severity": "Moderate",
+      "urgency": "Future",
+      "web": "https://www.meteo.be/de/wetter/warnungen/belgien"
+     }
+    ],
+    "msgType": "Alert",
+    "scope": "Public",
+    "sender": "kmi-irm",
+    "sent": "2026-10-30T00:00:00+01:00",
+    "status": "Actual"
+   },
+   "uuid": "9257c43e-fa47-491a-bdfd-60e90aa07b28"
+  },
+  {
+   "alert": {
+    "code": [
+     "MCP:v2.0"
+    ],
+    "identifier": "2.49.0.0.56.0.BE.SYNTH-BE24",
+    "incidents": "Alert",
+    "info": [
+     {
+      "area": [
+       {
+        "areaDesc": "SYNTH BE24",
+        "geocode": [
+         {
+          "valueName": "NUTS2",
+          "value": "BE24"
+         }
+        ]
+       }
+      ],
+      "category": [
+       "Met"
+      ],
+      "certainty": "Likely",
+      "description": "Er worden hoge waterstanden verwacht: 5,60 t.e.m. 6,20 m TAW in Oostende of 6,60 t.e.m. 7,20 m TAW in Antwerpen. Wees waakzaam.",
+      "event": "Gele waarschuwing voor stormtij",
+      "expires": "2026-11-01T23:59:00+01:00",
+      "headline": "Gele waarschuwing voor stormtij in België - Oost-Vlaanderen",
+      "instruction": "Be vigilant",
+      "language": "nl-BE",
+      "onset": "2026-10-30T01:00:00+01:00",
+      "parameter": [
+       {
+        "value": "2; yellow; Moderate",
+        "valueName": "awareness_level"
+       },
+       {
+        "value": "1; wind",
+        "valueName": "awareness_type"
+       },
+       {
+        "value": "1; wind may threat public safety and/or damage infrastructure",
+        "valueName": "impacts"
+       }
+      ],
+      "responseType": [
+       "None"
+      ],
+      "senderName": "Koninklijk Meteorologisch Instituut van België",
+      "severity": "Moderate",
+      "urgency": "Future",
+      "web": "https://www.meteo.be/nl/weer/waarschuwingen/overzichtskaart-belgie"
+     },
+     {
+      "area": [
+       {
+        "areaDesc": "SYNTH BE24",
+        "geocode": [
+         {
+          "valueName": "NUTS2",
+          "value": "BE24"
+         }
+        ]
+       }
+      ],
+      "category": [
+       "Met"
+      ],
+      "certainty": "Likely",
+      "description": "Nous prévoyons un niveau d’eau élevé: DNG 5,60 à 6,20 m à Ostende ou DNG 6,60 à 7,20 m à Anvers. Soyez vigilants.",
+      "event": "Avertissement jaune marée forte",
+      "expires": "2026-11-01T23:59:00+01:00",
+      "headline": "Avertissement jaune marée forte en Belgique - Flandre Orientale",
+      "instruction": "Be vigilant",
+      "language": "fr-BE",
+      "onset": "2026-10-30T01:00:00+01:00",
+      "parameter": [
+       {
+        "value": "2; yellow; Moderate",
+        "valueName": "awareness_level"
+       },
+       {
+        "value": "1; wind",
+        "valueName": "awareness_type"
+       },
+       {
+        "value": "1; wind may threat public safety and/or damage infrastructure",
+        "valueName": "impacts"
+       }
+      ],
+      "responseType": [
+       "None"
+      ],
+      "senderName": "Institut Royal Météorologique de Belgique",
+      "severity": "Moderate",
+      "urgency": "Future",
+      "web": "https://www.meteo.be/fr/meteo/avertissements/carte-de-belgique"
+     },
+     {
+      "area": [
+       {
+        "areaDesc": "SYNTH BE24",
+        "geocode": [
+         {
+          "valueName": "NUTS2",
+          "value": "BE24"
+         }
+        ]
+       }
+      ],
+      "category": [
+       "Met"
+      ],
+      "certainty": "Likely",
+      "description": "High tides are expected: TAW 5,60 to 6,20 m in Ostend or TAW 6,60 to 7,20 m in Antwerp. Be careful.",
+      "event": "Yellow warning for storm surge",
+      "expires": "2026-11-01T23:59:00+01:00",
+      "headline": "Yellow warning for storm surge in Belgium - East Flanders",
+      "instruction": "Be vigilant",
+      "language": "en-GB",
+      "onset": "2026-10-30T01:00:00+01:00",
+      "parameter": [
+       {
+        "value": "2; yellow; Moderate",
+        "valueName": "awareness_level"
+       },
+       {
+        "value": "1; wind",
+        "valueName": "awareness_type"
+       },
+       {
+        "value": "1; wind may threat public safety and/or damage infrastructure",
+        "valueName": "impacts"
+       }
+      ],
+      "responseType": [
+       "None"
+      ],
+      "senderName": "Royal Meteorological Institute of Belgium",
+      "severity": "Moderate",
+      "urgency": "Future",
+      "web": "https://www.meteo.be/en/weather/warnings/overview-belgium"
+     },
+     {
+      "area": [
+       {
+        "areaDesc": "SYNTH BE24",
+        "geocode": [
+         {
+          "valueName": "NUTS2",
+          "value": "BE24"
+         }
+        ]
+       }
+      ],
+      "category": [
+       "Met"
+      ],
+      "certainty": "Likely",
+      "description": "Es wird ein erhöhter Wasserstand erwartet: TAW 5,60 bis 6,20 m in Ostende oder TAW 6,60 bis 7,20 m in Antwerpen. Seien Sie vorsichtig.",
+      "event": "Gelbe Warnung fur Sturmflut",
+      "expires": "2026-11-01T23:59:00+01:00",
+      "headline": "Gelbe Warnung fur Sturmflut in Belgien - Ostflandern",
+      "instruction": "Be vigilant",
+      "language": "de-DE",
+      "onset": "2026-10-30T01:00:00+01:00",
+      "parameter": [
+       {
+        "value": "2; yellow; Moderate",
+        "valueName": "awareness_level"
+       },
+       {
+        "value": "1; wind",
+        "valueName": "awareness_type"
+       },
+       {
+        "value": "1; wind may threat public safety and/or damage infrastructure",
+        "valueName": "impacts"
+       }
+      ],
+      "responseType": [
+       "None"
+      ],
+      "senderName": "Königliche Meteorologische Institut van Belgien",
+      "severity": "Moderate",
+      "urgency": "Future",
+      "web": "https://www.meteo.be/de/wetter/warnungen/belgien"
+     }
+    ],
+    "msgType": "Alert",
+    "scope": "Public",
+    "sender": "kmi-irm",
+    "sent": "2026-10-30T00:00:00+01:00",
+    "status": "Actual"
+   },
+   "uuid": "9257c43e-fa47-491a-bdfd-60e90aa07b28"
+  },
+  {
+   "alert": {
+    "code": [
+     "MCP:v2.0"
+    ],
+    "identifier": "2.49.0.0.56.0.BE.SYNTH-BE10",
+    "incidents": "Alert",
+    "info": [
+     {
+      "area": [
+       {
+        "areaDesc": "SYNTH BE10",
+        "geocode": [
+         {
+          "valueName": "NUTS2",
+          "value": "BE10"
+         }
+        ]
+       }
+      ],
+      "category": [
+       "Met"
+      ],
+      "certainty": "Likely",
+      "description": "Er worden hoge waterstanden verwacht: 5,60 t.e.m. 6,20 m TAW in Oostende of 6,60 t.e.m. 7,20 m TAW in Antwerpen. Wees waakzaam.",
+      "event": "Gele waarschuwing voor stormtij",
+      "expires": "2026-11-01T23:59:00+01:00",
+      "headline": "Gele waarschuwing voor stormtij in België - Oost-Vlaanderen",
+      "instruction": "Be vigilant",
+      "language": "nl-BE",
+      "onset": "2026-10-30T01:00:00+01:00",
+      "parameter": [
+       {
+        "value": "2; yellow; Moderate",
+        "valueName": "awareness_level"
+       },
+       {
+        "value": "1; wind",
+        "valueName": "awareness_type"
+       },
+       {
+        "value": "1; wind may threat public safety and/or damage infrastructure",
+        "valueName": "impacts"
+       }
+      ],
+      "responseType": [
+       "None"
+      ],
+      "senderName": "Koninklijk Meteorologisch Instituut van België",
+      "severity": "Moderate",
+      "urgency": "Future",
+      "web": "https://www.meteo.be/nl/weer/waarschuwingen/overzichtskaart-belgie"
+     },
+     {
+      "area": [
+       {
+        "areaDesc": "SYNTH BE10",
+        "geocode": [
+         {
+          "valueName": "NUTS2",
+          "value": "BE10"
+         }
+        ]
+       }
+      ],
+      "category": [
+       "Met"
+      ],
+      "certainty": "Likely",
+      "description": "Nous prévoyons un niveau d’eau élevé: DNG 5,60 à 6,20 m à Ostende ou DNG 6,60 à 7,20 m à Anvers. Soyez vigilants.",
+      "event": "Avertissement jaune marée forte",
+      "expires": "2026-11-01T23:59:00+01:00",
+      "headline": "Avertissement jaune marée forte en Belgique - Flandre Orientale",
+      "instruction": "Be vigilant",
+      "language": "fr-BE",
+      "onset": "2026-10-30T01:00:00+01:00",
+      "parameter": [
+       {
+        "value": "2; yellow; Moderate",
+        "valueName": "awareness_level"
+       },
+       {
+        "value": "1; wind",
+        "valueName": "awareness_type"
+       },
+       {
+        "value": "1; wind may threat public safety and/or damage infrastructure",
+        "valueName": "impacts"
+       }
+      ],
+      "responseType": [
+       "None"
+      ],
+      "senderName": "Institut Royal Météorologique de Belgique",
+      "severity": "Moderate",
+      "urgency": "Future",
+      "web": "https://www.meteo.be/fr/meteo/avertissements/carte-de-belgique"
+     },
+     {
+      "area": [
+       {
+        "areaDesc": "SYNTH BE10",
+        "geocode": [
+         {
+          "valueName": "NUTS2",
+          "value": "BE10"
+         }
+        ]
+       }
+      ],
+      "category": [
+       "Met"
+      ],
+      "certainty": "Likely",
+      "description": "High tides are expected: TAW 5,60 to 6,20 m in Ostend or TAW 6,60 to 7,20 m in Antwerp. Be careful.",
+      "event": "Yellow warning for storm surge",
+      "expires": "2026-11-01T23:59:00+01:00",
+      "headline": "Yellow warning for storm surge in Belgium - East Flanders",
+      "instruction": "Be vigilant",
+      "language": "en-GB",
+      "onset": "2026-10-30T01:00:00+01:00",
+      "parameter": [
+       {
+        "value": "2; yellow; Moderate",
+        "valueName": "awareness_level"
+       },
+       {
+        "value": "1; wind",
+        "valueName": "awareness_type"
+       },
+       {
+        "value": "1; wind may threat public safety and/or damage infrastructure",
+        "valueName": "impacts"
+       }
+      ],
+      "responseType": [
+       "None"
+      ],
+      "senderName": "Royal Meteorological Institute of Belgium",
+      "severity": "Moderate",
+      "urgency": "Future",
+      "web": "https://www.meteo.be/en/weather/warnings/overview-belgium"
+     },
+     {
+      "area": [
+       {
+        "areaDesc": "SYNTH BE10",
+        "geocode": [
+         {
+          "valueName": "NUTS2",
+          "value": "BE10"
+         }
+        ]
+       }
+      ],
+      "category": [
+       "Met"
+      ],
+      "certainty": "Likely",
+      "description": "Es wird ein erhöhter Wasserstand erwartet: TAW 5,60 bis 6,20 m in Ostende oder TAW 6,60 bis 7,20 m in Antwerpen. Seien Sie vorsichtig.",
+      "event": "Gelbe Warnung fur Sturmflut",
+      "expires": "2026-11-01T23:59:00+01:00",
+      "headline": "Gelbe Warnung fur Sturmflut in Belgien - Ostflandern",
+      "instruction": "Be vigilant",
+      "language": "de-DE",
+      "onset": "2026-10-30T01:00:00+01:00",
+      "parameter": [
+       {
+        "value": "2; yellow; Moderate",
+        "valueName": "awareness_level"
+       },
+       {
+        "value": "1; wind",
+        "valueName": "awareness_type"
+       },
+       {
+        "value": "1; wind may threat public safety and/or damage infrastructure",
+        "valueName": "impacts"
+       }
+      ],
+      "responseType": [
+       "None"
+      ],
+      "senderName": "Königliche Meteorologische Institut van Belgien",
+      "severity": "Moderate",
+      "urgency": "Future",
+      "web": "https://www.meteo.be/de/wetter/warnungen/belgien"
+     }
+    ],
+    "msgType": "Alert",
+    "scope": "Public",
+    "sender": "kmi-irm",
+    "sent": "2026-10-30T00:00:00+01:00",
+    "status": "Actual"
+   },
+   "uuid": "9257c43e-fa47-491a-bdfd-60e90aa07b28"
+  },
+  {
+   "alert": {
+    "code": [
+     "MCP:v2.0"
+    ],
+    "identifier": "2.49.0.0.56.0.BE.SYNTH-BE31",
+    "incidents": "Alert",
+    "info": [
+     {
+      "area": [
+       {
+        "areaDesc": "SYNTH BE31",
+        "geocode": [
+         {
+          "valueName": "NUTS2",
+          "value": "BE31"
+         }
+        ]
+       }
+      ],
+      "category": [
+       "Met"
+      ],
+      "certainty": "Likely",
+      "description": "Er worden hoge waterstanden verwacht: 5,60 t.e.m. 6,20 m TAW in Oostende of 6,60 t.e.m. 7,20 m TAW in Antwerpen. Wees waakzaam.",
+      "event": "Gele waarschuwing voor stormtij",
+      "expires": "2026-11-01T23:59:00+01:00",
+      "headline": "Gele waarschuwing voor stormtij in België - Oost-Vlaanderen",
+      "instruction": "Be vigilant",
+      "language": "nl-BE",
+      "onset": "2026-10-30T01:00:00+01:00",
+      "parameter": [
+       {
+        "value": "2; yellow; Moderate",
+        "valueName": "awareness_level"
+       },
+       {
+        "value": "1; wind",
+        "valueName": "awareness_type"
+       },
+       {
+        "value": "1; wind may threat public safety and/or damage infrastructure",
+        "valueName": "impacts"
+       }
+      ],
+      "responseType": [
+       "None"
+      ],
+      "senderName": "Koninklijk Meteorologisch Instituut van België",
+      "severity": "Moderate",
+      "urgency": "Future",
+      "web": "https://www.meteo.be/nl/weer/waarschuwingen/overzichtskaart-belgie"
+     },
+     {
+      "area": [
+       {
+        "areaDesc": "SYNTH BE31",
+        "geocode": [
+         {
+          "valueName": "NUTS2",
+          "value": "BE31"
+         }
+        ]
+       }
+      ],
+      "category": [
+       "Met"
+      ],
+      "certainty": "Likely",
+      "description": "Nous prévoyons un niveau d’eau élevé: DNG 5,60 à 6,20 m à Ostende ou DNG 6,60 à 7,20 m à Anvers. Soyez vigilants.",
+      "event": "Avertissement jaune marée forte",
+      "expires": "2026-11-01T23:59:00+01:00",
+      "headline": "Avertissement jaune marée forte en Belgique - Flandre Orientale",
+      "instruction": "Be vigilant",
+      "language": "fr-BE",
+      "onset": "2026-10-30T01:00:00+01:00",
+      "parameter": [
+       {
+        "value": "2; yellow; Moderate",
+        "valueName": "awareness_level"
+       },
+       {
+        "value": "1; wind",
+        "valueName": "awareness_type"
+       },
+       {
+        "value": "1; wind may threat public safety and/or damage infrastructure",
+        "valueName": "impacts"
+       }
+      ],
+      "responseType": [
+       "None"
+      ],
+      "senderName": "Institut Royal Météorologique de Belgique",
+      "severity": "Moderate",
+      "urgency": "Future",
+      "web": "https://www.meteo.be/fr/meteo/avertissements/carte-de-belgique"
+     },
+     {
+      "area": [
+       {
+        "areaDesc": "SYNTH BE31",
+        "geocode": [
+         {
+          "valueName": "NUTS2",
+          "value": "BE31"
+         }
+        ]
+       }
+      ],
+      "category": [
+       "Met"
+      ],
+      "certainty": "Likely",
+      "description": "High tides are expected: TAW 5,60 to 6,20 m in Ostend or TAW 6,60 to 7,20 m in Antwerp. Be careful.",
+      "event": "Yellow warning for storm surge",
+      "expires": "2026-11-01T23:59:00+01:00",
+      "headline": "Yellow warning for storm surge in Belgium - East Flanders",
+      "instruction": "Be vigilant",
+      "language": "en-GB",
+      "onset": "2026-10-30T01:00:00+01:00",
+      "parameter": [
+       {
+        "value": "2; yellow; Moderate",
+        "valueName": "awareness_level"
+       },
+       {
+        "value": "1; wind",
+        "valueName": "awareness_type"
+       },
+       {
+        "value": "1; wind may threat public safety and/or damage infrastructure",
+        "valueName": "impacts"
+       }
+      ],
+      "responseType": [
+       "None"
+      ],
+      "senderName": "Royal Meteorological Institute of Belgium",
+      "severity": "Moderate",
+      "urgency": "Future",
+      "web": "https://www.meteo.be/en/weather/warnings/overview-belgium"
+     },
+     {
+      "area": [
+       {
+        "areaDesc": "SYNTH BE31",
+        "geocode": [
+         {
+          "valueName": "NUTS2",
+          "value": "BE31"
+         }
+        ]
+       }
+      ],
+      "category": [
+       "Met"
+      ],
+      "certainty": "Likely",
+      "description": "Es wird ein erhöhter Wasserstand erwartet: TAW 5,60 bis 6,20 m in Ostende oder TAW 6,60 bis 7,20 m in Antwerpen. Seien Sie vorsichtig.",
+      "event": "Gelbe Warnung fur Sturmflut",
+      "expires": "2026-11-01T23:59:00+01:00",
+      "headline": "Gelbe Warnung fur Sturmflut in Belgien - Ostflandern",
+      "instruction": "Be vigilant",
+      "language": "de-DE",
+      "onset": "2026-10-30T01:00:00+01:00",
+      "parameter": [
+       {
+        "value": "2; yellow; Moderate",
+        "valueName": "awareness_level"
+       },
+       {
+        "value": "1; wind",
+        "valueName": "awareness_type"
+       },
+       {
+        "value": "1; wind may threat public safety and/or damage infrastructure",
+        "valueName": "impacts"
+       }
+      ],
+      "responseType": [
+       "None"
+      ],
+      "senderName": "Königliche Meteorologische Institut van Belgien",
+      "severity": "Moderate",
+      "urgency": "Future",
+      "web": "https://www.meteo.be/de/wetter/warnungen/belgien"
+     }
+    ],
+    "msgType": "Alert",
+    "scope": "Public",
+    "sender": "kmi-irm",
+    "sent": "2026-10-30T00:00:00+01:00",
+    "status": "Actual"
+   },
+   "uuid": "9257c43e-fa47-491a-bdfd-60e90aa07b28"
+  },
+  {
+   "alert": {
+    "code": [
+     "MCP:v2.0"
+    ],
+    "identifier": "2.49.0.0.56.0.BE.SYNTH-BE10-UND-BE004",
+    "incidents": "Alert",
+    "info": [
+     {
+      "area": [
+       {
+        "areaDesc": "SYNTH BE10-UND-BE004",
+        "geocode": [
+         {
+          "valueName": "NUTS2",
+          "value": "BE10"
+         },
+         {
+          "valueName": "EMMA_ID",
+          "value": "BE004"
+         }
+        ]
+       }
+      ],
+      "category": [
+       "Met"
+      ],
+      "certainty": "Likely",
+      "description": "Er worden hoge waterstanden verwacht: 5,60 t.e.m. 6,20 m TAW in Oostende of 6,60 t.e.m. 7,20 m TAW in Antwerpen. Wees waakzaam.",
+      "event": "Gele waarschuwing voor stormtij",
+      "expires": "2026-11-01T23:59:00+01:00",
+      "headline": "Gele waarschuwing voor stormtij in België - Oost-Vlaanderen",
+      "instruction": "Be vigilant",
+      "language": "nl-BE",
+      "onset": "2026-10-30T01:00:00+01:00",
+      "parameter": [
+       {
+        "value": "2; yellow; Moderate",
+        "valueName": "awareness_level"
+       },
+       {
+        "value": "1; wind",
+        "valueName": "awareness_type"
+       },
+       {
+        "value": "1; wind may threat public safety and/or damage infrastructure",
+        "valueName": "impacts"
+       }
+      ],
+      "responseType": [
+       "None"
+      ],
+      "senderName": "Koninklijk Meteorologisch Instituut van België",
+      "severity": "Moderate",
+      "urgency": "Future",
+      "web": "https://www.meteo.be/nl/weer/waarschuwingen/overzichtskaart-belgie"
+     },
+     {
+      "area": [
+       {
+        "areaDesc": "SYNTH BE10-UND-BE004",
+        "geocode": [
+         {
+          "valueName": "NUTS2",
+          "value": "BE10"
+         },
+         {
+          "valueName": "EMMA_ID",
+          "value": "BE004"
+         }
+        ]
+       }
+      ],
+      "category": [
+       "Met"
+      ],
+      "certainty": "Likely",
+      "description": "Nous prévoyons un niveau d’eau élevé: DNG 5,60 à 6,20 m à Ostende ou DNG 6,60 à 7,20 m à Anvers. Soyez vigilants.",
+      "event": "Avertissement jaune marée forte",
+      "expires": "2026-11-01T23:59:00+01:00",
+      "headline": "Avertissement jaune marée forte en Belgique - Flandre Orientale",
+      "instruction": "Be vigilant",
+      "language": "fr-BE",
+      "onset": "2026-10-30T01:00:00+01:00",
+      "parameter": [
+       {
+        "value": "2; yellow; Moderate",
+        "valueName": "awareness_level"
+       },
+       {
+        "value": "1; wind",
+        "valueName": "awareness_type"
+       },
+       {
+        "value": "1; wind may threat public safety and/or damage infrastructure",
+        "valueName": "impacts"
+       }
+      ],
+      "responseType": [
+       "None"
+      ],
+      "senderName": "Institut Royal Météorologique de Belgique",
+      "severity": "Moderate",
+      "urgency": "Future",
+      "web": "https://www.meteo.be/fr/meteo/avertissements/carte-de-belgique"
+     },
+     {
+      "area": [
+       {
+        "areaDesc": "SYNTH BE10-UND-BE004",
+        "geocode": [
+         {
+          "valueName": "NUTS2",
+          "value": "BE10"
+         },
+         {
+          "valueName": "EMMA_ID",
+          "value": "BE004"
+         }
+        ]
+       }
+      ],
+      "category": [
+       "Met"
+      ],
+      "certainty": "Likely",
+      "description": "High tides are expected: TAW 5,60 to 6,20 m in Ostend or TAW 6,60 to 7,20 m in Antwerp. Be careful.",
+      "event": "Yellow warning for storm surge",
+      "expires": "2026-11-01T23:59:00+01:00",
+      "headline": "Yellow warning for storm surge in Belgium - East Flanders",
+      "instruction": "Be vigilant",
+      "language": "en-GB",
+      "onset": "2026-10-30T01:00:00+01:00",
+      "parameter": [
+       {
+        "value": "2; yellow; Moderate",
+        "valueName": "awareness_level"
+       },
+       {
+        "value": "1; wind",
+        "valueName": "awareness_type"
+       },
+       {
+        "value": "1; wind may threat public safety and/or damage infrastructure",
+        "valueName": "impacts"
+       }
+      ],
+      "responseType": [
+       "None"
+      ],
+      "senderName": "Royal Meteorological Institute of Belgium",
+      "severity": "Moderate",
+      "urgency": "Future",
+      "web": "https://www.meteo.be/en/weather/warnings/overview-belgium"
+     },
+     {
+      "area": [
+       {
+        "areaDesc": "SYNTH BE10-UND-BE004",
+        "geocode": [
+         {
+          "valueName": "NUTS2",
+          "value": "BE10"
+         },
+         {
+          "valueName": "EMMA_ID",
+          "value": "BE004"
+         }
+        ]
+       }
+      ],
+      "category": [
+       "Met"
+      ],
+      "certainty": "Likely",
+      "description": "Es wird ein erhöhter Wasserstand erwartet: TAW 5,60 bis 6,20 m in Ostende oder TAW 6,60 bis 7,20 m in Antwerpen. Seien Sie vorsichtig.",
+      "event": "Gelbe Warnung fur Sturmflut",
+      "expires": "2026-11-01T23:59:00+01:00",
+      "headline": "Gelbe Warnung fur Sturmflut in Belgien - Ostflandern",
+      "instruction": "Be vigilant",
+      "language": "de-DE",
+      "onset": "2026-10-30T01:00:00+01:00",
+      "parameter": [
+       {
+        "value": "2; yellow; Moderate",
+        "valueName": "awareness_level"
+       },
+       {
+        "value": "1; wind",
+        "valueName": "awareness_type"
+       },
+       {
+        "value": "1; wind may threat public safety and/or damage infrastructure",
+        "valueName": "impacts"
+       }
+      ],
+      "responseType": [
+       "None"
+      ],
+      "senderName": "Königliche Meteorologische Institut van Belgien",
+      "severity": "Moderate",
+      "urgency": "Future",
+      "web": "https://www.meteo.be/de/wetter/warnungen/belgien"
+     }
+    ],
+    "msgType": "Alert",
+    "scope": "Public",
+    "sender": "kmi-irm",
+    "sent": "2026-10-30T00:00:00+01:00",
+    "status": "Actual"
+   },
+   "uuid": "9257c43e-fa47-491a-bdfd-60e90aa07b28"
+  },
+  {
+   "alert": {
+    "code": [
+     "MCP:v2.0"
+    ],
+    "identifier": "2.49.0.0.56.0.BE.SYNTH-BE99",
+    "incidents": "Alert",
+    "info": [
+     {
+      "area": [
+       {
+        "areaDesc": "SYNTH BE99",
+        "geocode": [
+         {
+          "valueName": "NUTS2",
+          "value": "BE99"
+         }
+        ]
+       }
+      ],
+      "category": [
+       "Met"
+      ],
+      "certainty": "Likely",
+      "description": "Er worden hoge waterstanden verwacht: 5,60 t.e.m. 6,20 m TAW in Oostende of 6,60 t.e.m. 7,20 m TAW in Antwerpen. Wees waakzaam.",
+      "event": "Gele waarschuwing voor stormtij",
+      "expires": "2026-11-01T23:59:00+01:00",
+      "headline": "Gele waarschuwing voor stormtij in België - Oost-Vlaanderen",
+      "instruction": "Be vigilant",
+      "language": "nl-BE",
+      "onset": "2026-10-30T01:00:00+01:00",
+      "parameter": [
+       {
+        "value": "2; yellow; Moderate",
+        "valueName": "awareness_level"
+       },
+       {
+        "value": "1; wind",
+        "valueName": "awareness_type"
+       },
+       {
+        "value": "1; wind may threat public safety and/or damage infrastructure",
+        "valueName": "impacts"
+       }
+      ],
+      "responseType": [
+       "None"
+      ],
+      "senderName": "Koninklijk Meteorologisch Instituut van België",
+      "severity": "Moderate",
+      "urgency": "Future",
+      "web": "https://www.meteo.be/nl/weer/waarschuwingen/overzichtskaart-belgie"
+     },
+     {
+      "area": [
+       {
+        "areaDesc": "SYNTH BE99",
+        "geocode": [
+         {
+          "valueName": "NUTS2",
+          "value": "BE99"
+         }
+        ]
+       }
+      ],
+      "category": [
+       "Met"
+      ],
+      "certainty": "Likely",
+      "description": "Nous prévoyons un niveau d’eau élevé: DNG 5,60 à 6,20 m à Ostende ou DNG 6,60 à 7,20 m à Anvers. Soyez vigilants.",
+      "event": "Avertissement jaune marée forte",
+      "expires": "2026-11-01T23:59:00+01:00",
+      "headline": "Avertissement jaune marée forte en Belgique - Flandre Orientale",
+      "instruction": "Be vigilant",
+      "language": "fr-BE",
+      "onset": "2026-10-30T01:00:00+01:00",
+      "parameter": [
+       {
+        "value": "2; yellow; Moderate",
+        "valueName": "awareness_level"
+       },
+       {
+        "value": "1; wind",
+        "valueName": "awareness_type"
+       },
+       {
+        "value": "1; wind may threat public safety and/or damage infrastructure",
+        "valueName": "impacts"
+       }
+      ],
+      "responseType": [
+       "None"
+      ],
+      "senderName": "Institut Royal Météorologique de Belgique",
+      "severity": "Moderate",
+      "urgency": "Future",
+      "web": "https://www.meteo.be/fr/meteo/avertissements/carte-de-belgique"
+     },
+     {
+      "area": [
+       {
+        "areaDesc": "SYNTH BE99",
+        "geocode": [
+         {
+          "valueName": "NUTS2",
+          "value": "BE99"
+         }
+        ]
+       }
+      ],
+      "category": [
+       "Met"
+      ],
+      "certainty": "Likely",
+      "description": "High tides are expected: TAW 5,60 to 6,20 m in Ostend or TAW 6,60 to 7,20 m in Antwerp. Be careful.",
+      "event": "Yellow warning for storm surge",
+      "expires": "2026-11-01T23:59:00+01:00",
+      "headline": "Yellow warning for storm surge in Belgium - East Flanders",
+      "instruction": "Be vigilant",
+      "language": "en-GB",
+      "onset": "2026-10-30T01:00:00+01:00",
+      "parameter": [
+       {
+        "value": "2; yellow; Moderate",
+        "valueName": "awareness_level"
+       },
+       {
+        "value": "1; wind",
+        "valueName": "awareness_type"
+       },
+       {
+        "value": "1; wind may threat public safety and/or damage infrastructure",
+        "valueName": "impacts"
+       }
+      ],
+      "responseType": [
+       "None"
+      ],
+      "senderName": "Royal Meteorological Institute of Belgium",
+      "severity": "Moderate",
+      "urgency": "Future",
+      "web": "https://www.meteo.be/en/weather/warnings/overview-belgium"
+     },
+     {
+      "area": [
+       {
+        "areaDesc": "SYNTH BE99",
+        "geocode": [
+         {
+          "valueName": "NUTS2",
+          "value": "BE99"
+         }
+        ]
+       }
+      ],
+      "category": [
+       "Met"
+      ],
+      "certainty": "Likely",
+      "description": "Es wird ein erhöhter Wasserstand erwartet: TAW 5,60 bis 6,20 m in Ostende oder TAW 6,60 bis 7,20 m in Antwerpen. Seien Sie vorsichtig.",
+      "event": "Gelbe Warnung fur Sturmflut",
+      "expires": "2026-11-01T23:59:00+01:00",
+      "headline": "Gelbe Warnung fur Sturmflut in Belgien - Ostflandern",
+      "instruction": "Be vigilant",
+      "language": "de-DE",
+      "onset": "2026-10-30T01:00:00+01:00",
+      "parameter": [
+       {
+        "value": "2; yellow; Moderate",
+        "valueName": "awareness_level"
+       },
+       {
+        "value": "1; wind",
+        "valueName": "awareness_type"
+       },
+       {
+        "value": "1; wind may threat public safety and/or damage infrastructure",
+        "valueName": "impacts"
+       }
+      ],
+      "responseType": [
+       "None"
+      ],
+      "senderName": "Königliche Meteorologische Institut van Belgien",
+      "severity": "Moderate",
+      "urgency": "Future",
+      "web": "https://www.meteo.be/de/wetter/warnungen/belgien"
+     }
+    ],
+    "msgType": "Alert",
+    "scope": "Public",
+    "sender": "kmi-irm",
+    "sent": "2026-10-30T00:00:00+01:00",
+    "status": "Actual"
+   },
+   "uuid": "9257c43e-fa47-491a-bdfd-60e90aa07b28"
+  },
+  {
+   "alert": {
+    "code": [
+     "MCP:v2.0"
+    ],
+    "identifier": "2.49.0.0.56.0.BE.SYNTH-UPD-ALT-BE23",
+    "incidents": "Alert",
+    "info": [
+     {
+      "area": [
+       {
+        "areaDesc": "SYNTH UPD-ALT-BE23",
+        "geocode": [
+         {
+          "valueName": "NUTS2",
+          "value": "BE23"
+         }
+        ]
+       }
+      ],
+      "category": [
+       "Met"
+      ],
+      "certainty": "Likely",
+      "description": "Er worden hoge waterstanden verwacht: 5,60 t.e.m. 6,20 m TAW in Oostende of 6,60 t.e.m. 7,20 m TAW in Antwerpen. Wees waakzaam.",
+      "event": "Gele waarschuwing voor stormtij",
+      "expires": "2026-11-01T23:59:00+01:00",
+      "headline": "Gele waarschuwing voor stormtij in België - Oost-Vlaanderen",
+      "instruction": "Be vigilant",
+      "language": "nl-BE",
+      "onset": "2026-10-30T01:00:00+01:00",
+      "parameter": [
+       {
+        "value": "2; yellow; Moderate",
+        "valueName": "awareness_level"
+       },
+       {
+        "value": "1; wind",
+        "valueName": "awareness_type"
+       },
+       {
+        "value": "1; wind may threat public safety and/or damage infrastructure",
+        "valueName": "impacts"
+       }
+      ],
+      "responseType": [
+       "None"
+      ],
+      "senderName": "Koninklijk Meteorologisch Instituut van België",
+      "severity": "Moderate",
+      "urgency": "Future",
+      "web": "https://www.meteo.be/nl/weer/waarschuwingen/overzichtskaart-belgie"
+     },
+     {
+      "area": [
+       {
+        "areaDesc": "SYNTH UPD-ALT-BE23",
+        "geocode": [
+         {
+          "valueName": "NUTS2",
+          "value": "BE23"
+         }
+        ]
+       }
+      ],
+      "category": [
+       "Met"
+      ],
+      "certainty": "Likely",
+      "description": "Nous prévoyons un niveau d’eau élevé: DNG 5,60 à 6,20 m à Ostende ou DNG 6,60 à 7,20 m à Anvers. Soyez vigilants.",
+      "event": "Avertissement jaune marée forte",
+      "expires": "2026-11-01T23:59:00+01:00",
+      "headline": "Avertissement jaune marée forte en Belgique - Flandre Orientale",
+      "instruction": "Be vigilant",
+      "language": "fr-BE",
+      "onset": "2026-10-30T01:00:00+01:00",
+      "parameter": [
+       {
+        "value": "2; yellow; Moderate",
+        "valueName": "awareness_level"
+       },
+       {
+        "value": "1; wind",
+        "valueName": "awareness_type"
+       },
+       {
+        "value": "1; wind may threat public safety and/or damage infrastructure",
+        "valueName": "impacts"
+       }
+      ],
+      "responseType": [
+       "None"
+      ],
+      "senderName": "Institut Royal Météorologique de Belgique",
+      "severity": "Moderate",
+      "urgency": "Future",
+      "web": "https://www.meteo.be/fr/meteo/avertissements/carte-de-belgique"
+     },
+     {
+      "area": [
+       {
+        "areaDesc": "SYNTH UPD-ALT-BE23",
+        "geocode": [
+         {
+          "valueName": "NUTS2",
+          "value": "BE23"
+         }
+        ]
+       }
+      ],
+      "category": [
+       "Met"
+      ],
+      "certainty": "Likely",
+      "description": "High tides are expected: TAW 5,60 to 6,20 m in Ostend or TAW 6,60 to 7,20 m in Antwerp. Be careful.",
+      "event": "Yellow warning for storm surge",
+      "expires": "2026-11-01T23:59:00+01:00",
+      "headline": "Yellow warning for storm surge in Belgium - East Flanders",
+      "instruction": "Be vigilant",
+      "language": "en-GB",
+      "onset": "2026-10-30T01:00:00+01:00",
+      "parameter": [
+       {
+        "value": "2; yellow; Moderate",
+        "valueName": "awareness_level"
+       },
+       {
+        "value": "1; wind",
+        "valueName": "awareness_type"
+       },
+       {
+        "value": "1; wind may threat public safety and/or damage infrastructure",
+        "valueName": "impacts"
+       }
+      ],
+      "responseType": [
+       "None"
+      ],
+      "senderName": "Royal Meteorological Institute of Belgium",
+      "severity": "Moderate",
+      "urgency": "Future",
+      "web": "https://www.meteo.be/en/weather/warnings/overview-belgium"
+     },
+     {
+      "area": [
+       {
+        "areaDesc": "SYNTH UPD-ALT-BE23",
+        "geocode": [
+         {
+          "valueName": "NUTS2",
+          "value": "BE23"
+         }
+        ]
+       }
+      ],
+      "category": [
+       "Met"
+      ],
+      "certainty": "Likely",
+      "description": "Es wird ein erhöhter Wasserstand erwartet: TAW 5,60 bis 6,20 m in Ostende oder TAW 6,60 bis 7,20 m in Antwerpen. Seien Sie vorsichtig.",
+      "event": "Gelbe Warnung fur Sturmflut",
+      "expires": "2026-11-01T23:59:00+01:00",
+      "headline": "Gelbe Warnung fur Sturmflut in Belgien - Ostflandern",
+      "instruction": "Be vigilant",
+      "language": "de-DE",
+      "onset": "2026-10-30T01:00:00+01:00",
+      "parameter": [
+       {
+        "value": "2; yellow; Moderate",
+        "valueName": "awareness_level"
+       },
+       {
+        "value": "1; wind",
+        "valueName": "awareness_type"
+       },
+       {
+        "value": "1; wind may threat public safety and/or damage infrastructure",
+        "valueName": "impacts"
+       }
+      ],
+      "responseType": [
+       "None"
+      ],
+      "senderName": "Königliche Meteorologische Institut van Belgien",
+      "severity": "Moderate",
+      "urgency": "Future",
+      "web": "https://www.meteo.be/de/wetter/warnungen/belgien"
+     }
+    ],
+    "msgType": "Alert",
+    "scope": "Public",
+    "sender": "kmi-irm",
+    "sent": "2026-10-30T00:00:00+01:00",
+    "status": "Actual"
+   },
+   "uuid": "9257c43e-fa47-491a-bdfd-60e90aa07b28"
+  },
+  {
+   "alert": {
+    "code": [
+     "MCP:v2.0"
+    ],
+    "identifier": "2.49.0.0.56.0.BE.SYNTH-UPD-NEU-BE23",
+    "incidents": "Alert",
+    "info": [
+     {
+      "area": [
+       {
+        "areaDesc": "SYNTH UPD-NEU-BE23",
+        "geocode": [
+         {
+          "valueName": "NUTS2",
+          "value": "BE23"
+         }
+        ]
+       }
+      ],
+      "category": [
+       "Met"
+      ],
+      "certainty": "Likely",
+      "description": "Er worden hoge waterstanden verwacht: 5,60 t.e.m. 6,20 m TAW in Oostende of 6,60 t.e.m. 7,20 m TAW in Antwerpen. Wees waakzaam.",
+      "event": "Gele waarschuwing voor stormtij",
+      "expires": "2026-11-01T23:59:00+01:00",
+      "headline": "Gele waarschuwing voor stormtij in België - Oost-Vlaanderen",
+      "instruction": "Be vigilant",
+      "language": "nl-BE",
+      "onset": "2026-10-30T01:00:00+01:00",
+      "parameter": [
+       {
+        "value": "3; orange; Severe",
+        "valueName": "awareness_level"
+       },
+       {
+        "value": "1; wind",
+        "valueName": "awareness_type"
+       },
+       {
+        "value": "1; wind may threat public safety and/or damage infrastructure",
+        "valueName": "impacts"
+       }
+      ],
+      "responseType": [
+       "None"
+      ],
+      "senderName": "Koninklijk Meteorologisch Instituut van België",
+      "severity": "Severe",
+      "urgency": "Future",
+      "web": "https://www.meteo.be/nl/weer/waarschuwingen/overzichtskaart-belgie"
+     },
+     {
+      "area": [
+       {
+        "areaDesc": "SYNTH UPD-NEU-BE23",
+        "geocode": [
+         {
+          "valueName": "NUTS2",
+          "value": "BE23"
+         }
+        ]
+       }
+      ],
+      "category": [
+       "Met"
+      ],
+      "certainty": "Likely",
+      "description": "Nous prévoyons un niveau d’eau élevé: DNG 5,60 à 6,20 m à Ostende ou DNG 6,60 à 7,20 m à Anvers. Soyez vigilants.",
+      "event": "Avertissement jaune marée forte",
+      "expires": "2026-11-01T23:59:00+01:00",
+      "headline": "Avertissement jaune marée forte en Belgique - Flandre Orientale",
+      "instruction": "Be vigilant",
+      "language": "fr-BE",
+      "onset": "2026-10-30T01:00:00+01:00",
+      "parameter": [
+       {
+        "value": "3; orange; Severe",
+        "valueName": "awareness_level"
+       },
+       {
+        "value": "1; wind",
+        "valueName": "awareness_type"
+       },
+       {
+        "value": "1; wind may threat public safety and/or damage infrastructure",
+        "valueName": "impacts"
+       }
+      ],
+      "responseType": [
+       "None"
+      ],
+      "senderName": "Institut Royal Météorologique de Belgique",
+      "severity": "Severe",
+      "urgency": "Future",
+      "web": "https://www.meteo.be/fr/meteo/avertissements/carte-de-belgique"
+     },
+     {
+      "area": [
+       {
+        "areaDesc": "SYNTH UPD-NEU-BE23",
+        "geocode": [
+         {
+          "valueName": "NUTS2",
+          "value": "BE23"
+         }
+        ]
+       }
+      ],
+      "category": [
+       "Met"
+      ],
+      "certainty": "Likely",
+      "description": "High tides are expected: TAW 5,60 to 6,20 m in Ostend or TAW 6,60 to 7,20 m in Antwerp. Be careful.",
+      "event": "Yellow warning for storm surge",
+      "expires": "2026-11-01T23:59:00+01:00",
+      "headline": "Yellow warning for storm surge in Belgium - East Flanders",
+      "instruction": "Be vigilant",
+      "language": "en-GB",
+      "onset": "2026-10-30T01:00:00+01:00",
+      "parameter": [
+       {
+        "value": "3; orange; Severe",
+        "valueName": "awareness_level"
+       },
+       {
+        "value": "1; wind",
+        "valueName": "awareness_type"
+       },
+       {
+        "value": "1; wind may threat public safety and/or damage infrastructure",
+        "valueName": "impacts"
+       }
+      ],
+      "responseType": [
+       "None"
+      ],
+      "senderName": "Royal Meteorological Institute of Belgium",
+      "severity": "Severe",
+      "urgency": "Future",
+      "web": "https://www.meteo.be/en/weather/warnings/overview-belgium"
+     },
+     {
+      "area": [
+       {
+        "areaDesc": "SYNTH UPD-NEU-BE23",
+        "geocode": [
+         {
+          "valueName": "NUTS2",
+          "value": "BE23"
+         }
+        ]
+       }
+      ],
+      "category": [
+       "Met"
+      ],
+      "certainty": "Likely",
+      "description": "Es wird ein erhöhter Wasserstand erwartet: TAW 5,60 bis 6,20 m in Ostende oder TAW 6,60 bis 7,20 m in Antwerpen. Seien Sie vorsichtig.",
+      "event": "Gelbe Warnung fur Sturmflut",
+      "expires": "2026-11-01T23:59:00+01:00",
+      "headline": "Gelbe Warnung fur Sturmflut in Belgien - Ostflandern",
+      "instruction": "Be vigilant",
+      "language": "de-DE",
+      "onset": "2026-10-30T01:00:00+01:00",
+      "parameter": [
+       {
+        "value": "3; orange; Severe",
+        "valueName": "awareness_level"
+       },
+       {
+        "value": "1; wind",
+        "valueName": "awareness_type"
+       },
+       {
+        "value": "1; wind may threat public safety and/or damage infrastructure",
+        "valueName": "impacts"
+       }
+      ],
+      "responseType": [
+       "None"
+      ],
+      "senderName": "Königliche Meteorologische Institut van Belgien",
+      "severity": "Severe",
+      "urgency": "Future",
+      "web": "https://www.meteo.be/de/wetter/warnungen/belgien"
+     }
+    ],
+    "msgType": "Update",
+    "scope": "Public",
+    "sender": "kmi-irm",
+    "sent": "2026-10-30T00:00:00+01:00",
+    "status": "Actual",
+    "references": "kmi-irm,2.49.0.0.56.0.BE.SYNTH-UPD-ALT-BE23,2026-10-30T00:00:00+01:00"
+   },
+   "uuid": "9257c43e-fa47-491a-bdfd-60e90aa07b28"
+  },
+  {
+   "alert": {
+    "code": [
+     "MCP:v2.0"
+    ],
+    "identifier": "2.49.0.0.56.0.BE.SYNTH-CANCEL-ALT-BE23",
+    "incidents": "Alert",
+    "info": [
+     {
+      "area": [
+       {
+        "areaDesc": "SYNTH CANCEL-ALT-BE23",
+        "geocode": [
+         {
+          "valueName": "NUTS2",
+          "value": "BE23"
+         }
+        ]
+       }
+      ],
+      "category": [
+       "Met"
+      ],
+      "certainty": "Likely",
+      "description": "Er worden hoge waterstanden verwacht: 5,60 t.e.m. 6,20 m TAW in Oostende of 6,60 t.e.m. 7,20 m TAW in Antwerpen. Wees waakzaam.",
+      "event": "Gele waarschuwing voor stormtij",
+      "expires": "2026-11-01T23:59:00+01:00",
+      "headline": "Gele waarschuwing voor stormtij in België - Oost-Vlaanderen",
+      "instruction": "Be vigilant",
+      "language": "nl-BE",
+      "onset": "2026-10-30T01:00:00+01:00",
+      "parameter": [
+       {
+        "value": "2; yellow; Moderate",
+        "valueName": "awareness_level"
+       },
+       {
+        "value": "1; wind",
+        "valueName": "awareness_type"
+       },
+       {
+        "value": "1; wind may threat public safety and/or damage infrastructure",
+        "valueName": "impacts"
+       }
+      ],
+      "responseType": [
+       "None"
+      ],
+      "senderName": "Koninklijk Meteorologisch Instituut van België",
+      "severity": "Moderate",
+      "urgency": "Future",
+      "web": "https://www.meteo.be/nl/weer/waarschuwingen/overzichtskaart-belgie"
+     },
+     {
+      "area": [
+       {
+        "areaDesc": "SYNTH CANCEL-ALT-BE23",
+        "geocode": [
+         {
+          "valueName": "NUTS2",
+          "value": "BE23"
+         }
+        ]
+       }
+      ],
+      "category": [
+       "Met"
+      ],
+      "certainty": "Likely",
+      "description": "Nous prévoyons un niveau d’eau élevé: DNG 5,60 à 6,20 m à Ostende ou DNG 6,60 à 7,20 m à Anvers. Soyez vigilants.",
+      "event": "Avertissement jaune marée forte",
+      "expires": "2026-11-01T23:59:00+01:00",
+      "headline": "Avertissement jaune marée forte en Belgique - Flandre Orientale",
+      "instruction": "Be vigilant",
+      "language": "fr-BE",
+      "onset": "2026-10-30T01:00:00+01:00",
+      "parameter": [
+       {
+        "value": "2; yellow; Moderate",
+        "valueName": "awareness_level"
+       },
+       {
+        "value": "1; wind",
+        "valueName": "awareness_type"
+       },
+       {
+        "value": "1; wind may threat public safety and/or damage infrastructure",
+        "valueName": "impacts"
+       }
+      ],
+      "responseType": [
+       "None"
+      ],
+      "senderName": "Institut Royal Météorologique de Belgique",
+      "severity": "Moderate",
+      "urgency": "Future",
+      "web": "https://www.meteo.be/fr/meteo/avertissements/carte-de-belgique"
+     },
+     {
+      "area": [
+       {
+        "areaDesc": "SYNTH CANCEL-ALT-BE23",
+        "geocode": [
+         {
+          "valueName": "NUTS2",
+          "value": "BE23"
+         }
+        ]
+       }
+      ],
+      "category": [
+       "Met"
+      ],
+      "certainty": "Likely",
+      "description": "High tides are expected: TAW 5,60 to 6,20 m in Ostend or TAW 6,60 to 7,20 m in Antwerp. Be careful.",
+      "event": "Yellow warning for storm surge",
+      "expires": "2026-11-01T23:59:00+01:00",
+      "headline": "Yellow warning for storm surge in Belgium - East Flanders",
+      "instruction": "Be vigilant",
+      "language": "en-GB",
+      "onset": "2026-10-30T01:00:00+01:00",
+      "parameter": [
+       {
+        "value": "2; yellow; Moderate",
+        "valueName": "awareness_level"
+       },
+       {
+        "value": "1; wind",
+        "valueName": "awareness_type"
+       },
+       {
+        "value": "1; wind may threat public safety and/or damage infrastructure",
+        "valueName": "impacts"
+       }
+      ],
+      "responseType": [
+       "None"
+      ],
+      "senderName": "Royal Meteorological Institute of Belgium",
+      "severity": "Moderate",
+      "urgency": "Future",
+      "web": "https://www.meteo.be/en/weather/warnings/overview-belgium"
+     },
+     {
+      "area": [
+       {
+        "areaDesc": "SYNTH CANCEL-ALT-BE23",
+        "geocode": [
+         {
+          "valueName": "NUTS2",
+          "value": "BE23"
+         }
+        ]
+       }
+      ],
+      "category": [
+       "Met"
+      ],
+      "certainty": "Likely",
+      "description": "Es wird ein erhöhter Wasserstand erwartet: TAW 5,60 bis 6,20 m in Ostende oder TAW 6,60 bis 7,20 m in Antwerpen. Seien Sie vorsichtig.",
+      "event": "Gelbe Warnung fur Sturmflut",
+      "expires": "2026-11-01T23:59:00+01:00",
+      "headline": "Gelbe Warnung fur Sturmflut in Belgien - Ostflandern",
+      "instruction": "Be vigilant",
+      "language": "de-DE",
+      "onset": "2026-10-30T01:00:00+01:00",
+      "parameter": [
+       {
+        "value": "2; yellow; Moderate",
+        "valueName": "awareness_level"
+       },
+       {
+        "value": "1; wind",
+        "valueName": "awareness_type"
+       },
+       {
+        "value": "1; wind may threat public safety and/or damage infrastructure",
+        "valueName": "impacts"
+       }
+      ],
+      "responseType": [
+       "None"
+      ],
+      "senderName": "Königliche Meteorologische Institut van Belgien",
+      "severity": "Moderate",
+      "urgency": "Future",
+      "web": "https://www.meteo.be/de/wetter/warnungen/belgien"
+     }
+    ],
+    "msgType": "Alert",
+    "scope": "Public",
+    "sender": "kmi-irm",
+    "sent": "2026-10-30T00:00:00+01:00",
+    "status": "Actual"
+   },
+   "uuid": "9257c43e-fa47-491a-bdfd-60e90aa07b28"
+  },
+  {
+   "alert": {
+    "code": [
+     "MCP:v2.0"
+    ],
+    "identifier": "2.49.0.0.56.0.BE.SYNTH-CANCEL-BE23",
+    "incidents": "Alert",
+    "msgType": "Cancel",
+    "scope": "Public",
+    "sender": "kmi-irm",
+    "sent": "2026-10-30T00:00:00+01:00",
+    "status": "Actual",
+    "references": "kmi-irm,2.49.0.0.56.0.BE.SYNTH-CANCEL-ALT-BE23,2026-10-30T00:00:00+01:00"
+   },
+   "uuid": "9257c43e-fa47-491a-bdfd-60e90aa07b28"
+  }
+ ]
+}

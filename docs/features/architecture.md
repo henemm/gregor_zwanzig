@@ -82,7 +82,7 @@ Idempotenz `briefing_slots.py`), rendert und versendet.
 | `data_write_selftest` | `*/15` | — (Go-intern, `probeDataWritable`) | — |
 
 Telegram-Eingang hat keinen Cron-Job: Push über `POST /api/webhooks/telegram/inbound` (Go;
-Auth allein per Header `X-Telegram-Bot-Api-Secret-Token`, `{secret}`-Pfad nur Übergang, #1814) →
+Auth allein per Header `X-Telegram-Bot-Api-Secret-Token`, kein Secret im Pfad, #1814) →
 `POST /api/internal/telegram-webhook` (Python). Status/Observability: `GET /api/scheduler/status`
 (Go). Manuelle Sofortversände (`/api/scheduler/trips/{id}/send`, `.../compare-presets/{id}/send`)
 laufen nicht über den Cron.
@@ -277,7 +277,7 @@ Auswertung aufruft. Specs:
 
 2. **Telegram-Handler** (`InboundTelegramReader._process_update()`)
    - **Empfängt Telegram-Updates per Webhook** (Push-basiert seit Issue #637; Polling entfernt)
-   - Go-Endpoint `/api/webhooks/telegram/inbound` mit Secret-Header-Validierung (einziger Auth-Träger) → Python-Weiterleitung; Alt-Route `/api/webhooks/telegram/{secret}` nur Übergang (#1814)
+   - Go-Endpoint `/api/webhooks/telegram/inbound` mit Secret-Header-Validierung (einziger Auth-Träger) → Python-Weiterleitung; kein Secret im Pfad, frühere Pfad-Route entfernt (#1814)
    - Extrahiert Chat-ID
    - `lookup_user_by_telegram_chat_id(chat_id)` → findet User-Profil
    - Fallback: `user_id = "default"` wenn kein User gefunden
@@ -810,6 +810,7 @@ send_one_compare_preset() [scheduler_dispatch_service.py, nach Report-Versand]
 - *`parallel_fetch`* (`src/services/parallel_fetch.py`): Ergebnisse in Eingabereihenfolge, Teilausfall isoliert, Slot-Semaphore je Provider, Deadline und Timeout unterscheidbar, verschachtelte Aufrufe laufen inline, `contextvars` werden je Aufgabe kopiert. Spec: `docs/specs/modules/feat_1539_s1b_s2_abruf_baustein.md`.
 - *Radar-Abrufe (#1539 S4, 2026-10-30, Spec `docs/specs/modules/feat_1539_s4_radar_parallel.md`):* Trip-Zonenpunkte (ab dem zweiten Punkt) und Ortsvergleich-Orte laufen über `fetch_ordered(provider="open_meteo")`. Je Abruf eine eigene `RadarNowcastService`-Instanz (eigene Flags, geteilter Radar-Cache); Single-flight um den Cache-Miss je Kachel; Open-Meteo-Budget atomar über `reserve()`. `RadarDeadlineExceeded` wird im Hauptfaden neu geworfen (Trip: Radar-Einheit abbrechen; Ortsvergleich: Preset gilt als nicht erreicht, ohne Ausfall-Eintrag). `skipped` (Frist/Zeitüberschreitung) zählt als gescheitert und wird geloggt.
 - *Briefing-Abrufe (#1539 S5, 2026-10-30, Spec `docs/specs/modules/feat_1539_s5_briefing_parallel.md`):* Im Trip-Briefing (`src/services/trip_report_scheduler.py`) laufen Warn-Abrufe, Trend-Etappen-Abrufe und der Gewitter-Fallback über `parallel_fetch` statt nacheinander (Provider-Semaphoren, Mandantentrennung je Nutzer, gemeinsame Frist, fail-soft je Etappe).
+- *Ortsvergleich-Alarme (#1539 S6, 2026-10-30, Spec `docs/specs/modules/feat_1539_s6_compare_parallel.md`):* Änderungs-Alarm (`compare_alert.py`, Frisch-Abruf je Ort, `provider="open_meteo"`) und Warn-Alarm (`compare_official_alert.py`, Warn-Abruf je Ort mit eigener Quellen-Senke, `provider="official_alerts"`) laufen dreiphasig: vorbereiten seriell, nur der Abruf parallel, auswerten seriell in Eingabereihenfolge. Frist 60 s je Preset, höchstens 180 s Lauf-Frist (Konstanten aus `trip_alert`). Änderungs-Alarm: Fehler/`skipped` je Ort geloggt und als `unavailable` gebucht, andere Orte laufen weiter; Warn-Alarm: Fehler/`skipped` lässt das Preset scheitern (nie Entwarnung aus Quellenausfall, ADR-0021).
 
 Siehe: `docs/features/issue-816-alert-deviation-core.md`, `docs/specs/_archive/modules/issue_816_alert_deviation_core.md`, `docs/specs/_archive/modules/issue_822_radar_nowcast_segment.md`, `docs/specs/modules/issue_883_acute_danger_override.md`, `docs/specs/modules/alarm_eingangsprotokoll.md`
 

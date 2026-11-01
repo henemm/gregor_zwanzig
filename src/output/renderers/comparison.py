@@ -23,6 +23,8 @@ from app.metric_catalog import kurzform_kuerzel
 from app.models import Corridor, MetricConfig, UnifiedWeatherDisplayConfig
 from app.profile import ActivityProfile
 from app.user import ComparisonResult, LocationResult
+from i18n import Lang, t
+from i18n.format import fmt_date_numeric, fmt_weekday
 from output.renderers.channel_layout import (
     CHANNEL_LIMITS, render_for_channel, selection_gap_notice,
     telegram_metric_notice,
@@ -32,10 +34,10 @@ from output.renderers.compare_metric_catalog import (
 )
 from output.renderers.compare_metric_ids import FRONTEND_TO_RENDERER_METRIC_ID
 from output.renderers.email.compare_html import (
-    CV2_METRICS, OUTLOOK_HEADING, _build_location_outlook_rows,
+    CV2_METRICS, _build_location_outlook_rows,
     _column_legend_text, _fmt_precip_type, _fmt_thunder,
     _fmt_visibility_overview, _metric_value, _should_merge_wind_dir,
-    _units_legend_text, _visible_hour_metrics, derive_row_labels,
+    _units_legend_text, _visible_hour_metrics, derive_row_labels, fmt_word_cell,
     loc_hail_flag, loc_thunder_signals, location_render_order, rowless_count,
 )
 from output.renderers.email.outlook_state_hint import (
@@ -46,7 +48,7 @@ from output.renderers.email.undelivered_hint import (
 )
 from utils.geo import degrees_to_compass
 from utils.timezone import (
-    local_fmt, local_stamp, location_tz, resolve_location_tz, tz_abbrev,
+    local_dt, local_fmt, local_stamp, location_tz, resolve_location_tz, tz_abbrev,
 )
 from output.renderers.email.outlook import render_outlook_plain
 from output.metric_format import format_value
@@ -68,28 +70,28 @@ import services.alert_urgency as alert_urgency
 # Issue #1401 Scheibe A2b: das zweite Tupel-Element ist NICHT mehr die
 # Mail-Beschriftung -- die leitet der Mail-Klartext jetzt aus dem zentralen
 # Register ab (`compare_html.derive_row_labels`, dieselbe Quelle wie der
-# HTML-Teil). Es bleibt ausschliesslich das DEUTSCHE Kanal-Label des
-# Telegram-Pfads (`_plain_metric_cell`), der bewusst deutsch bleibt (Spec
-# "Known Limitations": drei Namens-Vokabulare parallel, Bestandsschutz).
+# HTML-Teil). Es bleibt ausschliesslich das Kanal-Label des Telegram-Pfads
+# (`_plain_metric_cell`); seit Issue #2666 als Katalog-Schluessel
+# ``vergleich.zeile.<Zeilenschluessel>`` (de-Text = bisheriges Label).
 _DAILY_PLAIN_ROWS: tuple[tuple[str, str, object], ...] = (
-    ("precip_sum", "Regen", lambda v: f"{v:.1f} mm"),
-    ("pop_max", "Regenwahrscheinlichkeit", lambda v: f"{v:.0f}%"),
-    ("thunder_max", "Gewitter", _fmt_thunder),
-    ("uv_max", "UV max", lambda v: f"{v:.0f}"),
-    ("visibility_min", "Sicht min", _fmt_visibility_overview),
+    ("precip_sum", "vergleich.zeile.precip_sum", lambda v: f"{v:.1f} mm"),
+    ("pop_max", "vergleich.zeile.pop_max", lambda v: f"{v:.0f}%"),
+    ("thunder_max", "vergleich.zeile.thunder_max", _fmt_thunder),
+    ("uv_max", "vergleich.zeile.uv_max", lambda v: f"{v:.0f}"),
+    ("visibility_min", "vergleich.zeile.visibility_min", _fmt_visibility_overview),
     # Issue #1296, Klasse B (kein LocationResult-Feld, Live-Ableitung ueber
     # _metric_value -> _daily_summary, analog den fuenf #1285-Zeilen).
     # Issue #1585: die cape_max-Zeile ist hier ersatzlos entfallen -- sie muss
     # mit CV2_METRICS (compare_html.py) synchron bleiben, `derive_row_labels`
     # schlaegt sie ueber `_CV2_BY_KEY` nach und wirft sonst KeyError.
-    ("freezing_level", "Nullgradgrenze", lambda v: f"{v:.0f} m"),
+    ("freezing_level", "vergleich.zeile.freezing_level", lambda v: f"{v:.0f} m"),
     # Issue #1324, Klasse B (kein LocationResult-Feld, Live-Ableitung ueber
     # _metric_value -> _daily_summary). HTML-Parität: dieselben Werte.
-    ("humidity_avg", "Luftfeuchtigkeit Ø", lambda v: f"{v:.0f}%"),
-    ("dewpoint_avg", "Taupunkt Ø", lambda v: format_value("temperature", v, style="plain")),
-    ("pressure_avg", "Luftdruck Ø", lambda v: f"{v:.0f} hPa"),
-    ("precip_type", "Niederschlagsart", _fmt_precip_type),
-    ("snowfall_limit", "Schneefallgrenze", lambda v: f"{v:.0f} m"),
+    ("humidity_avg", "vergleich.zeile.humidity_avg", lambda v: f"{v:.0f}%"),
+    ("dewpoint_avg", "vergleich.zeile.dewpoint_avg", lambda v: format_value("temperature", v, style="plain")),
+    ("pressure_avg", "vergleich.zeile.pressure_avg", lambda v: f"{v:.0f} hPa"),
+    ("precip_type", "vergleich.zeile.precip_type", _fmt_precip_type),
+    ("snowfall_limit", "vergleich.zeile.snowfall_limit", lambda v: f"{v:.0f} m"),
 )
 
 # Issue #1359 Scheibe 1: ALLE Uebersichts-Zeilen des Klartext-Teils als EINE
@@ -104,23 +106,23 @@ _DAILY_PLAIN_ROWS: tuple[tuple[str, str, object], ...] = (
 # Wert-Quelle): fuer IDs ohne `_DAILY_AGGREGATE_FIELD`-Eintrag ist das exakt
 # das bisherige `getattr(loc_result, metric_id)`.
 _PLAIN_ROWS: tuple[tuple[str, str, object], ...] = (
-    ("temp_max", "Temp max", lambda v: format_value("temperature", v, style="plain")),
-    ("wind_max", "Wind", lambda v: format_value("wind", v, style="plain")),
-    ("temp_min", "Temp min", lambda v: format_value("temperature", v, style="plain")),
-    ("gust_max", "Böen", lambda v: format_value("wind", v, style="plain")),
-    ("wind_direction_avg", "Windrichtung", lambda v: f"{v}°"),
-    ("wind_chill_min", "Gefühlte Temp. min",
+    ("temp_max", "vergleich.zeile.temp_max", lambda v: format_value("temperature", v, style="plain")),
+    ("wind_max", "vergleich.zeile.wind_max", lambda v: format_value("wind", v, style="plain")),
+    ("temp_min", "vergleich.zeile.temp_min", lambda v: format_value("temperature", v, style="plain")),
+    ("gust_max", "vergleich.zeile.gust_max", lambda v: format_value("wind", v, style="plain")),
+    ("wind_direction_avg", "vergleich.zeile.wind_direction_avg", lambda v: f"{v}°"),
+    ("wind_chill_min", "vergleich.zeile.wind_chill_min",
      lambda v: format_value("temperature", v, style="plain")),
-    ("wind_chill_max", "Gefühlte Temp. max",
+    ("wind_chill_max", "vergleich.zeile.wind_chill_max",
      lambda v: format_value("temperature", v, style="plain")),
-    ("cloud_low_avg", "Wolken tief", lambda v: f"{v}%"),
-    ("cloud_mid_avg", "Wolken mittel", lambda v: f"{v}%"),
-    ("cloud_high_avg", "Wolken hoch", lambda v: f"{v}%"),
+    ("cloud_low_avg", "vergleich.zeile.cloud_low_avg", lambda v: f"{v}%"),
+    ("cloud_mid_avg", "vergleich.zeile.cloud_mid_avg", lambda v: f"{v}%"),
+    ("cloud_high_avg", "vergleich.zeile.cloud_high_avg", lambda v: f"{v}%"),
     *_DAILY_PLAIN_ROWS,
-    ("sunny_hours", "Sonne", lambda v: f"{format_value('sunshine', v, style='bare')}h"),
-    ("cloud_avg", "Wolken", lambda v: format_value("cloud_total", v, style="plain")),
-    ("snow_depth_cm", "Schneehöhe", lambda v: format_value("snow_depth", v, style="plain")),
-    ("snow_new_cm", "Neuschnee", lambda v: f"{v:.0f} cm"),
+    ("sunny_hours", "vergleich.zeile.sunny_hours", lambda v: f"{format_value('sunshine', v, style='bare')}h"),
+    ("cloud_avg", "vergleich.zeile.cloud_avg", lambda v: format_value("cloud_total", v, style="plain")),
+    ("snow_depth_cm", "vergleich.zeile.snow_depth_cm", lambda v: format_value("snow_depth", v, style="plain")),
+    ("snow_new_cm", "vergleich.zeile.snow_new_cm", lambda v: f"{v:.0f} cm"),
 )
 
 # Beschriftungs-Quelle des Klartext-Zwillings: dieselben Register-Verknuepfungen
@@ -156,9 +158,10 @@ def render_comparison_text(
     hourly_enabled: bool = True,
     undelivered: list | None = None,
     unresolved_count: int = 0,
+    lang: Lang = "de",
 ) -> str:
     """
-    Render ComparisonResult als Klartext (v2, Issue #1110).
+    Render ComparisonResult als Klartext (v2, Issue #1110). ``lang``: #2666.
 
     Kein Score/🏆 mehr. Je Ort: Uebersichtswerte + amtliche Warnungen (via
     ``render_official_alerts_plain()``, kein Copy-Paste, ADR-0011). Danach
@@ -212,19 +215,27 @@ def render_comparison_text(
     # insensitiv, identisch zu render_compare_html() -- keine Doppel-Logik.
     locations = location_render_order(result.locations)
     if not locations:
-        return "Keine Vergleichsdaten verfügbar."
+        return t("vergleich.allgemein.keine_daten", lang)
 
     lines: list[str] = []
-    lines.append("ORTS-VERGLEICH")
+    lines.append(t("vergleich.kopf.titel", lang))
     lines.append("=" * 24)
-    lines.append(f"Datum: {target_date.strftime('%A, %d.%m.%Y')}")
+    # de: bisheriger strftime-Ausdruck unveraendert (Golden, Spec Known Limitations)
+    datum = (
+        f"{fmt_weekday(target_date, 'en', kurz=False)}, {fmt_date_numeric(target_date, 'en')}"
+        if lang == "en" else target_date.strftime('%A, %d.%m.%Y')
+    )
+    lines.append(t("vergleich.kopf.datum", lang, datum=datum))
     # Issue #1268: Zeitfenster-Zeile ersatzlos entfernt (Bewertung = ganzer Tag).
     # Issue #1378 (AC-4/AC-8): Ortszeit des ERSTGENANNTEN Ortes plus
     # erkennbares Zeitzonen-Kuerzel -- identische Zeitbasis und identischer
     # Wert wie die HTML-Kopfzeile derselben Mail.
-    lines.append(
-        f"Erstellt: {local_stamp(created_at, location_tz(locations[0].location), '%d.%m.%Y %H:%M')}"
+    kopf_tz = location_tz(locations[0].location)
+    erstellt = (
+        f"{fmt_date_numeric(local_dt(created_at, kopf_tz), 'en')} {local_stamp(created_at, kopf_tz)}"
+        if lang == "en" else local_stamp(created_at, kopf_tz, '%d.%m.%Y %H:%M')
     )
+    lines.append(t("vergleich.kopf.erstellt_zeile", lang, zeit=erstellt))
     lines.append("")
     lines.append("-" * 50)
 
@@ -232,7 +243,7 @@ def render_comparison_text(
         loc = loc_result.location
         lines.append(loc.name)
         if loc_result.error is not None:
-            lines.append(f"   Fehler: {loc_result.error}")
+            lines.append("   " + t("vergleich.ort.fehler", lang, fehler=loc_result.error))
             lines.append("")
             continue
 
@@ -248,21 +259,21 @@ def render_comparison_text(
         # liefen HTML- und Klartext-Teil derselben Mail auseinander.
         ordered = _ordered_rows(_PLAIN_ROWS, enabled_metrics)
         labelled = derive_row_labels(
-            [_CV2_BY_KEY[key] for key, _de, _fmt in ordered], form="long"
+            [_CV2_BY_KEY[key] for key, _de, _fmt in ordered], form="long", lang=lang,
         )
-        for (metric_id, _de_label, fmt), row in zip(ordered, labelled):
+        for (metric_id, _label_key, fmt), row in zip(ordered, labelled):
             value = _metric_value(loc_result, metric_id)
             cell = (
                 # Issue #1680 S1: der Klartext-Teil der Mail zeigt die
                 # Herkunft der Gewitterstufe genau wie der HTML-Teil.
-                _fmt_overview_cell(fmt, value, loc_result, include_origin=True)
+                _fmt_overview_cell(fmt, value, loc_result, include_origin=True, lang=lang)
                 if value is not None else "-"
             )
             lines.append(f"   {row['label']}: {cell}")
 
         # Amtliche Warnungen, eine Zeile pro Warnung (Epic #1073 Punkt 6,
         # gemeinsamer Renderer statt Copy-Paste).
-        for line in render_official_alerts_plain([(loc.name, loc_result.official_alerts)]):
+        for line in render_official_alerts_plain([(loc.name, loc_result.official_alerts)], lang=lang):
             lines.append(f"   ⚠️ {line}")
 
         lines.append("")
@@ -271,7 +282,7 @@ def render_comparison_text(
     # wie im HTML-Teil (Zeilen ohne Definition + unmappbare Eintraege).
     gap_notice = selection_gap_notice(
         rowless_count(enabled_metrics, _PLAIN_ROWS_BY_ID) + unresolved_count,
-        scope="vergleich",
+        scope="vergleich", lang=lang,
     )
     if gap_notice:
         lines.append(gap_notice)
@@ -309,7 +320,7 @@ def render_comparison_text(
             # Pflicht-Validator liest nur HTML und ist im Klartext blind
             # (#1366-Erfahrung), die Zellen muessen trotzdem uebereinstimmen.
             _build_location_outlook_rows(
-                loc_result, outlook_metrics, outlook_metric_formats)
+                loc_result, outlook_metrics, outlook_metric_formats, lang)
             if outlook_enabled and loc_result.outlook_hourly_data else []
         )
         # Fix #1505 (AC-4): bei eingeschaltetem Ausblick ohne Zeilen (weder
@@ -318,7 +329,7 @@ def render_comparison_text(
         # tritt derselbe benannte Zustand an die Stelle wie im HTML-Teil
         # (geteilter Baustein aus #1486, keine zweite Formulierung).
         outlook_state_text = (
-            render_outlook_state_plain(OutlookState.UNAVAILABLE)
+            render_outlook_state_plain(OutlookState.UNAVAILABLE, lang=lang)
             if outlook_enabled and not outlook_rows else None
         )
         if not have_hourly and not outlook_rows and not outlook_state_text:
@@ -360,13 +371,13 @@ def render_comparison_text(
                         # sie baut ihre Zelle ueber `_sms_metric_cell()` ->
                         # `_fmt_overview_cell(..., include_origin=False)`
                         # (PO-Entscheidung, dort aktiv abgewaehlt).
-                        text = m["fmt"](
-                            getattr(dp, m["key"], None),
+                        text = fmt_word_cell(
+                            m["fmt"], getattr(dp, m["key"], None), lang,
                             getattr(dp, "hail_flag", None),
                             getattr(dp, "thunder_level_signals", None),
                         )
                     else:
-                        text = m["fmt"](getattr(dp, m["key"], None))
+                        text = fmt_word_cell(m["fmt"], getattr(dp, m["key"], None), lang)
                     if merge_wind_dir and m["key"] == "wind10m_kmh":
                         compass = degrees_to_compass(getattr(dp, "wind_direction_deg", None))
                         if compass:
@@ -383,18 +394,18 @@ def render_comparison_text(
             # sonst blieben Bestandsnutzer auf dem Fehler sitzen.
             section_lines.append(render_outlook_plain(
                 outlook_rows, show_acc=False, metrics=outlook_metrics,
-                heading=OUTLOOK_HEADING, show_name=False,
+                heading=t("vergleich.ausblick.titel", lang), show_name=False, lang=lang,
             ).strip("\n"))
         elif outlook_state_text:
             # Fix #1505 (AC-4): benannter Zustand an derselben Stelle wie
             # sonst die Ausblick-Tabelle, unter derselben Ueberschrift.
-            section_lines.append(OUTLOOK_HEADING)
+            section_lines.append(t("vergleich.ausblick.titel", lang))
             section_lines.append(f"   {outlook_state_text}")
         section_lines.append("")
 
     if section_lines:
         if hour_rows_written:
-            lines.append("STUNDENVERLAUF")
+            lines.append(t("vergleich.stunden.klartext_titel", lang))
             lines.append("-" * 15)
         lines.extend(section_lines)
 
@@ -411,8 +422,8 @@ def render_comparison_text(
     # Ausblick sichtbar ist, auch bei abgeschalteter Stundentabelle.
     if hourly_enabled or outlook_enabled:
         for _legend in (
-            _units_legend_text(visible_hour_metrics),
-            _column_legend_text(visible_hour_metrics, outlook_metrics, outlook_enabled),
+            _units_legend_text(visible_hour_metrics, lang),
+            _column_legend_text(visible_hour_metrics, outlook_metrics, outlook_enabled, lang),
         ):
             if _legend:
                 lines.append(_legend)
@@ -423,13 +434,13 @@ def render_comparison_text(
     if has_undelivered(undelivered):
         lines.append("")
         lines.append(render_undelivered_plain(
-            undelivered, tz=location_tz(locations[0].location),
+            undelivered, tz=location_tz(locations[0].location), lang=lang,
         ))
         lines.append("")
 
     from output.renderers.email.command_block import render_commands_plain
     lines.append("")
-    lines.append(render_commands_plain("vergleich"))
+    lines.append(render_commands_plain("vergleich", lang=lang))
     lines.append("")
     lines.append("---")
     lines.append("Gregor Zwanzig")
@@ -453,6 +464,7 @@ def render_compare_email(
     undelivered: list | None = None,
     preset: Optional[dict] = None,
     unresolved_count: int = 0,
+    lang: Lang = "de",
 ) -> tuple[str, str]:
     """Render both HTML and plain-text parts for a compare email (v2, #1110).
 
@@ -493,6 +505,7 @@ def render_compare_email(
         preset=preset,
         # Issue #1405 S3: dieselbe Zahl in BEIDE Fassungen der Mail.
         unresolved_count=unresolved_count,
+        lang=lang,
     )
     text_body = render_comparison_text(
         result, profile=profile, enabled_metrics=enabled_metrics,
@@ -515,6 +528,7 @@ def render_compare_email(
         # gestellt (Teilungs-Invariante).
         undelivered=undelivered,
         unresolved_count=unresolved_count,
+        lang=lang,
     )
     return html_body, text_body
 
@@ -552,6 +566,7 @@ _PLAIN_ROWS_BY_ID = {row[0]: row for row in _PLAIN_ROWS}
 
 def _fmt_overview_cell(
     fmt, value, loc_result: LocationResult, *, include_origin: bool = False,
+    lang: Lang = "de",
 ) -> str:
     """Issue #1475 Nachbesserung (Punkt 5b, Aufrufstellen 3/5/6): DIE EINE
     Stelle, an der die Ortsvergleich-Kanaele Klartext, SMS und Telegram ihren
@@ -571,8 +586,8 @@ def _fmt_overview_cell(
     """
     if fmt is _fmt_thunder:
         signale = loc_thunder_signals(loc_result) if include_origin else None
-        return fmt(value, loc_hail_flag(loc_result), signale)
-    return fmt(value)
+        return fmt_word_cell(fmt, value, lang, loc_hail_flag(loc_result), signale)
+    return fmt_word_cell(fmt, value, lang)
 
 # Issue #1362 (Scheibe S5b): Compare-Renderer-ID -> zentrale Katalog-Metrik-ID
 # (wie von ``metric_catalog.kurzform_kuerzel()`` erwartet), abgeleitet aus den
@@ -671,7 +686,9 @@ def _sms_metric_cell(loc_result: LocationResult, metric_id: str) -> str | None:
     return f"{code} {_sms_gsm7_safe(_fmt_overview_cell(fmt, value, loc_result))}"
 
 
-def _plain_metric_cell(loc_result: LocationResult, metric_id: str) -> str | None:
+def _plain_metric_cell(
+    loc_result: LocationResult, metric_id: str, lang: Lang = "de",
+) -> str | None:
     """"Label Wert"-Zelle fuer ``metric_id``, aus derselben Quelle wie der
     Klartext-Teil derselben Mail (``_PLAIN_ROWS``/``_metric_value``, Issue
     #1362 -- keine zweite Werte-/Formatierungsquelle). ``None`` = Wert nicht
@@ -679,11 +696,12 @@ def _plain_metric_cell(loc_result: LocationResult, metric_id: str) -> str | None
     row = _PLAIN_ROWS_BY_ID.get(metric_id)
     if row is None:
         return None
-    _, label, fmt = row
+    _, label_key, fmt = row
     value = _metric_value(loc_result, metric_id)
     if value is None:
         return None
-    return f"{label} {_fmt_overview_cell(fmt, value, loc_result, include_origin=True)}"
+    zelle = _fmt_overview_cell(fmt, value, loc_result, include_origin=True, lang=lang)
+    return f"{t(label_key, lang)} {zelle}"
 
 
 def _channel_layout_for_metrics(channel: str, metric_ids: list[str]):
@@ -718,8 +736,12 @@ def render_compare_telegram(
     enabled_metrics: list[str] | None = None,
     preset_name: Optional[str] = None,
     unresolved_count: int = 0,
+    lang: Lang = "de",
 ) -> str:
     """Rendert einen Orts-Vergleich als Telegram-Nachricht (Issue #1270).
+
+    ``lang`` (Issue #2666): beschriftete Langform (Kopf, Zeilen, Hinweise) in
+    Nutzersprache; Warnungs-Bubble folgt P6 (#2668).
 
     Reine Funktion, kein Score/Rang (AC-3). Budget aus
     ``CHANNEL_LIMITS["telegram"]``: ``max_table_cols`` = 8 zaehlt inkl. der
@@ -748,14 +770,13 @@ def render_compare_telegram(
 
     locations = location_render_order(result.locations)
     if not locations:
-        return "Keine Vergleichsdaten verfügbar."
+        return t("vergleich.allgemein.keine_daten", lang)
 
     header: list[str] = []
-    if preset_name:
-        header.append(f"ORTS-VERGLEICH — {preset_name}")
-    else:
-        header.append("ORTS-VERGLEICH")
-    header.append(f"Datum: {result.target_date.strftime('%d.%m.%Y')}")
+    titel = t("vergleich.kopf.titel", lang)
+    header.append(f"{titel} — {preset_name}" if preset_name else titel)
+    header.append(t("vergleich.kopf.datum", lang,
+                    datum=fmt_date_numeric(result.target_date, lang)))
     # Issue #1268: Zeitfenster-Zeile ersatzlos entfernt (Bewertung = ganzer Tag),
     # analog render_comparison_text() und compare_html._render_header().
     header.append("")
@@ -764,29 +785,30 @@ def render_compare_telegram(
     for loc_result in locations:
         block = [loc_result.location.name]
         if loc_result.error is not None:
-            block.append(f"   Fehler: {loc_result.error}")
+            block.append("   " + t("vergleich.ort.fehler", lang, fehler=loc_result.error))
             blocks.append(block)
             continue
         # Werte sind ortsabhaengig -- Verfuegbarkeit VOR der Prioritaets-/
         # Slot-Kappung pruefen (Adversary-Korrektur), nicht erst beim
         # Zellenbau. `cell_values` haelt jede Zelle nur einmal vor (keine
         # doppelte `_metric_value`/`_daily_summary`-Berechnung).
-        cell_values = {mid: _plain_metric_cell(loc_result, mid) for mid in dedup_ids}
+        cell_values = {mid: _plain_metric_cell(loc_result, mid, lang) for mid in dedup_ids}
         available_ids = [mid for mid in dedup_ids if cell_values[mid] is not None]
         no_data_count = len(dedup_ids) - len(available_ids) + unresolved_count
         layout = _channel_layout_for_metrics("telegram", available_ids)
         cells = [cell_values[mid] for mid in layout.table_columns]
-        block.append("   " + (" · ".join(cells) if cells else "keine Werte"))
+        block.append("   " + (" · ".join(cells) if cells
+                                 else t("vergleich.telegram.keine_werte", lang)))
         # Zwei getrennt zaehlbare Ausfaelle (Invariante: sichtbare Zellen +
         # Platzmangel-Zaehler + Ohne-Daten-Zaehler == Anzahl gewaehlter
         # Groessen). Je eigene Zeile INNERHALB dieses Ortsblocks, weil beide
         # Zahlen ortsabhaengig sind.
         if layout.demoted_count > 0:
             block.append("   " + telegram_metric_notice(
-                layout.demoted_count, context="vergleich",
+                layout.demoted_count, context="vergleich", lang=lang,
             ))
         if no_data_count > 0:
-            block.append("   " + _telegram_no_data_notice(no_data_count))
+            block.append("   " + _telegram_no_data_notice(no_data_count, lang))
         # Issue #1332 (PO-Korrektur 2026-07-23): Sicherheits-Filter + geteilte,
         # kontext-agnostische Bausteine (`build_official_alert_notices`/
         # `render_official_alert_telegram`, `trip=None` fuer den einzelnen
@@ -811,14 +833,14 @@ def render_compare_telegram(
         _min_level = alert_urgency.min_official_level_for_threshold("LOW")
         filtered = [a for a in loc_result.official_alerts if a.level >= _min_level]
         if filtered:
-            notices = build_official_alert_notices(None, [(a, []) for a in filtered])
+            notices = build_official_alert_notices(None, [(a, []) for a in filtered], lang=lang)
             sources = list(dict.fromkeys(
-                official_alert_source_label(a.source) for a in filtered
+                official_alert_source_label(a.source, lang=lang) for a in filtered
             ))
             warn_text = render_official_alert_telegram(
                 notices, prefix=loc_result.location.name,
                 source_label=" · ".join(sources), show_scope=False,
-                tz=location_tz(loc_result.location),
+                tz=location_tz(loc_result.location), lang=lang,
             )
             block.append(f"   {warn_text}")
         blocks.append(block)
@@ -831,14 +853,19 @@ def render_compare_telegram(
     text = _join_telegram(header, blocks)
     if max_chars is None or len(text) <= max_chars:
         return text
+    # Issue #2666: EIN Hinweis-Baustein in Nutzersprache fuer alle drei
+    # Stellen der Einpass-Logik (Laenge pruefen = Laenge anhaengen).
+    return _fit_telegram(header, blocks, max_chars, lambda n: _telegram_notice(n, lang))
 
-    # Ueberlauf: NICHT hart mitten im Wort schneiden (das ergaebe eine halbe
-    # Datenzeile, die wie ein vollstaendiger Wert aussieht). Stattdessen ganze
-    # ORTSBLOECKE behalten und den Verlust ausweisen — gleiche Einpass-Schleife
-    # mit mitgerechnetem Hinweis wie im SMS-Pfad (alert/render.py:521-529).
+
+def _fit_telegram(header: list[str], blocks: list[list[str]], max_chars: int, hinweis) -> str:
+    """Ueberlauf: NICHT hart mitten im Wort schneiden (das ergaebe eine halbe
+    Datenzeile, die wie ein vollstaendiger Wert aussieht). Stattdessen ganze
+    ORTSBLOECKE behalten und den Verlust ausweisen — gleiche Einpass-Schleife
+    mit mitgerechnetem Hinweis wie im SMS-Pfad (alert/render.py:521-529)."""
     kept: list[list[str]] = []
     for block in blocks:
-        notice = _telegram_notice(len(blocks) - len(kept) - 1)
+        notice = hinweis(len(blocks) - len(kept) - 1)
         if len(_join_telegram(header, kept + [block]) + notice) <= max_chars:
             kept.append(block)
         else:
@@ -849,11 +876,11 @@ def render_compare_telegram(
         # Degeneration: schon der erste Ortsblock sprengt 4096 Zeichen. Dann an
         # der Wortgrenze kuerzen (letztes Sicherheitsnetz, geteilter Helfer
         # `_word_boundary_truncate`) statt mitten im Wort.
-        notice = _telegram_notice(omitted - 1)
+        notice = hinweis(omitted - 1)
         body = _join_telegram(header, [blocks[0]])
         return _word_boundary_truncate(body, max(max_chars - len(notice), 0)) + notice
 
-    body = _join_telegram(header, kept) + _telegram_notice(omitted)
+    body = _join_telegram(header, kept) + hinweis(omitted)
     return body if len(body) <= max_chars else _word_boundary_truncate(body, max_chars)
 
 
@@ -861,15 +888,15 @@ def _join_telegram(header: list[str], blocks: list[list[str]]) -> str:
     return "\n".join(header + [line for block in blocks for line in block])
 
 
-def _telegram_notice(omitted: int) -> str:
+def _telegram_notice(omitted: int, lang: Lang = "de") -> str:
     """Ehrlicher Kuerzungs-Hinweis (#1269): benennt die Zahl der nicht
     dargestellten Orte. Leer, wenn nichts entfaellt. Rang-/score-frei (AC-3)."""
     if omitted <= 0:
         return ""
-    return f"\n… +{omitted} weitere Orte (Telegram-Limit) — vollständig per E-Mail"
+    return "\n" + t("vergleich.telegram.uebersprungen", lang, n=omitted)
 
 
-def _telegram_no_data_notice(no_data_count: int) -> str:
+def _telegram_no_data_notice(no_data_count: int, lang: Lang = "de") -> str:
     """Ehrlicher Hinweis fuer OHNE-DATEN (#1362, Adversary-Fund/Gegenpruefung):
     eine ausgewaehlte Groesse hat an DIESEM Ort keinen Wert (z.B. Ausfall der
     Fallback-Kette) -- anders als der Platzmangel-Fall
@@ -881,7 +908,7 @@ def _telegram_no_data_notice(no_data_count: int) -> str:
     s. ``render_comparison_text``), das waere also ein falsches Versprechen.
     Leer, wenn nichts fehlt. Issue #1405 S3: Wortlaut aus dem EINEN Baustein
     ``selection_gap_notice`` (geteilt mit E-Mail HTML/Klartext)."""
-    return selection_gap_notice(no_data_count, scope="ort")
+    return selection_gap_notice(no_data_count, scope="ort", lang=lang)
 
 
 def _official_alert_sms_marker(

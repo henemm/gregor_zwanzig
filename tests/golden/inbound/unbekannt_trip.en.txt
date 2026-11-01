@@ -1,0 +1,5 @@
+[Unknown command]
+
+Unknown command.
+Available: TODAY, TOMORROW, NOW, STORMS, ROUTE, RESTDAY, STATUS, PAUSE, SKIP, STOP, RESUME, HELP, CODES, STARTDATE, REPORT
+Weather values in the hourly view: send a code (HELP lists them all).

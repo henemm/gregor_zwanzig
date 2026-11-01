@@ -15,6 +15,8 @@ from __future__ import annotations
 from datetime import datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
 
+from i18n import Lang, t
+
 
 def format_starkregen_hint(
     intensity_label: str, onset_minutes: int | None, *, tz: ZoneInfo,
@@ -22,6 +24,7 @@ def format_starkregen_hint(
     event_ongoing_beyond_horizon: bool = False,
     already_running: bool = False,
     source_reach_minutes: int | None = None,
+    lang: Lang = "de",
 ) -> str:
     """"Starker Regen ab ca. HH:MM (in ~N Min), letzter Regen gegen HH:MM." —
     identisches Format wie `RadarNowcastService.format_now_text()` fuer den
@@ -55,19 +58,20 @@ def format_starkregen_hint(
         # bereits, ist die Beginn-Angabe eine Falschaussage -- und
         # `onset_minutes` darf hier `None` sein (kein kuenftiger Beginn
         # bestimmbar). Die Ende-Angabe unten bleibt unveraendert.
-        satz = f"{intensity_label} läuft bereits"
+        satz = t("mail.starkregen.laeuft", lang, label=intensity_label)
     else:
         onset_time = now + timedelta(minutes=onset_minutes)
         time_str = local_dt(onset_time, tz).strftime("%H:%M")
-        satz = f"{intensity_label} ab ca. {time_str} (in ~{onset_minutes} Min)"
+        satz = t("mail.starkregen.beginn", lang, label=intensity_label,
+                 zeit=time_str, min=onset_minutes)
     if event_end_minutes is not None:
         end_str = local_dt(
             now + timedelta(minutes=event_end_minutes), tz,
         ).strftime("%H:%M")
         if event_ongoing_beyond_horizon:
-            satz += f", Regen mindestens bis {end_str}"
+            satz += t("mail.starkregen.ende_mindestens", lang, zeit=end_str)
         else:
-            satz += f", letzter Regen gegen {end_str}"
+            satz += t("mail.starkregen.ende_letzter", lang, zeit=end_str)
     # Issue #2051 S3 (E5): Reichweite additiv, aber NICHT bei gesetztem
     # R4-Waechter -- die Untergrenzenform traegt die Reichweiten-Aussage
     # bereits implizit.
@@ -75,7 +79,7 @@ def format_starkregen_hint(
         reach_str = local_dt(
             now + timedelta(minutes=source_reach_minutes), tz,
         ).strftime("%H:%M")
-        satz += f" · Radar reicht bis {reach_str}"
+        satz += t("mail.starkregen.reichweite", lang, zeit=reach_str)
     # Issue #2051 S3 (E4): Guete-Grenze -- ausgeloest, wenn Beginn ODER Ende
     # jenseits der Grenze liegen. Genannt wird die GRENZZEIT selbst.
     limit = radar_service_mod.LOCATION_SHARPNESS_LIMIT_MIN
@@ -85,7 +89,7 @@ def format_starkregen_hint(
     )
     if jenseits_guete:
         guete_str = local_dt(now + timedelta(minutes=limit), tz).strftime("%H:%M")
-        satz += f" · Ortsangabe ab {guete_str} unscharf"
+        satz += t("mail.starkregen.unscharf", lang, zeit=guete_str)
     return satz + "."
 
 
