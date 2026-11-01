@@ -24,6 +24,7 @@ import {
 	GOLDEN_DIR,
 	locale,
 	trFor,
+	trnFor,
 	schreibeGolden,
 	kontoRendern,
 	kontoDaten,
@@ -35,6 +36,8 @@ import {
 } from '../../__tests__/f4KontoAdminNavSsr.ts';
 import { ROUTES, teilbaum } from '../../__tests__/onboardingSsr.ts';
 import { deutscheReste, sichtbarerText, attributText } from '../../__tests__/f3Sprachpruefung.ts';
+import { F4_ANKER } from '../../__tests__/f4KatalogAnker.ts';
+import { readdirSync } from 'node:fs';
 
 const { profileSaveErrorMessage } = await import(pathToFileURL(path.join(ROUTES, 'account/profileSaveError.ts')).href);
 const { deleteErrorText } = await import(pathToFileURL(path.join(ROUTES, 'account/deleteErrorText.ts')).href);
@@ -195,6 +198,7 @@ describe('AC-3: „Zuletzt" der Scheduler-Karte (timeAgo) in beiden Sprachen', (
 	const FAELLE_ZEIT: [number, string, string][] = [
 		[0, 'Zuletzt: gerade eben', 'Last: just now'],
 		[3, 'Zuletzt: vor 3 Min', 'Last: 3 min ago'],
+		[60, 'Zuletzt: vor 1 Std', 'Last: 1 h ago'],
 		[120, 'Zuletzt: vor 2 Std', 'Last: 2 h ago'],
 		[1440, 'Zuletzt: vor 1 Tag', 'Last: 1 day ago'],
 		[2880, 'Zuletzt: vor 2 Tagen', 'Last: 2 days ago']
@@ -306,5 +310,35 @@ describe('AC-1: zwei Nutzer, zwei Sprachen, gleiche Zahlen, getrennte Daten', ()
 		assert.ok(!ta.includes('bert') && !ta.includes('Berts Ort'), 'A sieht Daten von B');
 		hat(tb, 'Berts Ort');
 		assert.ok(!tb.includes('anna') && !tb.includes('Annas Ort'), 'B sieht Daten von A');
+	});
+});
+
+describe('F001: jeder F4-Katalogwert ist als festes de/en-Literal verankert', () => {
+	/** Platzhalter des Literals (<name>) werden als Parameter `<name>` eingesetzt. */
+	const params = (literal: string) =>
+		Object.fromEntries([...literal.matchAll(/<([a-z0-9_]+)>/g)].map((m) => [m[1], `<${m[1]}>`]));
+	for (const [k, de, en] of F4_ANKER) {
+		test(k, () => {
+			assert.equal(trFor('de', k, params(de)), de, `de ${k}`);
+			assert.equal(trFor('en', k, params(en)), en, `en ${k}`);
+		});
+	}
+
+	test('statischer Gegencheck: Anker-Tabelle == Schluessel von konto/admin/nav (de und en)', () => {
+		const MSG = path.join(ROUTES, '..', 'lib', 'i18n', 'messages');
+		for (const lang of ['de', 'en']) {
+			const dateien = readdirSync(path.join(MSG, lang)).filter((d) => ['konto.json', 'admin.json', 'nav.json'].includes(d));
+			assert.equal(dateien.length, 3);
+			const schluessel = dateien.flatMap((d) => Object.keys(JSON.parse(readFileSync(path.join(MSG, lang, d), 'utf-8'))));
+			assert.deepEqual([...schluessel].sort(), F4_ANKER.map(([k]) => k).sort(), `${lang}: Schluessel ohne Anker oder Anker ohne Schluessel`);
+		}
+		assert.equal(new Set(F4_ANKER.map(([k]) => k)).size, F4_ANKER.length, 'doppelte Anker');
+	});
+
+	test('F002: Plural exakt — „vor 1 Std" | „1 h ago", „vor 1 Tag" | „1 day ago"', () => {
+		assert.equal(trnFor('de', 'konto.zeit.vor_stunden', 1), 'vor 1 Std');
+		assert.equal(trnFor('en', 'konto.zeit.vor_stunden', 1), '1 h ago');
+		assert.equal(trnFor('en', 'konto.zeit.vor_tagen', 1), '1 day ago');
+		assert.equal(trnFor('en', 'konto.zeit.vor_tagen', 3), '3 days ago');
 	});
 });
