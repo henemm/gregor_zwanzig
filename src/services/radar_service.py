@@ -191,7 +191,15 @@ def intensity_text(label: str, lang: str = "de") -> str:
     from i18n import t
 
     key = _INTENSITY_KEYS.get(label)
-    return t(key, lang) if key else label
+    if key:
+        return t(key, lang)
+    # Issue #2672: der Trip-Radar-Pfad schreibt das Label fuer die Satzmitte
+    # klein (F002, ``trip_alert``) -- dieselbe Schreibung in ``lang``.
+    key = _INTENSITY_KEYS.get(label[:1].upper() + label[1:])
+    if key:
+        text = t(key, lang)
+        return text[:1].lower() + text[1:]
+    return label
 
 
 _INTENSITY_EN = {

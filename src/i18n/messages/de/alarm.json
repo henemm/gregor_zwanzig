@@ -76,5 +76,9 @@
   "alarm.segment.liste": "Segment {liste}",
   "alarm.segment.anzahl": "{n} Segmente",
   "alarm.nachtrag.amtlich": "Ergänzung zur amtlichen Warnung",
-  "alarm.nachtrag.abweichung": "Ergänzung zur gemeldeten Wetterabweichung"
+  "alarm.nachtrag.abweichung": "Ergänzung zur gemeldeten Wetterabweichung",
+  "alarm.nachtrag.von": " von {zeit}",
+  "alarm.kontext.akut": "bereits angekündigt — jetzt akut",
+  "alarm.kontext.angekuendigt": "bereits angekündigt",
+  "alarm.kontext.nicht_angekuendigt": "nicht angekündigt"
 }

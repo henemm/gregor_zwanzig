@@ -17,7 +17,7 @@ from fastapi.responses import JSONResponse
 
 from i18n import resolve_user_lang
 from services.scheduler_dispatch_service import send_compare_preset
-from services.send_outcomes import SEND_OUTCOMES, error_body
+from services.send_outcomes import SEND_OUTCOMES, InvalidPresetError, error_body
 
 router = APIRouter(tags=["briefings"])
 logger = logging.getLogger("briefings_send")
@@ -63,6 +63,9 @@ def _send_vergleich(entity_id: str, user_id: str):
         result = send_compare_preset(user_id, entity_id)
     except KeyError:
         return _error("not_found", user_id, entity_id=entity_id)
+    except InvalidPresetError as e:
+        # Issue #2672: der Grund in der Sprache des Nutzers (Katalogschluessel).
+        return _error("invalid_preset", user_id, reason=e.reason_text(resolve_user_lang(user_id)))
     except ValueError as e:
         return _error("invalid_preset", user_id, reason=str(e))
     outcome = result.get("status")

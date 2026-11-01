@@ -30,5 +30,21 @@
   "versand.ergebnis.invalid_report_type": "Ungültiger Berichtstyp {report_type} (erlaubt: morning, evening)",
   "versand.ergebnis.smtp_not_configured": "E-Mail-Versand (SMTP) ist für diesen Nutzer nicht eingerichtet",
   "versand.ergebnis.invalid_preset": "Ortsvergleich nicht versendbar: {reason}",
-  "versand.ergebnis.send_failed": "Versand fehlgeschlagen — interner Fehler, bitte später erneut versuchen"
+  "versand.ergebnis.send_failed": "Versand fehlgeschlagen — interner Fehler, bitte später erneut versuchen",
+  "versand.scheduler.nachgeliefert": "Nachgeliefert — der Wetterdienst war um {stunde}:00 nicht erreichbar",
+  "versand.scheduler.aktualisiert_unvollstaendig": "Aktualisiert — weiterhin unvollständig, Details im Hinweis",
+  "versand.scheduler.aktualisiert_vollstaendig": "Aktualisiert — jetzt mit vollständigen Daten",
+  "versand.scheduler.zustellung_fehlgeschlagen": "Nachgeliefert — die Zustellung um {stunde} ist fehlgeschlagen",
+  "versand.scheduler.teilausfall": "Hinweis: Für folgende Abschnitte liegen aktuell keine Wetterdaten vor ({abschnitte}) — eine Aktualisierung wird nachgeliefert.",
+  "versand.scheduler.abschnitt": "Segment {id}",
+  "versand.scheduler.vergleich_betreff": "Wetter-Vergleich: {name} ({datum})",
+  "versand.scheduler.trend_gewitter": "Gewitter möglich",
+  "versand.scheduler.trend_regen": "Regen {mm} mm",
+  "versand.scheduler.trend_boeen": "Böen bis {kmh} km/h",
+  "versand.servicefehler.titel": "Service-Benachrichtigung",
+  "versand.servicefehler.problem": "Wetterdaten konnten nicht abgerufen werden.",
+  "versand.servicefehler.segmente": "Betroffene Segmente:",
+  "versand.servicefehler.grund": "Diese E-Mail wurde automatisch gesendet, weil Ihr Trip nur SMS aktiviert hat und Anbieter-Fehler aufgetreten sind.",
+  "versand.servicefehler.fusszeile": "automatischer Wetter-Service",
+  "versand.grund.orte_geloescht": "Ortsvergleich '{preset_id}' verweist auf gelöschte Orte. Ersetze die Orte im Ortsvergleich. (Orte {orte} nicht aufloesbar)"
 }

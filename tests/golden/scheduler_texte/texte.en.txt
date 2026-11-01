@@ -85,7 +85,7 @@ E1: D2/2 TF? FD?/? W15@4 G22@4 R? TH:? TH+:- SL2200 CT:SCT@4 SU9
 ----- servicefehler.header -----
 en
 ----- gewitter.tag -----
-29 Oct 2026: Thunderstorm possible from 10:00 · CAPE, lightning · Hail: yes, at night strong thunderstorm from 02:00 · Hail: yes
+29 Oct 2026: Thunderstorm possible from 10:00 · CAPE, Lightning density · Hail: yes, at night strong thunderstorm from 02:00 · Hail: yes
 ----- gewitter.leicht -----
 29 Oct 2026: Unstable air mass (light) from 11:00 · CAPE
 ----- gewitter.kein -----
@@ -100,6 +100,8 @@ Thunderstorm possible · Rain 9 mm · Gusts up to 50 km/h
 Weak signal (light)
 ----- trend_notiz.ruhig -----
 None
+----- gewitter_abruf.+1 -----
+30 Oct 2026: Thunderstorm possible from 11:00 · Lightning density · Hail: yes, at night strong thunderstorm from 03:00 · Hail: yes
 ----- vergleich.betreff -----
 Weather comparison: Tirol (29 Oct 2026)
 ----- vergleich.header -----
@@ -241,6 +243,23 @@ Created: 29 Oct 2026 05:00 (CET)
 ----- vergleich_kurzform.telegram -----
 Vergleich 29.10.: Innsbruck D 14C W 12 km/h SU 4.0h CT 40% ?2; Stubai D 14C W 12 km/h SU 4.0h CT 40% ?2; Zillertal D 14C W 12 km/h SU 4.0h CT 40% ?2
 ----- vergleich_kurzform.sms -----
+Vergleich 29.10.: Innsbruck D 14C W 12 km/h SU 4.0h CT 40% ?2; Stubai D 14C W 12 km/h SU 4.0h CT 40% ?2; Zillertal D 14C W 12 km/h SU 4.0h CT 40% ?2
+----- vorschau.subject -----
+Weather comparison: Tirol (29 Oct 2026)
+----- vorschau.telegram -----
+LOCATION COMPARISON — Tirol
+Date: 29 Oct 2026
+
+Innsbruck
+   Temp max 14°C · Wind 12 km/h · Sun 4.0h · Clouds 40%
+   … +2 selected weather values without data at this location
+Stubai
+   Temp max 14°C · Wind 12 km/h · Sun 4.0h · Clouds 40%
+   … +2 selected weather values without data at this location
+Zillertal
+   Temp max 14°C · Wind 12 km/h · Sun 4.0h · Clouds 40%
+   … +2 selected weather values without data at this location
+----- vorschau.sms -----
 Vergleich 29.10.: Innsbruck D 14C W 12 km/h SU 4.0h CT 40% ?2; Stubai D 14C W 12 km/h SU 4.0h CT 40% ?2; Zillertal D 14C W 12 km/h SU 4.0h CT 40% ?2
 ----- alarm.gesendet -----
 1

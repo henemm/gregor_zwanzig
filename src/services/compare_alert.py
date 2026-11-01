@@ -20,6 +20,7 @@ from datetime import datetime, timedelta, timezone
 from typing import Optional
 
 from app.config import Settings
+from i18n import Lang, resolve_user_lang
 from app.loader import load_all_locations
 from providers.enrichment_health import (
     OUTCOME_OK, OUTCOME_UNAVAILABLE, PATH_ALERT_FETCH, log_enrichment_call,
@@ -109,6 +110,8 @@ class CompareAlertService:
     ) -> None:
         self._settings = settings if settings else Settings().with_user_profile(user_id)
         self._user_id = user_id
+        # Issue #2672: Sprache EINMAL je Dienstobjekt (Nutzer), kein Modulzustand.
+        self._lang: Lang = resolve_user_lang(user_id)
         self._weather_source = weather_source or CompareLocationWeatherSource()
         self._mail_sink = mail_sink
         self._snapshot_service = CompareWeatherSnapshotService(user_id=user_id)
@@ -466,6 +469,7 @@ class CompareAlertService:
                 reference_at = format_reference_at(
                     first_anchor_fetched_at,
                     tz_for_coords(first_loc.lat, first_loc.lon),
+                    lang=self._lang,
                 )
             notif_result = notification_service.send_multi_location_deviation_alert(
                 entities=entities,
@@ -942,6 +946,7 @@ class CompareAlertService:
         `compare_preset_access.notification_service_for_preset`."""
         return notification_service_for_preset(
             self._settings, self._user_id, preset, log_label="Compare-Alert:",
+            lang=self._lang,
         )
 
     def _load_presets(self) -> list[dict]:

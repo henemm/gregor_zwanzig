@@ -26,6 +26,7 @@ from datetime import datetime, timedelta, timezone
 from typing import Optional
 
 from app.config import Settings
+from i18n import Lang, resolve_user_lang
 import app.day_window as day_window
 from app.loader import load_all_locations
 from output.renderers.alert.official_alerts import (
@@ -118,6 +119,8 @@ class CompareOfficialAlertService:
     ) -> None:
         self._settings = settings if settings else Settings().with_user_profile(user_id)
         self._user_id = user_id
+        # Issue #2672: Sprache EINMAL je Dienstobjekt (Nutzer), kein Modulzustand.
+        self._lang: Lang = resolve_user_lang(user_id)
         self._mail_sink = mail_sink
         self._sms_sink = sms_sink
         self._telegram_sink = telegram_sink
@@ -620,6 +623,7 @@ class CompareOfficialAlertService:
         `compare_preset_access.notification_service_for_preset`."""
         return notification_service_for_preset(
             self._settings, self._user_id, preset, log_label="Compare-Alert (amtlich):",
+            lang=self._lang,
         )
 
     def _load_presets(self) -> list[dict]:

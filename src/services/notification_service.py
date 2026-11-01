@@ -326,7 +326,9 @@ class RadarAlertRequest:
     segment_date: date | None = None
 
 
-def build_service_error_email_html(trip_name: str, report_type: str, error_lines: str) -> str:
+def build_service_error_email_html(
+    trip_name: str, report_type: str, error_lines: str, *, lang: Lang = "de",
+) -> str:
     """Service-Error E-Mail-Body mit Design-System tokens.
 
     Aus trip_report_scheduler.py hierher verschoben (Issue #1022), weil die
@@ -357,21 +359,20 @@ def build_service_error_email_html(trip_name: str, report_type: str, error_lines
         '</head>'
         '<body>'
         '<div class="container">'
-        '<h2 class="heading">Service-Benachrichtigung</h2>'
+        f'<h2 class="heading">{t("versand.servicefehler.titel", lang)}</h2>'
         '<div class="meta">'
         f'<strong>Trip:</strong> {trip_name}<br>'
         f'<strong>Report:</strong> {report_type.title()}<br>'
-        '<strong>Problem:</strong> Wetterdaten konnten nicht abgerufen werden.'
+        f'<strong>Problem:</strong> {t("versand.servicefehler.problem", lang)}'
         '</div>'
-        '<p><strong>Betroffene Segmente:</strong></p>'
+        f'<p><strong>{t("versand.servicefehler.segmente", lang)}</strong></p>'
         f'<div class="error-block">{error_lines}</div>'
         '<p style="font-size:13px; color:#5c5a52;">'
-        'Diese E-Mail wurde automatisch gesendet, weil Ihr Trip nur SMS aktiviert '
-        'hat und Anbieter-Fehler aufgetreten sind.'
+        f'{t("versand.servicefehler.grund", lang)}'
         '</p>'
         '</div>'
         f'<div class="footer" style="background:{G_INK}; color:#ffffff;">'
-        'Gregor Zwanzig &mdash; automatischer Wetter-Service'
+        f'Gregor Zwanzig &mdash; {t("versand.servicefehler.fusszeile", lang)}'
         '</div>'
         '</body>'
         '</html>'
@@ -1537,9 +1538,10 @@ class NotificationService:
                     to=recipients,
                     compare_hourly_enabled=compare_hourly_enabled,
                     mail_type="compare",  # Issue #1124: X-GZ-Mail-Type
-                    # X-GZ-Lang = Sprache des INHALTS: der Ortsvergleich wird bis
-                    # P9b (#2672) in scheduler_dispatch_service deutsch gerendert.
-                    lang="de",
+                    # X-GZ-Lang = Sprache des INHALTS: seit #2672 rendert
+                    # scheduler_dispatch_service den Ortsvergleich in derselben
+                    # Sprache, mit der dieser Dienst gebaut wurde.
+                    lang=self._lang,
                 )
             sent_channels.append("email")
 
@@ -2480,16 +2482,17 @@ class NotificationService:
             for e in request.failed_segments
             if e.segment is not None
         )
-        # Rumpf (build_service_error_email_html) ist noch deutsch: Betreff und
-        # X-GZ-Lang bleiben bis zur Umstellung des Rumpfs (#2672) deutsch.
-        subject = t("versand.betreff.wetterdaten_fehlen_ascii", "de", trip=request.trip.name)
+        # Issue #2672: Rumpf, Betreff und X-GZ-Lang in derselben Sprache.
+        subject = t("versand.betreff.wetterdaten_fehlen_ascii", self._lang, trip=request.trip.name)
         body = build_service_error_email_html(
             trip_name=request.trip.name,
             report_type=request.report_type,
             error_lines=error_lines,
+            lang=self._lang,
         )
         try:
-            EmailOutput(self._settings).send(subject=subject, body=body, html=True, lang="de")
+            EmailOutput(self._settings).send(subject=subject, body=body, html=True,
+                                             lang=self._lang)
             logger.info(f"Service error email sent for {request.trip.name}")
         except Exception as e:
             logger.error(f"Failed to send service error email: {e}")

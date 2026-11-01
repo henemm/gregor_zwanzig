@@ -271,22 +271,27 @@ def test_briefing_sms_premium_und_kurzstil_in_en_wie_de(rig):
 
 @pytest.mark.parametrize("lang", ["de", "en"])
 def test_ortsvergleich_briefing_kopf_ist_sprache_des_inhalts(rig, lang):
-    """Bis P9b (#2672) rendert scheduler_dispatch_service den Ortsvergleich deutsch:
-    der Kopf sagt deshalb fuer jeden Nutzer ``de`` (kein Fehlalarm, keine Mischmail)."""
+    """Seit P9b (#2672) rendert scheduler_dispatch_service den Ortsvergleich in
+    der Sprache, mit der der Dienst gebaut wurde: der Kopf sagt ``lang``."""
     uid = f"vgl-{lang}"
     nutzer_anlegen(uid, lang)
     rig.zaehler_leeren()
     _vergleich_briefing(rig, NotificationService(rig.settings(), uid), uid, lang)
-    assert [m[2] for m in _mails(rig)] == ["de"]
+    assert [m[2] for m in _mails(rig)] == [lang]
 
 
-def test_servicefehler_mail_betreff_und_kopf_wie_rumpf_deutsch(rig):
-    """Rumpf der Service-Fehler-Mail ist noch deutsch: Betreff + Kopf ebenso."""
+@pytest.mark.parametrize("lang", ["de", "en"])
+def test_servicefehler_mail_betreff_und_kopf_wie_rumpf(rig, lang):
+    """Seit P9b (#2672) ist der Rumpf der Service-Fehler-Mail uebersetzt:
+    Betreff, Kopf und Rumpf in derselben Sprache."""
+    from i18n import t
     from tests.helpers.versand_fixture import service_fehler_betreff
 
-    nutzer_anlegen("svc-en", "en")
-    werte = dict(service_fehler_betreff(rig, "svc-en"))
-    assert werte == {"servicefehler.betreff": "[GR20] Wetterdaten nicht verfuegbar",
-                     "servicefehler.header": "de"}
+    nutzer_anlegen(f"svc-{lang}", lang)
+    werte = dict(service_fehler_betreff(rig, f"svc-{lang}"))
+    assert werte == {
+        "servicefehler.betreff": t("versand.betreff.wetterdaten_fehlen_ascii", lang, trip="GR20"),
+        "servicefehler.header": lang,
+    }
     _betreff, text, _ = _mails(rig)[-1]
-    assert "Wetterdaten konnten nicht abgerufen werden" in text
+    assert t("versand.servicefehler.problem", lang) in text

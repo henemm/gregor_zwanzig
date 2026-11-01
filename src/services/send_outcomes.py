@@ -45,6 +45,21 @@ class SendOutcomeError(ValueError):
         self.code = code
 
 
+class InvalidPresetError(ValueError):
+    """Ortsvergleich nicht versendbar, Grund als Katalogschluessel (#2672).
+
+    Der Text der Ausnahme bleibt die deutsche Fassung (Log, Bestand); die
+    Fehlerantwort an den Nutzer rendert ``reason_text(lang)``."""
+
+    def __init__(self, reason_key: str, **values) -> None:
+        self.reason_key = reason_key
+        self.values = {k: str(v) for k, v in values.items()}
+        super().__init__(self.reason_text("de"))
+
+    def reason_text(self, lang: Lang) -> str:
+        return t(self.reason_key, lang, **self.values)
+
+
 def outcome_from_result(result) -> str:
     """``NotificationResult`` -> ``"no_channels"`` | ``"channels_unreachable"`` | ``"sent"``."""
     if result.no_channel_configured:

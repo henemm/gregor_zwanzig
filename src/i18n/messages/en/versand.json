@@ -30,5 +30,21 @@
   "versand.ergebnis.invalid_report_type": "Invalid report type {report_type} (allowed: morning, evening)",
   "versand.ergebnis.smtp_not_configured": "Email delivery (SMTP) is not set up for this user",
   "versand.ergebnis.invalid_preset": "Location comparison cannot be sent: {reason}",
-  "versand.ergebnis.send_failed": "Delivery failed — internal error, please try again later"
+  "versand.ergebnis.send_failed": "Delivery failed — internal error, please try again later",
+  "versand.scheduler.nachgeliefert": "Delivered late — the weather service was unavailable at {stunde}:00",
+  "versand.scheduler.aktualisiert_unvollstaendig": "Updated — still incomplete, see the note for details",
+  "versand.scheduler.aktualisiert_vollstaendig": "Updated — now with complete data",
+  "versand.scheduler.zustellung_fehlgeschlagen": "Delivered late — delivery at {stunde} failed",
+  "versand.scheduler.teilausfall": "Note: weather data is currently missing for the following sections ({abschnitte}) — an update will follow.",
+  "versand.scheduler.abschnitt": "Segment {id}",
+  "versand.scheduler.vergleich_betreff": "Weather comparison: {name} ({datum})",
+  "versand.scheduler.trend_gewitter": "Thunderstorm possible",
+  "versand.scheduler.trend_regen": "Rain {mm} mm",
+  "versand.scheduler.trend_boeen": "Gusts up to {kmh} km/h",
+  "versand.servicefehler.titel": "Service notification",
+  "versand.servicefehler.problem": "Weather data could not be retrieved.",
+  "versand.servicefehler.segmente": "Affected segments:",
+  "versand.servicefehler.grund": "This email was sent automatically because your trip only has SMS enabled and provider errors occurred.",
+  "versand.servicefehler.fusszeile": "automatic weather service",
+  "versand.grund.orte_geloescht": "Location comparison '{preset_id}' refers to deleted locations. Replace the locations in the location comparison. (Locations {orte} cannot be resolved)"
 }

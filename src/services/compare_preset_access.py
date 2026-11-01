@@ -19,6 +19,7 @@ from __future__ import annotations
 import logging
 
 from app.config import Settings
+from i18n import Lang
 from app.loader import compare_preset_to_dict, load_compare_presets
 from services.notification_service import NotificationService
 
@@ -35,6 +36,7 @@ def load_compare_alert_presets(user_id: str) -> list[dict]:
 
 def notification_service_for_preset(
     settings: Settings, user_id: str, preset: dict, *, log_label: str,
+    lang: Lang | None = None,
 ) -> NotificationService:
     """Empfaenger ausschliesslich aus den Konto-Settings des Nutzers (Muster
     `trip_alert.py:125`). Issue #1452: `preset.empfaenger` ist inert — ein
@@ -50,4 +52,4 @@ def notification_service_for_preset(
             "Konto-Settings — Preset %s kann keine E-Mail zustellen.",
             log_label, user_id, preset.get("id", ""),
         )
-    return NotificationService(settings, user_id)
+    return NotificationService(settings, user_id, lang=lang)
