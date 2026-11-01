@@ -8,6 +8,7 @@
 	import type { ConnectionProfile } from '$lib/components/shared/versand-tab/channelConnectionStatus.js';
 	import type { SendTargetChannels } from '$lib/components/shared/versand-tab/sendTargetLabel.js';
 	import type { SubscriptionKind } from '$lib/components/shared/subscriptionTabs.js';
+	import { t } from '$lib/i18n';
 
 	interface Props {
 		open: boolean;
@@ -33,9 +34,9 @@
 
 <ConfirmDialog
 	{open}
-	title="Briefing senden?"
+	title={$t('bausteine.senden_dialog.titel')}
 	description={modell.beschreibung}
-	confirmLabel="Senden"
+	confirmLabel={$t('aktionen.senden')}
 	disabled={gesperrt}
 	data-testid="send-confirm-dialog"
 	cancelTestid="send-confirm-cancel"
@@ -47,7 +48,7 @@
 	}}
 >
 	{#if modell.berichtsartWahl}
-		<div class="flex gap-4" role="radiogroup" aria-label="Berichtsart">
+		<div class="flex gap-4" role="radiogroup" aria-label={$t('bausteine.senden_dialog.berichtsart')}>
 			{#each modell.berichtsartWahl as w (w.value)}
 				<label class="inline-flex items-center gap-2 min-h-[44px] text-sm cursor-pointer">
 					<input

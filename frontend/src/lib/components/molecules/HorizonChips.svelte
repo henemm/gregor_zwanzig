@@ -5,6 +5,8 @@
 	// Drei Pills HEUTE / MORGEN / ÜBERMORGEN für die pro-Metrik-Horizont-Wahl
 	// (Trip-Kontext). Aktiv = ink-on-paper; inaktiv = ghost.
 
+	import { t, type MessageKey } from '$lib/i18n';
+
 	interface Props {
 		value?: Record<string, boolean>;
 		onToggle?: (key: string) => void;
@@ -14,10 +16,10 @@
 
 	let { value = {}, onToggle, compact = false, class: className = '' }: Props = $props();
 
-	const items = [
-		{ key: 'today',     label: 'HEUTE' },
-		{ key: 'tomorrow',  label: 'MORGEN' },
-		{ key: 'day_after', label: 'ÜBERM.' },
+	const items: { key: string; label: MessageKey }[] = [
+		{ key: 'today',     label: 'bausteine.horizont.heute' },
+		{ key: 'tomorrow',  label: 'bausteine.horizont.morgen' },
+		{ key: 'day_after', label: 'bausteine.horizont.uebermorgen_kurz' },
 	];
 </script>
 
@@ -37,6 +39,6 @@
 			style:border={on ? '1px solid var(--g-accent)' : '1px solid var(--g-rule)'}
 			style:border-radius="var(--g-r-pill)"
 			style:cursor="pointer"
-		>{it.label}</button>
+		>{$t(it.label)}</button>
 	{/each}
 </div>

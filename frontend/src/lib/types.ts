@@ -425,6 +425,10 @@ export interface HealthResponse {
 export interface ApiError {
 	error: string;
 	detail?: string;
+	/** #2675/#2660: stabiler Go-Fehlercode (snake_case); das Frontend uebersetzt bekannte Codes. */
+	code?: string;
+	/** #2675: Server-Text in der Sprache der Anfrage. */
+	message?: string;
 	/**
 	 * Issue #1395 S3: HTTP-Statuscode der abgelehnten Antwort. Erlaubt es
 	 * Aufrufern, einen Nebenlaeufigkeits-Konflikt (`412`) von einem gewoehnlichen

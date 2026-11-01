@@ -133,7 +133,7 @@ export function starteNachladenNachEntladen<T>(o: NachladeOptionen<T>): {
 export function tripNachladeQuelle<T = unknown>(tripId: string): () => Promise<NachladeAntwort<T>> {
 	return async () => {
 		const { daten, etag, inRegistry } = await getMitFassung<T>(`/api/trips/${encodeURIComponent(tripId)}`);
-		if (!etag || !inRegistry) throw new Error('Nachladen: Fassung passt nicht zur Registry');
+		if (!etag || !inRegistry) throw new Error('Nachladen: Fassung passt nicht zur Registry'); // i18n-log
 		return { stand: daten, fassung: etag };
 	};
 }

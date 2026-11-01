@@ -6,6 +6,7 @@
 // HubOverview.svelte konsumiert.
 
 import type { StagesWeatherResponse } from '../types';
+import { tr } from '../i18n/index.ts';
 
 export type StageRisk = 'green' | 'yellow' | 'red' | null;
 
@@ -17,9 +18,9 @@ export interface RiskPill {
 // Mapping (PO-bestätigt): red→bad/'Risiko', yellow→warn/'Achten', green→good/'OK',
 // null|undefined → neutral/'—' (KEIN Falsch-Grün).
 export function riskToPill(risk: StageRisk | undefined): RiskPill {
-	if (risk === 'red') return { tone: 'bad', label: 'Risiko' };
-	if (risk === 'yellow') return { tone: 'warn', label: 'Achten' };
-	if (risk === 'green') return { tone: 'good', label: 'OK' };
+	if (risk === 'red') return { tone: 'bad', label: tr('bausteine.risiko.rot') };
+	if (risk === 'yellow') return { tone: 'warn', label: tr('bausteine.risiko.gelb') };
+	if (risk === 'green') return { tone: 'good', label: tr('bausteine.risiko.gruen') };
 	return { tone: 'neutral', label: '—' };
 }
 

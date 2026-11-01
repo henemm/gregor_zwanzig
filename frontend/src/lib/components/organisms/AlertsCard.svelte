@@ -6,6 +6,7 @@
 
 	import { Card, Eyebrow } from '$lib/components/atoms';
 	import AlertRow from '../molecules/AlertRow.svelte';
+	import { t } from '$lib/i18n';
 
 	interface Alert {
 		metric: string;
@@ -33,9 +34,9 @@
 		style:margin-bottom="12px"
 	>
 		<div>
-			<Eyebrow style="margin-bottom: 4px">Alerts · letzte 24 h</Eyebrow>
+			<Eyebrow style="margin-bottom: 4px">{$t('bausteine.alarme.titel')}</Eyebrow>
 			<div style:font-size="17px" style:font-weight="600">
-				{alerts.length > 0 ? `${alerts.length} ausgelöst` : 'Keine'}
+				{alerts.length > 0 ? $t('bausteine.alarme.ausgeloest', { anzahl: alerts.length }) : $t('bausteine.alarme.keine')}
 			</div>
 		</div>
 		<a
@@ -44,7 +45,7 @@
 			style:color="var(--g-ink-3)"
 			style:text-decoration="none"
 			style:font-family="var(--g-font-mono)"
-		>Schwellen →</a>
+		>{$t('bausteine.alarme.schwellen')}</a>
 	</div>
 
 	{#if alerts.length > 0}
@@ -53,7 +54,7 @@
 		{/each}
 	{:else}
 		<div style:font-size="13px" style:color="var(--g-ink-3)" style:line-height="1.5" style:padding-top="2px">
-			Keine Schwellen-Überschreitung. Du wirst sofort benachrichtigt, sobald eine Bedingung kippt.
+			{$t('bausteine.alarme.leer')}
 		</div>
 	{/if}
 </Card>

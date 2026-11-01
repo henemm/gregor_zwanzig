@@ -1,6 +1,8 @@
 // Issue #2216 — Aufbereitung der 409-Antwort `location_in_use` beim Ort-Loeschen.
 // Reine Logik, per `node --test` pruefbar. Spec: fix_2216_ort_loeschen_sperre.md (AC-4).
 
+import { tr } from '../i18n/index.ts';
+
 export type OrtInUseHinweis = {
 	text: string;
 	links: { href: string; name: string }[];
@@ -16,7 +18,7 @@ export function ortInUseHinweis(fehler: unknown): OrtInUseHinweis | null {
 	if (presets.length === 0) return null;
 	const namen = presets.map((p) => p.name).join(', ');
 	return {
-		text: `Dieser Ort wird noch in diesen Ortsvergleichen verwendet: ${namen}. Entferne ihn dort zuerst.`,
+		text: tr('fehler.ort.in_verwendung', { namen }),
 		links: presets.map((p) => ({ href: `/compare/${encodeURIComponent(p.id)}`, name: p.name })),
 	};
 }

@@ -11,6 +11,7 @@
 
 import type { Trip } from '$lib/types';
 import { reportSlotAktiv } from './reportSlotAktiv.ts';
+import { tr } from '../i18n/index.ts';
 
 const TEMPLATE_LABELS: Record<string, string> = {
 	wandern: 'Wandern',
@@ -23,7 +24,6 @@ const TEMPLATE_LABELS: Record<string, string> = {
 	summer_trekking: 'Sommer-Trekking',
 };
 
-const DEFAULT_LABEL = 'Standard-Metriken';
 
 export function getPresetLabel(trip: Trip): string {
 	const savedKey = trip.display_config?.preset_name;
@@ -31,11 +31,10 @@ export function getPresetLabel(trip: Trip): string {
 		return TEMPLATE_LABELS[savedKey];
 	}
 	const profile = trip.aggregation?.profile;
-	if (profile === 'wintersport') return 'Wintersport-Standard';
-	if (profile === 'wandern') return 'Wandern-Standard';
-	if (profile === 'summer_trekking') return 'Sommer-Trekking-Standard';
-	if (profile === 'allgemein') return DEFAULT_LABEL;
-	return DEFAULT_LABEL;
+	if (profile === 'wintersport') return tr('bausteine.profil.standard_wintersport');
+	if (profile === 'wandern') return tr('bausteine.profil.standard_wandern');
+	if (profile === 'summer_trekking') return tr('bausteine.profil.standard_summer_trekking');
+	return tr('bausteine.profil.standard_metriken');
 }
 
 /**

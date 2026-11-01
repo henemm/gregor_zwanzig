@@ -5,12 +5,14 @@ import { sendTargetLabel } from '../shared/versand-tab/sendTargetLabel.ts';
 import type { SendTargetChannels } from '../shared/versand-tab/sendTargetLabel.ts';
 import type { ConnectionProfile } from '../shared/versand-tab/channelConnectionStatus.ts';
 import type { SubscriptionKind } from '../shared/subscriptionTabs.ts';
+import { tr, type MessageKey } from '../../i18n/index.ts';
 
 export type Berichtsart = 'morning' | 'evening';
 
-export const BERICHTSART_WAHL: ReadonlyArray<{ value: Berichtsart; label: string }> = [
-	{ value: 'morning', label: 'Morgen' },
-	{ value: 'evening', label: 'Abend' }
+// #2660: Schluessel statt Text; die Beschriftung entsteht bei jedem Aufruf in der aktuellen Sprache.
+export const BERICHTSART_WAHL: ReadonlyArray<{ value: Berichtsart; labelKey: MessageKey }> = [
+	{ value: 'morning', labelKey: 'bausteine.senden_dialog.morgen' },
+	{ value: 'evening', labelKey: 'bausteine.senden_dialog.abend' }
 ];
 
 export interface SendConfirmModel {
@@ -31,7 +33,7 @@ export function sendConfirmModel(
 	return {
 		beschreibung: ziel.text,
 		gesperrt: ziel.gesperrt,
-		berichtsartWahl: trip ? BERICHTSART_WAHL.map((w) => ({ ...w })) : null,
+		berichtsartWahl: trip ? BERICHTSART_WAHL.map((w) => ({ value: w.value, label: tr(w.labelKey) })) : null,
 		berichtsart: trip ? (auswahl ?? 'morning') : undefined
 	};
 }

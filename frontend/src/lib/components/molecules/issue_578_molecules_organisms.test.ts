@@ -30,6 +30,20 @@ const hasMol = (name: string) => has(join(moleculesDir, name));
 const readOrg = (name: string) => read(join(organismsDir, name));
 const hasOrg = (name: string) => has(join(organismsDir, name));
 
+// #2660 (i18n F11): Texte stehen im Katalog; ihre Pruefung laeuft deshalb ueber
+// den echten SSR-Render (deutsche Standard-Sprache), nicht ueber den Quelltext.
+let ssrRegistriert = false;
+async function gerenderterText(rel: string, props: Record<string, unknown>): Promise<string> {
+	const frontend = join(componentsRoot, '..', '..', '..');
+	if (!ssrRegistriert) {
+		register(pathToFileURL(join(frontend, 'test-svelte-ssr-hooks.mjs')).href, pathToFileURL(frontend + '/').href);
+		ssrRegistriert = true;
+	}
+	const { render } = await import('svelte/server');
+	const komp = (await import(pathToFileURL(join(componentsRoot, rel)).href)).default;
+	return render(komp, { props: props as never }).body.replace(/<!--[\s\S]*?-->/g, '').replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ');
+}
+
 // ════════════════ BLOCK A — Divergenz-Fixes ════════════════
 
 describe('AC-1: QuickAction — Shadow + Rule-Border + Mono-Sub + SVG-Chevron', () => {
@@ -131,14 +145,18 @@ describe('AC-2/3: SetupResumeCard — accent-Leiste + Shadow + Chip-Layout + Foo
 			'SetupResumeCard: Chip-Reihe braucht border-radius: var(--g-r-pill)'
 		);
 	});
-	test('SetupResumeCard Footer-Leiste: card-alt + "Weiter bei"', () => {
+	test('SetupResumeCard Footer-Leiste: card-alt + "Weiter bei"', async () => {
 		const src = readMol('SetupResumeCard.svelte');
 		assert.ok(
 			/g-card-alt/.test(src),
 			'SetupResumeCard: Footer-Leiste mit --g-card-alt-Hintergrund fehlt'
 		);
+		const text = await gerenderterText('molecules/SetupResumeCard.svelte', {
+			eyebrow: 'E', title: 'T', ctaLabel: 'Weiter', ctaHref: '/x',
+			steps: [{ label: 'Route', done: true }, { label: 'Etappen', done: false }]
+		});
 		assert.ok(
-			/Weiter bei/.test(src),
+			/Weiter bei: Etappen/.test(text),
 			'SetupResumeCard: "Weiter bei:"-Text in Footer fehlt'
 		);
 	});
@@ -319,21 +337,23 @@ describe('AC-16/17: OutboxCard + AlertsCard', () => {
 	test('AC-16: OutboxCard.svelte existiert in organisms/', () => {
 		assert.ok(hasOrg('OutboxCard.svelte'), 'organisms/OutboxCard.svelte fehlt');
 	});
-	test('AC-16: OutboxCard hat Eyebrow "Versand · heute" + "Was geht raus" + Pill good', () => {
+	test('AC-16: OutboxCard hat Eyebrow "Versand · heute" + "Was geht raus" + Pill good', async () => {
 		const src = readOrg('OutboxCard.svelte');
-		assert.ok(/Versand.*heute|heute.*Versand/.test(src), 'OutboxCard: Eyebrow "Versand · heute" fehlt');
-		assert.ok(/Was geht raus/.test(src), 'OutboxCard: "Was geht raus"-Titel fehlt');
-		assert.ok(/Alle Kanäle ok/.test(src), 'OutboxCard: Pill "Alle Kanäle ok" fehlt');
+		const text = await gerenderterText('organisms/OutboxCard.svelte', { contextName: 'GR20', reports: [] });
+		assert.ok(/Versand · heute/.test(text), 'OutboxCard: Eyebrow "Versand · heute" fehlt');
+		assert.ok(/Was geht raus · GR20/.test(text), 'OutboxCard: "Was geht raus"-Titel fehlt');
+		assert.ok(/Alle Kanäle ok/.test(text), 'OutboxCard: Pill "Alle Kanäle ok" fehlt');
+		assert.ok(/<Pill tone="good">/.test(src), 'OutboxCard: Pill good fehlt');
 		assert.ok(/BriefingTimelineRow/.test(src), 'OutboxCard: BriefingTimelineRow-Import fehlt');
 	});
 
 	test('AC-17: AlertsCard.svelte existiert in organisms/', () => {
 		assert.ok(hasOrg('AlertsCard.svelte'), 'organisms/AlertsCard.svelte fehlt');
 	});
-	test('AC-17: AlertsCard Eyebrow "Alerts · letzte 24 h" + Schwellen-Link', () => {
-		const src = readOrg('AlertsCard.svelte');
-		assert.ok(/Alerts.*letzte 24|24.*Alerts/.test(src), 'AlertsCard: Eyebrow "Alerts · letzte 24 h" fehlt');
-		assert.ok(/Schwellen/.test(src), 'AlertsCard: "Schwellen →"-Link fehlt');
+	test('AC-17: AlertsCard Eyebrow "Alerts · letzte 24 h" + Schwellen-Link', async () => {
+		const text = await gerenderterText('organisms/AlertsCard.svelte', { alerts: [] });
+		assert.ok(/Alerts · letzte 24 h/.test(text), 'AlertsCard: Eyebrow "Alerts · letzte 24 h" fehlt');
+		assert.ok(/Schwellen →/.test(text), 'AlertsCard: "Schwellen →"-Link fehlt');
 	});
 	test('AC-17: AlertsCard rendert AlertRow bei alerts > 0', () => {
 		const src = readOrg('AlertsCard.svelte');

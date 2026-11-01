@@ -1,5 +1,10 @@
 {
 	"aktionen.zeit.vor_minuten.one": "{count} min ago",
 	"aktionen.zeit.vor_minuten.other": "{count} min ago",
-	"aktionen.zeit.gerade_eben": "just now"
+	"aktionen.zeit.gerade_eben": "just now",
+	"aktionen.abbrechen": "Cancel",
+	"aktionen.weitere": "More actions",
+	"aktionen.zurueck_zu": "Back: {ziel}",
+	"aktionen.senden": "Send",
+	"aktionen.schliessen": "Close"
 }

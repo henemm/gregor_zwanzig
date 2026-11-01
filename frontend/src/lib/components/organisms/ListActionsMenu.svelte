@@ -13,6 +13,7 @@
 	// Spec: docs/specs/feature/issue_1277_list_table_unify.md
 
 	import { untrack } from 'svelte';
+	import { t } from '$lib/i18n';
 
 	interface Action {
 		key: string;
@@ -26,7 +27,7 @@
 	let {
 		actions,
 		onSelect,
-		label = 'Weitere Aktionen',
+		label,
 		testid
 	}: {
 		actions: Action[];
@@ -115,8 +116,8 @@
 
 <button
 	data-testid={testid}
-	title={label}
-	aria-label={label}
+	title={label ?? $t('aktionen.weitere')}
+	aria-label={label ?? $t('aktionen.weitere')}
 	aria-haspopup="menu"
 	aria-expanded={open}
 	type="button"

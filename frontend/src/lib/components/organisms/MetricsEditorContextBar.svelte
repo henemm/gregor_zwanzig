@@ -5,6 +5,7 @@
 	// Header oben im Metrics-Editor. Zeigt Profil-Name + Kontext + Counts.
 
 	import { Eyebrow, Stat } from '$lib/components/atoms';
+	import { t, type MessageKey } from '$lib/i18n';
 
 	type Context = 'trip' | 'ort' | 'abo';
 
@@ -37,17 +38,16 @@
 		class: className = ''
 	}: Props = $props();
 
-	const ctxLabel = $derived(({
-		trip: 'Trip-Kontext',
-		ort: 'Ort-Kontext (im Orts-Vergleich)',
-		abo: 'Abo-Kontext (regelmäßiger Vergleich)',
-	} as Record<Context, string>)[context]);
+	// #2660: Katalog-Schluessel; Aufloesung zur Laufzeit ueber $t (folgt der Sprache).
+	const CTX_LABEL: Record<Context, MessageKey> = {
+		trip: 'bausteine.kontext.trip', ort: 'bausteine.kontext.ort', abo: 'bausteine.kontext.abo',
+	};
+	const ctxLabel = $derived($t(CTX_LABEL[context]));
 
-	const ctxDesc = $derived(({
-		trip: 'Briefing-Spalten pro Etappe · Horizonte HEUTE / MORGEN / ÜBERMORGEN pro Metrik wählbar.',
-		ort: 'Briefing-Spalten pro Ort · keine Horizonte · Metrik kann in den Score einfließen.',
-		abo: 'Spalten pro Eintrag im Abo-Vergleich · keine Horizonte · Score-Beitrag pro Metrik konfigurierbar.',
-	} as Record<Context, string>)[context]);
+	const CTX_DESC: Record<Context, MessageKey> = {
+		trip: 'bausteine.kontext.trip_text', ort: 'bausteine.kontext.ort_text', abo: 'bausteine.kontext.abo_text',
+	};
+	const ctxDesc = $derived($t(CTX_DESC[context]));
 
 	const horiCount = $derived(
 		context === 'trip' && horizons
@@ -89,12 +89,12 @@
 	</div>
 
 	<div style:display="flex" style:gap="18px" style:white-space="nowrap">
-		<Stat label="Spalten" value={buckets.primary.length} size="md" mono />
-		<Stat label="Detail" value={buckets.secondary.length} size="md" mono />
+		<Stat label={$t('bausteine.metriken.spalten')} value={buckets.primary.length} size="md" mono />
+		<Stat label={$t('bausteine.metriken.detail')} value={buckets.secondary.length} size="md" mono />
 		{#if context === 'trip'}
-			<Stat label="Horizont-Slots" value={horiCount} size="md" mono tone="accent" />
+			<Stat label={$t('bausteine.metriken.horizont_slots')} value={horiCount} size="md" mono tone="accent" />
 		{:else}
-			<Stat label="Im Score" value={scoreCount} size="md" mono tone="accent" />
+			<Stat label={$t('bausteine.metriken.im_score')} value={scoreCount} size="md" mono tone="accent" />
 		{/if}
 	</div>
 </div>

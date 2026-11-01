@@ -4,6 +4,8 @@
 	//
 	// Ein einzelner Pill-Toggle „Im Score / Nicht im Score" für Ort/Abo-Kontext.
 
+	import { t } from '$lib/i18n';
+
 	interface Props {
 		on?: boolean;
 		onToggle?: () => void;
@@ -38,5 +40,5 @@
 		style:border-radius="50%"
 		style:background={on ? 'var(--g-accent)' : 'var(--g-rule)'}
 	></span>
-	{on ? 'Im Score' : 'Nicht im Score'}
+	{on ? $t('bausteine.metriken.im_score') : $t('bausteine.metriken.nicht_im_score')}
 </button>

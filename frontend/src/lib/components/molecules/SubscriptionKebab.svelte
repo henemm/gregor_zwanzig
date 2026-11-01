@@ -4,6 +4,7 @@
 
 	import { DropdownMenu } from 'bits-ui';
 	import EllipsisVerticalIcon from '@lucide/svelte/icons/ellipsis-vertical';
+	import { t } from '$lib/i18n';
 
 	interface Props {
 		actions: Array<{ id: string; label: string; danger?: boolean }>;
@@ -26,8 +27,8 @@
 				onclick={(e: MouseEvent) => {
 					e.stopPropagation();
 				}}
-				aria-label="Weitere Aktionen"
-				title="Weitere Aktionen"
+				aria-label={$t('aktionen.weitere')}
+				title={$t('aktionen.weitere')}
 				style:display="inline-flex"
 				style:align-items="center"
 				style:justify-content="center"

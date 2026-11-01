@@ -6,6 +6,8 @@ import { refreshResourceEtagMitTrip } from '../api.ts';
 import { getKnownEtag, loescheKonflikt, markiereKonflikt, setKnownEtag } from '../etagRegistry.ts';
 import type { NachladeKennung } from '../pwa/geraetespeicher.ts';
 import type { ApiError } from '../types.js';
+import { tr } from '../i18n/index.ts';
+import { fehlerTextFuerCode } from '../i18n/fehlerCode.ts';
 import { nutzlastVon, wendeNutzlastenAn } from './nutzlastStand.ts';
 
 /** F502: Stempel, der zu keinem Server-Stand passt (Go `ifMatchAllows` ⇒ 412). */
@@ -47,13 +49,16 @@ function schluesselVon(fn: SaveFn): unknown {
 }
 
 export function extractMessage(e: unknown): string {
+	// #2660: bekannter Go-Fehlercode → Katalogtext in der Nutzersprache.
+	const bekannt = fehlerTextFuerCode((e as { code?: unknown } | null)?.code);
+	if (bekannt) return bekannt;
 	if (e && typeof e === 'object') {
 		const obj = e as Record<string, unknown>;
 		if (typeof obj.detail === 'string' && obj.detail) return obj.detail;
 		if (typeof obj.error === 'string' && obj.error) return obj.error;
 		if (typeof obj.message === 'string' && obj.message) return obj.message;
 	}
-	return 'Fehler beim Speichern';
+	return tr('fehler.speichern.allgemein');
 }
 
 export class SaveStatus {

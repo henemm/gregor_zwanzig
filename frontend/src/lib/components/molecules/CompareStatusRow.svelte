@@ -7,6 +7,7 @@
 
 	import type { ComparePreset } from '$lib/types.js';
 	import { Dot } from '$lib/components/atoms';
+	import { t } from '$lib/i18n';
 	import { presetChannels } from '$lib/components/compare/subscriptionHelpers.js';
 	// Issue #1969 (AC-23/AC-24): nächster Versand = Backend-Wert, keine eigene Rechnung.
 	import { formatNextBriefing, type NextBriefing } from '$lib/components/shared/versand-tab/nextBriefingText';
@@ -49,7 +50,7 @@
 
 	<!-- N Orte -->
 	<span style:font-size="12px" style:color="var(--g-ink-2)" style:white-space="nowrap">
-		{(preset.location_ids ?? []).length} Orte
+		{$t('bausteine.vergleich.orte_anzahl', { anzahl: (preset.location_ids ?? []).length })}
 	</span>
 
 	<!-- Region (falls vorhanden) -->

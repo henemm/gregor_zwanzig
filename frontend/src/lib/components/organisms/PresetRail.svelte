@@ -6,6 +6,7 @@
 	// bietet einen "Eigenes Profil"-Block.
 
 	import { Eyebrow, Btn } from '$lib/components/atoms';
+	import { t } from '$lib/i18n';
 
 	interface Preset {
 		id: string;
@@ -38,9 +39,9 @@
 
 <div style:display="flex" style:flex-direction="column" style:gap="16px" class={className}>
 	<div>
-		<Eyebrow>Wetter-Profil</Eyebrow>
+		<Eyebrow>{$t('bausteine.profil.wetter_profil')}</Eyebrow>
 		<div style:font-size="13px" style:color="var(--g-ink-3)" style:margin-top="4px" style:line-height="1.5">
-			Vorlage wählen oder eigenes Profil anlegen.
+			{$t('bausteine.profil.vorlage_hinweis')}
 		</div>
 	</div>
 
@@ -74,7 +75,7 @@
 								style:color="var(--g-accent)"
 								style:letter-spacing="0.08em"
 								style:font-family="var(--g-font-mono)"
-							>EIGEN</span>
+							>{$t('bausteine.profil.eigen_marke')}</span>
 						{/if}
 					</span>
 					<span
@@ -106,12 +107,12 @@
 			style:text-transform="uppercase"
 			style:color="var(--g-ink-4)"
 			style:margin-bottom="6px"
-		>Eigenes Profil</div>
+		>{$t('bausteine.profil.eigenes')}</div>
 		<div style:font-size="12px" style:color="var(--g-ink-2)" style:line-height="1.45" style:margin-bottom="8px">
-			Aktuelle Auswahl ({totalActive} Metriken) als Profil sichern.
+			{$t('bausteine.profil.auswahl_sichern', { anzahl: totalActive })}
 		</div>
 		<Btn variant="ghost" size="sm" style="width: 100%" onclick={onSave}>
-			+ Als Profil speichern
+			{$t('bausteine.profil.als_profil_speichern')}
 		</Btn>
 	</div>
 </div>
