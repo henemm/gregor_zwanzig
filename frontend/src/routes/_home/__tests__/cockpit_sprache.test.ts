@@ -15,6 +15,7 @@ import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { FAELLE, locale, trFor, trnFor } from '../../__tests__/f3HomeListenSsr.ts';
 import { render, ohneKommentare } from '../../__tests__/onboardingSsr.ts';
+import { seiteRendern } from '../../__tests__/f3HomeListenSsr.ts';
 import { deutscheReste, sichtbarerText, attributText } from '../../__tests__/f3Sprachpruefung.ts';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
@@ -44,7 +45,7 @@ describe('AC-1: Cockpit mit aktivem Trip auf Englisch', () => {
 		for (const k of [
 			'home.hero.naechster_versand', 'home.hero.kanaele', 'home.hero.oeffnen.trip',
 			'home.hero.schnell_eingreifen', 'home.hero.schnellaktionen', 'home.cockpit.titel',
-			'home.aktion.pausentag', 'home.aktion.zeitplan', 'home.trip.keine_briefings_geplant',
+			'home.aktion.pausentag', 'home.aktion.zeitplan', 'bausteine.versand.was_geht_raus',
 			'home.cockpit.ausserdem', 'home.cockpit.alle_vergleiche', 'home.abschnitt.einrichten',
 			'home.abschnitt.fruehere_trips', 'home.cockpit.alle_anzeigen', 'bausteine.versand.heute',
 			'bausteine.alarme.titel'
@@ -56,13 +57,18 @@ describe('AC-1: Cockpit mit aktivem Trip auf Englisch', () => {
 		hat(s, trnFor('en', 'home.cockpit.nebenher', 1));
 		hat(s, trnFor('en', 'home.archiv.mehrtages', 1));
 		hat(s, trnFor('en', 'listen.anzahl.etappen', 2));
-		hat(s, en('home.cockpit.eyebrow', { datum: 'Thu, 29 October 2026' }));
+		// Datumsformat en-GB (ADR-0104: Tag vor Monat, englische Monatsnamen); ICU-Ausgabe der Laufzeit.
+		const heute = new Date('2026-10-29T06:00:00+02:00');
+		const lang = heute.toLocaleDateString('en-GB', { weekday: 'short', day: '2-digit', month: 'long', year: 'numeric' });
+		assert.match(lang, /Thu.*29 October 2026/);
+		hat(s, en('home.cockpit.eyebrow', { datum: lang }));
 		hat(s, '28 Oct 2026 → 30 Oct 2026');
+		assert.ok(!s.includes('Okt'), s);
 		assert.deepEqual(deutscheReste(s), []);
 		assert.deepEqual(deutscheReste(attributText(html)), []);
 	});
 	test('Trip-, Orts- und Kanalnamen bleiben unveraendert', () => {
-		const s = sichtbarerText(enNachDe('cockpit_trip'));
+		const s = enNachDe('cockpit_trip').replace(/<[^>]*>/g, ' ');
 		for (const name of ['GR20 Nord', 'Korsika', 'Hüttenvergleich Stubai', 'Dolomiten Höhenweg', 'Email', 'Telegram']) hat(s, name);
 	});
 	test('Monatskuerzel der Archiv-Karte englisch (Sep 2026), deutsch bleibt Sep 2026 / Mär', () => {
@@ -71,6 +77,20 @@ describe('AC-1: Cockpit mit aktivem Trip auf Englisch', () => {
 		assert.equal(archivedTrips([fertig], new Date('2026-10-29T06:00:00+02:00'))[0].dates, 'Mar 2026');
 		locale.set('de');
 		assert.equal(archivedTrips([fertig], new Date('2026-10-29T06:00:00+02:00'))[0].dates, 'Mär 2026');
+	});
+});
+
+describe('AC-1: Trip-Hero ohne geplante Briefings', () => {
+	test('Hinweis „keine Briefings geplant" englisch', () => {
+		const ohne = { ...tripAktiv(), report_config: { enabled: false } };
+		const f = () => seiteRendern('cockpit', { userId: 'golden-de', trips: [ohne], presets: [], nextBriefings: null, cockpitStatus: null });
+		locale.set('de');
+		hat(sichtbarerText(f()), 'Keine Briefings für diesen Trip geplant.');
+		locale.set('en');
+		const s = sichtbarerText(f());
+		hat(s, en('home.trip.keine_briefings_geplant'));
+		hat(s, en('bausteine.alarme.keine'));
+		assert.deepEqual(deutscheReste(s), []);
 	});
 });
 

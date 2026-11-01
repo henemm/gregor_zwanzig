@@ -3,8 +3,9 @@
 // mit deterministischer Fixture: feste Zeit 2026-10-29T06:00+02:00, Zone
 // Europe/Berlin, Nutzer `golden-de`. Die feste Uhr ist eine Zeit-Fixture (nur
 // `new Date()` ohne Argument und `Date.now()`), keine Attrappe des Prueflings.
-// Golden: tests/golden/f3_home_listen/<fall>.(de|en).html — geschrieben mit
-//   cd frontend && GZ_GOLDEN_SCHREIBEN=1 npm test -- src/routes/__tests__/listen_sprache_je_nutzer.test.ts
+// Golden: tests/golden/f3_home_listen/<fall>.de.html = Ist-Stand VOR der Umstellung
+// (Commit 8a2a0d2b7, nie neu schreiben); <fall>.en.html = Review-Hilfe, aktualisiert mit
+//   cd frontend && GZ_GOLDEN_SCHREIBEN=en npm test -- src/routes/__tests__/listen_sprache_je_nutzer.test.ts
 // Spec: docs/specs/modules/i18n_f3_home_listen_2652.md (Implementation Details 9)
 
 import { register } from 'node:module';
@@ -177,7 +178,7 @@ export async function ladeArchivGolden(): Promise<void> {
 	archivGolden = (data as { entries: unknown[] }).entries;
 }
 
-/** Schreibt die Golden-Dateien der aktuellen Sprache (nur mit GZ_GOLDEN_SCHREIBEN=1). */
+/** Schreibt die Golden-Dateien einer Sprache (Test-Lauf mit GZ_GOLDEN_SCHREIBEN=en). */
 export function schreibeGolden(lang: 'de' | 'en'): void {
 	mkdirSync(GOLDEN_DIR, { recursive: true });
 	for (const [fall, f] of Object.entries(FAELLE)) {
