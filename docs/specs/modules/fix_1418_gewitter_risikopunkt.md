@@ -291,3 +291,4 @@ keine Gmail-Zustellung, ausschließlich Stalwart-Test-Postfach.
 
 - 2026-07-29: Initial spec created (Scheibe S1 von Epic #1419, Issue #1418
   Fehler 1)
+- 2026-11-01: `_render_mobile_hour_list` (html.py) war toter Code ohne Aufrufer; Funktion mit #2210 zurückgebaut (Spec `fix_2210_mail_renderfehler.md`). Der historische Text oben bleibt unverändert.

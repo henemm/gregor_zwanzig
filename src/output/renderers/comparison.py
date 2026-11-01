@@ -220,11 +220,8 @@ def render_comparison_text(
     lines: list[str] = []
     lines.append(t("vergleich.kopf.titel", lang))
     lines.append("=" * 24)
-    # de: bisheriger strftime-Ausdruck unveraendert (Golden, Spec Known Limitations)
-    datum = (
-        f"{fmt_weekday(target_date, 'en', kurz=False)}, {fmt_date_numeric(target_date, 'en')}"
-        if lang == "en" else target_date.strftime('%A, %d.%m.%Y')
-    )
+    # #2210 C2-52: beide Sprachen ueber die sprachfesten i18n-Helfer (locale-unabhaengig).
+    datum = f"{fmt_weekday(target_date, lang, kurz=False)}, {fmt_date_numeric(target_date, lang)}"
     lines.append(t("vergleich.kopf.datum", lang, datum=datum))
     # Issue #1268: Zeitfenster-Zeile ersatzlos entfernt (Bewertung = ganzer Tag).
     # Issue #1378 (AC-4/AC-8): Ortszeit des ERSTGENANNTEN Ortes plus

@@ -52,7 +52,7 @@ from output.metric_format import format_value
 GOLDEN = (
     "ORTS-VERGLEICH\n"
     "========================\n"
-    "Datum: Wednesday, 15.07.2026\n"
+    "Datum: Mittwoch, 15.07.2026\n"
     "Erstellt: 12.07.2026 11:00 (CEST)\n"  # 09:00 UTC + 2 h (Europe/Berlin, #1378)
     "\n"
     "--------------------------------------------------\n"
