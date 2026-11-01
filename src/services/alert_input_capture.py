@@ -27,7 +27,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
 
-from app.loader import VALID_USER_ID_RE, get_data_dir, get_data_root
+from app.loader import InvalidUserIdError, get_data_dir, get_data_root, is_valid_user_id
 
 logger = logging.getLogger("alert_input_capture")
 
@@ -106,8 +106,8 @@ def capture_user_scoped(
     Vorgabewert (kein stiller "default"-Fallback, Pruefung wie
     ``get_data_dir``). Rueckgabe: capture_id oder None (fail-open)."""
     try:
-        if not VALID_USER_ID_RE.match(user_id):
-            raise ValueError(f"invalid user_id: {user_id!r}")
+        if not is_valid_user_id(user_id):
+            raise InvalidUserIdError("invalid user_id")  # #2163: Kennung nie im Text
         capture_id = uuid.uuid4().hex
         now = datetime.now(timezone.utc)
         record = {

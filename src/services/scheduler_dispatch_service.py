@@ -15,12 +15,15 @@ from i18n import Lang, resolve_user_lang, t
 from i18n.format import fmt_date_numeric
 from app.loader import (
     VALID_ENTITY_ID_RE,
+    InvalidUserIdError,
     LoaderError,
     _parse_activity_profile,
     compare_preset_to_dict,
     get_data_root,
+    is_valid_user_id,
     load_all_locations,
     load_compare_presets,
+    user_dir,
 )
 from services.alert_check_state import report_unit_failure
 from services.file_lock import LockTimeout, locked_json_rmw
@@ -61,8 +64,8 @@ def _load_presets_for_dispatch(user_id: str, data_root: str) -> list | None:
     Faelligkeits-Liste.
     """
     # Issue #1250 Scheibe 7b: Existenz-Check gegen das briefings/-Verzeichnis
-    # (Cutover-Lesepfad).
-    briefings_dir = Path(data_root) / "users" / user_id / "briefings"
+    # (Cutover-Lesepfad). #2163 S2: ungueltige Kennung wirft InvalidUserIdError.
+    briefings_dir = user_dir(data_root, user_id) / "briefings"
     if not briefings_dir.exists():
         logger.info("No briefings/ dir for user %s — skipping", user_id)
         return None
@@ -593,10 +596,13 @@ def save_compare_preset_status(
     # Read-Modify-Write ueberschriebe sie mit Preset-Feldern. Behandelt wie der
     # "Datei gibt es nicht"-Zweig direkt darunter: stilles return, damit kein
     # neuer Fehlerausgang fuer die Scheduler-Aufrufer entsteht.
+    # #2163 S2: Nutzerkennung ebenso, VOR der Entitaets-ID (fail-soft).
+    if not is_valid_user_id(user_id):
+        return None
     if not VALID_ENTITY_ID_RE.match(preset_id):
         return None  # Guard: kein Wert (Test: test_entity_id_path_guard)
 
-    path = Path(data_root) / "users" / user_id / "briefings" / f"{preset_id}.json"
+    path = user_dir(data_root, user_id) / "briefings" / f"{preset_id}.json"
     if not path.exists():
         return False
 
@@ -628,10 +634,12 @@ def save_compare_preset_pause(
 
     # Issue #2140 Scheibe 2: Segment-Pruefung VOR dem Pfadbau, identisch zu
     # save_compare_preset_status (stilles return statt neuem Fehlerausgang).
+    if not is_valid_user_id(user_id):
+        return None  # #2163 S2
     if not VALID_ENTITY_ID_RE.match(preset_id):
         return None  # Guard: kein Wert (Test: test_entity_id_path_guard)
 
-    path = Path(data_root) / "users" / user_id / "briefings" / f"{preset_id}.json"
+    path = user_dir(data_root, user_id) / "briefings" / f"{preset_id}.json"
     if not path.exists():
         return False
 
@@ -666,10 +674,12 @@ def resume_compare_preset(
     """
     if data_root is None:
         data_root = str(get_data_root())
+    if not is_valid_user_id(user_id):
+        return "not_found"  # #2163 S2, fail-soft wie die Entitaets-ID
     if not VALID_ENTITY_ID_RE.match(preset_id):
         return "not_found"
 
-    path = Path(data_root) / "users" / user_id / "briefings" / f"{preset_id}.json"
+    path = user_dir(data_root, user_id) / "briefings" / f"{preset_id}.json"
     if not path.exists():
         return "not_found"
 
@@ -1166,6 +1176,10 @@ def send_compare_preset(
     reichen HEUTE/MORGEN per Befehl durch (``None`` = Web-Handversand
     unveraendert); Orte ohne Wetterdaten stehen unter ``orte_ohne_wetter``.
     """
+    # #2163 S2: Kennung als ERSTE Handlung -- vor jedem Dateizugriff und
+    # vor dem Sende-Sperre-Schluessel.
+    if not is_valid_user_id(user_id):
+        raise InvalidUserIdError("invalid user_id")
     if data_root is None:
         data_root = str(get_data_root())
 

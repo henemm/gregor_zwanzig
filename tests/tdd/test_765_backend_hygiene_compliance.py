@@ -82,6 +82,12 @@ _SELF_EXEMPT = {
     # Text erreichbar) — gleiche Werkzeug-Klasse wie
     # test_egress_inventory_drift.py; # doc-compliance-test.
     "test_user_id_pattern_parity.py",
+    # #2163 S2 AC-13..15: Drift-Ratsche .env.tpl. Liest
+    # internal/config/config.go als DATEN (envconfig-Struct-Tags), um die
+    # Secret-Liste abzuleiten (Go aus Python nur als Text erreichbar) —
+    # gleiche Werkzeug-Klasse wie test_user_id_pattern_parity.py;
+    # # doc-compliance-test. Spec: docs/specs/modules/auth_haertung_python_2163.md
+    "test_env_tpl_secret_drift.py",
     # #1412 S2a: Empfaenger-Regelwerk-Paritaet Python <-> Go. Zwei
     # Strukturregeln auf Quelltext-als-Daten — die Konstantenmengen aus
     # internal/mail/sender.go (Go aus Python nur als Text erreichbar) und eine

@@ -101,9 +101,9 @@ class ForecastBudgetGate:
         self._user_path: Optional[Path] = None
         if user_id is not None:
             if user_root is not None:
-                from app.loader import VALID_USER_ID_RE
-                if not VALID_USER_ID_RE.match(user_id):
-                    raise ValueError(f"invalid user_id: {user_id!r}")
+                from app.loader import InvalidUserIdError, is_valid_user_id
+                if not is_valid_user_id(user_id):
+                    raise InvalidUserIdError("invalid user_id")  # #2163: Kennung nie im Text
                 self._user_dir = user_root / user_id / "diagnostics"
             else:
                 from app.loader import get_data_dir

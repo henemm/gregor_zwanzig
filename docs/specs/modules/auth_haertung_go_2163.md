@@ -2,8 +2,8 @@
 entity_id: auth_haertung_go_2163
 type: module
 created: 2026-10-31
-updated: 2026-10-31
-status: draft
+updated: 2026-11-01
+status: implemented
 version: "1.0"
 tags: [security, auth, go, epic-2138, issue-2163, scheibe-1]
 workflow: feat-2163-s1-auth-haertung-go
@@ -201,7 +201,7 @@ Nach dem Push gegen `https://staging.gregor20.henemm.com`: Login mit gültigem K
 - Bei `en`-Nutzern gelten die Antworten wie bisher; die i18n-Fehlertexte aus #2676 sind nicht berührt.
 - **Abgetrennt (Abtrennregel aus Scope/Estimated Scope angewendet am 2026-10-31, Test-LoC 1443 > 450):** Punkt 7 (Webhook-Secrets über `config.Config`, AC-15..AC-18) ist NICHT Teil dieser Scheibe, sondern Folgescheibe #2715 (fertiger Stand gesichert im Branch `feat-2163-s1b-webhook-config`). Die Webhooks lesen ihre Secrets bis dahin weiterhin per `os.Getenv`. AC-19 gilt für diese Scheibe nur für die Teile Login/Passwort-vergessen.
 - Die tatsächlichen Testdateien heißen abweichend von der Tabelle im Test Plan: `proxy_user_id_strip_test.go` (handler), `proxy_user_id_two_users_test.go` (router), `startup_log_counts_test.go`, `auth_dummy_hash_test.go`, `register_conflict_characterization_test.go`.
-- #2163 bleibt nach dieser Scheibe **offen** (Scheibe 2: Python-Pfadbauten ohne `VALID_USER_ID_RE`, `.env.tpl`). PR-Text daher „Refs #2163", nie „Closes".
+- #2163 wird geschlossen mit Scheibe 2 (`auth_haertung_python_2163.md`: Python-Pfadbauten ohne `VALID_USER_ID_RE`, `.env.tpl`). PR-Text weiterhin „Refs #2163", nie „Closes"; Close erst nach Selftest.
 
 ## Architektur-Entscheidung (ADR)
 

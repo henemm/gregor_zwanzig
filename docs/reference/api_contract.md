@@ -171,6 +171,7 @@ Fehlerantworten der Go-API, die über `handler.WriteError`/`WriteErrorWith` lauf
 - Cookie `gz_lang` setzt Go bei Anmeldung (alle Wege), Registrierung und Profil-Update, aber nur bei gespeicherter Sprache: `Path=/`, `Max-Age=31536000`, `SameSite=Lax`, `Secure` bei https, nicht HttpOnly.
 - Umgestellt sind in G1 die Pfade über `bailIf` (`/api/briefings*`, Teile von `/api/compare/presets/{id}*`). Die übrigen Formen (`{"error":…}`, Form A in 10.1, `AuthMiddleware` 401/503) werden mit G2/G3 vereinheitlicht und hier nachgeführt.
 - Antworten des Python-Cores werden unverändert durchgereicht.
+- **Ungültige `user_id` im Python-Core (#2163, 2026-11-01):** Nutzerpfade entstehen nur mit geprüfter Kennung (`src/app/loader.py`: `is_valid_user_id` mit `fullmatch`, `user_dir`, `InvalidUserIdError`; `"alice\n"` wird abgelehnt). Ein zentraler FastAPI-Handler antwortet 404 `{"error":"not_found"}` ohne Kennung im Text. Ausnahme: `api/routers/gpx.py` behält 400 `invalid_user_id`. Fail-soft-Leser/-Schreiber (Scheduler, Alert-Erfassung, Budget) kehren bei ungültiger Kennung still zurück. Spec: `docs/specs/modules/auth_haertung_python_2163.md`.
 
 ---
 

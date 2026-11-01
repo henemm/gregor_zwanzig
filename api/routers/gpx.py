@@ -26,11 +26,11 @@ async def parse_gpx(
     stage_date: Optional[date] = Query(None),
     start_hour: int = Query(8, ge=0, le=23),
 ):
-    from app.loader import VALID_USER_ID_RE, get_data_dir
+    from app.loader import get_data_dir, is_valid_user_id
     from services.gpx_processing import gpx_to_stage_data
 
-    # Vor jedem Pfadbau und vor jedem Schreibzugriff pruefen.
-    if not VALID_USER_ID_RE.match(user_id):
+    # Vor jedem Pfadbau und vor jedem Schreibzugriff pruefen (fullmatch, #2163).
+    if not is_valid_user_id(user_id):
         raise HTTPException(status_code=400, detail="invalid_user_id")
 
     content = await file.read()
