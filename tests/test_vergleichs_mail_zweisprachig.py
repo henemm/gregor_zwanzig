@@ -54,17 +54,13 @@ def _de_fragmente() -> set[str]:
 
 
 def _ohne_ausnahmen(zeilen: list[str]) -> list[str]:
-    """Entfernt Daten und Texte anderer Pakete:
-    - Befehlszeilen des Antwort-Blocks (P10 #2673),
-    - Eyebrow ``ORT`` vor dem Ortsnamen: Erkennungsmarke des Pflicht-Validators
-      ``email_spec_validator.py`` (``>ORT</span>``), Aenderung dort = Blocker."""
-    from output.renderers.email.command_block import render_commands_html, render_commands_plain
-
-    befehle = set(sichtbar(render_commands_html("vergleich", lang="en")))
-    befehle |= {z.strip() for z in render_commands_plain("vergleich", lang="en").splitlines()}
+    """Entfernt Daten und Texte anderer Pakete: Eyebrow ``ORT`` vor dem
+    Ortsnamen, Erkennungsmarke des Pflicht-Validators ``email_spec_validator.py``
+    (``>ORT</span>``), Aenderung dort = Blocker. Die Befehlszeilen sind seit
+    P10 (#2673) englisch und keine Ausnahme mehr."""
     out = []
     for z in zeilen:
-        if z.strip() in befehle or z == "ORT":
+        if z == "ORT":
             continue
         for d in _DATEN:
             z = z.replace(d, "")

@@ -245,8 +245,10 @@ def test_ac6_befehlsblock_englisch(kind):
 
     plain = render_commands_plain(kind, lang="en")
     assert plain.split("\n")[0] == "── Reply commands ──"
-    # Befehlsteil unveraendert aus command_rows (Umstellung folgt mit P10).
-    assert plain.split("\n")[1:] == render_commands_plain(kind).split("\n")[1:]
+    # Befehlsteil aus command_rows(kind, lang) -- seit P10 (#2673) englisch.
+    assert plain.split("\n")[1:] == [
+        f"  {c:<20} – {b}" for c, b in command_rows(kind, lang="en")]
+    assert plain.split("\n")[1:] != render_commands_plain(kind).split("\n")[1:]
     assert len(plain.split("\n")) == len(command_rows(kind)) + 1
     html = render_commands_html(kind, lang="en")
     assert "Reply commands</span>" in html

@@ -1,0 +1,11 @@
+[Help]
+
+Available commands:
+
+  TODAY                 – Send the comparison for today now
+  TOMORROW              – Send the comparison for tomorrow now
+  PAUSE                 – Pause briefings for a while
+  RESUME                – Turn briefings back on
+  HELP                  – Show this help
+  CODES                 – Show what the codes mean
+  REPORT                – Send the comparison to all channels now

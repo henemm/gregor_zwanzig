@@ -33,11 +33,7 @@ from tests.helpers.versand_fixture import TZ, anfrage, nutzer_anlegen, rig_start
 KATALOG = Path(__file__).resolve().parents[1] / "src" / "i18n" / "messages"
 # Daten des Aufrufers / Eigennamen (keine Renderertexte).
 _DATEN = ("Etappe 3", "GR20", "Hyeres", "Toulon", "Cote", "Orages", "Calenzana", "Ortu")
-# Fremdes Paket: Antwort-Kommando-Block im Briefing (Inbound, P10 #2673).
-_FREMDE_ZEILEN = ("Wetter der heutigen Etappe", "Wetter der morgigen Etappe",
-                  "Nowcast Regen/Gewitter", "Gewittergefahr heutige Etappe",
-                  "Regen-Ereignisfl", "Etappen um N Tage", "Briefings für Dauer",
-                  "Nächstes Briefing", "Kürzel-Bedeutungen", "Briefing jetzt senden")
+# Antwort-Kommando-Block: seit P10 (#2673) in Nutzersprache, keine Ausnahme mehr.
 _BEFEHLE = {"HEUTE", "MORGEN", "JETZT", "GEWITTER", "STRECKE", "RUHETAG", "PAUSE", "SKIP",
             "KUERZEL", "REPORT"}  # Befehlswoerter (P10), z. B. als Telegram-Knopf
 
@@ -72,8 +68,7 @@ def deutsch(text: str) -> list[str]:
     for d in _DATEN:
         text = text.replace(d, "<daten>")
     zeilen = [z for z in text.splitlines()
-              if z.strip() and not any(f in z for f in _FREMDE_ZEILEN)
-              and z.split()[0] not in _BEFEHLE]
+              if z.strip() and z.split()[0] not in _BEFEHLE]
     return [z for z in zeilen if re.search(r"[äöüÄÖÜß]|\bOrt\b", z)
             or any(re.search(rf"(?<![A-Za-z]){re.escape(f)}(?![a-z])", z) for f in _FRAGMENTE)]
 

@@ -463,11 +463,13 @@ def test_f007_anderer_bekannter_befehl_bekommt_die_dauer_zeile_nie():
     assert (b["befehl"], b["dauer_ms"]) == ("HELP", None)
 
 
-@pytest.mark.parametrize("text, befehl", [("ABBRUCH", "UNKNOWN"), ("### abbruch", "ABBRUCH"),
-                                          ("stop", "ABBRUCH")])
-def test_f008_nacktes_abbruch_ist_wie_im_prozessor_unknown(text, befehl):
-    """Bare-Pfad nur ueber `_BARE_KEYWORD_MAP` (ABBRUCH ist dort kein Wort, STOP schon);
-    der `###`-Pfad nimmt wie `_parse_command` jedes Wort als Schluessel."""
+@pytest.mark.parametrize("text, befehl", [("ABBRUCH", "ABBRUCH"), ("CANCEL", "ABBRUCH"),
+                                          ("Abbrechen", "UNKNOWN"),
+                                          ("### abbruch", "ABBRUCH"), ("stop", "ABBRUCH")])
+def test_f008_nacktes_abbruch_ist_wie_im_prozessor(text, befehl):
+    """Bare-Pfad nur ueber `_BARE_KEYWORD_MAP` (seit #2673 kennt sie ABBRUCH/CANCEL
+    als Alias von STOP); der `###`-Pfad nimmt wie `_parse_command` jedes Wort als
+    Schluessel; ein Fremdwort bleibt UNKNOWN."""
     erg = _werte([_ein("2026-10-27 09:00:00", text)], [], [])
     assert _eintrag(erg, "2026-10-27T08:00:00")["befehl"] == befehl
 

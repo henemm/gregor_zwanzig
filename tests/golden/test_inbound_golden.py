@@ -40,19 +40,34 @@ def _vergleiche(texte: dict[str, str], faelle, lang: str, modus: str) -> None:
 
 
 @freeze_time(FEST)
-def test_deutsch_byte_gleich(netzrand):
-    nutzer_anlegen("golden-de", None)
-    texte = langform_texte("golden-de", None)
-    _vergleiche(texte, (*LANGFORM_FAELLE, "weitere"), "de", "de")
+@pytest.mark.parametrize("lang", [None, "de"])
+def test_deutsch_byte_gleich(netzrand, lang):
+    """AC-2: Konto ``de`` und Konto ohne Feld -- byte-gleich zur Ist-Fassung."""
+    uid = f"golden-de-{lang or 'ohne'}"
+    nutzer_anlegen(uid, lang)
+    texte = langform_texte(uid, lang)
+    _vergleiche(texte, (*LANGFORM_FAELLE, "weitere"), "de", "de" if lang is None else "-")
 
 
 @freeze_time(FEST)
-def test_deutsch_echter_eingang_byte_gleich(netzrand):
+@pytest.mark.parametrize("lang", [None, "de"])
+def test_deutsch_echter_eingang_byte_gleich(netzrand, lang):
     """Reader-eigene Texte (Telegram-Fehlertext, Ladehinweis, Rueckfrage,
     E-Mail "Trip nicht gefunden") durch den echten Eingang."""
-    nutzer_anlegen("golden-de-reader", None)
-    texte = {"reader": reader_texte(netzrand, basis_settings(), "golden-de-reader")}
-    _vergleiche(texte, ("reader",), "de", "de")
+    uid = f"golden-de-reader-{lang or 'ohne'}"
+    nutzer_anlegen(uid, lang)
+    texte = {"reader": reader_texte(netzrand, basis_settings(), uid)}
+    _vergleiche(texte, ("reader",), "de", "de" if lang is None else "-")
+
+
+@freeze_time(FEST)
+def test_englische_referenz_byte_gleich(netzrand):
+    """Englische Referenz derselben Fixture (Review-Hilfe, ``*.en.txt``)."""
+    nutzer_anlegen("golden-en", "en")
+    texte = langform_texte("golden-en", "en")
+    nutzer_anlegen("golden-en-reader", "en")
+    texte["reader"] = reader_texte(netzrand, basis_settings(), "golden-en-reader")
+    _vergleiche(texte, (*LANGFORM_FAELLE, "weitere", "reader"), "en", "en")
 
 
 @freeze_time(FEST)

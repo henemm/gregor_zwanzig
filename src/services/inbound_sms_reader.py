@@ -57,6 +57,7 @@ from app.loader import (
     load_compare_presets,
 )
 from app.origin_guard import classify_origin
+from i18n import resolve_user_lang, t
 from utils.timezone import SEVEN_IO_JOURNAL_TZ, to_utc
 from services.file_lock import share_state_file
 from services.notification_service import NotificationService
@@ -383,6 +384,9 @@ class InboundSmsReader:
             if not befehl:
                 return  # reine Positions-SMS: keine bezahlte Antwort (Entscheidung 2)
         user_settings = settings.with_user_profile(user_id)
+        # #2673: Kontosprache aus der Lern-Antwort (nie "default"); die
+        # Premium-SMS-Antwort bleibt Kurzform (englisch, in jeder Sprache gleich).
+        lang = resolve_user_lang(user_id)
 
         # Issue #2282 Abschnitt 2/4: Satelliten-Text traegt normalerweise
         # keinen Namen (jedes Zeichen kostet), kann aber einem Trip/Vergleich
@@ -421,7 +425,7 @@ class InboundSmsReader:
                 ))
             else:
                 ziel = resolve_command_target(
-                    key, trips, presets, now_utc, channel="premium_sms",
+                    key, trips, presets, now_utc, channel="premium_sms", lang=lang,
                 )
                 if ziel.kind is None:
                     befehl_markieren(key)
@@ -429,7 +433,8 @@ class InboundSmsReader:
                     # `process()`-Aufruf.
                     hinweis = CommandResult(
                         success=False, command="mehrdeutig",
-                        confirmation_subject="Hinweis", confirmation_body=ziel.text,
+                        confirmation_subject=t("inbound.antwort.hinweis", lang),
+                        confirmation_body=ziel.text,
                     )
                     NotificationService(
                         user_settings, user_id=user_id,

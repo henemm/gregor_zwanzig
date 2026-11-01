@@ -2,9 +2,9 @@
 entity_id: i18n_p10_inbound_2673
 type: module
 created: 2026-10-30
-updated: 2026-10-30
+updated: 2026-11-01
 status: approved
-version: "1.0"
+version: "1.1"
 tags: [i18n, epic-2644, issue-2673, python, model-sonnet]
 ---
 
@@ -250,6 +250,23 @@ Plural-Beispiel `:2683-2686` (`tage_wort` und die Zeile `Ruhetag eingetragen: +N
 - Gewitterstufen-Wörter und Niederschlagsarten in der Langform folgen `lang` nur über die in diesem Paket ergänzten Katalogschlüssel; die Domänentabellen `THUNDER_LABEL_DE` und `PRECIP_TYPE_LABEL_DE` bleiben unverändert.
 - Die Antwortmail auf einen E-Mail-Befehl trägt keinen Validator-Marker; der Staging-Nachweis läuft über `.claude/tools/staging_befehl_pruefen.py` (nur `de`-Nutzer) und Kern-Tests mit echtem Eingang für `en`. Der zweisprachige Live-Lauf folgt in A2 (#2681).
 
+## Umsetzung: PO-Vorgabe und Ist-Stand (v1.1)
+
+**PO-Vorgabe (Vorrang vor dieser Spec):** SMS, Premium-SMS und Telegram-Kurzform bleiben in JEDER Kontosprache exakt wie bisher. Daraus folgt in der Umsetzung:
+
+- Zwei Helfer statt einem `_m`: `_m(key)` für Texte MIT Kurzform-Pendant (bisheriges `_t`-Paar: Kurzform = englischer Katalogtext, sonst Kontosprache) und `_ml(key)` für Texte OHNE Kurzform-Pendant (bisher nur deutsch: `Trip nicht gefunden`, `Ungueltiger Report-Typ`, `PAUSE: Ungültige Dauer`, Betreff `Fehlendes Datum`, `Kein report_config`, `[… ] Strecke`, Knopf-Beschriftungen): auf Kurzform-Kanälen unverändert deutsch, sonst Kontosprache. Abweichung zur Tabelle „Kanal × Nutzersprache": die Telegram-Knöpfe sind im **Kurzstil** auch für `en` deutsch wie bisher (Langform: englisch).
+- Nachweis: `tests/golden/inbound/kurz_*.en.txt` (vor der Umstellung erzeugt) gelten byte-gleich für Konto ohne Feld, `de` und `en`.
+
+**Ist-Stand-Anpassungen:**
+
+- `tests/fixtures/i18n_python_allowlist.json` existiert noch nicht (P11 offen); AC-8 prüft deshalb das Verhalten (englische Langform ohne deutsches Katalog-Bruchstück) und, falls die Allowlist später entsteht, dass keine der fünf Dateien darin steht.
+- `command_block.py` (P3) hat `lang` bereits; P10 reicht es an `command_rows(kind, lang=lang)` weiter. Damit zeigen die englischen Goldens (`tests/golden/{email,scheduler_texte,vergleichs_mail,amtliche_warnungen}/*.en.*`) und die Validator-Fixtures `tests/fixtures/mail/{briefing_full,compare}_en.eml` den Befehlsblock englisch; deutsche Goldens byte-gleich. Die P3/P9b-Ausnahmen „Befehlsblock = P10" in den Sprach-Ratschen sind gestrichen.
+- `_heute_buttons`/`_morgen_buttons` sind eine Funktion `_tag_buttons(tag, lang)`.
+- Antwortmail auf einen E-Mail-Befehl trägt `X-GZ-Lang` = Inhaltssprache (`NotificationService.send_command_reply_email(..., lang=)`).
+- Langform `en`: `KUERZEL` antwortet mit `codes_text(True)`, `JETZT` mit dem vorhandenen englischen Nowcast-Text, `STRECKE` per E-Mail mit englischer Intensität.
+- Ohne Ziel (unbekanntes Wort am Telegram-Eingang) gibt es keinen Kurzstil: der Fehlertext folgt der Kontosprache; für `en` entfällt der Zusatz `English: send HELP`.
+- Nicht in diesem Paket: `ACTIONS_BUBBLE_BUTTONS` (Aktionen-Knöpfe des Telegram-Briefings, von `narrow.py`/P7 genutzt) und `BOT_COMMANDS` bleiben deutsch.
+
 ## Architektur-Entscheidung (ADR)
 
 - **ADR-Nr.:** ADR-0104 (zusätzlich ADR-0042, ADR-0095)
@@ -258,3 +275,4 @@ Plural-Beispiel `:2683-2686` (`tage_wort` und die Zeile `Ruhetag eingetragen: +N
 ## Changelog
 
 - 2026-10-30: Initial spec created (Planung Epic #2644)
+- 2026-11-01: v1.1 Abschnitt „Umsetzung: PO-Vorgabe und Ist-Stand" (Kurzform in jeder Sprache wie bisher, Ist-Stand P3/P9b/P11)

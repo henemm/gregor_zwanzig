@@ -1,0 +1,51 @@
+[Help]
+
+Available commands:
+
+  TODAY                 – Weather for today's stage
+  TOMORROW              – Weather for tomorrow's stage
+  NOW                   – Rain and thunderstorm nowcast for the next ~2h
+  STORMS                – Thunderstorm risk for today's stage
+  ROUTE [km]            – Rain areas along the rest of the route
+  RESTDAY [N]           – Shift stages by N days (default: 1)
+  STATUS                – Today and upcoming stages
+  PAUSE [2d / 12h]      – Pause briefings for a while
+  SKIP                  – Skip the next briefing
+  STOP                  – Turn briefings off for good (also CANCEL)
+  RESUME                – Turn briefings back on
+  HELP                  – Show this help
+  CODES                 – Show what the codes mean
+  STARTDATE YYYY-MM-DD  – Set the trip start date and shift all stages
+  REPORT [morning / evening] – Send the briefing now (default: morning)
+
+Weather values (send a code → hourly values):
+
+  Temp / T         – Temperature (°C)
+  Night            – Night low (°C)
+  DayMin / L       – Daytime low (walking hours) (°C)
+  DayMax           – Daytime high (walking hours) (°C)
+  Feels / TF       – Feels-like temperature (°C)
+  NightF / FN      – Feels-like night low (°C)
+  DayMinF / FL     – Feels-like daytime low (walking hours) (°C)
+  DayMaxF / FD     – Feels-like daytime high (walking hours) (°C)
+  Humid / HU       – Humidity (%)
+  Dew / DP         – Dew point (°C)
+  Wind / W         – Wind (km/h)
+  Gust / G         – Wind gusts (km/h)
+  WDir / WD        – Wind direction (°)
+  Rain / R         – Precipitation (mm)
+  Rain% / PR       – Rain probability (%)
+  Thdr / TH        – Thunderstorm
+  SnowL / SL       – Snow line (m)
+  PType / PT       – Precipitation type
+  Cloud / CT       – Cloud cover (%)
+  CldLow / CL      – Low clouds (%)
+  CldMid / CM      – Mid-level clouds (%)
+  CldHi / CH       – High clouds (%)
+  Visib / VS       – Visibility (km)
+  Sun / SU         – Sunshine hours (h)
+  UV               – UV index
+  Press / HP       – Air pressure (hPa)
+  0°Line / FZ      – Freezing level (m)
+  SnowH / SD       – Snow depth (cm)
+  NewSn / NS       – Fresh snow (cm)

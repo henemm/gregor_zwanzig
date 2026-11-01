@@ -20,6 +20,7 @@ from html.parser import HTMLParser
 
 from app.config import Settings
 from app.loader import load_all_trips
+from i18n import resolve_user_lang, t
 from utils.pii_masking import mask_addr_for_pii_log
 from services.notification_service import NotificationService
 from services.trip_command_processor import (
@@ -250,15 +251,18 @@ class InboundEmailReader:
             return 0, 0
 
         # 3. Find trip — error reply if not found
+        # #2673: Kontosprache des aufgeloesten Absenders (nie "default").
+        lang = resolve_user_lang(_user_id)
         trip_id = self._find_trip_id(trip_name, _user_id)
         if not trip_id:
             befehl_markieren(None)
             result = CommandResult(
                 success=False, command="trip_not_found",
-                confirmation_subject=f"[{trip_name}] Trip nicht gefunden",
+                confirmation_subject=t("inbound.antwort.trip_nicht_gefunden.betreff", lang,
+                                       trip_name=trip_name),
                 confirmation_body=(
-                    f"Kein Trip mit Name '{trip_name}' gefunden.\n"
-                    "Bitte pruefen ob der Trip-Name korrekt ist."
+                    t("inbound.antwort.trip_nicht_gefunden.text", lang, trip_name=trip_name)
+                    + "\n" + t("inbound.antwort.trip_nicht_gefunden.pruefen", lang)
                 ),
                 trip_name=trip_name,
             )
@@ -267,7 +271,7 @@ class InboundEmailReader:
             zugestellt = True
             if user_settings.can_send_email():
                 zugestellt = self._notification_service.send_command_reply_email(
-                    result, user_settings,
+                    result, user_settings, lang=lang,
                 )
             imap.store(uid, "+FLAGS", "\\Seen")
             return 0, 0 if zugestellt else 1
@@ -294,7 +298,7 @@ class InboundEmailReader:
             zugestellt = True
             if user_settings.can_send_email() and not result.suppress_email_reply:
                 zugestellt = self._notification_service.send_command_reply_email(
-                    result, user_settings,
+                    result, user_settings, lang=lang,
                 )
             # Issue #1405 S4b: der Befehl ist verarbeitet; eine nicht
             # zugestellte Antwort zaehlt zusaetzlich als Fehler des Laufs.
