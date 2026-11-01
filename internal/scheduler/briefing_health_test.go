@@ -1009,3 +1009,38 @@ func TestTrackResolutionFailuresSkipCorruptLineBetweenValidOnes(t *testing.T) {
 		t.Errorf("streakSince: want %s, got %q", want, since)
 	}
 }
+
+// Issue #2587 AC-14: pending_briefings.json traegt seit #2587 Trip- UND
+// Ortsvergleich-Vermerke in DERSELBEN Datei (Compare: kind="vergleich",
+// preset_id statt trip_id, failed_segment_ids leer). BriefingHealth muss beide
+// zaehlen (open_pending_briefings == 2); der Compare-Eintrag darf
+// degraded_segments_total nicht veraendern (nur die 2 Trip-Segmente zaehlen).
+// Echte Mischdatei im t.TempDir(), echter Status()-Roundtrip.
+func TestBriefingHealthCountsMixedTripAndCompareEntries(t *testing.T) {
+	tmpDir := t.TempDir()
+	sched := newBriefingHealthTestScheduler(t, tmpDir, "tdd-2587-mix")
+
+	now := time.Now().UTC().Format(time.RFC3339)
+	writePendingBriefingsFile(t, tmpDir, "tdd-2587-mix",
+		`{"trip_id":"trip-mix","report_type":"morning","date":"2026-07-08",`+
+			`"slot_hour":7,"failed_segment_ids":["seg1","seg2"],"attempts":0,`+
+			`"created_at":"`+now+`"},`+
+			`{"kind":"vergleich","preset_id":"vgl-mix","report_type":"evening",`+
+			`"date":"2026-07-09","slot_hour":19,"reason":"dispatch_error",`+
+			`"failed_segment_ids":[],"attempts":0,"created_at":"`+now+`"}`)
+
+	code, body, _ := callStatusEndpoint(t, sched)
+	if code != http.StatusOK {
+		t.Fatalf("expected 200, got %d", code)
+	}
+	bh, ok := body["briefing_health"].(map[string]any)
+	if !ok {
+		t.Fatalf("briefing_health missing or wrong type: %v", body["briefing_health"])
+	}
+	if got := bh["open_pending_briefings"]; got != float64(2) {
+		t.Errorf("open_pending_briefings: want 2 (Trip + Ortsvergleich), got %v", got)
+	}
+	if got := bh["degraded_segments_total"]; got != float64(2) {
+		t.Errorf("degraded_segments_total: want 2 (nur Trip-Segmente, Compare-Eintrag traegt 0), got %v", got)
+	}
+}

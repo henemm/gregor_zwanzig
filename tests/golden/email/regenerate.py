@@ -9,6 +9,11 @@ Fixtures neu ein und überschreibt die bestehenden Snapshot-Dateien
 Aufruf nach jeder ABSICHTLICHEN Renderer-Änderung:
 
     uv run python3 tests/golden/email/regenerate.py
+    uv run python3 tests/golden/email/regenerate.py --lang en   # Issue #2664
+    uv run python3 tests/golden/email/regenerate.py --format compact [--lang en]  # #2665
+
+Mit ``--lang en`` entstehen NUR die englischen ``*-html.en.txt``; die
+deutschen Dateien werden dabei nie ueberschrieben.
 
 Datetime wird — identisch zu conftest.py — auf 2026-04-28 12:00:00 UTC
 eingefroren und in den drei betroffenen Modulen direkt gepatcht
@@ -18,6 +23,7 @@ deterministisch bleibt. Die Fixture-Parameter sind bit-identisch zu
 """
 from __future__ import annotations
 
+import dataclasses
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
@@ -47,6 +53,7 @@ from app.models import (
 from app.profile import ActivityProfile
 from output.renderers.trip_report import TripReportFormatter
 from services.official_alerts.models import OfficialAlert
+from services.report_config_resolver import resolve_report_render_options
 
 GOLDEN_DIR = Path(__file__).parent
 
@@ -72,10 +79,13 @@ def _freeze_datetime() -> None:
     from output.renderers.email import plain as plain_mod
     from output.renderers.email import html as html_mod
     from output.renderers.email import helpers as helpers_mod
+    from output.renderers.email import compact as compact_mod
 
     tr_mod.datetime = _FrozenDatetime
     plain_mod.datetime = _FrozenDatetime
     html_mod.datetime = _FrozenDatetime
+    # Issue #2665: Kompakt-Footer "Generated:" ebenfalls einfrieren.
+    compact_mod.datetime = _FrozenDatetime
     # Issue #1241: Herkunfts-Footer-Commit auf festen Platzhalter (s. conftest).
     helpers_mod._DEPLOYED_COMMIT = "gitrev0"
 
@@ -202,10 +212,28 @@ _TZ_MALLORCA = ZoneInfo("Europe/Madrid")
 _TZ_ARLBERG = ZoneInfo("Europe/Vienna")
 
 
-def _scenarios():
-    """Liefert (stem, report) je Referenz-Szenario."""
-    formatter = TripReportFormatter()
+def _scenarios(lang: str = "de", email_format: str = "full"):
+    """Liefert (stem, report) je Referenz-Szenario (``lang``: Issue #2664).
+
+    ``email_format="compact"`` (Issue #2665): dieselben Szenarien als
+    Kompakt-Mail -- die Render-Optionen sind die Bestands-Defaults
+    (``resolve_report_render_options(None, ...)``), nur das Format getauscht.
+    ``"full"`` laesst ``render_options`` weg (Bestandsaufruf, byte-gleich).
+    """
+    _formatter = TripReportFormatter()
     cfg = build_default_display_config
+
+    class _Fmt:
+        @staticmethod
+        def format_email(segments, trip_name, report_type, **kw):
+            if email_format != "full":
+                kw["render_options"] = dataclasses.replace(
+                    resolve_report_render_options(None, kw["display_config"], report_type),
+                    email_format=email_format,
+                )
+            return _formatter.format_email(segments, trip_name, report_type, **kw)
+
+    formatter = _Fmt()
 
     # 1. GR20 Sommer Evening — 2 Etappen
     seg1 = _build_seg_weather(
@@ -218,7 +246,7 @@ def _scenarios():
     )
     yield "gr20-summer-evening", formatter.format_email(
         [seg1, seg2], "GR20", "evening",
-        display_config=cfg(), stage_name="GR20 E3", tz=_TZ_CORSICA,
+        display_config=cfg(), stage_name="GR20 E3", tz=_TZ_CORSICA, lang=lang,
     )
 
     # 2. GR20 Frühjahr Morning — kalt + Niederschlag
@@ -229,7 +257,7 @@ def _scenarios():
     )
     yield "gr20-spring-morning", formatter.format_email(
         [seg], "GR20", "morning",
-        display_config=cfg(), stage_name="GR20 E1", tz=_TZ_CORSICA,
+        display_config=cfg(), stage_name="GR20 E1", tz=_TZ_CORSICA, lang=lang,
     )
 
     # 3. GR221 Mallorca Evening — warm, breezy, kein Regen
@@ -240,7 +268,7 @@ def _scenarios():
     )
     yield "gr221-mallorca-evening", formatter.format_email(
         [seg], "GR221 Mallorca", "evening",
-        display_config=cfg(), stage_name="GR221 Tag1", tz=_TZ_MALLORCA,
+        display_config=cfg(), stage_name="GR221 Tag1", tz=_TZ_MALLORCA, lang=lang,
     )
 
     # 4. Arlberg Winter Morning — Schnee/Lawine
@@ -257,7 +285,7 @@ def _scenarios():
     yield "arlberg-winter-morning", formatter.format_email(
         [seg], "Arlberg Winter", "morning",
         display_config=cfg(), stage_name="Arlberg",
-        profile=ActivityProfile.WINTERSPORT, tz=_TZ_ARLBERG,
+        profile=ActivityProfile.WINTERSPORT, tz=_TZ_ARLBERG, lang=lang,
     )
 
     # 5. Korsika Vigilance Update — mit amtlicher Warnung (Issue #1216 AC-9):
@@ -281,11 +309,37 @@ def _scenarios():
     yield "corsica-vigilance", formatter.format_email(
         [seg], "Korsika Trail", "update",
         display_config=cfg(), stage_name="Corsica E5", changes=[], tz=_TZ_CORSICA,
+        lang=lang,
     )
+
+
+def _write(path: Path, text: str) -> None:
+    path.write_text(text, encoding="utf-8")
+    print(f"[GESCHRIEBEN] {path.name}")
 
 
 def main() -> None:
     _freeze_datetime()
+    args = sys.argv[1:]
+    if args == ["--format", "compact"]:
+        # Issue #2665: deutscher Kompakt-Golden (*-compact.txt).
+        for stem, report in _scenarios(email_format="compact"):
+            _write(GOLDEN_DIR / f"{stem}-compact.txt", report.email_plain)
+        return
+    if args in (["--format", "compact", "--lang", "en"], ["--lang", "en", "--format", "compact"]):
+        for stem, report in _scenarios(lang="en", email_format="compact"):
+            _write(GOLDEN_DIR / f"{stem}-compact.en.txt", report.email_plain)
+        return
+    if args == ["--lang", "en"]:
+        # Issue #2664: *-html.en.txt; Issue #2665: dazu *-plain.en.txt.
+        for stem, report in _scenarios(lang="en"):
+            _write(GOLDEN_DIR / f"{stem}-html.en.txt", report.email_html)
+            _write(GOLDEN_DIR / f"{stem}-plain.en.txt", report.email_plain)
+        return
+    if args:
+        raise SystemExit(
+            f"Unbekannte Option: {args} (erlaubt: --lang en, --format compact [--lang en])"
+        )
     for stem, report in _scenarios():
         html_path = GOLDEN_DIR / f"{stem}-html.txt"
         plain_path = GOLDEN_DIR / f"{stem}-plain.txt"

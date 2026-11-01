@@ -1,6 +1,7 @@
 """MeteoAlarmFeedSource — kontingentfreier CAP-Feed fuer Italien, Oesterreich,
 Deutschland (Issue #1445 S1/S3, #1681), die Schweiz, Norwegen, Schweden,
-Finnland, Spanien, Portugal, die Niederlande und Polen (Issue #1442 S1-S3a).
+Finnland, Spanien, Portugal, die Niederlande, Polen, das Vereinigte Koenigreich
+und Belgien (Issue #1442 S1-S3c).
 
 Ersetzt den kontingentierten EDR-Index-Weg (``meteoalarm.py``) durch
 ``feeds.meteoalarm.org`` -- eine Momentaufnahme ALLER aktuell gueltigen
@@ -70,13 +71,26 @@ _FEED_PATHS: dict[str, str] = {
     "PT": "/api/v1/warnings/feeds-portugal",
     "NL": "/api/v1/warnings/feeds-netherlands",
     "PL": "/api/v1/warnings/feeds-poland",
+    # Issue #1442 S3b: wie CH/NO/SE -- nur Polygone, kein Geocode.
+    "GB": "/api/v1/warnings/feeds-united-kingdom",
+    # Issue #1442 S3c: Zonenweg wie FI/ES/PT/NL/PL, zusaetzlich NUTS2 (s. unten).
+    "BE": "/api/v1/warnings/feeds-belgium",
 }
 # Issue #1681: Geocode-Art je Land -- DE ordnet ueber die DWD-``WARNCELLID``
 # zu (1:1 im Feed, traegt die eingecheckte Kreisgeometrie), alle anderen
-# Geocode-Laender (IT/AT/FI/ES/PT/NL/PL) ueber EMMA.
+# Geocode-Laender (IT/AT/FI/ES/PT/NL/PL/BE) ueber EMMA.
 _GEOCODE_NAME: dict[str, str] = {
     "IT": "EMMA_ID", "AT": "EMMA_ID", "DE": "WARNCELLID", "FI": "EMMA_ID",
     "ES": "EMMA_ID", "PT": "EMMA_ID", "NL": "EMMA_ID", "PL": "EMMA_ID",
+    "BE": "EMMA_ID",
+}
+# Issue #1442 S3c: der belgische Feed mischt je Warnung EMMA_ID (BE004, BE801)
+# und NUTS2 (Provinz). NUTS2 wird NUR fuer BE ueber diese Tabelle zur EMMA-Zone
+# uebersetzt; EMMA kennt nur das ungeteilte Brabant (BE10/BE24/BE31 -> BE004).
+_BE_NUTS2_TO_EMMA: dict[str, str] = {
+    "BE21": "BE002", "BE22": "BE007", "BE23": "BE003", "BE25": "BE009", "BE32": "BE005",
+    "BE33": "BE008", "BE34": "BE001", "BE35": "BE006", "BE10": "BE004", "BE24": "BE004",
+    "BE31": "BE004",
 }
 # Kuesten-/Seezellen (Praefix 501) liegen bewusst nicht in der Kreisgeometrie.
 _DE_COAST_PREFIX = "501"
@@ -231,6 +245,18 @@ def _emma_ids_for_alert(alert: dict, geocode_name: str = "EMMA_ID") -> set[str]:
     return ids
 
 
+def _zone_ids_for_alert(alert: dict, country: str) -> set[str]:
+    """EINE Einsammelstelle fuer Warnung UND Drift-Waechter (#1442 S3c): alle
+    Laender unveraendert ueber ihren einen Geocode-Namen; nur BE liest
+    zusaetzlich ``NUTS2`` und uebersetzt ueber ``_BE_NUTS2_TO_EMMA`` (unbekannter
+    Code bleibt roh -> "andere Zone" + Drift-Journal, kein Ausfall)."""
+    ids = _emma_ids_for_alert(alert, _GEOCODE_NAME.get(country, "EMMA_ID"))
+    if country == "BE":
+        ids |= {_BE_NUTS2_TO_EMMA.get(code, code)
+                for code in _emma_ids_for_alert(alert, "NUTS2")}
+    return ids
+
+
 _drift_checked: dict = {}
 
 
@@ -251,7 +277,7 @@ def _log_unknown_zone_drift(
         alert = warning.get("alert") if isinstance(warning, dict) else None
         if not isinstance(alert, dict) or not isinstance(alert.get("info"), list):
             continue
-        for cell in _emma_ids_for_alert(alert, _GEOCODE_NAME[country]):
+        for cell in _zone_ids_for_alert(alert, country):
             if cell not in known and not (ignore_prefix and cell.startswith(ignore_prefix)):
                 warn_egress.log_zone_drift(f"meteoalarm_feed:{country}", cell, True, drift)
 
@@ -339,7 +365,7 @@ def _alerts_for_zone(
         # Malformation ermitteln.
         if info_is_list:
             geocode_name = _GEOCODE_NAME.get(country, "EMMA_ID")
-            emma_ids = _emma_ids_for_alert(alert, geocode_name)
+            emma_ids = _zone_ids_for_alert(alert, country)
             if emma_ids:
                 if emma_ids & zones:
                     # DE: areaDesc des abgefragten Kreises (mehrere je Alert).
@@ -384,13 +410,15 @@ def _alerts_for_zone(
 _DATA_DIR = Path(__file__).resolve().parent / "data"
 _ch_regions = RegionMapper(_SLF_REGIONS_FILE)
 _nordic_outlines = RegionMapper(_DATA_DIR / "meteoalarm_outlines_nordics.geojson.json")
-_POLYGON_COUNTRIES = ("CH", "NO", "SE")
-# Zonenlaender FI (Issue #1442 S2), ES (S3) und PT/NL/PL (S3a): EMMA_ID-
-# Zonengeometrie aus MeteoAlarm-geocodes.json, EIN gemeinsamer Zonenweg
+# Issue #1442 S3b: GB ueber einen eigenen aufgeweiteten Umriss (inkl. Nordirland).
+_uk_outline = RegionMapper(_DATA_DIR / "meteoalarm_outlines_uk.geojson.json")
+_POLYGON_COUNTRIES = ("CH", "NO", "SE", "GB")
+# Zonenlaender FI (Issue #1442 S2), ES (S3), PT/NL/PL (S3a) und BE (S3c):
+# EMMA_ID-Zonengeometrie aus MeteoAlarm-geocodes.json, EIN gemeinsamer Zonenweg
 # (data/README.md).
 _zone_mappers: dict[str, RegionMapper] = {
     country: RegionMapper(_DATA_DIR / f"meteoalarm_zones_{country}.geojson.json")
-    for country in ("FI", "ES", "PT", "NL", "PL")
+    for country in ("FI", "ES", "PT", "NL", "PL", "BE")
 }
 # Ausgewerteter Feed (BBoxen, Ringe, Rueckzuege) je Land und Momentaufnahme --
 # haengt per Objekt-Referenz am gecachten Feed und lebt dessen 30-min-TTL mit.
@@ -526,9 +554,11 @@ def _cached_feed_without_network(country: str) -> Optional[dict]:
 
 
 def _in_outline(country: str, lat: float, lon: float) -> bool:
-    """CH: SLF-Regionen; NO/SE: aufgeweiteter Landesumriss (lieber zu gross)."""
+    """CH: SLF-Regionen; NO/SE/GB: aufgeweiteter Landesumriss (lieber zu gross)."""
     if country == "CH":
         return bool(_ch_regions.regions_at(lat, lon))
+    if country == "GB":
+        return country in _uk_outline.regions_at(lat, lon)
     return country in _nordic_outlines.regions_at(lat, lon)
 
 
@@ -544,13 +574,16 @@ def _covers_polygon(country: str, lat: float, lon: float) -> bool:
 
 
 def _zones_for_point(country: str, lat: float, lon: float) -> set[str]:
-    """Punkt -> ALLE getroffenen ``EMMA_ID`` eines Zonenlands (FI/ES/PT/NL/PL;
+    """Punkt -> ALLE getroffenen ``EMMA_ID`` eines Zonenlands (FI/ES/PT/NL/PL/BE;
     Kuestenort: Land- UND Seezone)."""
     return set(_zone_mappers[country].regions_at(lat, lon))
 
 
 def _known_zones(country: str) -> set[str]:
-    return {region_id for region_id, _geo, _box in _zone_mappers[country]._loaded()}
+    known = {region_id for region_id, _geo, _box in _zone_mappers[country]._loaded()}
+    if country == "BE":  # S3c Punkt 5: auch alle Tabellen-Schluessel sind bekannt
+        known |= set(_BE_NUTS2_TO_EMMA)
+    return known
 
 
 class MeteoAlarmFeedSource:
@@ -559,11 +592,13 @@ class MeteoAlarmFeedSource:
     ``"meteoalarm"`` (Spec Implementation Details Punkt 8): nur der interne
     Abrufweg aendert sich. Ein Code, eine Instanz je Land ueber den
     Konstruktor-Parameter ``country`` (IT/AT/DE eigene Zonenaufloesung,
-    FI/ES/PT/NL/PL gemeinsamer Zonenweg, CH/NO/SE Punkt-in-Polygon)."""
+    FI/ES/PT/NL/PL/BE gemeinsamer Zonenweg, CH/NO/SE/GB Punkt-in-Polygon)."""
 
     def __init__(
         self,
-        country: Literal["IT", "AT", "DE", "CH", "NO", "SE", "FI", "ES", "PT", "NL", "PL"],
+        country: Literal[
+            "IT", "AT", "DE", "CH", "NO", "SE", "FI", "ES", "PT", "NL", "PL", "GB", "BE"
+        ],
     ) -> None:
         self.country = country
 
@@ -679,7 +714,7 @@ class MeteoAlarmFeedSource:
         return _alerts_for_point_polygon(feed, lat, lon, self.country)
 
     def _fetch_zones(self, country: str, lat: float, lon: float) -> list[OfficialAlert]:
-        """Zonenlaender FI/ES/PT/NL/PL (Spec #1442 S2 Punkt 7, S3 Punkt 1, S3a):
+        """Zonenlaender FI/ES/PT/NL/PL/BE (Spec #1442 S2 Punkt 7, S3 Punkt 1, S3a, S3c):
         Zonenweg ueber ``EMMA_ID`` wie IT/AT/DE; keine Zone -> nicht zustaendig;
         unbekannte Feed-Zonen -> Drift-Journal (``meteoalarm_feed:<Land>``);
         ``Update``/``Cancel`` ersetzen ihre Vorgaenger (S3a AC-7)."""

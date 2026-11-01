@@ -27,6 +27,7 @@ from datetime import datetime, timedelta, timezone
 from typing import Optional
 
 from app.config import Settings
+from i18n import Lang, resolve_user_lang
 from app.loader import load_all_locations
 from services import alert_channel_threshold, alert_daily_limit, alert_log
 from services import alert_retry_backoff
@@ -96,16 +97,16 @@ def _identity_inputs(nowcast, now_utc: datetime) -> tuple:
     )
 
 
-def _format_cooldown_display(cooldown_minutes: int) -> str:
+def _format_cooldown_display(cooldown_minutes: int, *, lang: str = "de") -> str:
     """Menschenlesbarer Cooldown-Hinweis-Text — Muster
     `radar_alert_service.py::_cooldown_display` (Trip-Radar-Pfad), hier auf
     dem bereits aufgelösten `cooldown_minutes`-Wert des Presets statt eines
     Trip-Objekts (Pflicht-Fix, Staging-Befund: fehlender Cooldown-Hinweis in
-    Compare-Radar-Alarm-Mails)."""
-    if cooldown_minutes % 60 == 0:
-        n = cooldown_minutes // 60
-        return f"{n} Stunde" if n == 1 else f"{n} Stunden"
-    return f"{cooldown_minutes} Minuten"
+    Compare-Radar-Alarm-Mails). Issue #2667: derselbe Baustein wie der
+    Trip-Pfad (`radar_alert_service.cooldown_text`), in ``lang``."""
+    from services.radar_alert_service import cooldown_text
+
+    return cooldown_text(cooldown_minutes, lang=lang)
 
 
 # Issue #2050 S6 (E-1): Ereigniszeit-Ableitung aus dem GETEILTEN Baustein --
@@ -130,6 +131,8 @@ class CompareRadarAlertService:
     ) -> None:
         self._settings = settings if settings else Settings().with_user_profile(user_id)
         self._user_id = user_id
+        # Issue #2672: Sprache EINMAL je Dienstobjekt (Nutzer), kein Modulzustand.
+        self._lang: Lang = resolve_user_lang(user_id)
         self._radar_service = radar_service
         self._mail_sink = mail_sink
 
@@ -422,7 +425,7 @@ class CompareRadarAlertService:
         entities = list(triggered)
         notif_result = notification_service.send_multi_location_radar_alert(
             entities=entities, effective_channels=allowed, mail_sink=self._mail_sink,
-            cooldown_display=_format_cooldown_display(cooldown_minutes),
+            cooldown_display=_format_cooldown_display(cooldown_minutes, lang=self._lang),
             telegram_style=effective_compare_telegram_style(preset),
         )
         # Issue #2050 S6 (E-1): nur, wenn ALLE getriggerten Orte uebereinstimmen
@@ -627,6 +630,7 @@ class CompareRadarAlertService:
         `compare_preset_access.notification_service_for_preset`."""
         return notification_service_for_preset(
             self._settings, self._user_id, preset, log_label="Compare-Alert (Radar):",
+            lang=self._lang,
         )
 
     @staticmethod

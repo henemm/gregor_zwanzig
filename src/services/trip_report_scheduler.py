@@ -25,6 +25,9 @@ import httpx
 
 from app.config import Settings, resolve_public_url
 from app.loader import LoaderError, get_data_dir, load_all_trips, update_trip
+from i18n import Lang, resolve_user_lang, t
+from i18n.format import fmt_date_numeric, fmt_weekday
+from services import pending_briefings
 from services.file_lock import LockTimeout
 from services.send_lock import release_send_lock, try_acquire_send_lock
 from utils.pii_masking import mask_addr_for_pii_log
@@ -46,7 +49,7 @@ from services.alert_briefing_anchor import (
 from services.alert_check_state import report_unit_failure
 from services.briefing_slots import BriefingSlotStore
 from services.day_comparison import DayComparison
-from services.notification_service import NotificationService, TripReportRequest
+from services.notification_service import NotificationService, TripReportRequest, abschnitt_id
 from services.user_tier import (
     premium_sms_allowed, resolve_restricted_channel_flags, sms_allowed,
 )
@@ -391,8 +394,10 @@ def trip_slot_due(
     return _slot_faellig_vor_ort(trip, report_type, trip_local_now(trip, moment), store)
 
 
-def _trend_note(thunder: str, precip_mm: float, wind_kmh: int) -> str | None:
-    """Returns a hint text when conditions are notable, else None."""
+def _trend_note(
+    thunder: str, precip_mm: float, wind_kmh: int, *, lang: Lang = "de",
+) -> str | None:
+    """Returns a hint text when conditions are notable, else None (in ``lang``)."""
     from app.thunder_scale import thunder_low_statement_sentence
 
     notes = []
@@ -401,13 +406,13 @@ def _trend_note(thunder: str, precip_mm: float, wind_kmh: int) -> str | None:
         # Trend-Notiz kennt an dieser Stelle keine Traegerliste -- unbekannte
         # Herkunft ist KEINE reine Luftmasse (Spec AC-4), der Baustein
         # entscheidet das selbst.
-        notes.append(thunder_low_statement_sentence("kurz", None))
+        notes.append(thunder_low_statement_sentence("kurz", None, lang=lang))
     elif thunder != "NONE":
-        notes.append("Gewitter möglich")
+        notes.append(t("versand.scheduler.trend_gewitter", lang))
     if precip_mm > 5:
-        notes.append(f"Regen {precip_mm:.0f} mm")
+        notes.append(t("versand.scheduler.trend_regen", lang, mm=f"{precip_mm:.0f}"))
     if wind_kmh > 40:
-        notes.append(f"Böen bis {wind_kmh} km/h")
+        notes.append(t("versand.scheduler.trend_boeen", lang, kmh=wind_kmh))
     return " · ".join(notes) if notes else None
 
 
@@ -443,29 +448,17 @@ def _parse_hhmm(value: str) -> Optional[time]:
         return None
 
 
-def _load_pending_entries(path: Path) -> dict:
-    """Issue #1012 Adversary-Fix F001: liest pending_briefings.json robust.
-
-    Fehlende oder kaputte Datei (z.B. abgebrochener Schreibvorgang) liefert ein
-    leeres Schema statt eine ungefangene JSONDecodeError zu werfen, die sonst
-    den kompletten stündlichen Versandlauf VOR dem regulären Versand crasht
-    (HTTP 500, kein Trip bekommt sein Briefing).
-    """
-    if not path.exists():
-        return {"entries": []}
-    try:
-        return json.loads(path.read_text())
-    except (json.JSONDecodeError, OSError) as e:
-        logger.warning(f"Corrupt pending_briefings.json at {path}, ignoring: {e}")
-        return {"entries": []}
+#: Issue #2587: Laden/atomares Schreiben stehen im geteilten Modul
+#: `services.pending_briefings` (ADR-0097). Die alten Namen bleiben aus
+#: diesem Modul importierbar (Bestandstests, State-Datei unten).
+_load_pending_entries = pending_briefings.load_pending_entries
+_write_pending_data = pending_briefings.write_pending_data
 
 
-def _write_pending_data(path: Path, data: dict) -> None:
-    """Atomarer Schreibvorgang (tmp + os.replace) — verhindert eine halb
-    geschriebene Datei bei einem Absturz mitten im Schreibvorgang."""
-    tmp_path = path.with_suffix(path.suffix + ".tmp")
-    tmp_path.write_text(json.dumps(data, indent=2))
-    os.replace(tmp_path, path)
+def _trip_marker(trip_id) -> "pending_briefings.Match":
+    """Issue #2587: Trip-Vermerk dieses Trips -- Ortsvergleich-Vermerke
+    (``kind == "vergleich"``, kein ``trip_id``) werden nie getroffen."""
+    return lambda e: pending_briefings.is_trip_entry(e) and e.get("trip_id") == trip_id
 
 
 @dataclasses.dataclass
@@ -677,6 +670,9 @@ class TripReportSchedulerService:
     # Issue #2217: Trips, deren Faelligkeits-/Filterpruefung im letzten
     # Sammellauf mit einer Ausnahme scheiterte (-> `failed` der Antwort).
     collect_failed: int = 0
+    # Issue #2672: nur Platzhalter fuer per ``__new__`` gebaute Instanzen
+    # (Bestandstests); ``__init__`` setzt die Sprache JE NUTZER.
+    _lang: Lang = "de"
 
     def __init__(self, settings: Optional[Settings] = None, *, user_id: str) -> None:
         """
@@ -687,7 +683,12 @@ class TripReportSchedulerService:
             user_id: User identifier for data scoping
         """
         self._settings = settings if settings else Settings().with_user_profile(user_id)
-        self._notification_service = NotificationService(self._settings, user_id)
+        # Issue #2672: Sprache EINMAL je Nutzer (Dienstobjekt) lesen und an
+        # Versand und eigene Hinweise durchreichen -- kein Modulzustand.
+        self._lang: Lang = resolve_user_lang(user_id)
+        self._notification_service = NotificationService(
+            self._settings, user_id, lang=self._lang,
+        )
         self._user_id = user_id
         # Issue #2036 CI-Nachschlag (PR #2058): Objekt-Attribut statt
         # durchgereichtem Keyword-Parameter an _build_stage_trend /
@@ -936,7 +937,9 @@ class TripReportSchedulerService:
             ohne Versand (Lärmschutz #1012) zählen weder noch.
         """
         path = get_data_dir(self._user_id) / "pending_briefings.json"
-        entries = _load_pending_entries(path).get("entries", [])
+        # Issue #2587 (Blocker): nur Trip-Vermerke -- Ortsvergleich-Vermerke in
+        # derselben Datei werden weder gelesen noch veraendert noch geloescht.
+        entries = pending_briefings.entries_matching(path, pending_briefings.is_trip_entry)
         if not entries:
             return 0, 0
 
@@ -998,9 +1001,9 @@ class TripReportSchedulerService:
                 # Issue #1662 AC-3: eigener Text — bei einem Versandfehler
                 # waren die Daten nie das Problem, und der Nutzer hat kein
                 # "Vorher", das aktualisiert wuerde. Kein Technikjargon.
-                prefix = (
-                    f"Nachgeliefert — die Zustellung um "
-                    f"{entry.get('slot_hour')}:00 ist fehlgeschlagen"
+                # Issue #2587: geteilter Baustein mit dem Ortsvergleich.
+                prefix = pending_briefings.dispatch_error_hint(
+                    entry.get("slot_hour"), lang=self._lang,
                 )
                 self._remove_pending_marker(trip_id)
                 outcome = self._send_trip_report_outcome(
@@ -1028,19 +1031,17 @@ class TripReportSchedulerService:
 
             was_complete_failure = len(previously_failed) >= len(segments)
             if was_complete_failure:
-                prefix = (
-                    f"Nachgeliefert — der Wetterdienst war um "
-                    f"{entry.get('slot_hour')}:00 nicht erreichbar"
-                )
+                prefix = t("versand.scheduler.nachgeliefert", self._lang,
+                           stunde=entry.get("slot_hour"))
             elif failed_ids_now:
                 # Adversary Finding F003: ein (neues) Segment schlägt beim
                 # Nachliefer-Versuch fehl, obwohl kein zuvor bekanntes
                 # Segment mehr betroffen ist — "vollständig" wäre hier
                 # widersprüchlich zum gleichzeitig gesetzten
                 # partial_outage_hint (siehe _send_trip_report_outcome).
-                prefix = "Aktualisiert — weiterhin unvollständig, Details im Hinweis"
+                prefix = t("versand.scheduler.aktualisiert_unvollstaendig", self._lang)
             else:
-                prefix = "Aktualisiert — jetzt mit vollständigen Daten"
+                prefix = t("versand.scheduler.aktualisiert_vollstaendig", self._lang)
             # Marker zuerst entfernen (RMW) — schlägt die Nachlieferung
             # erneut (teilweise) fehl, schreibt der reguläre Sendepfad
             # selbst einen frischen Marker (siehe _send_trip_report_outcome).
@@ -1074,8 +1075,6 @@ class TripReportSchedulerService:
         keine Migration noetig (Go ignoriert unbekannte Felder).
         """
         path = get_data_dir(self._user_id) / "pending_briefings.json"
-        data = _load_pending_entries(path)
-        entries = [e for e in data.get("entries", []) if e.get("trip_id") != trip.id]
         slot_hour = (
             self._get_morning_hour(trip) if report_type == "morning"
             else self._get_evening_hour(trip)
@@ -1091,9 +1090,8 @@ class TripReportSchedulerService:
         }
         if reason is not None:
             marker["reason"] = reason
-        entries.append(marker)
-        data["entries"] = entries
-        _write_pending_data(path, data)
+        # Issue #2587: RMW ueber das geteilte Modul, nur der Trip-Schluessel.
+        pending_briefings.upsert_entry(path, _trip_marker(trip.id), marker)
 
     def _mark_briefing_undelivered(
         self, trip: "Trip", report_type: str, target_date: date, *, on_demand: bool,
@@ -1129,39 +1127,22 @@ class TripReportSchedulerService:
         anderen Bedingung (Segment-Schnittmenge).
         """
         path = get_data_dir(self._user_id) / "pending_briefings.json"
-        if not path.exists():
-            return
-        data = _load_pending_entries(path)
-        rest = [
-            e for e in data.get("entries", [])
-            if not (e.get("trip_id") == trip_id and e.get("reason") == "dispatch_error")
-        ]
-        if len(rest) == len(data.get("entries", [])):
-            return
-        data["entries"] = rest
-        _write_pending_data(path, data)
+        mine = _trip_marker(trip_id)
+        pending_briefings.remove_entries(
+            path, lambda e: mine(e) and e.get("reason") == pending_briefings.DISPATCH_ERROR,
+        )
 
     def _remove_pending_marker(self, trip_id: str) -> None:
-        """Issue #1012 (b2): Entfernt den Nachliefer-Marker eines Trips (RMW)."""
+        """Issue #1012 (b2): Entfernt den Nachliefer-Marker eines Trips (RMW).
+
+        Issue #2587: trifft nur Trip-Vermerke (auch bei ``trip_id is None``)."""
         path = get_data_dir(self._user_id) / "pending_briefings.json"
-        if not path.exists():
-            return
-        data = _load_pending_entries(path)
-        data["entries"] = [
-            e for e in data.get("entries", []) if e.get("trip_id") != trip_id
-        ]
-        _write_pending_data(path, data)
+        pending_briefings.remove_entries(path, _trip_marker(trip_id))
 
     def _bump_pending_marker_attempts(self, trip_id: str) -> None:
         """Issue #1012 (b2, Lärmschutz): attempts += 1, Marker bleibt bestehen."""
         path = get_data_dir(self._user_id) / "pending_briefings.json"
-        if not path.exists():
-            return
-        data = _load_pending_entries(path)
-        for e in data.get("entries", []):
-            if e.get("trip_id") == trip_id:
-                e["attempts"] = e.get("attempts", 0) + 1
-        _write_pending_data(path, data)
+        pending_briefings.bump_attempts(path, _trip_marker(trip_id))
 
     def _get_morning_hour(self, trip: "Trip") -> int:
         """Get configured morning hour for trip (default: 7).
@@ -1768,10 +1749,12 @@ class TripReportSchedulerService:
             return "no_weather"
         elif error_segments:
             # Teilausfall unterhalb der Schwelle: Hinweis statt Rückhalten.
-            missing = ", ".join(f"Segment {s.segment.segment_id}" for s in error_segments)
-            partial_outage_hint = (
-                f"Hinweis: Für folgende Abschnitte liegen aktuell keine Wetterdaten vor "
-                f"({missing}) — eine Aktualisierung wird nachgeliefert."
+            missing = ", ".join(
+                t("versand.scheduler.abschnitt", self._lang, id=abschnitt_id(s, self._lang))
+                for s in error_segments
+            )
+            partial_outage_hint = t(
+                "versand.scheduler.teilausfall", self._lang, abschnitte=missing,
             )
 
         # 2b. Ensemble-Anreicherung: 1 API-Call für letzten Waypoint der letzten Etappe
@@ -2982,8 +2965,6 @@ class TripReportSchedulerService:
         from services.trip_day import trip_local_today
         from services.weather_metrics import aggregate_stage
 
-        WEEKDAYS_DE = ["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"]
-
         future_stages = trip.get_future_stages(target_date)
         if not future_stages:
             # Klasse A: normaler Tourabschluss — bewusst KEIN Log.
@@ -3067,6 +3048,7 @@ class TripReportSchedulerService:
                     _thunder_name,
                     float(agg.precip_sum_mm or 0.0),
                     int(agg.wind_max_kmh or 0),
+                    lang=self._lang,
                 )
 
                 _tz = tz if tz is not None else ZoneInfo("UTC")
@@ -3094,7 +3076,7 @@ class TripReportSchedulerService:
                     getattr(_rc, "day_window_end_hour", None),
                 )
                 row = build_outlook_row(
-                    agg, _flat_points, WEEKDAYS_DE[stage.date.weekday()], _tz,
+                    agg, _flat_points, fmt_weekday(stage.date, self._lang), _tz,
                     sms_thresholds=_sms_thr,
                     # #1720 S1: ungekollabierte Konfiguration durchreichen,
                     # nicht selbst aufloesen -- Renderer-Vokabular gehoert in
@@ -3378,7 +3360,8 @@ class TripReportSchedulerService:
         # Issue #2028: Satzkopf aus der EINEN Quelle (Fetch-Weg nutzt dieselbe).
         # LOW-Herkunft aus DERSELBEN `carriers`-Rechnung, die unten den
         # ·-Zusatz speist (#2176).
-        text = thunder_headline_sentence(level, when, carriers)
+        lang = self._lang
+        text = thunder_headline_sentence(level, when, carriers, lang=lang)
         # Issue #1680 S5b: die Herkunft steht unmittelbar hinter der
         # Tagesaussage -- VOR dem Nacht-Halbsatz und (weil sie Teil von `text`
         # ist) auch vor dem Hagel-Zusatz, den erst der Renderer anhaengt.
@@ -3386,7 +3369,7 @@ class TripReportSchedulerService:
         # erwartet" traegt nie eine Herkunft (Spec AC-6), und ohne
         # Traegerliste entsteht kein leerer ·-Trenner (Spec AC-11).
         if level != ThunderLevel.NONE and carriers:
-            text += " · " + ", ".join(thunder_signal_label(n) for n in carriers)
+            text += " · " + ", ".join(thunder_signal_label(n, lang=lang) for n in carriers)
         # Issue #2205: Hagel je Stunde aus `row["hourly_hail"]` (Stunden mit
         # bestaetigtem Hagel, `build_outlook_row`) -- NICHT `row["hail"]`, das
         # den ganzen Kalendertag inkl. Nacht abdeckt. Tages-Hagel ueber
@@ -3403,7 +3386,7 @@ class TripReportSchedulerService:
             day_hail = row.get("hail")
         # Tages-Hagel steht hinter der Herkunft und VOR dem Nacht-Halbsatz --
         # der Renderer haengt seit #2205 nichts mehr an die ganze Zeile.
-        _day_hail_note = format_hail_note(day_hail)
+        _day_hail_note = format_hail_note(day_hail, lang=lang)
         if _day_hail_note:
             text += f" · {_day_hail_note}"
         # Issue #1651: das Gewitter AUSSERHALB des Fensters wird angehaengt
@@ -3417,9 +3400,9 @@ class TripReportSchedulerService:
         ]
         add = night_addendum(own_hourly, night_hourly, win_start, win_end)
         if add:
-            text += format_night_addendum(*add)
+            text += format_night_addendum(*add, lang=lang)
         return {
-            "date": fc_date.strftime("%d.%m.%Y"),
+            "date": fmt_date_numeric(fc_date, lang),
             "level": level,
             # ADR-0025, Entscheidung 4: die Stunde wird durchgereicht, damit der
             # SMS-Pfad sie nicht erfinden muss. None = keine Stunde bekannt.
@@ -3681,18 +3664,20 @@ class TripReportSchedulerService:
             carriers = getattr(summary, "thunder_level_max_signals", None)
             # Issue #2028: Satzkopf aus der EINEN Quelle (wortgleich zum
             # Trend-Weg); `when` ist hier immer gesetzt.
-            text = thunder_headline_sentence(level, when, carriers)
+            text = thunder_headline_sentence(level, when, carriers, lang=self._lang)
             # Herkunft unmittelbar hinter der Tagesaussage, VOR dem
             # Nacht-Halbsatz (und damit vor dem Hagel-Zusatz des Renderers).
             # Level-Check am Wirkort (Spec AC-6), Traeger-Guard gegen den
             # leeren ·-Trenner bei Alt-Fixturen ohne Traegerfeld (AC-11).
             if level != ThunderLevel.NONE and carriers:
                 text += " · " + ", ".join(
-                    thunder_signal_label(n) for n in carriers
+                    thunder_signal_label(n, lang=self._lang) for n in carriers
                 )
             # Issue #2205: Tages-Hagel (dieselbe `thunder_dps`-Menge) hinter
             # der Herkunft und VOR dem Nacht-Halbsatz, wortgleich zum Trend-Weg.
-            _day_hail_note = format_hail_note(getattr(summary, "hail_flag", None))
+            _day_hail_note = format_hail_note(
+                getattr(summary, "hail_flag", None), lang=self._lang,
+            )
             if _day_hail_note:
                 text += f" · {_day_hail_note}"
             # Issue #1651: Nacht-Zusatz, wortgleich zum Trend-Weg (eine
@@ -3707,9 +3692,9 @@ class TripReportSchedulerService:
                 win_start, win_end,
             )
             if add:
-                text += format_night_addendum(*add)
+                text += format_night_addendum(*add, lang=self._lang)
             forecast[key] = {
-                "date": fc_date.strftime("%d.%m.%Y"),
+                "date": fmt_date_numeric(fc_date, self._lang),
                 "level": level,
                 # ADR-0025, Entscheidung 4: echte Stunde durchreichen statt sie
                 # im SMS-Renderer zu erfinden. Bei NONE gibt es keine Stunde.

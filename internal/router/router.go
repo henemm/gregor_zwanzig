@@ -152,7 +152,7 @@ func New(deps Deps) chi.Router {
 	// Issue #1071 — Level-Änderungs-Antrag (authentifiziert, NICHT in Public-Allowlist)
 	r.Post("/api/auth/tier-change-request", handler.RequestTierChangeHandler(deps.Store, *deps.Config))
 	// Bug #590: Telegram /start-Flow — link generation + status polling + internal connect
-	r.Get("/api/auth/telegram-link", handler.GetTelegramLinkHandler(deps.Store, deps.TelegramTokenStore))
+	r.Get("/api/auth/telegram-link", handler.GetTelegramLinkHandler(deps.Store, deps.TelegramTokenStore, deps.Config.TelegramBotUsername))
 	r.Get("/api/auth/telegram-status", handler.GetTelegramStatusHandler(deps.Store))
 	coreAuth := coreauth.RequireCoreAuth(deps.Config.CoreSharedSecret)
 	r.With(coreAuth).Post("/api/internal/telegram-connect", handler.PostTelegramConnectHandler(deps.Store, deps.TelegramTokenStore))
@@ -173,15 +173,15 @@ func New(deps Deps) chi.Router {
 	// Issue #637: Telegram Inbound Webhook (public, secret-header-protected).
 	// Issue #1814: registrierte URL ist die statische Route /inbound (kein Secret
 	// im Pfad); Auth-Traeger ist allein der Header X-Telegram-Bot-Api-Secret-Token.
-	// Die {secret}-Route bleibt nur als Uebergang, bis beide Umgebungen neu
-	// registriert sind (Folge-Scheibe entfernt sie).
-	telegramWebhook := handler.TelegramWebhookHandler(deps.Config.PythonCoreURL)
+	// Die fruehere Route mit Secret im Pfad ist entfernt (#1814 Scheibe 2).
+	telegramWebhook := handler.TelegramWebhookHandler(deps.Config.PythonCoreURL, deps.Config.TelegramWebhookSecret)
 	r.Post("/api/webhooks/telegram/inbound", telegramWebhook)
-	r.Post("/api/webhooks/telegram/{secret}", telegramWebhook)
 	// Issue #2439: Push-Eingang fuer Befehle (SMS seven.io, Mail Stalwart) --
 	// oeffentlich, secret-/signaturgeschuetzt, weckt nur den Poll-Job (ADR-0088).
-	r.Post("/api/webhooks/sms/{secret}", handler.InboundSMSWebhook(deps.Scheduler, deps.Config.PublicHost, time.Now))
-	r.Post("/api/webhooks/mail/{secret}", handler.InboundMailWebhook(deps.Scheduler))
+	r.Post("/api/webhooks/sms/{secret}", handler.InboundSMSWebhook(deps.Scheduler, deps.Config.PublicHost,
+		deps.Config.SevenWebhookPathSecret, deps.Config.SevenWebhookSigningKey, time.Now))
+	r.Post("/api/webhooks/mail/{secret}", handler.InboundMailWebhook(deps.Scheduler,
+		deps.Config.StalwartWebhookPathSecret, deps.Config.StalwartWebhookSecret))
 	r.Get("/api/auth/google/init", handler.GoogleOAuthInitHandler(deps.Config))
 	r.Get("/api/auth/google/callback", handler.GoogleOAuthCallbackHandler(deps.Config, deps.Store))
 	magicLinkLimiter := authmw.NewIPRateLimiter(5, 15*time.Minute)

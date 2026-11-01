@@ -139,7 +139,7 @@ def _login(page, base: str, env: dict, messages: list[str]) -> None:
         page.wait_for_load_state("networkidle", timeout=15000)
         page.fill("input[name='username']", user)
         page.fill("input[name='password']", pw)
-        page.click("button[type='submit']")
+        page.get_by_role("button", name="Anmelden", exact=True).click()
         page.wait_for_load_state("networkidle", timeout=15000)
     except Exception as exc:  # noqa: BLE001
         messages.append(f"/login: Anmeldung nicht durchfuehrbar — {exc}")

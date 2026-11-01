@@ -1,0 +1,23 @@
+============================= test session starts ==============================
+platform linux -- Python 3.12.3, pytest-8.4.1, pluggy-1.6.0
+rootdir: /home/hem/gregor_zwanzig/.claude/worktrees/typed-hugging-honey
+configfile: pyproject.toml
+plugins: anyio-4.12.0, timeout-2.4.0, socket-0.8.0
+timeout: 30.0s
+timeout method: signal
+timeout func_only: False
+collected 166 items
+
+tests/tdd/test_compare_briefing_nachholen.py ........................... [ 16%]
+......                                                                   [ 19%]
+tests/tdd/test_briefing_anchor_survives_dispatch_failure.py ............ [ 27%]
+.............                                                            [ 34%]
+tests/tdd/test_erfolg_heisst_wirkung_s4b.py ............................ [ 51%]
+...........................                                              [ 68%]
+tests/tdd/test_versandpfade_folgen_ortszone.py .................         [ 78%]
+tests/tdd/test_briefing_slot_faelligkeit_und_alarmsperre.py .........    [ 83%]
+tests/tdd/test_compare_preset_send.py ...................                [ 95%]
+tests/tdd/test_compare_briefing_anchor_survives_dispatch_failure.py ..   [ 96%]
+tests/tdd/test_compare_dispatch_failed_tally.py ......                   [100%]
+
+============================= 166 passed in 26.17s =============================

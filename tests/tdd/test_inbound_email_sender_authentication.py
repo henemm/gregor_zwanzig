@@ -170,7 +170,7 @@ class _RecordingNotificationService(NotificationService):
         super().__init__(user_id="default")
         self.replies: list = []
 
-    def send_command_reply_email(self, result, settings):
+    def send_command_reply_email(self, result, settings, lang="de"):
         self.replies.append(result)
         return True  # #1405 S4b AC-23: Vertrag "-> bool" (zugestellt)
 

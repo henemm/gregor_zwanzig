@@ -36,10 +36,13 @@ def _freeze_now(monkeypatch):
     from output.renderers.email import plain as plain_mod
     from output.renderers.email import html as html_mod
     from output.renderers.email import helpers as helpers_mod
+    from output.renderers.email import compact as compact_mod
 
     monkeypatch.setattr(tr_mod, "datetime", _FrozenDatetime)
     monkeypatch.setattr(plain_mod, "datetime", _FrozenDatetime)
     monkeypatch.setattr(html_mod, "datetime", _FrozenDatetime)
+    # Issue #2665: Kompakt-Mail traegt denselben "Generated:"-Footer.
+    monkeypatch.setattr(compact_mod, "datetime", _FrozenDatetime)
     # Issue #1241: der Herkunfts-Footer trägt den Commit-Hash — für die
     # Golden-Bit-Gleichheit auf einen festen Platzhalter einfrieren, sonst
     # brechen die Fixtures nach jedem Commit (analog zum datetime-Freeze).

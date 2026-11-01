@@ -24,6 +24,8 @@ import { parse } from 'svelte/compiler';
 const here = dirname(fileURLToPath(import.meta.url));
 const HUB_OVERVIEW = join(here, '..', 'HubOverview.svelte');
 const COMPARE_TABS = join(here, '..', '..', 'compare', 'CompareTabs.svelte');
+const HUB_UEBERSICHT = join(here, '..', '..', 'shared', 'hub-uebersicht', 'HubUebersicht.svelte');
+const TRIP_TABS = join(here, '..', 'TripTabs.svelte');
 const SHARED_MODULE = join(here, '..', '..', 'shared', 'trip-metrics', 'tripActiveMetricNames.ts');
 
 function readSrc(path: string): string {
@@ -342,6 +344,24 @@ describe('AC-9: Namensauflösung liegt unter shared/, kein Compare-Pendant entst
 			'CompareTabs.svelte importiert tripActiveMetricNames — das wäre ein stillschweigendes ' +
 				'Compare-Pendant, das diese Etappe ausdrücklich NICHT liefert (AC-9, Known Limitations).'
 		);
+	});
+
+	// Issue #2682: die Vergleichs-Übersicht rendert seit dem Umzug der geteilte Baustein
+	// HubUebersicht — die Negativ-Zusicherung gilt dort genauso (sonst vakuum durch den Umzug).
+	// Die Wetter-Metriken-Karte bleibt Trip-Hauptfläche in HubOverview.
+	test('der geteilte Übersichts-Baustein bindet tripActiveMetricNames nicht ein; HubOverview bleibt Trip-Hauptfläche in ihm', () => {
+		const huAst = parse(readSrc(HUB_UEBERSICHT), { modern: true });
+		const imports = (huAst.instance?.content?.body ?? []).filter(
+			(stmt: any) => stmt.type === 'ImportDeclaration' && /tripActiveMetricNames/.test(stmt.source?.value ?? '')
+		);
+		assert.equal(imports.length, 0, 'HubUebersicht importiert tripActiveMetricNames (stilles Compare-Pendant).');
+		const { ast } = parseSvelte(TRIP_TABS);
+		const hu = findAll(ast.fragment, 'Component').find((c) => c.name === 'HubUebersicht');
+		assert.ok(hu, 'TripTabs bindet HubUebersicht nicht ein.');
+		const hauptflaeche = findAll(hu, 'Component').filter((c) => c.name === 'HubOverview');
+		assert.equal(hauptflaeche.length, 1, 'HubOverview steht nicht als Hauptfläche in HubUebersicht.');
+		const katalog = (hauptflaeche[0].attributes ?? []).find((a: any) => a.name === 'metricsCatalog');
+		assert.ok(katalog, 'HubOverview bekommt metricsCatalog nicht mehr durchgereicht (AC-5).');
 	});
 });
 

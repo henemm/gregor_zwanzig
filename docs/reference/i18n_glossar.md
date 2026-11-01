@@ -1,5 +1,7 @@
 # i18n-Glossar Deutsch → Englisch (bindend, ADR-0104, Epic #2644)
 
+> **Hinweis (PO 2026-10-31, ADR-0104):** Die Kurzform (Token-Zeile) von SMS, Premium-SMS und Telegram ist nie sprachabhängig: sie bleibt in jeder Sprache (Konto-Sprache de/en) unverändert und wird nicht übersetzt.
+
 > Stand: 2026-10-30 (freigegeben mit #2645). Regel: **ein** Begriff je Zeile,
 > neue Fachwörter zuerst hier, dann in den Katalog. Einfaches Englisch, Fachbegriffe wo sie
 > der Klarheit dienen. **Verboten:** „Tour"/*tour* (Produktbegriff ist Trip).
@@ -40,6 +42,10 @@
 | Ausblick (3 Tage) | outlook (3-day) | |
 | Legende | legend | |
 | Hinweis | note | |
+| Wetterlage | weather pattern | Stabilitäts-Satz „Wetterlage: STABIL" = *Weather pattern: STABLE* (#2665) |
+| Ersatzquelle / Ersatzmodell | backup source / backup model | Herkunfts-Vertretung; Quellennamen bleiben (#2665) |
+| Antwort-Kommandos | reply commands | Kopf des Befehlsblocks; Befehlswörter selbst siehe P10 (#2665) |
+| nicht zugestellt: FEHLGESCHLAGEN / ZURÜCKGEHALTEN | FAILED / HELD BACK | Blöcke im Briefing (#2665) |
 | Totalausfall | complete outage | Provider-Ausfall-Meldung |
 | Kontingent | quota | SMS-Kontingent = *SMS quota* |
 | Premium-SMS | Premium SMS | Kanalname, bleibt; Zusatz *(inReach)* |
@@ -49,6 +55,9 @@
 | Stufe (Alarm/Warnung) | level | Warnstufe = *warning level* |
 | Schwelle | threshold | |
 | Aktivitätsprofil | activity profile | Werte: *general*, *hiking*, *mountaineering*, … (Register prüfen) |
+| Stundenverlauf | hourly view | Abschnitt im Ortsvergleich; Abschnittskopf „STUNDEN" = *HOURLY* (#2666) |
+| Abo | subscription | „Dieses Abo" = *This subscription*, „Abo bearbeiten" = *Edit subscription* (#2666) |
+| Übersicht | overview | Abschnittskopf „ÜBERSICHT" = *OVERVIEW* (#2666) |
 
 ## Wettergrößen (volle Form, ADR-0042 Klasse 2 „voll")
 
@@ -123,3 +132,31 @@ Hier nur Beispiele der Konvention; **Kurzform (`col_label`) und Kürzel bleiben*
 | PAUSE | PAUSE | |
 | STRECKE | ROUTE | |
 | KUERZEL | CODES | heute schon so (#2417) |
+
+## Amtliche Warnungen (#2668)
+
+| Deutsch | Englisch | Hinweis |
+|---|---|---|
+| GELB / ORANGE / ROT (GRÜN) | YELLOW / ORANGE / RED (GREEN) | Stufenwörter; SMS-Stufenbuchstaben bleiben |
+| Warnstufe / höchste Stufe | warning level / highest level | |
+| Gültig | Valid | Datenzeile „Valid: Thu 29 Oct · 11:00–20:00“ |
+| ganztägig | all day | |
+| Gefahr | hazard | Datenzeile |
+| Entwarnung | all clear | „Stufe 3 → beendet“ = *Level 3 → ended* |
+| Lawinenstufe | avalanche level | EAWS-Wörter: low, moderate, considerable, high, very high |
+| Waldgrenze | treeline | |
+| Quelltext: Französisch | Source text in French | Behördentext wird nie übersetzt |
+| gesamte Route / alle Orte | entire route / all locations | SMS-Umfang (`ges.Route`, `alleOrte`) bleibt |
+| Zugang gesperrt | Access closed | Massiv-Namen bleiben |
+| Waldbrand-Gefahr | Wildfire risk | |
+
+## Abweichungs- und Regen-Alarme (#2667)
+
+| Deutsch | Englisch | Hinweis |
+|---|---|---|
+| Ziel (Etappenziel im Alarm) | destination | `🏁 Destination`; derselbe Schlüssel `alarm.segment.ziel` wie im Radar-Validator |
+| stärkste Stunde | peak hour | Zeitpunkt des stärksten Werts |
+| Luftmasse | air mass | Gewitter-Zeile bis „leicht“ (#2176) |
+| Radar-Nowcast | radar nowcast | Badge der Regen-Alarm-Mail |
+| Beginn (Regen-/Gewitter-Beginn) | onset | „Niedersch-Beginn“ = *Precip onset* |
+| Cooldown | cooldown | „höchstens einmal in“ = *at most once in* |

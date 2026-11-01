@@ -18,6 +18,7 @@ from app.models import (
 )
 from app.profile import ActivityProfile
 
+from i18n import Lang
 from output.renderers.day_window import DAY_WINDOW_END_HOUR, DAY_WINDOW_START_HOUR
 from output.renderers.email.compact import render_compact
 from output.renderers.email.helpers import build_format_modes, build_html_indicator_keys
@@ -70,6 +71,7 @@ def render_email(
     trip_metrics_altbestand: bool = True,
     undelivered: Optional[list] = None,
     starkregen_hint_text: Optional[str] = None,
+    lang: Lang = "de",
     **_ignored,
 ) -> tuple[str, str]:
     """Returns (html_body, plain_body). Pure function.
@@ -129,6 +131,7 @@ def render_email(
             day_window_end_hour=day_window_end_hour,
             trip_metrics_altbestand=trip_metrics_altbestand,
             undelivered=undelivered,
+            lang=lang,
         )
         return "", compact_text
 
@@ -177,6 +180,7 @@ def render_email(
         trip_metrics_altbestand=trip_metrics_altbestand,
         undelivered=undelivered,
         starkregen_hint_text=starkregen_hint_text,
+        lang=lang,
     )
     plain_body = render_plain(
         segments=segments,
@@ -210,6 +214,7 @@ def render_email(
         trip_metrics_altbestand=trip_metrics_altbestand,
         undelivered=undelivered,
         starkregen_hint_text=starkregen_hint_text,
+        lang=lang,
     )
     return html_body, plain_body
 

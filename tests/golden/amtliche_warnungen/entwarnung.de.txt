@@ -1,0 +1,55 @@
+Entwarnung Gewitter 3→1 +1 weitere
+
+===== ✂ =====
+
+Entwarnung
+Gewitter · Innsbruck-Land · Segment 1: Stufe 3 → 1
+Hitze · Var · Route: Stufe 3 → beendet
+
+Stand: heute 06:00 · abgerufen bei GeoSphere Austria
+
+GR20 Golden · Amtliche Warnung · GeoSphere Austria
+
+===== ✂ =====
+
+<b>GR20 Golden · Entwarnung</b>
+Gewitter · Innsbruck-Land · Segment 1: Stufe 3 → 1
+Hitze · Var · Route: Stufe 3 → beendet
+
+===== ✂ =====
+
+<b>Entwarnung</b>
+Gewitter · Innsbruck-Land · Segment 1: Stufe 3 → 1
+Hitze · Var · Route: Stufe 3 → beendet
+
+===== ✂ =====
+
++TS:M>- HT:M>0
+
+===== ✂ =====
+
+Sturm und Starkregen für nur Hyères gemeldet.
+
+2 amtliche Warnungen
+
+Warnstufe: ORANGE (mittlere von drei) — Skala GELB · ORANGE · ROT
+Gefahr: Sturm
+Gültig: Do 29.10. · 23:00 – Fr 30.10. 04:00
+Orte: Hyères
+Gefahr: Starkregen
+Gültig: Fr 30.10. · 07:00–13:00
+Orte: Hyères
+Quelle: GeoSphere Austria — Var.
+Betrifft nur Hyères, nicht alle Orte.
+
+Entwarnung
+Gewitter · Innsbruck-Land · Segment 1: Stufe 3 → 1
+Hitze · Var · Route: Stufe 3 → beendet
+
+Stand: heute 06:00 · abgerufen bei GeoSphere Austria
+
+GR20 Golden · Amtliche Warnung · GeoSphere Austria
+
+===== ✂ =====
+
+nur Hyeres: !WG:M Do23-Fr04 RA:M Fr07-13 +TS:M>- Seg 1 HT:M>0 Route

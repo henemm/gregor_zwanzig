@@ -53,9 +53,9 @@ KOMPAKT_ERWARTET = [
     f"XX  {_NIEDERSCHLAG_LABEL} 7.1 mm  {_BOEEN_LABEL} 33 km/h",
 ]
 TELEGRAM_ERWARTET = [
-    f"XX  {_NIEDERSCHLAG_LABEL}: 2.5 mm  {_BOEEN_LABEL}: 44 km/h",
-    f"XX  {_NIEDERSCHLAG_LABEL}: 0.0 mm  {_BOEEN_LABEL}: 52 km/h",
-    f"XX  {_NIEDERSCHLAG_LABEL}: 7.1 mm  {_BOEEN_LABEL}: 33 km/h",
+    f"XX TT.MM.  {_NIEDERSCHLAG_LABEL}: 2.5 mm  {_BOEEN_LABEL}: 44 km/h",
+    f"XX TT.MM.  {_NIEDERSCHLAG_LABEL}: 0.0 mm  {_BOEEN_LABEL}: 52 km/h",
+    f"XX TT.MM.  {_NIEDERSCHLAG_LABEL}: 7.1 mm  {_BOEEN_LABEL}: 33 km/h",
 ]
 
 

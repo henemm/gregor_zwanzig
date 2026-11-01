@@ -345,7 +345,7 @@ def _run_engine_with_recorded_hourly(hourly: list[ForecastDataPoint]) -> Locatio
     loc = SavedLocation(id="andermatt", name="Andermatt", lat=39.76, lon=2.71, elevation_m=200)
     original_fetch = ce_mod.fetch_forecast_for_location
 
-    def recorded_fetch(location, hours=48, settings=None):  # echte Funktion, kein Mock
+    def recorded_fetch(location, hours=48, settings=None, user_id=None):  # echte Funktion, kein Mock
         return {
             "location": location,
             "error": None,

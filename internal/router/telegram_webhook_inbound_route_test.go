@@ -3,15 +3,15 @@ package router
 // TDD RED: Issue #1814 — Telegram-Webhook ohne Secret im URL-Pfad.
 // Spec: docs/specs/modules/fix_1814_telegram_webhook_secret_nicht_im_pfad.md
 //
-// AC-3: POST /api/webhooks/telegram/inbound mit korrektem Header -> 200 + Weiterreichung,
-//       ueber den ECHTEN Router inkl. AuthMiddleware, ohne Sitzungs-Cookie.
-// AC-4: fehlender/falscher Header -> derselbe Status wie auf der Alt-Route, kein Forwarding.
-// AC-5: Alt-Route /{beliebiges-Segment} bleibt bis zur Folge-Scheibe erreichbar.
-// AC-6: zwei Chats (zwei Nutzer) -> Zuordnung (Body) identisch ueber beide Routen.
+// Scheibe 2 (fix_1814_s2_telegram_alt_route_entfernen):
+// AC-1: Alt-Route /{segment} entfernt -> 404/405, nichts an den Core.
+// AC-2: /inbound mit korrektem Header -> 200 + Weiterreichung (echter Router + AuthMiddleware).
+// AC-3: fehlender/falscher Header auf /inbound -> 403, kein Forwarding.
+// AC-5: zwei Chats (zwei Nutzer) -> Zuordnung (Body) unveraendert.
 //
-// RED-Signal heute: /inbound ist nur ueber die Param-Route {secret} erreichbar;
-// die Param-Route akzeptiert ihn ebenfalls -- daher wird zusaetzlich geprueft, dass
-// die neue Adresse als EIGENE statische Route registriert ist (kein Param-Treffer).
+// Ist-Zustand: Die Alt-Route {secret} ist seit Scheibe 2 entfernt; /inbound ist die
+// einzige Route. Zusaetzlich wird geprueft, dass /inbound als EIGENE statische Route
+// registriert ist (kein Param-Treffer).
 // Kein t.Parallel() (t.Setenv).
 
 import (
@@ -67,22 +67,20 @@ func tgPost(r http.Handler, pfad, body, header string) *httptest.ResponseRecorde
 	return w
 }
 
-// AC-3 + AC-6: korrekter Header, zwei Chats, beide Routen -> gleiche Weiterreichung.
-func TestTelegramInbound_KorrekterHeader_200UndWeiterreichung_BeideRoutenGleich(t *testing.T) {
+// AC-2 + AC-5: korrekter Header, zwei Chats (zwei Nutzer) nur auf /inbound -> 200,
+// jedes Update unveraendert (Zuordnung/Body) an den Core.
+func TestTelegramInbound_KorrekterHeader_200UndWeiterreichung_ZweiNutzer(t *testing.T) {
 	r, core := tgRouter(t)
 	alice := `{"update_id":1,"message":{"chat":{"id":1001},"text":"status"}}`
 	bob := `{"update_id":2,"message":{"chat":{"id":2002},"text":"status"}}`
-
-	for _, pfad := range []string{"/api/webhooks/telegram/inbound", "/api/webhooks/telegram/altes-segment"} {
-		for _, body := range []string{alice, bob} {
-			w := tgPost(r, pfad, body, "tg-geheim-1814")
-			if w.Code != http.StatusOK {
-				t.Fatalf("POST %s: erwartet 200, bekam %d: %s", pfad, w.Code, w.Body.String())
-			}
+	for _, body := range []string{alice, bob} {
+		w := tgPost(r, "/api/webhooks/telegram/inbound", body, "tg-geheim-1814")
+		if w.Code != http.StatusOK {
+			t.Fatalf("POST /inbound: erwartet 200, bekam %d: %s", w.Code, w.Body.String())
 		}
 	}
 	got := core.snapshot()
-	want := []string{alice, bob, alice, bob}
+	want := []string{alice, bob}
 	if len(got) != len(want) {
 		t.Fatalf("Python-Core sah %d Updates, erwartet %d: %v", len(got), len(want), got)
 	}
@@ -93,17 +91,13 @@ func TestTelegramInbound_KorrekterHeader_200UndWeiterreichung_BeideRoutenGleich(
 	}
 }
 
-// AC-4: fehlender/falscher Header auf /inbound -> gleicher Status wie Alt-Route, kein Forwarding.
-func TestTelegramInbound_FalscherOderFehlenderHeader_GleicherStatusWieAltRoute_KeinForwarding(t *testing.T) {
+// AC-3: fehlender/falscher Header auf /inbound -> 403, kein Forwarding.
+func TestTelegramInbound_FalscherOderFehlenderHeader_403_KeinForwarding(t *testing.T) {
 	r, core := tgRouter(t)
 	for _, header := range []string{"", "falsch"} {
-		neu := tgPost(r, "/api/webhooks/telegram/inbound", `{"update_id":9}`, header)
-		alt := tgPost(r, "/api/webhooks/telegram/altes-segment", `{"update_id":9}`, header)
-		if neu.Code != alt.Code {
-			t.Errorf("Header %q: /inbound %d != Alt-Route %d", header, neu.Code, alt.Code)
-		}
-		if neu.Code != http.StatusForbidden {
-			t.Errorf("Header %q: erwartet 403 (nicht 401/404/200), bekam %d", header, neu.Code)
+		w := tgPost(r, "/api/webhooks/telegram/inbound", `{"update_id":9}`, header)
+		if w.Code != http.StatusForbidden {
+			t.Errorf("Header %q: erwartet 403 (nicht 401/404/200), bekam %d", header, w.Code)
 		}
 	}
 	if n := len(core.snapshot()); n != 0 {
@@ -111,23 +105,24 @@ func TestTelegramInbound_FalscherOderFehlenderHeader_GleicherStatusWieAltRoute_K
 	}
 }
 
-// AC-5: andere Segmente werden von der statischen Route nicht verdraengt.
-func TestTelegramInbound_AltRoute_BleibtErreichbar(t *testing.T) {
+// AC-1: die Alt-Route /{secret} ist entfernt -- auch mit korrektem Header weder
+// 200 noch Weiterreichung (Mutation: Route wieder einfuegen => rot).
+func TestTelegramInbound_AltRoute_NichtMehrZugestellt(t *testing.T) {
 	r, core := tgRouter(t)
-	for _, seg := range []string{"whatever", "x", "inbound2"} {
+	for _, seg := range []string{"tg-geheim-1814", "whatever", "x", "inbound2"} {
 		w := tgPost(r, "/api/webhooks/telegram/"+seg, `{"update_id":3}`, "tg-geheim-1814")
-		if w.Code != http.StatusOK {
-			t.Errorf("Alt-Route /%s: erwartet 200, bekam %d", seg, w.Code)
+		if w.Code != http.StatusNotFound && w.Code != http.StatusMethodNotAllowed {
+			t.Errorf("Alt-Route /%s: erwartet 404/405, bekam %d", seg, w.Code)
 		}
 	}
-	if n := len(core.snapshot()); n != 3 {
-		t.Errorf("erwartet 3 weitergereichte Updates, bekam %d", n)
+	if n := len(core.snapshot()); n != 0 {
+		t.Errorf("Alt-Route darf nichts an den Core reichen, %d Updates gesehen", n)
 	}
 }
 
 // AC-3 (Wirkungsort): /inbound ist als EIGENE statische Route registriert --
-// nicht nur zufaellig ueber {secret} erreichbar. Sonst wuerde die Folge-Scheibe
-// (Alt-Route entfernen) den Eingang still abschalten.
+// nicht ueber eine Param-Route. Die Alt-Route {secret} ist seit Scheibe 2 entfernt;
+// der Test sichert, dass der Eingang dadurch nicht still abgeschaltet ist.
 func TestTelegramInbound_IstEigeneStatischeRoute(t *testing.T) {
 	r, _ := tgRouter(t)
 	cr, ok := r.(chi.Routes)

@@ -42,6 +42,7 @@ from app.models import (
     WeatherChange,
 )
 from app.profile import ActivityProfile
+from i18n import Lang
 from output.renderers.day_window import display_end_time, resolve_configured_window
 import services.alert_urgency as alert_urgency
 from services.report_config_resolver import ReportRenderOptions, resolve_report_render_options
@@ -89,6 +90,8 @@ class TripReportFormatter:
         has_gap: bool = False,
         undelivered: Optional[list] = None,
         starkregen_hint_text: Optional[str] = None,
+        *,
+        lang: Lang = "de",
     ) -> TripReport:
         """Format trip segments into HTML + plain-text email.
 
@@ -191,7 +194,7 @@ class TripReportFormatter:
             compact_summary = self._generate_compact_summary(
                 segments, stage_name, dc, night_weather, has_gap=has_gap,
                 day_window_start_hour=_dw_start, day_window_end_hour=_dw_end,
-                report_type=report_type,
+                report_type=report_type, lang=lang,
             )
 
         # β3 Adapter (§A2/§A6): RENDER an pure renderer delegieren.
@@ -264,6 +267,8 @@ class TripReportFormatter:
             # Ohne den kwarg (Vorschau, Goldens, CLI) unveraendert.
             undelivered=undelivered,
             starkregen_hint_text=starkregen_hint_text,
+            # Issue #2664/#2665: Sprache der Mail (HTML, Klartext, Kompakt).
+            lang=lang,
         )
         first_agg = segments[0].aggregated
         email_subject = self._generate_subject(
@@ -274,6 +279,7 @@ class TripReportFormatter:
             gust_max_kmh=first_agg.gust_max_kmh,
             tz=self._tz,
             shortcode=shortcode,
+            lang=lang,  # Issue #2671
         )
 
         # Issue #1001: Multi-Bubble-Telegram-Rendering (ersetzt #360-Narrow-Body).
@@ -329,6 +335,7 @@ class TripReportFormatter:
             day_window_start_hour=_dw_start,
             day_window_end_hour=_dw_end,
             starkregen_hint_text=starkregen_hint_text,
+            lang=lang,  # Issue #2671: Versand reicht die Nutzersprache durch
         )
         telegram_bubbles = [b.text for b in telegram_bubbles_result]
         telegram_actions_markup = (
@@ -901,6 +908,7 @@ class TripReportFormatter:
         gust_max_kmh: Optional[float] = None,
         tz: ZoneInfo,
         shortcode: Optional[str] = None,
+        lang: Lang = "de",
     ) -> str:
         """Generate §11-konformes E-Mail-Subject via output.subject filter.
 
@@ -939,7 +947,7 @@ class TripReportFormatter:
             trip_name=trip_name,
             shortcode=shortcode or None,
         )
-        return build_email_subject(line)
+        return build_email_subject(line, lang=lang)
 
     # ------------------------------------------------------------------
     # Risk (per segment, used for overview)
@@ -1010,6 +1018,7 @@ class TripReportFormatter:
         day_window_start_hour: Optional[int] = None,
         day_window_end_hour: Optional[int] = None,
         report_type: str = "evening",
+        lang: Lang = "de",
     ) -> Optional[str]:
         """Generate compact natural-language summary for the stage."""
         if not segments or not stage_name:
@@ -1025,6 +1034,7 @@ class TripReportFormatter:
             day_window_start_hour=_start,
             day_window_end_hour=_end,
             report_type=report_type,
+            lang=lang,
         )
 
     @staticmethod

@@ -14,10 +14,11 @@ VORBILD: frontend/src/lib/utils/profileSignature.ts
 """
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import Optional
 
 from app.profile import ActivityProfile
+from i18n import Lang, t
 
 
 @dataclass(frozen=True)
@@ -92,15 +93,20 @@ _SIGNATURES: dict[ActivityProfile, ProfileSignature] = {
 _FALLBACK = _SIGNATURES[ActivityProfile.ALLGEMEIN]
 
 
-def profile_signature(profile: Optional[ActivityProfile]) -> ProfileSignature:
+def profile_signature(
+    profile: Optional[ActivityProfile], *, lang: Lang = "de",
+) -> ProfileSignature:
     """Liefert die ProfileSignature fuer ein ActivityProfile.
 
     Bei ``None`` oder unbekanntem Wert wird die ALLGEMEIN-Signatur zurueckgegeben
-    (Fallback, kein Throw).
+    (Fallback, kein Throw). Issue #2664: ``lang="en"`` liefert die Eyebrow aus
+    dem Katalog (``mail.profil.*``); ohne ``lang`` bleibt sie deutsch.
     """
-    if profile is None:
-        return _FALLBACK
-    return _SIGNATURES.get(profile, _FALLBACK)
+    sig = _FALLBACK if profile is None else _SIGNATURES.get(profile, _FALLBACK)
+    if lang != "en":
+        return sig
+    key = next((k for k, v in _SIGNATURES.items() if v is sig), ActivityProfile.ALLGEMEIN)
+    return replace(sig, eyebrow=t(f"mail.profil.{key.value}", lang))
 
 
 __all__ = ["ProfileSignature", "profile_signature"]

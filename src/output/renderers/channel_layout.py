@@ -12,6 +12,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
+from i18n import Lang, t, tn
+
 if TYPE_CHECKING:  # pragma: no cover - nur fuer Typannotation
     from app.models import MetricConfig, UnifiedWeatherDisplayConfig
 
@@ -87,7 +89,7 @@ class ChannelLayout:
     demoted_count: int         # aus primary verdraengt (Logging/Badge/Hinweis)
 
 
-def telegram_metric_notice(demoted_count: int, *, context: str) -> str:
+def telegram_metric_notice(demoted_count: int, *, context: str, lang: Lang = "de") -> str:
     """context='vergleich' -> Ortsvergleich-Wortlaut (#1362, unveraendert).
     context='route' -> Trip-Wortlaut (#1741, neu). Leer, wenn nichts verdraengt wurde.
 
@@ -95,31 +97,28 @@ def telegram_metric_notice(demoted_count: int, *, context: str) -> str:
     gebildet: im Ortsvergleich fehlen die verdraengten Groessen in der
     Telegram-Nachricht GANZ, im Trip stehen sie unmittelbar darueber in der
     Kurzuebersicht als Tageswert. Ein gemeinsamer Text waere fuer eine der
-    beiden Flaechen sachlich falsch."""
+    beiden Flaechen sachlich falsch. ``lang`` (Issue #2666): Wortlaut aus
+    ``allgemein.telegram_limit.*`` (Singular/Plural ueber ``tn``)."""
     if demoted_count <= 0:
         return ""
-    if context == "vergleich":
-        return (
-            f"… +{demoted_count} weitere Wettergrößen je Ort (Telegram-Limit) "
-            "— vollständig per E-Mail"
-        )
-    return (
-        f"… +{demoted_count} weitere Wettergrößen nur als Tageswert "
-        "(Telegram-Limit)"
-    )
+    form = "vergleich" if context == "vergleich" else "route"
+    return tn(f"allgemein.telegram_limit.{form}", demoted_count, lang)
 
 
-def selection_gap_notice(count: int, *, scope: str) -> str:
+def selection_gap_notice(count: int, *, scope: str, lang: Lang = "de") -> str:
     """Issue #1405 S3: EIN Wortlaut fuer "gewaehlte Groessen ohne Wert".
 
     scope='ort' -> je Ort (Telegram, Wortlaut seit #1362 unveraendert);
     scope='vergleich' -> tabellenweit (E-Mail HTML + Klartext). Leer bei
     ``count <= 0``. Die SMS traegt stattdessen das Kuerzel ``?N``
-    (Wire-Vertrag sms_format.md §5b)."""
+    (Wire-Vertrag sms_format.md §5b). ``lang`` (Issue #2666): Wortlaut aus
+    ``allgemein.hinweis.gewaehlt_ohne_wert*`` (geteilt Trip/Ortsvergleich,
+    Singular/Plural ueber ``tn``)."""
     if count <= 0:
         return ""
-    where = "an diesem Ort" if scope == "ort" else "in diesem Vergleich"
-    return f"… +{count} gewählte Wettergrößen ohne Wert {where}"
+    form = "ort" if scope == "ort" else "vergleich"
+    wo = t(f"allgemein.hinweis.gewaehlt_ohne_wert.{form}", lang)
+    return tn("allgemein.hinweis.gewaehlt_ohne_wert", count, lang, wo=wo)
 
 
 def render_for_channel(

@@ -1,7 +1,7 @@
 # Epic 2644: Zweisprachigkeit Deutsch/Englisch
 
 **Status:** Geplant (2026-10-30) — Specs geschrieben, warten auf Block-Freigabe; Umsetzung autonom in einer Sitzung (Kern Sonnet, Migration Haiku)
-**Epic Scope:** Web-UI, E-Mail, Telegram, SMS-/Premium-SMS-Freitext, Inbound-Befehle und -Antworten, Go-API-Meldungen, Konto-/Transaktions-Mails sprechen Deutsch **und** Englisch. Die Sprache ist eine Konto-Einstellung (`language`), vorbelegt aus dem Browser. Protokoll-Token, Kurzformen und Eigennamen werden nie übersetzt.
+**Epic Scope:** Web-UI, E-Mail, Telegram (Normalstil), Inbound-Befehle und -Antworten, Go-API-Meldungen, Konto-/Transaktions-Mails sprechen Deutsch **und** Englisch. Die Sprache ist eine Konto-Einstellung (`language`), vorbelegt aus dem Browser. Protokoll-Token, Kurzformen und Eigennamen werden nie übersetzt. **Präzisierung PO 2026-10-31 (ADR-0104): Die Kurzform von SMS, Premium-SMS und Telegram bleibt in JEDER Sprache unverändert; SMS-/Premium-SMS-Freitext (P8, #2670) entfällt.**
 **Grundsatz:** `docs/adr/0104-zweisprachigkeit-de-en.md` · **Konventionen (verbindlich, schließt alle Entwurfsfragen):** `docs/features/epic-i18n-de-en-konventionen.md` · **Glossar:** `docs/reference/i18n_glossar.md` · **Issues:** Epic #2644 mit 32 Sub-Issues (#2645–#2681) · **Specs:** `docs/specs/modules/i18n_*.md` (Block-Freigabe, Abschnitt unten)
 **PO-Auftrag:** 2026-10-30 („Erstelle einen Plan, wie du Gregor Zwanzig multilingual erstellst … Umsetzung später durch Agenten mit Haiku, wenn ausreichend"); Rückfragen per `AskUserQuestion` beantwortet (Sprachwahl, Umfang, Technik, Ablage).
 
@@ -27,7 +27,7 @@ Mail: Header X-GZ-Lang ──> Validatoren bilden Erwartungen aus dem Python-Kat
 - **Ein Auflösungsweg je Schicht:** `resolve_user_lang(user_id)` (Python), `i18n.FromContext(ctx)` (Go), `locals.lang` (SvelteKit). Kein zweiter Weg, kein globaler Zustand (zwei Nutzer im selben Scheduler-Lauf).
 - **Kataloge:** flache, bereichs-präfixierte Schlüssel in JSON je Sprache **und Bereich**, damit Migrationspakete parallel ohne Dateikonflikt arbeiten. Platzhalter `{name}`, Plural `.one`/`.other`, Fallback Deutsch mit einmaligem Log. Paritätstest je Katalog.
 - **Ratschen:** je Schicht ein Test gegen hartkodierte Nutzertexte mit schrumpfender Allowlist (S4, P11, G5).
-- **Kurzform ist Platzform:** Telegram-Kurzstil und Premium-SMS bleiben für beide Kontosprachen vollständig englisch wie heute (#2417 AC-4); Nutzersprache wirkt nur in Langform-Kanälen (Spec P10).
+- **Kurzform ist Platzform:** Telegram-Kurzstil und Premium-SMS bleiben für beide Kontosprachen vollständig englisch wie heute (#2417 AC-4); Nutzersprache wirkt nur in Langform-Kanälen (Spec P10). Präzisierung PO 2026-10-31: auch die SMS-Kurzform ist nie sprachabhängig, P8 entfällt (ADR-0104, Abschnitt „Präzisierung 2026-10-31“).
 
 ## Ist-Stand (gemessen 2026-10-30)
 
@@ -69,10 +69,10 @@ Mail: Header X-GZ-Lang ──> Validatoren bilden Erwartungen aus dem Python-Kat
 | 2 | P5 Abweichungs-/Radar-Alarme | #2667 | Haiku | PV |
 | 2 | P6 Amtliche Warnungen | #2668 | Haiku | PV |
 | 2 | P7 Telegram | #2669 | Haiku | P1 |
-| 2 | P8 SMS/Premium-SMS-Freitext | #2670 | Haiku | P1 |
-| 2 | P9a Versand-Schicht | #2671 | Haiku | PV |
-| 2 | P9b Scheduler/Alarm-Orchestrierung | #2672 | Haiku | P2–P8 |
-| 2 | P10 Inbound | #2673 | Sonnet | P1 |
+| 2 | ~~P8 SMS/Premium-SMS-Freitext~~ **entfällt** (PO 2026-10-31, Kurzform unverändert) | #2670 | — | — |
+| 2 | P9a Versand-Schicht (keine Sprachumschaltung der Kurzform) | #2671 | Haiku | PV |
+| 2 | P9b Scheduler/Alarm-Orchestrierung (keine Sprachumschaltung der Kurzform) | #2672 | Haiku | P2–P7 |
+| 2 | P10 Inbound (keine Sprachumschaltung der Kurzform) | #2673 | Sonnet | P1 |
 | 2 | P11 API-Meldungen + Ratsche Python | #2674 | Haiku | P1 / P2–P10 |
 | 3 Go | G1 i18n-Kern, Kontext, `code`+`message` | #2675 | Sonnet | S1 |
 | 3 | G2 Handler Auth/Konto | #2676 | Haiku | G1 |
@@ -102,7 +102,7 @@ PO-Frage; einzige Unterbrechung ist ein gescheitertes Hard Gate (Konventionen Ab
 | S3 #2648 | `i18n_s3_sprachumschalter_konto_2648.md` | P5 #2667 | `i18n_p5_abweichungs_radar_alarme_2667.md` |
 | S4 #2649 | `i18n_s4_ratsche_frontend_2649.md` | P6 #2668 | `i18n_p6_amtliche_warnungen_2668.md` |
 | F1 #2650 | `i18n_f1_auth_routen_2650.md` | P7 #2669 | `i18n_p7_telegram_2669.md` |
-| F2 #2651 | `i18n_f2_hilfe_infobox_2651.md` | P8 #2670 | `i18n_p8_sms_freitext_2670.md` |
+| F2 #2651 | `i18n_f2_hilfe_infobox_2651.md` | ~~P8 #2670~~ | `i18n_p8_sms_freitext_2670.md` (superseded) |
 | F3 #2652 | `i18n_f3_home_listen_2652.md` | P9a #2671 | `i18n_p9a_versand_schicht_2671.md` |
 | F4 #2653 | `i18n_f4_konto_admin_nav_2653.md` | P9b #2672 | `i18n_p9b_scheduler_orchestrierung_2672.md` |
 | F5 #2654 | `i18n_f5_wertebereiche_tab_2654.md` | P10 #2673 | `i18n_p10_inbound_2673.md` |
@@ -126,7 +126,7 @@ Vollständig in den Konventionen, Abschnitte 7–9. Kurzfassung:
 4. Englische Texte prüft der Adversary gegen das Glossar; kein PO-Review (PO-Entscheid).
 5. Zweiter Staging-Nutzer `en` entsteht autonom per Subadressierung und Register-API; Telegram-Prüfung per Sprach-Umschalten des Testnutzers (Konventionen Abschnitt 6).
 
-**Reihenfolge:** S0 → S1 → S2 → S4 → S3 → P1 → PV → G1 → F1 → F11 → F2 → F3 → F4 → F6 → F8 → F5 → F7 → F9 → F10 → P2 → P3 → P4 → P5 → P6 → P7 → P8 → P9a → P9b → P10 → P11 → G2 → G3 → G4 → G5 → F12 → A1 → A2.
+**Reihenfolge:** S0 → S1 → S2 → S4 → S3 → P1 → PV → G1 → F1 → F11 → F2 → F3 → F4 → F6 → F8 → F5 → F7 → F9 → F10 → P2 → P3 → P4 → P5 → P6 → P7 → P9a → P9b → P10 → P11 → G2 → G3 → G4 → G5 → F12 → A1 → A2.
 
 ## Was jedes Haiku-Paket im Briefing braucht
 
@@ -140,7 +140,7 @@ Vollständig in den Konventionen, Abschnitte 7–9. Kurzfassung:
 
 | Risiko | Gegenmittel |
 |---|---|
-| Englische Texte länger → Layout-Brüche, SMS > 160 Zeichen | F12 Screenshot-Paare + Fresh-Eyes; P8 Längen-Test je Klartext |
+| Englische Texte länger → Layout-Brüche, SMS > 160 Zeichen | F12 Screenshot-Paare + Fresh-Eyes; SMS-Kurzform unverändert (Token-Wächter, kein Längenrisiko) |
 | Validatoren brechen bei erster englischer Mail (Lehre #1381/#1404/#1420) | PV **vor** allen Mail-Renderer-Paketen; Marker `X-GZ-Lang` |
 | Parallel-Pakete kollidieren im Katalog | Katalog je Bereich (eigene Datei je Paket) |
 | Haiku übersetzt frei oder uneinheitlich | Glossar bindend; Adversary prüft Glossar-Konformität; Paritätstest |

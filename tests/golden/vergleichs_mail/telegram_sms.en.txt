@@ -1,0 +1,33 @@
+LOCATION COMPARISON — Golden-Vergleich
+Date: 29 Oct 2026
+
+Innsbruck
+   Temp max 11°C · Rain 2.4 mm · Thunderstorm — · Precipitation type Rain · Gusts 38 km/h · Rain probability 70% · Wind 26 km/h
+   … +3 more weather values per location (Telegram limit) — full version by email
+   … +1 selected weather value without data at this location
+Lienz
+   Temp max 12°C · Rain 5.4 mm · Thunderstorm medium · CAPE, Lightning density · Hail: yes · Precipitation type Rain · Gusts 39 km/h · Rain probability 70% · Wind 26 km/h
+   … +3 more weather values per location (Telegram limit) — full version by email
+   … +1 selected weather value without data at this location
+Kufstein
+   Temp max 13°C · Rain 8.4 mm · Thunderstorm — · Precipitation type Mixed precipitation · Gusts 40 km/h · Rain probability 70% · Wind 26 km/h
+   … +3 more weather values per location (Telegram limit) — full version by email
+   … +1 selected weather value without data at this location
+Brenner
+   Error: Zeitueberschreitung beim Abruf
+----
+LOCATION COMPARISON
+Date: 29 Oct 2026
+
+Innsbruck
+   no values
+Lienz
+   no values
+Kufstein
+   no values
+Brenner
+   Error: Zeitueberschreitung beim Abruf
+----
+No comparison data available.
+----
+Vergleich 29.10.: Innsbruck D 11C R 2.4 mm TH - PT Regen G 38 km/h PR 70% W 26 km/h FZ 2400 m HU 72% SU 4.0h ?1 +3 Orte

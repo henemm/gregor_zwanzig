@@ -2,9 +2,9 @@
 entity_id: i18n_p9a_versand_schicht_2671
 type: module
 created: 2026-10-30
-updated: 2026-10-30
+updated: 2026-11-01
 status: approved
-version: "1.0"
+version: "1.1"
 tags: [i18n, epic-2644, issue-2671, python, model-haiku]
 ---
 
@@ -30,7 +30,7 @@ Wer Englisch gewählt hat, bekommt Betreffzeilen, Ausfall- und Vorschau-Hinweise
 > **Querschnitts-Prüfpunkte:**
 > - **Trip/Ortsvergleich-Teilung:** Alle Texte dieses Pakets bedienen beide Flächen (Trip-Briefing, Ortsvergleich-Briefing, Handversand beider Arten, Test-Versand). Sie liegen in `versand.*`; es entsteht kein Trip- oder Compare-Pendant. `SEND_OUTCOMES` ist schon die geteilte Zuordnung für beide.
 > - **Mandantentrennung:** `NotificationService` ist je Nutzer instanziiert (`NotificationService(settings, user_id)`); die Sprache wird **einmal im Konstruktor aus dieser `user_id`** gelesen und am Objekt gehalten, nicht modulglobal. `user_id` kommt aus dem Auth-Kontext, nie `"default"` (`_require_user()` bleibt fail-closed). AC-4 beweist mit **zwei Nutzern verschiedener Sprache im selben Prozess und Lauf**, dass jeder seine Sprache bekommt.
-> - **Kanäle:** Briefing- und Alarm-Inhalt. Alle vier: E-Mail (Betreff, Header, Hinweise), Telegram (`render_telegram_incomplete_hint`, Alarm-/Briefing-Renderer), SMS (`_AMTL_HINWEIS_SMS_TOKEN`) und Premium-SMS (derselbe Text); die Weitergabe von `lang` an alle Renderer-Aufrufe ist Teil dieses Pakets.
+> - **Kanäle:** Briefing- und Alarm-Inhalt. E-Mail (Betreff, Header, Hinweise) und Telegram im Normalstil (`render_telegram_incomplete_hint`, Alarm-/Briefing-Renderer, Ausfall-Meldung) folgen der Nutzersprache; die Weitergabe von `lang` an alle Langform-Renderer-Aufrufe ist Teil dieses Pakets. **PO-Korrektur 2026-10-31** (ADR-0104 Präzisierung): SMS, Premium-SMS und der Telegram-Kurzstil bleiben in JEDER Sprache byte-gleich zu heute. `_AMTL_HINWEIS_SMS_TOKEN` (`+ amtl. Warnung s. E-Mail/Telegram`) bleibt deutsch, es gibt keinen Schlüssel `versand.sms.amtl_hinweis`; der SMS-/Premium-SMS-Text der Ausfall-Meldung bleibt deutsch; die SMS-Renderer (`render_alert_sms`, `render_official_alert_sms*`, `format_sms`) bekommen kein `lang`.
 
 ### Affected Files
 
@@ -39,13 +39,13 @@ Wer Englisch gewählt hat, bekommt Betreffzeilen, Ausfall- und Vorschau-Hinweise
 | `src/output/channels/email.py` | MODIFY | `build_mime_message(..., lang: str = "de")` setzt den Header `X-GZ-Lang` in beiden Zweigen (HTML und Plain); `EmailOutput.send(..., lang: str = "de")` reicht ihn weiter (Aufruf Zeile ~855). Operator-Texte (`Test-Versand über Resend ist gesperrt.`, Herkunftssperre, Zeilen 454-456, 726, 807, 839) bleiben deutsch und erhalten `# i18n-log` |
 | `src/output/subject.py` | MODIFY | `build_email_subject(token_line, *, max_length=78, lang="de")`; `_report_type_label(report_type, lang)`, `_translate_risk(risk, lang)` über Katalog; `_REPORT_TYPE_DE`/`_RISK_DE` werden `_REPORT_TYPE_KEYS`/`_RISK_KEYS` (Grep zuerst nach Importen in `tests/`) |
 | `src/output/renderers/trip_report.py` | MODIFY | Nur Durchreichen: `_generate_subject(...)` (Zeile 892) ruft `build_email_subject(..., lang=lang)` |
-| `src/services/notification_service.py` | MODIFY | `self._lang` im Konstruktor; `lang=self._lang` an alle `EmailOutput(...).send(...)`-Aufrufe (Zeilen ~997, 1379, 1514, 1712, 2067, 2232 und die übrigen) und an alle Renderer-Aufrufe (`render_email`, `render_subject`, `render_telegram`, `render_sms`, `render_official_alert_*`, `render_telegram_bubbles`, `render_telegram_incomplete_hint`, `render_compare_*`); eigene Texte: `_AMTL_HINWEIS_SMS_TOKEN` (66), `send_no_data_hint` (986-990), `_apply_prefixes` (2363-2372), Betreff Zeile 2452, `context_label="Ortsvergleich"` (1654) |
+| `src/services/notification_service.py` | MODIFY | `self._lang` im Konstruktor; `lang=self._lang` an alle `EmailOutput(...).send(...)`-Aufrufe (Zeilen ~997, 1379, 1514, 1712, 2067, 2232 und die übrigen) und an alle Renderer-Aufrufe (`render_email`, `render_subject`, `render_telegram`, `render_sms`, `render_official_alert_*`, `render_telegram_bubbles`, `render_telegram_incomplete_hint`, `render_compare_*`); eigene Texte: `send_no_data_hint` (986-990; SMS/Premium-SMS-Text bleibt deutsch, PO-Korrektur 2026-10-31), `_AMTL_HINWEIS_SMS_TOKEN` (66) bleibt unverändert, `_apply_prefixes` (2363-2372), Betreff Zeile 2452, `context_label="Ortsvergleich"` (1654) |
 | `src/services/send_outcomes.py` | MODIFY | `SEND_OUTCOMES: dict[str, tuple[int, str]]` hält (Status, **Katalogschlüssel**) statt deutschem Text; `error_body(code, *, lang="de", **values)` löst über `t(key, lang, **values)` auf; `SendOutcomeError`-Meldung und Code bleiben (Betreiber-Text) |
 | `src/services/channel_test_service.py` | MODIFY | `send_test_message(channel, user_id)` liest `lang = resolve_user_lang(user_id)` und nutzt `t("versand.test.*", lang)`; `_sperre_email(user_id, lang)`; Betreff, Text, Sperrtext, `Unbekannter Kanal` über Katalog |
 | `api/routers/briefings_send.py` | MODIFY | Hilfsfunktion `_err(...)` (Zeile ~27) gibt `lang=resolve_user_lang(user_id)` an `error_body`; `user_id` ist die vorhandene Query-Variable |
 | `src/services/inbound_telegram_reader.py`, `inbound_email_reader.py`, `inbound_sms_reader.py` | unverändert | Inbound-Antworten gehören zu P10 (#2673) |
 | `src/i18n/messages/de/versand.json`, `src/i18n/messages/en/versand.json` | MODIFY | Neue Schlüssel `versand.*` (nur diese Bereichsdateien anfassen) |
-| `tests/golden/versand/betreffe.de.txt`, `betreffe.en.txt` | CREATE | Golden `de` (VOR der Umstellung erzeugen) und Referenz `en`: Betreffe, Ausfall-Hinweis, Vorschau-Hinweise, Test-Versand, SMS-Hinweis, Fehlertexte |
+| `tests/golden/versand/betreffe.de.txt`, `betreffe.en.txt` | CREATE | Golden `de` (VOR der Umstellung erzeugen) und Referenz `en`: Betreffe, Ausfall-Hinweis, Vorschau-Hinweise, Test-Versand, SMS-Hinweis (in `en` byte-gleich zu `de`), Fehlertexte |
 | `tests/golden/test_versand_texte_golden.py` | CREATE | Byte-Vergleich `de` |
 | `tests/test_versand_zweisprachig.py` | CREATE | Verhaltenstests der ACs 1, 2, 5, 6 |
 | `tests/test_versand_zwei_nutzer_sprachen.py` | CREATE | Zwei-Nutzer-Test (AC-4) über die Sink-Naht |
@@ -91,7 +91,6 @@ Wer Englisch gewählt hat, bekommt Betreffzeilen, Ausfall- und Vorschau-Hinweise
 | `versand.hinweis.test_vorschau` | `Test-Vorschau für {etappe} am {datum}` | `Test preview for {etappe} on {datum}` | notification_service.py:2368 |
 | `versand.hinweis.auf_anfrage` | `Briefing auf Anfrage für {etappe} am {datum}` | `Briefing on request for {etappe} on {datum}` | notification_service.py:2372 |
 | `versand.etappe.rueckfall` | `Etappe` | `Stage` | notification_service.py:2363 |
-| `versand.sms.amtl_hinweis` | `+ amtl. Warnung s. E-Mail/Telegram` | `+ off. warning, see email/Telegram` | `_AMTL_HINWEIS_SMS_TOKEN`, notification_service.py:66 (beide 34 Zeichen) |
 | `versand.test.betreff` | `Gregor 20 — Testmeldung` | `Gregor 20 — Test message` | channel_test_service.py:51 |
 | `versand.test.text` | `Dein Kanal funktioniert!` | `Your channel works.` | channel_test_service.py:52 |
 | `versand.test.kanal_unbekannt` | `Unbekannter Kanal: {kanal}` | `Unknown channel: {kanal}` | channel_test_service.py:77 |
@@ -175,7 +174,7 @@ def error_body(code: str, *, lang: Lang = "de", **values: str) -> tuple[int, dic
 ## Expected Behavior
 
 - **Input:** Versand-Anfrage mit `user_id` (aus Auth-Kontext), Trip- oder Ortsvergleich-Daten; Test-Versand mit Kanal und `user_id`; Handversand-Fehlercodes.
-- **Output:** E-Mails mit Betreff und Hinweisen in der Nutzersprache und Header `X-GZ-Lang`; SMS-Hinweis in der Nutzersprache; Fehlerobjekt `{"detail": <Text in Nutzersprache>, "code": <stabil>}`. `de` byte-gleich zu heute.
+- **Output:** E-Mails mit Betreff und Hinweisen in der Nutzersprache und Header `X-GZ-Lang`; SMS und Premium-SMS (inkl. SMS-Hinweis und Ausfall-Text) in jeder Sprache unverändert deutsch (PO-Korrektur 2026-10-31); Fehlerobjekt `{"detail": <Text in Nutzersprache>, "code": <stabil>}`. `de` byte-gleich zu heute.
 - **Side effects:** Lesen von `data/users/<user_id>/user.json` (nur Feld `language`) beim Anlegen des Dienstes bzw. Test-Versands. Keine Schreibzugriffe, kein globaler Zustand.
 
 ## Acceptance Criteria
@@ -198,12 +197,16 @@ def error_body(code: str, *, lang: Lang = "de", **values: str) -> tuple[int, dic
 - **AC-6:** Given ein Nutzer ohne bestätigte Adresse und Sprache `en` / When ein Test-Versand per E-Mail versucht wird / Then erscheint der englische Sperrtext (`The test email was not sent …`), es wird keine Mail gebaut, und für `user_id` leer oder `"default"` bleibt die Sperre bestehen.
   - Test: tests/test_versand_zweisprachig.py — `_sperre_email`/`send_test_message` für die drei Fälle (bestätigt, unbestätigt, `"default"`).
 
+- **AC-7:** Given Nutzer-Sprache `en` / When die Ausfall-Meldung per SMS und Premium-SMS sowie ein Alarm mit amtlichem Zusatz per SMS und Premium-SMS versendet werden / Then ist jeder SMS-Text byte-gleich zur Ausgabe für einen `de`-Nutzer (PO-Korrektur 2026-10-31), während E-Mail und Telegram der Ausfall-Meldung englisch sind.
+  - Test: tests/test_versand_zweisprachig.py — beide Nutzer über die Draht-Gegenstellen (`KanalRig`), Vergleich der gesendeten SMS-Texte.
+
 ## Known Limitations
 
 - Annahme: Der Header `X-GZ-Lang` wird in `build_mime_message` immer gesetzt (Wert `de` oder `en`); falls PV ihn schon mit Vorgabe `de` setzt, ersetzt P9a nur die Vorgabe durch die Nutzersprache.
 - Annahme: `SEND_OUTCOMES` hält jetzt Katalogschlüssel statt Text; weil der Router nur auf Mitgliedschaft prüft, ändert sich dort nichts. Tests, die den deutschen Text direkt aus `SEND_OUTCOMES` lesen, werden auf `error_body(code, lang="de", ...)` umgestellt (Grep in `tests/` zuerst).
 - Annahme: Betreiber- und Sperrgrund-Texte der Kanäle (`ChannelBlockedError`, `OutputError`) bleiben deutsch; ihre Nutzersicht entsteht über `reason_code` und `send_outcomes`.
-- Annahme: Der englische SMS-Hinweis ist `+ off. warning, see email/Telegram` (34 Zeichen wie das deutsche Original) und deshalb nicht länger.
+- PO-Korrektur 2026-10-31 (ADR-0104 Präzisierung, hat Vorrang vor Version 1.0): Es gibt keinen englischen SMS-Hinweis; `_AMTL_HINWEIS_SMS_TOKEN` bleibt in jeder Sprache `+ amtl. Warnung s. E-Mail/Telegram`.
+- Bis P9b (#2672) rendern `scheduler_dispatch_service` (Ortsvergleich-Inhalt) und `trip_report_scheduler` (Nachlieferungs-/Teilausfall-Präfixe) noch deutsch; `NotificationService` liest die Sprache aber schon aus `user_id`. Der Kopf `X-GZ-Lang` folgt der Sprache des Inhalts: das Ortsvergleich-Briefing (`send_compare_report`) und die Service-Fehler-Mail (Rumpf `build_service_error_email_html`, samt Betreff) bleiben bis P9b (#2672) `de`.
 - Die Antworten auf Befehle (Inbound) und die übrigen `api/routers/**`-Meldungen sind P10 und P11.
 - Admin-Mails an den Betreiber bleiben deutsch (Epic-Abgrenzung).
 
@@ -215,3 +218,4 @@ def error_body(code: str, *, lang: Lang = "de", **values: str) -> tuple[int, dic
 ## Changelog
 
 - 2026-10-30: Initial spec created (Planung Epic #2644)
+- 2026-11-01: PO-Korrektur 2026-10-31 eingearbeitet (SMS/Premium-SMS/Telegram-Kurzstil sprachunabhängig, `versand.sms.amtl_hinweis` entfällt, AC-7 neu); Übergangslage bis P9b vermerkt

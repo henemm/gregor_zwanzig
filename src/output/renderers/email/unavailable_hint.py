@@ -12,12 +12,14 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from i18n import Lang, t
+
 if TYPE_CHECKING:
     from app.models import SegmentWeatherData
 
-_UNAVAILABLE_HINT_TEXT = (
-    "Amtliche Warnungen aktuell nicht abrufbar — bitte selbst pruefen."
-)
+# Deutscher Referenzwert (Bestandstests); die Renderer lesen den Katalog
+# (``mail.hinweis.warnungen_nicht_abrufbar.*``, Issue #2665).
+_UNAVAILABLE_HINT_TEXT = t("mail.hinweis.warnungen_nicht_abrufbar.text", "de")
 
 
 def any_official_alerts_unavailable(segments: list["SegmentWeatherData"]) -> bool:
@@ -29,7 +31,7 @@ def any_official_alerts_unavailable(segments: list["SegmentWeatherData"]) -> boo
     )
 
 
-def render_official_alerts_unavailable_html() -> str:
+def render_official_alerts_unavailable_html(*, lang: Lang = "de") -> str:
     """Hochkontrastiger Danger-Box-Baustein (Issue #1348) nach dem Vorbild
     "Segment X: Wetterdaten nicht verfuegbar" (html.py:919): Token
     ``G_BOX_DANGER_BG``/``G_DANGER`` — bewusst KEIN ``G_INK_FAINT`` (Lesbarkeit
@@ -43,17 +45,17 @@ def render_official_alerts_unavailable_html() -> str:
         f'border-left:4px solid {G_DANGER};padding:12px;margin:8px 20px;'
         f'border-radius:4px;font-family:{FONT_UI};">'
         f'<strong style="color:{G_DANGER};font-size:14px;">'
-        f'Amtliche Warnungen aktuell nicht abrufbar</strong>'
+        f'{t("mail.hinweis.warnungen_nicht_abrufbar.titel", lang)}</strong>'
         f'<p style="margin:4px 0 0 0;color:{G_INK_MUTED};font-size:13px;">'
-        f'Mindestens ein amtlicher Warndienst war nicht erreichbar — '
-        f'"keine Warnung" bedeutet hier nicht sicher "alles ruhig". '
-        f'Bitte selbst pruefen.</p></div>'
+        f'{t("mail.hinweis.warnungen_nicht_abrufbar.detail", lang)}</p></div>'
     )
 
 
-def render_official_alerts_unavailable_plain(*, ascii_safe: bool = False) -> str:
+def render_official_alerts_unavailable_plain(
+    *, ascii_safe: bool = False, lang: Lang = "de",
+) -> str:
     """Einzeilige Text-Fassung des Nicht-abrufbar-Hinweises (Issue #1348).
     ``ascii_safe=False`` (plain.py) nutzt das Warn-Emoji "⚠️", ``ascii_safe=True``
     (compact.py) das ASCII-Praefix "!!"."""
     prefix = "!!" if ascii_safe else "⚠️"
-    return f"{prefix} {_UNAVAILABLE_HINT_TEXT}"
+    return f"{prefix} {t('mail.hinweis.warnungen_nicht_abrufbar.text', lang)}"

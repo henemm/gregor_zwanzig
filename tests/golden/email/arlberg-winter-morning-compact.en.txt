@@ -1,0 +1,19 @@
+WINTER SPORTS - SLOPES
+Arlberg Winter - Morning Report
+Arlberg
+11.07.2026
+
+== Metrics overview ==
+  17-19C - Max 15:00
+  feels 11.6-12.6C - Max 15:00
+  Wind >10 km/h from 04:00 - max 18 (15:00)
+  !!! Wind gusts >20 km/h from 04:00 - max 110 (10:00)
+  no rain
+  no thunderstorm
+  50% cloud cover - Max 10:00
+  Sun 3.0h
+
+----------------------------------------
+Generated: 2026-04-28 12:00 UTC
+Data: openmeteo (arome_france)
+Stage briefing - compact - openmeteo

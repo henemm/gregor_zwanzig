@@ -42,6 +42,8 @@ register(
 	pathToFileURL(join(FRONTEND, 'test-env-dynamic-private-stub-hooks.mjs')).href,
 	pathToFileURL(FRONTEND + '/').href
 );
+// #2682: das Übersichts-Modell wird echt geladen (endungslose Importe der Helfer).
+register(pathToFileURL(join(FRONTEND, 'test-svelte-ssr-hooks.mjs')).href, pathToFileURL(FRONTEND + '/').href);
 
 // #1743: fuenf Reiter je Hub — fest eingesetzt.
 const TRIP_IDS = ['uebersicht', 'etappen', 'wetter-metriken', 'wertebereiche', 'alarme'];
@@ -192,27 +194,84 @@ describe('AC-9 / AC-10 (Quelltext-Scan, doc-compliance-test): Trip-Sprunglinks n
 
 	// #1743 AC-25/AC-28: kein Sprung auf 'versand'/'vorschau' mehr; der Zeitplan-Sprung samt Anker
 	// wird als Verhalten in versand_sprung_auf_wetter_metriken.test.ts gemessen.
-	test('HubOverview: Sprungkarten nur mit neuen Trip-Kennungen (Etappen, Wetter-Metriken, Wertebereiche) — keine Versand/Vorschau', () => {
+	// #2682 (Entscheidung 4/AC-11): der Knopf „Alle Alerts →" (Sprungziel 'wertebereiche') entfaellt
+	// mit der Alerts-Attrappe bewusst; die uebrigen Sprungziele bleiben Pflicht.
+	test('HubOverview: Sprungkarten nur mit neuen Trip-Kennungen (Etappen, Wetter-Metriken) — keine Versand/Vorschau, kein „Alle Alerts →"', () => {
 		const k = erzeugteKennungen('lib/components/trip-detail/HubOverview.svelte');
 		for (const id of k) assert.ok(TRIP_IDS.includes(id), `Kennung '${id}' ist keine neue Trip-Kennung`);
-		for (const pflicht of ['etappen', 'wetter-metriken', 'wertebereiche']) {
+		for (const pflicht of ['etappen', 'wetter-metriken']) {
 			assert.ok(k.includes(pflicht), `HubOverview springt nicht mehr auf '${pflicht}'`);
 		}
+		assert.ok(!k.includes('wertebereiche'), 'HubOverview springt noch auf wertebereiche („Alle Alerts →", AC-11)');
+	});
+});
+
+// #2682: die Sprungziele der Übersicht (Orte, Wertebereiche, Versand) sind Daten des Modells
+// (shared/hub-uebersicht/hubUebersichtModell.ts), der Baustein ruft nur `onJump(tab, anchor)`.
+// Gemessen am ECHTEN Ableiter je Art — jede Kennung muss ohne Legacy-Umweg aufloesen.
+describe('AC-9 / AC-10 (Verhalten, #2682): Sprungziele der geteilten Übersicht', () => {
+	async function modelle() {
+		const m = await import('../hub-uebersicht/hubUebersichtModell.ts');
+		const vergleich = m.deriveVergleichKennzahlen(
+			{ id: 'c', name: 'V', location_ids: ['l1'], schedule: 'daily', profil: 'wandern' } as never,
+			'active',
+			undefined,
+			[{ rank: 1, loc: { id: 'l1', name: 'A' } }]
+		);
+		const route = m.deriveRouteKennzahlen(
+			{ id: 't', name: 'T', stages: [], report_config: {} } as never,
+			'planned',
+			undefined,
+			{ zustand: 'geladen', eintraege: [] }
+		);
+		return { vergleich, route };
+	}
+	const ziele = (m: Knoten) =>
+		[m.orteKarte, m.wertebereicheKarte, m.versandKarte].filter(Boolean).map((k: Knoten) => k.sprungziel);
+
+	test('Vergleich: Orte, Wertebereiche, Versand (#versand) — jede Kennung ist ein Vergleich-Reiter', async () => {
+		const z = ziele((await modelle()).vergleich);
+		assert.deepEqual(z.map((x) => x.tab), ['orte', 'wertebereiche', 'wetter-metriken']);
+		assert.equal(z[2].anchor, 'versand');
+		for (const { tab } of z) {
+			assert.ok(VERGLEICH_IDS.includes(tab), `'${tab}' ist keine neue Vergleich-Kennung`);
+			assert.equal(resolveTab('vergleich', tab).legacy, false, `'${tab}' laeuft ueber den Legacy-Umweg`);
+		}
+	});
+
+	test('Vergleich: „Bearbeiten →" der Wertebereiche-Karte nutzt die Kennung wertebereiche (nie idealwerte)', async () => {
+		assert.equal((await modelle()).vergleich.wertebereicheKarte?.sprungziel.tab, 'wertebereiche');
+	});
+
+	test('Trip: nur die Versand-Karte (wetter-metriken#versand) — neue Trip-Kennung', async () => {
+		const z = ziele((await modelle()).route);
+		assert.deepEqual(z, [{ tab: 'wetter-metriken', anchor: 'versand' }]);
+		assert.equal(resolveTab('trip', z[0].tab).legacy, false);
+	});
+
+	test('der Baustein springt nur ueber die Sprungziele des Modells (kein Literal im Markup)', () => {
+		const k = erzeugteKennungen('lib/components/shared/hub-uebersicht/HubUebersicht.svelte');
+		assert.deepEqual(k, [], `HubUebersicht erzeugt eigene Kennungen: ${JSON.stringify(k)}`);
+		assert.match(ohneKommentare('lib/components/shared/hub-uebersicht/HubUebersicht.svelte'), /onJump\?\.\(ziel\.tab/);
 	});
 });
 
 describe('AC-9 / AC-10 (Quelltext-Scan, doc-compliance-test): Vergleich-Sprunglinks nur mit neuen Vergleich-Kennungen', () => {
-	for (const rel of [
-		'lib/components/compare/CompareTabs.svelte',
-		'routes/compare/[id]/+page.svelte',
-		'routes/compare/+page.svelte'
-	]) {
+	for (const rel of ['routes/compare/[id]/+page.svelte', 'routes/compare/+page.svelte']) {
 		test(`${rel}: jede erzeugte Kennung ist ein Vergleich-Reiter`, () => {
 			const k = erzeugteKennungen(rel);
 			assert.ok(k.length > 0, 'Messaufbau kaputt: keine Kennung gefunden');
 			for (const id of k) assert.ok(VERGLEICH_IDS.includes(id), `'${id}' ist keine neue Vergleich-Kennung`);
 		});
 	}
+
+	// #2682: die Übersichts-Sprungknöpfe (Orte/Wertebereiche/Versand) zogen in den geteilten Baustein —
+	// ihre Kennungen misst der Verhaltens-Block oben am Modell (nicht leer, Vergleich-Reiter, kein Legacy).
+	// CompareTabs selbst darf weiterhin keine fremde Kennung erzeugen.
+	test('lib/components/compare/CompareTabs.svelte: jede erzeugte Kennung ist ein Vergleich-Reiter', () => {
+		for (const id of erzeugteKennungen('lib/components/compare/CompareTabs.svelte'))
+			assert.ok(VERGLEICH_IDS.includes(id), `'${id}' ist keine neue Vergleich-Kennung`);
+	});
 
 	// Issue #2278 AC-12: das Hub-Menue ist reiner Lebenszyklus; "Setup abschliessen" bleibt im Hub.
 	// #1743 AC-24/AC-27: "Setup abschliessen" zielt auf wetter-metriken (#versand, Verhalten in
@@ -227,10 +286,11 @@ describe('AC-9 / AC-10 (Quelltext-Scan, doc-compliance-test): Vergleich-Sprungli
 		assert.ok(!liste.includes('vorschau'), `Vergleich-Liste springt noch auf 'vorschau': ${JSON.stringify(liste)}`);
 	});
 
-	test('CompareTabs: „Bearbeiten →"-Sprung auf Wertebereiche nutzt die Kennung wertebereiche', () => {
-		const k = erzeugteKennungen('lib/components/compare/CompareTabs.svelte');
-		assert.ok(k.includes('wertebereiche'));
-		assert.ok(!k.includes('idealwerte'));
+	// #2682: „Bearbeiten →" der Wertebereiche-Karte liegt im Modell (Verhaltens-Block oben, positiv);
+	// hier bleibt die Negativ-Zusicherung je Quelle.
+	test('CompareTabs und Übersichts-Modell: keine Alt-Kennung idealwerte', () => {
+		assert.ok(!erzeugteKennungen('lib/components/compare/CompareTabs.svelte').includes('idealwerte'));
+		assert.ok(!/['"`]idealwerte['"`]/.test(ohneKommentare('lib/components/shared/hub-uebersicht/hubUebersichtModell.ts')));
 	});
 });
 
@@ -263,6 +323,9 @@ describe('AC-10 / AC-15 (Quelltext-Scan, doc-compliance-test): kein Alt-Literal,
 		'lib/components/edit/WeatherSummaryCard.svelte',
 		'lib/components/shared/VersandTab.svelte',
 		'lib/components/trip-detail/HubOverview.svelte',
+		// #2682: geteilte Übersicht (Baustein + Modell)
+		'lib/components/shared/hub-uebersicht/HubUebersicht.svelte',
+		'lib/components/shared/hub-uebersicht/hubUebersichtModell.ts',
 		'lib/components/trip-detail/AlertsPreviewCard.svelte',
 		'lib/components/alerts-tab/AlertPreviewCard.svelte'
 	];

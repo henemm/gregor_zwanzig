@@ -12,14 +12,13 @@ SPEC: docs/specs/epic_129a_1_compare_helpers.md
 from __future__ import annotations
 
 import logging
+from datetime import datetime, time, timedelta, timezone
 from typing import Any, Dict, List, Optional, TYPE_CHECKING
 
-from app.config import Location
 from app.user import ComparisonResult, LocationResult, SavedLocation
 from services.comparison_scoring import calculate_score
-from services.forecast import ForecastService
 from services.weather_metrics import WeatherMetricsService, summarize_points
-from utils.timezone import local_dt, location_tz
+from utils.timezone import local_dt, location_tz, to_utc
 from validation.ground_truth import BergfexScraper
 
 if TYPE_CHECKING:
@@ -38,6 +37,64 @@ logger = logging.getLogger("comparison_engine")
 # EINE Konstante fuer Versand + Vorschau + beide Engine-Defaults verhindert
 # Drift zwischen den Pfaden (Fehlerklasse #1297).
 COMPARE_FORECAST_HOURS = 96
+
+
+def compare_fetch_window(
+    now: datetime, hours: int = COMPARE_FORECAST_HOURS,
+) -> tuple[datetime, datetime]:
+    """Abruf-Fenster des Ortsvergleichs (Issue #2234), beide Werte in UTC.
+
+    Start = ``now`` auf die volle Stunde abgerundet, Ende = 23:59:59 UTC des
+    Kalendertags von ``now + hours``. Der Provider fragt tageweise ab, das
+    Fenster liefert also dieselben Daten wie ``now .. now+hours`` (kein
+    Extra-Tag), ist aber innerhalb einer Stunde identisch und deckt spaetere
+    Aufrufe desselben Zieltags -- erst damit greift die Covers-Regel des
+    geteilten Caches und der Single-Flight im Vergleich."""
+    now_utc = to_utc(now)
+    start = now_utc.replace(minute=0, second=0, microsecond=0)
+    target_day = (now_utc + timedelta(hours=hours)).date()
+    end = datetime.combine(target_day, time(23, 59, 59), tzinfo=timezone.utc)
+    return start, end
+
+
+def _fetch_compare_series(
+    loc: SavedLocation, hours: int, user_id: Optional[str],
+) -> tuple:
+    """Rohe Zeitreihe eines Orts ueber den geteilten Segment-Weg (Issue #2234):
+    Cache-get -> Single-Flight -> Budget-Gate -> Fetch -> put, wie Trip- und
+    Compare-Alarm-Pfad (Muster ``compare_location_weather_source.py``).
+
+    Liefert ``(timeseries, None)`` oder ``(None, fehlertext)``. Die
+    ``segment_id`` ist nutzerneutral (Koordinate statt Orts-Kennung)."""
+    from app.models import GPXPoint, TripSegment
+    from providers.base import get_provider
+    from services.segment_weather import SegmentWeatherService
+
+    start, end = compare_fetch_window(datetime.now(timezone.utc), hours)
+    point = GPXPoint(lat=loc.lat, lon=loc.lon, elevation_m=loc.elevation_m,
+                     distance_from_start_km=0.0)
+    segment = TripSegment(
+        segment_id=f"vergleich-{loc.lat:.4f}-{loc.lon:.4f}",
+        start_point=point, end_point=point,
+        start_time=start, end_time=end,
+        duration_hours=(end - start).total_seconds() / 3600,
+        distance_km=0.0, ascent_m=0, descent_m=0,
+    )
+    provider = get_provider("openmeteo")
+    try:
+        weather = SegmentWeatherService(provider).fetch_segment_weather(
+            segment,
+            enrich_ensemble=True,
+            enrich_snow=True,
+            priority="user_briefing",  # Vorschau/Versand nie gedrosselt
+            user_id=user_id,  # Budget-Buchung beim ausloesenden Nutzer
+        )
+    finally:
+        if hasattr(provider, "close"):
+            provider.close()
+    if weather.has_error:
+        return None, weather.error_message or "Wetterabruf fehlgeschlagen"
+    return weather.timeseries, None
 
 
 def fetch_location_official_alerts(lat: float, lon: float) -> tuple:
@@ -117,6 +174,7 @@ class ComparisonEngine:
         forecast_hours: int = COMPARE_FORECAST_HOURS,
         profile: Optional["ActivityProfile"] = None,
         official_alerts_enabled: bool = True,
+        user_id: Optional[str] = None,
     ) -> ComparisonResult:
         """
         Run comparison for given locations and time window.
@@ -129,6 +187,8 @@ class ComparisonEngine:
             official_alerts_enabled: Issue #1040 — bei False werden die
                 #1034-Official-Alert-Quellen fuer keinen der Orte abgefragt
                 (strukturell kein Fetch, nicht nur Ausblenden im Rendering).
+            user_id: Issue #2234 -- echte Nutzerkennung des Aufrufers fuer
+                das Budget-Gate des geteilten Abrufwegs (nie "default").
 
         Returns:
             ComparisonResult with all metrics for all locations
@@ -142,7 +202,9 @@ class ComparisonEngine:
         for loc in locations:
             try:
                 # Fetch forecast
-                raw_result = fetch_forecast_for_location(loc, forecast_hours)
+                raw_result = fetch_forecast_for_location(
+                    loc, forecast_hours, user_id=user_id,
+                )
 
                 if raw_result.get("error"):
                     # Fix #1505 (AC-1): der Fetch-Fehler blieb bisher komplett
@@ -413,11 +475,14 @@ def fetch_forecast_for_location(
     loc: SavedLocation,
     hours: int = COMPARE_FORECAST_HOURS,
     settings: Optional["Settings"] = None,
+    user_id: Optional[str] = None,
 ) -> Dict[str, Any]:
     """Fetch forecast for a location and extract all available metrics.
 
     Issue #347: optional ``settings`` is passed through to
     ``calculate_sunny_hours`` so custom DNI bands can be used; ``None`` -> defaults.
+    Issue #2234: Abruf ueber den geteilten Segment-Weg (Cache, Single-Flight,
+    Budget-Gate); ``user_id`` bucht beim ausloesenden Nutzer.
     """
     result: Dict[str, Any] = {
         "location": loc,
@@ -427,21 +492,11 @@ def fetch_forecast_for_location(
     }
 
     try:
-        from providers.base import get_provider
-
-        provider = get_provider("openmeteo")
-        service = ForecastService(provider)
-
-        location = Location(
-            latitude=loc.lat,
-            longitude=loc.lon,
-            name=loc.name,
-            elevation_m=loc.elevation_m,
-        )
-
-        forecast = service.get_forecast(location, hours_ahead=hours)
-        if hasattr(provider, "close"):
-            provider.close()
+        forecast, fetch_error = _fetch_compare_series(loc, hours, user_id)
+        if fetch_error is not None:
+            result["error"] = fetch_error
+            result["score"] = 0
+            return result
 
         # Fetch snow data from Bergfex if slug is available
         if loc.bergfex_slug:

@@ -29,7 +29,7 @@ gilt auf Staging und Prod, das Secret steht aber auf beiden im Pfad, weil
 
 ## Source
 
-- **Go-Router:** `internal/router/router.go` (Route `/api/webhooks/telegram/{secret}`, Zeile ~171) — Identifier: Webhook-Route-Registrierung
+- **Go-Router:** `internal/router/router.go` (Route `/api/webhooks/telegram/{secret}`, Zeile ~171; Alt-Route entfernt in Scheibe 2 (#1814)) — Identifier: Webhook-Route-Registrierung
 - **Go-Handler:** `internal/handler/telegram_webhook.go` — nur Doku-Kommentar (Pfad ist nicht Auth-Träger)
 - **Setup-Skript:** `scripts/telegram_set_webhook.sh` (Zeile ~45) — Identifier: Aufbau der Registrier-URL
 - **Unverändert (Präfix-Treffer):** `internal/middleware/auth.go` (Ausnahme `/api/webhooks/telegram/`), nginx-Location `/api/webhooks/telegram/` in `henemm-infra`
@@ -46,7 +46,7 @@ gilt auf Staging und Prod, das Secret steht aber auf beiden im Pfad, weil
 **Im Scope (diese Scheibe):**
 - Neue statische Route `POST /api/webhooks/telegram/inbound` mit demselben Handler.
 - `telegram_set_webhook.sh` registriert die secretfreie URL und gibt das Secret nirgends aus.
-- Alte Route `/api/webhooks/telegram/{secret}` bleibt vorerst als Übergang bestehen.
+- Alte Pfad-Route blieb in dieser Scheibe vorübergehend bestehen; **inzwischen entfernt** durch Scheibe 2 (`fix_1814_s2_telegram_alt_route_entfernen.md`). Gültig ist allein `/api/webhooks/telegram/inbound`.
 - Doku-Anpassungen (`{secret}` wird zu `inbound`), Doku-Kommentar im Handler.
 
 **Folge-Scheibe im selben Ticket (nach Neuregistrierung beider Umgebungen):**
@@ -77,7 +77,7 @@ gilt auf Staging und Prod, das Secret steht aber auf beiden im Pfad, weil
 ```
 router.go:
   r.Post("/api/webhooks/telegram/inbound", telegramWebhookHandler)   // neu, statisch
-  r.Post("/api/webhooks/telegram/{secret}", telegramWebhookHandler)  // Übergang, bleibt
+  (Alt-Route mit Secret im Pfad: in Scheibe 2 entfernt)
   (chi: statische Route hat Vorrang vor Param-Route)
 
 telegram_set_webhook.sh:
@@ -120,6 +120,7 @@ Wichtig: Die Alt-Route darf nie vor Schritt 3 für beide Umgebungen entfernt wer
 
 - **AC-5:** Given die Übergangszeit, in der Telegram noch die alte URL kennt / When ein `POST /api/webhooks/telegram/<beliebiges-Segment>` mit korrektem Header eingeht / Then antwortet die API weiterhin mit 200, es entsteht kein 404 und kein Update-Verlust.
   - Test: bestehende Go-Testfälle (`/…/whatever`, `/…/x`) bleiben unverändert grün; die statische Route `/inbound` verdrängt die Param-Route nicht für andere Segmente.
+  - **Abgelöst durch Scheibe 2** (`fix_1814_s2_telegram_alt_route_entfernen.md`): die Übergangszeit ist beendet, andere Segmente werden nicht mehr zugestellt (404/405).
 
 - **AC-6:** Given zwei verschiedene Nutzer haben je einen verknüpften Telegram-Chat / When beide nacheinander einen Befehl über `/inbound` senden / Then wird jeder Befehl dem richtigen Nutzer zugeordnet wie über die Alt-Route (keine Verschiebung der Zuordnung durch die neue Adresse).
   - Test: Go-Testfall, der die Zuordnung an den Core-Aufruf weiterreicht und für beide Routen dieselbe `chat`-Zuordnung prüft. Dient als Regressionsnachweis; die Zuordnung selbst ist unverändert (siehe Abschnitt Mandantentrennung).
@@ -141,7 +142,7 @@ Wichtig: Die Alt-Route darf nie vor Schritt 3 für beide Umgebungen entfernt wer
 
 ## Known Limitations
 
-- In der Übergangszeit akzeptiert die Alt-Route weiterhin jedes Segment; das ist unkritisch, weil die Header-Prüfung greift.
+- In der Übergangszeit akzeptierte die Alt-Route jedes Segment (unkritisch wegen Header-Prüfung); seit Scheibe 2 ist sie entfernt.
 - Bis zur Rotation (Folge-Scheibe) bleibt das alte Secret gültig, obwohl es in früheren Logs stehen kann.
 - Das Secret in `getWebhookInfo` der vor der Neuregistrierung gesetzten URL bleibt bis zum `set` sichtbar; Ausgaben nie ins Ticket kopieren.
 - Betrieb auf Prod: Während laufender Trips wird normal ausgeliefert; die Reihenfolge oben verhindert einen Ausfall des Eingangs.

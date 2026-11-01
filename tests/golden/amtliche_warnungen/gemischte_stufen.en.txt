@@ -1,0 +1,54 @@
+[GR20 Golden] several locations · RED Access closed — Monts Toulonnais + ORANGE Wildfire risk +1 more
+
+===== ✂ =====
+
+Access closed — Monts Toulonnais (RED), Wildfire risk (ORANGE) and Heat (YELLOW) reported.
+
+3 official warnings · highest level RED
+
+Warning level: RED · 3/3
+Hazard: Access closed — Monts Toulonnais
+Locations: Toulon
+Warning level: ORANGE · 2/3
+Hazard: Wildfire risk
+Locations: Bastia
+Warning level: YELLOW · 1/3
+Hazard: Heat
+Valid: Thu 29 Oct · 01:00–23:59
+Locations: Toulon, Hyères and Bastia
+Source: Météo-France (wildfire) · Prefecture (access closure) · Météo-France — Haute-Corse, Var.
+The warnings cover different areas — the affected extent is shown with each warning above.
+
+As of today 06:00 · retrieved from Météo-France (wildfire) · Prefecture (access closure) · Météo-France
+
+GR20 Golden · Official warning · Météo-France (wildfire) · Prefecture (access closure) · Météo-France
+
+===== ✂ =====
+
+<b>GR20 Golden · highest level RED (3/3)</b>
+🔴 Access closed — Monts Toulonnais · only Toulon
+🟠 Wildfire risk · only Bastia
+🟡 Heat · Thu 29 Oct · 01:00–23:59 · all locations
+Météo-France (wildfire) · Prefecture (access closure) · Météo-France
+
+===== ✂ =====
+
+!AB nur Toulon FR:M nur Bastia HT:L Do01-23:59 alleOrte
+
+===== ✂ =====
+
+ORANGE — Wildfire risk
+Region: Haute-Corse
+
+RED — Access closed — Monts Toulonnais
+Region: unknown
+
+YELLOW — Heat
+Region: Var
+Valid: Thu 29.10. 01:00 – Thu 29.10. 23:59
+
+===== ✂ =====
+
+Official warning: Wildfire risk
+Official warning: Access closed — Monts Toulonnais
+Official warning: Heat (Thu 29 Oct · all day)

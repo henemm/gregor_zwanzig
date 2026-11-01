@@ -9,8 +9,7 @@ package handler
 //
 // Einziger Auth-Träger ist der HTTP-Header X-Telegram-Bot-Api-Secret-Token
 // (Konstantzeit-Vergleich gegen TELEGRAM_WEBHOOK_SECRET). Der URL-Pfad wird
-// nie gelesen. Die Alt-Route /api/webhooks/telegram/{secret} ist nur noch ein
-// Übergang bis zur Neuregistrierung beider Umgebungen und fällt danach weg.
+// nie gelesen. Die frühere Route mit Secret im Pfad ist entfernt (#1814 Scheibe 2).
 //
 // Spec: docs/specs/modules/telegram_webhook_inbound.md,
 // docs/specs/modules/fix_1814_telegram_webhook_secret_nicht_im_pfad.md
@@ -22,7 +21,6 @@ import (
 	"io"
 	"log"
 	"net/http"
-	"os"
 	"sync/atomic"
 	"time"
 )
@@ -37,11 +35,11 @@ func RejectedTelegramWebhookCount() int64 {
 }
 
 // TelegramWebhookHandler returns the public webhook gateway handler.
-// pythonCoreURL is the internal Python core base URL (config.PythonCoreURL).
-func TelegramWebhookHandler(pythonCoreURL string) http.HandlerFunc {
+// pythonCoreURL is the internal Python core base URL (config.PythonCoreURL);
+// secret is config.TelegramWebhookSecret (Issue #2715, leer = 503).
+func TelegramWebhookHandler(pythonCoreURL, secret string) http.HandlerFunc {
 	client := &http.Client{Timeout: 5 * time.Second}
 	return func(w http.ResponseWriter, r *http.Request) {
-		secret := os.Getenv("TELEGRAM_WEBHOOK_SECRET")
 		if secret == "" {
 			// fail-closed: kein offener Endpoint ohne konfiguriertes Secret.
 			http.Error(w, "webhook not configured", http.StatusServiceUnavailable)

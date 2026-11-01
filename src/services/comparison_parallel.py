@@ -51,6 +51,7 @@ def _run_one_location(
     profile: Optional["ActivityProfile"],
     official_alerts_enabled: bool,
     call_source: Optional[str],
+    user_id: Optional[str] = None,
 ) -> LocationResult:
     """Ein Ort, ein Engine-Lauf.
 
@@ -66,6 +67,8 @@ def _run_one_location(
 
     Die Diagnose-Quelle wird hier gesetzt, nicht beim Aufrufer: ein
     ``ThreadPoolExecutor`` reicht den Kontext NICHT an seine Arbeiter weiter.
+    Aus demselben Grund kommt die ``user_id`` (Issue #2234, Budget-Gate des
+    geteilten Abrufwegs) ausdruecklich als Parameter.
     """
     import services.comparison_engine as ce_mod
     from providers.call_log import override_call_source
@@ -79,6 +82,7 @@ def _run_one_location(
             forecast_hours=forecast_hours,
             profile=profile,
             official_alerts_enabled=official_alerts_enabled,
+            user_id=user_id,
         )
     return result.locations[0]
 
@@ -92,6 +96,7 @@ def run_comparison_parallel(
     official_alerts_enabled: bool = True,
     *,
     call_source: Optional[str] = None,
+    user_id: Optional[str] = None,
 ) -> ComparisonResult:
     """Wie ``ComparisonEngine.run()``, nur werden die Orte gleichzeitig statt
     nacheinander berechnet. Signatur, Parameter und Ergebnisform sind identisch.
@@ -128,6 +133,7 @@ def run_comparison_parallel(
                     profile=profile,
                     official_alerts_enabled=official_alerts_enabled,
                     call_source=call_source,
+                    user_id=user_id,
                 ): idx
                 for idx, loc in enumerate(locations)
             }

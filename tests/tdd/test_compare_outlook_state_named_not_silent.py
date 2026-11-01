@@ -68,26 +68,26 @@ def _run_engine_with_fetch(locations, fetch_fn, *, time_window=(9, 16),
         ce_mod.fetch_forecast_for_location = original
 
 
-def _error_fetch(location, hours=96, settings=None):
+def _error_fetch(location, hours=96, settings=None, user_id=None):
     return {"location": location, "error": "Kontingent erschoepft",
             "forecast_hours": hours, "snow_source": None, "raw_data": []}
 
 
-def _raising_fetch(location, hours=96, settings=None):
+def _raising_fetch(location, hours=96, settings=None, user_id=None):
     """Zweiter Weg zu `LocationResult(error=...)`: eine Exception statt eines
     strukturierten `error`-Feldes (Adversary F002 — dieser Zweig war
     ungetestet, sein WARNING liess sich spurlos entfernen)."""
     raise RuntimeError("Netzwerkfehler")
 
 
-def _today_only_fetch(location, hours=96, settings=None):
+def _today_only_fetch(location, hours=96, settings=None, user_id=None):
     """Erfolgreicher Fetch, aber alle Punkte liegen am Detailtag selbst —
     kein Datenpunkt jenseits davon, `outlook_hourly_data` bleibt leer."""
     return {"location": location, "error": None, "forecast_hours": hours,
             "snow_source": None, "raw_data": _day_points(date.today())}
 
 
-def _multi_day_fetch(location, hours=96, settings=None):
+def _multi_day_fetch(location, hours=96, settings=None, user_id=None):
     """Erfolgreicher Fetch mit Detailtag + 3 Folgetagen (Normalfall)."""
     today = date.today()
     points = list(_day_points(today))

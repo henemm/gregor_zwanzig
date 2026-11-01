@@ -29,6 +29,7 @@ from output.renderers.day_window import (
     collect_hiking_window_points, hiking_field_min_max,
     night_temp_min_c, night_wind_chill_min_c,
 )
+from i18n import Lang, t
 from output.renderers.email.helpers import format_temp_span
 
 
@@ -56,6 +57,7 @@ class CompactSummaryFormatter:
         day_window_start_hour: int = DAY_WINDOW_START_HOUR,
         day_window_end_hour: int = DAY_WINDOW_END_HOUR,
         report_type: str = "evening",
+        lang: Lang = "de",
     ) -> str:
         """Wrapper ``context="route"`` (Trip/Etappe) um den geteilten Kern.
 
@@ -117,6 +119,7 @@ class CompactSummaryFormatter:
             hiking_max_c=_temp[1] if _temp else None,
             hiking_felt_min_c=_felt[0] if _felt else None,
             hiking_felt_max_c=_felt[1] if _felt else None,
+            lang=lang,
         )
 
     def format_weather_summary(
@@ -134,6 +137,8 @@ class CompactSummaryFormatter:
         hiking_max_c: Optional[float] = None,
         hiking_felt_min_c: Optional[float] = None,
         hiking_felt_max_c: Optional[float] = None,
+        *,
+        lang: Lang = "de",
     ) -> str:
         """Kontextneutraler Kern (Issue #1278): ``(summary, hourly, titel, dc,
         tz) -> Fliesstext``.
@@ -168,6 +173,8 @@ class CompactSummaryFormatter:
         UTC-Rueckfall NUR wenn der Ort wirklich nicht aufloesbar ist).
         """
         self._tz = tz
+        # Issue #2665: Sprache des Satzes; ohne ``lang`` deutsch (Ortsvergleich P4).
+        self._lang = lang
         self._has_gap = has_gap
         short_name = title
         enabled = {mc.metric_id: mc for mc in dc.metrics if mc.enabled}
@@ -203,7 +210,7 @@ class CompactSummaryFormatter:
         felt_night_selected = "wind_chill_night" in enabled
         if "wind_chill" in enabled:
             ft = self._format_felt_temperature(
-                summary, report_type=report_type,
+                summary, report_type=report_type, lang=lang,
                 night_wind_chill_min_c=(
                     night_wind_chill_min_c if felt_night_selected else None
                 ),
@@ -216,14 +223,15 @@ class CompactSummaryFormatter:
             # Nur die gefuehlte Nachtgroesse gewaehlt: abends ihr Wert als
             # Einzelangabe (derselbe Formatierer, ohne Tages-Aggregat).
             ft = self._format_felt_temperature(
-                None, report_type=report_type,
+                None, report_type=report_type, lang=lang,
                 night_wind_chill_min_c=night_wind_chill_min_c,
             )
             if ft:
                 parts.append(ft)
 
         if "cloud_total" in enabled:
-            c = self._format_clouds(summary, enabled["cloud_total"].use_friendly_format)
+            c = self._format_clouds(summary, enabled["cloud_total"].use_friendly_format,
+                                    lang=lang)
             if c:
                 parts.append(c)
 
@@ -343,6 +351,7 @@ class CompactSummaryFormatter:
         night_wind_chill_min_c: Optional[float] = None,
         hiking_felt_min_c: Optional[float] = None,
         hiking_felt_max_c: Optional[float] = None,
+        lang: Lang = "de",
     ) -> Optional[str]:
         """Gefuehlter Temperaturteil ``"gef. {min}–{max}°C"`` (Issue #1410).
 
@@ -368,14 +377,15 @@ class CompactSummaryFormatter:
             return None
         lo = f_min if f_min is not None else f_max
         hi = f_max if f_max is not None else f_min
-        return f"gef. {format_temp_span(lo, hi, decimals=0)}"
+        return f"{t('mail.pille.gefuehlt', lang)}{format_temp_span(lo, hi, decimals=0)}"
 
     # ------------------------------------------------------------------
     # Clouds
     # ------------------------------------------------------------------
 
     @staticmethod
-    def _format_clouds(summary: Optional[SegmentWeatherSummary], friendly: bool) -> Optional[str]:
+    def _format_clouds(summary: Optional[SegmentWeatherSummary], friendly: bool,
+                       lang: Lang = "de") -> Optional[str]:
         if summary is None or summary.cloud_avg_pct is None:
             return None
         pct = summary.cloud_avg_pct
@@ -384,7 +394,7 @@ class CompactSummaryFormatter:
             # 2026-07-12, statt der bisherigen lokalen <20/40/60/80-Stufen).
             from output.metric_format import cloud_emoji
             return cloud_emoji(pct)
-        return f"Wolken {pct}%"
+        return t("mail.zusammenfassung.wolken", lang, wert=pct)
 
     # ------------------------------------------------------------------
     # Precipitation with temporal qualification
@@ -404,9 +414,10 @@ class CompactSummaryFormatter:
         if precip < self._RAIN_DETECT:
             # Issue #1331: kein gefundener Regen UND Ziel-Datenluecke ->
             # Unsicherheitsmarker statt Fehl-Entwarnung "trocken".
-            return "trocken?" if getattr(self, "_has_gap", False) else "trocken"
+            trocken = t("mail.zusammenfassung.trocken", self._sprache())
+            return f"{trocken}?" if getattr(self, "_has_gap", False) else trocken
 
-        adj = self._precip_adjective(precip)
+        adj = self._precip_adjective(precip, lang=self._sprache())
         pattern = self._find_rain_pattern(hourly)
 
         if not pattern:
@@ -418,23 +429,25 @@ class CompactSummaryFormatter:
         if kind == "peak":
             return f"{adj} max {pattern['peak_hour']}:00"
         if kind == "starts_later":
-            return f"trocken, {adj} ab {pattern['start_hour']}:00"
+            return t("mail.zusammenfassung.regen_ab", self._sprache(), art=adj,
+                     ab=pattern["start_hour"])
         if kind == "ends_early":
             end_h = pattern["end_hour"]
             dry_h = pattern.get("dry_from_hour", end_h + 1)
-            return f"{adj} bis {end_h}:00, trocken ab {dry_h}:00"
+            return t("mail.zusammenfassung.regen_bis", self._sprache(), art=adj,
+                     bis=end_h, ab=dry_h)
         if kind == "window":
             return f"{adj} {pattern['start_hour']}:00–{pattern['end_hour']}:00"
 
         return adj
 
     @staticmethod
-    def _precip_adjective(mm: float) -> str:
+    def _precip_adjective(mm: float, lang: Lang = "de") -> str:
         if mm > 10:
-            return "starker Regen"
+            return t("mail.zusammenfassung.regen.stark", lang)
         if mm > 2:
-            return "mäßiger Regen"
-        return "leichter Regen"
+            return t("mail.zusammenfassung.regen.maessig", lang)
+        return t("mail.zusammenfassung.regen.leicht", lang)
 
     def _find_rain_pattern(self, hourly: list[ForecastDataPoint]) -> Optional[dict]:
         if not hourly:
@@ -527,13 +540,13 @@ class CompactSummaryFormatter:
 
         # Adjective
         if speed > 60:
-            adj = "Sturmböen"
+            adj = t("mail.zusammenfassung.wind.sturm", self._sprache())
         elif speed > 35:
-            adj = "starker Wind"
+            adj = t("mail.zusammenfassung.wind.stark", self._sprache())
         elif speed > 15:
-            adj = "mäßiger Wind"
+            adj = t("mail.zusammenfassung.wind.maessig", self._sprache())
         else:
-            adj = "schwacher Wind"
+            adj = t("mail.zusammenfassung.wind.schwach", self._sprache())
 
         # Direction
         compass = ""
@@ -547,7 +560,8 @@ class CompactSummaryFormatter:
         gust_peak = self._find_wind_peak(hourly)
         gust_part = ""
         if gust_peak and gust_max and speed and gust_max > speed * 1.3:
-            gust_part = f", Böen bis {int(round(gust_max))} km/h ab {gust_peak['hour']}:00"
+            gust_part = t("mail.zusammenfassung.boeen", self._sprache(),
+                          wert=int(round(gust_max)), ab=gust_peak["hour"])
 
         return f"{adj}{compass}{speed_str}{gust_part}"
 
@@ -583,6 +597,8 @@ class CompactSummaryFormatter:
             format_hail_note, hail_priority, thunder_signal_label,
             union_of_max_carriers,
         )
+
+        lang = self._sprache()
 
         thunder_hours = []
         # Issue #1475 Nachbesserung (Punkt 3/AC-4): das Hagel-Kennzeichen
@@ -620,13 +636,13 @@ class CompactSummaryFormatter:
         if max_lvl == ThunderLevel.LOW:
             traeger_low = union_of_max_carriers(thunder_paare)
             text = (
-                f"{thunder_low_statement_sentence('kurz', traeger_low)} "
+                f"{thunder_low_statement_sentence('kurz', traeger_low, lang=lang)} "
                 f"{start_h}:00–{end_h}:00"
             )
         elif friendly:
-            text = f"⚡ möglich {start_h}:00–{end_h}:00"
+            text = f"{t('mail.zusammenfassung.gewitter_symbol', lang)} {start_h}:00–{end_h}:00"
         else:
-            text = f"Gewitter möglich {start_h}:00–{end_h}:00"
+            text = f"{t('mail.zusammenfassung.gewitter_moeglich', lang)} {start_h}:00–{end_h}:00"
         # BEIDE Schreibweisen tragen die Herkunft: der Default aus
         # `build_default_display_config()` ist `use_friendly_format=True`, ein
         # Suffix nur am unfreundlichen Zweig bliebe fuer den Normalnutzer
@@ -640,11 +656,15 @@ class CompactSummaryFormatter:
         # lesen diesen Text nicht -- aktiv abgewaehlt, nicht stillschweigend
         # ausgelassen (bewacht durch Spec AC-8).
         traeger = union_of_max_carriers(thunder_paare)
-        herkunft = ", ".join(thunder_signal_label(n) for n in traeger or [])
+        herkunft = ", ".join(thunder_signal_label(n, lang=lang) for n in traeger or [])
         if herkunft:
             text = f"{text} · {herkunft}"
-        note = format_hail_note(hail_priority(hail_values))
+        note = format_hail_note(hail_priority(hail_values), lang=lang)
         return f"{text} · {note}" if note else text
+
+    def _sprache(self) -> Lang:
+        """Sprache des laufenden ``format_weather_summary``-Aufrufs (Default de)."""
+        return getattr(self, "_lang", "de")
 
     # ------------------------------------------------------------------
     # Stage name shortening
@@ -668,7 +688,9 @@ class CompactSummaryFormatter:
 # Wrapper context="vergleich" (Orts-Vergleich, Issue #1278)
 # ---------------------------------------------------------------------------
 
-def format_location_summary(loc, enabled_metrics: Optional[set] = None) -> str:
+def format_location_summary(
+    loc, enabled_metrics: Optional[set] = None, *, lang: Lang = "de",
+) -> str:
     """Wrapper ``context="vergleich"``: ein ``LocationResult`` -> derselbe
     Fliesstext-Satz wie im Trip (geteilter Kern ``format_weather_summary``).
 
@@ -709,6 +731,6 @@ def format_location_summary(loc, enabled_metrics: Optional[set] = None) -> str:
     # location_tz() mit sichtbarem UTC-Rueckfall) statt der frueheren
     # eigenen Kopie `_location_tz()` (ignorierte Koordinaten komplett).
     return CompactSummaryFormatter().format_weather_summary(
-        summary, hourly, loc.location.name, dc, location_tz(loc.location),
+        summary, hourly, loc.location.name, dc, location_tz(loc.location), lang=lang,
     )
 

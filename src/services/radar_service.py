@@ -173,6 +173,35 @@ INTENSITY_MODERATE = "Mäßiger Regen"
 INTENSITY_LIGHT = "Leichter Regen"
 INTENSITY_DRY = "Kein Niederschlag"
 # #2417 Kurzform englisch: englische Fassung derselben Stufen.
+# Issue #2667: Anzeige der Intensitaet in der Nutzersprache. Die Konstanten
+# oben bleiben der Vergleichsschluessel (alert_urgency, rain_extent,
+# trip_report_scheduler); angezeigt wird `intensity_text(label, lang)`.
+_INTENSITY_KEYS = {
+    INTENSITY_CONVECTIVE: "alarm.radar.intensitaet.hagel_gewitter",
+    INTENSITY_CONVECTIVE_NO_HAIL: "alarm.radar.intensitaet.gewitter",
+    INTENSITY_HEAVY: "alarm.radar.intensitaet.stark",
+    INTENSITY_MODERATE: "alarm.radar.intensitaet.maessig",
+    INTENSITY_LIGHT: "alarm.radar.intensitaet.leicht",
+    INTENSITY_DRY: "alarm.radar.intensitaet.trocken",
+}
+
+
+def intensity_text(label: str, lang: str = "de") -> str:
+    """Angezeigter Text einer Intensitaets-Konstante; unbekannt -> unveraendert."""
+    from i18n import t
+
+    key = _INTENSITY_KEYS.get(label)
+    if key:
+        return t(key, lang)
+    # Issue #2672: der Trip-Radar-Pfad schreibt das Label fuer die Satzmitte
+    # klein (F002, ``trip_alert``) -- dieselbe Schreibung in ``lang``.
+    key = _INTENSITY_KEYS.get(label[:1].upper() + label[1:])
+    if key:
+        text = t(key, lang)
+        return text[:1].lower() + text[1:]
+    return label
+
+
 _INTENSITY_EN = {
     INTENSITY_CONVECTIVE: "Heavy hail/storm", INTENSITY_CONVECTIVE_NO_HAIL: "Storm",
     INTENSITY_HEAVY: "Heavy rain", INTENSITY_MODERATE: "Moderate rain",

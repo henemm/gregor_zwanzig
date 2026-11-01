@@ -1,0 +1,19 @@
+WETTER-BRIEFING
+GR20 - Evening Report
+GR20 E3
+11.07.2026
+
+== Metriken-Ueberblick ==
+  18-20C - Max 18:00
+  gef. 11.8-13.2C - Max 18:00
+  Wind >10 km/h ab 04:00 - max 20 (18:00)
+  !! Boeen >20 km/h ab 04:00 - max 46 (18:00)
+  ! Regen ab 11:00 - 2.5 mm
+  kein Gewitter
+  50% bewoelkt - Max 11:00
+  Sonne 4.0h
+
+----------------------------------------
+Generated: 2026-04-28 12:00 UTC
+Data: openmeteo (arome_france)
+Etappen-Briefing - Kompakt - openmeteo

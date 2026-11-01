@@ -1,0 +1,608 @@
+============================= test session starts ==============================
+platform linux -- Python 3.12.3, pytest-8.4.1, pluggy-1.6.0
+rootdir: /home/hem/gregor_zwanzig/.claude/worktrees/typed-hugging-honey
+configfile: pyproject.toml
+plugins: anyio-4.12.0, timeout-2.4.0, socket-0.8.0
+timeout: 30.0s
+timeout method: signal
+timeout func_only: False
+collected 20 items
+
+tests/tdd/test_compare_briefing_nachholen.py FF....FF.FFFFF.FFFFF        [100%]
+
+=================================== FAILURES ===================================
+_ test_ac1_gescheiterter_zeitplan_versand_hinterlaesst_genau_einen_vergleichs_vermerk _
+
+aus = <tdd.test_compare_briefing_nachholen._Ausgang object at 0x7916a1e26150>
+
+    def test_ac1_gescheiterter_zeitplan_versand_hinterlaesst_genau_einen_vergleichs_vermerk(aus):
+        """AC-1.
+    
+        GIVEN ein aktiver Ortsvergleich (Morgen-Slot 07:00 Ortszeit), dessen
+              automatischer Versand auf allen Kanaelen scheitert (E-Mail wirft),
+              und in der Ablage liegt bereits ein fremder Trip-Vermerk.
+        WHEN  der Scheduler-Lauf der Slot-Stunde beendet ist.
+        THEN  liegt in der Ablage dieses Nutzers genau ein Vermerk mit Art
+              "vergleich", Preset-Kennung, Slot "morning", Zieltag D, Slot-Stunde 7,
+              Grund "dispatch_error" — und der Trip-Vermerk ist unveraendert
+              (Read-Modify-Write, kein Replace, #102).
+    
+        RED heute: Compare schreibt keinen Vermerk.
+        """
+        uid = _nutzer()
+        pid = _vergleich(uid, _pid("ac1"))
+        fremd = _trip_vermerk("trip-fremd-ac1")
+        _ablage_schreiben(uid, [fremd])
+        aus.stoerung.add("email")
+    
+        _lauf(uid, _utc(D, 7))
+    
+        assert aus.versuche["email"] == 1, "Vorbedingung: der Slot hat den E-Mail-Ausgang betreten"
+        vermerke = _vergleich_vermerke(uid)
+>       assert len(vermerke) == 1, (
+            "AC-1: ein vollstaendig gescheiterter Zeitplan-Versand muss genau einen "
+            f"Ortsvergleich-Vermerk hinterlassen, Ablage: {_ablage(uid)!r}"
+        )
+E       AssertionError: AC-1: ein vollstaendig gescheiterter Zeitplan-Versand muss genau einen Ortsvergleich-Vermerk hinterlassen, Ablage: [{'trip_id': 'trip-fremd-ac1', 'report_type': 'morning', 'date': '2026-07-08', 'slot_hour': 7, 'failed_segment_ids': ['seg-1'], 'attempts': 1, 'created_at': '2026-07-08T05:00:00+00:00'}]
+E       assert 0 == 1
+E        +  where 0 = len([])
+
+tests/tdd/test_compare_briefing_nachholen.py:292: AssertionError
+------------------------------ Captured log call -------------------------------
+ERROR    scheduler.dispatch:scheduler_dispatch_service.py:189 Compare preset vgl-ac1-a22190 failed: Mail-Gateway nicht erreichbar (simulierter Ausfall)
+__ test_ac2_kein_kanal_erreichbar_im_zeitplan_hinterlaesst_denselben_vermerk ___
+
+aus = <tdd.test_compare_briefing_nachholen._Ausgang object at 0x7916a2171100>
+
+    def test_ac2_kein_kanal_erreichbar_im_zeitplan_hinterlaesst_denselben_vermerk(aus):
+        """AC-2 (positiv).
+    
+        GIVEN ein Ortsvergleich, dessen einziger wirksamer Kanal (Telegram; das
+              Konto hat keine mail_to) beim Senden scheitert — Ausgang
+              ``channels_unreachable``, keine Ausnahme.
+        WHEN  der Scheduler-Lauf beendet ist.
+        THEN  entsteht derselbe Vermerk wie bei AC-1.
+    
+        RED heute: kein Vermerk.
+        """
+        from app.config import Settings
+    
+        uid = _nutzer()
+        pid = _vergleich(uid, _pid("ac2-unerreichbar"), telegram=True)
+        hv.profil_ohne_mail_to(uid)
+        assert not Settings().with_user_profile(uid).mail_to, "Vorbedingung: keine mail_to"
+        aus.stoerung.add("telegram")
+    
+        _lauf(uid, _utc(D, 7))
+    
+        assert aus.versuche["telegram"] == 1, "Vorbedingung: Telegram-Ausgang betreten"
+        assert aus.mit.kanaele == [], f"Vorbedingung: nichts zugestellt: {aus.mit!r}"
+>       assert _schluessel(uid) == {(pid, "morning", D.isoformat(), 7)}, (
+            "AC-2: 'kein Kanal erreichbar' muss denselben Vermerk wie eine Ausnahme "
+            f"hinterlassen, Ablage: {_ablage(uid)!r}"
+        )
+E       AssertionError: AC-2: 'kein Kanal erreichbar' muss denselben Vermerk wie eine Ausnahme hinterlassen, Ablage: []
+E       assert set() == {('vgl-ac2-un...26-07-08', 7)}
+E         
+E         Extra items in the right set:
+E         ('vgl-ac2-unerreichbar-b56f60', 'morning', '2026-07-08', 7)
+E         Use -v to get more diff
+
+tests/tdd/test_compare_briefing_nachholen.py:335: AssertionError
+------------------------------ Captured log call -------------------------------
+ERROR    services.notification_service:notification_service.py:1540 Compare report telegram failed for 'Wetter-Vergleich: Vergleich vgl-ac2-unerreichbar-b56f60 (08.07.2026)': Telegram-Gateway nicht erreichbar (simulierter Ausfall)
+WARNING  scheduler.dispatch:scheduler_dispatch_service.py:186 Versand ohne Zustellung: channels_unreachable
+__ test_ac3_kontrolle_derselbe_fehler_ohne_on_demand_hinterlaesst_den_vermerk __
+
+aus = <tdd.test_compare_briefing_nachholen._Ausgang object at 0x7916a2171760>
+
+    def test_ac3_kontrolle_derselbe_fehler_ohne_on_demand_hinterlaesst_den_vermerk(aus):
+        """AC-3 Gegenprobe (sonst waere AC-3 vakuum).
+    
+        GIVEN derselbe Ausnahme-Fehler wie oben, aber als regulaerer Versand
+              (``on_demand=False``, Morgen-Slot: Versatz 0).
+        WHEN  ``send_one_compare_preset`` beendet ist.
+        THEN  liegt der Vermerk (Slot "morning", Zieltag D) vor.
+    
+        RED heute: kein Vermerk.
+        """
+        from services.scheduler_dispatch_service import send_one_compare_preset
+        from tests.tdd._compare_kette_fixtures import alle_orte
+    
+        uid = _nutzer()
+        pid = _vergleich(uid, _pid("ac3-kontrolle"))
+        aus.stoerung.add("email")
+        with pytest.raises(RuntimeError):
+            send_one_compare_preset(
+                preset_laden(uid, pid), settings_fuer(uid), uid, str(get_data_root()),
+                all_locations_cache=alle_orte(uid), target_date=D, tage_ab_ortstag=0,
+            )
+>       assert {(k[0], k[1], k[2]) for k in _schluessel(uid)} == {(pid, "morning", D.isoformat())}, (
+            f"AC-3 Gegenprobe: regulaerer Fehlschlag muss vermerkt werden: {_ablage(uid)!r}"
+        )
+E       AssertionError: AC-3 Gegenprobe: regulaerer Fehlschlag muss vermerkt werden: []
+E       assert set() == {('vgl-ac3-ko...'2026-07-08')}
+E         
+E         Extra items in the right set:
+E         ('vgl-ac3-kontrolle-a24949', 'morning', '2026-07-08')
+E         Use -v to get more diff
+
+tests/tdd/test_compare_briefing_nachholen.py:460: AssertionError
+_ test_ac4_trip_nachholdurchlauf_laesst_den_vergleichs_vermerk_byte_gleich_stehen _
+
+aus = <tdd.test_compare_briefing_nachholen._Ausgang object at 0x79169013aea0>
+
+    def test_ac4_trip_nachholdurchlauf_laesst_den_vergleichs_vermerk_byte_gleich_stehen(aus):
+        """AC-4.
+    
+        GIVEN in der Ablage liegen ein Ortsvergleich-Vermerk, ein Trip-Vermerk ohne
+              Art-Feld (Bestandsformat) und ein Trip-Vermerk mit Art "route" — beide
+              Trips existieren nicht (mehr).
+        WHEN  der Trip-Nachholdurchlauf (``TripDispatchStrategy.pre_pass``, der
+              Vorlauf von ``trip-reports``) laeuft.
+        THEN  bleibt der Ortsvergleich-Vermerk unveraendert, und die Trip-Vermerke
+              behandelt der Trip-Lauf wie bisher (zu nicht vorhandenem Trip:
+              geloescht).
+    
+        RED heute: ``_remove_pending_marker(None)`` loescht den Compare-Eintrag.
+        """
+        from services.dispatch_orchestrator import TripDispatchStrategy
+    
+        uid = _nutzer()
+        pid = _vergleich(uid, _pid("ac4"))
+        vgl = _vermerk(pid, "evening", D + timedelta(days=1), 19, attempts=2)
+        _ablage_schreiben(uid, [
+            _trip_vermerk("trip-weg-alt"),
+            vgl,
+            _trip_vermerk("trip-weg-route", kind="route"),
+        ])
+    
+        TripDispatchStrategy(settings=settings_fuer(uid), user_id=uid).pre_pass(
+            now_utc=_utc(D, 10), due=[],
+        )
+    
+        eintraege = _ablage(uid)
+        trips = [e for e in eintraege if e.get("trip_id")]
+        assert trips == [], (
+            "Vorbedingung/Bestand: Vermerke zu nicht vorhandenen Trips raeumt der "
+            f"Trip-Lauf weg (der Lauf hat also stattgefunden): {trips!r}"
+        )
+>       assert [_kanon(e) for e in eintraege if e.get("kind") == "vergleich"] == [_kanon(vgl)], (
+            "AC-4: der Trip-Nachholdurchlauf darf den Ortsvergleich-Vermerk weder "
+            f"loeschen noch veraendern, Ablage danach: {eintraege!r}"
+        )
+E       AssertionError: AC-4: der Trip-Nachholdurchlauf darf den Ortsvergleich-Vermerk weder loeschen noch veraendern, Ablage danach: []
+E       assert [] == ['{"attempts"...t_hour": 19}']
+E         
+E         Right contains one more item: '{"attempts": 2, "created_at": "2026-07-01T00:00:00+00:00", "date": "2026-07-09", "failed_segment_ids": [], "kind": "vergleich", "preset_id": "vgl-ac4-a96413", "reason": "dispatch_error", "report_type": "evening", "slot_hour": 19}'
+E         Use -v to get more diff
+
+tests/tdd/test_compare_briefing_nachholen.py:503: AssertionError
+_ test_ac5_vermerk_wird_spaeter_am_zieltag_mit_hinweis_in_mail_und_telegram_nachgeholt _
+
+aus = <tdd.test_compare_briefing_nachholen._Ausgang object at 0x7916901e1c40>
+
+    def test_ac5_vermerk_wird_spaeter_am_zieltag_mit_hinweis_in_mail_und_telegram_nachgeholt(aus):
+        """AC-5.
+    
+        GIVEN ein Vermerk fuer den Morgen-Slot 07:00 von D, es ist 10:00 Ortszeit
+              an D, kein regulaerer Slot dieses Presets faellig; Kanaele E-Mail und
+              Telegram funktionieren.
+        WHEN  der stuendliche Compare-Vorlauf laeuft.
+        THEN  wird das Briefing an die Empfaenger des Nutzers zugestellt, und der
+              Text beginnt in E-Mail (Plain; HTML: vor dem Inhalt) und Telegram mit
+              "Nachgeliefert — die Zustellung um 07:00 ist fehlgeschlagen"; der
+              Vermerk ist danach weg.
+    
+        RED heute: es wird nichts nachgeholt.
+        """
+        uid = _nutzer()
+        pid = _vergleich(uid, _pid("ac5"), telegram=True)
+        _ablage_schreiben(uid, [_vermerk(pid, "morning", D, 7)])
+    
+        _lauf(uid, _utc(D, 10))
+    
+        mails = aus.mit.sendungen("email")
+>       assert len(mails) == 1, f"AC-5: genau eine nachgeholte Mail erwartet: {aus.mit!r}"
+E       AssertionError: AC-5: genau eine nachgeholte Mail erwartet: Kanalmitschrift({})
+E       assert 0 == 1
+E        +  where 0 = len([])
+
+tests/tdd/test_compare_briefing_nachholen.py:552: AssertionError
+_ test_ac6_vermerk_ist_vor_dem_nachholen_entfernt_und_ein_erneuter_fehlschlag_vermerkt_frisch _
+
+aus = <tdd.test_compare_briefing_nachholen._Ausgang object at 0x79169013bbc0>
+
+    def test_ac6_vermerk_ist_vor_dem_nachholen_entfernt_und_ein_erneuter_fehlschlag_vermerkt_frisch(aus):
+        """AC-6.
+    
+        GIVEN ein Vermerk (alter ``created_at``, ``attempts=3``) wird nachgeholt.
+        WHEN  der Nachhol-Versand beginnt und dabei erneut scheitert.
+        THEN  ist der Vermerk im Sendemoment bereits aus der Ablage entfernt, und
+              danach liegt genau ein NEUER Vermerk (frischer ``created_at``,
+              ``attempts == 0``) fuer denselben Preset und Slot vor.
+    
+        RED heute: kein Nachholversuch.
+        """
+        uid = _nutzer()
+        pid = _vergleich(uid, _pid("ac6"))
+        alt = "2020-01-01T00:00:00+00:00"
+        _ablage_schreiben(uid, [_vermerk(pid, "morning", D, 7, created_at=alt, attempts=3)])
+        im_sendemoment: list = []
+        aus.beim_senden.append(lambda kanal: im_sendemoment.append(_vergleich_vermerke(uid)))
+        aus.stoerung.add("email")
+    
+        _lauf(uid, _utc(D, 10))
+    
+>       assert im_sendemoment, "AC-6: es hat kein Nachhol-Versuch stattgefunden"
+E       AssertionError: AC-6: es hat kein Nachhol-Versuch stattgefunden
+E       assert []
+
+tests/tdd/test_compare_briefing_nachholen.py:596: AssertionError
+_______ test_ac7_verfall_folgt_dem_ortstag_des_presets_nicht_dem_utc_tag _______
+
+aus = <tdd.test_compare_briefing_nachholen._Ausgang object at 0x7916901e32f0>
+
+    def test_ac7_verfall_folgt_dem_ortstag_des_presets_nicht_dem_utc_tag(aus):
+        """AC-7.
+    
+        GIVEN zwei Presets in verschiedenen Zonen (Auckland, Los Angeles) und ein
+              fester UTC-Zeitpunkt, an dem in Auckland schon der Folgetag ist:
+              (a) Auckland-Vermerk Morgen-Slot mit Zieltag = UTC-Tag (in Ortszeit
+                  gestern); (b) LA-Vermerk Abend-Slot mit Zieltag = morgen (Ortszeit).
+        WHEN  der stuendliche Compare-Vorlauf laeuft.
+        THEN  (a) wird nicht zugestellt und ist entfernt; (b) wird nicht verworfen,
+              sondern nachgeholt (Zustellung fuer seinen Zieltag).
+    
+        RED heute: (a) bleibt liegen, (b) wird nie zugestellt.
+        """
+        from services.compare_slot_scheduler import preset_ortstag
+    
+        uid = nutzer_anlegen()
+        _orte(uid, {"loc-ibk": ("Auckland", -36.85, 174.76),
+                    "loc-bz": ("Los Angeles", 34.05, -118.24)})
+        pid_nz = _vergleich(uid, _pid("ac7-nz"), name="Vergleich Neuseeland", orte=["loc-ibk"])
+        pid_la = _vergleich(uid, _pid("ac7-la"), name="Vergleich Kalifornien", orte=["loc-bz"],
+                            abend="19:00:00")
+        jetzt = datetime(2026, 7, 8, 12, 0, tzinfo=timezone.utc)
+        utc_tag = jetzt.date()
+        nz_tag = jetzt.astimezone(ZoneInfo("Pacific/Auckland")).date()
+        la_tag = jetzt.astimezone(ZoneInfo("America/Los_Angeles")).date()
+        assert nz_tag == utc_tag + timedelta(days=1) and la_tag == utc_tag, "Vorbedingung Zonen"
+        from app.loader import load_all_locations
+    
+        by_id = {o.id: o for o in load_all_locations(user_id=uid)}
+        assert preset_ortstag(preset_laden(uid, pid_nz), by_id, jetzt) == nz_tag
+        assert preset_ortstag(preset_laden(uid, pid_la), by_id, jetzt) == la_tag
+    
+        _ablage_schreiben(uid, [
+            _vermerk(pid_nz, "morning", utc_tag, 7),
+            _vermerk(pid_la, "evening", la_tag + timedelta(days=1), 19),
+        ])
+    
+        _lauf(uid, jetzt)
+    
+        assert _mails(aus, "Neuseeland") == [], (
+            f"AC-7: ein in Ortszeit abgelaufener Vermerk darf nichts zustellen: {aus.mit!r}"
+        )
+>       assert pid_nz not in {e.get("preset_id") for e in _vergleich_vermerke(uid)}, (
+            f"AC-7: der in Ortszeit abgelaufene Vermerk muss entfernt sein: {_ablage(uid)!r}"
+        )
+E       AssertionError: AC-7: der in Ortszeit abgelaufene Vermerk muss entfernt sein: [{'kind': 'vergleich', 'preset_id': 'vgl-ac7-nz-307b1b', 'report_type': 'morning', 'date': '2026-07-08', 'slot_hour': 7, 'reason': 'dispatch_error', 'failed_segment_ids': [], 'attempts': 0, 'created_at': '2026-07-01T00:00:00+00:00'}, {'kind': 'vergleich', 'preset_id': 'vgl-ac7-la-a2f633', 'report_type': 'evening', 'date': '2026-07-09', 'slot_hour': 19, 'reason': 'dispatch_error', 'failed_segment_ids': [], 'attempts': 0, 'created_at': '2026-07-01T00:00:00+00:00'}]
+E       assert 'vgl-ac7-nz-307b1b' not in {'vgl-ac7-la-a2f633', 'vgl-ac7-nz-307b1b'}
+
+tests/tdd/test_compare_briefing_nachholen.py:654: AssertionError
+_ test_ac8_abend_nachholer_nach_mitternacht_wird_als_abend_fuer_den_zieltag_verbucht _
+
+aus = <tdd.test_compare_briefing_nachholen._Ausgang object at 0x7916901e33b0>
+
+    def test_ac8_abend_nachholer_nach_mitternacht_wird_als_abend_fuer_den_zieltag_verbucht(aus):
+        """AC-8.
+    
+        GIVEN ein Abend-Vermerk (Slot 19:00, Zieltag D) und der Nachhol-Lauf findet
+              um 01:00 Ortszeit an D statt (Zieltag ist nun "heute").
+        WHEN  der Vorlauf den Vermerk nachholt.
+        THEN  verbucht die Versand-Historie den Eintrag als "evening" (nicht
+              "morning"), und Betreff/Wetterabruf beziehen sich auf D.
+    
+        RED heute: es wird nichts nachgeholt (kein Historien-Eintrag).
+        """
+        uid = _nutzer()
+        pid = _vergleich(uid, _pid("ac8"), abend="19:00:00")
+        _ablage_schreiben(uid, [_vermerk(pid, "evening", D, 19)])
+    
+        _lauf(uid, _utc(D, 1))
+    
+        eintraege = [e for e in _briefing_log(uid) if e.get("entity_id") == pid]
+>       assert len(eintraege) == 1, (
+            f"AC-8: genau ein Historien-Eintrag fuer den Nachholer erwartet: {_briefing_log(uid)!r}"
+        )
+E       AssertionError: AC-8: genau ein Historien-Eintrag fuer den Nachholer erwartet: []
+E       assert 0 == 1
+E        +  where 0 = len([])
+
+tests/tdd/test_compare_briefing_nachholen.py:686: AssertionError
+_____ test_ac9a_regulaerer_slot_mit_gleichem_zieltag_ersetzt_das_nachholen _____
+
+aus = <tdd.test_compare_briefing_nachholen._Ausgang object at 0x7916901e3500>
+
+    def test_ac9a_regulaerer_slot_mit_gleichem_zieltag_ersetzt_das_nachholen(aus):
+        """AC-9 (a).
+    
+        GIVEN ein Abend-Vermerk fuer D, und um 07:00 an D faellt der Morgen-Slot
+              desselben Presets fuer D an (gleicher Zieltag), Versand ok.
+        WHEN  der Compare-Lauf dieser Stunde beendet ist.
+        THEN  genau EINE Zustellung (die regulaere), der Vermerk ist danach entfernt.
+    
+        RED heute: der Vermerk bleibt liegen.
+        """
+        uid = _nutzer()
+        pid = _vergleich(uid, _pid("ac9a"), abend="19:00:00")
+        _ablage_schreiben(uid, [_vermerk(pid, "evening", D, 19)])
+    
+        _lauf(uid, _utc(D, 7))
+    
+        assert len(aus.mit.sendungen("email")) == 1, (
+            f"AC-9a: genau eine Zustellung (die regulaere), kein Doppel: {aus.mit!r}"
+        )
+>       assert _vergleich_vermerke(uid) == [], (
+            "AC-9a: nach gelungener regulaerer Zustellung fuer denselben Zieltag muss "
+            f"der Vermerk weg sein: {_ablage(uid)!r}"
+        )
+E       AssertionError: AC-9a: nach gelungener regulaerer Zustellung fuer denselben Zieltag muss der Vermerk weg sein: [{'kind': 'vergleich', 'preset_id': 'vgl-ac9a-032cb5', 'report_type': 'evening', 'date': '2026-07-08', 'slot_hour': 19, 'reason': 'dispatch_error', 'failed_segment_ids': [], 'attempts': 0, 'created_at': '2026-07-01T00:00:00+00:00'}]
+E       assert [{'attempts':...ds': [], ...}] == []
+E         
+E         Left contains one more item: {'attempts': 0, 'created_at': '2026-07-01T00:00:00+00:00', 'date': '2026-07-08', 'failed_segment_ids': [], ...}
+E         Use -v to get more diff
+
+tests/tdd/test_compare_briefing_nachholen.py:722: AssertionError
+----------------------------- Captured stderr call -----------------------------
+2026-10-31 09:21:40,686 INFO scheduler.dispatch: Compare preset vgl-ac9a-032cb5 sent to ***@example.invalid (top_ort=Innsbruck)
+------------------------------ Captured log call -------------------------------
+INFO     scheduler.dispatch:scheduler_dispatch_service.py:814 Compare preset vgl-ac9a-032cb5 sent to ***@example.invalid (top_ort=Innsbruck)
+__ test_ac9c_regulaerer_slot_mit_anderem_zieltag_wird_zusaetzlich_nachgeholt ___
+
+aus = <tdd.test_compare_briefing_nachholen._Ausgang object at 0x791690183200>
+
+    def test_ac9c_regulaerer_slot_mit_anderem_zieltag_wird_zusaetzlich_nachgeholt(aus):
+        """AC-9 (c).
+    
+        GIVEN ein Morgen-Vermerk fuer D (07:00 gescheitert), und um 19:00 an D
+              faellt nur der Abend-Slot (Zieltag D+1) an.
+        WHEN  der Compare-Lauf dieser Stunde beendet ist.
+        THEN  zwei Zustellungen: die regulaere fuer D+1 und die nachgeholte fuer D;
+              danach kein Vermerk mehr.
+    
+        RED heute: nur die regulaere Zustellung.
+        """
+        uid = _nutzer()
+        pid = _vergleich(uid, _pid("ac9c"), abend="19:00:00")
+        _ablage_schreiben(uid, [_vermerk(pid, "morning", D, 7)])
+    
+        _lauf(uid, _utc(D, 19))
+    
+        betreffe = sorted(m["subject"] for m in aus.mit.sendungen("email"))
+>       assert len(betreffe) == 2, f"AC-9c: regulaer + nachgeholt erwartet: {betreffe!r}"
+E       AssertionError: AC-9c: regulaer + nachgeholt erwartet: ['Wetter-Vergleich: Vergleich vgl-ac9c-63d6f0 (09.07.2026)']
+E       assert 1 == 2
+E        +  where 1 = len(['Wetter-Vergleich: Vergleich vgl-ac9c-63d6f0 (09.07.2026)'])
+
+tests/tdd/test_compare_briefing_nachholen.py:769: AssertionError
+----------------------------- Captured stderr call -----------------------------
+2026-10-31 09:21:40,752 INFO scheduler.dispatch: Compare preset vgl-ac9c-63d6f0 sent to ***@example.invalid (top_ort=Innsbruck)
+------------------------------ Captured log call -------------------------------
+INFO     scheduler.dispatch:scheduler_dispatch_service.py:814 Compare preset vgl-ac9c-63d6f0 sent to ***@example.invalid (top_ort=Innsbruck)
+_ test_ac10_stillgelegt_abgelaufen_oder_geloescht_verwirft_den_vermerk_ohne_versand _
+
+aus = <tdd.test_compare_briefing_nachholen._Ausgang object at 0x7916901803e0>
+
+    def test_ac10_stillgelegt_abgelaufen_oder_geloescht_verwirft_den_vermerk_ohne_versand(aus):
+        """AC-10.
+    
+        GIVEN drei Vermerke zu drei Presets: pausiert (``paused_at``), abgelaufen
+              (``end_date`` in der Vergangenheit), geloescht (keine Datei); dazu ein
+              Trip-Vermerk.
+        WHEN  der stuendliche Compare-Vorlauf laeuft (10:00, kein Slot faellig).
+        THEN  wird nichts gesendet, alle drei Vermerke sind entfernt, der
+              Trip-Vermerk bleibt byte-gleich.
+    
+        RED heute: Versandzaehler 0 (gruen), aber die Vermerke bleiben liegen.
+        """
+        uid = _nutzer()
+        pid_pause = _vergleich(uid, _pid("ac10-pause"), paused_at="2026-07-01T00:00:00Z")
+        pid_ende = _vergleich(uid, _pid("ac10-ende"), end_date="2026-01-01")
+        pid_weg = _pid("ac10-weg")  # keine Preset-Datei
+        trip = _trip_vermerk("trip-ac10")
+        _ablage_schreiben(uid, [
+            _vermerk(pid_pause, "morning", D, 7),
+            _vermerk(pid_ende, "morning", D, 7),
+            _vermerk(pid_weg, "morning", D, 7),
+            trip,
+        ])
+    
+        _lauf(uid, _utc(D, 10))
+    
+        assert aus.mit.kanaele == [], f"AC-10: nichts senden: {aus.mit!r}"
+>       assert _vergleich_vermerke(uid) == [], (
+            f"AC-10: Vermerke stillgelegter/abgelaufener/geloeschter Presets verwerfen: {_ablage(uid)!r}"
+        )
+E       AssertionError: AC-10: Vermerke stillgelegter/abgelaufener/geloeschter Presets verwerfen: [{'kind': 'vergleich', 'preset_id': 'vgl-ac10-pause-6f9ef0', 'report_type': 'morning', 'date': '2026-07-08', 'slot_hour': 7, 'reason': 'dispatch_error', 'failed_segment_ids': [], 'attempts': 0, 'created_at': '2026-07-01T00:00:00+00:00'}, {'kind': 'vergleich', 'preset_id': 'vgl-ac10-ende-71eed0', 'report_type': 'morning', 'date': '2026-07-08', 'slot_hour': 7, 'reason': 'dispatch_error', 'failed_segment_ids': [], 'attempts': 0, 'created_at': '2026-07-01T00:00:00+00:00'}, {'kind': 'vergleich', 'preset_id': 'vgl-ac10-weg-68e88c', 'report_type': 'morning', 'date': '2026-07-08', 'slot_hour': 7, 'reason': 'dispatch_error', 'failed_segment_ids': [], 'attempts': 0, 'created_at': '2026-07-01T00:00:00+00:00'}, {'trip_id': 'trip-ac10', 'report_type': 'morning', 'date': '2026-07-08', 'slot_hour': 7, 'failed_segment_ids': ['seg-1'], 'attempts': 1, 'created_at': '2026-07-08T05:00:00+00:00'}]
+E       assert [{'attempts':...ds': [], ...}] == []
+E         
+E         Left contains 3 more items, first extra item: {'attempts': 0, 'created_at': '2026-07-01T00:00:00+00:00', 'date': '2026-07-08', 'failed_segment_ids': [], ...}
+E         Use -v to get more diff
+
+tests/tdd/test_compare_briefing_nachholen.py:805: AssertionError
+_ test_ac11_nur_der_regulaere_erfolg_desselben_presets_und_slots_raeumt_den_vermerk _
+
+aus = <tdd.test_compare_briefing_nachholen._Ausgang object at 0x7916901818b0>
+
+    def test_ac11_nur_der_regulaere_erfolg_desselben_presets_und_slots_raeumt_den_vermerk(aus):
+        """AC-11.
+    
+        GIVEN Vermerke (A, Morgen, D), (A, Abend, D+1), (B, Morgen, D).
+        WHEN  erst ein On-Demand-Versand von A erfolgreich zustellt, dann der
+              regulaere Morgen-Versand von A (Cron-Wrapper ``_dispatch_due_preset``,
+              Versatz 0) erfolgreich zustellt.
+        THEN  aendert der On-Demand-Erfolg nichts; nach dem regulaeren Erfolg ist
+              nur (A, Morgen, D) entfernt.
+    
+        RED heute: der regulaere Erfolg raeumt nichts.
+        """
+        from services.scheduler_dispatch_service import _dispatch_due_preset, send_one_compare_preset
+        from tests.tdd._compare_kette_fixtures import alle_orte
+    
+        uid = _nutzer()
+        pid_a = _vergleich(uid, _pid("ac11-a"), abend="19:00:00")
+        pid_b = _vergleich(uid, _pid("ac11-b"), abend="19:00:00")
+        _ablage_schreiben(uid, [
+            _vermerk(pid_a, "morning", D, 7),
+            _vermerk(pid_a, "evening", D + timedelta(days=1), 19),
+            _vermerk(pid_b, "morning", D, 7),
+        ])
+        vorher = _schluessel(uid)
+    
+        send_one_compare_preset(
+            preset_laden(uid, pid_a), settings_fuer(uid), uid, str(get_data_root()),
+            all_locations_cache=alle_orte(uid), target_date=D, tage_ab_ortstag=0,
+            on_demand=True,
+        )
+        assert len(aus.mit.sendungen("email")) == 1, "Vorbedingung: On-Demand hat zugestellt"
+        assert _schluessel(uid) == vorher, (
+            f"AC-11: ein On-Demand-Erfolg darf keinen Vermerk raeumen: {_ablage(uid)!r}"
+        )
+    
+        assert _dispatch_due_preset(
+            preset_laden(uid, pid_a), D, settings_fuer(uid), uid, str(get_data_root()),
+            alle_orte(uid), tage_ab_ortstag=0,
+        ) is True, "Vorbedingung: regulaerer Versand gelungen"
+>       assert _schluessel(uid) == vorher - {(pid_a, "morning", D.isoformat(), 7)}, (
+            "AC-11: nach regulaerem Erfolg darf genau (A, Morgen) fehlen, alles andere "
+            f"bleibt: {_ablage(uid)!r}"
+        )
+E       AssertionError: AC-11: nach regulaerem Erfolg darf genau (A, Morgen) fehlen, alles andere bleibt: [{'kind': 'vergleich', 'preset_id': 'vgl-ac11-a-bb828e', 'report_type': 'morning', 'date': '2026-07-08', 'slot_hour': 7, 'reason': 'dispatch_error', 'failed_segment_ids': [], 'attempts': 0, 'created_at': '2026-07-01T00:00:00+00:00'}, {'kind': 'vergleich', 'preset_id': 'vgl-ac11-a-bb828e', 'report_type': 'evening', 'date': '2026-07-09', 'slot_hour': 19, 'reason': 'dispatch_error', 'failed_segment_ids': [], 'attempts': 0, 'created_at': '2026-07-01T00:00:00+00:00'}, {'kind': 'vergleich', 'preset_id': 'vgl-ac11-b-4465c0', 'report_type': 'morning', 'date': '2026-07-08', 'slot_hour': 7, 'reason': 'dispatch_error', 'failed_segment_ids': [], 'attempts': 0, 'created_at': '2026-07-01T00:00:00+00:00'}]
+E       assert {('vgl-ac11-a...26-07-08', 7)} == {('vgl-ac11-a...26-07-08', 7)}
+E         
+E         Extra items in the left set:
+E         ('vgl-ac11-a-bb828e', 'morning', '2026-07-08', 7)
+E         Use -v to get more diff
+
+tests/tdd/test_compare_briefing_nachholen.py:853: AssertionError
+----------------------------- Captured stderr call -----------------------------
+2026-10-31 09:21:40,828 INFO scheduler.dispatch: Compare preset vgl-ac11-a-bb828e sent to ***@example.invalid (top_ort=Innsbruck)
+2026-10-31 09:21:40,854 INFO scheduler.dispatch: Compare preset vgl-ac11-a-bb828e sent to ***@example.invalid (top_ort=Innsbruck)
+------------------------------ Captured log call -------------------------------
+INFO     scheduler.dispatch:scheduler_dispatch_service.py:814 Compare preset vgl-ac11-a-bb828e sent to ***@example.invalid (top_ort=Innsbruck)
+INFO     scheduler.dispatch:scheduler_dispatch_service.py:814 Compare preset vgl-ac11-a-bb828e sent to ***@example.invalid (top_ort=Innsbruck)
+__ test_ac12_morgen_und_abend_vermerk_koexistieren_und_verfallen_unabhaengig ___
+
+aus = <tdd.test_compare_briefing_nachholen._Ausgang object at 0x7916902d6d50>
+
+    def test_ac12_morgen_und_abend_vermerk_koexistieren_und_verfallen_unabhaengig(aus):
+        """AC-12.
+    
+        GIVEN ein Preset mit Morgen- (07:00) und Abend-Slot (19:00), dessen Versand
+              dauerhaft scheitert.
+        WHEN  beide Slot-Laeufe an D beendet sind, und spaeter um 03:00 an D+1.
+        THEN  liegen zwei getrennte Vermerke vor (morning/D/7, evening/D+1/19); nach
+              dem Lauf an D+1 ist der Morgen-Vermerk verfallen, der Abend-Vermerk
+              besteht weiter.
+    
+        RED heute: es entsteht kein Vermerk.
+        """
+        uid = _nutzer()
+        pid = _vergleich(uid, _pid("ac12"), abend="19:00:00")
+        aus.stoerung.add("email")
+    
+        _lauf(uid, _utc(D, 7))
+        _lauf(uid, _utc(D, 19))
+    
+        morgen = (pid, "morning", D.isoformat(), 7)
+        abend = (pid, "evening", (D + timedelta(days=1)).isoformat(), 19)
+>       assert _schluessel(uid) == {morgen, abend}, (
+            f"AC-12: zwei getrennte Vermerke mit verschiedenen Zieltagen erwartet: {_ablage(uid)!r}"
+        )
+E       AssertionError: AC-12: zwei getrennte Vermerke mit verschiedenen Zieltagen erwartet: []
+E       assert set() == {('vgl-ac12-f...26-07-08', 7)}
+E         
+E         Extra items in the right set:
+E         ('vgl-ac12-f36c2c', 'evening', '2026-07-09', 19)
+E         ('vgl-ac12-f36c2c', 'morning', '2026-07-08', 7)
+E         Use -v to get more diff
+
+tests/tdd/test_compare_briefing_nachholen.py:883: AssertionError
+----------------------------- Captured stderr call -----------------------------
+2026-10-31 09:21:40,891 ERROR scheduler.dispatch: Compare preset vgl-ac12-f36c2c failed: Mail-Gateway nicht erreichbar (simulierter Ausfall)
+2026-10-31 09:21:40,913 ERROR scheduler.dispatch: Compare preset vgl-ac12-f36c2c failed: Mail-Gateway nicht erreichbar (simulierter Ausfall)
+------------------------------ Captured log call -------------------------------
+ERROR    scheduler.dispatch:scheduler_dispatch_service.py:189 Compare preset vgl-ac12-f36c2c failed: Mail-Gateway nicht erreichbar (simulierter Ausfall)
+ERROR    scheduler.dispatch:scheduler_dispatch_service.py:189 Compare preset vgl-ac12-f36c2c failed: Mail-Gateway nicht erreichbar (simulierter Ausfall)
+_____ test_ac13_vermerke_nachholen_und_verfall_bleiben_beim_eigenen_nutzer _____
+
+aus = <tdd.test_compare_briefing_nachholen._Ausgang object at 0x791690182c00>
+
+    def test_ac13_vermerke_nachholen_und_verfall_bleiben_beim_eigenen_nutzer(aus):
+        """AC-13 (Zwei-Nutzer-Pflicht).
+    
+        GIVEN zwei Nutzer mit verschiedenen Kennungen und Empfaengern, je ein
+              Ortsvergleich, beide scheitern um 07:00 an D.
+        WHEN  beide Vermerke geschrieben sind; dann laeuft fuer Nutzer 1 der
+              Vorlauf an D+1 03:00 (Verfall) und fuer Nutzer 2 an D 10:00
+              (Nachholen, Kanal wieder ok).
+        THEN  liegt jeder Vermerk nur in der eigenen Ablage; Verfall und Nachholen
+              aendern die Ablage des anderen Nutzers nicht; das Nachholen erreicht
+              nur die Empfaenger von Nutzer 2.
+    
+        RED heute: es entstehen keine Vermerke.
+        """
+        u1, u2 = _nutzer(), _nutzer()
+        assert u1 != u2 and _mail_to(u1) != _mail_to(u2), "Vorbedingung: zwei echte Nutzer"
+        p1 = _vergleich(u1, _pid("ac13-eins"), name="Vergleich Eins")
+        p2 = _vergleich(u2, _pid("ac13-zwei"), name="Vergleich Zwei")
+        aus.stoerung.add("email")
+    
+        _lauf(u1, _utc(D, 7))
+        _lauf(u2, _utc(D, 7))
+    
+>       assert {e.get("preset_id") for e in _vergleich_vermerke(u1)} == {p1}, (
+            f"AC-13: Nutzer 1 muss genau seinen eigenen Vermerk tragen: {_ablage(u1)!r}"
+        )
+E       AssertionError: AC-13: Nutzer 1 muss genau seinen eigenen Vermerk tragen: []
+E       assert set() == {'vgl-ac13-eins-29a9da'}
+E         
+E         Extra items in the right set:
+E         'vgl-ac13-eins-29a9da'
+E         Use -v to get more diff
+
+tests/tdd/test_compare_briefing_nachholen.py:921: AssertionError
+----------------------------- Captured stderr call -----------------------------
+2026-10-31 09:21:40,950 ERROR scheduler.dispatch: Compare preset vgl-ac13-eins-29a9da failed: Mail-Gateway nicht erreichbar (simulierter Ausfall)
+2026-10-31 09:21:40,972 ERROR scheduler.dispatch: Compare preset vgl-ac13-zwei-b2aa80 failed: Mail-Gateway nicht erreichbar (simulierter Ausfall)
+------------------------------ Captured log call -------------------------------
+ERROR    scheduler.dispatch:scheduler_dispatch_service.py:189 Compare preset vgl-ac13-eins-29a9da failed: Mail-Gateway nicht erreichbar (simulierter Ausfall)
+ERROR    scheduler.dispatch:scheduler_dispatch_service.py:189 Compare preset vgl-ac13-zwei-b2aa80 failed: Mail-Gateway nicht erreichbar (simulierter Ausfall)
+=============================== warnings summary ===============================
+tests/tdd/test_compare_briefing_nachholen.py::test_ac9a_regulaerer_slot_mit_gleichem_zieltag_ersetzt_das_nachholen
+tests/tdd/test_compare_briefing_nachholen.py::test_ac9c_regulaerer_slot_mit_anderem_zieltag_wird_zusaetzlich_nachgeholt
+tests/tdd/test_compare_briefing_nachholen.py::test_ac11_nur_der_regulaere_erfolg_desselben_presets_und_slots_raeumt_den_vermerk
+tests/tdd/test_compare_briefing_nachholen.py::test_ac11_nur_der_regulaere_erfolg_desselben_presets_und_slots_raeumt_den_vermerk
+  /home/hem/gregor_zwanzig/.claude/worktrees/typed-hugging-honey/src/services/scheduler_dispatch_service.py:308: DeprecationWarning: datetime.datetime.utcnow() is deprecated and scheduled for removal in a future version. Use timezone-aware objects to represent datetimes in UTC: datetime.datetime.now(datetime.UTC).
+    entry["letzter_versand"] = _datetime.utcnow().isoformat() + "Z"
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+FAILED tests/tdd/test_compare_briefing_nachholen.py::test_ac1_gescheiterter_zeitplan_versand_hinterlaesst_genau_einen_vergleichs_vermerk
+FAILED tests/tdd/test_compare_briefing_nachholen.py::test_ac2_kein_kanal_erreichbar_im_zeitplan_hinterlaesst_denselben_vermerk
+FAILED tests/tdd/test_compare_briefing_nachholen.py::test_ac3_kontrolle_derselbe_fehler_ohne_on_demand_hinterlaesst_den_vermerk
+FAILED tests/tdd/test_compare_briefing_nachholen.py::test_ac4_trip_nachholdurchlauf_laesst_den_vergleichs_vermerk_byte_gleich_stehen
+FAILED tests/tdd/test_compare_briefing_nachholen.py::test_ac5_vermerk_wird_spaeter_am_zieltag_mit_hinweis_in_mail_und_telegram_nachgeholt
+FAILED tests/tdd/test_compare_briefing_nachholen.py::test_ac6_vermerk_ist_vor_dem_nachholen_entfernt_und_ein_erneuter_fehlschlag_vermerkt_frisch
+FAILED tests/tdd/test_compare_briefing_nachholen.py::test_ac7_verfall_folgt_dem_ortstag_des_presets_nicht_dem_utc_tag
+FAILED tests/tdd/test_compare_briefing_nachholen.py::test_ac8_abend_nachholer_nach_mitternacht_wird_als_abend_fuer_den_zieltag_verbucht
+FAILED tests/tdd/test_compare_briefing_nachholen.py::test_ac9a_regulaerer_slot_mit_gleichem_zieltag_ersetzt_das_nachholen
+FAILED tests/tdd/test_compare_briefing_nachholen.py::test_ac9c_regulaerer_slot_mit_anderem_zieltag_wird_zusaetzlich_nachgeholt
+FAILED tests/tdd/test_compare_briefing_nachholen.py::test_ac10_stillgelegt_abgelaufen_oder_geloescht_verwirft_den_vermerk_ohne_versand
+FAILED tests/tdd/test_compare_briefing_nachholen.py::test_ac11_nur_der_regulaere_erfolg_desselben_presets_und_slots_raeumt_den_vermerk
+FAILED tests/tdd/test_compare_briefing_nachholen.py::test_ac12_morgen_und_abend_vermerk_koexistieren_und_verfallen_unabhaengig
+FAILED tests/tdd/test_compare_briefing_nachholen.py::test_ac13_vermerke_nachholen_und_verfall_bleiben_beim_eigenen_nutzer
+=================== 14 failed, 6 passed, 4 warnings in 2.24s ===================

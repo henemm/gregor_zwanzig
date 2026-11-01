@@ -25,6 +25,12 @@
 // „Briefings laufen" mit zwei ReportLine-Zeilen (Label, Zeit, Punkt in Aktiv- bzw.
 // Inaktiv-Farbe, ReportLine.svelte). Jeder kind prüft sein eigenes Ist-Format.
 //
+// Seit Issue #2682 (Spec feat_2682_hub_uebersicht_geteilt.md AC-1/AC-2/AC-8/AC-13)
+// tragen BEIDE Arten zusätzlich die geteilte Kennzahlen-Leiste (Stat „Briefings"),
+// die Versand-Karte mit „Bearbeiten →" und mobil die Pfeil-Zeile „Versand". Die
+// Trip-Karte „Briefings laufen" bleibt Trip-Hauptfläche und wird weiter geprüft.
+// testids je Art: Tabelle UE unten (Vergleich compare-*, Trip hub-uebersicht-*).
+//
 // Seed: beide Slots aktiv, Morgen 07:00, Abend 18:00 — Erwartungen aus dem Seed.
 // Läuft im isolierten CI-Stack (frontend/e2e/ci-stack.sh). Aufräumen im finally.
 
@@ -55,6 +61,21 @@ const SEED: Record<HubKind, Record<string, unknown>> = {
 	}
 };
 const STAT = 'Morgen 07:00 · Abend 18:00';
+/** testids der geteilten Übersicht je kind (#2682, Spec „Stabile testids"). */
+const UE: Record<HubKind, { statBriefings: string; versandEdit: string }> = {
+	route: { statBriefings: 'hub-uebersicht-stat-briefings', versandEdit: 'hub-uebersicht-versand-edit' },
+	vergleich: { statBriefings: 'compare-detail-stat-briefings', versandEdit: 'compare-hub-versand-edit' }
+};
+/** Stat „Briefings" je kind: Vergleich exakt STAT (presetBriefingTimesLabel), Trip nennt beide Zeiten. */
+async function pruefeStatBriefings(page: Page, kind: HubKind): Promise<void> {
+	const stat = page.locator(`[data-testid="${UE[kind].statBriefings}"]:visible`).first();
+	if (kind === 'vergleich') {
+		await expect(stat).toHaveText(STAT, { timeout: 10_000 });
+	} else {
+		await expect(stat).toContainText('07:00', { timeout: 10_000 });
+		await expect(stat).toContainText('18:00');
+	}
+}
 // slotZeit (HubOverview.svelte) hängt bei bekanntem Briefing das Zonenkürzel an.
 const MORGEN = /^07:00( \(.+\))?$/;
 const ABEND = /^18:00( \(.+\))?$/;
@@ -118,14 +139,10 @@ for (const kind of HUB_KINDS) {
 			try {
 				await openHub(page, kind, hub.id);
 				await expect(panel(page, kind, 'uebersicht')).toBeVisible({ timeout: 10_000 });
-				// Übersicht-Format je kind (Kopfkommentar, Spec „Kind-Kontraste").
-				if (kind === 'vergleich') {
-					await expect(page.locator('[data-testid="compare-detail-stat-briefings"]:visible').first()).toHaveText(STAT, {
-						timeout: 10_000
-					});
-				} else {
-					await pruefeTripKarte(page);
-				}
+				// #2682: geteilte Kennzahl „Briefings" für BEIDE Arten.
+				await pruefeStatBriefings(page, kind);
+				// Trip-Hauptfläche: Karte „Briefings laufen" bleibt (Kopfkommentar).
+				if (kind === 'route') await pruefeTripKarte(page);
 			} finally {
 				await hub.aufraeumen();
 			}
@@ -138,19 +155,21 @@ for (const kind of HUB_KINDS) {
 			try {
 				await openHub(page, kind, hub.id);
 				await expect(panel(page, kind, 'uebersicht')).toBeVisible({ timeout: 10_000 });
-				// Mobile Stelle je kind (Spec „Kind-Kontraste" / „Frage 1"): Vergleich
-				// Summary-Zeile „Versand" (der Desktop-Stat steht mobil nicht,
-				// CompareTabs.svelte isMobileViewport); Trip dieselbe HubOverview-Karte.
+				// Mobile Stelle (#2682: für BEIDE Arten die geteilte Pfeil-Zeile „Versand";
+				// der Desktop-Stat steht mobil nicht, isMobileViewport). Trip zusätzlich
+				// die HubOverview-Karte (Trip-Hauptfläche).
+				const versandZeile = page
+					.locator('[data-testid="hub-summary-row-mobile"]:visible')
+					.filter({ has: page.locator('.hub-summary-row-eyebrow', { hasText: /^Versand$/ }) });
+				await expect(versandZeile).toHaveCount(1, { timeout: 10_000 });
 				if (kind === 'vergleich') {
-					const versandZeile = page
-						.locator('[data-testid="hub-summary-row-mobile"]:visible')
-						.filter({ has: page.locator('.hub-summary-row-eyebrow', { hasText: /^Versand$/ }) });
-					await expect(versandZeile).toHaveCount(1, { timeout: 10_000 });
 					await expect(versandZeile.locator('.hub-summary-row-title')).toHaveText(STAT);
-					await expect(page.locator('[data-testid="compare-detail-stat-briefings"]')).toHaveCount(0);
 				} else {
+					await expect(versandZeile.locator('.hub-summary-row-title')).toContainText('07:00');
+					await expect(versandZeile.locator('.hub-summary-row-title')).toContainText('18:00');
 					await pruefeTripKarte(page);
 				}
+				await expect(page.locator(`[data-testid="${UE[kind].statBriefings}"]`)).toHaveCount(0);
 			} finally {
 				await hub.aufraeumen();
 			}
@@ -211,11 +230,11 @@ for (const kind of HUB_KINDS) {
 			try {
 				await openHub(page, kind, hub.id);
 				await expect(panel(page, kind, 'uebersicht')).toBeVisible({ timeout: 10_000 });
-				// Selektor-Tabelle (Spec „Kind-Kontraste", Zeile „Bearbeiten →"): gleicher Zielvertrag.
-				const knopf =
-					kind === 'vergleich'
-						? page.locator('[data-testid="compare-hub-versand-edit"]:visible').first()
-						: page.locator('[data-testid="hub-overview"]:visible').getByRole('button', { name: 'Zeitplan bearbeiten →' });
+				// #2682 (AC-8): die geteilte Versand-Karte trägt den Knopf für BEIDE Arten
+				// (testid je Art aus Tabelle UE). Der Trip-Knopf „Zeitplan bearbeiten →"
+				// der Karte „Briefings laufen" hat denselben Zielvertrag (VB-5b).
+				const knopf = page.locator(`[data-testid="${UE[kind].versandEdit}"]:visible`).first();
+				await expect(knopf).toHaveText('Bearbeiten →', { timeout: 10_000 });
 				await knopf.click();
 
 				await expect(panel(page, kind, 'wetter-metriken')).toBeVisible({ timeout: 10_000 });
@@ -226,6 +245,28 @@ for (const kind of HUB_KINDS) {
 				await hub.aufraeumen();
 			}
 		});
+
+		// VB-5b — nur route: der bisherige VB-5-Knopf „Zeitplan bearbeiten →" der Trip-
+		// Hauptflächen-Karte „Briefings laufen" (die der Vergleich nicht hat, #2682
+		// Entscheidung 1) springt weiter auf den Versand-Abschnitt — nicht gelockert.
+		if (kind === 'route') {
+			test(`VB-5b (${kind}): „Zeitplan bearbeiten →" der Karte „Briefings laufen" springt auf den Versand-Abschnitt`, async ({
+				page
+			}) => {
+				await page.setViewportSize(DESKTOP);
+				const hub = await seedHub(page.request, kind, { extra: SEED[kind] });
+				try {
+					await openHub(page, kind, hub.id);
+					await expect(panel(page, kind, 'uebersicht')).toBeVisible({ timeout: 10_000 });
+					await page.locator('[data-testid="hub-overview"]:visible').getByRole('button', { name: 'Zeitplan bearbeiten →' }).click();
+					await expect(panel(page, kind, 'wetter-metriken')).toBeVisible({ timeout: 10_000 });
+					await expect(page.locator('[data-testid="versand-abschnitt"]:visible').first()).toBeInViewport({ timeout: 10_000 });
+					await expect(page).toHaveURL(sel.hubUrl(hub.id));
+				} finally {
+					await hub.aufraeumen();
+				}
+			});
+		}
 
 		// VB-6 (Alt AC-6) — fängt: Absturz bzw. leere Seite bei unbekanntem Reiter.
 		test(`VB-6 (${kind}): unbekannter ?tab=-Wert → Übersicht aktiv, kein Absturz; ohne ?tab= ebenfalls`, async ({ page }) => {
@@ -289,11 +330,8 @@ for (const kind of HUB_KINDS) {
 				await expect(panel(page, kind, 'uebersicht')).toBeVisible({ timeout: 10_000 });
 				// Ausgangszustand je kind (Übersicht-Format, Kopfkommentar).
 				let vorherFarbe = '';
-				if (kind === 'vergleich') {
-					await expect(page.locator('[data-testid="compare-detail-stat-briefings"]:visible').first()).toHaveText(STAT, {
-						timeout: 10_000
-					});
-				} else {
+				await pruefeStatBriefings(page, kind);
+				if (kind === 'route') {
 					await pruefeTripKarte(page);
 					vorherFarbe = await hintergrund(zeile(tripKarte(page), 'Morgen-Briefing').punkt);
 				}
@@ -322,13 +360,14 @@ for (const kind of HUB_KINDS) {
 
 				await openHub(page, kind, hub.id);
 				await expect(panel(page, kind, 'uebersicht')).toBeVisible({ timeout: 10_000 });
-				if (kind === 'vergleich') {
-					// exakt „—": nicht leer, kein verwaister Trennpunkt
-					await expect(page.locator('[data-testid="compare-detail-stat-briefings"]:visible').first()).toHaveText('—', {
-						timeout: 10_000
-					});
-				} else {
-					// Trip-Ist-Format: kein „—", beide Zeilen bleiben mit ihrer Zeit stehen,
+				// #2682: geteilte Kennzahl für BEIDE Arten exakt „—" (nicht leer, kein
+				// verwaister Trennpunkt) — Trip über reportSlotAktiv, Vergleich über
+				// presetBriefingTimesLabel.
+				await expect(page.locator(`[data-testid="${UE[kind].statBriefings}"]:visible`).first()).toHaveText('—', {
+					timeout: 10_000
+				});
+				if (kind === 'route') {
+					// Trip-Karte „Briefings laufen": kein „—", beide Zeilen bleiben mit ihrer Zeit stehen,
 					// die Punkte wechseln von der Aktiv- auf die Inaktiv-Farbe.
 					const karte = tripKarte(page);
 					await expect(karte).toBeVisible({ timeout: 10_000 });

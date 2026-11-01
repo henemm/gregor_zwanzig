@@ -5,6 +5,9 @@ on:
     branches: [main]
   pull_request:
     branches: [main]
+  # #2314: taeglicher Lauf mitten im Nachtfenster 00:00-02:30 UTC (Prozesstag != UTC-/Ortstag).
+  schedule:
+    - cron: "30 0 * * *"
   # #1771 S2: manueller Vermessungslauf des Filter-A-Pools statt der Positivliste.
   workflow_dispatch:
     inputs:

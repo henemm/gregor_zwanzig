@@ -84,6 +84,7 @@ def run_comparison(
         forecast_hours=forecast_hours,
         profile=profile,
         call_source="vergleich",
+        user_id=user_id,  # Issue #2234: Budget beim ausloesenden Nutzer
     )
 
     # Convert to JSON-serializable dict

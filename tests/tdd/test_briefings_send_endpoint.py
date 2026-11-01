@@ -145,9 +145,10 @@ def test_ac2_fehlendes_kind_liefert_400_kind_required_ohne_versand(lage, c):
     assert r.status_code == 400, f"Erwartet 400, bekommen {r.status_code}: {r.text}"
     b = hv.body(r)
     assert b.get("code") == "kind_required", b
-    from services.send_outcomes import SEND_OUTCOMES  # noqa: PLC0415
+    from services.send_outcomes import error_body  # noqa: PLC0415
 
-    assert b.get("detail") == SEND_OUTCOMES["kind_required"][1], b
+    # #2671: SEND_OUTCOMES haelt Katalogschluessel; der Text kommt aus error_body.
+    assert b.get("detail") == error_body("kind_required")[1]["detail"], b
     assert lage.nichts_versendet, f"Ohne kind darf nichts versendet sein: {lage}"
 
 
@@ -355,6 +356,11 @@ def test_ac9_fehlerform_des_neuen_endpoints_je_code(lage, c, monkeypatch, name):
     vorlage = eintrag[1] if isinstance(eintrag, (tuple, list)) else (
         getattr(eintrag, "text", None) or getattr(eintrag, "detail", "")
     )
+    # #2671: das Vokabular haelt Katalogschluessel; die deutsche Vorlage kommt
+    # aus dem Katalog (Nutzer dieses Tests ohne Sprache = de).
+    from i18n import t  # noqa: PLC0415
+
+    vorlage = t(vorlage, "de")
     for stueck in re.split(r"\{[^}]*\}", vorlage):
         assert stueck.strip() in detail, (
             f"{name}: detail {detail!r} stammt nicht aus send_outcomes ({vorlage!r})"

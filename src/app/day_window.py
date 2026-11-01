@@ -250,7 +250,7 @@ def night_addendum(
     return level, hour, hail
 
 
-def format_night_addendum(level, hour: int, hail=None) -> str:
+def format_night_addendum(level, hour: int, hail=None, *, lang: str = "de") -> str:
     """Der angehaengte Halbsatz zu einem ``night_addendum()``-Treffer.
 
     EINE Stelle fuer den Wortlaut: beide Bauwege des Vorschau-Satzes
@@ -267,27 +267,32 @@ def format_night_addendum(level, hour: int, hail=None) -> str:
     """
     from app.thunder_scale import format_hail_note
 
-    _note = format_hail_note(hail)
+    _note = format_hail_note(hail, lang=lang)
     _suffix = f" · {_note}" if _note else ""
     name = getattr(level, "name", str(level))
+    # Issue #2672: zweite Sprache als feste Satzteile -- die Domaenenschicht
+    # importiert keinen Katalog (Waechter #1365, Muster thunder_scale).
+    nachts, ab = (("at night", "from") if lang == "en" else ("nachts", "ab"))
     if name == "LOW":
         from app.thunder_scale import thunder_low_statement
 
         # Herkunft liegt an dieser Stelle nicht vor (der Nacht-Treffer traegt
         # nur Stufe + Stunde) -- unbekannte Herkunft ist KEINE reine
         # Luftmasse (Spec AC-4), der Baustein entscheidet das selbst.
-        return (f", nachts {thunder_low_statement('kurz', None)} "
-                f"ab {int(hour):02d}:00{_suffix}")
+        return (f", {nachts} {thunder_low_statement('kurz', None, lang=lang)} "
+                f"{ab} {int(hour):02d}:00{_suffix}")
     # Wortschatz des Nacht-Zusatzes (#1651), kanonisch seit #2028. Bewusste
     # Abweichung vom Tagestext, wo MED kein Adjektiv traegt: der Halbsatz muss
     # fuer sich lesbar sein. ThunderLevel ist ein str-Enum -- der Name trifft
     # den Schluessel.
-    from app.thunder_scale import THUNDER_NIGHT_ADJECTIVE_DE
+    from app.thunder_scale import THUNDER_NIGHT_ADJECTIVE_DE, THUNDER_NIGHT_ADJECTIVE_EN
 
-    word = THUNDER_NIGHT_ADJECTIVE_DE.get(name)
+    tabelle = THUNDER_NIGHT_ADJECTIVE_EN if lang == "en" else THUNDER_NIGHT_ADJECTIVE_DE
+    word = tabelle.get(name)
     if word is None:
         return ""
-    return f", nachts {word} Gewitter ab {int(hour):02d}:00{_suffix}"
+    gewitter = "thunderstorm" if lang == "en" else "Gewitter"
+    return f", {nachts} {word} {gewitter} {ab} {int(hour):02d}:00{_suffix}"
 
 
 def hour_in_window(hour: int, start_hour: int, end_hour: int) -> bool:

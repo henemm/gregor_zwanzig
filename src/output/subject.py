@@ -11,26 +11,27 @@ renderer. No parallel data fetching, no side effects, deterministic.
 """
 from __future__ import annotations
 
+from i18n import Lang, t
 from output.tokens.dto import Token, TokenLine
 
-# A2: ReportType-Mapping (English internal -> German label).
-_REPORT_TYPE_DE: dict[str, str] = {
-    "morning": "Morgen",
-    "evening": "Abend",
-    "update": "Update",
+# A2: ReportType-Mapping (English internal -> Katalogschluessel, #2671).
+_REPORT_TYPE_KEYS: dict[str, str] = {
+    "morning": "versand.betreff.bericht.morgen",
+    "evening": "versand.betreff.bericht.abend",
+    "update": "versand.betreff.bericht.update",
     # 'compare' deliberately not in scope (β5).
 }
 
-# A3: MainRisk-Mapping (English from RiskEngine -> German label).
+# A3: MainRisk-Mapping (English from RiskEngine -> Katalogschluessel, #2671).
 # Unknown labels are passed through as-is (fail-soft).
-_RISK_DE: dict[str, str] = {
-    "Thunder": "Gewitter",
-    "Storm": "Sturm",
-    "Heat": "Hitze",
-    "Cold": "Kälte",
-    "Rain": "Regen",
-    "Snow": "Schnee",
-    "Wind": "Wind",
+_RISK_KEYS: dict[str, str] = {
+    "Thunder": "versand.betreff.risiko.gewitter",
+    "Storm": "versand.betreff.risiko.sturm",
+    "Heat": "versand.betreff.risiko.hitze",
+    "Cold": "versand.betreff.risiko.kaelte",
+    "Rain": "versand.betreff.risiko.regen",
+    "Snow": "versand.betreff.risiko.schnee",
+    "Wind": "versand.betreff.risiko.wind",
 }
 
 # A4: Whitelist for subject (in display order).
@@ -42,14 +43,16 @@ DEFAULT_MAX_LENGTH = 78
 _DASH = "—"  # em dash separator
 
 
-def _translate_risk(risk: str | None) -> str | None:
+def _translate_risk(risk: str | None, lang: Lang = "de") -> str | None:
     if risk is None:
         return None
-    return _RISK_DE.get(risk, risk)
+    key = _RISK_KEYS.get(risk)
+    return t(key, lang) if key else risk
 
 
-def _report_type_label(report_type: str) -> str:
-    return _REPORT_TYPE_DE.get(report_type, report_type)
+def _report_type_label(report_type: str, lang: Lang = "de") -> str:
+    key = _REPORT_TYPE_KEYS.get(report_type)
+    return t(key, lang) if key else report_type
 
 
 def _whitelisted_forecast_tokens(tokens: tuple[Token, ...]) -> dict[str, Token]:
@@ -146,7 +149,7 @@ def _build_token_strings(
 
 
 def build_email_subject(
-    token_line: TokenLine, *, max_length: int = DEFAULT_MAX_LENGTH
+    token_line: TokenLine, *, max_length: int = DEFAULT_MAX_LENGTH, lang: Lang = "de",
 ) -> str:
     """Build the E-Mail subject as a filter over TokenLine (sms_format.md §11).
 
@@ -157,9 +160,11 @@ def build_email_subject(
     Stage name is NEVER truncated.
 
     Note: 'D' here is Tag-Max temperature (NOT debug).
+
+    Issue #2671: Berichtsart und Hauptrisiko in ``lang``; Token unveraendert.
     """
-    risk_de = _translate_risk(token_line.main_risk)
-    report_de = _report_type_label(token_line.report_type)
+    risk_de = _translate_risk(token_line.main_risk, lang)
+    report_de = _report_type_label(token_line.report_type, lang)
     fc_map = _whitelisted_forecast_tokens(token_line.tokens)
     hr_tok, th_tok = _vigilance_pair(token_line.tokens)
 

@@ -398,7 +398,9 @@ die Schwellen 80 %/95 % werden deshalb als Kommentar mit Verweis auf
   Radar-Pfads bleibt außerhalb des hier eingeführten Cache/Budget-Gates
   (andere Auflösung, kein gemeinsamer Code-Pfad mit `fetch_forecast` über
   `SegmentWeatherService`).
-- **`comparison_engine.py` (Compare-Report-Versand) profitiert nicht vom
+- **[Überholt 2026-10-31, #2234: der Ortsvergleich nutzt den geteilten Cache inzwischen,
+  siehe `fix_2234_compare_forecast_cache.md`.]**
+  **`comparison_engine.py` (Compare-Report-Versand) profitiert nicht vom
   Cache:** Der Compare-Report-Pfad ruft `ForecastService.get_forecast()`
   direkt (`comparison_engine.py:348-357`), nicht über
   `SegmentWeatherService` — er nutzt daher weder den geteilten Cache noch

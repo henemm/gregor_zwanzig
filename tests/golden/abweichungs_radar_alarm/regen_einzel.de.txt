@@ -1,0 +1,21 @@
+
+----- betreff -----
+[GR20 Golden] km 0-12 · Regen in 25 Min · Regen mindestens bis morgen 00:40 · Radar reicht bis 08:55 · Ortsangabe ab 07:30 unscharf · Nass km 2-4, km 9-11 · Ausdehnung unvollständig gemessen · Gewitter ungeprüft
+----- klartext -----
+Regen in 25 Min
+
+Radar-Nowcast
+
+Wo & wann: km 0-12 · ab 06:25 · Regen mindestens bis morgen 00:40 · Radar reicht bis 08:55 · Ortsangabe ab 07:30 unscharf · Nass km 2-4, km 9-11 · Ausdehnung unvollständig gemessen · Gewitter ungeprüft
+Intensität: Starker Regen
+Quelle: Radar (DWD)
+
+Stand: heute 06:00
+Cooldown: Du erhältst diese Warnung höchstens einmal in 2 Stunden. Bei Meldungen aus anderen Quellen (amtliche Warnung/Radar) greift dieser Cooldown nicht.
+
+Regen-/Gewitter-Alarm · Radar (DWD)
+----- telegram -----
+<b>GR20 Golden · km 0-12 · Regen in 25 Min</b>
+06:25 · Regen mindestens bis morgen 00:40 · Radar reicht bis 08:55 · Ortsangabe ab 07:30 unscharf · Nass km 2-4, km 9-11 · Ausdehnung unvollständig gemessen · Gewitter ungeprüft · Starker Regen · Radar (DWD)
+----- sms -----
+S5 km 0-12: R#2.5@6:25 >@Fr0:40? km2-4,9-11>
