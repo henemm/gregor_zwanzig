@@ -359,7 +359,10 @@ class TestCorridorScoreIndependence:
 # ausschliesslich in diesen drei Befehlszeilen (plus Zeilenumbruch der
 # Befehlstabelle). Alte Summen: HTML 645479b7…, Klartext e517e744….
 _COMPARE_HTML_SHA256_BEFORE = "9d48487f21ad339c450c2cb13e20a52af8d5643ee530f09904611103bd00f7d9"
-_COMPARE_TEXT_SHA256_BEFORE = "62a49aa2f71fed25b23edbbad637fa299a381df80a5d2e34d68ca2fa509e50ab"
+# #2210: einzige Abweichung ist der deutsche Wochentag in der Kopfzeile
+# ("Montag, 13.07.2026" statt "Monday, 13.07.2026"); mit "Monday" ergibt der
+# neue Text exakt die alte Summe 62a49aa2….
+_COMPARE_TEXT_SHA256_BEFORE = "75f46468f0e69234a8c477b7275af77a603ffb1b1e9c5120a4bf811a7f7e659b"
 
 
 def _byte_identity_fixture():
