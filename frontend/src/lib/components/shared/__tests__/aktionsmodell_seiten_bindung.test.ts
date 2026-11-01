@@ -31,6 +31,7 @@ import {
 } from './aktionsmodellAst.ts';
 
 const SRC = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../../..');
+const { trFor } = await import('../../../i18n/index.ts');
 const TRIPS = ladeSvelte(path.join(SRC, 'routes/trips/+page.svelte'));
 const TRIP_HUB = ladeSvelte(path.join(SRC, 'routes/trips/[id]/+page.svelte'));
 const CMP = ladeSvelte(path.join(SRC, 'routes/compare/+page.svelte'));
@@ -215,7 +216,9 @@ describe('F011 (AC-17): Fehler und Erfolg des Versands/Pausierens werden angezei
 		);
 	test('Trip-Liste: Versandfehler und Pausierfehler landen in `error`, das gerendert wird', () => {
 		assert.deepEqual(zuweisungen(funktion(TRIPS, 'confirmSend'), 'error'), ['null', 'o.message']);
-		assert.deepEqual(zuweisungen(funktion(TRIPS, 'confirmSend'), 'sendInfo'), ['null', '"Briefing wurde versendet."']);
+		// #2652 (i18n F3): Erfolgstext aus dem Katalog; deutsch unveraendert.
+		assert.deepEqual(zuweisungen(funktion(TRIPS, 'confirmSend'), 'sendInfo'), ['null', 'tr("listen.meldung.versendet")']);
+		assert.equal(trFor('de', 'listen.meldung.versendet'), 'Briefing wurde versendet.');
 		assert.ok(zuweisungen(funktion(TRIPS, 'togglePause'), 'error').length === 2, 'Pausierfehler wird nicht gesetzt');
 		assert.ok(zeigt(TRIPS, 'error', 'error') && zeigt(TRIPS, 'sendInfo', 'sendInfo'));
 	});

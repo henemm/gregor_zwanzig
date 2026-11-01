@@ -15,6 +15,7 @@
 	import CloudSunIcon from '@lucide/svelte/icons/cloud-sun';
 	import PencilIcon from '@lucide/svelte/icons/pencil';
 	import Trash2Icon from '@lucide/svelte/icons/trash-2';
+	import { t, tr } from '$lib/i18n/index.js';
 
 	let { data } = $props();
 
@@ -57,7 +58,7 @@
 			error =
 				(e as { detail?: string })?.detail ??
 				(e as { error?: string })?.error ??
-				'Fehler beim Speichern';
+				tr('listen.meldung.fehler_speichern');
 		}
 	}
 
@@ -76,7 +77,7 @@
 			deleteTarget = null;
 		} catch (e: unknown) {
 			inUse = ortInUseHinweis(e);
-			error = inUse ? null : ((e as { error?: string })?.error ?? 'Fehler beim Löschen');
+			error = inUse ? null : ((e as { error?: string })?.error ?? tr('listen.meldung.fehler_loeschen'));
 			}
 	}
 
@@ -106,28 +107,28 @@
 		} catch (e: unknown) {
 			error = (e as { error?: string; detail?: string })?.detail
 				?? (e as { error?: string })?.error
-				?? 'Fehler beim Speichern der Wetter-Konfiguration';
+				?? tr('listen.meldung.fehler_wetter_konfiguration');
 		}
 	}
 </script>
 
 <div class="space-y-4">
 	<div class="flex items-center justify-between">
-		<h1 class="text-2xl font-bold">Locations</h1>
-		<Btn variant="primary" onclick={openCreate}>Neuer Ort</Btn>
+		<h1 class="text-2xl font-bold">{$t('listen.orte.titel')}</h1>
+		<Btn variant="primary" onclick={openCreate}>{$t('listen.orte.neu')}</Btn>
 	</div>
 
 	{#if error}
 		<p class="text-sm text-destructive">{error}</p>
 	{/if}
 	{#if locations.length === 0}
-		<EmptyState icon={MapPinIcon} title="Keine Locations vorhanden" description="Füge Orte hinzu, um Wetterdaten abzurufen und zu vergleichen.">
-			<Btn variant="outline" onclick={openCreate}>Ort hinzufügen</Btn>
+		<EmptyState icon={MapPinIcon} title={$t('listen.orte.leer_titel')} description={$t('listen.orte.leer_text')}>
+			<Btn variant="outline" onclick={openCreate}>{$t('listen.orte.hinzufuegen')}</Btn>
 		</EmptyState>
 	{:else}
 		<div class="relative mb-3 max-w-xs">
 			<SearchIcon class="absolute left-2.5 top-2.5 size-4 text-muted-foreground" />
-			<Input placeholder="Suchen..." class="pl-8" bind:value={search} />
+			<Input placeholder={$t('listen.suche.platzhalter_punkte')} class="pl-8" bind:value={search} />
 		</div>
 		{#if refetching}
 			<div class="space-y-3">
@@ -140,11 +141,11 @@
 		<Table.Root>
 			<Table.Header>
 				<Table.Row>
-					<Table.Head>Name</Table.Head>
-					<Table.Head class="hidden sm:table-cell">Koordinaten</Table.Head>
-					<Table.Head class="hidden sm:table-cell">Höhe</Table.Head>
-					<Table.Head class="hidden md:table-cell">Profil</Table.Head>
-					<Table.Head class="text-right">Aktionen</Table.Head>
+					<Table.Head>{$t('listen.spalte.name')}</Table.Head>
+					<Table.Head class="hidden sm:table-cell">{$t('listen.spalte.koordinaten')}</Table.Head>
+					<Table.Head class="hidden sm:table-cell">{$t('listen.spalte.hoehe')}</Table.Head>
+					<Table.Head class="hidden md:table-cell">{$t('listen.spalte.profil')}</Table.Head>
+					<Table.Head class="text-right">{$t('listen.tabelle.aktionen')}</Table.Head>
 				</Table.Row>
 			</Table.Header>
 			<Table.Body>
@@ -164,9 +165,9 @@
 						</Table.Cell>
 						<Table.Cell class="text-right">
 							<div class="inline-flex gap-0.5">
-								<Btn variant="ghost" size="icon-sm" title="Wetter" onclick={() => (weatherTarget = loc)}><CloudSunIcon class="size-3.5" /></Btn>
-								<Btn variant="ghost" size="icon-sm" title="Bearbeiten" onclick={() => openEdit(loc)}><PencilIcon class="size-3.5" /></Btn>
-								<Btn variant="ghost" size="icon-sm" title="Löschen" onclick={() => { inUse = null; deleteTarget = loc; }}><Trash2Icon class="size-3.5" /></Btn>
+								<Btn variant="ghost" size="icon-sm" title={$t('listen.orte.wetter')} onclick={() => (weatherTarget = loc)}><CloudSunIcon class="size-3.5" /></Btn>
+								<Btn variant="ghost" size="icon-sm" title={$t('home.kachel.bearbeiten')} onclick={() => openEdit(loc)}><PencilIcon class="size-3.5" /></Btn>
+								<Btn variant="ghost" size="icon-sm" title={$t('listen.aktion.loeschen')} onclick={() => { inUse = null; deleteTarget = loc; }}><Trash2Icon class="size-3.5" /></Btn>
 							</div>
 						</Table.Cell>
 					</Table.Row>
@@ -193,7 +194,7 @@
 >
 	<Dialog.Content class="max-h-[80vh] max-w-lg overflow-y-auto">
 		<Dialog.Header>
-			<Dialog.Title>Location bearbeiten</Dialog.Title>
+			<Dialog.Title>{$t('listen.orte.bearbeiten_titel')}</Dialog.Title>
 		</Dialog.Header>
 		{#if dialogMode === 'edit'}
 			<LocationForm
@@ -223,9 +224,9 @@
 >
 	<Dialog.Content>
 		<Dialog.Header>
-			<Dialog.Title>Location löschen</Dialog.Title>
+			<Dialog.Title>{$t('listen.orte.loeschen_titel')}</Dialog.Title>
 			<Dialog.Description>
-				Möchtest du "{deleteTarget?.name}" wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.
+				{$t('listen.orte.loeschen_text', { name: deleteTarget?.name ?? '' })}
 			</Dialog.Description>
 		</Dialog.Header>
 		{#if inUse}
@@ -237,8 +238,8 @@
 			</p>
 		{/if}
 		<Dialog.Footer>
-			<Btn variant="outline" onclick={() => (deleteTarget = null)}>Abbrechen</Btn>
-			<Btn variant="destructive" onclick={handleDelete}>Löschen</Btn>
+			<Btn variant="outline" onclick={() => (deleteTarget = null)}>{$t('aktionen.abbrechen')}</Btn>
+			<Btn variant="destructive" onclick={handleDelete}>{$t('listen.aktion.loeschen')}</Btn>
 		</Dialog.Footer>
 	</Dialog.Content>
 </Dialog.Root>

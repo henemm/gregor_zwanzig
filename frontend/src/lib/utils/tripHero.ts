@@ -2,26 +2,17 @@
 // Spec: docs/specs/modules/epic_135_step3_trip_hero.md
 //
 // Alle Funktionen sind seiteneffektfrei und arbeiten auf Tages-Granularitaet
-// in lokaler Zeit. KEIN toLocaleString — explizite deutsche Monatsnamen-Map
-// fuer deterministische Tests (Node-Test-Runner laeuft ohne ICU-Locale).
+// in lokaler Zeit. KEIN toLocaleString — Monatsnamen und Zeitraum-Muster aus
+// dem Katalog (home.monat.*, home.zeitraum.*; #2652 i18n F3), deterministisch
+// ohne ICU. Sprache: aktuelle `locale` (tr/trn), Aufrufer in Svelte lesen
+// `$locale` im $derived mit, damit ein Sprachwechsel ohne Neuladen wirkt.
 
 import type { Trip } from '../types.ts';
 import { deriveTripStatus } from './tripStatus.ts';
+import { tr, trn, type MessageKey } from '../i18n/index.ts';
 
-const MONTH_NAMES_DE = [
-	'Januar',
-	'Februar',
-	'März',
-	'April',
-	'Mai',
-	'Juni',
-	'Juli',
-	'August',
-	'September',
-	'Oktober',
-	'November',
-	'Dezember'
-] as const;
+// i18n-dynamic: home.monat.
+const monat = (m: number) => tr(`home.monat.${m + 1}` as MessageKey);
 
 function daysBetween(a: Date, b: Date): number {
 	const aDay = new Date(a.getFullYear(), a.getMonth(), a.getDate());
@@ -59,39 +50,39 @@ export function getDaysLabel(trip: Trip, now: Date): string {
 		if (trip.paused_at) {
 			const pausedDate = new Date(trip.paused_at);
 			const diff = daysBetween(pausedDate, now);
-			if (diff <= 0) return 'pausiert seit heute';
-			return `pausiert seit ${diff} Tagen`;
+			if (diff <= 0) return tr('home.tage.pausiert_seit_heute');
+			return trn('home.tage.pausiert_seit', diff);
 		}
-		return 'pausiert seit heute';
+		return tr('home.tage.pausiert_seit_heute');
 	}
 
 	if (status === 'planned') {
 		const dates = sortedStageDates(trip);
-		if (dates.length === 0) return 'Trip noch nicht geplant';
+		if (dates.length === 0) return tr('home.tage.nicht_geplant');
 		const diff = daysBetween(now, parseStageDate(dates[0]));
-		if (diff <= 0) return 'heute';
-		if (diff === 1) return 'morgen';
-		return `in ${diff} Tagen`;
+		if (diff <= 0) return tr('home.tage.heute');
+		if (diff === 1) return tr('home.tage.morgen');
+		return trn('home.tage.in_tagen', diff);
 	}
 
 	if (status === 'active') {
 		const stages = trip.stages ?? [];
 		const idx = stages.findIndex((s) => s.date === today);
-		if (idx === -1) return 'Tag 1';
-		return `läuft seit Tag ${idx + 1}`;
+		if (idx === -1) return tr('home.tage.tag_eins');
+		return tr('home.tage.laeuft_seit', { tag: idx + 1 });
 	}
 
 	// #1271: draft (keine datierten Etappen) hat kein "Tage bis Start" —
 	// sonst fiele es in den Fallback unten und zeigte fälschlich "Trip beendet".
-	if (status === 'draft') return 'Trip noch nicht geplant';
+	if (status === 'draft') return tr('home.tage.nicht_geplant');
 
 	// finished/archived
 	const dates = sortedStageDates(trip);
-	if (dates.length === 0) return 'Trip beendet';
+	if (dates.length === 0) return tr('home.tage.beendet');
 	const last = parseStageDate(dates[dates.length - 1]);
 	const diff = daysBetween(last, now);
-	if (diff <= 0) return 'beendet heute';
-	return `beendet vor ${diff} Tagen`;
+	if (diff <= 0) return tr('home.tage.beendet_heute');
+	return trn('home.tage.beendet_vor', diff);
 }
 
 export function formatDateRange(trip: Trip): string {
@@ -108,24 +99,26 @@ export function formatDateRange(trip: Trip): string {
 	const mL = last.getMonth();
 	const yL = last.getFullYear();
 
-	const monthF = MONTH_NAMES_DE[mF];
-	const monthL = MONTH_NAMES_DE[mL];
+	const monthF = monat(mF);
+	const monthL = monat(mL);
 
 	// Einzelner Tag
 	if (dates[0] === dates[dates.length - 1]) {
-		return `${dF}. ${monthF} ${yF}`;
+		return tr('home.zeitraum.tag', { tag: dF, monat: monthF, jahr: yF });
 	}
 
 	// Gleicher Monat + Jahr
 	if (mF === mL && yF === yL) {
-		return `${dF}.–${dL}. ${monthF} ${yF}`;
+		return tr('home.zeitraum.gleicher_monat', { von: dF, bis: dL, monat: monthF, jahr: yF });
 	}
 
 	// Verschiedene Monate, gleicher Jahr
 	if (yF === yL) {
-		return `${dF}. ${monthF} – ${dL}. ${monthL} ${yF}`;
+		return tr('home.zeitraum.verschiedene_monate', { von: dF, monat_von: monthF, bis: dL, monat_bis: monthL, jahr: yF });
 	}
 
 	// Verschiedene Jahre
-	return `${dF}. ${monthF} ${yF} – ${dL}. ${monthL} ${yL}`;
+	return tr('home.zeitraum.verschiedene_jahre', {
+		von: dF, monat_von: monthF, jahr_von: yF, bis: dL, monat_bis: monthL, jahr_bis: yL
+	});
 }

@@ -27,6 +27,11 @@ import { join } from 'node:path';
 const ROUTES_COMPARE = join(fileURLToPath(import.meta.url), '..', '..', '..');
 const COMPARE_DIR = join(ROUTES_COMPARE, '..', 'lib', 'components', 'compare');
 
+// #2652 (i18n F3): Eyebrow und Footer-Zaehler kommen aus dem Katalog — AC-1a/AC-3
+// pruefen die GERENDERTE Liste (svelte/server, deutsche Oberflaeche).
+const { seiteRendern, vergleich } = await import('../../__tests__/f3HomeListenSsr.ts');
+const listeHtml = () => seiteRendern('compare', { presets: [vergleich('c-1'), vergleich('c-2')], profile: null });
+
 const LIST_PAGE    = join(ROUTES_COMPARE, 'compare', '+page.svelte');
 const HUB_PAGE     = join(ROUTES_COMPARE, 'compare', '[id]', '+page.svelte');
 const COMPARE_TABS = join(COMPARE_DIR, 'CompareTabs.svelte');
@@ -39,10 +44,9 @@ const HUB_UEBERSICHT = join(COMPARE_DIR, '..', 'shared', 'hub-uebersicht', 'HubU
 
 describe('AC-1: Compare-Liste — Eyebrow + Stat-Molecule + immer sichtbare Suche', () => {
 	test('AC-1a: Eyebrow-Text ist "Workspace · Orts-Vergleiche" (Mixed Case, nicht CAPS)', () => {
-		const src = readFileSync(LIST_PAGE, 'utf-8');
 		assert.match(
-			src,
-			/Workspace\s*·\s*Orts-Vergleiche/,
+			listeHtml(),
+			/>Workspace · Orts-Vergleiche</,
 			'Eyebrow muss "Workspace · Orts-Vergleiche" lauten (Mixed Case) — IST: "WORKSPACE · ORTS-VERGLEICHE"'
 		);
 	});
@@ -88,10 +92,9 @@ describe('AC-2: Compare-Liste — Leerzustand als Card-Molecule', () => {
 
 describe('AC-3: Compare-Liste — Footer-Zähler', () => {
 	test('AC-3: Footer zeigt "N von M Vergleichen" in mono/ink-4', () => {
-		const src = readFileSync(LIST_PAGE, 'utf-8');
 		assert.match(
-			src,
-			/von.*Vergleich|Vergleich.*von/,
+			listeHtml(),
+			/letter-spacing: 0\.06em">2 von 2 Vergleichen</,
 			'Footer-Zähler "N von M Vergleichen" fehlt — JSX hat: {filtered.length} von {subs.length} Vergleichen'
 		);
 	});

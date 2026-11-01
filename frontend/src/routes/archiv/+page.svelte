@@ -13,10 +13,15 @@
 	import { discardEtag } from '$lib/etagRegistry';
 	import { Card, Eyebrow, Btn } from '$lib/components/atoms';
 	import { ConfirmDialog } from '$lib/components/molecules';
+	import { t, tn, tr, type MessageKey } from '$lib/i18n/index.js';
 
 	let { data }: { data: PageData } = $props();
 
-	const TYPE_LABEL: Record<ArchiveEntry['type'], string> = { trip: 'Trip', compare: 'Vergleich' };
+	// #2652 (i18n F3): Typ-Pille und Umfang aus dem Katalog (Plural ueber tn, `count` vom Loader).
+	const TYPE_KEY: Record<ArchiveEntry['type'], MessageKey> = { trip: 'listen.typ.trip', compare: 'listen.typ.vergleich' };
+	// i18n-dynamic: listen.anzahl.
+	const umfang = (item: ArchiveEntry) =>
+		$tn(item.type === 'trip' ? 'listen.anzahl.etappen' : 'listen.anzahl.orte', item.count);
 
 	let query = $state('');
 	let filter = $state<'all' | 'trip' | 'compare'>('all');
@@ -36,9 +41,9 @@
 	const nTrips = $derived(entries.filter((t) => t.type === 'trip').length);
 	const nCompares = $derived(entries.filter((t) => t.type === 'compare').length);
 	const chips = $derived([
-		{ id: 'all' as const, label: 'Alle', n: entries.length },
-		{ id: 'trip' as const, label: 'Trips', n: nTrips },
-		{ id: 'compare' as const, label: 'Vergleiche', n: nCompares }
+		{ id: 'all' as const, label: $t('listen.archiv.alle'), n: entries.length },
+		{ id: 'trip' as const, label: $t('listen.trips.titel'), n: nTrips },
+		{ id: 'compare' as const, label: $t('listen.archiv.vergleiche'), n: nCompares }
 	]);
 
 	// Factory-Pattern für Button-Handler (Safari-Kompatibilität).
@@ -62,7 +67,7 @@
 				if (item.type === 'trip') discardEtag(item.id);
 				await invalidateAll();
 			} catch (e: unknown) {
-				error = (e as Error).message ?? 'Fehler beim Reaktivieren';
+				error = (e as Error).message ?? tr('listen.meldung.fehler_reaktivieren');
 			} finally {
 				busyId = null;
 			}
@@ -87,7 +92,7 @@
 			deleteTarget = null;
 			await invalidateAll();
 		} catch (e: unknown) {
-			error = (e as Error).message ?? 'Fehler beim Löschen';
+			error = (e as Error).message ?? tr('listen.meldung.fehler_loeschen');
 			deleteTarget = null;
 		} finally {
 			busyId = null;
@@ -99,13 +104,12 @@
 	<!-- Header -->
 	<div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:28px">
 		<div>
-			<Eyebrow>Workspace · Archiv</Eyebrow>
-			<div style="font-size:32px;font-weight:600;letter-spacing:-0.025em;margin-top:4px">Archiv</div>
+			<Eyebrow>{$t('listen.archiv.eyebrow')}</Eyebrow>
+			<div style="font-size:32px;font-weight:600;letter-spacing:-0.025em;margin-top:4px">{$t('listen.archiv.titel')}</div>
 			<div
 				style="font-size:14px;color:var(--g-ink-3);margin-top:6px;max-width:620px;line-height:1.5"
 			>
-				Abgelegte Trips und Orts-Vergleiche. Trips wandern nach ihrem Enddatum automatisch
-				hierher. Jeden Eintrag kannst du wieder aktivieren oder endgültig löschen.
+				{$t('listen.archiv.intro')}
 			</div>
 		</div>
 	</div>
@@ -130,7 +134,7 @@
 			</svg>
 			<input
 				bind:value={query}
-				placeholder="Suchen…"
+				placeholder={$t('listen.suche.platzhalter')}
 				style="width:100%;padding:9px 14px 9px 34px;border:1px solid var(--g-rule);border-radius:var(--g-r-pill);background:var(--g-card);font-family:var(--g-font-sans);color:var(--g-ink);outline:none"
 			/>
 		</div>
@@ -166,10 +170,10 @@
 				<div
 					style="display:grid;grid-template-columns:2fr 1fr 1fr auto;gap:0;padding:12px 20px;background:var(--g-paper-deep);font-size:11px;font-family:var(--g-font-mono);letter-spacing:0.18em;text-transform:uppercase;color:var(--g-ink-3);font-weight:500;border-bottom:1px solid var(--g-rule)"
 				>
-					<div>Name</div>
-					<div>Umfang</div>
-					<div>Archiviert</div>
-					<div style="text-align:right">Aktionen</div>
+					<div>{$t('listen.spalte.name')}</div>
+					<div>{$t('listen.spalte.umfang')}</div>
+					<div>{$t('listen.spalte.archiviert')}</div>
+					<div style="text-align:right">{$t('listen.tabelle.aktionen')}</div>
 				</div>
 
 				{#each filtered as item, i (item.id)}
@@ -181,9 +185,9 @@
 		{#if filtered.length === 0}
 			<div style="padding:40px;text-align:center;color:var(--g-ink-3);font-size:13px">
 				{#if query}
-					Keine archivierten Einträge für »{query}« gefunden.
+					{$t('listen.leer.archiv_suche', { suche: query })}
 				{:else}
-					Keine archivierten Einträge.
+					{$t('listen.leer.archiv')}
 				{/if}
 			</div>
 		{/if}
@@ -193,15 +197,15 @@
 	<div
 		style="margin-top:14px;font-size:11px;color:var(--g-ink-4);font-family:var(--g-font-mono);letter-spacing:0.06em"
 	>
-		{filtered.length} von {entries.length} Einträgen · Trips auto-archiviert nach Trip-Ende
+		{$t('listen.zaehler.archiv', { gefiltert: filtered.length, gesamt: entries.length })}
 	</div>
 </main>
 
 <ConfirmDialog
 	open={deleteTarget !== null}
-	title="Endgültig löschen?"
-	description={'"' + (deleteTarget?.name ?? '') + '" wird unwiderruflich gelöscht.'}
-	confirmLabel="Löschen"
+	title={$t('listen.archiv.endgueltig_loeschen_frage')}
+	description={$t('listen.dialog.unwiderruflich', { name: deleteTarget?.name ?? '' })}
+	confirmLabel={$t('listen.aktion.loeschen')}
 	confirmVariant="destructive"
 	onConfirm={confirmDelete}
 	onCancel={() => (deleteTarget = null)}
@@ -231,11 +235,11 @@
 					: 'var(--g-ink-3)'};border:1px solid {isCompare
 					? 'rgba(61,107,58,0.35)'
 					: 'var(--g-rule)'};border-radius:var(--g-r-pill);padding:2px 8px;flex-shrink:0"
-				>{TYPE_LABEL[item.type]}</span
+				>{$t(TYPE_KEY[item.type])}</span
 			>
 		</div>
 		<div style="font-size:13px;color:var(--g-ink-2);font-variant-numeric:tabular-nums">
-			{item.detail}
+			{umfang(item)}
 		</div>
 		<div
 			style="font-size:13px;color:var(--g-ink-2);font-family:var(--g-font-mono);letter-spacing:0.02em"
@@ -255,11 +259,10 @@
 					stroke-linejoin="round"
 				>
 					<path d="M3 12a9 9 0 1 0 3-6.7L3 8" /><path d="M3 3v5h5" />
-				</svg>
-				Wieder aktivieren
+				</svg>{' '}{$t('listen.archiv.wieder_aktivieren')}<!-- Leerzeichen wie zuvor im Textknoten (Golden) -->
 			</Btn>
 			<button
-				title="Endgültig löschen"
+				title={$t('listen.archiv.endgueltig_loeschen')}
 				onclick={makeDelete(item)}
 				disabled={busyId === item.id}
 				style="display:inline-flex;align-items:center;gap:6px;padding:6px 10px;min-height:30px;background:transparent;border:1px solid var(--g-rule);border-radius:var(--g-r-2);cursor:pointer;font-size:12px;font-weight:500;font-family:var(--g-font-sans);color:var(--g-bad, #a83232)"
@@ -276,7 +279,7 @@
 				>
 					<path d="M4 7h16M9 7V4h6v3M6 7l1 13a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-13" />
 				</svg>
-				Löschen
+				{$t('listen.aktion.loeschen')}
 			</button>
 		</div>
 	</div>

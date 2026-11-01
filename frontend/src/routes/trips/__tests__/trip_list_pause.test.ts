@@ -34,6 +34,7 @@ import {
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const ast = ladeSvelte(path.join(HERE, '..', '+page.svelte'));
+const { trFor } = await import('../../../lib/i18n/index.ts');
 const wert = (a: any) => (a ? (Array.isArray(a.value) ? a.value : [a.value]) : []);
 const hatLiteral = (lits: Set<string>, re: RegExp) => [...lits].some((l) => re.test(l));
 
@@ -77,7 +78,9 @@ describe('AC-1: Desktop-Trip-Liste — Zeilenmenue aus der EINEN Aktionsquelle',
 
 	test('Zeilen-Primaerknopf "Briefing senden" bleibt, oeffnet aber den Sende-Dialog (AC-3/AC-17: nie ohne Rueckfrage)', () => {
 		const r = erreichbar(ast, wert(attribut(listenTabelle(), 'rowPrimary')));
-		assert.ok(r.literale.has('Briefing senden'), 'Primaerknopf "Briefing senden" fehlt');
+		// #2652 (i18n F3): Beschriftung aus dem Katalog (deutsch „Briefing senden").
+		assert.ok(r.literale.has('listen.aktion.briefing_senden'), 'Primaerknopf "Briefing senden" fehlt');
+		assert.equal(trFor('de', 'listen.aktion.briefing_senden'), 'Briefing senden');
 		const dlg = komponenten(ast, 'SendConfirmDialog')[0];
 		assert.ok(dlg, '<SendConfirmDialog> fehlt');
 		const zustand = ids(wert(attribut(dlg, 'open')));

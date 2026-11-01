@@ -31,6 +31,8 @@ import {
 	formatNextSend,
 	presetChannels
 } from '../../lib/components/compare/subscriptionHelpers.ts';
+// #2652 (i18n F3): Texte aus dem Katalog in der aktuellen `locale`.
+import { tr, type MessageKey } from '../../lib/i18n/index.ts';
 
 /** Höhen-Array (number[]) einer Etappe für ElevSparkline. Leer wenn keine Wegpunkte. */
 export function stageProfile(stage: Stage | null | undefined): number[] {
@@ -200,7 +202,7 @@ export function plannedBriefings(
 	if (reportSlotAktiv(rc, 'morning')) {
 		rows.push({
 			when: when('morning', rc?.morning_time, 7),
-			kind: 'morgen',
+			kind: tr('home.timeline.morgen'),
 			channels,
 			status: isSent('morning') ? 'sent' : 'planned'
 		});
@@ -208,7 +210,7 @@ export function plannedBriefings(
 	if (reportSlotAktiv(rc, 'evening')) {
 		rows.push({
 			when: when('evening', rc?.evening_time, 18),
-			kind: 'abend',
+			kind: tr('home.timeline.abend'),
 			channels,
 			status: isSent('evening') ? 'sent' : 'planned'
 		});
@@ -240,7 +242,8 @@ export interface ArchiveCard {
 	stages: number;
 }
 
-const MONTHS_DE = ['Jan', 'Feb', 'Mär', 'Apr', 'Mai', 'Jun', 'Jul', 'Aug', 'Sep', 'Okt', 'Nov', 'Dez'];
+// i18n-dynamic: home.monat_kurz.
+const monatKurz = (m: number) => tr(`home.monat_kurz.${m}` as MessageKey);
 
 function shortRange(trip: Trip): string {
 	const dates = (trip.stages ?? [])
@@ -251,7 +254,7 @@ function shortRange(trip: Trip): string {
 	if (dates.length === 0) return '';
 	const fmt = (iso: string) => {
 		const [y, m] = iso.split('-').map(Number);
-		return `${MONTHS_DE[(m ?? 1) - 1]} ${y}`;
+		return `${monatKurz(m ?? 1)} ${y}`;
 	};
 	return dates.length === 1 || fmt(dates[0]) === fmt(dates[dates.length - 1])
 		? fmt(dates[0])
@@ -288,7 +291,8 @@ export function homeCompareTimeline(
 	const region = (preset.display_config as Record<string, unknown> | undefined)?.region as
 		| string
 		| undefined;
-	const place = `${preset.location_ids.length} Orte` + (region ? ` · ${region}` : '');
+	const orte = tr('bausteine.vergleich.orte_anzahl', { anzahl: preset.location_ids.length });
+	const place = orte + (region ? ` · ${region}` : '');
 
 	const rows: CompareTimelineRow[] = [];
 	// Issue #1452 (AC-8): Kanal-LABEL aus der zentralen Ableitung, nicht die
@@ -297,8 +301,8 @@ export function homeCompareTimeline(
 
 	if (preset.letzter_versand) {
 		rows.push({
-			when: `Zuletzt · ${formatNextSend(new Date(preset.letzter_versand))}`,
-			kind: 'Vergleich',
+			when: tr('home.timeline.zuletzt', { zeit: formatNextSend(new Date(preset.letzter_versand)) }),
+			kind: tr('listen.typ.vergleich'),
 			channels,
 			status: 'sent',
 			etappe: place
@@ -307,8 +311,8 @@ export function homeCompareTimeline(
 
 	if (nextBriefing?.at) {
 		rows.push({
-			when: `Nächster · ${formatNextBriefing(nextBriefing, 'vergleich')}`,
-			kind: 'Vergleich',
+			when: tr('home.timeline.naechster', { zeit: formatNextBriefing(nextBriefing, 'vergleich') }),
+			kind: tr('listen.typ.vergleich'),
 			channels,
 			status: 'planned',
 			etappe: place

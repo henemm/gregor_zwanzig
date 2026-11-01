@@ -34,6 +34,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import { umgebungFuer, werte, ohneTypen, findeKomponenten, attributAusdruck, type Knoten } from './svelteInstanzPruefstand.ts';
 import { vollerVergleich } from './goMergeServerPruefstand.ts';
 import { resolveTab } from '../subscriptionTabs.ts';
+import { trFor, type MessageKey } from '../../../i18n/index.ts';
 
 const HIER = dirname(fileURLToPath(import.meta.url));
 const FRONTEND = resolve(HIER, '../../../../..');
@@ -130,6 +131,15 @@ function attributText(n: Knoten, name: string): string | null {
 	if (!a) return null;
 	const teile = Array.isArray(a.value) ? a.value : [a.value];
 	return teile.map((t: Knoten) => (t?.type === 'Text' ? t.data : 'X')).join('');
+}
+
+/** Angezeigte (deutsche) Beschriftung: statischer Text oder `$t('key')` ueber den Katalog (#2652). */
+function beschriftung(n: Knoten, name: string): string {
+	const a = ((n.attributes ?? []) as Knoten[]).find((x) => x.type === 'Attribute' && x.name === name);
+	const wert = Array.isArray(a?.value) ? a.value[0] : a?.value;
+	const e = wert?.type === 'ExpressionTag' ? wert.expression : null;
+	if (e?.type === 'CallExpression' && e.callee?.name === '$t') return trFor('de', e.arguments[0].value as MessageKey);
+	return attributText(n, name) ?? '';
 }
 
 const ziel = (url: string) => new URL(url, 'http://localhost/x');
@@ -310,7 +320,7 @@ describe('#1743 AC-23 / AC-28: Cockpit-Schnellaktionen — nur neue Kennungen, V
 	const aktionen: Array<{ label: string; href: string }> = [];
 	besuche(ast.fragment, (n) => {
 		if (n.type === 'Component' && n.name === 'QuickAction')
-			aktionen.push({ label: attributText(n, 'label') ?? '', href: attributText(n, 'href') ?? '' });
+			aktionen.push({ label: beschriftung(n, 'label'), href: attributText(n, 'href') ?? '' });
 	});
 
 	test('Messaufbau: Schnellaktionen fuer Trip und Vergleich gefunden', () => {

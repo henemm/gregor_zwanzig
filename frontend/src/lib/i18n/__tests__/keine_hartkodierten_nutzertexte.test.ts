@@ -251,6 +251,29 @@ describe('TypeScript-Ratsche (F11, AC-6)', () => {
 		assert.ok(ts.some((e) => e.pfad === 'lib/stores/saveStatusStore.svelte.ts'));
 	});
 
+	// Issue #2652 (i18n F3, AC-7): die Dateien des Pakets stehen unter keinem Eintrag mehr.
+	// Ausnahme bis zum Merge von F2 (#2651): routes/_home/EmptyKachel.svelte (Leerzustand gehoert F2).
+	test('F3: kein Allowlist-Eintrag deckt Cockpit, Listen, ListTable oder tripHero', () => {
+		const F3 = [
+			'routes/+page.svelte',
+			'routes/_home/HomeHero.svelte',
+			'routes/_home/SubscriptionKachel.svelte',
+			'routes/_home/StartklarCheckliste.svelte',
+			'routes/trips/+page.svelte',
+			'routes/compare/+page.svelte',
+			'routes/locations/+page.svelte',
+			'routes/archiv/+page.svelte',
+			'lib/components/organisms/ListTable.svelte',
+			'lib/utils/tripHero.ts',
+			'lib/utils/schedulerTime.ts'
+		];
+		const deckt = (a: string, p: string) => (a.endsWith('/') ? p.startsWith(a) : p === a);
+		assert.deepEqual(F3.filter((p) => ALLOWLIST.some((a) => deckt(a, p))), []);
+		for (const alt of ['routes/_home/', 'routes/trips/', 'routes/compare/', 'routes/locations/', 'routes/archiv/']) {
+			assert.ok(!ALLOWLIST.includes(alt), alt);
+		}
+	});
+
 	test('Allowlist enthaelt die acht F11-Praefixe nicht mehr', () => {
 		const F11 = [
 			'lib/components/ui/',

@@ -14,6 +14,7 @@
 
 	import { Card } from '$lib/components/atoms';
 	import ListTableRow from './ListTableRow.svelte';
+	import { t } from '$lib/i18n/index.js';
 
 	interface NameCell {
 		name: string;
@@ -45,7 +46,8 @@
 		rowActions,
 		rowPrimary,
 		onAction,
-		emptyText = 'Keine Einträge.',
+		// #2652: kein Katalogtext im $props()-Default (wuerde die Sprache einfrieren).
+		emptyText,
 		rowTestid,
 		menuTestid
 	}: {
@@ -76,7 +78,7 @@
 		{#each columns as col (col.key)}
 			<div style="text-align: {col.align ?? 'left'};">{col.header}</div>
 		{/each}
-		<div style="text-align: right;">Aktionen</div>
+		<div style="text-align: right;">{$t('listen.tabelle.aktionen')}</div>
 	</div>
 
 	{#each rows as row, i (getRowId(row))}
@@ -96,7 +98,7 @@
 
 	{#if rows.length === 0}
 		<div style="padding: 40px; text-align: center; color: var(--g-ink-3); font-size: 13px;">
-			{emptyText}
+			{emptyText ?? $t('listen.tabelle.leer')}
 		</div>
 	{/if}
 </Card>

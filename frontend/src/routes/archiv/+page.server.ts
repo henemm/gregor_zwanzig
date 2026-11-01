@@ -8,7 +8,10 @@ export type ArchiveEntry = {
 	id: string;
 	type: 'trip' | 'compare';
 	name: string;
-	detail: string; // "13 Etappen" | "6 Orte"
+	detail: string; // "13 Etappen" | "6 Orte" (Bestand, deutsch; Anzeige nutzt `count`)
+	// #2652 (i18n F3): Anzahl Etappen bzw. Orte; die Seite setzt den Plural ueber
+	// tn('listen.anzahl.etappen'|'listen.anzahl.orte') in der Nutzersprache.
+	count: number;
 	archived: string; // YYYY-MM-DD
 };
 
@@ -34,6 +37,7 @@ export const load: PageServerLoad = async ({ cookies }) => {
 				type: 'trip' as const,
 				name: t.name,
 				detail: `${n} ${n === 1 ? 'Etappe' : 'Etappen'}`,
+				count: n,
 				archived: (t.archived_at ?? '').slice(0, 10)
 			};
 		});
@@ -51,6 +55,7 @@ export const load: PageServerLoad = async ({ cookies }) => {
 				type: 'compare' as const,
 				name: p.name,
 				detail: `${n} ${n === 1 ? 'Ort' : 'Orte'}`,
+				count: n,
 				archived: (p.archived_at ?? '').slice(0, 10)
 			};
 		});

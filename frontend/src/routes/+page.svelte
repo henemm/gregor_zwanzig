@@ -50,7 +50,7 @@
 		type OnboardingProfil
 	} from './_home/onboardingSichtbarkeit.js';
 	import { api } from '$lib/api.js';
-	import { tr } from '$lib/i18n/index.js';
+	import { tr, t, tn, locale } from '$lib/i18n/index.js';
 
 	let { data } = $props();
 
@@ -94,14 +94,18 @@
 		}
 	});
 
-	const todayPretty = now.toLocaleDateString('de-DE', {
-		weekday: 'short',
-		day: '2-digit',
-		month: 'long',
-		year: 'numeric'
-	});
+	// #2652 (i18n F3): Datumsformate je Sprache — de-DE wie bisher, en-GB (24 h) fuer en.
+	const INTL = { de: 'de-DE', en: 'en-GB' } as const;
+	const todayPretty = $derived(
+		now.toLocaleDateString(INTL[$locale], {
+			weekday: 'short',
+			day: '2-digit',
+			month: 'long',
+			year: 'numeric'
+		})
+	);
 	// Mobile-Shell S2 — Datum als Mono-Caption neben der Wordmark („Sa., 19. Sep.").
-	const heuteKurz = now.toLocaleDateString('de-DE', { weekday: 'short', day: 'numeric', month: 'short' });
+	const heuteKurz = $derived(now.toLocaleDateString(INTL[$locale], { weekday: 'short', day: 'numeric', month: 'short' }));
 
 	// --- Hero-Modus: trip > compare > planning --------------------------------
 	const activeLiveTrip = $derived(liveTrip(trips, now));
@@ -150,13 +154,24 @@
 	const compareCtaHref = $derived(buildCompareCtaHref(firstIncomplete));
 
 	// --- Rechte Spalte / Archiv ---------------------------------------------
-	const briefings = $derived(
-		hero
+	// Helfer lesen die Sprache per get(locale); `$locale` macht den Sprachwechsel reaktiv (#2652).
+	const briefings = $derived.by(() => {
+		void $locale;
+		return hero
 			? plannedBriefings(hero.report_config, cockpitStatus?.briefings, hero.id, nextBriefings?.trips?.[hero.id] ?? null)
-			: []
-	);
+			: [];
+	});
 	const heroAlerts = $derived(alertsForTrip(cockpitStatus?.alerts, hero?.id));
-	const archive = $derived(archivedTrips(trips, now, 4));
+	const archive = $derived.by(() => {
+		void $locale;
+		return archivedTrips(trips, now, 4);
+	});
+	const compareTimeline = $derived.by(() => {
+		void $locale;
+		return compareHero ? homeCompareTimeline(compareHero, compareNb(compareHero.id)) : [];
+	});
+	// Hinweis-Banner: Satz mit Platzhaltern, die Platzhalter tragen Auszeichnung (kein HTML im Katalog).
+	const bannerTeile = $derived($t('home.planung.banner').split(/(\{kein_trip\}|\{marke\})/));
 
 	// AC-9: fertig-Trips aus otherTrips ausschließen
 	const otherTrips = $derived(trips.filter((t) => t.id !== hero?.id && tripStatus(t, now) !== 'fertig'));
@@ -170,7 +185,7 @@
 			.sort();
 		if (dates.length === 0) return '';
 		const fmt = (iso: string) =>
-			new Date(iso).toLocaleDateString('de-DE', { day: '2-digit', month: 'short', year: 'numeric' });
+			new Date(iso).toLocaleDateString(INTL[$locale], { day: '2-digit', month: 'short', year: 'numeric' });
 		return dates.length === 1 ? fmt(dates[0]) : `${fmt(dates[0])} → ${fmt(dates[dates.length - 1])}`;
 	});
 </script>
@@ -189,12 +204,12 @@
 	</div>
 	<!-- Topbar — AC-7: kein sub-Text, beide Buttons ghost -->
 	<PageHeader
-		eyebrow="Übersicht · {todayPretty}"
-		title="Deine Trips & Vergleiche"
+		eyebrow={$t('home.cockpit.eyebrow', { datum: todayPretty })}
+		title={$t('home.cockpit.titel')}
 	>
 		{#snippet right()}
-			<Btn href="/trips/new" variant="ghost" size="sm">+ Neuer Trip</Btn>
-			<Btn href="/compare/new" variant="ghost" size="sm">+ Neuer Vergleich</Btn>
+			<Btn href="/trips/new" variant="ghost" size="sm">{$t('onboarding.willkommen.neuer_trip')}</Btn>
+			<Btn href="/compare/new" variant="ghost" size="sm">{$t('onboarding.willkommen.neuer_vergleich')}</Btn>
 		{/snippet}
 	</PageHeader>
 
@@ -224,10 +239,10 @@
 		{#if hero && heroIsActive}
 			<!-- #2346 S3: ein HomeHero fuer beide kinds (2-Spalten-Grid, rechte Spalte als aside) -->
 				<!-- Kanaele (Flags, Slot-Regel #2422), naechster Versand (Backend), Link: homeHeroProps -->
-				<HomeHero {...homeHeroProps('trip', hero, nextBriefings)}>
+				<HomeHero {...homeHeroProps('trip', hero, nextBriefings, $locale)}>
 					{#snippet pills()}
-						<Pill tone="accent"><Dot tone="bad" size={6} /> Live · Tag {dayX} von {dayY}</Pill>
-						<Pill tone="ghost">Sommer-Trekking</Pill>
+						<Pill tone="accent"><Dot tone="bad" size={6} /> {$t('home.trip.live_tag', { tag: dayX, gesamt: dayY })}</Pill>
+						<Pill tone="ghost">{$t('bausteine.profil.summer_trekking')}</Pill>
 					{/snippet}
 					{#snippet details()}
 						<!-- Fortschrittsbalken mit Label "Tag x / y" + Datum-Range (volle Breite) -->
@@ -245,7 +260,7 @@
 										style:letter-spacing="0.06em"
 										style:text-transform="uppercase"
 										style:font-weight="600"
-									>Tag {dayX} / {dayY}</span>
+									>{$t('home.trip.tag_von', { tag: dayX, gesamt: dayY })}</span>
 									<span
 										style:font-family="var(--g-font-mono)"
 										style:font-size="11px"
@@ -271,26 +286,26 @@
 						<!-- AC-3/V13: Schnellaktionen vertikal in linker Spalte -->
 						<QuickAction
 							glyph="pause"
-							label="Pausentag einplanen"
-							sub="→ Etappen & Wegpunkte"
+							label={$t('home.aktion.pausentag')}
+							sub={$t('home.aktion.pausentag_ziel')}
 							href="/trips/{hero.id}?tab=etappen"
 						/>
 						<QuickAction
 							glyph="metrics"
-							label="Wetter-Metriken ändern"
-							sub="→ Wetter-Metriken"
+							label={$t('home.aktion.metriken')}
+							sub={$t('home.aktion.metriken_ziel')}
 							href="/trips/{hero.id}?tab=wetter-metriken"
 						/>
 						<QuickAction
 							glyph="clock"
-							label="Briefing-Zeitplan"
-							sub="→ Briefing-Zeitplan"
+							label={$t('home.aktion.zeitplan')}
+							sub={$t('home.aktion.zeitplan_ziel')}
 							href="/trips/{hero.id}?tab=wetter-metriken#versand"
 						/>
 						<QuickAction
 							glyph="send"
-							label="Test-Briefing schicken"
-							sub="→ An deine eigenen Kanäle"
+							label={$t('home.aktion.test_briefing')}
+							sub={$t('home.aktion.eigene_kanaele')}
 							href="/trips/{hero.id}?action=test-send"
 						/>
 					{/snippet}
@@ -307,7 +322,7 @@
 							style:gap="12px"
 						>
 							<div style:min-width="0">
-								<Eyebrow style="margin-bottom: 4px">Versand · heute</Eyebrow>
+								<Eyebrow style="margin-bottom: 4px">{$t('bausteine.versand.heute')}</Eyebrow>
 								<div
 									style:font-size="17px"
 									style:font-weight="600"
@@ -315,10 +330,10 @@
 									style:overflow="hidden"
 									style:text-overflow="ellipsis"
 								>
-									Was geht raus · <span style:color="var(--g-ink-2)" style:font-weight="600">{hero?.name ?? ''}</span>
+									{$t('bausteine.versand.was_geht_raus')} <span style:color="var(--g-ink-2)" style:font-weight="600">{hero?.name ?? ''}</span>
 								</div>
 							</div>
-							<Pill tone="good">Alle Kanäle ok</Pill>
+							<Pill tone="good">{$t('bausteine.versand.alle_kanaele_ok')}</Pill>
 						</div>
 						{#if briefings.length > 0}
 							<div style:display="flex" style:flex-direction="column" style:gap="8px">
@@ -328,7 +343,7 @@
 							</div>
 						{:else}
 							<div style:font-size="13px" style:color="var(--g-ink-2)">
-								Keine Briefings für diesen Trip geplant.
+								{$t('home.trip.keine_briefings_geplant')}
 							</div>
 						{/if}
 					</Card>
@@ -342,9 +357,9 @@
 							style:margin-bottom="12px"
 						>
 							<div>
-								<Eyebrow style="margin-bottom: 4px">Alerts · letzte 24 h</Eyebrow>
+								<Eyebrow style="margin-bottom: 4px">{$t('bausteine.alarme.titel')}</Eyebrow>
 								<div style:font-size="17px" style:font-weight="600">
-									{heroAlerts.length > 0 ? `${heroAlerts.length} ausgelöst` : 'Keine'}
+									{heroAlerts.length > 0 ? $t('bausteine.alarme.ausgeloest', { anzahl: heroAlerts.length }) : $t('bausteine.alarme.keine')}
 								</div>
 							</div>
 							<a
@@ -354,7 +369,7 @@
 								style:color="var(--g-ink-3)"
 								style:text-decoration="none"
 								style:font-family="var(--g-font-mono)"
-							>Schwellen →</a>
+							>{$t('bausteine.alarme.schwellen')}</a>
 						</div>
 						{#if heroAlerts.length > 0}
 							<div style:display="flex" style:flex-direction="column" style:gap="6px">
@@ -377,15 +392,13 @@
 													: 'neutral'}
 										/>
 										<span style:color="var(--g-ink-2)"
-											>{new Date(alert.sent_at).toLocaleTimeString('de-DE', {
+											>{new Date(alert.sent_at).toLocaleTimeString(INTL[$locale], {
 												hour: '2-digit',
 												minute: '2-digit'
 											})}</span
 										>
 										<span style:color="var(--g-ink-2)"
-											>{alert.changes_count} Änderung{alert.changes_count !== 1
-												? 'en'
-												: ''}</span
+											>{$tn('home.alarm.aenderungen', alert.changes_count)}</span
 										>
 									</div>
 								{/each}
@@ -397,7 +410,7 @@
 								style:line-height="1.5"
 								style:padding-top="2px"
 							>
-								Keine Schwellen-Überschreitung in den verglichenen Orten. Du wirst sofort benachrichtigt, sobald eine Bedingung kippt.
+								{$t('home.alarm.leer')}
 							</div>
 						{/if}
 					</Card>
@@ -411,9 +424,9 @@
 			<!-- #2346 S3: derselbe HomeHero wie der Trip -->
 
 				<!-- Kanaele aus den Flags, nie aus empfaenger (#1452): homeHeroProps -->
-				<HomeHero {...homeHeroProps('vergleich', compareHero, nextBriefings)}>
+				<HomeHero {...homeHeroProps('vergleich', compareHero, nextBriefings, $locale)}>
 					{#snippet pills()}
-						<Pill tone="accent"><Dot tone="good" size={6} /> Aktiv · läuft automatisch</Pill>
+						<Pill tone="accent"><Dot tone="good" size={6} /> {$t('home.vergleich.aktiv_automatisch')}</Pill>
 						{#if (compareHero.display_config as Record<string,unknown> | undefined)?.profile_label}
 							<Pill tone="ghost">{(compareHero.display_config as Record<string,unknown>).profile_label as string}</Pill>
 						{/if}
@@ -433,9 +446,9 @@
 								style:text-transform="uppercase"
 								style:letter-spacing="0.1em"
 								style:margin-bottom="5px"
-							>Zeitplan</div>
+							>{$t('home.vergleich.zeitplan')}</div>
 							<div style:font-size="15px" style:font-weight="600">
-								{compareHero.schedule === 'daily' ? 'täglich' : compareHero.schedule === 'weekly' ? 'wöchentlich' : 'manuell'}
+								{compareHero.schedule === 'daily' ? $t('home.zeitplan.taeglich') : compareHero.schedule === 'weekly' ? $t('home.zeitplan.woechentlich') : $t('home.zeitplan.manuell')}
 								<!-- Issue #1268 (AC-10): echte Versandzeit aus dem Slot statt hour_from
 								     (zeigte bei neu angelegten Vergleichen "· 00:00"). -->
 								{#if compareHero.schedule !== 'manual' && primarySendSlot(compareHero)} · {String(primarySendSlot(compareHero)!.hour).padStart(2,'0')}:00{/if}
@@ -445,26 +458,26 @@
 					{#snippet actions()}
 						<QuickAction
 							glyph="route"
-							label="Orte bearbeiten"
-							sub="→ Verglichene Orte"
+							label={$t('home.aktion.orte_bearbeiten')}
+							sub={$t('home.aktion.orte_ziel')}
 							href="/compare/{compareHero.id}"
 						/>
 						<QuickAction
 							glyph="metrics"
-							label="Ideal-Werte ändern"
-							sub="→ Ideal-Profil"
+							label={$t('home.aktion.ideal_werte')}
+							sub={$t('home.aktion.ideal_ziel')}
 							href="/compare/{compareHero.id}?tab=wertebereiche"
 						/>
 						<QuickAction
 							glyph="clock"
-							label="Briefing-Zeitplan"
-							sub="→ Zeitplan & Kanäle"
+							label={$t('home.aktion.zeitplan')}
+							sub={$t('home.aktion.zeitplan_kanaele_ziel')}
 							href="/compare/{compareHero.id}?tab=wetter-metriken#versand"
 						/>
 						<QuickAction
 							glyph="send"
-							label="Test-Vergleich schicken"
-							sub="→ An deine eigenen Kanäle"
+							label={$t('home.aktion.test_vergleich')}
+							sub={$t('home.aktion.eigene_kanaele')}
 							href="/compare/{compareHero.id}?action=test-send"
 						/>
 					{/snippet}
@@ -480,7 +493,7 @@
 							style:gap="12px"
 						>
 							<div style:min-width="0">
-								<Eyebrow style="margin-bottom: 4px">Versand · heute</Eyebrow>
+								<Eyebrow style="margin-bottom: 4px">{$t('bausteine.versand.heute')}</Eyebrow>
 								<div
 									style:font-size="17px"
 									style:font-weight="600"
@@ -488,25 +501,25 @@
 									style:overflow="hidden"
 									style:text-overflow="ellipsis"
 								>
-									Was geht raus · <span style:color="var(--g-ink-2)" style:font-weight="600">{compareHero.name}</span>
+									{$t('bausteine.versand.was_geht_raus')} <span style:color="var(--g-ink-2)" style:font-weight="600">{compareHero.name}</span>
 								</div>
 							</div>
-							<Pill tone="good">Alle Kanäle ok</Pill>
+							<Pill tone="good">{$t('bausteine.versand.alle_kanaele_ok')}</Pill>
 						</div>
-						{#if homeCompareTimeline(compareHero, compareNb(compareHero.id)).length > 0}
+						{#if compareTimeline.length > 0}
 							<div
 								style:display="flex"
 								style:flex-direction="column"
 								style:gap="8px"
 								style:margin-top="8px"
 							>
-								{#each homeCompareTimeline(compareHero, compareNb(compareHero.id)) as r, i (i)}
+								{#each compareTimeline as r, i (i)}
 									<BriefingTimelineRow report={r} />
 								{/each}
 							</div>
 						{:else}
 							<div style:font-size="13px" style:color="var(--g-ink-2)" style:margin-top="8px">
-								Versand läuft automatisch gemäß Zeitplan.
+								{$t('home.vergleich.versand_automatisch')}
 							</div>
 						{/if}
 					</Card>
@@ -518,8 +531,8 @@
 							style:margin-bottom="12px"
 						>
 							<div>
-								<Eyebrow style="margin-bottom: 4px">Alerts · letzte 24 h</Eyebrow>
-								<div style:font-size="17px" style:font-weight="600">Keine</div>
+								<Eyebrow style="margin-bottom: 4px">{$t('bausteine.alarme.titel')}</Eyebrow>
+								<div style:font-size="17px" style:font-weight="600">{$t('bausteine.alarme.keine')}</div>
 							</div>
 							<a
 								href="/compare/{compareHero.id}"
@@ -527,10 +540,10 @@
 								style:color="var(--g-ink-3)"
 								style:text-decoration="none"
 								style:font-family="var(--g-font-mono)"
-							>Schwellen →</a>
+							>{$t('bausteine.alarme.schwellen')}</a>
 						</div>
 						<div style:font-size="13px" style:color="var(--g-ink-2)" style:line-height="1.5" style:padding-top="2px">
-							Keine Schwellen-Überschreitung in den verglichenen Orten. Du wirst sofort benachrichtigt, sobald eine Bedingung kippt.
+							{$t('home.alarm.leer')}
 						</div>
 					</Card>
 				</div>
@@ -553,7 +566,7 @@
 			>
 				<Dot tone="neutral" size={8} />
 				<span style:font-size="14px" style:color="var(--g-ink-2)">
-					Aktuell läuft <strong>kein Trip</strong>. Sobald deine nächste Reise startet, schickt <span style:font-family="var(--g-font-mono)" style:font-size="13px">gregor · zwanzig</span> die Briefings automatisch in deine Kanäle.
+					{#each bannerTeile as teil, i (i)}{#if teil === '{kein_trip}'}<strong>{$t('home.planung.kein_trip')}</strong>{:else if teil === '{marke}'}<span style:font-family="var(--g-font-mono)" style:font-size="13px">{'gregor · zwanzig'}</span>{:else}{teil}{/if}{/each}
 				</span>
 			</div>
 
@@ -561,30 +574,30 @@
 			{#if nextPlanned || firstIncomplete}
 				<div style:margin-bottom="36px">
 					<SectionH
-						eyebrow="Weiter einrichten"
-						title="Mach weiter, wo du aufgehört hast"
-						kicker="Du nutzt die Webseite vor allem zur Vorbereitung — hier liegen deine offenen Entwürfe"
+						eyebrow={$t('home.abschnitt.weiter_einrichten')}
+						title={$t('home.abschnitt.weiter_titel')}
+						kicker={$t('home.abschnitt.weiter_text')}
 					/>
 					<div class="setup-grid">
 						{#if nextPlanned}
 							<SetupResumeCard
 								tone="accent"
-								eyebrow="Nächster Trip"
+								eyebrow={$t('home.planung.naechster_trip')}
 								title={nextPlanned.name}
 								steps={setupStepsTrip}
-								ctaLabel="Setup fortsetzen"
+								ctaLabel={$t('home.planung.setup_fortsetzen')}
 								ctaHref={tripCtaHref}
-								secondary={{ label: 'Öffnen', href: `/trips/${nextPlanned.id}?tab=uebersicht` }}
+								secondary={{ label: $t('home.planung.oeffnen'), href: `/trips/${nextPlanned.id}?tab=uebersicht` }}
 							/>
 						{/if}
 						{#if firstIncomplete}
 							<SetupResumeCard
-								eyebrow="Orts-Vergleich"
+								eyebrow={$t('home.planung.orts_vergleich')}
 								title={firstIncomplete.name}
 								steps={setupStepsCompare}
-								ctaLabel="Setup fortsetzen"
+								ctaLabel={$t('home.planung.setup_fortsetzen')}
 								ctaHref={compareCtaHref}
-								secondary={{ label: 'Öffnen', href: `/compare/${firstIncomplete.id}` }}
+								secondary={{ label: $t('home.planung.oeffnen'), href: `/compare/${firstIncomplete.id}` }}
 								tone="default"
 							/>
 						{/if}
@@ -594,19 +607,19 @@
 
 			<!-- Schnell anlegen -->
 			<div style:margin-bottom="36px">
-				<SectionH eyebrow="Schnell anlegen" title="Neu starten" />
+				<SectionH eyebrow={$t('home.abschnitt.schnell_anlegen')} title={$t('home.abschnitt.neu_starten')} />
 				<div class="quick-create-grid">
 					<QuickAction
 						glyph="route"
 						tone="accent"
-						label="Neuer Trip"
-						sub="Wizard · 5 Schritte"
+						label={$t('listen.neuer_trip')}
+						sub={$t('home.planung.wizard')}
 						href="/trips/new"
 					/>
 					<QuickAction
 						glyph="metrics"
-						label="Neuer Orts-Vergleich"
-						sub="Wizard · 5 Schritte"
+						label={$t('home.planung.neuer_orts_vergleich')}
+						sub={$t('home.planung.wizard')}
 						href="/compare/new"
 					/>
 				</div>
@@ -624,13 +637,9 @@
 					style:gap="16px"
 				>
 					<div>
-						<Eyebrow style="margin-bottom: 4px">Außerdem beobachtet</Eyebrow>
+						<Eyebrow style="margin-bottom: 4px">{$t('home.cockpit.ausserdem')}</Eyebrow>
 						<div style:font-size="15px" style:font-weight="600">
-							{#if alsoWatched.length === 1}
-								{alsoWatched.length} Orts-Vergleich läuft nebenher
-							{:else}
-								{alsoWatched.length} Orts-Vergleiche laufen nebenher
-							{/if}
+							{$tn('home.cockpit.nebenher', alsoWatched.length)}
 						</div>
 					</div>
 					<a
@@ -640,7 +649,7 @@
 						style:color="var(--g-ink-3)"
 						style:text-decoration="none"
 						style:font-family="var(--g-font-mono)"
-					>Alle Vergleiche →</a>
+					>{$t('home.cockpit.alle_vergleiche')}</a>
 				</div>
 				<!-- Issue #2346 S2: Vergleiche als dieselbe Startseiten-Kachel wie Trips. -->
 				<div class="kachel-grid" style:margin-top="12px">
@@ -667,7 +676,7 @@
 		<!-- AC-2 (Trip-Modus): Einrichten / Frühere Trips -->
 		{#if mode === 'trip' && archive.length > 0}
 			<div style:margin-bottom="40px">
-				<SectionH eyebrow="Einrichten" title="Frühere Trips" kicker="{archive.length} abgeschlossene Mehrtages-Trips" right={archiveLink} />
+				<SectionH eyebrow={$t('home.abschnitt.einrichten')} title={$t('home.abschnitt.fruehere_trips')} kicker={$tn('home.archiv.mehrtages', archive.length)} right={archiveLink} />
 				<div class="archive-grid">
 					{#each archive as t (t.id)}
 						{@render archiveCard(t)}
@@ -679,7 +688,7 @@
 		<!-- AC-1 + AC-3 (Compare-Modus): Einrichten / Kein Trip geplant — Kopf immer sichtbar -->
 		{#if mode === 'compare'}
 			<div style:margin-bottom="40px">
-				<SectionH eyebrow="Einrichten" title="Kein Trip geplant" kicker="Sobald ein Mehrtages-Trip ansteht, übernimmt er das Cockpit" right={newTripLink} />
+				<SectionH eyebrow={$t('home.abschnitt.einrichten')} title={$t('home.abschnitt.kein_trip')} kicker={$t('home.abschnitt.kein_trip_text')} right={newTripLink} />
 				{#if archive.length > 0}
 					<div class="archive-grid">
 						{#each archive as t (t.id)}
@@ -694,7 +703,7 @@
 		{#if mode === 'planning' && archive.length > 0}
 			<Card padding={20}>
 				<div style:margin-bottom="40px">
-					<SectionH eyebrow="Archiv" title="Frühere Trips" kicker="{archive.length} abgeschlossene Trips" right={archiveLink} />
+					<SectionH eyebrow={$t('home.abschnitt.archiv')} title={$t('home.abschnitt.fruehere_trips')} kicker={$tn('home.archiv.abgeschlossen', archive.length)} right={archiveLink} />
 					<div class="archive-grid">
 						{#each archive as t (t.id)}
 							{@render archiveCard(t)}
@@ -707,11 +716,11 @@
 </div>
 
 {#snippet archiveLink()}
-	<Btn href="/trips" variant="quiet" size="sm">Alle anzeigen</Btn>
+	<Btn href="/trips" variant="quiet" size="sm">{$t('home.cockpit.alle_anzeigen')}</Btn>
 {/snippet}
 
 {#snippet newTripLink()}
-	<Btn href="/trips/new" variant="primary" size="sm">Neuer Trip</Btn>
+	<Btn href="/trips/new" variant="primary" size="sm">{$t('listen.neuer_trip')}</Btn>
 {/snippet}
 
 {#snippet archiveCard(t: { id: string; dates: string; name: string; stages: number })}
@@ -743,7 +752,7 @@
 			style:font-family="var(--g-font-mono)"
 			style:font-size="11px"
 			style:color="var(--g-ink-3)"
-		>{t.stages} {t.stages === 1 ? 'Etappe' : 'Etappen'}</div>
+		>{$tn('listen.anzahl.etappen', t.stages)}</div>
 	</a>
 {/snippet}
 

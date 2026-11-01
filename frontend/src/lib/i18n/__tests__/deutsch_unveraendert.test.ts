@@ -22,6 +22,65 @@ const GOLDEN = JSON.parse(
 
 /** Neue Schluessel dieses Pakets (nicht im Bestand). */
 const NEU_IN_S2 = ['aktionen.zeit.vor_minuten.one', 'aktionen.zeit.vor_minuten.other', 'aktionen.zeit.gerade_eben'];
+/** #2652 (F3) Cockpit und Listen: Bereiche home.json (home.*) und listen.json. */
+const NEU_IN_F3 = [
+	'home.cockpit.eyebrow', 'home.cockpit.titel', 'home.cockpit.ausserdem', 'home.cockpit.nebenher.one',
+	'home.cockpit.nebenher.other', 'home.cockpit.alle_vergleiche', 'home.cockpit.alle_anzeigen',
+	'home.hero.naechster_versand', 'home.hero.kanaele', 'home.hero.schnell_eingreifen',
+	'home.hero.schnellaktionen', 'home.hero.oeffnen.trip', 'home.hero.oeffnen.vergleich',
+	'home.hero.orte_verglichen.one', 'home.hero.orte_verglichen.other', 'home.kachel.bearbeiten',
+	'home.trip.live_tag', 'home.trip.tag_von', 'home.trip.keine_briefings_geplant', 'home.aktion.pausentag',
+	'home.aktion.pausentag_ziel', 'home.aktion.metriken', 'home.aktion.metriken_ziel', 'home.aktion.zeitplan',
+	'home.aktion.zeitplan_ziel', 'home.aktion.test_briefing', 'home.aktion.eigene_kanaele',
+	'home.aktion.orte_bearbeiten', 'home.aktion.orte_ziel', 'home.aktion.ideal_werte', 'home.aktion.ideal_ziel',
+	'home.aktion.zeitplan_kanaele_ziel', 'home.aktion.test_vergleich', 'home.alarm.aenderungen.one',
+	'home.alarm.aenderungen.other', 'home.alarm.leer', 'home.vergleich.aktiv_automatisch',
+	'home.vergleich.zeitplan', 'home.vergleich.versand_automatisch', 'home.zeitplan.taeglich',
+	'home.zeitplan.woechentlich', 'home.zeitplan.manuell', 'home.planung.banner', 'home.planung.kein_trip',
+	'home.planung.naechster_trip', 'home.planung.setup_fortsetzen', 'home.planung.oeffnen',
+	'home.planung.orts_vergleich', 'home.planung.wizard', 'home.planung.neuer_orts_vergleich',
+	'home.abschnitt.weiter_einrichten', 'home.abschnitt.weiter_titel', 'home.abschnitt.weiter_text',
+	'home.abschnitt.schnell_anlegen', 'home.abschnitt.neu_starten', 'home.abschnitt.einrichten',
+	'home.abschnitt.archiv', 'home.abschnitt.fruehere_trips', 'home.abschnitt.kein_trip',
+	'home.abschnitt.kein_trip_text', 'home.archiv.mehrtages.one', 'home.archiv.mehrtages.other',
+	'home.archiv.abgeschlossen.one', 'home.archiv.abgeschlossen.other', 'home.timeline.zuletzt',
+	'home.timeline.naechster', 'home.timeline.morgen', 'home.timeline.abend', 'home.tage.heute',
+	'home.tage.morgen', 'home.tage.in_tagen.one', 'home.tage.in_tagen.other', 'home.tage.nicht_geplant',
+	'home.tage.pausiert_seit_heute', 'home.tage.pausiert_seit.one', 'home.tage.pausiert_seit.other',
+	'home.tage.tag_eins', 'home.tage.laeuft_seit', 'home.tage.beendet', 'home.tage.beendet_heute',
+	'home.tage.beendet_vor.one', 'home.tage.beendet_vor.other', 'home.monat.1', 'home.monat.2', 'home.monat.3',
+	'home.monat.4', 'home.monat.5', 'home.monat.6', 'home.monat.7', 'home.monat.8', 'home.monat.9',
+	'home.monat.10', 'home.monat.11', 'home.monat.12', 'home.monat_kurz.1', 'home.monat_kurz.2',
+	'home.monat_kurz.3', 'home.monat_kurz.4', 'home.monat_kurz.5', 'home.monat_kurz.6', 'home.monat_kurz.7',
+	'home.monat_kurz.8', 'home.monat_kurz.9', 'home.monat_kurz.10', 'home.monat_kurz.11', 'home.monat_kurz.12',
+	'home.zeitraum.tag', 'home.zeitraum.gleicher_monat', 'home.zeitraum.verschiedene_monate',
+	'home.zeitraum.verschiedene_jahre', 'home.zeit.heute_um', 'home.zeit.morgen_um', 'home.stand.zeile',
+	'home.stand.kurz', 'home.stand.herkunft', 'listen.workspace_anzahl', 'listen.neuer_trip',
+	'listen.trips.eyebrow', 'listen.trips.titel', 'listen.trips.intro', 'listen.trips.intro_mobil',
+	'listen.vergleiche.eyebrow', 'listen.vergleiche.titel', 'listen.vergleiche.intro',
+	'listen.vergleiche.intro_mobil', 'listen.vergleiche.ohne_namen', 'listen.orte.titel', 'listen.orte.neu',
+	'listen.orte.leer_titel', 'listen.orte.leer_text', 'listen.orte.hinzufuegen', 'listen.orte.wetter',
+	'listen.orte.bearbeiten_titel', 'listen.orte.loeschen_titel', 'listen.orte.loeschen_text',
+	'listen.archiv.eyebrow', 'listen.archiv.titel', 'listen.archiv.intro', 'listen.archiv.alle',
+	'listen.archiv.vergleiche', 'listen.archiv.wieder_aktivieren', 'listen.archiv.endgueltig_loeschen',
+	'listen.archiv.endgueltig_loeschen_frage', 'listen.typ.trip', 'listen.typ.vergleich',
+	'listen.suche.platzhalter', 'listen.suche.platzhalter_punkte', 'listen.stat.aktiv', 'listen.stat.geplant',
+	'listen.stat.abgeschlossen', 'listen.stat.pausiert', 'listen.stat.drafts', 'listen.status.aktiv',
+	'listen.status.geplant', 'listen.status.pausiert', 'listen.status.fertig', 'listen.status.draft',
+	'listen.spalte.name', 'listen.spalte.etappen', 'listen.spalte.zeitraum', 'listen.spalte.orte',
+	'listen.spalte.profil', 'listen.spalte.kanaele', 'listen.spalte.zeitplan', 'listen.spalte.koordinaten',
+	'listen.spalte.hoehe', 'listen.spalte.umfang', 'listen.spalte.archiviert', 'listen.tabelle.aktionen',
+	'listen.tabelle.leer', 'listen.leer.trip', 'listen.leer.trip_text', 'listen.leer.trip_suche',
+	'listen.leer.vergleich', 'listen.leer.vergleich_suche', 'listen.leer.archiv', 'listen.leer.archiv_suche',
+	'listen.zaehler.trips', 'listen.zaehler.vergleiche', 'listen.zaehler.archiv', 'listen.anzahl.etappen.one',
+	'listen.anzahl.etappen.other', 'listen.anzahl.orte.one', 'listen.anzahl.orte.other',
+	'listen.aktion.briefing_senden', 'listen.aktion.loeschen', 'listen.dialog.trip_loeschen',
+	'listen.dialog.vergleich_loeschen', 'listen.dialog.nicht_rueckgaengig', 'listen.dialog.unwiderruflich',
+	'listen.meldung.versendet', 'listen.meldung.fehler_pausieren', 'listen.meldung.fehler_loeschen',
+	'listen.meldung.fehler_reaktivieren', 'listen.meldung.fehler_speichern',
+	'listen.meldung.fehler_wetter_konfiguration', 'listen.meldung.status_fehlgeschlagen',
+	'listen.meldung.loeschen_fehlgeschlagen',
+];
 /** Neue Schluessel spaeterer Pakete (je Paket ein Eintrag, nur ergaenzen). */
 const NEU_IN_FOLGEPAKETEN = [
 	// #2648 (S3) Sprachumschalter und Konto-Sprache
@@ -243,7 +302,7 @@ test('AC-5: jeder Bestandsschluessel ist mit byte-gleichem Wert in der de-Karte'
 
 test('AC-5: die de-Karte enthaelt ausser dem Bestand nur die neuen Schluessel dieses und der Folgepakete', () => {
 	const extra = Object.keys(de).filter((k) => !(k in GOLDEN)).sort();
-	assert.deepEqual(extra, [...NEU_IN_S2, ...NEU_IN_FOLGEPAKETEN].sort());
+	assert.deepEqual(extra, [...NEU_IN_S2, ...NEU_IN_F3, ...NEU_IN_FOLGEPAKETEN].sort());
 });
 
 test('AC-5: trFor(de) und tr() mit Standard-Locale liefern die Bestandstexte unveraendert', () => {

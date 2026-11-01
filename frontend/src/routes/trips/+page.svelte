@@ -17,6 +17,7 @@
 	import { subscriptionActions, subscriptionLifecycle } from '$lib/components/shared/subscriptionActions';
 	import { setPaused, deleteSubscription, sendSubscription } from '$lib/components/shared/subscriptionExec';
 	import { tripStatus } from '$lib/utils/tripStatus';
+	import { t, tn, tr, type MessageKey } from '$lib/i18n/index.js';
 
 	const now = new Date();
 
@@ -63,39 +64,39 @@
 		return 'var(--g-ink-4)';
 	}
 
-	const tripColumns = [
+	// #2652 (i18n F3): $derived, damit Spaltenkoepfe und Zellen der Sprache folgen.
+	// i18n-dynamic: listen.status.
+	const statusText = (st: string) => $t(`listen.status.${st}` as MessageKey);
+	const tripColumns = $derived([
 		{
 			key: 'name',
-			header: 'Name',
+			header: $t('listen.spalte.name'),
 			width: '1.6fr',
 			render: (row: unknown) => {
 				const t = row as Trip;
-				return { nameCell: { name: t.name, statusLabel: tripStatus(t, now), dotColor: tripDotColor(t) } };
+				return { nameCell: { name: t.name, statusLabel: statusText(tripStatus(t, now)), dotColor: tripDotColor(t) } };
 			}
 		},
 		{
 			key: 'stages',
-			header: 'Etappen',
+			header: $t('listen.spalte.etappen'),
 			width: '0.8fr',
-			render: (row: unknown) => {
-				const n = (row as Trip).stages?.length ?? 0;
-				return `${n} ${n === 1 ? 'Etappe' : 'Etappen'}`;
-			}
+			render: (row: unknown) => $tn('listen.anzahl.etappen', (row as Trip).stages?.length ?? 0)
 		},
 		{
 			key: 'range',
-			header: 'Zeitraum',
+			header: $t('listen.spalte.zeitraum'),
 			width: '1.4fr',
 			mono: true,
 			render: (row: unknown) => dateRange(row as Trip)
 		}
-	];
+	]);
 
 	// "Briefing senden" oeffnet den Sende-Dialog (AC-3/AC-17: nie ohne Rueckfrage).
 	function tripRowPrimary(row: unknown) {
-		const t = row as Trip;
-		return tripStatus(t, now) === 'aktiv'
-			? { label: 'Briefing senden', onClick: () => (sendTarget = t) }
+		const trip = row as Trip;
+		return tripStatus(trip, now) === 'aktiv'
+			? { label: tr('listen.aktion.briefing_senden'), onClick: () => (sendTarget = trip) }
 			: null;
 	}
 
@@ -119,7 +120,7 @@
 			discardEtag(trip.id);
 			await refetchTrips();
 		} catch (e: unknown) {
-			error = (e as Error).message ?? 'Fehler beim Pausieren';
+			error = (e as Error).message ?? tr('listen.meldung.fehler_pausieren');
 		}
 	}
 
@@ -138,7 +139,7 @@
 			await deleteSubscription('trip', target.id);
 			trips = trips.filter((t) => t.id !== target.id);
 		} catch (e: unknown) {
-			error = (e as Error)?.message ?? 'Fehler beim Löschen';
+			error = (e as Error)?.message ?? tr('listen.meldung.fehler_loeschen');
 		}
 		deleteTarget = null;
 	}
@@ -151,7 +152,7 @@
 		sendInfo = null;
 		// Issue #2124: geteilter Laufzustand (trip:<id>) + Klassifikation.
 		const o = await sendSubscription('trip', target.id, { reportType: berichtsart });
-		if (o.kind === 'ok') sendInfo = 'Briefing wurde versendet.';
+		if (o.kind === 'ok') sendInfo = tr('listen.meldung.versendet');
 		else error = o.message;
 	}
 
@@ -162,7 +163,7 @@
 </script>
 
 {#snippet neuerTripMobil()}
-	<Btn href="/trips/new" variant="ghost" size="sm" data-testid="trip-list-new-mobile">+ Neuer Trip</Btn>
+	<Btn href="/trips/new" variant="ghost" size="sm" data-testid="trip-list-new-mobile">{$t('onboarding.willkommen.neuer_trip')}</Btn>
 {/snippet}
 
 <div class="space-y-4">
@@ -171,20 +172,20 @@
 	     (#2347 S4, Fix F003). -->
 	<div class="hidden desktop:flex items-start justify-between gap-4">
 		<div>
-			<Eyebrow>WORKSPACE · TRIPS</Eyebrow>
-			<h1 style="font-size: 32px; font-weight: 600; letter-spacing: -0.025em; margin-top: 4px;">Trips</h1>
-			<p class="text-sm text-muted-foreground mt-1">Alle aktiven, geplanten und abgeschlossenen Mehrtages-Trips. Pro Trip kannst du Alerts justieren oder ein Briefing direkt schicken.</p>
+			<Eyebrow>{$t('listen.trips.eyebrow')}</Eyebrow>
+			<h1 style="font-size: 32px; font-weight: 600; letter-spacing: -0.025em; margin-top: 4px;">{$t('listen.trips.titel')}</h1>
+			<p class="text-sm text-muted-foreground mt-1">{$t('listen.trips.intro')}</p>
 		</div>
-		<Btn variant="accent" onclick={() => goto('/trips/new')}>+ Neuer Trip</Btn>
+		<Btn variant="accent" onclick={() => goto('/trips/new')}>{$t('onboarding.willkommen.neuer_trip')}</Btn>
 	</div>
 
 	<!-- Mobiler Seitenkopf (#2347 S4, HL-1/HL-2/HL-4): gleich gebaut wie die
 	     Ortsvergleich-Liste (routes/compare/+page.svelte) — PageHeader mit
 	     Eyebrow, Titel und „Neu"-Knopf, kurzer Intro-Satz, kompakte Stats. -->
 	<div class="desktop:hidden">
-		<PageHeader eyebrow="Workspace · {trips.length}" title="Trips" right={neuerTripMobil} compact />
+		<PageHeader eyebrow={$t('listen.workspace_anzahl', { anzahl: trips.length })} title={$t('listen.trips.titel')} right={neuerTripMobil} compact />
 		<div style="font-size: 13px; color: var(--g-ink-3); line-height: 1.5; margin: 14px 0">
-			Mehrtages-Trips mit Briefings je Etappe — morgens für heute, abends für morgen.
+			{$t('listen.trips.intro_mobil')}
 		</div>
 	</div>
 
@@ -194,17 +195,17 @@
 		{@const countFertig = trips.filter(t => tripStatus(t, now) === 'fertig').length}
 		{@const countDraft = trips.filter(t => tripStatus(t, now) === 'draft').length}
 		<div class="hidden desktop:flex" style="gap: 24px; margin-bottom: 20px; padding-bottom: 16px; border-bottom: 1px solid var(--g-rule-soft);">
-			<Stat label="Aktiv"        value={countAktiv}   layout="inline" tone="accent" />
-			<Stat label="Geplant"      value={countGeplant} layout="inline" />
-			<Stat label="Abgeschlossen" value={countFertig} layout="inline" />
-			<Stat label="Drafts"       value={countDraft}   layout="inline" />
+			<Stat label={$t('listen.stat.aktiv')} value={countAktiv} layout="inline" tone="accent" />
+			<Stat label={$t('listen.stat.geplant')} value={countGeplant} layout="inline" />
+			<Stat label={$t('listen.stat.abgeschlossen')} value={countFertig} layout="inline" />
+			<Stat label={$t('listen.stat.drafts')} value={countDraft} layout="inline" />
 		</div>
 		<!-- Mobile Stats (kompakt, size="sm" wie im Vergleich), vor den Filter-Pillen -->
 		<div class="flex desktop:hidden" style="gap: 20px; padding: 4px 2px 16px; border-bottom: 1px solid var(--g-rule-soft); flex-wrap: wrap;">
-			<Stat label="Aktiv"        value={countAktiv}   layout="inline" size="sm" tone="accent" />
-			<Stat label="Geplant"      value={countGeplant} layout="inline" size="sm" />
-			<Stat label="Abgeschlossen" value={countFertig} layout="inline" size="sm" />
-			<Stat label="Drafts"       value={countDraft}   layout="inline" size="sm" />
+			<Stat label={$t('listen.stat.aktiv')} value={countAktiv} layout="inline" size="sm" tone="accent" />
+			<Stat label={$t('listen.stat.geplant')} value={countGeplant} layout="inline" size="sm" />
+			<Stat label={$t('listen.stat.abgeschlossen')} value={countFertig} layout="inline" size="sm" />
+			<Stat label={$t('listen.stat.drafts')} value={countDraft} layout="inline" size="sm" />
 		</div>
 	{/if}
 
@@ -218,9 +219,9 @@
 
 	{#if trips.length === 0}
 		<div class="flex flex-col items-center gap-3 py-12">
-			<Eyebrow>Noch keine Trips</Eyebrow>
-			<p class="text-sm text-muted-foreground mt-1">Erstelle deinen ersten Trip, um Briefings zu erhalten.</p>
-			<Btn onclick={openCreate} variant="primary">Neuer Trip</Btn>
+			<Eyebrow>{$t('listen.leer.trip')}</Eyebrow>
+			<p class="text-sm text-muted-foreground mt-1">{$t('listen.leer.trip_text')}</p>
+			<Btn onclick={openCreate} variant="primary">{$t('listen.neuer_trip')}</Btn>
 		</div>
 	{:else}
 		<!-- Suche nur Desktop (#2347 S4, HL-3; wie die Ortsvergleich-Liste).
@@ -230,7 +231,7 @@
 		<div class="hidden desktop:flex mb-3">
 			<div class="relative w-full max-w-[380px]">
 				<SearchIcon class="absolute left-2.5 top-2.5 size-4 text-muted-foreground" />
-				<Input placeholder="Suchen..." class="pl-8 rounded-full" bind:value={search} />
+				<Input placeholder={$t('listen.suche.platzhalter_punkte')} class="pl-8 rounded-full" bind:value={search} />
 			</div>
 		</div>
 		{#if refetching}
@@ -273,12 +274,12 @@
 					}))}
 				rowPrimary={tripRowPrimary}
 				onAction={onTripAction}
-				emptyText={`Keine Trips für »${search}« gefunden.`}
+				emptyText={$t('listen.leer.trip_suche', { suche: search })}
 				rowTestid={(row) => `trip-row-${(row as Trip).id}`}
 				menuTestid={() => 'trip-row-menu-btn'}
 			/>
 			<div style="margin-top: 14px; font-size: 11px; color: var(--g-ink-4); font-family: var(--g-font-mono); letter-spacing: 0.06em;">
-				{filteredTrips.length} von {trips.length} Trips
+				{$t('listen.zaehler.trips', { gefiltert: filteredTrips.length, gesamt: trips.length })}
 			</div>
 		</div>
 		{/if}
@@ -287,9 +288,9 @@
 
 <ConfirmDialog
 	open={deleteTarget !== null}
-	title="Trip löschen"
-	description="Diese Aktion kann nicht rückgängig gemacht werden."
-	confirmLabel="Löschen"
+	title={$t('listen.dialog.trip_loeschen')}
+	description={$t('listen.dialog.nicht_rueckgaengig')}
+	confirmLabel={$t('listen.aktion.loeschen')}
 	confirmVariant="destructive"
 	onConfirm={handleDelete}
 	onCancel={() => (deleteTarget = null)}
