@@ -276,9 +276,12 @@ class TestEntscheidungstabelle:
         # `_vergleich_ist_aktiv`), nicht `date.today()` der Prozesszone: der
         # Root-conftest stellt die Prozesszone bewusst weg von UTC, sonst
         # kippt der Test in der Stunde um Mitternacht (CI 2026-11-01).
+        from tests.helpers.ortstag import utc_tag
+
         jetzt = _now()
-        heute = jetzt.date().isoformat()
-        gestern = (jetzt.date() - timedelta(days=2)).isoformat()
+        tag = utc_tag(now_utc=jetzt)
+        heute = tag.isoformat()
+        gestern = (tag - timedelta(days=2)).isoformat()
         erg = resolve_active_target(
             [],
             [
