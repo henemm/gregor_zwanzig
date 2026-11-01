@@ -100,7 +100,7 @@ export function scanneMarkup(quelltext: string): Treffer[] {
 
 // ── TypeScript (ab F11, #2660): String-Literale in lib/utils, lib/stores, lib/api.ts ──
 
-const TS_SIGNAL = /[äöüÄÖÜß]|\b(?:nicht|bitte|fehlgeschlagen|gespeichert)\b/i;
+const TS_SIGNAL = /[äöüÄÖÜß]|\b(?:nicht|nichts|keine|bitte|fehlgeschlagen|gespeichert)\b/i;
 const LOG_MARKER = /\/\/\s*i18n-log\s*$/;
 // Katalog-Schluessel (`fehler.versand.fehlgeschlagen`) sind kein Nutzertext.
 const KATALOG_SCHLUESSEL = /^[a-z0-9_]+(?:\.[a-z0-9_-]+)+$/;
@@ -179,8 +179,16 @@ export function scanneTs(quelltext: string): Treffer[] {
 export function wirdGescanntTs(pfad: string): boolean {
 	if (!pfad.endsWith('.ts') || pfad.endsWith('.d.ts') || /\.(test|spec)\.ts$/.test(pfad)) return false;
 	if (pfad.split('/').includes('__tests__')) return false;
-	return pfad === 'lib/api.ts' || pfad.startsWith('lib/utils/') || pfad.startsWith('lib/stores/');
+	return (
+		pfad === 'lib/api.ts' ||
+		pfad.startsWith('lib/utils/') ||
+		pfad.startsWith('lib/stores/') ||
+		TS_KOMPONENTEN_ORDNER.some((o) => pfad.startsWith(o))
+	);
 }
+
+/** Ab F6 (#2655): .ts-Module migrierter Komponentenordner; spaetere Pakete tragen ihren Ordner ein. */
+export const TS_KOMPONENTEN_ORDNER = ['lib/components/shared/versand-tab/'];
 
 /** Pfad relativ zu frontend/src/ mit Schraegstrichen. */
 export function wirdGescannt(pfad: string): boolean {
