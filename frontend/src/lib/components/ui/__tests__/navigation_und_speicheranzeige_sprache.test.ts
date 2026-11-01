@@ -127,9 +127,9 @@ describe('AC-5: Speicher-Anzeige je Zustand', () => {
 	test('gespeichert: „Saved", Uhrzeit weiter im eigenen .save-time', () => {
 		const h = enNachDe({ state: 'idle', savedAt: UM });
 		assert.equal(zustandsText(h), 'Saved');
-		assert.match(h, /<span>Saved<\/span> <span class="save-time">14:30<\/span>/);
+		assert.match(h, /<span>Saved<\/span> <span class="save-time[^"]*">14:30<\/span>/);
 		locale.set('de');
-		assert.match(anzeige({ state: 'idle', savedAt: UM }), /<span>Gespeichert<\/span> <span class="save-time">14:30<\/span>/);
+		assert.match(anzeige({ state: 'idle', savedAt: UM }), /<span>Gespeichert<\/span> <span class="save-time[^"]*">14:30<\/span>/);
 	});
 
 	test('ungespeichert / speichernd: „Not saved", „Saving …"', () => {

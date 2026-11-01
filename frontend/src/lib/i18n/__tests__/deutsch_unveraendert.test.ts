@@ -82,6 +82,73 @@ const NEU_IN_F3 = [
 	'listen.meldung.loeschen_fehlgeschlagen',
 ];
 /** Neue Schluessel spaeterer Pakete (je Paket ein Eintrag, nur ergaenzen). */
+/** #2653 (F4) Konto, Admin, Navigation, Speicher-Anzeige: konto.json, admin.json, nav.json. */
+const NEU_IN_F4 = [
+	'konto.titel', 'konto.aktion.speichern', 'konto.aktion.loeschen', 'konto.aktion.loeschen_fehlgeschlagen',
+	'konto.aktion.test_senden', 'konto.aktion.gesendet', 'konto.aktion.senden_fehlgeschlagen',
+	'konto.profil.titel', 'konto.profil.benutzername', 'konto.profil.anzeigename', 'konto.profil.mitglied_seit',
+	'konto.profil.gespeichert', 'konto.kanaele.titel', 'konto.kanaele.beschreibung', 'konto.kanaele.mail_label',
+	'konto.kanaele.mail_platzhalter', 'konto.adresse.ausstehend', 'konto.adresse.mail_erneut',
+	'konto.adresse.mail_verschickt', 'konto.sms.label', 'konto.sms.format_hinweis', 'konto.sms.ausstehend',
+	'konto.sms.code_platzhalter', 'konto.sms.code_bestaetigen', 'konto.sms.code_erneut',
+	'konto.sms.code_verschickt', 'konto.telegram.verbunden', 'konto.telegram.trennen',
+	'konto.telegram.nicht_verbunden', 'konto.telegram.warte', 'konto.telegram.verbinden',
+	'konto.kopplung.titel', 'konto.kopplung.beschreibung', 'konto.kopplung.erzeugen', 'konto.kopplung.erneuern',
+	'konto.kopplung.einmalig', 'konto.kopplung.erneuern_frage', 'konto.kopplung.bestaetigen',
+	'konto.kopplung.fehlgeschlagen', 'konto.passkey.titel', 'konto.passkey.leer', 'konto.passkey.angelegt_am',
+	'konto.passkey.zuletzt_verwendet', 'konto.passkey.hinzufuegen', 'konto.passkey.nicht_unterstuetzt',
+	'konto.passkey.unbenannt', 'konto.passkey.abgebrochen', 'konto.passkey.angelegt',
+	'konto.passkey.anlegen_fehler', 'konto.passkey.entfernt', 'konto.passkey.entfernen_fehler',
+	'konto.passkey.loeschen_titel', 'konto.passkey.loeschen_frage', 'konto.passkey.dialog_text',
+	'konto.passkey.bezeichnung', 'konto.passkey.warte', 'konto.passkey.anlegen', 'konto.passwort.titel',
+	'konto.passwort.aktuell', 'konto.passwort.neu', 'konto.passwort.neu_bestaetigen', 'konto.passwort.ungleich',
+	'konto.passwort.geaendert', 'konto.passwort.falsch', 'konto.passwort.fehlgeschlagen',
+	'konto.wetter_profile.titel', 'konto.wetter_profile.beschreibung', 'konto.wetter_profile.leer',
+	'konto.wetter_profile.standard', 'konto.wetter_profile.umbenennen',
+	'konto.wetter_profile.umbenennen_fehler', 'konto.wetter_profile.loeschen_titel',
+	'konto.wetter_profile.loeschen_frage', 'konto.metriken.one', 'konto.metriken.other', 'konto.reports.titel',
+	'konto.reports.nicht_verfuegbar', 'konto.reports.naechste_pruefung', 'konto.reports.zuletzt',
+	'konto.reports.lauf_fehlgeschlagen', 'konto.reports.lauf_fehlgeschlagen_mit', 'konto.reports.keine',
+	'konto.job.trip_checks', 'konto.zeit.vor_stunden.one', 'konto.zeit.vor_stunden.other',
+	'konto.zeit.vor_tagen.one', 'konto.zeit.vor_tagen.other', 'konto.account.titel', 'konto.level.titel',
+	'konto.level.wechsel_titel', 'konto.level.ausstehend', 'konto.level.nicht_benachrichtigt',
+	'konto.level.wird_gesendet', 'konto.level.antrag_stellen', 'konto.level.antrag_gesendet',
+	'konto.level.bereits_aktiv', 'konto.level.ungueltig', 'konto.level.antrag_fehlgeschlagen',
+	'konto.menge.aktive_trips', 'konto.menge.aktive_vergleiche', 'konto.menge.locations', 'konto.menge.von',
+	'konto.kontingent.titel', 'konto.kontingent.antworten.one', 'konto.kontingent.antworten.other',
+	'konto.kontingent.davon', 'konto.benachrichtigung.titel', 'konto.benachrichtigung.keine',
+	'konto.benachrichtigung.einrichten', 'konto.modelle.titel', 'konto.modelle.keine', 'konto.modelle.anlegen',
+	'konto.status.titel', 'konto.status.nicht_erreichbar', 'konto.status.laeuft', 'konto.status.eingeschraenkt',
+	'konto.templates.titel', 'konto.templates.beschreibung', 'konto.templates.keine', 'konto.anmeldungen.titel',
+	'konto.anmeldungen.text', 'konto.anmeldungen.alle_abmelden', 'konto.anmeldungen.dialog_text',
+	'konto.anmeldungen.fehlgeschlagen', 'konto.daten.titel', 'konto.daten.text', 'konto.daten.wird_erstellt',
+	'konto.daten.herunterladen', 'konto.daten.fehlgeschlagen', 'konto.loeschen.zone_titel',
+	'konto.loeschen.zone_text', 'konto.loeschen.titel', 'konto.loeschen.frage_mit_passwort',
+	'konto.loeschen.frage_ohne_passwort', 'konto.loeschen.passwort', 'konto.loeschen.code_senden',
+	'konto.loeschen.code_verschickt', 'konto.loeschen.code', 'konto.loeschen.code_versand_fehlgeschlagen',
+	'konto.fehler.reauth_required', 'konto.fehler.wrong_password', 'konto.fehler.loeschcode_ungueltig',
+	'konto.fehler.zu_viele_versuche', 'konto.fehler.mail_failed', 'konto.fehler.email_taken',
+	'konto.fehler.invalid_sms_number', 'konto.fehler.invalid_code', 'konto.fehler.code_expired',
+	'konto.fehler.sms_not_allowed', 'konto.fehler.no_number', 'konto.fehler.rate_limit_exceeded',
+	'konto.fehler.speichern_fehlgeschlagen', 'admin.kopf.eyebrow', 'admin.kopf.sub', 'admin.einladung.titel',
+	'admin.einladung.notiz', 'admin.einladung.erstellen', 'admin.einladung.kopiert',
+	'admin.einladung.link_kopieren', 'admin.einladung.nur_jetzt', 'admin.einladung.ohne_notiz',
+	'admin.einladung.erstellt', 'admin.einladung.widerrufen', 'admin.einladung.status_offen',
+	'admin.einladung.status_benutzt', 'admin.einladung.status_widerrufen', 'admin.einladung.widerrufen_titel',
+	'admin.einladung.widerrufen_text', 'admin.nutzer.testnutzer', 'admin.nutzer.gesperrt', 'admin.nutzer.tier',
+	'admin.nutzer.offener_antrag', 'admin.nutzer.seit', 'admin.nutzer.letzter_report', 'admin.nutzer.kein_lauf',
+	'admin.nutzer.verbrauch', 'admin.nutzer.tier_von', 'admin.nutzer.entsperren', 'admin.nutzer.sperren',
+	'admin.nutzer.sperren_titel', 'admin.nutzer.sperren_text', 'admin.fehler.keine_berechtigung',
+	'admin.fehler.nutzer_nicht_gefunden', 'admin.fehler.selbst_sperren', 'admin.fehler.ungueltig',
+	'admin.fehler.fehlgeschlagen', 'admin.fehler.einladung_nicht_gefunden', 'admin.fehler.einladung_benutzt',
+	'admin.fehler.einladung_ungueltig', 'nav.hauptmenue.startseite', 'nav.hauptmenue.meine_trips',
+	'nav.hauptmenue.vergleich', 'nav.hauptmenue.archiv', 'nav.admin', 'nav.konto', 'nav.system_status',
+	'nav.hell', 'nav.dunkel', 'nav.abmelden', 'nav.unten.uebersicht', 'nav.unten.vergleich',
+	'nav.konto_sheet.kanaele_empfaenger', 'nav.konto_sheet.einstellungen', 'nav.konto_sheet.dunkles_design',
+	'nav.konto_sheet.datenexport', 'nav.konto_sheet.schliessen', 'nav.konto_sheet.version', 'nav.gespeichert',
+	'nav.nicht_gespeichert', 'nav.speichere', 'nav.nochmal_speichern', 'nav.konflikt', 'nav.speicherfehler',
+	'nav.speicherfehler_mit'
+];
 const NEU_IN_FOLGEPAKETEN = [
 	// #2648 (S3) Sprachumschalter und Konto-Sprache
 	'konto.sprache.titel',
@@ -302,7 +369,7 @@ test('AC-5: jeder Bestandsschluessel ist mit byte-gleichem Wert in der de-Karte'
 
 test('AC-5: die de-Karte enthaelt ausser dem Bestand nur die neuen Schluessel dieses und der Folgepakete', () => {
 	const extra = Object.keys(de).filter((k) => !(k in GOLDEN)).sort();
-	assert.deepEqual(extra, [...NEU_IN_S2, ...NEU_IN_F3, ...NEU_IN_FOLGEPAKETEN].sort());
+	assert.deepEqual(extra, [...NEU_IN_S2, ...NEU_IN_F3, ...NEU_IN_F4, ...NEU_IN_FOLGEPAKETEN].sort());
 });
 
 test('AC-5: trFor(de) und tr() mit Standard-Locale liefern die Bestandstexte unveraendert', () => {

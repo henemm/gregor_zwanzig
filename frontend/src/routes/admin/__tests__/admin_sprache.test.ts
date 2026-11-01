@@ -94,8 +94,10 @@ describe('AC-4: Admin-Seite (SSR) auf Englisch', () => {
 
 	test('kein deutscher Katalogtext (admin.*, konto.*, nav.*) im Text oder in Attributen', () => {
 		const h = html();
-		assert.deepEqual(deutscheReste(sichtbarerText(h), ['admin.', 'konto.', 'nav.']), []);
-		assert.deepEqual(deutscheReste(attributText(h), ['admin.', 'konto.', 'nav.']), []);
+		// konto.* ohne die Tier-Namen: „Standard" ist dort Eigenname (TIER_LABELS), kein Rest.
+		const ohneTier = (r: string[]) => r.filter((x) => x !== 'konto.wetter_profile.standard: Standard');
+		assert.deepEqual(ohneTier(deutscheReste(sichtbarerText(h), ['admin.', 'konto.', 'nav.'])), []);
+		assert.deepEqual(ohneTier(deutscheReste(attributText(h), ['admin.', 'konto.', 'nav.'])), []);
 	});
 
 	test('feste englische Anker; Namen, Adressen, Tier-Namen und Zahlen unveraendert', () => {

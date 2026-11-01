@@ -81,12 +81,16 @@ const hat = (text: string, teil: string) => assert.ok(text.includes(teil), `fehl
 const wort = (w: string) => new RegExp(`(^|[^A-Za-zÄÖÜäöüß])${w}([^A-Za-zÄÖÜäöüß]|$)`);
 
 describe('Konto-Seite auf Englisch (de -> en ohne Neuladen)', () => {
-	const html = () => enNachDe(() => kontoRendern(kontoDaten()));
+	// „ohne Metriken" ist die Beschreibung einer Vorlage aus der API (Daten, kein UI-Text).
+	const html = () => enNachDe(() => kontoRendern(kontoDaten())).replace('ohne Metriken', '');
 
 	test('kein deutscher Katalogtext (konto.*, nav.*) im sichtbaren Text oder in Attributen', () => {
 		const h = html();
-		assert.deepEqual(deutscheReste(sichtbarerText(h), ['konto.', 'nav.', 'aktionen.']), []);
-		assert.deepEqual(deutscheReste(attributText(h), ['konto.', 'nav.', 'aktionen.']), []);
+		// „Standard" ist als Tier-Name Eigenname (TIER_LABELS); das Profil-Badge pruefen die Anker.
+		const ohneTier = (r: string[]) => r.filter((x) => x !== 'konto.wetter_profile.standard: Standard');
+		assert.deepEqual(ohneTier(deutscheReste(sichtbarerText(h), ['konto.', 'nav.', 'aktionen.'])), []);
+		assert.deepEqual(ohneTier(deutscheReste(attributText(h), ['konto.', 'nav.', 'aktionen.'])), []);
+		assert.match(h, /data-testid="wetter-profile-default-mp1">Default</);
 	});
 
 	test('feste englische Anker (exakte Literale)', () => {
@@ -293,7 +297,7 @@ describe('AC-1: zwei Nutzer, zwei Sprachen, gleiche Zahlen, getrennte Daten', ()
 		const tb = sichtbarerText(b.html);
 		for (const s of ['My account', 'SMS quota (today)', 'Active trips 2 of 5', 'SMS 3 of 10', 'Weather models']) hat(ta, s);
 		for (const s of ['Mein Konto', 'SMS-Kontingent (heute)', 'Aktive Trips 2 von 5', 'SMS 3 von 10', 'Wetter-Modelle']) hat(tb, s);
-		assert.deepEqual(deutscheReste(ta, ['konto.']), []);
+		assert.deepEqual(deutscheReste(ta, ['konto.']).filter((x) => x !== 'konto.wetter_profile.standard: Standard'), []);
 		assert.doesNotMatch(tb, /My account|SMS quota/);
 		assert.equal(zahlen(a.html), zahlen(b.html));
 		assert.equal(zahlen(a.html), '2/5 0/3 1/20 | 3/10/8/2/1/4/3/1');
