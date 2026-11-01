@@ -102,12 +102,12 @@ describe('#2147 Scheibe B2 AC-17 — Bestaetigungsseite meldet address_taken ver
 	// Regressionswaechter (heute gruen): die bestehenden Codes behalten ihre
 	// bisherige Meldung.
 	test('regression_400_token_expired_behaelt_ablauf_meldung', async () => {
-		const ergebnis = await bestaetigen(400, JSON.stringify({ error: 'token expired' }));
+		const ergebnis = await bestaetigen(400, JSON.stringify({ code: 'token_expired' }));
 		assert.equal(ergebnis?.data?.error, MELDUNG_ABGELAUFEN);
 	});
 
 	test('regression_400_invalid_token_behaelt_ungueltig_meldung', async () => {
-		const ergebnis = await bestaetigen(400, JSON.stringify({ error: 'invalid token' }));
+		const ergebnis = await bestaetigen(400, JSON.stringify({ code: 'invalid_token' }));
 		assert.equal(ergebnis?.data?.error, MELDUNG_UNGUELTIG);
 	});
 });

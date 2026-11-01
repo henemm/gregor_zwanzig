@@ -37,8 +37,8 @@ func TestLoginHandlerLogsOnlyForCorruptNotMissingUserJSON(t *testing.T) {
 	if w.Code != 401 {
 		t.Fatalf("expected 401 for corrupt user.json (no enumeration leak), got %d", w.Code)
 	}
-	if !strings.Contains(w.Body.String(), "invalid credentials") {
-		t.Errorf("expected generic 'invalid credentials' body, got %q", w.Body.String())
+	if !strings.Contains(w.Body.String(), "invalid_credentials") {
+		t.Errorf("expected generic 'invalid_credentials' body, got %q", w.Body.String())
 	}
 	if !strings.Contains(logBuf.String(), "alice") {
 		t.Errorf("AC-1: Server-Log muss den betroffenen Nutzernamen enthalten (kaputte user.json), bekam: %q", logBuf.String())

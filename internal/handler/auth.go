@@ -81,28 +81,20 @@ func RegisterHandlerWithInvites(s *store.Store, bcryptCost int, cfg config.Confi
 	return func(w http.ResponseWriter, r *http.Request) {
 		var req authRequest
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(400)
-			w.Write([]byte(`{"error":"invalid request"}`))
+			WriteError(w, r, http.StatusBadRequest, "invalid_request", nil)
 			return
 		}
 
 		if len(req.Username) < 3 || len(req.Username) > 50 {
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(400)
-			w.Write([]byte(`{"error":"validation failed"}`))
+			WriteError(w, r, http.StatusBadRequest, "validation_failed", nil)
 			return
 		}
 		if !validUsernameRe.MatchString(req.Username) {
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(400)
-			w.Write([]byte(`{"error":"validation failed"}`))
+			WriteError(w, r, http.StatusBadRequest, "validation_failed", nil)
 			return
 		}
 		if len(req.Password) < 8 {
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(400)
-			w.Write([]byte(`{"error":"validation failed"}`))
+			WriteError(w, r, http.StatusBadRequest, "validation_failed", nil)
 			return
 		}
 		// Issue #1517: Existenzprüfung wandert VOR die E-Mail-Pflichtprüfung —
@@ -112,9 +104,7 @@ func RegisterHandlerWithInvites(s *store.Store, bcryptCost int, cfg config.Confi
 		// Bewusstes Restrisiko (Enumeration, 409): docs/specs/modules/auth_haertung_go_2163.md
 		// "Bewusst nicht geaendert"; ADR-0003, #2147 B1; gebremst per registerLimiter.
 		if s.UserExists(req.Username) {
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(409)
-			w.Write([]byte(`{"error":"user already exists"}`))
+			WriteError(w, r, http.StatusConflict, "user_already_exists", nil)
 			return
 		}
 
@@ -125,29 +115,23 @@ func RegisterHandlerWithInvites(s *store.Store, bcryptCost int, cfg config.Confi
 		// mappen kann. Formatprüfung minimal (strings.Contains) — Precedent aus
 		// PasskeyRegisterPublicBeginHandler.
 		if req.Email == "" {
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(400)
-			w.Write([]byte(`{"error":"validation failed"}`))
+			WriteError(w, r, http.StatusBadRequest, "validation_failed", nil)
 			return
 		}
 		if !strings.Contains(req.Email, "@") {
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(400)
-			w.Write([]byte(`{"error":"invalid_email"}`))
+			WriteError(w, r, http.StatusBadRequest, "invalid_email", nil)
 			return
 		}
 		// Issue #2646: VOR SaveUser und Einladungseinloesung — kein Konto,
 		// keine verbrauchte Einladung bei ungueltiger Sprache.
 		if req.Language != "" && !model.IsValidLanguage(req.Language) {
-			writeInvalidLanguage(w)
+			writeInvalidLanguage(w, r)
 			return
 		}
 
 		hash, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcryptCost)
 		if err != nil {
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(500)
-			w.Write([]byte(`{"error":"internal error"}`))
+			WriteError(w, r, http.StatusInternalServerError, "internal_error", nil)
 			return
 		}
 
@@ -161,15 +145,11 @@ func RegisterHandlerWithInvites(s *store.Store, bcryptCost int, cfg config.Confi
 		taken, err := s.IsAddressTakenByOtherAccount(normalizedEmail, "")
 		if err != nil {
 			log.Printf("register: address uniqueness check failed: %v", err)
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(500)
-			w.Write([]byte(`{"error":"internal error"}`))
+			WriteError(w, r, http.StatusInternalServerError, "internal_error", nil)
 			return
 		}
 		if taken { // Restrisiko wie oben (auth_haertung_go_2163.md, ADR-0003, #2147 B1)
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(409)
-			w.Write([]byte(`{"error":"email_taken"}`))
+			WriteError(w, r, http.StatusConflict, "email_taken", nil)
 			return
 		}
 
@@ -196,15 +176,11 @@ func RegisterHandlerWithInvites(s *store.Store, bcryptCost int, cfg config.Confi
 			}
 			if rerr != nil {
 				log.Printf("register: invite redeem failed: %v", rerr)
-				w.Header().Set("Content-Type", "application/json")
-				w.WriteHeader(500)
-				w.Write([]byte(`{"error":"store_error"}`))
+				WriteError(w, r, http.StatusInternalServerError, "store_error", nil)
 				return
 			}
 			if !ok {
-				w.Header().Set("Content-Type", "application/json")
-				w.WriteHeader(400)
-				w.Write([]byte(`{"error":"invite_invalid"}`))
+				WriteError(w, r, http.StatusBadRequest, "invite_invalid", nil)
 				return
 			}
 			redeemed = &inv
@@ -221,9 +197,7 @@ func RegisterHandlerWithInvites(s *store.Store, bcryptCost int, cfg config.Confi
 		model.MarkOnboardingPending(&user)
 		if err := s.SaveUser(user); err != nil {
 			rollbackInvite()
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(500)
-			w.Write([]byte(`{"error":"store_error"}`))
+			WriteError(w, r, http.StatusInternalServerError, "store_error", nil)
 			return
 		}
 
@@ -274,15 +248,11 @@ func hasVerifiedEmail(s *store.Store, userId string) (verified bool, readable bo
 func issueSession(w http.ResponseWriter, r *http.Request, s *store.Store, userId, secret, publicHost string) bool {
 	verified, readable := hasVerifiedEmail(s, userId)
 	if !readable {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(500)
-		w.Write([]byte(`{"error":"internal error"}`))
+		WriteError(w, r, http.StatusInternalServerError, "internal_error", nil)
 		return false
 	}
 	if !verified {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusForbidden)
-		w.Write([]byte(`{"error":"email_not_verified"}`))
+		WriteError(w, r, http.StatusForbidden, "email_not_verified", nil)
 		return false
 	}
 	return issueSessionWithoutVerificationGate(w, r, s, userId, secret, publicHost)
@@ -309,30 +279,22 @@ func issueSessionWithoutVerificationGate(w http.ResponseWriter, r *http.Request,
 	u, err := s.LoadUser(userId)
 	if err != nil {
 		log.Printf("session issue: load user failed for %s: %v", userId, err)
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(500)
-		w.Write([]byte(`{"error":"store_error"}`))
+		WriteError(w, r, http.StatusInternalServerError, "store_error", nil)
 		return false
 	}
 	if u != nil && u.Disabled {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(403)
-		w.Write([]byte(`{"error":"account_disabled"}`))
+		WriteError(w, r, http.StatusForbidden, "account_disabled", nil)
 		return false
 	}
 	sessionId, err := middleware.NewSessionID()
 	if err != nil {
 		log.Printf("session issue: id generation failed for %s: %v", userId, err)
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(500)
-		w.Write([]byte(`{"error":"internal error"}`))
+		WriteError(w, r, http.StatusInternalServerError, "internal_error", nil)
 		return false
 	}
 	if err := s.AddSession(userId, sessionId); err != nil {
 		log.Printf("session issue: allowlist write failed for %s: %v", userId, err)
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(500)
-		w.Write([]byte(`{"error":"store_error"}`))
+		WriteError(w, r, http.StatusInternalServerError, "store_error", nil)
 		return false
 	}
 	middleware.SetSessionCookie(w, r, middleware.SignSessionWithID(userId, sessionId, secret), publicHost)
@@ -348,9 +310,7 @@ func LoginHandler(s *store.Store, secret, publicHost string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		var req authRequest
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(400)
-			w.Write([]byte(`{"error":"invalid request"}`))
+			WriteError(w, r, http.StatusBadRequest, "invalid_request", nil)
 			return
 		}
 
@@ -361,9 +321,7 @@ func LoginHandler(s *store.Store, secret, publicHost string) http.HandlerFunc {
 		if !store.ValidUserID(req.Username) {
 			log.Printf("login: rejected path-unsafe user id %q", req.Username)
 			burnDummyCompare(req.Password)
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(401)
-			w.Write([]byte(`{"error":"invalid credentials"}`))
+			WriteError(w, r, http.StatusUnauthorized, "invalid_credentials", nil)
 			return
 		}
 
@@ -371,16 +329,12 @@ func LoginHandler(s *store.Store, secret, publicHost string) http.HandlerFunc {
 		if err != nil {
 			log.Printf("login: user.json unreadable/corrupt for %s: %v", req.Username, err)
 			burnDummyCompare(req.Password)
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(401)
-			w.Write([]byte(`{"error":"invalid credentials"}`))
+			WriteError(w, r, http.StatusUnauthorized, "invalid_credentials", nil)
 			return
 		}
 		if user == nil {
 			burnDummyCompare(req.Password)
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(401)
-			w.Write([]byte(`{"error":"invalid credentials"}`))
+			WriteError(w, r, http.StatusUnauthorized, "invalid_credentials", nil)
 			return
 		}
 
@@ -390,9 +344,7 @@ func LoginHandler(s *store.Store, secret, publicHost string) http.HandlerFunc {
 			if !errors.Is(err, bcrypt.ErrMismatchedHashAndPassword) {
 				burnDummyCompare(req.Password)
 			}
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(401)
-			w.Write([]byte(`{"error":"invalid credentials"}`))
+			WriteError(w, r, http.StatusUnauthorized, "invalid_credentials", nil)
 			return
 		}
 
@@ -418,11 +370,11 @@ func DeleteAccountHandler(s *store.Store, ts *TelegramTokenStore) http.HandlerFu
 		_ = json.NewDecoder(r.Body).Decode(&req) // leerer/kaputter Body = kein Nachweis
 		user, err := s.LoadUser(userId)
 		if err != nil || user == nil {
-			writeJSONError(w, http.StatusNotFound, "not_found")
+			WriteError(w, r, http.StatusNotFound, "not_found", nil)
 			return
 		}
 		if req.Password == "" && req.Code == "" {
-			writeJSONError(w, http.StatusBadRequest, "reauth_required")
+			WriteError(w, r, http.StatusBadRequest, "reauth_required", nil)
 			return
 		}
 		var verbraucht *deleteCodeEntry
@@ -430,13 +382,13 @@ func DeleteAccountHandler(s *store.Store, ts *TelegramTokenStore) http.HandlerFu
 			// Passwortweg beruehrt den Lösch-Code nie (auch nicht den Zaehler).
 			if user.PasswordHash == "" ||
 				bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(req.Password)) != nil {
-				writeJSONError(w, http.StatusForbidden, "wrong_password")
+				WriteError(w, r, http.StatusForbidden, "wrong_password", nil)
 				return
 			}
 		} else {
 			e, ok := consumeDeleteCode(userId, req.Code, time.Now())
 			if !ok {
-				writeJSONError(w, http.StatusForbidden, "invalid_code")
+				WriteError(w, r, http.StatusForbidden, "invalid_code", nil)
 				return
 			}
 			verbraucht = e
@@ -447,7 +399,7 @@ func DeleteAccountHandler(s *store.Store, ts *TelegramTokenStore) http.HandlerFu
 				restoreDeleteCode(userId, verbraucht)
 			}
 			log.Printf("account delete: %s nicht geloescht: %v", userId, err)
-			writeJSONError(w, http.StatusInternalServerError, "internal")
+			WriteError(w, r, http.StatusInternalServerError, "internal_error", nil)
 			return
 		}
 		// Die Gaesteliste liegt IM Nutzerordner und ist mit DeleteUser bereits
@@ -505,9 +457,7 @@ func ForgotPasswordHandler(s *store.Store, bcryptCost int, cfg config.Config) ht
 			Username string `json:"username"`
 		}
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.Username == "" {
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(400)
-			w.Write([]byte(`{"error":"invalid request"}`))
+			WriteError(w, r, http.StatusBadRequest, "invalid_request", nil)
 			return
 		}
 
@@ -534,8 +484,7 @@ func ForgotPasswordHandler(s *store.Store, bcryptCost int, cfg config.Config) ht
 		// Generate random token
 		tokenBytes := make([]byte, 32)
 		if _, err := rand.Read(tokenBytes); err != nil {
-			w.WriteHeader(500)
-			w.Write([]byte(`{"error":"internal error"}`))
+			WriteError(w, r, http.StatusInternalServerError, "internal_error", nil)
 			return
 		}
 		token := hex.EncodeToString(tokenBytes)
@@ -543,8 +492,7 @@ func ForgotPasswordHandler(s *store.Store, bcryptCost int, cfg config.Config) ht
 		// Hash token for storage
 		hash, err := bcrypt.GenerateFromPassword([]byte(token), bcryptCost)
 		if err != nil {
-			w.WriteHeader(500)
-			w.Write([]byte(`{"error":"internal error"}`))
+			WriteError(w, r, http.StatusInternalServerError, "internal_error", nil)
 			return
 		}
 
@@ -630,17 +578,14 @@ func ResetPasswordHandler(s *store.Store, bcryptCost int) http.HandlerFunc {
 			NewPassword string `json:"new_password"`
 		}
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(400)
-			w.Write([]byte(`{"error":"invalid request"}`))
+			WriteError(w, r, http.StatusBadRequest, "invalid_request", nil)
 			return
 		}
 
 		w.Header().Set("Content-Type", "application/json")
 
 		if len(req.NewPassword) < 8 {
-			w.WriteHeader(400)
-			w.Write([]byte(`{"error":"validation failed"}`))
+			WriteError(w, r, http.StatusBadRequest, "validation_failed", nil)
 			return
 		}
 
@@ -648,49 +593,42 @@ func ResetPasswordHandler(s *store.Store, bcryptCost int) http.HandlerFunc {
 		// "Token fehlt/passt nicht"-Zweig direkt darunter.
 		if !store.ValidUserID(req.Username) {
 			log.Printf("password reset confirm: rejected path-unsafe user id %q", req.Username)
-			w.WriteHeader(400)
-			w.Write([]byte(`{"error":"invalid token"}`))
+			WriteError(w, r, http.StatusBadRequest, "invalid_token", nil)
 			return
 		}
 
 		resetToken, err := s.LoadResetToken(req.Username)
 		if err != nil || resetToken == nil {
-			w.WriteHeader(400)
-			w.Write([]byte(`{"error":"invalid token"}`))
+			WriteError(w, r, http.StatusBadRequest, "invalid_token", nil)
 			return
 		}
 
 		if time.Now().After(resetToken.ExpiresAt) {
-			w.WriteHeader(400)
-			w.Write([]byte(`{"error":"token expired"}`))
+			WriteError(w, r, http.StatusBadRequest, "token_expired", nil)
 			return
 		}
 
 		if err := bcrypt.CompareHashAndPassword([]byte(resetToken.TokenHash), []byte(req.Token)); err != nil {
-			w.WriteHeader(400)
-			w.Write([]byte(`{"error":"invalid token"}`))
+			WriteError(w, r, http.StatusBadRequest, "invalid_token", nil)
 			return
 		}
 
 		// Update password
 		user, err := s.LoadUser(req.Username)
 		if err != nil || user == nil {
-			w.WriteHeader(400)
-			w.Write([]byte(`{"error":"invalid token"}`))
+			WriteError(w, r, http.StatusBadRequest, "invalid_token", nil)
 			return
 		}
 
 		newHash, err := bcrypt.GenerateFromPassword([]byte(req.NewPassword), bcryptCost)
 		if err != nil {
-			w.WriteHeader(500)
-			w.Write([]byte(`{"error":"internal error"}`))
+			WriteError(w, r, http.StatusInternalServerError, "internal_error", nil)
 			return
 		}
 
 		user.PasswordHash = string(newHash)
 		if err := s.SaveUser(*user); err != nil {
-			w.WriteHeader(500)
-			w.Write([]byte(`{"error":"store_error"}`))
+			WriteError(w, r, http.StatusInternalServerError, "store_error", nil)
 			return
 		}
 
@@ -720,8 +658,7 @@ func VerifyEmailHandler(s *store.Store) http.HandlerFunc {
 		}
 		w.Header().Set("Content-Type", "application/json")
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil || req.User == "" || req.Token == "" {
-			w.WriteHeader(400)
-			w.Write([]byte(`{"error":"invalid request"}`))
+			WriteError(w, r, http.StatusBadRequest, "invalid_request", nil)
 			return
 		}
 
@@ -729,20 +666,17 @@ func VerifyEmailHandler(s *store.Store) http.HandlerFunc {
 		// "Token fehlt/passt nicht"-Zweig direkt darunter.
 		if !store.ValidUserID(req.User) {
 			log.Printf("email verification: rejected path-unsafe user id %q", req.User)
-			w.WriteHeader(400)
-			w.Write([]byte(`{"error":"invalid token"}`))
+			WriteError(w, r, http.StatusBadRequest, "invalid_token", nil)
 			return
 		}
 
 		vt, err := s.LoadVerificationToken(req.User)
 		if err != nil || vt == nil {
-			w.WriteHeader(400)
-			w.Write([]byte(`{"error":"invalid token"}`))
+			WriteError(w, r, http.StatusBadRequest, "invalid_token", nil)
 			return
 		}
 		if time.Now().After(vt.ExpiresAt) {
-			w.WriteHeader(400)
-			w.Write([]byte(`{"error":"token expired"}`))
+			WriteError(w, r, http.StatusBadRequest, "token_expired", nil)
 			return
 		}
 		if err := bcrypt.CompareHashAndPassword([]byte(vt.TokenHash), []byte(req.Token)); err != nil {
@@ -750,14 +684,12 @@ func VerifyEmailHandler(s *store.Store) http.HandlerFunc {
 			// ein zweiter Adresswechsel ueberschreibt das erste, dessen Hash
 			// passt danach nicht mehr. Steht eine Aenderung aus, ist genau das
 			// der Fall "ersetzter Link" und wird wie ein abgelaufener Link
-			// beantwortet; ohne ausstehende Aenderung bleibt es "invalid token".
+			// beantwortet; ohne ausstehende Aenderung bleibt es "invalid_token".
 			if u, lerr := s.LoadUser(req.User); lerr == nil && u != nil && u.PendingContactAddress != "" {
-				w.WriteHeader(400)
-				w.Write([]byte(`{"error":"token expired"}`))
+				WriteError(w, r, http.StatusBadRequest, "token_expired", nil)
 				return
 			}
-			w.WriteHeader(400)
-			w.Write([]byte(`{"error":"invalid token"}`))
+			WriteError(w, r, http.StatusBadRequest, "invalid_token", nil)
 			return
 		}
 
@@ -772,8 +704,7 @@ func VerifyEmailHandler(s *store.Store) http.HandlerFunc {
 
 		user, err := s.LoadUser(req.User) // RMW: vollständiges Objekt laden
 		if err != nil || user == nil {
-			w.WriteHeader(400)
-			w.Write([]byte(`{"error":"invalid token"}`))
+			WriteError(w, r, http.StatusBadRequest, "invalid_token", nil)
 			return
 		}
 
@@ -783,29 +714,25 @@ func VerifyEmailHandler(s *store.Store) http.HandlerFunc {
 			// Alt-Token (ohne Adresse) gegen ein Konto mit ausstehender
 			// Aenderung: kann nach dem Deploy nicht neu entstehen, defensiv
 			// ungueltig (B2 §2 Punkt 1).
-			w.WriteHeader(400)
-			w.Write([]byte(`{"error":"invalid token"}`))
+			WriteError(w, r, http.StatusBadRequest, "invalid_token", nil)
 			return
 		case address != "" && pending == "":
 			// Adressgebundenes Token ohne ausstehende Aenderung (Erst-
 			// bestaetigung): nur die aktuell wirksame Adresse ist beweisbar.
 			if address != store.EffectiveContactAddress(user) {
-				w.WriteHeader(400)
-				w.Write([]byte(`{"error":"token expired"}`))
+				WriteError(w, r, http.StatusBadRequest, "token_expired", nil)
 				return
 			}
 		case address != "" && pending != "":
 			if address != pending {
 				// Ein neuerer Wechsel hat die Aenderung ersetzt (AC-3).
-				w.WriteHeader(400)
-				w.Write([]byte(`{"error":"token expired"}`))
+				WriteError(w, r, http.StatusBadRequest, "token_expired", nil)
 				return
 			}
 			taken, terr := s.IsAddressTakenByOtherAccount(pending, req.User)
 			if terr != nil {
 				log.Printf("email verification: address uniqueness check failed: %v", terr)
-				w.WriteHeader(500)
-				w.Write([]byte(`{"error":"internal error"}`))
+				WriteError(w, r, http.StatusInternalServerError, "internal_error", nil)
 				return
 			}
 			if taken {
@@ -814,13 +741,11 @@ func VerifyEmailHandler(s *store.Store) http.HandlerFunc {
 				user.PendingContactAddress = ""
 				user.PendingContactField = ""
 				if err := s.SaveUser(*user); err != nil {
-					w.WriteHeader(500)
-					w.Write([]byte(`{"error":"store_error"}`))
+					WriteError(w, r, http.StatusInternalServerError, "store_error", nil)
 					return
 				}
 				s.DeleteVerificationToken(req.User)
-				w.WriteHeader(409)
-				w.Write([]byte(`{"error":"address_taken"}`))
+				WriteError(w, r, http.StatusConflict, "address_taken", nil)
 				return
 			}
 			switch user.PendingContactField {
@@ -833,8 +758,7 @@ func VerifyEmailHandler(s *store.Store) http.HandlerFunc {
 			case "email":
 				user.Email = pending
 			default:
-				w.WriteHeader(400)
-				w.Write([]byte(`{"error":"invalid token"}`))
+				WriteError(w, r, http.StatusBadRequest, "invalid_token", nil)
 				return
 			}
 			user.PendingContactAddress = ""
@@ -844,8 +768,7 @@ func VerifyEmailHandler(s *store.Store) http.HandlerFunc {
 		now := time.Now().UTC()
 		user.EmailVerifiedAt = &now
 		if err := s.SaveUser(*user); err != nil {
-			w.WriteHeader(500)
-			w.Write([]byte(`{"error":"store_error"}`))
+			WriteError(w, r, http.StatusInternalServerError, "store_error", nil)
 			return
 		}
 		s.DeleteVerificationToken(req.User)
@@ -888,15 +811,13 @@ func LogoutAllHandler(s *store.Store) http.HandlerFunc {
 		userId := middleware.UserIDFromContext(r.Context())
 		w.Header().Set("Content-Type", "application/json")
 		if userId == "" {
-			w.WriteHeader(401)
-			w.Write([]byte(`{"error":"unauthorized"}`))
+			WriteError(w, r, http.StatusUnauthorized, "unauthorized", nil)
 			return
 		}
 
 		if err := s.ClearSessions(userId); err != nil {
 			log.Printf("logout-all: allowlist clear failed for %s: %v", userId, err)
-			w.WriteHeader(500)
-			w.Write([]byte(`{"error":"store_error"}`))
+			WriteError(w, r, http.StatusInternalServerError, "store_error", nil)
 			return
 		}
 
@@ -1072,9 +993,7 @@ func GetProfileHandler(s *store.Store, admins map[string]struct{}) http.HandlerF
 		userId := middleware.UserIDFromContext(r.Context())
 		user, err := s.LoadUser(userId)
 		if err != nil || user == nil {
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(404)
-			w.Write([]byte(`{"error":"not_found"}`))
+			WriteError(w, r, http.StatusNotFound, "not_found", nil)
 			return
 		}
 
@@ -1113,9 +1032,7 @@ func UpdateProfileHandler(s *store.Store, cfg config.Config, mailLimiter *MailFl
 		userId := middleware.UserIDFromContext(r.Context())
 		user, err := s.LoadUser(userId)
 		if err != nil || user == nil {
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(404)
-			w.Write([]byte(`{"error":"not_found"}`))
+			WriteError(w, r, http.StatusNotFound, "not_found", nil)
 			return
 		}
 
@@ -1136,14 +1053,12 @@ func UpdateProfileHandler(s *store.Store, cfg config.Config, mailLimiter *MailFl
 			Language *string `json:"language"`
 		}
 		if err := json.NewDecoder(r.Body).Decode(&update); err != nil {
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(400)
-			w.Write([]byte(`{"error":"invalid request"}`))
+			WriteError(w, r, http.StatusBadRequest, "invalid_request", nil)
 			return
 		}
 		// Issue #2646: Sprachpruefung VOR jedem Schreibzugriff (strikt).
 		if update.Language != nil && !model.IsValidLanguage(*update.Language) {
-			writeInvalidLanguage(w)
+			writeInvalidLanguage(w, r)
 			return
 		}
 		noOtherField := update.Email == nil && update.DisplayName == nil && update.MailTo == nil &&
@@ -1158,9 +1073,7 @@ func UpdateProfileHandler(s *store.Store, cfg config.Config, mailLimiter *MailFl
 			if noOtherField && update.Language == nil {
 				// Nur Dismiss-Flags: Merge-Setter statt SaveUser (Fremdfelder bleiben).
 				if err := s.SetUserOnboardingFlags(userId, update.OnboardingDismissed, update.ChecklistDismissed); err != nil {
-					w.Header().Set("Content-Type", "application/json")
-					w.WriteHeader(500)
-					w.Write([]byte(`{"error":"store_error"}`))
+					WriteError(w, r, http.StatusInternalServerError, "store_error", nil)
 					return
 				}
 				if fresh, err := s.LoadUser(userId); err == nil && fresh != nil {
@@ -1190,9 +1103,7 @@ func UpdateProfileHandler(s *store.Store, cfg config.Config, mailLimiter *MailFl
 		if update.DisplayName != nil {
 			newDisplayName = strings.TrimSpace(*update.DisplayName)
 			if newDisplayName != "" && (utf8.RuneCountInString(newDisplayName) > 50 || hasControlChars(newDisplayName)) {
-				w.Header().Set("Content-Type", "application/json")
-				w.WriteHeader(400)
-				w.Write([]byte(`{"error":"invalid display_name"}`))
+				WriteError(w, r, http.StatusBadRequest, "invalid_display_name", nil)
 				return
 			}
 		}
@@ -1205,9 +1116,7 @@ func UpdateProfileHandler(s *store.Store, cfg config.Config, mailLimiter *MailFl
 		if update.SmsTo != nil {
 			newSmsTo = strings.TrimSpace(*update.SmsTo)
 			if newSmsTo != "" && !store.IsValidE164(newSmsTo) {
-				w.Header().Set("Content-Type", "application/json")
-				w.WriteHeader(400)
-				w.Write([]byte(`{"error":"invalid_sms_number"}`))
+				WriteError(w, r, http.StatusBadRequest, "invalid_sms_number", nil)
 				return
 			}
 		}
@@ -1271,9 +1180,7 @@ func UpdateProfileHandler(s *store.Store, cfg config.Config, mailLimiter *MailFl
 			}
 			fresh, ferr := s.LoadUser(userId)
 			if ferr != nil || fresh == nil {
-				w.Header().Set("Content-Type", "application/json")
-				w.WriteHeader(500)
-				w.Write([]byte(`{"error":"internal error"}`))
+				WriteError(w, r, http.StatusInternalServerError, "internal_error", nil)
 				return
 			}
 			user = fresh
@@ -1283,15 +1190,11 @@ func UpdateProfileHandler(s *store.Store, cfg config.Config, mailLimiter *MailFl
 				taken, terr := s.IsAddressTakenByOtherAccount(*update.Email, userId)
 				if terr != nil {
 					log.Printf("profile update: address uniqueness check failed: %v", terr)
-					w.Header().Set("Content-Type", "application/json")
-					w.WriteHeader(500)
-					w.Write([]byte(`{"error":"internal error"}`))
+					WriteError(w, r, http.StatusInternalServerError, "internal_error", nil)
 					return
 				}
 				if taken {
-					w.Header().Set("Content-Type", "application/json")
-					w.WriteHeader(409)
-					w.Write([]byte(`{"error":"email_taken"}`))
+					WriteError(w, r, http.StatusConflict, "email_taken", nil)
 					return
 				}
 			}
@@ -1299,15 +1202,11 @@ func UpdateProfileHandler(s *store.Store, cfg config.Config, mailLimiter *MailFl
 				taken, terr := s.IsAddressTakenByOtherAccount(*update.MailTo, userId)
 				if terr != nil {
 					log.Printf("profile update: address uniqueness check failed: %v", terr)
-					w.Header().Set("Content-Type", "application/json")
-					w.WriteHeader(500)
-					w.Write([]byte(`{"error":"internal error"}`))
+					WriteError(w, r, http.StatusInternalServerError, "internal_error", nil)
 					return
 				}
 				if taken {
-					w.Header().Set("Content-Type", "application/json")
-					w.WriteHeader(409)
-					w.Write([]byte(`{"error":"email_taken"}`))
+					WriteError(w, r, http.StatusConflict, "email_taken", nil)
 					return
 				}
 			}
@@ -1458,10 +1357,8 @@ func UpdateProfileHandler(s *store.Store, cfg config.Config, mailLimiter *MailFl
 		// teilten sich alle Nutzer den Bucket des Leerstrings und der elfte,
 		// voellig unbeteiligte bekaeme 429.
 		if sendVerification && verificationAddress != "" && !mailLimiter.Allow(userId, verificationAddress) {
-			w.Header().Set("Content-Type", "application/json")
 			w.Header().Set("Retry-After", mailLimiter.RetryAfterHeader())
-			w.WriteHeader(429)
-			w.Write([]byte(`{"error":"rate_limit_exceeded"}`))
+			WriteError(w, r, http.StatusTooManyRequests, "rate_limit_exceeded", nil)
 			return
 		}
 
@@ -1470,17 +1367,13 @@ func UpdateProfileHandler(s *store.Store, cfg config.Config, mailLimiter *MailFl
 		// verbrauchen und umgekehrt. Wie oben VOR SaveUser: bei Ablehnung
 		// bleibt kein Teilzustand zurueck (AC-6).
 		if sendSmsCode && !smsLimiter.Allow(userId, smsCodeTarget) {
-			w.Header().Set("Content-Type", "application/json")
 			w.Header().Set("Retry-After", smsLimiter.RetryAfterHeader())
-			w.WriteHeader(429)
-			w.Write([]byte(`{"error":"rate_limit_exceeded"}`))
+			WriteError(w, r, http.StatusTooManyRequests, "rate_limit_exceeded", nil)
 			return
 		}
 
 		if err := s.SaveUser(*user); err != nil {
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(500)
-			w.Write([]byte(`{"error":"store_error"}`))
+			WriteError(w, r, http.StatusInternalServerError, "store_error", nil)
 			return
 		}
 
@@ -1504,27 +1397,21 @@ func UpdateProfileHandler(s *store.Store, cfg config.Config, mailLimiter *MailFl
 	}
 }
 
-// writeInvalidLanguage: 400 {"error":"invalid_language"} (Issue #2646).
-func writeInvalidLanguage(w http.ResponseWriter) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(400)
-	w.Write([]byte(`{"error":"invalid_language"}`))
+// writeInvalidLanguage: 400 mit code invalid_language im Fehlerobjekt {code, message} (Issue #2646, #2676).
+func writeInvalidLanguage(w http.ResponseWriter, r *http.Request) {
+	WriteError(w, r, http.StatusBadRequest, "invalid_language", nil)
 }
 
 // updateLanguageOnly: Profil-PUT mit NUR language (Issue #2646) — Merge statt
 // SaveUser, danach frisch laden und Cookie setzen.
 func updateLanguageOnly(w http.ResponseWriter, r *http.Request, s *store.Store, cfg config.Config, userId, lang string) {
 	if err := s.SetUserLanguage(userId, lang); err != nil {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(500)
-		w.Write([]byte(`{"error":"store_error"}`))
+		WriteError(w, r, http.StatusInternalServerError, "store_error", nil)
 		return
 	}
 	user, err := s.LoadUser(userId)
 	if err != nil || user == nil {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(500)
-		w.Write([]byte(`{"error":"store_error"}`))
+		WriteError(w, r, http.StatusInternalServerError, "store_error", nil)
 		return
 	}
 	middleware.SetLangCookie(w, r, i18n.Parse(user.Lang()), cfg.PublicHost)
@@ -1760,41 +1647,35 @@ func ChangePasswordHandler(s *store.Store, bcryptCost int, secret, publicHost st
 			NewPassword string `json:"new_password"`
 		}
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-			w.WriteHeader(400)
-			w.Write([]byte(`{"error":"invalid request"}`))
+			WriteError(w, r, http.StatusBadRequest, "invalid_request", nil)
 			return
 		}
 
 		if len(req.NewPassword) < 8 {
-			w.WriteHeader(400)
-			w.Write([]byte(`{"error":"validation failed"}`))
+			WriteError(w, r, http.StatusBadRequest, "validation_failed", nil)
 			return
 		}
 
 		user, err := s.LoadUser(userId)
 		if err != nil || user == nil {
-			w.WriteHeader(500)
-			w.Write([]byte(`{"error":"internal error"}`))
+			WriteError(w, r, http.StatusInternalServerError, "internal_error", nil)
 			return
 		}
 
 		if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(req.OldPassword)); err != nil {
-			w.WriteHeader(403)
-			w.Write([]byte(`{"error":"wrong password"}`))
+			WriteError(w, r, http.StatusForbidden, "wrong_password", nil)
 			return
 		}
 
 		newHash, err := bcrypt.GenerateFromPassword([]byte(req.NewPassword), bcryptCost)
 		if err != nil {
-			w.WriteHeader(500)
-			w.Write([]byte(`{"error":"internal error"}`))
+			WriteError(w, r, http.StatusInternalServerError, "internal_error", nil)
 			return
 		}
 
 		user.PasswordHash = string(newHash)
 		if err := s.SaveUser(*user); err != nil {
-			w.WriteHeader(500)
-			w.Write([]byte(`{"error":"internal error"}`))
+			WriteError(w, r, http.StatusInternalServerError, "internal_error", nil)
 			return
 		}
 
@@ -1814,8 +1695,7 @@ func ChangePasswordHandler(s *store.Store, bcryptCost int, secret, publicHost st
 		// bleiben.
 		if err := s.ClearSessions(userId); err != nil {
 			log.Printf("password change: allowlist clear failed for %s: %v", userId, err)
-			w.WriteHeader(500)
-			w.Write([]byte(`{"error":"internal error"}`))
+			WriteError(w, r, http.StatusInternalServerError, "internal_error", nil)
 			return
 		}
 		// Issue #2271: bewusst OHNE Bestaetigungs-Gate. Wer gerade seine
@@ -1842,8 +1722,7 @@ func RequestTierChangeHandler(s *store.Store, cfg config.Config) http.HandlerFun
 
 		user, err := s.LoadUser(userId)
 		if err != nil || user == nil {
-			w.WriteHeader(404)
-			w.Write([]byte(`{"error":"not_found"}`))
+			WriteError(w, r, http.StatusNotFound, "not_found", nil)
 			return
 		}
 
@@ -1851,21 +1730,18 @@ func RequestTierChangeHandler(s *store.Store, cfg config.Config) http.HandlerFun
 			RequestedTier string `json:"requested_tier"`
 		}
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-			w.WriteHeader(400)
-			w.Write([]byte(`{"error":"invalid request"}`))
+			WriteError(w, r, http.StatusBadRequest, "invalid_request", nil)
 			return
 		}
 
 		if req.RequestedTier != "free" && req.RequestedTier != "standard" && req.RequestedTier != "premium" {
-			w.WriteHeader(400)
-			w.Write([]byte(`{"error":"invalid_tier"}`))
+			WriteError(w, r, http.StatusBadRequest, "invalid_tier", nil)
 			return
 		}
 
 		currentTier := model.EffectiveTier(user.Tier)
 		if req.RequestedTier == currentTier {
-			w.WriteHeader(400)
-			w.Write([]byte(`{"error":"already_current_tier"}`))
+			WriteError(w, r, http.StatusBadRequest, "already_current_tier", nil)
 			return
 		}
 
@@ -1875,8 +1751,7 @@ func RequestTierChangeHandler(s *store.Store, cfg config.Config) http.HandlerFun
 		// Ein alter Nachweis gilt nie fuer einen neuen Antrag (Issue #2436 AC-5).
 		user.RequestedNotifiedAt = nil
 		if err := s.SaveUser(*user); err != nil {
-			w.WriteHeader(500)
-			w.Write([]byte(`{"error":"store_error"}`))
+			WriteError(w, r, http.StatusInternalServerError, "store_error", nil)
 			return
 		}
 

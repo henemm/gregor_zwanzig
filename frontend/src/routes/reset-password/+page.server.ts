@@ -36,7 +36,7 @@ export const actions = {
 		if (!resp.ok) {
 			const body = await resp.json().catch(() => ({}));
 			const msg =
-				body.error === 'token expired'
+				body.code === 'token_expired'
 					? trFor(locals.lang, 'auth.reset.fehler_token_abgelaufen')
 					: trFor(locals.lang, 'auth.reset.fehler_token_ungueltig');
 			return fail(400, { error: msg, username, token });

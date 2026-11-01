@@ -135,8 +135,8 @@ func TestLoginHandler_TraversalUsername_RejectedSameAsUnknownUser_AC1(t *testing
 	if wAttack.Code != 401 {
 		t.Errorf("AC-1: expected 401 for traversal username, got %d: %s", wAttack.Code, wAttack.Body.String())
 	}
-	if wAttack.Body.String() != `{"error":"invalid credentials"}` {
-		t.Errorf("AC-1: expected body '{\"error\":\"invalid credentials\"}', got %q", wAttack.Body.String())
+	if fehlerCodeVon(wAttack) != "invalid_credentials" {
+		t.Errorf("AC-1: expected code invalid_credentials, got %q", wAttack.Body.String())
 	}
 	if wAttack.Code != wUnknown.Code || wAttack.Body.String() != wUnknown.Body.String() {
 		t.Errorf("AC-1: traversal response must be byte-identical to unknown-user response: attack=%d %q vs unknown=%d %q",
@@ -168,8 +168,8 @@ func TestLoginHandler_TraversalUsersBobPayload_CanImpersonateRealUser_AC1(t *tes
 	if w.Code == 200 {
 		t.Errorf("AC-1 (Cross-User): '../users/bob' + bob's real password IMPERSONATES the real second user — got 200: %s", w.Body.String())
 	}
-	if w.Code != 401 || w.Body.String() != `{"error":"invalid credentials"}` {
-		t.Errorf("AC-1 (Cross-User): expected 401 {\"error\":\"invalid credentials\"} after the fix, got %d %q", w.Code, w.Body.String())
+	if w.Code != 401 || fehlerCodeVon(w) != "invalid_credentials" {
+		t.Errorf("AC-1 (Cross-User): expected 401 code invalid_credentials after the fix, got %d %q", w.Code, w.Body.String())
 	}
 }
 
@@ -316,8 +316,8 @@ func TestResetPassword_TraversalUsername_RejectedNoHashChange_AC6(t *testing.T) 
 	w := httptest.NewRecorder()
 	h.ServeHTTP(w, req)
 
-	if w.Code != 400 || w.Body.String() != `{"error":"invalid token"}` {
-		t.Errorf("AC-6: expected 400 {\"error\":\"invalid token\"}, got %d %q", w.Code, w.Body.String())
+	if w.Code != 400 || fehlerCodeVon(w) != "invalid_token" {
+		t.Errorf("AC-6: expected 400 code invalid_token, got %d %q", w.Code, w.Body.String())
 	}
 
 	victimUserData := readFileOrEmpty(t, filepath.Join(victimDir, "user.json"))
@@ -367,8 +367,8 @@ func TestResetPassword_TraversalUsersBobPayload_HitsRealSecondUser_AC6(t *testin
 	if w.Code == 200 {
 		t.Errorf("AC-6 (Cross-User): '../users/bob' + bob's own valid token changed the REAL user's password — got 200: %s", w.Body.String())
 	}
-	if w.Code != 400 || w.Body.String() != `{"error":"invalid token"}` {
-		t.Errorf("AC-6 (Cross-User): expected 400 {\"error\":\"invalid token\"} after the fix, got %d %q", w.Code, w.Body.String())
+	if w.Code != 400 || fehlerCodeVon(w) != "invalid_token" {
+		t.Errorf("AC-6 (Cross-User): expected 400 code invalid_token after the fix, got %d %q", w.Code, w.Body.String())
 	}
 
 	contentAfter := readFileOrEmpty(t, bobFile)
@@ -449,8 +449,8 @@ func TestVerifyEmail_TraversalUsername_RejectedNoVerification_AC8(t *testing.T) 
 	w := httptest.NewRecorder()
 	h.ServeHTTP(w, req)
 
-	if w.Code != 400 || w.Body.String() != `{"error":"invalid token"}` {
-		t.Errorf("AC-8: expected 400 {\"error\":\"invalid token\"}, got %d %q", w.Code, w.Body.String())
+	if w.Code != 400 || fehlerCodeVon(w) != "invalid_token" {
+		t.Errorf("AC-8: expected 400 code invalid_token, got %d %q", w.Code, w.Body.String())
 	}
 
 	victimUserData := readFileOrEmpty(t, filepath.Join(victimDir, "user.json"))
@@ -496,8 +496,8 @@ func TestVerifyEmail_TraversalUsersBobPayload_HitsRealSecondUser_AC8(t *testing.
 	if w.Code == 200 {
 		t.Errorf("AC-8 (Cross-User): '../users/bob' + bob's own valid token verified the REAL user's email — got 200: %s", w.Body.String())
 	}
-	if w.Code != 400 || w.Body.String() != `{"error":"invalid token"}` {
-		t.Errorf("AC-8 (Cross-User): expected 400 {\"error\":\"invalid token\"} after the fix, got %d %q", w.Code, w.Body.String())
+	if w.Code != 400 || fehlerCodeVon(w) != "invalid_token" {
+		t.Errorf("AC-8 (Cross-User): expected 400 code invalid_token after the fix, got %d %q", w.Code, w.Body.String())
 	}
 
 	realBob, err := s.LoadUser("bob")

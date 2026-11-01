@@ -53,6 +53,7 @@
 | Magic-Link | magic link | |
 | Passkey | passkey | |
 | Stufe (Alarm/Warnung) | level | Warnstufe = *warning level* |
+| Level (Tarifstufe) | level | Kontostufe; Tarif-Begriffe ergänzt G3 (#2677) |
 | Schwelle | threshold | |
 | Aktivitätsprofil | activity profile | Werte: *general*, *hiking*, *mountaineering*, … (Register prüfen) |
 | Stundenverlauf | hourly view | Abschnitt im Ortsvergleich; Abschnittskopf „STUNDEN" = *HOURLY* (#2666) |

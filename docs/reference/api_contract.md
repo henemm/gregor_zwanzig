@@ -3180,13 +3180,13 @@ User registration with username + password + email (HTTP 201 on success, 409 if 
 
 | Status | Body | Scenario |
 |--------|------|----------|
-| 400 | `{"error":"invalid request"}` | JSON malformed (`internal/handler/auth.go:36`) |
-| 400 | `{"error":"validation failed"}` | username/password missing, too short, or wrong format (auth.go:43-56) |
-| 409 | `{"error":"user already exists"}` | User with this ID already registered (auth.go:62-67 — Klartext mit Leerzeichen, KEIN snake_case; checked before email validation) |
-| 400 | `{"error":"validation failed"}` | `email` missing (auth.go:75-79) |
+| 400 | `{"code":"invalid_request"}` | JSON malformed (`internal/handler/auth.go:36`) |
+| 400 | `{"code":"validation_failed"}` | username/password missing, too short, or wrong format (auth.go:43-56) |
+| 409 | `{"code":"user_already_exists"}` | User with this ID already registered (auth.go:62-67; geprüft vor der E-Mail-Validierung) |
+| 400 | `{"code":"validation_failed"}` | `email` missing (auth.go:75-79) |
 | 400 | `{"error":"invalid_email"}` | `email` present but without `@` (auth.go:81-85) |
 | 409 | `{"error":"email_taken"}` | `email` bereits von einem anderen, echten Konto (in `email` oder `mail_to`) getragen (Issue #2147 Scheibe B1) — kein Konto wird angelegt, keine Verifikationsmail |
-| 500 | `{"error":"internal error"}` / `{"error":"store_error"}` | Hashing-/Persistenz-Fehler oder Lesefehler bei der Adress-Eindeutigkeitsprüfung (fail-closed) (auth.go:88-93,102-106) |
+| 500 | `{"code":"internal_error"}` / `{"error":"store_error"}` | Hashing-/Persistenz-Fehler oder Lesefehler bei der Adress-Eindeutigkeitsprüfung (fail-closed) (auth.go:88-93,102-106) |
 
 Since Issue #1226, a valid `email` also triggers the existing `dispatchVerificationMail` helper (from #1219) after account creation — same Double-Opt-In flow as profile email changes. Google-OAuth account creation (`createOAuthUser`) and passkey-public account creation (`PasskeyRegisterPublicFinishHandler`) trigger the same dispatch on first-time account creation (not on existing-user login).
 
@@ -3211,13 +3211,13 @@ User login with username + password, returns session cookie.
 
 | Status | Body | Scenario |
 |--------|------|----------|
-| 400 | `{"error":"invalid request"}` | JSON malformed (auth.go:124 — Klartext, KEIN snake_case) |
-| 401 | `{"error":"invalid credentials"}` | User not found or password incorrect — same message for both (auth.go:132,139; Klartext mit Leerzeichen) |
+| 400 | `{"code":"invalid_request"}` | JSON malformed (auth.go:124) |
+| 401 | `{"code":"invalid_credentials"}` | User not found or password incorrect — same message for both (auth.go:132,139) |
 
 #### POST /api/auth/magic-link
 
 Fordert einen 6-stelligen Anmeldecode (15 Min gültig) für `{"email": "..."}` an. Antwort **immer**
-`200 {"status":"ok"}` (keine Konto-Enumeration); `400 {"error":"invalid request"}` nur bei leerem
+`200 {"status":"ok"}` (keine Konto-Enumeration); `400 {"code":"invalid_request"}` nur bei leerem
 Body/leerer Adresse. **Legt kein Konto an** (seit #2147). Der Code geht über den
 Bestätigungsmail-Weg (Resend-Sonderpfad ohne Empfänger-Allowlist), weil er wie die
 Bestätigungsmail ein Adressnachweis ist. Adressen werden per `TrimSpace + ToLower` normalisiert.
@@ -3240,10 +3240,10 @@ genau einmal (auch bei gleichzeitigen Anfragen). Erst hier wird die Adresse X ei
 
 | Status | Body | Scenario |
 |--------|------|----------|
-| 400 | `{"error":"invalid request"}` | JSON malformed, Adresse oder Code leer |
+| 400 | `{"code":"invalid_request"}` | JSON malformed, Adresse oder Code leer |
 | 400 | `{"error":"invalid_or_expired_code"}` | Kein/abgelaufener/falscher/verbrauchter Code **oder** Adresse nicht eindeutig zuordenbar |
 | 400 | `{"error":"max_attempts_exceeded"}` | 3 Fehlversuche |
-| 500 | `{"error":"internal error"}` | Konten nicht lesbar / Anlage oder Bestätigung fehlgeschlagen |
+| 500 | `{"code":"internal_error"}` | Konten nicht lesbar / Anlage oder Bestätigung fehlgeschlagen |
 
 ### B) Passkey Authentication (WebAuthn/FIDO2)
 
@@ -3703,7 +3703,7 @@ Returns updated profile object (same as `GET /api/auth/profile`).
 | 401 | (via `AuthMiddleware`) | No valid session cookie or session expired |
 | 409 | `{"error":"email_taken"}` | changed `email`/`mail_to` already belongs to another real account (Issue #2147 Scheibe B1) — entire update discarded, nothing saved |
 | 429 | `{"error":"rate_limit_exceeded"}` with `Retry-After` header | Issue #2404: das interne `MailFloodLimiter`-Kontingent (10 Bestätigungsmails/Stunde je User-ID UND je Zieladresse, unabhängig gezählt) ist ausgeschöpft, wenn diese Anfrage eine wirksame Adressänderung auslösen würde — der **gesamte** Request wird verworfen, `SaveUser` läuft nicht, auch harmlose Felder im selben Request (z. B. `display_name`) bleiben unverändert |
-| 500 | `{"error":"internal error"}` | Lesefehler bei der Adress-Eindeutigkeitsprüfung (fail-closed, Issue #2147 Scheibe B1) |
+| 500 | `{"code":"internal_error"}` | Lesefehler bei der Adress-Eindeutigkeitsprüfung (fail-closed, Issue #2147 Scheibe B1) |
 
 #### POST /api/internal/telegram-connect
 
@@ -3840,7 +3840,7 @@ verändert — Freigabe erfolgt weiterhin manuell durch den PO.
 
 | Status | Body | Scenario |
 |--------|------|----------|
-| 400 | `{"error":"invalid request"}` | JSON not decodable |
+| 400 | `{"code":"invalid_request"}` | JSON not decodable |
 | 400 | `{"error":"invalid_tier"}` | `requested_tier` not one of `free`/`standard`/`premium` |
 | 400 | `{"error":"already_current_tier"}` | `requested_tier` equals the user's current effective `tier` |
 | 404 | `{"error":"not_found"}` | No user found for the authenticated `user_id` |
@@ -3879,7 +3879,7 @@ Nutzers (persistiert in `data/telegram_tokens.json`), Login-OTPs für `email`, `
 | 403 | `{"error":"invalid_code"}` | Lösch-Code falsch, abgelaufen (15 min), verbraucht oder nach 3 Fehlversuchen gesperrt |
 | 404 | `{"error":"not_found"}` | Nutzer existiert nicht (mehr) |
 | 429 | `{"error":"rate_limit_exceeded"}` | mehr als 5 Aufrufe je IP in 15 min (geteilte IP-Middleware) |
-| 500 | `{"error":"internal"}` | Token-Store oder Ordner nicht löschbar — Ordner bleibt, Löschung wiederholbar |
+| 500 | `{"code":"internal_error"}` | Token-Store oder Ordner nicht löschbar — Ordner bleibt, Löschung wiederholbar |
 
 **POST /api/auth/account/delete-code** — verschickt einen 6-stelligen Lösch-Code
 ausschließlich an die wirksame Adresse (`mail_to`, sonst `email`; nie an
@@ -3945,8 +3945,8 @@ aus dem Profil.
 
 | Status | Body | Scenario |
 |--------|------|----------|
-| 400 | `{"error":"invalid token"}` | Token-Hash passt nicht zum gespeicherten Token (und keine ausstehende Änderung liegt vor) |
-| 400 | `{"error":"token expired"}` | Token abgelaufen, ODER (Issue #2147 Scheibe B2) das adressgebundene Token wurde durch eine neuere Adressänderung bereits ersetzt |
+| 400 | `{"code":"invalid_token"}` | Token-Hash passt nicht zum gespeicherten Token (und keine ausstehende Änderung liegt vor) |
+| 400 | `{"code":"token_expired"}` | Token abgelaufen, ODER (Issue #2147 Scheibe B2) das adressgebundene Token wurde durch eine neuere Adressänderung bereits ersetzt |
 | 409 | `{"error":"address_taken"}` | Issue #2147 Scheibe B2: die ausstehende Zieladresse wurde zwischen Anfordern und Einlösen des Links einem anderen, echten Konto zugeordnet — die ausstehende Änderung wird verworfen, nichts übernommen |
 
 Details zur B2-Fallunterscheidung (Alt-Token ohne Adresse, adressgebundenes Token, erneute
@@ -4039,11 +4039,11 @@ Zeitstempel anzurühren).
 
 | Status | Body | Scenario |
 |--------|------|----------|
-| 400 | `{"error":"invalid request"}` | JSON nicht dekodierbar, `username` leer, oder pfad-unsichere Kennung (`store.ValidUserID`) |
+| 400 | `{"code":"invalid_request"}` | JSON nicht dekodierbar, `username` leer, oder pfad-unsichere Kennung (`store.ValidUserID`) |
 | 401 | (via `AuthMiddleware`) | Kein gültiges Session-Cookie |
 | 404 | `{"error":"unknown user"}` | Kein Konto zu `username` gefunden |
 | 404 | (Chi-Default, kein JSON-Body) | Route nicht registriert — jeder Aufruf außerhalb von `GZ_ENV=staging`, insbesondere Produktion |
-| 500 | `{"error":"internal error"}` | Token-Erzeugung fehlgeschlagen |
+| 500 | `{"code":"internal_error"}` | Token-Erzeugung fehlgeschlagen |
 
 **Notes:**
 - Ein angemeldeter Staging-Nutzer kann über diesen Weg ein Token für ein beliebiges fremdes

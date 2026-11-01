@@ -159,7 +159,7 @@ const SEITEN_EN: Array<{ name: string; datei: string; props: () => Promise<Recor
 			form: await formAus(
 				'verify-email/+page.server.ts',
 				{ user: 'anna', token: 'abc' },
-				{ status: 400, body: { error: 'token expired' } }
+				{ status: 400, body: { code: 'token_expired', error: 'token_expired' } }
 			),
 			data: { user: 'anna', token: 'abc' }
 		})
@@ -217,7 +217,7 @@ const ACTIONS_FAELLE: Array<{
 		name: 'reset_token_abgelaufen',
 		datei: 'reset-password/+page.server.ts',
 		felder: { username: 'anna', token: 't', new_password: 'langesPasswort1' },
-		antwort: { status: 400, body: { error: 'token expired' } },
+		antwort: { status: 400, body: { code: 'token_expired', error: 'token_expired' } },
 		de: 'Token abgelaufen',
 		key: 'auth.reset.fehler_token_abgelaufen'
 	},
@@ -281,7 +281,7 @@ const ACTIONS_FAELLE: Array<{
 		name: 'bestaetigen_link_abgelaufen',
 		datei: 'verify-email/+page.server.ts',
 		felder: { user: 'anna', token: 't' },
-		antwort: { status: 400, body: { error: 'token expired' } },
+		antwort: { status: 400, body: { code: 'token_expired', error: 'token_expired' } },
 		de: 'Der Bestätigungslink ist abgelaufen. Bitte ändere deine Adresse erneut, um einen neuen Link zu erhalten.',
 		key: 'auth.bestaetigen.fehler_abgelaufen'
 	},

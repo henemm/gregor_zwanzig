@@ -46,7 +46,7 @@ export const actions = {
 				});
 			}
 			const msg =
-				body.error === 'token expired'
+				body.code === 'token_expired'
 					? trFor(locals.lang, 'auth.bestaetigen.fehler_abgelaufen')
 					: trFor(locals.lang, 'auth.bestaetigen.fehler_ungueltig');
 			return fail(400, { error: msg, user, token });

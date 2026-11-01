@@ -48,23 +48,23 @@ func AdminCreateInviteHandler(inv *store.InviteStore, publicHost string) http.Ha
 			Note string `json:"note"`
 		}
 		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-			adminError(w, http.StatusBadRequest, "invalid_request")
+			WriteError(w, r, http.StatusBadRequest, "invalid_request", nil)
 			return
 		}
 		switch body.Tier {
 		case "free", "standard", "premium":
 		default:
-			adminError(w, http.StatusBadRequest, "invalid_tier")
+			WriteError(w, r, http.StatusBadRequest, "invalid_tier", nil)
 			return
 		}
 		if utf8.RuneCountInString(body.Note) > inviteNoteMaxLen {
-			adminError(w, http.StatusBadRequest, "note_too_long")
+			WriteError(w, r, http.StatusBadRequest, "note_too_long", nil)
 			return
 		}
 		created, token, err := inv.Create(body.Tier, body.Note, middleware.UserIDFromContext(r.Context()))
 		if err != nil {
 			log.Printf("admin invites: create failed: %v", err)
-			adminError(w, http.StatusInternalServerError, "store_error")
+			WriteError(w, r, http.StatusInternalServerError, "store_error", nil)
 			return
 		}
 		log.Printf("admin invites: created %s tier=%s by=%s", created.ID, created.Tier, created.CreatedBy)
@@ -94,14 +94,14 @@ func AdminRevokeInviteHandler(inv *store.InviteStore) http.HandlerFunc {
 		switch err := inv.Revoke(id); err {
 		case nil:
 		case store.ErrInviteNotFound:
-			adminError(w, http.StatusNotFound, "not_found")
+			WriteError(w, r, http.StatusNotFound, "not_found", nil)
 			return
 		case store.ErrInviteUsed:
-			adminError(w, http.StatusConflict, "invite_used")
+			WriteError(w, r, http.StatusConflict, "invite_used", nil)
 			return
 		default:
 			log.Printf("admin invites: revoke %s failed: %v", id, err)
-			adminError(w, http.StatusInternalServerError, "store_error")
+			WriteError(w, r, http.StatusInternalServerError, "store_error", nil)
 			return
 		}
 		log.Printf("admin invites: revoked %s", id)
@@ -111,7 +111,7 @@ func AdminRevokeInviteHandler(inv *store.InviteStore) http.HandlerFunc {
 				return
 			}
 		}
-		adminError(w, http.StatusInternalServerError, "store_error")
+		WriteError(w, r, http.StatusInternalServerError, "store_error", nil)
 	}
 }
 
@@ -125,13 +125,13 @@ func InviteCheckHandler(inv *store.InviteStore) http.HandlerFunc {
 		}
 		r.Body = http.MaxBytesReader(w, r.Body, 4096)
 		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-			adminError(w, http.StatusBadRequest, "invalid_request")
+			WriteError(w, r, http.StatusBadRequest, "invalid_request", nil)
 			return
 		}
 		if i, ok := inv.Peek(body.Token); ok {
 			adminJSON(w, http.StatusOK, map[string]string{"tier": i.Tier})
 			return
 		}
-		adminError(w, http.StatusNotFound, "invite_invalid")
+		WriteError(w, r, http.StatusNotFound, "invite_invalid", nil)
 	}
 }

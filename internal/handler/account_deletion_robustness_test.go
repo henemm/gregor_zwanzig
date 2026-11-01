@@ -111,7 +111,7 @@ func TestKontoLoeschen_DeleteUserScheitert_500OrdnerBleibt(t *testing.T) {
 	t.Cleanup(func() { os.Chmod(dir, 0755) })
 
 	w := postKontoLoeschen(DeleteAccountHandler(s, NewTelegramTokenStore(t.TempDir())), "anna", `{"password":"`+loeschPasswort+`"}`)
-	if w.Code != 500 || !strings.Contains(w.Body.String(), `"internal"`) {
+	if w.Code != 500 || !strings.Contains(w.Body.String(), `"internal_error"`) {
 		t.Fatalf("expected 500 internal, got %d: %s", w.Code, w.Body.String())
 	}
 	if u, err := s.LoadUser("anna"); err != nil || u == nil {
