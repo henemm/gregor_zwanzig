@@ -37,6 +37,23 @@ export function fmtDate(d: Date, lang: Lang, style: 'kurz' | 'lang'): string {
 	return `${fmtWeekday(d, 'de')} ${zwei(tag)}.${zwei(monat + 1)}.`;
 }
 
+// Issue #2651 (F2): Tag/Monat/Jahr in der Zone Europe/Berlin (nur Ziffern aus
+// Intl, Monatskuerzel aus der eigenen Tabelle).
+const BERLIN = new Intl.DateTimeFormat('en-US', {
+	timeZone: 'Europe/Berlin',
+	day: 'numeric',
+	month: 'numeric',
+	year: 'numeric'
+});
+
+/** Datum in Europe/Berlin: `30.10.2026` | `30 Oct 2026`. */
+export function fmtDateNumeric(d: Date, lang: Lang): string {
+	const teil = (typ: string) => Number(BERLIN.formatToParts(d).find((p) => p.type === typ)?.value);
+	const [tag, monat, jahr] = [teil('day'), teil('month'), teil('year')];
+	if (lang === 'en') return `${tag} ${MONAT_KURZ_EN[monat - 1]} ${jahr}`;
+	return `${zwei(tag)}.${zwei(monat)}.${jahr}`;
+}
+
 /** `14:30` (24 h, beide Sprachen). */
 export function fmtTime(d: Date): string {
 	return `${zwei(d.getHours())}:${zwei(d.getMinutes())}`;
