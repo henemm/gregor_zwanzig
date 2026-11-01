@@ -2995,7 +2995,12 @@ Pause-Flag (`manual` = pausiert). Details: `docs/specs/modules/compare_preset_ze
 
 Prüft für jeden Nutzer alle Compare-Presets auf Slot-Fälligkeit zur aktuellen Stunde
 (optionaler Query-Parameter `hour`, Default: aktuelle Stunde Europe/Vienna — Muster
-`trigger_trip_reports`). Fällige Presets: Morgen-Slot → Compare Engine mit `target_date=heute`,
+`trigger_trip_reports`). Ein Preset ist ab der Slot-Stunde (Ortszeit) 3 Stunden lang fällig
+(`stunde <= ortsstunde < stunde+3`, Prädikat geteilt mit dem Trip, #1777); ein Idempotenz-Vermerk je
+(Vergleich, Slot, Ortstag, Zone) in `data/users/<id>/briefing_slots_compare.json` verhindert
+Doppelversand. Vermerkt werden die Ausgänge `sent`, `no_channels`, `no_weather`;
+`channels_unreachable` und Ausnahmen geben den Slot frei. Ein Speicherfehler im Vermerk zählt nur den
+betroffenen Vergleich als `failed`. Fällige Presets: Morgen-Slot → Compare Engine mit `target_date=heute`,
 Abend-Slot → `target_date=morgen`. Guards vor Versand: siehe `compare_alert_guard.is_silenced()`
 (Issue #1467 S2 AG6: `paused_at` gesetzt, `schedule=="manual"`, oder `archived_at` gesetzt);
 zusätzlich `end_date` gesetzt und in der Vergangenheit. Rendert/sendet E-Mails,
@@ -4328,7 +4333,7 @@ Kind-neutral delivery log (#2281) for a trip (`kind=route`) or a location compar
 
 **Status codes:** 401 without user; 400 for missing/invalid `kind` or invalid ID; 200 `[]` for unknown ID.
 
-**Log entry storage** (`briefing_log.json` per user): each entry carries `entity_type` (`"trip"` | `"compare"`) and `entity_id`. Legacy entries without `entity_*` are read by Go with `EntityID := TripID`, `EntityType := "trip"` (in-memory only, `internal/store/log.go`). Archive statistics count briefings per `"<type>:<id>"` (`BriefingCountByEntity`). The double-send guard (`briefing_slots.py`) evaluates trip entries only.
+**Log entry storage** (`briefing_log.json` per user): each entry carries `entity_type` (`"trip"` | `"compare"`) and `entity_id`. Legacy entries without `entity_*` are read by Go with `EntityID := TripID`, `EntityType := "trip"` (in-memory only, `internal/store/log.go`). Archive statistics count briefings per `"<type>:<id>"` (`BriefingCountByEntity`). The double-send guard for trips (`briefing_slots.json`) evaluates trip entries only; compare briefings have their own marker file `briefing_slots_compare.json` (#1777).
 
 **Response 200:**
 
@@ -4964,6 +4969,7 @@ Sprache ist Eigenschaft des Nutzers (ADR-0104); Werte `de`/`en`, Standard `de`. 
   unverbunden** von `hail_flag` (#1475 S5a) und `hail_potential_grau_gsp` (DWD) — keine
   Kombination, keine Schwellen-/Flag-Ableitung, kein Renderer-Anschluss (Known Limitation).
   Details: `docs/specs/modules/feat_1507_s5c_hagel_mf_fr.md`.
+- 2026-11-01: Issue #1777 — `POST /api/scheduler/compare-presets-daily`: Fälligkeit jetzt als 3-Stunden-Fenster ab Slot-Stunde (statt exakter Stunde), Idempotenz-Vermerk `briefing_slots_compare.json`. Keine Schemaänderung der Response. Details: `docs/specs/modules/fix_1777_compare_faelligkeit_und_idempotenz.md`.
 - 2026-09-19: Issue #2151 Scheibe A — `user_id` wird in den Routen `POST /api/scheduler/trips/{trip_id}/send` und `POST /api/scheduler/compare-presets/{preset_id}/send` zur Pflicht (kein Default mehr); fehlender Parameter → HTTP 422. Details: `docs/specs/modules/fix_2151_default_fallbacks_scheibe_a.md`.
 - 2026-09-15: Issue #2136/ADR-0068 — **kein neues Feld**, Korrektur einer Aussage in Section 19:
   die Spaltenköpfe des 3-Tages-Ausblicks (Trip UND Ortsvergleich, HTML + Klartext) kommen jetzt

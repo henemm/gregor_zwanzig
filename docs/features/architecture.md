@@ -68,7 +68,11 @@ Das Backend besteht aus zwei klar getrennten Schichten (siehe `docs/adr/0015-dua
 (kein APScheduler o. ä.); er stellt je Job einen `POST /api/scheduler/<job>`-Endpunkt
 (`api/routers/scheduler.py`) und entscheidet dort selbst die **Fälligkeit** (welcher Trip/Vergleich
 in seiner Ortszeit jetzt dran ist: `trip_report_scheduler.py`, `compare_slot_scheduler.py`,
-Idempotenz `briefing_slots.py`), rendert und versendet.
+Idempotenz `briefing_slots.py`), rendert und versendet. Trip **und** Ortsvergleich sind ab der
+Slot-Stunde (Ortszeit) 3 Stunden lang fällig (gemeinsames Fensterprädikat, fängt ausgefallene oder
+doppelte Ticks an Zeitumstellungstagen auf); Doppelversand verhindert je ein Vermerk
+(`briefing_slots.json` Trip, `briefing_slots_compare.json` Ortsvergleich je Vergleich/Slot/Ortstag/Zone,
+#1777).
 
 | Go-Job (`jobID`) | Takt | Python-Endpunkt | Aufruf |
 |---|---|---|---|

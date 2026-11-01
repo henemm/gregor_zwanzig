@@ -358,28 +358,55 @@ def test_ac2_keine_kanaele_konfiguriert_hinterlaesst_keinen_vermerk(aus):
     )
 
 
-@pytest.mark.parametrize("ausfall", ["fehler_je_ort", "ausnahme_ueberall"])
-def test_ac2_keine_wetterdaten_hinterlassen_keinen_vermerk(aus, monkeypatch, ausfall):
-    """AC-2 (negativ, Bestandsabsicherung).
+def test_ac2_keine_wetterdaten_im_cron_hinterlassen_slot_vermerk_und_nachhol_vermerk(aus, monkeypatch):
+    """AC-2 (negativ) — abgeloest durch #1777 AC-12 (Spec fix_1777,
+    „no_weather im Cron"; Trip-Paritaet).
 
     GIVEN ein Ortsvergleich, dessen Wetterabruf an jedem Ort scheitert
-          (``LocationResult(error=...)`` bzw. eine durchschlagende Ausnahme).
+          (``LocationResult(error=...)`` -> ``no_weather``).
     WHEN  der Scheduler-Lauf beendet ist.
-    THEN  entsteht KEIN Vermerk (no_weather liegt ausserhalb dieser Scheibe;
-          ein zu breit gesetzter Haken in ``_dispatch_due_preset`` faellt hier auf).
+    THEN  nichts geht hinaus, der Slot ist mit ``no_weather`` vermerkt
+          (``briefing_slots_compare.json``) UND es liegt genau ein Nachhol-
+          Vermerk (morning, D, 07) vor — ein kurzer Wetterausfall laesst den
+          Vergleich nicht mehr ersatzlos ausfallen. Frueher galt hier „no_weather
+          erzeugt keinen Vermerk".
     """
     uid = _nutzer()
-    _vergleich(uid, _pid("ac2-ohne-wetter"))
-    if ausfall == "fehler_je_ort":
-        hv.wetter_fehlt_je_ort(monkeypatch)
-    else:
-        hv.wetter_faellt_ueberall_aus(monkeypatch)
+    pid = _vergleich(uid, _pid("ac2-ohne-wetter"))
+    hv.wetter_fehlt_je_ort(monkeypatch)
+
+    _lauf(uid, _utc(D, 7))
+
+    assert aus.mit.kanaele == [], aus.mit
+    assert _schluessel(uid) == {(pid, "morning", D.isoformat(), 7)}, (
+        f"#1777 AC-12: no_weather im Cron muss einen Nachhol-Vermerk schreiben: {_ablage(uid)!r}"
+    )
+    slots = get_data_dir(uid) / "briefing_slots_compare.json"
+    eintraege = json.loads(slots.read_text()).get("entries", []) if slots.exists() else []
+    assert [(e.get("preset_id"), e.get("slot"), e.get("local_day"), e.get("outcome"))
+            for e in eintraege] == [(pid, "morning", D.isoformat(), "no_weather")], (
+        f"#1777 AC-11/AC-12: der Slot ist mit no_weather vermerkt: {eintraege!r}"
+    )
+
+
+def test_ac2_wetter_ausnahme_ueberall_hinterlaesst_keinen_vermerk(aus, monkeypatch):
+    """AC-2 (negativ, Bestandsabsicherung).
+
+    GIVEN ein Ortsvergleich, dessen Wetterabruf an jedem Ort mit einer
+          durchschlagenden Ausnahme scheitert (im Cron KEIN ``no_weather``,
+          sondern die Originalausnahme, #2286 F-ADV1).
+    WHEN  der Scheduler-Lauf beendet ist.
+    THEN  entsteht KEIN Nachhol-Vermerk (#1777: sonstige Ausnahme = release).
+    """
+    uid = _nutzer()
+    _vergleich(uid, _pid("ac2-wetter-ausnahme"))
+    hv.wetter_faellt_ueberall_aus(monkeypatch)
 
     _lauf(uid, _utc(D, 7))
 
     assert aus.mit.kanaele == [], aus.mit
     assert _vergleich_vermerke(uid) == [], (
-        f"AC-2: no_weather darf keinen Vermerk erzeugen: {_ablage(uid)!r}"
+        f"AC-2: eine Wetter-Ausnahme darf keinen Vermerk erzeugen: {_ablage(uid)!r}"
     )
 
 
@@ -884,7 +911,7 @@ def test_ac11_nur_der_regulaere_erfolg_desselben_presets_und_slots_raeumt_den_ve
     assert _dispatch_due_preset(
         preset_laden(uid, pid_a), D, settings_fuer(uid), uid, str(get_data_root()),
         alle_orte(uid), tage_ab_ortstag=0,
-    ) is True, "Vorbedingung: regulaerer Versand gelungen"
+    ) == "sent", "Vorbedingung: regulaerer Versand gelungen (#1777: Ausgang statt bool)"
     assert _schluessel(uid) == vorher - {(pid_a, "morning", D.isoformat(), 7)}, (
         "AC-11: nach regulaerem Erfolg darf genau (A, Morgen) fehlen, alles andere "
         f"bleibt: {_ablage(uid)!r}"
@@ -1048,7 +1075,7 @@ def test_f004_regulaerer_erfolg_raeumt_gleichen_slot_mit_altem_zieltag_aber_kein
     assert _dispatch_due_preset(
         preset_laden(uid, pid), D, settings_fuer(uid), uid, str(get_data_root()),
         alle_orte(uid), tage_ab_ortstag=0,
-    ) is True
+    ) == "sent"  # #1777: Ausgang statt bool
     assert [_kanon(e) for e in _vergleich_vermerke(uid)] == [_kanon(anders)], _ablage(uid)
 
 

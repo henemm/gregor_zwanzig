@@ -241,13 +241,19 @@ class TestComparePresetsFilterLogic:
         assert isinstance(sent, int)
         assert isinstance(failed, int)
 
-    def test_empty_location_ids_logged_not_crashed(self, tmp_path):
+    def test_empty_location_ids_logged_not_crashed(self, tmp_path, monkeypatch):
         """
         GIVEN: Zwei daily-Presets: erstes mit leeren location_ids, zweites mit location_ids
         WHEN: _run_compare_presets_daily() aufgerufen
         THEN: Läuft durch ohne Exception, error_count reflektiert das erste Preset
+
+        Issue #1777 (AC-11): ``no_channels`` (kein Empfaenger) zaehlt neutral.
+        Der Nutzer bekommt deshalb einen Empfaenger (``mail_to``), damit das
+        Preset an der gemeinten Ursache scheitert -- den leeren location_ids.
         """
         from services.scheduler_dispatch_service import run_compare_presets_daily as _run_compare_presets_daily
+
+        monkeypatch.setenv("GZ_MAIL_TO", "gregor-test@henemm.com")
 
         # Preset mit leeren location_ids → sollte error_count erhöhen, nicht crashen
         # Issue #1726: ohne aufloesbaren Ort gibt es auch keine Ortszone, das

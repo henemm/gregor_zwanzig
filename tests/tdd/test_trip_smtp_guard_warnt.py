@@ -69,7 +69,13 @@ def test_compare_has_no_global_guard_and_counts_failed():
     """AC-11 Gegenrichtung (gruener Waechter): der Vergleichs-Versand bleibt
     OHNE globalen SMTP-Guard -- ein faelliger Vergleich wird auch ohne SMTP
     versucht, sein Scheitern zaehlt pro Vergleich als `failed` (`(0, 1)`).
-    Ein (versehentlich) eingebauter Guard lieferte `(0, 0)`."""
+    Ein (versehentlich) eingebauter Guard lieferte `(0, 0)`.
+
+    Issue #1777 (AC-11): ohne JEDEN wirksamen Kanal endet der Versuch als
+    neutrales ``no_channels``. Der Vergleich bekommt deshalb Telegram als
+    wirksamen Kanal (Preset-Opt-in + Dummy-Bot-Konfiguration), waehrend SMTP
+    weiter fehlt -- so scheitert er an der gemeinten Ursache, dem nicht
+    aufloesbaren Ort, und das vor jedem Netzkontakt."""
     from app.loader import get_data_dir, get_data_root
     from services.dispatch_orchestrator import run_briefing_dispatch
 
@@ -81,13 +87,18 @@ def test_compare_has_no_global_guard_and_counts_failed():
     write_compare_briefings(user_dir, [{
         "id": "cp-ohne-ort", "name": "Ohne Ort", "location_ids": ["loc-fehlt"],
         "schedule": "daily", "profil": "ALLGEMEIN", "morning_time": "07:00:00",
-        "created_at": "2026-01-01T00:00:00Z",
+        "created_at": "2026-01-01T00:00:00Z", "send_telegram": True,
     }])
     now_utc = utc_moment(datetime.now(timezone.utc).date(), 7)
+    settings = _settings_ohne_smtp(user_id).model_copy(update={
+        "telegram_bot_token": "dummy-token", "telegram_chat_id": "1",
+    })
+    assert settings.can_send_email() is False, "Praemisse: SMTP muss fehlen"
+    assert settings.can_send_telegram() is True, "Praemisse: Telegram wirksam"
 
     result = run_briefing_dispatch(
         "vergleich", user_id, now_utc, data_root=str(get_data_root()),
-        settings=_settings_ohne_smtp(user_id),
+        settings=settings,
     )
 
     assert result == (0, 1), (

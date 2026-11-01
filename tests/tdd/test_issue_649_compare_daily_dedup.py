@@ -152,10 +152,15 @@ class TestComparePresetsDailyDedup:
 
         Zwei daily-Presets, beide mit nicht auflösbaren Orten → beide werden
         übersprungen, success_count == 0, KEINE Exception nach außen.
+
+        Issue #1777 (AC-11): ``no_channels`` (kein Empfaenger) zaehlt neutral.
+        Der Nutzer bekommt deshalb einen Empfaenger, damit beide Presets an der
+        gemeinten Ursache scheitern -- den nicht aufloesbaren Orten.
         """
         from services.scheduler_dispatch_service import run_compare_presets_daily as _run_compare_presets_daily
 
         user_id = _fresh_user()
+        _write_recipient_profile(user_id)
         presets = [
             _daily_preset(preset_id="cp-bad-1"),
             _daily_preset(preset_id="cp-bad-2"),
@@ -189,20 +194,35 @@ class TestComparePresetsDailyDedup:
             "manual-Preset muss still übersprungen werden (kein Log-Eintrag)"
         )
 
-    def test_no_recipient_is_skipped_not_crashed(self, tmp_path):
+    def test_no_recipient_is_skipped_not_crashed(self, tmp_path, caplog):
         """AC-5: Preset ohne Empfänger + ohne mail_to wird übersprungen, kein Crash.
 
         Der Helper wirft hierfür ValueError; die Loop muss diese fangen und das
         Preset überspringen (success_count unverändert), nicht abbrechen.
+
+        Issue #1777 (AC-11): der Ausgang ``no_channels`` (kein Empfaenger)
+        zaehlt seither neutral wie beim Trip (#2218) -- ``(0, 0)`` statt
+        ``(0, 1)``. Damit der Test nicht leer besteht, belegt das Log, dass der
+        Versuch stattfand und genau an "kein Empfaenger" endete.
         """
         from services.scheduler_dispatch_service import run_compare_presets_daily as _run_compare_presets_daily
 
         user_id = _fresh_user()
+        # mail_to ausdruecklich leer im Profil -- unabhaengig von einer
+        # lokalen .env (GZ_MAIL_TO), die sonst als Rueckfall durchschluege.
+        _write_recipient_profile(user_id, mail_to=None)
         preset = _daily_preset(preset_id="cp-no-rcpt")
-        preset["empfaenger"] = []  # kein Empfänger; frischer User hat kein mail_to
+        preset["empfaenger"] = []  # kein Empfänger, kein mail_to
         _write_presets(tmp_path, user_id, [preset])
 
-        count = _run_compare_presets_daily(user_id=user_id, data_root=str(tmp_path), hour=6)
-        # Issue #1290 (E1, Revision): fehlender Empfaenger ist ein echter
-        # Fehlschlag (ValueError aus dem Helper) -- zaehlt seither in failed.
-        assert count == (0, 1)
+        with caplog.at_level(logging.WARNING):
+            count = _run_compare_presets_daily(user_id=user_id, data_root=str(tmp_path), hour=6)
+        assert count == (0, 0)
+        empfaenger_logs = [
+            r.getMessage() for r in caplog.records
+            if "cp-no-rcpt" in r.getMessage() and "kein Empfaenger" in r.getMessage()
+        ]
+        assert empfaenger_logs, (
+            "Der Versuch muss am fehlenden Empfaenger enden (Log 'kein "
+            f"Empfaenger'); Log war: {[r.getMessage() for r in caplog.records]!r}"
+        )

@@ -859,44 +859,43 @@ def _vergleichs_zone(user_id: str, ort_ids: list[str]) -> ZoneInfo:
     )
 
 
-def test_t11_ortsvergleich_kennt_keinen_vermerk(monkeypatch):
-    """Given der Ortsvergleichs-Pfad mit unveraenderter Konfiguration / When
-    derselbe Versandlauf ueber einen Ortstag ausgefuehrt wird / Then feuert das
-    Preset genau zur konfigurierten Stunde SEINER Ortszone — und ein ZWEITER
-    Lauf in derselben Stunde feuert erneut.
+def test_t11_ortsvergleich_fenster_und_vermerk_ergeben_genau_einen_versand(monkeypatch):
+    """Given der Ortsvergleichs-Pfad (Slot 09:00 in der Ortszone des Presets)
+    / When derselbe Versandlauf ueber einen Ortstag ausgefuehrt wird / Then
+    sendet das Preset genau EINMAL, zur konfigurierten Ortsstunde 09 — die
+    Fenster-Stunden 10 und 11 und ein ZWEITER Lauf in derselben Stunde senden
+    nicht erneut.
 
-    Issue #1726 hat die feste Vergleichs-Zone abgeloest
-    (`NOCH_NICHT_ORTSZEIT_SIEHE_1726`, bis dahin `Europe/Vienna`): die
-    Faelligkeit haengt jetzt an der Ortszone des jeweiligen Presets. Die hier
-    geprueffte Zusicherung bleibt davon UNBERUEHRT — sie lautet „genau eine
-    Stunde am Ortstag feuert, und ein zweiter Lauf in derselben Stunde feuert
-    erneut". Nur der Bezugspunkt wandert von der Konstante zum Preset, und er
-    wird deshalb ueber denselben Weg abgeleitet wie im Produktivcode
-    (`_vergleichs_zone`), nicht getippt.
+    Issue #1777 (Spec fix_1777, AC-2/AC-3/AC-21; ADR-0051): abgeloest ist die
+    fruehere Zusicherung „Compare kennt keinen Vermerk, ein zweiter Lauf in
+    derselben Stunde feuert erneut" (#1725/#1726). Der Ortsvergleich nutzt
+    jetzt dasselbe Fenster (3 h) und denselben parametrierten
+    ``BriefingSlotStore`` wie der Trip — eigene Datei
+    ``briefing_slots_compare.json``. Der Trip-Pfad dieser Datei bleibt
+    unberuehrt.
 
-    Der zweite Lauf ist der eigentliche Waechter: der Idempotenz-Schutz darf
-    ausschliesslich im Trip-Pfad wirken. Gemessen wird ueber das GETEILTE
-    Skelett `run_briefing_dispatch`, nicht nur ueber `collect_due` — ein Hook
-    im Skelett (etwa `already_sent(item)` vor `dispatch_one`) waere an
-    `collect_due` allein unsichtbar. Ersetzt ist nur `dispatch_one` (die Naht
-    zum echten Vergleichs-Versand), `collect_due` und `pre_pass` laufen echt.
+    Ersetzt ist nur die Naht zum Netz (``send_one_compare_preset``);
+    ``collect_due``, ``pre_pass`` und ``dispatch_one`` samt Vermerk laufen
+    echt ueber ``run_briefing_dispatch``. Wuerde wie frueher ``dispatch_one``
+    ersetzt, entstuende nie ein Vermerk und das Fenster sendete dreimal.
 
-    RED-Charakter: Mutations-Waechter — rot bei: Vermerk-Filter ins geteilte
-    Skelett `run_briefing_dispatch` verschoben oder in eine gemeinsame
-    Basisklasse beider Strategien gezogen; dann verstummt der zweite Lauf und
-    der Ortsvergleich hat vor #1726 still seine Faelligkeit geaendert.
+    RED-Charakter: Fehlernachweis — heute zweiter Versand im Wiederholungslauf
+    (kein Vermerk). Nach GREEN rot bei: Vermerk-Filter im Sammellauf entfernt
+    (dann [9, 10, 11]), Compare-Vermerk in die Trip-Datei.
     """
     from app.config import Settings
     from services import dispatch_orchestrator as orchestrator
+    import services.scheduler_dispatch_service as sds
 
     ort_ids = _compare_preset_schreiben("slot-t11", 9)
     protokoll: list = []
 
-    class _MitgeschriebenerVergleich(orchestrator.CompareDispatchStrategy):
-        def dispatch_one(self, item, now_utc=None) -> None:
-            protokoll.append(item[0].get("id"))
+    def _versand_ohne_netz(preset, *args, **kwargs):
+        protokoll.append(preset.get("id"))
+        return "Ort", ["empfaenger@example.invalid"]
 
-    monkeypatch.setitem(orchestrator._STRATEGY, "vergleich", _MitgeschriebenerVergleich)
+    monkeypatch.setattr(sds, "send_one_compare_preset", _versand_ohne_netz)
+    monkeypatch.setattr(orchestrator.CompareDispatchStrategy, "inter_mail_delay", 0.0)
     zone = _vergleichs_zone("slot-t11", ort_ids)
     settings = Settings(is_test_mode=True)
 
@@ -908,19 +907,22 @@ def test_t11_ortsvergleich_kennt_keinen_vermerk(monkeypatch):
             stunden_mit_versand.append(_ortsstunde(now, zone))
 
     assert stunden_mit_versand == [9], (
-        "Der Ortsvergleich muss unveraendert genau zur konfigurierten Stunde "
-        f"seiner Ortszone feuern, gefunden {stunden_mit_versand}"
+        "Der Ortsvergleich muss genau einmal, zur konfigurierten Stunde seiner "
+        f"Ortszone, senden — gefunden {stunden_mit_versand}"
     )
 
-    # Zweiter Lauf in derselben Stunde: Compare kennt keinen Vermerk.
+    # Zweiter Lauf in derselben Stunde: der Vermerk verhindert den Zweitversand.
     vorher = len(protokoll)
     orchestrator.run_briefing_dispatch(
         "vergleich", "slot-t11", _zeitpunkt(zone, date(2026, 8, 20), 9), settings=settings,
     )
-    assert len(protokoll) == vorher + 1, (
-        "Ein zweiter Lauf in derselben Stunde muss den Vergleich erneut "
-        "versenden — der Idempotenz-Schutz aus #1725 gehoert ausschliesslich "
-        "in den Trip-Pfad, nicht ins geteilte Skelett (#1726, AC-8 aus #1724)."
+    assert len(protokoll) == vorher, (
+        "Ein zweiter Lauf in derselben Stunde darf den Vergleich nicht erneut "
+        "versenden — der Vermerk (preset_id, slot, ortstag) gilt seit #1777 "
+        "auch fuer den Ortsvergleich."
+    )
+    assert not (get_data_dir("slot-t11") / "briefing_slots.json").exists(), (
+        "Der Ortsvergleich darf nie in die Trip-Datei schreiben (AC-23)"
     )
 
 

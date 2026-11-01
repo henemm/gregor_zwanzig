@@ -188,12 +188,28 @@ def _compare_vorab_grund(preset: dict) -> Optional[str]:
     return None
 
 
+def _compare_jetzt_faellig(preset: dict, locations: dict, now_utc: datetime,
+                           aktiv: list, zone, slot_store) -> Optional[dict]:
+    """#1777 AC-20: liegt ``now`` im Fenster eines noch nicht vermerkten
+    Slots, ist DIESER der Termin (ueberfaellig, wenn er schon begann)."""
+    from services.compare_slot_scheduler import presets_due_for_hour
+
+    due = presets_due_for_hour([preset], locations, now_utc, store=slot_store)
+    for stunde, slot, versatz in aktiv:
+        if any(d.tage_ab_ortstag == versatz for d in due):
+            at = local_dt(now_utc, zone).replace(hour=stunde, minute=0, second=0, microsecond=0)
+            return _aus_treffer((at, slot, at < now_utc))
+    return None
+
+
 def next_compare_briefing(
     preset: dict, locations: dict, now_utc: datetime, strict_after: bool = False,
+    slot_store: "Optional[BriefingSlotStore]" = None,
 ) -> dict:
     """Naechster Versandtermin eines Ortsvergleichs (rohes Preset-Dict,
-    ``locations`` = ``{location_id: SavedLocation}``). Exakte Slot-Stunde,
-    kein Nachholfenster; ``strict_after=True`` schliesst ``now`` selbst aus."""
+    ``locations`` = ``{location_id: SavedLocation}``). Seit #1777 Fenster und
+    Vermerk wie beim Trip (``slot_store`` nur gelesen); ``strict_after=True``
+    schliesst ``now`` und den laufenden Slot aus."""
     from services.compare_slot_scheduler import (
         ABEND_SLOT_VERSATZ, MORGEN_SLOT_VERSATZ, _preset_ortszeit,
         presets_due_for_hour, resolve_preset_slots,
@@ -211,6 +227,10 @@ def next_compare_briefing(
     if slots.evening_enabled:
         aktiv.append((slots.evening_time.hour, "evening", ABEND_SLOT_VERSATZ))
     aktiv.sort()
+    if not strict_after:
+        jetzt = _compare_jetzt_faellig(preset, locations, now_utc, aktiv, zone, slot_store)
+        if jetzt is not None:
+            return jetzt
     for i in range(_COMPARE_SUCHTAGE + 1):
         tag = heute + timedelta(days=i)
         for stunde, slot, versatz in aktiv:
@@ -218,7 +238,7 @@ def next_compare_briefing(
             moment = to_utc(vor_ort)
             if moment < now_utc or (strict_after and moment == now_utc):
                 continue
-            due = presets_due_for_hour([preset], locations, moment)
+            due = presets_due_for_hour([preset], locations, moment, store=slot_store)
             if any(d.tage_ab_ortstag == versatz for d in due):
                 return _termin(local_dt(moment, zone), slot)
     return _kein_termin("ended" if preset.get("end_date") else "none")

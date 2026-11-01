@@ -603,6 +603,10 @@ liegen und werden nicht automatisch gelöscht; sie sind keine Nutzerdaten-Reste.
 Reparieren ist nicht nötig. Lock-freie Leser reparieren nie (sie antworten weiter fail-closed).
 Spec: `docs/specs/modules/fix_2231_slot_reparatur.md`.
 
+Der Ortsvergleich führt seinen Vermerk getrennt in `briefing_slots_compare.json` (#1777; Teil des
+Datenexports, wird beim Löschen des Nutzers erfasst). Ein Speicherfehler dort lässt nur den
+betroffenen Vergleich als fehlgeschlagen zählen, nicht den ganzen Lauf.
+
 ---
 
 ## Testdaten-Cleanup (`data/users`) — Detailablauf (#1133)

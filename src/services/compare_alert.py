@@ -31,6 +31,7 @@ import services.alert_urgency as alert_urgency
 from services.alert_gate import check_briefing_imminent
 from services.alert_preset import _PRESET_TABLE
 from services.alert_check_state import report_unit_failure
+from services.briefing_slots import compare_slot_store
 from services.alert_state import AlertStateService
 from services.alert_channels import effective_alert_channels
 from services.compare_alert_channels import effective_compare_telegram_style
@@ -347,8 +348,9 @@ class CompareAlertService:
         if check_briefing_imminent(
             user_id=self._user_id, entity_id=preset_id, entity_type="compare",
             now=now, zone=config.zone,
-            briefing_due_at=lambda moment: due_or_raise(
-                presets_due_for_hour([preset], all_locations, moment)
+            # Issue #1777: Fenster + abgeschlossener Vermerk (is_recorded).
+            briefing_due_at=lambda moment, store=compare_slot_store(self._user_id): due_or_raise(
+                presets_due_for_hour([preset], all_locations, moment, store=store)
             ),
         ):
             logger.debug(f"Compare-Alert briefing imminent for preset {preset_id}")

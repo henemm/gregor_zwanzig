@@ -7,7 +7,7 @@ outputs.* or output.renderers.* directly.
 from __future__ import annotations
 
 import logging
-from datetime import date, datetime as _datetime
+from datetime import date, datetime as _datetime, timezone as _timezone_mod
 from pathlib import Path
 
 from app.config import Settings
@@ -157,8 +157,9 @@ def _dispatch_due_preset(
     all_locations_cache: list,
     *,
     tage_ab_ortstag: int,
-) -> bool:
-    """Sendet EIN faelliges Compare-Preset; liefert True bei Erfolg.
+    now_utc: _datetime | None = None,
+) -> str | None:
+    """Sendet EIN faelliges Compare-Preset; liefert den AUSGANG (#1777).
 
     Issue #1207: Extrahiert aus `run_compare_presets_daily` fuer Delegation
     durch `CompareDispatchStrategy.dispatch_one()` -- Fehler-Isolation
@@ -170,8 +171,24 @@ def _dispatch_due_preset(
     Zeitabfrage im Slot-Scheduler (`DuePreset`); ein vergessenes Argument
     scheitert hier sofort mit `TypeError`, statt still auf eine zweite
     `date.today()`-Auswertung zurueckzufallen.
+
+    Issue #1777: reserve-then-release um den Versand, ausschliesslich HIER
+    (Handversand unberuehrt). Rueckgabe: Ausgangs-Code, ``"error"``
+    (Ausnahme, freigegeben) oder ``None`` (nicht reserviert, fail-closed).
     """
+    from services.briefing_slots import compare_slot_store
+
     preset_id = preset.get("id", "")
+    now_utc = now_utc or _datetime.now(_timezone_mod.utc)
+    slot, slot_hour = _compare_slot(preset, tage_ab_ortstag, None, None)
+    if all_locations_cache is None:
+        all_locations_cache = load_all_locations(user_id=user_id)
+    by_loc = {loc.id: loc for loc in all_locations_cache}
+    schluessel = compare_vermerk_schluessel(preset, by_loc, now_utc, slot)
+    store = compare_slot_store(user_id)
+    if not store.reserve(*schluessel, moment=now_utc):
+        logger.warning("Vergleich %s/%s am %s nicht reservierbar, kein Versand", *schluessel[:3])
+        return None
     try:
         send_one_compare_preset(
             preset,
@@ -182,14 +199,57 @@ def _dispatch_due_preset(
             target_date=target_date,
             tage_ab_ortstag=tage_ab_ortstag,
         )
-        return True
+        ausgang = "sent"
+    except SendOutcomeError as e:
+        logger.warning("%s", e)
+        ausgang = e.code
     except ValueError as e:
         # Helper-Skip-Pfade: kein Empfaenger / Orte nicht aufloesbar → ueberspringen.
         logger.warning("%s", e)
-        return False
+        ausgang = None
     except Exception as e:
         logger.error("Compare preset %s failed: %s", preset_id, e)
-        return False
+        ausgang = None
+    if ausgang == "no_weather":  # #1777 AC-12: Nachlieferung ueber den Marker
+        _mark_compare_undelivered(user_id, preset_id, slot, target_date, slot_hour)
+    return _vermerk_abschliessen(store, schluessel[:3], ausgang)
+
+
+def _vermerk_abschliessen(store, schluessel: tuple, ausgang: str | None) -> str:
+    """Ausgangs-Abbildung (#1777, Spec-Tabelle): vermerken, freigeben oder
+    -- unbekannter Code -- sperren (Trip-Paritaet #2231)."""
+    from services.briefing_slots import VERMERK_AUSGAENGE
+
+    if ausgang is None:  # Ausnahme: Reservierung zuruecknehmen, zaehlt failed
+        store.release(*schluessel)
+        return "error"
+    if ausgang == "channels_unreachable":
+        store.release(*schluessel)
+    elif ausgang in VERMERK_AUSGAENGE:
+        store.record_outcome(*schluessel, ausgang)
+    else:
+        logger.error("Unbekannter Ausgang %r fuer %s/%s am %s, Slot gesperrt", ausgang, *schluessel)
+        ausgang = ausgang or "unknown"
+        store.record_outcome(*schluessel, ausgang)
+    return ausgang
+
+
+def compare_vermerk_schluessel(preset: dict, by_loc: dict, now_utc: _datetime, slot: str,
+                               zieltag: date | None = None) -> tuple:
+    """Issue #1777: DER Schluessel-Helfer ``(preset_id, slot, ortstag, zone)``
+    -- Ortstag und Zone aus EINER ``_preset_ortszeit``-Aufloesung (#1726).
+    ``zieltag`` (nur Nachholer): Ortstag = Zieltag - Versatz, weil der Marker
+    den Zieltag traegt und ein Abend-Marker nach Ortsmitternacht sonst dem
+    falschen Ortstag zugeordnet und doppelt versendet wuerde."""
+    from datetime import timedelta
+
+    from services.compare_slot_scheduler import ABEND_SLOT_VERSATZ, _preset_ortszeit
+
+    vor_ort = _preset_ortszeit(preset, by_loc, now_utc)
+    ortstag = vor_ort.date()
+    if zieltag is not None:
+        ortstag = zieltag - timedelta(days=ABEND_SLOT_VERSATZ if slot == "evening" else 0)
+    return preset.get("id", ""), slot, ortstag, vor_ort.tzinfo
 
 
 # ---------------------------------------------------------------------------
@@ -309,9 +369,11 @@ def _compare_marker_groups(user_id: str) -> dict:
 
 
 def _catchup_verdict(preset: dict | None, tag: str, ortstag: date | None,
-                     due_keys: set) -> str:
+                     due_keys: set, slot_ausgang: str | None = None) -> str:
     """``drop`` (verwerfen ohne Versand), ``wait`` (regulaerer Slot desselben
-    Presets mit gleichem Zieltag ist jetzt faellig) oder ``send``."""
+    Presets mit gleichem Zieltag ist jetzt faellig) oder ``send``.
+
+    ``slot_ausgang`` (#1777): ``sent`` ⇒ drop, ``laeuft`` (Claim) ⇒ wait, sonst Retry."""
     from services.alert_briefing_anchor import briefing_target_day_is_current
     from services.compare_alert_guard import is_silenced
 
@@ -325,9 +387,29 @@ def _catchup_verdict(preset: dict | None, tag: str, ortstag: date | None,
         return "drop"  # korrupt -> der Slot-Scheduler sendet es ebenfalls nie
     if not briefing_target_day_is_current(tag, today=ortstag):
         return "drop"  # AC-7: Zieltag in Ortszeit vorbei
-    if (preset.get("id"), tag) in due_keys:
+    if slot_ausgang == "sent":
+        return "drop"  # #1777 AC-14: Slot bereits zugestellt
+    if (preset.get("id"), tag) in due_keys or slot_ausgang == "laeuft":
         return "wait"  # AC-9: der regulaere Versand ist der letzte Versuch
     return "send"
+
+
+def _catchup_slot_ausgang(preset: dict | None, marker: dict, by_loc: dict,
+                          now_utc: _datetime, user_id: str) -> str | None:
+    """Vermerk-Ausgang des Marker-Slots (#1777 AC-14), rein lesend."""
+    from services.briefing_slots import compare_slot_store
+
+    slot = marker.get("report_type")
+    if preset is None or slot not in ("morning", "evening"):
+        return None
+    pid, slot, ortstag, zone = compare_vermerk_schluessel(
+        preset, by_loc, now_utc, slot, zieltag=date.fromisoformat(marker["date"]),
+    )
+    store = compare_slot_store(user_id)
+    ausgang = store.outcome_of(pid, slot, ortstag)
+    if ausgang is None and store.is_recorded_or_claimed(pid, slot, ortstag, zone, moment=now_utc):
+        return "laeuft"  # F003(b): paralleler Versand (lebendiger Claim) => warten
+    return ausgang
 
 
 def _send_catchup(preset: dict, marker: dict, ortstag: date, settings: Settings,
@@ -383,7 +465,8 @@ def process_compare_pending_markers(
         preset = by_preset.get(pid)
         try:
             ortstag = preset_ortstag(preset, by_loc, now_utc) if preset else None
-            verdict = _catchup_verdict(preset, tag, ortstag, due_keys)
+            ausgang = _catchup_slot_ausgang(preset, members[0], by_loc, now_utc, user_id)
+            verdict = _catchup_verdict(preset, tag, ortstag, due_keys, ausgang)
             if verdict == "wait":
                 continue
             # Vor dem Senden entfernen (kein Doppelversand bei Absturz, AC-6).

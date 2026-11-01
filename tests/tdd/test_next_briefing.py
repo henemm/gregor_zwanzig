@@ -503,11 +503,40 @@ def test_ac8_etappenluecke_abend_vor_dem_naechsten_etappentag():
 # ═══════════════════════════════ AC-9 ═══════════════════════════════
 
 
-def test_ac9_compare_daily_naechste_exakte_slot_stunde_ohne_nachholfenster():
-    """AC-9: daily 07:00/18:00, now = 08:30 Ortszeit ⇒ 18:00 heute (kein
-    Nachholfenster für 07:00), Format wie beim Trip."""
+def _compare_store():
+    """Vermerk-Speicher des Ortsvergleichs (Issue #1777, Spec fix_1777
+    „Design" Variante B): dieselbe Klasse wie beim Trip, eigene Datei
+    ``briefing_slots_compare.json``, Eintragsfeld ``preset_id``."""
+    from services.briefing_slots import BriefingSlotStore
+
+    return BriefingSlotStore(
+        UID, filename="briefing_slots_compare.json", entity_type="compare", id_key="preset_id",
+    )
+
+
+def test_ac9_compare_daily_im_nachholfenster_ohne_vermerk_ist_ueberfaellig():
+    """AC-9 (abgelöst durch #1777 AC-20): daily 07:00/18:00, now = 08:30
+    Ortszeit, kein Vermerk ⇒ 07:00 heute, ``overdue`` — die Anzeige folgt dem
+    Fälligkeitsfenster wie beim Trip. Früher galt hier „exakte Slot-Stunde,
+    kein Nachholfenster" (⇒ 18:00); ADR-0051 erklärt Stundengleichheit für
+    Fälligkeit für unzulässig (Spec fix_1777, „Abgelöste Festlegungen" 1)."""
     nb = _nb()
     r = nb.next_compare_briefing(_preset(), _orte_paris(), _lokal(PARIS_TZ, D23, 8, 30))
+
+    _termin(r, _lokal(PARIS_TZ, D23, 7), PARIS_TZ, "morning")
+    assert r.get("overdue") is True, r
+
+
+def test_ac9_compare_daily_mit_vermerk_zeigt_den_abend_slot():
+    """#1777 AC-20: derselbe Fall, der Morgen-Slot ist aber bereits vermerkt
+    (``sent``) ⇒ 18:00 heute, nicht überfällig. Der Speicher wird nur gelesen."""
+    nb = _nb()
+    store = _compare_store()
+    store.record_outcome("preset-nb", "morning", D23, "sent")
+
+    r = nb.next_compare_briefing(
+        _preset(), _orte_paris(), _lokal(PARIS_TZ, D23, 8, 30), slot_store=store,
+    )
 
     _termin(r, _lokal(PARIS_TZ, D23, 18), PARIS_TZ, "evening")
     assert not r.get("overdue")
@@ -529,7 +558,10 @@ def test_ac9_compare_weekly_naechster_passender_wochentag():
     ("overrides", "now_stunde", "erwartet"),
     [
         ({"end_date": "2026-10-22"}, 5, "ended"),
-        ({"end_date": "2026-10-23", "evening_enabled": False}, 8, "ended"),
+        # #1777: 10:30 statt 08:30 — um 08:30 läge der 07:00-Slot noch im
+        # Fälligkeitsfenster (überfällig statt „ended"); gemeint ist „letzter
+        # Slot vorbei".
+        ({"end_date": "2026-10-23", "evening_enabled": False}, 10, "ended"),
         ({"schedule": "manual"}, 5, "manual"),
         ({"paused_at": "2026-10-22T10:00:00+00:00"}, 5, "paused"),
         ({"archived_at": "2026-10-22T10:00:00+00:00"}, 5, "ended"),
@@ -724,6 +756,16 @@ def _pruefe_compare_aequivalenz(preset: dict, orte: dict, now: datetime) -> None
         return bool(presets_due_for_hour([preset], orte, m))
 
     at = _at(r)
+    # #1777 AC-20: Fenster wie beim Trip — ist der Scheduler JETZT fällig,
+    # nennt die Anzeige den laufenden Slot (überfällig, wenn er schon begann).
+    if faellig(now):
+        assert at is not None, f"Scheduler fällig zu {now}, Anzeige ohne Termin: {r!r}"
+        assert at <= now < at + _FENSTER, (
+            f"Scheduler fällig zu {now}, Anzeige nennt {at} — nicht der laufende Slot"
+        )
+        if at < now:
+            assert r.get("overdue") is True, r
+        return
     if at is None:
         assert r.get("reason") in GRUENDE, r
         treffer = next(
@@ -748,10 +790,11 @@ def _orte_auckland() -> dict:
 
 
 _COMPARE_MATRIX = [
-    # now bewusst auf HH:30: die Grenze „exakte Slot-Stunde == now" ist ohne
-    # strict_after nicht spezifiziert und wird hier nicht gepinnt.
+    # now bewusst auf HH:30. Seit #1777 (AC-20) gilt das Fenster wie beim
+    # Trip: ist der Scheduler zu ``now`` fällig (07:30, 18:30), nennt die
+    # Anzeige den laufenden Slot als überfällig statt den nächsten.
     ("daily-0530", {}, "paris", _lokal(PARIS_TZ, D23, 5, 30)),
-    ("daily-0730-kein-nachholen", {}, "paris", _lokal(PARIS_TZ, D23, 7, 30)),
+    ("daily-0730-im-fenster", {}, "paris", _lokal(PARIS_TZ, D23, 7, 30)),
     ("daily-1830", {}, "paris", _lokal(PARIS_TZ, D23, 18, 30)),
     ("weekly-montag", {"schedule": "weekly", "weekday": 0}, "paris",
      _lokal(PARIS_TZ, D23, 8, 30)),

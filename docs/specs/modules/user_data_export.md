@@ -75,6 +75,7 @@ Exakte Dateinamen (Gleichheitsvergleich):
 | `briefing_log.json` | `internal/store/log.go:24` |
 | `pending_briefings.json` | `internal/store/pending_briefings.go:30` |
 | `briefing_slots.json` | `src/services/briefing_slots.py:6` |
+| `briefing_slots_compare.json` | `src/services/briefing_slots.py` (Idempotenz-Vermerk Ortsvergleich, #1777) |
 | `briefing_anchor.json` | `src/services/alert_briefing_anchor.py:40` |
 | `throttle_state.json` | `src/services/throttle_store.py:29` |
 | `alert_throttle.json`, `compare_alert_throttle.json`, `radar_alert_throttle.json` | `throttle_store.py:31-33` — Altbestand, s. AC-9 |

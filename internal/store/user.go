@@ -466,6 +466,8 @@ var exportErlaubteDateienExakt = []string{
 	"briefing_log.json",
 	"pending_briefings.json",
 	"briefing_slots.json",
+	// Issue #1777: Idempotenz-Vermerk des Ortsvergleichs.
+	"briefing_slots_compare.json",
 	"briefing_anchor.json",
 	"throttle_state.json",
 	// Altbestand aus src/services/throttle_store.py:31-33: Vorgaenger-Dateien,

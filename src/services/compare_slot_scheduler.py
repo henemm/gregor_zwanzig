@@ -21,6 +21,7 @@ from datetime import date, datetime, time as dt_time, timedelta
 from typing import NamedTuple
 
 from services.alert_check_state import report_unit_failure
+from services.briefing_slots import fenster_offen
 from services.compare_alert_guard import is_silenced
 from utils.timezone import first_resolvable_tz, local_dt
 
@@ -139,9 +140,22 @@ def preset_ortstag(preset: dict, all_locations: dict, now_utc: datetime) -> date
     return _preset_ortszeit(preset, all_locations, now_utc).date()
 
 
-def presets_due_for_hour(presets: list, all_locations: dict, now_utc: datetime) -> list:
+def _vermerkt(store, preset: dict, all_locations: dict, now_utc: datetime, slot: str) -> bool:
+    """#1777: Slot ABGESCHLOSSEN vermerkt (``is_recorded``)? Schluessel ueber DEN Helfer."""
+    from services.scheduler_dispatch_service import compare_vermerk_schluessel
+
+    return store.is_recorded(*compare_vermerk_schluessel(preset, all_locations, now_utc, slot))
+
+
+def presets_due_for_hour(presets: list, all_locations: dict, now_utc: datetime,
+                         store=None) -> list:
     """Liefert je faelligem Preset ein `DuePreset`-Tripel
     `(preset, target_date, tage_ab_ortstag)`.
+
+    Issue #1777: Fenster (geteiltes ``fenster_offen``, Trip-Paritaet) statt
+    Stundengleichheit. ``store`` (read-only, Alarm-Sperre/Anzeige): Slots mit
+    ABGESCHLOSSENEM Vermerk (``is_recorded``) fallen heraus; der Sammellauf
+    filtert separat mit ``is_recorded_or_claimed``.
 
     Issue #1726: JEDES Preset wird gegen SEINE eigene Ortszone geprueft (die
     seines ersten aufloesbaren Orts, `first_resolvable_tz`). Bis dahin galten
@@ -208,10 +222,15 @@ def presets_due_for_hour(presets: list, all_locations: dict, now_utc: datetime) 
                 )
                 continue
 
-            if slots.morning_enabled and slots.morning_time.hour == hour:
-                due.append(_due(preset, today, MORGEN_SLOT_VERSATZ))
-            if slots.evening_enabled and slots.evening_time.hour == hour:
-                due.append(_due(preset, today, ABEND_SLOT_VERSATZ))
+            for aktiv, zeit, slot, versatz in (
+                (slots.morning_enabled, slots.morning_time, "morning", MORGEN_SLOT_VERSATZ),
+                (slots.evening_enabled, slots.evening_time, "evening", ABEND_SLOT_VERSATZ),
+            ):
+                if not (aktiv and fenster_offen(zeit.hour, hour)):
+                    continue
+                if store is not None and _vermerkt(store, preset, all_locations, now_utc, slot):
+                    continue
+                due.append(_due(preset, today, versatz))
         except Exception:
             # Issue #2217: ein kaputtes Preset haelt die uebrigen nicht auf;
             # kein Vermerk, wird beim naechsten Lauf erneut geprueft.
