@@ -236,8 +236,10 @@ const EINGEFROREN: readonly string[] = [
 	'WeatherMetricsTab.svelte:625',
 	'WeatherMetricsTab.svelte:638',
 	'WeatherMetricsTab.svelte:1429',
-	'versand-tab/vtBriefingChannelsText.ts:21',
-	'versand-tab/vtBriefingChannelsText.ts:26',
+	// #2655 (F6): beide nur verschoben (Katalog-Import, Satz je Kontext aus
+	// dem Katalog statt Konkatenation); Bedingungen unveraendert, nachgemessen.
+	'versand-tab/vtBriefingChannelsText.ts:22',
+	'versand-tab/vtBriefingChannelsText.ts:29',
 	// S6d: von 14 Corridor-Paaren bleiben elf (Schicksals-Tabelle der Spec).
 	// Ihre Zeilennummern verschieben sich durch den Wertprop-Umbau — die neuen
 	// sind gemessen und unten in BLEIBT_MIT_INHALT inhaltlich gefesselt.
@@ -267,8 +269,10 @@ const EINGEFROREN: readonly string[] = [
 	'corridor-editor/CorridorEditor.svelte:448',
 	'corridor-editor/CorridorEditor.svelte:577',
 	'corridor-editor/corridorEditorState.ts:297',
-	'versand-tab/VTSchedulePlan.svelte:55',
-	'versand-tab/VTSchedulePlan.svelte:83',
+	// #2655 (F6): verschoben (zwei Katalog-Importe, Zeitplan-Hinweis einzeilig);
+	// Bedingungen `context === 'route'` / `{#if context === 'vergleich'}` unveraendert.
+	'versand-tab/VTSchedulePlan.svelte:57',
+	'versand-tab/VTSchedulePlan.svelte:84',
 	'alarme-tab/alarmeTabSections.ts:27',
 	'alarme-tab/alarmeTabSections.ts:38',
 	'corridor-editor/wertebereicheVergleichSpeicherung.ts:209',

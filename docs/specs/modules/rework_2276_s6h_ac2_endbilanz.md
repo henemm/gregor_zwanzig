@@ -110,9 +110,9 @@ Diese Scheibe:
 | `VersandTab.svelte:370` | Markup-Baum Trip (`VTLaufzeitRoute`, Mehrtages-Trend, Premium-SMS) |
 | `VersandTab.svelte:406` | Markup-Baum Vergleich (`VTLaufzeitVergleich`, kein Mehrtages-Trend, eigener Premium-SMS-Schalter seit #2293 S2) — zwei komplette, unterschiedliche Komponenten-Bäume |
 | `WeatherMetricsTab.svelte:1429` | Metrik-Markup-Baum (#1311 C1: Vergleich-Grundauswahl) |
-| `versand-tab/vtBriefingChannelsText.ts:21` | SMS-Zeichenbudget: Trip 160 / Vergleich 153 (unterschiedliches Layout) |
-| `versand-tab/vtBriefingChannelsText.ts:26` | Einleitungstext: Etappen-Tabelle vs. Orts-Tabelle — inhaltlich verschiedene Datenform |
-| `versand-tab/VTSchedulePlan.svelte:55` | `isRoute`-Ableitung — Mehrtages-Trend-Karte existiert nur im Trip |
+| `versand-tab/vtBriefingChannelsText.ts:22` | SMS-Zeichenbudget: Trip 160 / Vergleich 153 (unterschiedliches Layout) |
+| `versand-tab/vtBriefingChannelsText.ts:29` | Einleitungstext: Etappen-Tabelle vs. Orts-Tabelle — inhaltlich verschiedene Datenform |
+| `versand-tab/VTSchedulePlan.svelte:57` | `isRoute`-Ableitung — Mehrtages-Trend-Karte existiert nur im Trip |
 | `alarme-tab/alarmeTabSections.ts:27` | Radar-Abschnitt nur im Vergleich |
 | `corridor-editor/corridorEditorState.ts:297` | Markieren-Schalter bei Tages-Summen nur im Trip gesperrt |
 | `weather-metrics-tab/weatherMetricsTabSections.ts:72` | SMS-Schwellen/Report-Config nur im Trip |
@@ -139,7 +139,7 @@ Diese Scheibe:
 | `AlarmeTab.svelte:530` | Kurzstil-Schalter — im Trip steht derselbe Schalter im Versand-Reiter (#1260 S5), reine Platzierung |
 | `corridor-editor/CorridorEditor.svelte:427` | Überschrift-/Lauftext-Wahl, keine Datenverzweigung |
 | `corridor-editor/CorridorEditorMobile.svelte:367` | Mobil-Zwilling von `CorridorEditor.svelte:427` |
-| `versand-tab/VTSchedulePlan.svelte:83` | Erklärtext „wie beim Trip" — reine Zusatzerklärung, keine Funktionsänderung |
+| `versand-tab/VTSchedulePlan.svelte:84` | Erklärtext „wie beim Trip" — reine Zusatzerklärung, keine Funktionsänderung |
 | `alarme-tab/alarmeTabSections.ts:38` | nur Überschrifttext |
 
 ### HERKUNFT (15 — AC-2-Abweichung, bleibt bestehen, siehe Begründung oben)

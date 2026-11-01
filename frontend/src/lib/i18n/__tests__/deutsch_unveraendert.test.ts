@@ -149,6 +149,34 @@ const NEU_IN_F4 = [
 	'nav.nicht_gespeichert', 'nav.speichere', 'nav.nochmal_speichern', 'nav.konflikt', 'nav.speicherfehler',
 	'nav.speicherfehler_mit'
 ];
+/** #2655 (F6) Versand-Reiter: versand.json und telegram_kurzstil.checkbox (bausteine.json). */
+const NEU_IN_F6 = [
+	'versand.kanaele.titel', 'versand.kanal.email_fehlt', 'versand.kanal.telegram_fehlt',
+	'versand.kanal.nummer_fehlt', 'versand.kanal.im_account_einrichten', 'versand.kanal.nummer_unbestaetigt',
+	'versand.kanal.code_eingeben', 'versand.kanal.sms_ab_standard', 'versand.kanal.bald_verfuegbar',
+	'versand.status.nicht_verbunden', 'versand.status.bestaetigt', 'versand.status.nicht_bestaetigt',
+	'versand.status.verbunden', 'versand.status.hinterlegt', 'versand.status.eingetragen_unbestaetigt',
+	'versand.premium_sms.nicht_verfuegbar', 'versand.premium_sms.hinweis.nicht_verfuegbar',
+	'versand.premium_sms.gelernt', 'versand.premium_sms.hinweis.gelernt', 'versand.premium_sms.verfallen',
+	'versand.premium_sms.hinweis.verfallen', 'versand.premium_sms.hinweis.nie_gemeldet',
+	'versand.premium_sms.zuletzt_gemeldet', 'versand.briefing.lead.route', 'versand.briefing.lead.vergleich',
+	'versand.briefing.sub.email', 'versand.briefing.sub.telegram', 'versand.briefing.sub.telegram_kurzform',
+	'versand.briefing.sub.sms', 'versand.zeitplan.titel', 'versand.zeitplan.kein_kanal',
+	'versand.zeitplan.kein_kanal_text', 'versand.zeitplan.vergleich_intro', 'versand.zeitplan.morgen',
+	'versand.zeitplan.morgen_sub', 'versand.zeitplan.abend', 'versand.zeitplan.abend_sub',
+	'versand.zeitplan.aktiv', 'versand.zeitplan.uhrzeit', 'versand.zeitplan.morgens', 'versand.zeitplan.abends',
+	'versand.zeitplan.trend', 'versand.zeitplan.trend_sub', 'versand.zeitplan.im_morgen',
+	'versand.zeitplan.im_abend', 'versand.laufzeit.titel', 'versand.laufzeit.route',
+	'versand.laufzeit.route_sub', 'versand.laufzeit.etappen_oeffnen', 'versand.laufzeit.offen',
+	'versand.laufzeit.bis_datum', 'versand.laufzeit.ohne_ende', 'versand.naechstes.titel',
+	'versand.naechstes.pausiert', 'versand.naechstes.pausiert_bis', 'versand.naechstes.beendet.route',
+	'versand.naechstes.beendet.vergleich', 'versand.naechstes.grund.manual', 'versand.naechstes.grund.disabled',
+	'versand.naechstes.grund.none', 'versand.naechstes.uebersprungen', 'versand.naechstes.nachgeholt',
+	'versand.wochentag.0', 'versand.wochentag.1', 'versand.wochentag.2', 'versand.wochentag.3',
+	'versand.wochentag.4', 'versand.wochentag.5', 'versand.wochentag.6', 'versand.ziel.unbekannt',
+	'versand.ziel.keine_adresse', 'versand.ziel.unbestaetigt', 'versand.ziel.geht_an',
+	'telegram_kurzstil.checkbox'
+];
 const NEU_IN_FOLGEPAKETEN = [
 	// #2648 (S3) Sprachumschalter und Konto-Sprache
 	'konto.sprache.titel',
@@ -369,7 +397,7 @@ test('AC-5: jeder Bestandsschluessel ist mit byte-gleichem Wert in der de-Karte'
 
 test('AC-5: die de-Karte enthaelt ausser dem Bestand nur die neuen Schluessel dieses und der Folgepakete', () => {
 	const extra = Object.keys(de).filter((k) => !(k in GOLDEN)).sort();
-	assert.deepEqual(extra, [...NEU_IN_S2, ...NEU_IN_F3, ...NEU_IN_F4, ...NEU_IN_FOLGEPAKETEN].sort());
+	assert.deepEqual(extra, [...NEU_IN_S2, ...NEU_IN_F3, ...NEU_IN_F4, ...NEU_IN_F6, ...NEU_IN_FOLGEPAKETEN].sort());
 });
 
 test('AC-5: trFor(de) und tr() mit Standard-Locale liefern die Bestandstexte unveraendert', () => {

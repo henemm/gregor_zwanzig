@@ -145,7 +145,7 @@ describe('AC-1: Versand-Reiter englisch in Trip und Ortsvergleich, Kanalnamen un
 		hat(text, 'The location comparison is a wide table — in practice it goes by email. Telegram carries only ≤ 7 columns, SMS has no grid, plain text.');
 		hat(text, 'Layout · no grid, 153 characters');
 		hat(text, 'As with a trip: the Morning briefing shows today, the Evening briefing shows tomorrow. You only choose the time.');
-		assert.match(en, /<strong>Morning briefing<\/strong>/);
+		assert.match(en, /<strong[^>]*>Morning briefing<\/strong>/);
 		hat(text, 'Until further notice');
 		hat(text, 'Until a date');
 		hat(text, 'Delivery continues without an end date.');
