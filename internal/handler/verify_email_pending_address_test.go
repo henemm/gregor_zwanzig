@@ -30,8 +30,8 @@ import (
 // weg; derselbe Link bewirkt beim zweiten Mal nichts (400, Zustand gleich).
 //
 // Offener Punkt (siehe red-notizen): der Test-Bullet der Spec nennt fuer den
-// Zweitversuch `token expired`, §2 loescht das Token aber und laesst die
-// Hash-/Ladepruefung unveraendert -> dort entsteht `invalid token`. Das
+// Zweitversuch `token_expired`, §2 loescht das Token aber und laesst die
+// Hash-/Ladepruefung unveraendert -> dort entsteht `invalid_token`. Das
 // freigegebene "Then" verlangt nur "kann kein zweites Mal etwas bewirken";
 // deshalb wird hier 400 mit einem der beiden Codes akzeptiert, streng ist
 // der unveraenderte Zustand.
@@ -87,7 +87,7 @@ func TestAC2_EinloesenMachtAusstehendeAdresseWirksamUndNeuGestempelt(t *testing.
 	if w2.Code != http.StatusBadRequest {
 		t.Errorf("AC-2: Zweitversuch mit demselben Token muss 400 liefern, bekommen %d: %s", w2.Code, w2.Body.String())
 	}
-	if code := schreibpfadFehlerCode(w2); code != "token expired" && code != "invalid token" {
+	if code := schreibpfadFehlerCode(w2); code != "token_expired" && code != "invalid_token" {
 		t.Errorf("AC-2: Zweitversuch muss als abgelaufen/ungueltig abgewiesen werden, Code %q", code)
 	}
 	if string(rohNachErstem) != string(rohesKonto(t, s, uid)) {
@@ -105,7 +105,7 @@ func mustMail(t *testing.T, ch chan ausstehendMail, an string) ausstehendMail {
 // --- AC-3 ---------------------------------------------------------------------
 
 // AC-3: zweiter Wechsel vor dem ersten Klick ersetzt den ersten vollstaendig;
-// der erste Link -> 400 {"error":"token expired"} (freigegebenes Then), Konto
+// der erste Link -> 400 {"error":"token_expired"} (freigegebenes Then), Konto
 // bleibt bei der zweiten ausstehenden Adresse. Positivkontrolle: der zweite
 // Link wirkt danach.
 func TestAC3_ZweiterWechselEntwertetErstenLinkMitTokenExpired(t *testing.T) {
@@ -138,8 +138,8 @@ func TestAC3_ZweiterWechselEntwertetErstenLinkMitTokenExpired(t *testing.T) {
 	rohVorher := rohesKonto(t, s, uid)
 
 	w1 := ausstehendEinloesen(s, uid, token1)
-	if w1.Code != http.StatusBadRequest || schreibpfadFehlerCode(w1) != "token expired" {
-		t.Errorf("AC-3: erster, ersetzter Link muss 400 {\"error\":\"token expired\"} liefern, bekommen %d: %s",
+	if w1.Code != http.StatusBadRequest || schreibpfadFehlerCode(w1) != "token_expired" {
+		t.Errorf("AC-3: erster, ersetzter Link muss 400 {\"error\":\"token_expired\"} liefern, bekommen %d: %s",
 			w1.Code, w1.Body.String())
 	}
 	if string(rohVorher) != string(rohesKonto(t, s, uid)) {

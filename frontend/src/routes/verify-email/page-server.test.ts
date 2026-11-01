@@ -46,7 +46,7 @@ test('AC-4: +page.server.ts postet an /api/auth/verify-email und mappt token-exp
 	// THEN: kommt der Endpoint-Pfad vor, und beide Fehlermeldungs-Zweige existieren
 	const src = readFileSync(join(__dirname, '+page.server.ts'), 'utf-8');
 	assert.ok(src.includes('/api/auth/verify-email'), 'Endpoint /api/auth/verify-email fehlt');
-	assert.ok(src.includes('token expired'), "Fehler-Mapping für 'token expired' fehlt");
+	assert.ok(src.includes('token_expired'), "Fehler-Mapping für 'token expired' fehlt");
 	assert.ok(
 		src.includes('ungültig oder wurde bereits verwendet'),
 		'Fehler-Mapping für den ungültig-Zweig fehlt'

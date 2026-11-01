@@ -244,6 +244,29 @@ def _decoded_subject(msg: Message) -> str:
         return str(raw)
 
 
+def _without_subject_name(msg: Message, text: str) -> str:
+    """#2560: Trip-/Ortsname aus dem Betreff-Praefix `[Name]` an seiner
+    Fusszeilen-Stelle entfernen ("Name · Amtliche Warnung"). Ein Typ-Wort im
+    Namen ("PROBE Sturmtrip", "Hitzeck") darf die Gefahrenart-Erkennung nicht
+    beeinflussen. Je Mail-Teil (Klartext bzw. HTML einzeln aufrufen) wird nur
+    die LETZTE Fundstelle `Name · ` entfernt -- die Fusszeile steht am Ende;
+    ein gleichlautendes Karten-Label ("Gewitter · Fr 20.02. · ...", F002)
+    davor bleibt erhalten. Fehlt das Praefix, bleibt der Text unveraendert."""
+    import html as _html
+
+    m = re.match(r"\s*\[([^\]]+)\]", _decoded_subject(msg))
+    if not m or not m.group(1).strip():
+        return text
+    name = m.group(1).strip()
+    variants = {name, _html.escape(name, quote=False), _html.escape(name)}
+    pattern = "|".join(re.escape(v) for v in sorted(variants, key=len, reverse=True))
+    hits = list(re.finditer(f"(?:{pattern})(?= · )", text))
+    if not hits:
+        return text
+    last = hits[-1]
+    return text[:last.start()] + text[last.end():]
+
+
 def _allclear_errors(msg: Message, plain: str, html: str, classes: set[str],
                      w: dict | None = None) -> list[str]:
     """E-1..E-4: Abschnitt, Betreff, plausibler Uebergang (alt > neu bzw.
@@ -349,7 +372,8 @@ def validate_message(msg: Message, warnungen: list | None = None) -> tuple[bool,
     avalanche_only = (
         is_avalanche
         and not w["level_word"].search(text)
-        and not w["other_hazard"].search(plain + html)
+        and not w["other_hazard"].search(_without_subject_name(msg, plain))
+        and not w["other_hazard"].search(_without_subject_name(msg, html))
     )
     # P-2b: Ziffer und EAWS-Wort muessen zusammenpassen (bewacht u. a., dass
     # Stufe 5 nie als "groß" erscheint). Gilt fuer JEDES Vorkommen.

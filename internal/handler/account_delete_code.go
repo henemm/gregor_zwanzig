@@ -172,28 +172,28 @@ func RequestDeleteCodeHandler(s *store.Store, cfg config.Config, l *MailFloodLim
 		userID := middleware.UserIDFromContext(r.Context())
 		user, err := s.LoadUser(userID)
 		if err != nil || user == nil {
-			writeJSONError(w, http.StatusNotFound, "not_found")
+			WriteError(w, r, http.StatusNotFound, "not_found", nil)
 			return
 		}
 		addr := store.EffectiveContactAddress(user)
 		if addr == "" || cfg.SMTPHost == "" {
 			log.Printf("delete-code: kein Versand moeglich fuer %s (Adresse/SMTP fehlt)", userID)
-			writeJSONError(w, http.StatusBadGateway, "mail_failed")
+			WriteError(w, r, http.StatusBadGateway, "mail_failed", nil)
 			return
 		}
 		if !l.Allow(userID, addr) {
 			w.Header().Set("Retry-After", l.RetryAfterHeader())
-			writeJSONError(w, http.StatusTooManyRequests, "rate_limit_exceeded")
+			WriteError(w, r, http.StatusTooManyRequests, "rate_limit_exceeded", nil)
 			return
 		}
 		code, err := newDeleteCode()
 		if err != nil {
-			writeJSONError(w, http.StatusInternalServerError, "internal")
+			WriteError(w, r, http.StatusInternalServerError, "internal_error", nil)
 			return
 		}
 		if err := sendDeleteCodeMail(cfg, addr, code); err != nil {
 			log.Printf("delete-code: Versand an %s fehlgeschlagen: %v", mail.MaskAddrForLog(addr), err)
-			writeJSONError(w, http.StatusBadGateway, "mail_failed")
+			WriteError(w, r, http.StatusBadGateway, "mail_failed", nil)
 			return
 		}
 		deleteCodeStore.Store(userID, &deleteCodeEntry{code: code, expiresAt: time.Now().Add(deleteCodeTTL)})

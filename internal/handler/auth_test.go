@@ -134,14 +134,14 @@ func TestRegisterHandler_ExistingUserWithoutEmail_Returns409_AC1(t *testing.T) {
 	w := httptest.NewRecorder()
 	h.ServeHTTP(w, req)
 
-	// THEN: 409 Conflict (nicht 400 "validation failed")
+	// THEN: 409 Conflict (nicht 400 "validation_failed")
 	if w.Code != 409 {
 		t.Fatalf("expected 409, got %d: %s", w.Code, w.Body.String())
 	}
 	var resp map[string]string
 	json.Unmarshal(w.Body.Bytes(), &resp)
-	if resp["error"] != "user already exists" {
-		t.Errorf("expected error 'user already exists', got %q", resp["error"])
+	if resp["error"] != "user_already_exists" {
+		t.Errorf("expected error 'user_already_exists', got %q", resp["error"])
 	}
 }
 
@@ -168,14 +168,14 @@ func TestRegisterHandler_ExistingUserShortPassword_Returns400NotEnumeration(t *t
 	w := httptest.NewRecorder()
 	h.ServeHTTP(w, req)
 
-	// THEN: 400 "validation failed" (NICHT 409 — das wäre der Enumeration-Leak)
+	// THEN: 400 "validation_failed" (NICHT 409 — das wäre der Enumeration-Leak)
 	if w.Code != 400 {
 		t.Fatalf("expected 400 for short password against existing user, got %d: %s", w.Code, w.Body.String())
 	}
 	var resp map[string]string
 	json.Unmarshal(w.Body.Bytes(), &resp)
-	if resp["error"] != "validation failed" {
-		t.Errorf("expected error 'validation failed', got %q", resp["error"])
+	if resp["error"] != "validation_failed" {
+		t.Errorf("expected error 'validation_failed', got %q", resp["error"])
 	}
 }
 
@@ -211,14 +211,14 @@ func TestRegisterHandler_ExistingUserInvalidUsernameFormat_Returns400NotEnumerat
 			w := httptest.NewRecorder()
 			h.ServeHTTP(w, req)
 
-			// THEN: 400 "validation failed" (NICHT 409 — das wäre der Enumeration-Leak)
+			// THEN: 400 "validation_failed" (NICHT 409 — das wäre der Enumeration-Leak)
 			if w.Code != 400 {
 				t.Fatalf("expected 400 for invalid username against existing user, got %d: %s", w.Code, w.Body.String())
 			}
 			var resp map[string]string
 			json.Unmarshal(w.Body.Bytes(), &resp)
-			if resp["error"] != "validation failed" {
-				t.Errorf("expected error 'validation failed', got %q", resp["error"])
+			if resp["error"] != "validation_failed" {
+				t.Errorf("expected error 'validation_failed', got %q", resp["error"])
 			}
 		})
 	}
@@ -256,7 +256,7 @@ func TestRegisterHandlerShortPassword(t *testing.T) {
 // Issue #1226 — E-Mail-Pflichtfeld + Verifikations-Dispatch bei Registrierung
 // -----------------------------------------------------------------------------
 
-// AC-1: Request ohne email-Feld → 400 "validation failed", kein Konto angelegt.
+// AC-1: Request ohne email-Feld → 400 "validation_failed", kein Konto angelegt.
 func TestRegisterHandler_MissingEmail_AC1(t *testing.T) {
 	s := newTestStore(t)
 	h := RegisterHandler(s, bcrypt.MinCost, testRegisterCfg())
@@ -271,8 +271,8 @@ func TestRegisterHandler_MissingEmail_AC1(t *testing.T) {
 	}
 	var resp map[string]string
 	json.Unmarshal(w.Body.Bytes(), &resp)
-	if resp["error"] != "validation failed" {
-		t.Errorf("AC-1: expected error 'validation failed', got %q", resp["error"])
+	if resp["error"] != "validation_failed" {
+		t.Errorf("AC-1: expected error 'validation_failed', got %q", resp["error"])
 	}
 	if s.UserExists("alice") {
 		t.Errorf("AC-1: no account must be created when email is missing")
@@ -296,7 +296,7 @@ func TestRegisterHandler_InvalidEmail_AC2(t *testing.T) {
 	var resp map[string]string
 	json.Unmarshal(w.Body.Bytes(), &resp)
 	if resp["error"] != "invalid_email" {
-		t.Errorf("AC-2: expected error 'invalid_email' (getrennt von 'validation failed'), got %q", resp["error"])
+		t.Errorf("AC-2: expected error 'invalid_email' (getrennt von 'validation_failed'), got %q", resp["error"])
 	}
 	if s.UserExists("alice") {
 		t.Errorf("AC-2: no account must be created when email is invalid")
