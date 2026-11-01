@@ -294,6 +294,26 @@ describe('TypeScript-Ratsche (F11, AC-6)', () => {
 		assert.deepEqual(treffer.map((e) => e.pfad), []);
 	});
 
+	// Issue #2655 (i18n F6, AC-7): Versand-Reiter und Telegram-Kurzstil-Schalter.
+	test('F6: kein Allowlist-Eintrag deckt den Versand-Reiter oder den Kurzstil-Schalter', () => {
+		const F6 = [
+			'lib/components/shared/VersandTab.svelte',
+			'lib/components/shared/TelegramKurzstilToggle.svelte',
+			'lib/components/shared/versand-tab/VTBriefingChannels.svelte',
+			'lib/components/shared/versand-tab/VTSchedulePlan.svelte',
+			'lib/components/shared/versand-tab/VTLaufzeitRoute.svelte',
+			'lib/components/shared/versand-tab/VTLaufzeitVergleich.svelte',
+			'lib/components/shared/versand-tab/VTNextBriefing.svelte'
+		];
+		const deckt = (a: string, p: string) => (a.endsWith('/') ? p.startsWith(a) : p === a);
+		assert.deepEqual(F6.filter((p) => ALLOWLIST.some((a) => deckt(a, p))), []);
+		for (const alt of ['lib/components/shared/', 'lib/components/shared/versand-tab/', 'lib/components/shared/TelegramKurzstilToggle.svelte'])
+			assert.ok(!ALLOWLIST.includes(alt), alt);
+		const treffer = scanneVerzeichnis(SRC).filter((e) => F6.includes(e.pfad) && e.treffer.length > 0);
+		assert.deepEqual(treffer.map((e) => e.pfad), []);
+		assert.ok(scanneVerzeichnis(SRC).filter((e) => F6.includes(e.pfad)).length === F6.length, 'Messaufbau: F6-Dateien nicht gescannt');
+	});
+
 	test('Allowlist enthaelt die acht F11-Praefixe nicht mehr', () => {
 		const F11 = [
 			'lib/components/ui/',
