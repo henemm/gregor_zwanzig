@@ -17,5 +17,7 @@
 	"onboarding.hinweis.premium_sms": "Your plan includes Premium SMS (Garmin inReach) as a channel.",
 	"onboarding.testmail.laeuft": "Sending test email …",
 	"onboarding.testmail.fehler": "The test email could not be sent.",
-	"onboarding.checkliste.hilfe": "How Gregor works"
+	"onboarding.checkliste.hilfe": "How Gregor works",
+	"onboarding.leer.titel": "Welcome to Gregor 20",
+	"onboarding.leer.beschreibung": "Create your first trip or start a location comparison."
 }

@@ -84,13 +84,24 @@ describe('AC-8: englische Texte', () => {
 		assert.equal(enText('standardwerte.knopf'), 'Save as defaults');
 		assert.equal(enText('onboarding.willkommen.neuer_trip'), '+ New trip');
 	});
-	test('Protokoll-Token und Bildpfade bleiben unuebersetzt', () => {
-		for (const k of keys.filter((x) => x.endsWith('.src') || /^hilfe\.befehle\.[^.]+\.befehl$/.test(x))) {
-			const d = trFor('de', k);
-			const e = enText(k);
-			// Datumsplatzhalter (JJJJ-MM-TT) ist Beschreibung, kein Token.
-			assert.equal(e.replace('YYYY-MM-DD', 'JJJJ-MM-TT'), d, k);
+	test('Bildpfade bleiben unuebersetzt', () => {
+		const pfade = keys.filter((x) => x.endsWith('.src'));
+		assert.ok(pfade.length > 0, 'Messaufbau: keine Bildpfade');
+		for (const k of pfade) assert.equal(enText(k), trFor('de', k), k);
+	});
+	test('Befehlswoerter: en zeigt die englischen Protokoll-Woerter (#2651), Argumentform bleibt', () => {
+		// #2651 (F2): die Hilfe zeigt je Sprache das Wort, das der Bot versteht
+		// (wort_en, Drift gegen _COMMAND_SPECS: tests/test_hilfe_befehle_drift.py).
+		// Die Argumentform (nach dem ersten Wort) bleibt bis auf den Datumsplatzhalter gleich.
+		const befehle = keys.filter((x) => /^hilfe\.befehle\.[^.]+\.befehl$/.test(x));
+		assert.equal(befehle.length, 15);
+		const arg = (s: string) => s.split(' ').slice(1).join(' ');
+		for (const k of befehle) {
+			assert.equal(arg(enText(k)).replace('YYYY-MM-DD', 'JJJJ-MM-TT'), arg(trFor('de', k)), k);
 		}
+		assert.equal(enText('hilfe.befehle.heute.befehl'), 'TODAY');
+		assert.equal(enText('hilfe.befehle.weiter.befehl'), 'RESUME');
+		assert.equal(enText('hilfe.befehle.status.befehl'), 'STATUS');
 	});
 });
 

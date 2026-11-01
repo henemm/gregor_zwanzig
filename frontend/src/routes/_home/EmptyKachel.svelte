@@ -48,10 +48,10 @@
 		{/if}
 	</section>
 {:else}
-	<EmptyState title="Willkommen bei Gregor 20" description="Leg deinen ersten Trip an oder starte einen Orts-Vergleich.">
+	<EmptyState title={$t('onboarding.leer.titel')} description={$t('onboarding.leer.beschreibung')}>
 		<div style="display: flex; gap: 0.75rem; flex-wrap: wrap; justify-content: center;">
-			<Btn variant="accent" href="/trips/new">+ Neuer Trip</Btn>
-			<Btn variant="outline" href="/compare/new">+ Neuer Vergleich</Btn>
+			<Btn variant="accent" href="/trips/new">{$t('onboarding.willkommen.neuer_trip')}</Btn>
+			<Btn variant="outline" href="/compare/new">{$t('onboarding.willkommen.neuer_vergleich')}</Btn>
 		</div>
 	</EmptyState>
 {/if}
