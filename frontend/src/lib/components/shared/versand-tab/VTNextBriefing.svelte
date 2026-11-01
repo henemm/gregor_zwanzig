@@ -8,6 +8,7 @@
 	import { api } from '$lib/api.js';
 	import { formatNextBriefing, type NextBriefing } from './nextBriefingText.ts';
 	import { erstelleNaechstesBriefingLader } from './naechstesBriefingLader.svelte.ts';
+	import { t, locale } from '$lib/i18n';
 
 	interface Props {
 		/** Backend-Wert von aussen; gesetzt ⇒ kein eigener Abruf. */
@@ -28,11 +29,12 @@
 		(p) => api.get(p)
 	);
 
-	const wert = $derived(formatNextBriefing(lader.wert, context));
+	// #2655 (F6): formatNextBriefing liest die Sprache per tr(); `$locale` macht den Wechsel reaktiv.
+	const wert = $derived.by(() => (void $locale, formatNextBriefing(lader.wert, context)));
 </script>
 
 <div class="vt-next-briefing" data-testid="vt-next-briefing">
-	<span class="vt-next-briefing-label">Nächstes Briefing</span>
+	<span class="vt-next-briefing-label">{$t('versand.naechstes.titel')}</span>
 	<span class="vt-next-briefing-value">{wert}</span>
 </div>
 

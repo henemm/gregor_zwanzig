@@ -9,6 +9,7 @@
 	// Spec: docs/specs/modules/versand_tab_route.md (AC-5)
 
 	import { Eyebrow, Btn } from '$lib/components/atoms';
+	import { t } from '$lib/i18n';
 
 	interface Props {
 		tripEnd: string | null;
@@ -18,16 +19,16 @@
 </script>
 
 <div>
-	<Eyebrow style="margin-bottom: 10px;">Laufzeit</Eyebrow>
+	<Eyebrow style="margin-bottom: 10px;">{$t('versand.laufzeit.titel')}</Eyebrow>
 	<div class="vt-laufzeit-box" data-testid="briefings-laufzeit">
 		<span class="vt-laufzeit-dot"></span>
 		<div class="vt-laufzeit-text">
-			<div class="vt-laufzeit-title">Läuft mit der Trip · endet {tripEnd ?? '—'}</div>
+			<div class="vt-laufzeit-title">{$t('versand.laufzeit.route', { ende: tripEnd ?? '—' })}</div>
 			<div class="vt-laufzeit-sub">
-				Das Enddatum ergibt sich aus den Etappen — es wird dort gepflegt, nicht hier.
+				{$t('versand.laufzeit.route_sub')}
 			</div>
 		</div>
-		<Btn variant="ghost" size="sm" onclick={onOpenStages}>Etappen öffnen →</Btn>
+		<Btn variant="ghost" size="sm" onclick={onOpenStages}>{$t('versand.laufzeit.etappen_oeffnen')}</Btn>
 	</div>
 </div>
 

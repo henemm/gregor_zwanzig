@@ -20,6 +20,9 @@
 // Pure Funktion, kein Netz-/DOM-Zugriff — node:testbar.
 
 import type { ConnectionProfile } from './channelConnectionStatus';
+import { get } from 'svelte/store';
+import { tr, locale } from '../../../i18n/index.ts';
+import { fmtDate } from '../../../i18n/format.ts';
 
 export type PremiumSmsTone = 'good' | 'warn' | 'neutral';
 
@@ -40,12 +43,14 @@ export interface PremiumSmsChannelState {
 	contactLabel: string;
 }
 
-/** Meldedatum als deutsches Kalenderdatum. Bewusst ohne toLocaleDateString:
- * das Ergebnis darf nicht von der ICU-Ausstattung der Laufzeit abhaengen. */
+/** Meldedatum: deutsch `TT.MM.JJJJ`, englisch `Thu 30 Oct` ohne Jahr (#2655, Annahme A2).
+ * Bewusst ohne toLocaleDateString: das Ergebnis darf nicht von der
+ * ICU-Ausstattung der Laufzeit abhaengen. */
 function formatReportedAt(iso: string | undefined): string {
 	if (!iso) return '';
 	const d = new Date(iso);
 	if (Number.isNaN(d.getTime())) return '';
+	if (get(locale) === 'en') return fmtDate(d, 'en', 'kurz');
 	const pad = (n: number) => String(n).padStart(2, '0');
 	return `${pad(d.getDate())}.${pad(d.getMonth() + 1)}.${d.getFullYear()}`;
 }
@@ -55,7 +60,7 @@ export function premiumSmsChannelState(
 ): PremiumSmsChannelState {
 	const p = profile ?? {};
 	const reportedAt = formatReportedAt(p.premium_sms_reply_at);
-	const reportedAtLabel = reportedAt ? `zuletzt gemeldet am ${reportedAt}` : '';
+	const reportedAtLabel = reportedAt ? tr('versand.premium_sms.zuletzt_gemeldet', { datum: reportedAt }) : '';
 	const contactLabel = p.premium_sms_reply_to ? ` (${p.premium_sms_reply_to})` : '';
 	const base = { reportedAtLabel, contactLabel };
 
@@ -68,8 +73,8 @@ export function premiumSmsChannelState(
 			...base,
 			disabled: true,
 			tone: 'neutral',
-			statusLabel: 'nicht verfügbar',
-			hint: 'Premium-SMS ab Level Premium verfügbar'
+			statusLabel: tr('versand.premium_sms.nicht_verfuegbar'),
+			hint: tr('versand.premium_sms.hinweis.nicht_verfuegbar')
 		};
 	}
 
@@ -79,8 +84,8 @@ export function premiumSmsChannelState(
 			...base,
 			disabled: false,
 			tone: 'good',
-			statusLabel: 'gelernt',
-			hint: 'Das Gerät hat sich gemeldet — Briefings gehen an die gelernte Rückadresse.'
+			statusLabel: tr('versand.premium_sms.gelernt'),
+			hint: tr('versand.premium_sms.hinweis.gelernt')
 		};
 	}
 	if (p.premium_sms_reply_state === 'stale') {
@@ -88,10 +93,8 @@ export function premiumSmsChannelState(
 			...base,
 			disabled: true,
 			tone: 'warn',
-			statusLabel: 'verfallen',
-			hint:
-				'Rückadresse verfallen — Garmin kann die Nummer inzwischen einem fremden Gerät ' +
-				'zugeteilt haben. Sobald sich das Gerät wieder meldet, ist der Kanal erneut nutzbar.'
+			statusLabel: tr('versand.premium_sms.verfallen'),
+			hint: tr('versand.premium_sms.hinweis.verfallen')
 		};
 	}
 	// 'none' und alles Unbekannte: noch nie gemeldet. Bewusst NICHT als
@@ -100,7 +103,7 @@ export function premiumSmsChannelState(
 		...base,
 		disabled: true,
 		tone: 'neutral',
-		statusLabel: 'nicht verbunden',
-		hint: 'Das Gerät hat sich noch nie gemeldet — die Rückadresse wird beim ersten Empfang gelernt.'
+		statusLabel: tr('versand.status.nicht_verbunden'),
+		hint: tr('versand.premium_sms.hinweis.nie_gemeldet')
 	};
 }

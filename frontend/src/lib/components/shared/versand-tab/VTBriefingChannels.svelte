@@ -20,6 +20,11 @@
 	// Funktionen ausgelagert — testbar ohne Renderharness.
 	import { vtBriefingLeadText, vtBriefingSubTexts } from './vtBriefingChannelsText';
 	import TelegramKurzstilToggle from '$lib/components/shared/TelegramKurzstilToggle.svelte';
+	import { t, locale } from '$lib/i18n';
+	import { textTeile } from '$lib/i18n/textTeile';
+
+	// #2655 (F6): Kanalnamen sind Eigennamen (ADR-0104) und stehen nicht im Katalog.
+	const KANAL = { email: 'E-Mail', telegram: 'Telegram', sms: 'SMS', premiumSms: 'Premium-SMS (Garmin inReach)' } as const;
 
 	interface Channels {
 		email: boolean;
@@ -95,11 +100,12 @@
 
 	// Issue #1258 S6 (R5): ehrlicher Verbindungsstatus je Kanal (Dot + Label),
 	// additiv zu den bestehenden Checkboxen.
-	let connectionStatus = $derived(channelConnectionStatus(profile));
+	// #2655 (F6): die Helfer lesen die Sprache per tr(); `$locale` macht den Wechsel reaktiv.
+	let connectionStatus = $derived.by(() => (void $locale, channelConnectionStatus(profile)));
 	let contactLabel = $derived(channelContactLabel(profile));
 	// Issue #1717 S3: geteilter Zustands-Helfer — dieselbe Quelle, die
 	// die frühere Report-Config-Section (#2277 S5 entfernt) benutzt (keine zweite Kopie der Logik).
-	let premiumSms = $derived(premiumSmsChannelState(profile));
+	let premiumSms = $derived.by(() => (void $locale, premiumSmsChannelState(profile)));
 
 	onMount(() => {
 		if (profileOverride !== undefined) return;
@@ -116,19 +122,19 @@
 	// Issue #1719 S3 (AC-5/AC-5a, AC-6): Hinweistexte kommen aus reinen
 	// Funktionen (vtBriefingChannelsText.ts) — keine Wertung mehr ("läuft/wird
 	// flach" raus), SMS-Zeichengrenze kontextabhängig (Trip 160 / Vergleich 153).
-	const ctxLeadText = $derived(vtBriefingLeadText(context));
-	const SUB = $derived(vtBriefingSubTexts(context, telegramStyle));
+	const ctxLeadText = $derived.by(() => (void $locale, vtBriefingLeadText(context)));
+	const SUB = $derived.by(() => (void $locale, vtBriefingSubTexts(context, telegramStyle)));
 </script>
 
 <div>
-	<Eyebrow style="margin-bottom: 10px;">Geplantes Briefing · Kanäle</Eyebrow>
+	<Eyebrow style="margin-bottom: 10px;">{$t('versand.kanaele.titel')}</Eyebrow>
 	<p class="vt-lead">{ctxLeadText}</p>
 	<Card padding={0}>
 		<div class="vt-channels-body">
 			<div class="text-sm">
 				<span data-testid={emailTestid} class="inline-flex items-center gap-2">
 					<Checkbox checked={channels.email} disabled={connectionStatus.email.tone !== 'good'} onchange={onEmailChange}
-						>E-Mail{contactLabel.email}</Checkbox
+						>{KANAL.email}{contactLabel.email}</Checkbox
 					>
 				</span>
 				<span data-testid="channel-status-email" class="vt-channel-status">
@@ -138,7 +144,7 @@
 				<p class="vt-channel-sub pl-6">{SUB.email}</p>
 				{#if !availableChannels.email}
 					<div data-testid="channel-email-hint" class="pl-6 text-xs text-muted-foreground">
-						E-Mail-Adresse fehlt — <a href="/account">im Account einrichten</a>
+						{#each textTeile($t('versand.kanal.email_fehlt')) as teil}{#if teil.platzhalter === 'link'}<a href="/account">{$t('versand.kanal.im_account_einrichten')}</a>{:else}{teil.text}{/if}{/each}
 					</div>
 				{/if}
 			</div>
@@ -149,7 +155,7 @@
 						checked={channels.telegram}
 						disabled={!availableChannels.telegram}
 						onchange={onTelegramChange}
-						>Telegram{contactLabel.telegram}</Checkbox
+						>{KANAL.telegram}{contactLabel.telegram}</Checkbox
 					>
 				</span>
 				<span data-testid="channel-status-telegram" class="vt-channel-status">
@@ -159,7 +165,7 @@
 				<p class="vt-channel-sub pl-6">{SUB.telegram}</p>
 				{#if !availableChannels.telegram}
 					<div data-testid="channel-telegram-hint" class="pl-6 text-xs text-muted-foreground">
-						Telegram-Chat-ID fehlt — <a href="/account">im Account einrichten</a>
+						{#each textTeile($t('versand.kanal.telegram_fehlt')) as teil}{#if teil.platzhalter === 'link'}<a href="/account">{$t('versand.kanal.im_account_einrichten')}</a>{:else}{teil.text}{/if}{/each}
 					</div>
 				{/if}
 				{#if onTelegramStyleChange}
@@ -177,7 +183,7 @@
 			<div class="text-sm">
 				<span data-testid={smsTestid} class="inline-flex items-center gap-2">
 					<Checkbox checked={channels.sms} disabled={!availableChannels.sms} onchange={onSmsChange}
-						>SMS{contactLabel.sms}</Checkbox
+						>{KANAL.sms}{contactLabel.sms}</Checkbox
 					>
 				</span>
 				<span data-testid="channel-status-sms" class="vt-channel-status">
@@ -187,18 +193,18 @@
 				<p class="vt-channel-sub pl-6">{SUB.sms}</p>
 				{#if profile?.sms_allowed === false}
 					<div data-testid="channel-sms-hint" class="pl-6 text-xs text-muted-foreground">
-						SMS ab Level Standard verfügbar
+						{$t('versand.kanal.sms_ab_standard')}
 					</div>
 				{:else if profile?.sms_to && !profile?.sms_verified}
 					<!-- Issue #2406: eine eingetragene, aber unbewiesene Nummer ist nicht
 					     dasselbe wie "keine Nummer" — der Hinweis nennt den einzigen Weg
 					     zur Freischaltung. -->
 					<div data-testid="channel-sms-hint" class="pl-6 text-xs text-muted-foreground">
-						Nummer noch nicht bestätigt — <a href="/account">Code im Account eingeben</a>
+						{#each textTeile($t('versand.kanal.nummer_unbestaetigt')) as teil}{#if teil.platzhalter === 'link'}<a href="/account">{$t('versand.kanal.code_eingeben')}</a>{:else}{teil.text}{/if}{/each}
 					</div>
 				{:else if !availableChannels.sms}
 					<div data-testid="channel-sms-hint" class="pl-6 text-xs text-muted-foreground">
-						Handynummer fehlt — <a href="/account">im Account einrichten</a>
+						{#each textTeile($t('versand.kanal.nummer_fehlt')) as teil}{#if teil.platzhalter === 'link'}<a href="/account">{$t('versand.kanal.im_account_einrichten')}</a>{:else}{teil.text}{/if}{/each}
 					</div>
 				{/if}
 				<!-- Premium-SMS (Garmin inReach) — Issue #1717 S3. Schaltbar NUR wenn
@@ -212,7 +218,7 @@
 								checked={channels.premium_sms ?? false}
 								disabled={premiumSms.disabled}
 								onchange={onPremiumSmsChange}
-								>Premium-SMS (Garmin inReach){premiumSms.contactLabel}</Checkbox
+								>{KANAL.premiumSms}{premiumSms.contactLabel}</Checkbox
 							>
 						</span>
 						<span data-testid="channel-status-premium-sms" class="vt-channel-status">
@@ -231,10 +237,10 @@
 				{:else}
 					<div class="text-sm" style="margin-top: 6px;">
 						<span data-testid="channel-premium-sms" class="inline-flex items-center gap-2">
-							<Checkbox checked={false} disabled={true}>Premium-SMS (Garmin inReach)</Checkbox>
+							<Checkbox checked={false} disabled={true}>{KANAL.premiumSms}</Checkbox>
 						</span>
 					</div>
-					<div class="pl-6 text-xs text-muted-foreground">bald verfügbar</div>
+					<div class="pl-6 text-xs text-muted-foreground">{$t('versand.kanal.bald_verfuegbar')}</div>
 				{/if}
 			</div>
 		</div>

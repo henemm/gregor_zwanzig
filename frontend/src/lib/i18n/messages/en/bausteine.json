@@ -16,6 +16,7 @@
 	"tip.aria.kanal_schwelle": "Explanation: urgency threshold",
 	"tip.aria.cape": "Explanation: CAPE",
 	"tip.aria.cooldown": "Explanation: cooldown",
+	"telegram_kurzstil.checkbox": "Telegram in SMS compact style",
 	"telegram_kurzstil.hinweis_aktiv": "Telegram gets the same short one-line text as SMS, without buttons. Content and values follow the SMS selection in the Layout tab; the Telegram selection only applies to the detailed Telegram message.",
 	"telegram_kurzstil.hinweis_inaktiv": "Only active when Telegram is switched on as a channel.",
 	"standardwerte.knopf": "Save as defaults",

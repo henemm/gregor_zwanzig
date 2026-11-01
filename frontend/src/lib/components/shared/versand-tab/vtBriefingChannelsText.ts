@@ -13,6 +13,7 @@
 
 import { CHANNEL_COL_BUDGET } from '$lib/components/trip-detail/metricsEditor';
 import { SMS_TRIP_CHAR_LIMIT, SMS_COMPARE_CHAR_LIMIT } from '$lib/components/shared/layout-tab/ltChannels';
+import { tr } from '../../../i18n/index.ts';
 
 export type VtBriefingContext = 'route' | 'vergleich';
 
@@ -23,16 +24,10 @@ export function vtBriefingSmsCharLimit(context: VtBriefingContext): number {
 
 /** Einleitungstext oberhalb der Kanal-Liste — keine Wertung (AC-5/AC-5a). */
 export function vtBriefingLeadText(context: VtBriefingContext): string {
-	if (context === 'vergleich') {
-		return (
-			'Der Orts-Vergleich ist eine breite Tabelle — realistisch läuft er per E-Mail. ' +
-			`Telegram trägt nur ≤ ${CHANNEL_COL_BUDGET.telegram} Spalten, SMS kein Raster, Fließtext.`
-		);
-	}
-	return (
-		'Das Trip-Briefing ist eine Etappen-Tabelle — E-Mail trägt alle Spalten, ' +
-		`Telegram die ersten ${CHANNEL_COL_BUDGET.telegram}, SMS kein Raster, Fließtext.`
-	);
+	// #2655 (F6): je Kontext ein ganzer Satz im Katalog (keine Satz-Konkatenation).
+	const telegram_spalten = CHANNEL_COL_BUDGET.telegram;
+	if (context === 'vergleich') return tr('versand.briefing.lead.vergleich', { telegram_spalten });
+	return tr('versand.briefing.lead.route', { telegram_spalten });
 }
 
 /** Kanal-Unterzeile je Kanal (Layout-Hinweis) — keine Wertung (AC-5/AC-5a). */
@@ -42,9 +37,11 @@ export function vtBriefingSubTexts(
 ): { email: string; telegram: string; sms: string } {
 	// Issue #2455: Telegram-Kurzform uebernimmt die SMS-Auswahl 1:1.
 	return {
-		email: 'Layout · volle Tabelle',
+		email: tr('versand.briefing.sub.email'),
 		telegram:
-			telegramStyle === 'kurzform' ? 'folgt der SMS-Auswahl' : `Layout · ${CHANNEL_COL_BUDGET.telegram} Spalten`,
-		sms: `Layout · kein Raster, ${vtBriefingSmsCharLimit(context)} Zeichen`
+			telegramStyle === 'kurzform'
+				? tr('versand.briefing.sub.telegram_kurzform')
+				: tr('versand.briefing.sub.telegram', { telegram_spalten: CHANNEL_COL_BUDGET.telegram }),
+		sms: tr('versand.briefing.sub.sms', { zeichen: vtBriefingSmsCharLimit(context) })
 	};
 }

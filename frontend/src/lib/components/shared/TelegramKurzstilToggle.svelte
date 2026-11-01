@@ -54,7 +54,7 @@
 			{disabled}
 			aria-disabled={disabled ? 'true' : undefined}
 			onchange={handleChange}
-		>Telegram im SMS-Kurzstil</Checkbox>
+		>{$t('telegram_kurzstil.checkbox')}</Checkbox>
 	</span>
 	<p class="tks-sub">
 		{#if disabled}

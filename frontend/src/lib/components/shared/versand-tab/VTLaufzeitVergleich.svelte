@@ -14,6 +14,7 @@
 	//
 	// Spec: docs/specs/modules/versand_tab_vergleich.md (AC-3)
 	import { Eyebrow } from '$lib/components/atoms';
+	import { t } from '$lib/i18n';
 
 	interface Props {
 		value: string | null;
@@ -40,7 +41,7 @@
 </script>
 
 <div>
-	<Eyebrow style="margin-bottom: 10px;">Laufzeit</Eyebrow>
+	<Eyebrow style="margin-bottom: 10px;">{$t('versand.laufzeit.titel')}</Eyebrow>
 	<div class="vt-laufzeit-vergleich" data-testid="briefings-laufzeit-vergleich">
 		<div class="vt-segmented" role="tablist">
 			<button
@@ -51,7 +52,7 @@
 				data-testid="compare-versand-enddate-open"
 				onclick={selectOpen}
 			>
-				Bis auf Weiteres
+				{$t('versand.laufzeit.offen')}
 			</button>
 			<button
 				type="button"
@@ -61,7 +62,7 @@
 				data-testid="compare-versand-enddate-date"
 				onclick={selectDate}
 			>
-				Bis Datum
+				{$t('versand.laufzeit.bis_datum')}
 			</button>
 		</div>
 		{#if mode === 'date'}
@@ -73,7 +74,7 @@
 				class="vt-date-input"
 			/>
 		{:else}
-			<p class="vt-laufzeit-hint">Der Versand läuft ohne Enddatum weiter.</p>
+			<p class="vt-laufzeit-hint">{$t('versand.laufzeit.ohne_ende')}</p>
 		{/if}
 	</div>
 </div>

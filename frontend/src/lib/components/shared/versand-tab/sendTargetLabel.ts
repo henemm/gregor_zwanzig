@@ -13,6 +13,7 @@ import { channelConnectionStatus } from './channelConnectionStatus';
 // Issue #2229 (AC-2): Zustellbarkeit der Premium-SMS NICHT neu ableiten.
 import { premiumSmsChannelState } from './premiumSmsChannelState';
 import type { ConnectionProfile } from './channelConnectionStatus.js';
+import { tr } from '../../../i18n/index.ts';
 
 /** Die im Vergleich aktivierten Zusatzkanaele (Ausschnitt aus ComparePreset). */
 export interface SendTargetChannels {
@@ -64,7 +65,7 @@ export function sendTargetLabel(
 	// Issue #2278 AC-10: ohne Konto-Profil (keine Session / nicht ladbar) ist das Ziel UNBEKANNT —
 	// gesperrt, nie ein Default-Nutzer. Unterscheidet sich von „Profil da, aber ohne Adresse".
 	if (profile === null || profile === undefined) {
-		return ergebnis('Versandziel unbekannt — das Konto-Profil ist nicht verfügbar; es wird nichts gesendet.', false);
+		return ergebnis(tr('versand.ziel.unbekannt'), false);
 	}
 	const p = profile;
 	const selected = preset ?? {};
@@ -73,19 +74,17 @@ export function sendTargetLabel(
 	// Keine Adresse hinterlegt → der Server wirft "kein Empfaenger — mail_to fehlt"
 	// (scheduler_dispatch_service.py:336-340).
 	if (!p.mail_to) {
-		return ergebnis(
-			'Im Konto ist keine E-Mail-Adresse hinterlegt — es kann nichts gesendet werden.',
-			false
-		);
+		return ergebnis(tr('versand.ziel.keine_adresse'), false);
 	}
 
 	// Adresse da, aber unbestaetigt → der Empfaengerschutz blockt die Zustellung
 	// (email.py:239-285). Ein Knopf, der nichts bewirkt, waere #1471 mit umgekehrtem
 	// Vorzeichen — deshalb gesperrt, mit sichtbar anderer Begruendung als oben.
 	if (status.email.tone !== 'good') {
-		return ergebnis(`Die Adresse ${p.mail_to} ist nicht bestätigt — es wird nichts zugestellt.`, false);
+		return ergebnis(tr('versand.ziel.unbestaetigt', { adresse: p.mail_to }), false);
 	}
 
+	// Kanalnamen sind Eigennamen (ADR-0104) und stehen nicht im Katalog.
 	const ziele = [`E-Mail (${p.mail_to})`];
 	if (selected.send_telegram === true && status.telegram.tone === 'good') ziele.push('Telegram');
 	if (selected.send_sms === true && status.sms.tone === 'good') ziele.push('SMS');
@@ -94,5 +93,5 @@ export function sendTargetLabel(
 	if (selected.send_premium_sms === true && !premiumSmsChannelState(p).disabled) ziele.push('Premium-SMS');
 
 	// " · " als Trenner — Konvention aus channelNamesLabel() (subscriptionHelpers.ts).
-	return ergebnis(`Geht an ${ziele.join(' · ')}.`, true);
+	return ergebnis(tr('versand.ziel.geht_an', { ziele: ziele.join(' · ') }), true);
 }
