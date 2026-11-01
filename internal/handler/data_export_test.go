@@ -50,6 +50,9 @@ var exportErwarteteDateien = []string{
 	"briefing_log.json",
 	"pending_briefings.json",
 	"briefing_slots.json",
+	// Issue #1777: Idempotenz-Vermerk des Ortsvergleichs (eigene Datei neben
+	// dem Trip-Vermerk, BriefingSlotStore parametriert).
+	"briefing_slots_compare.json",
 	"briefing_anchor.json",
 	"throttle_state.json",
 	// Altbestand aus src/services/throttle_store.py:31-33 (Spec AC-9).
@@ -286,6 +289,8 @@ func exportSeedVollbild(t *testing.T, root *store.Store, uid string) {
 
 	// Python-Kern (src/services/*.py) — kein Go-Schreiber.
 	exportSchreibeRoh(t, root, uid, "briefing_slots.json", `{"marker":"MARKER-voll-slots-1f04"}`)
+	// Issue #1777: Vermerk-Speicher des Ortsvergleichs (Python-Kern, kein Go-Schreiber).
+	exportSchreibeRoh(t, root, uid, "briefing_slots_compare.json", `{"marker":"MARKER-voll-slots-compare-1f04"}`)
 	exportSchreibeRoh(t, root, uid, "briefing_anchor.json", `{"marker":"MARKER-voll-anchor-1f04"}`)
 	exportSchreibeRoh(t, root, uid, "throttle_state.json", `{"marker":"MARKER-voll-throttle-1f04"}`)
 	exportSchreibeRoh(t, root, uid, "alert_throttle.json", `{"marker":"MARKER-voll-throttle-alt-trip-1f04"}`)

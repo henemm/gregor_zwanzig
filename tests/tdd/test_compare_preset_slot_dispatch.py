@@ -71,7 +71,14 @@ def _without_slot_fields(preset: dict) -> dict:
 def test_ac4_morning_slot_due_at_configured_hour_not_outside():
     """GIVEN ein Preset mit aktivem Morgen-Versand um 07:00
     WHEN presets_due_for_hour bei hour=7 laeuft
-    THEN ist das Preset faellig mit target=heute; bei hour=8 nicht faellig."""
+    THEN ist das Preset faellig mit target=heute; bei hour=8 (im Nachhol-
+    Fenster, kein Vermerk) ebenfalls; bei hour=10 (ausserhalb) nicht.
+
+    Issue #1777 (abgeloeste Festlegung, Spec fix_1777 Abschnitt „Abgeloeste
+    Festlegungen" Punkt 2): frueher stand hier ``due_at_8 == []``
+    (Stundengleichheit als Soll). ADR-0051 erklaert Stundengleichheit fuer
+    Faelligkeit fuer unzulaessig; neu gilt das Fenster
+    ``stunde <= ortsstunde < stunde + 3`` (Trip-Paritaet #1725)."""
     preset = _preset(
         morning_enabled=True, morning_time="07:00:00",
         evening_enabled=False, evening_time="18:00:00",
@@ -79,9 +86,13 @@ def test_ac4_morning_slot_due_at_configured_hour_not_outside():
 
     due_at_7 = presets_due_for_hour([preset], {}, utc_moment(TODAY, 7))
     due_at_8 = presets_due_for_hour([preset], {}, utc_moment(TODAY, 8))
+    due_at_10 = presets_due_for_hour([preset], {}, utc_moment(TODAY, 10))
 
     assert due_at_7 == [(preset, TODAY, 0)]
-    assert due_at_8 == []
+    assert due_at_8 == [(preset, TODAY, 0)], (
+        "Ortsstunde 08 liegt im Fenster eines 07:00-Slots und ist ohne Vermerk faellig"
+    )
+    assert due_at_10 == []
 
 
 # --- AC-5: Abend-Slot faellig, Ziel ist der Folgetag -----------------------

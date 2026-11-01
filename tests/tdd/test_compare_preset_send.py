@@ -177,9 +177,15 @@ def _vergleich(uid: str, preset_id: str, *, telegram: bool = False, sms: bool = 
     return preset_id
 
 
-def _cron(uid: str, preset_id: str, settings=None) -> bool:
+def _cron(uid: str, preset_id: str, settings=None) -> str | None:
     """Cron-Pfad wie im Betrieb: der fehler-isolierende Wrapper
-    ``_dispatch_due_preset`` (Morgen-Slot, Versatz 0)."""
+    ``_dispatch_due_preset`` (Morgen-Slot, Versatz 0).
+
+    Issue #1777 (Spec fix_1777, Ausgangs-Abbildung): der Wrapper liefert den
+    AUSGANG als String (``"sent"``, ``"no_channels"``, ``"no_weather"``,
+    ``"channels_unreachable"``) statt ``bool``. ``now_utc`` ist optional
+    (Default = jetzt) und wird hier bewusst nicht uebergeben. Zusicherungen
+    vergleichen den Ausgang EXPLIZIT, nie truthy."""
     from app.loader import get_data_root
     from services.scheduler_dispatch_service import _dispatch_due_preset
 
@@ -339,7 +345,7 @@ def test_ac7_cron_nur_telegram_ohne_mail_to_wird_zugestellt(mit, anker, monkeypa
 
     ergebnis = _cron(uid, pid, settings)
 
-    assert ergebnis is True, "Cron-Lauf nur mit Telegram muss als versendet gelten"
+    assert ergebnis == "sent", f"Cron-Lauf nur mit Telegram muss als versendet gelten: {ergebnis!r}"
     assert mit.kanaele == ["telegram"], mit
     assert hv.letzter_versand(uid, pid), "Erfolgs-Status nach echter Zustellung erwartet"
 
@@ -378,7 +384,9 @@ def test_ac8_cron_ohne_wirksamen_kanal_bucht_nicht_als_versendet(mit, anker, mon
 
     ergebnis = _cron(uid, pid)  # darf nicht werfen
 
-    assert ergebnis is False, "Ohne Kanal darf der Cron-Lauf nicht als versendet gelten"
+    assert ergebnis == "no_channels", (
+        f"Ohne Kanal darf der Cron-Lauf nicht als versendet gelten: {ergebnis!r}"
+    )
     assert hv.letzter_versand(uid, pid) is None, "Kein Erfolgs-Status"
     assert anker == [], f"Kein Anker-Reset ohne Zustellung: {anker}"
     assert not mit.kanaele, mit
@@ -396,7 +404,9 @@ def test_ac8_cron_alle_kanaele_gescheitert_bucht_nicht_als_versendet(mit, anker,
     ergebnis = _cron(uid, pid)  # darf nicht werfen
 
     assert versuche, "Vorbedingung: Telegram-Ausgang betreten"
-    assert ergebnis is False, "Gescheiterter Cron-Lauf darf nicht als versendet gelten"
+    assert ergebnis == "channels_unreachable", (
+        f"Gescheiterter Cron-Lauf darf nicht als versendet gelten: {ergebnis!r}"
+    )
     assert hv.letzter_versand(uid, pid) is None, "Kein Erfolgs-Status"
     assert anker == [], f"Kein Anker-Reset bei gescheitertem Versand: {anker}"
 
@@ -409,7 +419,7 @@ def test_ac8_kontrolle_cron_mit_zustellung_bucht_und_setzt_anker(mit, anker, mon
 
     ergebnis = _cron(uid, pid)
 
-    assert ergebnis is True
+    assert ergebnis == "sent", ergebnis
     assert mit.kanaele == ["email"], mit
     assert hv.letzter_versand(uid, pid), "Erfolgs-Status nach Zustellung erwartet"
     assert len(anker) >= 1, f"Anker muss nach echter Zustellung gesetzt werden: {anker}"
@@ -459,7 +469,9 @@ def test_cron_ohne_opt_in_alle_orte_mit_fehler_wird_nicht_zugestellt(mit, anker,
 
     ergebnis = _cron(uid, pid)
 
-    assert ergebnis is False, "Cron: Provider-Totalausfall darf nicht als zugestellt gelten (#2286)"
+    assert ergebnis == "no_weather", (
+        f"Cron: Provider-Totalausfall darf nicht als zugestellt gelten (#2286): {ergebnis!r}"
+    )
     assert mit.kanaele == [], mit
     assert not hv.letzter_versand(uid, pid), "kein Erfolgs-Status bei no_weather (#2286)"
 
@@ -487,7 +499,7 @@ def test_cron_alle_kanaele_gescheitert_schreibt_versandfehler_spur(mit, anker, m
     hv.profil_ohne_mail_to(uid)
     versuche = hv.telegram_vergleich_scheitert(monkeypatch)
 
-    assert _cron(uid, pid) is False
+    assert _cron(uid, pid) == "channels_unreachable"
     assert versuche, "Vorbedingung: Telegram-Ausgang betreten"
     eintraege = _versandfehler_eintraege(uid)
     assert [(e["kind"], e["entity_id"]) for e in eintraege] == [("vergleich", pid)], eintraege

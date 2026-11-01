@@ -490,9 +490,18 @@ def test_slot_stunde_gilt_in_der_ortszeit_des_presets_je_nutzer():
     assert len(faellig(uid_a, roh_a["id"], "ort-wien")) == 1, "Wien 07:00 = 05:00 UTC -> faellig"
     assert len(faellig(uid_b, roh_b["id"], "ort-auckland")) == 1, "Auckland 17:00 = 05:00 UTC -> faellig"
     assert faellig(uid_b, "kette-slots-b2", "ort-auckland") == [], "Auckland 07:00 ist um 05:00 UTC NICHT faellig"
-    spaeter = datetime(2026, 7, 8, 6, 0, tzinfo=timezone.utc)
+    # #1777 (Spec fix_1777 AC-3, abgeloeste Stundengleichheit): 08:00 Wien
+    # liegt im 3-h-Fenster des 07:00-Slots (ohne Vermerk faellig), 10:00 Wien
+    # (H+3) nicht mehr. Frueher: 08:00 Wien == [].
+    spaeter = datetime(2026, 7, 8, 6, 0, tzinfo=timezone.utc)   # Wien 08:00
+    zu_spaet = datetime(2026, 7, 8, 8, 0, tzinfo=timezone.utc)  # Wien 10:00
     orte_a = {o.id: o for o in alle_orte_nur(uid_a)}
-    assert presets_due_for_hour([preset_laden(uid_a, roh_a["id"])], orte_a, spaeter) == []
+    assert len(presets_due_for_hour([preset_laden(uid_a, roh_a["id"])], orte_a, spaeter)) == 1, (
+        "Wien 08:00 liegt im Fenster des 07:00-Slots -> faellig"
+    )
+    assert presets_due_for_hour([preset_laden(uid_a, roh_a["id"])], orte_a, zu_spaet) == [], (
+        "Wien 10:00 (H+3) liegt ausserhalb des Fensters"
+    )
 
 
 # ---------------------------------------------------------------------------
