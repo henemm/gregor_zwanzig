@@ -194,7 +194,8 @@ describe('TypeScript-Ratsche (F11, AC-6)', () => {
 		"console.error('Fehler beim Laden fehlgeschlagen'); // i18n-log",
 		"export const D = 'ok', E = 'Nicht', F = 'nichtig';",
 		"const re = /[äöü]'nicht'/g;",
-		"export const G = `a${'Größe'}b`;"
+		"export const G = `a${'Größe'}b`;",
+		"export const H = tr('fehler.versand.fehlgeschlagen');"
 	].join('\n');
 
 	test('Selbsttest an einer temporaeren Beispiel-Datei: Treffer mit Datei:Zeile, i18n-log und Kommentare ausgenommen', () => {

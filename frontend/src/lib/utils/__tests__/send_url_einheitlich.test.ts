@@ -11,7 +11,7 @@
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import { sendSubscription } from '../../components/shared/subscriptionExec.ts';
-import { SEND_REJECTED_FALLBACK } from '../sendOutcome.ts';
+import { tr } from '../../i18n/index.ts';
 
 interface Aufruf {
 	url: string;
@@ -102,7 +102,7 @@ describe('AC-16: konkreter Grund statt generischer Fehlermeldung', () => {
 			const r = await sendSubscription('vergleich', `cmp-ac16-${code}`, {}, fn);
 			assert.equal(r.kind, 'rejected');
 			assert.equal(r.message, detail);
-			assert.notEqual(r.message, SEND_REJECTED_FALLBACK);
+			assert.notEqual(r.message, tr('fehler.versand.abgelehnt'));
 			assert.equal(r.fehlendeOrte, undefined);
 		});
 	}

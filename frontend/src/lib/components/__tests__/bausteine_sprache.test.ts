@@ -31,6 +31,7 @@ hook(path.join(HERE, 'dialogRahmenHook.mjs'));
 
 const { render } = await import('svelte/server');
 const { locale, trFor } = await import(pathToFileURL(path.join(FRONTEND, 'src/lib/i18n/index.ts')).href);
+const { sendTargetLabel } = await import(pathToFileURL(path.join(COMPONENTS, 'shared/versand-tab/sendTargetLabel.ts')).href);
 const lade = async (rel: string) => (await import(pathToFileURL(path.join(COMPONENTS, rel)).href)).default;
 
 afterEach(() => locale.set('de'));
@@ -100,9 +101,14 @@ describe('AC-4: Englisch — kein deutsches Wort in Beschriftung und aria-label'
 		assert.ok(text(b.presetRail).includes(trFor('en', 'bausteine.profil.wetter_profil')), text(b.presetRail));
 		assert.ok(text(b.presetRail).includes(trFor('en', 'bausteine.profil.eigenes')));
 		assert.ok(text(b.cardTrip).includes(trFor('en', 'bausteine.abo.keine_kanaele')), text(b.cardTrip));
+		// Das Versandziel im Dialog liefert sendTargetLabel (Versand-Reiter, Paket F6), nicht F11.
+		const versandziel = sendTargetLabel(null, null).text;
 		for (const [name, h] of Object.entries(b)) {
 			// Eigennamen (GR20, Korsika, Trips) und Nutzerdaten sind keine Katalogtexte.
-			const gemessen = [text(h), ...attribute(h, 'aria-label'), ...attribute(h, 'title')].join(' | ');
+			// Kachel-Text des Ortsvergleichs (Zeitplan, Profil, Orte-Zahl) liefert compare/subscriptionHelpers
+			// (Pakete F3/F10); hier zaehlen dort nur die Attribute des Bausteins.
+			const sichtbar = name === 'cardVergleich' ? '' : text(h).replace(versandziel, '');
+			const gemessen = [sichtbar, ...attribute(h, 'aria-label'), ...attribute(h, 'title')].join(' | ');
 			assert.doesNotMatch(gemessen, DEUTSCH, `${name}: ${gemessen}`);
 		}
 	});

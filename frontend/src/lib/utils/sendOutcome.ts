@@ -5,30 +5,31 @@
 // Kein AbortController / kein Client-Timeout: der Versand darf bis zur
 // nginx-Grenze (330 s) laufen.
 
+import { tr } from '../i18n/index.ts';
+
 export type SendOutcomeKind = 'ok' | 'already_running' | 'unclear' | 'rejected' | 'failed';
 
 export type SendResponseInput =
 	| { status: number; detail?: string | null }
 	| { networkError: true };
 
-export const SEND_UNCLEAR_MESSAGE = 'Ergebnis unklar — Versand kann noch laufen, nicht erneut senden';
-export const SEND_ALREADY_RUNNING_MESSAGE = 'Versand läuft bereits';
-export const SEND_FAILED_MESSAGE = 'Versand fehlgeschlagen — Serverfehler, bitte später erneut versuchen.';
-export const SEND_REJECTED_FALLBACK = 'Versand fehlgeschlagen — bitte später erneut versuchen.';
+// #2660: Meldungen werden bei JEDEM Aufruf in der aktuellen Sprache gebaut (keine
+// Modul-Konstanten, die die Sprache beim Import einfroeren).
 
 export function classifySendResponse(input: SendResponseInput): { kind: SendOutcomeKind; message: string } {
-	if ('networkError' in input) return { kind: 'unclear', message: SEND_UNCLEAR_MESSAGE };
+	if ('networkError' in input) return { kind: 'unclear', message: tr('fehler.versand.unklar') };
 	const { status } = input;
 	if (status >= 200 && status < 300) return { kind: 'ok', message: '' };
-	if (status === 409) return { kind: 'already_running', message: SEND_ALREADY_RUNNING_MESSAGE };
+	if (status === 409) return { kind: 'already_running', message: tr('fehler.versand.laeuft_bereits') };
 	if (status === 502 || status === 503 || status === 504) {
-		return { kind: 'unclear', message: SEND_UNCLEAR_MESSAGE };
+		return { kind: 'unclear', message: tr('fehler.versand.unklar') };
 	}
 	if (status >= 400 && status < 500) {
-		const detail = typeof input.detail === 'string' && input.detail ? input.detail : SEND_REJECTED_FALLBACK;
+		const detail =
+			typeof input.detail === 'string' && input.detail ? input.detail : tr('fehler.versand.abgelehnt');
 		return { kind: 'rejected', message: detail };
 	}
-	return { kind: 'failed', message: SEND_FAILED_MESSAGE };
+	return { kind: 'failed', message: tr('fehler.versand.fehlgeschlagen') };
 }
 
 /** Liest `detail` bzw. `error` aus einem JSON-Fehlerkoerper (best effort). */
@@ -92,13 +93,13 @@ export type SendRunResult = {
  */
 export async function runSend(key: string, send: () => Promise<Response>): Promise<SendRunResult> {
 	if (!beginSend(key)) {
-		return { kind: 'already_running', message: SEND_ALREADY_RUNNING_MESSAGE, skipped: true };
+		return { kind: 'already_running', message: tr('fehler.versand.laeuft_bereits'), skipped: true };
 	}
 	try {
 		const res = await send();
 		const o = await classifyResponse(res);
 		if (o.kind === 'failed' || o.kind === 'rejected') {
-			console.error(`Versand ${key} fehlgeschlagen: HTTP ${res.status}`);
+			console.error(`Versand ${key} fehlgeschlagen: HTTP ${res.status}`); // i18n-log
 		}
 		return { ...o, skipped: false };
 	} catch (e) {
@@ -146,7 +147,7 @@ export async function sendBriefing(
 		return {
 			...r,
 			fehlendeOrte: fehlende,
-			message: `Test-Briefing gesendet, aber Orte fehlten (gelöscht, ${fehlende.length}): ${fehlende.join(', ')}. Ersetze die Orte im Ortsvergleich.`,
+			message: tr('fehler.versand.orte_fehlten', { anzahl: fehlende.length, orte: fehlende.join(', ') }),
 		};
 	}
 	return r;

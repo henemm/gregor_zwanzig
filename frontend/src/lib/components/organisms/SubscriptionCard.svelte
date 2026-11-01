@@ -20,6 +20,7 @@
 	import { tripStatus } from '$lib/utils/tripStatus.js';
 	import SubscriptionKebab from '$lib/components/molecules/SubscriptionKebab.svelte';
 	import EllipsisVerticalIcon from '@lucide/svelte/icons/ellipsis-vertical';
+	import { t } from '$lib/i18n';
 
 	interface Props {
 		kind: SubscriptionKind;
@@ -82,7 +83,7 @@
 		if (kind === 'trip') {
 			const dates = (trip.stages ?? []).map((s) => s.date).filter(Boolean).sort();
 			const range = dates.length === 0 ? '-' : dates.length === 1 ? dates[0] : `${dates[0]} — ${dates[dates.length - 1]}`;
-			return `${trip.stages?.length ?? 0} Etappen · ${range}`;
+			return $t('bausteine.abo.etappen', { anzahl: trip.stages?.length ?? 0, zeitraum: range });
 		}
 		const profil = presetProfileLabel(preset.profil);
 		return presetLocationsLabel(preset) + (profil ? ` · ${profil}` : '');
@@ -205,8 +206,8 @@
 					<button
 						type="button"
 						data-testid="subscription-card-menu-{sub.id}"
-						aria-label="Weitere Aktionen"
-						title="Weitere Aktionen"
+						aria-label={$t('aktionen.weitere')}
+						title={$t('aktionen.weitere')}
 						onclick={(e: MouseEvent) => {
 							e.stopPropagation();
 							onAction?.('menu');
@@ -250,7 +251,7 @@
 		>
 			{#if channels.length === 0}
 				<span style:font-family="var(--g-font-mono)" style:font-size={dense ? '10px' : '11px'} style:color="var(--g-ink-4)"
-					>noch keine Kanäle</span
+					>{$t('bausteine.abo.keine_kanaele')}</span
 				>
 			{:else}
 				{#each channels as ch (ch)}
@@ -283,7 +284,7 @@
 		>
 			{#if draft || scheduleText}
 				<span style:font-family="var(--g-font-mono)" style:font-size="11px" style:color="var(--g-ink-3)" style:letter-spacing="0.02em"
-					>{draft ? 'Setup unvollständig' : scheduleText}</span
+					>{draft ? $t('bausteine.abo.setup_unvollstaendig') : scheduleText}</span
 				>
 			{/if}
 			{#if nextSend !== undefined}
@@ -291,7 +292,7 @@
 					data-field="next-send"
 					style:font-size="11px"
 					style:color="var(--g-ink-2)"
-					style:flex-shrink="0">nächster {nextSend ?? '—'}</span
+					style:flex-shrink="0">{$t('bausteine.abo.naechster', { zeit: nextSend ?? '—' })}</span
 				>
 			{/if}
 			{#if !draft || versandGeliefert}
@@ -307,7 +308,7 @@
 					<svg width="6" height="6" viewBox="0 0 6 6" style:display="block">
 						<circle cx="3" cy="3" r="3" fill={dotColor(active)} />
 					</svg>
-					zuletzt {lastSentText || '—'}
+					{$t('bausteine.abo.zuletzt', { zeit: lastSentText || '—' })}
 				</span>
 			{/if}
 		</div>

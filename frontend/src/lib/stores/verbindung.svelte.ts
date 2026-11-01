@@ -19,7 +19,8 @@ import { api } from '../api.ts';
 
 /** Ereignisnamen, ueber die `$lib/api.ts` den Ausgang eines Abrufs meldet. */
 export const ABRUF_GELUNGEN = 'gz-abruf-gelungen';
-export const ABRUF_FEHLGESCHLAGEN = 'gz-abruf-fehlgeschlagen';
+// Ereignisname = Protokoll, kein Nutzertext (Ratsche #2660: Marker i18n-log).
+export const ABRUF_FEHLGESCHLAGEN = 'gz-abruf-fehlgeschlagen'; // i18n-log
 
 // Issue #2361: Probe gegen die Sperr-Sackgasse. Das Zeitlimit in `api.ts` kann
 // einen langsamen, aber erreichbaren Server als „offline" melden; entsperrt wird

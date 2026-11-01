@@ -4,6 +4,7 @@
 	// Artboard „Unterseite": Mono-Caps 12 px, 36 px Touch-Höhe, Chevron links,
 	// um 8 px nach links ausgerückt, damit der Text bündig mit dem Eyebrow steht.
 	// Konzept: docs/design-requests/mobile_shell_ohne_topbar.md §2/§3.
+	import { t } from '$lib/i18n';
 	interface Props {
 		href: string;
 		label: string;
@@ -26,7 +27,7 @@
 		type="button"
 		data-testid="back-link"
 		class="mono back-link"
-		aria-label={ariaLabel ?? `Zurück: ${label}`}
+		aria-label={ariaLabel ?? $t('aktionen.zurueck_zu', { ziel: label })}
 		{onclick}
 	>
 		{@render inhalt()}
@@ -36,7 +37,7 @@
 		{href}
 		data-testid="back-link"
 		class="mono back-link"
-		aria-label={ariaLabel ?? `Zurück: ${label}`}
+		aria-label={ariaLabel ?? $t('aktionen.zurueck_zu', { ziel: label })}
 	>
 		{@render inhalt()}
 	</a>

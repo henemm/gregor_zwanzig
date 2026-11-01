@@ -26,6 +26,7 @@
 | Kürzel | code | SMS-Kürzel = *SMS code*; Protokoll-Token nie übersetzen |
 | Kurzform / Kurzstil | compact style | Platzform, keine Sprache (ADR-0042) |
 | Ruhetag | rest day | Inbound-Befehl `RUHETAG`/`RESTDAY` |
+| Pausentag | rest day | Pause-Etappe in der Etappenkarte (#2660) |
 | Cockpit | dashboard | Startfläche nach Login |
 | Archiv | archive | |
 | Konto | account | |

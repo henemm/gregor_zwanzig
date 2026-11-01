@@ -10,6 +10,7 @@ import {
 	setKnownEtag,
 	setKnownEtagIfUnchanged
 } from './etagRegistry.ts';
+import { tr } from './i18n/index.ts';
 
 /**
  * Issue #1395 S3: Header feldweise zusammenfuehren. `extra` wurde bisher per
@@ -39,7 +40,8 @@ function headerFields(init?: HeadersInit): Record<string, string> {
  */
 function meldeAbrufAusgang(erfolg: boolean): void {
 	if (typeof window === 'undefined') return;
-	window.dispatchEvent(new CustomEvent(erfolg ? 'gz-abruf-gelungen' : 'gz-abruf-fehlgeschlagen'));
+	// Ereignisnamen sind Protokoll, kein Nutzertext (Ratsche #2660: Marker i18n-log).
+	window.dispatchEvent(new CustomEvent(erfolg ? 'gz-abruf-gelungen' : 'gz-abruf-fehlgeschlagen')); // i18n-log
 }
 
 /**
@@ -89,9 +91,7 @@ export type AbrufOptionen = RequestInit & { zeitlimitMs?: number };
 
 function zeitlimitFehler(): Error {
 	// Bewusst KEIN `status: 0` — das ist die Schreibsperre aus #2131.
-	const fehler = new Error(
-		'Die Verbindung ist zu langsam — der Server hat nicht rechtzeitig geantwortet.'
-	);
+	const fehler = new Error(tr('fehler.verbindung.zeitlimit'));
 	fehler.name = 'TimeoutError';
 	return fehler;
 }
@@ -184,7 +184,7 @@ async function send<T>(
 			// Issue #2128: der Status gehoert an den Fehler. Ein Aufrufer muss
 			// unterscheiden koennen, ob er auf der Seite bleibt (dann zeigt er eine
 			// Meldung) oder ob die Umleitung auf die Anmeldeseite bereits laeuft.
-			const abgelaufen = new Error('Sitzung abgelaufen — bitte neu anmelden.') as Error & {
+			const abgelaufen = new Error(tr('fehler.sitzung.abgelaufen')) as Error & {
 				status: number;
 			};
 			abgelaufen.status = 401;
@@ -229,9 +229,7 @@ async function send<T>(
 
 async function request<T>(method: string, path: string, body?: unknown, extra?: AbrufOptionen): Promise<T> {
 	if (schreibenVerboten(method)) {
-		const gesperrt = new Error(
-			'Ohne Verbindung lässt sich nichts speichern — die Änderung wurde nicht abgeschickt.'
-		) as Error & { status: number };
+		const gesperrt = new Error(tr('fehler.verbindung.schreiben_offline')) as Error & { status: number };
 		gesperrt.status = 0;
 		throw gesperrt;
 	}
@@ -349,7 +347,7 @@ export async function downloadUserDataExport(): Promise<void> {
 	const res = await fetch('/api/auth/export');
 	if (!res.ok) {
 		const detail = await res.text();
-		throw new Error(`Download fehlgeschlagen (${res.status}): ${detail}`);
+		throw new Error(tr('fehler.download.fehlgeschlagen', { status: res.status, detail }));
 	}
 	const treffer = /filename="?([^";]+)"?/.exec(res.headers.get('Content-Disposition') ?? '');
 	const blob = await res.blob();

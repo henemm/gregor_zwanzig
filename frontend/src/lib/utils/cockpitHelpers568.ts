@@ -14,6 +14,7 @@
 import type { Trip, ComparePreset } from '../types.ts';
 import { tripStatus } from './tripStatus.ts';
 import { reportSlotAktiv } from './reportSlotAktiv.ts';
+import { tr } from '../i18n/index.ts';
 
 export type SetupStep = { label: string; done: boolean };
 
@@ -63,14 +64,14 @@ export function setupStepTrip(trip: Trip): SetupStep[] {
 	const evening = reportSlotAktiv(trip.report_config, 'evening');
 
 	return [
-		{ label: 'Route', done: stages.length >= 1 },
+		{ label: tr('bausteine.checkliste.route'), done: stages.length >= 1 },
 		{
-			label: 'Etappen',
+			label: tr('bausteine.checkliste.etappen'),
 			done: stages.some((s) => typeof s?.date === 'string' && s.date.length > 0)
 		},
-		{ label: 'Wetter', done: hasMetrics },
-		{ label: 'Layout', done: hasLayout },
-		{ label: 'Reports', done: morning || evening }
+		{ label: tr('bausteine.checkliste.wetter'), done: hasMetrics },
+		{ label: tr('bausteine.checkliste.layout'), done: hasLayout },
+		{ label: tr('bausteine.checkliste.reports'), done: morning || evening }
 	];
 }
 
@@ -114,11 +115,11 @@ export function setupStepCompare(preset: ComparePreset): SetupStep[] {
 		rcObj['morning_enabled'] === true || rcObj['evening_enabled'] === true;
 
 	return [
-		{ label: 'Vergleich', done: true },
-		{ label: 'Orte', done: locCount >= 2 },
-		{ label: 'Wertebereiche', done: hasIdealValues },
-		{ label: 'Layout', done: hasLayout },
-		{ label: 'Versand', done: hasActiveSend }
+		{ label: tr('bausteine.checkliste.vergleich'), done: true },
+		{ label: tr('bausteine.checkliste.orte'), done: locCount >= 2 },
+		{ label: tr('bausteine.checkliste.wertebereiche'), done: hasIdealValues },
+		{ label: tr('bausteine.checkliste.layout'), done: hasLayout },
+		{ label: tr('bausteine.checkliste.versand'), done: hasActiveSend }
 	];
 }
 

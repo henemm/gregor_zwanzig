@@ -9,6 +9,7 @@
 	// Orte-Tab (ADR-0024 — Sortier-Infrastruktur wird geteilt, nicht kopiert).
 	// F7: Tap auf die Karte klappt die Wegpunkt-Zeilen auf (auf/zu via `open`).
 	import { Pill } from '$lib/components/atoms';
+	import { t } from '$lib/i18n';
 	import { isPauseStage, formatStageNumber } from '$lib/components/shared/wizardHelpers';
 	import StageDateField from '$lib/components/edit/StageDateField.svelte';
 	import StageTimeField from '$lib/components/edit/StageTimeField.svelte';
@@ -103,13 +104,13 @@
 			{/if}
 		</div>
 		{#if isPause}
-			<div class="title pause-title">Pausentag</div>
-			<div class="meta">{#if stage.location}⌂ {stage.location}{:else}⌂ Pause{/if}</div>
+			<div class="title pause-title">{$t('bausteine.etappe.pausentag')}</div>
+			<div class="meta">{#if stage.location}⌂ {stage.location}{:else}⌂ {$t('bausteine.etappe.pause')}{/if}</div>
 		{:else}
 			<div class="title">{stage.name}</div>
 			<div class="meta">
-				{#if stats.km !== null}{stats.km.toFixed(1)} km{/if}{#if stats.km !== null && stats.ascent !== null} · {/if}{#if stats.ascent !== null}↑{Math.round(stats.ascent)}{/if}
-				{#if stats.wpCount > 0} · {stats.wpCount} WP{/if}
+				{#if stats.km !== null}{$t('bausteine.etappe.km', { km: stats.km.toFixed(1) })}{/if}{#if stats.km !== null && stats.ascent !== null} · {/if}{#if stats.ascent !== null}↑{Math.round(stats.ascent)}{/if}
+				{#if stats.wpCount > 0} · {$t('bausteine.etappe.wegpunkte', { anzahl: stats.wpCount })}{/if}
 			</div>
 		{/if}
 		{#if open && !isPause && stage.waypoints.length > 0}
@@ -117,10 +118,10 @@
 				{#each stage.waypoints as wp, i (wp.id)}
 					<div class="wp-row" data-testid="stage-cardm-wp-row">
 						<span class="wp-num">{i + 1}</span>
-						<span class="wp-name">{wp.name ?? `Wegpunkt ${i + 1}`}</span>
+						<span class="wp-name">{wp.name ?? $t('bausteine.etappe.wegpunkt', { nr: i + 1 })}</span>
 						<span class="wp-meta">
-							{#if wp.elevation_m != null}{Math.round(wp.elevation_m)} m{/if}
-							{#if arrivals[i]} · ETA {arrivals[i]}{/if}
+							{#if wp.elevation_m != null}{$t('bausteine.etappe.hoehe', { hoehe: Math.round(wp.elevation_m) })}{/if}
+							{#if arrivals[i]} · {$t('bausteine.etappe.eta', { zeit: arrivals[i] })}{/if}
 						</span>
 					</div>
 				{/each}

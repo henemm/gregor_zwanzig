@@ -9,6 +9,7 @@
 	// tone='default' = Vergleich. CTA-Touch-Target ≥ 44 px (AC-7).
 
 	import { Btn } from '$lib/components/atoms';
+	import { t } from '$lib/i18n';
 
 	interface Step {
 		label: string;
@@ -104,7 +105,7 @@
 			style:font-family="var(--g-font-mono)"
 			style:font-size="var(--g-text-xs)"
 			style:color="var(--g-ink-3)"
-		>{doneCount} von {total} Schritten</div>
+		>{$t('bausteine.setup.fortschritt', { erledigt: doneCount, gesamt: total })}</div>
 	</div>
 
 	<!-- Schritt-Chips -->
@@ -152,8 +153,8 @@
 		style:border-radius="0 0 var(--g-r-3) var(--g-r-3)"
 	>
 		<span style:font-family="var(--g-font-mono)" style:font-size="11px" style:color="var(--g-ink-3)">
-			{#if nextStep}Weiter bei: <span style:color="var(--g-ink-2)" style:font-weight="600">{nextStep.label}</span>
-			{:else}Bereit zum Aktivieren{/if}
+			{#if nextStep}{$t('bausteine.setup.weiter_bei')} <span style:color="var(--g-ink-2)" style:font-weight="600">{nextStep.label}</span>
+			{:else}{$t('bausteine.setup.bereit')}{/if}
 		</span>
 		<div style:display="flex" style:gap="8px">
 			{#if secondary}

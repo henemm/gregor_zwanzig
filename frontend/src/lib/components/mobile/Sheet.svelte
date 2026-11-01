@@ -13,6 +13,7 @@
 	import { browser } from '$app/environment';
 	import type { Snippet } from 'svelte';
 	import IconBtn from './IconBtn.svelte';
+	import { t } from '$lib/i18n';
 
 	interface Props {
 		open?: boolean;
@@ -127,7 +128,7 @@
 					{/if}
 				</div>
 				{#if onClose}
-					<IconBtn kind="close" onclick={onClose} label="Schliessen" />
+					<IconBtn kind="close" onclick={onClose} label={$t('aktionen.schliessen')} />
 				{/if}
 			</div>
 		{/if}

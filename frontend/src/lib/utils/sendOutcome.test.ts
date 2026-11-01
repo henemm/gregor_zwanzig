@@ -36,6 +36,7 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { tr } from '../i18n/index.ts';
 
 const UNCLEAR = 'Ergebnis unklar — Versand kann noch laufen, nicht erneut senden';
 
@@ -62,8 +63,9 @@ test('AC-2: 409 ist already_running mit „Versand läuft bereits"', async () =>
 
 for (const status of [502, 503, 504]) {
 	test(`AC-2: ${status} ist unclear — „Ergebnis unklar", nie „fehlgeschlagen"`, async () => {
-		const { classifySendResponse, SEND_UNCLEAR_MESSAGE } = await mod();
-		assert.equal(SEND_UNCLEAR_MESSAGE, UNCLEAR);
+		const { classifySendResponse } = await mod();
+		// #2660: die Konstante entfiel; der Katalogtext (de) ist der bisherige Wortlaut.
+		assert.equal(tr('fehler.versand.unklar'), UNCLEAR);
 		const r = classifySendResponse({ status, detail: null });
 		assert.equal(r.kind, 'unclear');
 		assert.equal(r.message, UNCLEAR);

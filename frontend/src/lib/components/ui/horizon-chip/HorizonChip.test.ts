@@ -20,7 +20,8 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
+import { register } from 'node:module';
 import { dirname, join } from 'node:path';
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -31,48 +32,38 @@ function loadSource(): string {
 }
 
 // --- Label-Tests (AC: drei Tages-Labels) ---------------------------------
+// #2660 (i18n F11): die Labels stehen im Katalog (`bausteine.horizont.*`). Gemessen
+// wird deshalb der ECHTE SSR-Render (svelte/server) statt des Quelltexts — in der
+// deutschen Standard-Sprache wortgleich, in Englisch aus dem Katalog.
 
-test('HorizonChip rendert "HEUTE" fuer day=today', () => {
-	const source = loadSource();
-	assert.match(
-		source,
-		/HEUTE/,
-		'Label "HEUTE" fehlt im Komponenten-Source (LABELS.today)'
-	);
-	assert.match(
-		source,
-		/today\s*:\s*['"]HEUTE['"]/,
-		'LABELS-Map muss today: "HEUTE" enthalten'
-	);
-});
+let ssrBereit = false;
+async function chipText(day: string): Promise<string> {
+	const frontend = join(here, '..', '..', '..', '..', '..');
+	if (!ssrBereit) {
+		register(pathToFileURL(join(frontend, 'test-svelte-ssr-hooks.mjs')).href, pathToFileURL(frontend + '/').href);
+		ssrBereit = true;
+	}
+	const { render } = await import('svelte/server');
+	const Chip = (await import(pathToFileURL(COMPONENT).href)).default;
+	const html = render(Chip, { props: { day, active: false, onclick: () => {} } as never }).body;
+	return html.replace(/<!--[\s\S]*?-->/g, '').replace(/<[^>]*>/g, '').trim();
+}
 
-test('HorizonChip rendert "MORGEN" fuer day=tomorrow', () => {
-	const source = loadSource();
-	assert.match(
-		source,
-		/MORGEN/,
-		'Label "MORGEN" fehlt im Komponenten-Source (LABELS.tomorrow)'
-	);
-	assert.match(
-		source,
-		/tomorrow\s*:\s*['"]MORGEN['"]/,
-		'LABELS-Map muss tomorrow: "MORGEN" enthalten'
-	);
-});
+for (const [day, label] of [['today', 'HEUTE'], ['tomorrow', 'MORGEN'], ['day_after', 'ÜBERMORGEN']] as const) {
+	test(`HorizonChip rendert "${label}" fuer day=${day}`, async () => {
+		assert.equal(await chipText(day), label);
+	});
+}
 
-test('HorizonChip rendert "UEBERMORGEN" fuer day=day_after', () => {
-	const source = loadSource();
-	// Akzeptiere beide Schreibweisen: "ÜBERMORGEN" (UTF-8) oder ASCII-Fallback.
-	assert.match(
-		source,
-		/(ÜBERMORGEN|UEBERMORGEN)/,
-		'Label "UEBERMORGEN" fehlt im Komponenten-Source (LABELS.day_after)'
-	);
-	assert.match(
-		source,
-		/day_after\s*:\s*['"](ÜBERMORGEN|UEBERMORGEN)['"]/,
-		'LABELS-Map muss day_after: "ÜBERMORGEN" enthalten'
-	);
+test('HorizonChip folgt der Sprache (en aus dem Katalog)', async () => {
+	const { locale, trFor } = await import('../../../i18n/index.ts');
+	locale.set('en');
+	try {
+		assert.equal(await chipText('today'), trFor('en', 'bausteine.horizont.heute'));
+		assert.equal(await chipText('day_after'), trFor('en', 'bausteine.horizont.uebermorgen'));
+	} finally {
+		locale.set('de');
+	}
 });
 
 // --- data-active-Attribut (AC-1 Vorbedingung) ----------------------------

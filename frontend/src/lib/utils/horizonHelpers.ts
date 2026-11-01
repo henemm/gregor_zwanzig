@@ -4,6 +4,8 @@
 // Reine Funktionen — keine Svelte-Imports, damit `node --experimental-strip-types --test`
 // die Test-Datei laden kann.
 
+import { tr, type MessageKey } from '../i18n/index.ts';
+
 export type Horizons = {
 	today: boolean;
 	tomorrow: boolean;
@@ -55,11 +57,14 @@ export function computeHorizonSummary(metrics: HorizonSummaryInput[]): string {
 	}
 
 	const parts: string[] = [];
-	if (buckets.allThree > 0)         parts.push(`${buckets.allThree} alle drei Tage`);
-	if (buckets.todayTomorrow > 0)    parts.push(`${buckets.todayTomorrow} nur heute + morgen`);
-	if (buckets.onlyToday > 0)        parts.push(`${buckets.onlyToday} nur heute`);
-	if (buckets.tomorrowDayAfter > 0) parts.push(`${buckets.tomorrowDayAfter} nur morgen + übermorgen`);
-	if (buckets.other > 0)            parts.push(`${buckets.other} sonstige Kombinationen`);
+	const gruppen: [number, MessageKey][] = [
+		[buckets.allThree, 'bausteine.horizont.alle_drei'],
+		[buckets.todayTomorrow, 'bausteine.horizont.nur_heute_morgen'],
+		[buckets.onlyToday, 'bausteine.horizont.nur_heute'],
+		[buckets.tomorrowDayAfter, 'bausteine.horizont.nur_morgen_uebermorgen'],
+		[buckets.other, 'bausteine.horizont.sonstige']
+	];
+	for (const [anzahl, key] of gruppen) if (anzahl > 0) parts.push(tr(key, { anzahl }));
 	return parts.join(' · ');
 }
 

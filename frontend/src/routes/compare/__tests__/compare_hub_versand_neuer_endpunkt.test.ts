@@ -14,7 +14,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { umgebungFuer } from '../../../lib/components/shared/__tests__/svelteInstanzPruefstand.ts';
 import { clearEtagRegistry } from '../../../lib/etagRegistry.ts';
-import { SEND_REJECTED_FALLBACK } from '../../../lib/utils/sendOutcome.ts';
+import { tr } from '../../../lib/i18n/index.ts';
 
 const SEITE = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', '[id]', '+page.svelte');
 
@@ -96,7 +96,7 @@ describe('AC-16: Hub zeigt den konkreten Grund', () => {
 				`Versand ging nicht an den neuen Endpunkt: ${JSON.stringify(posts())}`
 			);
 			assert.equal(u.sendMsg, detail);
-			assert.notEqual(u.sendMsg, SEND_REJECTED_FALLBACK);
+			assert.notEqual(u.sendMsg, tr('fehler.versand.abgelehnt'));
 		});
 	}
 

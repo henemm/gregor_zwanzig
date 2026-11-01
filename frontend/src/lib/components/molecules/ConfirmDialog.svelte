@@ -10,6 +10,7 @@
 	import * as Dialog from '$lib/components/ui/dialog/index.js';
 	import { Btn } from '$lib/components/atoms';
 	import type { Snippet } from 'svelte';
+	import { t } from '$lib/i18n';
 
 	interface Props {
 		open: boolean;
@@ -35,7 +36,7 @@
 		description,
 		confirmLabel,
 		confirmVariant = 'primary',
-		cancelLabel = 'Abbrechen',
+		cancelLabel,
 		disabled = false,
 		'data-testid': dataTestid,
 		cancelTestid,
@@ -56,7 +57,7 @@
 		{@render children?.()}
 		<Dialog.Footer>
 			<Btn variant="outline" data-testid={cancelTestid} onclick={onCancel}>
-				{cancelLabel}
+				{cancelLabel ?? $t('aktionen.abbrechen')}
 			</Btn>
 			<Btn
 				variant={confirmVariant}

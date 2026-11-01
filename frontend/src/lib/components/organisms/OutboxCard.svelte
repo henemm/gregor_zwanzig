@@ -6,6 +6,7 @@
 
 	import { Card, Pill, Eyebrow } from '$lib/components/atoms';
 	import BriefingTimelineRow from '../molecules/BriefingTimelineRow.svelte';
+	import { t } from '$lib/i18n';
 
 	interface Report {
 		when: string;
@@ -33,7 +34,7 @@
 		style:gap="12px"
 	>
 		<div style:min-width="0">
-			<Eyebrow style="margin-bottom: 4px">Versand · heute</Eyebrow>
+			<Eyebrow style="margin-bottom: 4px">{$t('bausteine.versand.heute')}</Eyebrow>
 			<div
 				style:font-size="17px"
 				style:font-weight="600"
@@ -41,10 +42,10 @@
 				style:overflow="hidden"
 				style:text-overflow="ellipsis"
 			>
-				Was geht raus · <span style:color="var(--g-ink-2)" style:font-weight="600">{contextName}</span>
+				{$t('bausteine.versand.was_geht_raus')} <span style:color="var(--g-ink-2)" style:font-weight="600">{contextName}</span>
 			</div>
 		</div>
-		<Pill tone="good">Alle Kanäle ok</Pill>
+		<Pill tone="good">{$t('bausteine.versand.alle_kanaele_ok')}</Pill>
 	</div>
 
 	<div style:display="flex" style:flex-direction="column" style:gap="8px">

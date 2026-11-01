@@ -102,6 +102,8 @@ export function scanneMarkup(quelltext: string): Treffer[] {
 
 const TS_SIGNAL = /[äöüÄÖÜß]|\b(?:nicht|bitte|fehlgeschlagen|gespeichert)\b/i;
 const LOG_MARKER = /\/\/\s*i18n-log\s*$/;
+// Katalog-Schluessel (`fehler.versand.fehlgeschlagen`) sind kein Nutzertext.
+const KATALOG_SCHLUESSEL = /^[a-z0-9_]+(?:\.[a-z0-9_-]+)+$/;
 // Nach diesen Zeichen bzw. Schluesselwoertern beginnt ein `/` ein Regex-Literal.
 const VOR_REGEX = /(?:^|[(,=:[!&|?{};+\-*%<>~^]|\b(?:return|typeof|case|in|of|void|delete|throw))\s*$/;
 
@@ -168,7 +170,7 @@ export function tsLiterale(q: string): { index: number; text: string }[] {
 export function scanneTs(quelltext: string): Treffer[] {
 	const zeilen = quelltext.split('\n');
 	return tsLiterale(quelltext)
-		.filter((l) => TS_SIGNAL.test(l.text))
+		.filter((l) => TS_SIGNAL.test(l.text) && !KATALOG_SCHLUESSEL.test(l.text))
 		.map((l) => ({ zeile: zeileBei(quelltext, l.index), art: 'literal' as const, text: l.text.trim() }))
 		.filter((t) => !LOG_MARKER.test(zeilen[t.zeile - 1] ?? ''));
 }

@@ -6,6 +6,8 @@
 	// Touch-Target ≥ 44 px (Padding hebt die 32 px Chip-Hoehe auf 44 × 44 px).
 	// Mono-Caps-Schrift, Token-only Styling — keine Hex-Inlines.
 
+	import { t, type MessageKey } from '$lib/i18n';
+
 	type Day = 'today' | 'tomorrow' | 'day_after';
 
 	let {
@@ -22,10 +24,10 @@
 		'data-testid'?: string;
 	} = $props();
 
-	const LABELS: Record<Day, string> = {
-		today: 'HEUTE',
-		tomorrow: 'MORGEN',
-		day_after: 'ÜBERMORGEN',
+	const LABELS: Record<Day, MessageKey> = {
+		today: 'bausteine.horizont.heute',
+		tomorrow: 'bausteine.horizont.morgen',
+		day_after: 'bausteine.horizont.uebermorgen',
 	};
 </script>
 
@@ -38,7 +40,7 @@
 	{disabled}
 	aria-pressed={active}
 	{onclick}
->{LABELS[day]}</button>
+>{$t(LABELS[day])}</button>
 
 <style>
 	[data-slot='horizon-chip'] {

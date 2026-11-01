@@ -5,6 +5,7 @@
 	// Aufklappbarer "Nicht im Briefing"-Block. Gruppiert nach Metric-Kategorie.
 
 	import { Card, Eyebrow, Btn } from '$lib/components/atoms';
+	import { t } from '$lib/i18n';
 
 	interface MetricItem {
 		id: string;
@@ -63,14 +64,14 @@
 		style:text-align="left"
 	>
 		<div>
-			<Eyebrow>Nicht im Briefing</Eyebrow>
+			<Eyebrow>{$t('bausteine.metriken.nicht_im_briefing')}</Eyebrow>
 			<div style:font-size={compact ? '14px' : '15px'} style:font-weight="600" style:margin-top="2px">
-				{items.length} weitere Metriken
-				<span style:color="var(--g-ink-4)" style:font-size="12px" style:font-weight="400"> · aktuell aus</span>
+				{$t('bausteine.metriken.weitere', { anzahl: items.length })}
+				<span style:color="var(--g-ink-4)" style:font-size="12px" style:font-weight="400"> · {$t('bausteine.metriken.aktuell_aus')}</span>
 			</div>
 		</div>
 		<span style:font-family="var(--g-font-mono)" style:font-size="11px" style:color="var(--g-ink-3)">
-			{open ? '▴ einklappen' : '▾ ausklappen'}
+			{open ? $t('bausteine.metriken.einklappen') : $t('bausteine.metriken.ausklappen')}
 		</span>
 	</button>
 
@@ -104,8 +105,8 @@
 										{m.unit ?? '—'} · {m.short ?? ''}
 									</div>
 								</div>
-								<Btn variant="ghost" size="xs" onclick={() => onAdd && onAdd(m.id, 'primary')}>+ Spalte</Btn>
-								<Btn variant="quiet" size="xs" onclick={() => onAdd && onAdd(m.id, 'secondary')}>+ Detail</Btn>
+								<Btn variant="ghost" size="xs" onclick={() => onAdd && onAdd(m.id, 'primary')}>{$t('bausteine.metriken.plus_spalte')}</Btn>
+								<Btn variant="quiet" size="xs" onclick={() => onAdd && onAdd(m.id, 'secondary')}>{$t('bausteine.metriken.plus_detail')}</Btn>
 							</div>
 						{/each}
 					</div>
