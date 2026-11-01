@@ -24,16 +24,17 @@ const HomeHero = (await lade('HomeHero.svelte')).default;
 const { kachelActions } = await lade('kachelActions.ts');
 const { homeHeroProps } = await lade('homeHeroProps.ts');
 const { homeCompareTimeline, plannedBriefings, archivedTrips } = await lade('cockpitHelpers.ts');
-const { vergleich, tripAktiv, tripFertig } = await import('../../__tests__/f3HomeListenSsr.ts');
+const { vergleich, tripAktiv, tripFertig, ladeArchivGolden } = await import('../../__tests__/f3HomeListenSsr.ts');
 
 afterEach(() => locale.set('de'));
 
 /** de rendern, dann ohne Neuladen auf en schalten und erneut rendern. */
-function enNachDe(fall: string): string {
+function enNachDe(fall: string | (() => string)): string {
+	const f = typeof fall === 'string' ? FAELLE[fall] : fall;
 	locale.set('de');
-	FAELLE[fall]();
+	f();
 	locale.set('en');
-	return FAELLE[fall]();
+	return f();
 }
 const en = (k: string, p?: Record<string, string | number>) => trFor('en', k, p);
 const hat = (text: string, teil: string) => assert.ok(text.includes(teil), `fehlt: "${teil}"\n${text}`);
@@ -144,5 +145,54 @@ describe('AC-1: Bausteine und Helfer des Cockpits (de -> en ohne Neuladen)', () 
 		assert.ok(zeilen[0].etappe.startsWith(en('bausteine.vergleich.orte_anzahl', { anzahl: 3 })), zeilen[0].etappe);
 		const rows = plannedBriefings(tripAktiv().report_config);
 		assert.deepEqual(rows.map((r: { kind: string }) => r.kind), [en('home.timeline.morgen'), en('home.timeline.abend')]);
+	});
+});
+
+// Adversary F003: die Pruefung gegen den eigenen Katalog allein faengt einen
+// falschen englischen Katalogwert nicht. Hier stehen einige freigegebene
+// englische Texte (AC-1/AC-2, Glossar) als feste Anker — gegen die GERENDERTE
+// Ausgabe bzw. den Aufrufer, mit exakten Wortgrenzen fuer die Pluralformen.
+describe('Englische Anker (feste Literale aus Spec und Glossar)', () => {
+	const exakt = (text: string, teil: string) =>
+		assert.match(text, new RegExp(`(^|[^A-Za-z])${teil.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}([^A-Za-z]|$)`), `fehlt exakt: "${teil}"\n${text}`);
+	test('Cockpit Trip: Next delivery, Overview, Open trip, Plural changes/change, multi-day trip', () => {
+		const s = sichtbarerText(enNachDe('cockpit_trip'));
+		for (const a of ['Next delivery', 'Open trip →', 'Channels', 'Quick actions', 'Live · Day 2 of 3', '2 changes', '1 change',
+			'1 completed multi-day trip', '2 stages', '1 location comparison running alongside'])
+			exakt(s, a);
+		assert.match(s, /Overview · Thu/);
+		assert.equal(trFor('en', 'home.cockpit.eyebrow'), 'Overview · {datum}');
+	});
+	test('Cockpit Vergleich/Planung: Open comparison, 3 locations compared, 1 completed trip, Archive', () => {
+		const v = sichtbarerText(enNachDe('cockpit_vergleich'));
+		for (const a of ['Open comparison →', '3 locations compared', 'daily']) exakt(v, a);
+		const p = sichtbarerText(enNachDe('cockpit_planung'));
+		for (const a of ['Archive', '1 completed trip', 'Past trips']) exakt(p, a);
+		assert.doesNotMatch(p, /1 completed trips/);
+	});
+	test('Helfer: Edit, 1 location compared, Tagesangaben in day/days', async () => {
+		locale.set('de');
+		kachelActions();
+		locale.set('en');
+		assert.deepEqual(kachelActions(), [{ id: 'edit', label: 'Edit' }]);
+		const ein = { ...vergleich(), location_ids: ['a'], display_config: {} };
+		assert.equal(homeHeroProps('vergleich', ein, null).subtitle, '1 location compared');
+		const { getDaysLabel } = await import(pathToFileURL(path.join(HERE, '../../../lib/utils/tripHero.ts')).href);
+		const heute = new Date('2026-10-12T12:00:00');
+		const geplant = (d: string) => ({ id: 't', name: 'T', stages: [{ id: 's', name: 'E', date: d, waypoints: [] }] });
+		assert.equal(getDaysLabel(geplant('2026-10-17'), heute), 'in 5 days');
+		assert.equal(trnFor('en', 'home.tage.in_tagen', 1), 'in 1 day');
+		assert.equal(trnFor('en', 'home.archiv.abgeschlossen', 1), '1 completed trip');
+	});
+	test('Listen: No trips yet, Archive, 1 stage / 1 location exakt', async () => {
+		await ladeArchivGolden();
+		const leer = sichtbarerText(enNachDe(() => seiteRendern('trips', { trips: [], profile: null })));
+		exakt(leer, 'No trips yet');
+		const archiv = enNachDe(() => FAELLE.archiv());
+		assert.match(archiv, /margin-top:4px">Archive<\/div>/, 'Seitentitel des Archivs ist nicht „Archive"');
+		exakt(sichtbarerText(archiv), 'Workspace · Archive');
+		const umfang = [...archiv.matchAll(/font-variant-numeric:tabular-nums">([^<]*)</g)].map((m) => m[1].trim());
+		assert.deepEqual(umfang.sort(), ['1 location', '3 stages']);
+		assert.equal(trnFor('en', 'listen.anzahl.etappen', 1), '1 stage');
 	});
 });

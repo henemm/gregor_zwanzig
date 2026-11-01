@@ -37,7 +37,7 @@ export const STAND_STIL =
 
 /** Sprache eines HTML-Dokuments aus `<html lang>`; alles ausser `en` ergibt `de`. */
 export function standSpracheAusHtml(html: string): Lang {
-	return /<html\b[^>]*\blang=["']?en\b/i.test(html) ? 'en' : 'de';
+	return /<html\b[^>]*\slang=["']?en\b/i.test(html) ? 'en' : 'de';
 }
 
 export function formatiereStandZeit(zeit: Date, lang: Lang = 'de'): string {

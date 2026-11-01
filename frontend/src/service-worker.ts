@@ -32,7 +32,8 @@
 
 import { build, files, version } from '$service-worker';
 import { ansichtVon, DATEN_ENDUNG } from './lib/pwa/ansicht.ts';
-import { STAND_ELEMENT_ID, STAND_STIL, standKurz, standSpracheAusHtml, standZeile } from './lib/pwa/standText.ts';
+// #2652: Stand-Zeile und Offline-Liste (Sprache aus <html lang>) in einem pruefbaren Modul.
+import { offlineListe, standEinschreiben, type OfflineEintrag } from './lib/pwa/standDokument.ts';
 
 const sw = self as unknown as ServiceWorkerGlobalScope;
 
@@ -63,18 +64,6 @@ const PROGRAMMPFADE = new Set(PROGRAMMDATEIEN);
 /** Liegt als Datei in `static/`, kommt also ueber `files` in den Speicher. */
 const OFFLINE_SEITE = '/offline.html';
 
-/** Marke in `offline.html`, an der die Liste der Ansichten eingesetzt wird. */
-const LISTEN_MARKE = '<!--GZ_LISTE-->';
-
-/** Marke in `app.html`, die beim Ablegen zur Stand-Zeile wird. */
-const STAND_MARKE = `<div id="${STAND_ELEMENT_ID}" hidden></div>`;
-
-interface OfflineEintrag {
-	pfad: string;
-	titel: string;
-	/** ISO-Zeitpunkt der Ablage. */
-	stand: string;
-}
 
 /** Laedt die Programmdateien vollstaendig in den Speicher der eigenen Version. */
 async function programmdateienAblegen(): Promise<void> {
@@ -233,27 +222,6 @@ function titelAus(html: string, ersatz: string): string {
 	return roh.replace(/\s+—\s+Gregor Zwanzig$/u, '');
 }
 
-function maskiere(text: string): string {
-	return text
-		.replace(/&/gu, '&amp;')
-		.replace(/</gu, '&lt;')
-		.replace(/>/gu, '&gt;')
-		.replace(/"/gu, '&quot;');
-}
-
-/**
- * Schreibt den Stand in die KOPIE, die abgelegt wird. Die live ausgelieferte
- * Antwort bleibt unveraendert (Spec, Abschnitt B): damit steht der Stand im
- * ersten Byte des offline ausgelieferten Dokuments -- es gibt kein Zeitfenster,
- * in dem ein alter Stand ungekennzeichnet sichtbar waere, auch nicht vor der
- * Hydrierung.
- */
-function standEinschreiben(html: string, zeit: Date): string {
-	const zeile =
-		`<div id="${STAND_ELEMENT_ID}" data-testid="offline-stand" role="status" ` +
-		`style="${STAND_STIL}">${maskiere(standZeile(zeit, standSpracheAusHtml(html)))}</div>`;
-	return html.replace(STAND_MARKE, zeile);
-}
 
 /** Legt Seitenantwort bzw. `__data.json` einer Ansicht ab. */
 async function ablegen(
@@ -418,22 +386,8 @@ async function offlineUebersicht(): Promise<Response> {
 	const roh = await grundlage.text();
 
 	const eintraege = (await indexLesen()).sort((a, b) => b.stand.localeCompare(a.stand));
-	// #2652: Sprache aus <html lang> des abgelegten Offline-Dokuments (Fallback de).
-	const lang = standSpracheAusHtml(roh);
-	const liste = eintraege.length
-		? '<ul class="liste">' +
-			eintraege
-				.map(
-					(e) =>
-						`<li data-testid="offline-uebersicht-eintrag">` +
-						`<a href="${maskiere(e.pfad)}">${maskiere(e.titel)}</a>` +
-						`<span class="stand">${maskiere(standKurz(new Date(e.stand), lang))}</span></li>`
-				)
-				.join('') +
-			'</ul>'
-		: '<p class="leer">Es ist noch keine Ansicht auf dem Gerät vorgehalten.</p>';
-
-	return new Response(roh.replace(LISTEN_MARKE, liste), {
+	// #2652: Sprache aus <html lang> der Offline-Seite (Fallback de), siehe standDokument.ts.
+	return new Response(offlineListe(roh, eintraege), {
 		status: 200,
 		headers: { 'content-type': 'text/html; charset=utf-8' }
 	});

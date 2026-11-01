@@ -82,6 +82,9 @@ const nichtDeutsch = (html: string) => {
 	assert.deepEqual(deutscheReste(sichtbarerText(html)), []);
 	assert.deepEqual(deutscheReste(attributText(html)), []);
 };
+/** Texte der Umfang-Spalte im Archiv (Zelle mit tabular-nums), exakt und getrimmt. */
+const zellen = (html: string) =>
+	[...html.matchAll(/font-variant-numeric:tabular-nums">([^<]*)</g)].map((m) => m[1].trim());
 const DREI_TRIPS = [tripAktiv(), tripGeplant(), tripGeplant('trip-drei', 'Dritter Trip')];
 
 describe('AC-3: Listen auf Englisch', () => {
@@ -193,15 +196,15 @@ describe('AC-5: Sprache und Daten je Nutzer, keine Wanderung', () => {
 
 		const sa2 = sichtbarerText(a2.html);
 		hat(sa2, en('listen.archiv.titel'));
-		hat(sa2, '1 stage');
-		hat(sa2, '2 stages');
-		hat(sa2, trnFor('en', 'listen.anzahl.orte', 1));
+		// Adversary F002: Zellentext exakt (ein Teilstring „1 stage" passte auch auf „1 stages").
+		const umfang = zellen(a2.html);
+		assert.deepEqual([...umfang].sort(), ['1 location', '1 stage', '2 stages'], umfang.join(' | '));
+		assert.ok(umfang.includes(trnFor('en', 'listen.anzahl.orte', 1)));
 		assert.ok(!sa2.includes('Beta'), sa2);
 		nichtDeutsch(a2.html);
 
 		const sb2 = sichtbarerText(b2.html);
-		hat(sb2, '3 Etappen');
-		hat(sb2, '2 Orte');
+		assert.deepEqual([...zellen(b2.html)].sort(), ['2 Orte', '3 Etappen']);
 		hat(sb2, 'Wieder aktivieren');
 		assert.ok(!sb2.includes('Alpha') && !sb2.includes('stage'), sb2);
 	});

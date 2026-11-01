@@ -54,6 +54,11 @@ function zeige(text: string | null): void {
 	el.hidden = false;
 }
 
+/** Stand-Zeile fuer einen gemeldeten Stand in der aktuellen Oberflaechensprache (#2652). */
+export function standZeileFuer(stand: string | null): string | null {
+	return stand ? standZeile(new Date(stand), get(locale)) : null;
+}
+
 /**
  * Bringt die Zeile auf den Stand des aktuell angezeigten Pfades.
  * Wird nach jeder Navigation und nach jeder Worker-Meldung aufgerufen.
@@ -68,8 +73,7 @@ export function standAnwenden(): void {
 		// stehengebliebene Zeile eine Falschaussage.
 		if (pfad !== startPfad) zeige(null);
 	} else {
-		const stand = staende.get(pfad) ?? null;
-		zeige(stand ? standZeile(new Date(stand), get(locale)) : null);
+		zeige(standZeileFuer(staende.get(pfad) ?? null));
 	}
 	verbindung.ausSpeicher = dokumentAusSpeicher();
 }

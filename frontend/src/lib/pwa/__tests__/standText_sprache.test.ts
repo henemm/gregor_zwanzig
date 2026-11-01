@@ -63,4 +63,10 @@ describe('Service Worker: Sprache aus <html lang> des abzulegenden Dokuments', (
 		assert.equal(standSpracheAusHtml('<html>'), 'de');
 		assert.equal(standSpracheAusHtml('<html lang="fr">'), 'de');
 	});
+	test('nur das Attribut lang zaehlt, nicht data-lang oder xml:lang (Adversary F004)', () => {
+		assert.equal(standSpracheAusHtml('<html data-lang="en">'), 'de');
+		assert.equal(standSpracheAusHtml('<html xml:lang="en">'), 'de');
+		assert.equal(standSpracheAusHtml('<html data-lang="en" lang="de">'), 'de');
+		assert.equal(standSpracheAusHtml('<html class="x"\n\tlang="en">'), 'en');
+	});
 });
