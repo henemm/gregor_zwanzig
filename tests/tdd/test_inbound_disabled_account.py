@@ -106,7 +106,7 @@ def email_mitschrift(monkeypatch) -> list[dict]:
             self._s = settings
 
         def send(self, subject, body, html=True, plain_text_body=None, to=None,
-                 mail_type=None, mail_format=None, compare_hourly_enabled=None):
+                 mail_type=None, mail_format=None, compare_hourly_enabled=None, lang="de"):
             mitschrift.append({"empfaenger": to if to else self._s.mail_to,
                                "subject": subject, "body": str(body)})
 

@@ -53,7 +53,7 @@ def _phase_timeout_or_raise(deadline_at: float) -> float:
     """
     remaining = deadline_at - time.monotonic()
     if remaining <= 0:
-        raise TimeoutError("SMTP-Zeitbudget vor Phasenbeginn erschöpft")
+        raise TimeoutError("SMTP-Zeitbudget vor Phasenbeginn erschöpft")  # i18n-log
     return min(SMTP_OP_TIMEOUT_SECONDS, remaining)
 
 
@@ -315,7 +315,7 @@ def build_mime_message(
     mail_format: str | None = None,
     compare_hourly_enabled: bool | None = None,
     message_id: str | None = None,
-    lang: str | None = None,
+    lang: str = "de",
 ):
     """Issue #722: Build a MIME message. Pure function, no SMTP side-effects.
 
@@ -450,17 +450,17 @@ class EmailOutput:
         if (getattr(settings, "env", "") or "").lower() == "staging" and "resend" in (settings.smtp_host or "").lower():
             raise OutputConfigError(
                 "email",
-                "Staging darf NICHT über Resend senden! "
+                "Staging darf NICHT über Resend senden! "  # i18n-log
                 "GZ_SMTP_HOST muss auf mail.henemm.com zeigen. "
-                "Prüfe /home/hem/gregor_zwanzig_staging/.env (Issue #924).",
+                "Prüfe /home/hem/gregor_zwanzig_staging/.env (Issue #924).",  # i18n-log
             )
         if getattr(settings, "is_test_mode", False) and "resend" in (settings.smtp_host or "").lower():
             raise OutputConfigError(
                 "email",
-                "Test-Versand über Resend ist gesperrt. "
-                "Test-Mails MÜSSEN über Stalwart gehen — siehe Settings.for_testing(). "
+                "Test-Versand über Resend ist gesperrt. "  # i18n-log
+                "Test-Mails MÜSSEN über Stalwart gehen — siehe Settings.for_testing(). "  # i18n-log
                 "Konfiguriere GZ_TEST_SMTP_USER/PASS oder verwende einen Test-User "
-                "(User-ID enthält 'test' oder 'tdd').",
+                "(User-ID enthält 'test' oder 'tdd').",  # i18n-log
             )
 
         self._host = settings.smtp_host
@@ -576,7 +576,7 @@ class EmailOutput:
                         raise
                     except smtplib.SMTPException as exc:
                         logger.error(
-                            "SMTP-Fehler für Empfänger %s: %s", recipient, exc
+                            "SMTP-Fehler für Empfänger %s: %s", recipient, exc  # i18n-log
                         )
                         fehler.append((recipient, exc))
                 if len(fehler) == len(recipients):
@@ -670,7 +670,7 @@ class EmailOutput:
         mail_type: str | None = None,
         mail_format: str | None = None,
         compare_hourly_enabled: bool | None = None,
-        lang: str | None = None,
+        lang: str = "de",
     ) -> None:
         """
         Send email via SMTP with automatic retry on network errors.
@@ -800,7 +800,7 @@ class EmailOutput:
             if blocked:
                 masked = [mask_addr_for_pii_log(r) for r in blocked]
                 logger.warning(
-                    "Resend-Allowlist-Guard blockiert %d Empfänger, die "
+                    "Resend-Allowlist-Guard blockiert %d Empfänger, die "  # i18n-log
                     "keinem echten Nutzerprofil zugeordnet werden konnten "
                     "(Issue #1147/#1219): %s",
                     len(blocked),
@@ -808,10 +808,10 @@ class EmailOutput:
                 )
                 raise OutputConfigError(
                     "email",
-                    f"{len(blocked)} Empfänger nicht in der Resend-Allowlist "
+                    f"{len(blocked)} Empfänger nicht in der Resend-Allowlist "  # i18n-log
                     f"bei Host {self._host!r} — Versand blockiert (Issue "
                     "#1147/#1219). Nur mail_to/email echter, angelegter "
-                    f"(Nicht-Test-)Nutzerprofile dürfen über Resend erreicht "
+                    f"(Nicht-Test-)Nutzerprofile dürfen über Resend erreicht "  # i18n-log
                     f"werden. Betroffene Domains: {masked}",
                 )
         else:
@@ -849,10 +849,10 @@ class EmailOutput:
                 )
                 raise OutputConfigError(
                     "email",
-                    f"{len(blocked)} Empfänger nicht lokal zustellbar "
+                    f"{len(blocked)} Empfänger nicht lokal zustellbar "  # i18n-log
                     f"bei Host {self._host!r} — Versand blockiert (Issue "
-                    "#1235). Auf dem Nicht-Resend-Pfad sind ausschließlich "
-                    f"lokale @henemm.com-Empfänger erlaubt. Betroffene "
+                    "#1235). Auf dem Nicht-Resend-Pfad sind ausschließlich "  # i18n-log
+                    f"lokale @henemm.com-Empfänger erlaubt. Betroffene "  # i18n-log
                     f"Domains: {masked}",
                 )
 

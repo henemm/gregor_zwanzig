@@ -1,0 +1,110 @@
+----- betreff.morgen_gewitter -----
+[GR20] Etappe 3 — Morgen — Gewitter D13 W30 G55
+----- betreff.abend_kaelte -----
+[GR20] Etappe 3 — Abend — Kälte D13 W30 G55
+----- betreff.update_ohne_risiko -----
+[GR20] Etappe 3 — Update — D13 W30 G55
+----- betreff.abend_ohne_token -----
+[GR20] Etappe 3 — Abend
+----- betreff.sturm -----
+[GR20] E1 — Morgen — Sturm
+----- betreff.hitze -----
+[GR20] E1 — Morgen — Hitze
+----- betreff.regen -----
+[GR20] E1 — Abend — Regen
+----- betreff.schnee -----
+[GR20] E1 — Abend — Schnee
+----- betreff.wind -----
+[GR20] E1 — Abend — Wind
+----- betreff.unbekanntes_risiko -----
+[GR20] E1 — Morgen — Fog
+----- betreff.unbekannter_typ -----
+[GR20] E1 — compare
+----- betreff.kuerzung -----
+[GR20] Etappe 3: Refuge d'Ortu di u Piobbu — Morgen — Gewitter D13 W30 G55
+----- betreff.kuerzung_lang -----
+Etappe 3: Refuge d'Ortu di u Piobbu nach Refuge de Carrozzu — Abend — Kälte
+----- fehler.kind_required -----
+400 kind_required Briefing-Art fehlt oder ist ungültig (erlaubt: route, vergleich)
+----- fehler.not_found -----
+404 not_found Briefing trip-42 nicht gefunden
+----- fehler.already_in_progress -----
+409 already_in_progress Versand läuft bereits — bitte warten
+----- fehler.no_stage -----
+422 no_stage Kein Briefing für morning — keine Etappendaten für das aktuelle Datum
+----- fehler.no_weather -----
+422 no_weather Kein Briefing versendet — keine Wetterdaten verfügbar
+----- fehler.no_channels -----
+422 no_channels Kein Briefing versendet — kein Versandweg aktiv (E-Mail, Telegram und SMS sind alle deaktiviert)
+----- fehler.channels_unreachable -----
+422 channels_unreachable Kein Briefing versendet — Versandweg konfiguriert, aber nicht einsatzbereit (Kanal technisch nicht erreichbar)
+----- fehler.invalid_report_type -----
+422 invalid_report_type Ungültiger Berichtstyp morning (erlaubt: morning, evening)
+----- fehler.smtp_not_configured -----
+422 smtp_not_configured E-Mail-Versand (SMTP) ist für diesen Nutzer nicht eingerichtet
+----- fehler.invalid_preset -----
+422 invalid_preset Ortsvergleich nicht versendbar: keine Orte
+----- fehler.send_failed -----
+500 send_failed Versand fehlgeschlagen — interner Fehler, bitte später erneut versuchen
+----- briefing.betreff -----
+[GR20] Etappe 3 — Morgen
+----- briefing.header -----
+de
+----- test_vorschau.betreff -----
+[TEST] [GR20] Etappe 3 — Morgen
+----- test_vorschau.header -----
+de
+----- test_vorschau.hinweis_mail -----
+Test-Vorschau für Etappe 3 am 29.10.2026
+----- test_vorschau.hinweis_telegram -----
+Test-Vorschau für Etappe 3 am 29.10.2026
+----- auf_anfrage.betreff -----
+[GR20] Etappe 3 — Morgen
+----- auf_anfrage.header -----
+de
+----- auf_anfrage.hinweis_mail -----
+Briefing auf Anfrage für Etappe 3 am 29.10.2026
+----- auf_anfrage.hinweis_telegram -----
+Briefing auf Anfrage für Etappe 3 am 29.10.2026
+----- ohne_etappe.betreff -----
+[TEST] [GR20] 29.10.2026 — Morgen
+----- ohne_etappe.header -----
+de
+----- ohne_etappe.hinweis_mail -----
+Test-Vorschau für Etappe am 29.10.2026
+----- ohne_etappe.hinweis_telegram -----
+Test-Vorschau für Etappe am 29.10.2026
+----- servicefehler.betreff -----
+[GR20] Wetterdaten nicht verfuegbar
+----- servicefehler.header -----
+de
+----- ausfall.betreff -----
+[GR20] Wetterdaten nicht verfügbar
+----- ausfall.header -----
+de
+----- ausfall.mail -----
+Wetterdienst aktuell nicht erreichbar — wir versuchen es weiter und liefern das Briefing nach, sobald Daten verfügbar sind.
+----- ausfall.telegram -----
+[[GR20] Wetterdaten nicht verfügbar]
+
+Wetterdienst aktuell nicht erreichbar — wir versuchen es weiter und liefern das Briefing nach, sobald Daten verfügbar sind.
+----- ausfall.sms -----
+Wetterdienst aktuell nicht erreichbar — wir versuchen es weiter und liefern das Briefing nach, sobald Daten verfügbar sind.
+----- ausfall.premium_sms -----
+Wetterdienst aktuell nicht erreichbar — wir versuchen es weiter und liefern das Briefing nach, sobald Daten verfügbar sind.
+----- alarm.sms -----
+S3 Seg 3: G45->72@Do15 13-18 + amtl. Warnung s. E-Mail/Telegram
+----- alarm.premium_sms -----
+S3 Seg 3: G45->72@Do15 13-18 + amtl. Warnung s. E-Mail/Telegram
+----- test.ergebnis -----
+{"status": "ok"}
+----- test.betreff -----
+Gregor 20 — Testmeldung
+----- test.text -----
+Dein Kanal funktioniert!
+----- test.header -----
+de
+----- test.kanal_unbekannt -----
+Unbekannter Kanal: fax
+----- test.mail_gesperrt -----
+Die Testmail wurde nicht gesendet: Für dein Konto ist keine bestätigte E-Mail-Adresse hinterlegt. Bitte bestätige zuerst deine Adresse im Profil.

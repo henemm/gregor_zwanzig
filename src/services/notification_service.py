@@ -15,6 +15,8 @@ from typing import TYPE_CHECKING, Optional
 from zoneinfo import ZoneInfo
 
 from app.config import Settings
+from i18n import Lang, resolve_user_lang, t
+from i18n.format import fmt_date_numeric
 from output.renderers.trip_report import TripReportFormatter
 from output.renderers.alert.model import AlertMessage, OnsetEvent
 from output.renderers.alert.project import to_alert_message, to_multi_point_alert_message
@@ -376,7 +378,7 @@ def build_service_error_email_html(trip_name: str, report_type: str, error_lines
     )
 
 
-def _official_source_label_for(dto_notices: list) -> str:
+def _official_source_label_for(dto_notices: list, *, lang: Lang = "de") -> str:
     """Anzeigename(n) der amtlichen Quelle(n) (Issue #1216 AC-7, erweitert um
     #1251): abgeleitet aus ALLEN beteiligten Warnungen statt nur der
     führenden (höchststufigen) — ein Bündel aus zwei Behörden (z.B. GeoSphere
@@ -386,9 +388,9 @@ def _official_source_label_for(dto_notices: list) -> str:
     from output.renderers.alert.official_alerts import official_alert_source_label
 
     if not dto_notices:
-        return "Amtliche Quelle"
+        return t("warnung.quelle.amtlich", lang)
     ordered = sorted(dto_notices, key=lambda n: -n.alert.level)
-    labels = [official_alert_source_label(n.alert.source) for n in ordered]
+    labels = [official_alert_source_label(n.alert.source, lang=lang) for n in ordered]
     return ", ".join(dict.fromkeys(labels))
 
 
@@ -462,65 +464,73 @@ def _measured_event_km(alert_msg) -> dict:
     return result
 
 
-def _official_allclear_source_label(dto_notices: list, ac_notices: list) -> str:
+def _official_allclear_source_label(dto_notices: list, ac_notices: list, *,
+                                    lang: Lang = "de") -> str:
     """Issue #1441 S2: Quelle einer reinen Entwarnung aus dem Gedaechtnis."""
     from output.renderers.alert.official_alerts import official_alert_source_label
 
     if dto_notices or not ac_notices:
-        return _official_source_label_for(dto_notices)
-    return ", ".join(dict.fromkeys(official_alert_source_label(n.source) for n in ac_notices))
+        return _official_source_label_for(dto_notices, lang=lang)
+    return ", ".join(dict.fromkeys(
+        official_alert_source_label(n.source, lang=lang) for n in ac_notices))
 
 
-def _official_subject(dto_notices: list, ac_notices: list, *, prefix: str, tz) -> str:
+def _official_subject(dto_notices: list, ac_notices: list, *, prefix: str, tz,
+                      lang: Lang = "de") -> str:
     """Issue #1441 S2: Warnung zuerst, dann "+ Entwarnung …"."""
     from output.renderers.alert.official_alerts import (
         render_official_alert_subject, render_official_allclear_subject_part,
     )
 
     if not ac_notices:
-        return render_official_alert_subject(dto_notices, prefix=prefix, tz=tz)
-    part = render_official_allclear_subject_part(ac_notices)
+        return render_official_alert_subject(dto_notices, prefix=prefix, tz=tz, lang=lang)
+    part = render_official_allclear_subject_part(ac_notices, lang=lang)
     if dto_notices:
-        return f"{render_official_alert_subject(dto_notices, prefix=prefix, tz=tz)} + {part}"
+        warnung = render_official_alert_subject(dto_notices, prefix=prefix, tz=tz, lang=lang)
+        return f"{warnung} + {part}"
     scopes = {n.scope_label for n in ac_notices}
-    scope = next(iter(scopes)) if len(scopes) == 1 else "mehrere Orte"
+    scope = next(iter(scopes)) if len(scopes) == 1 else t("warnung.umfang.mehrere_orte", lang)
     return f"[{prefix}] {scope} · {part}"
 
 
 def _official_mail_bodies(
     dto_notices: list, ac_notices: list, *, source_label: str, source_url, stand_at: str,
-    tz, context_label: str,
+    tz, context_label: str, lang: Lang = "de",
 ) -> tuple[str, str]:
     """Issue #1441 S2: (HTML, Klartext) -- Entwarnungs-Abschnitt nach den Warnungen."""
     from output.renderers.alert import official_alerts as oa
 
     if not dto_notices:
-        kw = dict(stand_at=stand_at, source_label=source_label, context_label=context_label)
+        kw = dict(stand_at=stand_at, source_label=source_label, context_label=context_label,
+                  lang=lang)
         return (oa.render_official_allclear_mail_html(ac_notices, **kw),
                 oa.render_official_allclear_mail_plain(ac_notices, **kw))
     html = oa.render_warn_block(
         dto_notices, variant="standalone", source_label=source_label,
         source_url=source_url, stand_at=stand_at, tz=tz, context_label=context_label,
-        allclear_html=oa.render_official_allclear_html(ac_notices),
+        allclear_html=oa.render_official_allclear_html(ac_notices, lang=lang), lang=lang,
     )
     plain = oa.render_official_alert_mail_plain(
         dto_notices, source_label=source_label, stand_at=stand_at,
         tz=tz, context_label=context_label, source_url=source_url,
-        allclear_lines=oa.render_official_allclear_plain(ac_notices),
+        allclear_lines=oa.render_official_allclear_plain(ac_notices, lang=lang), lang=lang,
     )
     return html, plain
 
 
 def _official_telegram_rich(dto_notices: list, ac_notices: list, *, prefix: str,
-                            source_label: str, tz) -> str:
+                            source_label: str, tz, lang: Lang = "de") -> str:
     from output.renderers.alert.official_alerts import (
         render_official_alert_telegram, render_official_allclear_telegram,
     )
 
     if not dto_notices:
-        return render_official_allclear_telegram(ac_notices, prefix=prefix)
-    text = render_official_alert_telegram(dto_notices, prefix=prefix, source_label=source_label, tz=tz)
-    return f"{text}\n\n{render_official_allclear_telegram(ac_notices)}" if ac_notices else text
+        return render_official_allclear_telegram(ac_notices, prefix=prefix, lang=lang)
+    text = render_official_alert_telegram(
+        dto_notices, prefix=prefix, source_label=source_label, tz=tz, lang=lang)
+    if not ac_notices:
+        return text
+    return f"{text}\n\n{render_official_allclear_telegram(ac_notices, lang=lang)}"
 
 
 def _compare_allclear_channels(ac_notices: list, dto_notices: list, telegram_style: str,
@@ -606,6 +616,7 @@ class NotificationService:
 
     def __init__(
         self, settings: Optional[Settings] = None, user_id: Optional[str] = None,
+        *, lang: Optional[Lang] = None,
     ) -> None:
         # #2151 Scheibe C (ADR-0003): kein stiller Rueckfall auf das Konto
         # "default". Ohne settings UND ohne user_id gibt es kein Profil, das
@@ -619,6 +630,9 @@ class NotificationService:
         self._settings = settings if settings else Settings().with_user_profile(user_id)
         self._formatter = TripReportFormatter()
         self._user_id = user_id
+        # Issue #2671 (ADR-0104): Sprache am Dienstobjekt, einmal je Nutzer
+        # gelesen (nie Modul-/Klassenzustand); P9b reicht sie direkt herein.
+        self._lang: Lang = lang or (resolve_user_lang(user_id) if user_id else "de")
 
     def _require_user(self) -> str:
         """Nutzerkennung fuer nutzerbezogene Datenzugriffe -- fail-closed."""
@@ -760,6 +774,7 @@ class NotificationService:
             render_options=request.render_options,
             has_gap=has_gap,
             starkregen_hint_text=starkregen_hint_text,
+            lang=self._lang,
         )
 
         self._apply_prefixes(report, request)
@@ -956,7 +971,7 @@ class NotificationService:
         try:
             self._telegram_output().send(
                 subject=report.email_subject,
-                body=render_telegram_incomplete_hint(missing_count),
+                body=render_telegram_incomplete_hint(missing_count, lang=self._lang),
                 parse_mode="HTML",
                 suppress_subject_line=True,
             )
@@ -983,18 +998,19 @@ class NotificationService:
         Loch: der Nutzer haette den Kanal gewaehlt und nie erfahren, dass er
         die Ausfallmeldung nicht bekommt.
         """
-        subject = f"[{trip.name}] Wetterdaten nicht verfügbar"
-        text = (
-            "Wetterdienst aktuell nicht erreichbar — wir versuchen es weiter "
-            "und liefern das Briefing nach, sobald Daten verfügbar sind."
-        )
+        subject = t("versand.betreff.wetterdaten_fehlen", self._lang, trip=trip.name)
+        text = t("versand.hinweis.wetterdienst_ausfall", self._lang)
+        # PO-Korrektur 2026-10-31 (ADR-0104): SMS/Premium-SMS in jeder Sprache wie bisher.
+        sms_text = t("versand.hinweis.wetterdienst_ausfall", "de")
         sent_channels: list[str] = []
         blocked_channels: dict[str, str] = {}
         blocked_reason_codes: dict[str, str] = {}
 
         if send_email:
             try:
-                EmailOutput(self._settings).send(subject=subject, body=text, html=False)
+                EmailOutput(self._settings).send(
+                    subject=subject, body=text, html=False, lang=self._lang,
+                )
                 sent_channels.append("email")
             except Exception as e:
                 logger.error(f"No-data hint email failed for {trip.name}: {e}")
@@ -1005,7 +1021,7 @@ class NotificationService:
                 "sms", "briefing", now_sms, blocked_channels, blocked_reason_codes,
             ):
                 try:
-                    self._sms_output().send(subject=subject, body=text)
+                    self._sms_output().send(subject=subject, body=sms_text)
                     sent_channels.append("sms")
                 except Exception as e:
                     sms_daily_limit.release_reservation(self._require_user(), "sms", now_sms)
@@ -1017,7 +1033,7 @@ class NotificationService:
                 "premium_sms", "briefing", now_premium, blocked_channels, blocked_reason_codes,
             ):
                 try:
-                    self._premium_sms_output().send(subject=subject, body=text)
+                    self._premium_sms_output().send(subject=subject, body=sms_text)
                     sent_channels.append("premium_sms")
                 except Exception as e:  # noqa: BLE001 — Grund wird Ergebnisfeld
                     sms_daily_limit.release_reservation(
@@ -1332,24 +1348,27 @@ class NotificationService:
         )
         # Issue #2036: gemessene km-Spannen mitgeben -- ohne sie bleibt die
         # amtliche Warnung byte-identisch bei der Segment-Sprache.
+        lang = self._lang
         dto_notices = build_official_alert_notices(
-            trip, notices, segment_km=segment_km, stage_number=stage_number,
+            trip, notices, segment_km=segment_km, stage_number=stage_number, lang=lang,
         )
-        ac_notices = build_official_allclear_notices(allclears or [])
-        source_label = _official_allclear_source_label(dto_notices, ac_notices)
+        ac_notices = build_official_allclear_notices(allclears or [], lang=lang)
+        source_label = _official_allclear_source_label(dto_notices, ac_notices, lang=lang)
         source_url = _official_source_url_for(dto_notices)
         # #1233 Nebenbefund AC-12: Betreff und Body MUESSEN dieselbe tz-aware
         # Quelle nutzen (sonst Wochentags-Divergenz Betreff vs. Body).
-        subject = _official_subject(dto_notices, ac_notices, prefix=trip.name, tz=alert_tz)
+        subject = _official_subject(
+            dto_notices, ac_notices, prefix=trip.name, tz=alert_tz, lang=lang)
         stand_at = local_fmt(datetime.now(timezone.utc), alert_tz)
         # Issue #1216 F002 / #1744 A2 (AC-13): geteilter Baustein (variant=
         # "standalone") plus eigens gebauter Klartext aus denselben Datenzeilen.
         html, plain = _official_mail_bodies(
             dto_notices, ac_notices, source_label=source_label, source_url=source_url,
-            stand_at=stand_at, tz=alert_tz, context_label=trip.name,
+            stand_at=stand_at, tz=alert_tz, context_label=trip.name, lang=lang,
         )
         telegram_text = _official_telegram_rich(
             dto_notices, ac_notices, prefix=trip.name, source_label=source_label, tz=alert_tz,
+            lang=lang,
         )
         sms_body, sms_has_allclear = render_official_alert_sms_with_allclears(
             dto_notices, ac_notices, tz=alert_tz,
@@ -1378,7 +1397,7 @@ class NotificationService:
                 else:
                     EmailOutput(self._settings).send(
                         subject=subject, body=html, html=True,
-                        plain_text_body=plain, mail_type="official-alert",
+                        plain_text_body=plain, mail_type="official-alert", lang=self._lang,
                     )
                 sent_channels.append("email")
             except Exception as e:
@@ -1518,6 +1537,9 @@ class NotificationService:
                     to=recipients,
                     compare_hourly_enabled=compare_hourly_enabled,
                     mail_type="compare",  # Issue #1124: X-GZ-Mail-Type
+                    # X-GZ-Lang = Sprache des INHALTS: der Ortsvergleich wird bis
+                    # P9b (#2672) in scheduler_dispatch_service deutsch gerendert.
+                    lang="de",
                 )
             sent_channels.append("email")
 
@@ -1627,11 +1649,12 @@ class NotificationService:
 
         all_location_ids = [loc.id for loc in locations]
         id_to_name = {loc.id: loc.name for loc in locations}
+        lang = self._lang
         dto_notices = build_compare_official_alert_notices(
-            all_location_ids, id_to_name, tagged_alerts,
+            all_location_ids, id_to_name, tagged_alerts, lang=lang,
         )
         # Issue #1441 S2: Entwarnungen (Orts-IDs -> Namen) in derselben Nachricht.
-        ac_notices = build_official_allclear_notices(allclears or [], id_to_name)
+        ac_notices = build_official_allclear_notices(allclears or [], id_to_name, lang=lang)
         if not dto_notices and not ac_notices:
             return NotificationResult(sent=False, sent_channels=[])
 
@@ -1641,17 +1664,19 @@ class NotificationService:
             if first_loc is not None
             else ZoneInfo("UTC")
         )
-        source_label = _official_allclear_source_label(dto_notices, ac_notices)
+        source_label = _official_allclear_source_label(dto_notices, ac_notices, lang=lang)
         source_url = _official_source_url_for(dto_notices)
         # #1233 Nebenbefund AC-12: Betreff und Body MUESSEN dieselbe tz-aware
         # Quelle nutzen (sonst Wochentags-Divergenz Betreff vs. Body).
-        subject = _official_subject(dto_notices, ac_notices, prefix=preset_name, tz=alert_tz)
+        subject = _official_subject(
+            dto_notices, ac_notices, prefix=preset_name, tz=alert_tz, lang=lang)
         stand_at = local_fmt(datetime.now(timezone.utc), alert_tz)
         # Issue #1216 F002 / #1744 A2 (AC-13): derselbe Baustein und derselbe
         # Klartext-Bau wie im Trip-Pfad.
         html, plain = _official_mail_bodies(
             dto_notices, ac_notices, source_label=source_label, source_url=source_url,
-            stand_at=stand_at, tz=alert_tz, context_label="Ortsvergleich",
+            stand_at=stand_at, tz=alert_tz,
+            context_label=t("versand.kontext.ortsvergleich", lang), lang=lang,
         )
 
         # Issue #1701 (S2b, D5): analog `_dispatch_alert_message`.
@@ -1711,7 +1736,7 @@ class NotificationService:
             else:
                 EmailOutput(self._settings).send(
                     subject=subject, body=html, html=True,
-                    plain_text_body=plain, mail_type="official-alert",
+                    plain_text_body=plain, mail_type="official-alert", lang=self._lang,
                 )
         except Exception as e:
             logger.error(f"Compare official alert email failed for {preset_name}: {e}")
@@ -1746,7 +1771,7 @@ class NotificationService:
                 return True
             telegram_text = _official_telegram_rich(
                 dto_notices, ac_notices or [], prefix=preset_name,
-                source_label=source_label, tz=alert_tz,
+                source_label=source_label, tz=alert_tz, lang=self._lang,
             )
             if telegram_sink is not None:
                 telegram_sink(telegram_text)
@@ -1965,9 +1990,10 @@ class NotificationService:
         `send_multi_location_deviation_alert()` gesetzt. Ohne ihn bleibt der
         SMS-Text der drei anderen Alarmwege byte-identisch.
         """
-        subject = render_alert_subject(alert_msg)
-        html, plain = render_alert_email(alert_msg)
-        telegram_body = render_alert_telegram(alert_msg)
+        lang = self._lang
+        subject = render_alert_subject(alert_msg, lang=lang)
+        html, plain = render_alert_email(alert_msg, lang=lang)
+        telegram_body = render_alert_telegram(alert_msg, lang=lang)
         # Issue #2422 S4 (Fix #1088): liegt ein amtlicher Zusatzblock vor,
         # wird das SMS-Limit VOR dem Rendern um die Hinweislänge reduziert,
         # damit der angehängte Hinweistext das 140-Zeichen-Limit nicht
@@ -2002,12 +2028,12 @@ class NotificationService:
             # projizierten Ereignissen, nicht aus einer zweiten Quelle.
             embed_notices = build_official_alert_notices(
                 None, official_notices,
-                segment_km=_measured_event_km(alert_msg),
+                segment_km=_measured_event_km(alert_msg), lang=lang,
             )
-            embed_source = _official_source_label_for(embed_notices)
+            embed_source = _official_source_label_for(embed_notices, lang=lang)
             embedded_html = render_warn_block(
                 embed_notices, variant="embedded", source_label=embed_source,
-                tz=alert_tz,
+                tz=alert_tz, lang=lang,
             )
             html = html.replace(
                 "</body></html>", embedded_html + "</body></html>",
@@ -2015,7 +2041,7 @@ class NotificationService:
             # Plain/Telegram bleiben beim bestehenden Notice-Text (AC-6 betrifft
             # nur das HTML-Format, das aus dem Rahmen brach).
             extra_lines = render_official_alert_notice_plain(
-                official_notices, tz=alert_tz,
+                official_notices, tz=alert_tz, lang=lang,
             )
             extra_text = "\n".join(extra_lines)
             plain += "\n\n" + extra_text
@@ -2069,6 +2095,7 @@ class NotificationService:
                         body=html,
                         plain_text_body=plain,
                         mail_type=mail_type,
+                        lang=lang,
                     )
                 sent_channels.append("email")
             except Exception as e:
@@ -2128,7 +2155,7 @@ class NotificationService:
                                 format_modes=alert_msg.format_modes,
                                 indicator_keys=alert_msg.indicator_keys,
                             )
-                            single_body = render_alert_telegram(single_msg)
+                            single_body = render_alert_telegram(single_msg, lang=lang)
                             self._telegram_output().send(
                                 subject=subject,
                                 body=single_body,
@@ -2360,16 +2387,18 @@ class NotificationService:
 
     def _apply_prefixes(self, report, request: TripReportRequest) -> None:
         """Test-/On-Demand-/Catchup-/Teilausfall-Präfixe auf Betreff und Body anwenden."""
-        stage_name = request.stage_name or "Etappe"
+        stage_name = request.stage_name or t("versand.etappe.rueckfall", self._lang)
         target_date = self._target_date_from_report(report, request)
-        human_date = target_date.strftime("%d.%m.%Y")
+        human_date = fmt_date_numeric(target_date, self._lang)
 
         if request.test_prefix:
-            hint = f"Test-Vorschau für {stage_name} am {human_date}"
+            hint = t("versand.hinweis.test_vorschau", self._lang,
+                     etappe=stage_name, datum=human_date)
             report.email_subject = f"[TEST] {report.email_subject}"
             self._prepend_hint(report, hint)
         elif request.on_demand_prefix:
-            hint = f"Briefing auf Anfrage für {stage_name} am {human_date}"
+            hint = t("versand.hinweis.auf_anfrage", self._lang,
+                     etappe=stage_name, datum=human_date)
             self._prepend_hint(report, hint)
         else:
             # Issue #1113: catchup_prefix (Nachlieferung) und
@@ -2423,6 +2452,7 @@ class NotificationService:
                 plain_text_body=report.email_plain,
                 mail_type="trip-briefing",
                 mail_format="full",
+                lang=self._lang,
             )
         else:
             email_output.send(
@@ -2431,6 +2461,7 @@ class NotificationService:
                 html=False,
                 mail_type="trip-briefing",
                 mail_format="compact",
+                lang=self._lang,
             )
 
     def _send_service_error_email(self, request: TripReportRequest) -> bool:
@@ -2449,14 +2480,16 @@ class NotificationService:
             for e in request.failed_segments
             if e.segment is not None
         )
-        subject = f"[{request.trip.name}] Wetterdaten nicht verfuegbar"
+        # Rumpf (build_service_error_email_html) ist noch deutsch: Betreff und
+        # X-GZ-Lang bleiben bis zur Umstellung des Rumpfs (#2672) deutsch.
+        subject = t("versand.betreff.wetterdaten_fehlen_ascii", "de", trip=request.trip.name)
         body = build_service_error_email_html(
             trip_name=request.trip.name,
             report_type=request.report_type,
             error_lines=error_lines,
         )
         try:
-            EmailOutput(self._settings).send(subject=subject, body=body, html=True)
+            EmailOutput(self._settings).send(subject=subject, body=body, html=True, lang="de")
             logger.info(f"Service error email sent for {request.trip.name}")
         except Exception as e:
             logger.error(f"Failed to send service error email: {e}")
