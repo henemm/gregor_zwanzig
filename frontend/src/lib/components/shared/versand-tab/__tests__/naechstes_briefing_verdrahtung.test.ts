@@ -34,6 +34,7 @@ const VERSAND_TAB = join(HIER, '..', '..', 'VersandTab.svelte');
 const BAUSTEIN = join(HIER, '..', 'VTNextBriefing.svelte');
 const VERGLEICH_HUB = join(HIER, '..', '..', '..', 'compare', 'CompareTabs.svelte');
 const TRIP_KARTE = join(HIER, '..', '..', '..', 'trip-detail', 'HubOverview.svelte');
+const UEBERSICHT = join(HIER, '..', '..', 'hub-uebersicht', 'HubUebersicht.svelte');
 
 register(pathToFileURL(join(FRONTEND, 'test-env-dynamic-private-stub-hooks.mjs')).href, basis);
 register(pathToFileURL(join(FRONTEND, 'test-app-environment-stub-hooks.mjs')).href, basis);
@@ -161,15 +162,36 @@ describe('(a) VersandTab → VTNextBriefing: Quelle je Kontext', () => {
 	});
 });
 
-describe('(c) CompareTabs: Hub-Stat „Nächster Versand" aus dem Backend-Wert', () => {
-	test('Lader-Quelle: vergleich, preset.id, savedAt', async () => {
-		const { u } = await umgebungFuer(
+// Issue #2682: die Hub-Stat „Nächster Versand" steht im geteilten Übersichts-Baustein
+// (shared/hub-uebersicht/HubUebersicht.svelte); CompareTabs reicht `saveController` durch.
+// Gemessen wird dieselbe Kette wie vorher, nur am neuen Ort: Lader-Quelle → Abruf → Anzeige.
+const UEBERSICHT_LEER = { trip: undefined, preset: undefined, status: undefined, orte: undefined, saveController: undefined, onJump: undefined, children: undefined };
+async function vergleichsUebersicht() {
+	return umgebungFuer(
+		UEBERSICHT,
+		{ ...UEBERSICHT_LEER, context: 'vergleich', preset: vollerVergleich('cp-1969'), orte: [], saveController: { savedAt: GESPEICHERT } },
+		{ jsAlsTs: true }
+	);
+}
+
+describe('(c) Vergleichs-Hub: Hub-Stat „Nächster Versand" aus dem Backend-Wert', () => {
+	test('CompareTabs reicht saveController an den Übersichts-Baustein (Neuladen nach Speichern)', async () => {
+		const { ast, quelle } = await umgebungFuer(
 			VERGLEICH_HUB,
 			{ preset: vollerVergleich('cp-1969'), locations: [], saveController: { savedAt: GESPEICHERT } },
 			{ jsAlsTs: true }
 		);
+		const e = findeKomponenten(ast, 'HubUebersicht');
+		assert.equal(e.length, 1, 'CompareTabs bindet HubUebersicht nicht genau einmal ein');
+		const a = ((e[0].attributes ?? []) as Knoten[]).find((x) => x.type === 'Attribute' && x.name === 'saveController');
+		assert.ok(a, 'CompareTabs reicht saveController nicht an HubUebersicht');
+		assert.equal(a.value?.type === 'ExpressionTag' ? quelle.slice(a.value.expression.start, a.value.expression.end) : null, 'saveController');
+	});
+
+	test('Lader-Quelle: vergleich, preset.id, savedAt', async () => {
+		const { u } = await vergleichsUebersicht();
 		const q = u.naechstesBriefing?.quelle;
-		assert.ok(q, 'Messaufbau: Lader im Hub nicht auswertbar');
+		assert.ok(q, 'Messaufbau: Lader im Baustein nicht auswertbar');
 		assert.equal(q.context, 'vergleich');
 		assert.equal(q.id, 'cp-1969');
 		assert.equal(q.neuLaden, GESPEICHERT, 'Hub lädt nach dem Speichern nicht neu');
@@ -178,14 +200,13 @@ describe('(c) CompareTabs: Hub-Stat „Nächster Versand" aus dem Backend-Wert',
 	});
 
 	test('Anzeige-Text folgt dem geladenen Wert', async () => {
-		const { ast, quelle, u } = await umgebungFuer(
-			VERGLEICH_HUB,
-			{ preset: vollerVergleich('cp-1969'), locations: [], saveController: { savedAt: GESPEICHERT } },
-			{ jsAlsTs: true }
-		);
-		assert.equal(deklaration(ast, quelle, u, 'nextSendText'), '—', 'nicht geladen ⇒ „—"');
+		const { ast, quelle, u } = await vergleichsUebersicht();
+		const naechster = () =>
+			(deklaration(ast, quelle, u, 'modell') as Knoten).kennzahlen.find((k: Knoten) => k.id === 'naechster-versand');
+		assert.equal(naechster().lang, '—', 'nicht geladen ⇒ „—"');
 		u.naechstesBriefing = { wert: NB('07:00'), quelle: u.naechstesBriefing.quelle };
-		assert.equal(deklaration(ast, quelle, u, 'nextSendText'), 'Do 07:00 (CEST)');
+		assert.equal(naechster().lang, 'Do 07:00 (CEST)');
+		assert.equal(naechster().kurz, 'Do 07:00 (CEST)');
 	});
 });
 
@@ -205,42 +226,62 @@ function knoten(wurzel: unknown, typ: string, aus: Knoten[] = []): Knoten[] {
 const reinerText = (el: Knoten) =>
 	((el.fragment?.nodes ?? []) as Knoten[]).map((c) => (c.type === 'Text' ? c.data : '\u0000')).join('').trim();
 
-describe('(c/F007) CompareTabs: jede „Nächster Versand"-Anzeige rendert den geladenen Wert', () => {
+// #2682: die Etiketten sind Daten des Modells (`{k.label}` je {#each}-Eintrag) — gemessen wird je
+// Raster (mobil, Desktop) der Eintrag „Nächster Versand" mit seiner ECHTEN Schleifenbindung.
+/** Text-Kinder eines Knotens (Fragment-Ebene, rekursiv, ohne Attribut-Ausdrücke). */
+function fragmentAusdruecke(n: Knoten, aus: Knoten[] = []): Knoten[] {
+	for (const c of (n.fragment?.nodes ?? n.consequent?.nodes ?? []) as Knoten[]) {
+		if (c.type === 'ExpressionTag') aus.push(c);
+		else fragmentAusdruecke(c, aus);
+	}
+	if (n.type === 'IfBlock' && n.alternate) for (const c of n.alternate.nodes as Knoten[]) {
+		if (c.type === 'ExpressionTag') aus.push(c);
+		else fragmentAusdruecke(c, aus);
+	}
+	return aus;
+}
+
+describe('(c/F007) Vergleichs-Übersicht: jede „Nächster Versand"-Anzeige rendert den geladenen Wert', () => {
 	async function hubMitWert() {
-		const r = await umgebungFuer(
-			VERGLEICH_HUB,
-			{ preset: vollerVergleich('cp-1969'), locations: [], saveController: { savedAt: GESPEICHERT } },
-			{ jsAlsTs: true }
-		);
+		const r = await vergleichsUebersicht();
 		r.u.naechstesBriefing = { wert: NB('07:00'), quelle: r.u.naechstesBriefing.quelle };
-		r.u.nextSendText = deklaration(r.ast, r.quelle, r.u, 'nextSendText');
-		r.u.versandSummaryText = deklaration(r.ast, r.quelle, r.u, 'versandSummaryText');
+		r.u.modell = deklaration(r.ast, r.quelle, r.u, 'modell');
+		r.u.mobileKennzahlen = deklaration(r.ast, r.quelle, r.u, 'mobileKennzahlen');
 		return r;
 	}
 
 	test('Stat-Karten (mobil + Desktop): der Wert-Knoten neben dem Etikett zeigt „Do 07:00 (CEST)"', async () => {
 		const { ast, quelle, u } = await hubMitWert();
-		const etiketten = knoten(ast.fragment, 'RegularElement').filter((el) => reinerText(el) === 'Nächster Versand');
-		assert.equal(etiketten.length, 2, 'Messaufbau: genau zwei „Nächster Versand"-Etiketten (mobil, Desktop) erwartet');
-		for (const etikett of etiketten) {
-			const eltern = [...knoten(ast.fragment, 'RegularElement'), ...knoten(ast.fragment, 'Component')].find((p) =>
+		const schleifen = knoten(ast.fragment, 'EachBlock').filter((e) => /kennzahlen|Kennzahlen/.test(quelle.slice(e.expression.start, e.expression.end)));
+		assert.equal(schleifen.length, 2, 'Messaufbau: genau zwei Kennzahlen-Raster (mobil, Desktop) erwartet');
+		for (const s of schleifen) {
+			const eintraege = werte(ohneTypen(quelle, s.expression), u) as Knoten[];
+			const eintrag = eintraege.find((k) => k.label === 'Nächster Versand');
+			assert.ok(eintrag, 'Messaufbau: Raster ohne Kennzahl „Nächster Versand"');
+			const bindung = Object.assign(Object.create(u), { [s.context.name]: eintrag });
+			const etikett = knoten(s.body, 'RegularElement').find((el) =>
+				((el.fragment?.nodes ?? []) as Knoten[]).some(
+					(c) => c.type === 'ExpressionTag' && werte(ohneTypen(quelle, c.expression), bindung) === 'Nächster Versand'
+				)
+			);
+			assert.ok(etikett, 'Etikett „Nächster Versand" wird nicht gerendert');
+			const eltern = [...knoten(s.body, 'RegularElement'), ...knoten(s.body, 'Component')].find((p) =>
 				((p.fragment?.nodes ?? []) as Knoten[]).includes(etikett)
 			);
-			const geschwister = (eltern?.fragment?.nodes ?? []) as Knoten[];
-			const elemente = geschwister.filter((g) => g.type === 'RegularElement');
-			const wertKnoten = elemente[elemente.indexOf(etikett) + 1];
+			const elemente = ((eltern?.fragment?.nodes ?? []) as Knoten[]).filter((g) => g.type === 'RegularElement');
+			const wertKnoten = elemente[elemente.indexOf(etikett!) + 1];
 			assert.ok(wertKnoten, 'Wert-Knoten neben dem Etikett fehlt');
-			const tags = knoten(wertKnoten, 'ExpressionTag');
-			assert.equal(tags.length, 1, 'Wert-Knoten muss genau einen Ausdruck rendern');
-			assert.equal(werte(ohneTypen(quelle, tags[0].expression), u), 'Do 07:00 (CEST)');
+			const tags = fragmentAusdruecke(wertKnoten);
+			assert.ok(tags.length >= 1, 'Wert-Knoten rendert keinen Ausdruck');
+			for (const t of tags) assert.equal(werte(ohneTypen(quelle, t.expression), bindung), 'Do 07:00 (CEST)');
 		}
 	});
 
 	test('Versand-Zusammenfassung (aktiver Vergleich) nennt den geladenen Termin', async () => {
 		const { ast, quelle, u } = await hubMitWert();
-		assert.equal(u.status, 'active', 'Messaufbau: aktiver Vergleich');
+		assert.equal(u.modell.kennzahlen[0].lang, 'Läuft automatisch', 'Messaufbau: aktiver Vergleich');
 		const tags = knoten(ast.fragment, 'ExpressionTag').filter((t) =>
-			knoten(t.expression, 'Identifier').some((i) => i.name === 'versandSummaryText')
+			/versandKarte\.beschreibungLang/.test(quelle.slice(t.expression.start, t.expression.end))
 		);
 		assert.equal(tags.length, 1, 'Messaufbau: Zusammenfassung wird genau einmal gerendert');
 		const gerendert = String(werte(ohneTypen(quelle, tags[0].expression), u));

@@ -358,6 +358,18 @@ describe('Naechster Versand und Briefings-Zeiten aus echten Quellen', () => {
 		assert.equal(gesamtAus, '—', `Gesamtschalter aus (reportSlotAktiv) ⇒ „—": ${gesamtAus}`);
 	});
 
+	// Phase 6 (Tech-Lead-Rueckfrage): der Trip-Editor bietet seit #1379 nur volle Stunden; ein
+	// Altbestand mit Minuten (06:30) wird vom Scheduler zur vollen Stunde versandt
+	// (trip_report_scheduler._slot_stunde nutzt nur `.hour`). Die Kennzahl zeigt daher die
+	// ECHTE Versandstunde — wie die Karte „Briefings laufen" (HubOverview slotZeit), AC-15.
+	test('route: Altbestand 06:30 ⇒ „Morgen 06:00" (tatsaechliche Versandstunde, keine Minuten-Fiktion)', async () => {
+		const k = kennzahl(
+			await route(trip({ morning_time: '06:30:00', morning_enabled: true, evening_enabled: false })),
+			'briefings'
+		);
+		assert.equal(k.lang, 'Morgen 06:00');
+	});
+
 	test('vergleich: Briefings = presetBriefingTimesLabel(preset), testid compare-detail-stat-briefings', async () => {
 		const p = preset();
 		const k = kennzahl(await vergleich(p), 'briefings');
@@ -495,5 +507,23 @@ describe('Stabile testids: Praefix kommt aus dem Modell', () => {
 		const ids = [...r.kennzahlen.flatMap((k: any) => [k.testid, k.testidMobil]), r.versandKarte.testid].filter(Boolean);
 		assert.ok(ids.length >= 3, `zu wenige testids: ${ids.join(', ')}`);
 		for (const id of ids) assert.ok(id.startsWith('hub-uebersicht-'), `fremder Praefix: ${id}`);
+	});
+});
+
+// ── Fix-Loop 1 (Adversary F004): Randfaelle ohne Waechter ───────────────────
+
+describe('F004/M09: Slot ohne Uhrzeit ⇒ Standardstunde des Schedulers (Morgen 7, Abend 18)', () => {
+	test('morning_time/evening_time fehlen, beide Slots aktiv ⇒ „Morgen 07:00 · Abend 18:00"', async () => {
+		const t = trip({ morning_enabled: true, evening_enabled: true, morning_time: undefined, evening_time: undefined });
+		assert.equal(kennzahl(await route(t), 'briefings').lang, 'Morgen 07:00 · Abend 18:00');
+	});
+});
+
+describe('F004/M14: Ton des Status-Punkts im Trip', () => {
+	test('active ⇒ „good"; draft/planned/paused/finished ⇒ „neutral"', async () => {
+		assert.equal(kennzahl(await route(trip({}), 'active'), 'status').punkt, 'good');
+		for (const status of ['draft', 'planned', 'paused', 'finished']) {
+			assert.equal(kennzahl(await route(trip({}), status), 'status').punkt, 'neutral', status);
+		}
 	});
 });

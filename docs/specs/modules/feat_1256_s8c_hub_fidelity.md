@@ -259,7 +259,13 @@ konsumiert).
   S8c, und es werden keine PUT-/Fetch-Pfade verändert.
   - Test: Source-Wächter — `git diff` auf `HubOverview.svelte`/`TripTabs.svelte`
     ist leer; `SectionH.svelte` ist unverändert (keine neue Prop im Interface);
-    keine neuen `fetch(`/PUT-Aufrufe in den geänderten Dateien.
+    keine neuen `fetch(`/PUT-Aufrufe in den geänderten Dateien. Seit #2682
+    (Spec `feat_2682_hub_uebersicht_geteilt.md`) ist die Übersicht beider Hubs EIN
+    Baustein (`shared/hub-uebersicht/HubUebersicht.svelte`); HubOverview/TripTabs
+    sind dabei bewusst geändert. Der Wächter gilt ab #2682 für den neuen Ort:
+    `SectionH` bleibt unverändert (`compare/__tests__/compare_hub_fidelity.test.ts`,
+    AC-13), das Markup der Vergleichs-Übersicht ist gegen den Stand vor dem Umzug
+    festgehalten (`compare/__tests__/hub_uebersicht_charakterisierung.test.ts`).
 
 ## Known Limitations
 

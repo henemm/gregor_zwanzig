@@ -205,6 +205,21 @@ describe('AC-7: Lade-, Leer- und Fehlerzustand', () => {
 		l.stopp();
 	});
 
+	// Fix-Loop 1 (Adversary F004/L03): eine Antwort, die keine Liste ist (z. B. `null`
+	// aus einer leeren Go-Slice ohne Initialisierung oder ein Fehlerobjekt mit 200),
+	// darf weder die Liste noch neuesterPlanmaessigerEintrag (iteriert per Index) brechen.
+	for (const [name, antwort] of [['null', null], ['Objekt', { error: 'x' }]] as const) {
+		test(`Antwort ${name} statt Liste ⇒ geladen, Eintraege []`, async () => {
+			const s = fakeServer({ 'route:t-1': Promise.resolve(antwort) });
+			const l = await starte({ kind: 'route', id: 't-1' }, s.holen);
+			await setzen();
+			assert.equal(l.lader.zustand, 'geladen');
+			assert.deepEqual(l.lader.eintraege, []);
+			assert.equal(l.lader.neuesterPlanmaessiger, null);
+			l.stopp();
+		});
+	}
+
 	test('ohne id (Anlege-Seite) ⇒ kein Abruf', async () => {
 		const s = fakeServer({});
 		const l = await starte({ kind: 'route', id: undefined }, s.holen);
@@ -233,6 +248,27 @@ describe('Stale-Guard: eine spaete Antwort fuer eine alte Kennung wird verworfen
 		await setzen();
 		assert.equal(l.lader.neuesterPlanmaessiger?.sent_at, ABEND_29.sent_at, 'veraltete Antwort (t-1) hat t-2 ueberschrieben');
 		assert.equal(l.lader.eintraege.length, 1);
+		l.stopp();
+	});
+
+	// Fix-Loop 1 (Adversary F004/L04): beim Kennungswechsel darf die Liste des ALTEN Trips
+	// nicht stehen bleiben, solange die neue Antwort aussteht (fremde Historie unter neuem Trip).
+	test('id wechselt t-1 → t-2, Antwort fuer t-2 steht aus ⇒ Eintraege leer, Zustand „laedt"', async () => {
+		let t2Aufloesen: (v: unknown) => void = () => {};
+		const s = fakeServer({
+			'route:t-1': [PLANMAESSIG_28, ABEND_29],
+			'route:t-2': new Promise((r) => (t2Aufloesen = r))
+		});
+		const l = await starte({ kind: 'route', id: 't-1' }, s.holen);
+		await setzen();
+		assert.equal(l.lader.eintraege.length, 2, 'Messaufbau: t-1 geladen');
+		$.set(l.signale.id, 't-2');
+		await setzen();
+		assert.deepEqual(l.lader.eintraege, [], 'Historie von t-1 steht noch unter t-2');
+		assert.equal(l.lader.zustand, 'laedt');
+		t2Aufloesen([VON_HAND_30]);
+		await setzen();
+		assert.deepEqual(l.lader.eintraege.map((e: Eintrag) => e.sent_at), [VON_HAND_30.sent_at]);
 		l.stopp();
 	});
 

@@ -3,9 +3,9 @@
 	import FullProfile from './FullProfile.svelte';
 	import TripStageRow from './TripStageRow.svelte';
 	import ReportLine from './ReportLine.svelte';
-	import ChannelDot from './ChannelDot.svelte';
-	import BriefingHistory from '$lib/components/shared/BriefingHistory.svelte';
 	import type { Trip } from '$lib/types';
+	// Issue #2682: echte Briefing-/Alert-Kanäle (EINE Regel mit der Kanäle-Kennzahl der Übersicht).
+	import { tripAlertKanaele, tripBriefingKanaele } from '../shared/hub-uebersicht/hubUebersichtModell.ts';
 	import { fetchStageRisk, type StageRisk } from '$lib/utils/stageRisk';
 	// Feature #1435 Etappe E3a: Wetter-Metriken-Block. `metricsCatalog` kommt
 	// ausschließlich als Prop aus der Server-Naht (+page.server.ts) — kein
@@ -46,6 +46,9 @@
 	}
 	const morgenZeit = $derived(slotZeit(trip.report_config?.morning_time, 7));
 	const abendZeit = $derived(slotZeit(trip.report_config?.evening_time, 18));
+	// Issue #2682 (AC-9/AC-10): tatsaechlich eingestellte Kanaele statt fester Liste.
+	const briefingKanaele = $derived(tripBriefingKanaele(trip));
+	const alertKanaele = $derived(tripAlertKanaele(trip));
 
 	const metricsState = $derived(
 		metricsCatalog ? resolveTripMetricsOverviewState(trip.display_config?.metrics, metricsCatalog) : null
@@ -138,33 +141,27 @@
 
 		<Card padding={18}>
 			<Eyebrow style="margin-bottom: 10px;">Briefings laufen</Eyebrow>
-			<ReportLine kind="morning" time={morgenZeit} channels={['email', 'telegram']} active={reportSlotAktiv(trip.report_config, 'morning')} />
-			<ReportLine kind="evening" time={abendZeit} channels={['email']} active={reportSlotAktiv(trip.report_config, 'evening')} />
-			<ReportLine kind="alert" time="bei Δ" channels={['telegram']} active alert />
+			<ReportLine kind="morning" time={morgenZeit} channels={briefingKanaele} active={reportSlotAktiv(trip.report_config, 'morning')} />
+			<ReportLine kind="evening" time={abendZeit} channels={briefingKanaele} active={reportSlotAktiv(trip.report_config, 'evening')} />
+			<ReportLine kind="alert" time="bei Δ" channels={alertKanaele} active alert />
 			<div style="margin-top: 12px;">
 				<Btn variant="ghost" size="sm" onclick={makeJumpHandler('wetter-metriken', 'versand')}>Zeitplan bearbeiten →</Btn>
 			</div>
 		</Card>
 
-		<!-- Issue #2281: Versand-Historie, geteilter Baustein mit dem Ortsvergleich. -->
-		<BriefingHistory id={trip.id} kind="route" />
-
-		<Card padding={18}>
-			<Eyebrow style="margin-bottom: 10px;">Alerts (letzte 7 Tage)</Eyebrow>
-			<p style="font-size: 13px; color: var(--g-ink-2); margin: 0 0 12px;">Keine aktuellen Alerts.</p>
-			<Btn variant="ghost" size="sm" onclick={makeJumpHandler('wertebereiche')}>Alle Alerts →</Btn>
-		</Card>
+		<!-- Issue #2682: die Versand-Historie steht im geteilten Baustein HubUebersicht (EIN Laden
+		     mit „Zuletzt raus"); die Karte „Alerts (letzte 7 Tage)" mit Festtext ohne Datenquelle
+		     entfaellt (AC-11) — Alarme bleiben ueber den Reiter Alarme erreichbar. -->
 	</div>
 </div>
 
 <style>
+	/* Issue #2682: Rand und Breite traegt die Einbindung (TripTabs .trip-uebersicht). */
 	.hub-overview {
 		position: relative;
-		padding: 32px 40px 60px;
 		display: grid;
 		grid-template-columns: 1fr 380px;
 		gap: 32px;
-		max-width: 1480px;
 	}
 	.hub-overview > :global(*) {
 		min-width: 0;
@@ -190,7 +187,6 @@
 	@media (max-width: 899px) {
 		.hub-overview {
 			grid-template-columns: 1fr;
-			padding: 20px 16px 48px;
 			gap: 24px;
 		}
 	}

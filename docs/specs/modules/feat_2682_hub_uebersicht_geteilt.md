@@ -175,7 +175,7 @@ Zusicherungen, die heute CompareTabs/HubOverview per Quelltextpfad lesen, ziehen
 - **AC-18:** Given die Unit-Tests, die heute CompareTabs/HubOverview per Quelltextpfad lesen / When der Umbau fertig ist / Then prüfen sie die gleichen Zusicherungen am neuen Baustein (Tabelle „Zuordnung der Tests"), keine ist gelöscht oder abgeschwächt; allein das Sprungziel „Alle Alerts →" entfällt gemäß AC-11.
   - Test: Test-Diff-Prüfung in /60: Anzahl und Strenge der Zusicherungen je Datei vor und nach dem Umzug.
 - **AC-19:** Given die Doku / When der Umbau geliefert ist / Then führen `feat_2347_s4_paritaets_e2e.md` (Befund 6, AC-20, AC-22) und `docs/reference/gates_und_ratschen.md` die Hub-Übersicht nicht mehr als Vergleichs-Eigenheit, und in #2658 (i18n F9) und #2659 (i18n F10) steht je ein Kommentar mit dem neuen Ort `shared/hub-uebersicht/` und dem Hinweis, dass die Prämisse „keine neue Komponente" und die Zeilenangaben nachzuziehen sind.
-  - Test: Doku-Prüfung in /60 (Absatz gestrichen, Kommentare vorhanden); Doku-Test mit Kennzeichnung `# doc-compliance-test`.
+  - Test: Doku-Prüfung in /60 (Absatz gestrichen, Kommentare vorhanden); Doku-Test `tests/unit/test_hub_uebersicht_doku_2682.py` mit Kennzeichnung `# doc-compliance-test`: gates-Absatz gestrichen; weil `feat_2347_s4` abgeschlossen und eingefroren ist (Befund 6, AC-20, AC-22, Kopftabelle per `frozen_spec_sha256` gesperrt), prüft er dort je Stelle einen Vermerk „Abgelöst durch #2682" mit dem Pfad `shared/hub-uebersicht/HubUebersicht.svelte` in Known Limitations und im Changelog-Eintrag 2026-11-01.
 
 ## Known Limitations
 

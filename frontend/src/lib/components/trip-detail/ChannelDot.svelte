@@ -1,13 +1,15 @@
 <script lang="ts">
 	interface Props {
-		kind: 'email' | 'telegram' | 'sms';
+		kind: 'email' | 'telegram' | 'sms' | 'premium_sms';
 	}
 	let { kind }: Props = $props();
 
 	const icons: Record<string, string> = {
 		email: '✉',
 		telegram: '✈',
-		sms: '·'
+		sms: '·',
+		// Issue #2682: vierter Kanal (ADR-0095), vom SMS-Symbol unterscheidbar.
+		premium_sms: '◆'
 	};
 </script>
 

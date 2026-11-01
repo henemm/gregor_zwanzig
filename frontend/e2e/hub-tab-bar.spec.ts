@@ -250,7 +250,7 @@ for (const kind of HUB_KINDS) {
 // HT-12: Ersatz für compare-flow-navigation AC-30 („Bearbeiten →" der Orte-Karte).
 // Seed-Text des Punkte-Panels (aus seedDrei bzw. global.setup.ts) und Sprungknopf
 // der Übersicht je kind (Kind-Kontraste „HT-12 Sprungknopf": Trip HubOverview.svelte:88
-// „Im Editor öffnen →", Vergleich CompareTabs.svelte:841 „Bearbeiten →" auf der
+// „Im Editor öffnen →", Vergleich shared/hub-uebersicht/HubUebersicht.svelte „Bearbeiten →" auf der
 // Orte-Karte). Die Sprungziele gehören zur context-eigenen Hauptfläche (Etappen bzw.
 // Orte, #2682 Entscheidung 1) — nur die Beschriftung unterscheidet sich, die Aussage
 // ist gleich. Ein Sprungknopf „Alle Alerts →" existiert in KEINER Art mehr (HT-13).

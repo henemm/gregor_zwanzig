@@ -1,8 +1,8 @@
 // naechstesBriefingLader — Issue #1969 (AC-18/AC-19), Fix-Loop 1 (Adversary F002).
 //
 // EIN reaktiver Lader für den Backend-Wert „Nächstes Briefing", geteilt von
-// VTNextBriefing (Versand-Reiter Trip + Vergleich), CompareTabs (Hub-Stat) und
-// HubOverview (Karte „Briefings laufen"). Vorher stand dieselbe Effekt-Logik
+// VTNextBriefing (Versand-Reiter Trip + Vergleich), HubUebersicht (Hub-Stat beider
+// Arten, #2682) und HubOverview (Karte „Briefings laufen"). Vorher stand dieselbe Effekt-Logik
 // dreimal in Komponenten — im SSR-only-Kern unbeobachtbar. Als Runen-Modul ist
 // sie in der echten Svelte-Client-Laufzeit prüfbar
 // (__tests__/naechstes_briefing_lader_laufzeit.test.ts).
