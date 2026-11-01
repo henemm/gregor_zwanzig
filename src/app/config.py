@@ -79,7 +79,10 @@ def is_test_user_id(user_id: str, data_dir: str | None = None) -> bool:
             root = get_data_root()
         else:
             root = Path(data_dir)
-        profile_path = root / "users" / user_id / "user.json"
+        from app.loader import user_dir
+
+        # #2163 S2: ungueltige Kennung wirft hier, fail-soft => False, nichts gelesen.
+        profile_path = user_dir(root, user_id) / "user.json"
         if profile_path.exists():
             profile = json.loads(profile_path.read_text(encoding="utf-8"))
             if profile.get("is_test_user") is True:
@@ -407,7 +410,11 @@ class Settings(BaseSettings):
         """
         import json
 
-        from app.loader import get_data_dir
+        from app.loader import InvalidUserIdError, get_data_dir, is_valid_user_id
+
+        # #2163 S2: Kennung als ERSTE Handlung pruefen, vor jedem Lesen.
+        if not is_valid_user_id(user_id):
+            raise InvalidUserIdError("invalid user_id")
 
         # Test users AND staging always use the Stalwart test account: staging must
         # never send real briefings over Resend to real recipients (burns prod quota).

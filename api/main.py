@@ -15,6 +15,7 @@ from fastapi.responses import JSONResponse
 from api.routers import briefings_send, config, compare, forecast, gpx, health, internal, notify, preview, scheduler, validator, webhook
 from app.config import Settings
 from app.egress_guard import install_egress_guard
+from app.loader import InvalidUserIdError
 from output.channels.telegram import TelegramOutput
 
 logger = logging.getLogger(__name__)
@@ -117,6 +118,16 @@ app.include_router(webhook.router)
 if os.environ.get("GZ_ENV") == "staging":
     from api.routers import debug as _debug_router
     app.include_router(_debug_router.router)
+
+
+@app.exception_handler(InvalidUserIdError)
+async def invalid_user_id_handler(request, exc):  # noqa: ANN001
+    """#2163 S2: ungueltige Nutzerkennung aus dem Request => 404 ``not_found``.
+
+    Ein zentraler Handler fuer alle Router (statt unbehandelter 500). Kein
+    neuer Fehlercode, keine Kennung im Text, nur Warn-Log ohne Traceback."""
+    logger.warning("Ungueltige Nutzerkennung an %s abgewiesen (#2163)", request.url.path)
+    return JSONResponse(status_code=404, content={"detail": "not_found", "code": "not_found"})
 
 
 # ---------------------------------------------------------------------------

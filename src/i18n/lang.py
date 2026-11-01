@@ -36,9 +36,9 @@ def resolve_user_lang(user_id: str, data_dir: str | Path | None = None) -> Lang:
     """
     try:
         # Lokaler Import: app.loader importiert dieses Modul (Zirkularitaet).
-        from app.loader import VALID_USER_ID_RE, get_data_root
+        from app.loader import get_data_root, is_valid_user_id
 
-        if not isinstance(user_id, str) or not VALID_USER_ID_RE.fullmatch(user_id):
+        if not is_valid_user_id(user_id):
             return "de"
         root = get_data_root() if data_dir is None else Path(data_dir)
         pfad = root / "users" / user_id / "user.json"

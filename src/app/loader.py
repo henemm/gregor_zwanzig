@@ -339,7 +339,7 @@ def load_compare_presets(
     """
     if data_root is None:
         data_root = get_data_root()
-    briefings_dir = Path(data_root) / "users" / user_id / "briefings"
+    briefings_dir = user_dir(data_root, user_id) / "briefings"
     if not briefings_dir.exists():
         return []
     presets: List[ComparePreset] = []
@@ -455,7 +455,7 @@ def load_trip(
     if data_dir is not None and not isinstance(source, dict):
         if not user_id:
             raise ValueError("load_trip: data_dir given without user_id (#2151)")
-        path = Path(data_dir) / "users" / user_id / "briefings" / f"{source}.json"
+        path = user_dir(data_dir, user_id) / "briefings" / f"{source}.json"
         if not path.exists():
             return None
         with open(path, "r", encoding="utf-8") as f:
@@ -1306,6 +1306,31 @@ VALID_USER_ID_RE = re.compile(r"^[a-zA-Z0-9_-]+$")
 VALID_ENTITY_ID_RE = re.compile(r"^[^./\\\x00][^/\\\x00]*$")
 
 
+class InvalidUserIdError(ValueError):
+    """Ungueltige Nutzerkennung vor einem Pfadbau (Issue #2163 Scheibe 2).
+
+    Erbt von ``ValueError`` (rueckwaertskompatibel zu ``except ValueError``).
+    Die Meldung traegt die Kennung bewusst nicht (keine Spiegelung)."""
+
+
+def is_valid_user_id(user_id: object) -> bool:
+    """True nur fuer einen ``str``, der ``VALID_USER_ID_RE`` voll erfuellt.
+
+    ``fullmatch`` statt ``match``: ``$`` akzeptiert ein Zeilenende am Schluss,
+    ``"alice\\n"`` waere sonst gueltig (Go ``pathsafe.go`` lehnt es ab)."""
+    return isinstance(user_id, str) and VALID_USER_ID_RE.fullmatch(user_id) is not None
+
+
+def user_dir(root: Union[str, Path], user_id: str) -> Path:
+    """``<root>/users/<user_id>`` nur fuer eine gueltige Kennung (#2163 S2).
+
+    Einziger Helfer fuer Pfadbauten mit eigener Wurzel; wirft sonst
+    ``InvalidUserIdError`` ohne Kennung im Text."""
+    if not is_valid_user_id(user_id):
+        raise InvalidUserIdError("invalid user_id")
+    return Path(root) / "users" / user_id
+
+
 def get_data_dir(user_id: str) -> Path:
     """Get the data directory for a user.
 
@@ -1318,9 +1343,7 @@ def get_data_dir(user_id: str) -> Path:
     das eigene Nutzerverzeichnis — am GPX-Endpoint praktisch vorgefuehrt
     (#1352). Zentral hier, damit alle Aufrufer gedeckt sind.
     """
-    if not VALID_USER_ID_RE.match(user_id):
-        raise ValueError(f"invalid user_id: {user_id!r}")
-    return get_data_root() / "users" / user_id
+    return user_dir(get_data_root(), user_id)
 
 
 def get_locations_dir(user_id: str) -> Path:
@@ -1382,7 +1405,7 @@ def is_user_disabled(user_id: str, data_dir: str | None = None) -> bool:
     """
     root = Path(data_dir) if data_dir is not None else get_data_root()
     try:
-        profile = json.loads((root / "users" / user_id / "user.json").read_text(encoding="utf-8"))
+        profile = json.loads((user_dir(root, user_id) / "user.json").read_text(encoding="utf-8"))
     except Exception:
         return False
     return isinstance(profile, dict) and profile.get("disabled") is True
@@ -2001,7 +2024,7 @@ def save_trip(
 
 def _briefings_dir_for(user_id: str, data_dir: Optional[Union[str, Path]]) -> Path:
     if data_dir is not None:
-        briefings_dir = Path(data_dir) / "users" / user_id / "briefings"
+        briefings_dir = user_dir(data_dir, user_id) / "briefings"
     else:
         briefings_dir = get_briefings_dir(user_id)
     briefings_dir.mkdir(parents=True, exist_ok=True)

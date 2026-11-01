@@ -15,6 +15,7 @@ import logging
 from fastapi import APIRouter, Query
 from fastapi.responses import JSONResponse
 
+from app.loader import InvalidUserIdError
 from i18n import resolve_user_lang
 from services.scheduler_dispatch_service import send_compare_preset
 from services.send_outcomes import SEND_OUTCOMES, InvalidPresetError, error_body
@@ -61,6 +62,10 @@ def _send_trip(entity_id: str, user_id: str, report_type: str):
 def _send_vergleich(entity_id: str, user_id: str):
     try:
         result = send_compare_preset(user_id, entity_id)
+    except InvalidUserIdError:
+        # #2163 S2: VOR InvalidPresetError/ValueError (beide erben von
+        # ValueError) -- sonst "invalid_preset" mit gespiegelter Kennung.
+        return _error("not_found", user_id, entity_id=entity_id)
     except KeyError:
         return _error("not_found", user_id, entity_id=entity_id)
     except InvalidPresetError as e:
@@ -88,6 +93,10 @@ def send_briefing(kind: str, entity_id: str, user_id: str, report_type: str):
         if kind == "route":
             return _send_trip(entity_id, user_id, report_type)
         return _send_vergleich(entity_id, user_id)
+    except InvalidUserIdError:
+        # #2163 S2 (Trip-Zweig): ungueltige Kennung ist "not_found", kein 500.
+        logger.warning("Handversand %s/%s: ungueltige Nutzerkennung", kind, entity_id)
+        return _error("not_found", user_id, entity_id=entity_id)
     except Exception:
         logger.exception("Handversand %s/%s (user %s) fehlgeschlagen", kind, entity_id, user_id)
         return _error("send_failed", user_id)

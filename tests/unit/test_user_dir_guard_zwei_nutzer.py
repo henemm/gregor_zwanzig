@@ -212,6 +212,44 @@ def test_send_compare_preset_lehnt_ab_vor_dateizugriff_und_sperre(root, kennung)
     assert ergebnis is None, f"Aufruf lief bis zur Sende-Sperre durch: {ergebnis!r}"
     assert isinstance(fehler, _fehlertyp()), f"erwartet InvalidUserIdError, bekam {fehler!r}"
 
+def _fehler_with_user_profile(kennung, r):
+    from app.config import Settings
+    return _rufe(Settings().with_user_profile, kennung)[1]
+
+
+def _fehler_send_compare(kennung, r):
+    from services.scheduler_dispatch_service import send_compare_preset
+    from services.send_lock import release_send_lock, try_acquire_send_lock
+    assert try_acquire_send_lock("compare", kennung, "bob-aktiv")  # Netzsicherung
+    try:
+        return _rufe(send_compare_preset, kennung, "bob-aktiv", str(r))[1]
+    finally:
+        release_send_lock("compare", kennung, "bob-aktiv")
+
+
+def _fehler_forecast_budget(kennung, r):
+    from services.forecast_budget import ForecastBudgetGate
+    return _rufe(ForecastBudgetGate, kennung, data_root=r)[1]
+
+
+@pytest.mark.parametrize("kennung", ANGRIFF)
+@pytest.mark.parametrize("ausloeser", [
+    lambda k, r: _rufe(loader.user_dir, r, k)[1],
+    _fehler_with_user_profile,
+    _fehler_send_compare,
+    _fehler_forecast_budget,
+], ids=["user_dir", "with_user_profile", "send_compare_preset", "forecast_budget"])
+def test_fehlertext_spiegelt_die_kennung_nie(root, kennung, ausloeser):
+    """F001/F002 (#2163). GIVEN die Angriffskennung WHEN eine harte Pruefstelle
+    ablehnt THEN ist es InvalidUserIdError, und str(exc) enthaelt weder die
+    Kennung noch 'bob' noch 'users' (keine Spiegelung, auch nicht im Log)."""
+    fehler = ausloeser(kennung, root)
+    assert isinstance(fehler, _fehlertyp()), f"erwartet InvalidUserIdError, bekam {fehler!r}"
+    text = str(fehler)
+    for verraeter in (kennung, "bob", "users"):
+        assert verraeter not in text, f"Kennung gespiegelt: {text!r}"
+
+
 ZEILENUMBRUCH = "alice\n"
 
 
