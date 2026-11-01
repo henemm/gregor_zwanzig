@@ -135,8 +135,9 @@
 	// --- Planungs-Kandidaten ------------------------------------------------
 	const nextPlanned = $derived(nextPlannedTrip(trips, now));
 	const firstIncomplete = $derived(firstIncompleteCompare(presets));
-	const setupStepsTrip = $derived(nextPlanned ? setupStepTrip(nextPlanned) : []);
-	const setupStepsCompare = $derived(firstIncomplete ? setupStepCompare(firstIncomplete) : []);
+	// #2655: Checklisten-Texte per tr(); `$locale` macht den Sprachwechsel reaktiv.
+	const setupStepsTrip = $derived.by(() => (void $locale, nextPlanned ? setupStepTrip(nextPlanned) : []));
+	const setupStepsCompare = $derived.by(() => (void $locale, firstIncomplete ? setupStepCompare(firstIncomplete) : []));
 
 	// Issue #1743: der Versand steht unten im Reiter Wetter-Metriken (Anker #versand).
 	const TRIP_TAB_MAP = ['etappen', 'etappen', 'wetter-metriken', 'wetter-metriken#versand', 'wetter-metriken#versand'];
