@@ -131,9 +131,7 @@ def test_ac1_html_element_traegt_englische_sprache():
 def test_ac1_golden_szenarien_englisch_ohne_signalwoerter(nr):
     stem, report = _golden_szenarien("en")[nr]
     text = ohne_spaetere_pakete(sichtbarer_text(report.email_html))
-    # Amtliche Warnung (P6 #2668) bleibt bis zu ihrem Paket deutsch.
-    text = re.sub(r"Official warning\n.*?(?=DAY SUMMARY)", "", text, flags=re.S)
-    text = re.sub(r"Amtliche Warnung\n.*?(?=DAY SUMMARY)", "", text, flags=re.S)
+    # Amtliche Warnung: seit P6 (#2668) englisch, keine Ausnahme mehr.
     assert _deutsche_reste(text) == [], (stem, text)
 
 

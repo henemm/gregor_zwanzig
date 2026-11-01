@@ -14,7 +14,7 @@ Corsica E5
   Sun 3.0h
 
 == Warnings ==
-  ! Amtliche Warnung: Extreme Hitze (Sa 11.07. - 12:00-20:00)
+  ! Official warning: Heat (Sat 11 Jul - 12:00-20:00)
 
 ----------------------------------------
 Generated: 2026-04-28 12:00 UTC

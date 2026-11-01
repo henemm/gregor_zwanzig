@@ -1,0 +1,39 @@
+[GR20 Golden] Segment 1 · ORANGE Orages — Chablais (Thu)
+
+===== ✂ =====
+
+Orages — Chablais reported.
+
+1 official warning
+
+Warning level: ORANGE (middle of three) — scale YELLOW · ORANGE · RED
+Hazard: Orages — Chablais
+Valid: Thu 29 Oct · 11:00–20:00
+Route: Segment 1
+Source: MeteoAlarm — Lienz.
+
+As of today 06:00 · retrieved from MeteoAlarm
+Source text in French
+
+GR20 Golden · Official warning · MeteoAlarm
+
+===== ✂ =====
+
+<b>GR20 Golden · Segment 1 · Warning level ORANGE (2/3)</b>
+🟠 Orages — Chablais · Thu 29 Oct · 11:00–20:00
+MeteoAlarm
+Source text in French
+
+===== ✂ =====
+
+Seg 1: !TS:M Do11-20
+
+===== ✂ =====
+
+ORANGE — Orages — Chablais
+Region: Lienz
+Valid: Thu 29.10. 11:00 – Thu 29.10. 20:00
+
+===== ✂ =====
+
+Official warning: Orages — Chablais (Thu 29 Oct · 10:00–19:00)

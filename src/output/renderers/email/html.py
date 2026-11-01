@@ -1599,7 +1599,7 @@ def render_html(
     # platziert. Segment-Bezug -> Route-Chip je Warnung.
     _warn_notices = []
     for _a, _sids, _regions in _deduped:
-        _chip = format_segment_reference(_sids) if _sids else ""
+        _chip = format_segment_reference(_sids, lang=lang) if _sids else ""
         _warn_notices.append(OfficialAlertNotice(
             alert=_a, scope_label=_chip, sms_scope="",
             affected_chips=[_chip] if _chip else [], free_chips=[],
@@ -1609,8 +1609,8 @@ def render_html(
         _leading = max((a for a, _, _ in _deduped), key=lambda a: a.level)
         warn_block_html = render_warn_block(
             _warn_notices, variant="embedded",
-            source_label=official_alert_source_label(_leading.source),
-            source_url=getattr(_leading, "url", None), tz=tz,
+            source_label=official_alert_source_label(_leading.source, lang=lang),
+            source_url=getattr(_leading, "url", None), tz=tz, lang=lang,
         )
     else:
         warn_block_html = ""

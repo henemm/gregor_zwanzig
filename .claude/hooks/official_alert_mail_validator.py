@@ -166,6 +166,7 @@ def _lang_patterns(lang: str) -> dict:
         "source_row": re.compile(r"^\s*" + re.escape(quelle) + r":\s*\S", re.MULTILINE),
         "quelle": f"{quelle}:",
         "abgerufen": ml.erwartet("warnung.abgerufen_bei", lang),
+        "stand": ml.kern("warnung.zeile.stand", lang),  # de 'Stand: heute', en 'As of today'
         "entwarnung": ml.erwartet("warnung.entwarnung.wort", lang),
         "transition": re.compile(
             re.escape(uebergang) + r"\s+(\d)\s*(?:→|->)\s*(\d|"
@@ -316,8 +317,8 @@ def validate_message(msg: Message, warnungen: list | None = None) -> tuple[bool,
     if "entwarnung" in collector.classes or w["entwarnung"] in _decoded_subject(msg):
         errors.extend(_allclear_errors(msg, plain, html, collector.classes, w))
         if not ({"verdict", "warn"} & collector.classes):
-            if "Stand: heute" not in text:
-                errors.append("P-5: 'Stand: heute'-Footer fehlt im Body.")
+            if w["stand"] not in text:
+                errors.append(f"P-5: '{w['stand']}'-Footer fehlt im Body.")
             return len(errors) == 0, errors
 
     missing_classes = _REQUIRED_CLASSES - collector.classes
@@ -402,8 +403,8 @@ def validate_message(msg: Message, warnungen: list | None = None) -> tuple[bool,
             "fehlt im Body."
         )
 
-    if "Stand: heute" not in text:
-        errors.append("P-5: 'Stand: heute'-Footer fehlt im Body.")
+    if w["stand"] not in text:
+        errors.append(f"P-5: '{w['stand']}'-Footer fehlt im Body.")
 
     return len(errors) == 0, errors
 

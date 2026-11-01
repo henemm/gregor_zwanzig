@@ -272,8 +272,13 @@ class TestEntscheidungstabelle:
         """Nur archived_at/end_date machen inaktiv — Vergleich mit Enddatum heute bleibt."""
         from services.trip_selection import resolve_active_target
 
-        heute = date.today().isoformat()
-        gestern = (date.today() - timedelta(days=2)).isoformat()
+        # Referenztag ist der UTC-Kalendertag von `now_utc` (Vertrag von
+        # `_vergleich_ist_aktiv`), nicht `date.today()` der Prozesszone: der
+        # Root-conftest stellt die Prozesszone bewusst weg von UTC, sonst
+        # kippt der Test in der Stunde um Mitternacht (CI 2026-11-01).
+        jetzt = _now()
+        heute = jetzt.date().isoformat()
+        gestern = (jetzt.date() - timedelta(days=2)).isoformat()
         erg = resolve_active_target(
             [],
             [
@@ -281,7 +286,7 @@ class TestEntscheidungstabelle:
                 _preset_dict("Vorbei", end_date=gestern),
                 _preset_dict("Heute", end_date=heute),
             ],
-            _now(),
+            jetzt,
             channel="telegram",
         )
         assert erg.kind == "vergleich" and erg.target["name"] == "Heute"

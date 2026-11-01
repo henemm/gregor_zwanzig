@@ -146,14 +146,20 @@ def test_ac5_warnung_praefix_englisch_eigennamen_unveraendert():
     assert "ORANGE" in warn
     assert "MeteoAlarm" in warn
     de_warn = _golden_de()[_warn_index(_golden_de())]
-    # Ausser dem Praefix unveraendert (Behoerde, Stufe, Zeitraum)
-    assert warn.split(" · ", 1)[1] == de_warn.split(" · ", 1)[1]
+    # Behoerde (letzte Zeile) unveraendert; Rahmen (P6 #2668) und Segment-Bezug
+    # (P5 #2667) in der Sprache des Briefings.
+    from output.renderers.alert.segments import format_segment_reference
+
+    assert warn.split(" · ")[1] == format_segment_reference(["1", "Ziel"], lang="en")
+    assert de_warn.split(" · ")[1] == format_segment_reference(["1", "Ziel"])
+    assert warn.splitlines()[-1] == de_warn.splitlines()[-1]
 
 
-@pytest.mark.xfail(strict=True, reason="englischer Warnungs-Rahmen kommt mit P6 #2668")
 def test_ac5_englischer_rahmen_aus_p6():
     texts = build_texts(lang="en")
-    assert "Warning level ORANGE" in texts[_warn_index(texts)]
+    warn = texts[_warn_index(texts)]
+    assert f"{t('warnung.kopf.warnstufe', 'en')} {t('warnung.stufe.orange', 'en')} (2/3)" in warn
+    assert t("warnung.gefahr.thunderstorm", "en") in warn
 
 
 # --- AC-6 -------------------------------------------------------------------

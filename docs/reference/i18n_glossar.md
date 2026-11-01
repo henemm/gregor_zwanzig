@@ -125,6 +125,23 @@ Hier nur Beispiele der Konvention; **Kurzform (`col_label`) und Kürzel bleiben*
 | STRECKE | ROUTE | |
 | KUERZEL | CODES | heute schon so (#2417) |
 
+## Amtliche Warnungen (#2668)
+
+| Deutsch | Englisch | Hinweis |
+|---|---|---|
+| GELB / ORANGE / ROT (GRÜN) | YELLOW / ORANGE / RED (GREEN) | Stufenwörter; SMS-Stufenbuchstaben bleiben |
+| Warnstufe / höchste Stufe | warning level / highest level | |
+| Gültig | Valid | Datenzeile „Valid: Thu 29 Oct · 11:00–20:00“ |
+| ganztägig | all day | |
+| Gefahr | hazard | Datenzeile |
+| Entwarnung | all clear | „Stufe 3 → beendet“ = *Level 3 → ended* |
+| Lawinenstufe | avalanche level | EAWS-Wörter: low, moderate, considerable, high, very high |
+| Waldgrenze | treeline | |
+| Quelltext: Französisch | Source text in French | Behördentext wird nie übersetzt |
+| gesamte Route / alle Orte | entire route / all locations | SMS-Umfang (`ges.Route`, `alleOrte`) bleibt |
+| Zugang gesperrt | Access closed | Massiv-Namen bleiben |
+| Waldbrand-Gefahr | Wildfire risk | |
+
 ## Abweichungs- und Regen-Alarme (#2667)
 
 | Deutsch | Englisch | Hinweis |

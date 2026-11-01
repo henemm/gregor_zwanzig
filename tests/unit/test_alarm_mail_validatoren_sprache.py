@@ -33,7 +33,7 @@ RADAR = [
 ]
 _TAG = date(2026, 10, 29)
 # Gueltig-Zeitraum: Datumsform kommt aus fmt_date (Formatquelle der Renderer).
-DATUM = {fmt_date(_TAG, "de"): fmt_date(_TAG, "en")}
+DATUM = {fmt_date(_TAG, "de"): fmt_date(_TAG, "en"), "Stand: heute": "As of today"}
 
 FAELLE = {
     "official_alert_mail_validator": ("official_alert_de.eml", WARNUNG, DATUM),
@@ -123,7 +123,7 @@ LAWINE = [*WARNUNG, "warnung.lawine.stufe", *(f"warnung.eaws.{i}" for i in range
 ENTWARNUNG = ["warnung.entwarnung.wort", "warnung.entwarnung.uebergang",
               "warnung.entwarnung.beendet", "warnung.gefahr.extreme_heat", *WARNUNG]
 DATEN = {fmt_date(date(2026, m, t), "de"): fmt_date(date(2026, m, t), "en")
-         for m, t in ((2, 19), (2, 20), (10, 29))}
+         for m, t in ((2, 19), (2, 20), (10, 29))} | {"Stand: heute": "As of today"}
 OFFICIAL = "official_alert_mail_validator"
 
 
