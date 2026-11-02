@@ -274,6 +274,10 @@ describe('AC-4: Trip und Ortsvergleich englisch mit demselben Baustein', () => {
 		])
 			hat(enT, s);
 		assert.deepEqual(deutscheReste(enT), []);
+		// Reihenfolge-Zeilen und Legende: Auswertung als eigenes Element, je Kennung uebersetzt
+		const reihe = sichtbar(en.slice(en.indexOf('data-testid="weather-metrics-vergleich-reihenfolge"')));
+		hat(reihe, 'Sunshine hours Total Email Sun');
+		hat(sichtbar(de.slice(de.indexOf('data-testid="weather-metrics-vergleich-reihenfolge"'))), 'Sonnenstunden Summe Mail Sun');
 	});
 
 	test('vergleich ohne label_en im Register (A2): deutscher Name, nie leer', () => {

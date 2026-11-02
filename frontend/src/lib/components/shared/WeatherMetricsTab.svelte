@@ -144,7 +144,7 @@
 	} from './weather-metrics-tab/compareMetricOrder.ts';
 	// Issue #1411 (Epic #1372 S4b Scheibe 1): flache Katalogantwort -> eine
 	// Zeile je Wettergroesse (24 statt 26 Zeilen).
-	import { groupCompareCatalog } from './weather-metrics-tab/compareAggregationGrouping.ts'; import { vergleichsGruppen, schwellenStufen, symbolZeilenName } from './weather-metrics-tab/wertebereicheAnzeige.ts'; import { metricAggregationLabel } from '$lib/i18n/metricLabel';
+	import { groupCompareCatalog } from './weather-metrics-tab/compareAggregationGrouping.ts'; import { vergleichsGruppen, schwellenStufen, symbolZeilenName } from './weather-metrics-tab/wertebereicheAnzeige.ts';
 
 	interface Template {
 		id: string;
@@ -1177,7 +1177,7 @@
 		for (const e of compareCatalog)
 			map[e.metric] = {
 				id: e.metric, label: vergleichsMetrikLabel(e, metricById, $locale), aggregation: e.aggregation,
-				aggregation_label: e.aggregation_label === undefined ? undefined : metricAggregationLabel(e.aggregation, e.aggregation_label, $locale),
+				aggregation_label: e.aggregation_label, // Anzeige je Kennung macht WeatherV2Reihenfolge
 				col_label: e.col_label, sms_code: e.sms_code
 			} as MetricEntry;
 		return map;
