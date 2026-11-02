@@ -2,6 +2,7 @@
 	// BrandWordmark — kanonisches Lockup-Logo: Berg+Blitz-Glyph + Mono-Typo + Caption.
 	// 1:1 portiert aus brand-kit.jsx. Drei Groessen (sm/md/lg); `icon`-Prop steuert die Komposition.
 	import BrandIcon from './BrandIcon.svelte';
+	import { t } from '$lib/i18n';
 
 	interface Props {
 		size?: 'sm' | 'md' | 'lg';
@@ -53,7 +54,7 @@
 				class="typo-row"
 				style="font-family:var(--g-font-mono);font-size:{s.row}px;font-weight:500;letter-spacing:0.04em;color:{inkPrimary};display:flex;align-items:baseline;line-height:1"
 			>
-				<span>gregor</span><span style:color={inkDot}>.</span><!-- audit:exempt: Markenname/Logo --><span style:color="var(--g-accent)">zwanzig</span>
+				<span>{$t('bausteine.marke.gregor')}</span><span style:color={inkDot}>.</span><!-- audit:exempt: Markenname/Logo --><span style:color="var(--g-accent)">{$t('bausteine.marke.zwanzig')}</span>
 			</span>
 			{#if hasCaption}
 				<span
@@ -72,7 +73,7 @@
 				class="typo-row"
 				style="font-family:var(--g-font-mono);font-size:{s.row}px;font-weight:500;letter-spacing:0.04em;color:{inkPrimary};display:flex;align-items:baseline;line-height:1"
 			>
-				<span>gregor</span><span style:color={inkDot}>.</span><!-- audit:exempt: Markenname/Logo --><span style:color="var(--g-accent)">zwanzig</span>
+				<span>{$t('bausteine.marke.gregor')}</span><span style:color={inkDot}>.</span><!-- audit:exempt: Markenname/Logo --><span style:color="var(--g-accent)">{$t('bausteine.marke.zwanzig')}</span>
 			</span>
 		</span>
 		{#if hasCaption}

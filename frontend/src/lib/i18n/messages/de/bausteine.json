@@ -102,5 +102,22 @@
 	"bausteine.checkliste.versand": "Versand",
 	"bausteine.risiko.rot": "Risiko",
 	"bausteine.risiko.gelb": "Achten",
-	"bausteine.risiko.gruen": "OK"
+	"bausteine.risiko.gruen": "OK",
+	"bausteine.marke.name": "Gregor Zwanzig",
+	"bausteine.marke.gregor": "gregor",
+	"bausteine.marke.zwanzig": "zwanzig",
+	"bausteine.footer.rechtliches": "Rechtliches",
+	"bausteine.footer.impressum": "Impressum",
+	"bausteine.footer.datenschutz": "Datenschutz",
+	"bausteine.hinweis.update_fehlgeschlagen": "Aktualisieren fehlgeschlagen — bitte erneut versuchen.",
+	"bausteine.hinweis.update_verfuegbar": "Neue Version verfügbar. Wird erst auf Antippen geladen.",
+	"bausteine.hinweis.spaeter": "Später",
+	"bausteine.hinweis.aktualisieren": "Aktualisieren",
+	"bausteine.hinweis.ios": "Auf den Startbildschirm legen: unten „Teilen“ antippen, dann „Zum Home-Bildschirm“.",
+	"bausteine.hinweis.schliessen": "Schließen",
+	"bausteine.hinweis.passkey": "Nächstes Mal ohne Passwort anmelden: Passkey auf diesem Gerät einrichten.",
+	"bausteine.hinweis.nicht_jetzt": "Nicht jetzt",
+	"bausteine.hinweis.einrichten": "Jetzt einrichten",
+	"bausteine.timeline.gesendet": "gesendet",
+	"bausteine.timeline.briefing": "-Briefing"
 }

@@ -8,6 +8,7 @@
 	import { CATEGORY_LABELS, CATEGORY_ORDER, indicatorCapable } from '$lib/components/trip-detail/metricsEditor';
 	// Issue #435 — Single Source of Truth in $lib/types.ts (Adversary F002).
 	import type { MetricEntry } from '$lib/types';
+	import { t, tr } from '$lib/i18n';
 
 	type MetricCatalog = Record<string, MetricEntry[]>;
 
@@ -99,7 +100,7 @@
 			friendlyMap = buildFriendlyMap(catalog, currentConfig);
 			scoreMap = buildScoreMap(catalog, currentConfig);
 		} catch (e: unknown) {
-			errorMsg = (e as { error?: string })?.error ?? 'Fehler beim Laden der Metriken';
+			errorMsg = (e as { error?: string })?.error ?? tr('listen.orte.metriken.fehler_laden');
 		} finally {
 			loading = false;
 		}
@@ -108,7 +109,7 @@
 	function applyTemplate(event: Event) {
 		const templateId = (event.target as HTMLSelectElement).value;
 		if (!templateId) return;
-		const tpl = templates.find(t => t.id === templateId);
+		const tpl = templates.find((v) => v.id === templateId);
 		if (!tpl) return;
 		const newMap: Record<string, boolean> = {};
 		for (const metrics of Object.values(catalog)) {
@@ -150,26 +151,26 @@
 >
 	<Dialog.Content class="max-h-[85vh] max-w-lg overflow-y-auto">
 		<Dialog.Header>
-			<Dialog.Title>Wetter-Metriken — {entityName}</Dialog.Title>
-			<Dialog.Description>Welche Metriken sollen im Report angezeigt werden?</Dialog.Description>
+			<Dialog.Title>{$t('aktionen.weather')} — {entityName}</Dialog.Title>
+			<Dialog.Description>{$t('listen.orte.metriken.frage')}</Dialog.Description>
 		</Dialog.Header>
 
 		{#if loading}
-			<p class="py-4 text-sm text-muted-foreground">Lade Metriken…</p>
+			<p class="py-4 text-sm text-muted-foreground">{$t('wertebereiche.tab.laedt')}</p>
 		{:else if errorMsg}
 			<p class="py-4 text-sm text-destructive">{errorMsg}</p>
 		{:else}
 			{#if templates.length > 0}
 				<div class="py-2">
-					<label for="template-select" class="block text-sm font-medium mb-1">Template laden</label>
+					<label for="template-select" class="block text-sm font-medium mb-1">{$t('listen.orte.metriken.template')}</label>
 					<Select
 						id="template-select"
 						class="w-full"
 						onchange={applyTemplate}
 					>
-						<option value="">-- Kein Template --</option>
-						{#each templates as t}
-							<option value={t.id}>{t.label}</option>
+						<option value="">{$t('listen.orte.metriken.kein_template')}</option>
+						{#each templates as vorlage}
+							<option value={vorlage.id}>{vorlage.label}</option>
 						{/each}
 					</Select>
 				</div>
@@ -200,12 +201,12 @@
 											size="sm"
 											value={(friendlyMap[metric.id] ?? true) ? 'indicator' : 'raw'}
 											onChange={(v: string) => { friendlyMap = { ...friendlyMap, [metric.id]: v === 'indicator' }; }}
-											items={[{ id: 'raw', label: 'Roh' }, { id: 'indicator', label: 'Einfach' }]}
+											items={[{ id: 'raw', label: $t('wertebereiche.reihenfolge.roh') }, { id: 'indicator', label: $t('wertebereiche.reihenfolge.einfach') }]}
 										/>
 									{/if}
 									{#if showScoreToggle && enabledMap[metric.id]}
 										<Segmented
-											options={[{ value: 'score', label: 'Im Score' }, { value: 'noscore', label: 'Nicht im Score' }]}
+											options={[{ value: 'score', label: $t('bausteine.metriken.im_score') }, { value: 'noscore', label: $t('bausteine.metriken.nicht_im_score') }]}
 											selected={(scoreMap[metric.id] ?? true) ? 'score' : 'noscore'}
 											onselect={(v) => { scoreMap = { ...scoreMap, [metric.id]: v === 'score' }; }}
 										/>
@@ -219,9 +220,9 @@
 		{/if}
 
 		<Dialog.Footer>
-			<Btn variant="outline" onclick={onclose}>Abbrechen</Btn>
+			<Btn variant="outline" onclick={onclose}>{$t('aktionen.abbrechen')}</Btn>
 			<Btn variant="primary" onclick={handleSave} disabled={loading || saving}>
-				{saving ? 'Speichern…' : 'Speichern'}
+				{saving ? $t('listen.orte.metriken.speichert') : $t('aktionen.speichern')}
 			</Btn>
 		</Dialog.Footer>
 	</Dialog.Content>

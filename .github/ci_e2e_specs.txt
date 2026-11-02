@@ -603,3 +603,14 @@ e2e/begriff-erklaerung.spec.ts
 # misst der CI-Hauptlauf des PR. Filter C: Screenshot nur nach test-results/
 # (ignoriert). Fallzahl: 5.
 e2e/langlaeufer-zeitbudget-wirkort.spec.ts
+#
+# Aufnahme 2026-11-02 (#2661 i18n F12, Sprachwechsel de/en):
+# sprachwechsel.spec.ts -- Besucher-Umschalter (Cookie gz_lang), zwei frisch
+# registrierte Konten (de/en) in getrennten Kontexten, Konto-Wechsel ohne
+# Neuladen, Sprach-Mischung der sechs Hauptflaechen je HUB_KINDS, 24
+# Screenshot-Paare. Filter A: kein waitForTimeout/skip/fixme, kein .staging.spec.
+# Filter B lokal 3x gruen gegen den isolierten Stack; im Zielverbund misst der
+# CI-Hauptlauf des PR (2 Registrierungen unter eigener X-Real-IP, das Kontingent
+# der anderen Specs bleibt unberuehrt). Filter C: Screenshots nach
+# ../docs/artifacts/ (ignoriert). Fallzahl: 7.
+e2e/sprachwechsel.spec.ts

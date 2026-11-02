@@ -4,6 +4,7 @@
 	import { Btn, Input } from '$lib/components/atoms';
 	import { Label } from '$lib/components/ui/label/index.js';
 	import { Select } from '$lib/components/ui/select';
+	import { t, tr } from '$lib/i18n';
 
 	interface Props {
 		location?: Location;
@@ -56,11 +57,11 @@
 	function save() {
 		error = '';
 		if (!name.trim()) {
-			error = 'Name ist erforderlich';
+			error = tr('listen.orte.form.name_fehlt');
 			return;
 		}
 		if (Number(lat) === 0 && Number(lon) === 0) {
-			error = 'Koordinaten dürfen nicht beide 0 sein';
+			error = tr('listen.orte.form.koordinaten_null');
 			return;
 		}
 		// Read-Modify-Write: bestehende, nicht im Formular editierte Felder
@@ -84,8 +85,8 @@
 
 <div class="space-y-4">
 	<div>
-		<Label for="location-name">Name</Label>
-		<Input id="location-name" name="location-name" placeholder="Name der Location" bind:value={name} />
+		<Label for="location-name">{$t('listen.spalte.name')}</Label>
+		<Input id="location-name" name="location-name" placeholder={$t('listen.orte.form.name_platzhalter')} bind:value={name} />
 	</div>
 
 	{#if error}
@@ -93,11 +94,11 @@
 	{/if}
 
 	<div>
-		<Label for="location-dms">Google Maps Koordinaten (DMS)</Label>
+		<Label for="location-dms">{$t('listen.orte.form.dms')}</Label>
 		<Input
 			id="location-dms"
 			name="location-dms"
-			placeholder='z.B. 47°16&apos;11.1"N 11°50&apos;50.2"E'
+			placeholder={$t('listen.orte.form.dms_platzhalter')}
 			bind:value={dmsInput}
 			oninput={handleDmsInput}
 		/>
@@ -105,39 +106,39 @@
 
 	<div class="grid grid-cols-2 gap-3">
 		<div>
-			<Label for="location-lat">Breitengrad (Lat)</Label>
+			<Label for="location-lat">{$t('listen.orte.form.lat')}</Label>
 			<Input id="location-lat" name="location-lat" type="number" step="0.000001" bind:value={lat} />
 		</div>
 		<div>
-			<Label for="location-lon">Längengrad (Lon)</Label>
+			<Label for="location-lon">{$t('listen.orte.form.lon')}</Label>
 			<Input id="location-lon" name="location-lon" type="number" step="0.000001" bind:value={lon} />
 		</div>
 	</div>
 
 	<div>
-		<Label for="location-elevation">Höhe (m)</Label>
+		<Label for="location-elevation">{$t('listen.orte.form.hoehe')}</Label>
 		<Input id="location-elevation" name="location-elevation" type="number" bind:value={elevationM} />
 	</div>
 
 	<div>
-		<Label for="location-region">Region (optional)</Label>
-		<Input id="location-region" name="location-region" placeholder="z.B. AT-07-23-02" bind:value={region} />
+		<Label for="location-region">{$t('listen.orte.form.region')}</Label>
+		<Input id="location-region" name="location-region" placeholder={$t('listen.orte.form.region_platzhalter')} bind:value={region} />
 	</div>
 
 	<div>
-		<Label for="location-bergfex">Bergfex Slug (optional)</Label>
-		<Input id="location-bergfex" name="location-bergfex" placeholder="z.B. hochfuegen" bind:value={bergfexSlug} />
+		<Label for="location-bergfex">{$t('listen.orte.form.bergfex')}</Label>
+		<Input id="location-bergfex" name="location-bergfex" placeholder={$t('listen.orte.form.bergfex_platzhalter')} bind:value={bergfexSlug} />
 	</div>
 
 	<div>
-		<Label for="activity-profile">Aktivitätsprofil</Label>
+		<Label for="activity-profile">{$t('vergleich.neu.aktivitaetsprofil')}</Label>
 		<Select
 			id="activity-profile"
 			name="activity-profile"
 			bind:value={activityProfile}
 			class="w-full"
 		>
-			<option value="">— Kein Profil —</option>
+			<option value="">{$t('vergleich.gruppe.kein_profil')}</option>
 			{#each ACTIVITY_PROFILE_OPTIONS as opt}
 				<option value={opt.value}>{opt.label}</option>
 			{/each}
@@ -145,7 +146,7 @@
 	</div>
 
 	<div>
-		<Label for="location-group">Gruppe (optional)</Label>
+		<Label for="location-group">{$t('vergleich.ort.gruppe_optional')}</Label>
 		<Select
 			id="location-group"
 			name="location-group"
@@ -153,7 +154,7 @@
 			bind:value={groupId}
 			class="w-full"
 		>
-			<option value="">Keine Gruppe</option>
+			<option value="">{$t('listen.orte.form.keine_gruppe')}</option>
 			{#each groups as g (g.id)}
 				<option value={g.id}>{g.name}</option>
 			{/each}
@@ -161,7 +162,7 @@
 	</div>
 
 	<div class="flex justify-end gap-2 pt-2">
-		<Btn variant="outline" onclick={oncancel}>Abbrechen</Btn>
-		<Btn variant="primary" onclick={save}>Speichern</Btn>
+		<Btn variant="outline" onclick={oncancel}>{$t('aktionen.abbrechen')}</Btn>
+		<Btn variant="primary" onclick={save}>{$t('aktionen.speichern')}</Btn>
 	</div>
 </div>

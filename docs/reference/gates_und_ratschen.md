@@ -519,8 +519,10 @@ bzw. durch die noch belasteten Unterordner/Dateien ersetzen. Weniger als 150 ges
 bricht mit „Messaufbau leer" ab (gegen vakuum-grün). Startstand per `--messen`
 (2026-10-31, `4f386528a`): 253 Dateien gescannt, 115 mit Treffern, 1115 Trefferzeilen,
 33 Einträge. Nicht erfasst: Texte in `<script>`, sonstige Props (`eyebrow="…"`), `*.ts` (ab #2660).
-Marken-Schriftzüge (`lib/brand/*`, „gregor"/„zwanzig") meldet der Scanner wie jeden Text; sie
-stehen bis zur Entscheidung im zuständigen F-Paket in der Allowlist.
+Marken-Schriftzüge (`lib/brand/*`, „gregor"/„zwanzig") meldet der Scanner wie jeden Text; F12
+(#2661) führt sie als Katalogwerte `bausteine.marke.*` (in beiden Sprachen gleich).
+**Seit F12 (#2661, 2026-11-02) ist die Allowlist leer (`[]`)**; `hardcode_allowlist_leer.test.ts`
+hält das fest — jeder neue hartkodierte Nutzertext ist sofort ein Treffer ohne Eintrag.
 
 `katalog_schluessel_haben_verwender.test.ts` verlangt für jeden Schlüssel der vereinigten
 `de`-Karte einen Verwender in `frontend/src/` (ohne `__tests__/`, `*.test.ts`, `*.spec.ts`):
@@ -631,7 +633,7 @@ Skripten/Skills aufgerufen: `staging_gate.py`, `prod_selftest.py`, `briefing_mai
 | Trip-Schema-Drift-Gate `trip_schema_drift` — Test-Paar `tests/test_trip_schema_drift.py` + `internal/model/trip_schema_drift_test.go`, Allowlist `send_premium_sms`/`trip` (#2058) | 2027-01-03 | `suggestion_reason` nur in Python (Go-Editor-Save verwarf es still), bei Einführung geschlossen |
 | Egress-Struktur-Wächter `tests/tdd/test_egress_single_dial_point.py` — `smtplib` (#1412 S3a) und `httpx`-POST (#1412 S3b) nur an den erlaubten Ausgängen (`TelegramOutput._post`, `SevenIoChannelBase._post`), Deckel 3 localhost-Ausnahmen | 2027-01-04 | `seven_io_base.py:171` (`httpx.post` direkt in `SevenIoChannelBase.send`) bei Einführung gefangen und in `_post` verlegt |
 | Compare-Paritäts-Wächter `tests/unit/test_e2e_compare_paritaet_waechter.py` — jede `*compare*.spec.ts` bzw. Compare-Hub-Spec ohne Trip-Gegenstück braucht kind-Schleife oder `gz-eigenstaendig:`-Kopf; Altlastliste nur schrumpfend (#2347 S1, Epic #2345 P6) | 2027-01-24 | Regel 2 fand bei Einführung 2 Specs außerhalb der Compare-Dateinamen (`kanal-grenzen-ortsvergleich.staging.spec.ts`, `versand-tab-vergleich.spec.ts`); fehlende Trip-Cross-User-Schreibprüfung (geschlossen durch `hub-cross-user-write-block.spec.ts`) |
-| i18n-Ratsche Frontend `keine_hartkodierten_nutzertexte.test.ts` + `katalog_schluessel_haben_verwender.test.ts` (Epic #2644, S4) — Allowlist bleibt bis Abschluss von Epic #2644 bestehen und darf nur schrumpfen, danach leer | 2027-01-28 | offen — Startstand 2026-10-31 (`4f386528a`): 115 Dateien mit 1115 Trefferzeilen in 33 Allowlist-Einträgen; Kriterium: ein neuer hartkodierter Nutzertext oder verwaister Katalogschlüssel, der ohne die Ratsche ausgeliefert worden wäre |
+| i18n-Ratsche Frontend `keine_hartkodierten_nutzertexte.test.ts` + `katalog_schluessel_haben_verwender.test.ts` (Epic #2644, S4) — Allowlist seit F12 (#2661, 2026-11-02) leer, `hardcode_allowlist_leer.test.ts` hält sie leer | 2027-01-28 | offen — Endstand 2026-11-02: 0 Einträge; Startstand 2026-10-31 (`4f386528a`): 115 Dateien mit 1115 Trefferzeilen in 33 Allowlist-Einträgen; Kriterium: ein neuer hartkodierter Nutzertext oder verwaister Katalogschlüssel, der ohne die Ratsche ausgeliefert worden wäre |
 | i18n-Ratsche Go (`internal/i18n/hardcode_guard_test.go`, Allowlist `internal/i18n/hardcode_allowlist.json`, #2679) | 2027-01-28 | Startstand = alle Fundstellen vom Tag der Einführung (2026-10-31: 72 Befunde in 16 Dateien, 16 Einträge (nur Einzeldateien, kein Verzeichnis-Präfix)); Endstand leer nach G2 bis G4 (Epic #2644) |
 | i18n-Ratsche Python (`tests/test_i18n_keine_hartkodierten_nutzertexte_python.py`, Allowlist `tests/fixtures/i18n_python_allowlist.json`, #2674) | 2027-01-28 | — (Startstand 2026-11-02: 222 Funde in 50 Dateien; Restbefund nach P11: 182 Funde in 42 Einträgen mit Baseline-Fundzahl je Datei; Endstand leer nach Abbau der P2–P10-Restbefunde im Folge-Issue) |
 

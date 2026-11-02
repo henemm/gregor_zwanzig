@@ -8,9 +8,11 @@ import { compile } from 'svelte/compiler';
 
 const MUSTER = "import * as Dialog from '$lib/components/ui/dialog/index.js';";
 const RAHMEN = new URL('./dialogRahmen.ts', import.meta.url).href;
+const ZIELE = ['/lib/components/molecules/ConfirmDialog.svelte', '/lib/components/WeatherConfigDialog.svelte'];
 
 export async function load(url, context, nextLoad) {
-	if (url.startsWith('file:') && url.endsWith('/lib/components/molecules/ConfirmDialog.svelte')) {
+	// #2661 (F12): auch WeatherConfigDialog.svelte (gleiche Import-Zeile).
+	if (url.startsWith('file:') && ZIELE.some((z) => url.endsWith(z))) {
 		const file = fileURLToPath(url);
 		const quelle = readFileSync(file, 'utf-8');
 		if (quelle.split(MUSTER).length !== 2) {
