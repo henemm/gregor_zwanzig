@@ -25,6 +25,7 @@ import logging
 from datetime import datetime, timezone
 from zoneinfo import ZoneInfo
 
+from i18n import Lang, resolve_user_lang, t
 from services.fehler_code import fehler_mit_code
 
 logger = logging.getLogger(__name__)
@@ -56,15 +57,17 @@ def render_compare_alert_preview(preset_id: str, *, user_id: str, body: dict) ->
         raise fehler_mit_code(ValueError, "vergleich_body_genau_einer")
     all_locations = {loc.id: loc for loc in load_all_locations(user_id=user_id)}
     style = effective_compare_telegram_style(preset)
+    # Issue #2721: Sprache DIESES Kontos wie im Versand (SMS bleibt sprachneutral).
+    lang = resolve_user_lang(user_id)
     kind = provided[0]
     if kind == "changes":
         return _deviation(
             preset, body["changes"], all_locations, style,
-            preset_id=preset_id, user_id=user_id,
+            preset_id=preset_id, user_id=user_id, lang=lang,
         )
     if kind == "onsets":
-        return _onset(preset, body["onsets"], all_locations, style)
-    return _official(preset, body["official"], all_locations, style)
+        return _onset(preset, body["onsets"], all_locations, style, lang=lang)
+    return _official(preset, body["official"], all_locations, style, lang=lang)
 
 
 def _ordered(location_ids: list[str], wanted: list[str], all_locations: dict) -> list[str]:
@@ -76,12 +79,12 @@ def _ordered(location_ids: list[str], wanted: list[str], all_locations: dict) ->
     return [lid for lid in location_ids if lid in wanted_set]
 
 
-def _channels(msg, *, sms: str, bubbles: list[str]) -> dict:
+def _channels(msg, *, sms: str, bubbles: list[str], lang: Lang) -> dict:
     from output.renderers.alert.render import render_email, render_subject
 
-    html, plain = render_email(msg)
+    html, plain = render_email(msg, lang=lang)
     return {
-        "subject": render_subject(msg), "email_html": html, "email_plain": plain,
+        "subject": render_subject(msg, lang=lang), "email_html": html, "email_plain": plain,
         "sms": sms, "telegram_bubbles": bubbles, "telegram": "\n\n".join(bubbles),
     }
 
@@ -100,7 +103,7 @@ def _hour_inputs(preset: dict, preset_id: str, loc, user_id: str, deadline: floa
 
 def _deviation(
     preset: dict, changes: list[dict], all_locations: dict, style: str, *,
-    preset_id: str, user_id: str,
+    preset_id: str, user_id: str, lang: Lang,
 ) -> dict:
     from app.models import ChangeSeverity, WeatherChange
     from output.renderers.alert.project import to_multi_point_alert_message
@@ -143,13 +146,15 @@ def _deviation(
         bubbles = [
             render_telegram(to_multi_point_alert_message(
                 [g], tz=tz, stand_at=stand_at, anchor_points=anchors,
-            ))
+            ), lang=lang)
             for g in groups
         ]
-    return _channels(msg, sms=sms, bubbles=bubbles)
+    return _channels(msg, sms=sms, bubbles=bubbles, lang=lang)
 
 
-def _onset(preset: dict, onsets: list[dict], all_locations: dict, style: str) -> dict:
+def _onset(
+    preset: dict, onsets: list[dict], all_locations: dict, style: str, *, lang: Lang,
+) -> dict:
     from output.renderers.alert.project import to_multi_location_onset_alert_message
     from output.renderers.alert.render import render_sms, render_telegram
     from services.compare_radar_alert import _DEFAULT_COOLDOWN_MINUTES, _format_cooldown_display
@@ -172,14 +177,16 @@ def _onset(preset: dict, onsets: list[dict], all_locations: dict, style: str) ->
     cooldown = preset.get("alert_cooldown_minutes", _DEFAULT_COOLDOWN_MINUTES)
     msg = to_multi_location_onset_alert_message(
         entities, tz=tz, stand_at=stand_at,
-        cooldown_display=_format_cooldown_display(cooldown),
+        cooldown_display=_format_cooldown_display(cooldown, lang=lang),
     )
     sms = render_sms(msg, limit=_SMS_LIMIT, location_positions=None)
-    bubbles = [sms] if style == "kurzform" else [render_telegram(msg)]
-    return _channels(msg, sms=sms, bubbles=bubbles)
+    bubbles = [sms] if style == "kurzform" else [render_telegram(msg, lang=lang)]
+    return _channels(msg, sms=sms, bubbles=bubbles, lang=lang)
 
 
-def _official(preset: dict, official: list[dict], all_locations: dict, style: str) -> dict:
+def _official(
+    preset: dict, official: list[dict], all_locations: dict, style: str, *, lang: Lang,
+) -> dict:
     from output.renderers.alert.official_alerts import (
         build_compare_official_alert_notices, render_official_alert_sms_with_allclears,
     )
@@ -216,22 +223,23 @@ def _official(preset: dict, official: list[dict], all_locations: dict, style: st
         )
     dto_notices = build_compare_official_alert_notices(
         [loc.id for loc in locations], {loc.id: loc.name for loc in locations}, tagged,
+        lang=lang,
     )
     if not dto_notices:
         raise fehler_mit_code(ValueError, "vergleich_keine_warnung")
     tz = resolve_location_tz(locations[0]) or ZoneInfo("UTC")
     name = preset.get("name", "")
-    source_label = _official_allclear_source_label(dto_notices, [])
-    subject = _official_subject(dto_notices, [], prefix=name, tz=tz)
+    source_label = _official_allclear_source_label(dto_notices, [], lang=lang)
+    subject = _official_subject(dto_notices, [], prefix=name, tz=tz, lang=lang)
     html, plain = _official_mail_bodies(
         dto_notices, [], source_label=source_label,
         source_url=_official_source_url_for(dto_notices),
         stand_at=local_fmt(datetime.now(timezone.utc), tz), tz=tz,
-        context_label="Ortsvergleich",
+        context_label=t("versand.kontext.ortsvergleich", lang), lang=lang,
     )
     sms, _ = render_official_alert_sms_with_allclears(dto_notices, [], tz=tz)
     telegram = sms if style == "kurzform" else _official_telegram_rich(
-        dto_notices, [], prefix=name, source_label=source_label, tz=tz,
+        dto_notices, [], prefix=name, source_label=source_label, tz=tz, lang=lang,
     )
     return {
         "subject": subject, "email_html": html, "email_plain": plain,
