@@ -164,7 +164,9 @@ Diese Scheibe:
 | `WetterMetrikenVersandPanel.svelte:66` | #1743: Versand-Inhalt nach Herkunft — Trip-Hub über `BriefingScheduleTab`, Vergleich und Trip-Anlegen über den EINEN `VersandTab` | ersetzt die Direkt-Mounts in TripTabs/CompareTabs/Anlege-Seiten |
 
 **Summe:** 28 FACHLICH + 5 DARSTELLUNG + 15 HERKUNFT = **48**, deckungsgleich
-mit `EINGEFROREN_SOLL_ANZAHL`.
+mit `EINGEFROREN_SOLL_ANZAHL` (Summenzeile in #2727 korrigiert — sie nannte 14 / 46;
+Abgleich der `context ===`-Zweige gegen die Soll-Liste bestanden, kein Zweig entfällt;
+#1721 hob danach FACHLICH 27 → 28).
 
 ## Changelog
 

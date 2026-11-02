@@ -87,6 +87,11 @@ const BEREICHE: Record<string, string[]> = {
 /**
  * Begruendete Ausnahmen: Pfad + Ausschnitt des gemeldeten Ausdrucks. Nur, wenn
  * der Ausdruck nachweislich KEINEN Text liefert (der Waechter arbeitet je Export).
+ * Zweite, eng gefasste Kategorie: der Ausdruck ist der EINMALIGE Startwert eines
+ * Eingabefelds, das ab dem Start Nutzerdaten haelt. Eine Neuberechnung beim
+ * Sprachwechsel wuerde dort Nutzereingaben ueberschreiben, deshalb ist das
+ * Einfrieren hier gewollt. Der Grund muss das Feld benennen. Die Kategorie gilt
+ * NICHT allgemein fuer `$state`-Startwerte.
  */
 const AUSNAHMEN: { pfad: string; enthaelt: string; grund: string }[] = [
 	{
@@ -98,6 +103,14 @@ const AUSNAHMEN: { pfad: string; enthaelt: string; grund: string }[] = [
 		pfad: 'routes/compare/[id]/+page.svelte',
 		enthaelt: 'abmeldenUebernahme = hubSaveCtl.registriereUebernahme(',
 		grund: 'registriert nur einen Rueckruf (Abmelde-Funktion, kein Text); der Rueckruf laedt per getMitFassung, dessen Fehlertexte erst beim Fehlschlag entstehen'
+	},
+	{
+		pfad: 'lib/components/compare-new/CompareNewEditor.svelte',
+		// Trifft NUR die eigene Deklaration `vorlagenFelder` (Fund-Text: erste 90 Zeichen,
+		// reaktivitaet_scan.ts `ausschnitt`); der `$state`-Startwert `wiz` bleibt voll gescannt.
+		enthaelt: 'vorlagenFelder = untrack(() => (vorlage ? feldsatzAusVorlage(vorlage, locations) : {}))',
+		grund:
+			'Namensfeld: Vorschlagsname „<Name> (Kopie)“ (tr(\'vergleich.neu.kopie\')) ist der einmalige Startwert des Namensfelds beim Anlegen aus Vorlage und danach Nutzereingabe. Verhalten identisch zu main #2659, dort als Anweisung `vorlageInZustand` in routes/compare/new/+page.svelte. #2727 verlegt die Uebernahme in den Initialisierer (AC-7: einmalig, kein $effect).'
 	}
 ];
 

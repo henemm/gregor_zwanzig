@@ -4,8 +4,8 @@
 //
 // Die AC-2-Endbilanz der HERKUNFT-Ratsche (docs/specs/modules/rework_2276_s6h_ac2_endbilanz.md)
 // listet die eingefrorenen `context ===`-Zweige in drei Tabellen (FACHLICH / DARSTELLUNG / HERKUNFT).
-// Die Summenzeile darunter muss zu den Tabellen passen: 27 + 5 + 15 = 47 (= `EINGEFROREN_SOLL_ANZAHL`
-// in context_herkunft_zweige_eingefroren.test.ts). Gezählt werden die echten Tabellenzeilen, nicht
+// Die Summenzeile darunter muss zu den Tabellen passen und der Soll-Zahl `EINGEFROREN_SOLL_ANZAHL`
+// in context_herkunft_zweige_eingefroren.test.ts entsprechen (zur Laufzeit von dort gelesen). Gezählt werden die echten Tabellenzeilen, nicht
 // die Überschrift — die Summenzeile wird gegen die Zählung abgeglichen.
 //
 // Doku-Compliance-Test (Ausnahme der Test-Politik): der Prüfling IST eine Doku-Datei; es gibt
@@ -29,6 +29,11 @@ const REPO = resolve(dirname(fileURLToPath(import.meta.url)), ...Array(6).fill('
 const DOKU = join(REPO, 'docs', 'specs', 'modules', 'rework_2276_s6h_ac2_endbilanz.md');
 const quelle = readFileSync(DOKU, 'utf-8');
 
+// Soll-Anzahl aus der Ratsche selbst lesen statt sie hier zu duplizieren — sonst bricht dieser
+// Test bei jeder legitimen Ratschen-Änderung (#1721 hob 47 → 48) ohne inhaltlichen Grund.
+const RATSCHE = join(dirname(fileURLToPath(import.meta.url)), 'context_herkunft_zweige_eingefroren.test.ts');
+const SOLL = Number(/const EINGEFROREN_SOLL_ANZAHL = (\d+);/.exec(readFileSync(RATSCHE, 'utf-8'))?.[1]);
+
 /** Tabellenzeilen (Datei:Zeile-Einträge) des Abschnitts `### <titel> (…)` bis zur nächsten Überschrift. */
 function abschnitt(titel: string): { ueberschriftZahl: number; zeilen: string[] } {
 	const zeilen = quelle.split('\n');
@@ -47,16 +52,15 @@ const darstellung = abschnitt('DARSTELLUNG');
 const herkunft = abschnitt('HERKUNFT');
 
 describe('AC-23: Summenzeile der AC-2-Endbilanz stimmt mit den Tabellen überein', () => {
-	test('Messaufbau: die drei Tabellen haben 27 / 5 / 15 Einträge, passend zu ihren Überschriften', () => {
-		assert.equal(fachlich.zeilen.length, 27);
-		assert.equal(darstellung.zeilen.length, 5);
+	test('Messaufbau: jede Tabelle hat so viele Einträge, wie ihre Überschrift nennt (HERKUNFT 15)', () => {
+		assert.ok(SOLL > 0, 'Messaufbau: EINGEFROREN_SOLL_ANZAHL in der Ratsche nicht gefunden');
 		assert.equal(herkunft.zeilen.length, 15);
 		assert.equal(fachlich.ueberschriftZahl, fachlich.zeilen.length);
 		assert.equal(darstellung.ueberschriftZahl, darstellung.zeilen.length);
 		assert.equal(herkunft.ueberschriftZahl, herkunft.zeilen.length);
 	});
 
-	test('die Summenzeile nennt 15 HERKUNFT und 47 insgesamt (= Summe der Tabellenzeilen)', () => {
+	test('die Summenzeile nennt 15 HERKUNFT und als Gesamtzahl die Summe der Tabellenzeilen (= EINGEFROREN_SOLL_ANZAHL)', () => {
 		const summe = /\*\*Summe:\*\*\s*(\d+)\s*FACHLICH\s*\+\s*(\d+)\s*DARSTELLUNG\s*\+\s*(\d+)\s*HERKUNFT\s*=\s*\*\*(\d+)\*\*/.exec(quelle);
 		assert.ok(summe, 'Summenzeile „**Summe:** N FACHLICH + N DARSTELLUNG + N HERKUNFT = **N**" nicht gefunden');
 		const [, f, d, h, gesamt] = summe!.map(Number);
@@ -65,6 +69,6 @@ describe('AC-23: Summenzeile der AC-2-Endbilanz stimmt mit den Tabellen überein
 		assert.equal(h, herkunft.zeilen.length, `HERKUNFT in der Summenzeile: ${h}, Tabelle: ${herkunft.zeilen.length}`);
 		const gezaehlt = fachlich.zeilen.length + darstellung.zeilen.length + herkunft.zeilen.length;
 		assert.equal(gesamt, gezaehlt, `Gesamtzahl in der Summenzeile: ${gesamt}, gezählt: ${gezaehlt}`);
-		assert.equal(gesamt, 47);
+		assert.equal(gesamt, SOLL, `Gesamtzahl ${gesamt} ≠ EINGEFROREN_SOLL_ANZAHL ${SOLL} der Ratsche`);
 	});
 });

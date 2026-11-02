@@ -6,10 +6,17 @@
 //
 // Komponiert die vorhandenen Hub-Hydrierer (unverändert) und ergänzt nur die
 // Felder ohne gemeinsamen Hydrierer. Identität (id, ETag, letzter_versand,
-// Aktiv-Status) wird nie übernommen; `isEditMode` bleibt false (AC-3).
+// Aktiv-Status) wird nie übernommen; `isEditMode` bleibt draußen (AC-3).
+//
+// Issue #2727 (Epic #2345, DoD-1): reine Funktion `preset, locations → Feldsatz`
+// statt Mutation eines Zustandsobjekts. Der Anlege-Editor legt das Ergebnis
+// einmalig beim Start über den Standard-Feldsatz. `weekday` entfällt (wurde nie
+// gelesen und reist nicht im Create-Payload).
+// Spec: docs/specs/modules/feat_2727_compare_wizardstate_abloesen.md (AC-7)
 
 import type { ComparePreset, Location } from '$lib/types';
-import type { CompareWizardState } from '../compare/compareWizardState.svelte';
+import type { CompareFeldsatz } from '../compare/compareEditorSave.ts';
+import type { AlarmHydrationTarget } from '../shared/alarmeVergleichSpeicherung.ts';
 import {
 	hydrateAlarmFieldsFromPreset,
 	hydrateHubFieldsFromPreset
@@ -22,32 +29,32 @@ import {
 	hydrateLayoutFieldsFromPreset
 } from '../shared/weather-metrics-tab/weatherMetricsCompareSave.ts';
 
-export function vorlageInZustand(
+export function feldsatzAusVorlage(
 	preset: ComparePreset,
-	locations: Location[],
-	state: CompareWizardState
-): void {
+	locations: Location[]
+): Partial<CompareFeldsatz> {
 	const displayConfig = (preset.display_config as Record<string, unknown>) ?? {};
 
 	// Alarm-Felder zuerst: der Alarm-Hydrierer setzt activeMetricKeys ohne
 	// null-Sentinel; das Hub-Ergebnis unten überschreibt es sentineltreu.
-	hydrateAlarmFieldsFromPreset(state, preset);
+	const alarm: AlarmHydrationTarget = {};
+	hydrateAlarmFieldsFromPreset(alarm, preset);
 	// isEditMode wird bewusst NICHT übertragen (Anlege-Modus, AC-3).
 	const { isEditMode: _nichtUebernehmen, ...hub } = hydrateHubFieldsFromPreset(preset);
-	Object.assign(state, hub);
-	// Versand inkl. endDate (fehlend ⇒ null, AC-9).
-	Object.assign(state, hydrateVersandFieldsFromPreset(preset));
-	state.channelActiveMetricKeys = hydrateChannelActiveMetricsFromPreset(preset);
-	Object.assign(state, hydrateDayWindowFromPreset(preset));
-	Object.assign(state, hydrateLayoutFieldsFromPreset(preset));
 
-	// Issue #2659 (i18n F10): Vorschlagsname in der Sprache des Nutzers (danach Nutzerdaten).
-	state.name = tr('vergleich.neu.kopie', { name: preset.name });
-	state.region = (displayConfig.region as string | undefined) ?? '';
-	state.pickedIds = (preset.location_ids ?? []).filter((id) =>
-		locations.some((l) => l.id === id)
-	);
-	state.schedule = preset.schedule === 'weekly' ? 'weekly' : 'daily_morning';
-	state.weekday = preset.weekday ?? 0;
-	state.officialAlertTriggersEnabled = preset.official_alert_triggers_enabled !== false;
+	return {
+		...(alarm as Partial<CompareFeldsatz>),
+		...hub,
+		// Versand inkl. endDate (fehlend ⇒ null, AC-9).
+		...hydrateVersandFieldsFromPreset(preset),
+		channelActiveMetricKeys: hydrateChannelActiveMetricsFromPreset(preset),
+		...hydrateDayWindowFromPreset(preset),
+		...hydrateLayoutFieldsFromPreset(preset),
+		// Issue #2659 (i18n F10): Vorschlagsname in der Sprache des Nutzers (danach Nutzerdaten).
+		name: tr('vergleich.neu.kopie', { name: preset.name }),
+		region: (displayConfig.region as string | undefined) ?? '',
+		pickedIds: (preset.location_ids ?? []).filter((id) => locations.some((l) => l.id === id)),
+		schedule: preset.schedule === 'weekly' ? 'weekly' : 'daily_morning',
+		officialAlertTriggersEnabled: preset.official_alert_triggers_enabled !== false
+	};
 }

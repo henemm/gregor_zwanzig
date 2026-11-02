@@ -69,9 +69,8 @@
 	import ChannelToggle from '$lib/components/shared/ChannelToggle.svelte';
 	// Epic #1301 Scheibe F2a: Stundenverlauf-Steuerung als geteilte Komponente
 	// (Hub + Anlege-Seite /compare/new). Inline-Markup + Handler wanderten dorthin.
-	import { CompareWizardState } from './compareWizardState.svelte';
 	import { hydrateHubFieldsFromPreset, hydrateAlarmFieldsFromPreset } from './compareHubHydration.ts';
-	import { buildComparePresetPartialPayload } from './compareEditorSave.ts';
+	import { buildComparePresetPartialPayload, compareFeldsatzStandard } from './compareEditorSave.ts';
 	import {
 		snapshotForRollback,
 		buildToggleActivePutPayload,
@@ -359,7 +358,10 @@
 	// Idealwerte-Tab statt Bespoke-Liste — Bridge hydratisiert die 6 Felder,
 	// die der Organism im vergleich-Kontext aus dem Wizard-State liest
 	// (Entscheidung 1, C0: 0 Zeilen Diff im Organism selbst).
-	const wizardState = new CompareWizardState();
+	// Issue #2727 (Epic #2345, DoD-1): komponentenlokaler Feldsatz statt der
+	// geloeschten Zustandsklasse (Variante A: Versand und Alarme teilen weiter
+	// Cooldown/Ruhezeit, Rollback-Ziel bleibt erhalten).
+	const wizardState = $state(compareFeldsatzStandard());
 	let idealwerteHydrated = $state(false);
 	// Issue #1373 (S2 Scheibe B, Fix-Runde 1): dritte Hydrationsstelle mit
 	// derselben Wurzel — auch hier wird die Katalogantwort abgewartet, BEVOR

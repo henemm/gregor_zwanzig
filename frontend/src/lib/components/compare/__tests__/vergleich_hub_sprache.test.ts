@@ -265,13 +265,10 @@ describe('AC-7: Groessennamen im Alarme-Reiter des Vergleichs (Register-Ergaenzu
 		assert.deepEqual(katalog.map((e: { metric: string; label: string }) => [e.metric, e.label]), P.VERGLEICHS_KATALOG.map((e) => [e.metric, e.label]));
 	});
 	test('Vorlage (?from=): Vorschlagsname in der Sprache des Nutzers', async () => {
-		const { vorlageInZustand } = await import(pathToFileURL(path.join(P.KOMP, 'compare-new/compareNewVorlage.ts')).href);
-		const { CompareWizardState } = await import(pathToFileURL(path.join(P.CMP, 'compareWizardState.svelte.ts')).href);
-		const name = () => {
-			const s = new CompareWizardState();
-			vorlageInZustand(P.vergleichAktiv(), P.ORTE, s);
-			return s.name;
-		};
+		// #2727: reine Funktion ueber dem Standard-Feldsatz (wie der Anlege-Editor beim Start).
+		const { feldsatzAusVorlage } = await import(pathToFileURL(path.join(P.KOMP, 'compare-new/compareNewVorlage.ts')).href);
+		const { compareFeldsatzStandard } = await import(pathToFileURL(path.join(P.CMP, 'compareEditorSave.ts')).href);
+		const name = () => ({ ...compareFeldsatzStandard(), ...feldsatzAusVorlage(P.vergleichAktiv(), P.ORTE) }).name;
 		const r = deDannEn(name);
 		assert.equal(r.de, 'Skitouren Tirol (Kopie)');
 		assert.equal(r.en, 'Skitouren Tirol (copy)');
