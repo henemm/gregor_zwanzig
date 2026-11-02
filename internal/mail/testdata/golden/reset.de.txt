@@ -1,0 +1,11 @@
+Subject: Gregor 20 — Passwort zuruecksetzen
+
+Hallo,
+
+Du hast eine Passwort-Zuruecksetzung fuer Gregor 20 angefordert.
+
+Oeffne diesen Link, um ein neues Passwort zu setzen (gueltig 30 Minuten):
+
+https://example.invalid/reset-password?user=golden-de&token=tok123
+
+Falls du das nicht angefordert hast, ignoriere diese E-Mail.
