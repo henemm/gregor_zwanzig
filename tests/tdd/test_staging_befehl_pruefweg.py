@@ -928,8 +928,9 @@ class _VertragsStaging:
 
     TOKEN = "TOKEN-GEHEIM-c0ffee-9912"
 
-    def __init__(self, status_je_pfad=None, register_ohne_id=False):
+    def __init__(self, status_je_pfad=None, register_ohne_id=False, register_id=None):
         self.register_ohne_id = register_ohne_id
+        self.register_id = register_id  # nicht None: diese id statt der vergebenen zurueckgeben
         self.vergebene_ids: list[str] = []
         self.anfragen: list[tuple] = []
         self.akteure: list[str | None] = []
@@ -962,6 +963,8 @@ class _VertragsStaging:
             neue_id = f"u-{0x5eed0000 + len(self.vergebene_ids):08x}"
             self.vergebene_ids.append(neue_id)
             self.konten[neue_id] = {"pw": body["password"], "verifiziert": False}
+            if self.register_id is not None:
+                return 201, {"id": self.register_id}
             return 201, ({} if self.register_ohne_id else {"id": neue_id})
         if pfad == "api/auth/login":
             k = self.konten.get(body.get("username"))
@@ -1403,7 +1406,8 @@ def test_alle_szenarien_ueberschreiten_das_trip_kontingent_nicht():
     assert rc != 0  # keine Antworten -> Befund, aber KEIN Abbruch durch 409
     angelegt = [p for m, p, _, _ in tr.anfragen if p == "api/trips"]
     assert len(angelegt) == 5, "alle fuenf Szenarien muessen ihren Trip anlegen koennen"
-    assert not [t for t in tr.trips if t[0].startswith("gzp-")], "Trips muessen nach Lauf weg sein"
+    assert tr.vergebene_ids, "Registrierung nicht durchlaufen - Test waere vakuum"
+    assert not [t for t in tr.trips if t[0] in tr.vergebene_ids], "Trips muessen nach Lauf weg sein"
 
 
 def test_trip_wird_unter_der_sitzung_des_wegwerf_nutzers_geloescht():
@@ -1417,7 +1421,7 @@ def test_trip_wird_unter_der_sitzung_des_wegwerf_nutzers_geloescht():
     loeschungen = [(a, p) for (m, p, _, _), a in zip(tr.anfragen, tr.akteure)
                    if m == "DELETE" and p.startswith("api/trips/")]
     assert len(loeschungen) == 1
-    assert loeschungen[0][0].startswith("gzp-") and loeschungen[0][1].endswith("-b")
+    assert loeschungen[0][0] == tr.vergebene_ids[0] and loeschungen[0][1].endswith("-b")
     assert ("anderer-nutzer", "fremd") in tr.trips
 
 
@@ -1514,3 +1518,60 @@ def test_register_antwort_ohne_id_bricht_verstaendlich_ab():
     pfade = [p for _, p, _, _ in tr.anfragen]
     assert pfade[-1] == "api/auth/register", "nach fehlender id darf kein Folgeaufruf laufen"
     assert not (api.nutzer_id or "").startswith("gzp-")
+
+
+@pytest.mark.parametrize("leere_id", ["", "   "])
+def test_register_antwort_mit_leerer_id_bricht_verstaendlich_ab(leere_id):
+    """#2757 AC-3: eine leere oder nur aus Leerzeichen bestehende ``id`` gilt wie eine fehlende."""
+    w = _werkzeug()
+    tr = _VertragsStaging(register_id=leere_id)
+    api = _api(tr)
+    with pytest.raises(w.StagingFehler) as exc:
+        api.registriere("gregor-test+leerid@henemm.com")
+    assert "id" in str(exc.value).lower()
+    pfade = [p for _, p, _, _ in tr.anfragen]
+    assert pfade[-1] == "api/auth/register", "nach leerer id darf kein Folgeaufruf laufen"
+    assert api.nutzer_id is None
+
+
+def test_erfolgreiches_konto_loeschen_wird_mit_server_id_bestaetigt(capsys):
+    """#2757: nach erfolgreichem Konto-Loeschen steht ein positiver Beleg mit der Server-ID im Log."""
+    w = _werkzeug()
+    tr = _VertragsStaging()
+    api = _api(tr)
+    w.fuehre_lauf_exit(["B"], api=api, smtp_factory=_smtp_klasse(),
+                       imap_factory=lambda: _ErsatzImap({}), heute=HEUTE, tag="tagbeleg",
+                       timeout=0, schlaf=_kein_schlaf)
+    [server_id] = tr.vergebene_ids
+    assert tr.geloescht == [server_id]
+    aus = capsys.readouterr()
+    assert f"Wegwerf-Nutzer geloescht: {server_id}" in aus.out
+    assert "WARNUNG" not in aus.out + aus.err
+
+
+def test_gescheitertes_konto_loeschen_meldet_warnung_statt_bestaetigung(capsys):
+    """#2757: scheitert das Konto-Loeschen, gibt es KEINE Erfolgszeile, sondern die WARNUNG."""
+    w = _werkzeug()
+    tr = _VertragsStaging(status_je_pfad={"api/auth/account/delete": 500})
+    api = _api(tr)
+    w.fuehre_lauf_exit(["B"], api=api, smtp_factory=_smtp_klasse(),
+                       imap_factory=lambda: _ErsatzImap({}), heute=HEUTE, tag="tagwarn",
+                       timeout=0, schlaf=_kein_schlaf)
+    [server_id] = tr.vergebene_ids
+    aus = capsys.readouterr()
+    assert "Wegwerf-Nutzer geloescht" not in aus.out + aus.err
+    assert "WARNUNG: Wegwerf-Nutzer nicht geloescht" in aus.out
+    assert server_id in aus.out
+
+
+def test_ohne_angelegten_nutzer_keine_loesch_bestaetigung(capsys):
+    """#2757: scheitert schon die Registrierung, existiert kein Nutzer -> keine Erfolgszeile."""
+    w = _werkzeug()
+    tr = _VertragsStaging({"/api/auth/register": 429})
+    api = _api(tr)
+    w.fuehre_lauf_exit(["B"], api=api, smtp_factory=_smtp_klasse(),
+                       imap_factory=lambda: _ErsatzImap({}), heute=HEUTE, tag="tagkeiner",
+                       timeout=0, schlaf=_kein_schlaf)
+    assert "api/auth/register" in [p for _, p, _, _ in tr.anfragen], "Test waere vakuum"
+    aus = capsys.readouterr()
+    assert "Wegwerf-Nutzer geloescht" not in aus.out + aus.err
