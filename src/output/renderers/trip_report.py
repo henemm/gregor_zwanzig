@@ -613,6 +613,10 @@ class TripReportFormatter:
                 metric_def = get_metric(mc.metric_id)
             except KeyError:
                 continue
+            # Issue #2209 / PO-Regel #710/#715: nicht waehlbare Metriken
+            # (selectable=False, z.B. temperature_cold) still ignorieren.
+            if not metric_def.selectable:
+                continue
 
             # Collect non-None values
             values = [
@@ -706,6 +710,10 @@ class TripReportFormatter:
             try:
                 metric_def = get_metric(mc.metric_id)
             except KeyError:
+                continue
+            # Issue #2209 / PO-Regel #710/#715: nicht waehlbare Metriken
+            # (selectable=False, z.B. temperature_cold) still ignorieren.
+            if not metric_def.selectable:
                 continue
             row[metric_def.col_key] = getattr(dp, metric_def.dp_field, None)
         if merge_wind_dir and "wind" in row:

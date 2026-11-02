@@ -16,13 +16,13 @@ GR20 E1: 17–18°C, feels 11–12°C, ⛅, heavy rain max 8:00, moderate wind 1
   Sun 2.5h
 
 ━━ Segment 1: km 0.0–0.0 | 08:00–12:00 | ↑400m → 1200m ━━
-  Time   Temp   Feels   Wind   Gust   Rain   Thdr     SnowL   Cloud   Sun   TmpMin 
-  -----  -----  ------  -----  -----  -----  -------  ------  ------  ----  -------
-  08     16.8   11.2    15     70     18.5   medium   –       ⛅       –     16.8   
-  09     17.1   11.4    16     37     0.0    medium   –       ⛅       –     17.1   
-  10     17.4   11.6    16     38     0.0    medium   –       ⛅       –     17.4   
-  11     17.7   11.8    16     39     0.0    medium   –       ⛅       –     17.7   
-  12     18.0   12.0    17     40     0.0    medium   –       ⛅       –     18.0   
+  Time   Temp   Feels   Wind   Gust   Rain   Thdr     SnowL   Cloud   Sun 
+  -----  -----  ------  -----  -----  -----  -------  ------  ------  ----
+  08     16.8   11.2    15     70     18.5   medium   –       ⛅       –   
+  09     17.1   11.4    16     37     0.0    medium   –       ⛅       –   
+  10     17.4   11.6    16     38     0.0    medium   –       ⛅       –   
+  11     17.7   11.8    16     39     0.0    medium   –       ⛅       –   
+  12     18.0   12.0    17     40     0.0    medium   –       ⛅       –   
 
 
 ── Reply commands ──
@@ -42,8 +42,8 @@ GR20 E1: 17–18°C, feels 11–12°C, ⛅, heavy rain max 8:00, moderate wind 1
   STARTDATE YYYY-MM-DD – Set the trip start date and shift all stages
   REPORT [morning / evening] – Send the briefing now (default: morning)
 
-Units: Temp, TmpMin, Feels °C · Wind, Gust km/h · Rain mm · SnowL m · Cloud % · Sun h
-Columns: Temp = Temperature · TmpMin = Low temperature alert · Feels = Feels-like temperature · Gust = Wind gusts · Rain = Precipitation · Thdr = Thunderstorm · SnowL = Snow line · Cloud = Cloud cover · Sun = Sunshine hours
+Units: Temp, Feels °C · Wind, Gust km/h · Rain mm · SnowL m · Cloud % · Sun h
+Columns: Temp = Temperature · Feels = Feels-like temperature · Gust = Wind gusts · Rain = Precipitation · Thdr = Thunderstorm · SnowL = Snow line · Cloud = Cloud cover · Sun = Sunshine hours
 ------------------------------------------------------------
 Generated: 2026-04-28 12:00 UTC
 Data: openmeteo (arome_france)
