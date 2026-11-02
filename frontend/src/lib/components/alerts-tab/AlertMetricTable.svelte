@@ -12,6 +12,7 @@
 	} from './alertMetricTable.ts';
 	import AlertMetricRow from './AlertMetricRow.svelte';
 	import { Card, Eyebrow } from '$lib/components/atoms';
+	import { t } from '$lib/i18n';
 
 	let { alert_rules = $bindable<AlertRule[]>([]), requestedMode }: { alert_rules: AlertRule[]; requestedMode?: 'absolute' | 'delta' | 'both' } = $props();
 
@@ -37,9 +38,9 @@
 <Card padding={0}>
 	<div class="table-header">
 		<div></div>
-		<Eyebrow>Metrik</Eyebrow>
-		<Eyebrow>Δ-Änderung (seit letztem Briefing)</Eyebrow>
-		<Eyebrow>Absoluter Schwellwert</Eyebrow>
+		<Eyebrow>{$t('alarme.tabelle.metrik')}</Eyebrow>
+		<Eyebrow>{$t('alarme.tabelle.delta')}</Eyebrow>
+		<Eyebrow>{$t('alarme.tabelle.absolut')}</Eyebrow>
 		<div></div>
 	</div>
 	<div class="alert-metric-table" data-testid="alert-metric-table">

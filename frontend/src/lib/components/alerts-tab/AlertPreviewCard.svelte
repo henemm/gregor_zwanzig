@@ -6,7 +6,9 @@
 
 	import { alarmVorschau } from '$lib/api';
 	import type { AlertRule, Stage } from '$lib/types';
-	import { buildAlertPreviewBody } from './alertPreviewHelpers';
+	import { buildAlertPreviewBody, vorschauFehlerText } from './alertPreviewHelpers';
+	import { t } from '$lib/i18n';
+	import { textTeile } from '$lib/i18n/textTeile';
 
 	interface Props {
 		kind: 'route' | 'vergleich';
@@ -54,12 +56,7 @@
 			telegram = result.telegram;
 			sms = result.sms;
 		} catch (e: unknown) {
-			error =
-				e && typeof e === 'object' && 'error' in e
-					? String((e as { error: unknown }).error)
-					: e instanceof Error
-						? e.message
-						: 'Vorschau konnte nicht geladen werden';
+			error = vorschauFehlerText(e);
 		} finally {
 			loading = false;
 		}
@@ -71,27 +68,25 @@
 		<!-- Issue #809: Kein alert_rules nach Self-Heal = keine alert-fähigen Metriken -->
 		<!-- Issue #850: Link direkt auf Inhalt-Tab -->
 		<p class="empty" data-testid="alert-preview-no-metrics">
-			Keine alert-fähigen Wetter-Metriken aktiv. Aktiviere zuerst
-			Wetter-Metriken (z.B. Windböen, Temperatur) im Tab
-			<a href="?tab=wetter-metriken" data-testid="alert-preview-no-metrics-link"><strong>Wetter-Metriken</strong></a>.
+			{#each textTeile($t('alarme.vorschau.keine_metriken')) as teil}{#if teil.platzhalter === 'link'}<a href="?tab=wetter-metriken" data-testid="alert-preview-no-metrics-link"><strong>{$t('alarme.vorschau.reiter_wetter_metriken')}</strong></a>{:else}{teil.text}{/if}{/each}
 		</p>
 	{:else if id === ''}
 		<!-- Issue #2283 S5: Anlege-Seite — es gibt noch keinen gespeicherten Eintrag. -->
 		<p class="empty" data-testid="alert-preview-unsaved">
-			Die Vorschau mit echten Daten ist nach dem Speichern verfügbar.
+			{$t('alarme.vorschau.nach_speichern')}
 		</p>
 	{:else if kind === 'vergleich' && locationIds.length === 0}
 		<!-- Issue #2283 (F006b): ohne Orte gibt es nichts vorzuschauen — kein Abruf
 		     (das Backend antwortete sonst 422), analog zum „0 Orte"-Hinweis der Vorschau. -->
 		<p class="empty" data-testid="alert-preview-no-locations">
-			Noch keine Orte konfiguriert — im Reiter <strong>Orte</strong> Kandidaten hinzufügen.
+			{#each textTeile($t('alarme.vorschau.keine_orte')) as teil}{#if teil.platzhalter === 'reiter'}<strong>{$t('alarme.vorschau.reiter_orte')}</strong>{:else}{teil.text}{/if}{/each}
 		</p>
 	{:else if enabledRules.length === 0}
 		<p class="empty" data-testid="alert-preview-empty">
-			Aktiviere mindestens eine Alert-Regel, um die Vorschau zu laden.
+			{$t('alarme.vorschau.regel_aktivieren')}
 		</p>
 		<button type="button" class="btn" data-testid="alert-preview-load-btn" disabled>
-			Vorschau laden
+			{$t('alarme.vorschau.laden')}
 		</button>
 	{:else}
 		<button
@@ -101,7 +96,7 @@
 			disabled={loading}
 			onclick={loadPreview}
 		>
-			{loading ? 'Lade…' : 'Vorschau laden'}
+			{loading ? $t('alarme.vorschau.lade') : $t('alarme.vorschau.laden')}
 		</button>
 	{/if}
 
@@ -112,7 +107,7 @@
 				data-testid="alert-preview-iframe"
 				srcdoc={emailHtml}
 				sandbox="allow-same-origin"
-				title="Alert-Vorschau E-Mail"
+				title={$t('alarme.vorschau.iframe_titel')}
 			></iframe>
 			<pre class="channel-text" data-testid="alert-preview-telegram">{telegram}</pre>
 			<div class="sms-block" data-testid="alert-preview-sms">

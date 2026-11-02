@@ -6,7 +6,9 @@
 	// #1401 Scheibe B: die Beschriftungen kommen aus dem geteilten Register.
 	// Eine zweite Liste hier hatte davon abweichende Namen gefuehrt
 	// ("Temperatursturz"/"Regenänderung") — sichtbar in Trip UND Vergleich.
-	import { ALERT_METRIC_LABELS } from '$lib/utils/alertMetricLabels';
+	import { alertMetricLabel } from '$lib/utils/alertMetricLabels';
+	import { t, locale } from '$lib/i18n';
+	import type { MessageKey } from '$lib/i18n';
 
 	interface Props {
 		activeMetrics: AlertMetric[];
@@ -17,11 +19,11 @@
 	let { activeMetrics, levels, onLevelChange }: Props = $props();
 
 	const QUICKSET_LEVELS: SensLevel[] = ['off', 'entspannt', 'standard', 'sensibel'];
-	const QUICKSET_LABELS: Record<SensLevel, string> = {
-		off: 'Aus',
-		entspannt: 'Entspannt',
-		standard: 'Standard',
-		sensibel: 'Sensibel'
+	const QUICKSET_LABELS: Record<SensLevel, MessageKey> = {
+		off: 'alarme.empfindlichkeit.aus',
+		entspannt: 'alarme.preset.entspannt',
+		standard: 'alarme.preset.standard',
+		sensibel: 'alarme.preset.sensibel'
 	};
 
 	const allSameLevel = $derived(
@@ -31,9 +33,10 @@
 	const quicksetActiveLevel = $derived(allSameLevel ? levels[activeMetrics[0]] : null);
 	const activeCount = $derived(activeMetrics.filter((m) => levels[m] !== 'off').length);
 	const counterLabel = $derived(
-		allSameLevel
-			? `${activeCount} von ${activeMetrics.length} aktiv`
-			: `${activeCount} von ${activeMetrics.length} · gemischt`
+		$t(allSameLevel ? 'alarme.tabelle.zaehler' : 'alarme.tabelle.zaehler_gemischt', {
+			aktiv: activeCount,
+			gesamt: activeMetrics.length
+		})
 	);
 
 	function setAllLevels(level: SensLevel) {
@@ -45,7 +48,7 @@
 
 <div class="alert-metric-table" data-testid="alert-metric-level-table">
 	<div class="quickset" data-testid="alert-quickset">
-		<span class="quickset-label">Alle Metriken auf:</span>
+		<span class="quickset-label">{$t('alarme.tabelle.alle_auf')}</span>
 		<div class="quickset-controls">
 			{#each QUICKSET_LEVELS as l (l)}
 				<button
@@ -55,7 +58,7 @@
 					onclick={() => setAllLevels(l)}
 					data-testid="alert-quickset-{l}"
 				>
-					{QUICKSET_LABELS[l]}
+					{$t(QUICKSET_LABELS[l])}
 				</button>
 			{/each}
 		</div>
@@ -64,22 +67,22 @@
 
 	{#if activeMetrics.length === 0}
 		<p class="empty-hint" data-testid="alert-metric-empty">
-			Keine alertable Metriken aktiv. Wähle Metriken im Wetter-Metriken-Tab.
+			{$t('alarme.tabelle.leer')}
 		</p>
 	{:else}
 		<table>
 			<thead>
 				<tr>
-					<th>Metrik</th>
-					<th>Empfindlichkeit</th>
-					<th>Schwellwert</th>
+					<th>{$t('alarme.tabelle.metrik')}</th>
+					<th>{$t('alarme.tabelle.empfindlichkeit')}</th>
+					<th>{$t('alarme.tabelle.schwellwert')}</th>
 				</tr>
 			</thead>
 			<tbody>
 				{#each activeMetrics as metric (metric)}
 					<AlertMetricLevelRow
 						{metric}
-						label={ALERT_METRIC_LABELS[metric]?.label_de ?? metric}
+						label={alertMetricLabel(metric, $locale)}
 						level={levels[metric] ?? 'standard'}
 						onChange={onLevelChange}
 					/>

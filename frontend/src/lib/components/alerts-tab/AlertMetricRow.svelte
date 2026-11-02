@@ -3,7 +3,8 @@
 	// Issue #586 — 4-Spalten-Grid nach JSX + Zeilen-Switch + Label+Unit-Spalte.
 
 	import type { AlertMetric } from '$lib/types';
-	import { ALERT_METRIC_LABELS } from '$lib/utils/alertMetricLabels';
+	import { ALERT_METRIC_LABELS, alertMetricLabel } from '$lib/utils/alertMetricLabels';
+	import { t, locale } from '$lib/i18n';
 	import { DELTA_ONLY_METRICS, type MetricRowState } from './alertMetricTable.ts';
 	import { Select } from '$lib/components/ui/select';
 
@@ -50,7 +51,7 @@
 
 	<!-- Col 2: Label + Unit -->
 	<div>
-		<div class="metric-label">{info?.label_de ?? metric}</div>
+		<div class="metric-label">{alertMetricLabel(metric, $locale)}</div>
 		<div class="metric-unit">{info?.unit ?? ''}</div>
 	</div>
 
@@ -70,7 +71,7 @@
 				<span class="threshold-unit">{info?.unit ?? ''}</span>
 			</div>
 		{:else}
-			<span class="disabled-label">— deaktiviert —</span>
+			<span class="disabled-label">{$t('alarme.tabelle.deaktiviert')}</span>
 		{/if}
 	</div>
 
@@ -90,7 +91,7 @@
 				<span class="threshold-unit">{info?.unit ?? ''}</span>
 			</div>
 		{:else}
-			<span class="disabled-label">— deaktiviert —</span>
+			<span class="disabled-label">{$t('alarme.tabelle.deaktiviert')}</span>
 		{/if}
 	</div>
 
@@ -100,9 +101,9 @@
 		data-testid="alert-metric-severity-{metric}"
 		bind:value={state.severity}
 	>
-		<option value="info">Info</option>
-		<option value="warning">Warnung</option>
-		<option value="critical">Kritisch</option>
+		<option value="info">{$t('alarme.stufe.info')}</option>
+		<option value="warning">{$t('alarme.stufe.warning')}</option>
+		<option value="critical">{$t('alarme.stufe.critical')}</option>
 	</Select>
 </div>
 

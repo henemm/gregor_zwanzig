@@ -6,6 +6,7 @@
 
 import type { AlertRule, AlertMetric, Stage } from '../../types.ts';
 import { METRIC_DEFAULTS } from './alertMetricTable.ts';
+import { tr } from '../../i18n/index.ts';
 
 export const METRIC_MAP: Record<AlertMetric, { metric: string; direction: string }> = {
 	wind_gust:            { metric: 'gust_max_kmh',      direction: 'above' },
@@ -130,4 +131,15 @@ export function vergleichAlarmRegeln(
 			severity: 'warning',
 			enabled: true,
 		}));
+}
+
+/**
+ * Issue #2656 (i18n F7): Fehlertext der Beispiel-Warnung. Ein Servertext
+ * (`{ error }`) bzw. die Fehlermeldung bleibt unveraendert (Server-Sprache);
+ * nur der eigene Rueckfall kommt aus dem Katalog (aktuelle Sprache).
+ */
+export function vorschauFehlerText(e: unknown): string {
+	if (e && typeof e === 'object' && 'error' in e) return String((e as { error: unknown }).error);
+	if (e instanceof Error && e.message) return e.message;
+	return tr('alarme.vorschau.fehler');
 }
