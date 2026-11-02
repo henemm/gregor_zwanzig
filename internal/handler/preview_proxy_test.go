@@ -133,7 +133,8 @@ func TestPreviewProxyHandlerHandlesUpstreamError(t *testing.T) {
 	if w.Code != http.StatusBadGateway {
 		t.Errorf("expected 502 on upstream connection error, got %d", w.Code)
 	}
-	if !strings.Contains(w.Body.String(), "upstream unreachable") {
-		t.Errorf("expected upstream-unreachable error body, got %q", w.Body.String())
+	// Issue #2677: stabiler Code upstream_unreachable statt Alt-Wort mit Leerzeichen.
+	if !strings.Contains(w.Body.String(), `"code":"upstream_unreachable"`) {
+		t.Errorf("expected upstream_unreachable error body, got %q", w.Body.String())
 	}
 }
