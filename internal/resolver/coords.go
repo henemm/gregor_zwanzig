@@ -19,18 +19,15 @@ func inRange(lat, lon float64) bool {
 func resolveDecimal(input string) (ResolveResult, error) {
 	m := reDecimal.FindStringSubmatch(strings.TrimSpace(input))
 	if m == nil {
-		return ResolveResult{}, &ResolveError{Code: "unknown_format", Message: "Konnte Dezimalkoordinaten nicht erkennen."}
+		return ResolveResult{}, newResolveError("unknown_format", "fach.resolver.decimal_unbekannt", nil)
 	}
 	lat, err1 := strconv.ParseFloat(m[1], 64)
 	lon, err2 := strconv.ParseFloat(m[2], 64)
 	if err1 != nil || err2 != nil {
-		return ResolveResult{}, &ResolveError{Code: "unknown_format", Message: "Dezimalkoordinaten konnten nicht geparst werden."}
+		return ResolveResult{}, newResolveError("unknown_format", "fach.resolver.decimal_parse", nil)
 	}
 	if !inRange(lat, lon) {
-		return ResolveResult{}, &ResolveError{
-			Code:    "unknown_format",
-			Message: "Koordinaten ausserhalb des gültigen Bereichs (lat ∈ [-90,90], lon ∈ [-180,180]).",
-		}
+		return ResolveResult{}, newResolveError("unknown_format", "fach.resolver.bereich", nil)
 	}
 	return finalize(ResolveResult{Lat: lat, Lon: lon, SourceType: "decimal"}, true), nil
 }
@@ -42,7 +39,7 @@ var reDMS = regexp.MustCompile(`(\d+)°\s*(\d+)['′]\s*([\d.]+)["″]?\s*([NS])
 func resolveDMS(input string) (ResolveResult, error) {
 	m := reDMS.FindStringSubmatch(input)
 	if m == nil {
-		return ResolveResult{}, &ResolveError{Code: "unknown_format", Message: "DMS-Format nicht erkannt."}
+		return ResolveResult{}, newResolveError("unknown_format", "fach.resolver.dms_unbekannt", nil)
 	}
 
 	latD, _ := strconv.ParseFloat(m[1], 64)
@@ -65,7 +62,7 @@ func resolveDMS(input string) (ResolveResult, error) {
 	}
 
 	if !inRange(lat, lon) {
-		return ResolveResult{}, &ResolveError{Code: "unknown_format", Message: "DMS-Koordinaten ausserhalb des gültigen Bereichs."}
+		return ResolveResult{}, newResolveError("unknown_format", "fach.resolver.dms_bereich", nil)
 	}
 	return finalize(ResolveResult{Lat: lat, Lon: lon, SourceType: "dms"}, true), nil
 }
@@ -77,31 +74,31 @@ var reUTMParse = regexp.MustCompile(`(\d{1,2})([A-Z])\s+(\d{4,7})\s+(\d{4,7})`)
 func resolveUTM(input string) (ResolveResult, error) {
 	m := reUTMParse.FindStringSubmatch(input)
 	if m == nil {
-		return ResolveResult{}, &ResolveError{Code: "unknown_format", Message: "UTM-Format nicht erkannt."}
+		return ResolveResult{}, newResolveError("unknown_format", "fach.resolver.utm_unbekannt", nil)
 	}
 
 	zone, err := strconv.Atoi(m[1])
 	if err != nil || zone < 1 || zone > 60 {
-		return ResolveResult{}, &ResolveError{Code: "unknown_format", Message: "UTM-Zone ausserhalb [1,60]."}
+		return ResolveResult{}, newResolveError("unknown_format", "fach.resolver.utm_zone", nil)
 	}
 	band := m[2]
 	if band == "I" || band == "O" || band < "C" || band > "X" {
-		return ResolveResult{}, &ResolveError{Code: "unknown_format", Message: "UTM-Band ungültig."}
+		return ResolveResult{}, newResolveError("unknown_format", "fach.resolver.utm_band", nil)
 	}
 	easting, err := strconv.ParseFloat(m[3], 64)
 	if err != nil {
-		return ResolveResult{}, &ResolveError{Code: "unknown_format", Message: "Easting nicht parsebar."}
+		return ResolveResult{}, newResolveError("unknown_format", "fach.resolver.utm_easting", nil)
 	}
 	northing, err := strconv.ParseFloat(m[4], 64)
 	if err != nil {
-		return ResolveResult{}, &ResolveError{Code: "unknown_format", Message: "Northing nicht parsebar."}
+		return ResolveResult{}, newResolveError("unknown_format", "fach.resolver.utm_northing", nil)
 	}
 
 	northern := band >= "N"
 	lat, lon := utmToLatLon(zone, easting, northing, northern)
 
 	if !inRange(lat, lon) {
-		return ResolveResult{}, &ResolveError{Code: "unknown_format", Message: "UTM-Konvertierung lieferte ungültige Koordinaten."}
+		return ResolveResult{}, newResolveError("unknown_format", "fach.resolver.utm_konvertierung", nil)
 	}
 	return finalize(ResolveResult{Lat: lat, Lon: lon, SourceType: "utm"}, true), nil
 }
@@ -110,9 +107,9 @@ func resolveUTM(input string) (ResolveResult, error) {
 // Vereinfachte Standardformel — ausreichend für Smart-Import-Vorschau (Toleranz ~1m).
 func utmToLatLon(zone int, easting, northing float64, northern bool) (float64, float64) {
 	const (
-		a    = 6378137.0           // WGS84 semi-major axis
-		e2   = 0.00669437999014    // WGS84 eccentricity squared
-		k0   = 0.9996              // UTM scale factor
+		a             = 6378137.0        // WGS84 semi-major axis
+		e2            = 0.00669437999014 // WGS84 eccentricity squared
+		k0            = 0.9996           // UTM scale factor
 		falseEasting  = 500000.0
 		falseNorthing = 10000000.0
 	)
@@ -178,15 +175,15 @@ func resolveGPX(input string) (ResolveResult, error) {
 		closing := strings.Index(input[start:], "/>")
 		snippet = input[start : start+closing+2]
 	} else {
-		return ResolveResult{}, &ResolveError{Code: "unknown_format", Message: "GPX-Wegpunkt nicht erkannt."}
+		return ResolveResult{}, newResolveError("unknown_format", "fach.resolver.gpx_unbekannt", nil)
 	}
 
 	var pt gpxTrkpt
 	if err := xml.Unmarshal([]byte(snippet), &pt); err != nil {
-		return ResolveResult{}, &ResolveError{Code: "unknown_format", Message: "GPX-Wegpunkt konnte nicht geparst werden."}
+		return ResolveResult{}, newResolveError("unknown_format", "fach.resolver.gpx_parse", nil)
 	}
 	if !inRange(pt.Lat, pt.Lon) {
-		return ResolveResult{}, &ResolveError{Code: "unknown_format", Message: "GPX-Koordinaten ausserhalb des gültigen Bereichs."}
+		return ResolveResult{}, newResolveError("unknown_format", "fach.resolver.gpx_bereich", nil)
 	}
 
 	result := ResolveResult{

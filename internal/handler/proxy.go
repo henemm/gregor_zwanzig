@@ -69,9 +69,7 @@ func ProxyHandler(pythonURL, path string) http.HandlerFunc {
 
 		resp, err := client.Get(url)
 		if err != nil {
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(503)
-			w.Write([]byte(`{"error":"core_unavailable"}`))
+			WriteError(w, r, 503, "core_unavailable", nil)
 			return
 		}
 		defer resp.Body.Close()
@@ -123,9 +121,7 @@ func CompareProxyHandler(pythonURL string) http.HandlerFunc {
 
 		resp, err := client.Get(url)
 		if err != nil {
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(503)
-			w.Write([]byte(`{"error":"core_unavailable"}`))
+			WriteError(w, r, 503, "core_unavailable", nil)
 			return
 		}
 		defer resp.Body.Close()
@@ -154,18 +150,14 @@ func ProxyPostHandler(pythonURL, path string) http.HandlerFunc {
 
 		req, err := http.NewRequestWithContext(r.Context(), http.MethodPost, url, r.Body)
 		if err != nil {
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(500)
-			w.Write([]byte(`{"error":"proxy_error"}`))
+			WriteError(w, r, 500, "proxy_error", nil)
 			return
 		}
 		req.Header.Set("Content-Type", r.Header.Get("Content-Type"))
 
 		resp, err := client.Do(req)
 		if err != nil {
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(503)
-			w.Write([]byte(`{"error":"core_unavailable"}`))
+			WriteError(w, r, 503, "core_unavailable", nil)
 			return
 		}
 		defer resp.Body.Close()
@@ -210,9 +202,7 @@ func LoadedTripProxyHandler(pythonURL string) http.HandlerFunc {
 		client := &http.Client{Timeout: 10 * time.Second}
 		resp, err := client.Get(url)
 		if err != nil {
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(http.StatusBadGateway)
-			w.Write([]byte(`{"error":"upstream unreachable"}`))
+			WriteError(w, r, http.StatusBadGateway, "upstream_unreachable", nil)
 			return
 		}
 		defer resp.Body.Close()
@@ -242,9 +232,7 @@ func StagesWeatherProxyHandler(pythonURL string) http.HandlerFunc {
 		client := &http.Client{Timeout: stagesWeatherProxyTimeout}
 		resp, err := client.Get(url)
 		if err != nil {
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(http.StatusBadGateway)
-			w.Write([]byte(`{"error":"upstream unreachable"}`))
+			WriteError(w, r, http.StatusBadGateway, "upstream_unreachable", nil)
 			return
 		}
 		defer resp.Body.Close()
@@ -270,9 +258,7 @@ func NextBriefingsProxyHandler(pythonURL string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		uid := middleware.UserIDFromContext(r.Context())
 		if uid == "" {
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(http.StatusUnauthorized)
-			w.Write([]byte(`{"error":"unauthorized"}`))
+			WriteError(w, r, http.StatusUnauthorized, "unauthorized", nil)
 			return
 		}
 		url := pythonURL + "/api/_internal/next-briefings?" + appendUserID(r.URL.RawQuery, uid)
@@ -280,9 +266,7 @@ func NextBriefingsProxyHandler(pythonURL string) http.HandlerFunc {
 		client := &http.Client{Timeout: 10 * time.Second}
 		resp, err := client.Get(url)
 		if err != nil {
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(http.StatusBadGateway)
-			w.Write([]byte(`{"error":"upstream unreachable"}`))
+			WriteError(w, r, http.StatusBadGateway, "upstream_unreachable", nil)
 			return
 		}
 		defer resp.Body.Close()
@@ -311,9 +295,7 @@ func ValidatorFormatMetricProxyHandler(pythonURL string) http.HandlerFunc {
 
 		resp, err := client.Get(url)
 		if err != nil {
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(http.StatusBadGateway)
-			w.Write([]byte(`{"error":"upstream unreachable"}`))
+			WriteError(w, r, http.StatusBadGateway, "upstream_unreachable", nil)
 			return
 		}
 		defer resp.Body.Close()
@@ -365,9 +347,7 @@ func DetectorThresholdsProxyHandler(pythonURL string) http.HandlerFunc {
 		client := &http.Client{Timeout: 10 * time.Second}
 		resp, err := client.Get(url)
 		if err != nil {
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(http.StatusBadGateway)
-			w.Write([]byte(`{"error":"upstream unreachable"}`))
+			WriteError(w, r, http.StatusBadGateway, "upstream_unreachable", nil)
 			return
 		}
 		defer resp.Body.Close()
@@ -396,9 +376,7 @@ func MetricsForChannelProxyHandler(pythonURL string) http.HandlerFunc {
 		client := &http.Client{Timeout: 10 * time.Second}
 		resp, err := client.Get(url)
 		if err != nil {
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(http.StatusBadGateway)
-			w.Write([]byte(`{"error":"upstream unreachable"}`))
+			WriteError(w, r, http.StatusBadGateway, "upstream_unreachable", nil)
 			return
 		}
 		defer resp.Body.Close()
@@ -425,18 +403,14 @@ func GpxProxyHandler(pythonURL string) http.HandlerFunc {
 
 		req, err := http.NewRequestWithContext(r.Context(), http.MethodPost, url, r.Body)
 		if err != nil {
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(500)
-			w.Write([]byte(`{"error":"proxy_error"}`))
+			WriteError(w, r, 500, "proxy_error", nil)
 			return
 		}
 		req.Header.Set("Content-Type", r.Header.Get("Content-Type"))
 
 		resp, err := client.Do(req)
 		if err != nil {
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(503)
-			w.Write([]byte(`{"error":"core_unavailable"}`))
+			WriteError(w, r, 503, "core_unavailable", nil)
 			return
 		}
 		defer resp.Body.Close()
@@ -456,9 +430,7 @@ func CompareEmailPreviewProxyHandler(pythonURL string) http.HandlerFunc {
 
 		req, err := http.NewRequestWithContext(r.Context(), http.MethodPost, url, r.Body)
 		if err != nil {
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(http.StatusInternalServerError)
-			w.Write([]byte(`{"error":"proxy_error"}`))
+			WriteError(w, r, http.StatusInternalServerError, "proxy_error", nil)
 			return
 		}
 		req.Header.Set("Content-Type", r.Header.Get("Content-Type"))
@@ -466,9 +438,7 @@ func CompareEmailPreviewProxyHandler(pythonURL string) http.HandlerFunc {
 		client := &http.Client{Timeout: 10 * time.Second}
 		resp, err := client.Do(req)
 		if err != nil {
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(http.StatusBadGateway)
-			w.Write([]byte(`{"error":"upstream unreachable"}`))
+			WriteError(w, r, http.StatusBadGateway, "upstream_unreachable", nil)
 			return
 		}
 		defer resp.Body.Close()
@@ -492,9 +462,7 @@ func SmsFidelityPreviewProxyHandler(pythonURL string) http.HandlerFunc {
 
 		req, err := http.NewRequestWithContext(r.Context(), http.MethodPost, url, r.Body)
 		if err != nil {
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(http.StatusInternalServerError)
-			w.Write([]byte(`{"error":"proxy_error"}`))
+			WriteError(w, r, http.StatusInternalServerError, "proxy_error", nil)
 			return
 		}
 		req.Header.Set("Content-Type", r.Header.Get("Content-Type"))
@@ -502,9 +470,7 @@ func SmsFidelityPreviewProxyHandler(pythonURL string) http.HandlerFunc {
 		client := &http.Client{Timeout: 10 * time.Second}
 		resp, err := client.Do(req)
 		if err != nil {
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(http.StatusBadGateway)
-			w.Write([]byte(`{"error":"upstream unreachable"}`))
+			WriteError(w, r, http.StatusBadGateway, "upstream_unreachable", nil)
 			return
 		}
 		defer resp.Body.Close()

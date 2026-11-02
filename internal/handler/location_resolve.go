@@ -38,9 +38,13 @@ func ResolveLocationHandler() http.HandlerFunc {
 		result, err := resolver.Resolve(input)
 		if err != nil {
 			if resolveErr, ok := err.(*resolver.ResolveError); ok {
-				w.Header().Set("Content-Type", "application/json")
-				w.WriteHeader(422)
-				json.NewEncoder(w).Encode(resolveErr)
+				// Issue #2677: Code unveraendert, Meldung in Nutzersprache
+				// aus fach.resolver.* (detail = message).
+				lang := i18n.FromContext(r.Context())
+				msg := i18n.T(lang, resolveErr.Key, resolveErr.Args)
+				body := i18n.ErrorBody(lang, resolveErr.Code, nil)
+				body["message"], body["detail"] = msg, msg
+				writeJSON(w, http.StatusUnprocessableEntity, body)
 				return
 			}
 			WriteError(w, r, http.StatusInternalServerError, "internal_error", nil)

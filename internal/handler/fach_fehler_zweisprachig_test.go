@@ -396,6 +396,9 @@ func TestG3AnkertabelleFachFehler(t *testing.T) {
 		{"fach.fehler.invalid_params", "", "Die Parameter sind ungültig.", "The parameters are invalid."},
 		{"fach.fehler.budget_exceeded", "", "Das Tageskontingent für Wetterabfragen ist aufgebraucht.", "The daily quota for forecast requests is used up."},
 		{"fach.fehler.provider_error", "", "Der Wetteranbieter ist nicht erreichbar.", "The weather provider is not reachable."},
+		{"fach.fehler.unknown_format", "", "Das Format wurde nicht erkannt.", "The format was not recognized."},
+		{"fach.fehler.unsupported_url", "", "Diese Adresse wird nicht unterstützt.", "This address is not supported."},
+		{"fach.fehler.resolve_failed", "", "Die Auflösung ist fehlgeschlagen.", "The lookup failed."},
 	}
 	for _, a := range anker {
 		de := a.de

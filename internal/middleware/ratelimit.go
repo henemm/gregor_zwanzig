@@ -1,7 +1,6 @@
 package middleware
 
 import (
-	"encoding/json"
 	"net"
 	"net/http"
 	"strconv"
@@ -9,6 +8,8 @@ import (
 	"time"
 
 	"golang.org/x/time/rate"
+
+	"github.com/henemm/gregor-api/internal/i18n"
 )
 
 // IPRateLimiter limits the number of requests per client IP using a
@@ -73,8 +74,8 @@ func (rl *IPRateLimiter) cleanupLoop() {
 }
 
 // Middleware wraps `next` so that requests exceeding the rate limit get
-// HTTP 429 with a Retry-After header (seconds until next token) and a JSON body
-// `{"error":"rate_limit_exceeded"}`.
+// HTTP 429 with a Retry-After header (seconds until next token) and the error
+// object rate_limit_exceeded in the request language (Issue #2677).
 func (rl *IPRateLimiter) Middleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ip := clientIP(r)
@@ -84,10 +85,8 @@ func (rl *IPRateLimiter) Middleware(next http.Handler) http.Handler {
 			if retry < 1 {
 				retry = 1
 			}
-			w.Header().Set("Content-Type", "application/json")
 			w.Header().Set("Retry-After", strconv.Itoa(retry))
-			w.WriteHeader(http.StatusTooManyRequests)
-			_ = json.NewEncoder(w).Encode(map[string]string{"error": "rate_limit_exceeded"})
+			writeError(w, i18n.FromContext(r.Context()), http.StatusTooManyRequests, "rate_limit_exceeded")
 			return
 		}
 		next.ServeHTTP(w, r)

@@ -194,11 +194,11 @@ func GetTelegramLinkHandler(s *store.Store, ts *TelegramTokenStore, botUsername 
 	return func(w http.ResponseWriter, r *http.Request) {
 		userID := middleware.UserIDFromContext(r.Context())
 		if userID == "" {
-			http.Error(w, "unauthorized", http.StatusUnauthorized)
+			WriteError(w, r, http.StatusUnauthorized, "unauthorized", nil)
 			return
 		}
 		if botUsername == "" {
-			http.Error(w, "TELEGRAM_BOT_USERNAME not configured", http.StatusInternalServerError)
+			WriteError(w, r, http.StatusInternalServerError, "service_unavailable", nil)
 			return
 		}
 		// Issue #2160 AC-10/AC-16: Laden und Token-Ausgabe unter demselben
@@ -210,14 +210,14 @@ func GetTelegramLinkHandler(s *store.Store, ts *TelegramTokenStore, botUsername 
 		user, err := s.LoadUser(userID)
 		if err != nil || user == nil {
 			telegramConnectMu.Unlock()
-			http.Error(w, "user not found", http.StatusNotFound)
+			WriteError(w, r, http.StatusNotFound, "not_found", nil)
 			return
 		}
 		token, err := ts.IssueToken(userID)
 		telegramConnectMu.Unlock()
 		if err != nil {
 			log.Printf("telegram-link: token not persisted for %s: %v", userID, err)
-			http.Error(w, "token store unavailable", http.StatusInternalServerError)
+			WriteError(w, r, http.StatusInternalServerError, "service_unavailable", nil)
 			return
 		}
 
@@ -242,12 +242,12 @@ func GetTelegramStatusHandler(s *store.Store) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		userID := middleware.UserIDFromContext(r.Context())
 		if userID == "" {
-			http.Error(w, "unauthorized", http.StatusUnauthorized)
+			WriteError(w, r, http.StatusUnauthorized, "unauthorized", nil)
 			return
 		}
 		user, err := s.LoadUser(userID)
 		if err != nil || user == nil {
-			http.Error(w, "user not found", http.StatusNotFound)
+			WriteError(w, r, http.StatusNotFound, "not_found", nil)
 			return
 		}
 		connected := user.TelegramChatID != ""
