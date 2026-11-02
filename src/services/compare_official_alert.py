@@ -88,7 +88,7 @@ def _raise_first_failure(preset_id: str, outcomes: list) -> None:
     for out in outcomes:
         if out.skipped:
             logger.error(
-                "Compare-Amtlich-Alarm: Warn-Abruf fuer Preset %s / Ort %s nicht "
+                "Compare-Amtlich-Alarm: Warn-Abruf fuer Preset %s / Ort %s nicht "  # i18n-log
                 "abgeschlossen (Grund: %s)", preset_id, out.item[0].id, out.skipped,
             )
     for out in outcomes:
@@ -96,7 +96,7 @@ def _raise_first_failure(preset_id: str, outcomes: list) -> None:
             raise out.error
         if out.skipped:
             raise RuntimeError(
-                f"Warn-Abruf fuer Preset {preset_id} / Ort {out.item[0].id} "
+                f"Warn-Abruf fuer Preset {preset_id} / Ort {out.item[0].id} "  # i18n-log
                 f"nicht abgeschlossen ({out.skipped})"
             )
 
@@ -237,7 +237,7 @@ class CompareOfficialAlertService:
                 )
             except Exception as e:
                 logger.error(
-                    "Compare-Amtlich: Unterdrueckungs-Protokoll fuer Preset %s "
+                    "Compare-Amtlich: Unterdrueckungs-Protokoll fuer Preset %s "  # i18n-log
                     "fehlgeschlagen (%s) — der Alarm blieb aus (Grund: %s), "
                     "nur der Protokoll-Eintrag fehlt.", preset_id, e, gate.reason,
                 )
@@ -329,7 +329,7 @@ class CompareOfficialAlertService:
                     )
                 except Exception as e:
                     logger.error(
-                        "Compare official alert: Unterdrueckungs-Protokoll "
+                        "Compare official alert: Unterdrueckungs-Protokoll "  # i18n-log
                         "(Ereignis-Identitaet) fuer %s:%s fehlgeschlagen (%s) "
                         "— der Alarm blieb aus, nur der Protokoll-Eintrag fehlt.",
                         preset_id, loc_id, e,

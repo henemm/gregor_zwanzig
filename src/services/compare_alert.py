@@ -142,7 +142,7 @@ class CompareAlertService:
             )
         except Exception as e:
             logger.error(
-                "Compare-Alert: Unterdrueckungs-Protokoll fuer Preset %s "
+                "Compare-Alert: Unterdrueckungs-Protokoll fuer Preset %s "  # i18n-log
                 "fehlgeschlagen (%s) — der Alarm blieb aus (Grund: %s), nur "
                 "der Protokoll-Eintrag fehlt.", preset_id, e, gate_reason,
             )
@@ -156,7 +156,7 @@ class CompareAlertService:
         Ort). Beruehrt weder `alert_state` noch Cooldown. Fail-soft."""
         if not preset:
             logger.warning(
-                "Compare-Alert: keine gueltige Vergleichsbasis (%s) fuer Preset %s, "
+                "Compare-Alert: keine gueltige Vergleichsbasis (%s) fuer Preset %s, "  # i18n-log
                 "aber kein Preset uebergeben — Protokoll-Eintrag entfaellt.",
                 gap, preset_id,
             )
@@ -172,7 +172,7 @@ class CompareAlertService:
                 return
         except Exception as e:
             logger.error(
-                "Compare-Alert: Vergleichsbasis-Entdopplung fuer Preset %s "
+                "Compare-Alert: Vergleichsbasis-Entdopplung fuer Preset %s "  # i18n-log
                 "fehlgeschlagen (%s)", preset_id, e,
             )
         self._protokolliere_unterdrueckung(
@@ -616,7 +616,7 @@ class CompareAlertService:
             loc = all_locations.get(location_id)
             if loc is None:
                 logger.warning(
-                    f"Compare-Alert: Ort {location_id} nicht aufloesbar fuer Preset {preset_id}"
+                    f"Compare-Alert: Ort {location_id} nicht aufloesbar fuer Preset {preset_id}"  # i18n-log
                 )
                 continue
             try:

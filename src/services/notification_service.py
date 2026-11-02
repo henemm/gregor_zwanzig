@@ -877,7 +877,7 @@ class NotificationService:
                     blocked_channels["premium_sms"] = str(e)
                     _record_block_reason_code(blocked_reason_codes, "premium_sms", e)
                     logger.error(
-                        f"Premium-SMS nicht versendet für {request.trip.name}: {e}"
+                        f"Premium-SMS nicht versendet für {request.trip.name}: {e}"  # i18n-log
                     )
 
         # Telegram
@@ -1050,7 +1050,7 @@ class NotificationService:
                     )
                     blocked_channels["premium_sms"] = str(e)
                     _record_block_reason_code(blocked_reason_codes, "premium_sms", e)
-                    logger.error(f"No-data hint Premium-SMS blockiert für {trip.name}: {e}")
+                    logger.error(f"No-data hint Premium-SMS blockiert für {trip.name}: {e}")  # i18n-log
 
         if send_telegram and self._settings.can_send_telegram():
             try:
@@ -1270,7 +1270,7 @@ class NotificationService:
         # nur früher und mit klarer Ursache statt eines IndexError.
         if not entities:
             raise ValueError(
-                "send_multi_location_radar_alert benötigt mindestens einen Ort"
+                "send_multi_location_radar_alert benötigt mindestens einen Ort"  # i18n-log
             )
         first_loc = entities[0][1]
         alert_tz = tz or resolve_location_tz(first_loc) or ZoneInfo("UTC")

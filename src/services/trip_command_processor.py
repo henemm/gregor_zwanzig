@@ -1044,7 +1044,7 @@ def _fetch_and_save_snapshot(trip, user_id: str, today, tomorrow) -> None:
                 trip.id, segment_weather, today, briefing_backed=False,
             )
     except Exception as exc:
-        logger.warning("on-demand fetch fehlgeschlagen für trip %s: %s", trip.id, exc)
+        logger.warning("on-demand fetch fehlgeschlagen für trip %s: %s", trip.id, exc)  # i18n-log
 
 
 # ---------------------------------------------------------------------------
@@ -3005,7 +3005,7 @@ class TripCommandProcessor:
                 pos = position_at_time(trip, active, segment_date, now_utc, user_id=user_id)
             except Exception as e:
                 logger.error(
-                    "Jetzt-Befehl: Positionsbestimmung fuer Trip %s "
+                    "Jetzt-Befehl: Positionsbestimmung fuer Trip %s "  # i18n-log
                     "fehlgeschlagen (%s) -- falle zurueck auf den ersten "
                     "Wegpunkt der Etappe.",
                     trip.id, e,
@@ -3034,7 +3034,7 @@ class TripCommandProcessor:
         except Exception as e:
             # #1405 S4a (AC-12): Ausfall der Quelle -> Antwort statt Schweigen.
             logger.warning(
-                "Jetzt-Befehl: Nowcast fuer Trip %s fehlgeschlagen (%s)", trip.id, e)
+                "Jetzt-Befehl: Nowcast fuer Trip %s fehlgeschlagen (%s)", trip.id, e)  # i18n-log
             return self._nowcast_ausfall(trip, "now")
         # Issue #1402: ohne tz faellt format_now_text() auf das argumentlose
         # .astimezone() zurueck -- deutet die Onset-Zeit in der PROZESS-
@@ -3098,7 +3098,7 @@ class TripCommandProcessor:
         except Exception as e:
             # #1405 S4a (AC-14): Streckenlaengen nachtragen scheitert -> Antwort.
             logger.warning(
-                "Strecke-Kommando: Streckenlaengen fuer Trip %s nicht "
+                "Strecke-Kommando: Streckenlaengen fuer Trip %s nicht "  # i18n-log
                 "nachtragbar (%s)", trip.id, e)
             return self._nowcast_ausfall(trip, "strecke")
         resolved = resolve_current_segment(trip, now_utc, today)
@@ -3165,7 +3165,7 @@ class TripCommandProcessor:
                 )
             except Exception as e:
                 logger.warning(
-                    "Strecke-Kommando: Nowcast fuer Punkt %d (km %.1f) des "
+                    "Strecke-Kommando: Nowcast fuer Punkt %d (km %.1f) des "  # i18n-log
                     "Trips %s fehlgeschlagen (%s) -- der Punkt faellt aus "
                     "der Ausdehnung heraus, das Kommando laeuft weiter.",
                     i, p.distance_from_start_km, trip.id, e,
@@ -3277,7 +3277,7 @@ class TripCommandProcessor:
         try:
             update_trip(user_id, trip.id, mutate)
         except LockTimeout:
-            logger.warning("Kommando %s: Sperre fuer Trip %s nicht erhalten", command, trip.id)
+            logger.warning("Kommando %s: Sperre fuer Trip %s nicht erhalten", command, trip.id)  # i18n-log
             raise _SpeicherFehler(CommandResult(
                 success=False, command=command,
                 confirmation_subject=self._m("antwort.gesperrt.betreff", trip_name=trip.name),
@@ -3285,7 +3285,7 @@ class TripCommandProcessor:
                 trip_name=trip.name,
             ))
         except LoaderError as e:
-            logger.error("Kommando %s: Trip %s nicht speicherbar: %s", command, trip.id, e)
+            logger.error("Kommando %s: Trip %s nicht speicherbar: %s", command, trip.id, e)  # i18n-log
             raise _SpeicherFehler(CommandResult(
                 success=False, command=command,
                 confirmation_subject=self._m("antwort.nicht_gespeichert.betreff",

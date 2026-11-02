@@ -214,7 +214,7 @@ class ComparisonEngine:
                     # Datenschicht, NICHT in den Renderern (die laufen fuer
                     # dieselbe Mail zweimal, HTML + Klartext -- Spec §4).
                     logger.warning(
-                        "Ort %s: Ausblick nicht verfuegbar (Fetch-Fehler: %s)",
+                        "Ort %s: Ausblick nicht verfuegbar (Fetch-Fehler: %s)",  # i18n-log
                         loc.name, raw_result["error"],
                     )
                     results.append(LocationResult(
@@ -261,7 +261,7 @@ class ComparisonEngine:
                     # dafuer wortlos aus der Mail; der Empfaenger sah eine
                     # unerklaerte Leerstelle, das Log gar nichts.
                     logger.warning(
-                        "Ort %s: kein Ausblick — keine Daten in den naechsten "
+                        "Ort %s: kein Ausblick — keine Daten in den naechsten "  # i18n-log
                         "3 Tagen", loc.name,
                     )
 
@@ -402,7 +402,7 @@ class ComparisonEngine:
                         )
                     except Exception:
                         logger.warning(
-                            "comparison_engine: official_alerts nicht ladbar — "
+                            "comparison_engine: official_alerts nicht ladbar — "  # i18n-log
                             "Alerts fuer diesen Ort deaktiviert", exc_info=True,
                         )
                         official_alerts = []
@@ -452,7 +452,7 @@ class ComparisonEngine:
                 # strukturierten Fetch-Fehler, damit beide Ursachen im Log
                 # gleich aussehen.
                 logger.warning(
-                    "Ort %s: Ausblick nicht verfuegbar (Fetch-Fehler: %s)",
+                    "Ort %s: Ausblick nicht verfuegbar (Fetch-Fehler: %s)",  # i18n-log
                     loc.name, e,
                 )
                 results.append(LocationResult(

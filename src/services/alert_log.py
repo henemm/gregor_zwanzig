@@ -269,7 +269,7 @@ def capture_kwargs_from_alerts(alerts: Iterable) -> dict:
             return {"capture_ids": sorted(ids)}
     except Exception as e:
         logger.warning(
-            "alert_log: Herkunfts-Kennungen nicht auswertbar (%s) -- der "
+            "alert_log: Herkunfts-Kennungen nicht auswertbar (%s) -- der "  # i18n-log
             "Eintrag entsteht ohne Herkunfts-Feld.", e,
         )
     return {}
@@ -528,7 +528,7 @@ def _append(user_id: str, target: str, entry: dict) -> None:
             try:
                 data = json.loads(path.read_text()) if path.exists() else {}
             except (OSError, ValueError) as e:  # kaputte Datei darf keinen Alarm killen
-                logger.warning("alert_log: %s nicht lesbar (%s) -- neu angelegt", path, e)
+                logger.warning("alert_log: %s nicht lesbar (%s) -- neu angelegt", path, e)  # i18n-log
                 data = {}
             data.setdefault("entries", [])
             data.setdefault(target, [])
@@ -538,7 +538,7 @@ def _append(user_id: str, target: str, entry: dict) -> None:
         with _lost_lock:
             alert_log_lost_entries += 1
         logger.error(
-            "alert_log: Sperre nicht erhalten -- Eintrag NICHT geschrieben "
+            "alert_log: Sperre nicht erhalten -- Eintrag NICHT geschrieben "  # i18n-log
             "(target=%s, user=%s): %s",
             target, user_id, json.dumps(entry, ensure_ascii=False, default=str),
         )
@@ -607,7 +607,7 @@ def append_suppressed_entry(
     if not gate_reason or not str(gate_reason).strip():
         raise ValueError(
             "append_suppressed_entry: gate_reason ist leer "
-            f"({gate_reason!r}) — ein Unterdrueckungs-Eintrag ohne Grund wird "
+            f"({gate_reason!r}) — ein Unterdrueckungs-Eintrag ohne Grund wird "  # i18n-log
             "beim Lesen still als 'Zustellung fehlgeschlagen' gedeutet und "
             f"wuerde das Protokoll fuer {entity_type}/{entity_id} verfaelschen."
         )
@@ -774,7 +774,7 @@ def read_undelivered(
     try:
         data = json.loads(path.read_text()) if path.exists() else {}
     except (OSError, ValueError) as e:
-        logger.warning("alert_log: %s nicht lesbar (%s) -- kein Briefing-Hinweis", path, e)
+        logger.warning("alert_log: %s nicht lesbar (%s) -- kein Briefing-Hinweis", path, e)  # i18n-log
         return []
     if not isinstance(data, dict):
         return []

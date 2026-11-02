@@ -733,7 +733,7 @@ class TripReportSchedulerService:
         try:
             record_corrupt_trip_observability(self._user_id, notify=_mq_notify_infra)
         except Exception as e:
-            logger.warning("record_corrupt_trip_observability fehlgeschlagen: %s", e)
+            logger.warning("record_corrupt_trip_observability fehlgeschlagen: %s", e)  # i18n-log
 
         from services.dispatch_orchestrator import run_briefing_dispatch
 
@@ -863,7 +863,7 @@ class TripReportSchedulerService:
             trip.id, report_type, local_day, zone=trip_tz(trip), moment=now_utc,
         ):
             logger.warning(
-                "Slot %s/%s am %s nicht reservierbar -- kein Versandversuch",
+                "Slot %s/%s am %s nicht reservierbar -- kein Versandversuch",  # i18n-log
                 trip.id, report_type, local_day,
             )
             return None
@@ -1225,7 +1225,7 @@ class TripReportSchedulerService:
             # Ueberspringen-Zusage gilt: Trip in diesem Lauf NICHT senden,
             # der Wunsch bleibt stehen und wird im naechsten Lauf erneut versucht.
             logger.warning(
-                "skip_next fuer Trip %s nicht verbrauchbar (%s) -- Trip wird in "
+                "skip_next fuer Trip %s nicht verbrauchbar (%s) -- Trip wird in "  # i18n-log
                 "diesem Lauf nicht gesendet", trip.id, e,
             )
             return True
@@ -1819,7 +1819,7 @@ class TripReportSchedulerService:
                 if yday:
                     day_comparison = DayComparisonService().compare(segment_weather, yday)
             except Exception as e:
-                logger.warning(f"Vortag-Vergleich übersprungen für {trip.id}: {e}")
+                logger.warning(f"Vortag-Vergleich übersprungen für {trip.id}: {e}")  # i18n-log
                 day_comparison = None
 
         # 7c. Issue #1439: Starkregen-Kurzfristhinweis (planmaessiger Pfad) —
@@ -2044,7 +2044,7 @@ class TripReportSchedulerService:
                     user_id=self._user_id, entity_id=trip.id, queries=official_queries,
                 )
             except Exception:
-                logger.warning("Briefing-Entwarnungspfad fehlgeschlagen fuer %s", trip.id,
+                logger.warning("Briefing-Entwarnungspfad fehlgeschlagen fuer %s", trip.id,  # i18n-log
                                exc_info=True)
 
         _anchor_and_reset()
@@ -2309,7 +2309,7 @@ class TripReportSchedulerService:
             _pos = position_at_time(trip, active, _seg_date, _at, user_id=self._user_id)
         except Exception as e:
             logger.warning(
-                "Starkregen-Kurzfristhinweis: Positionsbestimmung fuer %s "
+                "Starkregen-Kurzfristhinweis: Positionsbestimmung fuer %s "  # i18n-log
                 "fehlgeschlagen (%s) — der Hinweis entfaellt, das Briefing "
                 "selbst bleibt unberuehrt.",
                 trip.id, e,
@@ -2331,7 +2331,7 @@ class TripReportSchedulerService:
                 user_id=self._user_id,
             )
         except Exception as e:
-            logger.warning(f"Starkregen-Kurzfristhinweis: Nowcast fehlgeschlagen fuer {trip.id}: {e}")
+            logger.warning(f"Starkregen-Kurzfristhinweis: Nowcast fehlgeschlagen fuer {trip.id}: {e}")  # i18n-log
             return None
 
         # Issue #2050 S2b: ein bereits LAUFENDES Ereignis hat keinen kuenftigen
@@ -2594,7 +2594,7 @@ class TripReportSchedulerService:
                         ), fenster,
                     )
         except Exception:
-            logger.warning("Vorwärmen fehlgeschlagen", exc_info=True)
+            logger.warning("Vorwärmen fehlgeschlagen", exc_info=True)  # i18n-log
 
     def _lade_amtliche_warnungen(self, segment_weather, segments) -> list:
         """#1539 S5: amtliche Warnungen je eindeutigem Segment-Startpunkt
@@ -2648,7 +2648,7 @@ class TripReportSchedulerService:
                 official_queries.extend(_briefing_queries(_sink, sw))
                 continue
             logger.warning(
-                "trip_report_scheduler: official_alerts nicht ladbar (%s)", grund,
+                "trip_report_scheduler: official_alerts nicht ladbar (%s)", grund,  # i18n-log
                 exc_info=grund if isinstance(grund, BaseException) else None,
             )
             sw.official_alerts = []
@@ -2704,7 +2704,7 @@ class TripReportSchedulerService:
             if out.error is None and out.skipped is None and out.value is not None:
                 weather_data.append(out.value)
                 continue
-            fehler = out.error or RuntimeError(f"Wetterabruf nicht abgeschlossen ({out.skipped})")
+            fehler = out.error or RuntimeError(f"Wetterabruf nicht abgeschlossen ({out.skipped})")  # i18n-log
             logger.error(f"Weather fetch failed for segment {out.item.segment_id}: {fehler}")
             weather_data.append(_fehler_platzhalter(out.item, fehler))
 
@@ -2980,7 +2980,7 @@ class TripReportSchedulerService:
                 if not segments:
                     # Fix #1486: bisher voellig stumm.
                     logger.warning(
-                        "Stage %s (%s): kein Ausblick — keine Segmente aufloesbar",
+                        "Stage %s (%s): kein Ausblick — keine Segmente aufloesbar",  # i18n-log
                         stage.id, stage.date,
                     )
                     failures.add(OutlookState.UNAVAILABLE)
@@ -2994,7 +2994,7 @@ class TripReportSchedulerService:
         for (stage, _segs, stage_trip), seg_weather, grund in self._abrufe_fuer_etappen(vorbereitet):
             if isinstance(grund, str):
                 logger.warning(
-                    "Stage %s (%s): kein Ausblick — Abruf nicht abgeschlossen (%s)",
+                    "Stage %s (%s): kein Ausblick — Abruf nicht abgeschlossen (%s)",  # i18n-log
                     stage.id, stage.date, grund,
                 )
                 failures.add(OutlookState.UNAVAILABLE)
@@ -3007,7 +3007,7 @@ class TripReportSchedulerService:
                 if not seg_weather:
                     # Fix #1486: bisher voellig stumm.
                     logger.warning(
-                        "Stage %s (%s): kein Ausblick — keine Wetterdaten",
+                        "Stage %s (%s): kein Ausblick — keine Wetterdaten",  # i18n-log
                         stage.id, stage.date,
                     )
                     failures.add(OutlookState.UNAVAILABLE)

@@ -77,7 +77,7 @@ def trip_preview_series(
         )
     except Exception as e:  # noqa: BLE001 -- Vorschau ist fail-soft (AC-11)
         logger.warning(
-            "Alarm-Vorschau Trip %s: Stundenreihen nicht beschaffbar (%s: %s) "
+            "Alarm-Vorschau Trip %s: Stundenreihen nicht beschaffbar (%s: %s) "  # i18n-log
             "-- Vorschau ohne Stundenzeilen (vgl. #1737)", trip.id, type(e).__name__, e,
         )
         return None, None
@@ -113,7 +113,7 @@ def compare_preview_point(
         )
     except Exception as e:  # noqa: BLE001 -- Vorschau ist fail-soft (AC-11)
         logger.warning(
-            "Alarm-Vorschau Ortsvergleich %s/%s: Stundenreihen nicht beschaffbar "
+            "Alarm-Vorschau Ortsvergleich %s/%s: Stundenreihen nicht beschaffbar "  # i18n-log
             "(%s: %s) -- Vorschau ohne Stundenzeilen (vgl. #1737)",
             preset_id, loc.id, type(e).__name__, e,
         )

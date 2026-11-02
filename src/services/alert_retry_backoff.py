@@ -80,7 +80,7 @@ def settle(
     if outcome == TRANSPORT_FAILED:
         store.record(retry_scope(scope), fingerprint, now)
         logger.warning(
-            "Alarm nicht zugestellt (%s, %s) -- naechster Versuch fruehestens "
+            "Alarm nicht zugestellt (%s, %s) -- naechster Versuch fruehestens "  # i18n-log
             "in %d Minuten", fingerprint, scope, RETRY_BACKOFF_MINUTES,
         )
         return False

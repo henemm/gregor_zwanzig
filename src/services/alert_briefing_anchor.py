@@ -96,7 +96,7 @@ def record_alert_anchor_rejected(
             fh.write(line + "\n")
     except Exception as e:  # noqa: BLE001 — fail-soft, AC-15
         logger.warning(
-            "Diagnose-Spur zum verworfenen Alarm-Anker (%s, %s) nicht schreibbar: %s: %s",
+            "Diagnose-Spur zum verworfenen Alarm-Anker (%s, %s) nicht schreibbar: %s: %s",  # i18n-log
             entity_id, reason, type(e).__name__, e,
         )
 
@@ -141,7 +141,7 @@ def record_briefing_dispatch_failure(
             fh.write(line + "\n")
     except Exception as e:  # noqa: BLE001 — fail-soft, AC-7
         logger.warning(
-            "Diagnose-Spur zum gescheiterten Versand (%s) nicht schreibbar: %s: %s",
+            "Diagnose-Spur zum gescheiterten Versand (%s) nicht schreibbar: %s: %s",  # i18n-log
             entity_id, type(e).__name__, e,
         )
 
@@ -214,7 +214,7 @@ def record_briefing_sent(
         data.setdefault(entity_type, {})[entity_id] = moment.isoformat()
         path.write_text(json.dumps(data, indent=2))
     except (OSError, ValueError, AttributeError) as e:
-        logger.warning("Briefing-Zeitstempel fuer %s nicht schreibbar: %s", entity_id, e)
+        logger.warning("Briefing-Zeitstempel fuer %s nicht schreibbar: %s", entity_id, e)  # i18n-log
 
 
 def last_briefing_at(
@@ -230,7 +230,7 @@ def last_briefing_at(
             return None
         ts = datetime.fromisoformat(str(raw))
     except (OSError, ValueError, AttributeError) as e:
-        logger.warning("Briefing-Zeitstempel fuer %s nicht lesbar: %s", entity_id, e)
+        logger.warning("Briefing-Zeitstempel fuer %s nicht lesbar: %s", entity_id, e)  # i18n-log
         return None
     return ts if ts.tzinfo else ts.replace(tzinfo=timezone.utc)
 

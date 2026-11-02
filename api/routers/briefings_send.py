@@ -98,7 +98,7 @@ def send_briefing(kind: str, entity_id: str, user_id: str, report_type: str):
         logger.warning("Handversand %s/%s: ungueltige Nutzerkennung", kind, entity_id)
         return _error("not_found", user_id, entity_id=entity_id)
     except Exception:
-        logger.exception("Handversand %s/%s (user %s) fehlgeschlagen", kind, entity_id, user_id)
+        logger.exception("Handversand %s/%s (user %s) fehlgeschlagen", kind, entity_id, user_id)  # i18n-log
         return _error("send_failed", user_id)
 
 
