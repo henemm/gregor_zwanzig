@@ -107,6 +107,10 @@ dem Python-Core mit einem gemeinsamen Geheimnis (`GZ_CORE_SHARED_SECRET`, Header
 Geheimnis in Gegenrichtung: Die internen Go-Endpunkte (`/api/internal/premium-sms-learn`,
 `/api/internal/telegram-connect`) verlangen zusätzlich zum Localhost-Guard `X-GZ-Core-Auth`;
 Python ruft sie über `src/lib/go_internal.py::post_internal` (Basis-URL `GZ_GO_API_URL`).
+Seit #2190 verweigert der Python-Core den Start, wenn seine uvicorn-Config auf etwas anderes als
+`127.0.0.1` bindet (auch `localhost`, `::1`, `0.0.0.0`, Unix-Socket, übergebener FD); die Prüfung
+läuft als erster Schritt im FastAPI-Lifespan, bevor uvicorn den Port öffnet, und hat bewusst keinen
+Override (`api/bind_guard.py`, Spec `docs/specs/modules/core_bind_guard.md`).
 
 ### Python-Core: Wetter-Pipeline und Rendering
 
