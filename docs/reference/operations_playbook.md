@@ -1001,7 +1001,8 @@ nichts aus (keine Schwellen, kein Urteil). Spec: `docs/specs/modules/feat_2439_s
   verknüpfbar", Abbruch, Aufräumen gescheitert — Nutzer-Kennung steht in der Meldung) · `2`
   Umgebungsfehler/Sperre (fehlende Env, Staging nicht erreichbar, Zeitfenster 23:45–00:15 Wien bzw.
   Laufzeit über Mitternacht, Nicht-Staging-Adresse).
-- **Ablauf:** Wegwerf-Nutzer `gzp-<tag>` + genau 2 Trips (DE, Korsika) → Telegram-Verknüpfung
+- **Ablauf:** Wegwerf-Nutzer (Name `gzp-<tag>` gesendet, Konto-Kennung ist die vom Server vergebene
+  `u-<8hex>`-ID, #2757) + genau 2 Trips (DE, Korsika) → Telegram-Verknüpfung
   (`/start TOKEN` als Webhook-Update, bestätigt per `telegram-status`) → Probelauf (Korsika HEUTE,
   DE HEUTE, dann Ortswechsel per Read-Modify-Write, dann DE MORGEN — ohne Wechsel läse MORGEN den
   von HEUTE gewärmten Cache; jeder Lauf wird sofort geprüft, DE ohne `downloads>0` im Journal ⇒
