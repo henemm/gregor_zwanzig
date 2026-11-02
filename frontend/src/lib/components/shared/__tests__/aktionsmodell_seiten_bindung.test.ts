@@ -37,7 +37,8 @@ const TRIPS = ladeSvelte(path.join(SRC, 'routes/trips/+page.svelte'));
 const TRIP_HUB_DATEI = path.join(SRC, 'routes/trips/[id]/+page.svelte');
 const TRIP_HUB = ladeSvelte(TRIP_HUB_DATEI);
 const CMP = ladeSvelte(path.join(SRC, 'routes/compare/+page.svelte'));
-const CMP_HUB = ladeSvelte(path.join(SRC, 'routes/compare/[id]/+page.svelte'));
+const CMP_HUB_DATEI = path.join(SRC, 'routes/compare/[id]/+page.svelte');
+const CMP_HUB = ladeSvelte(CMP_HUB_DATEI);
 
 const dlg = (ast: any) => komponenten(ast, 'SendConfirmDialog')[0];
 const sheet = (ast: any) => komponenten(ast, 'SubscriptionActionSheet')[0];
@@ -202,7 +203,9 @@ describe('F008 (AC-5/AC-12): Trip-Hub Loeschdialog, Navigation, Menue-Flaeche', 
 		// i18n F9 (#2658): der Trip-Hub haelt die Liste in `hubAktionen` (liest `$locale`).
 		assert.equal(attrKurz(komponenten(TRIP_HUB, 'SubscriptionKebab')[0], 'actions'), 'hubAktionen');
 		assert.match(readFileSync(TRIP_HUB_DATEI, 'utf-8'), /const hubAktionen = \$derived\.by\(\(\) => \(void \$locale, subscriptionActions\('trip', lifecycle, 'hub'\)\)\);/);
-		assert.equal(attrKurz(komponenten(CMP_HUB, 'SubscriptionKebab')[0], 'actions'), 'subscriptionActions("vergleich", lifecycle, "hub")');
+		// i18n F10 (#2659): ebenso der Ortsvergleich-Hub.
+		assert.equal(attrKurz(komponenten(CMP_HUB, 'SubscriptionKebab')[0], 'actions'), 'hubAktionen');
+		assert.match(readFileSync(CMP_HUB_DATEI, 'utf-8'), /const hubAktionen = \$derived\.by\(\(\) => \(void \$locale, subscriptionActions\('vergleich', lifecycle, 'hub'\)\)\);/);
 		assert.equal(attrKurz(komponenten(TRIP_HUB, 'SubscriptionKebab')[0], 'onSelect'), 'handleHubAction');
 		assert.equal(attrKurz(komponenten(CMP_HUB, 'SubscriptionKebab')[0], 'onSelect'), 'handleAction');
 		for (const ast of [TRIP_HUB, CMP_HUB]) {

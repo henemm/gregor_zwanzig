@@ -104,7 +104,7 @@ describe('F025: der Pause-Weg schreibt wirklich (Seite -> CompareDetail -> Compa
 		]);
 		assert.equal(k.tabs.localSchedule, 'manual');
 		assert.deepEqual(k.zeitplaene, ['manual']);
-		assert.equal(k.seite.pauseError, null);
+		assert.equal(k.seite.pauseError, false);
 		assert.deepEqual(k.meldungen, ['saved']);
 	});
 
@@ -165,8 +165,10 @@ describe('F026: Fehler werden gemeldet, nicht als Erfolg verbucht', () => {
 		assert.equal(k.tabs.localSchedule, 'daily', 'lokaler Zeitplan bleibt beim alten Stand');
 		k.seite.handleAction('pause');
 		const ende = Date.now() + 5000;
-		while (typeof k.seite.pauseError !== 'string' && Date.now() < ende) await new Promise((r) => setTimeout(r, 5));
-		assert.match(k.seite.pauseError, /Status-Änderung fehlgeschlagen/);
+		// Issue #2659 (i18n F10): die Seite haelt nur das Flag; der Text (vergleich.hub.status_fehler)
+		// entsteht beim Rendern in der aktuellen Sprache.
+		while (k.seite.pauseError !== true && Date.now() < ende) await new Promise((r) => setTimeout(r, 5));
+		assert.equal(k.seite.pauseError, true);
 	});
 
 	test('Erfolg liefert true (und meldet keinen Fehler)', async () => {

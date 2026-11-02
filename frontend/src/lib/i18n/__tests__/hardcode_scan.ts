@@ -210,7 +210,13 @@ export const TS_KOMPONENTEN_ORDNER = [
 	'routes/trips/',
 	// F7 (#2656): Alarme-Reiter (Abschnitte, Kanaele, Premium-SMS-Sperre) und alerts-tab/
 	'lib/components/shared/alarme-tab/',
-	'lib/components/alerts-tab/'
+	'lib/components/alerts-tab/',
+	// F10 (#2659): Ortsvergleich-Hub, Anlegen, geteilte Hub-Uebersicht, Seiten /compare/[id] und /compare/new
+	'lib/components/compare/',
+	'lib/components/compare-new/',
+	'lib/components/shared/hub-uebersicht/',
+	'routes/compare/[id]/',
+	'routes/compare/new/'
 ];
 
 /** Pfad relativ zu frontend/src/ mit Schraegstrichen. */

@@ -252,6 +252,46 @@ export function vergleichsMetrikLabel(
 	return metricLabel(r ?? entry, lang);
 }
 
+// Issue #2659 (i18n F10): /api/compare/metrics liefert nur den deutschen Namen. Fuer
+// Flaechen ohne eigenes Register (Alarme-Reiter im Vergleich) laedt dieser Lader das
+// Register (/api/metrics) EINMAL je Seiten-Load und ergaenzt `label_en` je `metric_id`.
+let cachedRegister: Promise<Record<string, MetricLabelFields>> | null = null;
+
+/** Register GET /api/metrics als Kennung -> Namensfelder (geteilter Promise-Cache). */
+export function loadMetricRegister(): Promise<Record<string, MetricLabelFields>> {
+	if (!cachedRegister) {
+		cachedRegister = api
+			.get<Record<string, unknown>>('/api/metrics')
+			.then((katalog) => registerAusKatalog(katalog))
+			.catch((e: unknown) => {
+				cachedRegister = null;
+				throw e;
+			});
+	}
+	return cachedRegister;
+}
+
+/** Reiner Mapper: Register-Antwort (Kategorie -> Eintraege) -> Kennung -> Namensfelder. */
+export function registerAusKatalog(katalog: Record<string, unknown> | null | undefined): Record<string, MetricLabelFields> {
+	const register: Record<string, MetricLabelFields> = {};
+	for (const liste of Object.values(katalog ?? {})) {
+		if (!Array.isArray(liste)) continue;
+		for (const m of liste as (MetricLabelFields & { id?: string })[]) if (m && typeof m.id === 'string') register[m.id] = m;
+	}
+	return register;
+}
+
+/** Vergleichs-Eintraege mit dem englischen Namen aus dem Register (fehlt er: unveraendert). */
+export function mitRegisterNamen<T extends { metric_id?: string }>(
+	entries: T[],
+	register: Record<string, MetricLabelFields>
+): (T & { label_en?: string })[] {
+	return (entries ?? []).map((e) => {
+		const en = e.metric_id ? register[e.metric_id]?.label_en : undefined;
+		return en ? { ...e, label_en: en } : e;
+	});
+}
+
 /**
  * Kapselt die GANZE Naht Katalog -> Gewitter-Schwellenliste (Adversary-Runde
  * 2, Findings F003/F004): Katalog-Suche nach `thunder_level_max` UND Aufruf

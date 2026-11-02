@@ -73,6 +73,14 @@ const BEREICHE: Record<string, string[]> = {
 		'lib/components/shared/AlarmeTab.svelte',
 		'lib/components/shared/AlertChannelPicker.svelte',
 		'lib/components/alerts-tab/'
+	],
+	'F10 #2659 Ortsvergleich-Hub, Anlegen, Orte, transponierte Uebersicht': [
+		'lib/components/compare/',
+		'lib/components/compare-new/',
+		'lib/components/shared/hub-uebersicht/',
+		'lib/components/shared/OutlookLayoutControls.svelte',
+		'routes/compare/[id]/',
+		'routes/compare/new/'
 	]
 };
 
@@ -85,6 +93,11 @@ const AUSNAHMEN: { pfad: string; enthaelt: string; grund: string }[] = [
 		pfad: 'routes/+page.svelte',
 		enthaelt: '$derived(firstIncompleteCompare(presets))',
 		grund: 'liefert ein ComparePreset (kein Text); ruft setupStepCompare nur fuer die done-Flags'
+	},
+	{
+		pfad: 'routes/compare/[id]/+page.svelte',
+		enthaelt: 'abmeldenUebernahme = hubSaveCtl.registriereUebernahme(',
+		grund: 'registriert nur einen Rueckruf (Abmelde-Funktion, kein Text); der Rueckruf laedt per getMitFassung, dessen Fehlertexte erst beim Fehlschlag entstehen'
 	}
 ];
 

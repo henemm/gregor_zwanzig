@@ -22,6 +22,9 @@ import {
 	presetProfileLabel,
 	type CompareStatus
 } from '../../compare/subscriptionHelpers.ts';
+// Issue #2659 (i18n F10): Texte je Aufruf aus dem Katalog (aktionen.*/home.*/trip.status.*,
+// vergleich.hub.*); der Baustein liest `$locale` und rechnet beim Sprachwechsel neu.
+import { tr, trn, type MessageKey } from '../../../i18n/index.ts';
 
 export type KennzahlId = 'status' | 'naechster-versand' | 'briefings' | 'zuletzt-raus' | 'kanaele';
 export type Sprungziel = { tab: string; anchor?: 'versand' };
@@ -84,19 +87,14 @@ const KANAL_NAMEN: Record<Kanal, string> = {
 
 /** Wortgleich zum Status-Badge im Trip-Kopf (TripStatusBadge.svelte, Entscheidung 2);
  *  bewacht durch den Render-Vergleich in hub_uebersicht_modell.test.ts (AC-5). */
-const TRIP_STATUS_TEXT: Record<TripStatus, string> = {
-	draft: 'Entwurf',
-	planned: 'Geplant',
-	active: 'Aktiv',
-	paused: 'Pausiert',
-	finished: 'Fertig',
-	archived: 'Archiviert'
+const TRIP_STATUS_TEXT: Record<TripStatus, MessageKey> = {
+	draft: 'trip.status.draft',
+	planned: 'trip.status.planned',
+	active: 'trip.status.active',
+	paused: 'trip.status.paused',
+	finished: 'trip.status.finished',
+	archived: 'trip.status.archived'
 };
-
-const DRAFT_TITEL_LANG = 'Noch nicht geplant';
-const DRAFT_TITEL_KURZ = 'Nicht geplant';
-const DRAFT_TEXT_LANG = 'Briefing-Uhrzeiten unter Wetter-Metriken im Abschnitt Versand festlegen.';
-const DRAFT_TEXT_KURZ = 'Aktivierung offen';
 const VERSAND_ZIEL = { tab: 'wetter-metriken', anchor: 'versand' } as const;
 
 /** EINE Regel für „Zuletzt raus" (Entscheidung 3): neuester Eintrag mit on_demand !== true. */
@@ -151,8 +149,8 @@ export function slotStunde(raw: string | undefined, standardStunde: number): str
 function tripBriefingZeiten(trip: Trip): string {
 	const rc = trip.report_config;
 	const teile: string[] = [];
-	if (reportSlotAktiv(rc, 'morning')) teile.push(`Morgen ${slotStunde(rc?.morning_time, 7)}`);
-	if (reportSlotAktiv(rc, 'evening')) teile.push(`Abend ${slotStunde(rc?.evening_time, 18)}`);
+	if (reportSlotAktiv(rc, 'morning')) teile.push(`${tr('aktionen.historie.morgen')} ${slotStunde(rc?.morning_time, 7)}`);
+	if (reportSlotAktiv(rc, 'evening')) teile.push(`${tr('aktionen.historie.abend')} ${slotStunde(rc?.evening_time, 18)}`);
 	return teile.length > 0 ? teile.join(' · ') : '—';
 }
 
@@ -163,10 +161,12 @@ function zuletztRaus(stand: LetzterVersandStand): string {
 
 function versandKarte(entwurf: boolean, zeiten: string, naechster: string, testid: string): VersandKarte {
 	return {
-		titelKurz: entwurf ? DRAFT_TITEL_KURZ : zeiten,
-		titelLang: entwurf ? DRAFT_TITEL_LANG : zeiten,
-		beschreibungKurz: entwurf ? DRAFT_TEXT_KURZ : `Briefings ${zeiten}`,
-		beschreibungLang: entwurf ? DRAFT_TEXT_LANG : `Briefings ${zeiten} · nächster Versand ${naechster}.`,
+		titelKurz: entwurf ? tr('aktionen.uebersicht.nicht_geplant') : zeiten,
+		titelLang: entwurf ? tr('aktionen.uebersicht.noch_nicht_geplant') : zeiten,
+		beschreibungKurz: entwurf ? tr('aktionen.uebersicht.aktivierung_offen') : tr('aktionen.uebersicht.briefings_zeiten', { zeiten }),
+		beschreibungLang: entwurf
+			? tr('aktionen.uebersicht.uhrzeiten_festlegen')
+			: tr('aktionen.uebersicht.briefings_naechster', { zeiten, naechster }),
 		testid,
 		sprungziel: VERSAND_ZIEL
 	};
@@ -177,14 +177,14 @@ function kennzahlen(
 	t: Record<KennzahlId, { kurz: string; lang: string; punkt?: Punkt }>,
 	ids: Partial<Record<KennzahlId, { testid?: string; testidMobil?: string }>>
 ): Kennzahl[] {
-	const labels: Array<[KennzahlId, string]> = [
-		['status', 'Status'],
-		['naechster-versand', 'Nächster Versand'],
-		['briefings', 'Briefings'],
-		['zuletzt-raus', 'Zuletzt raus'],
-		['kanaele', 'Kanäle']
+	const labels: Array<[KennzahlId, MessageKey]> = [
+		['status', 'aktionen.uebersicht.status'],
+		['naechster-versand', 'home.hero.naechster_versand'],
+		['briefings', 'aktionen.uebersicht.briefings'],
+		['zuletzt-raus', 'aktionen.uebersicht.zuletzt_raus'],
+		['kanaele', 'home.hero.kanaele']
 	];
-	return labels.map(([id, label]) => ({ id, label, mobil: id !== 'briefings', ...t[id], ...ids[id] }));
+	return labels.map(([id, key]) => ({ id, label: tr(key), mobil: id !== 'briefings', ...t[id], ...ids[id] }));
 }
 
 const gleich = (text: string) => ({ kurz: text, lang: text });
@@ -204,7 +204,7 @@ export function deriveRouteKennzahlen(
 	return {
 		kennzahlen: kennzahlen(
 			{
-				status: { ...gleich(TRIP_STATUS_TEXT[status]), punkt: status === 'active' ? 'good' : 'neutral' },
+				status: { ...gleich(tr(TRIP_STATUS_TEXT[status])), punkt: status === 'active' ? 'good' : 'neutral' },
 				'naechster-versand': gleich(naechster),
 				briefings: gleich(zeiten),
 				'zuletzt-raus': gleich(zuletztRaus(letzterVersand)),
@@ -225,22 +225,26 @@ export function deriveRouteKennzahlen(
 	};
 }
 
-const VERGLEICH_STATUS: Record<CompareStatus, { kurz: string; lang: string; punkt: Punkt }> = {
-	active: { kurz: 'Läuft autom.', lang: 'Läuft automatisch', punkt: 'good' },
-	draft: { kurz: 'Entwurf', lang: 'Entwurf · nicht aktiv', punkt: 'neutral' },
-	paused: { kurz: 'Pausiert', lang: 'Pausiert', punkt: 'neutral' }
+const VERGLEICH_STATUS: Record<CompareStatus, { kurz: MessageKey; lang: MessageKey; punkt: Punkt }> = {
+	active: { kurz: 'vergleich.hub.laeuft_autom', lang: 'vergleich.hub.laeuft_automatisch', punkt: 'good' },
+	draft: { kurz: 'trip.status.draft', lang: 'vergleich.hub.entwurf', punkt: 'neutral' },
+	paused: { kurz: 'trip.status.paused', lang: 'trip.status.paused', punkt: 'neutral' }
 };
+function vergleichStatus(status: CompareStatus): { kurz: string; lang: string; punkt: Punkt } {
+	const s = VERGLEICH_STATUS[status];
+	return { kurz: tr(s.kurz), lang: tr(s.lang), punkt: s.punkt };
+}
 
 /** Orte-Karte: Zahl und Namen nur der AUFLÖSBAREN Orte (Entscheidung 5, AC-4). */
 function orteKarte(aufgeloesteOrte: Array<{ rank: number; loc?: { name: string } }>): Karte & { namen: string[] } {
 	const namen = aufgeloesteOrte.flatMap(({ loc }) => (loc ? [loc.name] : []));
 	const n = namen.length;
 	return {
-		eyebrow: 'Orte',
-		titel: `${n} Kandidaten`,
+		eyebrow: tr('aktionen.reiter.orte'),
+		titel: trn('vergleich.hub.kandidaten', n),
 		namen,
 		beschreibungKurz: `${namen.slice(0, 2).join(' · ')}${n > 2 ? ` +${n - 2}` : ''}`,
-		beschreibungLang: `${namen.slice(0, 3).join(' · ')}${n > 3 ? ` +${n - 3} weitere` : ''}`,
+		beschreibungLang: `${namen.slice(0, 3).join(' · ')}${n > 3 ? ` ${tr('vergleich.hub.weitere', { anzahl: n - 3 })}` : ''}`,
 		sprungziel: { tab: 'orte' }
 	};
 }
@@ -248,10 +252,10 @@ function orteKarte(aufgeloesteOrte: Array<{ rank: number; loc?: { name: string }
 function wertebereicheKarte(preset: ComparePreset): Karte {
 	const anzahl = Object.keys(preset.display_config?.ideal_ranges ?? {}).length;
 	return {
-		eyebrow: 'Wertebereiche',
+		eyebrow: tr('aktionen.reiter.wertebereiche'),
 		titel: presetProfileLabel(preset.profil) || String(preset.profil ?? ''),
-		beschreibungKurz: `${anzahl} Metriken · Markierung, kein Score`,
-		beschreibungLang: `${anzahl} Metriken mit Idealbereich — im Briefing pro Wert markiert. Kein Score, kein Ranking.`,
+		beschreibungKurz: trn('vergleich.hub.wertebereiche_kurz', anzahl),
+		beschreibungLang: trn('vergleich.hub.wertebereiche_lang', anzahl),
 		sprungziel: { tab: 'wertebereiche' }
 	};
 }
@@ -267,7 +271,7 @@ export function deriveVergleichKennzahlen(
 	return {
 		kennzahlen: kennzahlen(
 			{
-				status: VERGLEICH_STATUS[status],
+				status: vergleichStatus(status),
 				'naechster-versand': gleich(naechster),
 				briefings: gleich(zeiten),
 				'zuletzt-raus': gleich(formatLastSent(preset.letzter_versand)),

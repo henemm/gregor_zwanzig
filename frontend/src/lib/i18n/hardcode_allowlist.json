@@ -3,10 +3,6 @@
 	"lib/brand/BrandWordmark.svelte",
 	"lib/components/LocationForm.svelte",
 	"lib/components/WeatherConfigDialog.svelte",
-	"lib/components/compare-new/",
-	"lib/components/compare/",
 	"lib/components/shared/AppFooter.svelte",
-	"lib/components/shared/hub-uebersicht/",
-	"routes/+layout.svelte",
-	"routes/compare/[id]/"
+	"routes/+layout.svelte"
 ]

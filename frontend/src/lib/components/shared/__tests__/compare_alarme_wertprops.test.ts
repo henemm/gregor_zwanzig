@@ -178,7 +178,6 @@ function saatVergleich(zusatz: Knoten = {}): Knoten {
 		quietFrom: '22:00',
 		quietTo: '07:00',
 		radarAlertEnabled: false,
-		zonenBezug: 'des ersten Orts',
 		profileOverride: { premium_sms_allowed: false },
 		// route-Props, die der Organismus auch im Vergleichs-Zweig deklariert —
 		// ohne sie scheitern seine route-Herleitungen still (ReferenceError).
@@ -197,7 +196,7 @@ describe('AC-1: AlarmeTab leitet den Vergleichs-Zweig aus Wertprops her', () => 
 		const { ast, quelle } = await umgebungFuer(TAB, saatVergleich());
 		const namen = gebundeneProps(ast, quelle);
 
-		for (const pflicht of [...WERTPROPS, ...RUECKRUFE, 'zonenBezug']) {
+		for (const pflicht of [...WERTPROPS, ...RUECKRUFE]) {
 			assert.ok(
 				namen.includes(pflicht),
 				`AC-1 FAIL: die Komponente bindet kein \`${pflicht}\`. Gebunden: ${[...namen].sort().join(', ')}`
@@ -498,12 +497,11 @@ describe('AC-3: alle drei Vergleichs-Mounts speisen dasselbe Buendel ein', () =>
 							'KEINE gelistete E2E-Spec beruehrt /compare/new im Alarme-Reiter.'
 					);
 				}
-				assert.strictEqual(
-					buendel.zonenBezug,
-					'des ersten Orts',
-					`AC-3 FAIL: Vergleichs-Mount ${i + 1} liefert nicht den Bezug „des ersten Orts" ` +
-						'fuer die Stillen Stunden (#1378 AC-4) — der Vorgabewert „der Trip" gilt nur ' +
-						'fuer die Trip.'
+				// Issue #2659 (i18n F10): kein deutscher Bezugstext mehr im Buendel — den Bezug
+				// der Stillen Stunden zeigt AlarmeTab je context aus dem Katalog (F7).
+				assert.ok(
+					!('zonenBezug' in buendel),
+					`F10: Vergleichs-Mount ${i + 1} reicht noch \`zonenBezug\` (deutscher Anzeigetext) durch`
 				);
 
 				// Rueckschreiben: jeder Rueckruf trifft GENAU sein Feld im Zustand.

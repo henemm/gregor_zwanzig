@@ -24,6 +24,9 @@
 	import { erstelleNaechstesBriefingLader } from '../versand-tab/naechstesBriefingLader.svelte.ts';
 	import { erstelleBriefingHistoryLader } from '../briefingHistoryLader.svelte.ts';
 	import { deriveRouteKennzahlen, deriveVergleichKennzahlen, type Sprungziel } from './hubUebersichtModell.ts';
+	// Issue #2659 (i18n F10): das Modell liest den Katalog je Aufruf — `$locale` macht den
+	// Sprachwechsel ohne Neuladen sichtbar.
+	import { locale, t } from '$lib/i18n';
 
 	interface Props {
 		context: 'route' | 'vergleich';
@@ -58,7 +61,7 @@
 	);
 
 	const modell = $derived(
-		trip
+		(void $locale, trip)
 			? deriveRouteKennzahlen(trip, deriveTripStatus(trip, new Date()), naechstesBriefing.wert, historie)
 			: deriveVergleichKennzahlen(
 					preset as ComparePreset,
@@ -148,7 +151,7 @@
 			{/each}
 			<button type="button" class="hub-summary-row-mobile" data-testid="hub-summary-row-mobile" onclick={springe(modell.versandKarte.sprungziel)}>
 				<span class="hub-summary-row-body">
-					<span class="hub-summary-row-eyebrow">Versand</span>
+					<span class="hub-summary-row-eyebrow">{$t('bausteine.checkliste.versand')}</span>
 					<span class="hub-summary-row-title">{modell.versandKarte.titelKurz}</span>
 					<span class="hub-summary-row-desc">{modell.versandKarte.beschreibungKurz}</span>
 				</span>
@@ -162,7 +165,7 @@
 					<Card padding={20} style="display: flex; flex-direction: column">
 						<div style="display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 4px">
 							<Eyebrow>{karte.eyebrow}</Eyebrow>
-							<button onclick={springe(karte.sprungziel)} style="background: none; border: none; cursor: pointer; padding: 0; font-size: 12px; font-weight: 600; color: var(--g-accent-deep); font-family: var(--g-font-sans)">Bearbeiten →</button>
+							<button onclick={springe(karte.sprungziel)} style="background: none; border: none; cursor: pointer; padding: 0; font-size: 12px; font-weight: 600; color: var(--g-accent-deep); font-family: var(--g-font-sans)">{$t('aktionen.edit')} →</button>
 						</div>
 						<div style="font-size: 16px; font-weight: 600; margin-bottom: 8px; letter-spacing: -0.01em">{karte.titel}</div>
 						<div style="font-size: 13px; color: var(--g-ink-2); line-height: 1.6">{karte.beschreibungLang}</div>
@@ -171,8 +174,8 @@
 			{/each}
 			<Card padding={20} style="display: flex; flex-direction: column">
 				<div style="display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 4px">
-					<Eyebrow>Versand</Eyebrow>
-					<button data-testid={modell.versandKarte.testid} onclick={springe(modell.versandKarte.sprungziel)} style="background: none; border: none; cursor: pointer; padding: 0; font-size: 12px; font-weight: 600; color: var(--g-accent-deep); font-family: var(--g-font-sans)">Bearbeiten →</button>
+					<Eyebrow>{$t('bausteine.checkliste.versand')}</Eyebrow>
+					<button data-testid={modell.versandKarte.testid} onclick={springe(modell.versandKarte.sprungziel)} style="background: none; border: none; cursor: pointer; padding: 0; font-size: 12px; font-weight: 600; color: var(--g-accent-deep); font-family: var(--g-font-sans)">{$t('aktionen.edit')} →</button>
 				</div>
 				<div style="font-size: 16px; font-weight: 600; margin-bottom: 8px; letter-spacing: -0.01em">{modell.versandKarte.titelLang}</div>
 				<div style="font-size: 13px; color: var(--g-ink-2); line-height: 1.6">{modell.versandKarte.beschreibungLang}</div>

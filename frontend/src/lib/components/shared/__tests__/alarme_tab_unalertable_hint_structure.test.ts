@@ -382,7 +382,9 @@ describe('#1435 E1b AC-8: alle drei Vergleichs-Flaechen zeigen denselben Satz', 
 			for (const inst of instanzen) {
 				const attr = (inst.attributes ?? []).find((a: any) => a.name === 'catalog');
 				assert.ok(attr, `${flaeche}: <AlarmeTab context="vergleich"> ohne \`catalog\` (AC-8).`);
-				assert.equal(quelle.slice(attr.start, attr.end), 'catalog={alarmeCatalog}');
+				// Issue #2659 (i18n F10): derselbe Katalog, um `label_en` aus dem Register ergaenzt.
+				assert.equal(quelle.slice(attr.start, attr.end), 'catalog={alarmeCatalogMitNamen}');
+				assert.match(quelle, /const alarmeCatalogMitNamen = \$derived\(mitRegisterNamen\(alarmeCatalog, alarmeRegister\)\);/);
 			}
 			gesamt += instanzen.length;
 		}

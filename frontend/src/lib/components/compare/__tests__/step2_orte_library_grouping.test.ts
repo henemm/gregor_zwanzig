@@ -57,6 +57,9 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
+// Issue #2659 (i18n F10): der Wortlaut steht im Katalog — die Quelle wird mit den deutschen
+// Katalogwerten gelesen (quelleMitKatalogUndTabellen), die Ratsche bewacht weiter den Text.
+import { quelleMitKatalogUndTabellen } from '../../../i18n/__tests__/quelleMitKatalog.ts';
 
 const here = dirname(fileURLToPath(import.meta.url));
 // __tests__ -> compare -> steps
@@ -65,7 +68,7 @@ const STEP2_FILE = join(here, '..', 'steps', 'Step2Orte.svelte');
 const COMPARE_TABS_FILE = join(here, '..', 'CompareTabs.svelte');
 
 function readStep2(): string {
-	return readFileSync(STEP2_FILE, 'utf-8');
+	return quelleMitKatalogUndTabellen(readFileSync(STEP2_FILE, 'utf-8'));
 }
 
 function readCompareTabs(): string {
