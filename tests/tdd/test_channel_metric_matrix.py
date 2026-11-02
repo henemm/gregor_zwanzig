@@ -632,26 +632,16 @@ def test_ac3_temperature_cold_cold_alarm_stays_active():
 
 
 def test_ac5_temperature_cold_mail_column_via_remaining_fallback():
-    """AC-5: ein Trip mit Default-Konfiguration (temperature_cold.enabled=True,
-    keine eigene order) zeigt die Spalte 'TmpMin' im ECHTEN <thead> an
-    letzter Position (remaining-Fallback, email/html.py:678-682), OBWOHL
-    resolve_metric_col_order(dc) selbst 'temp_cold' NICHT fuehrt
-    (dokumentierte Bestands-Abweichung, models.py:619-625)."""
+    """AC-5 (#2209 umgedreht): die Dublette 'TmpMin' steht NICHT mehr in der
+    echten Trip-Mail-Kopfzeile -- der Zeilenbau (trip_report.py) ignoriert
+    nicht waehlbare Metriken still. 'Temp' bleibt."""
     dc = build_default_display_config()
-
-    assert "temp_cold" not in resolve_metric_col_order(dc), (
-        "Vorbedingung: resolve_metric_col_order() fuehrt 'temp_cold' bewusst "
-        "NICHT (Bestand, s. models.py _SELECTABLE_GATE_EXEMPT-Kommentar)"
-    )
 
     headers, _ = _mail_table(dc)
     metric_cols = [h for h in headers if h not in {"Time", "Risk"}]
-    assert "TmpMin" in metric_cols, (
-        f"AC-5: 'TmpMin' fehlt in der echten Trip-Mail-Kopfzeile: {headers}"
-    )
-    assert metric_cols[-1] == "TmpMin", (
-        f"AC-5: 'TmpMin' muss ueber den remaining-Fallback an letzter "
-        f"Position stehen: {metric_cols}"
+    assert "Temp" in metric_cols
+    assert "TmpMin" not in metric_cols, (
+        f"AC-5 (#2209): 'TmpMin' darf nicht mehr in der Kopfzeile stehen: {headers}"
     )
 
 
@@ -661,19 +651,15 @@ def test_ac5_temperature_cold_mail_column_via_remaining_fallback():
 
 
 def test_ac6_temperature_cold_hourly_duplicate_characterization():
-    """AC-6: die Stundenzeilen der Trip-Mail zeigen HEUTE (gemessen
-    2026-08-10) eine eigene Spalte 'TmpMin' NEBEN 'Temp', mit fuer dieselbe
-    Stunde IDENTISCHEM Zahlenwert (beide lesen dp_field='t2m_c') -- eine
-    echte Dublette. Reine Charakterisierung, kein Bug-Fix-Test."""
+    """AC-6 (#2209 umgeschrieben): 'Temp' ist mit Wert vorhanden, 'TmpMin'
+    fehlt -- die Dublette ist behoben."""
     dc = build_default_display_config()
     headers, rows = _mail_table(dc)
-    assert "Temp" in headers and "TmpMin" in headers
+    assert "Temp" in headers and "TmpMin" not in headers
 
     row = _row_by_time(headers, rows, f"{F.COLD_HOUR:02d}")
-    assert row["Temp"] == row["TmpMin"], (
-        f"AC-6 (Charakterisierung): 'Temp' und 'TmpMin' sollten fuer "
-        f"dieselbe Stunde identisch gerendert sein (Dublette) -- gemessen "
-        f"Temp={row['Temp']!r} TmpMin={row['TmpMin']!r}"
+    assert row["Temp"].strip() not in ("", "–"), (
+        f"AC-6 (#2209): 'Temp' muss einen Wert tragen: {row!r}"
     )
 
 
