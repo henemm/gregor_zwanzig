@@ -250,3 +250,61 @@ def test_gpx_nur_gpx_in_kontosprache(client, nutzer):
                               files={"file": ("route.txt", b"<gpx/>", "text/plain")})
         assert antwort.status_code == 400, antwort.text[:300]
         assert antwort.json() == {"detail": erwartet, "code": "gpx_nur_gpx"}
+
+
+# ------------------------------------------- F006: Reihenfolge leerer Vergleich
+
+
+@pytest.mark.parametrize("body", [
+    {},  # ungueltig: keine Body-Art
+    {**_compare_body("loc-x"), "onsets": [{"location_id": "loc-x"}]},  # ungueltig: zwei
+    _compare_body("loc-x"),  # gueltige Form
+])
+def test_leerer_vergleich_meldet_ohne_orte_vor_body_pruefung(client, nutzer, body):
+    """Bewusste Verhaltensaenderung (Spec F006): ein Vergleich ohne Orte meldet
+    ``vergleich_ohne_orte`` vor jeder Body-Pruefung; Status bleibt 422."""
+    uid = nutzer["de"]
+    _seed_compare_ohne_orte(uid, "cp-leer")
+    antwort = client.post("/api/briefings/cp-leer/alert-preview",
+                          params={"kind": "vergleich", "user_id": uid}, json=body)
+    assert antwort.status_code == 422
+    assert antwort.json() == {
+        "detail": "Ungültiger Alarm-Körper: Orts-Vergleich 'cp-leer' hat keine Orte "
+                  "konfiguriert — es gibt nichts zu vergleichen.",
+        "code": "vergleich_ohne_orte"}
+
+
+# --------------------------------- F005: ohne Nutzer immer de, nie "default"
+
+
+@pytest.fixture
+def default_nutzer_en(env):  # noqa: F811
+    """Ein Konto ``default`` mit ``language=en`` existiert im Daten-Root: wer
+    ohne echten Nutzer auf ``default`` zurueckfiele, bekaeme Englisch."""
+    ordner = get_data_dir("default")
+    ordner.mkdir(parents=True, exist_ok=True)
+    (ordner / "user.json").write_text(json.dumps({"id": "default", "language": "en"}),
+                                      encoding="utf-8")
+
+
+def test_ohne_nutzer_deutsch_auch_wenn_default_englisch_ist(default_nutzer_en):
+    from api.fehler import api_fehler, api_fehler_aus, meldung_aus
+    from i18n import resolve_user_lang
+    from services.fehler_code import fehler_mit_code
+
+    assert resolve_user_lang("default") == "en"  # Fixture wirkt
+    exc = fehler_mit_code(ValueError, "vergleich_ohne_orte", preset_id="p")
+    deutsch = "Orts-Vergleich 'p' hat keine Orte konfiguriert — es gibt nichts zu vergleichen."
+    assert api_fehler(422, "vergleich_ohne_orte", None, preset_id="p").detail == deutsch
+    assert meldung_aus(exc, None) == deutsch
+    fehler = api_fehler_aus(exc, 422, None)
+    assert (fehler.detail, fehler.code) == (deutsch, "vergleich_ohne_orte")
+
+
+def test_compare_email_preview_ohne_nutzer_behaelt_text(client, default_nutzer_en):
+    antwort = client.post("/api/_validator/compare-email-preview", json={
+        "profile": "gibt-es-nicht", "time_window": [9, 16], "target_date": "2026-05-31"})
+    assert antwort.status_code == 422, antwort.text[:300]
+    daten = antwort.json()
+    assert daten["code"] == "unbekannt"
+    assert isinstance(daten["detail"], str) and "gibt-es-nicht" in daten["detail"]

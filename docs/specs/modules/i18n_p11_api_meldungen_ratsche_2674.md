@@ -192,7 +192,7 @@ Signaturen: `format_wind_strength(kmh, *, lang: Lang = "de")` und analog für di
 
 **Endstand der Ratsche.** `tests/fixtures/i18n_python_allowlist.json` wird auf `[]` gekürzt (bis auf Log-/Debug-Ausnahmen, die per `# i18n-log` an der Zeile markiert sind und die Allowlist nicht brauchen); `test_allowlist_ist_leer` kommt in die Testdatei. Vor dem Kürzen: per `--startstand`-Aufruf mit Ausgabe auf stdout (ohne Überschreiben) prüfen, welche Dateien noch Funde haben; verbleibende Funde sind entweder Log-Zeilen (Kommentar ergänzen) oder ein Befund für das Paket, das sie hätte migrieren müssen (Rückmeldung im Epic, nicht hier migrieren).
 
-**Mutations-Gegenproben (Adversary).** (a) deutsches Literal `"Fehler beim Rendern"` in `src/output/renderers/email/html.py` einfügen → `test_keine_neuen_hartkodierten_nutzertexte` rot mit `Datei:Zeile`; (b) `resolve_user_lang` im Handler fest auf `"de"` setzen → AC-1/AC-2 rot; (c) Allowlist-Eintrag einer sauberen Datei ergänzen → `test_allowlist_hat_keine_toten_eintraege` rot.
+**Mutations-Gegenproben (Adversary).** (a) vom Scanner erfasstes deutsches Literal (Umlaut/Signalwort, z. B. `FEHLER_X = "Größe ungültig"`) an `src/output/renderers/email/html.py` anhängen → `test_keine_neuen_hartkodierten_nutzertexte` rot mit `Datei: N Funde > Baseline M` und `Datei:Zeile` (die Datei steht mit Baseline-Fundzahl auf der Allowlist; `"Fehler beim Rendern"` enthält weder Umlaut noch Signalwort und wird bewusst nicht erfasst); (b) `resolve_user_lang` im Handler fest auf `"de"` setzen → AC-1/AC-2 rot; (c) Allowlist-Eintrag einer sauberen Datei ergänzen → `test_allowlist_hat_keine_toten_eintraege` rot.
 
 ## Expected Behavior
 
@@ -240,6 +240,12 @@ Signaturen: `format_wind_strength(kmh, *, lang: Lang = "de")` und analog für di
 
 - **ADR-Nr.:** ADR-0104
 - **Rationale:** Meldungen folgen der Sprache des Nutzers aus `user.json`, der stabile `code` entkoppelt die Übersetzung vom Text, und die Ratsche mit schrumpfender Allowlist (ADR-0104 Nr. 8) hält den Endstand dauerhaft sauber.
+
+## Nachträge aus der Gegenprüfung (2026-11-02, Orchestrator-Entscheid)
+
+- **Zählende Allowlist (F002):** `tests/fixtures/i18n_python_allowlist.json` ist ein JSON-Objekt `{"<repo-pfad>": <Baseline-Fundzahl>}` statt einer Pfadliste; mehr Funde als die Baseline sind rot, eine Baseline über der Fundzahl ebenfalls (sie muss mitsinken, bei 0 fällt der Eintrag weg).
+- **AC-6 Teilauslieferung (F001):** Die Allowlist ist nach P11 nicht leer (Startstand 50 Dateien/222 Funde, Restbefund 42 Dateien/182 Funde aus P2–P10 und unmarkierten Log-Zeilen). `test_allowlist_ist_leer` steht als `xfail(strict=True)`; Abbau im Folge-Issue, Prüfdatum 2027-01-28; #2674 bleibt offen.
+- **Bewusste Verhaltensänderung, Status bleibt 422 (F006):** Die Vergleichs-Alarm-Vorschau meldet bei einem Ortsvergleich ohne Orte `vergleich_ohne_orte` vor jeder Body-Prüfung (vorher je nach Body `vergleich_orte_fremd`, `vergleich_keine_warnung` oder Body-Fehler). `detail` behält den Rahmen `Ungültiger Alarm-Körper: {grund}`; `code` ist der Code des Grundes.
 
 ## Changelog
 

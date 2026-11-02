@@ -12,6 +12,19 @@ Funde: String-Konstanten (auch Teile von f-Strings) mit Umlaut/ß oder einem
 Signalwort. Ausgenommen: Docstrings, Argumente von ``t(...)``/``tn(...)`` und
 Literale in Zeilen mit dem Kommentar ``# i18n-log``.
 
+Allowlist ``tests/fixtures/i18n_python_allowlist.json``: JSON-Objekt
+``{"<repo-pfad>": <Baseline-Fundzahl>}``. Je Datei darf die Fundzahl nur
+sinken: mehr Funde als die Baseline = rot; weniger Funde, ohne dass die
+Baseline mitsinkt (bzw. der Eintrag bei 0 gestrichen wird) = ebenfalls rot,
+damit die Zahl nie wieder wachsen kann.
+
+Startstand/Restbefund (Prüfdatum 2027-01-28, Regel-Budget): AC-6 (Allowlist
+leer) ist mit P11 NICHT erreicht -- dokumentierte Teilauslieferung. Die
+Restbefunde der Pakete P2-P10 (u. a. Telegram-Befehlsmenue, fallback_notice,
+tokens/builder, Aktionsknoepfe in trip_command_processor) und unmarkierte
+Log-Zeilen stehen mit ihrer Fundzahl in der Allowlist; Abbau im Folge-Issue
+zu #2674. ``test_allowlist_ist_leer`` ist bis dahin ``xfail(strict=True)``.
+
 Startstand/Messen: ``python tests/test_i18n_keine_hartkodierten_nutzertexte_python.py
 --startstand`` schreibt die Allowlist; ``--messen`` gibt nur auf stdout aus.
 """
@@ -104,10 +117,10 @@ def _finde_nutzertexte(pfad: Path) -> list[tuple[int, str]]:
     return sorted(funde)
 
 
-def _allowlist() -> list[str]:
-    """JSON-Liste von Repo-Pfaden (fehlt die Datei: leer)."""
+def _allowlist() -> dict[str, int]:
+    """Repo-Pfad -> Baseline-Fundzahl (fehlt die Datei: leer)."""
     if not ALLOWLIST.exists():
-        return []
+        return {}
     return json.loads(ALLOWLIST.read_text(encoding="utf-8"))
 
 
@@ -120,14 +133,25 @@ def _alle_funde(root: Path = REPO) -> dict[str, list[tuple[int, str]]]:
     return out
 
 
-def _verstoesse(funde: dict[str, list[tuple[int, str]]], erlaubt: list[str]) -> list[str]:
-    return [f'{datei}:{zeile}: "{text}"'
-            for datei, liste in sorted(funde.items()) if datei not in erlaubt
-            for zeile, text in liste]
+def _verstoesse(funde: dict[str, list[tuple[int, str]]],
+                erlaubt: dict[str, int]) -> list[str]:
+    """Funde ausserhalb der Allowlist und Wachstum ueber die Baseline."""
+    out: list[str] = []
+    for datei, liste in sorted(funde.items()):
+        baseline = erlaubt.get(datei, 0)
+        if len(liste) <= baseline:
+            continue
+        if baseline:
+            out.append(f"{datei}: {len(liste)} Funde > Baseline {baseline}")
+        out += [f'{datei}:{zeile}: "{text}"' for zeile, text in liste]
+    return out
 
 
-def _tote_eintraege(funde: dict[str, list[tuple[int, str]]], erlaubt: list[str]) -> list[str]:
-    return [e for e in erlaubt if e not in funde]
+def _tote_eintraege(funde: dict[str, list[tuple[int, str]]],
+                    erlaubt: dict[str, int]) -> list[str]:
+    """Eintraege, deren Baseline ueber der Fundzahl liegt (mitsenken/streichen)."""
+    return [f"{e}: Baseline {n} > {len(funde.get(e, []))} Funde"
+            for e, n in sorted(erlaubt.items()) if n > len(funde.get(e, []))]
 
 
 def test_keine_neuen_hartkodierten_nutzertexte():
@@ -138,9 +162,11 @@ def test_keine_neuen_hartkodierten_nutzertexte():
 
 def test_allowlist_hat_keine_toten_eintraege():
     erlaubt = _allowlist()
-    assert erlaubt == sorted(set(erlaubt)), "Allowlist sortiert und ohne Dubletten"
+    assert list(erlaubt) == sorted(erlaubt), "Allowlist sortiert"
+    assert all(isinstance(n, int) and n > 0 for n in erlaubt.values()), erlaubt
     tote = _tote_eintraege(_alle_funde(), erlaubt)
-    assert not tote, f"Allowlist-Eintraege ohne Fund (streichen, sie schrumpft nur): {tote}"
+    assert not tote, ("Baseline senken bzw. Eintrag bei 0 streichen (die Allowlist "
+                      f"schrumpft nur): {tote}")
 
 
 @pytest.mark.xfail(strict=True, reason=(
@@ -151,7 +177,7 @@ def test_allowlist_hat_keine_toten_eintraege():
     "dieser Test rot und die Markierung muss weg."))
 def test_allowlist_ist_leer():
     """Endstand Teil 2 (AC-6): alle Pakete P2-P10 haben migriert."""
-    assert _allowlist() == []
+    assert _allowlist() == {}
 
 
 def _baue_mini_repo(root: Path, inhalt: str) -> Path:
@@ -179,17 +205,23 @@ def test_ratsche_erkennt_bekannte_faelle(tmp_path):
     assert [z for z, _ in funde] == [7, 9], funde
     alle = _alle_funde(tmp_path)
     assert list(alle) == ["src/output/renderer.py"]
-    assert _verstoesse(alle, []) == ['src/output/renderer.py:7: "Größe"',
+    assert _verstoesse(alle, {}) == ['src/output/renderer.py:7: "Größe"',
                                      'src/output/renderer.py:9: "Bitte warten"']
-    assert _verstoesse(alle, ["src/output/renderer.py"]) == []
-    assert _tote_eintraege(alle, ["src/output/renderer.py", "src/output/sauber.py"]) \
-        == ["src/output/sauber.py"]
+    assert _verstoesse(alle, {"src/output/renderer.py": 2}) == []
+    assert _verstoesse(alle, {"src/output/renderer.py": 1}) == [
+        "src/output/renderer.py: 2 Funde > Baseline 1",
+        'src/output/renderer.py:7: "Größe"', 'src/output/renderer.py:9: "Bitte warten"']
+    assert _tote_eintraege(alle, {"src/output/renderer.py": 2, "src/output/sauber.py": 1}) \
+        == ["src/output/sauber.py: Baseline 1 > 0 Funde"]
+    assert _tote_eintraege(alle, {"src/output/renderer.py": 3}) \
+        == ["src/output/renderer.py: Baseline 3 > 2 Funde"]
 
 
 def _main(argv: list[str]) -> None:
     funde = _alle_funde()
     pfade = sorted(funde)
-    text = json.dumps(pfade, indent=2, ensure_ascii=False) + "\n"
+    text = json.dumps({p: len(funde[p]) for p in pfade}, indent=2,
+                      ensure_ascii=False) + "\n"
     if "--startstand" in argv:
         ALLOWLIST.write_text(text, encoding="utf-8")
     for datei in pfade:

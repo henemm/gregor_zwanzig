@@ -57,7 +57,8 @@ def test_inbound_schluessel_und_platzhalter_paritaet():
 
 #: Restbefund der P11-Ratsche (#2674), im Epic #2644 gemeldet: deutsche
 #: Aktionsknoepfe ``ACTIONS_BUBBLE_BUTTONS``, Kopf ``Kuerzel`` und Eingabe-Alias.
-#: Eintrag streichen, sobald die Datei ohne Fund ist.
+#: Pruefdatum 2027-01-28 (Regel-Budget). Eintrag streichen, sobald die Datei
+#: ohne Fund ist -- ``test_restbefund_p11_nur_solange_allowlistet`` erzwingt das.
 _RESTBEFUND_P11 = ("trip_command_processor",)  # Modulname, kein Quelltext-Read
 
 
@@ -68,6 +69,16 @@ def test_allowlist_traegt_keine_paket_datei():
     eintraege = json.loads(ALLOWLIST.read_text(encoding="utf-8"))
     pfade = [f"src/services/{m}.py" for m in PAKET_MODULE if m not in _RESTBEFUND_P11]
     assert not [p for p in pfade if any(p.startswith(e) for e in eintraege)]
+
+
+def test_restbefund_p11_nur_solange_allowlistet():
+    """Ein Restbefund-Modul muss in der P11-Allowlist stehen; die Ratsche
+    streicht den Eintrag erzwungen, sobald die Datei keinen Fund mehr hat
+    (``test_allowlist_hat_keine_toten_eintraege``) -- dann wird dieser Test
+    rot und ``_RESTBEFUND_P11`` muss mitschrumpfen."""
+    eintraege = json.loads(ALLOWLIST.read_text(encoding="utf-8"))
+    veraltet = [m for m in _RESTBEFUND_P11 if f"src/services/{m}.py" not in eintraege]
+    assert not veraltet, f"Restbefund behoben, aus _RESTBEFUND_P11 streichen: {veraltet}"
 
 
 def _fragmente() -> set[str]:
