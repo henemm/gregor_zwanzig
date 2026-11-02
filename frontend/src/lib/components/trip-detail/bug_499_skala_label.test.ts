@@ -28,7 +28,7 @@ const TABLE_PREVIEW      = join(here, 'TablePreview.svelte');
 // --- AC-1: Toggle in ActiveMetricRow ---
 
 test('AC-1: ActiveMetricRow zeigt Button-Label "Einfach" statt "Skala"', () => {
-	const src = readFileSync(ACTIVE_METRIC_ROW, 'utf-8');
+	const src = quelleMitKatalog(readFileSync(ACTIVE_METRIC_ROW, 'utf-8'));
 	assert.ok(
 		src.includes('>Einfach<'),
 		'AC-1 RED: Button-Label muss ">Einfach<" enthalten'
@@ -36,7 +36,7 @@ test('AC-1: ActiveMetricRow zeigt Button-Label "Einfach" statt "Skala"', () => {
 });
 
 test('AC-1: ActiveMetricRow enthält kein Button-Label "Skala" mehr', () => {
-	const src = readFileSync(ACTIVE_METRIC_ROW, 'utf-8');
+	const src = quelleMitKatalog(readFileSync(ACTIVE_METRIC_ROW, 'utf-8'));
 	assert.ok(
 		!src.includes('>Skala<'),
 		'AC-1 RED: Button-Label ">Skala<" muss entfernt sein'
@@ -44,7 +44,7 @@ test('AC-1: ActiveMetricRow enthält kein Button-Label "Skala" mehr', () => {
 });
 
 test('AC-1: ActiveMetricRow aria-label verwendet "Einfach" statt "Skala"', () => {
-	const src = readFileSync(ACTIVE_METRIC_ROW, 'utf-8');
+	const src = quelleMitKatalog(readFileSync(ACTIVE_METRIC_ROW, 'utf-8'));
 	assert.ok(
 		src.includes('Roh oder Einfach'),
 		'AC-1 RED: aria-label muss "Roh oder Einfach" enthalten'
@@ -91,7 +91,7 @@ test('AC-3: SavePresetDialog enthält kein "als Skala" mehr', () => {
 // --- AC-4: Tabellen-Vorschau TablePreview ---
 
 test('AC-4: TablePreview zeigt Suffix "·einfach" statt "·skala"', () => {
-	const src = readFileSync(TABLE_PREVIEW, 'utf-8');
+	const src = quelleMitKatalog(readFileSync(TABLE_PREVIEW, 'utf-8'));
 	assert.ok(
 		src.includes('·einfach'),
 		'AC-4 RED: TablePreview muss "·einfach" enthalten'
@@ -99,7 +99,7 @@ test('AC-4: TablePreview zeigt Suffix "·einfach" statt "·skala"', () => {
 });
 
 test('AC-4: TablePreview enthält kein "·skala" mehr', () => {
-	const src = readFileSync(TABLE_PREVIEW, 'utf-8');
+	const src = quelleMitKatalog(readFileSync(TABLE_PREVIEW, 'utf-8'));
 	assert.ok(
 		!src.includes('·skala'),
 		'AC-4 RED: TablePreview darf "·skala" nicht mehr enthalten'

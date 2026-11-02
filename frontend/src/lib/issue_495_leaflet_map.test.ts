@@ -12,6 +12,7 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { quelleMitKatalogUndTabellen } from './i18n/__tests__/quelleMitKatalog.ts';
 import { readFileSync, existsSync, readdirSync, statSync } from 'node:fs';
 import { execSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
@@ -133,7 +134,8 @@ test('AC-5: MapCanvas.svelte enthält Europa-Fallback für leere Stage', () => {
 // =============================================================================
 
 test('AC-4: MapCanvas.svelte enthält OpenStreetMap-Attribution', () => {
-	const src = readFileSync(MAP_CANVAS, 'utf-8');
+	// i18n F9 (#2658): die Quellenangabe steht im Katalog (trip.wegpunkt.karte_attribution).
+	const src = quelleMitKatalogUndTabellen(readFileSync(MAP_CANVAS, 'utf-8'));
 	assert.match(
 		src,
 		/OpenStreetMap/,

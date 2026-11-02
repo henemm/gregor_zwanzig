@@ -25,6 +25,7 @@ import { readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { parse } from 'svelte/compiler';
+import { get, type Readable } from 'svelte/store';
 
 export type Knoten = Record<string, any>;
 
@@ -139,6 +140,14 @@ export async function umgebungFuer(
 					mod = null;
 				}
 			}
+			// Issue #2658 (i18n F9): Verzeichnis-Importe wie `$lib/i18n` zeigen auf `index.ts`.
+			if (!mod && spec.startsWith('$lib/') && !/\.[a-z]+$/.test(spec)) {
+				try {
+					mod = (await import(`${spec}/index.ts`)) as Knoten;
+				} catch {
+					mod = null;
+				}
+			}
 		}
 		if (!mod) continue;
 		for (const s of (stmt.specifiers ?? []) as Knoten[]) {
@@ -151,6 +160,9 @@ export async function umgebungFuer(
 			}
 			const her = s.type === 'ImportDefaultSpecifier' ? 'default' : (s.imported?.name ?? lokal);
 			if (her in mod) u[lokal] = mod[her];
+			// Issue #2658 (i18n F9): `$store` (Svelte-Auto-Abo) als aktueller Wert, z. B. `$t`, `$locale`.
+			if (her in mod && typeof (mod[her] as { subscribe?: unknown })?.subscribe === 'function' && !(`$${lokal}` in u))
+				Object.defineProperty(u, `$${lokal}`, { get: () => get(mod![her] as Readable<unknown>), enumerable: false, configurable: true });
 		}
 	}
 	// `$props()`-Destrukturierung mit Default-Werten (Issue #2277 S2a Fix-Loop 1,

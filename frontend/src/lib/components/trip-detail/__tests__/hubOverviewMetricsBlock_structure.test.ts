@@ -16,6 +16,7 @@
 
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
+import { quelleMitKatalogUndTabellen } from '../../../i18n/__tests__/quelleMitKatalog.ts'; // i18n F9 (#2658): deutscher Katalogwert statt Schluessel
 import { readFileSync, existsSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -29,7 +30,7 @@ const TRIP_TABS = join(here, '..', 'TripTabs.svelte');
 const SHARED_MODULE = join(here, '..', '..', 'shared', 'trip-metrics', 'tripActiveMetricNames.ts');
 
 function readSrc(path: string): string {
-	return readFileSync(path, 'utf-8');
+	return quelleMitKatalogUndTabellen(readFileSync(path, 'utf-8'));
 }
 
 function parseSvelte(path: string): { ast: any; src: string } {

@@ -32,6 +32,9 @@ const { render } = await import('svelte/server');
 const PageHeader = (await import(pathToFileURL(path.join(FRONTEND, 'src/lib/components/atoms/PageHeader.svelte')).href)).default;
 
 const HUB = path.join(HERE, '..', '[id]', '+page.svelte');
+// Issue #2658 (i18n F9): die Beschriftung kommt aus dem Katalog (de „Trips").
+const TRIPS_KEY = 'listen.trips.titel';
+const { trFor } = await import(pathToFileURL(path.join(FRONTEND, 'src/lib/i18n/index.ts')).href);
 const EDITOR = path.join(FRONTEND, 'src/lib/components/trip-new/TripNewEditor.svelte');
 
 /** Gibt es im Template einen Link auf /trips mit Text "Trips"? (direkt oder ueber `back`-Prop) */
@@ -43,14 +46,14 @@ function trips_link_vorhanden(datei: string): boolean {
 			n.type === 'RegularElement' &&
 			n.name === 'a' &&
 			(n.attributes ?? []).some((a: any) => a.name === 'href' && literale(a.value).has('/trips')) &&
-			collect(n.fragment, (t) => t.type === 'Text' && /Trips/.test(t.data)).length > 0
+			(collect(n.fragment, (t) => t.type === 'Text' && /Trips/.test(t.data)).length > 0 || literale(n.fragment).has(TRIPS_KEY))
 	);
 	if (direkt.length > 0) return true;
 	const ueberBack = collect(
 		ast.fragment,
 		(n) =>
 			(n.type === 'Component') &&
-			(n.attributes ?? []).some((a: any) => a.name === 'back' && literale(a.value).has('/trips') && literale(a.value).has('Trips'))
+			(n.attributes ?? []).some((a: any) => a.name === 'back' && literale(a.value).has('/trips') && (literale(a.value).has('Trips') || literale(a.value).has(TRIPS_KEY)))
 	);
 	return ueberBack.length > 0;
 }
@@ -60,6 +63,10 @@ describe('AC-13: Breadcrumb "Trips" ist ein Link auf /trips', () => {
 		const h = render(PageHeader, { props: { back: { href: '/trips', label: 'Trips' }, compact: true } }).body;
 		assert.match(h, /<a[^>]*href="\/trips"/);
 		assert.match(h, />[^<]*Trips/);
+	});
+
+	test('Katalog: listen.trips.titel ist deutsch „Trips"', () => {
+		assert.equal(trFor('de', TRIPS_KEY), 'Trips');
 	});
 
 	test('Trip-Hub: "Trips" ist verlinkt (heute toter <span>)', () => {

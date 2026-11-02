@@ -17,3 +17,15 @@ export function quelleMitKatalog(quelle: string): string {
 		.replace(/\{\$t\('([a-z0-9_.-]+)'\)\}/g, (m, k: string) => (hat(k) ? KATALOG[k] : m))
 		.replace(/(?<![\w$])(?:\$t|tr)\('([a-z0-9_.-]+)'\)/g, (m, k: string) => (hat(k) ? JSON.stringify(KATALOG[k]) : m));
 }
+
+/**
+ * Issue #2658 (i18n F9): wie `quelleMitKatalog`, setzt zusaetzlich JEDES verbleibende
+ * Schluessel-Literal ein — in Aufrufen mit Parametern (`$t('k', { … })`), in
+ * Zuordnungstabellen (`{ summit: 'trip.wegpunkt.typ.summit' }`) und fuer Plural-
+ * Stamm-Schluessel (`$tn('k', n)` → deutscher Wert von `k.other`).
+ */
+export function quelleMitKatalogUndTabellen(quelle: string): string {
+	return quelleMitKatalog(quelle).replace(/'([a-z0-9_-]+(?:\.[a-z0-9_-]+)+)'/g, (m, k: string) =>
+		hat(k) ? JSON.stringify(KATALOG[k]) : hat(`${k}.other`) ? JSON.stringify(KATALOG[`${k}.other`]) : m
+	);
+}

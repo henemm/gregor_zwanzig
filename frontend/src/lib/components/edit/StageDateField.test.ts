@@ -16,12 +16,14 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { join } from 'node:path';
+import { fmtWeekday } from '../../i18n/format.ts';
+import { quelleMitKatalogUndTabellen } from '../../i18n/__tests__/quelleMitKatalog.ts';
 
 // Test liegt in src/lib/components/edit/ → '../../../' = frontend/src/
 const SRC = fileURLToPath(new URL('../../../', import.meta.url));
 
 function read(rel: string): string {
-	return readFileSync(join(SRC, rel), 'utf8');
+	return quelleMitKatalogUndTabellen(readFileSync(join(SRC, rel), 'utf8'));
 }
 
 const COMPONENT = 'lib/components/edit/StageDateField.svelte';
@@ -43,15 +45,14 @@ test('AC-1: StageDateField hat data-testid="stage-date-field"', () => {
 // (entspricht Date.prototype.getDay() = 0..6 → So..Sa).
 // ---------------------------------------------------------------------------
 
-test('AC-2: StageDateField hat Wochentag-Array So..Sa für getDay()-Index', () => {
+test('AC-2: StageDateField nimmt den Wochentag aus fmtWeekday (de So..Sa in getDay()-Reihenfolge)', () => {
+	// Issue #2658 (i18n F9): die eigene Tabelle `WD` ist durch `fmtWeekday` (S2) ersetzt;
+	// deutsch unveraendert So..Sa, englisch Sun..Sat.
 	const src = read(COMPONENT);
-	// Erlaubt: einzeilig oder mit Whitespace; einfach auf Kürzel-Reihenfolge prüfen.
-	const normalized = src.replace(/\s+/g, '');
-	assert.ok(
-		normalized.includes("'So','Mo','Di','Mi','Do','Fr','Sa'") ||
-			normalized.includes('"So","Mo","Di","Mi","Do","Fr","Sa"'),
-		'Wochentag-Map muss in Sonntag-zuerst-Reihenfolge sein (Date.getDay()-Index)'
-	);
+	assert.ok(src.includes('fmtWeekday('), 'StageDateField muss den Wochentag ueber fmtWeekday bilden');
+	const tage = [5, 6, 7, 8, 9, 10, 11].map((t) => new Date(2026, 6, t)); // So 5.7.2026 … Sa 11.7.2026
+	assert.deepEqual(tage.map((d) => fmtWeekday(d, 'de', true)), ['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa']);
+	assert.deepEqual(tage.map((d) => fmtWeekday(d, 'en', true)), ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']);
 });
 
 // ---------------------------------------------------------------------------

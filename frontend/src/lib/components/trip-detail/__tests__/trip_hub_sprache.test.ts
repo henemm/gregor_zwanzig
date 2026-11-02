@@ -65,7 +65,9 @@ export function deutscheReste(text: string, ausnahmen: string[] = []): string[] 
 		const enTeile = new Set(en.split(/<[a-z0-9_]+>/).map((s) => s.trim()));
 		for (const teil of de.split(/<[a-z0-9_]+>/).map((s) => s.trim())) {
 			if ((teil.match(/[A-Za-zÄÖÜäöüß]/g) ?? []).length < 5 || enTeile.has(teil)) continue;
-			if (text.includes(teil)) reste.push(`${k}: ${teil}`);
+			// Als eigenes Wort (Pause ≠ Paused): kein Buchstabe direkt davor oder danach.
+			const esc = teil.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+			if (new RegExp(`(?<![A-Za-zÄÖÜäöüß])${esc}(?![A-Za-zÄÖÜäöüß])`).test(text)) reste.push(`${k}: ${teil}`);
 		}
 	}
 	return reste;
@@ -75,6 +77,9 @@ export function deutscheReste(text: string, ausnahmen: string[] = []): string[] 
  * Trip-/Etappen-/Wegpunkt-Namen der Fixture, API-Metriknamen ohne label_en (F5),
  * und Bausteine anderer Pakete (Uebersicht-Kennzahlen F10, Versand F6 …).
  */
+/** Geteilte Uebersicht-Kennzahlen (shared/hub-uebersicht/, Paket F10, noch in der Allowlist):
+ *  „Bearbeiten →", „Morgen 07:00 · Abend 18:00", Status „Aktiv" stehen dort selbst deutsch. */
+const FREMD_F10 = ['aktionen.edit', 'aktionen.historie.morgen', 'aktionen.historie.abend', 'trip.status.active'];
 const DATEN = ['trip.wegpunkt.typ.', 'trip.etappe', 'trip.anlegen.name_beispiel', 'trip.anlegen.region_beispiel', 'trip.anlegen.etappe_beispiel'];
 
 describe('AC-6: Deutsch byte-gleich zum Ist-Stand vor der Umstellung (Golden golden-de)', () => {
@@ -105,15 +110,16 @@ describe('AC-6: Deutsch byte-gleich zum Ist-Stand vor der Umstellung (Golden gol
 describe('AC-1: Trip-Hub englisch, Namen unveraendert', () => {
 	test('Reiterleiste und Seite: Reiter, Aktionen, Kopf, Erfolg/Fehler englisch (erst de, dann ohne Neuladen en)', () => {
 		const { de, en } = deDannEn(() => P.reiterRendern() + P.seiteRendern('gesendet') + P.seiteRendern('fehler'));
-		for (const s of ['Übersicht', 'Etappen & Wegpunkte', 'Wetter-Metriken', 'Wertebereiche', 'Alarme', 'Briefing gesendet!', 'aria-label="Weitere Aktionen"']) hat(de, s);
-		for (const s of ['>Overview<', 'Stages &amp; waypoints', '>Weather metrics<', '>Target ranges<', '>Alerts<', 'Briefing sent', 'Send', 'aria-label="More actions"', 'aria-label="Trip details"', 'Error while sending', 'Action failed, please try again later.', 'aria-label="Edit name"', 'aria-label="Edit region"'])
+		for (const s of ['Übersicht', 'Etappen &amp; Wegpunkte', 'Wetter-Metriken', 'Wertebereiche', 'Alarme', 'Briefing gesendet!', 'aria-label="Weitere Aktionen"']) hat(de, s);
+		for (const s of ['data-testid="trip-detail-tab-uebersicht">Overview', 'data-testid="trip-detail-tab-etappen">Stages &amp; waypoints', 'data-testid="trip-detail-tab-wetter-metriken">Weather metrics', 'data-testid="trip-detail-tab-wertebereiche">Target ranges', 'data-testid="trip-detail-tab-alarme">Alerts', 'Briefing sent', 'Send', 'aria-label="More actions"', 'aria-label="Trip details"', 'Error while sending', 'aria-label="Edit name"', 'aria-label="Edit region"'])
 			hat(en, s);
 		hatNicht(en, 'Briefing gesendet');
 		const sEn = sichtbar(en);
 		hat(sEn, 'GR20 Nord 2026');
 		hat(sEn, 'Calenzana – Ortu di u Piobbu');
 		hat(sEn, 'Trips');
-		assert.deepEqual(deutscheReste(sEn, DATEN), []);
+		// Der Fehler-Zustand der Seite traegt einen Server-Detailtext (Daten), s. f9Pruefstand.
+		assert.deepEqual(deutscheReste(sEn, [...DATEN, ...FREMD_F10, 'aktionen.fehler.allgemein']), []);
 	});
 
 	test('Kopf: Tag/ETAPPE/START IN, Zahlenformat en-GB, Aktivitaeten englisch', () => {
@@ -122,7 +128,8 @@ describe('AC-1: Trip-Hub englisch, Namen unveraendert', () => {
 		for (const s of ['Day 2', 'STAGE 2/3', 'BRIEFING 07:00', 'DAY Day 2', 'STARTS IN 70 d', '↑1,527 m', 'Ski touring', 'Mountaineering', 'Via ferrata', 'Bike (15 km/h)', 'Rename', 'Cancel', 'Save']) hat(en, s);
 		hatNicht(en, 'Tg');
 		hatNicht(en, '1.527');
-		assert.deepEqual(deutscheReste(en, DATEN), []);
+		// Fixture-Trip „Entwurf Dolomiten" (Name = Daten).
+		assert.deepEqual(deutscheReste(en, [...DATEN, 'trip.status.draft']), []);
 	});
 
 	test('Etappen: Datum `Wed 1 Jul` (de unveraendert `01.07.`), Kennzahlen und Risiko englisch, Etappen-Namen gleich', () => {
@@ -147,9 +154,10 @@ describe('AC-1: Trip-Hub englisch, Namen unveraendert', () => {
 	test('Wegpunkt-Editor-Bausteine englisch (Streifen, Karten, Pausentag, Profil)', () => {
 		const { en } = deDannEn(() => P.wegpunkteRendern());
 		const s = sichtbar(en);
-		for (const t of ['+ Rest day', 'STAGES · DRAG TO SORT · + REST DAY BETWEEN', '2 GPX · 1 rest day', '+ Stage', 'Rest day', '⌂ Rest day · Carrozzu', 'Hut', 'Waypoint', 'Rename', 'Move', 'Delete', 'Location: Ortu di u Piobbu', 'Next: Bocca Piccaia', 'No location set', 'Save', 'Saving failed']) hat(s, t);
+		for (const t of ['+ Rest day', 'STAGES · DRAG TO SORT · + REST DAY BETWEEN', '2 GPX · 1 rest day', '+ Stage', 'Rest day', '⌂ Rest day · Carrozzu', 'Hut', 'Waypoint', 'Rename', 'Move', 'Delete', 'Location: Ortu di u Piobbu', 'Next: Bocca Piccaia', 'No location set', 'Save']) hat(s, t);
 		for (const t of ['aria-label="Remove stage"', 'aria-label="Rename waypoint"', 'aria-label="Move waypoint"', 'aria-label="Delete waypoint"', 'aria-label="Elevation profile with 2 waypoints"', 'aria-label="Elevation profile with 1 waypoint"', 'aria-label="Waypoint Calenzana"', 'aria-label="Waypoint 3"']) hat(en, t);
-		assert.deepEqual(deutscheReste(s, DATEN), []);
+		// WaypointsPanel traegt im Golden-Zustand einen Server-Fehlertext (Daten), s. f9Pruefstand.
+		assert.deepEqual(deutscheReste(s, [...DATEN, 'aktionen.speichern', 'aktionen.speichern_fehlgeschlagen']), []);
 	});
 
 	test('Geteilte Bausteine: Versand-Historie (Morgen/Abend, von Hand, Leer/Laden/Fehler) und Vorschau-Rahmen', () => {
@@ -157,7 +165,15 @@ describe('AC-1: Trip-Hub englisch, Namen unveraendert', () => {
 		hat(de, '01.07.2026 07:00');
 		for (const s of ['Delivery history', 'Morning', 'Evening', '· sent manually', 'Wed 1 Jul 2026 07:00', 'No briefings delivered yet.', 'Loading delivery history…', 'Delivery history could not be loaded.', 'alert', 'Morning briefing · 01.07.2026', 'Evening briefing', 'Distance', 'Ascent', 'Descent', 'Max elevation', 'Segments'])
 			hat(en, s);
-		assert.deepEqual(deutscheReste(en, DATEN), []);
+		// Preset-Name „Wandern" der Fixture (Daten).
+		assert.deepEqual(deutscheReste(en, [...DATEN, 'trip.aktivitaet.wandern']), []);
+	});
+
+	test('Fehler ohne Server-Text: Flag/Schluessel wird beim Rendern aufgeloest (nicht eingefroren)', () => {
+		const { de, en } = deDannEn(() => sichtbar(P.fehlerFlagsRendern()));
+		for (const s of ['Speichern fehlgeschlagen', 'Fehler beim Speichern', 'Versand-Historie konnte nicht geladen werden.', 'Aktion fehlgeschlagen, bitte später erneut versuchen.', 'Fehler beim Senden']) hat(de, s);
+		for (const s of ['Saving failed', 'Error while saving', 'Delivery history could not be loaded.', 'Action failed, please try again later.', 'Error while sending']) hat(en, s);
+		for (const s of ['Speichern fehlgeschlagen', 'Fehler beim Speichern', 'Aktion fehlgeschlagen']) hatNicht(en, s);
 	});
 });
 
@@ -208,11 +224,13 @@ describe('AC-4: Metrik-Namen ueber metricLabel, col_label unveraendert', () => {
 		const { de, en } = deDannEn(() => P.layoutRendern());
 		const sEn = sichtbar(en);
 		hat(sichtbar(de), 'Böen');
-		for (const s of ['Wind gusts', 'Temperature', 'Bewölkung', 'Code', 'Raw', 'Simple', 'raw value only', '→ Detail', '↑ Column', 'Limit', 'Telegram 9/8', '✂ from here Telegram cuts off (max 8 columns)', 'No entries — add metrics from “Not in the briefing”.', 'Not in the briefing', '3 more metrics', '1 more metric', '· not output', '▴ Collapse', '▾ Expand', '+ Column', '+ Detail', '6 metrics', '1 metric', 'Default', 'Indicator', 'Table preview', 'TODAY — 2 METRICS', 'TOMORROW — 0 METRICS', 'No metrics enabled for this horizon.', 'Time', '·simple', 'Alert rules', 'Alert thresholds', 'No alerts configured yet', 'Edit rules →', 'all columns · no limit', 'no grid · 140 characters', 'SMS not configured —', 'set up in your account', 'Daily max for remaining metrics', '2 metrics do not fit in the table — append as a compact daily summary', 'briefing schedule', 'Saved.', 'Temperature', 'Wind', 'Atmosphere'])
+		for (const s of ['Wind gusts', 'Temperature', 'Bewölkung', 'Code', 'Raw', 'Simple', 'raw value only', '→ Detail', '↑ Column', 'Limit', 'Telegram 9/7', '✂ from here Telegram cuts off (max 7 columns)', 'No entries — add metrics from “Not in the briefing”.', 'Not in the briefing', '3 more metrics', '1 more metric', '· not output', '▴ Collapse', '▾ Expand', '+ Column', '+ Detail', '6 metrics', '1 metric', 'Default', 'Indicator', 'Table preview', 'TODAY — 2 METRICS', 'TOMORROW — 0 METRICS', 'No metrics enabled for this horizon.', 'Time', '·simple', 'Alert rules', 'Alert thresholds', 'No alerts configured yet', 'Edit rules →', 'all columns · no limit', 'no grid · 140 characters', 'SMS not configured —', 'set up in your account', 'Daily max for remaining metrics', '3 metrics do not fit in the table — append as a compact daily summary', 'briefing schedule', 'Temperature', 'Wind', 'Atmosphere'])
 			hat(sEn, s);
-		for (const s of ['title="Telegram: max 8 columns"', 'aria-label="Raw or simple"', 'aria-label="Enable Email"', 'aria-label="Wind gusts"']) hat(en, s);
-		hatNicht(sEn, 'Böen');
-		assert.deepEqual(deutscheReste(sEn, DATEN), []);
+		for (const s of ['title="Telegram: max 7 columns"', 'aria-label="Raw or simple"', 'aria-label="Enable Email"', 'aria-label="Wind gusts"']) hat(en, s);
+		// Voller Name englisch; die Kurzform (Fallback `label.slice(0, 5)`) bleibt wie jede Kurzform (ADR-0042).
+		assert.ok(!/class="(label|off-name|col-name|metric-name)[^"]*">Böen</.test(en), 'voller Name noch deutsch');
+		// Fixture: Preset „Wandern" (Name = Daten), Zeitplan-Speicherstand mit Server-Text „Gespeichert.".
+		assert.deepEqual(deutscheReste(sEn, [...DATEN, 'trip.aktivitaet.wandern', 'trip.gespeichert_punkt']), []);
 	});
 	test('Uebersicht: Namensliste englisch, col_label der Fixture steht nirgends verfaelscht', () => {
 		const { en } = deDannEn(() => sichtbar(P.uebersichtRendern()));

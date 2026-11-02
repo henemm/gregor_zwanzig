@@ -226,9 +226,10 @@ export function layoutRendern(): string {
 	const vieleById = Object.fromEntries(viele.map((id, i) => [id, { ...metricById[ACHT[i]], id }]));
 	const base = { metricById: vieleById, shortById: {}, friendlyMap: {}, indicatorCapable: (id: string) => id === 'm1', onMode: nix, onMove: nix, onDndReorder: nix };
 	return [
-		html(K.BucketSection, { ...base, eyebrow: 'Im Briefing als Spalte', title: 'Spalten', hint: 'h', bucket: 'primary', items: viele, showLimitMarkers: true }),
-		html(K.BucketSection, { ...base, eyebrow: 'Im Briefing als Detail', title: 'Detail-Werte', hint: 'h', bucket: 'secondary', items: [] }),
-		html(K.BucketSection, { ...base, eyebrow: 'Im Briefing als Detail', title: 'Detail-Werte', hint: 'h', bucket: 'secondary', items: ['m0', 'm1'] }),
+		// Ueberschriften reicht der Aufrufer (OutputLayoutEditor, F8) aus seinem Katalog herein.
+		html(K.BucketSection, { ...base, eyebrow: tr('layout.ausgabe.spalten_eyebrow'), title: tr('layout.ausgabe.spalten'), hint: 'h', bucket: 'primary', items: viele, showLimitMarkers: true }),
+		html(K.BucketSection, { ...base, eyebrow: tr('layout.ausgabe.detail_eyebrow'), title: tr('layout.ausgabe.detail_werte'), hint: 'h', bucket: 'secondary', items: [] }),
+		html(K.BucketSection, { ...base, eyebrow: tr('layout.ausgabe.detail_eyebrow'), title: tr('layout.ausgabe.detail_werte'), hint: 'h', bucket: 'secondary', items: ['m0', 'm1'] }),
 		html(K.BucketSectionOffOffen, { items: ['temperature', 'gust', 'cloud_total'], metricById, shortById: { gust: 'G' }, categoryLabels: { temperature: 'Temperatur', wind: 'Wind', atmosphere: 'Atmosphäre' }, categoryOrder: ['temperature', 'wind', 'atmosphere'], onAdd: nix }),
 		html(K.BucketSectionOffOffen, { items: ['gust'], metricById, shortById: {}, categoryLabels: {}, categoryOrder: [], onAdd: nix, hideDetailButton: true }),
 		html(K.BucketSectionOff, { items: ['gust'], metricById, shortById: {}, categoryLabels: {}, categoryOrder: [], onAdd: nix }),
@@ -331,6 +332,32 @@ export const ANLEGE_FAELLE: Record<string, AnlegeFall[]> = {
 		{ tab: 'alarme', mobil: true, name: 'GR20 Nord 2026', startDate: '2026-07-01', stageNames: ['Calenzana'] }
 	]
 };
+
+// ── Fehler-Flags (nur neuer Quelltext): ohne Server-Text halten die Bausteine nur ein
+// Flag bzw. einen Schluessel; die Meldung entsteht beim Rendern in der aktuellen Sprache.
+const FLAG = {
+	header: await variante(path.join(KOMP, 'shared', 'subscription-header', 'SubscriptionHeader.svelte'), [
+		['let errors = $state<Record<Field, string | null>>({ name: null, region: null, profile: null });', "let errors = $state<Record<Field, string | null>>({ name: '', region: null, profile: null });"]
+	]),
+	wegpunkte: await variante(td('WaypointsPanel.svelte'), [['let saveError = $state<string | null>(null);', "let saveError = $state<string | null>('');"]]),
+	panel: await panelVariante([['let saveError = $state<string | null>(null);', "let saveError = $state<string | null>('');"]]),
+	zeitplan: await variante(td('BriefingScheduleTab.svelte'), [['let statusKey = $state<MessageKey | null>(null);', "let statusKey = $state<MessageKey | null>('trip.fehler_speichern');"]]),
+	historie: await variante(path.join(KOMP, 'shared', 'BriefingHistory.svelte'), [['let eigenError = $state(false);', 'let eigenError = $state(true);']]),
+	seite: await seitenVariante([
+		['let errorKey = $state<MessageKey | null>(null);', "let errorKey = $state<MessageKey | null>('aktionen.fehler.allgemein');"],
+		["let sendStatus = $state<'idle' | 'ok' | 'error'>('idle');", "let sendStatus = $state<'idle' | 'ok' | 'error'>('error');"]
+	])
+};
+export function fehlerFlagsRendern(): string {
+	return [
+		html(FLAG.header, { kind: 'trip', name: 'GR20 Nord 2026', region: 'Korsika', profile: 'trekking', profileOptions: [], testidPrefix: 'trip', onSaveField: async () => {} }),
+		html(FLAG.wegpunkte, { trip: tripLaufend() }),
+		html(FLAG.panel, { stages: structuredClone(ETAPPEN), tripId: 'gd-gr20', showSave: true }),
+		html(FLAG.zeitplan, { trip: tripLaufend() }),
+		html(FLAG.historie, { id: '', kind: 'route' }),
+		html(FLAG.seite, { data: { trip: tripLaufend(), metricsCatalog: KATALOG, profile: null } })
+	].join('\n');
+}
 
 export function seiteRendern(fall: keyof typeof S, trip = tripLaufend()): string {
 	return html(S[fall], { data: { trip, metricsCatalog: KATALOG, profile: null } });

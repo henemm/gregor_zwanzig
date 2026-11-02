@@ -103,6 +103,9 @@ function text(n: Knoten): string {
 	let t = '';
 	besuche(n.fragment, (k) => {
 		if (k.type === 'Text') t += k.data;
+		// Issue #2658 (i18n F9): `{$t('schluessel')}` traegt den deutschen Katalogwert.
+		const e = k.type === 'ExpressionTag' ? (k.expression as Knoten) : null;
+		if (e?.type === 'CallExpression' && e.callee?.name === '$t' && e.arguments?.[0]?.type === 'Literal') t += trFor('de', e.arguments[0].value);
 	});
 	return t.replace(/\s+/g, ' ').trim();
 }

@@ -41,7 +41,8 @@ function deutscheReste(text: string): string[] {
 		const enTeile = new Set(en.split(/<[a-z0-9_]+>/).map((s) => s.trim()));
 		for (const teil of de.split(/<[a-z0-9_]+>/).map((s) => s.trim())) {
 			if ((teil.match(/[A-Za-zÄÖÜäöüß]/g) ?? []).length < 5 || enTeile.has(teil)) continue;
-			if (text.includes(teil)) reste.push(`${k}: ${teil}`);
+			const esc = teil.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+			if (new RegExp(`(?<![A-Za-zÄÖÜäöüß])${esc}(?![A-Za-zÄÖÜäöüß])`).test(text)) reste.push(`${k}: ${teil}`);
 		}
 	}
 	return reste;
@@ -68,7 +69,8 @@ describe('AC-3: /trips/new englisch (Desktop und mobil)', () => {
 		hat(en, 'placeholder="Name stage 2 …"');
 		hat(en, 'aria-label="Remove stage"');
 		hat(en, 'value="Calenzana"');
-		hatNicht(s, '01.07.');
+		// Das Etappen-Datum steht frei (die Laufzeit-Zeile des Versand-Bausteins F6 traegt `01.07.2026`).
+		assert.ok(!/(^|\s)01\.07\.(\s|$)/.test(s), 'Etappen-Datum noch deutsch');
 		assert.deepEqual(deutscheReste(s), []);
 	});
 
@@ -96,7 +98,7 @@ describe('AC-3: Etappen-Editor englisch, Wochentag ueber fmtWeekday', () => {
 		const { de, en } = deDannEn(() => P.etappenEditorRendern('desktop'));
 		hat(sichtbar(de), 'Mi');
 		const s = sichtbar(en);
-		for (const t of ['Stage · GR20-01', 'Calenzana – Ortu di u Piobbu', 'Waypoints are weather divides — points where elevation, aspect or terrain changes. 2 waypoints were created from the GPX', 'Date · Trip start', 'Wed', 'Start time', 'Map · OpenTopoMap (OSM + SRTM)', 'Topo', 'Elevation profile · synced with map', 'Waypoints', '2 in total', '+ on route', 'Save stages', 'STAGES · DRAG TO SORT', '+ Stage'])
+		for (const t of ['Stage · GR20-01', 'Calenzana – Ortu di u Piobbu', 'Waypoints are weather divides — points where elevation, aspect or terrain changes. 2 waypoints were created from the GPX', 'Date· Trip start', 'Wed', 'Start time', 'Map · OpenTopoMap (OSM + SRTM)', 'Topo', 'Elevation profile · synced with map', 'Waypoints', '2 in total', '+ on route', 'Save stages', 'STAGES · DRAG TO SORT', '+ Stage'])
 			hat(s, t);
 		for (const t of ['title="Rename stage"', 'aria-label="Rename stage"']) hat(en, t);
 		hatNicht(s, ' Mi ');
@@ -120,8 +122,8 @@ describe('AC-3: Etappen-Editor englisch, Wochentag ueber fmtWeekday', () => {
 
 	test('Datumsfeld: Wochentag je Sprache, Trip-Start und Startzeit englisch', () => {
 		const { de, en } = deDannEn(() => sichtbar(P.editFelderRendern()));
-		for (const t of ['So', 'Mo', 'Di', 'Datum · Trip-Start', '· Trip-Start', 'Startzeit']) hat(de, t);
-		for (const t of ['Sun', 'Mon', 'Tue', 'Date · Trip start', '· Trip start', 'Start time', 'Weather profile', 'Custom selection', '1 columns · 1 detail · 2 active', 'Edit in the weather tab →', 'Read-only.', 'Create 2 stages', '2 file(s) selected', 'Drag GPX files here', 'or click to choose', '2 stage(s) loaded', 'Create manually', 'Trip name'])
+		for (const t of ['So', 'Mo', 'Di', 'Datum· Trip-Start', '· Trip-Start', 'Startzeit']) hat(de, t);
+		for (const t of ['Sun', 'Mon', 'Tue', 'Date· Trip start', '· Trip start', 'Start time', 'Weather profile', 'Custom selection', '1 columns · 1 detail · 2 active', 'Edit in the weather tab →', 'Read-only.', 'Create 2 stages', '2 file(s) selected', 'Drag GPX files here', 'or click to choose', '2 stage(s) loaded', 'Create manually', 'Trip name'])
 			hat(en, t);
 	});
 });

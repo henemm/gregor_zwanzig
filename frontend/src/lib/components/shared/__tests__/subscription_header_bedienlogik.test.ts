@@ -16,6 +16,8 @@
 
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
+import { trFor } from '../../../i18n/index.ts';
+import { quelleMitKatalogUndTabellen } from '../../../i18n/__tests__/quelleMitKatalog.ts';
 import { register } from 'node:module';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
@@ -64,7 +66,8 @@ function element(ast: Knoten, quelle: string, tag: string, merkmal: string, enth
 		const k = n as Knoten;
 		if (k.type === 'RegularElement' && k.name === tag) {
 			const a = (k.attributes as Knoten[]).find((x) => x.type === 'Attribute' && x.name === merkmal);
-			if (a && quelle.slice(a.start, a.end).includes(enthaelt)) {
+			// Issue #2658 (i18n F9): Beschriftungen stehen als `$t('schluessel')` im Quelltext.
+			if (a && quelleMitKatalogUndTabellen(quelle.slice(a.start, a.end)).includes(enthaelt)) {
 				treffer = k;
 				return;
 			}
@@ -149,7 +152,10 @@ describe('#2284 S1 F002 — Fehlermeldung: Text aus error, sonst Fallback', () =
 		u.start('name');
 		u.draft.name = 'Neu';
 		await (u.save as SaveField)('name', u.draft.name);
-		assert.equal(u.errors.name, 'Speichern fehlgeschlagen');
+		// i18n F9: ohne Server-Text haelt der Baustein nur das Flag (''); angezeigt wird
+		// `$t('aktionen.speichern_fehlgeschlagen')` = „Speichern fehlgeschlagen" (de).
+		assert.equal(u.errors.name, '');
+		assert.equal(trFor('de', 'aktionen.speichern_fehlgeschlagen'), 'Speichern fehlgeschlagen');
 		assert.equal(u.open.name, true, 'bei Fehler bleibt das Feld offen');
 		assert.equal(u.draft.name, 'Neu', 'eingetippter Wert bleibt erhalten');
 	});
