@@ -307,3 +307,94 @@ func TestSetLangCookieAttribute(t *testing.T) {
 		pruefeLangCookie(t, "SetLangCookie "+host, w, "en", secure)
 	}
 }
+
+// --- Issue #2677 (i18n G3b) — AC-6: Middleware-Fehler in der Sprache der Anfrage.
+
+func pruefeFehlerJSON(t *testing.T, fall string, w *httptest.ResponseRecorder, status int, code, msg string) {
+	t.Helper()
+	if w.Code != status {
+		t.Fatalf("%s: Status %d, erwartet %d (%s)", fall, w.Code, status, w.Body.String())
+	}
+	if ct := w.Header().Get("Content-Type"); !strings.HasPrefix(ct, "application/json") {
+		t.Errorf("%s: Content-Type %q, erwartet application/json", fall, ct)
+	}
+	var body map[string]any
+	if err := json.Unmarshal(w.Body.Bytes(), &body); err != nil {
+		t.Fatalf("%s: kein JSON: %v (%s)", fall, err, w.Body.String())
+	}
+	if body["code"] != code || body["error"] != code || body["message"] != msg {
+		t.Errorf("%s: Antwort %v, erwartet code %q message %q", fall, body, code, msg)
+	}
+}
+
+// AC-6: ohne Sitzung -> 401 unauthorized, JSON, englisch bei Accept-Language en, sonst deutsch.
+func TestAuthOhneSitzungSpricht(t *testing.T) {
+	s := store.New(t.TempDir(), "")
+	h := kette(s)
+	for _, tc := range []struct{ acc, cookie, msg string }{
+		{"en", "", "Please sign in."},
+		{"", "", "Bitte melde dich an."},
+		{"de", "en", "Please sign in."},
+	} {
+		req := httptest.NewRequest(http.MethodGet, "/api/briefings/x?kind=route", nil)
+		if tc.acc != "" {
+			req.Header.Set("Accept-Language", tc.acc)
+		}
+		if tc.cookie != "" {
+			req.AddCookie(&http.Cookie{Name: i18n.CookieName, Value: tc.cookie})
+		}
+		w := httptest.NewRecorder()
+		h.ServeHTTP(w, req)
+		pruefeFehlerJSON(t, "401 acc="+tc.acc+" cookie="+tc.cookie, w, http.StatusUnauthorized, "unauthorized", tc.msg)
+	}
+	// Ungueltiges Merkmal: ebenfalls JSON in Nutzersprache.
+	req := httptest.NewRequest(http.MethodGet, "/api/briefings/x?kind=route", nil)
+	req.AddCookie(&http.Cookie{Name: "gz_session", Value: "kaputt"})
+	req.Header.Set("Accept-Language", "en")
+	w := httptest.NewRecorder()
+	h.ServeHTTP(w, req)
+	pruefeFehlerJSON(t, "401 kaputtes Merkmal", w, http.StatusUnauthorized, "unauthorized", "Please sign in.")
+}
+
+// AC-6: RequireAdmin nach Auth+Lang -> 403 forbidden fuer en-Nutzer englisch, de-Nutzer deutsch.
+func TestRequireAdminSprichtNutzersprache(t *testing.T) {
+	s := store.New(t.TempDir(), "")
+	schreibeNutzer(t, s, "anna-en", "en", "x")
+	schreibeNutzer(t, s, "bert-de", "de", "x")
+	r := chi.NewRouter()
+	r.Use(middleware.AuthMiddleware(sprachSecret, s))
+	r.Use(middleware.Lang(s))
+	r.With(middleware.RequireAdmin(map[string]struct{}{"chef": {}})).Get("/api/admin/x",
+		func(w http.ResponseWriter, r *http.Request) { t.Errorf("Handler darf nicht laufen") })
+	for _, tc := range []struct{ id, msg string }{
+		{"anna-en", "You do not have permission to do this."},
+		{"bert-de", "Dafür fehlt dir die Berechtigung."},
+	} {
+		req := httptest.NewRequest(http.MethodGet, "/api/admin/x", nil)
+		req.AddCookie(sitzung(t, s, tc.id))
+		w := httptest.NewRecorder()
+		r.ServeHTTP(w, req)
+		pruefeFehlerJSON(t, "403 "+tc.id, w, http.StatusForbidden, "forbidden", tc.msg)
+	}
+}
+
+// IPRateLimiter nach Lang: 429 rate_limit_exceeded in der Sprache der Anfrage, Retry-After bleibt.
+func TestRateLimitSprichtAnfragesprache(t *testing.T) {
+	s := store.New(t.TempDir(), "")
+	lim := middleware.NewIPRateLimiter(1, time.Hour)
+	h := middleware.Lang(s)(lim.Middleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {})))
+	for i, tc := range []struct{ acc, msg string }{{"en", ""}, {"en", "Too many requests. Please try again later."}, {"de", "Zu viele Anfragen. Bitte versuche es später erneut."}} {
+		req := httptest.NewRequest(http.MethodPost, "/api/auth/login", nil)
+		req.Header.Set("Accept-Language", tc.acc)
+		req.Header.Set("X-Real-IP", "10.0.0.1")
+		w := httptest.NewRecorder()
+		h.ServeHTTP(w, req)
+		if i == 0 {
+			continue
+		}
+		pruefeFehlerJSON(t, "429 "+tc.acc, w, http.StatusTooManyRequests, "rate_limit_exceeded", tc.msg)
+		if w.Header().Get("Retry-After") == "" {
+			t.Errorf("429 ohne Retry-After")
+		}
+	}
+}

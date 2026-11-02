@@ -34,9 +34,7 @@ func forwardPreview(w http.ResponseWriter, r *http.Request, method, path string,
 	}
 	req, err := http.NewRequestWithContext(r.Context(), method, target, body)
 	if err != nil {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusInternalServerError)
-		w.Write([]byte(`{"error":"proxy_error"}`))
+		WriteError(w, r, http.StatusInternalServerError, "proxy_error", nil)
 		return
 	}
 	if ct := r.Header.Get("Content-Type"); method == http.MethodPost && ct != "" {
@@ -46,9 +44,7 @@ func forwardPreview(w http.ResponseWriter, r *http.Request, method, path string,
 	client := &http.Client{Timeout: timeout}
 	resp, err := client.Do(req)
 	if err != nil {
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusBadGateway)
-		w.Write([]byte(`{"error":"upstream unreachable"}`))
+		WriteError(w, r, http.StatusBadGateway, "upstream_unreachable", nil)
 		return
 	}
 	defer resp.Body.Close()

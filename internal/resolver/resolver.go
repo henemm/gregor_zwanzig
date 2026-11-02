@@ -4,6 +4,7 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/henemm/gregor-api/internal/i18n"
 	"github.com/henemm/gregor-api/internal/provider/openmeteo"
 )
 
@@ -23,7 +24,17 @@ type ResolveResult struct {
 // unterstützt wird, oder wenn eine externe Auflösung fehlschlägt.
 type ResolveError struct {
 	Code    string `json:"code"`    // "unknown_format" | "unsupported_url" | "resolve_failed"
-	Message string `json:"message"` // menschenlesbar
+	Message string `json:"message"` // menschenlesbar, deutsch (i18n.T(i18n.De, Key, Args))
+	// Key/Args: Katalogschluessel fach.resolver.* und Platzhalter; der
+	// Handler rendert die Meldung damit in der Sprache des Nutzers (#2677).
+	Key  string    `json:"-"`
+	Args i18n.Args `json:"-"`
+}
+
+// newResolveError baut den Fehler aus Katalogschluessel und Platzhaltern;
+// Message traegt den deutschen Text fuer Logs und Error().
+func newResolveError(code, key string, args i18n.Args) *ResolveError {
+	return &ResolveError{Code: code, Message: i18n.T(i18n.De, key, args), Key: key, Args: args}
 }
 
 func (e *ResolveError) Error() string { return e.Message }
@@ -55,10 +66,7 @@ func Resolve(input string) (ResolveResult, error) {
 		return resolveDecimal(input)
 	}
 
-	return ResolveResult{}, &ResolveError{
-		Code:    "unknown_format",
-		Message: "Das Format wurde nicht erkannt. Bitte eine Komoot-Highlight-URL, Google-Maps-Link oder Koordinaten eingeben.",
-	}
+	return ResolveResult{}, newResolveError("unknown_format", "fach.resolver.format", nil)
 }
 
 // finalize ergänzt Timezone und (falls fehlend und lookupElevation==true) Elevation

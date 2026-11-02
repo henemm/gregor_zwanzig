@@ -23,9 +23,9 @@ package handler
 
 import (
 	"context"
-	"fmt"
 	"net/http"
 
+	"github.com/henemm/gregor-api/internal/i18n"
 	"github.com/henemm/gregor-api/internal/middleware"
 	"github.com/henemm/gregor-api/internal/model"
 	"github.com/henemm/gregor-api/internal/store"
@@ -88,18 +88,6 @@ func (res quotaResource) limit(q model.Quota) int {
 	}
 }
 
-// detail ist der deutsche Text der 409-Antwort. Nur "Trip"/"Trips" (AC-15).
-func (res quotaResource) detail(current, limit int) string {
-	switch res {
-	case quotaTrips:
-		return fmt.Sprintf("Du hast bereits %d von %d Trips in deinem Tarif. Archiviere oder lösche einen Trip, um einen neuen anzulegen.", current, limit)
-	case quotaComparePresets:
-		return fmt.Sprintf("Du hast bereits %d von %d Ortsvergleichen in deinem Tarif. Archiviere oder lösche einen Ortsvergleich, um einen neuen anzulegen.", current, limit)
-	default:
-		return fmt.Sprintf("Du hast bereits %d von %d Orten in deinem Tarif. Lösche einen Ort, um einen neuen anzulegen.", current, limit)
-	}
-}
-
 // userQuota liefert die Grenzen des Nutzers. nil = unbegrenzt (Admin/Ausnahme).
 // Fehlt die user.json oder ist der Tarif unbekannt -> free (fail-closed). Ein
 // echter Ladefehler (unlesbare/kaputte user.json) wird NICHT als free gewertet,
@@ -135,7 +123,7 @@ func quotaAllows(w http.ResponseWriter, r *http.Request, s *store.Store, res quo
 	us := s.WithUser(middleware.UserIDFromContext(r.Context()))
 	q, err := userQuota(r.Context(), s, us.UserID)
 	if err != nil {
-		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "store_error"})
+		WriteError(w, r, http.StatusInternalServerError, "store_error", nil)
 		return false
 	}
 	if q == nil {
@@ -166,19 +154,17 @@ func quotaAllows(w http.ResponseWriter, r *http.Request, s *store.Store, res quo
 		current = len(locs)
 	}
 	if err != nil {
-		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "store_error"})
+		WriteError(w, r, http.StatusInternalServerError, "store_error", nil)
 		return false
 	}
 
 	limit := res.limit(*q)
 	if current >= limit {
-		writeJSON(w, http.StatusConflict, map[string]interface{}{
-			"error":    "quota_exceeded",
-			"detail":   res.detail(current, limit),
-			"resource": string(res),
-			"limit":    limit,
-			"current":  current,
-		})
+		// Issue #2677: Text je Ressource aus fach.fehler.quota_exceeded_<res>
+		// (Trip und Ortsvergleich teilen die Katalog-Mechanik).
+		WriteErrorWith(w, r, http.StatusConflict, "quota_exceeded",
+			i18n.Args{"variante": string(res), "current": current, "limit": limit},
+			map[string]any{"resource": string(res), "limit": limit, "current": current})
 		return false
 	}
 	if quotaBeforeSave != nil {

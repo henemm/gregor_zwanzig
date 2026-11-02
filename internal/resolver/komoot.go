@@ -7,6 +7,8 @@ import (
 	"regexp"
 	"strings"
 	"time"
+
+	"github.com/henemm/gregor-api/internal/i18n"
 )
 
 var reKomootHighlight = regexp.MustCompile(`komoot\.com/(?:[^/]+/)?highlight/(\d+)`)
@@ -18,12 +20,12 @@ type komootPoint struct {
 }
 
 type komootResponse struct {
-	Name      string      `json:"name"`
-	BaseName  string      `json:"base_name"`
-	Elevation float64     `json:"elevation"`
-	MidPoint  komootPoint `json:"mid_point"`
+	Name       string      `json:"name"`
+	BaseName   string      `json:"base_name"`
+	Elevation  float64     `json:"elevation"`
+	MidPoint   komootPoint `json:"mid_point"`
 	StartPoint komootPoint `json:"start_point"`
-	Embedded  struct {
+	Embedded   struct {
 		Coordinates struct {
 			Items []komootPoint `json:"items"`
 		} `json:"coordinates"`
@@ -33,25 +35,19 @@ type komootResponse struct {
 func resolveKomoot(input string) (ResolveResult, error) {
 	low := strings.ToLower(input)
 	if strings.Contains(low, "/tour/") || strings.Contains(low, "/collection/") {
-		return ResolveResult{}, &ResolveError{
-			Code:    "unsupported_url",
-			Message: "Komoot-Touren und Sammlungen werden nicht unterstützt. Bitte einen Komoot Highlight-Link verwenden.",
-		}
+		return ResolveResult{}, newResolveError("unsupported_url", "fach.resolver.komoot_sammlung", nil)
 	}
 
 	m := reKomootHighlight.FindStringSubmatch(input)
 	if m == nil {
-		return ResolveResult{}, &ResolveError{
-			Code:    "unsupported_url",
-			Message: "Komoot-URL nicht erkannt. Bitte einen Komoot Highlight-Link verwenden.",
-		}
+		return ResolveResult{}, newResolveError("unsupported_url", "fach.resolver.komoot_url", nil)
 	}
 	id := m[1]
 
 	apiURL := fmt.Sprintf("https://www.komoot.com/api/v007/highlights/%s", id)
 	req, err := http.NewRequest("GET", apiURL, nil)
 	if err != nil {
-		return ResolveResult{}, &ResolveError{Code: "resolve_failed", Message: "Komoot-Anfrage konnte nicht erstellt werden."}
+		return ResolveResult{}, newResolveError("resolve_failed", "fach.resolver.komoot_anfrage", nil)
 	}
 	req.Header.Set("Accept", "application/hal+json")
 	req.Header.Set("User-Agent", "Mozilla/5.0 (compatible; gregor-zwanzig/1.0)")
@@ -59,20 +55,17 @@ func resolveKomoot(input string) (ResolveResult, error) {
 	client := &http.Client{Timeout: 10 * time.Second}
 	resp, err := client.Do(req)
 	if err != nil {
-		return ResolveResult{}, &ResolveError{Code: "resolve_failed", Message: "Komoot-API nicht erreichbar."}
+		return ResolveResult{}, newResolveError("resolve_failed", "fach.resolver.komoot_api", nil)
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != 200 {
-		return ResolveResult{}, &ResolveError{
-			Code:    "resolve_failed",
-			Message: fmt.Sprintf("Komoot-API antwortete mit Status %d.", resp.StatusCode),
-		}
+		return ResolveResult{}, newResolveError("resolve_failed", "fach.resolver.komoot_status", i18n.Args{"status": resp.StatusCode})
 	}
 
 	var data komootResponse
 	if err := json.NewDecoder(resp.Body).Decode(&data); err != nil {
-		return ResolveResult{}, &ResolveError{Code: "resolve_failed", Message: "Komoot-Antwort konnte nicht gelesen werden."}
+		return ResolveResult{}, newResolveError("resolve_failed", "fach.resolver.komoot_antwort", nil)
 	}
 
 	// Komoot liefert je nach Highlight-Typ unterschiedliche Felder:
@@ -88,7 +81,7 @@ func resolveKomoot(input string) (ResolveResult, error) {
 	case data.StartPoint.Lat != 0 || data.StartPoint.Lng != 0:
 		lat, lon, alt = data.StartPoint.Lat, data.StartPoint.Lng, data.StartPoint.Alt
 	default:
-		return ResolveResult{}, &ResolveError{Code: "resolve_failed", Message: "Komoot-Highlight enthält keine Koordinaten."}
+		return ResolveResult{}, newResolveError("resolve_failed", "fach.resolver.komoot_ohne_koordinaten", nil)
 	}
 
 	name := data.Name

@@ -1,7 +1,6 @@
 package handler
 
 import (
-	"encoding/json"
 	"io"
 	"net/http"
 	"strings"
@@ -26,11 +25,9 @@ const maxPreconditionDrainBytes = 1 << 20
 // Bewusst NICHT scharf geschaltet: ohne If-Match-Header verhaelt sich jeder
 // Aufruf exakt wie bisher. Das Erzwingen kommt erst mit dem Frontend (S3).
 
-// preconditionFailedDetail ist der nutzerlesbare Text der 412-Antwort. Er sagt,
-// was passiert ist UND was der Nutzer tun kann — eine reine Statuszahl waere
-// im Frontend nicht uebersetzbar.
-const preconditionFailedDetail = "Der Stand wurde zwischenzeitlich an anderer Stelle geaendert. " +
-	"Bitte neu laden und die Aenderung erneut vornehmen."
+// Der nutzerlesbare Text der 412-Antwort steht im Katalog unter
+// fach.fehler.precondition_failed (Issue #2677): er sagt, was passiert ist
+// UND was der Nutzer tun kann, in der Sprache des Nutzers.
 
 // ifMatchAllows prueft den If-Match-Header gegen den aktuellen Fingerabdruck.
 //
@@ -94,15 +91,10 @@ func setETagHeader(w http.ResponseWriter, fingerprint string, err error) {
 // liegen dort noch Bytes, sendet der Kernel RST, und der Proxy macht aus dem
 // 412 ein 502 (gemessen: weather-config-Rumpf 4137 B, `write ECONNRESET`).
 // Obergrenze 1 MiB: groessere Ruempfe liest auch kein Handler.
-func writePreconditionFailed(w http.ResponseWriter, r *http.Request, detail string) {
+func writePreconditionFailed(w http.ResponseWriter, r *http.Request) {
 	if r.Body != nil {
 		_, _ = io.Copy(io.Discard, io.LimitReader(r.Body, maxPreconditionDrainBytes))
 	}
 	w.Header().Del("ETag")
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusPreconditionFailed)
-	json.NewEncoder(w).Encode(map[string]string{
-		"error":  "precondition_failed",
-		"detail": detail,
-	})
+	WriteError(w, r, http.StatusPreconditionFailed, "precondition_failed", nil)
 }

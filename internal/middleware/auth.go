@@ -14,6 +14,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/henemm/gregor-api/internal/i18n"
 	"github.com/henemm/gregor-api/internal/store"
 )
 
@@ -69,13 +70,13 @@ func AuthMiddleware(secret string, sessions SessionStore) func(http.Handler) htt
 
 			cookie, err := r.Cookie("gz_session")
 			if err != nil {
-				http.Error(w, `{"error":"unauthorized"}`, http.StatusUnauthorized)
+				writeError(w, i18n.FromRequest(r, nil), http.StatusUnauthorized, "unauthorized")
 				return
 			}
 
 			userId, sessionId, _, ok := validateSession(cookie.Value, secret)
 			if !ok {
-				http.Error(w, `{"error":"unauthorized"}`, http.StatusUnauthorized)
+				writeError(w, i18n.FromRequest(r, nil), http.StatusUnauthorized, "unauthorized")
 				return
 			}
 
@@ -87,7 +88,7 @@ func AuthMiddleware(secret string, sessions SessionStore) func(http.Handler) htt
 			if lookupErr != nil {
 				if errors.Is(lookupErr, store.ErrInvalidUserID) {
 					// #2140: Traversal-Versuch bleibt 401, kein Serverfehler.
-					http.Error(w, `{"error":"unauthorized"}`, http.StatusUnauthorized)
+					writeError(w, i18n.FromRequest(r, nil), http.StatusUnauthorized, "unauthorized")
 					return
 				}
 				// Gaesteliste nicht lesbar (I/O-Fehler, kaputtes JSON) -- ein
@@ -95,11 +96,11 @@ func AuthMiddleware(secret string, sessions SessionStore) func(http.Handler) htt
 				// sessionId/Cookie-Wert loggen. 503 bleibt fail-closed wie 401:
 				// es gewaehrt nichts, macht den Fehler aber sichtbar.
 				log.Printf("auth: Gaesteliste fuer Nutzer %q nicht lesbar: %v", userId, lookupErr)
-				http.Error(w, `{"error":"service_unavailable"}`, http.StatusServiceUnavailable)
+				writeError(w, i18n.FromRequest(r, nil), http.StatusServiceUnavailable, "service_unavailable")
 				return
 			}
 			if !listed {
-				http.Error(w, `{"error":"unauthorized"}`, http.StatusUnauthorized)
+				writeError(w, i18n.FromRequest(r, nil), http.StatusUnauthorized, "unauthorized")
 				return
 			}
 

@@ -21,12 +21,12 @@ func GetTripWeatherConfigHandler(s *store.Store) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		s := s.WithUser(middleware.UserIDFromContext(r.Context()))
 		id := chi.URLParam(r, "id")
-		if rejectInvalidEntityID(w, id) {
+		if rejectInvalidEntityID(w, r, id) {
 			return
 		}
 		// Issue #1395 S2: Sperre auch beim Lesen, damit der ausgelieferte ETag
 		// zur ausgelieferten Fassung gehoert (analog TripHandler).
-		unlockB, okB := lockBriefingOr503(w, s, id)
+		unlockB, okB := lockBriefingOr503(w, r, s, id)
 		if !okB {
 			return
 		}
@@ -34,15 +34,11 @@ func GetTripWeatherConfigHandler(s *store.Store) http.HandlerFunc {
 
 		trip, err := s.LoadTrip(id)
 		if err != nil {
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(500)
-			w.Write([]byte(`{"error":"store_error"}`))
+			WriteError(w, r, 500, "store_error", nil)
 			return
 		}
 		if trip == nil {
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(404)
-			w.Write([]byte(`{"error":"not_found"}`))
+			WriteError(w, r, 404, "not_found", nil)
 			return
 		}
 		// Issue #1395 S2: Der Stempel gilt fuer die GANZE Briefing-Datei, nicht
@@ -60,14 +56,14 @@ func PutTripWeatherConfigHandler(s *store.Store) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		s := s.WithUser(middleware.UserIDFromContext(r.Context()))
 		id := chi.URLParam(r, "id")
-		if rejectInvalidEntityID(w, id) {
+		if rejectInvalidEntityID(w, r, id) {
 			return
 		}
 		// Issue #1395 S2: Sperre + Vorbedingung, identisch zu UpdateTripHandler.
 		// Dieser Pfad schreibt dieselbe Datei UND synchronisiert dabei
 		// alert_rules (model.SyncAlertRules) — ein verlorener Schreibvorgang
 		// zieht hier also mehr nach sich als nur display_config.
-		unlockB, okB := lockBriefingOr503(w, s, id)
+		unlockB, okB := lockBriefingOr503(w, r, s, id)
 		if !okB {
 			return
 		}
@@ -75,35 +71,27 @@ func PutTripWeatherConfigHandler(s *store.Store) http.HandlerFunc {
 
 		oldFp, fpErr := s.BriefingFingerprint(id)
 		if fpErr != nil {
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(500)
-			w.Write([]byte(`{"error":"store_error"}`))
+			WriteError(w, r, 500, "store_error", nil)
 			return
 		}
 
 		trip, err := s.LoadTrip(id)
 		if err != nil {
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(500)
-			w.Write([]byte(`{"error":"store_error"}`))
+			WriteError(w, r, 500, "store_error", nil)
 			return
 		}
 		if trip == nil {
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(404)
-			w.Write([]byte(`{"error":"not_found"}`))
+			WriteError(w, r, 404, "not_found", nil)
 			return
 		}
 		// Vorbedingung VOR dem Dekodieren des Rumpfes (AC-5).
 		if !ifMatchAllows(r.Header.Get("If-Match"), oldFp) {
-			writePreconditionFailed(w, r, preconditionFailedDetail)
+			writePreconditionFailed(w, r)
 			return
 		}
 		var cfg map[string]interface{}
 		if err := json.NewDecoder(r.Body).Decode(&cfg); err != nil {
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(400)
-			w.Write([]byte(`{"error":"bad_request"}`))
+			WriteError(w, r, 400, "bad_request", nil)
 			return
 		}
 		// Issue #1151: Feld-Level-Merge statt Blind-Replace, analog #1129/#1103.
@@ -123,9 +111,7 @@ func PutTripWeatherConfigHandler(s *store.Store) http.HandlerFunc {
 		// fuer gespeichert — ein Vertrauensanker, den es vor S2 nicht gab.
 		trip.ID = id
 		if err := s.SaveTrip(trip); err != nil {
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(500)
-			w.Write([]byte(`{"error":"store_error"}`))
+			WriteError(w, r, 500, "store_error", nil)
 			return
 		}
 		// Issue #1395 S2: neuer Stempel fuer den Folge-Schreibvorgang; fail-soft,
@@ -146,20 +132,16 @@ func GetLocationWeatherConfigHandler(s *store.Store) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		s := s.WithUser(middleware.UserIDFromContext(r.Context()))
 		id := chi.URLParam(r, "id")
-		if rejectInvalidEntityID(w, id) {
+		if rejectInvalidEntityID(w, r, id) {
 			return
 		}
 		loc, err := s.LoadLocation(id)
 		if err != nil {
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(500)
-			w.Write([]byte(`{"error":"store_error"}`))
+			WriteError(w, r, 500, "store_error", nil)
 			return
 		}
 		if loc == nil {
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(404)
-			w.Write([]byte(`{"error":"not_found"}`))
+			WriteError(w, r, 404, "not_found", nil)
 			return
 		}
 		w.Header().Set("Content-Type", "application/json")
@@ -171,28 +153,22 @@ func PutLocationWeatherConfigHandler(s *store.Store) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		s := s.WithUser(middleware.UserIDFromContext(r.Context()))
 		id := chi.URLParam(r, "id")
-		if rejectInvalidEntityID(w, id) {
+		if rejectInvalidEntityID(w, r, id) {
 			return
 		}
 		defer s.LockLocation(id)() // #2158
 		loc, err := s.LoadLocation(id)
 		if err != nil {
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(500)
-			w.Write([]byte(`{"error":"store_error"}`))
+			WriteError(w, r, 500, "store_error", nil)
 			return
 		}
 		if loc == nil {
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(404)
-			w.Write([]byte(`{"error":"not_found"}`))
+			WriteError(w, r, 404, "not_found", nil)
 			return
 		}
 		var cfg map[string]interface{}
 		if err := json.NewDecoder(r.Body).Decode(&cfg); err != nil {
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(400)
-			w.Write([]byte(`{"error":"bad_request"}`))
+			WriteError(w, r, 400, "bad_request", nil)
 			return
 		}
 		// Issue #1159: Feld-Level-Merge statt Blind-Replace — behebt aktiven
@@ -205,9 +181,7 @@ func PutLocationWeatherConfigHandler(s *store.Store) http.HandlerFunc {
 		// FREMDEN Ort, waehrend der angefragte unveraendert blieb.
 		loc.ID = id
 		if err := s.SaveLocation(*loc); err != nil {
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(500)
-			w.Write([]byte(`{"error":"store_error"}`))
+			WriteError(w, r, 500, "store_error", nil)
 			return
 		}
 		w.Header().Set("Content-Type", "application/json")

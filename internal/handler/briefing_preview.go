@@ -24,7 +24,7 @@ import (
 func briefingPreviewTarget(w http.ResponseWriter, r *http.Request, pythonURL, suffix string) (string, string, bool) {
 	kind := r.URL.Query().Get("kind")
 	if !isValidBriefingKind(kind) {
-		writeBriefingKindRequired(w)
+		WriteError(w, r, http.StatusBadRequest, "kind_required", nil)
 		return "", "", false
 	}
 	id := chi.URLParam(r, "id")

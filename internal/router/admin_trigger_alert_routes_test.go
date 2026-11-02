@@ -62,7 +62,7 @@ func TestAdminAlarmTrigger_NormalUserForbidden_NoCookie401_TargetUntouched(t *te
 		if w.Code != http.StatusForbidden {
 			t.Errorf("bob %s: erwartet 403, bekommen %d: %s", pfad, w.Code, w.Body.String())
 		}
-		if got := strings.TrimSpace(w.Body.String()); got != `{"error":"forbidden"}` {
+		if got := strings.TrimSpace(w.Body.String()); !strings.Contains(got, `"code":"forbidden"`) || !strings.Contains(got, `"error":"forbidden"`) { // Issue #2677: Fehlerobjekt
 			t.Errorf("bob %s: Body erwartet %q, bekommen %q", pfad, `{"error":"forbidden"}`, got)
 		}
 		if w := trigger(t, r, secret, http.MethodPost, pfad, ""); w.Code != http.StatusUnauthorized {

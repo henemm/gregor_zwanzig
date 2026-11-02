@@ -169,7 +169,8 @@ Fehlerantworten der Go-API, die über `handler.WriteError`/`WriteErrorWith` lauf
 - Zusatzfelder je Endpunkt bleiben möglich (z. B. `resource`, `compare_presets`); Header wie `Retry-After` unverändert.
 - **Sprachauflösung** (Middleware `middleware.Lang` direkt nach `AuthMiddleware`): angemeldet gespeicherte Nutzersprache `language` > Cookie `gz_lang` (`de`|`en`, andere Werte ignoriert) > `Accept-Language` (nach `q`, `q=0` ignoriert) > `de`; öffentlich Cookie > `Accept-Language` > `de`.
 - Cookie `gz_lang` setzt Go bei Anmeldung (alle Wege), Registrierung und Profil-Update, aber nur bei gespeicherter Sprache: `Path=/`, `Max-Age=31536000`, `SameSite=Lax`, `Secure` bei https, nicht HttpOnly.
-- Umgestellt sind in G1 die Pfade über `bailIf` (`/api/briefings*`, Teile von `/api/compare/presets/{id}*`). Die übrigen Formen (`{"error":…}`, Form A in 10.1, `AuthMiddleware` 401/503) werden mit G2/G3 vereinheitlicht und hier nachgeführt.
+- Umgestellt sind in G1 die Pfade über `bailIf` (`/api/briefings*`, Teile von `/api/compare/presets/{id}*`), in G2 Auth/Konto.
+- **Seit G3 (#2677)** tragen auch Trip-, Ortsvergleich-, Orts-, Gruppen-, Metrik-Preset-, Wetter-Konfig-, Forecast-, Versand-, Vorschau- und Proxy-Fehler sowie `AuthMiddleware` (401 `unauthorized`, 503 `service_unavailable`), `RequireAdmin` (403 `forbidden`) und `IPRateLimiter` (429 `rate_limit_exceeded`) dieses Objekt. Die in den Tabellen dieses Dokuments notierten Kurzformen `{"error":"<code>"}` meinen ab dann das volle Objekt mit diesem `code`; Status, Codes und Zusatzfelder sind unverändert. Fachtexte liegen unter `fach.fehler.*`, Resolver-Meldungen unter `fach.resolver.*`; deutsche Texte sind wortgleich zum Stand vor G3. Umbenannt: `upstream unreachable` → `upstream_unreachable`. Klartext-Antworten (`http.Error`) der Nutzer-Handler (Briefing-Historie, Wegpunkt-Bestätigung, Telegram-Link/-Status, Premium-SMS-Kopplungscode) sind jetzt JSON mit `unauthorized`/`internal_error`/`store_error`/`not_found`/`bad_request`/`service_unavailable`. Maschinen-Endpunkte (`/api/internal/`, `/api/webhooks/`, Status-Token, Staging) bleiben unverändert.
 - Antworten des Python-Cores werden unverändert durchgereicht.
 - **Ungültige `user_id` im Python-Core (#2163, 2026-11-01):** Nutzerpfade entstehen nur mit geprüfter Kennung (`src/app/loader.py`: `is_valid_user_id` mit `fullmatch`, `user_dir`, `InvalidUserIdError`; `"alice\n"` wird abgelehnt). Ein zentraler FastAPI-Handler antwortet 404 `{"error":"not_found"}` ohne Kennung im Text. Ausnahme: `api/routers/gpx.py` behält 400 `invalid_user_id`. Fail-soft-Leser/-Schreiber (Scheduler, Alert-Erfassung, Budget) kehren bei ungültiger Kennung still zurück. Spec: `docs/specs/modules/auth_haertung_python_2163.md`.
 
@@ -933,8 +934,8 @@ tatsächlich zugestellt hat.
 bei `route` zusätzlich `report_type`, bei `vergleich` optional `fehlende_orte: [<ort_id>, …]`
 (gelöschte Orte, Versand lief mit den übrigen). `winner`/`empfaenger_count` entfallen.
 
-**Fehler (Form A):** `{"detail": "<deutscher Text>", "code": "<maschinenlesbar>"}` mit 4xx/5xx.
-`detail` wird im Frontend unverändert angezeigt.
+**Fehler (Form A):** `{"detail": "<Text>", "code": "<maschinenlesbar>"}` mit 4xx/5xx.
+`detail` wird im Frontend unverändert angezeigt. Die Go-seitigen Fehler liefern seit #2677 das Fehlerobjekt (Abschnitt 0) mit `detail` = `message` in Nutzersprache (`fach.fehler.validation_error_kennung`, `proxy_error_versand`, `upstream_unreachable_versand`); Python-Antworten gehen unverändert durch.
 
 | Status | `code` | Bedeutung |
 |---|---|---|
@@ -951,7 +952,7 @@ bei `route` zusätzlich `report_type`, bei `vergleich` optional `fehlende_orte: 
 Die Fehler mit `kind_required`, `validation_error` und `upstream_unreachable` (sowie 500
 `proxy_error`) entstehen in der Go-API, alle übrigen im Python-Core (`src/services/send_outcomes.py`);
 beide in derselben Form A. Gilt auch für die Alt-Routen (gleiche Proxy-Funktion `forwardSend`).
-Die Vorschau-/CRUD-Routen unter `/api/briefings` behalten ihre Form `{"error":"<code>"}`.
+Die Vorschau-/CRUD-Routen unter `/api/briefings` antworten mit dem Fehlerobjekt (Abschnitt 0); `error` = `code` bleibt.
 
 Lock-Schlüssel unverändert: Trip `(user_id, trip_id, report_type)`, Ortsvergleich
 `("compare", user_id, preset_id)`. Die Alt-Routen `POST /api/trips/{id}/send` und
@@ -1317,7 +1318,7 @@ Ein Ort, der in `LocationIDs` eines Ortsvergleichs **desselben Nutzers** steht, 
 409-Body:
 
 ```json
-{"error":"location_in_use","compare_presets":[{"id":"…","name":"…"}]}
+{"code":"location_in_use","message":"…","error":"location_in_use","detail":"…","compare_presets":[{"id":"…","name":"…"}]}
 ```
 
 Die Orte-Seite zeigt die Namen mit Link auf `/compare/{id}` und den Hinweis, den Ort dort zuerst zu entfernen. Die Pruefung laeuft ueber den nutzergebundenen Store (`WithUser`), nie ueber `"default"`; Ortsvergleiche anderer Nutzer erscheinen nie.
@@ -1360,7 +1361,7 @@ betroffen.
   waere die Auslieferungsreihenfolge Go↔Frontend eine Sollbruchstelle und jeder
   Bestandsclient braeche.
 - **Falscher `If-Match` → `412`** mit
-  `{"error":"precondition_failed","detail":"<deutscher Text>"}`, **ohne**
+  Fehlerobjekt `precondition_failed` (Text in Nutzersprache, `fach.fehler.precondition_failed`, #2677), **ohne**
   `ETag`-Header und **ohne** dass geschrieben wird. Der Client soll neu laden,
   nicht blind wiederholen.
 - **Schreibsperre belegt → `503` + `Retry-After`** (Issue #2158, ADR-0083): Trip-,
@@ -1822,8 +1823,8 @@ Fetches normalized weather forecast for a given coordinate.
 | Status | Body | Scenario |
 |--------|------|----------|
 | 400 | `{"error":"invalid_coords"}` | lat/lon out of range or missing |
-| 401 | `{"error":"unauthorized","detail":"authentication required"}` | Kein Nutzerkontext (Issue #2391 — geprüft VOR Parametervalidierung, damit die Kontingent-Reservierung nie auf ein leeres/fremdes Konto bucht) |
-| 429 | `{"error":"budget_exceeded","detail":"daily forecast budget exhausted for this user"}`, Header `Retry-After` (Sekunden, 1..86400 geklemmt) | Tageskontingent des Nutzers erschöpft (Issue #2391, ADR-0076) |
+| 401 | `unauthorized`, `detail` `"authentication required"` (technisch, seit #2677 im Fehlerobjekt) | Kein Nutzerkontext (Issue #2391 — geprüft VOR Parametervalidierung, damit die Kontingent-Reservierung nie auf ein leeres/fremdes Konto bucht) |
+| 429 | `budget_exceeded`, `detail` `"daily forecast budget exhausted for this user"` (Fehlerobjekt, #2677), Header `Retry-After` (Sekunden, 1..86400 geklemmt) | Tageskontingent des Nutzers erschöpft (Issue #2391, ADR-0076) |
 | 503 | `{"error":"provider_unavailable"}` | Weather provider API unreachable |
 
 **Note (Issue #2391, ADR-0076):** Vor dem eigentlichen Abruf reserviert der Go-Handler das
@@ -2692,7 +2693,7 @@ oder `archived_at` gesetzt); zusätzlich `end_date` gesetzt und `< heute`.
 
 | Status | Body | Scenario |
 |--------|------|----------|
-| 409 | `{"error":"id_conflict","detail":"Diese Kennung ist bereits durch einen Trip oder Ortsvergleich belegt — bitte anderen Namen wählen."}` | `SaveComparePreset` trifft auf eine Datei fremder Art (statt 500 `store_error`) |
+| 409 | `id_conflict`, `message`/`detail` aus `fach.fehler.id_conflict` (de wortgleich: „Diese Kennung ist bereits durch einen Trip oder Ortsvergleich belegt — bitte anderen Namen wählen.“; Trip-Anlage gegen Ortsvergleich: Variante `vergleich`) | `SaveComparePreset` trifft auf eine Datei fremder Art (statt 500 `store_error`) |
 
 ### Validation Rules (POST/PUT)
 

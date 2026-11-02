@@ -27,9 +27,7 @@ func ExportUserDataHandler(s *store.Store) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		userID := middleware.UserIDFromContext(r.Context())
 		if userID == "" {
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(http.StatusUnauthorized)
-			w.Write([]byte(`{"error":"unauthorized"}`))
+			WriteError(w, r, http.StatusUnauthorized, "unauthorized", nil)
 			return
 		}
 

@@ -5,18 +5,19 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/henemm/gregor-api/internal/i18n"
 	"github.com/henemm/gregor-api/internal/resolver"
 )
+
+// inputFehlt waehlt fach.fehler.bad_request_input (Issue #2677).
+var inputFehlt = i18n.Args{"variante": "input"}
 
 // ResolveLocationHandler liefert eine Location-Vorschau für eine URL oder
 // Koordinaten-Eingabe — ohne zu speichern.
 func ResolveLocationHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-
 		if r.Body == nil {
-			w.WriteHeader(400)
-			w.Write([]byte(`{"error":"bad_request","message":"Feld 'input' fehlt"}`))
+			WriteError(w, r, http.StatusBadRequest, "bad_request", inputFehlt)
 			return
 		}
 
@@ -24,30 +25,33 @@ func ResolveLocationHandler() http.HandlerFunc {
 			Input string `json:"input"`
 		}
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-			w.WriteHeader(400)
-			w.Write([]byte(`{"error":"bad_request","message":"Feld 'input' fehlt"}`))
+			WriteError(w, r, http.StatusBadRequest, "bad_request", inputFehlt)
 			return
 		}
 
 		input := strings.TrimSpace(req.Input)
 		if input == "" {
-			w.WriteHeader(400)
-			w.Write([]byte(`{"error":"bad_request","message":"Feld 'input' fehlt"}`))
+			WriteError(w, r, http.StatusBadRequest, "bad_request", inputFehlt)
 			return
 		}
 
 		result, err := resolver.Resolve(input)
 		if err != nil {
 			if resolveErr, ok := err.(*resolver.ResolveError); ok {
-				w.WriteHeader(422)
-				json.NewEncoder(w).Encode(resolveErr)
+				// Issue #2677: Code unveraendert, Meldung in Nutzersprache
+				// aus fach.resolver.* (detail = message).
+				lang := i18n.FromContext(r.Context())
+				msg := i18n.T(lang, resolveErr.Key, resolveErr.Args)
+				body := i18n.ErrorBody(lang, resolveErr.Code, nil)
+				body["message"], body["detail"] = msg, msg
+				writeJSON(w, http.StatusUnprocessableEntity, body)
 				return
 			}
-			w.WriteHeader(500)
-			w.Write([]byte(`{"error":"internal_error"}`))
+			WriteError(w, r, http.StatusInternalServerError, "internal_error", nil)
 			return
 		}
 
+		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(result)
 	}
 }

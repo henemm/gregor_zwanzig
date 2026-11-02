@@ -18,10 +18,7 @@ func resolveGoogleMaps(input string) (ResolveResult, error) {
 
 	finalURL, err := followGoogleMapsRedirect(input)
 	if err != nil {
-		return ResolveResult{}, &ResolveError{
-			Code:    "resolve_failed",
-			Message: "Google-Maps-Link konnte nicht aufgelöst werden.",
-		}
+		return ResolveResult{}, newResolveError("resolve_failed", "fach.resolver.maps_aufloesen", nil)
 	}
 
 	if m := reGoogleAt.FindStringSubmatch(finalURL); m != nil {
@@ -76,10 +73,7 @@ func resolveGoogleMaps(input string) (ResolveResult, error) {
 		}
 	}
 
-	return ResolveResult{}, &ResolveError{
-		Code:    "resolve_failed",
-		Message: "Konnte keine Koordinaten aus dem Google-Maps-Link extrahieren.",
-	}
+	return ResolveResult{}, newResolveError("resolve_failed", "fach.resolver.maps_koordinaten", nil)
 }
 
 func followGoogleMapsRedirect(input string) (string, error) {

@@ -78,25 +78,25 @@ func PostPremiumSmsLinkCodeHandler(s *store.Store, bcryptCost int) http.HandlerF
 	return func(w http.ResponseWriter, r *http.Request) {
 		userID := middleware.UserIDFromContext(r.Context())
 		if userID == "" {
-			http.Error(w, "unauthorized", http.StatusUnauthorized)
+			WriteError(w, r, http.StatusUnauthorized, "unauthorized", nil)
 			return
 		}
 
 		code, err := generatePremiumSmsLinkCode()
 		if err != nil {
-			http.Error(w, "internal error", http.StatusInternalServerError)
+			WriteError(w, r, http.StatusInternalServerError, "internal_error", nil)
 			return
 		}
 		hash, err := bcrypt.GenerateFromPassword([]byte(code), bcryptCost)
 		if err != nil {
-			http.Error(w, "internal error", http.StatusInternalServerError)
+			WriteError(w, r, http.StatusInternalServerError, "internal_error", nil)
 			return
 		}
 		if err := s.SaveLinkCode(userID, model.PremiumSmsLinkCode{
 			CodeHash:  string(hash),
 			CreatedAt: time.Now().UTC(),
 		}); err != nil {
-			http.Error(w, "save failed", http.StatusInternalServerError)
+			WriteError(w, r, http.StatusInternalServerError, "store_error", nil)
 			return
 		}
 
@@ -110,12 +110,12 @@ func GetPremiumSmsLinkCodeHandler(s *store.Store) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		userID := middleware.UserIDFromContext(r.Context())
 		if userID == "" {
-			http.Error(w, "unauthorized", http.StatusUnauthorized)
+			WriteError(w, r, http.StatusUnauthorized, "unauthorized", nil)
 			return
 		}
 		stored, err := s.LoadLinkCode(userID)
 		if err != nil {
-			http.Error(w, "load failed", http.StatusInternalServerError)
+			WriteError(w, r, http.StatusInternalServerError, "store_error", nil)
 			return
 		}
 		w.Header().Set("Content-Type", "application/json")
