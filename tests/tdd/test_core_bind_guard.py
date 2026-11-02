@@ -188,6 +188,151 @@ def test_core_verweigert_trotz_gesetzter_umgebungsvariablen(tmp_path: Path) -> N
 
 
 # ---------------------------------------------------------------------------
+# Spec-Output: UDS/FD ergibt Exit-Code 3 (host bleibt dabei 127.0.0.1)
+# ---------------------------------------------------------------------------
+
+
+def _unix_socket_accepts(path: Path) -> bool:
+    if not path.exists():
+        return False
+    with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as s:
+        try:
+            s.connect(str(path))
+        except OSError:
+            return False
+    return True
+
+
+def test_core_verweigert_start_auf_unix_socket(tmp_path: Path) -> None:
+    """
+    GIVEN: der Core wird mit ``--host 127.0.0.1 --uds <pfad>`` gestartet
+    WHEN:  uvicorn die App startet
+    THEN:  bricht der Start mit Exit 3 ab, der Unix-Socket nimmt nie Verbindungen an,
+           und die Ausgabe nennt #2190
+    """
+    sock_path = tmp_path / "core.sock"
+    proc = subprocess.Popen(
+        [sys.executable, "-m", "uvicorn", "api.main:app", "--host", "127.0.0.1", "--uds", str(sock_path)],
+        cwd=str(tmp_path),
+        env=_subprocess_env(tmp_path),
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        text=True,
+    )
+    ever_listened = False
+    deadline = time.monotonic() + START_TIMEOUT_S
+    try:
+        while time.monotonic() < deadline:
+            if _unix_socket_accepts(sock_path):
+                ever_listened = True
+                break
+            if proc.poll() is not None:
+                break
+            time.sleep(POLL_INTERVAL_S)
+        exit_code = proc.poll()
+    finally:
+        output = _stop(proc)
+
+    assert not ever_listened, f"Core hat auf Unix-Socket {sock_path} gelauscht (#2190).\n{output[-2000:]}"
+    assert exit_code == 3, f"Erwartet Exit 3 bei --uds, bekam {exit_code}.\n{output[-2000:]}"
+    assert "#2190" in output, f"Abbruchmeldung nennt #2190 nicht.\n{output[-2000:]}"
+
+
+def test_core_verweigert_start_auf_uebergebenem_fd(tmp_path: Path) -> None:
+    """
+    GIVEN: der Elternprozess uebergibt einen auf 127.0.0.1 gebundenen (nicht
+           lauschenden) TCP-Socket, der Core startet mit ``--fd N``
+    WHEN:  uvicorn die App startet
+    THEN:  bricht der Start mit Exit 3 ab, der Port lauscht nie, die Ausgabe nennt #2190
+    """
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    try:
+        sock.bind(("127.0.0.1", 0))
+        port = sock.getsockname()[1]
+        assert port not in (8000, 8001)
+        fd = sock.fileno()
+        proc = subprocess.Popen(
+            [sys.executable, "-m", "uvicorn", "api.main:app", "--fd", str(fd)],
+            cwd=str(tmp_path),
+            env=_subprocess_env(tmp_path),
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            text=True,
+            pass_fds=(fd,),
+        )
+        ever_listened = False
+        deadline = time.monotonic() + START_TIMEOUT_S
+        try:
+            while time.monotonic() < deadline:
+                if _port_is_listening(port):
+                    ever_listened = True
+                    break
+                if proc.poll() is not None:
+                    break
+                time.sleep(POLL_INTERVAL_S)
+            exit_code = proc.poll()
+        finally:
+            output = _stop(proc)
+    finally:
+        sock.close()
+
+    assert not ever_listened, f"Core hat ueber --fd auf Port {port} gelauscht (#2190).\n{output[-2000:]}"
+    assert exit_code == 3, f"Erwartet Exit 3 bei --fd, bekam {exit_code}.\n{output[-2000:]}"
+    assert "#2190" in output, f"Abbruchmeldung nennt #2190 nicht.\n{output[-2000:]}"
+
+
+# ---------------------------------------------------------------------------
+# fail-closed: eigene Config ohne lesbaren Host
+# ---------------------------------------------------------------------------
+
+_NO_HOST_PROBE = textwrap.dedent(
+    """
+    import asyncio
+
+    import uvicorn
+
+    from api.main import app as core_app
+
+    own = uvicorn.Config(app=core_app, host="127.0.0.1", port=54322)
+    own.load()
+    del own.host
+
+    async def run():
+        async with core_app.router.lifespan_context(core_app):
+            pass
+
+    try:
+        asyncio.run(run())
+        print("RESULT=started")
+    except Exception as exc:  # noqa: BLE001
+        print("RESULT=refused:" + type(exc).__name__ + ":" + str(exc))
+    """
+)
+
+
+def test_eigene_config_ohne_host_wird_verweigert(tmp_path: Path) -> None:
+    """
+    GIVEN: die eigene uvicorn-Config der Core-App hat kein ``host``-Attribut
+    WHEN:  der Lifespan von api.main:app laeuft
+    THEN:  wird der Start verweigert (fail-closed, kein stiller Default auf 127.0.0.1)
+    """
+    proc = subprocess.run(
+        [sys.executable, "-c", _NO_HOST_PROBE],
+        cwd=str(tmp_path),
+        env=_subprocess_env(tmp_path),
+        capture_output=True,
+        text=True,
+        timeout=120,
+    )
+    output = proc.stdout + proc.stderr
+
+    assert "RESULT=refused:RuntimeError" in output, (
+        f"Config ohne Host wurde nicht verweigert (fail-closed #2190).\n{output[-2000:]}"
+    )
+    assert "#2190" in output
+
+
+# ---------------------------------------------------------------------------
 # AC-4: 127.0.0.1 startet normal
 # ---------------------------------------------------------------------------
 

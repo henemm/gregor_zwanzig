@@ -202,6 +202,8 @@ Der im Issue geforderte **Bind-Guard** („`127.0.0.1` im Startpfad erzwingen") 
 
 **Diese Verkleinerung des Ticket-Umfangs bedarf der Freigabe durch den Product Owner** — sie wird hier ausdrücklich benannt, nicht stillschweigend weggelassen.
 
+**Nachtrag (2026-11-02):** Der abgetrennte Bind-Guard ist als Issue #2190 umgesetzt, Spec `docs/specs/modules/core_bind_guard.md`. Statt eines eigenen Einstiegspunkts prüft der Core im FastAPI-Lifespan (vor dem Binden) die uvicorn-Config, die genau diese App bedient, und verweigert den Start bei jeder Adresse außer `127.0.0.1`; die systemd-Units in `henemm-infra` bleiben unverändert.
+
 ## Architektur-Entscheidung (ADR)
 
 - **ADR-Nr.:** ADR-0062 (neu, nächste freie Nummer)
