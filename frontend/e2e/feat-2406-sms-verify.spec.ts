@@ -33,10 +33,15 @@ async function frischesKonto(page: Page): Promise<string> {
 		data: { username: kennung, password: PASSWORT, email: `${kennung}@example.com` }
 	});
 	expect([200, 201].includes(reg.status()), `Registrierung fehlgeschlagen: ${reg.status()}`).toBeTruthy();
+	// Issue #2194 (ADR-0105): ohne is_test_user vergibt der Server die Konto-ID
+	// selbst (`u-<8hex>`) und ignoriert `username`; Folgeschritte nutzen die `id`.
+	const { id } = (await reg.json().catch(() => ({}))) as { id?: unknown };
+	expect(typeof id === 'string' && id !== '', 'Registrierung lieferte keine Konto-ID').toBeTruthy();
+	const kontoId = id as string;
 
 	// E-Mail-Gate (#2271) oeffnen — sonst kann sich das Konto nicht anmelden.
 	const tokenAntwort = await page.request.post('/api/auth/verify-email/staging-token', {
-		data: { username: kennung }
+		data: { username: kontoId }
 	});
 	expect(
 		tokenAntwort.ok(),
@@ -44,10 +49,11 @@ async function frischesKonto(page: Page): Promise<string> {
 	).toBeTruthy();
 	const { token } = await tokenAntwort.json();
 	const bestaetigt = await page.request.post('/api/auth/verify-email', {
-		data: { user: kennung, token }
+		data: { user: kontoId, token }
 	});
 	expect(bestaetigt.ok(), `E-Mail-Bestaetigung fehlgeschlagen: ${bestaetigt.status()}`).toBeTruthy();
-	return kennung;
+	// Die Anmeldung akzeptiert die Konto-ID (ADR-0105), deshalb wird sie zurueckgegeben.
+	return kontoId;
 }
 
 /** Eigener Browser-Kontext OHNE die Fixture-Sitzung, im Konto angemeldet. */

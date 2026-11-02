@@ -31,7 +31,12 @@ async function registriereWegwerfkonto(page: Page, marke: string): Promise<strin
 		data: { username: kennung, password: PASSWORT, email: `${kennung}@example.com` }
 	});
 	expect([200, 201].includes(reg.status()), `Registrierung fehlgeschlagen: ${reg.status()}`).toBeTruthy();
-	return kennung;
+	// Issue #2194 (ADR-0105): ohne is_test_user vergibt der Server die Konto-ID
+	// selbst (`u-<8hex>`) und ignoriert `username`. Login, Testweg und
+	// verify-email sprechen das Konto deshalb ueber diese `id` an.
+	const { id } = (await reg.json().catch(() => ({}))) as { id?: unknown };
+	expect(typeof id === 'string' && id !== '', 'Registrierung lieferte keine Konto-ID').toBeTruthy();
+	return id as string;
 }
 
 /** Browser-Kontext OHNE die Fixture-Sitzung — sonst startete der "Gast" als admin. */
@@ -144,7 +149,7 @@ test('AC-14: Nach der Registrierung weist die Login-Seite auf die Bestätigungsm
 	try {
 		const kennung = `e2e2271reg${Date.now()}`;
 		await gast.goto('/register');
-		await gast.fill('input[name="username"]', kennung);
+		// Issue #2194: das Registrierungsformular hat kein Benutzername-Feld mehr.
 		await gast.fill('input[name="email"]', `${kennung}@example.com`);
 		await gast.fill('input[name="password"]', PASSWORT);
 		await gast.fill('input[name="confirmPassword"]', PASSWORT);

@@ -199,17 +199,23 @@ async function registriereMitAdresse(
 	if (![200, 201].includes(reg.status())) {
 		throw new Error(`Registrierung fehlgeschlagen: HTTP ${reg.status()} ${await reg.text()}`);
 	}
+	// Issue #2194 (ADR-0105): ohne is_test_user vergibt der Server die Konto-ID
+	// selbst (`u-<8hex>`) und ignoriert `username`; Folgeschritte nutzen die `id`.
+	const { id } = (await reg.json().catch(() => ({}))) as { id?: unknown };
+	if (typeof id !== 'string' || id === '') {
+		throw new Error(`Registrierung lieferte keine Konto-ID: ${await reg.text()}`);
+	}
 	const tokenAntwort = await admin.post('/api/auth/verify-email/staging-token', {
-		data: { username }
+		data: { username: id }
 	});
 	if (!tokenAntwort.ok()) {
 		throw new Error(`Staging-Token-Testweg antwortet HTTP ${tokenAntwort.status()}`);
 	}
 	const { token } = (await tokenAntwort.json()) as { token?: string };
 	if (!token) throw new Error('Staging-Token-Testweg lieferte kein Token');
-	const ok = await gast.post('/api/auth/verify-email', { data: { user: username, token } });
+	const ok = await gast.post('/api/auth/verify-email', { data: { user: id, token } });
 	if (!ok.ok()) throw new Error(`Bestaetigung fehlgeschlagen: HTTP ${ok.status()}`);
-	const login = await gast.post('/api/auth/login', { data: { username, password } });
+	const login = await gast.post('/api/auth/login', { data: { username: id, password } });
 	if (!login.ok()) throw new Error(`Login fehlgeschlagen: HTTP ${login.status()}`);
 }
 
