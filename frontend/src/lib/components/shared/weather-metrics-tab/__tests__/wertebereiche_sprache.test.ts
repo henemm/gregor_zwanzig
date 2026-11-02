@@ -188,7 +188,7 @@ describe('AC-1: Metrik-Namen aus dem Register, Kurzform und Kuerzel unveraendert
 			'Activated metrics appear in section 3, where you set their order and display.', 'Order', '· 9 metrics',
 			'left → right in the email table', 'Raw', 'Simple', 'Off', 'Off in this channel', 'Day window', 'From', 'To',
 			'04 — Thresholds', 'Apply to SMS tokens, Telegram compact style and the email outlook/trend block', 'Gusts (km/h)',
-			'Precipitation (mm)', 'Snow line (m)', 'Sensitive Standard Robust', 'Thunderstorm Light Moderate High',
+			'Precipitation (mm)', 'Snow line (m)', 'Sensitive Standard Robust', 'Thunderstorm TH Light Moderate High',
 			'Official warnings in the report', 'everything after it is an official warning', 'L = yellow', 'TH:H = red thunderstorm warning',
 			'These are the codes for these values in SMS and Telegram compact style:', 'CUSTOM PRESET', 'Save selection as preset',
 			'DESCRIPTION · OPTIONAL', 'WILL BE SAVED', 'Active metrics: 9 · raw: 5 · indicator: 0', 'Columns: 9 · detail: 0 · simple: 0',
@@ -197,21 +197,31 @@ describe('AC-1: Metrik-Namen aus dem Register, Kurzform und Kuerzel unveraendert
 		])
 			hat(t, s);
 		assert.deepEqual(deutscheReste(t), []);
-		// beschriftende Attribute (title, aria-label, placeholder) englisch
-		const alle = [...attr(en, 'title'), ...attr(en, 'aria-label'), ...attr(en, 'placeholder')].join(' | ');
-		for (const s of ['Short form in the email hourly table', 'Codes in SMS, Premium SMS and Telegram', 'Remove from briefing', 'Add back to briefing', 'Close', 'My hiking preset', 'Optimised for day trips', 'Metrics, order'])
+		// beschriftende Attribute (title, aria-label, placeholder) englisch — ohne die Bloecke
+		// anderer Pakete (Ausblick, Mail-Inhalt) und ohne die Bedienhilfe von shared/dnd (eigener Baustein).
+		const eigen = ['weather-metrics-ausblick', 'report-mail-content'].reduce(ohneBlock, en);
+		const alle = [...attr(eigen, 'title'), ...attr(eigen, 'aria-label'), ...attr(eigen, 'placeholder')]
+			.filter((a) => !a.startsWith('Zum Sortieren ziehen'))
+			.join(' | ');
+		for (const s of ['Short form in the email hourly table', 'Codes in SMS, Premium SMS and Telegram', 'Remove from briefing', 'Close', 'My hiking preset', 'Optimised for day trips', 'Metrics, order'])
 			hat(alle, s);
 		assert.deepEqual(deutscheReste(alle), []);
+		const baustein = deDannEn(() => bausteineRendern()).en;
+		hat(attr(baustein, 'title').join(' | '), 'Add back to briefing');
+		const bt = sichtbar(baustein);
+		for (const s of ['Day window', 'Crosses midnight — ends the next day.', 'Custom', 'Off in this channel', 'On', 'No metric active', 'Telegram'])
+			hat(bt, s);
+		assert.deepEqual(deutscheReste(bt), []);
 	});
 
 	test('Trip: Schwellen-Zustaende (Gewitter laedt / nicht ladbar), Gespeichert, Lade- und Fehlerzustand englisch', () => {
 		const z = deDannEn(() => [
-			routeRendern({ activeChannel: 'telegram', compareCatalogLoaded: false, saveSuccess: true }),
-			routeRendern({ activeChannel: 'sms', compareCatalogError: 'HTTP 503' }),
+			routeRendern({ catalog: katalogMitRegister(), activeChannel: 'telegram', compareCatalogLoaded: false, saveSuccess: true }),
+			routeRendern({ catalog: katalogMitRegister(), activeChannel: 'sms', compareCatalogError: 'HTTP 503' }),
 			routeRendern({ catalogLoaded: false }),
 			routeRendern({ catalogLoaded: false, loadError: 'HTTP 500' })
 		].map(paketText));
-		hat(z.de[0], 'Gewitter Lädt…');
+		hat(z.de[0], 'Lädt…'); // „Gewitter" entfernt paketText (Gefahren-Name aus /api/sms-symbols)
 		hat(z.en[0], 'Thunderstorm Loading…');
 		hat(z.en[0], 'Saved');
 		hat(z.en[1], 'Thunderstorm Thresholds could not be loaded');
@@ -285,7 +295,7 @@ describe('AC-4: Trip und Ortsvergleich englisch mit demselben Baustein', () => {
 		for (const id of ['wm2-reihenfolge', 'day-window-control', 'report-show-official-alerts', 'wm2-aus-gruppe'])
 			for (const h of [route, vergleich]) assert.ok(h.includes(`data-testid="${id}"`), `${id} fehlt`);
 		hat(v, 'comparison email');
-		hatNicht(r, 'comparison');
+		hatNicht(r, 'comparison email');
 		hat(r, 'Default for new trips');
 		hatNicht(v, 'trip');
 		assert.equal(trFor('en', 'wertebereiche.reihenfolge.aus_im_kanal'), 'Off in this channel');

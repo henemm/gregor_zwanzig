@@ -10,6 +10,9 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
+
+// #2654 (i18n F5): Wortlaut steht im Katalog — die Ratsche liest den Quelltext mit eingesetzten de-Werten.
+import { quelleMitKatalog } from '../../i18n/__tests__/quelleMitKatalog.ts';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
@@ -70,7 +73,7 @@ test('AC-2 (#629): WeatherConfigDialog bietet Roh/Einfach-Toggle', () => {
 // --- AC-3: Preset-Zusammenfassung SavePresetDialog ---
 
 test('AC-3: SavePresetDialog zeigt "als Einfach" statt "als Skala"', () => {
-	const src = readFileSync(SAVE_PRESET_DLG, 'utf-8');
+	const src = quelleMitKatalog(readFileSync(SAVE_PRESET_DLG, 'utf-8'));
 	assert.ok(
 		src.includes('als Einfach'),
 		'AC-3 RED: SavePresetDialog muss "als Einfach" enthalten'

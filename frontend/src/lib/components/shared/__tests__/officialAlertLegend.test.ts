@@ -23,6 +23,9 @@
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync, readdirSync, statSync } from 'node:fs';
+
+// #2654 (i18n F5): Wortlaut steht im Katalog — die Ratsche liest den Quelltext mit eingesetzten de-Werten.
+import { quelleMitKatalog } from '../../../i18n/__tests__/quelleMitKatalog.ts';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import { parse } from 'svelte/compiler';
@@ -45,7 +48,7 @@ const SMS_THRESHOLD_METRIC_IDS = [
 ];
 
 function read(path: string): string {
-	return readFileSync(path, 'utf-8');
+	return quelleMitKatalog(readFileSync(path, 'utf-8'));
 }
 
 /** Liest den Backend-Katalog (hazard -> Kürzel) aus hazard_symbols.py. */

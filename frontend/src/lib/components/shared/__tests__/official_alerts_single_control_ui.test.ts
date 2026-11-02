@@ -21,6 +21,9 @@
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
+
+// #2654 (i18n F5): Wortlaut steht im Katalog — die Ratsche liest den Quelltext mit eingesetzten de-Werten.
+import { quelleMitKatalog } from '../../../i18n/__tests__/quelleMitKatalog.ts';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
@@ -38,7 +41,7 @@ const TRIGGER_TOGGLE_TESTID = 'alerts-tab-official-alert-triggers-toggle';
 const CONTENT_LABEL = 'Amtliche Warnungen im Bericht';
 
 function read(path: string): string {
-	return readFileSync(path, 'utf-8');
+	return quelleMitKatalog(readFileSync(path, 'utf-8'));
 }
 
 describe('D2 AC-1: Alarm-Tab hat nur noch den Auslöser-Schalter', () => {
