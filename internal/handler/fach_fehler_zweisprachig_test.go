@@ -424,3 +424,99 @@ func TestG3AnkertabelleFachFehler(t *testing.T) {
 		t.Errorf("fach.fehler.quota_exceeded ohne Variante darf es nicht geben")
 	}
 }
+
+// --- G3b: Proxy und uebrige Nutzer-Handler -----------------------------------
+
+// g3bDo ruft h durch die echte Lang-Middleware als Nutzer uid (leer = ohne Kontext).
+func g3bDo(s *store.Store, h http.Handler, uid, acc, method, path string) *httptest.ResponseRecorder {
+	req := httptest.NewRequest(method, path, nil)
+	if uid != "" {
+		req = req.WithContext(middleware.ContextWithUserID(req.Context(), uid))
+	}
+	if acc != "" {
+		req.Header.Set("Accept-Language", acc)
+	}
+	w := httptest.NewRecorder()
+	middleware.Lang(s)(h).ServeHTTP(w, req)
+	return w
+}
+
+func g3bPruefe(t *testing.T, fall string, w *httptest.ResponseRecorder, status int, code, msg string) {
+	t.Helper()
+	if w.Code != status {
+		t.Fatalf("%s: Status %d, erwartet %d (%s)", fall, w.Code, status, w.Body.String())
+	}
+	if ct := w.Header().Get("Content-Type"); !strings.HasPrefix(ct, "application/json") {
+		t.Errorf("%s: Content-Type %q, erwartet application/json", fall, ct)
+	}
+	b := g3Body(t, w)
+	if b["code"] != code || b["error"] != code || b["message"] != msg {
+		t.Errorf("%s: Antwort %v, erwartet code %q message %q", fall, b, code, msg)
+	}
+}
+
+func g3bTot(t *testing.T) string {
+	srv := httptest.NewServer(http.NewServeMux())
+	srv.Close()
+	return srv.URL
+}
+
+// Go-eigene Proxy-Fehler in Nutzersprache; zwei Nutzer (en/de) in einem Lauf.
+func TestG3bProxyFehlerJeSprache(t *testing.T) {
+	s := store.New(t.TempDir(), "")
+	mustSaveUser(t, s, model.User{ID: "anna-en", Language: "en"})
+	mustSaveUser(t, s, model.User{ID: "bert-de", Language: "de"})
+	tot := g3bTot(t)
+	for _, u := range []struct{ id, core, upstream string }{
+		{"anna-en", "The core service is not reachable right now. Please try again later.", "The service is not reachable."},
+		{"bert-de", "Der Kern-Dienst ist gerade nicht erreichbar. Bitte versuche es später erneut.", "Der Dienst ist nicht erreichbar."},
+	} {
+		w := g3bDo(s, ProxyHandler(tot, "/api/x"), u.id, "", http.MethodGet, "/api/x")
+		g3bPruefe(t, "core_unavailable "+u.id, w, 503, "core_unavailable", u.core)
+		w = g3bDo(s, StagesWeatherProxyHandler(tot), u.id, "", http.MethodGet, "/api/trips/t1/stages/weather")
+		g3bPruefe(t, "upstream_unreachable "+u.id, w, 502, "upstream_unreachable", u.upstream)
+	}
+	w := g3bDo(s, NextBriefingsProxyHandler(tot), "", "en", http.MethodGet, "/api/next-briefings")
+	g3bPruefe(t, "next-briefings ohne Nutzer", w, 401, "unauthorized", "Please sign in.")
+}
+
+// Python-Antworten gehen unveraendert durch (Status, Body).
+func TestG3bProxyReichtPythonDurch(t *testing.T) {
+	s := store.New(t.TempDir(), "")
+	mustSaveUser(t, s, model.User{ID: "anna-en", Language: "en"})
+	py := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusConflict)
+		w.Write([]byte(`{"detail":"Python sagt nein","code":"py_code"}`))
+	}))
+	defer py.Close()
+	w := g3bDo(s, StagesWeatherProxyHandler(py.URL), "anna-en", "", http.MethodGet, "/api/trips/t1/stages/weather")
+	if w.Code != http.StatusConflict || w.Body.String() != `{"detail":"Python sagt nein","code":"py_code"}` {
+		t.Errorf("Python-Antwort veraendert: %d %s", w.Code, w.Body.String())
+	}
+}
+
+// Klartext-http.Error der Nutzer-Handler wird JSON mit Code (Telegram, Premium-SMS-Code, Export).
+func TestG3bNutzerHandlerKlartextWirdJSON(t *testing.T) {
+	s := store.New(t.TempDir(), "")
+	ts := NewTelegramTokenStore(t.TempDir())
+	faelle := []struct {
+		name          string
+		h             http.Handler
+		uid, acc      string
+		status        int
+		code, message string
+	}{
+		{"telegram-status ohne Nutzer", GetTelegramStatusHandler(s), "", "en", 401, "unauthorized", "Please sign in."},
+		{"telegram-status unbekannt", GetTelegramStatusHandler(s), "geist", "en", 404, "not_found", "Not found."},
+		{"telegram-link ohne Bot", GetTelegramLinkHandler(s, ts, ""), "geist", "de", 500, "service_unavailable", "Der Dienst ist gerade nicht verfügbar."},
+		{"telegram-link unbekannt", GetTelegramLinkHandler(s, ts, "bot"), "geist", "en", 404, "not_found", "Not found."},
+		{"link-code GET ohne Nutzer", GetPremiumSmsLinkCodeHandler(s), "", "en", 401, "unauthorized", "Please sign in."},
+		{"link-code POST ohne Nutzer", PostPremiumSmsLinkCodeHandler(s, 4), "", "de", 401, "unauthorized", "Bitte melde dich an."},
+		{"export ohne Nutzer", ExportUserDataHandler(s), "", "en", 401, "unauthorized", "Please sign in."},
+	}
+	for _, f := range faelle {
+		w := g3bDo(s, f.h, f.uid, f.acc, http.MethodGet, "/x")
+		g3bPruefe(t, f.name, w, f.status, f.code, f.message)
+	}
+}

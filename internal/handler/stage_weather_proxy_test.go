@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"encoding/json"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -80,8 +81,10 @@ func TestStagesWeatherProxyHandlerReturns502OnUpstreamUnreachable(t *testing.T) 
 	if w.Code != http.StatusBadGateway {
 		t.Fatalf("expected 502, got %d (body=%q)", w.Code, w.Body.String())
 	}
-	if got := w.Body.String(); got != `{"error":"upstream unreachable"}` {
-		t.Errorf("expected exact error body, got %q", got)
+	// Issue #2677: Fehlerobjekt mit stabilem Code upstream_unreachable.
+	var body map[string]any
+	if err := json.Unmarshal(w.Body.Bytes(), &body); err != nil || body["code"] != "upstream_unreachable" || body["error"] != "upstream_unreachable" {
+		t.Errorf("expected upstream_unreachable error object, got %q", w.Body.String())
 	}
 	if ct := w.Header().Get("Content-Type"); ct != "application/json" {
 		t.Errorf("expected Content-Type application/json, got %q", ct)

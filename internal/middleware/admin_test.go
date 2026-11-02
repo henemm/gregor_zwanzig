@@ -58,8 +58,8 @@ func TestRequireAdmin_NormalUser_Gets403JSON_HandlerNotCalled(t *testing.T) {
 	if w.Code != http.StatusForbidden {
 		t.Fatalf("normaler Nutzer: erwartet 403, bekommen %d", w.Code)
 	}
-	if got := strings.TrimSpace(w.Body.String()); got != `{"error":"forbidden"}` {
-		t.Errorf("Body: erwartet %q, bekommen %q", `{"error":"forbidden"}`, got)
+	if got := strings.TrimSpace(w.Body.String()); !strings.Contains(got, `"code":"forbidden"`) || !strings.Contains(got, `"error":"forbidden"`) { // Issue #2677: Fehlerobjekt
+		t.Errorf("Body: erwartet code %q, bekommen %q", "forbidden", got)
 	}
 	if ct := w.Header().Get("Content-Type"); !strings.HasPrefix(ct, "application/json") {
 		t.Errorf("Content-Type: erwartet application/json, bekommen %q", ct)

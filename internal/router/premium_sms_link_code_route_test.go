@@ -27,10 +27,10 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
-	"strings"
 	"testing"
 	"time"
 
+	authmw "github.com/henemm/gregor-api/internal/middleware"
 	"github.com/henemm/gregor-api/internal/model"
 )
 
@@ -109,10 +109,20 @@ func TestPremiumSmsLinkCodeRouteWeistAnonymeAufrufeInDerMiddlewareAb(t *testing.
 			t.Errorf("F001: anonymes %s %s erwartet 401, bekam %d, body=%s",
 				method, linkCodeRoutePath, w.Code, w.Body.String())
 		}
-		if got := strings.TrimSpace(w.Body.String()); got != `{"error":"unauthorized"}` {
-			t.Errorf("F001: anonymes %s %s wurde NICHT von der AuthMiddleware abgewiesen, sondern erst "+
-				"vom Handler (Antwort %q) — der Pfad steht in der Public-Allowlist (auth.go:50-68)",
-				method, linkCodeRoutePath, got)
+		// Issue #2677: Middleware und Handler antworten beide mit dem
+		// Fehlerobjekt unauthorized; die Abweisung IN der Middleware wird
+		// darum direkt an AuthMiddleware mit einem Waechter-Handler geprueft.
+		var body map[string]any
+		if err := json.Unmarshal(w.Body.Bytes(), &body); err != nil || body["code"] != "unauthorized" {
+			t.Errorf("F001: anonymes %s %s: erwartet Fehlerobjekt unauthorized, bekam %q",
+				method, linkCodeRoutePath, w.Body.String())
+		}
+		erreicht := false
+		waechter := authmw.AuthMiddleware("x", s)(http.HandlerFunc(func(http.ResponseWriter, *http.Request) { erreicht = true }))
+		waechter.ServeHTTP(httptest.NewRecorder(), httptest.NewRequest(method, linkCodeRoutePath, nil))
+		if erreicht {
+			t.Errorf("F001: anonymes %s %s wurde NICHT von der AuthMiddleware abgewiesen — "+
+				"der Pfad steht in der Public-Allowlist (auth.go:50-68)", method, linkCodeRoutePath)
 		}
 	}
 
