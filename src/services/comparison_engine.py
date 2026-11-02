@@ -16,6 +16,7 @@ from datetime import datetime, time, timedelta, timezone
 from typing import Any, Dict, List, Optional, TYPE_CHECKING
 
 from app.user import ComparisonResult, LocationResult, SavedLocation
+from i18n import resolve_user_lang, t
 from services.comparison_scoring import calculate_score
 from services.weather_metrics import WeatherMetricsService, summarize_points
 from utils.timezone import local_dt, location_tz, to_utc
@@ -93,8 +94,15 @@ def _fetch_compare_series(
         if hasattr(provider, "close"):
             provider.close()
     if weather.has_error:
-        return None, weather.error_message or "Wetterabruf fehlgeschlagen"
+        return None, _abruf_fehlertext(weather.error_message, user_id)
     return weather.timeseries, None
+
+
+def _abruf_fehlertext(meldung: Optional[str], user_id: Optional[str]) -> str:
+    """Meldung der Quelle, sonst der Ersatztext in der Kontosprache (#2751)."""
+    if meldung:
+        return meldung
+    return t("vergleich.ort.abruf_fehlgeschlagen", resolve_user_lang(user_id or ""))
 
 
 def fetch_location_official_alerts(lat: float, lon: float) -> tuple:

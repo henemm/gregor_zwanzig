@@ -37,6 +37,7 @@
   "vergleich.fuss.abmelden": "Abmelden",
   "vergleich.allgemein.keine_daten": "Keine Vergleichsdaten verfügbar.",
   "vergleich.ort.fehler": "Fehler: {fehler}",
+  "vergleich.ort.abruf_fehlgeschlagen": "Wetterabruf fehlgeschlagen",
   "vergleich.telegram.keine_werte": "keine Werte",
   "vergleich.telegram.uebersprungen": "… +{n} weitere Orte (Telegram-Limit) — vollständig per E-Mail",
   "vergleich.niederschlagsart.rain": "Regen",

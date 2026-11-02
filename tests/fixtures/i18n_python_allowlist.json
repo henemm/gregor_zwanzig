@@ -14,6 +14,5 @@
   "src/output/renderers/email/thunder_branch.py": 1,
   "src/output/renderers/fallback_notice.py": 9,
   "src/output/renderers/text_report/__init__.py": 1,
-  "src/output/renderers/trip_report.py": 2,
-  "src/services/comparison_engine.py": 1
+  "src/output/renderers/trip_report.py": 2
 }

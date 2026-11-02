@@ -37,6 +37,7 @@
   "vergleich.fuss.abmelden": "Unsubscribe",
   "vergleich.allgemein.keine_daten": "No comparison data available.",
   "vergleich.ort.fehler": "Error: {fehler}",
+  "vergleich.ort.abruf_fehlgeschlagen": "Weather fetch failed",
   "vergleich.telegram.keine_werte": "no values",
   "vergleich.telegram.uebersprungen": "… +{n} more locations (Telegram limit) — full version by email",
   "vergleich.niederschlagsart.rain": "Rain",
