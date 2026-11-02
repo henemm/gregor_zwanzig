@@ -1,0 +1,34 @@
+ALERT_METRIC_LABELS(wind_gust) → {"label_de":"Böen","unit":"km/h","comparison":">"}
+ALERT_METRIC_LABELS(precipitation_sum) → {"label_de":"Niederschlag","unit":"mm","comparison":">"}
+ALERT_METRIC_LABELS(thunder_level) → {"label_de":"Gewitter","unit":"","comparison":"≥"}
+ALERT_METRIC_LABELS(snow_line) → {"label_de":"Schneefallgrenze","unit":"m","comparison":">"}
+ALERT_METRIC_LABELS(temperature_min) → {"label_de":"Temperatur (Minimum)","unit":"°C","comparison":"<"}
+ALERT_METRIC_LABELS(temperature_max) → {"label_de":"Temperatur (Maximum)","unit":"°C","comparison":">"}
+ALERT_METRIC_LABELS(temperature_change) → {"label_de":"Temperatur (Änderung)","unit":"°C","comparison":">"}
+ALERT_METRIC_LABELS(wind_change) → {"label_de":"Wind (Änderung)","unit":"km/h","comparison":">"}
+ALERT_METRIC_LABELS(precipitation_change) → {"label_de":"Niederschlag (Änderung)","unit":"mm","comparison":">"}
+ALERT_METRIC_LABELS(fresh_snow) → {"label_de":"Neuschnee","unit":"cm","comparison":">"}
+ALERT_METRIC_LABELS(cape) → {"label_de":"Gewitterenergie (CAPE)","unit":"J/kg","comparison":">"}
+ALERT_METRIC_LABELS(visibility) → {"label_de":"Sichtweite","unit":"m","comparison":"<"}
+ALERT_METRIC_LABELS(humidity) → {"label_de":"Luftfeuchtigkeit","unit":"%","comparison":">"}
+ALERT_METRIC_LABELS(freezing_level) → {"label_de":"Nullgradgrenze","unit":"m","comparison":"<"}
+ALERT_METRIC_LABELS(thunder_onset) → {"label_de":"Gewitter (Beginn)","unit":"h","comparison":"≥"}
+ALERT_METRIC_LABELS(precipitation_heavy_onset) → {"label_de":"Starkregen (Beginn)","unit":"h","comparison":"≥"}
+SEVERITY_LABEL_DE(info) → "Info"
+SEVERITY_LABEL_DE(warning) → "Warnung"
+SEVERITY_LABEL_DE(critical) → "Kritisch"
+CHANNEL_THRESHOLD_LABELS(LOW) → "gering"
+CHANNEL_THRESHOLD_LABELS(MODERATE) → "mittel"
+CHANNEL_THRESHOLD_LABELS(HIGH) → "hoch"
+triggerGroupHeading(route) → "Amtliche Warnungen"
+triggerGroupHeading(vergleich) → "Amtliche & Radar-Warnungen"
+derivePremiumSmsAlarmGate(null) → {"disabled":true,"hint":"Tarif wird geprüft — der Kanal lässt sich einen Moment lang nicht umschalten."}
+derivePremiumSmsAlarmGate({"premium_sms_allowed":false}) → {"disabled":true,"hint":"Premium-SMS ab Level Premium verfügbar"}
+derivePremiumSmsAlarmGate({"premium_sms_allowed":true}) → {"disabled":false,"hint":null}
+thresholdTitle(cape) → "Richtwert — wird je Wettermodell und Gebiet umgerechnet"
+thresholdTitle(wind_gust) → null
+levelToThreshold(cape, standard) → "Δ ≥ ~600 J/kg"
+levelToThreshold(wind_gust, standard) → "Δ ≥ 20 km/h"
+levelToThreshold(thunder_onset, standard) → "Δ ≥ 1 h"
+deriveUnalertableSelectedMetricNames(alle) → ["Luftfeuchtigkeit","Gefühlte Temperatur (Minimum)","Gefühlte Temperatur (Maximum)"]
+deriveActiveAlertMetricsFromCatalog(alle) → ["wind_gust","temperature_min","cape"]

@@ -14,6 +14,7 @@
 
 import type { AlertMetric, AlertRule, AlertSeverity, SensLevel } from '../../types.ts';
 import { ALERT_METRIC_LABELS } from '../../utils/alertMetricLabels.ts';
+import { tr } from '../../i18n/index.ts';
 // Fix #1435 Etappe E4: einzige Quelle der Preset-Schwellwerte, erzeugt von
 // scripts/generate_alert_preset_table.py aus src/services/alert_preset.py.
 import rawPresetThresholds from '../../generated/alertPresetThresholds.generated.json' with { type: 'json' };
@@ -277,7 +278,7 @@ export function levelToThreshold(metric: AlertMetric, level: SensLevel): string 
  */
 export function thresholdTitle(metric: AlertMetric): string | undefined {
 	if (metric === 'cape') {
-		return 'Richtwert — wird je Wettermodell und Gebiet umgerechnet';
+		return tr('alarme.richtwert'); // #2656: aktuelle Sprache; Aufrufer im Markup lesen $locale
 	}
 	return undefined;
 }

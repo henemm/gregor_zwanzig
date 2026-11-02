@@ -198,7 +198,10 @@ export const TS_KOMPONENTEN_ORDNER = [
 	'lib/components/shared/layout-tab/',
 	'lib/components/shared/corridor-editor/',
 	'lib/components/shared/mailInhaltKonstanten.ts',
-	'routes/gpx-upload/'
+	'routes/gpx-upload/',
+	// F7 (#2656): Alarme-Reiter (Abschnitte, Kanaele, Premium-SMS-Sperre) und alerts-tab/
+	'lib/components/shared/alarme-tab/',
+	'lib/components/alerts-tab/'
 ];
 
 /** Pfad relativ zu frontend/src/ mit Schraegstrichen. */

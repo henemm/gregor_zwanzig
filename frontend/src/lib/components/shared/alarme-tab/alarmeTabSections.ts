@@ -1,10 +1,10 @@
 // Issue #1258 Scheibe S2 — geteilter Alarme-Organism (ungewired).
 // Pure-Function-Kern fuer AlarmeTab.svelte: feste Abschnittsreihenfolge
-// (AC-9), Korridor-Zusammenfassungs-Label (AC-10) und Sprung-Link-Ziel je
-// Kontext.
-//
+// (AC-9), Korridor-Zusammenfassungs-Label (AC-10) und Sprung-Link-Ziel je Kontext.
 // Spec: docs/specs/modules/issue_1258_alarme_tab_official_warnings.md
 //   (AC-9, AC-10, Abschnitt 4 a-h)
+
+import { tr } from '../../../i18n/index.ts';
 
 export type AlarmeContext = 'route' | 'vergleich';
 
@@ -33,7 +33,7 @@ export function alarmeTabSections(context: AlarmeContext): string[] {
 }
 
 // Epic #1301 D3 AC-2: Ueberschrift ueber der Ausloeser-Gruppe
-// (official-warnings + radar), kontextabhaengig.
+// (official-warnings + radar), kontextabhaengig. Issue #2656: aktuelle Sprache (tr).
 export function triggerGroupHeading(context: AlarmeContext): string {
-	return context === 'vergleich' ? 'Amtliche & Radar-Warnungen' : 'Amtliche Warnungen';
+	return context === 'vergleich' ? tr('alarme.gruppe.amtlich_radar') : tr('alarme.gruppe.amtlich');
 }

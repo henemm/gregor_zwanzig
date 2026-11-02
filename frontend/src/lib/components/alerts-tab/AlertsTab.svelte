@@ -12,6 +12,7 @@
 
 	import AlertMetricLevelTable from './AlertMetricLevelTable.svelte';
 	import { Eyebrow } from '$lib/components/atoms';
+	import { t } from '$lib/i18n';
 	import { api } from '$lib/api';
 	import type { Trip, AlertMetric, SensLevel } from '$lib/types';
 	import type { SaveStatus } from '$lib/stores/saveStatusStore.svelte';
@@ -82,19 +83,19 @@
 </script>
 
 <div class="alerts-tab" data-testid="alerts-tab">
-	<Eyebrow>Alerts · Sofort-Meldung</Eyebrow>
-	<h2 class="alerts-h2" data-testid="alerts-tab-heading">Sofort-Meldung zwischen den Briefings</h2>
+	<Eyebrow>{$t('alarme.tab.eyebrow')}</Eyebrow>
+	<h2 class="alerts-h2" data-testid="alerts-tab-heading">{$t('alarme.tab.titel')}</h2>
 
 	{#if isOnboarding}
 		<div class="onboarding" data-testid="alerts-onboarding">
-			<p>Keine Alerts konfiguriert.</p>
+			<p>{$t('alarme.tab.leer')}</p>
 			<button type="button" onclick={activateStandard} data-testid="alerts-activate-standard">
-				Standard-Konfiguration übernehmen
+				{$t('alarme.tab.standard_uebernehmen')}
 			</button>
 		</div>
 	{:else if displayMetrics.length === 0}
 		<p class="no-metrics-hint" data-testid="alerts-no-metrics">
-			Wähle oben Metriken aus, um Alarm-Schwellen zu konfigurieren.
+			{$t('alarme.tab.metriken_waehlen')}
 		</p>
 	{:else}
 		<AlertMetricLevelTable

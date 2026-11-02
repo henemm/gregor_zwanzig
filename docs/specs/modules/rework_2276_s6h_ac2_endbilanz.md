@@ -104,9 +104,9 @@ Diese Scheibe:
 
 | Datei:Zeile | Grund |
 |---|---|
-| `AlarmeTab.svelte:250` | Ableitung `unalertableSelectedMetricNames` — route liefert strukturell immer `[]` (#1435 AC-7) |
-| `AlarmeTab.svelte:511` | Anzeige-Zwilling der fachlichen Zusicherung aus `:250` |
-| `AlarmeTab.svelte:563` | Beispielwarnung: Ort- statt Etappen-Subjekt, zwei verschiedene Komponenten |
+| `AlarmeTab.svelte:259` | Ableitung `unalertableSelectedMetricNames` — route liefert strukturell immer `[]` (#1435 AC-7) |
+| `AlarmeTab.svelte:519` | Anzeige-Zwilling der fachlichen Zusicherung aus `:259` |
+| `AlarmeTab.svelte:570` | Beispielwarnung: Ort- statt Etappen-Subjekt, zwei verschiedene Komponenten |
 | `VersandTab.svelte:370` | Markup-Baum Trip (`VTLaufzeitRoute`, Mehrtages-Trend, Premium-SMS) |
 | `VersandTab.svelte:406` | Markup-Baum Vergleich (`VTLaufzeitVergleich`, kein Mehrtages-Trend, eigener Premium-SMS-Schalter seit #2293 S2) — zwei komplette, unterschiedliche Komponenten-Bäume |
 | `WeatherMetricsTab.svelte:1429` | Metrik-Markup-Baum (#1311 C1: Vergleich-Grundauswahl) |
@@ -136,7 +136,7 @@ Diese Scheibe:
 
 | Datei:Zeile | Grund |
 |---|---|
-| `AlarmeTab.svelte:530` | Kurzstil-Schalter — im Trip steht derselbe Schalter im Versand-Reiter (#1260 S5), reine Platzierung |
+| `AlarmeTab.svelte:537` | Kurzstil-Schalter — im Trip steht derselbe Schalter im Versand-Reiter (#1260 S5), reine Platzierung |
 | `corridor-editor/CorridorEditor.svelte:429` | Überschrift-/Lauftext-Wahl, keine Datenverzweigung |
 | `corridor-editor/CorridorEditorMobile.svelte:369` | Mobil-Zwilling von `CorridorEditor.svelte:429` |
 | `versand-tab/VTSchedulePlan.svelte:84` | Erklärtext „wie beim Trip" — reine Zusatzerklärung, keine Funktionsänderung |

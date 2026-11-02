@@ -64,7 +64,8 @@ describe('#1401b AC-5/AC-6: AlertMetricLevelTable liest Labels aus dem geteilten
 				stmt.type === 'ImportDeclaration' &&
 				/alertMetricLabels/.test(stmt.source?.value ?? '') &&
 				(stmt.specifiers ?? []).some(
-					(spec: any) => spec.imported?.name === 'ALERT_METRIC_LABELS'
+					// #2656 (F7): `alertMetricLabel` liest dieselbe Tabelle je Sprache.
+					(spec: any) => spec.imported?.name === 'ALERT_METRIC_LABELS' || spec.imported?.name === 'alertMetricLabel'
 				)
 		);
 		assert.ok(

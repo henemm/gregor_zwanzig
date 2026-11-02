@@ -6,6 +6,8 @@
 import { ALERTABLE_METRICS } from '$lib/components/alerts-tab/alertMetricTable';
 import type { AlertMetric } from '$lib/types';
 import type { CompareSelectionEntry } from '../weather-metrics-tab/compareMetricSelection.ts';
+import type { Lang } from '../../../i18n/index.ts';
+import { metricAggregationLabel, metricLabel, type MetricLabelFields } from '../../../i18n/metricLabel.ts';
 
 /**
  * Aktive Compare-Auswahl-Schluessel -> Alarm-Identitaeten, gelesen aus dem
@@ -51,7 +53,8 @@ export function deriveActiveAlertMetricsFromCatalog(
  */
 export function deriveUnalertableSelectedMetricNames(
 	activeMetricKeys: string[],
-	catalog: CompareSelectionEntry[]
+	catalog: (CompareSelectionEntry & Partial<MetricLabelFields>)[],
+	lang: Lang = 'de'
 ): string[] {
 	const labelCounts = new Map<string, number>();
 	for (const e of catalog ?? []) {
@@ -60,9 +63,12 @@ export function deriveUnalertableSelectedMetricNames(
 	const active = new Set(activeMetricKeys ?? []);
 	return (catalog ?? [])
 		.filter((e) => active.has(e.metric) && !e.alertMetric)
-		.map((e) =>
-			(labelCounts.get(e.label) ?? 0) > 1 && e.aggregation_label
-				? `${e.label} (${e.aggregation_label})`
-				: e.label
-		);
+		.map((e) => {
+			// Issue #2656 (F7): Name ueber metricLabel (label_en, sonst deutsch), die
+			// Auswertung ueber ihre Kennung (F5); gezaehlt wird weiter am deutschen `label`.
+			const name = metricLabel(e, lang);
+			return (labelCounts.get(e.label) ?? 0) > 1 && e.aggregation_label
+				? `${name} (${metricAggregationLabel(e.aggregation, e.aggregation_label, lang)})`
+				: name;
+		});
 }

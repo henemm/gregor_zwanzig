@@ -95,7 +95,7 @@ export function buildAlarmeDeliveryPayload(state: AlarmeDeliveryState): object {
 		typeof state.channels?.premium_sms !== 'boolean'
 	) {
 		throw new Error(
-			'buildAlarmeDeliveryPayload: channels fehlt oder enthaelt einen Nicht-boolean-Wert — ' +
+			'buildAlarmeDeliveryPayload: channels fehlt oder enthaelt einen Nicht-boolean-Wert — ' + // i18n-log
 				'alert_channels wird IMMER mit allen vier expliziten Werten gesendet ' +
 				'(email/telegram/sms/premium_sms), kein stiller Default (F001, #1745 D7).'
 		);
