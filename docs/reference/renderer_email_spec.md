@@ -228,7 +228,10 @@ Spec: `docs/specs/modules/feat_1737_alarm_stundenzeilen.md`.
 ```
 X-GZ-Mail-Type: trip-briefing | compare
 X-GZ-Format:    full | compact
+X-GZ-Lang:      de | en
 ```
+
+`X-GZ-Lang` nennt die Sprache des Inhalts (ADR-0104, seit #2663). Er wird in jeder Mail gesetzt; Details und Übergangsregel: `docs/reference/mail_validators.md`, Abschnitt „Sprache".
 
 ### Routing
 
@@ -351,3 +354,23 @@ dieses Absatzes (#831) beschrieb ihn noch als aktuell (Doku-Abgleich #1198; Ist-
 gemessen bei #1432: beide Fassungen jeder Stundentabelle sind `<table>`-Blöcke).
 
 **Resultat:** Kein Modus-Mismatch mehr zwischen Desktop- und Mobile-Ansicht derselben Nachricht.
+
+## Sprache
+
+Die Sprache der Mail folgt der **Kontosprache** des Empfängers (`language`, ADR-0104). Sie gilt für
+alle Mail-Arten; der Kopf `X-GZ-Lang` nennt sie (`de` oder `en`).
+
+**Was wechselt:** Betreff, Abschnitts- und Tabellenüberschriften, Hinweise und Legendenzeilen aus den
+Katalogbereichen `mail.*`, `vergleich.*`, `alarm.*` und `warnung.*` (`src/i18n/messages/{de,en}/`);
+Wettergrößen in voller Form über `label(lang)` aus dem Metrik-Register (`src/app/metric_catalog.py`).
+
+**Was bleibt:** Spaltenkürzel `col_label` und `compact_label`, Kürzel und Token-Zeile, `sms_code`,
+Kanal- und Providernamen, Orte, Trip-Namen. Amtliche Warntexte bleiben in ihrer Quellsprache.
+
+**Woher:** `resolve_user_lang(user_id)` einmal je Nutzer im Orchestrierer; der Renderer bekommt
+`lang` als Schlüsselwort mit Default `"de"`. Kein Modulzustand, keine Sprache aus dem Empfänger
+einer Adresse.
+
+**Prüfung:** Golden-Dateien `tests/golden/<paket>/<fall>.de.(html|txt)` sind byte-genau gleich zur
+deutschen Ausgabe; `<fall>.en.*` ist die englische Review-Fassung derselben Fixture. Der
+Mail-Validator (`docs/reference/mail_validators.md`) prüft die Erwartungen in der Kopfsprache.

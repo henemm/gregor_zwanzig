@@ -66,6 +66,29 @@ entfernt, #637/#1369).
   (`with_emoji = channel == "telegram"`), Ad-hoc-Verläufe ausgeschrieben (nicht Kurzform, s.
   `sms_format.md` §5a).
 
+## Sprache
+
+Telegram hat zwei Stile. Die Sprache folgt dem Stil und dem Befehlswort (ADR-0104 Nr. 5).
+
+**Normalstil** (Trip- bzw. Ortsvergleich-Ziel ohne `telegram_style == "kurzform"`): Briefings, Hinweise
+und Antworten stehen in der **Kontosprache** (`resolve_user_lang`). Ein englisches Befehlswort (z. B.
+`TODAY`, `RESTDAY`) ergibt eine englische Antwort, auch bei deutschem Konto (`telegram_englisch`,
+`src/services/trip_command_processor.py`).
+
+**Kurzstil** (`telegram_style == "kurzform"`): die Kurzform bleibt in jeder Sprache unverändert, Kürzel
+und Befehlswörter eingeschlossen. Die Antwort ist englisch wie bisher; der Konto-Wert ändert nichts an
+der Token-Zeile.
+
+**Befehlswörter:** beide Sprachen werden erkannt (`wort` und `wort_en` aus `_COMMAND_SPECS`). Das
+Bot-Menü (`BOT_COMMANDS` in `src/output/channels/telegram.py`) zeigt die Befehle deutsch und englisch;
+seine deutschen Beschreibungstexte sind nach #2751 noch Restbefund der Python-Ratsche
+(`docs/reference/gates_und_ratschen.md`, Abschnitt „i18n-Ratschen").
+
+**Woher:** Katalogbereiche `telegram.*`, `inbound.*` und `allgemein.*` (`src/i18n/messages/{de,en}/`).
+
+**Prüfung:** Golden-Tests `tests/golden/telegram_briefing/` und `tests/test_telegram_briefing_golden.py`
+(deutsche Ausgabe byte-genau); Kurzform-Token über `tests/test_metric_tokens_eingefroren.py`.
+
 ## 4. Quelle im Code
 
 | Was | Datei:Zeile |

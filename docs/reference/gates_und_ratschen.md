@@ -518,7 +518,7 @@ und Eintrag ohne Treffer — das F-Paket, das einen Bereich migriert, muss seine
 bzw. durch die noch belasteten Unterordner/Dateien ersetzen. Weniger als 150 gescannte Dateien
 bricht mit „Messaufbau leer" ab (gegen vakuum-grün). Startstand per `--messen`
 (2026-10-31, `4f386528a`): 253 Dateien gescannt, 115 mit Treffern, 1115 Trefferzeilen,
-33 Einträge. Nicht erfasst: Texte in `<script>`, sonstige Props (`eyebrow="…"`), `*.ts` (ab #2660).
+33 Einträge. Nicht erfasst: Texte in `<script>` und sonstige Props (`eyebrow="…"`). `*.ts` wird seit F11 (#2660) in `lib/utils`, `lib/stores` und `lib/api.ts` gescannt.
 Marken-Schriftzüge (`lib/brand/*`, „gregor"/„zwanzig") meldet der Scanner wie jeden Text; F12
 (#2661) führt sie als Katalogwerte `bausteine.marke.*` (in beiden Sprachen gleich).
 **Seit F12 (#2661, 2026-11-02) ist die Allowlist leer (`[]`)**; `hardcode_allowlist_leer.test.ts`
@@ -561,10 +561,10 @@ der Fundzahl (mitsenken, bei 0 streichen) — die Zahl je Datei kann nur sinken.
 100 gescannte Dateien bricht mit „Messaufbau leer" ab. Messen per `python
 tests/test_i18n_keine_hartkodierten_nutzertexte_python.py --messen` (stdout), `--startstand`
 schreibt die Allowlist. Startstand (2026-11-02, `2175114cd`): 111 Dateien gescannt, 50 mit Fund,
-222 Funde. **Restbefund nach P11 (dokumentierte Teilauslieferung, AC-6 nicht erreicht):** 42 Einträge,
-182 Funde — unmigrierte Nutzertexte der Pakete P2–P10 (u. a. Telegram-Befehlsmenü, `fallback_notice.py`,
-`tokens/builder.py`, Aktionsknöpfe in `trip_command_processor.py`) und unmarkierte Log-Zeilen; Abbau im
-Folge-Issue zu #2674, Prüfdatum 2027-01-28. Bis dahin steht `test_allowlist_ist_leer` als
+222 Funde. **Restbefund (Stand 2026-11-02, nach #2751; AC-6 nicht erreicht):** 15 Einträge, 47 Funde in 15 Dateien —
+u. a. `src/output/renderers/fallback_notice.py`, `src/output/renderers/trip_report.py`,
+`src/output/renderers/text_report/__init__.py` und das Bot-Menü `BOT_COMMANDS` in
+`src/output/channels/telegram.py`. Abbau im Folge-Issue zu #2674, Prüfdatum 2027-01-28. Bis dahin steht `test_allowlist_ist_leer` als
 `xfail(strict=True)` (wird rot, sobald die Allowlist leer ist). Benannter Restbefund in
 `tests/test_i18n_inbound_katalog_paritaet.py` (`_RESTBEFUND_P11`, Prüfdatum 2027-01-28), der rot wird,
 sobald `trip_command_processor.py` ohne Fund ist.
@@ -634,8 +634,10 @@ Skripten/Skills aufgerufen: `staging_gate.py`, `prod_selftest.py`, `briefing_mai
 | Egress-Struktur-Wächter `tests/tdd/test_egress_single_dial_point.py` — `smtplib` (#1412 S3a) und `httpx`-POST (#1412 S3b) nur an den erlaubten Ausgängen (`TelegramOutput._post`, `SevenIoChannelBase._post`), Deckel 3 localhost-Ausnahmen | 2027-01-04 | `seven_io_base.py:171` (`httpx.post` direkt in `SevenIoChannelBase.send`) bei Einführung gefangen und in `_post` verlegt |
 | Compare-Paritäts-Wächter `tests/unit/test_e2e_compare_paritaet_waechter.py` — jede `*compare*.spec.ts` bzw. Compare-Hub-Spec ohne Trip-Gegenstück braucht kind-Schleife oder `gz-eigenstaendig:`-Kopf; Altlastliste nur schrumpfend (#2347 S1, Epic #2345 P6) | 2027-01-24 | Regel 2 fand bei Einführung 2 Specs außerhalb der Compare-Dateinamen (`kanal-grenzen-ortsvergleich.staging.spec.ts`, `versand-tab-vergleich.spec.ts`); fehlende Trip-Cross-User-Schreibprüfung (geschlossen durch `hub-cross-user-write-block.spec.ts`) |
 | i18n-Ratsche Frontend `keine_hartkodierten_nutzertexte.test.ts` + `katalog_schluessel_haben_verwender.test.ts` (Epic #2644, S4) — Allowlist seit F12 (#2661, 2026-11-02) leer, `hardcode_allowlist_leer.test.ts` hält sie leer | 2027-01-28 | offen — Endstand 2026-11-02: 0 Einträge; Startstand 2026-10-31 (`4f386528a`): 115 Dateien mit 1115 Trefferzeilen in 33 Allowlist-Einträgen; Kriterium: ein neuer hartkodierter Nutzertext oder verwaister Katalogschlüssel, der ohne die Ratsche ausgeliefert worden wäre |
-| i18n-Ratsche Go (`internal/i18n/hardcode_guard_test.go`, Allowlist `internal/i18n/hardcode_allowlist.json`, #2679) | 2027-01-28 | Startstand = alle Fundstellen vom Tag der Einführung (2026-10-31: 72 Befunde in 16 Dateien, 16 Einträge (nur Einzeldateien, kein Verzeichnis-Präfix)); Endstand leer nach G2 bis G4 (Epic #2644) |
-| i18n-Ratsche Python (`tests/test_i18n_keine_hartkodierten_nutzertexte_python.py`, Allowlist `tests/fixtures/i18n_python_allowlist.json`, #2674) | 2027-01-28 | — (Startstand 2026-11-02: 222 Funde in 50 Dateien; Restbefund nach P11: 182 Funde in 42 Einträgen mit Baseline-Fundzahl je Datei; Endstand leer nach Abbau der P2–P10-Restbefunde im Folge-Issue) |
+| i18n-Ratsche Go (`internal/i18n/hardcode_guard_test.go`, Allowlist `internal/i18n/hardcode_allowlist.json`, #2679) | 2027-01-28 | Startstand = alle Fundstellen vom Tag der Einführung (2026-10-31: 72 Befunde in 16 Dateien, 16 Einträge (nur Einzeldateien, kein Verzeichnis-Präfix)); Endstand 2026-11-02: 0 Einträge (`[]`) |
+| i18n-Ratsche Python (`tests/test_i18n_keine_hartkodierten_nutzertexte_python.py`, Allowlist `tests/fixtures/i18n_python_allowlist.json`, #2674) | 2027-01-28 | — (Startstand 2026-11-02: 222 Funde in 50 Dateien; Stand nach #2751: 47 Funde in 15 Einträgen mit Baseline-Fundzahl je Datei; Endstand leer nach Abbau der Restbefunde im Folge-Issue) |
+| i18n-Paritätstests je Katalog (Frontend `paritaet_de_en.test.ts`, Python `test_i18n_*_katalog_paritaet.py`, Go `katalog_paritaet_test.go`; Epic #2644) | 2027-01-31 | eingeführt im Epic #2644 (Frontend laut Testkopf mit #2647); Kriterium: ein Schlüssel nur in `de` oder ein Platzhalter, der in einer Sprache fehlt |
+| i18n-Token-Wächter `tests/test_metric_tokens_eingefroren.py` (Fixture `tests/fixtures/metric_tokens_frozen.json`, Epic #2644 P1) | 2027-01-31 | eingeführt im Epic #2644 (laut Konvention P1); Kriterium: eine Übersetzung oder Umbenennung von `col_label`, `compact_label` oder `sms_code`, die sonst still in Kanäle wanderte |
 
 **Weitere Prüfdaten, die nur im Code stehen** (Abgleich 2026-10-21 per
 `grep -rn "Prüfdatum\|Pruefdatum" tests .claude/hooks`; Fang-Beleg hier nicht erhoben):

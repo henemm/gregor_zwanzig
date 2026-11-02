@@ -3,7 +3,7 @@
 > Stand 2026-10-30. Dieses Dokument schließt **alle** Entwurfsfragen der 32 Pakete (#2645–#2681),
 > damit Specs, Developer-Agenten (Haiku/Sonnet) und Adversary ohne Rückfrage arbeiten.
 > Weicht ein Paket ab, ist das ein Finding. Grundsatz: ADR-0104. Wortliste: `docs/reference/i18n_glossar.md`.
-> Nach Abschluss des Epics wandert der dauerhaft gültige Teil in `docs/reference/` (Paket A1 #2680).
+> Nach Abschluss des Epics wandert der dauerhaft gültige Teil in `docs/reference/` (Paket A1 #2680): Abschnitte 1 bis 6 gelten jetzt als `docs/reference/i18n_konventionen.md` (dort die Ist-Signaturen aus dem Code). Abschnitte 7 bis 9 (Ablauf, Briefing, Reihenfolge) sind historisch und bleiben nur hier.
 
 ## 1. Sprachen, Auflösung, Persistenz
 

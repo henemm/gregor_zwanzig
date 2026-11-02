@@ -10,7 +10,7 @@ falschen Validator auf einen Pfad anzuwenden ist ein Fehler — er kann struktur
 nie bestehen (Dauer-Exit-1) und führt zu falschem „Feature kaputt" oder
 Gate-Erosion.
 
-## 0. Sprache der Mail — Kopf `X-GZ-Lang` (seit #2663, ADR-0104)
+## Sprache — Kopf `X-GZ-Lang` (seit #2663, ADR-0104)
 
 `build_mime_message()` setzt in **jeder** Mail (HTML- und Klartext-Zweig, alle
 Mail-Arten inkl. Service-Mails) neben `X-GZ-Mail-Type`/`X-GZ-Format` den Kopf
@@ -58,6 +58,15 @@ zugleich die Validator-Erwartung (gewollte Kopplung).
   Golden-Fixtures `tests/fixtures/mail/*_de.eml` ohne Netz
   (`tests/unit/test_*_sprache.py`). Der Nachweis für „E2E bestanden" bleibt die
   echt zugestellte Staging-Mail.
+
+**Was wechselt und was bleibt:** Überschriften, Hinweise, Warn-Wörter und Betreffmuster wechseln mit
+der Kopfsprache. Kürzel und Token bleiben gleich: Spaltenkürzel `col_label`, Kürzel der Token-Zeile und
+`sms_code` werden nie übersetzt.
+
+**Prüfung:** Die Golden-Fixtures `tests/fixtures/mail/*_de.eml` prüfen den Datei-Modus ohne Netz; der
+Nachweis „E2E bestanden" bleibt die echt zugestellte Staging-Mail in der Kopfsprache. Die deutsche
+Renderer-Ausgabe ist byte-genau über `tests/golden/` abgesichert (`docs/reference/renderer_email_spec.md`,
+Abschnitt „Sprache").
 
 ## 1. `email_spec_validator.py` — Orts-Vergleich-Mail (ZWINGEND)
 

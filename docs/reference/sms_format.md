@@ -791,3 +791,24 @@ Implementationen, die SMS-Text und E-Mail-Subject getrennt erzeugen, sind als **
 - Bestehende gregor-Specs:
   - `docs/specs/wintersport_extension.md` §5 (Wintersport-Tokens)
   - `docs/reference/renderer_email_spec.md` §2 (Token line is single source of truth)
+
+## Sprache
+
+Die Kurzform (Token-Zeile) ist in **jeder** Konto-Sprache identisch (ADR-0104, Präzisierung 2026-10-31).
+Eine SMS hat keine sprachabhängigen Anteile.
+
+**Was bleibt:** die Token-Zeile mit allen Kürzeln, `sms_code`, `compact_label`, `col_label`, die
+Stufen- und Warnbuchstaben, die Platzgrenze von 160 Zeichen in GSM-7 (ADR-0042). Die Kürzel werden nie
+übersetzt.
+
+**Was sich ändert:** nur die Eingabe wird um die englischen Befehlswörter erweitert. Jedes Befehlswort
+ist in `src/services/trip_command_processor.py` (`_COMMAND_SPECS`) als `wort` (deutsch) und `wort_en`
+(englisch) hinterlegt; beide werden erkannt. Die Antworten auf SMS-Befehle sind Kurzform und stehen wie
+bisher in Englisch (`_KURZFORM_KANAELE = ("premium_sms", "sms")`), unabhängig vom Konto.
+
+**Woher:** die Bedeutungen der Kürzel stehen im Katalog `sms.baustein.*`, `sms.format.*`,
+`sms.warnart.*`, `sms.stufe.*` (`src/i18n/messages/{de,en}/sms.json`), die Token selbst in
+`src/output/tokens/`.
+
+**Prüfung:** Golden-Tests `tests/golden/sms/` und `tests/test_sms_golden.py` vergleichen die Kurzform
+byte-genau; `tests/test_metric_tokens_eingefroren.py` friert die Token-Werte der Metriken ein.
