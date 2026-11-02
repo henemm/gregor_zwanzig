@@ -107,14 +107,26 @@ def _referenz(art: str, preset: dict, body: dict, uid: str, wire) -> dict:  # no
     return _official_reference(preset, body, uid)
 
 
+def _waldbrand_ein_ort() -> dict:
+    """Ein Ort ("nur X"/"only X") und eine Quelle mit sprachabhaengigem
+    Anzeigenamen (Météo-France Waldbrand/wildfire) -- beide Stellen tragen
+    Sprache nur in diesem Fall."""
+    (eintrag,) = _official_dicts(["loc-bz"])
+    return {"official": [{**eintrag, "source": "meteo_forets", "hazard": "wildfire_risk",
+                          "label": "Waldbrandgefahr", "region_label": "Bozen"}]}
+
+
 _BODIES = {
     "changes": lambda: {"changes": _change_dicts(ORTE)},
     "onsets": lambda: {"onsets": _onset_dicts(ORTE)},
     "official": lambda: {"official": _official_dicts(ORTE)},
+    "official-ein-ort": _waldbrand_ein_ort,
 }
 
 
-@pytest.mark.parametrize("art", list(_BODIES), ids=["abweichung", "radar", "amtlich"])
+@pytest.mark.parametrize(
+    "art", list(_BODIES), ids=["abweichung", "radar", "amtlich", "amtlich-ein-ort-waldbrand"],
+)
 def test_vorschau_spricht_die_sprache_des_kontos(client, konten, wire, art):  # noqa: F811
     """AC (#2721): GIVEN zwei Konten, eines mit language=en, eines deutsch,
     mit demselben Ortsvergleich
