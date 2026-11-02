@@ -7,11 +7,10 @@
 // Reiter *Alarme*. Der Text schickte Nutzer also an die falsche Stelle.
 //
 // Geprueft wird zweierlei:
-//   1. AC-1/AC-2 — die ANGEZEIGTE Copy beider Editoren (Desktop + Mobil).
-//      Reiner Textinhalt hat keine ausfuehrbare Logik, deshalb ein bewusst
-//      markierter doc-compliance-Check (CLAUDE.md, Test-Politik). Er liest
-//      ausschliesslich den Markup-Teil OHNE HTML-Kommentare — ein Kommentar,
-//      der das alte Versprechen nur ERWAEHNT, darf nicht anschlagen.
+//   1. AC-1/AC-2 — die ANGEZEIGTE Copy beider Editoren (Desktop + Mobil),
+//      seit #2657 (i18n F8) am echten SSR-Render (deutsch) statt am Quelltext:
+//      die Texte stehen im Katalog. HTML-Kommentare erscheinen im Render nicht —
+//      ein Kommentar, der das alte Versprechen nur ERWAEHNT, schlaegt nicht an.
 //   2. AC-3 — der Markieren-Zaehler als echter Logik-Test gegen
 //      countEffectiveMarks() (keine Datei-Inspektion).
 //
@@ -20,31 +19,33 @@
 
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, resolve } from 'node:path';
 
 import { countEffectiveMarks, supportsMark } from '../corridorEditorState.ts';
+import { locale, korridorRendern, routeZustand, vergleichZustand } from '../../layout-tab/__tests__/f8Pruefstand.ts';
 
 // Pfadregel #1409: Prueflinge relativ zur EIGENEN Testdatei aufloesen (Worktree),
 // nie ueber einen festen Hauptrepo-Pfad — sonst pruefte der Test aus dem Worktree
 // die unveraenderte Hauptrepo-Kopie und meldete falsches Gruen.
 const HERE = dirname(fileURLToPath(import.meta.url));
-const EDITORS = {
-	Desktop: resolve(HERE, '..', 'CorridorEditor.svelte'),
-	Mobil: resolve(HERE, '..', 'CorridorEditorMobile.svelte')
-} as const;
+const EDITORS = { Desktop: 'desktop', Mobil: 'mobil' } as const;
+void HERE;
+void resolve;
 
 /**
- * Der Teil einer .svelte-Datei, den der Nutzer als Text zu sehen bekommt:
- * Markup ohne <script>, ohne <style> und ohne HTML-Kommentare.
+ * Was der Nutzer als Text zu sehen bekommt: der ECHTE SSR-Render des Editors
+ * (Prüfstand layout-tab/__tests__/f8Pruefstand.ts, Zeilen nach dem Katalog-Laden),
+ * Trip- und Vergleichs-Kontext, Sprache Deutsch. Seit #2657 (i18n F8) stehen die
+ * Texte im Katalog — ein Quelltext-Grep sähe nur noch Schlüssel. Kommentare im
+ * Markup erscheinen im Render nicht.
  */
-function visibleCopy(path: string): string {
-	const src = readFileSync(path, 'utf-8');
-	return src
-		.replace(/<script[\s\S]*?<\/script>/g, '')
-		.replace(/<style[\s\S]*?<\/style>/g, '')
-		.replace(/<!--[\s\S]*?-->/g, '');
+function visibleCopy(fassung: 'desktop' | 'mobil'): string {
+	locale.set('de');
+	return [
+		korridorRendern('route', fassung, routeZustand(false)),
+		korridorRendern('vergleich', fassung, vergleichZustand(1))
+	].join('\n');
 }
 
 // Formulierungen, die eine Wirkung des Reiters behaupten, die er nicht hat.
@@ -64,15 +65,19 @@ const COMPARE_LEAD =
 	'Ein Wertebereich je Metrik legt deinen Idealbereich fest. Werte im Bereich werden im ' +
 	'Briefing pro Ort grün markiert — kein Score, kein Ranking, nur eine Lese-Hilfe.';
 
-/** Zeilenumbrueche/Einrueckung im Markup sind Layout, kein Text. */
+/** Zeilenumbrueche/Einrueckung im Markup sind Layout, kein Text; Tags sind kein Text. */
 function flat(s: string): string {
-	return s.replace(/\s+/g, ' ').trim();
+	return s.replace(/<!--[\s\S]*?-->/g, '').replace(/\s+/g, ' ').trim();
+}
+/** Sichtbarer Text ohne Tags. */
+function text(s: string): string {
+	return flat(s.replace(/<style[\s\S]*?<\/style>/g, ' ').replace(/<(?:"[^"]*"|'[^']*'|[^'">])*>/g, ' '));
 }
 
 describe('AC-1/AC-2: der Wertebereiche-Reiter verspricht keine Wirkung, die er nicht hat', () => {
 	for (const [variante, path] of Object.entries(EDITORS)) {
 		test(`${variante}: keine Sofort-Meldung, keine "außerhalb ="-Wirkung, keine Warn-Schwellen`, () => {
-			const copy = visibleCopy(path); // doc-compliance-test
+			const copy = text(visibleCopy(path));
 			for (const phrase of BROKEN_PROMISES) {
 				assert.equal(
 					copy.includes(phrase),
@@ -86,9 +91,10 @@ describe('AC-1/AC-2: der Wertebereiche-Reiter verspricht keine Wirkung, die er n
 		});
 
 		test(`${variante}: die Legende nennt nur noch "im Bereich = markiert"`, () => {
-			const copy = flat(visibleCopy(path)); // doc-compliance-test
-			assert.ok(
-				copy.includes('im Bereich = <strong'),
+			const copy = flat(visibleCopy(path));
+			assert.match(
+				copy,
+				/im Bereich = <strong[^>]*>markiert<\/strong>/,
 				`AC-2 FAIL (${variante}): die Legenden-Zeile "im Bereich = markiert" fehlt.`
 			);
 			assert.equal(
@@ -99,7 +105,7 @@ describe('AC-1/AC-2: der Wertebereiche-Reiter verspricht keine Wirkung, die er n
 		});
 
 		test(`${variante}: der Trip-Text verweist auf den Reiter Alarme`, () => {
-			const copy = flat(visibleCopy(path)); // doc-compliance-test
+			const copy = text(visibleCopy(path));
 			assert.ok(
 				copy.includes(flat(TRIP_LEAD)),
 				`AC-1 FAIL (${variante}): der Trip-Einleitungstext lautet nicht wie freigegeben ` +
@@ -112,7 +118,7 @@ describe('AC-1/AC-2: der Wertebereiche-Reiter verspricht keine Wirkung, die er n
 		});
 
 		test(`${variante}: der Ortsvergleich-Text bleibt woertlich unveraendert`, () => {
-			const copy = flat(visibleCopy(path)); // doc-compliance-test
+			const copy = text(visibleCopy(path));
 			assert.ok(
 				copy.includes(flat(COMPARE_LEAD)),
 				`AC-4 FAIL (${variante}): der Compare-Einleitungstext wurde mitveraendert — ` +

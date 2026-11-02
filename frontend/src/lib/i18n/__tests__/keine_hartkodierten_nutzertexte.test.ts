@@ -330,6 +330,47 @@ describe('TypeScript-Ratsche (F11, AC-6)', () => {
 		assert.equal(scanneTs("x('nichtig')").length, 0);
 	});
 
+	// Issue #2657 (i18n F8, AC-7): Layout-Reiter, Korridor-Editor, Ausgabe-Layout, Ausblick,
+	// Mail-Inhalt und GPX-Seite stehen unter keinem Eintrag mehr; ihre .ts-Helfer unter der TS-Ratsche.
+	test('F8: kein Allowlist-Eintrag deckt Layout-Reiter, Korridor-Editor, Ausgabe-Layout, Mail-Inhalt oder GPX-Seite', () => {
+		const F8 = [
+			'lib/components/shared/layout-tab/LayoutTab.svelte',
+			'lib/components/shared/layout-tab/LTCapNote.svelte',
+			'lib/components/shared/layout-tab/LTChannelPicker.svelte',
+			'lib/components/shared/layout-tab/LTCutLine.svelte',
+			'lib/components/shared/corridor-editor/CorridorEditor.svelte',
+			'lib/components/shared/corridor-editor/CorridorEditorMobile.svelte',
+			'lib/components/shared/OutputLayoutEditor.svelte',
+			'lib/components/shared/OutlookLayoutControls.svelte',
+			'lib/components/shared/MailInhaltCard.svelte',
+			'routes/gpx-upload/+page.svelte'
+		];
+		const deckt = (a: string, p: string) => (a.endsWith('/') ? p.startsWith(a) : p === a);
+		assert.deepEqual(F8.filter((p) => ALLOWLIST.some((a) => deckt(a, p))), []);
+		for (const alt of ['lib/components/shared/layout-tab/', 'lib/components/shared/corridor-editor/', 'routes/gpx-upload/', 'lib/components/shared/MailInhaltCard.svelte', 'lib/components/shared/OutlookLayoutControls.svelte', 'lib/components/shared/OutputLayoutEditor.svelte'])
+			assert.ok(!ALLOWLIST.includes(alt), alt);
+		const alle = scanneVerzeichnis(SRC);
+		assert.equal(alle.filter((e) => F8.includes(e.pfad)).length, F8.length, 'Messaufbau: F8-Dateien nicht gescannt');
+		assert.deepEqual(alle.filter((e) => F8.includes(e.pfad) && e.treffer.length > 0).map((e) => e.pfad), []);
+	});
+
+	test('F8: .ts-Helfer von Layout-Reiter, Korridor-Editor und Mail-Inhalt werden gescannt und sind ohne Treffer', () => {
+		const ts = scanneVerzeichnis(SRC).filter(
+			(e) =>
+				e.pfad.endsWith('.ts') &&
+				(e.pfad.startsWith('lib/components/shared/layout-tab/') || e.pfad.startsWith('lib/components/shared/corridor-editor/') || e.pfad === 'lib/components/shared/mailInhaltKonstanten.ts' || e.pfad.startsWith('routes/gpx-upload/'))
+		);
+		for (const p of ['layout-tab/ltChannels.ts', 'corridor-editor/corridorEditorState.ts', 'mailInhaltKonstanten.ts'])
+			assert.ok(ts.some((e) => e.pfad === `lib/components/shared/${p}`), p);
+		assert.ok(ts.some((e) => e.pfad === 'routes/gpx-upload/gpxTrip.ts'), 'routes/gpx-upload/gpxTrip.ts');
+		assert.deepEqual(ts.filter((e) => e.treffer.length > 0).map((e) => `${e.pfad}: ${e.treffer.map((t) => t.text).join(' | ')}`), []);
+		assert.equal(wirdGescanntTs('lib/components/shared/layout-tab/__tests__/f8Pruefstand.ts'), false);
+		assert.equal(wirdGescanntTs('lib/components/shared/corridor-editor/corridorEditorState.test.ts'), false);
+		// Gegenprobe: ein zurueckgekehrtes deutsches Literal waere ein Treffer ohne Eintrag.
+		const treffer = scanneTs("{ metric: 'wind_gust', label: 'Böen', note: 'Grat-kritisch' }");
+		assert.equal(pruefeGegenAllowlist([{ pfad: 'lib/components/shared/corridor-editor/corridorEditorState.ts', treffer }], ALLOWLIST).ohneEintrag.length, 1);
+	});
+
 	test('Allowlist enthaelt die acht F11-Praefixe nicht mehr', () => {
 		const F11 = [
 			'lib/components/ui/',

@@ -20,6 +20,7 @@
 	import type { Snippet } from 'svelte';
 	import LTChannelPicker from './LTChannelPicker.svelte';
 	import LTCapNote from './LTCapNote.svelte';
+	import { t } from '$lib/i18n';
 	import {
 		ltChannelsFor, ltOverflowAcrossChannels, SMS_TRIP_CHAR_LIMIT, type ChannelId
 	} from './ltChannels';
@@ -69,7 +70,7 @@
 </script>
 
 <div class="layout-tab" class:dense data-testid="layout-tab" data-context={context}>
-	<div class="lt-eyebrow mono">Kanal · Auswahl &amp; Kappung</div>
+	<div class="lt-eyebrow mono">{$t('layout.tab.eyebrow')}</div>
 	<LTChannelPicker bind:channel {overflow} {dense} {channels} />
 	{@render editor({ channel })}
 	<!-- Issue #1703 S8 (Fix A/B): Zaehl-Einheit UND SMS-Zeichengrenze kommen vom

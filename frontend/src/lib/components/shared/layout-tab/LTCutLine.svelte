@@ -9,6 +9,8 @@
 	//
 	// Spec: docs/specs/modules/layout_tab_vergleich.md (Implementation Details §1, KL-1)
 
+	import { t } from '$lib/i18n';
+
 	interface Props {
 		label: string;
 		max: number;
@@ -17,7 +19,7 @@
 </script>
 
 <div class="lt-cut-line mono" data-testid="lt-cut-line">
-	✂ ab hier {label}-Limit (max {max})
+	{$t('layout.kappung.schnittlinie', { kanal: label, max })}
 </div>
 
 <style>

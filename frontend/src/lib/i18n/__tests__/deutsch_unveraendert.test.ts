@@ -177,6 +177,51 @@ const NEU_IN_F6 = [
 	'versand.ziel.keine_adresse', 'versand.ziel.unbestaetigt', 'versand.ziel.geht_an',
 	'telegram_kurzstil.checkbox'
 ];
+/** #2657 (F8) Layout-Reiter, Korridor-Editor, Ausgabe-Layout, Mail-Inhalt, GPX: Bereich layout.json. */
+const NEU_IN_F8 = [
+	'layout.tab.eyebrow', 'layout.kappung.schnittlinie', 'layout.kappung.zeigt_alles', 'layout.kappung.zeichen',
+	'layout.kappung.anzahl_passt', 'layout.kappung.anzahl_zu_breit', 'layout.kappung.spalten_passt.one',
+	'layout.kappung.spalten_passt.other', 'layout.kappung.spalten_zu_breit.one',
+	'layout.kappung.spalten_zu_breit.other', 'layout.hinweis.kanal_abwahl', 'layout.korridor.eyebrow',
+	'layout.korridor.eyebrow_idealbereiche', 'layout.korridor.wiederholen', 'layout.korridor.lade',
+	'layout.korridor.fehler_laden', 'layout.korridor.titel_route', 'layout.korridor.titel_vergleich',
+	'layout.korridor.einleitung_route', 'layout.korridor.einleitung_vergleich', 'layout.korridor.zusatz_fehlt',
+	'layout.korridor.legende_titel', 'layout.korridor.legende_im_bereich', 'layout.korridor.legende_markiert',
+	'layout.korridor.pflicht', 'layout.korridor.offen', 'layout.korridor.von', 'layout.korridor.bis',
+	'layout.korridor.grenze_setzen', 'layout.korridor.grenze_oeffnen', 'layout.korridor.markieren',
+	'layout.korridor.entfernen', 'layout.korridor.metrik_hinzufuegen', 'layout.korridor.neutral',
+	'layout.korridor.weitere_erhalten.one', 'layout.korridor.weitere_erhalten.other',
+	'layout.korridor_zeile.wind_gust', 'layout.korridor_zeile.precipitation_sum',
+	'layout.korridor_zeile.temperature_min', 'layout.korridor_zeile.temperature_max',
+	'layout.korridor_zeile.snow_line', 'layout.korridor_hinweis.wind_gust',
+	'layout.korridor_hinweis.precipitation_sum', 'layout.korridor_hinweis.temperature_min',
+	'layout.korridor_hinweis.temperature_max', 'layout.korridor_hinweis.snow_line',
+	'layout.profil_metrik.snow_depth_cm', 'layout.profil_metrik.snow_new_sum_cm',
+	'layout.profil_metrik.sunny_hours_h', 'layout.profil_metrik.wind_max_kmh',
+	'layout.profil_metrik.cloud_avg_pct', 'layout.profil_metrik.visibility_min_m',
+	'layout.profil_metrik.precip_sum_mm', 'layout.profil_metrik.thunder_level_max',
+	'layout.profil_metrik.uv_index_max', 'layout.profil_metrik.temp_max_c', 'layout.ausgabe.sms_eyebrow',
+	'layout.ausgabe.reihenfolge', 'layout.ausgabe.sms_hinweis', 'layout.ausgabe.zeichen', 'layout.ausgabe.leer',
+	'layout.ausgabe.sms_liste', 'layout.ausgabe.entfernen', 'layout.ausgabe.preset_auswahl',
+	'layout.ausgabe.spalten_eyebrow', 'layout.ausgabe.spalten', 'layout.ausgabe.spalten_hinweis',
+	'layout.ausgabe.detail_eyebrow', 'layout.ausgabe.detail_werte', 'layout.ausgabe.detail_hinweis',
+	'layout.ausblick.titel', 'layout.ausblick.nur_email', 'layout.mail_inhalt.titel', 'layout.mail_inhalt.format',
+	'layout.mail_inhalt.ausfuehrlich', 'layout.mail_inhalt.kompakt', 'layout.mail_inhalt.kompakt_hinweis',
+	'layout.mail_inhalt.etappen_kennzahlen', 'layout.mail_inhalt.etappen_kennzahlen_text',
+	'layout.mail_inhalt.quick_take', 'layout.mail_inhalt.quick_take_text',
+	'layout.mail_inhalt.metriken_ueberblick', 'layout.mail_inhalt.metriken_ueberblick_text',
+	'layout.mail_inhalt.ausblick', 'layout.mail_inhalt.ausblick_text', 'layout.mail_inhalt.grosswetterlage',
+	'layout.mail_inhalt.grosswetterlage_text', 'layout.mail_inhalt.zusammenfassung',
+	'layout.mail_inhalt.zusammenfassung_text', 'layout.mail_inhalt.vortag_vergleich',
+	'layout.mail_inhalt.vortag_vergleich_text', 'layout.gpx.titel', 'layout.gpx.import_titel',
+	'layout.gpx.import_text', 'layout.gpx.datei', 'layout.gpx.datum', 'layout.gpx.startzeit',
+	'layout.gpx.hochladen', 'layout.gpx.wird_hochgeladen', 'layout.gpx.vorschau', 'layout.gpx.spalte_name',
+	'layout.gpx.spalte_lat', 'layout.gpx.spalte_lon', 'layout.gpx.spalte_hoehe', 'layout.gpx.spalte_zeitfenster',
+	'layout.gpx.als_trip_speichern', 'layout.gpx.wird_gespeichert', 'layout.gpx.trip_name',
+	'layout.gpx.trip_name_eingeben', 'layout.gpx.gespeichert', 'layout.gpx.zu_den_trips',
+	'layout.gpx.fehler_keine_datei', 'layout.gpx.fehler_zu_gross', 'layout.gpx.fehler_nur_gpx',
+	'layout.gpx.fehler_hochladen', 'layout.gpx.fehler_name', 'layout.gpx.fehler_speichern'
+];
 const NEU_IN_FOLGEPAKETEN = [
 	// #2648 (S3) Sprachumschalter und Konto-Sprache
 	'konto.sprache.titel',
@@ -397,7 +442,7 @@ test('AC-5: jeder Bestandsschluessel ist mit byte-gleichem Wert in der de-Karte'
 
 test('AC-5: die de-Karte enthaelt ausser dem Bestand nur die neuen Schluessel dieses und der Folgepakete', () => {
 	const extra = Object.keys(de).filter((k) => !(k in GOLDEN)).sort();
-	assert.deepEqual(extra, [...NEU_IN_S2, ...NEU_IN_F3, ...NEU_IN_F4, ...NEU_IN_F6, ...NEU_IN_FOLGEPAKETEN].sort());
+	assert.deepEqual(extra, [...NEU_IN_S2, ...NEU_IN_F3, ...NEU_IN_F4, ...NEU_IN_F6, ...NEU_IN_F8, ...NEU_IN_FOLGEPAKETEN].sort());
 });
 
 test('AC-5: trFor(de) und tr() mit Standard-Locale liefern die Bestandstexte unveraendert', () => {

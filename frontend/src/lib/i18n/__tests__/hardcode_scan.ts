@@ -188,7 +188,14 @@ export function wirdGescanntTs(pfad: string): boolean {
 }
 
 /** Ab F6 (#2655): .ts-Module migrierter Komponentenordner; spaetere Pakete tragen ihren Ordner ein. */
-export const TS_KOMPONENTEN_ORDNER = ['lib/components/shared/versand-tab/'];
+export const TS_KOMPONENTEN_ORDNER = [
+	'lib/components/shared/versand-tab/',
+	// F8 (#2657): Layout-Reiter, Korridor-Editor, Mail-Inhalt-Konstanten, GPX-Seite
+	'lib/components/shared/layout-tab/',
+	'lib/components/shared/corridor-editor/',
+	'lib/components/shared/mailInhaltKonstanten.ts',
+	'routes/gpx-upload/'
+];
 
 /** Pfad relativ zu frontend/src/ mit Schraegstrichen. */
 export function wirdGescannt(pfad: string): boolean {

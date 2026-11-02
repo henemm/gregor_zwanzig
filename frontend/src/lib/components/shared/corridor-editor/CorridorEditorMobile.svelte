@@ -41,12 +41,13 @@
 	import {
 		buildRoutePool, addRow, removeRow, patchRow, validateCorridorRows,
 		buildCorridorSavePayload, ROUTE_CTX_DEFAULTS, valueAtPointer, clampDragValue, clampBoundInput,
-		saveGateDecision, openBoundValue, supportsMark, countEffectiveMarks, type CorridorRowState,
+		saveGateDecision, openBoundValue, supportsMark, countEffectiveMarks, zeilenLabel, zeilenHinweis, type CorridorRowState,
 		buildComparePool, addCompareRow, VERGLEICH_CTX_DEFAULTS,
 		buildCompareCorridorSavePayload, buildComparePrefillRows,
 		type RouteMetricDef, type CompareMetricDef, type ProfileKey, type IdealRange,
 	} from './corridorEditorState.ts';
 	import { loadCompareMetricCatalog, loadRouteExtraMetricDefs } from './compareMetricCatalogLoader.ts';
+	import { t, tn, tr, locale } from '$lib/i18n';
 	// Issue #1366 F002: `activeMetricKeys` ist `string[] | null` ("nie
 	// eingestellt" vs. "bewusst leer") -- materialisiert lesen, NIE roh
 	// spreaden/an buildCompareCorridorSavePayload durchreichen (das wuerde
@@ -180,7 +181,7 @@
 				if (isFreshCompareCreate && rows.length > 0) syncToWizard();
 			})
 			.catch((e: unknown) => {
-				compareDefsError = (e as { error?: string })?.error ?? 'Fehler beim Laden der Metriken';
+				compareDefsError = (e as { error?: string })?.error ?? tr('layout.korridor.fehler_laden');
 			});
 	});
 
@@ -214,7 +215,8 @@
 			});
 	});
 
-	const validation = $derived(validateCorridorRows(rows));
+	// Issue #2657 (i18n F8): Fehlertext nennt Zeilennamen der aktuellen Sprache.
+	const validation = $derived.by(() => (void $locale, validateCorridorRows(rows)));
 	// Issue #1425 (S2 Teil 2, Scheibe C, AC-3): identisch zum Desktop-Editor —
 	// gezaehlt wird nur, was countEffectiveMarks/supportsMark zulaesst.
 	const markN = $derived(countEffectiveMarks(rows, context));
@@ -330,12 +332,12 @@
 			if (row.min != null && row.max != null) return `${lbl(row.min)} … ${lbl(row.max)}`;
 			if (row.min != null) return `≥ ${lbl(row.min)}`;
 			if (row.max != null) return `≤ ${lbl(row.max)}`;
-			return 'offen';
+			return tr('layout.korridor.offen');
 		}
 		if (row.min != null && row.max != null) return `${corridorFmt(row.min, '')} … ${corridorFmt(row.max, row.unit)}`;
 		if (row.min != null) return `≥ ${corridorFmt(row.min, row.unit)}`;
 		if (row.max != null) return `≤ ${corridorFmt(row.max, row.unit)}`;
-		return 'offen';
+		return tr('layout.korridor.offen');
 	}
 </script>
 
@@ -346,7 +348,7 @@
 		{#if context === 'vergleich' && compareDefsError}
 			<!-- Issue #1350 Teil 3 (AC-4): sichtbarer Fehlerzustand statt still
 			     leerem Editor bei Endpoint-Ausfall. -->
-			<div class="cem-eyebrow-row"><Eyebrow>Wertebereiche · Idealbereiche</Eyebrow><BegriffErklaerung begriff="wertebereiche" suffix="cem-{context}" /></div>
+			<div class="cem-eyebrow-row"><Eyebrow>{$t('layout.korridor.eyebrow_idealbereiche')}</Eyebrow><BegriffErklaerung begriff="wertebereiche" suffix="cem-{context}" /></div>
 			<p class="cem-error" role="alert" data-testid="corridor-editor-mobile-vergleich-load-error">
 				{compareDefsError}
 			</p>
@@ -355,44 +357,44 @@
 				class="cem-open-btn"
 				data-testid="corridor-editor-mobile-vergleich-load-retry"
 				onclick={() => (compareDefsError = null)}
-			>Wiederholen</button>
+			>{$t('layout.korridor.wiederholen')}</button>
 		{:else if context === 'vergleich' && compareDefs === null}
-			<div class="cem-eyebrow-row"><Eyebrow>Wertebereiche · Idealbereiche</Eyebrow><BegriffErklaerung begriff="wertebereiche" suffix="cem-{context}" /></div>
-			<div class="cem-lead" aria-busy="true" data-testid="corridor-editor-mobile-vergleich-loading">Lade Metriken…</div>
+			<div class="cem-eyebrow-row"><Eyebrow>{$t('layout.korridor.eyebrow_idealbereiche')}</Eyebrow><BegriffErklaerung begriff="wertebereiche" suffix="cem-{context}" /></div>
+			<div class="cem-lead" aria-busy="true" data-testid="corridor-editor-mobile-vergleich-loading">{$t('layout.korridor.lade')}</div>
 		{:else if context === 'route' && routeExtraDefs === null}
 			<!-- Issue #1425 (AC-6): Ladezustand statt Nachpoppen der Zusatz-Metriken. -->
-			<div class="cem-eyebrow-row"><Eyebrow>Wertebereiche</Eyebrow><BegriffErklaerung begriff="wertebereiche" suffix="cem-{context}" /></div>
-			<div class="cem-lead" aria-busy="true" data-testid="corridor-editor-mobile-route-loading">Lade Metriken…</div>
+			<div class="cem-eyebrow-row"><Eyebrow>{$t('layout.korridor.eyebrow')}</Eyebrow><BegriffErklaerung begriff="wertebereiche" suffix="cem-{context}" /></div>
+			<div class="cem-lead" aria-busy="true" data-testid="corridor-editor-mobile-route-loading">{$t('layout.korridor.lade')}</div>
 		{:else}
 		{#if context === 'vergleich'}
-			<div class="cem-eyebrow-row"><Eyebrow>Wertebereiche · Idealbereiche</Eyebrow><BegriffErklaerung begriff="wertebereiche" suffix="cem-{context}" /></div>
-			<div class="cem-title">Sag mir, welche Werte dir ideal sind</div>
-			<div class="cem-lead">Ein Wertebereich je Metrik legt deinen Idealbereich fest. Werte im Bereich werden im Briefing pro Ort grün markiert — kein Score, kein Ranking, nur eine Lese-Hilfe.</div>
+			<div class="cem-eyebrow-row"><Eyebrow>{$t('layout.korridor.eyebrow_idealbereiche')}</Eyebrow><BegriffErklaerung begriff="wertebereiche" suffix="cem-{context}" /></div>
+			<div class="cem-title">{$t('layout.korridor.titel_vergleich')}</div>
+			<div class="cem-lead">{$t('layout.korridor.einleitung_vergleich')}</div>
 		{:else}
 			<!-- Issue #1425 (S2 Teil 2, Scheibe C, AC-1): wortgleich zum Desktop-Editor —
 			     keine Sofort-Meldung mehr versprechen, Verweis auf den Reiter Alarme. -->
-			<div class="cem-eyebrow-row"><Eyebrow>Wertebereiche</Eyebrow><BegriffErklaerung begriff="wertebereiche" suffix="cem-{context}" /></div>
-			<div class="cem-title">Sag mir, welche Werte für dich passen</div>
-			<div class="cem-lead">Ein Wertebereich je Metrik legt fest, welche Werte du auf der Trip noch akzeptierst. Werte im Bereich werden im Briefing hervorgehoben. Warnungen zwischen den Briefings stellst du im Reiter Alarme ein.</div>
+			<div class="cem-eyebrow-row"><Eyebrow>{$t('layout.korridor.eyebrow')}</Eyebrow><BegriffErklaerung begriff="wertebereiche" suffix="cem-{context}" /></div>
+			<div class="cem-title">{$t('layout.korridor.titel_route')}</div>
+			<div class="cem-lead">{$t('layout.korridor.einleitung_route')}</div>
 		{/if}
 
 		{#if context === 'route' && routeDefsFailed}
 			<!-- Issue #1425: Rueckfall auf die 6 Standard-Metriken statt blockierendem
 			     Fehlerzustand — bestehende Wertebereiche bleiben bearbeitbar. -->
 			<p class="cem-error" role="alert" data-testid="corridor-editor-mobile-route-load-warning">
-				Zusätzliche Metriken konnten nicht geladen werden — es stehen nur die Standard-Metriken zur Auswahl.
+				{$t('layout.korridor.zusatz_fehlt')}
 			</p>
-			<MBtn block variant="ghost" size="lg" onclick={() => { routeDefsFailed = false; routeExtraDefs = null; }}>Wiederholen</MBtn>
+			<MBtn block variant="ghost" size="lg" onclick={() => { routeDefsFailed = false; routeExtraDefs = null; }}>{$t('layout.korridor.wiederholen')}</MBtn>
 		{/if}
 
 		<div class="cem-legend">
 			<!-- Issue #1425 (Scheibe C, AC-2): "außerhalb = Warnung" entfaellt ersatzlos. -->
-			<span><span class="cem-swatch mark"></span> im Bereich = <strong class="cem-good">markiert</strong></span>
+			<span><span class="cem-swatch mark"></span> {$t('layout.korridor.legende_im_bereich')} <strong class="cem-good">{$t('layout.korridor.legende_markiert')}</strong></span>
 		</div>
 
 		{#if !validation.valid}
 			<p class="cem-error" role="alert" data-testid="corridor-editor-mobile-error">
-				Mindestens eine Grenze (Von oder Bis) ist Pflicht: {validation.errors.join(', ')}
+				{$t('layout.korridor.pflicht', { metriken: validation.errors.join(', ') })}
 			</p>
 		{/if}
 
@@ -403,21 +405,21 @@
 			<div class="cem-card" data-testid="corridor-mobile-row-{row.metric}">
 				<div class="cem-head">
 					<div>
-						<span class="cem-label">{row.label}</span>
+						<span class="cem-label">{(void $locale, zeilenLabel(row))}</span>
 						<!-- Issue #1401 (A1): Auswertung daneben, nicht im Namen (nur vergleich). -->
 						{#if row.aggregationLabel}
 							<span class="cem-aggregation">{row.aggregationLabel}</span>
 						{/if}
 						<span class="cem-unit">{row.unit}</span>
 					</div>
-					<span class="cem-range">{rangeLabel(row)}</span>
+					<span class="cem-range">{(void $locale, rangeLabel(row))}</span>
 				</div>
-				{#if row.note}<div class="cem-note">{row.note}</div>{/if}
+				{#if row.note}<div class="cem-note">{(void $locale, zeilenHinweis(row))}</div>{/if}
 
 				<div class="cem-band-track" data-testid="corridor-mobile-band-{row.metric}">
 					<div class="cem-band-fill" class:mark={row.mark} style="left:{leftPct}%;width:{rightPct - leftPct}%"></div>
-					{#if row.min == null}<span class="cem-open cem-open-left">◂ offen</span>{/if}
-					{#if row.max == null}<span class="cem-open cem-open-right">offen ▸</span>{/if}
+					{#if row.min == null}<span class="cem-open cem-open-left">◂ {$t('layout.korridor.offen')}</span>{/if}
+					{#if row.max == null}<span class="cem-open cem-open-right">{$t('layout.korridor.offen')} ▸</span>{/if}
 					{#if row.min != null}
 						<div class="cem-handle" style="left:{leftPct}%" onpointerdown={(e) => onHandleDown(e, row.metric, 'min')}></div>
 					{/if}
@@ -437,15 +439,15 @@
 						     — sonst teilen sich 3 Ordinal-Buttons + Clear-Button eine ~175px-
 						     Spalte und unterschreiten real die 44px-Mindestbreite. -->
 						<div class="cem-bound" class:cem-bound-full={row.kind === 'ordinal'}>
-							<div class="cem-bound-label">{side === 'min' ? 'Von' : 'Bis'}</div>
+							<div class="cem-bound-label">{side === 'min' ? $t('layout.korridor.von') : $t('layout.korridor.bis')}</div>
 							{#if value == null}
-								<button type="button" class="cem-open-btn" onclick={() => openBound(row, side)}>offen · + Grenze</button>
+								<button type="button" class="cem-open-btn" onclick={() => openBound(row, side)}>{$t('layout.korridor.grenze_setzen')}</button>
 							{:else if row.kind === 'ordinal'}
 								<div class="cem-ordinal-group" data-testid="corridor-mobile-ordinal-{side}-{row.metric}">
 									{#each row.ordinalLabels ?? [] as lbl, idx (lbl)}
 										<button type="button" class="cem-ordinal-btn" class:on={value === idx} onclick={() => patchBound(row, side, clampBoundInput(idx, side, row))}>{lbl}</button>
 									{/each}
-									<button type="button" class="cem-clear-btn" title="Grenze öffnen" onclick={() => patchBound(row, side, null)}>×</button>
+									<button type="button" class="cem-clear-btn" title={$t('layout.korridor.grenze_oeffnen')} onclick={() => patchBound(row, side, null)}>×</button>
 								</div>
 							{:else}
 								<!-- AC-14 vs. JSX-Optik (Tech-Lead-Entscheidung): Hit-Area-Technik —
@@ -458,7 +460,7 @@
 										<div class="cem-step-unit">{row.unit}</div>
 									</div>
 									<button type="button" class="cem-step-btn" onclick={() => nudge(row, side, 1)}><span class="cem-step-btn-glyph">+</span></button>
-									<button type="button" class="cem-clear-btn" title="Grenze öffnen" onclick={() => patchBound(row, side, null)}>×</button>
+									<button type="button" class="cem-clear-btn" title={$t('layout.korridor.grenze_oeffnen')} onclick={() => patchBound(row, side, null)}>×</button>
 								</div>
 							{/if}
 						</div>
@@ -473,35 +475,35 @@
 					     wie im Desktop-Editor (corridorEditorState.ts::supportsMark) —
 					     kein zweiter Nachbau je Komponente. -->
 					{#if supportsMark(row.metric, context)}
-						<button type="button" class="cem-effect mark" class:on={row.mark} aria-pressed={row.mark} onclick={() => patch(row.metric, { mark: !row.mark })}>Markieren</button>
+						<button type="button" class="cem-effect mark" class:on={row.mark} aria-pressed={row.mark} onclick={() => patch(row.metric, { mark: !row.mark })}>{$t('layout.korridor.markieren')}</button>
 					{/if}
 				</div>
 
 				<div class="cem-remove-row">
-					<button type="button" class="cem-remove" onclick={() => remove(row.metric)}>✕ entfernen</button>
+					<button type="button" class="cem-remove" onclick={() => remove(row.metric)}>✕ {$t('layout.korridor.entfernen')}</button>
 				</div>
 			</div>
 		{/each}
 
 		{#if poolLeft.length > 0}
 			<div class="cem-pool">
-				<div class="cem-pool-label">Metrik hinzufügen</div>
+				<div class="cem-pool-label">{$t('layout.korridor.metrik_hinzufuegen')}</div>
 				{#each poolLeft as m (m.metric)}
 					<div data-testid="corridor-editor-pool-item-{m.metric}">
-						<MBtn block variant="ghost" size="lg" onclick={() => add(m.metric)}>＋ {m.label}{#if 'aggregationLabel' in m && m.aggregationLabel}<span class="cem-aggregation">{m.aggregationLabel}</span>{/if}</MBtn>
+						<MBtn block variant="ghost" size="lg" onclick={() => add(m.metric)}>＋ {(void $locale, zeilenLabel(m))}{#if 'aggregationLabel' in m && m.aggregationLabel}<span class="cem-aggregation">{m.aggregationLabel}</span>{/if}</MBtn>
 					</div>
 				{/each}
 			</div>
 		{/if}
 
 		<div class="cem-summary">
-			<span class="cem-summary-item"><Dot tone="good" /> {markN} × Markieren</span>
+			<span class="cem-summary-item"><Dot tone="good" /> {markN} × {$t('layout.korridor.markieren')}</span>
 		</div>
 		{#if context === 'vergleich'}
-			<div class="cem-neutral" data-testid="corridor-editor-mobile-neutral-hint">kein Score · kein Rang · Wertebereiche markieren nur, sie sortieren nicht</div>
+			<div class="cem-neutral" data-testid="corridor-editor-mobile-neutral-hint">{$t('layout.korridor.neutral')}</div>
 			{#if unknownCorridors.length > 0}
 				<div class="cem-neutral" data-testid="corridor-editor-mobile-unknown-hint">
-					{unknownCorridors.length} weitere{unknownCorridors.length === 1 ? 'r Eintrag bleibt' : ' Einträge bleiben'} erhalten
+					{$tn('layout.korridor.weitere_erhalten', unknownCorridors.length)}
 				</div>
 			{/if}
 		{/if}
