@@ -1,0 +1,43 @@
+premiumSmsChannelState(ohne_profil) → {"reportedAtLabel":"","contactLabel":"","disabled":true,"tone":"neutral","statusLabel":"nicht verfügbar","hint":"Premium-SMS ab Level Premium verfügbar"}
+premiumSmsChannelState(nicht_verfuegbar) → {"reportedAtLabel":"","contactLabel":"","disabled":true,"tone":"neutral","statusLabel":"nicht verfügbar","hint":"Premium-SMS ab Level Premium verfügbar"}
+premiumSmsChannelState(nie_gemeldet) → {"reportedAtLabel":"","contactLabel":"","disabled":true,"tone":"neutral","statusLabel":"nicht verbunden","hint":"Das Gerät hat sich noch nie gemeldet — die Rückadresse wird beim ersten Empfang gelernt."}
+premiumSmsChannelState(gelernt) → {"reportedAtLabel":"zuletzt gemeldet am 30.10.2026","contactLabel":" (+1555)","disabled":false,"tone":"good","statusLabel":"gelernt","hint":"Das Gerät hat sich gemeldet — Briefings gehen an die gelernte Rückadresse."}
+premiumSmsChannelState(verfallen) → {"reportedAtLabel":"zuletzt gemeldet am 20.09.2026","contactLabel":"","disabled":true,"tone":"warn","statusLabel":"verfallen","hint":"Rückadresse verfallen — Garmin kann die Nummer inzwischen einem fremden Gerät zugeteilt haben. Sobald sich das Gerät wieder meldet, ist der Kanal erneut nutzbar."}
+channelConnectionStatus(alles_gekoppelt) → {"email":{"tone":"good","label":"bestätigt"},"telegram":{"tone":"good","label":"verbunden"},"sms":{"tone":"good","label":"hinterlegt"}}
+channelConnectionStatus(premium_verfallen) → {"email":{"tone":"good","label":"bestätigt"},"telegram":{"tone":"neutral","label":"nicht verbunden"},"sms":{"tone":"neutral","label":"eingetragen, unbestätigt"}}
+channelConnectionStatus(nur_email) → {"email":{"tone":"good","label":"bestätigt"},"telegram":{"tone":"neutral","label":"nicht verbunden"},"sms":{"tone":"neutral","label":"nicht verbunden"}}
+channelConnectionStatus(email_unbestaetigt) → {"email":{"tone":"neutral","label":"nicht bestätigt"},"telegram":{"tone":"neutral","label":"nicht verbunden"},"sms":{"tone":"neutral","label":"nicht verbunden"}}
+channelConnectionStatus(leer) → {"email":{"tone":"neutral","label":"nicht verbunden"},"telegram":{"tone":"neutral","label":"nicht verbunden"},"sms":{"tone":"neutral","label":"nicht verbunden"}}
+sendTargetLabel(ohne_profil) → {"text":"Versandziel unbekannt — das Konto-Profil ist nicht verfügbar; es wird nichts gesendet.","deliverable":false,"gesperrt":true}
+sendTargetLabel(ohne_adresse) → {"text":"Im Konto ist keine E-Mail-Adresse hinterlegt — es kann nichts gesendet werden.","deliverable":false,"gesperrt":true}
+sendTargetLabel(unbestaetigt) → {"text":"Die Adresse a@example.org ist nicht bestätigt — es wird nichts zugestellt.","deliverable":false,"gesperrt":true}
+sendTargetLabel(nur_email) → {"text":"Geht an E-Mail (golden@example.org).","deliverable":true,"gesperrt":false}
+sendTargetLabel(alles) → {"text":"Geht an E-Mail (golden@example.org) · Telegram · SMS · Premium-SMS.","deliverable":true,"gesperrt":false}
+formatNextBriefing(termin, route) → "Mi 07:00 (CEST)"
+formatNextBriefing(uebersprungen, route) → "Mi 07:00 (CEST) — Do 07:00 wird übersprungen"
+formatNextBriefing(ueberfaellig, route) → "Mi 07:00 (CET) — läuft jetzt / wird nachgeholt"
+formatNextBriefing(pausiert_bis, route) → "pausiert bis 28.10."
+formatNextBriefing(pausiert, route) → "pausiert"
+formatNextBriefing(manuell, route) → "nur manueller Versand"
+formatNextBriefing(beendet, route) → "Trip beendet"
+formatNextBriefing(abgeschaltet, route) → "Briefings abgeschaltet"
+formatNextBriefing(kein_termin, route) → "kein Termin geplant"
+formatNextBriefing(kaputt, route) → "—"
+formatNextBriefing(nicht_geladen, route) → "—"
+vtBriefingLeadText(route) → "Das Trip-Briefing ist eine Etappen-Tabelle — E-Mail trägt alle Spalten, Telegram die ersten 7, SMS kein Raster, Fließtext."
+vtBriefingSubTexts(route, rich) → {"email":"Layout · volle Tabelle","telegram":"Layout · 7 Spalten","sms":"Layout · kein Raster, 160 Zeichen"}
+vtBriefingSubTexts(route, kurzform) → {"email":"Layout · volle Tabelle","telegram":"folgt der SMS-Auswahl","sms":"Layout · kein Raster, 160 Zeichen"}
+formatNextBriefing(termin, vergleich) → "Mi 07:00 (CEST)"
+formatNextBriefing(uebersprungen, vergleich) → "Mi 07:00 (CEST) — Do 07:00 wird übersprungen"
+formatNextBriefing(ueberfaellig, vergleich) → "Mi 07:00 (CET) — läuft jetzt / wird nachgeholt"
+formatNextBriefing(pausiert_bis, vergleich) → "pausiert bis 28.10."
+formatNextBriefing(pausiert, vergleich) → "pausiert"
+formatNextBriefing(manuell, vergleich) → "nur manueller Versand"
+formatNextBriefing(beendet, vergleich) → "Ortsvergleich beendet"
+formatNextBriefing(abgeschaltet, vergleich) → "Briefings abgeschaltet"
+formatNextBriefing(kein_termin, vergleich) → "kein Termin geplant"
+formatNextBriefing(kaputt, vergleich) → "—"
+formatNextBriefing(nicht_geladen, vergleich) → "—"
+vtBriefingLeadText(vergleich) → "Der Orts-Vergleich ist eine breite Tabelle — realistisch läuft er per E-Mail. Telegram trägt nur ≤ 7 Spalten, SMS kein Raster, Fließtext."
+vtBriefingSubTexts(vergleich, rich) → {"email":"Layout · volle Tabelle","telegram":"Layout · 7 Spalten","sms":"Layout · kein Raster, 153 Zeichen"}
+vtBriefingSubTexts(vergleich, kurzform) → {"email":"Layout · volle Tabelle","telegram":"folgt der SMS-Auswahl","sms":"Layout · kein Raster, 153 Zeichen"}

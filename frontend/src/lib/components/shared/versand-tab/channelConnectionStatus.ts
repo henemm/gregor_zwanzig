@@ -7,6 +7,8 @@
 // konsumieren: sendTargetLabel.ts (#1471, Ziel-Satz im Bestätigungsdialog) und
 // channelContactLabel.ts (#1510, Kontakt-Suffixe für die Checkbox-Labels).
 
+import { tr } from '../../../i18n/index.ts';
+
 export type ConnectionTone = 'good' | 'neutral';
 
 export interface ChannelConnectionInfo {
@@ -44,7 +46,8 @@ export interface ConnectionProfile {
 	premium_sms_reply_state?: 'none' | 'stale' | 'fresh';
 }
 
-const NOT_CONNECTED: ChannelConnectionInfo = { tone: 'neutral', label: 'nicht verbunden' };
+// #2655 (F6): Statusworte je Aufruf in der aktuellen Sprache (nie auf Modulebene eingefroren).
+const notConnected = (): ChannelConnectionInfo => ({ tone: 'neutral', label: tr('versand.status.nicht_verbunden') });
 
 export function channelConnectionStatus(
 	profile: ConnectionProfile | null | undefined
@@ -53,16 +56,16 @@ export function channelConnectionStatus(
 
 	let email: ChannelConnectionInfo;
 	if (!p.mail_to) {
-		email = NOT_CONNECTED;
+		email = notConnected();
 	} else if (p.email_verified) {
-		email = { tone: 'good', label: 'bestätigt' };
+		email = { tone: 'good', label: tr('versand.status.bestaetigt') };
 	} else {
-		email = { tone: 'neutral', label: 'nicht bestätigt' };
+		email = { tone: 'neutral', label: tr('versand.status.nicht_bestaetigt') };
 	}
 
 	const telegram: ChannelConnectionInfo = p.telegram_chat_id
-		? { tone: 'good', label: 'verbunden' }
-		: NOT_CONNECTED;
+		? { tone: 'good', label: tr('versand.status.verbunden') }
+		: notConnected();
 
 	// Issue #2406: "eingetragen" ist nicht "sendebereit". Eine unbewiesene
 	// Nummer wird vom Versand ohnehin fail-closed verworfen (config.py) — sie
@@ -70,11 +73,11 @@ export function channelConnectionStatus(
 	// stattfindet.
 	let sms: ChannelConnectionInfo;
 	if (!p.sms_to || p.sms_allowed === false) {
-		sms = NOT_CONNECTED;
+		sms = notConnected();
 	} else if (p.sms_verified) {
-		sms = { tone: 'good', label: 'hinterlegt' };
+		sms = { tone: 'good', label: tr('versand.status.hinterlegt') };
 	} else {
-		sms = { tone: 'neutral', label: 'eingetragen, unbestätigt' };
+		sms = { tone: 'neutral', label: tr('versand.status.eingetragen_unbestaetigt') };
 	}
 
 	return { email, telegram, sms };

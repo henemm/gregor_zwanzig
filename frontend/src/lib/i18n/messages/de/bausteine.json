@@ -16,6 +16,7 @@
 	"tip.aria.kanal_schwelle": "Erklärung: Dringlichkeits-Schwelle",
 	"tip.aria.cape": "Erklärung: CAPE",
 	"tip.aria.cooldown": "Erklärung: Cooldown",
+	"telegram_kurzstil.checkbox": "Telegram im SMS-Kurzstil",
 	"telegram_kurzstil.hinweis_aktiv": "Telegram bekommt denselben kurzen Ein-Zeilen-Text wie SMS, ohne Knöpfe. Inhalt und Werte folgen der SMS-Auswahl im Layout-Reiter; die Telegram-Auswahl gilt nur für das ausführliche Telegram.",
 	"telegram_kurzstil.hinweis_inaktiv": "Erst aktiv, wenn Telegram als Kanal an ist.",
 	"standardwerte.knopf": "Mit Standardwerten speichern",

@@ -15,6 +15,8 @@
 	import { Checkbox } from '$lib/components/ui/checkbox';
 	import { Select } from '$lib/components/ui/select';
 	import { HOUR_OPTIONS, toHourOption } from '$lib/utils/time';
+	import { t } from '$lib/i18n';
+	import { textTeile } from '$lib/i18n/textTeile';
 
 	interface Props {
 		/** Issue #1232 Scheibe 2b: context-Diskriminierung — vergleich zeigt
@@ -72,34 +74,32 @@
 </script>
 
 <div>
-	<Eyebrow style="margin-bottom: 10px;">Briefing-Zeitplan</Eyebrow>
+	<Eyebrow style="margin-bottom: 10px;">{$t('versand.zeitplan.titel')}</Eyebrow>
 
 	{#if !hasActiveChannel}
 		<div class="vt-empty-box" data-testid="briefings-channel-empty">
-			<strong class="vt-empty-strong">Kein Kanal aktiv.</strong> Aktiviere oben mindestens einen Briefing-Kanal,
-			damit hier Zeitplan-Optionen erscheinen.
+			<strong class="vt-empty-strong">{$t('versand.zeitplan.kein_kanal')}</strong> {$t('versand.zeitplan.kein_kanal_text')}
 		</div>
 	{:else}
 		{#if context === 'vergleich'}
 			<div class="vt-vergleich-intro">
-				Wie beim Trip: das <strong>Morgen-Briefing</strong> zeigt den heutigen Tag, das
-				<strong>Abend-Briefing</strong> den morgigen. Du wählst nur die Uhrzeit.
+				{#each textTeile($t('versand.zeitplan.vergleich_intro')) as teil}{#if teil.platzhalter === 'morgen'}<strong>{$t('versand.zeitplan.morgen')}</strong>{:else if teil.platzhalter === 'abend'}<strong>{$t('versand.zeitplan.abend')}</strong>{:else}{teil.text}{/if}{/each}
 			</div>
 		{/if}
 		<div class="vt-schedule-grid">
 			<Card padding={18}>
 				<div class="vt-card-head">
 					<div>
-						<div class="vt-card-title">Morgen-Briefing</div>
-						<div class="vt-card-sub">Gleicher Tag — alles für die heutige Etappe</div>
+						<div class="vt-card-title">{$t('versand.zeitplan.morgen')}</div>
+						<div class="vt-card-sub">{$t('versand.zeitplan.morgen_sub')}</div>
 					</div>
 					<span data-testid="morning-master-switch">
-						<Checkbox checked={morning_enabled} onchange={onMorningToggle}>Aktiv</Checkbox>
+						<Checkbox checked={morning_enabled} onchange={onMorningToggle}>{$t('versand.zeitplan.aktiv')}</Checkbox>
 					</span>
 				</div>
 				<div class="vt-card-body">
 					<label class="vt-time-label vt-time-choice">
-						<span class="vt-time-caption">Uhrzeit</span>
+						<span class="vt-time-caption">{$t('versand.zeitplan.uhrzeit')}</span>
 						<Select
 							data-testid="report-morning-time"
 							value={morningHourOption}
@@ -119,7 +119,7 @@
 							disabled={!morning_enabled}
 							onclick={makeQuickPickHandler(onMorningTime, '07:00')}
 						>
-							Morgens 07:00
+							{$t('versand.zeitplan.morgens', { zeit: '07:00' })}
 						</button>
 						<button
 							type="button"
@@ -128,7 +128,7 @@
 							disabled={!morning_enabled}
 							onclick={makeQuickPickHandler(onMorningTime, '18:00')}
 						>
-							Abends 18:00
+							{$t('versand.zeitplan.abends', { zeit: '18:00' })}
 						</button>
 					</div>
 				</div>
@@ -137,16 +137,16 @@
 			<Card padding={18}>
 				<div class="vt-card-head">
 					<div>
-						<div class="vt-card-title">Abend-Briefing</div>
-						<div class="vt-card-sub">Nächster Tag — Ausblick auf morgen</div>
+						<div class="vt-card-title">{$t('versand.zeitplan.abend')}</div>
+						<div class="vt-card-sub">{$t('versand.zeitplan.abend_sub')}</div>
 					</div>
 					<span data-testid="evening-master-switch">
-						<Checkbox checked={evening_enabled} onchange={onEveningToggle}>Aktiv</Checkbox>
+						<Checkbox checked={evening_enabled} onchange={onEveningToggle}>{$t('versand.zeitplan.aktiv')}</Checkbox>
 					</span>
 				</div>
 				<div class="vt-card-body">
 					<label class="vt-time-label vt-time-choice">
-						<span class="vt-time-caption">Uhrzeit</span>
+						<span class="vt-time-caption">{$t('versand.zeitplan.uhrzeit')}</span>
 						<Select
 							data-testid="report-evening-time"
 							value={eveningHourOption}
@@ -166,7 +166,7 @@
 							disabled={!evening_enabled}
 							onclick={makeQuickPickHandler(onEveningTime, '07:00')}
 						>
-							Morgens 07:00
+							{$t('versand.zeitplan.morgens', { zeit: '07:00' })}
 						</button>
 						<button
 							type="button"
@@ -175,7 +175,7 @@
 							disabled={!evening_enabled}
 							onclick={makeQuickPickHandler(onEveningTime, '18:00')}
 						>
-							Abends 18:00
+							{$t('versand.zeitplan.abends', { zeit: '18:00' })}
 						</button>
 					</div>
 				</div>
@@ -185,19 +185,19 @@
 				<Card padding={18}>
 					<div class="vt-card-head">
 						<div>
-							<div class="vt-card-title">Mehrtages-Trend</div>
-							<div class="vt-card-sub">Sonntags · 3–7-Tage-Ausblick (optional)</div>
+							<div class="vt-card-title">{$t('versand.zeitplan.trend')}</div>
+							<div class="vt-card-sub">{$t('versand.zeitplan.trend_sub')}</div>
 						</div>
 					</div>
 					<div class="vt-card-body vt-trend-body">
 						<span data-testid="report-morning-trend">
 							<Checkbox checked={multi_day_trend_morning} disabled={!morning_enabled} onchange={onTrendMorningToggle}
-								>im Morgen-Briefing</Checkbox
+								>{$t('versand.zeitplan.im_morgen')}</Checkbox
 							>
 						</span>
 						<span data-testid="report-evening-trend">
 							<Checkbox checked={multi_day_trend_evening} disabled={!evening_enabled} onchange={onTrendEveningToggle}
-								>im Abend-Briefing</Checkbox
+								>{$t('versand.zeitplan.im_abend')}</Checkbox
 							>
 						</span>
 					</div>

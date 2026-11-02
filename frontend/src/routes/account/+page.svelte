@@ -999,7 +999,7 @@
 							{:else}
 								<span data-testid="wetter-profile-name-{p.id}" class="font-medium">{p.name}</span>
 								<div class="flex items-center gap-2">
-									<Badge variant="secondary" data-testid="wetter-profile-count-{p.id}">{metricCountLabel(p)}</Badge>
+									<Badge variant="secondary" data-testid="wetter-profile-count-{p.id}">{(void $locale, metricCountLabel(p))}</Badge>
 									{#if showDefaultBadge(p)}
 										<Badge variant="secondary" data-testid="wetter-profile-default-{p.id}">{$t('konto.wetter_profile.standard')}</Badge>
 									{/if}
@@ -1133,15 +1133,15 @@
 				<div class="space-y-2 mb-4" data-testid="mengen-quote">
 					<div class="flex items-center justify-between text-sm">
 						<span>{$t('konto.menge.aktive_trips')}</span>
-						<a href="/trips" class="g-link-tap font-medium hover:underline" data-testid="quota-trips">{formatQuotaUsage(countActive(data.trips), quota?.trips)}</a>
+						<a href="/trips" class="g-link-tap font-medium hover:underline" data-testid="quota-trips">{(void $locale, formatQuotaUsage(countActive(data.trips), quota?.trips))}</a>
 					</div>
 					<div class="flex items-center justify-between text-sm">
 						<span>{$t('konto.menge.aktive_vergleiche')}</span>
-						<a href="/compare" class="g-link-tap font-medium hover:underline" data-testid="quota-compare-presets">{formatQuotaUsage(countActive(data.comparePresets), quota?.compare_presets)}</a>
+						<a href="/compare" class="g-link-tap font-medium hover:underline" data-testid="quota-compare-presets">{(void $locale, formatQuotaUsage(countActive(data.comparePresets), quota?.compare_presets))}</a>
 					</div>
 					<div class="flex items-center justify-between text-sm">
 						<span>{$t('konto.menge.locations')}</span>
-						<a href="/locations" class="g-link-tap font-medium hover:underline" data-testid="quota-locations">{formatQuotaUsage(Array.isArray(data.locations) ? data.locations.length : 0, quota?.locations)}</a>
+						<a href="/locations" class="g-link-tap font-medium hover:underline" data-testid="quota-locations">{(void $locale, formatQuotaUsage(Array.isArray(data.locations) ? data.locations.length : 0, quota?.locations))}</a>
 					</div>
 				</div>
 

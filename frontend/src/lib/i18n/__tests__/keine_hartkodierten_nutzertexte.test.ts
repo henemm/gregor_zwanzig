@@ -294,6 +294,42 @@ describe('TypeScript-Ratsche (F11, AC-6)', () => {
 		assert.deepEqual(treffer.map((e) => e.pfad), []);
 	});
 
+	// Issue #2655 (i18n F6, AC-7): Versand-Reiter und Telegram-Kurzstil-Schalter.
+	test('F6: kein Allowlist-Eintrag deckt den Versand-Reiter oder den Kurzstil-Schalter', () => {
+		const F6 = [
+			'lib/components/shared/VersandTab.svelte',
+			'lib/components/shared/TelegramKurzstilToggle.svelte',
+			'lib/components/shared/versand-tab/VTBriefingChannels.svelte',
+			'lib/components/shared/versand-tab/VTSchedulePlan.svelte',
+			'lib/components/shared/versand-tab/VTLaufzeitRoute.svelte',
+			'lib/components/shared/versand-tab/VTLaufzeitVergleich.svelte',
+			'lib/components/shared/versand-tab/VTNextBriefing.svelte'
+		];
+		const deckt = (a: string, p: string) => (a.endsWith('/') ? p.startsWith(a) : p === a);
+		assert.deepEqual(F6.filter((p) => ALLOWLIST.some((a) => deckt(a, p))), []);
+		for (const alt of ['lib/components/shared/', 'lib/components/shared/versand-tab/', 'lib/components/shared/TelegramKurzstilToggle.svelte'])
+			assert.ok(!ALLOWLIST.includes(alt), alt);
+		const treffer = scanneVerzeichnis(SRC).filter((e) => F6.includes(e.pfad) && e.treffer.length > 0);
+		assert.deepEqual(treffer.map((e) => e.pfad), []);
+		assert.ok(scanneVerzeichnis(SRC).filter((e) => F6.includes(e.pfad)).length === F6.length, 'Messaufbau: F6-Dateien nicht gescannt');
+	});
+
+	// F6 Adversary F002: auch die .ts-Helfer des Versand-Reiters stehen unter der TS-Ratsche.
+	test('F6: .ts-Module unter shared/versand-tab/ werden gescannt und sind ohne Treffer', () => {
+		const ts = scanneVerzeichnis(SRC).filter((e) => e.pfad.startsWith('lib/components/shared/versand-tab/') && e.pfad.endsWith('.ts'));
+		for (const p of ['sendTargetLabel.ts', 'premiumSmsChannelState.ts', 'nextBriefingText.ts', 'channelConnectionStatus.ts', 'vtBriefingChannelsText.ts'])
+			assert.ok(ts.some((e) => e.pfad === `lib/components/shared/versand-tab/${p}`), p);
+		assert.deepEqual(ts.filter((e) => e.treffer.length > 0).map((e) => e.pfad), []);
+		assert.equal(wirdGescanntTs('lib/components/shared/versand-tab/__tests__/f6VersandSsr.ts'), false);
+		// Gegenprobe: ein zurueckgekehrtes deutsches Literal waere ein Treffer ohne Eintrag.
+		const treffer = scanneTs("hint: 'Premium-SMS ab Level Premium verfügbar'");
+		const ergebnis = pruefeGegenAllowlist([{ pfad: 'lib/components/shared/versand-tab/premiumSmsChannelState.ts', treffer }], ALLOWLIST);
+		assert.equal(ergebnis.ohneEintrag.length, 1);
+		// Signalwoerter „keine"/„nichts" (F6): Saetze ohne Umlaut werden ebenfalls erkannt.
+		assert.equal(scanneTs("x('Im Konto ist keine E-Mail-Adresse hinterlegt — es kann nichts gesendet werden.')").length, 1);
+		assert.equal(scanneTs("x('nichtig')").length, 0);
+	});
+
 	test('Allowlist enthaelt die acht F11-Praefixe nicht mehr', () => {
 		const F11 = [
 			'lib/components/ui/',

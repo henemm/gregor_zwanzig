@@ -19,7 +19,7 @@
 		revokeInvite,
 		adminLocale
 	} from '$lib/admin';
-	import { t } from '$lib/i18n';
+	import { t, locale } from '$lib/i18n';
 	import type { AdminInvite, AdminUser, UserTier } from '$lib/types';
 
 	let { data } = $props();
@@ -187,7 +187,7 @@
 					<div>
 						<strong>{inv.note || $t('admin.einladung.ohne_notiz')}</strong>
 						<span class="mono text-xs"> · {tierLabel(inv.tier)} · {$t('admin.einladung.erstellt', { zeit: formatTime(inv.created_at) })}</span>
-						<div data-testid="admin-invite-status">{inviteStatusText(inv)}</div>
+						<div data-testid="admin-invite-status">{(void $locale, inviteStatusText(inv))}</div>
 					</div>
 					{#if inv.status === 'open'}
 						<Btn variant="outline" data-testid="admin-invite-revoke" onclick={makeAskRevoke(inv)}>{$t('admin.einladung.widerrufen')}</Btn>
