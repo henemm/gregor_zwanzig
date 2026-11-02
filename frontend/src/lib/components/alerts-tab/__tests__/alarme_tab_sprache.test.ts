@@ -94,8 +94,11 @@ function deutscheReste(text: string, ausnahmen: string[] = []): string[] {
 	}
 	return reste;
 }
-/** Vergleichs-Katalog ohne label_en (Luftfeuchtigkeit): der deutsche Name ist Fallback (AC-3). */
-const OHNE_LABEL_EN = ['alarme.metrik.humidity', 'alarme.preset.zeile.humidity'];
+/** Vergleichs-Katalog ohne label_en (Luftfeuchtigkeit, Gefühlte Temperatur (Minimum/Maximum)):
+ *  der deutsche Name ist Fallback (AC-3) und enthaelt die Wortlaute dieser Anker. */
+const OHNE_LABEL_EN = ['alarme.metrik.humidity', 'alarme.preset.zeile.humidity', 'alarme.metrik.temperature_min', 'alarme.metrik.temperature_max'];
+/** Servertext der geladenen Beispiel-Warnung (Betreff/Telegram/SMS der Fixture) bleibt Server-Sprache. */
+const ohneServerVorschau = (text: string) => text.replaceAll('[GR20] Böen 75 km/h', '').replaceAll('GR20 Böen 75', '');
 /** Die Preset-Zeilen nennen dieselben Woerter wie die Metrik-Namen; im Reiter stehen nur diese. */
 const PRESET_ZEILEN = ['alarme.preset.zeile.'];
 
@@ -103,7 +106,10 @@ const PRESET_ZEILEN = ['alarme.preset.zeile.'];
 function zahlenUndEinheiten(h: string): string[] {
 	const muster = [
 		/data-testid="alert-threshold-[^"]*"[^>]*>([^<]*)</g,
-		/class="(?:threshold-unit|metric-unit|unit|threshold-label)[^"]*"[^>]*>([^<]*)</g,
+		// Messeinheiten der Schwellen; die Cooldown-Einheit „Minuten" ist ein Wort (Spec Abschnitt 2) und zaehlt nicht.
+		/class="(?:threshold-unit|metric-unit)[^"]*"[^>]*>([^<]*)</g,
+		// Vergleichssymbole (Δ ≥, >, <); die Beschriftung „Melde ab Änderung:" derselben Klasse ist Text.
+		/class="threshold-label[^"]*"[^>]*>([^<A-Za-zÄÖÜäöüß]*)</g,
 		/value="([^"]*)"/g,
 		/data-level="([^"]*)"/g
 	];
@@ -261,7 +267,7 @@ describe('AC-1: Alarme-Reiter englisch in Trip und Ortsvergleich, Zahlen und Sym
 		hat(en, 'title="Alert preview email"');
 		// Optionswerte (value) bleiben die Kennungen.
 		for (const v of ['value="info"', 'value="warning"', 'value="critical"', 'value="deaktiviert"', 'value="entspannt"']) hat(en, v);
-		assert.deepEqual(deutscheReste(text), []);
+		assert.deepEqual(deutscheReste(ohneServerVorschau(text)), []);
 		assert.deepEqual(zahlenUndEinheiten(en), zahlenUndEinheiten(de));
 	});
 });

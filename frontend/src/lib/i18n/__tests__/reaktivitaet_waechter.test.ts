@@ -156,6 +156,19 @@ describe('Bestand: Sprachwechsel ohne Neuladen erreicht jede Anzeige', () => {
 		assert.equal(gezaehlt, 12);
 	});
 
+	test('Messaufbau F7: ohne die $locale-Lesung waeren drei Ableitungen/Ausdruecke gemeldet', () => {
+		// AlarmeTab: Premium-SMS-Sperre (derived) und Gruppen-Ueberschrift (markup);
+		// AlertMetricLevelRow: Richtwert-Hinweis (derived).
+		const { dateien } = scanneEintraege(SRC, BEREICHE['F7 #2656 Alarme-Reiter, Alarm-Kanal-Picker, alerts-tab']);
+		assert.ok(dateien.length >= 12, `Messaufbau: nur ${dateien.length} Dateien`);
+		let gezaehlt = 0;
+		for (const rel of dateien) {
+			const q = (readFileSync(join(SRC, rel), 'utf8') as string).replace(/\(void \$locale, /g, '(');
+			gezaehlt += scanneKomponente(q, join(SRC, rel), SRC, rel).length;
+		}
+		assert.equal(gezaehlt, 3);
+	});
+
 	test('jede Ausnahme trifft noch einen Fund (keine toten Eintraege)', () => {
 		const alle = Object.values(BEREICHE).flatMap((e) => scanneEintraege(SRC, e).funde);
 		for (const a of AUSNAHMEN) assert.ok(alle.some((f) => f.pfad === a.pfad && f.text.includes(a.enthaelt)), `tote Ausnahme: ${a.enthaelt}`);

@@ -203,10 +203,13 @@ const EINGEFROREN: readonly string[] = [
 	// s. Implementation Details Abschnitt 3) — die drei ANDEREN AlarmeTab-
 	// Eintraege bleiben auf ihrer Zeile (ein kompensierender Kommentarblock
 	// gleicht die Zeilenzahl VOR ihnen wieder aus, Datei bleibt bei 631 Zeilen).
-	'AlarmeTab.svelte:250',
-	'AlarmeTab.svelte:511',
-	'AlarmeTab.svelte:530',
-	'AlarmeTab.svelte:563',
+	// 🔴 Issue #2656 (F7, i18n): +9/+8/+7/+7 Zeilen durch Katalog-Importe, die
+	// $locale-Lesung und die Schluesseltabelle ZONEN_BEZUG; Bedingungen unveraendert
+	// (Inhalt in BLEIBT_MIT_INHALT gefesselt, nachgemessen).
+	'AlarmeTab.svelte:259',
+	'AlarmeTab.svelte:519',
+	'AlarmeTab.svelte:537',
+	'AlarmeTab.svelte:570',
 	// S6e: alle DREI VersandTab-Eintraege bleiben (0 gestrichen) — sie sind
 	// Wirkort-/Darstellungs-Weichen, kein `wiz`-Symptom. Ihre Zeilennummern
 	// verschoben sich durch die elf neuen Prop-Zeilen im Skript-Teil; die neuen
@@ -312,22 +315,22 @@ const EINGEFROREN_SOLL_ANZAHL = 47;
  */
 const BLEIBT_MIT_INHALT: readonly { eintrag: string; zeile: string; folgt: string }[] = [
 	{
-		eintrag: 'AlarmeTab.svelte:250',
+		eintrag: 'AlarmeTab.svelte:259',
 		zeile: "context === 'vergleich'",
 		folgt: 'deriveUnalertableSelectedMetricNames('
 	},
 	{
-		eintrag: 'AlarmeTab.svelte:511',
+		eintrag: 'AlarmeTab.svelte:519',
 		zeile: "{#if context === 'vergleich' && unalertableSelectedMetricNames.length > 0}",
 		folgt: 'alarme-unalertable-metrics-hint'
 	},
 	{
-		eintrag: 'AlarmeTab.svelte:530',
+		eintrag: 'AlarmeTab.svelte:537',
 		zeile: "{#if context === 'vergleich'}",
 		folgt: 'TelegramKurzstilToggle'
 	},
 	{
-		eintrag: 'AlarmeTab.svelte:563',
+		eintrag: 'AlarmeTab.svelte:570',
 		zeile: "{#if context === 'vergleich'}",
 		// #2283 S5: VTAlertSample durch echte AlertPreviewCard ersetzt (AC-21).
 		// Anker samt `kind="vergleich"`: das FENSTER (8 Zeilen) reicht bis in den

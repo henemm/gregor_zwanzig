@@ -26,6 +26,7 @@ import { parse } from 'svelte/compiler';
 import { toCompareSelectionEntries } from '../weather-metrics-tab/compareMetricSelection.ts';
 import type { CompareSelectionEntry } from '../weather-metrics-tab/compareMetricSelection.ts';
 import type { CompareMetricCatalogEntry } from '../../../types.ts';
+import { trFor } from '../../../i18n/index.ts';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const ALARME_TAB = join(here, '..', 'AlarmeTab.svelte');
@@ -166,7 +167,9 @@ function screen(opts: { context?: string; metrics?: string[]; unalertable?: stri
 		effectiveActiveMetrics: opts.metrics ?? [],
 		unalertableSelectedMetricNames: opts.unalertable ?? [],
 		effectiveMetricLevels: {},
-		handleMetricLevelChange: () => {}
+		handleMetricLevelChange: () => {},
+		// #2656 (F7): die Saetze stehen im Katalog; `$t` liefert hier die deutsche Fassung.
+		$t: (k: string, p?: Record<string, string | number>) => trFor('de', k as never, p)
 	});
 }
 
