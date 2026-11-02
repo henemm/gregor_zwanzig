@@ -7,6 +7,7 @@ Leerzeichen vor der Uhrzeit ("Max16:00"). Keine Mocks, echter Renderer.
 from __future__ import annotations
 
 import re
+import sys
 from pathlib import Path
 
 import pytest
@@ -14,7 +15,6 @@ import pytest
 from src.output.renderers.email.helpers import pill_html
 
 LABELS = ["Max 16:00", "ab 15:00 · Regen", "stärkste 14:00"]
-HTML_PY = Path(__file__).resolve().parent.parent / "src/output/renderers/email/html.py"
 
 
 @pytest.mark.parametrize("label", LABELS)
@@ -36,5 +36,15 @@ def test_pillentext_bleibt_zeichengleich_mit_leerzeichen_vor_uhrzeit(label):
 
 
 def test_pillen_container_behaelt_abstand_und_umbruch():
-    src = HTML_PY.read_text(encoding="utf-8")  # doc-compliance-test
-    assert "display:flex;gap:6px;flex-wrap:wrap" in src
+    """Verhalten: in der echt gerenderten Trip-Mail umschliesst ein
+    Flex-Container mit Abstand und Umbruch die Pillen (nur die Pille selbst
+    ist inline-block)."""
+    sys.path.insert(0, str(Path(__file__).resolve().parent / "tdd"))
+    from test_issue_664_metrics_summary import _build_segments, _render_html
+
+    html = _render_html(_build_segments(), show_metrics_summary=True)
+    container = re.search(
+        r'<div style="display:flex;gap:6px;flex-wrap:wrap;[^"]*">(.*?)</div>',
+        html, re.S)
+    assert container, "Pillen-Container mit gap/flex-wrap fehlt"
+    assert "display:inline-block" in container.group(1)
