@@ -83,6 +83,24 @@ ADR-0049 (eigener Kanal), ADR-0095 (Kanal-Parität, Alarm-Kanal in Trip und Orts
   allen vier Kanälen gleich. Eine **reine Positions-SMS** (kein Befehlstext) nimmt den Fix auf und
   wird **nicht** beantwortet.
 
+## Sprache
+
+Der Premium-SMS-Kanal ist Kurzform-Kanal (`_KURZFORM_KANAELE = ("premium_sms", "sms")`,
+`src/services/trip_command_processor.py`). Die Kurzform ist in jeder Konto-Sprache unverändert
+(ADR-0104, Präzisierung 2026-10-31; ADR-0042 Platzgrenze).
+
+**Was bleibt:** Token-Zeile, Kürzel, `sms_code`, `compact_label`, `col_label`, das Zeichenbudget von
+160 Zeichen in GSM-7. Die Antworten auf Rückkanal-Befehle sind wie bisher englisch, unabhängig vom
+Konto.
+
+**Was sich ändert:** nur die Eingabe. Jedes Befehlswort wird in der deutschen oder englischen Form
+erkannt (`wort` und `wort_en` in `_COMMAND_SPECS`).
+
+**Woher:** Kürzel-Bedeutungen aus `sms.*` im Katalog (`src/i18n/messages/{de,en}/sms.json`).
+
+**Prüfung:** Golden-Tests für die Kurzform (`tests/golden/sms/`, `tests/test_sms_golden.py`) und der
+Token-Wächter `tests/test_metric_tokens_eingefroren.py`.
+
 ## 5. Quelle im Code
 
 | Was | Datei:Zeile |

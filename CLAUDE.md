@@ -7,6 +7,7 @@
 **Gregor Zwanzig** ist ein Headless-Service zur Normalisierung von Wetterdaten und Ausgabe als kompakte Reports (SMS <=160 Zeichen, E-Mail mit Tabellen). Zielgruppe: Weitwanderer (z.B. GR20) mit eingeschraenkter Konnektivitaet. Stack: Python, uv, pytest.
 
 - **Kanäle (vier):** E-Mail · Telegram · SMS · **Premium-SMS** (Garmin inReach, ADR-0049). Signal ist seit 2026-06-06 app-weit entfernt (#610, `docs/adr/0004-signal-channel-removed.md`); Wiedereinführung müsste neu spezifiziert werden.
+- **Zweisprachig DE/EN (ADR-0104, Epic #2644):** Sprache am Nutzer (`language`), Protokoll-Token (`sms_code`, `compact_label`, Kürzel) nie übersetzen, neue Nutzertexte nur über den Katalog; Regeln: `docs/reference/i18n_konventionen.md`.
 - **Alle vier Kanäle sind gleichrangig relevant, kein Kanal ersetzt einen anderen** (PO-Vorgabe). Die Empfangslage unterwegs ist **unvorhersehbar** (PO-Korrektur 2026-09-05: auf der Hütte eher WLAN als Satellit, auf dem Pass normaler Handyempfang). Daher muss **jeder Kanal jede Frage beantworten können**, mit demselben Inhalt (Epic #2133); Alarme erreichen **alle** Kanäle (#1701). Wer „E-Mail/Telegram sind nachrangig" folgert, liegt falsch. Volltext: `docs/adr/0095-kanal-paritaet-jeder-kanal-jede-frage.md`.
 - **Premium-SMS-Reichweite:** als **Versandkanal** im **Trip-Briefing** UND im **Ortsvergleich-Briefing** verdrahtet (#2275); als **Alarm-Kanal** in Trip UND Ortsvergleich für **alle** Alarmarten inkl. Regen-/Radar-Alarme, über dieselbe geteilte Kanal-Auflösung (Paritäts-Audit #1533).
 - **Multi-User-Produkt:** jeder Nutzer hat eigene Trips, Orte, Orts-Vergleiche, Empfänger, Settings unter `data/users/<user_id>/`. Isolation über `s.WithUser(middleware.UserIDFromContext(r.Context()))` (Go) bzw. `user_id`-Parameter (Python). **PFLICHT:** echte `user_id` aus dem Auth-Kontext, **niemals** Fallback auf `"default"` (Cross-User-Datenleck). Jeder datenbewegende Endpoint wird mit **zwei verschiedenen Nutzern** getestet. „Senden" heißt immer „an die konfigurierten Empfänger dieses Nutzers", es gibt kein systemseitiges „an mich".
@@ -96,7 +97,7 @@ Monitoring-Pflicht (`last_run`), Pre-Test-Validierung (`python3 .claude/validate
 
 ## Parallele Sessions & Token-Budget
 
-Ein Projektordner trägt höchstens eine Claude-Session; eine zweite arbeitet per `EnterWorktree` bzw. `.claude/tools/gz-workspace` isoliert und liefert unabhängig über `origin/main` aus. Kontext ist die teuerste Ressource: nach jedem Ticket `/clear`, Bash-Aufrufe bündeln, breit suchen delegieren, gezielt lesen; Details: `docs/reference/operations_playbook.md`.
+Ein Projektordner trägt höchstens eine Claude-Session; eine zweite arbeitet per `EnterWorktree` bzw. `.claude/tools/gz-workspace` isoliert und liefert unabhängig über `origin/main` aus. Kontext ist die teuerste Ressource (nach jedem Ticket `/clear`); Details: `docs/reference/operations_playbook.md`.
 
 Diese Instanz heißt `gregor`. **VERBOTEN: MQ-Nachrichten `gregor` → `gregor`**; Sitzungen im selben Projekt nutzen `SendMessage`, MQ nur instanzübergreifend (`docs/reference/workflow_und_agenten.md`).
 

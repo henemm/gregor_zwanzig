@@ -38,7 +38,7 @@ Main Context (Opus) ist reiner Orchestrierer und schreibt KEINEN Code. Implement
 
 ## Agenten-Modelle
 
-`developer` (Plugin-Pendant `developer-agent`)/`user-story-planner` Opus · `bug-intake`/`bug-investigator`/`analysis-challenger`/`feature-planner`/`spec-writer`/`implementation-validator`/`staging-validator`/`external-validator`/`fresh-eyes-inspector` Sonnet · `docs-updater`/`spec-validator`/`test-runner`/Explore Haiku.
+`developer` (Plugin-Pendant `developer-agent`)/`user-story-planner` Opus · `bug-intake`/`bug-investigator`/`analysis-challenger`/`feature-planner`/`spec-writer`/`implementation-validator`/`staging-validator`/`external-validator`/`fresh-eyes-inspector` Sonnet · `docs-updater`/`spec-validator`/`test-runner`/Explore Haiku · Katalog-Migrationspakete (i18n) → `developer` mit Haiku (scheitern zwei Läufe, Wechsel auf Sonnet; Konventionen Epic #2644, Abschnitt 7).
 
 ## Workflow-State
 

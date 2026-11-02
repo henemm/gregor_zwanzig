@@ -2,7 +2,7 @@
 
 > **Hinweis (PO 2026-10-31, ADR-0104):** Die Kurzform (Token-Zeile) von SMS, Premium-SMS und Telegram ist nie sprachabhängig: sie bleibt in jeder Sprache (Konto-Sprache de/en) unverändert und wird nicht übersetzt.
 
-> Stand: 2026-10-30 (freigegeben mit #2645). Regel: **ein** Begriff je Zeile,
+> Stand: 2026-11-02 (Abschluss Epic #2644, Paket A1 #2680; Erstfassung 2026-10-30 mit #2645). Regel: **ein** Begriff je Zeile,
 > neue Fachwörter zuerst hier, dann in den Katalog. Einfaches Englisch, Fachbegriffe wo sie
 > der Klarheit dienen. **Verboten:** „Tour"/*tour* (Produktbegriff ist Trip).
 
@@ -135,6 +135,13 @@ Hier nur Beispiele der Konvention; **Kurzform (`col_label`) und Kürzel bleiben*
 | PAUSE | PAUSE | |
 | STRECKE | ROUTE | |
 | KUERZEL | CODES | heute schon so (#2417) |
+| HEUTE | TODAY | Tagesbericht der Etappe |
+| MORGEN | TOMORROW | Vorschau auf den nächsten Tag |
+| JETZT | NOW | Regen und Gewitter in den nächsten zwei Stunden |
+| GEWITTER | STORMS | Gewitterlage heute |
+| SKIP | SKIP | nächstes Briefing überspringen |
+| STOP | STOP | Briefings beenden |
+| REPORT | REPORT | Bericht sofort senden (Trip-Briefing oder Ortsvergleich) |
 
 ## Amtliche Warnungen (#2668)
 
