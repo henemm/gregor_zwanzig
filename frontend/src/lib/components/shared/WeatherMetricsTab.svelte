@@ -1593,6 +1593,7 @@
 					onEnabledChange={(checked) => onHourlyEnabledChange?.(checked)}
 					catalog={compareCatalog}
 					smsSymbols={metricSymbols}
+					register={metricById}
 				/>
 			</div>
 		{/if}
@@ -1622,6 +1623,7 @@
 					enabled={outlookEnabled}
 					onEnabledChange={onCompareOutlookEnabled}
 					smsSymbols={metricSymbols}
+					register={metricById}
 				/>
 			</div>
 		{/if}
@@ -1995,6 +1997,7 @@
 						title={$t('wertebereiche.ausblick.titel')}
 						showEmailOnlyHint={false}
 						smsSymbols={metricSymbols}
+						register={metricById}
 					/>
 				</div>
 				{/if}

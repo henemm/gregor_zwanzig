@@ -109,12 +109,14 @@
 		onQuietHoursChange?: (von: string | undefined, bis: string | undefined) => void;
 		radarAlertEnabled?: boolean;
 		onRadarAlertChange?: (an: boolean) => void;
-		/** Bezugsgroesse der Ortszeit in den Stillen Stunden (#1726/#1378 AC-4).
-		 *  Issue #2656 (F7): der angezeigte Bezug kommt sprachabhaengig aus dem
-		 *  Katalog je `context` (alarme.stille_stunden.bezug_route|_vergleich); die
-		 *  Prop (deutscher Text aus compare/alarmePropsAus.ts) wird nicht mehr
-		 *  angezeigt und bleibt nur fuer die Buendel-Signatur (Rueckbau in F10). */
-		zonenBezug?: string;
+		// Issue #2659 (i18n F10): die Prop `zonenBezug` (deutscher Bezugstext aus
+		// compare/alarmePropsAus.ts) ist zurueckgebaut — den Bezug der Stillen
+		// Stunden zeigt dieser Reiter je `context` aus dem Katalog
+		// (alarme.stille_stunden.bezug_route|_vergleich, F7 #2656).
+		// Dieser Kommentarblock haelt die Zeilenzahl VOR den gefesselten
+		// HERKUNFT-Zweigen (context_herkunft_zweige_eingefroren.test.ts,
+		// Spec-Endbilanz) unveraendert.
+		//
 		/** Rollback-Senke des UNVERAENDERTEN Vergleichs-Speicherwegs:
 		 *  `rollbackAlarmSnapshot` setzt nach einem gescheiterten PUT feldweise
 		 *  zurueck. KEIN Bedienelement schreibt hierueber. */
@@ -167,8 +169,6 @@
 		onQuietHoursChange,
 		radarAlertEnabled,
 		onRadarAlertChange,
-		// #2656 (F7): gebunden (Buendel-Signatur), angezeigt wird der Katalog-Bezug je context.
-		zonenBezug: _zonenBezug,
 		onAlarmFeldSetzen,
 		catalog,
 		preset,

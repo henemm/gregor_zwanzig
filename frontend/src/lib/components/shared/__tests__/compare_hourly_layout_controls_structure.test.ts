@@ -319,11 +319,19 @@ describe('AC-1: Stundenverlauf-Auswahl kommt aus groupCompareCatalog(catalog)', 
 		const viaAttribut = labelAttrs.some((attr) =>
 			attributeReferencesMember(attr, 'group', 'label')
 		);
+		// Issue #2659 (i18n F10): die Beschriftung laeuft ueber `nameVon(group)` — dessen Rumpf
+		// liest `group.metric_id` (Register-Name je Sprache) und `group.label` (Fallback).
+		const quelle = readFileSync(COMPONENT, 'utf-8');
+		const nameVonLiestLabel = /const nameVon = \(group: CompareAggregationGroup\) =>\s*metricLabel\(register\?\.\[group\.metric_id\] \?\? \{ label: group\.label \}/.test(quelle);
 		const viaText = labelTags.some(
 			(tag) =>
-				tag.expression?.type === 'MemberExpression' &&
-				tag.expression.object?.name === 'group' &&
-				tag.expression.property?.name === 'label'
+				(tag.expression?.type === 'MemberExpression' &&
+					tag.expression.object?.name === 'group' &&
+					tag.expression.property?.name === 'label') ||
+				(nameVonLiestLabel &&
+					tag.expression?.type === 'CallExpression' &&
+					tag.expression.callee?.name === 'nameVon' &&
+					tag.expression.arguments?.[0]?.name === 'group')
 		);
 		assert.ok(
 			viaAttribut || viaText,
