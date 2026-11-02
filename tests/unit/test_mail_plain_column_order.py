@@ -171,8 +171,8 @@ def test_swapping_two_positions_swaps_plain_columns():
 
 def test_legacy_config_plain_matches_html_baseline():
     """AC-3: Altbestand (alle order=0) -- die Plain-Reihenfolge deckt sich
-    mit der bereits verifizierten HTML-Baseline aus Scheibe 1 (inkl. TmpMin
-    am Ende statt an Katalog-Position 2, s. AC-5). Die Sortierung erfindet
+    mit der bereits verifizierten HTML-Baseline aus Scheibe 1 (#2209: ohne die
+    behobene TmpMin-Dublette). Die Sortierung erfindet
     fuer Altbestand keine neue Reihenfolge."""
     config = build_default_display_config()
     assert all(mc.order == 0 for mc in config.metrics if mc.enabled), (
@@ -182,7 +182,7 @@ def test_legacy_config_plain_matches_html_baseline():
 
     baseline = [
         "Temp", "Feels", "Wind", "Gust", "Rain",
-        "Thdr", "SnowL", "Cloud", "Sun", "TmpMin",
+        "Thdr", "SnowL", "Cloud", "Sun",
     ]
     columns = _mail_columns_plain(config)
     assert columns == baseline, (
@@ -221,9 +221,8 @@ def test_telegram_layout_still_unaffected_by_plain_fix():
 # --- AC-5 -------------------------------------------------------------
 
 def test_tmpmin_position_matches_between_html_and_plain():
-    """AC-5: TmpMin steht im Plain-Teil an derselben Stelle wie im HTML-Teil
-    derselben Mail -- Plain gleicht sich an das bereits produktive
-    HTML-Verhalten an (Konvergenzrichtung, nicht umgekehrt)."""
+    """AC-5 (#2209): HTML und Plain zeigen dieselbe Spaltenfolge, und die
+    Dublette TmpMin steht in keinem von beiden."""
     config = build_default_display_config()
 
     html_columns = _mail_columns_html(config)
@@ -234,9 +233,8 @@ def test_tmpmin_position_matches_between_html_and_plain():
         "HTML- und Plain-Teil derselben Mail zeigen unterschiedliche "
         f"Spaltenfolgen: HTML={html_columns} Plain={plain_columns}"
     )
-    assert plain_columns[-1] == tmpmin, (
-        f"'{tmpmin}' muesste im Plain-Text die letzte Spalte sein "
-        f"(wie im HTML-Teil), tatsaechlich: {plain_columns}"
+    assert tmpmin not in plain_columns, (
+        f"'{tmpmin}' darf nicht mehr als Spalte erscheinen: {plain_columns}"
     )
 
 
