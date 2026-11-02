@@ -58,6 +58,11 @@ const BEREICHE: Record<string, string[]> = {
 		'lib/components/shared/MailInhaltCard.svelte',
 		'lib/components/shared/weather-metrics-tab/WeatherV2Reihenfolge.svelte',
 		'routes/gpx-upload/'
+	],
+	'F7 #2656 Alarme-Reiter, Alarm-Kanal-Picker, alerts-tab': [
+		'lib/components/shared/AlarmeTab.svelte',
+		'lib/components/shared/AlertChannelPicker.svelte',
+		'lib/components/alerts-tab/'
 	]
 };
 
