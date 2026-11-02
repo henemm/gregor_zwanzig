@@ -1,0 +1,147 @@
+{
+	"temperature": {
+		"label_en": "Temperature",
+		"col_label": "Temp",
+		"sms_code": "T"
+	},
+	"temperature_night": {
+		"label_en": "Night low",
+		"col_label": "Night",
+		"sms_code": ""
+	},
+	"temperature_day_low": {
+		"label_en": "Daytime low (walking hours)",
+		"col_label": "DayMin",
+		"sms_code": "L"
+	},
+	"temperature_day_high": {
+		"label_en": "Daytime high (walking hours)",
+		"col_label": "DayMax",
+		"sms_code": ""
+	},
+	"wind_chill": {
+		"label_en": "Feels-like temperature",
+		"col_label": "Feels",
+		"sms_code": "TF"
+	},
+	"wind_chill_night": {
+		"label_en": "Feels-like night low",
+		"col_label": "NightF",
+		"sms_code": "FN"
+	},
+	"wind_chill_day_low": {
+		"label_en": "Feels-like daytime low (walking hours)",
+		"col_label": "DayMinF",
+		"sms_code": "FL"
+	},
+	"wind_chill_day_high": {
+		"label_en": "Feels-like daytime high (walking hours)",
+		"col_label": "DayMaxF",
+		"sms_code": "FD"
+	},
+	"humidity": {
+		"label_en": "Humidity",
+		"col_label": "Humid",
+		"sms_code": "HU"
+	},
+	"dewpoint": {
+		"label_en": "Dew point",
+		"col_label": "Dew",
+		"sms_code": "DP"
+	},
+	"wind": {
+		"label_en": "Wind",
+		"col_label": "Wind",
+		"sms_code": "W"
+	},
+	"gust": {
+		"label_en": "Wind gusts",
+		"col_label": "Gust",
+		"sms_code": "G"
+	},
+	"wind_direction": {
+		"label_en": "Wind direction",
+		"col_label": "WDir",
+		"sms_code": "WD"
+	},
+	"precipitation": {
+		"label_en": "Precipitation",
+		"col_label": "Rain",
+		"sms_code": "R"
+	},
+	"rain_probability": {
+		"label_en": "Rain probability",
+		"col_label": "Rain%",
+		"sms_code": "PR"
+	},
+	"thunder": {
+		"label_en": "Thunderstorm",
+		"col_label": "Thdr",
+		"sms_code": "TH"
+	},
+	"snowfall_limit": {
+		"label_en": "Snow line",
+		"col_label": "SnowL",
+		"sms_code": "SL"
+	},
+	"precip_type": {
+		"label_en": "Precipitation type",
+		"col_label": "PType",
+		"sms_code": "PT"
+	},
+	"cloud_total": {
+		"label_en": "Cloud cover",
+		"col_label": "Cloud",
+		"sms_code": "CT"
+	},
+	"cloud_low": {
+		"label_en": "Low clouds",
+		"col_label": "CldLow",
+		"sms_code": "CL"
+	},
+	"cloud_mid": {
+		"label_en": "Mid-level clouds",
+		"col_label": "CldMid",
+		"sms_code": "CM"
+	},
+	"cloud_high": {
+		"label_en": "High clouds",
+		"col_label": "CldHi",
+		"sms_code": "CH"
+	},
+	"visibility": {
+		"label_en": "Visibility",
+		"col_label": "Visib",
+		"sms_code": "VS"
+	},
+	"sunshine": {
+		"label_en": "Sunshine hours",
+		"col_label": "Sun",
+		"sms_code": "SU"
+	},
+	"uv_index": {
+		"label_en": "UV index",
+		"col_label": "UV",
+		"sms_code": "UV"
+	},
+	"pressure": {
+		"label_en": "Air pressure",
+		"col_label": "Press",
+		"sms_code": "HP"
+	},
+	"freezing_level": {
+		"label_en": "Freezing level",
+		"col_label": "0°Line",
+		"sms_code": "FZ"
+	},
+	"snow_depth": {
+		"label_en": "Snow depth",
+		"col_label": "SnowH",
+		"sms_code": "SD"
+	},
+	"fresh_snow": {
+		"label_en": "Fresh snow",
+		"col_label": "NewSn",
+		"sms_code": "NS"
+	}
+}

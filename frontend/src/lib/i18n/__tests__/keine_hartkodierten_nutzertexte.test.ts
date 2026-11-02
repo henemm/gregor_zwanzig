@@ -330,6 +330,41 @@ describe('TypeScript-Ratsche (F11, AC-6)', () => {
 		assert.equal(scanneTs("x('nichtig')").length, 0);
 	});
 
+	// Issue #2654 (i18n F5, AC-7): Wertebereiche-Reiter, Trip-Metrik-Namen, Vergleichs-Katalog-Loader.
+	test('F5: kein Allowlist-Eintrag deckt den Wertebereiche-Reiter; Svelte- und .ts-Dateien ohne Treffer', () => {
+		const deckt = (a: string, p: string) => (a.endsWith('/') ? p.startsWith(a) : p === a);
+		const alle = scanneVerzeichnis(SRC);
+		const F5 = alle
+			.map((e) => e.pfad)
+			.filter(
+				(p) =>
+					p === 'lib/components/shared/WeatherMetricsTab.svelte' ||
+					p === 'lib/components/shared/StandardwerteSpeichernKnopf.svelte' ||
+					p === 'lib/components/shared/corridor-editor/compareMetricCatalogLoader.ts' ||
+					p === 'lib/i18n/metricLabel.ts' ||
+					p.startsWith('lib/components/shared/weather-metrics-tab/') ||
+					p.startsWith('lib/components/shared/trip-metrics/')
+			);
+		for (const p of [
+			'lib/components/shared/WeatherMetricsTab.svelte',
+			'lib/components/shared/weather-metrics-tab/WeatherV2Reihenfolge.svelte',
+			'lib/components/shared/weather-metrics-tab/SavePresetDialog.svelte',
+			'lib/components/shared/weather-metrics-tab/kuerzelLegende.ts',
+			'lib/components/shared/trip-metrics/tripActiveMetricNames.ts',
+			'lib/components/shared/corridor-editor/compareMetricCatalogLoader.ts',
+			'lib/i18n/metricLabel.ts'
+		])
+			assert.ok(F5.includes(p), `Messaufbau: ${p} nicht gescannt`);
+		assert.deepEqual(F5.filter((p) => ALLOWLIST.some((a) => deckt(a, p))), []);
+		for (const alt of ['lib/components/shared/weather-metrics-tab/', 'lib/components/shared/trip-metrics/', 'lib/components/shared/WeatherMetricsTab.svelte', 'lib/components/shared/StandardwerteSpeichernKnopf.svelte'])
+			assert.ok(!ALLOWLIST.includes(alt), alt);
+		assert.deepEqual(alle.filter((e) => F5.includes(e.pfad) && e.treffer.length > 0).map((e) => `${e.pfad}: ${e.treffer.map((t) => t.text).join(' | ')}`), []);
+		assert.equal(wirdGescanntTs('lib/components/shared/weather-metrics-tab/__tests__/f5Pruefstand.ts'), false);
+		// Gegenprobe: ein zurueckgekehrtes deutsches Literal waere ein Treffer ohne Eintrag.
+		const treffer = scanneTs("label: 'Böen (km/h)'");
+		assert.equal(pruefeGegenAllowlist([{ pfad: 'lib/components/shared/weather-metrics-tab/channelMetricLayouts.ts', treffer }], ALLOWLIST).ohneEintrag.length, 1);
+	});
+
 	test('Allowlist enthaelt die acht F11-Praefixe nicht mehr', () => {
 		const F11 = [
 			'lib/components/ui/',

@@ -188,7 +188,14 @@ export function wirdGescanntTs(pfad: string): boolean {
 }
 
 /** Ab F6 (#2655): .ts-Module migrierter Komponentenordner; spaetere Pakete tragen ihren Ordner ein. */
-export const TS_KOMPONENTEN_ORDNER = ['lib/components/shared/versand-tab/'];
+export const TS_KOMPONENTEN_ORDNER = [
+	'lib/components/shared/versand-tab/',
+	// F5 (#2654): Wertebereiche-Reiter, Trip-Metrik-Namen, Vergleichs-Katalog-Loader, metricLabel
+	'lib/components/shared/weather-metrics-tab/',
+	'lib/components/shared/trip-metrics/',
+	'lib/components/shared/corridor-editor/compareMetricCatalogLoader.ts',
+	'lib/i18n/metricLabel.ts'
+];
 
 /** Pfad relativ zu frontend/src/ mit Schraegstrichen. */
 export function wirdGescannt(pfad: string): boolean {

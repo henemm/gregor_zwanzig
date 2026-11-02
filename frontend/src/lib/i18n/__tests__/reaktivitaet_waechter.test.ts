@@ -44,6 +44,11 @@ const BEREICHE: Record<string, string[]> = {
 		'lib/components/shared/VersandTab.svelte',
 		'lib/components/shared/TelegramKurzstilToggle.svelte',
 		'lib/components/shared/versand-tab/'
+	],
+	'F5 #2654 Wertebereiche-Reiter': [
+		'lib/components/shared/WeatherMetricsTab.svelte',
+		'lib/components/shared/StandardwerteSpeichernKnopf.svelte',
+		'lib/components/shared/weather-metrics-tab/'
 	]
 };
 
