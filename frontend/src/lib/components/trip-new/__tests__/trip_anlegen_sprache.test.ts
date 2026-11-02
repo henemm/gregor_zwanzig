@@ -93,6 +93,16 @@ describe('AC-3: /trips/new englisch (Desktop und mobil)', () => {
 	});
 });
 
+describe('AC-3: gesperrter Schritt (mobil) — Toast-Hinweis beim Rendern aufgeloest', () => {
+	test('derselbe Zustand zeigt nach dem Sprachwechsel den englischen Sperr-Hinweis', () => {
+		const { de, en } = deDannEn(() => P.anlegenToastRendern());
+		const toast = (h: string) => sichtbar(h.slice(h.indexOf('data-testid="tn-lock-toast"')));
+		hat(toast(de), 'erst Trip-Name + Startdatum');
+		hat(toast(en), 'trip name + start date first');
+		hatNicht(toast(en), 'etappen');
+	});
+});
+
 describe('AC-3: Etappen-Editor englisch, Wochentag ueber fmtWeekday', () => {
 	test('Desktop: Kopf, Datum/Startzeit, Karte, Profil, Wegpunkte, Speichern; Wochentag Wed (de Mi)', () => {
 		const { de, en } = deDannEn(() => P.etappenEditorRendern('desktop'));

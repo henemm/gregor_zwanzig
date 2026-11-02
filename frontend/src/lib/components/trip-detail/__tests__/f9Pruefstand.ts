@@ -303,6 +303,11 @@ export function etappenEditorRendern(fall: 'desktop' | 'kaskade_offen' | 'kaskad
 // Speicherfehler ohne Server-Text: der Editor haelt nur das Flag (leerer Text) und
 // loest die Meldung beim Rendern auf — in beiden Sprachen derselbe Zustand.
 const TripNewFehler = await variante(path.join(KOMP, 'trip-new', 'TripNewEditor.svelte'), [['let saveError: string | null = $state(null);', "let saveError: string | null = $state('');"]]);
+// Gesperrter Schritt (mobil): der Toast haelt die Kennung, der Hinweis entsteht beim Rendern.
+const TripNewToast = await variante(path.join(KOMP, 'trip-new', 'TripNewEditor.svelte'), [['let lockToastMsg = $state<TabId | null>(null);', "let lockToastMsg = $state<TabId | null>('etappen');"]]);
+export function anlegenToastRendern(): string {
+	return html(TripNewToast, { stateOverride: { activeTab: 'route', isMobileViewport: true } });
+}
 export function anlegenFehlerRendern(): string {
 	return html(TripNewFehler, { stateOverride: { activeTab: 'route', isMobileViewport: false, name: 'GR20', startDate: '2026-07-01' } });
 }

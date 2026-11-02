@@ -174,6 +174,31 @@ describe('AC-1: Trip-Hub englisch, Namen unveraendert', () => {
 		for (const s of ['Speichern fehlgeschlagen', 'Fehler beim Speichern', 'Versand-Historie konnte nicht geladen werden.', 'Aktion fehlgeschlagen, bitte später erneut versuchen.', 'Fehler beim Senden']) hat(de, s);
 		for (const s of ['Saving failed', 'Error while saving', 'Delivery history could not be loaded.', 'Action failed, please try again later.', 'Error while sending']) hat(en, s);
 		for (const s of ['Speichern fehlgeschlagen', 'Fehler beim Speichern', 'Aktion fehlgeschlagen']) hatNicht(en, s);
+		// Wirkort je Baustein: die Meldung steht am Feld des Kopfes (nicht nur irgendwo im Render).
+		const kopf = deDannEn(() => P.fehlerFlagsRendern().split('\n')[0]);
+		assert.match(kopf.de, /data-testid="trip-name-save-error"[^>]*>Speichern fehlgeschlagen</);
+		assert.match(kopf.en, /data-testid="trip-name-save-error"[^>]*>Saving failed</);
+	});
+
+	test('Aktionsfehler der Seite: 5xx/4xx ohne Detail/Netz → Schluessel, 4xx mit Detail → Server-Text (echte Funktion)', async () => {
+		const { umgebungFuer } = await import(pathToFileURL(path.join(P.KOMP, 'shared/__tests__/svelteInstanzPruefstand.ts')).href);
+		const { SubscriptionExecError } = await import(pathToFileURL(path.join(P.KOMP, 'shared/subscriptionExec.ts')).href);
+		const seite = path.join(P.FRONTEND, 'src/routes/trips/[id]/+page.svelte');
+		const { u } = await umgebungFuer(seite, { data: { trip: P.tripLaufend() } }, { jsAlsTs: true });
+		const fall = (e: unknown) => {
+			u.setzeAktionsFehler(e);
+			return [u.errorKey, u.errorMsg];
+		};
+		const still = console.error;
+		console.error = () => {};
+		try {
+			assert.deepEqual(fall(new SubscriptionExecError('x', 503, 'kaputt')), ['aktionen.fehler.server', null]);
+			assert.deepEqual(fall(new SubscriptionExecError('x', 409)), ['aktionen.fehler.allgemein', null]);
+			assert.deepEqual(fall(new SubscriptionExecError('x', 409, 'Trip ist archiviert')), [null, 'Trip ist archiviert']);
+			assert.deepEqual(fall(new Error('offline')), ['aktionen.fehler.verbindung', null]);
+		} finally {
+			console.error = still;
+		}
 	});
 });
 
