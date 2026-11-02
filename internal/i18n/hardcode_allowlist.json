@@ -1,8 +1,1 @@
-[
-  "internal/handler/account_delete_code.go",
-  "internal/handler/auth_oauth.go",
-  "internal/mail/magic.go",
-  "internal/mail/reset.go",
-  "internal/mail/tier_change.go",
-  "internal/mail/verify.go"
-]
+[]

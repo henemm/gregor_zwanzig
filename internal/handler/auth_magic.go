@@ -27,6 +27,7 @@ import (
 	"time"
 
 	"github.com/henemm/gregor-api/internal/config"
+	"github.com/henemm/gregor-api/internal/i18n"
 	"github.com/henemm/gregor-api/internal/mail"
 	"github.com/henemm/gregor-api/internal/model"
 	"github.com/henemm/gregor-api/internal/store"
@@ -119,7 +120,8 @@ func MagicLinkRequestHandler(s *store.Store, cfg *config.Config) http.HandlerFun
 			// mail — same Resend special path (the recipient allowlist only
 			// knows confirmed accounts, a not-yet-existing one would never
 			// receive it).
-			msg := mail.BuildMagicLinkMail(code)
+			// Issue #2678: kein Konto vor dem Einloesen -> Anfragesprache.
+			msg := mail.BuildMagicLinkMail(i18n.FromContext(r.Context()), code)
 			go func(to string, m mail.Mail, c mail.MailConfig) {
 				done := make(chan error, 1)
 				go func() { done <- sendVerificationMailFn(c, to, m) }()

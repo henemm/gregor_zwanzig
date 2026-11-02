@@ -19,6 +19,7 @@ import (
 	"time"
 
 	"github.com/henemm/gregor-api/internal/config"
+	"github.com/henemm/gregor-api/internal/i18n"
 	"github.com/henemm/gregor-api/internal/mail"
 	"github.com/henemm/gregor-api/internal/middleware"
 	"github.com/henemm/gregor-api/internal/store"
@@ -128,33 +129,32 @@ func newDeleteCode() (string, error) {
 	return fmt.Sprintf("%06d", binary.BigEndian.Uint32(b[:])%1_000_000), nil
 }
 
-func buildDeleteCodeMail(code string) mail.Mail {
-	plain := fmt.Sprintf(
-		"Hallo,\n\nDein Lösch-Code für Gregor 20: %s\n\nMit diesem Code wird dein Konto unwiderruflich gelöscht. Der Code ist 15 Minuten gültig.\n\nFalls du die Löschung nicht angefordert hast, ignoriere diese E-Mail und ändere dein Passwort — jemand hat Zugriff auf eine deiner Anmeldungen.\n",
-		code,
-	)
-	html := fmt.Sprintf(
-		`<!DOCTYPE html><html><body style="font-family:sans-serif;line-height:1.5">`+
-			`<p>Hallo,</p>`+
-			`<p>Dein L&ouml;sch-Code f&uuml;r <strong>Gregor 20</strong>:</p>`+
-			`<p style="font-size:2em;font-weight:bold;letter-spacing:0.2em;font-family:monospace">%s</p>`+
-			`<p>Mit diesem Code wird dein Konto <strong>unwiderruflich gel&ouml;scht</strong>. Der Code ist 15 Minuten g&uuml;ltig.</p>`+
-			`<p>Falls du die L&ouml;schung nicht angefordert hast, ignoriere diese E-Mail und &auml;ndere dein Passwort.</p>`+
-			`</body></html>`,
-		code,
-	)
-	return mail.Mail{Subject: "Gregor 20 — Dein Lösch-Code", PlainBody: plain, HTMLBody: html}
+// buildDeleteCodeMail baut die Lösch-Code-Mail in lang (Issue #2678); Text
+// aus dem Katalog mail.delete.*, Tags hier.
+func buildDeleteCodeMail(lang i18n.Lang, code string) mail.Mail {
+	t := func(k string) string { return i18n.T(lang, "mail.delete."+k, nil) }
+	mitCode := i18n.Args{"code": code}
+	plain := t("plain.z1") + "\n\n" + i18n.T(lang, "mail.delete.plain.z2", mitCode) + "\n\n" +
+		t("plain.z3") + "\n\n" + t("plain.z4") + "\n"
+	html := `<!DOCTYPE html><html><body style="font-family:sans-serif;line-height:1.5">` +
+		"<p>" + t("html.z1") + "</p>" +
+		"<p>" + i18n.T(lang, "mail.delete.html.z2", i18n.Args{"betont": "<strong>Gregor 20</strong>"}) + "</p>" +
+		`<p style="font-size:2em;font-weight:bold;letter-spacing:0.2em;font-family:monospace">` + code + "</p>" +
+		"<p>" + i18n.T(lang, "mail.delete.html.z3", i18n.Args{"betont": "<strong>" + t("html.betont") + "</strong>"}) + "</p>" +
+		"<p>" + t("html.z4") + "</p>" +
+		`</body></html>`
+	return mail.Mail{Subject: t("betreff"), PlainBody: plain, HTMLBody: html, Lang: i18n.Parse(string(lang))}
 }
 
 // sendDeleteCodeMail verschickt synchron (20s-Timeout) ueber den
 // Magic-Code-Pfad (Resend-Sonderweg, sendVerificationMailFn).
-func sendDeleteCodeMail(cfg config.Config, to, code string) error {
+func sendDeleteCodeMail(cfg config.Config, lang i18n.Lang, to, code string) error {
 	mailCfg := mail.MailConfig{
 		Host: cfg.SMTPHost, Port: cfg.SMTPPort,
 		User: cfg.SMTPUser, Pass: cfg.SMTPPass, From: cfg.SMTPFrom,
 	}
 	done := make(chan error, 1)
-	go func() { done <- sendVerificationMailFn(mailCfg, to, buildDeleteCodeMail(code)) }()
+	go func() { done <- sendVerificationMailFn(mailCfg, to, buildDeleteCodeMail(lang, code)) }()
 	select {
 	case err := <-done:
 		return err
@@ -191,7 +191,7 @@ func RequestDeleteCodeHandler(s *store.Store, cfg config.Config, l *MailFloodLim
 			WriteError(w, r, http.StatusInternalServerError, "internal_error", nil)
 			return
 		}
-		if err := sendDeleteCodeMail(cfg, addr, code); err != nil {
+		if err := sendDeleteCodeMail(cfg, i18n.Parse(user.Language), addr, code); err != nil {
 			log.Printf("delete-code: Versand an %s fehlgeschlagen: %v", mail.MaskAddrForLog(addr), err)
 			WriteError(w, r, http.StatusBadGateway, "mail_failed", nil)
 			return

@@ -4,12 +4,15 @@ import (
 	"fmt"
 	"html"
 	"time"
+
+	"github.com/henemm/gregor-api/internal/i18n"
 )
 
 // BuildTierChangeRequestMail produces the PO notification mail for a user's
 // tier-change request (Issue #1071). Purely informational — no approval link,
 // no interactive element. The PO grants the change manually by editing the
 // user's tier field. German texts, Plain+HTML, analog reset.go.
+// i18n-log: Betreiber-Text, bleibt deutsch (ADR-0104, Issue #2678).
 func BuildTierChangeRequestMail(username, currentTier, requestedTier string) Mail {
 	ts := time.Now().Format("02.01.2006 15:04")
 	subject := fmt.Sprintf("Gregor 20 — Level-Wechsel-Antrag von %s", username)
@@ -46,5 +49,6 @@ func BuildTierChangeRequestMail(username, currentTier, requestedTier string) Mai
 		Subject:   subject,
 		PlainBody: plain,
 		HTMLBody:  htmlBody,
+		Lang:      i18n.De,
 	}
 }

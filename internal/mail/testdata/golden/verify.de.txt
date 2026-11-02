@@ -1,0 +1,11 @@
+Subject: Bestätige deine E-Mail-Adresse für Gregor 20
+
+Hallo,
+
+Bitte bestaetige deine neue E-Mail-Adresse fuer Gregor 20.
+
+Oeffne diesen Link, um die Bestaetigung abzuschliessen (gueltig 24 Stunden):
+
+https://example.invalid/verify-email?user=golden-de&token=tok123
+
+Falls du das nicht angefordert hast, ignoriere diese E-Mail.

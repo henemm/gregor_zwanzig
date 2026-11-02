@@ -21,6 +21,7 @@ import (
 
 	"github.com/henemm/gregor-api/internal/config"
 	"github.com/henemm/gregor-api/internal/egress"
+	"github.com/henemm/gregor-api/internal/i18n"
 	"github.com/henemm/gregor-api/internal/model"
 )
 
@@ -49,11 +50,13 @@ type MailConfig struct {
 	From string
 }
 
-// Mail represents a multipart/alternative outgoing message.
+// Mail represents a multipart/alternative outgoing message. Lang ist die
+// Sprache der Mail (Header X-GZ-Lang, Issue #2678); leer gilt als de.
 type Mail struct {
 	Subject   string
 	PlainBody string
 	HTMLBody  string
+	Lang      i18n.Lang
 }
 
 // IsTestUser detects test-user accounts whose mail MUST NOT be sent through
@@ -508,11 +511,25 @@ func dialAndSend(cfg MailConfig, to string, msg Mail) error {
 	}
 
 	boundary := fmt.Sprintf("gz-boundary-%d", time.Now().UnixNano())
+	payload := buildPayload(from, to, boundary, msg)
+
+	// smtp.SendMail negotiates STARTTLS automatically; ServerName for TLS
+	// verification is derived from cfg.Host internally.
+	if err := smtp.SendMail(addr, auth, from, []string{to}, payload); err != nil {
+		return fmt.Errorf("mail.Send: %w", err)
+	}
+	return nil
+}
+
+// buildPayload baut die MIME-Nachricht (multipart/alternative). X-GZ-Lang
+// traegt die Sprache der Mail (leer = de), Muster der Python-Mails (Issue #2678).
+func buildPayload(from, to, boundary string, msg Mail) []byte {
 	headers := []string{
 		fmt.Sprintf("From: %s", from),
 		fmt.Sprintf("To: %s", to),
 		fmt.Sprintf("Subject: %s", encodeMailHeader(msg.Subject)),
 		"MIME-Version: 1.0",
+		"X-GZ-Lang: " + string(i18n.Parse(string(msg.Lang))),
 		fmt.Sprintf("Content-Type: multipart/alternative; boundary=\"%s\"", boundary),
 	}
 	body := []string{
@@ -531,14 +548,7 @@ func dialAndSend(cfg MailConfig, to string, msg Mail) error {
 		"--" + boundary + "--",
 		"",
 	}
-	payload := []byte(strings.Join(body, "\r\n"))
-
-	// smtp.SendMail negotiates STARTTLS automatically; ServerName for TLS
-	// verification is derived from cfg.Host internally.
-	if err := smtp.SendMail(addr, auth, from, []string{to}, payload); err != nil {
-		return fmt.Errorf("mail.Send: %w", err)
-	}
-	return nil
+	return []byte(strings.Join(body, "\r\n"))
 }
 
 // Send dispatches an e-mail over SMTP+STARTTLS using stdlib net/smtp.
