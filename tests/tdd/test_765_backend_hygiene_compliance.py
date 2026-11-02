@@ -141,6 +141,14 @@ _SELF_EXEMPT = {
     # # doc-compliance-test.
     # Spec: docs/specs/modules/fix_2151_default_fallbacks_scheibe_a.md
     "test_user_id_default_guard.py",
+    # #2674 (Epic #2644, ADR-0104 Nr. 8): i18n-Ratsche Python. Liest Produkt-
+    # Quelltext als DATEN fuer eine AST-Strukturregel (String-Literale mit
+    # Umlaut/Signalwort ausserhalb von t()/Docstrings/# i18n-log), kein
+    # Verhaltensnachweis auf Code-Strings; gleiche Werkzeug-Klasse wie die
+    # Ratschen Frontend (S4) und Go (G5); # doc-compliance-test.
+    # Pruefdatum 2027-01-28 (gates_und_ratschen.md, Regel-Budget).
+    # Spec: docs/specs/modules/i18n_p11_api_meldungen_ratsche_2674.md
+    "test_i18n_keine_hartkodierten_nutzertexte_python.py",
 }
 # #1408 F005 / #1469: `test_validator_log_unique_filenames.py` stand hier als
 # ausdruecklicher FEHLALARM-Eintrag, weil `_collect_listed_product_paths()`

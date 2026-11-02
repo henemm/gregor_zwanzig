@@ -545,6 +545,24 @@ gescannte Dateien oder ein leeres Verzeichnis bricht mit „Messaufbau leer" ab.
 *Regel-Budget: i18n-Ratsche Go — Prüfdatum 2027-01-28, siehe Tabelle unten. Spec:
 `docs/specs/modules/i18n_g5_ratsche_go_2679.md`.*
 
+**Python (P11, #2674, seit 2026-11-02).** `tests/test_i18n_keine_hartkodierten_nutzertexte_python.py`
+parst (`ast`) `src/output/**/*.py`, `api/routers/**/*.py`, die `src/services/*.py` mit
+`report|alert|notification|command|inbound|preview|comparison` im Namen sowie
+`EXTRA_DATEIEN` (`weather_metrics.py`, `trip_selection.py`) und meldet String-Konstanten (auch
+f-String-Teile) mit Umlaut/`ß` oder Signalwort (`nicht|bitte|keine|fehlgeschlagen|hinweis`, ganzes
+Wort). Ausgenommen: Docstrings, Argumente von `t(...)`/`tn(...)`, reine Katalogschlüssel
+(`bereich.gruppe.element`) und Literale in Zeilen mit `# i18n-log` (Log-/Betreiber-Texte).
+Altbestand in `tests/fixtures/i18n_python_allowlist.json` (sortierte Repo-Pfade, nur Einzeldateien);
+**beide Richtungen rot** (Fund ohne Eintrag `Datei:Zeile: "Auszug"`, Eintrag ohne Fund). Weniger als
+100 gescannte Dateien bricht mit „Messaufbau leer" ab. Messen per `python
+tests/test_i18n_keine_hartkodierten_nutzertexte_python.py --messen` (stdout), `--startstand`
+schreibt die Allowlist. Startstand (2026-11-02, `2175114cd`): 111 Dateien gescannt, 50 mit Fund,
+222 Funde; nach P11 Teil 2: 42 Einträge, 182 Funde. `test_allowlist_ist_leer` (AC-6) steht als
+`xfail(strict=True)`, bis die Restbefunde der Pakete P2–P10 abgebaut sind.
+
+*Regel-Budget: i18n-Ratsche Python — Prüfdatum 2027-01-28, siehe Tabelle unten. Spec:
+`docs/specs/modules/i18n_p11_api_meldungen_ratsche_2674.md`.*
+
 ## Aktive Hooks in `.claude/settings.json` — Kurzreferenz (Stand 2026-10-21)
 
 Vollständige Liste der im Repo verdrahteten Hooks. Alle stehen in der geschützten Form
@@ -608,6 +626,7 @@ Skripten/Skills aufgerufen: `staging_gate.py`, `prod_selftest.py`, `briefing_mai
 | Compare-Paritäts-Wächter `tests/unit/test_e2e_compare_paritaet_waechter.py` — jede `*compare*.spec.ts` bzw. Compare-Hub-Spec ohne Trip-Gegenstück braucht kind-Schleife oder `gz-eigenstaendig:`-Kopf; Altlastliste nur schrumpfend (#2347 S1, Epic #2345 P6) | 2027-01-24 | Regel 2 fand bei Einführung 2 Specs außerhalb der Compare-Dateinamen (`kanal-grenzen-ortsvergleich.staging.spec.ts`, `versand-tab-vergleich.spec.ts`); fehlende Trip-Cross-User-Schreibprüfung (geschlossen durch `hub-cross-user-write-block.spec.ts`) |
 | i18n-Ratsche Frontend `keine_hartkodierten_nutzertexte.test.ts` + `katalog_schluessel_haben_verwender.test.ts` (Epic #2644, S4) — Allowlist bleibt bis Abschluss von Epic #2644 bestehen und darf nur schrumpfen, danach leer | 2027-01-28 | offen — Startstand 2026-10-31 (`4f386528a`): 115 Dateien mit 1115 Trefferzeilen in 33 Allowlist-Einträgen; Kriterium: ein neuer hartkodierter Nutzertext oder verwaister Katalogschlüssel, der ohne die Ratsche ausgeliefert worden wäre |
 | i18n-Ratsche Go (`internal/i18n/hardcode_guard_test.go`, Allowlist `internal/i18n/hardcode_allowlist.json`, #2679) | 2027-01-28 | Startstand = alle Fundstellen vom Tag der Einführung (2026-10-31: 72 Befunde in 16 Dateien, 16 Einträge (nur Einzeldateien, kein Verzeichnis-Präfix)); Endstand leer nach G2 bis G4 (Epic #2644) |
+| i18n-Ratsche Python (`tests/test_i18n_keine_hartkodierten_nutzertexte_python.py`, Allowlist `tests/fixtures/i18n_python_allowlist.json`, #2674) | 2027-01-28 | — (Startstand 2026-11-02: 222 Funde in 50 Dateien; nach P11 Teil 2: 182 Funde in 42 Einträgen; Endstand leer nach Abbau der P2–P10-Restbefunde) |
 
 **Weitere Prüfdaten, die nur im Code stehen** (Abgleich 2026-10-21 per
 `grep -rn "Prüfdatum\|Pruefdatum" tests .claude/hooks`; Fang-Beleg hier nicht erhoben):
