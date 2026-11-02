@@ -5,6 +5,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/henemm/gregor-api/internal/i18n"
 	"github.com/henemm/gregor-api/internal/model"
 )
 
@@ -86,7 +87,7 @@ func TestIsTestUser_ProfilfeldStattName_AC6(t *testing.T) {
 }
 
 func TestBuildResetMail_LinkContainsPublicHost(t *testing.T) {
-	msg := BuildResetMail("https://example.com", "alice", "abc123")
+	msg := BuildResetMail(i18n.De, "https://example.com", "alice", "abc123")
 	if !strings.Contains(msg.PlainBody, "https://example.com/reset-password?user=alice&token=abc123") {
 		t.Errorf("Plaintext body missing reset link with public host. Body: %s", msg.PlainBody)
 	}
@@ -96,7 +97,7 @@ func TestBuildResetMail_LinkContainsPublicHost(t *testing.T) {
 }
 
 func TestBuildResetMail_Subject(t *testing.T) {
-	msg := BuildResetMail("https://gregor20.henemm.com", "alice", "tok")
+	msg := BuildResetMail(i18n.De, "https://gregor20.henemm.com", "alice", "tok")
 	if msg.Subject == "" {
 		t.Errorf("Reset mail subject is empty")
 	}
@@ -106,7 +107,7 @@ func TestBuildResetMail_Subject(t *testing.T) {
 // injection: a malicious username MUST NOT be able to overwrite the token
 // parameter by injecting "&token=…".
 func TestBuildResetMail_UsernameWithAmpersandIsEscaped(t *testing.T) {
-	msg := BuildResetMail("https://example.com", "alice&token=evil", "real-token")
+	msg := BuildResetMail(i18n.De, "https://example.com", "alice&token=evil", "real-token")
 	wantEscaped := "user=alice%26token%3Devil"
 	if !strings.Contains(msg.PlainBody, wantEscaped) {
 		t.Errorf("Plain body missing escaped username %q. Body: %s", wantEscaped, msg.PlainBody)
@@ -124,7 +125,7 @@ func TestBuildResetMail_UsernameWithAmpersandIsEscaped(t *testing.T) {
 // TestBuildResetMail_TokenWithSpecialCharsIsEscaped covers Base64-style tokens
 // containing '+' and '/' — both reserved in URL query syntax.
 func TestBuildResetMail_TokenWithSpecialCharsIsEscaped(t *testing.T) {
-	msg := BuildResetMail("https://example.com", "alice", "abc+def/ghi=")
+	msg := BuildResetMail(i18n.De, "https://example.com", "alice", "abc+def/ghi=")
 	// url.QueryEscape: '+' → "%2B", '/' → "%2F", '=' → "%3D"
 	wantEscaped := "token=abc%2Bdef%2Fghi%3D"
 	if !strings.Contains(msg.PlainBody, wantEscaped) {
@@ -250,8 +251,8 @@ func TestEncodeMailHeader_LongSubjectFolding(t *testing.T) {
 // Dies ist der Integrations-Test, der die zwei produktiven Subject-Quellen abdeckt.
 func TestEncodeMailHeader_BuildersIntegration(t *testing.T) {
 	subjects := []string{
-		BuildMagicLinkMail("123456").Subject,
-		BuildResetMail("https://example.com", "alice", "tok").Subject,
+		BuildMagicLinkMail(i18n.De, "123456").Subject,
+		BuildResetMail(i18n.De, "https://example.com", "alice", "tok").Subject,
 	}
 	dec := &mime.WordDecoder{}
 	for _, subject := range subjects {

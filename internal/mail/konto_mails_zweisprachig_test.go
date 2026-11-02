@@ -188,7 +188,9 @@ func TestMailKatalogSchluesselJeMailArt(t *testing.T) {
 	for _, lang := range []i18n.Lang{i18n.De, i18n.En} {
 		kat := kmKatalog(t, string(lang))
 		for _, art := range []string{"verify", "reset", "magic"} {
-			kmAbdeckung(t, art+"/"+string(lang), kat, kmBuild(art, lang), mindest[art])
+			t.Run(art+"/"+string(lang), func(t *testing.T) {
+				kmAbdeckung(t, art, kat, kmBuild(art, lang), mindest[art])
+			})
 		}
 	}
 }

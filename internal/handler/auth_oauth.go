@@ -16,6 +16,7 @@ import (
 	"golang.org/x/oauth2/google"
 
 	"github.com/henemm/gregor-api/internal/config"
+	"github.com/henemm/gregor-api/internal/i18n"
 	"github.com/henemm/gregor-api/internal/mail"
 	"github.com/henemm/gregor-api/internal/middleware"
 	"github.com/henemm/gregor-api/internal/model"
@@ -330,19 +331,19 @@ func takeOverGoogleAccount(w http.ResponseWriter, r *http.Request, s *store.Stor
 	return ownerID, true
 }
 
-// buildGoogleLinkNoticeMail: Hinweis ohne einlösbaren Link oder Token.
-func buildGoogleLinkNoticeMail() mail.Mail {
+// buildGoogleLinkNoticeMail: Hinweis ohne einlösbaren Link oder Token, in
+// lang (Issue #2678); Text aus dem Katalog mail.google_link.*.
+func buildGoogleLinkNoticeMail(lang i18n.Lang) mail.Mail {
+	t := func(k string) string { return i18n.T(lang, "mail.google_link."+k, nil) }
 	return mail.Mail{
-		Subject: "Google-Anmeldung mit deinem Gregor-20-Konto verknüpft",
-		PlainBody: "Hallo,\n\ndein Gregor-20-Konto wurde soeben mit einer Google-Anmeldung verknuepft. " +
-			"Du kannst dich ab jetzt auch mit \"Mit Google anmelden\" anmelden.\n\n" +
-			"Warst du das nicht, melde dich bitte umgehend bei uns.\n",
+		Subject:   t("betreff"),
+		PlainBody: t("plain.z1") + "\n\n" + t("plain.z2") + "\n\n" + t("plain.z3") + "\n",
 		HTMLBody: `<!DOCTYPE html><html><body style="font-family:sans-serif;line-height:1.5">` +
-			`<p>Hallo,</p>` +
-			`<p>dein Gregor-20-Konto wurde soeben mit einer Google-Anmeldung verkn&uuml;pft. ` +
-			`Du kannst dich ab jetzt auch mit &bdquo;Mit Google anmelden&ldquo; anmelden.</p>` +
-			`<p>Warst du das nicht, melde dich bitte umgehend bei uns.</p>` +
+			"<p>" + t("html.z1") + "</p>" +
+			"<p>" + t("html.z2") + "</p>" +
+			"<p>" + t("html.z3") + "</p>" +
 			`</body></html>`,
+		Lang: i18n.Parse(string(lang)),
 	}
 }
 
@@ -355,7 +356,7 @@ func sendGoogleLinkNotice(cfg config.Config, user *model.User, to string) {
 		log.Printf("oauth google: link notice not sent — SMTP not configured")
 		return
 	}
-	msg := buildGoogleLinkNoticeMail()
+	msg := buildGoogleLinkNoticeMail(i18n.Parse(user.Language))
 	go func() {
 		done := make(chan error, 1)
 		if isTestUser {

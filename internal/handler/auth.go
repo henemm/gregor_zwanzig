@@ -621,7 +621,7 @@ func ForgotPasswordHandler(s *store.Store, bcryptCost int, cfg config.Config) ht
 			}
 		}
 
-		msg := mail.BuildResetMail(cfg.PublicHost, req.Username, token)
+		msg := mail.BuildResetMail(i18n.Parse(user.Language), cfg.PublicHost, req.Username, token)
 
 		// Goroutine with timeout — endpoint must not block on SMTP.
 		fallbackCfg := mail.MailConfig{
@@ -1668,7 +1668,7 @@ func dispatchVerificationMail(s *store.Store, cfg config.Config, userId string, 
 		return
 	}
 
-	msg := mail.BuildVerificationMail(cfg.PublicHost, userId, token)
+	msg := mail.BuildVerificationMail(i18n.Parse(user.Language), cfg.PublicHost, userId, token)
 
 	// Select SMTP config synchronously (identisches Muster zu
 	// ForgotPasswordHandler): Test-User (IsTestUser ueber das geladene Profil,

@@ -11,6 +11,8 @@ import (
 
 	"github.com/emersion/go-imap/v2"
 	"github.com/emersion/go-imap/v2/imapclient"
+
+	"github.com/henemm/gregor-api/internal/i18n"
 )
 
 // TDD GREEN — Integration test (AC-7). Only runs with -tags=integration.
@@ -35,7 +37,7 @@ func TestPasswordResetMail_RealGmailRoundtrip(t *testing.T) {
 	}
 	token := "integration-token-" + time.Now().Format("20060102150405")
 	username := "test-alice"
-	msg := BuildResetMail("https://gregor20.henemm.com", username, token)
+	msg := BuildResetMail(i18n.De, "https://gregor20.henemm.com", username, token)
 	recipient := os.Getenv("GZ_IMAP_USER") + "@henemm.com"
 
 	if err := Send(cfg, recipient, msg); err != nil {
@@ -76,7 +78,7 @@ func TestSendWithFallback_AC3_DeliverViaStalwartFallback(t *testing.T) {
 	}
 	token := "ac3-fallback-" + time.Now().Format("20060102150405")
 	recipient := imap_user + "@henemm.com"
-	msg := BuildResetMail("https://gregor20.henemm.com", "test-ac3", token)
+	msg := BuildResetMail(i18n.De, "https://gregor20.henemm.com", "test-ac3", token)
 
 	if err := SendWithFallback(primaryCfg, fallbackCfg, recipient, msg); err != nil {
 		t.Fatalf("SendWithFallback returned error: %v", err)
@@ -123,7 +125,7 @@ func TestSendWithFallback_AC4_NoFallbackOnAuthError(t *testing.T) {
 
 	token := "ac4-no-fallback-" + time.Now().Format("20060102150405")
 	recipient := imapUser + "@henemm.com"
-	msg := BuildResetMail("https://gregor20.henemm.com", "test-ac4", token)
+	msg := BuildResetMail(i18n.De, "https://gregor20.henemm.com", "test-ac4", token)
 
 	err := SendWithFallback(primaryCfg, fallbackCfg, recipient, msg)
 

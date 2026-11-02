@@ -1,0 +1,11 @@
+Subject: Gregor 20 — Reset your password
+
+Hello,
+
+You requested a password reset for Gregor 20.
+
+Open this link to set a new password (valid for 30 minutes):
+
+https://example.invalid/reset-password?user=golden-de&token=tok123
+
+If you did not request this, ignore this email.

@@ -1,0 +1,11 @@
+Subject: Confirm your email address for Gregor 20
+
+Hello,
+
+Please confirm your new email address for Gregor 20.
+
+Open this link to complete the confirmation (valid for 24 hours):
+
+https://example.invalid/verify-email?user=golden-de&token=tok123
+
+If you did not request this, ignore this email.
