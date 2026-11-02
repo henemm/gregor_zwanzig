@@ -74,7 +74,7 @@ def trigger_trip_reports(at: Optional[str] = None, user_id: str = Query(...)):
         try:
             now_utc = datetime.fromisoformat(at)
         except ValueError:
-            raise HTTPException(status_code=400, detail=f"Unlesbarer Zeitpunkt: {at!r}")
+            raise HTTPException(status_code=400, detail=f"Unlesbarer Zeitpunkt: {at!r}")  # i18n-log (Betreiber-Meldung)
         if now_utc.tzinfo is None:
             now_utc = now_utc.replace(tzinfo=timezone.utc)
 

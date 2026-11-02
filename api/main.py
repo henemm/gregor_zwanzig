@@ -12,6 +12,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.responses import JSONResponse
 
+from api.fehler import register_fehler_handler
 from api.routers import briefings_send, config, compare, forecast, gpx, health, internal, notify, preview, scheduler, validator, webhook
 from app.config import Settings
 from app.egress_guard import install_egress_guard
@@ -102,6 +103,7 @@ async def lifespan(app):  # noqa: ANN001
 
 
 app = FastAPI(title="Gregor Zwanzig Core API", version="0.1.0", lifespan=lifespan)
+register_fehler_handler(app)
 app.include_router(health.router)
 app.include_router(config.router)
 app.include_router(forecast.router)

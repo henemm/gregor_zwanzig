@@ -127,8 +127,8 @@ def trigger_radar_alert(user_id: str = Query(...)):
             to="gregor-test@henemm.com",
         )
     except Exception as exc:
-        logger.error("Trigger-Endpoint Mail-Versand fehlgeschlagen: %s", exc)
-        raise HTTPException(status_code=500, detail=f"Mail-Versand fehlgeschlagen: {exc}")
+        logger.error("Trigger-Endpoint Mail-Versand fehlgeschlagen: %s", exc)  # i18n-log
+        raise HTTPException(status_code=500, detail=f"Mail-Versand fehlgeschlagen: {exc}")  # i18n-log (Debug-Router, nur Betreiber)
 
     logger.info("Trigger-Endpoint: Radar-Alert-Mail gesendet fuer trip=%s, segment=%s", trip.id, segment_label)
     return JSONResponse({"status": "sent", "trip_id": str(trip.id), "segment": segment_label})

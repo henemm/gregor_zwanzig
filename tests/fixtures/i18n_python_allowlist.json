@@ -1,9 +1,6 @@
 [
   "api/routers/briefings_send.py",
-  "api/routers/debug.py",
   "api/routers/internal.py",
-  "api/routers/preview.py",
-  "api/routers/validator.py",
   "src/output/adapters/trip_result.py",
   "src/output/channels/base.py",
   "src/output/channels/premium_sms.py",
@@ -34,19 +31,14 @@
   "src/services/alert_preview_hours.py",
   "src/services/alert_retry_backoff.py",
   "src/services/compare_alert.py",
-  "src/services/compare_alert_preview_service.py",
   "src/services/compare_official_alert.py",
-  "src/services/compare_preview_service.py",
   "src/services/compare_radar_alert.py",
   "src/services/comparison_engine.py",
   "src/services/comparison_parallel.py",
   "src/services/deviation_alert_engine.py",
-  "src/services/inbound_sms_reader.py",
   "src/services/notification_service.py",
-  "src/services/preview_service.py",
   "src/services/report_config_resolver.py",
   "src/services/trip_alert.py",
   "src/services/trip_command_processor.py",
-  "src/services/trip_report_scheduler.py",
-  "src/services/weather_metrics.py"
+  "src/services/trip_report_scheduler.py"
 ]

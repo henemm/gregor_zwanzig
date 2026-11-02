@@ -18,6 +18,8 @@ from datetime import datetime, timezone
 from typing import Optional
 
 from fastapi import APIRouter, HTTPException, Query
+
+from api.fehler import api_fehler, api_fehler_aus, meldung_aus
 from pydantic import BaseModel, Field, ValidationError
 
 from app.loader import VALID_ENTITY_ID_RE, _parse_trip, get_briefings_dir
@@ -191,10 +193,7 @@ def detector_thresholds(
     raw = _load_trip_raw(user_id, trip)
     trip_obj = _load_trip_for_validator(user_id, trip)
     if raw is None or trip_obj is None:
-        raise HTTPException(
-            status_code=404,
-            detail=f"Trip {trip} nicht gefunden für User {user_id}",
-        )
+        raise api_fehler(404, "trip_nicht_gefunden", user_id, trip_id=trip, user_id=user_id)
 
     config_source = _config_source_from_raw(raw, trip_obj)
     effective_source = _effective_detector_source(trip_obj)
@@ -343,10 +342,7 @@ def alert_preview(
 ):
     trip_obj = _load_trip_for_validator(user_id, trip_id)
     if trip_obj is None:
-        raise HTTPException(
-            status_code=404,
-            detail=f"Trip {trip_id} nicht gefunden für User {user_id}",
-        )
+        raise api_fehler(404, "trip_nicht_gefunden", user_id, trip_id=trip_id, user_id=user_id)
 
     # Issue #1948 Scheibe S2 (AC-1): Vier-Wege-Exklusivitaet statt binaerem
     # Alt-Gate (onset XOR changes+segment_times). segment_times ist bei
@@ -356,21 +352,15 @@ def alert_preview(
         bool(body.nowcast_frames),
     ]
     if sum(provided) != 1:
-        raise HTTPException(
-            status_code=422,
-            detail=(
-                "Body muss genau einen von 'onset', 'changes', 'official' "
-                "oder 'nowcast_frames' enthalten"
-            ),
-        )
+        raise api_fehler(422, "body_genau_einer", user_id)
 
     if body.official:
-        _validate_official_segment_ids(trip_obj, body.official)
+        _validate_official_segment_ids(trip_obj, body.official, user_id)
     if body.changes:
-        _validate_change_metrics(body.changes)
-        _validate_change_segment_ids(trip_obj, body.changes)
+        _validate_change_metrics(body.changes, user_id)
+        _validate_change_segment_ids(trip_obj, body.changes, user_id)
         if not body.segment_times:
-            body.segment_times = _synthesize_segment_times(trip_obj, body.changes)
+            body.segment_times = _synthesize_segment_times(trip_obj, body.changes, user_id)
 
     # Issue #1737: echte user_id -> Stundenreihen der Vorschau nutzergebunden.
     return render_alert_preview(trip_obj, body, user_id=user_id)
@@ -403,9 +393,12 @@ def briefing_alert_preview(
     try:
         return render_compare_alert_preview(entity_id, user_id=user_id, body=body)
     except LookupError as e:
-        raise HTTPException(status_code=404, detail=str(e))
+        raise api_fehler_aus(e, 404, user_id)
     except (KeyError, TypeError, ValueError) as e:
-        raise HTTPException(status_code=422, detail=f"Ungültiger Alarm-Körper: {e}")
+        # Text: Rahmen + lokalisierter Grund; code: der des Grundes, falls vorhanden.
+        fehler = api_fehler(422, "alarm_body_ungueltig", user_id, grund=meldung_aus(e, user_id))
+        fehler.code = getattr(e, "code", fehler.code)
+        raise fehler
 
 
 def _real_segment_ids_for_today(trip_obj: Trip) -> set[str]:
@@ -421,16 +414,13 @@ def _real_segment_ids_for_today(trip_obj: Trip) -> set[str]:
     return {str(s.segment_id) for s in convert_trip_to_segments(trip_obj, today)}
 
 
-def _reject_unknown_segment_id(real_ids: set[str], segment_id: str) -> None:
+def _reject_unknown_segment_id(real_ids: set[str], segment_id: str, user_id: str) -> None:
     if real_ids and segment_id not in real_ids:
-        raise HTTPException(
-            status_code=422,
-            detail=f"Unbekannte segment_id '{segment_id}' im Trip",
-        )
+        raise api_fehler(422, "segment_unbekannt", user_id, segment_id=segment_id)
 
 
 def _validate_official_segment_ids(
-    trip_obj: Trip, payloads: "list[OfficialAlertPayload]",
+    trip_obj: Trip, payloads: "list[OfficialAlertPayload]", user_id: str,
 ) -> None:
     """fix-1948-s2-preview-eingaben (Bug B Teil 1): ``official[].segment_ids``
     gegen die echten Trip-Segmente pruefen -- unbekannte ID (bei einem Trip
@@ -438,10 +428,10 @@ def _validate_official_segment_ids(
     real_ids = _real_segment_ids_for_today(trip_obj)
     for p in payloads:
         for sid in p.segment_ids:
-            _reject_unknown_segment_id(real_ids, sid)
+            _reject_unknown_segment_id(real_ids, sid, user_id)
 
 
-def _validate_change_metrics(changes: "list[ChangePayload]") -> None:
+def _validate_change_metrics(changes: "list[ChangePayload]", user_id: str) -> None:
     """fix-1948-s2-preview-eingaben (Bug A): ``changes[].metric`` gegen den
     Metrik-Katalog pruefen (gleiche Quelle wie ``project.py:_resolve_metric_id``)
     -- unbekannte Metrik -> 422 mit dem Namen, statt spaeter als KeyError zu
@@ -451,14 +441,11 @@ def _validate_change_metrics(changes: "list[ChangePayload]") -> None:
     known = {f for m in _METRICS for f in m.summary_fields.values()}
     for c in changes:
         if c.metric not in known:
-            raise HTTPException(
-                status_code=422,
-                detail=f"Unbekannte Metrik '{c.metric}' in changes",
-            )
+            raise api_fehler(422, "metrik_unbekannt", user_id, metric=c.metric)
 
 
 def _validate_change_segment_ids(
-    trip_obj: Trip, changes: "list[ChangePayload]",
+    trip_obj: Trip, changes: "list[ChangePayload]", user_id: str,
 ) -> None:
     """fix-1948-s2-preview-eingaben: dieselbe Pruefung wie bei ``official``,
     aber fuer ``changes[].segment_id`` -- schliesst die Luecke, dass bei
@@ -467,11 +454,11 @@ def _validate_change_segment_ids(
     unbekannte ``segment_id`` bislang ungeprueft blieb."""
     real_ids = _real_segment_ids_for_today(trip_obj)
     for c in changes:
-        _reject_unknown_segment_id(real_ids, c.segment_id)
+        _reject_unknown_segment_id(real_ids, c.segment_id, user_id)
 
 
 def _synthesize_segment_times(
-    trip_obj: Trip, changes: "list[ChangePayload]",
+    trip_obj: Trip, changes: "list[ChangePayload]", user_id: str | None = None,
 ) -> "list[SegmentTimePayload]":
     """Issue #1948 Scheibe S2 (AC-2/AC-3): Segment-Zeiten der in ``changes``
     genannten ``segment_id``s aus dem bereits geladenen Trip synthetisieren
@@ -487,10 +474,7 @@ def _synthesize_segment_times(
     for c in changes:
         seg = real_segments.get(c.segment_id)
         if seg is None:
-            raise HTTPException(
-                status_code=422,
-                detail=f"Unbekannte segment_id '{c.segment_id}' im Trip",
-            )
+            raise api_fehler(422, "segment_unbekannt", user_id, segment_id=c.segment_id)
         synthesized.append(SegmentTimePayload(
             segment_id=c.segment_id,
             start=seg.start_time.strftime("%H:%M"),
@@ -517,10 +501,7 @@ def metrics_for_channel(
     """
     trip_obj = _load_trip_for_validator(user_id, trip)
     if trip_obj is None:
-        raise HTTPException(
-            status_code=404,
-            detail=f"Trip {trip} nicht gefunden für User {user_id}",
-        )
+        raise api_fehler(404, "trip_nicht_gefunden", user_id, trip_id=trip, user_id=user_id)
 
     dc = trip_obj.display_config  # kann None sein (Loader injiziert i.d.R. Default)
     source = _determine_cascade_source(dc, channel, report)
@@ -558,7 +539,7 @@ def compare_email_preview(body: CompareEmailPreviewBody):
     try:
         html = render_compare_email_preview(body)
     except ValueError as e:
-        raise HTTPException(status_code=422, detail=str(e))
+        raise api_fehler_aus(e, 422, None)  # kein Nutzer (externer Validator): de
     return {"html": html}
 
 

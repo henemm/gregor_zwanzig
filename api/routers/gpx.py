@@ -9,6 +9,8 @@ from typing import Optional
 
 from fastapi import APIRouter, File, HTTPException, Query, UploadFile
 
+from api.fehler import api_fehler_aus
+
 router = APIRouter()
 
 # Zweite Verteidigungslinie hinter dem Go-Proxy (Bug #1352): der Proxy verwirft
@@ -44,6 +46,6 @@ async def parse_gpx(
             content, file.filename, stage_date, start_hour, upload_dir=upload_dir,
         )
     except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+        raise api_fehler_aus(e, 400, user_id)
 
     return result

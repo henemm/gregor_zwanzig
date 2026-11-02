@@ -18,6 +18,7 @@ import math
 from app.debug import DebugBuffer
 from app.model_registry import effective_cape_model_id
 from app.models import NormalizedTimeseries, PrecipType, SegmentWeatherSummary, ThunderLevel
+from i18n import Lang, t
 
 
 # =============================================================================
@@ -120,7 +121,7 @@ def _cloud_pct_emoji(cloud_pct: Optional[int]) -> str:
 # Adjective thresholds mirror compact_summary._format_wind (line 271–279)
 # and compact_summary._precip_adjective (line 187–192).
 
-def format_wind_strength(kmh: Optional[float]) -> str:
+def format_wind_strength(kmh: Optional[float], *, lang: Lang = "de") -> str:
     """Wind-strength adjective (kürzel) for simplified-mode rendering.
 
     Thresholds mirror compact_summary._format_wind (line 271–279):
@@ -133,15 +134,15 @@ def format_wind_strength(kmh: Optional[float]) -> str:
     if kmh is None:
         return "–"
     if kmh < 10:
-        return "schwach"
+        return t("api.skala.wind.schwach", lang)
     if kmh < 25:
-        return "mäßig"
+        return t("api.skala.wind.maessig", lang)
     if kmh < 40:
-        return "stark"
-    return "sehr stark"
+        return t("api.skala.wind.stark", lang)
+    return t("api.skala.wind.sehr_stark", lang)
 
 
-def format_precip_intensity(mm: Optional[float]) -> str:
+def format_precip_intensity(mm: Optional[float], *, lang: Lang = "de") -> str:
     """Precipitation-intensity adjective (kürzel) for simplified-mode rendering.
 
     Thresholds mirror compact_summary._precip_adjective (line 187–192):
@@ -151,15 +152,15 @@ def format_precip_intensity(mm: Optional[float]) -> str:
       >10 mm     -> "stark"
     """
     if mm is None or mm <= 0:
-        return "trocken"
+        return t("api.skala.niederschlag.trocken", lang)
     if mm <= 2:
-        return "leicht"
+        return t("api.skala.niederschlag.leicht", lang)
     if mm <= 10:
-        return "mäßig"
-    return "stark"
+        return t("api.skala.niederschlag.maessig", lang)
+    return t("api.skala.niederschlag.stark", lang)
 
 
-def format_precip_daily_sum(mm: Optional[float]) -> str:
+def format_precip_daily_sum(mm: Optional[float], *, lang: Lang = "de") -> str:
     """Niederschlags-Wortstufe einer TAGESSUMME (Issue #2049, AC-9).
 
     Bewusst NICHT ``format_precip_intensity``: jene Schwellen (2/10 mm) meinen
@@ -172,15 +173,15 @@ def format_precip_daily_sum(mm: Optional[float]) -> str:
       >20 mm      -> "stark"
     """
     if mm is None or mm <= 0:
-        return "trocken"
+        return t("api.skala.niederschlag.trocken", lang)
     if mm <= 5:
-        return "leicht"
+        return t("api.skala.niederschlag.leicht", lang)
     if mm <= 20:
-        return "mäßig"
-    return "stark"
+        return t("api.skala.niederschlag.maessig", lang)
+    return t("api.skala.niederschlag.stark", lang)
 
 
-def format_rain_probability_scale(pct: Optional[float]) -> str:
+def format_rain_probability_scale(pct: Optional[float], *, lang: Lang = "de") -> str:
     """Regenwahrscheinlichkeits-Wortskala (Issue #2049, AC-7).
 
     Reine Zustandsbeschreibung ohne Handlungsempfehlung (ADR-0007):
@@ -194,15 +195,15 @@ def format_rain_probability_scale(pct: Optional[float]) -> str:
     if pct is None:
         return "–"
     if pct < 25:
-        return "unwahrscheinlich"
+        return t("api.skala.regen.unwahrscheinlich", lang)
     if pct < 50:
-        return "möglich"
+        return t("api.skala.regen.moeglich", lang)
     if pct < 75:
-        return "wahrscheinlich"
-    return "sehr wahrscheinlich"
+        return t("api.skala.regen.wahrscheinlich", lang)
+    return t("api.skala.regen.sehr_wahrscheinlich", lang)
 
 
-def format_sunshine_scale(hours: Optional[float]) -> str:
+def format_sunshine_scale(hours: Optional[float], *, lang: Lang = "de") -> str:
     """Sonnenstunden-Wortskala einer TAGESSUMME (Issue #2049, AC-8).
 
       <2 h  -> "trübe"
@@ -214,12 +215,12 @@ def format_sunshine_scale(hours: Optional[float]) -> str:
     if hours is None:
         return "–"
     if hours < 2:
-        return "trübe"
+        return t("api.skala.sonne.truebe", lang)
     if hours < 5:
-        return "wechselhaft"
+        return t("api.skala.sonne.wechselhaft", lang)
     if hours < 8:
-        return "freundlich"
-    return "sonnig"
+        return t("api.skala.sonne.freundlich", lang)
+    return t("api.skala.sonne.sonnig", lang)
 
 
 def compute_dominant_wmo(data) -> Optional[int]:

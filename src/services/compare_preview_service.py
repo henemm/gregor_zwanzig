@@ -34,6 +34,8 @@ from __future__ import annotations
 import logging
 from datetime import date, datetime, timezone
 
+from services.fehler_code import fehler_mit_code
+
 logger = logging.getLogger(__name__)
 
 
@@ -193,9 +195,8 @@ class ComparePreviewService:
         for preset in presets:
             if preset.id == preset_id:
                 return compare_preset_to_dict(preset)
-        raise LookupError(
-            f"Orts-Vergleich '{preset_id}' nicht gefunden für Nutzer '{user_id}'"
-        )
+        raise fehler_mit_code(LookupError, "vergleich_nicht_gefunden",
+                              preset_id=preset_id, user_id=user_id)
 
     def _resolve_locations(self, preset: dict, *, user_id: str) -> list:
         """Echte Orte des Nutzers in Preset-Reihenfolge (kein Stub-Ort)."""
@@ -203,18 +204,14 @@ class ComparePreviewService:
 
         location_ids = preset.get("location_ids") or []
         if not location_ids:
-            raise ValueError(
-                f"Orts-Vergleich '{preset.get('id', '')}' hat keine Orte konfiguriert — "
-                "es gibt nichts zu vergleichen."
-            )
+            raise fehler_mit_code(ValueError, "vergleich_ohne_orte",
+                                  preset_id=preset.get("id", ""))
         locations = order_locations_by_ids(
             load_all_locations(user_id=user_id), location_ids
         )
         if not locations:
-            raise ValueError(
-                f"Ortsvergleich '{preset.get('id', '')}' verweist auf gelöschte Orte. "
-                f"Ersetze die Orte im Ortsvergleich. (Orte {location_ids} nicht aufloesbar)"
-            )
+            raise fehler_mit_code(ValueError, "vergleich_orte_geloescht",
+                                  preset_id=preset.get("id", ""), location_ids=location_ids)
         return locations
 
 
@@ -249,4 +246,4 @@ def _resolve_target_date(
     try:
         return date.fromisoformat(str(given))
     except ValueError as e:
-        raise ValueError(f"Ungültiges Datum '{given}' (erwartet ISO JJJJ-MM-TT)") from e
+        raise fehler_mit_code(ValueError, "vergleich_datum_ungueltig", datum=given) from e
