@@ -2,6 +2,7 @@
 	import { Pill } from '$lib/components/atoms';
 	import type { Stage } from '$lib/types';
 	import { riskToPill } from '$lib/utils/stageRisk';
+	import { locale } from '$lib/i18n';
 
 	interface Props {
 		stage: Stage;
@@ -12,7 +13,8 @@
 	}
 	let { stage, index, active = false, onclick, risk }: Props = $props();
 
-	const pill = $derived(riskToPill(risk));
+	// i18n F9: riskToPill liest die Sprache per tr() — `$locale` haelt die Pille reaktiv.
+	const pill = $derived.by(() => (void $locale, riskToPill(risk)));
 
 	const wpCount = $derived(stage.waypoints?.length ?? 0);
 	const kmVal = $derived((stage as Stage & { distance_km?: number }).distance_km ?? 0);
@@ -60,11 +62,11 @@
 		</div>
 		<div style="font-family: var(--g-font-mono, ui-monospace, monospace); font-size: 11px; color: var(--g-ink-3); margin-top: 3px;">
 			{stage.date ?? ''}
-			{#if kmVal} · {kmVal.toFixed(1)} km{/if}
-			{#if ascentVal} · ↑{ascentVal} m{/if}
-			{#if descentVal} · ↓{descentVal} m{/if}
-			{#if elevVal} · {elevVal} m{/if}
-			{#if wpCount} · {wpCount} WP{/if}
+			{#if kmVal}{` · ${kmVal.toFixed(1)} km`}{/if}
+			{#if ascentVal}{` · ↑${ascentVal} m`}{/if}
+			{#if descentVal}{` · ↓${descentVal} m`}{/if}
+			{#if elevVal}{` · ${elevVal} m`}{/if}
+			{#if wpCount}{` · ${wpCount} WP`}{/if}
 		</div>
 	</div>
 

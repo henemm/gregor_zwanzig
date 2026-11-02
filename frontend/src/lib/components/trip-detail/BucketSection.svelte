@@ -10,6 +10,8 @@
 	import ChannelLimitMarkers from './ChannelLimitMarkers.svelte';
 	import SortableList from '$lib/components/shared/dnd/SortableList.svelte';
 	import DragHandle from '$lib/components/shared/dnd/DragHandle.svelte';
+	import { t, locale } from '$lib/i18n';
+	import { metricLabel } from '$lib/i18n/metricLabel';
 
 	interface Props {
 		eyebrow: string;
@@ -35,13 +37,15 @@
 		onMode, onMove, onDndReorder,
 	}: Props = $props();
 
+	const TELEGRAM = 'Telegram'; // Kanalname = Eigenname (nicht uebersetzt)
 	const telegramBudget = CHANNEL_COL_BUDGET.telegram; // #587: 8 wählbare Spalten (war 7)
 
 	// Issue #1272: DnD-State/Sync/Flip liegen jetzt im geteilten SortableList
 	// (ADR-0024). Der Telegram-Trenner ist bedingtes Markup INNERHALB des
 	// Item-Wrappers — als Sibling in der Zone würde dndzone ihn entfernen.
 	function itemLabel(id: string, i: number) {
-		return `${i + 1}. ${metricById[id]?.label ?? id}`;
+		const m = metricById[id];
+		return `${i + 1}. ${m ? metricLabel(m, $locale) : id}`;
 	}
 </script>
 
@@ -60,19 +64,19 @@
 	</div>
 
 	{#if items.length === 0}
-		<div class="empty">Keine Einträge — Metriken aus „Nicht im Briefing" hinzufügen.</div>
+		<div class="empty">{$t('trip.layout.leer')}</div>
 	{:else}
 		<SortableList
 			{items}
 			{onDndReorder}
-			ariaLabel="{title}, Reihenfolge"
+			ariaLabel={$t('trip.layout.reihenfolge_aria', { titel: title })}
 			{itemLabel}
 			dropFromOthersDisabled
 		>
 			{#snippet row(id: string, i: number)}
 				{#if bucket === 'primary' && i === telegramBudget}
 					<div class="telegram-divider mono" data-testid="telegram-divider">
-						✂ ab hier bei <strong>Telegram</strong> abgeschnitten (max {telegramBudget} Spalten)
+						{$t('trip.layout.telegram_vor')} <strong>{TELEGRAM}</strong> {$t('trip.layout.telegram_nach', { max: telegramBudget })}
 					</div>
 				{/if}
 				{#if metricById[id]}

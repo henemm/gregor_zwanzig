@@ -17,6 +17,7 @@
 	import { reportSlotAktiv } from '$lib/utils/reportSlotAktiv';
 	import { erstelleNaechstesBriefingLader } from '../shared/versand-tab/naechstesBriefingLader.svelte.ts';
 	import type { NextBriefing } from '$lib/components/shared/versand-tab/nextBriefingText';
+	import { t, tn, locale } from '$lib/i18n';
 
 	interface Props {
 		trip: Trip;
@@ -52,8 +53,9 @@
 	// AC-15: Alarm-Zeile nur aktiv, wenn der Trip eine Wetter-Alarm-Quelle hat.
 	const wetterAlarmAktiv = $derived(tripWetterAlarmAktiv(trip));
 
-	const metricsState = $derived(
-		metricsCatalog ? resolveTripMetricsOverviewState(trip.display_config?.metrics, metricsCatalog) : null
+	// i18n F9: die Namensliste kommt sprachabhaengig aus F5 — `$locale` haelt sie reaktiv.
+	const metricsState = $derived.by(() =>
+		(void $locale, metricsCatalog ? resolveTripMetricsOverviewState(trip.display_config?.metrics, metricsCatalog) : null)
 	);
 
 	let selectedStageId = $state<string | null>(trip.stages?.[0]?.id ?? null);
@@ -88,9 +90,9 @@
 <div data-testid="hub-overview" class="hub-overview">
 	<!-- Left column -->
 	<div>
-		<SectionH eyebrow="Etappen" title="Reihenfolge & Profil">
+		<SectionH eyebrow={$t('trip.etappen')} title={$t('trip.uebersicht.reihenfolge_profil')}>
 			{#snippet right()}
-				<Btn variant="ghost" size="sm" onclick={makeJumpHandler('etappen')}>Im Editor öffnen →</Btn>
+				<Btn variant="ghost" size="sm" onclick={makeJumpHandler('etappen')}>{$t('trip.uebersicht.im_editor')}</Btn>
 			{/snippet}
 		</SectionH>
 
@@ -116,38 +118,38 @@
 		     ausschließende Zweige in dieser Prüfreihenfolge: Katalog-Fehler ->
 		     Altbestand -> Leerauswahl -> Auswahl (AC-4). -->
 		<Card padding={18}>
-			<Eyebrow style="margin-bottom: 10px;">Wetter-Metriken</Eyebrow>
+			<Eyebrow style="margin-bottom: 10px;">{$t('aktionen.weather')}</Eyebrow>
 			{#if !metricsCatalog}
 				<p data-testid="hub-metrics-catalog-error" class="hub-metrics-text">
-					Wetter-Metriken konnten nicht geladen werden.
+					{$t('trip.uebersicht.metriken_fehler')}
 				</p>
 			{:else if metricsState?.kind === 'altbestand'}
 				<p data-testid="hub-metrics-altbestand" class="hub-metrics-text">
-					Noch nicht eingestellt — es gilt der Standardsatz.
+					{$t('trip.uebersicht.metriken_altbestand')}
 				</p>
 			{:else if metricsState?.kind === 'empty'}
 				<p data-testid="hub-metrics-empty" class="hub-metrics-text">
-					Keine Wettergrößen ausgewählt — das Briefing enthält keine Wettertabelle.
+					{$t('trip.uebersicht.metriken_leer')}
 				</p>
 			{:else}
 				<p data-testid="hub-metrics-selected" class="hub-metrics-text hub-metrics-names">
 					{metricsState?.names.join(', ')}{#if (metricsState?.unknownCount ?? 0) > 0}
 						<span class="hub-metrics-unknown">
-							· {metricsState?.unknownCount} {metricsState?.unknownCount === 1 ? 'Größe unbekannt' : 'Größen unbekannt'}
+							· {$tn('trip.uebersicht.unbekannt', metricsState?.unknownCount ?? 0)}
 						</span>
 					{/if}
 				</p>
 			{/if}
-			<Btn variant="ghost" size="sm" onclick={makeJumpHandler('wetter-metriken')}>Wetter-Metriken bearbeiten →</Btn>
+			<Btn variant="ghost" size="sm" onclick={makeJumpHandler('wetter-metriken')}>{$t('trip.uebersicht.metriken_bearbeiten')}</Btn>
 		</Card>
 
 		<Card padding={18}>
-			<Eyebrow style="margin-bottom: 10px;">Briefings laufen</Eyebrow>
+			<Eyebrow style="margin-bottom: 10px;">{$t('trip.uebersicht.briefings_laufen')}</Eyebrow>
 			<ReportLine kind="morning" time={morgenZeit} channels={briefingKanaele} active={reportSlotAktiv(trip.report_config, 'morning')} />
 			<ReportLine kind="evening" time={abendZeit} channels={briefingKanaele} active={reportSlotAktiv(trip.report_config, 'evening')} />
-			<ReportLine kind="alert" time="bei Δ" channels={alertKanaele} active={wetterAlarmAktiv} alert />
+			<ReportLine kind="alert" time={$t('trip.uebersicht.bei_delta')} channels={alertKanaele} active={wetterAlarmAktiv} alert />
 			<div style="margin-top: 12px;">
-				<Btn variant="ghost" size="sm" onclick={makeJumpHandler('wetter-metriken', 'versand')}>Zeitplan bearbeiten →</Btn>
+				<Btn variant="ghost" size="sm" onclick={makeJumpHandler('wetter-metriken', 'versand')}>{$t('trip.uebersicht.zeitplan_bearbeiten')}</Btn>
 			</div>
 		</Card>
 

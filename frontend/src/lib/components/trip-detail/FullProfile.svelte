@@ -18,6 +18,7 @@
 		computeStageBoundaries,
 		getActiveStageId
 	} from '$lib/utils/fullProfile';
+	import { t } from '$lib/i18n';
 
 	interface Props {
 		trip: Trip;
@@ -107,13 +108,13 @@
 
 <div data-testid="trip-full-profile" class="trip-full-profile">
 	{#if !showSvg}
-		<p data-testid="trip-full-profile-empty" class="empty">Keine Etappen geplant</p>
+		<p data-testid="trip-full-profile-empty" class="empty">{$t('trip.hub.keine_etappen')}</p>
 	{:else}
 		<svg
 			viewBox="0 0 {VB_WIDTH} {VB_HEIGHT}"
 			preserveAspectRatio="none"
 			role="img"
-			aria-label="Hoehenprofil aller Etappen"
+			aria-label={$t('trip.profil.aria')}
 		>
 			<!-- Active-Stage-Fill -->
 			{#if activeBoundary}
@@ -165,7 +166,7 @@
 					data-testid="trip-full-profile-stage-{b.stageId}"
 					role="button"
 					tabindex="0"
-					aria-label="Etappe {b.code} auswählen"
+					aria-label={$t('trip.profil.etappe_waehlen', { code: b.code })}
 					x={scaleX(b.xStart)}
 					y={0}
 					width={Math.max(1, scaleX(b.xEnd) - scaleX(b.xStart))}

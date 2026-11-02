@@ -13,6 +13,7 @@
 
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
+import { quelleMitKatalogUndTabellen } from '../../i18n/__tests__/quelleMitKatalog.ts'; // i18n F9 (#2658): deutscher Katalogwert statt Schluessel
 import { readFileSync, existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
@@ -35,7 +36,7 @@ const WAYPOINT_PIN = join(here, '..', 'trip-detail', 'waypoints', 'WaypointPin.s
 
 describe('#503 EditStagesPanelNew Layout', () => {
 	test('importiert MapCanvas', () => {
-		const src = readFileSync(EDIT_STAGES_PANEL, 'utf-8');
+		const src = quelleMitKatalogUndTabellen(readFileSync(EDIT_STAGES_PANEL, 'utf-8'));
 		assert.ok(
 			/import\s+MapCanvas\s+from\s+['"][^'"]*MapCanvas\.svelte['"]/.test(src),
 			'EditStagesPanelNew.svelte muss MapCanvas importieren'
@@ -43,7 +44,7 @@ describe('#503 EditStagesPanelNew Layout', () => {
 	});
 
 	test('rendert MapCanvas-Element', () => {
-		const src = readFileSync(EDIT_STAGES_PANEL, 'utf-8');
+		const src = quelleMitKatalogUndTabellen(readFileSync(EDIT_STAGES_PANEL, 'utf-8'));
 		assert.ok(
 			/<MapCanvas[\s>]/.test(src),
 			'EditStagesPanelNew.svelte muss <MapCanvas .../> im Markup rendern'
@@ -51,7 +52,7 @@ describe('#503 EditStagesPanelNew Layout', () => {
 	});
 
 	test('Grid-Layout mit grid-template-columns: 1fr 360px', () => {
-		const src = readFileSync(EDIT_STAGES_PANEL, 'utf-8');
+		const src = quelleMitKatalogUndTabellen(readFileSync(EDIT_STAGES_PANEL, 'utf-8'));
 		// Whitespace-tolerant: erlaubt Mehrfach-Leerzeichen
 		const hasGrid = /grid-template-columns:\s*1fr\s+360px/.test(src);
 		assert.ok(
@@ -61,7 +62,7 @@ describe('#503 EditStagesPanelNew Layout', () => {
 	});
 
 	test('Karten-Card hat Eyebrow "Karte · OpenTopoMap (OSM + SRTM)"', () => {
-		const src = readFileSync(EDIT_STAGES_PANEL, 'utf-8');
+		const src = quelleMitKatalogUndTabellen(readFileSync(EDIT_STAGES_PANEL, 'utf-8'));
 		assert.ok(
 			src.includes('Karte · OpenTopoMap (OSM + SRTM)'),
 			'EditStagesPanelNew.svelte muss den Eyebrow-Text "Karte · OpenTopoMap (OSM + SRTM)" enthalten'
@@ -69,7 +70,7 @@ describe('#503 EditStagesPanelNew Layout', () => {
 	});
 
 	test('Karten-Card hat Pill "Topo"', () => {
-		const src = readFileSync(EDIT_STAGES_PANEL, 'utf-8');
+		const src = quelleMitKatalogUndTabellen(readFileSync(EDIT_STAGES_PANEL, 'utf-8'));
 		// Pill als Atom mit Kind-Text "Topo" — toleriere beliebiges Pill-Markup
 		const hasTopoPill = />\s*Topo\s*</.test(src);
 		assert.ok(
@@ -79,7 +80,7 @@ describe('#503 EditStagesPanelNew Layout', () => {
 	});
 
 	test('Profil-Card hat Eyebrow "Höhenprofil · synchron mit Karte"', () => {
-		const src = readFileSync(EDIT_STAGES_PANEL, 'utf-8');
+		const src = quelleMitKatalogUndTabellen(readFileSync(EDIT_STAGES_PANEL, 'utf-8'));
 		assert.ok(
 			src.includes('Höhenprofil · synchron mit Karte'),
 			'EditStagesPanelNew.svelte muss den Eyebrow-Text "Höhenprofil · synchron mit Karte" enthalten'
@@ -87,7 +88,7 @@ describe('#503 EditStagesPanelNew Layout', () => {
 	});
 
 	test('Sidebar-Card hat Eyebrow "Wegpunkte"', () => {
-		const src = readFileSync(EDIT_STAGES_PANEL, 'utf-8');
+		const src = quelleMitKatalogUndTabellen(readFileSync(EDIT_STAGES_PANEL, 'utf-8'));
 		// "Wegpunkte" als sichtbarer Eyebrow-Kind-Text
 		assert.ok(
 			/<Eyebrow>\s*Wegpunkte\s*<\/Eyebrow>/.test(src),
@@ -96,7 +97,7 @@ describe('#503 EditStagesPanelNew Layout', () => {
 	});
 
 	test('Sidebar hat „+ auf Route"-Button', () => {
-		const src = readFileSync(EDIT_STAGES_PANEL, 'utf-8');
+		const src = quelleMitKatalogUndTabellen(readFileSync(EDIT_STAGES_PANEL, 'utf-8'));
 		assert.ok(
 			src.includes('+ auf Route'),
 			'EditStagesPanelNew.svelte muss einen Button mit Text "+ auf Route" haben'
@@ -110,7 +111,7 @@ describe('#503 EditStagesPanelNew Layout', () => {
 
 describe('#503 Keine KI/Auto/Manuell-Unterscheidung', () => {
 	test('EditStagesPanelNew setzt KEIN waypoint.suggested mehr beim Profil-Add', () => {
-		const src = readFileSync(EDIT_STAGES_PANEL, 'utf-8');
+		const src = quelleMitKatalogUndTabellen(readFileSync(EDIT_STAGES_PANEL, 'utf-8'));
 		// Konkrete Anti-Pattern: neuer Waypoint mit suggested: true.
 		assert.ok(
 			!/suggested:\s*true/.test(src),
@@ -119,7 +120,7 @@ describe('#503 Keine KI/Auto/Manuell-Unterscheidung', () => {
 	});
 
 	test('EditStagesPanelNew enthält keinen KI-Hinweis-Footer', () => {
-		const src = readFileSync(EDIT_STAGES_PANEL, 'utf-8');
+		const src = quelleMitKatalogUndTabellen(readFileSync(EDIT_STAGES_PANEL, 'utf-8'));
 		// KI-Vorschläge & "gestrichelt" gehören in den alten Hinweis-Footer.
 		assert.ok(
 			!src.includes('KI-Vorschläge'),
@@ -132,7 +133,7 @@ describe('#503 Keine KI/Auto/Manuell-Unterscheidung', () => {
 	});
 
 	test('EditStagesPanelNew rendert keine Confirm-/Reject-Buttons', () => {
-		const src = readFileSync(EDIT_STAGES_PANEL, 'utf-8');
+		const src = quelleMitKatalogUndTabellen(readFileSync(EDIT_STAGES_PANEL, 'utf-8'));
 		// "Bestätigen"/"Verwerfen" oder waypoint-confirm-/-reject-testids
 		assert.ok(
 			!src.includes('Bestätigen'),
@@ -145,7 +146,7 @@ describe('#503 Keine KI/Auto/Manuell-Unterscheidung', () => {
 	});
 
 	test('EditStagesPanelNew nutzt KEIN bedingtes Rendering auf waypoint.suggested', () => {
-		const src = readFileSync(EDIT_STAGES_PANEL, 'utf-8');
+		const src = quelleMitKatalogUndTabellen(readFileSync(EDIT_STAGES_PANEL, 'utf-8'));
 		// Whitespace-toleranter Match.
 		const hasSuggestedBranch =
 			/\{#if\s+[^}]*\.suggested\b/.test(src) ||
@@ -201,7 +202,7 @@ describe('#503 Toter Code entfernt', () => {
 
 describe('#522 WaypointCard Visual-Redesign', () => {
 	test('importiert WaypointPin NICHT mehr', () => {
-		const src = readFileSync(WAYPOINT_CARD, 'utf-8');
+		const src = quelleMitKatalogUndTabellen(readFileSync(WAYPOINT_CARD, 'utf-8'));
 		assert.ok(
 			!/import\s+WaypointPin\s+from/.test(src),
 			'WaypointCard.svelte darf WaypointPin NICHT mehr importieren (Kreis-Pin als inline span)'
@@ -209,7 +210,7 @@ describe('#522 WaypointCard Visual-Redesign', () => {
 	});
 
 	test('rendert Kreis-Pin als CSS-Klasse waypoint-pin (kein SVG-Pfad mit stroke-dasharray)', () => {
-		const src = readFileSync(WAYPOINT_CARD, 'utf-8');
+		const src = quelleMitKatalogUndTabellen(readFileSync(WAYPOINT_CARD, 'utf-8'));
 		assert.ok(
 			/class="[^"]*waypoint-pin\b/.test(src),
 			'WaypointCard.svelte muss den Kreis-Pin via CSS-Klasse "waypoint-pin" rendern'
@@ -221,14 +222,14 @@ describe('#522 WaypointCard Visual-Redesign', () => {
 	});
 
 	test('hat Text-Buttons "Umbenennen", "Verschieben", "Löschen" (keine Icons mehr)', () => {
-		const src = readFileSync(WAYPOINT_CARD, 'utf-8');
+		const src = quelleMitKatalogUndTabellen(readFileSync(WAYPOINT_CARD, 'utf-8'));
 		assert.ok(src.includes('Umbenennen'), 'WaypointCard.svelte muss Text "Umbenennen" enthalten');
 		assert.ok(src.includes('Verschieben'), 'WaypointCard.svelte muss Text "Verschieben" enthalten');
 		assert.ok(src.includes('Löschen'), 'WaypointCard.svelte muss Text "Löschen" enthalten');
 	});
 
 	test('Action-Buttons sind nur bei active sichtbar ({#if active})', () => {
-		const src = readFileSync(WAYPOINT_CARD, 'utf-8');
+		const src = quelleMitKatalogUndTabellen(readFileSync(WAYPOINT_CARD, 'utf-8'));
 		// Action-Block (mit "Umbenennen") muss in einem {#if active}-Block stehen
 		const hasActiveGate = /\{#if\s+active\s*\}[\s\S]*Umbenennen[\s\S]*\{\/if\}/.test(src);
 		assert.ok(
@@ -238,7 +239,7 @@ describe('#522 WaypointCard Visual-Redesign', () => {
 	});
 
 	test('hat data-testid="waypoint-move-{index}" für Verschieben-Button', () => {
-		const src = readFileSync(WAYPOINT_CARD, 'utf-8');
+		const src = quelleMitKatalogUndTabellen(readFileSync(WAYPOINT_CARD, 'utf-8'));
 		assert.ok(
 			/data-testid=["']waypoint-move-\{index\}["']/.test(src),
 			'WaypointCard.svelte muss data-testid="waypoint-move-{index}" haben'
@@ -246,7 +247,7 @@ describe('#522 WaypointCard Visual-Redesign', () => {
 	});
 
 	test('behält bestehende data-testids waypoint-card/rename/delete', () => {
-		const src = readFileSync(WAYPOINT_CARD, 'utf-8');
+		const src = quelleMitKatalogUndTabellen(readFileSync(WAYPOINT_CARD, 'utf-8'));
 		assert.ok(
 			/data-testid=["']waypoint-card-\{index\}["']/.test(src),
 			'data-testid="waypoint-card-{index}" muss erhalten bleiben'
@@ -262,7 +263,7 @@ describe('#522 WaypointCard Visual-Redesign', () => {
 	});
 
 	test('Left-Border-Accent-Indikator: border-left mit var(--g-accent) im aktiven Zustand', () => {
-		const src = readFileSync(WAYPOINT_CARD, 'utf-8');
+		const src = quelleMitKatalogUndTabellen(readFileSync(WAYPOINT_CARD, 'utf-8'));
 		// CSS muss eine border-left-Regel haben, die im active-State auf --g-accent geht.
 		const hasBorderLeft = /border-left[^;]*var\(--g-accent\)/.test(src) ||
 			/border-left-color:\s*var\(--g-accent\)/.test(src);
@@ -313,7 +314,7 @@ describe('#522 WaypointPin Cleanup (suggested-Branch raus)', () => {
 
 describe('#524 waypoint-add-on-route-btn entsperren', () => {
 	test('AC-1: Button hat KEIN disabled-Attribut', () => {
-		const src = readFileSync(EDIT_STAGES_PANEL, 'utf-8');
+		const src = quelleMitKatalogUndTabellen(readFileSync(EDIT_STAGES_PANEL, 'utf-8'));
 		const hasDisabled =
 			/<Btn[^>]*data-testid=["']waypoint-add-on-route-btn["'][^>]*\bdisabled\b/.test(src) ||
 			/\bdisabled\b[^>]*data-testid=["']waypoint-add-on-route-btn["']/.test(src);
@@ -324,7 +325,7 @@ describe('#524 waypoint-add-on-route-btn entsperren', () => {
 	});
 
 	test('AC-1: Button setzt addModeHint = true beim Klick', () => {
-		const src = readFileSync(EDIT_STAGES_PANEL, 'utf-8');
+		const src = quelleMitKatalogUndTabellen(readFileSync(EDIT_STAGES_PANEL, 'utf-8'));
 		assert.ok(
 			src.includes('addModeHint = true'),
 			'EditStagesPanelNew.svelte muss onclick mit addModeHint = true am waypoint-add-on-route-btn haben'
@@ -332,7 +333,7 @@ describe('#524 waypoint-add-on-route-btn entsperren', () => {
 	});
 
 	test('AC-2: addModeHint als $state(false) deklariert', () => {
-		const src = readFileSync(EDIT_STAGES_PANEL, 'utf-8');
+		const src = quelleMitKatalogUndTabellen(readFileSync(EDIT_STAGES_PANEL, 'utf-8'));
 		assert.ok(
 			/addModeHint\s*=\s*\$state\(false\)/.test(src),
 			'EditStagesPanelNew.svelte muss addModeHint = $state(false) enthalten'
@@ -340,7 +341,7 @@ describe('#524 waypoint-add-on-route-btn entsperren', () => {
 	});
 
 	test('AC-2: Info-Strip-Text "Klicke im Höhenprofil" vorhanden', () => {
-		const src = readFileSync(EDIT_STAGES_PANEL, 'utf-8');
+		const src = quelleMitKatalogUndTabellen(readFileSync(EDIT_STAGES_PANEL, 'utf-8'));
 		assert.ok(
 			src.includes('Klicke im Höhenprofil'),
 			'EditStagesPanelNew.svelte muss den Info-Strip-Text "Klicke im Höhenprofil" enthalten'
@@ -348,7 +349,7 @@ describe('#524 waypoint-add-on-route-btn entsperren', () => {
 	});
 
 	test('AC-3: data-testid="waypoint-add-on-route-btn" bleibt erhalten', () => {
-		const src = readFileSync(EDIT_STAGES_PANEL, 'utf-8');
+		const src = quelleMitKatalogUndTabellen(readFileSync(EDIT_STAGES_PANEL, 'utf-8'));
 		assert.ok(
 			src.includes('data-testid="waypoint-add-on-route-btn"'),
 			'waypoint-add-on-route-btn muss seine data-testid behalten'
@@ -356,7 +357,7 @@ describe('#524 waypoint-add-on-route-btn entsperren', () => {
 	});
 
 	test('AC-4: handleProfileAdd setzt addModeHint = false', () => {
-		const src = readFileSync(EDIT_STAGES_PANEL, 'utf-8');
+		const src = quelleMitKatalogUndTabellen(readFileSync(EDIT_STAGES_PANEL, 'utf-8'));
 		assert.ok(
 			src.includes('addModeHint = false'),
 			'handleProfileAdd muss addModeHint = false setzen wenn Wegpunkt eingefügt wurde'

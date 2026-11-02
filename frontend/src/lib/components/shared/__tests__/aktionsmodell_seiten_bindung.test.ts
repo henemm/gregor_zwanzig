@@ -11,6 +11,7 @@
 
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import {
@@ -33,7 +34,8 @@ import {
 const SRC = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../../..');
 const { trFor } = await import('../../../i18n/index.ts');
 const TRIPS = ladeSvelte(path.join(SRC, 'routes/trips/+page.svelte'));
-const TRIP_HUB = ladeSvelte(path.join(SRC, 'routes/trips/[id]/+page.svelte'));
+const TRIP_HUB_DATEI = path.join(SRC, 'routes/trips/[id]/+page.svelte');
+const TRIP_HUB = ladeSvelte(TRIP_HUB_DATEI);
 const CMP = ladeSvelte(path.join(SRC, 'routes/compare/+page.svelte'));
 const CMP_HUB = ladeSvelte(path.join(SRC, 'routes/compare/[id]/+page.svelte'));
 
@@ -185,7 +187,8 @@ describe('F008 (AC-5/AC-12): Trip-Hub Loeschdialog, Navigation, Menue-Flaeche', 
 	const bestaetigungen = () => komponenten(TRIP_HUB, 'ConfirmDialog');
 	test('Loeschdialog nennt trip.name; Bestaetigen loescht und navigiert auf /trips', () => {
 		const del = bestaetigungen().find((c) => attrKurz(c, 'confirmTestid') === '"trip-detail-delete-confirm-yes"')!;
-		assert.match(attrKurz(del, 'description')!, /\$\{trip\.name\}/);
+		// i18n F9 (#2658): der Text kommt aus dem Katalog, der Name als Platzhalter.
+		assert.match(attrKurz(del, 'description')!, /\$\{trip\.name\}|name: trip\.name/);
 		assert.equal(attrKurz(del, 'onConfirm'), 'handleDeleteConfirm');
 		assert.deepEqual(aufrufArgumente(funktion(TRIP_HUB, 'handleDeleteConfirm'), 'goto'), [['"/trips"']]);
 		assert.deepEqual(aufrufArgumente(funktion(TRIP_HUB, 'handleDeleteConfirm'), 'deleteSubscription'), [['"trip"', 'trip.id']]);
@@ -196,7 +199,9 @@ describe('F008 (AC-5/AC-12): Trip-Hub Loeschdialog, Navigation, Menue-Flaeche', 
 		assert.deepEqual(aufrufArgumente(funktion(TRIP_HUB, 'handleArchiveConfirm'), 'sendStateUpdate'), [['undefined', 'nextArchived']]);
 	});
 	test('beide Huebs: Kebab und Blatt zeigen die Hub-Aktionen (Flaeche "hub")', () => {
-		assert.equal(attrKurz(komponenten(TRIP_HUB, 'SubscriptionKebab')[0], 'actions'), 'subscriptionActions("trip", lifecycle, "hub")');
+		// i18n F9 (#2658): der Trip-Hub haelt die Liste in `hubAktionen` (liest `$locale`).
+		assert.equal(attrKurz(komponenten(TRIP_HUB, 'SubscriptionKebab')[0], 'actions'), 'hubAktionen');
+		assert.match(readFileSync(TRIP_HUB_DATEI, 'utf-8'), /const hubAktionen = \$derived\.by\(\(\) => \(void \$locale, subscriptionActions\('trip', lifecycle, 'hub'\)\)\);/);
 		assert.equal(attrKurz(komponenten(CMP_HUB, 'SubscriptionKebab')[0], 'actions'), 'subscriptionActions("vergleich", lifecycle, "hub")');
 		assert.equal(attrKurz(komponenten(TRIP_HUB, 'SubscriptionKebab')[0], 'onSelect'), 'handleHubAction');
 		assert.equal(attrKurz(komponenten(CMP_HUB, 'SubscriptionKebab')[0], 'onSelect'), 'handleAction');

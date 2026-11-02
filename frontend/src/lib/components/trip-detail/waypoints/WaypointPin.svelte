@@ -5,6 +5,8 @@
 	// Issue #522/#523: Dashed-Pin-Branch entfernt (toter Code nach #503 / C8 aus #506).
 	// Komponente bleibt für zukünftige Leaflet Custom Marker bestehen.
 
+	import { t } from '$lib/i18n';
+
 	interface Props {
 		index: number;
 		active?: boolean;
@@ -29,7 +31,7 @@
 	style={active ? 'filter: drop-shadow(0 0 3px var(--g-accent))' : undefined}
 	role={onclick ? 'button' : undefined}
 	tabindex={onclick ? 0 : undefined}
-	aria-label={onclick ? `Wegpunkt ${index}` : undefined}
+	aria-label={onclick ? $t('bausteine.etappe.wegpunkt', { nr: index }) : undefined}
 	onclick={onclick}
 	onkeydown={onclick ? handleKeydown : undefined}
 	style:cursor={onclick ? 'pointer' : 'default'}

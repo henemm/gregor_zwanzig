@@ -28,7 +28,7 @@
 	} from '$lib/components/compare/subscriptionHelpers.js';
 	import { subscriptionActions, subscriptionLifecycle } from '$lib/components/shared/subscriptionActions.js';
 	import { setPaused, deleteSubscription, sendSubscription } from '$lib/components/shared/subscriptionExec.js';
-	import { t, tr, type MessageKey } from '$lib/i18n/index.js';
+	import { t, tr, locale, type MessageKey } from '$lib/i18n/index.js';
 
 	let { data } = $props();
 	let presets: ComparePreset[] = $state(data.presets ?? []);
@@ -257,7 +257,8 @@
 				getRowId={(row) => (row as ComparePreset).id}
 				onRowClick={(row) => goto(`/compare/${(row as ComparePreset).id}`)}
 				rowActions={(row) =>
-					subscriptionActions('vergleich', subscriptionLifecycle('vergleich', row as ComparePreset), 'list').map((a) => ({
+					// i18n F9: Aktionsnamen entstehen per tr() — `$locale` macht den Aufruf im Render reaktiv.
+					(void $locale, subscriptionActions('vergleich', subscriptionLifecycle('vergleich', row as ComparePreset), 'list')).map((a) => ({
 						key: a.id,
 						label: a.label,
 						danger: a.danger

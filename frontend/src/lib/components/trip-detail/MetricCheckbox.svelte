@@ -9,6 +9,8 @@
 	import { Pill } from '$lib/components/atoms';
 	import { HorizonChip } from '$lib/components/ui/horizon-chip/index.js';
 	import type { Horizons, MetricEntry } from '$lib/types';
+	import { t, locale } from '$lib/i18n';
+	import { metricLabel } from '$lib/i18n/metricLabel';
 
 	interface Props {
 		metric: MetricEntry;
@@ -60,7 +62,7 @@
 		type="button"
 		role="checkbox"
 		aria-checked={enabled}
-		aria-label={metric.label}
+		aria-label={metricLabel(metric, $locale)}
 		data-testid="weather-metrics-tab-checkbox-{metric.id}"
 		onclick={toggleEnabled}
 		class="metric-checkbox"
@@ -84,7 +86,7 @@
 			</svg>
 		{/if}
 	</button>
-	<span class="metric-name" data-slot="metric-label">{metric.label}</span>
+	<span class="metric-name" data-slot="metric-label">{metricLabel(metric, $locale)}</span>
 	{#if metric.unit}
 		<span class="metric-unit">{metric.unit}</span>
 	{/if}
@@ -99,7 +101,7 @@
 				tabindex={0}
 				onclick={setRaw}
 				onkeydown={(e: KeyboardEvent) => keyActivate(e, setRaw)}
-			>Roh</Pill>
+			>{$t('wertebereiche.reihenfolge.roh')}</Pill>
 			<Pill
 				tone={useIndicator ? 'accent' : 'default'}
 				data-testid="weather-metrics-tab-format-indicator-{metric.id}"
@@ -109,7 +111,7 @@
 				tabindex={0}
 				onclick={setIndicator}
 				onkeydown={(e: KeyboardEvent) => keyActivate(e, setIndicator)}
-			>Indikator</Pill>
+			>{$t('trip.layout.indikator')}</Pill>
 		</span>
 	{/if}
 	<span class="horizon-chips" data-slot="horizon-chip-group">

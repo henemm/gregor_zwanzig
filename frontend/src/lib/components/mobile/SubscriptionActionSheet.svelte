@@ -3,6 +3,7 @@
 	// Aktionen kommen aus der einen Quelle `subscriptionActions`; Dispatch via onAction(id), danach onClose().
 
 	import Sheet from './Sheet.svelte';
+	import { locale } from '$lib/i18n';
 	import {
 		subscriptionActions,
 		type SubscriptionLifecycle,
@@ -22,7 +23,8 @@
 
 	let { open, onClose, kind, status, onAction, name, surface = 'mobile' }: Props = $props();
 
-	const actions = $derived(subscriptionActions(kind, status, surface));
+	// i18n F9: Aktionsnamen entstehen per tr() — `$locale` haelt die Liste reaktiv.
+	const actions = $derived.by(() => (void $locale, subscriptionActions(kind, status, surface)));
 </script>
 
 <Sheet {open} {onClose} snap="half" title={name} eyebrow="AKTIONEN">

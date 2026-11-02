@@ -11,6 +11,7 @@
 
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
+import { quelleMitKatalogUndTabellen } from '../../i18n/__tests__/quelleMitKatalog.ts'; // i18n F9 (#2658): deutscher Katalogwert statt Schluessel
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { join, dirname } from 'node:path';
@@ -20,7 +21,7 @@ const WAYPOINTS_DIR = join(HERE, '..', 'trip-detail', 'waypoints');
 const TYPES_FILE = join(HERE, '..', '..', '..', 'lib', 'types.ts');
 
 function read(file: string): string {
-	return readFileSync(file, 'utf-8');
+	return quelleMitKatalogUndTabellen(readFileSync(file, 'utf-8'));
 }
 
 const ETAPPEN_STRIP = join(WAYPOINTS_DIR, 'EtappenStrip.svelte');

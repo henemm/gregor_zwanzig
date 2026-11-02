@@ -9,6 +9,8 @@
 // (/trips/new, /compare/new) werden aus EINER Definition (`REITER_DEFINITION`)
 // abgeleitet — eine zweite Liste gibt es nicht.
 
+import { tr, type MessageKey } from '../../i18n/index.ts';
+
 export type SubscriptionKind = 'trip' | 'vergleich';
 
 export interface SubscriptionTab {
@@ -23,7 +25,11 @@ export interface AnlegeSchritt extends SubscriptionTab {
 }
 
 /** Die EINE Definition. Hub-Leiste = [uebersicht, punkte[kind], ...schwanz];
- *  Anlege-Kette = [...anlegeKopf[kind], ...schwanz]. */
+ *  Anlege-Kette = [...anlegeKopf[kind], ...schwanz].
+ *  Issue #2658 (i18n F9): `label`/`lockHint` der Definition sind Katalog-Schluessel
+ *  (aktionen.* wortgleich fuer beide Hubs, trip.anlegen.*, vergleich.anlegen.*); der
+ *  Text entsteht erst in `subscriptionTabs`/`anlegeKette` in der aktuellen Sprache.
+ *  Ein Wert, der kein Schluessel ist, steht unveraendert (translate-Rueckfall). */
 export interface ReiterDefinition {
 	uebersicht: SubscriptionTab;
 	punkte: Record<SubscriptionKind, SubscriptionTab>;
@@ -32,25 +38,25 @@ export interface ReiterDefinition {
 }
 
 export const REITER_DEFINITION: ReiterDefinition = {
-	uebersicht: { id: 'uebersicht', label: 'Übersicht' },
+	uebersicht: { id: 'uebersicht', label: 'aktionen.reiter.uebersicht' },
 	punkte: {
-		trip: { id: 'etappen', label: 'Etappen & Wegpunkte' },
-		vergleich: { id: 'orte', label: 'Orte' }
+		trip: { id: 'etappen', label: 'aktionen.reiter.etappen_wegpunkte' },
+		vergleich: { id: 'orte', label: 'aktionen.reiter.orte' }
 	},
 	schwanz: [
-		{ id: 'wetter-metriken', label: 'Wetter-Metriken' },
-		{ id: 'wertebereiche', label: 'Wertebereiche' },
-		{ id: 'alarme', label: 'Alarme' }
+		{ id: 'wetter-metriken', label: 'aktionen.weather' },
+		{ id: 'wertebereiche', label: 'aktionen.reiter.wertebereiche' },
+		{ id: 'alarme', label: 'aktionen.alarms' }
 	],
 	anlegeKopf: {
 		trip: [
-			{ id: 'route', label: 'Route' },
-			{ id: 'etappen', label: 'Etappen & GPX', lockHint: 'erst Trip-Name + Startdatum' },
-			{ id: 'wegpunkte', label: 'Wegpunkte prüfen', lockHint: 'erst alle GPX hochladen', optional: true }
+			{ id: 'route', label: 'trip.anlegen.reiter_route' },
+			{ id: 'etappen', label: 'trip.anlegen.reiter_etappen', lockHint: 'trip.anlegen.sperre_etappen' },
+			{ id: 'wegpunkte', label: 'trip.anlegen.reiter_wegpunkte', lockHint: 'trip.anlegen.sperre_gpx', optional: true }
 		],
 		vergleich: [
-			{ id: 'vergleich', label: 'Vergleich' },
-			{ id: 'orte', label: 'Orte', lockHint: 'erst Vergleich benennen' }
+			{ id: 'vergleich', label: 'vergleich.anlegen.reiter' },
+			{ id: 'orte', label: 'aktionen.reiter.orte', lockHint: 'vergleich.anlegen.sperre_orte' }
 		]
 	}
 };
@@ -59,27 +65,34 @@ export const REITER_DEFINITION: ReiterDefinition = {
  *  Der Hinweis eines Schritts nennt den Vorgaenger; der erste Schwanz-Schritt haengt am
  *  Kopf und ist daher kind-eigen. */
 const ANLEGE_SCHWANZ_HINWEIS: Record<SubscriptionKind, Record<string, string>> = {
-	trip: { 'wetter-metriken': 'erst alle GPX hochladen' },
-	vergleich: { 'wetter-metriken': 'erst mind. 2 Orte auswählen' }
+	trip: { 'wetter-metriken': 'trip.anlegen.sperre_gpx' },
+	vergleich: { 'wetter-metriken': 'vergleich.anlegen.sperre_wetter' }
 };
+
+/** Schluessel (oder freier Text einer ersetzten Definition) in der aktuellen Sprache. */
+const text = (k: string): string => tr(k as MessageKey);
 
 /** Sperr-Hinweis eines Schwanz-Schritts: kind-eigen oder „erst <Vorgaenger> öffnen". */
 function schwanzHinweis(kind: SubscriptionKind, schwanz: SubscriptionTab[], i: number): string | undefined {
 	const eigen = ANLEGE_SCHWANZ_HINWEIS[kind][schwanz[i].id];
-	if (eigen !== undefined) return eigen;
-	return i > 0 ? `erst ${schwanz[i - 1].label} öffnen` : undefined;
+	if (eigen !== undefined) return text(eigen);
+	return i > 0 ? tr('aktionen.sperre.oeffnen', { reiter: text(schwanz[i - 1].label) }) : undefined;
 }
 
 /** Reiterleiste in der Reihenfolge beider Hubs (Desktop und MTabBar). */
 export function subscriptionTabs(kind: SubscriptionKind, def: ReiterDefinition = REITER_DEFINITION): SubscriptionTab[] {
-	return [def.uebersicht, def.punkte[kind], ...def.schwanz].map((t) => ({ id: t.id, label: t.label }));
+	return [def.uebersicht, def.punkte[kind], ...def.schwanz].map((t) => ({ id: t.id, label: text(t.label) }));
 }
 
 /** Schrittfolge der Anlege-Seite je kind — Schwanz aus derselben Definition wie der Hub. */
 export function anlegeKette(kind: SubscriptionKind, def: ReiterDefinition = REITER_DEFINITION): AnlegeSchritt[] {
-	const kopf = def.anlegeKopf[kind].map((s) => ({ ...s }));
+	const kopf = def.anlegeKopf[kind].map((s) => {
+		const schritt: AnlegeSchritt = { ...s, label: text(s.label) };
+		if (s.lockHint !== undefined) schritt.lockHint = text(s.lockHint);
+		return schritt;
+	});
 	const schwanz = def.schwanz.map((t, i) => {
-		const schritt: AnlegeSchritt = { id: t.id, label: t.label };
+		const schritt: AnlegeSchritt = { id: t.id, label: text(t.label) };
 		const hinweis = schwanzHinweis(kind, def.schwanz, i);
 		if (hinweis !== undefined) schritt.lockHint = hinweis;
 		return schritt;
@@ -123,7 +136,9 @@ const hat = (o: object, k: string): boolean => Object.prototype.hasOwnProperty.c
 
 export function resolveTab(kind: SubscriptionKind, raw: string | null | undefined): ResolvedTab {
 	if (typeof raw !== 'string') return { ...FALLBACK };
-	if (subscriptionTabs(kind).some((t) => t.id === raw)) return { tab: raw, legacy: false, known: true };
+	// i18n F9: nur Kennungen vergleichen (kein Text) — die Aufloesung bleibt sprachunabhaengig.
+	const def = REITER_DEFINITION;
+	if ([def.uebersicht, def.punkte[kind], ...def.schwanz].some((t) => t.id === raw)) return { tab: raw, legacy: false, known: true };
 	if (hat(LEGACY, raw)) {
 		const alt = LEGACY[raw];
 		const r: ResolvedTab = { tab: alt === 'punkte' ? REITER_DEFINITION.punkte[kind].id : alt, legacy: true, known: true };

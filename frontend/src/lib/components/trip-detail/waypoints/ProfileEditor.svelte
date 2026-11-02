@@ -18,6 +18,7 @@
 	// ARIA: aria-label `Hoehenprofil mit ${N} Wegpunkten`.
 
 	import type { Stage, Waypoint } from '$lib/types';
+	import { t, tn } from '$lib/i18n';
 
 	interface Props {
 		stage: Stage;
@@ -112,7 +113,7 @@
 	height={svgH}
 	viewBox="0 0 {svgW} {svgH}"
 	role="img"
-	aria-label="Höhenprofil mit {n} Wegpunkten"
+	aria-label={$tn('trip.wegpunkt.profil_aria', n)}
 	class="border border-[var(--g-ink-faint)]/20 rounded bg-white/40 w-full"
 >
 	<!-- Issue #296-FE: transparente Klick-Flaeche zum Hinzufuegen (nur im Editor). -->
@@ -184,7 +185,7 @@
 			onkeydown={makeWaypointKeyHandler(p.wp.id)}
 			role="button"
 			tabindex="0"
-			aria-label="Wegpunkt {p.wp.name}"
+			aria-label={$t('bausteine.etappe.wegpunkt', { nr: p.wp.name })}
 			style="cursor: pointer;"
 		/>
 	{/each}

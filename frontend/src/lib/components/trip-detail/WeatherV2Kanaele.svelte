@@ -5,6 +5,7 @@
 	// Kurzform-Toggle (telegram_kurzform).
 	import { Switch } from '$lib/components/atoms';
 	import { CHANNEL_COL_BUDGET } from './metricsEditor.ts';
+	import { t, tn, type MessageKey } from '$lib/i18n';
 
 	interface ChannelConfig {
 		email: boolean;
@@ -23,11 +24,12 @@
 
 	let { channels, primaryCount, telegramKurzform, onChange, onKurzformChange, availability }: Props = $props();
 
-	const WM2_CHANNELS = [
-		{ id: 'email' as const,    label: 'Email',    glyph: '✉', max: 99,  note: 'alle Spalten · kein Limit' },
-		{ id: 'telegram' as const, label: 'Telegram', glyph: '✈', max: CHANNEL_COL_BUDGET.telegram, note: `max ${CHANNEL_COL_BUDGET.telegram} Spalten` },
-		{ id: 'sms' as const,      label: 'SMS',      glyph: '✱', max: 0,   note: 'kein Raster · 140 Zeichen' },
-	] as const;
+	// i18n F9: Kanalnamen sind Eigennamen; der Hinweis ist ein Katalog-Schluessel.
+	const WM2_CHANNELS: readonly { id: 'email' | 'telegram' | 'sms'; label: string; glyph: string; max: number; note: MessageKey }[] = [
+		{ id: 'email',    label: 'Email',    glyph: '✉', max: 99,  note: 'trip.kanaele.alle_spalten' },
+		{ id: 'telegram', label: 'Telegram', glyph: '✈', max: CHANNEL_COL_BUDGET.telegram, note: 'trip.kanaele.max_spalten' },
+		{ id: 'sms',      label: 'SMS',      glyph: '✱', max: 0,   note: 'trip.kanaele.kein_raster' },
+	];
 
 	type ChannelId = 'email' | 'telegram' | 'sms';
 
@@ -50,20 +52,20 @@
 				<span class="ch-glyph mono" class:active={on} aria-hidden="true">{ch.glyph}</span>
 				<div class="ch-info">
 					<div class="ch-label" class:on>{ch.label}</div>
-					<div class="ch-note mono">{ch.note}</div>
+					<div class="ch-note mono">{$t(ch.note, { max: CHANNEL_COL_BUDGET.telegram })}</div>
 				</div>
 				<Switch
 					checked={on}
 					size="md"
 					tone="good"
-					aria-label="{ch.label} aktivieren"
+					aria-label={$t('trip.kanaele.aktivieren', { kanal: ch.label })}
 					onchange={(v) => { if (v !== on) toggle(ch.id); }}
 				/>
 			</button>
 			{#if !(availability?.[ch.id] ?? true)}
 				<div class="ch-hint" data-testid="channel-{ch.id}-hint">
-					{ch.label} nicht konfiguriert —
-					<a href="/account">im Account einrichten</a>
+					{$t('trip.kanaele.nicht_konfiguriert', { kanal: ch.label })}
+					<a href="/account">{$t('trip.kanaele.einrichten')}</a>
 				</div>
 			{/if}
 			{#if ch.id === 'telegram' && on && (availability?.telegram ?? true) && primaryCount > CHANNEL_COL_BUDGET.telegram}
@@ -72,13 +74,13 @@
 						checked={telegramKurzform}
 						size="md"
 						tone="good"
-						aria-label="Tages-Max für übrige Metriken"
+						aria-label={$t('trip.kanaele.tages_max')}
 						onchange={onKurzformChange}
 					/>
 					<div class="kurzform-info" role="button" tabindex="0" onclick={() => onKurzformChange(!telegramKurzform)} onkeydown={(e) => e.key === ' ' && onKurzformChange(!telegramKurzform)}>
-						<div class="kurzform-title">Tages-Max für übrige Metriken</div>
+						<div class="kurzform-title">{$t('trip.kanaele.tages_max')}</div>
 						<div class="kurzform-desc">
-							{primaryCount - CHANNEL_COL_BUDGET.telegram} Metriken passen nicht in die Tabelle — als kompakte Tageszusammenfassung anhängen
+							{$tn('trip.kanaele.passen_nicht', primaryCount - CHANNEL_COL_BUDGET.telegram)}
 						</div>
 					</div>
 				</div>
@@ -86,7 +88,7 @@
 		</div>
 	{/each}
 	<div class="footnote">
-		Aktivierte Kanäle erscheinen auch im <strong>Briefing-Zeitplan</strong> und als Standard in den <strong>Alerts</strong>.
+		{$t('trip.kanaele.fuss_vor')} <strong>{$t('trip.kanaele.fuss_zeitplan')}</strong> {$t('trip.kanaele.fuss_mitte')} <strong>{$t('trip.kanaele.fuss_alerts')}</strong>.
 	</div>
 </div>
 

@@ -5,15 +5,8 @@
 	"lib/components/WeatherConfigDialog.svelte",
 	"lib/components/compare-new/",
 	"lib/components/compare/",
-	"lib/components/edit/",
-	"lib/components/email-preview/",
 	"lib/components/shared/AppFooter.svelte",
-	"lib/components/shared/BriefingHistory.svelte",
 	"lib/components/shared/hub-uebersicht/",
-	"lib/components/shared/subscription-header/",
-	"lib/components/trip-detail/",
-	"lib/components/trip-new/",
 	"routes/+layout.svelte",
-	"routes/compare/[id]/",
-	"routes/trips/[id]/"
+	"routes/compare/[id]/"
 ]

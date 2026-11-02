@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { t } from '$lib/i18n';
 	// Issue #675 — Startzeit je Etappe editieren.
 	//
 	// Duenner Wrapper um native <input type="time"> mit:
@@ -36,7 +37,7 @@
 	</label>
 {:else}
 	<div class="stage-time" data-testid="stage-start-time-field">
-		<span class="label">Startzeit</span>
+		<span class="label">{$t('trip.startzeit')}</span>
 		<label class="box">
 			<input type="time" value={displayValue} onchange={handleChange} />
 		</label>

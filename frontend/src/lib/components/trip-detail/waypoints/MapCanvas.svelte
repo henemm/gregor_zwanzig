@@ -2,6 +2,7 @@
 	import { browser } from '$app/environment';
 	import type { Stage } from '$lib/types';
 	import type * as LeafletNS from 'leaflet';
+	import { locale, tr } from '$lib/i18n';
 
 	interface Props {
 		stage: Stage;
@@ -27,6 +28,8 @@
 
 	$effect(() => {
 		if (!browser || !mapEl) return;
+		// i18n F9: die Karten-Quellenangabe folgt der Sprache (Sprachwechsel baut die Karte neu).
+		void $locale;
 
 		let aborted = false;
 
@@ -45,10 +48,7 @@
 			map = L.map(mapEl, { zoomControl: true });
 
 			L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {
-				attribution:
-					'Kartendaten: © <a href="https://openstreetmap.org/copyright">OpenStreetMap</a>-Mitwirkende, ' +
-					'SRTM | Kartendarstellung: © <a href="http://opentopomap.org">OpenTopoMap</a> ' +
-					'(<a href="https://creativecommons.org/licenses/by-sa/3.0/">CC-BY-SA</a>)',
+				attribution: tr('trip.wegpunkt.karte_attribution'),
 				maxZoom: 17
 			}).addTo(map);
 

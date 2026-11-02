@@ -10,6 +10,7 @@
 	import { goto } from '$app/navigation';
 	import { Btn, Eyebrow } from '$lib/components/atoms';
 	import { summarizeTripWeather, type DisplayConfigLike } from './weatherSummary.js';
+	import { t } from '$lib/i18n';
 
 	interface Props {
 		displayConfig: DisplayConfigLike | undefined | null;
@@ -19,7 +20,7 @@
 
 	const summary = $derived(summarizeTripWeather(displayConfig));
 	const profileLabel = $derived(
-		summary.presetName ?? (summary.aktiv > 0 ? 'Eigene Auswahl' : '—'),
+		summary.presetName ?? (summary.aktiv > 0 ? $t('trip.wetter.eigene_auswahl') : '—'),
 	);
 
 	// Factory Pattern für den Navigations-Handler (Safari-Closure-Schutz, CLAUDE.md).
@@ -34,22 +35,21 @@
 <div data-testid="weather-summary-card" class="ws-card">
 	<div class="ws-head">
 		<div class="ws-info">
-			<Eyebrow>Wetter-Profil</Eyebrow>
+			<Eyebrow>{$t('trip.wetter.profil')}</Eyebrow>
 			<div class="ws-title-row">
 				<span class="ws-profile">{profileLabel}</span>
 				<span class="mono ws-counts" data-testid="weather-summary-counts">
-					{summary.spalten} Spalten · {summary.detail} Detail · {summary.aktiv} aktiv
+					{$t('trip.wetter.zaehler', { spalten: summary.spalten, detail: summary.detail, aktiv: summary.aktiv })}
 				</span>
 			</div>
 		</div>
 		<Btn variant="ghost" onclick={onOpenWeatherTab} data-testid="weather-edit-link">
-			Im Wetter-Tab bearbeiten →
+			{$t('trip.wetter.bearbeiten')}
 		</Btn>
 	</div>
 	<div class="ws-note">
-		<strong>Read-only.</strong>
-		Die Wetter-Konfiguration lebt im Trip-Detail, Tab „Wetter-Briefing" — dort
-		der einzige Bearbeitungs-Ort. „Trip speichern" hier ändert nur die Stammdaten.
+		<strong>{$t('trip.wetter.nur_lesen')}</strong>
+		{$t('trip.wetter.hinweis')}
 	</div>
 </div>
 

@@ -150,7 +150,8 @@ describe('AC-1: Layout-Reiter englisch in Trip und Ortsvergleich, Kanalnamen und
 		hat(de, 'aria-label="SMS-Metriken, Reihenfolge"');
 		hat(en, 'aria-label="SMS metrics, order"');
 		const email = deDannEn(() => layoutTabRendern('route', 'email'));
-		hat(email.en, 'aria-label="Columns, Reihenfolge"'); // „, Reihenfolge" haengt BucketSection (F9) an
+		hat(email.en, 'aria-label="Columns, order"'); // „, Reihenfolge" haengt BucketSection an (seit F9 #2658 sprachfaehig)
+		hat(email.de, 'aria-label="Spalten, Reihenfolge"');
 		hatNicht(email.en, 'aria-label="Spalten, Reihenfolge"');
 	});
 	test('Spaltenkoepfe (col_label) und Kurzformen bleiben byte-gleich zur Eingabe', () => {

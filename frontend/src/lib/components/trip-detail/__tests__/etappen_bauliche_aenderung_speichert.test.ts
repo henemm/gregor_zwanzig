@@ -28,6 +28,8 @@ import { api } from '../../../api.ts';
 import { clearEtagRegistry } from '../../../etagRegistry.ts';
 import { createFakeTripServer, type FakeTripServer } from '../../../__tests__/fakeTripServer.ts';
 import * as P from './tripMehrreiterPruefstand.ts';
+import { locale } from '../../../i18n/index.ts';
+import { isPauseStage } from '../../shared/wizardHelpers.ts';
 
 type Wp = { id: string; name: string };
 type St = { id: string; name: string; date: string; waypoints: Wp[] };
@@ -138,6 +140,38 @@ describe('AC-1/AC-2: Etappe hinzufuegen, Pausentag, Etappe loeschen ⇒ sofort g
 		const s = serverEtappen();
 		assert.equal(s.length, 4);
 		assert.equal(s[3].name, 'Pausentag');
+	});
+});
+
+// Issue #2658 (i18n F9, Adversary F001): die Vorschlagsnamen sind gespeicherte DATEN — auch
+// unter englischer Oberflaeche bleibt die Nutzlast sprachunabhaengig („Pausentag" erkennt
+// isPauseStage() am Namen). Gemessen am Server-Stand nach dem echten Handler.
+describe('i18n F9: Vorschlagsnamen in der Nutzlast unter locale=en unveraendert', () => {
+	afterEach(() => locale.set('de'));
+	const pausen = [
+		['handlePauseInsert (Strip-Luecke)', (u: U) => rufe(u, 'handlePauseInsert', 0), 1],
+		['handleMobileAddPause (mobil)', (u: U) => rufe(u, 'handleMobileAddPause'), 3]
+	] as const;
+	for (const [name, ausloesen, pos] of pausen) {
+		test(`${name}: name === 'Pausentag', isPauseStage true`, async () => {
+			const { u } = await aufbau();
+			locale.set('en');
+			ausloesen(u);
+			await genauEinSofortigerPut(name);
+			const s = serverEtappen()[pos];
+			assert.equal(s.name, 'Pausentag');
+			assert.equal(isPauseStage(s as never), true);
+		});
+	}
+	test('handleAddStage / handleProfileAdd: „Neue Etappe" / „Neuer Punkt" unveraendert', async () => {
+		const { u } = await aufbau();
+		locale.set('en');
+		rufe(u, 'handleAddStage');
+		rufe(u, 'handleProfileAdd', 0.5);
+		await ruhe();
+		const s = serverEtappen();
+		assert.equal(s[3].name, 'Neue Etappe');
+		assert.equal(s.find((x) => x.id === 'T1')!.waypoints[1].name, 'Neuer Punkt');
 	});
 });
 

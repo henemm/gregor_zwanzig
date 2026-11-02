@@ -14,6 +14,7 @@
 	import PencilIcon from '@lucide/svelte/icons/pencil';
 	import SaveIndicator from '$lib/components/ui/SaveIndicator.svelte';
 	import type { SaveStatus } from '$lib/stores/saveStatusStore.svelte';
+	import { t } from '$lib/i18n';
 
 	type Field = 'name' | 'region' | 'profile';
 
@@ -67,7 +68,7 @@
 	// #2284 S2 (Entscheidung 14): Handy-Knopf. Text nur aus der Prop `profile` (kein
 	// optimistischer Zustand) ⇒ nach Erfolg sofort neu, nach Fehler unverändert.
 	let auswahlOffen = $state(false);
-	const knopfText = $derived(profileOptions.find((o) => o.value === profile)?.label ?? 'Aktivität wählen');
+	const knopfText = $derived(profileOptions.find((o) => o.value === profile)?.label ?? $t('aktionen.kopf.aktivitaet_waehlen'));
 	function waehle(value: string): void {
 		auswahlOffen = false;
 		save('profile', value);
@@ -91,7 +92,8 @@
 				if (field !== 'profile') open[field] = false;
 			});
 		} catch (e: unknown) {
-			errors[field] = (e as { error?: string })?.error || 'Speichern fehlgeschlagen';
+			// i18n F9: ohne Server-Text bleibt nur das Flag (''), die Meldung entsteht beim Rendern.
+			errors[field] = (e as { error?: string })?.error || '';
 		} finally {
 			saving[field] = false;
 		}
@@ -100,26 +102,26 @@
 
 {#snippet editButtons(field: 'name' | 'region', desktopLabel: string)}
 	<Btn variant="ghost" size="sm" data-testid={`${p}-${field}-save`} disabled={saving[field]} onclick={() => save(field, draft[field])}>
-		{#if saving[field]}…{:else}<span class="hidden desktop:inline">{desktopLabel}</span><span class="desktop:hidden">OK</span>{/if}
+		{#if saving[field]}…{:else}<span class="hidden desktop:inline">{desktopLabel}</span><span class="desktop:hidden">{$t('aktionen.kopf.ok')}</span>{/if}
 	</Btn>
-	<Btn variant="ghost" size="sm" aria-label="Abbrechen" onclick={() => cancel(field)}><span class="hidden desktop:inline">Abbrechen</span><span class="desktop:hidden">×</span></Btn>
+	<Btn variant="ghost" size="sm" aria-label={$t('aktionen.abbrechen')} onclick={() => cancel(field)}><span class="hidden desktop:inline">{$t('aktionen.abbrechen')}</span><span class="desktop:hidden">×</span></Btn>
 {/snippet}
 
 <!-- Mobil (flex-col) stehen Name- und Region-Fehler wie bisher unter der Unterzeile:
      `order` wirkt nur dort, Desktop ist ein Block in DOM-Reihenfolge. -->
 {#snippet fieldError(field: Field, order: string)}
-	{#if errors[field]}<div data-testid={`${p}-${field === 'profile' ? 'profil' : field}-save-error`} role="alert" class="text-sm desktop:mt-1.5 desktop:mb-2 {order}" style="color: var(--g-bad)">{errors[field]}</div>{/if}
+	{#if errors[field] !== null}<div data-testid={`${p}-${field === 'profile' ? 'profil' : field}-save-error`} role="alert" class="text-sm desktop:mt-1.5 desktop:mb-2 {order}" style="color: var(--g-bad)">{errors[field] || $t('aktionen.speichern_fehlgeschlagen')}</div>{/if}
 {/snippet}
 
 <div data-kind={kind} class="min-w-0 flex-1 flex flex-col gap-2 desktop:block">
 	{#if eyebrow}{@render eyebrow()}{/if}
 	<div class="flex items-center gap-2 desktop:gap-3 min-h-[44px] desktop:min-h-0">
 		{#if open.name}
-			<input type="text" data-testid={`${p}-name-edit`} bind:value={draft.name} aria-label="Name bearbeiten" class="min-w-0 flex-1 desktop:flex-none font-semibold px-2 py-1 rounded-md desktop:text-2xl" style="border: 1px solid var(--g-rule); background: var(--g-card)" />
-			{@render editButtons('name', 'Umbenennen')}
+			<input type="text" data-testid={`${p}-name-edit`} bind:value={draft.name} aria-label={$t('aktionen.kopf.name_bearbeiten')} class="min-w-0 flex-1 desktop:flex-none font-semibold px-2 py-1 rounded-md desktop:text-2xl" style="border: 1px solid var(--g-rule); background: var(--g-card)" />
+			{@render editButtons('name', $t('aktionen.umbenennen'))}
 		{:else}
 			<h1 data-testid={titleTestid} class="{titleSize === 38 ? 'desktop:text-[38px]' : 'desktop:text-[30px]'} m-0 min-w-0 truncate desktop:whitespace-normal font-semibold text-[length:var(--g-text-xl)] desktop:leading-[1.1] desktop:tracking-[-0.025em]">{#if namePrefix}{@render namePrefix()}{/if}{name}</h1>
-			<button type="button" data-testid={`${p}-name-edit-toggle`} aria-label="Name bearbeiten" onclick={() => start('name')} class="flex-shrink-0 inline-flex items-center justify-center min-h-[44px] min-w-[44px] desktop:min-h-0 desktop:min-w-0 desktop:p-1 cursor-pointer" style="color: var(--g-ink-3)"><PencilIcon size={15} /></button>
+			<button type="button" data-testid={`${p}-name-edit-toggle`} aria-label={$t('aktionen.kopf.name_bearbeiten')} onclick={() => start('name')} class="flex-shrink-0 inline-flex items-center justify-center min-h-[44px] min-w-[44px] desktop:min-h-0 desktop:min-w-0 desktop:p-1 cursor-pointer" style="color: var(--g-ink-3)"><PencilIcon size={15} /></button>
 		{/if}
 		{#if badges}{@render badges()}{/if}
 		{#if actions}{@render actions()}{/if}
@@ -127,12 +129,12 @@
 	{@render fieldError('name', 'order-1')}
 	<div class="text-sm flex items-center gap-2 flex-wrap desktop:mt-2 desktop:mb-2.5" style="color: var(--g-ink-3)">
 		{#if open.region}
-			<input type="text" data-testid={`${p}-region-edit`} bind:value={draft.region} aria-label="Region bearbeiten" maxlength={regionMaxLength} class="min-w-0 flex-1 desktop:flex-none px-2 py-1 rounded-md text-sm" style="border: 1px solid var(--g-rule); background: var(--g-card)" />
-			{@render editButtons('region', 'Speichern')}
+			<input type="text" data-testid={`${p}-region-edit`} bind:value={draft.region} aria-label={$t('aktionen.kopf.region_bearbeiten')} maxlength={regionMaxLength} class="min-w-0 flex-1 desktop:flex-none px-2 py-1 rounded-md text-sm" style="border: 1px solid var(--g-rule); background: var(--g-card)" />
+			{@render editButtons('region', $t('aktionen.speichern'))}
 		{:else}
 			<span>{region || '—'}</span>
 			<!-- Mobil 44×44-Tippfläche ohne Layout-Höhe (negativer Rand), Desktop unverändert (#2284 S2 AC-13). -->
-			<button type="button" data-testid={`${p}-region-edit-toggle`} aria-label="Region bearbeiten" onclick={() => start('region')} class="inline-flex items-center justify-center min-h-[44px] min-w-[44px] -my-3 -mx-2 desktop:min-h-0 desktop:min-w-0 desktop:m-0 p-0.5 cursor-pointer" style="color: var(--g-ink-3)"><PencilIcon size={13} /></button>
+			<button type="button" data-testid={`${p}-region-edit-toggle`} aria-label={$t('aktionen.kopf.region_bearbeiten')} onclick={() => start('region')} class="inline-flex items-center justify-center min-h-[44px] min-w-[44px] -my-3 -mx-2 desktop:min-h-0 desktop:min-w-0 desktop:m-0 p-0.5 cursor-pointer" style="color: var(--g-ink-3)"><PencilIcon size={13} /></button>
 			<!-- {' · '} statt " · ": Svelte trimmt sonst das Leerzeichen vor {/if} weg. -->
 			{#if profileLabel}<span>{' · '}{profileLabel}</span>{/if}
 			{#if meta}{@render meta()}{/if}

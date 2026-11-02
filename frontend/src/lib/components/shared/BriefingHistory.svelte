@@ -10,6 +10,8 @@
 		type BriefingHistoryKind
 	} from './briefingHistory.ts';
 	import type { BriefingHistoryLader } from './briefingHistoryLader.svelte.ts';
+	import { t, locale, type Lang, type MessageKey } from '$lib/i18n';
+	import { fmtDate, fmtTime } from '$lib/i18n/format';
 
 	interface Props {
 		id: string;
@@ -24,18 +26,19 @@
 
 	let eigeneGeladen = $state<BriefingHistoryEntry[]>([]);
 	let eigenLoading = $state(false);
-	let eigenError = $state<string | null>(null);
-	const FEHLERTEXT = 'Versand-Historie konnte nicht geladen werden.';
+	// i18n F9: Fehler als Flag, der Text entsteht beim Rendern (Sprachwechsel ohne Neuladen).
+	let eigenError = $state(false);
 	const geladen = $derived(lader ? lader.eintraege : eigeneGeladen);
 	const loading = $derived(lader ? lader.zustand === 'laedt' : eigenLoading);
-	const error = $derived(lader ? (lader.zustand === 'fehler' ? FEHLERTEXT : null) : eigenError);
+	const error = $derived(lader ? lader.zustand === 'fehler' : eigenError);
 
-	const SLOT_LABELS: Record<string, string> = { morning: 'Morgen', evening: 'Abend' };
+	const SLOT_LABELS: Record<string, MessageKey> = { morning: 'aktionen.historie.morgen', evening: 'aktionen.historie.abend' };
 
-	function formatDate(isoStr: string): string {
+	function formatDate(isoStr: string, lang: Lang): string {
 		const d = new Date(isoStr);
 		if (isNaN(d.getTime())) return isoStr;
 		const p = (n: number) => String(n).padStart(2, '0');
+		if (lang === 'en') return `${fmtDate(d, 'en', 'kurz')} ${d.getFullYear()} ${fmtTime(d)}`;
 		return `${p(d.getDate())}.${p(d.getMonth() + 1)}.${d.getFullYear()} ${p(d.getHours())}:${p(d.getMinutes())}`;
 	}
 
@@ -43,7 +46,7 @@
 		if (entries !== undefined || lader || !id) return;
 		const angefragt = id;
 		eigenLoading = true;
-		eigenError = null;
+		eigenError = false;
 		api
 			.get<BriefingHistoryEntry[]>(briefingHistoryUrl(id, kind))
 			.then((data) => {
@@ -53,7 +56,7 @@
 			})
 			.catch(() => {
 				if (angefragt !== id) return;
-				eigenError = FEHLERTEXT;
+				eigenError = true;
 				eigenLoading = false;
 			});
 	});
@@ -64,13 +67,13 @@
 
 <div data-testid="briefing-history" data-kind={kind}>
 	<Card padding={18}>
-		<Eyebrow style="margin-bottom: 10px;">Versand-Historie</Eyebrow>
+		<Eyebrow style="margin-bottom: 10px;">{$t('aktionen.historie.titel')}</Eyebrow>
 		{#if entries === undefined && loading}
-			<p class="bh-text">Lade Versand-Historie…</p>
+			<p class="bh-text">{$t('aktionen.historie.laedt')}</p>
 		{:else if entries === undefined && error}
-			<p class="bh-text">{error}</p>
+			<p class="bh-text">{$t('aktionen.historie.fehler')}</p>
 		{:else if liste.length === 0}
-			<p data-testid="briefing-history-empty" class="bh-text">Noch keine Briefings zugestellt.</p>
+			<p data-testid="briefing-history-empty" class="bh-text">{$t('aktionen.historie.leer')}</p>
 		{:else}
 			<ul class="bh-list">
 				{#each liste as entry, i (entry.sent_at + entry.kind + i)}
@@ -80,11 +83,11 @@
 						class="bh-row"
 					>
 						<span class="bh-slot">
-							{SLOT_LABELS[entry.kind] ?? entry.kind}{#if entry.on_demand === true}<span class="bh-hand">
-									· von Hand</span
+							{SLOT_LABELS[entry.kind] ? $t(SLOT_LABELS[entry.kind]) : entry.kind}{#if entry.on_demand === true}<span class="bh-hand">
+									{$t('aktionen.historie.von_hand')}</span
 								>{/if}
 						</span>
-						<time datetime={entry.sent_at} class="bh-meta">{formatDate(entry.sent_at)}</time>
+						<time datetime={entry.sent_at} class="bh-meta">{formatDate(entry.sent_at, $locale)}</time>
 						<span class="bh-meta bh-channels">{(entry.channels ?? []).join(', ')}</span>
 					</li>
 				{/each}

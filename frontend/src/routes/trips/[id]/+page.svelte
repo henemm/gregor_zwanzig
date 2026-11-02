@@ -31,6 +31,7 @@
 	import { AKTIVE_SPEICHERUNG, type SpeicherAnmeldestelle } from '$lib/stores/aktiveSpeicherung';
 	import { starteNachladenNachEntladen, tripNachladeQuelle } from '$lib/stores/nachEntladenNachladen';
 	import { wendeNutzlastAn } from '$lib/stores/nutzlastStand';
+	import { t, locale, type MessageKey } from '$lib/i18n';
 
 	let { data } = $props();
 
@@ -138,6 +139,8 @@
 	let deleteDialogOpen = $state(false);
 	let isLoading = $state(false);
 	let errorMsg = $state<string | null>(null);
+	// i18n F9: eigene Fehlermeldungen als Schluessel (beim Rendern aufgeloest), Server-Detail als Text.
+	let errorKey = $state<MessageKey | null>(null);
 	let sendDialogOpen = $state(false);
 	let sendLoading = $state(false);
 	let sendStatus = $state<'idle' | 'ok' | 'error'>('idle');
@@ -147,6 +150,8 @@
 	let sheetOpen = $state(false);
 	let mobil = $state(false);
 	const lifecycle = $derived(subscriptionLifecycle('trip', trip, now));
+	// i18n F9: Aktionsnamen entstehen per tr() — `$locale` haelt das Menue reaktiv.
+	const hubAktionen = $derived.by(() => (void $locale, subscriptionActions('trip', lifecycle, 'hub')));
 
 	/**
 	 * Issue #1433: nach PATCH /state (liefert keinen Stempel, S2 AC-15) wird der Trip
@@ -173,6 +178,7 @@
 
 	async function sendStateUpdate(paused: boolean | undefined, archived: boolean | undefined): Promise<void> {
 		errorMsg = null; // Issue #1059: alten Fehler beim Start eines neuen Versuchs zurücksetzen
+		errorKey = null;
 		isLoading = true;
 		try {
 			// Issue #1433: offene Speichervorgaenge zuerst abschliessen — danach PATCH,
@@ -190,23 +196,27 @@
 			errorMsg = null;
 			trip = await uebernehmeNachStatusAenderung(updated);
 		} catch (e) {
-			errorMsg = aktionsFehler(e);
+			setzeAktionsFehler(e);
 		} finally {
 			isLoading = false;
 		}
 	}
 
 	// Issue #1059/#1065: nutzerverstaendliche Meldung — 5xx generisch, 4xx mit Server-Detail, sonst Netzfehler.
-	function aktionsFehler(e: unknown): string {
+	// i18n F9: eigene Meldungen als Schluessel (errorKey), das Server-Detail bleibt Text (errorMsg).
+	function setzeAktionsFehler(e: unknown): void {
+		errorMsg = null;
+		errorKey = null;
 		if (e instanceof SubscriptionExecError) {
 			if (e.status >= 500) {
-				console.error(`Aktion fehlgeschlagen: HTTP ${e.status}`, e.detail);
-				return 'Aktion fehlgeschlagen — Serverfehler, bitte später erneut versuchen.';
-			}
-			return e.detail ?? 'Aktion fehlgeschlagen, bitte später erneut versuchen.';
+				console.error(`Aktion fehlgeschlagen: HTTP ${e.status}`, e.detail); // i18n-log
+				errorKey = 'aktionen.fehler.server';
+			} else if (e.detail != null) errorMsg = e.detail;
+			else errorKey = 'aktionen.fehler.allgemein';
+			return;
 		}
 		console.error(e);
-		return 'Aktion fehlgeschlagen — bitte Verbindung prüfen.';
+		errorKey = 'aktionen.fehler.verbindung';
 	}
 
 	function handleArchiveClick(): void {
@@ -237,12 +247,13 @@
 
 	async function handleDeleteConfirm(): Promise<void> {
 		errorMsg = null; // Issue #1059: alten Fehler beim Start eines neuen Versuchs zurücksetzen
+		errorKey = null;
 		isLoading = true;
 		try {
 			await deleteSubscription('trip', trip.id);
 			void goto('/trips');
 		} catch (e) {
-			errorMsg = aktionsFehler(e);
+			setzeAktionsFehler(e);
 		} finally {
 			isLoading = false;
 			deleteDialogOpen = false;
@@ -293,16 +304,16 @@
 	}
 </script>
 
-<svelte:head><title>{trip.name} — Gregor Zwanzig</title></svelte:head>
+<svelte:head><title>{`${trip.name} — Gregor Zwanzig`}</title></svelte:head>
 
 <main style="position: relative; overflow: hidden;">
 	<TopoBg opacity={0.14} />
 	<div class="breadcrumb-bar" data-testid="trip-detail-breadcrumb-bar">
 		<!-- #2347 S4 (KA-11): mobiler Zurück-Pfeil zur Liste wie im Vergleich-Hub
 		     (BackLink ariaLabel „Zurück zur Übersicht"); nur ≤899px, ohne Zeilenhöhe. -->
-		<div class="back-mobil"><BackLink href="/trips" label="" ariaLabel="Zurück zur Übersicht" /></div>
+		<div class="back-mobil"><BackLink href="/trips" label="" ariaLabel={$t('aktionen.zurueck_uebersicht')} /></div>
 		<div class="mono breadcrumb-path" style="font-size: 11px; color: var(--g-ink-3); letter-spacing: 0.06em;">
-			<a href="/trips" class="g-link-tap" style="opacity: 0.6; color: inherit; text-decoration: none;">Trips</a>
+			<a href="/trips" class="g-link-tap" style="opacity: 0.6; color: inherit; text-decoration: none;">{$t('listen.trips.titel')}</a>
 			<span style="margin: 0 8px;">/</span>
 			<span style="color: var(--g-ink);">{trip.shortcode ?? trip.name}</span>
 		</div>
@@ -315,14 +326,14 @@
 				onclick={() => { sendDialogOpen = true; }}
 				disabled={sendLoading || lifecycle === 'archived' || lifecycle === 'draft'}
 			>
-				{sendLoading ? 'Wird gesendet…' : 'Senden'}
+				{sendLoading ? $t('aktionen.wird_gesendet') : $t('aktionen.senden')}
 			</Btn>
 			{#if mobil}
 				<button
 					type="button"
 					data-testid="subscription-kebab"
-					aria-label="Weitere Aktionen"
-					title="Weitere Aktionen"
+					aria-label={$t('aktionen.weitere')}
+					title={$t('aktionen.weitere')}
 					onclick={() => { sheetOpen = true; }}
 					style="display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px; background: transparent; border: none; cursor: pointer; color: var(--g-ink-2);"
 				>
@@ -331,17 +342,17 @@
 			{:else}
 				<SubscriptionKebab
 					data-testid="subscription-kebab"
-					actions={subscriptionActions('trip', lifecycle, 'hub')}
+					actions={hubAktionen}
 					onSelect={handleHubAction}
 				/>
 			{/if}
 			{#if sendStatus === 'ok'}
-				<span data-testid="test-briefing-success" style="font-size: 12px; color: var(--g-success, #2e7d32);">Briefing gesendet!</span>
+				<span data-testid="test-briefing-success" style="font-size: 12px; color: var(--g-success, #2e7d32);">{$t('trip.hub.briefing_gesendet')}</span>
 			{:else if sendStatus === 'error'}
-				<span data-testid="test-briefing-error" style="font-size: 12px; color: var(--g-error, #c62828);">{sendMessage ?? 'Fehler beim Senden'}</span>
+				<span data-testid="test-briefing-error" style="font-size: 12px; color: var(--g-error, #c62828);">{sendMessage ?? $t('aktionen.fehler.senden')}</span>
 			{/if}
-			{#if errorMsg}
-				<span data-testid="trip-detail-action-error" style="font-size: 12px; color: var(--g-error, #c62828);">{errorMsg}</span>
+			{#if errorKey || errorMsg}
+				<span data-testid="trip-detail-action-error" style="font-size: 12px; color: var(--g-error, #c62828);">{errorKey ? $t(errorKey) : errorMsg}</span>
 			{/if}
 		</div>
 	</div>
@@ -360,11 +371,11 @@
 
 <ConfirmDialog
 	open={archiveDialogOpen}
-	title={status === 'archived' ? 'Trip reaktivieren?' : 'Trip archivieren?'}
+	title={status === 'archived' ? $t('trip.hub.reaktivieren_titel') : $t('trip.hub.archivieren_titel')}
 	description={status === 'archived'
-		? 'Der Trip wird aus dem Archiv zurückgeholt und ist wieder aktiv.'
-		: 'Archivierte Trips erhalten keine Briefings mehr.'}
-	confirmLabel={status === 'archived' ? 'Reaktivieren' : 'Archivieren'}
+		? $t('trip.hub.reaktivieren_text')
+		: $t('trip.hub.archivieren_text')}
+	confirmLabel={status === 'archived' ? $t('aktionen.unarchive') : $t('aktionen.archive')}
 	confirmVariant="primary"
 	data-testid="trip-detail-archive-confirm-dialog"
 	cancelTestid="trip-detail-archive-confirm-cancel"
@@ -377,9 +388,9 @@
 
 <ConfirmDialog
 	open={deleteDialogOpen}
-	title="Trip endgültig löschen?"
-	description={`„${trip.name}“ wird dauerhaft gelöscht. Dieser Schritt kann nicht rückgängig gemacht werden.`}
-	confirmLabel="Löschen"
+	title={$t('trip.hub.loeschen_titel')}
+	description={$t('trip.hub.loeschen_text', { name: trip.name })}
+	confirmLabel={$t('aktionen.delete')}
 	confirmVariant="destructive"
 	data-testid="trip-detail-delete-confirm-dialog"
 	cancelTestid="trip-detail-delete-confirm-cancel"

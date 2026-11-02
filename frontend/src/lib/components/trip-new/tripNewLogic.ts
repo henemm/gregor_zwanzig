@@ -16,6 +16,8 @@ import {
 import { tailUnlocked, tailDone, canFinish, progressCount as kernProgressCount, type TailIds } from '../shared/anlegeLockEngine.ts';
 import { buildAlarmeDeliveryPayload } from '../shared/alarme-tab/alarmeDeliveryPayload.ts';
 import { anlegeKette } from '../shared/subscriptionTabs.ts';
+import { fmtDate } from '../../i18n/format.ts';
+import type { Lang } from '../../i18n/index.ts';
 import { baueReportConfigPayload, ladeReportZustand } from '../shared/versand-tab/reportConfigPayload.ts';
 import { ladeMailZustand } from '../shared/mailInhaltZustand.ts';
 
@@ -75,13 +77,15 @@ export function doneTabs(
 
 // ── Etappen-Datum (TN_stageDate) ─────────────────────────────────────────────
 
-export function stageDate(startDate: string, offset: number): string | null {
+/** Anzeige-Datum einer Etappe: de unveraendert `DD.MM.`, en (i18n F9) `1 Jul`. */
+export function stageDate(startDate: string, offset: number, lang: Lang = 'de'): string | null {
 	if (!startDate) return null;
 	try {
 		// UTC, damit das Anzeige-Datum exakt zum ISO-Datum im POST-Payload passt
 		// (addDaysISO nutzt ebenfalls UTC) — kein ±1-Tag-Drift in Extrem-Zeitzonen (Adversary F002).
 		const d = new Date(startDate + 'T00:00:00Z');
 		d.setUTCDate(d.getUTCDate() + offset);
+		if (lang === 'en') return fmtDate(new Date(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()), 'en', 'kurz').replace(/^\S+ /, '');
 		return `${String(d.getUTCDate()).padStart(2, '0')}.${String(d.getUTCMonth() + 1).padStart(2, '0')}.`;
 	} catch (e) { return null; }
 }

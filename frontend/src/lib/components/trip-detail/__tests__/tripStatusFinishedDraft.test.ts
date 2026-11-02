@@ -17,6 +17,7 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { quelleMitKatalogUndTabellen } from '../../../i18n/__tests__/quelleMitKatalog.ts'; // i18n F9 (#2658): deutscher Katalogwert statt Schluessel
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
@@ -25,7 +26,7 @@ const here = dirname(fileURLToPath(import.meta.url));
 const BADGE = join(here, '../TripStatusBadge.svelte');
 const HEADER = join(here, '../TripHeader.svelte');
 
-const badgeSource = readFileSync(BADGE, 'utf8');
+const badgeSource = quelleMitKatalogUndTabellen(readFileSync(BADGE, 'utf8'));
 const headerSource = readFileSync(HEADER, 'utf8');
 
 // ---------------------------------------------------------------------------

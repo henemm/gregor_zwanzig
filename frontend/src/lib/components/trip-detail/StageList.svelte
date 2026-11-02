@@ -5,6 +5,7 @@
 	import type { Trip, StagesWeatherResponse, StageWeatherResult } from '$lib/types';
 	import StageDetailRow from './StageDetailRow.svelte';
 	import { computeStageBoundaries, getActiveStageId } from '$lib/utils/fullProfile';
+	import { t } from '$lib/i18n';
 
 	interface Props {
 		trip: Trip;
@@ -46,7 +47,7 @@
 
 <div data-testid="trip-stage-list" class="trip-stage-list">
 	{#if !trip.stages || trip.stages.length === 0}
-		<p data-testid="trip-stage-empty" class="empty">Keine Etappen geplant</p>
+		<p data-testid="trip-stage-empty" class="empty">{$t('trip.hub.keine_etappen')}</p>
 	{:else}
 		{#each trip.stages as stage, index (stage.id || `idx-${index}`)}
 			{@const boundary = boundaries.find((b) => b.stageId === stage.id)}

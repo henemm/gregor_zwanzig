@@ -4,6 +4,7 @@
 	// Telegram 7; Uhrzeit nicht mitgezählt — deckt sich mit #360).
 	// Design: docs/design/epic_331_output_layout/screen-metrics-editor.jsx
 	import { CHANNEL_COL_BUDGET, channelOverflow } from './metricsEditor.ts';
+	import { t } from '$lib/i18n';
 
 	interface Props {
 		count: number;
@@ -20,13 +21,13 @@
 <div class="markers" data-testid="channel-limit-markers">
 	<!-- Issue #365 Fresh-Eyes-Politur: Label ordnet die Badges klar der
 		"Spalten"-Überschrift zu. -->
-	<span class="markers-label mono">Limit</span>
+	<span class="markers-label mono">{$t('trip.layout.limit')}</span>
 	{#each channels as c}
 		<span
 			class="marker"
 			class:exceeded={overflow[c.id as 'telegram']}
 			data-testid="channel-marker-{c.id}"
-			title="{c.label}: max {c.budget} Spalten"
+			title={$t('trip.layout.kanal_max_spalten', { kanal: c.label, max: c.budget })}
 		>
 			{c.label} {count}/{c.budget}
 		</span>

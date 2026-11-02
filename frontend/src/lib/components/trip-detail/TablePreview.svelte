@@ -8,6 +8,8 @@
 	import { Eyebrow } from '$lib/components/atoms';
 	import type { Horizons, MetricEntry } from '$lib/types';
 	import { HORIZONS_ALL } from '$lib/types';
+	import { t, tn, locale, type MessageKey } from '$lib/i18n';
+	import { metricLabel } from '$lib/i18n/metricLabel';
 
 	type MetricCatalog = Record<string, MetricEntry[]>;
 	type Day = 'today' | 'tomorrow' | 'day_after';
@@ -24,10 +26,10 @@
 	let { catalog, enabledMap, friendlyMap, horizonsMap, categoryOrder, indicatorCapable }: Props = $props();
 
 	const DAYS: readonly Day[] = ['today', 'tomorrow', 'day_after'] as const;
-	const DAY_LABEL: Record<Day, string> = {
-		today: 'HEUTE',
-		tomorrow: 'MORGEN',
-		day_after: 'ÜBERMORGEN',
+	const DAY_LABEL: Record<Day, MessageKey> = {
+		today: 'trip.vorschau.heute',
+		tomorrow: 'trip.vorschau.morgen',
+		day_after: 'trip.vorschau.uebermorgen',
 	};
 
 	// Beispieldatenzeilen (statisch, repräsentativ für einen Tagesverlauf).
@@ -75,8 +77,8 @@
 
 <section data-testid="weather-metrics-table-preview" class="table-preview">
 	<header class="table-preview-header">
-		<h4>Tabellen-Vorschau</h4>
-		<span class="hint">Beispiel-Daten · zeigt nur aktivierte Spalten pro Tag</span>
+		<h4>{$t('trip.vorschau.titel')}</h4>
+		<span class="hint">{$t('trip.vorschau.hinweis')}</span>
 	</header>
 	<div class="grid-three">
 		{#each DAYS as day}
@@ -84,28 +86,28 @@
 			<div class="day-table" data-testid="table-preview-day-{day}">
 				{#if cols.length === 0}
 					<div class="caption-empty">
-						<Eyebrow>{DAY_LABEL[day]} — 0 METRIKEN</Eyebrow>
+						<Eyebrow>{$tn('trip.vorschau.metriken', 0, { tag: $t(DAY_LABEL[day]) })}</Eyebrow>
 					</div>
 					<div class="empty-day">
-						<p>Keine Metriken für diesen Horizont aktiviert.</p>
+						<p>{$t('trip.vorschau.keine')}</p>
 					</div>
 				{:else}
 					<div class="table-wrap">
 						<table data-day={day}>
 							<caption>
-								<Eyebrow>{DAY_LABEL[day]} — {cols.length} METRIKEN</Eyebrow>
+								<Eyebrow>{$tn('trip.vorschau.metriken', cols.length, { tag: $t(DAY_LABEL[day]) })}</Eyebrow>
 							</caption>
 							<thead>
 								<tr>
-									<th class="th-time">Zeit</th>
+									<th class="th-time">{$t('trip.vorschau.zeit')}</th>
 									{#each cols as col}
 										<th data-testid="table-preview-th-{day}-{col.id}">
-											<div class="col-name">{col.label}</div>
+											<div class="col-name">{metricLabel(col, $locale)}</div>
 											{#if col.unit}
 												<div class="col-unit">{col.unit}</div>
 											{/if}
 											{#if indicatorCapable(col.id) && friendlyMap[col.id]}
-												<span class="th-suffix">·einfach</span>
+												<span class="th-suffix">{$t('trip.vorschau.einfach')}</span>
 											{/if}
 										</th>
 									{/each}
