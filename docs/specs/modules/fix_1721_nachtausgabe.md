@@ -33,7 +33,7 @@ Die Trip-Mail enthaelt eine Nacht-Stundentabelle ("Nacht am Ziel"), die der Nutz
 | Punkt aus #1721 | Stand | Beleg |
 |---|---|---|
 | 1 Schalter `show_night_block` | Echte Luecke. Backend wertet aus, Frontend hat kein Bedienelement. | `trip_report.py:168` (`if night_weather and dc.show_night_block`); `loader.py:1088` (Laden, Default `True`), `:1832` (Speichern). Im Frontend kommt das Feld nur in Tests vor, in keiner `.svelte`-Datei. |
-| 2 Ausblick-Spalte `N` | Behoben durch #2136, kein Code. | `outlook.py:225-245`: Spaltenkoepfe `Temp min`/`Temp max` aus `col_label` plus `aggregation_label_de`; Werte `temp_lo`/`temp_hi` (Tages-Minimum/-Maximum, `outlook.py:263-266`). Die Legende "Nacht-Tief" gibt es nicht mehr. Beschriftung und Inhalt stimmen ueberein. Es fehlt nur der Nachweis an der zugestellten Mail. |
+| 2 Ausblick-Spalte `N` | Behoben durch #2136, kein Code. | `outlook.py:225-245`: Der Legacy-Pfad (`metrics=[]`) hat `Temp min`/`Temp max`; die zugestellte Trip-Mail nutzt den metrikgesteuerten Pfad und zeigt EINE Spalte `Temp` mit Wert `min/max` (z.B. `3/9`, Tages-Minimum/-Maximum, gemessen an zugestellter Staging-Mail 2026-11-02). Spalte `N` und Legende "Nacht-Tief" gibt es nicht mehr. |
 | 3 `FN` erklaert | Behoben durch #1888, kein Code. | `WeatherMetricsTab.svelte:1935-1939` bindet `wind_chill_night` ein; `kuerzelLegende.ts` leitet die Legende aus dem Katalog ab; `metricKuerzelLegende.test.ts` prueft, dass `FN` mit dem Registerlabel erklaert wird. `kuerzel-legende-lesbar.staging.spec.ts` fuehrt `wind_chill_night` in `TRIP_METRIKEN`, prueft aber nur allgemein "jeder Marken-Block erklaert seine Kuerzel", nicht ausdruecklich den Text zu `FN`. Dafuer kommt ein gezielter Klickpfad dazu (AC-8). |
 
 **Trip/Ortsvergleich:** Die Nacht-Stundentabelle gibt es nur im Trip. `_extract_night_rows` wird ausschliesslich in `trip_report.py` gerufen; der Ortsvergleich-Renderer kennt keinen Nachtblock (`loader.py:1615` schreibt das Feld bei Orten nur mit, ohne Wirkung). Es gibt also kein Compare-Pendant, der Schalter darf deshalb im geteilten Reiter nur bei `context="route"` erscheinen. Das ist die dokumentierte Begruendung fuer die einseitige Anlage (Pendant-Sperre).
@@ -95,13 +95,13 @@ Die Trip-Mail enthaelt eine Nacht-Stundentabelle ("Nacht am Ziel"), die der Nutz
 - **AC-4:** Given ein Trip mit Schalter "aus" / When die Trip-Mail (Voll-Format) zugestellt wird und im Test-Postfach liegt / Then enthaelt sie keine Nacht-Stundentabelle ("Nacht am Ziel"), und bei Schalter "an" desselben Trips enthaelt die zugestellte Mail diese Tabelle; `briefing_mail_validator.py` endet in beiden Faellen mit Exit 0.
 - Test: zugestellte Staging-Mail + briefing_mail_validator.py (Exit 0, beide Zustaende)
 
-- **AC-5:** Given ein Trip mit Schalter "aus", gewaehlter Metrik "Nacht-Tiefsttemperatur" und aktivem Gewitter / When die Trip-Mail zugestellt wird / Then zeigt sie weiterhin den Nacht-Tiefstwert (Kuerzel `N`) und den Gewitter-Nachtsatz, nur die Stundentabelle fehlt.
-- Test: zugestellte Staging-Mail, gezielte Pruefung auf N und Gewitter-Nachtsatz
+- **AC-5:** Given ein Trip mit Schalter "aus", gewaehlter Metrik "Nacht-Tiefsttemperatur" und aktivem Gewitter / When die Trip-Mail zugestellt wird / Then zeigt sie weiterhin den Nacht-Tiefstwert (in der Abend-Tageslage) und den Gewitter-Nachtsatz (bei Nachtgewitter in den Daten, sonst die unveraenderte Aussage "kein Gewitter"), beides identisch zur Mail mit Schalter "an"; nur die Stundentabelle fehlt.
+- Test: zugestellte Staging-Mails mit Schalter "aus" und "an" desselben Trips, Vergleich von Nacht-Tiefstwert und Gewitter-Aussage
 
 - **AC-6:** Given zwei verschiedene Nutzer mit je einem Trip / When Nutzer A den Schalter ausschaltet und speichert / Then bleibt der Trip von Nutzer B auf "an", und ein Teil-Speichern ohne `show_night_block` (z.B. aus einem anderen Reiter) laesst den gespeicherten Wert von Nutzer A unveraendert (Go-API, Read-Modify-Write mit Merge).
 - Test: frontend/e2e/trip-night-block-schalter.staging.spec.ts (zwei Nutzer) + Go-Test config_merge_structure_test.go
 
-- **AC-7:** Given der Trip-Mail-Ausblick mit der Standardspalten-Auswahl / When die Mail zugestellt wird / Then tragen die Temperatur-Spalten die Koepfe "Temp min" und "Temp max", ihre Werte entsprechen dem Tages-Minimum und -Maximum der jeweiligen Etappe, und weder die Spalte "N" noch die Legende "Nacht-Tief" kommen im Ausblick vor.
+- **AC-7:** Given der Trip-Mail-Ausblick mit der Standardspalten-Auswahl / When die Mail zugestellt wird / Then traegt der Ausblick eine Temperatur-Spalte mit dem Kopf "Temp" und Werten der Form "min/max" (z.B. "3/9"), die dem Tages-Minimum und -Maximum der jeweiligen Etappe entsprechen, und weder die Spalte "N" noch die Legende "Nacht-Tief" kommen im Ausblick vor.
 - Test: zugestellte Staging-Mail, Pruefung der Ausblick-Koepfe und Werte
 
 - **AC-8:** Given ein Trip mit gewaehlter Metrik "Gefuehlte Nacht-Tiefsttemperatur" (`wind_chill_night`) / When der Nutzer im Browser den Wetter-Metriken-Reiter oeffnet / Then zeigt die Kuerzel-Legende einen Eintrag `FN` mit der Erklaerung "Gefuehlte Nacht-Tiefsttemperatur" (Text aus dem Katalog).
@@ -116,7 +116,7 @@ Es gibt keine Mock-Theater-Tests; jede Zusicherung wird dort geprueft, wo sie wi
    - AC-2/AC-3: Alt-Trip ohne Feld steht auf "an"; ausschalten, speichern, neu laden: bleibt "aus"; Stand per API gegengelesen (`display_config.show_night_block === false`).
    - AC-6: zweiter Testnutzer (eigene Session), eigener Trip bleibt "an"; Teil-Speichern ohne das Feld erhaelt den Wert.
    - AC-8: Metrik `wind_chill_night` waehlen, Legende zeigt `FN` samt Erklaerungstext.
-2. **Mail-Nachweis gegen Stalwart-Staging:** Trip-Briefing mit Schalter "aus" und "an" ueber den echten Versandweg ausloesen, zugestellte Mail im Test-Postfach pruefen mit `uv run python3 .claude/hooks/briefing_mail_validator.py` (Exit 0) und gezielter Pruefung auf "Nacht am Ziel" (AC-4), `N`/Gewitter-Nachtsatz (AC-5) sowie auf die Ausblick-Koepfe "Temp min"/"Temp max" mit Tages-Min/Max-Werten (AC-7).
+2. **Mail-Nachweis gegen Stalwart-Staging:** Trip-Briefing mit Schalter "aus" und "an" ueber den echten Versandweg ausloesen, zugestellte Mail im Test-Postfach pruefen mit `uv run python3 .claude/hooks/briefing_mail_validator.py` (Exit 0) und gezielter Pruefung auf "Nacht am Ziel" (AC-4), Nacht-Tiefstwert und Gewitter-Nachtsatz (AC-5) sowie auf den Ausblick-Kopf "Temp" mit Werten "min/max" (AC-7).
 3. **Verhaltenstests (keine Dateiinhalt-Checks):**
    - `node --test`: `buildWeatherPayload` sendet `show_night_block` nur bei gesetztem oder gespeichertem Wert; Alt-Trip ohne Feld sendet es nicht; `false` geht durch.
    - Nutzlast-Waechter `trip_reiter_nutzlast_nur_eigene_felder.test.ts`: `show_night_block` ist nur im Wetter-Metriken-Reiter erlaubt, in Versand, Alarme usw. weiterhin nie.
