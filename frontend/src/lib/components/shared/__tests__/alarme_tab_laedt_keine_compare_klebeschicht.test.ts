@@ -101,8 +101,7 @@ function alarmProps(): Record<string, unknown> {
 		quietTo: '07:00',
 		onQuietHoursChange: () => {},
 		radarAlertEnabled: false,
-		onRadarAlertChange: () => {},
-		zonenBezug: 'des ersten Orts'
+		onRadarAlertChange: () => {}
 	};
 }
 

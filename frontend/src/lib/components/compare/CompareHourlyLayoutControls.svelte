@@ -44,6 +44,11 @@
 		orderableHourlyMetricKeys,
 		applyHourlyReorder
 	} from './compareHourlyMetricDefs.ts';
+	// Issue #2659 (i18n F10): voller Name aus dem Register (label_en, sonst deutsch), wie im
+	// Wetter-Metriken-Reiter (F5); `col_label`/Kuerzel bleiben unveraendert.
+	// (Regel wie vergleichsMetrikLabel, compareMetricCatalogLoader.ts — ohne dessen Netz-Import.)
+	import { metricLabel, type MetricLabelFields } from '../../i18n/metricLabel.ts';
+	import { locale, t } from '$lib/i18n';
 
 	interface Props {
 		/** `null` = nie eingestellt (Katalog-Vorgabe), `[]` = bewusst leer. */
@@ -66,11 +71,16 @@
 		 *  Zustand nicht melden kann, darf ihn auch nicht anbieten. */
 		enabled?: boolean;
 		onEnabledChange?: (checked: boolean) => void;
+		/** Register (GET /api/metrics, `metricById` des Reiters) fuer den vollen Namen je Sprache. */
+		register?: Record<string, MetricLabelFields>;
 	}
 	let {
 		metricKeys, onMetricKeys, catalog = [], smsSymbols = {},
-		enabled = true, onEnabledChange
+		enabled = true, onEnabledChange, register = {}
 	}: Props = $props();
+	/** Anzeigename einer Groesse in der aktuellen Sprache (reaktiv ueber `$locale`). */
+	const nameVon = (group: CompareAggregationGroup) =>
+		metricLabel(register?.[group.metric_id] ?? { label: group.label }, $locale);
 
 	const hourlyGroups = $derived(groupCompareCatalog(catalog));
 
@@ -134,6 +144,7 @@
 	// historischen Kurzschluessel zeigen auf denselben Namen, damit ein
 	// Alt-Vergleich vor dem ersten Speichern keine nackten Kennungen zeigt.
 	const hourlyMetricById = $derived.by(() => {
+		void $locale;
 		const map: Record<string, MetricEntry> = {};
 		// Issue #1453 (AC-7): die beiden uebrigen Namensformen stehen an den
 		// flachen Katalog-Eintraegen, nicht an der nach Groesse gruppierten
@@ -145,12 +156,13 @@
 			const forms = formsByMetricId.get(group.metric_id);
 			const col_label = forms?.col_label;
 			const sms_code = forms?.sms_code;
+			const label = nameVon(group);
 			map[group.metric_id] = {
-				id: group.metric_id, label: group.label, col_label, sms_code
+				id: group.metric_id, label, col_label, sms_code
 			} as MetricEntry;
 			for (const legacy of group.hourly_legacy_keys)
 				map[legacy] = {
-					id: legacy, label: group.label, col_label, sms_code
+					id: legacy, label, col_label, sms_code
 				} as MetricEntry;
 		}
 		return map;
@@ -196,12 +208,12 @@
 	function noopHourlyMode(): void {}
 </script>
 
-<SectionH title="Stundenverlauf" />
+<SectionH title={$t('vergleich.stundenverlauf.titel')} />
 <!-- Issue #2276 S6b (wie #1720 S1 AC-13 beim Ausblick): der Schalter erscheint
      NUR, wenn der Aufrufer ihn fuehrt. -->
 {#if onEnabledChange}
 	<ChannelToggle
-		label="Stundenverlauf"
+		label={$t('vergleich.stundenverlauf.titel')}
 		checked={enabled}
 		onchange={handleEnabledToggle}
 		testid="compare-layout-hourly-enabled-toggle"
@@ -228,7 +240,7 @@
 				disabled={!group.hourly_selectable}
 				onchange={makeHourlyMetricHandler(group)}
 			/>
-			<span>{group.label}</span>
+			<span>{nameVon(group)}</span>
 			{#if !group.hourly_selectable && group.hourly_not_selectable_reason}
 				<span
 					class="hourly-metric-reason"
@@ -254,7 +266,7 @@
      diese Faktenlage zu widerlegen. -->
 {#if orderableHourlyKeys.length > 0}
 	<p class="hourly-email-hint" data-testid="compare-layout-hourly-email-only-hint">
-		Erscheint nur in der E-Mail.
+		{$t('layout.ausblick.nur_email')}
 	</p>
 	<Card padding={0} style="margin-top: 6px">
 		<WeatherV2Reihenfolge

@@ -22,6 +22,9 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { join, dirname } from 'node:path';
+// Issue #2659 (i18n F10): der Wortlaut steht im Katalog — die Quelle wird mit den deutschen
+// Katalogwerten gelesen (quelleMitKatalogUndTabellen), die Ratsche bewacht weiter den Text.
+import { quelleMitKatalogUndTabellen } from '../../../i18n/__tests__/quelleMitKatalog.ts';
 
 const COMPARE_DIR = join(dirname(fileURLToPath(import.meta.url)), '..');
 const TABS_FILE = join(COMPARE_DIR, 'CompareTabs.svelte');
@@ -34,10 +37,10 @@ const SECTION_H_FILE = join(COMPARE_DIR, '..', 'atoms', 'SectionH.svelte');
 const HU_FILE = join(COMPARE_DIR, '..', 'shared', 'hub-uebersicht', 'HubUebersicht.svelte');
 const MODELL_FILE = join(COMPARE_DIR, '..', 'shared', 'hub-uebersicht', 'hubUebersichtModell.ts');
 
-const tabs = () => readFileSync(TABS_FILE, 'utf-8');
-const baustein = () => readFileSync(HU_FILE, 'utf-8');
-const modell = () => readFileSync(MODELL_FILE, 'utf-8');
-const page = () => readFileSync(PAGE_FILE, 'utf-8');
+const tabs = () => quelleMitKatalogUndTabellen(readFileSync(TABS_FILE, 'utf-8'));
+const baustein = () => quelleMitKatalogUndTabellen(readFileSync(HU_FILE, 'utf-8'));
+const modell = () => quelleMitKatalogUndTabellen(readFileSync(MODELL_FILE, 'utf-8'));
+const page = () => quelleMitKatalogUndTabellen(readFileSync(PAGE_FILE, 'utf-8'));
 
 // Issue #1360 (Scheibe S1a von Epic #1372): die Fidelity-Pruefungen zum
 // Layout-Reiter (AC-1 Desktop-Rahmen „Übersicht pro Kanal" + Limit-Pillen,

@@ -4,9 +4,11 @@ import type { PageServerLoad } from './$types.js';
 import type { ComparePreset, Location } from '$lib/types.js';
 import { apiBase as API } from '$lib/server/apiBase.js';
 import { loadProfile } from '$lib/server/profileLoader.js';
+// Issue #2659 (i18n F10): Fehlermeldung in der Sprache des angemeldeten Nutzers (locals.lang).
+import { trFor } from '$lib/i18n/index.js';
 
 
-export const load: PageServerLoad = async ({ cookies, params }) => {
+export const load: PageServerLoad = async ({ cookies, params, locals }) => {
 	const session = cookies.get('gz_session');
 	const headers: Record<string, string> = { 'Content-Type': 'application/json' };
 	if (session) headers['Cookie'] = `gz_session=${session}`;
@@ -19,7 +21,7 @@ export const load: PageServerLoad = async ({ cookies, params }) => {
 	]);
 
 	if (!presetRes?.ok) {
-		error(presetRes?.status === 404 ? 404 : 500, 'Orts-Vergleich nicht gefunden');
+		error(presetRes?.status === 404 ? 404 : 500, trFor(locals.lang, 'vergleich.hub.nicht_gefunden'));
 	}
 
 	const preset: ComparePreset = await presetRes.json();

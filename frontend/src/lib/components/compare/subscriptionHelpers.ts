@@ -9,19 +9,28 @@
 import type { ComparePreset, ActivityProfile } from '../../types.js';
 // Issue #1268 (AC-10): geteilte Slot-Aufloesung — NICHT nachbauen.
 import { primarySendSlot } from '../../utils/cockpitHelpers568';
+// Issue #2659 (i18n F10): Anzeige-Texte ueber den Katalog (vergleich.*, listen.*, home.*,
+// bausteine.profil.*); Wochentage aus dem geteilten Datumsformat (lib/i18n/format.ts).
+import { locale, tr, trn, type MessageKey } from '../../i18n/index.ts';
+import { fmtDate, fmtDateNumeric, fmtTime, fmtWeekday } from '../../i18n/format.ts';
+import { get } from 'svelte/store';
 
-// Konvention 0=Montag. NICHT Sonntag-first.
-const WEEKDAYS = ['Montag', 'Dienstag', 'Mittwoch', 'Donnerstag', 'Freitag', 'Samstag', 'Sonntag'];
+/** Langer Wochentag-Name, Konvention 0=Montag (NICHT Sonntag-first). 5. Januar 2026 = Montag. */
+export function weekdayLong(i: number): string | undefined {
+	if (!Number.isInteger(i) || i < 0 || i > 6) return undefined;
+	return fmtWeekday(new Date(2026, 0, 5 + i), get(locale), false);
+}
 
 // Issue #439 — Status-Ableitung für die Übersichtsseite.
 // Rein Frontend; kein Backend-Feld. Spec §2 (issue_439_compare_uebersicht.md).
 export type CompareStatus = 'active' | 'paused' | 'draft';
 
+// Issue #2659 (i18n F10): `key` statt eingefrorenem Text — die Pille loest beim Rendern auf.
 export const STATUS_MAP = {
-	active: { label: 'aktiv',    dot: 'var(--g-accent)' },
-	paused: { label: 'pausiert', dot: 'var(--g-ink-3)'  },
-	draft:  { label: 'draft',    dot: 'var(--g-ink-4)'  },
-} as const;
+	active: { key: 'listen.status.aktiv', dot: 'var(--g-accent)' },
+	paused: { key: 'listen.status.pausiert', dot: 'var(--g-ink-3)'  },
+	draft:  { key: 'listen.status.draft',  dot: 'var(--g-ink-4)'  },
+} as const satisfies Record<CompareStatus, { key: MessageKey; dot: string }>;
 
 // Issue #459 — ComparePreset-Helfer für das Auto-Briefings-Sidepanel.
 // Spec: docs/specs/modules/issue_459_auto_briefings_sidepanel.md (§2)
@@ -29,10 +38,10 @@ export const STATUS_MAP = {
 /** ComparePreset → lesbares Zeitplan-Label. */
 export function presetScheduleLabel(preset: ComparePreset): string {
 	if (preset.schedule === 'daily') {
-		return `Täglich ${preset.hour_from}–${preset.hour_to} Uhr`;
+		return tr('vergleich.zeitplan.taeglich', { von: preset.hour_from, bis: preset.hour_to });
 	}
-	if (preset.schedule === 'weekly') return 'Wöchentlich';
-	return 'Manuell';
+	if (preset.schedule === 'weekly') return tr('vergleich.zeitplan.woechentlich');
+	return tr('vergleich.zeitplan.manuell');
 }
 
 /**
@@ -52,16 +61,20 @@ export function presetScheduleLabel(preset: ComparePreset): string {
  * schon vor #1268 falsch (ein Versand um 06:03 wurde als 06:00 angezeigt).
  */
 export function formatNextSend(d: Date | null): string {
-	if (!d) return 'manuell';
+	if (!d) return tr('home.zeitplan.manuell');
 	const pad = (n: number) => String(n).padStart(2, '0');
+	// Issue #2659 (i18n F10): en im Glossar-Format `Fri 30 Oct 07:05`, de unveraendert `30.10. 07:05`.
+	if (get(locale) === 'en') return `${fmtDate(d, 'en', 'kurz')} ${fmtTime(d)}`;
 	return `${d.getDate()}.${d.getMonth() + 1}. ${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
-/** ISO-Timestamp → kurzes deutsches Datum (de-DE) | "Noch kein Versand" wenn leer/ungültig. */
+/** ISO-Timestamp → kurzes Datum (de: de-DE `27.10.2026`, en: `27 Oct 2026`, Glossar
+ *  „Zeit und Format") | „Noch kein Versand" wenn leer/ungültig. */
 export function formatLastSent(iso?: string | null): string {
-	if (!iso) return 'Noch kein Versand';
+	if (!iso) return tr('vergleich.relativ.noch_kein_versand');
 	const d = new Date(iso);
-	if (isNaN(d.getTime())) return 'Noch kein Versand';
+	if (isNaN(d.getTime())) return tr('vergleich.relativ.noch_kein_versand');
+	if (get(locale) === 'en') return fmtDateNumeric(d, 'en');
 	return d.toLocaleDateString('de-DE', {
 		day: '2-digit',
 		month: '2-digit',
@@ -159,7 +172,7 @@ export function compareFilterStatus(
 
 /** ComparePreset → "N Orte" */
 export function presetLocationsLabel(p: ComparePreset): string {
-	return `${p.location_ids.length} ${p.location_ids.length === 1 ? 'Ort' : 'Orte'}`;
+	return trn('listen.anzahl.orte', p.location_ids.length);
 }
 
 // Issue #1471 — `channelCountLabel()` entfernt: sie zaehlte dieselbe seit #1452
@@ -178,11 +191,12 @@ export function presetLocationsLabel(p: ComparePreset): string {
 
 // Inline-Map statt Import aus types.ts (vermeidet value-Import-Auflösungsproblem
 // bei node --experimental-strip-types, das .js nicht auf .ts mappt).
-const PROFILE_LABELS: Record<string, string> = {
-	allgemein:       'Allgemein',
-	wintersport:     'Wintersport',
-	wandern:         'Wandern',
-	summer_trekking: 'Sommer-Trekking',
+// Issue #2659 (i18n F10): Profil-ID → Katalogschluessel (Anzeigename je Sprache).
+const PROFILE_LABELS: Record<string, MessageKey> = {
+	allgemein:       'bausteine.profil.allgemein',
+	wintersport:     'bausteine.profil.wintersport',
+	wandern:         'bausteine.profil.wandern',
+	summer_trekking: 'bausteine.profil.summer_trekking',
 };
 
 /**
@@ -192,7 +206,8 @@ const PROFILE_LABELS: Record<string, string> = {
  */
 export function presetProfileLabel(profil: ActivityProfile | string | undefined): string {
 	if (!profil) return '';
-	return PROFILE_LABELS[String(profil).toLowerCase()] ?? '';
+	const key = PROFILE_LABELS[String(profil).toLowerCase()];
+	return key ? tr(key) : '';
 }
 
 /**
@@ -211,14 +226,14 @@ export function presetProfileLabel(profil: ActivityProfile | string | undefined)
 export function presetTileScheduleLabel(preset: ComparePreset): string {
 	if (preset.schedule === 'daily') {
 		const slot = primarySendSlot(preset);
-		if (slot === null) return 'tägl.';
+		if (slot === null) return tr('vergleich.zeitplan.kachel_taeglich_kurz');
 		const h = String(slot.hour).padStart(2, '0');
-		return `tägl. ${h}`;
+		return tr('vergleich.zeitplan.kachel_taeglich', { stunde: h });
 	}
 	if (preset.schedule === 'weekly') {
-		return WEEKDAYS[preset.weekday ?? 0] ?? 'wöchentl.';
+		return weekdayLong(preset.weekday ?? 0) ?? tr('vergleich.zeitplan.kachel_woechentlich');
 	}
-	return 'manuell';
+	return tr('home.zeitplan.manuell');
 }
 
 /**
@@ -239,11 +254,11 @@ export function relativeLastSent(iso: string | undefined): string {
 	const diffMs = now.setHours(0, 0, 0, 0) - new Date(d).setHours(0, 0, 0, 0);
 	const diffDays = Math.round(diffMs / (1000 * 60 * 60 * 24));
 
-	if (diffDays <= 0) return 'heute';
-	if (diffDays === 1) return 'gestern';
-	if (diffDays < 7) return WEEKDAYS[d.getDay() === 0 ? 6 : d.getDay() - 1] ?? 'diese Woche';
+	if (diffDays <= 0) return tr('home.tage.heute');
+	if (diffDays === 1) return tr('vergleich.relativ.gestern');
+	if (diffDays < 7) return weekdayLong(d.getDay() === 0 ? 6 : d.getDay() - 1) ?? tr('vergleich.relativ.diese_woche');
 	const weeks = Math.floor(diffDays / 7);
-	return `vor ${weeks} ${weeks === 1 ? 'Woche' : 'Wochen'}`;
+	return trn('vergleich.relativ.wochen', weeks);
 }
 
 /**
@@ -305,8 +320,8 @@ export function channelNamesLabel(preset: ComparePreset): string {
 export function presetBriefingTimesLabel(preset: ComparePreset): string {
 	const toHHMM = (t?: string) => (t ?? '').slice(0, 5);
 	const parts: string[] = [];
-	if (preset.morning_enabled) parts.push(`Morgen ${toHHMM(preset.morning_time)}`);
-	if (preset.evening_enabled) parts.push(`Abend ${toHHMM(preset.evening_time)}`);
+	if (preset.morning_enabled) parts.push(`${tr('aktionen.historie.morgen')} ${toHHMM(preset.morning_time)}`);
+	if (preset.evening_enabled) parts.push(`${tr('aktionen.historie.abend')} ${toHHMM(preset.evening_time)}`);
 	return parts.length > 0 ? parts.join(' · ') : '—';
 }
 

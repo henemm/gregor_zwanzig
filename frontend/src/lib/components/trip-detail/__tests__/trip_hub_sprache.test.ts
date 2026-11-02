@@ -26,6 +26,7 @@ import path from 'node:path';
 import { register } from 'node:module';
 import * as P from './f9Pruefstand.ts';
 import { F9_ANKER } from './f9KatalogAnker.ts';
+import { F10_ANKER } from '../../compare/__tests__/f10KatalogAnker.ts';
 
 const { locale, trFor } = P;
 const base = pathToFileURL(P.FRONTEND + '/').href;
@@ -77,9 +78,6 @@ export function deutscheReste(text: string, ausnahmen: string[] = []): string[] 
  * Trip-/Etappen-/Wegpunkt-Namen der Fixture, API-Metriknamen ohne label_en (F5),
  * und Bausteine anderer Pakete (Uebersicht-Kennzahlen F10, Versand F6 …).
  */
-/** Geteilte Uebersicht-Kennzahlen (shared/hub-uebersicht/, Paket F10, noch in der Allowlist):
- *  „Bearbeiten →", „Morgen 07:00 · Abend 18:00", Status „Aktiv" stehen dort selbst deutsch. */
-const FREMD_F10 = ['aktionen.edit', 'aktionen.historie.morgen', 'aktionen.historie.abend', 'trip.status.active'];
 const DATEN = ['trip.wegpunkt.typ.', 'trip.etappe', 'trip.anlegen.name_beispiel', 'trip.anlegen.region_beispiel', 'trip.anlegen.etappe_beispiel'];
 
 describe('AC-6: Deutsch byte-gleich zum Ist-Stand vor der Umstellung (Golden golden-de)', () => {
@@ -119,7 +117,7 @@ describe('AC-1: Trip-Hub englisch, Namen unveraendert', () => {
 		hat(sEn, 'Calenzana – Ortu di u Piobbu');
 		hat(sEn, 'Trips');
 		// Der Fehler-Zustand der Seite traegt einen Server-Detailtext (Daten), s. f9Pruefstand.
-		assert.deepEqual(deutscheReste(sEn, [...DATEN, ...FREMD_F10, 'aktionen.fehler.allgemein']), []);
+		assert.deepEqual(deutscheReste(sEn, [...DATEN, 'aktionen.fehler.allgemein']), []);
 	});
 
 	test('Kopf: Tag/ETAPPE/START IN, Zahlenformat en-GB, Aktivitaeten englisch', () => {
@@ -405,7 +403,9 @@ describe('Anker: jeder F9-Katalogwert ist als festes de/en-Literal verankert', (
 		for (const lang of ['de', 'en']) {
 			const lies = (b: string) => Object.keys(JSON.parse(readFileSync(path.join(MSG, lang, `${b}.json`), 'utf-8')));
 			assert.deepEqual(lies('trip').sort(), anker('trip.').sort(), `${lang}: trip.json`);
-			assert.deepEqual(lies('aktionen').sort(), [...BESTAND_AKTIONEN, ...anker('aktionen.')].sort(), `${lang}: aktionen.json`);
+			// F10 (#2659): die geteilte Hub-Uebersicht ergaenzt aktionen.uebersicht.* (Anker in f10KatalogAnker.ts).
+			const f10 = F10_ANKER.map(([k]) => k).filter((k) => k.startsWith('aktionen.'));
+			assert.deepEqual(lies('aktionen').sort(), [...BESTAND_AKTIONEN, ...anker('aktionen.'), ...f10].sort(), `${lang}: aktionen.json`);
 			assert.deepEqual(lies('vergleich').filter((k) => k.startsWith('vergleich.anlegen.')).sort(), anker('vergleich.anlegen.').sort(), `${lang}: vergleich.anlegen.*`);
 		}
 		assert.equal(new Set(F9_ANKER.map(([k]) => k)).size, F9_ANKER.length, 'doppelte Anker');

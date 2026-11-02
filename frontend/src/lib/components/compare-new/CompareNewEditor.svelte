@@ -37,7 +37,9 @@
 	import StandardwerteSpeichernKnopf from '$lib/components/shared/StandardwerteSpeichernKnopf.svelte';
 	import type { SensLevel } from '$lib/types';
 	import { api } from '$lib/api.js';
-	import { locale } from '$lib/i18n';
+	// Issue #2659 (i18n F10): Texte aus dem Katalog; Reiter/Anlege-Kette und Sperr-Hinweise
+	// werden je Sprache abgeleitet (`$locale`), nichts auf Skript-Ebene eingefroren.
+	import { locale, t, tn, type MessageKey } from '$lib/i18n';
 	import {
 		tailUnlocked,
 		tailDone,
@@ -63,8 +65,11 @@
 	// Promise-Cache, kein zweiter Netzwerk-Request) und durchreichen.
 	import {
 		loadCompareSelectionEntries,
-		loadCompareMetricCatalog
+		loadCompareMetricCatalog,
+		loadMetricRegister,
+		mitRegisterNamen
 	} from '$lib/components/shared/corridor-editor/compareMetricCatalogLoader';
+	import type { MetricLabelFields } from '$lib/i18n/metricLabel';
 	import type { CompareSelectionEntry } from '$lib/components/shared/weather-metrics-tab/compareMetricSelection';
 	import Toast from '$lib/components/mobile/Toast.svelte';
 	import MBtn from '$lib/components/mobile/MBtn.svelte';
@@ -107,7 +112,11 @@
 	// Katalog und behauptet faelschlich "keine Metriken" (AC-5, #1320).
 	let alarmeCatalog = $state<CompareSelectionEntry[]>([]);
 	let alarmeHydrated = $state(false);
+	// Issue #2659 (i18n F10): englische Groessennamen aus dem Register (nicht blockierend).
+	let alarmeRegister = $state<Record<string, MetricLabelFields>>({});
+	const alarmeCatalogMitNamen = $derived(mitRegisterNamen(alarmeCatalog, alarmeRegister));
 	async function hydrateAlarmeTab(): Promise<void> {
+		void loadMetricRegister().then((r) => (alarmeRegister = r), () => {});
 		// Fehlerfall gibt den Reiter ebenfalls frei (identisch CompareTabs:
 		// `.catch(() => [])`) — sonst bliebe er nach einem misslungenen Laden
 		// dauerhaft unerreichbar.
@@ -132,12 +141,14 @@
 	// ── Tab-Definitionen — Issue #1743: aus der EINEN Reiter-Definition
 	// (`subscriptionTabs.anlegeKette`), keine Zweitliste. Fortschritt zaehlt
 	// dieselben Schritte (5 Segmente).
-	const TAB_DEFS: { id: CompareNewTabId; label: string; lockHint: string | null }[] = anlegeKette('vergleich').map((t) => ({
-		id: t.id as CompareNewTabId,
-		label: t.label,
-		lockHint: t.lockHint ?? null
-	}));
-	const PROGRESS_STEPS: CompareNewTabId[] = TAB_DEFS.map((t) => t.id);
+	const TAB_DEFS: { id: CompareNewTabId; label: string; lockHint: string | null }[] = $derived(
+		(void $locale, anlegeKette('vergleich')).map((r) => ({
+			id: r.id as CompareNewTabId,
+			label: r.label,
+			lockHint: r.lockHint ?? null
+		}))
+	);
+	const PROGRESS_STEPS: CompareNewTabId[] = $derived(TAB_DEFS.map((r) => r.id));
 
 	// ── Visited-Flags (Tab-Besuch → nächster Tab frei; nie zurückgesetzt) ──────
 	let metrikenVisited = $state(seed.metrikenVisited ?? false);
@@ -221,7 +232,7 @@
 		const { sections, ungrouped } = groupLocations(locations, ceGroups);
 		const result: [string, Location[]][] = [];
 		for (const s of sections) if (s.locations.length > 0) result.push([s.group.name, s.locations]);
-		if (ungrouped.length > 0) result.push(['Weitere', ungrouped]);
+		if (ungrouped.length > 0) result.push([$t('vergleich.orte.weitere'), ungrouped]);
 		return result;
 	});
 
@@ -301,18 +312,22 @@
 
 	// ── Mobile-only State ──────────────────────────────────────────────────────
 	let mobileLibraryOpen = $state(false);
-	let lockToastMsg = $state('');
+	// Issue #2659 (i18n F10): der Toast haelt die Reiter-Kennung; der Hinweis entsteht beim Rendern.
+	let lockToastTab = $state<CompareNewTabId | null>(null);
 	let lockToastVisible = $state(false);
+	const lockToastMsg = $derived(
+		lockToastTab ? (TAB_DEFS.find((r) => r.id === lockToastTab)?.lockHint ?? $t('vergleich.neu.tab_gesperrt')) : ''
+	);
 	let _lockToastTimer: ReturnType<typeof setTimeout> | null = null;
-	function showLockToast(msg: string) {
-		lockToastMsg = msg;
+	function showLockToast(id: CompareNewTabId) {
+		lockToastTab = id;
 		lockToastVisible = true;
 		if (_lockToastTimer) clearTimeout(_lockToastTimer);
 		_lockToastTimer = setTimeout(() => { lockToastVisible = false; }, 2000);
 	}
 	function handleMobileTabClick(id: CompareNewTabId) {
 		if (!unlocked.has(id)) {
-			showLockToast(TAB_DEFS.find((t) => t.id === id)?.lockHint ?? 'Tab gesperrt');
+			showLockToast(id);
 			return;
 		}
 		switchTab(id);
@@ -329,8 +344,8 @@
 	// ── Mobile-Shell S2: Kopf im Inhalt statt globaler Kopfleiste ──────────────
 	// <PageHeader back> traegt Ruecksprung + Eyebrow + Reiter-Titel; „Briefing
 	// aktivieren" sitzt im geteilten Sticky-Footer (EditorStickyFooter).
-	const mobileTitel = $derived(TAB_DEFS.find((t) => t.id === activeTab)?.label ?? 'Vergleich');
-	const mobileEyebrow = $derived(wiz.name.trim() || 'Neuer Vergleich');
+	const mobileTitel = $derived(TAB_DEFS.find((r) => r.id === activeTab)?.label ?? $t('vergleich.anlegen.reiter'));
+	const mobileEyebrow = $derived(wiz.name.trim() || $t('vergleich.neu.neuer_vergleich'));
 </script>
 
 <!-- Create-Aktivierungs-Banner als Snippet-Prop für VersandTab (1:1 Muster). -->
@@ -341,10 +356,10 @@
 		class="rounded-md p-4 text-white text-sm"
 		style:background={canActivateNow ? 'var(--g-good)' : 'var(--g-ink)'}
 	>
-		<div class="mono" style:font-size="11px" style:letter-spacing="0.12em" style:text-transform="uppercase" style:color="rgba(255,255,255,0.55)" style:margin-bottom="4px">Bereit zum Aktivieren</div>
-		<div style:font-size="15px" style:font-weight="600">„{wiz.name || 'Neuer Vergleich'}" · {wiz.pickedIds?.length ?? 0} Orte</div>
+		<div class="mono" style:font-size="11px" style:letter-spacing="0.12em" style:text-transform="uppercase" style:color="rgba(255,255,255,0.55)" style:margin-bottom="4px">{$t('vergleich.neu.bereit_titel')}</div>
+		<div style:font-size="15px" style:font-weight="600">{$tn('vergleich.neu.bereit_zeile', wiz.pickedIds?.length ?? 0, { name: wiz.name || $t('vergleich.neu.neuer_vergleich') })}</div>
 		<div style:font-size="12.5px" style:color="rgba(255,255,255,0.75)" style:margin-top="4px" style:line-height="1.5">
-			{#if canActivateNow}Bereit — klicke „Briefing aktivieren".{:else}Alarme einrichten zum Aktivieren.{/if}
+			{#if canActivateNow}{$t('vergleich.neu.bereit_text')}{:else}{$t('vergleich.neu.alarme_zum_aktivieren_punkt')}{/if}
 		</div>
 	</div>
 {/snippet}
@@ -356,16 +371,16 @@
 		<!-- Breadcrumb + Aktionen -->
 		<div style:position="relative" style:padding="14px 40px" style:border-bottom="1px solid var(--g-rule-soft)" style:display="flex" style:justify-content="space-between" style:align-items="center">
 			<div class="mono" style:font-size="11px" style:color="var(--g-ink-3)" style:letter-spacing="0.06em">
-				<span style:opacity="0.6">Orts-Vergleiche</span>
+				<span style:opacity="0.6">{$t('listen.vergleiche.titel')}</span>
 				<span style:margin="0 8px">/</span>
-				<span style:color="var(--g-ink)">Neuer Vergleich</span>
+				<span style:color="var(--g-ink)">{$t('vergleich.neu.neuer_vergleich')}</span>
 			</div>
 			<div style:display="flex" style:gap="8px" style:align-items="center">
 				{#if !canActivateNow}
-					<span class="mono" style:font-size="11px" style:color="var(--g-ink-4)">Alarme einrichten zum Aktivieren</span>
+					<span class="mono" style:font-size="11px" style:color="var(--g-ink-4)">{$t('vergleich.neu.alarme_zum_aktivieren')}</span>
 					<StandardwerteSpeichernKnopf enabled={standardwerteFrei} saving={activating} onclick={onStandardwerte} testid="compare-editor-standardwerte" />
 				{/if}
-				<Btn variant="ghost" size="sm" href="/compare">Abbrechen</Btn>
+				<Btn variant="ghost" size="sm" href="/compare">{$t('aktionen.abbrechen')}</Btn>
 				<Btn
 					data-testid="compare-editor-activate"
 					variant={canActivateNow && !activating ? 'primary' : 'quiet'}
@@ -373,42 +388,42 @@
 					disabled={!canActivateNow || activating}
 					onclick={handleActivate}
 					style={canActivateNow && !activating ? '' : 'opacity:0.4; cursor:not-allowed'}
-				>{activating ? 'Speichere…' : 'Briefing aktivieren'}</Btn>
+				>{activating ? $t('trip.anlegen.speichere') : $t('vergleich.neu.aktivieren')}</Btn>
 			</div>
 		</div>
 
 		<!-- Hero + Fortschrittsbalken (7 Segmente) -->
 		<div style:position="relative" style:padding="20px 40px 14px">
-			<Eyebrow>Neuer Orts-Vergleich</Eyebrow>
+			<Eyebrow>{$t('home.planung.neuer_orts_vergleich')}</Eyebrow>
 			<h1 style:font-size="32px" style:font-weight="600" style:letter-spacing="-0.02em" style:margin="4px 0 0" style:line-height="1.1" style:color={wiz.name.trim() ? 'var(--g-ink)' : 'var(--g-ink-4)'}>
-				{wiz.name.trim() || 'Noch kein Name'}
+				{wiz.name.trim() || $t('trip.anlegen.kein_name')}
 			</h1>
 			<div data-testid="compare-editor-progress" style:display="flex" style:align-items="center" style:gap="10px" style:margin-top="7px">
 				<div style:display="flex" style:gap="3px">
-					{#each TAB_DEFS as t (t.id)}
-						<div data-testid="compare-editor-progress-segment" style:width="24px" style:height="3px" style:border-radius="2px" style:background={done.has(t.id) ? 'var(--g-accent)' : 'var(--g-rule)'} style:transition="background 350ms"></div>
+					{#each TAB_DEFS as r (r.id)}
+						<div data-testid="compare-editor-progress-segment" style:width="24px" style:height="3px" style:border-radius="2px" style:background={done.has(r.id) ? 'var(--g-accent)' : 'var(--g-rule)'} style:transition="background 350ms"></div>
 					{/each}
 				</div>
 				<span class="mono" style:font-size="11px" style:color="var(--g-ink-4)" style:letter-spacing="0.04em">
-					{doneCount === 0 ? 'Noch nichts eingerichtet' : `${doneCount} / ${TAB_DEFS.length} Abschnitte eingerichtet`}
+					{doneCount === 0 ? $t('trip.anlegen.nichts_eingerichtet') : $t('trip.anlegen.abschnitte', { n: doneCount, gesamt: TAB_DEFS.length })}
 				</span>
 			</div>
 		</div>
 
 		<!-- Tab-Bar -->
 		<div style:border-bottom="1px solid var(--g-rule)" style:padding="0 40px" style:display="flex" style:gap="0" style:overflow-x="auto">
-			{#each TAB_DEFS as t (t.id)}
-				{@const on = t.id === activeTab}
-				{@const open = unlocked.has(t.id)}
-				{@const isDone = done.has(t.id) && !on}
+			{#each TAB_DEFS as r (r.id)}
+				{@const on = r.id === activeTab}
+				{@const open = unlocked.has(r.id)}
+				{@const isDone = done.has(r.id) && !on}
 				<button
-					data-testid={`compare-editor-tab-${t.id}`}
+					data-testid={`compare-editor-tab-${r.id}`}
 					data-active={on ? 'true' : 'false'}
 					data-locked={open ? 'false' : 'true'}
-					data-done={done.has(t.id) ? 'true' : 'false'}
+					data-done={done.has(r.id) ? 'true' : 'false'}
 					type="button"
-					onclick={makeTabHandler(t.id)}
-					title={!open && t.lockHint ? `Gesperrt — ${t.lockHint}` : undefined}
+					onclick={makeTabHandler(r.id)}
+					title={!open && r.lockHint ? $t('trip.anlegen.gesperrt', { hinweis: r.lockHint }) : undefined}
 					style:padding="12px 16px" style:cursor={open ? 'pointer' : 'not-allowed'} style:background="none" style:border="none"
 					style:border-bottom={on ? '2px solid var(--g-accent)' : '2px solid transparent'} style:margin-bottom="-1px"
 					style:font-family="var(--g-font-sans)" style:font-size="13px" style:font-weight={on ? 600 : 500}
@@ -416,7 +431,7 @@
 					style:display="flex" style:align-items="center" style:gap="5px" style:white-space="nowrap"
 					style:opacity={open ? 1 : 0.34} style:transition="opacity 250ms, color 200ms" style:user-select="none"
 				>
-					{t.label}
+					{r.label}
 					{#if isDone}
 						<span class="mono" style:font-size="11px" style:font-weight="700" style:padding="2px 5px" style:border-radius="3px" style:background="rgba(61,107,58,0.12)" style:color="var(--g-good)">✓</span>
 					{/if}
@@ -433,16 +448,16 @@
 		<div style:position="relative" style:padding="28px 40px 60px">
 			<TopoBg opacity={0.1}>
 				<div style:position="relative" style:max-width="640px">
-					<Eyebrow style="margin-bottom: 14px">Eckdaten</Eyebrow>
-					<Field label="Name des Vergleichs" hint="Erscheint im Mail-Betreff. Kurz & wiedererkennbar.">
-						<input data-testid="compare-editor-name" type="text" maxlength="80" placeholder="z.B. Skitouren Hochkönig" bind:value={wiz.name} class="w-full border rounded px-3 py-2 text-base bg-[var(--g-card)] border-[var(--g-rule)]" />
+					<Eyebrow style="margin-bottom: 14px">{$t('vergleich.neu.eckdaten')}</Eyebrow>
+					<Field label={$t('vergleich.neu.name')} hint={$t('vergleich.neu.name_hinweis')}>
+						<input data-testid="compare-editor-name" type="text" maxlength="80" placeholder={$t('vergleich.neu.name_beispiel')} bind:value={wiz.name} class="w-full border rounded px-3 py-2 text-base bg-[var(--g-card)] border-[var(--g-rule)]" />
 					</Field>
-					<Field label="Region" side="optional · max 60">
-						<input data-testid="compare-editor-region" type="text" maxlength="60" placeholder="z.B. Hochkönig · Salzburger Land" bind:value={wiz.region} class="w-full border rounded px-3 py-2 text-base bg-[var(--g-card)] border-[var(--g-rule)]" />
+					<Field label={$t('trip.anlegen.region')} side={$t('vergleich.neu.optional_max')}>
+						<input data-testid="compare-editor-region" type="text" maxlength="60" placeholder={$t('vergleich.neu.region_beispiel')} bind:value={wiz.region} class="w-full border rounded px-3 py-2 text-base bg-[var(--g-card)] border-[var(--g-rule)]" />
 					</Field>
-					<Eyebrow style="margin-bottom: 12px; margin-top: 28px">Aktivitätsprofil</Eyebrow>
+					<Eyebrow style="margin-bottom: 12px; margin-top: 28px">{$t('vergleich.neu.aktivitaetsprofil')}</Eyebrow>
 					<div style:font-size="13px" style:color="var(--g-ink-3)" style:margin-bottom="14px">
-						Bestimmt, welche Wetter-Metriken verglichen werden. Die Wertebereiche legst du in den nächsten Tabs fest.
+						{$t('vergleich.neu.profil_hinweis')}
 					</div>
 					<div style:display="grid" style:grid-template-columns="1fr 1fr" style:gap="10px">
 						{#each ACTIVITY_PROFILE_OPTIONS as opt (opt.value)}
@@ -452,14 +467,14 @@
 								style:background={sel ? 'var(--g-accent-tint)' : 'var(--g-card)'}
 								style:border={sel ? '1.5px solid var(--g-accent)' : '1px solid var(--g-rule)'}
 								style:border-radius="var(--g-r-3)" style:font-family="var(--g-font-sans)">
-								<div style:font-size="14px" style:font-weight="600" style:color={sel ? 'var(--g-accent-deep)' : 'var(--g-ink)'} style:margin-bottom="4px">{opt.label}</div>
+								<div style:font-size="14px" style:font-weight="600" style:color={sel ? 'var(--g-accent-deep)' : 'var(--g-ink)'} style:margin-bottom="4px">{$t(`bausteine.profil.${opt.value}` as MessageKey)}</div>
 								<div class="mono" style:font-size="11px" style:color="var(--g-ink-3)" style:margin-top="4px">{profileMetricsLabel(opt.value)}</div>
 							</button>
 						{/each}
 					</div>
 					<div style:margin-top="28px" style:padding-top="20px" style:border-top="1px solid var(--g-rule)" style:display="flex" style:justify-content="flex-end" style:align-items="center" style:gap="12px">
-						{#if !canContinue}<span class="mono" style:font-size="11px" style:color="var(--g-ink-4)">⊘ Name fehlt</span>{/if}
-						<Btn data-testid="compare-editor-continue-orte" variant={canContinue ? 'accent' : 'quiet'} size="md" disabled={!canContinue} onclick={() => canContinue && switchTab('orte')}>Orte hinzufügen →</Btn>
+						{#if !canContinue}<span class="mono" style:font-size="11px" style:color="var(--g-ink-4)">{$t('vergleich.neu.name_fehlt')}</span>{/if}
+						<Btn data-testid="compare-editor-continue-orte" variant={canContinue ? 'accent' : 'quiet'} size="md" disabled={!canContinue} onclick={() => canContinue && switchTab('orte')}>{$t('vergleich.neu.orte_hinzufuegen')}</Btn>
 					</div>
 				</div>
 			</TopoBg>
@@ -468,8 +483,8 @@
 		<Step2Orte {locations} groups={ceGroups} />
 		<div class="ce-cta-foot" style:max-width="980px">
 			<div class="ce-cta-row">
-				{#if !orteContinueReady}<span class="mono ce-cta-hint">⊘ min. 2 Orte auswählen</span>{/if}
-				<Btn data-testid="compare-editor-continue-wetter-metriken" variant={orteContinueReady ? 'accent' : 'quiet'} size="md" disabled={!orteContinueReady} onclick={() => orteContinueReady && switchTab('wetter-metriken')} style={orteContinueReady ? '' : 'opacity:0.45; cursor:not-allowed'}>Wetter-Metriken →</Btn>
+				{#if !orteContinueReady}<span class="mono ce-cta-hint">{$t('vergleich.neu.min_orte')}</span>{/if}
+				<Btn data-testid="compare-editor-continue-wetter-metriken" variant={orteContinueReady ? 'accent' : 'quiet'} size="md" disabled={!orteContinueReady} onclick={() => orteContinueReady && switchTab('wetter-metriken')} style={orteContinueReady ? '' : 'opacity:0.45; cursor:not-allowed'}>{$t('vergleich.neu.wetter_metriken')}</Btn>
 			</div>
 		</div>
 	{:else if activeTab === 'wetter-metriken'}
@@ -481,7 +496,7 @@
 		{/if}
 		<div class="ce-cta-foot" style:max-width="1040px">
 			<div class="ce-cta-row">
-				<Btn data-testid="compare-editor-continue-wertebereiche" variant="accent" size="md" onclick={makeContinueHandler('wertebereiche')}>Wertebereiche festlegen →</Btn>
+				<Btn data-testid="compare-editor-continue-wertebereiche" variant="accent" size="md" onclick={makeContinueHandler('wertebereiche')}>{$t('trip.anlegen.wertebereiche_festlegen')}</Btn>
 			</div>
 		</div>
 	{:else if activeTab === 'wertebereiche'}
@@ -490,12 +505,12 @@
 		{/if}
 		<div class="ce-cta-foot" style:max-width="1100px">
 			<div class="ce-cta-row">
-				<Btn data-testid="compare-editor-continue-alarme" variant="accent" size="md" onclick={makeContinueHandler('alarme')}>Alarme einrichten →</Btn>
+				<Btn data-testid="compare-editor-continue-alarme" variant="accent" size="md" onclick={makeContinueHandler('alarme')}>{$t('trip.anlegen.alarme_einrichten')}</Btn>
 			</div>
 		</div>
 	{:else if activeTab === 'alarme'}
 		{#if alarmeHydrated}
-			<AlarmeTab context="vergleich" {...alarmePropsAus(wiz)} catalog={alarmeCatalog} showInfobox={true} />
+			<AlarmeTab context="vergleich" {...alarmePropsAus(wiz)} catalog={alarmeCatalogMitNamen} showInfobox={true} />
 		{/if}
 	{/if}
 </div><!-- /.cm-desktop -->
@@ -507,14 +522,14 @@
 	{/if}
 
 	<div data-testid="cm-mobile-head" style="padding: 0 16px; flex-shrink: 0;">
-		<PageHeader back={{ href: '/compare', label: 'Vergleiche' }} eyebrow={mobileEyebrow} title={mobileTitel} compact />
+		<PageHeader back={{ href: '/compare', label: $t('listen.archiv.vergleiche') }} eyebrow={mobileEyebrow} title={mobileTitel} compact />
 	</div>
 
 	<!-- Fortschrittsbalken -->
 	<div class="cm-mobile-flex" data-testid="cm-mobile-progress" style="align-items: center; gap: 8px; padding: 8px 16px 0; flex-shrink: 0;">
 		<div style="display: flex; gap: 3px; flex: 1;">
-			{#each TAB_DEFS as t (t.id)}
-				<div style="flex: 1; height: 3px; border-radius: 2px; background: {done.has(t.id) ? 'var(--g-accent)' : (t.id === activeTab ? 'var(--g-accent-soft,#bcd)' : 'var(--g-rule)')}; transition: background 350ms;"></div>
+			{#each TAB_DEFS as r (r.id)}
+				<div style="flex: 1; height: 3px; border-radius: 2px; background: {done.has(r.id) ? 'var(--g-accent)' : (r.id === activeTab ? 'var(--g-accent-soft,#bcd)' : 'var(--g-rule)')}; transition: background 350ms;"></div>
 			{/each}
 		</div>
 		<span class="mono" style="font-size: 11px; color: var(--g-ink-4); flex-shrink: 0;">{doneCount}/{TAB_DEFS.length}</span>
@@ -522,12 +537,12 @@
 
 	<!-- Scrollbare Tab-Bar -->
 	<div class="cm-mobile-flex" data-testid="cm-mobile-tabbar" style="gap: 0; overflow-x: auto; border-bottom: 1px solid var(--g-rule-soft); -webkit-overflow-scrolling: touch; scrollbar-width: none; flex-shrink: 0; mask-image: linear-gradient(to right, transparent, black 16px, black calc(100% - 16px), transparent); -webkit-mask-image: linear-gradient(to right, transparent, black 16px, black calc(100% - 16px), transparent);">
-		{#each TAB_DEFS as t (t.id)}
-			{@const on = t.id === activeTab}
-			{@const open = unlocked.has(t.id)}
-			<button type="button" data-testid="cm-mobile-tab-{t.id}" data-active={on ? 'true' : 'false'} data-locked={open ? 'false' : 'true'} onclick={() => handleMobileTabClick(t.id)}
+		{#each TAB_DEFS as r (r.id)}
+			{@const on = r.id === activeTab}
+			{@const open = unlocked.has(r.id)}
+			<button type="button" data-testid="cm-mobile-tab-{r.id}" data-active={on ? 'true' : 'false'} data-locked={open ? 'false' : 'true'} onclick={() => handleMobileTabClick(r.id)}
 				style="display: inline-flex; align-items: center; gap: 5px; padding: 13px 13px; min-height: 44px; flex-shrink: 0; background: transparent; border: none; border-bottom: {on ? '2px solid var(--g-accent)' : '2px solid transparent'}; margin-bottom: -1px; cursor: {open ? 'pointer' : 'default'}; font-size: 14px; font-weight: {on ? 600 : 500}; color: {on ? 'var(--g-ink)' : open ? 'var(--g-ink-3)' : 'var(--g-ink-4)'}; white-space: nowrap; font-family: var(--g-font-sans); opacity: {open ? 1 : 0.35};">
-				{t.label}
+				{r.label}
 				{#if !open}<span class="mono" style="font-size: 11px; opacity: 0.8;">⊘</span>{/if}
 			</button>
 		{/each}
@@ -537,17 +552,17 @@
 	<div style="flex: 1; overflow-y: auto; padding: 16px;">
 		{#if activeTab === 'vergleich'}
 			<div style="margin-bottom: 14px;">
-				<div class="mono" style="font-size: 11px; color: var(--g-ink-4); letter-spacing: 0.10em; text-transform: uppercase; margin-bottom: 8px;">Name des Vergleichs</div>
-				<input data-testid="compare-editor-name-mobile" type="text" maxlength="80" placeholder="z.B. Skitouren Hochkönig" bind:value={wiz.name}
+				<div class="mono" style="font-size: 11px; color: var(--g-ink-4); letter-spacing: 0.10em; text-transform: uppercase; margin-bottom: 8px;">{$t('vergleich.neu.name')}</div>
+				<input data-testid="compare-editor-name-mobile" type="text" maxlength="80" placeholder={$t('vergleich.neu.name_beispiel')} bind:value={wiz.name}
 					style="width: 100%; box-sizing: border-box; padding: 12px 14px; font-size: 16px; border: 1px solid var(--g-rule); border-radius: var(--g-r-3); background: var(--g-card); font-family: var(--g-font-sans); color: var(--g-ink); outline: none; min-height: 48px;" />
 			</div>
 			<div style="margin-bottom: 14px;">
-				<div class="mono" style="font-size: 11px; color: var(--g-ink-4); letter-spacing: 0.10em; text-transform: uppercase; margin-bottom: 8px;">Region <span style="font-weight:400; text-transform:none;">(optional)</span></div>
-				<input type="text" maxlength="60" placeholder="z.B. Hochkönig · Salzburger Land" bind:value={wiz.region}
+				<div class="mono" style="font-size: 11px; color: var(--g-ink-4); letter-spacing: 0.10em; text-transform: uppercase; margin-bottom: 8px;">{$t('trip.anlegen.region')} <span style="font-weight:400; text-transform:none;">({$t('trip.anlegen.optional')})</span></div>
+				<input type="text" maxlength="60" placeholder={$t('vergleich.neu.region_beispiel')} bind:value={wiz.region}
 					style="width: 100%; box-sizing: border-box; padding: 12px 14px; font-size: 16px; border: 1px solid var(--g-rule); border-radius: var(--g-r-3); background: var(--g-card); font-family: var(--g-font-sans); color: var(--g-ink); outline: none; min-height: 48px;" />
 			</div>
 			<div>
-				<div class="mono" style="font-size: 11px; color: var(--g-ink-4); letter-spacing: 0.10em; text-transform: uppercase; margin-bottom: 10px;">Aktivitätsprofil</div>
+				<div class="mono" style="font-size: 11px; color: var(--g-ink-4); letter-spacing: 0.10em; text-transform: uppercase; margin-bottom: 10px;">{$t('vergleich.neu.aktivitaetsprofil')}</div>
 				<div style="display: flex; flex-direction: column; gap: 8px;">
 					{#each ACTIVITY_PROFILE_OPTIONS as opt (opt.value)}
 						{@const sel = wiz.activityProfile === opt.value}
@@ -555,7 +570,7 @@
 						<button type="button" data-testid={`compare-editor-profile-mobile-${opt.value}`} onclick={() => selectProfile(opt.value)}
 							style="display: flex; align-items: center; gap: 12px; min-height: 52px; padding: 12px 14px; background: {sel ? 'var(--g-accent-tint)' : 'var(--g-card)'}; border: {sel ? '1.5px solid var(--g-accent)' : '1px solid var(--g-rule)'}; border-radius: var(--g-r-3); cursor: pointer; text-align: left; font-family: var(--g-font-sans);">
 							<div style="flex: 1; min-width: 0; display: flex; flex-direction: column;">
-								<div style="font-size: 14px; font-weight: 600; color: {sel ? 'var(--g-accent-deep)' : 'var(--g-ink)'};">{opt.label}</div>
+								<div style="font-size: 14px; font-weight: 600; color: {sel ? 'var(--g-accent-deep)' : 'var(--g-ink)'};">{$t(`bausteine.profil.${opt.value}` as MessageKey)}</div>
 								<div class="mono" style="font-size: 11px; color: var(--g-ink-3); margin-top: 4px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{metricsList.slice(0, 4).join(' · ')}{metricsList.length > 4 ? ' …' : ''}</div>
 							</div>
 							{#if sel}
@@ -579,7 +594,7 @@
 			{/if}
 		{:else if activeTab === 'alarme'}
 			{#if alarmeHydrated}
-				<AlarmeTab context="vergleich" {...alarmePropsAus(wiz)} catalog={alarmeCatalog} showInfobox={true} />
+				<AlarmeTab context="vergleich" {...alarmePropsAus(wiz)} catalog={alarmeCatalogMitNamen} showInfobox={true} />
 			{/if}
 		{/if}
 	</div>
@@ -593,22 +608,22 @@
 				</div>
 			{/if}
 			{#if activeTab === 'alarme'}
-				<MBtn block variant={canActivateNow ? 'primary' : 'quiet'} size="xl" disabled={!canActivateNow || activating} onclick={handleActivate} testid="cm-mobile-activate">{activating ? 'Speichere…' : canActivateNow ? 'Briefing aktivieren' : 'Alarme einrichten zum Aktivieren'}</MBtn>
+				<MBtn block variant={canActivateNow ? 'primary' : 'quiet'} size="xl" disabled={!canActivateNow || activating} onclick={handleActivate} testid="cm-mobile-activate">{activating ? $t('trip.anlegen.speichere') : canActivateNow ? $t('vergleich.neu.aktivieren') : $t('vergleich.neu.alarme_zum_aktivieren')}</MBtn>
 			{:else if activeTab === 'vergleich'}
-				<MBtn block variant={canContinue ? 'primary' : 'quiet'} size="xl" disabled={!canContinue} onclick={handleMobileNext}>{canContinue ? 'Orte hinzufügen →' : 'Name eingeben'}</MBtn>
+				<MBtn block variant={canContinue ? 'primary' : 'quiet'} size="xl" disabled={!canContinue} onclick={handleMobileNext}>{canContinue ? $t('vergleich.neu.orte_hinzufuegen') : $t('vergleich.neu.name_eingeben')}</MBtn>
 			{:else if activeTab === 'orte'}
 				{@const restOrte = 2 - wiz.pickedIds.length}
-				<MBtn block variant={orteContinueReady ? 'primary' : 'quiet'} size="xl" disabled={!orteContinueReady} onclick={handleMobileNext}>{orteContinueReady ? 'Wetter-Metriken →' : `noch ${restOrte} Ort${restOrte !== 1 ? 'e' : ''} nötig`}</MBtn>
+				<MBtn block variant={orteContinueReady ? 'primary' : 'quiet'} size="xl" disabled={!orteContinueReady} onclick={handleMobileNext}>{orteContinueReady ? $t('vergleich.neu.wetter_metriken') : $tn('vergleich.neu.noch_orte', restOrte)}</MBtn>
 			{:else if activeTab === 'wetter-metriken'}
-				<MBtn block variant="primary" size="xl" onclick={handleMobileNext}>Wertebereiche festlegen →</MBtn>
+				<MBtn block variant="primary" size="xl" onclick={handleMobileNext}>{$t('trip.anlegen.wertebereiche_festlegen')}</MBtn>
 			{:else if activeTab === 'wertebereiche'}
-				<MBtn block variant="primary" size="xl" onclick={handleMobileNext}>Alarme einrichten →</MBtn>
+				<MBtn block variant="primary" size="xl" onclick={handleMobileNext}>{$t('trip.anlegen.alarme_einrichten')}</MBtn>
 			{/if}
 	</EditorStickyFooter>
 </div><!-- /.cm-mobile -->
 
 <!-- Mobile Bibliotheks-Sheet (Orte-Tab) -->
-<Sheet open={mobileLibraryOpen} snap="full" title="Ort wählen" onClose={() => { mobileLibraryOpen = false; }}>
+<Sheet open={mobileLibraryOpen} snap="full" title={$t('vergleich.neu.ort_waehlen')} onClose={() => { mobileLibraryOpen = false; }}>
 	{#each mobileLibraryGroups as [groupName, groupLocs] (groupName)}
 		<div style="margin-bottom: 8px;">
 			<div class="mono" style="font-size: 11px; color: var(--g-ink-4); letter-spacing: 0.10em; text-transform: uppercase; padding: 8px 0 4px; font-weight: 600;">{groupName} · {groupLocs.length}</div>

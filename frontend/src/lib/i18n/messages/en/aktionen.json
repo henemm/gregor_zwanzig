@@ -40,5 +40,14 @@
 	"aktionen.fehler.server": "Action failed — server error, please try again later.",
 	"aktionen.fehler.allgemein": "Action failed, please try again later.",
 	"aktionen.fehler.verbindung": "Action failed — please check your connection.",
-	"aktionen.fehler.senden": "Error while sending"
+	"aktionen.fehler.senden": "Error while sending",
+	"aktionen.uebersicht.status": "Status",
+	"aktionen.uebersicht.briefings": "Briefings",
+	"aktionen.uebersicht.zuletzt_raus": "Last sent",
+	"aktionen.uebersicht.noch_nicht_geplant": "Not scheduled yet",
+	"aktionen.uebersicht.nicht_geplant": "Not scheduled",
+	"aktionen.uebersicht.uhrzeiten_festlegen": "Set the briefing times under Weather metrics in the Delivery section.",
+	"aktionen.uebersicht.aktivierung_offen": "Activation pending",
+	"aktionen.uebersicht.briefings_zeiten": "Briefings {zeiten}",
+	"aktionen.uebersicht.briefings_naechster": "Briefings {zeiten} · next delivery {naechster}."
 }

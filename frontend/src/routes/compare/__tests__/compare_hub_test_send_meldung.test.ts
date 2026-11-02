@@ -28,10 +28,13 @@ test('ok mit Meldung -> Meldung des Versands wird angezeigt', async () => {
 	assert.equal(u.isSending, false);
 });
 
+// Issue #2659 (i18n F10): ohne Server-Meldung haelt die Seite den Katalogschluessel
+// (Text beim Rendern in der Nutzersprache: „Test-Briefing gesendet" / „Test briefing sent").
 test('ok ohne Meldung -> Standardtext', async () => {
 	const u = await hub({ kind: 'ok', message: '' });
 	await u.handleTestSend();
-	assert.equal(u.sendMsg, 'Test-Briefing gesendet');
+	assert.equal(u.sendMsg, null);
+	assert.equal(u.sendKey, 'vergleich.hub.test_gesendet');
 });
 
 test('Fehler -> Fehlermeldung', async () => {

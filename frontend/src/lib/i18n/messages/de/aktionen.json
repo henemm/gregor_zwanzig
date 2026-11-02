@@ -40,5 +40,14 @@
 	"aktionen.fehler.server": "Aktion fehlgeschlagen — Serverfehler, bitte später erneut versuchen.",
 	"aktionen.fehler.allgemein": "Aktion fehlgeschlagen, bitte später erneut versuchen.",
 	"aktionen.fehler.verbindung": "Aktion fehlgeschlagen — bitte Verbindung prüfen.",
-	"aktionen.fehler.senden": "Fehler beim Senden"
+	"aktionen.fehler.senden": "Fehler beim Senden",
+	"aktionen.uebersicht.status": "Status",
+	"aktionen.uebersicht.briefings": "Briefings",
+	"aktionen.uebersicht.zuletzt_raus": "Zuletzt raus",
+	"aktionen.uebersicht.noch_nicht_geplant": "Noch nicht geplant",
+	"aktionen.uebersicht.nicht_geplant": "Nicht geplant",
+	"aktionen.uebersicht.uhrzeiten_festlegen": "Briefing-Uhrzeiten unter Wetter-Metriken im Abschnitt Versand festlegen.",
+	"aktionen.uebersicht.aktivierung_offen": "Aktivierung offen",
+	"aktionen.uebersicht.briefings_zeiten": "Briefings {zeiten}",
+	"aktionen.uebersicht.briefings_naechster": "Briefings {zeiten} · nächster Versand {naechster}."
 }

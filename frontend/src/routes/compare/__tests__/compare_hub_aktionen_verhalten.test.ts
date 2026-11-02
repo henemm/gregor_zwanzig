@@ -88,15 +88,16 @@ describe('F021: Pausieren/Fortsetzen erreichen den Schreibweg des Hubs', () => {
 		await bis(() => toggles.length === 1 && u.isPausing === false, 'Ende von „pause"');
 		aktion('resume');
 		await bis(() => toggles.length === 2 && u.isPausing === false, 'Ende von „resume"');
-		assert.equal(u.pauseError, null);
+		assert.equal(u.pauseError, false);
 	});
 
 	test('scheitert das Kind, meldet der Hub die Fehlermeldung', async () => {
 		const { aktion, kindScheitert, u } = await hub();
 		kindScheitert();
 		aktion('pause');
-		await bis(() => typeof u.pauseError === 'string', 'pauseError');
-		assert.match(u.pauseError, /Status-Änderung fehlgeschlagen/);
+		// Issue #2659 (i18n F10): Flag statt eingefrorenem Text (Text beim Rendern, listen.meldung.status_fehlgeschlagen).
+		await bis(() => u.pauseError === true, 'pauseError');
+		assert.equal(u.pauseError, true);
 	});
 });
 
@@ -141,7 +142,8 @@ describe('F021/F024: Senden erst nach Bestaetigung', () => {
 		const { u } = await hub();
 		await u.handleTestSend();
 		assert.deepEqual(nach('POST', '/send').map((a) => a.url), ['/api/briefings/c1/send?kind=vergleich']);
-		assert.equal(typeof u.sendMsg, 'string');
+		// Issue #2659 (i18n F10): Server-Text ODER Katalogschluessel (ohne Server-Meldung).
+		assert.ok(typeof u.sendMsg === 'string' || u.sendKey === 'vergleich.hub.test_gesendet');
 		assert.equal(u.isSending, false);
 	});
 });

@@ -21,7 +21,9 @@
 	import type { SaveFn, SaveStatus } from '$lib/stores/saveStatusStore.svelte';
 	import { extractMessage } from '$lib/stores/saveStatusStore.svelte';
 	import { merkeNutzlast, wendeNutzlastAn } from '$lib/stores/nutzlastStand';
-	import { deriveStatusWithScheduleOverride, STATUS_MAP } from '$lib/components/compare/subscriptionHelpers.js';
+	import { deriveStatusWithScheduleOverride } from '$lib/components/compare/subscriptionHelpers.js';
+	// Issue #2659 (i18n F10): Texte aus dem Katalog; Reiter/Aktionen wortgleich zum Trip (aktionen.*).
+	import { locale, t } from '$lib/i18n';
 	import type { ComparePreset, Location, Group } from '$lib/types.js';
 	import { api } from '$lib/api.js';
 	import { onMount } from 'svelte';
@@ -54,8 +56,13 @@
 	// Katalogantwort (Übersetzung auf Auswahl-Schlüssel) abwarten, BEVOR sie den
 	// Dirty-Check-Grundzustand aufnimmt. Geteilter Promise-Cache: eine Anfrage
 	// pro Seiten-Load für alle Verbraucher.
-	import { loadCompareSelectionEntries } from '../shared/corridor-editor/compareMetricCatalogLoader.ts';
+	import {
+		loadCompareSelectionEntries,
+		loadMetricRegister,
+		mitRegisterNamen
+	} from '../shared/corridor-editor/compareMetricCatalogLoader.ts';
 	import type { CompareSelectionEntry } from '../shared/weather-metrics-tab/compareMetricSelection.ts';
+	import type { MetricLabelFields } from '../../i18n/metricLabel.ts';
 	// Issue #1299/#1291/#1287 (C2 von Epic #1301): Stundenverlauf-Steuerung im
 	// Hub-Layout-Tab — geteiltes ChannelToggle-Bedienelement + eigenstaendiges
 	// Compare-Vokabular (kein Reuse von compareMetricDefs.ts).
@@ -143,12 +150,13 @@
 	});
 
 	// Tab-Leisten-Items für den MTabBar-Baustein — Orte mit Zähler-Badge.
+	// Issue #2659 (i18n F10): `$locale` — die Reiternamen folgen dem Sprachwechsel ohne Neuladen.
 	const compareBarItems = $derived(
-		subscriptionTabs('vergleich').map((t) => ({
-			value: t.id,
-			label: t.label,
-			testid: `compare-detail-tab-${t.id}`,
-			badge: t.id === 'orte' ? orteCount : undefined
+		(void $locale, subscriptionTabs('vergleich')).map((r) => ({
+			value: r.id,
+			label: r.label,
+			testid: `compare-detail-tab-${r.id}`,
+			badge: r.id === 'orte' ? orteCount : undefined
 		}))
 	);
 
@@ -189,7 +197,6 @@
 	// Reihenfolge-Korrektur. Issue #527/#558 + #631: Pause/Aktivieren-Zustand.
 	let localSchedule = $state<string>(preset.schedule ?? 'manual');
 	const status = $derived(deriveStatusWithScheduleOverride(preset, localSchedule));
-	const statusInfo = $derived(STATUS_MAP[status]);
 
 	// Issue #2682: „Nächster Versand" (Issue #1969, Backend-Wert, neu geladen nach jedem
 	// erfolgreichen Speichern ueber `saveController.savedAt`), Kanal-Namen, Profil-Label und
@@ -340,7 +347,7 @@
 		const { sections, ungrouped } = groupLocations(notPicked, groupsForAdd);
 		const result: [string, Location[]][] = [];
 		for (const s of sections) if (s.locations.length > 0) result.push([s.group.name, s.locations]);
-		if (ungrouped.length > 0) result.push(['Weitere', ungrouped]);
+		if (ungrouped.length > 0) result.push([$t('vergleich.orte.weitere'), ungrouped]);
 		return result;
 	});
 
@@ -440,8 +447,13 @@
 	// (Alarm-Zeilen aus dem Register). Als $state festgehalten und als Prop
 	// durchgereicht — der Modul-Getter waere nicht reaktiv.
 	let alarmeCatalog = $state<CompareSelectionEntry[]>([]);
+	// Issue #2659 (i18n F10): englische Groessennamen (label_en) aus dem Register — nicht
+	// blockierend nachgeladen; ohne Register bleiben die deutschen Namen der Vergleichs-Antwort.
+	let alarmeRegister = $state<Record<string, MetricLabelFields>>({});
+	const alarmeCatalogMitNamen = $derived(mitRegisterNamen(alarmeCatalog, alarmeRegister));
 
 	async function hydrateAlarmeTab(): Promise<void> {
+		void loadMetricRegister().then((r) => (alarmeRegister = r), () => {});
 		const catalog = await loadCompareSelectionEntries().catch(() => []);
 		alarmeCatalog = catalog;
 		// F005-Muster: aus currentPreset hydrieren, damit ein vorheriger
@@ -664,7 +676,7 @@
 		items={compareBarItems}
 		active={activeTab}
 		onChange={(v) => void handleValueChange(v)}
-		ariaLabel="Vergleich-Detail"
+		ariaLabel={$t('vergleich.hub.tabs_aria')}
 		size="sm"
 	/>
 
@@ -694,26 +706,26 @@
 			     Fix-Loop 1 (F002): mobil ueber `eyebrow` statt `title` — kompakter
 			     CDM_SectionH-Look (Soll: screen-compare-detail-mobile.jsx:267-274). -->
 			{#if isMobileViewport}
-				<SectionH eyebrow="Verglichene Orte">
+				<SectionH eyebrow={$t('vergleich.hub.verglichene_orte')}>
 					{#snippet right()}
-						<span class="hub-section-hint">ziehen zum Sortieren</span>
+						<span class="hub-section-hint">{$t('vergleich.hub.ziehen_sortieren')}</span>
 					{/snippet}
 				</SectionH>
 			{:else}
-				<SectionH title="Verglichene Orte">
+				<SectionH title={$t('vergleich.hub.verglichene_orte')}>
 					{#snippet right()}
-						<span class="hub-section-hint">Reihenfolge = Spalten im Briefing · ziehen zum Sortieren</span>
+						<span class="hub-section-hint">{$t('vergleich.hub.reihenfolge_hinweis')}</span>
 					{/snippet}
 				</SectionH>
 			{/if}
 			<Card padding={0} style="overflow: hidden">
 				{#if resolvedLocations.length === 0}
-					<p class="empty-state" style="padding: 0 16px">Noch keine Orte ausgewählt.</p>
+					<p class="empty-state" style="padding: 0 16px">{$t('vergleich.hub.keine_orte')}</p>
 				{:else}
 					<SortableList
 						items={currentLocationIds}
 						onDndReorder={handleOrteDndReorder}
-						ariaLabel="Verglichene Orte, Reihenfolge"
+						ariaLabel={$t('trip.layout.reihenfolge_aria', { titel: $t('vergleich.hub.verglichene_orte') })}
 						itemLabel={orteItemLabel}
 						flipDurationMs={150}
 						zoneClass="hub-orte-list"
@@ -728,7 +740,7 @@
 										type="button"
 										class="hub-orte-remove-btn"
 										data-testid="hub-orte-remove"
-										title="Entfernen"
+										title={$t('layout.ausgabe.entfernen')}
 										onclick={() => removeLocation(id)}
 									>✕</button>
 								</div>
@@ -737,13 +749,13 @@
 					</SortableList>
 				{/if}
 				<div style="padding: 14px">
-					<Btn variant="ghost" size="sm" data-testid="hub-orte-add" onclick={toggleAddPanel}>Ort hinzufügen</Btn>
+					<Btn variant="ghost" size="sm" data-testid="hub-orte-add" onclick={toggleAddPanel}>{$t('listen.orte.hinzufuegen')}</Btn>
 				</div>
 			</Card>
 			{#if addPanelOpen}
 				<div class="hub-add-panel" data-testid="hub-orte-panel">
 					{#if addPanelGroups.length === 0}
-						<p class="empty-state">Keine weiteren gespeicherten Orte verfügbar.</p>
+						<p class="empty-state">{$t('vergleich.hub.keine_weiteren')}</p>
 					{:else}
 						{#each addPanelGroups as [groupName, groupLocs] (groupName)}
 							<div class="hub-add-group">
@@ -821,7 +833,7 @@
 				<AlarmeTab
 					context="vergleich"
 					{...alarmePropsAus(wizardState)}
-					catalog={alarmeCatalog}
+					catalog={alarmeCatalogMitNamen}
 					preset={currentPreset}
 					{saveController}
 					enqueueHubWrite={(fn) => hubPutQueue.enqueue(fn)}
@@ -837,7 +849,7 @@
 	     im Reiter Wetter-Metriken (WetterMetrikenVersandPanel oben). -->
 
 	{#snippet hubActivationCard()}
-		{@const banner = hubActivationBanner(status)}
+		{@const banner = (void $locale, hubActivationBanner(status))}
 		<Card padding={20} style="border-left: 3px solid {banner.border}" data-testid="compare-hub-activation-card">
 			<div style="display: flex; align-items: center; gap: 9px; margin-bottom: 10px">
 				<Dot tone={banner.dotTone} size={8} />

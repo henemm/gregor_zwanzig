@@ -15,6 +15,7 @@ import {
 	hydrateHubFieldsFromPreset
 } from '../compare/compareHubHydration.ts';
 import { hydrateVersandFieldsFromPreset } from '../shared/versandVergleichSpeicherung.ts';
+import { tr } from '../../i18n/index.ts';
 import {
 	hydrateChannelActiveMetricsFromPreset,
 	hydrateDayWindowFromPreset,
@@ -40,7 +41,8 @@ export function vorlageInZustand(
 	Object.assign(state, hydrateDayWindowFromPreset(preset));
 	Object.assign(state, hydrateLayoutFieldsFromPreset(preset));
 
-	state.name = `${preset.name} (Kopie)`;
+	// Issue #2659 (i18n F10): Vorschlagsname in der Sprache des Nutzers (danach Nutzerdaten).
+	state.name = tr('vergleich.neu.kopie', { name: preset.name });
 	state.region = (displayConfig.region as string | undefined) ?? '';
 	state.pickedIds = (preset.location_ids ?? []).filter((id) =>
 		locations.some((l) => l.id === id)

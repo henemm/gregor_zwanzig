@@ -5,6 +5,7 @@
 	// Spec: docs/specs/modules/issue_301b_auto_reports_overview.md (§4)
 
 	import PlusIcon from '@lucide/svelte/icons/plus';
+	import { t } from '$lib/i18n';
 
 	interface Props {
 		onclick: () => void;
@@ -17,10 +18,10 @@
 	class="add-report-card"
 	{onclick}
 	data-testid="add-report-card"
-	aria-label="Neuer Auto-Report"
+	aria-label={$t('vergleich.neu.auto_report')}
 >
 	<PlusIcon size={24} />
-	<span>Neuer Auto-Report</span>
+	<span>{$t('vergleich.neu.auto_report')}</span>
 </button>
 
 <style>

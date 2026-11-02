@@ -130,7 +130,8 @@ export function alarmePropsAus(wiz: AlarmeZustandsQuelle) {
 		cooldownMinutes: wiz.alertCooldownMinutes,
 		quietFrom: wiz.alertQuietFrom,
 		quietTo: wiz.alertQuietTo,
-		zonenBezug: 'des ersten Orts',
+		// Issue #2659 (i18n F10): `zonenBezug` entfaellt — den Bezug der Stillen Stunden zeigt
+		// AlarmeTab sprachabhaengig aus dem Katalog je context (F7, alarme.stille_stunden.bezug_*).
 		onOfficialWarningsChange: (an: boolean) => {
 			wiz.officialWarningsEnabled = an;
 		},

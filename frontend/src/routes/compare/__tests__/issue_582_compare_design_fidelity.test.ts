@@ -23,6 +23,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { join } from 'node:path';
+import { quelleMitKatalog } from '../../../lib/i18n/__tests__/quelleMitKatalog.ts';
 
 const ROUTES_COMPARE = join(fileURLToPath(import.meta.url), '..', '..', '..');
 const COMPARE_DIR = join(ROUTES_COMPARE, '..', 'lib', 'components', 'compare');
@@ -202,7 +203,8 @@ describe('AC-6: Übersicht-Tab — Monitoring-Streifen + SummaryCard-Grid', () =
 	}
 
 	test('AC-6b: Übersicht-Tab hat SummaryCard mit "Bearbeiten →" Link', () => {
-		const src = readFileSync(HUB_UEBERSICHT, 'utf-8');
+		// Issue #2659 (i18n F10): Text aus dem Katalog (aktionen.edit) — mit deutschem Wert gelesen.
+		const src = quelleMitKatalog(readFileSync(HUB_UEBERSICHT, 'utf-8'));
 		assert.match(
 			src,
 			/Bearbeiten\s*→|Bearbeiten\s*&rarr;/,

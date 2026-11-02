@@ -28,7 +28,11 @@ test('#491 AC-1: +page.svelte Breadcrumb-Text enthält ORTS-VERGLEICHE', () => {
 	const pagePath = '../../../routes/compare/[id]/+page.svelte';
 	assert.ok(has(pagePath), 'frontend/src/routes/compare/[id]/+page.svelte fehlt');
 	const src = read(pagePath);
-	assert.ok(src.includes('ORTS-VERGLEICHE'), '+page.svelte enthält keinen Breadcrumb-Text "ORTS-VERGLEICHE"');
+	// Issue #2659 (i18n F10): Krümel aus dem Katalog (listen.vergleiche.titel), in Grossbuchstaben.
+	assert.ok(
+		src.includes('ORTS-VERGLEICHE') || src.includes("$t('listen.vergleiche.titel').toUpperCase()"),
+		'+page.svelte enthält keinen Breadcrumb-Text "ORTS-VERGLEICHE"'
+	);
 });
 
 test('#491 AC-2: CompareDetail.svelte hat Monitoring-Streifen-Felder', () => {

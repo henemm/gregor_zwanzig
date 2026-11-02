@@ -38,6 +38,9 @@
 	import { ACTIVITY_PROFILE_OPTIONS, type ComparePreset } from '$lib/types';
 	import SubscriptionHeader from '$lib/components/shared/subscription-header/SubscriptionHeader.svelte';
 	import MoreHorizontalIcon from '@lucide/svelte/icons/more-horizontal';
+	// Issue #2659 (i18n F10): Texte aus dem Katalog — Aktionen/Senden wortgleich zum Trip-Hub
+	// (aktionen.*). Fehler ohne Server-Text halten nur den Schluessel (Sprachwechsel ohne Neuladen).
+	import { locale, t, tn, type MessageKey } from '$lib/i18n';
 
 	let { data } = $props();
 
@@ -170,7 +173,11 @@
 	let runtimeExceeded = $derived(isRuntimeExceeded(currentPreset));
 	// Adversary-Finding F001: geguardetes Profil-Label für die mobile Kontext-
 	// Unterzeile (Muster SubscriptionCard.svelte) — leer bei unbekanntem/fehlendem profil.
-	let profileLabel = $derived(presetProfileLabel(currentPreset.profil));
+	// Issue #2659 (i18n F10): Profilnamen je Sprache (`$locale`/`$t`), Kennungen unveraendert.
+	let profileLabel = $derived((void $locale, presetProfileLabel(currentPreset.profil)));
+	const profileOptions = $derived(
+		ACTIVITY_PROFILE_OPTIONS.map((o) => ({ value: o.value, label: $t(`bausteine.profil.${o.value}` as MessageKey) }))
+	);
 
 	// Issue #2284 S1 — Speicherweg des geteilten Kopfs (SubscriptionHeader).
 	// KRITISCH (#2375/#2381): NUR das eigene Feld senden ({ name } / { profil } /
@@ -212,6 +219,8 @@
 	let mobil = $state(false);
 	let sendDialogOpen = $state(false);
 	const lifecycle = $derived(currentPreset.archived_at != null ? 'archived' : status);
+	// Issue #2659 (i18n F10): Aktionsliste je Sprache (wortgleich zum Trip-Hub, aktionen.*).
+	const hubAktionen = $derived.by(() => (void $locale, subscriptionActions('vergleich', lifecycle, 'hub')));
 	onMount(() => {
 		const mq = window.matchMedia('(max-width: 899px)');
 		const update = () => (mobil = mq.matches);
@@ -223,22 +232,28 @@
 	// Issue #528 — Status-abhängige Header-Primäraktion.
 	let isSending = $state(false);
 	let sendMsg = $state<string | null>(null);
+	let sendKey = $state<MessageKey | null>(null);
+	/** Meldung unter dem Kopf: Server-Text (`text`) oder Katalogschluessel (`key`). */
+	function meldung(text: string | null, key: MessageKey | null): void {
+		sendMsg = text;
+		sendKey = text ? null : key;
+	}
 
 	async function handleTestSend() {
 		isSending = true;
-		sendMsg = null;
+		meldung(null, null);
 		try {
 			// Issue #2124/#2280: geteilter Laufzustand (compare:<id>) + Klassifikation,
 			// einheitlicher Ausloeser -> POST /api/briefings/{id}/send?kind=vergleich.
 			const o = await sendSubscription('vergleich', currentPreset.id);
-			sendMsg = o.kind === 'ok' ? (o.message || 'Test-Briefing gesendet') : o.message;
+			meldung(o.message || null, o.kind === 'ok' ? 'vergleich.hub.test_gesendet' : null);
 		} finally {
 			isSending = false;
 		}
 	}
 
 	let isPausing = $state(false);
-	let pauseError = $state<string | null>(null);
+	let pauseError = $state(false);
 
 	// Staging-Fund F004 (CRITICAL): kein eigenstaendiger fetch-Pfad mit vollem
 	// Objekt-Spread aus `data.preset` mehr (Datenverlust-Risiko in BEIDE
@@ -252,12 +267,12 @@
 
 	async function togglePause() {
 		isPausing = true;
-		pauseError = null;
+		pauseError = false;
 		// Adversary Runde 6 (LOW): Ref-Fallback analog CompareDetail.svelte:24 —
 		// ein (noch) undefined `compareDetailRef` faellt jetzt auf denselben
 		// Fehlerpfad zurueck statt still (ohne pauseError) zu enden.
 		const ok = (await compareDetailRef?.toggleActiveFromParent()) ?? false;
-		if (!ok) pauseError = 'Status-Änderung fehlgeschlagen. Bitte versuche es erneut.';
+		if (!ok) pauseError = true;
 		isPausing = false;
 	}
 
@@ -299,13 +314,13 @@
 			await setArchived('vergleich', currentPreset.id, true);
 			window.location.href = '/compare';
 		} catch (e) {
-			sendMsg = fehlerText(e, 'Archivieren fehlgeschlagen.');
+			fehlerMeldung(e, 'vergleich.hub.archivieren_fehler');
 		}
 	}
 
 	// Nutzerverstaendliche Meldung: 4xx mit Server-Detail, sonst der feste Text (5xx/Netz).
-	function fehlerText(e: unknown, fest: string): string {
-		return e instanceof SubscriptionExecError && e.status < 500 && e.detail ? e.detail : fest;
+	function fehlerMeldung(e: unknown, key: MessageKey): void {
+		meldung(e instanceof SubscriptionExecError && e.status < 500 && e.detail ? e.detail : null, key);
 	}
 
 	async function unarchivePreset() {
@@ -313,7 +328,7 @@
 			await setArchived('vergleich', currentPreset.id, false);
 			window.location.reload();
 		} catch (e) {
-			sendMsg = fehlerText(e, 'Reaktivieren fehlgeschlagen.');
+			fehlerMeldung(e, 'vergleich.hub.reaktivieren_fehler');
 		}
 	}
 
@@ -323,7 +338,7 @@
 			await deleteSubscription('vergleich', currentPreset.id);
 			window.location.href = '/compare';
 		} catch (e) {
-			sendMsg = fehlerText(e, 'Löschen fehlgeschlagen.');
+			fehlerMeldung(e, 'vergleich.hub.delete_fehler');
 		} finally {
 			isDeleting = false;
 		}
@@ -334,7 +349,7 @@
      (trips/[id]/+page.svelte). Ohne ihn traegt das Dokument nur den
      Platzhalter aus app.html, und die Offline-Uebersicht listet jeden
      Ortsvergleich als „Gregor Zwanzig". -->
-<svelte:head><title>{currentPreset.name} — Gregor Zwanzig</title></svelte:head>
+<svelte:head><title>{`${currentPreset.name} — Gregor Zwanzig`}</title></svelte:head>
 
 <!-- Hub-Kopf (#491, #493, #582; #2284 S1): EIN Markup für Desktop und Mobil.
      Seiten-Chrome (Breadcrumb Desktop, BackLink Mobil, Aktionen) bleibt hier;
@@ -342,11 +357,11 @@
 <div class="flex flex-col gap-4 p-4 desktop:block desktop:pt-[22px] desktop:px-10 desktop:pb-0 desktop:[border-bottom:1px_solid_var(--g-rule)]" style="position: relative">
 	<!-- Breadcrumb (Issue #582 + Bug #589). Issue #1256 S8c (AC-10): genau 2 Krümel. -->
 	<div class="hidden desktop:flex" style="align-items: center; gap: 8px; margin-bottom: 12px">
-		<a href="/compare" style="font-size: 11px; font-family: var(--g-font-mono); letter-spacing: 0.1em; text-transform: uppercase; color: var(--g-ink-3); text-decoration: none" class="breadcrumb-link">ORTS-VERGLEICHE</a>
+		<a href="/compare" style="font-size: 11px; font-family: var(--g-font-mono); letter-spacing: 0.1em; text-transform: uppercase; color: var(--g-ink-3); text-decoration: none" class="breadcrumb-link">{$t('listen.vergleiche.titel').toUpperCase()}</a>
 		<span style="color: var(--g-ink-4); font-size: 11px">/</span>
-		<span style="font-size: 11px; font-family: var(--g-font-mono); letter-spacing: 0.1em; text-transform: uppercase; color: var(--g-ink-4)">Hub</span>
+		<span style="font-size: 11px; font-family: var(--g-font-mono); letter-spacing: 0.1em; text-transform: uppercase; color: var(--g-ink-4)">{$t('vergleich.hub.krumel')}</span>
 	</div>
-	<div class="desktop:hidden"><BackLink href="/compare" label="Vergleiche" ariaLabel="Zurück zur Übersicht" /></div>
+	<div class="desktop:hidden"><BackLink href="/compare" label={$t('listen.archiv.vergleiche')} ariaLabel={$t('aktionen.zurueck_uebersicht')} /></div>
 
 	<div class="flex items-start gap-2 desktop:gap-6 desktop:justify-between">
 		<SubscriptionHeader
@@ -354,7 +369,7 @@
 			name={currentPreset.name}
 			region={currentPreset.display_config?.region as string | undefined}
 			profile={currentPreset.profil}
-			profileOptions={ACTIVITY_PROFILE_OPTIONS}
+			{profileOptions}
 			{profileLabel}
 			regionMaxLength={60}
 			testidPrefix="compare-hub"
@@ -363,12 +378,12 @@
 		>
 			{#snippet eyebrow()}
 				<!-- Issue #1256 S8c (AC-12): Eyebrow nur mobil. -->
-				<span class="mono block desktop:hidden" style="font-size: 11px; color: var(--g-ink-muted); letter-spacing: 0.12em; text-transform: uppercase; line-height: 1;">Orts-Vergleich · Hub</span>
+				<span class="mono block desktop:hidden" style="font-size: 11px; color: var(--g-ink-muted); letter-spacing: 0.12em; text-transform: uppercase; line-height: 1;">{$t('vergleich.hub.eyebrow')}</span>
 			{/snippet}
 			{#snippet badges()}
 				<span class="flex-shrink-0"><CompareStatusPill {status} /></span>
 				{#if runtimeExceeded}
-					<span data-testid="runtime-exceeded-hint" class="flex-shrink-0 text-[11px] desktop:text-xs" style="font-weight: 600; color: var(--g-bad)">Laufzeit überschritten</span>
+					<span data-testid="runtime-exceeded-hint" class="flex-shrink-0 text-[11px] desktop:text-xs" style="font-weight: 600; color: var(--g-bad)">{$t('vergleich.hub.laufzeit_ueberschritten')}</span>
 				{/if}
 			{/snippet}
 			{#snippet meta()}
@@ -376,8 +391,8 @@
 				     Desktop zählte die gespeicherten IDs, Mobil die aufgelösten Orte
 				     (weichen ab, wenn ein Ort gelöscht/nicht auflösbar ist). Getrennte
 				     testids je Viewport, damit jede Kopf-testid genau einmal im DOM steht (AC-8). -->
-				<span data-testid="compare-hub-orte-anzahl-desktop" class="hidden desktop:inline">{' · '}{currentPreset.location_ids.length} {currentPreset.location_ids.length === 1 ? 'Ort' : 'Orte'}</span>
-				<span data-testid="compare-hub-orte-anzahl-mobil" class="desktop:hidden">{' · '}{data.locations.length} {data.locations.length === 1 ? 'Ort' : 'Orte'}</span>
+				<span data-testid="compare-hub-orte-anzahl-desktop" class="hidden desktop:inline">{' · '}{$tn('listen.anzahl.orte', currentPreset.location_ids.length)}</span>
+				<span data-testid="compare-hub-orte-anzahl-mobil" class="desktop:hidden">{' · '}{$tn('listen.anzahl.orte', data.locations.length)}</span>
 			{/snippet}
 		</SubscriptionHeader>
 
@@ -385,22 +400,22 @@
 		     mt-[25px] = Eyebrow (9px) + gap-4 (16px): Knopf steht auf Höhe der Namenszeile. -->
 		<div class="flex items-center mt-[25px] desktop:mt-0" style="gap: 8px; flex-shrink: 0">
 			{#if status === 'draft'}
-				<Btn variant="primary" class="min-h-[44px] desktop:min-h-0" onclick={() => { window.location.href = `?tab=wetter-metriken#versand`; }}>Setup abschließen</Btn>
+				<Btn variant="primary" class="min-h-[44px] desktop:min-h-0" onclick={() => { window.location.href = `?tab=wetter-metriken#versand`; }}>{$t('vergleich.hub.setup_abschliessen')}</Btn>
 			{:else}
 				<!-- Senden ist der Primaerknopf und oeffnet den Sende-Dialog (AC-3/AC-12) -->
 				<Btn variant="primary" class="min-h-[44px] desktop:min-h-0" data-testid="subscription-hub-send" onclick={() => (sendDialogOpen = true)} disabled={isSending || lifecycle === 'archived'}>
-					{isSending ? 'Wird gesendet…' : 'Senden'}
+					{isSending ? $t('aktionen.wird_gesendet') : $t('aktionen.senden')}
 				</Btn>
 			{/if}
 			{#if !mobil}
-				<SubscriptionKebab data-testid="subscription-kebab" actions={subscriptionActions('vergleich', lifecycle, 'hub')} onSelect={handleAction} />
+				<SubscriptionKebab data-testid="subscription-kebab" actions={hubAktionen} onSelect={handleAction} />
 			{/if}
 			{#if mobil}
 				<button
 					type="button"
 					class="flex flex-shrink-0 items-center justify-center min-h-[44px] min-w-[44px] rounded-md"
 					data-testid="subscription-kebab"
-					aria-label="Weitere Aktionen"
+					aria-label={$t('aktionen.weitere')}
 					onclick={() => (actionSheetOpen = true)}
 				>
 					<MoreHorizontalIcon size={20} />
@@ -410,11 +425,11 @@
 	</div>
 
 	<!-- sendMsg/pauseError wie bisher nur Desktop (mobil: Aktions-Sheet). -->
-	{#if sendMsg}
-		<div class="hidden desktop:flex" style="font-size: 14px; color: var(--g-ink-3); margin-bottom: 8px">{sendMsg}</div>
+	{#if sendMsg || sendKey}
+		<div class="hidden desktop:flex" style="font-size: 14px; color: var(--g-ink-3); margin-bottom: 8px">{sendKey ? $t(sendKey) : sendMsg}</div>
 	{/if}
 	{#if pauseError}
-		<div class="hidden desktop:flex" style="font-size: 14px; color: var(--g-bad); margin-bottom: 8px">{pauseError}</div>
+		<div class="hidden desktop:flex" style="font-size: 14px; color: var(--g-bad); margin-bottom: 8px">{$t('listen.meldung.status_fehlgeschlagen')}</div>
 	{/if}
 </div>
 
@@ -460,9 +475,9 @@
 <!-- Issue #2214: Loeschen erst nach Bestaetigung (Muster trips/[id]/+page.svelte). -->
 <ConfirmDialog
 	open={deleteDialogOpen}
-	title="Vergleich endgültig löschen?"
-	description={'"' + currentPreset.name + '" wird unwiderruflich gelöscht.'}
-	confirmLabel="Löschen"
+	title={$t('vergleich.hub.delete_titel')}
+	description={$t('listen.dialog.unwiderruflich', { name: currentPreset.name })}
+	confirmLabel={$t('aktionen.delete')}
 	confirmVariant="destructive"
 	data-testid="compare-detail-delete-confirm-dialog"
 	cancelTestid="compare-detail-delete-confirm-cancel"

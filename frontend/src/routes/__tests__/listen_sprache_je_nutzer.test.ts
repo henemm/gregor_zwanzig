@@ -129,10 +129,11 @@ describe('AC-3: Listen auf Englisch', () => {
 		const s = sichtbarerText(c);
 		hat(s, en('listen.spalte.orte'));
 		hat(s, en('listen.status.aktiv'));
-		// Zelleninhalte aus subscriptionHelpers.ts gehoeren F10 (Known Limitations) — vor der Pruefung entfernt.
+		// Seit F10 (#2659) sind auch die Zelleninhalte aus subscriptionHelpers.ts englisch.
 		const p = vergleich() as unknown as Parameters<typeof presetLocationsLabel>[0];
-		const f10 = [presetLocationsLabel(p), presetTileScheduleLabel(p)];
-		assert.deepEqual(deutscheReste(f10.reduce((t, w) => t.split(w).join(' '), s)), []);
+		hat(s, presetLocationsLabel(p));
+		hat(s, presetTileScheduleLabel(p));
+		assert.deepEqual(deutscheReste(s), []);
 		assert.deepEqual(deutscheReste(attributText(c)), []);
 	});
 });

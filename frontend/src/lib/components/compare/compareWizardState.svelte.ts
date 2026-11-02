@@ -9,6 +9,7 @@ import type { IdealRange } from '../shared/corridor-editor/corridorEditorState';
 import type { CompareChannelActiveMetrics } from '../shared/weather-metrics-tab/compareChannelMetricLayouts';
 import type { AlertChannelState } from '../shared/alarme-tab/alertChannelState';
 import { buildNewComparePresetPayload } from './compareEditorSave';
+import type { MessageKey } from '../../i18n/index.ts';
 
 export class CompareWizardState {
 	name = $state('');
@@ -116,6 +117,8 @@ export class CompareWizardState {
 	dayWindowEndHour = $state(19);
 	saveStatus = $state<'idle' | 'saving' | 'ok' | 'error'>('idle');
 	saveError = $state<string | null>(null);
+	// Issue #2659 (i18n F10): ohne Server-Text nur der Schluessel (Anzeige loest beim Rendern auf).
+	saveErrorKey = $state<MessageKey | null>(null);
 
 	// --- API-Aktionen --------------------------------------------------------
 	// Issue #1250 Scheibe 0: die beiden Legacy-Save-Methoden (enabled-Toggle +
@@ -132,6 +135,7 @@ export class CompareWizardState {
 	async saveNewPreset(): Promise<void> {
 		this.saveStatus = 'saving';
 		this.saveError = null;
+		this.saveErrorKey = null;
 		const payload = buildNewComparePresetPayload({
 			name: this.name,
 			pickedIds: this.pickedIds,
@@ -184,16 +188,17 @@ export class CompareWizardState {
 		} catch (e) {
 			this.saveStatus = 'error';
 			this.saveError = extractErrorMessage(e);
+			this.saveErrorKey = this.saveError === null ? 'trip.fehler_speichern' : null;
 		}
 	}
 }
 
-function extractErrorMessage(e: unknown): string {
+function extractErrorMessage(e: unknown): string | null {
 	if (e && typeof e === 'object') {
 		const obj = e as Record<string, unknown>;
 		if (typeof obj.detail === 'string' && obj.detail) return obj.detail;
 		if (typeof obj.error === 'string' && obj.error) return obj.error;
 		if (typeof obj.message === 'string' && obj.message) return obj.message;
 	}
-	return 'Fehler beim Speichern';
+	return null;
 }
