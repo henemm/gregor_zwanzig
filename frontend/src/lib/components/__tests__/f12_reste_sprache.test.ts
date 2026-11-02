@@ -85,7 +85,7 @@ describe('F12: Reste der Allowlist (AC-1)', () => {
 		const en = (k: string) => trFor('en', k);
 		const erwartet: Record<string, string[]> = {
 			brandIcon: [en('bausteine.marke.name')],
-			footer: [en('nav.footer.rechtliches'), en('nav.footer.impressum'), en('nav.footer.datenschutz')],
+			footer: [en('bausteine.footer.rechtliches'), en('bausteine.footer.impressum'), en('bausteine.footer.datenschutz')],
 			locationForm: ['Location name', 'Google Maps coordinates (DMS)', 'Latitude (lat)', 'Longitude (lon)', 'Elevation (m)', 'Activity profile', 'Group (optional)', 'No group', '— No profile —', 'Cancel', 'Save', 'e.g. hochfuegen'],
 			weatherDialog: ['Weather metrics — E2E-Ort', 'Which metrics should the report show?', 'Cancel', 'Save']
 		};

@@ -1,8 +1,1 @@
-[
-	"lib/brand/BrandIcon.svelte",
-	"lib/brand/BrandWordmark.svelte",
-	"lib/components/LocationForm.svelte",
-	"lib/components/WeatherConfigDialog.svelte",
-	"lib/components/shared/AppFooter.svelte",
-	"routes/+layout.svelte"
-]
+[]

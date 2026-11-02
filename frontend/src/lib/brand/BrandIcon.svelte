@@ -11,6 +11,8 @@
 
 	let { size = 'md', color = 'var(--g-ink)', accent = 'var(--g-accent)' }: Props = $props(); // audit:exempt — Icon-Farbe (§1.4.11)
 
+	import { t } from '$lib/i18n';
+
 	const SIZES: Record<string, number> = { sm: 18, md: 24, lg: 32 };
 	const px = $derived(typeof size === 'number' ? size : (SIZES[size] ?? SIZES.md));
 </script>
@@ -20,7 +22,7 @@
 	height={px}
 	viewBox="0 0 64 64"
 	data-testid="brand-icon"
-	aria-label="Gregor Zwanzig"
+	aria-label={$t('bausteine.marke.name')}
 	style="display:inline-block;flex-shrink:0;vertical-align:middle"
 >
 	<!-- Hauptkamm — gefuellte Silhouette, vier Spitzen -->

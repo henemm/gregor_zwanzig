@@ -27,7 +27,7 @@
 	import { isWebAuthnSupported, registerPasskey } from '$lib/passkey';
 	import { api } from '$lib/api.js';
 	// Issue #2647 (i18n S2) — Oberflaechensprache aus data.lang.
-	import { locale } from '$lib/i18n';
+	import { locale, t } from '$lib/i18n';
 
 	let { children, data } = $props();
 
@@ -37,6 +37,11 @@
 	locale.set(untrack(() => data.lang) ?? 'de');
 	$effect.pre(() => {
 		locale.set(data.lang ?? 'de');
+	});
+	// #2661 (F12): <html lang> folgt der Sprache auch ohne Neuladen (Konto-Wechsel);
+	// beim Serverrendern setzt hooks.server.ts den Wert (%lang%).
+	$effect(() => {
+		document.documentElement.lang = $locale;
 	});
 
 	let updateBereit = $state(false);
@@ -317,9 +322,9 @@
 	>
 		<div>
 			{#if updateFehlgeschlagen}
-				Aktualisieren fehlgeschlagen — bitte erneut versuchen.
+				{$t('bausteine.hinweis.update_fehlgeschlagen')}
 			{:else}
-				Neue Version verfügbar. Wird erst auf Antippen geladen.
+				{$t('bausteine.hinweis.update_verfuegbar')}
 			{/if}
 		</div>
 		<div style="display: flex; align-items: center; gap: 16px; justify-content: flex-end;">
@@ -329,7 +334,7 @@
 				style="background: transparent; border: none; color: inherit; font-size: 13px;
 				       font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em;
 				       font-family: var(--g-font-data); cursor: pointer; min-height: 44px; padding: 0 4px;"
-			>Später</button>
+			>{$t('bausteine.hinweis.spaeter')}</button>
 			<button
 				type="button"
 				onclick={updateAnwenden}
@@ -337,7 +342,7 @@
 				       font-size: 13px; font-weight: 600; text-transform: uppercase;
 				       letter-spacing: 0.06em; font-family: var(--g-font-data); cursor: pointer;
 				       min-height: 44px; padding: 0 16px; border-radius: var(--g-radius-md, 0.5rem);"
-			>Aktualisieren</button>
+			>{$t('bausteine.hinweis.aktualisieren')}</button>
 		</div>
 	</div>
 {/if}
@@ -355,7 +360,7 @@
 		       font-size: 14px; line-height: 1.4;"
 	>
 		<div style="flex: 1; min-width: 0;">
-			Auf den Startbildschirm legen: unten „Teilen“ antippen, dann „Zum Home-Bildschirm“.
+			{$t('bausteine.hinweis.ios')}
 		</div>
 		<button
 			type="button"
@@ -363,7 +368,7 @@
 			style="background: transparent; border: none; color: inherit; font-size: 13px;
 			       font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em;
 			       font-family: var(--g-font-data); cursor: pointer; min-height: 44px; padding: 0 4px;"
-		>Schließen</button>
+		>{$t('bausteine.hinweis.schliessen')}</button>
 	</div>
 {/if}
 
@@ -381,7 +386,7 @@
 		       font-size: 14px; line-height: 1.4;"
 	>
 		<div>
-			Nächstes Mal ohne Passwort anmelden: Passkey auf diesem Gerät einrichten.
+			{$t('bausteine.hinweis.passkey')}
 		</div>
 		<div style="display: flex; align-items: center; gap: 16px; justify-content: flex-end;">
 			<button
@@ -390,7 +395,7 @@
 				style="background: transparent; border: none; color: inherit; font-size: 13px;
 				       font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em;
 				       font-family: var(--g-font-data); cursor: pointer; min-height: 44px; padding: 0 4px;"
-			>Nicht jetzt</button>
+			>{$t('bausteine.hinweis.nicht_jetzt')}</button>
 			<button
 				type="button"
 				onclick={passkeyAngebotEinrichten}
@@ -398,7 +403,7 @@
 				       font-size: 13px; font-weight: 600; text-transform: uppercase;
 				       letter-spacing: 0.06em; font-family: var(--g-font-data); cursor: pointer;
 				       min-height: 44px; padding: 0 16px; border-radius: var(--g-radius-md, 0.5rem);"
-			>Jetzt einrichten</button>
+			>{$t('bausteine.hinweis.einrichten')}</button>
 		</div>
 	</div>
 {/if}

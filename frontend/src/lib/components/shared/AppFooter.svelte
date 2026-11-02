@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { t } from '$lib/i18n';
 	// Issue #2268 (S1 von #2146, Epic #2138) — app-weites Chrome mit den zwei
 	// Rechtstext-Links. Die Ziele liegen auf henemm.com, Gregor betreibt keine
 	// eigene Rechtstext-Route. Wortlaut und URLs sind PO-Vorgabe: Aenderung nur
@@ -23,12 +24,12 @@
      (Vorrangregel #2316 AC-7). -->
 <footer style="color: var(--g-ink-3); font-size: 14px; padding: 24px 0 8px;">
 	<nav
-		aria-label="Rechtliches"
+		aria-label={$t('bausteine.footer.rechtliches')}
 		style="display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 24px;"
 	>
-		<a href={IMPRESSUM_URL} target="_blank" rel="noopener noreferrer" style={LINK_STIL}>Impressum</a>
+		<a href={IMPRESSUM_URL} target="_blank" rel="noopener noreferrer" style={LINK_STIL}>{$t('bausteine.footer.impressum')}</a>
 		<a href={DATENSCHUTZ_URL} target="_blank" rel="noopener noreferrer" style={LINK_STIL}>
-			Datenschutz
+			{$t('bausteine.footer.datenschutz')}
 		</a>
 	</nav>
 </footer>

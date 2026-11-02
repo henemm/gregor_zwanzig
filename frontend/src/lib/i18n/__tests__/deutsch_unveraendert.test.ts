@@ -235,7 +235,7 @@ const NEU_IN_F9 = F9_ANKER.map(([k]) => k);
 const NEU_IN_F7 = F7_ANKER.map(([k]) => k);
 /** #2659 (F10) Ortsvergleich-Flaechen: vergleich.* und aktionen.uebersicht.* (feste Anker-Tabelle). */
 const NEU_IN_F10 = F10_ANKER.map(([k]) => k);
-/** #2661 (F12) letzte Allowlist-Dateien: bausteine.marke.*, nav.footer.*, nav.hinweis.*, listen.orte.form/metriken.* (feste Anker-Tabelle). */
+/** #2661 (F12) letzte Allowlist-Dateien: bausteine.marke/footer/hinweis.*, listen.orte.form/metriken.* (feste Anker-Tabelle). */
 const NEU_IN_F12 = F12_ANKER.map(([k]) => k);
 const NEU_IN_FOLGEPAKETEN = [
 	// #2648 (S3) Sprachumschalter und Konto-Sprache
