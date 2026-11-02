@@ -85,7 +85,7 @@ function deDannEn<T>(f: () => T): { de: T; en: T } {
 function deutscheReste(text: string, ausnahmen: string[] = []): string[] {
 	const reste: string[] = [];
 	for (const [k, de, en] of F8_ANKER) {
-		if (de === en || k.startsWith('layout.profil_metrik.') || ausnahmen.includes(k)) continue;
+		if (de === en || k.startsWith('layout.profil_metrik.') || ausnahmen.some((a) => k === a || (a.endsWith('.') && k.startsWith(a)))) continue;
 		const enTeile = new Set(en.split(/<[a-z0-9_]+>/).map((s) => s.trim()));
 		for (const teil of de.split(/<[a-z0-9_]+>/).map((s) => s.trim())) {
 			if ((teil.match(/[A-Za-zÄÖÜäöüß]/g) ?? []).length < 4 || enTeile.has(teil)) continue;
@@ -96,6 +96,9 @@ function deutscheReste(text: string, ausnahmen: string[] = []): string[] {
 }
 /** Fremdbausteine mit eigenem Deutsch (andere Pakete), deren Woerter Ankerteile treffen. */
 const FREMD_REIHENFOLGE = ['layout.ausgabe.reihenfolge']; // WeatherV2Reihenfolge (F5) titelt selbst „Reihenfolge"
+/** Der Fixture-Katalog des Layout-Reiters traegt API-Metriknamen (Böen, Niederschlag; F5),
+ *  die zugleich Trip-Korridor-Zeilennamen sind — im Layout-Reiter keine Paket-Texte. */
+const API_METRIKNAMEN = ['layout.korridor_zeile.']
 
 describe('AC-6: Deutsch byte-gleich zum Ist-Stand vor der Umstellung (Golden golden-de)', () => {
 	const FAELLE = htmlFaelle();
@@ -139,7 +142,7 @@ describe('AC-1: Layout-Reiter englisch in Trip und Ortsvergleich, Kanalnamen und
 			hat(en, 'Email shows everything · no limit');
 			hat(en, `SMS: no grid, no table — plain text, ${sms} characters`);
 			hat(en, context === 'route' ? 'Telegram: 9 Metriken · too wide — max 7, further forward = safer' : 'Telegram: 9 columns (label + 4 Orte) · too wide — max 7, further forward = safer');
-			assert.deepEqual(deutscheReste(en), []);
+			assert.deepEqual(deutscheReste(en, API_METRIKNAMEN), []);
 		});
 	}
 	test('aria-Beschriftungen des Ausgabe-Layouts englisch', () => {
@@ -186,7 +189,7 @@ describe('AC-1: Layout-Reiter englisch in Trip und Ortsvergleich, Kanalnamen und
 		hatNicht(text, 'Detail values'); // hideDetailBucket
 		assert.equal((sichtbar(de).match(/3-Tages-Ausblick/g) ?? []).length, 2);
 		assert.equal((text.match(/3-day outlook/g) ?? []).length, 2, 'Ueberschrift und Schalter-Beschriftung');
-		assert.deepEqual(deutscheReste(text, FREMD_REIHENFOLGE), []);
+		assert.deepEqual(deutscheReste(text, [...FREMD_REIHENFOLGE, ...API_METRIKNAMEN]), []);
 	});
 	test('Mail-Inhalt: Bausteintexte der Konstantenliste je Sprache (alle sieben)', () => {
 		const { de, en } = deDannEn(() =>

@@ -1,0 +1,25 @@
+ltCapNoteText(email) → "Email shows everything · no limit"
+ltCapNoteText(telegram_passt) → "Telegram: 5 Metriken · fits (max 7)"
+ltCapNoteText(telegram_zu_breit) → "Telegram: 9 Metriken · too wide — max 7, further forward = safer"
+ltCapNoteText(telegram_label_passt) → "Telegram: 5 columns (label + 4 Orte) · fits (max 7)"
+ltCapNoteText(telegram_label_eine) → "Telegram: 1 column (label + 0 Orte) · fits (max 7)"
+ltCapNoteText(telegram_label_zu_breit) → "Telegram: 9 columns (label + 8 Orte) · too wide — max 7, further forward = safer"
+ltCapNoteText(sms_trip) → "SMS: no grid, no table — plain text, 160 characters"
+ltCapNoteText(sms_vergleich) → "SMS: no grid, no table — plain text, 153 characters"
+ltKanalAbwahlHinweisText() → "A channel shows at most what is selected in the base selection. Anything missing there appears in no channel."
+ROUTE_METRIC_DEFS(wind_gust) → {"label":"Wind gusts","note":"Critical on ridges","unit":"km/h","scale":[0,120],"step":5,"defaultMin":null,"defaultMax":70}
+ROUTE_METRIC_DEFS(precipitation_sum) → {"label":"Precipitation","note":"Wet / slip risk","unit":"mm/h","scale":[0,20],"step":1,"defaultMin":null,"defaultMax":5}
+ROUTE_METRIC_DEFS(temperature_min) → {"label":"Temperature min","note":"Frost limit","unit":"°C","scale":[-20,20],"step":1,"defaultMin":-5,"defaultMax":null}
+ROUTE_METRIC_DEFS(temperature_max) → {"label":"Temperature max","note":"Heat limit","unit":"°C","scale":[-20,30],"step":1,"defaultMin":null,"defaultMax":28}
+ROUTE_METRIC_DEFS(snow_line) → {"label":"Snow line","note":"Snow instead of rain","unit":"m","scale":[500,3000],"step":100,"defaultMin":1500,"defaultMax":null}
+PROFILE_METRICS_WITH_SCALES(WINTERSPORT) → [{"key":"snow_depth_cm","label":"Snow depth"},{"key":"snow_new_sum_cm","label":"Fresh snow"},{"key":"sunny_hours_h","label":"Sunshine hours"},{"key":"wind_max_kmh","label":"Peak wind"},{"key":"cloud_avg_pct","label":"Cloud cover Ø"}]
+PROFILE_METRICS_WITH_SCALES(ALPINE_TOURING) → [{"key":"snow_new_sum_cm","label":"Fresh snow"},{"key":"visibility_min_m","label":"Visibility min"},{"key":"wind_max_kmh","label":"Peak wind"}]
+PROFILE_METRICS_WITH_SCALES(SUMMER_TREKKING) → [{"key":"precip_sum_mm","label":"Precipitation"},{"key":"thunder_level_max","label":"Thunderstorm"},{"key":"wind_max_kmh","label":"Peak wind"},{"key":"uv_index_max","label":"UV index max"},{"key":"visibility_min_m","label":"Visibility min"}]
+PROFILE_METRICS_WITH_SCALES(ALLGEMEIN) → [{"key":"temp_max_c","label":"Temperature max"},{"key":"wind_max_kmh","label":"Peak wind"},{"key":"precip_sum_mm","label":"Precipitation"},{"key":"visibility_min_m","label":"Visibility min"}]
+CONTENT_MODULE_DESCRIPTIONS(show_stage_stats) → {"label":"Stage figures","description":"Distance, ascent/descent and maximum altitude of the stage as a number grid."}
+CONTENT_MODULE_DESCRIPTIONS(show_quick_take_tags) → {"label":"Quick-take chips","description":"Coloured keyword pills at the top, e.g. “Dry”, “Windy”."}
+CONTENT_MODULE_DESCRIPTIONS(show_metrics_summary) → {"label":"Metrics overview","description":"Replaces quick-take chips and the daily summary with one coloured pill per active metric."}
+CONTENT_MODULE_DESCRIPTIONS(show_outlook) → {"label":"Outlook","description":"Weather pattern header, next stages and forecast confidence at the end of the email."}
+CONTENT_MODULE_DESCRIPTIONS(show_stability) → {"label":"Weather pattern","description":"Assessment of weather stability, e.g. “stable high pressure”."}
+CONTENT_MODULE_DESCRIPTIONS(show_highlights) → {"label":"Summary","description":"Short text with the day's main weather highlights."}
+CONTENT_MODULE_DESCRIPTIONS(show_yesterday_comparison) → {"label":"Comparison with yesterday","description":"Today's weather compared with yesterday as a short line in the briefing."}
