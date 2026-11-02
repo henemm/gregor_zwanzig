@@ -1451,6 +1451,12 @@ null
 > vollstaendige `MetricConfig`-Objekte mit explizitem `bucket`/`order`; nur solche Eintraege
 > werden unveraendert uebernommen.
 
+> **`display_config.show_night_block` (Issue #1721):** optionales `bool` (nur Trip, nicht
+> Ortsvergleich) — Schalter „Nacht-Stundentabelle in der Mail zeigen" im Trip-Editor, Reiter
+> „Wetter-Metriken". Fehlt das Feld, gilt `true` (Nacht-Stundentabelle an, bisheriges Verhalten).
+> Das Frontend sendet das Feld nur, wenn der Nutzer den Schalter bedient hat; der Go-Merge
+> (`mergeConfigMap`) erhaelt es bei Teil-Speichern. Spec: `docs/specs/modules/fix_1721_nachtausgabe.md`.
+
 ### Error Responses
 
 | Status | Body | Szenario |

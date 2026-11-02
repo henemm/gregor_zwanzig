@@ -117,5 +117,8 @@ export const F5_ANKER: [schluessel: string, de: string, en: string][] = [
 	// Ortsvergleich (WeatherMetricsTab context="vergleich")
 	['wertebereiche.vergleich.titel', 'Wetter-Metriken', 'Weather metrics'],
 	['wertebereiche.vergleich.hinweis', 'Nur angewählte Metriken erscheinen in der Vergleichs-Mail.', 'Only selected metrics appear in the comparison email.'],
-	['wertebereiche.vergleich.warn_hinweis', 'Amtliche Warnungen stehen unabhängig von dieser Reihenfolge immer an erster Stelle und sind deshalb nicht Teil der sortierbaren Liste.', 'Official warnings always come first regardless of this order and are therefore not part of the sortable list.']
+	['wertebereiche.vergleich.warn_hinweis', 'Amtliche Warnungen stehen unabhängig von dieser Reihenfolge immer an erster Stelle und sind deshalb nicht Teil der sortierbaren Liste.', 'Official warnings always come first regardless of this order and are therefore not part of the sortable list.'],
+	// Nacht-Stundentabelle (#1721, nur Trip)
+	['wertebereiche.nachtblock.checkbox', 'Nacht-Stundentabelle in der Mail zeigen', 'Show the night hourly table in the email'],
+	['wertebereiche.nachtblock.text', 'Betrifft nur die Stundentabelle. Nacht-Tiefstwert und Gewitter-Hinweis für die Nacht bleiben, wenn du sie gewählt hast.', 'Affects only the hourly table. The night low and the night thunderstorm note stay if you selected them.']
 ];
