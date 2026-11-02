@@ -43,7 +43,7 @@ async function exhaustRateLimitViaPage(page: import('@playwright/test').Page) {
 
 test.describe.serial('Bug #703: Login Rate-Limit Fehlermeldung', () => {
 	// AC-3 muss vor AC-2 laufen — danach ist der Bucket erschöpft.
-	test('AC-3: HTTP-401 zeigt "Benutzername oder Passwort nicht korrekt" (Regression)', async ({
+	test('AC-3: HTTP-401 zeigt "E-Mail oder Passwort nicht korrekt" (Regression)', async ({
 		page,
 	}: { page: import('@playwright/test').Page }) => {
 		await page.goto('/login');
@@ -53,12 +53,12 @@ test.describe.serial('Bug #703: Login Rate-Limit Fehlermeldung', () => {
 
 		const errorBox = page.locator('.rounded-md.border-destructive, [style*="g-bad"]');
 		await expect(errorBox).toBeVisible({ timeout: 8_000 });
-		await expect(errorBox).toContainText('Benutzername oder Passwort nicht korrekt');
+		await expect(errorBox).toContainText('E-Mail oder Passwort nicht korrekt');
 	});
 
 	// AC-2: Rate-Limit-Bucket erschöpfen → nächster Login-Versuch muss
 	// "Zu viele Versuche" zeigen.
-	// VOR FIX: zeigt fälschlich "Benutzername oder Passwort nicht korrekt" → RED
+	// VOR FIX: zeigt fälschlich "E-Mail oder Passwort nicht korrekt" → RED
 	// NACH FIX: zeigt "Zu viele Versuche" → GREEN
 	test('AC-2: HTTP-429 zeigt "Zu viele Versuche" statt "Passwort falsch" (RED vor Fix)', async ({
 		page,
@@ -76,7 +76,7 @@ test.describe.serial('Bug #703: Login Rate-Limit Fehlermeldung', () => {
 		const errorBox = page.locator('.rounded-md.border-destructive, [style*="g-bad"]');
 		await expect(errorBox).toBeVisible({ timeout: 8_000 });
 
-		// RED vor Fix: zeigt "Benutzername oder Passwort nicht korrekt"
+		// RED vor Fix: zeigt "E-Mail oder Passwort nicht korrekt"
 		// GREEN nach Fix: zeigt "Zu viele Versuche"
 		await expect(errorBox).toContainText('Zu viele Versuche');
 	});

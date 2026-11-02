@@ -121,7 +121,7 @@ test('AC-12/AC-13: Login-Seite erklärt den 403 und bietet den erneuten Versand 
 		const hinweis = gast.getByTestId('login-error-email-not-verified');
 		await expect(hinweis).toBeVisible();
 		await expect(hinweis).toContainText(/bestätig/i);
-		await expect(gast.locator('body')).not.toContainText('Benutzername oder Passwort nicht korrekt.');
+		await expect(gast.locator('body')).not.toContainText('E-Mail oder Passwort nicht korrekt.');
 
 		// AC-13: das Resend-Formular löst die Aktion aus und quittiert sie.
 		// Beobachtet wird der Aufruf der SvelteKit-Action (?/resend) — der
