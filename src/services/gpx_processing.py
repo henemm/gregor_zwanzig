@@ -38,6 +38,7 @@ from core.gpx_parser import parse_gpx
 from core.hybrid_segmentation import optimize_segments
 from core.natural_sort import natural_sort_key
 from core.segment_builder import build_segments
+from services.fehler_code import fehler_mit_code
 from utils.timezone import local_dt, tz_for_coords
 
 
@@ -62,7 +63,7 @@ def process_gpx_upload(
         GPXParseError: If GPX content is invalid.
     """
     if not filename.lower().endswith(".gpx"):
-        raise ValueError(f"Nur .gpx Dateien erlaubt, nicht '{filename}'")
+        raise fehler_mit_code(ValueError, "gpx_nur_gpx", filename=filename)
 
     upload_dir.mkdir(parents=True, exist_ok=True)
     # Only the bare name — a crafted filename must not escape upload_dir (#1352).

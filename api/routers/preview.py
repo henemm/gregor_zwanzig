@@ -18,7 +18,9 @@ fremde Trips.
 """
 from __future__ import annotations
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, Query
+
+from api.fehler import api_fehler, api_fehler_aus
 
 from app.config import Settings
 from services.preview_service import PreviewService, VALID_REPORT_TYPES
@@ -39,7 +41,7 @@ def preview_sms(
     demo: bool = Query(False, description="Issue #483: Fixture-Daten statt Live-API"),
 ):
     if type not in VALID_REPORT_TYPES:
-        raise HTTPException(status_code=422, detail=f"Ungültiger type '{type}'")
+        raise api_fehler(422, "typ_ungueltig", user_id, type=type)
     service = _build_service(user_id)
     try:
         subject, token_line = service.render_sms_preview(
@@ -50,11 +52,9 @@ def preview_sms(
             "token_line": token_line,
             "char_count": len(token_line),
         }
-    except FileNotFoundError as e:
-        raise HTTPException(status_code=404, detail=str(e))
-    except LookupError as e:
-        raise HTTPException(status_code=404, detail=str(e))
+    except (FileNotFoundError, LookupError) as e:
+        raise api_fehler_aus(e, 404, user_id)
     except ValueError as e:
-        raise HTTPException(status_code=422, detail=str(e))
+        raise api_fehler_aus(e, 422, user_id)
     except RuntimeError as e:
-        raise HTTPException(status_code=503, detail=str(e))
+        raise api_fehler_aus(e, 503, user_id)

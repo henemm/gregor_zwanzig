@@ -202,14 +202,14 @@ class InboundSmsReader:
         if origin != "production":
             if os.environ.get(DRYRUN_ENV_VAR) != "1":
                 logger.warning(
-                    "Premium-SMS-Poll: Herkunft %r ist nicht 'production' und "
+                    "Premium-SMS-Poll: Herkunft %r ist nicht 'production' und "  # i18n-log
                     "%s ist nicht gesetzt -- Poll uebersprungen (AC-7).",
                     origin, DRYRUN_ENV_VAR,
                 )
                 return 0
             print(
                 f"[inbound_sms_reader] WARN: {DRYRUN_ENV_VAR}=1 -- Herkunft "
-                f"{origin!r} ist nicht 'production', der Journal-Abruf laeuft "
+                f"{origin!r} ist nicht 'production', der Journal-Abruf laeuft "  # i18n-log
                 "trotzdem (Trockenlauf, AC-10). KEIN user.json wird veraendert.",
                 file=sys.stderr,
             )
@@ -250,7 +250,7 @@ class InboundSmsReader:
             msg_id = _coerce_message_id(raw_id)
             if msg_id is None:
                 logger.warning(
-                    "journal/inbound Eintrag mit nicht umwandelbarer id %r "
+                    "journal/inbound Eintrag mit nicht umwandelbarer id %r "  # i18n-log
                     "wird uebersprungen (Fix F004), Rest des Journal-Fensters "
                     "wird weiterverarbeitet.", raw_id,
                 )
@@ -288,7 +288,7 @@ class InboundSmsReader:
             except Exception as e:
                 failed += 1
                 logger.warning(
-                    "premium-sms-learn fehlgeschlagen (Netzwerk oder Geheimnis "
+                    "premium-sms-learn fehlgeschlagen (Netzwerk oder Geheimnis "  # i18n-log
                     "nicht konfiguriert) fuer maskierte "
                     "Nummer %s: %s -- Zeiger bleibt stehen (Fix F001).",
                     _mask(sender), e,
@@ -320,7 +320,7 @@ class InboundSmsReader:
                             )
                     except Exception as e:
                         logger.warning(
-                            "Premium-SMS-Kommandoverarbeitung fehlgeschlagen "
+                            "Premium-SMS-Kommandoverarbeitung fehlgeschlagen "  # i18n-log
                             "fuer maskierte Nummer %s: %s -- Lernvorgang bleibt "
                             "erfolgreich (AC-6).", _mask(sender), e,
                         )
@@ -365,7 +365,7 @@ class InboundSmsReader:
         user_id = (response.json() or {}).get("user_id") or ""
         if not user_id:
             logger.warning(
-                "premium-sms-learn antwortete mit HTTP 200 ohne verwertbare "
+                "premium-sms-learn antwortete mit HTTP 200 ohne verwertbare "  # i18n-log
                 "user_id fuer maskierte Nummer %s -- keine "
                 "Kommandoverarbeitung (AC-9).", _mask(sender),
             )
@@ -471,7 +471,7 @@ class InboundSmsReader:
             record_position_fix(user_id, position[0], position[1], observed_at)
         except Exception as e:
             logger.warning(
-                "GPS-Fix fuer maskierte Nummer %s nicht aufgenommen: %s",
+                "GPS-Fix fuer maskierte Nummer %s nicht aufgenommen: %s",  # i18n-log
                 _mask(sender), e,
             )
 
@@ -492,7 +492,7 @@ class InboundSmsReader:
                 return None
             return response.json()
         except Exception as e:
-            logger.error("journal/inbound Abruf fehlgeschlagen: %s", e)
+            logger.error("journal/inbound Abruf fehlgeschlagen: %s", e)  # i18n-log
             return None
 
     def _load_last_seen_id(self, data_root: Path) -> int:
@@ -518,7 +518,7 @@ class InboundSmsReader:
                 json.dump({"last_seen_id": last_seen_id}, f)
             os.rename(tmp_path, path)
         except Exception:
-            logger.exception("Dedup-Zeiger konnte nicht geschrieben werden")
+            logger.exception("Dedup-Zeiger konnte nicht geschrieben werden")  # i18n-log
             try:
                 os.remove(tmp_path)
             except OSError:

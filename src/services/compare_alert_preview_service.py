@@ -25,6 +25,8 @@ import logging
 from datetime import datetime, timezone
 from zoneinfo import ZoneInfo
 
+from services.fehler_code import fehler_mit_code
+
 logger = logging.getLogger(__name__)
 
 _SMS_LIMIT = 140  # wie `_dispatch_alert_message` (Alarm-SMS-Limit)
@@ -47,11 +49,11 @@ def render_compare_alert_preview(preset_id: str, *, user_id: str, body: dict) ->
     from services.compare_preview_service import ComparePreviewService
 
     preset = ComparePreviewService()._load_preset(preset_id, user_id=user_id)
+    if not preset.get("location_ids"):
+        raise fehler_mit_code(ValueError, "vergleich_ohne_orte", preset_id=preset_id)
     provided = [k for k in _BODY_KINDS if body.get(k)]
     if len(provided) != 1:
-        raise ValueError(
-            "Body muss genau einen von 'changes', 'onsets' oder 'official' enthalten"
-        )
+        raise fehler_mit_code(ValueError, "vergleich_body_genau_einer")
     all_locations = {loc.id: loc for loc in load_all_locations(user_id=user_id)}
     style = effective_compare_telegram_style(preset)
     kind = provided[0]
@@ -69,7 +71,7 @@ def _ordered(location_ids: list[str], wanted: list[str], all_locations: dict) ->
     """Betroffene Orte in Preset-Reihenfolge (wie die Vergleichs-E-Mail)."""
     unknown = [lid for lid in wanted if lid not in location_ids or lid not in all_locations]
     if unknown:
-        raise ValueError(f"Orte {unknown} gehoeren nicht zu diesem Orts-Vergleich")
+        raise fehler_mit_code(ValueError, "vergleich_orte_fremd", orte=unknown)
     wanted_set = set(wanted)
     return [lid for lid in location_ids if lid in wanted_set]
 
@@ -209,14 +211,14 @@ def _official(preset: dict, official: list[dict], all_locations: dict, style: st
         locations.append(all_locations[lid])
     if dropped:
         logger.warning(
-            "compare alert preview %s: Orte %s nicht aufloesbar — "
+            "compare alert preview %s: Orte %s nicht aufloesbar — "  # i18n-log
             "fehlen in der Vorschau (vgl. #2283)", preset.get("id"), dropped,
         )
     dto_notices = build_compare_official_alert_notices(
         [loc.id for loc in locations], {loc.id: loc.name for loc in locations}, tagged,
     )
     if not dto_notices:
-        raise ValueError("Keine amtliche Warnung fuer die Orte dieses Vergleichs")
+        raise fehler_mit_code(ValueError, "vergleich_keine_warnung")
     tz = resolve_location_tz(locations[0]) or ZoneInfo("UTC")
     name = preset.get("name", "")
     source_label = _official_allclear_source_label(dto_notices, [])

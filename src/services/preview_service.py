@@ -16,6 +16,7 @@ from typing import TYPE_CHECKING
 
 from app.config import Settings
 from app.loader import VALID_ENTITY_ID_RE, get_briefings_dir, load_trip
+from services.fehler_code import fehler_mit_code
 
 if TYPE_CHECKING:
     from app.trip import Trip
@@ -73,17 +74,17 @@ class PreviewService:
         trips_dir = get_briefings_dir(user_id)
         path = trips_dir / f"{trip_id}.json"
         if not path.exists():
-            raise FileNotFoundError(
-                f"Trip '{trip_id}' nicht gefunden für user '{user_id}'"
-            )
+            raise fehler_mit_code(FileNotFoundError, "vorschau_trip_nicht_gefunden",
+                                  trip_id=trip_id, user_id=user_id)
         try:
             raw = json.loads(path.read_text(encoding="utf-8"))
         except (OSError, json.JSONDecodeError):
             raw = None
         if isinstance(raw, dict) and raw.get("kind") == "vergleich":
+            # Entwicklerfall (Frontend ruft die Trip-Vorschau nie mit einem Vergleich).
             raise ValueError(
-                f"'{trip_id}' ist ein Vergleich (kind=vergleich), kein Trip — "
-                "der Preview-Pfad lädt nur Trips (Issue #1250 AC-37)"
+                f"'{trip_id}' ist ein Vergleich (kind=vergleich), kein Trip — "  # i18n-log
+                "der Preview-Pfad lädt nur Trips (Issue #1250 AC-37)"  # i18n-log
             )
         return load_trip(path)
 
@@ -100,7 +101,8 @@ class PreviewService:
             try:
                 return date.fromisoformat(given_date)
             except ValueError as e:
-                raise ValueError(f"Ungültiges Datum '{given_date}', ISO erwartet") from e
+                raise fehler_mit_code(ValueError, "vorschau_datum_ungueltig",
+                                      datum=given_date) from e
         from services.trip_day import trip_local_today
         today = trip_local_today(trip, now_utc)
         # Issue #990 / Adversary F001: Trip komplett ohne Etappen ist ein
@@ -109,7 +111,7 @@ class PreviewService:
         # ValueError (→ HTTP 422, generisch), NICHT den waypoint-LookupError
         # (→ 404), der das Frontend fälschlich zum Wegpunkt-Editor schickt.
         if not trip.stages:
-            raise ValueError(f"Trip '{trip.id}' hat keine Stages")
+            raise fehler_mit_code(ValueError, "vorschau_ohne_etappen", trip_id=trip.id)
         stages = sorted(trip.stages, key=lambda s: s.date)
 
         def _stage_d(s) -> date:
@@ -124,9 +126,7 @@ class PreviewService:
         for stage in stages:  # Fallback: erste renderbare Etappe überhaupt
             if _stage_is_renderable(stage):
                 return _stage_d(stage)
-        raise LookupError(
-            f"Trip '{trip.id}' hat keine Etappe mit genug waypoints für eine Vorschau"
-        )
+        raise fehler_mit_code(LookupError, "vorschau_ohne_wegpunkte", trip_id=trip.id)
 
     def _build_report(
         self,
@@ -177,13 +177,10 @@ class PreviewService:
             # echten Wegpunkt-Fall greift, nicht beim "Datum falsch"-Fall.
             stage = trip.get_stage_for_date(target)
             if stage is None:
-                raise LookupError(
-                    f"Keine Stage am {target.isoformat()} im Trip '{trip.id}'"
-                )
-            raise LookupError(
-                f"Stage am {target.isoformat()} im Trip '{trip.id}' hat zu wenige "
-                "waypoints für eine Vorschau"
-            )
+                raise fehler_mit_code(LookupError, "vorschau_etappe_fehlt",
+                                      datum=target.isoformat(), trip_id=trip.id)
+            raise fehler_mit_code(LookupError, "vorschau_zu_wenige_wegpunkte",
+                                  datum=target.isoformat(), trip_id=trip.id)
 
         if demo:
             from providers.fixture import FixtureProvider
@@ -192,9 +189,8 @@ class PreviewService:
             provider = None
         segment_weather = scheduler._fetch_weather(segments, provider=provider)
         if not segment_weather:
-            raise RuntimeError(
-                f"Wetterdaten nicht verfügbar für Trip '{trip.id}' am {target.isoformat()}"
-            )
+            raise fehler_mit_code(RuntimeError, "vorschau_wetter_fehlt",
+                                  trip_id=trip.id, datum=target.isoformat())
 
         from utils.timezone import tz_for_coords
         trip_tz = tz_for_coords(segments[0].start_point.lat, segments[0].start_point.lon)
@@ -364,7 +360,7 @@ class PreviewService:
         v2.1-konform (≤160 Zeichen, '{StageName}: {Forecast-Tokens...}').
         """
         if report_type not in VALID_REPORT_TYPES:
-            raise ValueError(f"Ungültiger report_type '{report_type}'")
+            raise fehler_mit_code(ValueError, "report_typ_ungueltig", report_type=report_type)
         trip = self._load_trip(trip_id, user_id)
         now_utc = datetime.now(timezone.utc)
         target = self._resolve_target_date(trip, target_date, now_utc=now_utc)
