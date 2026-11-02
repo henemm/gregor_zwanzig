@@ -1,0 +1,25 @@
+ltCapNoteText(email) → "Email zeigt alles · keine Begrenzung"
+ltCapNoteText(telegram_passt) → "Telegram: 5 Metriken · passt (max 7)"
+ltCapNoteText(telegram_zu_breit) → "Telegram: 9 Metriken · zu breit — max 7, weiter vorne = sicherer"
+ltCapNoteText(telegram_label_passt) → "Telegram: 5 Spalten (Label + 4 Orte) · passt (max 7)"
+ltCapNoteText(telegram_label_eine) → "Telegram: 1 Spalten (Label + 0 Orte) · passt (max 7)"
+ltCapNoteText(telegram_label_zu_breit) → "Telegram: 9 Spalten (Label + 8 Orte) · zu breit — max 7, weiter vorne = sicherer"
+ltCapNoteText(sms_trip) → "SMS: kein Raster, keine Tabelle — Fließtext, 160 Zeichen"
+ltCapNoteText(sms_vergleich) → "SMS: kein Raster, keine Tabelle — Fließtext, 153 Zeichen"
+ltKanalAbwahlHinweisText() → "Ein Kanal zeigt höchstens, was in der Grundauswahl gewählt ist. Was dort fehlt, erscheint in keinem Kanal."
+ROUTE_METRIC_DEFS(wind_gust) → {"label":"Böen","note":"Grat-kritisch","unit":"km/h","scale":[0,120],"step":5,"defaultMin":null,"defaultMax":70}
+ROUTE_METRIC_DEFS(precipitation_sum) → {"label":"Niederschlag","note":"Nässe / Rutschgefahr","unit":"mm/h","scale":[0,20],"step":1,"defaultMin":null,"defaultMax":5}
+ROUTE_METRIC_DEFS(temperature_min) → {"label":"Temperatur Min","note":"Frost-Grenze","unit":"°C","scale":[-20,20],"step":1,"defaultMin":-5,"defaultMax":null}
+ROUTE_METRIC_DEFS(temperature_max) → {"label":"Temperatur Max","note":"Hitze-Grenze","unit":"°C","scale":[-20,30],"step":1,"defaultMin":null,"defaultMax":28}
+ROUTE_METRIC_DEFS(snow_line) → {"label":"Schneefallgrenze","note":"Schnee statt Regen","unit":"m","scale":[500,3000],"step":100,"defaultMin":1500,"defaultMax":null}
+PROFILE_METRICS_WITH_SCALES(WINTERSPORT) → [{"key":"snow_depth_cm","label":"Schneehöhe"},{"key":"snow_new_sum_cm","label":"Neuschnee"},{"key":"sunny_hours_h","label":"Sonnenstunden"},{"key":"wind_max_kmh","label":"Windspitzen"},{"key":"cloud_avg_pct","label":"Bewölkung Ø"}]
+PROFILE_METRICS_WITH_SCALES(ALPINE_TOURING) → [{"key":"snow_new_sum_cm","label":"Neuschnee"},{"key":"visibility_min_m","label":"Sichtweite min"},{"key":"wind_max_kmh","label":"Windspitzen"}]
+PROFILE_METRICS_WITH_SCALES(SUMMER_TREKKING) → [{"key":"precip_sum_mm","label":"Niederschlag"},{"key":"thunder_level_max","label":"Gewitter"},{"key":"wind_max_kmh","label":"Windspitzen"},{"key":"uv_index_max","label":"UV-Index max"},{"key":"visibility_min_m","label":"Sichtweite min"}]
+PROFILE_METRICS_WITH_SCALES(ALLGEMEIN) → [{"key":"temp_max_c","label":"Temperatur max"},{"key":"wind_max_kmh","label":"Windspitzen"},{"key":"precip_sum_mm","label":"Niederschlag"},{"key":"visibility_min_m","label":"Sichtweite min"}]
+CONTENT_MODULE_DESCRIPTIONS(show_stage_stats) → {"label":"Etappen-Kennzahlen","description":"Distanz, Auf-/Abstieg und maximale Höhe der Etappe als Zahlenraster."}
+CONTENT_MODULE_DESCRIPTIONS(show_quick_take_tags) → {"label":"Quick-Take-Chips","description":"Farbige Schlagwort-Pillen oben, z. B. „Trocken\", „Windig\"."}
+CONTENT_MODULE_DESCRIPTIONS(show_metrics_summary) → {"label":"Metriken-Überblick","description":"Ersetzt Quick-Take-Chips und Tages-Summe durch eine farbige Pille je aktiver Metrik."}
+CONTENT_MODULE_DESCRIPTIONS(show_outlook) → {"label":"Ausblick","description":"Großwetterlage-Kopf, nächste Etappen und Vorhersage-Sicherheit am Mail-Ende."}
+CONTENT_MODULE_DESCRIPTIONS(show_stability) → {"label":"Großwetterlage","description":"Einordnung der Wetterstabilität, z. B. „stabile Hochdrucklage\"."}
+CONTENT_MODULE_DESCRIPTIONS(show_highlights) → {"label":"Zusammenfassung","description":"Kurzer Fließtext mit den wichtigsten Wetter-Highlights des Tages."}
+CONTENT_MODULE_DESCRIPTIONS(show_yesterday_comparison) → {"label":"Vortag-Vergleich","description":"Vergleich des heutigen Wetters mit dem Vortag als Kurzzeile im Briefing."}

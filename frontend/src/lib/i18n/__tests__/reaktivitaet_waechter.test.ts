@@ -44,6 +44,15 @@ const BEREICHE: Record<string, string[]> = {
 		'lib/components/shared/VersandTab.svelte',
 		'lib/components/shared/TelegramKurzstilToggle.svelte',
 		'lib/components/shared/versand-tab/'
+	],
+	'F8 #2657 Layout-Reiter, Korridor-Editor, Ausgabe-Layout, GPX': [
+		'lib/components/shared/layout-tab/',
+		'lib/components/shared/corridor-editor/',
+		'lib/components/shared/OutputLayoutEditor.svelte',
+		'lib/components/shared/OutlookLayoutControls.svelte',
+		'lib/components/shared/MailInhaltCard.svelte',
+		'lib/components/shared/weather-metrics-tab/WeatherV2Reihenfolge.svelte',
+		'routes/gpx-upload/'
 	]
 };
 
