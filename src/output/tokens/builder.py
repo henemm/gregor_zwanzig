@@ -10,7 +10,7 @@ from output.tokens.dto import (
     DailyForecast, MetricSpec, NormalizedForecast, ReportType,
     Token, TokenLine,
 )
-from output.tokens.hazard_symbols import alert_entry_token_parts
+from output.tokens.hazard_symbols import alert_entry_token_parts, katalog_bedeutung
 from output.tokens.metrics import (
     render_temperature, render_threshold_peak_value, render_int,
     render_inverse_min_value, STUFEN_FN,
@@ -133,28 +133,27 @@ STD_SYMBOLS = {s for s, _ in POSITIONAL}
 # Issue #2417 AC-23: EINZIGE Definitionsstelle der Bedeutung der Bausteine
 # ohne Katalog-Eintrag (Wetter-Kuerzel wie SD/C stehen im Metrik-Katalog,
 # DBG erscheint nie beim Nutzer). CODES (en) und KUERZEL (de) lesen hier.
-BAUSTEIN_BEDEUTUNG_EN: dict[str, str] = {
-    "Z:": "fire zones", "MAX": "top level",
-    "M:": "massifs", VIGI_HR: "MF rain risk",
-    VIGI_TH: "MF storm risk", UNAVAILABLE_SYMBOL: "no data",
+# Issue #2751: Texte im Katalog ``sms.baustein.*``/``sms.format.*``; die
+# englische Fassung (CODES, Kurzform) bleibt byte-gleich.
+_BAUSTEIN_SCHLUESSEL: dict[str, str] = {
+    "Z:": "brandzonen", "MAX": "hoechststufe", "M:": "massive",
+    VIGI_HR: "mf_regen", VIGI_TH: "mf_gewitter", UNAVAILABLE_SYMBOL: "keine_warndaten",
 }
-BAUSTEIN_BEDEUTUNG_DE: dict[str, str] = {
-    "Z:": "Brandzonen", "MAX": "Höchststufe",
-    "M:": "Massive", VIGI_HR: "Météo-France-Risiko Regen",
-    VIGI_TH: "Météo-France-Risiko Gewitter", UNAVAILABLE_SYMBOL: "keine Warndaten",
-}
+BAUSTEIN_BEDEUTUNG_EN: dict[str, str] = katalog_bedeutung(
+    "sms.baustein", _BAUSTEIN_SCHLUESSEL, "en")
+BAUSTEIN_BEDEUTUNG_DE: dict[str, str] = katalog_bedeutung(
+    "sms.baustein", _BAUSTEIN_SCHLUESSEL, "de")
 # Formatzeichen der Kurzform-Grammatik (sms_format.md): Beispiel -> Bedeutung.
 # Etappen-Praefix, Stunden-Marker '@', Spitze '(...)', Bereich '/',
 # Hagel-Suffix (FORECAST_TH_HAIL_SUFFIX), Null-Form '-', Luecken-Marker '?'.
-FORMAT_BEDEUTUNG_EN: dict[str, str] = {
-    "E4": "stage 4", "23@5": "over limit from 5h", "(24@7)": "peak",
-    "D13/27": "min/max", FORECAST_TH_HAIL_SUFFIX: "hail", "-": "none", "?": "no data",
+_FORMAT_SCHLUESSEL: dict[str, str] = {
+    "E4": "etappe", "23@5": "schwelle", "(24@7)": "spitze", "D13/27": "bereich",
+    FORECAST_TH_HAIL_SUFFIX: "hagel", "-": "nichts", "?": "keine_daten",
 }
-FORMAT_BEDEUTUNG_DE: dict[str, str] = {
-    "E4": "Etappe 4", "23@5": "über der Schwelle ab 5 Uhr", "(24@7)": "Spitze",
-    "D13/27": "Tiefst/Höchst", FORECAST_TH_HAIL_SUFFIX: "Hagel", "-": "nichts",
-    "?": "keine Daten",
-}
+FORMAT_BEDEUTUNG_EN: dict[str, str] = katalog_bedeutung(
+    "sms.format", _FORMAT_SCHLUESSEL, "en")
+FORMAT_BEDEUTUNG_DE: dict[str, str] = katalog_bedeutung(
+    "sms.format", _FORMAT_SCHLUESSEL, "de")
 
 # Issue #1677 DEC-4/Known Limitation 2: nur diese beiden Kategorien gehoeren
 # zur waehlbaren Metrik-Kaskade und duerfen ueber MetricSpec.position sortiert

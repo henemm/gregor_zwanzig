@@ -10,6 +10,8 @@ fuer dieselbe Gefahr nicht zwei verschiedene Codes bekommen.
 """
 from __future__ import annotations
 
+from i18n import Lang, t
+
 # hazard -> internationales SMS-Kuerzel. Die Reihenfolge ist zugleich die
 # Sortier-Reihenfolge bei gleicher Warnstufe (Spec Abschnitt 2).
 # Issue #2417 AC-27: TS/FO/RA/WG/AB statt TH/FL/HR/W/CL -- die alten Kuerzel
@@ -32,22 +34,18 @@ HAZARD_SMS_SYMBOLS: dict[str, str] = {
     "access_ban": "AB",
 }
 
+
+def katalog_bedeutung(gruppe: str, schluessel: dict[str, str], lang: Lang) -> dict[str, str]:
+    """``{Kuerzel: Bedeutung}`` aus dem Katalog ``<gruppe>.<schluessel>`` (#2751)."""
+    return {sym: t(f"{gruppe}.{k}", lang) for sym, k in schluessel.items()}
+
+
 # Issue #2417 AC-23: EINZIGE Definitionsstelle der Bedeutung je Warn-Kuerzel
-# (Schluessel = hazard wie oben) -- CODES (en) und KUERZEL (de) lesen hier.
-HAZARD_BEDEUTUNG_EN: dict[str, str] = {
-    "thunderstorm": "storm", "flood": "flood", "rain": "heavy rain",
-    "wind_gust": "wind", "snow": "snow", "avalanche": "avalanche",
-    "avalanche_bulletin": "avalanche level", "black_ice": "ice",
-    "extreme_heat": "heat", "extreme_cold": "cold", "wildfire_risk": "fire",
-    "access_ban": "closure",
-}
-HAZARD_BEDEUTUNG_DE: dict[str, str] = {
-    "thunderstorm": "Gewitter", "flood": "Hochwasser", "rain": "Starkregen",
-    "wind_gust": "Wind", "snow": "Schnee", "avalanche": "Lawine",
-    "avalanche_bulletin": "Lawinenstufe", "black_ice": "Glätte",
-    "extreme_heat": "Hitze", "extreme_cold": "Kälte", "wildfire_risk": "Waldbrand",
-    "access_ban": "Sperrung",
-}
+# (Schluessel = hazard wie oben) -- CODES (en) und KUERZEL (de) lesen hier;
+# Texte seit #2751 im Katalog ``sms.warnart.<hazard>``.
+_WARNART = {h: h for h in HAZARD_SMS_SYMBOLS}
+HAZARD_BEDEUTUNG_EN: dict[str, str] = katalog_bedeutung("sms.warnart", _WARNART, "en")
+HAZARD_BEDEUTUNG_DE: dict[str, str] = katalog_bedeutung("sms.warnart", _WARNART, "de")
 
 # Katalog-Reihenfolge als Sortier-Index (Gleichstand bei der Warnstufe).
 HAZARD_ORDER: dict[str, int] = {h: i for i, h in enumerate(HAZARD_SMS_SYMBOLS)}
@@ -57,8 +55,9 @@ HAZARD_ORDER: dict[str, int] = {h: i for i, h in enumerate(HAZARD_SMS_SYMBOLS)}
 # sichtbar (Known Limitation der Spec).
 LEVEL_LETTERS: dict[int, str] = {2: "L", 3: "M", 4: "H"}
 # Issue #2417: Bedeutung der Stufen-Buchstaben (Werte, keine Kuerzel).
-STUFE_BEDEUTUNG_EN: dict[str, str] = {"L": "low", "M": "mid", "H": "high"}
-STUFE_BEDEUTUNG_DE: dict[str, str] = {"L": "niedrig", "M": "mittel", "H": "hoch"}
+_STUFE = {"L": "l", "M": "m", "H": "h"}
+STUFE_BEDEUTUNG_EN: dict[str, str] = katalog_bedeutung("sms.stufe", _STUFE, "en")
+STUFE_BEDEUTUNG_DE: dict[str, str] = katalog_bedeutung("sms.stufe", _STUFE, "de")
 
 # Sicherheits-Filter: nur orange (3) und rot (4) erreichen SMS/Telegram.
 MIN_SMS_LEVEL = 3
