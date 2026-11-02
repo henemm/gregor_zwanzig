@@ -365,9 +365,14 @@ class StagingApi:
         self._rufe("POST", f"{b}/api/auth/login",
                    {"username": self._helfer_zugang[0], "password": self._helfer_zugang[1]},
                    transport=self._helfer_transport)
-        self._rufe("POST", f"{b}/api/auth/register", {
+        antwort = self._rufe("POST", f"{b}/api/auth/register", {
             "username": name, "password": passwort, "email": email_adresse})
-        self._username, self._passwort = name, passwort  # erst jetzt existiert der Nutzer
+        # #2757: der Server vergibt die Konto-ID selbst (u-<8hex>) und ignoriert den gesendeten Namen
+        server_id = antwort.get("id") if isinstance(antwort, dict) else None
+        if not isinstance(server_id, str) or not server_id.strip():
+            raise StagingFehler("Register-Antwort ohne Nutzer-id - Konto-Kennung unbekannt, Abbruch "
+                                f"(evtl. verwaistes Staging-Konto mit E-Mail {email_adresse})")
+        self._username, self._passwort = server_id, passwort  # erst jetzt existiert der Nutzer
         tok = self._rufe("POST", f"{b}/api/auth/verify-email/staging-token",
                          {"username": self._username}, transport=self._helfer_transport)["token"]
         self._rufe("POST", f"{b}/api/auth/verify-email", {"user": self._username, "token": tok})
@@ -520,6 +525,9 @@ def _raeume_auf(api, nutzer, imap_factory, plus, aufraeumen=True) -> None:
         kennung = nutzer or getattr(api, "nutzer_id", None) or "unbekannt"
         print(f"WARNUNG: Wegwerf-Nutzer nicht geloescht ({type(exc).__name__}) - "
               f"uebrig geblieben: {kennung}")
+    else:
+        if getattr(api, "nutzer_id", None) is not None:
+            print(f"Wegwerf-Nutzer geloescht: {nutzer or api.nutzer_id}")
 
 
 # ---------------------------------------------------------------------------
