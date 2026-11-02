@@ -24,7 +24,7 @@ import pytest
 
 from app.loader import load_all_trips
 from services.trip_command_processor import _COMMAND_SPECS
-from tests.fixtures.authentication_results_fixtures import AR_PASS
+from tests.fixtures.authentication_results_fixtures import ar_pass_for
 from tests.tdd._befehl_e2e_fixtures import (
     FEHLERTEXTE,
     MAIL_FORMEN,
@@ -58,7 +58,7 @@ def _mime_alternative_beide_unterschiedliche_befehle(
         f"From: {from_addr}\r\n"
         "To: cmd@example.com\r\n"
         f"Subject: {subject}\r\n"
-        f"Authentication-Results: {AR_PASS}\r\n"
+        f"Authentication-Results: {ar_pass_for(from_addr)}\r\n"
         "MIME-Version: 1.0\r\n"
         f'Content-Type: multipart/alternative; boundary="{boundary}"\r\n'
         "\r\n"
@@ -94,7 +94,7 @@ def _mime_apple_html_zitat_und_signatur_mit_fremdem_befehl(
         f"From: {from_addr}\r\n"
         "To: cmd@example.com\r\n"
         f"Subject: {subject}\r\n"
-        f"Authentication-Results: {AR_PASS}\r\n"
+        f"Authentication-Results: {ar_pass_for(from_addr)}\r\n"
         "MIME-Version: 1.0\r\n"
         f'Content-Type: multipart/alternative; boundary="{boundary}"\r\n'
         "\r\n"
@@ -138,7 +138,7 @@ def _mime_gmail_html_leere_antwort_mit_zitiertem_fremdem_befehl(
         f"From: {from_addr}\r\n"
         "To: cmd@example.com\r\n"
         f"Subject: {subject}\r\n"
-        f"Authentication-Results: {AR_PASS}\r\n"
+        f"Authentication-Results: {ar_pass_for(from_addr)}\r\n"
         "MIME-Version: 1.0\r\n"
         f'Content-Type: multipart/alternative; boundary="{boundary}"\r\n'
         "\r\n"

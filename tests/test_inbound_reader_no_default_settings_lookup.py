@@ -38,7 +38,7 @@ from app.loader import get_data_dir, save_trip
 from app.trip import Stage, TimeWindow, Trip, Waypoint
 from services.inbound_email_reader import InboundEmailReader
 from services.inbound_telegram_reader import InboundTelegramReader
-from tests.fixtures.authentication_results_fixtures import AR_PASS, TEST_AUTHSERV_ID
+from tests.fixtures.authentication_results_fixtures import TEST_AUTHSERV_ID, ar_pass_for
 
 VERIFIED = "2026-01-01T00:00:00Z"
 LAT, LON = 47.2692, 11.4041
@@ -97,7 +97,7 @@ def _msg(from_addr: str, trip_name: str) -> email.message.Message:
         f"From: {from_addr}",
         "To: cmd@example.com",
         f"Subject: [{trip_name}] Befehl",
-        f"Authentication-Results: {AR_PASS}",
+        f"Authentication-Results: {ar_pass_for(from_addr)}",
         "",
         "status",
     ]).encode("utf-8")

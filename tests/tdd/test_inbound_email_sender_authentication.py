@@ -48,13 +48,30 @@ analog dem Telegram-Pendants `httpx.post`-Fake), eine echte
 SMTP-Versand auszufuehren (Kern-Schicht: deterministisch, kein Netz).
 
 SPEC: docs/specs/modules/inbound_command_channels.md v1.5, §5, AC-1..AC-4, AC-6.
+
+#2252 (SECURITY-FIX, Spec v1.7, §5/§5a, AC-7, AC-12..AC-15) — TESTVERTRAG:
+
+* `_authorize(sender, settings, msg)` bleibt in der Signatur unveraendert;
+  intern ruft es `_single_from_address(msg) -> bool` (AC-14: genau ein
+  `From:`-Header mit genau einer Adresse) und
+  `_spf_dkim_pass(msg, settings.mail_server_hostname, from_domain)` mit
+  `from_domain = sender.rpartition("@")[2]` (Spec 5a, Domain-Ausrichtung).
+* Pass-Header in Annahmetests sind auf die `From:`-Domain ausgerichtet
+  (`ar_pass_for(<From-Adresse>)`), damit Ablehnungen nur am jeweils
+  geprueften Waechter entstehen. Echte Prod-Header H1–H4 laufen mit
+  `mail_server_hostname="mail.henemm.com"` (explizit gesetzt).
+* AC-15 Zwei-Nutzer-Test: Nutzer A (@henemm.com) und B (@opfer.example)
+  mit VERSCHIEDENEN Domains ueber den echten `_process_single`-Pfad.
 """
 from __future__ import annotations
 
 import email
 import json
+import logging
 from datetime import date, time
 from pathlib import Path
+
+import pytest
 
 from app import loader
 from app.config import Settings
@@ -68,8 +85,14 @@ from services.trip_command_processor import TripCommandProcessor
 import services.inbound_email_reader as _reader_mod
 
 from tests.fixtures.authentication_results_fixtures import (
-    AR_PASS,
+    AR_FOREIGN_DOMAIN_ALIGNED,
+    AR_H1_NORMAL,
+    AR_H2_INJECTION,
+    AR_H3_ESCAPED_QUOTE,
+    AR_H4_RESEND,
+    PROD_AUTHSERV_ID,
     TEST_AUTHSERV_ID,
+    ar_pass_for,
 )
 
 LAT, LON = 47.2692, 11.4041
@@ -124,7 +147,12 @@ def _base_settings(mail_to: str, mail_server_hostname: str = TEST_AUTHSERV_ID) -
     )
 
 
-def _msg(from_addr: str, trip_name: str, body: str = "status", auth_header: str | None = AR_PASS) -> email.message.Message:
+_ALIGNED = object()  # Sentinel: auf die From-Domain ausgerichteter Pass-Header (#2252)
+
+
+def _msg(from_addr: str, trip_name: str, body: str = "status", auth_header=_ALIGNED) -> email.message.Message:
+    if auth_header is _ALIGNED:
+        auth_header = ar_pass_for(from_addr)
     lines = [f"From: {from_addr}", "To: cmd@example.com", f"Subject: [{trip_name}] Befehl"]
     if auth_header is not None:
         lines.append(f"Authentication-Results: {auth_header}")
@@ -247,7 +275,7 @@ def test_ac2_command_from_user_a_never_touches_user_b_trip(tmp_path, monkeypatch
     reader = InboundEmailReader()
     reader._notification_service = _RecordingNotificationService()
 
-    msg = _msg(a_addr, "TripA", body="status", auth_header=AR_PASS)
+    msg = _msg(a_addr, "TripA", body="status", auth_header=ar_pass_for(a_addr))
     result = _run_process_single(reader, settings, msg)
 
     after_b = _trip_file_bytes("userb", "t-b")
@@ -280,7 +308,7 @@ def test_ac3_unverified_profile_is_rejected_despite_valid_spf_dkim(tmp_path, mon
     reader = InboundEmailReader()
     reader._notification_service = _RecordingNotificationService()
 
-    msg = _msg(addr, "UnverifiedTrip", body="status", auth_header=AR_PASS)
+    msg = _msg(addr, "UnverifiedTrip", body="status", auth_header=ar_pass_for(addr))
     result = _run_process_single(reader, settings, msg)
 
     assert result == (0, 0), f"#2143 AC-3: unverifizierter Absender wurde verarbeitet (return={result})"  # #1405 S4b AC-23
@@ -342,7 +370,7 @@ def test_ac4_default_gate_is_the_sole_blocker_when_base_settings_are_otherwise_v
     reader = InboundEmailReader()
     reader._notification_service = _RecordingNotificationService()
 
-    msg = _msg(shared_addr, "FrankTrip", body="status", auth_header=AR_PASS)
+    msg = _msg(shared_addr, "FrankTrip", body="status", auth_header=ar_pass_for(shared_addr))
     result = _run_process_single(reader, settings, msg)
 
     assert result == (0, 0), (  # #1405 S4b AC-23: (processed, failed)
@@ -370,7 +398,7 @@ def test_ac4_ambiguous_sender_rejected_end_to_end(tmp_path, monkeypatch):
     reader = InboundEmailReader()
     reader._notification_service = _RecordingNotificationService()
 
-    msg = _msg(shared_addr, "CarolTrip", body="status", auth_header=AR_PASS)
+    msg = _msg(shared_addr, "CarolTrip", body="status", auth_header=ar_pass_for(shared_addr))
     result = _run_process_single(reader, settings, msg)
 
     assert result == (0, 0), f"#2143 AC-4: mehrdeutiger Absender wurde verarbeitet (return={result})"  # #1405 S4b AC-23
@@ -399,7 +427,7 @@ def test_ac6_valid_verified_sender_with_spf_dkim_pass_is_processed(tmp_path, mon
     reader = InboundEmailReader()
     reader._notification_service = _RecordingNotificationService()
 
-    msg = _msg(addr, "EveTrip", body="status", auth_header=AR_PASS)
+    msg = _msg(addr, "EveTrip", body="status", auth_header=ar_pass_for(addr))
     result = _run_process_single(reader, settings, msg)
 
     assert result == (1, 0), f"#2143 AC-6: gueltiger Absender wurde NICHT verarbeitet (return={result})"  # #1405 S4b AC-23
@@ -436,3 +464,274 @@ def test_settings_has_mail_server_hostname_field():
     Vergleichsbasis fuer `authserv-id` in `_spf_dkim_pass`."""
     settings = Settings(mail_server_hostname=TEST_AUTHSERV_ID)
     assert settings.mail_server_hostname == TEST_AUTHSERV_ID
+
+
+# ===========================================================================
+# #2252 — Integration ueber _authorize / _process_single (AC-7, AC-12..AC-15)
+# ===========================================================================
+
+_VERIFIED = "2026-01-01T00:00:00Z"
+_SYSTEM_FROM = "system@example.invalid"  # explizit, unabhaengig von GZ_MAIL_FROM in .env
+
+
+def _raw_lines_msg(lines: list[str]) -> email.message.Message:
+    """Raw-Bytes wie IMAP sie liefert (Header inkl. woertlicher Faltungen)."""
+    return email.message_from_bytes("\r\n".join(lines + ["", "status"]).encode("utf-8"))
+
+
+def _authz_settings(mail_to: str, authserv: str) -> Settings:
+    return Settings(
+        mail_to=mail_to,
+        mail_from=_SYSTEM_FROM,
+        email_verified_at=_VERIFIED,
+        mail_server_hostname=authserv,
+        smtp_host="smtp.example.com",
+        smtp_user="test-user",
+        smtp_pass="test-pass",
+    )
+
+
+def _authorize_with(sender: str, from_lines: list[str], header: str, authserv: str) -> bool:
+    msg = _raw_lines_msg(from_lines + [
+        "To: cmd@henemm.com", "Subject: [Trip] Befehl", f"Authentication-Results: {header}",
+    ])
+    return InboundEmailReader()._authorize(sender, _authz_settings(sender, authserv), msg)
+
+
+class TestAuthorize2252:
+    """`_authorize` mit echten Prod-Headern (authserv mail.henemm.com) und Luecke 2."""
+
+    def test_ac7_h2_injection_is_rejected(self):
+        sender = "nutzer@henemm.com"
+        assert _authorize_with(sender, [f"From: {sender}"], AR_H2_INJECTION, PROD_AUTHSERV_ID) is False, (
+            "#2252 AC-7: Injektion ueber quoted Local-Part (H2) wurde autorisiert"
+        )
+
+    def test_ac7_h3_escaped_quote_injection_is_rejected(self):
+        sender = "nutzer@henemm.com"
+        assert _authorize_with(sender, [f"From: {sender}"], AR_H3_ESCAPED_QUOTE, PROD_AUTHSERV_ID) is False, (
+            "#2252 AC-7: Injektion mit \\\"-Escape (H3) wurde autorisiert"
+        )
+
+    def test_ac12_foreign_domain_aligned_luecke2_is_rejected(self):
+        sender = "opfer@opfer.example"
+        assert _authorize_with(sender, [f"From: {sender}"], AR_FOREIGN_DOMAIN_ALIGNED, TEST_AUTHSERV_ID) is False, (
+            "#2252 AC-12: SPF/DKIM der Angreifer-Domain wurde fuer From @opfer.example akzeptiert"
+        )
+
+    def test_ac14_two_from_headers_are_rejected(self):
+        sender = "nutzer@henemm.com"
+        lines = [f"From: {sender}", "From: angreifer@evil.example"]
+        assert _authorize_with(sender, lines, AR_H1_NORMAL, PROD_AUTHSERV_ID) is False, (
+            "#2252 AC-14: zwei From:-Header wurden akzeptiert"
+        )
+
+    def test_ac14_two_addresses_in_one_from_are_rejected(self):
+        sender = "nutzer@henemm.com"
+        lines = [f"From: {sender}, angreifer@evil.example"]
+        assert _authorize_with(sender, lines, AR_H1_NORMAL, PROD_AUTHSERV_ID) is False, (
+            "#2252 AC-14: From: mit zwei Adressen wurde akzeptiert"
+        )
+
+    def test_ac13_h1_is_accepted(self):
+        sender = "nutzer@henemm.com"
+        assert _authorize_with(sender, [f"From: {sender}"], AR_H1_NORMAL, PROD_AUTHSERV_ID) is True
+
+    def test_ac13_h4_resend_is_accepted(self):
+        sender = "gregor_zwanzig@henemm.com"  # != _SYSTEM_FROM (Loop-Guard)
+        assert _authorize_with(sender, [f"From: {sender}"], AR_H4_RESEND, PROD_AUTHSERV_ID) is True
+
+
+class TestSingleFromAddress:
+    """AC-14: `_single_from_address(msg)` — genau ein From:-Header, genau eine Adresse."""
+
+    def _check(self, from_lines: list[str]) -> bool:
+        msg = _raw_lines_msg(from_lines + ["To: cmd@henemm.com", "Subject: x"])
+        return InboundEmailReader()._single_from_address(msg)
+
+    def test_single_address_is_true(self):
+        assert self._check(["From: Nutzer <nutzer@henemm.com>"]) is True
+
+    def test_display_name_with_comma_is_one_address(self):
+        """Outlook-Stil: Komma im quoted Anzeigenamen ist KEINE zweite Adresse
+        (sonst bricht AC-6 fuer echte Nutzer)."""
+        assert self._check(['From: "Emmrich, Henning" <nutzer@henemm.com>']) is True
+
+    def test_two_headers_is_false(self):
+        assert self._check(["From: nutzer@henemm.com", "From: angreifer@evil.example"]) is False
+
+    def test_two_addresses_is_false(self):
+        assert self._check(["From: nutzer@henemm.com, angreifer@evil.example"]) is False
+
+    def test_missing_from_is_false(self):
+        assert self._check([]) is False
+
+
+# ---------------------------------------------------------------------------
+# AC-7 / AC-14 Ende-zu-Ende ueber _process_single
+# ---------------------------------------------------------------------------
+
+def _seen_marked(imap: _FakeImap) -> bool:
+    return any(value == "\\Seen" for _uid, _flags, value in imap.stored)
+
+
+def _run_raw(reader: InboundEmailReader, settings: Settings, msg) -> tuple[object, _FakeImap]:
+    imap = _fake_imap_for(msg)
+    _RecordingProcessor.calls = []
+    orig = _reader_mod.TripCommandProcessor
+    _reader_mod.TripCommandProcessor = _RecordingProcessor
+    try:
+        return reader._process_single(imap, b"1", settings), imap
+    finally:
+        _reader_mod.TripCommandProcessor = orig
+
+
+def _cmd_msg(from_lines: list[str], trip_name: str, header: str, body: str) -> email.message.Message:
+    lines = from_lines + [
+        "To: cmd@henemm.com", f"Subject: [{trip_name}] Befehl", f"Authentication-Results: {header}", "",
+        body,
+    ]
+    return email.message_from_bytes("\r\n".join(lines).encode("utf-8"))
+
+
+def _reader() -> InboundEmailReader:
+    reader = InboundEmailReader()
+    reader._notification_service = _RecordingNotificationService()
+    return reader
+
+
+def _reader_warnings(caplog) -> list:
+    return [r for r in caplog.records
+            if r.name == "services.inbound_email_reader" and r.levelno == logging.WARNING]
+
+
+def test_ac7_h2_injection_end_to_end_is_rejected(tmp_path, monkeypatch, caplog):
+    """AC-7: H2 mit From = verifizierte mail_to ⇒ SEEN, kein Reply, WARNING-Log,
+    Trip unveraendert."""
+    caplog.set_level(logging.DEBUG)
+    monkeypatch.setattr(loader, "_DATA_ROOT", str(tmp_path))
+    addr = "nutzer-h2@henemm.com"
+    _write_user(tmp_path, "nutzerh2", mail_to=addr, email_verified_at=_VERIFIED)
+    _make_trip("nutzerh2", "t-h2", "H2Trip", with_report_config=True)
+    before = _trip_file_bytes("nutzerh2", "t-h2")
+
+    reader = _reader()
+    result, imap = _run_raw(reader, _authz_settings(addr, PROD_AUTHSERV_ID),
+                            _cmd_msg([f"From: {addr}"], "H2Trip", AR_H2_INJECTION, "stop"))
+
+    assert result == (0, 0), f"#2252 AC-7: H2-Injektion wurde verarbeitet (return={result})"
+    assert _trip_file_bytes("nutzerh2", "t-h2") == before
+    assert not _RecordingProcessor.calls
+    assert not reader._notification_service.replies
+    assert _seen_marked(imap), "#2252 AC-7: abgelehnte Mail nicht SEEN markiert"
+    assert _reader_warnings(caplog), "#2252 AC-7: kein WARNING-Log bei Ablehnung"
+
+
+def test_ac14_double_from_end_to_end_is_rejected(tmp_path, monkeypatch, caplog):
+    """AC-14: erster From:-Header = verifizierte mail_to, Header sonst gueltig
+    (H1) ⇒ trotzdem fail-closed (SEEN, kein Reply, WARNING-Log, Trip unveraendert)."""
+    caplog.set_level(logging.DEBUG)
+    monkeypatch.setattr(loader, "_DATA_ROOT", str(tmp_path))
+    addr = "nutzer-df@henemm.com"
+    _write_user(tmp_path, "nutzerdf", mail_to=addr, email_verified_at=_VERIFIED)
+    _make_trip("nutzerdf", "t-df", "DfTrip", with_report_config=True)
+    before = _trip_file_bytes("nutzerdf", "t-df")
+
+    reader = _reader()
+    msg = _cmd_msg([f"From: {addr}", "From: angreifer@evil.example"], "DfTrip", AR_H1_NORMAL, "stop")
+    result, imap = _run_raw(reader, _authz_settings(addr, PROD_AUTHSERV_ID), msg)
+
+    assert result == (0, 0), f"#2252 AC-14: Doppel-From wurde verarbeitet (return={result})"
+    assert _trip_file_bytes("nutzerdf", "t-df") == before
+    assert not reader._notification_service.replies
+    assert _seen_marked(imap)
+    assert _reader_warnings(caplog), "#2252 AC-14: kein WARNING-Log bei Ablehnung"
+
+
+# ---------------------------------------------------------------------------
+# AC-15: zwei Nutzer mit VERSCHIEDENEN Domains
+# ---------------------------------------------------------------------------
+
+_A_ID, _A_ADDR, _A_TRIP, _A_TID = "nutzera", "nutzer-a@henemm.com", "AlphaTrip", "t-alpha"
+_B_ID, _B_ADDR, _B_TRIP, _B_TID = "nutzerb", "nutzer-b@opfer.example", "BetaTrip", "t-beta"
+
+
+def _two_users(tmp_path, monkeypatch) -> None:
+    monkeypatch.setattr(loader, "_DATA_ROOT", str(tmp_path))
+    _write_user(tmp_path, _A_ID, mail_to=_A_ADDR, email_verified_at=_VERIFIED)
+    _write_user(tmp_path, _B_ID, mail_to=_B_ADDR, email_verified_at=_VERIFIED)
+    _make_trip(_A_ID, _A_TID, _A_TRIP, with_report_config=True)
+    _make_trip(_B_ID, _B_TID, _B_TRIP, with_report_config=True)
+
+
+def _send(reader, from_addr: str, trip: str, header: str, authserv: str, body: str = "stop"):
+    # Basis-Settings bewusst NEUTRAL (nicht die Adresse eines der Nutzer):
+    # die Nutzerzuordnung muss ueber den echten Lookup erfolgen.
+    settings = _authz_settings("basis@example.invalid", authserv)
+    return _run_raw(reader, settings, _cmd_msg([f"From: {from_addr}"], trip, header, body))
+
+
+def test_ac15_mail_from_b_aligned_to_a_domain_never_changes_b_trip(tmp_path, monkeypatch):
+    """AC-15 entscheidender Fall: From = Adresse von B (@opfer.example), der
+    Header ist aber auf A's Domain (henemm.com) ausgerichtet ⇒ abgelehnt,
+    B's Trip unveraendert (und A's auch)."""
+    _two_users(tmp_path, monkeypatch)
+    before_a, before_b = _trip_file_bytes(_A_ID, _A_TID), _trip_file_bytes(_B_ID, _B_TID)
+    reader = _reader()
+
+    result, imap = _send(reader, _B_ADDR, _B_TRIP, ar_pass_for(_A_ADDR), TEST_AUTHSERV_ID)
+
+    assert result == (0, 0), (
+        f"#2252 AC-15: Mail mit From=B, aber auf A's Domain ausgerichtet, wurde verarbeitet (return={result})"
+    )
+    assert _trip_file_bytes(_B_ID, _B_TID) == before_b, "#2252 AC-15: Trip von B wurde veraendert"
+    assert _trip_file_bytes(_A_ID, _A_TID) == before_a
+    assert not reader._notification_service.replies
+    assert _seen_marked(imap)
+
+
+@pytest.mark.parametrize("from_who,header,authserv", [
+    pytest.param("a", AR_H2_INJECTION, PROD_AUTHSERV_ID, id="H2-an-A"),
+    pytest.param("a", AR_H3_ESCAPED_QUOTE, PROD_AUTHSERV_ID, id="H3-an-A"),
+    pytest.param("b", AR_FOREIGN_DOMAIN_ALIGNED, TEST_AUTHSERV_ID, id="Luecke2-an-B"),
+])
+def test_ac15_attacks_are_rejected_for_both_users(tmp_path, monkeypatch, from_who, header, authserv):
+    _two_users(tmp_path, monkeypatch)
+    before_a, before_b = _trip_file_bytes(_A_ID, _A_TID), _trip_file_bytes(_B_ID, _B_TID)
+    addr, trip = (_A_ADDR, _A_TRIP) if from_who == "a" else (_B_ADDR, _B_TRIP)
+    reader = _reader()
+
+    result, _imap = _send(reader, addr, trip, header, authserv)
+
+    assert result == (0, 0), f"#2252 AC-15: Angriff gegen Nutzer {from_who} wurde verarbeitet (return={result})"
+    assert _trip_file_bytes(_A_ID, _A_TID) == before_a
+    assert _trip_file_bytes(_B_ID, _B_TID) == before_b
+    assert not reader._notification_service.replies
+
+
+def test_ac15_aligned_mails_are_accepted_per_user_and_touch_only_own_trip(tmp_path, monkeypatch):
+    """Positivkontrolle (heute und nach dem Fix gruen): H1/H4 fuer A
+    (@henemm.com) und ein auf opfer.example ausgerichteter Header fuer B werden
+    akzeptiert; jede Mail aendert nur den eigenen Trip — und `stop` aendert
+    die Trip-Datei tatsaechlich (sonst waere "unveraendert" oben wertlos)."""
+    _two_users(tmp_path, monkeypatch)
+    before_a, before_b = _trip_file_bytes(_A_ID, _A_TID), _trip_file_bytes(_B_ID, _B_TID)
+    reader = _reader()
+
+    result, _ = _send(reader, _A_ADDR, _A_TRIP, AR_H1_NORMAL, PROD_AUTHSERV_ID, body="stop")
+    assert result == (1, 0), f"H1 fuer A abgelehnt (return={result})"
+    assert _RecordingProcessor.calls[0].user_id == _A_ID
+    after_a = _trip_file_bytes(_A_ID, _A_TID)
+    assert after_a != before_a, "Vorbedingung: STOP muss A's Trip-Datei aendern"
+    assert _trip_file_bytes(_B_ID, _B_TID) == before_b, "Mail von A hat B's Trip veraendert"
+
+    result, _ = _send(reader, _A_ADDR, _A_TRIP, AR_H4_RESEND, PROD_AUTHSERV_ID, body="status")
+    assert result == (1, 0), f"H4 fuer A abgelehnt (return={result})"
+    assert _RecordingProcessor.calls[0].user_id == _A_ID
+    assert _trip_file_bytes(_B_ID, _B_TID) == before_b
+
+    result, _ = _send(reader, _B_ADDR, _B_TRIP, ar_pass_for(_B_ADDR), TEST_AUTHSERV_ID, body="stop")
+    assert result == (1, 0), f"ausgerichtete Mail fuer B abgelehnt (return={result})"
+    assert _RecordingProcessor.calls[0].user_id == _B_ID
+    assert _trip_file_bytes(_B_ID, _B_TID) != before_b, "Vorbedingung: STOP muss B's Trip-Datei aendern"
+    assert _trip_file_bytes(_A_ID, _A_TID) == after_a, "Mail von B hat A's Trip veraendert"

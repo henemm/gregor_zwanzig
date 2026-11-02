@@ -21,11 +21,16 @@ import email
 
 from app.config import Settings
 from services.inbound_email_reader import InboundEmailReader
-from tests.fixtures.authentication_results_fixtures import AR_PASS, TEST_AUTHSERV_ID
+from tests.fixtures.authentication_results_fixtures import TEST_AUTHSERV_ID, ar_pass_for
 
-_VALID_MSG = email.message_from_bytes(
-    f"Authentication-Results: {AR_PASS}\r\n\r\nstatus".encode("utf-8")
-)
+
+def _valid_msg(sender: str) -> email.message.Message:
+    """#2252: je Absender eine Mail mit GENAU EINEM ``From: <sender>`` (AC-14)
+    und einem auf dessen Domain ausgerichteten Pass-Header (Spec 5a) — so
+    entsteht eine Ablehnung in dieser Datei nur aus der Adress-Logik."""
+    return email.message_from_bytes(
+        f"From: {sender}\r\nAuthentication-Results: {ar_pass_for(sender)}\r\n\r\nstatus".encode("utf-8")
+    )
 
 
 def _settings(mail_to: str, mail_from: str, inbound_address: str | None = None) -> Settings:
@@ -50,7 +55,7 @@ class TestAuthorizeRejectsSytemSender:
         )
         # BUG: aktuell gibt _authorize True zurück, weil mail_from in allowed steht
         # Nach Fix muss False zurückkommen
-        assert reader._authorize("gregor_zwanzig@henemm.com", settings, _VALID_MSG) is False
+        assert reader._authorize("gregor_zwanzig@henemm.com", settings, _valid_msg("gregor_zwanzig@henemm.com")) is False
 
     def test_mail_from_variation_rejected(self):
         """Auch andere mail_from-Adressen dürfen nicht autorisiert werden."""
@@ -59,7 +64,7 @@ class TestAuthorizeRejectsSytemSender:
             mail_to="user@example.com",
             mail_from="noreply@myapp.com",
         )
-        assert reader._authorize("noreply@myapp.com", settings, _VALID_MSG) is False
+        assert reader._authorize("noreply@myapp.com", settings, _valid_msg("noreply@myapp.com")) is False
 
 
 class TestAuthorizeAcceptsMailTo:
@@ -72,7 +77,7 @@ class TestAuthorizeAcceptsMailTo:
             mail_to="gregor-test@henemm.com",
             mail_from="gregor_zwanzig@henemm.com",
         )
-        assert reader._authorize("gregor-test@henemm.com", settings, _VALID_MSG) is True
+        assert reader._authorize("gregor-test@henemm.com", settings, _valid_msg("gregor-test@henemm.com")) is True
 
     def test_mail_to_case_insensitive(self):
         """Groß-/Kleinschreibung ist irrelevant."""
@@ -81,7 +86,7 @@ class TestAuthorizeAcceptsMailTo:
             mail_to="User@Example.COM",
             mail_from="system@app.com",
         )
-        assert reader._authorize("user@example.com", settings, _VALID_MSG) is True
+        assert reader._authorize("user@example.com", settings, _valid_msg("user@example.com")) is True
 
 
 class TestAuthorizeRejectsUnknown:
@@ -93,7 +98,7 @@ class TestAuthorizeRejectsUnknown:
             mail_to="user@example.com",
             mail_from="system@app.com",
         )
-        assert reader._authorize("attacker@evil.com", settings, _VALID_MSG) is False
+        assert reader._authorize("attacker@evil.com", settings, _valid_msg("attacker@evil.com")) is False
 
 
 class TestAuthorizeInboundAddress:
@@ -106,7 +111,7 @@ class TestAuthorizeInboundAddress:
             mail_from="system@app.com",
             inbound_address="user+gregor@example.com",
         )
-        assert reader._authorize("user+gregor@example.com", settings, _VALID_MSG) is True
+        assert reader._authorize("user+gregor@example.com", settings, _valid_msg("user+gregor@example.com")) is True
 
     def test_inbound_address_does_not_accept_mail_from(self):
         """inbound_address ändert nichts daran, dass mail_from abgelehnt wird."""
@@ -116,7 +121,7 @@ class TestAuthorizeInboundAddress:
             mail_from="system@app.com",
             inbound_address="user+gregor@example.com",
         )
-        assert reader._authorize("system@app.com", settings, _VALID_MSG) is False
+        assert reader._authorize("system@app.com", settings, _valid_msg("system@app.com")) is False
 
 
 class TestAuthorizeProductionScenario:
@@ -132,7 +137,7 @@ class TestAuthorizeProductionScenario:
         )
         # Diese E-Mail ist eine Stalwart-Kopie der gesendeten Mail
         # Sie darf NICHT verarbeitet werden
-        assert reader._authorize("gregor_zwanzig@henemm.com", settings, _VALID_MSG) is False
+        assert reader._authorize("gregor_zwanzig@henemm.com", settings, _valid_msg("gregor_zwanzig@henemm.com")) is False
 
     def test_inbound_address_different_from_mail_from_accepted(self):
         """Wenn inbound_address eine echte User-Adresse ist, bleibt sie erlaubt."""
@@ -142,7 +147,7 @@ class TestAuthorizeProductionScenario:
             mail_from="system@app.com",
             inbound_address="user+commands@example.com",  # verschieden von mail_from
         )
-        assert reader._authorize("user+commands@example.com", settings, _VALID_MSG) is True
+        assert reader._authorize("user+commands@example.com", settings, _valid_msg("user+commands@example.com")) is True
 
     def test_mail_to_none_returns_false(self):
         """Wenn mail_to nicht gesetzt ist (None), wird alles abgelehnt."""
@@ -152,7 +157,7 @@ class TestAuthorizeProductionScenario:
             mail_to=None, mail_from="system@app.com",
             email_verified_at="2026-01-01T00:00:00Z", mail_server_hostname=TEST_AUTHSERV_ID,
         )
-        assert reader._authorize("anyone@example.com", settings, _VALID_MSG) is False
+        assert reader._authorize("anyone@example.com", settings, _valid_msg("anyone@example.com")) is False
 
     def test_mail_from_rejected_even_when_equals_mail_to(self):
         """Fallback: user.json fehlt → base-env hat mail_to==mail_from → mail_from trotzdem abgelehnt."""
@@ -163,7 +168,7 @@ class TestAuthorizeProductionScenario:
             mail_from="gregor_zwanzig@henemm.com",
         )
         # Expliziter mail_from-Guard macht den Schutz unabhängig von user.json
-        assert reader._authorize("gregor_zwanzig@henemm.com", settings, _VALID_MSG) is False
+        assert reader._authorize("gregor_zwanzig@henemm.com", settings, _valid_msg("gregor_zwanzig@henemm.com")) is False
 
 
 class TestAuthorizeRequiresVerificationAndSpfDkim:
@@ -176,10 +181,12 @@ class TestAuthorizeRequiresVerificationAndSpfDkim:
             mail_to="user@example.com", mail_from="system@app.com",
             email_verified_at=None, mail_server_hostname=TEST_AUTHSERV_ID,
         )
-        assert reader._authorize("user@example.com", settings, _VALID_MSG) is False
+        assert reader._authorize("user@example.com", settings, _valid_msg("user@example.com")) is False
 
     def test_missing_spf_dkim_header_rejects_otherwise_valid_sender(self):
         reader = InboundEmailReader()
         settings = _settings(mail_to="user@example.com", mail_from="system@app.com")
-        no_auth_msg = email.message_from_bytes(b"\r\n\r\nstatus")
+        # #2252: mit genau einem From:, damit die Ablehnung am fehlenden
+        # Authentication-Results-Header liegt, nicht an der From-Eindeutigkeit.
+        no_auth_msg = email.message_from_bytes(b"From: user@example.com\r\n\r\nstatus")
         assert reader._authorize("user@example.com", settings, no_auth_msg) is False
