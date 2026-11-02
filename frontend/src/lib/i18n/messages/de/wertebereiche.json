@@ -86,6 +86,8 @@
 	"wertebereiche.auswertung.avg": "Mittel",
 	"wertebereiche.auswertung.sum": "Summe",
 	"wertebereiche.ausblick.titel": "3-Tages-Vorschau",
+	"wertebereiche.nachtblock.checkbox": "Nacht-Stundentabelle in der Mail zeigen",
+	"wertebereiche.nachtblock.text": "Betrifft nur die Stundentabelle. Nacht-Tiefstwert und Gewitter-Hinweis für die Nacht bleiben, wenn du sie gewählt hast.",
 	"wertebereiche.warnungen.checkbox": "Amtliche Warnungen im Bericht",
 	"wertebereiche.warnungen.text": "Amtliche Wetterwarnungen (z. B. Unwetterwarnung) im E-Mail-Briefing anzeigen.",
 	"wertebereiche.warnungen.legende_block": "In SMS und Telegram-Kurzform beginnt der Warn-Block mit {zeichen} — alles dahinter ist eine amtliche Warnung, nicht die eigene Vorhersage.",

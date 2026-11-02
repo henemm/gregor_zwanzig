@@ -213,7 +213,9 @@ export const DISPLAY_WETTER_METRIKEN = [
 	'preset_name',
 	'telegram_kurzform',
 	'outlook_metrics',
-	'outlook_metric_formats'
+	'outlook_metric_formats',
+	// Issue #1721: Schalter "Nacht-Stundentabelle in der Mail zeigen"
+	'show_night_block'
 ] as const;
 
 /** Spec §2.1 — Alarme: Top-Level-Felder (ohne `display_config`). */

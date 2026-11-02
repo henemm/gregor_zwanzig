@@ -80,5 +80,7 @@ export const WETTER_DISPLAY_KEYS = [
 	'preset_name',
 	'telegram_kurzform',
 	'outlook_metrics',
-	'outlook_metric_formats'
+	'outlook_metric_formats',
+	// Issue #1721: Schalter "Nacht-Stundentabelle in der Mail zeigen" (nur Trip).
+	'show_night_block'
 ] as const;

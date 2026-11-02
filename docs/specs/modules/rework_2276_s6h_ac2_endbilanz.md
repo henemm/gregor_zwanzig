@@ -98,9 +98,9 @@ Diese Scheibe:
   Zählbefehl) und prüft, dass die drei Kategorie-Summen 27/6/14 ergeben.
   Verhindert, dass diese Dokumentation und die Ratsche künftig auseinanderlaufen.
 
-## Anhang: AC-2-Endbilanz — alle 47 Ratschen-Einträge (Stand `3cece096`, S6g live; seit #2287 ohne `alarmeTabSections.ts:42`; seit #1743 mit `WetterMetrikenVersandPanel.svelte:66`)
+## Anhang: AC-2-Endbilanz — alle 48 Ratschen-Einträge (Stand `3cece096`, S6g live; seit #2287 ohne `alarmeTabSections.ts:42`; seit #1743 mit `WetterMetrikenVersandPanel.svelte:66`; seit #1721 mit `WeatherMetricsTab.svelte:2042`)
 
-### FACHLICH (27 — echter Sachunterschied, bleibt dauerhaft)
+### FACHLICH (28 — echter Sachunterschied, bleibt dauerhaft)
 
 | Datei:Zeile | Grund |
 |---|---|
@@ -109,7 +109,8 @@ Diese Scheibe:
 | `AlarmeTab.svelte:570` | Beispielwarnung: Ort- statt Etappen-Subjekt, zwei verschiedene Komponenten |
 | `VersandTab.svelte:370` | Markup-Baum Trip (`VTLaufzeitRoute`, Mehrtages-Trend, Premium-SMS) |
 | `VersandTab.svelte:406` | Markup-Baum Vergleich (`VTLaufzeitVergleich`, kein Mehrtages-Trend, eigener Premium-SMS-Schalter seit #2293 S2) — zwei komplette, unterschiedliche Komponenten-Bäume |
-| `WeatherMetricsTab.svelte:1429` | Metrik-Markup-Baum (#1311 C1: Vergleich-Grundauswahl) |
+| `WeatherMetricsTab.svelte:1457` | Metrik-Markup-Baum (#1311 C1: Vergleich-Grundauswahl) |
+| `WeatherMetricsTab.svelte:2042` | Schalter „Nacht-Stundentabelle in der Mail zeigen“ nur im Trip (#1721): die Nacht-Stundentabelle gibt es nur in der Trip-Mail, der Ortsvergleich hat keinen Nachtblock (Pendant-Sperre, Spec `fix_1721_nachtausgabe.md`) |
 | `versand-tab/vtBriefingChannelsText.ts:22` | SMS-Zeichenbudget: Trip 160 / Vergleich 153 (unterschiedliches Layout) |
 | `versand-tab/vtBriefingChannelsText.ts:29` | Einleitungstext: Etappen-Tabelle vs. Orts-Tabelle — inhaltlich verschiedene Datenform |
 | `versand-tab/VTSchedulePlan.svelte:57` | `isRoute`-Ableitung — Mehrtages-Trend-Karte existiert nur im Trip |
@@ -156,17 +157,21 @@ Diese Scheibe:
 | `corridor-editor/CorridorEditor.svelte:332` | `maybeSchedule()`: wählt zwischen `vergleichSpeicherung.aenderungMelden()` und `saveController.schedule(buildSaveFn())` | Genau der in AC-2 benannte Beispielfall „Vergleichs-Speicherweg vs. `saveController.schedule`" — Auflösung bräuchte eine injizierte `SaveFn`, eigene Architekturentscheidung |
 | `corridor-editor/CorridorEditorMobile.svelte:254` | Mobil-Zwilling von `:332` | dito |
 | `VersandTab.svelte:360` | Wirkort-Guard des Selbst-Speicher-Effekts — läuft nur im Vergleich | Effekt existiert nur für den Compare-Speicherweg; Trip speichert über einen anderen Mechanismus außerhalb dieser Datei |
-| `WeatherMetricsTab.svelte:581` | Ladepfad-Zwilling: Hydration-Guard nur für `route` | Trip und Vergleich laden ihre Kataloge über verschiedene Wege; echte Vereinheitlichung ist eine Ladeschicht-Frage, nicht Teil von S6 |
-| `WeatherMetricsTab.svelte:596` | Ladepfad-Zwilling: Katalog-Nachlade-Guard nur für `route` | dito |
-| `WeatherMetricsTab.svelte:625` | Ladepfad-Zwilling: SMS-Symbole nur im Vergleich laden | dito |
-| `WeatherMetricsTab.svelte:638` | Ladepfad-Zwilling: Katalog-Nachlade-Guard nur für `vergleich` | dito |
+| `WeatherMetricsTab.svelte:594` | Ladepfad-Zwilling: Hydration-Guard nur für `route` | Trip und Vergleich laden ihre Kataloge über verschiedene Wege; echte Vereinheitlichung ist eine Ladeschicht-Frage, nicht Teil von S6 |
+| `WeatherMetricsTab.svelte:609` | Ladepfad-Zwilling: Katalog-Nachlade-Guard nur für `route` | dito |
+| `WeatherMetricsTab.svelte:638` | Ladepfad-Zwilling: SMS-Symbole nur im Vergleich laden | dito |
+| `WeatherMetricsTab.svelte:651` | Ladepfad-Zwilling: Katalog-Nachlade-Guard nur für `vergleich` | dito |
 | `WetterMetrikenVersandPanel.svelte:66` | #1743: Versand-Inhalt nach Herkunft — Trip-Hub über `BriefingScheduleTab`, Vergleich und Trip-Anlegen über den EINEN `VersandTab` | ersetzt die Direkt-Mounts in TripTabs/CompareTabs/Anlege-Seiten |
 
-**Summe:** 27 FACHLICH + 5 DARSTELLUNG + 14 HERKUNFT = **46**, deckungsgleich
+**Summe:** 28 FACHLICH + 5 DARSTELLUNG + 15 HERKUNFT = **48**, deckungsgleich
 mit `EINGEFROREN_SOLL_ANZAHL`.
 
 ## Changelog
 
+- 2026-11-02: #1721 — `WeatherMetricsTab.svelte:2042` (Nacht-Stundentabelle-Schalter nur im
+  Trip) neu als FACHLICH; die fünf übrigen WeatherMetricsTab-Einträge nur verschoben
+  (581→594, 596→609, 625→638, 638→651, 1429→1457), Bedingungstext unverändert.
+  FACHLICH 27 → 28, Summe 47 → 48 (Ratsche und Doc-Compliance-Test nachgezogen).
 - 2026-10-05: #2287 (AC-11) — `alarme-tab/alarmeTabSections.ts:42` (`wertebereicheTabId`) entfällt mit der
   Funktion; DARSTELLUNG 6 → 5, Summe 47 → 46 (Ratsche und Doc-Compliance-Test nachgezogen).
 - 2026-09-25: Initial spec created (Scheibe S6h von #2276, Epic #2345, Fast Track)
