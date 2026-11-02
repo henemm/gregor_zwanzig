@@ -928,7 +928,9 @@ class _VertragsStaging:
 
     TOKEN = "TOKEN-GEHEIM-c0ffee-9912"
 
-    def __init__(self, status_je_pfad=None):
+    def __init__(self, status_je_pfad=None, register_ohne_id=False):
+        self.register_ohne_id = register_ohne_id
+        self.vergebene_ids: list[str] = []
         self.anfragen: list[tuple] = []
         self.akteure: list[str | None] = []
         self.status_je_pfad = status_je_pfad or {}
@@ -955,8 +957,12 @@ class _VertragsStaging:
     def _antwort(self, cookie, pfad, headers, body, method="POST"):
         nutzer = cookie["nutzer"]
         if pfad == "api/auth/register":
-            self.konten[body["username"]] = {"pw": body["password"], "verifiziert": False}
-            return 201, {"id": "nutzer-fake-1"}
+            # #2194/#2757: der Server vergibt die Konto-ID SELBST (u-<8hex>, NewOpaqueUserID,
+            # internal/handler/auth.go:193) und ignoriert den gesendeten username.
+            neue_id = f"u-{0x5eed0000 + len(self.vergebene_ids):08x}"
+            self.vergebene_ids.append(neue_id)
+            self.konten[neue_id] = {"pw": body["password"], "verifiziert": False}
+            return 201, ({} if self.register_ohne_id else {"id": neue_id})
         if pfad == "api/auth/login":
             k = self.konten.get(body.get("username"))
             if k is None or k["pw"] != body.get("password"):
@@ -968,6 +974,8 @@ class _VertragsStaging:
         if pfad == "api/auth/verify-email/staging-token":
             if nutzer is None or not self.konten[nutzer]["verifiziert"]:
                 return 401, {"error": "unauthorized"}
+            if body.get("username") not in self.konten:  # internal/handler/staging_verify_token.go:50
+                return 404, {"error": "unknown user"}
             return 200, {"token": self.TOKEN}
         if pfad == "api/auth/verify-email":
             k = self.konten.get(body.get("user"))
@@ -1084,7 +1092,8 @@ def test_registrierkette_reihenfolge_und_inhalt():
     ]
     helfer_login, reg, tokreq, ver, login, trips, poll, loesch = (a[3] for a in tr.anfragen)
     assert helfer_login == {"username": HELFER_USER, "password": HELFER_PASS}
-    assert reg["email"] == plus and reg["username"] == nutzer and len(reg["password"]) >= 8
+    assert nutzer == tr.vergebene_ids[0], "Werkzeug muss die vom Server vergebene ID verwenden (#2757)"
+    assert reg["email"] == plus and len(reg["password"]) >= 8
     assert reg["username"] != HELFER_USER
     assert login == {"username": nutzer, "password": reg["password"]}
     assert tokreq == {"username": nutzer}
@@ -1453,3 +1462,55 @@ def test_lauf_erkennt_echte_heute_briefing_mail():
     rc = w.fuehre_lauf(["A"], api=api, smtp_factory=system.smtp, imap_factory=lambda: system.imap,
                        heute=HEUTE, tag="tagbrief", timeout=5, schlaf=system.schlaf)
     assert rc == 0
+
+
+# ---------------------------------------------------------------------------
+# #2757: Server vergibt die Konto-ID selbst (seit #2194) — Werkzeug muss sie uebernehmen
+# ---------------------------------------------------------------------------
+
+def test_registrierung_uebernimmt_die_vom_server_vergebene_id():
+    """#2757 AC-1/AC-2: staging-token, verify-email, Login und Konto-Loeschen laufen unter der
+    vom Server vergebenen ``u-…``-ID, nicht unter dem selbst gewaehlten Namen ``gzp-…``."""
+    w = _werkzeug()
+    tr = _VertragsStaging()
+    api = _api(tr)
+    nutzer = api.registriere("gregor-test+idsrv1@henemm.com")
+    api.loesche_nutzer()
+    [server_id] = tr.vergebene_ids
+    assert nutzer == server_id and api.nutzer_id == server_id
+    assert not nutzer.startswith("gzp-")
+    koerper = {p: b for _, p, _, b in tr.anfragen}
+    assert koerper["api/auth/verify-email/staging-token"] == {"username": server_id}
+    assert koerper["api/auth/verify-email"]["user"] == server_id
+    logins = [b for _, p, _, b in tr.anfragen if p == "api/auth/login"]
+    assert logins[-1]["username"] == server_id
+    assert tr.geloescht == [server_id], "Wegwerf-Konto muss unter der Server-ID geloescht werden"
+    assert server_id not in tr.konten
+
+
+def test_lauf_mit_server_vergebener_id_endet_ohne_konto_leiche():
+    """#2757 AC-1/AC-4: ein ganzer Lauf ueber den Vertrags-Server laesst kein Wegwerf-Konto zurueck."""
+    w = _werkzeug()
+    tr = _VertragsStaging()
+    api = _api(tr)
+    w.fuehre_lauf_exit(["B"], api=api, smtp_factory=_smtp_klasse(),
+                       imap_factory=lambda: _ErsatzImap({}), heute=HEUTE, tag="tagid2",
+                       timeout=0, schlaf=_kein_schlaf)
+    pfade = [p for _, p, _, _ in tr.anfragen]
+    assert "api/auth/verify-email" in pfade, "Registrierkette nicht durchlaufen — Test waere vakuum"
+    assert tr.geloescht == tr.vergebene_ids and len(tr.vergebene_ids) == 1
+    assert set(tr.konten) == {HELFER_USER}, "Konto-Leiche auf Staging"
+
+
+def test_register_antwort_ohne_id_bricht_verstaendlich_ab():
+    """#2757 AC-3: fehlt die ``id`` in der Register-Antwort, bricht das Werkzeug mit klarer
+    Meldung ab und arbeitet NICHT mit dem selbst gewaehlten Namen weiter."""
+    w = _werkzeug()
+    tr = _VertragsStaging(register_ohne_id=True)
+    api = _api(tr)
+    with pytest.raises(w.StagingFehler) as exc:
+        api.registriere("gregor-test+ohneid@henemm.com")
+    assert "id" in str(exc.value).lower()
+    pfade = [p for _, p, _, _ in tr.anfragen]
+    assert pfade[-1] == "api/auth/register", "nach fehlender id darf kein Folgeaufruf laufen"
+    assert not (api.nutzer_id or "").startswith("gzp-")
