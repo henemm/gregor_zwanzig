@@ -12,13 +12,8 @@
 	"lib/components/shared/AlertChannelPicker.svelte",
 	"lib/components/shared/AppFooter.svelte",
 	"lib/components/shared/BriefingHistory.svelte",
-	"lib/components/shared/MailInhaltCard.svelte",
-	"lib/components/shared/OutlookLayoutControls.svelte",
-	"lib/components/shared/OutputLayoutEditor.svelte",
 	"lib/components/shared/WeatherMetricsTab.svelte",
-	"lib/components/shared/corridor-editor/",
 	"lib/components/shared/hub-uebersicht/",
-	"lib/components/shared/layout-tab/",
 	"lib/components/shared/subscription-header/",
 	"lib/components/shared/weather-metrics-tab/",
 	"lib/components/trip-detail/",
@@ -26,6 +21,5 @@
 	"lib/utils/alertMetricLabels.ts",
 	"routes/+layout.svelte",
 	"routes/compare/[id]/",
-	"routes/gpx-upload/",
 	"routes/trips/[id]/"
 ]

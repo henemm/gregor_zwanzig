@@ -31,6 +31,7 @@
 	} from './weather-metrics-tab/compareMetricOrder.ts';
 	import { splitChannelMetricsForDisplay } from './weather-metrics-tab/channelMetricLayouts.ts';
 	import { outlookFriendlyCapable } from './weather-metrics-tab/outlookFriendlyCapability.ts';
+	import { t } from '$lib/i18n';
 
 	// Issue #1720 S1: flache Props statt `CompareWizardState`-Bindung — dasselbe
 	// Bauteil bedient jetzt Ortsvergleich UND Trip (parametrisiert statt
@@ -57,7 +58,9 @@
 		 *  `onHourlyCommit`. Ohne Uebergabe (Anlege-Seite) bleibt die Mutation
 		 *  lokal beim Aufrufer. */
 		onOutlookCommit?: () => void;
-		/** Ueberschrift: Vergleich "3-Tages-Ausblick", Trip "3-Tages-Vorschau". */
+		/** Ueberschrift: Vergleich (ohne Angabe) Katalogtext layout.ausblick.titel,
+		 *  Trip uebergibt seine eigene. Kein Standardwert in $props(): er wuerde die
+		 *  Sprache beim Erzeugen einfrieren (i18n F8, #2657). */
 		title?: string;
 		/** Ein/Aus-Schalter — NUR der Vergleich uebergibt beides. Der Trip hat
 		 *  mit `report_config.show_outlook` bereits einen Schalter; ein zweiter
@@ -87,7 +90,7 @@
 	}
 	let {
 		metricKeys, catalog, onMetricKeys, onOutlookCommit,
-		title = '3-Tages-Ausblick', enabled = true, onEnabledChange,
+		title, enabled = true, onEnabledChange,
 		showEmailOnlyHint = true, grundauswahl = null,
 		metricFormats = null, onMetricFormats, smsSymbols = {}
 	}: Props = $props();
@@ -214,13 +217,13 @@
 	}
 </script>
 
-<SectionH {title} />
+<SectionH title={title ?? $t('layout.ausblick.titel')} />
 <!-- Issue #1720 S1 (AC-13): der Schalter erscheint NUR, wenn der Aufrufer ihn
      fuehrt. Der Trip laesst `onEnabledChange` weg — sein Ein/Aus liegt bereits
      in der Inhalt-/Versand-Karte (`report_config.show_outlook`). -->
 {#if onEnabledChange}
 	<ChannelToggle
-		label="3-Tages-Ausblick"
+		label={$t('layout.ausblick.titel')}
 		checked={enabled}
 		onchange={handleEnabledToggle}
 		testid="compare-layout-outlook-enabled-toggle"
@@ -241,7 +244,7 @@
 	{#if materializedOutlookKeys.length > 0 || offOutlookKeys.length > 0}
 		{#if showEmailOnlyHint}
 			<p class="outlook-email-hint" data-testid="compare-layout-outlook-email-only-hint">
-				Erscheint nur in der E-Mail.
+				{$t('layout.ausblick.nur_email')}
 			</p>
 		{/if}
 		<Card padding={0} style="margin-top: 6px">

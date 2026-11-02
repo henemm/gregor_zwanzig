@@ -34,6 +34,7 @@
 	// unerklaert. Hier ist „Marke ohne Erklaerung" baulich unmoeglich statt nur
 	// getestet: jeder Block bringt seine Legende mit.
 	import { ltKanalAbwahlHinweisText } from '../layout-tab/ltChannels.ts';
+	import { locale } from '$lib/i18n';
 	import { buildKuerzelLegende } from './kuerzelLegende.ts';
 
 	interface Props {
@@ -222,7 +223,7 @@
 				</div>
 			{/each}
 			{#if showAbwahlHinweis}
-				<p class="aus-hinweis" data-testid="wm2-aus-hinweis">{ltKanalAbwahlHinweisText()}</p>
+				<p class="aus-hinweis" data-testid="wm2-aus-hinweis">{(void $locale, ltKanalAbwahlHinweisText())}</p>
 			{/if}
 		</div>
 	{/if}

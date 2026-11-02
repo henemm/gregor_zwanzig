@@ -13,6 +13,7 @@
 // Spec: docs/specs/modules/fix_1719_s3_aus_ist_ein_zustand.md (Abschnitt 5, 6)
 
 import { CHANNEL_COL_BUDGET } from '$lib/components/trip-detail/metricsEditor';
+import { tr, trn } from '../../../i18n/index.ts';
 
 export type ChannelId = 'email' | 'telegram' | 'sms';
 
@@ -137,20 +138,20 @@ export function ltCapNoteText(params: {
 	hasLabelColumn: boolean;
 }): string {
 	const { channel, limit, colCount, subject, hasLabelColumn } = params;
-	const label = CHANNEL_LABELS[channel];
-	if (limit.kind === 'none') return `${label} zeigt alles · keine Begrenzung`;
-	if (limit.kind === 'chars') {
-		return `${label}: kein Raster, keine Tabelle — Fließtext, ${limit.value} Zeichen`;
-	}
+	// Issue #2657 (i18n F8): Saetze je Sprache aus dem Katalog (layout.kappung.*);
+	// Kanalname (Eigenname) und Zahlen bleiben Platzhalter-Werte.
+	const kanal = CHANNEL_LABELS[channel];
+	if (limit.kind === 'none') return tr('layout.kappung.zeigt_alles', { kanal });
+	if (limit.kind === 'chars') return tr('layout.kappung.zeichen', { kanal, zeichen: limit.value });
 	const fits = colCount <= limit.value;
-	const fitText = fits
-		? `passt (max ${limit.value})`
-		: `zu breit — max ${limit.value}, weiter vorne = sicherer`;
-	const countLabel = hasLabelColumn ? `${colCount} Spalten (Label + ${subject})` : `${colCount} ${subject}`;
-	return `${label}: ${countLabel} · ${fitText}`;
+	const werte = { kanal, max: limit.value, subjekt: subject };
+	if (hasLabelColumn) {
+		return fits ? trn('layout.kappung.spalten_passt', colCount, werte) : trn('layout.kappung.spalten_zu_breit', colCount, werte);
+	}
+	return tr(fits ? 'layout.kappung.anzahl_passt' : 'layout.kappung.anzahl_zu_breit', { ...werte, anzahl: colCount });
 }
 
 /** Issue #2438 (ADR-0050): Regel-Hinweis im Kanal-Reiter — reine Beschreibung. */
 export function ltKanalAbwahlHinweisText(): string {
-	return 'Ein Kanal zeigt höchstens, was in der Grundauswahl gewählt ist. Was dort fehlt, erscheint in keinem Kanal.';
+	return tr('layout.hinweis.kanal_abwahl');
 }
