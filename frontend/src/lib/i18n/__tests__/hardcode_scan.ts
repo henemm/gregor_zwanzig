@@ -193,8 +193,12 @@ export const TS_KOMPONENTEN_ORDNER = [
 	// F5 (#2654): Wertebereiche-Reiter, Trip-Metrik-Namen, Vergleichs-Katalog-Loader, metricLabel
 	'lib/components/shared/weather-metrics-tab/',
 	'lib/components/shared/trip-metrics/',
-	'lib/components/shared/corridor-editor/compareMetricCatalogLoader.ts',
-	'lib/i18n/metricLabel.ts'
+	'lib/i18n/metricLabel.ts',
+	// F8 (#2657): Layout-Reiter, Korridor-Editor, Mail-Inhalt-Konstanten, GPX-Seite
+	'lib/components/shared/layout-tab/',
+	'lib/components/shared/corridor-editor/',
+	'lib/components/shared/mailInhaltKonstanten.ts',
+	'routes/gpx-upload/'
 ];
 
 /** Pfad relativ zu frontend/src/ mit Schraegstrichen. */

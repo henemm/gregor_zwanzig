@@ -27,6 +27,7 @@
 		type MetricEntry,
 	} from '$lib/components/trip-detail/metricsEditor';
 	import type { MetricPreset } from '$lib/types';
+	import { t } from '$lib/i18n';
 
 	interface Template {
 		id: string;
@@ -117,11 +118,10 @@
 	<div data-testid="output-layout-editor-sms" class="sms-editor">
 		<Card>
 			<div class="head">
-				<Eyebrow>SMS · Priorisierte Liste</Eyebrow>
-				<div class="title">Reihenfolge</div>
+				<Eyebrow>{$t('layout.ausgabe.sms_eyebrow')}</Eyebrow>
+				<div class="title">{$t('layout.ausgabe.reihenfolge')}</div>
 				<p class="hint">
-					SMS hat maximal 140 Zeichen. Reihenfolge: oben = wichtiger. Was nicht
-					mehr in das Budget passt, wird automatisch weggelassen.
+					{$t('layout.ausgabe.sms_hinweis')}
 				</p>
 			</div>
 
@@ -131,17 +131,17 @@
 				data-testid="sms-budget-display"
 				class:exceeded={smsOverBudget}
 			>
-				<span class="budget-label mono">Zeichen</span>
+				<span class="budget-label mono">{$t('layout.ausgabe.zeichen')}</span>
 				<span class="budget-value mono">{smsBudgetUsed} / {smsBudgetTotal}</span>
 			</div>
 
 			{#if buckets.primary.length === 0}
-				<div class="empty">Keine Metriken — aus „Nicht im Briefing" hinzufügen.</div>
+				<div class="empty">{$t('layout.ausgabe.leer')}</div>
 			{:else}
 				<SortableList
 					items={buckets.primary}
 					onDndReorder={handleSmsDndReorder}
-					ariaLabel="SMS-Metriken, Reihenfolge"
+					ariaLabel={$t('layout.ausgabe.sms_liste')}
 					itemLabel={smsItemLabel}
 				>
 					{#snippet row(id: string, i: number)}
@@ -156,7 +156,7 @@
 										variant="ghost"
 										size="icon-sm"
 										onclick={() => handleRemove(id)}
-										aria-label="Entfernen"
+										aria-label={$t('layout.ausgabe.entfernen')}
 									>
 										×
 									</Btn>
@@ -182,7 +182,7 @@
 	<div data-testid="output-layout-editor-standard" class="standard-editor">
 		{#if userPresets.length > 0 || templates.length > 0}
 			<div class="preset-list" data-testid="output-layout-preset-list">
-				<Eyebrow>Preset-Auswahl</Eyebrow>
+				<Eyebrow>{$t('layout.ausgabe.preset_auswahl')}</Eyebrow>
 				{#each userPresets as p (p.id)}
 					<PresetRow
 						id={p.id}
@@ -205,9 +205,9 @@
 		{/if}
 
 		<BucketSection
-			eyebrow="Im Briefing als Spalte"
-			title="Spalten"
-			hint="Eine eigene Tabellen-Spalte je Metrik. Reihenfolge = von links nach rechts."
+			eyebrow={$t('layout.ausgabe.spalten_eyebrow')}
+			title={$t('layout.ausgabe.spalten')}
+			hint={$t('layout.ausgabe.spalten_hinweis')}
 			bucket="primary"
 			items={buckets.primary}
 			{metricById}
@@ -223,9 +223,9 @@
 
 		{#if !hideDetailBucket}
 			<BucketSection
-				eyebrow="Im Briefing als Detail"
-				title="Detail-Werte"
-				hint="Erscheinen als kompakte Zeile direkt unter der Tabelle."
+				eyebrow={$t('layout.ausgabe.detail_eyebrow')}
+				title={$t('layout.ausgabe.detail_werte')}
+				hint={$t('layout.ausgabe.detail_hinweis')}
 				bucket="secondary"
 				items={buckets.secondary}
 				{metricById}

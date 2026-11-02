@@ -28,12 +28,13 @@
 	import {
 		buildRoutePool, buildRoutePrefillRows, addRow, removeRow, patchRow, validateCorridorRows,
 		buildCorridorSavePayload, ROUTE_CTX_DEFAULTS, valueAtPointer, clampDragValue, clampBoundInput,
-		saveGateDecision, supportsMark, countEffectiveMarks, type CorridorRowState,
+		saveGateDecision, supportsMark, countEffectiveMarks, zeilenLabel, zeilenHinweis, type CorridorRowState,
 		buildComparePool, addCompareRow, VERGLEICH_CTX_DEFAULTS,
 		buildCompareCorridorSavePayload, buildComparePrefillRows,
 		type RouteMetricDef, type CompareMetricDef, type ProfileKey, type IdealRange,
 	} from './corridorEditorState.ts';
 	import { loadCompareMetricCatalog, loadRouteExtraMetricDefs } from './compareMetricCatalogLoader.ts';
+	import { t, tn, tr, locale } from '$lib/i18n';
 	// Issue #1366 F002: `activeMetricKeys` ist `string[] | null` ("nie
 	// eingestellt" vs. "bewusst leer") -- materialisiert lesen, NIE roh
 	// spreaden/an buildCompareCorridorSavePayload durchreichen (das wuerde
@@ -200,7 +201,7 @@
 				if (isFreshCompareCreate && rows.length > 0) syncToWizard();
 			})
 			.catch((e: unknown) => {
-				compareDefsError = (e as { error?: string })?.error ?? 'Fehler beim Laden der Metriken';
+				compareDefsError = (e as { error?: string })?.error ?? tr('layout.korridor.fehler_laden');
 			});
 	});
 
@@ -278,7 +279,8 @@
 		if (saveGateDecision(rows) === 'schedule') onCorridorsChange?.(buildCorridorSavePayload(rows, originalLevels, routeUnknownCorridors).corridors);
 	}
 
-	const validation = $derived(validateCorridorRows(rows));
+	// Issue #2657 (i18n F8): Fehlertext nennt Zeilennamen der aktuellen Sprache.
+	const validation = $derived.by(() => (void $locale, validateCorridorRows(rows)));
 	// Issue #1425 (S2 Teil 2, Scheibe C, AC-3): zaehlt nur Marken, deren Schalter
 	// im aktuellen Kontext ueberhaupt sichtbar ist (geteilte Entscheidung
 	// countEffectiveMarks -> supportsMark).
@@ -405,7 +407,7 @@
 	{#if context === 'vergleich' && compareDefsError}
 		<!-- Issue #1350 Teil 3 (AC-4): sichtbarer Fehlerzustand statt still
 		     leerem Editor bei Endpoint-Ausfall -- kein Pool, keine Zeilen. -->
-		<div class="ce-eyebrow-row"><Eyebrow>Wertebereiche · Idealbereiche</Eyebrow><BegriffErklaerung begriff="wertebereiche" suffix="ce-{context}" /></div>
+		<div class="ce-eyebrow-row"><Eyebrow>{$t('layout.korridor.eyebrow_idealbereiche')}</Eyebrow><BegriffErklaerung begriff="wertebereiche" suffix="ce-{context}" /></div>
 		<p class="ce-error" role="alert" data-testid="corridor-editor-vergleich-load-error">
 			{compareDefsError}
 		</p>
@@ -414,34 +416,31 @@
 			class="ce-pool-btn"
 			data-testid="corridor-editor-vergleich-load-retry"
 			onclick={() => (compareDefsError = null)}
-		>Wiederholen</button>
+		>{$t('layout.korridor.wiederholen')}</button>
 	{:else if context === 'vergleich' && compareDefs === null}
-		<div class="ce-eyebrow-row"><Eyebrow>Wertebereiche · Idealbereiche</Eyebrow><BegriffErklaerung begriff="wertebereiche" suffix="ce-{context}" /></div>
-		<p class="ce-lead" aria-busy="true" data-testid="corridor-editor-vergleich-loading">Lade Metriken…</p>
+		<div class="ce-eyebrow-row"><Eyebrow>{$t('layout.korridor.eyebrow_idealbereiche')}</Eyebrow><BegriffErklaerung begriff="wertebereiche" suffix="ce-{context}" /></div>
+		<p class="ce-lead" aria-busy="true" data-testid="corridor-editor-vergleich-loading">{$t('layout.korridor.lade')}</p>
 	{:else if context === 'route' && routeExtraDefs === null}
 		<!-- Issue #1425 (AC-6): erkennbarer Ladezustand, statt kurz nur die alten
 		     6 Metriken zu zeigen und die uebrigen nachpoppen zu lassen. -->
-		<div class="ce-eyebrow-row"><Eyebrow>Wertebereiche</Eyebrow><BegriffErklaerung begriff="wertebereiche" suffix="ce-{context}" /></div>
-		<p class="ce-lead" aria-busy="true" data-testid="corridor-editor-route-loading">Lade Metriken…</p>
+		<div class="ce-eyebrow-row"><Eyebrow>{$t('layout.korridor.eyebrow')}</Eyebrow><BegriffErklaerung begriff="wertebereiche" suffix="ce-{context}" /></div>
+		<p class="ce-lead" aria-busy="true" data-testid="corridor-editor-route-loading">{$t('layout.korridor.lade')}</p>
 	{:else}
 	{#if context === 'vergleich'}
-		<div class="ce-eyebrow-row"><Eyebrow>Wertebereiche · Idealbereiche</Eyebrow><BegriffErklaerung begriff="wertebereiche" suffix="ce-{context}" /></div>
-		<h2 class="ce-h2">Sag mir, welche Werte dir ideal sind</h2>
+		<div class="ce-eyebrow-row"><Eyebrow>{$t('layout.korridor.eyebrow_idealbereiche')}</Eyebrow><BegriffErklaerung begriff="wertebereiche" suffix="ce-{context}" /></div>
+		<h2 class="ce-h2">{$t('layout.korridor.titel_vergleich')}</h2>
 		<p class="ce-lead">
-			Ein Wertebereich je Metrik legt deinen Idealbereich fest. Werte im Bereich werden im
-			Briefing pro Ort grün markiert — kein Score, kein Ranking, nur eine Lese-Hilfe.
+			{$t('layout.korridor.einleitung_vergleich')}
 		</p>
 	{:else}
 		<!-- Issue #1425 (S2 Teil 2, Scheibe C, AC-1): der Reiter versprach eine
 		     Sofort-Meldung, die er nicht ausloest — `corridor.notify` hat keinen
 		     Leser, die Alarme kommen ausschliesslich aus
 		     display_config.metric_alert_levels (Reiter Alarme, seit #1371). -->
-		<div class="ce-eyebrow-row"><Eyebrow>Wertebereiche</Eyebrow><BegriffErklaerung begriff="wertebereiche" suffix="ce-{context}" /></div>
-		<h2 class="ce-h2">Sag mir, welche Werte für dich passen</h2>
+		<div class="ce-eyebrow-row"><Eyebrow>{$t('layout.korridor.eyebrow')}</Eyebrow><BegriffErklaerung begriff="wertebereiche" suffix="ce-{context}" /></div>
+		<h2 class="ce-h2">{$t('layout.korridor.titel_route')}</h2>
 		<p class="ce-lead">
-			Ein Wertebereich je Metrik legt fest, welche Werte du auf der Trip noch akzeptierst. Werte im
-			Bereich werden im Briefing hervorgehoben. Warnungen zwischen den Briefings stellst du im
-			Reiter Alarme ein.
+			{$t('layout.korridor.einleitung_route')}
 		</p>
 	{/if}
 
@@ -450,26 +449,26 @@
 		     blockierendem Fehlerzustand — bestehende Wertebereiche bleiben
 		     bearbeitbar. -->
 		<p class="ce-error" role="alert" data-testid="corridor-editor-route-load-warning">
-			Zusätzliche Metriken konnten nicht geladen werden — es stehen nur die Standard-Metriken zur Auswahl.
+			{$t('layout.korridor.zusatz_fehlt')}
 			<button
 				type="button"
 				class="ce-pool-btn"
 				data-testid="corridor-editor-route-load-retry"
 				onclick={() => { routeDefsFailed = false; routeExtraDefs = null; }}
-			>Wiederholen</button>
+			>{$t('layout.korridor.wiederholen')}</button>
 		</p>
 	{/if}
 
 	<div class="ce-legend">
-		<span class="ce-legend-title">So liest sich ein Wertebereich</span>
+		<span class="ce-legend-title">{$t('layout.korridor.legende_titel')}</span>
 		<!-- Issue #1425 (Scheibe C, AC-2): "außerhalb = Warnung" entfaellt ersatzlos —
 		     der Reiter hat nur EINE Wirkung (markieren). -->
-		<span class="ce-legend-item"><span class="ce-swatch mark"></span> im Bereich = <strong class="ce-good">markiert</strong></span>
+		<span class="ce-legend-item"><span class="ce-swatch mark"></span> {$t('layout.korridor.legende_im_bereich')} <strong class="ce-good">{$t('layout.korridor.legende_markiert')}</strong></span>
 	</div>
 
 	{#if !validation.valid}
 		<p class="ce-error" role="alert" data-testid="corridor-editor-error">
-			Mindestens eine Grenze (Von oder Bis) ist Pflicht: {validation.errors.join(', ')}
+			{$t('layout.korridor.pflicht', { metriken: validation.errors.join(', ') })}
 		</p>
 	{/if}
 
@@ -480,19 +479,19 @@
 			{@const rightPct = row.max == null ? 100 : Math.max(0, Math.min(1, (row.max - row.scale[0]) / span)) * 100}
 			<div class="ce-row" data-testid="corridor-row-{row.metric}">
 				<div class="ce-info">
-					<span class="ce-label">{row.label}</span>
+					<span class="ce-label">{(void $locale, zeilenLabel(row))}</span>
 					<!-- Issue #1401 (A1): Auswertung daneben, nicht im Namen (nur vergleich). -->
 					{#if row.aggregationLabel}
 						<span class="ce-aggregation">{row.aggregationLabel}</span>
 					{/if}
 					<span class="ce-unit">{row.unit}</span>
-					{#if row.note}<div class="ce-note">{row.note}</div>{/if}
+					{#if row.note}<div class="ce-note">{(void $locale, zeilenHinweis(row))}</div>{/if}
 				</div>
 				<div class="ce-band-col">
 					<div class="ce-band-track">
 						<div class="ce-band-fill" class:mark={row.mark} style="left:{leftPct}%;width:{rightPct - leftPct}%"></div>
-						{#if row.min == null}<span class="ce-open ce-open-left">◂ offen</span>{/if}
-						{#if row.max == null}<span class="ce-open ce-open-right">offen ▸</span>{/if}
+						{#if row.min == null}<span class="ce-open ce-open-left">◂ {$t('layout.korridor.offen')}</span>{/if}
+						{#if row.max == null}<span class="ce-open ce-open-right">{$t('layout.korridor.offen')} ▸</span>{/if}
 						{#if row.min != null}
 							<div class="ce-handle" style="left:{leftPct}%" onpointerdown={(e) => onHandleDown(e, row.metric, 'min')}></div>
 						{/if}
@@ -504,45 +503,45 @@
 						{#if row.kind === 'ordinal'}
 							<!-- Gewitter-Ordinal (PO-entschieden 2026-07-12): 3-Stufen-Band statt
 							     Zahlen-Eingabe — "Beschriftung der Stufen statt Zahlen". -->
-							<label class="ce-bound">Von
+							<label class="ce-bound">{$t('layout.korridor.von')}
 								{#if row.min == null}
-									<button type="button" class="ce-open-btn" onclick={() => patch(row.metric, { min: row.scale[0] })}>offen · + Grenze</button>
+									<button type="button" class="ce-open-btn" onclick={() => patch(row.metric, { min: row.scale[0] })}>{$t('layout.korridor.grenze_setzen')}</button>
 								{:else}
 									<span class="ce-ordinal-group" data-testid="corridor-ordinal-min-{row.metric}">
 										{#each row.ordinalLabels ?? [] as lbl, idx (lbl)}
 											<button type="button" class="ce-ordinal-btn" class:on={row.min === idx} onclick={() => patch(row.metric, { min: clampBoundInput(idx, 'min', row) })}>{lbl}</button>
 										{/each}
 									</span>
-									<button type="button" class="ce-clear-btn" title="Grenze öffnen" onclick={() => patch(row.metric, { min: null })}>×</button>
+									<button type="button" class="ce-clear-btn" title={$t('layout.korridor.grenze_oeffnen')} onclick={() => patch(row.metric, { min: null })}>×</button>
 								{/if}
 							</label>
-							<label class="ce-bound">Bis
+							<label class="ce-bound">{$t('layout.korridor.bis')}
 								{#if row.max == null}
-									<button type="button" class="ce-open-btn" onclick={() => patch(row.metric, { max: row.scale[1] })}>offen · + Grenze</button>
+									<button type="button" class="ce-open-btn" onclick={() => patch(row.metric, { max: row.scale[1] })}>{$t('layout.korridor.grenze_setzen')}</button>
 								{:else}
 									<span class="ce-ordinal-group" data-testid="corridor-ordinal-max-{row.metric}">
 										{#each row.ordinalLabels ?? [] as lbl, idx (lbl)}
 											<button type="button" class="ce-ordinal-btn" class:on={row.max === idx} onclick={() => patch(row.metric, { max: clampBoundInput(idx, 'max', row) })}>{lbl}</button>
 										{/each}
 									</span>
-									<button type="button" class="ce-clear-btn" title="Grenze öffnen" onclick={() => patch(row.metric, { max: null })}>×</button>
+									<button type="button" class="ce-clear-btn" title={$t('layout.korridor.grenze_oeffnen')} onclick={() => patch(row.metric, { max: null })}>×</button>
 								{/if}
 							</label>
 						{:else}
-							<label class="ce-bound">Von
+							<label class="ce-bound">{$t('layout.korridor.von')}
 								{#if row.min == null}
-									<button type="button" class="ce-open-btn" onclick={() => patch(row.metric, { min: row.scale[0] })}>offen · + Grenze</button>
+									<button type="button" class="ce-open-btn" onclick={() => patch(row.metric, { min: row.scale[0] })}>{$t('layout.korridor.grenze_setzen')}</button>
 								{:else}
 									<input type="number" step={row.step} value={row.min} oninput={(e) => patch(row.metric, { min: clampBoundInput(numOrNull(e.currentTarget.value), 'min', row) })} />
-									<button type="button" class="ce-clear-btn" title="Grenze öffnen" onclick={() => patch(row.metric, { min: null })}>×</button>
+									<button type="button" class="ce-clear-btn" title={$t('layout.korridor.grenze_oeffnen')} onclick={() => patch(row.metric, { min: null })}>×</button>
 								{/if}
 							</label>
-							<label class="ce-bound">Bis
+							<label class="ce-bound">{$t('layout.korridor.bis')}
 								{#if row.max == null}
-									<button type="button" class="ce-open-btn" onclick={() => patch(row.metric, { max: row.scale[1] })}>offen · + Grenze</button>
+									<button type="button" class="ce-open-btn" onclick={() => patch(row.metric, { max: row.scale[1] })}>{$t('layout.korridor.grenze_setzen')}</button>
 								{:else}
 									<input type="number" step={row.step} value={row.max} oninput={(e) => patch(row.metric, { max: clampBoundInput(numOrNull(e.currentTarget.value), 'max', row) })} />
-									<button type="button" class="ce-clear-btn" title="Grenze öffnen" onclick={() => patch(row.metric, { max: null })}>×</button>
+									<button type="button" class="ce-clear-btn" title={$t('layout.korridor.grenze_oeffnen')} onclick={() => patch(row.metric, { max: null })}>×</button>
 								{/if}
 							</label>
 						{/if}
@@ -556,33 +555,33 @@
 					     geteilte Entscheidung (corridorEditorState.ts) — im Trip haben
 					     Tages-Summen keine Stundenzelle zum Markieren. -->
 					{#if supportsMark(row.metric, context)}
-						<button type="button" class="ce-effect mark" class:on={row.mark} aria-pressed={row.mark} onclick={() => patch(row.metric, { mark: !row.mark })}>Markieren</button>
+						<button type="button" class="ce-effect mark" class:on={row.mark} aria-pressed={row.mark} onclick={() => patch(row.metric, { mark: !row.mark })}>{$t('layout.korridor.markieren')}</button>
 					{/if}
-					<button type="button" class="ce-remove" onclick={() => remove(row.metric)}>✕ entfernen</button>
+					<button type="button" class="ce-remove" onclick={() => remove(row.metric)}>✕ {$t('layout.korridor.entfernen')}</button>
 				</div>
 			</div>
 		{/each}
 		{#if poolLeft.length > 0}
 			<div class="ce-pool">
-				<span class="ce-pool-label">Metrik hinzufügen:</span>
+				<span class="ce-pool-label">{$t('layout.korridor.metrik_hinzufuegen')}:</span>
 				{#each poolLeft as m (m.metric)}
-					<button type="button" class="ce-pool-btn" data-testid="corridor-editor-pool-item-{m.metric}" onclick={() => add(m.metric)}>＋ {m.label}{#if 'aggregationLabel' in m && m.aggregationLabel}<span class="ce-aggregation">{m.aggregationLabel}</span>{/if}</button>
+					<button type="button" class="ce-pool-btn" data-testid="corridor-editor-pool-item-{m.metric}" onclick={() => add(m.metric)}>＋ {(void $locale, zeilenLabel(m))}{#if 'aggregationLabel' in m && m.aggregationLabel}<span class="ce-aggregation">{m.aggregationLabel}</span>{/if}</button>
 				{/each}
 			</div>
 		{/if}
 	</div>
 
 	<div class="ce-summary">
-		<span>{markN} × Markieren</span>
+		<span>{markN} × {$t('layout.korridor.markieren')}</span>
 		{#if context === 'vergleich'}
 			<!-- AC-13: Neutralitäts-Hinweis — keine Sortierung/Rang anhand der Wertebereiche (C1). -->
 			<span class="ce-neutral" data-testid="corridor-editor-neutral-hint">
-				· kein Score · kein Rang · Wertebereiche markieren nur, sie sortieren nicht
+				· {$t('layout.korridor.neutral')}
 			</span>
 			{#if unknownCorridors.length > 0}
 				<!-- F003-Fix: Transparenz-Hinweis fuer nicht editierbare, aber erhaltene Pass-Through-Eintraege. -->
 				<span class="ce-neutral" data-testid="corridor-editor-unknown-hint">
-					· {unknownCorridors.length} weitere{unknownCorridors.length === 1 ? 'r Eintrag bleibt' : ' Einträge bleiben'} erhalten
+					· {$tn('layout.korridor.weitere_erhalten', unknownCorridors.length)}
 				</span>
 			{/if}
 		{/if}

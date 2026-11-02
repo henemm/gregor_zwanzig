@@ -49,6 +49,15 @@ const BEREICHE: Record<string, string[]> = {
 		'lib/components/shared/WeatherMetricsTab.svelte',
 		'lib/components/shared/StandardwerteSpeichernKnopf.svelte',
 		'lib/components/shared/weather-metrics-tab/'
+	],
+	'F8 #2657 Layout-Reiter, Korridor-Editor, Ausgabe-Layout, GPX': [
+		'lib/components/shared/layout-tab/',
+		'lib/components/shared/corridor-editor/',
+		'lib/components/shared/OutputLayoutEditor.svelte',
+		'lib/components/shared/OutlookLayoutControls.svelte',
+		'lib/components/shared/MailInhaltCard.svelte',
+		'lib/components/shared/weather-metrics-tab/WeatherV2Reihenfolge.svelte',
+		'routes/gpx-upload/'
 	]
 };
 
@@ -128,6 +137,18 @@ describe('Bestand: Sprachwechsel ohne Neuladen erreicht jede Anzeige', () => {
 			gezaehlt += scanneKomponente(ohne, join(SRC, rel), SRC, rel).filter((f) => f.art === 'derived').length;
 		}
 		assert.equal(gezaehlt, 5);
+	});
+
+	test('Messaufbau F8: ohne die $locale-Lesung waeren zwoelf Ableitungen/Ausdruecke gemeldet', () => {
+		// LTCapNote (1), CorridorEditor (Pflicht-Fehler, Zeile, Hinweis, Pool = 4), mobil
+		// (dieselben 4 + Bereichs-Anzeige = 5), MailInhaltCard (1), Abwahl-Hinweis (1).
+		const { dateien } = scanneEintraege(SRC, BEREICHE['F8 #2657 Layout-Reiter, Korridor-Editor, Ausgabe-Layout, GPX']);
+		let gezaehlt = 0;
+		for (const rel of dateien) {
+			const q = (readFileSync(join(SRC, rel), 'utf8') as string).replace(/\(void \$locale, /g, '(');
+			gezaehlt += scanneKomponente(q, join(SRC, rel), SRC, rel).length;
+		}
+		assert.equal(gezaehlt, 12);
 	});
 
 	test('jede Ausnahme trifft noch einen Fund (keine toten Eintraege)', () => {

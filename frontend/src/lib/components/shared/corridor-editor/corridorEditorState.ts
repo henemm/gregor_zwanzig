@@ -18,6 +18,7 @@
 
 import type { Corridor, SensLevel, WeatherConfigMetric } from '$lib/types';
 import rawAlertMetricMapping from '$lib/generated/alertMetricMapping.generated.json' with { type: 'json' };
+import { tr, type MessageKey } from '$lib/i18n/index';
 
 export interface RouteMetricDef {
 	metric: string;
@@ -37,19 +38,52 @@ export interface RouteMetricDef {
 	ordinalLabels?: string[];
 }
 
+// Issue #2657 (i18n F8, Annahme A2): Name und Hinweis der fest verdrahteten Zeilen
+// kommen aus dem Katalog (layout.korridor_zeile.* / layout.korridor_hinweis.*).
+// Die Zeilen tragen beim Aufbau den Text der dann gueltigen Sprache; die Anzeige
+// loest ueber `zeilenLabel`/`zeilenHinweis` je Render neu auf (Sprachwechsel ohne
+// Neuladen). metric/unit/scale/step/defaultMin/defaultMax bleiben unveraendert.
+const ROUTE_ZEILEN_TEXT: Record<string, { label: MessageKey; note: MessageKey }> = {
+	wind_gust: { label: 'layout.korridor_zeile.wind_gust', note: 'layout.korridor_hinweis.wind_gust' },
+	precipitation_sum: { label: 'layout.korridor_zeile.precipitation_sum', note: 'layout.korridor_hinweis.precipitation_sum' },
+	temperature_min: { label: 'layout.korridor_zeile.temperature_min', note: 'layout.korridor_hinweis.temperature_min' },
+	temperature_max: { label: 'layout.korridor_zeile.temperature_max', note: 'layout.korridor_hinweis.temperature_max' },
+	snow_line: { label: 'layout.korridor_zeile.snow_line', note: 'layout.korridor_hinweis.snow_line' }
+};
+
+/** Anzeigename einer Zeile/Pool-Metrik in der aktuellen Sprache (Katalog-Metriken: API-Name). */
+export function zeilenLabel(row: { metric: string; label: string }): string {
+	const k = ROUTE_ZEILEN_TEXT[row.metric];
+	return k ? tr(k.label) : row.label;
+}
+
+/** Hinweis einer Zeile in der aktuellen Sprache (nur die fest verdrahteten Trip-Zeilen haben einen). */
+export function zeilenHinweis(row: { metric: string; note?: string }): string | undefined {
+	const k = ROUTE_ZEILEN_TEXT[row.metric];
+	return k ? tr(k.note) : row.note;
+}
+
+/** Definition mit `label`/`note` als Lesezugriff je Aufruf (nie beim Modul-Laden eingefroren). */
+function routeDef(def: Omit<RouteMetricDef, 'label' | 'note'>): RouteMetricDef {
+	return Object.defineProperties(def, {
+		label: { get: () => zeilenLabel({ metric: def.metric, label: def.metric }), enumerable: true },
+		note: { get: () => zeilenHinweis({ metric: def.metric }), enumerable: true }
+	}) as RouteMetricDef;
+}
+
 // Reihenfolge = Anzeige-Reihenfolge (deterministisch, C1: nur Anzeige, kein Rang).
 export const ROUTE_METRIC_DEFS: RouteMetricDef[] = [
-	{ metric: 'wind_gust', label: 'Böen', unit: 'km/h', scale: [0, 120], step: 5, note: 'Grat-kritisch', defaultMin: null, defaultMax: 70 },
-	{ metric: 'precipitation_sum', label: 'Niederschlag', unit: 'mm/h', scale: [0, 20], step: 1, note: 'Nässe / Rutschgefahr', defaultMin: null, defaultMax: 5 },
-	{ metric: 'temperature_min', label: 'Temperatur Min', unit: '°C', scale: [-20, 20], step: 1, note: 'Frost-Grenze', defaultMin: -5, defaultMax: null },
-	{ metric: 'temperature_max', label: 'Temperatur Max', unit: '°C', scale: [-20, 30], step: 1, note: 'Hitze-Grenze', defaultMin: null, defaultMax: 28 },
+	routeDef({ metric: 'wind_gust', unit: 'km/h', scale: [0, 120], step: 5, defaultMin: null, defaultMax: 70 }),
+	routeDef({ metric: 'precipitation_sum', unit: 'mm/h', scale: [0, 20], step: 1, defaultMin: null, defaultMax: 5 }),
+	routeDef({ metric: 'temperature_min', unit: '°C', scale: [-20, 20], step: 1, defaultMin: -5, defaultMax: null }),
+	routeDef({ metric: 'temperature_max', unit: '°C', scale: [-20, 30], step: 1, defaultMin: null, defaultMax: 28 }),
 	// Issue #1425 (S2 Teil 2, Scheibe B): der Gewitter-Eintrag stand hier als
 	// Prozent 0-100 ("bis 40"). Der Stundenwert ist aber immer ein Ordinal
 	// 0/1/2 — jeder Prozent-Bereich schloss damit JEDEN Gewittergrad ein und
 	// markierte gerade dann, wenn Gewitter herrschte (Umkehrung). Gewitter
 	// kommt jetzt als ordinaler Katalog-Eintrag `thunder_level_max` aus
 	// compareMetricCatalogLoader.ts::buildRouteMetricDefsFromCatalog.
-	{ metric: 'snow_line', label: 'Schneefallgrenze', unit: 'm', scale: [500, 3000], step: 100, note: 'Schnee statt Regen', defaultMin: 1500, defaultMax: null },
+	routeDef({ metric: 'snow_line', unit: 'm', scale: [500, 3000], step: 100, defaultMin: 1500, defaultMax: null }),
 ];
 
 const ROUTE_METRIC_DEF_BY_ID = new Map(ROUTE_METRIC_DEFS.map((m) => [m.metric, m]));
@@ -327,11 +361,12 @@ export function patchRow(
 
 /**
  * AC-12: mind. eine Grenze ist Pflicht — beidseitig offen blockt das
- * Speichern. Fehlermeldungen nennen das deutsche Anzeige-Label (row.label,
- * z.B. "Böen"), nicht den internen Bezeichner (Fresh-Eyes-Fund: Lokalisierung).
+ * Speichern. Fehlermeldungen nennen das Anzeige-Label in der Nutzersprache
+ * (z.B. "Böen" / "Wind gusts"), nicht den internen Bezeichner.
  */
 export function validateCorridorRows(rows: CorridorRowState[]): { valid: boolean; errors: string[] } {
-	const errors = rows.filter((r) => r.min == null && r.max == null).map((r) => r.label);
+	// Issue #2657 (i18n F8): Anzeigename in der aktuellen Sprache (zeilenLabel).
+	const errors = rows.filter((r) => r.min == null && r.max == null).map((r) => zeilenLabel(r));
 	return { valid: errors.length === 0, errors };
 }
 
@@ -498,32 +533,26 @@ export interface IdealRange {
 // Reduziert auf {key,label} (D3): Konsumenten lesen ausschliesslich m.key/m.label
 // (verifiziert in CompareNewEditor.svelte + buildComparePrefillRows unten).
 // Werte 1:1 aus den ehemaligen MetricDef-Objekten uebernommen.
+// Issue #2657 (i18n F8): `label` ist ein Lesezugriff je Aufruf (layout.profil_metrik.<key>).
+const PROFIL_METRIK_TEXT: Record<string, MessageKey> = {
+	snow_depth_cm: 'layout.profil_metrik.snow_depth_cm',
+	snow_new_sum_cm: 'layout.profil_metrik.snow_new_sum_cm',
+	sunny_hours_h: 'layout.profil_metrik.sunny_hours_h',
+	wind_max_kmh: 'layout.profil_metrik.wind_max_kmh',
+	cloud_avg_pct: 'layout.profil_metrik.cloud_avg_pct',
+	visibility_min_m: 'layout.profil_metrik.visibility_min_m',
+	precip_sum_mm: 'layout.profil_metrik.precip_sum_mm',
+	thunder_level_max: 'layout.profil_metrik.thunder_level_max',
+	uv_index_max: 'layout.profil_metrik.uv_index_max',
+	temp_max_c: 'layout.profil_metrik.temp_max_c'
+};
+const profilMetriken = (...keys: string[]): { key: string; label: string }[] =>
+	keys.map((key) => Object.defineProperty({ key } as { key: string; label: string }, 'label', { get: () => tr(PROFIL_METRIK_TEXT[key]), enumerable: true }));
 export const PROFILE_METRICS_WITH_SCALES: Record<ProfileKey, { key: string; label: string }[]> = {
-	WINTERSPORT: [
-		{ key: 'snow_depth_cm', label: 'Schneehöhe' },
-		{ key: 'snow_new_sum_cm', label: 'Neuschnee' },
-		{ key: 'sunny_hours_h', label: 'Sonnenstunden' },
-		{ key: 'wind_max_kmh', label: 'Windspitzen' },
-		{ key: 'cloud_avg_pct', label: 'Bewölkung Ø' },
-	],
-	ALPINE_TOURING: [
-		{ key: 'snow_new_sum_cm', label: 'Neuschnee' },
-		{ key: 'visibility_min_m', label: 'Sichtweite min' },
-		{ key: 'wind_max_kmh', label: 'Windspitzen' },
-	],
-	SUMMER_TREKKING: [
-		{ key: 'precip_sum_mm', label: 'Niederschlag' },
-		{ key: 'thunder_level_max', label: 'Gewitter' },
-		{ key: 'wind_max_kmh', label: 'Windspitzen' },
-		{ key: 'uv_index_max', label: 'UV-Index max' },
-		{ key: 'visibility_min_m', label: 'Sichtweite min' },
-	],
-	ALLGEMEIN: [
-		{ key: 'temp_max_c', label: 'Temperatur max' },
-		{ key: 'wind_max_kmh', label: 'Windspitzen' },
-		{ key: 'precip_sum_mm', label: 'Niederschlag' },
-		{ key: 'visibility_min_m', label: 'Sichtweite min' },
-	],
+	WINTERSPORT: profilMetriken('snow_depth_cm', 'snow_new_sum_cm', 'sunny_hours_h', 'wind_max_kmh', 'cloud_avg_pct'),
+	ALPINE_TOURING: profilMetriken('snow_new_sum_cm', 'visibility_min_m', 'wind_max_kmh'),
+	SUMMER_TREKKING: profilMetriken('precip_sum_mm', 'thunder_level_max', 'wind_max_kmh', 'uv_index_max', 'visibility_min_m'),
+	ALLGEMEIN: profilMetriken('temp_max_c', 'wind_max_kmh', 'precip_sum_mm', 'visibility_min_m'),
 };
 
 export const IDEAL_DEFAULTS: Record<ProfileKey, Record<string, IdealRange>> = {

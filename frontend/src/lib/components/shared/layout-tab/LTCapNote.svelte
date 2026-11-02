@@ -10,6 +10,7 @@
 	// Spec: docs/specs/modules/fix_1719_s3_aus_ist_ein_zustand.md (Abschnitt 5, AC-5)
 
 	import { ltLimitForChannel, ltCapNoteText, SMS_TRIP_CHAR_LIMIT, type ChannelId } from './ltChannels';
+	import { locale } from '$lib/i18n';
 
 	interface Props {
 		channel: ChannelId;
@@ -41,7 +42,8 @@
 
 	const limit = $derived(ltLimitForChannel(channel, smsCharLimit));
 	const warn = $derived(limit.kind === 'columns' && colCount > limit.value);
-	const text = $derived(ltCapNoteText({ channel, limit, colCount, subject, hasLabelColumn }));
+	// Issue #2657 (i18n F8): Sprachwechsel ohne Neuladen — $locale lesen.
+	const text = $derived.by(() => (void $locale, ltCapNoteText({ channel, limit, colCount, subject, hasLabelColumn })));
 </script>
 
 <div class="lt-cap-note mono" class:warn class:dense data-testid="lt-cap-note">

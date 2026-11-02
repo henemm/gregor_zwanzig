@@ -8,13 +8,16 @@
 	import { Checkbox } from '$lib/components/ui/checkbox';
 	import * as Card from '$lib/components/ui/card/index.js';
 	import { baueReportConfigPayload } from './versand-tab/reportConfigPayload.ts';
-	import { CONTENT_MODULE_DESCRIPTIONS } from './mailInhaltKonstanten.ts';
+	import { mailInhaltBausteine } from './mailInhaltKonstanten.ts';
+	import { t, locale } from '$lib/i18n';
 	import { ladeMailZustand } from './mailInhaltZustand.ts';
 
 	interface Props {
 		reportConfig: ReportConfig | undefined;
 	}
 	let { reportConfig = $bindable() }: Props = $props();
+	// Issue #2657 (i18n F8): Bausteintexte je Sprache, Sprachwechsel ohne Neuladen.
+	const BAUSTEINE = $derived.by(() => (void $locale, mailInhaltBausteine()));
 
 	// Original-Blob (Rueckfall fuer den ersten Effekt-Lauf vor onMount).
 	let originalReportConfig: ReportConfig = {};
@@ -94,11 +97,11 @@
 </script>
 
 <Card.Root class="p-3 space-y-2 hover:translate-y-0 hover:shadow-none" data-testid="report-mail-content">
-	<h3 class="text-sm font-semibold">E-Mail-Inhalt</h3>
+	<h3 class="text-sm font-semibold">{$t('layout.mail_inhalt.titel')}</h3>
 
 	<!-- Issue #722: Format-Schalter (full/compact) -->
 	<div class="space-y-1">
-		<p class="text-xs text-muted-foreground font-medium">Format</p>
+		<p class="text-xs text-muted-foreground font-medium">{$t('layout.mail_inhalt.format')}</p>
 		<div class="flex gap-2" data-testid="report-email-format-switcher">
 			<label class="flex items-center gap-1.5 text-sm cursor-pointer">
 				<input
@@ -109,7 +112,7 @@
 					checked={email_format === 'full'}
 					onchange={() => { email_format = 'full'; }}
 				/>
-				Ausführlich (HTML)
+				{$t('layout.mail_inhalt.ausfuehrlich')}
 			</label>
 			<label class="flex items-center gap-1.5 text-sm cursor-pointer">
 				<input
@@ -120,12 +123,12 @@
 					checked={email_format === 'compact'}
 					onchange={() => { email_format = 'compact'; }}
 				/>
-				Kompakt (Nur-Text)
+				{$t('layout.mail_inhalt.kompakt')}
 			</label>
 		</div>
 		{#if email_format === 'compact'}
 			<p class="text-xs text-muted-foreground" data-testid="report-compact-hint">
-				Im Kompakt-Modus werden fix Metriken-Überblick + Ausblick gezeigt. Die Inhalts-Bausteine unten sind deaktiviert.
+				{$t('layout.mail_inhalt.kompakt_hinweis')}
 			</p>
 		{/if}
 	</div>
@@ -141,9 +144,9 @@
 						checked={show_outlook}
 						disabled={email_format === 'compact'}
 						onchange={(e) => { show_outlook = (e.target as HTMLInputElement).checked; }}
-					>{CONTENT_MODULE_DESCRIPTIONS.show_outlook.label}</Checkbox>
+					>{BAUSTEINE.show_outlook.label}</Checkbox>
 				</span>
-				<p class="pl-6 text-xs text-muted-foreground mt-0.5">{CONTENT_MODULE_DESCRIPTIONS.show_outlook.description}</p>
+				<p class="pl-6 text-xs text-muted-foreground mt-0.5">{BAUSTEINE.show_outlook.description}</p>
 			</div>
 			<div class="text-sm">
 				<span data-testid="report-show-stage-stats" class="inline-flex items-center gap-2">
@@ -151,9 +154,9 @@
 						checked={show_stage_stats}
 						disabled={email_format === 'compact'}
 						onchange={(e) => { show_stage_stats = (e.target as HTMLInputElement).checked; }}
-					>{CONTENT_MODULE_DESCRIPTIONS.show_stage_stats.label}</Checkbox>
+					>{BAUSTEINE.show_stage_stats.label}</Checkbox>
 				</span>
-				<p class="pl-6 text-xs text-muted-foreground mt-0.5">{CONTENT_MODULE_DESCRIPTIONS.show_stage_stats.description}</p>
+				<p class="pl-6 text-xs text-muted-foreground mt-0.5">{BAUSTEINE.show_stage_stats.description}</p>
 			</div>
 			<div class="text-sm">
 				<span data-testid="report-show-yesterday-comparison" class="inline-flex items-center gap-2">
@@ -161,10 +164,10 @@
 						checked={show_yesterday_comparison}
 						disabled={email_format === 'compact'}
 						onchange={(e) => { show_yesterday_comparison = (e.target as HTMLInputElement).checked; }}
-					>{CONTENT_MODULE_DESCRIPTIONS.show_yesterday_comparison.label}</Checkbox>
+					>{BAUSTEINE.show_yesterday_comparison.label}</Checkbox>
 				</span>
 				<p class="pl-6 text-xs text-muted-foreground mt-0.5">
-					{CONTENT_MODULE_DESCRIPTIONS.show_yesterday_comparison.description}
+					{BAUSTEINE.show_yesterday_comparison.description}
 				</p>
 			</div>
 		</div>

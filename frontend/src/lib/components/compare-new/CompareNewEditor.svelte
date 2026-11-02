@@ -37,6 +37,7 @@
 	import StandardwerteSpeichernKnopf from '$lib/components/shared/StandardwerteSpeichernKnopf.svelte';
 	import type { SensLevel } from '$lib/types';
 	import { api } from '$lib/api.js';
+	import { locale } from '$lib/i18n';
 	import {
 		tailUnlocked,
 		tailDone,
@@ -242,6 +243,7 @@
 		wiz.activityProfile = value;
 	}
 	function profileMetricsLabel(value: ActivityProfile): string {
+		void $locale; // #2657 (i18n F8): Profil-Metriknamen folgen dem Sprachwechsel ohne Neuladen
 		const key = toCompareProfile(value) as ProfileKey;
 		return PROFILE_METRICS_WITH_SCALES[key].map((m) => m.label).join(' · ');
 	}

@@ -20,6 +20,16 @@ import { readFileSync, existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import { openBoundValue } from './corridorEditorState.ts';
+import { locale, korridorRendern, routeZustand } from '../layout-tab/__tests__/f8Pruefstand.ts';
+
+/** #2657 (i18n F8): Beschriftungen stehen im Katalog — geprueft am echten SSR-Render (deutsch). */
+function sichtbar(fassung: 'desktop' | 'mobil'): string {
+	locale.set('de');
+	return korridorRendern('route', fassung, routeZustand(false))
+		.replace(/<style[\s\S]*?<\/style>/g, ' ')
+		.replace(/<(?:"[^"]*"|'[^']*'|[^'">])*>/g, ' ')
+		.replace(/\s+/g, ' ');
+}
 
 const here = dirname(fileURLToPath(import.meta.url));
 const MOBILE = join(here, 'CorridorEditorMobile.svelte');
@@ -157,7 +167,8 @@ describe('AC-14: Effekt-Buttons erfuellen 44px-Touch-Mindestmass (Struktur)', ()
 		assert.ok(!src.includes('notifyN'), '#1371 FAIL: notifyN darf nicht mehr existieren');
 		assert.ok(!src.includes('× Warnen'), '#1371 FAIL: "× Warnen"-Text darf nicht mehr vorkommen');
 		assert.ok(src.includes('markN'), 'markN muss weiterhin existieren');
-		assert.ok(src.includes('× Markieren'), '"N × Markieren" muss weiterhin existieren');
+		assert.ok(sichtbar('mobil').includes('2 × Markieren'), '"N × Markieren" muss weiterhin angezeigt werden');
+		assert.ok(!sichtbar('mobil').includes('Warnen'), '#1371 FAIL: "Warnen" wird wieder angezeigt');
 	});
 });
 
@@ -177,8 +188,10 @@ describe('#1371 F001: CorridorEditor.svelte (Desktop) hat kein "Warnen"-Bedienel
 	test('Markieren-Button und "✕ entfernen" bleiben vorhanden', () => {
 		const src = readFileSync(DESKTOP, 'utf-8');
 		assert.ok(src.includes('ce-effect mark'), 'ce-effect mark (Markieren-Button) muss weiterhin existieren');
-		assert.ok(src.includes('>Markieren<'), 'Markieren-Button-Label muss weiterhin existieren');
-		assert.ok(src.includes('✕ entfernen'), '"✕ entfernen"-Button muss weiterhin existieren');
+		const text = sichtbar('desktop');
+		assert.ok(/<button[^>]*class="ce-effect mark[^"]*"[^>]*>Markieren<\/button>/.test(korridorRendern('route', 'desktop', routeZustand(false))), 'Markieren-Button-Label muss weiterhin angezeigt werden');
+		assert.ok(text.includes('✕ entfernen'), '"✕ entfernen"-Button muss weiterhin angezeigt werden');
+		assert.ok(!text.includes('Warnen'), '#1371 FAIL: "Warnen" wird wieder angezeigt');
 	});
 });
 
