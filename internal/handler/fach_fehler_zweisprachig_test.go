@@ -523,3 +523,26 @@ func TestG3bNutzerHandlerKlartextWirdJSON(t *testing.T) {
 		g3bPruefe(t, f.name, w, f.status, f.code, f.message)
 	}
 }
+
+// Kontingent ueberschritten (z. B. nach Tarifwechsel): current != limit, die
+// Zahlen stehen in der richtigen Reihenfolge — de wortgleich zum Golden.
+func TestG3KontingentUeberGrenzeZahlenreihenfolge(t *testing.T) {
+	for _, tc := range []struct{ uid, lang, want string }{
+		{"bert-de", "de", strings.Replace(g3GoldenOhneT("quota_exceeded_trips"), "1 von 1", "4 von 3", 1)},
+		{"anna-en", "en", "You already have 4 of 3 trips on your plan. Archive or delete a trip to create a new one."},
+	} {
+		s := store.New(t.TempDir(), "")
+		c := g3Nutzer(t, s, tc.uid, tc.lang, "free")
+		quoteSeedTrips(t, s, tc.uid, 4, 0)
+		w := g3Do(g3Router(s, ""), c, http.MethodPost, "/api/trips", quoteTripBody("neu"), "")
+		b := g3Body(t, w)
+		if w.Code != http.StatusConflict || b["message"] != tc.want || b["current"] != float64(4) || b["limit"] != float64(3) {
+			t.Errorf("%s: %d %v, erwartet message %q", tc.lang, w.Code, b, tc.want)
+		}
+	}
+}
+
+func g3GoldenOhneT(name string) string {
+	data, _ := os.ReadFile(filepath.Join("testdata", "wortgleich_de", name+".txt"))
+	return string(data)
+}
