@@ -19,10 +19,8 @@ const DE = lies('de');
 const EN = lies('en');
 
 /** Schluessel, deren englischer Text bewusst gleich dem deutschen ist. Jede Ausnahme nennt den Grund. */
-const GLEICH_ERLAUBT: Record<string, string> = {
-	'auth.feld.username_platzhalter':
-		'„Username“ ist in beiden Sprachen derselbe Begriff (Glossar: username) und Platzhalter im Eingabefeld'
-};
+// #2194: `auth.feld.username_platzhalter` entfernt (Reset-Seite traegt die Kennung nur noch versteckt).
+const GLEICH_ERLAUBT: Record<string, string> = {};
 
 /** Woerter, die in beiden Sprachen gleich geschrieben werden (Glossar-Fachbegriffe, Eigennamen, Produktwoerter). */
 const GLEICHE_WOERTER = new Set([

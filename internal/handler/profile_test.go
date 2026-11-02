@@ -399,7 +399,8 @@ func TestRegisterCreatesUserDirs(t *testing.T) {
 	}
 
 	// THEN: User directories are created
-	base := filepath.Join(s.DataDir, "users", "newuser")
+	// Issue #2194: Ordner der generierten ID aus der 201-Antwort.
+	base := filepath.Join(s.DataDir, "users", registrierID2194(t, w, "RegisterCreatesUserDirs"))
 	for _, sub := range []string{"locations", "gpx", "weather_snapshots"} {
 		path := filepath.Join(base, sub)
 		info, err := os.Stat(path)

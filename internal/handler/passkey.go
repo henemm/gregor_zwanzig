@@ -171,7 +171,20 @@ func PasskeyLoginBeginHandler(s *store.Store, wa *webauthn.WebAuthn, cs *Challen
 			return
 		}
 
-		user, err := s.LoadUser(req.Username)
+		// Issue #2194: @-Weiche — eine E-Mail-Kennung loest genau ein echtes
+		// Konto auf; unbekannte, mehrfach vergebene oder Testkonto-Adressen
+		// antworten wie eine unbekannte Kennung.
+		uid := req.Username
+		var user *model.User
+		var err error
+		if isLoginEmail(req.Username) {
+			user = resolveLoginEmail(s, req.Username, "passkey login begin")
+			if user != nil {
+				uid = user.ID
+			}
+		} else {
+			user, err = s.LoadUser(req.Username)
+		}
 		if err != nil || user == nil || len(user.PasskeyCredentials) == 0 {
 			WriteError(w, r, http.StatusUnauthorized, "invalid_credentials", nil)
 			return
@@ -185,7 +198,7 @@ func PasskeyLoginBeginHandler(s *store.Store, wa *webauthn.WebAuthn, cs *Challen
 
 		cs.Put(sessionData.Challenge, &ChallengeEntry{
 			SessionData: *sessionData,
-			UserID:      req.Username,
+			UserID:      uid,
 			ExpiresAt:   time.Now().Add(challengeTTL),
 		})
 
@@ -455,17 +468,10 @@ func PasskeyRegisterPublicBeginHandler(s *store.Store, wa *webauthn.WebAuthn, cs
 			WriteError(w, r, http.StatusBadRequest, "invalid_request", nil)
 			return
 		}
-		if len(req.Username) < 3 || len(req.Username) > 50 || !validUsernameRe.MatchString(req.Username) {
-			WriteError(w, r, http.StatusBadRequest, "validation_failed", nil)
-			return
-		}
+		// Issue #2194 (AC-13): ein mitgesendeter username wird ignoriert (auch
+		// nicht mehr validiert) — das Konto bekommt eine generierte ID.
 		if !strings.Contains(req.Email, "@") {
 			WriteError(w, r, http.StatusBadRequest, "validation_failed", nil)
-			return
-		}
-		if s.UserExists(req.Username) {
-			// Bewusstes Restrisiko (Enumeration): auth_haertung_go_2163.md, ADR-0003, #2147 B1
-			WriteError(w, r, http.StatusConflict, "user_already_exists", nil)
 			return
 		}
 
@@ -484,9 +490,20 @@ func PasskeyRegisterPublicBeginHandler(s *store.Store, wa *webauthn.WebAuthn, cs
 			return
 		}
 
+		// Issue #2194 (AC-13): die ID entsteht HIER, nicht im Finish — die
+		// WebAuthn-Nutzerkennung (userHandle) wird in BeginRegistration fest
+		// an sie gebunden, und der Discoverable-Login laedt das Konto ueber
+		// userHandle == user.ID. Der Finish-Schritt prueft erneut auf Belegung.
+		newID, err := s.NewOpaqueUserID("u")
+		if err != nil {
+			log.Printf("passkey register public begin: id generation failed: %v", err)
+			WriteError(w, r, http.StatusInternalServerError, "internal_error", nil)
+			return
+		}
+
 		// Issue #2130: hier zwingend auffindbar (discoverable) — ohne Passwort
 		// und ohne auffindbaren Passkey haette der Nutzer keinen Wiedereinstieg.
-		tempUser := &model.User{ID: req.Username}
+		tempUser := &model.User{ID: newID}
 		creation, sessionData, err := wa.BeginRegistration(tempUser,
 			webauthn.WithResidentKeyRequirement(protocol.ResidentKeyRequirementRequired))
 		if err != nil {
@@ -496,7 +513,7 @@ func PasskeyRegisterPublicBeginHandler(s *store.Store, wa *webauthn.WebAuthn, cs
 
 		cs.Put(sessionData.Challenge, &ChallengeEntry{
 			SessionData: *sessionData,
-			UserID:      req.Username,
+			UserID:      newID,
 			Email:       req.Email,
 			ExpiresAt:   time.Now().Add(challengeTTL),
 		})
@@ -532,7 +549,8 @@ func PasskeyRegisterPublicFinishHandler(s *store.Store, wa *webauthn.WebAuthn, c
 			return
 		}
 
-		// Race protection: username may have been claimed between Begin and Finish.
+		// Race protection: die in Begin erzeugte ID kann zwischen Begin und
+		// Finish belegt worden sein — nie ueberschreiben (Issue #2194 AC-13).
 		if s.UserExists(entry.UserID) {
 			// Bewusstes Restrisiko (Enumeration): auth_haertung_go_2163.md, ADR-0003, #2147 B1
 			WriteError(w, r, http.StatusConflict, "user_already_exists", nil)

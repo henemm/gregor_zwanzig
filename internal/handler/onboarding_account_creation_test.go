@@ -85,7 +85,8 @@ func TestRegisterWithInviteMarksAccountOnboardingPending(t *testing.T) {
 		t.Fatalf("Registrierung: erwartet 201, bekommen %d: %s", w.Code, w.Body.String())
 	}
 	onbWaitDispatch(t, calls)
-	onbAssertPending(t, s, "onb-invite", "Registrierung mit Einladung")
+	// Issue #2194: Konto-ID aus der 201-Antwort (generiert).
+	onbAssertPending(t, s, registrierID2194(t, w, "Einladung"), "Registrierung mit Einladung")
 }
 
 // AC-1, Weg 1b: Registrierung OHNE Einladung — die Registrierung ist nicht auf
@@ -102,7 +103,8 @@ func TestRegisterWithoutInviteMarksAccountOnboardingPending(t *testing.T) {
 		t.Fatalf("Registrierung: erwartet 201, bekommen %d: %s", w.Code, w.Body.String())
 	}
 	onbWaitDispatch(t, calls)
-	onbAssertPending(t, s, "onb-offen", "Registrierung ohne Einladung")
+	// Issue #2194: Konto-ID aus der 201-Antwort (generiert).
+	onbAssertPending(t, s, registrierID2194(t, w, "ohne Einladung"), "Registrierung ohne Einladung")
 }
 
 // AC-1, Weg 2: Magic-Link — das Konto entsteht beim Einloesen des Codes.
@@ -212,5 +214,6 @@ func TestPasskeyPublicRegistrationMarksOnboardingPending(t *testing.T) {
 	if finishW.Code != http.StatusCreated {
 		t.Fatalf("Passkey finish: erwartet 201, bekommen %d: %s", finishW.Code, finishW.Body.String())
 	}
-	onbAssertPending(t, s, "onb-pk", "Passkey-Registrierung")
+	// Issue #2194: Konto-ID = die in Begin erzeugte ID.
+	onbAssertPending(t, s, registrierID2194(t, finishW, "Passkey"), "Passkey-Registrierung")
 }

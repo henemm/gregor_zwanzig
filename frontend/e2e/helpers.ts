@@ -208,44 +208,54 @@ export async function login(page: Page) {
  *
  * Braucht `GZ_ENV=staging` im Ziel-Stack (Staging und der isolierte
  * CI-Stack erfuellen das, frontend/e2e/ci-stack.sh:66).
+ *
+ * Issue #2194 (ADR-0105): Der Zweitnutzer ist bewusst KEIN Testkonto (er braucht
+ * ein zustellbares Ziel, Testkonten erhalten keine Mails). Ohne `is_test_user`
+ * vergibt der Server die Konto-ID selbst (`u-<8hex>`) und ignoriert `username`;
+ * alle Folgeschritte nutzen deshalb die `id` aus der Register-Antwort. `username`
+ * bleibt der Namensstamm fuer die E-Mail-Adresse. Rueckgabe: die angelegte ID.
  */
 export async function registriereBestaetigtenZweitnutzer(
 	adminRequest: APIRequestContext,
 	gastRequest: APIRequestContext,
 	username: string,
 	password: string
-): Promise<void> {
+): Promise<string> {
+	const email = `${username}@example.com`;
 	const reg = await gastRequest.post('/api/auth/register', {
-		data: { username, password, email: `${username}@example.com` }
+		data: { username, password, email }
 	});
 	if (![200, 201].includes(reg.status())) {
 		throw new Error(`Registrierung ${username} fehlgeschlagen: ${reg.status()} ${await reg.text()}`);
 	}
+	const { id } = (await reg.json().catch(() => ({}))) as { id?: unknown };
+	if (typeof id !== 'string' || id === '') {
+		throw new Error(`Registrierung ${username} lieferte keine Konto-ID: ${await reg.text()}`);
+	}
 
 	const tokenAntwort = await adminRequest.post('/api/auth/verify-email/staging-token', {
-		data: { username }
+		data: { username: id }
 	});
 	if (!tokenAntwort.ok()) {
 		throw new Error(
-			`Staging-Testweg antwortet ${tokenAntwort.status()} fuer ${username} — laeuft das Ziel mit GZ_ENV=staging, und ist die uebergebene Sitzung angemeldet?`
+			`Staging-Testweg antwortet ${tokenAntwort.status()} fuer ${id} — laeuft das Ziel mit GZ_ENV=staging, und ist die uebergebene Sitzung angemeldet?`
 		);
 	}
 	const { token } = (await tokenAntwort.json()) as { token?: string };
-	if (!token) throw new Error(`Staging-Testweg lieferte kein Token fuer ${username}`);
+	if (!token) throw new Error(`Staging-Testweg lieferte kein Token fuer ${id}`);
 
 	const bestaetigung = await gastRequest.post('/api/auth/verify-email', {
-		data: { user: username, token }
+		data: { user: id, token }
 	});
 	if (!bestaetigung.ok()) {
-		throw new Error(
-			`Bestaetigung ${username} fehlgeschlagen: ${bestaetigung.status()} ${await bestaetigung.text()}`
-		);
+		throw new Error(`Bestaetigung ${id} fehlgeschlagen: ${bestaetigung.status()} ${await bestaetigung.text()}`);
 	}
 
-	const login = await gastRequest.post('/api/auth/login', { data: { username, password } });
+	const login = await gastRequest.post('/api/auth/login', { data: { username: id, password } });
 	if (!login.ok()) {
-		throw new Error(`Login ${username} fehlgeschlagen: ${login.status()} ${await login.text()}`);
+		throw new Error(`Login ${id} fehlgeschlagen: ${login.status()} ${await login.text()}`);
 	}
+	return id;
 }
 
 type Sitzung = Awaited<ReturnType<BrowserContext['storageState']>>;

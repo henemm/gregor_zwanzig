@@ -173,13 +173,13 @@ func TestAC8_AusstehendeAdresseZaehltNichtAlsBelegtEinloesenScheitertMit409(t *t
 		holen func(t *testing.T, s *store.Store, x string) string // liefert B's Kennung
 	}{
 		{"registrierung", func(t *testing.T, s *store.Store, x string) string {
-			const uidB = "bneu-reg-ac8-b2"
-			w := schreibpfadRegistrieren(s, ausstehendCfg(), uidB, x)
+			w := schreibpfadRegistrieren(s, ausstehendCfg(), "bneu-reg-ac8-b2", x)
 			if w.Code != http.StatusCreated {
 				t.Fatalf("AC-8/registrierung: B's Registrierung mit %q muss gelingen (201), bekommen %d: %s",
 					x, w.Code, w.Body.String())
 			}
-			return uidB
+			// Issue #2194: B's Kennung ist die generierte ID aus der 201-Antwort.
+			return registrierID2194(t, w, "AC-8/registrierung")
 		}},
 		{"profil", func(t *testing.T, s *store.Store, x string) string {
 			const uidB = "bneu-prof-ac8-b2"

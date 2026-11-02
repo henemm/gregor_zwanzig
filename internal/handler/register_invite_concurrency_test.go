@@ -6,6 +6,7 @@ package handler
 
 import (
 	"bytes"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -30,6 +31,7 @@ func TestRegisterMitEinladung_ParallelRegistrieren_GenauEinKonto(t *testing.T) {
 
 	const n = 12
 	var created, invalid int32
+	var erzeugteID atomic.Value // Issue #2194: ID aus der einen 201-Antwort
 	var wg sync.WaitGroup
 	start := make(chan struct{})
 	for i := 0; i < n; i++ {
@@ -43,6 +45,12 @@ func TestRegisterMitEinladung_ParallelRegistrieren_GenauEinKonto(t *testing.T) {
 			switch {
 			case w.Code == http.StatusCreated:
 				atomic.AddInt32(&created, 1)
+				var a struct {
+					ID string `json:"id"`
+				}
+				if err := json.Unmarshal(w.Body.Bytes(), &a); err == nil {
+					erzeugteID.Store(a.ID)
+				}
 			case w.Code == http.StatusBadRequest && bytes.Contains(w.Body.Bytes(), []byte("invite_invalid")):
 				atomic.AddInt32(&invalid, 1)
 			default:
@@ -55,15 +63,23 @@ func TestRegisterMitEinladung_ParallelRegistrieren_GenauEinKonto(t *testing.T) {
 	if created != 1 || invalid != n-1 {
 		t.Fatalf("erwartet 1 Konto und %d invite_invalid, bekommen %d / %d", n-1, created, invalid)
 	}
+	// Issue #2194: Konten tragen generierte IDs (u-<8hex>), der Body-username
+	// ("racerN") benennt keines mehr. Gezaehlt werden deshalb ALLE Konten der
+	// Platte (der Store startet leer); das eine muss die ID der 201-Antwort
+	// tragen und die Stufe der Einladung haben.
 	ids, _ := s.ListUserIDs()
 	konten := 0
 	for _, id := range ids {
-		if len(id) >= 5 && id[:5] == "racer" {
-			konten++
-			u, _ := s.LoadUser(id)
-			if u.Tier != "premium" {
-				t.Errorf("Konto %s hat Tier %q", id, u.Tier)
-			}
+		konten++
+		if !opakeID2194.MatchString(id) {
+			t.Errorf("Konto %s traegt keine generierte ID", id)
+		}
+		if want, _ := erzeugteID.Load().(string); id != want {
+			t.Errorf("Konto %s auf der Platte, 201-Antwort nannte %q", id, want)
+		}
+		u, _ := s.LoadUser(id)
+		if u == nil || u.Tier != "premium" {
+			t.Errorf("Konto %s hat Tier %v", id, u)
 		}
 	}
 	if konten != 1 {

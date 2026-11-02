@@ -39,7 +39,8 @@ func TestRegisterMitSpracheEnSpeichertUndSetztCookie(t *testing.T) {
 		t.Fatalf("AC-4: Status %d: %s", w.Code, w.Body.String())
 	}
 	onbWaitDispatch(t, calls)
-	if got := string(onbReadRawUser(t, s, "lang-reg-en")["language"]); got != `"en"` {
+	// Issue #2194: Konto-ID aus der 201-Antwort (generiert).
+	if got := string(onbReadRawUser(t, s, registrierID2194(t, w, "AC-4 en"))["language"]); got != `"en"` {
 		t.Errorf("AC-4: user.json language=%s, erwartet \"en\"", got)
 	}
 	langPruefeCookie(t, "AC-5 (Registrierung, https)", w, "en", true)
@@ -57,7 +58,8 @@ func TestRegisterOhneSpracheLaesstFeldWeg(t *testing.T) {
 		t.Fatalf("AC-4: Status %d: %s", w.Code, w.Body.String())
 	}
 	onbWaitDispatch(t, calls)
-	if v, ok := onbReadRawUser(t, s, "lang-reg-leer")["language"]; ok {
+	// Issue #2194: Konto-ID aus der 201-Antwort (generiert).
+	if v, ok := onbReadRawUser(t, s, registrierID2194(t, w, "AC-4 leer"))["language"]; ok {
 		t.Errorf("AC-4: ohne Sprachwahl steht language=%s in user.json, erwartet: Feld fehlt", v)
 	}
 	if c := langCookie(w); c != nil {
@@ -82,6 +84,10 @@ func TestRegisterMitUngueltigerSpracheLegtNichtsAn(t *testing.T) {
 	}
 	if s.UserExists("lang-reg-fr") {
 		t.Errorf("AC-4: UserExists meldet das abgewiesene Konto")
+	}
+	// Issue #2194: der Name benennt kein Konto mehr — der Store muss leer sein.
+	if ids, _ := s.ListUserIDs(); len(ids) != 0 {
+		t.Errorf("AC-4: trotz ungueltiger Sprache existieren Konten: %v", ids)
 	}
 	if _, offen := inv.Peek(token); !offen {
 		t.Errorf("AC-4: Einladung wurde trotz Ablehnung verbraucht")

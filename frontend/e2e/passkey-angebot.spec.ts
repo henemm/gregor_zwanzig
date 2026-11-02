@@ -131,18 +131,23 @@ async function legeKontoAn(request: APIRequestContext, name: string): Promise<vo
 		`Registrierung ${name} fehlgeschlagen: ${reg.status()} ${await reg.text()} ` +
 			'(429 = Kontingent 5/Stunde erschoepft, frischen Go-Server nehmen)'
 	).toBeTruthy();
+	// Issue #2194 (ADR-0105): ohne is_test_user vergibt der Server die Konto-ID
+	// selbst (`u-<8hex>`) und ignoriert `username`; Folgeschritte nutzen die `id`.
+	const { id } = (await reg.json().catch(() => ({}))) as { id?: unknown };
+	expect(typeof id === 'string' && id !== '', `Registrierung ${name} lieferte keine Konto-ID`).toBeTruthy();
+	const kontoId = id as string;
 
 	const login = await request.post('/api/auth/login', {
-		data: { username: name, password: PASSWORT }
+		data: { username: kontoId, password: PASSWORT }
 	});
 	if (!login.ok()) return; // Login-Pflicht schon scharf: Token-Weg unerreichbar.
 
 	const tokenAntwort = await request.post('/api/auth/verify-email/staging-token', {
-		data: { username: name }
+		data: { username: kontoId }
 	});
 	if (!tokenAntwort.ok()) return; // Kein Staging-Stand — Bestaetigung nicht noetig.
 	const { token } = (await tokenAntwort.json()) as { token: string };
-	const verify = await request.post('/api/auth/verify-email', { data: { user: name, token } });
+	const verify = await request.post('/api/auth/verify-email', { data: { user: kontoId, token } });
 	expect(verify.ok(), `Bestaetigung ${name} fehlgeschlagen: ${verify.status()}`).toBeTruthy();
 }
 
@@ -180,10 +185,14 @@ async function setzeAngebotZurueck(request: APIRequestContext): Promise<void> {
 	).toBeFalsy();
 }
 
-/** Meldet sich ueber das Passwort-Formular an — nur dieser Weg setzt den Marker. */
+/**
+ * Meldet sich ueber das Passwort-Formular an — nur dieser Weg setzt den Marker.
+ * Issue #2194: `name` ist nur der Namensstamm; die Konto-ID vergibt der Server,
+ * angemeldet wird deshalb mit der E-Mail-Adresse aus `legeKontoAn`.
+ */
 async function meldePasswortAn(page: Page, name: string): Promise<void> {
 	await page.goto('/login');
-	await page.fill('input[name="username"]', name);
+	await page.fill('input[name="username"]', `${name}@example.com`);
 	await page.fill('input[name="password"]', PASSWORT);
 	await page.click('form[action="?/login"] button[type="submit"]');
 	await page.waitForURL((url) => !url.pathname.startsWith('/login'), { timeout: 15_000 });

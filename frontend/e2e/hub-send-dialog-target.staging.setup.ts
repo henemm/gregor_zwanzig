@@ -44,16 +44,21 @@ setup('authenticate via API (staging) — hub_send_dialog_target', async ({ play
 			data: { username, password: kennwort, email: `gregor-test+sd${suffix}@henemm.com` }
 		});
 		expect([200, 201], `Registrierung HTTP ${reg.status()}`).toContain(reg.status());
-		writeFileSync(WEGWERF_DATEI, JSON.stringify({ username, kennwort }), { mode: 0o600 });
+		// Issue #2194 (ADR-0105): ohne is_test_user vergibt der Server die Konto-ID
+		// selbst (`u-<8hex>`) und ignoriert `username`; Folgeschritte nutzen die `id`.
+		const { id } = (await reg.json().catch(() => ({}))) as { id?: unknown };
+		expect(typeof id === 'string' && id !== '', 'Registrierung lieferte keine Konto-ID').toBeTruthy();
+		const kontoId = id as string;
+		writeFileSync(WEGWERF_DATEI, JSON.stringify({ username: kontoId, kennwort }), { mode: 0o600 });
 
-		const tok = await validator.post('/api/auth/verify-email/staging-token', { data: { username } });
+		const tok = await validator.post('/api/auth/verify-email/staging-token', { data: { username: kontoId } });
 		expect(tok.ok(), `Staging-Token HTTP ${tok.status()}`).toBeTruthy();
 		const { token } = (await tok.json()) as { token?: string };
 		expect(token, 'Staging-Testweg lieferte kein Token').toBeTruthy();
-		const best = await gast.post('/api/auth/verify-email', { data: { user: username, token } });
+		const best = await gast.post('/api/auth/verify-email', { data: { user: kontoId, token } });
 		expect(best.ok(), `Bestaetigung HTTP ${best.status()}`).toBeTruthy();
 
-		const gastLogin = await gast.post('/api/auth/login', { data: { username, password: kennwort } });
+		const gastLogin = await gast.post('/api/auth/login', { data: { username: kontoId, password: kennwort } });
 		expect(gastLogin.ok(), `Wegwerf-Login HTTP ${gastLogin.status()}`).toBeTruthy();
 		const leer = await gast.put('/api/auth/profile', { data: { email: '', mail_to: '' } });
 		expect(leer.ok(), `Adressen leeren HTTP ${leer.status()}`).toBeTruthy();
