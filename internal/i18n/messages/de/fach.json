@@ -1,1 +1,21 @@
-{}
+{
+  "fach.fehler.precondition_failed": "Der Stand wurde zwischenzeitlich an anderer Stelle geaendert. Bitte neu laden und die Aenderung erneut vornehmen.",
+  "fach.fehler.id_conflict": "Diese Kennung ist bereits durch einen Trip oder Ortsvergleich belegt — bitte anderen Namen wählen.",
+  "fach.fehler.id_conflict_vergleich": "Ein Ortsvergleich trägt bereits diese Kennung — bitte anderen Namen wählen.",
+  "fach.fehler.conflict": "Ort mit dieser ID existiert bereits",
+  "fach.fehler.location_in_use": "Dieser Ort wird noch von mindestens einem Ortsvergleich verwendet.",
+  "fach.fehler.busy": "Datei gerade gesperrt, bitte erneut versuchen",
+  "fach.fehler.quota_exceeded_trips": "Du hast bereits {current} von {limit} Trips in deinem Tarif. Archiviere oder lösche einen Trip, um einen neuen anzulegen.",
+  "fach.fehler.quota_exceeded_compare_presets": "Du hast bereits {current} von {limit} Ortsvergleichen in deinem Tarif. Archiviere oder lösche einen Ortsvergleich, um einen neuen anzulegen.",
+  "fach.fehler.quota_exceeded_locations": "Du hast bereits {current} von {limit} Orten in deinem Tarif. Lösche einen Ort, um einen neuen anzulegen.",
+  "fach.fehler.validation_error_kennung": "Ungültige Briefing-Kennung",
+  "fach.fehler.proxy_error_versand": "Versand konnte nicht gestartet werden — bitte später erneut versuchen",
+  "fach.fehler.upstream_unreachable_versand": "Versanddienst nicht erreichbar — bitte später erneut versuchen",
+  "fach.fehler.bad_request_input": "Feld 'input' fehlt",
+  "fach.fehler.upstream_unreachable": "Der Dienst ist nicht erreichbar.",
+  "fach.fehler.name_required": "Der Name fehlt.",
+  "fach.fehler.name_exists": "Dieser Name ist bereits vergeben.",
+  "fach.fehler.invalid_params": "Die Parameter sind ungültig.",
+  "fach.fehler.budget_exceeded": "Das Tageskontingent für Wetterabfragen ist aufgebraucht.",
+  "fach.fehler.provider_error": "Der Wetteranbieter ist nicht erreichbar."
+}

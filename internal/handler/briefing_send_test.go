@@ -50,8 +50,10 @@ func bsAssertSendError(t *testing.T, w *httptest.ResponseRecorder, wantCode stri
 	if d := got["detail"]; d == "" || d == wantCode {
 		t.Errorf("detail %q muss ein anzeigbarer Text sein (body=%q)", d, w.Body.String())
 	}
-	if len(got) != 2 {
-		t.Errorf("Fehler-Body hat Felder %v, erwartet genau detail+code", got)
+	// Issue #2677: Form A bleibt (detail+code), WriteError ergaenzt message
+	// (= detail, Nutzersprache) und das Alt-Feld error (= code).
+	if len(got) != 4 || got["message"] != got["detail"] || got["error"] != wantCode {
+		t.Errorf("Fehler-Body hat Felder %v, erwartet detail+code+message+error", got)
 	}
 	if ct := w.Header().Get("Content-Type"); !strings.HasPrefix(ct, "application/json") {
 		t.Errorf("Content-Type %q, erwartet application/json", ct)

@@ -1,1 +1,21 @@
-{}
+{
+  "fach.fehler.precondition_failed": "The data was changed elsewhere in the meantime. Please reload and make your change again.",
+  "fach.fehler.id_conflict": "This ID is already used by a trip or location comparison. Please choose a different name.",
+  "fach.fehler.id_conflict_vergleich": "A location comparison already uses this ID. Please choose a different name.",
+  "fach.fehler.conflict": "A location with this ID already exists.",
+  "fach.fehler.location_in_use": "This location is still used by at least one location comparison.",
+  "fach.fehler.busy": "The file is locked at the moment. Please try again.",
+  "fach.fehler.quota_exceeded_trips": "You already have {current} of {limit} trips on your plan. Archive or delete a trip to create a new one.",
+  "fach.fehler.quota_exceeded_compare_presets": "You already have {current} of {limit} location comparisons on your plan. Archive or delete a location comparison to create a new one.",
+  "fach.fehler.quota_exceeded_locations": "You already have {current} of {limit} locations on your plan. Delete a location to create a new one.",
+  "fach.fehler.validation_error_kennung": "Invalid briefing ID",
+  "fach.fehler.proxy_error_versand": "Sending could not be started. Please try again later.",
+  "fach.fehler.upstream_unreachable_versand": "The sending service is not reachable. Please try again later.",
+  "fach.fehler.bad_request_input": "The field 'input' is missing.",
+  "fach.fehler.upstream_unreachable": "The service is not reachable.",
+  "fach.fehler.name_required": "The name is required.",
+  "fach.fehler.name_exists": "This name is already in use.",
+  "fach.fehler.invalid_params": "The parameters are invalid.",
+  "fach.fehler.budget_exceeded": "The daily quota for forecast requests is used up.",
+  "fach.fehler.provider_error": "The weather provider is not reachable."
+}

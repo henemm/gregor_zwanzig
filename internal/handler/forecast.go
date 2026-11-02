@@ -10,6 +10,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/henemm/gregor-api/internal/i18n"
 	"github.com/henemm/gregor-api/internal/middleware"
 	"github.com/henemm/gregor-api/internal/provider"
 )
@@ -83,11 +84,7 @@ func ForecastHandler(p provider.WeatherProvider, coreURL string) http.HandlerFun
 		// oder fremdes Konto (ADR-0003, ADR-0075 Punkt 4).
 		userID := middleware.UserIDFromContext(r.Context())
 		if userID == "" {
-			w.WriteHeader(http.StatusUnauthorized)
-			json.NewEncoder(w).Encode(map[string]string{
-				"error":  "unauthorized",
-				"detail": "authentication required",
-			})
+			WriteError(w, r, http.StatusUnauthorized, "unauthorized", i18n.Args{"detail": "authentication required"})
 			return
 		}
 
@@ -96,31 +93,19 @@ func ForecastHandler(p provider.WeatherProvider, coreURL string) http.HandlerFun
 		hoursStr := r.URL.Query().Get("hours")
 
 		if latStr == "" || lonStr == "" {
-			w.WriteHeader(http.StatusBadRequest)
-			json.NewEncoder(w).Encode(map[string]string{
-				"error":  "invalid_params",
-				"detail": "lat and lon are required",
-			})
+			WriteError(w, r, http.StatusBadRequest, "invalid_params", i18n.Args{"detail": "lat and lon are required"})
 			return
 		}
 
 		lat, err := strconv.ParseFloat(latStr, 64)
 		if err != nil || lat < -90 || lat > 90 {
-			w.WriteHeader(http.StatusBadRequest)
-			json.NewEncoder(w).Encode(map[string]string{
-				"error":  "invalid_params",
-				"detail": "lat must be between -90 and 90",
-			})
+			WriteError(w, r, http.StatusBadRequest, "invalid_params", i18n.Args{"detail": "lat must be between -90 and 90"})
 			return
 		}
 
 		lon, err := strconv.ParseFloat(lonStr, 64)
 		if err != nil || lon < -180 || lon > 180 {
-			w.WriteHeader(http.StatusBadRequest)
-			json.NewEncoder(w).Encode(map[string]string{
-				"error":  "invalid_params",
-				"detail": "lon must be between -180 and 180",
-			})
+			WriteError(w, r, http.StatusBadRequest, "invalid_params", i18n.Args{"detail": "lon must be between -180 and 180"})
 			return
 		}
 
@@ -128,11 +113,7 @@ func ForecastHandler(p provider.WeatherProvider, coreURL string) http.HandlerFun
 		if hoursStr != "" {
 			h, err := strconv.Atoi(hoursStr)
 			if err != nil || h < 1 || h > 240 {
-				w.WriteHeader(http.StatusBadRequest)
-				json.NewEncoder(w).Encode(map[string]string{
-					"error":  "invalid_params",
-					"detail": "hours must be between 1 and 240",
-				})
+				WriteError(w, r, http.StatusBadRequest, "invalid_params", i18n.Args{"detail": "hours must be between 1 and 240"})
 				return
 			}
 			hours = h
@@ -145,21 +126,13 @@ func ForecastHandler(p provider.WeatherProvider, coreURL string) http.HandlerFun
 			log.Printf("[forecast] WARN: budget reserve fehlgeschlagen, fail-open: %v", err)
 		} else if !urteil.Allowed {
 			w.Header().Set("Retry-After", strconv.Itoa(klemmeRetryAfter(urteil.RetryAfterS)))
-			w.WriteHeader(http.StatusTooManyRequests)
-			json.NewEncoder(w).Encode(map[string]string{
-				"error":  "budget_exceeded",
-				"detail": "daily forecast budget exhausted for this user",
-			})
+			WriteError(w, r, http.StatusTooManyRequests, "budget_exceeded", i18n.Args{"detail": "daily forecast budget exhausted for this user"})
 			return
 		}
 
 		ts, err := p.FetchForecast(lat, lon, hours)
 		if err != nil {
-			w.WriteHeader(http.StatusBadGateway)
-			json.NewEncoder(w).Encode(map[string]string{
-				"error":  "provider_error",
-				"detail": err.Error(),
-			})
+			WriteError(w, r, http.StatusBadGateway, "provider_error", i18n.Args{"detail": err.Error()})
 			return
 		}
 

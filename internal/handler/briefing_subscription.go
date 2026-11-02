@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/henemm/gregor-api/internal/i18n"
 	"github.com/henemm/gregor-api/internal/middleware"
 	"github.com/henemm/gregor-api/internal/store"
 )
@@ -25,10 +26,6 @@ const (
 
 func isValidBriefingKind(kind string) bool {
 	return kind == briefingKindRoute || kind == briefingKindVergleich
-}
-
-func writeBriefingKindRequired(w http.ResponseWriter) {
-	writeJSON(w, http.StatusBadRequest, map[string]string{"error": "kind_required"})
 }
 
 // bailIf schreibt das Fehlerobjekt (WriteError, Issue #2675) mit status und
@@ -47,7 +44,7 @@ func GetBriefingHandler(s *store.Store) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		kind := r.URL.Query().Get("kind")
 		if !isValidBriefingKind(kind) {
-			writeBriefingKindRequired(w)
+			WriteError(w, r, http.StatusBadRequest, "kind_required", nil)
 			return
 		}
 		// Issue #1395 S6: ":=" statt "=" — die Closure-Variable ist zwischen
@@ -65,7 +62,7 @@ func GetBriefingHandler(s *store.Store) http.HandlerFunc {
 			// unten und zu GetTripHandler (trip.go) -- Sperre VOR LoadTrip,
 			// kein Selbst-Blockierer: dieser Zweig laedt selbst und
 			// delegiert NICHT an GetTripHandler.
-			unlockB, okB := lockBriefingOr503(w, s, id)
+			unlockB, okB := lockBriefingOr503(w, r, s, id)
 			if !okB {
 				return
 			}
@@ -88,7 +85,7 @@ func GetBriefingHandler(s *store.Store) http.HandlerFunc {
 		// Stempel zum ausgelieferten Rumpf (analog GetComparePresetHandler).
 		// Ausschliesslich im vergleich-Zweig: der route-Zweig oben laedt selbst
 		// und ist nicht Teil dieser Scheibe.
-		unlockB, okB := lockBriefingOr503(w, s, id)
+		unlockB, okB := lockBriefingOr503(w, r, s, id)
 		if !okB {
 			return
 		}
@@ -163,7 +160,7 @@ func DeleteBriefingHandler(s *store.Store) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		kind := r.URL.Query().Get("kind")
 		if !isValidBriefingKind(kind) {
-			writeBriefingKindRequired(w)
+			WriteError(w, r, http.StatusBadRequest, "kind_required", nil)
 			return
 		}
 		if kind == briefingKindRoute {
@@ -216,7 +213,7 @@ func UpdateBriefingHandler(s *store.Store) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		kind := r.URL.Query().Get("kind")
 		if !isValidBriefingKind(kind) {
-			writeBriefingKindRequired(w)
+			WriteError(w, r, http.StatusBadRequest, "kind_required", nil)
 			return
 		}
 		// Issue #1395 S6: KEINE Sperre vor dieser Weiche. UpdateTripHandler nimmt
@@ -239,7 +236,7 @@ func UpdateBriefingHandler(s *store.Store) http.HandlerFunc {
 		// Ab hier gilt der volle Nebenlaeufigkeitsschutz des Preset-Schreibwegs:
 		// dieselbe Sperre und derselbe Fingerabdruck wie
 		// UpdateComparePresetHandler — sonst waere dieser Weg dessen Umgehung.
-		unlockB, okB := lockBriefingOr503(w, s, id)
+		unlockB, okB := lockBriefingOr503(w, r, s, id)
 		if !okB {
 			return
 		}
@@ -267,7 +264,7 @@ func UpdateBriefingHandler(s *store.Store) http.HandlerFunc {
 
 		// Vorbedingung VOR dem Merge: stimmt sie nicht, wird nichts geschrieben.
 		if !ifMatchAllows(r.Header.Get("If-Match"), oldFp) {
-			writePreconditionFailed(w, r, preconditionFailedDetail)
+			writePreconditionFailed(w, r)
 			return
 		}
 
@@ -279,7 +276,7 @@ func UpdateBriefingHandler(s *store.Store) http.HandlerFunc {
 			return
 		}
 		if err := validateComparePreset(preset); err != nil {
-			writeJSON(w, http.StatusBadRequest, map[string]string{"error": "validation_error", "detail": err.Error()})
+			WriteError(w, r, http.StatusBadRequest, "validation_error", i18n.Args{"detail": err.Error()})
 			return
 		}
 		// Issue #1250 Scheibe 7b: nur die eigene Datei per-Datei zurueckschreiben.

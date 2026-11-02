@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/henemm/gregor-api/internal/i18n"
 	"github.com/henemm/gregor-api/internal/middleware"
 	"github.com/henemm/gregor-api/internal/model"
 	"github.com/henemm/gregor-api/internal/store"
@@ -33,9 +34,7 @@ func TripsHandler(s *store.Store) http.HandlerFunc {
 		s := s.WithUser(middleware.UserIDFromContext(r.Context()))
 		trips, err := s.LoadTrips()
 		if err != nil {
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(500)
-			w.Write([]byte(`{"error":"store_error"}`))
+			WriteError(w, r, 500, "store_error", nil)
 			return
 		}
 
@@ -51,7 +50,7 @@ func TripHandler(s *store.Store) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		s := s.WithUser(middleware.UserIDFromContext(r.Context()))
 		id := chi.URLParam(r, "id")
-		if rejectInvalidEntityID(w, id) {
+		if rejectInvalidEntityID(w, r, id) {
 			return
 		}
 
@@ -59,7 +58,7 @@ func TripHandler(s *store.Store) http.HandlerFunc {
 		// gleichzeitiger PUT zwischen Fingerabdruck und Serialisierung
 		// dazwischenfunken, und der Client haelt einen Stempel, der nicht zum
 		// ausgelieferten Rumpf gehoert.
-		unlockB, okB := lockBriefingOr503(w, s, id)
+		unlockB, okB := lockBriefingOr503(w, r, s, id)
 		if !okB {
 			return
 		}
@@ -67,16 +66,12 @@ func TripHandler(s *store.Store) http.HandlerFunc {
 
 		trip, err := s.LoadTrip(id)
 		if err != nil {
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(500)
-			w.Write([]byte(`{"error":"store_error"}`))
+			WriteError(w, r, 500, "store_error", nil)
 			return
 		}
 
 		if trip == nil {
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(404)
-			w.Write([]byte(`{"error":"not_found"}`))
+			WriteError(w, r, 404, "not_found", nil)
 			return
 		}
 
@@ -100,16 +95,11 @@ func TripHandler(s *store.Store) http.HandlerFunc {
 // validation_error-Muster liefert statt eines 404/204/500 aus dem Store.
 // Die eigentliche Sperre sitzt im Store (store.ValidEntityID) und faengt
 // auch Aufrufer, die hier nicht vorbeikommen.
-func rejectInvalidEntityID(w http.ResponseWriter, id string) bool {
+func rejectInvalidEntityID(w http.ResponseWriter, r *http.Request, id string) bool {
 	if store.ValidEntityID(id) {
 		return false
 	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(400)
-	json.NewEncoder(w).Encode(map[string]string{
-		"error":  "validation_error",
-		"detail": "invalid id",
-	})
+	WriteError(w, r, 400, "validation_error", i18n.Args{"detail": "invalid id"})
 	return true
 }
 
@@ -163,15 +153,12 @@ func ensureStageIDs(stages []model.Stage) []model.Stage {
 // writeSaveError bildet Save-Fehler von SaveTrip/SaveComparePreset EINHEITLICH
 // ab (Issue #2359): store.ErrKindConflict (Kennung von der anderen Art belegt)
 // ⇒ 409 id_conflict mit deutscher Meldung, jeder andere Fehler ⇒ 500.
-func writeSaveError(w http.ResponseWriter, err error) {
+func writeSaveError(w http.ResponseWriter, r *http.Request, err error) {
 	if errors.Is(err, store.ErrKindConflict) {
-		writeJSON(w, http.StatusConflict, map[string]string{
-			"error":  "id_conflict",
-			"detail": "Diese Kennung ist bereits durch einen Trip oder Ortsvergleich belegt — bitte anderen Namen wählen.",
-		})
+		WriteError(w, r, http.StatusConflict, "id_conflict", nil)
 		return
 	}
-	writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "store_error"})
+	WriteError(w, r, http.StatusInternalServerError, "store_error", nil)
 }
 
 func CreateTripHandler(s *store.Store) http.HandlerFunc {
@@ -179,9 +166,7 @@ func CreateTripHandler(s *store.Store) http.HandlerFunc {
 		s := s.WithUser(middleware.UserIDFromContext(r.Context()))
 		var trip model.Trip
 		if err := json.NewDecoder(r.Body).Decode(&trip); err != nil {
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(400)
-			w.Write([]byte(`{"error":"bad_request"}`))
+			WriteError(w, r, 400, "bad_request", nil)
 			return
 		}
 
@@ -207,12 +192,7 @@ func CreateTripHandler(s *store.Store) http.HandlerFunc {
 		}
 
 		if err := validateTrip(trip); err != nil {
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(400)
-			json.NewEncoder(w).Encode(map[string]string{
-				"error":  "validation_error",
-				"detail": err.Error(),
-			})
+			WriteError(w, r, 400, "validation_error", i18n.Args{"detail": err.Error()})
 			return
 		}
 
@@ -228,9 +208,7 @@ func CreateTripHandler(s *store.Store) http.HandlerFunc {
 		defer s.LockQuota()()
 		vorhanden, err := s.LoadTrip(trip.ID)
 		if err != nil {
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(500)
-			w.Write([]byte(`{"error":"store_error"}`))
+			WriteError(w, r, 500, "store_error", nil)
 			return
 		}
 		// Geprueft wird die Neuanlage UND der Upsert, der einen archivierten
@@ -242,14 +220,11 @@ func CreateTripHandler(s *store.Store) http.HandlerFunc {
 		if vorhanden == nil {
 			belegt, err := s.LoadComparePreset(trip.ID)
 			if err != nil {
-				writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "store_error"})
+				WriteError(w, r, http.StatusInternalServerError, "store_error", nil)
 				return
 			}
 			if belegt != nil {
-				writeJSON(w, http.StatusConflict, map[string]string{
-					"error":  "id_conflict",
-					"detail": "Ein Ortsvergleich trägt bereits diese Kennung — bitte anderen Namen wählen.",
-				})
+				WriteError(w, r, http.StatusConflict, "id_conflict", i18n.Args{"variante": "vergleich"})
 				return
 			}
 		}
@@ -257,14 +232,14 @@ func CreateTripHandler(s *store.Store) http.HandlerFunc {
 			return
 		}
 
-		unlockB, okB := lockBriefingOr503(w, s, trip.ID)
+		unlockB, okB := lockBriefingOr503(w, r, s, trip.ID)
 		if !okB {
 			return
 		}
 		defer unlockB()
 
 		if err := s.SaveTrip(&trip); err != nil {
-			writeSaveError(w, err)
+			writeSaveError(w, r, err)
 			return
 		}
 
@@ -329,7 +304,7 @@ func UpdateTripHandler(s *store.Store) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		s := s.WithUser(middleware.UserIDFromContext(r.Context()))
 		id := chi.URLParam(r, "id")
-		if rejectInvalidEntityID(w, id) {
+		if rejectInvalidEntityID(w, r, id) {
 			return
 		}
 
@@ -338,7 +313,7 @@ func UpdateTripHandler(s *store.Store) http.HandlerFunc {
 		// durch (briefing_subscription.go) — dort darf KEINE zweite Sperre auf
 		// dieselbe <Nutzer, ID> genommen werden (sync.Mutex, nicht wiedereintritts-
 		// faehig -> sicherer Selbst-Blockierer).
-		unlockB, okB := lockBriefingOr503(w, s, id)
+		unlockB, okB := lockBriefingOr503(w, r, s, id)
 		if !okB {
 			return
 		}
@@ -349,38 +324,30 @@ func UpdateTripHandler(s *store.Store) http.HandlerFunc {
 		// fehlende Datei liefert "" ohne Fehler und faellt unten in den 404.
 		oldFp, fpErr := s.BriefingFingerprint(id)
 		if fpErr != nil {
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(500)
-			w.Write([]byte(`{"error":"store_error"}`))
+			WriteError(w, r, 500, "store_error", nil)
 			return
 		}
 
 		existing, err := s.LoadTrip(id)
 		if err != nil {
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(500)
-			w.Write([]byte(`{"error":"store_error"}`))
+			WriteError(w, r, 500, "store_error", nil)
 			return
 		}
 		if existing == nil {
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(404)
-			w.Write([]byte(`{"error":"not_found"}`))
+			WriteError(w, r, 404, "not_found", nil)
 			return
 		}
 
 		// Vorbedingung VOR dem Dekodieren des Rumpfes: stimmt sie nicht, ist der
 		// Rumpf irrelevant und es wird nichts geschrieben (AC-5).
 		if !ifMatchAllows(r.Header.Get("If-Match"), oldFp) {
-			writePreconditionFailed(w, r, preconditionFailedDetail)
+			writePreconditionFailed(w, r)
 			return
 		}
 
 		var req tripUpdateRequest
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(400)
-			w.Write([]byte(`{"error":"bad_request"}`))
+			WriteError(w, r, 400, "bad_request", nil)
 			return
 		}
 
@@ -500,19 +467,12 @@ func UpdateTripHandler(s *store.Store) http.HandlerFunc {
 		// gerufen — hier nicht mehr nötig (Doppelberechnung vermeiden).
 
 		if err := validateTrip(*existing); err != nil {
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(400)
-			json.NewEncoder(w).Encode(map[string]string{
-				"error":  "validation_error",
-				"detail": err.Error(),
-			})
+			WriteError(w, r, 400, "validation_error", i18n.Args{"detail": err.Error()})
 			return
 		}
 
 		if err := s.SaveTrip(existing); err != nil {
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(500)
-			w.Write([]byte(`{"error":"store_error"}`))
+			WriteError(w, r, 500, "store_error", nil)
 			return
 		}
 
@@ -544,7 +504,7 @@ func UpdateTripStateHandler(s *store.Store) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		s := s.WithUser(middleware.UserIDFromContext(r.Context()))
 		id := chi.URLParam(r, "id")
-		if rejectInvalidEntityID(w, id) {
+		if rejectInvalidEntityID(w, r, id) {
 			return
 		}
 
@@ -557,7 +517,7 @@ func UpdateTripStateHandler(s *store.Store) http.HandlerFunc {
 		// Er serialisiert nur die Zustandswechsel eines Nutzers; abgelehnt wird
 		// ausschliesslich das Wiederherstellen aus dem Archiv (AC-9).
 		defer s.LockQuota()()
-		unlockB, okB := lockBriefingOr503(w, s, id)
+		unlockB, okB := lockBriefingOr503(w, r, s, id)
 		if !okB {
 			return
 		}
@@ -565,23 +525,17 @@ func UpdateTripStateHandler(s *store.Store) http.HandlerFunc {
 
 		existing, err := s.LoadTrip(id)
 		if err != nil {
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(500)
-			w.Write([]byte(`{"error":"store_error"}`))
+			WriteError(w, r, 500, "store_error", nil)
 			return
 		}
 		if existing == nil {
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(404)
-			w.Write([]byte(`{"error":"not_found"}`))
+			WriteError(w, r, 404, "not_found", nil)
 			return
 		}
 
 		var req tripStateRequest
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(400)
-			w.Write([]byte(`{"error":"bad_request"}`))
+			WriteError(w, r, 400, "bad_request", nil)
 			return
 		}
 
@@ -613,9 +567,7 @@ func UpdateTripStateHandler(s *store.Store) http.HandlerFunc {
 		existing.ID = id
 
 		if err := s.SaveTrip(existing); err != nil {
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(500)
-			w.Write([]byte(`{"error":"store_error"}`))
+			WriteError(w, r, 500, "store_error", nil)
 			return
 		}
 
@@ -645,7 +597,7 @@ func ConfirmWaypointHandler(s *store.Store) http.HandlerFunc {
 
 		// Issue #1395 S2: Sperre analog UpdateTripStateHandler — kein If-Match
 		// (AC-15), aber kein Hineinschreiben in einen laufenden PUT.
-		unlockB, okB := lockBriefingOr503(w, s, tripID)
+		unlockB, okB := lockBriefingOr503(w, r, s, tripID)
 		if !okB {
 			return
 		}
@@ -659,7 +611,7 @@ func ConfirmWaypointHandler(s *store.Store) http.HandlerFunc {
 
 		var req confirmWaypointRequest
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-			http.Error(w, "bad request", http.StatusBadRequest)
+			WriteError(w, r, http.StatusBadRequest, "bad_request", nil)
 			return
 		}
 
@@ -696,7 +648,7 @@ func ConfirmWaypointHandler(s *store.Store) http.HandlerFunc {
 		trip.ID = tripID
 
 		if err := s.SaveTrip(trip); err != nil {
-			http.Error(w, "internal error", http.StatusInternalServerError)
+			WriteError(w, r, http.StatusInternalServerError, "internal_error", nil)
 			return
 		}
 
@@ -709,7 +661,7 @@ func DeleteTripHandler(s *store.Store) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		s := s.WithUser(middleware.UserIDFromContext(r.Context()))
 		id := chi.URLParam(r, "id")
-		if rejectInvalidEntityID(w, id) {
+		if rejectInvalidEntityID(w, r, id) {
 			return
 		}
 
@@ -720,16 +672,14 @@ func DeleteTripHandler(s *store.Store) http.HandlerFunc {
 		// — die geloeschte Tour ersteht wieder auf. Mit Sperre sind nur die
 		// beiden unbedenklichen Reihenfolgen moeglich (PUT dann DELETE = weg;
 		// DELETE dann PUT = 404, es wird nichts geschrieben).
-		unlockB, okB := lockBriefingOr503(w, s, id)
+		unlockB, okB := lockBriefingOr503(w, r, s, id)
 		if !okB {
 			return
 		}
 		defer unlockB()
 
 		if err := s.DeleteTrip(id); err != nil {
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(500)
-			w.Write([]byte(`{"error":"store_error"}`))
+			WriteError(w, r, 500, "store_error", nil)
 			return
 		}
 

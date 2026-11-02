@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"encoding/json"
 	"net/http/httptest"
 	"os"
 	"path/filepath"
@@ -8,6 +9,8 @@ import (
 	"testing"
 
 	"github.com/go-chi/chi/v5"
+
+	"github.com/henemm/gregor-api/internal/i18n"
 )
 
 // AC-4 (#1066): Ein Store-Schreibfehler beim PATCH /api/trips/{id}/state
@@ -41,9 +44,12 @@ func TestUpdateTripStateHandler_WriteFailureReturnsGenericStoreError(t *testing.
 		t.Fatalf("expected 500 on store write failure, got %d: %s", w.Code, w.Body.String())
 	}
 
+	// Issue #2677: Fehlerobjekt aus dem Katalog — generischer Text, Code store_error.
 	body := w.Body.String()
-	if body != `{"error":"store_error"}` {
-		t.Fatalf("expected exact body {\"error\":\"store_error\"}, got: %q", body)
+	var got map[string]any
+	if err := json.Unmarshal([]byte(body), &got); err != nil || got["error"] != "store_error" || got["code"] != "store_error" ||
+		got["message"] != i18n.T(i18n.De, "fehler.store_error", nil) || len(got) != 4 {
+		t.Fatalf("expected generic store_error object, got: %q", body)
 	}
 	if strings.Contains(body, path) {
 		t.Errorf("response body must not leak the file path, got: %q", body)
