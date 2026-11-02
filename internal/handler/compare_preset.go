@@ -137,11 +137,8 @@ func validateComparePreset(p model.ComparePreset) error {
 	if p.Schedule == "weekly" && p.Weekday != nil && (*p.Weekday < 0 || *p.Weekday > 6) {
 		return fmt.Errorf("weekday must be between 0 and 6 for weekly presets")
 	}
-	for _, e := range p.Empfaenger {
-		if !strings.Contains(e, "@") {
-			return fmt.Errorf("empfaenger entry %q is not a valid email address", e)
-		}
-	}
+	// empfaenger inert seit #1452, nur noch round-getrippt (#2161): keine
+	// Validierung mehr, Empfaenger kommen aus dem Nutzerprofil.
 	// Issue #1232 Scheibe 2a: Slot-Zeitfelder + Laufzeit-Ende validieren.
 	if err := validateComparePresetSlotTime("morning_time", p.MorningTime); err != nil {
 		return err

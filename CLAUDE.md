@@ -18,7 +18,7 @@ SvelteKit-Frontend  ->  Go-API (Port 8090)  ->  Python-Core (FastAPI, intern Por
                         Auth/Store/Scheduler     Provider -> Risk Engine -> Renderer -> Channel
 ```
 
-Go-API (`internal/`, `cmd/`): Auth, Mandantentrennung, Persistenz, einziger Cron-Taktgeber (ruft `POST /api/scheduler/*`; der Python-Core entscheidet die Fälligkeit und versendet), Proxy. Python-Core (`api/`, `src/`): Wetter-Domäne, alle Kanal-Renderer/-Transporte, Alerts, Inbound. Die Legacy-CLI `python -m src.app.cli` (Priorität CLI > ENV > config.ini) ist Debug-Werkzeug. Details: `docs/features/architecture.md`.
+Go-API (`internal/`, `cmd/`): Auth, Mandantentrennung, Persistenz, einziger Cron-Taktgeber (ruft `POST /api/scheduler/*`; der Python-Core entscheidet die Fälligkeit und versendet), Proxy. Python-Core (`api/`, `src/`): Wetter-Domäne, alle Kanal-Renderer/-Transporte, Alerts, Inbound. Die Legacy-CLI `python -m src.app.cli` (Priorität CLI > ENV) ist Debug-Werkzeug. Details: `docs/features/architecture.md`.
 
 ## Wichtige Referenzen
 

@@ -422,7 +422,7 @@ def test_parse_command_format()
 
 ## Known Limitations
 
-- Single-User only (kein Multi-User-Auth)
+- Mandantengetrennt seit #612: jeder Befehl traegt `user_id` im Befehlskontext (`InboundMessage.user_id`); Trip-Suche, Sprache, Snapshots und Scheduler laufen je Nutzer (ADR-0003)
 - Kein Undo-Mechanismus (kein `### resume` Befehl)
 - Keine Validierung ob verschobene Dates Konflikte mit anderen Trips erzeugen
 - Idempotenz nur fuer `ruhetag` (nicht fuer `startdatum`)
@@ -445,6 +445,7 @@ Kein Fehler darf den APScheduler-Thread zum Absturz bringen.
 
 ## Changelog
 
+- 2026-11-02: Known Limitations an Ist-Stand angeglichen (#2161): Mandantentrennung ueber `user_id` im Befehlskontext seit #612 statt veralteter Single-User-Aussage.
 - 2026-09-17: v2.2 HINWEIS (#2282 Scheibe S1): `InboundMessage` bekommt additive
   Felder `resolved_kind`/`resolved_preset_id` (Default `None` = Trip-Verhalten
   unverändert); `process()` bekommt eine Vergleichs-Dispatch-Weiche VOR dem

@@ -2,11 +2,13 @@
 entity_id: subscriptions_crud
 type: module
 created: 2026-04-14
-updated: 2026-04-14
-status: implemented
+updated: 2026-11-02
+status: deprecated
 version: "1.0"
 tags: [go, crud, subscriptions, chi, rest-api, json-store]
 ---
+
+> **Stillgelegt durch #1250 (Scheibe 0, ba6fe60d0):** der Legacy-CompareSubscription-Stack (Handler, Store, Routen) ist entfernt; diese Spec beschreibt nur noch den historischen Stand. Ortsvergleiche laufen heute ueber Compare-Presets (`internal/handler/compare_preset.go`). Stand 2026-11-02 (#2161).
 
 > Teilweise abgelöst durch [ADR-0004](../../adr/0004-signal-channel-removed.md) (2026-06-06): das Feld `SendSignal`/`send_signal` und der Signal-Kanal gelten nicht mehr; Signal ist app-weit entfernt (#610).
 

@@ -202,10 +202,12 @@ func TestCreateComparePreset_InvalidHourRange(t *testing.T) {
 }
 
 // =============================================================================
-// AC-7: POST — empfaenger ohne @ → 400
+// AC-7 (#458) abgeloest durch #2161: empfaenger ist seit #1452 inert und wird
+// nicht mehr validiert, sondern nur round-getrippt. Der fruehere 400-Test ist
+// umgekehrt; Abdeckung in compare_preset_empfaenger_inert_test.go.
 // =============================================================================
 
-func TestCreateComparePreset_InvalidEmpfaenger(t *testing.T) {
+func TestCreateComparePreset_EmpfaengerOhneAtWirdNichtAbgewiesen(t *testing.T) {
 	s := newTestStore(t)
 	r := chi.NewRouter()
 	r.Post("/api/compare/presets", CreateComparePresetHandler(s))
@@ -219,8 +221,8 @@ func TestCreateComparePreset_InvalidEmpfaenger(t *testing.T) {
 	w := httptest.NewRecorder()
 	r.ServeHTTP(w, req)
 
-	if w.Code != http.StatusBadRequest {
-		t.Fatalf("expected 400, got %d: %s", w.Code, w.Body.String())
+	if w.Code == http.StatusBadRequest {
+		t.Fatalf("empfaenger ist inert (#1452/#2161), erwartet kein 400, got %d: %s", w.Code, w.Body.String())
 	}
 }
 
