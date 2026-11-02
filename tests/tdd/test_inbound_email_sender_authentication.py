@@ -88,6 +88,7 @@ from tests.fixtures.authentication_results_fixtures import (
     AR_FOREIGN_DOMAIN_ALIGNED,
     AR_H1_NORMAL,
     AR_H2_INJECTION,
+    AR_H2B_ALIGNED_INJECTION,
     AR_H3_ESCAPED_QUOTE,
     AR_H4_RESEND,
     PROD_AUTHSERV_ID,
@@ -507,6 +508,12 @@ class TestAuthorize2252:
             "#2252 AC-7: Injektion ueber quoted Local-Part (H2) wurde autorisiert"
         )
 
+    def test_f001_aligned_injection_is_rejected(self):
+        sender = "nutzer@henemm.com"
+        assert _authorize_with(sender, [f"From: {sender}"], AR_H2B_ALIGNED_INJECTION, PROD_AUTHSERV_ID) is False, (
+            "F001: ausgerichtete Injektion ueber quoted Local-Part (H2b) wurde autorisiert"
+        )
+
     def test_ac7_h3_escaped_quote_injection_is_rejected(self):
         sender = "nutzer@henemm.com"
         assert _authorize_with(sender, [f"From: {sender}"], AR_H3_ESCAPED_QUOTE, PROD_AUTHSERV_ID) is False, (
@@ -625,6 +632,30 @@ def test_ac7_h2_injection_end_to_end_is_rejected(tmp_path, monkeypatch, caplog):
     assert not reader._notification_service.replies
     assert _seen_marked(imap), "#2252 AC-7: abgelehnte Mail nicht SEEN markiert"
     assert _reader_warnings(caplog), "#2252 AC-7: kein WARNING-Log bei Ablehnung"
+
+
+def test_f001_aligned_injection_end_to_end_is_rejected(tmp_path, monkeypatch, caplog):
+    """F001 (Adversary #2252): H2-Muster mit AUSGERICHTETER Nutzlast
+    (``dkim=pass header.d=henemm.com`` im quoted Local-Part) — ohne Quote-Schutz
+    waere das ein akzeptiertes dkim-Segment. ⇒ SEEN, kein Reply, WARNING, Trip
+    unveraendert."""
+    caplog.set_level(logging.DEBUG)
+    monkeypatch.setattr(loader, "_DATA_ROOT", str(tmp_path))
+    addr = "nutzer-h2b@henemm.com"
+    _write_user(tmp_path, "nutzerh2b", mail_to=addr, email_verified_at=_VERIFIED)
+    _make_trip("nutzerh2b", "t-h2b", "H2bTrip", with_report_config=True)
+    before = _trip_file_bytes("nutzerh2b", "t-h2b")
+
+    reader = _reader()
+    result, imap = _run_raw(reader, _authz_settings(addr, PROD_AUTHSERV_ID),
+                            _cmd_msg([f"From: {addr}"], "H2bTrip", AR_H2B_ALIGNED_INJECTION, "stop"))
+
+    assert result == (0, 0), f"F001: ausgerichtete Injektion wurde verarbeitet (return={result})"
+    assert _trip_file_bytes("nutzerh2b", "t-h2b") == before
+    assert not _RecordingProcessor.calls
+    assert not reader._notification_service.replies
+    assert _seen_marked(imap), "F001: abgelehnte Mail nicht SEEN markiert"
+    assert _reader_warnings(caplog), "F001: kein WARNING-Log bei Ablehnung"
 
 
 def test_ac14_double_from_end_to_end_is_rejected(tmp_path, monkeypatch, caplog):

@@ -133,3 +133,8 @@ Es gibt keinen Schalter für Mail-Befehle; der Go-Scheduler ruft `POST /api/sche
 - [ ] **Format des `dkim`-Segments bei signierter Fremdmail ist nicht empirisch belegt.** Alle Proben waren unsigniert, und eine signierte Mail über Port 25 ließ sich in dieser Sitzung nicht erzeugen (Stalwart-Submission verweigert fremde Absender). Für Gmail, GMX und web.de greift ohnehin der Pfad über `dmarc=pass` (deren Domains publizieren DMARC). Der `header.d`-Pfad betrifft nur Domains ohne DMARC. Vor TDD-RED einen echten signierten Header beschaffen, etwa aus einem Prod-Postfach per `sudo -n -u claude-gregor` oder einer Mail von außen. Andernfalls den `dkim`-Pfad nach RFC 8601 bauen und die Lücke in der Spec vermerken.
 - [ ] Mehrere `From:`-Header: `msg.get("From")` nimmt den ersten. Prüfen, ob Stalwart doppelte From-Header ablehnt, sonst als fail-closed-Regel aufnehmen.
 - [ ] Live-Regressionsnachweis in `/e2e-verify`: Der Positivtest (H1) muss grün bleiben. Ein neuer Negativtest mit dem Injection-Envelope (H2) muss abgelehnt werden.
+
+## Hinweis für /50-implement (2.11.2026)
+- Commit 84d7734e2 (Spec + RED-Tests) enthält H2/H3 wörtlich, also den Angriffsweg. Das Repo ist öffentlich: den Branch erst pushen, wenn die Fix-Commits darauf liegen.
+- Der Live-Negativtest `test_live_injected_quoted_local_part_envelope_over_real_anonymous_pipeline_is_rejected` ist durch `addopts` abgewählt und läuft erst in `/e2e-verify`.
+- Testvertrag (Signaturen, Segment-Form) steht im Modul-Docstring von `tests/tdd/test_authentication_results_parsing.py`.

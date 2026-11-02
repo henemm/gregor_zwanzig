@@ -32,6 +32,11 @@ TESTVERTRAG fuer /50-implement (#2252, in TDD-RED festgelegt):
 Messages werden als Raw-Bytes mit den woertlichen Faltungen gebaut (wie IMAP
 sie liefert), nie ueber ``msg[...] = ...``. Keine Mocks.
 
+Restrisiko (Adversary F005): ein UNGEQUOTETES ``;`` in einem Wert wie
+``smtp.helo`` waere RFC-8601-konform ein neues Segment und wird bewusst nicht
+abgefangen; der Schutz haengt an Stalwart, das ein EHLO mit ``;``/``"``/``(``
+mit 550 ablehnt (Spec 5a, empirisch belegt).
+
 Zusaetzlich prueft ``TestAuthorizeAppliesRules`` dieselben Angriffe ueber die
 unveraenderte Signatur ``_authorize(sender, settings, msg)`` — dort scheitern
 sie vor dem Fix per AssertionError (nicht nur per TypeError), und
@@ -55,22 +60,28 @@ from tests.fixtures.authentication_results_fixtures import (
     AR_DKIM_PASS_NO_D,
     AR_DKIM_TWICE_SAME,
     AR_DMARC_PASS_NO_FROM,
+    AR_DUPLICATE_MAILFROM_ALIGNED_FIRST,
+    AR_DUPLICATE_MAILFROM_FOREIGN_FIRST,
     AR_FAIL,
     AR_FOREIGN_AUTHSERV,
     AR_FOREIGN_DOMAIN_ALIGNED,
     AR_H1_NORMAL,
     AR_H1_SPF_SWAPPED,
     AR_H2_INJECTION,
+    AR_H2B_ALIGNED_INJECTION,
     AR_H3_ESCAPED_QUOTE,
     AR_H4_RESEND,
     AR_HARMLESS_QUOTE_IN_COMMENT,
     AR_MAILFROM_FAIL_HELO_PASS,
+    AR_MAILFROM_LAST_AT_ALIGNED,
+    AR_MAILFROM_LAST_AT_FOREIGN,
     AR_ONLY_UNALIGNED_DKIM,
     AR_PARENT_DOMAIN_ONLY,
     AR_PASS,
     AR_SEMICOLON_IN_COMMENT,
     AR_SPF_DMARC_ALIGNMENT,
     AR_SPF_ONLY,
+    AR_SPF_PASS_EMPTY_MAILFROM,
     AR_SPF_PASS_NO_SCOPE,
     AR_SUBDOMAIN_ALIGNED,
     AR_SUFFIX_LOOKALIKE,
@@ -80,6 +91,7 @@ from tests.fixtures.authentication_results_fixtures import (
     AR_UNBALANCED_QUOTE,
     AR_UNCLOSED_PAREN,
     H1_SEGMENT_COUNT,
+    H2B_INJECTED_MAILFROM,
     H2_INJECTED_MAILFROM,
     H2_SEGMENT_COUNT,
     H3_INJECTED_MAILFROM,
@@ -219,6 +231,7 @@ class TestSegmentTokenizer:
     @pytest.mark.parametrize("header,count,injected", [
         pytest.param(AR_H2_INJECTION, H2_SEGMENT_COUNT, H2_INJECTED_MAILFROM, id="H2"),
         pytest.param(AR_H3_ESCAPED_QUOTE, H3_SEGMENT_COUNT, H3_INJECTED_MAILFROM, id="H3"),
+        pytest.param(AR_H2B_ALIGNED_INJECTION, H2_SEGMENT_COUNT, H2B_INJECTED_MAILFROM, id="H2b"),
     ])
     def test_injection_stays_inside_quoted_string(self, header, count, injected):
         """H2/H3: ``;`` im quoted-string trennt NICHT; das eingeschleuste
@@ -425,6 +438,32 @@ class TestSpfDkimPass:
     def test_ac13_only_unaligned_dkim_is_rejected(self):
         assert self._check(AR_ONLY_UNALIGNED_DKIM) is False
 
+    # --- Adversary-Nachtrag F001..F004 ---
+
+    def test_f001_aligned_injection_is_rejected(self):
+        """H2b: eingeschleuste Nutzlast ist zu henemm.com ausgerichtet — nur
+        Quote-Sperre/Quote-Handling verhindern hier die Annahme."""
+        assert self._check(AR_H2B_ALIGNED_INJECTION, authserv=PROD_AUTHSERV_ID) is False
+
+    @pytest.mark.parametrize("header", [
+        pytest.param(AR_DUPLICATE_MAILFROM_ALIGNED_FIRST, id="ausgerichtet-zuerst"),
+        pytest.param(AR_DUPLICATE_MAILFROM_FOREIGN_FIRST, id="fremd-zuerst"),
+    ])
+    def test_f002_duplicate_property_makes_header_unreadable(self, header):
+        assert _segments(header) is None, "F002: doppelter Schluessel muss Parse-Fehler sein"
+        assert self._check(header) is False
+
+    def test_f003_empty_from_domain_with_empty_mailfrom_is_rejected(self):
+        """Leere from_domain + leerer smtp.mailfrom: ohne die Leer-Pruefung
+        waere "" zu "" ausgerichtet."""
+        assert self._check(AR_SPF_PASS_EMPTY_MAILFROM, from_domain="") is False
+
+    def test_f004_mailfrom_domain_after_last_at_is_aligned(self):
+        assert self._check(AR_MAILFROM_LAST_AT_ALIGNED) is True
+
+    def test_f004_mailfrom_domain_after_last_at_is_foreign(self):
+        assert self._check(AR_MAILFROM_LAST_AT_FOREIGN) is False
+
 
 # ---------------------------------------------------------------------------
 # Dieselben Regeln ueber die UNVERAENDERTE Signatur _authorize(sender, settings, msg)
@@ -451,6 +490,9 @@ class TestAuthorizeAppliesRules:
     @pytest.mark.parametrize("sender,header,authserv", [
         pytest.param("nutzer@henemm.com", AR_H2_INJECTION, PROD_AUTHSERV_ID, id="AC7-H2"),
         pytest.param("nutzer@henemm.com", AR_H3_ESCAPED_QUOTE, PROD_AUTHSERV_ID, id="AC7-H3"),
+        pytest.param("nutzer@henemm.com", AR_H2B_ALIGNED_INJECTION, PROD_AUTHSERV_ID, id="F001-H2b"),
+        pytest.param("nutzer@henemm.com", AR_DUPLICATE_MAILFROM_ALIGNED_FIRST, TEST_AUTHSERV_ID,
+                     id="F002-doppelter-schluessel"),
         pytest.param("nutzer@henemm.com", AR_HARMLESS_QUOTE_IN_COMMENT, TEST_AUTHSERV_ID, id="AC8-quote-kommentar"),
         pytest.param("nutzer@henemm.com", AR_UNBALANCED_QUOTE, TEST_AUTHSERV_ID, id="AC8-quote-offen"),
         pytest.param("nutzer@henemm.com", AR_UNBALANCED_PAREN, TEST_AUTHSERV_ID, id="AC8-klammer-zu"),
@@ -479,6 +521,9 @@ class TestAuthorizeAppliesRules:
 
     def test_spf_only_aligned_is_accepted_v3(self):
         assert _authorize("nutzer@henemm.com", (AR_SPF_ONLY,), TEST_AUTHSERV_ID) is True
+
+    def test_f004_mailfrom_domain_after_last_at_is_accepted(self):
+        assert _authorize("nutzer@henemm.com", (AR_MAILFROM_LAST_AT_ALIGNED,), TEST_AUTHSERV_ID) is True
 
 
 class TestAuthorizeRegressionGuards:

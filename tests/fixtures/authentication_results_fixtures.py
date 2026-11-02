@@ -257,3 +257,39 @@ AR_DKIM_TWICE_SAME = (
     f"{TEST_AUTHSERV_ID}; dkim=pass header.d=henemm.com; dkim=pass header.d=amazonses.com; "
     "spf=pass smtp.mailfrom=user@henemm.com"
 )
+
+# F001 (Adversary #2252): H2-Muster, aber die eingeschleuste Nutzlast ist zur
+# From-Domain henemm.com AUSGERICHTET. Ohne Quote-Sperre UND ohne Quote-Handling
+# im Tokenizer wuerde ``dkim=pass header.d=henemm.com`` ein eigenes Segment und
+# die Mail akzeptiert — dieser Header unterscheidet beide Schutzschichten.
+H2B_INJECTED_MAILFROM = "x;dkim=pass header.d=henemm.com;spf=pass smtp.mailfrom=a@henemm.com"
+AR_H2B_ALIGNED_INJECTION = (
+    "mail.henemm.com;\r\n\tspf=permerror (mail.henemm.com: unable to verify SPF record for "
+    "postmaster@[127.0.1.1]) smtp.helo=[127.0.1.1];\r\n\tspf=none (mail.henemm.com: no SPF "
+    "records found for xdkimpassspfpasssmtp.mailfroma@spoofer-domain.invalid) "
+    f'smtp.mailfrom="{H2B_INJECTED_MAILFROM}";\r\n\tiprev=pass policy.iprev=178.104.143.19;'
+    "\r\n\tdmarc=fail (policy not aligned) header.from=henemm.com policy.dmarc=quarantine"
+)
+
+# F002: doppelter Property-Schluessel im selben Segment, beide Reihenfolgen ⇒
+# mehrdeutig ⇒ ganzer Header unlesbar (nie "erster/letzter gewinnt").
+AR_DUPLICATE_MAILFROM_ALIGNED_FIRST = (
+    f"{TEST_AUTHSERV_ID}; spf=pass smtp.mailfrom=u@henemm.com smtp.mailfrom=u@evil.example"
+)
+AR_DUPLICATE_MAILFROM_FOREIGN_FIRST = (
+    f"{TEST_AUTHSERV_ID}; spf=pass smtp.mailfrom=u@evil.example smtp.mailfrom=u@henemm.com"
+)
+
+# F003: leerer smtp.mailfrom-Wert mit spf=pass — bei leerer from_domain waere
+# "" == "" ausgerichtet; nur die Pruefung "from_domain leer ⇒ ablehnen" schuetzt.
+AR_SPF_PASS_EMPTY_MAILFROM = f"{TEST_AUTHSERV_ID}; spf=pass smtp.mailfrom="
+
+# F004: mailfrom-Domain ist der Teil nach dem LETZTEN @ (Spec 5a, Regel b).
+AR_MAILFROM_LAST_AT_ALIGNED = (
+    f"{TEST_AUTHSERV_ID}; spf=pass smtp.mailfrom=a@evil.example@henemm.com; "
+    "dmarc=none header.from=henemm.com"
+)
+AR_MAILFROM_LAST_AT_FOREIGN = (
+    f"{TEST_AUTHSERV_ID}; spf=pass smtp.mailfrom=a@henemm.com@evil.example; "
+    "dmarc=none header.from=henemm.com"
+)
