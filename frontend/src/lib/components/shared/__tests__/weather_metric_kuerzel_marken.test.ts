@@ -36,6 +36,9 @@ import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
+
+// #2654 (i18n F5): Wortlaut steht im Katalog — die Ratsche liest den Quelltext mit eingesetzten de-Werten.
+import { quelleMitKatalog } from '../../../i18n/__tests__/quelleMitKatalog.ts';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parse } from 'svelte/compiler';
@@ -58,7 +61,7 @@ const KURZFORM_BADGE = 'wm2-kurzform-badge';
 type Knoten = Record<string, any>;
 
 function parseComponent(path: string): any {
-	return parse(readFileSync(path, 'utf-8'), { modern: true });
+	return parse(quelleMitKatalog(readFileSync(path, 'utf-8')), { modern: true });
 }
 
 /** Tiefensuche mit Elternkette — die brauchen wir, um "die Marke steht in

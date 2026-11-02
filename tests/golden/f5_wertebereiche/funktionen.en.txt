@@ -1,0 +1,4 @@
+resolveTripMetricsOverviewState(auswahl) → {"kind":"selected","names":["Temperature","Wind gusts","Snow depth"],"unknownCount":1}
+resolveTripMetricsOverviewState(leer) → {"kind":"empty"}
+thunderThresholdLevelsFromCatalog → [{"id":"leicht","label":"Leicht","float":1},{"id":"mittel","label":"Mittel","float":2},{"id":"hoch","label":"Hoch","float":3}]
+deriveThunderThresholdLevels([kein,leicht,mittel,hoch]) → [{"id":"leicht","label":"Leicht","float":1},{"id":"mittel","label":"Mittel","float":2},{"id":"hoch","label":"Hoch","float":3}]

@@ -1,0 +1,241 @@
+{
+	"metrics": [
+		{
+			"metric_id": "precipitation",
+			"sms_symbols": [
+				"R"
+			]
+		},
+		{
+			"metric_id": "rain_probability",
+			"sms_symbols": [
+				"PR"
+			]
+		},
+		{
+			"metric_id": "wind",
+			"sms_symbols": [
+				"W"
+			]
+		},
+		{
+			"metric_id": "gust",
+			"sms_symbols": [
+				"G"
+			]
+		},
+		{
+			"metric_id": "thunder",
+			"sms_symbols": [
+				"TH",
+				"TH+"
+			]
+		},
+		{
+			"metric_id": "snow_depth",
+			"sms_symbols": [
+				"SD"
+			]
+		},
+		{
+			"metric_id": "snowfall_limit",
+			"sms_symbols": [
+				"SL"
+			]
+		},
+		{
+			"metric_id": "fresh_snow",
+			"sms_symbols": [
+				"NS24+"
+			]
+		},
+		{
+			"metric_id": "wind_chill",
+			"sms_symbols": [
+				"TF"
+			]
+		},
+		{
+			"metric_id": "humidity",
+			"sms_symbols": [
+				"HU"
+			]
+		},
+		{
+			"metric_id": "dewpoint",
+			"sms_symbols": [
+				"DP"
+			]
+		},
+		{
+			"metric_id": "wind_direction",
+			"sms_symbols": [
+				"WD"
+			]
+		},
+		{
+			"metric_id": "cape",
+			"sms_symbols": [
+				"CP"
+			]
+		},
+		{
+			"metric_id": "precip_type",
+			"sms_symbols": [
+				"PT"
+			]
+		},
+		{
+			"metric_id": "cloud_total",
+			"sms_symbols": [
+				"CT"
+			]
+		},
+		{
+			"metric_id": "cloud_low",
+			"sms_symbols": [
+				"CL"
+			]
+		},
+		{
+			"metric_id": "cloud_mid",
+			"sms_symbols": [
+				"CM"
+			]
+		},
+		{
+			"metric_id": "cloud_high",
+			"sms_symbols": [
+				"CH"
+			]
+		},
+		{
+			"metric_id": "visibility",
+			"sms_symbols": [
+				"VS"
+			]
+		},
+		{
+			"metric_id": "sunshine",
+			"sms_symbols": [
+				"SU"
+			]
+		},
+		{
+			"metric_id": "uv_index",
+			"sms_symbols": [
+				"UV"
+			]
+		},
+		{
+			"metric_id": "pressure",
+			"sms_symbols": [
+				"HP"
+			]
+		},
+		{
+			"metric_id": "freezing_level",
+			"sms_symbols": [
+				"FZ"
+			]
+		},
+		{
+			"metric_id": "temperature_night",
+			"sms_symbols": [
+				"N"
+			]
+		},
+		{
+			"metric_id": "temperature_day_low",
+			"sms_symbols": [
+				"L"
+			]
+		},
+		{
+			"metric_id": "temperature_day_high",
+			"sms_symbols": [
+				"D"
+			]
+		},
+		{
+			"metric_id": "wind_chill_night",
+			"sms_symbols": [
+				"FN"
+			]
+		},
+		{
+			"metric_id": "wind_chill_day_low",
+			"sms_symbols": [
+				"FL"
+			]
+		},
+		{
+			"metric_id": "wind_chill_day_high",
+			"sms_symbols": [
+				"FD"
+			]
+		}
+	],
+	"hazards": [
+		{
+			"hazard": "thunderstorm",
+			"sms_symbol": "TS",
+			"label": "Gewitter"
+		},
+		{
+			"hazard": "flood",
+			"sms_symbol": "FO",
+			"label": "Hochwasser/Erdrutsch"
+		},
+		{
+			"hazard": "rain",
+			"sms_symbol": "RA",
+			"label": "Starkregen"
+		},
+		{
+			"hazard": "wind_gust",
+			"sms_symbol": "WG",
+			"label": "Sturm"
+		},
+		{
+			"hazard": "snow",
+			"sms_symbol": "SN",
+			"label": "Schneefall"
+		},
+		{
+			"hazard": "avalanche",
+			"sms_symbol": "AW",
+			"label": "Lawine"
+		},
+		{
+			"hazard": "avalanche_bulletin",
+			"sms_symbol": "AV",
+			"label": "Lawinenstufe"
+		},
+		{
+			"hazard": "black_ice",
+			"sms_symbol": "IC",
+			"label": "Glatteis"
+		},
+		{
+			"hazard": "extreme_heat",
+			"sms_symbol": "HT",
+			"label": "Hitze"
+		},
+		{
+			"hazard": "extreme_cold",
+			"sms_symbol": "CD",
+			"label": "Kälte"
+		},
+		{
+			"hazard": "wildfire_risk",
+			"sms_symbol": "FR",
+			"label": "Waldbrand-Gefahr"
+		},
+		{
+			"hazard": "access_ban",
+			"sms_symbol": "AB",
+			"label": "Zugang gesperrt"
+		}
+	]
+}

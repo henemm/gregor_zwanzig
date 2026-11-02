@@ -180,9 +180,19 @@ export const HORIZONS_ALL: Horizons = {
 // aus GET /api/catalog/metrics. Single Source of Truth (Adversary F002).
 // Frühere lokale Duplikate in metricsEditor.ts und WeatherConfigDialog.svelte
 // wurden durch Import dieses Typs ersetzt.
+export type { MetricLabelFields } from './i18n/metricLabel';
+
 export interface MetricEntry {
 	id: string;
 	label: string;
+	/** Issue #2654 (i18n F5): Namen je Sprache aus dem Register (P1 #2662);
+	 *  Anzeige nur ueber `metricLabel()` (lib/i18n/metricLabel.ts). */
+	label_de?: string;
+	label_en?: string;
+	alert_label?: string;
+	alert_label_en?: string;
+	/** Issue #2654: Kennung der Auswertung (min/max/avg/sum), nur Vergleichs-Eintraege. */
+	aggregation?: string;
 	unit: string;
 	category: string;
 	default_enabled: boolean;
@@ -530,6 +540,9 @@ export function toCompareProfile(profile: ActivityProfile): string {
 export interface CompareMetricCatalogEntry {
 	key: string;
 	label: string;
+	/** Issue #2654 (i18n F5): optional; /api/compare/metrics liefert es heute nicht
+	 *  (Annahme A2) — der Name kommt dann aus dem Register (`metricById`). */
+	label_en?: string;
 	unit?: string;
 	decimals?: number;
 	higherIsBetter?: boolean;

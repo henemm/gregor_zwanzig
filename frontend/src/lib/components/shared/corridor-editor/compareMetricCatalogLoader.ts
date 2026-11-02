@@ -11,6 +11,9 @@
 // dieser Mapper ist vollstaendiger (CompareMetricDef statt nur {metric,label}).
 
 import { api } from '$lib/api';
+import { trFor, type Lang, type MessageKey } from '../../../i18n/index.ts';
+import { metricLabel, type MetricLabelFields } from '../../../i18n/metricLabel.ts';
+import { de } from '../../../i18n/messages/de/index.ts';
 import type { CompareMetricCatalogEntry, CompareMetricCatalogResponse } from '$lib/types';
 import {
 	_COMPARE_DEFAULTS,
@@ -210,14 +213,43 @@ export interface ThunderThresholdLevel {
  * Katalog (AC-7).
  */
 export function deriveThunderThresholdLevels(
-	ordinalLabels: string[] | undefined
+	ordinalLabels: string[] | undefined,
+	lang: Lang = 'de'
 ): ThunderThresholdLevel[] {
 	if (!ordinalLabels || ordinalLabels.length === 0) return [];
 	return ordinalLabels.slice(1).map((label, index) => ({
 		id: label,
-		label: label.charAt(0).toUpperCase() + label.slice(1),
+		label: ordinalStufeLabel(label, lang),
 		float: index + 1
 	}));
+}
+
+// Issue #2654 (i18n F5): die Stufen kommen aus dem Register (THUNDER_LABEL_DE,
+// `ordinalLabels`) und sind zugleich ihre Kennung — die Anzeige wechselt die
+// Sprache ueber den Katalog (`wertebereiche.gewitter_stufe.<stufe>`); Kennung (`id`)
+// und Wert (`float`) bleiben. Bewusst KEINE lokale Stufenliste (#1911, Regel A):
+// der Schluessel entsteht aus der Kennung, die der Katalog liefert.
+// i18n-dynamic: wertebereiche.gewitter_stufe.
+
+/** Anzeige einer Ordinal-Stufe in `lang`; unbekannte Stufe: grossgeschrieben wie bisher. */
+export function ordinalStufeLabel(stufe: string, lang: Lang): string {
+	const k = `wertebereiche.gewitter_stufe.${stufe}`;
+	return k in de ? trFor(lang, k as MessageKey) : stufe.charAt(0).toUpperCase() + stufe.slice(1);
+}
+
+/**
+ * Issue #2654 (i18n F5, Annahme A2): Anzeigename eines Vergleichs-Eintrags.
+ * /api/compare/metrics liefert nur den deutschen Namen; die Sprachform steht im
+ * Register (/api/metrics, `metricById`) unter der Kennung `metric_id`. Fehlt der
+ * Register-Eintrag, bleibt der Name aus der Vergleichs-Antwort.
+ */
+export function vergleichsMetrikLabel(
+	entry: MetricLabelFields & { metric_id?: string },
+	register: Record<string, MetricLabelFields>,
+	lang: Lang
+): string {
+	const r = entry.metric_id ? register[entry.metric_id] : undefined;
+	return metricLabel(r ?? entry, lang);
 }
 
 /**
@@ -229,8 +261,9 @@ export function deriveThunderThresholdLevels(
  * -> leeres Array, kein Absturz (AC-7).
  */
 export function thunderThresholdLevelsFromCatalog(
-	entries: CompareSelectionEntry[]
+	entries: CompareSelectionEntry[],
+	lang: Lang = 'de'
 ): ThunderThresholdLevel[] {
 	const entry = (entries ?? []).find((e) => e.metric === 'thunder_level_max');
-	return deriveThunderThresholdLevels(entry?.ordinalLabels);
+	return deriveThunderThresholdLevels(entry?.ordinalLabels, lang);
 }

@@ -190,6 +190,10 @@ export function wirdGescanntTs(pfad: string): boolean {
 /** Ab F6 (#2655): .ts-Module migrierter Komponentenordner; spaetere Pakete tragen ihren Ordner ein. */
 export const TS_KOMPONENTEN_ORDNER = [
 	'lib/components/shared/versand-tab/',
+	// F5 (#2654): Wertebereiche-Reiter, Trip-Metrik-Namen, Vergleichs-Katalog-Loader, metricLabel
+	'lib/components/shared/weather-metrics-tab/',
+	'lib/components/shared/trip-metrics/',
+	'lib/i18n/metricLabel.ts',
 	// F8 (#2657): Layout-Reiter, Korridor-Editor, Mail-Inhalt-Konstanten, GPX-Seite
 	'lib/components/shared/layout-tab/',
 	'lib/components/shared/corridor-editor/',

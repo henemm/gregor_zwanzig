@@ -1068,7 +1068,10 @@ const EINBETTUNGEN = [
 			channelBuckets: {}, activeChannel: 'email', compareChannel: 'email',
 			friendlyMap: {}, highlight: null,
 			// #2276 S6g: Wertprops statt `wiz` — derselbe Zustand, ohne Zustandsobjekt.
-			activeMetricKeys: gerendertVergleich(), channelActiveMetricKeys: {}
+			activeMetricKeys: gerendertVergleich(), channelActiveMetricKeys: {},
+			// #2654 (i18n F5): die Vergleichs-Namen haengen an der Oberflaechensprache
+			// (Store-Wert `$locale`) — gesaet wie eine Prop, Deutsch wie der Bestand.
+			$locale: 'de'
 		})
 	},
 	{

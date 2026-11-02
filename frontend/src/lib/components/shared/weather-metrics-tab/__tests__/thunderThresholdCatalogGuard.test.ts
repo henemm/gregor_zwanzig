@@ -150,9 +150,11 @@ describe('#1911 AC-3 (Verdrahtung): die Gewitter-Zeile bezieht `levels` aus thun
 				'geteilte Funktion (compareMetricCatalogLoader.ts), nicht ins Template.'
 		);
 		const argNames = (levelsExpr?.arguments ?? []).map((a: any) => a?.name);
+		// #2654 (i18n F5): zweites Argument ist die Oberflaechensprache (`$locale`,
+		// reaktiv) — die Stufen-KENNUNGEN und Werte kommen weiter nur aus dem Katalog.
 		assert.deepEqual(
 			argNames,
-			['compareCatalog'],
+			['compareCatalog', '$locale'],
 			`AC-3 FAIL: thunderThresholdLevelsFromCatalog(...) wird nicht mit \`compareCatalog\` ` +
 				`aufgerufen (Argumente: ${JSON.stringify(argNames)}).`
 		);

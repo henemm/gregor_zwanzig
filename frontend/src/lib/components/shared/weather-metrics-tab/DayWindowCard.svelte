@@ -16,6 +16,7 @@
 	// Speicher-Weg).
 
 	import { Card } from '$lib/components/atoms';
+	import { t } from '$lib/i18n';
 	import { clampDayWindowEndHour } from '../versand-tab/dayWindowClamp.ts';
 
 	interface Props {
@@ -54,12 +55,12 @@
 
 <Card padding={18} data-testid="day-window-control">
 	<div class="dwc-head">
-		<div class="dwc-title">Tagesfenster</div>
-		<div class="dwc-sub">Zeitraum für Stundentabelle, Vergleichswerte, SMS/Kurzzusammenfassung</div>
+		<div class="dwc-title">{$t('wertebereiche.tagesfenster.titel')}</div>
+		<div class="dwc-sub">{$t('wertebereiche.tagesfenster.untertitel')}</div>
 	</div>
 	<div class="dwc-body">
 		<label class="dwc-time-label">
-			<span class="dwc-time-caption">Von</span>
+			<span class="dwc-time-caption">{$t('wertebereiche.tagesfenster.von')}</span>
 			<select
 				data-testid="day-window-start-hour"
 				class="dwc-time-input"
@@ -72,7 +73,7 @@
 			</select>
 		</label>
 		<label class="dwc-time-label">
-			<span class="dwc-time-caption">Bis</span>
+			<span class="dwc-time-caption">{$t('wertebereiche.tagesfenster.bis')}</span>
 			<select
 				data-testid="day-window-end-hour"
 				class="dwc-time-input"
@@ -87,7 +88,7 @@
 	</div>
 	{#if wrapsMidnight}
 		<div class="dwc-wrap-hint" data-testid="day-window-wrap-hint">
-			Geht über Mitternacht — endet am Folgetag.
+			{$t('wertebereiche.tagesfenster.ueber_mitternacht')}
 		</div>
 	{/if}
 </Card>

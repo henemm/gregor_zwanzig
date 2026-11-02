@@ -5,6 +5,18 @@
 	import type { MetricEntry } from '../../trip-detail/metricsEditor.ts';
 	import { CATEGORY_ORDER, CATEGORY_LABELS } from '../../trip-detail/metricsEditor.ts';
 	import type { Highlight } from '../../trip-detail/metricsEditor.ts';
+	import { t, locale, type MessageKey } from '$lib/i18n';
+	import { metricLabel } from '$lib/i18n/metricLabel';
+
+	// Issue #2654 (i18n F5): Kategorie-Ueberschriften ueber den Katalog; unbekannte
+	// Kategorie wie bisher (CATEGORY_LABELS bzw. Kennung).
+	const KATEGORIE: Record<string, MessageKey> = {
+		temperature: 'wertebereiche.kategorie.temperature',
+		wind: 'wertebereiche.kategorie.wind',
+		precipitation: 'wertebereiche.kategorie.precipitation',
+		atmosphere: 'wertebereiche.kategorie.atmosphere',
+		winter: 'wertebereiche.kategorie.winter'
+	};
 
 	interface Props {
 		catalog: Record<string, MetricEntry[]>;
@@ -24,15 +36,15 @@
 
 <div class="grundauswahl" data-testid="wm2-grundauswahl">
 	<div class="section-subhead">
-		Welche Metriken ins Briefing?
-		<span class="count">{totalActive()} aktiv</span>
+		{$t('wertebereiche.grundauswahl.frage')}
+		<span class="count">{$t('wertebereiche.grundauswahl.aktiv', { anzahl: totalActive() })}</span>
 	</div>
 	<div class="categories">
 		{#each CATEGORY_ORDER as cat}
 			{@const metrics = catalog[cat] ?? []}
 			{#if metrics.length > 0}
 				<div class="category">
-					<div class="cat-label mono">{CATEGORY_LABELS[cat] ?? cat}</div>
+					<div class="cat-label mono">{KATEGORIE[cat] ? $t(KATEGORIE[cat]) : (CATEGORY_LABELS[cat] ?? cat)}</div>
 					<div class="toggle-row">
 						{#each metrics as m}
 							{@const on = activeSet.has(m.id)}
@@ -43,10 +55,10 @@
 								class:on
 								class:hl
 								onclick={() => onToggle(m.id, on)}
-								title={m.label}
+								title={metricLabel(m, $locale)}
 							>
 								{#if on}<span class="check-mark" aria-hidden="true">✓</span>{/if}
-								{m.label}
+								{metricLabel(m, $locale)}
 							</button>
 						{/each}
 					</div>
@@ -55,7 +67,7 @@
 		{/each}
 	</div>
 	<div class="hint">
-		Aktivierte Metriken erscheinen in Abschnitt 3, wo du Reihenfolge und Darstellung festlegst.
+		{$t('wertebereiche.grundauswahl.hinweis')}
 	</div>
 </div>
 
