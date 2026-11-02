@@ -1,5 +1,4 @@
 {
-  "src/output/adapters/trip_result.py": 5,
   "src/output/channels/telegram.py": 8,
   "src/output/renderers/alert/hours.py": 1,
   "src/output/renderers/alert/model.py": 1,
