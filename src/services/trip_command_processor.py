@@ -248,7 +248,7 @@ _BARE_KEYWORD_MAP = {
     "skip":     "skip",
     "strecke":  "strecke",
     "kuerzel":  "kuerzel",
-    "kürzel":   "kuerzel",
+    "kürzel":   "kuerzel",  # i18n-log: Eingabe-Alias (Befehlswort), kein Ausgabetext
     "startdatum": "startdatum",
     "report":   "report",
 }
@@ -524,8 +524,9 @@ def codes_text(en: bool, vergleich: bool = False) -> str:
         _codes_gruppe((builder.VIGI_HR, builder.VIGI_TH), bed),
         _codes_gruppe((builder.UNAVAILABLE_SYMBOL,), bed),
     ))
-    k = ("Weather", "More", "Alerts after !") if en else ("Wetter", "Weitere", "Warnungen nach !")
-    return "\n".join(([] if en else ["Kürzel"]) + [
+    lang: Lang = "en" if en else "de"
+    k = tuple(t(f"inbound.kuerzel.{x}", lang) for x in ("wetter", "weitere", "warnungen"))
+    return "\n".join(([] if en else [t("inbound.kuerzel.titel", lang)]) + [
         f"{k[0]}: {', '.join(_codes_gruppe(g, bed) for g in wetter)}.",
         f"{k[1]}: {', '.join(_codes_gruppe(g, bed) for g in _CODES_WEITERE)}.",
         f"Format: {', '.join(f'{z} {t}' for z, t in formate.items())}.",
@@ -637,19 +638,25 @@ def _traegt_tageswerte(point) -> bool:
 # Eigenes Praefix `act_` verhindert Kollision mit den `dd_*`/`tl_*`-Drilldown-
 # Callbacks oben. Dispatch der einzelnen Buttons: siehe
 # inbound_telegram_reader._CALLBACK_QUERY_MAP.
-ACTIONS_BUBBLE_BUTTONS = {
-    "inline_keyboard": [
-        [
-            {"text": "📋 Übersicht", "callback_data": "act_overview"},
-            {"text": "⏸ Pause", "callback_data": "act_pause"},
-        ],
-        [
-            {"text": "⏭ Überspringen", "callback_data": "act_skip"},
-            {"text": "📊 Spalten", "callback_data": "act_columns"},
-        ],
-        [{"text": "❓ Hilfe", "callback_data": "act_help"}],
-    ]
-}
+# Issue #2751: Beschriftung aus dem Katalog ``inbound.knopf.*``, ``callback_data``
+# sprachneutral. ``ACTIONS_BUBBLE_BUTTONS`` bleibt die deutsche Fassung
+# (byte-gleich), bis ``renderers/narrow.py`` die Nutzersprache durchreicht.
+_AKTIONS_KNOEPFE = (
+    (("uebersicht", "act_overview"), ("pause", "act_pause")),
+    (("ueberspringen", "act_skip"), ("spalten", "act_columns")),
+    (("hilfe", "act_help"),),
+)
+
+
+def actions_bubble_buttons(lang: Lang = "de") -> dict:
+    """Aktionen-Bubble-Keyboard mit Beschriftung in ``lang``."""
+    return {"inline_keyboard": [
+        [{"text": t(f"inbound.knopf.{k}", lang), "callback_data": cb} for k, cb in reihe]
+        for reihe in _AKTIONS_KNOEPFE
+    ]}
+
+
+ACTIONS_BUBBLE_BUTTONS = actions_bubble_buttons("de")
 
 _DRILLDOWN_PATTERN = re.compile(r"^dd_(thunder|wind|precip)_(today|tomorrow)$")
 _HOURS_PATTERN = re.compile(r"^dd_hours_(today|tomorrow)$")
