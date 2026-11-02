@@ -14,6 +14,9 @@
 	import * as Dialog from '$lib/components/ui/dialog/index.js';
 	import { Btn } from '$lib/components/atoms';
 	import { Select } from '$lib/components/ui/select';
+	// Issue #2659 (i18n F10): Texte aus dem Katalog; ohne Server-Text haelt `error` nur
+	// das Flag '' und die Meldung entsteht beim Rendern in der aktuellen Sprache.
+	import { t, type MessageKey } from '$lib/i18n';
 
 	interface Props {
 		open: boolean;
@@ -25,7 +28,7 @@
 	let name = $state('');
 	let profile = $state<ActivityProfile | ''>('');
 	let saving = $state(false);
-	let error = $state('');
+	let error = $state<string | null>(null);
 
 	let canSubmit = $derived(name.trim().length > 0 && !saving);
 
@@ -33,7 +36,7 @@
 		name = '';
 		profile = '';
 		saving = false;
-		error = '';
+		error = null;
 	}
 
 	function close() {
@@ -44,7 +47,7 @@
 	async function submit() {
 		if (!canSubmit) return;
 		saving = true;
-		error = '';
+		error = null;
 		try {
 			const group = await api.post<Group>('/api/groups', {
 				name: name.trim(),
@@ -55,7 +58,7 @@
 			reset();
 		} catch (e: unknown) {
 			const body = e as { detail?: string; error?: string };
-			error = body?.detail ?? body?.error ?? 'Gruppe konnte nicht angelegt werden';
+			error = body?.detail ?? body?.error ?? '';
 		} finally {
 			saving = false;
 		}
@@ -65,46 +68,46 @@
 <Dialog.Root bind:open onOpenChange={(o) => { if (!o) close(); }}>
 	<Dialog.Content data-testid="create-group-dialog" class="max-w-sm">
 		<Dialog.Header>
-			<Dialog.Title>Neue Gruppe</Dialog.Title>
+			<Dialog.Title>{$t('vergleich.gruppe.neu')}</Dialog.Title>
 		</Dialog.Header>
 
 		<div class="dialog-body">
 			<label class="field">
-				<span class="field-label">Name <span class="required">*</span></span>
+				<span class="field-label">{$t('listen.spalte.name')} <span class="required">*</span></span>
 				<input
 					data-testid="create-group-name"
 					type="text"
 					bind:value={name}
 					maxlength="80"
-					placeholder="z.B. Zillertal"
+					placeholder={$t('vergleich.gruppe.beispiel')}
 					required
 				/>
 			</label>
 
 			<label class="field">
-				<span class="field-label">Standard-Profil (optional)</span>
+				<span class="field-label">{$t('vergleich.gruppe.standard_profil')}</span>
 				<Select data-testid="create-group-profile" bind:value={profile} class="w-full">
-					<option value="">— Kein Profil —</option>
+					<option value="">{$t('vergleich.gruppe.kein_profil')}</option>
 					{#each ACTIVITY_PROFILE_OPTIONS as opt}
-						<option value={opt.value}>{opt.label}</option>
+						<option value={opt.value}>{$t(`bausteine.profil.${opt.value}` as MessageKey)}</option>
 					{/each}
 				</Select>
 			</label>
 
-			{#if error}
-				<p class="error-msg" data-testid="create-group-error">{error}</p>
+			{#if error !== null}
+				<p class="error-msg" data-testid="create-group-error">{error || $t('vergleich.gruppe.fehler')}</p>
 			{/if}
 		</div>
 
 		<Dialog.Footer>
-			<Btn variant="outline" onclick={close} disabled={saving}>Abbrechen</Btn>
+			<Btn variant="outline" onclick={close} disabled={saving}>{$t('aktionen.abbrechen')}</Btn>
 			<Btn
 				variant="primary"
 				data-testid="create-group-submit"
 				disabled={!canSubmit}
 				onclick={submit}
 			>
-				{saving ? 'Anlegen…' : 'Anlegen'}
+				{saving ? $t('vergleich.gruppe.legt_an') : $t('konto.passkey.anlegen')}
 			</Btn>
 		</Dialog.Footer>
 	</Dialog.Content>

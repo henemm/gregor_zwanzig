@@ -1091,7 +1091,10 @@ const EINBETTUNGEN = [
 			catalog: toCompareSelectionEntries({ metrics: live().compare } as never),
 			metricKeys: null,
 			grundauswahl: gerendertVergleich(),
-			smsSymbols: tripKuerzelById()
+			smsSymbols: tripKuerzelById(),
+			// #2659 (i18n F10): Namen ueber das Register je Oberflaechensprache.
+			$locale: 'de',
+			register: {}
 		})
 	},
 	{
@@ -1105,7 +1108,9 @@ const EINBETTUNGEN = [
 		saat: () => ({
 			catalog: toCompareSelectionEntries({ metrics: live().compare } as never),
 			metricKeys: null,
-			smsSymbols: tripKuerzelById()
+			smsSymbols: tripKuerzelById(),
+			$locale: 'de',
+			register: {}
 		})
 	}
 ] as const;

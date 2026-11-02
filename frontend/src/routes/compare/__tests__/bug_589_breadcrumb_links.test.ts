@@ -24,8 +24,14 @@ import { join } from 'node:path';
 
 const SRC = fileURLToPath(new URL('../../..', import.meta.url)); // -> frontend/src/
 
+// Issue #2659 (i18n F10): der Kruemel kommt aus dem Katalog (listen.vergleiche.titel,
+// in Grossbuchstaben) — die Quelle wird mit dem deutschen Katalogwert gelesen.
+import { de } from '../../../lib/i18n/messages/de/index.ts';
 function read(rel: string): string {
-	return readFileSync(join(SRC, rel), 'utf8');
+	return readFileSync(join(SRC, rel), 'utf8').replace(
+		"{$t('listen.vergleiche.titel').toUpperCase()}",
+		(de as Record<string, string>)['listen.vergleiche.titel'].toUpperCase()
+	);
 }
 
 const PAGE = 'routes/compare/[id]/+page.svelte';

@@ -46,6 +46,7 @@ interface Zustand {
 	deleteDialogOpen: boolean;
 	isDeleting: boolean;
 	sendMsg: string | null;
+	sendKey: string | null;
 }
 interface Aufruf {
 	url: string;
@@ -54,7 +55,7 @@ interface Aufruf {
 
 /** Baut die Seitenlogik (nur Loesch-Pfad) und laeuft gegen gestubbtes fetch/location. */
 function baue(deleteStatus: number) {
-	const z: Zustand = { deleteDialogOpen: false, isDeleting: false, sendMsg: null };
+	const z: Zustand = { deleteDialogOpen: false, isDeleting: false, sendMsg: null, sendKey: null };
 	const aufrufe: Aufruf[] = [];
 	const location = { href: '/compare/cp-2214' };
 	const fetchStub = async (url: string, init?: { method?: string }) => {
@@ -64,13 +65,14 @@ function baue(deleteStatus: number) {
 	const handlerNamen = ['handleDeleteConfirm', 'handleDeleteCancel', 'handleDeleteDialogOpenChange'].filter(
 		(n) => new RegExp(`function\\s+${n}\\s*\\(`).test(SCRIPT)
 	);
-	const teile = [funktion('handleAction'), funktion('deletePreset'), funktion('fehlerText'), ...handlerNamen.map(funktion)];
+	const teile = [funktion('handleAction'), funktion('deletePreset'), funktion('fehlerMeldung'), funktion('meldung'), ...handlerNamen.map(funktion)];
 	// `$state`-Variablen werden durch ein Zustandsobjekt ersetzt (Svelte-Runen gibt es hier nicht).
 	const körper = teile
 		.join('\n')
 		.replace(/\bdeleteDialogOpen\b/g, 'z.deleteDialogOpen')
 		.replace(/\bisDeleting\b/g, 'z.isDeleting')
-		.replace(/\bsendMsg\b/g, 'z.sendMsg');
+		.replace(/\bsendMsg\b/g, 'z.sendMsg')
+		.replace(/\bsendKey\b/g, 'z.sendKey');
 	const fabrik = new Function(
 		'z',
 		'fetch',
@@ -164,7 +166,10 @@ describe('#2214 — Dialog-Verhalten', () => {
 		assert.ok(s.handleDeleteConfirm, 'handleDeleteConfirm fehlt');
 		await s.handleDeleteConfirm!();
 		assert.equal(s.aufrufe.filter(loeschen).length, 1);
-		assert.equal(s.z.sendMsg, 'Löschen fehlgeschlagen.');
+		// Issue #2659 (i18n F10): ohne Server-Detail haelt die Seite den Schluessel; angezeigt
+		// wird „Löschen fehlgeschlagen." bzw. „Deleting failed." beim Rendern.
+		assert.equal(s.z.sendMsg, null);
+		assert.equal(s.z.sendKey, 'vergleich.hub.delete_fehler');
 		assert.equal(s.location.href, '/compare/cp-2214', 'keine Navigation bei Fehler');
 		assert.equal(s.z.deleteDialogOpen, false, 'Dialog wird bei Fehler geschlossen');
 		assert.equal(s.z.isDeleting, false);

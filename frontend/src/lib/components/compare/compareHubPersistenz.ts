@@ -18,6 +18,7 @@ import type { ComparePreset } from '../../types.ts';
 import { buildComparePresetPartialPayload } from './compareEditorSave.ts';
 import type { CompareStatus } from './subscriptionHelpers.ts';
 import { computePauseToggle } from './subscriptionHelpers.ts';
+import { tr } from '../../i18n/index.ts';
 
 /**
  * Deep-Copy-Helfer fuer den Prae-Aktions-Zustand (Edge Case Z.1020, Rollback
@@ -94,7 +95,8 @@ export async function buildFreshTogglePutPayload(
 /** Modell der Hub-Aktivierungs-Karte (Soll: `screen-compare-detail.jsx:273-277`
  * + `:313-325`). Die JSX-active-Copy "im konfigurierten Rhythmus" ist eine
  * timeWindow-Stale-Spur (Spec § Umsetzungsregel) und wird NICHT mitkopiert —
- * ersetzt durch "zu den konfigurierten Zeiten". */
+ * ersetzt durch "zu den konfigurierten Zeiten".
+ * Issue #2659 (i18n F10): Texte je Aufruf aus dem Katalog — der Aufrufer liest `$locale`. */
 export function hubActivationBanner(status: CompareStatus): {
 	statusLabel: string;
 	text: string;
@@ -104,26 +106,26 @@ export function hubActivationBanner(status: CompareStatus): {
 } {
 	if (status === 'active') {
 		return {
-			statusLabel: 'Aktiv',
-			text: 'Läuft automatisch — unbegrenzt, bis du pausierst. Das Briefing geht zu den konfigurierten Zeiten in die Kanäle.',
-			cta: 'Pausieren',
+			statusLabel: tr('trip.status.active'),
+			text: tr('vergleich.aktivierung.aktiv_text'),
+			cta: tr('aktionen.pause'),
 			border: 'var(--g-good)',
 			dotTone: 'good'
 		};
 	}
 	if (status === 'paused') {
 		return {
-			statusLabel: 'Pausiert',
-			text: 'Pausiert. Es geht aktuell kein Briefing raus.',
-			cta: 'Aktivieren',
+			statusLabel: tr('trip.status.paused'),
+			text: tr('vergleich.aktivierung.pausiert_text'),
+			cta: tr('vergleich.aktivierung.aktivieren'),
 			border: 'var(--g-rule)',
 			dotTone: 'neutral'
 		};
 	}
 	return {
-		statusLabel: 'Entwurf',
-		text: 'Noch nicht aktiv. Sobald Orte, Idealwerte und mindestens ein Kanal stehen, kannst du den Vergleich aktivieren.',
-		cta: 'Aktivieren',
+		statusLabel: tr('trip.status.draft'),
+		text: tr('vergleich.aktivierung.entwurf_text'),
+		cta: tr('vergleich.aktivierung.aktivieren'),
 		border: 'var(--g-accent)',
 		dotTone: 'neutral'
 	};

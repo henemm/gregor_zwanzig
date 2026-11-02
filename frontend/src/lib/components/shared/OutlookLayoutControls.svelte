@@ -31,7 +31,10 @@
 	} from './weather-metrics-tab/compareMetricOrder.ts';
 	import { splitChannelMetricsForDisplay } from './weather-metrics-tab/channelMetricLayouts.ts';
 	import { outlookFriendlyCapable } from './weather-metrics-tab/outlookFriendlyCapability.ts';
-	import { t } from '$lib/i18n';
+	import { locale, t } from '$lib/i18n';
+	// Issue #2659 (i18n F10): voller Name aus dem Register (label_en, sonst deutsch).
+	// (Regel wie vergleichsMetrikLabel, compareMetricCatalogLoader.ts — ohne dessen Netz-Import.)
+	import { metricLabel, type MetricLabelFields } from '../../i18n/metricLabel.ts';
 
 	// Issue #1720 S1: flache Props statt `CompareWizardState`-Bindung — dasselbe
 	// Bauteil bedient jetzt Ortsvergleich UND Trip (parametrisiert statt
@@ -87,12 +90,14 @@
 		 *  Trip-Editor seine Marke speist. Diese Flaeche laedt den Endpoint
 		 *  bewusst NICHT selbst: zwei Ladewege waeren zwei Quellen. */
 		smsSymbols?: Record<string, string[]>;
+		/** Register (GET /api/metrics, `metricById` des Reiters) fuer den vollen Namen je Sprache. */
+		register?: Record<string, MetricLabelFields>;
 	}
 	let {
 		metricKeys, catalog, onMetricKeys, onOutlookCommit,
 		title, enabled = true, onEnabledChange,
 		showEmailOnlyHint = true, grundauswahl = null,
-		metricFormats = null, onMetricFormats, smsSymbols = {}
+		metricFormats = null, onMetricFormats, smsSymbols = {}, register = {}
 	}: Props = $props();
 
 	function handleEnabledToggle(checked: boolean): void {
@@ -107,6 +112,7 @@
 	// `label`/`col_label`/`sms_code`, es unterscheidet sich nur die
 	// Auswertung — die traegt die Kennung nicht mehr).
 	const outlookMetricById = $derived.by(() => {
+		const lang = $locale;
 		const map: Record<string, MetricEntry> = {};
 		// Issue #1401 (A1): Auswertung als eigenes Element mitgeben.
 		// Issue #1453 (AC-7): alle drei Namensformen mitgeben.
@@ -114,7 +120,7 @@
 			const id = e.metric_id ?? e.metric;
 			if (map[id]) continue;
 			map[id] = {
-				id, label: e.label, aggregation_label: e.aggregation_label,
+				id, label: metricLabel(register?.[id] ?? { label: e.label }, lang), aggregation_label: e.aggregation_label,
 				col_label: e.col_label, sms_code: e.sms_code
 			} as MetricEntry;
 		}

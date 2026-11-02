@@ -155,7 +155,8 @@ const K = {
 	CompareNewEditor: await komp(path.join(KOMP, 'compare-new', 'CompareNewEditor.svelte')),
 	// Gesperrter Reiter (mobil): der Toast zeigt den Sperr-Hinweis der Anlege-Kette.
 	CompareNewToast: await variante(path.join(KOMP, 'compare-new', 'CompareNewEditor.svelte'), [
-		["let lockToastMsg = $state('');", "let lockToastMsg = $state('erst Vergleich benennen');"],
+		// Bestand hielt den Hinweistext; seit F10 die Reiter-Kennung (Hinweis beim Rendern).
+		['let lockToastTab = $state<CompareNewTabId | null>(null);', "let lockToastTab = $state<CompareNewTabId | null>('orte');"],
 		['let lockToastVisible = $state(false);', 'let lockToastVisible = $state(true);']
 	])
 };
@@ -214,7 +215,8 @@ const S = {
 	senden: await seitenVariante([['let isSending = $state(false);', 'let isSending = $state(true);']]),
 	meldung: await seitenVariante([
 		['let sendMsg = $state<string | null>(null);', "let sendMsg = $state<string | null>('Test-Briefing gesendet');"],
-		['let pauseError = $state<string | null>(null);', "let pauseError = $state<string | null>('Status-Änderung fehlgeschlagen. Bitte versuche es erneut.');"]
+		// Bestand: pauseError trug den Text; seit F10 nur das Flag (Text beim Rendern).
+		['let pauseError = $state(false);', 'let pauseError = $state(true);']
 	])
 };
 export function seiteRendern(fall: keyof typeof S, preset: Record<string, unknown> = vergleichAktiv(), orte = ORTE.slice(0, 3)): string {
@@ -305,6 +307,23 @@ export function anlegenToastRendern(): string {
 	return html(K.CompareNewToast, { locations: ORTE, groups: GRUPPEN, stateOverride: { activeTab: 'vergleich', isMobileViewport: true } }, kontext(wizard()));
 }
 
+// ── Fehler-Flags (nur neuer Quelltext): ohne Server-Text halten die Bausteine nur ein
+// Flag bzw. einen Schluessel; die Meldung entsteht beim Rendern in der aktuellen Sprache.
+const FLAG = {
+	seite: await seitenVariante([['let sendKey = $state<MessageKey | null>(null);', "let sendKey = $state<MessageKey | null>('vergleich.hub.test_gesendet');"]]),
+	seiteFehler: await seitenVariante([['let sendKey = $state<MessageKey | null>(null);', "let sendKey = $state<MessageKey | null>('vergleich.hub.archivieren_fehler');"]]),
+	orte: await variante(cmp('steps/Step2Orte.svelte'), [['let resolveErrorKey = $state<MessageKey | null>(null);', "let resolveErrorKey = $state<MessageKey | null>('vergleich.orte.format_unbekannt');"]]),
+	ortNeu: await variante(cmp('LocationNewModal.svelte'), [['let saveError: string | null = $state(null);', "let saveError: string | null = $state('');"]])
+};
+export function fehlerFlagsRendern(): string[] {
+	return [
+		html(FLAG.seite, { data: { preset: vergleichAktiv(), locations: ORTE.slice(0, 3), profile: null } }),
+		html(FLAG.seiteFehler, { data: { preset: vergleichAktiv(), locations: ORTE.slice(0, 3), profile: null } }),
+		html(FLAG.orte, { locations: ORTE, groups: GRUPPEN }, kontext(wizard())),
+		html(FLAG.ortNeu, { onsave: () => {}, oncancel: () => {} })
+	];
+}
+
 // ── Golden ───────────────────────────────────────────────────────────────────
 
 export function htmlFaelle(): Record<string, () => string> {
@@ -329,7 +348,7 @@ export function funktionsTabelle(): string {
 		const j = (v: unknown) => JSON.stringify(v);
 		const H = helfer;
 		const p = (extra: Record<string, unknown>) => vergleichAktiv(extra);
-		z.push(`STATUS_MAP → ${j(Object.fromEntries(Object.entries(H.STATUS_MAP).map(([k, v]) => [k, (v as { label: string }).label])))}`);
+		z.push(`STATUS_MAP → ${j(Object.fromEntries(Object.entries(H.STATUS_MAP).map(([k, v]) => [k, tr((v as { key: string }).key)])))}`);
 		for (const [name, extra] of [['daily 7–9', { hour_from: 7, hour_to: 9 }], ['weekly', { schedule: 'weekly' }], ['manual', { schedule: 'manual' }]] as const)
 			z.push(`presetScheduleLabel(${name}) → ${j(H.presetScheduleLabel(p(extra)))}`);
 		z.push(`formatNextSend(null) → ${j(H.formatNextSend(null))}`);

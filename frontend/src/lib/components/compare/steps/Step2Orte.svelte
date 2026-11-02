@@ -13,6 +13,9 @@
 	import type { CompareWizardState } from '../compareWizardState.svelte';
 	import type { Location, Group } from '$lib/types';
 	import { groupLocations } from '../locationHelpers';
+	// Issue #2659 (i18n F10): Texte aus dem Katalog. Fehler ohne Server-Text halten nur
+	// den Schluessel (`resolveErrorKey`) — die Meldung entsteht beim Rendern.
+	import { t, type MessageKey } from '$lib/i18n';
 
 	interface Props {
 		locations: Location[];
@@ -43,6 +46,17 @@
 	let resolving = $state(false);
 	let preview = $state<ResolveResult | null>(null);
 	let resolveError = $state<string | null>(null);
+	let resolveErrorKey = $state<MessageKey | null>(null);
+	/** Server-Text, sonst Katalogschluessel (aufgeloest im Markup). */
+	function setzeFehler(e: unknown, key: MessageKey): void {
+		const msg = extractMsg(e);
+		resolveError = msg;
+		resolveErrorKey = msg ? null : key;
+	}
+	function fehlerLeeren(): void {
+		resolveError = null;
+		resolveErrorKey = null;
+	}
 	let adding = $state(false);
 	let fallbackLat = $state('');
 	let fallbackLon = $state('');
@@ -65,9 +79,9 @@
 	// AC-2: Counter-Text nach CE_OrteTab-Fidelity
 	const counterText = $derived.by(() => {
 		const n = ws.pickedIds.length;
-		if (n < 2) return 'min. 2 erforderlich';
-		if (n <= 5) return 'passt';
-		return 'viel — Empfehlung 3–5';
+		if (n < 2) return $t('vergleich.orte.min_erforderlich');
+		if (n <= 5) return $t('vergleich.orte.passt');
+		return $t('vergleich.orte.viel');
 	});
 
 	const counterColor = $derived(
@@ -78,9 +92,9 @@
 	// behält counterText/counterColor oben unverändert (längere Formulierung).
 	const denseCounterText = $derived.by(() => {
 		const n = ws.pickedIds.length;
-		if (n < 2) return 'min. 2';
-		if (n > 5) return 'viel — Empf. 3–5';
-		return 'passt';
+		if (n < 2) return $t('vergleich.orte.min_kurz');
+		if (n > 5) return $t('vergleich.orte.viel_kurz');
+		return $t('vergleich.orte.passt');
 	});
 
 	// Picked-Orte aus der Locations-Liste aufgelöst
@@ -102,7 +116,7 @@
 		for (const s of sections) {
 			if (s.locations.length > 0) result.push([s.group.name, s.locations]);
 		}
-		if (ungrouped.length > 0) result.push(['Weitere', ungrouped]);
+		if (ungrouped.length > 0) result.push([$t('vergleich.orte.weitere'), ungrouped]);
 		return result;
 	});
 
@@ -116,7 +130,7 @@
 	async function resolve() {
 		if (!importInput.trim()) return;
 		resolving = true;
-		resolveError = null;
+		fehlerLeeren();
 		preview = null;
 		try {
 			// #2361: eigenes Budget 40 s (Resolver bis ca. 30 s), s. api.ts.
@@ -126,7 +140,7 @@
 			// AC-2/AC-4: Namensfeld vorbelegen — erkannter Name, sonst Koordinaten, NIE die URL.
 			nameDraft = preview.suggested_name ?? `${preview.lat.toFixed(4)}, ${preview.lon.toFixed(4)}`;
 		} catch (e: unknown) {
-			resolveError = extractMsg(e) ?? 'Format nicht erkannt';
+			setzeFehler(e, 'vergleich.orte.format_unbekannt');
 		} finally {
 			resolving = false;
 		}
@@ -154,7 +168,7 @@
 			nameDraft = '';
 			preview = null;
 		} catch (e: unknown) {
-			resolveError = extractMsg(e) ?? 'Fehler beim Hinzufügen';
+			setzeFehler(e, 'vergleich.orte.fehler_hinzufuegen');
 		} finally {
 			adding = false;
 		}
@@ -176,11 +190,11 @@
 				ws.pickedIds = [...ws.pickedIds, loc.id];
 			}
 			importInput = '';
-			resolveError = null;
+			fehlerLeeren();
 			fallbackLat = '';
 			fallbackLon = '';
 		} catch (e: unknown) {
-			resolveError = extractMsg(e) ?? 'Fehler beim Hinzufügen';
+			setzeFehler(e, 'vergleich.orte.fehler_hinzufuegen');
 		} finally {
 			adding = false;
 		}
@@ -212,15 +226,15 @@
 	<div style="display:grid; grid-template-columns:1fr 1fr; gap:24px; margin-bottom:28px;">
 		<!-- Smart-Import Panel -->
 		<div>
-			<div style="font-family:var(--g-font-mono); font-size:10px; letter-spacing:0.10em; text-transform:uppercase; color:var(--g-ink-3); font-weight:600; margin-bottom:14px;">Neuen Ort hinzufügen</div>
+			<div style="font-family:var(--g-font-mono); font-size:10px; letter-spacing:0.10em; text-transform:uppercase; color:var(--g-ink-3); font-weight:600; margin-bottom:14px;">{$t('vergleich.orte.neuen_ort')}</div>
 			<div style="padding:16px 16px 14px; background:var(--g-card); border:1px solid var(--g-rule); border-radius:var(--g-r-3);">
 				<div style="margin-bottom:10px;">
-					<div style="font-size:11px; color:var(--g-ink-4); margin-bottom:6px;">Smart-Import · URL aus Komoot/Google Maps oder Koordinaten</div>
+					<div style="font-size:11px; color:var(--g-ink-4); margin-bottom:6px;">{$t('vergleich.orte.smart_import')}</div>
 					<div style="display:flex; align-items:center; gap:10px;">
 						<input
 							data-testid="compare-step2-smart-import-input"
 							type="text"
-							placeholder="Komoot-URL, Google Maps oder Koordinaten"
+							placeholder={$t('vergleich.orte.import_platzhalter')}
 							bind:value={importInput}
 							style="flex:1; padding:8px 10px; font-size:13px; border:1px solid var(--g-rule); border-radius:var(--g-r-2); background:var(--g-paper); font-family:var(--g-font-sans); color:var(--g-ink);"
 						/>
@@ -230,21 +244,21 @@
 							disabled={resolving || !importInput.trim()}
 							onclick={resolve}
 							style="padding:8px 14px; font-size:13px; border:1px solid var(--g-rule); border-radius:var(--g-r-2); background:transparent; cursor:pointer; font-family:var(--g-font-sans); color:var(--g-ink); opacity:{resolving || !importInput.trim() ? '0.4' : '1'};"
-						>{resolving ? '…' : 'Auflösen'}</button>
+						>{resolving ? '…' : $t('vergleich.orte.aufloesen')}</button>
 					</div>
 				</div>
 
-				{#if resolveError}
-					<p style="font-size:12px; color:var(--g-danger); margin:4px 0;">{resolveError}</p>
+				{#if resolveError || resolveErrorKey}
+					<p style="font-size:12px; color:var(--g-danger); margin:4px 0;">{resolveErrorKey ? $t(resolveErrorKey) : resolveError}</p>
 					<!-- Fallback: manuelle Koordinaten -->
 					<div style="margin-top:10px;">
-						<div style="font-size:11px; color:var(--g-ink-4); margin-bottom:6px;">Koordinaten manuell eingeben:</div>
+						<div style="font-size:11px; color:var(--g-ink-4); margin-bottom:6px;">{$t('vergleich.orte.manuell')}</div>
 						<div style="display:flex; gap:8px; margin-bottom:6px;">
 							<input
 								data-testid="compare-step2-fallback-lat"
 								type="number"
 								step="any"
-								placeholder="Breitengrad (z.B. 47.2692)"
+								placeholder={$t('vergleich.orte.breitengrad')}
 								bind:value={fallbackLat}
 								style="flex:1; padding:6px 8px; font-size:12px; border:1px solid var(--g-rule); border-radius:var(--g-r-2); background:var(--g-paper); font-family:var(--g-font-sans);"
 							/>
@@ -252,7 +266,7 @@
 								data-testid="compare-step2-fallback-lon"
 								type="number"
 								step="any"
-								placeholder="Längengrad (z.B. 11.4041)"
+								placeholder={$t('vergleich.orte.laengengrad')}
 								bind:value={fallbackLon}
 								style="flex:1; padding:6px 8px; font-size:12px; border:1px solid var(--g-rule); border-radius:var(--g-r-2); background:var(--g-paper); font-family:var(--g-font-sans);"
 							/>
@@ -263,20 +277,20 @@
 							disabled={adding || !fallbackLat || !fallbackLon}
 							onclick={addLocationFromFallback}
 							style="padding:5px 12px; font-size:12px; border-radius:var(--g-r-2); background:var(--g-accent); color:#fff; border:none; cursor:pointer; opacity:{adding || !fallbackLat || !fallbackLon ? '0.4' : '1'};"
-						>{adding ? 'Wird hinzugefügt…' : 'Hinzufügen'}</button>
+						>{adding ? $t('vergleich.orte.wird_hinzugefuegt') : $t('vergleich.orte.hinzufuegen')}</button>
 					</div>
 				{/if}
 
 				{#if preview}
 					<div style="padding:10px 12px; background:var(--g-paper-deep); border-radius:var(--g-r-2); margin-bottom:10px; margin-top:8px;">
-						<div style="font-family:var(--g-font-mono); font-size:10px; color:var(--g-ink-4); letter-spacing:0.06em; text-transform:uppercase; margin-bottom:4px;">Erkannt</div>
+						<div style="font-family:var(--g-font-mono); font-size:10px; color:var(--g-ink-4); letter-spacing:0.06em; text-transform:uppercase; margin-bottom:4px;">{$t('vergleich.orte.erkannt')}</div>
 						<div style="font-family:var(--g-font-mono); font-size:11px; color:var(--g-ink-3); margin-top:2px; margin-bottom:8px;">{preview.lat.toFixed(4)}, {preview.lon.toFixed(4)}{preview.elevation_m !== undefined ? ` · ${preview.elevation_m} m` : ''}</div>
-						<label style="display:block; font-size:11px; color:var(--g-ink-4); margin-bottom:4px;" for="compare-step2-name-input">Name</label>
+						<label style="display:block; font-size:11px; color:var(--g-ink-4); margin-bottom:4px;" for="compare-step2-name-input">{$t('listen.spalte.name')}</label>
 						<input
 							id="compare-step2-name-input"
 							data-testid="compare-step2-name-input"
 							type="text"
-							placeholder="Name des Ortes"
+							placeholder={$t('vergleich.orte.name_platzhalter')}
 							bind:value={nameDraft}
 							style="width:100%; padding:7px 9px; font-size:13px; font-weight:600; border:1px solid var(--g-rule); border-radius:var(--g-r-2); background:var(--g-paper); font-family:var(--g-font-sans); color:var(--g-ink); box-sizing:border-box;"
 						/>
@@ -286,7 +300,7 @@
 						disabled={adding}
 						onclick={addLocation}
 						style="width:100%; padding:8px; font-size:13px; border-radius:var(--g-r-2); background:var(--g-accent); color:#fff; border:none; cursor:pointer; font-family:var(--g-font-sans); opacity:{adding ? '0.4' : '1'};"
-					>{adding ? 'Wird hinzugefügt…' : '＋ Zum Vergleich hinzufügen'}</button>
+					>{adding ? $t('vergleich.orte.wird_hinzugefuegt') : $t('vergleich.orte.zum_vergleich')}</button>
 				{/if}
 			</div>
 		</div>
@@ -294,7 +308,7 @@
 		<!-- Picked-Liste (rechte Spalte) — AC-1/AC-2 -->
 		<div>
 			<div style="display:flex; justify-content:space-between; align-items:baseline; margin-bottom:14px;">
-				<div style="font-family:var(--g-font-mono); font-size:10px; letter-spacing:0.10em; text-transform:uppercase; color:var(--g-ink-3); font-weight:600;">Im Vergleich · {pickedLocations.length}</div>
+				<div style="font-family:var(--g-font-mono); font-size:10px; letter-spacing:0.10em; text-transform:uppercase; color:var(--g-ink-3); font-weight:600;">{$t('vergleich.orte.im_vergleich', { anzahl: pickedLocations.length })}</div>
 				<span
 					data-testid="compare-step2-counter"
 					style="font-family:var(--g-font-mono); font-size:10.5px; color:{counterColor}; letter-spacing:0.04em;"
@@ -304,8 +318,8 @@
 			<div data-testid="compare-step2-picked-list">
 				{#if pickedLocations.length === 0}
 					<div style="padding:28px 18px; border:1px dashed var(--g-rule); border-radius:var(--g-r-2); text-align:center; color:var(--g-ink-3); font-size:13px; line-height:1.6;">
-						Noch keine Orte.<br/>
-						<span style="font-family:var(--g-font-mono); font-size:11px; color:var(--g-ink-4);">links hinzufügen oder unten auswählen</span>
+						{$t('vergleich.orte.noch_keine')}<br/>
+						<span style="font-family:var(--g-font-mono); font-size:11px; color:var(--g-ink-4);">{$t('vergleich.orte.links_oder_unten')}</span>
 					</div>
 				{:else}
 					<div style="display:flex; flex-direction:column; gap:6px;">
@@ -335,10 +349,10 @@
 
 	<!-- Bibliothek: Group-Entity-gruppiert (group_id, AC-13) -->
 	<div data-testid="compare-step2-library">
-	<div style="font-family:var(--g-font-mono); font-size:10px; letter-spacing:0.10em; text-transform:uppercase; color:var(--g-ink-3); font-weight:600; margin-bottom:12px;">… oder aus gespeicherten Orten wählen</div>
+	<div style="font-family:var(--g-font-mono); font-size:10px; letter-spacing:0.10em; text-transform:uppercase; color:var(--g-ink-3); font-weight:600; margin-bottom:12px;">{$t('vergleich.orte.aus_gespeicherten')}</div>
 
 	{#if allLocations.length === 0}
-		<p style="font-size:13px; color:var(--g-ink-4);">Noch keine Orte gespeichert.</p>
+		<p style="font-size:13px; color:var(--g-ink-4);">{$t('vergleich.orte.keine_gespeichert')}</p>
 	{:else}
 		<div
 			style="background:var(--g-card); border:1px solid var(--g-rule); border-radius:var(--g-r-3); padding:14px 18px;"
@@ -378,7 +392,7 @@
 	<!-- Issue #1256 Scheibe 8d (AC-6/AC-7) — mobiler 1-spaltiger Stack
 	     (Soll: screen-compare-editor-mobile.jsx Z.226-266). -->
 	<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-		<div style="font-family:var(--g-font-mono); font-size:10px; letter-spacing:0.10em; text-transform:uppercase; color:var(--g-ink-3); font-weight:600;">Im Vergleich · {pickedLocations.length}</div>
+		<div style="font-family:var(--g-font-mono); font-size:10px; letter-spacing:0.10em; text-transform:uppercase; color:var(--g-ink-3); font-weight:600;">{$t('vergleich.orte.im_vergleich', { anzahl: pickedLocations.length })}</div>
 		<span
 			data-testid="compare-step2-counter"
 			style="font-family:var(--g-font-mono); font-size:10.5px; color:{counterColor}; letter-spacing:0.04em;"
@@ -387,7 +401,7 @@
 
 	{#if pickedLocations.length === 0}
 		<div style="padding:24px 16px; border:1px dashed var(--g-rule); border-radius:var(--g-r-3); text-align:center; color:var(--g-ink-3); font-size:13px; margin-bottom:12px;">
-			Noch keine Orte gewählt.
+			{$t('vergleich.orte.keine_gewaehlt')}
 		</div>
 	{:else}
 		<div style="display:flex; flex-direction:column; gap:8px; margin-bottom:12px;">
@@ -419,7 +433,7 @@
 		style="display:flex; align-items:center; justify-content:center; gap:8px; width:100%; padding:14px; min-height:52px; background:var(--g-card); border:1px dashed var(--g-rule); border-radius:var(--g-r-3); cursor:pointer; font-size:14px; color:var(--g-ink-3); font-family:var(--g-font-sans);"
 	>
 		<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
-		Ort aus Bibliothek wählen
+		{$t('vergleich.orte.aus_bibliothek')}
 	</button>
 	{/if}
 </div>

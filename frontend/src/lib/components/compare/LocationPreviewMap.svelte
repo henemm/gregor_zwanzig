@@ -3,6 +3,7 @@
 	// Spec: docs/specs/modules/issue_266_location_preview_map.md
 
 	import { TopoBg } from '$lib/components/atoms';
+	import { t } from '$lib/i18n';
 
 	interface Props {
 		lat: number;
@@ -25,7 +26,7 @@
 		class="absolute inset-0"
 		pointer-events="none"
 		role="img"
-		aria-label="Kartenvorschau"
+		aria-label={$t('vergleich.ort.kartenvorschau')}
 	>
 		<!-- Zentrierter Accent-Pin: Teardrop-Pfad (20×28px), Spitze bei y=75 (Bildmitte) -->
 		<!-- transform: Pin-Breite 20 → x=110 (= 120 - 10), Pin-Höhe 28 → y=47 (= 75 - 28) -->

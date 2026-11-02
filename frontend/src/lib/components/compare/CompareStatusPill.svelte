@@ -11,6 +11,7 @@
 
 	import type { CompareStatus } from './subscriptionHelpers.js';
 	import { STATUS_MAP } from './subscriptionHelpers.js';
+	import { t } from '$lib/i18n';
 
 	interface Props {
 		status: CompareStatus;
@@ -19,7 +20,8 @@
 
 	let { status, class: className = '' }: Props = $props();
 
-	const label = $derived(STATUS_MAP[status]?.label ?? status);
+	// Issue #2659 (i18n F10): Schluessel aus STATUS_MAP, Text beim Rendern ($t).
+	const label = $derived(STATUS_MAP[status] ? $t(STATUS_MAP[status].key) : status);
 	const isFilled = $derived(status === 'active');
 </script>
 

@@ -19,6 +19,9 @@ import assert from 'node:assert/strict';
 import { readFileSync, existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { join } from 'node:path';
+// Issue #2659 (i18n F10): die Texte stehen im Katalog — die Modal-Quelle wird mit den
+// deutschen Katalogwerten gelesen, die Ratsche bewacht weiter den sichtbaren Text.
+import { quelleMitKatalogUndTabellen } from '../../../lib/i18n/__tests__/quelleMitKatalog.ts';
 
 const FRONTEND = fileURLToPath(new URL('../../../../', import.meta.url)); // -> frontend/
 
@@ -44,7 +47,7 @@ test('AC-1: +page.svelte importiert LocationNewModal', () => {
 });
 
 test('AC-1: LocationNewModal verwendet position:fixed fuer Overlay (kein Shadcn Dialog.Root)', () => {
-	const src = readFileSync(MODAL_PATH, 'utf-8');
+	const src = quelleMitKatalogUndTabellen(readFileSync(MODAL_PATH, 'utf-8'));
 	assert.ok(
 		src.includes('position:fixed') || src.includes('position: fixed'),
 		'LocationNewModal muss ein position:fixed Overlay-Div verwenden (kein Shadcn Dialog-Wrapper)'
@@ -57,7 +60,7 @@ test('AC-1: LocationNewModal verwendet position:fixed fuer Overlay (kein Shadcn 
 });
 
 test('AC-1: Modal-Card hat 720px Breite', () => {
-	const src = readFileSync(MODAL_PATH, 'utf-8');
+	const src = quelleMitKatalogUndTabellen(readFileSync(MODAL_PATH, 'utf-8'));
 	assert.ok(
 		src.includes('720px') || src.includes('width:720') || src.includes('width: 720'),
 		'Modal-Card muss 720px breit sein (per JSX-Spec)'
@@ -76,7 +79,7 @@ test('AC-1: +page.svelte zeigt LocationNewModal wenn create-Modus aktiv', () => 
 // ── AC-2: Smart-Import ruft POST /api/locations/resolve auf ───────────────
 
 test('AC-2: LocationNewModal enthaelt Aufruf von /api/locations/resolve', () => {
-	const src = readFileSync(MODAL_PATH, 'utf-8');
+	const src = quelleMitKatalogUndTabellen(readFileSync(MODAL_PATH, 'utf-8'));
 	assert.ok(
 		src.includes('/api/locations/resolve'),
 		'LocationNewModal muss POST /api/locations/resolve aufrufen (Smart-Import)'
@@ -84,7 +87,7 @@ test('AC-2: LocationNewModal enthaelt Aufruf von /api/locations/resolve', () => 
 });
 
 test('AC-2: Vorschau-Grid zeigt KV-Eintraege nach Aufloesung', () => {
-	const src = readFileSync(MODAL_PATH, 'utf-8');
+	const src = quelleMitKatalogUndTabellen(readFileSync(MODAL_PATH, 'utf-8'));
 	// Pruefen dass KV-Atom genutzt wird
 	assert.ok(
 		src.includes('<KV') || src.includes('{@render') && src.includes('KV'),
@@ -93,7 +96,7 @@ test('AC-2: Vorschau-Grid zeigt KV-Eintraege nach Aufloesung', () => {
 });
 
 test('AC-2: Smart-Import-Feld und Format-Chips vorhanden', () => {
-	const src = readFileSync(MODAL_PATH, 'utf-8');
+	const src = quelleMitKatalogUndTabellen(readFileSync(MODAL_PATH, 'utf-8'));
 	// Mindestens einen Format-Chip oder die Chip-Render-Logik pruefen
 	assert.ok(
 		src.includes('Komoot') && src.includes('Google Maps'),
@@ -104,7 +107,7 @@ test('AC-2: Smart-Import-Feld und Format-Chips vorhanden', () => {
 // ── AC-3: Speichern ruft POST /api/locations auf und feuert onsave ─────────
 
 test('AC-3: LocationNewModal enthaelt Aufruf von /api/locations (ohne /resolve)', () => {
-	const src = readFileSync(MODAL_PATH, 'utf-8');
+	const src = quelleMitKatalogUndTabellen(readFileSync(MODAL_PATH, 'utf-8'));
 	// Muss /api/locations enthalten, aber getrennt von /resolve
 	assert.ok(
 		src.includes('/api/locations'),
@@ -113,7 +116,7 @@ test('AC-3: LocationNewModal enthaelt Aufruf von /api/locations (ohne /resolve)'
 });
 
 test('AC-3: LocationNewModal empfaengt onsave-Prop und ruft sie nach erfolgreichem Speichern auf', () => {
-	const src = readFileSync(MODAL_PATH, 'utf-8');
+	const src = quelleMitKatalogUndTabellen(readFileSync(MODAL_PATH, 'utf-8'));
 	assert.match(
 		src,
 		/onsave\s*[:(]/,
@@ -122,7 +125,7 @@ test('AC-3: LocationNewModal empfaengt onsave-Prop und ruft sie nach erfolgreich
 });
 
 test('AC-3: Speichern-Button ist vorhanden und an Speichern-Funktion gebunden', () => {
-	const src = readFileSync(MODAL_PATH, 'utf-8');
+	const src = quelleMitKatalogUndTabellen(readFileSync(MODAL_PATH, 'utf-8'));
 	assert.ok(
 		src.includes('Ort speichern'),
 		'LocationNewModal muss Button mit Text "Ort speichern" enthalten'
@@ -132,7 +135,7 @@ test('AC-3: Speichern-Button ist vorhanden und an Speichern-Funktion gebunden', 
 // ── AC-4: Abbrechen und Schliessen-Button feuern oncancel ─────────────────
 
 test('AC-4: LocationNewModal empfaengt oncancel-Prop', () => {
-	const src = readFileSync(MODAL_PATH, 'utf-8');
+	const src = quelleMitKatalogUndTabellen(readFileSync(MODAL_PATH, 'utf-8'));
 	assert.match(
 		src,
 		/oncancel\s*[:(]/,
@@ -141,7 +144,7 @@ test('AC-4: LocationNewModal empfaengt oncancel-Prop', () => {
 });
 
 test('AC-4: Abbrechen-Button und Schliessen-Button (×) sind vorhanden', () => {
-	const src = readFileSync(MODAL_PATH, 'utf-8');
+	const src = quelleMitKatalogUndTabellen(readFileSync(MODAL_PATH, 'utf-8'));
 	assert.ok(
 		src.includes('Abbrechen'),
 		'LocationNewModal muss Button mit Text "Abbrechen" enthalten'
@@ -155,7 +158,7 @@ test('AC-4: Abbrechen-Button und Schliessen-Button (×) sind vorhanden', () => {
 // ── AC-5: Aktivitaetsprofil-Auswahl mit Akzent-Hervorhebung ───────────────
 
 test('AC-5: LocationNewModal rendert Aktivitaetsprofil-Karten fuer alle Profile', () => {
-	const src = readFileSync(MODAL_PATH, 'utf-8');
+	const src = quelleMitKatalogUndTabellen(readFileSync(MODAL_PATH, 'utf-8'));
 	// ACTIVITY_PROFILE_OPTIONS muss importiert oder die Profile direkt referenziert sein
 	assert.ok(
 		src.includes('ACTIVITY_PROFILE_OPTIONS') || src.includes('activity_profile') || src.includes('wandern'),
@@ -164,7 +167,7 @@ test('AC-5: LocationNewModal rendert Aktivitaetsprofil-Karten fuer alle Profile'
 });
 
 test('AC-5: Aktive Profil-Karte bekommt Akzent-Border und Akzent-Tint-Hintergrund', () => {
-	const src = readFileSync(MODAL_PATH, 'utf-8');
+	const src = quelleMitKatalogUndTabellen(readFileSync(MODAL_PATH, 'utf-8'));
 	assert.ok(
 		src.includes('g-accent') || src.includes('var(--g-accent'),
 		'LocationNewModal muss var(--g-accent) fuer die aktive Karte nutzen (Akzent-Border/Tint)'
@@ -172,7 +175,7 @@ test('AC-5: Aktive Profil-Karte bekommt Akzent-Border und Akzent-Tint-Hintergrun
 });
 
 test('AC-5: Sektion 3 hat nummerierte Ueberschrift "Meteorologische Brille"', () => {
-	const src = readFileSync(MODAL_PATH, 'utf-8');
+	const src = quelleMitKatalogUndTabellen(readFileSync(MODAL_PATH, 'utf-8'));
 	assert.ok(
 		src.includes('Meteorologische Brille') || src.includes('Aktivitätsprofil'),
 		'LocationNewModal muss Sektion 3 "Meteorologische Brille" enthalten'
@@ -182,7 +185,7 @@ test('AC-5: Sektion 3 hat nummerierte Ueberschrift "Meteorologische Brille"', ()
 // ── Zusatz: Design-Token-Konformitaet ─────────────────────────────────────
 
 test('Design-Tokens: LocationNewModal nutzt nur var(--g-*) — kein rohes Hex', () => {
-	const src = readFileSync(MODAL_PATH, 'utf-8');
+	const src = quelleMitKatalogUndTabellen(readFileSync(MODAL_PATH, 'utf-8'));
 	// Pruefen auf rohes Hex (6-stellig) ausserhalb von Kommentaren
 	const noComments = src.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*/g, '');
 	const hexMatches = noComments.match(/#[0-9a-fA-F]{6}\b/g) ?? [];
@@ -194,7 +197,7 @@ test('Design-Tokens: LocationNewModal nutzt nur var(--g-*) — kein rohes Hex', 
 });
 
 test('Design-Tokens: LocationNewModal importiert Atoms aus $lib/components/atoms', () => {
-	const src = readFileSync(MODAL_PATH, 'utf-8');
+	const src = quelleMitKatalogUndTabellen(readFileSync(MODAL_PATH, 'utf-8'));
 	assert.match(
 		src,
 		/from\s+['"][^'"]*components\/atoms[^'"]*['"]/,
