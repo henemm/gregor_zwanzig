@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { t, tn } from '$lib/i18n';
 	// Issue #173 — PresetRow: klickbare Zeile im Metriken-Editor, ersetzt das
 	// vormalige Template-Dropdown. Single Source of Truth fuer Aktiv-Status ist
 	// `selectedTemplate` aus WeatherMetricsTab (basiert auf display_config.preset_name).
@@ -23,8 +24,8 @@
 		 [data-testid^="weather-metrics-preset-row-"] mit hasText sonst sowohl
 		 den Button als auch den Name-Span findet. Siehe epic-138-block-b AC-6d. -->
 	<span class="preset-name" data-testid="preset-row-name-{id}">{label}</span>
-	<span class="preset-count" data-testid="weather-metrics-preset-row-{id}-count">{metricCount} Metriken</span>
-	<span class="preset-badge" data-testid="weather-metrics-preset-row-{id}-badge">Standard</span>
+	<span class="preset-count" data-testid="weather-metrics-preset-row-{id}-count">{$tn('trip.layout.preset_metriken', metricCount)}</span>
+	<span class="preset-badge" data-testid="weather-metrics-preset-row-{id}-badge">{$t('trip.layout.standard')}</span>
 </button>
 
 <style>

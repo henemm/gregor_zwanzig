@@ -1,5 +1,6 @@
 <script lang="ts">
 	import ChannelDot from './ChannelDot.svelte';
+	import { t, type MessageKey } from '$lib/i18n';
 
 	interface Props {
 		kind: 'morning' | 'evening' | 'alert';
@@ -18,10 +19,10 @@
 				: 'var(--g-rule)'
 	);
 
-	const labels: Record<string, string> = {
-		morning: 'Morgen-Briefing',
-		evening: 'Abend-Briefing',
-		alert: 'Alert-Trigger'
+	const labels: Record<string, MessageKey> = {
+		morning: 'trip.briefing.morgen',
+		evening: 'trip.briefing.abend',
+		alert: 'trip.uebersicht.alert_trigger'
 	};
 </script>
 
@@ -43,7 +44,7 @@
 			flex-shrink: 0;
 		"
 	></span>
-	<span style="flex: 1; font-size: 13px; color: var(--g-ink);">{labels[kind] ?? kind}</span>
+	<span style="flex: 1; font-size: 13px; color: var(--g-ink);">{labels[kind] ? $t(labels[kind]) : kind}</span>
 	<span
 		style="
 			font-family: var(--g-font-mono, ui-monospace, monospace);

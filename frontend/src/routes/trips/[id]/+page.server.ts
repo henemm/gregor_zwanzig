@@ -2,9 +2,10 @@ import { error } from '@sveltejs/kit';
 import type { PageServerLoad } from './$types.js';
 import { apiBase as API } from '$lib/server/apiBase.js';
 import { loadProfile } from '$lib/server/profileLoader.js';
+import { trFor } from '$lib/i18n/index.js';
 
 
-export const load: PageServerLoad = async ({ params, cookies }) => {
+export const load: PageServerLoad = async ({ params, cookies, locals }) => {
 	const session = cookies.get('gz_session');
 	const headers: Record<string, string> = {};
 	if (session) headers['Cookie'] = `gz_session=${session}`;
@@ -24,10 +25,10 @@ export const load: PageServerLoad = async ({ params, cookies }) => {
 		loadProfile(cookies)
 	]);
 	if (res.status === 404) {
-		throw error(404, `Trip '${params.id}' nicht gefunden`);
+		throw error(404, trFor(locals.lang, 'trip.hub.nicht_gefunden', { id: params.id }));
 	}
 	if (!res.ok) {
-		throw error(res.status, 'Fehler beim Laden des Trips');
+		throw error(res.status, trFor(locals.lang, 'trip.hub.laden_fehler'));
 	}
 
 	// Issue #1395 S3: den Stempel der ausgelieferten Fassung mitgeben, damit der

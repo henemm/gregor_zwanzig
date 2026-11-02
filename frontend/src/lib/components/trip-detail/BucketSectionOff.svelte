@@ -4,6 +4,17 @@
 	import { Eyebrow } from '$lib/components/atoms';
 	import * as Card from '$lib/components/ui/card/index.js';
 	import type { MetricEntry } from './metricsEditor.ts';
+	import { t, tn, locale, type MessageKey } from '$lib/i18n';
+	import { metricLabel } from '$lib/i18n/metricLabel';
+
+	// i18n F9: Kategorie-Namen je Sprache (F5-Schluessel), sonst die uebergebene Beschriftung.
+	const KATEGORIE: Record<string, MessageKey> = {
+		temperature: 'wertebereiche.kategorie.temperature',
+		wind: 'wertebereiche.kategorie.wind',
+		precipitation: 'wertebereiche.kategorie.precipitation',
+		atmosphere: 'wertebereiche.kategorie.atmosphere',
+		winter: 'wertebereiche.kategorie.winter'
+	};
 
 	interface Props {
 		items: string[];
@@ -43,29 +54,29 @@
 		onclick={() => (open = !open)}
 	>
 		<div>
-			<Eyebrow>Nicht im Briefing</Eyebrow>
+			<Eyebrow>{$t('trip.layout.nicht_im_briefing')}</Eyebrow>
 			<div class="title">
-				{items.length} weitere Metriken <span class="muted">· nicht ausgegeben</span>
+				{$tn('trip.layout.weitere_metriken', items.length)} <span class="muted">{$t('trip.layout.nicht_ausgegeben')}</span>
 			</div>
 		</div>
-		<span class="chev">{open ? '▴ Einklappen' : '▾ Aufklappen'}</span>
+		<span class="chev">{open ? $t('trip.layout.einklappen') : $t('trip.layout.aufklappen')}</span>
 	</button>
 
 	{#if open}
 		<div class="body">
 			{#each grouped as g}
 				<div class="group">
-					<div class="group-label mono">{categoryLabels[g.cat] ?? g.cat}</div>
+					<div class="group-label mono">{categoryLabels[g.cat] === undefined ? g.cat : KATEGORIE[g.cat] ? $t(KATEGORIE[g.cat]) : categoryLabels[g.cat]}</div>
 					<div class="grid">
 						{#each g.metrics as m}
 							<div class="off-row" data-testid="off-metric-{m.id}">
 								<div class="off-label">
-									<div class="off-name">{m.label}</div>
+									<div class="off-name">{metricLabel(m, $locale)}</div>
 									<div class="off-meta mono">{m.unit || '—'} · {shortById[m.id] ?? m.label.slice(0, 5)}</div>
 								</div>
-								<button type="button" class="text-btn" data-testid="off-add-column-{m.id}" onclick={() => onAdd(m.id, 'primary')}>+ Spalte</button>
+								<button type="button" class="text-btn" data-testid="off-add-column-{m.id}" onclick={() => onAdd(m.id, 'primary')}>{$t('trip.layout.plus_spalte')}</button>
 								{#if !hideDetailButton}
-									<button type="button" class="text-btn" data-testid="off-add-detail-{m.id}" onclick={() => onAdd(m.id, 'secondary')}>+ Detail</button>
+									<button type="button" class="text-btn" data-testid="off-add-detail-{m.id}" onclick={() => onAdd(m.id, 'secondary')}>{$t('trip.layout.plus_detail')}</button>
 								{/if}
 							</div>
 						{/each}

@@ -9,6 +9,8 @@
 	import { computeHeaderStats } from '$lib/components/email-preview/headerStats';
 	import { Pill, WIcon } from '$lib/components/atoms';
 	import { wmoToWIconKind } from '$lib/utils/weatherUtils.js';
+	import { t, locale, type Lang } from '$lib/i18n';
+	import { fmtDate } from '$lib/i18n/format';
 
 	interface Props {
 		stage: Stage;
@@ -44,28 +46,29 @@
 
 	const riskLabel = $derived(
 		weatherData?.risk === 'green'
-			? 'Gering'
+			? $t('trip.risiko.gering')
 			: weatherData?.risk === 'yellow'
-				? 'Mittel'
+				? $t('trip.risiko.mittel')
 				: weatherData?.risk === 'red'
-					? 'Hoch'
+					? $t('trip.risiko.hoch')
 					: null
 	);
 
 	const stats = $derived(computeHeaderStats(stage));
 	const wptCount = $derived(stage.waypoints?.length ?? 0);
 
-	// Lokaler Date-Helper — deutsches Kurzformat "DD.MM."
-	function formatDate(iso: string | undefined | null): string {
+	// Lokaler Date-Helper — deutsch unveraendert "DD.MM.", englisch `Thu 30 Oct` (i18n F9).
+	function formatDate(iso: string | undefined | null, lang: Lang): string {
 		if (!iso) return '';
 		const clean = iso.split('T')[0];
 		const parts = clean.split('-');
 		if (parts.length < 3) return '';
-		const [, m, d] = parts;
+		const [y, m, d] = parts;
+		if (lang === 'en') return fmtDate(new Date(Number(y), Number(m) - 1, Number(d)), 'en', 'kurz');
 		return `${d}.${m}.`;
 	}
 
-	const dateLabel = $derived(formatDate(stage.date));
+	const dateLabel = $derived(formatDate(stage.date, $locale));
 </script>
 
 <button
@@ -100,19 +103,19 @@
 
 	<dl class="stat-strip">
 		<div>
-			<dt class="eyebrow">Distanz</dt>
-			<dd>{stats.distanceKm.toFixed(1)} km</dd>
+			<dt class="eyebrow">{$t('trip.etappe.distanz')}</dt>
+			<dd>{`${stats.distanceKm.toFixed(1)} km`}</dd>
 		</div>
 		<div>
-			<dt class="eyebrow">Aufstieg</dt>
-			<dd>{stats.ascentM} Hm</dd>
+			<dt class="eyebrow">{$t('trip.etappe.aufstieg')}</dt>
+			<dd>{$t('trip.etappe.hm', { wert: stats.ascentM })}</dd>
 		</div>
 		<div>
-			<dt class="eyebrow">Abstieg</dt>
-			<dd>{stats.descentM} Hm</dd>
+			<dt class="eyebrow">{$t('trip.etappe.abstieg')}</dt>
+			<dd>{$t('trip.etappe.hm', { wert: stats.descentM })}</dd>
 		</div>
 		<div>
-			<dt class="eyebrow">Wegpunkte</dt>
+			<dt class="eyebrow">{$t('trip.wegpunkte')}</dt>
 			<dd>{wptCount}</dd>
 		</div>
 	</dl>
@@ -125,10 +128,10 @@
 				<span class="eyebrow">{Math.round(ws.temp_min_c)}–{Math.round(ws.temp_max_c)} °C</span>
 			{/if}
 			{#if ws.wind_max_kmh != null}
-				<span class="eyebrow">Wind {Math.round(ws.wind_max_kmh)} km/h</span>
+				<span class="eyebrow">{$t('trip.etappe.wind', { wert: Math.round(ws.wind_max_kmh) })}</span>
 			{/if}
 			{#if ws.precip_mm != null && ws.precip_mm > 0}
-				<span class="eyebrow">{ws.precip_mm.toFixed(1)} mm</span>
+				<span class="eyebrow">{`${ws.precip_mm.toFixed(1)} mm`}</span>
 			{/if}
 		</div>
 	{/if}

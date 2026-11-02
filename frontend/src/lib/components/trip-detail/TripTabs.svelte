@@ -18,6 +18,7 @@
 	import EditStagesSection from '../edit/EditStagesSection.svelte';
 	import { subscriptionTabs, resolveTab, bereinigteTabAdresse, versandSprungStart } from '../shared/subscriptionTabs.ts';
 	import type { SaveStatus } from '$lib/stores/saveStatusStore.svelte';
+	import { t, locale, type MessageKey } from '$lib/i18n';
 
 	// Issue #2287: Badge-Schluessel = Reiter-Kennungen (gemeinsame Tabelle).
 	interface Badges {
@@ -77,11 +78,12 @@
 	// Wertebereiche und Versand eingefuegt.
 	// Issue #2287: Tabelle und Kennungen kommen aus der GEMEINSAMEN Reiter-Tabelle
 	// (shared/subscriptionTabs.ts) — dieselben Kennungen wie im Ortsvergleich-Hub.
-	const TABS = subscriptionTabs('trip').map((t) => ({ value: t.id, label: t.label }));
+	// i18n F9: Reiternamen entstehen in subscriptionTabs per tr() — `$locale` haelt sie reaktiv.
+	const TABS = $derived.by(() => (void $locale, subscriptionTabs('trip').map((r) => ({ value: r.id, label: r.label }))));
 
-	const PLACEHOLDERS: Record<string, string> = {
-		uebersicht: 'Inhalt folgt mit Issue #154 (Hero) + #156 (Höhenprofil) + #157 (Stage-Liste)',
-		etappen: 'Inhalt folgt mit Epic #137 (Wegpunkt-Editor)'
+	const PLACEHOLDERS: Record<string, MessageKey> = {
+		uebersicht: 'trip.hub.platzhalter_uebersicht',
+		etappen: 'trip.hub.platzhalter_etappen'
 	};
 
 	const segmentedOptions = $derived(
@@ -184,7 +186,7 @@
 		items={segmentedOptions}
 		active={activeTab}
 		onChange={(v) => void handleValueChange(v)}
-		ariaLabel="Tour-Detail"
+		ariaLabel={$t('trip.hub.tabs_aria')}
 	/>
 	{#each TABS as tab}
 		{#if activeTab === tab.value}
@@ -212,7 +214,7 @@
 				{:else if tab.value === 'alarme' && trip}
 					<AlarmeScheduleTab {trip} {onTripUpdate} {saveController} {metricsCatalog} />
 				{:else}
-					<p class="p-4 text-sm">{PLACEHOLDERS[tab.value]}</p>
+					<p class="p-4 text-sm">{PLACEHOLDERS[tab.value] ? $t(PLACEHOLDERS[tab.value]) : ''}</p>
 				{/if}
 			</div>
 		{/if}

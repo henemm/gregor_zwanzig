@@ -6,6 +6,8 @@
 	// Ziehen am Griff bzw. über dessen Tastatur-Pfad (ADR-0024).
 	// Design: docs/design/epic_331_output_layout/screen-metrics-editor.jsx
 	import type { MetricEntry } from './metricsEditor.ts';
+	import { t, locale } from '$lib/i18n';
+	import { metricLabel } from '$lib/i18n/metricLabel';
 
 	interface Props {
 		metric: MetricEntry;
@@ -38,41 +40,41 @@
 	{/if}
 
 	<div class="label-cell">
-		<div class="label">{metric.label}</div>
-		<div class="meta mono">{metric.unit || '—'} · Kürzel <span class="short">{short}</span></div>
+		<div class="label">{metricLabel(metric, $locale)}</div>
+		<div class="meta mono">{metric.unit || '—'} · {$t('trip.layout.kuerzel')} <span class="short">{short}</span></div>
 	</div>
 
 	<div class="mode-cell">
 		{#if hasIndicator}
-			<div class="mode-toggle" role="group" aria-label="Roh oder Einfach">
+			<div class="mode-toggle" role="group" aria-label={$t('trip.layout.roh_oder_einfach')}>
 				<button
 					type="button"
 					class="mode-btn mono"
 					class:active={!useIndicator}
 					data-testid="metric-mode-raw-{metric.id}"
 					onclick={() => onMode(false)}
-				>Roh</button>
+				>{$t('wertebereiche.reihenfolge.roh')}</button>
 				<button
 					type="button"
 					class="mode-btn mono"
 					class:active={useIndicator}
 					data-testid="metric-mode-scale-{metric.id}"
 					onclick={() => onMode(true)}
-				>Einfach</button>
+				>{$t('wertebereiche.reihenfolge.einfach')}</button>
 			</div>
 		{:else}
-			<span class="raw-only mono">nur Rohwert</span>
+			<span class="raw-only mono">{$t('trip.layout.nur_rohwert')}</span>
 		{/if}
 	</div>
 
 	<div class="move-cell">
 		{#if bucket === 'primary'}
 			{#if !hideDetailButton}
-				<button type="button" class="text-btn" data-testid="metric-to-detail-{metric.id}" onclick={() => onMove('secondary')}>→ Detail</button>
+				<button type="button" class="text-btn" data-testid="metric-to-detail-{metric.id}" onclick={() => onMove('secondary')}>{$t('trip.layout.zu_detail')}</button>
 			{/if}
 			<button type="button" class="text-btn" data-testid="metric-to-off-{metric.id}" onclick={() => onMove('off')}>✕</button>
 		{:else}
-			<button type="button" class="text-btn" data-testid="metric-to-column-{metric.id}" onclick={() => onMove('primary')}>↑ Spalte</button>
+			<button type="button" class="text-btn" data-testid="metric-to-column-{metric.id}" onclick={() => onMove('primary')}>{$t('trip.layout.zu_spalte')}</button>
 			<button type="button" class="text-btn" data-testid="metric-to-off-{metric.id}" onclick={() => onMove('off')}>✕</button>
 		{/if}
 	</div>

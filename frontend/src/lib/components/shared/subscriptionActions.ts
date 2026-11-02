@@ -6,6 +6,7 @@ import type { ComparePreset, Trip } from '../../types.js';
 import { deriveTripStatus } from '../../utils/tripStatus.ts';
 import { deriveStatusFromPreset } from '../compare/subscriptionHelpers.ts';
 import type { SubscriptionKind } from './subscriptionTabs.ts';
+import { tr, type MessageKey } from '../../i18n/index.ts';
 
 export type SubscriptionLifecycle = 'draft' | 'active' | 'paused' | 'archived';
 export type SubscriptionSurface = 'list' | 'hub' | 'mobile';
@@ -28,20 +29,28 @@ export interface SubscriptionAction {
 	danger?: boolean;
 }
 
-const A: Record<SubscriptionActionId, SubscriptionAction> = {
-	pause: { id: 'pause', label: 'Pausieren' },
-	resume: { id: 'resume', label: 'Fortsetzen' },
-	send: { id: 'send', label: 'Senden' },
-	alarms: { id: 'alarms', label: 'Alarme' },
-	weather: { id: 'weather', label: 'Wetter-Metriken' },
-	edit: { id: 'edit', label: 'Bearbeiten' },
-	archive: { id: 'archive', label: 'Archivieren' },
-	unarchive: { id: 'unarchive', label: 'Reaktivieren' },
-	delete: { id: 'delete', label: 'Löschen', danger: true },
-	'continue-setup': { id: 'continue-setup', label: 'Setup fortsetzen' }
+// Issue #2658 (i18n F9): die Tabelle traegt nur Kennung, Gefahr-Markierung und den
+// Katalog-Schluessel (aktionen.*, wortgleich fuer Trip UND Ortsvergleich); der Text
+// entsteht erst beim Aufruf in der aktuellen Sprache. Aufrufer in Komponenten lesen
+// dafuer `$locale` (Muster `$derived.by(() => (void $locale, subscriptionActions(…)))`).
+const A: Record<SubscriptionActionId, Omit<SubscriptionAction, 'label'> & { key: MessageKey }> = {
+	pause: { id: 'pause', key: 'aktionen.pause' },
+	resume: { id: 'resume', key: 'aktionen.resume' },
+	send: { id: 'send', key: 'aktionen.senden' },
+	alarms: { id: 'alarms', key: 'aktionen.alarms' },
+	weather: { id: 'weather', key: 'aktionen.weather' },
+	edit: { id: 'edit', key: 'aktionen.edit' },
+	archive: { id: 'archive', key: 'aktionen.archive' },
+	unarchive: { id: 'unarchive', key: 'aktionen.unarchive' },
+	delete: { id: 'delete', key: 'aktionen.delete', danger: true },
+	'continue-setup': { id: 'continue-setup', key: 'aktionen.continue_setup' }
 };
 
-const ids = (...i: SubscriptionActionId[]): SubscriptionAction[] => i.map((id) => ({ ...A[id] }));
+const ids = (...i: SubscriptionActionId[]): SubscriptionAction[] =>
+	i.map((id) => {
+		const { key, ...rest } = A[id];
+		return { id: rest.id, label: tr(key), ...(rest.danger ? { danger: true } : {}) };
+	});
 
 /**
  * Aktionen je Art/Status/Flaeche. Die Art (`kind`) aendert das Ergebnis bewusst NICHT:

@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { t, locale } from '$lib/i18n';
+	import { fmtWeekday } from '$lib/i18n/format';
 	// Issue #498 — Etappen-Datum nachträglich bearbeiten.
 	// Spec: docs/design-requests/stage_date_edit.md
 	//
@@ -23,8 +25,8 @@
 
 	let { value = $bindable(''), isFirst = false, onchange, variant = 'default' }: Props = $props();
 
-	const WD = ['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa'];
-	const wd = $derived(value ? WD[new Date(value + 'T00:00:00').getDay()] : '—');
+	// i18n F9: Wochentag je Sprache aus S2 (de `So`/`Mo` …, en `Sun`/`Mon` …).
+	const wd = $derived(value ? fmtWeekday(new Date(value + 'T00:00:00'), $locale, true) : '—');
 
 	function handleChange(e: Event): void {
 		const newVal = (e.target as HTMLInputElement).value;
@@ -37,12 +39,12 @@
 	<label class="box inline" data-testid="stage-date-field">
 		<span class="wd">{wd}</span>
 		<input type="date" {value} onchange={handleChange} />
-		{#if isFirst}<span class="trip-start">· Trip-Start</span>{/if}
+		{#if isFirst}<span class="trip-start">· {$t('trip.trip_start')}</span>{/if}
 	</label>
 {:else}
 	<div class="stage-date" data-testid="stage-date-field">
 		<span class="label">
-			Datum{#if isFirst} · <em>Trip-Start</em>{/if}
+			{$t('trip.datum')}{#if isFirst} · <em>{$t('trip.trip_start')}</em>{/if}
 		</span>
 		<label class="box">
 			<span class="wd">{wd}</span>

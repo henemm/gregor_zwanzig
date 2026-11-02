@@ -11,6 +11,7 @@
 	import PauseStageView from './waypoints/PauseStageView.svelte';
 	import { isPauseStage } from '$lib/components/shared/wizardHelpers';
 	import type { Trip, Stage } from '$lib/types';
+	import { t, tr } from '$lib/i18n';
 
 	interface Props {
 		trip: Trip;
@@ -43,7 +44,8 @@
 			await invalidateAll();
 			onSaved?.();
 		} catch (e) {
-			saveError = e instanceof Error ? e.message : 'Speichern fehlgeschlagen';
+			// i18n F9: ohne Fehlertext bleibt das Flag (''), die Meldung entsteht beim Rendern.
+			saveError = e instanceof Error ? e.message : '';
 		} finally {
 			saving = false;
 		}
@@ -75,7 +77,7 @@
 	// Waypoint-Mutations (Factory-Pattern fuer WaypointCard-Callbacks)
 	function makeRenameHandler(stageId: string, waypointId: string) {
 		return function handleRename() {
-			const newName = prompt('Neuer Name:');
+			const newName = prompt(tr('trip.neuer_name'));
 			if (!newName) return;
 			localStages = localStages.map((s) =>
 				s.id !== stageId
@@ -111,9 +113,9 @@
 <div data-testid="waypoints-panel" class="flex flex-col gap-4 p-4">
 	<!-- Save-Bar -->
 	<div class="flex justify-end gap-2">
-		{#if saveError}
+		{#if saveError !== null}
 			<span data-testid="waypoints-save-error" class="text-sm text-[var(--g-danger)]">
-				{saveError}
+				{saveError || $t('aktionen.speichern_fehlgeschlagen')}
 			</span>
 		{/if}
 		<button
@@ -122,7 +124,7 @@
 			disabled={saving}
 			class="rounded bg-[var(--g-accent)] px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
 		>
-			{saving ? 'Speichert…' : 'Speichern'}
+			{saving ? $t('trip.speichert') : $t('aktionen.speichern')}
 		</button>
 	</div>
 
@@ -172,7 +174,7 @@
 						/>
 					{/each}
 					{#if activeStage.waypoints.length === 0}
-						<p class="text-sm text-[var(--g-ink-muted)]">Keine Wegpunkte.</p>
+						<p class="text-sm text-[var(--g-ink-muted)]">{$t('trip.keine_wegpunkte')}</p>
 					{/if}
 				</div>
 			{/if}

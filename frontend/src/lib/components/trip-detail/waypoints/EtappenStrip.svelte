@@ -11,6 +11,7 @@
 	import DragHandle from '$lib/components/shared/dnd/DragHandle.svelte';
 	import { isPauseStage } from '$lib/components/shared/wizardHelpers';
 	import type { Stage } from '$lib/types';
+	import { t, tn } from '$lib/i18n';
 
 	interface Props {
 		stages: Stage[];
@@ -91,7 +92,7 @@
 					onclick={makePauseInsertHandler(i)}
 				>
 					{#if hoverGap === i}
-						<span style="padding:3px 8px; font-size: 11px; font-weight:600; background:var(--g-accent); color:#fff; border-radius:10px; letter-spacing:0.06em; text-transform:uppercase; font-family:var(--g-font-mono);">+ Pause</span>
+						<span style="padding:3px 8px; font-size: 11px; font-weight:600; background:var(--g-accent); color:#fff; border-radius:10px; letter-spacing:0.06em; text-transform:uppercase; font-family:var(--g-font-mono);">{$t('trip.wegpunkt.plus_pause')}</span>
 					{:else}
 						<span style="width:1px; height:24px; background:var(--g-rule); display:block;"></span>
 					{/if}
@@ -110,10 +111,10 @@
 	<!-- Eyebrow-Header mit Zähler -->
 	<div style="display:flex; justify-content:space-between; align-items:baseline; margin-bottom:10px;">
 		<span style="font-size: 11px; font-family:var(--g-font-mono); font-weight:600; letter-spacing:0.08em; text-transform:uppercase; color:var(--g-ink-4);">
-			ETAPPEN · DRAG ZUM SORTIEREN · + PAUSE ZWISCHEN
+			{$t('trip.wegpunkt.strip_eyebrow')}
 		</span>
 		<span style="font-size: 11px; font-family:var(--g-font-mono); color:var(--g-ink-4); letter-spacing:0.06em;">
-			{gpxCount} GPX · {pauseCount} Pause
+			{$tn('trip.wegpunkt.strip_zaehler', pauseCount, { gpx: gpxCount })}
 		</span>
 	</div>
 
@@ -137,7 +138,7 @@
 				items={stages.map((s) => s.id)}
 				onDndReorder={handleDndReorder}
 				onDndReorderEnd={handleDndReorderEnd}
-				ariaLabel="Etappen sortieren"
+				ariaLabel={$t('trip.wegpunkt.etappen_sortieren')}
 				itemLabel={stageName}
 				{row}
 			/>
@@ -149,7 +150,7 @@
 					class="add-stage-btn"
 					style="position:absolute; right:0; top:0; bottom:0; padding:0 16px; border:1px dashed var(--g-rule); background:transparent; color:var(--g-ink-3); font-size:11px; font-family:var(--g-font-mono); letter-spacing:0.06em; text-transform:uppercase; cursor:pointer; border-radius:4px; min-height:88px;"
 				>
-					+ Etappe
+					{$t('trip.plus_etappe')}
 				</button>
 			{/if}
 		</div>

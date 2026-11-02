@@ -5,6 +5,7 @@
 	import { Label } from '$lib/components/ui/label/index.js';
 	import { naturalSort } from '$lib/utils/naturalSort.js';
 	import UploadIcon from '@lucide/svelte/icons/upload';
+	import { t, tn } from '$lib/i18n';
 
 	interface Props {
 		tripName: string;
@@ -30,8 +31,10 @@
 	}
 
 	let uploading = $state(false);
-	let uploadProgress = $state('');
-	let uploadError = $state('');
+	// i18n F9: Fortschritt und Fehler als Daten, die Texte entstehen beim Rendern.
+	let uploadProgress = $state<{ nr: number; gesamt: number } | null>(null);
+	let fehlerOhneDatum = $state(false);
+	let dateiFehler = $state<{ name: string; text: string | null }[]>([]);
 	let dragOver = $state(false);
 
 	// Buffer-State: GPX-Files warten bis User Startdatum bestaetigt.
@@ -46,7 +49,8 @@
 		// only when the buffer becomes non-empty for the first time.
 		const wasEmpty = pendingFiles.length === 0;
 		pendingFiles = [...pendingFiles, ...fileArray];
-		uploadError = '';
+		fehlerOhneDatum = false;
+		dateiFehler = [];
 		if (wasEmpty) {
 			bulkStartDate = computeDefaultStartDate(stages);
 		}
@@ -55,12 +59,13 @@
 	async function commitPending() {
 		if (pendingFiles.length === 0) return;
 		if (!bulkStartDate) {
-			uploadError = 'Bitte Startdatum wählen.';
+			fehlerOhneDatum = true;
 			return;
 		}
 
 		uploading = true;
-		uploadError = '';
+		fehlerOhneDatum = false;
+		dateiFehler = [];
 
 		// Snapshot + clear buffer so the picker disappears immediately.
 		const files = pendingFiles;
@@ -72,14 +77,14 @@
 		let uploadIndex = 0;
 		for (let i = 0; i < files.length; i++) {
 			const file = files[i];
-			uploadProgress = `Lade ${i + 1} von ${total} Dateien...`;
+			uploadProgress = { nr: i + 1, gesamt: total };
 			const stageDate = addDays(start, uploadIndex);
 			try {
 				const stage = await uploadGpx(file, stageDate, 8);
 				uploaded.push(stage);
 				uploadIndex += 1;
 			} catch (e) {
-				uploadError += `${file.name}: ${e instanceof Error ? e.message : 'Fehler'}\n`;
+				dateiFehler = [...dateiFehler, { name: file.name, text: e instanceof Error ? e.message : null }];
 			}
 		}
 
@@ -93,12 +98,13 @@
 		}
 
 		uploading = false;
-		uploadProgress = '';
+		uploadProgress = null;
 	}
 
 	function cancelPending() {
 		pendingFiles = [];
-		uploadError = '';
+		fehlerOhneDatum = false;
+		dateiFehler = [];
 	}
 
 	function onDrop(e: DragEvent) {
@@ -136,20 +142,16 @@
 	}
 
 	let fileInput: HTMLInputElement;
-	let commitLabel = $derived(
-		pendingFiles.length === 1
-			? '1 Etappe anlegen'
-			: `${pendingFiles.length} Etappen anlegen`
-	);
+	let commitLabel = $derived($tn('trip.route.anlegen', pendingFiles.length));
 </script>
 
 <div class="space-y-6">
 	<div>
-		<Label for="wizard-trip-name">Trip Name</Label>
+		<Label for="wizard-trip-name">{$t('trip.route.trip_name')}</Label>
 		<Input
 			id="wizard-trip-name"
 			data-testid="trip-name-input"
-			placeholder="Name des Trips"
+			placeholder={$t('trip.route.name_platzhalter')}
 			bind:value={tripName}
 		/>
 	</div>
@@ -167,8 +169,8 @@
 		onkeydown={(e) => { if (e.key === 'Enter' || e.key === ' ') fileInput.click(); }}
 	>
 		<UploadIcon class="mx-auto mb-2 size-8 text-muted-foreground" />
-		<p class="font-medium">GPX-Dateien hierher ziehen</p>
-		<p class="text-sm text-muted-foreground mt-1">oder klicken zum Auswählen</p>
+		<p class="font-medium">{$t('trip.route.ziehen')}</p>
+		<p class="text-sm text-muted-foreground mt-1">{$t('trip.route.klicken')}</p>
 		<input
 			bind:this={fileInput}
 			type="file"
@@ -182,10 +184,10 @@
 	{#if pendingFiles.length > 0}
 		<div class="rounded-md border p-4 space-y-3 bg-muted/30">
 			<p class="text-sm" data-testid="bulk-stage-pending-count">
-				{pendingFiles.length} Datei(en) ausgewählt
+				{$t('trip.route.ausgewaehlt', { anzahl: pendingFiles.length })}
 			</p>
 			<div class="flex flex-col gap-2 sm:flex-row sm:items-center">
-				<Label for="bulk-stage-start-date" class="sm:w-32">Startdatum</Label>
+				<Label for="bulk-stage-start-date" class="sm:w-32">{$t('trip.startdatum')}</Label>
 				<Input
 					id="bulk-stage-start-date"
 					data-testid="bulk-stage-start-date"
@@ -208,26 +210,26 @@
 					onclick={cancelPending}
 					disabled={uploading}
 				>
-					Abbrechen
+					{$t('aktionen.abbrechen')}
 				</Btn>
 			</div>
 		</div>
 	{/if}
 
 	{#if uploading}
-		<p class="text-sm text-muted-foreground">{uploadProgress}</p>
+		<p class="text-sm text-muted-foreground">{uploadProgress ? $t('trip.route.lade_dateien', uploadProgress) : ''}</p>
 	{/if}
 
-	{#if uploadError}
-		<p class="text-sm text-destructive whitespace-pre-line">{uploadError}</p>
+	{#if fehlerOhneDatum || dateiFehler.length > 0}
+		<p class="text-sm text-destructive whitespace-pre-line">{fehlerOhneDatum ? $t('trip.route.startdatum_waehlen') : dateiFehler.map((f) => `${f.name}: ${f.text ?? $t('trip.route.fehler')}\n`).join('')}</p>
 	{/if}
 
 	{#if stages.length > 0}
-		<p class="text-sm text-muted-foreground">{stages.length} Etappe(n) geladen</p>
+		<p class="text-sm text-muted-foreground">{$t('trip.route.geladen', { anzahl: stages.length })}</p>
 	{/if}
 
 	<div class="flex items-center gap-3">
-		<span class="text-sm text-muted-foreground">oder</span>
-		<Btn variant="outline" onclick={addManualStage}>Manuell anlegen</Btn>
+		<span class="text-sm text-muted-foreground">{$t('trip.route.oder')}</span>
+		<Btn variant="outline" onclick={addManualStage}>{$t('trip.route.manuell')}</Btn>
 	</div>
 </div>

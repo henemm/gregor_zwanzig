@@ -11,6 +11,7 @@
 		SEVERITY_LABEL_DE,
 		normalizeAlertMetric
 	} from '$lib/utils/alertMetricLabels';
+	import { t } from '$lib/i18n';
 
 	interface Props {
 		trip: Trip;
@@ -40,12 +41,12 @@
 </script>
 
 <GCard data-testid="right-card-alerts" class="alerts-card">
-	<Eyebrow>Alarmregeln</Eyebrow>
-	<h3 class="card-title">Alert-Schwellen</h3>
+	<Eyebrow>{$t('trip.alerts.eyebrow')}</Eyebrow>
+	<h3 class="card-title">{$t('trip.alerts.titel')}</h3>
 
 	{#if isEmpty}
 		<p data-testid="right-card-alerts-empty" class="empty-state">
-			Noch keine Alerts konfiguriert
+			{$t('trip.alerts.leer')}
 		</p>
 	{:else}
 		<ul class="alert-list">
@@ -59,7 +60,7 @@
 	{/if}
 
 	<a href="?tab=wertebereiche" data-testid="right-card-alerts-edit-link" class="edit-link">
-		Regeln bearbeiten →
+		{$t('trip.alerts.bearbeiten')}
 	</a>
 </GCard>
 

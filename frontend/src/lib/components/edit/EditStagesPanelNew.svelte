@@ -37,6 +37,15 @@
 	// auf Mobile ersatzlos. Der Mobile-Zweig rendert Desktop-Hinweis + Liste.
 	import SortableList from '$lib/components/shared/dnd/SortableList.svelte';
 	import DragHandle from '$lib/components/shared/dnd/DragHandle.svelte';
+	import { t, tn, tr, locale, type Lang } from '$lib/i18n';
+	import { fmtDate } from '$lib/i18n/format';
+
+	// i18n F9: Kaskaden-Datum deutsch unveraendert `DD.MM.YYYY` (formatDeDate), englisch `5 Jul 2026`.
+	function kaskadenDatum(iso: string, lang: Lang): string {
+		if (lang !== 'en') return formatDeDate(iso);
+		const [y, m, d] = iso.split('-').map(Number);
+		return y && m && d ? `${fmtDate(new Date(y, m - 1, d), 'en', 'kurz').replace(/^\S+ /, '')} ${y}` : '';
+	}
 	import StageCardM from '$lib/components/mobile/StageCardM.svelte';
 	import { fetchStageRisk, type StageRisk } from '$lib/utils/stageRisk';
 
@@ -123,7 +132,8 @@
 			onTripUpdate?.(updatedTrip);
 			return updatedTrip;
 		} catch (e: unknown) {
-			saveError = e instanceof Error ? e.message : 'Speichern fehlgeschlagen';
+			// i18n F9: ohne Fehlertext bleibt das Flag (''), die Meldung entsteht beim Rendern.
+			saveError = e instanceof Error ? e.message : '';
 			return null;
 		} finally {
 			saving = false;
@@ -266,15 +276,12 @@
 	// Benannt wird, was WIRKLICH betroffen ist — Etappen davor und solche ohne
 	// Datum zählen nicht mit.
 	const cascadeCount = $derived(cascadeFollowers.length);
-	const cascadeCountText = $derived(
-		cascadeCount === 1 ? 'die folgende Etappe' : `die ${cascadeCount} folgenden Etappen`,
-	);
 	// Datum, das die erste Folge-Etappe bekäme — aus derselben Rechnung wie
 	// applyCascade(), damit Ankündigung und Ergebnis nicht auseinanderlaufen.
 	const cascadeFirstDate = $derived.by(() => {
 		if (!cascade) return '';
 		const targets = consecutiveDates(cascade.anchorDate, cascadeFollowers);
-		return formatDeDate(targets[cascadeFollowers[0]] ?? '');
+		return kaskadenDatum(targets[cascadeFollowers[0]] ?? '', $locale);
 	});
 
 	function handleDateChange(stageId: string, newDate: string): void {
@@ -427,10 +434,10 @@
 					// erklärt, was los ist — „Speichern fehlgeschlagen" allein sagt dem
 					// Nutzer im Funkloch nichts.
 					const msg = ctrl.signal.aborted
-						? 'Zeitüberschreitung beim Speichern — bitte erneut versuchen.'
+						? tr('trip.etappen_editor.zeitueberschreitung')
 						: e instanceof Error
 							? e.message
-							: 'Speichern fehlgeschlagen';
+							: tr('aktionen.speichern_fehlgeschlagen'); // SaveStatus.setError nimmt nur Text (Kanal der Speicher-Anzeige)
 					// Bug #1389 F006 (Spiegelfall): `cancel()` oben hat den zurückgestellten
 					// Save abgeräumt — ohne Neu-Anmeldung fänden `beforeNavigate` und
 					// Reiterwechsel nichts vor, die Datumsänderung an der bearbeiteten
@@ -616,7 +623,7 @@
 		};
 	}
 	function handleStageRename(stageId: string, currentName: string): void {
-		const newName = prompt('Etappenname:', currentName);
+		const newName = prompt(tr('trip.etappen_editor.etappenname_prompt'), currentName);
 		if (!newName?.trim()) return;
 		stages = stages.map((s) => (s.id !== stageId ? s : { ...s, name: newName.trim() }));
 		if (saveController) scheduleSave(); else void save();
@@ -625,7 +632,7 @@
 	function makeRenameHandler(stageId: string, waypointId: string) {
 		return function handleRename() {
 			if (cascadeBusy) return;
-			const newName = prompt('Neuer Name:');
+			const newName = prompt(tr('trip.neuer_name'));
 			if (!newName) return;
 			stages = stages.map((s) =>
 				s.id !== stageId
@@ -663,17 +670,16 @@
 				<!-- Bug #1393: kein „Trip-Start" mehr (es kann jede Etappe sein) und kein
 				     „derselbe Betrag" (es wird lückenlos durchdatiert). -->
 				<p>
-					<strong>Diese Etappe liegt jetzt am {formatDeDate(cascade.anchorDate)}.</strong>
-					{cascadeCount === 1 ? 'Soll' : 'Sollen'}
-					{cascadeCountText} lückenlos anschließen, ab {cascadeFirstDate}?
+					<strong>{$t('trip.kaskade.liegt_am', { datum: kaskadenDatum(cascade.anchorDate, $locale) })}</strong>
+					{$tn('trip.kaskade.frage', cascadeCount, { datum: cascadeFirstDate })}
 				</p>
 				<!-- Bug #1389 F004: während der Verarbeitung nicht erneut auslösbar.
 				     Der Riegel in applyCascade() ist die eigentliche Absicherung. -->
 				<div class="cascade-actions">
 					<Btn variant="accent" size="sm" onclick={applyCascade} disabled={cascadeBusy}>
-						{cascadeBusy ? 'Wird angepasst …' : 'Lückenlos anschließen'}
+						{cascadeBusy ? $t('trip.kaskade.wird_angepasst') : $t('trip.kaskade.anschliessen')}
 					</Btn>
-					<Btn variant="outline" size="sm" onclick={dismissCascade} disabled={cascadeBusy}>Nur diese Etappe</Btn>
+					<Btn variant="outline" size="sm" onclick={dismissCascade} disabled={cascadeBusy}>{$t('trip.kaskade.nur_diese')}</Btn>
 				</div>
 			</div>
 		{:else}
@@ -683,9 +689,9 @@
 			>
 				<Dot tone="success" />
 				<span>
-					<strong>Lückenlos neu datiert</strong> · {cascadeCountText}, ab {cascadeFirstDate}.
+					<strong>{$t('trip.kaskade.erledigt')}</strong> {$tn('trip.kaskade.erledigt_text', cascadeCount, { datum: cascadeFirstDate })}
 				</span>
-				<Btn variant="ghost" size="sm" onclick={dismissCascade}>Schließen</Btn>
+				<Btn variant="ghost" size="sm" onclick={dismissCascade}>{$t('trip.kaskade.schliessen')}</Btn>
 			</div>
 		{/if}
 	{/if}
@@ -700,10 +706,10 @@
 		<div class="mobile-stages" data-testid="mobile-stages-list">
 			<div class="desktop-hint" data-testid="desktop-hint">
 				<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 8v5M12 16h.01"/></svg>
-				<p><strong>Karte &amp; Höhenprofil</strong> sind am Desktop verfügbar. Das Gesamt-Höhenprofil bleibt im Übersichts-Tab.</p>
+				<p><strong>{$t('trip.etappen_editor.desktop_stark')}</strong> {$t('trip.etappen_editor.desktop_text')}</p>
 			</div>
 			<div class="mobile-list-head">
-				<span class="mobile-list-eyebrow">{stages.length} Etappen · ziehen zum Sortieren</span>
+				<span class="mobile-list-eyebrow">{$tn('trip.etappen_editor.liste', stages.length)}</span>
 				<!-- F3: „+ Etappe" öffnet die Wahl Etappe/Pausentag (ersetzt den
 				     Desktop-Hover-Gap, der mobil nicht bedienbar war). Die Wahl
 				     steht als eigene Zeile im Fluss — nichts überlappt, keine
@@ -716,13 +722,13 @@
 					onclick={() => { addChoiceOpen = !addChoiceOpen; }}
 					disabled={cascadeBusy}
 				>
-					+ Etappe
+					{$t('trip.plus_etappe')}
 				</button>
 			</div>
 			{#if addChoiceOpen}
 				<div class="mobile-add-choice" data-testid="mobile-add-choice" role="menu">
-					<button type="button" role="menuitem" onclick={() => { handleAddStage(); addChoiceOpen = false; }}>Etappe</button>
-					<button type="button" role="menuitem" onclick={() => { handleMobileAddPause(); addChoiceOpen = false; }}>Pausentag</button>
+					<button type="button" role="menuitem" onclick={() => { handleAddStage(); addChoiceOpen = false; }}>{$t('trip.etappe')}</button>
+					<button type="button" role="menuitem" onclick={() => { handleMobileAddPause(); addChoiceOpen = false; }}>{$t('bausteine.etappe.pausentag')}</button>
 				</div>
 			{/if}
 			{@render cascadeBanner()}
@@ -730,8 +736,8 @@
 				items={stages.map((s) => s.id)}
 				onDndReorder={handleMobileReorder}
 				onDndReorderEnd={handleReorderEnd}
-				ariaLabel="Etappen, Reihenfolge"
-				itemLabel={(id, i) => `${i + 1}. ${stages.find((s) => s.id === id)?.name || 'Pausentag'}`}
+				ariaLabel={$t('trip.etappen_editor.reihenfolge_aria')}
+				itemLabel={(id, i) => `${i + 1}. ${stages.find((s) => s.id === id)?.name || tr('bausteine.etappe.pausentag')}`}
 				zoneClass="stage-cardm-zone"
 				flipDurationMs={150}
 			>
@@ -793,18 +799,18 @@
 			<!-- Etappen-Header mit editierbarem Datum (Issue #498) -->
 			<div class="flex items-start justify-between gap-8">
 				<div class="min-w-0 flex-1">
-					<Eyebrow>Etappe · {activeStage.code ?? ''}</Eyebrow>
+					<Eyebrow>{$t('trip.etappen_editor.eyebrow', { code: activeStage.code ?? '' })}</Eyebrow>
 					<div class="flex items-center gap-2">
 						<p style="font-size:32px; font-weight:600; letter-spacing:-0.02em;" class="truncate">{activeStage.name}</p>
 						<button
 							onclick={() => handleStageRename(activeStage!.id, activeStage!.name)}
 							style="flex-shrink:0; color:var(--g-ink-3); padding:4px; border-radius:4px; background:none; border:none; cursor:pointer; line-height:1;"
-							title="Etappenname ändern"
-							aria-label="Etappenname ändern"
+							title={$t('trip.etappen_editor.umbenennen')}
+							aria-label={$t('trip.etappen_editor.umbenennen')}
 						><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg></button>
 					</div>
 					<div style="font-size:14px; color:var(--g-ink-3); margin-top:4px; max-width:680px;">
-						Wegpunkte sind <strong style="color:var(--g-ink)">Wetterscheiden</strong> — Punkte, an denen sich Höhe, Exposition oder Geländekammer ändert. Aus der GPX sind {activeStage.waypoints.length} Wegpunkte entstanden — du kannst sie umbenennen, verschieben, löschen oder eigene ergänzen.
+						{$t('trip.etappen_editor.wetterscheiden_vor')} <strong style="color:var(--g-ink)">{$t('trip.etappen_editor.wetterscheiden')}</strong> {$tn('trip.etappen_editor.wetterscheiden_nach', activeStage.waypoints.length)}
 					</div>
 				</div>
 				<div class="stage-header-fields">
@@ -829,8 +835,8 @@
 					<!-- Karten-Card (Leaflet/OpenTopoMap) -->
 					<div class="editor-card" data-testid="map-card">
 						<div class="editor-card-header">
-							<Eyebrow>Karte · OpenTopoMap (OSM + SRTM)</Eyebrow>
-							<Pill tone="ghost">Topo</Pill>
+							<Eyebrow>{$t('trip.etappen_editor.karte')}</Eyebrow>
+							<Pill tone="ghost">{$t('trip.etappen_editor.topo')}</Pill>
 						</div>
 						{#key activeStageId}
 						<MapCanvas
@@ -843,15 +849,15 @@
 
 					{#if addModeHint}
 						<div class="add-mode-hint" role="status" data-testid="add-mode-hint">
-							<span>Klicke im Höhenprofil, um einen Wegpunkt einzufügen</span>
-							<button class="add-mode-hint-close" aria-label="Hinweis schließen" onclick={() => { addModeHint = false; }}>×</button>
+							<span>{$t('trip.etappen_editor.einfuegen_hinweis')}</span>
+							<button class="add-mode-hint-close" aria-label={$t('trip.etappen_editor.hinweis_schliessen')} onclick={() => { addModeHint = false; }}>×</button>
 						</div>
 					{/if}
 
 					<!-- Profil-Card (Höhenprofil) -->
 					<div class="editor-card editor-card--padded" class:cascade-locked={cascadeBusy} aria-busy={cascadeBusy ? 'true' : undefined} data-testid="profile-card">
 						<div class="editor-card-header editor-card-header--inline">
-							<Eyebrow>Höhenprofil · synchron mit Karte</Eyebrow>
+							<Eyebrow>{$t('trip.etappen_editor.profil')}</Eyebrow>
 						</div>
 						<ProfileEditor
 							stage={activeStage}
@@ -866,11 +872,11 @@
 				<div class="editor-card editor-sidebar" data-testid="waypoint-sidebar">
 					<div class="editor-card-header sidebar-header">
 						<div>
-							<Eyebrow>Wegpunkte</Eyebrow>
-							<div class="sidebar-count">{activeStage.waypoints.length} insgesamt</div>
+							<Eyebrow>{$t('trip.wegpunkte')}</Eyebrow>
+							<div class="sidebar-count">{$t('trip.etappen_editor.insgesamt', { anzahl: activeStage.waypoints.length })}</div>
 						</div>
 						<Btn variant="ghost" size="sm" data-testid="waypoint-add-on-route-btn" onclick={() => { addModeHint = true; }}>
-							+ auf Route
+							{$t('trip.etappen_editor.auf_route')}
 						</Btn>
 					</div>
 					<div class="sidebar-list" class:cascade-locked={cascadeBusy} aria-busy={cascadeBusy ? 'true' : undefined}>
@@ -886,7 +892,7 @@
 							/>
 						{/each}
 						{#if activeStage.waypoints.length === 0}
-							<p class="sidebar-empty">Keine Wegpunkte.</p>
+							<p class="sidebar-empty">{$t('trip.keine_wegpunkte')}</p>
 						{/if}
 					</div>
 				</div>
@@ -900,10 +906,10 @@
 			<!-- Bug #1393 R5-F002: NICHT `onclick={save}` — der Browser übergäbe das
 			     Klick-Ereignis als `payload` und schriebe `{ stages: <MouseEvent> }`. -->
 			<Btn variant="primary" size="sm" onclick={() => save()} disabled={saving || !tripId}>
-				{saving ? 'Speichern …' : 'Etappen speichern'}
+				{saving ? $t('trip.speichern_laeuft') : $t('trip.etappen_editor.speichern')}
 			</Btn>
-			{#if saveSuccess}<span class="save-ok">Gespeichert ✓</span>{/if}
-			{#if saveError}<span class="save-err">{saveError}</span>{/if}
+			{#if saveSuccess}<span class="save-ok">{$t('trip.etappen_editor.gespeichert')}</span>{/if}
+			{#if saveError !== null}<span class="save-err">{saveError || $t('aktionen.speichern_fehlgeschlagen')}</span>{/if}
 		</div>
 	{/if}
 	{/if}
@@ -916,14 +922,14 @@
 >
 	<Dialog.Content>
 		<Dialog.Header>
-			<Dialog.Title>Etappe löschen</Dialog.Title>
+			<Dialog.Title>{$t('trip.etappe_loeschen')}</Dialog.Title>
 			<Dialog.Description>
-				Möchtest du „{stages.find(s => s.id === pendingRemoveStageId)?.name ?? ''}" wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.
+				{$t('trip.etappen_editor.loeschen_frage', { name: stages.find(s => s.id === pendingRemoveStageId)?.name ?? '' })}
 			</Dialog.Description>
 		</Dialog.Header>
 		<Dialog.Footer>
-			<Btn variant="outline" data-testid="cancel-delete-stage" onclick={() => { pendingRemoveStageId = null; }}>Abbrechen</Btn>
-			<Btn variant="destructive" data-testid="confirm-delete-stage" onclick={confirmRemoveStage} disabled={cascadeBusy}>Löschen</Btn>
+			<Btn variant="outline" data-testid="cancel-delete-stage" onclick={() => { pendingRemoveStageId = null; }}>{$t('aktionen.abbrechen')}</Btn>
+			<Btn variant="destructive" data-testid="confirm-delete-stage" onclick={confirmRemoveStage} disabled={cascadeBusy}>{$t('aktionen.delete')}</Btn>
 		</Dialog.Footer>
 	</Dialog.Content>
 </Dialog.Root>

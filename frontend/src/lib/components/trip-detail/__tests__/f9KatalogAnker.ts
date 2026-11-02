@@ -335,6 +335,7 @@ export const F9_ANKER: [schluessel: string, de: string, en: string][] = [
 	['trip.anlegen.ohne_gpx.one', '⊘ <count> Etappe ohne GPX-Datei — nach dem Upload werden Wegpunkte automatisch berechnet.', '⊘ <count> stage without a GPX file — waypoints are calculated automatically after the upload.'],
 	['trip.anlegen.ohne_gpx.other', '⊘ <count> Etappen ohne GPX-Datei — nach dem Upload werden Wegpunkte automatisch berechnet.', '⊘ <count> stages without a GPX file — waypoints are calculated automatically after the upload.'],
 	['trip.anlegen.alle_gpx', '✓ Alle GPX geladen — Wegpunkte werden berechnet. Jetzt weiter zu „Wegpunkte prüfen" (optional) oder direkt zu „Wetter-Metriken".', '✓ All GPX loaded — waypoints are being calculated. Now continue to “Check waypoints” (optional) or go straight to “Weather metrics”.'],
+	['trip.anlegen.noch_gpx', '⊘ Noch <anzahl> GPX fehlen — danach Wegpunkte prüfen oder direkt zu Wetter.', '⊘ <anzahl> GPX still missing — then check waypoints or go straight to weather.'],
 	['trip.anlegen.alle_gpx_kurz', '✓ Alle GPX geladen — Wegpunkte werden berechnet.', '✓ All GPX loaded — waypoints are being calculated.'],
 	['trip.anlegen.wetter_direkt', 'Wetter direkt →', 'Weather directly →'],
 	['trip.anlegen.wegpunkte_pruefen', 'Wegpunkte prüfen →', 'Check waypoints →'],

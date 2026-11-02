@@ -4,6 +4,7 @@
 	// Design: docs/design/epic_331_output_layout/screen-metrics-editor.jsx
 	import * as Dialog from '$lib/components/ui/dialog/index.js';
 	import { Eyebrow } from '$lib/components/atoms';
+	import { t, type MessageKey } from '$lib/i18n';
 
 	interface Props {
 		open: boolean;
@@ -12,34 +13,34 @@
 	let { open = $bindable(false), onClose }: Props = $props();
 
 	// Gesamt-Spalten inkl. Uhrzeit (User-Sicht, deckt sich mit #360). Signal entfernt (#610).
-	const channels = [
-		{ label: 'Email', max: '∞', behavior: 'Alles als Spalten + Detail-Zeile darunter' },
-		{ label: 'Telegram', max: '8', behavior: 'Erste 8 als Spalten, Rest wandert in Detail' },
-		{ label: 'SMS', max: '0', behavior: 'Keine Tabelle, alles in flacher Zeile bis 140 Zeichen' },
+	const channels: { label: string; max: string; behavior: MessageKey }[] = [
+		{ label: 'Email', max: '∞', behavior: 'trip.about.email' },
+		{ label: 'Telegram', max: '8', behavior: 'trip.about.telegram' },
+		{ label: 'SMS', max: '0', behavior: 'trip.about.sms' },
 	];
 </script>
 
 <Dialog.Root bind:open onOpenChange={(o) => { if (!o) onClose(); }}>
 	<Dialog.Content data-testid="about-output-layout" class="about-dialog">
 		<Dialog.Header>
-			<Eyebrow>Output-Layout-System</Eyebrow>
-			<Dialog.Title>Wie kommt was wohin</Dialog.Title>
+			<Eyebrow>{$t('trip.about.eyebrow')}</Eyebrow>
+			<Dialog.Title>{$t('trip.about.titel')}</Dialog.Title>
 		</Dialog.Header>
 
 		<div class="about-body">
-			<p>Du verwaltest die Metriken eines Trips an <strong>einer Stelle</strong>. Pro Metrik entscheidest du:</p>
+			<p>{$t('trip.about.intro_vor')} <strong>{$t('trip.about.intro_stark')}</strong>{$t('trip.about.intro_nach')}</p>
 			<ul>
-				<li><strong>Spalte</strong> — eigene Tabellen-Spalte im Briefing</li>
-				<li><strong>Detail</strong> — kompakter Zusatz-Wert in einer Zeile unter der Tabelle</li>
-				<li><strong>Aus</strong> — wird für diesen Trip nicht ausgegeben</li>
+				<li><strong>{$t('trip.about.spalte')}</strong> {$t('trip.about.spalte_text')}</li>
+				<li><strong>{$t('trip.about.detail')}</strong> {$t('trip.about.detail_text')}</li>
+				<li><strong>{$t('wertebereiche.reihenfolge.aus')}</strong> {$t('trip.about.aus_text')}</li>
 			</ul>
-			<p>Jeder Kanal hat eigene Constraints. Der Renderer wendet sie automatisch an:</p>
+			<p>{$t('trip.about.constraints')}</p>
 			<table>
 				<thead>
 					<tr>
-						<th>Kanal</th>
-						<th>Max Spalten</th>
-						<th>Verhalten</th>
+						<th>{$t('trip.about.kanal')}</th>
+						<th>{$t('trip.about.max_spalten')}</th>
+						<th>{$t('trip.about.verhalten')}</th>
 					</tr>
 				</thead>
 				<tbody>
@@ -47,20 +48,19 @@
 						<tr>
 							<td class="ch">{c.label}</td>
 							<td class="mono">{c.max}</td>
-							<td>{c.behavior}</td>
+							<td>{$t(c.behavior)}</td>
 						</tr>
 					{/each}
 				</tbody>
 			</table>
 			<p class="note">
-				Pro-Kanal-Overrides sind in einer späteren Version möglich — Default ist eine
-				Konfiguration für alle Kanäle, die der Renderer kanalspezifisch anpasst.
+				{$t('trip.about.hinweis')}
 			</p>
 		</div>
 
 		<Dialog.Footer>
 			<button type="button" class="btn-primary" data-testid="about-close" onclick={() => { open = false; onClose(); }}>
-				Verstanden
+				{$t('trip.about.verstanden')}
 			</button>
 		</Dialog.Footer>
 	</Dialog.Content>

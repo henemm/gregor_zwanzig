@@ -15,6 +15,19 @@
 	import SubscriptionHeader from '$lib/components/shared/subscription-header/SubscriptionHeader.svelte';
 	import { baueTripSpeicherung, speichereKopfFeld } from '$lib/components/shared/tripSpeicherung';
 	import type { SaveStatus } from '$lib/stores/saveStatusStore.svelte';
+	import { t, locale, type MessageKey } from '$lib/i18n';
+
+	// i18n F9: Aktivitaetsnamen je Sprache (Kennungen unveraendert).
+	const AKTIVITAET: Record<string, MessageKey> = {
+		trekking: 'trip.aktivitaet.trekking',
+		skitour: 'trip.aktivitaet.skitour',
+		hochtour: 'trip.aktivitaet.hochtour',
+		klettersteig: 'trip.aktivitaet.klettersteig',
+		mtb: 'trip.aktivitaet.mtb',
+		fahrrad_15: 'trip.aktivitaet.fahrrad_15',
+		fahrrad_20: 'trip.aktivitaet.fahrrad_20',
+		fahrrad_25: 'trip.aktivitaet.fahrrad_25'
+	};
 
 	interface Props {
 		trip: Trip;
@@ -46,10 +59,12 @@
 	}
 
 	const stats = $derived(computeTripStats(trip));
-	const dateRange = $derived(formatDateRange(trip));
+	// i18n F9: tripHero-Helfer lesen die Sprache per tr() — `$locale` haelt die Ableitung reaktiv.
+	const dateRange = $derived.by(() => (void $locale, formatDateRange(trip)));
 
 	// Issue #2284 S2 — Eyebrow zeigt nur noch den Datumsbereich; die Region steht in der Region-Zeile des Bausteins.
-	const daysLabel = $derived(getDaysLabel(trip, now));
+	const daysLabel = $derived.by(() => (void $locale, getDaysLabel(trip, now)));
+	const aktivitaeten = $derived(ACTIVITY_TYPE_OPTIONS.map((o) => ({ value: o.value, label: $t(AKTIVITAET[o.value]) })));
 
 	// Issue #416 — Mobile Kennzahlen-Kacheln (sichtbar nur ≤ 899px).
 	// Spec: docs/specs/modules/issue_416_mobile_trip_kennzahlen.md
@@ -75,9 +90,9 @@
 
 	const startLabel = $derived((() => {
 		const s = deriveTripStatus(trip, now);
-		if (s === 'planned') return 'START IN';
-		if (s === 'active') return 'TAG';
-		return 'STATUS';
+		if (s === 'planned') return $t('trip.kopf.start_in');
+		if (s === 'active') return $t('trip.kopf.tag_label');
+		return $t('trip.kopf.status');
 	})());
 
 	const startValue = $derived((() => {
@@ -91,11 +106,11 @@
 			const firstDay = new Date(dates[0] + 'T00:00:00');
 			const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
 			const diff = Math.ceil((firstDay.getTime() - today.getTime()) / 86_400_000);
-			return diff > 0 ? `${diff} Tg` : '—';
+			return diff > 0 ? $t('trip.kopf.tage_bis', { tage: diff }) : '—';
 		}
 		if (s === 'active') {
 			const idx = todayStageIndex(trip, now);
-			return idx >= 0 ? `Tag ${idx + 1}` : '—';
+			return idx >= 0 ? $t('trip.kopf.tag', { tag: idx + 1 }) : '—';
 		}
 		return '—';
 	})());
@@ -111,7 +126,7 @@
 				name={trip.name}
 				region={trip.region}
 				profile={trip.activity}
-				profileOptions={ACTIVITY_TYPE_OPTIONS}
+				profileOptions={aktivitaeten}
 				regionMaxLength={60}
 				testidPrefix="trip"
 				titleTestid="trip-detail-h1"
@@ -135,8 +150,8 @@
 			</div>
 
 			<div class="meta-line" data-testid="trip-detail-meta">
-				<span>{stats.kmTotal.toFixed(1)} km</span>
-				· <span>↑{Math.round(stats.ascentM).toLocaleString('de-DE')} m</span>
+				<span>{`${stats.kmTotal.toFixed(1)} km`}</span>
+				· <span>{`↑${Math.round(stats.ascentM).toLocaleString($locale === 'en' ? 'en-GB' : 'de-DE')} m`}</span>
 			</div>
 		</div>
 
@@ -144,10 +159,10 @@
 
 	<div class="mobile-metrics" data-testid="trip-header-mobile-metrics">
 		<div data-testid="metric-etappe">
-			<Stat label="ETAPPE" value={etappeValue} size="sm" mono />
+			<Stat label={$t('trip.kopf.etappe')} value={etappeValue} size="sm" mono />
 		</div>
 		<div data-testid="metric-briefing">
-			<Stat label="BRIEFING" value={briefingValue} size="sm" mono />
+			<Stat label={$t('trip.kopf.briefing')} value={briefingValue} size="sm" mono />
 		</div>
 		<div data-testid="metric-start">
 			<Stat label={startLabel} value={startValue} size="sm" mono />

@@ -3,6 +3,7 @@
 	// Spec: docs/specs/modules/issue_183_email_preview_header.md
 	import type { Trip, Stage } from '$lib/types';
 	import { computeHeaderStats } from './headerStats';
+	import { t } from '$lib/i18n';
 
 	interface Props {
 		trip: Trip;
@@ -14,7 +15,7 @@
 	let { trip, stage, reportType, reportDate }: Props = $props();
 
 	const eyebrowText = $derived(
-		reportType === 'morning' ? 'Morgen-Briefing' : 'Abend-Briefing'
+		reportType === 'morning' ? $t('trip.briefing.morgen') : $t('trip.briefing.abend')
 	);
 	const stats = $derived(computeHeaderStats(stage));
 	const title = $derived(trip.shortcode ? `${trip.name} · ${trip.shortcode}` : trip.name);
@@ -38,23 +39,23 @@
 		class="grid grid-cols-2 md:grid-cols-5 gap-3 mt-3"
 	>
 		<div class="flex flex-col">
-			<span data-testid="email-preview-header-stats-label-distanz" class="text-xs text-muted-foreground">Distanz</span>
-			<span class="text-sm font-medium">{stats.distanceKm} km</span>
+			<span data-testid="email-preview-header-stats-label-distanz" class="text-xs text-muted-foreground">{$t('trip.etappe.distanz')}</span>
+			<span class="text-sm font-medium">{`${stats.distanceKm} km`}</span>
 		</div>
 		<div class="flex flex-col">
-			<span data-testid="email-preview-header-stats-label-aufstieg" class="text-xs text-muted-foreground">Aufstieg</span>
-			<span class="text-sm font-medium">{stats.ascentM} m</span>
+			<span data-testid="email-preview-header-stats-label-aufstieg" class="text-xs text-muted-foreground">{$t('trip.etappe.aufstieg')}</span>
+			<span class="text-sm font-medium">{`${stats.ascentM} m`}</span>
 		</div>
 		<div class="flex flex-col">
-			<span data-testid="email-preview-header-stats-label-abstieg" class="text-xs text-muted-foreground">Abstieg</span>
-			<span class="text-sm font-medium">{stats.descentM} m</span>
+			<span data-testid="email-preview-header-stats-label-abstieg" class="text-xs text-muted-foreground">{$t('trip.etappe.abstieg')}</span>
+			<span class="text-sm font-medium">{`${stats.descentM} m`}</span>
 		</div>
 		<div class="flex flex-col">
-			<span data-testid="email-preview-header-stats-label-max-hoehe" class="text-xs text-muted-foreground">Max-Höhe</span>
-			<span class="text-sm font-medium">{stats.maxElevationM} m</span>
+			<span data-testid="email-preview-header-stats-label-max-hoehe" class="text-xs text-muted-foreground">{$t('trip.etappe.max_hoehe')}</span>
+			<span class="text-sm font-medium">{`${stats.maxElevationM} m`}</span>
 		</div>
 		<div class="flex flex-col">
-			<span data-testid="email-preview-header-stats-label-segmente" class="text-xs text-muted-foreground">Segmente</span>
+			<span data-testid="email-preview-header-stats-label-segmente" class="text-xs text-muted-foreground">{$t('trip.etappe.segmente')}</span>
 			<span class="text-sm font-medium">{stats.segmentCount}</span>
 		</div>
 	</div>

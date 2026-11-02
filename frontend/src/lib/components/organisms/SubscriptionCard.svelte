@@ -20,7 +20,7 @@
 	import { tripStatus } from '$lib/utils/tripStatus.js';
 	import SubscriptionKebab from '$lib/components/molecules/SubscriptionKebab.svelte';
 	import EllipsisVerticalIcon from '@lucide/svelte/icons/ellipsis-vertical';
-	import { t } from '$lib/i18n';
+	import { t, locale } from '$lib/i18n';
 
 	interface Props {
 		kind: SubscriptionKind;
@@ -61,7 +61,8 @@
 	const status = $derived(subscriptionLifecycle(kind, sub, now));
 	const active = $derived(status === 'active');
 	const draft = $derived(status === 'draft');
-	const actions = $derived(actionsProp ?? subscriptionActions(kind, status, 'list'));
+	// i18n F9: Aktionsnamen entstehen per tr() — `$locale` haelt die Liste reaktiv.
+	const actions = $derived.by(() => (void $locale, actionsProp ?? subscriptionActions(kind, status, 'list')));
 
 	const preset = $derived(sub as ComparePreset);
 	const trip = $derived(sub as Trip);

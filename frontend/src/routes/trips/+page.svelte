@@ -17,7 +17,7 @@
 	import { subscriptionActions, subscriptionLifecycle } from '$lib/components/shared/subscriptionActions';
 	import { setPaused, deleteSubscription, sendSubscription } from '$lib/components/shared/subscriptionExec';
 	import { tripStatus } from '$lib/utils/tripStatus';
-	import { t, tn, tr, type MessageKey } from '$lib/i18n/index.js';
+	import { t, tn, tr, locale, type MessageKey } from '$lib/i18n/index.js';
 
 	const now = new Date();
 
@@ -266,7 +266,8 @@
 				getRowId={(row) => (row as Trip).id}
 				onRowClick={(row) => goto(`/trips/${(row as Trip).id}`)}
 				rowActions={(row) =>
-					subscriptionActions('trip', subscriptionLifecycle('trip', row as Trip, now), 'list').map((a) => ({
+					// i18n F9: Aktionsnamen entstehen per tr() — `$locale` macht den Aufruf im Render reaktiv.
+					(void $locale, subscriptionActions('trip', subscriptionLifecycle('trip', row as Trip, now), 'list')).map((a) => ({
 						key: a.id,
 						label: a.label,
 						danger: a.danger,

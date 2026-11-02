@@ -13,6 +13,7 @@
 	// treiben (nicht nur aus dem Gate) — identisch zu WeatherMetricsTab.svelte
 	// und CompareEditor.svelte (dirty-$derived), sonst AC-7-Asymmetrie.
 	import { reportConfigChangedByUser } from '$lib/components/shared/reportConfigDirty';
+	import { t, type MessageKey } from '$lib/i18n';
 
 	interface Props {
 		trip: Trip;
@@ -31,6 +32,8 @@
 	// Legacy save state (only used when saveController is not present)
 	let saving = $state(false);
 	let statusMsg = $state('');
+	// i18n F9: eigene Meldungen als Schluessel (beim Rendern aufgeloest), Server-Texte als Text.
+	let statusKey = $state<MessageKey | null>(null);
 
 	// Issue #1269 (c): kein Katalog-Ladevorgang in diesem Tab — report_config
 	// liegt synchron aus dem Trip vor (kein SSR-Wartezustand wie im Inhalt-Tab).
@@ -57,17 +60,20 @@
 		return async function doSave() {
 			saving = true;
 			statusMsg = '';
+			statusKey = null;
 			try {
 				const configSnapshot = { ...reportConfig };
 				const updated = await api.put<Trip>(
 					`/api/trips/${trip.id}`,
 					pickEigenfelder({ report_config: configSnapshot }, { report: VERSAND_REPORT_KEYS })
 				);
-				statusMsg = 'Gespeichert.';
+				statusKey = 'trip.gespeichert_punkt';
 				onTripUpdate?.(updated);
 			} catch (e: unknown) {
 				const err = e as { error?: string; detail?: string };
-				statusMsg = err.detail ?? err.error ?? 'Fehler beim Speichern';
+				const text = err.detail ?? err.error;
+				if (text) statusMsg = text;
+				else statusKey = 'trip.fehler_speichern';
 			} finally {
 				saving = false;
 			}
@@ -155,10 +161,10 @@
 				disabled={saving}
 				onclick={makeSaveHandler()}
 			>
-				{saving ? 'Speichern …' : 'Briefing-Zeitplan speichern'}
+				{saving ? $t('trip.speichern_laeuft') : $t('trip.zeitplan_speichern')}
 			</Btn>
-			{#if statusMsg}
-				<span style="font-size: 13px; color: var(--g-ink-muted);">{statusMsg}</span>
+			{#if statusKey || statusMsg}
+				<span style="font-size: 13px; color: var(--g-ink-muted);">{statusKey ? $t(statusKey) : statusMsg}</span>
 			{/if}
 		</div>
 	{/if}

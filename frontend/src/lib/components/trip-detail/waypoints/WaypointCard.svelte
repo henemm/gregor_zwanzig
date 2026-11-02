@@ -8,6 +8,7 @@
 
 	import { Btn } from '$lib/components/atoms';
 	import type { Waypoint } from '$lib/types';
+	import { t, type MessageKey } from '$lib/i18n';
 
 	interface Props {
 		waypoint: Waypoint;
@@ -59,10 +60,11 @@
 	}
 
 	// Issue #585 — Typ-Label-Mapping (waypoint.type → lesbares Label)
-	const TYPE_LABELS: Record<string, string> = {
-		start: 'Start', end: 'Ziel', summit: 'Gipfel', pass: 'Pass', valley: 'Tal', hut: 'Hütte'
+	const TYPE_LABELS: Record<string, MessageKey> = {
+		start: 'trip.wegpunkt.typ.start', end: 'trip.wegpunkt.typ.end', summit: 'trip.wegpunkt.typ.summit',
+		pass: 'trip.wegpunkt.typ.pass', valley: 'trip.wegpunkt.typ.valley', hut: 'trip.wegpunkt.typ.hut'
 	};
-	const typeLabel = $derived(waypoint.type ? (TYPE_LABELS[waypoint.type] ?? 'Wegpunkt') : null);
+	const typeLabel = $derived(waypoint.type ? $t(TYPE_LABELS[waypoint.type] ?? 'trip.wegpunkt.typ.andere') : null);
 </script>
 
 <!-- svelte-ignore a11y_no_static_element_interactions -->
@@ -86,7 +88,7 @@
 			{#if typeLabel || waypoint.elevation_m || arrival}
 				<div class="waypoint-meta">
 					{#if typeLabel}<span>{typeLabel}</span><span class="waypoint-meta-sep">·</span>{/if}
-					{#if waypoint.elevation_m}<span>{waypoint.elevation_m} m</span>{/if}
+					{#if waypoint.elevation_m}<span>{`${waypoint.elevation_m} m`}</span>{/if}
 					{#if (waypoint.elevation_m) && arrival}
 						<span class="waypoint-meta-sep">·</span>
 					{/if}
@@ -105,27 +107,27 @@
 				size="xs"
 				data-testid="waypoint-rename-{index}"
 				onclick={makeRenameClick()}
-				aria-label="Wegpunkt umbenennen"
+				aria-label={$t('trip.wegpunkt.umbenennen')}
 			>
-				Umbenennen
+				{$t('aktionen.umbenennen')}
 			</Btn>
 			<Btn
 				variant="ghost"
 				size="xs"
 				data-testid="waypoint-move-{index}"
 				onclick={makeMoveClick()}
-				aria-label="Wegpunkt verschieben"
+				aria-label={$t('trip.wegpunkt.verschieben_aria')}
 			>
-				Verschieben
+				{$t('trip.wegpunkt.verschieben')}
 			</Btn>
 			<Btn
 				variant="ghost"
 				size="xs"
 				data-testid="waypoint-delete-{index}"
 				onclick={makeDeleteClick()}
-				aria-label="Wegpunkt löschen"
+				aria-label={$t('trip.wegpunkt.loeschen')}
 			>
-				Löschen
+				{$t('aktionen.delete')}
 			</Btn>
 		</div>
 	{/if}

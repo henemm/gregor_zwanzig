@@ -6,6 +6,7 @@
 	import { isPauseStage, formatStageNumber } from '$lib/components/shared/wizardHelpers';
 	import { computeHeaderStats } from '$lib/components/email-preview/headerStats';
 	import type { Stage } from '$lib/types';
+	import { t } from '$lib/i18n';
 
 	interface Props {
 		stage: Stage;
@@ -88,7 +89,7 @@
 				type="button"
 				onclick={makeRemoveClick()}
 				style="font-size:12px; color:var(--g-ink-4); background:none; border:none; cursor:pointer; padding:0; line-height:1;"
-				aria-label="Etappe entfernen"
+				aria-label={$t('trip.etappe_entfernen')}
 			>×</button>
 		{/if}
 	</div>
@@ -96,10 +97,10 @@
 	{#if isPause}
 		<!-- Pause stage content -->
 		<div style="font-size:12px; font-weight:600; color:var(--g-ink-2); font-style:italic; margin-top:4px; line-height:1.3;">
-			Pausentag
+			{$t('bausteine.etappe.pausentag')}
 		</div>
 		<div style="font-size:9px; font-family:var(--g-font-mono); color:var(--g-ink-3); margin-top:auto;">
-			⌂ Pause · {stage.location || '—'}
+			{$t('trip.etappe.pause_ort', { ort: stage.location || '—' })}
 		</div>
 	{:else}
 		<!-- Normal stage content -->
@@ -121,7 +122,7 @@
 		<!-- Stats row -->
 		{#if totalKm !== null || ascent !== null}
 			<div style="font-size:9px; font-family:var(--g-font-mono); color:var(--g-ink-3);">
-				{#if totalKm !== null}{totalKm.toFixed(1)} km{/if}{#if totalKm !== null && ascent !== null} · {/if}{#if ascent !== null}↑{Math.round(ascent)}{/if}
+				{#if totalKm !== null}{`${totalKm.toFixed(1)} km`}{/if}{#if totalKm !== null && ascent !== null} · {/if}{#if ascent !== null}↑{Math.round(ascent)}{/if}
 			</div>
 		{/if}
 	{/if}

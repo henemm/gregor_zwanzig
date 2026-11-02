@@ -4,6 +4,7 @@
 	import { Pill } from '$lib/components/atoms';
 	import { deriveTripStatus, type TripStatus } from '$lib/utils/tripStatus';
 	import type { Trip } from '$lib/types';
+	import { t, type MessageKey } from '$lib/i18n';
 
 	interface Props {
 		trip: Trip;
@@ -21,18 +22,20 @@
 		archived: 'default'
 	};
 
-	const LABEL_MAP: Record<TripStatus, string> = {
-		draft: 'Entwurf',
-		planned: 'Geplant',
-		active: 'Aktiv',
-		paused: 'Pausiert',
-		finished: 'Fertig',
-		archived: 'Archiviert'
+	// i18n F9: Status-Namen aus dem Katalog (trip.status.*; de: Entwurf, Geplant, Aktiv,
+	// Pausiert, Fertig, Archiviert), aufgeloest beim Rendern.
+	const LABEL_MAP: Record<TripStatus, MessageKey> = {
+		draft: 'trip.status.draft',
+		planned: 'trip.status.planned',
+		active: 'trip.status.active',
+		paused: 'trip.status.paused',
+		finished: 'trip.status.finished',
+		archived: 'trip.status.archived'
 	};
 
 	const status = $derived(deriveTripStatus(trip, now));
 </script>
 
 <Pill tone={TONE_MAP[status]} data-outlined data-testid="trip-detail-status-badge">
-	{LABEL_MAP[status]}
+	{$t(LABEL_MAP[status])}
 </Pill>

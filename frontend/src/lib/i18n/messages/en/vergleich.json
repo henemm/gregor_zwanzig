@@ -1,1 +1,5 @@
-{}
+{
+	"vergleich.anlegen.reiter": "Comparison",
+	"vergleich.anlegen.sperre_orte": "name the comparison first",
+	"vergleich.anlegen.sperre_wetter": "select at least 2 locations first"
+}
