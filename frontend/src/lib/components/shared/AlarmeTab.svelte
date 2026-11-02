@@ -26,6 +26,7 @@
 		erstelleAlarmeVergleichSpeicherung
 	} from './alarmeVergleichSpeicherung.ts';
 	import { Eyebrow } from '$lib/components/atoms';
+	import { t, locale, type MessageKey } from '$lib/i18n';
 	import type { Trip, AlertMetric, SensLevel, ComparePreset } from '$lib/types';
 	import type { SaveStatus } from '$lib/stores/saveStatusStore.svelte';
 	import ChannelToggle from '$lib/components/shared/ChannelToggle.svelte';
@@ -109,8 +110,10 @@
 		radarAlertEnabled?: boolean;
 		onRadarAlertChange?: (an: boolean) => void;
 		/** Bezugsgroesse der Ortszeit in den Stillen Stunden (#1726/#1378 AC-4).
-		 *  Der Vorgabewert deckt den Trip-Mount vollstaendig ab, der nichts
-		 *  uebergibt; die drei Vergleichs-Mounts liefern „des ersten Orts". */
+		 *  Issue #2656 (F7): der angezeigte Bezug kommt sprachabhaengig aus dem
+		 *  Katalog je `context` (alarme.stille_stunden.bezug_route|_vergleich); die
+		 *  Prop (deutscher Text aus compare/alarmePropsAus.ts) wird nicht mehr
+		 *  angezeigt und bleibt nur fuer die Buendel-Signatur (Rueckbau in F10). */
 		zonenBezug?: string;
 		/** Rollback-Senke des UNVERAENDERTEN Vergleichs-Speicherwegs:
 		 *  `rollbackAlarmSnapshot` setzt nach einem gescheiterten PUT feldweise
@@ -164,7 +167,8 @@
 		onQuietHoursChange,
 		radarAlertEnabled,
 		onRadarAlertChange,
-		zonenBezug = 'der Trip',
+		// #2656 (F7): gebunden (Buendel-Signatur), angezeigt wird der Katalog-Bezug je context.
+		zonenBezug: _zonenBezug,
 		onAlarmFeldSetzen,
 		catalog,
 		preset,
@@ -194,7 +198,7 @@
 				alarmProfile = null;
 			});
 	});
-	const premiumSmsAlarmGate = $derived(derivePremiumSmsAlarmGate(alarmProfile));
+	const premiumSmsAlarmGate = $derived.by(() => (void $locale, derivePremiumSmsAlarmGate(alarmProfile)));
 	const channelDisabled = $derived(
 		premiumSmsAlarmGate.disabled && premiumSmsAlarmGate.hint
 			? { premium_sms: premiumSmsAlarmGate.hint }
@@ -202,6 +206,11 @@
 	);
 
 	const sections = $derived(alarmeTabSections(context));
+	// #2656 (F7): Ortszeit-Bezug der Stillen Stunden je Kontext — zwei Katalogsaetze.
+	const ZONEN_BEZUG: Record<AlarmeContext, MessageKey> = {
+		route: 'alarme.stille_stunden.bezug_route',
+		vergleich: 'alarme.stille_stunden.bezug_vergleich'
+	};
 
 	// ── (b) Amtliche Warnungen — scharfer Trigger (S1; Inhalt-Schalter s.u.) ───
 	// route: lokaler State (Grundlage fuer den EINEN $effect unten).
@@ -250,7 +259,8 @@
 		context === 'vergleich'
 			? deriveUnalertableSelectedMetricNames(
 					materializeActiveMetricKeys(activeMetricKeys ?? null),
-					catalog ?? []
+					catalog ?? [],
+					$locale
 				)
 			: []
 	);
@@ -479,10 +489,10 @@
 		>
 			{#if id === 'official-warnings'}
 				<div class="alarme-official-warnings">
-					<Eyebrow style="margin-bottom: 10px;">{triggerGroupHeading(context)}</Eyebrow>
+					<Eyebrow style="margin-bottom: 10px;">{(void $locale, triggerGroupHeading(context))}</Eyebrow>
 					<div class="alarme-official-toggles">
 						<ChannelToggle
-							label="Amtliche Warnungen lösen Alert aus"
+							label={$t('alarme.amtlich.label')}
 							checked={displayOfficialWarningsEnabled}
 							onchange={handleOfficialWarningsToggle}
 							testid="alerts-tab-official-alert-triggers-toggle"
@@ -492,15 +502,13 @@
 			{:else if id === 'metric-levels'}
 				{#if effectiveActiveMetrics.length === 0 && unalertableSelectedMetricNames.length === 0}
 					<p class="alarme-no-metrics-hint" data-testid="alarme-no-metrics">
-						Wähle im Tab „Wetter-Metriken" Metriken aus, um Alarm-Schwellen zu konfigurieren.
+						{$t('alarme.metriken.keine_gewaehlt')}
 					</p>
 				{:else if effectiveActiveMetrics.length === 0}
 					<!-- #1435 E1b: der Nutzer HAT gewaehlt, nur eben nichts Alarmfaehiges —
 					     „nichts gewaehlt" waere hier sachlich falsch (AC-9). -->
 					<p class="alarme-no-metrics-hint" data-testid="alarme-only-unalertable-hint">
-						Keine der gewählten Größen kann einen Alarm auslösen: {unalertableSelectedMetricNames.join(
-							', '
-						)}. Sie erscheinen weiterhin im Briefing, lösen aber keine Warnung aus.
+						{$t('alarme.metriken.nur_ohne_alarm', { namen: unalertableSelectedMetricNames.join(', ') })}
 					</p>
 				{:else}
 					<AlertMetricLevelTable
@@ -510,8 +518,7 @@
 					/>
 					{#if context === 'vergleich' && unalertableSelectedMetricNames.length > 0}
 						<p class="option-hint alarme-unalertable-hint" data-testid="alarme-unalertable-metrics-hint">
-							Für diese Größen gibt es keinen Alarm: {unalertableSelectedMetricNames.join(', ')}. Sie
-							erscheinen weiterhin im Briefing, lösen aber keine Warnung aus.
+							{$t('alarme.metriken.ohne_alarm', { namen: unalertableSelectedMetricNames.join(', ') })}
 						</p>
 					{/if}
 				{/if}
@@ -550,20 +557,20 @@
 				<AlertQuietHoursCard
 					bind:quiet_from={() => displayQuietFrom, handleQuietFromChange}
 					bind:quiet_to={() => displayQuietTo, handleQuietToChange}
-					zonen_bezug={zonenBezug}
+					zonen_bezug={$t(ZONEN_BEZUG[context])}
 				/>
 			{:else if id === 'radar'}
 				<ChannelToggle
-					label="Radar-Alarm"
+					label={$t('alarme.radar.label')}
 					checked={radarAlertEnabled ?? false}
 					onchange={(checked) => onRadarAlertChange?.(checked)}
 					testid="alarme-radar-toggle"
 				/>
 			{:else if id === 'sample'}
 				{#if context === 'vergleich'}
-					<Eyebrow style="margin: 4px 0 10px;">Beispiel-Warnung</Eyebrow><AlertPreviewCard kind="vergleich" id={preset?.id ?? ''} alertRules={vergleichAlarmRegeln(effectiveActiveMetrics, effectiveMetricLevels)} locationIds={preset?.location_ids ?? []} />
+					<Eyebrow style="margin: 4px 0 10px;">{$t('alarme.beispiel_warnung')}</Eyebrow><AlertPreviewCard kind="vergleich" id={preset?.id ?? ''} alertRules={vergleichAlarmRegeln(effectiveActiveMetrics, effectiveMetricLevels)} locationIds={preset?.location_ids ?? []} />
 				{:else}
-					<Eyebrow style="margin: 4px 0 10px;">Beispiel-Warnung</Eyebrow>
+					<Eyebrow style="margin: 4px 0 10px;">{$t('alarme.beispiel_warnung')}</Eyebrow>
 					<AlertPreviewCard kind="route" id={trip?.id ?? ''} alertRules={trip?.alert_rules ?? []} stages={trip?.stages ?? []} />
 				{/if}
 			{/if}

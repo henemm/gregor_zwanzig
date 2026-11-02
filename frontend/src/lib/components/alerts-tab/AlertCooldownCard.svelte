@@ -2,6 +2,7 @@
 	// Issue #586 — Eyebrow statt h4, JSX-konformer Hint-Text, Mono-Input.
 	import { Eyebrow } from '$lib/components/atoms';
 	import BegriffErklaerung from '$lib/components/molecules/BegriffErklaerung.svelte';
+	import { t } from '$lib/i18n';
 
     let { cooldown_minutes = $bindable<number | undefined>(undefined) }: {
         cooldown_minutes?: number;
@@ -11,7 +12,7 @@
 <div class="cooldown-card" data-testid="alert-cooldown-card">
     <!-- Issue #2521 S1 (AC-11): ⓘ an der Ueberschrift, Hinweistext unten unveraendert. -->
     <div class="eyebrow-row">
-        <Eyebrow>Cooldown</Eyebrow>
+        <Eyebrow>{$t('alarme.cooldown.titel')}</Eyebrow>
         <BegriffErklaerung begriff="cooldown" />
     </div>
     <div class="input-row">
@@ -26,10 +27,10 @@
             data-testid="alert-cooldown-input"
             class="cooldown-input"
         />
-        <span class="unit">Minuten</span>
+        <span class="unit">{$t('alarme.cooldown.einheit')}</span>
     </div>
     <p class="hint">
-        Mindestabstand zwischen zwei Alerts derselben Metrik — verhindert Spam bei zappelnden Werten.
+        {$t('alarme.cooldown.hinweis')}
     </p>
 </div>
 

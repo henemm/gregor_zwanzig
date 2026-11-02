@@ -264,6 +264,28 @@ describe('AC-4: Metrik-Namen ueber metricLabel, col_label unveraendert', () => {
 	});
 });
 
+describe('AC-4: Alarmregeln-Karte (AlertsPreviewCard) ueber F7-Helfer, Sprachwechsel ohne Neuladen', () => {
+	test('de wortgleich zum Bestand (label_de + SEVERITY_LABEL_DE), en Wind gusts / Warning', () => {
+		const { de, en } = deDannEn(() => sichtbar(P.alarmRegelnRendern()));
+		const L = P.alarmLabels;
+		// Bestandsformel vor F9: `${label_de} ${comparison} ${threshold}${unit}` und SEVERITY_LABEL_DE.
+		for (const r of P.ALARM_REGELN.slice(0, 2)) {
+			const m = L.ALERT_METRIC_LABELS[r.metric];
+			hat(de, `${m.label_de} ${m.comparison} ${r.threshold} ${m.unit}`);
+			hat(de, L.SEVERITY_LABEL_DE[r.severity]);
+			hat(en, `${m.label_en} ${m.comparison} ${r.threshold} ${m.unit}`);
+			hat(en, trFor('en', `alarme.stufe.${r.severity}`));
+		}
+		hat(de, 'Warnung');
+		hat(en, 'Warning');
+		hat(en, 'unbekannt_x');
+		hatNicht(en, 'Warnung');
+		hatNicht(en, L.ALERT_METRIC_LABELS.wind_gust.label_de + ' >');
+		assert.notEqual(L.ALERT_METRIC_LABELS.wind_gust.label_de, L.ALERT_METRIC_LABELS.wind_gust.label_en, 'Messaufbau');
+		hat(en, 'Alert rules');
+	});
+});
+
 describe('AC-7: Trip-Status je Sprache', () => {
 	const STATUS = ['Aktiv', 'Pausiert', 'Entwurf', 'Archiviert', 'Fertig', 'Geplant'];
 	const EN = ['Active', 'Paused', 'Draft', 'Archived', 'Finished', 'Planned'];

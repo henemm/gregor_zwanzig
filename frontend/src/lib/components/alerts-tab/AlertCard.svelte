@@ -3,6 +3,7 @@
 	// Karte: Label · Metrik · Bedingung (mono) · Switch · Kanal-Chips.
 
 	import type { AlertRule } from '$lib/types';
+	import { t } from '$lib/i18n';
 
 	let {
 		rule = $bindable(),
@@ -46,7 +47,7 @@
 
 	<!-- Threshold-Zeile (editierbar; Issue #817: Δ-Label statt absoluter "Schwelle:") -->
 	<div class="threshold-row">
-		<span class="threshold-label">Melde ab Änderung:</span>
+		<span class="threshold-label">{$t('alarme.karte.melde_ab_aenderung')}</span>
 		<input
 			type="number"
 			class="threshold-input"
@@ -63,7 +64,7 @@
 
 	<!-- Trennlinie + Kanal-Chips (read-only, Issue #701) -->
 	<div class="card-channels">
-		<span class="channel-label">Kanal:</span>
+		<span class="channel-label">{$t('alarme.karte.kanal')}</span>
 		{#each activeChannels as ch}
 			<span
 				class="channel-chip chip-active"

@@ -5,6 +5,8 @@
 	import { levelToThreshold, thresholdTitle } from './alertMetricTable.ts';
 	import BegriffErklaerung from '$lib/components/molecules/BegriffErklaerung.svelte';
 	import { METRIK_BEGRIFF } from '$lib/components/shared/infoboxKeys';
+	import { t, locale } from '$lib/i18n';
+	import type { MessageKey } from '$lib/i18n';
 
 	interface Props {
 		metric: AlertMetric;
@@ -16,23 +18,23 @@
 	let { metric, label, level, onChange }: Props = $props();
 
 	const LEVELS: SensLevel[] = ['off', 'entspannt', 'standard', 'sensibel'];
-	const LABELS_DESKTOP: Record<SensLevel, string> = {
-		off: 'Aus',
-		entspannt: 'Entspannt',
-		standard: 'Standard',
-		sensibel: 'Sensibel'
+	const LABELS_DESKTOP: Record<SensLevel, MessageKey> = {
+		off: 'alarme.empfindlichkeit.aus',
+		entspannt: 'alarme.preset.entspannt',
+		standard: 'alarme.preset.standard',
+		sensibel: 'alarme.preset.sensibel'
 	};
-	const LABELS_MOBILE: Record<SensLevel, string> = {
-		off: 'Aus',
-		entspannt: 'Entsp.',
-		standard: 'Std.',
-		sensibel: 'Sens.'
+	const LABELS_MOBILE: Record<SensLevel, MessageKey> = {
+		off: 'alarme.empfindlichkeit.aus',
+		entspannt: 'alarme.empfindlichkeit.kurz.entspannt',
+		standard: 'alarme.empfindlichkeit.kurz.standard',
+		sensibel: 'alarme.empfindlichkeit.kurz.sensibel'
 	};
 
 	const threshold = $derived(levelToThreshold(metric, level));
 	// Issue #1592 Scheibe C3 (AC-9): Erklärung fuer den Richtwert-Hinweis
 	// (aktuell nur CAPE) -- sitzt im `title`, nicht im knappen Zellentext.
-	const title = $derived(thresholdTitle(metric));
+	const title = $derived.by(() => (void $locale, thresholdTitle(metric)));
 	const isDimmed = $derived(level === 'off');
 	const begriff = $derived(METRIK_BEGRIFF[metric]);
 </script>
@@ -58,8 +60,8 @@
 				aria-pressed={level === l}
 				data-testid="alert-level-{metric}-{l}"
 			>
-				<span class="label-desktop">{LABELS_DESKTOP[l]}</span>
-				<span class="label-mobile">{LABELS_MOBILE[l]}</span>
+				<span class="label-desktop">{$t(LABELS_DESKTOP[l])}</span>
+				<span class="label-mobile">{$t(LABELS_MOBILE[l])}</span>
 			</button>
 		{/each}
 	</td>

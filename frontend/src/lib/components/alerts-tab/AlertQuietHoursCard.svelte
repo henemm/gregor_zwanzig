@@ -2,14 +2,17 @@
     // Issue #586 — Eyebrow statt h4, JSX-konformer Hint-Text, Mono-Inputs.
     import { Checkbox } from '$lib/components/ui/checkbox';
     import { Eyebrow } from '$lib/components/atoms';
+    import { t } from '$lib/i18n';
 
     // Issue #1726: `zonen_bezug` benennt, WOVON die Ortszeit abhängt — beim
     // Trip „der Trip", beim Ortsvergleich „des ersten Orts". Reiner Text: welche
     // IANA-Zone gilt, entscheidet das Backend (`anchor_tz`/`first_resolvable_tz`).
+    // Issue #2656 (F7): ohne Uebergabe der Trip-Bezug aus dem Katalog (kein
+    // Sprach-Standardwert in $props()).
     let {
         quiet_from = $bindable<string | undefined>(undefined),
         quiet_to   = $bindable<string | undefined>(undefined),
-        zonen_bezug = 'der Trip',
+        zonen_bezug,
     }: { quiet_from?: string; quiet_to?: string; zonen_bezug?: string } = $props();
 
     let enabled = $state(quiet_from !== undefined && quiet_to !== undefined);
@@ -29,18 +32,18 @@
 
 <div class="quiet-card" data-testid="alert-quiet-hours-card">
     <div class="header-row">
-        <Eyebrow>Stille Stunden</Eyebrow>
+        <Eyebrow>{$t('alarme.stille_stunden.titel')}</Eyebrow>
         <Checkbox
             checked={enabled}
             onchange={toggleEnabled}
             data-testid="alert-quiet-hours-toggle"
-        >Aktiv</Checkbox>
+        >{$t('alarme.stille_stunden.aktiv')}</Checkbox>
     </div>
-    <p class="hint">In diesem Zeitraum keine Alerts senden (Ortszeit {zonen_bezug}) — gestaute Alerts gehen mit dem nächsten Morgen-Briefing mit.</p>
+    <p class="hint">{$t('alarme.stille_stunden.hinweis', { zonen_bezug: zonen_bezug ?? $t('alarme.stille_stunden.bezug_route') })}</p>
     {#if enabled}
         <div class="time-row">
             <label>
-                Von
+                {$t('alarme.stille_stunden.von')}
                 <input
                     type="time"
                     bind:value={quiet_from}
@@ -49,7 +52,7 @@
                 />
             </label>
             <label>
-                Bis
+                {$t('alarme.stille_stunden.bis')}
                 <input
                     type="time"
                     bind:value={quiet_to}
@@ -60,7 +63,7 @@
         </div>
         {#if midnightWrap}
             <p class="midnight-hint" data-testid="alert-quiet-midnight-hint">
-                Stille Stunden über Mitternacht ({quiet_from} bis {quiet_to} des nächsten Tages).
+                {$t('alarme.stille_stunden.mitternacht', { von: quiet_from ?? '', bis: quiet_to ?? '' })}
             </p>
         {/if}
     {/if}

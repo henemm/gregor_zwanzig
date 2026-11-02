@@ -13,13 +13,16 @@
 	// Ungewired in dieser Scheibe — keine Flaeche bindet diese Komponente ein.
 
 	import { Eyebrow, Card, Switch } from '$lib/components/atoms';
+	import { t } from '$lib/i18n';
+	import type { MessageKey } from '$lib/i18n';
+	import { textTeile } from '$lib/i18n/textTeile';
 	import BegriffErklaerung from '$lib/components/molecules/BegriffErklaerung.svelte';
 	import {
 		ALERT_CHANNEL_ORDER,
-		NO_CHANNEL_WARNING,
+		NO_CHANNEL_WARNING_KEY,
 		channelWarningNeeded,
 		CHANNEL_THRESHOLD_LEVELS,
-		CHANNEL_THRESHOLD_LABELS,
+		CHANNEL_THRESHOLD_KEYS,
 		type AlertChannelState,
 		type AlertChannelThresholdState,
 		type ChannelKind,
@@ -60,12 +63,16 @@
 		premium_sms: 'Premium-SMS (Garmin inReach)',
 		email: 'Email'
 	};
-	const CHANNEL_SUB: Record<ChannelKind, string> = {
-		telegram: 'sofortiger Push',
-		sms: 'sofort · ≤ 140 Z.',
-		premium_sms: 'Satellit · auch ohne Handynetz',
-		email: 'optional · langsamer als Push'
+	// Issue #2656 (F7): Kanalnamen (oben) sind Eigennamen; die Beschreibungen kommen aus dem Katalog.
+	const CHANNEL_SUB: Record<ChannelKind, MessageKey> = {
+		telegram: 'alarme.kanaele.sub.telegram',
+		sms: 'alarme.kanaele.sub.sms',
+		premium_sms: 'alarme.kanaele.sub.premium_sms',
+		email: 'alarme.kanaele.sub.email'
 	};
+
+	// Eigennamen der Sofort-Kanaele im Einleitungssatz (Platzhalter {kanaele}).
+	const SOFORT_KANAELE = `${CHANNEL_LABELS.telegram}/${CHANNEL_LABELS.sms}`;
 
 	const activeCount = $derived(ALERT_CHANNEL_ORDER.filter((k) => channels[k]).length);
 	const warningNeeded = $derived(channelWarningNeeded(channels));
@@ -90,12 +97,12 @@
 
 <div data-testid="alert-channel-picker">
 	<div class="acp-head">
-		<Eyebrow style="margin: 0;">Alert-Kanäle</Eyebrow>
+		<Eyebrow style="margin: 0;">{$t('alarme.kanaele.titel')}</Eyebrow>
 		{#if thresholds}
 			<!-- Issue #2521 S1 (AC-9): sichtbarer Anker fuer den Begriff, derselbe
 			     wie im aria-label der Stufen-Gruppe und im Erklaertext. -->
 			<span class="acp-schwelle">
-				<span class="acp-schwelle-label">Dringlichkeits-Schwelle</span>
+				<span class="acp-schwelle-label">{$t('alarme.kanaele.schwelle')}</span>
 				<BegriffErklaerung begriff="kanal_schwelle" />
 			</span>
 		{/if}
@@ -104,12 +111,11 @@
 			class:warn={warningNeeded}
 			data-testid="alert-channel-picker-warning"
 		>
-			{warningNeeded ? NO_CHANNEL_WARNING : `${activeCount} aktiv`}
+			{warningNeeded ? $t(NO_CHANNEL_WARNING_KEY) : $t('alarme.kanaele.aktiv', { anzahl: activeCount })}
 		</span>
 	</div>
 	<p class="acp-lead">
-		Alerts sind kurze Sofort-Meldungen — <strong>Telegram/SMS</strong> sind dafür ideal. Das geplante
-		Briefing (die Tabelle) läuft davon getrennt weiter über seine eigenen Kanäle.
+		{#each textTeile($t('alarme.kanaele.einleitung')) as teil}{#if teil.platzhalter === 'kanaele'}<strong>{SOFORT_KANAELE}</strong>{:else}{teil.text}{/if}{/each}
 	</p>
 	<Card padding={0}>
 		<div class="acp-rows" style:padding={dense ? '2px 14px' : '4px 18px'}>
@@ -128,7 +134,7 @@
 								class="acp-threshold"
 								data-testid="alert-channel-threshold-{kind}"
 								role="group"
-								aria-label="Dringlichkeits-Schwelle {CHANNEL_LABELS[kind]}"
+								aria-label={$t('alarme.kanaele.schwelle_aria', { kanal: CHANNEL_LABELS[kind] })}
 							>
 								{#each CHANNEL_THRESHOLD_LEVELS as level (level)}
 									<button
@@ -139,12 +145,12 @@
 										data-testid="alert-channel-threshold-{kind}-{level}"
 										onclick={makeThresholdHandler(kind, level)}
 									>
-										{CHANNEL_THRESHOLD_LABELS[level]}
+										{$t(CHANNEL_THRESHOLD_KEYS[level])}
 									</button>
 								{/each}
 							</div>
 						{:else}
-							<div class="acp-sub">{CHANNEL_SUB[kind]}</div>
+							<div class="acp-sub">{$t(CHANNEL_SUB[kind])}</div>
 						{/if}
 						{#if disabledChannels?.[kind]}
 							<!-- Issue #1745 A (D3): eine gesperrte Zeile ohne Begruendung waere
@@ -161,7 +167,7 @@
 							disabled={!!disabledChannels?.[kind]}
 							tone="good"
 							size={dense ? 'lg' : 'md'}
-							aria-label="{CHANNEL_LABELS[kind]} umschalten"
+							aria-label={$t('alarme.kanaele.umschalten', { kanal: CHANNEL_LABELS[kind] })}
 						/>
 					</div>
 				</div>

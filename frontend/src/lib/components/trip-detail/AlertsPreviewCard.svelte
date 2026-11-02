@@ -8,10 +8,11 @@
 	import {
 		ALERT_METRIC_LABELS,
 		ALERT_SEVERITY_TONE,
-		SEVERITY_LABEL_DE,
+		alertMetricLabel,
+		severityLabel as severityName,
 		normalizeAlertMetric
 	} from '$lib/utils/alertMetricLabels';
-	import { t } from '$lib/i18n';
+	import { t, locale, type Lang } from '$lib/i18n';
 
 	interface Props {
 		trip: Trip;
@@ -22,21 +23,22 @@
 	const enabledRules = $derived((trip.alert_rules ?? []).filter((r) => r.enabled).slice(0, 5));
 	const isEmpty = $derived(enabledRules.length === 0);
 
-	function metricLabel(rule: AlertRule): string {
+	// i18n F9: Metrik- und Stufen-Namen aus F7 (alertMetricLabel/severityLabel), Sprache als Parameter.
+	function metricLabel(rule: AlertRule, lang: Lang): string {
 		const key = normalizeAlertMetric(rule.metric);
 		const meta = key ? ALERT_METRIC_LABELS[key] : undefined;
 		if (!meta) return rule.metric;
 		// #1488 Scheibe A: kein thunder_level-Sonderfall mehr — generischer Pfad.
 		const unit = meta.unit ? ` ${meta.unit}` : '';
-		return `${meta.label_de} ${meta.comparison} ${rule.threshold}${unit}`;
+		return `${alertMetricLabel(key!, lang)} ${meta.comparison} ${rule.threshold}${unit}`;
 	}
 
 	function severityTone(rule: AlertRule): 'info' | 'warning' | 'danger' {
 		return ALERT_SEVERITY_TONE[rule.severity] ?? 'info';
 	}
 
-	function severityLabel(rule: AlertRule): string {
-		return SEVERITY_LABEL_DE[rule.severity] ?? rule.severity;
+	function severityLabel(rule: AlertRule, lang: Lang): string {
+		return severityName(rule.severity, lang);
 	}
 </script>
 
@@ -52,8 +54,8 @@
 		<ul class="alert-list">
 			{#each enabledRules as rule (rule.metric + rule.threshold + rule.id)}
 				<li data-testid="alert-row" class="alert-row">
-					<span class="alert-metric">{metricLabel(rule)}</span>
-					<Pill tone={severityTone(rule)}>{severityLabel(rule)}</Pill>
+					<span class="alert-metric">{metricLabel(rule, $locale)}</span>
+					<Pill tone={severityTone(rule)}>{severityLabel(rule, $locale)}</Pill>
 				</li>
 			{/each}
 		</ul>

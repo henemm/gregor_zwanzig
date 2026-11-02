@@ -29,6 +29,7 @@ import { fileURLToPath } from 'node:url';
 import { parse } from 'svelte/compiler';
 
 import { ALERT_METRIC_LABELS } from '../alertMetricLabels.ts';
+import { trFor, type MessageKey } from '../../i18n/index.ts';
 import type { AlertMetric } from '../../types.ts';
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -41,7 +42,7 @@ const PRESET_SELECTOR = join(
 	'AlertPresetSelector.svelte'
 );
 
-/** Die `label`-Werte der POPOVER_ROWS-Tabelle aus AlertPresetSelector.svelte. */
+/** Die deutschen Zeilennamen der POPOVER_ROWS-Tabelle aus AlertPresetSelector.svelte. */
 function presetSelectorLabels(): string[] {
 	const ast: any = parse(readFileSync(PRESET_SELECTOR, 'utf-8'), { modern: true });
 	const decl = (ast.instance?.content?.body ?? [])
@@ -53,9 +54,11 @@ function presetSelectorLabels(): string[] {
 	const init = decl.init?.type === 'TSAsExpression' ? decl.init.expression : decl.init;
 	assert.equal(init?.type, 'ArrayExpression', '`POPOVER_ROWS` ist kein Array-Literal mehr.');
 
+	// #2656 (F7): die Zeilen tragen Katalogschluessel (`zeile`); verglichen wird
+	// ihr deutscher Wortlaut (de-Katalog = bisherige Literale, Golden F7).
 	return init.elements.map((el: any) => {
-		const prop = (el?.properties ?? []).find((p: any) => p.key?.name === 'label');
-		return String(prop?.value?.value ?? '');
+		const prop = (el?.properties ?? []).find((p: any) => p.key?.name === 'zeile');
+		return trFor('de', String(prop?.value?.value ?? '') as MessageKey);
 	});
 }
 

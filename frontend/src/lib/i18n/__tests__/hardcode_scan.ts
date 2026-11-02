@@ -207,7 +207,10 @@ export const TS_KOMPONENTEN_ORDNER = [
 	'lib/components/trip-new/',
 	'lib/components/edit/',
 	'lib/components/email-preview/',
-	'routes/trips/'
+	'routes/trips/',
+	// F7 (#2656): Alarme-Reiter (Abschnitte, Kanaele, Premium-SMS-Sperre) und alerts-tab/
+	'lib/components/shared/alarme-tab/',
+	'lib/components/alerts-tab/'
 ];
 
 /** Pfad relativ zu frontend/src/ mit Schraegstrichen. */

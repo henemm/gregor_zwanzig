@@ -32,10 +32,11 @@ import assert from 'node:assert/strict';
 
 import {
 	ALERT_CHANNEL_ORDER,
-	NO_CHANNEL_WARNING,
+	NO_CHANNEL_WARNING_KEY,
 	channelWarningNeeded,
 	resolveAlertChannels
 } from '../alarme-tab/alertChannelState.ts';
+import { trFor } from '../../../i18n/index.ts';
 
 // #1745 AC-1 (Teil a, reine Reihenfolge-Zusicherung). Ersetzt die frühere
 // Drei-Kanal-Fassung dieses Tests (#1258 AC-11) — dieselbe Zusicherung, um den
@@ -198,8 +199,9 @@ test('#1745 AC-4: warnhinweis_bleibt_aus_bei_nur_premium_sms', () => {
 	);
 });
 
+// #2656 (F7): der Text steht im Katalog; deutsch unveraendert der Design-Text.
 test('#1258 AC-11: NO_CHANNEL_WARNING hat den exakten Design-Text', () => {
-	assert.equal(NO_CHANNEL_WARNING, 'kein Kanal — Alerts gehen nirgends hin');
+	assert.equal(trFor('de', NO_CHANNEL_WARNING_KEY), 'kein Kanal — Alerts gehen nirgends hin');
 });
 
 test('#1258 AC-11: Default-State selbst löst den Warnhinweis nicht aus (TG/SMS an)', () => {

@@ -427,6 +427,50 @@ describe('TypeScript-Ratsche (F11, AC-6)', () => {
 		assert.equal(wirdGescanntTs('lib/components/trip-new/__tests__/f9x.ts'), false);
 	});
 
+	// Issue #2656 (i18n F7, AC-7): Alarme-Reiter, Alarm-Kanal-Picker und alerts-tab/ stehen
+	// unter keinem Eintrag mehr; ihre .ts-Helfer (alarme-tab/, alerts-tab/, alertMetricLabels.ts)
+	// unter der TS-Ratsche.
+	test('F7: kein Allowlist-Eintrag deckt Alarme-Reiter, Alarm-Kanal-Picker oder alerts-tab/', () => {
+		const F7 = [
+			'lib/components/shared/AlarmeTab.svelte',
+			'lib/components/shared/AlertChannelPicker.svelte',
+			'lib/components/alerts-tab/AlertsTab.svelte',
+			'lib/components/alerts-tab/AlertCard.svelte',
+			'lib/components/alerts-tab/AlertPresetSelector.svelte',
+			'lib/components/alerts-tab/AlertMetricLevelTable.svelte',
+			'lib/components/alerts-tab/AlertMetricLevelRow.svelte',
+			'lib/components/alerts-tab/AlertMetricRow.svelte',
+			'lib/components/alerts-tab/AlertMetricTable.svelte',
+			'lib/components/alerts-tab/AlertQuietHoursCard.svelte',
+			'lib/components/alerts-tab/AlertCooldownCard.svelte',
+			'lib/components/alerts-tab/AlertPreviewCard.svelte'
+		];
+		const deckt = (a: string, p: string) => (a.endsWith('/') ? p.startsWith(a) : p === a);
+		assert.deepEqual(F7.filter((p) => ALLOWLIST.some((a) => deckt(a, p))), []);
+		for (const alt of ['lib/components/alerts-tab/', 'lib/components/shared/AlarmeTab.svelte', 'lib/components/shared/AlertChannelPicker.svelte', 'lib/utils/alertMetricLabels.ts'])
+			assert.ok(!ALLOWLIST.includes(alt), alt);
+		const alle = scanneVerzeichnis(SRC);
+		assert.equal(alle.filter((e) => F7.includes(e.pfad)).length, F7.length, 'Messaufbau: F7-Dateien nicht gescannt');
+		assert.deepEqual(alle.filter((e) => F7.includes(e.pfad) && e.treffer.length > 0).map((e) => `${e.pfad}: ${e.treffer.map((t) => t.text).join(' | ')}`), []);
+	});
+
+	test('F7: .ts-Helfer von Alarme-Reiter und alerts-tab/ sowie alertMetricLabels.ts werden gescannt und sind ohne Treffer', () => {
+		const ts = scanneVerzeichnis(SRC).filter(
+			(e) =>
+				e.pfad.endsWith('.ts') &&
+				(e.pfad.startsWith('lib/components/shared/alarme-tab/') || e.pfad.startsWith('lib/components/alerts-tab/') || e.pfad === 'lib/utils/alertMetricLabels.ts')
+		);
+		for (const p of ['shared/alarme-tab/premiumSmsAlarmGate.ts', 'shared/alarme-tab/alertChannelState.ts', 'shared/alarme-tab/alarmeTabSections.ts', 'shared/alarme-tab/activeAlertMetricsFromCatalog.ts', 'shared/alarme-tab/alarmeDeliveryPayload.ts', 'alerts-tab/alertMetricTable.ts', 'alerts-tab/alertPreviewHelpers.ts'])
+			assert.ok(ts.some((e) => e.pfad === `lib/components/${p}`), p);
+		assert.ok(ts.some((e) => e.pfad === 'lib/utils/alertMetricLabels.ts'), 'lib/utils/alertMetricLabels.ts');
+		assert.deepEqual(ts.filter((e) => e.treffer.length > 0).map((e) => `${e.pfad}: ${e.treffer.map((t) => t.text).join(' | ')}`), []);
+		assert.equal(wirdGescanntTs('lib/components/alerts-tab/__tests__/f7Pruefstand.ts'), false);
+		assert.equal(wirdGescanntTs('lib/components/alerts-tab/alertMetricTable.test.ts'), false);
+		// Gegenprobe: ein zurueckgekehrtes deutsches Literal waere ein Treffer ohne Eintrag.
+		const treffer = scanneTs("export const PREMIUM_SMS_ALARM_HINT_NO_TIER = 'Premium-SMS ab Level Premium verfügbar';");
+		assert.equal(pruefeGegenAllowlist([{ pfad: 'lib/components/shared/alarme-tab/premiumSmsAlarmGate.ts', treffer }], ALLOWLIST).ohneEintrag.length, 1);
+	});
+
 	test('Allowlist enthaelt die acht F11-Praefixe nicht mehr', () => {
 		const F11 = [
 			'lib/components/ui/',

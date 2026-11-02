@@ -6,6 +6,8 @@
 // Design: claude-code-handoff/current/jsx/corridor-editor.jsx:469-489
 // Spec: docs/specs/modules/issue_1258_alarme_tab_official_warnings.md (AC-11)
 
+import { tr, type MessageKey } from '../../../i18n/index.ts';
+
 export interface AlertChannelState {
 	telegram: boolean;
 	sms: boolean;
@@ -73,7 +75,8 @@ export function resolveAlertChannels(
 	};
 }
 
-export const NO_CHANNEL_WARNING = 'kein Kanal — Alerts gehen nirgends hin';
+/** Issue #2656 (F7): Katalogschluessel des Warnhinweises „kein Kanal" (Anzeige ueber $t). */
+export const NO_CHANNEL_WARNING_KEY: MessageKey = 'alarme.kanaele.kein_kanal';
 
 // Issue #1745 A (Landmine 4): premium_sms zaehlt hier MIT — ein Trip/Preset mit
 // AUSSCHLIESSLICH Premium-SMS zeigte sonst faelschlich "kein Kanal", waehrend
@@ -102,10 +105,24 @@ export interface AlertChannelThresholdState {
 
 export const CHANNEL_THRESHOLD_LEVELS: ChannelThreshold[] = ['LOW', 'MODERATE', 'HIGH'];
 
+/** Issue #2656 (F7): Katalogschluessel je Stufe; die Anzeige im Markup ueber `$t`. */
+export const CHANNEL_THRESHOLD_KEYS: Record<ChannelThreshold, MessageKey> = {
+	LOW: 'alarme.kanaele.stufe.low',
+	MODERATE: 'alarme.kanaele.stufe.moderate',
+	HIGH: 'alarme.kanaele.stufe.high'
+};
+
+/** Stufen-Namen in der aktuellen Sprache (Lesezugriff je Aufruf, tr). */
 export const CHANNEL_THRESHOLD_LABELS: Record<ChannelThreshold, string> = {
-	LOW: 'gering',
-	MODERATE: 'mittel',
-	HIGH: 'hoch'
+	get LOW() {
+		return tr(CHANNEL_THRESHOLD_KEYS.LOW);
+	},
+	get MODERATE() {
+		return tr(CHANNEL_THRESHOLD_KEYS.MODERATE);
+	},
+	get HIGH() {
+		return tr(CHANNEL_THRESHOLD_KEYS.HIGH);
+	}
 };
 
 // PO-Entscheidung 2026-08-05: Startwert je Kanal ist 'LOW' — es wird

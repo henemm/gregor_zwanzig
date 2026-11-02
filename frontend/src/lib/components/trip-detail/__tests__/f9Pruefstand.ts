@@ -245,6 +245,17 @@ export function layoutRendern(): string {
 	].join('\n');
 }
 
+/** Alarmregeln (Bestand #409) — Namen und Stufen aus F7 (alertMetricLabel/severityLabel). */
+export const ALARM_REGELN = [
+	{ id: 'r1', metric: 'wind_gust', threshold: 60, severity: 'warning', enabled: true },
+	{ id: 'r2', metric: 'precipitation_sum', threshold: 15, severity: 'critical', enabled: true },
+	{ id: 'r3', metric: 'unbekannt_x', threshold: 1, severity: 'info', enabled: true }
+];
+export function alarmRegelnRendern(): string {
+	return html(K.AlertsPreviewCard, { trip: tripLaufend({ alert_rules: ALARM_REGELN }) });
+}
+export const alarmLabels = await imp(path.join(FRONTEND, 'src/lib/utils/alertMetricLabels.ts'));
+
 export function wegpunkteRendern(): string {
 	const pause = { id: 'p1', name: 'Pausentag', date: '2026-07-02', waypoints: [], location: 'Carrozzu' };
 	const strip = [ETAPPEN[0], pause, ETAPPEN[1]];

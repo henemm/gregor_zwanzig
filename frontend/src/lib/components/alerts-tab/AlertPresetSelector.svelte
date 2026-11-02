@@ -5,36 +5,42 @@
 
 	import type { PresetName } from './alertMetricTable.ts';
 
-	// Schwellwert-Popover-Daten: 13 Metriken × 3 Presets
+	import { t } from '$lib/i18n';
+	import type { MessageKey } from '$lib/i18n';
+
+	// Schwellwert-Popover-Daten: 13 Metriken × 3 Presets. Issue #2656 (F7): die
+	// Zeilennamen sind Katalogschluessel (`alarme.preset.zeile.<id>`) — ihr
+	// deutscher Wortlaut weicht teils von ALERT_METRIC_LABELS ab („Tiefsttemperatur")
+	// und bleibt byte-gleich; Zahlen und Einheiten sind Daten.
 	const POPOVER_ROWS: Array<{
-		label: string;
+		zeile: MessageKey;
 		unit: string;
 		entspannt: number | string;
 		standard: number | string;
 		sensibel: number | string;
 	}> = [
-		{ label: 'Böen',                unit: 'km/h',  entspannt: 35,   standard: 20,   sensibel: 12   },
-		{ label: 'Niederschlag',        unit: 'mm',    entspannt: 20,   standard: 10,   sensibel: 5    },
-		{ label: 'Gewitter',            unit: '',      entspannt: '+1', standard: '+1', sensibel: '+1' },
-		{ label: 'Schneefallgrenze',    unit: 'm',     entspannt: 600,  standard: 400,  sensibel: 200  },
-		{ label: 'Tiefsttemperatur',    unit: '°C',    entspannt: 8,    standard: 5,    sensibel: 3    },
-		{ label: 'Höchsttemperatur',    unit: '°C',    entspannt: 10,   standard: 6,    sensibel: 4    },
+		{ zeile: 'alarme.preset.zeile.wind_gust',            unit: 'km/h', entspannt: 35,   standard: 20,   sensibel: 12   },
+		{ zeile: 'alarme.preset.zeile.precipitation_sum',    unit: 'mm',   entspannt: 20,   standard: 10,   sensibel: 5    },
+		{ zeile: 'alarme.preset.zeile.thunder_level',        unit: '',     entspannt: '+1', standard: '+1', sensibel: '+1' },
+		{ zeile: 'alarme.preset.zeile.snow_line',            unit: 'm',    entspannt: 600,  standard: 400,  sensibel: 200  },
+		{ zeile: 'alarme.preset.zeile.temperature_min',      unit: '°C',   entspannt: 8,    standard: 5,    sensibel: 3    },
+		{ zeile: 'alarme.preset.zeile.temperature_max',      unit: '°C',   entspannt: 10,   standard: 6,    sensibel: 4    },
 		// #1435 E1a-2 AC-9: Wortlaut identisch zu ALERT_METRIC_LABELS (Gleichlauf
 		// per Test gesichert); die Zusammenfuehrung beider Tabellen gehoert zu E4.
-		{ label: 'Temperatur (Änderung)', unit: '°C',  entspannt: 14,   standard: 10,   sensibel: 6    },
-		{ label: 'Wind (Änderung)',     unit: 'km/h',  entspannt: 35,   standard: 25,   sensibel: 15   },
-		{ label: 'Niederschlag (Änderung)', unit: 'mm', entspannt: 15,  standard: 7,    sensibel: 3    },
-		{ label: 'Neuschnee',           unit: 'cm',    entspannt: 20,   standard: 8,    sensibel: 2    },
-		{ label: 'CAPE',                unit: 'J/kg',  entspannt: 1200, standard: 600,  sensibel: 200  },
-		{ label: 'Sichtweite',          unit: 'm',     entspannt: 500,  standard: 1000, sensibel: 3000 },
-		{ label: 'Luftfeuchtigkeit',    unit: '%',     entspannt: 25,   standard: 15,   sensibel: 10   },
+		{ zeile: 'alarme.preset.zeile.temperature_change',   unit: '°C',   entspannt: 14,   standard: 10,   sensibel: 6    },
+		{ zeile: 'alarme.preset.zeile.wind_change',          unit: 'km/h', entspannt: 35,   standard: 25,   sensibel: 15   },
+		{ zeile: 'alarme.preset.zeile.precipitation_change', unit: 'mm',   entspannt: 15,   standard: 7,    sensibel: 3    },
+		{ zeile: 'alarme.preset.zeile.fresh_snow',           unit: 'cm',   entspannt: 20,   standard: 8,    sensibel: 2    },
+		{ zeile: 'alarme.preset.zeile.cape',                 unit: 'J/kg', entspannt: 1200, standard: 600,  sensibel: 200  },
+		{ zeile: 'alarme.preset.zeile.visibility',           unit: 'm',    entspannt: 500,  standard: 1000, sensibel: 3000 },
+		{ zeile: 'alarme.preset.zeile.humidity',             unit: '%',    entspannt: 25,   standard: 15,   sensibel: 10   },
 	];
 
-	const PRESET_OPTIONS: Array<{ value: PresetName; label: string }> = [
-		{ value: 'deaktiviert', label: 'Deaktiviert' },
-		{ value: 'entspannt',   label: 'Entspannt'   },
-		{ value: 'standard',    label: 'Standard'    },
-		{ value: 'sensibel',    label: 'Sensibel'    },
+	const PRESET_OPTIONS: Array<{ value: PresetName; label: MessageKey }> = [
+		{ value: 'deaktiviert', label: 'alarme.preset.deaktiviert' },
+		{ value: 'entspannt',   label: 'alarme.preset.entspannt'   },
+		{ value: 'standard',    label: 'alarme.preset.standard'    },
+		{ value: 'sensibel',    label: 'alarme.preset.sensibel'    },
 	];
 
 	let { value = $bindable<PresetName>('standard'), onchange }: {
@@ -70,7 +76,7 @@
 				class="preset-select"
 			>
 				{#each PRESET_OPTIONS as opt}
-					<option value={opt.value}>{opt.label}</option>
+					<option value={opt.value}>{$t(opt.label)}</option>
 				{/each}
 			</select>
 		</div>
@@ -80,36 +86,36 @@
 			class="info-btn"
 			data-testid="alert-preset-info"
 			onclick={togglePopover}
-			aria-label="Schwellwert-Übersicht anzeigen"
+			aria-label={$t('alarme.preset.uebersicht_anzeigen')}
 		>ℹ</button>
 	</div>
 
 	{#if popoverOpen}
 	<div class="popover" data-testid="alert-preset-popover">
 		<div class="popover-header">
-			<span class="popover-title">Schwellwerte nach Preset</span>
+			<span class="popover-title">{$t('alarme.preset.uebersicht_titel')}</span>
 			<button
 				type="button"
 				class="popover-close"
 				data-testid="alert-preset-popover-close"
 				onclick={togglePopover}
-				aria-label="Schließen"
+				aria-label={$t('alarme.preset.schliessen')}
 			>✕</button>
 		</div>
 		<div class="popover-scroll">
 			<table class="threshold-table">
 				<thead>
 					<tr>
-						<th class="col-metric">Metrik</th>
-						<th>Entspannt</th>
-						<th>Standard</th>
-						<th>Sensibel</th>
+						<th class="col-metric">{$t('alarme.tabelle.metrik')}</th>
+						<th>{$t('alarme.preset.entspannt')}</th>
+						<th>{$t('alarme.preset.standard')}</th>
+						<th>{$t('alarme.preset.sensibel')}</th>
 					</tr>
 				</thead>
 				<tbody>
 					{#each POPOVER_ROWS as row}
 					<tr>
-						<td class="col-metric">{row.label}</td>
+						<td class="col-metric">{$t(row.zeile)}</td>
 						<td>{fmtNum(row.entspannt, row.unit)}</td>
 						<td>{fmtNum(row.standard, row.unit)}</td>
 						<td>{fmtNum(row.sensibel, row.unit)}</td>
