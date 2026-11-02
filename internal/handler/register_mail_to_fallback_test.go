@@ -52,7 +52,8 @@ func TestRegisterHandler_SetsMailToOnRegistration_AC1(t *testing.T) {
 		t.Fatal("AC-1: expected dispatch goroutine within 2s")
 	}
 
-	user, err := s.LoadUser("mailto-pw")
+	// Issue #2194: Konto-ID aus der 201-Antwort (generiert).
+	user, err := s.LoadUser(registrierID2194(t, w, "AC-1 Passwort"))
 	if err != nil || user == nil {
 		t.Fatalf("AC-1: user not found after registration: %v", err)
 	}
@@ -164,7 +165,8 @@ func TestPasskeyRegisterPublicFinish_SetsMailToOnRegistration_AC1(t *testing.T) 
 		t.Fatalf("AC-1 finish: expected 201, got %d: %s", finishW.Code, finishW.Body.String())
 	}
 
-	user, err := s.LoadUser("mailto-pk")
+	// Issue #2194: Konto-ID aus der 201-Antwort (in Begin erzeugt).
+	user, err := s.LoadUser(registrierID2194(t, finishW, "AC-1 Passkey"))
 	if err != nil || user == nil {
 		t.Fatalf("AC-1: user not found after registration: %v", err)
 	}

@@ -50,10 +50,41 @@ func dummyPasswordHash() []byte {
 	return dummyHash
 }
 
+// bcryptCompareFn ist die EINZIGE Funktion, ueber die der Login bcrypt-
+// Vergleiche ausfuehrt (Issue #2194 AC-3): burnDummyCompare und der echte
+// Passwortvergleich in LoginHandler laufen beide hierueber, damit "genau ein
+// Vergleich je Anmeldeversuch" am Wirkort zaehlbar ist.
+var bcryptCompareFn = bcrypt.CompareHashAndPassword
+
 // burnDummyCompare fuehrt einen bcrypt-Vergleich gegen den Dummy-Hash aus und
 // verwirft das Ergebnis — er entscheidet NIE ueber die Anmeldung.
 func burnDummyCompare(password string) {
-	_ = bcrypt.CompareHashAndPassword(dummyPasswordHash(), []byte(password))
+	_ = bcryptCompareFn(dummyPasswordHash(), []byte(password))
+}
+
+// isLoginEmail ist die @-Weiche (Issue #2194): eine Kennung mit "@" ist eine
+// E-Mail-Adresse, ohne "@" eine Konto-ID ("@" ist in IDs verboten).
+func isLoginEmail(kennung string) bool {
+	return strings.Contains(kennung, "@")
+}
+
+// resolveLoginEmail loest eine E-Mail-Kennung auf genau ein echtes Konto auf
+// (Issue #2194). 0 Treffer, mehrere Treffer oder ein Lesefehler liefern nil —
+// der Aufrufer behandelt das wie eine unbekannte Kennung. Geloggt werden nur
+// Anzahlen, nie die Adresse.
+func resolveLoginEmail(s *store.Store, kennung, ctx string) *model.User {
+	treffer, err := s.FindUsersByLoginEmail(kennung)
+	if err != nil {
+		log.Printf("%s: login email lookup failed: %v", ctx, err)
+		return nil
+	}
+	if len(treffer) != 1 {
+		if len(treffer) > 1 {
+			log.Printf("%s: login email ambiguous — %d account(s)", ctx, len(treffer))
+		}
+		return nil
+	}
+	return treffer[0]
 }
 
 type authRequest struct {
@@ -85,13 +116,19 @@ func RegisterHandlerWithInvites(s *store.Store, bcryptCost int, cfg config.Confi
 			return
 		}
 
-		if len(req.Username) < 3 || len(req.Username) > 50 {
-			WriteError(w, r, http.StatusBadRequest, "validation_failed", nil)
-			return
-		}
-		if !validUsernameRe.MatchString(req.Username) {
-			WriteError(w, r, http.StatusBadRequest, "validation_failed", nil)
-			return
+		// Issue #2194 (AC-10/AC-11): nur ein Testkonto (is_test_user=true)
+		// bestimmt seine ID selbst (Validator-Skript, Fixtures, E2E-Zweitnutzer).
+		// Sonst wird der Body-username ignoriert — auch nicht validiert — und
+		// die ID nach allen Pruefungen per NewOpaqueUserID erzeugt.
+		if req.IsTestUser {
+			if len(req.Username) < 3 || len(req.Username) > 50 {
+				WriteError(w, r, http.StatusBadRequest, "validation_failed", nil)
+				return
+			}
+			if !validUsernameRe.MatchString(req.Username) {
+				WriteError(w, r, http.StatusBadRequest, "validation_failed", nil)
+				return
+			}
 		}
 		if len(req.Password) < 8 {
 			WriteError(w, r, http.StatusBadRequest, "validation_failed", nil)
@@ -103,7 +140,7 @@ func RegisterHandlerWithInvites(s *store.Store, bcryptCost int, cfg config.Confi
 		// scripts/setup-validator-user.sh, das nie ein email-Feld sendet).
 		// Bewusstes Restrisiko (Enumeration, 409): docs/specs/modules/auth_haertung_go_2163.md
 		// "Bewusst nicht geaendert"; ADR-0003, #2147 B1; gebremst per registerLimiter.
-		if s.UserExists(req.Username) {
+		if req.IsTestUser && s.UserExists(req.Username) {
 			WriteError(w, r, http.StatusConflict, "user_already_exists", nil)
 			return
 		}
@@ -153,8 +190,18 @@ func RegisterHandlerWithInvites(s *store.Store, bcryptCost int, cfg config.Confi
 			return
 		}
 
+		userID := req.Username
+		if !req.IsTestUser {
+			userID, err = s.NewOpaqueUserID("u")
+			if err != nil {
+				log.Printf("register: id generation failed: %v", err)
+				WriteError(w, r, http.StatusInternalServerError, "internal_error", nil)
+				return
+			}
+		}
+
 		user := model.User{
-			ID:           req.Username,
+			ID:           userID,
 			PasswordHash: string(hash),
 			Email:        normalizedEmail,
 			MailTo:       normalizedEmail,
@@ -172,7 +219,8 @@ func RegisterHandlerWithInvites(s *store.Store, bcryptCost int, cfg config.Confi
 			var inv model.Invite
 			var rerr error
 			if invites != nil {
-				inv, ok, rerr = invites.Redeem(req.Invite, req.Username)
+				// Issue #2194 (AC-12): Einloeser ist die generierte Konto-ID.
+				inv, ok, rerr = invites.Redeem(req.Invite, userID)
 			}
 			if rerr != nil {
 				log.Printf("register: invite redeem failed: %v", rerr)
@@ -185,7 +233,7 @@ func RegisterHandlerWithInvites(s *store.Store, bcryptCost int, cfg config.Confi
 			}
 			redeemed = &inv
 			user.Tier = inv.Tier
-			log.Printf("register: invite %s redeemed by %s", inv.ID, req.Username)
+			log.Printf("register: invite %s redeemed by %s", inv.ID, userID)
 		}
 		rollbackInvite := func() {
 			if redeemed != nil {
@@ -201,12 +249,12 @@ func RegisterHandlerWithInvites(s *store.Store, bcryptCost int, cfg config.Confi
 			return
 		}
 
-		s.ProvisionUserDirs(req.Username)
+		s.ProvisionUserDirs(userID)
 
 		// Issue #1226: nach erfolgreicher Persistenz denselben #1219-Verifikations-
 		// Trigger auslösen wie UpdateProfileHandler — sonst bliebe EmailVerifiedAt
 		// für immer nil und die Adresse dauerhaft von Resend-Versand ausgeschlossen.
-		dispatchVerificationMail(s, cfg, req.Username, &user)
+		dispatchVerificationMail(s, cfg, userID, &user)
 
 		// Issue #2675 (G1 AC-6): nur bei gespeicherter Sprache; ohne Wahl
 		// bleibt die Browser-Vorbelegung (Cookie/Accept-Language) unberuehrt.
@@ -215,7 +263,7 @@ func RegisterHandlerWithInvites(s *store.Store, bcryptCost int, cfg config.Confi
 		}
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(201)
-		json.NewEncoder(w).Encode(map[string]string{"id": req.Username})
+		json.NewEncoder(w).Encode(map[string]string{"id": userID})
 	}
 }
 
@@ -314,31 +362,47 @@ func LoginHandler(s *store.Store, secret, publicHost string) http.HandlerFunc {
 			return
 		}
 
-		// Issue #2140: pfadunsichere Kennung wird abgewiesen, BEVOR sie in den
-		// Pfadbau geht — und zwar mit exakt der Antwort des "Nutzer unbekannt"-
-		// Zweigs unten, damit die Route nicht verraet, welche Kennungen
-		// syntaktisch auffallen.
-		if !store.ValidUserID(req.Username) {
-			log.Printf("login: rejected path-unsafe user id %q", req.Username)
-			burnDummyCompare(req.Password)
-			WriteError(w, r, http.StatusUnauthorized, "invalid_credentials", nil)
-			return
+		var user *model.User
+		uid := req.Username
+		if isLoginEmail(req.Username) {
+			// Issue #2194: E-Mail-Pfad. 0 oder >1 Treffer = wie unbekannt
+			// (Dummy-Vergleich, identische 401) — nie gegen mehrere Passwoerter
+			// pruefen, sonst verraete das Timing die Trefferzahl.
+			user = resolveLoginEmail(s, req.Username, "login")
+			if user == nil {
+				burnDummyCompare(req.Password)
+				WriteError(w, r, http.StatusUnauthorized, "invalid_credentials", nil)
+				return
+			}
+			uid = user.ID
+		} else {
+			// Issue #2140: pfadunsichere Kennung wird abgewiesen, BEVOR sie in den
+			// Pfadbau geht — und zwar mit exakt der Antwort des "Nutzer unbekannt"-
+			// Zweigs unten, damit die Route nicht verraet, welche Kennungen
+			// syntaktisch auffallen.
+			if !store.ValidUserID(req.Username) {
+				log.Printf("login: rejected path-unsafe user id %q", req.Username)
+				burnDummyCompare(req.Password)
+				WriteError(w, r, http.StatusUnauthorized, "invalid_credentials", nil)
+				return
+			}
+
+			var err error
+			user, err = s.LoadUser(req.Username)
+			if err != nil {
+				log.Printf("login: user.json unreadable/corrupt for %s: %v", req.Username, err)
+				burnDummyCompare(req.Password)
+				WriteError(w, r, http.StatusUnauthorized, "invalid_credentials", nil)
+				return
+			}
+			if user == nil {
+				burnDummyCompare(req.Password)
+				WriteError(w, r, http.StatusUnauthorized, "invalid_credentials", nil)
+				return
+			}
 		}
 
-		user, err := s.LoadUser(req.Username)
-		if err != nil {
-			log.Printf("login: user.json unreadable/corrupt for %s: %v", req.Username, err)
-			burnDummyCompare(req.Password)
-			WriteError(w, r, http.StatusUnauthorized, "invalid_credentials", nil)
-			return
-		}
-		if user == nil {
-			burnDummyCompare(req.Password)
-			WriteError(w, r, http.StatusUnauthorized, "invalid_credentials", nil)
-			return
-		}
-
-		if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(req.Password)); err != nil {
+		if err := bcryptCompareFn([]byte(user.PasswordHash), []byte(req.Password)); err != nil {
 			// Leerer/kaputter Hash (Passkey-/Google-Konto) scheitert ohne
 			// bcrypt-Arbeit; ein gueltiger Hash mit falschem Passwort ist schon langsam.
 			if !errors.Is(err, bcrypt.ErrMismatchedHashAndPassword) {
@@ -348,12 +412,14 @@ func LoginHandler(s *store.Store, secret, publicHost string) http.HandlerFunc {
 			return
 		}
 
-		if !issueSession(w, r, s, req.Username, secret, publicHost) {
+		// Issue #2194: Sitzung und Antwort gehoeren der AUFGELOESTEN ID, nie
+		// der Eingabe (auf dem ID-Pfad sind beide gleich).
+		if !issueSession(w, r, s, uid, secret, publicHost) {
 			return
 		}
 
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(map[string]string{"id": req.Username})
+		json.NewEncoder(w).Encode(map[string]string{"id": uid})
 	}
 }
 
@@ -464,21 +530,36 @@ func ForgotPasswordHandler(s *store.Store, bcryptCost int, cfg config.Config) ht
 		// Always return 200 (no user enumeration)
 		w.Header().Set("Content-Type", "application/json")
 
-		// Issue #2140: identischer Antwortpfad wie der "user == nil"-Zweig
-		// unten — der Enumerationsschutz dieser Route darf durch die neue
-		// Ablehnung keinen unterscheidbaren Fall bekommen.
-		if !store.ValidUserID(req.Username) {
-			log.Printf("password reset: rejected path-unsafe user id %q", req.Username)
-			burnDummyCompare(req.Username)
-			w.Write([]byte(`{"status":"ok"}`))
-			return
-		}
+		var user *model.User
+		if isLoginEmail(req.Username) {
+			// Issue #2194: E-Mail-Pfad. Nur bei genau einem echten Treffer
+			// geht es weiter; sonst dieselbe neutrale Antwort wie "unbekannt".
+			user = resolveLoginEmail(s, req.Username, "password reset")
+			if user == nil {
+				burnDummyCompare(req.Username)
+				w.Write([]byte(`{"status":"ok"}`))
+				return
+			}
+			// Ab hier traegt req.Username die aufgeloeste Konto-ID — Token,
+			// Link (?user=<ID>) und Logs nutzen nie die Adresse.
+			req.Username = user.ID
+		} else {
+			// Issue #2140: identischer Antwortpfad wie der "user == nil"-Zweig
+			// unten — der Enumerationsschutz dieser Route darf durch die neue
+			// Ablehnung keinen unterscheidbaren Fall bekommen.
+			if !store.ValidUserID(req.Username) {
+				log.Printf("password reset: rejected path-unsafe user id %q", req.Username)
+				burnDummyCompare(req.Username)
+				w.Write([]byte(`{"status":"ok"}`))
+				return
+			}
 
-		user, _ := s.LoadUser(req.Username)
-		if user == nil {
-			burnDummyCompare(req.Username)
-			w.Write([]byte(`{"status":"ok"}`))
-			return
+			user, _ = s.LoadUser(req.Username)
+			if user == nil {
+				burnDummyCompare(req.Username)
+				w.Write([]byte(`{"status":"ok"}`))
+				return
+			}
 		}
 
 		// Generate random token
@@ -1512,12 +1593,24 @@ func ResendVerificationHandler(s *store.Store, cfg config.Config, mailLimiter *M
 			w.Write([]byte(ok))
 			return
 		}
-		if !store.ValidUserID(req.Username) {
-			log.Printf("email verification resend: rejected path-unsafe user id %q", req.Username)
-			w.Write([]byte(ok))
-			return
+		var user *model.User
+		if isLoginEmail(req.Username) {
+			// Issue #2194: E-Mail-Pfad; nur ein eindeutig gefundenes Konto
+			// bekommt Token und Mail (Link ?user=<ID>), sonst neutral.
+			user = resolveLoginEmail(s, req.Username, "email verification resend")
+			if user == nil {
+				w.Write([]byte(ok))
+				return
+			}
+			req.Username = user.ID
+		} else {
+			if !store.ValidUserID(req.Username) {
+				log.Printf("email verification resend: rejected path-unsafe user id %q", req.Username)
+				w.Write([]byte(ok))
+				return
+			}
+			user, _ = s.LoadUser(req.Username)
 		}
-		user, _ := s.LoadUser(req.Username)
 		// Issue #2147 Scheibe B2 (AC-11): auch ein bestaetigtes Konto mit
 		// ausstehender Aenderung bekommt den Link erneut — an die ausstehende
 		// Adresse (dispatchVerificationMail waehlt sie).

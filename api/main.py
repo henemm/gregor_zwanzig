@@ -12,6 +12,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.responses import JSONResponse
 
+from api.bind_guard import enforce_loopback_bind
 from api.fehler import register_fehler_handler
 from api.routers import briefings_send, config, compare, forecast, gpx, health, internal, notify, preview, scheduler, validator, webhook
 from app.config import Settings
@@ -96,6 +97,10 @@ async def lifespan(app):  # noqa: ANN001
     # No-Op in Prod (Aktivierungsbedingung liegt im Modul: nur is_test_mode oder
     # env==staging). Idempotent -- Doppel-Install (z.B. conftest-Fixture + App-
     # Start unter TestClient) faengt das _installed-Flag im Modul sauber ab.
+    # Issue #2190: Bind-Guard als ALLERERSTER Schritt, vor install_egress_guard.
+    # Bricht den Start ab, bevor uvicorn den Socket oeffnet, wenn die eigene
+    # uvicorn-Config nicht auf 127.0.0.1 bindet.
+    enforce_loopback_bind(app)
     settings = Settings()
     install_egress_guard(settings)
     _init_telegram_bot_menu(settings)

@@ -22,14 +22,7 @@
 				{#if form?.error}
 					<div class="rounded-md bg-red-50 p-3 text-sm text-red-800">{form.error}</div>
 				{/if}
-				<input
-					name="username"
-					type="text"
-					placeholder={$t('auth.feld.username_platzhalter')}
-					value={form?.username ?? data.user}
-					class="w-full rounded-md border px-3 py-2 text-sm"
-					required
-				/>
+				<input name="username" type="hidden" value={form?.username ?? data.user} />
 				{#if form?.token || data.token}
 					<input name="token" type="hidden" value={form?.token ?? data.token} required />
 				{:else}

@@ -1,0 +1,310 @@
+TAP version 13
+# Subtest: AC-3: Schalter aus -> false geht als bewusster Wert durch
+    # Subtest: Nutzer legt den Schalter auf aus: /weather-config traegt show_night_block=false
+    not ok 1 - Nutzer legt den Schalter auf aus: /weather-config traegt show_night_block=false
+      ---
+      duration_ms: 1352.19347
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/moonlit-snacking-kahan/frontend/src/lib/components/trip-detail/__tests__/trip_night_block_schalter_nutzlast.test.ts:52:2'
+      failureType: 'testCodeFailure'
+      error: |-
+        /weather-config muss show_night_block=false senden
+        + actual - expected
+        
+        + undefined
+        - false
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: false
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/moonlit-snacking-kahan/frontend/src/lib/components/trip-detail/__tests__/trip_night_block_schalter_nutzlast.test.ts:60:10)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Promise.all (index 0)
+        async Suite.run (node:internal/test_runner/test:1442:7)
+        async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+      ...
+    1..1
+not ok 1 - AC-3: Schalter aus -> false geht als bewusster Wert durch
+  ---
+  duration_ms: 1353.451482
+  type: 'suite'
+  location: '/home/hem/gregor_zwanzig/.claude/worktrees/moonlit-snacking-kahan/frontend/src/lib/components/trip-detail/__tests__/trip_night_block_schalter_nutzlast.test.ts:51:1'
+  failureType: 'subtestsFailed'
+  error: '1 subtest failed'
+  code: 'ERR_TEST_FAILURE'
+  ...
+# Subtest: AC-2: Alt-Trip ohne Feld bekommt beim Speichern keinen neuen Wert
+    # Subtest: Alt-Trip: Schalter steht auf an (Standard true)
+    not ok 1 - Alt-Trip: Schalter steht auf an (Standard true)
+      ---
+      duration_ms: 696.882771
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/moonlit-snacking-kahan/frontend/src/lib/components/trip-detail/__tests__/trip_night_block_schalter_nutzlast.test.ts:65:2'
+      failureType: 'testCodeFailure'
+      error: |-
+        ohne gespeichertes Feld gilt "an" (wie loader.py)
+        + actual - expected
+        
+        + undefined
+        - true
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: true
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/moonlit-snacking-kahan/frontend/src/lib/components/trip-detail/__tests__/trip_night_block_schalter_nutzlast.test.ts:69:10)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Promise.all (index 0)
+        async Suite.run (node:internal/test_runner/test:1442:7)
+        async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: Alt-Trip: andere Metrik speichern sendet show_night_block NICHT
+    not ok 2 - Alt-Trip: andere Metrik speichern sendet show_night_block NICHT
+      ---
+      duration_ms: 601.612268
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/moonlit-snacking-kahan/frontend/src/lib/components/trip-detail/__tests__/trip_night_block_schalter_nutzlast.test.ts:72:2'
+      failureType: 'testCodeFailure'
+      error: |-
+        Vorbedingung: Schalter-Variable existiert (Standard an)
+        + actual - expected
+        
+        + undefined
+        - true
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: true
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/moonlit-snacking-kahan/frontend/src/lib/components/trip-detail/__tests__/trip_night_block_schalter_nutzlast.test.ts:76:10)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: Trip mit gespeichertem Wert: der Wert wird beim Speichern mitgegeben
+    not ok 3 - Trip mit gespeichertem Wert: der Wert wird beim Speichern mitgegeben
+      ---
+      duration_ms: 481.226995
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/moonlit-snacking-kahan/frontend/src/lib/components/trip-detail/__tests__/trip_night_block_schalter_nutzlast.test.ts:86:2'
+      failureType: 'testCodeFailure'
+      error: |-
+        Expected values to be strictly equal:
+        + actual - expected
+        
+        + undefined
+        - true
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: true
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/moonlit-snacking-kahan/frontend/src/lib/components/trip-detail/__tests__/trip_night_block_schalter_nutzlast.test.ts:93:10)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    1..3
+not ok 2 - AC-2: Alt-Trip ohne Feld bekommt beim Speichern keinen neuen Wert
+  ---
+  duration_ms: 1780.355054
+  type: 'suite'
+  location: '/home/hem/gregor_zwanzig/.claude/worktrees/moonlit-snacking-kahan/frontend/src/lib/components/trip-detail/__tests__/trip_night_block_schalter_nutzlast.test.ts:64:1'
+  failureType: 'subtestsFailed'
+  error: '3 subtests failed'
+  code: 'ERR_TEST_FAILURE'
+  ...
+# Subtest: AC-6: nur der Wetter-Metriken-Reiter ist Eigentuemer des Feldes
+    # Subtest: Alarme-Reiter sendet show_night_block nie
+    ok 1 - Alarme-Reiter sendet show_night_block nie
+      ---
+      duration_ms: 135.274034
+      type: 'test'
+      ...
+    # Subtest: Versand-Reiter sendet show_night_block nie
+    ok 2 - Versand-Reiter sendet show_night_block nie
+      ---
+      duration_ms: 24.839011
+      type: 'test'
+      ...
+    1..2
+ok 3 - AC-6: nur der Wetter-Metriken-Reiter ist Eigentuemer des Feldes
+  ---
+  duration_ms: 160.480284
+  type: 'suite'
+  ...
+# Subtest: AC-11: Alarme — Eigenfelder, display_config nur mit metric_alert_levels
+    # Subtest: Alarm-Empfindlichkeit aendern: genau die Alarme-Felder, display_config = { metric_alert_levels }
+    ok 1 - Alarm-Empfindlichkeit aendern: genau die Alarme-Felder, display_config = { metric_alert_levels }
+      ---
+      duration_ms: 486.760078
+      type: 'test'
+      ...
+    # Subtest: Kanal-Umschalten: dieselbe Schluesselmenge (jede Alarm-Aenderung sendet alle Alarme-Felder)
+    ok 2 - Kanal-Umschalten: dieselbe Schluesselmenge (jede Alarm-Aenderung sendet alle Alarme-Felder)
+      ---
+      duration_ms: 91.782047
+      type: 'test'
+      ...
+    1..2
+ok 4 - AC-11: Alarme — Eigenfelder, display_config nur mit metric_alert_levels
+  ---
+  duration_ms: 579.675215
+  type: 'suite'
+  ...
+# Subtest: AC-12: Wertebereiche (Desktop) — ausschliesslich corridors
+    # Subtest: Korridor aendern: Rumpf = { corridors } ohne display_config
+    ok 1 - Korridor aendern: Rumpf = { corridors } ohne display_config
+      ---
+      duration_ms: 234.307935
+      type: 'test'
+      ...
+    # Subtest: Leerung: corridors = [] wird gesendet (der Server loescht nie von selbst)
+    ok 2 - Leerung: corridors = [] wird gesendet (der Server loescht nie von selbst)
+      ---
+      duration_ms: 139.988184
+      type: 'test'
+      ...
+    1..2
+ok 5 - AC-12: Wertebereiche (Desktop) — ausschliesslich corridors
+  ---
+  duration_ms: 374.633439
+  type: 'suite'
+  ...
+# Subtest: AC-12: Wertebereiche (Mobile) — ausschliesslich corridors
+    # Subtest: Korridor aendern: Rumpf = { corridors } ohne display_config
+    ok 1 - Korridor aendern: Rumpf = { corridors } ohne display_config
+      ---
+      duration_ms: 194.142723
+      type: 'test'
+      ...
+    # Subtest: Leerung: corridors = [] wird gesendet (der Server loescht nie von selbst)
+    ok 2 - Leerung: corridors = [] wird gesendet (der Server loescht nie von selbst)
+      ---
+      duration_ms: 156.229056
+      type: 'test'
+      ...
+    1..2
+ok 6 - AC-12: Wertebereiche (Mobile) — ausschliesslich corridors
+  ---
+  duration_ms: 350.70542
+  type: 'suite'
+  ...
+# Subtest: AC-13: Wetter-Metriken — /weather-config nur Wetter-Metriken-Schluessel, Trip-PUT nur Inhalt + Tagesfenster
+    # Subtest: Metriken speichern: /weather-config ohne metric_alert_levels und Fremdschluessel
+    not ok 1 - Metriken speichern: /weather-config ohne metric_alert_levels und Fremdschluessel
+      ---
+      duration_ms: 750.899631
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/moonlit-snacking-kahan/frontend/src/lib/components/trip-detail/__tests__/trip_reiter_nutzlast_nur_eigene_felder.test.ts:140:2'
+      failureType: 'testCodeFailure'
+      error: '#1721: /weather-config muss den Eigen-Schluessel show_night_block senden (gespeicherter Wert im Seed)'
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: true
+      actual: false
+      operator: '=='
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/moonlit-snacking-kahan/frontend/src/lib/components/trip-detail/__tests__/trip_reiter_nutzlast_nur_eigene_felder.test.ts:155:10)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Promise.all (index 0)
+        async Suite.run (node:internal/test_runner/test:1442:7)
+        async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: Metriken speichern: Trip-PUT = { official_alerts_enabled, report_config(nur Inhalt/Tagesfenster) }
+    ok 2 - Metriken speichern: Trip-PUT = { official_alerts_enabled, report_config(nur Inhalt/Tagesfenster) }
+      ---
+      duration_ms: 570.686365
+      type: 'test'
+      ...
+    # Subtest: Tagesfenster/Inhalt (reportConfig-only-Pfad): nur Inhalt/Tagesfenster-Schluessel
+    ok 3 - Tagesfenster/Inhalt (reportConfig-only-Pfad): nur Inhalt/Tagesfenster-Schluessel
+      ---
+      duration_ms: 647.174309
+      type: 'test'
+      ...
+    1..3
+not ok 7 - AC-13: Wetter-Metriken — /weather-config nur Wetter-Metriken-Schluessel, Trip-PUT nur Inhalt + Tagesfenster
+  ---
+  duration_ms: 1969.196756
+  type: 'suite'
+  location: '/home/hem/gregor_zwanzig/.claude/worktrees/moonlit-snacking-kahan/frontend/src/lib/components/trip-detail/__tests__/trip_reiter_nutzlast_nur_eigene_felder.test.ts:139:1'
+  failureType: 'subtestsFailed'
+  error: '1 subtest failed'
+  code: 'ERR_TEST_FAILURE'
+  ...
+# Subtest: AC-14: Versand — nur Versand-Schluessel, kein Tagesfenster, kein E-Mail-Inhalt
+    # Subtest: Versandzeit aendern: Rumpf = { report_config } mit genau den Versand-Schluesseln
+    ok 1 - Versandzeit aendern: Rumpf = { report_config } mit genau den Versand-Schluesseln
+      ---
+      duration_ms: 15.35269
+      type: 'test'
+      ...
+    1..1
+ok 8 - AC-14: Versand — nur Versand-Schluessel, kein Tagesfenster, kein E-Mail-Inhalt
+  ---
+  duration_ms: 15.420781
+  type: 'suite'
+  ...
+# Subtest: AC-15: Kopf, Aktivitaet, Etappen — nur das eigene Feld (heute schon so)
+    # Subtest: Kopf: { name }
+    ok 1 - Kopf: { name }
+      ---
+      duration_ms: 32.255305
+      type: 'test'
+      ...
+    # Subtest: Aktivitaet: { activity }
+    ok 2 - Aktivitaet: { activity }
+      ---
+      duration_ms: 33.455688
+      type: 'test'
+      ...
+    # Subtest: Etappen: { stages }
+    ok 3 - Etappen: { stages }
+      ---
+      duration_ms: 284.706036
+      type: 'test'
+      ...
+    1..3
+ok 9 - AC-15: Kopf, Aktivitaet, Etappen — nur das eigene Feld (heute schon so)
+  ---
+  duration_ms: 350.649409
+  type: 'suite'
+  ...
+# Subtest: \#2284 S2 AC-6: Kopf-Region — nur das Eigenfeld, auch beim Leeren
+    # Subtest: Region: { region }
+    ok 1 - Region: { region }
+      ---
+      duration_ms: 40.498863
+      type: 'test'
+      ...
+    # Subtest: Region leeren: { region: "" } — der Schluessel bleibt im Rumpf (sonst kommt das Leeren nie an)
+    ok 2 - Region leeren: { region: "" } — der Schluessel bleibt im Rumpf (sonst kommt das Leeren nie an)
+      ---
+      duration_ms: 34.86723
+      type: 'test'
+      ...
+    # Subtest: Folge Name ⇒ Region ⇒ Aktivitaet: drei PUTs mit je genau einem Schluessel
+    ok 3 - Folge Name ⇒ Region ⇒ Aktivitaet: drei PUTs mit je genau einem Schluessel
+      ---
+      duration_ms: 29.64804
+      type: 'test'
+      ...
+    1..3
+ok 10 - \#2284 S2 AC-6: Kopf-Region — nur das Eigenfeld, auch beim Leeren
+  ---
+  duration_ms: 105.233632
+  type: 'suite'
+  ...
+1..10
+# tests 22
+# suites 10
+# pass 17
+# fail 5
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 5351.417841

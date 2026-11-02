@@ -13,7 +13,7 @@
 	"konto.aktion.gesendet": "Sent",
 	"konto.aktion.senden_fehlgeschlagen": "Sending failed",
 	"konto.profil.titel": "Profile",
-	"konto.profil.benutzername": "Username",
+	"konto.profil.benutzername": "Account ID",
 	"konto.profil.anzeigename": "Display name",
 	"konto.profil.mitglied_seit": "Member since",
 	"konto.profil.gespeichert": "Profile saved",

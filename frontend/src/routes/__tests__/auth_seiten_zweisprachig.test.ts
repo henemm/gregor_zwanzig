@@ -194,7 +194,7 @@ const ACTIONS_FAELLE: Array<{
 		datei: 'forgot-password/+page.server.ts',
 		felder: { username: '' },
 		antwort: null,
-		de: 'Username required',
+		de: 'E-Mail-Adresse erforderlich', // #2194: fragt nach der E-Mail-Adresse
 		key: 'auth.forgot.fehler_benutzername'
 	},
 	{

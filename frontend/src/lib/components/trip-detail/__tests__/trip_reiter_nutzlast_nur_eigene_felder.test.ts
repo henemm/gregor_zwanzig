@@ -49,7 +49,7 @@ const rumpf = (i: number): Record<string, unknown> => {
 const alsSet = (liste: readonly string[]): string[] => [...liste].sort();
 
 /** AC-16: in KEINEM Rumpf ein Python-eigener oder unbekannter Schluessel. */
-function keineFremdschluessel(body: Record<string, unknown>, label: string): void {
+function keineFremdschluessel(body: Record<string, unknown>, label: string, erlaubt: readonly string[] = []): void {
 	const rc = (body.report_config ?? {}) as Record<string, unknown>;
 	for (const k of P.NIE_GESENDET_REPORT) {
 		assert.ok(!(k in rc), `${label}: report_config.${k} darf kein Reiter je senden (Python-eigen / ohne Eigentuemer)`);
@@ -65,7 +65,8 @@ function keineFremdschluessel(body: Record<string, unknown>, label: string): voi
 		'alert_preset',
 		'trip_id',
 		'updated_at'
-	]) {
+	].filter((k) => !erlaubt.includes(k))) {
+		// Issue #1721: `show_night_block` gehoert dem Wetter-Metriken-Reiter (nur dort erlaubt).
 		assert.ok(!(k in dc), `${label}: display_config.${k} hat keinen Reiter-Eigentuemer und darf nie gesendet werden`);
 	}
 	assert.ok(!('skip_next' in body), `${label}: Top-Level skip_next darf nie gesendet werden`);
@@ -151,7 +152,8 @@ describe('AC-13: Wetter-Metriken — /weather-config nur Wetter-Metriken-Schlues
 			assert.ok(k in w, `/weather-config muss den Eigen-Schluessel ${k} senden`);
 		}
 		assert.ok(!('metric_alert_levels' in w), 'metric_alert_levels gehoert dem Reiter Alarme');
-		keineFremdschluessel({ display_config: w }, 'Wetter-Metriken /weather-config');
+		assert.ok('show_night_block' in w, '#1721: /weather-config muss den Eigen-Schluessel show_night_block senden (gespeicherter Wert im Seed)');
+		keineFremdschluessel({ display_config: w }, 'Wetter-Metriken /weather-config', ['show_night_block']);
 	});
 
 	test('Metriken speichern: Trip-PUT = { official_alerts_enabled, report_config(nur Inhalt/Tagesfenster) }', async () => {

@@ -2,6 +2,7 @@ package handler
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 	"net/http"
 	"net/http/httptest"
@@ -133,8 +134,11 @@ func TestSchreibsperre_CreateComparePreset_SperrfehlerBrichtAb(t *testing.T) {
 	if w.Code != 500 {
 		t.Fatalf("erwartet 500, bekam %d (%s)", w.Code, w.Body.String())
 	}
-	if got := strings.TrimSpace(w.Body.String()); got != `{"error":"store_error"}` {
-		t.Fatalf("erwartet genau EINE Fehlerantwort, bekam: %s", got)
+	// Issue #2677: Fehlerobjekt {code, message, error, detail}; genau EIN Objekt.
+	dec := json.NewDecoder(strings.NewReader(w.Body.String()))
+	var eins map[string]any
+	if err := dec.Decode(&eins); err != nil || eins["error"] != "store_error" || eins["code"] != "store_error" || dec.More() {
+		t.Fatalf("erwartet genau EINE Fehlerantwort store_error, bekam: %s", w.Body.String())
 	}
 }
 
@@ -213,12 +217,12 @@ func TestSchreibsperre_Hilfsfunktion_503Wert500Zweig(t *testing.T) {
 	defer release()
 	defer store.SetBriefingLockTimeout(100 * time.Millisecond)()
 	w := httptest.NewRecorder()
-	if _, ok := lockBriefingOr503(w, s, "x1"); ok || w.Code != 503 || w.Header().Get("Retry-After") != "5" {
+	if _, ok := lockBriefingOr503(w, httptest.NewRequest(http.MethodGet, "/", nil), s, "x1"); ok || w.Code != 503 || w.Header().Get("Retry-After") != "5" {
 		t.Fatalf("Timeout: ok=%v code=%d retry=%q", ok, w.Code, w.Header().Get("Retry-After"))
 	}
 
 	w = httptest.NewRecorder()
-	if _, ok := lockBriefingOr503(w, s, "../x"); ok || w.Code != 500 || w.Header().Get("Retry-After") != "" {
+	if _, ok := lockBriefingOr503(w, httptest.NewRequest(http.MethodGet, "/", nil), s, "../x"); ok || w.Code != 500 || w.Header().Get("Retry-After") != "" {
 		t.Fatalf("Nicht-Timeout: ok=%v code=%d retry=%q", ok, w.Code, w.Header().Get("Retry-After"))
 	}
 }

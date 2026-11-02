@@ -46,7 +46,7 @@ func TestIdEindeutigkeitSentinel_WriteSaveError_KindConflict_409(t *testing.T) {
 	}
 
 	w := httptest.NewRecorder()
-	writeSaveError(w, err)
+	writeSaveError(w, httptest.NewRequest(http.MethodPost, "/api/trips", nil), err)
 
 	idEindAssertIDConflict(t, w)
 	if !bytes.Equal(vorher, idEindBytes(t, s, uid, "x")) {
@@ -57,7 +57,7 @@ func TestIdEindeutigkeitSentinel_WriteSaveError_KindConflict_409(t *testing.T) {
 // AC-6: jeder andere Save-Fehler bleibt 500 store_error.
 func TestIdEindeutigkeitSentinel_WriteSaveError_AndererFehler_500(t *testing.T) {
 	w := httptest.NewRecorder()
-	writeSaveError(w, errors.New("platte voll"))
+	writeSaveError(w, httptest.NewRequest(http.MethodPost, "/api/trips", nil), errors.New("platte voll"))
 
 	if w.Code != http.StatusInternalServerError {
 		t.Errorf("erwartet 500, bekommen %d (Body %s)", w.Code, w.Body.String())

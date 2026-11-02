@@ -608,13 +608,16 @@ class _Welt:
                 return 200, {}
             return 401, {"error": "invalid_credentials"}
         if method == "POST" and pfad == "/api/auth/register":
-            name = body.get("username")
-            if not name or name in self.nutzer:
+            # #2757: der echte Server vergibt die Konto-ID selbst (u-<8hex>, NewOpaqueUserID)
+            # und ignoriert den gesendeten username; Antwort traegt die vergebene id.
+            if not body.get("username"):
                 return 409, {"error": "exists"}
+            name = f"u-{0x5eed0000 + len(self.nutzer) + len(self.geloeschte_nutzer):08x}"
             self.nutzer[name] = {"pw": body.get("password"), "email": body.get("email"),
-                                 "verifiziert": False, "chat_id": ""}
-            self._ereignis("registriert", name=name)
-            return 201, {}
+                                 "verifiziert": False, "chat_id": "",
+                                 "gesendet": body.get("username")}
+            self._ereignis("registriert", name=name, gesendet=body.get("username"))
+            return 201, {"id": name}
         if method == "POST" and pfad == "/api/auth/verify-email/staging-token":
             if user != HELFER[0] or body.get("username") not in self.nutzer:
                 return 403, {"error": "forbidden"}
@@ -1071,7 +1074,7 @@ def test_telegram_serie_fuenfzehn_updates_mit_secret_und_eindeutigen_update_ids(
         kopf = {k.lower(): v for k, v in a["headers"].items()}
         assert kopf.get("x-telegram-bot-api-secret-token") == WEBHOOK_SECRET
         assert WEBHOOK_SECRET not in a["url"], "Secret steht in der Webhook-URL"
-    tag = welt.registrierter_nutzer().split("gzp-", 1)[-1]
+    tag = next(e for e in welt.ereignisse if e["art"] == "registriert")["gesendet"].split("gzp-", 1)[-1]
     chats = {p["chat_id"] for p in posts}
     assert len(chats) == 1, f"mehrere chat_ids: {chats}"
     cid = chats.pop()

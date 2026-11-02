@@ -75,8 +75,8 @@ func TestDebugTrigger_NoSession401_User403_Admin200(t *testing.T) {
 	if w.Code != http.StatusForbidden {
 		t.Errorf("bob (kein Admin): erwartet 403, bekommen %d: %s", w.Code, w.Body.String())
 	}
-	if got := strings.TrimSpace(w.Body.String()); got != `{"error":"forbidden"}` {
-		t.Errorf("bob: Body erwartet %q, bekommen %q", `{"error":"forbidden"}`, got)
+	if got := strings.TrimSpace(w.Body.String()); !strings.Contains(got, `"code":"forbidden"`) || !strings.Contains(got, `"error":"forbidden"`) { // Issue #2677: Fehlerobjekt
+		t.Errorf("bob: Body erwartet code %q, bekommen %q", "forbidden", got)
 	}
 	if n, _ := ziel.stand(); n != 0 {
 		t.Fatalf("bob darf das Python-Ziel nicht erreichen, Zaehler=%d", n)

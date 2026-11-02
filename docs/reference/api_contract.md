@@ -169,7 +169,8 @@ Fehlerantworten der Go-API, die über `handler.WriteError`/`WriteErrorWith` lauf
 - Zusatzfelder je Endpunkt bleiben möglich (z. B. `resource`, `compare_presets`); Header wie `Retry-After` unverändert.
 - **Sprachauflösung** (Middleware `middleware.Lang` direkt nach `AuthMiddleware`): angemeldet gespeicherte Nutzersprache `language` > Cookie `gz_lang` (`de`|`en`, andere Werte ignoriert) > `Accept-Language` (nach `q`, `q=0` ignoriert) > `de`; öffentlich Cookie > `Accept-Language` > `de`.
 - Cookie `gz_lang` setzt Go bei Anmeldung (alle Wege), Registrierung und Profil-Update, aber nur bei gespeicherter Sprache: `Path=/`, `Max-Age=31536000`, `SameSite=Lax`, `Secure` bei https, nicht HttpOnly.
-- Umgestellt sind in G1 die Pfade über `bailIf` (`/api/briefings*`, Teile von `/api/compare/presets/{id}*`). Die übrigen Formen (`{"error":…}`, Form A in 10.1, `AuthMiddleware` 401/503) werden mit G2/G3 vereinheitlicht und hier nachgeführt.
+- Umgestellt sind in G1 die Pfade über `bailIf` (`/api/briefings*`, Teile von `/api/compare/presets/{id}*`), in G2 Auth/Konto.
+- **Seit G3 (#2677)** tragen auch Trip-, Ortsvergleich-, Orts-, Gruppen-, Metrik-Preset-, Wetter-Konfig-, Forecast-, Versand-, Vorschau- und Proxy-Fehler sowie `AuthMiddleware` (401 `unauthorized`, 503 `service_unavailable`), `RequireAdmin` (403 `forbidden`) und `IPRateLimiter` (429 `rate_limit_exceeded`) dieses Objekt. Die in den Tabellen dieses Dokuments notierten Kurzformen `{"error":"<code>"}` meinen ab dann das volle Objekt mit diesem `code`; Status, Codes und Zusatzfelder sind unverändert. Fachtexte liegen unter `fach.fehler.*`, Resolver-Meldungen unter `fach.resolver.*`; deutsche Texte sind wortgleich zum Stand vor G3. Umbenannt: `upstream unreachable` → `upstream_unreachable`. Klartext-Antworten (`http.Error`) der Nutzer-Handler (Briefing-Historie, Wegpunkt-Bestätigung, Telegram-Link/-Status, Premium-SMS-Kopplungscode) sind jetzt JSON mit `unauthorized`/`internal_error`/`store_error`/`not_found`/`bad_request`/`service_unavailable`. Maschinen-Endpunkte (`/api/internal/`, `/api/webhooks/`, Status-Token, Staging) bleiben unverändert.
 - Antworten des Python-Cores werden unverändert durchgereicht.
 - **Ungültige `user_id` im Python-Core (#2163, 2026-11-01):** Nutzerpfade entstehen nur mit geprüfter Kennung (`src/app/loader.py`: `is_valid_user_id` mit `fullmatch`, `user_dir`, `InvalidUserIdError`; `"alice\n"` wird abgelehnt). Ein zentraler FastAPI-Handler antwortet 404 `{"error":"not_found"}` ohne Kennung im Text. Ausnahme: `api/routers/gpx.py` behält 400 `invalid_user_id`. Fail-soft-Leser/-Schreiber (Scheduler, Alert-Erfassung, Budget) kehren bei ungültiger Kennung still zurück. Spec: `docs/specs/modules/auth_haertung_python_2163.md`.
 
@@ -933,8 +934,8 @@ tatsächlich zugestellt hat.
 bei `route` zusätzlich `report_type`, bei `vergleich` optional `fehlende_orte: [<ort_id>, …]`
 (gelöschte Orte, Versand lief mit den übrigen). `winner`/`empfaenger_count` entfallen.
 
-**Fehler (Form A):** `{"detail": "<deutscher Text>", "code": "<maschinenlesbar>"}` mit 4xx/5xx.
-`detail` wird im Frontend unverändert angezeigt.
+**Fehler (Form A):** `{"detail": "<Text>", "code": "<maschinenlesbar>"}` mit 4xx/5xx.
+`detail` wird im Frontend unverändert angezeigt. Die Go-seitigen Fehler liefern seit #2677 das Fehlerobjekt (Abschnitt 0) mit `detail` = `message` in Nutzersprache (`fach.fehler.validation_error_kennung`, `proxy_error_versand`, `upstream_unreachable_versand`); Python-Antworten gehen unverändert durch.
 
 | Status | `code` | Bedeutung |
 |---|---|---|
@@ -951,7 +952,7 @@ bei `route` zusätzlich `report_type`, bei `vergleich` optional `fehlende_orte: 
 Die Fehler mit `kind_required`, `validation_error` und `upstream_unreachable` (sowie 500
 `proxy_error`) entstehen in der Go-API, alle übrigen im Python-Core (`src/services/send_outcomes.py`);
 beide in derselben Form A. Gilt auch für die Alt-Routen (gleiche Proxy-Funktion `forwardSend`).
-Die Vorschau-/CRUD-Routen unter `/api/briefings` behalten ihre Form `{"error":"<code>"}`.
+Die Vorschau-/CRUD-Routen unter `/api/briefings` antworten mit dem Fehlerobjekt (Abschnitt 0); `error` = `code` bleibt.
 
 Lock-Schlüssel unverändert: Trip `(user_id, trip_id, report_type)`, Ortsvergleich
 `("compare", user_id, preset_id)`. Die Alt-Routen `POST /api/trips/{id}/send` und
@@ -1317,7 +1318,7 @@ Ein Ort, der in `LocationIDs` eines Ortsvergleichs **desselben Nutzers** steht, 
 409-Body:
 
 ```json
-{"error":"location_in_use","compare_presets":[{"id":"…","name":"…"}]}
+{"code":"location_in_use","message":"…","error":"location_in_use","detail":"…","compare_presets":[{"id":"…","name":"…"}]}
 ```
 
 Die Orte-Seite zeigt die Namen mit Link auf `/compare/{id}` und den Hinweis, den Ort dort zuerst zu entfernen. Die Pruefung laeuft ueber den nutzergebundenen Store (`WithUser`), nie ueber `"default"`; Ortsvergleiche anderer Nutzer erscheinen nie.
@@ -1360,7 +1361,7 @@ betroffen.
   waere die Auslieferungsreihenfolge Go↔Frontend eine Sollbruchstelle und jeder
   Bestandsclient braeche.
 - **Falscher `If-Match` → `412`** mit
-  `{"error":"precondition_failed","detail":"<deutscher Text>"}`, **ohne**
+  Fehlerobjekt `precondition_failed` (Text in Nutzersprache, `fach.fehler.precondition_failed`, #2677), **ohne**
   `ETag`-Header und **ohne** dass geschrieben wird. Der Client soll neu laden,
   nicht blind wiederholen.
 - **Schreibsperre belegt → `503` + `Retry-After`** (Issue #2158, ADR-0083): Trip-,
@@ -1449,6 +1450,12 @@ null
 > (Katalog-Vorgabe, #360), nicht aus der gesendeten Liste. Wer eine Reihenfolge setzen will, sendet
 > vollstaendige `MetricConfig`-Objekte mit explizitem `bucket`/`order`; nur solche Eintraege
 > werden unveraendert uebernommen.
+
+> **`display_config.show_night_block` (Issue #1721):** optionales `bool` (nur Trip, nicht
+> Ortsvergleich) — Schalter „Nacht-Stundentabelle in der Mail zeigen" im Trip-Editor, Reiter
+> „Wetter-Metriken". Fehlt das Feld, gilt `true` (Nacht-Stundentabelle an, bisheriges Verhalten).
+> Das Frontend sendet das Feld nur, wenn der Nutzer den Schalter bedient hat; der Go-Merge
+> (`mergeConfigMap`) erhaelt es bei Teil-Speichern. Spec: `docs/specs/modules/fix_1721_nachtausgabe.md`.
 
 ### Error Responses
 
@@ -1822,8 +1829,8 @@ Fetches normalized weather forecast for a given coordinate.
 | Status | Body | Scenario |
 |--------|------|----------|
 | 400 | `{"error":"invalid_coords"}` | lat/lon out of range or missing |
-| 401 | `{"error":"unauthorized","detail":"authentication required"}` | Kein Nutzerkontext (Issue #2391 — geprüft VOR Parametervalidierung, damit die Kontingent-Reservierung nie auf ein leeres/fremdes Konto bucht) |
-| 429 | `{"error":"budget_exceeded","detail":"daily forecast budget exhausted for this user"}`, Header `Retry-After` (Sekunden, 1..86400 geklemmt) | Tageskontingent des Nutzers erschöpft (Issue #2391, ADR-0076) |
+| 401 | `unauthorized`, `detail` `"authentication required"` (technisch, seit #2677 im Fehlerobjekt) | Kein Nutzerkontext (Issue #2391 — geprüft VOR Parametervalidierung, damit die Kontingent-Reservierung nie auf ein leeres/fremdes Konto bucht) |
+| 429 | `budget_exceeded`, `detail` `"daily forecast budget exhausted for this user"` (Fehlerobjekt, #2677), Header `Retry-After` (Sekunden, 1..86400 geklemmt) | Tageskontingent des Nutzers erschöpft (Issue #2391, ADR-0076) |
 | 503 | `{"error":"provider_unavailable"}` | Weather provider API unreachable |
 
 **Note (Issue #2391, ADR-0076):** Vor dem eigentlichen Abruf reserviert der Go-Handler das
@@ -2692,7 +2699,7 @@ oder `archived_at` gesetzt); zusätzlich `end_date` gesetzt und `< heute`.
 
 | Status | Body | Scenario |
 |--------|------|----------|
-| 409 | `{"error":"id_conflict","detail":"Diese Kennung ist bereits durch einen Trip oder Ortsvergleich belegt — bitte anderen Namen wählen."}` | `SaveComparePreset` trifft auf eine Datei fremder Art (statt 500 `store_error`) |
+| 409 | `id_conflict`, `message`/`detail` aus `fach.fehler.id_conflict` (de wortgleich: „Diese Kennung ist bereits durch einen Trip oder Ortsvergleich belegt — bitte anderen Namen wählen.“; Trip-Anlage gegen Ortsvergleich: Variante `vergleich`) | `SaveComparePreset` trifft auf eine Datei fremder Art (statt 500 `store_error`) |
 
 ### Validation Rules (POST/PUT)
 
@@ -3162,20 +3169,34 @@ Executes comparison and sends report for a single preset immediately (regardless
 
 #### POST /api/auth/register
 
-User registration with username + password + email (HTTP 201 on success, 409 if user exists).
+User registration with email + password (HTTP 201 on success).
 
-**Request Body:**
+**Issue #2194 / ADR-0105 — generierte Konto-ID:** Ein normales Konto (ohne `is_test_user`) erhält
+eine vom Server erzeugte, opake ID im Format `u-<8hex>` (`store.NewOpaqueUserID`, crypto/rand,
+Kollisionsprüfung mit Wiederholung, nie Überschreiben); der Ordner heißt `data/users/u-<8hex>/`.
+Ein im Body mitgesendeter `username` wird dabei **ignoriert**. Nur bei `is_test_user=true` wird
+`username` als feste Konto-ID übernommen (Validator-Skript, Fixture-Konten, E2E-Testkonten; die
+Prüfreihenfolge #1517 gilt für diesen Pfad weiter). Die Antwort `{"id": ...}` nennt die tatsächlich
+angelegte ID; Aufrufer verwenden sie für alle Folgeschritte (Verify-Link `?user=<id>`, Login). Wird
+die Registrierung mit Einladungscode (ADR-0084) eingelöst, ist die generierte ID der Einlöser.
+
+**Request Body (normales Konto):**
 ```json
-{"username": "alice", "password": "geheim123", "email": "alice@example.com", "is_test_user": false}
+{"password": "geheim123", "email": "alice@example.com"}
+```
+
+**Request Body (Testkonto mit fester ID):**
+```json
+{"username": "validator-bot", "password": "geheim123", "email": "bot@example.com", "is_test_user": true}
 ```
 
 **Response 201:**
 ```json
-{"id": "alice"}
+{"id": "u-1a2b3c4d"}
 ```
 
 **Validation:**
-- `username`: 3–50 characters, alphanumeric + underscore
+- `username` (nur bei `is_test_user=true` ausgewertet): 3–50 characters, alphanumeric + underscore
 - `password`: ≥8 characters
 - `is_test_user` (optional, Issue #2152/ADR-0072): `true` markiert das Konto dauerhaft als Testkonto (`user.json` → `is_test_user`). Der Testkonto-Status wird ausschliesslich aus diesem Feld gelesen (plus der festen Fixture-ID `tg-live-e2e`) — die frühere Namens-Heuristik (`test`/`tdd` im Usernamen) ist entfallen. Fehlt das Feld, ist das Konto ein normales Nutzerkonto.
 - `email`: required (Issue #1226), minimal format check (`strings.Contains(email, "@")` — no `net/mail` parsing); **uniqueness IS enforced** (Issue #2147 Scheibe B1) — normalisiert (`TrimSpace`+`ToLower`) darf `email`/`mail_to` keinem anderen, echten (Nicht-Test-)Konto bereits gehören, geprüft unter einer prozessweiten Sperre je Adresse (`store.LockEmailAddress`)
@@ -3198,11 +3219,19 @@ Since Issue #1226, a valid `email` also triggers the existing `dispatchVerificat
 
 #### POST /api/auth/login
 
-User login with username + password, returns session cookie.
+User login with E-Mail-Adresse (oder Konto-ID) + password, returns session cookie.
+
+**Issue #2194 / ADR-0105 — Weiche am `@`:** Das Feld `username` trägt die Anmeldekennung. Eine
+Eingabe mit `@` ist eine E-Mail-Adresse und wird über `Store.FindUsersByLoginEmail` aufgelöst
+(normalisiert per Trim + Kleinschreibung, verglichen wird **nur** `email`, nie `mail_to`;
+Testkonten sind ausgeschlossen). Eine Eingabe ohne `@` ist die Konto-ID und läuft unverändert über
+den bisherigen ID-Pfad (dauerhaft, z.B. Testkonten, Bestandskonten ohne `email`). Kein Treffer
+oder mehrere Treffer gelten gleich: genau ein bcrypt-Vergleich (Dummy), 401 `invalid_credentials`,
+identischer Body. Das Verify-Gate (ADR-0066) gilt auf beiden Wegen gleich.
 
 **Request Body:**
 ```json
-{"username": "alice", "password": "geheim123"}
+{"username": "alice@example.com", "password": "geheim123"}
 ```
 
 **Response 200:**
@@ -3210,15 +3239,35 @@ User login with username + password, returns session cookie.
 {"id": "alice"}
 ```
 
+`id` ist die **aufgelöste Konto-ID** (resolved), kein Echo der Eingabe — auch bei Login per
+E-Mail-Adresse steht hier die ID des Kontos (z.B. `u-1a2b3c4d`), nie die Adresse.
+
 **Side Effects:**
-- Sets `Set-Cookie: gz_session=<userId>.<sessionId>.<timestamp>.<hmacSig>; HttpOnly; SameSite=Lax; MaxAge=34560000; Secure` (Secure flag active on HTTPS)
+- Sets `Set-Cookie: gz_session=<userId>.<sessionId>.<timestamp>.<hmacSig>; HttpOnly; SameSite=Lax; MaxAge=34560000; Secure` (Secure flag active on HTTPS) — `<userId>` ist die aufgelöste Konto-ID
 
 **Error Responses:**
 
 | Status | Body | Scenario |
 |--------|------|----------|
 | 400 | `{"code":"invalid_request"}` | JSON malformed (auth.go:124) |
-| 401 | `{"code":"invalid_credentials"}` | User not found or password incorrect — same message for both (auth.go:132,139) |
+| 401 | `{"code":"invalid_credentials"}` | User not found, address unknown/ambiguous/test account, or password incorrect — same message for all |
+
+#### POST /api/auth/forgot-password
+
+Fordert einen Passwort-Reset an. Öffentlich, Antwort **immer** dieselbe neutrale Bestätigung
+(gleicher Status und Body), unabhängig davon, ob ein Konto gefunden wird (keine Enumeration).
+
+**Issue #2194 / ADR-0105 — Weiche am `@`:** Das Feld `username` nimmt die E-Mail-Adresse oder die
+Konto-ID auf. Mit `@` sucht der Server das Konto per E-Mail-Adresse (`FindUsersByLoginEmail`, nur
+`email`, ohne Testkonten); ohne `@` gilt der bisherige ID-Pfad. Nur bei genau einem Treffer geht
+die Reset-Mail an dieses Konto; der Link enthält weiterhin `?user=<id>` (keine Adresse in
+URL/Referer). Kein oder mehrere Treffer: keine Mail, Antwort unverändert. Der Reset-Confirm-Body
+bleibt `{username, token, new_password}` mit der Konto-ID aus dem Link.
+
+**Request Body:**
+```json
+{"username": "alice@example.com"}
+```
 
 #### POST /api/auth/magic-link
 
@@ -3433,6 +3482,10 @@ uniqueness of exactly the address stored in the challenge entry (not a client-su
 `store.LockEmailAddress`, since the address may have been claimed by a different account between
 Begin and Finish, before creating the credential-less account.
 
+**Issue #2194 / ADR-0105:** Das neue Konto erhält eine generierte ID `u-<8hex>`
+(`store.NewOpaqueUserID`); zwei Registrierungen liefern verschiedene IDs, Kollisionen werden
+wiederholt, nie überschrieben.
+
 **Error Responses (both endpoints):**
 
 | Status | Body | Scenario |
@@ -3445,9 +3498,15 @@ Begin and Finish, before creating the credential-less account.
 
 Initiate passkey login (public, no auth required).
 
+**Issue #2194 / ADR-0105 — Kennung = E-Mail-Adresse, Weiche am `@`:** Die Oberfläche fragt nach
+der E-Mail-Adresse und reicht die Eingabe unverändert als `username` weiter. Mit `@` löst der
+Server das Konto per E-Mail-Adresse auf (`FindUsersByLoginEmail`, nur `email`, ohne Testkonten);
+ohne `@` gilt der bisherige ID-Pfad. Unbekannte, mehrfach vergebene oder einem Testkonto gehörende
+Adressen liefern dieselbe Antwort wie eine unbekannte Kennung (kein Hinweis auf Existenz).
+
 **Request Body:**
 ```json
-{"username": "alice"}
+{"username": "alice@example.com"}
 ```
 
 **Response 200:**
@@ -3967,10 +4026,16 @@ Unterpfad nicht mit ab, deshalb ein eigener Allowlist-Eintrag). Nutzlast enthäl
 Nutzerkennung, keine Adresse — verhindert Adress-zu-Konto-Zuordnung, analog
 `ForgotPasswordHandler`.
 
+**Issue #2194 / ADR-0105 — Weiche am `@`:** `username` nimmt die E-Mail-Adresse oder die Konto-ID
+auf. Mit `@` sucht der Server das Konto per E-Mail-Adresse (`FindUsersByLoginEmail`, nur `email`,
+ohne Testkonten); ohne `@` gilt der bisherige ID-Pfad. Die Bestätigungsmail (Link `?user=<id>`)
+geht nur an ein eindeutig gefundenes Konto; unbekannte oder mehrfach vergebene Adressen erhalten
+dieselbe neutrale Antwort.
+
 **Request Body:**
 ```json
 {
-  "username": "henning"
+  "username": "henning@example.com"
 }
 ```
 

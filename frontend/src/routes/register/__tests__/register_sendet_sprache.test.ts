@@ -36,6 +36,8 @@ after(() => {
 async function registriere(lang: 'de' | 'en', invite?: string): Promise<Record<string, unknown>> {
 	koerper = [];
 	const body = new FormData();
+	// #2194: ein (veraltetes) username-Formularfeld wird NICHT weitergereicht —
+	// die Konto-ID vergibt die Go-API.
 	body.set('username', 'wanderer');
 	body.set('email', 'w@example.org');
 	body.set('password', 'geheim-genug');
@@ -57,7 +59,6 @@ async function registriere(lang: 'de' | 'en', invite?: string): Promise<Record<s
 describe('AC-5: Registrierung sendet language aus locals.lang', () => {
 	test('locals.lang = en ergibt "language":"en", uebrige Felder unveraendert', async () => {
 		assert.deepEqual(await registriere('en'), {
-			username: 'wanderer',
 			password: 'geheim-genug',
 			email: 'w@example.org',
 			language: 'en'
@@ -70,7 +71,6 @@ describe('AC-5: Registrierung sendet language aus locals.lang', () => {
 
 	test('Einladungstoken bleibt erhalten', async () => {
 		assert.deepEqual(await registriere('en', 'tok/1'), {
-			username: 'wanderer',
 			password: 'geheim-genug',
 			email: 'w@example.org',
 			language: 'en',

@@ -571,6 +571,65 @@ def test_live_spoofed_envelope_over_real_anonymous_pipeline_is_rejected():
         _cleanup_user(user_id)
 
 
+@_email_gate
+def test_live_injected_quoted_local_part_envelope_over_real_anonymous_pipeline_is_rejected():
+    """#2252 AC-7 (Live-Negativtest): der Envelope-Absender traegt einen quoted
+    Local-Part mit eingeschleusten Methoden (H2-Muster,
+    ``"x;dkim=pass;spf=pass smtp.mailfrom=a"@spoofer-domain.invalid``), der
+    ``From:``-Header die ``mail_to`` eines gueltigen, verifizierten Nutzers.
+
+    Stalwart uebernimmt ``smtp.mailfrom`` als quoted-string ROH in den echten
+    ``Authentication-Results``-Header; das naive ``split(";")`` vor #2252
+    machte daraus ``dkim=pass``/``spf=pass``-Segmente (Bypass). Erwartet:
+    fail-closed abgelehnt (0 verarbeitet), trotzdem \\Seen. ``.invalid`` ist
+    per RFC 2606 reserviert, es wird keine reale fremde Domain kontaktiert.
+    """
+    suffix = uuid.uuid4().hex[:8]
+    user_id = f"tdd-2252-liveinj-{suffix}"
+    sender = f"{user_id}@henemm.com"
+    token = f"GZ2252INJ-{suffix}"
+    _make_user(user_id, mail_to=sender)
+    _make_trip(user_id, trip_id=f"t{suffix}", name=token)
+
+    settings = _base_email_settings()
+    _deliver_mail_anonymous(
+        envelope_from='"x;dkim=pass;spf=pass smtp.mailfrom=a"@spoofer-domain.invalid',
+        header_from=sender,
+        subject=f"[{token}] status", body="status",
+    )
+
+    uids = _find_uids_by_token(token)
+    assert uids, "Injektions-Mail kam ueber die anonyme Port-25-Pipeline nicht an"
+    msg = _peek_msg(uids[0])
+    auth_results = msg.get("Authentication-Results") if msg else None
+    print(f"[2252-inj] Authentication-Results = {auth_results!r}")
+
+    try:
+        reader = InboundEmailReader()
+        _uid, user_settings = reader._resolve_settings_for_sender(sender, settings)
+        assert not reader._authorize(sender, user_settings, msg), (
+            f"#2252 AC-7: Injektion ueber quoted Local-Part wurde autorisiert. "
+            f"Authentication-Results={auth_results!r}"
+        )
+
+        processed = InboundEmailReader().poll_and_process(settings)
+        print(f"[2252-inj] poll_and_process = {processed}")
+        assert processed == 0, (
+            f"#2252 AC-7: Injektions-Mail wurde verarbeitet (processed={processed}). "
+            f"Authentication-Results={auth_results!r}"
+        )
+
+        uids_after = _find_uids_by_token(token, timeout_s=20)
+        assert uids_after, "Injektions-Mail nach Poll nicht mehr auffindbar"
+        flags = _flags_for_uid(uids_after[0])
+        assert "\\Seen" in flags, (
+            f"#1009: abgelehnte Injektions-Mail blieb UNSEEN (FLAGS={flags!r})"
+        )
+    finally:
+        _delete_uids(_find_uids_by_token(token, timeout_s=20))
+        _cleanup_user(user_id)
+
+
 # ===========================================================================
 # AC-3 + AC-4 (#1019) — echter Telegram-Live-Test (gated GZ_TELEGRAM_LIVE=1)
 # ===========================================================================

@@ -63,12 +63,17 @@ export async function registerPasskey(label: string): Promise<RegisteredPasskey>
  * Authenticate the user via a previously-registered Passkey. On success the
  * server sets a `gz_session` cookie and we reload the page so SvelteKit picks
  * up the new auth state.
+ *
+ * Issue #2194 (ADR-0105): `kennung` is what the user typed — normally the
+ * e-mail address, for test accounts the account ID. It is passed on unchanged
+ * as `username`; the Go server decides via the `@` switch (no client-side
+ * trimming/lower-casing).
  */
-export async function loginWithPasskey(username: string): Promise<void> {
+export async function loginWithPasskey(kennung: string): Promise<void> {
 	const beginRes = await fetch('/api/auth/passkey/login/begin', {
 		method: 'POST',
 		headers: { 'Content-Type': 'application/json' },
-		body: JSON.stringify({ username })
+		body: JSON.stringify({ username: kennung })
 	});
 	if (!beginRes.ok) {
 		throw new Error('invalid_credentials');
@@ -94,7 +99,7 @@ export async function loginWithPasskey(username: string): Promise<void> {
 /**
  * Authenticate the user via Discoverable Credentials + Conditional UI (Issue #467).
  * No username required — the browser surfaces all passkeys for this RP as an
- * autofill picker on focus of a `autocomplete="username webauthn"` input.
+ * autofill picker on focus of a `autocomplete="email webauthn"` input.
  *
  * The `signal` lets the caller abort the pending picker (e.g. when the user
  * clicks the explicit "Mit Passkey anmelden" button instead).

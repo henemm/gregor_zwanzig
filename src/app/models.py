@@ -694,20 +694,9 @@ class MetricConfig:
     derived: bool = False
 
 
-# Issue #1585: Groessen, die zwar ``selectable=False`` sind, deren Auftreten in
-# der Mail aber ein AUSDRUECKLICH festgehaltener Bestand ist. Klein, benannt,
-# DARF NUR SCHRUMPFEN -- ein neuer Eintrag hier ist ein Befund, kein
-# Schleichweg (Muster: AGGREGATION_CHECK_EXEMPTIONS in
-# tests/unit/test_compare_catalog_derives_from_central_catalog.py).
-#
-# ``temperature_cold`` (col_label "TmpMin", selectable=False seit #914, mit
-# #1585 nicht verwandt): faellt aus ``resolve_metric_col_order`` heraus und
-# wird vom ``remaining``-Zweig (email/html.py:681) hinten angehaengt. Diese
-# Abweichung ist Bestand und gehoert zu einer eigenen, noch nicht begonnenen
-# Scheibe -- festgehalten in tests/unit/test_mail_column_order.py::
-# test_legacy_config_without_order_keeps_catalog_order. Ohne diese Ausnahme
-# haette #1585 die Spalte still entfernt und damit fremder Arbeit vorgegriffen.
-_SELECTABLE_GATE_EXEMPT: frozenset[str] = frozenset({"temperature_cold"})
+# Issue #1585: Ausnahmeliste des Waehlbarkeits-Gates. DARF NUR SCHRUMPFEN --
+# ein neuer Eintrag hier ist ein Befund, kein Schleichweg. Seit #2209 leer.
+_SELECTABLE_GATE_EXEMPT: frozenset[str] = frozenset()
 
 
 def _is_selectable(metric_id: str) -> bool:

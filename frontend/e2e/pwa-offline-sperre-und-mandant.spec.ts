@@ -94,6 +94,13 @@ async function wiederAnmelden(page: Page): Promise<void> {
  * NICHT der Stamm-Testnutzer ist; genau darauf kommt es hier an.
  */
 const NUTZER_B = { username: 'e2e2131nutzerb', password: 'test1234' };
+/**
+ * Issue #2194 (ADR-0105): ohne is_test_user ignoriert `/api/auth/register` das
+ * Feld `username` und vergibt eine opake Konto-ID (`u-<8hex>`). Der feste Name
+ * ist deshalb nur noch der Stamm der E-Mail-Adresse; diese Adresse ist pro
+ * Konto eindeutig und ueber Laeufe hinweg der stabile Anmeldename von B.
+ */
+const NUTZER_B_EMAIL = `${NUTZER_B.username}@example.com`;
 
 /**
  * Bestaetigt Bs E-Mail-Adresse ueber den staging-only Testweg (Issue #2271).
@@ -113,8 +120,11 @@ const NUTZER_B = { username: 'e2e2131nutzerb', password: 'test1234' };
  * hier NICHT: er erwartet eine frische Kennung und eine bereits angemeldete
  * fremde Sitzung — beides gibt es in dieser Datei bewusst nicht (fester Name
  * wegen der Anlage-Bremse, siehe oben).
+ *
+ * `kontoId` ist die vom Server vergebene ID aus der Register-Antwort (Issue
+ * #2194): `verify-email` nimmt nur die ID, nicht die E-Mail-Adresse.
  */
-async function bestaetigeZweitnutzer(page: Page): Promise<void> {
+async function bestaetigeZweitnutzer(page: Page, kontoId: string): Promise<void> {
 	const basis = test.info().project.use.baseURL ?? new URL(page.url()).origin;
 	const admin = await apiSitzung.newContext({ baseURL: basis });
 	try {
@@ -125,7 +135,7 @@ async function bestaetigeZweitnutzer(page: Page): Promise<void> {
 		).toBeTruthy();
 
 		const tokenAntwort = await admin.post('/api/auth/verify-email/staging-token', {
-			data: { username: NUTZER_B.username }
+			data: { username: kontoId }
 		});
 		expect(
 			tokenAntwort.ok(),
@@ -133,11 +143,8 @@ async function bestaetigeZweitnutzer(page: Page): Promise<void> {
 		).toBeTruthy();
 		const { token } = (await tokenAntwort.json()) as { token?: string };
 
-		// Der Testweg gibt auch fuer ein laengst bestaetigtes Konto ein frisches
-		// Token heraus (#2304 AC-11) — der Schritt bleibt ueber Laeufe hinweg
-		// wiederholbar, obwohl B einen festen Namen traegt.
 		const bestaetigung = await admin.post('/api/auth/verify-email', {
-			data: { user: NUTZER_B.username, token }
+			data: { user: kontoId, token }
 		});
 		expect(
 			bestaetigung.ok(),
@@ -148,23 +155,49 @@ async function bestaetigeZweitnutzer(page: Page): Promise<void> {
 	}
 }
 
+/**
+ * Legt B an (falls noetig), bestaetigt ihn und meldet ihn im SELBEN Kontext an.
+ * Rueckgabe: Bs echte, vom Server vergebene Konto-ID (aus der Login-Antwort).
+ */
 async function zweiterNutzerAnmelden(page: Page): Promise<string> {
 	const reg = await page.request.post('/api/auth/register', {
-		data: { ...NUTZER_B, email: `${NUTZER_B.username}@example.com` }
+		data: { ...NUTZER_B, email: NUTZER_B_EMAIL }
 	});
-	// 200/201 = neu angelegt · 409 = liegt aus einem frueheren Lauf vor ·
-	// 429 = Anlage-Budget erschoepft. Ueber die Lauffaehigkeit entscheidet in
-	// allen drei Faellen erst die Anmeldung unten — sie ist die eigentliche
-	// Voraussetzung des Nachweises.
+	// 200/201 = neu angelegt · 409 = die Adresse gehoert einem Konto aus einem
+	// frueheren Lauf bzw. Aufruf · 429 = Anlage-Budget erschoepft. Ueber die
+	// Lauffaehigkeit entscheidet in allen drei Faellen erst die Anmeldung unten —
+	// sie ist die eigentliche Voraussetzung des Nachweises.
 	expect(
 		[200, 201, 409, 429],
 		`unerwartete Antwort beim Anlegen von B: ${reg.status()}`
 	).toContain(reg.status());
-	// Issue #2271: zwischen Anlage und Anmeldung liegt jetzt die Bestaetigung.
-	await bestaetigeZweitnutzer(page);
-	const login = await page.request.post('/api/auth/login', { data: NUTZER_B });
-	expect(login.ok(), `Anmeldung B fehlgeschlagen: ${login.status()}`).toBeTruthy();
-	return NUTZER_B.username;
+	if ([200, 201].includes(reg.status())) {
+		// Issue #2194: die Konto-ID vergibt der Server; nur sie oeffnet den
+		// Bestaetigungsweg. Issue #2271: zwischen Anlage und Anmeldung liegt die
+		// Bestaetigung.
+		const { id } = (await reg.json().catch(() => ({}))) as { id?: unknown };
+		expect(
+			typeof id === 'string' && id !== '',
+			`Anlage von B lieferte keine Konto-ID: ${await reg.text()}`
+		).toBeTruthy();
+		await bestaetigeZweitnutzer(page, id as string);
+	}
+	// Bei 409/429 existiert B bereits und wurde in dem Lauf bestaetigt, der ihn
+	// angelegt hat. Angemeldet wird per E-Mail-Adresse — sie ist der einzige
+	// laufuebergreifend stabile Anmeldename (die ID ist opak).
+	const login = await page.request.post('/api/auth/login', {
+		data: { username: NUTZER_B_EMAIL, password: NUTZER_B.password }
+	});
+	expect(
+		login.ok(),
+		`Anmeldung B (per E-Mail-Adresse) fehlgeschlagen: ${login.status()} ${await login.text()}`
+	).toBeTruthy();
+	const { id: kontoId } = (await login.json().catch(() => ({}))) as { id?: unknown };
+	expect(
+		typeof kontoId === 'string' && kontoId !== '',
+		'Anmeldung B lieferte keine Konto-ID'
+	).toBeTruthy();
+	return kontoId as string;
 }
 
 /** Zeichnet jede schreibende Anfrage des Kontexts auf (auch die des Workers). */

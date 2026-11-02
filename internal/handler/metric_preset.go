@@ -125,9 +125,7 @@ func ListMetricPresetsHandler(s *store.Store) http.HandlerFunc {
 		s := s.WithUser(middleware.UserIDFromContext(r.Context()))
 		presets, err := s.LoadMetricPresets()
 		if err != nil {
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(http.StatusInternalServerError)
-			w.Write([]byte(`{"error":"store_error"}`))
+			WriteError(w, r, http.StatusInternalServerError, "store_error", nil)
 			return
 		}
 		writeJSON(w, http.StatusOK, presets)
@@ -141,19 +139,19 @@ func CreateMetricPresetHandler(s *store.Store) http.HandlerFunc {
 
 		var req createPresetRequest
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-			writeJSON(w, http.StatusBadRequest, map[string]string{"error": "bad_request"})
+			WriteError(w, r, http.StatusBadRequest, "bad_request", nil)
 			return
 		}
 		name := strings.TrimSpace(req.Name)
 		if name == "" {
-			writeJSON(w, http.StatusBadRequest, map[string]string{"error": "name_required"})
+			WriteError(w, r, http.StatusBadRequest, "name_required", nil)
 			return
 		}
 
 		defer s.LockMetricPresets()() // #2158: Lesen+Schreiben unter einer Sperre
 		presets, err := s.LoadMetricPresets()
 		if err != nil {
-			writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "store_error"})
+			WriteError(w, r, http.StatusInternalServerError, "store_error", nil)
 			return
 		}
 
@@ -161,7 +159,7 @@ func CreateMetricPresetHandler(s *store.Store) http.HandlerFunc {
 		nameLower := strings.ToLower(name)
 		for _, p := range presets {
 			if strings.ToLower(strings.TrimSpace(p.Name)) == nameLower {
-				writeJSON(w, http.StatusConflict, map[string]string{"error": "name_exists"})
+				WriteError(w, r, http.StatusConflict, "name_exists", nil)
 				return
 			}
 		}
@@ -184,7 +182,7 @@ func CreateMetricPresetHandler(s *store.Store) http.HandlerFunc {
 		presets = append(presets, preset)
 
 		if err := s.SaveMetricPresets(presets); err != nil {
-			writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "store_error"})
+			WriteError(w, r, http.StatusInternalServerError, "store_error", nil)
 			return
 		}
 		writeJSON(w, http.StatusCreated, preset)
@@ -200,7 +198,7 @@ func DeleteMetricPresetHandler(s *store.Store) http.HandlerFunc {
 		defer s.LockMetricPresets()() // #2158: Lesen+Schreiben unter einer Sperre
 		presets, err := s.LoadMetricPresets()
 		if err != nil {
-			writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "store_error"})
+			WriteError(w, r, http.StatusInternalServerError, "store_error", nil)
 			return
 		}
 
@@ -214,12 +212,12 @@ func DeleteMetricPresetHandler(s *store.Store) http.HandlerFunc {
 			filtered = append(filtered, p)
 		}
 		if !found {
-			writeJSON(w, http.StatusNotFound, map[string]string{"error": "not_found"})
+			WriteError(w, r, http.StatusNotFound, "not_found", nil)
 			return
 		}
 
 		if err := s.SaveMetricPresets(filtered); err != nil {
-			writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "store_error"})
+			WriteError(w, r, http.StatusInternalServerError, "store_error", nil)
 			return
 		}
 		w.WriteHeader(http.StatusNoContent)
@@ -239,7 +237,7 @@ func PatchMetricPresetHandler(s *store.Store) http.HandlerFunc {
 		defer s.LockMetricPresets()() // #2158: Lesen+Schreiben unter einer Sperre
 		presets, err := s.LoadMetricPresets()
 		if err != nil {
-			writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "store_error"})
+			WriteError(w, r, http.StatusInternalServerError, "store_error", nil)
 			return
 		}
 
@@ -251,18 +249,18 @@ func PatchMetricPresetHandler(s *store.Store) http.HandlerFunc {
 			}
 		}
 		if idx < 0 {
-			writeJSON(w, http.StatusNotFound, map[string]string{"error": "not_found"})
+			WriteError(w, r, http.StatusNotFound, "not_found", nil)
 			return
 		}
 
 		var patch struct {
-			Name        *string            `json:"name,omitempty"`
-			Description *string            `json:"description,omitempty"`
-			IsDefault   *bool              `json:"is_default,omitempty"`
+			Name        *string                `json:"name,omitempty"`
+			Description *string                `json:"description,omitempty"`
+			IsDefault   *bool                  `json:"is_default,omitempty"`
 			Metrics     *[]model.DisplayMetric `json:"metrics,omitempty"`
 		}
 		if err := json.NewDecoder(r.Body).Decode(&patch); err != nil {
-			writeJSON(w, http.StatusBadRequest, map[string]string{"error": "bad_request"})
+			WriteError(w, r, http.StatusBadRequest, "bad_request", nil)
 			return
 		}
 
@@ -290,7 +288,7 @@ func PatchMetricPresetHandler(s *store.Store) http.HandlerFunc {
 		presets[idx] = existing
 
 		if err := s.SaveMetricPresets(presets); err != nil {
-			writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "store_error"})
+			WriteError(w, r, http.StatusInternalServerError, "store_error", nil)
 			return
 		}
 		writeJSON(w, http.StatusOK, existing)

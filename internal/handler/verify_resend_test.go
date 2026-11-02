@@ -407,7 +407,8 @@ func TestResendDrosseltAbDemSechstenAufrufProStunde_F003(t *testing.T) {
 			"bekommen %d: %s — das Ratenlimit auf %s greift nicht",
 			w.Code, w.Body.String(), resendPfad2304)
 	}
-	if got := strings.TrimSpace(w.Body.String()); got != `{"error":"rate_limit_exceeded"}` {
-		t.Errorf("F003: erwarteter Drossel-Körper `{\"error\":\"rate_limit_exceeded\"}`, bekommen %q", got)
+	// Issue #2677: Fehlerobjekt rate_limit_exceeded (code = error) in Anfragesprache.
+	if got := w.Body.String(); !strings.Contains(got, `"code":"rate_limit_exceeded"`) || !strings.Contains(got, `"error":"rate_limit_exceeded"`) {
+		t.Errorf("F003: erwartet Fehlerobjekt rate_limit_exceeded, bekommen %q", got)
 	}
 }

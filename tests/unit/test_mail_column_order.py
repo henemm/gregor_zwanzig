@@ -150,12 +150,9 @@ def test_legacy_config_without_order_keeps_catalog_order():
     Die Sortierung muss stabil sein -- sonst wuerde sie fuer Bestands-Trips,
     die nie eine Reihenfolge gesetzt haben, eine neue erfinden.
 
-    Der Sollwert ist der GEMESSENE Vorzustand (2026-08-07 gegen 9a932ef), nicht
-    die ideale Katalog-Reihenfolge: 'TmpMin' steht hinten, weil
-    `temperature_cold.selectable = False` es aus `_col_order` fallen laesst und
-    der `remaining`-Zweig es anhaengt (html.py:1024/1680). Diese Abweichung ist
-    Bestand und gehoert zu Scheibe 2 -- dieser Test haelt sie fest, damit die
-    Sortierung sie nicht versehentlich mitverschiebt.
+    #2209: die frühere Abweichung ('TmpMin' hinten angehaengt) ist behoben --
+    `temperature_cold` ist nicht waehlbar und wird im Zeilenbau still
+    ignoriert; die Baseline fuehrt keine 'TmpMin'-Spalte mehr.
     """
     config = build_default_display_config()
     assert all(mc.order == 0 for mc in config.metrics if mc.enabled), (
@@ -165,7 +162,7 @@ def test_legacy_config_without_order_keeps_catalog_order():
 
     baseline = [
         "Temp", "Feels", "Wind", "Gust", "Rain",
-        "Thdr", "SnowL", "Cloud", "Sun", "TmpMin",
+        "Thdr", "SnowL", "Cloud", "Sun",
     ]
     assert _mail_columns(config) == baseline, (
         "Altbestand-Reihenfolge veraendert -- ein Trip ohne je gesetzte "

@@ -47,14 +47,15 @@ export const load: PageServerLoad = async ({ url, request }) => {
 export const actions = {
 	default: async ({ request, locals }) => {
 		const data = await request.formData();
-		const username = data.get('username')?.toString() ?? '';
+		// Issue #2194: kein Benutzername mehr — die Go-API vergibt die Konto-ID
+		// (u-<8hex>); angemeldet wird mit der E-Mail-Adresse.
 		const email = data.get('email')?.toString() ?? '';
 		const password = data.get('password')?.toString() ?? '';
 		const confirmPassword = data.get('confirmPassword')?.toString() ?? '';
 		const invite = data.get('invite')?.toString() ?? '';
 
 		if (password !== confirmPassword) {
-			return fail(400, { error: trFor(locals.lang, 'auth.register.passwoerter_ungleich'), username, email });
+			return fail(400, { error: trFor(locals.lang, 'auth.register.passwoerter_ungleich'), email });
 		}
 
 		const clientIP = request.headers.get('x-real-ip') ?? '';
@@ -62,7 +63,7 @@ export const actions = {
 			method: 'POST',
 			headers: { 'Content-Type': 'application/json', ...(clientIP && { 'X-Real-IP': clientIP }) },
 			// Issue #2648 — neue Konten uebernehmen die Sprache, die der Besucher sah.
-			body: JSON.stringify({ username, password, email, language: locals.lang, ...(invite && { invite }) }),
+			body: JSON.stringify({ password, email, language: locals.lang, ...(invite && { invite }) }),
 		});
 
 		if (resp.ok) {
@@ -70,7 +71,7 @@ export const actions = {
 		}
 
 		if (resp.status === 429) {
-			return fail(429, { error: trFor(locals.lang, 'auth.fehler.zu_viele_versuche'), username, email });
+			return fail(429, { error: trFor(locals.lang, 'auth.fehler.zu_viele_versuche'), email });
 		}
 		if (resp.status === 409) {
 			// Issue #2147 Scheibe B1 (AC-15): "email_taken" ist ein Adress-, kein
@@ -80,11 +81,10 @@ export const actions = {
 			if (body?.error === 'email_taken') {
 				return fail(409, {
 					error: trFor(locals.lang, 'auth.register.email_vergeben'),
-					username,
 					email,
 				});
 			}
-			return fail(409, { error: trFor(locals.lang, 'auth.register.benutzername_vergeben'), username, email });
+			return fail(409, { error: trFor(locals.lang, 'auth.register.benutzername_vergeben'), email });
 		}
 		if (resp.status === 400) {
 			// Issue #1226: Backend liefert bei ungültiger E-Mail den eigenen
@@ -94,19 +94,17 @@ export const actions = {
 			if (body?.error === 'invite_invalid') {
 				return fail(400, {
 					error: trFor(locals.lang, 'auth.register.fehler_einladung_ungueltig'),
-					username,
 					email,
 				});
 			}
 			if (body?.error === 'invalid_email') {
-				return fail(400, { error: trFor(locals.lang, 'auth.register.fehler_email_ungueltig'), username, email });
+				return fail(400, { error: trFor(locals.lang, 'auth.register.fehler_email_ungueltig'), email });
 			}
 			return fail(400, {
 				error: trFor(locals.lang, 'auth.register.fehler_pflichtfelder'),
-				username,
 				email,
 			});
 		}
-		return fail(500, { error: trFor(locals.lang, 'auth.register.fehler_allgemein'), username, email });
+		return fail(500, { error: trFor(locals.lang, 'auth.register.fehler_allgemein'), email });
 	},
 } satisfies Actions;

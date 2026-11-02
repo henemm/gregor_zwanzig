@@ -119,6 +119,9 @@ var storeMethodRegister = map[string]guardEntry{
 	"DeleteSmsVerification":    exempt("Kennung als expliziter Parameter, nicht s.UserID"),
 	"FindUserByOAuthSub":       exempt("iteriert über ListUserIDs/LoadUser(id), nicht s.UserID"),
 	"FindUserByTelegramChatID": exempt("iteriert über ListUserIDs/LoadUser(id), nicht s.UserID"),
+	// Issue #2194 — E-Mail-Login-Lookup und opaker ID-Generator.
+	"FindUsersByLoginEmail": exempt("iteriert über ListUserIDs/LoadUser(id), nicht s.UserID (#2194)"),
+	"NewOpaqueUserID":       exempt("erzeugt eine neue Kennung, baut keinen Pfad aus s.UserID (#2194)"),
 
 	"AddSession":    exempt("Kennung als expliziter Parameter (userId), nicht s.UserID"),
 	"RemoveSession": exempt("Kennung als expliziter Parameter (userId), nicht s.UserID"),

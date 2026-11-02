@@ -330,6 +330,7 @@ export interface DisplayConfig {
 	channel_layouts?: ChannelLayouts; // Issue #429
 	channel_layouts_per_report?: ChannelLayoutsPerReport; // Issue #434
 	telegram_kurzform?: boolean; // Issue #614: SMS-Kurzform als Tages-Max-Anhang
+	show_night_block?: boolean; // Issue #1721: Nacht-Stundentabelle der Trip-Mail; fehlt = an (loader.py)
 	alert_preset?: string; // Issue #846: "deaktiviert" | "entspannt" | "standard" | "sensibel"
 	metric_alert_levels?: Record<string, SensLevel>; // Issue #864: metric → SensLevel
 	telegram_style?: 'rich' | 'kurzform'; // Issue #1260: Compare-amtliche Warnung im SMS-Kurzstil (opt-in)

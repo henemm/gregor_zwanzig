@@ -40,11 +40,11 @@ func TripBriefingHistoryHandler(s *store.Store) http.HandlerFunc {
 func briefingHistory(s *store.Store, w http.ResponseWriter, r *http.Request, kind string) {
 	userID := middleware.UserIDFromContext(r.Context())
 	if userID == "" {
-		http.Error(w, "unauthorized", http.StatusUnauthorized)
+		WriteError(w, r, http.StatusUnauthorized, "unauthorized", nil)
 		return
 	}
 	if !isValidBriefingKind(kind) {
-		writeBriefingKindRequired(w)
+		WriteError(w, r, http.StatusBadRequest, "kind_required", nil)
 		return
 	}
 	id := chi.URLParam(r, "id")
@@ -54,7 +54,7 @@ func briefingHistory(s *store.Store, w http.ResponseWriter, r *http.Request, kin
 
 	entries, err := s.WithUser(userID).LoadBriefingLog()
 	if err != nil {
-		http.Error(w, "internal error", http.StatusInternalServerError)
+		WriteError(w, r, http.StatusInternalServerError, "internal_error", nil)
 		return
 	}
 

@@ -41,7 +41,7 @@ from app.loader import get_data_dir, load_all_trips, save_trip
 from app.trip import Stage, Trip, Waypoint
 from services.inbound_email_reader import InboundEmailReader
 from services.inbound_telegram_reader import InboundTelegramReader
-from tests.fixtures.authentication_results_fixtures import AR_PASS, TEST_AUTHSERV_ID
+from tests.fixtures.authentication_results_fixtures import TEST_AUTHSERV_ID, ar_pass_for
 
 #: Fixture-Standort (providers/fixture.py) — nur Zeitzonen-Anker, kein Abruf.
 INNSBRUCK = (47.2692, 11.4041)
@@ -144,7 +144,7 @@ def _raw_mail(*, from_addr: str, subject: str, body: str) -> bytes:
     msg["From"] = from_addr
     msg["To"] = "basis@example.invalid"
     msg["Subject"] = subject
-    msg["Authentication-Results"] = AR_PASS
+    msg["Authentication-Results"] = ar_pass_for(from_addr)
     msg.set_content(body)
     return msg.as_bytes()
 

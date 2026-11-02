@@ -22,7 +22,8 @@ export const F4_ANKER: [schluessel: string, de: string, en: string][] = [
 	['konto.aktion.gesendet', 'Gesendet', 'Sent'],
 	['konto.aktion.senden_fehlgeschlagen', 'Senden fehlgeschlagen', 'Sending failed'],
 	['konto.profil.titel', 'Profil', 'Profile'],
-	['konto.profil.benutzername', 'Benutzername', 'Username'],
+	// #2194: bewusste Spec-Aenderung — die Zeile zeigt die Konto-Kennung (u-<8hex>), keinen Benutzernamen mehr.
+	['konto.profil.benutzername', 'Konto-Kennung', 'Account ID'],
 	['konto.profil.anzeigename', 'Anzeigename', 'Display name'],
 	['konto.profil.mitglied_seit', 'Mitglied seit', 'Member since'],
 	['konto.profil.gespeichert', 'Profil gespeichert', 'Profile saved'],

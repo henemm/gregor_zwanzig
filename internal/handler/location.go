@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/henemm/gregor-api/internal/i18n"
 	"github.com/henemm/gregor-api/internal/middleware"
 	"github.com/henemm/gregor-api/internal/model"
 	"github.com/henemm/gregor-api/internal/store"
@@ -31,9 +32,7 @@ func LocationsHandler(s *store.Store) http.HandlerFunc {
 		s := s.WithUser(middleware.UserIDFromContext(r.Context()))
 		locations, err := s.LoadLocations()
 		if err != nil {
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(500)
-			w.Write([]byte(`{"error":"store_error"}`))
+			WriteError(w, r, 500, "store_error", nil)
 			return
 		}
 
@@ -65,9 +64,7 @@ func CreateLocationHandler(s *store.Store) http.HandlerFunc {
 		s := s.WithUser(middleware.UserIDFromContext(r.Context()))
 		var loc model.Location
 		if err := json.NewDecoder(r.Body).Decode(&loc); err != nil {
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(400)
-			w.Write([]byte(`{"error":"bad_request"}`))
+			WriteError(w, r, 400, "bad_request", nil)
 			return
 		}
 
@@ -77,12 +74,7 @@ func CreateLocationHandler(s *store.Store) http.HandlerFunc {
 		}
 
 		if err := validateLocation(loc); err != nil {
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(400)
-			json.NewEncoder(w).Encode(map[string]string{
-				"error":  "validation_error",
-				"detail": err.Error(),
-			})
+			WriteError(w, r, 400, "validation_error", i18n.Args{"detail": err.Error()})
 			return
 		}
 
@@ -91,18 +83,11 @@ func CreateLocationHandler(s *store.Store) http.HandlerFunc {
 		// per WithUser gebunden) — keine Cross-User-Kollision.
 		existing, err := s.LoadLocation(loc.ID)
 		if err != nil {
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(500)
-			w.Write([]byte(`{"error":"store_error"}`))
+			WriteError(w, r, 500, "store_error", nil)
 			return
 		}
 		if existing != nil {
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(409)
-			json.NewEncoder(w).Encode(map[string]string{
-				"error":  "conflict",
-				"detail": "Ort mit dieser ID existiert bereits",
-			})
+			WriteError(w, r, 409, "conflict", nil)
 			return
 		}
 
@@ -117,9 +102,7 @@ func CreateLocationHandler(s *store.Store) http.HandlerFunc {
 		}
 
 		if err := s.SaveLocation(loc); err != nil {
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(500)
-			w.Write([]byte(`{"error":"store_error"}`))
+			WriteError(w, r, 500, "store_error", nil)
 			return
 		}
 
@@ -133,30 +116,24 @@ func UpdateLocationHandler(s *store.Store) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		s := s.WithUser(middleware.UserIDFromContext(r.Context()))
 		id := chi.URLParam(r, "id")
-		if rejectInvalidEntityID(w, id) {
+		if rejectInvalidEntityID(w, r, id) {
 			return
 		}
 
 		defer s.LockLocation(id)() // #2158
 		existing, err := s.LoadLocation(id)
 		if err != nil {
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(500)
-			w.Write([]byte(`{"error":"store_error"}`))
+			WriteError(w, r, 500, "store_error", nil)
 			return
 		}
 		if existing == nil {
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(404)
-			w.Write([]byte(`{"error":"not_found"}`))
+			WriteError(w, r, 404, "not_found", nil)
 			return
 		}
 
 		var loc model.Location
 		if err := json.NewDecoder(r.Body).Decode(&loc); err != nil {
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(400)
-			w.Write([]byte(`{"error":"bad_request"}`))
+			WriteError(w, r, 400, "bad_request", nil)
 			return
 		}
 
@@ -164,19 +141,12 @@ func UpdateLocationHandler(s *store.Store) http.HandlerFunc {
 		loc.CreatedAt = existing.CreatedAt
 
 		if err := validateLocation(loc); err != nil {
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(400)
-			json.NewEncoder(w).Encode(map[string]string{
-				"error":  "validation_error",
-				"detail": err.Error(),
-			})
+			WriteError(w, r, 400, "validation_error", i18n.Args{"detail": err.Error()})
 			return
 		}
 
 		if err := s.SaveLocation(loc); err != nil {
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(500)
-			w.Write([]byte(`{"error":"store_error"}`))
+			WriteError(w, r, 500, "store_error", nil)
 			return
 		}
 
@@ -192,39 +162,31 @@ func PatchLocationHandler(s *store.Store) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		s := s.WithUser(middleware.UserIDFromContext(r.Context()))
 		id := chi.URLParam(r, "id")
-		if rejectInvalidEntityID(w, id) {
+		if rejectInvalidEntityID(w, r, id) {
 			return
 		}
 
 		defer s.LockLocation(id)() // #2158
 		existing, err := s.LoadLocation(id)
 		if err != nil {
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(500)
-			w.Write([]byte(`{"error":"store_error"}`))
+			WriteError(w, r, 500, "store_error", nil)
 			return
 		}
 		if existing == nil {
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(404)
-			w.Write([]byte(`{"error":"not_found"}`))
+			WriteError(w, r, 404, "not_found", nil)
 			return
 		}
 
 		var patch map[string]json.RawMessage
 		if err := json.NewDecoder(r.Body).Decode(&patch); err != nil {
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(400)
-			w.Write([]byte(`{"error":"bad_request"}`))
+			WriteError(w, r, 400, "bad_request", nil)
 			return
 		}
 
 		if raw, ok := patch["group_id"]; ok {
 			var v *string
 			if err := json.Unmarshal(raw, &v); err != nil {
-				w.Header().Set("Content-Type", "application/json")
-				w.WriteHeader(400)
-				w.Write([]byte(`{"error":"bad_request"}`))
+				WriteError(w, r, 400, "bad_request", nil)
 				return
 			}
 			existing.GroupID = v
@@ -237,9 +199,7 @@ func PatchLocationHandler(s *store.Store) http.HandlerFunc {
 		// Nutzer bekam trotzdem 200.
 		existing.ID = id
 		if err := s.SaveLocation(*existing); err != nil {
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(500)
-			w.Write([]byte(`{"error":"store_error"}`))
+			WriteError(w, r, 500, "store_error", nil)
 			return
 		}
 
@@ -252,20 +212,16 @@ func LocationHandler(s *store.Store) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		s := s.WithUser(middleware.UserIDFromContext(r.Context()))
 		id := chi.URLParam(r, "id")
-		if rejectInvalidEntityID(w, id) {
+		if rejectInvalidEntityID(w, r, id) {
 			return
 		}
 		loc, err := s.LoadLocation(id)
 		if err != nil {
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(http.StatusInternalServerError)
-			w.Write([]byte(`{"error":"store_error"}`))
+			WriteError(w, r, http.StatusInternalServerError, "store_error", nil)
 			return
 		}
 		if loc == nil {
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(http.StatusNotFound)
-			w.Write([]byte(`{"error":"not_found"}`))
+			WriteError(w, r, http.StatusNotFound, "not_found", nil)
 			return
 		}
 		w.Header().Set("Content-Type", "application/json")
@@ -277,7 +233,7 @@ func DeleteLocationHandler(s *store.Store) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		s := s.WithUser(middleware.UserIDFromContext(r.Context()))
 		id := chi.URLParam(r, "id")
-		if rejectInvalidEntityID(w, id) {
+		if rejectInvalidEntityID(w, r, id) {
 			return
 		}
 
@@ -286,9 +242,7 @@ func DeleteLocationHandler(s *store.Store) http.HandlerFunc {
 		// #2216: Ort in einem Ortsvergleich -> nicht loeschen, Namen melden.
 		used, err := s.ComparePresetsUsingLocation(id)
 		if err != nil {
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(500)
-			w.Write([]byte(`{"error":"store_error"}`))
+			WriteError(w, r, 500, "store_error", nil)
 			return
 		}
 		if len(used) > 0 {
@@ -300,16 +254,12 @@ func DeleteLocationHandler(s *store.Store) http.HandlerFunc {
 			for _, p := range used {
 				refs = append(refs, ref{ID: p.ID, Name: p.Name})
 			}
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(409)
-			json.NewEncoder(w).Encode(map[string]any{"error": "location_in_use", "compare_presets": refs})
+			WriteErrorWith(w, r, 409, "location_in_use", nil, map[string]any{"compare_presets": refs})
 			return
 		}
 
 		if err := s.DeleteLocation(id); err != nil {
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(500)
-			w.Write([]byte(`{"error":"store_error"}`))
+			WriteError(w, r, 500, "store_error", nil)
 			return
 		}
 

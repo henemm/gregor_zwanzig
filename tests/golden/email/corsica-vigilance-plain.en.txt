@@ -19,14 +19,14 @@ Corsica E5: 18–20°C, feels 12–13°C, ⛅, moderate rain max 12:00, moderate
   ⚠️ Official warning: Heat (Sat 11 Jul · 12:00–20:00)
 
 ━━ Segment 1: km 0.0–0.0 | 12:00–17:00 | ↑400m → 1200m ━━
-  Time   Temp   Feels   Wind   Gust   Rain   Thdr   SnowL   Cloud   Sun   TmpMin 
-  -----  -----  ------  -----  -----  -----  -----  ------  ------  ----  -------
-  12     18.0   12.0    17     85     8.0    high   –       ⛅       –     18.0   
-  13     18.3   12.2    18     41     0.0    high   –       ⛅       –     18.3   
-  14     18.6   12.4    18     42     0.0    high   –       ⛅       –     18.6   
-  15     18.9   12.6    18     43     0.0    high   –       ⛅       –     18.9   
-  16     19.2   12.8    19     44     0.0    high   –       ⛅       –     19.2   
-  17     19.5   13.0    20     45     0.0    high   –       ⛅       –     19.5   
+  Time   Temp   Feels   Wind   Gust   Rain   Thdr   SnowL   Cloud   Sun 
+  -----  -----  ------  -----  -----  -----  -----  ------  ------  ----
+  12     18.0   12.0    17     85     8.0    high   –       ⛅       –   
+  13     18.3   12.2    18     41     0.0    high   –       ⛅       –   
+  14     18.6   12.4    18     42     0.0    high   –       ⛅       –   
+  15     18.9   12.6    18     43     0.0    high   –       ⛅       –   
+  16     19.2   12.8    19     44     0.0    high   –       ⛅       –   
+  17     19.5   13.0    20     45     0.0    high   –       ⛅       –   
 
 
 ── Reply commands ──
@@ -46,8 +46,8 @@ Corsica E5: 18–20°C, feels 12–13°C, ⛅, moderate rain max 12:00, moderate
   STARTDATE YYYY-MM-DD – Set the trip start date and shift all stages
   REPORT [morning / evening] – Send the briefing now (default: morning)
 
-Units: Temp, TmpMin, Feels °C · Wind, Gust km/h · Rain mm · SnowL m · Cloud % · Sun h
-Columns: Temp = Temperature · TmpMin = Low temperature alert · Feels = Feels-like temperature · Gust = Wind gusts · Rain = Precipitation · Thdr = Thunderstorm · SnowL = Snow line · Cloud = Cloud cover · Sun = Sunshine hours
+Units: Temp, Feels °C · Wind, Gust km/h · Rain mm · SnowL m · Cloud % · Sun h
+Columns: Temp = Temperature · Feels = Feels-like temperature · Gust = Wind gusts · Rain = Precipitation · Thdr = Thunderstorm · SnowL = Snow line · Cloud = Cloud cover · Sun = Sunshine hours
 ------------------------------------------------------------
 Generated: 2026-04-28 12:00 UTC
 Data: openmeteo (arome_france)

@@ -54,18 +54,8 @@
 			{#if invite.status === 'valid' || invite.status === 'unknown'}
 				<input type="hidden" name="invite" value={invite.token} />
 			{/if}
-			<div class="space-y-2">
-				<label for="username" class="text-sm font-medium">{$t('auth.feld.benutzername')}</label>
-				<input
-					id="username"
-					name="username"
-					type="text"
-					required
-					value={form?.username ?? ''}
-					class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-				/>
-			</div>
-
+			<!-- Issue #2194: kein Benutzername-Feld mehr — der Server vergibt die
+			     Konto-ID (u-<8hex>), angemeldet wird mit der E-Mail-Adresse. -->
 			<div class="space-y-2">
 				<label for="email" class="text-sm font-medium">{$t('auth.feld.email')}</label>
 					<input

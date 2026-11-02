@@ -24,6 +24,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
+	"github.com/henemm/gregor-api/internal/i18n"
 	"github.com/henemm/gregor-api/internal/middleware"
 	"github.com/henemm/gregor-api/internal/model"
 	"github.com/henemm/gregor-api/internal/store"
@@ -181,7 +182,7 @@ func ListComparePresetsHandler(s *store.Store) http.HandlerFunc {
 		s := s.WithUser(middleware.UserIDFromContext(r.Context()))
 		presets, err := s.LoadComparePresets()
 		if err != nil {
-			writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "store_error"})
+			WriteError(w, r, http.StatusInternalServerError, "store_error", nil)
 			return
 		}
 		// Issue #1280: Read-Heilung laeuft seit dem Adversary-Nachtrag zentral
@@ -199,7 +200,7 @@ func CreateComparePresetHandler(s *store.Store) http.HandlerFunc {
 
 		var preset model.ComparePreset
 		if err := json.NewDecoder(r.Body).Decode(&preset); err != nil {
-			writeJSON(w, http.StatusBadRequest, map[string]string{"error": "bad_request"})
+			WriteError(w, r, http.StatusBadRequest, "bad_request", nil)
 			return
 		}
 		preset.ID = newComparePresetID()
@@ -258,7 +259,7 @@ func CreateComparePresetHandler(s *store.Store) http.HandlerFunc {
 		}
 
 		if err := validateComparePreset(preset); err != nil {
-			writeJSON(w, http.StatusBadRequest, map[string]string{"error": "validation_error", "detail": err.Error()})
+			WriteError(w, r, http.StatusBadRequest, "validation_error", i18n.Args{"detail": err.Error()})
 			return
 		}
 
@@ -274,7 +275,7 @@ func CreateComparePresetHandler(s *store.Store) http.HandlerFunc {
 			return
 		}
 
-		unlockB, okB := lockBriefingOr503(w, s, preset.ID)
+		unlockB, okB := lockBriefingOr503(w, r, s, preset.ID)
 		if !okB {
 			return
 		}
@@ -284,7 +285,7 @@ func CreateComparePresetHandler(s *store.Store) http.HandlerFunc {
 		// briefings/<id>.json schreiben (SaveComparePreset setzt kind=vergleich),
 		// kein Laden+Zurueckschreiben des ganzen Arrays mehr.
 		if err := s.SaveComparePreset(preset); err != nil {
-			writeSaveError(w, err)
+			writeSaveError(w, r, err)
 			return
 		}
 		writeJSON(w, http.StatusCreated, preset)
@@ -381,7 +382,7 @@ func UpdateComparePresetHandler(s *store.Store) http.HandlerFunc {
 		// Issue #1395 S6: Sperre ueber den GANZEN Lesen-Pruefen-Schreiben-Zyklus.
 		// Dieselbe Sperre nimmt der zweite Schreibweg
 		// (PUT /api/briefings/{id}?kind=vergleich) auf dieselbe Datei.
-		unlockB, okB := lockBriefingOr503(w, s, id)
+		unlockB, okB := lockBriefingOr503(w, r, s, id)
 		if !okB {
 			return
 		}
@@ -392,19 +393,19 @@ func UpdateComparePresetHandler(s *store.Store) http.HandlerFunc {
 		// fehlende Datei liefert "" ohne Fehler und faellt unten in den 404.
 		oldFp, fpErr := s.BriefingFingerprint(id)
 		if fpErr != nil {
-			writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "store_error"})
+			WriteError(w, r, http.StatusInternalServerError, "store_error", nil)
 			return
 		}
 
 		presets, err := s.LoadComparePresets()
 		if err != nil {
-			writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "store_error"})
+			WriteError(w, r, http.StatusInternalServerError, "store_error", nil)
 			return
 		}
 
 		idx := findComparePresetIdx(presets, id)
 		if idx < 0 {
-			writeJSON(w, http.StatusNotFound, map[string]string{"error": "not_found"})
+			WriteError(w, r, http.StatusNotFound, "not_found", nil)
 			return
 		}
 
@@ -413,30 +414,30 @@ func UpdateComparePresetHandler(s *store.Store) http.HandlerFunc {
 		// Vorbedingung VOR dem Dekodieren des Rumpfes: stimmt sie nicht, ist der
 		// Rumpf irrelevant und es wird nichts geschrieben (AC-5).
 		if !ifMatchAllows(r.Header.Get("If-Match"), oldFp) {
-			writePreconditionFailed(w, r, preconditionFailedDetail)
+			writePreconditionFailed(w, r)
 			return
 		}
 
 		bodyBytes, err := io.ReadAll(r.Body)
 		if err != nil {
-			writeJSON(w, http.StatusBadRequest, map[string]string{"error": "bad_request"})
+			WriteError(w, r, http.StatusBadRequest, "bad_request", nil)
 			return
 		}
 		updated, err := applyComparePresetPatch(original, id, bodyBytes, time.Now().UTC())
 		if err != nil {
-			writeJSON(w, http.StatusBadRequest, map[string]string{"error": "bad_request"})
+			WriteError(w, r, http.StatusBadRequest, "bad_request", nil)
 			return
 		}
 
 		if err := validateComparePreset(updated); err != nil {
-			writeJSON(w, http.StatusBadRequest, map[string]string{"error": "validation_error", "detail": err.Error()})
+			WriteError(w, r, http.StatusBadRequest, "validation_error", i18n.Args{"detail": err.Error()})
 			return
 		}
 
 		// Issue #1250 Scheibe 7b: nur die eigene Datei zurueckschreiben
 		// (per-Datei-Save), nicht das ganze Array.
 		if err := s.SaveComparePreset(updated); err != nil {
-			writeSaveError(w, err)
+			writeSaveError(w, r, err)
 			return
 		}
 		// Issue #1395 S6: Stempel des soeben geschriebenen Standes — ohne ihn
@@ -462,7 +463,7 @@ func DeleteComparePresetHandler(s *store.Store) http.HandlerFunc {
 		// mitten in einen laufenden PUT faellt, wuerde sonst die Datei entfernen
 		// und der PUT sie danach wieder hinschreiben (Wiederauferstehen).
 		// KEIN If-Match: der Loeschpfad prueft keine Vorbedingung (analog Trip).
-		unlockB, okB := lockBriefingOr503(w, s, id)
+		unlockB, okB := lockBriefingOr503(w, r, s, id)
 		if !okB {
 			return
 		}
@@ -470,13 +471,13 @@ func DeleteComparePresetHandler(s *store.Store) http.HandlerFunc {
 
 		presets, err := s.LoadComparePresets()
 		if err != nil {
-			writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "store_error"})
+			WriteError(w, r, http.StatusInternalServerError, "store_error", nil)
 			return
 		}
 
 		idx := findComparePresetIdx(presets, id)
 		if idx < 0 {
-			writeJSON(w, http.StatusNotFound, map[string]string{"error": "not_found"})
+			WriteError(w, r, http.StatusNotFound, "not_found", nil)
 			return
 		}
 		// Issue #1250 Scheibe 7b (F-A): echtes Datei-Remove statt Array-Filtern.
@@ -484,7 +485,7 @@ func DeleteComparePresetHandler(s *store.Store) http.HandlerFunc {
 		// Array-Zurueckschreiben liesse briefings/<id>.json auf der Platte liegen
 		// (Wiederauferstehen beim naechsten Load).
 		if err := s.DeleteComparePreset(id); err != nil {
-			writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "store_error"})
+			WriteError(w, r, http.StatusInternalServerError, "store_error", nil)
 			return
 		}
 		w.WriteHeader(http.StatusNoContent)
@@ -517,7 +518,7 @@ func UpdateComparePresetStateHandler(s *store.Store) http.HandlerFunc {
 		// Issue #2482: Quoten-Lock IMMER vor LockBriefing (feste Reihenfolge);
 		// abgelehnt wird ausschliesslich das Wiederherstellen (AC-9).
 		defer s.LockQuota()()
-		unlockB, okB := lockBriefingOr503(w, s, id)
+		unlockB, okB := lockBriefingOr503(w, r, s, id)
 		if !okB {
 			return
 		}
@@ -525,18 +526,18 @@ func UpdateComparePresetStateHandler(s *store.Store) http.HandlerFunc {
 
 		presets, err := s.LoadComparePresets()
 		if err != nil {
-			writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "store_error"})
+			WriteError(w, r, http.StatusInternalServerError, "store_error", nil)
 			return
 		}
 		idx := findComparePresetIdx(presets, id)
 		if idx < 0 {
-			writeJSON(w, http.StatusNotFound, map[string]string{"error": "not_found"})
+			WriteError(w, r, http.StatusNotFound, "not_found", nil)
 			return
 		}
 
 		var req comparePresetStateRequest
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-			writeJSON(w, http.StatusBadRequest, map[string]string{"error": "bad_request"})
+			WriteError(w, r, http.StatusBadRequest, "bad_request", nil)
 			return
 		}
 
@@ -558,7 +559,7 @@ func UpdateComparePresetStateHandler(s *store.Store) http.HandlerFunc {
 
 		// Issue #1250 Scheibe 7b: nur die geaenderte Datei zurueckschreiben.
 		if err := s.SaveComparePreset(presets[idx]); err != nil {
-			writeSaveError(w, err)
+			writeSaveError(w, r, err)
 			return
 		}
 		writeJSON(w, http.StatusOK, presets[idx])
@@ -579,7 +580,7 @@ func GetComparePresetHandler(s *store.Store) http.HandlerFunc {
 		// gleichzeitiger PUT zwischen Fingerabdruck und Serialisierung
 		// dazwischenfunken, und der Client haelt einen Stempel, der nicht zum
 		// ausgelieferten Rumpf gehoert (analog TripHandler).
-		unlockB, okB := lockBriefingOr503(w, s, id)
+		unlockB, okB := lockBriefingOr503(w, r, s, id)
 		if !okB {
 			return
 		}
@@ -587,12 +588,12 @@ func GetComparePresetHandler(s *store.Store) http.HandlerFunc {
 
 		presets, err := s.LoadComparePresets()
 		if err != nil {
-			writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "store_error"})
+			WriteError(w, r, http.StatusInternalServerError, "store_error", nil)
 			return
 		}
 		idx := findComparePresetIdx(presets, id)
 		if idx < 0 {
-			writeJSON(w, http.StatusNotFound, map[string]string{"error": "not_found"})
+			WriteError(w, r, http.StatusNotFound, "not_found", nil)
 			return
 		}
 		// Issue #1280: Read-Heilung (siehe ListComparePresetsHandler oben).

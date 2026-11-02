@@ -148,7 +148,7 @@ export const GOLDEN_FAELLE: Golden[] = [
 			{
 				name: 'fehler_passwoerter',
 				render: () =>
-					registerSeite({ status: 'none' }, { error: 'Passwörter stimmen nicht überein', username: 'anna', email: 'a@b.de' })
+					registerSeite({ status: 'none' }, { error: 'Passwörter stimmen nicht überein', email: 'a@b.de' })
 			}
 		]
 	},
@@ -158,7 +158,13 @@ export const GOLDEN_FAELLE: Golden[] = [
 			{ name: 'leer', render: () => rendere('forgot-password/+page.svelte', { form: null }, 'de') },
 			{
 				name: 'fehler',
-				render: () => rendere('forgot-password/+page.svelte', { form: { error: 'Username required', username: '' } }, 'de')
+				// #2194: Pflichtfehler aus dem Katalog (fragt nach der E-Mail-Adresse).
+				render: () =>
+					rendere(
+						'forgot-password/+page.svelte',
+						{ form: { error: KATALOG_DE['auth.forgot.fehler_benutzername'], username: '' } },
+						'de'
+					)
 			},
 			{
 				name: 'erfolg',

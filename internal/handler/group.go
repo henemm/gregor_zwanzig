@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
+	"github.com/henemm/gregor-api/internal/i18n"
 	"github.com/henemm/gregor-api/internal/middleware"
 	"github.com/henemm/gregor-api/internal/model"
 	"github.com/henemm/gregor-api/internal/store"
@@ -20,9 +21,7 @@ func GroupsHandler(s *store.Store) http.HandlerFunc {
 		s := s.WithUser(middleware.UserIDFromContext(r.Context()))
 		groups, err := s.LoadGroups()
 		if err != nil {
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(500)
-			w.Write([]byte(`{"error":"store_error"}`))
+			WriteError(w, r, 500, "store_error", nil)
 			return
 		}
 
@@ -38,19 +37,12 @@ func CreateGroupHandler(s *store.Store) http.HandlerFunc {
 		s := s.WithUser(middleware.UserIDFromContext(r.Context()))
 		var g model.Group
 		if err := json.NewDecoder(r.Body).Decode(&g); err != nil {
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(400)
-			w.Write([]byte(`{"error":"bad_request"}`))
+			WriteError(w, r, 400, "bad_request", nil)
 			return
 		}
 
 		if g.Name == "" {
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(400)
-			json.NewEncoder(w).Encode(map[string]string{
-				"error":  "validation_error",
-				"detail": "name required",
-			})
+			WriteError(w, r, 400, "validation_error", i18n.Args{"detail": "name required"})
 			return
 		}
 
@@ -61,9 +53,7 @@ func CreateGroupHandler(s *store.Store) http.HandlerFunc {
 		defer s.LockGroups()() // #2158: Lesen+Schreiben unter einer Gruppen-Sperre
 		existing, err := s.LoadGroupsLocked()
 		if err != nil {
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(500)
-			w.Write([]byte(`{"error":"store_error"}`))
+			WriteError(w, r, 500, "store_error", nil)
 			return
 		}
 
@@ -78,9 +68,7 @@ func CreateGroupHandler(s *store.Store) http.HandlerFunc {
 		}
 
 		if err := s.SaveGroupLocked(g); err != nil {
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(500)
-			w.Write([]byte(`{"error":"store_error"}`))
+			WriteError(w, r, 500, "store_error", nil)
 			return
 		}
 
@@ -100,9 +88,7 @@ func UpdateGroupHandler(s *store.Store) http.HandlerFunc {
 		defer s.LockGroups()() // #2158
 		groups, err := s.LoadGroupsLocked()
 		if err != nil {
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(500)
-			w.Write([]byte(`{"error":"store_error"}`))
+			WriteError(w, r, 500, "store_error", nil)
 			return
 		}
 
@@ -114,17 +100,13 @@ func UpdateGroupHandler(s *store.Store) http.HandlerFunc {
 			}
 		}
 		if existing == nil {
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(404)
-			w.Write([]byte(`{"error":"not_found"}`))
+			WriteError(w, r, 404, "not_found", nil)
 			return
 		}
 
 		var patch map[string]json.RawMessage
 		if err := json.NewDecoder(r.Body).Decode(&patch); err != nil {
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(400)
-			w.Write([]byte(`{"error":"bad_request"}`))
+			WriteError(w, r, 400, "bad_request", nil)
 			return
 		}
 
@@ -132,9 +114,7 @@ func UpdateGroupHandler(s *store.Store) http.HandlerFunc {
 		if raw, ok := patch["name"]; ok {
 			var v string
 			if err := json.Unmarshal(raw, &v); err != nil {
-				w.Header().Set("Content-Type", "application/json")
-				w.WriteHeader(400)
-				w.Write([]byte(`{"error":"bad_request"}`))
+				WriteError(w, r, 400, "bad_request", nil)
 				return
 			}
 			updated.Name = v
@@ -142,9 +122,7 @@ func UpdateGroupHandler(s *store.Store) http.HandlerFunc {
 		if raw, ok := patch["default_profile"]; ok {
 			var v *string
 			if err := json.Unmarshal(raw, &v); err != nil {
-				w.Header().Set("Content-Type", "application/json")
-				w.WriteHeader(400)
-				w.Write([]byte(`{"error":"bad_request"}`))
+				WriteError(w, r, 400, "bad_request", nil)
 				return
 			}
 			updated.DefaultProfile = v
@@ -152,18 +130,14 @@ func UpdateGroupHandler(s *store.Store) http.HandlerFunc {
 		if raw, ok := patch["order"]; ok {
 			var v int
 			if err := json.Unmarshal(raw, &v); err != nil {
-				w.Header().Set("Content-Type", "application/json")
-				w.WriteHeader(400)
-				w.Write([]byte(`{"error":"bad_request"}`))
+				WriteError(w, r, 400, "bad_request", nil)
 				return
 			}
 			updated.Order = v
 		}
 
 		if err := s.SaveGroupLocked(updated); err != nil {
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(500)
-			w.Write([]byte(`{"error":"store_error"}`))
+			WriteError(w, r, 500, "store_error", nil)
 			return
 		}
 
@@ -183,17 +157,13 @@ func DeleteGroupHandler(s *store.Store) http.HandlerFunc {
 		// Orte werden darunter einzeln gesperrt (Reihenfolge Gruppe -> Ort).
 		defer s.LockGroups()()
 		if err := s.DeleteGroupLocked(id); err != nil {
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(500)
-			w.Write([]byte(`{"error":"store_error"}`))
+			WriteError(w, r, 500, "store_error", nil)
 			return
 		}
 
 		locations, err := s.LoadLocations()
 		if err != nil {
-			w.Header().Set("Content-Type", "application/json")
-			w.WriteHeader(500)
-			w.Write([]byte(`{"error":"store_error"}`))
+			WriteError(w, r, 500, "store_error", nil)
 			return
 		}
 		for _, loc := range locations {
@@ -210,9 +180,7 @@ func DeleteGroupHandler(s *store.Store) http.HandlerFunc {
 			serr := s.SaveLocation(*existing)
 			unlockLoc()
 			if serr != nil {
-				w.Header().Set("Content-Type", "application/json")
-				w.WriteHeader(500)
-				w.Write([]byte(`{"error":"store_error"}`))
+				WriteError(w, r, 500, "store_error", nil)
 				return
 			}
 		}
