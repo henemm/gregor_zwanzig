@@ -16,6 +16,8 @@ from __future__ import annotations
 
 import logging
 
+from output.metric_format import NO_VALUE
+
 logger = logging.getLogger(__name__)
 
 
@@ -489,7 +491,7 @@ def format_outlook_value(value: object, column: dict) -> str:
     from output.renderers.email.compare_html import _fmt_precip_type, _fmt_thunder
 
     if value is None:
-        return "–"
+        return NO_VALUE
     kind = column.get("kind")
     if kind == "ordinal":
         return _fmt_thunder(value, column.get("hail"), column.get("signals"))

@@ -768,10 +768,11 @@ def test_ac16_ohne_gewitter_bleibt_die_compare_stundenzelle_zeichengleich():
         f"{ruhig.hourly_data[0].thunder_level!r}")
 
     html, text = _compare_mail(ruhig, laut)
-    assert _html_stunden(html)["Ruhigort"] == [["16", "—"]], (
+    # Issue #1670: Platzhalter ist der EN DASH aus metric_format.NO_VALUE.
+    assert _html_stunden(html)["Ruhigort"] == [["16", "–"]], (
         f"Ohne erreichte Stufe bleibt die HTML-Stundenzelle zeichengleich: "
         f"{_html_stunden(html)['Ruhigort']!r}")
-    assert _text_stunden(text)["Ruhigort"] == ["16:00  Thdr —"], (
+    assert _text_stunden(text)["Ruhigort"] == ["16:00  Thdr –"], (
         f"Dasselbe im Klartext: {_text_stunden(text)['Ruhigort']!r}")
 
     assert _html_stunden(html)["Sturmort"] == [["16", "hoch · CAPE"]], (

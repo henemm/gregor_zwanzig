@@ -37,6 +37,7 @@ from output.renderers.email.thunder_branch import (
     thunder_column_index,
 )
 from output.renderers.email.design_tokens import FONT_DATA, tone_css
+from output.metric_format import NO_VALUE
 from utils.geo import degrees_to_compass
 
 
@@ -55,7 +56,7 @@ _ACC_STUFEN = (
     (40, "#e07b1a", "niedrig"),
     (None, "#c52a22", "sehr niedrig"),
 )
-_ACC_KEIN_WERT = "–"
+_ACC_KEIN_WERT = NO_VALUE  # Issue #1670: EINE Platzhalter-Konstante
 ACC_LABEL = "ACC"
 
 
@@ -186,7 +187,7 @@ def render_outlook_table(
             cells = stage.get("cells") or []
             # Issue #1849: Ampel-Hintergruende parallel zu den Zellentexten.
             cell_bg = stage.get("cell_bg") or []
-            texte = [cells[i] if i < len(cells) else "–" for i in range(len(columns))]
+            texte = [cells[i] if i < len(cells) else NO_VALUE for i in range(len(columns))]
             if gew_index is not None:
                 texte[gew_index] = thunder_cell_html(
                     format_trend_tokens(stage, lang=lang), stage, lang=lang,
@@ -201,7 +202,7 @@ def render_outlook_table(
                 _otd(_acc_dot(stage.get("confidence_pct"))) if show_acc else ""
             )
             body += (
-                '<tr>' + _otd(stage.get("weekday", "–"))
+                '<tr>' + _otd(stage.get("weekday", NO_VALUE))
                 + "".join(
                     _otd(_html.escape(text),
                          bg=cell_bg[i] if i < len(cell_bg) else "")
@@ -259,7 +260,7 @@ def render_outlook_table(
     outlook_rows = ""
     for stage in rows:
         tokens = format_trend_tokens(stage, lang=lang)
-        weekday = stage.get("weekday", "–")
+        weekday = stage.get("weekday", NO_VALUE)
         # F005 (#911): Scheduler schreibt temp_lo/temp_hi (trip_report_scheduler
         # _build_stage_trend). temp_min_c/temp_max_c nur Fallback (Alt-Fixtures).
         # Ohne temp_lo/temp_hi zeigten N/D in der echten Produktionsmail immer „–".
@@ -281,12 +282,12 @@ def render_outlook_table(
         thunder_level = (stage.get("thunder", "NONE") or "NONE").upper()
         gew_str = thunder_cell_html(tokens, stage, lang=lang)
 
-        n_str = f"{temp_min:.0f}°" if temp_min is not None else "–"
-        d_str = f"{temp_max:.0f}°" if temp_max is not None else "–"
-        r_str = f"{precip_mm:.1f}" if precip_mm is not None else "–"
-        pr_str = f"{int(pr_pct)}%" if pr_pct is not None else "–"
-        wind_str = f"{wind_kmh:.0f}" if wind_kmh is not None else "–"
-        gust_str = f"{gust_kmh:.0f}" if gust_kmh is not None else "–"
+        n_str = f"{temp_min:.0f}°" if temp_min is not None else NO_VALUE
+        d_str = f"{temp_max:.0f}°" if temp_max is not None else NO_VALUE
+        r_str = f"{precip_mm:.1f}" if precip_mm is not None else NO_VALUE
+        pr_str = f"{int(pr_pct)}%" if pr_pct is not None else NO_VALUE
+        wind_str = f"{wind_kmh:.0f}" if wind_kmh is not None else NO_VALUE
+        gust_str = f"{gust_kmh:.0f}" if gust_kmh is not None else NO_VALUE
 
         tag_bg = ""
         n_bg = ""
@@ -369,7 +370,7 @@ def render_outlook_plain(
 
             columns = outlook_columns(metrics)
             cells = stage.get("cells") or []
-            texte = [cells[i] if i < len(cells) else "–" for i in range(len(columns))]
+            texte = [cells[i] if i < len(cells) else NO_VALUE for i in range(len(columns))]
             # #1848 A3: Gewitterfeld aus DEMSELBEN Zellenbau wie der feste
             # Zweig darunter -- mit Onset-Uhrzeit, Nachtanteil, Herkunft und
             # Hagel statt bloss dem Stufenwort aus `cells`.
@@ -624,7 +625,11 @@ def build_outlook_row(
     temp_lo = int(_temp_lo_raw) if _temp_lo_raw is not None else None
     temp_hi = int(_temp_hi_raw) if _temp_hi_raw is not None else None
     precip_mm = float(summary.precip_sum_mm or 0.0)
-    wind_kmh = int(summary.wind_max_kmh or 0)
+    # Issue #1670 (AC-5): fehlen alle Windwerte, bleibt der Wert None (Zelle
+    # "–") statt eines erfundenen "0"; Leser (format_trend_tokens,
+    # _outlook_cell_bg) behandeln None bereits.
+    _wind_raw = summary.wind_max_kmh
+    wind_kmh = int(_wind_raw) if _wind_raw is not None else None
     wind_dir = degrees_to_compass(getattr(summary, "wind_direction_avg_deg", None))
     thunder_level = summary.thunder_level_max
     thunder = thunder_level.name if thunder_level is not None else "NONE"

@@ -52,6 +52,7 @@ from app.thunder_scale import (  # noqa: F401  (Re-Export, s.o.)
 )
 
 __all__ = [
+    "NO_VALUE",
     "format_value",
     "severity_for",
     "severity_from_thresholds",
@@ -70,7 +71,9 @@ __all__ = [
     "max_thunder",
 ]
 
-_NO_VALUE = "–"  # U+2013 EN DASH — Platzhalter bei fehlendem Wert
+# Issue #1670: EIN "kein Wert"-Platzhalter fuer Trip- UND Compare-Mail.
+NO_VALUE = "–"  # U+2013 EN DASH — Platzhalter bei fehlendem Wert
+_NO_VALUE = NO_VALUE  # modulinterner Alt-Name (Bestandsaufrufer unten)
 
 # Einheiten-Konvertierung fuer Metriken mit abweichender Anzeige-Einheit.
 # Aktuell nur visibility (unit="m" -> display_unit="km", Faktor 1000).

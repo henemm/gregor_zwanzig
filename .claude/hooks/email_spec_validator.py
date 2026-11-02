@@ -985,7 +985,7 @@ def validate_plausibility(body: str, *, lang: str = "de") -> List[str]:
     Metrikzeilen (_OVERVIEW_METRIC_CHECKS -- seit #1404 24, seit #1420 46
     numerische Zeilen als Alt+Neu-Uebergangs-Union, s.
     `fix_1420_validator_uebersichtslabels.md`) statt String-Presence-Check
-    der alten englischen Zeilen-Labels (Cloud Cover/Sunny Hours). "—" bleibt
+    der alten englischen Zeilen-Labels (Cloud Cover/Sunny Hours). "–" (NO_VALUE, #1670) bleibt
     als Fehlwert-Fallback zulaessig; die 5 nicht-numerischen Zeilen
     (_OVERVIEW_NO_CHECK_LABELS) bleiben ausdruecklich unbewertet."""
     errors = []
@@ -1002,7 +1002,7 @@ def validate_plausibility(body: str, *, lang: str = "de") -> List[str]:
         _, (lo, hi) = check
         for i, val in enumerate(row[1:]):
             val = val.strip()
-            if val == "—":
+            if val == "–":
                 continue
             num_match = re.search(r'-?\d+(\.\d+)?', val)
             if not num_match:
@@ -1020,7 +1020,7 @@ def validate_plausibility(body: str, *, lang: str = "de") -> List[str]:
 def validate_format(body: str, *, lang: str = "de") -> List[str]:
     """v2 (Issue #1108): Format-Check der Uebersichtstabellen-Metrikzeilen
     (z. B. 'N°C', 'N km/h') statt der alten englischen Zeilen-Labels
-    (Wind/Gusts, Sunny Hours). "—" bleibt als Fehlwert-Fallback zulaessig.
+    (Wind/Gusts, Sunny Hours). "–" (NO_VALUE, #1670) bleibt als Fehlwert-Fallback zulaessig.
     Issue #1404: deckte 24 numerische Zeilen ab (vorher 5); Issue #1420:
     deckt 46 ab (Alt+Neu-Uebergangs-Union, s.
     `fix_1420_validator_uebersichtslabels.md`); die 5 nicht-numerischen
@@ -1039,7 +1039,7 @@ def validate_format(body: str, *, lang: str = "de") -> List[str]:
         pattern, _ = check
         for i, val in enumerate(row[1:]):
             val = val.strip()
-            if val == "—":
+            if val == "–":
                 continue
             if not pattern.match(val):
                 errors.append(

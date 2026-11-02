@@ -258,17 +258,18 @@ def test_red4_derive_row_labels_call_does_not_mutate_module_constant():
 # Abschnitt B -- REGRESSIONS-WAECHTER (heute gruen, muessen gruen bleiben)
 # ===========================================================================
 
-def test_ac3_missing_value_shows_em_dash_not_en_dash():
+def test_ac3_missing_value_shows_en_dash_not_em_dash():
     """AC-3 (Mutations-Gegenprobe 3 der Spec): fehlender Wert einer Zeile
-    ohne eigenes 'fmt' zeigt exakt EM DASH `"—"` (U+2014) -- nicht EN DASH
-    `"–"` (U+2013). Codepoint-Pruefung, keine Sichtpruefung."""
+    ohne eigenes 'fmt' zeigt exakt EN DASH `"–"` (U+2013, seit Issue #1670 die
+    EINE Konstante metric_format.NO_VALUE) -- nicht EM DASH `"—"` (U+2014).
+    Codepoint-Pruefung, keine Sichtpruefung."""
     cell = _render_one(_loc(), "temp_max")  # temp_max bleibt None
 
-    assert any(ord(ch) == 0x2014 for ch in cell), (
-        f"AC-3: erwartet EM DASH (U+2014) fuer fehlenden Wert, Zelle: {cell!r}"
+    assert any(ord(ch) == 0x2013 for ch in cell), (
+        f"AC-3: erwartet EN DASH (U+2013) fuer fehlenden Wert, Zelle: {cell!r}"
     )
-    assert not any(ord(ch) == 0x2013 for ch in cell), (
-        f"AC-3: EN DASH (U+2013) darf in der Zelle NICHT vorkommen: {cell!r}"
+    assert not any(ord(ch) == 0x2014 for ch in cell), (
+        f"AC-3: EM DASH (U+2014) darf in der Zelle NICHT vorkommen: {cell!r}"
     )
 
 
@@ -357,7 +358,8 @@ def test_ac5_warn_row_without_alerts_unaffected():
     rows = _overview_rows_raw(html)
     _warn_label, warn_cells = rows[0]
 
-    assert warn_cells[0] == '<span style="color:#b8b4a8;font-size:12px;">—</span>', (
+    # Issue #1670: Platzhalter ist der EN DASH aus metric_format.NO_VALUE.
+    assert warn_cells[0] == '<span style="color:#b8b4a8;font-size:12px;">–</span>', (
         f"AC-5: Warn-Zelle ohne Alarme weicht vom bestehenden Markup ab: "
         f"{warn_cells[0]!r}"
     )

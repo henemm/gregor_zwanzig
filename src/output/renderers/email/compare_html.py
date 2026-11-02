@@ -50,7 +50,9 @@ from output.renderers.email.design_tokens import (
 )
 from output.renderers.email.outlook import build_outlook_row, render_outlook_table
 from output.renderers.email.profile_signature import profile_signature
-from output.metric_format import format_value, severity_for, thunder_ampel_band
+from output.metric_format import (
+    NO_VALUE, format_value, severity_for, thunder_ampel_band,
+)
 from utils.geo import degrees_to_compass
 from utils.timezone import (
     UTC, local_dt, local_hour, local_stamp, location_tz, tz_abbrev,
@@ -159,8 +161,8 @@ def _sev_visibility(v: float) -> str:
 
 
 # Issue #1474/#2666: LOW/MED/HIGH-Woerter aus der geteilten Quelle
-# (``thunder_scale.thunder_label``, je Sprache) -- NUR NONE bleibt lokal ("—"
-# statt "kein"). Wochentage kommen aus ``i18n.format.fmt_weekday``.
+# (``thunder_scale.thunder_label``, je Sprache) -- NUR NONE bleibt lokal (der
+# Platzhalter ``NO_VALUE`` statt "kein", Issue #1670). Wochentage kommen aus ``i18n.format.fmt_weekday``.
 # Issue #1491: die Ordnung stammt jetzt aus der EINEN geteilten Zuordnung
 # (metric_format.thunder_ampel_band) statt aus einem eigenen Woerterbuch --
 # uebersetzt ueber dieselbe _LEVEL_TO_COMPARE-Palette wie die anderen
@@ -169,11 +171,11 @@ def _sev_visibility(v: float) -> str:
 
 
 def _fmt_deg(v) -> str:
-    return f"{v:.0f}°" if v is not None else "—"
+    return f"{v:.0f}°" if v is not None else NO_VALUE
 
 
 def _fmt_kmh(v) -> str:
-    return f"{v:.0f}" if v is not None else "—"
+    return f"{v:.0f}" if v is not None else NO_VALUE
 
 
 def _fmt_rain(v) -> str:
@@ -181,17 +183,17 @@ def _fmt_rain(v) -> str:
 
 
 def _fmt_uv(v) -> str:
-    return f"{v:.0f}" if v is not None else "—"
+    return f"{v:.0f}" if v is not None else NO_VALUE
 
 
 def _fmt_pop(v) -> str:
-    return f"{v:.0f}%" if v is not None else "—"
+    return f"{v:.0f}%" if v is not None else NO_VALUE
 
 
 def _fmt_visibility(v) -> str:
     # Issue #1237 (AC-2): nur der Zahlenwert -- die Einheit steht in der
     # Einheiten-Legende unter den Stundentabellen (analog Trip-Briefing).
-    return f"{v / 1000:.1f}" if v is not None else "—"
+    return f"{v / 1000:.1f}" if v is not None else NO_VALUE
 
 
 def _fmt_thunder(
@@ -223,9 +225,12 @@ def _fmt_thunder(
     behauptete das Gegenteil des heutigen Codes.
     """
     if v is None:
-        return "—"
+        return NO_VALUE
     key = v.value if hasattr(v, "value") else str(v)
-    label = "—" if key == "NONE" else thunder_label(key, lang=lang, default="—")
+    label = (
+        NO_VALUE if key == "NONE"
+        else thunder_label(key, lang=lang, default=NO_VALUE)
+    )
     from output.metric_format import format_hail_note, thunder_signal_label
     teile = [label]
     if signals:
@@ -258,10 +263,10 @@ def _fmt_precip_type(v, *, lang: Lang = "de") -> str:
     """Niederschlagsart-TAGESWERT (Issue #1324): PrecipType-Enum -> Wort in
     ``lang``, analog ``_fmt_thunder``."""
     if v is None:
-        return "—"
+        return NO_VALUE
     key = v.value if hasattr(v, "value") else str(v)
     if key not in _PRECIP_TYPE_KEYS:
-        return "—"
+        return NO_VALUE
     return t(f"vergleich.niederschlagsart.{key.lower()}", lang)
 
 
@@ -284,7 +289,7 @@ def _fmt_visibility_overview(v) -> str:
     der "km" sonst stuende. Der zugrundeliegende Wert bleibt der Trip-Wert in
     Metern (AC-15), nur die Anzeige ist compare-typisch.
     """
-    return f"{_fmt_visibility(v)} km" if v is not None else "—"
+    return f"{_fmt_visibility(v)} km" if v is not None else NO_VALUE
 
 
 # Issue #1214 Scheibe 2: "metric_id" verweist auf den Katalog-Eintrag
@@ -599,7 +604,7 @@ def _render_warn_cell(alerts: list, lang: Lang = "de") -> str:
     Block-Divs statt Flexbox (Outlook-fest, AC-8) -- stapeln sich von selbst.
     """
     if not alerts:
-        return '<span style="color:#b8b4a8;font-size:12px;">—</span>'
+        return f'<span style="color:#b8b4a8;font-size:12px;">{NO_VALUE}</span>'
     chips = []
     seen: set[tuple[str, str, str, tuple[str, str]]] = set()
     for alert in alerts:
@@ -734,7 +739,7 @@ def loc_thunder_signals(loc: LocationResult, summary=None) -> Optional[list[str]
 
 def _fmt_metric(value, decimals, unit: str) -> str:
     if value is None:
-        return "—"
+        return NO_VALUE
     text = f"{value:.{decimals if decimals is not None else 0}f}"
     if not unit:
         return text
@@ -755,7 +760,7 @@ def _render_overview_row(
     cells = [label_cell]
     for loc in locations:
         if m["key"] == "warn":
-            content = "—" if loc.error is not None else _render_warn_cell(_dedup_alerts(loc.official_alerts), lang)
+            content = NO_VALUE if loc.error is not None else _render_warn_cell(_dedup_alerts(loc.official_alerts), lang)
             cells.append(
                 f'<td style="text-align:center;padding:7px 5px;vertical-align:middle;'
                 f'border-right:1px solid #f0ece1;">{content}</td>'
@@ -1577,7 +1582,7 @@ def _render_abo_footer(
     lang: Lang = "de",
 ) -> str:
     name = _html.escape(preset_name) if preset_name else t("vergleich.fuss.abo_name", lang)
-    next_send = _compute_next_send(preset, locations_by_id, lang) or "—"
+    next_send = _compute_next_send(preset, locations_by_id, lang) or NO_VALUE
     abo_zeile = t("vergleich.fuss.abo_zeile", lang, n=location_count,
                   profil=_html.escape(sig.eyebrow))
     return (
@@ -1699,7 +1704,7 @@ def render_compare_html(
         preset_name: Name des Compare-Presets fuer den Abo-Footer.
         preset: Issue #1969 -- das rohe Preset-Dict; der Fuss "Naechster
             Versand" nennt daraus den echten Termin (Slots, Wochentag,
-            ``end_date``, Pause). Fehlt es, steht dort "—". Die frueheren
+            ``end_date``, Pause). Fehlt es, steht dort ``NO_VALUE``. Die frueheren
             Parameter ``preset_schedule``/``preset_weekday`` sind entfallen.
         corridors: Issue #1231, Slice 7 -- Corridor-Liste des Presets. Zellen,
             deren Wert bei einem `mark=True`-Corridor innerhalb dessen `range`

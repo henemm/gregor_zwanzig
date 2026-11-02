@@ -623,6 +623,9 @@ _RENDERER_TO_CATALOG_METRIC_ID: dict[str, str] = {
 _SMS_GSM7_UNSAFE_REPLACEMENTS: tuple[tuple[str, str], ...] = (
     ("°", ""),
     ("—", "-"),
+    # Issue #1670: der Platzhalter ist jetzt `metric_format.NO_VALUE` (EN DASH
+    # U+2013) -- ebenfalls GSM-7-fremd; die SMS bleibt zeichengleich "-".
+    ("–", "-"),
     # Issue #1475 Nachbesserung: `_fmt_thunder` haengt den Hagel-Hinweis mit
     # einem Mittelpunkt an -- der ist wie der Geviertstrich nicht GSM-7.
     ("·", "-"),

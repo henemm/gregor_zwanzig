@@ -2365,10 +2365,15 @@ def test_ac_s1_7_gleichnamige_groessen_trennt_nur_die_kurznachricht(label, metri
 # diese Deckung ersatzlos weg (Lehre aus Scheibe 1, Finding F001).
 # ---------------------------------------------------------------------------
 
-# Zwei Striche, die im Terminal gleich aussehen und NICHT gleichgesetzt werden
-# duerfen (Spec "Die Fehlzeichen-Falle"):
-_S2_FEHLZEICHEN = "–"      # – format_outlook_value(None, ...): Wert FEHLT
-_S2_KEINE_ANGABE = "—"     # — Gewitterstufe "keine" / Niederschlagsart unbekannt
+# Issue #1670 (PO-Entscheidung 2026-11-02, Spec fix_1670_mail_formatdetails.md
+# "Ablösung und Auswirkungen"): die fruehere Trennung "—" (U+2014, keine
+# Gewitterstufe) gegen "–" (U+2013, Wert fehlt) aus #1703 S2 AC-4 ist
+# abgeloest. Beides zeigt jetzt das EINE Zeichen metric_format.NO_VALUE.
+# Der alte Geviertstrich darf in keiner Ausblick-Zelle mehr vorkommen.
+from output.metric_format import NO_VALUE as _S2_NO_VALUE  # noqa: E402
+
+_S2_FEHLZEICHEN = _S2_NO_VALUE   # – Wert fehlt ODER Gewitterstufe "keine"
+_S2_ALTER_STRICH = "—"           # — abgeloest durch #1670, darf nicht erscheinen
 
 # Eindeutiger Marker der Ausblick-Tabelle (nur auf dieser einen Tabelle
 # gesetzt, identisch zu test_compare_outlook_metric_selection.py:27).
@@ -2504,13 +2509,13 @@ def _s2_klartext_ausblick(text: str) -> list[dict[str, str]]:
 
 
 def _s2_zelle_ist_fehlwert(zellentext: str) -> bool:
-    """NUR das Fehlzeichen U+2013 zaehlt als "Wert fehlt".
+    """Exakt das EINE Platzhalterzeichen ``NO_VALUE`` (U+2013) zaehlt als
+    "kein Wert" -- weder ein anderer Strich noch ein Text mit Strich darin.
 
-    Der Gedankenstrich U+2014 ist eine INHALTLICHE Aussage (Gewitterstufe
-    "keine", unbekannte Niederschlagsart) und ausdruecklich KEIN Verstoss --
-    s. test_ac_s2_4_keine_gewitterstufe_ist_kein_fehlwert. Wer beide gleichsetzt,
-    macht aus einem gewitterfreien Tag faelschlich einen Fehler; wer den
-    Unterschied ganz aufgibt, uebersieht den echten Fehlwert.
+    Issue #1670: seit der Abloesung von #1703 S2 AC-4 zeigt auch die
+    Gewitterstufe "keine" dieses Zeichen; AC-S2-4 prueft deshalb mit
+    Fixtures, die fuer jede Groesse echte Werte liefern (Gewitter MED).
+    s. test_ac_s2_4_keine_gewitterstufe_ist_kein_fehlwert (Gegenprobe).
     """
     return zellentext.strip() == _S2_FEHLZEICHEN
 
@@ -2721,11 +2726,16 @@ def test_ac_s2_4_jede_zelle_traegt_einen_wert(soll):
 
 
 def test_ac_s2_4_keine_gewitterstufe_ist_kein_fehlwert():
-    """AC-S2-4 (Pflicht-Gegenprobe): ein Tag OHNE Gewitter zeigt in der
-    Gewitter-Zelle den Gedankenstrich U+2014 -- eine inhaltliche Aussage
-    ("keine Stufe"), KEIN fehlender Wert. Verkuerzt man die Unterscheidung in
-    ``_s2_zelle_ist_fehlwert()`` auf "irgendein Strich", muss dieser Test rot
-    werden; bliebe er gruen, prueft AC-S2-4 die Zellen nicht wirklich."""
+    """AC-S2-4 (Pflicht-Gegenprobe), umgestellt durch Issue #1670 (Abloesung
+    der U+2014/U+2013-Trennung aus #1703 S2 AC-4, PO-Entscheidung 2026-11-02):
+
+    1. Ein Tag OHNE Gewitter zeigt in der Gewitter-Zelle exakt ``NO_VALUE``
+       (U+2013), und ``_s2_zelle_ist_fehlwert()`` erkennt genau dieses eine
+       Zeichen -- nicht den abgeloesten Geviertstrich U+2014.
+    2. In der gewitterfreien Ausblick-Tabelle steht kein U+2014 mehr.
+    3. Mit Gewitterstufe MED (die Fixture des Haupttests) traegt DIESELBE
+       Zelle einen Wert -- sonst pruefte AC-S2-4 fuer die Gewitterspalte nur
+       den Platzhalter und bewachte nichts."""
     gewitter = next((s for s in _S2_SOLL if s["kind"] == "ordinal"), None)
     assert gewitter is not None, (
         "Vakuum: der Compare-Katalog fuehrt keine ordinale Groesse mehr -- die "
@@ -2734,16 +2744,34 @@ def test_ac_s2_4_keine_gewitterstufe_ist_kein_fehlwert():
 
     html, _ = _s2_mail("NONE")
     kopf, zeilen = _s2_html_ausblick(html)
-    zelle = zeilen[0][kopf.index(gewitter["ueberschrift"])]
+    spalte = kopf.index(gewitter["ueberschrift"])
+    zelle = zeilen[0][spalte]
 
-    assert zelle == _S2_KEINE_ANGABE, (
-        f"Vorbedingung: ohne Gewitter erwartet die Zelle {_S2_KEINE_ANGABE!r} "
-        f"(U+2014, inhaltlich 'keine Stufe'), gemessen: {zelle!r}"
+    assert zelle == _S2_NO_VALUE, (
+        f"#1670: ohne Gewitter erwartet die Zelle exakt NO_VALUE "
+        f"{_S2_NO_VALUE!r} (U+2013), gemessen: {zelle!r}"
     )
-    assert not _s2_zelle_ist_fehlwert(zelle), (
-        f"AC-S2-4 (Gegenprobe): {zelle!r} (U+2014) wird als fehlender Wert "
-        f"gewertet -- U+2014 und das Fehlzeichen {_S2_FEHLZEICHEN!r} (U+2013) "
-        "sind zwei verschiedene Aussagen und duerfen nicht gleichgesetzt werden"
+    assert _s2_zelle_ist_fehlwert(zelle), (
+        f"Gegenprobe: {zelle!r} ist NO_VALUE, wird von _s2_zelle_ist_fehlwert() "
+        "aber nicht erkannt -- der Helfer prueft das falsche Zeichen"
+    )
+    for anders in (_S2_ALTER_STRICH, "-", f"mittel {_S2_NO_VALUE}"):
+        assert not _s2_zelle_ist_fehlwert(anders), (
+            f"Gegenprobe: _s2_zelle_ist_fehlwert() wertet {anders!r} als "
+            "Platzhalter -- erkannt werden darf NUR exakt NO_VALUE"
+        )
+    alte_striche = [z for zeile in zeilen for z in zeile if z == _S2_ALTER_STRICH]
+    assert not alte_striche, (
+        f"#1670: {len(alte_striche)} Ausblick-Zelle(n) zeigen noch den "
+        f"abgeloesten Geviertstrich {_S2_ALTER_STRICH!r}"
+    )
+
+    html_med, _ = _s2_mail("MED")
+    kopf_med, zeilen_med = _s2_html_ausblick(html_med)
+    zelle_med = zeilen_med[0][kopf_med.index(gewitter["ueberschrift"])]
+    assert not _s2_zelle_ist_fehlwert(zelle_med) and zelle_med, (
+        f"Gegenprobe: mit Gewitterstufe MED zeigt die Gewitter-Zelle "
+        f"{zelle_med!r} -- AC-S2-4 bekaeme fuer diese Spalte keinen echten Wert"
     )
 
 
@@ -4009,11 +4037,13 @@ def test_ac_s5_5_fehlzeichen_html_em_dash_klartext_hyphen(key):
     html, text = render_compare_email(ergebnis, enabled_metrics=[key])
     label = _s5_label(key)
 
+    # Issue #1670 (AC-3/AC-4): HTML-Platzhalter ist jetzt die EINE Konstante
+    # metric_format.NO_VALUE = U+2013 EN DASH (vorher U+2014).
     html_zelle = _s5_html_wert(html, label)
-    assert len(html_zelle) == 1 and ord(html_zelle) == 0x2014, (
+    assert len(html_zelle) == 1 and ord(html_zelle) == 0x2013, (
         f"AC-S5-5: HTML-Zelle {label!r} ({key}) ohne Wert zeigt {html_zelle!r} "
         f"(Codepoints {[hex(ord(c)) for c in html_zelle]}) -- erwartet genau "
-        "U+2014 EM DASH"
+        "U+2013 EN DASH"
     )
     klartext_zelle = _s5_klartext_wert(text, label)
     assert len(klartext_zelle) == 1 and ord(klartext_zelle) == 0x2D, (

@@ -217,8 +217,8 @@ class TestAC3SchneehoeheGezieltAusgewaehlt:
         assert "45" in schnee_row[1], (
             f"Chamonix-Zelle muss den Schneehoehe-Wert '45' (cm) zeigen, war: {schnee_row[1]!r}"
         )
-        assert schnee_row[2] == "—", (
-            f"Nizza (kein Schnee) muss exakt '—' in der Schneehoehe-Zeile zeigen, war: {schnee_row[2]!r}"
+        assert schnee_row[2] == "–", (  # Issue #1670: NO_VALUE (EN DASH)
+            f"Nizza (kein Schnee) muss exakt '–' in der Schneehoehe-Zeile zeigen, war: {schnee_row[2]!r}"
         )
 
 

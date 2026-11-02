@@ -40,7 +40,7 @@ ERWARTET = {
         "leicht": ("light @12", "light@12", "light@12"),
         "hoch_ohne_reihe": ("high", "⚡high", "⚡high"),
         "leicht_ohne_reihe": ("light", "light", "light"),
-        "nur_nachts": ("—", "⚡–", "⚡–"),
+        "nur_nachts": ("–", "⚡–", "⚡–"),  # #1670: HTML-Platzhalter NO_VALUE
     },
     "de": {
         "mittel_hagel": ("mittel @13 (hoch @15) · Blitzdichte, Modellläufe · Hagel: ja",
@@ -49,7 +49,7 @@ ERWARTET = {
         "leicht": ("leicht @12", "leicht@12", "leicht@12"),
         "hoch_ohne_reihe": ("hoch", "⚡hoch", "⚡hoch"),
         "leicht_ohne_reihe": ("leicht", "leicht", "leicht"),
-        "nur_nachts": ("—", "⚡–", "⚡–"),
+        "nur_nachts": ("–", "⚡–", "⚡–"),  # #1670: HTML-Platzhalter NO_VALUE
     },
 }
 

@@ -107,6 +107,10 @@ def test_ac1_bestandstrip_html_ausblick_bleibt_byte_identisch():
     # INHALTLICHE Aenderungen (Mutation 1: stiller Totalausfall der Vorschau);
     # diese eine, gemessene, PO-freigegebene Palettenaenderung ist die einzige
     # dokumentierte Gegenausnahme dazu.
+    # Zweite Gegenausnahme #1670 (2026-11-02, freigegebene Spec AC-3/AC-4):
+    # die gewitterfreie Gewitter-Zelle zeigt den EINEN Platzhalter
+    # metric_format.NO_VALUE (U+2013) statt U+2014 -- genau ein Zeichen in
+    # der Referenz, keine Struktur-/Text-/Zahlenaenderung.
     assert tabelle == REFERENCE_TABLE.read_text(encoding="utf-8"), (
         f"Die HTML-Ausblick-Tabelle weicht von der Aufzeichnung ab "
         f"({REFERENCE_TABLE}). Die Referenz wird NICHT nachgezogen -- rot "

@@ -1,7 +1,7 @@
 ---
 spec_file: docs/specs/modules/fix_1670_mail_formatdetails.md
-spec_sha256: fea7063c291d204707346d6832c20879ac2f59916cd288a0be5684b2c210e7cc
-spec_frozen_sha256: 726679fa9ebef6bf1a5389867dd5f1dfbd5d259a7324e5ade187c606506d7505
+spec_sha256: 7d889404dbf0209d4933f40ab2e6c34df4ecc56691927c74a5edc02ecfbcd14d
+spec_frozen_sha256: 0a6c025a0a346c31c8ac0df863d527f21360ddb741e2f539efc05449d208250d
 ---
 
 # PO-Briefing: fix-1670-mail-formatdetails
@@ -12,25 +12,25 @@ spec_frozen_sha256: 726679fa9ebef6bf1a5389867dd5f1dfbd5d259a7324e5ade187c606506d
 
 ## Was gebaut wird
 
-Pillen in der Trip-Mail behalten mobil das Leerzeichen vor der Uhrzeit, und die Vergleichs-Mail nutzt überall denselben Strich.
+Pillen in der Trip-Mail behalten mobil das Leerzeichen vor der Uhrzeit, und alle Mails zeigen für fehlende Werte denselben Strich.
 
 ## Definition of Done
 
-Auf dem Handy steht "Max 16:00" mit Leerzeichen, die Vergleichs-Mail zeigt nur noch "–" für fehlende Werte, und Wind ohne Daten zeigt nicht "0".
+Auf dem Handy steht "Max 16:00" mit Leerzeichen, fehlende Werte zeigen überall "–", und Wind ohne Daten zeigt nicht mehr "0".
 
 ## Wie geprüft wird
 
-Automatische Tests prüfen Pillen-Aufbau, Striche und Wind-Anzeige; ob es im echten Handy-Mailprogramm gut aussieht, belegt nur dein Screenshot.
+Automatische Tests prüfen Pillen-Aufbau, Striche und Wind-Anzeige; wie es im echten Handy-Mailprogramm aussieht, belegt nur dein Screenshot.
 
 ## Kritische Anmerkungen
 
-- Zusatz: Wind ohne Daten zeigt künftig "–" statt "0". Das hat das Ticket nicht verlangt.
-- Drei Ticket-Punkte (C5-04, 07, 66) werden ohne Änderung abgehakt; AC-7 hat keinen eigenen Test.
-- Mobile Wirkung des Pillen-Fixes ist nicht automatisch prüfbar.
+- Zusatz: Wind ohne Daten zeigt künftig "–" statt "0"; das verlangte das Ticket nicht.
+- Der neue Strich ändert auch Compare-Telegram und Compare-Klartext (vorher "—"); du hast das entschieden.
+- C5-04, 07, 66 werden ohne Änderung abgehakt; dafür gibt es keinen eigenen Test.
 
 ## Freigabe-Frage
 
-Soll Wind ohne Daten wirklich "–" statt "0" zeigen, und sind die drei Punkte ohne Änderung abgehakt in Ordnung?
+Soll Wind ohne Daten wirklich "–" statt "0" zeigen, obwohl das Ticket es nicht verlangt hat?
 
 ## Ampel
 

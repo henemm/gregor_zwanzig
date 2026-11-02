@@ -202,7 +202,11 @@ _GENERATED_PLACEHOLDER = "Generated: <normalized-for-characterization-test>"
 # vorher/nachher-Diff): einziger Unterschied ist genau diese eine zusaetzliche
 # Kommando-Zeile im Fussz.-Block, identisch fuer HTML und Klartext. Alter
 # Digest 3fc03b40…, neuer ea35bc56….
-_EXPECTED_SHA256 = "8116c66194b392e7ea8328ee8dc822e258974ad9641f05555c7b602f291f2c54"
+# #1670 AC-1 (2026-11-02): Pillen-Stil "display:inline-flex;align-items:center;"
+# -> "display:inline-block;vertical-align:middle;" (8 Pillen). NACHGEMESSEN:
+# mit dem alten Stil zurueckersetzt ergibt der neue Output exakt den alten
+# Digest 8116c661…; kein anderer Unterschied. Neuer Digest 2a8ee9cf….
+_EXPECTED_SHA256 = "2a8ee9cfac8afd1535612b31efee8e1426018306e8510ce27a5a9474513abe48"
 
 _ENABLED_METRICS = {
     "temperature", "wind", "wind_direction", "gust", "precipitation",
