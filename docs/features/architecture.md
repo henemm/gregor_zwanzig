@@ -1033,7 +1033,7 @@ HTML + Client-Side Interactivity
 ### Authentication & Authorization
 
 **Auth Methods:**
-- **Username/Password:** `/api/auth/register` + `/api/auth/login` (traditional, bcrypt-hashed)
+- **E-Mail/Password:** `/api/auth/register` + `/api/auth/login` (bcrypt-hashed). Seit Issue #2194 (ADR-0105) melden sich Nutzer mit ihrer E-Mail-Adresse an; das Request-Feld heißt technisch weiter `username` (Weiche am `@`, siehe `api_contract.md` §19). Neue Konten erhalten eine opake ID, nur Testkonten (`is_test_user`) eine feste.
 - **Passkey/WebAuthn (Issues #450, #467):** 
   - V1 Identifier-First: `/api/auth/passkey/register/begin|finish` (Face ID, Touch ID, Windows Hello, YubiKey), `/api/auth/passkey/login/begin|finish`, `/api/auth/passkey/credentials/{id}` (delete)
   - V3 Discoverable (login without username): `/api/auth/passkey/discoverable/begin|finish` (Conditional UI with native autofill picker)
