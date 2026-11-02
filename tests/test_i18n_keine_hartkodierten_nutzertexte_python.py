@@ -19,11 +19,12 @@ Baseline mitsinkt (bzw. der Eintrag bei 0 gestrichen wird) = ebenfalls rot,
 damit die Zahl nie wieder wachsen kann.
 
 Startstand/Restbefund (Prüfdatum 2027-01-28, Regel-Budget): AC-6 (Allowlist
-leer) ist mit P11 NICHT erreicht -- dokumentierte Teilauslieferung. Die
-Restbefunde der Pakete P2-P10 (u. a. Telegram-Befehlsmenue, fallback_notice,
-tokens/builder, Aktionsknoepfe in trip_command_processor) und unmarkierte
-Log-Zeilen stehen mit ihrer Fundzahl in der Allowlist; Abbau im Folge-Issue
-zu #2674. ``test_allowlist_ist_leer`` ist bis dahin ``xfail(strict=True)``.
+leer) ist mit P11 NICHT erreicht -- dokumentierte Teilauslieferung. #2751 hat
+alles ausserhalb des Renderer-Gates abgebaut; uebrig sind Dateien unter
+``src/output/renderers/`` (Renderer-Commit-Gate, brauchen den Validator gegen
+echte Staging-Mail) und das Telegram-Befehlsmenue ``BOT_COMMANDS`` (bot-weit,
+ohne Nutzerkontext; Sprachwahl braucht eine Spec). ``test_allowlist_ist_leer``
+ist bis dahin ``xfail(strict=True)``.
 
 Startstand/Messen: ``python tests/test_i18n_keine_hartkodierten_nutzertexte_python.py
 --startstand`` schreibt die Allowlist; ``--messen`` gibt nur auf stdout aus.
@@ -170,9 +171,9 @@ def test_allowlist_hat_keine_toten_eintraege():
 
 
 @pytest.mark.xfail(strict=True, reason=(
-    "AC-6 Endstand noch nicht erreicht: Restbefunde der Pakete P2-P10 (u. a. "
-    "telegram.py-Befehlsmenue, fallback_notice.py, tokens/builder.py, "
-    "trip_command_processor.py-Aktionsknoepfe) und unmarkierte Log-Zeilen; "
+    "AC-6 Endstand noch nicht erreicht: Restbefunde unter src/output/renderers/ "
+    "(Renderer-Gate, u. a. fallback_notice.py, trip_report.py, alert/*) und "
+    "telegram.py-Befehlsmenue BOT_COMMANDS (#2751); "
     "Rueckmeldung im Epic #2644. strict: sobald die Allowlist leer ist, wird "
     "dieser Test rot und die Markierung muss weg."))
 def test_allowlist_ist_leer():
