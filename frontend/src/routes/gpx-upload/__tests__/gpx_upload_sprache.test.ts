@@ -28,6 +28,12 @@ const sichtbar = (html: string) =>
 const hat = (text: string, teil: string) => assert.ok(text.includes(teil), `fehlt: „${teil}"\nin: ${text.slice(0, 2500)}`);
 const hatNicht = (text: string, teil: string) => assert.ok(!text.includes(teil), `steht noch: „${teil}"`);
 
+/** Nutzlast ohne Trip-/Etappen-Kennung (die ist seit #2612 zufaellig). */
+function ohneKennung(trip: unknown) {
+	const t = trip as { id: string; stages: { id: string }[] };
+	return { ...t, id: undefined, stages: t.stages.map((s) => ({ ...s, id: undefined })) };
+}
+
 function deDannEn<T>(f: () => T): { de: T; en: T } {
 	locale.set('de');
 	const de = f();
@@ -164,7 +170,8 @@ describe('AC-5: Fehlerzweige im Seitenfluss (Hochladen, Speichern), erst de, dan
 		hatNicht(r.en, 'Fehler beim Speichern');
 		assert.equal(r.gespeichert.length, 2);
 		for (const t of r.gespeichert as { name: string }[]) assert.equal(t.name, '  Mein Trip — GR20 Süd  ');
-		assert.deepEqual(r.gespeichert[0], r.gespeichert[1]);
+		// #2612: Kennung ist zufaellig (newId) — Vergleich de/en ohne Kennung.
+		assert.deepEqual(ohneKennung(r.gespeichert[0]), ohneKennung(r.gespeichert[1]));
 	});
 	test('Speichern scheitert mit Servertext: Text unveraendert', async () => {
 		const r = await seitenfluss({ parsedStage: GPX_ETAPPE, tripName: 'GR20', serverFehler: { error: 'trip exists' } }, 'save');
@@ -209,12 +216,15 @@ describe('AC-5: Hochladen und Speichern ueber die echten Helfer, Trip-Name unver
 			};
 			const de = await lauf('de');
 			const en = await lauf('en');
-			assert.deepEqual(en, de);
+			// #2612: Kennung ist zufaellig (newId) — Vergleich de/en ohne Kennung.
+			assert.deepEqual(ohneKennung(en), ohneKennung(de));
 			// Name exakt wie eingegeben: Randleerzeichen und Umlaute bleiben (Adversary F002).
 			assert.equal(en.name, '  Mein Trip — GR20 Süd  ');
 			assert.equal(de.name, '  Mein Trip — GR20 Süd  ');
-			assert.equal(en.id, 'mein-trip-gr20-sd');
-			assert.equal(en.stages[0].id, 'mein-trip-gr20-sd-t1');
+			// #2612: Kennung hat die Form des normalen Anlegens (8 Zeichen), kein Namens-Slug.
+			assert.equal(en.id.length, 8);
+			assert.notEqual(en.id, 'mein-trip-gr20-sd');
+			assert.equal(en.stages[0].id, en.id + '-t1');
 			assert.equal(en.stages[0].name, 'GR20 Etappe 1');
 			assert.deepEqual(en.stages[0].waypoints, GPX_ETAPPE.waypoints);
 			assert.equal(anfragen.length, 2);
