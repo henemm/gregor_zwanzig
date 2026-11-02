@@ -15,6 +15,10 @@
 // Frontend, die AC-3 (und der Waechter officialAlertLegend.test.ts:395-415)
 // verbietet.
 
+import { get } from 'svelte/store';
+import { locale } from '../../../i18n/index.ts';
+import { metricLabel, metricAggregationLabel } from '../../../i18n/metricLabel.ts';
+
 /** Eine Legenden-Zeile: das Kuerzel, wie die Marke daneben es zeigt, und sein
  *  Klartext. Das Kuerzel bleibt roh — im Ortsvergleich also `D`, nicht `D+`;
  *  das Auswertungszeichen haengt erst die zugestellte SMS an
@@ -29,6 +33,10 @@ export interface KuerzelLegendeEintrag {
  *  (GET /api/metrics liefert es nicht, GET /api/compare/metrics schon). */
 interface BedeutungsQuelle {
 	label?: string;
+	/** Issue #2654 (i18n F5): Register-Namen je Sprache und Auswertungs-Kennung. */
+	label_de?: string;
+	label_en?: string;
+	aggregation?: string;
 	aggregation_label?: string;
 }
 
@@ -93,7 +101,12 @@ export function buildKuerzelLegende(
 		gesehen.add(id);
 		const kuerzel = (kuerzelById?.[id] ?? []).filter((k) => !!k);
 		const quelle = metricById?.[id];
-		const label = (quelle?.label ?? '').trim();
+		// Issue #2654 (i18n F5): Name und Auswertung in der aktuellen Sprache —
+		// dieselbe Aufloesung wie die Zeile daneben (metricLabel, Auswertung je Kennung).
+		const lang = get(locale);
+		// Ohne `label` bleibt die Groesse unaufloesbar (lauter Ausgang unten), auch wenn
+		// eine Sprachform mitkaeme — die Zeile daneben zeigte sonst etwas anderes.
+		const label = quelle?.label?.trim() ? metricLabel(quelle as { label: string }, lang).trim() : '';
 		if (!label) {
 			// Ohne Bedeutung kein Eintrag — aber auch kein stilles Verschwinden.
 			// Traegt die Groesse ein Kuerzel, ist das eine echte Luecke: die
@@ -101,7 +114,9 @@ export function buildKuerzelLegende(
 			if (kuerzel.length > 0) unaufloesbar.push(id);
 			continue;
 		}
-		const auswertung = (quelle?.aggregation_label ?? '').trim();
+		const auswertung = quelle?.aggregation_label
+			? metricAggregationLabel(quelle.aggregation, quelle.aggregation_label, lang).trim()
+			: '';
 		const bedeutung = auswertung ? `${label} (${auswertung})` : label;
 		for (const k of kuerzel) eintraege.push({ kuerzel: k, bedeutung });
 	}

@@ -34,6 +34,8 @@
 	// unerklaert. Hier ist „Marke ohne Erklaerung" baulich unmoeglich statt nur
 	// getestet: jeder Block bringt seine Legende mit.
 	import { ltKanalAbwahlHinweisText } from '../layout-tab/ltChannels.ts';
+	import { t, tn, locale } from '$lib/i18n';
+	import { metricLabel, metricAggregationLabel } from '$lib/i18n/metricLabel';
 	import { buildKuerzelLegende } from './kuerzelLegende.ts';
 
 	interface Props {
@@ -82,40 +84,53 @@
 	const tgBudget = CHANNEL_COL_BUDGET.telegram;
 	const showCutLine = $derived(activeChannel === 'telegram');
 
+	// Issue #2654 (i18n F5): voller Name aus dem Register in der Nutzersprache
+	// (label_en, sonst deutsch); Kurzform (col_label) und Kuerzel bleiben roh.
+	// Die Zeile liest weiter `m.label`/`m.aggregation_label` — nur deren Wert ist die
+	// Anzeige-Form in der Nutzersprache (Auswertung je Kennung, Annahme A1).
+	const anzeige = (m: MetricEntry | undefined): MetricEntry | undefined =>
+		m && {
+			...m,
+			label: metricLabel(m, $locale),
+			aggregation_label: m.aggregation_label ? metricAggregationLabel(m.aggregation, m.aggregation_label, $locale) : m.aggregation_label
+		};
+
 	function itemLabel(id: string, i: number): string {
-		return `${i + 1}. ${metricById[id]?.label ?? id}`;
+		return `${i + 1}. ${anzeige(metricById[id])?.label ?? id}`;
 	}
 
 	// Issue #1888: die Zeilen der Kuerzel-Legende dieses Blocks — aus GENAU den
 	// Groessen, die er zeigt (sortierbare Liste plus Aus-Gruppe), und aus GENAU
 	// den Props, aus denen auch die Marken kommen. Damit kann die Legende nicht
 	// von den Marken daneben abweichen.
-	const legende = $derived(
+	// Issue #2654 (i18n F5): die Ableitung liest Name/Auswertung in der aktuellen
+	// Sprache (get(locale)) — `$locale` rechnet sie bei einem Sprachwechsel neu.
+	const legende = $derived.by(() => (void $locale,
 		buildKuerzelLegende([...primaryColumns, ...(offColumns ?? [])], kuerzelById, metricById)
-	);
+	));
 </script>
 
 <div class="reihenfolge" data-testid="wm2-reihenfolge">
 	<div class="section-subhead">
-		Reihenfolge
-		<span class="count">· {primaryColumns.length} Metriken</span>
-		<span class="hint-right mono">links → rechts in der Email-Tabelle</span>
+		{$t('wertebereiche.reihenfolge.titel')}
+		<span class="count">{$tn('wertebereiche.reihenfolge.anzahl', primaryColumns.length)}</span>
+		<span class="hint-right mono">{$t('wertebereiche.reihenfolge.richtung')}</span>
 	</div>
 	<SortableList
 		items={primaryColumns}
 		{onDndReorder}
-		ariaLabel="Metriken, Reihenfolge"
+		ariaLabel={$t('wertebereiche.reihenfolge.aria')}
 		{itemLabel}
 	>
 		{#snippet row(id: string, i: number)}
-			{@const m = metricById[id]}
+			{@const m = anzeige(metricById[id])}
 			{@const hl = highlight && highlight.id === id}
 			{@const hasInd = modeCapable(id)}
 			{@const useIndicator = friendlyMap[id] === true}
 			{@const kurzform = kuerzelById[id]}
 			{#if showCutLine && i === tgBudget}
 				<div data-testid="wm2-cut-line">
-					<LTCutLine label="Telegram" max={tgBudget} />
+					<LTCutLine label={'Telegram'} max={tgBudget} />
 				</div>
 			{/if}
 			<div class="row" class:hl data-testid="wm2-reihenfolge-row" data-metric-id={id}>
@@ -141,14 +156,14 @@
 						     "TF" ist nicht aufloesbar, solange der Nutzer nicht
 						     weiss, ob es in seiner Mail oder in seiner SMS steht. -->
 						{#if m.col_label}
-							<span class="col-badge" data-testid="wm2-mail-badge" title="Kurzform in der Mail-Stundentabelle">
-								<span class="badge-key">Mail</span>
+							<span class="col-badge" data-testid="wm2-mail-badge" title={$t('wertebereiche.reihenfolge.mail_titel')}>
+								<span class="badge-key">{$t('wertebereiche.reihenfolge.mail')}</span>
 								<span class="badge-val mono">{m.col_label}</span>
 							</span>
 						{/if}
 						{#if kurzform && kurzform.length}
-							<span class="kurzform-badge" data-testid="wm2-kurzform-badge" title="Kürzel in SMS, Premium-SMS und Telegram">
-								<span class="badge-key">Kurzform</span>
+							<span class="kurzform-badge" data-testid="wm2-kurzform-badge" title={$t('wertebereiche.reihenfolge.kurzform_titel')}>
+								<span class="badge-key">{$t('wertebereiche.reihenfolge.kurzform')}</span>
 								<span class="badge-val mono">{kurzform.join(' ')}</span>
 							</span>
 						{/if}
@@ -162,16 +177,16 @@
 							size="sm"
 							value={useIndicator ? 'indicator' : 'raw'}
 							onChange={(v: string) => onMode(id, v === 'indicator')}
-							items={[{ id: 'raw', label: 'Roh' }, { id: 'indicator', label: 'Einfach' }]}
+							items={[{ id: 'raw', label: $t('wertebereiche.reihenfolge.roh') }, { id: 'indicator', label: $t('wertebereiche.reihenfolge.einfach') }]}
 						/>
 					{/if}
 					<button
 						type="button"
 						class="btn-aus"
 						onclick={() => onRemove(id)}
-						title="Aus Briefing entfernen"
+						title={$t('wertebereiche.reihenfolge.entfernen_titel')}
 					>
-						Aus
+						{$t('wertebereiche.reihenfolge.aus')}
 					</button>
 				</div>
 			</div>
@@ -179,9 +194,9 @@
 	</SortableList>
 	{#if offColumns !== undefined}
 		<div class="aus-gruppe" data-testid="wm2-aus-gruppe">
-			<div class="section-subhead aus-subhead">Aus in diesem Kanal</div>
+			<div class="section-subhead aus-subhead">{$t('wertebereiche.reihenfolge.aus_im_kanal')}</div>
 			{#each offColumns as id (id)}
-				{@const m = metricById[id]}
+				{@const m = anzeige(metricById[id])}
 				{@const kurzform = kuerzelById[id]}
 				<div class="row aus-row" data-testid="wm2-aus-row" data-metric-id={id}>
 					<div class="label-cell">
@@ -194,14 +209,14 @@
 								<span class="aggregation-badge" data-testid="wm2-aggregation-badge">{m.aggregation_label}</span>
 							{/if}
 							{#if m.col_label}
-								<span class="col-badge" data-testid="wm2-mail-badge" title="Kurzform in der Mail-Stundentabelle">
-									<span class="badge-key">Mail</span>
+								<span class="col-badge" data-testid="wm2-mail-badge" title={$t('wertebereiche.reihenfolge.mail_titel')}>
+									<span class="badge-key">{$t('wertebereiche.reihenfolge.mail')}</span>
 									<span class="badge-val mono">{m.col_label}</span>
 								</span>
 							{/if}
 							{#if kurzform && kurzform.length}
-								<span class="kurzform-badge" data-testid="wm2-kurzform-badge" title="Kürzel in SMS, Premium-SMS und Telegram">
-									<span class="badge-key">Kurzform</span>
+								<span class="kurzform-badge" data-testid="wm2-kurzform-badge" title={$t('wertebereiche.reihenfolge.kurzform_titel')}>
+									<span class="badge-key">{$t('wertebereiche.reihenfolge.kurzform')}</span>
 									<span class="badge-val mono">{kurzform.join(' ')}</span>
 								</span>
 							{/if}
@@ -214,15 +229,15 @@
 							type="button"
 							class="btn-ein"
 							onclick={() => onRestore?.(id)}
-							title="Wieder ins Briefing aufnehmen"
+							title={$t('wertebereiche.reihenfolge.aufnehmen_titel')}
 						>
-							Ein
+							{$t('wertebereiche.reihenfolge.ein')}
 						</button>
 					</div>
 				</div>
 			{/each}
 			{#if showAbwahlHinweis}
-				<p class="aus-hinweis" data-testid="wm2-aus-hinweis">{ltKanalAbwahlHinweisText()}</p>
+				<p class="aus-hinweis" data-testid="wm2-aus-hinweis">{(void $locale, ltKanalAbwahlHinweisText())}</p>
 			{/if}
 		</div>
 	{/if}
@@ -234,7 +249,7 @@
 	     ohne Zeilen erscheint gar nichts, statt einer leeren Liste (AC-4). -->
 	{#if legende.eintraege.length}
 		<div data-testid="metric-kuerzel-legend" class="kuerzel-legende text-xs">
-			<p>So heißen diese Größen in SMS und Telegram-Kurzform:</p>
+			<p>{$t('wertebereiche.reihenfolge.legende')}</p>
 			<ul class="legend-symbols">
 				{#each legende.eintraege as eintrag, i (eintrag.kuerzel + ' ' + eintrag.bedeutung + ' ' + i)}
 					<li data-testid="metric-kuerzel-legend-row"><code>{eintrag.kuerzel}</code> <span>{eintrag.bedeutung}</span></li>

@@ -15,6 +15,9 @@
 
 import { selectTableColumns, type MetricCatalog } from '../../trip-detail/metricsEditor.ts';
 import type { WeatherConfigMetric } from '$lib/types';
+import { get } from 'svelte/store';
+import { locale } from '../../../i18n/index.ts';
+import { metricLabel } from '../../../i18n/metricLabel.ts';
 
 export type TripMetricsOverviewState =
 	| { kind: 'selected'; names: string[]; unknownCount: number }
@@ -57,6 +60,9 @@ export function resolveTripMetricsOverviewState(
 	}
 	const unknownCount = enabledIds.filter((id) => !knownIds.has(id)).length;
 
-	const names = selectTableColumns(catalog, enabledMap).map((entry) => entry.label);
+	// Issue #2654 (i18n F5): voller Name in der aktuellen Sprache aus dem Register
+	// (label_en, sonst deutsch) — weiterhin keine lokale Metrik-ID→Name-Tabelle.
+	const lang = get(locale);
+	const names = selectTableColumns(catalog, enabledMap).map((entry) => metricLabel(entry, lang));
 	return { kind: 'selected', names, unknownCount };
 }

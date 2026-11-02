@@ -132,8 +132,8 @@
 	// Hub-Hydration; `toCompareSelectionEntries()` darin fuellt den Umkehr-Index
 	// Auswahl-Schluessel <-> Groesse+Auswertung.
 	import {
-		loadCompareSelectionEntries, thunderThresholdLevelsFromCatalog
-	} from './corridor-editor/compareMetricCatalogLoader.ts';
+		loadCompareSelectionEntries, thunderThresholdLevelsFromCatalog, vergleichsMetrikLabel
+	} from './corridor-editor/compareMetricCatalogLoader.ts'; import { t, tr, locale } from '$lib/i18n'; import { textTeile } from '$lib/i18n/textTeile'; // #2654 i18n F5
 	// Issue #1359 Scheibe 1: reihenfolge-erhaltendes An-/Abwaehlen als reine,
 	// testbare Funktion (Muster: weatherMetricsTabSections.ts nebenan).
 	// Issue #1366 F002: materializeActiveMetricKeys/toggleCompareMetricKeyFromState
@@ -144,7 +144,7 @@
 	} from './weather-metrics-tab/compareMetricOrder.ts';
 	// Issue #1411 (Epic #1372 S4b Scheibe 1): flache Katalogantwort -> eine
 	// Zeile je Wettergroesse (24 statt 26 Zeilen).
-	import { groupCompareCatalog } from './weather-metrics-tab/compareAggregationGrouping.ts';
+	import { groupCompareCatalog } from './weather-metrics-tab/compareAggregationGrouping.ts'; import { vergleichsGruppen, schwellenStufen, symbolZeilenName } from './weather-metrics-tab/wertebereicheAnzeige.ts'; import { metricAggregationLabel } from '$lib/i18n/metricLabel';
 
 	interface Template {
 		id: string;
@@ -555,7 +555,7 @@
 			catalogLoaded = true;
 		} catch (e: unknown) {
 			console.error(e);
-			loadError = (e as { error?: string })?.error ?? 'Fehler beim Laden der Metriken';
+			loadError = (e as { error?: string })?.error ?? tr('wertebereiche.tab.ladefehler');
 		}
 	}
 
@@ -586,7 +586,7 @@
 					smsThresholds, reportConfig, officialAlertsEnabledRoute);
 			}
 		} catch (e: unknown) {
-			compareCatalogError = (e as { error?: string })?.error ?? 'Fehler beim Laden der Metriken';
+			compareCatalogError = (e as { error?: string })?.error ?? tr('wertebereiche.tab.ladefehler');
 		}
 	}
 
@@ -991,7 +991,7 @@
 			setTimeout(() => { saveSuccess = false; }, 3000);
 		} catch (e: unknown) {
 			console.error(e);
-			saveError = (e as { error?: string })?.error ?? 'Speichern fehlgeschlagen';
+			saveError = (e as { error?: string })?.error ?? tr('wertebereiche.tab.speichern_fehlgeschlagen');
 		} finally {
 			saving = false;
 		}
@@ -1171,19 +1171,19 @@
 	// aber ausschliesslich fuer die Stundenverlauf-Beschriftungen.)
 	const compareMetricById = $derived.by(() => {
 		const map: Record<string, MetricEntry> = {};
-		// Issue #1401 (A1): `aggregation_label` mitgeben — die Reihenfolge-Zeile
-		// zeigt die Auswertung als eigenes Element neben dem Namen.
-		// Issue #1453 (AC-7): `col_label`/`sms_code` reisen aus derselben
-		// Katalogantwort mit — ohne sie koennte die Zeile die beiden anderen
-		// Namensformen nur leer lassen (fehlende Datengrundlage, nicht nur
-		// fehlende Anzeige).
+		// #1401 (A1) Auswertung als eigenes Element neben dem Namen; #1453 (AC-7) `col_label`/
+		// `sms_code` aus derselben Katalogantwort; #2654 (i18n F5, A1/A2) Name aus dem Register
+		// (label_en) in der Nutzersprache, Auswertung je Kennung — Kennungen/Kurzformen unveraendert.
 		for (const e of compareCatalog)
 			map[e.metric] = {
-				id: e.metric, label: e.label, aggregation_label: e.aggregation_label,
+				id: e.metric, label: vergleichsMetrikLabel(e, metricById, $locale), aggregation: e.aggregation,
+				aggregation_label: e.aggregation_label === undefined ? undefined : metricAggregationLabel(e.aggregation, e.aggregation_label, $locale),
 				col_label: e.col_label, sms_code: e.sms_code
 			} as MetricEntry;
 		return map;
 	});
+	const compareGruppen = $derived(vergleichsGruppen(compareCatalog, metricById, $locale)); // #2654: dieselben Namen wie oben
+	const stufen = (a: number, b: number, c: number) => schwellenStufen(a, b, c, $locale); const symbolName = (id: string, r: string) => symbolZeilenName(metricById, id, r, $locale);
 
 	// Issue #2232: die Kurzform-Marke des VERGLEICHS kommt aus DERSELBEN Quelle
 	// wie die des Trips — `/api/sms-symbols` (`metricSymbols`), nachgeschlagen
@@ -1395,9 +1395,9 @@
 	<UiCard.Root class="p-3 space-y-2 hover:translate-y-0 hover:shadow-none">
 		<div class="text-sm">
 			<span data-testid="report-show-official-alerts" class="inline-flex items-center gap-2">
-				<Checkbox {checked} onchange={onToggle}>Amtliche Warnungen im Bericht</Checkbox>
+				<Checkbox {checked} onchange={onToggle}>{$t('wertebereiche.warnungen.checkbox')}</Checkbox>
 			</span>
-			<p class="pl-6 text-xs text-muted-foreground mt-0.5">Amtliche Wetterwarnungen (z. B. Unwetterwarnung) im E-Mail-Briefing anzeigen.</p>
+			<p class="pl-6 text-xs text-muted-foreground mt-0.5">{$t('wertebereiche.warnungen.text')}</p>
 		</div>
 		<!-- Issue #1318 AC-9 / #1332: Kuerzel-Legende zur SMS-/Telegram-Kurzform.
 		     Alle Kuerzel stammen aus dem Backend-Katalog (smsSymbols), damit die
@@ -1410,16 +1410,16 @@
 		     Kontexte zu (die vormalige Ausblendung war ein Bug, kein Feature). -->
 		{#if smsSymbols}
 			<div data-testid="official-alerts-symbol-legend" class="pl-6 text-xs text-muted-foreground space-y-1">
-				<p>In SMS und Telegram-Kurzform beginnt der Warn-Block mit <code>!</code> — alles dahinter ist eine amtliche Warnung, nicht die eigene Vorhersage.</p>
+				<p>{#each textTeile($t('wertebereiche.warnungen.legende_block')) as teil}{#if teil.platzhalter === 'zeichen'}<code>!</code>{:else}{teil.text}{/if}{/each}</p>
 				<ul class="legend-symbols">
 					{#each smsSymbols.hazards as h (h.hazard)}
 						<li><code>{h.sms_symbol}</code> {h.label}</li>
 					{/each}
 				</ul>
 				<p>
-					Die Warnstufe steht nach dem Doppelpunkt: <code>L</code> = gelb,
-					<code>M</code> = orange, <code>H</code> = rot (z. B. <code>TH:H</code> =
-					rote Gewitterwarnung).
+					<!-- #2654 (i18n F5): Satz aus dem Katalog; die Stufenbuchstaben L/M/H
+					     und TH:H sind Protokoll-Token der SMS und bleiben unuebersetzt. -->
+					{#each textTeile($t('wertebereiche.warnungen.legende_stufe')) as teil}{#if teil.platzhalter === 'l'}<code>L</code>{:else if teil.platzhalter === 'm'}<code>M</code>{:else if teil.platzhalter === 'h'}<code>H</code>{:else if teil.platzhalter === 'beispiel'}<code>{'TH:H'}</code>{:else}{teil.text}{/if}{/each}
 				</p>
 			</div>
 		{/if}
@@ -1441,16 +1441,16 @@
 			     Editor — der Endpoint ist die einzige Quelle, ohne ihn kein Zugriff. -->
 			<div class="metrics-tab load-error-shell" data-testid="weather-metrics-vergleich-load-error">
 				<p class="load-error-msg">{compareCatalogError}</p>
-				<Btn variant="primary" size="sm" data-testid="weather-metrics-vergleich-load-retry" onclick={loadCompareMetricCatalog}>Wiederholen</Btn>
+				<Btn variant="primary" size="sm" data-testid="weather-metrics-vergleich-load-retry" onclick={loadCompareMetricCatalog}>{$t('wertebereiche.tab.wiederholen')}</Btn>
 			</div>
 		{:else if !compareCatalogLoaded}
 			<div class="metrics-tab loading-shell" aria-busy="true" data-testid="weather-metrics-vergleich-loading">
-				<p class="loading-msg">Lade Metriken…</p>
+				<p class="loading-msg">{$t('wertebereiche.tab.laedt')}</p>
 			</div>
 		{:else}
 			<Card padding={18}>
-				<Eyebrow style="margin-bottom:4px">Wetter-Metriken</Eyebrow>
-				<p class="option-hint">Nur angewählte Metriken erscheinen in der Vergleichs-Mail.</p>
+				<Eyebrow style="margin-bottom:4px">{$t('wertebereiche.vergleich.titel')}</Eyebrow>
+				<p class="option-hint">{$t('wertebereiche.vergleich.hinweis')}</p>
 				<div class="vergleich-metric-list" data-testid="weather-metrics-vergleich-list">
 					<!-- Issue #1411 (Epic #1372 S4b Scheibe 1): eine Zeile je
 					     Wettergroesse (24 statt 26) — Groessen mit nur einer
@@ -1462,7 +1462,7 @@
 					     Kaestchen ruft weiterhin denselben Umschalt-Pfad mit dem
 					     jeweiligen einzelnen Katalog-key auf — Speicherformat/
 					     Reihenfolge unveraendert. -->
-					{#each groupCompareCatalog(compareCatalog) as group (group.metric_id)}
+					{#each compareGruppen as group (group.metric_id)}
 						{#if group.options.length === 1}
 							<label class="vergleich-metric-row" data-testid="weather-metrics-vergleich-row-{group.metric_id}">
 								<input
@@ -1516,15 +1516,14 @@
 				context="vergleich"
 				bind:channel={compareChannel}
 				colCount={compareChannelSections.active.length}
-				subjectLabel="Metriken"
+				subjectLabel={$t('wertebereiche.reihenfolge.subjekt')}
 				hasLabelColumn={false}
 				smsCharLimit={SMS_COMPARE_CHAR_LIMIT}
 			>
 				{#snippet editor({ channel })}
 					<Card padding={0} data-testid="weather-metrics-vergleich-reihenfolge">
 						<p class="option-hint reihenfolge-hint" data-testid="weather-metrics-vergleich-warn-hint">
-							Amtliche Warnungen stehen unabhängig von dieser Reihenfolge immer an
-							erster Stelle und sind deshalb nicht Teil der sortierbaren Liste.
+							{$t('wertebereiche.vergleich.warn_hinweis')}
 						</p>
 						<WeatherV2Reihenfolge
 							primaryColumns={compareChannelSections.active}
@@ -1638,29 +1637,29 @@
 	     kein leerer Editor, kein Schreibzugriff (AC-3). -->
 	<div class="metrics-tab load-error-shell" data-testid="weather-metrics-load-error">
 		<p class="load-error-msg">{loadError}</p>
-		<Btn variant="primary" size="sm" data-testid="weather-metrics-load-retry" onclick={load}>Wiederholen</Btn>
+		<Btn variant="primary" size="sm" data-testid="weather-metrics-load-retry" onclick={load}>{$t('wertebereiche.tab.wiederholen')}</Btn>
 	</div>
 {:else if !catalogLoaded}
 	<div class="metrics-tab loading-shell" aria-busy="true">
-		<p class="loading-msg">Lade Metriken…</p>
+		<p class="loading-msg">{$t('wertebereiche.tab.laedt')}</p>
 	</div>
 {:else}
 	<div data-testid="weather-metrics-tab" class="metrics-tab">
 		<!-- Save-Bar (oben, schmal) — expliziter Button nur ohne saveController (#758) -->
 		<div class="save-bar">
 			{#if isDirty && !saveController && !createMode}
-				<Pill tone="warning" data-testid="weather-metrics-dirty-pill">Ungespeicherte Änderungen</Pill>
-				<Btn variant="ghost" size="sm" data-testid="weather-metrics-discard" onclick={handleDiscard}>Verwerfen</Btn>
+				<Pill tone="warning" data-testid="weather-metrics-dirty-pill">{$t('wertebereiche.tab.ungespeichert')}</Pill>
+				<Btn variant="ghost" size="sm" data-testid="weather-metrics-discard" onclick={handleDiscard}>{$t('wertebereiche.tab.verwerfen')}</Btn>
 			{/if}
 			{#if saveSuccess && !saveController && !createMode}
-				<span data-testid="weather-metrics-tab-success" class="save-success">Gespeichert</span>
+				<span data-testid="weather-metrics-tab-success" class="save-success">{$t('wertebereiche.tab.gespeichert')}</span>
 			{/if}
 			{#if saveError && !saveController && !createMode}
 				<span data-testid="weather-metrics-tab-error" class="save-error">{saveError}</span>
 			{/if}
 			{#if !saveController && !createMode}
 				<Btn variant="primary" size="sm" data-testid="weather-metrics-tab-save" disabled={saving || !isDirty} onclick={handleSave}>
-					{saving ? 'Speichern…' : 'Speichern'}
+					{saving ? $t('wertebereiche.tab.speichert') : $t('wertebereiche.tab.speichern')}
 				</Btn>
 			{/if}
 		</div>
@@ -1672,7 +1671,7 @@
 			<div class="top-section">
 				<!-- 01 Profil -->
 				<Card padding={18}>
-					<Eyebrow style="margin-bottom:10px">01 — Profil</Eyebrow>
+					<Eyebrow style="margin-bottom:10px">{$t('wertebereiche.profil.titel')}</Eyebrow>
 					<WeatherV2PresetBar
 						{selectedTemplate}
 						dirty={isDirty}
@@ -1685,7 +1684,7 @@
 
 				<!-- 02 Grundauswahl -->
 				<Card padding={18}>
-					<Eyebrow style="margin-bottom:4px">02 — Grundauswahl</Eyebrow>
+					<Eyebrow style="margin-bottom:4px">{$t('wertebereiche.grundauswahl.titel')}</Eyebrow>
 					<WeatherV2Grundauswahl
 						{catalog}
 						primaryColumns={buckets.primary}
@@ -1708,7 +1707,7 @@
 				context="route"
 				bind:channel={activeChannel}
 				colCount={activeChannelSections.active.length}
-				subjectLabel="Metriken"
+				subjectLabel={$t('wertebereiche.reihenfolge.subjekt')}
 				hasLabelColumn={false}
 			>
 				{#snippet editor({ channel })}
@@ -1794,9 +1793,9 @@
 				{#if sections.includes('sms_schwellen')}
 				<!-- 04 Schwellwerte (Issue #624, umbenannt in #736) -->
 				<Card padding={18}>
-					<Eyebrow style="margin-bottom:8px">04 — Schwellwerte</Eyebrow>
+					<Eyebrow style="margin-bottom:8px">{$t('wertebereiche.schwelle.titel')}</Eyebrow>
 					<p class="option-hint">
-						Gelten für SMS-Token, Telegram-Kurzform und den E-Mail-Ausblick/Trend-Block
+						{$t('wertebereiche.schwelle.hinweis')}
 					</p>
 					<div class="sms-thresholds" data-testid="sms-thresholds">
 						<table class="threshold-table">
@@ -1805,12 +1804,8 @@
 								<ThresholdMetricRow
 									metricId="wind"
 									smsSymbol={metricSymbols['wind']?.[0]}
-									label="Wind (km/h)"
-									levels={[
-										{ id: 'sensibel', label: 'Sensibel', float: 15 },
-										{ id: 'standard', label: 'Standard', float: 20 },
-										{ id: 'robust', label: 'Robust', float: 30 }
-									]}
+									label={$t('wertebereiche.schwelle.wind')}
+									levels={stufen(15, 20, 30)}
 									currentFloat={smsThresholds['wind'] !== undefined && smsThresholds['wind'] !== '' ? parseFloat(smsThresholds['wind']) : null}
 									onChange={(id, f) => { userTouched = true; smsThresholds = { ...smsThresholds, [id]: String(f) }; scheduleAutoSave(); }}
 								/>
@@ -1819,12 +1814,8 @@
 								<ThresholdMetricRow
 									metricId="gust"
 									smsSymbol={metricSymbols['gust']?.[0]}
-									label="Böen (km/h)"
-									levels={[
-										{ id: 'sensibel', label: 'Sensibel', float: 30 },
-										{ id: 'standard', label: 'Standard', float: 40 },
-										{ id: 'robust', label: 'Robust', float: 50 }
-									]}
+									label={$t('wertebereiche.schwelle.boeen')}
+									levels={stufen(30, 40, 50)}
 									currentFloat={smsThresholds['gust'] !== undefined && smsThresholds['gust'] !== '' ? parseFloat(smsThresholds['gust']) : null}
 									onChange={(id, f) => { userTouched = true; smsThresholds = { ...smsThresholds, [id]: String(f) }; scheduleAutoSave(); }}
 								/>
@@ -1833,12 +1824,8 @@
 								<ThresholdMetricRow
 									metricId="precipitation"
 									smsSymbol={metricSymbols['precipitation']?.[0]}
-									label="Niederschlag (mm)"
-									levels={[
-										{ id: 'sensibel', label: 'Sensibel', float: 0.3 },
-										{ id: 'standard', label: 'Standard', float: 0.8 },
-										{ id: 'robust', label: 'Robust', float: 1.5 }
-									]}
+									label={$t('wertebereiche.schwelle.niederschlag')}
+									levels={stufen(0.3, 0.8, 1.5)}
 									currentFloat={smsThresholds['precipitation'] !== undefined && smsThresholds['precipitation'] !== '' ? parseFloat(smsThresholds['precipitation']) : null}
 									onChange={(id, f) => { userTouched = true; smsThresholds = { ...smsThresholds, [id]: String(f) }; scheduleAutoSave(); }}
 								/>
@@ -1847,12 +1834,8 @@
 								<ThresholdMetricRow
 									metricId="rain_probability"
 									smsSymbol={metricSymbols['rain_probability']?.[0]}
-									label="Regenwahrsch. (%)"
-									levels={[
-										{ id: 'sensibel', label: 'Sensibel', float: 25 },
-										{ id: 'standard', label: 'Standard', float: 40 },
-										{ id: 'robust', label: 'Robust', float: 60 }
-									]}
+									label={$t('wertebereiche.schwelle.regenwahrscheinlichkeit')}
+									levels={stufen(25, 40, 60)}
 									currentFloat={smsThresholds['rain_probability'] !== undefined && smsThresholds['rain_probability'] !== '' ? parseFloat(smsThresholds['rain_probability']) : null}
 									onChange={(id, f) => { userTouched = true; smsThresholds = { ...smsThresholds, [id]: String(f) }; scheduleAutoSave(); }}
 								/>
@@ -1862,15 +1845,15 @@
 								<ThresholdMetricRow
 									metricId="thunder"
 									smsSymbol={metricSymbols['thunder']?.[0]}
-									label="Gewitter"
-									levels={thunderThresholdLevelsFromCatalog(compareCatalog)}
+									label={$t('wertebereiche.schwelle.gewitter')}
+									levels={thunderThresholdLevelsFromCatalog(compareCatalog, $locale)}
 									currentFloat={smsThresholds['thunder'] !== undefined && smsThresholds['thunder'] !== '' ? parseFloat(smsThresholds['thunder']) : null}
 									onChange={(id, f) => { userTouched = true; smsThresholds = { ...smsThresholds, [id]: String(f) }; scheduleAutoSave(); }}
 								/>
 								{:else}
 								<tr data-testid="threshold-metric-row-thunder-placeholder">
-									<td class="metric-label">Gewitter</td>
-									<td class="segmented-control">{compareCatalogError ? 'Schwellen nicht ladbar' : 'Lädt…'}</td>
+									<td class="metric-label">{$t('wertebereiche.schwelle.gewitter')}</td>
+									<td class="segmented-control">{compareCatalogError ? $t('wertebereiche.schwelle.nicht_ladbar') : $t('wertebereiche.schwelle.laedt')}</td>
 								</tr>
 								{/if}
 								{/if}
@@ -1878,12 +1861,8 @@
 								<ThresholdMetricRow
 									metricId="snow_depth"
 									smsSymbol={metricSymbols['snow_depth']?.[0]}
-									label="Schneehöhe (cm)"
-									levels={[
-										{ id: 'sensibel', label: 'Sensibel', float: 5 },
-										{ id: 'standard', label: 'Standard', float: 10 },
-										{ id: 'robust', label: 'Robust', float: 20 }
-									]}
+									label={$t('wertebereiche.schwelle.schneehoehe')}
+									levels={stufen(5, 10, 20)}
 									currentFloat={smsThresholds['snow_depth'] !== undefined && smsThresholds['snow_depth'] !== '' ? parseFloat(smsThresholds['snow_depth']) : null}
 									onChange={(id, f) => { userTouched = true; smsThresholds = { ...smsThresholds, ['snow_depth']: String(f) }; scheduleAutoSave(); }}
 								/>
@@ -1892,12 +1871,8 @@
 								<ThresholdMetricRow
 									metricId="snowfall_limit"
 									smsSymbol={metricSymbols['snowfall_limit']?.[0]}
-									label="Schneefallgrenze (m)"
-									levels={[
-										{ id: 'sensibel', label: 'Sensibel', float: 2000 },
-										{ id: 'standard', label: 'Standard', float: 1500 },
-										{ id: 'robust', label: 'Robust', float: 1000 }
-									]}
+									label={$t('wertebereiche.schwelle.schneefallgrenze')}
+									levels={stufen(2000, 1500, 1000)}
 									currentFloat={smsThresholds['snowfall_limit'] !== undefined && smsThresholds['snowfall_limit'] !== '' ? parseFloat(smsThresholds['snowfall_limit']) : null}
 									onChange={(id, f) => { userTouched = true; smsThresholds = { ...smsThresholds, ['snowfall_limit']: String(f) }; scheduleAutoSave(); }}
 								/>
@@ -1906,21 +1881,21 @@
 								{#if !buckets.off.includes('temperature')}
 								<MultiSymbolMetricRow
 									metricId="temperature"
-									label={metricById['temperature']?.label ?? 'Temperatur'}
+									label={symbolName('temperature', 'Temperatur')}
 									symbols={metricSymbols['temperature'] ?? []}
 								/>
 								{/if}
 								{#if !buckets.off.includes('temperature_night')}
 								<MultiSymbolMetricRow
 									metricId="temperature_night"
-									label={metricById['temperature_night']?.label ?? 'Nacht-Tiefsttemperatur'}
+									label={symbolName('temperature_night', 'Nacht-Tiefsttemperatur')}
 									symbols={metricSymbols['temperature_night'] ?? []}
 								/>
 								{/if}
 								{#if !buckets.off.includes('wind_chill')}
 								<MultiSymbolMetricRow
 									metricId="wind_chill"
-									label={metricById['wind_chill']?.label ?? 'Gefühlte Temperatur'}
+									label={symbolName('wind_chill', 'Gefühlte Temperatur')}
 									symbols={metricSymbols['wind_chill'] ?? []}
 								/>
 								{/if}
@@ -1930,35 +1905,35 @@
 								{#if !buckets.off.includes('temperature_day_low')}
 								<MultiSymbolMetricRow
 									metricId="temperature_day_low"
-									label={metricById['temperature_day_low']?.label ?? 'Tages-Tiefsttemperatur (Gehzeit)'}
+									label={symbolName('temperature_day_low', 'Tages-Tiefsttemperatur (Gehzeit)')}
 									symbols={metricSymbols['temperature_day_low'] ?? []}
 								/>
 								{/if}
 								{#if !buckets.off.includes('temperature_day_high')}
 								<MultiSymbolMetricRow
 									metricId="temperature_day_high"
-									label={metricById['temperature_day_high']?.label ?? 'Tages-Höchsttemperatur (Gehzeit)'}
+									label={symbolName('temperature_day_high', 'Tages-Höchsttemperatur (Gehzeit)')}
 									symbols={metricSymbols['temperature_day_high'] ?? []}
 								/>
 								{/if}
 								{#if !buckets.off.includes('wind_chill_day_low')}
 								<MultiSymbolMetricRow
 									metricId="wind_chill_day_low"
-									label={metricById['wind_chill_day_low']?.label ?? 'Gefühlte Tages-Tiefsttemperatur (Gehzeit)'}
+									label={symbolName('wind_chill_day_low', 'Gefühlte Tages-Tiefsttemperatur (Gehzeit)')}
 									symbols={metricSymbols['wind_chill_day_low'] ?? []}
 								/>
 								{/if}
 								{#if !buckets.off.includes('wind_chill_day_high')}
 								<MultiSymbolMetricRow
 									metricId="wind_chill_day_high"
-									label={metricById['wind_chill_day_high']?.label ?? 'Gefühlte Tages-Höchsttemperatur (Gehzeit)'}
+									label={symbolName('wind_chill_day_high', 'Gefühlte Tages-Höchsttemperatur (Gehzeit)')}
 									symbols={metricSymbols['wind_chill_day_high'] ?? []}
 								/>
 								{/if}
 								{#if !buckets.off.includes('wind_chill_night')}
 								<MultiSymbolMetricRow
 									metricId="wind_chill_night"
-									label={metricById['wind_chill_night']?.label ?? 'Gefühlte Nacht-Tiefsttemperatur'}
+									label={symbolName('wind_chill_night', 'Gefühlte Nacht-Tiefsttemperatur')}
 									symbols={metricSymbols['wind_chill_night'] ?? []}
 								/>
 								{/if}
@@ -2017,7 +1992,7 @@
 						onMetricKeys={onOutlookMetricKeys}
 						metricFormats={outlookMetricFormatsRoute}
 						onMetricFormats={onOutlookMetricFormats}
-						title="3-Tages-Vorschau"
+						title={$t('wertebereiche.ausblick.titel')}
 						showEmailOnlyHint={false}
 						smsSymbols={metricSymbols}
 					/>
@@ -2055,11 +2030,11 @@
 		{#if pendingPreset}
 			<div class="confirm-overlay" role="dialog" aria-modal="true" data-testid="preset-confirm">
 				<div class="confirm-box">
-					<Eyebrow>Preset anwenden</Eyebrow>
-					<p>Du hast ungespeicherte Änderungen. Das Preset überschreibt die aktuelle Auswahl.</p>
+					<Eyebrow>{$t('wertebereiche.preset.anwenden')}</Eyebrow>
+					<p>{$t('wertebereiche.preset.ueberschreiben_hinweis')}</p>
 					<div class="confirm-actions">
-						<Btn variant="ghost" size="sm" data-testid="preset-confirm-cancel" onclick={() => (pendingPreset = null)}>Abbrechen</Btn>
-						<Btn variant="primary" size="sm" data-testid="preset-confirm-ok" onclick={confirmPreset}>Überschreiben</Btn>
+						<Btn variant="ghost" size="sm" data-testid="preset-confirm-cancel" onclick={() => (pendingPreset = null)}>{$t('wertebereiche.preset.abbrechen')}</Btn>
+						<Btn variant="primary" size="sm" data-testid="preset-confirm-ok" onclick={confirmPreset}>{$t('wertebereiche.preset.ueberschreiben')}</Btn>
 					</div>
 				</div>
 			</div>

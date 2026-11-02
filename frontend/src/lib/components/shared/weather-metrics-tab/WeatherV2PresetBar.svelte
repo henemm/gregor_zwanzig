@@ -3,6 +3,7 @@
 	// 1:1 nach WM2_PresetBar aus screen-trip-edit-v2-weather.jsx.
 	// STANDALONE: nicht abhängig von shared/OutputLayoutEditor oder Geschwistern.
 	import type { MetricPreset } from '$lib/types';
+	import { t } from '$lib/i18n';
 
 	interface Template {
 		id: string;
@@ -35,7 +36,7 @@
 				data-testid="weather-preset-pill-{p.id}"
 			>
 				{p.name}
-				<span class="own-badge" data-testid="weather-preset-own-badge-{p.id}">Eigene</span>
+				<span class="own-badge" data-testid="weather-preset-own-badge-{p.id}">{$t('wertebereiche.preset.eigene')}</span>
 			</button>
 		{/each}
 		{#each templates as t}
@@ -54,9 +55,9 @@
 	</div>
 	{#if dirty}
 		<div class="dirty-hint">
-			Geändert —
+			{$t('wertebereiche.preset.geaendert')}
 			<button type="button" class="save-link" onclick={onOpenSaveDialog}>
-				als eigenes Profil speichern
+				{$t('wertebereiche.preset.als_profil_speichern')}
 			</button>
 		</div>
 	{/if}

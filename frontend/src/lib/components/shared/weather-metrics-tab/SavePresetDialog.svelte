@@ -13,6 +13,9 @@
 	import { Btn, Eyebrow } from '$lib/components/atoms';
 	import { computeHorizonSummary, dotsForHorizons } from '$lib/utils/horizonHelpers';
 	import { buildBucketSummary, type Buckets } from '../../trip-detail/metricsEditor.ts';
+	import { t, tr, locale } from '$lib/i18n';
+	import { metricLabel } from '$lib/i18n/metricLabel';
+	import { textTeile } from '$lib/i18n/textTeile';
 
 	type MetricCatalog = Record<string, MetricEntry[]>;
 
@@ -71,14 +74,16 @@
 	);
 
 	// Issue #343 — Wording-Heuristik + Dot-Pattern fuer ZEITHORIZONTE-Box
-	const horizonSummary = $derived(
+	// Issue #2654: computeHorizonSummary liest die Sprache per tr() — `$locale` macht
+	// die Ableitung bei einem Sprachwechsel ohne Neuladen neu.
+	const horizonSummary = $derived.by(() => (void $locale,
 		computeHorizonSummary(
 			enabledMetrics.map((m) => ({
 				metric_id: m.id,
 				horizons: horizonsMap[m.id] ?? HORIZONS_ALL,
 				enabled: true,
 			})),
-		),
+		)),
 	);
 
 	const canSubmit = $derived(name.trim().length > 0 && !saving);
@@ -104,7 +109,7 @@
 		// Issue #690: Client-seitige Eindeutigkeitsprüfung (case-insensitive, getrimmt).
 		const trimmedName = name.trim().toLowerCase();
 		if (existingNames.some(n => n.trim().toLowerCase() === trimmedName)) {
-			error = 'Ein Profil mit diesem Namen existiert bereits.';
+			error = tr('wertebereiche.preset_dialog.name_vergeben');
 			saving = false;
 			return;
 		}
@@ -128,9 +133,9 @@
 		} catch (e: unknown) {
 			const errToken = (e as { error?: string })?.error;
 			if (errToken === 'name_exists') {
-				error = 'Ein Profil mit diesem Namen existiert bereits.';
+				error = tr('wertebereiche.preset_dialog.name_vergeben');
 			} else {
-				error = errToken ?? 'Speichern fehlgeschlagen';
+				error = errToken ?? tr('wertebereiche.tab.speichern_fehlgeschlagen');
 			}
 		} finally {
 			saving = false;
@@ -158,23 +163,23 @@
 			<!-- Header -->
 			<div style="padding:18px 24px;border-bottom:1px solid var(--g-rule-soft);display:flex;justify-content:space-between;align-items:flex-start">
 				<div>
-					<Eyebrow>EIGENES PRESET</Eyebrow>
-					<div style="font-size:18px;font-weight:600;margin-top:2px">Auswahl als Preset speichern</div>
+					<Eyebrow>{$t('wertebereiche.preset_dialog.eyebrow')}</Eyebrow>
+					<div style="font-size:18px;font-weight:600;margin-top:2px">{$t('wertebereiche.preset_dialog.titel')}</div>
 				</div>
-				<button style="background:none;border:none;font-size:18px;color:var(--g-ink-3);cursor:pointer;padding:0" onclick={close} aria-label="Schließen">×</button>
+				<button style="background:none;border:none;font-size:18px;color:var(--g-ink-3);cursor:pointer;padding:0" onclick={close} aria-label={$t('wertebereiche.preset_dialog.schliessen')}>×</button>
 			</div>
 
 			<!-- Body -->
 			<div style="padding:18px 24px;display:flex;flex-direction:column;gap:var(--g-s-3)">
 				<!-- NAME-Feld -->
 				<label class="field">
-					<span style="font-size:10px;font-weight:600;letter-spacing:0.08em;color:var(--g-ink-3);font-family:var(--g-font-mono);text-transform:uppercase">NAME</span>
+					<span style="font-size:10px;font-weight:600;letter-spacing:0.08em;color:var(--g-ink-3);font-family:var(--g-font-mono);text-transform:uppercase">{$t('wertebereiche.preset_dialog.name')}</span>
 					<input
 						data-testid="save-preset-name"
 						type="text"
 						bind:value={name}
 						maxlength="40"
-						placeholder="Mein Wandern-Preset"
+						placeholder={$t('wertebereiche.preset_dialog.name_platzhalter')}
 						autofocus
 						required
 						style="padding:10px 12px;font-size:15px;background:var(--g-card);border:1px solid var(--g-rule);border-radius:4px;font:inherit;width:100%;box-sizing:border-box"
@@ -183,42 +188,38 @@
 
 				<!-- BESCHREIBUNG-Feld -->
 				<label class="field">
-					<span style="font-size:10px;font-weight:600;letter-spacing:0.08em;color:var(--g-ink-3);font-family:var(--g-font-mono);text-transform:uppercase">BESCHREIBUNG · OPTIONAL</span>
+					<span style="font-size:10px;font-weight:600;letter-spacing:0.08em;color:var(--g-ink-3);font-family:var(--g-font-mono);text-transform:uppercase">{$t('wertebereiche.preset_dialog.beschreibung')}</span>
 					<textarea
 						data-testid="save-preset-description"
 						bind:value={description}
 						maxlength="120"
 						rows="2"
-						placeholder="Optimiert für Tages-Trips"
+						placeholder={$t('wertebereiche.preset_dialog.beschreibung_platzhalter')}
 						style="padding:10px 12px;font-size:15px;background:var(--g-card);border:1px solid var(--g-rule);border-radius:4px;font:inherit;resize:vertical;width:100%;box-sizing:border-box"
 					></textarea>
 				</label>
 
 				<!-- WIRD GESPEICHERT Box — Issue #343 ZEITHORIZONTE-Block bleibt erhalten -->
 				<div style="padding:12px 14px;background:var(--g-card-alt);border-radius:4px;border:1px solid var(--g-rule-soft);display:flex;flex-direction:column;gap:var(--g-s-2)" data-testid="save-preset-will-save-box">
-					<Eyebrow>WIRD GESPEICHERT</Eyebrow>
+					<Eyebrow>{$t('wertebereiche.preset_dialog.wird_gespeichert')}</Eyebrow>
 					<div class="status" data-testid="save-preset-summary">
-						<strong>{enabledIds.length}</strong> Metriken aktiv ·
-						<strong>{rawCount}</strong> Rohwert ·
-						<strong>{indicatorCount}</strong> Indikator
+						{#each textTeile($t('wertebereiche.preset_dialog.zusammenfassung')) as teil}{#if teil.platzhalter === 'aktiv'}<strong>{enabledIds.length}</strong>{:else if teil.platzhalter === 'roh'}<strong>{rawCount}</strong>{:else if teil.platzhalter === 'indikator'}<strong>{indicatorCount}</strong>{:else}{teil.text}{/if}{/each}
 					</div>
 					{#if bucketSummary}
 						<div class="status" data-testid="save-preset-bucket-summary">
-							<strong>{bucketSummary.spalten}</strong> Spalten ·
-							<strong>{bucketSummary.detail}</strong> Detail ·
-							<strong>{bucketSummary.skala}</strong> als Einfach
+							{#each textTeile($t('wertebereiche.preset_dialog.spalten')) as teil}{#if teil.platzhalter === 'spalten'}<strong>{bucketSummary.spalten}</strong>{:else if teil.platzhalter === 'detail'}<strong>{bucketSummary.detail}</strong>{:else if teil.platzhalter === 'skala'}<strong>{bucketSummary.skala}</strong>{:else}{teil.text}{/if}{/each}
 						</div>
 					{/if}
 					<hr />
-					<Eyebrow>ZEITHORIZONTE</Eyebrow>
+					<Eyebrow>{$t('wertebereiche.preset_dialog.zeithorizonte')}</Eyebrow>
 					<div class="horizon-summary" data-testid="save-preset-horizon-summary">
-						{horizonSummary || 'Keine Metrik aktiv'}
+						{horizonSummary || $t('wertebereiche.preset_dialog.keine_metrik')}
 					</div>
 					{#if enabledMetrics.length > 0}
 						<div class="metric-dot-grid">
 							{#each enabledMetrics as m}
 								<div class="metric-dot-row" data-testid="save-preset-dot-row-{m.id}">
-									<span class="metric-name">{m.label}</span>
+									<span class="metric-name">{metricLabel(m, $locale)}</span>
 									<span class="dots">{dotsForHorizons(horizonsMap[m.id] ?? HORIZONS_ALL)}</span>
 								</div>
 							{/each}
@@ -229,7 +230,7 @@
 				<!-- Als Standard Checkbox -->
 				<div class="field-inline">
 					<Checkbox data-testid="save-preset-is-default" bind:checked={isDefault}>
-						Als Standard für neue Trips
+						{$t('wertebereiche.preset_dialog.standard')}
 					</Checkbox>
 				</div>
 
@@ -240,9 +241,9 @@
 
 			<!-- Footer -->
 			<div style="padding:14px 24px;border-top:1px solid var(--g-rule-soft);background:var(--g-card-alt);display:flex;justify-content:flex-end;gap:8px">
-				<Btn variant="ghost" size="sm" onclick={close} disabled={saving}>Abbrechen</Btn>
+				<Btn variant="ghost" size="sm" onclick={close} disabled={saving}>{$t('wertebereiche.preset.abbrechen')}</Btn>
 				<Btn variant="primary" size="sm" data-testid="save-preset-submit" disabled={!canSubmit} onclick={submit}>
-					{saving ? 'Speichern…' : 'Preset speichern'}
+					{saving ? $t('wertebereiche.tab.speichert') : $t('wertebereiche.preset_dialog.speichern')}
 				</Btn>
 			</div>
 		</div>
