@@ -125,7 +125,7 @@
 				size="xs"
 				data-testid="waypoint-delete-{index}"
 				onclick={makeDeleteClick()}
-				aria-label={$t('trip.wegpunkt.loeschen')}
+				aria-label={$t('trip.wegpunkt.entfernen')}
 			>
 				{$t('aktionen.delete')}
 			</Btn>
