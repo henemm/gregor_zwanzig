@@ -1,0 +1,124 @@
+# doc-compliance-test
+"""Katalogbereich ``api``: Schluessel- und Platzhalterparitaet (Issue #2674, AC-7).
+
+SPEC: docs/specs/modules/i18n_p11_api_meldungen_ratsche_2674.md AC-7.
+
+Daten-Check auf den Katalogdateien (kein Verhaltensnachweis). Die Anker-
+Tabelle unten ist die Codes-/Skalentabelle der Spec: ``de`` ist der Text der
+Ist-Fassung (``git show origin/main:<datei>``, Stand 2175114cd), ``en`` laut
+Spec/Glossar.
+"""
+from __future__ import annotations
+
+import json
+from pathlib import Path
+
+import pytest
+
+REPO = Path(__file__).resolve().parents[1]
+KATALOG = REPO / "src" / "i18n" / "messages"
+
+ANKER: dict[str, tuple[str, str]] = {
+    "api.fehler.trip_nicht_gefunden": (
+        "Trip {trip_id} nicht gefunden für User {user_id}",
+        "Trip {trip_id} not found for user {user_id}"),
+    "api.fehler.vorschau_trip_nicht_gefunden": (
+        "Trip '{trip_id}' nicht gefunden für user '{user_id}'",
+        "Trip '{trip_id}' not found for user '{user_id}'"),
+    "api.fehler.vorschau_ohne_wegpunkte": (
+        "Trip '{trip_id}' hat keine Etappe mit genug waypoints für eine Vorschau",
+        "Trip '{trip_id}' has no stage with enough waypoints for a preview"),
+    "api.fehler.vorschau_etappe_fehlt": (
+        "Keine Stage am {datum} im Trip '{trip_id}'",
+        "No stage on {datum} in trip '{trip_id}'"),
+    "api.fehler.vorschau_zu_wenige_wegpunkte": (
+        "Stage am {datum} im Trip '{trip_id}' hat zu wenige waypoints für eine Vorschau",
+        "Stage on {datum} in trip '{trip_id}' has too few waypoints for a preview"),
+    "api.fehler.vorschau_ohne_etappen": (
+        "Trip '{trip_id}' hat keine Stages", "Trip '{trip_id}' has no stages"),
+    "api.fehler.vorschau_wetter_fehlt": (
+        "Wetterdaten nicht verfügbar für Trip '{trip_id}' am {datum}",
+        "Weather data not available for trip '{trip_id}' on {datum}"),
+    "api.fehler.vorschau_datum_ungueltig": (
+        "Ungültiges Datum '{datum}', ISO erwartet",
+        "Invalid date '{datum}', ISO format expected"),
+    "api.fehler.report_typ_ungueltig": (
+        "Ungültiger report_type '{report_type}'", "Invalid report_type '{report_type}'"),
+    "api.fehler.typ_ungueltig": ("Ungültiger type '{type}'", "Invalid type '{type}'"),
+    "api.fehler.body_genau_einer": (
+        "Body muss genau einen von 'onset', 'changes', 'official' oder 'nowcast_frames' enthalten",
+        "Body must contain exactly one of 'onset', 'changes', 'official' or 'nowcast_frames'"),
+    "api.fehler.segment_unbekannt": (
+        "Unbekannte segment_id '{segment_id}' im Trip",
+        "Unknown segment_id '{segment_id}' in the trip"),
+    "api.fehler.metrik_unbekannt": (
+        "Unbekannte Metrik '{metric}' in changes", "Unknown metric '{metric}' in changes"),
+    "api.fehler.alarm_body_ungueltig": (
+        "Ungültiger Alarm-Körper: {grund}", "Invalid alert body: {grund}"),
+    "api.fehler.vergleich_nicht_gefunden": (
+        "Orts-Vergleich '{preset_id}' nicht gefunden für Nutzer '{user_id}'",
+        "Location comparison '{preset_id}' not found for user '{user_id}'"),
+    "api.fehler.vergleich_ohne_orte": (
+        "Orts-Vergleich '{preset_id}' hat keine Orte konfiguriert — es gibt nichts zu vergleichen.",
+        "Location comparison '{preset_id}' has no locations configured - there is nothing to compare."),
+    "api.fehler.vergleich_orte_geloescht": (
+        "Ortsvergleich '{preset_id}' verweist auf gelöschte Orte. Ersetze die Orte im "
+        "Ortsvergleich. (Orte {location_ids} nicht aufloesbar)",
+        "Location comparison '{preset_id}' points to deleted locations. Replace the locations "
+        "in the comparison. (Locations {location_ids} not resolvable)"),
+    "api.fehler.vergleich_datum_ungueltig": (
+        "Ungültiges Datum '{datum}' (erwartet ISO JJJJ-MM-TT)",
+        "Invalid date '{datum}' (expected ISO YYYY-MM-DD)"),
+    "api.fehler.vergleich_body_genau_einer": (
+        "Body muss genau einen von 'changes', 'onsets' oder 'official' enthalten",
+        "Body must contain exactly one of 'changes', 'onsets' or 'official'"),
+    "api.fehler.vergleich_orte_fremd": (
+        "Orte {orte} gehoeren nicht zu diesem Orts-Vergleich",
+        "Locations {orte} do not belong to this location comparison"),
+    "api.fehler.vergleich_keine_warnung": (
+        "Keine amtliche Warnung fuer die Orte dieses Vergleichs",
+        "No official warning for the locations of this comparison"),
+    "api.fehler.gpx_nur_gpx": (
+        "Nur .gpx Dateien erlaubt, nicht '{filename}'",
+        "Only .gpx files are allowed, not '{filename}'"),
+    "api.skala.wind.schwach": ("schwach", "weak"),
+    "api.skala.wind.maessig": ("mäßig", "moderate"),
+    "api.skala.wind.stark": ("stark", "strong"),
+    "api.skala.wind.sehr_stark": ("sehr stark", "very strong"),
+    "api.skala.niederschlag.trocken": ("trocken", "dry"),
+    "api.skala.niederschlag.leicht": ("leicht", "light"),
+    "api.skala.niederschlag.maessig": ("mäßig", "moderate"),
+    "api.skala.niederschlag.stark": ("stark", "heavy"),
+    "api.skala.regen.unwahrscheinlich": ("unwahrscheinlich", "unlikely"),
+    "api.skala.regen.moeglich": ("möglich", "possible"),
+    "api.skala.regen.wahrscheinlich": ("wahrscheinlich", "likely"),
+    "api.skala.regen.sehr_wahrscheinlich": ("sehr wahrscheinlich", "very likely"),
+    "api.skala.sonne.truebe": ("trübe", "overcast"),
+    "api.skala.sonne.wechselhaft": ("wechselhaft", "changeable"),
+    "api.skala.sonne.freundlich": ("freundlich", "fair"),
+    "api.skala.sonne.sonnig": ("sonnig", "sunny"),
+}
+
+
+def _bereich(lang: str) -> dict[str, str]:
+    return json.loads((KATALOG / lang / "api.json").read_text(encoding="utf-8"))
+
+
+def test_api_schluessel_und_platzhalter_paritaet():
+    from i18n.catalog import parity_errors
+
+    de, en = _bereich("de"), _bereich("en")
+    assert set(de) == set(en)
+    assert [f for f in parity_errors(KATALOG)
+            if f.startswith(("api", "de/api", "en/api"))] == []
+
+
+@pytest.mark.parametrize("key", sorted(ANKER))
+def test_ankertext_je_sprache(key):
+    de, en = ANKER[key]
+    assert _bereich("de").get(key) == de
+    assert _bereich("en").get(key) == en
+
+
+def test_katalog_traegt_genau_die_anker():
+    assert set(_bereich("de")) == set(ANKER)
