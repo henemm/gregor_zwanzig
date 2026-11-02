@@ -83,28 +83,28 @@ Die Trip-Mail enthaelt eine Nacht-Stundentabelle ("Nacht am Ziel"), die der Nutz
 
 ## Acceptance Criteria
 
-**AC-1:** Given ein angemeldeter Nutzer mit einem Trip / When er im Trip den Reiter "Wetter-Metriken" oeffnet / Then sieht er den Schalter "Nacht-Stundentabelle in der Mail zeigen", und im Editor eines Ortsvergleichs ist dieser Schalter im selben Reiter nicht vorhanden.
+- **AC-1:** Given ein angemeldeter Nutzer mit einem Trip / When er im Trip den Reiter "Wetter-Metriken" oeffnet / Then sieht er den Schalter "Nacht-Stundentabelle in der Mail zeigen", und im Editor eines Ortsvergleichs ist dieser Schalter im selben Reiter nicht vorhanden.
 - Test: frontend/e2e/trip-night-block-schalter.staging.spec.ts (Klickpfad Trip + Ortsvergleich)
 
-**AC-2:** Given ein Trip ohne gespeichertes Feld `show_night_block` (Alt-Trip) / When der Nutzer den Reiter oeffnet / Then steht der Schalter auf "an", und nach dem Speichern einer anderen Einstellung (z.B. andere Metrik) bleibt die Nacht-Stundentabelle in der naechsten Mail erhalten.
+- **AC-2:** Given ein Trip ohne gespeichertes Feld `show_night_block` (Alt-Trip) / When der Nutzer den Reiter oeffnet / Then steht der Schalter auf "an", und nach dem Speichern einer anderen Einstellung (z.B. andere Metrik) bleibt die Nacht-Stundentabelle in der naechsten Mail erhalten.
 - Test: frontend/e2e/trip-night-block-schalter.staging.spec.ts (Alt-Trip) + node-test pickEigenfelder
 
-**AC-3:** Given ein Trip mit Schalter "an" / When der Nutzer den Schalter ausschaltet, speichert und die Seite neu laedt / Then steht der Schalter nach dem Neuladen weiterhin auf "aus", und beim Oeffnen eines anderen Reiters und Zurueckkehren bleibt er aus.
+- **AC-3:** Given ein Trip mit Schalter "an" / When der Nutzer den Schalter ausschaltet, speichert und die Seite neu laedt / Then steht der Schalter nach dem Neuladen weiterhin auf "aus", und beim Oeffnen eines anderen Reiters und Zurueckkehren bleibt er aus.
 - Test: frontend/e2e/trip-night-block-schalter.staging.spec.ts (Umlegen, Speichern, Neuladen)
 
-**AC-4:** Given ein Trip mit Schalter "aus" / When die Trip-Mail (Voll-Format) zugestellt wird und im Test-Postfach liegt / Then enthaelt sie keine Nacht-Stundentabelle ("Nacht am Ziel"), und bei Schalter "an" desselben Trips enthaelt die zugestellte Mail diese Tabelle; `briefing_mail_validator.py` endet in beiden Faellen mit Exit 0.
+- **AC-4:** Given ein Trip mit Schalter "aus" / When die Trip-Mail (Voll-Format) zugestellt wird und im Test-Postfach liegt / Then enthaelt sie keine Nacht-Stundentabelle ("Nacht am Ziel"), und bei Schalter "an" desselben Trips enthaelt die zugestellte Mail diese Tabelle; `briefing_mail_validator.py` endet in beiden Faellen mit Exit 0.
 - Test: zugestellte Staging-Mail + briefing_mail_validator.py (Exit 0, beide Zustaende)
 
-**AC-5:** Given ein Trip mit Schalter "aus", gewaehlter Metrik "Nacht-Tiefsttemperatur" und aktivem Gewitter / When die Trip-Mail zugestellt wird / Then zeigt sie weiterhin den Nacht-Tiefstwert (Kuerzel `N`) und den Gewitter-Nachtsatz, nur die Stundentabelle fehlt.
+- **AC-5:** Given ein Trip mit Schalter "aus", gewaehlter Metrik "Nacht-Tiefsttemperatur" und aktivem Gewitter / When die Trip-Mail zugestellt wird / Then zeigt sie weiterhin den Nacht-Tiefstwert (Kuerzel `N`) und den Gewitter-Nachtsatz, nur die Stundentabelle fehlt.
 - Test: zugestellte Staging-Mail, gezielte Pruefung auf N und Gewitter-Nachtsatz
 
-**AC-6:** Given zwei verschiedene Nutzer mit je einem Trip / When Nutzer A den Schalter ausschaltet und speichert / Then bleibt der Trip von Nutzer B auf "an", und ein Teil-Speichern ohne `show_night_block` (z.B. aus einem anderen Reiter) laesst den gespeicherten Wert von Nutzer A unveraendert (Go-API, Read-Modify-Write mit Merge).
+- **AC-6:** Given zwei verschiedene Nutzer mit je einem Trip / When Nutzer A den Schalter ausschaltet und speichert / Then bleibt der Trip von Nutzer B auf "an", und ein Teil-Speichern ohne `show_night_block` (z.B. aus einem anderen Reiter) laesst den gespeicherten Wert von Nutzer A unveraendert (Go-API, Read-Modify-Write mit Merge).
 - Test: frontend/e2e/trip-night-block-schalter.staging.spec.ts (zwei Nutzer) + Go-Test config_merge_structure_test.go
 
-**AC-7:** Given der Trip-Mail-Ausblick mit der Standardspalten-Auswahl / When die Mail zugestellt wird / Then tragen die Temperatur-Spalten die Koepfe "Temp min" und "Temp max", ihre Werte entsprechen dem Tages-Minimum und -Maximum der jeweiligen Etappe, und weder die Spalte "N" noch die Legende "Nacht-Tief" kommen im Ausblick vor.
+- **AC-7:** Given der Trip-Mail-Ausblick mit der Standardspalten-Auswahl / When die Mail zugestellt wird / Then tragen die Temperatur-Spalten die Koepfe "Temp min" und "Temp max", ihre Werte entsprechen dem Tages-Minimum und -Maximum der jeweiligen Etappe, und weder die Spalte "N" noch die Legende "Nacht-Tief" kommen im Ausblick vor.
 - Test: zugestellte Staging-Mail, Pruefung der Ausblick-Koepfe und Werte
 
-**AC-8:** Given ein Trip mit gewaehlter Metrik "Gefuehlte Nacht-Tiefsttemperatur" (`wind_chill_night`) / When der Nutzer im Browser den Wetter-Metriken-Reiter oeffnet / Then zeigt die Kuerzel-Legende einen Eintrag `FN` mit der Erklaerung "Gefuehlte Nacht-Tiefsttemperatur" (Text aus dem Katalog).
+- **AC-8:** Given ein Trip mit gewaehlter Metrik "Gefuehlte Nacht-Tiefsttemperatur" (`wind_chill_night`) / When der Nutzer im Browser den Wetter-Metriken-Reiter oeffnet / Then zeigt die Kuerzel-Legende einen Eintrag `FN` mit der Erklaerung "Gefuehlte Nacht-Tiefsttemperatur" (Text aus dem Katalog).
 - Test: frontend/e2e/trip-night-block-schalter.staging.spec.ts (Metrik waehlen, Legende zeigt FN)
 
 ## Testplan

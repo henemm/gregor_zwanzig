@@ -234,11 +234,19 @@ const EINGEFROREN: readonly string[] = [
 	// allen fuenf Faellen unveraendert; Zeilennummern per Zaehlbefehl am
 	// tatsaechlichen Stand nach dem Rebase nachgemessen (nicht aus einer der
 	// beiden Vorversionen zurueckgerechnet).
-	'WeatherMetricsTab.svelte:581',
-	'WeatherMetricsTab.svelte:596',
-	'WeatherMetricsTab.svelte:625',
+	// 🔴 Issue #1721 (Spec fix_1721_nachtausgabe.md): +13/+13/+13/+13/+28 Zeilen
+	// durch Schalter-State, Snapshot-Felder und Handler; Bedingungen unveraendert,
+	// nachgemessen (Inhalt unten in BLEIBT_MIT_INHALT gefesselt). NEU :2042 —
+	// `{#if !createMode && context === 'route'}` des Schalters "Nacht-
+	// Stundentabelle in der Mail zeigen": die Nacht-Stundentabelle gibt es nur in
+	// der Trip-Mail, der Ortsvergleich hat keinen Nachtblock (Pendant-Sperre,
+	// dokumentierte einseitige Anlage). Soll 47 → 48.
+	'WeatherMetricsTab.svelte:594',
+	'WeatherMetricsTab.svelte:609',
 	'WeatherMetricsTab.svelte:638',
-	'WeatherMetricsTab.svelte:1429',
+	'WeatherMetricsTab.svelte:651',
+	'WeatherMetricsTab.svelte:1457',
+	'WeatherMetricsTab.svelte:2042',
 	// #2655 (F6): beide nur verschoben (Katalog-Import, Satz je Kontext aus
 	// dem Katalog statt Konkatenation); Bedingungen unveraendert, nachgemessen.
 	'versand-tab/vtBriefingChannelsText.ts:22',
@@ -299,7 +307,10 @@ const EINGEFROREN: readonly string[] = [
 // springen mit derselben Kennung `wertebereiche`. Soll 47 → 46.
 // Issue #1743: `WetterMetrikenVersandPanel.svelte:66` nachgetragen (neue Herkunfts-
 // Weiche des geteilten Bausteins). Soll 46 → 47.
-const EINGEFROREN_SOLL_ANZAHL = 47;
+// Issue #1721: `WeatherMetricsTab.svelte:2042` nachgetragen (Nacht-Stundentabelle-
+// Schalter nur im Trip, kein Compare-Pendant — Spec fix_1721_nachtausgabe.md).
+// Soll 47 → 48.
+const EINGEFROREN_SOLL_ANZAHL = 48;
 
 /**
  * S6c: die vier ueberlebenden AlarmeTab-Eintraege, GEGEN IHREN INHALT gefesselt.
@@ -485,30 +496,37 @@ const BLEIBT_MIT_INHALT: readonly { eintrag: string; zeile: string; folgt: strin
 	// verschoben (computeInitialBuckets()-Auslagerung), der letzte Eintrag um
 	// zusaetzliche 14 Zeilen durch die toggleGlobalMetric()-Auslagerung (31
 	// insgesamt). Text in allen fuenf Faellen unveraendert.
+	// Issue #1721: alle fuenf um 13 bzw. 28 Zeilen verschoben (Schalter-State,
+	// Snapshot, Handler), Text unveraendert; dazu der neue Schalter-Zweig :2042.
 	{
-		eintrag: 'WeatherMetricsTab.svelte:581',
+		eintrag: 'WeatherMetricsTab.svelte:594',
 		zeile: "if (context === 'route' && trip && catalogLoaded && !isDirty) {",
 		folgt: 'normalizeStoredOutlookMetrics('
 	},
 	{
-		eintrag: 'WeatherMetricsTab.svelte:596',
+		eintrag: 'WeatherMetricsTab.svelte:609',
 		zeile: "if (context === 'route' && Object.keys(catalog).length === 0) load();",
 		folgt: 'Issue #1350 Teil 2: analog dem Route-Guard oben'
 	},
 	{
-		eintrag: 'WeatherMetricsTab.svelte:625',
+		eintrag: 'WeatherMetricsTab.svelte:638',
 		zeile: "if (context === 'vergleich' && !smsSymbols) loadSmsSymbols();",
 		folgt: '#1401 Scheibe B: der Stundenverlauf beschriftet'
 	},
 	{
-		eintrag: 'WeatherMetricsTab.svelte:638',
+		eintrag: 'WeatherMetricsTab.svelte:651',
 		zeile: "if (context === 'vergleich' && Object.keys(catalog).length === 0) {",
 		folgt: ".get<MetricCatalog>('/api/metrics')"
 	},
 	{
-		eintrag: 'WeatherMetricsTab.svelte:1429',
+		eintrag: 'WeatherMetricsTab.svelte:1457',
 		zeile: "{#if context === 'vergleich'}",
 		folgt: 'Issue #1311 (C1): Vergleich-Grundauswahl'
+	},
+	{
+		eintrag: 'WeatherMetricsTab.svelte:2042',
+		zeile: "{#if !createMode && context === 'route'}",
+		folgt: 'Issue #1721: Nacht-Stundentabelle der Trip-Mail'
 	}
 ];
 

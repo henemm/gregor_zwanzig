@@ -86,6 +86,8 @@
 	"wertebereiche.auswertung.avg": "Average",
 	"wertebereiche.auswertung.sum": "Total",
 	"wertebereiche.ausblick.titel": "3-day preview",
+	"wertebereiche.nachtblock.checkbox": "Show the night hourly table in the email",
+	"wertebereiche.nachtblock.text": "Affects only the hourly table. The night low and the night thunderstorm note stay if you selected them.",
 	"wertebereiche.warnungen.checkbox": "Official warnings in the report",
 	"wertebereiche.warnungen.text": "Show official weather warnings (e.g. severe weather warning) in the email briefing.",
 	"wertebereiche.warnungen.legende_block": "In SMS and Telegram compact style the warning block starts with {zeichen} — everything after it is an official warning, not our own forecast.",

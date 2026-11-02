@@ -289,6 +289,13 @@
 	);
 	// Issue #614: Telegram Kurzform-Toggle (SMS-Tages-Max als Anhang).
 	let telegramKurzform = $state<boolean>(trip?.display_config?.telegram_kurzform ?? false);
+	// Issue #1721: Schalter "Nacht-Stundentabelle in der Mail zeigen" (nur route).
+	// Fehlt das Feld (Alt-Trip), gilt "an" wie im Backend (loader.py). Gesendet
+	// wird es nur, wenn ein gespeicherter Wert existiert oder der Nutzer den
+	// Schalter bedient hat (`nightBlockSend`) — sonst bekaeme ein Alt-Trip beim
+	// Speichern anderer Reiter-Inhalte einen neuen Wert.
+	let showNightBlock = $state<boolean>(trip?.display_config?.show_night_block ?? true);
+	let nightBlockSend = $state<boolean>(trip?.display_config?.show_night_block !== undefined);
 	// Issue #1117: Amtliche Warnungen im E-Mail-Briefing (zweiter Einstiegspunkt neben
 	// Alerts-Tab). Default true matcht den Backend-Default.
 	// Issue #2276 S6g: `Route`-Suffix, weil der Vergleichs-Zweig seit dieser
@@ -435,7 +442,7 @@
 	// Issue #1720 S1: outlookMetricKeys gehoert in Dirty-Vergleich UND Snapshot —
 	// sonst bleibt der Reiter nach einer reinen Vorschau-Aenderung „sauber".
 	const isDirty = $derived(
-		JSON.stringify({ buckets, friendlyMap, horizonsMap, telegramKurzform, smsThresholds, reportConfig, officialAlertsEnabled: officialAlertsEnabledRoute, channelBuckets, outlookMetricKeys: outlookMetricKeysRoute, outlookMetricFormats: outlookMetricFormatsRoute }) !== savedSnapshot,
+		JSON.stringify({ buckets, friendlyMap, horizonsMap, telegramKurzform, smsThresholds, reportConfig, officialAlertsEnabled: officialAlertsEnabledRoute, channelBuckets, outlookMetricKeys: outlookMetricKeysRoute, outlookMetricFormats: outlookMetricFormatsRoute, showNightBlock, nightBlockSend }) !== savedSnapshot,
 	);
 
 	function snapshot(
@@ -443,9 +450,11 @@
 		tk: boolean, st: Record<string, string>, rc: ReportConfig | undefined, oae: boolean,
 		cb: Record<ChannelId, ChannelOverride | null> = channelBuckets,
 		om: string[] | null = outlookMetricKeysRoute,
-		ofm: Record<string, boolean> | null = outlookMetricFormatsRoute
+		ofm: Record<string, boolean> | null = outlookMetricFormatsRoute,
+		nb: boolean = showNightBlock,
+		ns: boolean = nightBlockSend
 	): string {
-		return JSON.stringify({ buckets: b, friendlyMap: f, horizonsMap: h, telegramKurzform: tk, smsThresholds: st, reportConfig: rc ?? {}, officialAlertsEnabled: oae, channelBuckets: cb, outlookMetricKeys: om, outlookMetricFormats: ofm });
+		return JSON.stringify({ buckets: b, friendlyMap: f, horizonsMap: h, telegramKurzform: tk, smsThresholds: st, reportConfig: rc ?? {}, officialAlertsEnabled: oae, channelBuckets: cb, outlookMetricKeys: om, outlookMetricFormats: ofm, showNightBlock: nb, nightBlockSend: ns });
 	}
 
 	function allCatalogIds(): string[] {
@@ -514,7 +523,11 @@
 		// Kennungen geschluesselt), haengt also nicht am compareCatalog-Fetch.
 		const ofm = trip!.display_config?.outlook_metric_formats ?? null;
 		outlookMetricFormatsRoute = ofm;
-		savedSnapshot = snapshot(b, fMap, hMap, telegramKurzform, thrMap, reportConfig, officialAlertsEnabledRoute, cb, om, ofm);
+		// Issue #1721: Nacht-Stundentabelle — Bestand ungetrackt lesen (#1552).
+		const savedNightBlock = bestandDisplayConfigUngetrackt()?.show_night_block;
+		showNightBlock = savedNightBlock ?? true;
+		nightBlockSend = savedNightBlock !== undefined;
+		savedSnapshot = snapshot(b, fMap, hMap, telegramKurzform, thrMap, reportConfig, officialAlertsEnabledRoute, cb, om, ofm, showNightBlock, nightBlockSend);
 	}
 
 	// Issue #1332 F003 (Fix-Loop 2): eigener, idempotenter Ladepfad fuer die
@@ -814,6 +827,15 @@
 		scheduleAutoSave();
 	}
 
+	// Issue #1721: Nacht-Stundentabelle-Schalter — echte DOM-Geste, setzt
+	// userTouched (weatherSaveGate) und nutzt den bestehenden Auto-Save.
+	function onToggleNightBlock(e: Event) {
+		userTouched = true;
+		showNightBlock = (e.target as HTMLInputElement).checked;
+		nightBlockSend = true;
+		scheduleAutoSave();
+	}
+
 	// Aus Abschnitt 3 entfernen (→ off) — kanal-eigen (#1575 Scheibe 3).
 	function onRemove(id: string) {
 		userTouched = true;
@@ -874,6 +896,9 @@
 			// Issue #2049: dieselbe Begruendung — ohne diese Zeile bliebe der
 			// Reiter nach dem Verwerfen einer Roh/Einfach-Aenderung dirty.
 			outlookMetricFormatsRoute = snap.outlookMetricFormats ?? null;
+			// Issue #1721: Schalter und Sende-Merker mit zuruecknehmen.
+			showNightBlock = snap.showNightBlock ?? true;
+			nightBlockSend = snap.nightBlockSend ?? false;
 		} catch (e) {
 			console.error(e);
 			initFromTrip();
@@ -941,6 +966,9 @@
 					channel_layouts: nextLayouts,
 					preset_name: selectedTemplate || undefined,
 					telegram_kurzform: telegramKurzform,
+					// Issue #1721: nur bei gespeichertem Wert oder Nutzergeste;
+					// `false` geht als bewusster Wert durch.
+					show_night_block: nightBlockSend ? showNightBlock : undefined,
 					// Issue #1848 A2: reine Kennungen, ungewandelt.
 					outlook_metrics: outlookMetricKeysRoute === null ? undefined : outlookMetricKeysRoute,
 					// Issue #2049: dieselbe Bauart wie `outlook_metrics`.
@@ -2009,6 +2037,22 @@
 				<!-- 'report_config', damit derselbe Baustein auch im vergleich-        -->
 				<!-- Kontext (kein report_config dort) sichtbar sein kann.              -->
 				{@render officialAlertsToggle(officialAlertsEnabledRoute, onToggleOfficialAlerts)}
+				{/if}
+
+				{#if !createMode && context === 'route'}
+				<!-- Issue #1721: Nacht-Stundentabelle der Trip-Mail. Nur im Trip —
+				     der Ortsvergleich hat keinen Nachtblock (kein Compare-Pendant).
+				     !createMode wie 'official_alerts'/'report_config': beim Anlegen
+				     gibt es keinen Rueckkanal zu TripNewEditor, die Geste ginge still
+				     verloren; ein neuer Trip ohne Feld gilt als "an" (loader.py). -->
+				<UiCard.Root class="p-3 space-y-2 hover:translate-y-0 hover:shadow-none">
+					<div class="text-sm">
+						<span class="inline-flex items-center gap-2">
+							<Checkbox checked={showNightBlock} onchange={onToggleNightBlock} data-testid="wm-night-block-toggle">{$t('wertebereiche.nachtblock.checkbox')}</Checkbox>
+						</span>
+						<p class="pl-6 text-xs text-muted-foreground mt-0.5">{$t('wertebereiche.nachtblock.text')}</p>
+					</div>
+				</UiCard.Root>
 				{/if}
 			</div>
 		</div>

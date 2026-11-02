@@ -1,7 +1,7 @@
 ---
 spec_file: docs/specs/modules/fix_1721_nachtausgabe.md
-spec_sha256: c18370aa42e1436e7c9275f1473535c75148fa69f8f67d0bbbc9b7995bd156ae
-spec_frozen_sha256: 18cfa2e0aa0a108f5b39818f42316f4a2960cfab86bca33ffdafe9718ec61468
+spec_sha256: 4cfc7a21bf2b269adcb513a7124a1f53be2af2d985a184e4e798e802bd9622eb
+spec_frozen_sha256: 256d49adbc7dfeea2715e3c7ef33f02510810d711cc03cdfdf5b114f7e81c473
 ---
 
 # PO-Briefing: fix-1721-nachtausgabe
@@ -20,11 +20,11 @@ Der Schalter erscheint nur im Trip, bleibt nach Speichern und Neuladen erhalten,
 
 ## Wie geprüft wird
 
-Browser-Klickpfad mit zwei Nutzern und zugestellte Staging-Mails belegen Schalter, Nacht-Tiefstwert, Ausblick-Köpfe und die Kürzel-Erklärung „FN"; Code-Änderung an Mail-Aufbau entfällt.
+Browser-Klickpfad mit zwei Nutzern und zugestellte Staging-Mails belegen Schalter, Nacht-Tiefstwert, Ausblick-Köpfe und die Kürzel-Erklärung „FN"; Mail-Aufbau selbst bleibt unverändert.
 
 ## Kritische Anmerkungen
 
-- Ausblick-Spalte „N" und Kürzel „FN" werden nicht gebaut, nur als bereits behoben nachgewiesen; Ticketwortlaut konnte ich nicht einsehen.
+- Ausblick-Spalte „N" und Kürzel „FN" werden nicht gebaut, sondern als bereits behoben nur nachgewiesen (Browserlauf, zugestellte Mail).
 
 ## Freigabe-Frage
 

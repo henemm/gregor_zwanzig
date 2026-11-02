@@ -61,6 +61,26 @@ describe('AC-3: Schalter aus -> false geht als bewusster Wert durch', () => {
 	});
 });
 
+describe('AC-3: echte Geste am Schalter (Alt-Trip ohne Feld)', () => {
+	test('onToggleNightBlock setzt Geste + Sende-Merker: /weather-config traegt show_night_block=false', async () => {
+		await start(tripMitNachtBlock(undefined));
+		const a = P.neuerAufbau(tripMitNachtBlock(undefined));
+		const wm = await P.wetterMetrikenReiter(a);
+		// Die Geste selbst muss userTouched setzen (weatherSaveGate) — nicht der Pruefstand.
+		wm.inst.u.userTouched = false;
+		const handler = wm.inst.u.onToggleNightBlock as ((e: unknown) => void) | undefined;
+		assert.equal(typeof handler, 'function', 'Messaufbau: onToggleNightBlock nicht herleitbar');
+		handler!({ target: { checked: false } });
+		await P.fertig(a.ctl);
+
+		assert.equal(
+			weatherConfigBody().show_night_block,
+			false,
+			'die Geste auf einem Alt-Trip muss show_night_block=false senden'
+		);
+	});
+});
+
 describe('AC-2: Alt-Trip ohne Feld bekommt beim Speichern keinen neuen Wert', () => {
 	test('Alt-Trip: Schalter steht auf an (Standard true)', async () => {
 		await start(tripMitNachtBlock(undefined));

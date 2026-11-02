@@ -87,25 +87,25 @@ describe('S6h AC-2-Endbilanz: Spec-Tabelle deckt die Ratsche restlos ab', () => 
 		assert.ok(existsSync(RATSCHE), `Ratsche nicht gefunden (aufgeloest: ${RATSCHE})`);
 	});
 
-	test('aus der Ratsche extrahiert: genau 47 Eintraege (Positiv-Kontrolle des Regex)', () => {
+	test('aus der Ratsche extrahiert: genau 48 Eintraege (Positiv-Kontrolle des Regex)', () => {
 		const ratsche = extrahiereRatschenListe();
 		assert.strictEqual(
 			ratsche.length,
-			47, // #2287: alarmeTabSections.ts:42 gestrichen; #1743: WetterMetrikenVersandPanel.svelte:66 neu
-			`Extraktion aus EINGEFROREN lieferte ${ratsche.length} statt 47 Eintraege`
+			48, // #2287: alarmeTabSections.ts:42 gestrichen; #1743: WetterMetrikenVersandPanel.svelte:66 neu; #1721: WeatherMetricsTab.svelte:2042 neu
+			`Extraktion aus EINGEFROREN lieferte ${ratsche.length} statt 48 Eintraege`
 		);
 		assert.strictEqual(new Set(ratsche).size, ratsche.length, 'EINGEFROREN enthaelt Duplikate');
 	});
 
-	test('aus der Spec extrahiert: FACHLICH 27, DARSTELLUNG 5, HERKUNFT 15, Summe 47', () => {
+	test('aus der Spec extrahiert: FACHLICH 28, DARSTELLUNG 5, HERKUNFT 15, Summe 48', () => {
 		const spec = leseSpec();
 		const fachlich = extrahiereSpecKategorie(spec, 'FACHLICH');
 		const darstellung = extrahiereSpecKategorie(spec, 'DARSTELLUNG');
 		const herkunft = extrahiereSpecKategorie(spec, 'HERKUNFT');
-		assert.strictEqual(fachlich.length, 27, 'FACHLICH-Tabelle hat nicht 27 Eintraege');
+		assert.strictEqual(fachlich.length, 28, 'FACHLICH-Tabelle hat nicht 28 Eintraege (#1721: +WeatherMetricsTab.svelte:2042)');
 		assert.strictEqual(darstellung.length, 5, 'DARSTELLUNG-Tabelle hat nicht 5 Eintraege');
 		assert.strictEqual(herkunft.length, 15, 'HERKUNFT-Tabelle hat nicht 15 Eintraege (#1743: +WetterMetrikenVersandPanel.svelte:66)');
-		assert.strictEqual(fachlich.length + darstellung.length + herkunft.length, 47);
+		assert.strictEqual(fachlich.length + darstellung.length + herkunft.length, 48);
 	});
 
 	test('jeder Spec-Eintrag steht genau einmal (keine Duplikate, keine Kategorie-Ueberschneidung)', () => {
