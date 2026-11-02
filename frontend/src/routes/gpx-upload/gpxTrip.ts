@@ -5,6 +5,7 @@
 
 import type { Waypoint } from '$lib/types.js';
 import type { MessageKey } from '$lib/i18n';
+import { newId } from '$lib/components/shared/wizardHelpers';
 
 export interface GpxEtappe {
 	name: string;
@@ -32,6 +33,11 @@ export function gpxTripId(name: string): string {
 		.replace(/^-|-$/g, '');
 }
 
+/** Fehlerschluessel der Namenspruefung vor dem Speichern, `null` = Name ist in Ordnung. */
+export function gpxNameFehler(name: string): MessageKey | null {
+	return gpxTripId(name) ? null : 'layout.gpx.fehler_name';
+}
+
 /** Datei an POST /api/gpx/parse; wirft das Fehlerobjekt des Servers unveraendert weiter. */
 export async function gpxHochladen(datei: File, stageDate: string, startHour: number): Promise<GpxEtappe> {
 	const formData = new FormData();
@@ -43,9 +49,13 @@ export async function gpxHochladen(datei: File, stageDate: string, startHour: nu
 	return (await res.json()) as GpxEtappe;
 }
 
-/** Nutzlast fuer POST /api/trips: ein Trip mit genau der hochgeladenen Etappe. */
+/**
+ * Nutzlast fuer POST /api/trips: ein Trip mit genau der hochgeladenen Etappe.
+ * Kennung per newId() wie beim normalen Anlegen (#2612): POST /api/trips ist ein Upsert,
+ * eine aus dem Namen abgeleitete Kennung wuerde einen gleichnamigen Trip still ersetzen.
+ */
 export function baueGpxTrip(tripName: string, etappe: GpxEtappe) {
-	const id = gpxTripId(tripName);
+	const id = newId();
 	return {
 		id,
 		name: tripName,

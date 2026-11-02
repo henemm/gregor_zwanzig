@@ -5,7 +5,7 @@
 	import * as Table from '$lib/components/ui/table/index.js';
 	import { Badge } from '$lib/components/ui/badge/index.js';
 	import { t, type MessageKey } from '$lib/i18n';
-	import { gpxDateiFehler, gpxHochladen, baueGpxTrip, gpxTripId, type GpxEtappe } from './gpxTrip.ts';
+	import { gpxDateiFehler, gpxHochladen, baueGpxTrip, gpxNameFehler, type GpxEtappe } from './gpxTrip.ts';
 
 	type ParsedStage = GpxEtappe;
 
@@ -55,8 +55,9 @@
 		if (!parsedStage) return;
 		saveError = null;
 		saveErrorKey = null;
-		if (!gpxTripId(tripName)) {
-			saveErrorKey = 'layout.gpx.fehler_name';
+		const nameFehler = gpxNameFehler(tripName);
+		if (nameFehler) {
+			saveErrorKey = nameFehler;
 			return;
 		}
 		saving = true;
