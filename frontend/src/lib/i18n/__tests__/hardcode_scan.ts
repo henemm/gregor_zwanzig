@@ -12,7 +12,7 @@ import { readdirSync, statSync, readFileSync } from 'node:fs';
 import { join, relative, sep, dirname } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
-export type Treffer = { zeile: number; art: 'text' | 'attribut' | 'literal'; text: string };
+export type Treffer = { zeile: number; art: 'text' | 'attribut' | 'literal' | 'ausdruck'; text: string };
 export type DateiErgebnis = { pfad: string; treffer: Treffer[] };
 export type Pruefung = { ohneEintrag: string[]; eintraegeOhneTreffer: string[] };
 
@@ -95,7 +95,66 @@ export function scanneMarkup(quelltext: string): Treffer[] {
 		const text = roh.replaceAll(AUSDRUCK, ' ').replace(/\s+/g, ' ').trim();
 		treffer.push({ index, t: { zeile: zeileBei(q, index), art: 'text', text } });
 	}
-	return treffer.sort((a, b) => a.index - b.index).map((x) => x.t);
+	const sortiert = treffer.sort((a, b) => a.index - b.index).map((x) => x.t);
+	return [...sortiert, ...scanneAusdruecke(quelltext)].sort((a, b) => a.zeile - b.zeile);
+}
+
+// ── #2661 (F12): String-Literale in Markup-Ausdruecken (Textknoten-{…} und beschriftende Attribute) ──
+
+const BESCHRIFTEND = /^(?:title|aria-label|placeholder|alt|label)$/;
+const VERGLEICH_VOR = /(?:===|!==|==|!=)\s*$/;
+const VERGLEICH_NACH = /^\s*(?:===|!==|==|!=)/;
+// Keine Nutzertexte: Locale-Codes, Format-Optionen, snake_case-Kennungen, Schluessel-Praefixe.
+const KEIN_TEXT = /^(?:[a-z]{2}-[A-Z]{2}|\d+-digit|[YMD]+(?:-[YMD]+)*|[a-z0-9]*_[a-z0-9_]*|[a-z_]+(?:\.[a-z_]+)*\.)$/;
+const DREI_BUCHSTABEN = /(?:[A-Za-zÄÖÜäöüß][^A-Za-zÄÖÜäöüß]*){3}/;
+
+/** `{…}`-Ausdruecke mit Lage: im Textknoten (attr = null) oder als Wert des Attributs `attr`. */
+function markupAusdruecke(q: string): { index: number; code: string; attr: string | null; imTag: boolean }[] {
+	const aus: { index: number; code: string; attr: string | null; imTag: boolean }[] = [];
+	let imTag = false;
+	for (let i = 0; i < q.length; i++) {
+		const c = q[i];
+		if (!imTag && c === '<' && /[A-Za-z/!]/.test(q[i + 1] ?? '')) imTag = true;
+		else if (imTag && (c === '"' || c === "'")) i = stringEnde(q, i) - 1;
+		else if (imTag && c === '>') imTag = false;
+		else if (c === '{') {
+			let tiefe = 0;
+			let j = i;
+			for (; j < q.length; j++) {
+				const z = q[j];
+				if (z === '"' || z === "'" || z === '`') j = stringEnde(q, j) - 1;
+				else if (z === '{') tiefe++;
+				else if (z === '}' && --tiefe === 0) break;
+			}
+			const attr = imTag ? (q.slice(0, i).match(/([\w:-]+)\s*=\s*["']?$/)?.[1] ?? '') : null;
+			aus.push({ index: i + 1, code: q.slice(i + 1, j), attr, imTag });
+			i = j;
+		}
+	}
+	return aus;
+}
+
+/** Ausgegebene Literale: keine Bloecke, keine Vergleichs-Operanden, keine Katalogschluessel. */
+export function scanneAusdruecke(quelltext: string): Treffer[] {
+	const q = quelltext
+		.replace(/<!--[\s\S]*?-->/g, (m) => leer(m))
+		.replace(/<script\b[^>]*>[\s\S]*?<\/script>/g, (m) => leer(m))
+		.replace(/<style\b[^>]*>[\s\S]*?<\/style>/g, (m) => leer(m));
+	const treffer: Treffer[] = [];
+	for (const a of markupAusdruecke(q)) {
+		if (/^\s*[#:/@]/.test(a.code)) continue;
+		if (a.imTag && !BESCHRIFTEND.test(a.attr ?? '')) continue;
+		for (const l of tsLiterale(a.code)) {
+			const text = l.text.trim();
+			// Ab drei Buchstaben: Einheiten und Kurzzeichen (km, mm, WP) sind sprachneutral.
+			if (!DREI_BUCHSTABEN.test(text) || KATALOG_SCHLUESSEL.test(text) || KEIN_TEXT.test(text)) continue;
+			const vor = a.code.slice(0, Math.max(0, l.index - 1));
+			const nach = a.code.slice(l.index + l.text.length + 1);
+			if (VERGLEICH_VOR.test(vor) || VERGLEICH_NACH.test(nach)) continue;
+			treffer.push({ zeile: zeileBei(q, a.index + l.index), art: 'ausdruck', text });
+		}
+	}
+	return treffer;
 }
 
 // ── TypeScript (ab F11, #2660): String-Literale in lib/utils, lib/stores, lib/api.ts ──
@@ -252,9 +311,35 @@ export function scanneVerzeichnis(wurzel: string): DateiErgebnis[] {
 		.sort()
 		.map((pfad) => {
 			const quelle = readFileSync(join(wurzel, pfad), 'utf8');
-			return { pfad, treffer: pfad.endsWith('.ts') ? scanneTs(quelle) : scanneMarkup(quelle) };
+			const treffer = pfad.endsWith('.ts') ? scanneTs(quelle) : scanneMarkup(quelle);
+			return { pfad, treffer: treffer.filter((t) => !(t.art === 'ausdruck' && AUSDRUCK_OFFEN.includes(`${pfad}  "${t.text}"`))) };
 		});
 }
+
+/**
+ * #2661 (F12): Ausdrucks-Treffer ausserhalb von BriefingTimelineRow, die die Erweiterung
+ * der Ratsche beim Einfuehren fand. Entscheidung (migrieren oder sprachneutral) offen beim
+ * Orchestrator; die Liste darf nur schrumpfen, ein toter Eintrag ist rot
+ * (keine_hartkodierten_nutzertexte.test.ts). Format: `pfad  "Literal"` ohne Zeile.
+ */
+export const AUSDRUCK_OFFEN: string[] = [
+	'lib/components/organisms/SubscriptionCard.svelte  "(ohne Namen)"',
+	'lib/components/shared/WeatherMetricsTab.svelte  "TH:H"',
+	'lib/components/shared/WeatherMetricsTab.svelte  "temperature"',
+	'lib/components/shared/WeatherMetricsTab.svelte  "Temperatur"',
+	'lib/components/shared/WeatherMetricsTab.svelte  "Nacht-Tiefsttemperatur"',
+	'lib/components/shared/WeatherMetricsTab.svelte  "Gefühlte Temperatur"',
+	'lib/components/shared/WeatherMetricsTab.svelte  "Tages-Tiefsttemperatur (Gehzeit)"',
+	'lib/components/shared/WeatherMetricsTab.svelte  "Tages-Höchsttemperatur (Gehzeit)"',
+	'lib/components/shared/WeatherMetricsTab.svelte  "Gefühlte Tages-Tiefsttemperatur (Gehzeit)"',
+	'lib/components/shared/WeatherMetricsTab.svelte  "Gefühlte Tages-Höchsttemperatur (Gehzeit)"',
+	'lib/components/shared/WeatherMetricsTab.svelte  "Gefühlte Nacht-Tiefsttemperatur"',
+	'lib/components/shared/weather-metrics-tab/WeatherV2Reihenfolge.svelte  "Telegram"',
+	'lib/components/trip-new/TripNewEditor.svelte  "GPX"',
+	'routes/+page.svelte  "gregor · zwanzig"',
+	'routes/compare/[id]/+page.svelte  "— Gregor Zwanzig"',
+	'routes/trips/[id]/+page.svelte  "— Gregor Zwanzig"'
+];
 
 function deckt(eintrag: string, pfad: string): boolean {
 	return eintrag.endsWith('/') ? pfad.startsWith(eintrag) : pfad === eintrag;

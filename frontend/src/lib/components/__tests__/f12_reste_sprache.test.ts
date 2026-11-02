@@ -41,15 +41,16 @@ const ent = (s: string) =>
 const sichtbar = (h: string) => ent(h.replace(/<[^>]*>/g, ' ')).replace(/\s+/g, ' ').trim();
 const attribute = (h: string) => [...h.matchAll(/\s(?:aria-label|placeholder|title)="([^"]*)"/g)].map((m) => ent(m[1]));
 const sha = (s: string) => createHash('sha256').update(s).digest('hex').slice(0, 16);
-const DEUTSCH = /[äöüÄÖÜß]|\b(Abbrechen|Speichern|Rechtliches|Impressum|Datenschutz|Breitengrad|Gruppe|Keine|Kein|Welche|Metriken|Name der|z\.B\.)\b/;
+const DEUTSCH = /[äöüÄÖÜß]|\b(Abbrechen|Speichern|Rechtliches|Impressum|Datenschutz|Breitengrad|Gruppe|Keine|Kein|Welche|Metriken|Name der|z\.B\.|gesendet|geplant)\b/;
 
 async function renders(): Promise<Record<string, string>> {
-	const [BrandIcon, BrandWordmark, AppFooter, LocationForm, WeatherConfigDialog] = await Promise.all([
+	const [BrandIcon, BrandWordmark, AppFooter, LocationForm, WeatherConfigDialog, Zeile] = await Promise.all([
 		lade('brand/BrandIcon.svelte'),
 		lade('brand/BrandWordmark.svelte'),
 		lade('components/shared/AppFooter.svelte'),
 		lade('components/LocationForm.svelte'),
-		lade('components/WeatherConfigDialog.svelte')
+		lade('components/WeatherConfigDialog.svelte'),
+		lade('components/molecules/BriefingTimelineRow.svelte')
 	]);
 	const r = (k: unknown, props: Record<string, unknown>) => norm(render(k as never, { props: props as never }).body);
 	return {
@@ -58,7 +59,10 @@ async function renders(): Promise<Record<string, string>> {
 		wordmarkNone: r(BrandWordmark, { icon: 'none', caption: null }),
 		footer: r(AppFooter, {}),
 		locationForm: r(LocationForm, { groups: [], onsave: leer, oncancel: leer }),
-		weatherDialog: r(WeatherConfigDialog, { open: true, entityName: 'E2E-Ort', currentConfig: undefined, onsave: leer, onclose: leer })
+		weatherDialog: r(WeatherConfigDialog, { open: true, entityName: 'E2E-Ort', currentConfig: undefined, onsave: leer, onclose: leer }),
+		// Fresh-Eyes-Befund #2661: Status-Suffix der Versandkarte im Cockpit.
+		zeileGesendet: r(Zeile, { report: { when: '07:00', kind: 'X', channels: ['email'], status: 'sent' } }),
+		zeileGeplant: r(Zeile, { report: { when: '18:00', kind: 'X', channels: ['email'], status: 'planned' } })
 	};
 }
 
@@ -69,7 +73,9 @@ const GOLDEN_DE: Record<string, string> = {
 	wordmarkNone: 'c2fdcab548829168',
 	footer: '9c85c44385fe29e2',
 	locationForm: 'c09344f5e4f45680',
-	weatherDialog: 'e00ab9e6247728a3'
+	weatherDialog: 'e00ab9e6247728a3',
+	zeileGesendet: '9e87c359f10cb71f',
+	zeileGeplant: '73f413bec9e8047c'
 };
 
 describe('F12: Reste der Allowlist (AC-1)', () => {
@@ -87,7 +93,9 @@ describe('F12: Reste der Allowlist (AC-1)', () => {
 			brandIcon: [en('bausteine.marke.name')],
 			footer: [en('bausteine.footer.rechtliches'), en('bausteine.footer.impressum'), en('bausteine.footer.datenschutz')],
 			locationForm: ['Location name', 'Google Maps coordinates (DMS)', 'Latitude (lat)', 'Longitude (lon)', 'Elevation (m)', 'Activity profile', 'Group (optional)', 'No group', '— No profile —', 'Cancel', 'Save', 'e.g. hochfuegen'],
-			weatherDialog: ['Weather metrics — E2E-Ort', 'Which metrics should the report show?', 'Cancel', 'Save']
+			weatherDialog: ['Weather metrics — E2E-Ort', 'Which metrics should the report show?', 'Cancel', 'Save'],
+			zeileGesendet: [`X${en('bausteine.timeline.briefing')}`, en('bausteine.timeline.gesendet')],
+			zeileGeplant: [en('listen.status.geplant')]
 		};
 		for (const [name, texte] of Object.entries(erwartet)) {
 			const alles = `${sichtbar(h[name])} | ${attribute(h[name]).join(' | ')}`;

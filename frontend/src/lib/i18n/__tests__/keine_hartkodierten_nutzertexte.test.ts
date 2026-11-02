@@ -29,7 +29,9 @@ import {
 	scanneTs,
 	scanneVerzeichnis,
 	wirdGescanntTs,
-	MINDEST_DATEIEN
+	MINDEST_DATEIEN,
+	scanneAusdruecke,
+	AUSDRUCK_OFFEN
 } from './hardcode_scan.ts';
 
 const HIER = dirname(fileURLToPath(import.meta.url));
@@ -89,6 +91,49 @@ describe('Scanner an Fixtures (AC-1, AC-2)', () => {
 			{ zeile: 9, art: 'attribut', text: 'Ort' },
 			{ zeile: 9, art: 'attribut', text: 'Karte' }
 		]);
+	});
+});
+
+// #2661 (F12, Fresh-Eyes-Befund): Literale in Markup-Ausdruecken, z. B. ein Ternary im
+// Textknoten (BriefingTimelineRow `{isSent ? 'gesendet' : 'geplant'}`) oder in einem
+// beschriftenden Attribut. Vergleichs-Operanden, Bloecke ({#if}), Katalogschluessel und
+// Nicht-Beschriftungs-Attribute (class, style, data-*) sind keine Treffer.
+describe('Ausdrucks-Literale im Markup (F12)', () => {
+	test('Ternary im Textknoten und in aria-label ist ein Treffer mit Zeile', () => {
+		const quelle = [
+			'<script>let a = "Hallo Welt";</script>',
+			'<span>{isSent ? \'gesendet\' : "geplant"}</span>',
+			'<b>{`${n} Orte`}</b>',
+			'<button aria-label={offen ? \'Schließen\' : \'Öffnen\'}>x</button>'
+		].join('\n');
+		assert.deepEqual(scanneMarkup(quelle), [
+			{ zeile: 2, art: 'ausdruck', text: 'gesendet' },
+			{ zeile: 2, art: 'ausdruck', text: 'geplant' },
+			{ zeile: 3, art: 'ausdruck', text: 'Orte' },
+			{ zeile: 4, art: 'ausdruck', text: 'Schließen' },
+			{ zeile: 4, art: 'ausdruck', text: 'Öffnen' }
+		]);
+	});
+
+	test('AUSDRUCK_OFFEN hat keinen toten Eintrag und deckt BriefingTimelineRow nicht', () => {
+		const roh = new Set<string>();
+		for (const e of scanneVerzeichnis(SRC)) {
+			if (!e.pfad.endsWith('.svelte')) continue;
+			const quelle = readFileSync(join(SRC, e.pfad), 'utf8');
+			for (const t of scanneAusdruecke(quelle)) roh.add(`${e.pfad}  "${t.text}"`);
+		}
+		assert.deepEqual(AUSDRUCK_OFFEN.filter((x) => !roh.has(x)), []);
+		assert.ok(!AUSDRUCK_OFFEN.some((x) => x.startsWith('lib/components/molecules/BriefingTimelineRow')));
+	});
+
+	test('Vergleiche, Bloecke, Schluessel, class/style/data-* und Kommentare sind keine Treffer', () => {
+		const quelle = [
+			'<!-- {x ? \'kommentar\' : \'text\'} -->',
+			'{#if status === \'sent\'}<i>{$t(x ? \'listen.status.geplant\' : \'aktionen.speichern\')}</i>{/if}',
+			'<div class={aktiv ? \'rand fett\' : \'leise\'} style:color={x ? \'red\' : \'blue\'} data-testid={\'zeile-eins\'}></div>',
+			'<p>{\'sent\' === s ? $t(\'aktionen.senden\') : \'—\'}</p>'
+		].join('\n');
+		assert.deepEqual(scanneMarkup(quelle), []);
 	});
 });
 
