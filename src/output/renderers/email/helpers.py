@@ -1385,11 +1385,16 @@ _PILL_TONE_MAP = {
 
 
 def pill_html(label: str, tone: str) -> str:
-    """Eckiger Outline-Tag für Segment-Risk-Anzeigen in HTML-E-Mails."""
+    """Eckiger Outline-Tag für Segment-Risk-Anzeigen in HTML-E-Mails.
+
+    Issue #1670: ``inline-block`` statt ``inline-flex`` -- als Flex-Container
+    kollabierten mobile Mail-Clients das Leerzeichen vor der Uhrzeit
+    ("Max16:00"). Der Text fliesst jetzt als normaler Inline-Text.
+    """
     tag_tone = _PILL_TONE_MAP.get(tone, "info")
     p = _PILL_TAG_PALETTE[tag_tone]
     return (
-        f'<span style="display:inline-flex;align-items:center;'
+        f'<span style="display:inline-block;vertical-align:middle;'
         f'padding:4px 10px;border:1px solid {p["border"]};'
         f'background:{p["bg"]};color:{p["fg"]};'
         f'font-size:11px;font-weight:600;'

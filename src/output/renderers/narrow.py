@@ -37,7 +37,7 @@ from output.renderers.day_window import (
     DAY_WINDOW_END_HOUR, DAY_WINDOW_START_HOUR, collect_hiking_window_points,
     hiking_field_min_max, night_temp_min_c, night_wind_chill_min_c,
 )
-from output.metric_format import THUNDER_LABEL_DE
+from output.metric_format import NO_VALUE, THUNDER_LABEL_DE
 from output.renderers.compare_outlook_metric_ids import outlook_columns
 from output.renderers.email.helpers import fmt_val, format_trend_tokens
 from output.renderers.email.thunder_branch import (
@@ -86,7 +86,7 @@ def _cell(metric_id: str, row: dict, friendly_keys: set[str]) -> str:
     """Formatiere den Wert einer Metrik aus einem Tabellen-Row-Dict."""
     key = _col_key(metric_id)
     if key is None:
-        return "–"
+        return NO_VALUE
     return fmt_val(key, row.get(key), friendly_keys=friendly_keys, row=row)
 
 
@@ -502,7 +502,7 @@ def _overview_line(
     label = _compact_label(metric_id)
     key = _col_key(metric_id)
     if key is None:
-        return f"{label} –"
+        return f"{label} {NO_VALUE}"
 
     hiking = None
     if metric_id == "temperature":
@@ -512,7 +512,7 @@ def _overview_line(
 
     hits = [r for rows in seg_tables for r in rows if r.get(key) is not None]
     if not hits and hiking is None:
-        return f"{label} –"
+        return f"{label} {NO_VALUE}"
 
     try:
         if hiking is not None:
@@ -613,7 +613,7 @@ def _outlook_lines(
         for stage in multi_day_trend:
             weekday = _stage_day(stage, lang)
             cells = stage.get("cells") or []
-            texte = [cells[i] if i < len(cells) else "–" for i in range(len(columns))]
+            texte = [cells[i] if i < len(cells) else NO_VALUE for i in range(len(columns))]
             if gew_index is not None:
                 texte[gew_index] = thunder_cell_telegram(
                     format_trend_tokens(stage), stage,
@@ -630,7 +630,7 @@ def _outlook_lines(
         tok = format_trend_tokens(stage)
         weekday = _stage_day(stage, lang)
         pt, wt = tok["precip_token"], tok["wind_token"]
-        precip_part = f"R{pt}" if pt != "-" else (tok["precip_str"] if tok["precip_str"] != "–" else "R–")
+        precip_part = f"R{pt}" if pt != "-" else (tok["precip_str"] if tok["precip_str"] != NO_VALUE else f"R{NO_VALUE}")
         wind_part = f"W{wt}" if wt != "-" else tok["wind_str"]
         # Issue #1653: Tag/Nacht getrennt statt 24h-Peak -- Fall B zeigte
         # bisher nur das staerkere Nachtgewitter, das Tagesgewitter kam nie

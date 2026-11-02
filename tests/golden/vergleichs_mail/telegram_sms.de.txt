@@ -2,7 +2,7 @@ ORTS-VERGLEICH — Golden-Vergleich
 Datum: 29.10.2026
 
 Innsbruck
-   Temp max 11°C · Regen 2.4 mm · Gewitter — · Niederschlagsart Regen · Böen 38 km/h · Regenwahrscheinlichkeit 70% · Wind 26 km/h
+   Temp max 11°C · Regen 2.4 mm · Gewitter – · Niederschlagsart Regen · Böen 38 km/h · Regenwahrscheinlichkeit 70% · Wind 26 km/h
    … +3 weitere Wettergrößen je Ort (Telegram-Limit) — vollständig per E-Mail
    … +1 gewählte Wettergrößen ohne Wert an diesem Ort
 Lienz
@@ -10,7 +10,7 @@ Lienz
    … +3 weitere Wettergrößen je Ort (Telegram-Limit) — vollständig per E-Mail
    … +1 gewählte Wettergrößen ohne Wert an diesem Ort
 Kufstein
-   Temp max 13°C · Regen 8.4 mm · Gewitter — · Niederschlagsart Mischniederschlag · Böen 40 km/h · Regenwahrscheinlichkeit 70% · Wind 26 km/h
+   Temp max 13°C · Regen 8.4 mm · Gewitter – · Niederschlagsart Mischniederschlag · Böen 40 km/h · Regenwahrscheinlichkeit 70% · Wind 26 km/h
    … +3 weitere Wettergrößen je Ort (Telegram-Limit) — vollständig per E-Mail
    … +1 gewählte Wettergrößen ohne Wert an diesem Ort
 Brenner

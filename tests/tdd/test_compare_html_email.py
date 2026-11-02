@@ -158,7 +158,8 @@ class TestCompareHTMLRenderer:
 
         html = render_compare_html(result, profile=ActivityProfile.WINTERSPORT)
 
-        assert "—" in html, \
+        # Issue #1670: Platzhalter ist der EN DASH aus metric_format.NO_VALUE.
+        assert ">–<" in html, \
             "Fehlerhafte Location muss Strich-Symbol in Uebersichtstabellen-Zellen zeigen"
         assert "Ausgefallener Ort" in html, "Fehlerhafter Ort muss trotzdem als Spalte erscheinen"
 

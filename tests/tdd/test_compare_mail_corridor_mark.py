@@ -178,7 +178,7 @@ class TestCompareMailCorridorMarkOverview:
         assert _MARK in cells[1], "Ort A (20, im Korridor) muss trotzdem markiert sein"
         assert _MARK_STYLE in cells[1], "Ort A muss den sichtbaren Border-Balken tragen"
         assert _MARK not in cells[2], "Fehlerhafter Ort darf nicht markiert sein"
-        assert "—" in cells[2], "Fehlerhafter Ort zeigt weiterhin den Strich-Platzhalter"
+        assert "–" in cells[2], "Fehlerhafter Ort zeigt weiterhin den Strich-Platzhalter"
 
     def test_kein_corridor_rendert_wie_bisher(self):
         """corridors=None/[] darf am HTML nichts aendern -- Baseline-Schutz
@@ -358,11 +358,17 @@ class TestCorridorScoreIndependence:
 # gegen die Merge-Base e03dfc844: Klartext und HTML unterscheiden sich
 # ausschliesslich in diesen drei Befehlszeilen (plus Zeilenumbruch der
 # Befehlstabelle). Alte Summen: HTML 645479b7…, Klartext e517e744….
-_COMPARE_HTML_SHA256_BEFORE = "9d48487f21ad339c450c2cb13e20a52af8d5643ee530f09904611103bd00f7d9"
+# #1670: einzige Abweichung sind die Platzhalter-Zellen "—" -> "–"
+# (metric_format.NO_VALUE); mit ">—<" zurueckgesetzt ergibt der neue Text exakt
+# die alte Summe 9d48487f….
+_COMPARE_HTML_SHA256_BEFORE = "88c8e5f9392dd6b86825d821cb55d442e85fac955fadcacb669a35ca181d78c1"
 # #2210: einzige Abweichung ist der deutsche Wochentag in der Kopfzeile
 # ("Montag, 13.07.2026" statt "Monday, 13.07.2026"); mit "Monday" ergibt der
 # neue Text exakt die alte Summe 62a49aa2….
-_COMPARE_TEXT_SHA256_BEFORE = "75f46468f0e69234a8c477b7275af77a603ffb1b1e9c5120a4bf811a7f7e659b"
+# #1670: einzige Abweichung sind die Gewitter-Platzhalter "Gewitter: —" /
+# "Thdr —" -> EN DASH (metric_format.NO_VALUE); zurueckgesetzt ergibt der neue
+# Text exakt die alte Summe 75f46468….
+_COMPARE_TEXT_SHA256_BEFORE = "7a93c555a29207cb1f0f099745057ba2d38cfb02dc7a8be54bc9dbf0689a9b99"
 
 
 def _byte_identity_fixture():

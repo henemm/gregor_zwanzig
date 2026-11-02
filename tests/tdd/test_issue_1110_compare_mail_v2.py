@@ -384,8 +384,9 @@ class TestCompareMailV2HTML:
         warn_row = rows[1]
         # Preset-Reihenfolge (#1359 Scheibe 2): Spalte 3 = Fréjus
         # (Collobrières, Marseille, Fréjus — Fixture-Reihenfolge).
-        assert warn_row[3] == "—", (
-            f"Fréjus (alert-frei) muss exakt '—' in der Warn-Zeile zeigen, war: {warn_row[3]!r}"
+        # Issue #1670: Platzhalter ist der EN DASH aus metric_format.NO_VALUE.
+        assert warn_row[3] == "–", (
+            f"Fréjus (alert-frei) muss exakt '–' in der Warn-Zeile zeigen, war: {warn_row[3]!r}"
         )
 
     def test_ac4a_warn_lead_block_vorhanden_wenn_warnungen(self):
@@ -547,8 +548,8 @@ class TestCompareMailV2HTML:
         assert hour_row is not None, (
             "11-Uhr-Zeile (= 09:00 UTC) in Collobrières' Stundentabelle nicht gefunden"
         )
-        assert hour_row[2] == "—", (
-            f"Gef.-Spalte muss bei wind_chill_c=None exakt '—' zeigen, war: {hour_row[2]!r}"
+        assert hour_row[2] == "–", (  # Issue #1670: NO_VALUE (EN DASH)
+            f"Gef.-Spalte muss bei wind_chill_c=None exakt '–' zeigen, war: {hour_row[2]!r}"
         )
 
     def test_ac8_media_query_zwei_container_kein_flex_grid(self):
