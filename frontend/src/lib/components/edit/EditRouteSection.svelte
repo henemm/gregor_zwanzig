@@ -184,7 +184,7 @@
 	{#if pendingFiles.length > 0}
 		<div class="rounded-md border p-4 space-y-3 bg-muted/30">
 			<p class="text-sm" data-testid="bulk-stage-pending-count">
-				{$t('trip.route.ausgewaehlt', { anzahl: pendingFiles.length })}
+				{$t('trip.route.dateien_anzahl', { anzahl: pendingFiles.length })}
 			</p>
 			<div class="flex flex-col gap-2 sm:flex-row sm:items-center">
 				<Label for="bulk-stage-start-date" class="sm:w-32">{$t('trip.startdatum')}</Label>
