@@ -117,5 +117,7 @@
 	"bausteine.hinweis.schliessen": "Schließen",
 	"bausteine.hinweis.passkey": "Nächstes Mal ohne Passwort anmelden: Passkey auf diesem Gerät einrichten.",
 	"bausteine.hinweis.nicht_jetzt": "Nicht jetzt",
-	"bausteine.hinweis.einrichten": "Jetzt einrichten"
+	"bausteine.hinweis.einrichten": "Jetzt einrichten",
+	"bausteine.timeline.gesendet": "gesendet",
+	"bausteine.timeline.briefing": "-Briefing"
 }

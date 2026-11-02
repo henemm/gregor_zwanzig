@@ -10,6 +10,9 @@ export const F12_ANKER: [schluessel: string, de: string, en: string][] = [
 	['bausteine.marke.name', 'Gregor Zwanzig', 'Gregor Zwanzig'],
 	['bausteine.marke.gregor', 'gregor', 'gregor'],
 	['bausteine.marke.zwanzig', 'zwanzig', 'zwanzig'],
+	// ── BriefingTimelineRow (Fresh-Eyes-Befund; „geplant“ = listen.status.geplant) ──
+	['bausteine.timeline.gesendet', 'gesendet', 'sent'],
+	['bausteine.timeline.briefing', '-Briefing', ' briefing'],
 	// ── AppFooter ──
 	['bausteine.footer.rechtliches', 'Rechtliches', 'Legal'],
 	['bausteine.footer.impressum', 'Impressum', 'Legal notice'],

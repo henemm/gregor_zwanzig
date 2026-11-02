@@ -11,6 +11,7 @@
 
 	import { Dot } from '$lib/components/atoms';
 	import ChannelChip from './ChannelChip.svelte';
+	import { t } from '$lib/i18n';
 
 	interface Report {
 		when: string;
@@ -50,7 +51,7 @@
 				style:font-weight={dense ? 600 : 500}
 			>{report.when}</span>
 			<span style:font-size="12px" style:color="var(--g-ink-3)" style:text-transform="capitalize">
-				{report.kind}{dense ? '' : '-Briefing'}
+				{report.kind}{dense ? '' : $t('bausteine.timeline.briefing')}
 			</span>
 		</div>
 		{#if report.etappe}
@@ -79,6 +80,6 @@
 			style:text-align="right"
 			style:text-transform="uppercase"
 			style:letter-spacing="0.06em"
-		>{isSent ? 'gesendet' : 'geplant'}</span>
+		>{isSent ? $t('bausteine.timeline.gesendet') : $t('listen.status.geplant')}</span>
 	{/if}
 </div>

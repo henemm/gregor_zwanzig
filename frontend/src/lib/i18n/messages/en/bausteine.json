@@ -117,5 +117,7 @@
 	"bausteine.hinweis.schliessen": "Close",
 	"bausteine.hinweis.passkey": "Sign in without a password next time: set up a passkey on this device.",
 	"bausteine.hinweis.nicht_jetzt": "Not now",
-	"bausteine.hinweis.einrichten": "Set up now"
+	"bausteine.hinweis.einrichten": "Set up now",
+	"bausteine.timeline.gesendet": "sent",
+	"bausteine.timeline.briefing": " briefing"
 }
