@@ -299,18 +299,22 @@ describe('AC-7: Trip-Status je Sprache', () => {
 	});
 });
 
+/** Netzgrenze des AC-5-Aufbaus, geteilt mit dem Fehlerfall-Test (F002). */
+const AC5 = {} as { mitApi: <T>(lauf: () => Promise<T>) => Promise<T>; cookies: (s: string) => { get: (n: string) => string | undefined } };
+
 describe('AC-5: zwei Nutzer, zwei Sprachen, eigener Trip, sprachunabhaengige Nutzlast', () => {
 	const trip = (id: string, name: string) => P.tripLaufend({ id, name });
 	const API: Record<string, Record<string, unknown>> = {
-		A: { '/api/auth/profile': { id: 'anna', language: 'en' }, '/api/trips/anna-gr20': trip('anna-gr20', 'Anna GR20'), '/api/metrics': P.KATALOG },
-		B: { '/api/auth/profile': { id: 'bert', language: 'de' }, '/api/trips/bert-hr': trip('bert-hr', 'Bert Haute Route'), '/api/metrics': P.KATALOG }
+		A: { '/api/auth/profile': { id: 'anna', language: 'en' }, '/api/trips/anna-gr20': trip('anna-gr20', 'Anna GR20'), '/api/trips/anna-kaputt': 'HTTP500', '/api/metrics': P.KATALOG },
+		B: { '/api/auth/profile': { id: 'bert', language: 'de' }, '/api/trips/bert-hr': trip('bert-hr', 'Bert Haute Route'), '/api/trips/bert-kaputt': 'HTTP500', '/api/metrics': P.KATALOG }
 	};
 	async function mitApi<T>(lauf: () => Promise<T>): Promise<T> {
 		const echt = globalThis.fetch;
 		globalThis.fetch = (async (u: string, init?: { headers?: Record<string, string> }) => {
 			const sitzung = /gz_session=([^;]+)/.exec(init?.headers?.Cookie ?? '')?.[1] ?? '';
 			const daten = API[sitzung]?.[new URL(String(u)).pathname];
-			return new Response(JSON.stringify(daten ?? null), { status: daten === undefined ? 404 : 200 });
+			const status = daten === undefined ? 404 : daten === 'HTTP500' ? 500 : 200;
+			return new Response(JSON.stringify(status === 200 ? daten : null), { status });
 		}) as unknown as typeof fetch;
 		try {
 			return await lauf();
@@ -319,6 +323,8 @@ describe('AC-5: zwei Nutzer, zwei Sprachen, eigener Trip, sprachunabhaengige Nut
 		}
 	}
 	const cookies = (s: string) => ({ get: (n: string) => (n === 'gz_session' ? s : undefined) });
+	AC5.mitApi = mitApi;
+	AC5.cookies = cookies;
 
 	async function sichtFuer(sitzung: 'A' | 'B', tripId: string, fremdeId: string) {
 		const locals = { userId: sitzung, lang: 'de' as 'de' | 'en' };
@@ -363,6 +369,23 @@ describe('AC-5: zwei Nutzer, zwei Sprachen, eigener Trip, sprachunabhaengige Nut
 		assert.deepEqual(b.rumpf, [{ name: 'Bert Haute Route 2' }]);
 		assert.deepEqual(Object.keys(a.rumpf[0] as object), Object.keys(b.rumpf[0] as object));
 		for (const wort of ['Overview', 'Übersicht', 'Day', 'Tag', 'label']) hatNicht(JSON.stringify(a.rumpf), wort);
+	});
+});
+
+describe('AC-5 (Adversary F002): Trip-Loader-Fehler (nicht 404) in der Sprache des Nutzers', () => {
+	test('Status 500: A (en) „Error loading the trip", B (de) „Fehler beim Laden des Trips"', async () => {
+		for (const [sitzung, id, text] of [['A', 'anna-kaputt', 'Error loading the trip'], ['B', 'bert-kaputt', 'Fehler beim Laden des Trips']] as const) {
+			const locals = { userId: sitzung, lang: 'de' as 'de' | 'en' };
+			const fehler = await AC5.mitApi(async () => {
+				await layoutLoad({ locals, cookies: AC5.cookies(sitzung) } as never);
+				return tripLoad({ params: { id }, locals, cookies: AC5.cookies(sitzung) } as never).then(
+					() => null,
+					(e: { status?: number; body?: { message?: string } }) => e
+				);
+			});
+			assert.equal(fehler?.status, 500, sitzung);
+			assert.equal(fehler?.body?.message, text, sitzung);
+		}
 	});
 });
 
