@@ -279,10 +279,10 @@ const { render } = await import('svelte/server');
 const Editor = (await import(pathToFileURL(path.join(HERE, '../CompareNewEditor.svelte')).href)).default;
 
 function editorHtml(activeTab: string, isMobileViewport: boolean, flags: Record<string, boolean>): string {
-	const wiz = { name: 'X', region: '', profile: 'wandern', pickedIds: ['a', 'b', 'c'] };
+	// Issue #2727 (AC-9): kein Context-Stub mehr — Name und Orte reisen ueber stateOverride
+	// (heute rot: der Editor kennt diese Startwerte noch nicht und braucht den Context).
 	return render(Editor, {
-		props: { stateOverride: { activeTab, isMobileViewport, ...flags } },
-		context: new Map([['compare-wizard-state', wiz]])
+		props: { stateOverride: { activeTab, isMobileViewport, name: 'X', pickedIds: ['a', 'b', 'c'], ...flags } }
 	}).body;
 }
 function knopfGesperrt(html: string, testid: string): boolean {

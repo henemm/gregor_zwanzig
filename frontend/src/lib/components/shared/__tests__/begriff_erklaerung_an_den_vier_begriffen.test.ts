@@ -27,11 +27,11 @@ import {
 	entschluesselt,
 	innen,
 	lade,
-	neuerWiz,
 	renderKomponente,
 	sichtbarerText,
 	tagsMitTestid
 } from './infoboxSsr.ts';
+import { neuerFeldsatz } from './compareFeldsatzPruefstand.ts';
 import { corridorPropsAus } from '../../compare/corridorPropsAus.ts';
 import { alarmePropsAus } from '../../compare/alarmePropsAus.ts';
 
@@ -63,13 +63,10 @@ describe('AC-8: Wertebereiche tragen das ⓘ in Desktop- UND Mobil-Editor, in be
 			const Komp = await lade(datei);
 			const props =
 				kontext === 'vergleich'
-					? { context: 'vergleich', ...corridorPropsAus(neuerWiz()) }
+					? { context: 'vergleich', ...corridorPropsAus(neuerFeldsatz()) }
 					: { context: 'route', trip: TRIP, createMode: true };
-			const html = renderKomponente(
-				Komp,
-				props,
-				kontext === 'vergleich' ? new Map([['compare-wizard-state', neuerWiz()]]) : undefined
-			);
+			// Issue #2727: kein Context mehr — der Reiter liest nur seine Props (corridorPropsAus).
+			const html = renderKomponente(Komp, props);
 			const tags = ii(html, 'wertebereiche');
 			assert.equal(tags.length, 1, `${name} (${kontext}): ⓘ fehlt oder doppelt — ${tags.length}`);
 			assert.match(attribut(tags[0], 'aria-label') ?? '', /Wertebereich/);
@@ -102,7 +99,7 @@ describe('AC-9: Alarme — sichtbares Label „Dringlichkeits-Schwelle“ mit �
 			'vergleich',
 			() => ({
 				context: 'vergleich',
-				...alarmePropsAus(neuerWiz()),
+				...alarmePropsAus(neuerFeldsatz()),
 				catalog: [],
 				profileOverride: { premium_sms_allowed: false }
 			})

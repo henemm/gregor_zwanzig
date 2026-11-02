@@ -28,24 +28,20 @@ const Editor = (
 type Seed = { name?: string; picked?: number; metriken?: boolean; ideals?: boolean; alarme?: boolean; versand?: boolean };
 
 function html(s: Seed): string {
-	const wiz = {
-		name: s.name ?? '',
-		region: '',
-		profile: 'wandern',
-		pickedIds: Array.from({ length: s.picked ?? 0 }, (_, i) => `loc${i}`),
-	};
+	// Issue #2727 (AC-9): kein Context-Stub mehr — Name und Orte reisen ueber stateOverride.
 	return render(Editor, {
 		props: {
 			stateOverride: {
 				activeTab: 'vergleich',
 				isMobileViewport: false,
+				name: s.name ?? '',
+				pickedIds: Array.from({ length: s.picked ?? 0 }, (_, i) => `loc${i}`),
 				metrikenVisited: !!s.metriken,
 				idealsVisited: !!s.ideals,
 				alarmeVisited: !!s.alarme,
 				versandVisited: !!s.versand,
 			},
 		},
-		context: new Map([['compare-wizard-state', wiz]]),
 	}).body;
 }
 

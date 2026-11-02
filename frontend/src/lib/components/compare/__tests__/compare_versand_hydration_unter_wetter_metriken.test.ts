@@ -6,8 +6,13 @@
 // Messweise (Muster hub_reiter_gemeinsame_aufloesung.test.ts): das ECHTE Instanz-Skript von
 // CompareTabs wird mit gesaetem Vergleich ausgewertet; ausgefuehrt wird der ECHTE
 // Versand-Hydrations-Effekt (ausgewaehlt ueber den Aufruf `hydrateVersandFieldsFromPreset`).
-// `wizardState` (Import aus `./compareWizardState.svelte`, vom Pruefstand nicht bindbar) wird als
-// leeres Objekt gesaet — beobachtet wird, was der Effekt hineinschreibt.
+// Issue #2727 (Epic #2345, DoD-1; Spec feat_2727_compare_wizardstate_abloesen.md AC-15/AC-22): der
+// Hub haelt seinen Feldsatz lokal als `$state(compareFeldsatzStandard())` — der Pruefstand wertet
+// diese Deklaration SELBST aus (frueher wurde ein leeres Objekt gesaet, weil die Klasse nicht
+// bindbar war). Der Feldsatz wird ueber das Argument von `versandPropsAus(…)` im Markup gefunden,
+// nicht ueber einen Variablennamen. Neu: Fall „Daten kommen spaet" (erst Standard lesen, dann
+// hydrieren; ein vorher gesetzter Nutzerwert in einem nicht hydrierten Feld bleibt).
+// Heute rot (nur die Faelle mit Feldsatz): der Hub instanziiert noch die Klasse (VERTRAG FEHLT).
 // Zusaetzlich (Template-AST): der Baustein im Panel `wetter-metriken` haengt am Flag
 // `versandHydrated` (umschliessender Block oder Prop) — er mountet also erst nach der Hydration.
 //
@@ -29,6 +34,8 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import { umgebungFuer, effekteVon, type Knoten } from '../../shared/__tests__/svelteInstanzPruefstand.ts';
 import { vollerVergleich } from '../../shared/__tests__/goMergeServerPruefstand.ts';
 import { hydrateVersandFieldsFromPreset } from '../../shared/versandVergleichSpeicherung.ts';
+import { versandPropsAus } from '../versandPropsAus.ts';
+import { alarmePropsAus } from '../alarmePropsAus.ts';
 
 const HIER = dirname(fileURLToPath(import.meta.url));
 const FRONTEND = resolve(HIER, '../../../../..');
@@ -69,7 +76,6 @@ async function hubOeffnen(tab: string): Promise<{ u: Knoten; ast: Knoten; quelle
 			preset,
 			locations: [],
 			orteCount: 3,
-			wizardState: {},
 			goto: () => Promise.resolve(),
 			page: { url: new URL(`http://localhost/compare/c-1743?tab=${tab}`) }
 		},
@@ -77,21 +83,64 @@ async function hubOeffnen(tab: string): Promise<{ u: Knoten; ast: Knoten; quelle
 	);
 }
 
+/** Der lokale Feldsatz des Hubs: das Objekt, das der Hub an `versandPropsAus(…)` uebergibt. */
+function hubFeldsatz(ast: Knoten, u: Knoten): Knoten {
+	let name: string | null = null;
+	(function lauf(n: unknown): void {
+		if (name || n === null || typeof n !== 'object') return;
+		if (Array.isArray(n)) return n.forEach(lauf);
+		const k = n as Knoten;
+		if (k.type === 'CallExpression' && k.callee?.name === 'versandPropsAus' && k.arguments?.[0]?.type === 'Identifier') {
+			name = k.arguments[0].name;
+			return;
+		}
+		for (const key of Object.keys(k)) if (key !== 'parent' && key !== 'loc') lauf(k[key]);
+	})(ast.fragment);
+	assert.ok(name, 'Messaufbau: kein versandPropsAus(<Bezeichner>) im Hub-Markup');
+	const f = u[name!];
+	assert.ok(
+		f && typeof f === 'object',
+		`VERTRAG FEHLT (#2727): der Hub haelt keinen eigenen Feldsatz \`${name}\` ($state(compareFeldsatzStandard())) — vom Pruefstand nicht auswertbar`
+	);
+	return f as Knoten;
+}
+
 describe('#1743 AC-9: Versand-Hydration haengt am Reiter wetter-metriken', () => {
 	for (const tab of ['wetter-metriken', 'versand']) {
 		test(`?tab=${tab}: der Versand-Hydrations-Effekt fuellt die gespeicherten Werte (kein Platzhalter)`, async () => {
 			const { u, ast, quelle } = await hubOeffnen(tab);
 			assert.equal(u.activeTab, 'wetter-metriken', `Vorbedingung: ?tab=${tab} oeffnet Wetter-Metriken`);
+			const feldsatz = hubFeldsatz(ast, u);
 			const effekte = effekteVon(ast, quelle, u, 'hydrateVersandFieldsFromPreset');
 			assert.ok(effekte.length >= 1, 'Messaufbau: kein Versand-Hydrations-Effekt gefunden');
 			for (const e of effekte) e();
 			assert.equal(u.versandHydrated, true, 'die Versand-Hydration laeuft im Reiter wetter-metriken nicht');
 			const soll = hydrateVersandFieldsFromPreset(u.currentPreset);
 			for (const feld of ['morningEnabled', 'morningTime', 'eveningEnabled', 'eveningTime', 'sendEmail', 'sendTelegram', 'sendSms']) {
-				assert.deepEqual(u.wizardState[feld], (soll as Knoten)[feld], `wizardState.${feld} traegt nicht den gespeicherten Wert`);
+				assert.deepEqual(feldsatz[feld], (soll as Knoten)[feld], `Feldsatz.${feld} traegt nicht den gespeicherten Wert`);
 			}
 		});
 	}
+
+	test('#2727 AC-15 „Daten kommen spaet": vor der Hydration Standardwerte, danach Preset-Werte; Nutzerwert bleibt', async () => {
+		const { u, ast, quelle } = await hubOeffnen('wetter-metriken');
+		const feldsatz = hubFeldsatz(ast, u);
+		// Vor der Hydration: der Reiter ist nicht leer, er zeigt die Anlege-Standardwerte.
+		const vorher = versandPropsAus(feldsatz);
+		assert.equal(vorher.morningTime, '07:00');
+		assert.equal(vorher.morningEnabled, true);
+		assert.equal(vorher.eveningEnabled, false);
+		// Nutzer schaltet im Alarme-Reiter den Radar-Alarm an (Feld, das die Versand-Hydration nicht anfasst).
+		alarmePropsAus(feldsatz).onRadarAlertChange(true);
+		// Jetzt kommen die Daten: der Versand-Hydrations-Effekt laeuft.
+		for (const e of effekteVon(ast, quelle, u, 'hydrateVersandFieldsFromPreset')) e();
+		const nachher = versandPropsAus(feldsatz);
+		assert.equal(nachher.morningTime, '05:45', 'Versand-Reiter zeigt nach der Hydration nicht den gespeicherten Wert');
+		assert.equal(nachher.eveningEnabled, true);
+		assert.equal(nachher.eveningTime, '19:15');
+		assert.equal(nachher.sendTelegram, true);
+		assert.equal(alarmePropsAus(feldsatz).radarAlertEnabled, true, 'die spaete Hydration hat einen Nutzerwert ueberschrieben');
+	});
 
 	test('Gegenprobe: im Reiter Uebersicht wird der Versand nicht hydriert (lazy wie bisher)', async () => {
 		const { u, ast, quelle } = await hubOeffnen('uebersicht');

@@ -1,62 +1,64 @@
 // TDD RED — Issue #1250 Scheibe 0: Legacy-CompareSubscription-Stack stilllegen (#1131).
 // Spec: docs/specs/modules/issue_1250_briefing_subscription.md § AC-3
 //
-// AC-3: `wiz.save()`/`wiz.toggleEnabled()` (compareWizardState.svelte.ts:85,161) sind
-// FE-Totcode — sie schreiben in den Legacy-Store `/api/subscriptions`, der mit
-// Scheibe 0 abgeschafft wird. Dieser Test ist eine echte Verhaltens-Assertion
-// (Prototype-Inspektion der importierten Klasse), KEIN Dateiinhalt-Grep.
+// AC-3 (#1250): `save()`/`toggleEnabled()` der früheren Anlege-Zustandsklasse waren FE-Totcode —
+// sie schrieben in den Legacy-Store `/api/subscriptions`, der mit Scheibe 0 abgeschafft wurde.
 //
-// Direkt-Import von compareWizardState.svelte.ts (statt readFileSync-Grep wie in
-// issue_683_wizard_remove.test.ts) ist moeglich, weil Object.getOwnPropertyNames
-// auf dem Prototype arbeitet — die $state-Runen-Felder werden dabei NICHT
-// instanziiert (kein Svelte-Runtime-Kontext noetig), nur die Methoden-Namen auf
-// dem Prototype werden gelesen.
+// Umgebaut für Issue #2727 (Epic #2345, DoD-1) — Spec
+// docs/specs/modules/feat_2727_compare_wizardstate_abloesen.md, AC-22: die Klasse ist gelöscht,
+// die Zusicherung bleibt AM NEUEN ORT erhalten, und zwar als Verhalten statt als Prototype-Inspektion:
+//   (1) Anlegen im ECHTEN Anlege-Editor (Instanz-Prüfstand, ohne Context) sendet keinen einzigen
+//       Request an `/api/subscriptions` — Positivkontrolle: der POST an `/api/compare/presets` kommt an.
+//   (2) Der Feldsatz, den Editor und Hub halten (`compareFeldsatzStandard()`), trägt keine
+//       Speicher-Methoden (`save`, `toggleEnabled`, `saveNewPreset`) — er ist reine Daten.
+//
+// Warum heute rot: der Editor bekommt seinen Zustand nur über getContext (ohne Context leer),
+// `compareFeldsatzStandard` fehlt.
 //
 // Ausfuehrung:
-//   cd frontend && node --import ./test-lib-loader.mjs --experimental-strip-types --test \
+//   cd frontend && node --import ./test-lib-loader.mjs --experimental-strip-types \
+//     --experimental-test-module-mocks --test \
 //     src/lib/components/compare/__tests__/wizard_state_no_legacy_save.test.ts
 
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
+import { neuerFeldsatz } from '../../shared/__tests__/compareFeldsatzPruefstand.ts';
+import {
+	VERTRAG_FEHLT_EDITOR,
+	fetchMitschnitt,
+	vergleichEditor
+} from '../../shared/__tests__/compareNeuEditorPruefstand.ts';
 
-import { CompareWizardState } from '../compareWizardState.svelte.ts';
-
-describe('CompareWizardState — Legacy-Save-Totcode entfernt (AC-3, Issue #1250 Scheibe 0)', () => {
-	const protoMethods = Object.getOwnPropertyNames(CompareWizardState.prototype);
-
-	test('besitzt KEINE save()-Methode mehr (schrieb in Legacy-Store /api/subscriptions)', () => {
-		assert.strictEqual(
-			protoMethods.includes('save'),
-			false,
-			`CompareWizardState.prototype.save muss entfernt sein (Legacy-Totcode), ` +
-				`gefundene Methoden: ${protoMethods.join(', ')}`
-		);
+describe('#1250 AC-3 (am neuen Ort, #2727): kein Legacy-Save gegen /api/subscriptions', () => {
+	test('Anlegen im echten Anlege-Editor sendet nichts an /api/subscriptions, nur POST /api/compare/presets', async () => {
+		const netz = fetchMitschnitt('cmp-legacy');
+		try {
+			const e = await vergleichEditor({
+				stateOverride: {
+					activeTab: 'alarme',
+					isMobileViewport: false,
+					metrikenVisited: true,
+					idealsVisited: true,
+					alarmeVisited: true,
+					name: 'Legacy-Gegenprobe',
+					pickedIds: ['loc-a', 'loc-b']
+				}
+			});
+			assert.equal(e.u.nameOk, true, VERTRAG_FEHLT_EDITOR);
+			await e.u.handleActivate();
+			assert.equal(netz.presetPosts().length, 1, 'Positivkontrolle: POST /api/compare/presets fehlt');
+			const legacy = netz.anfragen.filter((a) => a.url.includes('/api/subscriptions'));
+			assert.deepEqual(legacy.map((a) => `${a.methode} ${a.url}`), [], 'Legacy-Store /api/subscriptions wird noch beschrieben');
+		} finally {
+			netz.abbauen();
+		}
 	});
 
-	test('besitzt KEINE toggleEnabled()-Methode mehr (schrieb in Legacy-Store /api/subscriptions)', () => {
-		assert.strictEqual(
-			protoMethods.includes('toggleEnabled'),
-			false,
-			`CompareWizardState.prototype.toggleEnabled muss entfernt sein (Legacy-Totcode), ` +
-				`gefundene Methoden: ${protoMethods.join(', ')}`
-		);
-	});
-
-	// Gegenprobe: der aktive, auf ComparePreset zielende Anlege-Pfad bleibt
-	// erhalten — dieser Test darf durch Scheibe 0 NICHT rot werden.
-	//
-	// Issue #2276 Scheibe S6a (AC-4): Die Assertion auf `saveComparePreset` ist
-	// hier ENTFALLEN. Die Methode hatte beim Stand `73f504c9` null Aufrufer und
-	// wird als Totcode zurueckgebaut (Befund 5 der Analyse; Nachweis in
-	// totcode_rueckbau_speicherweg.test.ts). Die eigentliche #1250-Zusicherung
-	// liegt in Test 1 und Test 2 oben — die sind UNVERAENDERT und bewachen
-	// weiterhin, dass `save()`/`toggleEnabled()` (Legacy-Store
-	// /api/subscriptions) nicht zurueckkehren. `saveNewPreset` bleibt gefordert:
-	// der Anlege-Pfad (POST /api/compare/presets) ist aktiv.
-	test('behaelt saveNewPreset() (aktiver ComparePreset-Anlege-Pfad)', () => {
-		assert.ok(
-			protoMethods.includes('saveNewPreset'),
-			'saveNewPreset() muss erhalten bleiben (zielt auf /api/compare/presets)'
-		);
+	test('der Feldsatz trägt keine Speicher-Methoden (save, toggleEnabled, saveNewPreset)', () => {
+		const f = neuerFeldsatz();
+		assert.ok('name' in f && 'pickedIds' in f, 'Positivkontrolle: Feldsatz ist bestückt');
+		for (const methode of ['save', 'toggleEnabled', 'saveNewPreset']) {
+			assert.ok(!(methode in f), `Feldsatz trägt ${methode}()`);
+		}
 	});
 });

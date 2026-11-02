@@ -37,7 +37,6 @@ import { execFileSync } from 'node:child_process';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import * as engine from '../anlegeLockEngine.ts';
-import { neuerWiz } from './infoboxSsr.ts';
 import {
 	TRIP_EDITOR,
 	COMPARE_EDITOR,
@@ -196,14 +195,12 @@ after(() => {
 });
 
 async function compareUmgebung(s: { name?: string; orte?: number; versand?: boolean }): Promise<EditorUmgebung> {
-	const wiz = neuerWiz({
-		name: s.name ?? 'Vergleich X',
-		pickedIds: Array.from({ length: s.orte ?? 2 }, (_, i) => `loc${i}`)
-	});
+	// Issue #2727 (AC-8/AC-10): kein Context mehr — Name und Orte reisen ueber stateOverride.
 	const alle = !!s.versand;
 	const e = await editorUmgebung(COMPARE_EDITOR, {
-		getContext: () => wiz,
 		stateOverride: {
+			name: s.name ?? 'Vergleich X',
+			pickedIds: Array.from({ length: s.orte ?? 2 }, (_, i) => `loc${i}`),
 			activeTab: 'vergleich',
 			isMobileViewport: false,
 			metrikenVisited: alle,

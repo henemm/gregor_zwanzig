@@ -5,10 +5,13 @@
 // sondern erst im Test (`lade(...)`): sonst bricht die ganze Datei mit EINEM
 // Importfehler ab und rot/gruen-Zaehlungen waeren bedeutungslos.
 //
-// Import-Reihenfolge ist Absicht: `compareWizardState.svelte.ts` benutzt
-// `$state(...)` als Klassenfeld und darf NICHT durch den Svelte-Compiler-Hook
-// laufen (js_parse_error bei `import type`). Deshalb: Shim -> Klasse laden ->
-// ERST DANN die SSR-Hooks registrieren.
+// Issue #2727 (Epic #2345, DoD-1, Spec feat_2727_compare_wizardstate_abloesen.md AC-10):
+// das geteilte Zustandsmodul des Ortsvergleichs ist abgeloest. Frueher lud dieser Helfer die
+// Zustandsklasse VOR den SSR-Hooks (eigener `$state`-Shim, Reihenfolge-Zwang) und reichte eine
+// Instanz per Context an `CompareNewEditor`. Beides entfaellt: der Anlege-Editor haelt seinen
+// Zustand selbst, Startwerte reisen ueber `stateOverride` (Muster TripNewEditor). Daten-Feldsaetze
+// fuer Organismus-Props liefert `compareFeldsatzPruefstand.neuerFeldsatz()`. Die SSR-Hooks werden
+// direkt registriert — es gibt kein Modul mehr, das vorher ausserhalb des Compilers laden muss.
 //
 // Pfadregel #1409: alles relativ zu DIESER Datei.
 
@@ -21,11 +24,6 @@ const HERE = path.dirname(fileURLToPath(import.meta.url));
 export const FRONTEND = path.resolve(HERE, '../../../../..');
 export const COMPONENTS = path.resolve(HERE, '../..');
 
-(globalThis as unknown as { $state: <T>(v: T) => T }).$state = <T>(v: T): T => v;
-const wizardModul = await import(
-	pathToFileURL(path.join(COMPONENTS, 'compare/compareWizardState.svelte.ts')).href
-);
-
 register(
 	pathToFileURL(path.join(COMPONENTS, 'trip-new/__tests__/ssrRunesHook.mjs')).href,
 	pathToFileURL(FRONTEND + '/').href
@@ -36,13 +34,6 @@ register(
 );
 
 const { render } = await import('svelte/server');
-
-/** Echte CompareWizardState-Instanz (Standardwerte des Anlegens). */
-export function neuerWiz(felder: Record<string, unknown> = {}): any {
-	const wiz = new wizardModul.CompareWizardState();
-	Object.assign(wiz, felder);
-	return wiz;
-}
 
 /** Laedt ein Modul relativ zu `src/lib/components/` erst beim Aufruf. */
 export async function lade(rel: string): Promise<any> {
@@ -62,15 +53,12 @@ export async function renderTrip(stateOverride: Record<string, unknown>): Promis
 	return renderKomponente(Editor, { stateOverride });
 }
 
-/** `/compare/new` mit echtem Wizard-Zustand: Name + zwei Orte, damit die Reiter frei sind. */
+/** `/compare/new` ohne Context: Name + zwei Orte ueber `stateOverride`, damit die Reiter frei sind. */
 export async function renderVergleichNeu(stateOverride: Record<string, unknown>): Promise<string> {
 	const Editor = await lade('compare-new/CompareNewEditor.svelte');
-	const wiz = neuerWiz({ name: 'Infobox-Test', pickedIds: ['loc-a', 'loc-b'] });
-	return renderKomponente(
-		Editor,
-		{ stateOverride },
-		new Map([['compare-wizard-state', wiz]])
-	);
+	return renderKomponente(Editor, {
+		stateOverride: { name: 'Infobox-Test', pickedIds: ['loc-a', 'loc-b'], ...stateOverride }
+	});
 }
 
 // ── HTML-Leser ───────────────────────────────────────────────────────────────

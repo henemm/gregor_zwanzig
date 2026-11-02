@@ -66,13 +66,14 @@ const TRIP_KETTE = ['route', 'etappen', 'wegpunkte', 'wetter-metriken', 'wertebe
 // ── Ortsvergleich-Anlegen ───────────────────────────────────────────────────────
 
 async function vergleichEditor() {
-	const wiz = { name: 'X', region: '', profile: 'wandern', pickedIds: ['a', 'b', 'c'] };
+	// Issue #2727 (AC-9): kein getContext-Saatwert mehr — Name und Orte reisen ueber stateOverride.
 	return umgebungFuer(
 		VERGLEICH_NEU,
 		{
 			untrack: (f: () => unknown) => f(),
-			getContext: () => wiz,
 			stateOverride: {
+				name: 'X',
+				pickedIds: ['a', 'b', 'c'],
 				activeTab: 'vergleich',
 				metrikenVisited: true,
 				idealsVisited: true,
