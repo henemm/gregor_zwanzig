@@ -101,8 +101,8 @@ Alle vier Pins geschehen in :func:`pin_production_origins`.
 - Braucht ``Authentication-Results: <mail_server_hostname>; spf=pass;
   dkim=pass`` (oder ``dmarc=pass`` als Alignment-Ersatz) UND
   ``settings.email_verified_at`` gesetzt. Fixtures:
-  ``tests/fixtures/authentication_results_fixtures.py::AR_PASS,
-  TEST_AUTHSERV_ID`` (Vorbild:
+  ``tests/fixtures/authentication_results_fixtures.py::ar_pass_for(<From>),
+  TEST_AUTHSERV_ID`` (#2252: Header muss zur From-Domain ausgerichtet sein; Vorbild:
   ``tests/test_inbound_reader_no_default_settings_lookup.py:79-97``).
 
 **Offline-Wetter — Fixture-Provider, EXAKTER Koordinatentreffer:**
@@ -312,7 +312,7 @@ from services.trip_command_processor import (
 )
 from services.inbound_telegram_reader import _CALLBACK_QUERY_MAP
 from services.trip_selection import KEIN_KANDIDAT_TEXT
-from tests.fixtures.authentication_results_fixtures import AR_PASS, TEST_AUTHSERV_ID
+from tests.fixtures.authentication_results_fixtures import TEST_AUTHSERV_ID, ar_pass_for
 from tests.helpers.telegram_empfaenger import numerische_chat_id
 
 # ---------------------------------------------------------------------------
@@ -1172,7 +1172,7 @@ def _mime_plain(from_addr: str, subject: str, body: str) -> bytes:
         f"From: {from_addr}",
         "To: cmd@example.com",
         f"Subject: {subject}",
-        f"Authentication-Results: {AR_PASS}",
+        f"Authentication-Results: {ar_pass_for(from_addr)}",
         "MIME-Version: 1.0",
         "Content-Type: text/plain; charset=utf-8",
         "",
@@ -1198,7 +1198,7 @@ def _mime_apple_html_only(from_addr: str, subject: str, befehl: str) -> bytes:
         f"From: {from_addr}\r\n"
         "To: cmd@example.com\r\n"
         f"Subject: {subject}\r\n"
-        f"Authentication-Results: {AR_PASS}\r\n"
+        f"Authentication-Results: {ar_pass_for(from_addr)}\r\n"
         "MIME-Version: 1.0\r\n"
         f'Content-Type: multipart/alternative; boundary="{boundary}"\r\n'
         "\r\n"
@@ -1222,7 +1222,7 @@ def _mime_alternative_beide(from_addr: str, subject: str, befehl: str) -> bytes:
         f"From: {from_addr}\r\n"
         "To: cmd@example.com\r\n"
         f"Subject: {subject}\r\n"
-        f"Authentication-Results: {AR_PASS}\r\n"
+        f"Authentication-Results: {ar_pass_for(from_addr)}\r\n"
         "MIME-Version: 1.0\r\n"
         f'Content-Type: multipart/alternative; boundary="{boundary}"\r\n'
         "\r\n"

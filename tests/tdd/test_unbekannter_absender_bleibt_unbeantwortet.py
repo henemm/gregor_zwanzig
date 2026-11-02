@@ -42,8 +42,8 @@ from app.loader import load_all_trips, save_trip  # noqa: E402
 from app.trip import Stage, Trip, Waypoint  # noqa: E402
 from services.inbound_email_reader import InboundEmailReader  # noqa: E402
 from tests.fixtures.authentication_results_fixtures import (  # noqa: E402
-    AR_PASS,
     TEST_AUTHSERV_ID,
+    ar_pass_for,
 )
 
 #: Exakter Standort aus ``providers/fixture.py::_FIXTURE_LOCATIONS`` — nur
@@ -232,7 +232,7 @@ def test_ac3_bekannter_absender_mit_existierendem_trip_erhaelt_sehr_wohl_eine_an
         from_addr=BASIS_MAIL_TO,
         subject=f"[{trip.name}] Status",
         body="status",
-        auth_header=AR_PASS,
+        auth_header=ar_pass_for(BASIS_MAIL_TO),
     )
     imap = _FakeImap(raw)
 

@@ -45,7 +45,7 @@ import services.inbound_email_reader as _reader_mod  # noqa: E402
 from services.inbound_email_reader import InboundEmailReader  # noqa: E402
 from services.notification_service import NotificationService  # noqa: E402
 from services.trip_command_processor import TripCommandProcessor  # noqa: E402
-from tests.fixtures.authentication_results_fixtures import AR_PASS, TEST_AUTHSERV_ID  # noqa: E402
+from tests.fixtures.authentication_results_fixtures import TEST_AUTHSERV_ID, ar_pass_for  # noqa: E402
 
 VERIFIED = "2026-01-01T00:00:00Z"
 LAT, LON = 47.2692, 11.4041
@@ -91,7 +91,7 @@ def _msg(from_addr: str, trip_name: str) -> email.message.Message:
         f"From: {from_addr}",
         "To: cmd@example.com",
         f"Subject: [{trip_name}] Befehl",
-        f"Authentication-Results: {AR_PASS}",
+        f"Authentication-Results: {ar_pass_for(from_addr)}",
         "",
         "status",
     ]).encode("utf-8")

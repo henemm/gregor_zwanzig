@@ -14,6 +14,7 @@ import email.utils
 import imaplib
 import logging
 import re
+from dataclasses import dataclass
 from datetime import datetime, timezone
 from email.header import decode_header, make_header
 from html.parser import HTMLParser
@@ -39,28 +40,149 @@ def _norm(s: str) -> str:
     return re.sub(r"\s+", " ", s.replace("_", " ")).strip().lower()
 
 
-def parse_authentication_results(header_value: str) -> tuple[str | None, dict[str, str]]:
-    """RFC-8601-Parsing: liefert (authserv-id, {method: result, ...}).
+@dataclass(frozen=True)
+class AuthResultSegment:
+    """Ein Ergebnis-Segment eines Authentication-Results-Headers (RFC 8601)."""
 
-    Format: "<authserv-id>; method1=result1 param=val param2=val; method2=result2 ...".
-    Nur der jeweils ERSTE Token nach '=' pro Segment zaehlt als method=result,
-    weitere Tokens im Segment (z.B. header.d=..., smtp.mailfrom=...) sind
-    Zusatzparameter und werden ignoriert.
+    method: str
+    result: str
+    props: dict[str, str]
+
+
+def _tokenize_auth_results(text: str) -> list[list[str]] | None:
+    """Zustandsautomat (#2252, Spec 5a): zerlegt den Header in Abschnitte
+    (``;`` nur auf oberster Ebene) aus Woertern (Leerraum-getrennt).
+    quoted-strings werden entpackt (``\\``-Escapes aufgeloest), Kommentare
+    (verschachtelt) entfernt. Unbalancierte Quotes/Klammern ⇒ ``None``."""
+    sections: list[list[str]] = [[]]
+    word: list[str] = []
+    depth, in_quote, i = 0, False, 0
+
+    def flush() -> None:
+        if word:
+            sections[-1].append("".join(word))
+            word.clear()
+
+    while i < len(text):
+        ch = text[i]
+        if (in_quote or depth) and ch == "\\":
+            if i + 1 >= len(text):
+                return None
+            if in_quote:
+                word.append(text[i + 1])
+            i += 2
+            continue
+        if in_quote:
+            in_quote = ch != '"'
+            if in_quote:
+                word.append(ch)
+        elif depth:
+            depth += {"(": 1, ")": -1}.get(ch, 0)
+        elif ch == '"':
+            in_quote = True
+        elif ch == "(":
+            flush()
+            depth = 1
+        elif ch == ")":
+            return None
+        elif ch == ";" or ch.isspace():
+            flush()
+            if ch == ";":
+                sections.append([])
+        else:
+            word.append(ch)
+        i += 1
+    if in_quote or depth:
+        return None
+    flush()
+    return sections
+
+
+def _segment_from_words(words: list[str]) -> AuthResultSegment | None:
+    """Erstes Wort ``method=result``, danach Properties ``ptype.property=value``
+    (Trennung am ERSTEN ``=``). Ohne ``method=result`` ⇒ ``None``."""
+    if not words or "=" not in words[0]:
+        return None
+    method, result = words[0].split("=", 1)
+    if not method or not result:
+        return None
+    props: dict[str, str] = {}
+    for word in words[1:]:
+        if "=" in word:
+            key, value = word.split("=", 1)
+            props.setdefault(key.lower(), value)
+    return AuthResultSegment(method.lower(), result.lower(), props)
+
+
+def _has_duplicate_property(words: list[str]) -> bool:
+    """F002 (#2252): derselbe ``ptype.property``-Schluessel zweimal in einem
+    Abschnitt ist mehrdeutig ⇒ der ganze Header gilt als unlesbar (fail-closed,
+    nie "erster/letzter gewinnt")."""
+    keys = [w.split("=", 1)[0].lower() for w in words[1:] if "=" in w]
+    return len(keys) != len(set(keys))
+
+
+def parse_authentication_results_segments(
+    header_value: str,
+) -> tuple[str | None, list[AuthResultSegment]] | None:
+    """RFC-8601-Parsing (#2252): ``(authserv-id, [Segment, ...])`` oder
+    ``None`` bei Parse-Fehler (fail-closed beim Aufrufer)."""
+    sections = _tokenize_auth_results(header_value)
+    if sections is None or any(_has_duplicate_property(w) for w in sections[1:]):
+        return None
+    authserv_id = " ".join(sections[0]) or None
+    segments = [seg for words in sections[1:] if (seg := _segment_from_words(words))]
+    return authserv_id, segments
+
+
+def parse_authentication_results(header_value: str) -> tuple[str | None, dict[str, str]]:
+    """Duenner Wrapper: liefert (authserv-id, {method: result, ...}).
+
+    Mehrere Segmente einer Methode mit GLEICHEM Ergebnis ⇒ dieses Ergebnis;
+    widerspruechliche Ergebnisse ⇒ kein Eintrag (nie "das letzte gewinnt").
+    Parse-Fehler ⇒ ``(None, {})``. Trifft keine Annahme-Entscheidung.
     """
-    segments = [s.strip() for s in header_value.split(";")]
-    if not segments:
+    parsed = parse_authentication_results_segments(header_value)
+    if parsed is None:
         return None, {}
-    authserv_id = segments[0] or None
-    results: dict[str, str] = {}
-    for segment in segments[1:]:
-        if not segment:
-            continue
-        first_token = segment.split()[0]
-        if "=" not in first_token:
-            continue
-        method, result = first_token.split("=", 1)
-        results[method.strip().lower()] = result.strip().lower()
+    authserv_id, segments = parsed
+    by_method: dict[str, set[str]] = {}
+    for seg in segments:
+        by_method.setdefault(seg.method, set()).add(seg.result)
+    results = {m: next(iter(r)) for m, r in by_method.items() if len(r) == 1}
     return authserv_id, results
+
+
+def _norm_domain(domain: str) -> str:
+    """Kleinschreibung, abschliessender Punkt entfernt."""
+    domain = domain.strip().lower()
+    return domain[:-1] if domain.endswith(".") else domain
+
+
+def _domain_aligned(domain: str, from_domain: str) -> bool:
+    """``domain`` ist ``from_domain`` oder eine Subdomain davon (nie umgekehrt)."""
+    domain = _norm_domain(domain)
+    return domain == from_domain or domain.endswith("." + from_domain)
+
+
+def _alignment_accepts(segments: list[AuthResultSegment], from_domain: str) -> bool:
+    """Annahmeregel V3 (Spec 5a): (a) genau ein dmarc-Segment, pass,
+    ``header.from == from_domain``; (b) genau ein spf-Segment mit
+    ``smtp.mailfrom``, pass, ausgerichtet; (c) irgendein ausgerichtetes dkim=pass."""
+    dmarcs = [s for s in segments if s.method == "dmarc"]
+    if (len(dmarcs) == 1 and dmarcs[0].result == "pass"
+            and "header.from" in dmarcs[0].props
+            and _norm_domain(dmarcs[0].props["header.from"]) == from_domain):
+        return True
+    mailfroms = [s for s in segments if s.method == "spf" and "smtp.mailfrom" in s.props]
+    if (len(mailfroms) == 1 and mailfroms[0].result == "pass"
+            and _domain_aligned(mailfroms[0].props["smtp.mailfrom"].rpartition("@")[2], from_domain)):
+        return True
+    return any(
+        s.method == "dkim" and s.result == "pass" and "header.d" in s.props
+        and _domain_aligned(s.props["header.d"], from_domain)
+        for s in segments
+    )
 
 
 class _BefehlsHtmlParser(HTMLParser):
@@ -359,28 +481,52 @@ class InboundEmailReader:
         if not settings.email_verified_at:
             logger.warning(f"Sender not verified: {mask_addr_for_pii_log(sender)!r}")
             return False
-        if not self._spf_dkim_pass(msg, settings.mail_server_hostname):
+        # #2252 (AC-14): genau ein From:-Header mit genau einer Adresse.
+        if not self._single_from_address(msg):
+            logger.warning(f"Ambiguous From header: {mask_addr_for_pii_log(sender)!r}")
+            return False
+        from_domain = sender.rpartition("@")[2]
+        if not self._spf_dkim_pass(msg, settings.mail_server_hostname, from_domain):
             logger.warning(f"SPF/DKIM check failed: {mask_addr_for_pii_log(sender)!r}")
             return False
         return True
 
+    def _single_from_address(self, msg: email.message.Message) -> bool:
+        """#2252 (AC-14): genau ein ``From:``-Header mit genau einer Adresse;
+        ein Komma im quoted Anzeigenamen ist keine zweite Adresse."""
+        froms = msg.get_all("From") or []
+        if len(froms) != 1:
+            return False
+        addresses = email.utils.getaddresses([str(froms[0])])
+        return len(addresses) == 1 and bool(addresses[0][1])
+
     def _spf_dkim_pass(
         self, msg: email.message.Message, expected_authserv_id: str | None,
+        from_domain: str,
     ) -> bool:
         """Nur der ERSTE Authentication-Results-Header zaehlt (msg.get(), NIE
         get_all() -- Stalwart prependt seinen echten Header, ein Angreifer
-        koennte einen zweiten gefaelschten Header mit pass anhaengen, AC-5)."""
-        if not expected_authserv_id:
+        koennte einen zweiten gefaelschten Header mit pass anhaengen, AC-5).
+
+        #2252 (Spec 5a): Quote-Sperre, Tokenizer (Parse-Fehler ⇒ ablehnen),
+        authserv-id-Vergleich, dann Annahmeregel V3 mit Ausrichtung zur
+        ``from_domain`` -- alles fail-closed."""
+        from_domain = _norm_domain(from_domain or "")
+        if not expected_authserv_id or not from_domain:
             return False
         header_value = msg.get("Authentication-Results")
         if not header_value:
             return False
-        authserv_id, results = parse_authentication_results(header_value)
+        header_value = str(header_value)
+        if '"' in header_value:
+            return False
+        parsed = parse_authentication_results_segments(header_value)
+        if parsed is None:
+            return False
+        authserv_id, segments = parsed
         if authserv_id != expected_authserv_id:
             return False
-        return results.get("spf") == "pass" and (
-            results.get("dkim") == "pass" or results.get("dmarc") == "pass"
-        )
+        return _alignment_accepts(segments, from_domain)
 
     def _extract_plain_body(self, msg: email.message.Message) -> str:
         """Extract plain-text body. Multipart: first text/plain part; fehlt
