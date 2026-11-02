@@ -145,8 +145,9 @@ describe('Allowlist-Pruefung (AC-3)', () => {
 		]);
 	});
 
-	test('Allowlist ist sortiert, eindeutig und nicht leer', () => {
-		assert.ok(ALLOWLIST.length > 0);
+	// #2661 (F12): die Allowlist ist leer; dass sie leer BLEIBT, haelt hardcode_allowlist_leer.test.ts fest.
+	test('Allowlist ist sortiert und eindeutig', () => {
+		assert.ok(Array.isArray(ALLOWLIST));
 		assert.deepEqual([...new Set(ALLOWLIST)].sort(), ALLOWLIST);
 	});
 
