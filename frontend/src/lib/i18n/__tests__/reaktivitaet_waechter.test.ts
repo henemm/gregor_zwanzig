@@ -58,6 +58,16 @@ const BEREICHE: Record<string, string[]> = {
 		'lib/components/shared/MailInhaltCard.svelte',
 		'lib/components/shared/weather-metrics-tab/WeatherV2Reihenfolge.svelte',
 		'routes/gpx-upload/'
+	],
+	'F9 #2658 Trip-Hub, Anlegen, Etappen-Editor, Vorschau-Rahmen': [
+		'lib/components/trip-detail/',
+		'lib/components/trip-new/',
+		'lib/components/edit/',
+		'lib/components/email-preview/',
+		'lib/components/shared/subscription-header/',
+		'lib/components/shared/BriefingHistory.svelte',
+		'routes/trips/[id]/',
+		'routes/trips/new/'
 	]
 };
 

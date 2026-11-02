@@ -406,6 +406,27 @@ describe('TypeScript-Ratsche (F11, AC-6)', () => {
 		assert.equal(pruefeGegenAllowlist([{ pfad: 'lib/components/shared/corridor-editor/corridorEditorState.ts', treffer }], ALLOWLIST).ohneEintrag.length, 1);
 	});
 
+	// Issue #2658 (i18n F9, AC-8): Trip-Hub, Anlegen, Etappen-Editor, Vorschau-Rahmen,
+	// SubscriptionHeader und BriefingHistory stehen unter keinem Eintrag mehr; ihre
+	// .ts-Helfer (Aktionsliste, Reiter, Anlege-Logik, Trip-Loader) unter der TS-Ratsche.
+	test('F9: kein Allowlist-Eintrag deckt Trip-Hub, Anlegen, Etappen-Editor, Vorschau-Rahmen, SubscriptionHeader, BriefingHistory', () => {
+		const deckt = (a: string, p: string) => (a.endsWith('/') ? p.startsWith(a) : p === a);
+		const alle = scanneVerzeichnis(SRC);
+		const F9_PRAEFIXE = ['lib/components/trip-detail/', 'lib/components/trip-new/', 'lib/components/edit/', 'lib/components/email-preview/', 'lib/components/shared/subscription-header/', 'routes/trips/'];
+		const F9_DATEIEN = ['lib/components/shared/BriefingHistory.svelte', 'lib/components/shared/subscriptionActions.ts', 'lib/components/shared/subscriptionTabs.ts'];
+		const F9 = alle.map((e) => e.pfad).filter((p) => F9_DATEIEN.includes(p) || F9_PRAEFIXE.some((v) => p.startsWith(v)));
+		for (const p of ['lib/components/trip-detail/TripHeader.svelte', 'lib/components/trip-detail/waypoints/WaypointCard.svelte', 'lib/components/trip-new/TripNewEditor.svelte', 'lib/components/trip-new/tripNewLogic.ts', 'lib/components/edit/EditStagesPanelNew.svelte', 'lib/components/email-preview/EmailPreviewHeader.svelte', 'routes/trips/[id]/+page.svelte', 'routes/trips/[id]/+page.server.ts', ...F9_DATEIEN])
+			assert.ok(F9.includes(p), `Messaufbau: ${p} nicht gescannt`);
+		assert.deepEqual(F9.filter((p) => ALLOWLIST.some((a) => deckt(a, p))), []);
+		for (const alt of ['lib/components/trip-detail/', 'lib/components/trip-new/', 'lib/components/edit/', 'lib/components/email-preview/', 'lib/components/shared/BriefingHistory.svelte', 'lib/components/shared/subscription-header/', 'routes/trips/[id]/'])
+			assert.ok(!ALLOWLIST.includes(alt), alt);
+		assert.deepEqual(alle.filter((e) => F9.includes(e.pfad) && e.treffer.length > 0).map((e) => `${e.pfad}: ${e.treffer.map((t) => t.text).join(' | ')}`), []);
+		// Gegenprobe: ein zurueckgekehrtes deutsches Literal waere ein Treffer ohne Eintrag.
+		const treffer = scanneTs("{ id: 'delete', label: 'Löschen', danger: true }");
+		assert.equal(pruefeGegenAllowlist([{ pfad: 'lib/components/shared/subscriptionActions.ts', treffer }], ALLOWLIST).ohneEintrag.length, 1);
+		assert.equal(wirdGescanntTs('lib/components/trip-new/__tests__/f9x.ts'), false);
+	});
+
 	test('Allowlist enthaelt die acht F11-Praefixe nicht mehr', () => {
 		const F11 = [
 			'lib/components/ui/',

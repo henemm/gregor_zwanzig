@@ -16,6 +16,7 @@ import { dirname, join } from 'node:path';
 import { de } from '../messages/de/index.ts';
 import { tr, trFor, type MessageKey } from '../index.ts';
 import { F5_ANKER } from '../../components/shared/weather-metrics-tab/__tests__/f5KatalogAnker.ts';
+import { F9_ANKER } from '../../components/trip-detail/__tests__/f9KatalogAnker.ts';
 
 const GOLDEN = JSON.parse(
 	readFileSync(join(dirname(fileURLToPath(import.meta.url)), 'fixtures', 'de_katalog_vor_i18n.json'), 'utf-8')
@@ -225,6 +226,8 @@ const NEU_IN_F8 = [
 	'layout.gpx.fehler_keine_datei', 'layout.gpx.fehler_zu_gross', 'layout.gpx.fehler_nur_gpx',
 	'layout.gpx.fehler_hochladen', 'layout.gpx.fehler_name', 'layout.gpx.fehler_speichern'
 ];
+/** #2658 (F9) Trip-Flaechen: neue Schluessel aktionen.*, trip.*, vergleich.anlegen.* (feste Anker-Tabelle). */
+const NEU_IN_F9 = F9_ANKER.map(([k]) => k);
 const NEU_IN_FOLGEPAKETEN = [
 	// #2648 (S3) Sprachumschalter und Konto-Sprache
 	'konto.sprache.titel',
@@ -445,7 +448,7 @@ test('AC-5: jeder Bestandsschluessel ist mit byte-gleichem Wert in der de-Karte'
 
 test('AC-5: die de-Karte enthaelt ausser dem Bestand nur die neuen Schluessel dieses und der Folgepakete', () => {
 	const extra = Object.keys(de).filter((k) => !(k in GOLDEN)).sort();
-	assert.deepEqual(extra, [...NEU_IN_S2, ...NEU_IN_F3, ...NEU_IN_F4, ...NEU_IN_F6, ...NEU_IN_F5, ...NEU_IN_F8, ...NEU_IN_FOLGEPAKETEN].sort());
+	assert.deepEqual(extra, [...NEU_IN_S2, ...NEU_IN_F3, ...NEU_IN_F4, ...NEU_IN_F6, ...NEU_IN_F5, ...NEU_IN_F8, ...NEU_IN_F9, ...NEU_IN_FOLGEPAKETEN].sort());
 });
 
 test('AC-5: trFor(de) und tr() mit Standard-Locale liefern die Bestandstexte unveraendert', () => {

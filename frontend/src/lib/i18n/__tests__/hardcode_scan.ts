@@ -198,7 +198,16 @@ export const TS_KOMPONENTEN_ORDNER = [
 	'lib/components/shared/layout-tab/',
 	'lib/components/shared/corridor-editor/',
 	'lib/components/shared/mailInhaltKonstanten.ts',
-	'routes/gpx-upload/'
+	'routes/gpx-upload/',
+	// F9 (#2658): Aktionsliste, Reiter, Anlege-Logik, Etappen-Editor, Vorschau-Rahmen, Trip-Loader.
+	// trip-detail/metricsEditor.ts bleibt aussen vor: INDICATOR_MAP/CATEGORY_LABELS sind
+	// Katalogdaten (Spec F9 §Affected Files: „IDs, Kataloge, Logik unveraendert").
+	'lib/components/shared/subscriptionActions.ts',
+	'lib/components/shared/subscriptionTabs.ts',
+	'lib/components/trip-new/',
+	'lib/components/edit/',
+	'lib/components/email-preview/',
+	'routes/trips/'
 ];
 
 /** Pfad relativ zu frontend/src/ mit Schraegstrichen. */
