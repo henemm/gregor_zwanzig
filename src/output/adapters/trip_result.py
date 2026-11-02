@@ -6,6 +6,11 @@ Bridges the domain DTOs (`TripForecastResult` / `AggregatedSummary` /
 
 Pure functions, deterministic, no I/O. See
 `docs/specs/modules/wintersport_profile_consolidation.md` §3.3, §5.1.
+
+i18n (#2751): einziger Aufrufer ist die Debug-CLI (`src/app/cli.py`), die keinen
+Nutzerkontext und damit keine Nutzersprache kennt (ADR-0104 Nr. 1); ihre
+Ausgabe erreicht keinen Nutzer. Die deutschen Beschriftungen tragen deshalb
+`# i18n-log` (Betreiber-/Debug-Ausgabe), keine Katalogschluessel.
 """
 from __future__ import annotations
 
@@ -100,12 +105,12 @@ def _waypoint_to_detail(wf: WaypointForecast) -> WaypointDetail:
         if dp.t2m_c is not None:
             temp_str = f"{dp.t2m_c:.1f}°C"
             if dp.wind_chill_c is not None and dp.wind_chill_c < dp.t2m_c - 3:
-                temp_str += f" (gefühlt {dp.wind_chill_c:.1f}°C)"
+                temp_str += f" (gefühlt {dp.wind_chill_c:.1f}°C)"  # i18n-log
             details.append(temp_str)
         if dp.wind10m_kmh is not None:
             wind_str = f"Wind {dp.wind10m_kmh:.0f} km/h"
             if dp.gust_kmh is not None and dp.gust_kmh > dp.wind10m_kmh * 1.3:
-                wind_str += f" (Böen {dp.gust_kmh:.0f})"
+                wind_str += f" (Böen {dp.gust_kmh:.0f})"  # i18n-log
             details.append(wind_str)
         lines.extend(details)
 
@@ -166,7 +171,7 @@ def _summary_to_rows(summary: AggregatedSummary) -> list[tuple[str, str]]:
         g = f"{summary.gust.value:.0f} km/h"
         if summary.gust.source_waypoint:
             g += f" ({summary.gust.source_waypoint})"
-        rows.append(("Böen", g))
+        rows.append(("Böen", g))  # i18n-log
 
     if summary.precipitation.value is not None and summary.precipitation.value > 0:
         rows.append(("Niederschlag", f"{summary.precipitation.value:.1f} mm"))
@@ -178,7 +183,7 @@ def _summary_to_rows(summary: AggregatedSummary) -> list[tuple[str, str]]:
         sd = f"{summary.snow_depth.value:.0f} cm"
         if summary.snow_depth.source_waypoint:
             sd += f" ({summary.snow_depth.source_waypoint})"
-        rows.append(("Schneehöhe", sd))
+        rows.append(("Schneehöhe", sd))  # i18n-log
 
     if summary.snowfall_limit.value is not None:
         rows.append(("Schneefallgr.", f"{summary.snowfall_limit.value:.0f} m"))
@@ -188,7 +193,7 @@ def _summary_to_rows(summary: AggregatedSummary) -> list[tuple[str, str]]:
         rows.append(("Sicht", f"{vis_km:.1f} km"))
 
     if summary.cloud_cover.value is not None:
-        rows.append(("Bewölkung", f"{summary.cloud_cover.value:.0f}%"))
+        rows.append(("Bewölkung", f"{summary.cloud_cover.value:.0f}%"))  # i18n-log
 
     return rows
 

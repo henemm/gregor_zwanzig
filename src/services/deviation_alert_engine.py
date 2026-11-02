@@ -130,7 +130,7 @@ class DeviationAlertEngine:
             logger.warning(
                 f"Unbrauchbarer Ruhezeit-Wert{f' fuer {context_label}' if context_label else ''} "
                 f"(alert_quiet_from={quiet_from!r}, alert_quiet_to={quiet_to!r}): "
-                f"{type(e).__name__}: {e} — wird wie 'keine Ruhezeit gesetzt' behandelt."
+                f"{type(e).__name__}: {e} — wird wie 'keine Ruhezeit gesetzt' behandelt."  # i18n-log
             )
             return False
         current = local_now.time()

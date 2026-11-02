@@ -140,7 +140,7 @@ class SmsRecipient:
         profile = _load_profile(user_id)
         number = _profile_text(profile, "sms_to")
         if not number or _profile_text(profile, "sms_verified_number") != number:
-            raise _sms_block(user_id, "sms_no_recipient", "keine bestaetigte SMS-Nummer im Profil")
+            raise _sms_block(user_id, "sms_no_recipient", "keine bestaetigte SMS-Nummer im Profil")  # i18n-log
         return cls(number, RecipientPurpose.user_profile, user_id, _FABRIK)
 
     @classmethod
@@ -154,7 +154,7 @@ class SmsRecipient:
         if not bound or candidate != bound:
             raise _sms_block(
                 user_id, "sms_verification_number_not_bound",
-                "Nummer ist nicht die zu bestaetigende Nummer des Profils",
+                "Nummer ist nicht die zu bestaetigende Nummer des Profils",  # i18n-log
             )
         return cls(candidate, RecipientPurpose.verification, user_id, _FABRIK)
 

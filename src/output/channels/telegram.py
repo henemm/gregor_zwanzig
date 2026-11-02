@@ -229,7 +229,7 @@ class TelegramOutput:
         if not test_chat_id:
             raise OutputConfigError(
                 "telegram",
-                "Herkunftssperre (Issue #1476): Code laeuft aus einem "
+                "Herkunftssperre (Issue #1476): Code laeuft aus einem "  # i18n-log
                 "Testlauf-Verzeichnis (nicht Prod-/Staging-Checkout), aber "
                 "keine Test-Chat-ID konfiguriert (GZ_TELEGRAM_TEST_CHAT_ID) "
                 f"-- Versand an chat_id={chat_id!r} abgebrochen.",
@@ -258,7 +258,7 @@ class TelegramOutput:
         if not test_chat_id or str(chat_id) != str(test_chat_id):
             raise OutputConfigError(
                 "telegram",
-                f"Test-Modus aktiv, aber chat_id={chat_id!r} ist nicht die "
+                f"Test-Modus aktiv, aber chat_id={chat_id!r} ist nicht die "  # i18n-log
                 "konfigurierte Test-Chat-ID (GZ_TELEGRAM_TEST_CHAT_ID) — "
                 "Versand blockiert (Issue #1288).",
             )
@@ -277,7 +277,7 @@ class TelegramOutput:
         if not test_token or active != test_token:
             raise OutputConfigError(
                 "telegram",
-                "Test-Modus aktiv, aber es ist nicht der Test-Bot-Token "
+                "Test-Modus aktiv, aber es ist nicht der Test-Bot-Token "  # i18n-log
                 "(GZ_TELEGRAM_TEST_BOT_TOKEN) — Versand blockiert (Issue #1363).",
             )
 
@@ -294,7 +294,7 @@ class TelegramOutput:
         if not test_chat_id or str(chat_id) != str(test_chat_id):
             raise OutputConfigError(
                 "telegram",
-                f"Test-Modus aktiv, aber chat_id={chat_id!r} ist nicht die "
+                f"Test-Modus aktiv, aber chat_id={chat_id!r} ist nicht die "  # i18n-log
                 "konfigurierte Test-Chat-ID (GZ_TELEGRAM_TEST_CHAT_ID) — "
                 "Versand blockiert (Issue #1363).",
             )
@@ -309,7 +309,7 @@ class TelegramOutput:
 
         chat = normalize_chat_id(chat_id)
         if not _CHAT_ID_RE.fullmatch(chat):
-            raise _block("telegram_invalid_chat_id", "Chat-ID ist nicht numerisch.")
+            raise _block("telegram_invalid_chat_id", "Chat-ID ist nicht numerisch.")  # i18n-log
         recipient = self._recipient
         if recipient is None:
             raise _block("telegram_no_recipient", "kein belegter Empfaenger uebergeben.")
@@ -319,7 +319,7 @@ class TelegramOutput:
             if normalize_chat_id(_current_inbound_sender.get()) != chat:
                 raise _block(
                     "telegram_not_inbound_sender",
-                    "Antwort-Ziel ist nicht der Absender des laufenden Updates.",
+                    "Antwort-Ziel ist nicht der Absender des laufenden Updates.",  # i18n-log
                 )
         elif recipient.purpose != RecipientPurpose.user_profile:
             raise _block("telegram_unknown_purpose", "unbekannter Empfaenger-Zweck.")
@@ -379,7 +379,7 @@ class TelegramOutput:
             if remaining <= 0:
                 waited = time.monotonic() - start
                 logger.warning(
-                    "Telegram-Drossel: Abbruch nach %.2fs Wartezeit (chat=%s) "
+                    "Telegram-Drossel: Abbruch nach %.2fs Wartezeit (chat=%s) "  # i18n-log
                     "-- SEND_SLOT_MAX_WAIT_SECONDS (%.0fs) ueberschritten, "
                     "Nachricht wird NICHT gesendet",
                     waited, mask_number(chat_key), SEND_SLOT_MAX_WAIT_SECONDS,

@@ -58,7 +58,7 @@ def loaded_trip(trip_id: str, user_id: str = Query(...)):
     if trip is None:
         raise HTTPException(
             status_code=404,
-            detail=f"Trip {trip_id} nicht gefunden fuer User {user_id}",
+            detail=f"Trip {trip_id} nicht gefunden fuer User {user_id}",  # i18n-log
         )
     return _trip_to_dict(trip)
 
@@ -261,7 +261,7 @@ def _letzte_einfuegen(user_id: str, trips: dict, compare: dict) -> None:
         from services.briefing_log import letzte_briefings
         letzte = letzte_briefings(user_id)
     except Exception:
-        logging.getLogger(__name__).exception("next-briefings: Briefing-Log nicht lesbar")
+        logging.getLogger(__name__).exception("next-briefings: Briefing-Log nicht lesbar")  # i18n-log
         letzte = {}
     for art, ziel in (("trip", trips), ("compare", compare)):
         for objekt_id, nb in ziel.items():

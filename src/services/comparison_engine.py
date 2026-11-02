@@ -16,6 +16,7 @@ from datetime import datetime, time, timedelta, timezone
 from typing import Any, Dict, List, Optional, TYPE_CHECKING
 
 from app.user import ComparisonResult, LocationResult, SavedLocation
+from i18n import resolve_user_lang, t
 from services.comparison_scoring import calculate_score
 from services.weather_metrics import WeatherMetricsService, summarize_points
 from utils.timezone import local_dt, location_tz, to_utc
@@ -93,8 +94,15 @@ def _fetch_compare_series(
         if hasattr(provider, "close"):
             provider.close()
     if weather.has_error:
-        return None, weather.error_message or "Wetterabruf fehlgeschlagen"
+        return None, _abruf_fehlertext(weather.error_message, user_id)
     return weather.timeseries, None
+
+
+def _abruf_fehlertext(meldung: Optional[str], user_id: Optional[str]) -> str:
+    """Meldung der Quelle, sonst der Ersatztext in der Kontosprache (#2751)."""
+    if meldung:
+        return meldung
+    return t("vergleich.ort.abruf_fehlgeschlagen", resolve_user_lang(user_id or ""))
 
 
 def fetch_location_official_alerts(lat: float, lon: float) -> tuple:
@@ -214,7 +222,7 @@ class ComparisonEngine:
                     # Datenschicht, NICHT in den Renderern (die laufen fuer
                     # dieselbe Mail zweimal, HTML + Klartext -- Spec §4).
                     logger.warning(
-                        "Ort %s: Ausblick nicht verfuegbar (Fetch-Fehler: %s)",
+                        "Ort %s: Ausblick nicht verfuegbar (Fetch-Fehler: %s)",  # i18n-log
                         loc.name, raw_result["error"],
                     )
                     results.append(LocationResult(
@@ -261,7 +269,7 @@ class ComparisonEngine:
                     # dafuer wortlos aus der Mail; der Empfaenger sah eine
                     # unerklaerte Leerstelle, das Log gar nichts.
                     logger.warning(
-                        "Ort %s: kein Ausblick — keine Daten in den naechsten "
+                        "Ort %s: kein Ausblick — keine Daten in den naechsten "  # i18n-log
                         "3 Tagen", loc.name,
                     )
 
@@ -402,7 +410,7 @@ class ComparisonEngine:
                         )
                     except Exception:
                         logger.warning(
-                            "comparison_engine: official_alerts nicht ladbar — "
+                            "comparison_engine: official_alerts nicht ladbar — "  # i18n-log
                             "Alerts fuer diesen Ort deaktiviert", exc_info=True,
                         )
                         official_alerts = []
@@ -452,7 +460,7 @@ class ComparisonEngine:
                 # strukturierten Fetch-Fehler, damit beide Ursachen im Log
                 # gleich aussehen.
                 logger.warning(
-                    "Ort %s: Ausblick nicht verfuegbar (Fetch-Fehler: %s)",
+                    "Ort %s: Ausblick nicht verfuegbar (Fetch-Fehler: %s)",  # i18n-log
                     loc.name, e,
                 )
                 results.append(LocationResult(

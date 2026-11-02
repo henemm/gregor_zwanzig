@@ -50,7 +50,7 @@ def _unlink(path: Path) -> bool:
         path.unlink()
         return True
     except OSError as e:
-        logger.warning("alert_input_capture: Bereinigung fehlgeschlagen (%s): %s", path, e)
+        logger.warning("alert_input_capture: Bereinigung fehlgeschlagen (%s): %s", path, e)  # i18n-log
         return False
 
 
@@ -128,7 +128,7 @@ def capture_user_scoped(
         return capture_id
     except Exception as e:
         logger.warning(
-            "alert_input_capture.capture_user_scoped fehlgeschlagen fuer "
+            "alert_input_capture.capture_user_scoped fehlgeschlagen fuer "  # i18n-log
             "%s/%s (%s): %s", entity_type, entity_id, user_id, e,
         )
         return None
@@ -163,7 +163,7 @@ def capture_system(
         return capture_id
     except Exception as e:
         logger.warning(
-            "alert_input_capture.capture_system fehlgeschlagen fuer %s/%s: %s",
+            "alert_input_capture.capture_system fehlgeschlagen fuer %s/%s: %s",  # i18n-log
             branch, source_key, e,
         )
         return None
@@ -213,7 +213,7 @@ def latest_capture_id(branch: str, source_key: str, *, max_age: float) -> Option
         return None
     except Exception as e:
         logger.warning(
-            "alert_input_capture.latest_capture_id fehlgeschlagen fuer %s/%s: %s",
+            "alert_input_capture.latest_capture_id fehlgeschlagen fuer %s/%s: %s",  # i18n-log
             branch, source_key, e,
         )
         return None

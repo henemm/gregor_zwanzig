@@ -55,11 +55,11 @@ def test_inbound_schluessel_und_platzhalter_paritaet():
     assert all(v.strip() for v in (*de.values(), *en.values()))
 
 
-#: Restbefund der P11-Ratsche (#2674), im Epic #2644 gemeldet: deutsche
-#: Aktionsknoepfe ``ACTIONS_BUBBLE_BUTTONS``, Kopf ``Kuerzel`` und Eingabe-Alias.
-#: Pruefdatum 2027-01-28 (Regel-Budget). Eintrag streichen, sobald die Datei
-#: ohne Fund ist -- ``test_restbefund_p11_nur_solange_allowlistet`` erzwingt das.
-_RESTBEFUND_P11 = ("trip_command_processor",)  # Modulname, kein Quelltext-Read
+#: Restbefund der P11-Ratsche (#2674). Seit #2751 leer: Aktionsknoepfe und Kopf
+#: ``Kuerzel`` kommen aus dem Katalog, der Eingabe-Alias traegt ``# i18n-log``.
+#: Pruefdatum 2027-01-28 (Regel-Budget). Ein neuer Eintrag nur, solange die Datei
+#: Funde hat -- ``test_restbefund_p11_nur_solange_allowlistet`` erzwingt das.
+_RESTBEFUND_P11: tuple[str, ...] = ()  # Modulname, kein Quelltext-Read
 
 
 def test_allowlist_traegt_keine_paket_datei():

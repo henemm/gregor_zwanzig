@@ -369,14 +369,14 @@ def check_briefing_imminent(
     )
     if letzter_versuch is not None and letzter_versuch > untergrenze:
         logger.debug(
-            "Keine Sperre fuer %s: das anstehende Briefing wurde um %s Ortszeit "
+            "Keine Sperre fuer %s: das anstehende Briefing wurde um %s Ortszeit "  # i18n-log
             "bereits versucht.",
             entity_id, local_fmt(letzter_versuch, zone),
         )
         return False
 
     logger.debug(
-        "Meldung unterdrueckt: Briefing fuer %s ist um %s Ortszeit faellig und "
+        "Meldung unterdrueckt: Briefing fuer %s ist um %s Ortszeit faellig und "  # i18n-log
         "noch nicht versucht.",
         entity_id, local_fmt(faellig_ab, zone),
     )
@@ -727,7 +727,7 @@ def _find_matching_entry(
             # ginge wieder ein VOLLER zweiter Alarm raus statt des
             # gerichteten Nachtrags.
             logger.warning(
-                "Kaputter Registereintrag beim Auflösen übersprungen "
+                "Kaputter Registereintrag beim Auflösen übersprungen "  # i18n-log
                 "(Issue #2018/#1405), Schlüssel=%s",
                 key,
             )

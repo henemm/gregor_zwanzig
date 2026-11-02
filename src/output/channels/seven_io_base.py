@@ -81,7 +81,7 @@ class SevenIoChannelBase:
         if not (self._settings.sms_gateway_url and self._settings.seven_api_key):
             raise OutputConfigError(
                 self.name,
-                "seven.io nicht konfiguriert: sms_gateway_url und seven_api_key "
+                "seven.io nicht konfiguriert: sms_gateway_url und seven_api_key "  # i18n-log
                 "sind Pflichtfelder",
             )
 
@@ -111,7 +111,7 @@ class SevenIoChannelBase:
         if not isinstance(recipient, self.RECIPIENT_TYPE):
             raise _block(self.NO_RECIPIENT_REASON, "kein belegter Empfaenger uebergeben.")
         if not recipient.well_formed():
-            raise _block(f"{self.name}_invalid_number", "Empfaengernummer hat keine gueltige Form.")
+            raise _block(f"{self.name}_invalid_number", "Empfaengernummer hat keine gueltige Form.")  # i18n-log
         if to != recipient.number:
             raise _block(f"{self.name}_recipient_mismatch", "Ziel weicht vom belegten Empfaenger ab.")
 
@@ -145,7 +145,7 @@ class SevenIoChannelBase:
         if not sandbox_key or active != sandbox_key:
             raise OutputConfigError(
                 self.name,
-                "Test-Modus aktiv, aber seven_api_key ist nicht der "
+                "Test-Modus aktiv, aber seven_api_key ist nicht der "  # i18n-log
                 "Sandbox-Zugang (GZ_SEVEN_SANDBOX_KEY) — Versand blockiert "
                 "(Issue #1336).",
             )

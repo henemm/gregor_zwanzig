@@ -59,7 +59,7 @@ class AlertCheckStateStore:
             lock_path = str(self._path) + ".lock"
             fd = open_lock_file(lock_path)
             if not acquire_exclusive(fd, LOCK_TIMEOUT_SECONDS):
-                logger.warning(f"{self._filename}: Sperre {lock_path} nicht erhalten — Stempel nicht gespeichert")
+                logger.warning(f"{self._filename}: Sperre {lock_path} nicht erhalten — Stempel nicht gespeichert")  # i18n-log
                 return
             try:
                 try:
@@ -75,7 +75,7 @@ class AlertCheckStateStore:
             finally:
                 fcntl.flock(fd, fcntl.LOCK_UN)
         except OSError as e:
-            logger.warning(f"{self._filename} nicht geschrieben ({self._path}): {e}")
+            logger.warning(f"{self._filename} nicht geschrieben ({self._path}): {e}")  # i18n-log
         finally:
             if fd is not None:
                 os.close(fd)
@@ -119,4 +119,4 @@ def report_unit_failure(label: str, unit_id: str) -> None:
     gescheitert (Issue #2217): sichtbar loggen (ID + Stacktrace), nie still
     verschlucken. Nur im ``except``-Block aufrufen. EIN Baustein fuer alle
     Alarmlaeufe (Trip und Ortsvergleich)."""
-    logger.error("%s: Einheit %s fehlgeschlagen", label, unit_id, exc_info=True)
+    logger.error("%s: Einheit %s fehlgeschlagen", label, unit_id, exc_info=True)  # i18n-log

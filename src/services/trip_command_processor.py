@@ -248,7 +248,7 @@ _BARE_KEYWORD_MAP = {
     "skip":     "skip",
     "strecke":  "strecke",
     "kuerzel":  "kuerzel",
-    "kürzel":   "kuerzel",
+    "kürzel":   "kuerzel",  # i18n-log: Eingabe-Alias (Befehlswort), kein Ausgabetext
     "startdatum": "startdatum",
     "report":   "report",
 }
@@ -524,8 +524,9 @@ def codes_text(en: bool, vergleich: bool = False) -> str:
         _codes_gruppe((builder.VIGI_HR, builder.VIGI_TH), bed),
         _codes_gruppe((builder.UNAVAILABLE_SYMBOL,), bed),
     ))
-    k = ("Weather", "More", "Alerts after !") if en else ("Wetter", "Weitere", "Warnungen nach !")
-    return "\n".join(([] if en else ["Kürzel"]) + [
+    lang: Lang = "en" if en else "de"
+    k = tuple(t(f"inbound.kuerzel.{x}", lang) for x in ("wetter", "weitere", "warnungen"))
+    return "\n".join(([] if en else [t("inbound.kuerzel.titel", lang)]) + [
         f"{k[0]}: {', '.join(_codes_gruppe(g, bed) for g in wetter)}.",
         f"{k[1]}: {', '.join(_codes_gruppe(g, bed) for g in _CODES_WEITERE)}.",
         f"Format: {', '.join(f'{z} {t}' for z, t in formate.items())}.",
@@ -637,19 +638,25 @@ def _traegt_tageswerte(point) -> bool:
 # Eigenes Praefix `act_` verhindert Kollision mit den `dd_*`/`tl_*`-Drilldown-
 # Callbacks oben. Dispatch der einzelnen Buttons: siehe
 # inbound_telegram_reader._CALLBACK_QUERY_MAP.
-ACTIONS_BUBBLE_BUTTONS = {
-    "inline_keyboard": [
-        [
-            {"text": "📋 Übersicht", "callback_data": "act_overview"},
-            {"text": "⏸ Pause", "callback_data": "act_pause"},
-        ],
-        [
-            {"text": "⏭ Überspringen", "callback_data": "act_skip"},
-            {"text": "📊 Spalten", "callback_data": "act_columns"},
-        ],
-        [{"text": "❓ Hilfe", "callback_data": "act_help"}],
-    ]
-}
+# Issue #2751: Beschriftung aus dem Katalog ``inbound.knopf.*``, ``callback_data``
+# sprachneutral. ``ACTIONS_BUBBLE_BUTTONS`` bleibt die deutsche Fassung
+# (byte-gleich), bis ``renderers/narrow.py`` die Nutzersprache durchreicht.
+_AKTIONS_KNOEPFE = (
+    (("uebersicht", "act_overview"), ("pause", "act_pause")),
+    (("ueberspringen", "act_skip"), ("spalten", "act_columns")),
+    (("hilfe", "act_help"),),
+)
+
+
+def actions_bubble_buttons(lang: Lang = "de") -> dict:
+    """Aktionen-Bubble-Keyboard mit Beschriftung in ``lang``."""
+    return {"inline_keyboard": [
+        [{"text": t(f"inbound.knopf.{k}", lang), "callback_data": cb} for k, cb in reihe]
+        for reihe in _AKTIONS_KNOEPFE
+    ]}
+
+
+ACTIONS_BUBBLE_BUTTONS = actions_bubble_buttons("de")
 
 _DRILLDOWN_PATTERN = re.compile(r"^dd_(thunder|wind|precip)_(today|tomorrow)$")
 _HOURS_PATTERN = re.compile(r"^dd_hours_(today|tomorrow)$")
@@ -1044,7 +1051,7 @@ def _fetch_and_save_snapshot(trip, user_id: str, today, tomorrow) -> None:
                 trip.id, segment_weather, today, briefing_backed=False,
             )
     except Exception as exc:
-        logger.warning("on-demand fetch fehlgeschlagen für trip %s: %s", trip.id, exc)
+        logger.warning("on-demand fetch fehlgeschlagen für trip %s: %s", trip.id, exc)  # i18n-log
 
 
 # ---------------------------------------------------------------------------
@@ -3005,7 +3012,7 @@ class TripCommandProcessor:
                 pos = position_at_time(trip, active, segment_date, now_utc, user_id=user_id)
             except Exception as e:
                 logger.error(
-                    "Jetzt-Befehl: Positionsbestimmung fuer Trip %s "
+                    "Jetzt-Befehl: Positionsbestimmung fuer Trip %s "  # i18n-log
                     "fehlgeschlagen (%s) -- falle zurueck auf den ersten "
                     "Wegpunkt der Etappe.",
                     trip.id, e,
@@ -3034,7 +3041,7 @@ class TripCommandProcessor:
         except Exception as e:
             # #1405 S4a (AC-12): Ausfall der Quelle -> Antwort statt Schweigen.
             logger.warning(
-                "Jetzt-Befehl: Nowcast fuer Trip %s fehlgeschlagen (%s)", trip.id, e)
+                "Jetzt-Befehl: Nowcast fuer Trip %s fehlgeschlagen (%s)", trip.id, e)  # i18n-log
             return self._nowcast_ausfall(trip, "now")
         # Issue #1402: ohne tz faellt format_now_text() auf das argumentlose
         # .astimezone() zurueck -- deutet die Onset-Zeit in der PROZESS-
@@ -3098,7 +3105,7 @@ class TripCommandProcessor:
         except Exception as e:
             # #1405 S4a (AC-14): Streckenlaengen nachtragen scheitert -> Antwort.
             logger.warning(
-                "Strecke-Kommando: Streckenlaengen fuer Trip %s nicht "
+                "Strecke-Kommando: Streckenlaengen fuer Trip %s nicht "  # i18n-log
                 "nachtragbar (%s)", trip.id, e)
             return self._nowcast_ausfall(trip, "strecke")
         resolved = resolve_current_segment(trip, now_utc, today)
@@ -3165,7 +3172,7 @@ class TripCommandProcessor:
                 )
             except Exception as e:
                 logger.warning(
-                    "Strecke-Kommando: Nowcast fuer Punkt %d (km %.1f) des "
+                    "Strecke-Kommando: Nowcast fuer Punkt %d (km %.1f) des "  # i18n-log
                     "Trips %s fehlgeschlagen (%s) -- der Punkt faellt aus "
                     "der Ausdehnung heraus, das Kommando laeuft weiter.",
                     i, p.distance_from_start_km, trip.id, e,
@@ -3277,7 +3284,7 @@ class TripCommandProcessor:
         try:
             update_trip(user_id, trip.id, mutate)
         except LockTimeout:
-            logger.warning("Kommando %s: Sperre fuer Trip %s nicht erhalten", command, trip.id)
+            logger.warning("Kommando %s: Sperre fuer Trip %s nicht erhalten", command, trip.id)  # i18n-log
             raise _SpeicherFehler(CommandResult(
                 success=False, command=command,
                 confirmation_subject=self._m("antwort.gesperrt.betreff", trip_name=trip.name),
@@ -3285,7 +3292,7 @@ class TripCommandProcessor:
                 trip_name=trip.name,
             ))
         except LoaderError as e:
-            logger.error("Kommando %s: Trip %s nicht speicherbar: %s", command, trip.id, e)
+            logger.error("Kommando %s: Trip %s nicht speicherbar: %s", command, trip.id, e)  # i18n-log
             raise _SpeicherFehler(CommandResult(
                 success=False, command=command,
                 confirmation_subject=self._m("antwort.nicht_gespeichert.betreff",

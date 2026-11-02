@@ -78,7 +78,7 @@ def check_reply_address(reply_to, reply_at) -> None:
     if not reply_to or reply_at is None:
         raise ChannelBlockedError(
             "premium_sms",
-            "keine gelernte Rueckadresse vorhanden — das Geraet hat sich "
+            "keine gelernte Rueckadresse vorhanden — das Geraet hat sich "  # i18n-log
             "noch nie gemeldet (Rueckkanal, Issue #1676 S1); ohne sie ist "
             "kein Empfaenger bekannt.",
             reason_code=BLOCK_REASON_NO_REPLY_ADDRESS,

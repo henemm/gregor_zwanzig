@@ -190,7 +190,7 @@ class CompareRadarAlertService:
                 try:
                     store.record(reached, known_ids)
                 except Exception as e:
-                    logger.warning(f"{_STATE_FILENAME} nicht geschrieben: {e}")
+                    logger.warning(f"{_STATE_FILENAME} nicht geschrieben: {e}")  # i18n-log
         skipped_ids = [p.get("id", "") for p in presets[checked:]]
         if hit_deadline:
             logger.warning(
@@ -289,7 +289,7 @@ class CompareRadarAlertService:
                 )
             except Exception as e:
                 logger.error(
-                    "Compare-Radar-Alert: Unterdrueckungs-Protokoll fuer Preset "
+                    "Compare-Radar-Alert: Unterdrueckungs-Protokoll fuer Preset "  # i18n-log
                     "%s fehlgeschlagen (%s) — der Alarm blieb aus (Grund: %s), "
                     "nur der Protokoll-Eintrag fehlt.",
                     preset_id, e, gate.reason,
@@ -350,7 +350,7 @@ class CompareRadarAlertService:
                 )
             except Exception as e:
                 logger.error(
-                    "Compare-Radar-Alert: Unterdrueckungs-Protokoll (Ereignis-"
+                    "Compare-Radar-Alert: Unterdrueckungs-Protokoll (Ereignis-"  # i18n-log
                     "Identitaet) fuer %s:%s fehlgeschlagen (%s) — der Alarm "
                     "blieb aus, nur der Protokoll-Eintrag fehlt.",
                     preset_id, loc.id, e,
@@ -397,7 +397,7 @@ class CompareRadarAlertService:
                     )
                 except Exception as e:
                     logger.error(
-                        "Compare-Radar-Alert: Unterdrueckungs-Protokoll "
+                        "Compare-Radar-Alert: Unterdrueckungs-Protokoll "  # i18n-log
                         "(Tages-Obergrenze) fuer Preset %s fehlgeschlagen (%s) "
                         "— der Alarm blieb aus, nur der Eintrag fehlt.",
                         preset_id, e,
@@ -526,7 +526,7 @@ class CompareRadarAlertService:
             )
         except Exception as e:
             logger.error(
-                "Compare-Radar-Alert: Unterdrueckungs-Protokoll (Quellen-"
+                "Compare-Radar-Alert: Unterdrueckungs-Protokoll (Quellen-"  # i18n-log
                 "ausfall) fuer %s:%s fehlgeschlagen (%s) — der Alarm blieb "
                 "aus, nur der Protokoll-Eintrag fehlt.",
                 preset_id, location_id, e,
@@ -557,7 +557,7 @@ class CompareRadarAlertService:
             loc = all_locations.get(location_id)
             if loc is None:
                 logger.warning(
-                    f"Compare-Radar-Alert: Ort {location_id} nicht aufloesbar fuer Preset {preset_id}"
+                    f"Compare-Radar-Alert: Ort {location_id} nicht aufloesbar fuer Preset {preset_id}"  # i18n-log
                 )
                 continue
             orte.append((location_id, loc))
@@ -599,7 +599,7 @@ class CompareRadarAlertService:
                 # Trip-Radarpfad, ADR-0021).
                 if result.data_unavailable:
                     logger.warning(
-                        "Compare-Radar-Alert: Quellenausfall fuer %s/%s (keine "
+                        "Compare-Radar-Alert: Quellenausfall fuer %s/%s (keine "  # i18n-log
                         "Frames aus der Quelle) — kein Alarm; der Ausfall wird als "
                         "solcher protokolliert.", preset_id, location_id,
                     )
@@ -645,7 +645,7 @@ class CompareRadarAlertService:
         for out in outcomes:
             if out.skipped is not None:
                 logger.warning(
-                    "Compare-Radar-Alert: Nowcast fuer %s/%s uebersprungen (%s, "
+                    "Compare-Radar-Alert: Nowcast fuer %s/%s uebersprungen (%s, "  # i18n-log
                     "Frist/Zeitgrenze des Laufs) — Preset gilt als nicht erreicht.",
                     preset_id, orte[out.index][0], out.skipped,
                 )

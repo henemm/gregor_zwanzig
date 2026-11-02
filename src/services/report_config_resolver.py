@@ -51,8 +51,8 @@ RENDER_EFFECTIVE_FIELDS: tuple[str, ...] = (
 # seit #1224 nur noch 19, show_daylight entfernt).
 RENDER_NEUTRAL: dict[str, str] = {
     # Metadaten
-    "trip_id": "Reine Identifikation, keine Render-Wirkung.",
-    "updated_at": "Reiner Zeitstempel, keine Render-Wirkung.",
+    "trip_id": "Reine Identifikation, keine Render-Wirkung.",  # i18n-log
+    "updated_at": "Reiner Zeitstempel, keine Render-Wirkung.",  # i18n-log
     # Pre-Render-Gate
     "enabled": "Entscheidet VOR dem Rendern, ob ueberhaupt versendet wird.",
     "paused_until": "Entscheidet VOR dem Rendern, ob ueberhaupt versendet wird.",
@@ -61,20 +61,20 @@ RENDER_NEUTRAL: dict[str, str] = {
     "morning_enabled": "Entscheidet VOR dem Rendern, ob ueberhaupt versendet wird.",
     "evening_enabled": "Entscheidet VOR dem Rendern, ob ueberhaupt versendet wird.",
     # Zeitplanung
-    "morning_time": "Steuert WANN der Scheduler laeuft, nicht WAS gerendert wird.",
-    "evening_time": "Steuert WANN der Scheduler laeuft, nicht WAS gerendert wird.",
+    "morning_time": "Steuert WANN der Scheduler laeuft, nicht WAS gerendert wird.",  # i18n-log
+    "evening_time": "Steuert WANN der Scheduler laeuft, nicht WAS gerendert wird.",  # i18n-log
     # Kanalwahl
-    "send_email": "Steuert WELCHER Kanal versendet wird, nicht den Mail-Inhalt.",
-    "send_sms": "Steuert WELCHER Kanal versendet wird, nicht den Mail-Inhalt.",
-    "send_telegram": "Steuert WELCHER Kanal versendet wird, nicht den Mail-Inhalt.",
+    "send_email": "Steuert WELCHER Kanal versendet wird, nicht den Mail-Inhalt.",  # i18n-log
+    "send_sms": "Steuert WELCHER Kanal versendet wird, nicht den Mail-Inhalt.",  # i18n-log
+    "send_telegram": "Steuert WELCHER Kanal versendet wird, nicht den Mail-Inhalt.",  # i18n-log
     # Issue #1676 S2a (ADR-0049): vierter Kanal, gleiche Begruendung wie die
     # drei darueber — der Premium-SMS-Text ist unveraendert `report.sms_text`.
-    "send_premium_sms": "Steuert WELCHER Kanal versendet wird, nicht den Mail-Inhalt.",
+    "send_premium_sms": "Steuert WELCHER Kanal versendet wird, nicht den Mail-Inhalt.",  # i18n-log
     # Alert-Pfad
-    "alert_on_changes": "Gehoert zum separaten Alert-/Deviation-Pfad, nicht zum Briefing-Rendering.",
-    "change_threshold_temp_c": "Gehoert zum separaten Alert-/Deviation-Pfad, nicht zum Briefing-Rendering.",
-    "change_threshold_wind_kmh": "Gehoert zum separaten Alert-/Deviation-Pfad, nicht zum Briefing-Rendering.",
-    "change_threshold_precip_mm": "Gehoert zum separaten Alert-/Deviation-Pfad, nicht zum Briefing-Rendering.",
+    "alert_on_changes": "Gehoert zum separaten Alert-/Deviation-Pfad, nicht zum Briefing-Rendering.",  # i18n-log
+    "change_threshold_temp_c": "Gehoert zum separaten Alert-/Deviation-Pfad, nicht zum Briefing-Rendering.",  # i18n-log
+    "change_threshold_wind_kmh": "Gehoert zum separaten Alert-/Deviation-Pfad, nicht zum Briefing-Rendering.",  # i18n-log
+    "change_threshold_precip_mm": "Gehoert zum separaten Alert-/Deviation-Pfad, nicht zum Briefing-Rendering.",  # i18n-log
     # Pre-Renderer-Service
     "wind_exposition_min_elevation_m": "Wird von einem vorgelagerten Exposition-Service konsumiert, kein direktes Render-Flag.",
     # Tote #790-Toggles
@@ -84,7 +84,7 @@ RENDER_NEUTRAL: dict[str, str] = {
     "show_metrics_summary": "Seit #790 in render_email() **_ignored absorbiert, strukturell wirkungslos.",
     # Issue #1306: unklassifiziertes Feld aus der Rot-Triage (#1211b).
     "telegram_style": (
-        "Steuert den Telegram-Kurzstil-Kanal (#1260: 'rich'|'kurzform'), "
+        "Steuert den Telegram-Kurzstil-Kanal (#1260: 'rich'|'kurzform'), "  # i18n-log
         "nicht den E-Mail/Plain-Render-Pfad — wirkt nachweislich weder auf "
         "render_html noch render_plain."
     ),

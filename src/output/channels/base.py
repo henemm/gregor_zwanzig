@@ -125,7 +125,7 @@ def get_channel(name: str, settings: "Settings") -> OutputChannel:
         # (Nummer bzw. Rueckadresse eines Nutzers) -- die globale .env ist keine.
         raise OutputConfigError(
             name,
-            f"{name} ist in der Debug-CLI nicht verfuegbar: Versand nur an die "
+            f"{name} ist in der Debug-CLI nicht verfuegbar: Versand nur an die "  # i18n-log
             "belegte Nummer eines Nutzers (Issue #1412).",
         )
     elif name == "telegram":
@@ -133,7 +133,7 @@ def get_channel(name: str, settings: "Settings") -> OutputChannel:
         # Profil oder Absender eines Updates) -- die Debug-CLI hat keinen.
         raise OutputConfigError(
             "telegram",
-            "Telegram ist in der Debug-CLI nicht verfuegbar: Versand nur an den "
+            "Telegram ist in der Debug-CLI nicht verfuegbar: Versand nur an den "  # i18n-log
             "Profil-Chat eines Nutzers (Issue #1412).",
         )
     elif name == "none":

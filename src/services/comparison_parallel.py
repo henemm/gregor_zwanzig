@@ -142,7 +142,7 @@ def run_comparison_parallel(
                     fetched[idx] = future.result()
                 except Exception as exc:  # noqa: BLE001 -- Einordnung folgt unten
                     logger.warning(
-                        "run_comparison_parallel: Ort %r fehlgeschlagen",
+                        "run_comparison_parallel: Ort %r fehlgeschlagen",  # i18n-log
                         getattr(locations[idx], "id", idx), exc_info=True,
                     )
                     fehler.append((idx, exc))

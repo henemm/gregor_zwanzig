@@ -354,7 +354,7 @@ def radar_ereignis_segmente(trip: "Trip", active, onset_dt: datetime) -> list:
                 break
     except Exception as e:
         logger.warning(
-            "Radar alert: Segment zur Ereigniszeit fuer Trip %s nicht "
+            "Radar alert: Segment zur Ereigniszeit fuer Trip %s nicht "  # i18n-log
             "bestimmbar (%s) — es bleibt beim aktiven Segment.",
             getattr(trip, "id", "?"), e,
         )
@@ -455,7 +455,7 @@ def _radar_e1_fields(
         }
     except Exception as e:
         logger.warning(
-            "alert_log: E-1-Groessen fuer entity_id=%s nicht ableitbar (%s) — "
+            "alert_log: E-1-Groessen fuer entity_id=%s nicht ableitbar (%s) — "  # i18n-log
             "der Alarm laeuft weiter, der Eintrag entsteht ohne diese Felder.",
             entity_id, e,
         )
@@ -474,7 +474,7 @@ def _radar_e1_fields(
             felder.update(_messluecken_felder(punkte, zonen_ergebnisse))
         except Exception as e:
             logger.warning(
-                "alert_log: Messluecken der Ausdehnung fuer entity_id=%s nicht "
+                "alert_log: Messluecken der Ausdehnung fuer entity_id=%s nicht "  # i18n-log
                 "ableitbar (%s) — der Alarm laeuft weiter, der Eintrag entsteht "
                 "ohne dieses Feld, die uebrigen E-1-Groessen bleiben.",
                 entity_id, e,
@@ -611,7 +611,7 @@ class TripAlertService:
             )
         except Exception as e:
             logger.error(
-                "Unterdrueckungs-Protokoll (%s) fuer Trip %s fehlgeschlagen "
+                "Unterdrueckungs-Protokoll (%s) fuer Trip %s fehlgeschlagen "  # i18n-log
                 "(%s) — der Alarm blieb aus (Grund: %s), nur der "
                 "Protokoll-Eintrag fehlt.", reason, trip.id, e, gate_reason,
             )
@@ -637,7 +637,7 @@ class TripAlertService:
             ):
                 return
         except Exception as e:
-            logger.error("Vergleichsbasis-Entdopplung fuer Trip %s fehlgeschlagen (%s)", trip.id, e)
+            logger.error("Vergleichsbasis-Entdopplung fuer Trip %s fehlgeschlagen (%s)", trip.id, e)  # i18n-log
         self._protokolliere_unterdrueckung(
             trip, reason=alert_log.REASON_FORECAST_CHANGE,
             gate_reason=alert_log.REASON_NO_REFERENCE_BASIS,
@@ -1297,7 +1297,7 @@ class TripAlertService:
                 try:
                     state_store.record(reached, known_ids)
                 except Exception as e:
-                    logger.warning(f"alert_last_checked.json nicht geschrieben: {e}")
+                    logger.warning(f"alert_last_checked.json nicht geschrieben: {e}")  # i18n-log
 
         skipped = len(trips) - checked
         skipped_ids = [t.id for t in trips[checked:]]
@@ -1460,7 +1460,7 @@ class TripAlertService:
         if not svc.load_briefing_backed(trip.id):
             reason = "not_briefing_backed"
             detail = (
-                "stammt aus einer reinen Abfrage, nicht aus einem Briefing "
+                "stammt aus einer reinen Abfrage, nicht aus einem Briefing "  # i18n-log
                 "(briefing_backed=false)"
             )
         elif anchor_date == today:
@@ -1602,7 +1602,7 @@ class TripAlertService:
         )
         if not laeuft:
             logger.debug(
-                "Kein Alarm-Anker fuer Trip %s — Laufzeitraum %s bis %s hat noch "
+                "Kein Alarm-Anker fuer Trip %s — Laufzeitraum %s bis %s hat noch "  # i18n-log
                 "nicht begonnen bzw. ist unbekannt; das ist der Normalfall vor "
                 "dem ersten Briefing.", trip.id, trip.start_date, trip.end_date,
             )
@@ -1848,9 +1848,9 @@ class TripAlertService:
             if out.skipped is not None:
                 grund = f"uebersprungen: {out.skipped} (Frist/Zeitgrenze des Laufs)"
             elif out.error is not None:
-                grund = f"fehlgeschlagen: {out.error}"
+                grund = f"fehlgeschlagen: {out.error}"  # i18n-log
             elif _zonen_messwert(out.value) is None:
-                grund = "keine verwertbaren Daten (Ausfall/Drosselung)"
+                grund = "keine verwertbaren Daten (Ausfall/Drosselung)"  # i18n-log
             else:
                 ergebnisse.append(out.value)
                 continue
@@ -1948,7 +1948,7 @@ class TripAlertService:
             )
         except Exception as e:
             logger.error(
-                "Radar alert: Unterdrueckungs-Protokoll fuer Trip %s "
+                "Radar alert: Unterdrueckungs-Protokoll fuer Trip %s "  # i18n-log
                 "fehlgeschlagen (%s) — der Alarm blieb aus (Grund: %s), "
                 "nur der Protokoll-Eintrag fehlt.",
                 trip.id, e, gate_reason,
@@ -2052,7 +2052,7 @@ class TripAlertService:
                 try:
                     state_store.record(reached, known_ids)
                 except Exception as e:
-                    logger.warning(f"{_RADAR_STATE_FILENAME} nicht geschrieben: {e}")
+                    logger.warning(f"{_RADAR_STATE_FILENAME} nicht geschrieben: {e}")  # i18n-log
         checked = progress["checked"]
         skipped_ids = [t.id for t in trips[checked:]]
         if progress["hit_deadline"]:
@@ -2276,7 +2276,7 @@ class TripAlertService:
                     _pos = _punkte[0]
                 except Exception as e:
                     logger.error(
-                        "Radar alert: Positionsbestimmung fuer Trip %s "
+                        "Radar alert: Positionsbestimmung fuer Trip %s "  # i18n-log
                         "fehlgeschlagen (%s) — dieser Trip wird uebersprungen, die "
                         "uebrigen Trips dieses Nutzers laufen weiter.",
                         trip.id, e,
@@ -2509,7 +2509,7 @@ class TripAlertService:
                     )
                     if not _budget_durchbruch:
                         logger.debug(
-                            "Radar alert suppressed (Tages-Obergrenze, keine "
+                            "Radar alert suppressed (Tages-Obergrenze, keine "  # i18n-log
                             "Eskalation) for trip %s", trip.id,
                         )
                         self._protokolliere_radar_unterdrueckung(
@@ -2534,7 +2534,7 @@ class TripAlertService:
                 # reine Aussage ueber die LAGE, nicht ueber die Datenlage.
                 if result.data_unavailable:
                     logger.warning(
-                        "Radar alert: Quellenausfall fuer Trip %s (keine Frames aus "
+                        "Radar alert: Quellenausfall fuer Trip %s (keine Frames aus "  # i18n-log
                         "der Quelle) — kein Alarm; der Ausfall wird als solcher "
                         "protokolliert statt als ruhige Viertelstunde.", trip.id,
                     )
@@ -2639,7 +2639,7 @@ class TripAlertService:
                         )
                     except Exception as e:
                         logger.error(
-                            "Radar alert: Unterdrueckungs-Protokoll (Briefing-Ankuendigung) "
+                            "Radar alert: Unterdrueckungs-Protokoll (Briefing-Ankuendigung) "  # i18n-log
                             "fuer Trip %s fehlgeschlagen (%s) — der Alarm blieb aus, nur der "
                             "Protokoll-Eintrag fehlt.", trip.id, e,
                         )
@@ -2847,7 +2847,7 @@ class TripAlertService:
                         )
                     except Exception as e:
                         logger.error(
-                            "Radar alert: Unterdrueckungs-Protokoll (Ereignis-"
+                            "Radar alert: Unterdrueckungs-Protokoll (Ereignis-"  # i18n-log
                             "Identitaet) fuer Trip %s fehlgeschlagen (%s) — der "
                             "Alarm blieb aus, nur der Protokoll-Eintrag fehlt.",
                             trip.id, e,
@@ -2937,7 +2937,7 @@ class TripAlertService:
                     result.delivery_outcome,
                 ):
                     logger.info(
-                        f"Radar alert: nicht zugestellt für {trip.id} "
+                        f"Radar alert: nicht zugestellt für {trip.id} "  # i18n-log
                         f"({result.delivery_outcome})"
                     )
                     continue
@@ -3320,7 +3320,7 @@ class TripAlertService:
                         *coord, window_start=window_start, window_end=window_end, now=now_utc,
                     ))
             except Exception as e:
-                logger.warning(f"official_alert_triggers: Quelle fehlgeschlagen fuer {trip.id}: {e}")
+                logger.warning(f"official_alert_triggers: Quelle fehlgeschlagen fuer {trip.id}: {e}")  # i18n-log
                 continue
             tagged_alerts.extend((alert, segment_ids) for alert in alerts)
             queries.append(AllClearQuery(
@@ -3459,7 +3459,7 @@ class TripAlertService:
                 )
             except Exception as e:
                 logger.error(
-                    "Official alert: Unterdrueckungs-Protokoll (Ereignis-"
+                    "Official alert: Unterdrueckungs-Protokoll (Ereignis-"  # i18n-log
                     "Identitaet) fuer Trip %s fehlgeschlagen (%s) — der "
                     "Alarm blieb aus, nur der Protokoll-Eintrag fehlt.",
                     trip.id, e,
