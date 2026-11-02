@@ -1,7 +1,7 @@
 ---
 spec_file: docs/specs/modules/fix_1721_nachtausgabe.md
-spec_sha256: 4cfc7a21bf2b269adcb513a7124a1f53be2af2d985a184e4e798e802bd9622eb
-spec_frozen_sha256: 256d49adbc7dfeea2715e3c7ef33f02510810d711cc03cdfdf5b114f7e81c473
+spec_sha256: ff52d865ed2a334af1a7fefcbfe2e06ff28118f21b737eebdb0431e23df2ab6c
+spec_frozen_sha256: 3add61b8ff375f3451b940f51e4df0dd834d3369d6b3fcc02f38449438e6c5ec
 ---
 
 # PO-Briefing: fix-1721-nachtausgabe
@@ -12,19 +12,21 @@ spec_frozen_sha256: 256d49adbc7dfeea2715e3c7ef33f02510810d711cc03cdfdf5b114f7e81
 
 ## Was gebaut wird
 
-Im Wetter-Metriken-Reiter eines Trips gibt es einen Schalter, mit dem die Nacht-Stundentabelle der Mail abgeschaltet werden kann.
+Im Wetter-Metriken-Reiter eines Trips lässt sich die Nacht-Stundentabelle der Mail ein- und ausschalten.
 
 ## Definition of Done
 
-Der Schalter erscheint nur im Trip, bleibt nach Speichern und Neuladen erhalten, und die zugestellte Mail zeigt die Nachttabelle genau bei „an".
+Mit ausgeschaltetem Schalter kommt die Trip-Mail ohne Nacht-Stundentabelle, behält Nacht-Tiefstwert und Gewitter-Aussage, und der Schalter bleibt nach Neuladen aus.
 
 ## Wie geprüft wird
 
-Browser-Klickpfad mit zwei Nutzern und zugestellte Staging-Mails belegen Schalter, Nacht-Tiefstwert, Ausblick-Köpfe und die Kürzel-Erklärung „FN"; Mail-Aufbau selbst bleibt unverändert.
+Browser-Klickpfad mit zwei Nutzern und zugestellte Staging-Mails belegen Schalter und Mail; der Nachtgewitter-Fall hängt von den Wetterdaten ab.
 
 ## Kritische Anmerkungen
 
-- Ausblick-Spalte „N" und Kürzel „FN" werden nicht gebaut, sondern als bereits behoben nur nachgewiesen (Browserlauf, zugestellte Mail).
+- Spec wurde nach dem Bauen korrigiert: Der Ausblick zeigt eine Spalte "Temp" (min/max, z.B. 3/9), nicht zwei Spalten; Code war schon gemerged.
+- Ticketpunkte 2 (Spalte N) und 3 (FN) brauchen keinen Code, nur Nachweis; Punkt 2 wurde per Spec-Anpassung entschieden.
+- Der Schalter erscheint nur im Trip, nicht im Ortsvergleich, weil dort keine Nacht-Stundentabelle existiert.
 
 ## Freigabe-Frage
 
