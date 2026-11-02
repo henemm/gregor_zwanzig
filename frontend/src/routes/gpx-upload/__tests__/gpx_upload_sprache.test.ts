@@ -90,6 +90,90 @@ describe('AC-5: GPX-Seite englisch (Formular, Vorschau-Tabelle, Schaltflaechen)'
 	});
 });
 
+/**
+ * Seitenfluss (Adversary F001): die ECHTEN Handler handleUpload/handleSave laufen beim
+ * Erzeugen der Seite; ersetzt ist nur die Netzgrenze (gpxHochladen/api.post werfen
+ * synchron das Fehlerobjekt des Servers), damit der Fehlerzweig vor dem SSR-Render greift.
+ */
+async function seitenfluss(zustand: Record<string, unknown>, ausloesen: 'upload' | 'save') {
+	const ersetzungen: [string, string][] = [
+		['let parsedStage: ParsedStage | null = $state(null);', 'let parsedStage: ParsedStage | null = $state(globalThis.__F8_GPX.parsedStage);'],
+		["let tripName: string = $state('');", 'let tripName: string = $state(globalThis.__F8_GPX.tripName);'],
+		['let savedTripId: string | null = $state(null);', 'let savedTripId: string | null = $state(globalThis.__F8_GPX.savedTripId);'],
+		['let fileList: FileList | undefined = $state(undefined);', 'let fileList: FileList | undefined = $state(globalThis.__F8_GPX.fileList);'],
+		['const data = await gpxHochladen(fileList[0], stageDate, startHour);', 'const data = globalThis.__F8_GPX.hochladen(fileList[0]);'],
+		["const result = await api.post<{ id: string }>('/api/trips', trip);", 'const result = globalThis.__F8_GPX.speichern(trip);'],
+		['</script>', 'globalThis.__F8_GPX.ausloesen({ handleUpload, handleSave });\n</script>']
+	];
+	const url = `${pathToFileURL(GPX_SEITE).href}?f8variante=${Buffer.from(JSON.stringify(ersetzungen)).toString('base64url')}`;
+	const Seite = (await import(url)).default;
+	const { render } = await import('svelte/server');
+	const g = globalThis as Record<string, unknown>;
+	const gespeichert: unknown[] = [];
+	g.__F8_GPX = {
+		parsedStage: null,
+		tripName: '',
+		savedTripId: null,
+		fileList: [{ name: 'etappe1.gpx', size: 100 }],
+		hochladen: () => {
+			throw zustand.serverFehler ?? {};
+		},
+		speichern: (trip: unknown) => {
+			gespeichert.push(trip);
+			throw zustand.serverFehler ?? {};
+		},
+		ausloesen: (h: { handleUpload: () => void; handleSave: () => void }) => void (ausloesen === 'upload' ? h.handleUpload() : h.handleSave()),
+		...zustand
+	};
+	try {
+		return { ...deDannEn(() => sichtbar(render(Seite as never, { props: {} } as never).body)), gespeichert };
+	} finally {
+		delete g.__F8_GPX;
+	}
+}
+
+describe('AC-5: Fehlerzweige im Seitenfluss (Hochladen, Speichern), erst de, dann en', () => {
+	test('Hochladen scheitert ohne detail/error: eigener Hinweis je Sprache', async () => {
+		const r = await seitenfluss({}, 'upload');
+		hat(r.de, 'Fehler beim Hochladen der GPX-Datei.');
+		hat(r.en, 'Failed to upload the GPX file.');
+		hatNicht(r.en, 'Fehler beim Hochladen');
+	});
+	test('Hochladen scheitert mit Servertext: Text unveraendert in beiden Sprachen, kein eigener Hinweis', async () => {
+		const r = await seitenfluss({ serverFehler: { detail: 'GPX ungültig: kein Track' } }, 'upload');
+		hat(r.de, 'GPX ungültig: kein Track');
+		hat(r.en, 'GPX ungültig: kein Track');
+		hatNicht(r.en, 'Failed to upload');
+	});
+	test('Dateipruefung im Seitenfluss: falsche Endung je Sprache', async () => {
+		const r = await seitenfluss({ fileList: [{ name: 'route.kml', size: 10 }] }, 'upload');
+		hat(r.de, 'Nur .gpx Dateien erlaubt.');
+		hat(r.en, 'Only .gpx files are allowed.');
+	});
+	test('Speichern mit ungueltigem Namen „!!!": Hinweis je Sprache, nichts gesendet', async () => {
+		const r = await seitenfluss({ parsedStage: GPX_ETAPPE, tripName: '!!!' }, 'save');
+		hat(r.de, 'Trip-Name muss mindestens einen Buchstaben oder eine Zahl enthalten.');
+		hat(r.en, 'Trip name must contain at least one letter or number.');
+		hatNicht(r.en, 'Trip-Name muss');
+		assert.equal(r.gespeichert.length, 0);
+	});
+	test('Speichern scheitert ohne detail/error: eigener Hinweis je Sprache, Name unveraendert gesendet', async () => {
+		const r = await seitenfluss({ parsedStage: GPX_ETAPPE, tripName: '  Mein Trip — GR20 Süd  ' }, 'save');
+		hat(r.de, 'Fehler beim Speichern des Trips.');
+		hat(r.en, 'Failed to save the trip.');
+		hatNicht(r.en, 'Fehler beim Speichern');
+		assert.equal(r.gespeichert.length, 2);
+		for (const t of r.gespeichert as { name: string }[]) assert.equal(t.name, '  Mein Trip — GR20 Süd  ');
+		assert.deepEqual(r.gespeichert[0], r.gespeichert[1]);
+	});
+	test('Speichern scheitert mit Servertext: Text unveraendert', async () => {
+		const r = await seitenfluss({ parsedStage: GPX_ETAPPE, tripName: 'GR20', serverFehler: { error: 'trip exists' } }, 'save');
+		hat(r.de, 'trip exists');
+		hat(r.en, 'trip exists');
+		hatNicht(r.en, 'Failed to save');
+	});
+});
+
 describe('AC-5: Hochladen und Speichern ueber die echten Helfer, Trip-Name unveraendert', () => {
 	test('Dateipruefung: Fehlerschluessel je Fall, Texte in beiden Sprachen', async () => {
 		const { gpxDateiFehler } = await gpxTrip();
@@ -121,12 +205,14 @@ describe('AC-5: Hochladen und Speichern ueber die echten Helfer, Trip-Name unver
 			const lauf = async (lang: 'de' | 'en') => {
 				locale.set(lang);
 				const etappe = await gpxHochladen(new File(['<gpx/>'], 'etappe1.gpx'), '2026-06-01', 7);
-				return baueGpxTrip('Mein Trip — GR20 Süd', etappe);
+				return baueGpxTrip('  Mein Trip — GR20 Süd  ', etappe);
 			};
 			const de = await lauf('de');
 			const en = await lauf('en');
 			assert.deepEqual(en, de);
-			assert.equal(en.name, 'Mein Trip — GR20 Süd');
+			// Name exakt wie eingegeben: Randleerzeichen und Umlaute bleiben (Adversary F002).
+			assert.equal(en.name, '  Mein Trip — GR20 Süd  ');
+			assert.equal(de.name, '  Mein Trip — GR20 Süd  ');
 			assert.equal(en.id, 'mein-trip-gr20-sd');
 			assert.equal(en.stages[0].id, 'mein-trip-gr20-sd-t1');
 			assert.equal(en.stages[0].name, 'GR20 Etappe 1');
