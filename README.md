@@ -82,5 +82,5 @@ python -m src.app.cli
 python -m src.app.cli --report morning --channel none --debug verbose
 python -m src.app.cli --report alert --dry-run
 
-Konfigurations-Priorität: CLI > ENV > config.ini  
+Konfigurations-Priorität: CLI > ENV  
 Debug-Konsistenz: E-Mail-Debug ist identisch zum Console-Debug-Subset.

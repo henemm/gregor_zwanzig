@@ -1468,8 +1468,8 @@ null
 ### Notes
 
 - `display_config` wird als `map[string]interface{}` ohne Schema-Validierung round-getrippt (opaque JSON)
-- `userID` hardcodiert auf `"default"` (V1)
-- Kein File-Locking: Race Conditions bei parallelen PUT-Requests akzeptiert (Single-User V1)
+- Mandantentrennung: jeder Handler bindet den Store per `s.WithUser(middleware.UserIDFromContext(r.Context()))` an den angemeldeten Nutzer (ADR-0003, seit #1395/#1396)
+- Schreibschutz (Stand 2026-11-02, #2161): Trip-GET/-PUT nehmen die Briefing-Sperre `lockBriefingOr503` (503 + `Retry-After` bei belegter Sperre, #1395); Trip-PUT prueft optional `If-Match` gegen den ETag der Briefing-Datei (412 bei Abweichung, ohne Header bewusst nicht scharf). Location-PUT nimmt `LockLocation` (#2158), ohne ETag-/If-Match-Pruefung.
 
 ### Source Files
 
@@ -2711,7 +2711,7 @@ oder `archived_at` gesetzt); zusätzlich `end_date` gesetzt und `< heute`.
 | `hour_from` | 0–23 — **weiterhin von `validateComparePreset` erzwungen** (`internal/handler/compare_preset.go:120`). @deprecated Issue #1268: nicht mehr vom Editor/Versand gelesen; bestehende Werte in Request-Body werden per RMW-Spread erhalten (Bestandsschutz). Neue Presets erhalten 0 (Go Zero-Value, von der Validierung zugelassen). |
 | `hour_to` | 0–23 **und** `hour_to >= hour_from` — **beide Regeln gelten weiter** (`compare_preset.go:123,126`); die API lehnt Verstöße auch nach #1268 ab. @deprecated: nicht mehr vom Editor/Versand gelesen; bestehende Werte per RMW-Spread erhalten. |
 | `forecast_hours` | @deprecated Issue #1268: nicht mehr vom Versand gelesen; der Dispatch verwendet fest 96 h (Issue #1305, zuvor 48 h). Bestehende Werte werden per RMW-Spread erhalten. Frontend sends dieses Feld nicht mehr mit. |
-| `empfaenger[]` | each contains `@` (basic email check) |
+| `empfaenger[]` | @deprecated Issue #1452: keine Validierung mehr (seit #2161) — wird ignoriert und unveraendert round-getrippt (Bestandsschutz); Empfaenger kommen aus dem Nutzerprofil. |
 
 ### Error Responses
 
@@ -2958,7 +2958,7 @@ Das neue `ComparePreset`-Datenmodell für Auto-Briefings (Orts-Vergleiche) mit C
 | profil | enum | `"WINTERSPORT"` \| `"ALPINE_TOURING"` \| `"SUMMER_TREKKING"` \| `"ALLGEMEIN"` |
 | hour_from | integer | @deprecated Issue #1268: nicht mehr vom Versand gelesen; der Versand rechnet fest über den ganzen Tag (0–23). Bleibt in Bestandsdaten zur Bestandssicherung. Neue Presets erhalten 0. |
 | hour_to | integer | @deprecated Issue #1268: nicht mehr vom Versand gelesen; der Versand rechnet fest über den ganzen Tag (0–23). Bleibt in Bestandsdaten zur Bestandssicherung. |
-| empfaenger | string[] | E-Mail-Adressen (Validierung: muss `@` enthalten) |
+| empfaenger | string[] | @deprecated Issue #1452: ignoriert, ohne Validierung round-getrippt (seit #2161); Empfaenger kommen aus dem Nutzerprofil |
 | letzter_versand | datetime \| null | ISO-8601 UTC des letzten Versands |
 | top_ort_letzter_versand | string \| null | Ort mit höchstem Score beim letzten Versand |
 | created_at | datetime | Erstellungszeitpunkt (ISO-8601 UTC) |
@@ -2979,7 +2979,7 @@ Das neue `ComparePreset`-Datenmodell für Auto-Briefings (Orts-Vergleiche) mit C
 - `schedule`: einer von `["daily", "weekly", "manual"]`
 - `profil`: einer von `["WINTERSPORT", "ALPINE_TOURING", "SUMMER_TREKKING", "ALLGEMEIN"]`
 - `hour_from`, `hour_to`: Integers in [0..23], `hour_from <= hour_to`
-- `empfaenger`: Array von Strings mit mindestens `@`-Zeichen (einfache Email-Validierung)
+- `empfaenger`: @deprecated Issue #1452 — keine Validierung (seit #2161), wird ignoriert und round-getrippt
 - `location_ids`: Array (leer erlaubt, aber mind. 1 Ort bei Versand sinnvoll)
 
 ### User-Isolation

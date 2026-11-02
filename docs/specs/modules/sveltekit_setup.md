@@ -2,13 +2,15 @@
 entity_id: sveltekit_setup
 type: module
 created: 2026-04-13
-updated: 2026-04-13
+updated: 2026-11-02
 status: draft
 version: "1.0"
 tags: [migration, sveltekit, auth, frontend]
 ---
 
 # M2: SvelteKit Frontend Setup + Auth
+
+> **Abgelöst (Stand 2026-11-02, #2161):** Auth läuft heute über die Go-API (ADR-0066/0078/0084), Single-User-/ENV-Credentials-Aussagen sind überholt. Siehe [ADR-0066](../../adr/0066-login-erfordert-bestaetigte-email-adresse.md), [ADR-0078](../../adr/0078-admin-rolle-ueber-env-liste-statt-profilfeld.md), [ADR-0084](../../adr/0084-admin-einladungslinks-globale-token-datei.md); Mandantentrennung nach ADR-0003.
 
 ## Approval
 

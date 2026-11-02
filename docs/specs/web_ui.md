@@ -2,13 +2,15 @@
 entity_id: web_ui
 type: feature
 created: 2025-12-28
-updated: 2026-05-15
+updated: 2026-11-02
 status: deprecated
 version: "1.0"
 tags: [ui, nicegui, configuration, legacy, removed]
 ---
 
 # Web UI - Konfigurationsoberfläche (LEGACY — entfernt mit Issue #129)
+
+> **Abgelöst (Stand 2026-11-02, #2161):** Single-User-Aussagen historisch, heute ADR-0003 ([Mandantentrennung](../adr/0003-multi-tenant-isolation.md)): jeder Nutzer hat eigene Daten unter `data/users/<user_id>/`.
 
 > **HINWEIS — Diese Spec ist historisch.** Die NiceGUI-basierte Python-UI in `src/web/` wurde am 2026-05-15 mit Issue #129 ersatzlos entfernt. Die produktive Benutzeroberfläche ist seit der SvelteKit-Migration `frontend/` (https://gregor20.henemm.com). Diese Datei bleibt als Archiv erhalten, beschreibt aber **keinen aktuellen Code mehr**.
 
