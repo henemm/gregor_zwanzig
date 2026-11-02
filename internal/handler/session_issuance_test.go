@@ -769,9 +769,11 @@ func TestPasskeyPublicRegistration_IssuesNoSession(t *testing.T) {
 		t.Errorf("AC-8: Antwort muss auf die ausstehende Bestätigung hinweisen "+
 			`(status "verification_pending"), bekommen %q`, finishW.Body.String())
 	}
-	if antwort["id"] != "passwordless" {
-		t.Errorf("AC-8: die angelegte Kennung muss weiter in der Antwort stehen, bekommen %q",
-			finishW.Body.String())
+	// Issue #2194 (AC-13): die angelegte Kennung ist die in Begin erzeugte ID,
+	// nicht mehr der Body-username.
+	if want := passkeyBeginKontoID(t, beginW.Body.Bytes()); antwort["id"] != want {
+		t.Errorf("AC-8: die angelegte Kennung %q muss weiter in der Antwort stehen, bekommen %q",
+			want, finishW.Body.String())
 	}
 }
 

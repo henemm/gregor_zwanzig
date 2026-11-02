@@ -100,7 +100,7 @@
 	});
 
 	/**
-	 * Bietet den hinterlegten Passkey als Vorschlag im Benutzernamen-Feld an.
+	 * Bietet den hinterlegten Passkey als Vorschlag im E-Mail-Feld an.
 	 * Startet nur, wenn der Browser das selbst meldet — die Pruefung laeuft rein
 	 * im Browser und verbraucht kein Anfrage-Kontingent.
 	 */
@@ -262,13 +262,16 @@
 		     Resend-Formular zwei benannte Actions und keine `default` mehr. -->
 		<form method="POST" action="?/login" class="space-y-4">
 			<div class="space-y-2">
-				<label for="username" class="text-sm font-medium">{$t('auth.feld.benutzername')}</label>
+				<!-- Issue #2194: Kennung ist die E-Mail-Adresse. `name`/`id` bleiben
+				     `username` (Vertrag mit Go-API, E2E-Selektoren); `type="text"`,
+				     weil Testkonten sich weiter per ID ohne `@` anmelden. -->
+				<label for="username" class="text-sm font-medium">{$t('auth.feld.email')}</label>
 				<input
 					id="username"
 					name="username"
 					type="text"
 					required
-					autocomplete="username webauthn"
+					autocomplete="email webauthn"
 					bind:value={username}
 					bind:this={usernameFeld}
 					class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"

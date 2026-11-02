@@ -110,15 +110,17 @@ describe('#2247 AC-3 — Passkey-Knopf steht bereits im Server-HTML', () => {
 });
 
 describe('#2247 AC-11 — Benutzernamen-Feld traegt die Autofill-Anbindung', () => {
-	test('username_feld_traegt_autocomplete_username_webauthn', () => {
+	// #2194 (AC-14): das Kennungsfeld fragt nach der E-Mail-Adresse; die
+	// Autofill-Anbindung (`webauthn`) bleibt, das Token davor ist jetzt `email`.
+	test('kennungsfeld_traegt_autocomplete_email_webauthn', () => {
 		const html = renderLogin();
 		// Das Feld ist per `id="username"` adressiert, nicht per data-testid --
 		// es existiert schon heute (login/+page.svelte:63) ohne data-testid.
 		const tag = openingTagByAttr(html, 'id="username"');
 		assert.match(
 			tag,
-			/autocomplete="username webauthn"/,
-			`AC-11: das Benutzernamen-Feld traegt nicht autocomplete="username webauthn" -- ${tag}`
+			/autocomplete="email webauthn"/,
+			`AC-11/#2194: das Kennungsfeld traegt nicht autocomplete="email webauthn" -- ${tag}`
 		);
 	});
 });

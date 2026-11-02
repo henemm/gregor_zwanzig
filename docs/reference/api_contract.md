@@ -3162,20 +3162,34 @@ Executes comparison and sends report for a single preset immediately (regardless
 
 #### POST /api/auth/register
 
-User registration with username + password + email (HTTP 201 on success, 409 if user exists).
+User registration with email + password (HTTP 201 on success).
 
-**Request Body:**
+**Issue #2194 / ADR-0105 — generierte Konto-ID:** Ein normales Konto (ohne `is_test_user`) erhält
+eine vom Server erzeugte, opake ID im Format `u-<8hex>` (`store.NewOpaqueUserID`, crypto/rand,
+Kollisionsprüfung mit Wiederholung, nie Überschreiben); der Ordner heißt `data/users/u-<8hex>/`.
+Ein im Body mitgesendeter `username` wird dabei **ignoriert**. Nur bei `is_test_user=true` wird
+`username` als feste Konto-ID übernommen (Validator-Skript, Fixture-Konten, E2E-Testkonten; die
+Prüfreihenfolge #1517 gilt für diesen Pfad weiter). Die Antwort `{"id": ...}` nennt die tatsächlich
+angelegte ID; Aufrufer verwenden sie für alle Folgeschritte (Verify-Link `?user=<id>`, Login). Wird
+die Registrierung mit Einladungscode (ADR-0084) eingelöst, ist die generierte ID der Einlöser.
+
+**Request Body (normales Konto):**
 ```json
-{"username": "alice", "password": "geheim123", "email": "alice@example.com", "is_test_user": false}
+{"password": "geheim123", "email": "alice@example.com"}
+```
+
+**Request Body (Testkonto mit fester ID):**
+```json
+{"username": "validator-bot", "password": "geheim123", "email": "bot@example.com", "is_test_user": true}
 ```
 
 **Response 201:**
 ```json
-{"id": "alice"}
+{"id": "u-1a2b3c4d"}
 ```
 
 **Validation:**
-- `username`: 3–50 characters, alphanumeric + underscore
+- `username` (nur bei `is_test_user=true` ausgewertet): 3–50 characters, alphanumeric + underscore
 - `password`: ≥8 characters
 - `is_test_user` (optional, Issue #2152/ADR-0072): `true` markiert das Konto dauerhaft als Testkonto (`user.json` → `is_test_user`). Der Testkonto-Status wird ausschliesslich aus diesem Feld gelesen (plus der festen Fixture-ID `tg-live-e2e`) — die frühere Namens-Heuristik (`test`/`tdd` im Usernamen) ist entfallen. Fehlt das Feld, ist das Konto ein normales Nutzerkonto.
 - `email`: required (Issue #1226), minimal format check (`strings.Contains(email, "@")` — no `net/mail` parsing); **uniqueness IS enforced** (Issue #2147 Scheibe B1) — normalisiert (`TrimSpace`+`ToLower`) darf `email`/`mail_to` keinem anderen, echten (Nicht-Test-)Konto bereits gehören, geprüft unter einer prozessweiten Sperre je Adresse (`store.LockEmailAddress`)
@@ -3198,11 +3212,19 @@ Since Issue #1226, a valid `email` also triggers the existing `dispatchVerificat
 
 #### POST /api/auth/login
 
-User login with username + password, returns session cookie.
+User login with E-Mail-Adresse (oder Konto-ID) + password, returns session cookie.
+
+**Issue #2194 / ADR-0105 — Weiche am `@`:** Das Feld `username` trägt die Anmeldekennung. Eine
+Eingabe mit `@` ist eine E-Mail-Adresse und wird über `Store.FindUsersByLoginEmail` aufgelöst
+(normalisiert per Trim + Kleinschreibung, verglichen wird **nur** `email`, nie `mail_to`;
+Testkonten sind ausgeschlossen). Eine Eingabe ohne `@` ist die Konto-ID und läuft unverändert über
+den bisherigen ID-Pfad (dauerhaft, z.B. Testkonten, Bestandskonten ohne `email`). Kein Treffer
+oder mehrere Treffer gelten gleich: genau ein bcrypt-Vergleich (Dummy), 401 `invalid_credentials`,
+identischer Body. Das Verify-Gate (ADR-0066) gilt auf beiden Wegen gleich.
 
 **Request Body:**
 ```json
-{"username": "alice", "password": "geheim123"}
+{"username": "alice@example.com", "password": "geheim123"}
 ```
 
 **Response 200:**
@@ -3210,15 +3232,35 @@ User login with username + password, returns session cookie.
 {"id": "alice"}
 ```
 
+`id` ist die **aufgelöste Konto-ID** (resolved), kein Echo der Eingabe — auch bei Login per
+E-Mail-Adresse steht hier die ID des Kontos (z.B. `u-1a2b3c4d`), nie die Adresse.
+
 **Side Effects:**
-- Sets `Set-Cookie: gz_session=<userId>.<sessionId>.<timestamp>.<hmacSig>; HttpOnly; SameSite=Lax; MaxAge=34560000; Secure` (Secure flag active on HTTPS)
+- Sets `Set-Cookie: gz_session=<userId>.<sessionId>.<timestamp>.<hmacSig>; HttpOnly; SameSite=Lax; MaxAge=34560000; Secure` (Secure flag active on HTTPS) — `<userId>` ist die aufgelöste Konto-ID
 
 **Error Responses:**
 
 | Status | Body | Scenario |
 |--------|------|----------|
 | 400 | `{"code":"invalid_request"}` | JSON malformed (auth.go:124) |
-| 401 | `{"code":"invalid_credentials"}` | User not found or password incorrect — same message for both (auth.go:132,139) |
+| 401 | `{"code":"invalid_credentials"}` | User not found, address unknown/ambiguous/test account, or password incorrect — same message for all |
+
+#### POST /api/auth/forgot-password
+
+Fordert einen Passwort-Reset an. Öffentlich, Antwort **immer** dieselbe neutrale Bestätigung
+(gleicher Status und Body), unabhängig davon, ob ein Konto gefunden wird (keine Enumeration).
+
+**Issue #2194 / ADR-0105 — Weiche am `@`:** Das Feld `username` nimmt die E-Mail-Adresse oder die
+Konto-ID auf. Mit `@` sucht der Server das Konto per E-Mail-Adresse (`FindUsersByLoginEmail`, nur
+`email`, ohne Testkonten); ohne `@` gilt der bisherige ID-Pfad. Nur bei genau einem Treffer geht
+die Reset-Mail an dieses Konto; der Link enthält weiterhin `?user=<id>` (keine Adresse in
+URL/Referer). Kein oder mehrere Treffer: keine Mail, Antwort unverändert. Der Reset-Confirm-Body
+bleibt `{username, token, new_password}` mit der Konto-ID aus dem Link.
+
+**Request Body:**
+```json
+{"username": "alice@example.com"}
+```
 
 #### POST /api/auth/magic-link
 
@@ -3433,6 +3475,10 @@ uniqueness of exactly the address stored in the challenge entry (not a client-su
 `store.LockEmailAddress`, since the address may have been claimed by a different account between
 Begin and Finish, before creating the credential-less account.
 
+**Issue #2194 / ADR-0105:** Das neue Konto erhält eine generierte ID `u-<8hex>`
+(`store.NewOpaqueUserID`); zwei Registrierungen liefern verschiedene IDs, Kollisionen werden
+wiederholt, nie überschrieben.
+
 **Error Responses (both endpoints):**
 
 | Status | Body | Scenario |
@@ -3445,9 +3491,15 @@ Begin and Finish, before creating the credential-less account.
 
 Initiate passkey login (public, no auth required).
 
+**Issue #2194 / ADR-0105 — Kennung = E-Mail-Adresse, Weiche am `@`:** Die Oberfläche fragt nach
+der E-Mail-Adresse und reicht die Eingabe unverändert als `username` weiter. Mit `@` löst der
+Server das Konto per E-Mail-Adresse auf (`FindUsersByLoginEmail`, nur `email`, ohne Testkonten);
+ohne `@` gilt der bisherige ID-Pfad. Unbekannte, mehrfach vergebene oder einem Testkonto gehörende
+Adressen liefern dieselbe Antwort wie eine unbekannte Kennung (kein Hinweis auf Existenz).
+
 **Request Body:**
 ```json
-{"username": "alice"}
+{"username": "alice@example.com"}
 ```
 
 **Response 200:**
@@ -3967,10 +4019,16 @@ Unterpfad nicht mit ab, deshalb ein eigener Allowlist-Eintrag). Nutzlast enthäl
 Nutzerkennung, keine Adresse — verhindert Adress-zu-Konto-Zuordnung, analog
 `ForgotPasswordHandler`.
 
+**Issue #2194 / ADR-0105 — Weiche am `@`:** `username` nimmt die E-Mail-Adresse oder die Konto-ID
+auf. Mit `@` sucht der Server das Konto per E-Mail-Adresse (`FindUsersByLoginEmail`, nur `email`,
+ohne Testkonten); ohne `@` gilt der bisherige ID-Pfad. Die Bestätigungsmail (Link `?user=<id>`)
+geht nur an ein eindeutig gefundenes Konto; unbekannte oder mehrfach vergebene Adressen erhalten
+dieselbe neutrale Antwort.
+
 **Request Body:**
 ```json
 {
-  "username": "henning"
+  "username": "henning@example.com"
 }
 ```
 

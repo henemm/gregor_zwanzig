@@ -104,7 +104,7 @@ function seiteMit(ergebnis: Ausgang): string {
 }
 
 const HINWEIS = 'data-testid="login-error-email-not-verified"';
-const ALLGEMEIN = 'Benutzername oder Passwort nicht korrekt.';
+const ALLGEMEIN = 'E-Mail oder Passwort nicht korrekt.'; // #2194: Kennung ist die E-Mail-Adresse
 
 describe('#2271 AC-12 — nur der Grund `email_not_verified` fuehrt zum Postfach-Hinweis', () => {
 	test('403_mit_email_not_verified_zeigt_den_hinweis', async () => {
@@ -146,6 +146,6 @@ describe('#2271 AC-12 — nur der Grund `email_not_verified` fuehrt zum Postfach
 		assert.equal(ergebnis.data.error, 'Invalid credentials');
 		const html = seiteMit(ergebnis);
 		assert.ok(!html.includes(HINWEIS), 'Der neue Hinweisblock darf bei falschem Passwort nicht erscheinen.');
-		assert.ok(html.includes(ALLGEMEIN), 'Bei 401 fehlt die Meldung "Benutzername oder Passwort nicht korrekt."');
+		assert.ok(html.includes(ALLGEMEIN), 'Bei 401 fehlt die Meldung "E-Mail oder Passwort nicht korrekt."');
 	});
 });

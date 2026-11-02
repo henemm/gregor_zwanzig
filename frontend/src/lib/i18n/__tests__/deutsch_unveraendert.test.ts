@@ -246,8 +246,6 @@ const NEU_IN_FOLGEPAKETEN = [
 	'auth.anmelden',
 	'auth.oder',
 	'auth.zurueck_login',
-	'auth.feld.benutzername',
-	'auth.feld.username_platzhalter',
 	'auth.feld.passwort',
 	'auth.feld.email',
 	'auth.feld.email_adresse',

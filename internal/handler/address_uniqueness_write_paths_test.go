@@ -110,7 +110,8 @@ func TestRegistrierungSpeichertNormalisierteAdresse_AC1(t *testing.T) {
 	if w.Code != http.StatusCreated {
 		t.Fatalf("AC-1: erwartet 201, bekommen %d: %s", w.Code, w.Body.String())
 	}
-	u := ladeKonto(t, s, username)
+	// Issue #2194: Konto-ID aus der 201-Antwort (generiert, username ignoriert).
+	u := ladeKonto(t, s, registrierID2194(t, w, "AC-1"))
 	if u.Email != "foo@x.de" || u.MailTo != "foo@x.de" {
 		t.Errorf("AC-1: erwartet normalisiert foo@x.de in beiden Feldern, bekommen email=%q mail_to=%q",
 			u.Email, u.MailTo)
@@ -156,6 +157,14 @@ func TestRegistrierungWeistBelegteAdresseAb_AC2(t *testing.T) {
 				t.Errorf("AC-2/%s: keine Verifikationsmail — es darf kein Token entstanden sein (tok=%v err=%v)",
 					f.name, tok, err)
 			}
+			// Issue #2194: der Name benennt kein Konto mehr — kein Konto darf
+			// ein Verifikations-Token tragen.
+			ids, _ := s.ListUserIDs()
+			for _, id := range ids {
+				if tok, _ := s.LoadVerificationToken(id); tok != nil {
+					t.Errorf("AC-2/%s: Konto %q traegt ein Verifikations-Token", f.name, id)
+				}
+			}
 		})
 	}
 }
@@ -198,7 +207,14 @@ func TestRegistrierungKennungskonfliktHatVorrangVorAdresskonflikt_AC4(t *testing
 	speichereKonto(t, s, model.User{ID: bestehendeKennung, PasswordHash: "irgendein-hash"})
 	speichereKonto(t, s, model.User{ID: halterID, Email: adresse, MailTo: adresse})
 
-	w := schreibpfadRegistrieren(s, cfg, bestehendeKennung, adresse)
+	// Issue #2194: eine feste Kennung gibt es nur fuer Testkonten; deren
+	// Registrierung prueft weiter die Kennung zuerst (#1517).
+	body := fmt.Sprintf(`{"username":%q,"password":%q,"email":%q,"is_test_user":true}`,
+		bestehendeKennung, schreibpfadPasswort, adresse)
+	req := httptest.NewRequest(http.MethodPost, "/api/auth/register", strings.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+	RegisterHandler(s, bcrypt.MinCost, cfg).ServeHTTP(w, req)
 
 	if w.Code != http.StatusConflict {
 		t.Fatalf("AC-4: erwartet 409, bekommen %d: %s", w.Code, w.Body.String())
@@ -267,6 +283,8 @@ func TestPasskeyPublicFinishWeistZwischenzeitlichBelegteAdresseAb_AC6(t *testing
 	if err := json.Unmarshal(beginW.Body.Bytes(), &beginResp); err != nil {
 		t.Fatalf("AC-6 begin decode: %v", err)
 	}
+	// Issue #2194: das Konto entstuende unter der in Begin erzeugten ID.
+	urspruenglicheID := passkeyBeginKontoID(t, beginW.Body.Bytes())
 
 	// Ein ANDERES Konto (andere Kennung!) belegt die Adresse zwischen Begin und
 	// Finish erfolgreich.
@@ -284,7 +302,7 @@ func TestPasskeyPublicFinishWeistZwischenzeitlichBelegteAdresseAb_AC6(t *testing
 	if finishW.Code != http.StatusConflict || !strings.Contains(finishW.Body.String(), "email_taken") {
 		t.Fatalf("AC-6: erwartet 409 email_taken, bekommen %d: %s", finishW.Code, finishW.Body.String())
 	}
-	if s.UserExists(ursprungsUsername) {
+	if s.UserExists(ursprungsUsername) || s.UserExists(urspruenglicheID) {
 		t.Errorf("AC-6: das urspruengliche Konto darf nicht entstanden sein")
 	}
 	if n := kontenAnzahl(t, s); n != 1 {
@@ -587,6 +605,11 @@ func TestRegistrierungMitUnlesbaremFremdkontoIstFailClosed_AC14(t *testing.T) {
 	if s.UserExists(neuerName) {
 		t.Errorf("AC-14: bei einem 500 darf kein Konto entstehen")
 	}
+	// Issue #2194: der Name benennt kein Konto mehr — nur das defekte
+	// Bestandskonto darf existieren.
+	if n := kontenAnzahl(t, s); n != 1 {
+		t.Errorf("AC-14: bei einem 500 darf kein Konto entstehen, Konten: %d statt 1", n)
+	}
 	protokoll := strings.ToLower(mitschnitt.String())
 	if strings.Contains(protokoll, "geprueft-ac14") {
 		t.Errorf("AC-14: das Server-Log nennt die Adresse im Klartext: %q", mitschnitt.String())
@@ -846,7 +869,8 @@ func TestPasskeyPublicFinishMitUnlesbaremFremdkontoIstFailClosed_F002(t *testing
 	if finishW.Code != http.StatusInternalServerError {
 		t.Fatalf("F002/PasskeyFinish: erwartet 500, bekommen %d: %s", finishW.Code, finishW.Body.String())
 	}
-	if s.UserExists(username) {
+	// Issue #2194: das Konto entstuende unter der in Begin erzeugten ID.
+	if s.UserExists(username) || s.UserExists(passkeyBeginKontoID(t, beginW.Body.Bytes())) {
 		t.Errorf("F002/PasskeyFinish: bei 500 darf kein Konto entstanden sein")
 	}
 	protokoll := strings.ToLower(mitschnitt.String())

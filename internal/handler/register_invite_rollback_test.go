@@ -30,7 +30,10 @@ func TestRegisterMitEinladung_SaveUserScheitert_EinladungBleibtOffen(t *testing.
 		t.Fatal(err)
 	}
 	h := RegisterHandlerWithInvites(s, bcrypt.MinCost, config.Config{}, inv)
-	body := `{"username":"blockiert","password":"geheim-pw-123","email":"b@example.org","invite":"` + token + `"}`
+	// Issue #2194: eine vorhersagbare ID (users/blockiert) gibt es nur fuer
+	// Testkonten; UserExists meldet fuer die Datei false, Redeem laeuft, erst
+	// SaveUser scheitert — so wird der Rollback-Pfad wirklich betreten.
+	body := `{"username":"blockiert","password":"geheim-pw-123","email":"b@example.org","is_test_user":true,"invite":"` + token + `"}`
 	w := httptest.NewRecorder()
 	h.ServeHTTP(w, httptest.NewRequest(http.MethodPost, "/api/auth/register", bytes.NewReader([]byte(body))))
 	if w.Code < 500 {

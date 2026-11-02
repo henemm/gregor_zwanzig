@@ -201,6 +201,29 @@ func TestFindUsersByLoginEmail_KaputteUserJSONFailClosed_2194(t *testing.T) {
 	}
 }
 
+// Der Ordnername ist die Kennung: eine user.json ohne bzw. mit abweichendem
+// "id"-Feld darf die aufgeloeste Konto-ID nicht verschieben (sonst bekaeme
+// der Login eine Sitzung fuer "" oder ein fremdes Konto).
+func TestFindUsersByLoginEmail_IDIstOrdnername_2194(t *testing.T) {
+	dir := t.TempDir()
+	s := New(dir, "")
+	writeRawUserJSON(t, dir, "ohne-id", `{"email":"ohne-id@beispiel.de"}`)
+	writeRawUserJSON(t, dir, "ordner-id", `{"id":"fremde-id","email":"abweichend@beispiel.de"}`)
+
+	for adresse, want := range map[string]string{
+		"ohne-id@beispiel.de":    "ohne-id",
+		"abweichend@beispiel.de": "ordner-id",
+	} {
+		got, err := s.FindUsersByLoginEmail(adresse)
+		if err != nil {
+			t.Fatalf("FindUsersByLoginEmail(%q): %v", adresse, err)
+		}
+		if ids := trefferIDs2194(got); !gleicheIDs2194(ids, []string{want}) {
+			t.Errorf("FindUsersByLoginEmail(%q): Konto-ID muss der Ordnername %q sein, bekommen %v", adresse, want, ids)
+		}
+	}
+}
+
 // AC-10/AC-13: Format u-<8hex>, verschiedene IDs, kein bestehendes Konto.
 func TestNewOpaqueUserID_FormatUndVerschieden_2194(t *testing.T) {
 	s := New(t.TempDir(), "")

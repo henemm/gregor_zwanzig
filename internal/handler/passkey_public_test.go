@@ -2,6 +2,7 @@ package handler
 
 import (
 	"bytes"
+	"encoding/base64"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
@@ -14,6 +15,32 @@ import (
 	"github.com/henemm/gregor-api/internal/mail"
 	"github.com/henemm/gregor-api/internal/model"
 )
+
+// passkeyBeginKontoID liest die im Begin-Schritt erzeugte Konto-ID aus der
+// Antwort (Issue #2194, AC-13): publicKey.user.id ist der base64url-kodierte
+// WebAuthn-userHandle == user.ID.
+func passkeyBeginKontoID(t *testing.T, beginAntwort []byte) string {
+	t.Helper()
+	var resp struct {
+		PublicKey struct {
+			User struct {
+				ID string `json:"id"`
+			} `json:"user"`
+		} `json:"publicKey"`
+	}
+	if err := json.Unmarshal(beginAntwort, &resp); err != nil {
+		t.Fatalf("Begin-Antwort kein JSON: %v", err)
+	}
+	roh, err := base64.RawURLEncoding.DecodeString(strings.TrimRight(resp.PublicKey.User.ID, "="))
+	if err != nil {
+		t.Fatalf("publicKey.user.id %q nicht base64url: %v", resp.PublicKey.User.ID, err)
+	}
+	id := string(roh)
+	if !opakeID2194.MatchString(id) {
+		t.Fatalf("Begin-Konto-ID %q passt nicht zu ^u-[0-9a-f]{8}$", id)
+	}
+	return id
+}
 
 // TDD RED — Issue #466 Passkey V2: Public passwordless registration.
 // Mock-free: reuses testAuthenticator (ECDSA-P-256, "none" attestation) from passkey_test.go.
@@ -53,14 +80,20 @@ func TestPasskeyRegisterPublicBegin_Success(t *testing.T) {
 		t.Errorf("AC-1: expected non-empty challenge in publicKey")
 	}
 
-	// No user must have been persisted at this point.
+	// No user must have been persisted at this point — weder unter dem
+	// Body-username noch unter der in Begin erzeugten ID (Issue #2194).
 	if s.UserExists("newuser") {
 		t.Errorf("AC-1: user must NOT be persisted after Begin")
+	}
+	if id := passkeyBeginKontoID(t, w.Body.Bytes()); s.UserExists(id) {
+		t.Errorf("AC-1: generated id %q must NOT be persisted after Begin", id)
 	}
 }
 
 // -----------------------------------------------------------------------------
-// AC-2: Begin fails when username already exists → 409
+// AC-2 (umgestellt auf Issue #2194 AC-13): ein vergebener Body-username ist
+// kein Konflikt mehr — er wird ignoriert. Begin liefert 200 mit generierter
+// ID, das Bestandskonto bleibt byte-genau unberuehrt.
 // -----------------------------------------------------------------------------
 
 func TestPasskeyRegisterPublicBegin_UserExists(t *testing.T) {
@@ -73,6 +106,7 @@ func TestPasskeyRegisterPublicBegin_UserExists(t *testing.T) {
 	if err := s.SaveUser(model.User{ID: "alice", PasswordHash: "hash", CreatedAt: time.Now()}); err != nil {
 		t.Fatalf("seed user: %v", err)
 	}
+	vorher := rohesKonto(t, s, "alice")
 
 	body := []byte(`{"username":"alice","email":"alice@example.com"}`)
 	req := httptest.NewRequest("POST", "/api/auth/passkey/register/public/begin", bytes.NewReader(body))
@@ -81,16 +115,20 @@ func TestPasskeyRegisterPublicBegin_UserExists(t *testing.T) {
 	h := PasskeyRegisterPublicBeginHandler(s, wa, cs)
 	h.ServeHTTP(w, req)
 
-	if w.Code != http.StatusConflict {
-		t.Fatalf("AC-2: expected 409, got %d: %s", w.Code, w.Body.String())
+	if w.Code != http.StatusOK {
+		t.Fatalf("#2194 AC-13: Body-username wird ignoriert, expected 200, got %d: %s", w.Code, w.Body.String())
 	}
-	if !strings.Contains(w.Body.String(), "user_already_exists") {
-		t.Errorf("AC-2: expected error=user_already_exists in body, got: %s", w.Body.String())
+	if id := passkeyBeginKontoID(t, w.Body.Bytes()); id == "alice" {
+		t.Errorf("#2194 AC-13: Begin darf die Bestandskennung nicht uebernehmen")
+	}
+	if nachher := rohesKonto(t, s, "alice"); !bytes.Equal(vorher, nachher) {
+		t.Errorf("#2194 AC-13: Bestandskonto alice wurde veraendert")
 	}
 }
 
 // -----------------------------------------------------------------------------
-// AC-3: Begin fails for invalid username (too short / too long) → 400
+// AC-3 (umgestellt auf Issue #2194 AC-13): ein ungueltiger Body-username wird
+// nicht mehr validiert, sondern ignoriert — 200 mit generierter ID, kein Konto.
 // -----------------------------------------------------------------------------
 
 func TestPasskeyRegisterPublicBegin_InvalidUsername(t *testing.T) {
@@ -116,11 +154,12 @@ func TestPasskeyRegisterPublicBegin_InvalidUsername(t *testing.T) {
 			req := httptest.NewRequest("POST", "/api/auth/passkey/register/public/begin", bytes.NewReader(body))
 			w := httptest.NewRecorder()
 			h.ServeHTTP(w, req)
-			if w.Code != http.StatusBadRequest {
-				t.Fatalf("AC-3 [%s]: expected 400, got %d: %s", tc.name, w.Code, w.Body.String())
+			if w.Code != http.StatusOK {
+				t.Fatalf("#2194 AC-13 [%s]: username wird ignoriert, expected 200, got %d: %s", tc.name, w.Code, w.Body.String())
 			}
-			if !strings.Contains(w.Body.String(), "validation_failed") {
-				t.Errorf("AC-3 [%s]: expected validation_failed in body", tc.name)
+			passkeyBeginKontoID(t, w.Body.Bytes()) // prueft ^u-[0-9a-f]{8}$
+			if ids, _ := s.ListUserIDs(); len(ids) != 0 {
+				t.Errorf("#2194 AC-13 [%s]: Begin darf kein Konto anlegen, vorhanden: %v", tc.name, ids)
 			}
 		})
 	}
@@ -205,8 +244,21 @@ func TestPasskeyRegisterPublicRoundtrip_Success(t *testing.T) {
 		t.Fatalf("AC-5 finish: expected 201, got %d: %s", finishW.Code, finishW.Body.String())
 	}
 
-	// User must exist without PasswordHash.
-	user, err := s.LoadUser("passwordless")
+	// User must exist without PasswordHash — unter der generierten ID aus der
+	// 201-Antwort, die mit der in Begin gebundenen ID uebereinstimmt (#2194).
+	var finishResp struct {
+		ID string `json:"id"`
+	}
+	if err := json.Unmarshal(finishW.Body.Bytes(), &finishResp); err != nil {
+		t.Fatalf("AC-5 finish decode: %v", err)
+	}
+	if beginID := passkeyBeginKontoID(t, beginW.Body.Bytes()); finishResp.ID != beginID {
+		t.Errorf("#2194: Finish-ID %q muss der in Begin gebundenen ID %q gleichen", finishResp.ID, beginID)
+	}
+	if s.UserExists("passwordless") {
+		t.Errorf("#2194: Body-username darf kein Konto benennen")
+	}
+	user, err := s.LoadUser(finishResp.ID)
 	if err != nil || user == nil {
 		t.Fatalf("AC-5: user not found after registration: %v", err)
 	}
@@ -287,7 +339,8 @@ func TestPasskeyRegisterPublicFinish_TriggersDispatch_1226_AC6(t *testing.T) {
 	if finishW.Code != http.StatusCreated {
 		t.Fatalf("AC-6 finish: expected 201, got %d: %s", finishW.Code, finishW.Body.String())
 	}
-	if !s.UserExists("pwverify") {
+	// Issue #2194: Konto unter der in Begin erzeugten ID.
+	if !s.UserExists(passkeyBeginKontoID(t, beginW.Body.Bytes())) {
 		t.Errorf("AC-6: passwordless account must exist after finish")
 	}
 
@@ -338,7 +391,8 @@ func TestPasskeyRegisterPublicFinish_ChallengeExpired(t *testing.T) {
 }
 
 // -----------------------------------------------------------------------------
-// AC-7: Race — username claimed between Begin and Finish → 409
+// AC-7: Race — die in Begin erzeugte ID (Issue #2194) wird zwischen Begin und
+// Finish belegt → 409, das Konto des anderen wird nicht ueberschrieben.
 // -----------------------------------------------------------------------------
 
 func TestPasskeyRegisterPublicFinish_UsernameRace(t *testing.T) {
@@ -364,10 +418,12 @@ func TestPasskeyRegisterPublicFinish_UsernameRace(t *testing.T) {
 	}
 	json.Unmarshal(beginW.Body.Bytes(), &beginResp)
 
-	// Step 2: Someone else claims the username before Finish.
-	if err := s.SaveUser(model.User{ID: "raced", PasswordHash: "claimed", CreatedAt: time.Now()}); err != nil {
-		t.Fatalf("AC-7: could not claim username: %v", err)
+	// Step 2: Someone else claims the generated id before Finish.
+	raced := passkeyBeginKontoID(t, beginW.Body.Bytes())
+	if err := s.SaveUser(model.User{ID: raced, PasswordHash: "claimed", CreatedAt: time.Now()}); err != nil {
+		t.Fatalf("AC-7: could not claim id: %v", err)
 	}
+	vorher := rohesKonto(t, s, raced)
 
 	// Step 3: Finish — must reject with 409
 	auth := passkeytest.NewAuthenticator(t, rpID, origin)
@@ -381,6 +437,9 @@ func TestPasskeyRegisterPublicFinish_UsernameRace(t *testing.T) {
 	}
 	if !strings.Contains(finishW.Body.String(), "user_already_exists") {
 		t.Errorf("AC-7: expected user_already_exists in body, got: %s", finishW.Body.String())
+	}
+	if nachher := rohesKonto(t, s, raced); !bytes.Equal(vorher, nachher) {
+		t.Errorf("AC-7: das zwischenzeitlich angelegte Konto %q wurde ueberschrieben", raced)
 	}
 }
 

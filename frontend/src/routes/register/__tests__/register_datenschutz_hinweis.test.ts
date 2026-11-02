@@ -99,14 +99,15 @@ for (const google of [true, false]) {
 			assert.ok(html.indexOf('Hinweise zum Umgang') > formEnde, 'Satz steht innerhalb des <form>');
 		});
 
-		test('AC-10: kein Zustimmungsschritt — 4 Eingaben, keine Checkbox, Knopf nicht gesperrt', () => {
+		// #2194: das Benutzername-Feld ist entfallen (Konto-ID vergibt der Server).
+		test('AC-10: kein Zustimmungsschritt — 3 Eingaben, keine Checkbox, Knopf nicht gesperrt', () => {
 			const form = html.match(/<form\b[\s\S]*?<\/form>/)?.[0] ?? '';
 			const inputs = [...form.matchAll(/<input\b[^>]*>/g)].map((m) => m[0]);
-			assert.equal(inputs.length, 4, `Erwartet 4 Eingabefelder, gefunden: ${inputs.length}`);
+			assert.equal(inputs.length, 3, `Erwartet 3 Eingabefelder, gefunden: ${inputs.length}`);
 			assert.equal(inputs.filter((i) => /type="checkbox"/.test(i)).length, 0, 'Checkbox im Formular');
 			assert.deepEqual(
 				inputs.map((i) => i.match(/name="([^"]*)"/)?.[1]),
-				['username', 'email', 'password', 'confirmPassword']
+				['email', 'password', 'confirmPassword']
 			);
 			const knopf = form.match(/<button\b[^>]*type="submit"[^>]*>/)?.[0] ?? '';
 			assert.ok(knopf !== '', 'Submit-Knopf fehlt');

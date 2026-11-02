@@ -86,6 +86,22 @@ func ivRegistrieren(t *testing.T, r http.Handler, name, email, invite string) *h
 	return w
 }
 
+// ivKontoID liest die vergebene Konto-ID aus der 201-Antwort der
+// Registrierung (Issue #2194: generiert, der Body-username benennt nichts).
+func ivKontoID(t *testing.T, w *httptest.ResponseRecorder) string {
+	t.Helper()
+	var a struct {
+		ID string `json:"id"`
+	}
+	if err := json.Unmarshal(w.Body.Bytes(), &a); err != nil || a.ID == "" {
+		t.Fatalf("Registrier-Antwort ohne id (%v): %s", err, w.Body.String())
+	}
+	if !strings.HasPrefix(a.ID, "u-") {
+		t.Fatalf("Registrier-Antwort: erwartet generierte ID u-<8hex>, bekommen %q", a.ID)
+	}
+	return a.ID
+}
+
 // ivCheck ruft den oeffentlichen Vorab-Check (POST mit Token im Body) ohne Sitzung.
 func ivCheck(t *testing.T, r http.Handler, secret, token string) *httptest.ResponseRecorder {
 	t.Helper()
@@ -175,10 +191,12 @@ func TestAdminInvites_UngueltigesLevelOderLangeNotiz_400_NichtsGespeichert(t *te
 func TestRegisterMitEinladung_SetztLevel_OhneAntrag_LoginErstNachBestaetigung(t *testing.T) {
 	r, s, secret, _ := adminTestRouter(t, "alice")
 	_, token := ivErstellen(t, r, secret, "premium", "")
-	if w := ivRegistrieren(t, r, "erna", "erna@example.org", token); w.Code != http.StatusCreated {
+	w := ivRegistrieren(t, r, "erna", "erna@example.org", token)
+	if w.Code != http.StatusCreated {
 		t.Fatalf("Register: erwartet 201, bekommen %d: %s", w.Code, w.Body.String())
 	}
-	u, err := s.LoadUser("erna")
+	erna := ivKontoID(t, w) // Issue #2194: generierte ID
+	u, err := s.LoadUser(erna)
 	if err != nil || u == nil {
 		t.Fatalf("Konto fehlt: %v", err)
 	}
@@ -188,7 +206,7 @@ func TestRegisterMitEinladung_SetztLevel_OhneAntrag_LoginErstNachBestaetigung(t 
 	if u.EmailVerifiedAt != nil {
 		t.Errorf("E-Mail darf durch die Einladung nicht als bestaetigt gelten")
 	}
-	if w := auLogin(t, r, "erna", "geheim-2519-pw"); w.Code != http.StatusForbidden {
+	if w := auLogin(t, r, erna, "geheim-2519-pw"); w.Code != http.StatusForbidden {
 		t.Errorf("Login vor Bestaetigung: erwartet 403, bekommen %d: %s", w.Code, w.Body.String())
 	}
 	jetzt := time.Now().UTC()
@@ -196,17 +214,18 @@ func TestRegisterMitEinladung_SetztLevel_OhneAntrag_LoginErstNachBestaetigung(t 
 	if err := s.SaveUser(*u); err != nil {
 		t.Fatal(err)
 	}
-	if w := auLogin(t, r, "erna", "geheim-2519-pw"); w.Code != http.StatusOK {
+	if w := auLogin(t, r, erna, "geheim-2519-pw"); w.Code != http.StatusOK {
 		t.Errorf("Login nach Bestaetigung: erwartet 200, bekommen %d: %s", w.Code, w.Body.String())
 	}
 }
 
 func TestRegisterOhneEinladung_BleibtFree(t *testing.T) {
 	r, s, _, _ := adminTestRouter(t, "alice")
-	if w := ivRegistrieren(t, r, "frei", "frei@example.org", ""); w.Code != http.StatusCreated {
+	w := ivRegistrieren(t, r, "frei", "frei@example.org", "")
+	if w.Code != http.StatusCreated {
 		t.Fatalf("Register: %d %s", w.Code, w.Body.String())
 	}
-	u, _ := s.LoadUser("frei")
+	u, _ := s.LoadUser(ivKontoID(t, w)) // Issue #2194: generierte ID
 	if u == nil || model.EffectiveTier(u.Tier) != "free" || u.RequestedTier != "" {
 		t.Errorf("Konto ohne Einladung: %+v", u)
 	}
@@ -216,16 +235,19 @@ func TestRegisterOhneEinladung_BleibtFree(t *testing.T) {
 func TestRegisterMitBenutzterEinladung_400_KeinKonto_ListeZeigtBenutztVon(t *testing.T) {
 	r, s, secret, _ := adminTestRouter(t, "alice")
 	_, token := ivErstellen(t, r, secret, "standard", "")
-	if w := ivRegistrieren(t, r, "erster", "erster@example.org", token); w.Code != http.StatusCreated {
-		t.Fatalf("erste Registrierung: %d %s", w.Code, w.Body.String())
+	w1 := ivRegistrieren(t, r, "erster", "erster@example.org", token)
+	if w1.Code != http.StatusCreated {
+		t.Fatalf("erste Registrierung: %d %s", w1.Code, w1.Body.String())
 	}
+	erster := ivKontoID(t, w1) // Issue #2194: generierte ID ist der Einloeser (AC-12)
+	vorher, _ := s.ListUserIDs()
 	w := ivRegistrieren(t, r, "zweiter", "zweiter@example.org", token)
 	auAssertJSONFehler(t, w, http.StatusBadRequest, `{"error":"invite_invalid"}`, "zweite Registrierung")
-	if s.UserExists("zweiter") {
-		t.Errorf("trotz abgelehnter Einladung wurde ein Konto angelegt")
+	if nachher, _ := s.ListUserIDs(); s.UserExists("zweiter") || len(nachher) != len(vorher) {
+		t.Errorf("trotz abgelehnter Einladung wurde ein Konto angelegt (%d -> %d Konten)", len(vorher), len(nachher))
 	}
 	liste, _ := ivListe(t, r, secret)
-	if len(liste) != 1 || liste[0].Status != "used" || liste[0].UsedBy != "erster" || liste[0].UsedAt == nil {
+	if len(liste) != 1 || liste[0].Status != "used" || liste[0].UsedBy != erster || liste[0].UsedAt == nil {
 		t.Errorf("Liste nach Einloesung: %+v", liste)
 	}
 }
@@ -241,10 +263,12 @@ func TestWiderrufeneEinladung_Register400_ListeZeigtWiderrufen_BenutzteNichtWide
 	if w := auRuf(t, r, secret, http.MethodPost, "/api/admin/invites/"+offen.ID+"/revoke", "alice", ""); w.Code != http.StatusOK {
 		t.Fatalf("Revoke: erwartet 200, bekommen %d: %s", w.Code, w.Body.String())
 	}
+	vorher, _ := s.ListUserIDs()
 	w := ivRegistrieren(t, r, "spaet", "spaet@example.org", tokOffen)
 	auAssertJSONFehler(t, w, http.StatusBadRequest, `{"error":"invite_invalid"}`, "widerrufen")
-	if s.UserExists("spaet") {
-		t.Errorf("Konto trotz widerrufener Einladung")
+	// Issue #2194: der Name benennt kein Konto mehr — Kontenzahl zaehlt.
+	if nachher, _ := s.ListUserIDs(); s.UserExists("spaet") || len(nachher) != len(vorher) {
+		t.Errorf("Konto trotz widerrufener Einladung (%d -> %d Konten)", len(vorher), len(nachher))
 	}
 	if w := auRuf(t, r, secret, http.MethodPost, "/api/admin/invites/"+benutzt.ID+"/revoke", "alice", ""); w.Code != http.StatusConflict {
 		t.Errorf("Revoke benutzt: erwartet 409, bekommen %d", w.Code)
@@ -281,10 +305,12 @@ func TestEinladungBleibtOffen_WennRegistrierungAnEmailTakenScheitert(t *testing.
 
 func TestRegisterMitUnbekanntemToken_400_KeinStillesFreeKonto(t *testing.T) {
 	r, s, _, _ := adminTestRouter(t, "alice")
+	vorher, _ := s.ListUserIDs()
 	w := ivRegistrieren(t, r, "fremd", "fremd@example.org", "gibt-es-nicht")
 	auAssertJSONFehler(t, w, http.StatusBadRequest, `{"error":"invite_invalid"}`, "unbekanntes Token")
-	if s.UserExists("fremd") {
-		t.Errorf("Konto trotz ungueltiger Einladung angelegt")
+	// Issue #2194: der Name benennt kein Konto mehr — Kontenzahl zaehlt.
+	if nachher, _ := s.ListUserIDs(); s.UserExists("fremd") || len(nachher) != len(vorher) {
+		t.Errorf("Konto trotz ungueltiger Einladung angelegt (%d -> %d Konten)", len(vorher), len(nachher))
 	}
 }
 
@@ -380,7 +406,14 @@ func TestEinladungNotiz_LaengeInZeichen(t *testing.T) {
 func TestEinladungBleibtOffen_WennBenutzernameVergebenIst(t *testing.T) {
 	r, _, secret, _ := adminTestRouter(t, "alice")
 	_, tok := ivErstellen(t, r, secret, "premium", "")
-	w := ivRegistrieren(t, r, "bob", "bob-neu@example.org", tok)
+	// Issue #2194: eine feste Kennung (und damit der Kennungskonflikt) gibt
+	// es nur noch bei der Testkonto-Registrierung.
+	b, _ := json.Marshal(map[string]any{"username": "bob", "password": "geheim-2519-pw",
+		"email": "bob-neu@example.org", "invite": tok, "is_test_user": true})
+	req := httptest.NewRequest(http.MethodPost, "/api/auth/register", bytes.NewReader(b))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
 	if w.Code != http.StatusConflict {
 		t.Fatalf("erwartet 409, bekommen %d: %s", w.Code, w.Body.String())
 	}

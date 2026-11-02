@@ -110,7 +110,7 @@ describe('register Seite: Einladungs-Hinweis und Google-Knopf (AC-11)', () => {
 	test('ungueltig: klarer Hinweis, normale Registrierung bleibt, kein Hidden-Field, Google weg', () => {
 		const html = seite({ googleEnabled: true, invite: { status: 'invalid', token: 'x' } });
 		assert.ok(html.includes('Einladung nicht (mehr) gültig'), 'Hinweis fehlt');
-		assert.ok(html.includes('name="username"'), 'Formular muss bleiben');
+		assert.ok(html.includes('name="email"'), 'Formular muss bleiben');
 		assert.ok(!/name="invite"/.test(html), 'ungueltiges Token darf nicht mitgesendet werden');
 		assert.ok(!html.includes('Mit Google registrieren'));
 	});

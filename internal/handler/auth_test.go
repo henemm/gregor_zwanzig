@@ -72,16 +72,20 @@ func TestRegisterHandlerSuccess(t *testing.T) {
 	if w.Code != 201 {
 		t.Fatalf("expected 201, got %d: %s", w.Code, w.Body.String())
 	}
+	// Issue #2194 (AC-10): generierte ID statt Body-username.
 	var resp map[string]string
 	json.Unmarshal(w.Body.Bytes(), &resp)
-	if resp["id"] != "alice" {
-		t.Errorf("expected id 'alice', got '%s'", resp["id"])
+	if !opakeID2194.MatchString(resp["id"]) {
+		t.Errorf("expected generated id u-<8hex>, got '%s'", resp["id"])
 	}
 
-	// AND: user.json exists
-	userFile := filepath.Join(s.DataDir, "users", "alice", "user.json")
+	// AND: user.json exists unter der generierten ID, kein Konto "alice"
+	userFile := filepath.Join(s.DataDir, "users", resp["id"], "user.json")
 	if _, err := os.Stat(userFile); os.IsNotExist(err) {
 		t.Error("user.json should be created")
+	}
+	if s.UserExists("alice") {
+		t.Error("body username must not name the account (#2194)")
 	}
 
 	// AND: auf den asynchronen Dispatch warten, bevor der defer den Stub
@@ -102,8 +106,8 @@ func TestRegisterHandlerDuplicateUser(t *testing.T) {
 
 	h := RegisterHandler(s, bcrypt.MinCost, testRegisterCfg())
 
-	// WHEN: Registering same username
-	body := `{"username":"alice","password":"geheim123","email":"alice@beispiel.de"}`
+	// WHEN: Registering same username (Issue #2194: feste ID nur als Testkonto)
+	body := `{"username":"alice","password":"geheim123","email":"alice@beispiel.de","is_test_user":true}`
 	req := httptest.NewRequest("POST", "/api/auth/register", strings.NewReader(body))
 	w := httptest.NewRecorder()
 	h.ServeHTTP(w, req)
@@ -128,8 +132,8 @@ func TestRegisterHandler_ExistingUserWithoutEmail_Returns409_AC1(t *testing.T) {
 	h := RegisterHandler(s, bcrypt.MinCost, testRegisterCfg())
 
 	// WHEN: Registering same username WITHOUT email (wie
-	// scripts/setup-validator-user.sh es tut)
-	body := `{"username":"alice","password":"geheim123"}`
+	// scripts/setup-validator-user.sh es tut — Testkonto, Issue #2194)
+	body := `{"username":"alice","password":"geheim123","is_test_user":true}`
 	req := httptest.NewRequest("POST", "/api/auth/register", strings.NewReader(body))
 	w := httptest.NewRecorder()
 	h.ServeHTTP(w, req)
@@ -206,7 +210,8 @@ func TestRegisterHandler_ExistingUserInvalidUsernameFormat_Returns400NotEnumerat
 
 			h := RegisterHandler(s, bcrypt.MinCost, testRegisterCfg())
 
-			body := `{"username":"` + tc.username + `","password":"geheim123","email":"user@beispiel.de"}`
+			// Issue #2194: der Name wird nur fuer Testkonten ausgewertet.
+			body := `{"username":"` + tc.username + `","password":"geheim123","email":"user@beispiel.de","is_test_user":true}`
 			req := httptest.NewRequest("POST", "/api/auth/register", strings.NewReader(body))
 			w := httptest.NewRecorder()
 			h.ServeHTTP(w, req)
@@ -228,7 +233,8 @@ func TestRegisterHandlerShortUsername(t *testing.T) {
 	s := newTestStore(t)
 	h := RegisterHandler(s, bcrypt.MinCost, testRegisterCfg())
 
-	body := `{"username":"ab","password":"geheim123","email":"ab@beispiel.de"}`
+	// Issue #2194: der Name wird nur fuer Testkonten ausgewertet.
+	body := `{"username":"ab","password":"geheim123","email":"ab@beispiel.de","is_test_user":true}`
 	req := httptest.NewRequest("POST", "/api/auth/register", strings.NewReader(body))
 	w := httptest.NewRecorder()
 	h.ServeHTTP(w, req)
@@ -277,6 +283,10 @@ func TestRegisterHandler_MissingEmail_AC1(t *testing.T) {
 	if s.UserExists("alice") {
 		t.Errorf("AC-1: no account must be created when email is missing")
 	}
+	// Issue #2194: der Name benennt kein Konto mehr — der Store muss leer sein.
+	if n := kontenAnzahl(t, s); n != 0 {
+		t.Errorf("AC-1: no account must be created when email is missing, found %d", n)
+	}
 }
 
 // AC-2: Request mit email ohne "@" → 400 mit eigenem Fehlercode "invalid_email",
@@ -300,6 +310,10 @@ func TestRegisterHandler_InvalidEmail_AC2(t *testing.T) {
 	}
 	if s.UserExists("alice") {
 		t.Errorf("AC-2: no account must be created when email is invalid")
+	}
+	// Issue #2194: der Name benennt kein Konto mehr — der Store muss leer sein.
+	if n := kontenAnzahl(t, s); n != 0 {
+		t.Errorf("AC-2: no account must be created when email is invalid, found %d", n)
 	}
 }
 
@@ -329,7 +343,8 @@ func TestRegisterHandler_ValidEmailTriggersDispatch_AC3(t *testing.T) {
 	if w.Code != 201 {
 		t.Fatalf("AC-3: expected 201, got %d: %s", w.Code, w.Body.String())
 	}
-	user, err := s.LoadUser("alice")
+	// Issue #2194: Konto-ID aus der 201-Antwort (generiert).
+	user, err := s.LoadUser(registrierID2194(t, w, "AC-3"))
 	if err != nil || user == nil {
 		t.Fatalf("AC-3: account must exist after registration: %v", err)
 	}
@@ -375,7 +390,8 @@ func TestRegisterHandler_ReservedTestDomainStillDispatches_AC7(t *testing.T) {
 	if w.Code != 201 {
 		t.Fatalf("AC-7: expected 201, got %d: %s", w.Code, w.Body.String())
 	}
-	if !s.UserExists("charlie") {
+	// Issue #2194: Konto-ID aus der 201-Antwort (generiert).
+	if !s.UserExists(registrierID2194(t, w, "AC-7")) {
 		t.Errorf("AC-7: account must be created even for reserved test domain")
 	}
 
@@ -410,6 +426,8 @@ func TestRegisterHandler_TwoUsersNoCrossContamination_AC8(t *testing.T) {
 		{"anna", "anna@beispiel.de"},
 		{"bernd", "bernd@beispiel.de"},
 	}
+	// Issue #2194: Konto-IDs werden generiert und aus der 201-Antwort gelesen.
+	ids := map[string]string{}
 	for _, tc := range cases {
 		body := `{"username":"` + tc.username + `","password":"geheim123","email":"` + tc.email + `"}`
 		req := httptest.NewRequest("POST", "/api/auth/register", strings.NewReader(body))
@@ -418,14 +436,18 @@ func TestRegisterHandler_TwoUsersNoCrossContamination_AC8(t *testing.T) {
 		if w.Code != 201 {
 			t.Fatalf("AC-8: expected 201 for %s, got %d: %s", tc.username, w.Code, w.Body.String())
 		}
+		ids[tc.username] = registrierID2194(t, w, "AC-8 "+tc.username)
+	}
+	if ids["anna"] == ids["bernd"] {
+		t.Fatalf("AC-8: two registrations must get distinct ids, both %q", ids["anna"])
 	}
 
 	// Jeder Nutzer hat sein eigenes Token unter seinem userId.
-	tokAnna, err := s.LoadVerificationToken("anna")
+	tokAnna, err := s.LoadVerificationToken(ids["anna"])
 	if err != nil || tokAnna == nil {
 		t.Fatalf("AC-8: anna must have her own verification token: %v", err)
 	}
-	tokBernd, err := s.LoadVerificationToken("bernd")
+	tokBernd, err := s.LoadVerificationToken(ids["bernd"])
 	if err != nil || tokBernd == nil {
 		t.Fatalf("AC-8: bernd must have his own verification token: %v", err)
 	}

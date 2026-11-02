@@ -23,6 +23,7 @@ import (
 	"log"
 	"net/http"
 
+	"github.com/henemm/gregor-api/internal/model"
 	"github.com/henemm/gregor-api/internal/store"
 )
 
@@ -39,16 +40,30 @@ func StagingVerificationTokenHandler(s *store.Store) http.HandlerFunc {
 			w.Write([]byte(`{"error":"invalid request"}`))
 			return
 		}
-		if !store.ValidUserID(req.Username) {
-			w.WriteHeader(http.StatusBadRequest)
-			w.Write([]byte(`{"error":"invalid request"}`))
-			return
-		}
-		user, err := s.LoadUser(req.Username)
-		if err != nil || user == nil {
-			w.WriteHeader(http.StatusNotFound)
-			w.Write([]byte(`{"error":"unknown user"}`))
-			return
+		var user *model.User
+		if isLoginEmail(req.Username) {
+			// Issue #2194: @-Weiche — E-Mail-Kennung loest genau ein echtes
+			// Konto auf; 0 oder mehrere Treffer = unbekannt.
+			user = resolveLoginEmail(s, req.Username, "staging verification token")
+			if user == nil {
+				w.WriteHeader(http.StatusNotFound)
+				w.Write([]byte(`{"error":"unknown user"}`))
+				return
+			}
+			req.Username = user.ID
+		} else {
+			if !store.ValidUserID(req.Username) {
+				w.WriteHeader(http.StatusBadRequest)
+				w.Write([]byte(`{"error":"invalid request"}`))
+				return
+			}
+			var err error
+			user, err = s.LoadUser(req.Username)
+			if err != nil || user == nil {
+				w.WriteHeader(http.StatusNotFound)
+				w.Write([]byte(`{"error":"unknown user"}`))
+				return
+			}
 		}
 
 		// Bewusst OHNE Blick auf user.EmailVerifiedAt: der Testweg gibt auch

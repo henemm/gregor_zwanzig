@@ -34,7 +34,13 @@ func TestRegisterCreatesNoLegacyTripsDir(t *testing.T) {
 		t.Fatalf("expected 201, got %d: %s", w.Code, w.Body.String())
 	}
 
-	base := filepath.Join(s.DataDir, "users", "newuser2")
+	// Issue #2194: Ordner der generierten ID aus der 201-Antwort. Damit die
+	// Abwesenheit von trips/ nicht trivial wahr ist, muss der Kontoordner
+	// selbst existieren.
+	base := filepath.Join(s.DataDir, "users", registrierID2194(t, w, "RegisterCreatesNoLegacyTripsDir"))
+	if fi, err := os.Stat(base); err != nil || !fi.IsDir() {
+		t.Fatalf("Messaufbau: Kontoordner %s fehlt (err=%v)", base, err)
+	}
 	tripsPath := filepath.Join(base, "trips")
 	if _, err := os.Stat(tripsPath); !os.IsNotExist(err) {
 		t.Errorf("#1708/ADR-0023: erwartet KEIN Legacy-Verzeichnis %s nach Registrierung, existiert aber (Stat-Fehler=%v)", tripsPath, err)

@@ -105,7 +105,7 @@ const FAELLE: Array<{ name: string; antwort: Antwort | null; passwort2?: string;
 	{
 		name: '400_sonst',
 		antwort: { status: 400, body: {} },
-		de: 'Benutzername (3–50 Zeichen), E-Mail und Passwort (mind. 8 Zeichen) erforderlich',
+		de: 'E-Mail und Passwort (mind. 8 Zeichen) erforderlich', // #2194: ohne Benutzername
 		key: 'auth.register.fehler_pflichtfelder'
 	},
 	{
