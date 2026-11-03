@@ -143,8 +143,8 @@ def _sort_by_cv2_order(rows) -> tuple:
     nur_cv2 = [k for k in cv2_keys if k not in by_id]
     if nur_plain or nur_cv2:
         raise ValueError(
-            "Klartext-Zeilen und CV2_METRICS sind nicht deckungsgleich: "
-            f"nur in Klartext-Zeilen: {nur_plain}; nur in CV2_METRICS: {nur_cv2}"
+            "plain rows and CV2_METRICS diverge: "
+            f"only in plain rows: {nur_plain}; only in CV2_METRICS: {nur_cv2}"
         )
     return tuple(by_id[k] for k in cv2_keys)
 
