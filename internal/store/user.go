@@ -6,8 +6,10 @@ import (
 	"fmt"
 	"io"
 	"io/fs"
+	"log"
 	"os"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"time"
 
@@ -84,12 +86,64 @@ func (s *Store) SaveUser(user model.User) error {
 		return err
 	}
 
+	path := filepath.Join(dir, "user.json")
 	data, err := json.MarshalIndent(user, "", "  ")
 	if err != nil {
 		return err
 	}
 
-	return writeFileLogged(filepath.Join(dir, "user.json"), data)
+	// Read-Modify-Write mit Merge (ADR-0101, Issue #2687): dem Modell
+	// unbekannte Schlüssel der vorhandenen Datei bleiben erhalten.
+	existing, err := os.ReadFile(path)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return writeFileLogged(path, data)
+		}
+		return err
+	}
+	var raw map[string]json.RawMessage
+	if err := json.Unmarshal(existing, &raw); err != nil || raw == nil {
+		log.Printf("SaveUser %s: vorhandene user.json ist kein gültiges JSON-Objekt, schreibe Modellstand: %v", user.ID, err)
+		return writeFileLogged(path, data)
+	}
+	var modelMap map[string]json.RawMessage
+	if err := json.Unmarshal(data, &modelMap); err != nil {
+		return err
+	}
+	for _, key := range userJSONKeys() {
+		delete(raw, key)
+	}
+	for k, v := range modelMap {
+		raw[k] = v
+	}
+	merged, err := json.MarshalIndent(raw, "", "  ")
+	if err != nil {
+		return err
+	}
+	return writeFileLogged(path, merged)
+}
+
+// userJSONKeys liefert die JSON-Schlüssel aller Top-Level-Felder von
+// model.User ("-" wird ignoriert, Tag-Name vor dem Komma).
+func userJSONKeys() []string {
+	t := reflect.TypeOf(model.User{})
+	keys := make([]string, 0, t.NumField())
+	for i := 0; i < t.NumField(); i++ {
+		f := t.Field(i)
+		if !f.IsExported() {
+			continue
+		}
+		tag := f.Tag.Get("json")
+		if tag == "-" {
+			continue
+		}
+		name, _, _ := strings.Cut(tag, ",")
+		if name == "" {
+			name = f.Name
+		}
+		keys = append(keys, name)
+	}
+	return keys
 }
 
 // SetUserTier setzt NUR "tier" in user.json (Merge auf Roh-Ebene, damit
