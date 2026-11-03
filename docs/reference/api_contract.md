@@ -2221,7 +2221,9 @@ Issue #1351 Teil 1.)
 
 ### GET /api/compare/metrics
 
-Kein Query-Parameter. Antwort: `{"metrics": [...]}`, genau 26 Einträge,
+Optionaler Query-Parameter `lang` (`de`|`en`, seit #2751): wählt nur die Sprache von
+`hourlyNotSelectableReason`; fehlt er oder ist er unbekannt, ist die Antwort die deutsche
+(statischer Katalog ohne Nutzerbezug). Antwort: `{"metrics": [...]}`, genau 26 Einträge,
 Reihenfolge deckungsgleich mit `ALL_METRICS` im Frontend.
 
 **Response 200:**
