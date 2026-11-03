@@ -5,7 +5,10 @@ Spec: docs/specs/bugfix/fix_2237_staging_testdaten.md
 """
 from __future__ import annotations
 
+import os
 from datetime import datetime, timezone
+
+import pytest
 
 from app.models import SegmentWeatherSummary
 from services.compare_weather_snapshot import CompareWeatherSnapshotService
@@ -31,7 +34,7 @@ def test_delete_entfernt_nur_eigene_preset_snapshots():
     fremd = a._dir / "cp-1__x.txt"
     fremd.write_text("fremd", encoding="utf-8")
 
-    assert a.delete("cp-1") == 2
+    assert a.delete("cp-1") == (2, 0)
     assert fremd.read_text(encoding="utf-8") == "fremd"
     assert a.load("cp-1", "loc1") == []
     assert a.load("cp-1", "loc2") == []
@@ -43,4 +46,32 @@ def test_delete_entfernt_nur_eigene_preset_snapshots():
 
 
 def test_delete_ohne_ordner_liefert_null():
-    assert CompareWeatherSnapshotService("user-ohne-ordner-2237").delete("cp-x") == 0
+    assert CompareWeatherSnapshotService("user-ohne-ordner-2237").delete("cp-x") == (0, 0)
+
+
+def test_delete_meldet_nicht_loeschbaren_eintrag_als_fehler():
+    """Teilerfolg ist sichtbar: ein Verzeichnis mit Snapshot-Namen lässt sich
+    per unlink() nicht entfernen (echter IsADirectoryError, kein Mock) und
+    zählt als failed; die übrigen Snapshots werden trotzdem entfernt."""
+    a = CompareWeatherSnapshotService("user-fail-2237")
+    a.save("cp-1", "loc1", _point("loc1"))
+    blocker = a._dir / "cp-1__kaputt.json"
+    blocker.mkdir()
+
+    assert a.delete("cp-1") == (1, 1)
+    assert a.load("cp-1", "loc1") == []
+    assert blocker.is_dir()
+
+
+@pytest.mark.skipif(os.geteuid() == 0, reason="root ignoriert Dateirechte")
+def test_delete_meldet_nicht_lesbaren_ordner_als_fehler():
+    """Listing-Fehler (Ordner ohne Leserecht, echtes PermissionError) zählt
+    als failed=1 statt still (0, 0) zu melden."""
+    a = CompareWeatherSnapshotService("user-nolist-2237")
+    a.save("cp-1", "loc1", _point("loc1"))
+    os.chmod(a._dir, 0)
+    try:
+        assert a.delete("cp-1") == (0, 1)
+    finally:
+        os.chmod(a._dir, 0o755)
+    assert len(a.load("cp-1", "loc1")) == 1

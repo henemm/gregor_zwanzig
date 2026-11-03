@@ -322,17 +322,18 @@ func (s *Store) DeleteComparePreset(id string) error {
 	if err != nil {
 		return err
 	}
-	// Issue #2237: Preset ist weg -> Snapshots und Sperrdatei DIESES Nutzers
-	// mit abraeumen (sonst sammeln sie sich als Waisen an).
+	// Issue #2237: Preset ist weg -> Snapshots DIESES Nutzers mit abraeumen
+	// (sonst sammeln sie sich als Waisen an). Die Sperrdatei entfernt der
+	// Handler erst NACH dem Freigeben seiner Sperre (RemoveBriefingLockFile).
 	s.removeComparePresetLeftovers(id)
 	return nil
 }
 
 // removeComparePresetLeftovers entfernt compare_weather_snapshots/<id>__*.json
-// und briefings/<id>.json.lock des eigenen Nutzers (s.UserID), nie
-// nutzeruebergreifend. Exakter Praefix "<id>__", damit "cp-1" nicht "cp-10__x"
-// trifft. Idempotent: Fehlendes ist kein Fehler; andere Fehler werden nur
-// geloggt, das Preset selbst ist zu diesem Zeitpunkt bereits entfernt.
+// des eigenen Nutzers (s.UserID), nie nutzeruebergreifend. Exakter Praefix
+// "<id>__", damit "cp-1" nicht "cp-10__x" trifft. Idempotent: Fehlendes ist
+// kein Fehler; andere Fehler werden nur geloggt, das Preset selbst ist zu
+// diesem Zeitpunkt bereits entfernt.
 func (s *Store) removeComparePresetLeftovers(id string) {
 	snapDir := filepath.Join(s.DataDir, "users", s.UserID, "compare_weather_snapshots")
 	if entries, err := os.ReadDir(snapDir); err == nil {
@@ -348,10 +349,6 @@ func (s *Store) removeComparePresetLeftovers(id string) {
 		}
 	} else if !os.IsNotExist(err) {
 		log.Printf("[compare_preset] Snapshot-Ordner nicht lesbar: %v", err)
-	}
-	lock := filepath.Join(s.briefingsDir(), id+".json.lock")
-	if rerr := os.Remove(lock); rerr != nil && !os.IsNotExist(rerr) {
-		log.Printf("[compare_preset] Sperrdatei %s nicht entfernt: %v", lock, rerr)
 	}
 }
 

@@ -2,6 +2,7 @@ package store
 
 import (
 	"errors"
+	"log"
 	"os"
 	"path/filepath"
 	"sync"
@@ -164,6 +165,43 @@ func (s *Store) lockBriefing(id string, timeout time.Duration) (func(), error) {
 		return func() {}, err
 	}
 	return release, nil
+}
+
+// RemoveBriefingLockFile entfernt briefings/<id>.json.lock DIESES Nutzers
+// (Issue #2237), aber nur als verwaiste Datei: der Aufrufer hat seine Sperre
+// bereits FREIGEGEBEN (die Haltedauer bis zur Antwort bleibt unverkuerzt,
+// ADR-0083). Schutz gegen zwei parallele Sperrinhaber: der Prozess-Mutex wird
+// gehalten (kein Go-Aufruf oeffnet die Datei dazwischen), die zugehoerige
+// .json darf nicht existieren (vergleich-Ausstieg im Trip-Pfad, Neuanlage),
+// und der flock muss ohne Warten zu haben sein (sonst haelt ihn gerade der
+// Python-Kern -> Datei bleibt, der Sweep raeumt sie spaeter ab). Idempotent;
+// Fehler werden nur geloggt.
+// gz-store-scope-required: baut den Sperrdateipfad direkt aus s.UserID, prueft requireUser selbst
+func (s *Store) RemoveBriefingLockFile(id string) {
+	if s.requireUser() != nil || !ValidEntityID(id) {
+		return
+	}
+	release, _ := s.lockBriefing(id, -1) // nur Prozess-Mutex
+	defer release()
+	if _, err := os.Stat(filepath.Join(s.briefingsDir(), id+".json")); !os.IsNotExist(err) {
+		return // .json vorhanden (oder unklar) -> Sperrdatei ist Betriebsmittel
+	}
+	path := s.briefingLockPath(id)
+	f, err := os.OpenFile(path, os.O_RDWR, 0) // ohne O_CREATE: nichts neu anlegen
+	if err != nil {
+		if !os.IsNotExist(err) {
+			log.Printf("[briefing_lock] Sperrdatei %s nicht pruefbar: %v", path, err)
+		}
+		return
+	}
+	defer f.Close()
+	if err := syscall.Flock(int(f.Fd()), syscall.LOCK_EX|syscall.LOCK_NB); err != nil {
+		return // belegt -> nicht entfernen
+	}
+	defer func() { _ = syscall.Flock(int(f.Fd()), syscall.LOCK_UN) }()
+	if err := os.Remove(path); err != nil && !os.IsNotExist(err) {
+		log.Printf("[briefing_lock] Sperrdatei %s nicht entfernt: %v", path, err)
+	}
 }
 
 func (s *Store) openBriefingLockFile(id string) (*os.File, error) {
