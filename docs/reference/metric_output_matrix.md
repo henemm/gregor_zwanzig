@@ -181,7 +181,7 @@ katalog-getriebene Liste mit handgeschriebenen Ausnahmen.
 | API Metrik-Liste | `api/routers/config.py:73` `get_metrics()` — filtert auf `selectable` | Nicht-wählbare Metriken sind für das Frontend unsichtbar |
 | API SMS-Symbole | `api/routers/config.py:31` `get_sms_symbols()`, Hazards `:46`/`:65` | zwei Symbolregister nebeneinander |
 | Frontend Trip | `frontend/src/lib/components/shared/WeatherMetricsTab.svelte:411`, `:755–771` — Reihenfolge **je Kanal** (`channel_layouts`) | |
-| Frontend Compare | Übersicht: `compareWizardState.svelte.ts` `wiz.channelActiveMetricKeys` (#1703 Scheibe 8, live 2026-08-13) — kanalweise wie beim Trip. Ausblick/Stundenverlauf: weiterhin `wiz.activeMetricKeys` + je eigene globale Liste, **keine Kanal-Tabs** | struktureller Bruch besteht nur noch für Ausblick/Stundenverlauf; Übersicht gelöst (ADR-0053), Wächter `tests/unit/test_compare_channel_metrics_reach_the_renderer.py` (Wirkung) + `frontend/e2e/compare-uebersicht-kanal-{bedienung,persistenz}.staging.spec.ts` (Oberfläche) |
+| Frontend Compare | Übersicht: `channelActiveMetricKeys` (#1703 Scheibe 8, live 2026-08-13; Träger `compareWizardState.svelte.ts` seit #2727 entfernt, Zustand liegt jetzt lokal in `CompareNewEditor.svelte`/`CompareTabs.svelte`) — kanalweise wie beim Trip. Ausblick/Stundenverlauf: weiterhin `activeMetricKeys` + je eigene globale Liste, **keine Kanal-Tabs** | struktureller Bruch besteht nur noch für Ausblick/Stundenverlauf; Übersicht gelöst (ADR-0053), Wächter `tests/unit/test_compare_channel_metrics_reach_the_renderer.py` (Wirkung) + `frontend/e2e/compare-uebersicht-kanal-{bedienung,persistenz}.staging.spec.ts` (Oberfläche) |
 
 ## 3. Sonderstrecken-Katalog
 
