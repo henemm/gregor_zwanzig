@@ -566,7 +566,9 @@ parst (`ast`) `src/output/**/*.py`, `api/routers/**/*.py`, die `src/services/*.p
 `EXTRA_DATEIEN` (`weather_metrics.py`, `trip_selection.py`) und meldet String-Konstanten (auch
 f-String-Teile) mit Umlaut/`ß` oder Signalwort (`nicht|bitte|keine|fehlgeschlagen|hinweis`, ganzes
 Wort). Ausgenommen: Docstrings, Argumente von `t(...)`/`tn(...)`, reine Katalogschlüssel
-(`bereich.gruppe.element`) und Literale in Zeilen mit `# i18n-log` (Log-/Betreiber-Texte).
+(`bereich.gruppe.element`) und Literale in Zeilen mit `# i18n-log` (Log-/Betreiber-Texte) oder
+`# i18n-fest: <Grund>` (begründet sprachfest: Eigenname, SMS-Kanal, Bot-Menü nach P7 #2669; Grund
+≥ 10 Zeichen, sonst wirkungslos; #2751).
 Altbestand in `tests/fixtures/i18n_python_allowlist.json` als JSON-Objekt `{"<repo-pfad>": <Baseline-Fundzahl>}`
 (sortiert, nur Einzeldateien). **Zählende Ratsche, beide Richtungen rot:** Fund ohne Eintrag bzw. mehr
 Funde als die Baseline (`Datei: N Funde > Baseline M` plus `Datei:Zeile: "Auszug"`), und Baseline über
@@ -574,10 +576,9 @@ der Fundzahl (mitsenken, bei 0 streichen) — die Zahl je Datei kann nur sinken.
 100 gescannte Dateien bricht mit „Messaufbau leer" ab. Messen per `python
 tests/test_i18n_keine_hartkodierten_nutzertexte_python.py --messen` (stdout), `--startstand`
 schreibt die Allowlist. Startstand (2026-11-02, `2175114cd`): 111 Dateien gescannt, 50 mit Fund,
-222 Funde. **Restbefund (Stand 2026-11-02, nach #2751; AC-6 nicht erreicht):** 15 Einträge, 47 Funde in 15 Dateien —
-u. a. `src/output/renderers/fallback_notice.py`, `src/output/renderers/trip_report.py`,
-`src/output/renderers/text_report/__init__.py` und das Bot-Menü `BOT_COMMANDS` in
-`src/output/channels/telegram.py`. Abbau im Folge-Issue zu #2674, Prüfdatum 2027-01-28. Bis dahin steht `test_allowlist_ist_leer` als
+222 Funde. **Restbefund (Stand 2026-11-03, nach #2751 Teil 2; AC-6 nicht erreicht):** 7 Einträge, 17 Funde, alle
+unter dem Renderer-Commit-Gate: `src/output/renderers/alert/{hours,model,official_alerts,project}.py`, `src/output/renderers/email/{html,thunder_branch}.py` und `src/output/renderers/trip_report.py` (Commit braucht Modus-Matrix-Test
+und Validator gegen echt zugestellte Staging-Mail). Prüfdatum 2027-01-28. Bis dahin steht `test_allowlist_ist_leer` als
 `xfail(strict=True)` (wird rot, sobald die Allowlist leer ist). Benannter Restbefund in
 `tests/test_i18n_inbound_katalog_paritaet.py` (`_RESTBEFUND_P11`, Prüfdatum 2027-01-28), der rot wird,
 sobald `trip_command_processor.py` ohne Fund ist.
@@ -648,7 +649,7 @@ Skripten/Skills aufgerufen: `staging_gate.py`, `prod_selftest.py`, `briefing_mai
 | Compare-Paritäts-Wächter `tests/unit/test_e2e_compare_paritaet_waechter.py` — jede `*compare*.spec.ts` bzw. Compare-Hub-Spec ohne Trip-Gegenstück braucht kind-Schleife oder `gz-eigenstaendig:`-Kopf; Altlastliste nur schrumpfend (#2347 S1, Epic #2345 P6) | 2027-01-24 | Regel 2 fand bei Einführung 2 Specs außerhalb der Compare-Dateinamen (`kanal-grenzen-ortsvergleich.staging.spec.ts`, `versand-tab-vergleich.spec.ts`); fehlende Trip-Cross-User-Schreibprüfung (geschlossen durch `hub-cross-user-write-block.spec.ts`) |
 | i18n-Ratsche Frontend `keine_hartkodierten_nutzertexte.test.ts` + `katalog_schluessel_haben_verwender.test.ts` (Epic #2644, S4) — Allowlist seit F12 (#2661, 2026-11-02) leer, `hardcode_allowlist_leer.test.ts` hält sie leer | 2027-01-28 | offen — Endstand 2026-11-02: 0 Einträge; Startstand 2026-10-31 (`4f386528a`): 115 Dateien mit 1115 Trefferzeilen in 33 Allowlist-Einträgen; Kriterium: ein neuer hartkodierter Nutzertext oder verwaister Katalogschlüssel, der ohne die Ratsche ausgeliefert worden wäre |
 | i18n-Ratsche Go (`internal/i18n/hardcode_guard_test.go`, Allowlist `internal/i18n/hardcode_allowlist.json`, #2679) | 2027-01-28 | Startstand = alle Fundstellen vom Tag der Einführung (2026-10-31: 72 Befunde in 16 Dateien, 16 Einträge (nur Einzeldateien, kein Verzeichnis-Präfix)); Endstand 2026-11-02: 0 Einträge (`[]`) |
-| i18n-Ratsche Python (`tests/test_i18n_keine_hartkodierten_nutzertexte_python.py`, Allowlist `tests/fixtures/i18n_python_allowlist.json`, #2674) | 2027-01-28 | — (Startstand 2026-11-02: 222 Funde in 50 Dateien; Stand nach #2751: 47 Funde in 15 Einträgen mit Baseline-Fundzahl je Datei; Endstand leer nach Abbau der Restbefunde im Folge-Issue) |
+| i18n-Ratsche Python (`tests/test_i18n_keine_hartkodierten_nutzertexte_python.py`, Allowlist `tests/fixtures/i18n_python_allowlist.json`, #2674) | 2027-01-28 | — (Startstand 2026-11-02: 222 Funde in 50 Dateien; Stand nach #2751 Teil 2: 17 Funde in 7 Einträgen (nur Renderer-Gate-Dateien) mit Baseline-Fundzahl je Datei; Endstand leer nach Abbau der Restbefunde im Folge-Issue) |
 | i18n-Paritätstests je Katalog (Frontend `paritaet_de_en.test.ts`, Python `test_i18n_*_katalog_paritaet.py`, Go `katalog_paritaet_test.go`; Epic #2644) | 2027-01-31 | eingeführt im Epic #2644 (Frontend laut Testkopf mit #2647); Kriterium: ein Schlüssel nur in `de` oder ein Platzhalter, der in einer Sprache fehlt |
 | i18n-Token-Wächter `tests/test_metric_tokens_eingefroren.py` (Fixture `tests/fixtures/metric_tokens_frozen.json`, Epic #2644 P1) | 2027-01-31 | eingeführt im Epic #2644 (laut Konvention P1); Kriterium: eine Übersetzung oder Umbenennung von `col_label`, `compact_label` oder `sms_code`, die sonst still in Kanäle wanderte |
 

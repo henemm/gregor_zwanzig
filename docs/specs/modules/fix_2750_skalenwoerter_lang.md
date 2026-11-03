@@ -3,7 +3,7 @@ entity_id: fix_2750_skalenwoerter_lang
 type: module
 created: 2026-11-03
 updated: 2026-11-03
-status: draft
+status: approved
 version: "1.0"
 tags: [i18n, epic-2644, issue-2750, python, email, bug]
 ---
@@ -14,7 +14,7 @@ tags: [i18n, epic-2644, issue-2750, python, email, bug]
 
 ## Approval
 
-- [ ] Approved
+- [x] Approved (PO-Freigabe 2026-11-03, an Claude delegiert)
 
 ## Purpose
 

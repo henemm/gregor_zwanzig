@@ -102,5 +102,10 @@
   "vergleich.vortag.hoeher.humidity": "feuchter",
   "vergleich.vortag.tiefer.humidity": "trockener",
   "vergleich.vortag.hoeher.pressure": "höherer Luftdruck",
-  "vergleich.vortag.tiefer.pressure": "niedrigerer Luftdruck"
+  "vergleich.vortag.tiefer.pressure": "niedrigerer Luftdruck",
+  "vergleich.stunden.ausschluss.sunshine": "Stuendlich nur als Einstrahlung (W/m²) verfuegbar, nicht als Sonnenstunden — die Bewölkung und der UV-Index beantworten dieselbe Frage stundengenau.",
+  "vergleich.stunden.ausschluss.temperature_night": "Nachtfenster-Skalar (#1484), kein Stundenwert — stuendlich beantwortet die Temperatur dieselbe Frage.",
+  "vergleich.stunden.ausschluss.wind_chill_night": "Nachtfenster-Skalar (#1660), kein Stundenwert — stuendlich beantwortet die gefuehlte Temperatur dieselbe Frage.",
+  "vergleich.stunden.ausschluss.tagesrichtung_temperatur": "Tagesrichtung der Gehzeit-Spanne (#1728), kein Stundenwert — stuendlich beantwortet die Temperatur dieselbe Frage.",
+  "vergleich.stunden.ausschluss.tagesrichtung_gefuehlt": "Tagesrichtung der Gehzeit-Spanne (#1728), kein Stundenwert — stuendlich beantwortet die gefuehlte Temperatur dieselbe Frage."
 }

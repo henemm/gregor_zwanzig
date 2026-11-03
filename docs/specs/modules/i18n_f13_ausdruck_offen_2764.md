@@ -3,7 +3,7 @@ entity_id: i18n_f13_ausdruck_offen_2764
 type: module
 created: 2026-11-03
 updated: 2026-11-03
-status: draft
+status: approved
 version: "1.0"
 tags: [i18n, epic-2644, epic-2730, issue-2764, frontend]
 ---
@@ -14,7 +14,7 @@ tags: [i18n, epic-2644, epic-2730, issue-2764, frontend]
 
 ## Approval
 
-- [ ] Approved
+- [x] Approved (PO-Freigabe 2026-11-03, an Claude delegiert)
 
 ## Purpose
 

@@ -102,5 +102,10 @@
   "vergleich.vortag.hoeher.humidity": "more humid",
   "vergleich.vortag.tiefer.humidity": "drier",
   "vergleich.vortag.hoeher.pressure": "higher pressure",
-  "vergleich.vortag.tiefer.pressure": "lower pressure"
+  "vergleich.vortag.tiefer.pressure": "lower pressure",
+  "vergleich.stunden.ausschluss.sunshine": "Hourly data exists only as solar radiation (W/m²), not as sunshine hours — cloud cover and the UV index answer the same question hour by hour.",
+  "vergleich.stunden.ausschluss.temperature_night": "Single value for the night window, not an hourly value — hourly, the temperature answers the same question.",
+  "vergleich.stunden.ausschluss.wind_chill_night": "Single value for the night window, not an hourly value — hourly, the feels-like temperature answers the same question.",
+  "vergleich.stunden.ausschluss.tagesrichtung_temperatur": "Daytime low or high over the walking hours, not an hourly value — hourly, the temperature answers the same question.",
+  "vergleich.stunden.ausschluss.tagesrichtung_gefuehlt": "Daytime low or high over the walking hours, not an hourly value — hourly, the feels-like temperature answers the same question."
 }

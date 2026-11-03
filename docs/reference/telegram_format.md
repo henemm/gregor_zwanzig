@@ -81,8 +81,8 @@ der Token-Zeile.
 
 **Befehlswörter:** beide Sprachen werden erkannt (`wort` und `wort_en` aus `_COMMAND_SPECS`). Das
 Bot-Menü (`BOT_COMMANDS` in `src/output/channels/telegram.py`) zeigt die Befehle deutsch und englisch;
-seine deutschen Beschreibungstexte sind nach #2751 noch Restbefund der Python-Ratsche
-(`docs/reference/gates_und_ratschen.md`, Abschnitt „i18n-Ratschen").
+das Menü ist botweit und bleibt deutsch (P7 #2669, Known Limitations); die Zeilen tragen
+`# i18n-fest` (#2751, `docs/reference/gates_und_ratschen.md`, Abschnitt „i18n-Ratschen").
 
 **Woher:** Katalogbereiche `telegram.*`, `inbound.*` und `allgemein.*` (`src/i18n/messages/{de,en}/`).
 

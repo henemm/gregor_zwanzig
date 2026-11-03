@@ -67,10 +67,12 @@ from app.metric_catalog import (
     aggregation_label_de, alert_metric_for, get_metric, kurzform_kuerzel,
 )
 from app.models import ThunderLevel
+from i18n import Lang
 from output.metric_format import THUNDER_LABEL_DE, thunder_ordinal
 from output.renderers.compare_hourly_metric_ids import (
-    HOURLY_DEFAULT_METRIC_IDS, HOURLY_EXCLUDED_METRIC_IDS, HOURLY_EXCLUSION_REASON,
+    HOURLY_DEFAULT_METRIC_IDS, HOURLY_EXCLUDED_METRIC_IDS,
     HOURLY_LEGACY_KEYS_BY_METRIC_ID, HOURLY_MERGE_ONLY_METRIC_IDS,
+    hourly_exclusion_reason,
 )
 from output.renderers.compare_metric_ids import FRONTEND_TO_RENDERER_METRIC_ID
 from services.compare_alert import _SUMMARY_KEY_TO_CATALOG_ID
@@ -212,7 +214,7 @@ assert _catalog_keys == _resolver_keys, (
 # (mehr) gibt.
 _alarm_keys = set(_SUMMARY_KEY_TO_CATALOG_ID.keys())
 assert _alarm_keys <= _catalog_keys, (
-    "compare_alert._SUMMARY_KEY_TO_CATALOG_ID nennt Keys, die nicht im "
+    "compare_alert._SUMMARY_KEY_TO_CATALOG_ID nennt Keys, die nicht im "  # i18n-log
     f"Compare-Metrik-Katalog existieren: {_alarm_keys - _catalog_keys}"
 )
 
@@ -254,7 +256,7 @@ def duplicate_metric_aggregation_pairs(
 _duplicate_pairs = duplicate_metric_aggregation_pairs()
 assert not _duplicate_pairs, (
     "compare_metric_catalog.py fuehrt mehrfach dasselbe "
-    f"(metric_id, aggregation)-Paar: {_duplicate_pairs} -- im neuen "
+    f"(metric_id, aggregation)-Paar: {_duplicate_pairs} -- im neuen "  # i18n-log
     "Speicherformat von display_config.active_metrics nicht unterscheidbar."
 )
 
@@ -307,7 +309,7 @@ def kuerzel_identity_violations(entries: list[dict] | None = None) -> list[str]:
             continue
         if kuerzel_id in angeboten:
             befunde.append(
-                f"{entry.get('key')!r}: kuerzel_metric_id {kuerzel_id!r} wird vom "
+                f"{entry.get('key')!r}: kuerzel_metric_id {kuerzel_id!r} wird vom "  # i18n-log
                 "Ortsvergleich selbst als metric_id angeboten -- das Feld darf "
                 "NUR eine Kennung tragen, die der Vergleich nicht fuehrt "
                 "(Gehzeit-Exklusivitaet #1848 Scheibe C)"
@@ -328,7 +330,7 @@ def assert_kuerzel_identity(entries: list[dict] | None = None) -> None:
     Regel #765)."""
     befunde = kuerzel_identity_violations(entries)
     assert not befunde, (
-        "compare_metric_catalog.py verletzt die Trennung von Kuerzel- und "
+        "compare_metric_catalog.py verletzt die Trennung von Kuerzel- und "  # i18n-log
         "Auflösungs-Identitaet (#2232):\n  " + "\n  ".join(befunde)
     )
 
@@ -361,7 +363,9 @@ def key_for(metric_id: object, aggregation: object) -> str | None:
     return _KEY_BY_METRIC_AGGREGATION.get((metric_id, aggregation))
 
 
-def get_compare_metric_catalog(entries: list[dict] | None = None) -> list[dict]:
+def get_compare_metric_catalog(
+    entries: list[dict] | None = None, *, lang: Lang = "de",
+) -> list[dict]:
     """Liefert die 26 Ortsvergleich-Metriken (read-only Kopie der Katalog-Liste),
     angereichert um `alarmCapable` (Teil 3, D1 Hybrid), `label` und
     `aggregation_label` (#1401 A1). `metric_id`/`aggregation` (#1373) stehen
@@ -376,7 +380,10 @@ def get_compare_metric_catalog(entries: list[dict] | None = None) -> list[dict]:
 
     `entries` injiziert eine Testkopie der Katalogzeilen (Vorbild:
     `duplicate_metric_aggregation_pairs(entries=...)`), damit dieser
-    Scheiter-Pfad ohne Monkeypatch des echten Katalogs pruefbar ist."""
+    Scheiter-Pfad ohne Monkeypatch des echten Katalogs pruefbar ist.
+
+    `lang` (#2751) betrifft nur `hourlyNotSelectableReason`; ohne Angabe ist
+    die Antwort die deutsche."""
     source = COMPARE_METRIC_CATALOG if entries is None else entries
     result: list[dict] = []
     for entry in source:
@@ -386,7 +393,7 @@ def get_compare_metric_catalog(entries: list[dict] | None = None) -> list[dict]:
         except KeyError as exc:
             raise KeyError(
                 f"Compare-Katalogzeile {entry.get('key')!r} nennt die zentral "
-                f"unbekannte Groesse {metric_id!r} -- der Anzeigename ist nicht "
+                f"unbekannte Groesse {metric_id!r} -- der Anzeigename ist nicht "  # i18n-log
                 "ableitbar (src/app/metric_catalog.py)"
             ) from exc
         # Issue #1585: zentral nicht waehlbare Groessen (cape) werden NICHT
@@ -432,7 +439,7 @@ def get_compare_metric_catalog(entries: list[dict] | None = None) -> list[dict]:
             "alertMetric": alert_metric,
             "alarmCapable": alert_metric is not None,
             "hourlySelectable": metric_id not in HOURLY_EXCLUDED_METRIC_IDS,
-            "hourlyNotSelectableReason": HOURLY_EXCLUSION_REASON.get(metric_id, ""),
+            "hourlyNotSelectableReason": hourly_exclusion_reason(metric_id, lang),
             "hourlyDefault": metric_id in HOURLY_DEFAULT_METRIC_IDS,
             "hourlyMergeOnly": metric_id in HOURLY_MERGE_ONLY_METRIC_IDS,
             "hourly_legacy_keys": list(

@@ -129,27 +129,30 @@ def _truncate_html(message: str, max_len: int) -> str:
 # literales `BOT_COMMANDS = [...]` ist dafuer auswertbar. Beschreibungen =
 # Kopie aus `_COMMAND_SPECS`, statisch wegen `prod_selftest.py`
 # (ast.literal_eval); Drift bewacht `test_befehlsangebot_vollstaendig.py`.
+# i18n (#2751): das Menue ist botweit und bleibt deutsch mit den englischen
+# Zusatzbefehlen (Spec P7 #2669, Known Limitations); Zeilen mit Umlaut tragen
+# deshalb `# i18n-fest`. Eine Sprachwahl je Chat braeuchte eine eigene Spec.
 BOT_COMMANDS = [
-    {"command": "glance", "description": "🌤️ Wetter-Überblick (heute & morgen)"},
+    {"command": "glance", "description": "🌤️ Wetter-Überblick (heute & morgen)"},  # i18n-fest: Bot-Menue (P7 #2669)
     {"command": "heute", "description": "📅 Nur heute"},
     {"command": "morgen", "description": "📅 Nur morgen"},
-    {"command": "now", "description": "🌂 Nowcast — Regen/Gewitter in den nächsten 2h"},
+    {"command": "now", "description": "🌂 Nowcast — Regen/Gewitter in den nächsten 2h"},  # i18n-fest: Bot-Menue (P7 #2669)
     {"command": "heute_gewitter", "description": "⛈️ Gewitter-Fokus heute"},
     {"command": "timeline_heute", "description": "🕐 Timeline heute"},
     {"command": "timeline_morgen", "description": "🕐 Timeline morgen"},
-    {"command": "hilfe", "description": "ℹ️ Verfügbare Befehle"},
-    {"command": "jetzt", "description": "Nowcast Regen/Gewitter nächste ~2h (auch NOW)"},
+    {"command": "hilfe", "description": "ℹ️ Verfügbare Befehle"},  # i18n-fest: Bot-Menue (P7 #2669)
+    {"command": "jetzt", "description": "Nowcast Regen/Gewitter nächste ~2h (auch NOW)"},  # i18n-fest: Bot-Menue (P7 #2669)
     {"command": "gewitter", "description": "Gewittergefahr heutige Etappe"},
-    {"command": "strecke", "description": "Regen-Ereignisflächen entlang der Reststrecke"},
+    {"command": "strecke", "description": "Regen-Ereignisflächen entlang der Reststrecke"},  # i18n-fest: Bot-Menue (P7 #2669)
     {"command": "ruhetag", "description": "Etappen um N Tage verschieben (Standard: 1)"},
     {"command": "status", "description": "Heute und kommende Etappen"},
-    {"command": "pause", "description": "Briefings für Dauer unterbrechen"},
-    {"command": "skip", "description": "Nächstes Briefing überspringen"},
+    {"command": "pause", "description": "Briefings für Dauer unterbrechen"},  # i18n-fest: Bot-Menue (P7 #2669)
+    {"command": "skip", "description": "Nächstes Briefing überspringen"},  # i18n-fest: Bot-Menue (P7 #2669)
     {"command": "stop", "description": "Briefings dauerhaft deaktivieren (auch ABBRUCH)"},
     {"command": "weiter", "description": "Briefings reaktivieren"},
     # #2417 Kurzform englisch AC-20: KUERZEL + englische Slash-Befehle
     # (gleich geschriebene now/status/pause/skip/stop stehen oben schon).
-    {"command": "kuerzel", "description": "Kürzel-Bedeutungen anzeigen (auch CODES)"},
+    {"command": "kuerzel", "description": "Kürzel-Bedeutungen anzeigen (auch CODES)"},  # i18n-fest: Bot-Menue (P7 #2669)
     {"command": "today", "description": "today's stage weather"},
     {"command": "tomorrow", "description": "tomorrow's stage weather"},
     {"command": "storms", "description": "storm risk today"},

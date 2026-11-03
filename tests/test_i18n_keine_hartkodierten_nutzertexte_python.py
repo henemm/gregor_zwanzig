@@ -10,7 +10,9 @@ Dateien in ``tmp_path``.
 
 Funde: String-Konstanten (auch Teile von f-Strings) mit Umlaut/ß oder einem
 Signalwort. Ausgenommen: Docstrings, Argumente von ``t(...)``/``tn(...)`` und
-Literale in Zeilen mit dem Kommentar ``# i18n-log``.
+Literale in Zeilen mit dem Kommentar ``# i18n-log`` (Log-, Assert-, Debug-Ausgabe)
+oder ``# i18n-fest: <Grund>`` (begruendet sprachfest: Eigenname, SMS-Kanal,
+Bot-Menue nach P7 #2669; Grund >= 10 Zeichen, sonst wirkungslos; #2751).
 
 Allowlist ``tests/fixtures/i18n_python_allowlist.json``: JSON-Objekt
 ``{"<repo-pfad>": <Baseline-Fundzahl>}``. Je Datei darf die Fundzahl nur
@@ -20,11 +22,11 @@ damit die Zahl nie wieder wachsen kann.
 
 Startstand/Restbefund (Prüfdatum 2027-01-28, Regel-Budget): AC-6 (Allowlist
 leer) ist mit P11 NICHT erreicht -- dokumentierte Teilauslieferung. #2751 hat
-alles ausserhalb des Renderer-Gates abgebaut; uebrig sind Dateien unter
-``src/output/renderers/`` (Renderer-Commit-Gate, brauchen den Validator gegen
-echte Staging-Mail) und das Telegram-Befehlsmenue ``BOT_COMMANDS`` (bot-weit,
-ohne Nutzerkontext; Sprachwahl braucht eine Spec). ``test_allowlist_ist_leer``
-ist bis dahin ``xfail(strict=True)``.
+alles ausserhalb des Renderer-Gates abgebaut (``BOT_COMMANDS`` traegt
+``# i18n-fest`` nach P7 #2669); uebrig sind nur Dateien unter
+``src/output/renderers/{alert,email}/`` und ``trip_report.py``
+(Renderer-Commit-Gate, brauchen den Validator gegen echte Staging-Mail).
+``test_allowlist_ist_leer`` ist bis dahin ``xfail(strict=True)``.
 
 Startstand/Messen: ``python tests/test_i18n_keine_hartkodierten_nutzertexte_python.py
 --startstand`` schreibt die Allowlist; ``--messen`` gibt nur auf stdout aus.
@@ -52,6 +54,8 @@ _SIGNAL_RE = re.compile(r"[äöüÄÖÜß]|\b(nicht|bitte|keine|fehlgeschlagen|h
 #: Katalogschluessel (``bereich.gruppe.element``) sind keine Nutzertexte.
 _SCHLUESSEL_RE = re.compile(r"[a-z0-9_]+(\.[a-z0-9_]+){1,3}")
 _MARKER = "# i18n-log"
+#: Begruendet sprachfester Text (Eigenname, SMS-Kanal, Bot-Menue P7 #2669), #2751.
+_FEST_RE = re.compile(r"# i18n-fest:\s*(\S.{9,})")
 _HINWEIS = ("Text in den Katalog `src/i18n/messages/{de,en}/<bereich>.json`, "
             "oder Log-Zeile mit `# i18n-log` markieren")
 _MIN_DATEIEN = 100
@@ -93,7 +97,9 @@ def _katalog_argument_ids(baum: ast.AST) -> set[int]:
 def _marker_zeilen(quelltext: str) -> set[int]:
     zeilen: set[int] = set()
     for tok in tokenize.generate_tokens(io.StringIO(quelltext).readline):
-        if tok.type == tokenize.COMMENT and tok.string.startswith(_MARKER):
+        if tok.type != tokenize.COMMENT:
+            continue
+        if tok.string.startswith(_MARKER) or _FEST_RE.match(tok.string.rstrip()):
             zeilen.add(tok.start[0])
     return zeilen
 
@@ -171,9 +177,8 @@ def test_allowlist_hat_keine_toten_eintraege():
 
 
 @pytest.mark.xfail(strict=True, reason=(
-    "AC-6 Endstand noch nicht erreicht: Restbefunde unter src/output/renderers/ "
-    "(Renderer-Gate, u. a. fallback_notice.py, trip_report.py, alert/*) und "
-    "telegram.py-Befehlsmenue BOT_COMMANDS (#2751); "
+    "AC-6 Endstand noch nicht erreicht: Restbefunde nur unter dem Renderer-Gate "
+    "(alert/*, email/html.py, email/thunder_branch.py, trip_report.py; #2751); "
     "Rueckmeldung im Epic #2644. strict: sobald die Allowlist leer ist, wird "
     "dieser Test rot und die Markierung muss weg."))
 def test_allowlist_ist_leer():
@@ -216,6 +221,17 @@ def test_ratsche_erkennt_bekannte_faelle(tmp_path):
         == ["src/output/sauber.py: Baseline 1 > 0 Funde"]
     assert _tote_eintraege(alle, {"src/output/renderer.py": 3}) \
         == ["src/output/renderer.py: Baseline 3 > 2 Funde"]
+
+
+def test_ratsche_fest_marker_braucht_grund(tmp_path):
+    """#2751 AC-4: ``# i18n-fest: <Grund>`` nimmt nur mit Grund (>= 10 Zeichen) aus."""
+    datei = _baue_mini_repo(tmp_path, (
+        'A = "GeoSphere Österreich"  # i18n-fest: Eigenname des Anbieters\n'
+        'B = "Böen"  # i18n-fest\n'
+        'C = "Böen"  # i18n-fest: kurz\n'
+        'D = "Böen"  # i18n-fest:   \n'
+    ))
+    assert [z for z, _ in _finde_nutzertexte(datei)] == [2, 3, 4]
 
 
 def _main(argv: list[str]) -> None:

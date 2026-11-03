@@ -236,7 +236,7 @@ def resolve_enabled_metrics(
         # stiller Verwerfung, damit sich der #1285/#1296-Bug-Typ nicht ein
         # drittes Mal wiederholt.
         logger.warning(
-            "resolve_enabled_metrics: %s ohne Renderer-Mapping oder zentral "
+            "resolve_enabled_metrics: %s ohne Renderer-Mapping oder zentral "  # i18n-log
             "nicht waehlbar — Auswahl wird ignoriert statt angezeigt "
             "(vgl. #1285/#1296, #1585)", unmapped,
         )

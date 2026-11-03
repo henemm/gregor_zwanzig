@@ -9,8 +9,12 @@ router = APIRouter(tags=["compare"])
 
 
 @router.get("/api/compare/metrics")
-def get_compare_metrics():
+def get_compare_metrics(lang: Optional[str] = Query(None, description="de|en, sonst de")):
     """Backend-Katalog der Ortsvergleich-Metriken (Issue #1350).
+
+    #2751: ``lang`` waehlt die Sprache der Begruendung „stuendlich nicht
+    waehlbar"; der Katalog ist statisch, daher Query statt Kontosprache.
+    Unbekannte Werte ergeben ``de``.
 
     Read-only, kein user_id-Bezug (statischer Katalog, analog /api/metrics).
     Die Strangler-Migration ist mit #1350 Teil 3 abgeschlossen: das Frontend
@@ -21,7 +25,7 @@ def get_compare_metrics():
     """
     from output.renderers.compare_metric_catalog import get_compare_metric_catalog
 
-    return {"metrics": get_compare_metric_catalog()}
+    return {"metrics": get_compare_metric_catalog(lang="en" if lang == "en" else "de")}
 
 
 @router.get("/api/compare")

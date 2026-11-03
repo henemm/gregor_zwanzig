@@ -1049,7 +1049,7 @@ def render_compare_sms(
     max_chars = CHANNEL_LIMITS["sms"]["max_chars"]
     locations = location_render_order(result.locations)
     if not locations:
-        return "Vergleich: keine Daten"
+        return "Vergleich: keine Daten"  # i18n-fest: SMS-Kanal sprachfest (ADR-0104)
 
     # Issue #1268: Stundenfenster-Angabe ersatzlos entfernt (Bewertung = ganzer
     # Tag). Sie waere dauerhaft "00-23h" — eine Nicht-Information, die 8 von
@@ -1085,7 +1085,7 @@ def render_compare_sms(
         for loc in locations
     ]
     if not parts:
-        return f"{head} keine Werte"
+        return f"{head} keine Werte"  # i18n-fest: SMS-Kanal sprachfest (ADR-0104)
     if max_chars is None:
         return f"{head} " + "; ".join(parts)
 
