@@ -59,7 +59,7 @@ s. „Liefer-Workflow" unten) → ~5 Min Staging-Auto-Deploy abwarten →
 1. Smoke gegen Staging (`/` + `/api/health`)
 2. Scope bestimmen (frontend-only vs. backend/full-stack)
 3. frontend-only → `staging-validator` Agent prüft alle ACs aus der Spec via Playwright; schreibt den Nachweis mit `verified_commit` + `staging_verdict`
-4. backend/full-stack → Test-Trip auf Staging, Mail nur an `gregor-test@henemm.com`, IMAP-Prüfung
+4. backend/full-stack → Test-Trip auf Staging, Mail nur ins Test-Postfach `gregor-test@henemm.com` (über die Plus-Adresse `gregor-test+<tag>@henemm.com` eines Wegwerf-Nutzers, die nackte Adresse scheitert an `email_taken`; Werkzeug `staging_mail_pruefen.py`), IMAP-Prüfung
 5. Nachweis in `.claude/e2e_verified/<sha>.json` — **eine Datei je Stand** (commit-benannt), mit `verified_commit`, `staging_verdict` und strukturierten Findings pro AC
 
 Basis-URL für Browser-Checks via `GZ_SVELTE_BASE` (Default Staging):
@@ -978,6 +978,33 @@ unberührt, der Mitschnitt ist durchgehend fail-soft.
   2048 statt 512 URLs (~28 MB Speicher).
 - **Monitoring:** `check-gregor20.sh` (henemm-infra) schlägt Alarm, wenn `push.missed_total` eines
   Befehls-Eingangs steigt (siehe `docs/runbooks/inbound-webhooks.md`).
+
+### Staging-Mail zustellen und prüfen (`staging_mail_pruefen.py`, #2774)
+
+Stellt auf **Staging** eine Trip- und/oder Compare-Mail wirklich zu und lässt den pfadrichtigen,
+unveränderten Validator gegen genau diese Mail laufen (Schritt 3b in `/e2e-verify`). Spec:
+`docs/specs/modules/fix_2774_staging_mailweg.md`.
+
+- **Aufruf:** `python3 .claude/tools/staging_mail_pruefen.py --typ trip|compare|beide`
+  (optional `--report-type morning|evening`, `--format full|compact` — `compact` nur lokal gegen
+  das Ersatz-Staging belegt, live nicht —, `--timeout 300`,
+  `--ohne-cleanup` nur zur Fehlersuche). Zugangsdaten (`GZ_CORE_SHARED_SECRET`, `GZ_AUTH_USER`/
+  `GZ_AUTH_PASS`, `GZ_TEST_IMAP_*`) aus `/home/hem/gregor_zwanzig_staging/.env` plus `GZ_*`-Umgebung;
+  nichts davon wird ausgegeben.
+- **Ablauf:** Wegwerf-Nutzer `gregor-test+<tag>@henemm.com` (bestätigt über das Helfer-Konto) →
+  Trip `GZM <tag>` bzw. drei Orte + Preset `GZM <tag> Vergleich` (`schedule: manual`) →
+  Einzelversand am Kern (Port 8001, Header `X-GZ-Core-Auth`, Zeitlimit 300 s) → warten, bis die Mail
+  mit dem Tag im Betreff im Test-Postfach liegt → `briefing_mail_validator.py` bzw.
+  `email_spec_validator.py` mit `--mail-type` und `--subject-contains <Tag-Betreff>` → Aufräumen
+  (Preset, Orte, Trip, Nutzer) im `finally`.
+- **Exit-Codes:** `0` alle Pfade bestanden · `1` Mail nicht zugestellt, Versand abgelehnt
+  (`smtp_not_configured`, `send_failed`) oder Validator-Befund · `2` Umgebungsfehler (Zugangsdaten
+  fehlen, Kern 401, Registrierung abgelehnt/429 — 5 Versuche je IP und Stunde, #117 —, Aufräumen
+  gescheitert, Nutzer-Kennung steht in der Meldung).
+- **Nicht** `gregor-test@henemm.com` als Trip-Empfänger eintragen: Go lehnt die Adresse als
+  `email_taken` ab.
+- **Grenze:** „Ausblick ohne Winddaten" (#1670 AC-5) ist auf Staging nicht herstellbar und bleibt
+  lokal per Render-Test belegt; kein Eingriff in Wetterdaten.
 
 ### Staging-Messlauf auslösen (`staging_messlauf.py`, #2439)
 
