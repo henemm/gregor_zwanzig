@@ -19,6 +19,7 @@ from __future__ import annotations
 import logging
 
 from app.metric_catalog import get_all_metrics, get_metric
+from i18n import Lang, t
 
 logger = logging.getLogger(__name__)
 
@@ -66,35 +67,37 @@ HOURLY_EXCLUDED_METRIC_IDS: frozenset[str] = frozenset({
 # Begruendung, die die Bedienflaeche anzeigt (ueber die Katalogantwort, s.
 # compare_metric_catalog.get_compare_metric_catalog). Nennt den Grund UND die
 # Groessen, die dieselbe Frage stuendlich beantworten.
+# #2751: der Text steht im Katalog (``vergleich.stunden.ausschluss.*``); dieses
+# Woerterbuch haelt die deutsche Fassung, ``hourly_exclusion_reason`` liefert
+# sie in der gewuenschten Sprache.
+_REASON_PREFIX = "vergleich.stunden.ausschluss."
 HOURLY_EXCLUSION_REASON: dict[str, str] = {
-    "sunshine": (
-        "Stuendlich nur als Einstrahlung (W/m²) verfuegbar, nicht als "
-        "Sonnenstunden — die Bewölkung und der UV-Index beantworten dieselbe "
-        "Frage stundengenau."
-    ),
-    "temperature_night": (
-        "Nachtfenster-Skalar (#1484), kein Stundenwert — stuendlich "
-        "beantwortet die Temperatur dieselbe Frage."
-    ),
-    "wind_chill_night": (
-        "Nachtfenster-Skalar (#1660), kein Stundenwert — stuendlich "
-        "beantwortet die gefuehlte Temperatur dieselbe Frage."
-    ),
+    "sunshine": t("vergleich.stunden.ausschluss.sunshine", "de"),
+    "temperature_night": t("vergleich.stunden.ausschluss.temperature_night", "de"),
+    "wind_chill_night": t("vergleich.stunden.ausschluss.wind_chill_night", "de"),
 }
 
 # #1728 Scheibe 1: dieselbe Begruendung fuer die vier Tagesrichtungen. Als
 # Schleife statt vier Textblocks, damit die Begruendung nicht viermal leicht
-# abweichend gepflegt werden muss.
-for _mid, _eltern in (
-    ("temperature_day_low", "die Temperatur"),
-    ("temperature_day_high", "die Temperatur"),
-    ("wind_chill_day_low", "die gefuehlte Temperatur"),
-    ("wind_chill_day_high", "die gefuehlte Temperatur"),
+# abweichend gepflegt werden muss (#2751: je Elterngroesse ein ganzer Satz).
+_TAGESRICHTUNG_KEY: dict[str, str] = {}
+for _mid, _key in (
+    ("temperature_day_low", "vergleich.stunden.ausschluss.tagesrichtung_temperatur"),
+    ("temperature_day_high", "vergleich.stunden.ausschluss.tagesrichtung_temperatur"),
+    ("wind_chill_day_low", "vergleich.stunden.ausschluss.tagesrichtung_gefuehlt"),
+    ("wind_chill_day_high", "vergleich.stunden.ausschluss.tagesrichtung_gefuehlt"),
 ):
-    HOURLY_EXCLUSION_REASON[_mid] = (
-        f"Tagesrichtung der Gehzeit-Spanne (#1728), kein Stundenwert — "
-        f"stuendlich beantwortet {_eltern} dieselbe Frage."
-    )
+    _TAGESRICHTUNG_KEY[_mid] = _key
+    HOURLY_EXCLUSION_REASON[_mid] = t(_key, "de")
+
+
+def hourly_exclusion_reason(metric_id: str, lang: Lang = "de") -> str:
+    """Begruendung „stuendlich nicht waehlbar" in ``lang``; leer ohne Ausschluss."""
+    if metric_id not in HOURLY_EXCLUSION_REASON:
+        return ""
+    # i18n-dynamic: vergleich.stunden.ausschluss.
+    return t(_TAGESRICHTUNG_KEY.get(metric_id, _REASON_PREFIX + metric_id), lang)
+
 
 # Reines Merge-Signal: erzeugt nie eine eigene Spalte (s. Modul-Kommentar oben
 # und `compare_html._should_merge_wind_dir`).
@@ -202,6 +205,7 @@ __all__ = [
     "HOURLY_LEGACY_KEYS_BY_METRIC_ID",
     "HOURLY_EXCLUDED_METRIC_IDS",
     "HOURLY_EXCLUSION_REASON",
+    "hourly_exclusion_reason",
     "HOURLY_MERGE_ONLY_METRIC_IDS",
     "HOURLY_DEFAULT_METRIC_IDS",
 ]

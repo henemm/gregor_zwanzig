@@ -67,10 +67,12 @@ from app.metric_catalog import (
     aggregation_label_de, alert_metric_for, get_metric, kurzform_kuerzel,
 )
 from app.models import ThunderLevel
+from i18n import Lang
 from output.metric_format import THUNDER_LABEL_DE, thunder_ordinal
 from output.renderers.compare_hourly_metric_ids import (
-    HOURLY_DEFAULT_METRIC_IDS, HOURLY_EXCLUDED_METRIC_IDS, HOURLY_EXCLUSION_REASON,
+    HOURLY_DEFAULT_METRIC_IDS, HOURLY_EXCLUDED_METRIC_IDS,
     HOURLY_LEGACY_KEYS_BY_METRIC_ID, HOURLY_MERGE_ONLY_METRIC_IDS,
+    hourly_exclusion_reason,
 )
 from output.renderers.compare_metric_ids import FRONTEND_TO_RENDERER_METRIC_ID
 from services.compare_alert import _SUMMARY_KEY_TO_CATALOG_ID
@@ -361,7 +363,9 @@ def key_for(metric_id: object, aggregation: object) -> str | None:
     return _KEY_BY_METRIC_AGGREGATION.get((metric_id, aggregation))
 
 
-def get_compare_metric_catalog(entries: list[dict] | None = None) -> list[dict]:
+def get_compare_metric_catalog(
+    entries: list[dict] | None = None, *, lang: Lang = "de",
+) -> list[dict]:
     """Liefert die 26 Ortsvergleich-Metriken (read-only Kopie der Katalog-Liste),
     angereichert um `alarmCapable` (Teil 3, D1 Hybrid), `label` und
     `aggregation_label` (#1401 A1). `metric_id`/`aggregation` (#1373) stehen
@@ -376,7 +380,10 @@ def get_compare_metric_catalog(entries: list[dict] | None = None) -> list[dict]:
 
     `entries` injiziert eine Testkopie der Katalogzeilen (Vorbild:
     `duplicate_metric_aggregation_pairs(entries=...)`), damit dieser
-    Scheiter-Pfad ohne Monkeypatch des echten Katalogs pruefbar ist."""
+    Scheiter-Pfad ohne Monkeypatch des echten Katalogs pruefbar ist.
+
+    `lang` (#2751) betrifft nur `hourlyNotSelectableReason`; ohne Angabe ist
+    die Antwort die deutsche."""
     source = COMPARE_METRIC_CATALOG if entries is None else entries
     result: list[dict] = []
     for entry in source:
@@ -432,7 +439,7 @@ def get_compare_metric_catalog(entries: list[dict] | None = None) -> list[dict]:
             "alertMetric": alert_metric,
             "alarmCapable": alert_metric is not None,
             "hourlySelectable": metric_id not in HOURLY_EXCLUDED_METRIC_IDS,
-            "hourlyNotSelectableReason": HOURLY_EXCLUSION_REASON.get(metric_id, ""),
+            "hourlyNotSelectableReason": hourly_exclusion_reason(metric_id, lang),
             "hourlyDefault": metric_id in HOURLY_DEFAULT_METRIC_IDS,
             "hourlyMergeOnly": metric_id in HOURLY_MERGE_ONLY_METRIC_IDS,
             "hourly_legacy_keys": list(

@@ -4,7 +4,6 @@
   "src/output/renderers/alert/model.py": 1,
   "src/output/renderers/alert/official_alerts.py": 3,
   "src/output/renderers/alert/project.py": 8,
-  "src/output/renderers/compare_hourly_metric_ids.py": 1,
   "src/output/renderers/compare_metric_catalog.py": 5,
   "src/output/renderers/compare_metric_ids.py": 1,
   "src/output/renderers/compare_outlook_metric_ids.py": 3,
