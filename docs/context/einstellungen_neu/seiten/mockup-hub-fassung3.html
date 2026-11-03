@@ -1,0 +1,705 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Hub Wetter & Zustellung</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap">
+<style>
+/* Layout: Rahmen-Leiste (Trip/Orte umschalten), darunter der Hub im Look des Atomic-Design-Handoffs.
+   Bewusst nur helles Thema: das Mockup zeigt die App, wie sie aussieht. */
+:root{
+  color-scheme:light;
+  --g-paper:#f6f4ee; --g-paper-deep:#ecead9; --g-card:#ffffff; --g-card-alt:#faf8f1;
+  --g-rule:#d8d3c2; --g-rule-soft:#e7e2d3;
+  --g-ink:#1a1a18; --g-ink-2:#45433d; --g-ink-3:#6b675c; --g-ink-4:#9a958a;
+  --g-accent:#c45a2a; --g-accent-deep:#8c3e1a; --g-accent-soft:#f3d9c8; --g-accent-tint:rgba(196,90,42,.08);
+  --g-good:#3d6b3a; --g-warn:#c08a1a; --g-bad:#a83232;
+  --a-green:#15803d; --a-yellow:#d69500; --a-orange:#d4530a; --a-red:#a8104a;
+  --g-r-2:4px; --g-r-3:6px; --g-shadow-1:0 1px 2px rgba(26,26,24,.06);
+  --f-ui:'Inter Tight',system-ui,-apple-system,'Segoe UI',sans-serif;
+  --f-mono:'JetBrains Mono',ui-monospace,'SFMono-Regular',Menlo,monospace;
+  --frame:#2a2925; --frame-ink:#f1efe7; --mark:#1f5f8b;
+}
+*{box-sizing:border-box}
+body{background:var(--g-paper);color:var(--g-ink);font-family:var(--f-ui);font-size:14px;line-height:1.5}
+button{font-family:inherit}
+:focus-visible{outline:2px solid var(--g-accent);outline-offset:2px}
+/* Rahmen-Leiste des Mockups, nicht Teil der App */
+.frame{background:var(--frame);color:var(--frame-ink);padding-block:10px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap}
+.frame b{font-weight:600}
+.frame .sw{display:inline-flex;background:#3a3934;border-radius:5px;padding:2px;gap:2px}
+.frame .sw button{border:0;background:transparent;color:#cfccc1;font-size:13px;padding:5px 12px;border-radius:4px;cursor:pointer}
+.frame .sw button.on{background:var(--frame-ink);color:var(--frame)}
+.frame small{color:#a3a093;font-size:12px}
+
+/* App */
+.crumbs{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;padding-block:14px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));border-bottom:1px solid var(--g-rule-soft);font-family:var(--f-mono);font-size:11px;letter-spacing:.06em;color:var(--g-ink-3);text-transform:uppercase}
+.crumbs .path b{color:var(--g-ink);font-weight:500}
+.inner{max-width:1100px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.head{padding-block:26px 18px;display:flex;flex-direction:column;gap:6px}
+.eyebrow{font-family:var(--f-mono);font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--g-ink-3);font-weight:500}
+h1{font-size:clamp(28px,5vw,38px);font-weight:600;letter-spacing:-.02em;line-height:1.1;margin:0;display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.meta{font-family:var(--f-mono);font-size:13px;color:var(--g-ink-3)}
+.pill{font-family:var(--f-mono);font-size:11px;font-weight:500;letter-spacing:.04em;text-transform:uppercase;padding:3px 9px;border-radius:999px;background:var(--g-accent-tint);color:var(--g-accent-deep)}
+.pill.good{background:rgba(61,107,58,.1);color:var(--g-good)}
+.pill.neutral{background:var(--g-paper-deep);color:var(--g-ink-3)}
+
+.btn{display:inline-flex;align-items:center;gap:6px;border-radius:var(--g-r-2);font-weight:500;cursor:pointer;border:1px solid transparent;white-space:nowrap;text-transform:none;letter-spacing:0;font-family:var(--f-ui)}
+.btn.sm{padding:6px 10px;font-size:12px}.btn.md{padding:9px 14px;font-size:13px}
+.btn.accent{background:var(--g-accent);color:#fff}
+.btn.primary{background:var(--g-ink);color:var(--g-paper)}
+.btn.ghost{background:transparent;color:var(--g-ink);border-color:var(--g-rule)}
+.btn.quiet{background:transparent;color:var(--g-ink-2);padding-inline:4px}
+.btnwrap{position:relative}
+.menu{position:absolute;right:0;top:calc(100% + 6px);z-index:5;background:var(--g-card);border:1px solid var(--g-rule);border-radius:var(--g-r-3);box-shadow:0 8px 24px rgba(26,26,24,.12);padding:6px;min-width:250px;display:flex;flex-direction:column;text-transform:none;letter-spacing:0;font-family:var(--f-ui)}
+.menu button{display:flex;justify-content:space-between;gap:12px;align-items:center;background:transparent;border:0;border-radius:var(--g-r-2);padding:9px 10px;font-size:13.5px;color:var(--g-ink);cursor:pointer;text-align:left}
+.menu button:hover{background:var(--g-card-alt)}
+.menu button[disabled]{color:var(--g-ink-3);cursor:not-allowed}
+.menu small{font-family:var(--f-mono);font-size:10.5px;color:var(--g-ink-3)}
+.menu hr{border:0;border-top:1px solid var(--g-rule-soft);margin:4px 0}
+.menu[hidden]{display:none}
+.toast{font-family:var(--f-ui);text-transform:none;letter-spacing:0;font-size:12.5px;color:var(--g-good)}
+
+/* Reiterleiste nach Handoff: nur Unterstrich, keine Box */
+.tabs{display:flex;gap:0;overflow-x:auto;border-bottom:1px solid var(--g-rule);padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.tabs-in{max-width:1100px;margin:0 auto;display:flex;width:100%}
+.tab{background:transparent;border:0;border-bottom:2px solid transparent;margin-bottom:-1px;padding:12px 16px;font-size:13px;font-weight:500;color:var(--g-ink-3);cursor:pointer;display:inline-flex;gap:6px;align-items:center;white-space:nowrap}
+.tab.on{color:var(--g-ink);font-weight:600;border-bottom-color:var(--g-accent)}
+.tab .badge{font-family:var(--f-mono);font-size:10px;font-weight:600;padding:2px 6px;border-radius:3px;background:var(--g-paper-deep);color:var(--g-ink-3)}
+.content{padding-block:28px 60px;display:flex;flex-direction:column;gap:22px}
+
+.sectionh{display:flex;justify-content:space-between;align-items:flex-end;gap:12px;flex-wrap:wrap;border-bottom:1px solid var(--g-rule-soft);padding-bottom:12px}
+.sectionh h2{font-size:22px;font-weight:600;letter-spacing:-.01em;margin:0}
+.sectionh p{margin:2px 0 0;color:var(--g-ink-3);font-size:13px;max-width:68ch}
+.card{background:var(--g-card);border:1px solid var(--g-rule);border-radius:var(--g-r-3);box-shadow:var(--g-shadow-1)}
+.card.pad{padding:20px}
+
+/* Segmented nach Handoff */
+.seg{display:inline-flex;background:var(--g-card-alt);border:1px solid var(--g-rule-soft);border-radius:4px;padding:2px;gap:2px;flex-wrap:wrap}
+.seg button{border:0;background:transparent;font-family:var(--f-mono);font-weight:600;font-size:11.5px;padding:4px 10px;border-radius:3px;color:var(--g-ink-3);cursor:pointer;display:inline-flex;gap:5px;align-items:center}
+.seg button.on{background:var(--g-paper);color:var(--g-accent-deep);box-shadow:0 0 0 1px var(--g-rule)}
+.seg .d{width:8px;height:8px;border-radius:50%}
+/* Switch nach Handoff */
+.switch{width:36px;height:20px;border-radius:999px;background:var(--g-rule);border:0;position:relative;cursor:pointer;flex:0 0 auto;padding:0}
+.switch::after{content:"";position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:50%;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.25);transition:left .15s}
+.switch[aria-checked="true"]{background:var(--g-good)}
+.switch[aria-checked="true"]::after{left:18px}
+.input{height:36px;border:1px solid var(--g-rule);border-radius:var(--g-r-2);background:var(--g-paper);padding:0 10px;font-size:14px;font-family:var(--f-mono);color:var(--g-ink);width:96px;font-variant-numeric:tabular-nums}
+.input.sm{height:28px;font-size:12px;width:64px;padding:0 6px;text-align:right}
+.field label{display:block;font-family:var(--f-mono);font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--g-ink-3);margin-bottom:4px}
+
+/* Vorlage */
+.vorlage{display:flex;gap:14px;align-items:center;flex-wrap:wrap;justify-content:space-between}
+.picker{display:inline-flex;align-items:center;gap:10px;border:1px solid var(--g-rule);background:var(--g-paper);border-radius:var(--g-r-2);padding:8px 12px;font-size:15px;font-weight:600;cursor:pointer;color:var(--g-ink)}
+.picker small{font-family:var(--f-mono);font-size:11px;color:var(--g-ink-3);font-weight:500}
+
+/* Metrik-Zeilen */
+.mgroup .gh{font-family:var(--f-mono);font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--g-ink-3);padding:14px 20px 6px;border-top:1px solid var(--g-rule-soft)}
+.mgroup:first-child .gh{border-top:0}
+.mr{display:grid;grid-template-columns:32px minmax(130px,190px) minmax(160px,1fr) auto;gap:8px 18px;align-items:center;padding:12px 20px;border-top:1px solid var(--g-rule-soft)}
+.mr.first{border-top:0}
+.mr .nm b{display:block;font-weight:600;font-size:14.5px}
+.mr .nm small{color:var(--g-ink-3);font-size:12px}
+.mr.off .nm b{color:var(--g-ink-3);font-weight:500}
+.bandwrap{display:flex;flex-direction:column;gap:3px;min-width:0}
+.ticks{position:relative;height:14px;font-family:var(--f-mono);font-size:10.5px;color:var(--g-ink-3)}
+.ticks i{position:absolute;transform:translateX(-50%);font-style:normal;white-space:nowrap}
+.band{height:10px;border-radius:5px;display:flex;overflow:hidden;background:var(--g-rule-soft)}
+.band span{height:100%}
+.mr .act{display:flex;gap:10px;align-items:center;justify-content:flex-end;flex-wrap:wrap}
+.mr .act .lbl{font-size:12px;color:var(--g-ink-3)}
+.edit{grid-column:2/-1;display:flex;gap:18px;flex-wrap:wrap;align-items:flex-end;background:var(--g-card-alt);border:1px solid var(--g-rule-soft);border-radius:var(--g-r-2);padding:10px 12px}
+.edit .grp{display:flex;gap:6px;align-items:flex-end}
+.edit .grp > span{font-family:var(--f-mono);font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--g-ink-3);padding-bottom:7px;min-width:42px}
+.lr{border-bottom:3px solid var(--a-red)!important}.lo{border-bottom:3px solid var(--a-orange)!important}.ly{border-bottom:3px solid var(--a-yellow)!important}
+.rm{width:28px;height:28px;border-radius:var(--g-r-2);border:1px solid var(--g-rule);background:var(--g-card);color:var(--g-ink-2);font-size:16px;line-height:1;cursor:pointer;padding:0}
+.rm:hover{border-color:var(--g-bad);color:var(--g-bad)}
+.why{font-size:12px;color:var(--g-ink-2);margin-top:4px}
+.why .gr{color:var(--a-green);font-weight:600}
+.edit .grp > span{line-height:1.25}
+.exm{font-family:var(--f-mono);font-size:10.5px;color:var(--g-ink-3);white-space:nowrap}
+.vmenu{position:absolute;top:100%;left:0;margin-top:6px;z-index:6;background:var(--g-card);border:1px solid var(--g-rule);border-radius:var(--g-r-3);box-shadow:0 8px 24px rgba(26,26,24,.12);padding:6px;width:min(360px,calc(100vw - 48px));display:flex;flex-direction:column}
+.vmenu .vg{font-family:var(--f-mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--g-ink-3);padding:8px 10px 4px}
+.vmenu > button{display:flex;flex-direction:column;align-items:flex-start;gap:1px;background:transparent;border:0;border-radius:var(--g-r-2);padding:8px 10px;cursor:pointer;text-align:left;color:var(--g-ink);font-size:13.5px}
+.vmenu > button:hover{background:var(--g-card-alt)}
+.vmenu > button.cur span{font-weight:600}
+.vmenu small{font-size:11.5px;color:var(--g-ink-3)}
+.confirm{display:flex;flex-direction:column;gap:8px;background:var(--g-accent-tint);border:1px solid var(--g-accent-soft);border-radius:var(--g-r-2);padding:10px 12px;margin-bottom:4px;font-size:13px;color:var(--g-ink-2)}
+.confirm b{color:var(--g-ink)}
+.kz{font-family:var(--f-mono);font-size:11px;font-weight:600;background:var(--g-paper-deep);color:var(--g-ink-2);border-radius:3px;padding:1px 6px}
+.oi.ohead{font-family:var(--f-mono);font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--g-ink-2);border-top:1px solid var(--g-rule);background:var(--g-card-alt);line-height:1.35}
+.oi.ohead .muted{text-transform:none;letter-spacing:0;font-family:var(--f-ui);font-size:11px}
+.oh-f{width:150px;text-align:left}.oh-s{width:70px;text-align:left}
+.mono-s{font-family:var(--f-mono);font-size:11.5px}
+.quick{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
+.quick button{font:inherit;font-size:12px;border:1px dashed var(--g-rule);background:transparent;color:var(--g-ink-2);border-radius:999px;padding:2px 9px;cursor:pointer}
+.legend{padding:10px 20px 14px;border-top:1px solid var(--g-rule-soft);display:flex;gap:6px 14px;flex-wrap:wrap;font-size:12.5px;color:var(--g-ink-2);align-items:center}
+.more{padding:12px 20px;border-top:1px solid var(--g-rule-soft);display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.chip{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--g-rule);background:var(--g-card);border-radius:999px;padding:4px 11px;font-size:12.5px;color:var(--g-ink-2);cursor:pointer}
+.muted{color:var(--g-ink-3)}
+
+/* Zeilenliste generisch */
+.lrow{display:flex;gap:14px;align-items:center;justify-content:space-between;padding:14px 20px;border-top:1px solid var(--g-rule-soft);flex-wrap:wrap}
+.lrow:first-child{border-top:0}
+.lrow .t b{display:block;font-weight:600}
+.lrow .t small{color:var(--g-ink-3);font-size:12.5px}
+.lrow .t strong{font-weight:600;color:var(--g-ink-2)}
+.lrow .r{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+
+/* Kanal-Tabelle */
+.kt{width:100%;border-collapse:collapse}
+.kt th{font-family:var(--f-mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--g-ink-3);font-weight:500;text-align:left;padding:12px 20px 8px}
+.kt td{padding:12px 20px;border-top:1px solid var(--g-rule-soft);vertical-align:middle}
+.kt td b{display:block;font-weight:600}
+.kt td small{color:var(--g-ink-3);font-size:12px}
+.tblwrap{overflow-x:auto}
+.kt{min-width:620px}
+
+/* Inhalt je Kanal */
+.olist{display:flex;flex-direction:column}
+.oi{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center;padding:9px 20px;border-top:1px solid var(--g-rule-soft)}
+.oi .h{color:var(--g-ink-4);font-family:var(--f-mono);cursor:grab}
+.oi .n{flex:1 1 220px;min-width:0}
+.oi .k{font-family:var(--f-mono);font-size:11px;color:var(--g-ink-3)}
+.oi.off .n{color:var(--g-ink-3);text-decoration:line-through}
+.budget{padding:10px 20px;border-top:1px dashed var(--g-rule);font-family:var(--f-mono);font-size:11.5px;color:var(--g-ink-3)}
+details.adv{border-top:1px solid var(--g-rule-soft)}
+details.adv summary{padding:14px 20px;cursor:pointer;font-weight:600;list-style:none;display:flex;justify-content:space-between}
+details.adv summary::after{content:"＋";color:var(--g-ink-3)}
+details.adv[open] summary::after{content:"－"}
+.two{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px}
+
+/* Feedback */
+.fb{border-top:1px solid var(--g-rule);background:var(--g-card-alt);padding-block:26px 60px}
+.fb h3{margin:0 0 6px;font-size:17px}
+.fbgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px;margin-top:14px}
+.fbgrid textarea{width:100%;min-height:70px;font:inherit;font-size:13.5px;border:1px solid var(--g-rule);border-radius:var(--g-r-2);background:var(--g-card);padding:8px 10px;color:var(--g-ink);resize:vertical}
+.fbgrid label{font-family:var(--f-mono);font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--g-ink-3);display:block;margin-bottom:4px}
+.st{font-family:var(--f-mono);font-size:11.5px;color:var(--g-ink-3)}
+.st.ok{color:var(--g-good)}
+
+@media (max-width:760px){
+  .mr{grid-template-columns:40px 1fr}
+  .mr .bandwrap{grid-column:1/-1}
+  .mr .act{grid-column:1/-1;justify-content:flex-start}
+  .edit{grid-column:1/-1}
+}
+/* Fassung 3: Marken für neue Punkte aus dem Abgleich, Zustände, Sperren */
+.tag{display:none;font-family:var(--f-mono);font-size:9.5px;font-weight:600;letter-spacing:.04em;text-transform:none;padding:1px 5px;border-radius:3px;background:var(--mark);color:#fff;vertical-align:2px;margin-left:6px;white-space:nowrap}
+body.marks .tag{display:inline-block}
+.warnbox{display:flex;flex-wrap:wrap;gap:4px 10px;align-items:baseline;padding:12px 16px;border-radius:var(--g-r-2);font-size:13px;border:1px solid}
+.warnbox.bad{background:rgba(168,50,50,.06);border-color:rgba(168,50,50,.35);color:var(--g-bad)}
+.warnbox.info{background:var(--g-card-alt);border-color:var(--g-rule);color:var(--g-ink-2)}
+.status{display:flex;flex-wrap:wrap;gap:4px 6px;align-items:center;font-size:12px;color:var(--g-ink-3);margin-top:3px}
+.status.bad{color:var(--g-bad)}
+.dot{width:8px;height:8px;border-radius:50%;flex:0 0 auto}
+.dot.ok{background:var(--g-good)}.dot.warn{background:var(--g-warn)}.dot.off{background:transparent;border:1.5px solid var(--g-ink-4)}
+.linkish{background:none;border:0;padding:0;color:var(--g-accent-deep);font:inherit;font-size:12px;text-decoration:underline;cursor:pointer}
+.switch[disabled]{opacity:.4;cursor:not-allowed}
+.lock{font-size:12px;color:var(--g-ink-3)}
+.oi.fixed{background:var(--g-card-alt)}
+.oi.fixed .n{color:var(--g-ink-2)}
+.oi.locked .n{color:var(--g-ink-3)}
+.skel{height:14px;border-radius:4px;background:var(--g-rule-soft)}
+.dialog{display:flex;flex-direction:column;gap:12px;padding:18px 20px}
+.input.wide{width:100%;max-width:380px;font-family:var(--f-ui)}
+.err{color:var(--g-bad);font-size:12.5px}
+.chk{display:inline-flex;gap:8px;align-items:center;font-size:13px;color:var(--g-ink-2)}
+.sub{font-family:var(--f-mono);font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--g-ink-3);padding:14px 20px 4px;border-top:1px solid var(--g-rule-soft)}
+.menu .mhead{padding:6px 6px 8px}
+.menu .dis{display:flex;flex-direction:column;gap:2px;padding:9px 10px;font-size:13.5px;color:var(--g-ink-3)}
+.menu .dis small{color:var(--g-bad)}
+.menu .confirm{margin:0}
+.toast.bad{color:var(--g-bad)}
+.hidden-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:8px 22px;margin:12px 0 0;padding:0;list-style:none;font-size:13px;color:var(--g-ink-2)}
+.hidden-list b{font-family:var(--f-mono);font-size:11px;color:var(--g-ink);margin-right:4px}
+.frame .grp{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.frame .grp > small{color:#a3a093}
+@media (prefers-reduced-motion:reduce){.switch::after{transition:none}}
+</style>
+
+<div class="frame">
+  <span><b>Mockup · Fassung 3</b> · mit den angenommenen Punkten aus dem Abgleich · <small>alles anklickbar, nichts wird an die App geschickt</small></span>
+  <span class="grp">
+    <span class="sw" role="group" aria-label="Kontext"><button class="on" data-ctx="trip" type="button">Trip</button><button data-ctx="orte" type="button">Orte</button></span>
+    <small>Zustand</small><span class="sw" role="group" aria-label="Zustand zeigen"><button class="on" data-zst="normal" type="button">normal</button><button data-zst="laedt" type="button">lädt</button><button data-zst="fehler" type="button">Ladefehler</button><button data-zst="luecken" type="button">Konto mit Lücken</button></span>
+    <small>Marken</small><span class="sw" role="group" aria-label="Neue Punkte markieren"><button class="on" data-mark="1" type="button">neu markiert</button><button data-mark="0" type="button">aus</button></span>
+  </span>
+</div>
+
+<div class="crumbs">
+  <span class="path" id="path"></span>
+  <span style="display:flex;gap:8px;align-items:center">
+    <span class="toast" id="toast" aria-live="polite"></span>
+    <span class="btnwrap">
+      <button class="btn sm ghost" id="kebabBtn" type="button" aria-label="Weitere Aktionen" aria-haspopup="menu" aria-expanded="false">⋮</button>
+      <div class="menu" id="kebabMenu" role="menu" hidden></div>
+    </span>
+    <span class="btnwrap">
+      <button class="btn sm accent" id="testBtn" type="button" aria-haspopup="menu" aria-expanded="false">Test schicken ▾</button>
+      <div class="menu" id="testMenu" role="menu" hidden></div>
+    </span>
+  </span>
+</div>
+
+<div class="inner"><div class="head" id="head"></div></div>
+<nav class="tabs" aria-label="Reiter"><div class="tabs-in" id="tabs"></div></nav>
+<main class="inner"><div class="content" id="content"></div></main>
+
+<section class="fb"><div class="inner">
+  <div class="card pad" style="margin-bottom:24px">
+    <h3>Im Konzept, aber hier nicht zu sehen</h3>
+    <p class="muted" style="margin:0;font-size:13px">Die blauen Marken im Mockup zeigen, wo die angenommenen Punkte aus dem Abgleich jetzt sitzen. Diese Punkte haben keine Oberfläche:</p>
+    <ul class="hidden-list">
+      <li><b>K17</b>Alte Links wie ?tab=wertebereiche und ?tab=alarme leiten auf Wetter bzw. Zustellung um.</li>
+      <li><b>K3b</b>Orte: Der Name der Vorlage ersetzt das Profil und steht im Kopf der Mail.</li>
+      <li><b>B8</b>Migration per Read-Modify-Write: alte Wertebereiche und Alarmstufen werden Ampel-Grenzen, nichts geht verloren.</li>
+      <li><b>W5b</b>Zeithorizonte entfallen. Gespeicherte Altwerte werden auf „alle Tage“ gesetzt.</li>
+      <li><b>V12</b>Der „Mehrtages-Trend“ ist derselbe Block wie der 3-Tages-Ausblick und geht darin auf. Ein Name überall: 3-Tages-Ausblick.</li>
+      <li><b>A6</b>CAPE geht in der Gewitter-Zeile auf, die eigene Erklärung entfällt.</li>
+      <li><b>V11</b>Die Schnellwahl 07:00/18:00 entfällt, das Uhrzeitfeld bleibt.</li>
+      <li><b>A15</b>Toter Code (AlertsTab, AlertPresetSelector, AlertCard) wird entfernt.</li>
+      <li><b>Radtour</b>Die Vorlage hat jetzt „Gefühlte Temperatur“ an (deine Änderung bei den Grenzen).</li>
+    </ul>
+  </div>
+  <h3>Rückmeldung zum Mockup</h3>
+  <p class="muted" style="margin:0">Schreib zu jedem Bereich, was passt und was nicht. Wird gespeichert, ich lese es danach aus. <span class="st" id="fbState">Speicher wird verbunden …</span></p>
+  <div class="fbgrid">
+    <div><label for="fb-kopf">Kopf &amp; Test schicken</label><textarea id="fb-kopf" data-fb="kopf"></textarea></div>
+    <div><label for="fb-reiter">Reiterleiste</label><textarea id="fb-reiter" data-fb="reiter"></textarea></div>
+    <div><label for="fb-wetter">Reiter Wetter</label><textarea id="fb-wetter" data-fb="wetter"></textarea></div>
+    <div><label for="fb-zustellung">Reiter Zustellung</label><textarea id="fb-zustellung" data-fb="zustellung"></textarea></div>
+    <div><label for="fb-etappen">Etappen (Tempo) / Orte</label><textarea id="fb-etappen" data-fb="etappen_orte"></textarea></div>
+    <div><label for="fb-sonst">Sonstiges</label><textarea id="fb-sonst" data-fb="sonstiges"></textarea></div>
+  </div>
+</div></section>
+
+<script>
+(function(){
+const COL={rot:'var(--a-red)',orange:'var(--a-orange)',gelb:'var(--a-yellow)',grün:'var(--a-green)'};
+// Metrik: id,label,hint,unit,scale,lo[rot,orange,gelb],hi[gelb,orange,rot],alarm|null,on,group,ordinal
+const TRIP_METRICS=[
+ ['temperature','Temperatur','Tageshöchst · Tagestief','°C',[-25,40],[-10,-3,2],[27,30,33],'orange',true,'Temperatur'],
+ ['temperature_night','Tiefsttemperatur Nacht','vor der Etappe','°C',[-20,25],[-8,-3,0],[null,null,null],'orange',true,'Temperatur'],
+ ['wind_chill','Gefühlte Temperatur','Vorbote, kein Alarm','°C',[-30,40],[-15,-8,-2],[null,null,null],null,true,'Temperatur'],
+ ['wind','Wind','Mittelwind','km/h',[0,90],[null,null,null],[30,45,60],'orange',true,'Wind'],
+ ['gust','Böen','Spitze','km/h',[0,100],[null,null,null],[35,50,70],'orange',true,'Wind'],
+ ['wind_direction','Windrichtung','nur Anzeige, keine Ampel','°',[0,360],null,null,null,false,'Wind',false,true],
+ ['precipitation','Niederschlag','Summe','mm',[0,25],[null,null,null],[1,5,15],'orange',true,'Niederschlag & Gewitter'],
+ ['thunder','Gewitter','Stufe','',[0,3],null,null,'orange',true,'Niederschlag & Gewitter',true],
+ ['rain_probability','Regenwahrscheinlichkeit','Vorbote, kein Alarm','%',[0,100],[null,null,null],[30,60,80],null,true,'Niederschlag & Gewitter'],
+ ['visibility','Sichtweite','Minimum','m',[0,5000],[100,300,1000],[null,null,null],'orange',true,'Himmel & Sicht'],
+ ['cloud_low','Tiefe Wolken','Gipfel in Wolken','%',[0,100],[null,null,null],[50,80,null],null,true,'Himmel & Sicht'],
+ ['uv_index','UV-Index','Maximum','',[0,12],[null,null,null],[6,8,10],'nie',true,'Himmel & Sicht'],
+ ['freezing_level','Nullgradgrenze','m über höchster Stelle','m',[-1500,2500],[-300,0,300],[null,null,null],'orange',true,'Schnee & Höhe'],
+ ['snowfall_limit','Schneefallgrenze','m über höchster Stelle','m',[-1500,2500],[-500,0,300],[null,null,null],'orange',true,'Schnee & Höhe']
+];
+const TRIP_OFF=['Bewölkung','Sonnenstunden','Neuschnee','Schneehöhe','Taupunkt','Luftfeuchte','Luftdruck'];
+const ORTE_METRICS=[
+ ['temperature','Temperatur','Tageshöchst · Tagestief','°C',[-25,40],[-15,-5,0],[28,31,34],'orange',true,'Temperatur'],
+ ['wind','Wind','Mittelwind','km/h',[0,90],[null,null,null],[30,50,70],'orange',true,'Wind'],
+ ['gust','Böen','Spitze','km/h',[0,100],[null,null,null],[30,45,60],'orange',true,'Wind'],
+ ['wind_direction','Windrichtung','nur Anzeige, keine Ampel','°',[0,360],null,null,null,false,'Wind',false,true],
+ ['precipitation','Niederschlag','Summe','mm',[0,25],[null,null,null],[1,5,10],'orange',true,'Niederschlag & Gewitter'],
+ ['thunder','Gewitter','Stufe','',[0,3],null,null,'orange',true,'Niederschlag & Gewitter',true],
+ ['rain_probability','Regenwahrscheinlichkeit','Vorbote, kein Alarm','%',[0,100],[null,null,null],[30,60,80],null,true,'Niederschlag & Gewitter'],
+ ['cloud_total','Bewölkung','Vorbote, kein Alarm','%',[0,100],[null,null,null],[60,85,null],null,true,'Himmel & Sicht'],
+ ['sunshine','Sonnenstunden','zu wenig ist schlecht','h',[0,14],[null,1,3],[null,null,null],null,true,'Himmel & Sicht']
+];
+const ORTE_OFF=['Sichtweite','UV-Index','Gefühlte Temperatur','Taupunkt','Luftfeuchte','Tiefe Wolken','Nullgradgrenze','Neuschnee','Schneehöhe'];
+
+const CTX={
+ trip:{path:'Trips / <b>GR221 Mallorca</b>',eyebrow:'Trip · Mallorca',title:'GR221 Mallorca',pill:['fertig','neutral'],meta:'23.–26. Februar 2026 · 4 Etappen · 31,5 km · ↑1.737 m',
+   tabs:[['uebersicht','Übersicht'],['etappen','Etappen','4'],['wetter','Wetter'],['zustellung','Zustellung']],vorlage:'Alpen-Trekking',metrics:TRIP_METRICS,off:TRIP_OFF},
+ orte:{path:'Orte / <b>Münsterland</b>',eyebrow:'Orte · Münsterland',title:'Münsterland',pill:['aktiv','good'],meta:'3 Orte · Vergleichstabelle · Morgen-Briefing 07:00',
+   tabs:[['uebersicht','Übersicht'],['orte','Orte','3'],['wetter','Wetter'],['zustellung','Zustellung']],vorlage:'Allgemein',metrics:ORTE_METRICS,off:ORTE_OFF}
+};
+// SMS-/Telegram-Kürzel laut docs/reference/sms_format.md (nur belegte)
+const KZ={wind_direction:'WD',temperature:'D',temperature_night:'N',wind:'W',gust:'G',precipitation:'R',thunder:'TH',rain_probability:'PR',visibility:'VS',uv_index:'UV',sunshine:'SU',humidity:'HU',dewpoint:'DP'};
+// Englische Spaltenköpfe der Mail-Tabelle laut metric_catalog.py (col_label)
+const COLL={wind_direction:'WDir',temperature:'Temp',temperature_night:'Night',wind_chill:'Feels',wind:'Wind',gust:'Gust',precipitation:'Rain',thunder:'Thdr',rain_probability:'Rain%',visibility:'Visib',cloud_total:'Cloud',cloud_low:'CldLow',uv_index:'UV',sunshine:'Sun',freezing_level:'0°Line',snowfall_limit:'SnowL',humidity:'Humid',dewpoint:'Dew'};
+const VORLAGEN=[['Alpen-Trekking','14 Metriken · Gewitter, Böen, Nullgradgrenze'],['Wandern','10 Metriken · Regen, Sonne, UV'],['Skitouren','13 Metriken · Neuschnee, Schneehöhe, Sicht'],['Wintersport','11 Metriken · Schnee, Kälte'],['Radtour','12 Metriken · Wind, Regen, gefühlte Temperatur'],['Wassersport','10 Metriken · Wind beidseitig, Gewitter'],['Allgemein','8 Metriken · Standard-Ampel']];
+const EIGENE=[['Mallorca Frühling','eigene · aus GR221 gespeichert']];
+const SIDES={temperature:'both',temperature_night:'both',wind_chill:'both',wind:'both',gust:'up',precipitation:'up',rain_probability:'up',visibility:'down',cloud_low:'up',cloud_total:'up',uv_index:'up',freezing_level:'both',snowfall_limit:'both',sunshine:'down'};
+const EX={wind_direction:['270°','W'],wind:['30 km/h','● gelb'],gust:['45 km/h','● orange'],precipitation:['2,1 mm','● gelb'],thunder:['mittel','● orange'],temperature:['27 °C','● gelb'],cloud_total:['70 %','☁'],uv_index:['7','● gelb']};
+let ctx='trip', tab='wetter', openEdit=null, channelTab='E-Mail', pickerOpen=false, pending=null;
+let zst='normal', testSlot='morgen', kebabConfirm=null, saveOpen=false, saveErr='', saveName='', laufzeit='Bis auf Weiteres';
+const status={trip:'fertig',orte:'entwurf'};
+const PILL={fertig:['fertig','neutral'],aktiv:['aktiv','good'],entwurf:['Entwurf','neutral'],pausiert:['pausiert','neutral'],archiviert:['archiviert','neutral']};
+function tg(c){return `<span class="tag" title="neu aus dem Abgleich">${c}</span>`;}
+// Konto-Zustand je Kanal: normal = alles eingerichtet, „Konto mit Lücken“ zeigt Sperren und Hinweise
+function konto(){const l=zst==='luecken';return {
+  'E-Mail':{ok:true,dot:'ok',st:'bestätigt',to:'henning@… · +1 Empfänger',menu:'an 2 Empfänger'},
+  'Telegram':l?{ok:false,dot:'off',st:'nicht verbunden',why:'Telegram-Chat fehlt.',fix:'verbinden'}:{ok:true,dot:'ok',st:'verbunden',to:'@henning',menu:'@henning'},
+  'SMS':l?{ok:false,dot:'warn',st:'unbestätigt · +49 171 …',why:'Nummer noch nicht bestätigt.',fix:'bestätigen'}:{ok:true,dot:'ok',st:'bestätigt',to:'+49 171 …',menu:'+49 171 …'},
+  'Premium-SMS':l?{ok:false,dot:'warn',st:'inReach · Rückadresse verfallen',why:'Schick eine Nachricht vom Gerät, dann ist die Rückadresse wieder gültig.',fix:'prüfen',lock:'Rückadresse verfallen'}:{ok:true,dot:'ok',st:'inReach · Rückadresse gelernt 28.10. · zuletzt gemeldet 1.11. 18:04',menu:'inReach · über Satellit'}
+};}
+const st={}; // pro Kontext: metric on/alarm
+function S(){ if(!st[ctx]){st[ctx]={};CTX[ctx].metrics.forEach(m=>st[ctx][m[0]]={on:m[8],alarm:m[7],lo:m[5]?m[5].slice():null,hi:m[6]?m[6].slice():null,mittel:'orange',hoch:'rot'});
+  st[ctx].sw={official:true,radar:true,morning:true,evening:ctx==='trip',quiet:true,tgkurz:false,outM:false,outA:true,std:true,mailfmt:'Ausführlich (HTML)',stats:true,yday:true,night:true,
+    ch:{'E-Mail':{b:true,a:true,s:'gering'},'Telegram':{b:true,a:true,s:'gering'},'SMS':{b:false,a:true,s:'mittel'},'Premium-SMS':{b:false,a:true,s:'hoch'}}};}
+  return st[ctx]; }
+
+function esc(s){return String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
+function band(m,r){
+  const [mn,mx]=m[4], span=mx-mn;
+  if(m[10]) return {segs:[['grün',1/3],[r.mittel,1/3],[r.hoch,1/3]],ticks:[['keins',16.6],['mittel',50],['hoch',83.3]]};
+  if(m[11]) return {segs:[],ticks:[]};
+  const L=[['rot',r.lo[0]],['orange',r.lo[1]],['gelb',r.lo[2]]].filter(x=>x[1]!=null);
+  const H=[['gelb',r.hi[0]],['orange',r.hi[1]],['rot',r.hi[2]]].filter(x=>x[1]!=null);
+  let prev=mn; const segs=[], ticks=[];
+  const cl=v=>Math.max(mn,Math.min(mx,v));
+  L.forEach(([c,v])=>{const x=cl(v);segs.push([c,(x-prev)/span]);ticks.push([v,(x-mn)/span*100]);prev=x;});
+  const fh=H.length?Math.max(prev,cl(H[0][1])):mx; segs.push(['grün',(fh-prev)/span]); prev=fh;
+  H.forEach(([c,v],i)=>{ticks.push([v,(cl(v)-mn)/span*100]);const nx=i+1<H.length?Math.max(prev,cl(H[i+1][1])):mx;segs.push([c,(nx-prev)/span]);prev=nx;});
+  return {segs,ticks};
+}
+function sw(key,on,label,dis){return `<button class="switch" role="switch" aria-checked="${on}" aria-label="${esc(label)}" data-sw="${key}" type="button"${dis?' disabled':''}></button>`;}
+function seg(name,opts,val,dots){return `<span class="seg" role="radiogroup">${opts.map(o=>`<button type="button" role="radio" aria-checked="${o===val}" class="${o===val?'on':''}" data-seg="${name}" data-v="${o}">${dots&&dots[o]?`<span class="d" style="background:${dots[o]}"></span>`:''}${o}</button>`).join('')}</span>`;}
+
+function renderHead(){
+  const c=CTX[ctx];
+  document.getElementById('path').innerHTML=c.path;
+  document.getElementById('head').innerHTML=`<span class="eyebrow">${c.eyebrow}</span>
+    <h1>${c.title} ${pillHtml()}</h1><span class="meta">${c.meta}</span>`;
+  document.getElementById('tabs').innerHTML=c.tabs.map(([id,l,b])=>`<button class="tab ${id===tab?'on':''}" data-tab="${id}" type="button" aria-current="${id===tab?'page':'false'}">${l}${b?`<span class="badge">${b}</span>`:''}</button>`).join('');
+  renderMenu();renderKebab();
+}
+function pillHtml(){const p=PILL[status[ctx]];return `<span class="pill ${p[1]}">${p[0]}</span>`+(status[ctx]==='entwurf'?`<button class="btn sm accent" type="button" data-activate="1">Aktivieren</button>${tg('V16')}`:'');}
+function slotLabel(){return ctx==='trip'?(testSlot==='morgen'?'Morgen-Briefing':'Abend-Briefing'):'Orts-Briefing';}
+function renderMenu(){
+  const acc=konto(), ch=S().sw.ch;
+  const head=ctx==='trip'?`<div class="mhead">${seg('slot',['Morgen-Briefing','Abend-Briefing'],slotLabel())}${tg('K11')}</div><hr>`:'';
+  const rows=Object.keys(ch).map(k=>{const a=acc[k];
+    return a.ok?`<button role="menuitem" type="button" data-send="${k}">${k}<small>${a.menu}</small></button>`
+      :`<div class="dis" role="menuitem" aria-disabled="true"><span>${k} ${tg('K10')}</span><small>gesperrt: ${a.why} <button class="linkish" type="button" data-konto="1">Im Konto ${a.fix} →</button></small></div>`;}).join('');
+  document.getElementById('testMenu').innerHTML=head+rows+`<hr><button role="menuitem" type="button" data-send="alle"><b>Alle eingerichteten Kanäle</b></button><hr><button role="menuitem" type="button" data-send="alarm"><span><b>Test-Alarm</b> ${tg('A14')}<br><small>Beispiel-Alarm mit echten Werten an alle Alarm-Kanäle</small></span></button>`;
+}
+function renderKebab(){
+  const el=document.getElementById('kebabMenu'), name=CTX[ctx].title;
+  if(kebabConfirm){
+    const T={loeschen:['Löschen?',`„${name}“ wird endgültig gelöscht. Briefings und Alarme hören sofort auf. Das lässt sich nicht rückgängig machen.`,'Endgültig löschen'],
+             archivieren:['Archivieren?',`„${name}“ verschwindet aus der Liste. Es kommen keine Briefings und Alarme mehr. Du kannst es im Archiv reaktivieren.`,'Archivieren']}[kebabConfirm];
+    el.innerHTML=`<div class="confirm"><b>${T[0]} ${tg('K15')}</b><span>${T[1]}</span><span style="display:flex;gap:8px"><button class="btn sm accent" type="button" data-kok="1">${T[2]}</button><button class="btn sm ghost" type="button" data-kno="1">Abbrechen</button></span></div>`;return;}
+  const s=status[ctx], it=[];
+  if(s==='entwurf') it.push(['aktivieren','Aktivieren','V16']);
+  if(s==='pausiert') it.push(['fortsetzen','Fortsetzen']); else if(s!=='entwurf'&&s!=='archiviert') it.push(['pausieren','Pausieren']);
+  it.push(s==='archiviert'?['reaktivieren','Reaktivieren']:['archivieren','Archivieren …']);
+  it.push(['loeschen','Löschen …']);
+  el.innerHTML=it.map(([k,l,c])=>`<button role="menuitem" type="button" data-k="${k}"><span>${l}${c?tg(c):''}</span></button>`).join('')+`<hr><div class="dis" style="color:var(--g-ink-3);font-size:12px">Pausieren, Archivieren, Löschen ${tg('K14')}</div>`;
+}
+
+function why(m,r){
+  if(m[11]) return 'Nur Anzeige: keine Ampel und kein Alarm. Roh oder Einfach stellst du unten je Liste ein.';
+  if(m[7]===null) return 'Nur im Briefing gefärbt. Vorboten lösen keinen Alarm aus.';
+  if(r.alarm==='nie') return 'Kein Alarm. Die Farbe erscheint nur im Briefing.';
+  const lvl={gelb:'Gelb',orange:'Orange',rot:'Rot'}[r.alarm];
+  if(m[10]){const st=[['mittel',r.mittel],['hoch',r.hoch]].filter(([,c])=>({gelb:1,orange:2,rot:3}[c])>=({gelb:1,orange:2,rot:3}[r.alarm])).map(([n])=>n);return st.length?`Alarm, wenn die Gewitter-Stufe seit dem letzten Briefing auf ${st.join(' oder ')} steigt (${lvl}). Entwarnung, wenn sie wieder fällt.`:`Mit diesen Farben erreicht Gewitter nie ${lvl}, daher kein Alarm.`;}
+  const hiI={gelb:0,orange:1,rot:2}[r.alarm], loI={gelb:2,orange:1,rot:0}[r.alarm];
+  const u=m[3]?' '+m[3]:''; const parts=[];
+  if(r.hi&&r.hi[hiI]!=null) parts.push(`über ${r.hi[hiI]}${u} steigt`);
+  if(r.lo&&r.lo[loI]!=null) parts.push(`unter ${r.lo[loI]}${u} fällt`);
+  if(!parts.length) return `Für ${lvl} ist keine Grenze gesetzt, daher kein Alarm.`;
+  return `Alarm, wenn der Wert seit dem letzten Briefing ${parts.join(' oder ')} (${lvl}), dazu bei sehr großen Sprüngen. Entwarnung, wenn er zurückgeht.`;
+}
+function greenText(m,r){
+  if(m[10]||m[11]) return '';
+  const lo=r.lo?[...r.lo].reverse().find(v=>v!=null):null, hi=r.hi?r.hi.find(v=>v!=null):null, u=m[3]?' '+m[3]:'';
+  if(lo!=null&&hi!=null) return `grün: ${lo} bis ${hi}${u}`;
+  if(lo!=null) return `grün: ab ${lo}${u}`;
+  if(hi!=null) return `grün: bis ${hi}${u}`;
+  return 'immer grün (keine Grenze gesetzt)';
+}
+function rowMetric(m,i){
+  const r=S()[m[0]]; const b=band(m,r);
+  const ticks=b.ticks.map(([v,p])=>`<i style="left:${p.toFixed(1)}%">${v}</i>`).join('');
+  const segs=b.segs.map(([c,w])=>`<span style="width:${(Math.max(0,w)*100).toFixed(2)}%;background:${COL[c]}"></span>`).join('');
+  const dots={Gelb:'var(--a-yellow)',Orange:'var(--a-orange)',Rot:'var(--a-red)'};
+  const cap=s=>s.charAt(0).toUpperCase()+s.slice(1);
+  const alarm=m[7]===null?`<span class="lbl">${m[2].includes('Vorbote')?'kein Alarm (Vorbote)':'kein Alarm'}</span>`:
+    `<span class="lbl">Alarm ab</span>${seg('alarm:'+m[0],m[10]?['Nie','Orange','Rot']:['Nie','Gelb','Orange','Rot'],cap(r.alarm),dots)}`;
+  const sides=SIDES[m[0]]||'both';
+  const fld=(k,lab,cls,v)=>`<div class="field"><label for="b-${k}-${m[0]}">${lab}</label><input id="b-${k}-${m[0]}" class="input sm ${cls}" value="${v??''}" data-b="${k}:${m[0]}" inputmode="decimal"></div>`;
+  let edit='';
+  if(openEdit===m[0]&&m[10]){
+    edit=`<div class="edit"><div class="grp"><span>mittel</span>${seg('thm:'+m[0],['gelb','orange','rot'],r.mittel)}</div><div class="grp"><span>hoch</span>${seg('thh:'+m[0],['orange','rot'],r.hoch)}</div>
+      <span class="muted" style="font-size:12px">„keins“ ist immer grün. Abweichend von der Vorlage „${CTX[ctx].vorlage}“.</span></div>`;
+  }else if(openEdit===m[0]){
+    edit=`<div class="edit">
+      ${sides!=='up'?`<div class="grp"><span>unten<br>zu wenig</span>${fld('lo0','rot &lt;','lr',r.lo[0])}${fld('lo1','orange &lt;','lo',r.lo[1])}${fld('lo2','gelb &lt;','ly',r.lo[2])}</div>`:''}
+      ${sides!=='down'?`<div class="grp"><span>oben<br>zu viel</span>${fld('hi0','gelb &gt;','ly',r.hi[0])}${fld('hi1','orange &gt;','lo',r.hi[1])}${fld('hi2','rot &gt;','lr',r.hi[2])}</div>`:''}
+      <span class="muted" style="font-size:12px;max-width:36ch">Grün ist alles zwischen „gelb unten“ und „gelb oben“. Ein leeres Feld heißt: auf dieser Seite keine Grenze. Abweichend von der Vorlage „${CTX[ctx].vorlage}“.</span>
+    </div>`;
+  }
+  return `<div class="mr ${i===0?'first':''}" data-row="${m[0]}">
+    <button class="rm" type="button" data-rm="${m[0]}" aria-label="${m[1]} aus dem Briefing nehmen" title="aus dem Briefing nehmen">−</button>
+    <div class="nm"><b>${m[1]}</b><small>${[m[3],m[2]].filter(Boolean).join(' · ')}</small></div>
+    <div class="bandwrap">${m[11]?`<span class="muted" style="font-size:12.5px">keine Ampel, nur Anzeige</span>`:`<div class="ticks">${ticks}</div><div class="band">${segs}</div>`}<div class="why">${why(m,r)}${greenText(m,r)?` <span class="gr">· ${greenText(m,r)}</span>`:''}</div></div>
+    <div class="act">${alarm}${m[11]?'':`<button class="btn ghost sm" type="button" data-edit="${m[0]}" aria-expanded="${openEdit===m[0]}">${openEdit===m[0]?'Fertig':'Grenzen ändern'}</button>`}</div>
+    ${edit}</div>`;
+}
+
+function viewWetter(){
+  const c=CTX[ctx], s=S();
+  const head=`<div class="sectionh"><div><h2>Wetter</h2><p>Was im Briefing steht, was für dich zu viel oder zu wenig ist und ab wann du einen Alarm bekommst.</p></div></div>`;
+  if(zst==='laedt') return head+`<div class="card pad" style="display:flex;flex-direction:column;gap:12px" aria-busy="true"><span class="muted">Lade Metriken … ${tg('W1')}</span>${[72,90,55,80,64].map(w=>`<div class="skel" style="width:${w}%"></div>`).join('')}</div>`;
+  if(zst==='fehler') return head+`<div class="warnbox bad" role="alert"><b>Die Metriken konnten nicht geladen werden. ${tg('W1')}</b><span>Die Verbindung zum Server ist abgebrochen. Deine Einstellungen sind gespeichert und gehen nicht verloren.</span><span style="flex-basis:100%"><button class="btn sm primary" type="button" data-zst="normal">Erneut laden</button></span></div>`;
+  const groups={}; c.metrics.filter(m=>s[m[0]].on).forEach(m=>{(groups[m[9]]=groups[m[9]]||[]).push(m);});
+  const removed=c.metrics.filter(m=>!s[m[0]].on);
+  const onM=c.metrics.filter(m=>s[m[0]].on);
+  const alarmable=onM.filter(m=>m[7]!==null), nAl=alarmable.filter(m=>s[m[0]].alarm!=='nie').length;
+  const dots={Gelb:'var(--a-yellow)',Orange:'var(--a-orange)',Rot:'var(--a-red)'};
+  const isSms=channelTab==='SMS'||channelTab==='Premium-SMS';
+  const chTabs=['E-Mail','Telegram','SMS','Premium-SMS','3-Tages-Ausblick'].concat(ctx==='orte'?['Stundenverlauf']:[]);
+  const devs=s.devs||0;
+  const pick=pickerOpen?`<div class="vmenu" role="listbox">
+      ${pending?`<div class="confirm"><b>„${pending}“ übernehmen?</b><span>Ersetzt Metrik-Auswahl, Ampel-Grenzen und Alarmstufen dieses ${ctx==='trip'?'Trips':'Orts-Briefings'}.${devs?` Deine ${devs} Abweichung${devs>1?'en':''} von „${c.vorlage}“ gehen verloren.`:''} Zustellung, Etappen und Orte bleiben unverändert.</span>
+        <span style="display:flex;gap:8px"><button class="btn sm accent" type="button" data-apply="1">Übernehmen</button><button class="btn sm ghost" type="button" data-cancel="1">Abbrechen</button></span></div>`:''}
+      <div class="vg">Vorlagen</div>${VORLAGEN.map(([n,d])=>`<button type="button" data-vorlage="${n}" class="${n===c.vorlage?'cur':''}"><span>${n}${n===c.vorlage?' · aktiv':''}</span><small>${d}</small></button>`).join('')}
+      <div class="vg">Eigene</div>${EIGENE.map(([n,d])=>`<button type="button" data-vorlage="${n}"><span>${n}</span><small>${d}</small></button>`).join('')}
+    </div>`:'';
+  const saveDlg=saveOpen?`<div class="card"><div class="dialog">
+      <b>Als eigene Vorlage speichern ${tg('W5b')}</b>
+      <div class="field"><label for="vName">Name</label><input id="vName" class="input wide" value="${esc(saveName)}" placeholder="z.B. Mallorca Frühling"></div>
+      ${saveErr?`<span class="err" role="alert">${esc(saveErr)}</span>`:''}
+      <div class="field"><label for="vDesc">Beschreibung (optional)</label><input id="vDesc" class="input wide" placeholder="wofür die Vorlage gedacht ist"></div>
+      <label class="chk" for="vDefault"><input type="checkbox" id="vDefault"> Als Standard für neue ${ctx==='trip'?'Trips':'Orte'}</label>
+      <span class="muted" style="font-size:12.5px">Gespeichert werden Metrik-Auswahl, Ampel-Grenzen und Alarmstufen. Zustellung, Etappen und Orte gehören nicht dazu.</span>
+      <span style="display:flex;gap:8px"><button class="btn sm accent" type="button" data-savego="1">Speichern</button><button class="btn sm ghost" type="button" data-savecancel="1">Abbrechen</button></span>
+    </div></div>`:'';
+  const allRow=`<div class="lrow" style="border-top:0;background:var(--g-card-alt)"><div class="t"><b>Alarm ab für alle ${tg('A5')}</b><small>${nAl} von ${onM.length} Metriken lösen einen Alarm aus. ${onM.length-alarmable.length} können keinen auslösen (Vorboten und reine Anzeige).</small></div><div class="r">${alarmable.length?seg('alarmall',['Nie','Gelb','Orange','Rot'],'',dots):''}</div></div>`
+    +(alarmable.length?'':`<div style="padding:0 20px 12px"><div class="warnbox info">Keine der gewählten Metriken kann einen Alarm auslösen. Nimm z.B. Wind, Böen oder Gewitter dazu. ${tg('A3')}</div></div>`);
+
+  // Inhalt je Kanal und Fläche
+  const cut={'Telegram':7,'SMS':6,'Premium-SMS':4}[channelTab]??99;
+  const EXPL={
+    'E-Mail':ctx==='trip'?'Diese Liste sind die Spalten der <strong>Stundentabelle</strong> in der Mail. Beim Trip ist die Haupttabelle selbst die Stundentabelle, deshalb gibt es keine eigene Liste „Stundenverlauf“.':'Diese Liste sind die Zeilen der <strong>Vergleichstabelle</strong>. Der Stundenverlauf darunter hat eine eigene Liste.',
+    'Telegram':`Die Kurzübersicht oben in der Nachricht zeigt die ersten 7 Zeilen, alle weiteren nur in der Tabelle darunter. Ist unter Zustellung der Kurzstil an, bekommt Telegram den SMS-Text, dann gilt die SMS-Liste. ${tg('V2')}`,
+    'SMS':`Eine SMS hat 160 Zeichen. Was nicht mehr passt, fällt weg; die Liste zeigt, ab welcher Zeile. ${tg('V2')}`,
+    'Premium-SMS':`Geht über Satellit an dein inReach. 160 Zeichen, jede Nachricht kostet. Eigene, kürzere Liste als die SMS. ${tg('N2')}`,
+    '3-Tages-Ausblick':`Kompakte Tageswerte der nächsten drei ${ctx==='trip'?'Etappen':'Tage'}. Wählst du alle Zeilen ab, entfällt der Ausblick. ${tg('W19')}`,
+    'Stundenverlauf':`Stunden-Tabelle unter der Vergleichstabelle. Größen ohne Stundenwert sind gesperrt. ${tg('WV9')}`
+  };
+  let extra='';
+  if(channelTab==='E-Mail'){
+    extra+=`<div class="lrow"><div class="t"><b>Format ${tg('W15')}</b><small>${ctx==='trip'?'Ausführlich mit Tabellen und Farben, oder Kompakt als reiner Text für schwache Verbindungen.':'Kompakt gilt für Orte, sobald die Orts-Mail Nur-Text kann.'}</small></div><div class="r">${seg('mailfmt',['Ausführlich (HTML)','Kompakt (Nur-Text)'],s.sw.mailfmt)}</div></div>`;
+    if(ctx==='trip') extra+=`<div class="sub">Zusatzblöcke der Mail</div>
+      <div class="lrow" style="border-top:0"><div class="t"><b>Etappen-Kennzahlen ${tg('W17')}</b><small>Länge, Höhenmeter und Gehzeit je Etappe</small></div><div class="r">${sw('stats',s.sw.stats,'Etappen-Kennzahlen')}</div></div>
+      <div class="lrow"><div class="t"><b>Vortag-Vergleich ${tg('W18')}</b><small>was sich seit dem letzten Briefing geändert hat</small></div><div class="r">${sw('yday',s.sw.yday,'Vortag-Vergleich')}</div></div>
+      <div class="lrow"><div class="t"><b>Nacht-Stundentabelle ${tg('W22')}</b><small>die Stunden der Nacht am Etappenziel</small></div><div class="r">${sw('night',s.sw.night,'Nacht-Stundentabelle')}</div></div>`;
+  }
+  if(channelTab==='Telegram') extra+=`<div class="lrow"><div class="t"><b>Kurzstil ${tg('A11')}</b><small>Telegram bekommt denselben kurzen Text wie die SMS, ohne Knöpfe. Gilt für Briefing und Alarme. Die Liste oben ruht dann, es gilt die SMS-Liste.</small></div><div class="r">${sw('tgkurz',s.sw.tgkurz,'Telegram im Kurzstil',!konto()['Telegram'].ok)}</div></div>`;
+  if(channelTab==='3-Tages-Ausblick') extra+=`<div class="lrow"><div class="t"><b>Erscheint im ${tg('V12')}</b><small>Ersetzt den bisherigen „Mehrtages-Trend“. Vorbelegung: nur abends.</small></div><div class="r"><span class="chk">${sw('outM',s.sw.outM,'Ausblick im Morgen-Briefing')} Morgen-Briefing</span><span class="chk">${sw('outA',s.sw.outA,'Ausblick im Abend-Briefing')} Abend-Briefing</span></div></div>`;
+  if(channelTab==='Stundenverlauf') extra+=`<div class="lrow"><div class="t"><b>Stundenverlauf im Briefing</b><small>Stunden-Tabelle je Ort</small></div><div class="r">${sw('std',s.sw.std,'Stundenverlauf')}</div></div>`;
+  const warnRow=pos=>`<div class="oi fixed"><span class="h" aria-hidden="true"></span><span class="n">Amtliche Warnungen <span class="muted">${pos==='top'?'· steht immer zuerst, nicht verschiebbar':'· steht immer am Ende (Warn-Block mit !) und fällt beim Kürzen als letztes weg'}</span>${tg('WV6')}</span></div>`;
+  const kanal=['E-Mail','Telegram','SMS','Premium-SMS'].includes(channelTab);
+  const rows=onM.map((m,i)=>{
+    const nm=`<span class="n">${m[1]} <span class="muted mono-s">(${COLL[m[0]]||'–'} | ${KZ[m[0]]||'–'})</span></span>`;
+    if(channelTab==='Stundenverlauf'&&m[0]==='sunshine') return `<div class="oi locked"><span class="h" aria-hidden="true"></span>${nm}<span class="k">gesperrt: Tagessumme, je Stunde gibt es keinen Wert</span>${sw('dummyL',false,m[1]+' gesperrt',true)}</div>`;
+    const over=i>=cut, gone=over&&isSms;
+    const note=over?(isSms?'passt nicht mehr in 160 Zeichen':'nur in der Tabelle'):'';
+    return `<div class="oi ${gone?'off':''}"><span class="h" aria-hidden="true" title="ziehen zum Umsortieren">⋮⋮</span>${nm}${seg('fmt:'+channelTab+':'+m[0],['Roh','Einfach'],['wind','gust','precipitation','rain_probability','thunder','cloud_total','cloud_low'].includes(m[0])?'Einfach':'Roh')}${EX[m[0]]?`<span class="exm" title="Roh · Einfach">${EX[m[0]][0]} · ${EX[m[0]][1]}</span>`:''}<span class="k">${note}</span>${sw('dummy',!gone,m[1]+' in '+channelTab)}</div>`;
+  }).join('');
+  const budget=channelTab==='SMS'?`<div class="budget">Beispiel: GR221 E2 D27 N8 W30@11 G45@14 R2@15 TH:M@15 · 43 von 160 Zeichen</div>`
+    :channelTab==='Premium-SMS'?`<div class="budget">Beispiel: GR221 E2 D27 N8 W30@11 G45@14 · 27 von 160 Zeichen</div>`:'';
+  const legend=(isSms||channelTab==='Telegram')?`<div class="legend"><b>Kürzel</b> ${onM.filter(m=>KZ[m[0]]).map(m=>`<span><span class="kz">${KZ[m[0]]}</span> ${m[1]}</span>`).join('')}<span><span class="kz">@14</span> ab 14 Uhr gelb oder schlechter</span>
+      <span><span class="kz">!TS:H@14</span> amtliche Warnung: Gewitter, Stufe hoch, ab 14 Uhr ${tg('W21')}</span><span>Stufen <span class="kz">L</span> gelb · <span class="kz">M</span> orange · <span class="kz">H</span> rot</span><span><span class="kz">WG</span> Wind · <span class="kz">RA</span> Starkregen · <span class="kz">AV4</span> Lawinenstufe</span><span><span class="kz">X?</span> Warnquelle nicht erreichbar</span>
+      <span class="muted">Die Legende steht auch am Ende jedes Briefings.</span></div>`:'';
+
+  return head+`
+  <div class="card pad vorlage">
+    <div style="display:flex;flex-direction:column;gap:6px;position:relative"><span class="eyebrow">Vorlage</span>
+      <button class="picker" type="button" data-picker="1" aria-expanded="${pickerOpen}">${c.vorlage} <small>▾ ${devs?devs+' Abweichung'+(devs>1?'en':''):'unverändert'}</small></button>${pick}</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn sm ghost" type="button" data-save="1">Als eigene Vorlage speichern</button>${devs?`<button class="btn sm quiet" type="button" data-reset="1">Auf „${c.vorlage}“ zurücksetzen</button>`:''}</div>
+  </div>
+  ${saveDlg}
+  <div class="card">
+    ${allRow}
+    ${Object.entries(groups).map(([g,ms])=>`<div class="mgroup"><div class="gh">${g}</div>${ms.map((m,i)=>rowMetric(m,i)).join('')}</div>`).join('')}
+    <div class="more"><span class="muted" style="font-size:12.5px">Nicht im Briefing:</span>${removed.map(m=>`<button class="chip" type="button" data-add="${m[0]}">+ ${m[1]}</button>`).join('')}${c.off.map(n=>`<button class="chip" type="button" data-addx="${n}">+ ${n}</button>`).join('')}</div>
+  </div>
+  <div class="card">
+    <div class="lrow"><div class="t"><b>Amtliche Warnungen</b><small>im Briefing und als Alarm, sobald sie dein Gebiet betreffen</small></div><div class="r">${sw('official',s.sw.official,'Amtliche Warnungen')}</div></div>
+    <div class="lrow"><div class="t"><b>Radar-Regen ${ctx==='trip'?tg('N1'):''}</b><small>Alarm, wenn in der nächsten Stunde Regen auf ${ctx==='trip'?'deine Etappe':'deine Orte'} zukommt</small></div><div class="r">${sw('radar',s.sw.radar,'Radar-Regen')}</div></div>
+  </div>
+  <div class="card">
+    <div class="lrow" style="border-top:0"><div class="t"><b>Inhalt je Kanal und Fläche</b><small>Reihenfolge und Auswahl je Kanal, dazu Ausblick${ctx==='orte'?' und Stundenverlauf':''}. Jede Liste nimmt nur aus den Metriken oben, sie kann abwählen, aber nichts hinzufügen. Je Zeile und Liste: Roh (Zahl) oder Einfach (Ampelpunkt, Symbol, Wort).</small></div>
+      <div class="r">${seg('channel',chTabs,channelTab)}</div></div>
+    <div class="olist"><div class="oi ohead"><span class="h"></span><span class="n">Metrik <span class="muted">(Spaltenkopf in der Mail | Kürzel in SMS/Telegram)</span></span><span class="oh-f">Darstellung<br><span class="muted">Roh = Zahl · Einfach = Symbol/Ampel</span></span><span class="oh-s">In ${channelTab}<br><span class="muted">an = erscheint</span></span></div>
+      ${kanal&&!isSms?warnRow('top'):''}${rows}${isSms?warnRow('end'):''}</div>
+    ${budget}${legend}
+    <details class="adv"><summary>Weitere Einstellungen für ${channelTab}</summary>
+      <div class="lrow"><div class="t"><small>${EXPL[channelTab]}</small></div></div>
+      ${extra}
+    </details>
+  </div>
+  <div class="card"><details class="adv"><summary>Anpassen</summary>
+    <div class="lrow"><div class="t"><b>Tagesfenster</b><small>Welche Stunden bewertet werden</small></div><div class="r"><input class="input" value="06:00" aria-label="von"> – <input class="input" value="20:00" aria-label="bis"></div></div>
+  </details></div>`;
+}
+
+function viewZustellung(){
+  const s=S().sw, acc=konto(), ch=Object.entries(s.ch);
+  const nb=ch.filter(([k,v])=>v.b&&acc[k].ok).length, na=ch.filter(([k,v])=>v.a&&acc[k].ok).length;
+  const kn=n=>n===1?'Kanal':'Kanäle';
+  const rows=ch.map(([k,v],i)=>{const a=acc[k];
+    const st=`<div class="status"><span class="dot ${a.dot}"></span>${esc(a.st)}${a.ok&&a.to?' · '+esc(a.to):''}${k==='Premium-SMS'?tg('V5'):i===0?tg('V3'):''}</div>`;
+    const hint=a.ok?'':`<div class="status bad">${esc(a.why)} <button class="linkish" type="button" data-konto="1">Im Konto ${a.fix} →</button>${tg('V4')}</div>`;
+    const kurz='';
+    const alarmCell=a.ok?sw('ca:'+k,v.a,'Alarme über '+k):`<span class="lock">gesperrt${a.lock?': '+a.lock+tg('A10'):''}</span>`;
+    return `<tr><td><b>${k}</b>${st}${hint}${kurz}</td><td>${sw('cb:'+k,v.b&&a.ok,'Briefing über '+k,!a.ok)}</td><td>${alarmCell}</td>
+      <td>${v.a&&a.ok?seg('thr:'+k,['gering','mittel','hoch'],v.s):'<span class="muted">–</span>'}</td></tr>`;}).join('');
+  const warns=(nb?'':`<div class="warnbox bad" role="alert"><b>Kein Kanal für Briefings an.</b><span>So kommt kein Briefing bei dir an. Schalte unten mindestens einen Kanal ein.</span>${tg('V7')}</div>`)
+    +(na?'':`<div class="warnbox bad" role="alert"><b>Kein Kanal für Alarme an.</b><span>Alarme gehen nirgends hin.</span>${tg('A9')}</div>`);
+  const lauf=ctx==='trip'
+    ?`<div class="card"><div class="lrow" style="border-top:0"><div class="t"><b>Laufzeit ${tg('V14')}</b><small>23.–26. Februar 2026. Die Briefings enden nach der letzten Etappe. Die Daten pflegst du in den Etappen.</small></div><div class="r"><button class="btn sm ghost" type="button" data-tab="etappen">Etappen öffnen →</button></div></div></div>`
+    :`<div class="card"><div class="lrow" style="border-top:0"><div class="t"><b>Laufzeit ${tg('V15')}</b><small>${laufzeit==='Bis Datum'?'Danach pausiert das Briefing von selbst. Im Kopf steht dann „Laufzeit überschritten“.':'Das Briefing läuft, bis du es pausierst.'}</small></div><div class="r">${seg('laufzeit',['Bis auf Weiteres','Bis Datum'],laufzeit)}${laufzeit==='Bis Datum'?`<input class="input" style="width:120px" value="31.03.2027" aria-label="Enddatum">`:''}</div></div></div>`;
+  return `
+  <div class="sectionh"><div><h2>Zustellung</h2><p>Wann die Briefings kommen und auf welchem Weg Briefings und Alarme dich erreichen.</p></div></div>
+  <div class="two">
+    <div class="card"><div class="lrow"><div class="t"><b>Morgen-Briefing</b><small>${ctx==='trip'?'für die Etappe des Tages':'für heute'}</small></div><div class="r"><input class="input" value="07:00" aria-label="Uhrzeit Morgen">${sw('morning',s.morning,'Morgen-Briefing')}</div></div></div>
+    <div class="card"><div class="lrow"><div class="t"><b>Abend-Briefing</b><small>${ctx==='trip'?'für die Etappe von morgen':'für morgen'}</small></div><div class="r"><input class="input" value="18:00" aria-label="Uhrzeit Abend">${sw('evening',s.evening,'Abend-Briefing')}</div></div></div>
+  </div>
+  ${lauf}
+  ${warns}
+  <div class="card">
+    <div class="lrow" style="border-top:0"><div class="t"><b>Briefings über ${nb} ${kn(nb)} · Alarme über ${na} ${kn(na)} ${tg('A9')}</b><small>Ein Kanal ohne Verbindung ist gesperrt, bis du ihn im Konto einrichtest.</small></div></div>
+    <div class="tblwrap"><table class="kt">
+    <thead><tr><th>Kanal</th><th>Briefing</th><th>Alarme</th><th>Alarm schon ab Dringlichkeit</th></tr></thead>
+    <tbody>${rows}</tbody></table></div>
+    <div class="legend">Die SMS kostet wenig und bekommt deshalb schon Alarme ab „mittel“. Die Premium-SMS geht über Satellit und meldet sich nur bei „hoch“. ${tg('N2')}</div>
+  </div>
+  <div class="card"><div class="lrow" style="border-top:0"><div class="t"><b>Stille Stunden</b><small>keine Alarme, sie kommen mit dem nächsten Morgen-Briefing</small></div>
+    <div class="r"><input class="input" value="22:00" aria-label="von"> – <input class="input" value="06:00" aria-label="bis">${sw('quiet',s.quiet,'Stille Stunden')}</div></div>
+  <details class="adv"><summary>Anpassen</summary>
+    <div class="lrow"><div class="t"><b>Mindestabstand zwischen zwei Alarmen</b><small>derselben Metrik</small></div><div class="r"><input class="input" value="10" aria-label="Minuten"> <span class="muted">Minuten</span></div></div>
+  </details></div>`;
+}
+
+function viewEtappen(){
+  const et=[['E1','Port d\'Andratx → Estellencs','7,8 km · ↑520 m','3:10'],['E2','Estellencs → Esporles','8,4 km · ↑610 m','3:35'],['E3','Esporles → Valldemossa','6,9 km · ↑380 m','2:40'],['E4','Valldemossa → Deià','8,4 km · ↑227 m','2:55']];
+  return `<div class="sectionh"><div><h2>Etappen &amp; Wegpunkte</h2><p>Das Tempo bestimmt die Gehzeiten und damit, welche Stunden je Wegpunkt bewertet werden.</p></div></div>
+  <div class="card pad" style="display:flex;gap:22px;flex-wrap:wrap;align-items:flex-end">
+    <div class="field"><label>Fortbewegung</label>${seg('fort',['zu Fuß','Rad','MTB','Ski'],'zu Fuß')}</div>
+    <div class="field"><label>Tempo flach</label><input class="input" value="4,0 km/h"></div>
+    <div class="field"><label>Aufstieg</label><input class="input" value="300 Hm/h"></div>
+    <span class="muted" style="font-size:12.5px;max-width:34ch">Gilt für alle Etappen, je Etappe überschreibbar (z.B. Ruhetag, Bergetappe).</span>
+  </div>
+  <div class="card">${et.map((e,i)=>`<div class="lrow"><div class="t"><b>${e[0]} · ${e[1]}</b><small>${e[2]}</small></div><div class="r"><span class="meta">Gehzeit ${e[3]}</span><button class="btn sm quiet" type="button">Tempo ändern</button></div></div>`).join('')}</div>`;
+}
+function viewOrte(){
+  const o=[['Münster','Stadt · 60 m'],['Telgte','Ems · 52 m'],['Tecklenburg','Teutoburger Wald · 235 m']];
+  return `<div class="sectionh"><div><h2>Orte</h2><p>Ein Ort ergibt ein Orts-Briefing. Ab zwei Orten kommt die Vergleichstabelle dazu, ohne Rangfolge.</p></div><button class="btn sm ghost" type="button">+ Ort hinzufügen</button></div>
+  <div class="card">${o.map(x=>`<div class="lrow"><div class="t"><b>${x[0]}</b><small>${x[1]}</small></div><div class="r"><button class="btn sm quiet" type="button">entfernen</button></div></div>`).join('')}</div>`;
+}
+function viewUebersicht(){
+  return `<div class="sectionh"><div><h2>Übersicht</h2><p>Unverändert: Stand, letzte Briefings, nächster Versand.</p></div></div><div class="card pad muted">Im Mockup nicht ausgearbeitet.</div>`;
+}
+function renderContent(){
+  const el=document.getElementById('content');
+  el.innerHTML = tab==='wetter'?viewWetter(): tab==='zustellung'?viewZustellung(): tab==='etappen'?viewEtappen(): tab==='orte'?viewOrte(): viewUebersicht();
+}
+function render(){renderHead();renderContent();}
+
+document.addEventListener('click',e=>{
+  const t=e.target.closest('button'); const menu=document.getElementById('testMenu'), tb=document.getElementById('testBtn'), km=document.getElementById('kebabMenu'), kb=document.getElementById('kebabBtn');
+  const closeMenus=()=>{menu.hidden=true;tb.setAttribute('aria-expanded','false');km.hidden=true;kb.setAttribute('aria-expanded','false');kebabConfirm=null;};
+  if(!t){if(!e.target.closest('.menu')) closeMenus();return;}
+  if(t.dataset.ctx){closeMenus();ctx=t.dataset.ctx;document.querySelectorAll('[data-ctx]').forEach(b=>b.classList.toggle('on',b===t));tab='wetter';openEdit=null;saveOpen=false;render();return;}
+  if(t.dataset.zst){zst=t.dataset.zst;document.querySelectorAll('.frame [data-zst]').forEach(b=>b.classList.toggle('on',b.dataset.zst===zst));closeMenus();render();return;}
+  if(t.dataset.mark){document.body.classList.toggle('marks',t.dataset.mark==='1');document.querySelectorAll('[data-mark]').forEach(b=>b.classList.toggle('on',b===t));return;}
+  if(t.id==='testBtn'){const was=menu.hidden;closeMenus();renderMenu();menu.hidden=!was;tb.setAttribute('aria-expanded',String(was));return;}
+  if(t.id==='kebabBtn'){const was=km.hidden;closeMenus();renderKebab();km.hidden=!was;kb.setAttribute('aria-expanded',String(was));return;}
+  if(t.dataset.seg==='slot'){testSlot=t.dataset.v.startsWith('Morgen')?'morgen':'abend';renderMenu();return;}
+  if(t.dataset.send){
+    const acc=konto(), ch=S().sw.ch; closeMenus();
+    if(t.dataset.send==='alarm'){const ks=Object.keys(ch).filter(k=>ch[k].a&&acc[k].ok);flash(ks.length?'Test-Alarm geschickt: '+ks.map(k=>k+' ✓').join(' · ')+' · 20:41':'Kein Alarm-Kanal eingerichtet, der Test-Alarm ging nirgends hin.',!ks.length);return;}
+    if(t.dataset.send==='alle'){const parts=Object.keys(ch).map(k=>acc[k].ok?k+' ✓':k+' übersprungen ('+acc[k].st.split(' · ').pop()+')');flash(slotLabel()+' geschickt: '+parts.join(' · '));return;}
+    flash(slotLabel()+' an '+t.dataset.send+' geschickt · '+acc[t.dataset.send].menu+' · 20:41');return;}
+  if(t.dataset.k){const k=t.dataset.k;
+    if(k==='archivieren'||k==='loeschen'){kebabConfirm=k;renderKebab();return;}
+    closeMenus();
+    if(k==='pausieren'){status[ctx]='pausiert';render();flash('Pausiert. Bis „Fortsetzen“ kommen keine Briefings und Alarme.');return;}
+    if(k==='fortsetzen'||k==='reaktivieren'){status[ctx]=ctx==='trip'?'fertig':'aktiv';render();flash(k==='fortsetzen'?'Fortgesetzt. Das nächste Briefing kommt wie geplant.':'Reaktiviert.');return;}
+    if(k==='aktivieren'){status[ctx]='aktiv';render();flash('Aktiviert. Das erste Briefing kommt morgen um 07:00.');return;}
+    return;}
+  if(t.dataset.kok){const k=kebabConfirm;closeMenus();
+    if(zst==='fehler'){flash((k==='loeschen'?'Löschen':'Archivieren')+' hat nicht geklappt: keine Verbindung zum Server. Versuch es gleich noch einmal.',true);return;}
+    if(k==='archivieren'){status[ctx]='archiviert';render();flash('Archiviert. Im Archiv kannst du es reaktivieren.');return;}
+    flash('Mockup: würde löschen und zur Liste zurückgehen.');return;}
+  if(t.dataset.kno){kebabConfirm=null;renderKebab();return;}
+  if(t.dataset.konto){closeMenus();flash('Mockup: öffnet das Konto beim betroffenen Kanal.');return;}
+  if(t.dataset.activate){status[ctx]='aktiv';render();flash('Aktiviert. Das erste Briefing kommt morgen um 07:00.');return;}
+  closeMenus();
+  if(t.dataset.save){saveOpen=!saveOpen;saveErr='';saveName='';renderContent();return;}
+  if(t.dataset.savecancel){saveOpen=false;saveErr='';renderContent();return;}
+  if(t.dataset.savego){const n=(document.getElementById('vName').value||'').trim();saveName=n;
+    if(!n){saveErr='Gib der Vorlage einen Namen.';renderContent();return;}
+    if(VORLAGEN.concat(EIGENE).some(([x])=>x.toLowerCase()===n.toLowerCase())){saveErr=`Eine Vorlage „${n}“ gibt es schon. Wähle einen anderen Namen.`;renderContent();return;}
+    EIGENE.push([n,'eigene · eben gespeichert']);saveOpen=false;saveErr='';renderContent();flash('Vorlage „'+n+'“ gespeichert. Du findest sie unter „Eigene“.');return;}
+  if(t.dataset.tab){tab=t.dataset.tab;openEdit=null;pickerOpen=false;pending=null;render();return;}
+  if(t.dataset.picker){pickerOpen=!pickerOpen;pending=null;renderContent();return;}
+  if(t.dataset.vorlage){if(t.dataset.vorlage===CTX[ctx].vorlage){pickerOpen=false;renderContent();return;}pending=t.dataset.vorlage;renderContent();return;}
+  if(t.dataset.cancel){pending=null;pickerOpen=false;renderContent();return;}
+  if(t.dataset.apply){const v=pending;delete st[ctx];CTX[ctx].vorlage=v;pending=null;pickerOpen=false;render();flash('Vorlage „'+v+'“ übernommen (Mockup: Werte bleiben die Beispielwerte)');return;}
+  if(t.dataset.reset){delete st[ctx];render();flash('Auf Vorlage zurückgesetzt');return;}
+  if(t.dataset.rm){const s=S();s[t.dataset.rm].on=false;s.devs=(s.devs||0)+1;openEdit=null;renderContent();return;}
+  if(t.dataset.add){const s=S();s[t.dataset.add].on=true;s.devs=(s.devs||0)+1;renderContent();const m=CTX[ctx].metrics.find(x=>x[0]===t.dataset.add);flash(m[1]+' ist jetzt im Briefing und steht in allen Listen unter „Inhalt je Kanal und Fläche“. Dort stellst du Roh oder Einfach ein.');return;}
+  if(t.dataset.addx){flash(t.dataset.addx+' würde mit den Grenzen der Vorlage hinzugefügt (Mockup)');return;}
+  if(t.dataset.edit){openEdit=openEdit===t.dataset.edit?null:t.dataset.edit;renderContent();return;}
+  if(t.dataset.sw){
+    const k=t.dataset.sw, s=S(); const on=t.getAttribute('aria-checked')!=='true';
+    if(k.startsWith('m:')){s[k.slice(2)].on=on;renderContent();return;}
+    if(k.startsWith('cb:')){s.sw.ch[k.slice(3)].b=on;renderContent();return;}
+    else if(k.startsWith('ca:')){s.sw.ch[k.slice(3)].a=on;renderContent();return;}
+    else if(k in s.sw){s.sw[k]=on;}
+    t.setAttribute('aria-checked',String(on));return;
+  }
+  if(t.dataset.seg){
+    const name=t.dataset.seg, v=t.dataset.v, s=S();
+    if(name==='alarmall'){const lv=v.toLowerCase();CTX[ctx].metrics.forEach(m=>{if(s[m[0]].on&&m[7]!==null){s[m[0]].alarm=(m[10]&&lv==='gelb')?'orange':lv;}});s.devs=(s.devs||0)+1;renderContent();flash('Alarm ab '+v+' für alle alarmfähigen Metriken gesetzt');return;}
+    if(name==='laufzeit'){laufzeit=v;renderContent();return;}
+    if(name.startsWith('thm:')||name.startsWith('thh:')){const id=name.slice(4);s[id][name.startsWith('thm:')?'mittel':'hoch']=v;s.devs=(s.devs||0)+1;renderContent();return;}
+    if(name==='mailfmt'){s.sw.mailfmt=v;}
+    if(name.startsWith('alarm:')){const id=name.slice(6);s[id].alarm=v.toLowerCase();s.devs=(s.devs||0)+1;const m=CTX[ctx].metrics.find(x=>x[0]===id);const w=document.querySelector(`[data-row="${id}"] .why`);if(w) w.textContent=why(m,s[id]);}
+    else if(name==='channel'){channelTab=v;renderContent();return;}
+    else if(name.startsWith('thr:')){s.sw.ch[name.slice(4)].s=v;}
+    t.parentElement.querySelectorAll('button').forEach(b=>{const on=b===t;b.classList.toggle('on',on);b.setAttribute('aria-checked',String(on));});
+  }
+});
+document.addEventListener('change',e=>{
+  const i=e.target; if(!i.dataset||!i.dataset.b) return;
+  const [f,id]=i.dataset.b.split(':'); const r=S()[id]; const side=f.slice(0,2), idx=+f[2];
+  const v=i.value.trim().replace(',','.'); r[side][idx]=v===''||isNaN(+v)?null:+v;
+  const m=CTX[ctx].metrics.find(x=>x[0]===id); const row=document.querySelector(`[data-row="${id}"]`);
+  const b=band(m,r); row.querySelector('.band').innerHTML=b.segs.map(([c,w])=>`<span style="width:${(Math.max(0,w)*100).toFixed(2)}%;background:${COL[c]}"></span>`).join('');
+  row.querySelector('.ticks').innerHTML=b.ticks.map(([v2,p])=>`<i style="left:${p.toFixed(1)}%">${v2}</i>`).join('');
+  const s=S(); s.devs=(s.devs||0)+1;
+  row.querySelector('.why').innerHTML=why(m,r)+` <span class="gr">· ${greenText(m,r)}</span>`;
+  const pk=document.querySelector('[data-picker] small'); if(pk) pk.textContent='▾ '+s.devs+' Abweichung'+(s.devs>1?'en':'');
+});
+function flash(msg,bad){const to=document.getElementById('toast');to.textContent=msg;to.classList.toggle('bad',!!bad);clearTimeout(flash.t);flash.t=setTimeout(()=>to.textContent='',5000);}
+document.body.classList.add('marks');
+render();
+
+// Rückmeldung speichern
+let db=null; const fbState=document.getElementById('fbState'); const timers={};
+document.querySelectorAll('[data-fb]').forEach(ta=>ta.addEventListener('input',()=>{
+  clearTimeout(timers[ta.dataset.fb]); fbState.textContent='Änderung …'; fbState.classList.remove('ok');
+  timers[ta.dataset.fb]=setTimeout(async()=>{
+    if(!db){fbState.textContent='nicht gespeichert (kein Speicher)';return;}
+    try{await db.doc('rueckmeldung/'+ta.dataset.fb).set({text:ta.value,aktualisiert:new Date().toISOString()});fbState.textContent='gespeichert';fbState.classList.add('ok');}
+    catch(err){fbState.textContent='nicht gespeichert: '+((err&&err.code)||'Fehler');}
+  },900);
+}));
+const to=setTimeout(()=>{if(!db) fbState.textContent='Speicher nicht erreichbar';},10000);
+(async()=>{try{
+  if(!window.claude||!window.claude.use){clearTimeout(to);fbState.textContent='Speicher nicht verfügbar';return;}
+  const d0=await window.claude.use('db'); clearTimeout(to);
+  if(!d0){fbState.textContent='Nicht angemeldet: Rückmeldung wird nicht gespeichert';return;}
+  db=d0; fbState.textContent='Speicher verbunden'; fbState.classList.add('ok');
+  const snap=await db.collection('rueckmeldung').get();
+  snap.docs.forEach(doc=>{const ta=document.querySelector(`[data-fb="${doc.id}"]`);const x=doc.data()||{};if(ta&&typeof x.text==='string'&&document.activeElement!==ta) ta.value=x.text;});
+}catch(err){clearTimeout(to);fbState.textContent='Speicher-Fehler';}})();
+})();
+</script>
+
+</body></html>

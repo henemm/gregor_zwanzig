@@ -1,0 +1,233 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Abgleich alt gegen neu</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: Kopf mit Zähler, Gruppen von Prüfpunkten mit Dreifach-Wahl, unten die vollständige Inventartabelle */
+:root{
+  --bg:#f6f4ee; --card:#ffffff; --card-alt:#faf8f1; --line:#d8d3c2; --line-soft:#e7e2d3;
+  --ink:#1a1a18; --ink-2:#45433d; --ink-3:#6b675c;
+  --accent:#c45a2a; --accent-deep:#8c3e1a; --accent-tint:rgba(196,90,42,.08);
+  --good:#3d6b3a; --good-tint:rgba(61,107,58,.1); --bad:#a83232; --bad-tint:rgba(168,50,50,.08); --warn:#8a6210; --warn-tint:rgba(192,138,26,.12);
+  --f-ui:'Inter Tight',system-ui,-apple-system,'Segoe UI',sans-serif;
+  --f-mono:'JetBrains Mono',ui-monospace,'SFMono-Regular',Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#151513; --card:#1e1e1b; --card-alt:#252521; --line:#3a3933; --line-soft:#2c2b27;
+  --ink:#f1efe7; --ink-2:#cfccc1; --ink-3:#a3a093;
+  --accent:#e07a48; --accent-deep:#f0a27b; --accent-tint:rgba(224,122,72,.12);
+  --good:#6cc27f; --good-tint:rgba(108,194,127,.12); --bad:#ff8a8a; --bad-tint:rgba(255,138,138,.1); --warn:#e6b02e; --warn-tint:rgba(230,176,46,.12); color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#151513; --card:#1e1e1b; --card-alt:#252521; --line:#3a3933; --line-soft:#2c2b27;
+  --ink:#f1efe7; --ink-2:#cfccc1; --ink-3:#a3a093;
+  --accent:#e07a48; --accent-deep:#f0a27b; --accent-tint:rgba(224,122,72,.12);
+  --good:#6cc27f; --good-tint:rgba(108,194,127,.12); --bad:#ff8a8a; --bad-tint:rgba(255,138,138,.1); --warn:#e6b02e; --warn-tint:rgba(230,176,46,.12); color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-ui);font-size:15px;line-height:1.5;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:28px 90px}
+.wrap{max-width:1000px;margin:0 auto;display:flex;flex-direction:column;gap:26px}
+h1{font-size:clamp(26px,4.5vw,36px);font-weight:700;line-height:1.1;margin:0;text-wrap:balance;letter-spacing:-.01em}
+h2{font-size:20px;margin:0;font-weight:700}
+p{margin:0;max-width:72ch}
+.eyebrow{font-family:var(--f-mono);font-size:11.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-3)}
+.lead{color:var(--ink-2);font-size:16px}
+.muted{color:var(--ink-3)}
+.mono{font-family:var(--f-mono);font-size:12px}
+.stack{display:flex;flex-direction:column;gap:10px}
+.facts{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:10px}
+.fact{background:var(--card);border:1px solid var(--line);border-left:3px solid var(--warn);border-radius:0 6px 6px 0;padding:12px 14px;font-size:14px;color:var(--ink-2)}
+.fact b{color:var(--ink);display:block;margin-bottom:2px}
+.group{display:flex;flex-direction:column;gap:10px}
+.item{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:14px 16px;display:grid;grid-template-columns:1fr auto;gap:8px 18px;align-items:start}
+.item.st-rein{border-left:4px solid var(--good)}
+.item.st-weg{border-left:4px solid var(--ink-3)}
+.item.st-offen{border-left:4px solid var(--warn)}
+.item h3{font-size:15.5px;margin:0;font-weight:600;display:flex;gap:8px;flex-wrap:wrap;align-items:baseline}
+.item h3 .id{font-family:var(--f-mono);font-size:11px;color:var(--ink-3);font-weight:500}
+.item h3 .ktx{font-family:var(--f-mono);font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3);border:1px solid var(--line);border-radius:3px;padding:0 5px}
+.item .heute{font-size:13.5px;color:var(--ink-2)}
+.item .rec{font-size:13.5px;color:var(--ink);background:var(--card-alt);border-radius:5px;padding:7px 10px}
+.item .rec b{font-family:var(--f-mono);font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--accent-deep);font-weight:600;margin-right:6px}
+.item .body{display:flex;flex-direction:column;gap:6px;min-width:0}
+.choices{display:inline-flex;border:1px solid var(--line);border-radius:5px;overflow:hidden}
+.choices button{font:inherit;font-size:13px;border:0;border-right:1px solid var(--line);background:var(--card);color:var(--ink-2);padding:6px 11px;cursor:pointer;white-space:nowrap}
+.choices button:last-child{border-right:0}
+.choices button[aria-pressed="true"][data-v="rein"]{background:var(--good);color:#fff}
+.choices button[aria-pressed="true"][data-v="weg"]{background:var(--ink-3);color:#fff}
+.choices button[aria-pressed="true"][data-v="offen"]{background:var(--warn);color:#fff}
+.choices button:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+.item textarea{grid-column:1/-1;width:100%;min-height:34px;font:inherit;font-size:13.5px;border:1px solid var(--line-soft);border-radius:5px;background:var(--card-alt);color:var(--ink);padding:6px 9px;resize:vertical}
+.st{font-family:var(--f-mono);font-size:11px;color:var(--ink-3)}
+.st.ok{color:var(--good)}
+.bar{position:sticky;bottom:0;background:var(--card);border:1px solid var(--line);border-radius:8px;padding:11px 16px;display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:center;padding-bottom:calc(11px + env(safe-area-inset-bottom,0px))}
+.bar button{font:inherit;font-size:13.5px;font-weight:600;border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:5px;padding:6px 12px;cursor:pointer}
+details.inv{background:var(--card);border:1px solid var(--line);border-radius:8px}
+details.inv summary{padding:14px 16px;cursor:pointer;font-weight:600}
+.tw{overflow-x:auto}
+table{border-collapse:collapse;width:100%;min-width:700px;font-size:13px}
+th,td{text-align:left;padding:7px 12px;border-top:1px solid var(--line-soft);vertical-align:top}
+th{font-family:var(--f-mono);font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3);font-weight:500}
+.k{font-family:var(--f-mono);font-size:10.5px;padding:1px 6px;border-radius:3px;white-space:nowrap}
+.k.A{background:var(--good-tint);color:var(--good)}.k.G{background:var(--accent-tint);color:var(--accent-deep)}.k.B{background:var(--line-soft);color:var(--ink-2)}
+@media (max-width:640px){.item{grid-template-columns:1fr}}
+</style>
+
+<div class="wrap">
+  <header class="stack">
+    <span class="eyebrow">Gregor Zwanzig · Schritt 4 · nichts soll unbewusst wegfallen</span>
+    <h1>Abgleich: heutige Reiter gegen das neue Modell</h1>
+    <p class="lead">Ein Agent hat jedes Bedienelement der heutigen Hubs inventarisiert, für Trip und Ortsvergleich, Desktop und Mobil. 38 Punkte deckt das neue Modell bisher nicht ab. Je Punkt steht meine Empfehlung als Vorauswahl. Bestätige sie oder ändere sie auf „muss rein“, „darf weg“ oder „offen“.</p>
+  </header>
+
+  <section class="stack">
+    <h2>Vier Annahmen, die nicht stimmten</h2>
+    <div class="facts">
+      <div class="fact"><b>Vorlagen gibt es heute nur im Trip</b>Für „Orte“ ist die Vorlage neu. Das ist gewollt, aber dort entsteht sie neu und wird nicht übernommen.</div>
+      <div class="fact"><b>Radar-Alarm gibt es heute nur im Ortsvergleich</b>Im Mockup steht er auch beim Trip. Siehe Punkt N1.</div>
+      <div class="fact"><b>„Inhalt je Kanal“ hat heute 3 Kanäle</b>E-Mail, Telegram und SMS. Premium-SMS hat keine eigene Liste. Siehe Punkt N2.</div>
+      <div class="fact"><b>Totes Alarm-Bündel im Code</b><span class="mono">AlertsTab</span>, <span class="mono">AlertPresetSelector</span> und <span class="mono">AlertCard</span> werden nirgends importiert. Sie fallen beim Umbau weg.</div>
+    </div>
+  </section>
+
+  <div id="groups" class="stack" style="gap:26px"></div>
+
+  <details class="inv"><summary>Vollständiges Inventar: abgedeckt, geändert, bewusst entfallen (<span id="invN"></span> Punkte)</summary><div class="tw"><table id="inv"></table></div></details>
+
+  <div class="bar"><span id="count"></span><span class="st" id="store">Speicher wird verbunden …</span></div>
+</div>
+
+<script>
+(function(){
+// [id, gruppe, kontext, titel, heute, empfehlung, vorauswahl]
+const ITEMS=[
+ ['N1','Neu zu entscheiden','Trip','Radar-Regen-Alarm auch für Trips','Gibt es heute nur im Ortsvergleich (radar_alert_enabled).','Rein. Gerade unterwegs ist „Regen in der nächsten Stunde“ wertvoll. Parität zu Orte (ADR-0095).','rein'],
+ ['N2','Neu zu entscheiden','beide','Premium-SMS: eigene Inhaltsliste oder folgt der SMS','Heute hat sie keine eigene Liste und folgt technisch der SMS.','Folgt der SMS. In der Liste steht dann der Hinweis „wie SMS“, damit keine zweite Liste gepflegt werden muss.','offen'],
+ ['K3b','Kopf & Aktionen','Orte','Profil des Ortsvergleichs (Mail-Kopf, Vergleichsprofil beim Versand)','Die Chips im Kopf setzen „profil“. Das steuert den Versand (scheduler_dispatch_service.py:918) und den Kopf der Mail.','Rein, aber über die Vorlage. Der Name der Vorlage ersetzt das Profil, die Mail zeigt ihn im Kopf.','rein'],
+ ['K10','Kopf & Aktionen','beide','Ziel und Sperre beim Test-Versand','Der Senden-Dialog zeigt „Geht an E-Mail (x) · Telegram …“ und sperrt, wenn eine Adresse fehlt oder unbestätigt ist.','Rein ins Kanal-Menü: jede Zeile nennt ihr Ziel, gesperrte Kanäle nennen den Grund und verlinken aufs Konto.','rein'],
+ ['K11','Kopf & Aktionen','Trip','Berichtsart Morgen oder Abend beim Test','Der Dialog fragt beim Trip, welches Briefing geschickt wird.','Rein: im Menü oben „Morgen-Briefing · Abend-Briefing“, darunter die Kanäle.','rein'],
+ ['K12','Kopf & Aktionen','beide','Rückmeldung nach dem Senden','„Briefing gesendet!“ und Fehlertexte, im Ortsvergleich mobil heute schon fehlend.','Rein, in beiden Kontexten gleich und auch mobil.','rein'],
+ ['A14','Kopf & Aktionen','beide','Beispiel-Warnung (Alarm-Vorschau)','„Vorschau laden“ zeigt Betreff, Mail, Telegram und SMS eines Beispiel-Alarms mit Zeichenzähler.','Ersetzen: „Test schicken ▾“ bekommt den Eintrag „Test-Alarm“. Das passt zu deinem Entscheid, keine Vorschau, sondern echte Tests.','rein'],
+ ['K14','Kopf & Aktionen','beide','Kebab: Pausieren, Archivieren, Löschen','Pausieren/Fortsetzen, Archivieren/Reaktivieren, Löschen, jeweils mit Rückfrage.','Rein, das Kebab neben „Test schicken“ bleibt unverändert.','rein'],
+ ['K15','Kopf & Aktionen','beide','Bestätigungsdialoge und Fehlermeldung beim Statuswechsel','Archivieren (Trip), Löschen, Fehler beim Statuswechsel.','Rein, gehört zu K14.','rein'],
+ ['V16','Kopf & Aktionen','Orte','Entwurf aktivieren','Die Aktivierungskarte im Versand ist der einzige Weg, einen Entwurf zu aktivieren.','Rein: Status-Pill im Kopf mit Aktion „Aktivieren“, dazu der Eintrag im Kebab.','rein'],
+ ['K17','Kopf & Aktionen','beide','Alte Links und Lesezeichen','?tab=wertebereiche, ?tab=alarme und der Listen-Eintrag „Alarme“ führen auf entfallene Reiter.','Rein: alte Adressen leiten auf Wetter bzw. Zustellung um, der Listen-Eintrag wird angepasst.','rein'],
+
+ ['W1','Reiter Wetter','beide','Ladefehler und Ladezustand','„Lade Metriken …“ und „Wiederholen“ bei einem Fehler.','Rein. Ohne das sieht man einen stillen, leeren Editor.','rein'],
+ ['W4','Reiter Wetter','beide','Rückfrage beim Wechsel der Vorlage','„Preset anwenden … überschreibt die aktuelle Auswahl“.','Rein, steht schon im Mockup (Übernehmen/Abbrechen mit Zahl der Abweichungen).','rein'],
+ ['W5b','Reiter Wetter','beide','Dialog „Vorlage speichern“: Beschreibung, Standard für neue, Zeithorizonte','Heute gibt es Beschreibung, Zusammenfassung, Zeithorizonte und „Als Standard für neue Trips“. Wie die Zeithorizonte wirken, ist unklar.','Rein: Name, Beschreibung und „Als Standard für Neue“. Die Zeithorizonte prüfe ich vor dem Umbau und lasse sie weg, wenn sie nichts bewirken.','rein'],
+ ['W11','Reiter Wetter','beide','Darstellung Roh oder Einfach je Metrik, in jeder Liste','Heute je Kanal beim Trip. Ändert, was in Mail, SMS und Telegram steht (Zahl gegen Ampelpunkt oder Symbol).','Rein als Umschalter je Zeile in jeder Liste: E-Mail, Telegram, SMS, Premium-SMS, Vergleichstabelle, Stundenverlauf und 3-Tages-Ausblick. Gilt für Trip und Orte gleich (dein Hinweis).','rein'],
+ ['W19','Reiter Wetter','beide','3-Tages-Ausblick: Metriken, Reihenfolge, Roh/Einfach','Eigene Auswahl aus der Grundauswahl, mit Reihenfolge und Darstellungsform.','Rein, steht seit der zweiten Fassung im Mockup als eigene Liste neben den Kanälen.','rein'],
+ ['WV9','Reiter Wetter','Orte','Stundenverlauf: Metriken, Reihenfolge, gesperrte Größen mit Grund','Z.B. Sonnenstunden sind dort gesperrt, mit Begründung.','Rein als eigene Liste, die gesperrten Größen werden mit Grund angezeigt.','rein'],
+ ['W15','Reiter Wetter','Trip','E-Mail-Format: Ausführlich (HTML) oder Kompakt (Nur-Text)','report_config.email_format, betrifft die ganze Mail.','Rein unter „Inhalt je Kanal → E-Mail“ als erste Einstellung. Gilt künftig auch für Orte, wenn der Renderer es kann.','rein'],
+ ['W17','Reiter Wetter','Trip','Etappen-Kennzahlen in der Mail','show_stage_stats','Rein unter „E-Mail → Zusatzblöcke“.','rein'],
+ ['W18','Reiter Wetter','Trip','Vortag-Vergleich','show_yesterday_comparison','Rein unter „E-Mail → Zusatzblöcke“.','rein'],
+ ['W22','Reiter Wetter','Trip','Nacht-Stundentabelle in der Mail','show_night_block','Rein unter „E-Mail → Zusatzblöcke“.','rein'],
+ ['V12','Reiter Wetter','Trip','Mehrtages-Trend (sonntags, 3–7 Tage)','multi_day_trend_morning/evening, ein anderer Block als der 3-Tages-Ausblick.','Rein unter „E-Mail → Zusatzblöcke“ mit Wahl Morgen/Abend.','rein'],
+ ['W21','Reiter Wetter','beide','Legende der amtlichen Warnungen in Kurzform','Präfix „!“, Gefahren-Kürzel, Stufen L/M/H.','Rein in die Kürzel-Legende von Telegram, SMS und Premium-SMS.','rein'],
+ ['WV6','Reiter Wetter','Orte','Hinweis „Amtliche Warnungen stehen immer an erster Stelle“','Kleiner Hinweis in der Reihenfolge.','Rein als feste, nicht verschiebbare erste Zeile jeder Kanalliste. Das erklärt sich von selbst.','rein'],
+ ['A3','Reiter Wetter','beide','Kennzeichnung nicht alarmfähiger Größen','„Keine der gewählten Größen kann einen Alarm auslösen …“','Rein: In der Zeile steht statt „Alarm ab“ der Text „kein Alarm (Vorbote)“. Der Sammelhinweis erscheint, wenn gar keine Größe alarmfähig ist.','rein'],
+ ['A5','Reiter Wetter','beide','„Alle Metriken auf …“ und Zähler','Sammel-Setzen der Empfindlichkeit, „x von y aktiv“.','Rein als „Alarm ab für alle: Nie · Gelb · Orange · Rot“ über den Metrik-Zeilen.','rein'],
+ ['A6','Reiter Wetter','beide','ⓘ-Erklärung bei CAPE','CAPE steht heute als eigene Alarmzeile mit Erklärung.','Darf weg, wenn CAPE in der Gewitter-Zeile aufgeht. Sonst bleibt die Erklärung.','offen'],
+ ['B8','Reiter Wetter','beide','Bestandsschutz für gespeicherte Wertebereiche','„n weitere Einträge bleiben erhalten“, also ideal_ranges, corridors, alert_rules.','Rein als eigene Migrations-Scheibe (Read-Modify-Write): alte Wertebereiche und Alarmstufen werden in Ampel-Grenzen überführt, nichts geht verloren.','rein'],
+
+ ['V3','Reiter Zustellung','beide','Verbindungsstatus je Kanal und Sperre','Punkt plus „bestätigt / verbunden / unbestätigt / nicht verbunden“. Ohne Verbindung ist der Schalter gesperrt.','Rein in die Kanal-Tabelle als Unterzeile.','rein'],
+ ['V4','Reiter Zustellung','beide','Hinweise mit Konto-Link','„E-Mail-Adresse fehlt“, „Telegram-Chat-ID fehlt“, „Nummer noch nicht bestätigt“, „SMS ab Level Standard“.','Rein, direkt in der betroffenen Kanalzeile.','rein'],
+ ['V5','Reiter Zustellung','beide','Premium-SMS-Status (gelernt, verfallen, zuletzt gemeldet)','Sicherheitsrelevant: eine verfallene Rückadresse kann ein fremdes Gerät erreichen.','Rein, unverändert, in der Premium-SMS-Zeile.','rein'],
+ ['A10','Reiter Zustellung','beide','Premium-SMS-Alarm gesperrt mit Grund','„Tarif wird geprüft …“, „ab Level Premium“.','Rein in der Spalte „Alarme“ der Premium-SMS-Zeile.','rein'],
+ ['V7','Reiter Zustellung','beide','„Kein Kanal aktiv“','Warnung, wenn kein Briefing-Kanal an ist.','Rein über der Kanal-Tabelle.','rein'],
+ ['A9','Reiter Zustellung','beide','„Kein Alarm-Kanal“ und Zähler','„Alerts gehen nirgends hin“, „n aktiv“, Einleitungstext.','Rein über der Kanal-Tabelle, getrennt für Briefing und Alarm.','rein'],
+ ['V2','Reiter Zustellung','beide','Erklärsätze zum Kanal-Layout','„Telegram die ersten 7“, „SMS 160 Zeichen“, „folgt der SMS-Auswahl“.','Rein, aber in „Inhalt je Kanal“, wo die Schnittlinie sichtbar ist.','rein'],
+ ['V8','Reiter Zustellung','Orte','„Morgen = heute, Abend = morgen“','Hinweis im Versand des Ortsvergleichs.','Rein, steht im Mockup schon als Unterzeile der Briefings.','rein'],
+ ['V11','Reiter Zustellung','beide','Schnellwahl „Morgens 07:00 / Abends 18:00“','Knöpfe zum schnellen Setzen der Uhrzeit.','Darf weg. Das Uhrzeitfeld mit Vorgabe 07:00 bzw. 18:00 reicht.','weg'],
+ ['V14','Reiter Zustellung','Trip','Laufzeit des Trips und „Etappen öffnen →“','„endet …, wird in den Etappen gepflegt“.','Rein als eine Zeile unter den Briefings.','rein'],
+ ['V15','Reiter Zustellung','Orte','Laufzeit „Bis auf Weiteres / Bis Datum“','end_date. Davon hängen die automatische Pause und „Laufzeit überschritten“ ab.','Rein unter den Briefings.','rein'],
+ ['A11','Reiter Zustellung','beide','„Telegram im SMS-Kurzstil“: für Briefing, Alarm oder beides?','Heute steht der Schalter beim Trip im Versand und beim Ortsvergleich unter Alarme, die Wirkung ist unklar.','Klären und dann als ein Schalter in der Telegram-Zeile. Der veraltete Hinweis auf den „Layout-Reiter“ fällt weg.','offen']
+];
+// [id, bereich, kontext, element, klasse A/G/B, wohin]
+const INV=[
+ ['K1','Kopf','beide','Name umbenennen','A','Kopf'],['K2','Kopf','beide','Region','A','Kopf'],['K3a','Kopf','Trip','Aktivitäts-Chips','B','Fortbewegung + Tempo in Etappen'],
+ ['K4','Kopf','Orte','Profil-Label, Orte-Anzahl','A','Kopf'],['K5','Kopf','Trip','Datum, Tage, Status, km/↑m','A','Kopf'],['K6','Kopf mobil','Trip','Kacheln Etappe/Briefing/Start','A','Kopf'],
+ ['K7','Kopf','Orte','Status-Pill, Laufzeit überschritten','A','Kopf (hängt an V15)'],['K8','Kopf','beide','Speicher-Chip, Feldfehler','A','Kopf'],['K9','Kopf','beide','„Senden“','G','„Test schicken ▾“'],
+ ['K13','Kopf','Orte','„Setup abschließen“','G','Sprung auf Zustellung'],['K16','Reiterleiste','beide','5 Reiter, Badges','G','4 Reiter, Handoff-Badges'],
+ ['W2','Wetter','Trip','Vorlagen + eigene','A','Vorlage'],['W3','Wetter','Trip','„als eigenes Profil speichern“','A','Vorlage'],['W5a','Wetter','Trip','Vorlagen-Name, Fehler „existiert“','A','Vorlage'],
+ ['W6','Wetter','Trip','Grundauswahl','A','Metrik-Zeilen'],['W7','Inhalt','beide','Kanalwahl mit Limits','G','4 Kanäle + Flächen'],['W8','Inhalt','beide','Reihenfolge, Aus/Ein je Kanal','A','Inhalt je Kanal'],
+ ['W9','Inhalt','beide','Schnittlinie Telegram-/SMS-Limit','A','Inhalt je Kanal'],['W10','Inhalt','beide','Kürzel und Legende','A','Inhalt je Kanal'],['W12','Wetter','beide','Tagesfenster','A','Anpassen'],
+ ['W13','Wetter','Trip','SMS-Schwellwerte Sensibel/Standard/Robust','B','Ampel'],['W14','Wetter','Trip','Kürzel der Temperaturgrößen','G','in W10'],['W16','Wetter','Trip','„Ausblick“ an/aus','A','3-Tages-Ausblick'],
+ ['W20','Wetter','beide','Amtliche Warnungen im Bericht','G','ein Schalter mit A1'],['WV2','Wetter','Orte','Metrikliste mit Auswertung','A','Metrik-Zeilen'],['WV3','Wetter','Orte','Mehrfach-Auswertung (Min+Max)','B','fest je Metrik, Bestand prüfen'],
+ ['WV4','Wetter','Orte','keine Vorlagen','G','Vorlagen neu'],['WV5','Inhalt','Orte','Reihenfolge je Kanal','A','Inhalt je Kanal'],['WV8','Wetter','Orte','Stundenverlauf an/aus','A','eigene Liste'],
+ ['WV10','Wetter','Orte','Ausblick an/aus','A','eigene Liste'],['V1','Versand','beide','Kanal-Kästchen Briefing','A','Zustellung'],['V6','Versand','Trip','Telegram im SMS-Kurzstil','A','Zustellung (s. A11)'],
+ ['V9','Versand','beide','Morgen/Abend aktiv + Uhrzeit','A','Zustellung'],['V13','Versand','beide','„Nächstes Briefing“','G','Übersicht'],
+ ['B1','Wertebereiche','beide','Titel, Einleitung','B','Ampel'],['B2','Wertebereiche','beide','Band, Von/Bis, Gewitter-Stufen','B','Ampel'],['B3','Wertebereiche','beide','Markieren','B','Ampel färbt immer'],
+ ['B4','Wertebereiche','beide','„im Bereich = markiert“','G','Ampel-Farbe im Briefing'],['B5','Wertebereiche','beide','Metrik hinzufügen/entfernen','B','Metrik-Zeilen'],['B6','Wertebereiche','beide','Pflichtfehler','B','Ampel-Prüfung'],['B7','Wertebereiche','Orte','„kein Score · kein Rang“','B','kein Ranking'],
+ ['A1','Alarme','beide','Amtliche Warnungen lösen Alarm aus','G','ein Schalter'],['A2','Alarme','Orte','Radar-Alarm','G','auch Trip (N1)'],['A4','Alarme','beide','Empfindlichkeit, Δ-Spalte','B','„Alarm ab Farbe“'],
+ ['A7','Alarme','beide','Alarm-Kanäle','A','Zustellung'],['A8','Alarme','beide','Dringlichkeits-Schwelle','A','Zustellung'],['A12','Alarme','beide','Cooldown','A','Zustellung → Anpassen'],
+ ['A13','Alarme','beide','Stille Stunden (Ortszeit)','A','Zustellung'],['A15','Alarme','–','AlertsTab, AlertPresetSelector, AlertCard','B','toter Code'],
+ ['U1','Übersicht','beide','Kennzahlen','A','unverändert'],['U2','Übersicht','beide','Versand-Karte „Bearbeiten →“','G','Ziel Zustellung'],['U3','Übersicht','Orte','Wertebereiche-Karte','G','Ziel Wetter'],
+ ['U4','Übersicht','Trip','„Alarm bei Δ“','G','Text anpassen'],['U5','Übersicht','beide','Versand-Historie','A','unverändert'],['E1','Etappen','Trip','Startzeit, Pausentag, Ankunftszeiten','A','+ Tempo/Aufstieg'],
+ ['E2','Orte','Orte','Reihenfolge, hinzufügen/entfernen','A','unverändert'],['X1','Texte','beide','Verweise auf alte Reiter','G','Texte nachziehen']
+];
+const KL={A:'abgedeckt',G:'geändert',B:'bewusst entfallen'};
+const state={}; ITEMS.forEach(i=>state[i[0]]={wahl:i[6],notiz:'',bestaetigt:false});
+let db=null;
+const gEl=document.getElementById('groups');
+function esc(s){return String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
+function render(){
+  const groups={}; ITEMS.forEach(i=>(groups[i[1]]=groups[i[1]]||[]).push(i));
+  gEl.innerHTML=Object.entries(groups).map(([g,its])=>`<section class="group"><h2>${g} <span class="muted" style="font-weight:500;font-size:14px">· ${its.length}</span></h2>${its.map(i=>{
+    const s=state[i[0]];
+    return `<article class="item st-${s.wahl}" data-id="${i[0]}"><div class="body">
+      <h3><span class="id">${i[0]}</span>${esc(i[3])}<span class="ktx">${i[2]}</span></h3>
+      <div class="heute"><span class="muted">Heute:</span> ${esc(i[4])}</div>
+      <div class="rec"><b>Empfehlung</b>${esc(i[5])}</div></div>
+      <div style="display:flex;flex-direction:column;gap:6px;align-items:flex-end">
+        <span class="choices" role="group" aria-label="Entscheidung ${i[0]}">${[['rein','muss rein'],['weg','darf weg'],['offen','offen']].map(([v,l])=>`<button type="button" data-v="${v}" aria-pressed="${s.wahl===v}">${l}</button>`).join('')}</span>
+        <span class="st ${s.bestaetigt?'ok':''}" data-st>${s.bestaetigt?'bestätigt':'Vorauswahl'}</span></div>
+      <textarea placeholder="Notiz (optional)" aria-label="Notiz ${i[0]}" data-note>${esc(s.notiz)}</textarea>
+    </article>`;}).join('')}</section>`).join('');
+  count();
+}
+function count(){
+  const v=Object.values(state); const n=v.filter(x=>x.bestaetigt).length;
+  const r=v.filter(x=>x.wahl==='rein').length, w=v.filter(x=>x.wahl==='weg').length, o=v.filter(x=>x.wahl==='offen').length;
+  document.getElementById('count').textContent=`${n} von ${v.length} bestätigt · ${r} rein · ${w} weg · ${o} offen`;
+}
+document.getElementById('inv').innerHTML='<thead><tr><th>ID</th><th>Bereich</th><th>Kontext</th><th>Element</th><th>Klasse</th><th>Wohin im neuen Modell</th></tr></thead><tbody>'+
+  INV.map(r=>`<tr><td class="mono">${r[0]}</td><td>${r[1]}</td><td>${r[2]}</td><td>${esc(r[3])}</td><td><span class="k ${r[4]}">${KL[r[4]]}</span></td><td>${esc(r[5])}</td></tr>`).join('')+'</tbody>';
+document.getElementById('invN').textContent=INV.length;
+
+const timers={};
+async function save(id){
+  if(!db) return;
+  const art=document.querySelector(`[data-id="${id}"]`); const stEl=art&&art.querySelector('[data-st]');
+  try{await db.doc('abgleich/'+id).set({wahl:state[id].wahl,notiz:state[id].notiz,bestaetigt:true,aktualisiert:new Date().toISOString()});
+    state[id].bestaetigt=true; if(stEl){stEl.textContent='bestätigt';stEl.classList.add('ok');} count();}
+  catch(e){if(stEl) stEl.textContent='nicht gespeichert';}
+}
+gEl.addEventListener('click',e=>{
+  const b=e.target.closest('.choices button'); if(!b) return;
+  const art=b.closest('.item'), id=art.dataset.id; state[id].wahl=b.dataset.v;
+  art.className='item st-'+b.dataset.v; art.querySelectorAll('.choices button').forEach(x=>x.setAttribute('aria-pressed',String(x===b)));
+  if(!db){const s=art.querySelector('[data-st]');s.textContent='nicht gespeichert (kein Speicher)';}
+  save(id);
+});
+gEl.addEventListener('input',e=>{
+  if(!e.target.matches('[data-note]')) return; const id=e.target.closest('.item').dataset.id;
+  state[id].notiz=e.target.value; clearTimeout(timers[id]); timers[id]=setTimeout(()=>save(id),900);
+});
+render();
+const storeEl=document.getElementById('store');
+const to=setTimeout(()=>{if(!db) storeEl.textContent='Speicher nicht erreichbar';},10000);
+(async()=>{try{
+  if(!window.claude||!window.claude.use){clearTimeout(to);storeEl.textContent='Speicher nicht verfügbar';return;}
+  const d0=await window.claude.use('db'); clearTimeout(to);
+  if(!d0){storeEl.textContent='Nicht angemeldet: Auswahl wird nicht gespeichert';return;}
+  db=d0; storeEl.textContent='Auswahl wird gespeichert'; storeEl.classList.add('ok');
+  const snap=await db.collection('abgleich').get();
+  snap.docs.forEach(doc=>{const x=doc.data()||{}; if(!state[doc.id]) return;
+    state[doc.id]={wahl:['rein','weg','offen'].includes(x.wahl)?x.wahl:state[doc.id].wahl,notiz:typeof x.notiz==='string'?x.notiz:'',bestaetigt:!!x.bestaetigt};});
+  render();
+}catch(e){clearTimeout(to);storeEl.textContent='Speicher-Fehler';}})();
+})();
+</script>
+
+</body></html>

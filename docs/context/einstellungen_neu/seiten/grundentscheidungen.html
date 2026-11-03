@@ -1,0 +1,547 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Einstellungen neu denken</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: eine lesbare Spalte (max 980px), Entscheidungen als Karten, Mockups im Look der App */
+:root{
+  --bg:#f6f4ee; --card:#ffffff; --card-alt:#faf8f1; --line:#dcd8c8; --line-soft:#ecead9;
+  --ink:#1a1a18; --ink-2:#45433d; --ink-3:#6b675c;
+  --accent:#c45a2a; --accent-deep:#8c3e1a; --accent-soft:#f3d9c8; --accent-tint:rgba(196,90,42,.08);
+  --a-green:#15803d; --a-yellow:#d69500; --a-orange:#d4530a; --a-red:#a8104a;
+  --ok:#2f6b3a; --sel:#1a1a18; --sel-ink:#ffffff;
+  --f-ui:'Inter Tight',system-ui,-apple-system,'Segoe UI',sans-serif;
+  --f-mono:'JetBrains Mono',ui-monospace,'SFMono-Regular',Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#151513; --card:#1e1e1b; --card-alt:#252521; --line:#3a3933; --line-soft:#2c2b27;
+  --ink:#f1efe7; --ink-2:#cfccc1; --ink-3:#a3a093;
+  --accent:#e07a48; --accent-deep:#f0a27b; --accent-soft:#4a2a1b; --accent-tint:rgba(224,122,72,.12);
+  --a-green:#3fae63; --a-yellow:#e6b02e; --a-orange:#ee7a3a; --a-red:#e2457f;
+  --ok:#6cc27f; --sel:#f1efe7; --sel-ink:#151513; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#151513; --card:#1e1e1b; --card-alt:#252521; --line:#3a3933; --line-soft:#2c2b27;
+  --ink:#f1efe7; --ink-2:#cfccc1; --ink-3:#a3a093;
+  --accent:#e07a48; --accent-deep:#f0a27b; --accent-soft:#4a2a1b; --accent-tint:rgba(224,122,72,.12);
+  --a-green:#3fae63; --a-yellow:#e6b02e; --a-orange:#ee7a3a; --a-red:#e2457f;
+  --ok:#6cc27f; --sel:#f1efe7; --sel-ink:#151513; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-ui);font-size:15px;line-height:1.55;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:32px 80px}
+.wrap{max-width:980px;margin:0 auto;display:flex;flex-direction:column;gap:40px}
+h1,h2,h3{text-wrap:balance;margin:0;letter-spacing:-.01em}
+h1{font-size:clamp(28px,5vw,40px);font-weight:700;line-height:1.1}
+h2{font-size:24px;font-weight:700}
+h3{font-size:17px;font-weight:600}
+p{margin:0;max-width:68ch}
+.eyebrow{font-family:var(--f-mono);font-size:11.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-3)}
+.lead{color:var(--ink-2);font-size:16.5px}
+.muted{color:var(--ink-3)}
+.mono{font-family:var(--f-mono)}
+.stack{display:flex;flex-direction:column;gap:14px}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+section.block{display:flex;flex-direction:column;gap:18px}
+.done-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:12px}
+.done{background:var(--card);border:1px solid var(--line);border-radius:6px;padding:14px 16px;display:flex;flex-direction:column;gap:6px;min-width:0}
+.done b{font-weight:600}
+.done .tag{font-family:var(--f-mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--ok)}
+/* Ampel-Tabelle */
+.tbl-wrap{overflow-x:auto;background:var(--card);border:1px solid var(--line);border-radius:6px}
+table{border-collapse:collapse;width:100%;min-width:560px;font-variant-numeric:tabular-nums}
+th,td{text-align:left;padding:9px 14px;border-bottom:1px solid var(--line-soft);font-size:14px}
+th{font-family:var(--f-mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-3);font-weight:500}
+tr:last-child td{border-bottom:0}
+.dot{display:inline-block;width:10px;height:10px;border-radius:50%;vertical-align:-1px;margin-right:6px}
+.g{background:var(--a-green)}.y{background:var(--a-yellow)}.o{background:var(--a-orange)}.r{background:var(--a-red)}
+/* Entscheidungskarten */
+.decision{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:22px;display:flex;flex-direction:column;gap:16px}
+.decision header{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:baseline}
+.status{font-family:var(--f-mono);font-size:11.5px;color:var(--ink-3)}
+.status.saved{color:var(--ok)}
+.opts{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:12px}
+.opt{position:relative;text-align:left;background:var(--card-alt);border:1.5px solid var(--line);border-radius:6px;padding:14px 16px;cursor:pointer;
+  display:flex;flex-direction:column;gap:8px;font:inherit;color:inherit;min-width:0}
+.opt:hover{border-color:var(--ink-3)}
+.opt:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.opt[aria-pressed="true"]{border-color:var(--accent);background:var(--accent-tint);box-shadow:inset 0 0 0 1px var(--accent)}
+.opt .t{font-weight:600;font-size:15.5px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.opt .d{color:var(--ink-2);font-size:14px}
+.opt .ex{font-size:13px;color:var(--ink-3);border-top:1px dashed var(--line);padding-top:8px}
+.rec{font-family:var(--f-mono);font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;background:var(--accent);color:#fff;padding:2px 6px;border-radius:3px}
+.pick{position:absolute;top:12px;right:12px;width:18px;height:18px;border-radius:50%;border:1.5px solid var(--ink-3)}
+.opt[aria-pressed="true"] .pick{border-color:var(--accent);background:radial-gradient(circle,var(--accent) 0 45%,transparent 50%)}
+.opt .t{padding-right:26px}
+textarea{width:100%;min-height:58px;font:inherit;font-size:14px;color:var(--ink);background:var(--card-alt);border:1px solid var(--line);border-radius:5px;padding:9px 11px;resize:vertical}
+textarea:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+label.nl{font-size:13px;color:var(--ink-3);display:block;margin-bottom:4px}
+.note{background:var(--card-alt);border-left:3px solid var(--accent);padding:12px 16px;border-radius:0 6px 6px 0;color:var(--ink-2);font-size:14.5px}
+/* App-Mockups */
+.mock{background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:14px;display:flex;flex-direction:column;gap:10px;min-width:0}
+.mrow{background:var(--card);border:1px solid var(--line);border-radius:5px;padding:12px 14px;display:grid;grid-template-columns:minmax(90px,130px) 1fr;gap:10px 16px;align-items:center}
+.mrow .nm{font-weight:600}
+.mrow .nm small{display:block;font-weight:400;color:var(--ink-3);font-size:12px}
+.mrow .full{grid-column:1/-1}
+.bar{position:relative;height:12px;border-radius:6px;overflow:hidden;display:flex}
+.bar span{height:100%}
+.ticks{position:relative;height:16px;font-family:var(--f-mono);font-size:11px;color:var(--ink-3)}
+.ticks i{position:absolute;transform:translateX(-50%);font-style:normal}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:5px;overflow:hidden;flex-wrap:wrap}
+.seg button{font:inherit;font-size:13px;background:var(--card);color:var(--ink-2);border:0;border-right:1px solid var(--line);padding:5px 10px;cursor:pointer}
+.seg button:last-child{border-right:0}
+.seg button.on{background:var(--accent);color:#fff}
+.seg button:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+.chip{display:inline-flex;align-items:center;gap:6px;font-size:13px;border:1px solid var(--line);border-radius:999px;padding:3px 10px;background:var(--card);color:var(--ink-2)}
+.sentence{font-size:14.5px;line-height:1.9}
+.sentence .val{font-family:var(--f-mono);font-size:13px;border-bottom:1.5px dashed var(--accent);padding:0 2px;cursor:pointer}
+.sentence select{font:inherit;font-size:14px;color:var(--accent-deep);background:transparent;border:0;border-bottom:1.5px dashed var(--accent);padding:0 2px;cursor:pointer}
+.link{color:var(--accent-deep);font-size:13px;text-decoration:underline;text-underline-offset:2px;cursor:pointer;background:none;border:0;padding:0;font-family:inherit}
+/* Reiter-Mock */
+.tabs{display:flex;border:1px solid var(--line);border-radius:5px 5px 0 0;background:var(--card);overflow-x:auto}
+.tabs button{font:inherit;font-size:13.5px;border:0;border-right:1px solid var(--line);background:transparent;color:var(--ink-2);padding:9px 13px;white-space:nowrap;cursor:pointer}
+.tabs button.on{color:var(--ink);font-weight:600;box-shadow:inset 0 -2px 0 var(--accent)}
+.tabs button:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+.panel{border:1px solid var(--line);border-top:0;border-radius:0 0 5px 5px;background:var(--card);padding:14px;display:flex;flex-direction:column;gap:8px;min-height:150px}
+.pi{display:flex;gap:10px;align-items:flex-start;font-size:13.5px;color:var(--ink-2)}
+.pi b{color:var(--ink);font-weight:600;min-width:0}
+.pi .k{flex:0 0 8px;height:8px;margin-top:7px;border-radius:2px;background:var(--accent)}
+.pi .k.n{background:var(--line)}
+.mhead{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+.mtitle{font-weight:700;font-size:18px}
+.btn{font:inherit;font-size:13.5px;font-weight:600;border-radius:5px;padding:7px 13px;border:1px solid var(--sel);background:var(--sel);color:var(--sel-ink);cursor:pointer}
+.btn.ghost{background:var(--card);color:var(--ink);border-color:var(--line)}
+.menu{background:var(--card);border:1px solid var(--line);border-radius:6px;box-shadow:0 6px 20px rgba(0,0,0,.08);padding:6px;display:flex;flex-direction:column;min-width:210px}
+.menu div{padding:7px 10px;font-size:13.5px;border-radius:4px;display:flex;justify-content:space-between;gap:12px}
+.menu div:hover{background:var(--card-alt)}
+.menu small{color:var(--ink-3);font-family:var(--f-mono);font-size:11px}
+.small-list{display:flex;flex-direction:column;gap:28px}
+.savebar{position:sticky;bottom:0;margin-top:8px;background:var(--card);border:1px solid var(--line);border-radius:8px;padding:12px 16px;display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap;padding-bottom:calc(12px + env(safe-area-inset-bottom,0px))}
+.progress{font-size:14px;color:var(--ink-2)}
+@media (max-width:560px){.mrow{grid-template-columns:1fr}.decision{padding:16px}}
+@media (prefers-reduced-motion:no-preference){.opt,.seg button,.tabs button{transition:border-color .12s,background .12s}}
+</style>
+
+<div class="wrap">
+
+<header class="stack">
+  <span class="eyebrow">Gregor Zwanzig · Trip &amp; Ortsvergleich · Schritt 2</span>
+  <h1>Wetter, Grenzen, Alarme: ein Modell statt drei Reiter</h1>
+  <p class="lead">Wähle in jeder Karte eine Variante. Deine Auswahl und Notizen werden gespeichert, ich lese sie danach aus und mache daraus die ADRs und das Epic.</p>
+</header>
+
+<section class="block">
+  <span class="eyebrow">Schritt 1 · deine Antworten</span>
+  <div class="done-grid">
+    <div class="done"><span class="tag">entschieden</span><b>Alarm bleibt ein Abweichungs-Wächter</b><span class="muted">Vergleich gegen das letzte Briefing bleibt. Je Metrik soll man einstellen können, wie wichtig sie einem ist.</span></div>
+    <div class="done"><span class="tag">entschieden</span><b>Stufen wie im Trip-Briefing</b><span class="muted">Die 4-stufige Ampel aus dem Briefing ist die Bewertung. Der Alarm hängt daran.</span></div>
+    <div class="done"><span class="tag">entschieden</span><b>Kein Ranking</b><span class="muted">Ein Bericht für nur einen Ort muss möglich sein, ganz ohne Vergleich.</span></div>
+    <div class="done"><span class="tag">entschieden</span><b>Keine Vorschau</b><span class="muted">„Senden“ wird zu „Test schicken“ mit Auswahl des Kanals.</span></div>
+  </div>
+</section>
+
+<section class="block">
+  <span class="eyebrow">Der Kern</span>
+  <h2>Die Ampel gibt es schon. Sie wird zur einzigen Bewertung.</h2>
+  <p>Das Briefing färbt heute 10 Metriken in vier Stufen. Die Grenzen sind fest im Metrik-Katalog hinterlegt und für jeden Nutzer gleich. Parallel dazu gibt es drei weitere Bewertungen: Wertebereiche (grün markieren), SMS-Schwellwerte (nur Trip) und die Δ-Empfindlichkeit der Alarme.</p>
+  <div class="note">Vorschlag: Die Ampel wird die eine Bewertung je Metrik. Das Profil (Trekking, Skitour …) legt ihre Grenzen fest, der Nutzer darf sie verschieben. Briefing-Farbe, SMS-Hervorhebung und Alarm lesen alle dieselbe Skala. Wertebereiche und SMS-Schwellwerte entfallen als eigene Einstellungen.</div>
+  <div class="tbl-wrap">
+    <table>
+      <thead><tr><th>Metrik</th><th><span class="dot g"></span>grün</th><th><span class="dot y"></span>gelb ab</th><th><span class="dot o"></span>orange ab</th><th><span class="dot r"></span>rot ab</th><th>heute alarmfähig</th></tr></thead>
+      <tbody>
+        <tr><td>Böen</td><td>&lt; 30</td><td>30 km/h</td><td>45 km/h</td><td>60 km/h</td><td>ja</td></tr>
+        <tr><td>Wind</td><td>&lt; 30</td><td>30 km/h</td><td>50 km/h</td><td>70 km/h</td><td>ja</td></tr>
+        <tr><td>Niederschlag</td><td>&lt; 1</td><td>1 mm</td><td>5 mm</td><td>10 mm</td><td>ja</td></tr>
+        <tr><td>Gewitter</td><td>keins</td><td>–</td><td>mittel</td><td>hoch</td><td>ja (schon heute nach Stufe)</td></tr>
+        <tr><td>Gewitterenergie (CAPE)</td><td>&lt; 300</td><td>300 J/kg</td><td>800 J/kg</td><td>1500 J/kg</td><td>ja</td></tr>
+        <tr><td>Temperatur (Hitze / Kälte)</td><td>0 … 28</td><td>28 / &lt; 0 °C</td><td>31 / &lt; −5 °C</td><td>34 / &lt; −15 °C</td><td>ja</td></tr>
+        <tr><td>Gefühlte Temperatur</td><td>0 … 28</td><td>28 / &lt; 0 °C</td><td>31 / &lt; −5 °C</td><td>34 / &lt; −15 °C</td><td>nein (Vorbote)</td></tr>
+        <tr><td>Sichtweite</td><td>≥ 2000</td><td>&lt; 2000 m</td><td>&lt; 1000 m</td><td>&lt; 500 m</td><td>ja</td></tr>
+        <tr><td>Neuschnee</td><td>&lt; 10</td><td>10 cm</td><td>20 cm</td><td>30 cm</td><td>ja</td></tr>
+        <tr><td>UV-Index</td><td>&lt; 3</td><td>3</td><td>6</td><td>8</td><td>ja</td></tr>
+        <tr><td>Regenwahrscheinlichkeit</td><td>&lt; 30</td><td>30 %</td><td>60 %</td><td>80 %</td><td>nein (Vorbote)</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="muted" style="font-size:13.5px">Ohne Ampel heute: Nullgradgrenze, Schneefallgrenze und Schneehöhe (alarmfähig über Δ). Dazu Sonnenstunden, Bewölkung, Luftfeuchte, Taupunkt, Luftdruck und die Wolkenschichten (nur Anzeige). Werte aus <span class="mono">src/app/metric_catalog.py</span>.</p>
+  <div class="note"><b>Warum nur 10?</b> Eine Grundsatzentscheidung dahinter gibt es nicht, die Ampel ist Ticket für Ticket gewachsen. Sie begann mit Wind, Böen, Regen und Regenwahrscheinlichkeit (#759), danach kamen CAPE, Temperatur, Sicht, UV und Neuschnee dazu. Für die Nullgradgrenze wurde sie ausdrücklich gestrichen, weil eine feste Zahl nichts aussagt: Entscheidend ist, wie sie zur Höhe der Etappe liegt. Der eigentliche Hemmschuh ist, dass die Ampel heute <i>global</i> ist. Schneehöhe ist für die Skitour gut und für die Wanderung schlecht, und das kann eine einzige feste Skala nicht abbilden. Kommen die Grenzen aus dem Profil, fällt dieser Grund weg (siehe Karte 9).</div>
+</section>
+
+<section class="block" id="entscheidungen">
+  <span class="eyebrow">Grundlegend</span>
+
+  <article class="decision" data-q="alarm_logik">
+    <header><h3>1 · Wie hängt der Alarm an der Ampel?</h3><span class="status"></span></header>
+    <p class="muted">Alle drei Varianten vergleichen weiter gegen das letzte Briefing. Beispiel: Das Briefing um 07:00 meldet Böen 40 km/h (gelb), die neue Prognose um 11:00 meldet 55 km/h (orange).</p>
+    <div class="opts">
+      <button class="opt" data-v="stufenwechsel"><span class="pick"></span><span class="t">Stufenwechsel <span class="rec">Empfehlung</span></span>
+        <span class="d">Ein Alarm kommt, wenn die Ampelstufe gegenüber dem Briefing steigt. Sinkt sie, kommt eine Entwarnung. Die Wichtigkeit legt fest, ab welcher Stufe das zählt. Gewitter funktioniert heute schon so (ADR-0043).</span>
+        <span class="ex">Beispiel: gelb → orange. Bei „ab Orange“ kommt ein Alarm, bei „nur Rot“ nicht.</span></button>
+      <button class="opt" data-v="delta_einfach"><span class="pick"></span><span class="t">Δ wie heute, einfacher</span>
+        <span class="d">Die Logik bleibt: Alarm bei einer Änderung um X. Sichtbar ist nur noch die Wichtigkeit, die Δ-Zahl steht klein daneben. Die Ampel färbt nur das Briefing.</span>
+        <span class="ex">Beispiel: +15 km/h. Bei „Standard“ (Δ 20) kein Alarm.</span></button>
+      <button class="opt" data-v="beides"><span class="pick"></span><span class="t">Stufenwechsel oder großer Sprung</span>
+        <span class="d">Alarm bei einem Stufenwechsel, zusätzlich bei einem sehr großen Sprung innerhalb einer Stufe (z.B. Böen 65 → 95, beides rot). Die Sprunggröße legt das System fest.</span>
+        <span class="ex">Beispiel: gelb → orange meldet. 65 → 95 meldet ebenfalls.</span></button>
+    </div>
+    <div><label class="nl" for="n-alarm_logik">Notiz</label><textarea id="n-alarm_logik" data-note></textarea></div>
+  </article>
+
+  <article class="decision" data-q="wichtigkeit_woerter">
+    <header><h3>2 · Wie heißt die Einstellung „wie wichtig ist mir diese Metrik“?</h3><span class="status"></span></header>
+    <p class="muted">Ein Regler je Metrik. Die Wörter entscheiden, ob man ihn ohne Erklärung versteht.</p>
+    <div class="opts">
+      <button class="opt" data-v="ampel_direkt"><span class="pick"></span><span class="t">Alarm ab: Nie · Gelb · Orange · Rot <span class="rec">Empfehlung</span></span>
+        <span class="d">Nutzt direkt die Farben, die man aus dem Briefing kennt. Nichts zu übersetzen.</span>
+        <span class="ex">Böen: Alarm ab <b>Orange</b></span></button>
+      <button class="opt" data-v="wichtig"><span class="pick"></span><span class="t">Egal · Normal · Wichtig · Sehr wichtig</span>
+        <span class="d">Spricht von der Bedeutung für den Nutzer. Welche Farbe dahintersteckt, sieht man nicht.</span>
+        <span class="ex">Böen: <b>Wichtig</b></span></button>
+      <button class="opt" data-v="heute"><span class="pick"></span><span class="t">Aus · Entspannt · Standard · Sensibel</span>
+        <span class="d">Die heutigen Wörter. Bekannt, aber „Sensibel“ meint heute in zwei Reitern verschiedene Dinge.</span>
+        <span class="ex">Böen: <b>Standard</b></span></button>
+    </div>
+    <div><label class="nl" for="n-wichtigkeit_woerter">Notiz</label><textarea id="n-wichtigkeit_woerter" data-note></textarea></div>
+  </article>
+
+  <article class="decision" data-q="metrik_zeile">
+    <header><h3>3 · Wie sieht eine Metrik-Zeile aus?</h3><span class="status"></span></header>
+    <p class="muted">Eine Zeile ersetzt dieselbe Metrik in heute drei Reitern. Die Mockups sind anklickbar.</p>
+    <div class="opts" style="grid-template-columns:1fr">
+      <button class="opt" data-v="ampel_leiste"><span class="pick"></span><span class="t">A · Ampel-Leiste <span class="rec">Empfehlung</span></span>
+        <span class="d">Die vier Farben als Leiste, die Grenzen als Zahlen darüber. Rechts der Alarm-Regler. Über „Grenzen anpassen“ werden die Zahlen eingebbar.</span></button>
+      <div class="mock" aria-label="Mockup Variante A">
+        <div class="mrow">
+          <div class="nm">Böen<small>km/h · Spitze</small></div>
+          <div class="stack" style="gap:4px">
+            <div class="ticks"><i style="left:37.5%">30</i><i style="left:56.25%">45</i><i style="left:75%">60</i></div>
+            <div class="bar"><span class="g" style="width:37.5%"></span><span class="y" style="width:18.75%"></span><span class="o" style="width:18.75%"></span><span class="r" style="width:25%"></span></div>
+          </div>
+          <div class="full row" style="justify-content:space-between">
+            <span class="row"><span class="muted" style="font-size:13px">Alarm ab</span>
+              <span class="seg" data-seg><button>Nie</button><button>Gelb</button><button class="on">Orange</button><button>Rot</button></span></span>
+            <span class="row"><button class="link" type="button">Grenzen anpassen</button><span class="muted" style="font-size:13px">·</span><button class="link" type="button">entfernen</button></span>
+          </div>
+        </div>
+        <div class="mrow">
+          <div class="nm">Gewitter<small>Stufe</small></div>
+          <div class="stack" style="gap:4px">
+            <div class="ticks"><i style="left:16%">keins</i><i style="left:50%">mittel</i><i style="left:84%">hoch</i></div>
+            <div class="bar"><span class="g" style="width:33.3%"></span><span class="o" style="width:33.3%"></span><span class="r" style="width:33.4%"></span></div>
+          </div>
+          <div class="full row"><span class="muted" style="font-size:13px">Alarm ab</span>
+            <span class="seg" data-seg><button>Nie</button><button class="on">Orange</button><button>Rot</button></span></div>
+        </div>
+      </div>
+
+      <button class="opt" data-v="kompakt"><span class="pick"></span><span class="t">B · Kompakte Liste</span>
+        <span class="d">Eine Zeile pro Metrik mit drei Farbpunkten und den Grenzen als Text. Sehr dicht, viele Metriken auf einen Blick. Die Grenzen ändert man in einem aufklappbaren Bereich.</span></button>
+      <div class="mock" aria-label="Mockup Variante B">
+        <div class="mrow" style="grid-template-columns:minmax(90px,130px) 1fr auto">
+          <div class="nm">Böen</div>
+          <div class="mono" style="font-size:13px"><span class="dot y"></span>30 <span class="dot o"></span>45 <span class="dot r"></span>60 km/h</div>
+          <span class="seg" data-seg><button>Egal</button><button>Normal</button><button class="on">Wichtig</button></span>
+        </div>
+        <div class="mrow" style="grid-template-columns:minmax(90px,130px) 1fr auto">
+          <div class="nm">Niederschlag</div>
+          <div class="mono" style="font-size:13px"><span class="dot y"></span>1 <span class="dot o"></span>5 <span class="dot r"></span>10 mm</div>
+          <span class="seg" data-seg><button>Egal</button><button class="on">Normal</button><button>Wichtig</button></span>
+        </div>
+      </div>
+
+      <button class="opt" data-v="satz"><span class="pick"></span><span class="t">C · Als Satz</span>
+        <span class="d">Jede Metrik ist ein lesbarer Satz mit änderbaren Stellen. Am verständlichsten für Einsteiger, aber länger.</span></button>
+      <div class="mock" aria-label="Mockup Variante C">
+        <div class="mrow" style="grid-template-columns:1fr">
+          <div class="sentence"><b>Böen</b> sind ab <span class="val">30</span> gelb, ab <span class="val">45</span> orange und ab <span class="val">60 km/h</span> rot.
+            Melde dich, wenn es
+            <select aria-label="Alarmstufe Böen"><option>nie</option><option>gelb</option><option selected>orange</option><option>rot</option></select> wird.</div>
+        </div>
+      </div>
+    </div>
+    <div><label class="nl" for="n-metrik_zeile">Notiz</label><textarea id="n-metrik_zeile" data-note></textarea></div>
+  </article>
+
+  <article class="decision" data-q="reiter">
+    <header><h3>4 · Welche Reiter gibt es?</h3><span class="status"></span></header>
+    <p class="muted">Gilt für Trip und Ortsvergleich gleich. Klick in den Mockups auf die Reiter, um zu sehen, was drin steht.</p>
+    <div class="opts" style="grid-template-columns:1fr">
+      <button class="opt" data-v="wetter_zustellung"><span class="pick"></span><span class="t">A · Wetter · Zustellung <span class="rec">Empfehlung</span></span>
+        <span class="d">„Wetter“ beantwortet „was interessiert mich und was ist für mich kritisch“. „Zustellung“ beantwortet „wann und über welchen Weg erreicht ihr mich“. Alarme haben keinen eigenen Reiter mehr: ihre Stufe steht an der Metrik, ihr Weg unter Zustellung.</span></button>
+      <div class="mock" data-tabmock>
+        <div class="mhead"><span class="mtitle">GR221 Mallorca</span><button class="btn" type="button">Test schicken ▾</button></div>
+        <div class="tabs" role="tablist"><button class="on">Übersicht</button><button>Etappen</button><button>Wetter</button><button>Zustellung</button></div>
+        <div class="panel" data-p="0"><div class="pi"><span class="k n"></span><span>Stand, letzte Briefings, nächster Versand</span></div></div>
+        <div class="panel" data-p="1" hidden><div class="pi"><span class="k n"></span><span>Etappen und Wegpunkte (unverändert). Beim Ortsvergleich: Orte, 1 bis n.</span></div></div>
+        <div class="panel" data-p="2" hidden>
+          <div class="pi"><span class="k"></span><span><b>Profil</b> Trekking ▾: setzt Metriken, Ampel-Grenzen und Alarmstufen</span></div>
+          <div class="pi"><span class="k"></span><span><b>Metrik-Zeilen</b> mit Ampel und „Alarm ab“ (siehe Karte 3)</span></div>
+          <div class="pi"><span class="k"></span><span><b>Amtliche Warnungen &amp; Radar</b>: im Briefing und als Alarm, ein Schalter je Art</span></div>
+          <div class="pi"><span class="k n"></span><span><b>Anpassen …</b> Tagesfenster, 3-Tages-Ausblick, Stundenverlauf, Reihenfolge</span></div>
+        </div>
+        <div class="panel" data-p="3" hidden>
+          <div class="pi"><span class="k"></span><span><b>Briefings</b> morgens 07:00 · abends 18:00, an/aus</span></div>
+          <div class="pi"><span class="k"></span><span><b>Kanäle</b> E-Mail · Telegram · SMS · Premium-SMS, je Kanal: Briefing ja/nein, Alarme ja/nein</span></div>
+          <div class="pi"><span class="k"></span><span><b>Stille Stunden</b> 22:00 bis 06:00</span></div>
+          <div class="pi"><span class="k n"></span><span><b>Anpassen …</b> Inhalt je Kanal, Telegram im SMS-Kurzstil</span></div>
+        </div>
+      </div>
+
+      <button class="opt" data-v="wetter_alarme_zustellung"><span class="pick"></span><span class="t">B · Wetter · Alarme · Zustellung</span>
+        <span class="d">Wie A, aber Alarme behalten einen eigenen Reiter mit der Alarmstufe je Metrik, amtlichen Warnungen und Radar. Die Metrik steht dann wieder an zwei Stellen.</span></button>
+      <div class="mock" data-tabmock>
+        <div class="mhead"><span class="mtitle">Münsterland</span><button class="btn" type="button">Test schicken ▾</button></div>
+        <div class="tabs" role="tablist"><button class="on">Übersicht</button><button>Orte</button><button>Wetter</button><button>Alarme</button><button>Zustellung</button></div>
+        <div class="panel" data-p="0"><div class="pi"><span class="k n"></span><span>Stand, letzte Briefings, nächster Versand</span></div></div>
+        <div class="panel" data-p="1" hidden><div class="pi"><span class="k n"></span><span>Orte, 1 bis n</span></div></div>
+        <div class="panel" data-p="2" hidden>
+          <div class="pi"><span class="k"></span><span><b>Profil</b> und <b>Metrik-Zeilen</b> mit Ampel-Grenzen (ohne Alarmstufe)</span></div>
+          <div class="pi"><span class="k n"></span><span><b>Anpassen …</b> Tagesfenster, Ausblick, Stundenverlauf</span></div>
+        </div>
+        <div class="panel" data-p="3" hidden>
+          <div class="pi"><span class="k"></span><span><b>Alarm ab</b> je Metrik (dieselben Metriken wie unter Wetter)</span></div>
+          <div class="pi"><span class="k"></span><span><b>Amtliche Warnungen &amp; Radar</b></span></div>
+        </div>
+        <div class="panel" data-p="4" hidden>
+          <div class="pi"><span class="k"></span><span><b>Briefings</b>, <b>Kanäle</b> (Briefing / Alarme je Kanal), <b>Stille Stunden</b></span></div>
+        </div>
+      </div>
+
+      <button class="opt" data-v="eine_seite"><span class="pick"></span><span class="t">C · Ein Reiter „Einstellungen“</span>
+        <span class="d">Alles auf einer Seite in zwei Abschnitten: Wetter, dann Zustellung. Am wenigsten Klicks, dafür eine lange Seite.</span></button>
+      <div class="mock" data-tabmock>
+        <div class="mhead"><span class="mtitle">GR221 Mallorca</span><button class="btn" type="button">Test schicken ▾</button></div>
+        <div class="tabs" role="tablist"><button class="on">Übersicht</button><button>Etappen</button><button>Einstellungen</button></div>
+        <div class="panel" data-p="0"><div class="pi"><span class="k n"></span><span>Stand, letzte Briefings, nächster Versand</span></div></div>
+        <div class="panel" data-p="1" hidden><div class="pi"><span class="k n"></span><span>Etappen und Wegpunkte</span></div></div>
+        <div class="panel" data-p="2" hidden>
+          <div class="pi"><span class="k"></span><span><b>Wetter</b>: Profil, Metrik-Zeilen, amtliche Warnungen &amp; Radar</span></div>
+          <div class="pi"><span class="k"></span><span><b>Zustellung</b>: Briefings, Kanäle, Stille Stunden</span></div>
+        </div>
+      </div>
+    </div>
+    <div><label class="nl" for="n-reiter">Notiz</label><textarea id="n-reiter" data-note></textarea></div>
+  </article>
+</section>
+
+<section class="block">
+  <span class="eyebrow">Einzelfragen</span>
+  <div class="small-list">
+
+  <article class="decision" data-q="test_schicken">
+    <header><h3>5 · „Test schicken“: wie wählt man den Kanal?</h3><span class="status"></span></header>
+    <div class="opts">
+      <button class="opt" data-v="menue"><span class="pick"></span><span class="t">Menü am Knopf <span class="rec">Empfehlung</span></span>
+        <span class="d">Ein Klick öffnet die Liste, ein zweiter schickt. Nicht verknüpfte Kanäle sind ausgegraut und nennen den Grund.</span>
+        <div class="menu" aria-hidden="true">
+          <div>E-Mail <small>an 2 Empfänger</small></div><div>Telegram <small>verknüpft</small></div><div>SMS <small>1 Nummer</small></div><div class="muted">Premium-SMS <small>nicht eingerichtet</small></div><div><b>Alle Kanäle</b></div>
+        </div></button>
+      <button class="opt" data-v="dialog"><span class="pick"></span><span class="t">Dialog mit Häkchen</span>
+        <span class="d">Ein Fenster mit einem Häkchen je Kanal und dem Knopf „Schicken“. Mehrere Kanäle in einem Zug, aber ein Klick mehr.</span></button>
+    </div>
+    <div><label class="nl" for="n-test_schicken">Notiz</label><textarea id="n-test_schicken" data-note></textarea></div>
+  </article>
+
+  <article class="decision" data-q="ein_ort">
+    <header><h3>6 · Bericht für nur einen Ort: wie heißt das Ganze?</h3><span class="status"></span></header>
+    <p class="muted">Technische Folge: Der Orts-Vergleich-Validator verlangt heute mindestens 3 Orte und die Mail ist eine Vergleichstabelle. Bei einem Ort braucht es eine eigene Darstellung.</p>
+    <div class="opts">
+      <button class="opt" data-v="orte"><span class="pick"></span><span class="t">„Orte“ <span class="rec">Empfehlung</span></span>
+        <span class="d">Ein Ort ist ein Orts-Briefing, ab zwei Orten kommt die Vergleichstabelle dazu. Menüpunkt „Orte“ neben „Trips“.</span></button>
+      <button class="opt" data-v="ortsvergleich_bleibt"><span class="pick"></span><span class="t">„Ortsvergleich“ bleibt</span>
+        <span class="d">Name bleibt, ein einzelner Ort ist nur ein Sonderfall.</span></button>
+      <button class="opt" data-v="zwei_dinge"><span class="pick"></span><span class="t">Zwei Dinge</span>
+        <span class="d">„Orts-Briefing“ (ein Ort) und „Ortsvergleich“ (mehrere) als getrennte Einträge mit demselben Editor.</span></button>
+    </div>
+    <div><label class="nl" for="n-ein_ort">Notiz</label><textarea id="n-ein_ort" data-note></textarea></div>
+  </article>
+
+  <article class="decision" data-q="aggregation">
+    <header><h3>7 · Aggregation (Minimum / Maximum / Mittel / Summe)</h3><span class="status"></span></header>
+    <div class="opts">
+      <button class="opt" data-v="versteckt"><span class="pick"></span><span class="t">Fest je Metrik <span class="rec">Empfehlung</span></span>
+        <span class="d">Böen = Spitze, Regen = Summe, Temperatur = Tief und Hoch. Wird nicht mehr gezeigt und nicht mehr gewählt. „Gefühlte Temperatur“ erscheint nicht mehr doppelt.</span></button>
+      <button class="opt" data-v="anpassen"><span class="pick"></span><span class="t">Unter „Anpassen“</span>
+        <span class="d">Standard fest, für Experten änderbar.</span></button>
+      <button class="opt" data-v="wie_heute"><span class="pick"></span><span class="t">Wie heute</span>
+        <span class="d">Als Kennzeichen an jeder Metrik sichtbar und wählbar.</span></button>
+    </div>
+    <div><label class="nl" for="n-aggregation">Notiz</label><textarea id="n-aggregation" data-note></textarea></div>
+  </article>
+
+  <article class="decision" data-q="kanal_inhalt">
+    <header><h3>8 · Auswahl und Reihenfolge je Kanal</h3><span class="status"></span></header>
+    <p class="muted">Heute: Grundauswahl und dazu eine eigene Liste für E-Mail, Telegram und SMS, Ausblick und Stundenverlauf. Bis zu sechs Listen derselben Metriken.</p>
+    <div class="opts">
+      <button class="opt" data-v="automatisch"><span class="pick"></span><span class="t">Automatisch nach Alarmstufe <span class="rec">Empfehlung</span></span>
+        <span class="d">Eine Liste. Die Reihenfolge ergibt sich aus der Wichtigkeit, die SMS kürzt von hinten. Per Hand umsortieren und je Kanal abwählen geht unter „Anpassen“.</span></button>
+      <button class="opt" data-v="eine_liste"><span class="pick"></span><span class="t">Eine Liste, per Hand sortiert</span>
+        <span class="d">Eine Reihenfolge für alle Kanäle, keine Abwahl je Kanal.</span></button>
+      <button class="opt" data-v="wie_heute"><span class="pick"></span><span class="t">Wie heute</span>
+        <span class="d">Eigene Liste je Kanal, sichtbar im Hauptbereich.</span></button>
+    </div>
+    <div><label class="nl" for="n-kanal_inhalt">Notiz</label><textarea id="n-kanal_inhalt" data-note></textarea></div>
+  </article>
+
+  <article class="decision" data-q="ohne_ampel">
+    <header><h3>9 · Ampel für alle Metriken?</h3><span class="status"></span></header>
+    <p class="muted">Für die meisten fehlenden Metriken lässt sich eine Ampel festlegen, sobald sie aus dem Profil kommt:</p>
+    <div class="tbl-wrap"><table>
+      <thead><tr><th>Metrik</th><th>Ampel möglich?</th><th>Wie</th></tr></thead>
+      <tbody>
+        <tr><td>Sonnenstunden</td><td>ja</td><td>umgekehrt: weniger ist schlechter (z.B. rot unter 1 h)</td></tr>
+        <tr><td>Bewölkung, tiefe Wolken</td><td>ja</td><td>mehr ist schlechter (Gipfel in Wolken)</td></tr>
+        <tr><td>Taupunkt</td><td>ja</td><td>Schwüle-Skala (gelb ab 16 °C, rot ab 21 °C)</td></tr>
+        <tr><td>Luftfeuchte</td><td>bedingt</td><td>nur zusammen mit Temperatur sinnvoll, sonst über Taupunkt</td></tr>
+        <tr><td>Nullgradgrenze, Schneefallgrenze</td><td>ja, relativ</td><td>Abstand zur höchsten Stelle der Etappe bzw. zur Höhe des Orts</td></tr>
+        <tr><td>Schneehöhe</td><td>ja, je Profil</td><td>Skitour: wenig ist schlecht · Wandern: viel ist schlecht</td></tr>
+        <tr><td>Luftdruck, Windrichtung, Niederschlagsart, mittelhohe und hohe Wolken</td><td>nein</td><td>nur Anzeige</td></tr>
+      </tbody>
+    </table></div>
+    <div class="opts">
+      <button class="opt" data-v="ampel_nachruesten"><span class="pick"></span><span class="t">Ampel überall, wo sinnvoll <span class="rec">Empfehlung</span></span>
+        <span class="d">Alle Metriken der Tabelle mit „ja“ bekommen eine Ampel aus dem Profil, auch die relativen und die umgekehrten. Was übrig bleibt, ist reine Anzeige. Damit ersetzt die Ampel den Wertebereich vollständig.</span></button>
+      <button class="opt" data-v="nur_anzeige"><span class="pick"></span><span class="t">Bei den 10 bleiben</span>
+        <span class="d">Die übrigen Metriken sind nur Anzeige. Nullgradgrenze, Schneefallgrenze und Schneehöhe behalten ihren Δ-Alarm.</span></button>
+    </div>
+    <div><label class="nl" for="n-ohne_ampel">Notiz</label><textarea id="n-ohne_ampel" data-note></textarea></div>
+  </article>
+
+  <article class="decision" data-q="toleranz">
+    <header><h3>10 · Ein Toleranz-Regler für alle Grenzen?</h3><span class="status"></span></header>
+    <div class="opts">
+      <button class="opt" data-v="ja"><span class="pick"></span><span class="t">Ja: vorsichtig · normal · erfahren</span>
+        <span class="d">Verschiebt alle Ampel-Grenzen gemeinsam (z.B. Böen rot ab 50 / 60 / 75). Einzelne Grenzen bleiben änderbar.</span></button>
+      <button class="opt" data-v="nein"><span class="pick"></span><span class="t">Nein, Profil reicht <span class="rec">Empfehlung</span></span>
+        <span class="d">Das Profil setzt die Grenzen, Feinheiten macht man je Metrik. Ein Regler weniger.</span></button>
+    </div>
+    <div><label class="nl" for="n-toleranz">Notiz</label><textarea id="n-toleranz" data-note></textarea></div>
+  </article>
+
+  <article class="decision" data-q="cooldown">
+    <header><h3>11 · Cooldown (Mindestabstand zwischen zwei Alarmen)</h3><span class="status"></span></header>
+    <div class="opts">
+      <button class="opt" data-v="system"><span class="pick"></span><span class="t">Systemwert, nicht sichtbar <span class="rec">Empfehlung</span></span>
+        <span class="d">Mit dem Stufenmodell meldet ein zappelnder Wert ohnehin nur beim Stufenwechsel. Kaum jemand stellt das bewusst ein.</span></button>
+      <button class="opt" data-v="anpassen"><span class="pick"></span><span class="t">Unter Zustellung → Anpassen</span>
+        <span class="d">Bleibt einstellbar, aber nicht im Blickfeld.</span></button>
+    </div>
+    <div><label class="nl" for="n-cooldown">Notiz</label><textarea id="n-cooldown" data-note></textarea></div>
+  </article>
+
+  <article class="decision" data-q="aktivitaet">
+    <header><h3>12 · Aktivität: heute dreimal, verschieden benannt</h3><span class="status"></span></header>
+    <p class="muted">Heute gibt es drei Auswahlen mit eigenen Listen, die im Hintergrund aufeinander abgebildet werden:</p>
+    <div class="tbl-wrap"><table>
+      <thead><tr><th>Wo</th><th>Auswahl</th><th>Wirkt auf</th></tr></thead>
+      <tbody>
+        <tr><td>Trip, Kopfbereich</td><td>Trekking · Skitour · Hochtour · Klettersteig · MTB · Fahrrad 15/20/25 km/h</td><td>Gehzeit bzw. Tempo, dazu die Vorbelegung der Metrik-Vorlage</td></tr>
+        <tr><td>Wetter-Metriken, „01 Profil“</td><td>Alpen-Trekking · Wandern · Skitouren · Wintersport · Radtour · Wassersport · Allgemein</td><td>welche Metriken vorgewählt sind</td></tr>
+        <tr><td>Ortsvergleich, Kopfbereich</td><td>Allgemein · Wintersport · Wandern · Sommer-Trekking</td><td>Profil-Label des Vergleichs</td></tr>
+      </tbody>
+    </table></div>
+    <div class="opts">
+      <button class="opt" data-v="eine_auswahl"><span class="pick"></span><span class="t">Eine Aktivität im Kopf, Tempo getrennt <span class="rec">Empfehlung</span></span>
+        <span class="d">Eine Liste für Trip und Orte. Sie setzt Metriken, Ampel-Grenzen und Alarmstufen. Das Tempo ist beim Trip ein eigenes Feld bei den Etappen (z.B. „4 km/h“ oder „20 km/h“), weil es nur die Gehzeit betrifft. „Fahrrad 15/20/25“ wird damit zu „Rad“ plus Tempo.</span></button>
+      <button class="opt" data-v="nur_wetter"><span class="pick"></span><span class="t">Nur im Reiter Wetter</span>
+        <span class="d">Kein Profil im Kopfbereich. Die Aktivität steht oben im Reiter Wetter, beim Trip steht das Tempo bei den Etappen.</span></button>
+      <button class="opt" data-v="wie_heute"><span class="pick"></span><span class="t">Getrennt lassen</span>
+        <span class="d">Aktivität (Tempo) im Kopf, Metrik-Vorlage im Wetter-Reiter, nur die Namen werden vereinheitlicht.</span></button>
+    </div>
+    <div><label class="nl" for="n-aktivitaet">Notiz</label><textarea id="n-aktivitaet" data-note></textarea></div>
+  </article>
+
+  </div>
+</section>
+
+<div class="savebar">
+  <span class="progress" id="progress">0 von 12 entschieden</span>
+  <span class="status" id="storeState">Speicher wird verbunden …</span>
+</div>
+
+</div>
+
+<script>
+(function(){
+  const cards=[...document.querySelectorAll('.decision')];
+  const state={};
+  let db=null;
+  const storeState=document.getElementById('storeState');
+  const progress=document.getElementById('progress');
+
+  function render(){
+    let n=0;
+    cards.forEach(c=>{
+      const q=c.dataset.q, s=state[q]||{};
+      c.querySelectorAll('.opt').forEach(b=>b.setAttribute('aria-pressed', String(b.dataset.v===s.wahl)));
+      const ta=c.querySelector('[data-note]');
+      if(ta && document.activeElement!==ta && typeof s.notiz==='string') ta.value=s.notiz;
+      if(s.wahl) n++;
+    });
+    progress.textContent=n+' von '+cards.length+' entschieden';
+  }
+  function mark(card,text,ok){const st=card.querySelector('.status');st.textContent=text;st.classList.toggle('saved',!!ok);}
+
+  const timers={};
+  async function save(q){
+    const card=cards.find(c=>c.dataset.q===q);
+    if(!db){mark(card,'nur in dieser Ansicht',false);return;}
+    mark(card,'speichert …',false);
+    try{
+      await db.doc('entscheidungen/'+q).set({wahl:state[q].wahl||null,notiz:state[q].notiz||'',aktualisiert:new Date().toISOString()});
+      mark(card,'gespeichert',true);
+    }catch(e){mark(card,'nicht gespeichert: '+((e&&e.code)||'Fehler'),false);}
+  }
+
+  cards.forEach(c=>{
+    const q=c.dataset.q;
+    c.querySelectorAll('.opt').forEach(b=>{
+      b.type='button';
+      b.addEventListener('click',()=>{state[q]={...(state[q]||{}),wahl:b.dataset.v};render();save(q);});
+    });
+    const ta=c.querySelector('[data-note]');
+    if(ta) ta.addEventListener('input',()=>{
+      state[q]={...(state[q]||{}),notiz:ta.value};
+      clearTimeout(timers[q]);timers[q]=setTimeout(()=>save(q),800);
+    });
+  });
+
+  // Mockup-Interaktion: Segmented Controls und Reiter
+  document.querySelectorAll('[data-seg]').forEach(seg=>{
+    seg.querySelectorAll('button').forEach(b=>{b.type='button';b.addEventListener('click',e=>{e.stopPropagation();seg.querySelectorAll('button').forEach(x=>x.classList.toggle('on',x===b));});});
+  });
+  document.querySelectorAll('[data-tabmock]').forEach(m=>{
+    const tabs=[...m.querySelectorAll('.tabs button')], panels=[...m.querySelectorAll('.panel')];
+    tabs.forEach((t,i)=>{t.type='button';t.addEventListener('click',()=>{
+      tabs.forEach(x=>x.classList.toggle('on',x===t));
+      panels.forEach(p=>p.hidden=(Number(p.dataset.p)!==i));
+    });});
+  });
+
+  render();
+
+  // Speicher verbinden
+  const timeout=setTimeout(()=>{if(!db) storeState.textContent='Speicher nicht erreichbar, Auswahl gilt nur in dieser Ansicht';},10000);
+  (async()=>{
+    try{
+      if(!window.claude||!window.claude.use){storeState.textContent='Speicher nicht verfügbar, Auswahl gilt nur in dieser Ansicht';clearTimeout(timeout);return;}
+      const d=await window.claude.use('db');
+      clearTimeout(timeout);
+      if(!d){storeState.textContent='Nicht angemeldet: Auswahl wird nicht gespeichert';return;}
+      db=d;
+      storeState.textContent='Auswahl wird gespeichert';
+      storeState.classList.add('saved');
+      db.collection('entscheidungen').onSnapshot(snap=>{
+        snap.docs.forEach(doc=>{
+          const v=doc.data()||{};
+          const local=state[doc.id]||{};
+          state[doc.id]={wahl:typeof v.wahl==='string'?v.wahl:local.wahl,notiz:typeof v.notiz==='string'?v.notiz:local.notiz};
+          const card=cards.find(c=>c.dataset.q===doc.id);
+          if(card && v.wahl) mark(card,'gespeichert',true);
+        });
+        render();
+      },err=>{storeState.textContent='Speicher-Fehler: '+((err&&err.code)||'unbekannt');storeState.classList.remove('saved');});
+    }catch(e){clearTimeout(timeout);storeState.textContent='Speicher nicht verfügbar';}
+  })();
+})();
+</script>
+
+</body></html>
