@@ -226,7 +226,7 @@ def test_write_verdict_rejects_object_instead_of_list(tmp_path):
     out_path = tmp_path / "e2e_verified.json"
 
     rc, out, err = _run_gate_in(repo, [
-        "--write-verdict", "VERIFIED: sollte abgelehnt werden",
+        "--write-verdict", "VERIFIED: sollte abgelehnt werden", "--langs", "de,en",
         "--findings-json", str(findings_path),
         "--e2e-path", str(out_path),
         "--scope=backend",
@@ -268,7 +268,7 @@ def test_write_verdict_rejects_list_with_bare_string_entries(tmp_path):
     out_path = tmp_path / "e2e_verified.json"
 
     rc, out, err = _run_gate_in(repo, [
-        "--write-verdict", "VERIFIED: sollte abgelehnt werden",
+        "--write-verdict", "VERIFIED: sollte abgelehnt werden", "--langs", "de,en",
         "--findings-json", str(findings_path),
         "--e2e-path", str(out_path),
         "--scope=backend",
@@ -299,6 +299,7 @@ def test_write_verdict_merge_drops_non_dict_legacy_entries(tmp_path):
     e2e_path.write_text(json.dumps({
         "verified_commit": head,
         "staging_verdict": "VERIFIED: Altlast (reale Fehlform #1653/#1677)",
+        "langs": ["de", "en"],
         "findings": list(REAL_FEHLFORM),
         "verified_at": datetime.now(timezone.utc).isoformat(),
         "scope": "backend",
@@ -315,7 +316,7 @@ def test_write_verdict_merge_drops_non_dict_legacy_entries(tmp_path):
     findings_path.write_text(json.dumps([clean_finding]))
 
     rc, out, err = _run_gate_in(repo, [
-        "--write-verdict", "VERIFIED: sauberer Folge-Lauf",
+        "--write-verdict", "VERIFIED: sauberer Folge-Lauf", "--langs", "de,en",
         "--findings-json", str(findings_path),
         "--e2e-path", str(e2e_path),
         "--scope=backend",
@@ -362,7 +363,7 @@ def test_write_verdict_merge_survives_non_dict_top_level_existing(tmp_path):
     findings_path.write_text(json.dumps([clean_finding]))
 
     rc, out, err = _run_gate_in(repo, [
-        "--write-verdict", "VERIFIED: ueberschrieben nach kaputtem Bestand",
+        "--write-verdict", "VERIFIED: ueberschrieben nach kaputtem Bestand", "--langs", "de,en",
         "--findings-json", str(findings_path),
         "--e2e-path", str(e2e_path),
         "--scope=backend",
@@ -443,6 +444,7 @@ def test_prod_selftest_survives_mixed_findings_without_crash(tmp_path, monkeypat
     e2e_path.write_text(json.dumps({
         "verified_commit": head,
         "staging_verdict": "VERIFIED: gemischte Findings",
+        "langs": ["de", "en"],
         "findings": mixed_findings,
         "verified_at": datetime.now(timezone.utc).isoformat(),
         "scope": "backend",
@@ -478,6 +480,7 @@ def test_prod_selftest_survives_non_list_findings_field(tmp_path, monkeypatch):
     e2e_path.write_text(json.dumps({
         "verified_commit": head,
         "staging_verdict": "VERIFIED: findings ist ein Objekt statt einer Liste",
+        "langs": ["de", "en"],
         "findings": {"issue": "#1653", "commit": "deadbeef"},
         "verified_at": datetime.now(timezone.utc).isoformat(),
         "scope": "backend",
@@ -518,6 +521,7 @@ def test_prod_selftest_all_unusable_findings_is_not_pass(tmp_path, monkeypatch):
     e2e_path.write_text(json.dumps({
         "verified_commit": head,
         "staging_verdict": "VERIFIED: reale Fehlform #1653/#1677",
+        "langs": ["de", "en"],
         "findings": list(REAL_FEHLFORM),
         "verified_at": datetime.now(timezone.utc).isoformat(),
         "scope": "backend",
@@ -573,6 +577,7 @@ def test_prod_selftest_falls_back_to_ancestor_on_non_dict_exact_match(tmp_path, 
     (att_dir / f"{parent_sha}.json").write_text(json.dumps({
         "verified_commit": parent_sha,
         "staging_verdict": "VERIFIED: gueltiger Vorgaenger",
+        "langs": ["de", "en"],
         "findings": [],
         "verified_at": datetime.now(timezone.utc).isoformat(),
         "scope": "backend",

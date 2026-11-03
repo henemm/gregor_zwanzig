@@ -55,6 +55,7 @@ Bei einer Blockade **zuerst hier** nachsehen, nicht in der `.env` des Arbeitsord
 | nginx-Schranke | `GZ_VALIDATOR_*` | `.claude/validator.env` |
 | App-Anmeldung (Staging-Ziel) | `GZ_AUTH_*` | `/home/hem/gregor_zwanzig_staging/.env` |
 | App-Anmeldung (lokal) | `GZ_AUTH_*` | lokale `.env` |
+| zweiter Staging-Nutzer (en) | `GZ_E2E_EN_*` | Staging-`.env` (`scripts/staging_e2e_user_en.py`, #2681) |
 
 Die Staging-Instanz hat **eigene** Anmeldedaten — gleicher Benutzername, **anderes Passwort**;
 gemessen an `POST /api/auth/login`: Arbeitsordner-`.env` → **401**, Staging-`.env` → **200**. Genau
@@ -79,6 +80,13 @@ der bestanden **und** frisch ist **und** dessen Zuwachs reine Doku ist. Ein ausd
 
 Meldet ein Lauf `verified_commit (<fremder Stand>) != expected-commit`, ist das der **alte** Wortlaut
 — dann läuft dort noch Code vor #1382.
+
+**Feld `langs` (seit #2681):** jeder Nachweis außer Scope `docs-only` muss
+`"langs": ["de","en"]` tragen — `/e2e-verify` lief mit beiden Staging-Nutzern. `--write-verdict`
+ohne `--langs de,en` schreibt kein Artefakt (Exit 1); `--check` blockt einen exakten Treffer und
+einen Vorgänger-Nachweis ohne das Feld („Nachweis ohne zweisprachigen Lauf"). Ältere Nachweise
+haben das Feld nicht und blocken bis zum nächsten `/e2e-verify`. `prod_selftest.py` bleibt deutsch
+und braucht keine `GZ_E2E_EN_*`.
 
 ## Renderer-Commit-Gate (#811)
 
@@ -523,6 +531,11 @@ Marken-Schriftzüge (`lib/brand/*`, „gregor"/„zwanzig") meldet der Scanner w
 (#2661) führt sie als Katalogwerte `bausteine.marke.*` (in beiden Sprachen gleich).
 **Seit F12 (#2661, 2026-11-02) ist die Allowlist leer (`[]`)**; `hardcode_allowlist_leer.test.ts`
 hält das fest — jeder neue hartkodierte Nutzertext ist sofort ein Treffer ohne Eintrag.
+Literale in Markup-Ausdrücken (`{x ? 'a' : 'b'}`, beschriftende Attribute) prüft seit F12
+`scanneAusdruecke`; die offene Liste `AUSDRUCK_OFFEN` ist seit F13 (#2764) leer. Sprachneutrale
+Literale (Protokoll-Token, Kennung, Eigenname, Dateiformat) tragen am Fundort den Marker
+`{/* i18n-neutral: <Begründung, ≥ 8 Zeichen> */ 'TH:H'}`; ein Literal mit Umlaut oder Signalwort
+bleibt trotz Marker ein Treffer.
 
 `katalog_schluessel_haben_verwender.test.ts` verlangt für jeden Schlüssel der vereinigten
 `de`-Karte einen Verwender in `frontend/src/` (ohne `__tests__/`, `*.test.ts`, `*.spec.ts`):

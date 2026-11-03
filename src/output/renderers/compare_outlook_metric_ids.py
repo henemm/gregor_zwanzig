@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import logging
 
+from i18n import Lang
 from output.metric_format import NO_VALUE
 
 logger = logging.getLogger(__name__)
@@ -436,7 +437,9 @@ def _merge_min_max_pairs(columns: list[dict]) -> list[dict]:
 _FRIENDLY_CLOUD_IDS = ("cloud_total", "cloud_low", "cloud_mid", "cloud_high")
 
 
-def _friendly_outlook_text(metric_id: object, number: float) -> str | None:
+def _friendly_outlook_text(
+    metric_id: object, number: float, lang: Lang = "de",
+) -> str | None:
     """Wort-/Symbolform einer Ausblick-Groesse oder ``None`` (Issue #2049).
 
     Wiederverwendung statt Parallel-Logik (AC-10): Himmelsrichtung, Wolken-
@@ -449,6 +452,9 @@ def _friendly_outlook_text(metric_id: object, number: float) -> str | None:
     Die Schluesselmenge dieser Verzweigung ist ``OUTLOOK_FRIENDLY_CAPABLE``
     (app.metric_catalog) -- dieselbe Liste, an der das Frontend die
     Sichtbarkeit des Umschalters festmacht (AC-4).
+
+    ``lang`` (Issue #2750): die vier Wortskalen in Nutzersprache; ohne
+    ``lang`` deutsch. Himmelsrichtung und Wolkensymbol bleiben unberuehrt.
     """
     from output.metric_format import cloud_emoji
     from services.weather_metrics import (
@@ -462,17 +468,19 @@ def _friendly_outlook_text(metric_id: object, number: float) -> str | None:
     if metric_id in _FRIENDLY_CLOUD_IDS:
         return cloud_emoji(number)
     if metric_id in ("wind", "gust"):
-        return format_wind_strength(number)
+        return format_wind_strength(number, lang=lang)
     if metric_id == "precipitation":
-        return format_precip_daily_sum(number)
+        return format_precip_daily_sum(number, lang=lang)
     if metric_id == "rain_probability":
-        return format_rain_probability_scale(number)
+        return format_rain_probability_scale(number, lang=lang)
     if metric_id == "sunshine":
-        return format_sunshine_scale(number)
+        return format_sunshine_scale(number, lang=lang)
     return None
 
 
-def format_outlook_value(value: object, column: dict) -> str:
+def format_outlook_value(
+    value: object, column: dict, *, lang: Lang = "de",
+) -> str:
     """Zellentext einer Ausblick-Spalte.
 
     Nicht-numerische Groessen nutzen DIESELBEN deutschen Labels wie die
@@ -487,6 +495,9 @@ def format_outlook_value(value: object, column: dict) -> str:
     Issue #1680 S5a (AC-11b): ``"signals"`` folgt exakt derselben Bauart --
     dritter Parameter von ``_fmt_thunder``, additiv, ohne den Schluessel
     zeichengleich.
+
+    ``lang`` (Issue #2750): Wortskalen, Gewitter- und Niederschlagsart-Wort
+    in Nutzersprache; ohne ``lang`` deutsch (byte-gleich zum Bestand).
     """
     from output.renderers.email.compare_html import _fmt_precip_type, _fmt_thunder
 
@@ -494,9 +505,10 @@ def format_outlook_value(value: object, column: dict) -> str:
         return NO_VALUE
     kind = column.get("kind")
     if kind == "ordinal":
-        return _fmt_thunder(value, column.get("hail"), column.get("signals"))
+        return _fmt_thunder(
+            value, column.get("hail"), column.get("signals"), lang=lang)
     if kind == "enum":
-        return _fmt_precip_type(value)
+        return _fmt_precip_type(value, lang=lang)
     try:
         number = float(value)
     except (TypeError, ValueError):
@@ -507,7 +519,7 @@ def format_outlook_value(value: object, column: dict) -> str:
     # Quelltext (AC-6). Die Ampel traegt die HTML-Zelle ohnehin als
     # Hintergrundtoenung (`_metric_column_bg`, unabhaengig von diesem Flag).
     if column.get("friendly") is True:
-        friendly = _friendly_outlook_text(column.get("metric_id"), number)
+        friendly = _friendly_outlook_text(column.get("metric_id"), number, lang)
         if friendly is not None:
             return friendly
         logger.warning(

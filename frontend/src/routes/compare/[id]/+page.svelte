@@ -349,7 +349,7 @@
      (trips/[id]/+page.svelte). Ohne ihn traegt das Dokument nur den
      Platzhalter aus app.html, und die Offline-Uebersicht listet jeden
      Ortsvergleich als „Gregor Zwanzig". -->
-<svelte:head><title>{`${currentPreset.name} — Gregor Zwanzig`}</title></svelte:head>
+<svelte:head><title>{`${currentPreset.name} — ${$t('bausteine.marke.name')}`}</title></svelte:head>
 
 <!-- Hub-Kopf (#491, #493, #582; #2284 S1): EIN Markup für Desktop und Mobil.
      Seiten-Chrome (Breadcrumb Desktop, BackLink Mobil, Aktionen) bleibt hier;

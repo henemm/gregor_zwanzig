@@ -37,6 +37,11 @@ Usage:
     uv run python3 scripts/send_gate_test_mails.py --only official
     uv run python3 scripts/send_gate_test_mails.py --only briefing
     uv run python3 scripts/send_gate_test_mails.py --only compare
+    uv run python3 scripts/send_gate_test_mails.py --lang en --only radar
+
+--lang en (Issue #2681): Inhalt, Betreff und X-GZ-Lang englisch, Empfaenger die
+Subadresse gregor-test+en@henemm.com (Nutzer ``en`` der zweisprachigen
+/e2e-verify-Laeufe). Default ``de`` ist byte-gleich zum bisherigen Verhalten.
 """
 from __future__ import annotations
 
@@ -62,6 +67,8 @@ from app.trip import Stage, Trip, Waypoint  # noqa: E402
 from app.user import ComparisonResult, LocationResult, SavedLocation  # noqa: E402
 from output.channels.email import EmailOutput  # noqa: E402
 from output.renderers.alert.model import AlertMessage, OnsetEvent  # noqa: E402
+from output.renderers.alert.render import render_email as render_alert_email  # noqa: E402
+from output.renderers.alert.render import render_subject as render_alert_subject  # noqa: E402
 from output.renderers.email import render_email  # noqa: E402
 from output.renderers.email.helpers import dp_to_row  # noqa: E402
 from output.renderers.comparison import render_compare_email  # noqa: E402
@@ -75,7 +82,12 @@ VIENNA = ZoneInfo("Europe/Vienna")
 TEST_RECIPIENT = "gregor-test@henemm.com"
 
 
-def _test_settings() -> Settings | None:
+def _empfaenger(lang: str) -> str:
+    """Nutzer ``de`` = Basispostfach, Nutzer ``en`` = Subadresse ``+en`` (#2681)."""
+    return TEST_RECIPIENT.replace("@", "+en@", 1) if lang == "en" else TEST_RECIPIENT
+
+
+def _test_settings(lang: str = "de") -> Settings | None:
     """Vorbild tests/tdd/test_952_onset_alert_e2e.py::_test_settings.
 
     Erzwingt Stalwart-Testpostfach (for_testing) + festen Test-Empfaenger,
@@ -84,14 +96,14 @@ def _test_settings() -> Settings | None:
     settings = Settings().for_testing()
     if not settings.can_send_email():
         return None
-    return settings.model_copy(update={"mail_to": TEST_RECIPIENT})
+    return settings.model_copy(update={"mail_to": _empfaenger(lang)})
 
 
 # ---------------------------------------------------------------------------
 # (a) Standalone amtliche Warnung -- ueber den echten Versandpfad
 #     NotificationService.send_official_alert() (#1233 Slice B Redesign).
 # ---------------------------------------------------------------------------
-def send_official_alert_mail(settings: Settings, token: str) -> bool:
+def send_official_alert_mail(settings: Settings, token: str, lang: str = "de") -> bool:
     stage = Stage(
         id="s1", name="Tag 1", date=date(2026, 7, 13),
         waypoints=[Waypoint(id="w1", name="Gate-Test-Start", lat=46.62, lon=13.68,
@@ -108,7 +120,9 @@ def send_official_alert_mail(settings: Settings, token: str) -> bool:
     )
     notices = [(alert, ["1"])]
 
-    ns = NotificationService(settings, f"gate-1233-official-{token}")
+    # #2681: Sprache direkt am Dienst (NotificationService(lang=...), #2671)
+    # statt eines temporaeren Sprachkontos -- derselbe Versandpfad.
+    ns = NotificationService(settings, f"gate-1233-official-{token}", lang=lang)
     result = ns.send_official_alert(
         trip=trip, notices=notices, effective_channels={"email"},
     )
@@ -165,7 +179,7 @@ def _briefing_dps() -> list[ForecastDataPoint]:
     ]
 
 
-def build_briefing_mail(token: str) -> tuple[str, str, str]:
+def build_briefing_mail(token: str, lang: str = "de") -> tuple[str, str, str]:
     """Returns (subject, html, plain)."""
     dps = _briefing_dps()
     seg = TripSegment(
@@ -205,7 +219,7 @@ def build_briefing_mail(token: str) -> tuple[str, str, str]:
     html, plain = render_email(
         tl, segments=[seg_data], seg_tables=seg_tables,
         display_config=dc, tz=VIENNA, friendly_keys=set(),
-        email_format="full",
+        email_format="full", lang=lang,
         compact_summary="Wechselhaft mit einzelnen Gewittern am Nachmittag.",
         stage_name="Etappe 1: Gate-Test-Strecke",
         stage_stats={"distance_km": 8.0, "ascent_m": 600.0, "descent_m": 0.0,
@@ -216,11 +230,11 @@ def build_briefing_mail(token: str) -> tuple[str, str, str]:
     return subject, html, plain
 
 
-def send_briefing_mail(settings: Settings, token: str) -> bool:
-    subject, html, plain = build_briefing_mail(token)
+def send_briefing_mail(settings: Settings, token: str, lang: str = "de") -> bool:
+    subject, html, plain = build_briefing_mail(token, lang)
     EmailOutput(settings).send(
         subject=subject, body=html, plain_text_body=plain,
-        mail_type="trip-briefing", mail_format="full",
+        mail_type="trip-briefing", mail_format="full", lang=lang,
     )
     return True
 
@@ -262,7 +276,7 @@ def _compare_hourly_data(base_temp: float) -> list[ForecastDataPoint]:
     ]
 
 
-def build_compare_mail(token: str) -> tuple[str, str, str]:
+def build_compare_mail(token: str, lang: str = "de") -> tuple[str, str, str]:
     """Returns (subject, html, plain)."""
     loc1 = SavedLocation(id=f"gate-loc-1-{token}", name="Gatehausen Nord", lat=47.0, lon=11.0,
                           elevation_m=1200)
@@ -302,17 +316,17 @@ def build_compare_mail(token: str) -> tuple[str, str, str]:
     )
     html, plain = render_compare_email(
         result, profile=ActivityProfile.ALLGEMEIN,
-        preset_name=f"GATE1233 Compare {token}",
+        preset_name=f"GATE1233 Compare {token}", lang=lang,
     )
     subject = f"[GATE1233 {token}] Orts-Vergleich"
     return subject, html, plain
 
 
-def send_compare_mail(settings: Settings, token: str) -> bool:
-    subject, html, plain = build_compare_mail(token)
+def send_compare_mail(settings: Settings, token: str, lang: str = "de") -> bool:
+    subject, html, plain = build_compare_mail(token, lang)
     EmailOutput(settings).send(
         subject=subject, body=html, plain_text_body=plain,
-        mail_type="compare", mail_format="full",
+        mail_type="compare", mail_format="full", lang=lang,
     )
     return True
 
@@ -355,21 +369,33 @@ def build_radar_alert_message(token: str) -> AlertMessage:
     )
 
 
-def send_radar_alert_mail(settings: Settings, token: str) -> bool:
+def send_radar_alert_mail(settings: Settings, token: str, lang: str = "de") -> bool:
     msg = build_radar_alert_message(token)
-    send_radar_alert_email(settings, msg)
+    if lang == "de":
+        send_radar_alert_email(settings, msg)
+        return True
+    # #2681: send_radar_alert_email kennt keine Sprache; derselbe Renderer
+    # (render_subject/render_email) mit lang, Versand ueber EmailOutput.
+    html, plain = render_alert_email(msg, lang=lang)
+    EmailOutput(settings).send(
+        subject=render_alert_subject(msg, lang=lang), body=html,
+        plain_text_body=plain, mail_type="radar-alert", lang=lang,
+    )
     return True
 
 
-def main() -> int:
+def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
         "--only", choices=["official", "briefing", "compare", "radar"], default=None,
         help="Nur einen der Mail-Pfade senden (default: official/briefing/compare).",
     )
-    args = parser.parse_args()
+    parser.add_argument("--lang", choices=["de", "en"], default="de",
+                        help="Sprache der Mails; en an die Subadresse +en (#2681).")
+    args = parser.parse_args(argv)
+    lang = args.lang
 
-    settings = _test_settings()
+    settings = _test_settings(lang)
     if settings is None:
         print("SMTP-Testpfad nicht konfiguriert (GZ_TEST_SMTP_USER/PASS fehlen) "
               "-- kann nicht senden.", file=sys.stderr)
@@ -382,23 +408,23 @@ def main() -> int:
 
     ok = True
     if "official" in targets:
-        sent = send_official_alert_mail(settings, token)
+        sent = send_official_alert_mail(settings, token, lang)
         print(f"(a) Standalone amtliche Warnung gesendet: {sent}")
         ok = ok and sent
     if "briefing" in targets:
-        sent = send_briefing_mail(settings, token)
+        sent = send_briefing_mail(settings, token, lang)
         print(f"(b) Trip-Briefing (full) + WarnBlock gesendet: {sent}")
         ok = ok and sent
     if "compare" in targets:
-        sent = send_compare_mail(settings, token)
+        sent = send_compare_mail(settings, token, lang)
         print(f"(c) Orts-Vergleich + WarnBlock gesendet: {sent}")
         ok = ok and sent
     if "radar" in targets:
-        sent = send_radar_alert_mail(settings, token)
+        sent = send_radar_alert_mail(settings, token, lang)
         print(f"(d) Radar-Onset-Alarm gesendet: {sent}")
         ok = ok and sent
 
-    print(f"An: {TEST_RECIPIENT} -- Token: {token}")
+    print(f"An: {_empfaenger(lang)} -- Sprache: {lang} -- Token: {token}")
     return 0 if ok else 1
 
 

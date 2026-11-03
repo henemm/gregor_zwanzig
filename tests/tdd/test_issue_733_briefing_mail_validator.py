@@ -83,6 +83,7 @@ def _build_full(html: str = _VALID_FULL_HTML, plain: str = "GR20 Evening Report\
     msg["To"] = "gregor-test@henemm.com"
     msg["X-GZ-Mail-Type"] = "trip-briefing"
     msg["X-GZ-Format"] = "full"
+    msg["X-GZ-Lang"] = "de"  # Pflicht seit A2 #2681
     msg.set_content(plain)
     if with_html_part:
         msg.add_alternative(html, subtype="html")
@@ -97,6 +98,7 @@ def _build_compact(text: str = _VALID_COMPACT_TEXT,
     msg["To"] = "gregor-test@henemm.com"
     msg["X-GZ-Mail-Type"] = "trip-briefing"
     msg["X-GZ-Format"] = "compact"
+    msg["X-GZ-Lang"] = "de"  # Pflicht seit A2 #2681
     msg.set_content(text)
     if multipart:
         msg.add_alternative("<p>" + text + "</p>", subtype="html")
@@ -110,6 +112,7 @@ def _build_compare() -> email.message.Message:
     msg["To"] = "gregor-test@henemm.com"
     msg["X-GZ-Mail-Type"] = "compare"
     msg["X-GZ-Format"] = "full"
+    msg["X-GZ-Lang"] = "de"  # Pflicht seit A2 #2681
     msg.set_content("Vergleich plain")
     msg.add_alternative("<table>Vergleich</table>", subtype="html")
     return _wire(msg)

@@ -3077,6 +3077,9 @@ class TripReportSchedulerService:
                     # Zeitplaner darf dieses Renderer-Modul nicht selbst
                     # importieren (test_scheduler_has_no_output_imports).
                     segments=seg_weather,
+                    # Issue #2750: Ausblick-Zellen (Wortskalen) in
+                    # Nutzersprache.
+                    lang=self._lang,
                 )
                 # Issue #1275: explicit calendar date so the thunder forecast
                 # can reuse this row (matched by date, gap-safe) instead of

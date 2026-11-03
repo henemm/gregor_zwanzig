@@ -1054,7 +1054,7 @@
 					<!-- Counter -->
 					<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
 						<div class="mono" style="font-size: 11px; color: var(--g-ink-3); font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase;">{$tn('trip.anlegen.etappen_anzahl', stages.length)}</div>
-						<span class="mono" style="font-size: 11px; color: {etDone ? 'var(--g-good)' : 'var(--g-ink-4)'};">{`${gpxCount}/${stages.length} GPX`}</span>
+						<span class="mono" style="font-size: 11px; color: {etDone ? 'var(--g-good)' : 'var(--g-ink-4)'};">{/* i18n-neutral: Dateiformat-Name */ `${gpxCount}/${stages.length} GPX`}</span>
 					</div>
 
 					<!-- Etappen-Karten -->

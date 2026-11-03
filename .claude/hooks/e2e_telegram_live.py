@@ -68,7 +68,8 @@ def _scope_touches_telegram(changed_files: list[str] | None = None,
         except Exception:
             changed_files = []
 
-    telegram_patterns = ("telegram", "inbound_telegram", "trip_command_processor")
+    # #2681: Telegram-Texte kommen aus den Katalogen (src/i18n/).
+    telegram_patterns = ("telegram", "inbound_telegram", "trip_command_processor", "src/i18n/")
     for f in changed_files:
         if _is_neutral_path(f):
             continue

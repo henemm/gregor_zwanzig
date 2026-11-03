@@ -123,7 +123,7 @@ class Sandbox:
         )
         proc = subprocess.run(
             ["python3", str(self.session / ".claude" / "hooks" / "staging_gate.py"),
-             "--write-verdict", "VERIFIED: Test-Nachweis", "--findings-json", str(findings)],
+             "--write-verdict", "VERIFIED: Test-Nachweis", "--langs", "de,en", "--findings-json", str(findings)],
             capture_output=True, text=True, env=_clean_env(), cwd=str(self.session),
         )
         assert proc.returncode == 0, f"write-verdict scheiterte: {proc.stdout}{proc.stderr}"

@@ -94,6 +94,7 @@ def _write_attestation(
             {
                 "verified_commit": sha,
                 "staging_verdict": verdict,
+                "langs": ["de", "en"],
                 "findings": [],
                 "verified_at": _iso(age_hours),
                 "scope": scope,

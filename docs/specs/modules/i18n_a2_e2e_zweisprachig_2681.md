@@ -30,7 +30,7 @@ Das letzte Paket des Epics beweist aus Nutzersicht, dass beide Sprachen auf Stag
 > **Querschnitts-Prüfpunkte:**
 > - **Trip/Ortsvergleich-Teilung:** Beide Mail-Pfade werden in beiden Sprachen geprüft, je mit dem zuständigen Validator (`email_spec_validator.py` für den Ortsvergleich `X-GZ-Mail-Type: compare`, `briefing_mail_validator.py` für `trip-briefing`); es entsteht kein neuer geteilter Baustein und keine einseitige Neuanlage.
 > - **Mandantentrennung:** Es existieren **zwei verschiedene** Staging-Nutzer (Standard-Testnutzer `de`, neuer Nutzer `en`) mit getrennten Konten und getrennter Zustellung (Basis-Postfach bzw. Subadresse `+en`). Die Registrierung geht über die echte API mit echter Anmeldung; die `user_id` kommt aus der Sitzung, nie `"default"`. Ein Test beweist, dass eine Mail für den einen Nutzer den Lauf für den anderen nicht erfüllt (AC-6).
-> - **Kanäle:** E-Mail (live, beide Sprachen, vier Validatoren) und Telegram (live, Sprachwechsel des Test-Nutzers) werden auf Staging geprüft. SMS und Premium-SMS haben keinen Staging-Livepfad (kostenpflichtig, Satellit); ihr zweisprachiger Nachweis liegt in den Kern-Tests von P8 (#2670) und P10 (#2673) und im Handy-Nachtest nach dem Prod-Deploy. Alle vier Kanäle sind damit benannt (ADR-0095).
+> - **Kanäle:** E-Mail (live, beide Sprachen, vier Validatoren) und Telegram (live, Sprachwechsel des Test-Nutzers) werden auf Staging geprüft. SMS und Premium-SMS haben keinen Staging-Livepfad (kostenpflichtig, Satellit); ihre Kurzform ist sprachunabhängig (P8 #2670 gestrichen, ADR-0104 Präzisierung 2026-10-31), Nachweis im P1-Token-Wächter und in P10 (#2673) sowie im Handy-Nachtest nach dem Prod-Deploy. Alle vier Kanäle sind damit benannt (ADR-0095).
 
 ### Affected Files
 

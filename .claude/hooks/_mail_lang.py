@@ -6,8 +6,8 @@ Sprache des Inhalts, die Erwartungen (Ueberschriften, Hinweise, Warn-Woerter)
 kommen aus dem Python-Katalog ``src/i18n`` in genau dieser Sprache -- nie aus
 Literalen. Pfadregel #1409: ``src`` relativ zur eigenen Datei.
 
-Uebergang (PV): fehlt der Kopf, gilt ``de`` plus Warnung. A2 (#2681) setzt
-``HEADER_PFLICHT = True``; dann ist ein fehlender Kopf ein Fehler.
+Seit A2 (#2681) ist der Kopf Pflicht (``HEADER_PFLICHT = True``): fehlt er,
+ist das ein Fehler (Exit 1), nicht mehr ``de`` plus Warnung (Uebergang PV #2663).
 """
 from __future__ import annotations
 
@@ -21,9 +21,10 @@ if str(_SRC) not in sys.path:
 from i18n import catalog as _catalog  # noqa: E402
 from i18n import t as _t  # noqa: E402
 
-HEADER_PFLICHT = False
+HEADER_PFLICHT = True
 SPRACHEN = ("de", "en")
 FEHLER_PRAEFIX = "X-GZ-Lang unbekannt oder fehlt"
+FEHLT = "Marker-Header X-GZ-Lang fehlt — Mail nicht vom sprachfähigen Renderer"
 _PLATZHALTER_RE = re.compile(r"\{([a-z][a-z0-9_]*)\}")
 
 
@@ -32,7 +33,7 @@ def mail_lang(msg) -> tuple[str, list[str]]:
     roh = msg.get("X-GZ-Lang")
     if roh is None:
         if HEADER_PFLICHT:
-            raise ValueError(f"{FEHLER_PRAEFIX}: Kopf fehlt (Pflicht seit A2 #2681)")
+            raise ValueError(f"{FEHLT} (Pflicht seit A2 #2681)")
         return "de", [
             "X-GZ-Lang fehlt -- Mail wird als 'de' geprueft (Uebergang #2663, "
             "ab A2 #2681 Pflicht)"

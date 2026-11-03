@@ -78,6 +78,7 @@ def _write_e2e_json(tmp_path: Path, **overrides) -> Path:
     data = {
         "verified_commit": _head_sha(),
         "staging_verdict": "VERIFIED: alle ACs grün",
+        "langs": ["de", "en"],
         "verified_at": datetime.now(timezone.utc).isoformat(),
         "environment": "staging",
         "scope": "frontend-only",
@@ -141,6 +142,7 @@ def _write_e2e_json_in(repo: Path, tmp_path: Path, **overrides) -> Path:
     data = {
         "verified_commit": _repo_head_sha(repo),
         "staging_verdict": "VERIFIED: alle ACs grün",
+        "langs": ["de", "en"],
         "verified_at": datetime.now(timezone.utc).isoformat(),
         "environment": "staging",
         "scope": "frontend-only",
@@ -315,7 +317,7 @@ class TestGateWriteVerdictModeA:
         ]))
         out_path = tmp_path / "e2e_verified.json"
         rc, out, err = _run_gate([
-            "--write-verdict", "VERIFIED: 1/1 ACs grün",
+            "--write-verdict", "VERIFIED: 1/1 ACs grün", "--langs", "de,en",
             "--findings-json", str(findings),
             "--e2e-path", str(out_path),
         ])
@@ -339,7 +341,7 @@ class TestGateWriteVerdictModeA:
         findings.write_text(json.dumps([]))
         out_path = tmp_path / "e2e_verified.json"
         _run_gate([
-            "--write-verdict", "VERIFIED: smoke only",
+            "--write-verdict", "VERIFIED: smoke only", "--langs", "de,en",
             "--findings-json", str(findings),
             "--e2e-path", str(out_path),
         ])
@@ -356,7 +358,7 @@ class TestGateWriteVerdictModeA:
         ]))
         out_path = tmp_path / "e2e_verified.json"
         rc, out, err = _run_gate([
-            "--write-verdict", "BROKEN: AC-1 fehlgeschlagen",
+            "--write-verdict", "BROKEN: AC-1 fehlgeschlagen", "--langs", "de,en",
             "--findings-json", str(findings),
             "--e2e-path", str(out_path),
         ])
@@ -370,7 +372,7 @@ class TestGateWriteVerdictModeA:
         ]))
         out_path = tmp_path / "e2e_verified.json"
         _run_gate([
-            "--write-verdict", "BROKEN: AC-1 fehlgeschlagen",
+            "--write-verdict", "BROKEN: AC-1 fehlgeschlagen", "--langs", "de,en",
             "--findings-json", str(findings),
             "--e2e-path", str(out_path),
         ])
@@ -386,7 +388,7 @@ class TestGateWriteVerdictModeA:
         findings.write_text(json.dumps([]))
         out_path = tmp_path / "e2e_verified.json"
         rc, _, _ = _run_gate([
-            "--write-verdict", "AMBIGUOUS: Screenshot nicht auswertbar",
+            "--write-verdict", "AMBIGUOUS: Screenshot nicht auswertbar", "--langs", "de,en",
             "--findings-json", str(findings),
             "--e2e-path", str(out_path),
         ])
@@ -617,6 +619,7 @@ class TestFix4WriteVerdictRejectsPlaceholder:
                 {
                     "verified_commit": _head_sha(),
                     "staging_verdict": "VERIFIED: Bestand gruen",
+                    "langs": ["de", "en"],
                     "findings": [],
                     "verified_at": datetime.now(timezone.utc).isoformat(),
                     "environment": "staging",
@@ -633,7 +636,7 @@ class TestFix4WriteVerdictRejectsPlaceholder:
         rc, out, err = _run_gate(
             [
                 "--write-verdict",
-                "TEST: irgendwas",
+                "TEST: irgendwas", "--langs", "de,en",
                 "--findings-json",
                 str(findings),
                 "--e2e-path",
@@ -669,6 +672,7 @@ class TestFix4VerdictWhitelistCaseSensitiveAndTrimmed:
                 {
                     "verified_commit": _head_sha(),
                     "staging_verdict": "VERIFIED: Bestand gruen",
+                    "langs": ["de", "en"],
                     "findings": [],
                     "verified_at": datetime.now(timezone.utc).isoformat(),
                     "environment": "staging",
@@ -687,7 +691,7 @@ class TestFix4VerdictWhitelistCaseSensitiveAndTrimmed:
 
         rc, out, err = _run_gate(
             [
-                "--write-verdict", "verified: klein",
+                "--write-verdict", "verified: klein", "--langs", "de,en",
                 "--findings-json", str(findings),
                 "--e2e-path", str(out_path),
             ]
@@ -712,7 +716,7 @@ class TestFix4VerdictWhitelistCaseSensitiveAndTrimmed:
 
         rc, out, err = _run_gate(
             [
-                "--write-verdict", "  verified: mit rand  ",
+                "--write-verdict", "  verified: mit rand  ", "--langs", "de,en",
                 "--findings-json", str(findings),
                 "--e2e-path", str(out_path),
             ]
@@ -740,7 +744,7 @@ class TestFix4VerdictWhitelistCaseSensitiveAndTrimmed:
 
         rc_write, out_w, err_w = _run_gate(
             [
-                "--write-verdict", " VERIFIED: mit rand ",
+                "--write-verdict", " VERIFIED: mit rand ", "--langs", "de,en",
                 "--findings-json", str(findings),
                 "--e2e-path", str(out_path),
             ]

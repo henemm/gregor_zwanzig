@@ -3,7 +3,7 @@ entity_id: i18n_p12_python_ratsche_rest_2751
 type: module
 created: 2026-11-03
 updated: 2026-11-03
-status: draft
+status: approved
 version: "1.0"
 tags: [i18n, epic-2644, issue-2751, python]
 ---
@@ -14,7 +14,7 @@ tags: [i18n, epic-2644, issue-2751, python]
 
 ## Approval
 
-- [ ] Approved (Freigabe durch den PO steht aus)
+- [x] Approved (PO-Freigabe 2026-11-03, an Claude delegiert)
 
 ## Purpose
 

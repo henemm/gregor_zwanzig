@@ -80,7 +80,7 @@ def _verdict(tmp_path, scope, e2e_path=None):
     """write_verdict mit leerer Findings-Datei (nicht angelegt → findings=[])."""
     return sg.write_verdict("VERIFIED: behauptet, aber unbelegt",
                             tmp_path / "findings.json",
-                            e2e_path=e2e_path, scope_override=scope)
+                            e2e_path=e2e_path, scope_override=scope, langs=["de", "en"])
 
 
 @pytest.mark.parametrize("scope", ["frontend-only", "full-stack"])
@@ -149,7 +149,7 @@ def test_frontend_change_two_commits_back_still_triggers_gate(
     # Vorbedingung 2: der bereits ermittelte Scope sieht die Frontend-Aenderung.
     assert sg._detect_committed_scope() == "frontend-only"
 
-    rc = sg.write_verdict("VERIFIED: behauptet", tmp_path / "findings.json")
+    rc = sg.write_verdict("VERIFIED: behauptet", tmp_path / "findings.json", langs=["de", "en"])
 
     assert rc == 1, "Gate muss trotz Doku-Commit an der Spitze anspringen"
     assert not sg._commit_e2e_path().exists(), (
@@ -384,7 +384,7 @@ def test_ambiguous_verdict_is_gated_like_verified(tmp_path, hostile):
     trivial zu nutzen. Also greift das Gate hier genauso."""
     e2e_path = tmp_path / "attestation.json"
     rc = sg.write_verdict("AMBIGUOUS: unklar und unbelegt", tmp_path / "findings.json",
-                          e2e_path=e2e_path, scope_override="frontend-only")
+                          e2e_path=e2e_path, scope_override="frontend-only", langs=["de", "en"])
     assert rc == 1, "AMBIGUOUS muss bei Frontend-Scope gegated werden wie VERIFIED"
     assert not e2e_path.exists(), "Attestation entstand trotz nicht bestandenem Browserlauf"
 

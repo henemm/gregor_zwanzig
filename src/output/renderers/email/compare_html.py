@@ -1243,6 +1243,8 @@ def _build_location_outlook_rows(
             # sie muss hier ausdruecklich ankommen, sonst bleibt der
             # Umschalter des Ortsvergleichs-Editors wirkungslos.
             outlook_metric_formats=outlook_metric_formats,
+            # Issue #2750: Zellentexte (Wortskalen) in Nutzersprache.
+            lang=lang,
         ))
     return rows
 

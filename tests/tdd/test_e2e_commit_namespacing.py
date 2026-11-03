@@ -102,12 +102,12 @@ class TestParallelWritesNoCollision:
         findings = _findings_file(tmp_path)
 
         # Session B: HEAD = c3
-        rc_b = sg.write_verdict("VERIFIED: Session B", findings, None)
+        rc_b = sg.write_verdict("VERIFIED: Session B", findings, None, langs=["de", "en"])
         assert rc_b == 0
 
         # Session A: HEAD = c2 (auschecken simuliert andere Session auf älterem Commit)
         _git(["checkout", "-q", shas["c2"]], root)
-        rc_a = sg.write_verdict("VERIFIED: Session A", findings, None)
+        rc_a = sg.write_verdict("VERIFIED: Session A", findings, None, langs=["de", "en"])
         assert rc_a == 0
 
         file_b = root / ".claude" / "e2e_verified" / f"{shas['c3']}.json"
@@ -129,7 +129,7 @@ class TestGateAcceptsCommitTagged:
         _patch_paths(monkeypatch, sg, root)
         findings = _findings_file(tmp_path)
 
-        assert sg.write_verdict("VERIFIED: alle ACs grün", findings, None) == 0
+        assert sg.write_verdict("VERIFIED: alle ACs grün", findings, None, langs=["de", "en"]) == 0
         rc = sg.gate_check(None, None)
         assert rc == 0, "Gate muss den commit-getaggten Default-Pfad finden und akzeptieren"
 
@@ -153,6 +153,7 @@ class TestSingletonFallbackAndPrecedence:
         singleton.write_text(json.dumps({
             "verified_commit": shas["c3"],
             "staging_verdict": "VERIFIED: legacy",
+            "langs": ["de", "en"],
             "verified_at": datetime.now(timezone.utc).isoformat(),
             "scope": "backend",
             "environment": "staging",
@@ -175,6 +176,7 @@ class TestSingletonFallbackAndPrecedence:
         (root / ".claude" / "e2e_verified.json").write_text(json.dumps({
             "verified_commit": shas["c3"],
             "staging_verdict": "VERIFIED: legacy gültig",
+            "langs": ["de", "en"],
             "verified_at": datetime.now(timezone.utc).isoformat(),
             "scope": "backend", "environment": "staging", "findings": [],
         }))
@@ -184,6 +186,7 @@ class TestSingletonFallbackAndPrecedence:
         (tagged_dir / f"{shas['c3']}.json").write_text(json.dumps({
             "verified_commit": "0" * 40,
             "staging_verdict": "VERIFIED: falscher commit",
+            "langs": ["de", "en"],
             "verified_at": datetime.now(timezone.utc).isoformat(),
             "scope": "backend", "environment": "staging", "findings": [],
         }))
@@ -205,7 +208,7 @@ class TestForeignCommitDoesNotUnlock:
 
         # Attestation nur für c2 erzeugen
         _git(["checkout", "-q", shas["c2"]], root)
-        sg.write_verdict("VERIFIED: c2", _findings_file(tmp_path), None)
+        sg.write_verdict("VERIFIED: c2", _findings_file(tmp_path), None, langs=["de", "en"])
         _git(["checkout", "-q", shas["c3"]], root)  # HEAD zurück auf c3
 
         assert not (root / ".claude" / "e2e_verified.json").exists()
@@ -229,6 +232,7 @@ class TestProdSelftestPathResolution:
         tagged.write_text(json.dumps({
             "verified_commit": shas["c3"],
             "staging_verdict": "VERIFIED: x",
+            "langs": ["de", "en"],
             "verified_at": datetime.now(timezone.utc).isoformat(),
             "scope": "backend", "environment": "staging", "findings": [],
         }))

@@ -245,25 +245,21 @@ def _write_validation_log(success: bool, errors: list, warnings: list | None = N
         pass  # fail-soft
 
 
-def fetch_latest_message(max_scan: int = 50) -> Message:
-    """Holt die neueste radar-alert-Mail aus dem Test-Postfach."""
-    src_dir = Path(__file__).resolve().parents[2] / "src"
-    if str(src_dir) not in sys.path:
-        sys.path.insert(0, str(src_dir))
-    from app.config import Settings
+def _message_matches(headers, lang: str = "de", to_contains: str | None = None) -> bool:
+    """Praedikat der Mail-Auswahl: Typ radar-alert, Sprache UND Empfaenger (#2681)."""
+    return (headers.get("X-GZ-Mail-Type") == "radar-alert"
+            and _e2e_paths.mail_waehlbar(headers, lang, to_contains))
 
-    settings = Settings()
-    imap_host = settings.imap_host or settings.smtp_host
-    # Radar-Alert-Mails werden an gregor-test@henemm.com gesendet (Test-Postfach).
-    # Priorisiere GZ_TEST_IMAP_* Credentials, falle auf GZ_IMAP_* zurueck.
-    imap_user = settings.test_imap_user or settings.imap_user or settings.smtp_user
-    imap_pass = settings.test_imap_pass or settings.imap_pass or settings.smtp_pass
-    if not imap_user or not imap_pass:
-        raise ValueError("IMAP nicht konfiguriert (GZ_TEST_IMAP_USER/GZ_IMAP_USER)")
 
-    imap = imaplib.IMAP4_SSL(imap_host, settings.imap_port)
+def fetch_latest_message(max_scan: int = 50, lang: str = "de",
+                         to_contains: str | None = None, imap=None) -> Message:
+    """Holt die neueste passende radar-alert-Mail aus dem Test-Postfach.
+
+    ``imap``: fertige, angemeldete Verbindung (Test-Seam, #2681)."""
+    own_connection = imap is None
+    if own_connection:
+        imap = _open_test_imap()
     try:
-        imap.login(imap_user, imap_pass)
         imap.select("INBOX")
         _, data = imap.search(None, "ALL")
         all_ids = data[0].split()
@@ -273,19 +269,40 @@ def fetch_latest_message(max_scan: int = 50) -> Message:
         for mid in reversed(all_ids[-max_scan:]):
             _, hdr_data = imap.fetch(mid, "(BODY.PEEK[HEADER])")
             headers = email.message_from_bytes(hdr_data[0][1])
-            if headers.get("X-GZ-Mail-Type") == "radar-alert":
+            if _message_matches(headers, lang, to_contains):
                 _, msg_data = imap.fetch(mid, "(RFC822)")
                 return email.message_from_bytes(msg_data[0][1])
 
         raise ValueError(
-            f"Keine radar-alert-Mail gefunden (scan={max_scan} Mails)"
+            f"Keine passende radar-alert-Mail gefunden (lang={lang!r}, "
+            f"to_contains={to_contains!r}, scan={max_scan} Mails)"
         )
     finally:
-        try:
-            imap.close()
-            imap.logout()
-        except Exception:
-            pass
+        if own_connection:
+            try:
+                imap.close()
+                imap.logout()
+            except Exception:
+                pass
+
+
+def _open_test_imap():
+    """Angemeldete Verbindung zum Test-Postfach (GZ_TEST_IMAP_* zuerst, #972)."""
+    src_dir = Path(__file__).resolve().parents[2] / "src"
+    if str(src_dir) not in sys.path:
+        sys.path.insert(0, str(src_dir))
+    from app.config import Settings
+
+    settings = Settings()
+    imap_host = settings.imap_host or settings.smtp_host
+    imap_user = settings.test_imap_user or settings.imap_user or settings.smtp_user
+    imap_pass = settings.test_imap_pass or settings.imap_pass or settings.smtp_pass
+    if not imap_user or not imap_pass:
+        raise ValueError("IMAP nicht konfiguriert (GZ_TEST_IMAP_USER/GZ_IMAP_USER)")
+
+    imap = imaplib.IMAP4_SSL(imap_host, settings.imap_port)
+    imap.login(imap_user, imap_pass)
+    return imap
 
 
 def main() -> None:
@@ -294,6 +311,7 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__.strip().splitlines()[0])
     parser.add_argument("--eml", metavar="PFAD", default=None,
                         help="Mail aus dieser .eml-Datei pruefen statt per IMAP (#2663)")
+    _e2e_paths.sprach_argumente(parser)
     args = parser.parse_args()
 
     print("=" * 70)
@@ -306,8 +324,11 @@ def main() -> None:
         if args.eml:  # #2663: Mail aus Datei statt IMAP
             msg = email.message_from_bytes(Path(args.eml).read_bytes())
         else:
-            msg = fetch_latest_message()
+            msg = fetch_latest_message(lang=args.lang or "de", to_contains=args.to_contains)
         success, errors = validate_message(msg, warnungen=warnungen)
+        if args.eml:  # #2681: --lang/--to-contains gelten auch fuer die Datei
+            auswahl = _e2e_paths.eml_auswahl_fehler(msg, args.lang, args.to_contains)
+            success, errors = success and not auswahl, auswahl + errors
     except Exception as exc:
         print(f"  TECHNISCHER FEHLER: Mail konnte nicht geladen werden: {exc}")
         _write_validation_log(success=False, errors=[str(exc)], warnings=warnungen)

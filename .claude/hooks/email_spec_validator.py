@@ -243,7 +243,8 @@ def _decode_subject(raw: "str | None") -> str:
     return "".join(parts)
 
 
-def _message_matches(headers, subject_contains: "str | None" = None) -> bool:
+def _message_matches(headers, subject_contains: "str | None" = None,
+                     lang: str = "de", to_contains: "str | None" = None) -> bool:
     """Issue #1408: EINE gemeinsame Trefferbedingung fuer die Mail-Auswahl.
 
     Vorher stand dieselbe Marker-Pruefung zweimal im Modul (in
@@ -255,8 +256,11 @@ def _message_matches(headers, subject_contains: "str | None" = None) -> bool:
     - Marker: ``X-GZ-Mail-Type`` muss ``compare`` sein (immer geprueft).
     - ``subject_contains`` gesetzt: das dekodierte Subject muss das Fragment
       enthalten. ``None`` => Verhalten exakt wie vor #1408 (nur Marker).
+    - #2681: Sprache UND Empfaenger des Nutzers (``_e2e_paths.mail_waehlbar``).
     """
     if headers.get("X-GZ-Mail-Type") != _COMPARE_MAIL_TYPE:
+        return False
+    if not _e2e_paths.mail_waehlbar(headers, lang, to_contains):
         return False
     if subject_contains is not None:
         if subject_contains not in _decode_subject(headers.get("Subject")):
@@ -378,6 +382,8 @@ def _fetch_latest_message(
     subject_contains: "str | None" = None,
     max_age_minutes: "int | None" = None,
     ignore_mail_age_reason: "str | None" = None,
+    lang: str = "de",
+    to_contains: "str | None" = None,
 ):
     """IMAP-Fetch der zu pruefenden Compare-Mail (Issue #1124 Teil B).
 
@@ -456,7 +462,7 @@ def _fetch_latest_message(
             # zusaetzlicher Roundtrip) und steht in deren Praefix-Zeile.
             _, hdr_data = imap.fetch(uid, '(BODY.PEEK[HEADER] INTERNALDATE)')
             headers = email.message_from_bytes(hdr_data[0][1])
-            if _message_matches(headers, subject_contains=subject_contains):
+            if _message_matches(headers, subject_contains, lang, to_contains):
                 selected_uid = uid
                 selected_subject = _decode_subject(headers.get("Subject"))
                 selected_response_line = _internaldate_line(hdr_data)
@@ -1092,6 +1098,8 @@ def run_validation(
     max_age_minutes: "int | None" = None,
     ignore_mail_age_reason: "str | None" = None,
     warnungen: "list | None" = None,
+    lang: str = "de",
+    to_contains: "str | None" = None,
 ) -> Tuple[bool, List[str]]:
     """Run all validations and return (success, errors).
 
@@ -1104,6 +1112,8 @@ def run_validation(
             subject_contains=subject_contains,
             max_age_minutes=max_age_minutes,
             ignore_mail_age_reason=ignore_mail_age_reason,
+            lang=lang,
+            to_contains=to_contains,
         )
     except Exception as e:
         return False, [f"FEHLER: E-Mail konnte nicht geladen werden: {e}"]
@@ -1119,7 +1129,7 @@ def validate_message(
     msg, min_locations: int = 3, warnungen: "list | None" = None,
 ) -> Tuple[bool, List[str]]:
     """Alle Pruefungen einer geparsten Compare-Mail in der Sprache ihres Kopfes
-    ``X-GZ-Lang`` (Issue #2663). Fehlt der Kopf: ``de`` + Warnung."""
+    ``X-GZ-Lang`` (Issue #2663). Fehlt der Kopf: Fehler (Pflicht seit A2 #2681)."""
     import _mail_lang  # lazy: Validator bleibt ohne Hilfsmodul ladbar (Log-Tests)
 
     try:
@@ -1199,6 +1209,7 @@ def main():
         default=None,
         help="Mail aus dieser .eml-Datei pruefen statt per IMAP (#2663)",
     )
+    _e2e_paths.sprach_argumente(parser)
     args = parser.parse_args()
 
     # Fail-fast, analog `qa_gate.py --no-visual "<Grund>"`: der Schutz laesst
@@ -1246,6 +1257,9 @@ def main():
             print(f"FEHLER: --eml {args.eml!r} nicht lesbar: {exc}")
             sys.exit(2)
         success, errors = validate_message(msg, args.min_locations, warnungen=warnungen)
+        # #2681: --lang/--to-contains gelten auch fuer die Datei.
+        auswahl = _e2e_paths.eml_auswahl_fehler(msg, args.lang, args.to_contains)
+        success, errors = success and not auswahl, auswahl + errors
     else:
         success, errors = run_validation(
             args.min_locations,
@@ -1253,6 +1267,8 @@ def main():
             max_age_minutes=args.max_age_minutes,
             ignore_mail_age_reason=args.ignore_mail_age,
             warnungen=warnungen,
+            lang=args.lang or "de",
+            to_contains=args.to_contains,
         )
     for hinweis in warnungen:
         print(f"WARNUNG: {hinweis}", file=sys.stderr)
