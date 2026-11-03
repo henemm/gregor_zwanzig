@@ -92,6 +92,9 @@ func WriteError(w http.ResponseWriter, r *http.Request, status int, code string,
 - Python-Core (FastAPI): Fehlerobjekt `{"detail", "code"}` (`api/fehler.py`), `detail` bleibt Zeichenkette, `code` kommt hinzu.
 - Mails: je Zeile ein Schlüssel (`mail.verify.betreff` usw.). Keine `text/template`-Datei je Sprache. Empfängersprache ist die Kontosprache. Admin-Mails an den Betreiber bleiben `de`.
 - Logs bleiben deutsch und tragen bei Umlauten den Marker `// i18n-log` (Go) bzw. `# i18n-log` (Python).
+- Begründet sprachfeste Texte im Python-Core (Eigennamen, SMS-Kanal, Bot-Menü `BOT_COMMANDS` nach P7 #2669)
+  tragen `# i18n-fest: <Grund>` (Grund ≥ 10 Zeichen). Der Marker ist kein Ersatz für den Katalog: jeder
+  Nutzertext, der der Kontosprache folgen soll, gehört in den Katalog.
 
 ## 4. Die drei Ratschen
 
@@ -100,7 +103,7 @@ Alle drei verbieten neue hartkodierte Nutzertexte außerhalb des Katalogs. Die A
 | Schicht | Testdatei | Scanfläche | Allowlist | Marker | Endstand 2026-11-02 |
 |---|---|---|---|---|---|
 | Frontend (S4) | `frontend/src/lib/i18n/__tests__/keine_hartkodierten_nutzertexte.test.ts` | `frontend/src/**/*.svelte` (ohne `__tests__/`, `routes/_design*`, `routes/email-preview-dev`) plus `*.ts` in `lib/utils`, `lib/stores`, `lib/api.ts` | `frontend/src/lib/i18n/hardcode_allowlist.json` | keiner; `// i18n-dynamic:` für Schlüssel (Verwender-Test) | leer (`[]`), gehalten durch `hardcode_allowlist_leer.test.ts` |
-| Python (P11) | `tests/test_i18n_keine_hartkodierten_nutzertexte_python.py` | `src/output/**`, `api/routers/**`, passende `src/services/*.py` | `tests/fixtures/i18n_python_allowlist.json` (Baseline je Datei) | `# i18n-log` | **nicht leer**: 15 Dateien, 47 Funde; `test_allowlist_ist_leer` ist `xfail(strict=True)` (#2751) |
+| Python (P11) | `tests/test_i18n_keine_hartkodierten_nutzertexte_python.py` | `src/output/**`, `api/routers/**`, passende `src/services/*.py` | `tests/fixtures/i18n_python_allowlist.json` (Baseline je Datei) | `# i18n-log`, `# i18n-fest: <Grund>` | **nicht leer**: 7 Dateien, 17 Funde (nur Renderer-Gate-Dateien); `test_allowlist_ist_leer` ist `xfail(strict=True)` (#2751) |
 | Go (G5) | `internal/i18n/hardcode_guard_test.go` | `internal/{handler,mail,notify,store,middleware,resolver}` | `internal/i18n/hardcode_allowlist.json` | `// i18n-log` (Zeile oder Funktions-Doc) | leer (`[]`) |
 
 Prüfdaten stehen im Regel-Budget von `gates_und_ratschen.md` (Frontend, Go, Python: 2027-01-28). Am Prüfdatum

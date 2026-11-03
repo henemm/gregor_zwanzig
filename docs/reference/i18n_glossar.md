@@ -59,6 +59,8 @@
 | Schwelle | threshold | |
 | Aktivitätsprofil | activity profile | Werte: *general*, *hiking*, *mountaineering*, … (Register prüfen) |
 | Stundenverlauf | hourly view | Abschnitt im Ortsvergleich; Abschnittskopf „STUNDEN" = *HOURLY* (#2666) |
+| Gehzeit | walking hours | Tageswerte „(Gehzeit)" = *(walking hours)*, wie `label_en` im Metrik-Register (#2751) |
+| Nachtfenster | night window | Nacht-Einzelwert = *single value for the night window* (#2751) |
 | Abo | subscription | „Dieses Abo" = *This subscription*, „Abo bearbeiten" = *Edit subscription* (#2666) |
 | Übersicht | overview | Abschnittskopf „ÜBERSICHT" = *OVERVIEW* (#2666) |
 

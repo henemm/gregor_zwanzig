@@ -22,11 +22,11 @@ damit die Zahl nie wieder wachsen kann.
 
 Startstand/Restbefund (Prüfdatum 2027-01-28, Regel-Budget): AC-6 (Allowlist
 leer) ist mit P11 NICHT erreicht -- dokumentierte Teilauslieferung. #2751 hat
-alles ausserhalb des Renderer-Gates abgebaut; uebrig sind Dateien unter
-``src/output/renderers/`` (Renderer-Commit-Gate, brauchen den Validator gegen
-echte Staging-Mail) und das Telegram-Befehlsmenue ``BOT_COMMANDS`` (bot-weit,
-ohne Nutzerkontext; Sprachwahl braucht eine Spec). ``test_allowlist_ist_leer``
-ist bis dahin ``xfail(strict=True)``.
+alles ausserhalb des Renderer-Gates abgebaut (``BOT_COMMANDS`` traegt
+``# i18n-fest`` nach P7 #2669); uebrig sind nur Dateien unter
+``src/output/renderers/{alert,email}/`` und ``trip_report.py``
+(Renderer-Commit-Gate, brauchen den Validator gegen echte Staging-Mail).
+``test_allowlist_ist_leer`` ist bis dahin ``xfail(strict=True)``.
 
 Startstand/Messen: ``python tests/test_i18n_keine_hartkodierten_nutzertexte_python.py
 --startstand`` schreibt die Allowlist; ``--messen`` gibt nur auf stdout aus.
@@ -177,9 +177,8 @@ def test_allowlist_hat_keine_toten_eintraege():
 
 
 @pytest.mark.xfail(strict=True, reason=(
-    "AC-6 Endstand noch nicht erreicht: Restbefunde unter src/output/renderers/ "
-    "(Renderer-Gate, u. a. fallback_notice.py, trip_report.py, alert/*) und "
-    "telegram.py-Befehlsmenue BOT_COMMANDS (#2751); "
+    "AC-6 Endstand noch nicht erreicht: Restbefunde nur unter dem Renderer-Gate "
+    "(alert/*, email/html.py, email/thunder_branch.py, trip_report.py; #2751); "
     "Rueckmeldung im Epic #2644. strict: sobald die Allowlist leer ist, wird "
     "dieser Test rot und die Markierung muss weg."))
 def test_allowlist_ist_leer():
