@@ -508,36 +508,270 @@ def test_ac12_leerender_metrik_arm_faellt_auf_satz_ohne_metrik_arm_zurueck(
     )
 
 
-def test_ac12_tier_gate_darf_nach_nicht_leerem_metrik_arm_auf_leer_fuehren(
+def test_ac25_tier_gate_leert_metrik_arm_rueckfall_auf_satz_ohne_metrik_arm(
     sauberer_nutzer,
 ):
-    """AC-12, Fall 3 (ROT, Klasse a): der Rueckfall-Guard liegt VOR den
-    Tier-Gates.
+    """AC-25 (S3a, ROT): umgekehrte Fassung des frueheren S2-Tests
+    `test_ac12_tier_gate_darf_nach_nicht_leerem_metrik_arm_auf_leer_fuehren`.
 
-    Free-Tarif-Nutzer, Eintrag fuer `gust` = `{sms}` (nicht leer!). Der
-    Metrik-Arm liefert `{sms}`, das Tier-Gate streicht `sms` — uebrig bleibt
-    leer. Das MUSS leer bleiben: ein Rueckfall an dieser Stelle waere eine
-    vom Tier-Gate ausgeloeste Kanal-ERWEITERUNG und verletzte AC-4 aus
-    #2279 S1 ("Tier-Gates genau einmal").
+    Free-Tarif-Nutzer, Eintrag fuer `gust` = `{sms}` (nicht leer!), geerbter
+    Satz `{email}`. Der Metrik-Arm liefert `{sms}`, das Tier-Gate streicht
+    `sms` — der Metrik-Arm ist NACH den Gates leer. Seit S3a gilt dann der
+    Satz ohne Metrik-Arm nach den Gates: `{email}`. Sonst schickte ein
+    gewaehlter, aber tarifgesperrter Kanal den Alarm an niemanden.
 
     Der Tarif wird ausdruecklich als Datei geschrieben (`free`), damit die
     Vorbedingung ausgesprochen und nicht bloss zufaellig (fail-closed bei
     unbekanntem Nutzer) erfuellt ist.
+
+    RED heute: der Rueckfall-Guard liegt VOR den Tier-Gates; gemessen wird
+    `set()`.
     """
     from services.alert_channels import effective_alert_channels
 
-    user_id = sauberer_nutzer("ac12-tier")
+    user_id = sauberer_nutzer("ac25-tier")
     _schreibe_tarif(user_id, "free")
-    trip = _trip("trip-ac12c", eintrag={"gust": {"sms": True}})
+    trip = _trip("trip-ac25", eintrag={"gust": {"sms": True}}, geerbt=("email",))
 
     ergebnis = effective_alert_channels(
         trip, _settings_ohne_netz(), user_id, metrics=["gust_max_kmh"],
     )
 
-    assert ergebnis == set(), (
-        "AC-12: der Metrik-Arm war NICHT leer ({sms}) — erst das Tier-Gate "
-        "hat geleert. Das ist Tarif-Politik, kein Fall fuer den Rueckfall-"
-        f"Guard; die Menge muss leer bleiben. Gemessen: {ergebnis!r}"
+    assert ergebnis == {"email"}, (
+        "AC-25: der Metrik-Arm {sms} ist nach dem Tier-Gate leer — dann muss "
+        "der Satz ohne Metrik-Arm ({email}) gelten, der Alarm darf nicht ins "
+        f"Leere gehen. Gemessen: {ergebnis!r}"
+    )
+
+
+def test_ac25_kern_premium_sms_ohne_tarif_faellt_auf_geerbt_zurueck(
+    sauberer_nutzer,
+):
+    """AC-25, zweite Tarif-Sperre (ROT): Standard-Tarif darf `sms`, aber
+    nicht `premium_sms`. Metrik-Arm `{premium_sms}`, geerbt `{email, sms}` ⇒
+    Ergebnis `{email, sms}` (Rueckfall, und `sms` ueberlebt das Gate, weil
+    der Tarif es erlaubt)."""
+    from services.alert_channels import resolve_alert_channels
+
+    user_id = sauberer_nutzer("ac25-premium")
+    _schreibe_tarif(user_id, "standard")
+
+    ergebnis = resolve_alert_channels(
+        override=None, inherited={"email", "sms"}, rule_channel_sets=[],
+        user_id=user_id, metric_channel_sets={"gust": {"premium_sms"}},
+    )
+
+    assert ergebnis == {"email", "sms"}, (
+        "AC-25: {premium_sms} ohne Premium-Tarif leert den Metrik-Arm — "
+        f"Rueckfall auf {{email, sms}} erwartet, gemessen: {ergebnis!r}"
+    )
+
+
+# ═══ AC-26 — Rueckfall-Satz unterliegt denselben Tier-Gates ══════════════════
+#
+# Der erste Test ist heute ROT (Rueckfall fehlt). Die parametrisierten Faelle
+# darunter sind 🟢 HEUTE GRUEN und bleiben es: sie sind die Fixture der
+# Mutations-Gegenprobe „Rueckfall ueberspringt das Tier-Gate des Rueckfall-
+# Satzes" (Spec, Mutations-Gegenprobe S3a).
+
+def test_ac26_rueckfall_satz_bleibt_tarifgesperrt(sauberer_nutzer):
+    """AC-26 (ROT heute, weil der Rueckfall fehlt): Metrik-Arm `{sms}`,
+    geerbt `{sms, email}`, kein SMS-Tarif. Der Rueckfall greift, aber `sms`
+    bleibt auch im Rueckfall-Satz gestrichen ⇒ `{email}`. Misst AC-25 und
+    AC-26 zugleich und faengt nach `/50` die Mutation „Rueckfall ueberspringt
+    das Tier-Gate" (dann kaeme `{sms, email}`)."""
+    from services.alert_channels import resolve_alert_channels
+
+    user_id = sauberer_nutzer("ac26-gate")
+    _schreibe_tarif(user_id, "free")
+
+    ergebnis = resolve_alert_channels(
+        override=None, inherited={"sms", "email"}, rule_channel_sets=[],
+        user_id=user_id, metric_channel_sets={"gust": {"sms"}},
+    )
+
+    assert ergebnis == {"email"}, (
+        "AC-26: im Rueckfall-Satz muss `sms` ohne Tarif gestrichen bleiben, "
+        f"`email` ueberlebt. Gemessen: {ergebnis!r}"
+    )
+
+
+@pytest.mark.parametrize(
+    ("fall", "override", "geerbt", "metrik_arm", "tarif", "erwartet"),
+    [
+        ("geerbt_sms_ohne_tarif", None, {"sms"}, None, "free", set()),
+        ("metrik_sms_und_geerbt_sms_ohne_tarif", None, {"sms"},
+         {"gust": {"sms"}}, "free", set()),
+        ("leeres_override", {}, {"email", "telegram"}, {"gust": set()},
+         "premium", set()),
+        ("mit_tarif_bleibt_sms", None, {"email"}, {"gust": {"sms"}},
+         "standard", {"sms"}),
+    ],
+)
+def test_ac26_gates_und_leeres_override_bleiben_unveraendert(
+    sauberer_nutzer, fall, override, geerbt, metrik_arm, tarif, erwartet,
+):
+    """AC-26 (🟢 HEUTE GRUEN, Regressions-/Mutations-Fixture): der Rueckfall
+    darf keinen tarifgesperrten Kanal hineinholen, ein explizit leeres
+    `override` ersetzt weiterhin ins Leere, mit Tarif bleibt `sms` (#2279 S1
+    AC-4)."""
+    from services.alert_channels import resolve_alert_channels
+
+    user_id = sauberer_nutzer(f"ac26-{fall[:12]}")
+    _schreibe_tarif(user_id, tarif)
+
+    ergebnis = resolve_alert_channels(
+        override=override, inherited=set(geerbt), rule_channel_sets=[],
+        user_id=user_id, metric_channel_sets=metrik_arm,
+    )
+
+    assert ergebnis == erwartet, (
+        f"AC-26 ({fall}): erwartet {erwartet!r}, gemessen {ergebnis!r}"
+    )
+
+
+# ═══ AC-27 — nicht-leerer Metrik-Arm ersetzt weiterhin vollstaendig ══════════
+
+def test_ac27_nicht_leerer_metrik_arm_nach_gates_ersetzt_vollstaendig(
+    sauberer_nutzer,
+):
+    """AC-27 (🟢 HEUTE GRUEN, Mutations-Fixture gegen „Rueckfall immer
+    beimischen"): Metrik-Arm `{telegram, sms}` bei Free-Tarif — nach dem Gate
+    bleibt `{telegram}`, nicht leer ⇒ KEIN Rueckfall, der geerbte `email`
+    kommt NICHT dazu."""
+    from services.alert_channels import resolve_alert_channels
+
+    user_id = sauberer_nutzer("ac27")
+    _schreibe_tarif(user_id, "free")
+
+    ergebnis = resolve_alert_channels(
+        override=None, inherited={"email"}, rule_channel_sets=[],
+        user_id=user_id, metric_channel_sets={"gust": {"telegram", "sms"}},
+    )
+
+    assert ergebnis == {"telegram"}, (
+        "AC-27: der Metrik-Arm ist nach dem Gate nicht leer ({telegram}) — er "
+        f"ersetzt den geerbten Satz vollstaendig. Gemessen: {ergebnis!r}"
+    )
+
+
+# ═══ AC-28 — am tatsaechlichen Versand: Trip UND Ortsvergleich ═══════════════
+
+def test_ac28_trip_versand_faellt_bei_gesperrtem_metrik_kanal_auf_email(
+    sauberer_nutzer,
+):
+    """AC-28 Trip (ROT): Eintrag `{sms}` fuer `gust`, kein SMS-Tarif, geerbt
+    `{email}`. Gemessen am echten Versandweg `trip_alert.py::_send_alert` →
+    `send_deviation_alert`: der Alarm muss ueber `email` gehen.
+
+    RED heute: der Kanalsatz ist nach dem Gate leer — der Versand bekommt
+    `set()` bzw. findet gar nicht statt."""
+    user_id = sauberer_nutzer("ac28-trip")
+    _schreibe_tarif(user_id, "free")
+    trip = _trip("trip-ac28", eintrag={"gust": {"sms": True}}, geerbt=("email",))
+
+    rekorder = _trip_versand(trip, user_id, [_aenderung("gust_max_kmh")])
+
+    assert rekorder.abweichung == [{"email"}], (
+        "AC-28: ein tarifgesperrter Metrik-Kanal darf den Trip-Alarm nicht "
+        "verstummen lassen — erwartet genau ein Versand ueber {email}, "
+        f"aufgezeichnet: {rekorder.abweichung!r}"
+    )
+
+
+def test_ac28_vergleich_versand_faellt_bei_gesperrtem_metrik_kanal_auf_email(
+    monkeypatch, sauberer_nutzer,
+):
+    """AC-28 Ortsvergleich (ROT, Paritaet): Preset ohne `send_sms` (geerbt
+    `{email}`), Eintrag `{sms}` fuer `gust`, kein SMS-Tarif. Gemessen an der
+    Ortsschleife `compare_alert.py` → `send_multi_location_deviation_alert`."""
+    user_id = sauberer_nutzer("ac28-vgl")
+    _schreibe_tarif(user_id, "free")
+    _lege_vergleich_an(
+        user_id, "cp-ac28", orte=["loc-graz"],
+        anker={"loc-graz": {"gust_max_kmh": 10.0}},
+        alert_metric_channels={"gust": {"sms": True}},
+    )
+
+    rekorder = _vergleich_versand(
+        monkeypatch, user_id, {"loc-graz": {"gust_max_kmh": 95.0}},
+    )
+
+    assert rekorder.metriken_je_ort.get("Graz", {"gust_max_kmh"}) == {"gust_max_kmh"}, (
+        "Vorbedingung AC-28: der Ort darf nur ueber die Boeen ausloesen, "
+        f"gemessen: {rekorder.metriken_je_ort!r}"
+    )
+    assert [k for k, _ in rekorder.abweichung] == [{"email"}], (
+        "AC-28: der Vergleichs-Alarm muss trotz tarifgesperrtem Metrik-Kanal "
+        "ueber {email} gehen — Paritaet zum Trip. Aufgezeichnet: "
+        f"{rekorder.abweichung!r}"
+    )
+
+
+# ═══ AC-29 — Kanal-Schwelle wirkt unveraendert NACH der Aufloesung ═══════════
+
+def test_ac29_aufloesung_kennt_keine_schwelle_split_wirkt_danach(sauberer_nutzer):
+    """AC-29 (ROT ueber den Rueckfall, danach Fixture): die Aufloesung liefert
+    ihre Kanalmenge OHNE Kenntnis der Kanal-Schwelle — mit und ohne gesetzte
+    `alert_channel_thresholds` dasselbe Ergebnis. `split_by_threshold`
+    (ADR-0046) wirkt danach unveraendert: eine `email`-Schwelle `HIGH`
+    unterdrueckt einen `LOW`-Alarm auch im Rueckfall-Satz (benanntes
+    Restrisiko, Known Limitations S3a)."""
+    from services.alert_channel_threshold import split_by_threshold
+    from services.alert_channels import effective_alert_channels
+
+    user_id = sauberer_nutzer("ac29")
+    _schreibe_tarif(user_id, "free")
+    ohne = _trip("trip-ac29a", eintrag={"gust": {"sms": True}}, geerbt=("email",))
+    mit = _trip("trip-ac29b", eintrag={"gust": {"sms": True}}, geerbt=("email",))
+    mit.alert_channel_thresholds = {"email": "HIGH"}
+
+    satz_ohne = effective_alert_channels(
+        ohne, _settings_ohne_netz(), user_id, metrics=["gust_max_kmh"],
+    )
+    satz_mit = effective_alert_channels(
+        mit, _settings_ohne_netz(), user_id, metrics=["gust_max_kmh"],
+    )
+
+    assert satz_ohne == satz_mit == {"email"}, (
+        "AC-29: die Aufloesung haengt nicht von der Schwelle ab und liefert "
+        f"den Rueckfall {{email}} — gemessen ohne={satz_ohne!r}, mit={satz_mit!r}"
+    )
+    erlaubt, unterdrueckt = split_by_threshold(
+        satz_mit, "LOW", mit.alert_channel_thresholds,
+    )
+    assert (erlaubt, unterdrueckt) == (set(), {"email"}), (
+        "AC-29: die Schwelle wirkt unveraendert NACH der Aufloesung, der "
+        f"Rueckfall wird nicht dahinter gezogen: {(erlaubt, unterdrueckt)!r}"
+    )
+
+
+# ═══ AC-38 (Kern) — `null` je Metrik heisst „erbt" ═══════════════════════════
+
+def test_ac38_null_eintrag_je_metrik_erbt(sauberer_nutzer):
+    """AC-38 Leser (🟢 HEUTE GRUEN, Regressions-Fixture): `{"gust": None}`
+    wie Go es persistiert ⇒ die Metrik erbt den Satz ohne Metrik-Arm — fuer
+    Trip UND Ortsvergleich."""
+    from services.alert_channels import effective_alert_channels
+
+    user_id = sauberer_nutzer("ac38")
+    _schreibe_tarif(user_id, "premium")
+    trip = _trip("trip-ac38", eintrag={"gust": None}, geerbt=("email", "telegram"))
+    preset = {"id": "cp-ac38", "send_telegram": True,
+              "alert_metric_channels": {"gust": None}}
+
+    trip_satz = effective_alert_channels(
+        trip, _settings_ohne_netz(), user_id, metrics=["gust_max_kmh"],
+    )
+    vgl_satz = effective_alert_channels(
+        preset, _settings_ohne_netz(), user_id, metrics=["gust_max_kmh"],
+    )
+
+    assert trip_satz == {"email", "telegram"}, (
+        f"AC-38 Trip: `gust: null` muss erben, gemessen {trip_satz!r}"
+    )
+    assert vgl_satz == {"email", "telegram"}, (
+        f"AC-38 Vergleich: `gust: null` muss erben, gemessen {vgl_satz!r}"
     )
 
 
