@@ -51,6 +51,8 @@ import re
 import secrets
 import sys
 import threading
+import time
+from email.message import EmailMessage
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import parse_qs, urlsplit
@@ -92,6 +94,10 @@ class _Staging:
         self.users: dict[str, dict] = {}
         self.log: list[tuple] = []              # (user, methode, pfad)
         self.kern: list[dict] = []              # aufgezeichnete Kern-Aufrufe
+        self.bodies: list[tuple] = []           # (methode, pfad, body) aller Go-API-Aufrufe
+        self.feste_id: str | None = None        # Register vergibt diese id statt u-<hex>
+        self.preset_ohne_id = False             # Preset-POST-Antwort ohne "id"
+        self.kern_verzoegerung_s = 0.0          # Kern antwortet erst nach dieser Zeit
         outer = self
 
         class H(BaseHTTPRequestHandler):
@@ -118,6 +124,7 @@ class _Staging:
                     if c.strip().startswith("sid="):
                         sid = c.strip()[4:]
                 outer.log.append((sid, methode, pfad))
+                outer.bodies.append((methode, pfad, body))
                 for teil, status in outer.ablehnen.items():
                     if teil in pfad:
                         return self._antwort(status, {"error": "abgelehnt"})
@@ -135,7 +142,7 @@ class _Staging:
                         return self._antwort(403, {"error": "email_not_verified"})
                     return self._antwort(200, {}, cookie=body["username"])
                 if pfad == "/api/auth/register":
-                    uid = "u-" + secrets.token_hex(4)
+                    uid = outer.feste_id or "u-" + secrets.token_hex(4)
                     u[uid] = {"pw": body["password"], "email": body["email"], "verified": False,
                               "trips": {}, "locations": {}, "presets": {}, "token": secrets.token_hex(4)}
                     return self._antwort(201, {"id": uid})
@@ -160,6 +167,8 @@ class _Staging:
                     if methode == "POST" and pfad == praefix:
                         oid = body.get("id") or "p-" + secrets.token_hex(3)
                         n[sammlung][oid] = body
+                        if sammlung == "presets" and outer.preset_ohne_id:
+                            return self._antwort(201, {k: v for k, v in body.items() if k != "id"})
                         return self._antwort(201, {**body, "id": oid})
                     if methode == "DELETE" and pfad.startswith(praefix + "/"):
                         n[sammlung].pop(pfad.rsplit("/", 1)[1], None)
@@ -171,6 +180,8 @@ class _Staging:
                 eintrag = {"pfad": pfad, "user_id": uid, "query": query,
                            "auth": self.headers.get("X-GZ-Core-Auth")}
                 outer.kern.append(eintrag)
+                if outer.kern_verzoegerung_s:
+                    time.sleep(outer.kern_verzoegerung_s)  # echter Versand dauert Minuten
                 if eintrag["auth"] != CORE_SECRET:
                     return self._antwort(401, {"error": "unauthorized"})
                 if outer.kern_antwort:
@@ -194,9 +205,13 @@ class _Staging:
         self._srv.shutdown()
         self._srv.server_close()
 
-    def api(self, w, secret=CORE_SECRET):
+    def api(self, w, secret=CORE_SECRET, **kw):
         return w.MailApi(self.url, self.url, secret, w.pw.http_transport(),
-                         helfer_transport=w.pw.http_transport(), helfer_zugang=(HELFER_USER, HELFER_PASS))
+                         helfer_transport=w.pw.http_transport(), helfer_zugang=(HELFER_USER, HELFER_PASS),
+                         **kw)
+
+    def trip_bodies(self) -> list[dict]:
+        return [b for m, p, b in self.bodies if m == "POST" and p == "/api/trips"]
 
 
 @pytest.fixture
@@ -287,6 +302,10 @@ def test_preset_enthaelt_mindestfelder_und_tag():
     ([("zugangsdaten_fehlen", None)], 2),
     ([("registrierung_abgelehnt", None)], 2),
     ([("validator", 1), ("core_401", None)], 2),
+    ([("validator", 2)], 2),
+    ([("validator", 0), ("validator", 2)], 2),
+    ([("aufraeumen_fehlgeschlagen", None), ("validator", 0)], 2),
+    ([], 2),  # kein einziger Pfad gelaufen: nie 0 ohne bestandenen Validator
 ])
 def test_exit_code_ableitung(ausgaenge, erwartet):
     assert _werkzeug().bestimme_exit(ausgaenge) == erwartet
@@ -450,6 +469,252 @@ def test_main_trip_gegen_ersatz_staging_ist_exit_0_und_raeumt_auf(monkeypatch, t
     monkeypatch.setenv("GZ_STAGING_CORE_URL", staging.url)
     assert w.main(["--typ", "trip"], validator_runner=_Runner()) == 0
     assert staging.users == {}
+
+
+def _main_env(monkeypatch, tmp_path, w, staging):
+    _env(monkeypatch, tmp_path, w)
+    monkeypatch.setenv("GZ_STAGING_BASE_URL", staging.url)
+    monkeypatch.setenv("GZ_STAGING_CORE_URL", staging.url)
+
+
+def test_main_beide_faehrt_trip_und_compare(monkeypatch, tmp_path, staging):
+    w = _werkzeug()
+    _main_env(monkeypatch, tmp_path, w, staging)
+    r = _Runner()
+    assert w.main(["--typ", "beide"], validator_runner=r) == 0
+    assert [c["pfad"].split("/")[3] for c in staging.kern] == ["trips", "compare-presets"]
+    assert len(r.aufrufe) == 2
+    assert any(a.endswith("briefing_mail_validator.py") for a in r.aufrufe[0])
+    assert any(a.endswith("email_spec_validator.py") for a in r.aufrufe[1])
+    assert staging.users == {}
+
+
+# ---------------------------------------------------------------------------
+# F001: Kern meldet 200, aber nichts versendet -> kein Validator auf alte Mail
+# ---------------------------------------------------------------------------
+
+@pytest.mark.parametrize("pfad", ["trip", "compare"])
+@pytest.mark.parametrize("antwort", [{"status": "skipped", "sent": False}, {"status": "ok"}])
+def test_kern_200_ohne_versand_ist_exit_1_ohne_validator(staging, pfad, antwort):
+    w = _werkzeug()
+    staging.kern_antwort = (200, antwort)
+    r = _Runner()
+    assert w.fuehre_lauf([pfad], api=staging.api(w), validator_runner=r, tag="f1-aaaa") == 1
+    assert r.aufrufe == [], "nicht versendete Mail darf keinen Validator auf eine ältere Mail loslassen"
+    assert len(staging.kern) == 1
+    assert staging.users == {}
+
+
+# ---------------------------------------------------------------------------
+# F002: 401-Pfad verrät kein Geheimnis
+# ---------------------------------------------------------------------------
+
+def test_401_pfad_verraet_weder_echtes_noch_falsches_secret(staging, capsys):
+    w = _werkzeug()
+    falsch = "FALSCH-GEHEIM-k93x"
+    for pfad in ("trip", "compare"):
+        assert w.fuehre_lauf([pfad], api=staging.api(w, secret=falsch), validator_runner=_Runner(),
+                             tag=f"f2-{pfad}") == 2
+    assert [c["auth"] for c in staging.kern] == [falsch, falsch]
+    aus = capsys.readouterr()
+    assert "401" in aus.err
+    for geheim in (CORE_SECRET, falsch, HELFER_PASS):
+        assert geheim not in aus.out and geheim not in aus.err
+
+
+# ---------------------------------------------------------------------------
+# F003: echter Validator-Rand wartet auf die Mail im Postfach
+# ---------------------------------------------------------------------------
+
+class _Postfach:
+    """imaplib-artiges Postfach: UID SEARCH ALL und UID FETCH der Kopffelder (PEEK)."""
+
+    def __init__(self):
+        self.mails: dict[int, bytes] = {}
+        self.verbindungen = 0
+        self.abgemeldet = 0
+
+    def lege_ab(self, betreff: str, mail_type: str | None):
+        m = EmailMessage()
+        m["From"], m["To"] = "gregor_zwanzig@henemm.com", "gregor-test+x@henemm.com"
+        m["Subject"] = betreff
+        if mail_type:
+            m["X-GZ-Mail-Type"] = mail_type
+        m.set_content("Inhalt")
+        self.mails[max(self.mails, default=0) + 1] = m.as_bytes()
+
+    def fabrik(self):
+        self.verbindungen += 1
+        return self
+
+    def logout(self):
+        self.abgemeldet += 1
+        return ("BYE", [b""])
+
+    def uid(self, befehl, *args):
+        befehl = befehl.upper()
+        if befehl == "SEARCH":
+            return ("OK", [" ".join(str(u) for u in sorted(self.mails)).encode()])
+        if befehl == "FETCH":
+            uid = int(args[0])
+            assert "PEEK" in args[1], "Wartepunkt darf Mails nicht als gelesen markieren"
+            felder = re.search(r"FIELDS \(([^)]*)\)", args[1]).group(1).lower().split()
+            kopf = self.mails[uid].split(b"\n\n", 1)[0].split(b"\n")
+            auswahl = b"\r\n".join(z for z in kopf if z.split(b":", 1)[0].decode().lower() in felder)
+            return ("OK", [(f"{uid} (BODY[HEADER.FIELDS] {{{len(auswahl)}}}".encode(), auswahl + b"\r\n\r\n"),
+                           b")"])
+        raise AssertionError(f"unerwarteter IMAP-Befehl {befehl}")
+
+
+def _validator_attrappe(marker: Path, betreff: str, mail_type: str) -> list[str]:
+    """Echter Unterprozess statt Validator: hinterlässt eine Spur und endet mit Exit 3."""
+    code = "import pathlib, sys; pathlib.Path(sys.argv[1]).write_text('lief'); sys.exit(3)"
+    return [sys.executable, "-c", code, str(marker), "--mail-type", mail_type, "--subject-contains", betreff]
+
+
+def test_validator_startet_erst_wenn_passende_mail_im_postfach_liegt(tmp_path):
+    w = _werkzeug()
+    box = _Postfach()
+    box.lege_ab("[GZM t-imap] Morgen", "compare")           # richtiger Tag, falscher Mail-Typ
+    box.lege_ab("[GZM t-anders] Morgen", "trip-briefing")   # richtiger Typ, fremder Tag
+    box.lege_ab("[GZM t-imap] Morgen", None)                # ohne Marker-Header
+    schlaefe = []
+
+    def schlaf(s):
+        assert not (tmp_path / "spur").exists(), "Validator lief, bevor die Mail da war"
+        schlaefe.append(s)
+        if len(schlaefe) == 2:
+            box.lege_ab("Gregor [GZM t-imap] Morgen-Briefing", "trip-briefing")
+
+    runner = w.echter_validator_runner({}, timeout=600, schlaf=schlaf, imap_factory=box.fabrik)
+    rc = runner(_validator_attrappe(tmp_path / "spur", "GZM t-imap", "trip-briefing"))
+    assert rc == 3, "Exit des Validators wird unverändert durchgereicht"
+    assert (tmp_path / "spur").read_text() == "lief"
+    assert len(schlaefe) == 2 and box.verbindungen == 3 == box.abgemeldet
+
+
+def test_validator_startet_nicht_wenn_mail_bis_timeout_ausbleibt(tmp_path, capsys):
+    w = _werkzeug()
+    box = _Postfach()
+    box.lege_ab("[GZM t-imap] Morgen", "compare")
+    schlaefe = []
+    runner = w.echter_validator_runner({}, timeout=30, schlaf=schlaefe.append, imap_factory=box.fabrik)
+    rc = runner(_validator_attrappe(tmp_path / "spur", "GZM t-imap", "trip-briefing"))
+    assert rc != 0
+    assert not (tmp_path / "spur").exists(), "ohne zugestellte Mail darf kein Validator laufen"
+    assert sum(schlaefe) == 30, "Gesamtwartezeit entspricht genau dem Timeout, nicht laenger"
+    assert box.verbindungen == len(schlaefe) + 1
+    assert "GZM t-imap" in capsys.readouterr().err
+
+
+def _postfach_mit_zielmail_und_nachfolgern(anzahl_danach: int) -> _Postfach:
+    box = _Postfach()
+    box.lege_ab("Gregor [GZM t-fenster] Morgen-Briefing", "trip-briefing")
+    for i in range(anzahl_danach):
+        box.lege_ab(f"[GZM fremd-{i}] Abend", "compare")
+    return box
+
+
+def test_zielmail_innerhalb_der_letzten_40_wird_gefunden(tmp_path):
+    w = _werkzeug()
+    box = _postfach_mit_zielmail_und_nachfolgern(39)   # Zielmail ist die 40.-juengste
+    schlaefe = []
+    runner = w.echter_validator_runner({}, timeout=0, schlaf=schlaefe.append, imap_factory=box.fabrik)
+    rc = runner(_validator_attrappe(tmp_path / "spur", "GZM t-fenster", "trip-briefing"))
+    assert rc == 3 and (tmp_path / "spur").read_text() == "lief"
+    assert schlaefe == []
+
+
+def test_zielmail_ausserhalb_der_letzten_40_wird_nicht_gefunden(tmp_path):
+    w = _werkzeug()
+    box = _postfach_mit_zielmail_und_nachfolgern(40)   # Zielmail ist die 41.-juengste
+    runner = w.echter_validator_runner({}, timeout=0, schlaf=lambda s: None, imap_factory=box.fabrik)
+    rc = runner(_validator_attrappe(tmp_path / "spur", "GZM t-fenster", "trip-briefing"))
+    assert rc == 1
+    assert not (tmp_path / "spur").exists(), "nur das Fenster der letzten 40 Mails zaehlt"
+
+
+# ---------------------------------------------------------------------------
+# F004: Randfälle Exit, Aufräumen, Isolation, Preset, Zeitlimit
+# ---------------------------------------------------------------------------
+
+def test_validator_exit_2_wird_als_2_durchgereicht(staging):
+    w = _werkzeug()
+    assert w.fuehre_lauf(["trip"], api=staging.api(w), validator_runner=_Runner({"briefing": 2}),
+                         tag="f4-aaaa") == 2
+    assert w.fuehre_lauf(["trip", "compare"], api=staging.api(w),
+                         validator_runner=_Runner({"email_spec": 2}), tag="f4-bbbb") == 2
+
+
+def test_uebrig_gebliebener_nutzer_steht_in_der_warnung(staging, capsys):
+    w = _werkzeug()
+    staging.ablehnen = {"/api/auth/account/delete": 500}
+    assert w.fuehre_lauf(["trip"], api=staging.api(w), validator_runner=_Runner(), tag="f4-cccc") != 0
+    (uebrig,) = staging.users
+    warnungen = [z for z in capsys.readouterr().err.splitlines() if "nicht geloescht" in z]
+    assert warnungen and all(uebrig in z for z in warnungen)
+
+
+def test_reste_beim_geloeschten_nutzer_sind_ein_befund(staging, capsys):
+    w = _werkzeug()
+    staging.ablehnen = {"/api/trips/": 500, "/api/compare/presets/": 500}  # nur DELETE, POST bleibt heil
+    rc = w.fuehre_lauf(["trip", "compare"], api=staging.api(w), validator_runner=_Runner(), tag="f4-dddd")
+    assert rc == 2, "nicht gelöschte Objekte sind ein Aufräum-Fehlschlag"
+    assert staging.users == {}, "der Nutzer wird trotzdem gelöscht"
+    nutzer = {c["user_id"] for c in staging.kern}
+    (kennung,) = nutzer
+    err = capsys.readouterr().err
+    assert any("Reste" in z and kennung in z for z in err.splitlines())
+
+
+def test_einzelversand_an_nutzer_default_wird_verweigert(staging):
+    w = _werkzeug()
+    staging.feste_id = "default"
+    r = _Runner()
+    rc = w.fuehre_lauf(["trip", "compare"], api=staging.api(w), validator_runner=r, tag="f4-eeee")
+    assert rc != 0
+    assert staging.kern == [], "kein Kern-Aufruf mit user_id=default"
+    assert r.aufrufe == []
+
+
+def test_preset_antwort_ohne_id_ist_umgebungsfehler(staging):
+    w = _werkzeug()
+    staging.preset_ohne_id = True
+    r = _Runner()
+    assert w.fuehre_lauf(["compare"], api=staging.api(w), validator_runner=r, tag="f4-ffff") == 2
+    assert staging.kern == [] and r.aufrufe == []
+
+
+def test_kern_zeitlimit_hat_untergrenze_300_s_am_echten_aufruf(staging):
+    w = _werkzeug()
+    staging.kern_verzoegerung_s = 1.5
+    api = staging.api(w, kern_timeout=1)  # zu kleines Limit muss auf >= 300 s angehoben werden
+    assert w.fuehre_lauf(["trip"], api=api, validator_runner=_Runner(), tag="f4-gggg") == 0
+    assert len(staging.kern) == 1
+
+
+# ---------------------------------------------------------------------------
+# F005: --format compact (nur lokal gegen Ersatz-Staging belegt, live nicht)
+# ---------------------------------------------------------------------------
+
+def _email_format(trip: dict) -> str:
+    return (trip.get("report_config") or {}).get("email_format", "full")
+
+
+def test_trip_format_full_standard_und_compact_auf_wunsch(staging):
+    w = _werkzeug()
+    assert w.fuehre_lauf(["trip"], api=staging.api(w), validator_runner=_Runner(), tag="f5-aaaa") == 0
+    assert w.fuehre_lauf(["trip"], api=staging.api(w), validator_runner=_Runner(), tag="f5-bbbb",
+                         email_format="compact") == 0
+    assert [_email_format(t) for t in staging.trip_bodies()] == ["full", "compact"]
+
+
+def test_main_reicht_format_compact_an_den_trip_durch(monkeypatch, tmp_path, staging):
+    w = _werkzeug()
+    _main_env(monkeypatch, tmp_path, w, staging)
+    assert w.main(["--typ", "trip"], validator_runner=_Runner()) == 0
+    assert w.main(["--typ", "trip", "--format", "compact"], validator_runner=_Runner()) == 0
+    assert [_email_format(t) for t in staging.trip_bodies()] == ["full", "compact"]
 
 
 # ---------------------------------------------------------------------------

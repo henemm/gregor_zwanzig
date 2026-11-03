@@ -82,28 +82,62 @@ KEINE Mail in diesem Scope.
 
 ## Schritt 3b: backend / full-stack — Test-Trip + Test-Mail
 
-1. **Test-Trip auf Staging anlegen** (via Staging-API), niemals einen Produktiv-Trip
-   (GR221 etc.) verwenden. Der Trip bekommt als einzigen Empfaenger die Test-Adresse
-   `gregor-test@henemm.com`.
-2. **Briefing ausschliesslich an diesen einen Test-Trip** ausloesen — niemals einen
-   Sammel-Versand ueber alle aktiven Touren. Nur dieser eine Test-Trip darf eine Mail
-   erhalten.
-3. **IMAP-Pruefung gegen Stalwart:** Posteingang von `gregor-test@henemm.com` auf
-   `mail.henemm.com` abrufen (Creds `GZ_IMAP_*`, nie im Klartext).
-   Pruefen: Subject mit Trip-Name + Report-Typ, HTML-Body nicht leer, Wetter-Tabelle
-   vorhanden, Werte plausibel, Timestamp NACH dem Versand.
-
-Inhaltliche Tiefe via **pfadrichtigem** Validator (liest dieselbe Test-Mail; falscher
-Validator auf einen Pfad ist strukturell nie bestehbar — `docs/reference/mail_validators.md`):
-
-- **Trip-Briefing** (`X-GZ-Mail-Type: trip-briefing`): `uv run python3 .claude/hooks/briefing_mail_validator.py`
-- **Orts-Vergleich** (`X-GZ-Mail-Type: compare`):
+Trip- und Compare-Mail werden **wirklich ueber Staging zugestellt** und mit dem
+pfadrichtigen Validator geprueft — ein Aufruf, ohne manuelle Zwischenschritte (#2774):
 
 ```bash
-uv run python3 .claude/hooks/email_spec_validator.py
+python3 .claude/tools/staging_mail_pruefen.py --typ trip      # Trip-Briefing
+python3 .claude/tools/staging_mail_pruefen.py --typ compare   # Orts-Vergleich
+python3 .claude/tools/staging_mail_pruefen.py --typ beide     # beides (mehrere Minuten)
+# optional: --report-type morning|evening  --format full|compact  --timeout 300  --ohne-cleanup
 ```
 
-**STOP wenn:** der zuständige Validator nicht Exit 0.
+Was das Werkzeug tut (Zugangsdaten aus `/home/hem/gregor_zwanzig_staging/.env`, nie im Klartext):
+
+1. Legt einen **Wegwerf-Nutzer** mit der eindeutigen Plus-Adresse `gregor-test+<tag>@henemm.com`
+   an und bestaetigt ihn ueber das Helfer-Konto (`GZ_AUTH_USER`/`GZ_AUTH_PASS`). Nie einen
+   Produktiv-Trip, nie das Konto `default`, nie Daten bestehender Nutzer.
+2. Trip (Name `GZM <tag>`) bzw. drei Orte + Compare-Preset (`schedule: manual`, Name mit Tag)
+   anlegen und **nur dieses eine Objekt** per Einzelversand am Kern ausloesen:
+   `POST http://127.0.0.1:8001/api/scheduler/trips/<id>/send?user_id=..&report_type=..` bzw.
+   `.../compare-presets/<id>/send?user_id=..` — Aufrufe an Port 8001 brauchen seit #2142 den
+   Header `X-GZ-Core-Auth` (Secret `GZ_CORE_SHARED_SECRET`), sonst HTTP 401. Zeitlimit 300 s.
+3. Wartet, bis die Mail mit dem Tag im Betreff im Test-Postfach liegt, und laesst dann den
+   **unveraenderten** Validator mit `--subject-contains <Tag-Betreff>` auf genau diese Mail los.
+4. Raeumt im `finally` auf (Preset, Orte, Trip, Nutzer); scheitert das, nennt es die Nutzer-Kennung.
+
+**Warum nicht `gregor-test@henemm.com` als Empfaenger:** Diese Adresse taugt **nicht** als
+Empfaenger eines Test-Trips — Go lehnt sie als `email_taken` ab. Die Plus-Adresse landet im
+selben Postfach; die Validatoren lesen das ganze Postfach, eindeutig wird die Mail erst ueber
+`--subject-contains` mit dem Lauf-Tag (ohne Filter kann eine fremde Mail geprueft werden).
+
+Zuordnung Validator zu Mail-Typ (falscher Validator auf einen Pfad ist strukturell nie
+bestehbar — `docs/reference/mail_validators.md`):
+
+| Pfad | `X-GZ-Mail-Type` | Validator |
+|---|---|---|
+| Trip (`full`/`compact`) | `trip-briefing` | `briefing_mail_validator.py --mail-type trip-briefing --subject-contains <Tag-Betreff>` |
+| Orts-Vergleich | `compare` | `email_spec_validator.py --mail-type compare --subject-contains <Tag-Betreff>` |
+
+Exit-Codes:
+- **Exit 0** — alle gewaehlten Pfade zugestellt und Validator Exit 0.
+- **Exit 1** — Mail nicht zugestellt, Versand abgelehnt (`smtp_not_configured`, `send_failed`)
+  oder Validator-Befund. Ein abgelehnter Versand gilt nie als Erfolg.
+- **Exit 2** — Umgebungs-/Aufruffehler: Zugangsdaten oder Core-Secret fehlen, Kern HTTP 401,
+  Registrierung abgelehnt (z. B. 429, 5 Versuche/IP/Stunde, #117), Aufraeumen gescheitert.
+
+`compact`: `--format compact` setzt `report_config.email_format` des Test-Trips. Belegt ist das
+nur lokal gegen das Ersatz-Staging der Kerntests (Trip-Body traegt `compact`); ob Staging daraus
+wirklich eine compact-Mail macht, ist live noch nicht nachgewiesen — dafuer zaehlt allein der
+Validator-Befund (`X-GZ-Format`).
+
+**Grenze „Ausblick ohne Winddaten“:** Das Szenario aus #1670 AC-5 (Wind-Zelle „–“ statt „0“
+bei fehlenden Winddaten) ist auf Staging **nicht herstellbar** — die echten Provider liefern
+Wind, der Seed-Endpoint setzt keine Wetterdaten. Der Fall ist per **lokalem** Render-Test
+belegt (abgedeckt in #1670). Es gibt dafuer keinen Eingriff in Wetterdaten und keine
+Ersatzkonstruktion.
+
+**STOP wenn:** das Werkzeug nicht Exit 0 meldet.
 
 ### Rezept: Befehl per echtem Mail-Eingang auf Staging
 
@@ -203,7 +237,9 @@ zweimal am 2026-08-10 (#1653, #1677).
 - Den lokalen Produktiv-API-Port (8090) beenden oder beschiessen.
 - Die Go-API lokal als eigenen Prozess hochfahren, um gegen `localhost` zu testen.
 - Einen Sammel-Versand ueber alle aktiven Touren ausloesen — nur der eine Test-Trip
-  darf eine Mail erhalten, Empfaenger ausschliesslich `gregor-test@henemm.com`.
+  darf eine Mail erhalten, Empfaenger ausschliesslich das Test-Postfach `gregor-test@henemm.com`
+  (beim Mailweg ueber die Plus-Adresse `gregor-test+<tag>@henemm.com` des Wegwerf-Nutzers, weil
+  die nackte Adresse als Trip-Empfaenger an `email_taken` scheitert).
 - IMAP gegen ein Gmail-Postfach pruefen — Stalwart (`mail.henemm.com`) ist die Quelle.
 - In einen laufenden Systemd-Prozess von Live oder Staging eingreifen
   (stoppen/starten/neu starten).

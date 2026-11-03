@@ -10,6 +10,30 @@ falschen Validator auf einen Pfad anzuwenden ist ein Fehler — er kann struktur
 nie bestehen (Dauer-Exit-1) und führt zu falschem „Feature kaputt" oder
 Gate-Erosion.
 
+## Zustellweg auf Staging und Subject-Filter (#2774)
+
+Die Validatoren prüfen eine **echt zugestellte** Staging-Mail. Zustellen und prüfen in einem
+Schritt: `python3 .claude/tools/staging_mail_pruefen.py --typ trip|compare|beide` (Rezept in
+`.claude/commands/e2e-verify.md` Schritt 3b und `docs/reference/operations_playbook.md`).
+
+- **Empfänger:** ein Wegwerf-Nutzer mit Plus-Adresse `gregor-test+<tag>@henemm.com`.
+  `gregor-test@henemm.com` selbst taugt nicht als Trip-Empfänger (Go: `email_taken`).
+- **Versand:** Einzelversand am Kern (Port 8001) mit Header `X-GZ-Core-Auth`.
+- **Subject-Filter:** Beide Validatoren lesen das **ganze** Postfach und filtern nur nach
+  `X-GZ-Mail-Type` und `--subject-contains`, nicht nach Empfängeradresse. Eindeutig wird die
+  Mail allein über den Lauf-Tag im Betreff (Trip-Name bzw. Preset-Name), deshalb immer mit
+  `--subject-contains <Tag-Betreff>` aufrufen; ohne Filter kann eine fremde Mail geprüft werden.
+
+| Pfad | `X-GZ-Mail-Type` | Validator | Pflicht-Argumente |
+|---|---|---|---|
+| Trip (`full`/`compact`) | `trip-briefing` | `briefing_mail_validator.py` | `--mail-type trip-briefing --subject-contains <Tag-Betreff>` |
+| Orts-Vergleich | `compare` | `email_spec_validator.py` | `--mail-type compare --subject-contains <Tag-Betreff>` |
+
+**Grenze „Ausblick ohne Winddaten":** #1670 AC-5 (Wind-Zelle „–" statt „0" bei fehlenden
+Winddaten) ist auf Staging nicht herstellbar (echte Provider liefern Wind, der Seed-Endpoint setzt
+keine Wetterdaten). Belegt per **lokalem** Render-Test (abgedeckt in #1670); kein Eingriff in
+Wetterdaten.
+
 ## Sprache — Kopf `X-GZ-Lang` (seit #2663, ADR-0104)
 
 `build_mime_message()` setzt in **jeder** Mail (HTML- und Klartext-Zweig, alle
@@ -108,7 +132,8 @@ uv run python3 .claude/hooks/email_spec_validator.py
 
 Prüft: Struktur, Location-Anzahl, Plausibilität, Format, Vollständigkeit der
 Orts-Vergleich-Mail. Läuft in der Acceptance-Stage gegen die Staging-Mail:
-Test-Trip mit Empfänger `gregor-test@henemm.com`, IMAP-Quelle ist das Stalwart-
+Wegwerf-Nutzer mit Plus-Adresse `gregor-test+<tag>@henemm.com`, die Zustellung
+landet im Postfach `gregor-test@henemm.com`; IMAP-Quelle ist dieses Stalwart-
 Test-Postfach (`mail.henemm.com`). `fetch_latest_email()` priorisiert seit #972
 `GZ_TEST_IMAP_USER`/`GZ_TEST_IMAP_PASS` vor `GZ_IMAP_*`/`GZ_SMTP_*`, sodass
 verlässlich gegen das Test-Postfach geprüft wird. Credentials aus den Settings —
