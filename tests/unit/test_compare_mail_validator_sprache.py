@@ -60,13 +60,13 @@ def test_ac2_deutscher_inhalt_mit_kopf_en_ist_widerspruch(tmp_path):
     assert "X-GZ-Lang: en widerspricht dem Inhalt" in lauf.stdout
 
 
-def test_ac3_deutsche_mail_ohne_kopf_besteht_mit_warnung(tmp_path):
+def test_ac3_deutsche_mail_ohne_kopf_ist_seit_a2_fehler(tmp_path):
+    """A2 (#2681): fehlender Kopf -> Exit 1, keine Uebergangs-Warnung mehr."""
     lauf, log_dir = validator_lauf(tmp_path, VALIDATOR, mit_kopf(lade("compare_de.eml"), None))
-    assert lauf.returncode == 0, lauf.stdout + lauf.stderr
-    assert "WARNUNG: X-GZ-Lang fehlt" in lauf.stderr
-    log = _log(log_dir)
-    assert log["passed"] is True
-    assert any("X-GZ-Lang fehlt" in w for w in log["warnings"])
+    assert lauf.returncode == 1, lauf.stdout + lauf.stderr
+    assert "Marker-Header X-GZ-Lang fehlt" in lauf.stdout
+    assert "WARNUNG: X-GZ-Lang fehlt" not in lauf.stderr
+    assert _log(log_dir)["passed"] is False
 
 
 def test_ac3_unbekannter_wert_ist_fehler(tmp_path):

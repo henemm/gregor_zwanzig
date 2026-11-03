@@ -1,4 +1,4 @@
-"""Mail-Kopf ``X-GZ-Lang`` und Übergangsschalter (Issue #2663 AC-6, AC-8).
+"""Mail-Kopf ``X-GZ-Lang`` und Pflichtschalter (Issue #2663 AC-6, AC-8; A2 #2681).
 
 Kern-Schicht: echter Aufruf von ``build_mime_message`` je Mail-Art (kein SMTP)
 und des echten Hilfsmoduls ``.claude/hooks/_mail_lang.py``. Kein Mock.
@@ -66,25 +66,15 @@ def _mail(kopf: str | None):
     return msg
 
 
-def test_ac8_ohne_schalter_fehlender_kopf_ist_warnung():
+def test_ac8_fehlender_kopf_ist_seit_a2_fehler():
+    """A2 (#2681): der Schalter steht auf Pflicht -- fehlender Kopf ist ein Fehler,
+    keine Warnung mehr (Uebergang PV #2663 beendet)."""
     mod = _mail_lang_modul()
-    assert mod.HEADER_PFLICHT is False
-    lang, warnungen = mod.mail_lang(_mail(None))
-    assert lang == "de"
-    assert warnungen and "X-GZ-Lang" in warnungen[0]
+    assert mod.HEADER_PFLICHT is True
+    with pytest.raises(ValueError, match="Marker-Header X-GZ-Lang fehlt"):
+        mod.mail_lang(_mail(None))
     assert mod.mail_lang(_mail("en")) == ("en", [])
     assert mod.mail_lang(_mail("de")) == ("de", [])
-
-
-def test_ac8_mit_schalter_fehlender_kopf_ist_fehler():
-    mod = _mail_lang_modul()
-    mod.HEADER_PFLICHT = True
-    try:
-        with pytest.raises(ValueError, match="X-GZ-Lang unbekannt oder fehlt"):
-            mod.mail_lang(_mail(None))
-        assert mod.mail_lang(_mail("en")) == ("en", [])
-    finally:
-        mod.HEADER_PFLICHT = False
 
 
 @pytest.mark.parametrize("wert", ["fr", "", "EN-us"])

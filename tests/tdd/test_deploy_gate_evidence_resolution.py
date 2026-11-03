@@ -160,6 +160,7 @@ def _write_attestation(
     payload = {
         "verified_commit": verified_commit,
         "staging_verdict": verdict,
+        "langs": ["de", "en"],
         "findings": findings if findings is not None else [],
         "scope": scope,
         "environment": "staging",
@@ -433,6 +434,7 @@ def test_ac11_legacy_singleton_with_foreign_commit_is_ignored(
     singleton.write_text(json.dumps({
         "verified_commit": c1,
         "staging_verdict": "VERIFIED — backend-only SMS-Fix: ...",
+        "langs": ["de", "en"],
     }))
 
     # Lauf 2: mit Sammeldatei

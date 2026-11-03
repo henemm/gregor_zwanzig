@@ -121,7 +121,7 @@ class TestRetentionPrunesOldest:
         prefilled = _prefill(tagged_dir, RETENTION, base_ts)
         oldest = prefilled[0]
 
-        rc = sg.write_verdict("VERIFIED: neu", _findings_file(tmp_path), None)
+        rc = sg.write_verdict("VERIFIED: neu", _findings_file(tmp_path), None, langs=["de", "en"])
         assert rc == 0
 
         head_file = tagged_dir / f"{head}.json"
@@ -148,7 +148,7 @@ class TestRetentionKeepsWhenUnderLimit:
         base_ts = datetime.now(timezone.utc).timestamp() - 1000
         prefilled = _prefill(tagged_dir, 5, base_ts)
 
-        assert sg.write_verdict("VERIFIED: neu", _findings_file(tmp_path), None) == 0
+        assert sg.write_verdict("VERIFIED: neu", _findings_file(tmp_path), None, langs=["de", "en"]) == 0
 
         for p in prefilled:
             assert p.exists(), f"Bestehende Datei darf nicht gelöscht werden: {p.name}"
@@ -169,7 +169,7 @@ class TestHeadAttestationSurvivesPruning:
         base_ts = datetime.now(timezone.utc).timestamp() - 1000
         _prefill(tagged_dir, RETENTION, base_ts)
 
-        assert sg.write_verdict("VERIFIED: HEAD grün", _findings_file(tmp_path), None) == 0
+        assert sg.write_verdict("VERIFIED: HEAD grün", _findings_file(tmp_path), None, langs=["de", "en"]) == 0
         assert sg.gate_check(None, None) == 0, (
             "HEAD-Attestation darf nie weggeprunt werden → Gate muss Exit 0 liefern"
         )
@@ -196,6 +196,6 @@ class TestPruningErrorDoesNotBreakVerdict:
         ts = base_ts - 9999  # ältester Eintrag → landet im Prune-Slice
         os.utime(bad, (ts, ts))
 
-        rc = sg.write_verdict("VERIFIED: trotz Löschfehler", _findings_file(tmp_path), None)
+        rc = sg.write_verdict("VERIFIED: trotz Löschfehler", _findings_file(tmp_path), None, langs=["de", "en"])
         assert rc == 0, "Löschfehler beim Pruning darf das Verdict nicht kippen"
         assert (tagged_dir / f"{head}.json").exists(), "Neue Attestation muss trotzdem existieren"

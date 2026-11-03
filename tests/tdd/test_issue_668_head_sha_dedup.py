@@ -141,7 +141,7 @@ def test_ac1_head_sha_called_once_with_gate_scope_marker(patched_repo_with_marke
     1× laufen. Vor Fix: 4× (drei bekannte Pfade + `_scope_diff_base():146`,
     der ohne Marker nie erreicht wird)."""
     rc = staging_gate.write_verdict(
-        "VERIFIED: alle ACs grün", patched_repo_with_marker["findings"]
+        "VERIFIED: alle ACs grün", patched_repo_with_marker["findings"], langs=["de", "en"]
     )
     assert rc == 0
     n = _count(patched_repo_with_marker["counter"])
@@ -154,7 +154,7 @@ def test_ac1_head_sha_called_once_with_gate_scope_marker(patched_repo_with_marke
 
 def test_ac1_head_sha_called_once_without_override(patched_repo):
     """AC-1 (a): ohne Override darf `git rev-parse HEAD` nur 1× laufen (vor Fix: 3×)."""
-    rc = staging_gate.write_verdict("VERIFIED: alle ACs grün", patched_repo["findings"])
+    rc = staging_gate.write_verdict("VERIFIED: alle ACs grün", patched_repo["findings"], langs=["de", "en"])
     assert rc == 0
     n = _count(patched_repo["counter"])
     assert n == 1, f"git rev-parse HEAD wurde {n}x ausgeführt, erwartet genau 1"
@@ -162,7 +162,7 @@ def test_ac1_head_sha_called_once_without_override(patched_repo):
 
 def test_ac2_verified_commit_matches_head(patched_repo):
     """AC-2: verified_commit bleibt exakt der aktuelle HEAD-SHA."""
-    rc = staging_gate.write_verdict("VERIFIED: ok", patched_repo["findings"])
+    rc = staging_gate.write_verdict("VERIFIED: ok", patched_repo["findings"], langs=["de", "en"])
     assert rc == 0
     head = patched_repo["head"]
     attestation = patched_repo["repo"] / ".claude" / "e2e_verified" / f"{head}.json"
@@ -174,7 +174,7 @@ def test_ac3_override_path_still_works(patched_repo, tmp_path):
     """AC-3: mit --e2e-path-Override wird dorthin geschrieben, SHA korrekt, 1× rev-parse."""
     override = tmp_path / "custom_e2e.json"
     rc = staging_gate.write_verdict(
-        "VERIFIED: ok", patched_repo["findings"], e2e_path=override
+        "VERIFIED: ok", patched_repo["findings"], e2e_path=override, langs=["de", "en"]
     )
     assert rc == 0
     assert override.exists()

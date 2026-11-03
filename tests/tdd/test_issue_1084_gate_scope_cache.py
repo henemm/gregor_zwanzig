@@ -95,6 +95,7 @@ def _write_valid_e2e(repo: Path, sha: str, verdict: str = "VERIFIED: alle ACs gr
     e2e_path.write_text(json.dumps({
         "verified_commit": sha,
         "staging_verdict": verdict,
+        "langs": ["de", "en"],
         "verified_at": datetime.now(timezone.utc).isoformat(),
         "environment": "staging",
         "scope": "backend",
@@ -301,7 +302,7 @@ def test_ac6_write_verdict_honors_scope_override(tmp_path):
     e2e_path = repo / ".claude" / "e2e_verified.json"
 
     res = _run_staging_gate(
-        repo, "--write-verdict", "VERIFIED: alle ACs gruen",
+        repo, "--write-verdict", "VERIFIED: alle ACs gruen", "--langs", "de,en",
         "--findings-json", str(findings_path),
         "--e2e-path", str(e2e_path),
         "--scope", "frontend-only",

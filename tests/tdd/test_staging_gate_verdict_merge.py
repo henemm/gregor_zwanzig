@@ -89,6 +89,7 @@ def _write_existing(e2e_path: Path, verified_commit: str, findings: list,
     e2e_path.write_text(json.dumps({
         "verified_commit": verified_commit,
         "staging_verdict": verdict,
+        "langs": ["de", "en"],
         "findings": findings,
         "verified_at": "2026-07-16T00:00:00+00:00",
         "scope": "backend",
@@ -98,7 +99,7 @@ def _write_existing(e2e_path: Path, verified_commit: str, findings: list,
 
 def _call(verdict: str, findings_path: Path, e2e_path: Path) -> int:
     return mod.write_verdict(
-        verdict, findings_path, e2e_path=e2e_path, scope_override="backend"
+        verdict, findings_path, e2e_path=e2e_path, scope_override="backend", langs=["de", "en"]
     )
 
 
@@ -275,14 +276,14 @@ def test_ac3_two_workflows_on_same_sha_keep_both_finding_sets(tmp_path, monkeypa
     monkeypatch.setenv("OPENSPEC_ACTIVE_WORKFLOW", "workflow-w1")
     findings_a = _write_findings(tmp_path, [FINDING_A])
     rc1 = mod.write_verdict(
-        "VERIFIED: W1 grün", findings_a, e2e_path=e2e_path, scope_override="backend"
+        "VERIFIED: W1 grün", findings_a, e2e_path=e2e_path, scope_override="backend", langs=["de", "en"]
     )
     assert rc1 == 0
 
     monkeypatch.setenv("OPENSPEC_ACTIVE_WORKFLOW", "workflow-w2")
     findings_b = _write_findings(tmp_path, [FINDING_B])
     rc2 = mod.write_verdict(
-        "VERIFIED: W2 grün", findings_b, e2e_path=e2e_path, scope_override="backend"
+        "VERIFIED: W2 grün", findings_b, e2e_path=e2e_path, scope_override="backend", langs=["de", "en"]
     )
     assert rc2 == 0
 
@@ -308,7 +309,7 @@ def test_ac3_written_findings_carry_workflow_field(tmp_path, monkeypatch):
     findings_a = _write_findings(tmp_path, [FINDING_A])
 
     rc = mod.write_verdict(
-        "VERIFIED: solo", findings_a, e2e_path=e2e_path, scope_override="backend"
+        "VERIFIED: solo", findings_a, e2e_path=e2e_path, scope_override="backend", langs=["de", "en"]
     )
 
     assert rc == 0
@@ -339,20 +340,20 @@ def test_ac4_same_workflow_rewrite_replaces_own_keeps_foreign_and_legacy(
     monkeypatch.setenv("OPENSPEC_ACTIVE_WORKFLOW", "workflow-w1")
     findings_f1 = _write_findings(tmp_path, [FINDING_A])
     assert mod.write_verdict(
-        "VERIFIED: W1 initial", findings_f1, e2e_path=e2e_path, scope_override="backend"
+        "VERIFIED: W1 initial", findings_f1, e2e_path=e2e_path, scope_override="backend", langs=["de", "en"]
     ) == 0
 
     monkeypatch.setenv("OPENSPEC_ACTIVE_WORKFLOW", "workflow-w2")
     findings_f2 = _write_findings(tmp_path, [FINDING_B])
     assert mod.write_verdict(
-        "VERIFIED: W2 dazwischen", findings_f2, e2e_path=e2e_path, scope_override="backend"
+        "VERIFIED: W2 dazwischen", findings_f2, e2e_path=e2e_path, scope_override="backend", langs=["de", "en"]
     ) == 0
 
     finding_a_corrected = {**FINDING_A, "evidence": "korrigierte Fassung"}
     monkeypatch.setenv("OPENSPEC_ACTIVE_WORKFLOW", "workflow-w1")
     findings_f1b = _write_findings(tmp_path, [finding_a_corrected])
     assert mod.write_verdict(
-        "VERIFIED: W1 Korrektur", findings_f1b, e2e_path=e2e_path, scope_override="backend"
+        "VERIFIED: W1 Korrektur", findings_f1b, e2e_path=e2e_path, scope_override="backend", langs=["de", "en"]
     ) == 0
 
     result = json.loads(e2e_path.read_text())
@@ -408,13 +409,13 @@ def test_f002_two_workflows_writing_identical_content_finding_both_preserved(
     monkeypatch.setenv("OPENSPEC_ACTIVE_WORKFLOW", "workflow-w1")
     findings_w1 = _write_findings(tmp_path, [dict(_F002_IDENTICAL_CONTENT)])
     assert mod.write_verdict(
-        "VERIFIED: W1", findings_w1, e2e_path=e2e_path, scope_override="backend"
+        "VERIFIED: W1", findings_w1, e2e_path=e2e_path, scope_override="backend", langs=["de", "en"]
     ) == 0
 
     monkeypatch.setenv("OPENSPEC_ACTIVE_WORKFLOW", "workflow-w2")
     findings_w2 = _write_findings(tmp_path, [dict(_F002_IDENTICAL_CONTENT)])
     assert mod.write_verdict(
-        "VERIFIED: W2", findings_w2, e2e_path=e2e_path, scope_override="backend"
+        "VERIFIED: W2", findings_w2, e2e_path=e2e_path, scope_override="backend", langs=["de", "en"]
     ) == 0
 
     result = json.loads(e2e_path.read_text())
@@ -444,20 +445,20 @@ def test_f002_rewrite_by_one_workflow_does_not_delete_other_workflows_identical_
     monkeypatch.setenv("OPENSPEC_ACTIVE_WORKFLOW", "workflow-w1")
     findings_w1 = _write_findings(tmp_path, [dict(_F002_IDENTICAL_CONTENT)])
     assert mod.write_verdict(
-        "VERIFIED: W1 initial", findings_w1, e2e_path=e2e_path, scope_override="backend"
+        "VERIFIED: W1 initial", findings_w1, e2e_path=e2e_path, scope_override="backend", langs=["de", "en"]
     ) == 0
 
     monkeypatch.setenv("OPENSPEC_ACTIVE_WORKFLOW", "workflow-w2")
     findings_w2 = _write_findings(tmp_path, [dict(_F002_IDENTICAL_CONTENT)])
     assert mod.write_verdict(
-        "VERIFIED: W2", findings_w2, e2e_path=e2e_path, scope_override="backend"
+        "VERIFIED: W2", findings_w2, e2e_path=e2e_path, scope_override="backend", langs=["de", "en"]
     ) == 0
 
     monkeypatch.setenv("OPENSPEC_ACTIVE_WORKFLOW", "workflow-w1")
     findings_w1_rewrite = _write_findings(tmp_path, [dict(_F002_IDENTICAL_CONTENT)])
     assert mod.write_verdict(
         "VERIFIED: W1 re-write", findings_w1_rewrite, e2e_path=e2e_path,
-        scope_override="backend"
+        scope_override="backend", langs=["de", "en"]
     ) == 0
 
     result = json.loads(e2e_path.read_text())

@@ -36,10 +36,18 @@ zugleich die Validator-Erwartung (gewollte Kopplung).
   Kopfsprache, aber Texte der anderen Sprache, meldet er `SPRACHE: Kopf
   X-GZ-Lang: <x> widerspricht dem Inhalt …` (Exit 1).
 - **Unbekannter Wert** (z. B. `fr`): `SPRACHE: X-GZ-Lang unbekannt oder fehlt …`, Exit 1.
-- **Übergang (bis A2 #2681):** Kopf fehlt ⇒ Prüfung als `de`, Exit unverändert,
-  `WARNUNG: X-GZ-Lang fehlt …` auf stderr und im YAML-Log unter `warnings:`.
-  A2 setzt `HEADER_PFLICHT = True` in `_mail_lang.py`; dann ist ein fehlender
-  Kopf ein Fehler (Exit 1).
+- **Pflicht (seit A2 #2681):** Kopf fehlt ⇒ `SPRACHE: Marker-Header X-GZ-Lang
+  fehlt — Mail nicht vom sprachfähigen Renderer`, Exit 1 (`HEADER_PFLICHT = True`
+  in `_mail_lang.py`). Die Übergangsregel aus PV #2663 (`de` + Warnung) ist beendet.
+- **Auswahl nach Sprache und Empfänger (A2 #2681):** alle vier Validatoren haben
+  `--lang de|en` (IMAP-Default `de`) und `--to-contains TEXT`. Gewählt werden nur
+  Mails mit `X-GZ-Lang == --lang` **und** passendem Empfänger (`en`: `To` enthält
+  `+en@`, `de`: nicht) — `_e2e_paths.mail_passt_zu_sprache`. Eine Mail **ohne**
+  Kopf an die Adresse des Nutzers bleibt wählbar und scheitert dann an der Pflicht
+  (kein stilles Ausweichen auf eine ältere Mail). Mit `--eml` gelten `--lang`/
+  `--to-contains` als Prüfung der Datei (passt sie nicht: Exit 1).
+  Zwei Staging-Nutzer: `de` = `gregor-test@henemm.com`, `en` =
+  `gregor-test+en@henemm.com` (`scripts/staging_e2e_user_en.py`).
 - **Folgearbeit P2–P6 (Pflicht vor der ersten englischen Mail des Pakets):**
   Folgende Erwartungen sind noch **feste deutsche Texte** in den Validatoren,
   weil sie nicht zum PV-Schlüsselsatz gehören. Das Renderer-Paket, das den

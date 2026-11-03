@@ -101,6 +101,7 @@ def _build_full(html: str,
     msg["To"] = "gregor-test@henemm.com"
     msg["X-GZ-Mail-Type"] = "trip-briefing"
     msg["X-GZ-Format"] = "full"
+    msg["X-GZ-Lang"] = "de"  # Pflicht seit A2 #2681
     msg.set_content(plain)
     msg.add_alternative(html, subtype="html")
     return _wire(msg)

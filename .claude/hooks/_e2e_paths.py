@@ -14,6 +14,72 @@ from pathlib import Path
 # prod_selftest.py (vorher zwei getrennte/eine fehlende Definition).
 STALE_HOURS = 24
 
+# Issue #2681 (A2): zweisprachiger Nachweis. Gemeinsame Stelle fuer das Gate
+# (Feld ``langs``) und die vier Mail-Validatoren (Auswahl nach Sprache UND
+# Empfaenger: Nutzer ``de`` = Basispostfach, Nutzer ``en`` = Subadresse ``+en``).
+ERFORDERLICHE_SPRACHEN = ("de", "en")
+EN_SUBADRESSE = "+en@"
+
+
+def parse_langs(text) -> "list[str]":
+    """``"de,en"`` -> ``["de", "en"]``; unbekannte Sprache -> ValueError."""
+    langs = [t.strip() for t in (text or "").split(",") if t.strip()]
+    unbekannt = [t for t in langs if t not in ERFORDERLICHE_SPRACHEN]
+    if unbekannt:
+        raise ValueError(f"unbekannte Sprache(n) {unbekannt} (erlaubt: de, en)")
+    return list(dict.fromkeys(langs))
+
+
+def langs_vollstaendig(data) -> bool:
+    """True, wenn ``data["langs"]`` eine Liste mit allen ERFORDERLICHE_SPRACHEN ist."""
+    langs = data.get("langs") if isinstance(data, dict) else None
+    return isinstance(langs, list) and all(s in langs for s in ERFORDERLICHE_SPRACHEN)
+
+
+def mail_sprache(headers) -> "str | None":
+    """Wert des Kopfes ``X-GZ-Lang`` oder None."""
+    roh = headers.get("X-GZ-Lang")
+    return None if roh is None else str(roh).strip()
+
+
+def _empfaenger_passt(headers, lang: str) -> bool:
+    an = str(headers.get("To") or "").lower()
+    return (EN_SUBADRESSE in an) == (lang == "en")
+
+
+def mail_passt_zu_sprache(headers, lang: str) -> bool:
+    """X-GZ-Lang == lang UND To-Regel (en: To enthaelt '+en@', de: nicht)."""
+    return mail_sprache(headers) == lang and _empfaenger_passt(headers, lang)
+
+
+def mail_waehlbar(headers, lang: str = "de", to_contains=None) -> bool:
+    """Auswahl im Postfach. Eine Mail OHNE Kopf an die Adresse des Nutzers bleibt
+    waehlbar (fail-closed): der Validator prueft sie und scheitert an der
+    Pflicht, statt still auf eine aeltere Mail mit Kopf auszuweichen."""
+    if to_contains and to_contains not in str(headers.get("To") or ""):
+        return False
+    if mail_sprache(headers) is None:
+        return _empfaenger_passt(headers, lang)
+    return mail_passt_zu_sprache(headers, lang)
+
+
+def sprach_argumente(parser) -> None:
+    """``--lang``/``--to-contains`` fuer die Validator-CLIs (IMAP-Default: de)."""
+    parser.add_argument("--lang", choices=ERFORDERLICHE_SPRACHEN, default=None,
+                        help="nur Mails dieser Sprache UND ihres Nutzers waehlen (#2681)")
+    parser.add_argument("--to-contains", default=None,
+                        help="nur Mails, deren To diesen Text enthaelt (#2681)")
+
+
+def eml_auswahl_fehler(msg, lang, to_contains) -> "list[str]":
+    """``--eml`` mit ``--lang``/``--to-contains``: passt die Datei nicht, Fehler."""
+    if lang is None and not to_contains:
+        return []
+    if mail_waehlbar(msg, lang or "de", to_contains):
+        return []
+    return [f"AUSWAHL: Mail passt nicht zu --lang {lang or 'de'} / --to-contains "
+            f"{to_contains!r} (X-GZ-Lang={mail_sprache(msg)!r}, To={msg.get('To')!r})"]
+
 
 def partition_findings(raw) -> "tuple[list, list]":
     """Trennt ein aus JSON geladenes Findings-Array in (gueltige, unverwertbare).

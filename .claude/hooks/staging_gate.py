@@ -333,8 +333,17 @@ def _frontend_browser_gate(scope: str, checked: list | None = None) -> int:
     return 0
 
 
+_LANGS_HINWEIS = ("Nachweis ohne zweisprachigen Lauf — /e2e-verify mit beiden Nutzern "
+                  "(de, en) ausführen und mit --langs de,en schreiben (Issue #2681).")
+
+
+def _langs_fehlen(data, scope: str) -> bool:
+    """Issue #2681: ausser bei docs-only muss der Nachweis beide Sprachen tragen."""
+    return scope != "docs-only" and not _e2e_paths.langs_vollstaendig(data)
+
+
 def write_verdict(verdict: str, findings_path: Path, e2e_path: Path | None = None,
-                  scope_override: str | None = None) -> int:
+                  scope_override: str | None = None, langs: list | None = None) -> int:
     """Mode A: Verdict in die commit-getaggte Nachweis-Datei schreiben."""
     sha = _head_sha()
     if e2e_path is None:
@@ -399,6 +408,12 @@ def write_verdict(verdict: str, findings_path: Path, e2e_path: Path | None = Non
     findings = [{**f, "workflow": workflow} for f in findings]
 
     scope = scope_override or _detect_committed_scope(head=sha)
+    langs = [s for s in _e2e_paths.ERFORDERLICHE_SPRACHEN if s in (langs or [])]
+    if _langs_fehlen({"langs": langs}, scope):
+        _log(f"FEHLER: beide Sprachen müssen geprüft sein (--langs de,en), erhalten: "
+             f"{langs or 'keine'}. {_LANGS_HINWEIS} Kein Artefakt geschrieben.",
+             stream=sys.stderr)
+        return 1
     # Issue #1558: NACH der Scope-Berechnung — nicht oben beim Telegram-Gate,
     # wo `scope` noch gar nicht existiert.
     frontend_pages: list[str] = []
@@ -412,6 +427,8 @@ def write_verdict(verdict: str, findings_path: Path, e2e_path: Path | None = Non
         "scope": scope,
         "environment": "staging",
     }
+    if langs:
+        payload["langs"] = langs
     if frontend_pages:
         payload["frontend_pages_checked"] = frontend_pages
     elif scope in ("frontend-only", "full-stack"):
@@ -624,6 +641,9 @@ def gate_check(e2e_path: Path | None, scope_override: str | None,
                 capture_output=True, text=True, cwd=str(git_dir),
             )
             if is_anc.returncode == 0:
+                if _langs_fehlen(_cdata, scope):
+                    _log(f"FEHLER: Basis {ancestor[:8]}: {_LANGS_HINWEIS}", stream=sys.stderr)
+                    return 1
                 if _e2e_paths._detect_scope_from_git_diff(ancestor, ref, git_dir) == "docs-only":
                     _log(
                         f"OK: Ancestor-Relaxierung (#1197): Basis {ancestor[:8]} VERIFIED, "
@@ -699,6 +719,10 @@ def gate_check(e2e_path: Path | None, scope_override: str | None,
         )
         return 1
 
+    if _langs_fehlen(data, scope):
+        _log(f"FEHLER: Zielstand {ref[:8]}: {_LANGS_HINWEIS}", stream=sys.stderr)
+        return 1
+
     _log(f"OK: Staging-Gate bestanden (commit={ref[:8]}, verdict={verdict!r}).")
     # Issue #1130: Preflight schreibt keinen Marker — HEAD ist noch der alte
     # Prod-Commit, der reguläre --check nach dem Reset cached korrekt.
@@ -716,7 +740,13 @@ def main() -> int:
     parser.add_argument("--scope", help="Scope-Override (frontend-only|backend|full-stack|docs-only)")
     parser.add_argument("--expected-commit", help="Ziel-Commit für Preflight-Check (Issue #1130): prüft gegen diesen SHA statt HEAD")
     parser.add_argument("--detect-scope", action="store_true", help="Mode C: Scope ausgeben")
+    parser.add_argument("--langs", default="",
+                        help="Mode A: geprüfte Sprachen, Pflicht 'de,en' ausser docs-only (#2681)")
     args = parser.parse_args()
+    try:
+        langs = _e2e_paths.parse_langs(args.langs)
+    except ValueError as exc:
+        parser.error(f"--langs: {exc}")
     # Sammel #1197 (#1382 F003): ausdruecklich leerer --e2e-path= ist nicht
     # "nicht angegeben" — fail-closed abbrechen statt Vorfahren-Suche.
     if args.e2e_path is not None and not args.e2e_path.strip():
@@ -730,7 +760,7 @@ def main() -> int:
 
     if args.write_verdict:
         findings_path = Path(args.findings_json) if args.findings_json else Path("/dev/null")
-        return write_verdict(args.write_verdict, findings_path, e2e_path, args.scope)
+        return write_verdict(args.write_verdict, findings_path, e2e_path, args.scope, langs=langs)
 
     if args.check:
         return gate_check(e2e_path, args.scope, expected_commit=args.expected_commit)
