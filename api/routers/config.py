@@ -90,6 +90,16 @@ def get_sms_symbols():
     }
 
 
+@router.get("/alert-metric-channel-keys")
+def get_alert_metric_channel_keys():
+    """Issue #1895 S3a (AC-30): Alarm-Zeile → Speicherschluessel von
+    `alert_metric_channels`. Eigener Endpunkt, `/metrics` bleibt unveraendert
+    (AC-34); einzige Quelle ist `alert_metric_channel_keys()`, nutzerunabhaengig."""
+    from services.weather_change_detection import alert_metric_channel_keys
+
+    return alert_metric_channel_keys()
+
+
 @router.get("/metrics")
 def get_metrics():
     from app.metric_catalog import (

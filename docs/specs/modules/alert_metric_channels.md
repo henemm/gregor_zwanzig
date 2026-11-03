@@ -2,9 +2,9 @@
 entity_id: alert_metric_channels
 type: module
 created: 2026-09-22
-updated: 2026-09-22
-status: implemented
-version: "1.0"
+updated: 2026-11-03
+status: draft
+version: "1.2"
 tags: [alerts, channels, datamodel]
 ---
 
@@ -22,6 +22,18 @@ Scheiben (Metrik-genaue Kanal-Auflösung, Editor-Spalte) darauf aufbauen können
 Speichern Kanäle einer anderen Metrik zu verlieren. Diese Scheibe (S1) ist reine
 Verrohrung: Das Feld wird persistiert und übersteht Speichern/Laden, wirkt aber auf
 nichts — es gibt in S1 noch keine Stelle, die es liest.
+
+**Scheibe S3a (Issue #1895, Backend und Vertrag, für Nutzer noch nicht sichtbar):** S3a macht die
+Schicht tragfähig, bevor eine Oberfläche sie anbietet. Vier Teile: (1) der Leser fällt auf den
+Satz ohne Metrik-Arm zurück, wenn der Metrik-Arm **nach** den Tarif-Sperren leer ist (ein
+gewählter Kanal kann den Alarm dann nicht mehr ins Leere schicken); (2) ein Nachtrag zu
+ADR-0077 hält Schlüsselmenge, Rückfall und „null = erbt" fest; (3) ein neuer Lese-Endpunkt
+`GET /alert-metric-channel-keys` (Go-Proxy `GET /api/alert-metric-channel-keys`) ist die
+**einzige** Quelle dafür, welche Alarm-Zeile auf welchen Speicherschlüssel abbildet; (4) ein
+Top-Level-`null` auf `alert_metric_channels` löscht beim Ortsvergleich nicht mehr die ganze
+Map (Angleichung an den Trip). Es gibt dafür **keine Oberfläche** (Prod-Bestand: 0 Briefings
+mit `alert_metric_channels`); das Verhalten ist für Nutzer erst mit S3b sichtbar. Die Oberfläche
+(Block „Kanäle je Wettergröße", Hinweise) ist ausdrücklich **nicht** Teil von S3a.
 
 ## Source
 
@@ -53,7 +65,7 @@ nichts — es gibt in S1 noch keine Stelle, die es liest.
 | Datei | Change Type | Beschreibung |
 |---|---|---|
 | `src/app/metric_catalog.py` | MODIFY | Rückwärts-Lookup `summary_field → Kandidaten` als **eine** Primitive (Katalog besitzt `summary_fields` bereits); Wählbarkeits-Tie-Break (bei mehreren Kandidaten gewinnt `selectable=True`, bei genau einem Kandidaten gewinnt dieser) |
-| `src/services/alert_channels.py` | MODIFY | Fünfte Eingabe `metric_channel_sets` im reinen Kern (Schleifen-Form aus `:56-60`, umgeschlüsselt auf Metrik statt Regel); Adapter lesen `alert_metric_channels`; Leer-Rückfall-Guard vor den Tier-Gates; `metrics=None`-Default im Dispatcher, damit die acht metrikfreien Aufrufstellen unverändert bleiben |
+| `src/services/alert_channels.py` | MODIFY | Fünfte Eingabe `metric_channel_sets` im reinen Kern (Schleifen-Form aus `:56-60`, umgeschlüsselt auf Metrik statt Regel); Adapter lesen `alert_metric_channels`; Leer-Rückfall-Guard vor den Tier-Gates (seit S3a/AC-25: nach den Tier-Gates); `metrics=None`-Default im Dispatcher, damit die acht metrikfreien Aufrufstellen unverändert bleiben |
 | `src/services/trip_alert.py` | MODIFY | Nur `:2509` (`_send_alert`) reicht die Metriken der `changes` durch; `:552` bleibt unberührt (reine Protokoll-Zierde, kein Versand) |
 | `src/services/compare_alert.py` | MODIFY | **Nicht** `:601` — dort sind die auslösenden Metriken noch unbekannt. Der metrik-bewusste Aufruf gehört in die bestehende Ortsschleife `:286-293`, inklusive Fix der `ids_by_channel`-Vorbelegung (AC-17) |
 | `src/app/loader.py` | MODIFY | Migration `alert_rules[].channels` → `alert_metric_channels`, Read-Modify-Write nach Muster `:741-753` (`snow_line`→`freezing_level`) |
@@ -66,6 +78,28 @@ nichts — es gibt in S1 noch keine Stelle, die es liest.
 **Nicht angefasst (S2):** alles unter `frontend/`, `internal/`, `cmd/`; `has_active_rules`;
 `alert_rules` als Entität (Rückbau folgt S4); `split_by_threshold` (die Union braucht keine
 Partitionsstelle).
+
+### Affected Files (S3a)
+
+| Datei | Change Type | Beschreibung |
+|---|---|---|
+| `src/services/alert_channels.py` | MODIFY | `resolve_alert_channels`: Rückfall auf den Satz ohne Metrik-Arm, wenn der Metrik-Arm **nach** den Tier-Gates leer ist (AC-25); Docstring Schritt 4/5 anpassen (Satz „kein Fall für den Rückfall" entfällt) |
+| `src/services/weather_change_detection.py` | MODIFY | Neben den Summary-Feld-Tabellen die **eine** Funktion `alert_metric_channel_keys()` (Zeile → sortierte Liste der Speicherschlüssel aus Lesersicht, akzeptierte Menge); keine zweite Zeile-zu-Schlüssel-Liste |
+| `api/routers/config.py` | MODIFY | Neuer Endpunkt `GET /alert-metric-channel-keys`; `get_metrics` bleibt **unverändert** |
+| `internal/router/router.go` | MODIFY | Proxy `GET /api/alert-metric-channel-keys` → `/alert-metric-channel-keys`, gleiche Auth-Gruppe und Zeilenmuster wie `/api/metrics` (`:235`) |
+| `internal/handler/briefing_subscription.go` | MODIFY | `mergeBriefingPatch`: Top-Level-`null` für **genau** `alert_metric_channels` überspringen (No-Op); alle anderen Felder behalten ihre Semantik (AC-36/AC-37) |
+| `docs/reference/api_contract.md` | MODIFY | SSOT: neuer Endpunkt samt Antwortform und Hinweis „null = erbt" am Feld (`tests/test_api_contract_drift.py` bleibt grün) |
+| `docs/adr/0077-metrik-genaue-kanal-schicht-als-top-level-map.md` | MODIFY | Nachtrag „S3a" (kein neues ADR, kein Status-Wechsel; `docs/adr/README.md` bleibt unverändert, `tests/test_adr_index_drift.py` prüft nur Datei↔Index-Konsistenz und Status) |
+| `tests/tdd/test_alert_metric_channel_reader.py` | MODIFY | `test_ac12_tier_gate_darf_nach_nicht_leerem_metrik_arm_auf_leer_fuehren` (`:511`) wird **umgekehrt**: nach Tier-Gate-Kürzung greift der Rückfall (AC-25) |
+| `tests/tdd/test_alert_metric_channel_keys.py` | CREATE | Endpunkt-Abbildung, zeilenweiser Wirk-Test, Migrations-Schlüsselmenge (AC-30 bis AC-34) |
+| `internal/handler/compare_preset_alert_metric_channels_test.go` | MODIFY | Null-Angleichung, Gegenprobe, je-Metrik-`null`, zwei Nutzer (AC-36 bis AC-39) |
+| `internal/handler/trip_alert_metric_channels_test.go` | MODIFY | Trip-Regressionsfall: Top-Level-`null` bleibt No-Op (AC-36) |
+| `internal/router/alert_metric_channel_keys_route_test.go` | CREATE | Proxy-Route und Auth (AC-35) |
+
+**Nicht angefasst (S3a):** alles unter `frontend/` (keine UI), `src/app/loader.py` (Migration
+und ihr Tie-Break bleiben unverändert, AC-33 prüft nur die Verträglichkeit), `split_by_threshold`
+(`trip_alert.py`, `compare_alert.py`), `internal/handler/trip.go` (Trip-Verhalten schon korrekt,
+nur Regressions-Test), `/api/metrics`-Antwort, `has_active_rules`, `alert_rules` als Entität.
 
 ## Estimated Scope
 
@@ -83,6 +117,15 @@ Partitionsstelle).
 - **Effort:** high (Risiko MITTEL-HOCH: Verhaltensänderung an Bestandsdaten, Persistenz-
   Migration mit Pre-Snapshot-Hook, Fläche ist der Alarm-Versand, Asymmetrie der zwei
   Aufrufstellen)
+
+### Estimated Scope (S3a)
+
+- **LoC:** ca. **+75 / −10** produktiv (Rückfall ~10, Schlüssel-Funktion ~20, Endpunkt ~15,
+  Go-Proxy 1, Go-Null-Skip ~8, Rest Docstring). Limit 250 je Workflow; `docs/`, `*.md`, ADR und
+  Tests zählen nicht.
+- **Files:** 5 produktiv + 4 Test + 2 Doku (Spec/ADR-Nachtrag zählen nicht mit)
+- **Effort:** medium (Risiko MITTEL: ändert die Versand-Auflösung, aber nur auf einem Zweig, den
+  heute kein Bestand erreicht — 0 Briefings mit Feld)
 
 ## Dependencies
 
@@ -171,7 +214,7 @@ färben:
 1. **Reiner Kern bleibt primitiv** (`src/services/alert_channels.py`): fünfte Eingabe
    `metric_channel_sets: dict[str, set[str]] | None`, umgeschlüsselte Fassung derselben
    Schleife wie `:56-60` (Union je Metrik statt je Regel), Leer-Rückfall-Guard **vor** den
-   Tier-Gates. `effective_alert_channels(subscription, settings, user_id, metrics=None)` —
+   Tier-Gates (durch S3a/AC-25 abgelöst: Rückfall jetzt nach den Tier-Gates). `effective_alert_channels(subscription, settings, user_id, metrics=None)` —
    der neue Parameter existiert nur am Dispatcher; die acht metrikfreien Aufrufstellen
    ändern sich nicht und können den neuen Arm bauartbedingt nicht auslösen (AC-13).
 2. **Katalog-Primitive** (`src/app/metric_catalog.py`): Rückwärts-Lookup
@@ -223,8 +266,9 @@ färben:
   Radar-/amtlichen Alarm nicht vorkommt, und dieser Eintrag muss von der abo-weiten
   Kanalmenge abweichen — sonst ist die Mutation bei leerem oder deckungsgleichem
   `alert_metric_channels` strukturell unbeobachtbar und bleibt grün.
-- Den Leer-Rückfall-Guard entfernen oder hinter die Tier-Gates verschieben → muss AC-12
-  rot färben.
+- Den Leer-Rückfall-Guard entfernen → muss AC-12 rot färben. (Die S2-Mutation „Guard hinter
+  die Tier-Gates verschieben" ist seit S3a überholt: S3a schreibt genau diese Lage vor; die
+  Gegen-Mutation „Rückfall wieder vor die Gates" steht in der Mutations-Gegenprobe (S3a).)
 - Den Migrations-/Lese-Arm auf die heutige preset-weite Regel-Union (ohne Metrik-Filter)
   umstellen → muss AC-10/AC-11/AC-23 rot färben (S2 hätte sonst keine Wirkung, ADR-0043).
 - Die `ids_by_channel`-Vorbelegung in der Ortsschleife auf reines `config.channels`
@@ -236,6 +280,91 @@ färben:
   AC-19 rot färben.
 - An der neuen Lesestelle `user_id` durch `"default"` ersetzen → muss AC-24 und
   `tests/test_user_id_default_guard.py` rot färben.
+
+### Implementation Details (S3a)
+
+1. **Rückfall nach den Tier-Gates (E7).** In `resolve_alert_channels` wird der bisherige
+   Leer-Rückfall-Guard (Schritt 4, vor den Gates) durch eine Auswertung **nach** den Gates
+   ersetzt: Zuerst die Tier-Gates auf den Metrik-Arm-Satz anwenden. Ist das Ergebnis leer,
+   gilt der Satz ohne Metrik-Arm (Ergebnis aus override/Regel-Union/geerbt), ebenfalls nach
+   denselben Tier-Gates. Die Gates selbst (`sms_allowed`, `premium_sms_allowed`) bleiben
+   unverändert und werden weiterhin genau einmal je Satz angewandt (SMS/Premium-SMS ohne
+   Tarif bleiben gestrichen — vereinbar mit #2279 S1 AC-4). Ist auch der Satz ohne Metrik-Arm
+   nach den Gates leer, bleibt das Ergebnis leer (heutiges Verhalten des Abo-Satzes).
+   Docstring Schritt 4/5 entsprechend umschreiben.
+2. **Kanal-Schwelle bleibt dahinter (Entscheidung).** `split_by_threshold` (ADR-0046) läuft bei
+   den Aufrufern (`trip_alert.py`, `compare_alert.py`) **nach** der Auflösung und bleibt
+   unverändert; der Rückfall wird **nicht** dahinter gezogen. Die Schwelle je Kanal ist eine
+   bewusste Nutzerwahl, und dasselbe Verhalten gilt heute schon für den Abo-Satz. Das ist ein
+   benanntes Restrisiko (Known Limitations S3a), kein Fehler dieser Scheibe.
+3. **Eine Funktion für die Schlüssel-Zuordnung (E2/E3).** `alert_metric_channel_keys()` in
+   `weather_change_detection.py` leitet je `AlertMetric` die Speicherschlüssel **aus der Sicht
+   des Lesers** ab: die Summary-Felder, die der Detektor für diese Zeile scharf stellt
+   (`_ALERT_METRIC_TO_SUMMARY_FIELD` bzw. `_ALERT_DELTA_METRIC_TO_FIELDS`), werden über die
+   Leser-Primitive `alert_channels._metric_id_for_summary_key` aufgelöst; der Wert je Zeile ist
+   die **sortierte Liste** dieser Schlüssel. Damit gibt es keine zweite Zeile-zu-Schlüssel-Liste
+   (Wächter #1480) und keine handgepflegte Ausnahme: Was der Leser liest, bietet der Endpunkt
+   an. Gemessen 2026-11-03 (Detektor real, Regeln aus `expand_per_metric_levels`): 14 Zeilen
+   tragen genau einen Schlüssel, **`wind_change` trägt zwei** (`["gust", "wind"]`), weil die
+   Windänderung `wind_max_kmh` **und** `gust_max_kmh` beobachtet und der Leser das Böen-Feld als
+   `gust` liest. `snowfall_limit` ist Legacy-Schlüssel und kommt in `keys` **nie** vor (der
+   Detektor meldet `snow_line` über `freezing_level_m`); eine einzige benannte Konstante
+   `_LEGACY_ONLY_CHANNEL_KEYS = {"snowfall_limit"}` nimmt ihn in `accepted` auf, weil die
+   Legacy-Migration ihn schreibt. Rückgabe: `keys` (AlertMetric-Wert → sortierte Liste der
+   Schlüssel) und `accepted` (sortierte Liste = Vereinigung aller Listen in `keys` ∪
+   `_LEGACY_ONLY_CHANNEL_KEYS`). Beispiele: `wind_gust→[gust]`, `wind_change→[gust, wind]`,
+   `temperature_min`/`temperature_max`/`temperature_change→[temperature]`,
+   `thunder_level`/`thunder_onset→[thunder]`, `precipitation_sum`/`precipitation_change`/
+   `precipitation_heavy_onset→[precipitation]`, `snow_line`/`freezing_level→[freezing_level]`,
+   `cape→[cape]`, `fresh_snow→[fresh_snow]`, `visibility→[visibility]`. `humidity` hat kein Summary-Feld (ADR-0010) und fehlt. Der Wählbarkeits-
+   Tie-Break der Migration (`loader.py::_katalog_ids_fuer_alarm_metrik`) bleibt, wo er ist —
+   die Schlüssel-Funktion braucht ihn nicht mehr, AC-33 prüft die Verträglichkeit beider.
+4. **Endpunkt statt `aggregations[]`.** `aggregations[]` in `/api/metrics` wird vom Wertebereiche-
+   Editor als wählbare Auswertung gelesen, und `cape` (`selectable=False`) fehlt dort ganz;
+   die Antwort bleibt daher unverändert. Neu: `GET /alert-metric-channel-keys` →
+   `{"keys": {…}, "accepted": […]}`, Go-Proxy `GET /api/alert-metric-channel-keys` in
+   derselben Auth-Gruppe wie `/api/metrics`. Die Antwort hängt von keinem Nutzer ab.
+5. **Keine Go-Schreibvalidierung (E3).** Go besitzt keinen Katalog (eine Kopie wäre Drift),
+   ADR-0077 Punkt 3 warnt vor Bestandsbruch, der Leser ist fail-soft (unbekannter Schlüssel ⇒
+   erbt). Die Prüfung der Schlüsselmenge geschieht ausschließlich durch den zeilenweisen
+   Wirk-Test (AC-32), nicht durch eine Laufzeit-Validierung.
+6. **`null` (E4/E8).** Je Metrik bedeutet `{"gust": null}` „erbt" (persistiert als `null`,
+   `config_merge.go:18-20`; Leser behandelt ihn als kein Eintrag). Top-Level
+   `"alert_metric_channels": null` ist beim Trip No-Op (`handler/trip.go:375`, Pointer-DTO) und
+   wird beim Ortsvergleich in `mergeBriefingPatch` (`briefing_subscription.go:200`, von
+   `applyComparePresetPatch` für beide Ortsvergleichs-PUT-Wege genutzt) für **genau dieses
+   Feld** übersprungen. Keine allgemeine „null = No-Op"-Regel: für andere Top-Level-Felder (z. B.
+   `activity_profile: null`) überschreibt `null` den Bestandswert wie bisher (`base[k] = v`, AC-37).
+7. **ADR-0077-Nachtrag „S3a"** (kein neues ADR): (a) gültige Schlüsselmenge und ihre einzige
+   Definition (`alert_metric_channel_keys()`), (b) Rückfall nach Tier-Gates (ersetzt die
+   S2-Aussage „kein Fall für den Rückfall", die nur in S2-Spec und Docstring stand; ADR-0077
+   selbst enthielt keine Aussage zum Tier-Gate-Verhalten), (c) `null`-Eintrag je Metrik =
+   „erbt", (d) keine Go-Schreibvalidierung samt Begründung. Statuszeile und Index-Eintrag
+   bleiben unverändert.
+
+#### Mutations-Gegenprobe (S3a, Pflicht in `/50-implement`)
+
+Mindestens folgende gezielte Verfälschungen müssen jeweils mindestens einen Test rot färben:
+
+- Den Rückfall wieder **vor** die Tier-Gates verschieben (alter Guard) → muss AC-25 rot färben.
+- Den Rückfall auch das Tier-Gate des Rückfall-Satzes überspringen lassen (SMS ohne Tarif
+  rutscht über den Rückfall wieder hinein) → muss AC-26 rot färben.
+- Den Rückfall entfernen (leer bleibt leer) → muss AC-25 und AC-28 rot färben.
+- Die Endpunkt-Abbildung `snow_line→[snowfall_limit]` statt `→[freezing_level]` → muss AC-30
+  und AC-32 rot färben.
+- `humidity` oder `snowfall_limit` als Ziel in `keys` aufnehmen → muss AC-31 rot färben.
+- Die Schlüssel-Funktion durch eine handgeschriebene zweite Liste ersetzen, in der eine Zeile
+  abweicht → muss AC-32 rot färben (zeilenweise Mengengleichheit, keine ⊆-Kette).
+- `wind_change` auf nur einen Schlüssel kürzen (`[wind]`, das Böen-Feld fällt weg) → muss
+  AC-30 und AC-32 rot färben.
+- Die Migration einen Schlüssel schreiben lassen, der nicht in `accepted` liegt → muss AC-33
+  rot färben.
+- Go: das `null`-Überspringen auf **alle** Top-Level-Felder ausdehnen → muss AC-37 rot färben
+  (ein anderes Feld mit `null`, z. B. `activity_profile`, bliebe dann unverändert).
+- Go: das `null`-Überspringen entfernen → muss AC-36 rot färben.
+- Go: den Proxy aus der Auth-Gruppe nehmen → muss AC-35 rot färben.
+- `/api/metrics` um die Schlüssel-Zuordnung erweitern (`aggregations[]` verändern) → muss
+  AC-34 rot färben.
 
 ## Expected Behavior
 
@@ -362,13 +491,15 @@ färben:
 - **AC-12:** Given die dreiarmige Union je Metrik ergibt für einen Alarm eine leere
   Kanalmenge, während dieselbe Kanalmenge ohne den Metrik-Arm (Ergebnis der bisherigen
   drei Schritte override/Regel-Union/geerbt) nicht leer wäre, When die Kanalmenge
-  gebildet wird, Then gilt vor den Tier-Gates der Satz ohne Metrik-Arm — ein explizit
-  leeres `override` ersetzt dabei weiterhin vollständig auch ins Leere
-  (`alert_channels.py:49-50`), und ein nachgelagertes Tier-Gate darf die Menge danach
-  weiterhin auf leer führen, ohne dass das gegen diese Regel verstößt.
+  gebildet wird, Then gilt der Satz ohne Metrik-Arm — ein explizit leeres `override`
+  ersetzt dabei weiterhin vollständig auch ins Leere (`alert_channels.py:49-50`).
+  **Seit S3a gilt der Zeitpunkt des Rückfalls nach AC-25 (nach den Tier-Gates);** die
+  frühere S2-Fassung „vor den Tier-Gates, ein nachgelagertes Tier-Gate darf die Menge danach
+  auf leer führen" ist durch AC-25 abgelöst.
   - Test: Fall mit nicht-leerem Ergebnis ohne Metrik-Arm und leerendem Metrik-Arm prüft
-    Rückfall; Fall mit explizit leerem `override` bleibt unverändert leer; Fall mit
-    Tier-Gate-Kürzung nach einer nicht-leeren Metrik-Arm-Menge bleibt leer.
+    Rückfall; Fall mit explizit leerem `override` bleibt unverändert leer. Der frühere
+    S2-Fall „Tier-Gate-Kürzung nach nicht-leerem Metrik-Arm bleibt leer" wird in S3a
+    umgekehrt (siehe AC-25).
 
 - **AC-13:** Given `alert_metric_channels` trägt einen Eintrag für eine Metrik, die in
   einem Radar-/Nowcast-Alarm oder einer amtlichen Warnung strukturell nicht vorkommt, und
@@ -486,6 +617,147 @@ färben:
     beide Ergebnisse tragen ausschließlich die eigenen Daten; zusätzlich bewacht durch
     `tests/test_user_id_default_guard.py` (ADR-0003).
 
+### Acceptance Criteria (S3a — Rückfall, Schlüssel-Quelle, Go-Angleichung)
+
+Nummerierung setzt AC-24 (S2) fort. Alle ACs dieser Scheibe sind Backend-/Vertrags-ACs;
+nutzerseitig sichtbar wird nichts (kein Frontend in S3a).
+
+- **AC-25:** Given der Metrik-Arm einer Auflösung ist nicht leer, wird aber durch die
+  Tier-Gates vollständig gestrichen (z. B. Eintrag `{sms}` bei Nutzer ohne SMS-Tarif, oder
+  `{premium_sms}` ohne Premium-SMS-Tarif), und der Satz ohne Metrik-Arm (override/Regel-Union/
+  geerbt) ist nach den Gates nicht leer, When die Kanalmenge gebildet wird, Then gilt der Satz
+  ohne Metrik-Arm nach den Tier-Gates — der Alarm bleibt zustellbar, statt leer zu werden.
+  - Testart: Kern (reiner Python-Test, kein Netz). Prüfling: `resolve_alert_channels` in
+    `src/services/alert_channels.py`; der bisherige S2-Test
+    `test_ac12_tier_gate_darf_nach_nicht_leerem_metrik_arm_auf_leer_fuehren` wird umgekehrt
+    und prüft genau diesen Rückfall (Metrik-Arm `{sms}`, kein Tarif, geerbt `{email}` ⇒
+    `{email}`).
+
+- **AC-26:** Given der Rückfall nach AC-25 greift und der Satz ohne Metrik-Arm enthält selbst
+  einen tarifgesperrten Kanal (`sms` oder `premium_sms` ohne Tarif), When die Kanalmenge
+  gebildet wird, Then bleibt dieser Kanal gestrichen; ist der Satz ohne Metrik-Arm nach den
+  Gates ebenfalls leer, bleibt das Ergebnis leer (heutiges Abo-Satz-Verhalten, unverändert),
+  und ein explizit leeres `override` ersetzt weiterhin vollständig ins Leere.
+  - Testart: Kern. Prüfling: `resolve_alert_channels`; Fälle: geerbt `{sms}` ohne Tarif ⇒
+    leer; Metrik-Arm `{sms}` + geerbt `{sms}` ohne Tarif ⇒ leer; leeres `override` ⇒ leer;
+    mit Tarif bleibt `sms` erhalten (Regression zu #2279 S1 AC-4).
+
+- **AC-27:** Given der Metrik-Arm ist nach den Tier-Gates nicht leer (z. B. `{telegram}`),
+  When die Kanalmenge gebildet wird, Then ersetzt er den Satz ohne Metrik-Arm weiterhin
+  vollständig (S2 AC-10/AC-11) — der Rückfall greift nur bei leerem Metrik-Arm nach den Gates,
+  und der Fall ohne Metrik-Arm-Eingabe (die acht metrikfreien Aufrufstellen, AC-13) bleibt
+  byte-gleich zu vorher.
+  - Testart: Kern. Prüfling: `resolve_alert_channels`, bestehende S2-Tests
+    (`tests/tdd/test_alert_metric_channel_reader.py`, `test_alert_channel_resolution_parity.py`)
+    bleiben grün.
+
+- **AC-28:** Given ein Trip bzw. Ortsvergleich trägt für die auslösende Metrik einen Eintrag
+  `{sms}`, der Nutzer hat keinen SMS-Tarif und der geerbte Satz ist `{email}`, When der
+  Abweichungsalarm tatsächlich versendet wird (`trip_alert.py:2509` bzw. die Ortsschleife
+  `compare_alert.py:286-293`), Then geht er über `email` und nicht an niemanden.
+  - Testart: Kern. Prüfling: Trip-Versandpfad und Vergleichs-Ortsschleife (am Versand
+    gemessen, nicht nur an `resolve_alert_channels`); Parität beider Flächen.
+
+- **AC-29:** Given der Rückfall nach AC-25 liefert einen Kanalsatz und ein Kanal darin hat eine
+  Kanal-Schwelle (ADR-0046), die über der Dringlichkeit des Alarms liegt, When der Alarm
+  verteilt wird, Then wirkt `split_by_threshold` unverändert **nach** der Auflösung — der
+  Rückfall wird nicht dahinter gezogen (bewusste Nutzerwahl der Schwelle; benanntes
+  Restrisiko, Known Limitations S3a).
+  - Testart: Kern. Prüfling: bestehende Schwellen-Tests (`trip_alert.py`, `compare_alert.py`)
+    bleiben unverändert grün; ein Test hält fest, dass die Auflösung ihre Kanalmenge
+    **ohne** Kenntnis der Schwelle liefert.
+
+- **AC-30:** Given der Python-Core läuft, When `GET /alert-metric-channel-keys` aufgerufen
+  wird, Then enthält `keys` je Alarm-Zeile die sortierte Liste ihrer Speicherschlüssel —
+  mindestens `wind_gust→[gust]`, `wind_change→[gust, wind]` (die Windänderung beobachtet auch
+  die Böen, und der Leser ordnet das Böen-Feld `gust` zu),
+  `temperature_min`/`temperature_max`/`temperature_change→[temperature]`,
+  `thunder_onset→[thunder]`, `precipitation_heavy_onset→[precipitation]`,
+  `snow_line→[freezing_level]`, `cape→[cape]`, `fresh_snow→[fresh_snow]`,
+  `visibility→[visibility]` — und `accepted` ist die sortierte Liste aller
+  Schlüssel aus `keys` zuzüglich `snowfall_limit`.
+  - Testart: Kern (FastAPI-`TestClient`, kein Mock). Prüfling: `api/routers/config.py`
+    (`/alert-metric-channel-keys`) gegen `alert_metric_channel_keys()`; zusätzlich Staging-API
+    (`/api/alert-metric-channel-keys` mit Login) nach Deploy.
+
+- **AC-31:** Given die Antwort aus AC-30, When ihre Ziele geprüft werden, Then fehlt
+  `humidity` (keine Alarm-Identität) in `keys`, und `snowfall_limit` ist **nie** Wert in `keys`
+  (nur Element von `accepted`, weil die Legacy-Migration es schreibt).
+  - Testart: Kern (`TestClient`). Prüfling: Antwort von `/alert-metric-channel-keys`.
+
+- **AC-32:** Given eine beliebige Alarm-Zeile (jeder `AlertMetric`-Wert in `keys`), When der
+  Detektor für diese Zeile bei Bewegung **aller** von ihr beobachteten Werte seine
+  `WeatherChange`s emittiert und `_metric_id_for_summary_key` jeden Summary-Key auflöst, Then
+  ist die Schlüsselliste aus dem Endpunkt **gleich** der Menge der aufgelösten Schlüssel —
+  geprüft **zeilenweise auf Mengengleichheit** (keine ⊆-Kette, die z. B. einen im Trip-Pfad nie
+  ausgelösten `snowfall_limit` grün durchließe oder bei `wind_change` den Böen-Schlüssel
+  verschwiege).
+  - Testart: Kern (reines Python, Endpunkt über `TestClient`, Detektor real, kein Mock).
+    Prüfling: `alert_metric_channel_keys()`/Endpunkt gegen `weather_change_detection.py` und
+    `alert_channels._metric_id_for_summary_key`. Der Test liest **keine** `.ts`-Datei ein
+    (kein Dateiinhalt-Check).
+
+- **AC-33:** Given die Legacy-Migration (S2 AC-18) läuft für Regeln aller `AlertMetric`-Werte
+  mit gesetzten Kanälen, When `alert_metric_channels` entsteht, Then liegt jeder geschriebene
+  Schlüssel in `accepted` aus dem Endpunkt (`snow_line`-Regeln schreiben `snowfall_limit` und
+  `freezing_level`, beide akzeptiert).
+  - Testart: Kern. Prüfling: `_migrate_rule_channels_to_metric_channels` in
+    `src/app/loader.py` gegen die Antwort des Endpunkts.
+
+- **AC-34:** Given der Endpunkt aus AC-30 existiert, When `GET /metrics` aufgerufen wird, Then
+  ist die Antwort unverändert: `aggregations[]` enthält keine neuen Einträge (kein Onset,
+  keine Alarm-Zeile), und `cape` fehlt weiterhin, weil `selectable=False`.
+  - Testart: Kern (`TestClient`). Prüfling: `get_metrics` in `api/routers/config.py`; Vergleich
+    gegen die Auswahl-Semantik des Wertebereiche-Editors (nur Verhalten der API, kein
+    Frontend-Dateiinhalt).
+
+- **AC-35:** Given ein angemeldeter bzw. ein nicht angemeldeter Aufruf, When
+  `GET /api/alert-metric-channel-keys` gegen die Go-API gerichtet wird, Then wird der Aufruf
+  nur mit gültiger Anmeldung an den Python-Core weitergereicht (gleiche Auth-Gruppe wie
+  `/api/metrics`) und ohne Anmeldung mit 401 abgelehnt.
+  - Testart: Go-Test (Router-Test). Prüfling: `internal/router/router.go`; nach Deploy
+    zusätzlich Staging-API.
+
+- **AC-36:** Given ein gespeicherter Ortsvergleich trägt `alert_metric_channels`
+  (`{"gust": {"email": true}}`), When ein Teil-PUT (`PUT /api/briefings/{id}?kind=vergleich`
+  und `PUT /api/compare/presets/{id}`) `"alert_metric_channels": null` sendet, Then bleibt die
+  gespeicherte Map unverändert — wie beim Trip (`handler/trip.go:375`).
+  - Testart: Go-Test. Prüfling: `mergeBriefingPatch` (`briefing_subscription.go`) /
+    `applyComparePresetPatch` (`compare_preset.go`), über die HTTP-Schicht beider PUT-Wege;
+    Trip-Pendant als Regressions-Fall.
+
+- **AC-37:** Given derselbe Teil-PUT sendet für ein **anderes** Top-Level-Feld `null` (z. B.
+  `activity_profile: null`), When er verarbeitet wird, Then ist das gespeicherte Ergebnis für
+  dieses Feld exakt dasselbe wie vor S3a (`null` überschreibt den Bestandswert, `base[k] = v`) —
+  die Angleichung gilt nur für `alert_metric_channels`. Der Test hält zuerst fest, dass das
+  gewählte Feld vor der Änderung tatsächlich durch `null` verändert wird (sonst ist die
+  Gegenprobe wertlos), und wählt notfalls ein anderes Feld, für das das gilt.
+  - Testart: Go-Test gegen dieselben PUT-Wege. Prüfling: `mergeBriefingPatch`.
+
+- **AC-38:** Given ein Teil-PUT sendet `{"alert_metric_channels": {"gust": null}}`, When er
+  gespeichert und wieder geladen wird, Then ist `gust` als `null` persistiert (andere Metriken
+  unverändert, `mergeConfigMap`), und der Leser behandelt `null` wie „kein Eintrag" — die
+  Metrik erbt (Trip und Ortsvergleich).
+  - Testart: Go-Test (Persistenz) plus Kern (Leser: `null`-Eintrag ⇒ geerbter Satz).
+    Prüfling: `mergeConfigMap`, `alert_channels._metric_channel_sets`.
+
+- **AC-39:** Given zwei verschiedene Nutzer A und B haben je einen Ortsvergleich mit eigenem
+  `alert_metric_channels`, When Nutzer B Teil-PUTs mit `null` bzw. mit einer Metrik sendet
+  (AC-36/AC-38) und Nutzer A liest, Then bleiben die Daten von A vollständig unverändert und B
+  sieht und ändert nichts von A; `user_id` kommt aus dem Auth-Kontext, nie `"default"`. Der
+  Endpunkt aus AC-30 liefert beiden Nutzern dieselbe, nutzerunabhängige Antwort.
+  - Testart: Go-Test mit zwei Nutzern (ADR-0003). Prüfling: `UpdateBriefingHandler`/
+    `UpdateComparePresetHandler`; `tests/test_user_id_default_guard.py` bleibt grün.
+
+- **AC-40:** Given S3a ist umgesetzt, When die Dokumentation geprüft wird, Then beschreibt
+  `docs/reference/api_contract.md` den Endpunkt samt Antwortform und die Semantik „null =
+  erbt", und ADR-0077 trägt den Nachtrag „S3a" (Schlüsselmenge, Rückfall nach Tier-Gates,
+  `null` = erbt, keine Go-Schreibvalidierung) bei unverändertem Status.
+  - Testart: Kern, `# doc-compliance-test`: ein eigener Test prüft, dass ADR-0077 einen
+    Abschnitt „S3a" mit den vier Punkten enthält und `api_contract.md` den Pfad
+    `/api/alert-metric-channel-keys` samt `keys`/`accepted` nennt; zusätzlich bleiben
+    `tests/test_api_contract_drift.py` und `tests/test_adr_index_drift.py` grün.
+
 ## Known Limitations / Nicht-Ziele
 
 Diese Scheibe (S1) liefert ausschließlich Feld, Persistenz, Roundtrip, Doku und ADR.
@@ -496,9 +768,10 @@ Ausdrücklich **nicht** Teil von S1:
   Leser folgt erst in S2.
 - **Keine Migration** von `alert_rules[].channels` in das neue Feld — folgt in S2,
   direkt neben dem Code, der das Feld erst maßgeblich macht.
-- **Keine Frontend-/`.svelte`-Änderung, keine Editor-Spalte.** Folgt in S3, und S3 darf
-  laut ADR-0043 erst nach S2 kommen (eine Bedienfläche ohne wirkende Aufrufstelle wäre
-  eine Konfigurationsfläche ohne sichtbare Wirkung).
+- **Keine Frontend-/`.svelte`-Änderung, keine Editor-Spalte.** Folgt in S3b (Oberfläche;
+  S3 ist in S3a/S3b geteilt, siehe Scheibenschnitt unten), und S3 darf laut ADR-0043 erst
+  nach S2 kommen (eine Bedienfläche ohne wirkende Aufrufstelle wäre eine
+  Konfigurationsfläche ohne sichtbare Wirkung).
 - **Kein Rückbau** von `alert_rules` — folgt in S4.
 - **Keine Validierung** der Metrik-Schlüssel oder Kanalwerte. Go validiert heute weder
   Metrik-Keys noch Stufenwerte; eine neue Validierung wäre Scope-Creep und würde
@@ -512,18 +785,58 @@ Ausdrücklich **nicht** Teil von S1:
 Diese Scheibe (S2) liefert Leser + Migration. Ausdrücklich **nicht** Teil von S2:
 
 - **Kein Frontend/`.svelte`.** Alles unter `frontend/`, `internal/`, `cmd/` ist
-  unangetastet — die Editor-Spalte folgt in S3 (ADR-0043: erst nach S2).
+  unangetastet — die Editor-Spalte folgt in S3b (ADR-0043: erst nach S2).
 - **Kein Rückbau von `alert_rules`.** Die Entität bleibt bestehen; `alert_rules[].channels`
   wird kopiert, nicht verschoben oder geleert — folgt in S4, erst wenn der Eintrags-Arm
   trägt.
 - **Keine Validierung der Metrik-Schlüssel.** S2 legt das Lese-Vokabular fest (Katalog-
   `metric_id`, wählbarkeitsdisambiguiert, unbekannt ⇒ erbt), aber prüft nicht, ob
-  Bestandsdaten „falsche" Schlüssel tragen — die verbindliche, validierte Menge samt
-  Bestandsdaten-Prüfung bleibt S3 (ADR-0077-Ergänzung).
+  Bestandsdaten „falsche" Schlüssel tragen — die verbindliche Schlüsselmenge (eine
+  Definition, zeilenweiser Wirk-Test, ADR-0077-Nachtrag) liefert S3a; eine
+  Go-Schreibvalidierung gibt es bewusst nicht (E3). Bestandsprüfung erledigt: 0 Briefings
+  mit `alert_metric_channels`, 0 Regeln mit `channels` in Prod.
 - **`has_active_rules` bleibt unangetastet** — wie in S1, unverändert gültig für S2–S4.
 - **`split_by_threshold` wird nicht gebraucht.** Die Union je Metrik braucht keine
   Partitionsstelle; Drosselung, Tages-Obergrenze und der Doppel-Alarm-Guard bleiben
   dadurch unberührt.
+
+### Known Limitations / Nicht-Ziele (S3a)
+
+**Scheibenschnitt (löst die frühere Einteilung „S3 = Editor-Spalte" ab):**
+
+| Scheibe | Inhalt | Workflow |
+|---|---|---|
+| S3a | Backend und Vertrag: Leser-Rückfall nach Tier-Gates, ADR-0077-Nachtrag, Schlüssel-Endpunkt, Go-Angleichung Top-Level-`null` | dieser Workflow |
+| S3b | Oberfläche: Block „Kanäle je Wettergröße" in Trip- und Vergleichs-Editor samt Anlegemasken, Payload, Snapshot/Rollback, DE/EN-Texte, Hinweise | eigener späterer Workflow unter #1895 |
+| S4 | Rückbau `alert_rules` | später, setzt S3b voraus |
+
+Ausdrücklich **nicht** Teil von S3a:
+
+- **Keine Oberfläche, für Nutzer unsichtbar.** Block „Kanäle je Wettergröße" (E1), „erbt"-Zustand
+  und Abwahl aller Kanäle (E4/E5), freie Kanalwahl mit Tarif-Sperre (E6), Hinweistext für
+  metrikfreie Alarme (E9) und Anlegemasken (E10) sind S3b. Bis dahin schreibt kein Nutzer das
+  Feld (Prod-Bestand: 0 Briefings), die Rückfall-Änderung wirkt auf keinen Bestand.
+- **Kanal-Schwelle (benanntes Restrisiko).** `split_by_threshold` (ADR-0046) läuft nach der
+  Auflösung und bleibt unverändert. Ein Metrik-Arm `{sms}` mit SMS-Schwelle „hoch" unterdrückt
+  eine niedrigere Warnung, auch wenn der Abo-Satz sie zugestellt hätte. Das gilt heute schon
+  gleich für den Abo-Satz; S3a macht es nicht schlechter. S3b zeigt dafür einen sichtbaren
+  Hinweis.
+- **Fehlender Empfänger (benanntes Restrisiko).** `resolve_alert_channels` kennt keine
+  Empfänger; ein gewählter Kanal ohne Empfänger (z. B. Telegram ohne verknüpften Chat) wird vom
+  Rückfall nicht erfasst. S3b zeigt dafür einen sichtbaren Hinweis.
+- **Windänderung hängt an zwei Schlüsseln.** Ein Windänderungs-Alarm, der über die Böen
+  ausgelöst wird, folgt der Kanalwahl unter `gust`, einer über den Mittelwind der unter `wind`
+  (so liest der S2-Leser heute, gemessen 2026-11-03). Der Endpunkt sagt das ehrlich
+  (`wind_change→[gust, wind]`); wie die Oberfläche diese Kopplung zeigt, entscheidet S3b.
+- **Metrikfreie Alarme unberührt.** Radar-/Regen-Alarme und amtliche Warnungen übergeben keinen
+  Metrik-Parameter und gehen unverändert über den Abo-Satz (AC-13).
+- **Nebenbefund außerhalb des Umfangs.** `compare_alert.py:70-80` bildet `temp_min_c` auf
+  `temperature_cold` ab, `alert_channels.py` auf `temperature`; betroffen ist nur der
+  Deaktivieren-Filter, nicht die Kanal-Map. Wird als Nebenbefund (#1199) geführt, nicht hier
+  geändert.
+- **Keine Go-Schreibvalidierung** der Metrik-Schlüssel (E3) und **keine allgemeine
+  „null = No-Op"-Regel** im Go-Merge (E8): nur `alert_metric_channels`.
+- **`/api/metrics` unverändert**; kein Rückbau von `alert_rules`; `has_active_rules` unangetastet.
 
 ## Architektur-Entscheidung (ADR)
 
@@ -546,3 +859,15 @@ Diese Scheibe (S2) liefert Leser + Migration. Ausdrücklich **nicht** Teil von S
   `alert_rules[].channels` → `alert_metric_channels`, AC-10 bis AC-24), Analyse-Grundlage
   `docs/context/feat-1895-s2-kanal-leser.md` Sektion `# Analysis`. S1-Inhalte (AC-1 bis
   AC-9, Approval-Block) unverändert.
+- 2026-11-03: Scheibe S3a ergänzt (Backend und Vertrag: Leser-Rückfall nach Tier-Gates,
+  Schlüssel-Endpunkt `GET /alert-metric-channel-keys`, Go-Angleichung Top-Level-`null`,
+  ADR-0077-Nachtrag, AC-25 bis AC-40), Analyse-Grundlage
+  `docs/context/feat-1895-s3-kanal-spalte.md` Sektion `## Analysis` (E1–E10). S2 AC-12 als
+  „teilweise abgelöst durch AC-25" vermerkt; Scheibenschnitt auf S3a/S3b/S4 umgeschrieben.
+  Oberfläche (S3b) ausdrücklich nicht enthalten.
+- 2026-11-03 (Nachfreigabe aus `/40-tdd-red`): Detektor-Probe zeigte, dass `wind_change` auch
+  `gust_max_kmh` meldet und der Leser es als `gust` liest — AC-30/AC-32 in der alten Form
+  (ein Schlüssel je Zeile, Gleichheit je Zeile) waren zusammen mit AC-33 nicht erfüllbar.
+  Korrektur: `keys` liefert je Zeile die sortierte Schlüsselliste aus Lesersicht, AC-32 prüft
+  Mengengleichheit; Implementation Details §3, Affected Files (Tie-Break bleibt in `loader.py`),
+  Mutations-Gegenprobe und Known Limitations entsprechend angepasst.

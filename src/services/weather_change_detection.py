@@ -165,6 +165,39 @@ def catalog_id_to_alert_metrics() -> dict[str, set[str]]:
     return result
 
 
+# Issue #1895 S3a: Legacy-Schluessel, den nur die Migration
+# (`loader._migrate_rule_channels_to_metric_channels`, SNOW_LINE) schreibt; der
+# Detektor meldet `snow_line` ueber `freezing_level_m`, daher nie Ziel in `keys`.
+_LEGACY_ONLY_CHANNEL_KEYS: frozenset[str] = frozenset({"snowfall_limit"})
+
+
+def alert_metric_channel_keys() -> dict:
+    """Issue #1895 S3a (AC-30 bis AC-33): die EINE Quelle fuer „welche
+    Alarm-Zeile landet auf welchem `alert_metric_channels`-Schluessel".
+
+    Je `AlertMetric` werden die Summary-Felder, die der Detektor fuer diese
+    Zeile scharf stellt (`_ALERT_METRIC_TO_SUMMARY_FIELD` bzw.
+    `_ALERT_DELTA_METRIC_TO_FIELDS`), ueber die Leser-Primitive
+    `alert_channels._metric_id_for_summary_key` aufgeloest — was der Leser
+    liest, bietet der Endpunkt an. Zeilen ohne Summary-Feld (`humidity`,
+    ADR-0010) fehlen. Rueckgabe: `keys` (Zeile → sortierte Schluesselliste)
+    und `accepted` (Vereinigung ∪ `_LEGACY_ONLY_CHANNEL_KEYS`, sortiert).
+    """
+    from services.alert_channels import _metric_id_for_summary_key
+
+    keys: dict[str, list[str]] = {}
+    for metric in AlertMetric:
+        fields = _ALERT_DELTA_METRIC_TO_FIELDS.get(metric)
+        if fields is None:
+            field = _ALERT_METRIC_TO_SUMMARY_FIELD.get(metric)
+            fields = (field,) if field else ()
+        resolved = {_metric_id_for_summary_key(f) for f in fields} - {None}
+        if resolved:
+            keys[metric.value] = sorted(resolved)
+    accepted = {k for liste in keys.values() for k in liste} | _LEGACY_ONLY_CHANNEL_KEYS
+    return {"keys": keys, "accepted": sorted(accepted)}
+
+
 def _build_alert_metric_comparison() -> dict[AlertMetric, str]:
     """Derive comparison direction from catalog cmp at module load.
 

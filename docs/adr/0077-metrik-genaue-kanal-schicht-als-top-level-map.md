@@ -83,3 +83,23 @@ für eine Metrik löscht still die Kanäle aller anderen Metriken.
   S3 die Editor-Spalte bauen. Die Schlüsselmenge wird in S3 verbindlich festgelegt — wer sie
   festlegt, prüft zugleich Bestandsdaten auf abgelöste Schlüssel. `has_active_rules` bleibt in allen
   Scheiben unangetastet.
+
+## Nachtrag S3a (2026-11-03, Issue #1895)
+
+Kein neues ADR, kein Statuswechsel. S3a macht die Schicht tragfähig, bevor eine Oberfläche sie
+anbietet (Spec `docs/specs/modules/alert_metric_channels.md`, AC-25 bis AC-40):
+
+- **(a) Schlüsselmenge:** Die gültige Schlüsselmenge hat genau eine Definition, `alert_metric_channel_keys()` in `src/services/weather_change_detection.py`.
+  Sie leitet je Alarm-Zeile die Schlüssel aus Sicht des Lesers ab (Detektor-Felder über
+  `alert_channels._metric_id_for_summary_key`) und wird über `GET /api/alert-metric-channel-keys`
+  (`keys`, `accepted`) angeboten. `snowfall_limit` ist Legacy-Schlüssel der Migration: akzeptiert,
+  nie Ziel einer Zeile. Damit ist die in Punkt 3 an S3 verwiesene Festlegung getroffen.
+- **(b) Rückfall nach den Tier-Gates:** Ist der Metrik-Arm nach den Tarif-Sperren leer, gilt der Satz ohne Metrik-Arm, ebenfalls nach denselben Tier-Gates.
+  Das ersetzt die S2-Aussage „kein Fall für den Rückfall" (stand nur in S2-Spec und Docstring).
+  Ein tarifgesperrter Kanal bleibt auch im Rückfall gestrichen; die Kanal-Schwelle (ADR-0046)
+  wirkt unverändert danach.
+- **(c) `null`:** Ein `null`-Eintrag je Metrik (`{"gust": null}`) bedeutet: die Metrik erbt.
+  Ein Top-Level-`null` auf `alert_metric_channels` ist auf Trip und Ortsvergleich ein No-Op.
+- **(d) Keine Go-Schreibvalidierung:** Go besitzt keinen Katalog (eine Kopie wäre Drift), eine
+  Validierung bräche Bestandsdaten (Punkt 3), der Leser ist fail-soft. Es gibt keine Schreibvalidierung in Go;
+  die Schlüsselmenge wird durch den zeilenweisen Wirk-Test (AC-32) bewacht.

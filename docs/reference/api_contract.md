@@ -197,6 +197,7 @@ Fehlerantworten der Go-API, die über `handler.WriteError`/`WriteErrorWith` lauf
 | `/api/admin/users` | GET — nur Admin (403 `{"error":"forbidden"}` sonst, #2155 S3) |
 | `/api/admin/users/{id}/disabled` | PUT — nur Admin, Konto sperren/entsperren (#2155 S3) |
 | `/api/admin/users/{id}/tier` | PUT — nur Admin, Tier setzen (#2155 S3) |
+| `/api/alert-metric-channel-keys` | GET — Session-Pflicht, nutzerunabhängig (Issue #1895 S3a). Proxy auf Python `GET /alert-metric-channel-keys`. Antwort `{"keys": {<AlertMetric>: [<schlüssel>, …]}, "accepted": [<schlüssel>, …]}`: `keys` bildet je Alarm-Zeile auf die sortierte Liste der `alert_metric_channels`-Speicherschlüssel ab, die der Leser für diese Zeile liest (z. B. `wind_gust → ["gust"]`, `wind_change → ["gust", "wind"]`, `snow_line → ["freezing_level"]`; `humidity` fehlt); `accepted` ist die sortierte Vereinigung aller Listen plus den Legacy-Schlüssel `snowfall_limit` (nur von der Migration geschrieben, nie Ziel in `keys`). Einzige Quelle: `weather_change_detection.alert_metric_channel_keys()`; `/api/metrics` bleibt unverändert. Details Abschnitt „alert_metric_channels" |
 | `/api/archive/stats` | GET |
 | `/api/auth/account/delete` | POST — Kontoloeschung mit Re-Auth (#2160, ADR-0081; ersetzt den entfallenen DELETE auf `/api/auth/account`) |
 | `/api/auth/account/delete-code` | POST — Lösch-Code an die wirksame Adresse (#2160) |
@@ -1098,6 +1099,13 @@ Dritte Kanal-Schicht neben `alert_channels`/`send_*` („je Abo") und `alert_cha
 - **Nur metrik-behaftete Alarme.** Regen-/Nowcast-Alarme und amtliche Warnungen sind strukturell metrikfrei und verwenden unverändert den Abo-weiten Satz.
 - **Je Ort beim Ortsvergleich.** Die Auflösung geschieht in der Ortsschleife: zwei Orte desselben Alarmlaufs können unterschiedliche Kanalsätze bekommen, wenn sie über verschiedene Metriken auslösen.
 - **Migration beim Laden (Python).** `alert_rules[].channels` wird in dieses Feld **kopiert** (`alert_rules` bleibt unverändert bestehen): nur aktivierte Regeln mit nicht-leerer Kanalliste, eins-zu-viele ausgerollt (`snow_line` ⇒ `snowfall_limit` **und** `freezing_level`), Kollisionen auf derselben `metric_id` unioniert, bereits vorhandene Einträge gewinnen (Read-Modify-Write mit Merge). Eine leere Regel-Kanalliste erzeugt **keinen** Schlüssel (ein `{}` läse sich als Override ins Leere). **Folge für Bestandsnutzer (bewusst, PO-freigegeben):** ein Alarm, der nur Metrik X auslöst, erreicht danach nur noch die Kanäle der X-Regel statt der regelübergreifenden Union.
+
+**Ergänzung S3a (Issue #1895 · Rückfall, Schlüssel-Quelle, `null`):**
+
+- **Gültige Schlüssel:** `GET /api/alert-metric-channel-keys` (`keys` je Alarm-Zeile, `accepted` als Gesamtmenge) ist die einzige Quelle; Go validiert die Schlüssel beim Schreiben nicht (fail-soft: unbekannter Schlüssel ⇒ erbt).
+- **Rückfall nach den Tarif-Sperren:** ist der Metrik-Arm nach den Tier-Gates leer (z. B. `{sms}` ohne SMS-Tarif), gilt der Kanalsatz ohne diese Schicht, ebenfalls nach den Tier-Gates — der Alarm geht nicht ins Leere.
+- **`null` je Metrik:** `{"gust": null}` wird als `null` persistiert und bedeutet: die Metrik erbt (wie kein Eintrag).
+- **Top-Level-`null`:** `"alert_metric_channels": null` im PUT-Body ist auf Trip **und** Ortsvergleich ein No-Op — die gespeicherte Map bleibt unverändert (`mergeBriefingPatch` überspringt `null` nur für dieses Feld; andere Felder überschreibt `null` wie bisher).
 
 Quelle: `internal/model/trip.go` / `internal/model/compare_preset.go` (`AlertMetricChannels`), ADR-0077 (schreibt ADR-0046 fort), Spec `docs/specs/modules/alert_metric_channels.md`.
 

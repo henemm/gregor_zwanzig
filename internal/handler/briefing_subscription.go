@@ -177,6 +177,10 @@ func DeleteBriefingHandler(s *store.Store) http.HandlerFunc {
 // mergeConfigMap (#1159-Kernel, config_merge.go) eine Ebene tiefer gemergt
 // statt blind ersetzt — sonst loescht {"display_config":{"A":9}} alle
 // anderen display_config-Keys (GR221-Klasse).
+//
+// Issue #1895 S3a (AC-36/AC-37): ein Top-Level-null auf GENAU
+// alert_metric_channels ist ein No-Op (wie beim Trip-Pointer-DTO); fuer alle
+// anderen Felder ueberschreibt null den Bestandswert wie bisher.
 func mergeBriefingPatch(existing interface{}, patch []byte) ([]byte, error) {
 	existingBytes, err := json.Marshal(existing)
 	if err != nil {
@@ -191,6 +195,9 @@ func mergeBriefingPatch(existing interface{}, patch []byte) ([]byte, error) {
 		return nil, err
 	}
 	for k, v := range overlay {
+		if v == nil && k == "alert_metric_channels" {
+			continue
+		}
 		if nestedNew, ok := v.(map[string]interface{}); ok {
 			if nestedOld, ok2 := base[k].(map[string]interface{}); ok2 {
 				base[k] = mergeConfigMap(nestedOld, nestedNew)
