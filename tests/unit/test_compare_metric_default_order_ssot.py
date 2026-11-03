@@ -187,3 +187,79 @@ def test_ac8_sink_mit_nur_subject_und_body_keywords():
     ergebnis = _sende(sink)
     assert "email" in ergebnis.sent_channels
     assert list(aufrufe[0]) == ["subject", "body"]
+
+
+@pytest.mark.parametrize("fehler", [ValueError, TypeError])
+def test_ac8_signatur_nicht_ermittelbar_ruft_sink_wie_bisher(monkeypatch, fehler):
+    """Spec Abschnitt 2: ist die Sink-Signatur nicht ermittelbar
+    (``inspect.signature`` wirft ValueError/TypeError), wird konservativ wie
+    bisher nur mit ``subject``/``body`` aufgerufen -- auch wenn der Sink
+    ``**kw`` annaehme (Adversary-Finding F001)."""
+    from services import notification_service
+
+    def _wirft(_obj, *a, **k):
+        raise fehler("Signatur nicht ermittelbar")
+
+    monkeypatch.setattr(notification_service.inspect, "signature", _wirft)
+
+    aufrufe: list[dict] = []
+    ergebnis = _sende(lambda **kw: aufrufe.append(kw))
+
+    assert "email" in ergebnis.sent_channels
+    assert aufrufe == [{
+        "subject": "Wetter-Vergleich: SSOT (03.11.2026)",
+        "body": "<p>Innsbruck</p>",
+    }]
+
+
+# ---------------------------------------------------------------------------
+# AC-4: Telegram/SMS/Premium-SMS bei enabled_metrics=None unveraendert
+# ---------------------------------------------------------------------------
+
+# Eingefroren aus dem Stand VOR #1356: per Gegenprobe mit zur Laufzeit
+# wiederhergestellter alter Klartext-Folge (_PLAIN_ROWS_UNSORTED) gerendert,
+# zeichengleich zur Ausgabe mit neuer Folge (die Kurz-Auswahl kommt aus
+# _CHANNEL_METRICS, nicht aus _PLAIN_ROWS). Premium-SMS sendet denselben Text.
+_FROZEN_SMS_NONE = (
+    "Vergleich 24.07.: Aachen D 20C W 15 km/h SU 5.0h CT 40% SD 1 cm NS 2 cm; "
+    "Bremen D 20C W 15 km/h SU 5.0h CT 40% SD 1 cm NS 2 cm +1 Orte"
+)
+
+
+def test_ac4_sms_bei_standard_zeichengleich_zum_stand_vor_1356():
+    from output.renderers.comparison import render_compare_sms
+
+    assert render_compare_sms(_result(), enabled_metrics=None) == _FROZEN_SMS_NONE
+
+
+# ---------------------------------------------------------------------------
+# AC-5: nur die Klartext-Zeilenfolge aendert sich, nicht Zeilen/Werte
+# ---------------------------------------------------------------------------
+
+
+def test_ac5_plain_rows_sind_dieselben_zeilen_nur_umsortiert():
+    from output.renderers import comparison
+
+    assert sorted(comparison._PLAIN_ROWS, key=lambda r: r[0]) == \
+        sorted(comparison._PLAIN_ROWS_UNSORTED, key=lambda r: r[0])
+    assert len(comparison._PLAIN_ROWS) == len(comparison._PLAIN_ROWS_UNSORTED)
+
+
+def test_ac5_klartext_zeilen_und_werte_mengengleich_zur_alten_folge():
+    """Der Klartext in alter Folge (Auswahl = Schluessel von
+    _PLAIN_ROWS_UNSORTED) und der neue Standard-Klartext (None) enthalten
+    dieselben Zeilen mit denselben Werten -- nur die Reihenfolge differiert."""
+    from collections import Counter
+
+    from output.renderers import comparison
+
+    alte_folge = [row[0] for row in comparison._PLAIN_ROWS_UNSORTED]
+    alt = render_comparison_text(_result(), enabled_metrics=alte_folge)
+    neu = render_comparison_text(_result(), enabled_metrics=None)
+
+    alt_labels = klartext_uebersicht_labels(alt)
+    assert len(alt_labels) >= 20, f"Vakuum-Schutz: nur {len(alt_labels)} Zeilen"
+    assert Counter(alt.splitlines()) == Counter(neu.splitlines())
+    assert alt_labels != klartext_uebersicht_labels(neu), (
+        "Gegenprobe: die alte Folge muss sich von der neuen unterscheiden"
+    )

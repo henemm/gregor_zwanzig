@@ -116,83 +116,83 @@ Erstellt: 29.10.2026 05:00 (CET)
 Innsbruck
    Temperatur Maximum: 14°C
    Wind: 12 km/h
+   Niederschlag: 0.6 mm
+   Regenwahrscheinlichkeit: 20%
+   Gewitter: –
+   Sonnenstunden: 4.0h
+   Bewölkung: 40%
+   UV-Index: 2
+   Sichtweite: 9.0 km
+   Schneehöhe: -
+   Neuschnee: -
    Temperatur Minimum: 4°C
    Böen: 25 km/h
+   Nullgradgrenze: -
    Windrichtung: -
    Gefühlte Temperatur Minimum: -
    Gefühlte Temperatur Maximum: -
    Tiefe Wolken: -
    Mittelhohe Wolken: -
    Hohe Wolken: -
-   Niederschlag: 0.6 mm
-   Regenwahrscheinlichkeit: 20%
-   Gewitter: –
-   UV-Index: 2
-   Sichtweite: 9.0 km
-   Nullgradgrenze: -
    Luftfeuchtigkeit: -
    Taupunkt: -
    Luftdruck: -
    Niederschlagsart: -
    Schneefallgrenze: -
-   Sonnenstunden: 4.0h
-   Bewölkung: 40%
-   Schneehöhe: -
-   Neuschnee: -
 
 Stubai
    Temperatur Maximum: 14°C
    Wind: 12 km/h
+   Niederschlag: 0.6 mm
+   Regenwahrscheinlichkeit: 20%
+   Gewitter: –
+   Sonnenstunden: 4.0h
+   Bewölkung: 40%
+   UV-Index: 2
+   Sichtweite: 9.0 km
+   Schneehöhe: -
+   Neuschnee: -
    Temperatur Minimum: 4°C
    Böen: 25 km/h
+   Nullgradgrenze: -
    Windrichtung: -
    Gefühlte Temperatur Minimum: -
    Gefühlte Temperatur Maximum: -
    Tiefe Wolken: -
    Mittelhohe Wolken: -
    Hohe Wolken: -
-   Niederschlag: 0.6 mm
-   Regenwahrscheinlichkeit: 20%
-   Gewitter: –
-   UV-Index: 2
-   Sichtweite: 9.0 km
-   Nullgradgrenze: -
    Luftfeuchtigkeit: -
    Taupunkt: -
    Luftdruck: -
    Niederschlagsart: -
    Schneefallgrenze: -
-   Sonnenstunden: 4.0h
-   Bewölkung: 40%
-   Schneehöhe: -
-   Neuschnee: -
 
 Zillertal
    Temperatur Maximum: 14°C
    Wind: 12 km/h
+   Niederschlag: 0.6 mm
+   Regenwahrscheinlichkeit: 20%
+   Gewitter: –
+   Sonnenstunden: 4.0h
+   Bewölkung: 40%
+   UV-Index: 2
+   Sichtweite: 9.0 km
+   Schneehöhe: -
+   Neuschnee: -
    Temperatur Minimum: 4°C
    Böen: 25 km/h
+   Nullgradgrenze: -
    Windrichtung: -
    Gefühlte Temperatur Minimum: -
    Gefühlte Temperatur Maximum: -
    Tiefe Wolken: -
    Mittelhohe Wolken: -
    Hohe Wolken: -
-   Niederschlag: 0.6 mm
-   Regenwahrscheinlichkeit: 20%
-   Gewitter: –
-   UV-Index: 2
-   Sichtweite: 9.0 km
-   Nullgradgrenze: -
    Luftfeuchtigkeit: -
    Taupunkt: -
    Luftdruck: -
    Niederschlagsart: -
    Schneefallgrenze: -
-   Sonnenstunden: 4.0h
-   Bewölkung: 40%
-   Schneehöhe: -
-   Neuschnee: -
 
 
 ── Antwort-Kommandos ──

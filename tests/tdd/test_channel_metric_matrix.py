@@ -66,7 +66,7 @@ gewaehlte Groesse erscheint, nicht AN WELCHER STELLE. Die Soll-Menge wird aus
 Vakuum-Schutz AC-S7-1b). SPEC:
 docs/specs/modules/fix_1703_s7_reihenfolge_matrix.md. Achsen: HTML- und
 Klartext-Zwilling derselben Compare-Mail (AC-S7-2/3), Altbestand ohne
-gespeicherte Auswahl (AC-S7-4, Charakterisierung der HTML/Klartext-Divergenz),
+gespeicherte Auswahl (AC-S7-4, seit #1356 eine Reihenfolge HTML = Klartext),
 je Kanal eine EIGENE Reihenfolge in EINER Sendung -- am echten Versand- UND
 Vorschaupfad (AC-S7-5/5b, Gegenprobe zum Label-Vergleich AC-S7-5c),
 Trip-Kurzuebersicht und ihre zwei Reihenfolge-Quellen (AC-S7-7/7b),
@@ -4287,21 +4287,17 @@ def test_ac_s7_3_compare_klartext_folgt_derselben_reihenfolge(metric_id):
         )
 
 
-# --- AC-S7-4: Altbestand ohne gespeicherte Auswahl (Charakterisierung) ----
+# --- AC-S7-4: Altbestand ohne gespeicherte Auswahl (eine Reihenfolge) ----
 
-def test_ac_s7_4_altbestand_html_und_klartext_divergieren_charakterisiert():
-    """AC-S7-4 (CHARAKTERISIERUNG, kein Fix -- Spec 'Bewusst NICHT in dieser
-    Scheibe'): ohne gespeicherte Auswahl (``enabled_metrics=None``) behaelt
-    jede Form derselben Mail ihre eigene Quellcode-Ordnung. Die MENGEN sind
-    identisch (25 Zeilen), die ORDNUNG nicht -- erste Abweichung an Position
-    3: HTML fuehrt dort ``precip_sum`` (CV2_METRICS), der Klartext
-    ``temp_min`` (_PLAIN_ROWS).
-
-    Ein Fix zoege den Bestandstest ``test_compare_metric_order.py`` AC-7 mit,
-    der die _PLAIN_ROWS-Ordnung ausdruecklich als Altbestands-Standard
-    einfriert -- eigene Entscheidung, Nebenbefund #1199. Faellt dieser Test
-    rot, hat sich das Produktivverhalten geaendert: dann Spec-Korrektur statt
-    Test-Anpassung pruefen."""
+def test_ac_s7_4_altbestand_klartext_folgt_html_reihenfolge():
+    """AC-S7-4 (seit Issue #1356 kein Charakterisierungstest mehr): ohne
+    gespeicherte Auswahl (``enabled_metrics=None``) folgen HTML- und
+    Klartext-Teil derselben Mail EINER Standard-Reihenfolge -- der von
+    ``CV2_METRICS``; ``_PLAIN_ROWS`` wird daraus abgeleitet (Spec
+    docs/specs/modules/compare_metric_default_order_ssot.md). Bis #1356
+    charakterisierte dieser Test die Divergenz (erste Abweichung Position 3:
+    HTML ``precip_sum``, Klartext ``temp_min``). Die HTML-Zeile "Amtliche
+    Warnungen" erfasst ``html_uebersicht_labels`` nicht."""
     html, text = render_compare_email(_s7_result(), enabled_metrics=None)
     html_labels = html_uebersicht_labels(html)
     text_labels = klartext_uebersicht_labels(text)
@@ -4309,29 +4305,13 @@ def test_ac_s7_4_altbestand_html_und_klartext_divergieren_charakterisiert():
         f"AC-S7-4: {len(html_labels)} HTML- und {len(text_labels)} "
         f"Klartext-Zeilen bei {len(_S7_SOLL)} Katalog-Groessen"
     )
-    assert set(html_labels) == set(text_labels), (
-        "AC-S7-4: HTML und Klartext zeigen NICHT dieselbe Menge -- das waere "
-        "ein anderer, schwererer Befund als die reine Ordnungs-Divergenz.\n"
-        f"nur HTML: {sorted(set(html_labels) - set(text_labels))}\n"
-        f"nur Klartext: {sorted(set(text_labels) - set(html_labels))}"
+    assert text_labels == html_labels, (
+        "AC-S7-4: Klartext-Standardreihenfolge weicht von HTML ab.\n"
+        f"HTML:     {html_labels}\nKlartext: {text_labels}"
     )
-    assert html_labels != text_labels, (
-        "AC-S7-4: die Altbestands-Divergenz ist verschwunden -- gut moeglich "
-        "ein bewusster Fix, dann gehoert diese Charakterisierung ersetzt "
-        "(und der Bestandstest AC-7 mitgezogen)."
-    )
-    erste_abweichung = next(
-        i for i, (h, t) in enumerate(zip(html_labels, text_labels)) if h != t
-    )
-    assert erste_abweichung == 2, (
-        f"AC-S7-4: erste Abweichung an Position {erste_abweichung + 1}, "
-        "gemessen 2026-08-13 war es Position 3"
-    )
-    assert html_labels[2] == uebersichts_label("precip_sum", _S7_SOLL), (
-        f"AC-S7-4: HTML-Position 3 traegt {html_labels[2]!r}"
-    )
-    assert text_labels[2] == uebersichts_label("temp_min", _S7_SOLL), (
-        f"AC-S7-4: Klartext-Position 3 traegt {text_labels[2]!r}"
+    assert text_labels[2] == uebersichts_label("precip_sum", _S7_SOLL), (
+        f"AC-S7-4: Klartext-Position 3 traegt {text_labels[2]!r} "
+        "(CV2_METRICS fuehrt dort precip_sum)"
     )
 
 

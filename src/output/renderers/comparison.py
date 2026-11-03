@@ -99,13 +99,15 @@ _DAILY_PLAIN_ROWS: tuple[tuple[str, str, object], ...] = (
 # sie als feste Folge einzelner `if _metric_visible(...)`-Bloecke im Quelltext
 # -- die im Editor eingestellte Metrik-Reihenfolge konnte deshalb gar nicht
 # ankommen (der Test prueft nur Mitgliedschaft, nicht Position).
-# Die Reihenfolge DIESER Konstante bleibt die Standard-Reihenfolge fuer
-# Altbestaende ohne gespeicherte Auswahl (AC-7, eingefroren in
-# tests/unit/test_compare_metric_order.py).
+# Issue #1356: die Quellcode-Reihenfolge dieser Tabelle ist NICHT mehr die
+# Standard-Reihenfolge. Einzige Quelle der Standard-Reihenfolge (Altbestaende
+# ohne gespeicherte Auswahl) ist `CV2_METRICS` (compare_html.py); die Tabelle
+# wird beim Import per `_sort_by_cv2_order` in diese Folge gebracht (Spec
+# docs/specs/modules/compare_metric_default_order_ssot.md).
 # Werte kommen einheitlich ueber `_metric_value` (HTML-Paritaet, keine zweite
 # Wert-Quelle): fuer IDs ohne `_DAILY_AGGREGATE_FIELD`-Eintrag ist das exakt
 # das bisherige `getattr(loc_result, metric_id)`.
-_PLAIN_ROWS: tuple[tuple[str, str, object], ...] = (
+_PLAIN_ROWS_UNSORTED: tuple[tuple[str, str, object], ...] = (
     ("temp_max", "vergleich.zeile.temp_max", lambda v: format_value("temperature", v, style="plain")),
     ("wind_max", "vergleich.zeile.wind_max", lambda v: format_value("wind", v, style="plain")),
     ("temp_min", "vergleich.zeile.temp_min", lambda v: format_value("temperature", v, style="plain")),
@@ -125,6 +127,32 @@ _PLAIN_ROWS: tuple[tuple[str, str, object], ...] = (
     ("snow_new_cm", "vergleich.zeile.snow_new_cm", lambda v: f"{v:.0f} cm"),
 )
 
+
+def _sort_by_cv2_order(rows) -> tuple:
+    """Klartext-Zeilen in die Reihenfolge von ``CV2_METRICS`` bringen (#1356).
+
+    ``CV2_METRICS`` ist die einzige Quelle der Standard-Reihenfolge; ``warn``
+    ist eine reine HTML-Zeile und wird uebersprungen. Fail-fast: steht ein
+    Schluessel nur in einer der beiden Listen, bricht der Aufruf (und damit der
+    Modulimport) mit ``ValueError`` ab, der den Schluessel nennt -- keine Zeile
+    wird still ans Ende gehaengt.
+    """
+    cv2_keys = [m["key"] for m in CV2_METRICS if m["key"] != "warn"]
+    by_id = {row[0]: row for row in rows}
+    nur_plain = [k for k in by_id if k not in cv2_keys]
+    nur_cv2 = [k for k in cv2_keys if k not in by_id]
+    if nur_plain or nur_cv2:
+        raise ValueError(
+            "Klartext-Zeilen und CV2_METRICS sind nicht deckungsgleich: "
+            f"nur in Klartext-Zeilen: {nur_plain}; nur in CV2_METRICS: {nur_cv2}"
+        )
+    return tuple(by_id[k] for k in cv2_keys)
+
+
+_PLAIN_ROWS: tuple[tuple[str, str, object], ...] = _sort_by_cv2_order(
+    _PLAIN_ROWS_UNSORTED
+)
+
 # Beschriftungs-Quelle des Klartext-Zwillings: dieselben Register-Verknuepfungen
 # wie im HTML-Pfad, nach Zeilen-Key ansprechbar (Issue #1401 A2b).
 _CV2_BY_KEY: dict[str, dict] = {m["key"]: m for m in CV2_METRICS}
@@ -135,8 +163,8 @@ def _ordered_rows(rows, enabled_metrics: list[str] | None) -> list | tuple:
 
     Issue #1359: ``enabled_metrics`` ist eine GEORDNETE Liste (Listenposition
     = Reihenfolge, kein eigenes ``order``-Feld). ``None`` = Altbestand ohne
-    gespeicherte Auswahl und behaelt die unveraenderte Quellcode-Reihenfolge
-    (AC-7). Eine leere Liste bleibt leer (AC-8) -- sie darf nicht in "alle
+    gespeicherte Auswahl und folgt der Standard-Reihenfolge von ``rows``
+    (fuer ``_PLAIN_ROWS`` die von ``CV2_METRICS``, Issue #1356). Eine leere Liste bleibt leer (AC-8) -- sie darf nicht in "alle
     Metriken" umgedeutet werden. Semantik identisch zu ``_visible_metrics()``
     im HTML-Pfad (``output.renderers.email.compare_html``).
     """
@@ -544,8 +572,9 @@ def render_compare_email(
 # eigene Metrik-Liste, insbesondere kein confidence_pct (#710/ADR-0005).
 # ---------------------------------------------------------------------------
 
-# (metric_id, Kurz-Label) in Anzeige-Prioritaet -- deckungsgleich mit den
-# Uebersichts-Zeilen in render_comparison_text().
+# (metric_id, Kurz-Label) in Anzeige-Prioritaet -- eigene Kurz-Auswahl fuer
+# Telegram/SMS (Teilmenge der Uebersichts-Zeilen, NICHT aus CV2_METRICS
+# abgeleitet; ihre Folge stimmt nur mit der CV2-Reihenfolge ueberein, #1356).
 _CHANNEL_METRICS: tuple[tuple[str, str], ...] = (
     ("temp_max", "Temp"),
     ("wind_max", "Wind"),

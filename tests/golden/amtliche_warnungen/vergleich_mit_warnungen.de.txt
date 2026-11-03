@@ -7,85 +7,85 @@ Erstellt: 29.10.2026 05:00 (CET)
 Innsbruck
    Temperatur Maximum: 11°C
    Wind: 26 km/h
+   Niederschlag: 2.4 mm
+   Regenwahrscheinlichkeit: 70%
+   Gewitter: –
+   Sonnenstunden: 4.0h
+   Bewölkung: 45%
+   UV-Index: 4
+   Sichtweite: 10.0 km
+   Schneehöhe: -
+   Neuschnee: -
    Temperatur Minimum: 2°C
    Böen: 38 km/h
+   Nullgradgrenze: 2400 m
    Windrichtung: -
    Gefühlte Temperatur Minimum: -
    Gefühlte Temperatur Maximum: -
    Tiefe Wolken: -
    Mittelhohe Wolken: -
    Hohe Wolken: -
-   Niederschlag: 2.4 mm
-   Regenwahrscheinlichkeit: 70%
-   Gewitter: –
-   UV-Index: 4
-   Sichtweite: 10.0 km
-   Nullgradgrenze: 2400 m
    Luftfeuchtigkeit: 72%
    Taupunkt: 1°C
    Luftdruck: 1012 hPa
    Niederschlagsart: Regen
    Schneefallgrenze: 2100 m
-   Sonnenstunden: 4.0h
-   Bewölkung: 45%
-   Schneehöhe: -
-   Neuschnee: -
    ⚠️ Amtliche Warnung: Mäßige Gewitterwarnung (Do 29.10. · 10:00–19:00)
    ⚠️ Amtliche Warnung: Extreme Hitze (Do 29.10. · ganztägig)
 
 Lienz
    Temperatur Maximum: 12°C
    Wind: 26 km/h
+   Niederschlag: 5.4 mm
+   Regenwahrscheinlichkeit: 70%
+   Gewitter: mittel · CAPE, Blitzdichte · Hagel: ja
+   Sonnenstunden: 5.0h
+   Bewölkung: 45%
+   UV-Index: 4
+   Sichtweite: 10.0 km
+   Schneehöhe: -
+   Neuschnee: -
    Temperatur Minimum: 3°C
    Böen: 39 km/h
+   Nullgradgrenze: 2450 m
    Windrichtung: -
    Gefühlte Temperatur Minimum: -
    Gefühlte Temperatur Maximum: -
    Tiefe Wolken: -
    Mittelhohe Wolken: -
    Hohe Wolken: -
-   Niederschlag: 5.4 mm
-   Regenwahrscheinlichkeit: 70%
-   Gewitter: mittel · CAPE, Blitzdichte · Hagel: ja
-   UV-Index: 4
-   Sichtweite: 10.0 km
-   Nullgradgrenze: 2450 m
    Luftfeuchtigkeit: 72%
    Taupunkt: 2°C
    Luftdruck: 1013 hPa
    Niederschlagsart: Regen
    Schneefallgrenze: 2150 m
-   Sonnenstunden: 5.0h
-   Bewölkung: 45%
-   Schneehöhe: -
-   Neuschnee: -
 
 Kufstein
    Temperatur Maximum: 13°C
    Wind: 26 km/h
+   Niederschlag: 8.4 mm
+   Regenwahrscheinlichkeit: 70%
+   Gewitter: –
+   Sonnenstunden: 6.0h
+   Bewölkung: 45%
+   UV-Index: 4
+   Sichtweite: 10.0 km
+   Schneehöhe: -
+   Neuschnee: -
    Temperatur Minimum: 4°C
    Böen: 40 km/h
+   Nullgradgrenze: 2500 m
    Windrichtung: -
    Gefühlte Temperatur Minimum: -
    Gefühlte Temperatur Maximum: -
    Tiefe Wolken: -
    Mittelhohe Wolken: -
    Hohe Wolken: -
-   Niederschlag: 8.4 mm
-   Regenwahrscheinlichkeit: 70%
-   Gewitter: –
-   UV-Index: 4
-   Sichtweite: 10.0 km
-   Nullgradgrenze: 2500 m
    Luftfeuchtigkeit: 72%
    Taupunkt: 3°C
    Luftdruck: 1014 hPa
    Niederschlagsart: Mischniederschlag
    Schneefallgrenze: 2200 m
-   Sonnenstunden: 6.0h
-   Bewölkung: 45%
-   Schneehöhe: -
-   Neuschnee: -
    ⚠️ Amtliche Warnung: Waldbrand-Gefahr — Stufe 3
 
 Brenner
