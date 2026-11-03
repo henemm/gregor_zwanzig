@@ -8,9 +8,9 @@
 	// bereits getesteten groupLocations()-Helper statt einer eigenen Reduce-Logik.
 	// Spec: docs/specs/modules/issue_680_compare_editor_slice3.md,
 	//       docs/specs/modules/issue_1256_compare_ui_rewire.md § Scheibe 5 (AC-13)
-	import { getContext } from 'svelte';
+	// Issue #2727 (Epic #2345, DoD-1): die Auswahl reist als bindbare Prop
+	// `pickedIds` (kein Context mehr), Muster der Trip-Organismen.
 	import { api, ZEITLIMIT_ORT_AUFLOESEN_MS } from '$lib/api';
-	import type { CompareWizardState } from '../compareWizardState.svelte';
 	import type { Location, Group } from '$lib/types';
 	import { groupLocations } from '../locationHelpers';
 	// Issue #2659 (i18n F10): Texte aus dem Katalog. Fehler ohne Server-Text halten nur
@@ -27,10 +27,16 @@
 		// mobileLibraryOpen-Sheet in CompareEditor.svelte (Sheet unverändert).
 		dense?: boolean;
 		onOpenLibrary?: () => void;
+		// Gewählte Orte in Auswahl-Reihenfolge (bind:pickedIds im Anlege-Editor).
+		pickedIds?: string[];
 	}
-	let { locations, groups = [], dense = false, onOpenLibrary }: Props = $props();
-
-	const ws = getContext<CompareWizardState>('compare-wizard-state');
+	let {
+		locations,
+		groups = [],
+		dense = false,
+		onOpenLibrary,
+		pickedIds = $bindable<string[]>([])
+	}: Props = $props();
 
 	interface ResolveResult {
 		lat: number;
@@ -78,20 +84,20 @@
 
 	// AC-2: Counter-Text nach CE_OrteTab-Fidelity
 	const counterText = $derived.by(() => {
-		const n = ws.pickedIds.length;
+		const n = pickedIds.length;
 		if (n < 2) return $t('vergleich.orte.min_erforderlich');
 		if (n <= 5) return $t('vergleich.orte.passt');
 		return $t('vergleich.orte.viel');
 	});
 
 	const counterColor = $derived(
-		ws.pickedIds.length < 2 ? 'var(--g-warn)' : 'var(--g-ink-4)'
+		pickedIds.length < 2 ? 'var(--g-warn)' : 'var(--g-ink-4)'
 	);
 
 	// Issue #1256 Scheibe 8d (AC-6) — dense-Badge-Kurzform (JSX-M Z.234), Desktop
 	// behält counterText/counterColor oben unverändert (längere Formulierung).
 	const denseCounterText = $derived.by(() => {
-		const n = ws.pickedIds.length;
+		const n = pickedIds.length;
 		if (n < 2) return $t('vergleich.orte.min_kurz');
 		if (n > 5) return $t('vergleich.orte.viel_kurz');
 		return $t('vergleich.orte.passt');
@@ -99,7 +105,7 @@
 
 	// Picked-Orte aus der Locations-Liste aufgelöst
 	const pickedLocations = $derived(
-		ws.pickedIds.map((id) => allLocations.find((l) => l.id === id)).filter(Boolean) as Location[]
+		pickedIds.map((id) => allLocations.find((l) => l.id === id)).filter(Boolean) as Location[]
 	);
 
 	// AC-13 (#1256 Scheibe 5): Bibliotheks-Grid nach der App-Group-Entity
@@ -161,8 +167,8 @@
 				region: preview.region
 			});
 			createdLocations = [...createdLocations, loc];
-			if (!ws.pickedIds.includes(loc.id)) {
-				ws.pickedIds = [...ws.pickedIds, loc.id];
+			if (!pickedIds.includes(loc.id)) {
+				pickedIds = [...pickedIds, loc.id];
 			}
 			importInput = '';
 			nameDraft = '';
@@ -186,8 +192,8 @@
 				lon
 			});
 			createdLocations = [...createdLocations, loc];
-			if (!ws.pickedIds.includes(loc.id)) {
-				ws.pickedIds = [...ws.pickedIds, loc.id];
+			if (!pickedIds.includes(loc.id)) {
+				pickedIds = [...pickedIds, loc.id];
 			}
 			importInput = '';
 			fehlerLeeren();
@@ -201,10 +207,10 @@
 	}
 
 	function togglePick(id: string) {
-		if (ws.pickedIds.includes(id)) {
-			ws.pickedIds = ws.pickedIds.filter((x) => x !== id);
+		if (pickedIds.includes(id)) {
+			pickedIds = pickedIds.filter((x) => x !== id);
 		} else {
-			ws.pickedIds = [...ws.pickedIds, id];
+			pickedIds = [...pickedIds, id];
 		}
 	}
 
@@ -336,7 +342,7 @@
 								<button
 									data-testid={`compare-step2-picked-remove-${loc.id}`}
 									type="button"
-									onclick={() => { ws.pickedIds = ws.pickedIds.filter((x) => x !== loc.id); }}
+									onclick={() => { pickedIds = pickedIds.filter((x) => x !== loc.id); }}
 									style="background:transparent; border:none; padding:6px; color:var(--g-ink-4); cursor:pointer; font-size:12px;"
 								>✕</button>
 							</div>
@@ -365,7 +371,7 @@
 						</div>
 						<div style="display:flex; flex-direction:column; gap:4px;">
 							{#each groupLocs as loc (loc.id)}
-								{@const on = ws.pickedIds.includes(loc.id)}
+								{@const on = pickedIds.includes(loc.id)}
 								<button
 									type="button"
 									onclick={() => togglePick(loc.id)}
@@ -418,7 +424,7 @@
 					<button
 						data-testid={`compare-step2-picked-remove-${loc.id}`}
 						type="button"
-						onclick={() => { ws.pickedIds = ws.pickedIds.filter((x) => x !== loc.id); }}
+						onclick={() => { pickedIds = pickedIds.filter((x) => x !== loc.id); }}
 						style="background:transparent; border:none; padding:8px; color:var(--g-ink-4); cursor:pointer; font-size:16px; min-height:44px; flex-shrink:0;"
 					>✕</button>
 				</div>

@@ -2,12 +2,22 @@
 // aus einem bestehenden Ortsvergleich (Vorlage).
 // Spec: docs/specs/modules/feat_2277_s2c_compare_from_vorlage.md (AC-1..AC-5, AC-8, AC-9)
 //
-// Technik (kein Mock-Theater): der ECHTE CompareWizardState wird instanziiert
-// ($state als Passthrough geschimmt, Praezedenz compare_wizard_save_new_preset_channels.test.ts)
-// und von der ECHTEN Funktion vorlageInZustand() befuellt. Gemessen wird der Zustand bzw.
-// der aus ihm gebaute Create-Payload (buildNewComparePresetPayload) — kein gespiegeltes Soll.
+// Umgebaut fuer Issue #2727 (Epic #2345, DoD-1) — Spec
+// docs/specs/modules/feat_2727_compare_wizardstate_abloesen.md, AC-7 und AC-22:
+// die Vorlage mutiert kein Zustandsobjekt mehr, sondern die REINE Funktion
+// `feldsatzAusVorlage(preset, locations)` gibt den Feldsatz zurueck, den der Editor
+// einmalig beim Start ueber den Standard-Feldsatz legt
+// (`{ ...compareFeldsatzStandard(), ...feldsatzAusVorlage(p, orte) }`).
+// Alle bisherigen Zusicherungen bleiben, gemessen am Rueckgabewert. `weekday` und
+// `isEditMode` gehoeren nicht in den Vorlagen-Feldsatz; `weekday` reist auch nicht im Payload.
+// Der echte Create-Request mit Vorlage (fetch, If-Match, Identitaet) ist in
+// shared/__tests__/compare_new_editor_postet_einmal.test.ts am Editor gemessen.
 //
-// RED-Zustand: compareNewVorlage.ts existiert noch nicht -> Import scheitert.
+// Technik (kein Mock-Theater): ECHTE Funktionen `feldsatzAusVorlage`,
+// `compareFeldsatzStandard`, `buildNewComparePresetPayload` — kein gespiegeltes Soll.
+//
+// Warum heute rot: `feldsatzAusVorlage` und `compareFeldsatzStandard` fehlen (Namensraum-
+// Importe, damit die Datei laedt; jeder Test scheitert mit „VERTRAG FEHLT").
 //
 // Ausfuehrung:
 //   cd frontend && node --import ./test-lib-loader.mjs --experimental-strip-types \
@@ -16,27 +26,24 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { register } from 'node:module';
 import type { ComparePreset, Location } from '../../../types.ts';
 import { tailUnlocked } from '../../shared/anlegeLockEngine.ts';
 import { buildNewComparePresetPayload } from '../../compare/compareEditorSave.ts';
+import * as vorlageModul from '../compareNewVorlage.ts';
+import { neuerFeldsatz } from '../../shared/__tests__/compareFeldsatzPruefstand.ts';
 
-// `$app/navigation` existiert ausserhalb von SvelteKit nicht; CompareWizardState importiert es
-// nur lazy in saveNewPreset() — hier nicht aufgerufen, der Hook haelt den Import trotzdem stabil.
-const appNavigationStubHook = `
-export async function resolve(specifier, context, nextResolve) {
-	if (specifier === '$app/navigation') {
-		return { url: 'data:text/javascript,export function goto(){}', shortCircuit: true };
+type Feldsatz = Record<string, any>;
+
+function feldsatzAusVorlage(preset: ComparePreset, locations: Location[]): Feldsatz {
+	const fn = (vorlageModul as Record<string, unknown>).feldsatzAusVorlage;
+	if (typeof fn !== 'function') {
+		throw new Error(
+			'VERTRAG FEHLT (#2727): compare-new/compareNewVorlage.ts exportiert keine reine Funktion ' +
+				'`feldsatzAusVorlage(preset, locations)`.'
+		);
 	}
-	return nextResolve(specifier, context);
+	return (fn as (p: ComparePreset, l: Location[]) => Feldsatz)(preset, locations);
 }
-`;
-register(`data:text/javascript,${encodeURIComponent(appNavigationStubHook)}`, import.meta.url);
-
-(globalThis as unknown as { $state: <T>(v: T) => T }).$state = <T>(v: T): T => v;
-
-const { CompareWizardState } = await import('../../compare/compareWizardState.svelte.ts');
-const { vorlageInZustand } = await import('../compareNewVorlage.ts');
 
 const loc = (id: string): Location => ({ id, name: id }) as unknown as Location;
 const ORTE = [loc('a'), loc('b'), loc('c')];
@@ -94,10 +101,9 @@ function vorlage(over: Partial<ComparePreset> = {}): ComparePreset {
 	} as ComparePreset;
 }
 
-function belegt(preset: ComparePreset, locations: Location[] = ORTE) {
-	const state = new CompareWizardState();
-	vorlageInZustand(preset, locations, state);
-	return state;
+/** Was der Editor beim Start haelt: Standard-Feldsatz, darueber der Vorlagen-Feldsatz. */
+function belegt(preset: ComparePreset, locations: Location[] = ORTE): Feldsatz {
+	return { ...neuerFeldsatz(), ...feldsatzAusVorlage(preset, locations) };
 }
 
 // ── AC-1: jedes Feld vorbelegt (je Feld ein Fall) ────────────────────────────
@@ -117,10 +123,25 @@ test('AC-1 Korridore werden uebernommen', () => {
 test('AC-1 Alarmstufen je Metrik werden uebernommen', () => {
 	assert.deepEqual(belegt(vorlage()).metricAlertLevels, { wind_kmh: 'hoch' });
 });
-test('AC-1 Zeitplan: weekly + Wochentag werden uebernommen', () => {
-	const s = belegt(vorlage());
-	assert.equal(s.schedule, 'weekly');
-	assert.equal(s.weekday, 3);
+test('AC-1 Zeitplan: weekly wird uebernommen', () => {
+	assert.equal(belegt(vorlage()).schedule, 'weekly');
+});
+test('#2727 AC-7: weekday steht weder im Vorlagen-Feldsatz noch im Create-Payload', () => {
+	const teil = feldsatzAusVorlage(vorlage(), ORTE);
+	assert.ok(!('weekday' in teil), `weekday im Feldsatz: ${JSON.stringify(teil.weekday)}`);
+	const payload = buildNewComparePresetPayload(belegt(vorlage()) as never);
+	assert.ok(!('weekday' in payload), 'weekday darf im Create-Payload nicht reisen');
+});
+test('#2727 AC-7: reine Funktion — Vorlage und Orte bleiben unveraendert, jeder Aufruf neu', () => {
+	const p = vorlage();
+	const vorher = JSON.stringify(p);
+	const orte = [...ORTE];
+	const a = feldsatzAusVorlage(p, orte);
+	const b = feldsatzAusVorlage(p, orte);
+	assert.equal(JSON.stringify(p), vorher, 'feldsatzAusVorlage veraendert die Vorlage');
+	assert.equal(orte.length, ORTE.length);
+	assert.notStrictEqual(a, b);
+	assert.notStrictEqual(a.pickedIds, b.pickedIds);
 });
 test('AC-1 Versand-Kanaele (Telegram/SMS/Premium-SMS) werden uebernommen', () => {
 	const s = belegt(vorlage());
@@ -174,24 +195,12 @@ test('AC-2 Name lautet "<Name> (Kopie)"', () => {
 
 // ── AC-3: keine Identitaet, Anlege-Modus ─────────────────────────────────────
 
-test('AC-3 isEditMode bleibt false (Anlege-Modus)', () => {
+test('AC-3 isEditMode bleibt false (Anlege-Modus) und steht nicht im Vorlagen-Feldsatz', () => {
 	assert.equal(belegt(vorlage()).isEditMode, false);
+	assert.ok(!('isEditMode' in feldsatzAusVorlage(vorlage(), ORTE)), 'isEditMode im Vorlagen-Feldsatz');
 });
 test('AC-3 Create-Payload enthaelt keine id, keinen letzter_versand, keinen Pausenstatus', () => {
-	const s = belegt(vorlage());
-	const payload = buildNewComparePresetPayload({
-		name: s.name,
-		pickedIds: s.pickedIds,
-		activityProfile: s.activityProfile,
-		schedule: s.schedule,
-		corridors: s.corridors,
-		region: s.region,
-		hourlyMetricKeys: s.hourlyMetricKeys,
-		outlookMetricKeys: s.outlookMetricKeys,
-		idealRanges: s.idealRanges,
-		activeMetricKeys: s.activeMetricKeys,
-		metricAlertLevels: s.metricAlertLevels
-	} as never);
+	const payload = buildNewComparePresetPayload(belegt(vorlage()) as never);
 	for (const verboten of ['id', 'letzter_versand', 'paused_at', 'created_at', 'archived_at']) {
 		assert.ok(!(verboten in payload), `Create-Payload darf "${verboten}" nicht tragen`);
 	}
@@ -232,8 +241,8 @@ test('AC-5 keine Platzhalter-IDs: null vorhandene Orte => pickedIds leer', () =>
 
 // ── AC-8: ohne Vorlage identisch zum Standard ────────────────────────────────
 
-test('AC-8 ohne Aufruf von vorlageInZustand entspricht der Zustand dem Standard (kein Suffix)', () => {
-	const frisch = new CompareWizardState();
+test('AC-8 ohne Vorlage entspricht der Zustand dem Standard (kein Suffix)', () => {
+	const frisch = neuerFeldsatz();
 	assert.equal(frisch.name, '');
 	assert.deepEqual(frisch.pickedIds, []);
 	assert.equal(frisch.isEditMode, false);
@@ -313,7 +322,7 @@ test('AC-9 outlook_metric_formats: fehlend bleibt null, {} bleibt {}', () => {
 
 test('F002 minimale Vorlage (nur name + location_ids): Standardwerte bleiben', () => {
 	const s = belegt({ name: 'Mini', location_ids: ['a', 'x'] } as unknown as ComparePreset);
-	const frisch = new CompareWizardState();
+	const frisch = neuerFeldsatz();
 	assert.equal(s.name, 'Mini (Kopie)');
 	assert.deepEqual(s.pickedIds, ['a']);
 	assert.equal(s.region, '');
@@ -327,7 +336,7 @@ test('F002 minimale Vorlage (nur name + location_ids): Standardwerte bleiben', (
 	assert.equal(s.officialAlertTriggersEnabled, frisch.officialAlertTriggersEnabled);
 	assert.equal(s.telegramStyle, frisch.telegramStyle);
 	assert.equal(s.schedule, frisch.schedule);
-	assert.equal(s.weekday, frisch.weekday);
+	assert.ok(!('weekday' in s), 'weekday gehoert nicht in den Feldsatz');
 	assert.deepEqual(s.metricAlertLevels, {});
 	assert.deepEqual(s.channelThresholds, {});
 	assert.deepEqual(s.idealRanges, {});
@@ -335,52 +344,27 @@ test('F002 minimale Vorlage (nur name + location_ids): Standardwerte bleiben', (
 	assert.equal(s.isEditMode, false);
 });
 
-// ── AC-3 (Adversary F004): echter Create-Request ueber saveNewPreset() ───────
-// Ersatz-fetch nur an der Netzgrenze; den Request baut das ECHTE saveNewPreset()
-// aus ALLEN Zustandsfeldern (kein handverlesener Feldsatz).
+// ── AC-3 (Adversary F004): Create-Payload aus dem vollstaendigen Feldsatz ──────
+// Der echte Request (fetch, If-Match) laeuft seit #2727 durch den Editor und ist in
+// shared/__tests__/compare_new_editor_postet_einmal.test.ts gemessen. Hier: der Payload, der
+// aus ALLEN Feldern (Standard + Vorlage, kein handverlesener Satz) entsteht.
 
-test('AC-3 Create-Request traegt Vorlagenwerte, aber keine Identitaet und kein If-Match', async () => {
+test('AC-3 Create-Payload aus dem vollen Feldsatz traegt Vorlagenwerte, aber keine Identitaet', () => {
 	const p = vorlage({ etag: 'W/"orig-etag"' } as unknown as Partial<ComparePreset>);
-	const s = belegt(p);
-	const aufrufe: { url: string; init: RequestInit }[] = [];
-	const echtesFetch = globalThis.fetch;
-	globalThis.fetch = (async (url: string, init: RequestInit) => {
-		aufrufe.push({ url: String(url), init });
-		return new Response(JSON.stringify({ id: 'cmp-neu' }), {
-			status: 201,
-			headers: { 'Content-Type': 'application/json' }
-		});
-	}) as typeof fetch;
-	try {
-		await s.saveNewPreset();
-	} finally {
-		globalThis.fetch = echtesFetch;
+	const f = belegt(p);
+	const body = buildNewComparePresetPayload({ ...f, alertChannels: f.channels } as never);
+	const roh = JSON.stringify(body);
+	for (const verboten of ['id', 'etag', 'letzter_versand', 'paused_at', 'created_at', 'archived_at', 'weekday']) {
+		assert.ok(!(verboten in body), `Create-Payload darf "${verboten}" nicht tragen`);
 	}
-	assert.equal(s.saveStatus, 'ok', `saveError: ${s.saveError}`);
-	assert.equal(aufrufe.length, 1);
-	const { url, init } = aufrufe[0];
-	assert.equal(url, '/api/compare/presets');
-	assert.equal(init.method, 'POST');
-	const kopf = init.headers as Record<string, string>;
-	assert.ok(!('If-Match' in kopf), 'Create-Request darf kein If-Match tragen');
-	const roh = String(init.body);
-	const body = JSON.parse(roh) as Record<string, unknown>;
-	for (const verboten of ['id', 'etag', 'letzter_versand', 'paused_at', 'created_at', 'archived_at']) {
-		assert.ok(!(verboten in body), `Create-Request darf "${verboten}" nicht tragen`);
-	}
-	assert.ok(!roh.includes('cmp-original'), 'Vorlagen-ID darf nirgends im Request stehen');
-	assert.ok(!roh.includes('orig-etag'), 'Vorlagen-ETag darf nirgends im Request stehen');
+	assert.ok(!roh.includes('cmp-original'), 'Vorlagen-ID darf nirgends im Payload stehen');
+	assert.ok(!roh.includes('orig-etag'), 'Vorlagen-ETag darf nirgends im Payload stehen');
 	assert.equal(body.name, 'Korsika Nord (Kopie)');
 	assert.deepEqual(body.location_ids, ['a', 'b', 'c']);
 	assert.equal(body.official_alert_triggers_enabled, false);
-	assert.deepEqual(body.alert_channels, {
-		email: false,
-		telegram: true,
-		sms: false,
-		premium_sms: true
-	});
+	assert.deepEqual(body.alert_channels, { email: false, telegram: true, sms: false, premium_sms: true });
 	const dc = body.display_config as Record<string, unknown>;
 	assert.equal(dc.region, 'Korsika');
 	const kanal = dc.channel_active_metrics as Record<string, unknown> | undefined;
-	assert.ok(kanal && 'telegram' in kanal, 'Telegram-Kanalauswahl der Vorlage muss im Request stehen');
+	assert.ok(kanal && 'telegram' in kanal, 'Telegram-Kanalauswahl der Vorlage muss im Payload stehen');
 });

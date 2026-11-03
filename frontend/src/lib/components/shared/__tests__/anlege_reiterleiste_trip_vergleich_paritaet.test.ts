@@ -11,7 +11,7 @@
 //     dann im title="Gesperrt — <Hinweis>" — das ist genau der Text, den der
 //     Nutzer beim Ueberfahren bzw. im Lock-Toast sieht.
 //   - Compare-Seite: fuer CompareNewEditor.svelte existiert kein SSR-Harness
-//     (kein Stub fuer den compare-wizard-state-Context, vgl.
+//     (kein Stub fuer den Wizard-Context, vgl.
 //     compare_new_footer_nav_clearance.test.ts). Gelesen wird deshalb die
 //     Reiter-Definition `TAB_DEFS` als STRUKTURIERTE Eintraege (id/label/lockHint)
 //     — dieselbe Liste, aus der CompareNewEditor Tab-Leiste UND Lock-Toast
@@ -56,10 +56,9 @@ const VergleichEditor = (await import(pathToFileURL(COMPARE_EDITOR).href)).defau
 /** Die Desktop-Reiter von /compare/new im Leerzustand (alle ausser „Vergleich" gesperrt),
  *  gelesen aus dem ECHTEN SSR-Markup (`compare-editor-tab-<id>`, Lock-Hinweis im title). */
 function compareReiter(): ReiterDef[] {
-	const wiz = { name: '', region: '', profile: 'wandern', pickedIds: [] as string[] };
+	// Issue #2727 (AC-9): kein Context-Stub mehr — Leerzustand = stateOverride ohne Name/Orte.
 	const html = render(VergleichEditor, {
-		props: { stateOverride: { activeTab: 'vergleich', isMobileViewport: false } },
-		context: new Map([['compare-wizard-state', wiz]])
+		props: { stateOverride: { activeTab: 'vergleich', isMobileViewport: false, name: '', pickedIds: [] } }
 	}).body;
 	const eintraege: ReiterDef[] = [];
 	const re = /<button([^>]*\bdata-testid="compare-editor-tab-[a-z-]+"[^>]*)>([\s\S]*?)<\/button>/g;
@@ -195,10 +194,9 @@ describe('AC-4: Fußzeilen-Hinweis und Fortschritt auf /trips/new', () => {
 describe('AC-12 (#2521 S3): Standardwerte-Knopf in beiden Anlege-Leisten', () => {
 	test('Trip-Footer und Ortsvergleich-Kopfzeile tragen den Knopf mit identischer Beschriftung', async () => {
 		const Vergleich = VergleichEditor;
-		const wiz = { name: 'X', region: '', profile: 'wandern', pickedIds: ['loc0', 'loc1'] };
+		// Issue #2727 (AC-9): kein Context-Stub mehr — Name und Orte reisen ueber stateOverride.
 		const vergleich = render(Vergleich, {
-			props: { stateOverride: { activeTab: 'vergleich', isMobileViewport: false } },
-			context: new Map([['compare-wizard-state', wiz]])
+			props: { stateOverride: { activeTab: 'vergleich', isMobileViewport: false, name: 'X', pickedIds: ['loc0', 'loc1'] } }
 		}).body;
 		const trip = renderTripNew({ activeTab: 'route', isMobileViewport: false });
 		const beschriftung = (html: string, testid: string): string | null => {

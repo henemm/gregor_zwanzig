@@ -115,9 +115,11 @@ function renderVergleich(Komponente: unknown): string {
 			saveController: controllerStub,
 			preset: PRESET,
 			enqueueHubWrite: <T>(fn: () => Promise<T>) => fn(),
-			onCompareUpdate: () => {}
-		} as never,
-		context: new Map([['compare-wizard-state', wsStub()]])
+			onCompareUpdate: () => {},
+			// Issue #2727 (AC-2): frueher als Context-Stub am Wizard-Schluessel uebergeben, den der
+			// Reiter seit S6d nicht mehr liest — jetzt als die Wertprops, die er tatsaechlich bekommt.
+			...wsStub()
+		} as never
 	});
 	return body;
 }

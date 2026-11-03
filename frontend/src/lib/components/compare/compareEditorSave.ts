@@ -11,7 +11,10 @@ import type { ComparePreset, ActivityProfile, Corridor } from '../../types.ts';
 import type { IdealRange } from '../shared/corridor-editor/corridorEditorState.ts';
 import { toHHMMSS } from '../../utils/time.ts';
 import { pickEigenfelder } from '../shared/pickEigenfelder.ts';
-import { newEntityAlertChannelDefault } from '../shared/alarme-tab/alertChannelState.ts';
+import {
+	newEntityAlertChannelDefault,
+	type AlertChannelState
+} from '../shared/alarme-tab/alertChannelState.ts';
 // Issue #1373 (S2 Scheibe B): Speicherformat der Metrik-Auswahl ist Größe +
 // Auswertung. Die Übersetzung kommt aus der bereits geladenen Antwort von
 // GET /api/compare/metrics (Scheibe A liefert metric_id/aggregation je Eintrag) —
@@ -338,7 +341,7 @@ export function waehleEigenfelder(
 // ─── Create-Pfad (POST /api/compare/presets) ──────────────────────────────
 //
 // Issue #1360 F002: Pure-Function-Gegenstueck zu buildComparePresetSavePayload
-// fuer die Neuanlage (`CompareWizardState.saveNewPreset()`). Analoges Prinzip
+// fuer die Neuanlage (Speichern in `CompareNewEditor.svelte`). Analoges Prinzip
 // (keine Browser-/SvelteKit-Imports, plain Input-Objekt statt $state-Runen) —
 // damit ist die Create-Payload ohne Svelte-Runtime testbar (kein nachgebautes
 // Objekt im Test, keine Mock-Rückspiegelung).
@@ -533,5 +536,113 @@ export function buildNewComparePresetPayload(fields: NewComparePresetFields): Re
 			// Issue #1260 S5: nur bei Abweichung vom Default persistieren.
 			...(fields.telegramStyle !== 'rich' ? { telegram_style: fields.telegramStyle } : {})
 		}
+	};
+}
+
+// ─── Feldsatz des Ortsvergleichs (Issue #2727, Epic #2345 DoD-1) ──────────
+//
+// Ersetzt das geloeschte geteilte Zustandsmodul: reine Daten-Factory mit den
+// Startwerten der frueheren Klassenfelder (ohne die toten Felder saveStatus,
+// saveError, metricsManuallyEdited, weekday). Hub (CompareTabs.svelte) und
+// Anlege-Editor (CompareNewEditor.svelte) halten daraus jeweils komponentenlokal
+// ihren reaktiven Feldsatz. Jeder Aufruf liefert ein frisches Objekt samt
+// frischen Unterobjekten — keine modulglobale Instanz (AC-17).
+// Spec: docs/specs/modules/feat_2727_compare_wizardstate_abloesen.md
+
+export interface CompareFeldsatz {
+	name: string;
+	region: string; // mapped: display_config.region
+	activityProfile: ActivityProfile | null;
+	pickedIds: string[];
+	isEditMode: boolean;
+	// Issue #441: Idealwerte pro Metrik; leer = nicht in display_config.
+	idealRanges: Record<string, IdealRange>;
+	// Issue #680/#1366 F002: `null` = „nie eingestellt" (Default-Menge aktiv),
+	// `[]` = bewusste Leerauswahl.
+	activeMetricKeys: string[] | null;
+	// Issue #1703 Scheibe 8: kanal-eigene Auswahl der Uebersichtstabelle; `null`
+	// je Kanal = nie editiert (folgt der Grundauswahl).
+	channelActiveMetricKeys: CompareChannelActiveMetrics;
+	// Issue #1231 Slice 4: Korridore (CorridorEditor context="vergleich").
+	corridors: Corridor[];
+	// Issue #1106/#1366 F001: `null` = „nie eingestellt", `[]` = bewusst leer.
+	hourlyMetricKeys: string[] | null;
+	// Issue #1361/#1368: Spaltenauswahl des 3-Tages-Ausblicks, Semantik wie oben.
+	outlookMetricKeys: string[] | null;
+	// Issue #2049: Roh/Einfach je Ausblick-Groesse; `null` = „nie eingestellt".
+	outlookMetricFormats: Record<string, boolean> | null;
+	// Issue #443: Versand-Felder.
+	sendEmail: boolean;
+	sendTelegram: boolean;
+	sendSms: boolean;
+	// Issue #1745 A / #2293 S2: Premium-SMS-Briefing-Opt-in (Default AUS).
+	sendPremiumSms: boolean;
+	// Issue #2293 S2: Alarm-Kanal-Bestand; `undefined` = nie umgeschaltet
+	// (alarmePropsAus faellt dann auf den Neuanlage-Default zurueck).
+	channels: AlertChannelState | undefined;
+	officialAlertsEnabled: boolean; // Issue #1040
+	radarAlertEnabled: boolean; // Issue #1041 Slice 2
+	hourlyEnabled: boolean; // Issue #1107
+	outlookEnabled: boolean; // Issue #1361/#1368
+	officialAlertTriggersEnabled: boolean; // Issue #1216 Slice 2b
+	officialWarningsEnabled: boolean; // Issue #1258
+	metricAlertLevels: Record<string, string>; // Issue #1170
+	channelThresholds: Record<string, string>; // Issue #1461 S3b-2b
+	telegramStyle: 'rich' | 'kurzform'; // Issue #1260 S5
+	alertCooldownMinutes: number | undefined;
+	alertQuietFrom: string | undefined;
+	alertQuietTo: string | undefined;
+	schedule: 'daily_morning' | 'daily_evening' | 'weekly';
+	// Issue #1232 Scheibe 2b: Zwei-Slot-Zeitplan + Laufzeit.
+	morningEnabled: boolean;
+	morningTime: string;
+	eveningEnabled: boolean;
+	eveningTime: string;
+	endDate: string | null;
+	// Issue #1361/#1372 S1b: Tagesfenster (Default 4/19 wie der Renderer).
+	dayWindowStartHour: number;
+	dayWindowEndHour: number;
+}
+
+/** Frischer Standard-Feldsatz des Ortsvergleichs (reine Daten, keine Runen). */
+export function compareFeldsatzStandard(): CompareFeldsatz {
+	return {
+		name: '',
+		region: '',
+		activityProfile: null,
+		pickedIds: [],
+		isEditMode: false,
+		idealRanges: {},
+		activeMetricKeys: null,
+		channelActiveMetricKeys: { email: null, telegram: null, sms: null },
+		corridors: [],
+		hourlyMetricKeys: null,
+		outlookMetricKeys: null,
+		outlookMetricFormats: null,
+		sendEmail: true,
+		sendTelegram: false,
+		sendSms: false,
+		sendPremiumSms: false,
+		channels: undefined,
+		officialAlertsEnabled: true,
+		radarAlertEnabled: false,
+		hourlyEnabled: true,
+		outlookEnabled: true,
+		officialAlertTriggersEnabled: true,
+		officialWarningsEnabled: false,
+		metricAlertLevels: {},
+		channelThresholds: {},
+		telegramStyle: 'rich',
+		alertCooldownMinutes: undefined,
+		alertQuietFrom: undefined,
+		alertQuietTo: undefined,
+		schedule: 'daily_morning',
+		morningEnabled: true,
+		morningTime: '07:00',
+		eveningEnabled: false,
+		eveningTime: '18:00',
+		endDate: null,
+		dayWindowStartHour: 4,
+		dayWindowEndHour: 19
 	};
 }

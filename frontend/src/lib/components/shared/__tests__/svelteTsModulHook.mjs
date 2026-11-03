@@ -1,6 +1,7 @@
 // ESM-Hook-Ergaenzung (Issue #2283): SvelteKit-Importe der Form
-// `./compareWizardState.svelte` bzw. `$lib/stores/saveStatusStore.svelte`
-// zeigen in Vite auf `<name>.svelte.ts`. Ausserhalb von Vite findet Node die
+// `./<modul>.svelte` bzw. `$lib/stores/saveStatusStore.svelte`
+// zeigen in Vite auf `<name>.svelte.ts` (Issue #2727: das fruehere Beispiel, das
+// Zustandsmodul des Ortsvergleichs, ist geloescht). Ausserhalb von Vite findet Node die
 // Datei nicht (`test-svelte-ssr-hooks.mjs` prueft nur die Variante ohne
 // Zusatzendung). Dieser Hook ergaenzt genau diese eine Aufloesung; die
 // Uebersetzung der Runen erledigt `trip-new/__tests__/ssrRunesHook.mjs`.

@@ -40,18 +40,19 @@ const SCHWANZ = ['wetter-metriken', 'wertebereiche', 'alarme'];
 const ALT_ANLEGE = ['metriken', 'idealwerte'];
 
 function vergleichHtml(activeTab: string, alleFlags: boolean): string {
-	const wiz = { name: 'X', region: '', profile: 'wandern', pickedIds: ['a', 'b', 'c'] };
+	// Issue #2727 (AC-9): kein Context-Stub mehr — Name und Orte reisen ueber stateOverride.
 	return render(Editor, {
 		props: {
 			stateOverride: {
 				activeTab,
 				isMobileViewport: false,
+				name: 'X',
+				pickedIds: ['a', 'b', 'c'],
 				metrikenVisited: alleFlags,
 				idealsVisited: alleFlags,
 				alarmeVisited: alleFlags
 			}
-		},
-		context: new Map([['compare-wizard-state', wiz]])
+		}
 	}).body;
 }
 

@@ -6,11 +6,15 @@
 // liest die Vorgaben dort, wo sie entstehen (nicht aus dem Katalog), und prueft,
 // dass der ANGEZEIGTE Text (Katalogwert) sie nennt bzw. nicht zu Unrecht nennt:
 //   * Trip-Versand:        ladeReportZustand(null)       -> 07:00 / 18:00, E-Mail
-//   * Vergleichs-Versand:  CompareWizardState            -> Morgen 07:00 an, Abend AUS, kein Enddatum
+//   * Vergleichs-Versand:  compareFeldsatzStandard()     -> Morgen 07:00 an, Abend AUS, kein Enddatum
 //   * Alarme (beide):      alertChannelState + Anlege-Zustand -> E-Mail+Telegram an, SMS/Premium aus,
 //                          Schwelle „gering“, amtliche Warnungen aus
 // Aendert jemand die Vorgabe (z. B. Abend-Slot im Vergleich an), wird der Text
 // zur Luege und dieser Test rot — genau dafuer ist er da.
+//
+// Issue #2727 (AC-22): Quelle der Vergleichs-Vorgaben ist seit dem Abloesen der Zustandsklasse
+// die Daten-Factory `compareFeldsatzStandard()` (compare/compareEditorSave.ts) — heute rot
+// (VERTRAG FEHLT) in den beiden Vergleichs-Faellen, Trip-Faelle unveraendert.
 //
 // Pfadregel #1409: alles relativ zu DIESER Datei.
 //
@@ -19,7 +23,7 @@
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import { de } from '../../../i18n/messages/de/index.ts';
-import { neuerWiz } from './infoboxSsr.ts';
+import { neuerFeldsatz } from './compareFeldsatzPruefstand.ts';
 import { ladeReportZustand } from '../versand-tab/reportConfigPayload.ts';
 import {
 	CHANNEL_THRESHOLD_LABELS,
@@ -49,7 +53,7 @@ describe('AC-3: Versand-Standard der Infobox = Anlege-Vorgabe der Quelle', () =>
 	});
 
 	test('Ortsvergleich: Morgen-Zeit genannt, Abend-Zeit NICHT (Slot ist aus), „kein Enddatum“ (endDate null)', () => {
-		const wiz = neuerWiz();
+		const wiz = neuerFeldsatz();
 		assert.equal(wiz.morningEnabled, true, 'Quelle: Morgen-Slot im Vergleich nicht mehr Standard an');
 		assert.equal(wiz.eveningEnabled, false, 'Quelle: Abend-Slot im Vergleich ist jetzt Standard an — Text anpassen');
 		assert.equal(wiz.endDate, null, 'Quelle: Vergleich hat jetzt ein Standard-Enddatum — Text anpassen');
@@ -73,7 +77,7 @@ describe('AC-3: Alarm-Standard der Infobox = Anlege-Vorgabe der Quelle (Trip UND
 		[
 			'vergleich',
 			() => {
-				const wiz = neuerWiz();
+				const wiz = neuerFeldsatz();
 				return {
 					kanaele: resolveAlertChannels(wiz.channels),
 					schwellen: resolveAlertChannelThresholds(wiz.channelThresholds),

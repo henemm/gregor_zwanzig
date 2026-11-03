@@ -118,10 +118,9 @@ async function hubOeffnen(
 	const fehler: string[] = [];
 	// /50-Anpassung (Muster compare_retry_reiterwechsel_eingabe_bleibt.test.ts): nur die
 	// Effekte, die `initialTab` nennen (Reiter-Aufloesung + URL-Bereinigung). Die
-	// asynchronen Hydrations-Effekte von CompareTabs brauchen `wizardState`
-	// (Import `./compareWizardState.svelte`, vom Pruefstand nicht bindbar) und
-	// wuerden nach Testende als unhandledRejection scheitern — sie sind nicht Gegenstand
-	// dieser Zusicherungen.
+	// asynchronen Hydrations-Effekte von CompareTabs sind nicht Gegenstand dieser
+	// Zusicherungen (Issue #2727: seit der Hub seinen Feldsatz lokal haelt, sind sie
+	// auswertbar — gemessen im Block „AC-15" am Dateiende).
 	for (const e of effekteVon(ast, quelle, u, 'initialTab')) {
 		try {
 			e();
@@ -388,5 +387,70 @@ describe('Panel-Weichen nutzen die neuen Kennungen (doc-compliance-test)', () =>
 		assert.ok(!/idealwerte/.test(q.replace(/\/\/[^\n]*|\/\*[\s\S]*?\*\//g, '').replace(/idealwerteHydrat(ed|ing)/g, "")),
 			"Alt-Kennung 'idealwerte' kommt im Hub noch in Code/testid vor (Kommentare und `idealwerteHydrated/-Hydrating` ausgenommen)");
 		assert.ok(q.includes("activeTab === 'wertebereiche'"), "Panel-Weiche fuer 'wertebereiche' fehlt");
+	});
+});
+
+// ── Issue #2727 AC-15: Deep-Link in den Alarme-Reiter, Daten kommen spaet ───────
+//
+// Spec: docs/specs/modules/feat_2727_compare_wizardstate_abloesen.md — AC-15/AC-22.
+// Der Hub haelt seinen Feldsatz lokal (`$state(compareFeldsatzStandard())`); der Pruefstand wertet
+// diese Deklaration selbst aus. Gefunden wird der Feldsatz ueber das Argument von
+// `alarmePropsAus(…)` im Markup (kein Variablenname). Ablauf: `?tab=alarme` oeffnen → vor der
+// Hydration zeigen die Reiter Standardwerte → ein Nutzerwert in einem Nicht-Alarm-Feld wird gesetzt
+// → die (asynchrone, katalogabhaengige) Alarm-Hydration laeuft → der Alarme-Reiter zeigt die
+// Preset-Werte, der Nutzerwert bleibt. Heute rot: der Hub instanziiert noch die Klasse (VERTRAG FEHLT).
+
+function hubFeldsatzAus(ast: Knoten, u: Knoten, adapter: string): Knoten {
+	let name: string | null = null;
+	(function lauf(n: unknown): void {
+		if (name || n === null || typeof n !== 'object') return;
+		if (Array.isArray(n)) return n.forEach(lauf);
+		const k = n as Knoten;
+		if (k.type === 'CallExpression' && k.callee?.name === adapter && k.arguments?.[0]?.type === 'Identifier') {
+			name = k.arguments[0].name;
+			return;
+		}
+		for (const key of Object.keys(k)) if (key !== 'parent' && key !== 'loc') lauf(k[key]);
+	})(ast.fragment);
+	assert.ok(name, `Messaufbau: kein ${adapter}(<Bezeichner>) im Hub-Markup`);
+	const f = u[name!];
+	assert.ok(
+		f && typeof f === 'object',
+		`VERTRAG FEHLT (#2727): der Hub haelt keinen eigenen Feldsatz \`${name}\` ($state(compareFeldsatzStandard())) — vom Pruefstand nicht auswertbar`
+	);
+	return f as Knoten;
+}
+
+describe('#2727 AC-15: CompareTabs — verzoegerte Alarm-Hydration fuellt den Reiter, Nutzerwert bleibt', () => {
+	test('?tab=alarme: vorher Standard, nachher Preset-Werte; ein vorher gesetzter Versand-Wert bleibt', async () => {
+		adresszeileVorbereiten('/compare/c-1', 'alarme');
+		const { u, ast, quelle } = await umgebungFuer(
+			VERGLEICH_HUB,
+			{
+				initialTab: 'alarme',
+				preset: vollerVergleich('c-1'),
+				locations: [],
+				orteCount: 3,
+				goto: gotoAufzeichnung,
+				page: { url: new URL('http://localhost/compare/c-1?tab=alarme') }
+			},
+			{ jsAlsTs: true }
+		);
+		const { alarmePropsAus } = await import('../../compare/alarmePropsAus.ts');
+		const { versandPropsAus } = await import('../../compare/versandPropsAus.ts');
+		const feldsatz = hubFeldsatzAus(ast, u, 'alarmePropsAus');
+		for (const e of effekteVon(ast, quelle, u, 'initialTab')) e();
+		assert.equal(u.activeTab, 'alarme', 'Vorbedingung: Deep-Link oeffnet den Alarme-Reiter');
+		assert.equal(alarmePropsAus(feldsatz).cooldownMinutes, undefined, 'vor der Hydration: Standard „nicht gesetzt"');
+		versandPropsAus(feldsatz).onSendSmsChange(true);
+		for (const e of effekteVon(ast, quelle, u, 'hydrateAlarmeTab')) e();
+		for (let i = 0; i < 20; i++) await new Promise((r) => setTimeout(r, 0));
+		assert.equal(u.alarmeHydrated, true, 'die Alarm-Hydration ist nicht gelaufen');
+		const alarme = alarmePropsAus(feldsatz);
+		assert.equal(alarme.cooldownMinutes, 45);
+		assert.equal(alarme.quietFrom, '22:00');
+		assert.equal(alarme.quietTo, '07:00');
+		assert.deepEqual(alarme.existingChannels, { email: true, telegram: true, sms: false, premium_sms: false });
+		assert.equal(versandPropsAus(feldsatz).sendSms, true, 'die spaete Alarm-Hydration hat einen Nutzerwert ueberschrieben');
 	});
 });

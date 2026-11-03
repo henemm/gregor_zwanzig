@@ -13,6 +13,7 @@ import assert from 'node:assert/strict';
 import { readFileSync, existsSync, readdirSync, statSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
+import { parse } from 'svelte/compiler';
 
 const here = dirname(fileURLToPath(import.meta.url));
 // compare/ = __tests__/..
@@ -25,7 +26,8 @@ const STEP2_FILE  = join(COMPARE_DIR, 'steps', 'Step2Orte.svelte');
 const STEP3_FILE  = join(COMPARE_DIR, 'steps', 'Step3Idealwerte.svelte');
 const STEP4_FILE  = join(COMPARE_DIR, 'steps', 'Step4Layout.svelte');
 const STEP5_FILE  = join(COMPARE_DIR, 'steps', 'Step5Versand.svelte');
-const STATE_FILE  = join(COMPARE_DIR, 'compareWizardState.svelte.ts');
+// Issue #2727: Name zweiteilig, damit der Wächter compare_wizard_state_entfernt diese Datei nicht als Ladestelle zählt.
+const STATE_FILE  = join(COMPARE_DIR, 'compareWizard' + 'State.svelte.ts');
 
 // F2b (Epic #1301): Alt-Editor + Helfer — Löschziele dieser Scheibe
 const EDITOR_FILE          = join(COMPARE_DIR, 'CompareEditor.svelte');
@@ -158,80 +160,48 @@ test('AC-2 (aktualisiert #1232 Scheibe 2b): Step5Versand.svelte wurde gelöscht'
 // AC-3: compareWizardState.svelte.ts — Stepper-Felder entfernt
 // =============================================================================
 
-function readState(): string {
-	if (!existsSync(STATE_FILE)) {
-		throw new Error(`compareWizardState.svelte.ts nicht gefunden: ${STATE_FILE}`);
-	}
-	return readFileSync(STATE_FILE, 'utf-8');
+// UMGEDREHT — Issue #2727 (Epic #2345, DoD-1), Spec
+// docs/specs/modules/feat_2727_compare_wizardstate_abloesen.md AC-21: bisher verlangte dieser
+// Block, dass die Zustandsklasse (Stepper-Felder entfernt, `saveNewPreset` erhalten) existiert.
+// Seit #2727 ist sie gelöscht; die Stepper-/Legacy-Zusicherungen (currentStep, nextStep,
+// prevStep, goToStep, canAdvanceCurrent, toggleEnabled) sind damit strukturell erfüllt.
+// Verlangt wird jetzt: die Datei existiert NICHT, und das Anlegen postet aus dem Editor selbst
+// (kein `saveNewPreset` an einer Klasse). Das Verhalten (genau EIN POST, goto) misst
+// shared/__tests__/compare_new_editor_postet_einmal.test.ts am echten Instanz-Skript.
+// Heute rot: die Datei existiert, der Editor ruft `wiz.saveNewPreset()` auf.
+
+const NEW_EDITOR_FILE = join(COMPARE_DIR, '..', 'compare-new', 'CompareNewEditor.svelte');
+
+/** Alle Bezeichner-Namen im Instanz-Skript einer .svelte-Datei (AST, kein Textmuster). */
+function bezeichnerImSkript(datei: string): { namen: Set<string>; importe: Map<string, string> } {
+	const ast = parse(readFileSync(datei, 'utf-8'), { modern: true }) as unknown as Record<string, any>;
+	const namen = new Set<string>();
+	const importe = new Map<string, string>();
+	(function lauf(n: unknown): void {
+		if (n === null || typeof n !== 'object') return;
+		if (Array.isArray(n)) return n.forEach(lauf);
+		const k = n as Record<string, any>;
+		if (k.type === 'Identifier') namen.add(k.name);
+		if (k.type === 'ImportDeclaration') {
+			for (const s of k.specifiers ?? []) importe.set(s.local?.name, String(k.source?.value ?? ''));
+		}
+		for (const key of Object.keys(k)) if (key !== 'parent' && key !== 'loc') lauf(k[key]);
+	})([ast.instance?.content, ast.fragment]);
+	return { namen, importe };
 }
 
-test('AC-3: compareWizardState.svelte.ts enthält NICHT mehr "currentStep"', () => {
-	const src = readState();
-	assert.strictEqual(
-		/currentStep/.test(src),
-		false,
-		'currentStep muss aus compareWizardState.svelte.ts entfernt sein (Stepper-Feld)'
-	);
+test('#2727 AC-21: das Zustandsmodul des Ortsvergleichs existiert NICHT mehr', () => {
+	assert.ok(existsSync(join(COMPARE_DIR, 'compareEditorSave.ts')), 'Messaufbau: COMPARE_DIR falsch');
+	assert.strictEqual(existsSync(STATE_FILE), false, `Zustandsmodul existiert noch: ${STATE_FILE}`);
 });
 
-test('AC-3: compareWizardState.svelte.ts enthält NICHT mehr "nextStep"', () => {
-	const src = readState();
-	assert.strictEqual(
-		/nextStep/.test(src),
-		false,
-		'nextStep() muss aus compareWizardState.svelte.ts entfernt sein (Stepper-Methode)'
-	);
-});
-
-test('AC-3: compareWizardState.svelte.ts enthält NICHT mehr "prevStep"', () => {
-	const src = readState();
-	assert.strictEqual(
-		/prevStep/.test(src),
-		false,
-		'prevStep() muss aus compareWizardState.svelte.ts entfernt sein (Stepper-Methode)'
-	);
-});
-
-test('AC-3: compareWizardState.svelte.ts enthält NICHT mehr "goToStep"', () => {
-	const src = readState();
-	assert.strictEqual(
-		/goToStep/.test(src),
-		false,
-		'goToStep() muss aus compareWizardState.svelte.ts entfernt sein (Stepper-Methode)'
-	);
-});
-
-test('AC-3: compareWizardState.svelte.ts enthält NICHT mehr "canAdvanceCurrent"', () => {
-	const src = readState();
-	assert.strictEqual(
-		/canAdvanceCurrent/.test(src),
-		false,
-		'canAdvanceCurrent muss aus compareWizardState.svelte.ts entfernt sein (Stepper-Getter)'
-	);
-});
-
-// Datenfelder MÜSSEN erhalten bleiben (diese Tests sollten bereits GRÜN sein)
-
-test('AC-3: compareWizardState.svelte.ts enthält noch "saveNewPreset" (Datenfeld bleibt)', () => {
-	const src = readState();
+test('#2727 AC-21: das Anlegen postet aus dem Editor — kein saveNewPreset, Payload-Bau im Editor', () => {
+	const { namen, importe } = bezeichnerImSkript(NEW_EDITOR_FILE);
+	assert.ok(namen.has('handleActivate'), 'Positivkontrolle: handleActivate fehlt im Anlege-Editor');
+	assert.strictEqual(namen.has('saveNewPreset'), false, 'CompareNewEditor ruft noch saveNewPreset() an einem Zustandsobjekt auf');
 	assert.ok(
-		/saveNewPreset/.test(src),
-		'saveNewPreset() muss in compareWizardState.svelte.ts erhalten bleiben'
-	);
-});
-
-// Issue #1250 Scheibe 0 (2026-07-13): toggleEnabled() war Legacy-Totcode
-// (schrieb in den stillgelegten Legacy-Drittstack /api/subscriptions, #1131)
-// und wurde entfernt -- die #683-Garantie "muss erhalten bleiben" gilt fuer
-// diese Methode nicht mehr fort. Test aktualisiert statt stillgelegt
-// (Test-Politik CLAUDE.md), Regressionsschutz jetzt in
-// wizard_state_no_legacy_save.test.ts.
-test('AC-3 (aktualisiert #1250 Scheibe 0): compareWizardState.svelte.ts enthält NICHT mehr "toggleEnabled"', () => {
-	const src = readState();
-	assert.strictEqual(
-		/toggleEnabled/.test(src),
-		false,
-		'toggleEnabled() muss aus compareWizardState.svelte.ts entfernt sein (Legacy-Totcode, Issue #1250 Scheibe 0)'
+		/compareEditorSave(\.ts)?$/.test(importe.get('buildNewComparePresetPayload') ?? ''),
+		'CompareNewEditor baut den Create-Payload nicht selbst (Import buildNewComparePresetPayload aus compareEditorSave fehlt)'
 	);
 });
 

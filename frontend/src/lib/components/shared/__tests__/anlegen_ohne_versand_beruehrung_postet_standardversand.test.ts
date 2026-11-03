@@ -10,8 +10,10 @@
 // (standardwerteEditorPruefstand.ts / svelteInstanzPruefstand.ts). Gesät werden nur Eingaben, die ein
 // Nutzer erzeugt (Name, Datum, Etappen mit GPX bzw. ≥2 Orte, Besuchs-Flags bis Alarme) — NIE `ready`/
 // `canActivateNow`: die Freischaltung leitet der Editor selbst her. Der Speicherweg ist der echte
-// (`buildAndSave` → `api.post` bzw. `handleActivate` → `CompareWizardState.saveNewPreset`); nur die
+// (`buildAndSave` → `api.post` bzw. `handleActivate` → lokaler Payload-Bau im Editor); nur die
 // Netzgrenze zeichnet den gesendeten Körper auf (Trip: `api.post`, Vergleich: `globalThis.fetch`).
+// Issue #2727 (AC-8): der Ortsvergleich-Editor bekommt Name/Orte über `stateOverride` statt über
+// einen Context — Vergleichsfälle heute rot (VERTRAG FEHLT), Trip-Fälle unverändert grün.
 // Ein Versand-Besuchs-Flag wird nicht gesät — genau das ist „Versand nie berührt".
 //
 // Ausführen (aus frontend/):
@@ -20,7 +22,6 @@
 
 import { test, describe, before, after } from 'node:test';
 import assert from 'node:assert/strict';
-import { neuerWiz } from './infoboxSsr.ts';
 import { COMPARE_EDITOR, TRIP_EDITOR, editorUmgebung, ruhe } from './standardwerteEditorPruefstand.ts';
 import type { Knoten } from './svelteInstanzPruefstand.ts';
 import { ladeReportZustand } from '../versand-tab/reportConfigPayload.ts';
@@ -97,13 +98,23 @@ after(() => {
 
 async function vergleichAnlegen(flags: Record<string, boolean>): Promise<{ frei: unknown; gepostet: Knoten[] }> {
 	presetPosts.length = 0;
-	const wiz = neuerWiz({ name: 'Sardinien-Woche', pickedIds: ['loc-a', 'loc-b', 'loc-c'] });
+	// Issue #2727 (AC-8): kein Context mehr — Name und Orte reisen ueber stateOverride.
 	const e = await editorUmgebung(COMPARE_EDITOR, {
-		getContext: () => wiz,
-		stateOverride: { activeTab: 'alarme', isMobileViewport: false, ...flags },
+		stateOverride: {
+			activeTab: 'alarme',
+			isMobileViewport: false,
+			name: 'Sardinien-Woche',
+			pickedIds: ['loc-a', 'loc-b', 'loc-c'],
+			...flags
+		},
 		window: { matchMedia: () => ({ matches: false, addEventListener() {}, removeEventListener() {} }) }
 	});
 	assert.equal(typeof e.u.handleActivate, 'function', 'Messaufbau kaputt: handleActivate nicht gebunden.');
+	assert.equal(
+		e.u.orteOk,
+		true,
+		'VERTRAG FEHLT (#2727): CompareNewEditor uebernimmt name/pickedIds nicht aus stateOverride (ohne Context).'
+	);
 	await e.u.handleActivate();
 	await ruhe();
 	return { frei: e.u.canActivateNow, gepostet: [...presetPosts] };

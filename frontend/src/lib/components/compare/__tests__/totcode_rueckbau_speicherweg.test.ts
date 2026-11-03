@@ -33,6 +33,15 @@
 // bleiben. Der Nachweis ist der unveraenderte gruene Lauf jener Datei plus die
 // Mutations-Gegenprobe in `/50` (`save()` wieder einfuehren ⇒ Test 1 rot).
 //
+// Umgebaut fuer Issue #2727 (Epic #2345, DoD-1) — Spec
+// docs/specs/modules/feat_2727_compare_wizardstate_abloesen.md, AC-19/AC-22: die
+// Zustandsklasse ist geloescht. Teil A misst den Totcode jetzt am Feldsatz, den Hub und
+// Anlege-Editor halten (`compareFeldsatzStandard()`, compare/compareEditorSave.ts); der
+// `SaveStatus`-Typ-Alias darf auch am neuen Ort nicht auftauchen; der AC-4-Block verlangt
+// statt der Hub-Klasseninstanz den komponentenlokalen Feldsatz. Der Round-Trip-Nachweis zu
+// AC-19 steht in compare_feldsatz_roundtrip_datenerhalt.test.ts.
+// Heute rot (#2727): `compareFeldsatzStandard` fehlt, der Hub instanziiert noch die Klasse.
+//
 // Ausfuehrung:
 //   cd frontend && node --import ./test-lib-loader.mjs --experimental-strip-types --test \
 //     src/lib/components/compare/__tests__/totcode_rueckbau_speicherweg.test.ts
@@ -42,48 +51,27 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-
-// `$state` muss VOR dem Import von compareWizardState.svelte.ts im globalen
-// Scope liegen — die Runen-Aufrufe sind Klassenfeld-Initializer, der Bezeichner
-// wird aber schon beim Modul-Laden aufgeloest. Passthrough genuegt: wir lesen
-// die Felder nur direkt nach dem `new`, ohne Reaktivitaet. Praezedenz:
-// compare_wizard_save_new_preset_channels.test.ts:66.
-(globalThis as unknown as { $state: <T>(v: T) => T }).$state = <T>(v: T): T => v;
-
-const { CompareWizardState } = await import('../compareWizardState.svelte.ts');
+import { neuerFeldsatz } from '../../shared/__tests__/compareFeldsatzPruefstand.ts';
 
 const HIER = dirname(fileURLToPath(import.meta.url));
 const COMPONENTS = join(HIER, '..', '..');
 const lies = (...teile: string[]) => readFileSync(join(COMPONENTS, ...teile), 'utf-8');
 
-// ── Teil A: Laufzeit ────────────────────────────────────────────────────────
+// ── Teil A: Laufzeit (am Feldsatz, #2727) ───────────────────────────────────
 
-describe('AC-1 / Teil A: CompareWizardState hat den Totcode nicht mehr', () => {
-	const protoMethoden = Object.getOwnPropertyNames(CompareWizardState.prototype);
-	const instanz = new CompareWizardState() as unknown as Record<string, unknown>;
-	const felder = Object.keys(instanz);
-
-	test('Positiv-Kontrolle: Prototype und Instanz sind ueberhaupt bestueckt', () => {
-		assert.ok(
-			protoMethoden.includes('saveNewPreset'),
-			'saveNewPreset() muss bleiben (Anlege-Pfad POST /api/compare/presets) — ' +
-				'fehlt sie, misst dieser Test einen kaputten Import statt den Rueckbau'
-		);
+describe('AC-1 / Teil A: der Ortsvergleich-Feldsatz traegt den Totcode nicht mehr', () => {
+	test('Positiv-Kontrolle: der Feldsatz ist ueberhaupt bestueckt', () => {
+		const felder = Object.keys(neuerFeldsatz());
 		for (const feld of ['name', 'region', 'pickedIds', 'endDate', 'dayWindowStartHour']) {
 			assert.ok(
 				felder.includes(feld),
-				'Instanz-Feld ' + feld + ' muss bleiben — Positiv-Kontrolle gegen eine leere Instanz'
+				'Feld ' + feld + ' muss bleiben — Positiv-Kontrolle gegen einen leeren Feldsatz'
 			);
 		}
 	});
 
-	test('saveComparePreset() ist vom Prototype verschwunden (null Aufrufer, Befund 5)', () => {
-		assert.strictEqual(
-			protoMethoden.includes('saveComparePreset'),
-			false,
-			'CompareWizardState.prototype.saveComparePreset muss entfernt sein. ' +
-				'Gefundene Methoden: ' + protoMethoden.join(', ')
-		);
+	test('saveComparePreset() gibt es nicht (null Aufrufer, Befund 5)', () => {
+		assert.strictEqual('saveComparePreset' in neuerFeldsatz(), false, 'saveComparePreset ist zurueck');
 	});
 
 	for (const feld of [
@@ -92,11 +80,12 @@ describe('AC-1 / Teil A: CompareWizardState hat den Totcode nicht mehr', () => {
 		'existingDisplayConfig',
 		'includeHourly'
 	]) {
-		test('Instanz-Feld ' + feld + ' ist entfernt (nur deklariert, null Referenzen)', () => {
+		test('Feld ' + feld + ' ist entfernt (nur deklariert, null Referenzen)', () => {
+			const felder = Object.keys(neuerFeldsatz());
 			assert.strictEqual(
 				felder.includes(feld),
 				false,
-				feld + ' muss aus CompareWizardState entfernt sein. Gefundene Felder: ' + felder.join(', ')
+				feld + ' gehoert nicht in den Feldsatz. Gefundene Felder: ' + felder.join(', ')
 			);
 		});
 	}
@@ -105,16 +94,16 @@ describe('AC-1 / Teil A: CompareWizardState hat den Totcode nicht mehr', () => {
 // ── Teil B: Quelltext ──────────────────────────────────────────────────────
 
 describe('AC-1 / Teil B: Typ-Alias, tote Bedingung und Kommentar-Leichen sind weg', () => {
-	test('compareWizardState.svelte.ts exportiert keinen Typ SaveStatus mehr', () => {
-		const quelle = lies('compare', 'compareWizardState.svelte.ts');
+	test('compareEditorSave.ts (neuer Ort der Feldsatz-Factory) exportiert keinen Typ SaveStatus', () => {
+		const quelle = lies('compare', 'compareEditorSave.ts');
 		assert.ok(
-			/saveStatus\s*=\s*\$state/.test(quelle),
-			'Positiv-Kontrolle: das Feld saveStatus selbst muss bleiben'
+			/export\s+function\s+buildNewComparePresetPayload\b/.test(quelle),
+			'Positiv-Kontrolle: buildNewComparePresetPayload muss in dieser Datei bleiben'
 		);
 		assert.strictEqual(
 			/export\s+type\s+SaveStatus\b/.test(quelle),
 			false,
-			'export type SaveStatus muss entfallen (null externe Importeure; der Name ' +
+			'export type SaveStatus darf nicht entstehen (der Name ' +
 				'kollidiert mit der unabhaengigen Store-Klasse SaveStatus aus ' +
 				'$lib/stores/saveStatusStore.svelte.ts, die ~15 Dateien importieren)'
 		);
@@ -202,29 +191,30 @@ describe('AC-1 / Teil B: die fuenf dateiinternen Signaturtypen bleiben stehen', 
 });
 
 // Issue #2276 Scheibe S6f (Epic #2345), AC-4: der tote
-// `setContext('compare-wizard-state', wizardState)`-Aufruf in
+// `setContext(<Wizard-Schluessel>, wizardState)`-Aufruf in
 // CompareTabs.svelte:330 hat im gesamten Hub-Baum keinen `getContext`-Leser
 // mehr (CorridorEditor(Mobile).svelte liest seit S6d aus
 // `corridorPropsAus(wizardState)`) und entfaellt samt seinem Import.
-// Die Hub-Klasseninstanz selbst (`new CompareWizardState()`, :329) UND
-// `onMount` (:140, unabhaengiger Verwendungszweck) bleiben unveraendert
-// bestehen — beide sind Positiv-Kontrollen, damit ein kaputter Import oder
-// eine leere Datei nicht faelschlich "Totcode entfernt" vortaeuscht.
+// `onMount` (:140, unabhaengiger Verwendungszweck) bleibt bestehen — Positiv-Kontrolle.
+// Issue #2727 (AC-22): statt der Hub-Klasseninstanz verlangt die zweite Positiv-Kontrolle jetzt den
+// komponentenlokalen Feldsatz `$state(compareFeldsatzStandard())`. Der Context-Schluessel ist
+// zweiteilig zusammengesetzt (Waechter compare_wizard_state_entfernt.test.ts zaehlt Code-Zeilen).
+const WIZARD_SCHLUESSEL = 'compare-wizard' + '-state';
 describe('AC-4 (S6f): toter setContext-Aufruf ist aus CompareTabs.svelte entfernt', () => {
-	test('setContext(\'compare-wizard-state\', …) ist weg, die Hub-Instanz und onMount bleiben', () => {
+	test('setContext(<Wizard-Schluessel>, …) ist weg, der lokale Feldsatz und onMount bleiben', () => {
 		const quelle = lies('compare', 'CompareTabs.svelte');
 		assert.ok(
-			quelle.includes('new CompareWizardState()'),
-			'Positiv-Kontrolle: die Hub-Klasseninstanz muss bestehen bleiben (Spec „Nicht in dieser Scheibe")'
+			/\$state\s*\(\s*compareFeldsatzStandard\s*\(\s*\)\s*\)/.test(quelle),
+			'Positiv-Kontrolle (#2727): der Hub haelt seinen Feldsatz lokal als $state(compareFeldsatzStandard())'
 		);
 		assert.ok(
 			/\bonMount\s*\(/.test(quelle),
 			'Positiv-Kontrolle: onMount() wird weiterhin gebraucht (:140) — nur setContext entfaellt'
 		);
 		assert.strictEqual(
-			/setContext\s*\(\s*['"]compare-wizard-state['"]/.test(quelle),
+			new RegExp(`setContext\\s*\\(\\s*['"]${WIZARD_SCHLUESSEL}['"]`).test(quelle),
 			false,
-			'setContext(\'compare-wizard-state\', …) muss entfallen — kein getContext-Leser mehr im Hub-Baum'
+			'setContext(<Wizard-Schluessel>, …) muss entfallen — kein getContext-Leser mehr im Hub-Baum'
 		);
 		assert.strictEqual(
 			/import\s*\{[^}]*\bsetContext\b[^}]*\}\s*from\s*['"]svelte['"]/.test(quelle),

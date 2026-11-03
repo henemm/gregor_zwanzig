@@ -48,7 +48,6 @@ import {
 	COMPONENTS,
 	innen,
 	lade,
-	neuerWiz,
 	renderKomponente,
 	renderTrip,
 	renderVergleichNeu,
@@ -57,6 +56,9 @@ import {
 	testids
 } from './infoboxSsr.ts';
 import { findeKomponenten, type Knoten } from './svelteInstanzPruefstand.ts';
+// Issue #2727 (AC-10/AC-22): Daten-Feldsatz statt Instanz der abgeloesten Zustandsklasse; die
+// Corridor-Rezepte brauchen keinen Context mehr (der Reiter liest nur corridorPropsAus).
+import { neuerFeldsatz } from './compareFeldsatzPruefstand.ts';
 import { INFO_TEXTE, PFLICHTREITER, REITER_DES_ABSCHNITTS, REITER_MIT_INFOBOX, type Kontext } from './infoboxTexte.ts';
 
 const ALLE_FLAGS = { wtVisited: true, wbVisited: true, alVisited: true };
@@ -304,7 +306,7 @@ const REZEPTE: Rezept[] = [
 		begriffe: ['kanal_schwelle', 'cooldown'],
 		props: async () => ({
 			context: 'vergleich',
-			...(await propsAus('compare/alarmePropsAus', 'alarmePropsAus', neuerWiz())),
+			...(await propsAus('compare/alarmePropsAus', 'alarmePropsAus', neuerFeldsatz())),
 			catalog: [],
 			profileOverride: PROFIL
 		})
@@ -315,8 +317,7 @@ const REZEPTE: Rezept[] = [
 		kontext: 'vergleich',
 		reiter: 'wertebereiche',
 		begriffe: ['wertebereiche'],
-		props: async () => ({ context: 'vergleich', ...(await propsAus('compare/corridorPropsAus', 'corridorPropsAus', neuerWiz())) }),
-		context: () => new Map([['compare-wizard-state', neuerWiz()]])
+		props: async () => ({ context: 'vergleich', ...(await propsAus('compare/corridorPropsAus', 'corridorPropsAus', neuerFeldsatz())) })
 	},
 	{
 		name: 'CorridorEditorMobile (vergleich)',
@@ -324,8 +325,7 @@ const REZEPTE: Rezept[] = [
 		kontext: 'vergleich',
 		reiter: 'wertebereiche',
 		begriffe: ['wertebereiche'],
-		props: async () => ({ context: 'vergleich', ...(await propsAus('compare/corridorPropsAus', 'corridorPropsAus', neuerWiz())) }),
-		context: () => new Map([['compare-wizard-state', neuerWiz()]])
+		props: async () => ({ context: 'vergleich', ...(await propsAus('compare/corridorPropsAus', 'corridorPropsAus', neuerFeldsatz())) })
 	},
 	{
 		name: 'CorridorEditor (route, Anlegen)',
@@ -343,7 +343,7 @@ const REZEPTE: Rezept[] = [
 		begriffe: [],
 		props: async () => ({
 			context: 'vergleich',
-			...(await propsAus('compare/wetterMetrikenPropsAus', 'wetterMetrikenPropsAus', neuerWiz()))
+			...(await propsAus('compare/wetterMetrikenPropsAus', 'wetterMetrikenPropsAus', neuerFeldsatz()))
 		})
 	},
 	{
@@ -354,7 +354,7 @@ const REZEPTE: Rezept[] = [
 		begriffe: [],
 		props: async () => ({
 			context: 'vergleich',
-			...(await propsAus('compare/versandPropsAus', 'versandPropsAus', neuerWiz()))
+			...(await propsAus('compare/versandPropsAus', 'versandPropsAus', neuerFeldsatz()))
 		})
 	}
 ];
@@ -525,7 +525,7 @@ describe('AC-6 Verdrahtung: die Bearbeiten-Hubs und die Wertprop-Bündel setzen 
 	}
 
 	test('wetterMetriken-/corridor-/alarme-/versandPropsAus liefern kein showInfobox-Feld', async () => {
-		const wiz = neuerWiz();
+		const wiz = neuerFeldsatz();
 		for (const [modul, fn] of [
 			['compare/wetterMetrikenPropsAus', 'wetterMetrikenPropsAus'],
 			['compare/corridorPropsAus', 'corridorPropsAus'],

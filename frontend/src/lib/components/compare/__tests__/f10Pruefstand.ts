@@ -50,7 +50,6 @@ export const persistenz = await imp(path.join(CMP, 'compareHubPersistenz.ts'));
 export const modell = await imp(path.join(KOMP, 'shared/hub-uebersicht/hubUebersichtModell.ts'));
 export const aktionen = await imp(path.join(KOMP, 'shared/subscriptionActions.ts'));
 export const reiter = await imp(path.join(KOMP, 'shared/subscriptionTabs.ts'));
-const { CompareWizardState } = await imp(path.join(CMP, 'compareWizardState.svelte.ts'));
 
 const ohneKommentare = (html: string) => html.replace(/<!--[\s\S]*?-->/g, '');
 /** Feste Uhr fuer jeden Render und jede Funktionszeile: Golden bleibt tagesunabhaengig. */
@@ -161,16 +160,8 @@ const K = {
 	])
 };
 
-/** Wizard-Zustand des Anlegens (Kontext 'compare-wizard-state'). */
-function wizard(f: { name?: string; region?: string; picked?: string[]; profil?: string } = {}) {
-	const ws = new CompareWizardState();
-	ws.name = f.name ?? '';
-	ws.region = f.region ?? '';
-	ws.pickedIds = f.picked ?? [];
-	if (f.profil) ws.activityProfile = f.profil;
-	return ws;
-}
-const kontext = (ws: unknown) => new Map<unknown, unknown>([['compare-wizard-state', ws], ['compare-wizard-profile', null]]);
+// #2727: Startwerte des Anlegens reisen als Props (Step2Orte `pickedIds`) bzw. ueber
+// `stateOverride` (CompareNewEditor), nicht mehr ueber einen Context.
 
 // ── Faelle ───────────────────────────────────────────────────────────────────
 
@@ -260,25 +251,27 @@ export function ortNeuRendern(): string {
 
 /** Orte-Schritt beim Anlegen: leer, mit Auswahl, erkannt, beim Hinzufuegen, mobil. */
 export function orteSchrittRendern(): string {
-	const leer = kontext(wizard());
-	const zwei = () => kontext(wizard({ picked: ['l-hx', 'l-ob'] }));
+	const zwei = () => ['l-hx', 'l-ob'];
 	return [
-		html(K.Step2Orte, { locations: ORTE, groups: GRUPPEN }, leer),
-		html(K.Step2Orte, { locations: [], groups: [] }, kontext(wizard())),
-		html(K.Step2Orte, { locations: ORTE, groups: GRUPPEN }, kontext(wizard({ picked: ['l-hx'] }))),
-		html(K.Step2Orte, { locations: ORTE, groups: GRUPPEN }, kontext(wizard({ picked: ORTE.map((o) => o.id).concat(['x1', 'x2']) }))),
-		html(K.Step2OrteVorschau, { locations: ORTE, groups: GRUPPEN }, zwei()),
-		html(K.Step2OrteHinzufuegen, { locations: ORTE, groups: GRUPPEN }, zwei()),
-		html(K.Step2Orte, { locations: ORTE, groups: GRUPPEN, dense: true }, kontext(wizard())),
-		html(K.Step2Orte, { locations: ORTE, groups: GRUPPEN, dense: true }, kontext(wizard({ picked: ['l-hx'] }))),
-		html(K.Step2Orte, { locations: ORTE, groups: GRUPPEN, dense: true }, zwei())
+		html(K.Step2Orte, { locations: ORTE, groups: GRUPPEN, pickedIds: [] }),
+		html(K.Step2Orte, { locations: [], groups: [], pickedIds: [] }),
+		html(K.Step2Orte, { locations: ORTE, groups: GRUPPEN, pickedIds: ['l-hx'] }),
+		html(K.Step2Orte, { locations: ORTE, groups: GRUPPEN, pickedIds: ORTE.map((o) => o.id).concat(['x1', 'x2']) }),
+		html(K.Step2OrteVorschau, { locations: ORTE, groups: GRUPPEN, pickedIds: zwei() }),
+		html(K.Step2OrteHinzufuegen, { locations: ORTE, groups: GRUPPEN, pickedIds: zwei() }),
+		html(K.Step2Orte, { locations: ORTE, groups: GRUPPEN, dense: true, pickedIds: [] }),
+		html(K.Step2Orte, { locations: ORTE, groups: GRUPPEN, dense: true, pickedIds: ['l-hx'] }),
+		html(K.Step2Orte, { locations: ORTE, groups: GRUPPEN, dense: true, pickedIds: zwei() })
 	].join('\n');
 }
 
 export type AnlegeFall = { tab: string; mobil: boolean; name?: string; picked?: string[]; profil?: string; besucht?: boolean };
 export function anlegenRendern(f: AnlegeFall): string {
-	const stateOverride = { activeTab: f.tab, isMobileViewport: f.mobil, metrikenVisited: f.besucht, idealsVisited: f.besucht, alarmeVisited: f.besucht };
-	return html(K.CompareNewEditor, { locations: ORTE, groups: GRUPPEN, stateOverride }, kontext(wizard({ name: f.name, picked: f.picked, profil: f.profil })));
+	const stateOverride = {
+		activeTab: f.tab, isMobileViewport: f.mobil, metrikenVisited: f.besucht, idealsVisited: f.besucht, alarmeVisited: f.besucht,
+		name: f.name ?? '', region: '', pickedIds: f.picked ?? [], ...(f.profil ? { activityProfile: f.profil } : {})
+	};
+	return html(K.CompareNewEditor, { locations: ORTE, groups: GRUPPEN, stateOverride });
 }
 export const ANLEGE_FAELLE: Record<string, AnlegeFall[]> = {
 	anlegen_vergleich: [
@@ -304,7 +297,7 @@ export const ANLEGE_FAELLE: Record<string, AnlegeFall[]> = {
 };
 
 export function anlegenToastRendern(): string {
-	return html(K.CompareNewToast, { locations: ORTE, groups: GRUPPEN, stateOverride: { activeTab: 'vergleich', isMobileViewport: true } }, kontext(wizard()));
+	return html(K.CompareNewToast, { locations: ORTE, groups: GRUPPEN, stateOverride: { activeTab: 'vergleich', isMobileViewport: true } });
 }
 
 // ── Fehler-Flags (nur neuer Quelltext): ohne Server-Text halten die Bausteine nur ein
@@ -319,7 +312,7 @@ export function fehlerFlagsRendern(): string[] {
 	return [
 		html(FLAG.seite, { data: { preset: vergleichAktiv(), locations: ORTE.slice(0, 3), profile: null } }),
 		html(FLAG.seiteFehler, { data: { preset: vergleichAktiv(), locations: ORTE.slice(0, 3), profile: null } }),
-		html(FLAG.orte, { locations: ORTE, groups: GRUPPEN }, kontext(wizard())),
+		html(FLAG.orte, { locations: ORTE, groups: GRUPPEN, pickedIds: [] }),
 		html(FLAG.ortNeu, { onsave: () => {}, oncancel: () => {} })
 	];
 }

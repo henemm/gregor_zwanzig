@@ -7,25 +7,32 @@
 	// Organismen (Step2Orte, WeatherMetricsTab, CorridorEditor(Mobile),
 	// AlarmeTab, VersandTab; Stundenverlauf jetzt via WeatherMetricsTab, #1360).
 	// Reine Freischalt-Logik
-	// im geteilten Kern shared/anlegeLockEngine.ts (#2277 S4). Lokaler CompareWizardState (Context), EIN POST bei
-	// „Briefing aktivieren" via wiz.saveNewPreset() — kein Backend-Change.
+	// im geteilten Kern shared/anlegeLockEngine.ts (#2277 S4). Lokaler Feldsatz `wiz` ($state, #2727), EIN POST bei
+	// „Briefing aktivieren" über die lokale Funktion speichereNeuenVergleich() — kein Backend-Change.
 	//
 	// Der Alt-Editor CompareEditor.svelte wurde in Epic #1301 F2b ersatzlos
 	// gelöscht (Rollback-Punkt entfallen, dieser Editor ist der einzige Anlege-Pfad).
 	// Testid-Familien 1:1 erhalten (E2E-Verträge).
 	// Safari-Factory-Pattern für alle Handler (CLAUDE.md).
 
-	import { getContext, onMount, untrack } from 'svelte';
+	import { onMount, untrack } from 'svelte';
+	import { goto } from '$app/navigation';
 	import { Btn, Eyebrow, TopoBg } from '$lib/components/atoms';
 	import { Field } from '$lib/components/molecules';
 	import {
 		ACTIVITY_PROFILE_OPTIONS,
 		toCompareProfile,
 		type ActivityProfile,
+		type ComparePreset,
 		type Location,
 		type Group
 	} from '$lib/types';
-	import type { CompareWizardState } from '$lib/components/compare/compareWizardState.svelte';
+	import {
+		buildNewComparePresetPayload,
+		compareFeldsatzStandard,
+		type CompareFeldsatz
+	} from '../compare/compareEditorSave.ts';
+	import { feldsatzAusVorlage } from './compareNewVorlage.ts';
 	import {
 		PROFILE_METRICS_WITH_SCALES,
 		buildComparePrefillRows,
@@ -85,23 +92,45 @@
 	};
 
 	// Test-Seam (#2277 S4, Muster TripNewEditor `stateOverride`): Startwerte fuer
-	// Reiter/Viewport/Besuchs-Flags. Ohne Uebergabe unveraendertes Verhalten.
+	// Reiter/Viewport/Besuchs-Flags und (#2727) die Stammdaten-Startwerte.
+	// Ohne Uebergabe unveraendertes Verhalten.
 	interface CompareNewStateOverride {
 		activeTab?: CompareNewTabId;
 		isMobileViewport?: boolean;
 		metrikenVisited?: boolean;
 		idealsVisited?: boolean;
 		alarmeVisited?: boolean;
+		name?: string;
+		region?: string;
+		activityProfile?: ActivityProfile | null;
+		pickedIds?: string[];
 	}
 	interface Props {
 		locations?: Location[];
 		groups?: Group[];
 		stateOverride?: CompareNewStateOverride;
+		// Issue #2277 S2c: /compare/new?from=<id> — Vorlage fuer die einmalige Vorbelegung.
+		vorlage?: ComparePreset | null;
 	}
-	let { locations = [], groups, stateOverride }: Props = $props();
+	let { locations = [], groups, stateOverride, vorlage = null }: Props = $props();
 	const seed: CompareNewStateOverride = untrack(() => stateOverride ?? {});
 
-	const wiz = getContext<CompareWizardState>('compare-wizard-state');
+	// Issue #2727 (Epic #2345, DoD-1): der Editor haelt seinen Feldsatz selbst
+	// (Muster TripNewEditor, kein Context). Startwerte: Standard < Vorlage
+	// (einmalig beim Start, bewusst KEIN $effect, #2277 S2c AC-10) < stateOverride.
+	const vorlagenFelder = untrack(() => (vorlage ? feldsatzAusVorlage(vorlage, locations) : {}));
+	const wiz = $state<CompareFeldsatz>({
+		...compareFeldsatzStandard(),
+		...vorlagenFelder,
+		...Object.fromEntries(
+			Object.entries({
+				name: seed.name,
+				region: seed.region,
+				activityProfile: seed.activityProfile,
+				pickedIds: seed.pickedIds
+			}).filter(([, wert]) => wert !== undefined)
+		)
+	});
 
 	// #1435 E1a-2: Register-Katalog fuer die Empfindlichkeits-Tabelle des
 	// Alarme-Reiters. Ohne ihn zeigte der Reiter hier null Zeilen.
@@ -259,7 +288,59 @@
 		return PROFILE_METRICS_WITH_SCALES[key].map((m) => m.label).join(' · ');
 	}
 
-	// ── „Briefing aktivieren" — genau EIN POST (saveNewPreset), dann Redirect ──
+	// ── Speichern (Issue #681 Create-Modus, seit #2727 lokal im Editor) ────────
+	// Legt das neue Preset via POST /api/compare/presets an und navigiert zum Hub.
+	// Ein Fehlschlag bleibt still (Verhalten unveraendert, Nebenbefund #1199).
+	async function speichereNeuenVergleich(): Promise<void> {
+		const payload = buildNewComparePresetPayload({
+			name: wiz.name,
+			pickedIds: wiz.pickedIds,
+			activityProfile: wiz.activityProfile,
+			schedule: wiz.schedule,
+			officialAlertsEnabled: wiz.officialAlertsEnabled, // Issue #1040
+			radarAlertEnabled: wiz.radarAlertEnabled, // Issue #1041 Slice 2
+			hourlyEnabled: wiz.hourlyEnabled, // Issue #1107
+			outlookEnabled: wiz.outlookEnabled, // Issue #1361/#1368
+			officialAlertTriggersEnabled: wiz.officialAlertTriggersEnabled, // Issue #1216 Slice 2b
+			sendTelegram: wiz.sendTelegram,
+			sendSms: wiz.sendSms,
+			sendPremiumSms: wiz.sendPremiumSms, // Issue #1745 A (AC-11) / #2293 S2
+			alertChannels: wiz.channels, // Issue #2293 Scheibe S2 (Abschnitt 1/7)
+			officialWarningsEnabled: wiz.officialWarningsEnabled, // Issue #1258 S4
+			morningEnabled: wiz.morningEnabled, // Issue #1232 Scheibe 2b
+			morningTime: wiz.morningTime,
+			eveningEnabled: wiz.eveningEnabled,
+			eveningTime: wiz.eveningTime,
+			endDate: wiz.endDate,
+			// Issue #1361/#1372 S1b: Tagesfenster gehört von Anfang an zur Bedienfläche.
+			dayWindowStartHour: wiz.dayWindowStartHour,
+			dayWindowEndHour: wiz.dayWindowEndHour,
+			alertCooldownMinutes: wiz.alertCooldownMinutes, // Issue #1170
+			alertQuietFrom: wiz.alertQuietFrom,
+			alertQuietTo: wiz.alertQuietTo,
+			corridors: wiz.corridors, // Issue #1231 Slice 4
+			region: wiz.region,
+			idealRanges: wiz.idealRanges,
+			activeMetricKeys: wiz.activeMetricKeys,
+			// Issue #1703 Scheibe 8: Kanal-Overrides der Uebersichtstabelle — Kopie,
+			// damit der gesendete Stand nicht spaeter noch mitmutiert.
+			channelActiveMetricKeys: { ...wiz.channelActiveMetricKeys },
+			hourlyMetricKeys: wiz.hourlyMetricKeys,
+			outlookMetricKeys: wiz.outlookMetricKeys, // Issue #1361/#1368
+			outlookMetricFormats: wiz.outlookMetricFormats, // Issue #2049
+			metricAlertLevels: wiz.metricAlertLevels, // Issue #1170
+			channelThresholds: wiz.channelThresholds, // Issue #1461 S3b-2b
+			telegramStyle: wiz.telegramStyle // Issue #1260 S5
+		});
+		try {
+			const created = await api.post<{ id: string }>('/api/compare/presets', payload);
+			await goto('/compare/' + created.id);
+		} catch {
+			/* Nebenbefund #1199: Fehlermeldung wird (wie bisher) nicht angezeigt */
+		}
+	}
+
+	// ── „Briefing aktivieren" — genau EIN POST, dann Redirect ──────────────────
 	// Re-Entrancy-Guard nach Trip-Vorbild (TripNewEditor.buildAndSave:
 	// `if (!ready || saving || savedTripId) return`) — ein Doppelklick auf
 	// „Briefing aktivieren" darf NUR EIN Preset anlegen (Staging-Fund #1301 F2a:
@@ -270,9 +351,9 @@
 		if (!canActivateNow || activating) return;
 		activating = true;
 		try {
-			await wiz.saveNewPreset();
+			await speichereNeuenVergleich();
 		} finally {
-			// Erfolg navigiert weg (Redirect in saveNewPreset); bei Fehler bleibt die
+			// Erfolg navigiert weg (Redirect nach dem POST); bei Fehler bleibt die
 			// Seite und der Knopf wird für einen erneuten Versuch wieder freigegeben.
 			activating = false;
 		}
@@ -302,7 +383,7 @@
 			activating = true;
 			try {
 				if (!idealsVisited) belegeWertebereicheVor(standardwerteKatalog);
-				await wiz.saveNewPreset();
+				await speichereNeuenVergleich();
 			} finally {
 				activating = false;
 			}
@@ -480,7 +561,7 @@
 			</TopoBg>
 		</div>
 	{:else if activeTab === 'orte'}
-		<Step2Orte {locations} groups={ceGroups} />
+		<Step2Orte bind:pickedIds={wiz.pickedIds} {locations} groups={ceGroups} />
 		<div class="ce-cta-foot" style:max-width="980px">
 			<div class="ce-cta-row">
 				{#if !orteContinueReady}<span class="mono ce-cta-hint">{$t('vergleich.neu.min_orte')}</span>{/if}
@@ -491,7 +572,7 @@
 		{#if !isMobileViewport}
 			<!-- Issue #1743: geteilter Baustein „Wetter-Metriken + Versand"; ohne
 			     preset/saveController/enqueueHubWrite — gespeichert wird erst per
-			     wiz.saveNewPreset() (ein POST). -->
+			     „Briefing aktivieren" (ein POST). -->
 			<WetterMetrikenVersandPanel context="vergleich" {...wetterMetrikenPropsAus(wiz)} versand={versandPropsAus(wiz)} vergleichTelegramStyle={wiz.telegramStyle ?? 'rich'} activation={versandActivationBanner} showInfobox={true} />
 		{/if}
 		<div class="ce-cta-foot" style:max-width="1040px">
@@ -583,7 +664,7 @@
 				</div>
 			</div>
 		{:else if activeTab === 'orte'}
-			<Step2Orte {locations} groups={ceGroups} dense onOpenLibrary={() => { mobileLibraryOpen = true; }} />
+			<Step2Orte bind:pickedIds={wiz.pickedIds} {locations} groups={ceGroups} dense onOpenLibrary={() => { mobileLibraryOpen = true; }} />
 		{:else if activeTab === 'wetter-metriken'}
 			{#if isMobileViewport}
 				<WetterMetrikenVersandPanel context="vergleich" {...wetterMetrikenPropsAus(wiz)} versand={versandPropsAus(wiz)} vergleichTelegramStyle={wiz.telegramStyle ?? 'rich'} activation={versandActivationBanner} showInfobox={true} />

@@ -6,7 +6,7 @@
 //
 // Messwege (kein Quelltext-Grep):
 //   - echte SSR-Renderings (svelte/server) des Bausteins und beider Editoren
-//     (Pruefstand infoboxSsr.ts: echter CompareWizardState, Name + 2 Orte);
+//     (Pruefstand infoboxSsr.ts: Name + 2 Orte ueber stateOverride, ohne Context — #2727);
 //   - AST der Editoren (`findeKomponenten`), um „derselbe Baustein, aus shared/"
 //     festzuhalten (Pendant-Sperre).
 //
