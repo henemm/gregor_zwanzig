@@ -840,7 +840,7 @@ def fmt_val(key: str, val, *, friendly_keys: set[str] | None = None,
         # Issue #435: simplified -> adjective only, kein km/h-Wert in Zelle.
         if mode == "simplified" and not html:
             from services.weather_metrics import format_wind_strength
-            return format_wind_strength(val)
+            return format_wind_strength(val, lang=lang)
         # Issue #814: HTML-Ampel wird durch indicator_keys gesteuert (use_friendly_format),
         # nicht durch mode (build_format_modes liefert immer 'raw' für diese Metriken).
         if html and _use_ampel:
@@ -855,7 +855,7 @@ def fmt_val(key: str, val, *, friendly_keys: set[str] | None = None,
     if key == "precip":
         if mode == "simplified" and not html:
             from services.weather_metrics import format_precip_intensity
-            return format_precip_intensity(val)
+            return format_precip_intensity(val, lang=lang)
         # Issue #814: HTML-Ampel durch indicator_keys (use_friendly_format).
         if html and _use_ampel:
             return _ampel_dot_severity("precipitation", val)
