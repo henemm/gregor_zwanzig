@@ -540,6 +540,7 @@ def build_outlook_row(
     hiking_extrema: Optional[dict] = None,
     segments: Optional[list] = None,
     outlook_metric_formats: Optional[dict] = None,
+    lang: Lang = "de",
 ) -> dict:
     """Baut ein Ausblick-Row-Dict aus einer SegmentWeatherSummary + Punktliste.
 
@@ -591,6 +592,9 @@ def build_outlook_row(
     Ausgabeorte -- deshalb ist dies die einzige Stelle, an der das Flag
     ankommen muss (die Kopfzeilen der Renderer brauchen es nicht, ihre
     Beschriftung aendert sich nicht).
+
+    ``lang`` (#2750): Sprache der Zellentexte in ``cells`` (Wortskalen,
+    Gewitter-/Niederschlagsart-Wort); ohne ``lang`` deutsch, byte-gleich.
 
     ``segments`` (#1848 A1, Alternative zu ``hiking_extrema``): der Aufrufer
     (``trip_report_scheduler.py``) hat ``seg_weather`` bereits vorliegen,
@@ -795,6 +799,7 @@ def build_outlook_row(
                 raw,
                 {**col, "hail": _hail,
                  "signals": _thunder_signals if ordinal else _signals},
+                lang=lang,
             ))
             cell_bg.append(_metric_column_bg(col, raw))
         row["cells"] = cells
