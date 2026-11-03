@@ -126,6 +126,33 @@ describe('Ausdrucks-Literale im Markup (F12)', () => {
 		assert.ok(!AUSDRUCK_OFFEN.some((x) => x.startsWith('lib/components/molecules/BriefingTimelineRow')));
 	});
 
+	// #2764 (F13) AC-1: die offene Liste ist abgebaut; jeder Fall ist migriert oder am Fundort begruendet.
+	test('AUSDRUCK_OFFEN ist leer', () => {
+		assert.deepEqual(AUSDRUCK_OFFEN, []);
+	});
+
+	// #2764 (F13) AC-2: sprachneutrale Literale tragen am Fundort einen begruendeten Marker.
+	test('Marker i18n-neutral mit Begruendung nimmt das Literal aus; ohne Begruendung oder mit Umlaut nicht', () => {
+		const quelle = [
+			'<code>{/* i18n-neutral: SMS-Protokoll-Token */ \'TH:H\'}</code>',
+			'<Cut label={/* i18n-neutral: Kanal-Eigenname */ \'Telegram\'} />',
+			'<span>{/* i18n-neutral: Dateiformat-Name */ `${n}/${m} GPX`}</span>',
+			'<code>{/* i18n-neutral: kurz */ \'Wort\'}</code>',
+			'<code>{/* i18n-neutral: */ \'Leer\'}</code>',
+			'<code>{/* i18n-neutral: SMS-Protokoll-Token */ \'Größe\'}</code>',
+			'<code>{/* i18n-neutral: Signalwort-Probe */ \'bitte warten\'}</code>',
+			// ein beliebiger fuehrender Kommentar ist kein Block wie {/if} und kein Marker
+			'<b>{/* irgendwas */ \'Speichern\'}</b>'
+		].join('\n');
+		assert.deepEqual(scanneMarkup(quelle), [
+			{ zeile: 4, art: 'ausdruck', text: 'Wort' },
+			{ zeile: 5, art: 'ausdruck', text: 'Leer' },
+			{ zeile: 6, art: 'ausdruck', text: 'Größe' },
+			{ zeile: 7, art: 'ausdruck', text: 'bitte warten' },
+			{ zeile: 8, art: 'ausdruck', text: 'Speichern' }
+		]);
+	});
+
 	test('Vergleiche, Bloecke, Schluessel, class/style/data-* und Kommentare sind keine Treffer', () => {
 		const quelle = [
 			'<!-- {x ? \'kommentar\' : \'text\'} -->',

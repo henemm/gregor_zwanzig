@@ -94,5 +94,13 @@
 	"wertebereiche.warnungen.legende_stufe": "Die Warnstufe steht nach dem Doppelpunkt: {l} = gelb, {m} = orange, {h} = rot (z. B. {beispiel} = rote Gewitterwarnung).",
 	"wertebereiche.vergleich.titel": "Wetter-Metriken",
 	"wertebereiche.vergleich.hinweis": "Nur angewählte Metriken erscheinen in der Vergleichs-Mail.",
-	"wertebereiche.vergleich.warn_hinweis": "Amtliche Warnungen stehen unabhängig von dieser Reihenfolge immer an erster Stelle und sind deshalb nicht Teil der sortierbaren Liste."
+	"wertebereiche.vergleich.warn_hinweis": "Amtliche Warnungen stehen unabhängig von dieser Reihenfolge immer an erster Stelle und sind deshalb nicht Teil der sortierbaren Liste.",
+	"wertebereiche.symbolzeile.temperature": "Temperatur",
+	"wertebereiche.symbolzeile.temperature_night": "Nacht-Tiefsttemperatur",
+	"wertebereiche.symbolzeile.wind_chill": "Gefühlte Temperatur",
+	"wertebereiche.symbolzeile.temperature_day_low": "Tages-Tiefsttemperatur (Gehzeit)",
+	"wertebereiche.symbolzeile.temperature_day_high": "Tages-Höchsttemperatur (Gehzeit)",
+	"wertebereiche.symbolzeile.wind_chill_day_low": "Gefühlte Tages-Tiefsttemperatur (Gehzeit)",
+	"wertebereiche.symbolzeile.wind_chill_day_high": "Gefühlte Tages-Höchsttemperatur (Gehzeit)",
+	"wertebereiche.symbolzeile.wind_chill_night": "Gefühlte Nacht-Tiefsttemperatur"
 }

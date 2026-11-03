@@ -237,6 +237,8 @@ const NEU_IN_F7 = F7_ANKER.map(([k]) => k);
 const NEU_IN_F10 = F10_ANKER.map(([k]) => k);
 /** #2661 (F12) letzte Allowlist-Dateien: bausteine.marke/footer/hinweis.*, listen.orte.form/metriken.* (feste Anker-Tabelle). */
 const NEU_IN_F12 = F12_ANKER.map(([k]) => k);
+/** #2764 (F13) AUSDRUCK_OFFEN: Name-Rueckfall der Karte (wertebereiche.symbolzeile.* stehen in F5_ANKER). */
+const NEU_IN_F13 = ['bausteine.karte.ohne_namen'];
 const NEU_IN_FOLGEPAKETEN = [
 	// #2648 (S3) Sprachumschalter und Konto-Sprache
 	'konto.sprache.titel',
@@ -455,7 +457,7 @@ test('AC-5: jeder Bestandsschluessel ist mit byte-gleichem Wert in der de-Karte'
 
 test('AC-5: die de-Karte enthaelt ausser dem Bestand nur die neuen Schluessel dieses und der Folgepakete', () => {
 	const extra = Object.keys(de).filter((k) => !(k in GOLDEN)).sort();
-	assert.deepEqual(extra, [...NEU_IN_S2, ...NEU_IN_F3, ...NEU_IN_F4, ...NEU_IN_F6, ...NEU_IN_F5, ...NEU_IN_F7, ...NEU_IN_F8, ...NEU_IN_F9, ...NEU_IN_F10, ...NEU_IN_F12, ...NEU_IN_FOLGEPAKETEN].sort());
+	assert.deepEqual(extra, [...NEU_IN_S2, ...NEU_IN_F3, ...NEU_IN_F4, ...NEU_IN_F6, ...NEU_IN_F5, ...NEU_IN_F7, ...NEU_IN_F8, ...NEU_IN_F9, ...NEU_IN_F10, ...NEU_IN_F12, ...NEU_IN_F13, ...NEU_IN_FOLGEPAKETEN].sort());
 });
 
 test('AC-5: trFor(de) und tr() mit Standard-Locale liefern die Bestandstexte unveraendert', () => {

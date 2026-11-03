@@ -94,5 +94,13 @@
 	"wertebereiche.warnungen.legende_stufe": "The warning level follows the colon: {l} = yellow, {m} = orange, {h} = red (e.g. {beispiel} = red thunderstorm warning).",
 	"wertebereiche.vergleich.titel": "Weather metrics",
 	"wertebereiche.vergleich.hinweis": "Only selected metrics appear in the comparison email.",
-	"wertebereiche.vergleich.warn_hinweis": "Official warnings always come first regardless of this order and are therefore not part of the sortable list."
+	"wertebereiche.vergleich.warn_hinweis": "Official warnings always come first regardless of this order and are therefore not part of the sortable list.",
+	"wertebereiche.symbolzeile.temperature": "Temperature",
+	"wertebereiche.symbolzeile.temperature_night": "Night low",
+	"wertebereiche.symbolzeile.wind_chill": "Feels-like temperature",
+	"wertebereiche.symbolzeile.temperature_day_low": "Daytime low (walking hours)",
+	"wertebereiche.symbolzeile.temperature_day_high": "Daytime high (walking hours)",
+	"wertebereiche.symbolzeile.wind_chill_day_low": "Feels-like daytime low (walking hours)",
+	"wertebereiche.symbolzeile.wind_chill_day_high": "Feels-like daytime high (walking hours)",
+	"wertebereiche.symbolzeile.wind_chill_night": "Feels-like night low"
 }

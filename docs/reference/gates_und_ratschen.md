@@ -531,6 +531,11 @@ Marken-Schriftzüge (`lib/brand/*`, „gregor"/„zwanzig") meldet der Scanner w
 (#2661) führt sie als Katalogwerte `bausteine.marke.*` (in beiden Sprachen gleich).
 **Seit F12 (#2661, 2026-11-02) ist die Allowlist leer (`[]`)**; `hardcode_allowlist_leer.test.ts`
 hält das fest — jeder neue hartkodierte Nutzertext ist sofort ein Treffer ohne Eintrag.
+Literale in Markup-Ausdrücken (`{x ? 'a' : 'b'}`, beschriftende Attribute) prüft seit F12
+`scanneAusdruecke`; die offene Liste `AUSDRUCK_OFFEN` ist seit F13 (#2764) leer. Sprachneutrale
+Literale (Protokoll-Token, Kennung, Eigenname, Dateiformat) tragen am Fundort den Marker
+`{/* i18n-neutral: <Begründung, ≥ 8 Zeichen> */ 'TH:H'}`; ein Literal mit Umlaut oder Signalwort
+bleibt trotz Marker ein Treffer.
 
 `katalog_schluessel_haben_verwender.test.ts` verlangt für jeden Schlüssel der vereinigten
 `de`-Karte einen Verwender in `frontend/src/` (ohne `__tests__/`, `*.test.ts`, `*.spec.ts`):
