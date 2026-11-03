@@ -233,6 +233,8 @@ func New(deps Deps) chi.Router {
 	r.Get("/api/health", handler.HealthHandler(deps.Config.PythonCoreURL, deps.GitCommit, deps.WebAuthn.Config.RPID))
 	r.Get("/api/config", handler.ProxyHandler(deps.Config.PythonCoreURL, "/config"))
 	r.Get("/api/metrics", handler.ProxyHandler(deps.Config.PythonCoreURL, "/metrics"))
+	// Issue #1895 S3a (AC-35): Alarm-Zeile -> alert_metric_channels-Schluessel.
+	r.Get("/api/alert-metric-channel-keys", handler.ProxyHandler(deps.Config.PythonCoreURL, "/alert-metric-channel-keys"))
 	r.Get("/api/templates", handler.ProxyHandler(deps.Config.PythonCoreURL, "/templates"))
 	// Issue #1318 AC-9: read-only SMS-Kuerzel-Katalog (Metriken + Gefahrenarten).
 	r.Get("/api/sms-symbols", handler.ProxyHandler(deps.Config.PythonCoreURL, "/sms-symbols"))

@@ -228,3 +228,44 @@ func TestTripAlertMetricChannels_OmittedFromJSONWhenUnset(t *testing.T) {
 		t.Errorf("AC-7 Gegenprobe: gesetzte Zuordnung wird nicht ausgeliefert — die Abwesenheits-Pruefung oben waere wertlos")
 	}
 }
+
+// Issue #1895 Scheibe S3a, AC-36 Trip-Pendant (🟢 HEUTE GRUEN, Regressions-
+// Fixture): beim Trip ist Top-Level `"alert_metric_channels": null` schon
+// heute ein No-Op (Pointer-DTO, handler/trip.go:375). Die S3a-Angleichung des
+// Ortsvergleichs darf dieses Verhalten nicht veraendern. Auch der
+// Briefing-Weg `PUT /api/briefings/{id}?kind=route` (delegiert an
+// UpdateTripHandler) wird mitgemessen.
+func TestTripAlertMetricChannels_S3a_TopLevelNullIstNoOp_AC36(t *testing.T) {
+	wege := []struct{ name, pfad string }{
+		{"trips", "/api/trips/trip-1895-s3a-ac36"},
+		{"briefings_route", "/api/briefings/trip-1895-s3a-ac36?kind=route"},
+	}
+	for _, weg := range wege {
+		weg := weg
+		t.Run(weg.name, func(t *testing.T) {
+			s := newTestStore(t)
+			r := amcTripRouter(s)
+			r.Put("/api/briefings/{id}", UpdateBriefingHandler(s))
+			const id = "trip-1895-s3a-ac36"
+			amcSeedTrip(t, s, "alice", id, "S3a-Trip")
+
+			gespeichert := map[string]interface{}{"gust": map[string]interface{}{"email": true}}
+			if w := amcReq(t, r, http.MethodPut, "/api/trips/"+id, "alice", map[string]interface{}{
+				"alert_metric_channels": gespeichert,
+			}); w.Code != http.StatusOK {
+				t.Fatalf("PUT (Vorbelegung): erwartet 200, bekam %d: %s", w.Code, w.Body.String())
+			}
+
+			if w := amcReq(t, r, http.MethodPut, weg.pfad, "alice", map[string]interface{}{
+				"alert_metric_channels": nil,
+			}); w.Code != http.StatusOK {
+				t.Fatalf("PUT %s (null): erwartet 200, bekam %d: %s", weg.pfad, w.Code, w.Body.String())
+			}
+
+			got := amcChannelsOf(t, amcBodyMap(t, amcReq(t, r, http.MethodGet, "/api/trips/"+id, "alice", nil)))
+			if !reflect.DeepEqual(got, gespeichert) {
+				t.Errorf("AC-36 Trip (%s): Top-Level-null muss No-Op bleiben — erwartet %v, bekam %v", weg.name, gespeichert, got)
+			}
+		})
+	}
+}

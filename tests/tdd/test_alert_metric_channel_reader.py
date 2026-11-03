@@ -708,6 +708,36 @@ def test_ac28_vergleich_versand_faellt_bei_gesperrtem_metrik_kanal_auf_email(
     )
 
 
+def test_ac28_kontrolle_vergleich_fixture_loest_mit_tarif_ueber_sms_aus(
+    monkeypatch, sauberer_nutzer,
+):
+    """AC-28 Kontrolle (🟢 HEUTE GRUEN): derselbe Aufbau wie der rote
+    Vergleichsfall, aber mit Standard-Tarif (`sms` erlaubt). Der Ort MUSS
+    genau einen Alarm ueber `{sms}` ausloesen. Damit ist bewiesen, dass der
+    rote Fall an der fehlenden Rueckfall-Logik scheitert und nicht daran,
+    dass der Boeen-Anker gar nicht ausloest."""
+    user_id = sauberer_nutzer("ac28-kontr")
+    _schreibe_tarif(user_id, "standard")
+    _lege_vergleich_an(
+        user_id, "cp-ac28k", orte=["loc-graz"],
+        anker={"loc-graz": {"gust_max_kmh": 10.0}},
+        alert_metric_channels={"gust": {"sms": True}},
+    )
+
+    rekorder = _vergleich_versand(
+        monkeypatch, user_id, {"loc-graz": {"gust_max_kmh": 95.0}},
+    )
+
+    assert rekorder.metriken_je_ort == {"Graz": {"gust_max_kmh"}}, (
+        "Kontrolle AC-28: der Ort muss ueber die Boeen ausloesen, gemessen: "
+        f"{rekorder.metriken_je_ort!r}"
+    )
+    assert [k for k, _ in rekorder.abweichung] == [{"sms"}], (
+        "Kontrolle AC-28: mit SMS-Tarif traegt der Metrik-Arm {sms}, "
+        f"aufgezeichnet: {rekorder.abweichung!r}"
+    )
+
+
 # ═══ AC-29 — Kanal-Schwelle wirkt unveraendert NACH der Aufloesung ═══════════
 
 def test_ac29_aufloesung_kennt_keine_schwelle_split_wirkt_danach(sauberer_nutzer):

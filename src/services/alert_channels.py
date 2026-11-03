@@ -54,14 +54,14 @@ def resolve_alert_channels(
        VOR dieser Scheibe behalten, sonst verloere ein Trip mit Regel-Kanaelen,
        dessen Regeln (noch) nicht migriert sind, stillschweigend Kanaele
        (#1701; nachgewiesen an `test_issue_816_alert_deviation.py::test_ac8b`).
-       Leert die Union GANZ, gilt ebenfalls der Satz ohne Metrik-Arm
-       (Leer-Rueckfall-Guard, AC-12) — ADR-0046: die Kanal-Ebene regelt den
-       WEG, nie das OB.
-    5. Tier-Gates genau einmal am Ende: `sms` raus, wenn nicht
+    5. Tier-Gates genau einmal je Satz: `sms` raus, wenn nicht
        `sms_allowed(user_id)`; `premium_sms` raus, wenn nicht
-       `premium_sms_allowed(user_id)`. Der Guard aus 4 liegt VOR diesen
-       Gates: was das Tarif-Gate streicht, bleibt gestrichen (Tarif-Politik,
-       kein Fall fuer den Rueckfall — #2279 S1 AC-4).
+       `premium_sms_allowed(user_id)`. Issue #1895 S3a (AC-25/AC-26): ist der
+       Metrik-Arm NACH den Gates leer (z. B. `{sms}` ohne SMS-Tarif), gilt
+       der Satz ohne Metrik-Arm — ebenfalls nach denselben Gates
+       (Leer-Rueckfall, ADR-0046: die Kanal-Ebene regelt den WEG, nie das
+       OB). Ein tarifgesperrter Kanal bleibt auch im Rueckfall gestrichen
+       (#2279 S1 AC-4); ist auch dieser Satz leer, bleibt das Ergebnis leer.
     """
     if override is not None:
         inherited = {ch for ch in _ALL_CHANNELS if override.get(ch)}
@@ -83,9 +83,16 @@ def resolve_alert_channels(
                 metric_channels.update(entry_channels)
             else:
                 metric_channels.update(channels)
+        metric_channels = _apply_tier_gates(metric_channels, user_id)
         if metric_channels:
-            channels = metric_channels
+            return metric_channels
 
+    return _apply_tier_gates(channels, user_id)
+
+
+def _apply_tier_gates(channels: set[str], user_id: str) -> set[str]:
+    """Tarif-Sperren: `sms`/`premium_sms` raus, wenn der Tarif sie nicht
+    erlaubt (#2279 S1 AC-4). Unveraendert, nur je Satz anwendbar (S3a)."""
     if "sms" in channels and not sms_allowed(user_id):
         channels = channels - {"sms"}
     if "premium_sms" in channels and not premium_sms_allowed(user_id):
