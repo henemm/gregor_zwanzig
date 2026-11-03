@@ -358,7 +358,15 @@ func (s *Store) DeleteTrip(id string) error {
 	if os.IsNotExist(err) {
 		return nil
 	}
-	return err
+	if err != nil {
+		return err
+	}
+	// Issue #2237: Sperrdatei nur mit abraeumen, wenn die .json wirklich
+	// entfernt wurde (nicht beim vergleich-Ausstieg oben). Idempotent.
+	if lerr := os.Remove(path + ".lock"); lerr != nil && !os.IsNotExist(lerr) {
+		log.Printf("[trip] Sperrdatei %s.lock nicht entfernt: %v", path, lerr)
+	}
+	return nil
 }
 
 // legacyAlertLevelKeys: Alt-Schluessel (Summary-Vokabular) -> Alarm-Name,
