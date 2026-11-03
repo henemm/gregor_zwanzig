@@ -2,7 +2,7 @@
 
 - **Status:** Vorgeschlagen
 - **Datum:** 2026-11-03
-- **Bezug:** Epic „Einstellungen neu“ (Scheibe S6), Kontext `docs/context/einstellungen_neu.md` §2.1, §2.2 (Karte `ein_ort`); berührt `.claude/hooks/email_spec_validator.py` (`min_locations: int = 3`, Zeilen 1096 und 1129; Prüfung Zeile 980), das Compare-Mail-Template, `docs/reference/mail_validators.md` und CLAUDE.md §„Mail-Validatoren“ (≥3 Orte); **bestätigt** ADR-0097 (Code-Teilung Trip/Ortsvergleich) und ADR-0095 (Kanal-Parität)
+- **Bezug:** Epic #2791, Scheibe S6 #2798, Kontext `docs/context/einstellungen_neu.md` §2.1, §2.2 (Karte `ein_ort`); berührt `.claude/hooks/email_spec_validator.py` (`min_locations: int = 3`, Zeilen 1096 und 1129; Prüfung Zeile 980), das Compare-Mail-Template, `docs/reference/mail_validators.md` und CLAUDE.md §„Mail-Validatoren“ (≥3 Orte); **bestätigt** ADR-0097 (Code-Teilung Trip/Ortsvergleich) und ADR-0095 (Kanal-Parität)
 
 ## Kontext
 

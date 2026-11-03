@@ -2,7 +2,7 @@
 
 - **Status:** Vorgeschlagen
 - **Datum:** 2026-11-03
-- **Bezug:** Epic „Einstellungen neu“ (Scheibe S4), Kontext `docs/context/einstellungen_neu.md` §2.2 (Karte `aktivitaet` + Rückfrage Tempo), §6; berührt `frontend/src/lib/components/trip-detail/TripHeader.svelte` (Aktivitäts-Chips), `ComparePreset.profil` (`src/app/models.py:1320`, ausgewertet in `src/services/scheduler_dispatch_service.py:919` über `_parse_activity_profile`, `src/app/loader.py:2136`), `EtappenConfig` (`models.py:413-417`); hängt an ADR-0106 (Vorlage trägt die Ampel)
+- **Bezug:** Epic #2791, Scheibe S4 #2796, Kontext `docs/context/einstellungen_neu.md` §2.2 (Karte `aktivitaet` + Rückfrage Tempo), §6; berührt `frontend/src/lib/components/trip-detail/TripHeader.svelte` (Aktivitäts-Chips), `ComparePreset.profil` (`src/app/models.py:1320`, ausgewertet in `src/services/scheduler_dispatch_service.py:919` über `_parse_activity_profile`, `src/app/loader.py:2136`), `EtappenConfig` (`models.py:413-417`); hängt an ADR-0106 (Vorlage trägt die Ampel)
 
 ## Kontext
 

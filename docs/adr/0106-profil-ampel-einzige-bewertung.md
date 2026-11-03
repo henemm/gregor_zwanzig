@@ -2,7 +2,7 @@
 
 - **Status:** Vorgeschlagen
 - **Datum:** 2026-11-03
-- **Bezug:** Epic „Einstellungen neu“ (Scheiben S1, S2, S7), Kontext `docs/context/einstellungen_neu.md` §2, §4; **löst bei Annahme ADR-0043 ab** und **ADR-0013 teilweise ab**; ADR-0040 ist schon durch ADR-0043 abgelöst und bleibt es; **bestätigt** ADR-0009 (Abweichungs-Wächter), ADR-0056 (rollierender Anker), ADR-0010 (Vorboten ohne Alarm), ADR-0046 (Kanal-Schwelle regelt den Weg, nicht das Ob), ADR-0025 (eine Gewitter-Quelle)
+- **Bezug:** Epic #2791, Scheiben S1 #2792, S2 #2793, S7 #2799, Kontext `docs/context/einstellungen_neu.md` §2, §4; **löst bei Annahme ADR-0043 ab** und **ADR-0013 teilweise ab**; ADR-0040 ist schon durch ADR-0043 abgelöst und bleibt es; **bestätigt** ADR-0009 (Abweichungs-Wächter), ADR-0056 (rollierender Anker), ADR-0010 (Vorboten ohne Alarm), ADR-0046 (Kanal-Schwelle regelt den Weg, nicht das Ob), ADR-0025 (eine Gewitter-Quelle)
 
 ## Kontext
 
