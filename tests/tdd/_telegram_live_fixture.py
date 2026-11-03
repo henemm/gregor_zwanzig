@@ -9,6 +9,7 @@ from __future__ import annotations
 import json
 import os
 import time
+from contextlib import contextmanager
 from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 from typing import Optional
@@ -281,6 +282,34 @@ def ensure_test_user_with_active_trip(
         trip = active_trip_for(user_id=user_id, data_dir=data_dir)
 
     return user_id
+
+
+def set_test_user_language(lang: Optional[str], data_dir: str = "data") -> Optional[str]:
+    """Issue #2681: Read-Modify-Write NUR des Feldes ``language`` in der
+    ``user.json`` von TEST_USER_ID; ``lang=None`` entfernt das Feld.
+    Rückgabe: vorheriger Wert (None, wenn das Feld fehlte)."""
+    user_file = Path(data_dir) / "users" / TEST_USER_ID / "user.json"
+    profile = json.loads(user_file.read_text(encoding="utf-8"))
+    vorher = profile.get("language")
+    if lang is None:
+        profile.pop("language", None)
+    else:
+        profile["language"] = lang
+    user_file.write_text(json.dumps(profile, ensure_ascii=False, indent=2), encoding="utf-8")
+    return vorher
+
+
+@contextmanager
+def test_user_language(lang: str, data_dir: str = "data"):
+    """Sprache des Test-Nutzers zeitweise setzen; Rücksetzen auch bei Fehlern."""
+    vorher = set_test_user_language(lang, data_dir=data_dir)
+    try:
+        yield
+    finally:
+        set_test_user_language(vorher, data_dir=data_dir)
+
+
+test_user_language.__test__ = False  # Helfer, kein pytest-Test
 
 
 def active_trip_for(user_id: str, data_dir: str = "data") -> Optional[object]:
