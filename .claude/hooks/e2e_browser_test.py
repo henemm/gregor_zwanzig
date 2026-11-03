@@ -27,6 +27,16 @@ import email
 from pathlib import Path
 
 
+def _e2e_paths():
+    """Gemeinsame Sprach-/Adressregel (#2681), lazy relativ zu dieser Datei."""
+    import importlib.util
+    spec = importlib.util.spec_from_file_location(
+        "_e2e_paths_browser", Path(__file__).resolve().parent / "_e2e_paths.py")
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return mod
+
+
 def _base_url():
     """Konfigurierbare Basis-URL fuer Browser-Checks (Default: Staging).
 
@@ -39,9 +49,15 @@ def _base_url():
     ).rstrip("/")
 
 
-def run_browser_test(url: str, check_text: str, action: str = None) -> tuple[bool, str, str]:
+def _lang_cookie(lang: str) -> dict:
+    """Cookie ``gz_lang`` fuer die Staging-Seite (Issue #2681, Sprachumschalter F12)."""
+    return {"name": "gz_lang", "value": lang, "url": _base_url()}
+
+
+def run_browser_test(url: str, check_text: str, action: str = None,
+                     lang: str | None = None) -> tuple[bool, str, str]:
     """
-    Führt Browser-Test durch.
+    Führt Browser-Test durch. ``lang`` (#2681): Cookie ``gz_lang`` vor dem Aufruf.
 
     Returns:
         (success, message, screenshot_path)
@@ -56,7 +72,10 @@ def run_browser_test(url: str, check_text: str, action: str = None) -> tuple[boo
     try:
         with sync_playwright() as p:
             browser = p.chromium.launch(headless=True)
-            page = browser.new_page(viewport={'width': 1400, 'height': 1000})
+            context = browser.new_context(viewport={'width': 1400, 'height': 1000})
+            if lang:
+                context.add_cookies([_lang_cookie(lang)])
+            page = context.new_page()
 
             # Navigate to page
             full_url = f"{_base_url()}{url}"
@@ -109,7 +128,8 @@ def run_browser_test(url: str, check_text: str, action: str = None) -> tuple[boo
         return False, f"Browser-Test Fehler: {e}", None
 
 
-def run_email_test(check_text: str, send_from_ui: bool = False) -> tuple[bool, str]:
+def run_email_test(check_text: str, send_from_ui: bool = False,
+                   lang: str | None = None) -> tuple[bool, str]:
     """
     Führt E-Mail E2E Test durch.
 
@@ -182,15 +202,23 @@ def run_email_test(check_text: str, send_from_ui: bool = False) -> tuple[bool, s
         imap.login(imap_user, imap_pass)
         imap.select('INBOX')
 
-        # Get latest email
+        # Get latest email (#2681: mit --lang die neueste Mail dieses Nutzers)
         _, data = imap.search(None, 'ALL')
         all_ids = data[0].split()
         if not all_ids:
             imap.logout()
             return False, "Keine E-Mails gefunden"
 
-        _, msg_data = imap.fetch(all_ids[-1], '(RFC822)')
-        msg = email.message_from_bytes(msg_data[0][1])
+        msg = None
+        for mid in reversed(all_ids if lang else all_ids[-1:]):
+            _, msg_data = imap.fetch(mid, '(RFC822)')
+            kandidat = email.message_from_bytes(msg_data[0][1])
+            if not lang or _e2e_paths().mail_passt_zu_sprache(kandidat, lang):
+                msg = kandidat
+                break
+        if msg is None:
+            imap.logout()
+            return False, f"Keine Mail mit X-GZ-Lang: {lang} an die Adresse dieses Nutzers"
 
         subject = msg.get('Subject', '')
         print(f"   Letzte E-Mail: {subject[:50]}")
@@ -225,12 +253,16 @@ def main():
     browser_parser.add_argument("--url", default="/compare", help="URL path")
     browser_parser.add_argument("--action", choices=["compare", "none"], default="none")
     browser_parser.add_argument("--expect-fail", action="store_true", help="RED-Phase")
+    browser_parser.add_argument("--lang", choices=["de", "en"], default=None,
+                                help="Cookie gz_lang setzen (#2681)")
 
     # Email subcommand
     email_parser = subparsers.add_parser("email", help="Email Test")
     email_parser.add_argument("--check", required=True, help="Text der in E-Mail sein muss")
     email_parser.add_argument("--send-from-ui", action="store_true", help="E-Mail über Browser senden")
     email_parser.add_argument("--expect-fail", action="store_true", help="RED-Phase")
+    email_parser.add_argument("--lang", choices=["de", "en"], default=None,
+                              help="nur Mails mit X-GZ-Lang und Adresse dieses Nutzers (#2681)")
 
     args = parser.parse_args()
 
@@ -248,7 +280,7 @@ def main():
         print(f"   Expect: {'RED' if expect_fail else 'GREEN'}")
         print()
 
-        success, message, screenshot = run_browser_test(args.url, args.check, args.action)
+        success, message, screenshot = run_browser_test(args.url, args.check, args.action, lang=args.lang)
         print(message)
         if screenshot:
             print(f"   Screenshot: {screenshot}")
@@ -260,7 +292,7 @@ def main():
         print(f"   Expect: {'RED' if expect_fail else 'GREEN'}")
         print()
 
-        success, message = run_email_test(args.check, args.send_from_ui)
+        success, message = run_email_test(args.check, args.send_from_ui, lang=args.lang)
         print(message)
 
     # RED/GREEN Logic

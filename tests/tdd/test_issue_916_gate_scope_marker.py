@@ -212,6 +212,7 @@ def test_gate_check_writes_marker_on_full_check_pass(tmp_path):
     e2e_path.write_text(json.dumps({
         "verified_commit": sha,
         "staging_verdict": "VERIFIED: alle ACs gruen",
+        "langs": ["de", "en"],
         "verified_at": datetime.now(timezone.utc).isoformat(),
         "environment": "staging",
         "scope": "backend",

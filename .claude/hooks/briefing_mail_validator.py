@@ -632,8 +632,8 @@ def validate_message(
     """Faellt das Urteil ueber ein geparstes email.message.Message-Objekt.
 
     Returnt (ok, errors). ok=True/errors=[] bei bestanden. Issue #2663: die
-    Erwartungen gelten in der Sprache des Kopfes ``X-GZ-Lang``; Warnungen
-    (fehlender Kopf) landen in ``warnungen``, nie in ``errors``.
+    Erwartungen gelten in der Sprache des Kopfes ``X-GZ-Lang``; fehlt er, ist
+    das seit A2 (#2681) ein Fehler.
     """
     mail_type = msg["X-GZ-Mail-Type"]
 
@@ -701,13 +701,17 @@ def _message_matches(
     headers: Message,
     mail_type: str | None = None,
     subject_contains: str | None = None,
+    lang: str = "de",
+    to_contains: str | None = None,
 ) -> bool:
     """Praedikat: passt die Mail zu den Filtern? (testbar OHNE IMAP).
 
     - mail_type gesetzt: X-GZ-Mail-Type muss exakt gleich sein.
     - subject_contains gesetzt: dekodiertes Subject muss den Marker enthalten.
-    - beide None: True (rueckwaertskompatibel — neueste Mail).
+    - #2681: Sprache UND Empfaenger des Nutzers (``_e2e_paths.mail_waehlbar``).
     """
+    if not _e2e_paths.mail_waehlbar(headers, lang, to_contains):
+        return False
     if mail_type is not None and headers.get("X-GZ-Mail-Type") != mail_type:
         return False
     if subject_contains is not None:
@@ -724,29 +728,20 @@ def fetch_latest_message(
     mail_type: str | None = None,
     subject_contains: str | None = None,
     max_scan: int = 50,
+    lang: str = "de",
+    to_contains: str | None = None,
+    imap=None,
 ) -> Message:
     """Holt die passende Mail aus dem Test-Postfach als Message-Objekt.
 
-    Ohne Filter (beide None): neueste Mail (rueckwaertskompatibel, AC-8). Mit
-    Filter: scannt die Header der bis zu `max_scan` neuesten Mails (newest-first)
-    und liefert die erste, die `_message_matches` erfuellt (Issue #780).
+    Scannt die Header der bis zu `max_scan` neuesten Mails (newest-first) und
+    liefert die erste, die `_message_matches` erfuellt (Issue #780; #2681:
+    Sprache und Empfaenger). ``imap``: fertige, angemeldete Verbindung (Test-Seam).
     """
-    sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent / "src"))
-    from app.config import Settings
-
-    settings = Settings()
-    imap_host = settings.imap_host or settings.smtp_host
-    # #972: Test-Postfach-Credentials priorisieren (Referenz-Pattern aus
-    # radar_alert_mail_validator.py:170-171) — sonst prueft der Validator
-    # versehentlich gegen das Produktiv-Postfach.
-    imap_user = settings.test_imap_user or settings.imap_user or settings.smtp_user
-    imap_pass = settings.test_imap_pass or settings.imap_pass or settings.smtp_pass
-    if not imap_user or not imap_pass:
-        raise ValueError("IMAP nicht konfiguriert (GZ_TEST_IMAP_USER/GZ_IMAP_USER)")
-
-    imap = imaplib.IMAP4_SSL(imap_host, settings.imap_port)
+    own_connection = imap is None
+    if own_connection:
+        imap = _open_test_imap()
     try:
-        imap.login(imap_user, imap_pass)
         imap.select("INBOX")
         _, data = imap.search(None, "ALL")
         all_ids = data[0].split()
@@ -756,20 +751,38 @@ def fetch_latest_message(
         for mid in reversed(all_ids[-max_scan:]):
             _, hdr_data = imap.fetch(mid, "(BODY.PEEK[HEADER])")
             headers = email.message_from_bytes(hdr_data[0][1])
-            if _message_matches(headers, mail_type, subject_contains):
+            if _message_matches(headers, mail_type, subject_contains, lang, to_contains):
                 _, msg_data = imap.fetch(mid, "(RFC822)")
                 return email.message_from_bytes(msg_data[0][1])
 
         raise ValueError(
             f"Keine passende Mail gefunden (mail_type={mail_type!r}, "
-            f"subject_contains={subject_contains!r}, scan={max_scan})"
+            f"subject_contains={subject_contains!r}, lang={lang!r}, "
+            f"to_contains={to_contains!r}, scan={max_scan})"
         )
     finally:
-        try:
-            imap.close()
-            imap.logout()
-        except Exception:
-            pass
+        if own_connection:
+            try:
+                imap.close()
+                imap.logout()
+            except Exception:
+                pass
+
+
+def _open_test_imap():
+    """Angemeldete Verbindung zum Test-Postfach (#972: GZ_TEST_IMAP_* zuerst)."""
+    sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent / "src"))
+    from app.config import Settings
+
+    settings = Settings()
+    imap_host = settings.imap_host or settings.smtp_host
+    imap_user = settings.test_imap_user or settings.imap_user or settings.smtp_user
+    imap_pass = settings.test_imap_pass or settings.imap_pass or settings.smtp_pass
+    if not imap_user or not imap_pass:
+        raise ValueError("IMAP nicht konfiguriert (GZ_TEST_IMAP_USER/GZ_IMAP_USER)")
+    imap = imaplib.IMAP4_SSL(imap_host, settings.imap_port)
+    imap.login(imap_user, imap_pass)
+    return imap
 
 
 def run_validation(
@@ -778,10 +791,13 @@ def run_validation(
     subject_contains: str | None = None,
     max_scan: int = 50,
     warnungen: list | None = None,
+    lang: str = "de",
+    to_contains: str | None = None,
 ) -> tuple[bool, list[str]]:
-    """Holt die (optional gefilterte) Mail und validiert sie."""
+    """Holt die (gefilterte) Mail und validiert sie."""
     msg = fetch_latest_message(
-        mail_type=mail_type, subject_contains=subject_contains, max_scan=max_scan
+        mail_type=mail_type, subject_contains=subject_contains, max_scan=max_scan,
+        lang=lang, to_contains=to_contains,
     )
     return validate_message(msg, max_bytes, warnungen=warnungen)
 
@@ -845,6 +861,7 @@ def main() -> None:
                         help="Wie viele neueste Mails maximal scannen (default: 50)")
     parser.add_argument("--eml", metavar="PFAD", default=None,
                         help="Mail aus dieser .eml-Datei pruefen statt per IMAP (#2663)")
+    _e2e_paths.sprach_argumente(parser)
     args = parser.parse_args()
 
     print("=" * 70)
@@ -857,6 +874,8 @@ def main() -> None:
         if args.eml:  # #2663: Mail aus Datei statt IMAP
             msg = email.message_from_bytes(Path(args.eml).read_bytes())
             success, errors = validate_message(msg, args.max_bytes, warnungen=warnungen)
+            auswahl = _e2e_paths.eml_auswahl_fehler(msg, args.lang, args.to_contains)
+            success, errors = success and not auswahl, auswahl + errors
         else:
             success, errors = run_validation(
                 args.max_bytes,
@@ -864,6 +883,8 @@ def main() -> None:
                 subject_contains=args.subject_contains,
                 max_scan=args.max_scan,
                 warnungen=warnungen,
+                lang=args.lang or "de",
+                to_contains=args.to_contains,
             )
     except Exception as e:  # IMAP / technischer Fehler
         print(f"⚠️  TECHNISCHER FEHLER: Mail konnte nicht geladen werden: {e}")

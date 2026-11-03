@@ -539,8 +539,10 @@ def test_documented_invocations_still_accepted_by_cli():
     argparse verarbeitet die Argumente der Reihe nach, ein unbekanntes Argument
     wuerde vor `--help` mit Exit 2 abbrechen."""
     calls = _documented_invocations()
-    assert len(calls) == 3, (
-        f"Erwartet werden die drei dokumentierten Aufrufe, gefunden: {calls}"
+    # #2681: /e2e-verify dokumentiert den Aufruf seither je Sprache (--lang de,
+    # --lang en --to-contains "+en@") -- drei Dokumente, fuenf Aufrufe.
+    assert len(calls) == 5, (
+        f"Erwartet werden die fuenf dokumentierten Aufrufe, gefunden: {calls}"
     )
 
     for doc_name, args in calls:

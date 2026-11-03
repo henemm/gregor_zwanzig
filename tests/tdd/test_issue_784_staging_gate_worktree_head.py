@@ -106,6 +106,7 @@ def _write_attestation(main: Path, commit: str, scope: str = "backend") -> Path:
     out.write_text(json.dumps({
         "verified_commit": commit,
         "staging_verdict": "VERIFIED: alles gut",
+        "langs": ["de", "en"],
         "findings": [],
         "verified_at": _now_iso(),
         "scope": scope,
@@ -124,7 +125,7 @@ class TestWriteVerdictTagsWorktreeHead:
         findings = tmp_path / "findings.json"
         findings.write_text("[]")
         r = _run_gate(
-            ["--write-verdict", "VERIFIED: ok",
+            ["--write-verdict", "VERIFIED: ok", "--langs", "de,en",
              "--findings-json", str(findings),
              "--e2e-path", str(out)],
             cwd=wt,

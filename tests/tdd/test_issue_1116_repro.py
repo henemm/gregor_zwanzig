@@ -81,7 +81,7 @@ def test_repeated_check_on_same_head_does_not_poison_scope_to_docs_only(tmp_path
     e2e_path.write_text(
         f'{{"verified_commit": "{sha}", "staging_verdict": "VERIFIED: alle ACs gruen", '
         f'"verified_at": "{datetime.now(timezone.utc).isoformat()}", '
-        f'"environment": "staging", "scope": "backend", "findings": []}}'
+        f'"environment": "staging", "scope": "backend", "findings": [], "langs": ["de", "en"]}}'
     )
 
     first = _run_staging_gate(repo, "--check", "--e2e-path", str(e2e_path))

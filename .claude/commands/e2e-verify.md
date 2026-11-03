@@ -74,8 +74,15 @@ Playwright/Screenshot gegen Staging. Die Basis-URL kommt aus `GZ_SVELTE_BASE`:
 
 ```bash
 GZ_SVELTE_BASE="${GZ_SVELTE_BASE:-https://staging.gregor20.henemm.com}" \
-  uv run python3 .claude/hooks/e2e_browser_test.py browser --check "Feature" --url "/"
+  uv run python3 .claude/hooks/e2e_browser_test.py browser --check "Feature" --url "/" --lang de
+GZ_SVELTE_BASE="${GZ_SVELTE_BASE:-https://staging.gregor20.henemm.com}" \
+  uv run python3 .claude/hooks/e2e_browser_test.py browser --check "<englischer Text>" --url "/" --lang en
+# Sprachwechsel-Spec (F12) gegen Staging:
+cd frontend && npx playwright test --config playwright.sprachwechsel.staging.config.ts
 ```
+
+**Zweisprachig (Issue #2681):** `--lang` setzt den Cookie `gz_lang`; beide Sprachen
+pruefen, je mit dem Text der jeweiligen Sprache.
 
 Screenshot visuell pruefen: ist die Aenderung auf Staging sichtbar und korrekt?
 KEINE Mail in diesem Scope.
@@ -139,6 +146,30 @@ Ersatzkonstruktion.
 
 **STOP wenn:** das Werkzeug nicht Exit 0 meldet.
 
+**Zweisprachig (Issue #2681, Pflicht):** Schritt 3b laeuft **zweimal** — einmal mit dem
+Standard-Testnutzer (`de`, Basispostfach `gregor-test@henemm.com`) und einmal mit dem
+Staging-Nutzer `en` (Anmeldung mit `GZ_E2E_EN_USER`/`GZ_E2E_EN_PASS`, Empfaenger die
+Subadresse `gregor-test+en@henemm.com`). Anlegen/Absichern des Nutzers `en`:
+`python3 scripts/staging_e2e_user_en.py` (Runbook `docs/runbooks/staging_e2e_nutzer_en.md`).
+Je Mail-Pfad der zustaendige Validator mit Sprache und Empfaenger:
+
+```bash
+uv run python3 .claude/hooks/briefing_mail_validator.py --lang de
+uv run python3 .claude/hooks/briefing_mail_validator.py --lang en --to-contains "+en@"
+uv run python3 .claude/hooks/email_spec_validator.py --lang de
+uv run python3 .claude/hooks/email_spec_validator.py --lang en --to-contains "+en@"
+# Alarm-Pfade (official-alert, radar-alert) je Sprache:
+uv run python3 scripts/send_gate_test_mails.py --lang en --only official
+uv run python3 .claude/hooks/official_alert_mail_validator.py --lang en --to-contains "+en@"
+uv run python3 scripts/send_gate_test_mails.py --lang en --only radar
+uv run python3 .claude/hooks/radar_alert_mail_validator.py --lang en --to-contains "+en@"
+```
+
+Der Kopf `X-GZ-Lang` ist Pflicht: fehlt er, endet jeder Validator mit Exit 1. Die Auswahl
+nimmt nur Mails der gewaehlten Sprache **und** ihres Empfaengers (`de`: To ohne `+en@`,
+`en`: To mit `+en@`); eine Mail des anderen Nutzers erfuellt den Lauf nie.
+Bekannter Blocker des Staging-Mailwegs: #2774 (Wegwerf-Konten, Plus-Adresse, Helfer-Konto).
+
 ### Rezept: Befehl per echtem Mail-Eingang auf Staging
 
 Fuer Aenderungen an E-Mail-Befehlen (`status`, `heute`, Ruhetag, Startdatum;
@@ -183,7 +214,12 @@ laufen — AC-3/AC-4 dürfen NICHT skippen:
 ```bash
 GZ_TELEGRAM_LIVE=1 GZ_TELEGRAM_TEST_CHAT_ID=<test-chat-id> GZ_TELEGRAM_BOT_TOKEN=<staging-bot-token> \
   uv run pytest tests/tdd/test_issue_686_telegram_functional_live.py -v
+# zweisprachig (Issue #2681): hilfe auf Englisch, dann wieder Deutsch
+GZ_TELEGRAM_LIVE=1 GZ_TELEGRAM_TEST_CHAT_ID=<test-chat-id> GZ_TELEGRAM_BOT_TOKEN=<staging-bot-token> \
+  uv run pytest tests/tdd/test_telegram_live_zweisprachig.py -v
 ```
+
+Aenderungen unter `src/i18n/` zaehlen als Telegram-Scope (die Texte kommen aus den Katalogen).
 
 Ein SKIPPED Telegram-Live-Test zählt **nicht** als grün. Das
 `staging_gate.py --write-verdict`-Gate erzwingt das automatisch: berührt der
@@ -216,8 +252,13 @@ EOF
 # Attestation commit-getaggt schreiben (.claude/e2e_verified/<HEAD>.json):
 python3 .claude/hooks/staging_gate.py \
   --write-verdict "VERIFIED: <kurze Begründung>" \
-  --findings-json /tmp/e2e_findings.json
+  --findings-json /tmp/e2e_findings.json \
+  --langs de,en
 ```
+
+**`--langs de,en` ist Pflicht (Issue #2681)** ausser bei Scope `docs-only`: ohne beide
+Sprachen verweigert `--write-verdict` das Artefakt (Exit 1), und `--check` (Deploy-Gate)
+blockt jeden Nachweis ohne `"langs": ["de","en"]`.
 
 ⚠️ **Die Findings-Datei muss eine JSON-LISTE sein, jedes Element ein Objekt** — die
 äußeren eckigen Klammern oben sind Pflicht, nicht Verzierung. Seit #1689 weist

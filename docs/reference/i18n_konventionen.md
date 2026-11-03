@@ -110,9 +110,9 @@ gilt: kein nachweisbarer Fang, dann Rückbau.
 
 - **Mail-Marker:** `build_mime_message()` setzt in jeder Mail `X-GZ-Lang: de|en` (`src/output/channels/email.py`). Die Sprache des Inhalts steht im Kopf, `en` nur bei englischem Inhalt.
 - **Validatoren:** die vier Mail-Validatoren lesen den Kopf über `.claude/hooks/_mail_lang.py` (`mail_lang(msg)`) und bilden ihre Erwartungen aus dem Python-Katalog in dieser Sprache. Details und Schwellen: `docs/reference/mail_validators.md`, Abschnitt „Sprache".
-- **Übergangsregel (bis A2 #2681):** Kopf fehlt, dann Prüfung als `de` mit Warnung, Exit unverändert. Nach A2 ist ein fehlender Kopf ein Fehler (`HEADER_PFLICHT`).
-- **Zweiter Staging-Nutzer `en`:** vorgesehen als Subadressierung des bestehenden Staging-Postfachs und Registrierung mit `language: "en"`. Im Repo ist davon bisher nur die Playwright-Strecke `frontend/e2e/sprachwechsel.spec.ts` belegt. Das geplante Skript für diesen Nutzer (`staging_e2e_user_en.py`) ist **nicht** im Repo.
-- **Nachweis:** `.claude/e2e_verified/<sha>.json` mit `"langs": ["de", "en"]` ist vorgesehen. Im Repo ist das Feld bisher nicht verankert.
+- **Pflicht (seit A2 #2681):** fehlt der Kopf, endet jeder Validator mit Exit 1 (`HEADER_PFLICHT = True`); die Übergangsregel (`de` + Warnung) ist beendet. `--lang`/`--to-contains` wählen die Mail der Sprache und des Empfängers.
+- **Zweiter Staging-Nutzer `en`:** Subadresse `gregor-test+en@henemm.com` des Test-Postfachs, Registrierung mit `language: "en"` über `scripts/staging_e2e_user_en.py` (Secrets `GZ_E2E_EN_*` nur in der Staging-`.env`, Runbook `docs/runbooks/staging_e2e_nutzer_en.md`). Der bisherige Testnutzer bleibt `de` im Basispostfach.
+- **Nachweis:** `.claude/e2e_verified/<sha>.json` trägt `"langs": ["de", "en"]` (`staging_gate.py --write-verdict … --langs de,en`); ohne das Feld blockt das Deploy-Gate jeden Scope außer `docs-only`.
 - **Telegram:** die Antwortsprache richtet sich nach dem Konto (und nach `telegram_style == "kurzform"` des Ziels, siehe `docs/reference/telegram_format.md`).
 
 ## 6. Checkliste: neuer Nutzertext

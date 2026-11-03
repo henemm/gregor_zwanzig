@@ -96,6 +96,7 @@ def _write_attestation(repo: Path, sha: str, scope: str) -> Path:
     p.write_text(json.dumps({
         "verified_commit": sha,
         "staging_verdict": "VERIFIED: alle ACs gruen",
+        "langs": ["de", "en"],
         "verified_at": datetime.now(timezone.utc).isoformat(),
         "environment": "staging",
         "scope": scope,
@@ -213,7 +214,7 @@ def test_write_verdict_after_check_never_writes_docs_only_scope(tmp_path):
 
     res2 = subprocess.run(
         [sys.executable, str(repo / ".claude" / "hooks" / "staging_gate.py"),
-         "--write-verdict", "VERIFIED: test",
+         "--write-verdict", "VERIFIED: test", "--langs", "de,en",
          "--findings-json", str(findings_path),
          "--e2e-path", str(out_path)],
         cwd=repo, capture_output=True, text=True,

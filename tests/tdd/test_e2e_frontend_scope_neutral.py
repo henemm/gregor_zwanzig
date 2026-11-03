@@ -193,6 +193,7 @@ def _write_attestation(shared: Path, sha: str, *, scope: str = "frontend-only") 
             {
                 "verified_commit": sha,
                 "staging_verdict": "VERIFIED: alles gut",
+                "langs": ["de", "en"],
                 "findings": [],
                 "verified_at": _iso(),
                 "scope": scope,
