@@ -4,6 +4,9 @@ SPEC: docs/specs/modules/wintersport_profile_consolidation.md §4.2, §A4, §A5.
 
 Pure function. Identical inputs -> bit-identical output. Reads `profile`
 implicitly via the `token_line` (profile-agnostic per §A5).
+
+i18n (#2751): einziger Aufrufer ist die Debug-CLI (`src/app/cli.py`) ohne
+Nutzerkontext (ADR-0104 Nr. 1); deutsche Zeilen mit Umlaut tragen `# i18n-log`.
 """
 from __future__ import annotations
 
@@ -77,7 +80,7 @@ def render_text_report(
         lines.append(_SUBSEP)
         for region in avalanche_regions:
             lines.append(f"  Region: {region}")
-        lines.append("  (Lawinendaten noch nicht implementiert)")
+        lines.append("  (Lawinendaten noch nicht implementiert)")  # i18n-log
         lines.append("")
 
     lines.append(_SEP)

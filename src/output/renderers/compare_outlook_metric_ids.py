@@ -119,7 +119,7 @@ def resolve_outlook_metrics(outlook_metrics: object) -> list[str] | None:
         )
     if outlook_metrics and not resolved:
         logger.warning(
-            "resolve_outlook_metrics: kein Eintrag von %s war aufloesbar — "
+            "resolve_outlook_metrics: kein Eintrag von %s war aufloesbar — "  # i18n-log
             "Rueckfall auf die sieben festen Ausblick-Spalten statt Block aus "
             "(#1848 A2: unaufloesbar ist NICHT bewusst geleert)",
             outlook_metrics,
@@ -186,7 +186,7 @@ def _erbe_grundauswahl(
     if aktiv:
         return aktiv
     logger.warning(
-        "Ausblick: keine Groesse aus %s liegt in der %s (%s) — Rueckfall auf "
+        "Ausblick: keine Groesse aus %s liegt in der %s (%s) — Rueckfall auf "  # i18n-log
         "die volle Grundauswahl statt Block aus (#1848 A3: unaufloesbar ist "
         "NICHT bewusst geleert)", gespeichert, herkunft, grundauswahl,
     )
@@ -511,7 +511,7 @@ def format_outlook_value(value: object, column: dict) -> str:
         if friendly is not None:
             return friendly
         logger.warning(
-            "format_outlook_value: %r ist als Einfach markiert, hat hier aber "
+            "format_outlook_value: %r ist als Einfach markiert, hat hier aber "  # i18n-log
             "keine Wortform — Rueckfall auf die Rohzahl. Faehigkeitsliste "
             "(metric_catalog.OUTLOOK_FRIENDLY_CAPABLE) und Verzweigung "
             "(_friendly_outlook_text) sind auseinandergelaufen (#2049 AC-4).",

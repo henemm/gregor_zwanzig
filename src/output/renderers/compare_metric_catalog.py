@@ -214,7 +214,7 @@ assert _catalog_keys == _resolver_keys, (
 # (mehr) gibt.
 _alarm_keys = set(_SUMMARY_KEY_TO_CATALOG_ID.keys())
 assert _alarm_keys <= _catalog_keys, (
-    "compare_alert._SUMMARY_KEY_TO_CATALOG_ID nennt Keys, die nicht im "
+    "compare_alert._SUMMARY_KEY_TO_CATALOG_ID nennt Keys, die nicht im "  # i18n-log
     f"Compare-Metrik-Katalog existieren: {_alarm_keys - _catalog_keys}"
 )
 
@@ -256,7 +256,7 @@ def duplicate_metric_aggregation_pairs(
 _duplicate_pairs = duplicate_metric_aggregation_pairs()
 assert not _duplicate_pairs, (
     "compare_metric_catalog.py fuehrt mehrfach dasselbe "
-    f"(metric_id, aggregation)-Paar: {_duplicate_pairs} -- im neuen "
+    f"(metric_id, aggregation)-Paar: {_duplicate_pairs} -- im neuen "  # i18n-log
     "Speicherformat von display_config.active_metrics nicht unterscheidbar."
 )
 
@@ -309,7 +309,7 @@ def kuerzel_identity_violations(entries: list[dict] | None = None) -> list[str]:
             continue
         if kuerzel_id in angeboten:
             befunde.append(
-                f"{entry.get('key')!r}: kuerzel_metric_id {kuerzel_id!r} wird vom "
+                f"{entry.get('key')!r}: kuerzel_metric_id {kuerzel_id!r} wird vom "  # i18n-log
                 "Ortsvergleich selbst als metric_id angeboten -- das Feld darf "
                 "NUR eine Kennung tragen, die der Vergleich nicht fuehrt "
                 "(Gehzeit-Exklusivitaet #1848 Scheibe C)"
@@ -330,7 +330,7 @@ def assert_kuerzel_identity(entries: list[dict] | None = None) -> None:
     Regel #765)."""
     befunde = kuerzel_identity_violations(entries)
     assert not befunde, (
-        "compare_metric_catalog.py verletzt die Trennung von Kuerzel- und "
+        "compare_metric_catalog.py verletzt die Trennung von Kuerzel- und "  # i18n-log
         "Auflösungs-Identitaet (#2232):\n  " + "\n  ".join(befunde)
     )
 
@@ -393,7 +393,7 @@ def get_compare_metric_catalog(
         except KeyError as exc:
             raise KeyError(
                 f"Compare-Katalogzeile {entry.get('key')!r} nennt die zentral "
-                f"unbekannte Groesse {metric_id!r} -- der Anzeigename ist nicht "
+                f"unbekannte Groesse {metric_id!r} -- der Anzeigename ist nicht "  # i18n-log
                 "ableitbar (src/app/metric_catalog.py)"
             ) from exc
         # Issue #1585: zentral nicht waehlbare Groessen (cape) werden NICHT
