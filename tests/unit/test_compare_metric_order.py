@@ -375,21 +375,6 @@ class TestAC7LegacyDefaultOrderUnchanged:
     # ausgeschriebene deutsche Registername -- die REIHENFOLGE (der eigentliche
     # Gegenstand von AC-7) ist unveraendert, Zeile fuer Zeile dieselbe Groesse
     # wie zuvor.
-    FROZEN_PLAIN_ORDER = [
-        "Temperatur Maximum", "Wind", "Temperatur Minimum", "Böen",
-        "Windrichtung",
-        "Gefühlte Temperatur Minimum", "Gefühlte Temperatur Maximum",
-        "Tiefe Wolken", "Mittelhohe Wolken", "Hohe Wolken",
-        "Niederschlag", "Regenwahrscheinlichkeit", "Gewitter", "UV-Index",
-        "Sichtweite",
-        # Issue #1585: "Gewitterenergie (CAPE)" entfallen -- zentral nicht mehr
-        # waehlbar, keine Uebersichtszeile mehr. Die Reihenfolge der uebrigen
-        # Zeilen ist unveraendert eingefroren.
-        "Nullgradgrenze", "Luftfeuchtigkeit",
-        "Taupunkt",
-        "Luftdruck", "Niederschlagsart", "Schneefallgrenze",
-        "Sonnenstunden", "Bewölkung", "Schneehöhe", "Neuschnee",
-    ]
     # Issue #1362 (Scheibe S5a): Telegram-Zellen kommen jetzt aus _PLAIN_ROWS
     # (derselben Quelle wie der Klartext-Teil) statt der alten eigenen
     # Kurz-Label-Tabelle. Die Werte/Reihenfolge bleiben unveraendert (AC-7);
@@ -411,6 +396,10 @@ class TestAC7LegacyDefaultOrderUnchanged:
         "Luftfeuchtigkeit", "Taupunkt", "Luftdruck", "Niederschlagsart",
         "Schneefallgrenze",
     ]
+    # Issue #1356 (PO-bestaetigt 2026-07-24): die Klartext-Standardreihenfolge
+    # ist seit der Umstellung die HTML-Reihenfolge (ohne die nur-HTML-Zeile
+    # "Amtliche Warnungen"). Bewusste, einmalige Ablösung der alten Folge.
+    FROZEN_PLAIN_ORDER = FROZEN_HTML_ORDER[1:]
 
     def test_plaintext_default_order_frozen(self):
         text = render_comparison_text(_result(), enabled_metrics=None)

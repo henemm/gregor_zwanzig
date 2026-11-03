@@ -7,6 +7,7 @@ der Scheduler (und später Alert-/Inbound-Pfade) von formatters/output/outputs.
 """
 from __future__ import annotations
 
+import inspect
 import logging
 from dataclasses import dataclass, field
 from datetime import date, datetime, timezone
@@ -67,6 +68,23 @@ logger = logging.getLogger(__name__)
 #: `tests/tdd/test_alarm_sms_paritaet_amtlicher_zusatz.py::_AMTL_HINWEIS_TOKEN`.
 _AMTL_HINWEIS_SMS_TOKEN = "+ amtl. Warnung s. E-Mail/Telegram"
 _AMTL_HINWEIS_SMS_SUFFIX = " " + _AMTL_HINWEIS_SMS_TOKEN
+
+
+def _sink_accepts_plain_body(sink: object) -> bool:
+    """Issue #1356 (C3-75): nimmt der Test-``mail_sink`` das Keyword
+    ``plain_body`` an (expliziter Parameter oder ``**kwargs``)?
+
+    Nicht ermittelbare Signatur -> ``False`` (Aufruf wie bisher nur mit
+    ``subject``/``body``, konservativ).
+    """
+    try:
+        params = inspect.signature(sink).parameters.values()
+    except (ValueError, TypeError):
+        return False
+    return any(
+        p.name == "plain_body" or p.kind is inspect.Parameter.VAR_KEYWORD
+        for p in params
+    )
 
 
 @dataclass
@@ -1532,7 +1550,11 @@ class NotificationService:
 
         if "email" in effective_channels:
             if mail_sink is not None:
-                mail_sink(subject=subject, body=html_body)
+                # Issue #1356 (C3-75): Klartext nur an Sinks, die ihn annehmen.
+                if _sink_accepts_plain_body(mail_sink):
+                    mail_sink(subject=subject, body=html_body, plain_body=text_body)
+                else:
+                    mail_sink(subject=subject, body=html_body)
             else:
                 # Laufzeit-Aufloesung (kein Modul-Level-Alias): der
                 # Compare-Versandpfad wird ueber `output.channels.email`

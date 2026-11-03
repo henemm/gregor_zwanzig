@@ -7,85 +7,85 @@ Created: 29 Oct 2026 05:00 (CET)
 Innsbruck
    Temperature Maximum: 11°C
    Wind: 26 km/h
+   Precipitation: 2.4 mm
+   Rain probability: 70%
+   Thunderstorm: –
+   Sunshine hours: 4.0h
+   Cloud cover: 45%
+   UV index: 4
+   Visibility: 10.0 km
+   Snow depth: -
+   Fresh snow: -
    Temperature Minimum: 2°C
    Wind gusts: 38 km/h
+   Freezing level: 2400 m
    Wind direction: -
    Feels-like temperature Minimum: -
    Feels-like temperature Maximum: -
    Low clouds: -
    Mid-level clouds: -
    High clouds: -
-   Precipitation: 2.4 mm
-   Rain probability: 70%
-   Thunderstorm: –
-   UV index: 4
-   Visibility: 10.0 km
-   Freezing level: 2400 m
    Humidity: 72%
    Dew point: 1°C
    Air pressure: 1012 hPa
    Precipitation type: Rain
    Snow line: 2100 m
-   Sunshine hours: 4.0h
-   Cloud cover: 45%
-   Snow depth: -
-   Fresh snow: -
    ⚠️ Official warning: Moderate thunderstorm warning (Thu 29 Oct · 10:00–19:00)
    ⚠️ Official warning: Heat (Thu 29 Oct · all day)
 
 Lienz
    Temperature Maximum: 12°C
    Wind: 26 km/h
+   Precipitation: 5.4 mm
+   Rain probability: 70%
+   Thunderstorm: medium · CAPE, Lightning density · Hail: yes
+   Sunshine hours: 5.0h
+   Cloud cover: 45%
+   UV index: 4
+   Visibility: 10.0 km
+   Snow depth: -
+   Fresh snow: -
    Temperature Minimum: 3°C
    Wind gusts: 39 km/h
+   Freezing level: 2450 m
    Wind direction: -
    Feels-like temperature Minimum: -
    Feels-like temperature Maximum: -
    Low clouds: -
    Mid-level clouds: -
    High clouds: -
-   Precipitation: 5.4 mm
-   Rain probability: 70%
-   Thunderstorm: medium · CAPE, Lightning density · Hail: yes
-   UV index: 4
-   Visibility: 10.0 km
-   Freezing level: 2450 m
    Humidity: 72%
    Dew point: 2°C
    Air pressure: 1013 hPa
    Precipitation type: Rain
    Snow line: 2150 m
-   Sunshine hours: 5.0h
-   Cloud cover: 45%
-   Snow depth: -
-   Fresh snow: -
 
 Kufstein
    Temperature Maximum: 13°C
    Wind: 26 km/h
+   Precipitation: 8.4 mm
+   Rain probability: 70%
+   Thunderstorm: –
+   Sunshine hours: 6.0h
+   Cloud cover: 45%
+   UV index: 4
+   Visibility: 10.0 km
+   Snow depth: -
+   Fresh snow: -
    Temperature Minimum: 4°C
    Wind gusts: 40 km/h
+   Freezing level: 2500 m
    Wind direction: -
    Feels-like temperature Minimum: -
    Feels-like temperature Maximum: -
    Low clouds: -
    Mid-level clouds: -
    High clouds: -
-   Precipitation: 8.4 mm
-   Rain probability: 70%
-   Thunderstorm: –
-   UV index: 4
-   Visibility: 10.0 km
-   Freezing level: 2500 m
    Humidity: 72%
    Dew point: 3°C
    Air pressure: 1014 hPa
    Precipitation type: Mixed precipitation
    Snow line: 2200 m
-   Sunshine hours: 6.0h
-   Cloud cover: 45%
-   Snow depth: -
-   Fresh snow: -
    ⚠️ Official warning: Wildfire risk
 
 Brenner
