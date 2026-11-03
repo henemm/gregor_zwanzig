@@ -43,8 +43,20 @@ export function schwellenStufen(sensibel: number, standard: number, robust: numb
 	];
 }
 
-/** Name einer Mehrfach-Symbol-Zeile aus dem Register; ohne Eintrag der deutsche Rueckfall. */
-export function symbolZeilenName(register: Record<string, MetricLabelFields>, id: string, rueckfall: string, lang: Lang): string {
+/** #2764 (F13): Rueckfall-Schluessel der Mehrfach-Symbol-Zeilen (Name ohne Register-Eintrag). */
+export const SYMBOL_ZEILE_RUECKFALL: Record<string, MessageKey> = {
+	temperature: 'wertebereiche.symbolzeile.temperature',
+	temperature_night: 'wertebereiche.symbolzeile.temperature_night',
+	wind_chill: 'wertebereiche.symbolzeile.wind_chill',
+	temperature_day_low: 'wertebereiche.symbolzeile.temperature_day_low',
+	temperature_day_high: 'wertebereiche.symbolzeile.temperature_day_high',
+	wind_chill_day_low: 'wertebereiche.symbolzeile.wind_chill_day_low',
+	wind_chill_day_high: 'wertebereiche.symbolzeile.wind_chill_day_high',
+	wind_chill_night: 'wertebereiche.symbolzeile.wind_chill_night'
+};
+
+/** Name einer Mehrfach-Symbol-Zeile aus dem Register; ohne Eintrag der Katalog-Rueckfall in `lang`. */
+export function symbolZeilenName(register: Record<string, MetricLabelFields>, id: string, rueckfall: MessageKey, lang: Lang): string {
 	const m = register[id];
-	return m ? metricLabel(m, lang) : rueckfall;
+	return m ? metricLabel(m, lang) : trFor(lang, rueckfall);
 }

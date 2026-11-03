@@ -304,7 +304,7 @@
 	}
 </script>
 
-<svelte:head><title>{`${trip.name} — Gregor Zwanzig`}</title></svelte:head>
+<svelte:head><title>{`${trip.name} — ${$t('bausteine.marke.name')}`}</title></svelte:head>
 
 <main style="position: relative; overflow: hidden;">
 	<TopoBg opacity={0.14} />

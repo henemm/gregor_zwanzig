@@ -99,7 +99,7 @@ Alle drei verbieten neue hartkodierte Nutzertexte außerhalb des Katalogs. Die A
 
 | Schicht | Testdatei | Scanfläche | Allowlist | Marker | Endstand 2026-11-02 |
 |---|---|---|---|---|---|
-| Frontend (S4) | `frontend/src/lib/i18n/__tests__/keine_hartkodierten_nutzertexte.test.ts` | `frontend/src/**/*.svelte` (ohne `__tests__/`, `routes/_design*`, `routes/email-preview-dev`) plus `*.ts` in `lib/utils`, `lib/stores`, `lib/api.ts` | `frontend/src/lib/i18n/hardcode_allowlist.json` | keiner; `// i18n-dynamic:` für Schlüssel (Verwender-Test) | leer (`[]`), gehalten durch `hardcode_allowlist_leer.test.ts` |
+| Frontend (S4) | `frontend/src/lib/i18n/__tests__/keine_hartkodierten_nutzertexte.test.ts` | `frontend/src/**/*.svelte` (ohne `__tests__/`, `routes/_design*`, `routes/email-preview-dev`) plus `*.ts` in `lib/utils`, `lib/stores`, `lib/api.ts` | `frontend/src/lib/i18n/hardcode_allowlist.json` | `/* i18n-neutral: <Begründung> */` im Markup-Ausdruck für sprachneutrale Literale (F13); `// i18n-dynamic:` für Schlüssel (Verwender-Test) | leer (`[]`), gehalten durch `hardcode_allowlist_leer.test.ts` |
 | Python (P11) | `tests/test_i18n_keine_hartkodierten_nutzertexte_python.py` | `src/output/**`, `api/routers/**`, passende `src/services/*.py` | `tests/fixtures/i18n_python_allowlist.json` (Baseline je Datei) | `# i18n-log` | **nicht leer**: 15 Dateien, 47 Funde; `test_allowlist_ist_leer` ist `xfail(strict=True)` (#2751) |
 | Go (G5) | `internal/i18n/hardcode_guard_test.go` | `internal/{handler,mail,notify,store,middleware,resolver}` | `internal/i18n/hardcode_allowlist.json` | `// i18n-log` (Zeile oder Funktions-Doc) | leer (`[]`) |
 

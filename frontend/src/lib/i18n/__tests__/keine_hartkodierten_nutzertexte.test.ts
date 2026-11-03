@@ -140,13 +140,16 @@ describe('Ausdrucks-Literale im Markup (F12)', () => {
 			'<code>{/* i18n-neutral: kurz */ \'Wort\'}</code>',
 			'<code>{/* i18n-neutral: */ \'Leer\'}</code>',
 			'<code>{/* i18n-neutral: SMS-Protokoll-Token */ \'Größe\'}</code>',
-			'<code>{/* i18n-neutral: Signalwort-Probe */ \'bitte warten\'}</code>'
+			'<code>{/* i18n-neutral: Signalwort-Probe */ \'bitte warten\'}</code>',
+			// ein beliebiger fuehrender Kommentar ist kein Block wie {/if} und kein Marker
+			'<b>{/* irgendwas */ \'Speichern\'}</b>'
 		].join('\n');
 		assert.deepEqual(scanneMarkup(quelle), [
 			{ zeile: 4, art: 'ausdruck', text: 'Wort' },
 			{ zeile: 5, art: 'ausdruck', text: 'Leer' },
 			{ zeile: 6, art: 'ausdruck', text: 'Größe' },
-			{ zeile: 7, art: 'ausdruck', text: 'bitte warten' }
+			{ zeile: 7, art: 'ausdruck', text: 'bitte warten' },
+			{ zeile: 8, art: 'ausdruck', text: 'Speichern' }
 		]);
 	});
 

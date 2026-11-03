@@ -171,10 +171,10 @@
 						{href}
 						onclick={(e) => e.stopPropagation()}
 						style:color="inherit"
-						style:text-decoration="none">{sub.name || '(ohne Namen)'}</a
+						style:text-decoration="none">{sub.name || $t('bausteine.karte.ohne_namen')}</a
 					>
 				{:else}
-					{sub.name || '(ohne Namen)'}
+					{sub.name || $t('bausteine.karte.ohne_namen')}
 				{/if}
 			</div>
 

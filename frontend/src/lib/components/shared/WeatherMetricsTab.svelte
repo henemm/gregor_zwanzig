@@ -144,7 +144,7 @@
 	} from './weather-metrics-tab/compareMetricOrder.ts';
 	// Issue #1411 (Epic #1372 S4b Scheibe 1): flache Katalogantwort -> eine
 	// Zeile je Wettergroesse (24 statt 26 Zeilen).
-	import { groupCompareCatalog } from './weather-metrics-tab/compareAggregationGrouping.ts'; import { vergleichsGruppen, schwellenStufen, symbolZeilenName } from './weather-metrics-tab/wertebereicheAnzeige.ts';
+	import { groupCompareCatalog } from './weather-metrics-tab/compareAggregationGrouping.ts'; import { vergleichsGruppen, schwellenStufen, symbolZeilenName, SYMBOL_ZEILE_RUECKFALL } from './weather-metrics-tab/wertebereicheAnzeige.ts';
 
 	interface Template {
 		id: string;
@@ -1211,7 +1211,7 @@
 		return map;
 	});
 	const compareGruppen = $derived(vergleichsGruppen(compareCatalog, metricById, $locale)); // #2654: dieselben Namen wie oben
-	const stufen = (a: number, b: number, c: number) => schwellenStufen(a, b, c, $locale); const symbolName = (id: string, r: string) => symbolZeilenName(metricById, id, r, $locale);
+	const stufen = (a: number, b: number, c: number) => schwellenStufen(a, b, c, $locale); const symbolName = (id: string) => symbolZeilenName(metricById, id, SYMBOL_ZEILE_RUECKFALL[id], $locale);
 
 	// Issue #2232: die Kurzform-Marke des VERGLEICHS kommt aus DERSELBEN Quelle
 	// wie die des Trips — `/api/sms-symbols` (`metricSymbols`), nachgeschlagen
@@ -1447,7 +1447,7 @@
 				<p>
 					<!-- #2654 (i18n F5): Satz aus dem Katalog; die Stufenbuchstaben L/M/H
 					     und TH:H sind Protokoll-Token der SMS und bleiben unuebersetzt. -->
-					{#each textTeile($t('wertebereiche.warnungen.legende_stufe')) as teil}{#if teil.platzhalter === 'l'}<code>L</code>{:else if teil.platzhalter === 'm'}<code>M</code>{:else if teil.platzhalter === 'h'}<code>H</code>{:else if teil.platzhalter === 'beispiel'}<code>{'TH:H'}</code>{:else}{teil.text}{/if}{/each}
+					{#each textTeile($t('wertebereiche.warnungen.legende_stufe')) as teil}{#if teil.platzhalter === 'l'}<code>L</code>{:else if teil.platzhalter === 'm'}<code>M</code>{:else if teil.platzhalter === 'h'}<code>H</code>{:else if teil.platzhalter === 'beispiel'}<code>{/* i18n-neutral: SMS-Protokoll-Token, nie uebersetzt (ADR-0104) */ 'TH:H'}</code>{:else}{teil.text}{/if}{/each}
 				</p>
 			</div>
 		{/if}
@@ -1911,21 +1911,21 @@
 								{#if !buckets.off.includes('temperature')}
 								<MultiSymbolMetricRow
 									metricId="temperature"
-									label={symbolName('temperature', 'Temperatur')}
+									label={symbolName(/* i18n-neutral: Metrik-Kennung, kein Text */ 'temperature')}
 									symbols={metricSymbols['temperature'] ?? []}
 								/>
 								{/if}
 								{#if !buckets.off.includes('temperature_night')}
 								<MultiSymbolMetricRow
 									metricId="temperature_night"
-									label={symbolName('temperature_night', 'Nacht-Tiefsttemperatur')}
+									label={symbolName('temperature_night')}
 									symbols={metricSymbols['temperature_night'] ?? []}
 								/>
 								{/if}
 								{#if !buckets.off.includes('wind_chill')}
 								<MultiSymbolMetricRow
 									metricId="wind_chill"
-									label={symbolName('wind_chill', 'Gefühlte Temperatur')}
+									label={symbolName('wind_chill')}
 									symbols={metricSymbols['wind_chill'] ?? []}
 								/>
 								{/if}
@@ -1935,35 +1935,35 @@
 								{#if !buckets.off.includes('temperature_day_low')}
 								<MultiSymbolMetricRow
 									metricId="temperature_day_low"
-									label={symbolName('temperature_day_low', 'Tages-Tiefsttemperatur (Gehzeit)')}
+									label={symbolName('temperature_day_low')}
 									symbols={metricSymbols['temperature_day_low'] ?? []}
 								/>
 								{/if}
 								{#if !buckets.off.includes('temperature_day_high')}
 								<MultiSymbolMetricRow
 									metricId="temperature_day_high"
-									label={symbolName('temperature_day_high', 'Tages-Höchsttemperatur (Gehzeit)')}
+									label={symbolName('temperature_day_high')}
 									symbols={metricSymbols['temperature_day_high'] ?? []}
 								/>
 								{/if}
 								{#if !buckets.off.includes('wind_chill_day_low')}
 								<MultiSymbolMetricRow
 									metricId="wind_chill_day_low"
-									label={symbolName('wind_chill_day_low', 'Gefühlte Tages-Tiefsttemperatur (Gehzeit)')}
+									label={symbolName('wind_chill_day_low')}
 									symbols={metricSymbols['wind_chill_day_low'] ?? []}
 								/>
 								{/if}
 								{#if !buckets.off.includes('wind_chill_day_high')}
 								<MultiSymbolMetricRow
 									metricId="wind_chill_day_high"
-									label={symbolName('wind_chill_day_high', 'Gefühlte Tages-Höchsttemperatur (Gehzeit)')}
+									label={symbolName('wind_chill_day_high')}
 									symbols={metricSymbols['wind_chill_day_high'] ?? []}
 								/>
 								{/if}
 								{#if !buckets.off.includes('wind_chill_night')}
 								<MultiSymbolMetricRow
 									metricId="wind_chill_night"
-									label={symbolName('wind_chill_night', 'Gefühlte Nacht-Tiefsttemperatur')}
+									label={symbolName('wind_chill_night')}
 									symbols={metricSymbols['wind_chill_night'] ?? []}
 								/>
 								{/if}

@@ -107,6 +107,10 @@ const VERGLEICH_NACH = /^\s*(?:===|!==|==|!=)/;
 // Keine Nutzertexte: Locale-Codes, Format-Optionen, snake_case-Kennungen, Schluessel-Praefixe.
 const KEIN_TEXT = /^(?:[a-z]{2}-[A-Z]{2}|\d+-digit|[YMD]+(?:-[YMD]+)*|[a-z0-9]*_[a-z0-9_]*|[a-z_]+(?:\.[a-z_]+)*\.)$/;
 const DREI_BUCHSTABEN = /(?:[A-Za-zÄÖÜäöüß][^A-Za-zÄÖÜäöüß]*){3}/;
+// #2764 (F13): sprachneutrales Literal (Protokoll-Token, Kennung, Eigenname) am Fundort
+// begruendet: `{/* i18n-neutral: <Begruendung, >= 8 Zeichen> */ 'TH:H'}`. Gilt fuer den
+// ganzen Ausdruck; deutscher Text (Umlaut/Signalwort, TS_SIGNAL) bleibt trotzdem ein Treffer.
+const NEUTRAL = /\/\*\s*i18n-neutral:\s*[^*\s][^*]{6,}[^*\s]\s*\*\//;
 
 /** `{…}`-Ausdruecke mit Lage: im Textknoten (attr = null) oder als Wert des Attributs `attr`. */
 function markupAusdruecke(q: string): { index: number; code: string; attr: string | null; imTag: boolean }[] {
@@ -142,10 +146,13 @@ export function scanneAusdruecke(quelltext: string): Treffer[] {
 		.replace(/<style\b[^>]*>[\s\S]*?<\/style>/g, (m) => leer(m));
 	const treffer: Treffer[] = [];
 	for (const a of markupAusdruecke(q)) {
-		if (/^\s*[#:/@]/.test(a.code)) continue;
+		// Bloecke ({#if}, {:else}, {/if}, {@html}); ein fuehrender Kommentar `{/* … */ x}` ist keiner (#2764).
+		if (/^\s*(?:[#:@]|\/(?![*/]))/.test(a.code)) continue;
 		if (a.imTag && !BESCHRIFTEND.test(a.attr ?? '')) continue;
+		const neutral = NEUTRAL.test(a.code);
 		for (const l of tsLiterale(a.code)) {
 			const text = l.text.trim();
+			if (neutral && !TS_SIGNAL.test(text)) continue;
 			// Ab drei Buchstaben: Einheiten und Kurzzeichen (km, mm, WP) sind sprachneutral.
 			if (!DREI_BUCHSTABEN.test(text) || KATALOG_SCHLUESSEL.test(text) || KEIN_TEXT.test(text)) continue;
 			const vor = a.code.slice(0, Math.max(0, l.index - 1));
@@ -317,29 +324,12 @@ export function scanneVerzeichnis(wurzel: string): DateiErgebnis[] {
 }
 
 /**
- * #2661 (F12): Ausdrucks-Treffer ausserhalb von BriefingTimelineRow, die die Erweiterung
- * der Ratsche beim Einfuehren fand. Entscheidung (migrieren oder sprachneutral) offen beim
- * Orchestrator; die Liste darf nur schrumpfen, ein toter Eintrag ist rot
+ * #2661 (F12): Ausdrucks-Treffer, die die Erweiterung der Ratsche beim Einfuehren fand.
+ * #2764 (F13): abgebaut — echte Nutzertexte stehen im Katalog, sprachneutrale Faelle tragen
+ * am Fundort den Marker `/* i18n-neutral: <Begruendung> *\/` (NEUTRAL). Die Liste bleibt leer
  * (keine_hartkodierten_nutzertexte.test.ts). Format: `pfad  "Literal"` ohne Zeile.
  */
-export const AUSDRUCK_OFFEN: string[] = [
-	'lib/components/organisms/SubscriptionCard.svelte  "(ohne Namen)"',
-	'lib/components/shared/WeatherMetricsTab.svelte  "TH:H"',
-	'lib/components/shared/WeatherMetricsTab.svelte  "temperature"',
-	'lib/components/shared/WeatherMetricsTab.svelte  "Temperatur"',
-	'lib/components/shared/WeatherMetricsTab.svelte  "Nacht-Tiefsttemperatur"',
-	'lib/components/shared/WeatherMetricsTab.svelte  "Gefühlte Temperatur"',
-	'lib/components/shared/WeatherMetricsTab.svelte  "Tages-Tiefsttemperatur (Gehzeit)"',
-	'lib/components/shared/WeatherMetricsTab.svelte  "Tages-Höchsttemperatur (Gehzeit)"',
-	'lib/components/shared/WeatherMetricsTab.svelte  "Gefühlte Tages-Tiefsttemperatur (Gehzeit)"',
-	'lib/components/shared/WeatherMetricsTab.svelte  "Gefühlte Tages-Höchsttemperatur (Gehzeit)"',
-	'lib/components/shared/WeatherMetricsTab.svelte  "Gefühlte Nacht-Tiefsttemperatur"',
-	'lib/components/shared/weather-metrics-tab/WeatherV2Reihenfolge.svelte  "Telegram"',
-	'lib/components/trip-new/TripNewEditor.svelte  "GPX"',
-	'routes/+page.svelte  "gregor · zwanzig"',
-	'routes/compare/[id]/+page.svelte  "— Gregor Zwanzig"',
-	'routes/trips/[id]/+page.svelte  "— Gregor Zwanzig"'
-];
+export const AUSDRUCK_OFFEN: string[] = [];
 
 function deckt(eintrag: string, pfad: string): boolean {
 	return eintrag.endsWith('/') ? pfad.startsWith(eintrag) : pfad === eintrag;

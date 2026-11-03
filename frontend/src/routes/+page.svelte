@@ -567,7 +567,7 @@
 			>
 				<Dot tone="neutral" size={8} />
 				<span style:font-size="14px" style:color="var(--g-ink-2)">
-					{#each bannerTeile as teil, i (i)}{#if teil === '{kein_trip}'}<strong>{$t('home.planung.kein_trip')}</strong>{:else if teil === '{marke}'}<span style:font-family="var(--g-font-mono)" style:font-size="13px">{'gregor · zwanzig'}</span>{:else}{teil}{/if}{/each}
+					{#each bannerTeile as teil, i (i)}{#if teil === '{kein_trip}'}<strong>{$t('home.planung.kein_trip')}</strong>{:else if teil === '{marke}'}<span style:font-family="var(--g-font-mono)" style:font-size="13px">{`${$t('bausteine.marke.gregor')} · ${$t('bausteine.marke.zwanzig')}`}</span>{:else}{teil}{/if}{/each}
 				</span>
 			</div>
 

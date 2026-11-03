@@ -130,7 +130,7 @@
 			{@const kurzform = kuerzelById[id]}
 			{#if showCutLine && i === tgBudget}
 				<div data-testid="wm2-cut-line">
-					<LTCutLine label={'Telegram'} max={tgBudget} />
+					<LTCutLine label={/* i18n-neutral: Kanal-Eigenname */ 'Telegram'} max={tgBudget} />
 				</div>
 			{/if}
 			<div class="row" class:hl data-testid="wm2-reihenfolge-row" data-metric-id={id}>
