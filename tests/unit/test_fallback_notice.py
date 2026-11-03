@@ -598,3 +598,33 @@ def test_broken_import_with_collision_drops_weather_bracket() -> None:
     assert "lightning_potential_lpi_jkg" not in weather, (
         f"F003: Roher Gewitter-Feldname in der Wetterzeile — {weather!r}"
     )
+
+
+# ===========================================================================
+# #2751 AC-5 — Aufloesungshinweis je Ersatzquelle unveraendert (de/en).
+# ===========================================================================
+
+@pytest.mark.parametrize("modell, erwartet", [
+    ("eu_direct", "DWD Europa (gröbere Auflösung)"),
+    ("icon_eu", "DWD Europa (gröbere Auflösung)"),
+    ("ecmwf_ifs04", "ECMWF (gröbere Auflösung)"),
+    ("de_direct", "DWD Deutschland"),
+    ("icon_d2", "DWD Deutschland"),
+    ("fr_direct", "Météo-France"),
+    ("meteofrance_arome", "Météo-France"),
+    ("at_direct", "GeoSphere Österreich"),
+    ("metno_nordic", "MET Norway"),
+    ("unbekanntes_modell_xyz", "unbekanntes_modell_xyz"),
+])
+def test_gewitterzeile_nennt_quelle_mit_aufloesungshinweis(modell: str, erwartet: str) -> None:
+    """Given eine Gewitter-Vertretung durch ``modell``, When die Zeile entsteht,
+    Then nennt sie den Anbieter (Eigenname, in jeder Sprache gleich) und nur bei
+    grober Aufloesung den Zusatz — deutsch byte-gleich, englisch uebersetzt."""
+    from output.renderers.fallback_notice import build_fallback_lines
+
+    meta = _make_meta(fallback_metrics=[_thunder_field_names()[0]], fallback_model=modell,
+                      fallback_reason="thunder_source_unavailable")
+    assert build_fallback_lines(meta) == [f"Gewitterdaten von Ersatzquelle: {erwartet}"]
+    englisch = erwartet.replace("gröbere Auflösung", "coarser resolution")
+    assert build_fallback_lines(meta, lang="en") == [
+        f"Thunderstorm data from backup source: {englisch}"]

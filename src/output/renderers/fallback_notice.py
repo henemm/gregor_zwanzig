@@ -27,80 +27,59 @@ if TYPE_CHECKING:  # pragma: no cover - nur fuer Typpruefer
     from app.models import ForecastMeta
 
 
-# --- Uebersetzung: Quellenkennung -> (Klartext, Zusatz) ---------------------
+# --- Quellenkennung -> (Klartext, grobe Aufloesung?) -----------------------
 # Wertebereich gemessen an allen Schreibstellen in ``src/providers/``
 # (``openmeteo.py:1055/1077/1167``, ``region_routing.py:33-36``,
 # ``thunder_enrichment.py:287``). ``icon_seamless`` steht bewusst NICHT hier:
-# es ist nie ein Fallback-Wert, nur ``meta.model``.
-_MODELL_KLARTEXT: dict[str, Tuple[str, str]] = {
-    "eu_direct": ("DWD Europa", "gröbere Auflösung"),
-    "de_direct": ("DWD Deutschland", ""),
-    "fr_direct": ("Météo-France", ""),
-    "at_direct": ("GeoSphere Österreich", ""),
-    "icon_eu": ("DWD Europa", "gröbere Auflösung"),
-    "icon_d2": ("DWD Deutschland", ""),
-    "meteofrance_arome": ("Météo-France", ""),
-    "metno_nordic": ("MET Norway", ""),
-    "ecmwf_ifs04": ("ECMWF", "gröbere Auflösung"),
+# es ist nie ein Fallback-Wert, nur ``meta.model``. Die Namen sind Eigennamen
+# der Anbieter und bleiben in jeder Sprache; der Zusatz "gröbere Auflösung"
+# kommt aus dem Katalog (``mail.fallback.groeber``, #2751).
+_MODELL_KLARTEXT: dict[str, Tuple[str, bool]] = {
+    "eu_direct": ("DWD Europa", True),
+    "de_direct": ("DWD Deutschland", False),
+    "fr_direct": ("Météo-France", False),
+    "at_direct": ("GeoSphere Österreich", False),  # i18n-fest: Eigenname des Anbieters
+    "icon_eu": ("DWD Europa", True),
+    "icon_d2": ("DWD Deutschland", False),
+    "meteofrance_arome": ("Météo-France", False),
+    "metno_nordic": ("MET Norway", False),
+    "ecmwf_ifs04": ("ECMWF", True),
 }
 
-# --- Uebersetzung: Metrikkennung -> Klartext --------------------------------
+# --- Metrikkennungen mit Klartext im Katalog --------------------------------
 # ``fallback_metrics`` mischt ZWEI Namenssysteme (Kontext-Doc): Open-Meteo-
 # Parameternamen (``OpenMeteoProvider._PARAM_TO_FIELD``, 18 Eintraege) bei
 # Metrik-Luecke/Modell-5xx, Datenpunkt-Feldnamen bei Schnee- und
 # Gewitter-Anreicherung. Beide sind hier abgebildet.
 #
-# Die Klartext-Labels sind 1:1 aus ``app/metric_catalog.py`` (``label_de``)
+# Die Klartexte stehen im Katalog (``mail.fallback.metrik.<kennung>``, #2665);
+# die deutschen sind 1:1 aus ``app/metric_catalog.py`` (``label_de``)
 # uebernommen, damit derselbe Begriff im Produkt nicht zweimal verschieden
 # heisst. Bewusst NICHT mechanisch daran gekoppelt: der Katalog ist mit
 # Metrik-IDs geschluesselt, diese Liste mit Parameter-/Feldnamen — die
 # Bruecke waere eine eigene, fehleranfaellige Abbildung (Spec, Known
-# Limitations).
-_METRIK_KLARTEXT: dict[str, str] = {
-    "temperature_2m": "Temperatur",
-    "apparent_temperature": "gefühlte Temperatur",
-    "relative_humidity_2m": "Luftfeuchtigkeit",
-    "dewpoint_2m": "Taupunkt",
-    "pressure_msl": "Luftdruck",
-    "cloud_cover": "Bewölkung",
-    "cloud_cover_low": "Tiefe Wolken",
-    "cloud_cover_mid": "Mittelhohe Wolken",
-    "cloud_cover_high": "Hohe Wolken",
-    "wind_speed_10m": "Wind",
-    "wind_direction_10m": "Windrichtung",
-    "wind_gusts_10m": "Böen",
-    "precipitation": "Niederschlag",
-    "precipitation_probability": "Niederschlagswahrscheinlichkeit",
-    "visibility": "Sicht",
-    "cape": "Gewitterenergie",
-    "freezing_level_height": "0°C-Grenze",
-    "uv_index": "UV-Index",
-    "weather_code": "Wetterlage",
-    "snow_depth": "Schneehöhe",
-    "swe_tot": "Wasseräquivalent Schnee",
-    # Gewitter-Feldnamen: nur der Vollstaendigkeit halber uebersetzt. Sie
-    # erscheinen wegen R4 NIE in der Wetterzeile — sie loesen die
-    # Gewitterzeile aus.
-    "lightning_density_per_km2_3h": "Blitzdichte",
-    "lightning_potential_lpi_jkg": "Blitzpotenzial",
-    "hail_potential_grau_gsp": "Hagelsignal",
-}
+# Limitations). Die Gewitter-Feldnamen (letzte drei) erscheinen wegen R4 NIE
+# in der Wetterzeile — sie loesen die Gewitterzeile aus.
+_METRIK_KENNUNGEN: frozenset[str] = frozenset({
+    "temperature_2m", "apparent_temperature", "relative_humidity_2m",
+    "dewpoint_2m", "pressure_msl", "cloud_cover", "cloud_cover_low",
+    "cloud_cover_mid", "cloud_cover_high", "wind_speed_10m",
+    "wind_direction_10m", "wind_gusts_10m", "precipitation",
+    "precipitation_probability", "visibility", "cape",
+    "freezing_level_height", "uv_index", "weather_code", "snow_depth",
+    "swe_tot",
+    "lightning_density_per_km2_3h", "lightning_potential_lpi_jkg",
+    "hail_potential_grau_gsp",
+})
 
 # Deutscher Referenzwert; die Zeilen kommen sprachabhaengig aus dem Katalog
 # (``mail.fallback.*``, Issue #2665). Quellennamen sind Eigennamen und bleiben.
 _GEWITTER_OHNE_QUELLE = t("mail.fallback.gewitter_ohne_quelle", "de")
 
 
-def _zusatz_text(zusatz: str, lang: Lang) -> str:
-    """Zusatz zur Quelle in ``lang`` -- heute nur "gröbere Auflösung"."""
-    if zusatz == _MODELL_KLARTEXT["eu_direct"][1]:
-        return t("mail.fallback.groeber", lang)
-    return zusatz
-
-
 def _metrik_text(metrik: str, lang: Lang) -> str:
     """Klartext einer Metrikkennung; unbekannte Kennung roh (R7)."""
-    if metrik not in _METRIK_KLARTEXT:
+    if metrik not in _METRIK_KENNUNGEN:
         return metrik
     # i18n-dynamic: mail.fallback.metrik.
     return t(f"mail.fallback.metrik.{metrik}", lang)
@@ -136,9 +115,9 @@ def _gewitter_felder() -> Optional[frozenset]:
     return frozenset({*_SIGNAL_ZU_FELD.values(), _EINZELWERT_FELD})
 
 
-def _quelle_klartext(model: str) -> Tuple[str, str]:
-    """(Klartext, Zusatz) — unbekannte Kennung erscheint roh (R7)."""
-    return _MODELL_KLARTEXT.get(model, (model, ""))
+def _quelle_klartext(model: str) -> Tuple[str, bool]:
+    """(Klartext, grobe Aufloesung?) — unbekannte Kennung erscheint roh (R7)."""
+    return _MODELL_KLARTEXT.get(model, (model, False))
 
 
 def select_fallback_meta(segments) -> Optional["ForecastMeta"]:
@@ -219,8 +198,8 @@ def build_fallback_lines(meta: Optional["ForecastMeta"], *, lang: Lang = "de") -
         if hat_wetter or not modell:
             lines.append(t("mail.fallback.gewitter_ohne_quelle", lang))
         else:
-            name, zusatz = _quelle_klartext(modell)
-            klammer = " (%s)" % _zusatz_text(zusatz, lang) if zusatz else ""
+            name, grob = _quelle_klartext(modell)
+            klammer = " (%s)" % t("mail.fallback.groeber", lang) if grob else ""
             lines.append(t("mail.fallback.gewitter_quelle", lang, name=name) + klammer)
 
     if hat_wetter:
@@ -240,7 +219,7 @@ def build_fallback_lines(meta: Optional["ForecastMeta"], *, lang: Lang = "de") -
             klartext = _metrik_text(m, lang)  # R7: Rohwert statt KeyError
             if klartext not in rest:
                 rest.append(klartext)
-        name, _zusatz = _quelle_klartext(modell)
+        name, _grob = _quelle_klartext(modell)
         # R4/#1145 — leere Restliste: Klammer entfaellt ERSATZLOS. Kein "()",
         # kein " : "-Artefakt, kein Doppelpunkt ohne Inhalt.
         klammer = " (%s)" % ", ".join(rest) if rest else ""
