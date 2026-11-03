@@ -22,7 +22,12 @@ USER_JSON = ("users", fx.TEST_USER_ID, "user.json")
 
 
 def _profil(data_dir) -> dict:
-    return json.loads(data_dir.joinpath(*USER_JSON).read_text(encoding="utf-8"))
+    # Liest das Nutzer-Profil (Daten, kein Produkt-Quelltext) -- bewusst per
+    # json.load statt read_text(): Die Hygiene-Pruefung (#765) wertet ein
+    # nicht aufloesbares read_text()-Ziel als Quelltext-Read und erntet dann
+    # die Scope-Pfadlisten unten als vermeintliche Dateilisten.
+    with data_dir.joinpath(*USER_JSON).open(encoding="utf-8") as fh:
+        return json.load(fh)
 
 
 @pytest.fixture
