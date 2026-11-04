@@ -3,6 +3,7 @@
 - **Status:** Akzeptiert
 - **Datum:** 2026-07-02
 - **Bezug:** GitHub-Issue #958 (Bündel #958/#980/#981/#982), `docs/specs/modules/fix_alert_bundle_958ff.md`, ADR-0009 (Alerts als Abweichungs-Wächter), ADR-0011 (ein Backend-Renderer)
+- **Teil-Ablösung vorgeschlagen durch:** [ADR-0106](0106-profil-ampel-einzige-bewertung.md) (Vorgeschlagen 2026-11-03: Auslösung über den Stufenwechsel der Ampel, `threshold` bleibt als Sprung-Schwelle)
 
 ## Kontext
 

@@ -3,6 +3,7 @@
 - **Status:** Akzeptiert (rückwirkend dokumentiert 2026-10-21 — gelebte PO-Vorgabe, mehrfach bekräftigt; mechanisch abgesichert seit 2026-08-04, Commit `909fb394d`)
 - **Datum:** 2026-10-21
 - **Bezug:** CLAUDE.md §„Trip/Ortsvergleich-Code-Teilung", Anti-Pattern #1170, Pendant-Sperre `.claude/hooks/pendant_gate.py` (#1481 B, Spec `docs/specs/modules/feat_1481b_pendant_gate.md`), `docs/reference/gates_und_ratschen.md` §„Pendant-Sperre", Epic #2345 (Datenmodell-Konvergenz, Etappe P7, vormals #1230), ADR-0032 (Wizard-Abschaffung). Die Nummer ADR-0026 war 2026-07-16/17 von zwei Specs für dieses Thema vorläufig reserviert, das ADR wurde nie angelegt — das Thema ist hier aufgegangen.
+- **Präzisierung vorgeschlagen durch:** [ADR-0109](0109-reiterstruktur-wetter-zustellung.md) (Vorgeschlagen 2026-11-03: die geteilten Tab-Organismen heißen Wetter und Zustellung statt Wertebereiche/Layout/Versand)
 
 ## Kontext
 

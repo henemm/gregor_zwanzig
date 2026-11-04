@@ -1,0 +1,279 @@
+{
+  "aktualisiert": "2026-11-03T19:30:23.446Z",
+  "notiz": "",
+  "passt": true,
+  "werte": {
+    "cloud_low": {
+      "alarm": "nie",
+      "hi": [
+        50,
+        80,
+        null
+      ],
+      "lo": [
+        null,
+        null,
+        null
+      ],
+      "on": false
+    },
+    "cloud_total": {
+      "alarm": "nie",
+      "hi": [
+        60,
+        85,
+        null
+      ],
+      "lo": [
+        null,
+        null,
+        null
+      ],
+      "on": true
+    },
+    "dewpoint": {
+      "alarm": "nie",
+      "hi": [
+        16,
+        18,
+        21
+      ],
+      "lo": [
+        null,
+        null,
+        null
+      ],
+      "on": false
+    },
+    "freezing_level": {
+      "alarm": "orange",
+      "hi": [
+        null,
+        null,
+        null
+      ],
+      "lo": [
+        -300,
+        0,
+        300
+      ],
+      "on": false
+    },
+    "fresh_snow": {
+      "alarm": "orange",
+      "hi": [
+        10,
+        20,
+        30
+      ],
+      "lo": [
+        null,
+        null,
+        null
+      ],
+      "on": false
+    },
+    "gust": {
+      "alarm": "orange",
+      "hi": [
+        30,
+        45,
+        60
+      ],
+      "lo": [
+        null,
+        null,
+        null
+      ],
+      "on": true
+    },
+    "humidity": {
+      "alarm": "nie",
+      "hi": [
+        null,
+        null,
+        null
+      ],
+      "lo": [
+        null,
+        null,
+        null
+      ],
+      "on": false
+    },
+    "precipitation": {
+      "alarm": "orange",
+      "hi": [
+        1,
+        5,
+        10
+      ],
+      "lo": [
+        null,
+        null,
+        null
+      ],
+      "on": true
+    },
+    "rain_probability": {
+      "alarm": "nie",
+      "hi": [
+        30,
+        60,
+        80
+      ],
+      "lo": [
+        null,
+        null,
+        null
+      ],
+      "on": true
+    },
+    "snow_depth": {
+      "alarm": "nie",
+      "hi": [
+        null,
+        null,
+        null
+      ],
+      "lo": [
+        null,
+        null,
+        null
+      ],
+      "on": false
+    },
+    "snowfall_limit": {
+      "alarm": "orange",
+      "hi": [
+        null,
+        null,
+        null
+      ],
+      "lo": [
+        -300,
+        0,
+        300
+      ],
+      "on": false
+    },
+    "sunshine": {
+      "alarm": "nie",
+      "hi": [
+        null,
+        null,
+        null
+      ],
+      "lo": [
+        null,
+        1,
+        3
+      ],
+      "on": true
+    },
+    "temperature": {
+      "alarm": "orange",
+      "hi": [
+        28,
+        31,
+        34
+      ],
+      "lo": [
+        -15,
+        -5,
+        0
+      ],
+      "on": true
+    },
+    "temperature_night": {
+      "alarm": "orange",
+      "hi": [
+        null,
+        null,
+        null
+      ],
+      "lo": [
+        -10,
+        -5,
+        0
+      ],
+      "on": false
+    },
+    "thunder": {
+      "alarm": "orange",
+      "hoch": "rot",
+      "mittel": "orange",
+      "on": true
+    },
+    "uv_index": {
+      "alarm": "nie",
+      "hi": [
+        3,
+        6,
+        8
+      ],
+      "lo": [
+        null,
+        null,
+        null
+      ],
+      "on": false
+    },
+    "visibility": {
+      "alarm": "orange",
+      "hi": [
+        null,
+        null,
+        null
+      ],
+      "lo": [
+        500,
+        1000,
+        2000
+      ],
+      "on": false
+    },
+    "wind": {
+      "alarm": "orange",
+      "hi": [
+        30,
+        50,
+        70
+      ],
+      "lo": [
+        null,
+        null,
+        null
+      ],
+      "on": true
+    },
+    "wind_chill": {
+      "alarm": "nie",
+      "hi": [
+        28,
+        31,
+        34
+      ],
+      "lo": [
+        -15,
+        -5,
+        0
+      ],
+      "on": false
+    },
+    "wind_direction": {
+      "alarm": "nie",
+      "hi": [
+        null,
+        null,
+        null
+      ],
+      "lo": [
+        null,
+        null,
+        null
+      ],
+      "on": false
+    }
+  }
+}

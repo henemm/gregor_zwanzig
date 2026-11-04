@@ -4,6 +4,7 @@
 - **Datum:** 2026-08-03
 - **Bezug:** Issue #1460 (Epic #1458 Scheibe 2, Teil 1), Spec `docs/specs/modules/rework_1460_t1_relevanzfilter.md`; **löst ADR-0040 ab**; bestätigt ADR-0009 (Alarme sind Abweichungs-Wächter) und ADR-0013 (`threshold` ist Δ-Sensitivität); berührt ADR-0016 (amtliche Warnungen als additiver Typ), ADR-0021 (geteilte `DeviationAlertEngine`)
 - **Ergänzt durch:** [ADR-0046](0046-alarm-kanal-schwelle.md) (ergänzt), [ADR-0090](0090-entwarnung-amtlicher-warnungen.md) (ergänzt)
+- **Ablösung vorgeschlagen durch:** [ADR-0106](0106-profil-ampel-einzige-bewertung.md) (Vorgeschlagen 2026-11-03: „Alarm ab“ an der Profil-Ampel ersetzt die Empfindlichkeitsstufe; bei Annahme wird dieser Status „Abgelöst durch ADR-0106“)
 
 ## Kontext
 
