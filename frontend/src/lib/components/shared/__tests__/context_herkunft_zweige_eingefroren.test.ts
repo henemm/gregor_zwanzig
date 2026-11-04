@@ -245,8 +245,11 @@ const EINGEFROREN: readonly string[] = [
 	'WeatherMetricsTab.svelte:609',
 	'WeatherMetricsTab.svelte:638',
 	'WeatherMetricsTab.svelte:651',
-	'WeatherMetricsTab.svelte:1457',
-	'WeatherMetricsTab.svelte:2042',
+	// 🔴 Issue #2792 S1a: die beiden Markup-Zweige um 10 Zeilen nach unten
+	// (Ampel-Zustand, Anwenden, Nutzlast im Script-Teil); Bedingungen
+	// unveraendert, nachgemessen, Inhalt unten gefesselt.
+	'WeatherMetricsTab.svelte:1467',
+	'WeatherMetricsTab.svelte:2052',
 	// #2655 (F6): beide nur verschoben (Katalog-Import, Satz je Kontext aus
 	// dem Katalog statt Konkatenation); Bedingungen unveraendert, nachgemessen.
 	'versand-tab/vtBriefingChannelsText.ts:22',
@@ -519,12 +522,12 @@ const BLEIBT_MIT_INHALT: readonly { eintrag: string; zeile: string; folgt: strin
 		folgt: ".get<MetricCatalog>('/api/metrics')"
 	},
 	{
-		eintrag: 'WeatherMetricsTab.svelte:1457',
+		eintrag: 'WeatherMetricsTab.svelte:1467', // #2792 S1a: +10, Text unveraendert
 		zeile: "{#if context === 'vergleich'}",
 		folgt: 'Issue #1311 (C1): Vergleich-Grundauswahl'
 	},
 	{
-		eintrag: 'WeatherMetricsTab.svelte:2042',
+		eintrag: 'WeatherMetricsTab.svelte:2052', // #2792 S1a: +10, Text unveraendert
 		zeile: "{#if !createMode && context === 'route'}",
 		folgt: 'Issue #1721: Nacht-Stundentabelle der Trip-Mail'
 	}

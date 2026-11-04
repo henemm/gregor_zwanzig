@@ -34,4 +34,9 @@ type MetricPreset struct {
 	IsDefault   bool            `json:"is_default"`
 	Metrics     []DisplayMetric `json:"metrics"`
 	CreatedAt   time.Time       `json:"created_at"`
+	// Issue #2792 S1a / ADR-0106: Profil-Ampel der eigenen Vorlage
+	// ({template, metrics{id:{enabled, lower, upper, alarm_ab}}, thunder}),
+	// beim Anwenden ins Abo kopiert. nil = Vorlage "allgemein" (Bestand).
+	// Keine Zustellungsfelder (Empfaenger, Kanaele, Etappen).
+	Ampel map[string]interface{} `json:"ampel,omitempty"`
 }

@@ -35,7 +35,13 @@
   "display_config": {
     "trip_id": "drift-gate-trip",
     "metrics": [],
-    "updated_at": "2026-10-01T10:00:00"
+    "updated_at": "2026-10-01T10:00:00",
+    "ampel": {
+      "template": "skitouren",
+      "metrics": {"gust": {"enabled": true, "lower": {"red": null, "orange": null, "yellow": null},
+                           "upper": {"yellow": 42, "orange": 55, "red": 70}, "alarm_ab": "yellow"}},
+      "thunder": {"mittel": "orange", "hoch": "red"}
+    }
   },
   "report_config": {
     "trip_id": "drift-gate-trip",

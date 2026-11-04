@@ -71,7 +71,7 @@
 	// Bereinigung sind reine, exportierte Funktionen — per node:test bewacht,
 	// statt unbewachter Inline-Logik in dieser Komponente.
 	import {
-		buildGlobalMetricsForSave, buildChannelMetricsForSave,
+		buildGlobalMetricsForSave, buildChannelMetricsForSave, ampelBeimAnwenden,
 	} from './weather-metrics-tab/weatherMetricsSavePayload.ts';
 	// Issue #1888 (E6 Scheibe B): die Kuerzel-Legende sitzt seit dem
 	// Staging-Befund IN der Marken-Komponente (WeatherV2Reihenfolge) — jeder
@@ -736,7 +736,9 @@
 		}
 	});
 
-	// Preset-Auswahl
+	// Preset-Auswahl. Issue #2792 S1a (AC-14): Ampel der zuletzt angewendeten
+	// Vorlage; undefined = nicht senden (gespeicherte Ampel bleibt unangetastet).
+	let ampelAngewendet: Record<string, unknown> | undefined = $state(undefined);
 	function applyPreset(id: string) {
 		// Issue #1234 (2c): Preset anwenden ist eine echte Nutzerabsicht (auch wenn
 		// die einmalige Activity-Vorauswahl im createMode denselben Pfad nutzt —
@@ -759,6 +761,7 @@
 		buckets = newBuckets;
 		friendlyMap = newFriendly;
 		selectedTemplate = id;
+		ampelAngewendet = ampelBeimAnwenden(userP, id);
 	}
 
 	function onSelectPreset(id: string) {
@@ -973,6 +976,8 @@
 					outlook_metrics: outlookMetricKeysRoute === null ? undefined : outlookMetricKeysRoute,
 					// Issue #2049: dieselbe Bauart wie `outlook_metrics`.
 					outlook_metric_formats: outlookMetricFormatsRoute === null ? undefined : outlookMetricFormatsRoute,
+					// Issue #2792 S1a: nur nach „Anwenden" einer Vorlage gesendet.
+					ampel: ampelAngewendet,
 				},
 			},
 			{ display: WETTER_DISPLAY_KEYS },
@@ -1127,7 +1132,12 @@
 
 	async function onPresetSaved(preset: MetricPreset) {
 		userPresets = [preset, ...userPresets];
+		// Issue #2792 S1a: die soeben aus DIESEM Trip gespeicherte Vorlage traegt
+		// (SavePresetDialog bis S3 unveraendert) keine Ampel -- die Abo-Ampel
+		// des Trips bleibt, statt auf „allgemein" zurueckzufallen.
+		const ampelVorher = ampelAngewendet;
 		applyPreset(preset.id);
+		ampelAngewendet = ampelVorher;
 		// F004: wenn saveController vorhanden, über scheduleAutoSave routen,
 		// damit der Indikator korrekt Feedback gibt (handleSave kennt den Controller nicht).
 		if (saveController && !createMode) {

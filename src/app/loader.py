@@ -18,6 +18,7 @@ from typing import Any, Callable, Dict, List, Optional, Union
 from output.channels.seven_io_base import mask_number
 from services.file_lock import atomic_write_json, exclusive_lock
 from i18n import language_from_user_dict
+from app.ampel import validate_ampel
 from app.metric_catalog import (
     normalize_outlook_metric_formats, normalize_outlook_metric_ids,
 )
@@ -579,7 +580,7 @@ def _parse_trip(data: Dict[str, Any]) -> Trip:
         # Issue #1244: "display_config": null (explizites JSON-null) darf
         # nicht crashen -- fail-soft heisst hier: valider Default statt
         # AttributeError in _parse_display_config.
-        display_config = _parse_display_config(data["display_config"] or {})
+        display_config = _parse_display_config(data["display_config"] or {}, data.get("id", ""))
     elif weather_config is not None:
         display_config = _migrate_weather_config(weather_config)
     else:
@@ -948,7 +949,20 @@ def _append_derived_metrics(metrics: List["MetricConfig"]) -> List["MetricConfig
     return metrics
 
 
-def _parse_display_config(data: Dict[str, Any]) -> "UnifiedWeatherDisplayConfig":
+def _ampel_beim_laden(ampel: Any, owner_id: str) -> Optional[dict]:
+    """Issue #2792 S1a: eine ungueltige Ampel wird protokolliert und verworfen
+    (die Vorlage greift); die Datei behaelt sie (kein Schreiben, ADR-0083)."""
+    if ampel is None:
+        return None
+    fehler = validate_ampel(ampel)
+    if fehler:
+        logger.warning("Trip %s: ungueltige Ampel verworfen, Vorlage greift: %s",  # i18n-log
+                       owner_id, "; ".join(fehler))
+        return None
+    return ampel
+
+
+def _parse_display_config(data: Dict[str, Any], owner_id: str = "") -> "UnifiedWeatherDisplayConfig":
     """Parse UnifiedWeatherDisplayConfig from dict."""
     from datetime import datetime as _dt
     from app.models import MetricConfig, UnifiedWeatherDisplayConfig
@@ -1104,6 +1118,7 @@ def _parse_display_config(data: Dict[str, Any]) -> "UnifiedWeatherDisplayConfig"
         # faehige Kennungen und nicht-boolesche Werte fallen beim Lesen heraus.
         outlook_metric_formats=normalize_outlook_metric_formats(
             data.get("outlook_metric_formats")),
+        ampel=_ampel_beim_laden(data.get("ampel"), owner_id or data.get("trip_id", "")),
         updated_at=_dt.fromisoformat(data["updated_at"]) if "updated_at" in data else _dt.now(),
     )
 
@@ -1858,6 +1873,9 @@ def _trip_to_dict(trip: Trip) -> Dict[str, Any]:
             **({"outlook_metric_formats":
                 normalize_outlook_metric_formats(dc.outlook_metric_formats)}
                if dc.outlook_metric_formats is not None else {}),
+            # Issue #2792 S1a: BEDINGT -- None (keine/verworfene Ampel) bleibt
+            # ungeschrieben, der Bestand auf der Platte bleibt per Merge erhalten.
+            **({"ampel": dc.ampel} if dc.ampel is not None else {}),
         }
         # Issue #429: per_channel_layouts serialisieren (latenter Bug-Fix)
         if dc.per_channel_layouts is not None:
@@ -2061,7 +2079,12 @@ def _write_trip_locked(trip: Trip, path: Path, existing: dict) -> None:
     # ist per Definition eine route-Entität.
     python_data["kind"] = "route"
     # Issue #805: RMW-Merge — Go-geschriebene und Legacy-Felder bleiben erhalten.
-    atomic_write_json(path, _deep_merge_preserve_unknown(existing, python_data))
+    merged = _deep_merge_preserve_unknown(existing, python_data)
+    # Issue #2792 S1a (Spec §1): die Ampel ist ein GANZER Unterbaum — ein
+    # tiefer Merge wuerde geloeschte Grenzen wiederbeleben.
+    if "ampel" in python_data.get("display_config", {}):
+        merged["display_config"]["ampel"] = python_data["display_config"]["ampel"]
+    atomic_write_json(path, merged)
 
 
 class TripFileCorrupt(LoaderError):

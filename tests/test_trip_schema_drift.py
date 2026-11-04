@@ -76,6 +76,16 @@ def test_python_roundtrip_schluesselmengen_stimmen_mit_fixture_ueberein():
     assert trip.extra == {}, f"Python kennt diese Trip-Schluessel nicht: {sorted(trip.extra)}"
 
 
+def test_display_config_ampel_ueberlebt_python_roundtrip():
+    """#2792 S1a: display_config.ampel liegt unter dem Pass-through-Unterbaum;
+    Python muss sie lesen UND wieder schreiben, sonst loescht ein Python-
+    Speichern die Ampel (ADR-0083). Go-Pendant: trip_schema_drift_test.go."""
+    fixture = _load_fixture()
+    assert fixture["display_config"].get("ampel"), "Fixture ohne Ampel macht diese Probe blind"
+    _, out = _roundtrip(fixture)
+    assert out["display_config"].get("ampel") == fixture["display_config"]["ampel"]
+
+
 def test_fixture_ist_voll_besetzt_auf_wegpunkt_ebene():
     """Voraussetzung fuer AC-1/AC-4: suggestion_reason muss in der Fixture stehen."""
     wp = _load_fixture()["stages"][0]["waypoints"][0]

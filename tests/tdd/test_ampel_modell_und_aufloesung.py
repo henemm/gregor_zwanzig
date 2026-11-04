@@ -1,0 +1,236 @@
+"""Profil-Ampel S1a (#2792): Datenmodell, Vorlagen, Validierung, Aufloesung.
+
+Spec: docs/specs/modules/feat_2792_s1_profil_ampel.md (AC-13, AC-14 Python-
+Seite, AC-15 Aufloesung, AC-16 Regeln, AC-18). Kein Mock: echter Katalog,
+echter Loader auf ``tmp_path``, echter FastAPI-Router. Fixture relativ zur
+Testdatei aufgeloest.
+"""
+
+import copy
+import json
+import logging
+from pathlib import Path
+
+import pytest
+from fastapi import FastAPI
+from fastapi.testclient import TestClient
+
+from app import metric_catalog
+from app.ampel import (
+    ampel_for,
+    deviation_count,
+    template_id_for,
+    thunder_color,
+    validate_ampel,
+)
+from app.ampel_templates import AMPEL_TEMPLATES
+from app.loader import compare_preset_from_dict, load_trip, save_trip
+from app.models import ThunderLevel
+from output.metric_format import severity_from_thresholds
+
+_HERE = Path(__file__).resolve().parent
+FIXTURE = _HERE.parent / "fixtures" / "trip_schema_full.json"
+
+
+def _trip_dict(display_config: dict) -> dict:
+    data = json.loads(FIXTURE.read_text(encoding="utf-8"))
+    data["display_config"] = display_config
+    return data
+
+
+def _gust(yellow, orange, red):
+    return {"upper": {"yellow": yellow, "orange": orange, "red": red}}
+
+
+# --- Vorlagen ---------------------------------------------------------------
+
+def test_sieben_vorlagen_mit_denselben_ids_wie_die_wettervorlagen():
+    assert list(AMPEL_TEMPLATES) == list(metric_catalog.WEATHER_TEMPLATES)
+
+
+@pytest.mark.parametrize("tid", list(AMPEL_TEMPLATES))
+def test_jede_vorlage_besteht_die_eigene_validierung(tid):
+    assert validate_ampel(AMPEL_TEMPLATES[tid]) == []
+
+
+def test_allgemein_gleicht_dem_bisherigen_katalog_ausser_cape():
+    """AC-18 Paritaets-Ratsche: Vorlage allgemein == display_thresholds (ohne CAPE).
+
+    Verglichen wird gegen den ECHTEN Katalog (alle Groessen inkl. nicht
+    waehlbarer), nicht gegen eine Kopie der Zahlen. Nie lockern.
+    """
+    katalog = {m.id: m.display_thresholds for m in metric_catalog._METRICS
+               if m.display_thresholds}
+    assert len(katalog) == 10 and "cape" in katalog
+    aufgeloest = ampel_for({})
+    for mid, erwartet in katalog.items():
+        if mid == "cape":
+            assert aufgeloest.get("cape", {}) == {}, "CAPE-Farbe entfaellt (P1)"
+            continue
+        assert aufgeloest[mid] == erwartet, mid
+
+
+# --- AC-13 Rueckfallkette Trip ----------------------------------------------
+
+def test_trip_ohne_ampel_mit_vorlagenname_liefert_skitouren_grenzen(tmp_path):
+    save_trip(load_trip(_trip_dict({"preset_name": "skitouren", "metrics": []})), "anna", tmp_path)
+    trip = load_trip("drift-gate-trip", data_dir=tmp_path, user_id="anna")
+    assert ampel_for(trip)["gust"]["yellow"] == 40
+
+
+def test_trip_ohne_ampel_und_ohne_vorlagenname_liefert_allgemein():
+    trip = load_trip(_trip_dict({"metrics": []}))
+    assert ampel_for(trip)["gust"]["yellow"] == 30
+
+
+def test_unbekannte_vorlage_liefert_allgemein_mit_warnung(caplog):
+    trip = load_trip(_trip_dict({"preset_name": "gibt-es-nicht", "metrics": []}))
+    with caplog.at_level(logging.WARNING, logger="app.ampel"):
+        assert ampel_for(trip)["gust"]["yellow"] == 30
+    assert any("gibt-es-nicht" in r.getMessage() for r in caplog.records)
+
+
+def test_abo_ampel_gewinnt_je_metrik_rest_aus_vorlage():
+    ampel = {"template": "skitouren", "metrics": {"gust": _gust(42, 55, 70)}}
+    trip = load_trip(_trip_dict({"preset_name": "wandern", "ampel": ampel, "metrics": []}))
+    res = ampel_for(trip)
+    assert res["gust"] == {"yellow": 42, "orange": 55, "red": 70}
+    assert res["temperature"] == {"yellow": 3, "orange": 8, "red": 15,
+                                  "yellow_lt": -15, "orange_lt": -20, "red_lt": -30}
+
+
+def test_form_passt_zu_severity_from_thresholds_beidseitig():
+    wind = ampel_for({"display_config": {"ampel": {"template": "wassersport"}}})["wind"]
+    assert wind == {"yellow": 30, "orange": 40, "red": 50, "orange_lt": 4, "yellow_lt": 8}
+    assert [severity_from_thresholds(wind, v) for v in (3, 6, 15, 41)] == [
+        "orange", "yellow", "green", "orange"]
+
+
+# --- AC-15 Compare-Profil ---------------------------------------------------
+
+@pytest.mark.parametrize("profil, vorlage", [
+    ("summer_trekking", "alpen-trekking"), ("WANDERN", "wandern"),
+    ("Wintersport", "wintersport"), ("allgemein", "allgemein"), ("radtour", "radtour"),
+])
+def test_compare_profil_wird_vorlage(profil, vorlage):
+    preset = {"profil": profil, "display_config": {}}
+    assert template_id_for(preset) == vorlage
+    assert template_id_for(compare_preset_from_dict({"id": "c1", **preset})) == vorlage
+
+
+def test_unbekanntes_compare_profil_wird_allgemein_mit_warnung(caplog):
+    with caplog.at_level(logging.WARNING, logger="app.ampel"):
+        assert template_id_for({"profil": "bergsteigen", "display_config": {}}) == "allgemein"
+    assert any("bergsteigen" in r.getMessage() for r in caplog.records)
+
+
+def test_gespeicherte_compare_vorlage_schlaegt_profil():
+    preset = {"profil": "summer_trekking", "display_config": {"ampel": {"template": "skitouren"}}}
+    assert template_id_for(preset) == "skitouren"
+    assert ampel_for(preset)["gust"]["yellow"] == 40
+
+
+# --- Validierung (Regeln fuer AC-16, Python-Seite) --------------------------
+
+@pytest.mark.parametrize("ampel", [
+    {"metrics": {"gust": _gust(50, 45, 60)}},
+    {"metrics": {"temperature": {"lower": {"yellow": 30}, "upper": {"yellow": 20}}}},
+    {"metrics": {"temperature": {"lower": {"red": 0, "orange": -5, "yellow": 5}}}},
+    {"metrics": {"gust": {"alarm_ab": "bald"}}},
+    {"metrics": {"gust": {"upper": {"yellow": "viel"}}}},
+    {"thunder": {"mittel": "orange", "hoch": "yellow"}},
+    {"thunder": {"mittel": "red", "hoch": "orange"}},
+    {"metrics": ["gust"]},
+])
+def test_ungueltige_ampel_wird_erkannt(ampel):
+    assert validate_ampel(ampel) != []
+
+
+def test_teilmenge_und_offene_grenzen_sind_gueltig():
+    ampel = {"template": "wassersport", "metrics": {
+        "wind": {"lower": {"red": None, "orange": 4, "yellow": 8},
+                 "upper": {"yellow": 30, "orange": None, "red": 50}, "alarm_ab": "yellow"}}}
+    assert validate_ampel(ampel) == []
+
+
+# --- Abweichungszahl und Gewitter -------------------------------------------
+
+def test_abweichungszahl_zaehlt_grenzen_und_gewitter_nicht_alarmstufe():
+    vorlage_gust = copy.deepcopy(AMPEL_TEMPLATES["skitouren"]["metrics"]["gust"])
+    assert deviation_count({"template": "skitouren"}) == 0
+    assert deviation_count({"template": "skitouren", "metrics": {"gust": vorlage_gust}}) == 0
+    assert deviation_count({"template": "skitouren",
+                            "metrics": {"gust": {**vorlage_gust, "alarm_ab": "never"}}}) == 0
+    assert deviation_count({"template": "skitouren", "metrics": {"gust": _gust(42, 55, 70)}}) == 1
+    assert deviation_count({"template": "skitouren", "metrics": {"gust": _gust(42, 55, 70)},
+                            "thunder": {"mittel": "red", "hoch": "red"}}) == 2
+
+
+@pytest.mark.parametrize("tid", list(AMPEL_TEMPLATES))
+def test_gewitter_keins_gruen_leicht_immer_gelb(tid):
+    ampel = {"template": tid}
+    assert thunder_color(ThunderLevel.NONE, ampel) == "green"
+    assert thunder_color(ThunderLevel.LOW, ampel) == "yellow"
+    assert thunder_color(ThunderLevel.HIGH, ampel) in ("orange", "red")
+
+
+def test_gewitter_mittel_nach_vorlage_und_abo():
+    assert thunder_color(ThunderLevel.MED, {"template": "wassersport"}) == "red"
+    assert thunder_color(ThunderLevel.MED, {"template": "allgemein"}) == "orange"
+    assert thunder_color(ThunderLevel.MED, None) == "orange"
+    assert thunder_color(ThunderLevel.MED, {"thunder": {"mittel": "yellow", "hoch": "orange"}}) == "yellow"
+    assert thunder_color(None, None) is None
+
+
+# --- Loader: lesen, schreiben, merge-sicher ---------------------------------
+
+def test_python_speichern_behaelt_ampel_und_alle_anderen_felder(tmp_path):
+    ampel = {"template": "skitouren", "metrics": {"gust": {**_gust(42, 55, 70), "alarm_ab": "yellow"}},
+             "thunder": {"mittel": "orange", "hoch": "red"}}
+    dc = {"preset_name": "skitouren", "metrics": [], "theme": "von-go", "ampel": ampel}
+    pfad = tmp_path / "users" / "anna" / "briefings" / "drift-gate-trip.json"
+    pfad.parent.mkdir(parents=True)
+    pfad.write_text(json.dumps(_trip_dict(dc)), encoding="utf-8")
+
+    trip = load_trip("drift-gate-trip", data_dir=tmp_path, user_id="anna")
+    assert trip.display_config.ampel == ampel
+    save_trip(trip, "anna", tmp_path)
+
+    gespeichert = json.loads(pfad.read_text(encoding="utf-8"))["display_config"]
+    assert gespeichert["ampel"] == ampel
+    assert gespeichert["theme"] == "von-go"
+    assert gespeichert["preset_name"] == "skitouren"
+
+
+def test_ungueltige_ampel_beim_laden_verworfen_und_protokolliert(tmp_path, caplog):
+    kaputt = {"metrics": {"gust": _gust(50, 45, 60)}}
+    pfad = tmp_path / "users" / "anna" / "briefings" / "drift-gate-trip.json"
+    pfad.parent.mkdir(parents=True)
+    pfad.write_text(json.dumps(_trip_dict({"preset_name": "skitouren", "metrics": [],
+                                           "ampel": kaputt})), encoding="utf-8")
+    with caplog.at_level(logging.WARNING):
+        trip = load_trip("drift-gate-trip", data_dir=tmp_path, user_id="anna")
+    assert trip.display_config.ampel is None
+    assert any("drift-gate-trip" in r.getMessage() and "Ampel" in r.getMessage()
+               for r in caplog.records)
+    assert ampel_for(trip)["gust"]["yellow"] == 40  # Vorlage skitouren greift
+    save_trip(trip, "anna", tmp_path)  # Altdaten gehen dabei nicht verloren
+    assert json.loads(pfad.read_text(encoding="utf-8"))["display_config"]["ampel"] == kaputt
+
+
+# --- GET /templates ---------------------------------------------------------
+
+def test_templates_endpunkt_liefert_ampel_je_vorlage_und_alte_felder_unveraendert():
+    from api.routers import config
+
+    app = FastAPI()
+    app.include_router(config.router, prefix="/api")
+    antwort = TestClient(app).get("/api/templates").json()
+    alt = metric_catalog.get_all_templates()
+    assert [{k: t[k] for k in ("id", "label", "metrics")} for t in antwort] == alt
+    for t in antwort:
+        assert t["ampel"]["template"] == t["id"]
+        assert validate_ampel(t["ampel"]) == []
+    skitouren = next(t for t in antwort if t["id"] == "skitouren")
+    assert skitouren["ampel"]["metrics"]["gust"]["upper"]["yellow"] == 40
+    assert skitouren["ampel"]["metrics"]["gust"]["alarm_ab"] == "orange"

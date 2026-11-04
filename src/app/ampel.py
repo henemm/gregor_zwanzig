@@ -1,0 +1,228 @@
+"""Profil-Ampel: Validierung, Aufloesung, Abweichungszahl, Gewitterfarbe.
+
+Issue #2792 S1a, ADR-0106, Spec ``docs/specs/modules/feat_2792_s1_profil_ampel.md``
+§1-§3. EIN Code fuer Trip (Objekt mit ``display_config`` als
+``UnifiedWeatherDisplayConfig``) und Ortsvergleich (Dict oder ``ComparePreset``
+mit ``display_config``-Dict und ``profil``).
+
+Rueckfallkette: Abo-Ampel je Metrik -> Vorlage ``ampel.template`` bzw. Trip
+``display_config.preset_name`` bzw. Compare ``profil`` -> Vorlage
+„allgemein". In S1a liest noch kein Renderer diese Funktionen (S1c).
+"""
+
+from __future__ import annotations
+
+import copy
+import logging
+from collections.abc import Mapping
+from numbers import Real
+from typing import Any, Optional
+
+from app.ampel_templates import AMPEL_TEMPLATES, DEFAULT_TEMPLATE
+from app.models import ThunderLevel
+
+logger = logging.getLogger(__name__)
+
+_LOWER = ("red", "orange", "yellow")  # aufsteigend: rot < orange < gelb
+_UPPER = ("yellow", "orange", "red")  # aufsteigend: gelb < orange < rot
+ALARM_AB = frozenset({"never", "yellow", "orange", "red"})
+_RANG = {"yellow": 1, "orange": 2, "red": 3}
+_THUNDER_HOCH = frozenset({"orange", "red"})
+_THUNDER_FEST = {ThunderLevel.NONE: "green", ThunderLevel.LOW: "yellow"}  # P2
+_PROFIL_ZU_VORLAGE = {"summer_trekking": "alpen-trekking"}
+
+
+def _feld(obj: Any, name: str) -> Any:
+    if isinstance(obj, Mapping):
+        return obj.get(name)
+    return getattr(obj, name, None)
+
+
+def _seite(werte: Any, keys: tuple, wo: str, fehler: list[str]) -> list:
+    """Gesetzte Werte einer Seite in Schluessel-Reihenfolge (muss aufsteigen)."""
+    if werte is None:
+        return []
+    if not isinstance(werte, Mapping):
+        fehler.append(f"{wo}: keine Grenzen-Tabelle")
+        return []
+    gesetzt = []
+    for k in keys:
+        v = werte.get(k)
+        if v is None:
+            continue
+        if not isinstance(v, Real) or isinstance(v, bool):
+            fehler.append(f"{wo}.{k}: keine Zahl")
+            continue
+        gesetzt.append(v)
+    if any(a >= b for a, b in zip(gesetzt, gesetzt[1:])):
+        fehler.append(f"{wo}: Reihenfolge verletzt")
+    return gesetzt
+
+
+def _pruefe_metrik(mid: str, e: Any, fehler: list[str]) -> None:
+    if not isinstance(e, Mapping):
+        fehler.append(f"{mid}: kein Objekt")
+        return
+    unten = _seite(e.get("lower"), _LOWER, f"{mid}.lower", fehler)
+    oben = _seite(e.get("upper"), _UPPER, f"{mid}.upper", fehler)
+    if unten and oben and unten[-1] > oben[0]:
+        fehler.append(f"{mid}: untere Grenze ueber der oberen")
+    if e.get("alarm_ab") is not None and e.get("alarm_ab") not in ALARM_AB:
+        fehler.append(f"{mid}.alarm_ab: unbekannt")
+    if e.get("enabled") is not None and not isinstance(e.get("enabled"), bool):
+        fehler.append(f"{mid}.enabled: kein Wahrheitswert")
+
+
+def _pruefe_gewitter(th: Any, fehler: list[str]) -> None:
+    if not isinstance(th, Mapping):
+        fehler.append("thunder: kein Objekt")
+        return
+    mittel, hoch = th.get("mittel"), th.get("hoch")
+    if mittel is not None and mittel not in _RANG:
+        fehler.append("thunder.mittel: unbekannt")
+    if hoch is not None and hoch not in _THUNDER_HOCH:
+        fehler.append("thunder.hoch: nie gelb")
+    if mittel in _RANG and hoch in _RANG and _RANG[hoch] < _RANG[mittel]:
+        fehler.append("thunder.hoch: schwaecher als mittel")
+
+
+def validate_ampel(ampel: Any) -> list[str]:
+    """Fehlerliste (leer = gueltig). Gleiche Regeln wie Go ``validateAmpel``."""
+    if ampel is None:
+        return []
+    if not isinstance(ampel, Mapping):
+        return ["Ampel: kein Objekt"]
+    fehler: list[str] = []
+    if ampel.get("template") is not None and not isinstance(ampel.get("template"), str):
+        fehler.append("template: kein Text")
+    metrics = ampel.get("metrics")
+    if metrics is not None and not isinstance(metrics, Mapping):
+        fehler.append("metrics: kein Objekt")
+    elif metrics:
+        for mid, e in metrics.items():
+            _pruefe_metrik(mid, e, fehler)
+    if ampel.get("thunder") is not None:
+        _pruefe_gewitter(ampel["thunder"], fehler)
+    return fehler
+
+
+def _bekannte_vorlage(tid: str, quelle: str) -> str:
+    if tid in AMPEL_TEMPLATES:
+        return tid
+    logger.warning("Profil-Ampel: unbekannte Vorlage %r aus %s, nutze allgemein", tid, quelle)  # i18n-log
+    return DEFAULT_TEMPLATE
+
+
+def template_for_profil(profil: Optional[str]) -> str:
+    """Compare-``profil`` -> Vorlagen-ID (Spec §3, Gross-/Kleinschreibung egal)."""
+    if not profil:
+        return DEFAULT_TEMPLATE
+    key = str(profil).strip().lower()
+    tid = _PROFIL_ZU_VORLAGE.get(key, key)
+    if tid in AMPEL_TEMPLATES:
+        return tid
+    logger.warning("Profil-Ampel: unbekanntes Profil %r, nutze allgemein", profil)  # i18n-log
+    return DEFAULT_TEMPLATE
+
+
+def _abo_ampel(dc: Any) -> Optional[Mapping]:
+    ampel = _feld(dc, "ampel")
+    if ampel is None:
+        return None
+    fehler = validate_ampel(ampel)
+    if fehler:
+        logger.warning("Profil-Ampel ungueltig, Vorlage greift: %s", "; ".join(fehler))  # i18n-log
+        return None
+    return ampel
+
+
+def _aufloesen(subscription: Any) -> tuple[str, Optional[Mapping]]:
+    dc = _feld(subscription, "display_config")
+    dc = subscription if dc is None else dc
+    abo = _abo_ampel(dc)
+    if abo and abo.get("template"):
+        return _bekannte_vorlage(abo["template"], "ampel.template"), abo
+    preset_name = _feld(dc, "preset_name")
+    if preset_name:
+        return _bekannte_vorlage(preset_name, "preset_name"), abo
+    return template_for_profil(_feld(subscription, "profil")), abo
+
+
+def template_id_for(subscription: Any) -> str:
+    """ID der Vorlage, auf die ein Abo (Trip oder Compare) zurueckfaellt."""
+    return _aufloesen(subscription)[0]
+
+
+def _verschmelzen(tid: str, abo: Optional[Mapping]) -> dict:
+    res = copy.deepcopy(AMPEL_TEMPLATES[tid])
+    if not abo:
+        return res
+    for mid, e in (abo.get("metrics") or {}).items():
+        ziel = res["metrics"].setdefault(
+            mid, {"enabled": False, "lower": {}, "upper": {}, "alarm_ab": "never"})
+        for k in ("lower", "upper"):
+            if k in e:  # null = Seite bewusst offen
+                ziel[k] = copy.deepcopy(e[k]) or {}
+        for k in ("enabled", "alarm_ab"):
+            if e.get(k) is not None:
+                ziel[k] = e[k]
+    res["thunder"].update({k: v for k, v in (abo.get("thunder") or {}).items() if v is not None})
+    return res
+
+
+def resolve_ampel(subscription: Any) -> dict:
+    """Vollstaendige Ampel eines Abos (Vorlage + Abo-Abweichungen)."""
+    return _verschmelzen(*_aufloesen(subscription))
+
+
+def _schwellen(e: Mapping) -> dict:
+    out = {}
+    for k in _UPPER:
+        if (e.get("upper") or {}).get(k) is not None:
+            out[k] = e["upper"][k]
+    for k in _LOWER:
+        if (e.get("lower") or {}).get(k) is not None:
+            out[f"{k}_lt"] = e["lower"][k]
+    return out
+
+
+def ampel_for(subscription: Any) -> dict[str, dict]:
+    """Je Metrik das Schwellen-Dict in der Form von ``severity_from_thresholds``
+    (``yellow/orange/red`` + ``yellow_lt/orange_lt/red_lt``, offene weggelassen)."""
+    return {mid: _schwellen(e) for mid, e in resolve_ampel(subscription)["metrics"].items()}
+
+
+def _vorlage_der_ampel(ampel: Optional[Mapping]) -> str:
+    tid = (ampel or {}).get("template")
+    return _bekannte_vorlage(tid, "ampel.template") if tid else DEFAULT_TEMPLATE
+
+
+def _ohne_offene(seite: Any) -> dict:
+    return {k: v for k, v in (seite or {}).items() if v is not None}
+
+
+def deviation_count(ampel: Optional[Mapping]) -> int:
+    """Anzahl Metriken (plus Gewitter), deren Grenzen von der Vorlage abweichen.
+    ``alarm_ab`` und ``enabled`` zaehlen nicht (Spec §1)."""
+    if not ampel:
+        return 0
+    vorlage = AMPEL_TEMPLATES[_vorlage_der_ampel(ampel)]
+    n = 0
+    for mid, e in (ampel.get("metrics") or {}).items():
+        v = vorlage["metrics"].get(mid, {})
+        if any(k in e and _ohne_offene(e[k]) != _ohne_offene(v.get(k)) for k in ("lower", "upper")):
+            n += 1
+    gewitter = {**vorlage["thunder"], **_ohne_offene(ampel.get("thunder"))}
+    return n + (gewitter != vorlage["thunder"])
+
+
+def thunder_color(level: Any, ampel: Optional[Mapping]) -> Optional[str]:
+    """Gewitterstufe -> Ampelfarbe: keins gruen, leicht fest gelb (P2), mittel/
+    hoch nach ``ampel.thunder`` (sonst Vorlage). ``None`` = keine Aussage."""
+    if level is None:
+        return None
+    lvl = ThunderLevel(level)
+    if lvl in _THUNDER_FEST:
+        return _THUNDER_FEST[lvl]
+    gewitter = _verschmelzen(_vorlage_der_ampel(ampel), ampel)["thunder"]
+    return gewitter["mittel"] if lvl == ThunderLevel.MED else gewitter["hoch"]
