@@ -3,8 +3,8 @@ entity_id: feat_2792_s1_profil_ampel
 type: module
 created: 2026-11-04
 updated: 2026-11-04
-status: approved
-version: "1.0"
+status: draft
+version: "1.1"
 tags: [ampel, profil, vorlagen, migration, renderer, sms, telegram, mail, i18n, epic-2791]
 ---
 
@@ -13,6 +13,7 @@ tags: [ampel, profil, vorlagen, migration, renderer, sms, telegram, mail, i18n, 
 ## Approval
 
 - [x] Approved (PO-Freigabe 2026-11-04 per Rückfrage: „Freigabe“)
+- [ ] Approved v1.1 (S1c-Ergänzungen: Schnitt in vier PRs, Migrations-Nachtrag AC-23, AC-19 (d), Pfadkorrekturen)
 
 ## Purpose
 
@@ -24,8 +25,8 @@ Entscheidungsgrundlage: ADR-0106 (Akzeptiert 2026-11-04) mit P1 (CAPE geht wie h
 
 ## Source
 
-- **Files:** `src/app/ampel.py` (neu), `src/app/ampel_templates.py` (neu), `src/app/models.py`, `src/app/loader.py`, `src/app/metric_catalog.py`, `src/output/metric_format.py`, `src/output/renderers/**`, `src/output/tokens/**`, `src/services/alert/**`, `scripts/migrate_2792_profil_ampel.py` (neu), `internal/model/metric_preset.go`, `internal/handler/**`
-- **Identifier:** `ampel_for(subscription)`, `validate_ampel(ampel)`, `thunder_color(level, ampel)`, `deviation_count(ampel)`
+- **Files:** `src/app/ampel.py` (neu), `src/app/ampel_templates.py` (neu), `src/app/models.py`, `src/app/loader.py`, `src/app/metric_catalog.py`, `src/output/metric_format.py`, `src/output/renderers/**`, `src/output/tokens/**`, `src/output/renderers/alert/**`, `scripts/migrate_2792_profil_ampel.py` (neu), `internal/model/metric_preset.go`, `internal/handler/**`
+- **Identifier:** `ampel_for(subscription)`, `validate_ampel(ampel)`, `thunder_color(level, resolved)`, `deviation_count(ampel)`
 
 > **Schicht-Hinweis:** Python-Core (Wetter-Domäne, alle Renderer, Migration), Go-API (nur `MetricPreset`-Feld, Validierung beim Speichern, Fehlertext), Frontend (nur Sperre der Altfelder und Hinweistext, kein neuer Editor). Go-Modelle `Trip`/`ComparePreset` bleiben unverändert: die Ampel liegt **unter `display_config`** (Go reicht `DisplayConfig map[string]interface{}` durch).
 
@@ -36,16 +37,22 @@ Entscheidungsgrundlage: ADR-0106 (Akzeptiert 2026-11-04) mit P1 (CAPE geht wie h
 
 ## Estimated Scope
 
-Lieferung in **drei Schritten, je eigener PR mit allen 6 CI-Checks** (`test` · `lint` · `go-test` · `svelte-check` · `frontend-test` · `e2e`), unter dieser einen Spec. Reihenfolge laut Playbook: erst Lese-Code (S1a), dann Migration (S1b), dann Umschalten der Leser (S1c).
+Lieferung in **sechs Teilschritten, je eigener PR mit allen 6 CI-Checks** (`test` · `lint` · `go-test` · `svelte-check` · `frontend-test` · `e2e`), unter dieser einen Spec. Reihenfolge laut Playbook: erst Lese-Code (S1a), dann Migration (S1b), dann Umschalten der Leser (S1c, selbst in vier PRs geschnitten).
 
 | Schritt | Inhalt | LoC (grob, inkl. Tests, Skript, Datentabellen) | ACs |
 |---|---|---|---|
 | **S1a** | Datenmodell, Vorlagen-Grenzen, Validierung, `ampel_for`, Go-`MetricPreset`, Compare-Profil-Zuordnung. Ausgabe unverändert (noch liest niemand `ampel_for`). | ca. 450 | AC-13, AC-14, AC-15 (nur Auflösung `profil` → Vorlage), AC-16, AC-18 |
 | **S1b** | Migrationsskript (Probelauf, `--execute`, Sicherung, wiederholbar). | ca. 400 | AC-8 bis AC-12, AC-17 |
-| **S1c** | Alle Leser auf `ampel_for`, Gewitter zentral, CAPE-Farbe entfernt, SMS-Hervorhebung aus Ampel, Sperre der Altfelder, Tests umgestellt. | ca. 650 | AC-1 bis AC-7, AC-15 (Mail-Kopf), AC-19 bis AC-22 |
+| **S1c-1** „Durchreichen, Ausgabe unverändert“ | Ampel-Objekt als keyword-only Pflichtparameter ohne Default bis an jede Farbentscheidung; Compare-Listen je Rendern; `AlertMessage` trägt die Ampel; Hervorhebung per Prädikat vorbereitet; Ratsche gegen `display_thresholds`-Zugriffe in `src/output/**`. Die Einstiege übergeben noch `resolve_ampel(None)` ⇒ Ausgabe byte-gleich. | ca. 450 | AC-20 (Struktur), Ratsche |
+| **S1c-2** „Migration nachziehen“ | `_ZUORDNUNG` ergänzen (§4 Nachtrag), Test, Nachlauf auf Staging und Prod. | ca. 120 | AC-23 |
+| **S1c-3** „Altfelder sperren (E2)“ | Frontend: Wertebereiche-Reiter und SMS-Schwellwert-Regler nur lesbar. Darf vor S1c-4 live gehen. | ca. 150 | AC-22 |
+| **S1c-4** „Umschalten, alle vier Kanäle gleichzeitig“ | Einstiege auf das Abo, CAPE ohne Farbe, Gewitter zentral, Wertebereich-Markierung aus, `sms_threshold`/`DEFAULTS` ohne Wirkung, Temperatur mit Stunde, Doku. | ca. 500 | AC-1 bis AC-7, AC-15 (Mail-Kopf), AC-19, AC-21 |
 
-- **Gesamt:** ca. 1500 LoC, ca. 35 Dateien. **Effort:** high.
-- **loc_limit_override:** in jedem der drei Schritte erwartet (Limit 250; Tests, Datentabellen und `scripts/` zählen mit). Vor `/50` je Schritt mit `workflow.py status` gegenlesen und `loc_limit_override` setzen (Richtwerte S1a 500, S1b 450, S1c 700; `*.md` zählt nicht).
+- **S1c: vier Teilschritte, je eigener PR und eigener Workflow-Lauf unter dieser Spec und Issue #2792.** Der Lauf `feat-2792-s1c-leser` liefert S1c-1; die übrigen folgen als eigene Läufe. Issue #2792 wird erst nach S1c-4 und Selftest geschlossen.
+- **Reihenfolge:** S1c-1, S1c-2 und S1c-3 in beliebiger Reihenfolge, S1c-4 zuletzt. Grund: Es gibt keinen Zeitpunkt, an dem die Kanäle unterschiedlich bewerten (ADR-0095), und die Altfelder sind nie still wirkungslos (E2).
+- **Reihenfolge-Gate (prüfbar):** Vor dem Prod-Deploy von S1c-4 muss auf Prod der Probelauf `scripts/migrate_2792_profil_ampel.py` (ohne `--execute`) für alle Nutzer „nichts zu tun“ melden, und der Migrationsbericht muss im Issue stehen. Dieser Probelauf ist Pflicht-Vorbedingung im `/70-deploy` von S1c-4.
+- **Gesamt:** ca. 2070 LoC (S1a 450 + S1b 400 + S1c ca. 1220 statt 650), ca. 45 Dateien. **Effort:** high.
+- **loc_limit_override:** in jedem Schritt erwartet (Limit 250; Tests, Datentabellen und `scripts/` zählen mit). Vor `/50` je Lauf mit `workflow.py status` gegenlesen und `loc_limit_override` setzen (Richtwerte S1a 500, S1b 450, S1c-1 450, S1c-2 120, S1c-3 150, S1c-4 500; `*.md` zählt nicht).
 - **Schema-Hook:** Edits an `internal/model/`, `src/app/models.py`, `src/app/loader.py` lösen `data_schema_backup.py` aus (erwartet, kein Fehler).
 
 ## Affected Files
@@ -58,15 +65,17 @@ Lieferung in **drei Schritten, je eigener PR mit allen 6 CI-Checks** (`test` · 
 | `src/app/ampel.py` | CREATE | `validate_ampel`, `ampel_for`, `deviation_count`, `thunder_color`, Profil-Zuordnung | S1a |
 | `src/app/models.py` | MODIFY | `UnifiedWeatherDisplayConfig.ampel: Optional[dict]` | S1a |
 | `src/app/loader.py` | MODIFY | Ampel lesen/schreiben (Muster `loader.py:1839`), ungültige Ampel loggen und verwerfen, merge-sicher | S1a |
-| `src/app/metric_catalog.py` | MODIFY | `display_thresholds` liefert danach nur Vorgaben der Vorlage „allgemein“; CAPE-Schwellen entfallen | S1a/S1c |
+| `src/app/metric_catalog.py` | MODIFY | `display_thresholds` liefert danach nur Vorgaben der Vorlage „allgemein“; CAPE-Schwellen entfallen | S1a/S1c-4 |
 | `api/routers/config.py` | MODIFY | `GET /templates` liefert zusätzlich `ampel` je Vorlage | S1a |
 | `scripts/migrate_2792_profil_ampel.py` | CREATE | Batch-Migration | S1b |
-| `src/output/metric_format.py` | MODIFY | `severity_for` nimmt Ampel-Dict statt Katalog; `thunder_ampel_band` wird die zentrale Gewitter-Abbildung | S1c |
-| `src/output/renderers/email/{html,plain,compact,helpers,outlook,compare_html}.py`, `src/output/renderers/comparison.py` | MODIFY | Leser umschalten (Abschnitt 5) | S1c |
-| `src/output/tokens/{builder,metrics}.py`, `src/output/renderers/sms_trip.py`, `src/output/renderers/telegram/narrow.py` | MODIFY | Hervorhebung „@14“ aus Ampel statt `sms_threshold` | S1c |
-| `src/services/alert/{hours,project,render}.py` | MODIFY | Stunden-Staging mit Ampel des Abos; `AlertMessage` trägt die Ampel | S1c |
-| `src/services/trip_command_processor.py` | MODIFY | Gewitter-Dublette `_BAND_EMOJI` über zentrale Abbildung | S1c |
-| Tests (Abschnitt Test Plan) | CREATE/MODIFY | | S1a-c |
+| `scripts/migrate_2792_profil_ampel.py` | MODIFY | `_ZUORDNUNG` um Vergleichsschlüssel ergänzen (§4 Nachtrag) | S1c-2 |
+| `src/output/metric_format.py` | MODIFY | `severity_for` nimmt Ampel-Dict statt Katalog; `thunder_ampel_band` wird die zentrale Gewitter-Abbildung | S1c-1/S1c-4 |
+| `src/output/renderers/email/{html,plain,compact,helpers,outlook,compare_html}.py`, `src/output/renderers/comparison.py` | MODIFY | Ampel durchreichen (S1c-1), Leser umschalten (Abschnitt 5, S1c-4) | S1c-1/S1c-4 |
+| `src/output/tokens/{builder,metrics,dto}.py`, `src/output/renderers/{sms_trip,narrow,day_window}.py` | MODIFY | Hervorhebung „@14“ aus Ampel statt `sms_threshold`; Temperatur mit Stunde (`min_ts` in `day_window.hiking_field_min_max` ergänzen) | S1c-1/S1c-4 |
+| `src/output/renderers/alert/{hours,project,model,render}.py`, `src/services/notification_service.py`, `src/services/validator_render_service.py` | MODIFY | Stunden-Staging mit Ampel des Abos; `AlertMessage` trägt die Ampel; Aufrufer reichen den Trip durch | S1c-1/S1c-4 |
+| `src/output/renderers/trip_report.py`, `src/services/trip_report_scheduler.py` | MODIFY | Auflösung am Einstieg; `build_outlook_row` bekommt die Ampel des jeweiligen Trips; `sms_threshold` wirkt nicht mehr | S1c-1/S1c-4 |
+| `src/services/trip_command_processor.py` | MODIFY | Gewitter-Dublette `_BAND_EMOJI` über zentrale Abbildung | S1c-4 |
+| Tests (Abschnitt Test Plan) | CREATE/MODIFY | | S1a bis S1c-4 |
 
 ### Go-API
 
@@ -81,10 +90,10 @@ Lieferung in **drei Schritten, je eigener PR mit allen 6 CI-Checks** (`test` · 
 
 | File | Change | Beschreibung | Schritt |
 |---|---|---|---|
-| `frontend/src/lib/components/shared/WeatherMetricsTab.svelte` | MODIFY | SMS-Schwellwert-Regler (Sensibel/Standard/Robust) nur lesbar + Hinweis | S1c |
-| geteilter Wertebereiche-Tab unter `frontend/src/lib/components/shared/` | MODIFY | gesamter Reiter nur lesbar + Hinweis, `context="route"\|"vergleich"` | S1c |
-| `frontend/src/lib/i18n/messages/{de,en}/wertebereiche.json` (SMS-Hinweis ggf. `trip.json`) | MODIFY | Hinweistext | S1c |
-| `frontend/src/lib/i18n/__tests__/**`, Komponententests | MODIFY | Paritätstest bleibt grün; Test der Sperre | S1c |
+| `frontend/src/lib/components/shared/WeatherMetricsTab.svelte`, `weather-metrics-tab/weatherMetricsSavePayload.ts` | MODIFY | SMS-Schwellwert-Regler (Sensibel/Standard/Robust) nur lesbar + Hinweis; Speicher-Payload reicht Bestandswerte `sms_threshold` unverändert durch (nie weglassen, nie leeren) | S1c-3 |
+| `frontend/src/lib/components/shared/corridor-editor/CorridorEditor.svelte`, `CorridorEditorMobile.svelte`, `wertebereicheVergleichSpeicherung.ts` | MODIFY | gesamter Reiter nur lesbar + Hinweis, `context="route"\|"vergleich"`; `corridors` unverändert durchreichen (nie leeren) | S1c-3 |
+| `frontend/src/lib/i18n/messages/{de,en}/wertebereiche.json` (SMS-Hinweis ggf. `trip.json`) | MODIFY | Hinweistext | S1c-3 |
+| `frontend/src/lib/i18n/__tests__/**`, Komponententests | MODIFY | Paritätstest bleibt grün; Test der Sperre | S1c-3 |
 
 ### Dokumentation
 
@@ -164,16 +173,49 @@ Der Compare erhält Vorlagen (Datenteil): `display_config.ampel.template` des `C
 - **CAPE:** eine gespeicherte Auswahl `cape` bzw. Compare `cape_max_jkg` → Metrik `thunder` aktiv (bestehende Einstellungen bleiben).
 - **Unangetastet:** `metric_alert_levels`, `alert_rules`, `alert_preset` (S2). Eigene Vorlagen ohne Ampel bleiben unverändert (Bericht nennt sie).
 
+#### Nachtrag S1c-2: Vergleichsschlüssel
+
+Der Migrationsbericht vom 2026-11-04 (Kommentar in #2792) nennt Vergleichs-Wertebereiche als „nicht zuordenbar“, die nach dem Umschalten sichtbar fehlen würden (Prod: `henning/5f534011`, `cp-ac57aa1e29c65649`, `cp-eb6ba0b239d90e37`, `zillertal-t-glich`). Deshalb wird `_ZUORDNUNG` (`scripts/migrate_2792_profil_ampel.py`) ergänzt. Die Einheiten sind geprüft (Einheit des Katalogs = Einheit des Schlüssels).
+
+| Vergleichsschlüssel | Ampel-Metrik | Bemerkung |
+|---|---|---|
+| `wind_max_kmh` | `wind` | km/h |
+| `visibility_min_m` | `visibility` | m; wirkt auf der unteren Seite (`von`), Katalog `*_lt` |
+| `precip_sum_mm` | `precipitation` | mm; die Vergleichs-Übersicht färbt die Summe schon heute mit `precipitation` |
+| `pop_max_pct` | `rain_probability` | % |
+| `snow_new_sum_cm` | `fresh_snow` | cm |
+| `wind_chill_min` / `wind_chill_max` | `wind_chill` | °C; Seitenregel wie `temperature_min`/`temperature_max` (min → nur `von`, max → nur `bis`) |
+| `uv_index_max` | `uv_index` | –; UV gehört zu den 10 heutigen Ampel-Metriken |
+| `temp_min_c` | `temperature` | °C; nur `von` → `lower.yellow`. Sind `temp_min_c` und `temp_max_c` beide vorhanden, gilt für die untere Seite `temp_min_c` |
+| `sunny_hours_h`, `cloud_avg_pct`, `humidity_avg_pct`, `dewpoint_avg_c`, `freezing_level_m`, `snowfall_limit_m` | `sunshine`, `cloud_total`, `humidity`, `dewpoint`, `freezing_level`, `snowfall_limit` | nur Daten (in S1 kein Leser) |
+| `thunder_level_max`, `cape_max_jkg` | nicht zuordenbar | Gewitter hat keine Zahlengrenzen, CAPE keine Farbe (P1). Der Bericht nennt diese Begründung. Vor `/40` wird geprüft, ob die heutige Wertebereich-Markierung diese Spalten sichtbar färbt |
+
+- **Vollständige Schlüsselliste** wird vor `/40` aus `compare_html.py` (Mapping `_DAILY_AGGREGATE_FIELD`, z. B. `precip_sum` → `precip_sum_mm`) und aus dem Probelauf gezogen, nicht nur aus dem Kommentar.
+- **Bestand aus S1b bleibt:** `temp_max_c` → `temperature` und `gust_max_kmh` → `gust` übernehmen schon beide Seiten des Bands (`_BEIDE`); das gilt weiter, nur die Vorrang-Regel für `temp_min_c` (Tabelle) kommt hinzu.
+- **Abbildungsregel** wie für Trips: `von`/`bis` mit `Schritt`, Klemm-Regel, Metrik wird bei verletzter Validierung übersprungen.
+- **Wiederholbarkeit:** Ein erneuter `--execute` ergänzt fehlende Metriken in einer vorhandenen Ampel und überschreibt keine.
+- **Ablauf je Umgebung (Staging, danach Prod):** Probelauf → `--execute` (mit `tar.gz`) → zweiter `--execute` mit „nichts zu tun“ → Bericht im Issue.
+
 ### 5. Leser umschalten (S1c)
 
 Alle Leser aus Context §3 nutzen `ampel_for(subscription)`; danach liest kein Leser `display_thresholds` als Nutzer-Bewertung:
 
-- **Trip-Mail:** HTML, Plain, Compact einschließlich Kacheln (`build_metrics_summary_pills`, `_pill_for_metric`, `tone_symbol`), Stundentabelle (`fmt_val`, `_render_html_table`), Zeilen-Risiko `_row_risk`, Highlights `_compute_highlights`.
+- **Trip-Mail:** HTML, Plain, Compact einschließlich Kacheln (`build_metrics_summary_pills`, `_pill_for_metric`, `tone_symbol`), Stundentabelle (`fmt_val`, `_render_html_table`), Zeilen-Risiko `_row_risk`. Die Highlights (`_compute_highlights`) lesen `highlight_threshold`, keine Farbschwelle, und bleiben unberührt.
+- **Träger:** Die Auflösung geschieht einmal am Einstieg (`resolve_ampel(sub)`, ohne Abo `resolve_ampel(None)` = „allgemein“); die Schwellen kommen per `ampel_for`. Das aufgelöste Objekt wird als keyword-only Pflichtparameter ohne Default durch alle internen Funktionen gereicht. Es gibt kein `ContextVar`. Gründe: versteckter Zustand, `copy_context` im Scheduler (`parallel_fetch.py`), und vergessene Stellen blieben unsichtbar. Ein Default „allgemein“ würde ein vergessenes Durchreichen gerade bei Skitouren und Wassersport verdecken. `build_outlook_row` im Scheduler bekommt die Ampel des jeweiligen Trips.
 - **3-Tages-Ausblick** (`render_outlook_table`, Trip und Vergleich): nutzt die Ampel des Abos statt `_catalog_thresholds`; Temperatur wird beidseitig gefärbt.
 - **Vergleichs-Mail:** Übersicht (`CV2_METRICS`) und Stundenverlauf (`HOUR_METRICS`, `_make_hour_sev`) sind statische Modul-Listen und werden **je Rendern** mit der Ampel des Presets gebaut.
 - **Alarm-Mail und Alarm-Telegram:** `alert/hours.py` (`_stage`, `_is_affected`, `format_cell`) bekommt die Ampel des Abos beim Projizieren (`AlertMessage` trägt sie); die getrennte Skala `risk_thresholds` (Etappen-Risiko) bleibt unberührt.
 - **SMS, Premium-SMS, Telegram „@14“:** `sms_threshold` und `DEFAULTS` wirken nicht mehr (E1). Hervorhebung = erste Stunde, in der die Metrik **gelb oder schlechter** ist, **beidseitig** (auch Unterschreiten der unteren Grenze); sonst „-“. `render_threshold_peak_value` und `_sms_mention_threshold` lesen die Ampel. Protokoll-Token (`sms_code`, `compact_label`) bleiben unverändert (`tests/test_metric_tokens_eingefroren.py`).
-- **Gewitter zentral (P2):** `thunder_color(level, ampel)`: „keins“ grün, „leicht“ fest gelb, „mittel“/„hoch“ nach `ampel.thunder`. Die Dubletten `outlook._THUNDER_LEVEL_BG`, `outlook._metric_column_bg`, `html._thunder_risk_level`, `compare_html._sev_thunder` und `trip_command_processor._BAND_EMOJI` werden entfernt oder rufen diese eine Abbildung. **CAPE (P1):** keine eigene Farbe (`_ampel_dot_severity("cape")` entfällt); die Fusion zur Gewitterstufe (`thunder_level_from_signals`, `_fuse_thunder_levels`) bleibt unverändert.
+- **Gewitter zentral (P2):** `thunder_color(level, resolved)`: „keins“ grün, „leicht“ fest gelb, „mittel“/„hoch“ nach `ampel.thunder`. Die Funktion nimmt das aufgelöste Objekt (`resolve_ampel(sub)`), damit bei einem Trip ohne gespeicherte Ampel die Vorlage aus `preset_name`/`profil` greift (z. B. Wassersport „mittel“ = rot, AC-5). Die Dubletten `outlook._THUNDER_LEVEL_BG`, `outlook._metric_column_bg`, `html._thunder_risk_level`, `compare_html._sev_thunder` und `trip_command_processor._BAND_EMOJI` werden entfernt oder rufen diese eine Abbildung. **CAPE (P1):** keine eigene Farbe (`_ampel_dot_severity("cape")` entfällt); die Fusion zur Gewitterstufe (`thunder_level_from_signals`, `_fuse_thunder_levels`) bleibt unverändert.
+- **Wertebereich-Markierung entfällt:** Die Markierung nach `corridors` (`corridor_mark.py`, Leser in `html.py`, `compare_html.py`, `design_tokens.py`) wird mit S1c-4 abgeschaltet. Nach ADR-0106 ist die Ampel die einzige Bewertung; die markierten Bereiche sind per Migration in die Ampel übernommen. Die Daten bleiben gespeichert.
+- **Temperatur in Kurzkanälen (AC-1):** Token-Form:
+  - Einzelform `D9@14` bzw. `L-17@6` (Stunde des Werts), nur wenn der Wert gelb oder schlechter ist; sonst wie heute `D9`.
+  - Bereichs-Token: jede Hälfte trägt ihr `@h` unabhängig, z. B. `D-2/9@14` oder `D-17@6/9@14`. `/` trennt die Hälften, `@` gehört zur Hälfte davor (eindeutig lesbar, GSM-7-sicher).
+  - Die Stunde kommt aus `hiking_field_min_max` (`day_window.py`): `max_ts` besteht, `min_ts` wird ergänzt. Gilt für D/L/FD/FL; N/FN bleiben unverändert.
+  - Bei Überlänge gilt unverändert die bestehende Kürzungsreihenfolge (Temperatur hat die niedrigste Priorität), kein neuer Mechanismus.
+  - Kürzel `sms_code`/`compact_label` bleiben unverändert (`tests/test_metric_tokens_eingefroren.py`).
+  - Luftfeuchte (`_sms_mention_threshold`, Wert 90) bleibt ohne Ampel-Leser; die Sicht 2,0 km kommt aus der Ampel.
+  - Premium-SMS nutzt keinen eigenen Builder: sie sendet den SMS-Text unverändert (`premium_sms_format.md`, Kanal `premium_sms` ist Kurzform-Kanal mit demselben Token-Vertrag). Die Token-Änderung gilt dadurch für SMS und Premium-SMS in einem Zug; Telegram nutzt den Pfad `src/output/renderers/narrow.py`.
 - **Altfelder sperren (E2):** Reiter „Wertebereiche“ und die SMS-Schwellwert-Regler sind nur lesbar mit Hinweis aus dem Katalog: DE „Wird gerade umgebaut – deine Werte sind übernommen.“, EN „Being rebuilt – your values have been carried over.“ Werte werden angezeigt, aber nicht mehr geschrieben.
 
 ### Neue Nutzertexte (ADR-0104)
@@ -188,8 +230,11 @@ Farben werden **am Entstehungsort** getestet (Renderer-Ausgabe, `ampel_for`, `th
 
 - [ ] `tests/tdd/test_ampel_modell_und_aufloesung.py` (S1a): Validierung gültig/ungültig, Teilmenge, Abweichungszahl, Rückfallkette, „allgemein“ == heutiges `display_thresholds` ohne CAPE, Compare-Profil-Zuordnung inkl. unbekannt, Loader behält andere Felder.
 - [ ] `internal/handler/ampel_validierung_test.go`, `internal/model/metric_preset_ampel_test.go` (S1a): Ablehnung `ampel_ungueltig` DE/EN, eigene Vorlage speichert/lädt Ampel+`alarm_ab` ohne Zustellung, zwei Nutzer isoliert.
-- [ ] `tests/tdd/test_migration_2792_profil_ampel.py` (S1b): Probelauf, `--execute`, Wiederholung, Sicherung, zwei Nutzer, Δ-Bereich, `sms_threshold`, `horizons`, CAPE, byte-gleiche Restfelder, Klemm-Regel.
+- [ ] `tests/tdd/test_migration_2792_profil_ampel.py` (S1b): Probelauf, `--execute`, Wiederholung, Sicherung, zwei Nutzer, Δ-Bereich, `sms_threshold`, `horizons`, CAPE, byte-gleiche Restfelder, Klemm-Regel; Nachtrag Vergleichsschlüssel (AC-23, S1c-2).
 - [ ] `tests/tdd/test_profil_ampel_leser.py` (S1c): Farben je Leser (HTML-Tabelle, Kachel, Plain, Compact, Ausblick, Vergleichs-Übersicht, Vergleichs-Stundenverlauf, Alarm-Stunden) mit Skitouren-/Wassersport-/Allgemein-Ampel; zwei Presets nacheinander im selben Prozess.
+- [ ] `tests/tdd/test_kein_leser_liest_display_thresholds.py` (S1c-1): Ratsche gegen `display_thresholds`-Zugriffe und `severity_for(` ohne Schwellen in `src/output/**` (inkl. `renderers/alert/**`); die Whitelist darf nur schrumpfen.
+- [ ] Mutationsgegenprobe je Leser (Ampel durch Katalog ersetzt) mit Skitouren- oder Wassersport-Abo, denn bei „allgemein“ bleibt sie unsichtbar; `build_outlook_row` mit zwei Trips nacheinander.
+- [ ] Alarm-Mail-Validator `.claude/hooks/radar_alert_mail_validator.py` gehört in den E2E-Umfang von S1c-4 (die Alarm-Mail wird angefasst).
 - [ ] `tests/tdd/test_sms_hervorhebung_aus_ampel.py` (S1c): SMS, Premium-SMS, Telegram, beidseitig.
 - [ ] `tests/tdd/test_gewitter_zentrale_abbildung.py` (S1c): alle Vorlagen, CAPE ohne Farbe.
 - [ ] `frontend/src/lib/components/shared/__tests__/altfelder_gesperrt.test.ts` (S1c): beide Kontexte, DE/EN.
@@ -233,7 +278,7 @@ Farben werden **am Entstehungsort** getestet (Renderer-Ausgabe, `ampel_for`, `th
   - Test: Datei vor/nach für Alarmfelder, `ampel_for` nach Migration
 - **AC-18:** Given die Vorlage „allgemein“ in `ampel_templates.py` / When sie mit dem bisherigen `display_thresholds` verglichen wird / Then sind alle Grenzen der 10 bisherigen Metriken gleich, mit Ausnahme der CAPE-Grenzen, die entfallen
   - Test: Paritäts-Ratsche Katalog-Vorgabe == Vorlage „allgemein“
-- **AC-19:** Given Trip-Briefing, Vergleichs-Mail und Alarm-Mail eines Abos mit Vorlage Allgemein und Werten aus den bisherigen Golden-Fixtures / When gerendert wird / Then ist die Ausgabe byte-gleich zu vorher, außer den drei bewusst vereinheitlichten Stellen: (a) die CAPE-Farbe entfällt (P1), (b) die Temperatur im 3-Tages-Ausblick wird nach der Ampel gefärbt (bisher nie), (c) die Gewitterfarbe der früheren Dubletten folgt der zentralen Abbildung (z.B. eigenes Hellgelb im Ausblick, „keins“ im Vergleich jetzt grün); jede dieser Abweichungen ist im Golden-Vergleich einzeln benannt
+- **AC-19:** Given Trip-Briefing, Vergleichs-Mail und Alarm-Mail eines Abos mit Vorlage Allgemein und Werten aus den bisherigen Golden-Fixtures / When gerendert wird / Then ist die Ausgabe byte-gleich zu vorher, außer den vier bewusst vereinheitlichten Stellen: (a) die CAPE-Farbe entfällt (P1), (b) die Temperatur im 3-Tages-Ausblick wird nach der Ampel gefärbt (bisher nie), (c) die Gewitterfarbe der früheren Dubletten folgt der zentralen Abbildung (z.B. eigenes Hellgelb im Ausblick, „keins“ im Vergleich jetzt grün), (d) die Markierung nach gespeicherten Wertebereichen entfällt (ihre Werte stehen jetzt in der Ampel); jede dieser Abweichungen ist im Golden-Vergleich einzeln benannt
   - Test: Golden-Vergleich vor/nach, zusätzlich `test_issue_811_mode_matrix.py` und die Validatoren für Trip und Compare in `/e2e-verify` mit Exit 0
 - **AC-20:** Given zwei Compare-Presets mit Vorlage Skitouren und Allgemein, nacheinander im selben Prozess gerendert, Temperatur +9 °C / When Übersicht und Stundenverlauf gerendert werden / Then ist +9 °C beim Skitouren-Preset orange und beim Allgemein-Preset grün, unabhängig von der Reihenfolge
   - Test: Rendern in beiden Reihenfolgen, keine Zustandsübernahme der Modul-Listen
@@ -241,12 +286,15 @@ Farben werden **am Entstehungsort** getestet (Renderer-Ausgabe, `ampel_for`, `th
   - Test: Projektion und Rendern beider Kanäle mit beiden Abos
 - **AC-22:** Given ein Nutzer öffnet den Reiter Wertebereiche und die SMS-Schwellwerte im Reiter Wetter, in Trip und Vergleich / When die Seite in Deutsch bzw. Englisch angezeigt wird / Then sind die Felder nur lesbar, zeigen die gespeicherten Werte, und der Hinweis lautet DE „Wird gerade umgebaut – deine Werte sind übernommen.“ bzw. EN „Being rebuilt – your values have been carried over.“
   - Test: Komponententest für beide Kontexte und beide Sprachen; Paritätstest der Kataloge grün
+- **AC-23:** Given zwei Nutzer mit je einem Compare-Preset mit Wertebereichen für `wind_max_kmh`, `visibility_min_m` und `precip_sum_mm` (mark=True) und einem bereits migrierten Preset mit vorhandener Ampel / When der Migrations-Nachlauf mit `--execute` und danach ein zweites Mal läuft / Then trägt jedes Preset die Werte als Ampel-Grenzen für `wind`, `visibility` (untere Seite) und `precipitation`, vorhandene Ampel-Metriken sind nicht überschrieben, der zweite Lauf ändert keine Datei, `thunder_level_max`/`cape_max_jkg` stehen als nicht zuordenbar im Bericht, und vor dem Prod-Deploy von S1c-4 meldet der Probelauf auf Prod „nichts zu tun“
+  - Test: Migration auf Kopie, zwei Nutzer, Prüfsummen, Bericht
 
 ## Known Limitations
 
 - **Alarm-Logik unverändert** (S2): `alarm_ab` wird gespeichert, aber nicht gelesen; Alarm-Trigger, `metric_alert_levels`, `alert_rules` und CAPE-Δ-Alarm bleiben bis S2 wie heute.
 - **Neue Bedienoberfläche** (S3a/S3b): in S1 nur Sperre der Altfelder; die Ampel ist noch nicht im Editor bearbeitbar (Änderungen laufen über API und Migration).
 - **Relative Höhen und weitere Metriken** (S7): Nullgradgrenze, Schneefallgrenze (relativ), Taupunkt, Sonnenstunden, Schneehöhe, Bewölkung u. a. liegen in den Vorlagendaten, haben in S1 aber keinen Leser.
+- **Highlights bleiben an `highlight_threshold`:** `_compute_highlights` liest keine Farbschwelle und ist nicht Teil der Ampel-Umstellung.
 - **E1-Folge:** schwache Werte unter Gelb (Wind 25 bei Gelb 30) erscheinen in SMS/Telegram nicht mehr als Spitzenwert, bewusst.
 - **Sichtbare Vereinheitlichung für alle Nutzer** (auch Vorlage Allgemein): CAPE ohne Farbe, Temperatur im 3-Tages-Ausblick gefärbt, eine Gewitterfarbe überall (AC-19).
 - **Klemm-Regel und `Schritt`** der Migration sind Näherungen; nicht abbildbare Metriken bleiben mit ihrem Altwert erhalten und stehen im Bericht.
@@ -263,3 +311,4 @@ Farben werden **am Entstehungsort** getestet (Renderer-Ausgabe, `ampel_for`, `th
 - 2026-11-04: Initial spec created (Issue #2792, Epic #2791, Scheibe S1)
 - 2026-11-04: PO-Freigabe (approved)
 - 2026-11-04: Review Tech Lead: AC-1 Kurzkanäle als Hervorhebung, Temperatur-Zuordnung der Migration eindeutig, AC-19 Ausnahmen ehrlich benannt
+- 2026-11-04: v1.1 S1c-Ergänzungen (Schnitt S1c-1…S1c-4 mit Reihenfolge-Gate Migration vor Umschalt-Deploy, AC-23 Migrations-Nachtrag Vergleichsschlüssel, AC-19 (d) Wertebereich-Markierung entfällt, Pfadkorrekturen Alarm/Telegram, `thunder_color` nimmt das aufgelöste Objekt, Highlights unberührt, Temperatur-Token mit Stunde) — Freigabe ausstehend
