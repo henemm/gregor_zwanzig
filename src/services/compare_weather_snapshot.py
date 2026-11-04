@@ -83,6 +83,36 @@ class CompareWeatherSnapshotService:
         except OSError as e:
             logger.error(f"Failed to save compare snapshot {preset_id}/{location_id}: {e}")
 
+    def delete(self, preset_id: str) -> tuple[int, int]:
+        """Entfernt alle Snapshots `"{preset_id}__*.json"` DIESES Nutzers
+        (Issue #2237). Exakter Präfix `"{preset_id}__"`, damit `cp-1` nicht
+        `cp-10__x` trifft. Gibt `(removed, failed)` zurück (Hausnorm wie
+        `run_briefing_dispatch()`): `failed` zählt je Datei einen `OSError`
+        (bereits verschwundene Datei zählt nicht), ein Listing-Fehler zählt
+        als 1. Fehlender Ordner = `(0, 0)`. Fehler werden geloggt wie bei
+        `save()`."""
+        if not self._dir.is_dir():
+            return 0, 0
+        removed = 0
+        failed = 0
+        prefix = f"{preset_id}__"
+        try:
+            for path in self._dir.iterdir():
+                if not (path.name.startswith(prefix) and path.name.endswith(".json")):
+                    continue
+                try:
+                    path.unlink()
+                    removed += 1
+                except FileNotFoundError:
+                    continue
+                except OSError as e:
+                    failed += 1
+                    logger.error(f"Failed to delete compare snapshot {path.name}: {e}")
+        except OSError as e:
+            failed += 1
+            logger.error(f"Failed to list compare snapshots for {preset_id}: {e}")
+        return removed, failed
+
     def load(self, preset_id: str, location_id: str) -> List[PointWeatherData]:
         """Return `[PointWeatherData]` (0 or 1 entries — list-Form, damit
         `DeviationAlertEngine.evaluate()` mit leerem `cached=[]` im

@@ -472,7 +472,17 @@ func DeleteComparePresetHandler(s *store.Store) http.HandlerFunc {
 		if !okB {
 			return
 		}
-		defer unlockB()
+		// Issue #2237: verwaiste Sperrdatei erst NACH der Freigabe entfernen
+		// (Reihenfolge fest in EINER Closure: erst unlock, dann entfernen),
+		// damit die Sperre bis zur Antwort belegt bleibt (ADR-0083).
+		deleted := false
+		defer func() {
+			unlockB()
+			if deleted {
+				// gz-store-scope-call: Closure nutzt den oben per WithUser gebundenen Store s dieses Handlers
+				s.RemoveBriefingLockFile(id)
+			}
+		}()
 
 		presets, err := s.LoadComparePresets()
 		if err != nil {
@@ -493,6 +503,7 @@ func DeleteComparePresetHandler(s *store.Store) http.HandlerFunc {
 			WriteError(w, r, http.StatusInternalServerError, "store_error", nil)
 			return
 		}
+		deleted = true
 		w.WriteHeader(http.StatusNoContent)
 	}
 }

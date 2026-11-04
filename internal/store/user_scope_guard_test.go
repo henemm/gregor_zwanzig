@@ -136,13 +136,14 @@ var storeMethodRegister = map[string]guardEntry{
 
 	"MigrateClearPremiumSmsReplyAddresses": exempt("iteriert über ListUserIDs/LoadUser(id), nicht s.UserID"),
 
-	"WithUser":          exempt("baut keinen Pfad, liefert nur eine Kopie mit anderer Kennung"),
-	"LockBriefing":      exempt("baut keinen Dateipfad, nur einen In-Memory-Sperrschlüssel"),
-	"LockBriefingErr":   exempt("baut nur Sperrschluessel; Sperrdatei-Pfad wird mit requireUser/ValidEntityID geprueft (ADR-0083)"),
-	"LockGroups":        exempt("baut keinen Dateipfad, nur einen In-Memory-Sperrschlüssel (Issue #2158)"),
-	"LockLocation":      exempt("baut keinen Dateipfad, nur einen In-Memory-Sperrschlüssel (Issue #2158)"),
-	"LockMetricPresets": exempt("baut keinen Dateipfad, nur einen In-Memory-Sperrschlüssel (Issue #2158)"),
-	"LockQuota":         exempt("baut keinen Dateipfad, nur einen In-Memory-Sperrschlüssel (Issue #2482)"),
+	"WithUser":               exempt("baut keinen Pfad, liefert nur eine Kopie mit anderer Kennung"),
+	"LockBriefing":           exempt("baut keinen Dateipfad, nur einen In-Memory-Sperrschlüssel"),
+	"LockBriefingErr":        exempt("baut nur Sperrschluessel; Sperrdatei-Pfad wird mit requireUser/ValidEntityID geprueft (ADR-0083)"),
+	"RemoveBriefingLockFile": exempt("kein error-Rueckgabewert; prueft requireUser/ValidEntityID selbst und tut dann nichts (Issue #2237)"),
+	"LockGroups":             exempt("baut keinen Dateipfad, nur einen In-Memory-Sperrschlüssel (Issue #2158)"),
+	"LockLocation":           exempt("baut keinen Dateipfad, nur einen In-Memory-Sperrschlüssel (Issue #2158)"),
+	"LockMetricPresets":      exempt("baut keinen Dateipfad, nur einen In-Memory-Sperrschlüssel (Issue #2158)"),
+	"LockQuota":              exempt("baut keinen Dateipfad, nur einen In-Memory-Sperrschlüssel (Issue #2482)"),
 
 	"LocationsDir": exempt("dokumentierter Rest: kein error-Rückgabewert, produktiv außerhalb des Stores unbenutzt"),
 	"PresetsFile":  exempt("dokumentierter Rest: kein error-Rückgabewert, produktiv außerhalb des Stores unbenutzt"),
