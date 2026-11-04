@@ -46,3 +46,43 @@
 
 ### API-Vertrag (`docs/reference/api_contract.md`)
 MetricConfig :820 · Orts-Vergleich-Presets §10 :905 · Trip DTO §10.5 :971 · Weather Config §11 :1302 · MetricPreset §15.5 :2340 · ComparePreset §16 :2535 (ideal_ranges :2671) · Corridor §24 :4737.
+
+## 2. Migration und Test-Lage (Analyse 2026-11-04)
+
+### `corridors` / `ideal_ranges`
+- Form `Corridor{metric, range:[min|None,max|None], notify, mark, prio}` (`src/app/models.py:1281-1296`). Fixtures: `tests/fixtures/trip_schema_full.json`, `tests/fixtures/migrate_2454/trip_frozen_wind_chill_structure.json`; Alt-`ideal_ranges` `{"temp_max_c":{"min":10,"max":25}}` (`tests/tdd/test_corridor_migration.py:248`).
+- Altdaten sind seit `scripts/migrate_1231_corridors.py:120-152` schon in `corridors` (`mark=True`); `ideal_ranges` blieb stehen (`:10-11`) ⇒ S1 liest `corridors` primär, `ideal_ranges` nur als Rückfall.
+- `mark` heute: grüner Randbalken im Band, grüner Hintergrund nur ohne Ampelfarbe (`src/output/renderers/email/corridor_mark.py:75-84`), Grenzen inklusiv (`src/services/corridor_match.py:17-36`).
+- `notify` ohne Wirkung (`src/services/trip_alert.py:127-131`).
+- **Falle:** Bereiche mit `notify=True, mark=False` stammen aus `alert_rules` und tragen **Δ-Werte** (`migrate_1231_corridors.py:44-53, 97, 111`) ⇒ nicht zu Ampel-Grenzen machen, nur protokollieren und erhalten.
+- Abbildung Band → Ampel: `von` → `yellow_lt` exakt (Ampel prüft `value < yellow_lt`); `bis` → `yellow` verschiebt die Grenze um den Randwert (Ampel prüft `value >= yellow`, `src/output/metric_format.py:152-195`). Orange/Rot aus der Vorlage; Reihenfolge gelb < orange < rot ggf. verletzt ⇒ Regel nötig.
+- Schlüsselräume verschieden: Trip AlertMetric-IDs (`wind_gust`, `precipitation_sum`, `thunder_level`, `temperature_min/max`, `snow_line`; `html.py:863`), Compare Summary-Keys (`temp_max_c`, `gust_max_kmh`; `compare_html.py:878,1100`).
+
+### `sms_threshold`
+- Freie Zahl (`models.py:689`) an drei Stellen: `metrics[]`, `channel_layouts`, `report_layouts` (`loader.py:999, 1040, 1075`; Schreiben `:182-184`).
+- Wirkung: unter der Schwelle zeigt die SMS „-“, sonst Wert und Stunde (`src/output/tokens/builder.py:215-220`; Schneefallgrenze umgekehrt `:326-333`). Ersatzwerte uneinheitlich (`builder.py:165`; Mail-Ausblick `helpers.py:1012-1014`).
+- Stufen der Oberfläche (`frontend/src/lib/components/shared/WeatherMetricsTab.svelte:1838-1905`): Wind 15/20/30 · Böen 30/40/50 · Niederschlag 0.3/0.8/1.5 · Regenwahrsch. 25/40/60 · Schneehöhe 5/10/20 · Schneefallgrenze 2000/1500/1000 · Gewitter 1/2/3 (Sensibel/Standard/Robust). Globale Ampel gelb zum Vergleich: Wind 30, Böen 30, Niederschlag 1, Regenwahrsch. 30.
+- **Konflikt:** `sms_threshold` als `yellow` übernommen ändert auch die Mail-Farbe (z.B. Wind gelb ab 20 statt 30).
+
+### Vorlage eines Bestands-Trips
+- Beste Quelle `display_config.preset_name` (`models.py:827`, `loader.py:1087, 1839`). `Trip.activity` (`trip.py:205`) nur über Frontend-Tabelle `ACTIVITY_TO_TEMPLATE` (`WeatherMetricsTab.svelte:662-674`).
+- Compare-`profil`: `wintersport | wandern | summer_trekking | allgemein` (`src/app/profile.py:24-27`, Fixtures teils groß) ⇒ `summer_trekking` → `alpen-trekking`, Rest gleichnamig.
+- Eigene Vorlagen: Go-`MetricPreset` typisiert (`internal/model/metric_preset.go:30-37`) ⇒ **neues Go-Feld nötig**, sonst geht die Ampel beim Speichern verloren.
+- Python lädt `display_config` typisiert ⇒ `UnifiedWeatherDisplayConfig` braucht ein Feld plus Schreiben im Loader (Muster `loader.py:1839`), sonst löscht ein Python-Speichern die Ampel (ADR-0083).
+
+### Migrations-Muster
+- Batch-Skripte mit Probelauf, `--execute`, tar.gz-Sicherung, wiederholbar: `scripts/migrate_1231_corridors.py`, `migrate_2454_derived_children.py`, `migrate_1373_compare_active_metrics_format.py`.
+- Beim-Laden-Migrationen: `_migrate_metric_alert_levels` (`loader.py:792-808`), `_migrate_weather_config` (`:576-584`).
+- Regeln `docs/reference/operations_playbook.md:541-590`, ADR-0101; Reihenfolge erst Lese-Code, dann Migration (`playbook:741`).
+- **Empfehlung:** Batch-Skript als Quelle der Wahrheit (Go und Frontend sehen keine Python-Lade-Migration; P3 verlangt Protokoll), dazu Rückfall beim Laden „fehlt die Ampel ⇒ Vorlage“.
+- **Übergangsrisiko:** Bis S3a schreibt die alte Oberfläche weiter `corridors`/`sms_threshold`, die dann wirkungslos wären.
+- `horizons` → „alle Tage“ in `metrics`, `channel_layouts`, `report_layouts`. CAPE: Metrik `cape` (`metric_catalog.py:515`) bzw. Compare `cape_max_jkg` (`loader.py:784`) → `thunder` an.
+
+### Tests und Gates
+- Testnamen nach Verhalten (`gates_und_ratschen.md:204-217`), kein breiter `uv run pytest` (`:219-225`).
+- Renderer-Commit-Gate (`gates_und_ratschen.md:91-98`, `mail_validators.md:234-258`): `tests/tdd/test_issue_811_mode_matrix.py` + `briefing_mail_validator.py` frisch grün; Matrix-Test hängt an globalen Gelb-Schwellen (`:29, 42, 151`).
+- **Kein Validator prüft Farben** (`briefing_mail_validator.py:376-608`, `email_spec_validator.py:860-1128`) ⇒ eigene Tests am Entstehungsort der Farbe.
+- `severity_from_thresholds` kann schon beidseitig (`yellow/orange/red` + `*_lt`) ⇒ Ampel übernimmt diese Form, keine neue Rechnung.
+
+### Umfang
+- LoC-Limit 250 je Workflow (Tests und `scripts/` zählen mit). Schätzung gesamt ~1100-1300 LoC ⇒ Lieferung in drei Schritten unter einer Spec: **S1a** Datenmodell + Vorlagen-Grenzen + Auflösung (Ausgabe „Allgemein“ byte-gleich) · **S1b** Migrationsskript · **S1c** Renderer-Umstellung aller vier Kanäle.
