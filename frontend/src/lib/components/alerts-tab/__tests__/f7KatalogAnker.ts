@@ -45,6 +45,9 @@ export const F7_ANKER: [schluessel: string, de: string, en: string][] = [
 	['alarme.kanaele.stufe.low', 'gering', 'low'],
 	['alarme.kanaele.stufe.moderate', 'mittel', 'moderate'],
 	['alarme.kanaele.stufe.high', 'hoch', 'high'],
+	// #1895 S3b2: Hinweise „Kanal ohne Empfänger" und „Kanal-Schwelle über Metrik-Stufe" (AC-75).
+	['alarme.kanaele.kein_empfaenger', '<kanal> hat keinen Empfänger — diese Alarme kommen dort nicht an. Eintragen im Reiter Versand bzw. im Profil.', '<kanal> has no recipient — these alerts will not arrive there. Add it in the Delivery tab or in your profile.'],
+	['alarme.kanaele.schwelle_hinweis', '<kanal> hat die Dringlichkeits-Schwelle „<schwelle>“ — schwächere Warnungen kommen über diesen Kanal nicht an.', '<kanal> has the urgency threshold "<schwelle>" — weaker warnings will not arrive over this channel.'],
 	['alarme.premium_sms.tarif_wird_geprueft', 'Tarif wird geprüft — der Kanal lässt sich einen Moment lang nicht umschalten.', 'Checking your level — the channel cannot be switched for a moment.'],
 	// Alerts-Reiter (AlertsTab) und Alarm-Karte (AlertCard)
 	['alarme.tab.eyebrow', 'Alerts · Sofort-Meldung', 'Alerts · instant notification'],

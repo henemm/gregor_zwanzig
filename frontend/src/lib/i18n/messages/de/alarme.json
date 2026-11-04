@@ -28,6 +28,8 @@
 	"alarme.kanaele.stufe.low": "gering",
 	"alarme.kanaele.stufe.moderate": "mittel",
 	"alarme.kanaele.stufe.high": "hoch",
+	"alarme.kanaele.kein_empfaenger": "{kanal} hat keinen Empfänger — diese Alarme kommen dort nicht an. Eintragen im Reiter Versand bzw. im Profil.",
+	"alarme.kanaele.schwelle_hinweis": "{kanal} hat die Dringlichkeits-Schwelle „{schwelle}“ — schwächere Warnungen kommen über diesen Kanal nicht an.",
 	"alarme.premium_sms.tarif_wird_geprueft": "Tarif wird geprüft — der Kanal lässt sich einen Moment lang nicht umschalten.",
 	"alarme.tab.eyebrow": "Alerts · Sofort-Meldung",
 	"alarme.tab.titel": "Sofort-Meldung zwischen den Briefings",

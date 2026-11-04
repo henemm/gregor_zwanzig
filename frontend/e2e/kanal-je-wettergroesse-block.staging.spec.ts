@@ -16,6 +16,8 @@
 // o. ä.; deshalb wird der Kontrast hier NICHT automatisch geprüft (nichts
 // erfunden). Der Block verwendet die Design-Tokens --g-ink / --g-ink-muted der
 // bestehenden WCAG-geprüften Oberfläche (docs/reference/design_system.md).
+// Ausnahme S3b2 AC-76 (Kanal-Hinweise): dort wird das Kontrastverhältnis am
+// echten Rendering gemessen (Hilfsfunktion `kontrast`, ohne Zusatzpaket).
 //
 // Sprache: Cookie gz_lang (Standard de; GZ_LANG=en für die EN-Variante). Ist am
 // Konto eine Profil-Sprache gesetzt, überschreibt diese das Cookie
@@ -320,4 +322,64 @@ for (const kind of ['route', 'vergleich'] as const) {
 				.toBe(true);
 		});
 	}
+}
+
+// ── S3b2 (AC-76): Kanal-Hinweis sichtbar in .tn-mobile UND .tn-desktop ────────
+//
+// Deterministischer Auslöser ist der Schwellen-Hinweis (Telegram-Schwelle „hoch"
+// über die Stufen-Knöpfe der Alert-Kanäle): der Empfänger-Hinweis hinge am
+// Profil des Staging-Logins und wäre nicht planbar. Der Kontrast wird hier am
+// echten Rendering gemessen (Textfarbe gegen den ersten deckenden Hintergrund).
+
+/** WCAG-Kontrastverhältnis der Textfarbe gegen den ersten deckenden Vorfahren-Hintergrund. */
+async function kontrast(loc: Locator): Promise<number> {
+	return loc.evaluate((el) => {
+		const rgb = (s: string) => (s.match(/[\d.]+/g) ?? []).map(Number);
+		const lum = ([r, g, b]: number[]) => {
+			const k = (c: number) => {
+				const v = c / 255;
+				return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4;
+			};
+			return 0.2126 * k(r) + 0.7152 * k(g) + 0.0722 * k(b);
+		};
+		let bg = [255, 255, 255];
+		for (let n: Element | null = el; n; n = n.parentElement) {
+			const c = rgb(getComputedStyle(n).backgroundColor);
+			if (c.length >= 3 && (c.length < 4 || c[3] === 1)) {
+				bg = c;
+				break;
+			}
+		}
+		const [a, b] = [lum(rgb(getComputedStyle(el).color)), lum(bg)];
+		return (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
+	});
+}
+
+for (const l of ANLEGE_LAYOUTS) {
+	const rahmen = l.mobil ? '.tn-mobile' : '.tn-desktop';
+	test(`AC-76: /trips/new, ${rahmen} (${l.name}) — Schwellen-Hinweis sichtbar, nicht abgeschnitten, Kontrast AA`, async ({ page }) => {
+		await anlegenPflicht(page, 'route', {
+			name: `E2E-GZ-1895-Kanalhinweis-Neu-${Date.now()}`,
+			mobil: l.mobil,
+			viewport: l.vp
+		});
+		await zumAlarmeReiter(page, 'route', l.mobil);
+
+		const scope = page.locator(rahmen);
+		const hoch = scope.getByTestId('alert-channel-threshold-telegram-HIGH');
+		await expect(hoch, 'Stufen-Knopf Telegram „hoch" fehlt').toBeVisible({ timeout: 15_000 });
+		await hoch.click();
+		await expect(hoch).toHaveAttribute('aria-pressed', 'true');
+
+		const { key, zeile } = await blockPruefen(page, scope.getByTestId('kanal-block'));
+		await eigeneWahlMitTelegram(page, zeile, key);
+
+		const hinweis = zeile.getByTestId('kanal-hinweis-schwelle-telegram');
+		await expect(hinweis, 'AC-76: Schwellen-Hinweis fehlt').toBeVisible({ timeout: 10_000 });
+		await expect(hinweis, 'AC-76: Hinweis nennt den Kanal nicht').toContainText('Telegram');
+		await pruefeBedienbar(page, hinweis, 'Schwellen-Hinweis Telegram');
+		expect(await kontrast(hinweis), 'AC-76: Kontrast unter WCAG-AA (4.5:1)').toBeGreaterThanOrEqual(4.5);
+		// Nur Anzeige (AC-72): der Telegram-Schalter bleibt bedienbar.
+		await pruefeBedienbar(page, telegram(zeile, key).locator('label'), 'Kanal-Schalter Telegram neben Hinweis');
+	});
 }

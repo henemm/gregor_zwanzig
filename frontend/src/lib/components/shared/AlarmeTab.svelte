@@ -57,6 +57,7 @@
 	} from './alarme-tab/alertChannelState.ts';
 	import { buildAlarmeDeliveryPayload } from './alarme-tab/alarmeDeliveryPayload.ts';
 	import { derivePremiumSmsAlarmGate } from './alarme-tab/premiumSmsAlarmGate.ts';
+	import type { ConnectionProfile } from './versand-tab/channelConnectionStatus.ts';
 	// Feature #1435 E1a-2: die Alarm-Zeilen kommen aus dem zentralen Register
 	// (Katalog-Feld `alertMetric`), nicht mehr aus der geloeschten Frontend-
 	// Liste compareMetricMapping.ts.
@@ -192,7 +193,7 @@
 	// EIN Fetch-Ort fuer alle vier Mount-Punkte (Trip-Alarme-Reiter,
 	// Vergleichs-Hub, beide Compare-Anlege-Masken) — AlertChannelPicker wird
 	// ausschliesslich von AlarmeTab eingebunden.
-	let alarmProfile = $state<{ premium_sms_allowed?: boolean } | null>(
+	let alarmProfile = $state<ConnectionProfile | null>(
 		untrack(() => (profileOverride !== undefined ? profileOverride : null))
 	);
 	onMount(() => {
@@ -200,7 +201,7 @@
 		fetch('/api/auth/profile', { credentials: 'same-origin' })
 			.then((r) => (r.ok ? r.json() : null))
 			.then((p) => {
-				alarmProfile = p as { premium_sms_allowed?: boolean } | null;
+				alarmProfile = p as ConnectionProfile | null;
 			})
 			.catch(() => {
 				alarmProfile = null;
@@ -545,6 +546,8 @@
 						eintraege={displayAlertMetricChannels}
 						aboKanaele={displayChannelState}
 						premiumSmsGate={premiumSmsAlarmGate}
+						profil={alarmProfile}
+						schwellen={displayChannelThresholds}
 						onChange={handleAlertMetricChannelChange}
 					/>
 					{#if context === 'vergleich' && unalertableSelectedMetricNames.length > 0}

@@ -28,6 +28,8 @@
 	"alarme.kanaele.stufe.low": "low",
 	"alarme.kanaele.stufe.moderate": "moderate",
 	"alarme.kanaele.stufe.high": "high",
+	"alarme.kanaele.kein_empfaenger": "{kanal} has no recipient — these alerts will not arrive there. Add it in the Delivery tab or in your profile.",
+	"alarme.kanaele.schwelle_hinweis": "{kanal} has the urgency threshold \"{schwelle}\" — weaker warnings will not arrive over this channel.",
 	"alarme.premium_sms.tarif_wird_geprueft": "Checking your level — the channel cannot be switched for a moment.",
 	"alarme.tab.eyebrow": "Alerts · instant notification",
 	"alarme.tab.titel": "Instant notifications between briefings",
