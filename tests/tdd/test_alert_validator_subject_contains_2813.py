@@ -7,6 +7,7 @@ geteilten Postfach kann das eine fremde oder aeltere sein. Die Test-Mails hier
 kommen aus dem ECHTEN Gate-Skript (Renderer + EmailOutput, Fixture ``draht``),
 das Postfach ist ein kleines IMAP-Double (Test-Seam ``imap=``, existiert).
 """
+# ruff: noqa: F811
 from __future__ import annotations
 
 import email

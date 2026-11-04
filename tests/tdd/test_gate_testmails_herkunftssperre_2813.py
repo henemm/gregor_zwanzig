@@ -8,6 +8,7 @@ Mail aus einem Nicht-Prod/Staging-Checkout auf die Basisadresse um. Eine
 das Skript meldete aber "gesendet" -- ein Scheinbeleg. Kern-Schicht, kein Netz:
 das Skript laeuft echt bis zum Draht (Fixture ``draht`` aus #2681).
 """
+# ruff: noqa: F811
 from __future__ import annotations
 
 import pytest
