@@ -165,6 +165,14 @@ uv run python3 scripts/send_gate_test_mails.py --lang en --only radar
 uv run python3 .claude/hooks/radar_alert_mail_validator.py --lang en --to-contains "+en@"
 ```
 
+**`send_gate_test_mails.py` NUR aus dem Staging-Checkout starten**
+(`cd /home/hem/gregor_zwanzig_staging && uv run python3 scripts/send_gate_test_mails.py …`): In einem
+Worktree stellt die Herkunftssperre (#1476) den Empfaenger auf `gregor-test@henemm.com` um, die
+Subadresse `+en@` geht verloren und `--to-contains "+en@"` findet nie eine Mail (Befund #2681).
+Briefing-Validator bei Alarm-/Vergleichsmails mit `--mail-type trip-briefing` aufrufen, sonst
+nimmt er die juengste Mail irgendeines Typs. Der Telegram-Live-Test (Schritt 3c) laeuft ebenfalls
+aus dem Staging-Checkout, mit `-m live` und den Werten aus dessen `.env`.
+
 Der Kopf `X-GZ-Lang` ist Pflicht: fehlt er, endet jeder Validator mit Exit 1. Die Auswahl
 nimmt nur Mails der gewaehlten Sprache **und** ihres Empfaengers (`de`: To ohne `+en@`,
 `en`: To mit `+en@`); eine Mail des anderen Nutzers erfuellt den Lauf nie.

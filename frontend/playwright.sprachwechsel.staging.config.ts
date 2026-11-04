@@ -15,6 +15,9 @@ export default defineConfig({
 	use: {
 		baseURL: process.env.GZ_SVELTE_BASE ?? 'https://staging.gregor20.henemm.com',
 		headless: true,
+		// Epic #2644: ohne angemeldeten Nutzer folgt die Sprache dem Browser
+		// (Accept-Language). Fall 1 erwartet fuer neue Besucher Deutsch, also Deutsch fest.
+		locale: 'de-DE',
 		ignoreHTTPSErrors: true,
 		httpCredentials: { username: user, password: pass },
 		serviceWorkers: 'block'
