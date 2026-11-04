@@ -65,6 +65,16 @@ def test_ac3_tageswechsel_warnt_erneut(caplog, monkeypatch):
     assert len(_warnungen(caplog)) == 2
 
 
+def test_set_bleibt_auf_heutigen_tag_begrenzt(monkeypatch):
+    """Expected Behavior: beim Eintragen wird das Set auf den heutigen Tag
+    begrenzt (bleibt klein) — Eintraege des Vortags verschwinden."""
+    tzmod.first_resolvable_tz([_ohne_zone()], "Preset A")
+    tzmod.first_resolvable_tz([_ohne_zone()], "Preset B")
+    monkeypatch.setattr(tzmod, "_utc_today", lambda: date(2026, 11, 5))
+    tzmod.first_resolvable_tz([_ohne_zone()], "Preset A")
+    assert tzmod._WARNED == {("Preset A", date(2026, 11, 5))}
+
+
 def test_ac4_leeres_label_nicht_entprellt(caplog):
     caplog.set_level(logging.WARNING, logger=tzmod.logger.name)
     for _ in range(4):

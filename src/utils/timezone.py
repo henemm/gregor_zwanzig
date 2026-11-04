@@ -9,7 +9,7 @@ SPEC: docs/specs/bugfix/utc_localtime_display.md
 from __future__ import annotations
 
 import logging
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 from threading import Lock
 from typing import Iterable, Optional
 from zoneinfo import ZoneInfo
@@ -83,6 +83,22 @@ def location_tz(location) -> ZoneInfo:
     return resolve_location_tz(location) or UTC
 
 
+# #1786: prozesslokale Entprellung der Zonen-Warnung je (Label, UTC-Tag).
+_WARNED: set[tuple[str, date]] = set()
+_WARNED_LOCK = Lock()
+
+
+def _utc_today() -> date:
+    """Heutiger UTC-Tag — Naht fuer Tests (Uhr)."""
+    return datetime.now(UTC).date()
+
+
+def reset_zonen_warnung() -> None:
+    """Entprell-Zustand leeren (Tests, reihenfolgeunabhaengig)."""
+    with _WARNED_LOCK:
+        _WARNED.clear()
+
+
 def first_resolvable_tz(locations: Iterable, context_label: str = "") -> ZoneInfo:
     """Zone des ERSTEN Orts der Reihenfolge, dessen Zone sich aufloesen laesst.
 
@@ -100,6 +116,18 @@ def first_resolvable_tz(locations: Iterable, context_label: str = "") -> ZoneInf
         tz = resolve_location_tz(location)
         if tz is not None:
             return tz
+    # #1786: je (Label, UTC-Tag) hoechstens eine Zeile; ohne Label nicht
+    # entprellen (verschiedene Aufrufer sollen sich nicht verschlucken).
+    if context_label:
+        tag = _utc_today()
+        with _WARNED_LOCK:
+            veraltet = {k for k in _WARNED if k[1] != tag}
+            _WARNED.difference_update(veraltet)
+            schluessel = (context_label, tag)
+            neu = schluessel not in _WARNED
+            _WARNED.add(schluessel)
+        if not neu:
+            return UTC
     logger.warning(
         "Keine aufloesbare Zeitzone%s — es gilt Weltzeit (UTC). Ruhezeit, "
         "Tageszaehler und Faelligkeit rechnen damit NICHT in der Ortszeit.",
