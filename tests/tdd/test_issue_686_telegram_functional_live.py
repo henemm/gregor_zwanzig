@@ -362,6 +362,9 @@ def test_ac5_write_verdict_blocks_telegram_scope_without_chat_id(tmp_path, monke
 
     Beweist, dass das echte Close-Gate (das deploy-gregor-prod.sh liest) bei
     Telegram-Scope ohne Test-Chat-ID hart blockt — kein kosmetisches Gate.
+
+    Seit #2681 ist langs=["de", "en"] Pflicht; beide Aufrufe tragen es, damit
+    der erste Aufruf allein an der fehlenden Test-Chat-ID scheitert.
     """
     repo = tmp_path / "repo"
     repo.mkdir()
@@ -390,13 +393,15 @@ def test_ac5_write_verdict_blocks_telegram_scope_without_chat_id(tmp_path, monke
 
     # OHNE Test-Chat-ID → Verdict verweigert, kein out.json
     monkeypatch.delenv("GZ_TELEGRAM_TEST_CHAT_ID", raising=False)
-    rc_block = gate_mod.write_verdict("VERIFIED: test", findings_path, e2e_path=out_path)
+    rc_block = gate_mod.write_verdict("VERIFIED: test", findings_path, e2e_path=out_path,
+                                      langs=["de", "en"])
     assert rc_block == 1, "Telegram-Scope ohne Test-Chat-ID muss write_verdict blocken (rc=1)"
     assert not out_path.exists(), "kein Verdict-Artefakt bei verweigertem Gate"
 
     # MIT Test-Chat-ID → Verdict geschrieben
     monkeypatch.setenv("GZ_TELEGRAM_TEST_CHAT_ID", "8346977700")
-    rc_pass = gate_mod.write_verdict("VERIFIED: test", findings_path, e2e_path=out_path)
+    rc_pass = gate_mod.write_verdict("VERIFIED: test", findings_path, e2e_path=out_path,
+                                     langs=["de", "en"])
     assert rc_pass == 0, "mit gesetzter Test-Chat-ID muss das Verdict geschrieben werden (rc=0)"
     assert out_path.exists(), "Verdict-Artefakt muss bei bestandenem Gate existieren"
 

@@ -80,7 +80,8 @@ def test_clean_run_writes_attestation_naming_checked_pages(tmp_path, monkeypatch
 
     e2e_path = tmp_path / "attestation.json"
     rc = sg.write_verdict("VERIFIED: #1558 Live-Nachweis", tmp_path / "findings.json",
-                          e2e_path=e2e_path, scope_override="frontend-only")
+                          e2e_path=e2e_path, scope_override="frontend-only",
+                          langs=["de", "en"])
 
     assert rc == 0, "sauberer Frontend-Lauf gegen Staging muss durchlaufen"
     checked = json.loads(e2e_path.read_text()).get("frontend_pages_checked") or []
