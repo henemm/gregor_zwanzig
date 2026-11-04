@@ -2,9 +2,9 @@
 entity_id: alert_metric_channels
 type: module
 created: 2026-09-22
-updated: 2026-11-03
+updated: 2026-11-04
 status: draft
-version: "1.3"
+version: "1.4"
 tags: [alerts, channels, datamodel]
 ---
 
@@ -42,7 +42,16 @@ DE/EN-Texten und drei Hinweisen („Kanal nicht im Abo-Satz aktiv", „Radar und
 gehen immer über die Abo-Kanäle", Wind-Hinweis). Die Zuordnung Zeile → Speicherschlüssel kommt
 ausschließlich aus `GET /api/alert-metric-channel-keys` (S3a). Die Hinweise „Kanal ohne
 Empfänger" und „Kanal-Schwelle über Metrik-Stufe" sind **nicht** Teil von S3b1, sondern S3b2
-(weiter unter #1895, noch offen, siehe Known Limitations S3b1).
+(geliefert mit S3b2, siehe Abschnitte S3b2).
+
+**Scheibe S3b2 (Issue #1895, Hinweise im Block, reine Frontend-Scheibe):** S3b2 ergänzt im Block
+„Kanäle je Wettergröße" genau zwei Hinweise für Zeilen mit **eigener Wahl**: (1) „Kanal ohne
+Empfänger" — ein gewählter Kanal hat keinen Empfänger, an den der Alarm zugestellt werden könnte
+(Telegram ohne Chat, SMS ohne bestätigte Nummer, Premium-SMS ohne frische Rückadresse); (2)
+„Kanal-Schwelle über Metrik-Stufe" — der gewählte Kanal hat eine Schwelle über „niedrig", schwächere
+Warnungen kommen darüber nicht an (ADR-0046). Die Hinweise **informieren nur**: sie sperren weder
+Auswahl noch Speichern, und der Speicherweg, Snapshot und Rollback bleiben unberührt. Es gibt keinen
+neuen Backend-Code.
 
 ## Source
 
@@ -134,6 +143,25 @@ nur Regressions-Test), `/api/metrics`-Antwort, `has_active_rules`, `alert_rules`
 **Nicht angefasst (S3b1):** alles unter `internal/`, `cmd/`, `src/`, `api/` (Backend und Endpunkt
 sind mit S3a fertig); `/api/metrics`; `hardcode_allowlist.json` (bleibt `[]`).
 
+### Affected Files (S3b2)
+
+| Datei | Change Type | Beschreibung |
+|---|---|---|
+| `frontend/src/lib/components/shared/alarme-tab/alertMetricChannels.ts` | MODIFY | reine Funktionen `kanaeleOhneEmpfaenger(eintrag, profil)` und `kanaeleMitSchwelle(eintrag, schwellen)` neben `hinweise()`; Empfänger-Bedingung für Telegram/SMS deckungsgleich mit `channelConnectionStatus` |
+| `frontend/src/lib/components/alerts-tab/AlertMetricChannelsBlock.svelte` | MODIFY | neue Props `profil`, `schwellen`; je Zeile mit eigener Wahl zwei Hinweiszeilen (Testids `kanal-hinweis-kein-empfaenger-<k>`, `kanal-hinweis-schwelle-<k>`) |
+| `frontend/src/lib/components/shared/AlarmeTab.svelte` | MODIFY | Typ von `alarmProfile` auf `ConnectionProfile` erweitern, `alarmProfile` und `displayChannelThresholds` an den Block reichen; keine zweite Profil-Abfrage, keine neue `context===`-Weiche; Ratsche neu messen |
+| `frontend/src/lib/components/shared/alarme-tab/premiumSmsAlarmGate.ts` | MODIFY (nur Kommentar) | überholte Aussage (Zeilen 7-14), der Alarmpfad frage die Empfängerprüfung nicht, berichtigen; Logik unverändert |
+| `frontend/src/lib/i18n/messages/{de,en}/alarme.json` | MODIFY | je 2 neue Schlüssel `alarme.kanaele.kein_empfaenger`, `alarme.kanaele.schwelle_hinweis` |
+| `frontend/src/lib/components/alerts-tab/__tests__/kanal_block_zeilen_und_hinweise_render.test.ts`, `shared/alarme-tab/__tests__/kanal_wahl_je_wettergroesse_regeln.test.ts`, `shared/__tests__/context_herkunft_zweige_eingefroren.test.ts` | MODIFY | Regeltests (zwei Nutzer, Profil null, je Kanal), Render-Test, Katalog DE/EN, Ratsche neu messen |
+| `frontend/e2e/kanal-je-wettergroesse-block.staging.spec.ts` | MODIFY | Hinweise sichtbar auf `.tn-mobile` und `.tn-desktop` |
+| `frontend/src/lib/components/shared/versand-tab/channelConnectionStatus.ts` | unverändert | Quelle der Empfänger-Definition (Telegram/SMS); wird gelesen, nicht verändert |
+| `docs/specs/modules/alert_metric_channels.md` | MODIFY | diese Spec |
+
+**Nicht angefasst (S3b2):** alles unter `internal/`, `cmd/`, `src/`, `api/` (nur gelesen als Quelle
+der Bedingungen: `src/output/channels/recipient.py`, `premium_sms.py`,
+`src/services/alert_channel_threshold.py`); Speicherweg, Payload, Snapshot, Rollback;
+`hardcode_allowlist.json` (bleibt `[]`).
+
 ## Estimated Scope
 
 - **LoC:** +40 bis +90 produktiv (Doku/`*.md`/Tests zählen nicht)
@@ -171,7 +199,15 @@ sind mit S3a fertig); `/api/metrics`; `hardcode_allowlist.json` (bleibt `[]`).
 - **Files:** ca. 16 produktiv (2 neu) + Tests + Spec
 - **Effort:** high (Risiko MITTEL: geteilter Organismus auf vier Flächen, Speicherweg mit
   Read-Modify-Write, Ratsche)
-- **S3b2 (separat, unter #1895):** ca. +60–80 LoC.
+- **S3b2 (separat, unter #1895):** ca. +90/−5 LoC (siehe Estimated Scope S3b2).
+
+### Estimated Scope (S3b2)
+
+- **LoC:** ca. **+90 / −5** produktiv (zwei reine Funktionen ~25, Block ~30, AlarmeTab ~5,
+  Kataloge ~4, Kommentar-Berichtigung). Unter dem Limit von 250 je Workflow; `docs/`, `*.md` und
+  Tests zählen nicht.
+- **Files:** ca. 6 produktiv + Tests + Spec; Frontend-only-Deploy.
+- **Effort:** low bis medium (Risiko NIEDRIG: reine Anzeige, Speicherweg unberührt, kein Backend).
 
 ## Dependencies
 
@@ -481,6 +517,73 @@ Mindestens folgende gezielte Verfälschungen (String-Ersetzung mit externer Sich
   zu nutzen → AC-54 rot.
 - `ALARM_TOP`/Nachbar-Schreiber lassen das Feld fallen → AC-57 rot.
 - Der Block schreibt `wind_change` doppelt in `gust` und `wind` → AC-48 rot.
+
+### Implementation Details (S3b2)
+
+Grundlage: `docs/context/feat-1895-s3b2-kanal-hinweise.md` Sektion `## Analysis` (Messergebnisse
+1–6). Zwei reine Funktionen im Helper, Anzeige im Block; kein neuer Backend-Code.
+
+1. **Geltungsbereich.** Beide Hinweise erscheinen nur in Zeilen mit **eigener Wahl** (`eintrag`
+   nicht `null`) und nur für **gewählte** Kanäle. Zeilen „wie Abo-Kanäle" und der Abo-Satz selbst
+   bekommen keinen Hinweis (Scope-Grenze; derselbe Mangel im Abo-Satz ist eine bekannte Lücke,
+   siehe Known Limitations S3b2).
+2. **`kanaeleOhneEmpfaenger(eintrag, profil)`** liefert die gewählten Kanäle ohne Empfänger.
+   `profil` ist `ConnectionProfile | null | undefined`; ist es `null`/unbekannt (nicht geladen),
+   ist das Ergebnis leer (nie „kein Empfänger" raten). Bedingungen je Kanal, belegt am
+   Python-Transport (`src/output/channels/recipient.py`, `premium_sms.py`):
+   - `email`: nie (Konto hat Pflicht-E-Mail).
+   - `telegram`: `!telegram_chat_id` (Transport: `telegram_no_chat_id`).
+   - `sms`: `!sms_to || sms_allowed === false || !sms_verified` (Transport: `sms_no_recipient`).
+     Das ist **dieselbe Definition** wie in `channelConnectionStatus` (Zweig „nicht verbunden" bzw.
+     „eingetragen, unbestätigt"); keine zweite Ableitung mit abweichender Bedingung.
+   - `premium_sms`: `premium_sms_reply_state` ∈ {`none`, `stale`}. Gemessen: der **Alarmpfad blockt
+     tatsächlich** bei fehlender oder veralteter Rückadresse (jede Alarm-Sendestelle ruft
+     `notification_service._premium_sms_output()` → `PremiumSmsRecipient.for_user` →
+     `check_reply_address`; „bewusst ohne Bereitschaftsfrage" betrifft nur `can_send_*()`, nicht die
+     Empfängerprüfung). Die Frische-Schwelle gehört dem Server; das Frontend rechnet keine Zeit.
+3. **`kanaeleMitSchwelle(eintrag, schwellen)`** liefert die gewählten Kanäle, deren Schwelle in
+   `schwellen` (`AlertChannelThresholdState`, aus `displayChannelThresholds`) `MODERATE` oder
+   `HIGH` ist, samt Schwelle. **Stufenunabhängig:** das Frontend hat keine einzige Quelle für die
+   Dringlichkeit der Metrik-Stufe (Mapping Stufe → LOW/MODERATE/HIGH liegt in
+   `services.alert_urgency`); eine zweite Rangtabelle entstünde gegen Wächter #1480/#1481. Der
+   Hinweis nennt daher nur die Schwelle des Kanals (Name über `CHANNEL_THRESHOLD_KEYS`) und sagt
+   ehrlich, dass schwächere Warnungen über diesen Kanal nicht ankommen. Alle vier Kanäle (auch
+   `premium_sms`, #1701 S2b). Schwelle `LOW` ⇒ kein Hinweis.
+4. **Block** (`AlertMetricChannelsBlock.svelte`): neue Props `profil` und `schwellen`; je Zeile
+   `{#if}` mit `data-testid="kanal-hinweis-kein-empfaenger-<k>"` bzw.
+   `data-testid="kanal-hinweis-schwelle-<k>"` (`<k>` = Kanal). Reiner Text, **kein Link**; der Text
+   nennt, wo der Empfänger einzutragen ist (Reiter Versand bzw. Profil). Farbe `--g-ink-muted`
+   (WCAG-AA). In Ausdrücken kein `(x) as T` (Prüfstand `ohneTypen()`, Nebenbefund #1199).
+5. **AlarmeTab**: `alarmProfile` wird im Typ auf `ConnectionProfile` erweitert (gleiche, bereits
+   vorhandene Abfrage von `/api/auth/profile`, **keine zweite**), `profileOverride`-Testhaken bleibt;
+   `alarmProfile` und `displayChannelThresholds` werden als Props an den Block gegeben. Keine neue
+   `context===`-Weiche; `context_herkunft_zweige_eingefroren.test.ts` neu messen.
+6. **Texte** nur über den Katalog: `alarme.kanaele.kein_empfaenger` (mit Platzhalter für Kanalnamen
+   und Ort) und `alarme.kanaele.schwelle_hinweis` (mit Platzhaltern für Kanalname und Schwellenname)
+   in `messages/{de,en}/alarme.json`; Kanalnamen (Protokoll-Token) nicht übersetzen.
+7. **Kommentar** in `premiumSmsAlarmGate.ts` (Zeilen 7-14) berichtigen: Das Gate bleibt auf
+   `premium_sms_allowed` beschränkt (Sperre der Auswahl), aber die Aussage, der Alarmpfad frage die
+   Empfängerprüfung nicht, ist überholt; die Frische wird als Hinweis (S3b2), nicht als Sperre
+   gezeigt. Keine Logikänderung.
+8. **Nur Anzeige.** Hinweise ändern weder `eintraege`, `onChange`, Payload, Snapshot noch Rollback
+   und sperren keinen Schalter und kein Speichern.
+
+#### Mutations-Gegenprobe (S3b2, Pflicht in `/50-implement`)
+
+Mindestens folgende gezielte Verfälschungen (String-Ersetzung mit externer Sicherungskopie, nie
+`git checkout/stash/reset`) müssen jeweils mindestens einen Test rot färben; die Hinweise müssen an
+der **Bedingung** (Profilfeld bzw. Schwelle) hängen, nicht nur am Text:
+
+- Telegram-Bedingung `!telegram_chat_id` entfernt bzw. invertiert → AC-63 rot.
+- SMS-Bedingung ohne `!sms_verified` → AC-64 rot.
+- Premium-SMS-Bedingung ohne `stale` (oder ohne `none`) → AC-65 rot.
+- E-Mail erhält eine Empfänger-Bedingung → AC-66 rot.
+- Profil `null` wird als „kein Empfänger" behandelt → AC-67 rot.
+- Hinweise auch für „wie Abo-Kanäle"-Zeilen → AC-68 rot.
+- Schwellen-Vergleich `> LOW` wird `>= LOW` bzw. `=== HIGH` → AC-69 bzw. AC-70 rot.
+- Der Block sperrt bei Hinweis den Schalter oder das Speichern → AC-72 rot.
+- Das Profil kommt aus einem festen Nutzer statt aus dem Auth-Kontext → AC-73 rot.
+- Ein Katalogschlüssel fehlt in EN → AC-75 rot.
 
 ## Expected Behavior
 
@@ -1025,6 +1128,113 @@ ist ein Wert unter `alert_metric_channels[<Speicherschlüssel>]`.
   abgeschnittene Schalter, bei WCAG-AA-Kontrast.
   - Testart: Playwright-E2E, beide Layouts, auf Staging.
 
+### Acceptance Criteria (S3b2 — Hinweise)
+
+Nummerierung setzt AC-62 (S3b1) fort. Die Hinweise erscheinen nur in Zeilen mit **eigener Wahl**,
+nur für gewählte Kanäle, und sie informieren nur: Auswahl und Speichern bleiben immer möglich.
+
+- **AC-63:** Given eine Zeile mit eigener Wahl, in der Telegram gewählt ist, und ein Nutzerprofil
+  ohne verknüpften Telegram-Chat, When die Zeile angezeigt wird, Then erscheint der Hinweis
+  `kanal-hinweis-kein-empfaenger-telegram`, dass dieser Kanal keinen Empfänger hat und wo er
+  einzutragen ist (Reiter Versand bzw. Profil); mit verknüpftem Chat erscheint er nicht.
+  - Testart: Kern (`node --test`). Prüfling: `kanaeleOhneEmpfaenger` und Block; Mutations-Gegenprobe
+    „Bedingung am Profilfeld entfernt".
+
+- **AC-64:** Given eine Zeile mit eigener Wahl, in der SMS gewählt ist, und ein Profil, bei dem die
+  Nummer fehlt, die SMS-Freigabe aus ist oder die Nummer nicht bestätigt ist, When die Zeile
+  angezeigt wird, Then erscheint der Hinweis `kanal-hinweis-kein-empfaenger-sms`; mit bestätigter
+  Nummer und Freigabe erscheint er nicht, und die Bedingung stimmt mit der Anzeige „nicht verbunden"
+  bzw. „eingetragen, unbestätigt" von `channelConnectionStatus` überein.
+  - Testart: Kern. Prüfling: `kanaeleOhneEmpfaenger`; Gleichlauf-Test gegen
+    `channelConnectionStatus` (eine Definition, keine zweite Ableitung); Mutations-Gegenprobe
+    „`!sms_verified` entfernt".
+
+- **AC-65:** Given eine Zeile mit eigener Wahl, in der Premium-SMS gewählt ist, When der
+  Rückadress-Stand des Profils `none` oder `stale` ist, Then erscheint der Hinweis
+  `kanal-hinweis-kein-empfaenger-premium_sms`; bei `fresh` erscheint er nicht. Das Frontend rechnet
+  keine Zeit, es liest nur `premium_sms_reply_state`.
+  - Testart: Kern. Prüfling: `kanaeleOhneEmpfaenger`, Block mit drei Profilen (`none`, `stale`,
+    `fresh`); Mutations-Gegenprobe „`stale` fehlt".
+
+- **AC-66:** Given eine Zeile mit eigener Wahl, in der E-Mail gewählt ist, When das Profil keine
+  weiteren Kanaldaten enthält, Then erscheint nie ein Hinweis „Kanal ohne Empfänger" für E-Mail,
+  weil das Konto immer eine E-Mail-Adresse hat.
+  - Testart: Kern. Prüfling: `kanaeleOhneEmpfaenger` (leeres und volles Profil).
+
+- **AC-67:** Given das Profil ist noch nicht geladen, nicht ladbar oder `null`, When eine Zeile mit
+  eigener Wahl (z. B. Telegram) angezeigt wird, Then erscheint **kein** Hinweis „Kanal ohne
+  Empfänger"; der Block behauptet nie „kein Empfänger", solange der Stand unbekannt ist. Der
+  Schwellen-Hinweis hängt nicht am Profil und bleibt davon unberührt.
+  - Testart: Kern. Prüfling: `kanaeleOhneEmpfaenger(…, null)` und Block ohne Profil.
+
+- **AC-68:** Given eine Zeile steht auf „wie Abo-Kanäle" (kein eigener Eintrag), When der Block sie
+  anzeigt, Then erscheint weder ein Hinweis „Kanal ohne Empfänger" noch ein Schwellen-Hinweis,
+  auch wenn das Profil Lücken hat oder Kanal-Schwellen über „niedrig" stehen; die Hinweise gelten
+  nur für die eigene Wahl.
+  - Testart: Kern und Komponententest. Prüfling: Block; Mutations-Gegenprobe „Hinweis auch bei
+    erbender Zeile".
+
+- **AC-69:** Given eine Zeile mit eigener Wahl und gewähltem Kanal, dessen Kanal-Schwelle `LOW`
+  (niedrig) ist, When die Zeile angezeigt wird, Then erscheint **kein** Schwellen-Hinweis; dies gilt
+  für alle vier Kanäle (E-Mail, Telegram, SMS, Premium-SMS).
+  - Testart: Kern. Prüfling: `kanaeleMitSchwelle`; Mutations-Gegenprobe „`>= LOW` statt `> LOW`".
+
+- **AC-70:** Given eine Zeile mit eigener Wahl und ein gewählter Kanal (je einer der vier: E-Mail,
+  Telegram, SMS, Premium-SMS) mit Schwelle `MODERATE` oder `HIGH`, When die Zeile angezeigt wird,
+  Then erscheint `kanal-hinweis-schwelle-<k>` mit dem Kanalnamen und dem Schwellennamen und der
+  Aussage, dass schwächere Warnungen über diesen Kanal nicht ankommen; der Hinweis ist
+  stufenunabhängig (es gibt im Frontend keine zweite Rangtabelle der Metrik-Stufen).
+  - Testart: Kern. Prüfling: `kanaeleMitSchwelle`, Block; je Kanal ein Fall für `MODERATE` und
+    `HIGH`; Mutations-Gegenprobe „nur `HIGH`".
+
+- **AC-71:** Given eine Zeile mit eigener Wahl, in der ein Kanal sowohl ohne Empfänger ist als auch
+  eine Schwelle über „niedrig" hat (z. B. Telegram ohne Chat, Schwelle `HIGH`), When die Zeile
+  angezeigt wird, Then erscheinen beide Hinweise gleichzeitig, jeder mit eigener Testid, und
+  keiner verdeckt den anderen.
+  - Testart: Kern und Komponententest. Prüfling: Block.
+
+- **AC-72:** Given eine Zeile mit eigener Wahl und mindestens einem Hinweis, When der Nutzer den
+  Kanal trotzdem gewählt lässt und speichert, Then bleiben alle Schalter bedienbar, das Speichern
+  wird nicht blockiert, und der gesendete Eintrag bzw. Payload, Snapshot und Rollback sind
+  identisch zu einer Zeile ohne Hinweis (die Hinweise ändern nichts am Speicherweg).
+  - Testart: Kern. Prüfling: Block (`disabled` unverändert, `onChange`-Aufrufe), Payload-Vergleich
+    mit und ohne Hinweis; Mutations-Gegenprobe „Hinweis sperrt Schalter".
+
+- **AC-73:** Given zwei verschiedene Nutzer A (Telegram-Chat verknüpft) und B (kein Chat), je mit
+  eigener Wahl „Telegram", When der Block für A bzw. B angezeigt wird, Then zeigt A keinen und B
+  den Hinweis „Kanal ohne Empfänger"; das Profil stammt aus dem Auth-Kontext des jeweiligen Nutzers
+  (nie `"default"`), und der Stand von A beeinflusst B nicht.
+  - Testart: Kern mit zwei Nutzern (ADR-0003); Staging kennt nur den Login `default`, daher ist
+    der Kern der Hauptnachweis.
+
+- **AC-74:** Given die vier Flächen Trip-Hub, Trip-Anlegen (`/trips/new`), Ortsvergleich-Editor
+  und Ortsvergleich-Anlegen (`/compare/new`), When der Alarme-Reiter mit eigener Wahl geöffnet
+  wird, Then erscheinen die Hinweise auf allen vier gleich aus **einem** Baustein
+  (`AlertMetricChannelsBlock.svelte`) über `AlarmeTab`, ohne neue `context===`-Weiche und ohne
+  zweite Profil-Abfrage; `context_herkunft_zweige_eingefroren.test.ts` ist nach neuer Messung grün.
+  - Testart: Kern (Ratsche) und Komponententest je Fläche; Staging-E2E für die erreichbaren
+    Flächen.
+
+- **AC-75:** Given die Sprache des Nutzers ist DE bzw. EN, When ein Hinweis angezeigt wird, Then
+  stammen die Texte aus den Schlüsseln `alarme.kanaele.kein_empfaenger` und
+  `alarme.kanaele.schwelle_hinweis` in `messages/{de,en}/alarme.json`, es gibt keinen
+  hartkodierten Nutzertext, `hardcode_allowlist.json` bleibt `[]`, und Kanalnamen (Protokoll-Token)
+  werden nicht übersetzt.
+  - Testart: Kern (Katalog-Parität DE/EN, Hardcode-Ratsche). Prüfling: `alarme.json`, Block.
+
+- **AC-76:** Given der Block auf Staging mit einer Zeile mit eigener Wahl, die einen Hinweis
+  auslöst, When ein Nutzer die Zeile betrachtet, Then ist der Hinweis sowohl im Layout `.tn-mobile`
+  als auch im Layout `.tn-desktop` sichtbar, nicht abgeschnitten oder verdeckt, bei
+  WCAG-AA-Kontrast.
+  - Testart: Playwright-E2E, beide Layouts, auf Staging (`kanal-je-wettergroesse-block.staging.spec.ts`).
+
+- **AC-77:** Given die Hinweislogik, When die Bedingung (Profilfeld bzw. Schwelle) verfälscht wird
+  (z. B. Telegram-Prüfung entfernt, Premium-SMS-Stand ignoriert, Schwelle ignoriert), Then färbt
+  mindestens ein Test jeweils rot; die Zusicherung ist dort geprüft, wo sie wirkt (an der
+  Bedingung der reinen Funktion und am Rendering des Blocks), nicht nur am Vorhandensein des Texts.
+  - Testart: Mutations-Gegenprobe im `implementation-validator` (Liste siehe Implementation Details
+    S3b2).
+
 ## Known Limitations / Nicht-Ziele
 
 Diese Scheibe (S1) liefert ausschließlich Feld, Persistenz, Roundtrip, Doku und ADR.
@@ -1075,7 +1285,7 @@ Diese Scheibe (S2) liefert Leser + Migration. Ausdrücklich **nicht** Teil von S
 |---|---|---|
 | S3a | Backend und Vertrag: Leser-Rückfall nach Tier-Gates, ADR-0077-Nachtrag, Schlüssel-Endpunkt, Go-Angleichung Top-Level-`null` | dieser Workflow |
 | S3b1 | Oberfläche: Block „Kanäle je Wettergröße" auf allen vier Flächen (Trip-Hub, Trip-Anlegen, Ortsvergleich, Ortsvergleich-Anlegen) samt Payload, Snapshot/Rollback, DE/EN-Texte, Hinweise „nicht im Abo-Satz", „metrikfreie Alarme" und Wind-Hinweis | Workflow `feat-1895-s3b-kanal-spalte` (Beschluss F1) |
-| S3b2 | Hinweis „Kanal ohne Empfänger" und Hinweis „Kanal-Schwelle über Metrik-Stufe" | **offen**, eigener späterer Workflow unter #1895 (kein neues Issue) |
+| S3b2 | Hinweis „Kanal ohne Empfänger" und Hinweis „Kanal-Schwelle über Metrik-Stufe" | dieser Workflow `feat-1895-s3b2-kanal-hinweise` (unter #1895, kein neues Issue) |
 | S4 | Rückbau `alert_rules` | später, setzt S3b1 voraus (S3b2 ist keine Voraussetzung) |
 
 Ausdrücklich **nicht** Teil von S3a:
@@ -1088,10 +1298,10 @@ Ausdrücklich **nicht** Teil von S3a:
   Auflösung und bleibt unverändert. Ein Metrik-Arm `{sms}` mit SMS-Schwelle „hoch" unterdrückt
   eine niedrigere Warnung, auch wenn der Abo-Satz sie zugestellt hätte. Das gilt heute schon
   gleich für den Abo-Satz; S3a macht es nicht schlechter. Der sichtbare Hinweis dafür ist
-  **S3b2** (offen, nicht in S3b1).
+  **S3b2** (geliefert mit S3b2).
 - **Fehlender Empfänger (benanntes Restrisiko).** `resolve_alert_channels` kennt keine
   Empfänger; ein gewählter Kanal ohne Empfänger (z. B. Telegram ohne verknüpften Chat) wird vom
-  Rückfall nicht erfasst. Der sichtbare Hinweis dafür ist **S3b2** (offen, nicht in S3b1).
+  Rückfall nicht erfasst. Der sichtbare Hinweis dafür ist **S3b2** (geliefert mit S3b2).
 - **Windänderung hängt an zwei Schlüsseln.** Ein Windänderungs-Alarm, der über die Böen
   ausgelöst wird, folgt der Kanalwahl unter `gust`, einer über den Mittelwind der unter `wind`
   (so liest der S2-Leser heute, gemessen 2026-11-03). Der Endpunkt sagt das ehrlich
@@ -1108,7 +1318,7 @@ Ausdrücklich **nicht** Teil von S3a:
 
 ### Known Limitations / Nicht-Ziele (S3b1)
 
-- **S3b2 ist offen (kein stilles Versprechen).** Zwei Hinweise fehlen in S3b1 ausdrücklich und
+- **S3b2 war offen (Stand S3b1; geliefert mit S3b2, siehe unten).** Zwei Hinweise fehlten in S3b1 ausdrücklich und
   bleiben bis S3b2 (weiter unter #1895) eine bekannte Lücke: (1) „Kanal ohne Empfänger" — das
   Frontend kennt `mail_to`, `sms_to`, `telegram_chat_id`, `sms_verified` und `tier` im
   Alarme-Reiter nicht, obwohl das Profil sie liefert, und es braucht erst einen Abgleich mit dem
@@ -1126,6 +1336,32 @@ Ausdrücklich **nicht** Teil von S3a:
   unverändert.
 - **Staging kennt nur den Login `default`.** Die Mandantentrennung (AC-59) wird im Kern mit zwei
   Nutzern bewiesen, nicht über zwei Staging-Konten.
+
+### Known Limitations / Nicht-Ziele (S3b2)
+
+- **Hinweise informieren nur.** Kein Gate, keine Sperre von Auswahl oder Speichern; ein Kanal ohne
+  Empfänger oder über der Schwelle bleibt wählbar und wird gespeichert.
+- **Schwellen-Hinweis ist stufenunabhängig.** Es gibt im Frontend keine einzige Quelle für die
+  Dringlichkeit einer Metrik-Stufe (Mapping liegt in `services.alert_urgency`); eine zweite
+  Rangtabelle wäre ein Verstoß gegen #1480/#1481. Der Hinweis erscheint daher bei jeder Schwelle
+  über „niedrig", auch wenn die gerade gewählte Stufe die Schwelle erreichen würde. Eine
+  stufengenaue Aussage bräuchte eine geteilte Quelle und wäre eine eigene Scheibe.
+- **Abo-Satz-Zeilen ohne Hinweis.** Zeilen „wie Abo-Kanäle" und der Abo-Kanalsatz selbst
+  bekommen keinen Hinweis, obwohl derselbe Mangel dort auftreten kann; die Scheibe bleibt auf die
+  eigene Wahl im Block begrenzt (Scope-Creep vermieden).
+- **Premium-SMS-Frische gehört dem Server.** Das Frontend liest nur `premium_sms_reply_state`; die
+  Schwelle für „veraltet" wird nicht dupliziert. Zwischen Laden des Profils und Versand kann sich
+  der Stand ändern.
+- **Kein Link.** Die Hinweise nennen den Ort (Reiter Versand bzw. Profil) als Text; es gibt
+  keinen Sprung dorthin und damit keinen toten Link.
+- **Kein neuer Backend-Code, Speicherweg unberührt.** Payload, Snapshot und Rollback bleiben wie in
+  S3b1; kein Rückbau von `alert_rules` (S4), `has_active_rules` unangetastet.
+- **Staging kennt nur den Login `default`.** Die Mandantentrennung (AC-73) wird im Kern mit zwei
+  Nutzern bewiesen; das Staging-E2E zeigt die Hinweise mit dem Zustand dieses einen Kontos.
+- **EN-Anlegen-Abläufe im E2E nicht messbar (#2810).** Der Testhelfer `anlegenPflicht` kennt nur
+  deutsche Labels; die englischen Texte deckt der Katalog-Test (AC-75) ab, nicht das E2E.
+- **Profil nicht ladbar ⇒ kein Empfänger-Hinweis.** Die Lücke bleibt dann unsichtbar (bewusst:
+  lieber kein Hinweis als ein Falschversprechen).
 
 ## Architektur-Entscheidung (ADR)
 
@@ -1166,3 +1402,9 @@ Ausdrücklich **nicht** Teil von S3a:
   „Kanal ohne Empfänger" und „Kanal-Schwelle über Metrik-Stufe") ausdrücklich als offen
   benannt. S1–S3a-Inhalte unverändert; die Zusagen „S3b zeigt Hinweis" (Kanal-Schwelle, fehlender
   Empfänger) und „Wind-Kopplung entscheidet S3b" wurden auf S3b2 bzw. S3b1 präzisiert.
+- 2026-11-04: Scheibe S3b2 ergänzt (Hinweise „Kanal ohne Empfänger" und „Kanal-Schwelle über
+  Metrik-Stufe" im Block „Kanäle je Wettergröße", reine Frontend-Scheibe, AC-63 bis AC-77),
+  Analyse-Grundlage `docs/context/feat-1895-s3b2-kanal-hinweise.md` Sektion `## Analysis`.
+  Scheibenschnitt-Zeile S3b2 von „offen" auf „dieser Workflow" gesetzt; Kommentar in
+  `premiumSmsAlarmGate.ts` zur Berichtigung vorgemerkt. S1–S3b1-Inhalte unverändert (nur der
+  Stand-Vermerk in den Known Limitations S3b1).
