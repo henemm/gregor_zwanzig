@@ -13,6 +13,8 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"os"
+	"path/filepath"
 	"reflect"
 	"strings"
 	"testing"
@@ -44,6 +46,8 @@ func ampelUngueltig() map[string]obj {
 func ampelRouter(s *store.Store) http.Handler {
 	r := chi.NewRouter()
 	r.Use(middleware.Lang(s))
+	r.Post("/api/trips", CreateTripHandler(s))
+	r.Post("/api/compare/presets", CreateComparePresetHandler(s))
 	r.Put("/api/trips/{id}", UpdateTripHandler(s))
 	r.Put("/api/trips/{id}/weather-config", PutTripWeatherConfigHandler(s))
 	r.Put("/api/compare/presets/{id}", UpdateComparePresetHandler(s))
@@ -255,5 +259,95 @@ func TestEigeneVorlageMitAmpel_SpeichernUndAnwendenLaesstZustellungUnveraendert(
 	}
 	if !reflect.DeepEqual(nachher.ReportConfig, vorher.ReportConfig) || !reflect.DeepEqual(nachher.Stages, vorher.Stages) {
 		t.Fatal("Anwenden hat Zustellung oder Etappen veraendert")
+	}
+}
+
+// F-A (Fix-Loop): dieselben Vektoren wie Python validate_ampel
+// (tests/fixtures/ampel_validierung_vektoren.json) — Regelgleichheit.
+func TestValidateAmpel_GemeinsameVektorenMitPython(t *testing.T) {
+	dir, _ := os.Getwd()
+	for i := 0; i < 8; i++ { // Pfadanker go.mod (-trimpath-fest)
+		if _, err := os.Stat(filepath.Join(dir, "go.mod")); err == nil {
+			break
+		}
+		dir = filepath.Dir(dir)
+	}
+	raw, err := os.ReadFile(filepath.Join(dir, "tests", "fixtures", "ampel_validierung_vektoren.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var datei struct {
+		Vektoren []struct {
+			Name    string      `json:"name"`
+			Gueltig bool        `json:"gueltig"`
+			Ampel   interface{} `json:"ampel"`
+		} `json:"vektoren"`
+	}
+	if err := json.Unmarshal(raw, &datei); err != nil || len(datei.Vektoren) < 20 {
+		t.Fatalf("Vektoren nicht lesbar (%v, %d)", err, len(datei.Vektoren))
+	}
+	for _, v := range datei.Vektoren {
+		if got := validateAmpel(v.Ampel); got != v.Gueltig {
+			t.Errorf("%s: validateAmpel = %v, erwartet %v", v.Name, got, v.Gueltig)
+		}
+	}
+}
+
+// F-B (Fix-Loop): auch die Anlage-Wege lehnen eine ungueltige Ampel ab, in
+// beiden Sprachen; nichts wird angelegt, bob bleibt unveraendert.
+func TestAmpelUngueltig_AnlageVonTripUndVergleichAbgelehnt(t *testing.T) {
+	kaputt := ampelUngueltig()["oben_absteigend"]
+	wege := []struct {
+		path string
+		body obj
+	}{
+		{"/api/trips", obj{"id": "neu", "name": "Neu", "display_config": obj{"ampel": kaputt},
+			"stages": []obj{{"id": "S1", "name": "D1", "date": "2026-05-01",
+				"waypoints": []obj{{"id": "W1", "name": "P", "lat": 47.0, "lon": 11.0, "elevation_m": 500}}}}}},
+		{"/api/compare/presets", obj{"name": "Neu", "schedule": "daily", "profil": "ALLGEMEIN",
+			"location_ids": []string{}, "display_config": obj{"ampel": kaputt}}},
+	}
+	texte := map[string]string{"de": "Die Ampel ist ungültig", "en": "The traffic light is invalid"}
+	for _, weg := range wege {
+		for lang, prefix := range texte {
+			s := newTestStore(t)
+			ampelSeed(t, s, "alice")
+			ampelSeed(t, s, "bob")
+			vorherB := ampelStand(t, s, "bob")
+			w := ampelAnfrage(t, ampelRouter(s), "POST", weg.path, "alice", lang, weg.body)
+			var body struct{ Code, Message string }
+			_ = json.Unmarshal(w.Body.Bytes(), &body)
+			if w.Code != http.StatusBadRequest || body.Code != "ampel_ungueltig" || !strings.HasPrefix(body.Message, prefix) {
+				t.Fatalf("POST %s %s: %d %s", weg.path, lang, w.Code, w.Body.String())
+			}
+			us := s.WithUser("alice")
+			if trip, _ := us.LoadTrip("neu"); trip != nil {
+				t.Fatalf("POST %s %s: Trip trotz Ablehnung angelegt", weg.path, lang)
+			}
+			if presets, _ := us.LoadComparePresets(); len(presets) != 1 {
+				t.Fatalf("POST %s %s: %d Vergleiche, erwartet 1", weg.path, lang, len(presets))
+			}
+			if ampelStand(t, s, "bob") != vorherB {
+				t.Fatalf("POST %s %s: bob wurde veraendert", weg.path, lang)
+			}
+		}
+	}
+}
+
+// F-B (Fix-Loop): PATCH mit gueltiger Ampel setzt sie als ganzen Unterbaum.
+func TestEigeneVorlage_PatchSetztGueltigeAmpel(t *testing.T) {
+	s := newTestStore(t)
+	h := ampelRouter(s)
+	w := ampelAnfrage(t, h, "POST", "/api/metric-presets", "alice", "de",
+		obj{"name": "Mein Gipfel", "metrics": []string{"wind"}, "ampel": ampelGueltig()})
+	var p struct{ ID string }
+	_ = json.Unmarshal(w.Body.Bytes(), &p)
+	neu := obj{"template": "radtour", "thunder": obj{"mittel": "red", "hoch": "red"}}
+	if w = ampelAnfrage(t, h, "PATCH", "/api/metric-presets/"+p.ID, "alice", "de", obj{"ampel": neu}); w.Code != http.StatusOK {
+		t.Fatalf("PATCH: %d %s", w.Code, w.Body.String())
+	}
+	presets, _ := s.WithUser("alice").LoadMetricPresets()
+	if len(presets) != 1 || !reflect.DeepEqual(presets[0].Ampel, map[string]interface{}(neu)) {
+		t.Fatalf("PATCH hat die Ampel nicht gesetzt: %+v", presets)
 	}
 }

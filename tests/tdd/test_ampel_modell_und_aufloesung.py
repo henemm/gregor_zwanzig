@@ -132,25 +132,26 @@ def test_gespeicherte_compare_vorlage_schlaegt_profil():
 
 # --- Validierung (Regeln fuer AC-16, Python-Seite) --------------------------
 
-@pytest.mark.parametrize("ampel", [
-    {"metrics": {"gust": _gust(50, 45, 60)}},
-    {"metrics": {"temperature": {"lower": {"yellow": 30}, "upper": {"yellow": 20}}}},
-    {"metrics": {"temperature": {"lower": {"red": 0, "orange": -5, "yellow": 5}}}},
-    {"metrics": {"gust": {"alarm_ab": "bald"}}},
-    {"metrics": {"gust": {"upper": {"yellow": "viel"}}}},
-    {"thunder": {"mittel": "orange", "hoch": "yellow"}},
-    {"thunder": {"mittel": "red", "hoch": "orange"}},
-    {"metrics": ["gust"]},
-])
-def test_ungueltige_ampel_wird_erkannt(ampel):
-    assert validate_ampel(ampel) != []
+#: Dieselben Vektoren liest der Go-Test TestValidateAmpel_GemeinsameVektorenMitPython
+#: (internal/handler/ampel_validierung_test.go) -- Regelgleichheit Python/Go.
+VEKTOREN = json.loads((_HERE.parent / "fixtures" / "ampel_validierung_vektoren.json")
+                      .read_text(encoding="utf-8"))["vektoren"]
 
 
-def test_teilmenge_und_offene_grenzen_sind_gueltig():
-    ampel = {"template": "wassersport", "metrics": {
-        "wind": {"lower": {"red": None, "orange": 4, "yellow": 8},
-                 "upper": {"yellow": 30, "orange": None, "red": 50}, "alarm_ab": "yellow"}}}
-    assert validate_ampel(ampel) == []
+@pytest.mark.parametrize("vektor", VEKTOREN, ids=[v["name"] for v in VEKTOREN])
+def test_validierung_gleicht_den_gemeinsamen_vektoren(vektor):
+    assert (validate_ampel(vektor["ampel"]) == []) is vektor["gueltig"]
+
+
+def test_ungueltige_compare_ampel_wird_beim_aufloesen_verworfen(caplog):
+    """F-F: auch ohne Loader (Compare-Dict direkt an ampel_for) gilt eine
+    ungueltige Abo-Ampel nicht -- weder ihre Grenzen noch ihr template."""
+    preset = {"profil": "radtour", "display_config": {"ampel": {
+        "template": "skitouren", "metrics": {"gust": _gust(99, 50, 60)}}}}
+    with caplog.at_level(logging.WARNING, logger="app.ampel"):
+        assert ampel_for(preset)["gust"] == {"yellow": 35, "orange": 50, "red": 65}
+    assert template_id_for(preset) == "radtour"
+    assert any("ungueltig" in r.getMessage() for r in caplog.records)
 
 
 # --- Abweichungszahl und Gewitter -------------------------------------------
@@ -200,6 +201,27 @@ def test_python_speichern_behaelt_ampel_und_alle_anderen_felder(tmp_path):
     assert gespeichert["ampel"] == ampel
     assert gespeichert["theme"] == "von-go"
     assert gespeichert["preset_name"] == "skitouren"
+
+
+def test_python_speichern_ersetzt_ampel_als_ganzen_unterbaum(tmp_path):
+    """F-C (Spec §1): eine entfernte Metrik und eine entfernte Grenze tauchen
+    nach dem erneuten Speichern NICHT wieder auf (kein Tief-Merge mit der
+    Platte); alle anderen Felder bleiben erhalten."""
+    ampel = {"template": "skitouren", "metrics": {
+        "gust": _gust(42, 55, 70), "wind": {"upper": {"yellow": 25, "orange": 45, "red": 60}}}}
+    pfad = tmp_path / "users" / "anna" / "briefings" / "drift-gate-trip.json"
+    pfad.parent.mkdir(parents=True)
+    pfad.write_text(json.dumps(_trip_dict({"preset_name": "skitouren", "metrics": [],
+                                           "theme": "von-go", "ampel": ampel})), encoding="utf-8")
+    trip = load_trip("drift-gate-trip", data_dir=tmp_path, user_id="anna")
+    del trip.display_config.ampel["metrics"]["wind"]
+    del trip.display_config.ampel["metrics"]["gust"]["upper"]["red"]
+    save_trip(trip, "anna", tmp_path)
+
+    dc = json.loads(pfad.read_text(encoding="utf-8"))["display_config"]
+    assert dc["ampel"] == {"template": "skitouren",
+                           "metrics": {"gust": {"upper": {"yellow": 42, "orange": 55}}}}
+    assert dc["theme"] == "von-go" and dc["preset_name"] == "skitouren"
 
 
 def test_ungueltige_ampel_beim_laden_verworfen_und_protokolliert(tmp_path, caplog):
