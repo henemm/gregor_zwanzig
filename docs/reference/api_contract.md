@@ -1079,7 +1079,7 @@ Wirkung: eine ausgelöste Meldung erreicht einen eingeschalteten Kanal nur, wenn
 
 Quelle: `internal/model/trip.go` / `internal/model/compare_preset.go` (`AlertChannelThresholdsConfig`), ADR-0046, Spec `docs/specs/modules/feat_1461_s3b2a_kanal_schwelle.md` (Trip), `docs/specs/modules/feat_1461_s3b2b_compare_kanal_schwelle.md` (Ortsvergleich).
 
-### alert_metric_channels (Issue #1895 S1 · S2 · Epic #1230)
+### alert_metric_channels (Issue #1895 S1 · S2 · S3a · S3b1 · Epic #1230)
 
 Dritte Kanal-Schicht neben `alert_channels`/`send_*` („je Abo") und `alert_channel_thresholds` („je Kanal", ADR-0046): **je Metrik** die Kanal-Zuordnung. Identischer Vertrag auf `Trip` **und** `ComparePreset` (Go jeweils `map[string]interface{}`, Python `Optional[dict]`), Parität ab S1.
 
@@ -1108,6 +1108,12 @@ Dritte Kanal-Schicht neben `alert_channels`/`send_*` („je Abo") und `alert_cha
 - **Rückfall nach den Tarif-Sperren:** ist der Metrik-Arm nach den Tier-Gates leer (z. B. `{sms}` ohne SMS-Tarif), gilt der Kanalsatz ohne diese Schicht, ebenfalls nach den Tier-Gates — der Alarm geht nicht ins Leere.
 - **`null` je Metrik:** `{"gust": null}` wird als `null` persistiert und bedeutet: die Metrik erbt (wie kein Eintrag).
 - **Top-Level-`null`:** `"alert_metric_channels": null` im PUT-Body ist auf Trip **und** Ortsvergleich ein No-Op — die gespeicherte Map bleibt unverändert (`mergeBriefingPatch` überspringt `null` nur für dieses Feld; andere Felder überschreibt `null` wie bisher).
+
+**Ergänzung S3b1 (Issue #1895 · Oberfläche, Frontend-only, 2026-11-04):** Der geteilte Block „Kanäle je Wettergröße" (`frontend/src/lib/components/alerts-tab/AlertMetricChannelsBlock.svelte`) sendet das Feld jetzt aus dem Alarme-Reiter auf allen vier Flächen (Trip-Hub, `/trips/new`, Ortsvergleich-Editor, `/compare/new`); es gibt keine API-Änderung.
+
+- **Pro aktiver Alarm-Wettergröße** (Schlüssel aus `GET /api/alert-metric-channel-keys`): „wie Abo-Kanäle" oder eigene Auswahl aus E-Mail/Telegram/SMS/Premium-SMS.
+- **Payload = Diff:** gesendet wird nur der geänderte Eintrag (Per-Metrik-Merge, siehe oben), immer mit allen vier Flags (`email`, `telegram`, `sms`, `premium_sms`). Zurück auf „wie Abo-Kanäle" sendet `{"<schluessel>": null}` (Per-Metrik-`null`, nicht Top-Level-`null`); ist der Schlüssel-Abruf nicht verfügbar, schreibt der Block nichts.
+- **Hinweis im Block:** Radar-/Regen-Alarme und amtliche Warnungen gehen weiterhin immer über die Abo-Kanäle.
 
 Quelle: `internal/model/trip.go` / `internal/model/compare_preset.go` (`AlertMetricChannels`), ADR-0077 (schreibt ADR-0046 fort), Spec `docs/specs/modules/alert_metric_channels.md`.
 

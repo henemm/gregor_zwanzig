@@ -284,6 +284,7 @@ describe('#1435 E1a-2 AC-7: der Trips-Zweig bleibt unberuehrt', () => {
 				[
 					'activeMetrics',
 					'context',
+					'existingAlertMetricChannels',
 					'existingChannelThresholds',
 					'existingChannels',
 					'metricLevels',
@@ -294,7 +295,8 @@ describe('#1435 E1a-2 AC-7: der Trips-Zweig bleibt unberuehrt', () => {
 				// Issue #1461 S3b-2a: legitime Erweiterung um
 				// `existingChannelThresholds` (Kanal-Schwelle, route-Speicherweg) --
 				// diese Zusicherung bewacht weiterhin, dass KEIN Katalog-Attribut
-				// (#1435-Scope) den Trips-Zweig erreicht.
+				// (#1435-Scope) den Trips-Zweig erreicht. Issue #1895 S3b1: ebenso
+				// `existingAlertMetricChannels` (Kanäle je Wettergröße, Bestand).
 				'Die Attribut-Liste der Trip-Einbettung hat sich unerwartet geaendert (AC-7).'
 			);
 		}

@@ -18,6 +18,7 @@ import type { SaveFn, SaveStatus } from '../../stores/saveStatusStore.svelte.ts'
 import { merkeNutzlast } from '../../stores/nutzlastStand.ts';
 import type { PutClient } from './tripSpeicherung.ts';
 import type { AlertChannelState } from './alarme-tab/alertChannelState.ts';
+import { baueDiff, type KanalMap } from './alarme-tab/alertMetricChannels.ts';
 import { buildComparePresetSavePayload, waehleEigenfelder } from '../compare/compareEditorSave.ts';
 import {
 	normalizeStoredActiveMetrics,
@@ -51,6 +52,8 @@ export interface AlarmSnapshot {
 	// Alarm-Kanaele als EIN Objekt statt der drei Flach-Felder oben -- Vorbild
 	// `buildAlarmeDeliveryPayload` (Trip).
 	channels?: AlertChannelState;
+	// Issue #1895 S3b1: Kanäle je Wettergröße (gesendet nur als Diff gegen das Preset).
+	alertMetricChannels?: KanalMap;
 }
 
 /** Ziel-Objekt fuer `hydrateAlarmFieldsFromPreset`: ALLE Felder optional, damit
@@ -88,6 +91,7 @@ export interface AlarmHydrationTarget {
 	// strukturell zuweisbar bleibt -- hydrateAlarmFieldsFromPreset schreibt hier
 	// ohnehin immer einen konkreten Wert (Zeile unten), nie `null`.
 	activeMetricKeys?: string[] | null;
+	alertMetricChannels?: KanalMap; // Issue #1895 S3b1
 }
 
 /** Aktueller Alarmstand von `wiz` als entkoppelte Kopie (JSON-Rundreise löst
@@ -104,7 +108,8 @@ export function alarmSnapshotAus(wiz: AlarmHydrationTarget): AlarmSnapshot {
 			alertQuietTo: wiz.alertQuietTo,
 			telegramStyle: wiz.telegramStyle,
 			channelThresholds: wiz.channelThresholds,
-			channels: wiz.channels
+			channels: wiz.channels,
+			alertMetricChannels: wiz.alertMetricChannels
 		})
 	) as AlarmSnapshot;
 }
@@ -119,7 +124,8 @@ const ALARM_TOP = [
 	'alert_quiet_from',
 	'alert_quiet_to',
 	'official_warnings',
-	'radar_alert_enabled'
+	'radar_alert_enabled',
+	'alert_metric_channels' // Issue #1895 S3b1 (nur Diff, s. buildComparePresetSavePayload)
 ] as const;
 const ALARM_DISPLAY = ['metric_alert_levels', 'telegram_style'] as const;
 
@@ -154,6 +160,7 @@ export function baueAlarmNutzlast(
 			current.channelThresholds ?? (preset.alert_channel_thresholds as Record<string, string> | undefined),
 		corridors: preset.corridors,
 		alertChannels: current.channels,
+		alertMetricChannels: current.alertMetricChannels ?? {},
 		alertCooldownMinutes: current.alertCooldownMinutes,
 		alertQuietFrom: current.alertQuietFrom,
 		alertQuietTo: current.alertQuietTo,
@@ -212,6 +219,16 @@ function setzeGeleerteAlarmfelderNull(
 	}
 }
 
+/** #1895 AC-56: nach Fehlschlägen ist der Serverstand unbekannt (Bestand oder ein Versuch) — jeder
+ *  Schlüssel, der von einem gescheiterten Versuch abweicht, geht zusätzlich raus (fehlend ⇒ null). */
+function sendeGegenVersuche(body: ComparePreset, aktuell: KanalMap = {}, versuche: KanalMap[]): void {
+	const ziel = body as { alert_metric_channels?: KanalMap };
+	for (const v of versuche) {
+		const zusatz = baueDiff(v, { ...Object.fromEntries(Object.keys(v).map((k) => [k, null])), ...aktuell });
+		if (Object.keys(zusatz).length > 0) ziel.alert_metric_channels = { ...ziel.alert_metric_channels, ...zusatz };
+	}
+}
+
 /**
  * Liefert `null`, wenn sich der Alarm-Snapshot seit dem letzten gespeicherten
  * Stand NICHT verändert hat (kein unnötiger PUT), sonst die fertige Nutzlast.
@@ -257,6 +274,13 @@ export function rollbackAlarmSnapshot(
 		if (JSON.stringify(target[field]) === JSON.stringify(attempted[field])) {
 			target[field] = before[field];
 		}
+	}
+	// Issue #1895 S3b1 (AC-56): seit dem Snapshot neue Einträge explizit auf null — der Server
+	// ersetzt je Schlüssel, Weglassen setzte nichts zurück.
+	const versucht = attempted.alertMetricChannels;
+	if (versucht && JSON.stringify(target.alertMetricChannels) === JSON.stringify(versucht)) {
+		const neu = Object.keys(versucht).filter((k) => !(k in (before.alertMetricChannels ?? {})));
+		target.alertMetricChannels = { ...before.alertMetricChannels, ...Object.fromEntries(neu.map((k) => [k, null])) };
 	}
 }
 
@@ -329,6 +353,8 @@ export function erstelleAlarmeVergleichSpeicherung(opt: AlarmeVergleichSpeicheru
 	// Nur einen EIGENEN, noch nicht gestarteten Vorgang verwerfen — ein
 	// ausstehender Speichervorgang eines anderen Reiters bleibt unangetastet.
 	let eigenerVorgangAussteht = false;
+	// #1895 AC-56: Kanalwahlen gescheiterter PUTs (bis zum nächsten Erfolg) — der Server kann sie übernommen haben.
+	let versuche: KanalMap[] = [];
 
 	const saveFn: SaveFn = async (init) => {
 		eigenerVorgangAussteht = false;
@@ -342,13 +368,16 @@ export function erstelleAlarmeVergleichSpeicherung(opt: AlarmeVergleichSpeicheru
 				const before = zuletztGespeichert;
 				const payload = flushPendingAlarmSave(opt.preset(), current, before);
 				if (!payload) return;
+				sendeGegenVersuche(payload.body, current.alertMetricChannels, versuche);
 				try {
 					// Fix-Loop 3 (F201): die GESENDETE Nutzlast bleibt am Funktionsobjekt (Seitenstand-Fortschreibung bei 412).
 					merkeNutzlast(saveFn, payload.body);
 					const antwort = await client.put<ComparePreset>(payload.url, payload.body, init);
 					zuletztGespeichert = current;
+					versuche = [];
 					opt.onCompareUpdate(antwort);
 				} catch (e) {
+					versuche = [...versuche, current.alertMetricChannels ?? {}];
 					if ((e as { status?: number })?.status !== 412 && !saveController.imWiederholen) {
 						rollbackAlarmSnapshot(zustand, before, current);
 					}

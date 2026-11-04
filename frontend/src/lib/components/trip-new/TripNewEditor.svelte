@@ -29,7 +29,7 @@
 	import Toast from '$lib/components/mobile/Toast.svelte';
 	import Select from '$lib/components/ui/select/Select.svelte';
 	import * as Dialog from '$lib/components/ui/dialog/index.js';
-	import type { Trip, ReportConfig, WeatherConfigMetric, Stage, Waypoint, ActivityType, AlertMetric, SensLevel, Corridor } from '$lib/types';
+	import type { Trip, ReportConfig, WeatherConfigMetric, Stage, Waypoint, ActivityType, AlertMetric, SensLevel, Corridor, AlertMetricChannelEntry } from '$lib/types';
 	import {
 		type TabId,
 		type CreateTripState,
@@ -461,6 +461,7 @@
 	function handleAlarmOfficialWarningsChange(an: boolean) { alarm = { ...alarm, officialWarningsEnabled: an }; }
 	function handleAlarmCooldownChange(minuten: number | undefined) { alarm = { ...alarm, cooldownMinutes: minuten }; }
 	function handleAlarmQuietHoursChange(von: string | undefined, bis: string | undefined) { alarm = { ...alarm, quietFrom: von, quietTo: bis }; }
+	function handleAlarmMetricChannelChange(k: string, e: AlertMetricChannelEntry) { alarm = { ...alarm, metricChannels: { ...(alarm.metricChannels ?? {}), [k]: e } }; } // #1895 S3b1
 
 	// ── Speichern ─────────────────────────────────────────────────────────────
 	// #2521 S3: `mitStandardwerten` = Weg des Standardwerte-Knopfs — eigenes Gate
@@ -973,6 +974,7 @@
 					onThresholdChange={handleAlarmThresholdChange}
 					activeMetrics={activeAlertMetrics}
 					onMetricLevelChange={handleAlarmMetricLevelChange}
+					onAlertMetricChannelChange={handleAlarmMetricChannelChange}
 				/>
 			</div>
 		</div>
@@ -1212,6 +1214,7 @@
 						onThresholdChange={handleAlarmThresholdChange}
 						activeMetrics={activeAlertMetrics}
 						onMetricLevelChange={handleAlarmMetricLevelChange}
+						onAlertMetricChannelChange={handleAlarmMetricChannelChange}
 					/>
 				</div>
 			</div>

@@ -330,6 +330,7 @@
 			outlookMetricFormats: wiz.outlookMetricFormats, // Issue #2049
 			metricAlertLevels: wiz.metricAlertLevels, // Issue #1170
 			channelThresholds: wiz.channelThresholds, // Issue #1461 S3b-2b
+			alertMetricChannels: wiz.alertMetricChannels, // Issue #1895 S3b1
 			telegramStyle: wiz.telegramStyle // Issue #1260 S5
 		});
 		try {

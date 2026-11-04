@@ -66,5 +66,6 @@
 		{metricLevels}
 		{existingChannels}
 		existingChannelThresholds={trip.alert_channel_thresholds}
+		existingAlertMetricChannels={trip.alert_metric_channels}
 	/>
 </div>

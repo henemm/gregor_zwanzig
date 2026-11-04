@@ -206,10 +206,12 @@ const EINGEFROREN: readonly string[] = [
 	// 🔴 Issue #2656 (F7, i18n): +9/+8/+7/+7 Zeilen durch Katalog-Importe, die
 	// $locale-Lesung und die Schluesseltabelle ZONEN_BEZUG; Bedingungen unveraendert
 	// (Inhalt in BLEIBT_MIT_INHALT gefesselt, nachgemessen).
-	'AlarmeTab.svelte:259',
-	'AlarmeTab.svelte:519',
-	'AlarmeTab.svelte:537',
-	'AlarmeTab.svelte:570',
+	// 🔴 Issue #1895 S3b1 (AC-58): +8/+31/+31/+31 Zeilen durch Block-Import, Props,
+	// Zustand (d3) und die Einbettung des Blocks unter der Tabelle; keine neue Weiche, nachgemessen.
+	'AlarmeTab.svelte:267',
+	'AlarmeTab.svelte:550',
+	'AlarmeTab.svelte:568',
+	'AlarmeTab.svelte:601',
 	// S6e: alle DREI VersandTab-Eintraege bleiben (0 gestrichen) — sie sind
 	// Wirkort-/Darstellungs-Weichen, kein `wiz`-Symptom. Ihre Zeilennummern
 	// verschoben sich durch die elf neuen Prop-Zeilen im Skript-Teil; die neuen
@@ -329,22 +331,22 @@ const EINGEFROREN_SOLL_ANZAHL = 48;
  */
 const BLEIBT_MIT_INHALT: readonly { eintrag: string; zeile: string; folgt: string }[] = [
 	{
-		eintrag: 'AlarmeTab.svelte:259',
+		eintrag: 'AlarmeTab.svelte:267',
 		zeile: "context === 'vergleich'",
 		folgt: 'deriveUnalertableSelectedMetricNames('
 	},
 	{
-		eintrag: 'AlarmeTab.svelte:519',
+		eintrag: 'AlarmeTab.svelte:550',
 		zeile: "{#if context === 'vergleich' && unalertableSelectedMetricNames.length > 0}",
 		folgt: 'alarme-unalertable-metrics-hint'
 	},
 	{
-		eintrag: 'AlarmeTab.svelte:537',
+		eintrag: 'AlarmeTab.svelte:568',
 		zeile: "{#if context === 'vergleich'}",
 		folgt: 'TelegramKurzstilToggle'
 	},
 	{
-		eintrag: 'AlarmeTab.svelte:570',
+		eintrag: 'AlarmeTab.svelte:601',
 		zeile: "{#if context === 'vergleich'}",
 		// #2283 S5: VTAlertSample durch echte AlertPreviewCard ersetzt (AC-21).
 		// Anker samt `kind="vergleich"`: das FENSTER (8 Zeilen) reicht bis in den

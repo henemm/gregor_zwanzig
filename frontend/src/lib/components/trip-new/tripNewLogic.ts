@@ -15,6 +15,7 @@ import {
 } from '../shared/alarme-tab/alertChannelState.ts';
 import { tailUnlocked, tailDone, canFinish, progressCount as kernProgressCount, type TailIds } from '../shared/anlegeLockEngine.ts';
 import { buildAlarmeDeliveryPayload } from '../shared/alarme-tab/alarmeDeliveryPayload.ts';
+import { baueDiff, type KanalMap } from '../shared/alarme-tab/alertMetricChannels.ts';
 import { anlegeKette } from '../shared/subscriptionTabs.ts';
 import { fmtDate } from '../../i18n/format.ts';
 import type { Lang } from '../../i18n/index.ts';
@@ -159,6 +160,7 @@ export interface CreateTripAlarmState {
 	channels: AlertChannelState;
 	channelThresholds: AlertChannelThresholdState;
 	metricLevels: Record<string, string>;
+	metricChannels?: KanalMap; // #1895 S3b1: Kanäle je Wettergröße
 }
 
 export function initialCreateTripAlarmState(): CreateTripAlarmState {
@@ -258,6 +260,7 @@ export function buildCreateTripPayload(state: CreateTripState): Trip {
 		channels: alarm.channels,
 		channelThresholds: alarm.channelThresholds,
 		metricLevels: alarm.metricLevels,
+		metricChannelsDiff: baueDiff({}, alarm.metricChannels), // #1895 S3b1
 	}) as Record<string, unknown>;
 	Object.assign(trip, alarmPayload);
 	// Neuanlage (POST): der Alarm-Teilfeld-Rumpf traegt nur `metric_alert_levels`;
