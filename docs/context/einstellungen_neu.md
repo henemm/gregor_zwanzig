@@ -2,7 +2,7 @@
 
 - **Stand:** 2026-11-03, Konzeptphase abgeschlossen, Scheiben-Schnitt vom PO freigegeben (10 Scheiben, siehe unten).
 - **Epic:** #2791 mit den Scheiben S1 #2792 · S2 #2793 · S3a #2794 · S3b #2795 · S4 #2796 · S5 #2797 · S6 #2798 · S7 #2799 · S8 #2800 · S9 #2801.
-- **ADR-Entwürfe:** [ADR-0106](../adr/0106-profil-ampel-einzige-bewertung.md) · [ADR-0107](../adr/0107-orte-ein-bis-n-orte.md) · [ADR-0108](../adr/0108-vorlage-und-tempo-getrennt.md) · [ADR-0109](../adr/0109-reiterstruktur-wetter-zustellung.md) (alle *Vorgeschlagen*).
+- **ADRs:** [ADR-0106](../adr/0106-profil-ampel-einzige-bewertung.md) *Akzeptiert* (2026-11-04, mit Präzisierungen P1 CAPE, P2 Gewitter „leicht“, P3 Altstufen) · [ADR-0107](../adr/0107-orte-ein-bis-n-orte.md) · [ADR-0108](../adr/0108-vorlage-und-tempo-getrennt.md) · [ADR-0109](../adr/0109-reiterstruktur-wetter-zustellung.md) (*Vorgeschlagen*).
 - **Gemessen gegen:** `origin/main` @ `3c412c3ef` (2026-11-03). Alle Angaben `Datei:Zeile` beziehen sich darauf.
 - **Sprache:** Jede neue oder geänderte Oberfläche und jeder neue Nachrichtentext ist **zweisprachig DE/EN** über die Kataloge (ADR-0104, `docs/reference/i18n_konventionen.md`, Glossar `docs/reference/i18n_glossar.md`). Das gilt für jede Scheibe (PO-Vorgabe bei der Freigabe des Schnitts, 2026-11-03).
 
@@ -221,7 +221,7 @@ Ein Agent hat jedes Bedienelement der heutigen Hubs inventarisiert, für Trip un
 - **Sonnenstunden** sind umgekehrt (weniger ist schlechter). Für den **Taupunkt** gilt eine Schwüle-Skala. **Luftfeuchte** bekommt keine eigene Ampel (über den Taupunkt bewertet).
 - Die **Schneehöhe** hängt von der Vorlage ab (Skitour: wenig ist schlecht).
 - **Keine Ampel** bekommen: Luftdruck, Windrichtung, Niederschlagsart, mittlere und hohe Wolken. Sie bleiben reine Anzeige.
-- **CAPE** bekommt keine eigene Zeile mehr, es geht in der Gewitter-Zeile auf (A6). Wie CAPE in die Gewitterstufe eingeht, klärt die Analyse der Scheibe S1 (ADR-0025: eine Gewitter-Quelle für alle Kanäle).
+- **CAPE** bekommt keine eigene Zeile mehr, es geht in der Gewitter-Zeile auf (A6). Es geht **wie heute** über die geeichte Leiter je Modell und Gebiet in die Gewitterstufe ein; eigene CAPE-Farbe und CAPE-Alarm entfallen (ADR-0106 P1, PO 2026-11-04). Gewitter „leicht“ ist immer gelb und alarmiert nie (ADR-0106 P2).
 - **Vorboten** (ADR-0010: `humidity`, `dewpoint`, `rain_probability`, `cloud_total`, `pressure`, `wind_chill`) werden gefärbt, lösen aber **keinen Alarm** aus. Ihre Zeile zeigt „kein Alarm (Vorbote)“.
 
 ### 4.3 Erklärsätze der Metrik-Zeile (Wortlaut aus dem Mockup)
@@ -543,10 +543,10 @@ Freigegeben: der Vorschlag aus dem Stand, **Scheibe 3 geteilt** in 3a und 3b, al
 | S1 #2792 | Beidseitige Profil-Ampel im Datenmodell | Ampel je Trip/Ort aus der Vorlage, Vorlagen mit Grenzen (§4.4), alle Renderer aller vier Kanäle lesen sie, Migration der Bestandsdaten (B8, W5b-Altwerte), eigene Vorlagen speichern Ampel + Alarmstufen | ADR-0106 angenommen | B8, W5b (Migration), A6 (CAPE), K3b (Datenteil) |
 | S2 #2793 | Alarm nach Stufenwechsel plus Sprung | „Alarm ab“ je Metrik, Entwarnung, Sprung durch System, Abbildung der alten Stufen, Vorboten ohne Alarm, alle Kanäle | S1 | A3 (Logik), A4 |
 | S3a #2794 | Reiter Wetter nach Atomic-Design-Soll | Reiterleiste, Vorlage-Picker + Speichern, Metrik-Zeilen mit Ampel-Leiste, Grenzen ändern, −/+, Alarm ab für alle, amtliche Warnungen/Radar-Karte, Anpassen/Tagesfenster, Wertebereiche/Alarme/Layout-Reiter weg, Umleitungen, toter Code weg | S1, S2 | W1, W4, W5b (UI), A3, A5, K16, K17, U3, U4, X1, A15, W20/A1 |
-| S3b #2795 | Inhalt je Kanal und Fläche + Reiter Zustellung | Kanal-Listen mit Roh/Einfach, Schnittlinie, Legende, Weitere Einstellungen, 3-Tages-Ausblick vereinheitlicht, Kurzstil, Zustellung mit Uhrzeiten, Laufzeit, Kanal-Tabelle, Stille Stunden, Cooldown | S3a | W7–W11, W15, W17–W19, W21, W22, WV5, WV6, WV8–WV10, V1–V4, V7–V9, V11–V15, A7–A13, U2 |
+| S3b #2795 | Inhalt je Kanal und Fläche + Reiter Zustellung | Kanal-Listen mit Roh/Einfach, Schnittlinie, Legende, Weitere Einstellungen, 3-Tages-Ausblick vereinheitlicht, Kurzstil, Zustellung mit Uhrzeiten, Laufzeit, Kanal-Tabelle, Stille Stunden, Cooldown | S3a | W7–W11, W15, W17–W19, W21, W22, WV5, WV6, WV8–WV10, V1–V4, V7–V9, V11–V15, A7–A13, U2, K13, V13 |
 | S4 #2796 | Vorlage und Tempo trennen | Kopf-Chips weg (Trip und Orte), Fortbewegung + Tempo im Reiter Etappen, je Etappe überschreibbar, Profil des Ortsvergleichs über die Vorlage | S3a | K3a, K3b, K4, E1, WV4 |
-| S5 #2797 | „Test schicken ▾“ | Kanal-Menü mit Ziel und Sperre, Morgen/Abend, Alle, Test-Alarm, Rückmeldung, Kebab, Aktivieren | – (nach S3a empfohlen) | K9–K15, A14, V16, V13 |
-| S6 #2798 | „Orte“ mit 1..n Orten | Umbenennung, Ein-Ort-Briefing (alle Kanäle), Vergleich ab 2, kein Ranking, Validator-Anpassung | S3b | B7, E2, K7 |
+| S5 #2797 | „Test schicken ▾“ | Kanal-Menü mit Ziel und Sperre, Morgen/Abend, Alle, Test-Alarm, Rückmeldung, Kebab, Aktivieren | – (nach S3a empfohlen) | K9–K12, K14, K15, A14, V16, K7 |
+| S6 #2798 | „Orte“ mit 1..n Orten | Umbenennung, Ein-Ort-Briefing (alle Kanäle), Vergleich ab 2, kein Ranking, Validator-Anpassung | S3b | B7, E2 |
 | S7 #2799 | Ampel für weitere Metriken | Sonnenstunden (umgekehrt), Bewölkung, tiefe Wolken, Taupunkt (Schwüle), Schneehöhe (je Vorlage), Nullgrad-/Schneefallgrenze relativ zur höchsten Stelle bzw. Ortshöhe | S1 (S3a für die Zeilen) | – |
 | S8 #2800 | Radar-Alarm für Trips | Regen in der nächsten Stunde auf der Etappe, alle Kanäle, Schalter im Reiter Wetter | S2 | N1, A2 |
 | S9 #2801 | Premium-SMS mit eigener Inhaltsliste | eigene Liste im Reiter Premium-SMS, Renderer nutzt sie, Dringlichkeits-Vorbelegung SMS mittel / Premium-SMS hoch | S3b | N2 |

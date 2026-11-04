@@ -1,8 +1,8 @@
 # ADR-0106: Die Profil-Ampel ist die einzige Bewertung einer Wettergröße — Briefing-Farbe, SMS-Hervorhebung und Alarm lesen dieselbe beidseitige Skala aus der Vorlage
 
-- **Status:** Vorgeschlagen
-- **Datum:** 2026-11-03
-- **Bezug:** Epic #2791, Scheiben S1 #2792, S2 #2793, S7 #2799, Kontext `docs/context/einstellungen_neu.md` §2, §4; **löst bei Annahme ADR-0043 ab** und **ADR-0013 teilweise ab**; ADR-0040 ist schon durch ADR-0043 abgelöst und bleibt es; **bestätigt** ADR-0009 (Abweichungs-Wächter), ADR-0056 (rollierender Anker), ADR-0010 (Vorboten ohne Alarm), ADR-0046 (Kanal-Schwelle regelt den Weg, nicht das Ob), ADR-0025 (eine Gewitter-Quelle)
+- **Status:** Akzeptiert (PO-Annahme 2026-11-04 per Rückfrage, mit den drei Präzisierungen unten)
+- **Datum:** 2026-11-03 (Entwurf), 2026-11-04 (angenommen)
+- **Bezug:** Epic #2791, Scheiben S1 #2792, S2 #2793, S7 #2799, Kontext `docs/context/einstellungen_neu.md` §2, §4; **löst ADR-0043 ab** und **ADR-0013 teilweise ab**; ADR-0040 ist schon durch ADR-0043 abgelöst und bleibt es; **bestätigt** ADR-0009 (Abweichungs-Wächter), ADR-0056 (rollierender Anker), ADR-0010 (Vorboten ohne Alarm), ADR-0046 (Kanal-Schwelle regelt den Weg, nicht das Ob), ADR-0025 (eine Gewitter-Quelle)
 
 ## Kontext
 
@@ -17,7 +17,7 @@ Der PO nennt die Oberfläche dazu „eine Katastrophe“. Nutzer denken in „ge
 
 ## Entscheidung
 
-1. **Eine Bewertung je Metrik: die Ampel** mit vier Stufen grün · gelb · orange · rot. Sie ist **beidseitig**: unten rot < orange < gelb, oben gelb < orange < rot, grün dazwischen. Jede Seite kann offen sein. Gewitter (ordinal) bekommt eine Farbe je Stufe: „keins“ immer grün, „mittel“ gelb/orange/rot, „hoch“ orange/rot.
+1. **Eine Bewertung je Metrik: die Ampel** mit vier Stufen grün · gelb · orange · rot. Sie ist **beidseitig**: unten rot < orange < gelb, oben gelb < orange < rot, grün dazwischen. Jede Seite kann offen sein. Gewitter (ordinal) bekommt eine Farbe je Stufe: „keins“ immer grün, „mittel“ gelb/orange/rot, „hoch“ orange/rot, „leicht“ immer gelb (siehe Präzisierung P2).
 2. **Die Ampel kommt aus der Vorlage** (die 7 Vorlagen aus `WEATHER_TEMPLATES`, mit den vom PO angenommenen Grenzen, Kontext §4.4) und ist **je Trip/Ort änderbar**. Abweichungen werden gezählt. Eine eigene Vorlage speichert Auswahl, Ampel und Alarmstufen zusammen. **Kein globaler Toleranz-Regler.**
 3. **Alle Leser nutzen dieselbe Ampel:** die Farbe im Briefing (alle vier Kanäle, ADR-0095), die Hervorhebung in SMS/Premium-SMS/Telegram („@14 ab 14 Uhr gelb oder schlechter“) und der Alarm.
 4. **Der Alarm hängt an der Ampel** und bleibt ein **Abweichungs-Wächter** (ADR-0009, Anker nach ADR-0056). Je Metrik gilt **„Alarm ab: Nie · Gelb · Orange · Rot“** (Gewitter: Nie · Orange · Rot). Ein Alarm kommt,
@@ -25,10 +25,22 @@ Der PO nennt die Oberfläche dazu „eine Katastrophe“. Nutzer denken in „ge
    - bei einem **sehr großen Sprung innerhalb einer Stufe** (z.B. Böen 65 → 95 km/h, beides rot). Die Sprunggröße legt das System je Metrik fest, nicht der Nutzer.
    - **Entwarnung**, wenn die Stufe wieder unter die eingestellte Stufe fällt (symmetrisch wie ADR-0043).
    - Ein unveränderter Wert meldet nie.
-5. **Vorboten** (ADR-0010) werden gefärbt, lösen aber nie einen Alarm aus. Reine Anzeigegrößen ohne Ampel: Luftdruck, Windrichtung, Niederschlagsart, mittlere und hohe Wolken. Luftfeuchte wird über den Taupunkt bewertet. CAPE geht in der Gewitter-Zeile auf und hat keine eigene Ampel.
+5. **Vorboten** (ADR-0010) werden gefärbt, lösen aber nie einen Alarm aus. Reine Anzeigegrößen ohne Ampel: Luftdruck, Windrichtung, Niederschlagsart, mittlere und hohe Wolken. Luftfeuchte wird über den Taupunkt bewertet. CAPE geht in der Gewitter-Zeile auf und hat keine eigene Ampel (siehe Präzisierung P1).
 6. **Relative Größen:** Nullgradgrenze und Schneefallgrenze werden relativ zur höchsten Stelle der Etappe bzw. zur Ortshöhe bewertet (Meter darüber, negativ darunter). Sonnenstunden sind umgekehrt skaliert, der Taupunkt nutzt eine Schwüle-Skala, die Schneehöhe hängt von der Vorlage ab.
 7. **Entfallen** als eigene Einstellungen: Wertebereiche (`corridors`, `ideal_ranges`), Markieren, SMS-Schwellwerte, die Δ-Empfindlichkeitsstufen (`metric_alert_levels`, `alert_rules`). Bestandsdaten werden per **Read-Modify-Write mit Merge** (ADR-0101) in Ampel-Grenzen und „Alarm ab“ überführt. Nichts geht verloren, die Abbildung steht in der Spec von S1/S2.
 8. **Unverändert:** Kanal-Schwelle „Alarm schon ab Dringlichkeit“ je Kanal (ADR-0046), Cooldown (unter Zustellung → Anpassen), Stille Stunden, amtliche Warnungen als eigener Typ (ADR-0016), Radar-Alarm mit absoluter Schwelle (ADR-0096).
+
+### Präzisierungen bei der Annahme (PO, 2026-11-04)
+
+- **P1 · CAPE geht wie heute in die Gewitterstufe ein.** CAPE bleibt eine der fusionierten Zutaten der Gewitterstufe, über die geeichte Leiter je Modell und Gebiet und mit Dämpfung durch CIN (`src/providers/thunder_enrichment.py` `_fuse_thunder_levels`, `src/output/metric_format.py` `thunder_level_from_signals`; ADR-0025, ADR-0057). Es entsteht keine neue Rechnung. Es **entfallen**: die eigene CAPE-Zeile, ihre globale Farbe (300/800/1500 J/kg in `display_thresholds`) und der eigene CAPE-Δ-Alarm (`alert_preset.py`, 1200/600/200). Eine gespeicherte CAPE-Auswahl wird auf „Gewitter an“ abgebildet. Verworfen: CAPE-Grenzen je Vorlage (hebelt die Eichung aus, widerspricht ADR-0025) und die CAPE-Zahl als Zusatz in der Gewitter-Zeile (A6: Erklärung weg).
+- **P2 · Gewitterstufe „leicht“ ist immer gelb.** Die Skala hat vier Stufen (keins · leicht · mittel · hoch, `ThunderLevel`, Issue #1474). „Keins“ ist fest grün, „leicht“ fest gelb (wie heute, `metric_format.py`), je Vorlage einstellbar sind nur „mittel“ und „hoch“. „Alarm ab“ für Gewitter bleibt **Nie · Orange · Rot**; „leicht“ allein löst nie einen Alarm aus (wie heute: auch „sensibel“ meldet erst ab „mittel“).
+- **P3 · Alte Empfindlichkeitsstufen werden relativ zur Vorlage abgebildet** (Umsetzung in S2 #2793, per Read-Modify-Write mit Merge). Reihenfolge der Empfindlichkeit: Nie < Rot < Orange < Gelb.
+  - `off` → **Nie**
+  - `standard` → **Vorgabe der Vorlage** für diese Metrik (meist Orange). Wer nie etwas geändert hat, bekommt dasselbe wie ein neuer Trip.
+  - `sensibel` → **eine Stufe empfindlicher als die Vorgabe** (Orange → Gelb, Rot → Orange, Nie → Rot), höchstens bis zur empfindlichsten erlaubten Stufe (Gelb; bei Gewitter Orange).
+  - `entspannt` → **Rot**.
+  - Vorboten (ADR-0010) bekommen unabhängig vom Altwert keinen Alarm. Der Altwert wird protokolliert; die Abbildung ist eine Annäherung, weil die alten Stufen eine Δ-Größe, die neuen eine erreichte Farbe meinen.
+  - Verworfen: feste Zuordnung ohne Vorlage (weicht bei Gewitter und bei Vorgabe „Nie“ von neuen Trips ab) und „alles auf Vorlage“ (bewusst gesetzte Wahl ginge verloren).
 
 ## Verworfene Alternativen
 
@@ -46,4 +58,4 @@ Der PO nennt die Oberfläche dazu „eine Katastrophe“. Nutzer denken in „ge
   - Kein Renderer und kein Alarmpfad liest nach der Umstellung noch `display_thresholds` als Nutzer-Bewertung. Der Katalog liefert nur noch die Vorgaben der Vorlage „Allgemein“.
   - Jede neue Metrik wird mit Ampel-Art (beidseitig, nur oben, nur unten, ordinal, keine) und Grenzen je Vorlage eingeführt.
   - Erklärsätze und Begriffe gibt es in DE und EN (ADR-0104).
-  - **Bei Annahme** wird nachgezogen: ADR-0043 Status „Abgelöst durch ADR-0106“; ADR-0013 Status „Teilweise abgelöst durch ADR-0106 (Auslösung über Stufenwechsel; `threshold` bleibt als Sprung-Schwelle)“; ADR-0040 Kopfzeile „Ergänzt durch: ADR-0106“; ADR-0009 Kopfzeile „Ergänzt durch: ADR-0106 (Auslöser ist der Stufenwechsel der Ampel)“; Index `docs/adr/README.md` und `tests/test_adr_index_drift.py` grün.
+  - **Bei Annahme nachgezogen (2026-11-04):** ADR-0043 Status „Abgelöst durch ADR-0106“; ADR-0013 Status „Teilweise abgelöst durch ADR-0106 (Auslösung über Stufenwechsel; `threshold` bleibt als Sprung-Schwelle)“; ADR-0040 Kopfzeile „Ergänzt durch: ADR-0106“; ADR-0009 Kopfzeile „Ergänzt durch: ADR-0106 (Auslöser ist der Stufenwechsel der Ampel)“; Index `docs/adr/README.md`; `tests/test_adr_index_drift.py` grün.
