@@ -42,6 +42,8 @@ Usage:
 --lang en (Issue #2681): Inhalt, Betreff und X-GZ-Lang englisch, Empfaenger die
 Subadresse gregor-test+en@henemm.com (Nutzer ``en`` der zweisprachigen
 /e2e-verify-Laeufe). Default ``de`` ist byte-gleich zum bisherigen Verhalten.
+Nur aus /home/hem/gregor_zwanzig_staging: aus jedem anderen Checkout bricht
+``--lang en`` vor dem Versand mit Exit 3 ab (Herkunftssperre #1476, #2813).
 """
 from __future__ import annotations
 
@@ -57,6 +59,7 @@ sys.path.insert(0, str(PROJECT_ROOT))
 sys.path.insert(0, str(PROJECT_ROOT / "src"))
 
 from app.config import Settings  # noqa: E402
+from app.origin_guard import classify_origin  # noqa: E402
 from app.metric_catalog import build_default_display_config  # noqa: E402
 from app.models import (  # noqa: E402
     ForecastDataPoint, ForecastMeta, GPXPoint, NormalizedTimeseries, Provider,
@@ -384,7 +387,25 @@ def send_radar_alert_mail(settings: Settings, token: str, lang: str = "de") -> b
     return True
 
 
-def main(argv: list[str] | None = None) -> int:
+def _herkunfts_abbruch(lang: str, herkunft) -> str | None:
+    """#2813: Meldung, wenn ``--lang en`` hier nie an ``+en@`` ankaeme, sonst None.
+
+    Die Herkunftssperre #1476 (``EmailOutput``) schreibt das To jeder Mail aus
+    einer Nicht-Prod/Staging-Herkunft auf die Basisadresse um. Statt still
+    umgeschrieben zu senden und "gesendet" zu melden, bricht das Skript ab.
+    """
+    if lang != "en" or herkunft(PROJECT_ROOT) in ("production", "staging"):
+        return None
+    return ("ABBRUCH: --lang en ist aus diesem Checkout nicht moeglich. "
+            "Grund: Herkunftssperre #1476 -- jede Mail aus einem Worktree/Klon "
+            f"wird auf {TEST_RECIPIENT} umgeschrieben, die Subadresse +en "
+            "kaeme nie an. Abhilfe: aus /home/hem/gregor_zwanzig_staging senden "
+            "(cd /home/hem/gregor_zwanzig_staging && uv run python3 "
+            "scripts/send_gate_test_mails.py --lang en ...).")
+
+
+def main(argv: list[str] | None = None, herkunft=classify_origin) -> int:
+    """``herkunft``: Klassifikation der Checkout-Wurzel (Test-Seam, #2813)."""
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
         "--only", choices=["official", "briefing", "compare", "radar"], default=None,
@@ -394,6 +415,11 @@ def main(argv: list[str] | None = None) -> int:
                         help="Sprache der Mails; en an die Subadresse +en (#2681).")
     args = parser.parse_args(argv)
     lang = args.lang
+
+    abbruch = _herkunfts_abbruch(lang, herkunft)
+    if abbruch:
+        print(abbruch, file=sys.stderr)
+        return 3
 
     settings = _test_settings(lang)
     if settings is None:

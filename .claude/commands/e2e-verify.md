@@ -160,10 +160,15 @@ uv run python3 .claude/hooks/email_spec_validator.py --lang de
 uv run python3 .claude/hooks/email_spec_validator.py --lang en --to-contains "+en@"
 # Alarm-Pfade (official-alert, radar-alert) je Sprache:
 uv run python3 scripts/send_gate_test_mails.py --lang en --only official
-uv run python3 .claude/hooks/official_alert_mail_validator.py --lang en --to-contains "+en@"
+uv run python3 .claude/hooks/official_alert_mail_validator.py --lang en --to-contains "+en@" --subject-contains <token>
 uv run python3 scripts/send_gate_test_mails.py --lang en --only radar
-uv run python3 .claude/hooks/radar_alert_mail_validator.py --lang en --to-contains "+en@"
+uv run python3 .claude/hooks/radar_alert_mail_validator.py --lang en --to-contains "+en@" --subject-contains <token>
 ```
+
+`<token>` ist der Wert aus der Zeile `Token fuer diesen Lauf: …` von `send_gate_test_mails.py`
+(#2813). Ohne `--subject-contains` nimmt der Validator die neueste Mail des Typs im geteilten
+Postfach, das kann eine fremde oder aeltere sein. Findet er keine Mail mit dem Token: Exit 2.
+Aus einem Worktree bricht `send_gate_test_mails.py --lang en` vor dem Versand mit Exit 3 ab.
 
 **`send_gate_test_mails.py` NUR aus dem Staging-Checkout starten**
 (`cd /home/hem/gregor_zwanzig_staging && uv run python3 scripts/send_gate_test_mails.py …`): In einem
@@ -221,11 +226,18 @@ laufen — AC-3/AC-4 dürfen NICHT skippen:
 
 ```bash
 GZ_TELEGRAM_LIVE=1 GZ_TELEGRAM_TEST_CHAT_ID=<test-chat-id> GZ_TELEGRAM_BOT_TOKEN=<staging-bot-token> \
-  uv run pytest tests/tdd/test_issue_686_telegram_functional_live.py -v
+  uv run pytest -m live tests/tdd/test_issue_686_telegram_functional_live.py -v
 # zweisprachig (Issue #2681): hilfe auf Englisch, dann wieder Deutsch
 GZ_TELEGRAM_LIVE=1 GZ_TELEGRAM_TEST_CHAT_ID=<test-chat-id> GZ_TELEGRAM_BOT_TOKEN=<staging-bot-token> \
-  uv run pytest tests/tdd/test_telegram_live_zweisprachig.py -v
+  uv run pytest -m live tests/tdd/test_telegram_live_zweisprachig.py -v
 ```
+
+**`-m live` ist Pflicht (#2813):** `pyproject.toml` schliesst per `addopts` alle
+`live`-Tests aus. Ohne `-m live` meldet pytest `0 selected` bzw. nur die Offline-Tests,
+und das ist **kein** Bestanden. Erst eine Ausgabe mit den Live-Tests als PASSED zaehlt.
+Die Live-Tests setzen `data/users/tg-live-e2e` nach jedem Test auf den Ausgangszustand
+zurueck (Fixture `tg_live_datenwurzel_zuruecksetzen`); der Waechter #2226 darf am
+Sessionende keinen Teardown-Error melden.
 
 Aenderungen unter `src/i18n/` zaehlen als Telegram-Scope (die Texte kommen aus den Katalogen).
 

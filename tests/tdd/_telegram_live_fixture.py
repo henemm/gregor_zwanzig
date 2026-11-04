@@ -15,6 +15,7 @@ from pathlib import Path
 from typing import Optional
 
 import httpx as _httpx
+import pytest as _pytest
 
 from tests.helpers.telegram_empfaenger import antwort_im_update
 
@@ -310,6 +311,52 @@ def test_user_language(lang: str, data_dir: str = "data"):
 
 
 test_user_language.__test__ = False  # Helfer, kein pytest-Test
+
+
+@contextmanager
+def tg_live_datenwurzel_zuruecksetzen(data_dir: str = "data"):
+    """Issue #2813: ``<data_dir>/users/tg-live-e2e`` nach dem Test auf den
+    Zustand davor zuruecksetzen -- auch bei Fehlern.
+
+    War das Verzeichnis nicht vorhanden, wird es vollstaendig entfernt. War es
+    vorhanden, wird der gesicherte Vorbestand samt Inhalt und Zeitstempeln
+    (``copy2``) wiederhergestellt und Neues entfernt. Nur dieser eine
+    Test-Nutzer, nie ein anderer (Mandantentrennung). So hinterlassen die
+    ``real_data_root``-Live-Tests keine Spur, und der Session-Waechter #2226
+    (``tests/conftest.py``, unveraendert) bleibt still.
+    """
+    import shutil
+    import tempfile
+
+    users = Path(data_dir) / "users"
+    spur = users / TEST_USER_ID
+    users_vorhanden = users.exists()
+    sicherung = None
+    if spur.exists():
+        sicherung = Path(tempfile.mkdtemp(prefix="tg-live-e2e-sicherung-"))
+        shutil.copytree(spur, sicherung / TEST_USER_ID, copy_function=shutil.copy2)
+    try:
+        yield
+    finally:
+        if spur.exists():
+            shutil.rmtree(spur)
+        if sicherung is not None:
+            shutil.copytree(sicherung / TEST_USER_ID, spur, copy_function=shutil.copy2)
+            shutil.rmtree(sicherung, ignore_errors=True)
+        elif not users_vorhanden and users.exists() and not any(users.iterdir()):
+            users.rmdir()
+
+
+@_pytest.fixture(autouse=True)
+def tg_live_datenwurzel_zuruecksetzen_autouse(request):
+    """#2813: gemeinsame autouse-Fixture beider Telegram-Live-Testdateien (per
+    Import eingebunden). Nur ``real_data_root``-Tests schreiben in den echten
+    Baum (CWD-``data``); deren Spur wird nach dem Test zurueckgesetzt."""
+    if not request.node.get_closest_marker("real_data_root"):
+        yield
+        return
+    with tg_live_datenwurzel_zuruecksetzen("data"):
+        yield
 
 
 def active_trip_for(user_id: str, data_dir: str = "data") -> Optional[object]:

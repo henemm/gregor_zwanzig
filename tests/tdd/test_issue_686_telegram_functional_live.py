@@ -30,6 +30,11 @@ import pytest
 from tests.helpers.telegram_empfaenger import antwort_im_update
 
 from tests.tdd._telegram_live_fixture import live_telegram_enabled
+# #2813: autouse-Fixture per Import registriert -- setzt nach jedem
+# real_data_root-Test data/users/tg-live-e2e zurueck (Waechter #2226).
+from tests.tdd._telegram_live_fixture import (  # noqa: F401
+    tg_live_datenwurzel_zuruecksetzen_autouse,
+)
 
 # Live-Schicht (Test-Politik, CLAUDE.md): braucht echtes Netz/echte Dienste --
 # lief im Kern nie gruen (CI-Vermessung 2026-08-04, #1196) und gehoert per
