@@ -3,7 +3,7 @@ entity_id: feat_2792_s1_profil_ampel
 type: module
 created: 2026-11-04
 updated: 2026-11-04
-status: draft
+status: approved
 version: "1.0"
 tags: [ampel, profil, vorlagen, migration, renderer, sms, telegram, mail, i18n, epic-2791]
 ---
@@ -12,7 +12,7 @@ tags: [ampel, profil, vorlagen, migration, renderer, sms, telegram, mail, i18n, 
 
 ## Approval
 
-- [ ] Approved
+- [x] Approved (PO-Freigabe 2026-11-04 per Rückfrage: „Freigabe“)
 
 ## Purpose
 
@@ -261,4 +261,5 @@ Farben werden **am Entstehungsort** getestet (Renderer-Ausgabe, `ampel_for`, `th
 ## Changelog
 
 - 2026-11-04: Initial spec created (Issue #2792, Epic #2791, Scheibe S1)
+- 2026-11-04: PO-Freigabe (approved)
 - 2026-11-04: Review Tech Lead: AC-1 Kurzkanäle als Hervorhebung, Temperatur-Zuordnung der Migration eindeutig, AC-19 Ausnahmen ehrlich benannt
