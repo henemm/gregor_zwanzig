@@ -73,18 +73,18 @@ def test_allgemein_gleicht_dem_bisherigen_katalog_ausser_cape():
 # --- AC-13 Rueckfallkette Trip ----------------------------------------------
 
 def test_trip_ohne_ampel_mit_vorlagenname_liefert_skitouren_grenzen(tmp_path):
-    save_trip(load_trip(_trip_dict({"preset_name": "skitouren", "metrics": []})), "anna", tmp_path)
+    save_trip(load_trip(_trip_dict({"preset_name": "skitouren", "metrics": []}), user_id="anna"), "anna", tmp_path)
     trip = load_trip("drift-gate-trip", data_dir=tmp_path, user_id="anna")
     assert ampel_for(trip)["gust"]["yellow"] == 40
 
 
 def test_trip_ohne_ampel_und_ohne_vorlagenname_liefert_allgemein():
-    trip = load_trip(_trip_dict({"metrics": []}))
+    trip = load_trip(_trip_dict({"metrics": []}), user_id="anna")
     assert ampel_for(trip)["gust"]["yellow"] == 30
 
 
 def test_unbekannte_vorlage_liefert_allgemein_mit_warnung(caplog):
-    trip = load_trip(_trip_dict({"preset_name": "gibt-es-nicht", "metrics": []}))
+    trip = load_trip(_trip_dict({"preset_name": "gibt-es-nicht", "metrics": []}), user_id="anna")
     with caplog.at_level(logging.WARNING, logger="app.ampel"):
         assert ampel_for(trip)["gust"]["yellow"] == 30
     assert any("gibt-es-nicht" in r.getMessage() for r in caplog.records)
@@ -92,7 +92,7 @@ def test_unbekannte_vorlage_liefert_allgemein_mit_warnung(caplog):
 
 def test_abo_ampel_gewinnt_je_metrik_rest_aus_vorlage():
     ampel = {"template": "skitouren", "metrics": {"gust": _gust(42, 55, 70)}}
-    trip = load_trip(_trip_dict({"preset_name": "wandern", "ampel": ampel, "metrics": []}))
+    trip = load_trip(_trip_dict({"preset_name": "wandern", "ampel": ampel, "metrics": []}), user_id="anna")
     res = ampel_for(trip)
     assert res["gust"] == {"yellow": 42, "orange": 55, "red": 70}
     assert res["temperature"] == {"yellow": 3, "orange": 8, "red": 15,

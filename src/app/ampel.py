@@ -28,7 +28,6 @@ _UPPER = ("yellow", "orange", "red")  # aufsteigend: gelb < orange < rot
 ALARM_AB = frozenset({"never", "yellow", "orange", "red"})
 _RANG = {"yellow": 1, "orange": 2, "red": 3}
 _THUNDER_HOCH = frozenset({"orange", "red"})
-_THUNDER_FEST = {ThunderLevel.NONE: "green", ThunderLevel.LOW: "yellow"}  # P2
 _PROFIL_ZU_VORLAGE = {"summer_trekking": "alpen-trekking"}
 
 
@@ -221,8 +220,11 @@ def thunder_color(level: Any, ampel: Optional[Mapping]) -> Optional[str]:
     hoch nach ``ampel.thunder`` (sonst Vorlage). ``None`` = keine Aussage."""
     if level is None:
         return None
+    from app.thunder_scale import thunder_ordinal
+    from output.metric_format import thunder_ampel_band  # zentrale Abbildung (#1491)
+
     lvl = ThunderLevel(level)
-    if lvl in _THUNDER_FEST:
-        return _THUNDER_FEST[lvl]
+    if thunder_ordinal(lvl) < thunder_ordinal(ThunderLevel.MED):
+        return thunder_ampel_band(lvl)  # keins gruen, leicht fest gelb (P2)
     gewitter = _verschmelzen(_vorlage_der_ampel(ampel), ampel)["thunder"]
     return gewitter["mittel"] if lvl == ThunderLevel.MED else gewitter["hoch"]
