@@ -709,7 +709,9 @@ describe('AC-4 Wirkort-Guard: der Selbst-Speicher-Effekt schweigt ohne Vergleich
 			// Issue #2293 S2: der Alarm-Kanal-Bestand laeuft als EIN Objekt.
 			channels: { email: false, telegram: true, sms: false, premium_sms: true },
 			channelThresholds: { telegram: 'mittel' },
-			activeMetricKeys: ['wind_max_kmh']
+			activeMetricKeys: ['wind_max_kmh'],
+			// Issue #1895 S3b1: Kanäle je Wettergröße laufen mit durch den Speicherweg.
+			alertMetricChannels: { gust: { email: false, telegram: true, sms: false, premium_sms: false } }
 		};
 		const { u: uHub } = await umgebungFuer(HUB, {
 			[s!.zustand]: wiz,
@@ -986,7 +988,9 @@ function alarmAusgangsstand(): Knoten {
 		// `channels` statt der drei Flach-Felder sendTelegram/sendSms/sendPremiumSms.
 		channels: { email: true, telegram: true, sms: false, premium_sms: false },
 		channelThresholds: { telegram: 'MODERATE' },
-		activeMetricKeys: ['wind_max_kmh']
+		activeMetricKeys: ['wind_max_kmh'],
+		// Issue #1895 S3b1: Kanäle je Wettergröße.
+		alertMetricChannels: { gust: { email: true, telegram: false, sms: false, premium_sms: false } }
 	};
 }
 
@@ -1011,13 +1015,19 @@ const FELD_AM_ORGANISMUS: Record<string, { prop: string; neu: unknown }> = {
 		prop: 'existingChannels',
 		neu: { email: true, telegram: false, sms: true, premium_sms: true }
 	},
-	channelThresholds: { prop: 'channelThresholds', neu: { telegram: 'HIGH' } }
+	channelThresholds: { prop: 'channelThresholds', neu: { telegram: 'HIGH' } },
+	// Issue #1895 S3b1: gleicher Schlüssel, andere Wahl (ein NEUER Schlüssel ginge beim
+	// Rollback bewusst als `null` zurück, AC-56 — das prüft alarme_vergleich_kanalwahl_speicherweg).
+	alertMetricChannels: {
+		prop: 'alertMetricChannels',
+		neu: { gust: { email: false, telegram: true, sms: false, premium_sms: false } }
+	}
 };
 
 /** Eingefrorene Maechtigkeit der Snapshot-Feldmenge. Waechst oder schrumpft
  *  `alarmSnapshotAus`, wird dieser Test rot — die Schleife darf NICHT still
  *  ueber weniger Felder laufen. */
-const SNAPSHOT_FELDER_SOLL = 10;
+const SNAPSHOT_FELDER_SOLL = 11; // #1895 S3b1: + alertMetricChannels
 
 describe('F001/F003 Frische-Garantie: die Bruecke liest JEDES Feld bei JEDEM Zugriff neu', () => {
 	/** Das Buendel des Hub-Mounts — einmal gebaut, als Saat wiederverwendet.

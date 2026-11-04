@@ -43,6 +43,8 @@
 //
 // Spec: docs/specs/modules/issue_1258_alarme_tab_official_warnings.md (AC-12, AC-26)
 
+import type { KanalMap } from './alertMetricChannels.ts';
+
 export interface AlarmeChannelsState {
 	email: boolean;
 	telegram: boolean;
@@ -76,6 +78,8 @@ export interface AlarmeDeliveryState {
 	// setzt es immer.
 	channelThresholds?: AlarmeChannelThresholdsState;
 	metricLevels?: Record<string, string> | undefined;
+	// Issue #1895 S3b1: Diff der Kanäle je Wettergröße (baueDiff), Top-Level nur wenn nicht leer.
+	metricChannelsDiff?: KanalMap;
 }
 
 export function buildAlarmeDeliveryPayload(state: AlarmeDeliveryState): object {
@@ -129,5 +133,6 @@ export function buildAlarmeDeliveryPayload(state: AlarmeDeliveryState): object {
 		// Spread der lokalen, womoeglich veralteten display_config.
 		payload.display_config = { metric_alert_levels: state.metricLevels };
 	}
+	if (Object.keys(state.metricChannelsDiff ?? {}).length > 0) payload.alert_metric_channels = state.metricChannelsDiff;
 	return payload;
 }

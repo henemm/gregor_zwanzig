@@ -12,7 +12,8 @@ import assert from 'node:assert/strict';
 import { register } from 'node:module';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import path from 'node:path';
-import { derivePremiumSmsAlarmGate } from '../../shared/alarme-tab/premiumSmsAlarmGate.ts';
+import { derivePremiumSmsAlarmGate, PREMIUM_SMS_ALARM_HINT_NO_TIER } from '../../shared/alarme-tab/premiumSmsAlarmGate.ts';
+import { locale, trFor, type MessageKey } from '../../../i18n/index.ts';
 import { umgebungFuer } from '../../shared/__tests__/svelteInstanzPruefstand.ts';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
@@ -80,6 +81,23 @@ test('AC-53: Premium-SMS-Schalter nach premiumSmsAlarmGate gesperrt bzw. schaltb
 	const frei = html({ premiumSmsGate: derivePremiumSmsAlarmGate({ premium_sms_allowed: true }) });
 	assert.doesNotMatch(schalter(frei), /\sdisabled/, 'mit Freigabe schaltbar');
 	assert.ok(!html().includes('kanal-schalter-thunder-sms-hint'), 'kein Tarif-Hinweis für SMS');
+	assert.match(html(), new RegExp(`kanal-schalter-thunder-premium_sms-hint"[^>]*>\\s*${trFor('de', PREMIUM_SMS_ALARM_HINT_NO_TIER)}`), 'Tarif-Hinweis fehlt');
+});
+
+test('AC-41/AC-43 F001: jede Zeile trägt ihren Titel aus dem Katalog — Deutsch und Englisch', () => {
+	const soll = (lang: 'de' | 'en', ...m: string[]) => m.map((x) => trFor(lang, `alarme.metrik.${x}` as MessageKey)).join(' / ');
+	const titel = (h: string, k: string) => ab(h, `kanal-zeile-${k}`).match(/class="amc-titel[^"]*">([^<]*)</)?.[1];
+	try {
+		for (const lang of ['de', 'en'] as const) {
+			locale.set(lang);
+			const h = html();
+			assert.strictEqual(titel(h, 'gust'), soll(lang, 'wind_gust', 'wind_change'), `${lang}: gust`);
+			assert.strictEqual(titel(h, 'wind'), soll(lang, 'wind_change'), `${lang}: wind`);
+			assert.strictEqual(titel(h, 'thunder'), soll(lang, 'thunder_level'), `${lang}: thunder`);
+		}
+	} finally {
+		locale.set('de');
+	}
 });
 
 // Bedienlogik ohne DOM (svelteInstanzPruefstand): festgelegte Instanzfunktionen des Blocks

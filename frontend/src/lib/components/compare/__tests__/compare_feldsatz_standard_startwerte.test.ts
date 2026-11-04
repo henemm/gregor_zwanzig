@@ -50,6 +50,7 @@ const SOLL: Record<string, unknown> = {
 	officialWarningsEnabled: false,
 	metricAlertLevels: {},
 	channelThresholds: {},
+	alertMetricChannels: {}, // #1895 S3b1: Kanäle je Wettergröße
 	telegramStyle: 'rich',
 	schedule: 'daily_morning',
 	morningEnabled: true,

@@ -35,6 +35,8 @@
 	import AlertQuietHoursCard from '$lib/components/alerts-tab/AlertQuietHoursCard.svelte';
 	import AlertPreviewCard from '$lib/components/alerts-tab/AlertPreviewCard.svelte';
 	import AlertMetricLevelTable from '$lib/components/alerts-tab/AlertMetricLevelTable.svelte';
+	import AlertMetricChannelsBlock from '$lib/components/alerts-tab/AlertMetricChannelsBlock.svelte';
+	import { baueDiff, type KanalEintrag, type KanalMap } from './alarme-tab/alertMetricChannels.ts';
 	import { vergleichAlarmRegeln } from '$lib/components/alerts-tab/alertPreviewHelpers'; // #2283 S5: echte Alarm-Vorschau statt VTAlertSample
 	import AlertChannelPicker from './AlertChannelPicker.svelte'; import Infobox from '$lib/components/molecules/Infobox.svelte';
 	import {
@@ -119,7 +121,7 @@
 		//
 		/** Rollback-Senke des UNVERAENDERTEN Vergleichs-Speicherwegs:
 		 *  `rollbackAlarmSnapshot` setzt nach einem gescheiterten PUT feldweise
-		 *  zurueck. KEIN Bedienelement schreibt hierueber. */
+		 *  zurueck; einziges Bedienelement darueber: Kanaele je Wettergroesse (#1895). */
 		onAlarmFeldSetzen?: (feld: string, wert: unknown) => void;
 		// #1435 E1a-2: geladener Compare-Katalog als UEBERGABEWERT — der
 		// Modul-Getter registeredCompareMetricCatalog() ist nicht reaktiv und
@@ -138,6 +140,11 @@
 		// Wertprop `channelThresholds` + `onThresholdChange` (kein zweiter
 		// Speicherweg noetig).
 		existingChannelThresholds?: Partial<Record<ChannelKind, string | null>> | null;
+		// Issue #1895 S3b1: Kanäle je Wettergröße — route: Bestand (Live-Prop = Diff-Basis) +
+		// informativer Rückruf (Anlegen); vergleich: Wertprop, Änderung über onAlarmFeldSetzen.
+		existingAlertMetricChannels?: KanalMap | null;
+		onAlertMetricChannelChange?: (schluessel: string, eintrag: KanalEintrag) => void;
+		alertMetricChannels?: KanalMap;
 		// Issue #1745 A: Testhaken fuer den Tarif-Zustand (Muster
 		// VTBriefingChannels.svelte:60,74,82). Ohne Uebergabe (`undefined`)
 		// unveraendertes Verhalten (Fetch in onMount); mit Uebergabe (auch
@@ -177,6 +184,7 @@
 		existingChannels,
 		onChannelToggle,
 		existingChannelThresholds,
+		existingAlertMetricChannels = undefined, onAlertMetricChannelChange = undefined, alertMetricChannels = undefined,
 		profileOverride, showInfobox = false
 	}: Props = $props();
 
@@ -346,6 +354,16 @@
 		onThresholdChange?.(kind, level);
 	}
 
+	// ── (d3) Kanäle je Wettergröße — Issue #1895 S3b1 (Discriminator `trip` wie (d)) ─
+	// svelte-ignore state_referenced_locally -- Bestand nur zur Initialisierung.
+	let routeAlertMetricChannels = $state<KanalMap>({ ...(existingAlertMetricChannels ?? {}) });
+	const displayAlertMetricChannels = $derived(trip ? routeAlertMetricChannels : (alertMetricChannels ?? {}));
+	function handleAlertMetricChannelChange(schluessel: string, eintrag: KanalEintrag) {
+		if (!trip) return onAlarmFeldSetzen?.('alertMetricChannels', { ...(alertMetricChannels ?? {}), [schluessel]: eintrag });
+		routeAlertMetricChannels = { ...routeAlertMetricChannels, [schluessel]: eintrag };
+		onAlertMetricChannelChange?.(schluessel, eintrag);
+	}
+
 	// ── (e)/(f) Cooldown/Stille Stunden ───────────────────────────────────────
 	// `undefined` heisst hier „nicht gesetzt" und ist ein gueltiger Wert —
 	// deshalb entscheidet an DIESEN beiden Stellen als einzigen der RUECKRUF
@@ -393,7 +411,9 @@
 			quietTo: routeQuietTo,
 			channels: routeChannelState,
 			channelThresholds: routeChannelThresholds,
-			metricLevels: routeMetricLevels
+			metricLevels: routeMetricLevels,
+			// #1895 S3b1: nur der Diff gegen den zuletzt geladenen Stand (Live-Prop), nie die Vollmap.
+			metricChannelsDiff: baueDiff(existingAlertMetricChannels, routeAlertMetricChannels)
 		});
 		// #2317 Baustein 1: die Entlade-Option (keepalive) erreicht den PUT.
 		return baueTripSpeicherung<Trip>(api, trip!.id, payload, (updated) => onTripUpdate?.(updated), 'alarme');
@@ -409,7 +429,8 @@
 		routeQuietTo,
 		routeChannelState,
 		routeChannelThresholds,
-		routeMetricLevels
+		routeMetricLevels,
+		routeAlertMetricChannels
 	});
 	$effect(() => {
 		if (!trip || createMode) return;
@@ -420,7 +441,8 @@
 			routeQuietTo,
 			routeChannelState,
 			routeChannelThresholds,
-			routeMetricLevels
+			routeMetricLevels,
+			routeAlertMetricChannels
 		});
 		if (currentJson === _prevAlarmeJson) return;
 		_prevAlarmeJson = currentJson;
@@ -447,6 +469,7 @@
 			quietTo,
 			telegramStyle,
 			channelThresholds,
+			alertMetricChannels, // #1895 S3b1
 			// Issue #2293 S2: der Alarm-Kanal-Bestand laeuft als EIN Objekt statt
 			// der drei Flach-Felder — der Feldname stimmt 1:1 mit
 			// AlarmSnapshot.channels ueberein, keine PROP_JE_FELD-Umleitung
@@ -515,6 +538,14 @@
 						activeMetrics={effectiveActiveMetrics}
 						levels={effectiveMetricLevels}
 						onLevelChange={handleMetricLevelChange}
+					/>
+					<!-- #1895 S3b1: Kanäle je Wettergröße — rendert erst mit geladenen Schlüsseln. -->
+					<AlertMetricChannelsBlock
+						aktiveMetriken={effectiveActiveMetrics}
+						eintraege={displayAlertMetricChannels}
+						aboKanaele={displayChannelState}
+						premiumSmsGate={premiumSmsAlarmGate}
+						onChange={handleAlertMetricChannelChange}
 					/>
 					{#if context === 'vergleich' && unalertableSelectedMetricNames.length > 0}
 						<p class="option-hint alarme-unalertable-hint" data-testid="alarme-unalertable-metrics-hint">

@@ -7,13 +7,15 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import type { ComparePreset } from '../../../types.ts';
-import { alarmSnapshotAus, baueAlarmNutzlast, flushPendingAlarmSave, rollbackAlarmSnapshot } from '../alarmeVergleichSpeicherung.ts';
+import { alarmSnapshotAus, baueAlarmNutzlast, erstelleAlarmeVergleichSpeicherung, flushPendingAlarmSave } from '../alarmeVergleichSpeicherung.ts';
 import { hydrateAlarmFieldsFromPreset } from '../../compare/compareHubHydration.ts';
 import { alarmePropsAus } from '../../compare/alarmePropsAus.ts';
 import { buildComparePresetSavePayload, buildNewComparePresetPayload } from '../../compare/compareEditorSave.ts';
 import { baueVersandNutzlast, hydrateVersandFieldsFromPreset } from '../versandVergleichSpeicherung.ts';
 import { baueWertebereichNutzlast, corridorSnapshotAus } from '../corridor-editor/wertebereicheVergleichSpeicherung.ts';
 import { goMerge } from './goMergeServerPruefstand.ts';
+import { baueWetterMetrikenNutzlast, wetterMetrikenSnapshotAus } from '../weather-metrics-tab/weatherMetricsCompareSave.ts';
+import { hydrierterWs } from '../weather-metrics-tab/__tests__/wetterMetrikenVergleichPruefstand.ts';
 
 const TG = { email: false, telegram: true, sms: false, premium_sms: false };
 const MAIL = { email: true, telegram: false, sms: false, premium_sms: false };
@@ -56,15 +58,103 @@ test('AC-47/AC-42: Alarm-PUT sendet nur den Diff; snowfall_limit bleibt nach dem
 	assert.ok(!('alert_metric_channels' in (baueAlarmNutzlast(p, vorher).body as object)), 'ohne Änderung: Feld fehlt');
 });
 
-test('AC-56: Rollback sendet für den seit dem Snapshot neuen Eintrag gust explizit null und stellt thunder vollständig wieder her', () => {
-	const vorher = alarmSnapshotAus(zustand(preset({ thunder: ALT })));
-	const versucht = alarmSnapshotAus(zustand(preset({ thunder: ALT }), { thunder: TG, gust: TG }));
-	const z = zustand(preset({ thunder: ALT }), { thunder: TG, gust: TG });
-	rollbackAlarmSnapshot(z, vorher, versucht);
-	assert.deepStrictEqual(z.alertMetricChannels, { thunder: ALT, gust: null });
-	// Server hat den Versuch (unbemerkt) übernommen ⇒ der nächste PUT muss gust aktiv zurücksetzen.
-	const server = preset({ thunder: TG, gust: TG });
-	assert.deepStrictEqual(amcVon(baueAlarmNutzlast(server, alarmSnapshotAus(z)).body), { thunder: ALT, gust: null });
+/** Echter Speicherweg des Hubs (erstelleAlarmeVergleichSpeicherung) über einem hydrierten
+ *  Zustand; der Server ist goMerge. `scheitert`: 'nach' = 500 nach dem Merge (Server hat übernommen,
+ *  Antwort verloren), 'vor' = 500 ohne Übernahme. Die Hub-Basis folgt nur über onCompareUpdate. */
+function hubSpeicherweg(start: ComparePreset) {
+	let basis = start;
+	let server = start;
+	let scheitert: false | 'nach' | 'vor' = false;
+	const z = zustand(start);
+	const bodies: unknown[] = [];
+	const geplant: Array<(init?: RequestInit) => Promise<void>> = [];
+	const sp = erstelleAlarmeVergleichSpeicherung({
+		client: { put: async <T,>(_u: string, body: unknown) => {
+			bodies.push(body);
+			if (scheitert === 'vor') throw Object.assign(new Error('5xx'), { status: 500 });
+			server = goMerge(server as never, body as never) as unknown as ComparePreset;
+			if (scheitert === 'nach') throw Object.assign(new Error('5xx'), { status: 500 });
+			return server as unknown as T;
+		} } as never,
+		zustand: z, preset: () => basis, enqueueHubWrite: (fn) => fn(),
+		onCompareUpdate: (a) => { basis = a; },
+		saveController: { schedule: (fn: never) => geplant.push(fn), cancel: () => {}, markPristine: () => {}, imWiederholen: false } as never
+	});
+	return {
+		z, bodies, server: () => server,
+		async aendern(amc: Record<string, unknown>, fehler: false | 'nach' | 'vor' = false, sonst: Record<string, unknown> = {}) {
+			z.alertMetricChannels = amc as never;
+			Object.assign(z, sonst);
+			scheitert = fehler;
+			sp.aenderungMelden();
+			await geplant.at(-1)!().catch(() => {});
+		}
+	};
+}
+
+test('AC-56: Rollback nach gescheitertem PUT — der nächste PUT trägt gust explizit null, auch bei Hub-Basis ohne gust', async () => {
+	const hub = hubSpeicherweg(preset({ thunder: ALT }));
+	await hub.aendern({ thunder: TG, gust: TG }, 'nach'); // Server übernimmt, Antwort geht verloren
+	assert.deepStrictEqual(hub.z.alertMetricChannels, { thunder: ALT, gust: null }, 'Rollback im Zustand');
+	await hub.aendern(hub.z.alertMetricChannels as Record<string, unknown>); // Rückweg wird gespeichert
+	assert.deepStrictEqual(amcVon(hub.bodies.at(-1)), { thunder: ALT, gust: null }, 'Wire-Body nach dem Rollback');
+	assert.deepStrictEqual(hub.server().alert_metric_channels, { thunder: ALT, gust: null }, 'Server erbt wieder');
+});
+
+test('AC-56: Fehlschlag OHNE Übernahme — dieselbe Wahl erneut gewählt wird gesendet und landet auf dem Server', async () => {
+	const hub = hubSpeicherweg(preset({ thunder: ALT }));
+	await hub.aendern({ thunder: TG }, 'vor');
+	assert.deepStrictEqual(hub.z.alertMetricChannels, { thunder: ALT }, 'Rollback im Zustand');
+	await hub.aendern({ thunder: TG });
+	assert.deepStrictEqual(amcVon(hub.bodies.at(-1)), { thunder: TG }, 'Wiederholung verpufft an einem Versuch als Basis');
+	assert.deepStrictEqual(hub.server().alert_metric_channels, { thunder: TG });
+});
+
+test('AC-56 mehrere Fehlschläge in Folge: jeder gescheiterte Versuch zählt, bis ein Erfolg Server und UI angleicht', async () => {
+	const hub = hubSpeicherweg(preset({ thunder: ALT }));
+	await hub.aendern({ thunder: TG }, 'nach'); // Server übernimmt TG, Antwort verloren
+	await hub.aendern({ thunder: ALT }, 'vor', { alertCooldownMinutes: 45 }); // scheitert ohne Übernahme
+	await hub.aendern({ thunder: ALT }, false, { alertCooldownMinutes: 50 }); // Erfolg über ein Fremdfeld
+	assert.deepStrictEqual(hub.server().alert_metric_channels, hub.z.alertMetricChannels, 'Server ≠ UI nach Erholung');
+});
+
+test('AC-56 Rollback schont neuere Wahl: Änderung während der PUT fliegt bleibt nach dem Fehlschlag erhalten', async () => {
+	const p = preset({ thunder: ALT });
+	const z = zustand(p);
+	let scheitern!: (e: unknown) => void;
+	const geplant: Array<() => Promise<void>> = [];
+	const sp = erstelleAlarmeVergleichSpeicherung({
+		client: { put: () => new Promise((_ok, nein) => { scheitern = nein; }) } as never,
+		zustand: z, preset: () => p, enqueueHubWrite: (fn) => fn(), onCompareUpdate: () => {},
+		saveController: { schedule: (fn: never) => geplant.push(fn), cancel: () => {}, markPristine: () => {}, imWiederholen: false } as never
+	});
+	z.alertMetricChannels = { thunder: TG };
+	sp.aenderungMelden();
+	const lauf = geplant[0]().catch(() => {});
+	await Promise.resolve();
+	z.alertMetricChannels = { thunder: MAIL }; // neuere Wahl, während der PUT fliegt
+	scheitern(Object.assign(new Error('5xx'), { status: 500 }));
+	await lauf;
+	assert.deepStrictEqual(z.alertMetricChannels, { thunder: MAIL }, 'Rollback überschreibt die neuere Wahl');
+});
+
+test('AC-47 nach Erholung: ist ein Fehlschlag nachgeholt, sendet ein fremdes Alarmfeld die Kanalwahl nicht mehr mit', async () => {
+	const hub = hubSpeicherweg(preset({ thunder: ALT }));
+	await hub.aendern({ thunder: TG }, 'vor');
+	await hub.aendern({ thunder: ALT }, false, { alertCooldownMinutes: 45 }); // Serverstand unbekannt ⇒ thunder geht mit
+	assert.deepStrictEqual(amcVon(hub.bodies.at(-1)), { thunder: ALT });
+	await hub.aendern({ thunder: ALT }, false, { alertCooldownMinutes: 50 }); // nach Erfolg ist der Versuch verworfen
+	assert.ok(!('alert_metric_channels' in (hub.bodies.at(-1) as object)), 'veralteter Versuch schreibt nach Erfolg weiter mit');
+});
+
+test('AC-46 (Ablauf): speichern, Basis zieht nach, zurück zur alten Wahl ⇒ der Rückweg wird gesendet', async () => {
+	const hub = hubSpeicherweg(preset({ thunder: MAIL }));
+	await hub.aendern({ thunder: TG });
+	assert.deepStrictEqual(amcVon(hub.bodies.at(-1)), { thunder: TG });
+	await hub.aendern({ thunder: MAIL });
+	assert.deepStrictEqual(amcVon(hub.bodies.at(-1)), { thunder: MAIL }, 'Basis nicht nachgezogen ⇒ Rückweg verpufft');
+	await hub.aendern({ thunder: null });
+	assert.deepStrictEqual(hub.server().alert_metric_channels, { thunder: null }, 'zurück auf „wie Abo"');
 });
 
 test('AC-55: Edit- und Create-Payload tragen alert_metric_channels', () => {
@@ -72,7 +162,7 @@ test('AC-55: Edit- und Create-Payload tragen alert_metric_channels', () => {
 		name: 'V', activityProfile: null, pickedIds: ['a', 'b', 'c'], region: '', idealRanges: {},
 		alertMetricChannels: { thunder: TG }
 	} as never);
-	assert.deepStrictEqual(amcVon(edit), { thunder: TG }, 'Edit');
+	assert.deepStrictEqual(amcVon(edit.body), { thunder: TG }, 'Edit'); // buildComparePresetSavePayload liefert {url, body}
 	const neu = buildNewComparePresetPayload({
 		name: 'Neu', pickedIds: ['a', 'b', 'c'], activityProfile: null, schedule: 'daily_morning',
 		officialAlertsEnabled: true, radarAlertEnabled: false, hourlyEnabled: true, officialAlertTriggersEnabled: false,
@@ -85,13 +175,14 @@ test('AC-55: Edit- und Create-Payload tragen alert_metric_channels', () => {
 	assert.deepStrictEqual(amcVon(neu), { thunder: TG }, 'Create');
 });
 
-test('AC-57 (grün, Mutations-Fixture): Versand- und Wertebereiche-Teil-PUT lassen den Bestand unverändert', () => {
+test('AC-57: Versand-, Wertebereiche- und Wetter-Metriken-Teil-PUT senden das Feld gar nicht und lassen den Bestand unverändert', () => {
 	const p = preset({ gust: TG, snowfall_limit: MAIL });
 	const versand = baueVersandNutzlast(p, hydrateVersandFieldsFromPreset(p)).body;
 	const wb = baueWertebereichNutzlast(p, corridorSnapshotAus({ corridors: [], idealRanges: {}, metricAlertLevels: {} })).body;
-	for (const [name, body] of [['Versand', versand], ['Wertebereiche', wb]] as const) {
-		const amc = amcVon(body);
-		assert.ok(amc === undefined || JSON.stringify(amc) === JSON.stringify(p.alert_metric_channels), `${name} verändert das Feld`);
+	const wetter = baueWetterMetrikenNutzlast(p, wetterMetrikenSnapshotAus(hydrierterWs(p) as never)).body;
+	for (const [name, body] of [['Versand', versand], ['Wertebereiche', wb], ['Wetter-Metriken', wetter]] as const) {
+		// Auch eine unveränderte Vollmap wäre aus einer veralteten Hub-Basis ein Rückschreiber (Race).
+		assert.ok(!('alert_metric_channels' in (body as object)), `${name} sendet alert_metric_channels mit`);
 		assert.deepStrictEqual(goMerge(p as never, body as never).alert_metric_channels, { gust: TG, snowfall_limit: MAIL }, name);
 	}
 });

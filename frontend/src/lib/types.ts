@@ -425,7 +425,12 @@ export interface Trip {
 		sms?: string;
 		premium_sms?: string;
 	};
+	// Issue #1895: Kanäle je Speicherschlüssel; null/fehlend = erbt alert_channels.
+	alert_metric_channels?: Record<string, AlertMetricChannelEntry>;
 }
+
+/** Issue #1895: Eintrag in alert_metric_channels (vier Flags oder null = erbt). */
+export type AlertMetricChannelEntry = { email: boolean; telegram: boolean; sms: boolean; premium_sms: boolean } | null;
 
 export interface HealthResponse {
 	status: 'ok' | 'degraded';
@@ -753,6 +758,7 @@ export interface ComparePreset {
 		sms?: string;
 		premium_sms?: string;
 	};
+	alert_metric_channels?: Record<string, AlertMetricChannelEntry>; // Issue #1895
 }
 
 // Issue #1068 — Nutzerlevel (Slice 1 aus Epic #1067).
