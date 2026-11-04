@@ -789,16 +789,24 @@ Ergänzt je Trip/Vergleich unter `<root>/<uid>/briefings/*.json` `display_config
 Rückfall `ideal_ranges`), setzt `horizons` auf alle Tage und schaltet bei CAPE-Auswahl
 Gewitter an. Nur berichtet, nie verändert: Δ-Bereiche (`notify` ohne `mark`),
 `sms_threshold`, eigene Vorlagen (`metric_presets.json`); Alarmfelder bleiben unberührt.
-Reihenfolge: nach S1a (Lese-Code), vor S1c. Je Host, Probelauf zuerst:
+Reihenfolge: nach S1a (Lese-Code), vor S1c. **Erst Staging, dann Prod**, je Host zuerst
+den Probelauf lesen, dann `--execute`:
 
 ```bash
-uv run python3 scripts/migrate_2792_profil_ampel.py --root data/users             # Probelauf (Default)
-uv run python3 scripts/migrate_2792_profil_ampel.py --root data/users --execute   # tar.gz je Nutzer + Schreiben
+uv run python3 scripts/migrate_2792_profil_ampel.py --root /var/lib/gregor-staging/users            # Staging, Probelauf
+uv run python3 scripts/migrate_2792_profil_ampel.py --root /var/lib/gregor-staging/users --execute  # Staging, Sicherung + Schreiben
+uv run python3 scripts/migrate_2792_profil_ampel.py --root /var/lib/gregor/users                    # Prod, Probelauf
+uv run python3 scripts/migrate_2792_profil_ampel.py --root /var/lib/gregor/users --execute          # Prod, Sicherung + Schreiben
 ```
 
 Sicherung `.backups/migrate-2792-<uid>-<timestamp>.tar.gz` (Briefings + `metric_presets.json`).
-Wiederholbar: vorhandene Ampel-Teile werden nie überschrieben, unveränderte Dateien nicht
-geschrieben. Regeln (Klemm-Regel, Metrik-Zuordnung): Spec
+Geschrieben wird je Datei unter der Sperre `<id>.json.lock` (wie Go und Python-Kern,
+ADR-0083), atomar per Temp-Datei + `os.replace`, Dateirechte bleiben. Wurde eine Datei
+zwischen Planung und Schreiben geändert, bleibt sie unangetastet (`Error:`-Zeile, Exit 1):
+Lauf wiederholen. Wiederholbar: vorhandene Ampel-Teile werden nie überschrieben,
+unveränderte Dateien nicht geschrieben. Neu geschriebene Dateien tragen Python-Format:
+Go-Escapes wie `<` werden zum Zeichen `<`; Go und Python laden beides als denselben
+Wert (JSON-Semantik gleich). Regeln (Klemm-Regel, Metrik-Zuordnung): Spec
 `docs/specs/modules/feat_2792_s1_profil_ampel.md` §4.
 
 ---

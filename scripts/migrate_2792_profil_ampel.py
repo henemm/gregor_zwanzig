@@ -19,7 +19,9 @@ from __future__ import annotations
 import argparse
 import copy
 import json
+import os
 import sys
+import uuid
 import tarfile
 from datetime import datetime, timezone
 from pathlib import Path
@@ -30,6 +32,7 @@ sys.path.insert(0, str(PROJECT_ROOT / "src"))
 from app.ampel import template_id_for, validate_ampel  # noqa: E402
 from app.ampel_templates import AMPEL_TEMPLATES, DEFAULT_TEMPLATE  # noqa: E402
 from app.metric_catalog import get_metric  # noqa: E402
+from services.file_lock import LockTimeout, exclusive_lock  # noqa: E402  (Sperre wie Go, ADR-0083)
 
 _BEIDE = ("von", "bis")
 # Bereichs-Schluessel -> (Ampel-Metrik, uebernommene Seiten); Spec §4.
@@ -116,10 +119,15 @@ def _band_eintragen(baender: dict, key: str, von, bis, quelle: str, bericht: lis
 def _baender(obj: dict, bericht: list) -> dict:
     """Ampel-Metrik -> {von, bis, quellen}; ``ideal_ranges`` nur ohne Bereich."""
     baender, gesehen = {}, set()
-    for c in obj.get("corridors") or []:
+    corridors = obj.get("corridors")
+    for c in corridors if isinstance(corridors, list) else []:
         if not isinstance(c, dict):
             continue
-        key, rng = c.get("metric"), list(c.get("range") or []) + [None, None]
+        key, rng = c.get("metric"), c.get("range")
+        rng = (list(rng) if isinstance(rng, list) else []) + [None, None]
+        if not isinstance(key, str):
+            bericht.append(f"    nicht zuordenbar: Bereich mit Schlüssel {key!r}: erhalten, nicht migriert")
+            continue
         gesehen.add(key)
         if c.get("mark"):
             _band_eintragen(baender, key, rng[0], rng[1], "corridors", bericht)
@@ -212,7 +220,7 @@ def _listen_angleichen(dc: dict, bericht: list) -> None:
         _gewitter_an(liste, ort, trip_liste, bericht)
 
 
-def _datei_planen(pfad: Path, bericht: list) -> tuple[dict, bool] | None:
+def _datei_planen(pfad: Path, bericht: list) -> tuple[dict, str] | None:
     text = pfad.read_text(encoding="utf-8")
     try:
         obj = json.loads(text)
@@ -227,7 +235,7 @@ def _datei_planen(pfad: Path, bericht: list) -> tuple[dict, bool] | None:
     if ampel is not None:
         neu["display_config"]["ampel"] = ampel
     _listen_angleichen(neu["display_config"], bericht)
-    return (neu, text.endswith("\n")) if neu != obj else None
+    return (neu, text) if neu != obj else None
 
 
 def _eigene_vorlagen(udir: Path) -> list[str]:
@@ -260,6 +268,48 @@ def _sichern(udir: Path, backup_dir: Path, stempel: str) -> Path:
     return ziel
 
 
+def planen(root: Path) -> tuple[dict, list[str]]:
+    """Phase 1: alle Nutzer planen, nichts schreiben. Nutzer = echte Ordner."""
+    plaene, bericht = {}, []
+    for udir in sorted(d for d in root.iterdir() if d.is_dir() and not d.name.startswith((".", "_"))):
+        plan, zeilen = _nutzer_planen(udir)
+        bericht += zeilen
+        if plan:
+            plaene[udir] = plan
+    return plaene, bericht
+
+
+def _atomar(pfad: Path, text: str) -> None:
+    """Temp-Datei im selben Ordner (nicht ``*.json``) + ``os.replace``, Rechte erhalten."""
+    tmp = pfad.with_name(f".{pfad.name}.{uuid.uuid4().hex}.tmp")
+    try:
+        with open(tmp, "w", encoding="utf-8") as f:
+            f.write(text)
+            f.flush()
+            os.fsync(f.fileno())
+        os.chmod(tmp, pfad.stat().st_mode & 0o7777)
+        os.replace(tmp, pfad)
+    except BaseException:
+        tmp.unlink(missing_ok=True)
+        raise
+
+
+def schreiben(plaene: dict) -> list[str]:
+    """Phase 3: je Datei unter ``<id>.json.lock`` neu lesen; nur schreiben, wenn
+    der Inhalt seit der Planung gleich blieb. Liefert die nicht geschriebenen."""
+    offen = []
+    for pfad, neu, alt in (eintrag for plan in plaene.values() for eintrag in plan):
+        try:
+            with exclusive_lock(pfad):
+                if pfad.read_text(encoding="utf-8") != alt:
+                    offen.append(f"{pfad}: seit der Planung geändert, nicht geschrieben")
+                    continue
+                _atomar(pfad, json.dumps(neu, indent=2, ensure_ascii=False) + ("\n" if alt.endswith("\n") else ""))
+        except (LockTimeout, OSError) as exc:
+            offen.append(f"{pfad}: nicht geschrieben ({exc})")
+    return offen
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--root", required=True, type=Path)
@@ -270,13 +320,8 @@ def main(argv: list[str] | None = None) -> int:
     if not root.is_dir():
         print(f"Error: --root existiert nicht oder ist kein Verzeichnis: {root}", file=sys.stderr)
         return 1
-    nutzer = [d for d in sorted(root.iterdir()) if d.is_dir() and not d.name.startswith((".", "_"))]
-    plaene = {}
-    for udir in nutzer:  # Phase 1: alles planen, nichts schreiben
-        plan, bericht = _nutzer_planen(udir)
-        print("\n".join(bericht))
-        if plan:
-            plaene[udir] = plan
+    plaene, bericht = planen(root)
+    print("\n".join(bericht))
     if not plaene:
         print("Nichts zu tun: alle Dateien bereits migriert.")
     if not args.execute or not plaene:
@@ -286,17 +331,16 @@ def main(argv: list[str] | None = None) -> int:
     stempel = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
     try:
         backup_dir.mkdir(parents=True, exist_ok=True)
-        for udir in plaene:  # Phase 2: erst alle Sicherungen ...
+        for udir in plaene:  # Phase 2: erst alle Sicherungen, dann schreiben
             print(f"Sicherung geschrieben: {_sichern(udir, backup_dir, stempel)}")
     except OSError as exc:
         print(f"Error: Sicherung nach '{backup_dir}' fehlgeschlagen, nichts geschrieben: {exc}", file=sys.stderr)
         return 1
-    for plan in plaene.values():  # ... dann schreiben
-        for pfad, neu, newline in plan:
-            pfad.write_text(json.dumps(neu, indent=2, ensure_ascii=False) + ("\n" if newline else ""),
-                            encoding="utf-8")
-    print(f"Migration abgeschlossen: {sum(map(len, plaene.values()))} Datei(en) geschrieben.")
-    return 0
+    offen = schreiben(plaene)
+    print(f"Migration abgeschlossen: {sum(map(len, plaene.values())) - len(offen)} Datei(en) geschrieben.")
+    for zeile in offen:
+        print(f"Error: {zeile} -- erneut laufen lassen", file=sys.stderr)
+    return 1 if offen else 0
 
 
 if __name__ == "__main__":

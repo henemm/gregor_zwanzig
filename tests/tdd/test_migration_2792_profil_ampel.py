@@ -8,7 +8,9 @@ und dem Renderer-Filter der Stundentabelle. Pruefling relativ zur Testdatei.
 
 import copy
 import hashlib
+import importlib.util
 import json
+import stat
 import subprocess
 import sys
 import tarfile
@@ -140,6 +142,9 @@ def test_execute_sichert_je_nutzer_vor_dem_schreiben(root):
             namen = tar.getnames()
             assert all(n.startswith(f"{uid}/") for n in namen), namen
             assert tar.extractfile(f"{uid}/briefings/{name}.json").read() == original[uid]
+            if uid == "alice":  # eigene Vorlagen gehoeren zur Sicherung
+                assert tar.extractfile("alice/metric_presets.json").read() == \
+                    (root / "alice" / "metric_presets.json").read_bytes()
     assert _lies(root, "alice", "trip-ski")["display_config"]["ampel"]["template"] == "skitouren"
 
 
@@ -216,12 +221,85 @@ def test_ac9_delta_bereich_bleibt_erhalten_ohne_ampelgrenze(root):
     assert "Δ-Bereich wind_gust [None, 5]" in _abschnitt(out, "alice")
 
 
-def _ein_trip(tmp_path, obj):
+def _ein_trip(tmp_path, obj, ende=""):
     r = tmp_path / "einzel"
     (r / "carla" / "briefings").mkdir(parents=True)
-    (r / "carla" / "briefings" / "x.json").write_text(json.dumps(obj), encoding="utf-8")
+    (r / "carla" / "briefings" / "x.json").write_text(json.dumps(obj) + ende, encoding="utf-8")
     out = _lauf(r, "--execute")
     return _lies(r, "carla", "x")["display_config"]["ampel"], out
+
+
+def test_klemm_regel_gleichheitsfall_wird_verschoben(tmp_path):
+    """bis + Schritt == Vorlagen-Orange bzw. von == Vorlagen-Orange verletzt die
+    strenge Reihenfolge und muss die Seite verschieben (allgemein)."""
+    ampel, out = _ein_trip(tmp_path, _trip("x", None, [
+        _band("wind_gust", None, 44), _band("temperature", -5, None)]))
+    assert ampel["metrics"]["gust"] == {"upper": {"yellow": 45, "orange": 60, "red": 75}}
+    assert ampel["metrics"]["temperature"] == {"lower": {"red": -20, "orange": -10, "yellow": -5}}
+    assert "oben verschoben um +15" in out and "unten verschoben um -5" in out
+
+
+def test_bereich_mit_nicht_text_schluessel_bricht_den_lauf_nicht_ab(tmp_path):
+    ampel, out = _ein_trip(tmp_path, _trip("x", None, [
+        {"metric": ["x"], "range": [0, 1], "mark": True}, {"metric": "gust", "range": 7, "mark": True},
+        _band("wind_gust", None, 20)]))
+    assert "nicht zuordenbar: Bereich mit Schlüssel ['x']" in out
+    assert ampel["metrics"] == {"gust": {"upper": {"yellow": 21, "orange": 45, "red": 60}}}
+
+
+def test_vorhandene_ungueltige_ampel_bleibt_unveraendert_und_steht_im_bericht(tmp_path):
+    kaputt = {"metrics": {"gust": {"upper": {"yellow": 50, "orange": 45}}}}
+    trip = _trip("x", None, [_band("temperature", 0, 20)])
+    trip["display_config"]["ampel"] = copy.deepcopy(kaputt)
+    ampel, out = _ein_trip(tmp_path, trip)
+    assert ampel == kaputt
+    assert "vorhandene Ampel ungültig, unverändert" in out
+
+
+@pytest.mark.parametrize("ende", ["\n", ""])
+def test_abschliessender_zeilenumbruch_bleibt_wie_vorher(tmp_path, ende):
+    _ein_trip(tmp_path, _trip("x", "wandern", []), ende)
+    text = (tmp_path / "einzel" / "carla" / "briefings" / "x.json").read_text(encoding="utf-8")
+    assert '"template": "wandern"' in text
+    assert text.endswith("}" + ende)
+
+
+def _modul():
+    spec = importlib.util.spec_from_file_location("migrate_2792", SCRIPT)
+    modul = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(modul)
+    return modul
+
+
+def test_zwischen_planung_und_schreiben_geaenderte_datei_wird_nicht_ueberschrieben(root):
+    mig = _modul()
+    ski, bob = root / "alice" / "briefings" / "trip-ski.json", root / "bob" / "briefings" / "trip-bob.json"
+    bob.chmod(0o640)
+    plaene, _ = mig.planen(root)
+    fremd = json.dumps({**_lies(root, "alice", "trip-ski"), "name": "parallel gespeichert"})
+    ski.write_text(fremd, encoding="utf-8")  # echte zweite Schreibaktion zwischen den Phasen
+    offen = mig.schreiben(plaene)
+    assert ski.read_text(encoding="utf-8") == fremd
+    assert offen == [f"{ski}: seit der Planung geändert, nicht geschrieben"]
+    assert "ampel" in _lies(root, "bob", "trip-bob")["display_config"]
+    assert stat.S_IMODE(bob.stat().st_mode) == 0o640
+    assert not list(root.rglob("*.tmp"))
+
+
+def test_gehaltene_sperre_verhindert_das_schreiben(root, monkeypatch):
+    """Haelt ein anderer Schreiber ``<id>.json.lock`` (Go/Python-Kern), bleibt die Datei unberuehrt."""
+    from services import file_lock
+
+    mig = _modul()
+    monkeypatch.setattr(file_lock, "BRIEFING_LOCK_TIMEOUT_SECONDS", 0.1)  # nur die Wartefrist
+    ski = root / "alice" / "briefings" / "trip-ski.json"
+    vorher = ski.read_bytes()
+    plaene, _ = mig.planen(root)
+    with file_lock.exclusive_lock(ski):
+        offen = mig.schreiben(plaene)
+    assert ski.read_bytes() == vorher
+    assert len(offen) == 1 and offen[0].startswith(f"{ski}: nicht geschrieben")
+    assert "ampel" in _lies(root, "bob", "trip-bob")["display_config"]
 
 
 def test_metrik_zuordnung_der_trip_schluessel(tmp_path):
