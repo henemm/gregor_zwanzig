@@ -88,3 +88,18 @@ export function buildChannelMetricsForSave(
 	const bestand = displayConfig?.channel_layouts?.[channel] ?? [];
 	return buildWeatherConfigMetrics(override.buckets, override.friendlyMap, horizonsMap, catalog, bestand);
 }
+
+/**
+ * Issue #2792 S1a (AC-14): Profil-Ampel, die beim Anwenden einer Vorlage nach
+ * `display_config.ampel` geht. Eigene Vorlage: Kopie ihrer Ampel samt
+ * `alarm_ab` (Bestand ohne Ampel = Vorlage „allgemein"). Eingebaute Vorlage:
+ * nur die Vorlagen-ID, damit fruehere Abweichungen nicht weiterwirken.
+ * Zustellung und Etappen fasst das nie an (Spec §2).
+ */
+export function ampelBeimAnwenden(
+	userPreset: { ampel?: Record<string, unknown> | null } | undefined,
+	vorlageId: string,
+): Record<string, unknown> {
+	if (userPreset) return structuredClone(userPreset.ampel ?? { template: 'allgemein' });
+	return { template: vorlageId };
+}

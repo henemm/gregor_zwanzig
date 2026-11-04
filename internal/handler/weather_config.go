@@ -94,6 +94,10 @@ func PutTripWeatherConfigHandler(s *store.Store) http.HandlerFunc {
 			WriteError(w, r, 400, "bad_request", nil)
 			return
 		}
+		// Issue #2792 S1a: ungueltige Profil-Ampel nie speichern.
+		if bailIf(w, r, displayConfigAmpelUngueltig(cfg), 400, "ampel_ungueltig") {
+			return
+		}
 		// Issue #1151: Feld-Level-Merge statt Blind-Replace, analog #1129/#1103.
 		// Teil-Updates (nur `metrics` gesendet) duerfen andere zuvor gespeicherte
 		// display_config-Keys (z.B. `theme`) nicht loeschen.

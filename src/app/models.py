@@ -867,6 +867,10 @@ class UnifiedWeatherDisplayConfig:
     # wind_direction symbol/scale und aenderte bestehende Trips ohne jede
     # Nutzeraktion).
     outlook_metric_formats: Optional[dict[str, bool]] = None
+    # Issue #2792 S1a / ADR-0106: Profil-Ampel des Abos ({template, metrics,
+    # thunder}, Struktur Spec feat_2792 §1). None = Vorlage (preset_name bzw.
+    # allgemein). Aufloesung ueber app.ampel.ampel_for; in S1a ohne Leser.
+    ampel: Optional[dict] = None
     updated_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
 
     def is_metric_enabled(self, metric_id: str) -> bool:

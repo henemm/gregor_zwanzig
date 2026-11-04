@@ -195,6 +195,10 @@ func CreateTripHandler(s *store.Store) http.HandlerFunc {
 			WriteError(w, r, 400, "validation_error", i18n.Args{"detail": err.Error()})
 			return
 		}
+		// Issue #2792 S1a: ungueltige Profil-Ampel nie speichern.
+		if bailIf(w, r, displayConfigAmpelUngueltig(trip.DisplayConfig), 400, "ampel_ungueltig") {
+			return
+		}
 
 		// Issue #1395 S2: Sperre um den Schreibvorgang. Die ID steht erst nach
 		// der Validierung fest (sie kommt aus dem Rumpf), darum hier und nicht
@@ -370,6 +374,11 @@ func UpdateTripHandler(s *store.Store) http.HandlerFunc {
 			existing.WeatherConfig = mergeConfigMap(existing.WeatherConfig, *req.WeatherConfig)
 		}
 		if req.DisplayConfig != nil {
+			// Issue #2792 S1a: Ampel pruefen, bevor irgendetwas gemergt wird;
+			// mergeConfigMap ersetzt den Unterbaum "ampel" als Ganzes (Spec §1).
+			if bailIf(w, r, displayConfigAmpelUngueltig(*req.DisplayConfig), 400, "ampel_ungueltig") {
+				return
+			}
 			existing.DisplayConfig = mergeConfigMap(existing.DisplayConfig, *req.DisplayConfig)
 		}
 		if req.AlertMetricChannels != nil {
