@@ -368,7 +368,13 @@ _COMPARE_HTML_SHA256_BEFORE = "88c8e5f9392dd6b86825d821cb55d442e85fac955fadcacb6
 # #1670: einzige Abweichung sind die Gewitter-Platzhalter "Gewitter: —" /
 # "Thdr —" -> EN DASH (metric_format.NO_VALUE); zurueckgesetzt ergibt der neue
 # Text exakt die alte Summe 75f46468….
-_COMPARE_TEXT_SHA256_BEFORE = "7a93c555a29207cb1f0f099745057ba2d38cfb02dc7a8be54bc9dbf0689a9b99"
+# #1356 (2026-11-03): erneut fortgeschrieben, wieder AUSDRUECKLICH. Die
+# Standard-Zeilenfolge des Klartexts folgt jetzt CV2_METRICS (eine Quelle mit
+# dem HTML-Teil). NACHGEMESSEN: mit zur Laufzeit wiederhergestellter alter
+# Folge (`_PLAIN_ROWS = _PLAIN_ROWS_UNSORTED`) ergibt der Text exakt die alte
+# Summe 7a93c555…; die Reihenfolge ist der einzige Unterschied. HTML-Summe
+# unveraendert.
+_COMPARE_TEXT_SHA256_BEFORE = "1a17e4775ca0c43f3f4eca027e4a55cba15af46cbe5ff04c329991a2f98efe9f"
 
 
 def _byte_identity_fixture():

@@ -276,7 +276,7 @@ Fehlerantworten der Go-API, die über `handler.WriteError`/`WriteErrorWith` lauf
 | `/api/scheduler/status/me` | GET | — Session-Pflicht, liefert nur den eigenen Lauf-Status (#2155 S2)
 | `/api/scheduler/trip-reports` | POST | — nur Admin (403 `{"error":"forbidden"}` sonst, #2155 S1)
 | `/api/sms-symbols` | GET |
-| `/api/templates` | GET |
+| `/api/templates` | GET | — je Vorlage zusaetzlich `ampel` (#2792 S1a, §11 „Profil-Ampel")
 | `/api/trips` | GET, POST |
 | `/api/trips/{id}` | DELETE, GET, PUT |
 | `/api/trips/{id}/alert-preview` | POST | — Delegate (Alt-Route) über dieselbe Proxy-Logik wie `/api/briefings/{id}/alert-preview?kind=route` (#2283)
@@ -968,6 +968,8 @@ nutzt ausschließlich den neuen Endpoint (`frontend/src/lib/utils/sendOutcome.ts
 
 Trip-Daten werden als JSON unter `data/users/{userID}/briefings/{trip_id}.json` gespeichert (seit ADR-0023 / #1250 S7a; `trips/` ist toter Bestand, Issue #1708). Das Kernmodell definiert Etappen, Wegpunkte und Konfiguration.
 
+**`display_config.ampel`** (#2792 S1a): Profil-Ampel des Trips, Pass-through unter `display_config`; Struktur, Validierung und `ampel_ungueltig` in §11 „Profil-Ampel“.
+
 ### Trip DTO
 
 ```go
@@ -1077,7 +1079,7 @@ Wirkung: eine ausgelöste Meldung erreicht einen eingeschalteten Kanal nur, wenn
 
 Quelle: `internal/model/trip.go` / `internal/model/compare_preset.go` (`AlertChannelThresholdsConfig`), ADR-0046, Spec `docs/specs/modules/feat_1461_s3b2a_kanal_schwelle.md` (Trip), `docs/specs/modules/feat_1461_s3b2b_compare_kanal_schwelle.md` (Ortsvergleich).
 
-### alert_metric_channels (Issue #1895 S1 · S2 · Epic #1230)
+### alert_metric_channels (Issue #1895 S1 · S2 · S3a · S3b1 · Epic #1230)
 
 Dritte Kanal-Schicht neben `alert_channels`/`send_*` („je Abo") und `alert_channel_thresholds` („je Kanal", ADR-0046): **je Metrik** die Kanal-Zuordnung. Identischer Vertrag auf `Trip` **und** `ComparePreset` (Go jeweils `map[string]interface{}`, Python `Optional[dict]`), Parität ab S1.
 
@@ -1106,6 +1108,12 @@ Dritte Kanal-Schicht neben `alert_channels`/`send_*` („je Abo") und `alert_cha
 - **Rückfall nach den Tarif-Sperren:** ist der Metrik-Arm nach den Tier-Gates leer (z. B. `{sms}` ohne SMS-Tarif), gilt der Kanalsatz ohne diese Schicht, ebenfalls nach den Tier-Gates — der Alarm geht nicht ins Leere.
 - **`null` je Metrik:** `{"gust": null}` wird als `null` persistiert und bedeutet: die Metrik erbt (wie kein Eintrag).
 - **Top-Level-`null`:** `"alert_metric_channels": null` im PUT-Body ist auf Trip **und** Ortsvergleich ein No-Op — die gespeicherte Map bleibt unverändert (`mergeBriefingPatch` überspringt `null` nur für dieses Feld; andere Felder überschreibt `null` wie bisher).
+
+**Ergänzung S3b1 (Issue #1895 · Oberfläche, Frontend-only, 2026-11-04):** Der geteilte Block „Kanäle je Wettergröße" (`frontend/src/lib/components/alerts-tab/AlertMetricChannelsBlock.svelte`) sendet das Feld jetzt aus dem Alarme-Reiter auf allen vier Flächen (Trip-Hub, `/trips/new`, Ortsvergleich-Editor, `/compare/new`); es gibt keine API-Änderung.
+
+- **Pro aktiver Alarm-Wettergröße** (Schlüssel aus `GET /api/alert-metric-channel-keys`): „wie Abo-Kanäle" oder eigene Auswahl aus E-Mail/Telegram/SMS/Premium-SMS.
+- **Payload = Diff:** gesendet wird nur der geänderte Eintrag (Per-Metrik-Merge, siehe oben), immer mit allen vier Flags (`email`, `telegram`, `sms`, `premium_sms`). Zurück auf „wie Abo-Kanäle" sendet `{"<schluessel>": null}` (Per-Metrik-`null`, nicht Top-Level-`null`); ist der Schlüssel-Abruf nicht verfügbar, schreibt der Block nichts.
+- **Hinweis im Block:** Radar-/Regen-Alarme und amtliche Warnungen gehen weiterhin immer über die Abo-Kanäle.
 
 Quelle: `internal/model/trip.go` / `internal/model/compare_preset.go` (`AlertMetricChannels`), ADR-0077 (schreibt ADR-0046 fort), Spec `docs/specs/modules/alert_metric_channels.md`.
 
@@ -1313,6 +1321,25 @@ Convenience-Layer ueber die bestehenden CRUD-Handler. Erlaubt gezieltes Lesen un
 | PUT | `/api/trips/{id}/weather-config` | 200 / 400 / 404 / **412** | `display_config` eines Trips setzen — prueft `If-Match`, Antwort traegt neuen `ETag` (#1395 S2) |
 | GET | `/api/locations/{id}/weather-config` | 200 / 400 / 404 | `display_config` einer Location lesen |
 | PUT | `/api/locations/{id}/weather-config` | 200 / 400 / 404 | `display_config` einer Location setzen — **kein** `ETag`/`If-Match` (Orte liegen auf einer anderen Datei-Ebene) |
+
+### Profil-Ampel `display_config.ampel` (Issue #2792 S1a, ADR-0106)
+
+Gilt identisch fuer Trip (§10.5, Python `UnifiedWeatherDisplayConfig.ampel`), ComparePreset (§16, Dict) und `PUT /api/trips/{id}/weather-config`. Fehlt das Feld, gilt die Vorlage (`ampel.template` → Trip `preset_name` → Compare `profil` → `allgemein`; Compare-Zuordnung `summer_trekking`→`alpen-trekking`, sonst gleichnamig, Gross-/Kleinschreibung egal). In S1a liest noch kein Renderer die Ampel (Umschaltung S1c).
+
+```
+ampel = { template: "<vorlagen-id>",
+          metrics: { "<metric_id>": { enabled: bool,
+                       lower: {red, orange, yellow},   // Zahl | null, rot < orange < gelb
+                       upper: {yellow, orange, red},   // Zahl | null, gelb < orange < rot
+                       alarm_ab: "never"|"yellow"|"orange"|"red" } },   // Teilmenge erlaubt
+          thunder: { mittel: "yellow"|"orange"|"red", hoch: "orange"|"red" } }
+```
+
+- **Vergleich:** oben `Wert >= Grenze`, unten `Wert < Grenze` (wie `severity_from_thresholds`); `null` = offen. `alarm_ab` und Vorlagen-IDs sind Protokoll-Token (nie uebersetzt); `alarm_ab` wird bis S2 nur gespeichert.
+- **Validierung (Go beim Speichern, Python beim Laden):** gesetzte Werte je Seite streng aufsteigend, hoechste untere Grenze `<=` niedrigste obere, `alarm_ab` aus der Menge, `thunder.hoch` nie gelb und nie schwaecher als `mittel`. Go lehnt ab mit **400 `ampel_ungueltig`** (`fach.fehler.ampel_ungueltig`, Meldung in der Anfragesprache), gespeicherte Daten bleiben unveraendert. Geprueft wird in `PUT /api/trips/{id}`, `PUT /api/trips/{id}/weather-config`, `PUT /api/compare/presets/{id}`, `PUT /api/briefings/{id}?kind=vergleich`, `POST /api/trips`, `POST /api/compare/presets`, `POST`/`PATCH /api/metric-presets`. Python verwirft eine ungueltige Ampel beim Laden mit Log-Warnung (Vorlage greift), die Datei behaelt sie.
+- **Speichern:** die Ampel wird als **ganzer Unterbaum** ersetzt (Client sendet die vollstaendige Ampel); alle anderen `display_config`-Felder bleiben per Read-Modify-Write erhalten. Python schreibt die Ampel beim Speichern mit.
+- **`GET /api/templates`** liefert je Vorlage zusaetzlich `ampel` (vollstaendig, `template` = Vorlagen-ID); `id`/`label`/`metrics` unveraendert. Quelle `src/app/ampel_templates.py` (Zahlen aus `docs/context/einstellungen_neu.md` §4.4).
+- **Eigene Vorlage** (`MetricPreset.ampel`, §15.5): Anwenden im Trip-Editor sendet deren Ampel als `display_config.ampel`; eine eingebaute Vorlage sendet `{template: "<id>"}`; Zustellung und Etappen bleiben unberuehrt.
 
 ### DELETE /api/locations/{id} — Ort-Loeschen-Sperre (Issue #2216, seit 2026-10-08)
 
@@ -2353,8 +2380,11 @@ type MetricPreset struct {
     IsDefault   bool             `json:"is_default"`              // Exactly one per user is marked as default
     Metrics     []DisplayMetric  `json:"metrics"`                 // List of selected metrics with horizons + format modes
     CreatedAt   time.Time        `json:"created_at"`              // Server-managed creation timestamp (UTC)
+    Ampel       map[string]interface{} `json:"ampel,omitempty"`  // #2792 S1a: Profil-Ampel samt alarm_ab (Struktur §11 „Profil-Ampel"); fehlt = Vorlage allgemein
 }
 ```
+
+**Ampel (#2792 S1a):** `POST` und `PATCH` nehmen optional `ampel` an (PATCH ersetzt den ganzen Unterbaum); ungueltig → 400 `ampel_ungueltig`. Eine eigene Vorlage speichert keine Zustellung (Empfaenger, Kanaele) und keine Etappen. Bestehende Vorlagen ohne `ampel` laden unveraendert.
 
 **DisplayMetric** (per-metric config within preset):
 
@@ -2531,6 +2561,8 @@ Updates selected fields of a metric preset (name, description, metrics, is_defau
 Manages persisted Compare-Preset configurations for automatic, multi-location comparison reports (foundation for Epic #456 — Auto-Briefings).
 
 **Handler:** `internal/handler/compare_preset.go` | **Storage:** `data/users/{userID}/briefings/{id}.json` (per-Datei, `kind="vergleich"`; Legacy `data/users/{userID}/compare_presets.json` nur noch Migrations-Quelle/Rollback, Issue #1250 S7b) | **Routing:** `internal/router/router.go`
+
+**`display_config.ampel`** (#2792 S1a): Profil-Ampel des Vergleichs, gleiche Struktur wie beim Trip (§11 „Profil-Ampel“); fehlt `ampel.template`, bestimmt `profil` die Vorlage.
 
 ### ComparePreset DTO
 
@@ -4967,6 +4999,7 @@ Sprache ist Eigenschaft des Nutzers (ADR-0104); Werte `de`/`en`, Standard `de`. 
 
 ## Changelog
 
+- 2026-11-04: Issue #2792 S1a — Profil-Ampel `display_config.ampel` (Trip, ComparePreset, Weather Config; §11 „Profil-Ampel"), `MetricPreset.ampel` (§15.5), `GET /api/templates` mit `ampel` je Vorlage, Fehlercode `ampel_ungueltig`.
 - 2026-10-30: Issue #2645 (S0, Doku) — Abschnitt 26 „Nutzerprofil und Sprache“: `language`, `invalid_language`, Cookie `gz_lang`.
 - 2026-10-24: Issue #2359 — Kennungsraum Trip/Ortsvergleich: `POST /api/trips` (neuer Abschnitt „Kennungs-Konflikt“) sowie Compare-Preset POST/PUT antworten bei belegter Kennung mit 409 `id_conflict` (statt 500 `store_error`).
 - 2026-10-21: Doku-Drift (kein Code) — Profil-DTO um `email_verified`, `sms_verified`, `pending_sms_to`,

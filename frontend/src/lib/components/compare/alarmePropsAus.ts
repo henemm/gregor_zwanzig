@@ -38,6 +38,7 @@ import {
 	type ChannelKind,
 	type ChannelThreshold
 } from '../shared/alarme-tab/alertChannelState.ts';
+import type { KanalMap } from '../shared/alarme-tab/alertMetricChannels.ts';
 
 /** Strukturelle Sicht auf die Alarmfelder des Compare-Wizard-Zustands —
  *  absichtlich nicht `CompareWizardState` selbst, damit diese Funktion auch
@@ -59,6 +60,7 @@ export interface AlarmeZustandsQuelle {
 	alertQuietTo?: string;
 	channels?: AlertChannelState;
 	activeMetricKeys?: string[] | null;
+	alertMetricChannels?: KanalMap; // Issue #1895 S3b1
 }
 
 /**
@@ -126,6 +128,8 @@ export function alarmePropsAus(wiz: AlarmeZustandsQuelle) {
 		telegramStyle: wiz.telegramStyle ?? 'rich',
 		existingChannels: aktuelleKanaele,
 		activeMetricKeys: wiz.activeMetricKeys ?? null,
+		// Issue #1895 S3b1: Wertprop; Änderung über onAlarmFeldSetzen('alertMetricChannels', …).
+		alertMetricChannels: wiz.alertMetricChannels ?? {},
 		// `undefined` ist hier ein gültiger Wert — siehe Diskriminator-Regel oben.
 		cooldownMinutes: wiz.alertCooldownMinutes,
 		quietFrom: wiz.alertQuietFrom,
@@ -169,9 +173,9 @@ export function alarmePropsAus(wiz: AlarmeZustandsQuelle) {
 			wiz.radarAlertEnabled = an;
 		},
 		/** Rollback-Senke: `rollbackAlarmSnapshot` (alarmeVergleichSpeicherung.ts)
-		 *  setzt nach einem gescheiterten PUT feldweise zurück. KEIN Bedienelement
-		 *  schreibt hierüber — die acht Gesten-Rückrufe oben sind die einzigen
-		 *  Schreibwege der Oberfläche. */
+		 *  setzt nach einem gescheiterten PUT feldweise zurück. Einzige Geste
+		 *  hierüber: Kanäle je Wettergröße (`alertMetricChannels`, #1895 S3b1,
+		 *  Spec-Vorgabe); sonst sind die acht Gesten-Rückrufe oben die Schreibwege. */
 		onAlarmFeldSetzen: (feld: string, wert: unknown) => {
 			(wiz as unknown as Record<string, unknown>)[feld] = wert;
 		}

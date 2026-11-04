@@ -2,9 +2,9 @@
 entity_id: compare_metric_order
 type: module
 created: 2026-07-24
-updated: 2026-07-24
+updated: 2026-11-03
 status: implemented
-version: "1.0"
+version: "1.1"
 tags: [compare, shared, metrics, reihenfolge, bugfix]
 ---
 
@@ -324,6 +324,15 @@ bleibt aber im Scope des Issues.
   - Test (Kern, deterministisch): Charakterisierungstest rendert einen
     Vergleich ohne gespeicherte Metrik-Auswahl vor und nach der Änderung
     und vergleicht die Zeilenfolge auf Gleichheit.
+  - **Nachtrag v1.1 (2026-11-03, Issue #1356, PO-bestätigt 2026-07-24):**
+    Die Klartext-Standardreihenfolge wird bewusst und einmalig auf die
+    HTML-Reihenfolge umgestellt (eine Quelle: `CV2_METRICS`, Spec
+    `docs/specs/modules/compare_metric_default_order_ssot.md`). Die
+    Zusicherung „nichts ändert sich ungefragt" gilt weiter für HTML,
+    Telegram, SMS, Premium-SMS sowie Zeileninhalt/Werte des Klartexts; nur
+    die **Zeilenfolge** des Klartexts ändert sich. Im Test ist
+    `FROZEN_PLAIN_ORDER` entsprechend auf die HTML-Folge (ohne „Amtliche
+    Warnungen") umgestellt.
 
 - **AC-8:** Given eine leere Metrik-Auswahl erreicht den Renderer / When die
   Vergleichs-Mail daraus erzeugt wird / Then enthält sie keine
@@ -379,14 +388,18 @@ bleibt aber im Scope des Issues.
   ist damit außerhalb des Risikoprofils dieser Scheibe.
 - SMS ist seit PO-Entscheidung 2026-07-24 **kein** unbenannter Nebeneffekt
   mehr, sondern durch AC-10 abgedeckt und getestet.
-- **HTML und Klartext haben unterschiedliche Standard-Reihenfolgen**, solange
+- **HTML und Klartext hatten bis #1356 unterschiedliche Standard-Reihenfolgen;
+  seit #1356 gibt es eine Quelle (`CV2_METRICS`)**, aus der `_PLAIN_ROWS`
+  beim Import abgeleitet wird (Spec
+  `compare_metric_default_order_ssot.md`). Historischer Stand: solange
   ein Vergleich noch nie eine Metrik-Auswahl gespeichert hat (RED-Befund
   2026-07-24): HTML folgt der Deklarationsreihenfolge von `CV2_METRICS`,
   der Klartext seiner eigenen Quellcode-Reihenfolge. Beide Ist-Zustände
   sind in AC-7 eingefroren statt angeglichen — Angleichen würde die Mail
   eines Altbestands ungefragt ändern und damit AC-7 verletzen. Sobald der
   Nutzer irgendetwas speichert, folgen beide derselben Liste und der
-  Unterschied verschwindet. **Bewusst so, nicht „nebenbei" reparieren.**
+  Unterschied verschwindet. Damals bewusst nicht „nebenbei" repariert, sondern
+  per eigenem Ticket #1356 angeglichen.
 - **`LayoutTab` wird im Vergleich-Zweig bewusst NICHT eingebunden**, obwohl
   die Implementation Details das ursprünglich vorsahen (Abweichung
   2026-07-24, vom Entwickler begründet und vom Adversary unabhängig
@@ -426,6 +439,10 @@ bleibt aber im Scope des Issues.
 
 ## Changelog
 
+- 2026-11-03 (v1.1): Nachtrag zu AC-7 und Known Limitation — die
+  Klartext-Standardreihenfolge folgt seit Issue #1356 der HTML-Reihenfolge
+  (`CV2_METRICS` als einzige Quelle), bewusste PO-bestätigte Ausnahme von
+  AC-7; siehe `docs/specs/modules/compare_metric_default_order_ssot.md`.
 - 2026-07-26: Die in AC-8 dokumentierte, vorgelagerte Leerauswahl-Verflachung
   ist behoben — Issue #1366 (S3 Scheibe B von Epic #1372), siehe
   `docs/specs/modules/compare_empty_metric_selection.md`.

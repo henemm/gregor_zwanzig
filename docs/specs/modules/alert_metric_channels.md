@@ -4,7 +4,7 @@ type: module
 created: 2026-09-22
 updated: 2026-11-03
 status: draft
-version: "1.2"
+version: "1.3"
 tags: [alerts, channels, datamodel]
 ---
 
@@ -34,6 +34,15 @@ Top-Level-`null` auf `alert_metric_channels` löscht beim Ortsvergleich nicht me
 Map (Angleichung an den Trip). Es gibt dafür **keine Oberfläche** (Prod-Bestand: 0 Briefings
 mit `alert_metric_channels`); das Verhalten ist für Nutzer erst mit S3b sichtbar. Die Oberfläche
 (Block „Kanäle je Wettergröße", Hinweise) ist ausdrücklich **nicht** Teil von S3a.
+
+**Scheibe S3b1 (Issue #1895, Oberfläche, für Nutzer erstmals sichtbar):** S3b1 liefert den Block
+„Kanäle je Wettergröße" im geteilten Alarme-Reiter auf **allen vier Flächen** (Trip-Hub,
+Trip-Anlegen, Ortsvergleich, Ortsvergleich-Anlegen) samt Speicherweg, Snapshot/Rollback,
+DE/EN-Texten und drei Hinweisen („Kanal nicht im Abo-Satz aktiv", „Radar und amtliche Warnungen
+gehen immer über die Abo-Kanäle", Wind-Hinweis). Die Zuordnung Zeile → Speicherschlüssel kommt
+ausschließlich aus `GET /api/alert-metric-channel-keys` (S3a). Die Hinweise „Kanal ohne
+Empfänger" und „Kanal-Schwelle über Metrik-Stufe" sind **nicht** Teil von S3b1, sondern S3b2
+(weiter unter #1895, noch offen, siehe Known Limitations S3b1).
 
 ## Source
 
@@ -101,6 +110,30 @@ und ihr Tie-Break bleiben unverändert, AC-33 prüft nur die Verträglichkeit), 
 (`trip_alert.py`, `compare_alert.py`), `internal/handler/trip.go` (Trip-Verhalten schon korrekt,
 nur Regressions-Test), `/api/metrics`-Antwort, `has_active_rules`, `alert_rules` als Entität.
 
+### Affected Files (S3b1)
+
+| Datei | Change Type | Beschreibung |
+|---|---|---|
+| `frontend/src/lib/components/alerts-tab/AlertMetricChannelsBlock.svelte` | CREATE | Block je Speicherschlüssel, Umschalter „wie Abo-Kanäle" / „eigene Wahl", vier `ChannelToggle`, Hinweise (~130 LoC) |
+| `frontend/src/lib/components/shared/alarme-tab/alertMetricChannels.ts` | CREATE | Endpunkt-Modul-Promise-Cache, Zeilen-Vereinigung, Normalisierung (alle aus ⇒ `null`, immer vier Flags), Diff-Payload, Hinweislogik (~70 LoC) |
+| `frontend/src/lib/components/shared/AlarmeTab.svelte` | MODIFY | Props/State, Mount des Blocks nach dem Abschnitt `metric-levels`, route: Aufnahme in den bestehenden Dirty-JSON-`$effect` und `buildAlarmeSaveFn`, vergleich: `alarmZustandsBruecke` (~28 LoC); Ratsche neu messen |
+| `frontend/src/lib/components/shared/alarme-tab/alarmeTabSections.ts` | MODIFY | Section-ID an der bestehenden Liste anhängen (zeilenneutral) |
+| `frontend/src/lib/components/shared/alarme-tab/alarmeDeliveryPayload.ts` | MODIFY | Trip-PUT: Top-Level-Feld `alert_metric_channels` (nicht in `display_config`), nur wenn der Diff nicht leer ist |
+| `frontend/src/lib/components/trip-detail/AlarmeScheduleTab.svelte` | MODIFY | Bestandsmap des Trips durchreichen |
+| `frontend/src/lib/components/trip-new/tripNewLogic.ts`, `trip-new/TripNewEditor.svelte` | MODIFY | Anlege-Payload, Desktop- und Mobil-Mount |
+| `frontend/src/lib/components/shared/alarmeVergleichSpeicherung.ts` | MODIFY | `AlarmSnapshot`, `AlarmHydrationTarget`, `ALARM_TOP`, `baueAlarmNutzlast`, Rollback (seit dem Snapshot neu entstandene Einträge ⇒ `null`) |
+| `frontend/src/lib/components/compare/alarmePropsAus.ts`, `compare/compareHubHydration.ts`, `compare/compareEditorSave.ts` | MODIFY | Props, Hydration, Edit- und Create-Payload (`buildComparePresetSavePayload`) |
+| `frontend/src/lib/components/compare-new/CompareNewEditor.svelte` | MODIFY | Create-Payload (Mounts per Spread unverändert) |
+| `frontend/src/lib/types.ts` | MODIFY | `alert_metric_channels?: Record<string, Record<string, boolean> \| null>` an `Trip` und `ComparePreset` |
+| `frontend/src/lib/i18n/messages/{de,en}/alarme.json` | MODIFY | neue Texte, Präfix `alarme.kanaele…` |
+| `frontend/src/lib/components/shared/versandVergleichSpeicherung.ts`, `corridor-editor/wertebereicheVergleichSpeicherung.ts`, `compare/CompareTabs.svelte` | unverändert | Feld darf dort nicht verloren gehen ⇒ Test, keine Änderung |
+| `frontend/src/lib/components/alerts-tab/AlertMetricLevelTable.svelte`, `…Row.svelte` | unverändert | Nachbar der Stufen-Tabelle (E1) |
+| `frontend/src/lib/components/shared/__tests__/context_herkunft_zweige_eingefroren.test.ts` | MODIFY | Pins der AlarmeTab-Zeilen nach der Änderung neu messen (fester Schritt, keine neue `context===`-Weiche) |
+| `docs/specs/modules/alert_metric_channels.md` | MODIFY | diese Spec |
+
+**Nicht angefasst (S3b1):** alles unter `internal/`, `cmd/`, `src/`, `api/` (Backend und Endpunkt
+sind mit S3a fertig); `/api/metrics`; `hardcode_allowlist.json` (bleibt `[]`).
+
 ## Estimated Scope
 
 - **LoC:** +40 bis +90 produktiv (Doku/`*.md`/Tests zählen nicht)
@@ -127,6 +160,19 @@ nur Regressions-Test), `/api/metrics`-Antwort, `has_active_rules`, `alert_rules`
 - **Effort:** medium (Risiko MITTEL: ändert die Versand-Auflösung, aber nur auf einem Zweig, den
   heute kein Bestand erreicht — 0 Briefings mit Feld)
 
+### Estimated Scope (S3b1)
+
+- **LoC:** ca. **+240 / −5** produktiv (Spanne 170–310; Block ~130, Helper ~70, AlarmeTab ~28,
+  Rest verteilt auf Payload, Hydration, Snapshot, Typen). Das liegt am oder über dem Limit von
+  250 je Workflow: ein `loc_limit_override` ist **voraussichtlich nötig** (Vorbild #1461,
+  dieselbe Doppelverdrahtung Trip + Vergleich). Vor `/40-tdd-red` erst `workflow.py status`
+  lesen und den Override setzen, statt die RED-Abdeckung auf eine Teilmenge der ACs zu verengen.
+  `docs/`, `*.md`, ADR und Tests zählen nicht mit.
+- **Files:** ca. 16 produktiv (2 neu) + Tests + Spec
+- **Effort:** high (Risiko MITTEL: geteilter Organismus auf vier Flächen, Speicherweg mit
+  Read-Modify-Write, Ratsche)
+- **S3b2 (separat, unter #1895):** ca. +60–80 LoC.
+
 ## Dependencies
 
 | Entity | Type | Purpose |
@@ -135,6 +181,7 @@ nur Regressions-Test), `/api/metrics`-Antwort, `has_active_rules`, `alert_rules`
 | #2293 | Folge-Abstimmung | definiert dieselbe Fläche (`ComparePreset.AlertChannels`, Schicht 2 je Abo); wird nach dieser Spec gegen die hier festgelegte Zielform neu geschnitten. Beide Felder existieren nebeneinander: #2293 bleibt Schicht "je Abo", dieses Feld ist die neue Schicht "je Metrik". |
 | ADR-0043 | Architekturentscheidung | verbietet eine Konfigurationsfläche ohne sichtbare Wirkung — begründet den Scheibenschnitt (S2 vor S3) |
 | ADR-0046 | Architekturentscheidung | Kanal-Schwelle regelt AUF WELCHEM WEG eine Meldung ankommt, nicht OB — diese Spec schreibt ADR-0046 fort |
+| S3a (`GET /api/alert-metric-channel-keys`, AC-25 bis AC-40) | Vorgänger-Scheibe (live) | S3b1 setzt voraus: einzige Quelle Alarm-Zeile → Speicherschlüssel, Leser-Rückfall nach Tier-Gates, je-Metrik-`null` = erbt, Top-Level-`null` = No-Op |
 
 ### Grün bleiben müssen (S2)
 
@@ -365,6 +412,75 @@ Mindestens folgende gezielte Verfälschungen müssen jeweils mindestens einen Te
 - Go: den Proxy aus der Auth-Gruppe nehmen → muss AC-35 rot färben.
 - `/api/metrics` um die Schlüssel-Zuordnung erweitern (`aggregations[]` verändern) → muss
   AC-34 rot färben.
+
+### Implementation Details (S3b1)
+
+Grundlage: `docs/context/feat-1895-s3b-kanal-spalte.md` Sektion `## Analysis` (F1–F9) und
+`docs/context/feat-1895-s3-kanal-spalte.md` (E1–E10). Reines TS-Helper-Modul (jede Regel per
+`node --test` prüfbar) plus schlanker Block; kein neuer Backend-Code.
+
+1. **Helper `shared/alarme-tab/alertMetricChannels.ts`.**
+   - `ladeKanalSchluessel()`: lädt `GET /api/alert-metric-channel-keys` über einen
+     **Modul-Promise-Cache** nach dem Vorbild `compareMetricCatalogLoader.ts:257-273`. Die Antwort
+     ist nutzerunabhängig (AC-39 S3a), der Cache daher mandantensicher. **Schlägt der Abruf fehl,
+     wird der Promise verworfen** (nicht gecacht), der nächste Aufruf versucht es neu.
+   - `kanalZeilen(aktiveMetriken, keys, accepted)`: Vereinigung von `keys[m]` über die aktiven
+     Alarm-Zeilen (`effectiveActiveMetrics`), gefiltert auf `accepted`, sortiert und ohne
+     Dubletten (F4). Keine zweite Zeile-zu-Schlüssel-Liste im Frontend (Wächter #1480).
+   - `normalisiereEintrag(flags)`: liefert immer **alle vier** Flags (`email`, `telegram`, `sms`,
+     `premium_sms`) als Boolean oder `null`, wenn kein Kanal gewählt ist (E5).
+   - `baueDiff(hydriert, aktuell)`: nur geänderte Einträge, nie eine neu aufgebaute Vollmap;
+     Bestandsschlüssel außerhalb der sichtbaren Zeilen kommen nie vor (F5).
+   - `hinweise(eintrag, aboSatz)`: Hinweis „Kanal nicht im Abo-Satz aktiv" (E6).
+2. **Block `alerts-tab/AlertMetricChannelsBlock.svelte`.** Liegt neben `AlertMetricLevelTable`,
+   wird in `AlarmeTab.svelte` nach dem Abschnitt `metric-levels` gemountet (E1). Eine Zeile je
+   Speicherschlüssel; Standard „wie Abo-Kanäle" (`null`); Umschalter „eigene Wahl" zeigt vier
+   `ChannelToggle` (wiederverwendet), vorbelegt mit dem Abo-Satz (`displayChannelState`); Rückweg
+   = Umschalter aus ⇒ `{key: null}` (F7). `premium_sms` nutzt das vorhandene
+   `premiumSmsAlarmGate` (F8); für SMS gibt es keinen Tarif-Hinweis (Rückfall AC-25/26 S3a).
+   Der Block lädt den Endpunkt selbst (F2), die Mounts bleiben unverändert. Ohne Antwort zeigt er
+   „nicht verfügbar" und schreibt nichts (F3). Texte nur über den Katalog
+   `messages/{de,en}/alarme.json`.
+3. **Wind-Kopplung (F6).** `gust` und `wind` sind zwei eigene Zeilen. Kein Doppelschreiben, kein
+   Zustand „gemischt". Beide tragen einen Hinweis: Die Windänderung folgt je nach Auslöser der
+   Kanalwahl der Böen- oder der Wind-Zeile.
+4. **Hinweis metrikfreie Alarme (E9).** Ein fester Satz im Block: Radar-/Regen-Alarme und amtliche
+   Warnungen gehen immer über die Abo-Kanäle.
+5. **Speicherweg Trip.** `routeAlertMetricChannels = $state(...)` aus dem Trip; das Feld geht in
+   den **bestehenden** `_prevAlarmeJson`-/Dirty-`$effect` und in `buildAlarmeSaveFn` ein, **kein
+   zweiter `schedule()`** (F001). `alarmeDeliveryPayload.ts` ergänzt `alert_metric_channels` als
+   Top-Level-Feld, nur wenn der Diff nicht leer ist. Anlegen: `tripNewLogic.ts`/`TripNewEditor.svelte`
+   (Desktop- und Mobil-Mount) tragen das Feld im Anlege-Payload (E10).
+6. **Speicherweg Ortsvergleich.** Wertprop + `onAlarmFeldSetzen` über `alarmZustandsBruecke`;
+   `alarmePropsAus.ts`, `compareHubHydration.ts` (Hydration aus dem Preset), `AlarmSnapshot`,
+   `ALARM_TOP`, `baueAlarmNutzlast`, Rollback-Feldliste in `alarmeVergleichSpeicherung.ts`;
+   `compareEditorSave.ts` (`buildComparePresetSavePayload`, Edit und Create), `CompareNewEditor.svelte`.
+   **Rollback:** Einträge, die seit dem Snapshot neu entstanden sind, werden explizit mit `null`
+   gesendet, weil der Server je Metrik-Schlüssel ersetzt (`config_merge.go:11-22`,
+   `briefing_subscription.go:197-205`) und Weglassen nichts zurücksetzt.
+7. **Server-Merge als Randbedingung (gemessen).** Eintrag wird als Ganzes ersetzt ⇒ jeder
+   gesendete Eintrag trägt alle vier Flags oder ist `null`; Top-Level-`null` auf
+   `alert_metric_channels` ist seit S3a in Trip und Ortsvergleich ein No-Op, daher nie als
+   „löschen" einsetzen.
+8. **Ratsche.** Keine neue `context===`-Weiche; `context_herkunft_zweige_eingefroren.test.ts`
+   wird nach der Änderung neu gemessen (die vier AlarmeTab-Pins), Section-ID zeilenneutral.
+   `hardcode_allowlist.json` bleibt `[]`.
+
+#### Mutations-Gegenprobe (S3b1, Pflicht in `/50-implement`)
+
+Mindestens folgende gezielte Verfälschungen (String-Ersetzung mit externer Sicherungskopie, nie
+`git checkout/stash/reset`) müssen jeweils mindestens einen Test rot färben:
+
+- `baueDiff` sendet die komplette Map statt nur der geänderten Einträge → AC-47 und AC-42 rot
+  (`snowfall_limit` würde mitgesendet oder überschrieben).
+- `normalisiereEintrag` lässt ein Kanal-Flag weg (z. B. `premium_sms`) → AC-44 rot.
+- Rollback sendet für seit dem Snapshot neue Einträge kein `null` → AC-56 rot.
+- Alle Kanäle abgewählt wird als `{}` bzw. alle-`false` statt `null` gesendet → AC-45 rot.
+- Der Endpunkt-Fehler wird gecacht (Promise nicht verworfen) → AC-50 rot.
+- Die Trip-Verdrahtung ruft einen zweiten `schedule()` auf statt den bestehenden Dirty-`$effect`
+  zu nutzen → AC-54 rot.
+- `ALARM_TOP`/Nachbar-Schreiber lassen das Feld fallen → AC-57 rot.
+- Der Block schreibt `wind_change` doppelt in `gust` und `wind` → AC-48 rot.
 
 ## Expected Behavior
 
@@ -758,6 +874,157 @@ nutzerseitig sichtbar wird nichts (kein Frontend in S3a).
     `/api/alert-metric-channel-keys` samt `keys`/`accepted` nennt; zusätzlich bleiben
     `tests/test_api_contract_drift.py` und `tests/test_adr_index_drift.py` grün.
 
+### Acceptance Criteria (S3b1 — Oberfläche)
+
+Nummerierung setzt AC-40 (S3a) fort. Diese ACs betreffen die Oberfläche auf allen vier Flächen
+(Trip-Hub, Trip-Anlegen, Ortsvergleich, Ortsvergleich-Anlegen). Ein Eintrag im Sinne dieser ACs
+ist ein Wert unter `alert_metric_channels[<Speicherschlüssel>]`.
+
+- **AC-41:** Given ein Alarme-Reiter mit aktiven Alarm-Zeilen und eine Antwort des Endpunkts
+  `/api/alert-metric-channel-keys`, When der Block „Kanäle je Wettergröße" angezeigt wird, Then
+  zeigt er genau eine Zeile je Speicherschlüssel, nämlich die Vereinigung von `keys[m]` über die
+  aktiven Alarm-Zeilen, beschränkt auf Schlüssel aus `accepted` (z. B. `gust` und `wind` für eine
+  aktive `wind_change`-Zeile; kein `humidity`, kein `snowfall_limit`).
+  - Testart: Kern (`node --test`). Prüfling: `kanalZeilen` in `alertMetricChannels.ts` sowie
+    Rendering des Blocks.
+
+- **AC-42:** Given ein Bestandseintrag für einen Schlüssel, den keine aktive Alarm-Zeile mehr
+  trägt (z. B. `snowfall_limit` oder die Größe einer deaktivierten Zeile), When der Nutzer im Block
+  eine andere Größe ändert und speichert, Then wird der Bestandseintrag weder angezeigt noch
+  gesendet und bleibt serverseitig unverändert erhalten.
+  - Testart: Kern. Prüfling: `baueDiff` und der Payload beider Speicherwege; Gegenprobe am
+    gespeicherten Stand (Eintrag danach noch vorhanden).
+
+- **AC-43:** Given eine Zeile ohne Eintrag oder mit `null`, When der Block sie anzeigt, Then steht
+  sie auf „wie Abo-Kanäle"; schaltet der Nutzer auf „eigene Wahl", Then zeigt die Zeile vier
+  Kanal-Schalter, vorbelegt mit dem aktuellen Abo-Kanalsatz des Trips bzw. Ortsvergleichs.
+  - Testart: Kern und Komponententest. Prüfling: `AlertMetricChannelsBlock.svelte`,
+    Vorbelegung aus `displayChannelState`.
+
+- **AC-44:** Given der Nutzer ändert die Kanalwahl einer Zeile (z. B. nur Telegram an), When
+  gespeichert wird, Then trägt der gesendete Eintrag alle vier Flags (`email`, `telegram`, `sms`,
+  `premium_sms`) als Boolean oder ist `null`, nie ein Teil davon.
+  - Testart: Kern. Prüfling: `normalisiereEintrag` und der Payload; Mutations-Gegenprobe
+    „Flag weglassen".
+
+- **AC-45:** Given der Nutzer wählt in einer Zeile mit „eigene Wahl" alle vier Kanäle ab, When
+  gespeichert wird, Then wird `null` (erbt) gesendet, die Zeile zeigt danach wieder „wie
+  Abo-Kanäle", und weder `{}` noch ein Eintrag mit vier `false` wird je gesendet.
+  - Testart: Kern. Prüfling: `normalisiereEintrag`, Block.
+
+- **AC-46:** Given eine Zeile mit eigener Wahl, When der Nutzer den Umschalter zurück auf „wie
+  Abo-Kanäle" stellt und speichert, Then sendet der Speicherweg `{<Schlüssel>: null}` und der
+  Leser behandelt den Schlüssel danach wieder als „erbt" (AC-38).
+  - Testart: Kern. Prüfling: Payload-Aufbau; Persistenz-Roundtrip auf Staging.
+
+- **AC-47:** Given ein hydrierter Stand mit mehreren Einträgen und eine Änderung an genau einem,
+  When gespeichert wird, Then enthält die Nutzlast nur diesen geänderten Eintrag (Diff gegen den
+  hydrierten Stand); eine neu aufgebaute Vollmap wird nie gesendet, und ohne Änderung enthält die
+  Nutzlast das Feld gar nicht.
+  - Testart: Kern. Prüfling: `baueDiff`, `buildAlarmeDeliveryPayload`,
+    `baueAlarmNutzlast`.
+
+- **AC-48:** Given aktive Zeilen `wind_gust` und `wind_change`, When der Block angezeigt wird,
+  Then sind `gust` und `wind` zwei eigene Zeilen mit je einem Hinweis, dass die Windänderung je
+  nach Auslöser der Böen- oder der Wind-Zeile folgt; eine Änderung an einer Zeile schreibt nur
+  ihren eigenen Schlüssel (kein Doppelschreiben) und es gibt keinen Zustand „gemischt".
+  - Testart: Kern und Komponententest. Prüfling: Block, `baueDiff`.
+
+- **AC-49:** Given der Endpunkt `/api/alert-metric-channel-keys` ist nicht ladbar (Netzwerk-
+  oder Serverfehler), When der Block angezeigt wird, Then zeigt er „nicht verfügbar", rät keine
+  Schlüssel, und ein Speichern des Alarme-Reiters sendet kein `alert_metric_channels`.
+  - Testart: Kern. Prüfling: Helper und Block mit fehlschlagendem Abruf; Payload ohne das Feld.
+
+- **AC-50:** Given mehrere Blöcke bzw. wiederholte Aufrufe in einer Sitzung, When der Endpunkt
+  erfolgreich geladen wurde, Then erfolgt genau ein Abruf (Modul-Promise-Cache); schlug der Abruf
+  fehl, wird das Ergebnis nicht gecacht und der nächste Aufruf versucht es erneut.
+  - Testart: Kern. Prüfling: `ladeKanalSchluessel`; Mutations-Gegenprobe „Fehler wird
+    gecacht".
+
+- **AC-51:** Given eine eigene Wahl enthält einen Kanal, der im Abo-Satz nicht aktiv ist (z. B.
+  Telegram gewählt, im Abo aber nur E-Mail), When die Zeile angezeigt wird, Then erscheint ein
+  sichtbarer Hinweis, dass dieser Kanal im Abo nicht aktiv ist; die Wahl wird trotzdem gespeichert
+  und nicht blockiert.
+  - Testart: Kern. Prüfling: `hinweise` und Block.
+
+- **AC-52:** Given der Block ist sichtbar, When der Nutzer ihn betrachtet, Then steht darin der
+  Hinweis, dass Radar-/Regen-Alarme und amtliche Warnungen immer über die Abo-Kanäle gehen (nicht
+  über die Wahl je Wettergröße).
+  - Testart: Komponententest und E2E. Prüfling: Block, Katalogtext in DE und EN.
+
+- **AC-53:** Given ein Nutzer ohne Premium-SMS-Freigabe (`premium_sms_allowed` aus dem Profil),
+  When er in einer Zeile „eigene Wahl" öffnet, Then ist der Premium-SMS-Schalter nach demselben
+  Gate gesperrt wie im Abo-Kanalwähler (`premiumSmsAlarmGate`); mit Freigabe ist er schaltbar.
+  Für SMS gibt es keinen Tarif-Hinweis.
+  - Testart: Kern. Prüfling: Block mit `premiumSmsAlarmGate`; zwei Profile.
+
+- **AC-54:** Given ein bestehender Trip im Trip-Hub, When der Nutzer eine Kanalwahl ändert, Then
+  geht die Änderung als Top-Level-Feld `alert_metric_channels` (nicht in `display_config`) mit dem
+  **bestehenden** Dirty-`$effect` und ohne zweiten `schedule()`-Aufruf an das Speichern; beim
+  Anlegen eines Trips (`/trips/new`, Desktop und Mobil) steht das Feld im Anlege-Payload.
+  - Testart: Kern. Prüfling: `AlarmeTab.svelte` (route-Zweig), `alarmeDeliveryPayload.ts`,
+    `tripNewLogic.ts`; Zählung der `schedule()`-Aufrufe im Test.
+
+- **AC-55:** Given ein Ortsvergleich im Editor bzw. in der Anlegemaske (`/compare/new`), When der
+  Nutzer eine Kanalwahl ändert, Then wird der Eintrag aus dem Preset hydriert, über Wertprop und
+  `onAlarmFeldSetzen` geändert und in `buildComparePresetSavePayload` (Edit und Create) als
+  `alert_metric_channels` gesendet; nach dem Neuladen zeigt der Block den gespeicherten Stand.
+  - Testart: Kern. Prüfling: `alarmePropsAus.ts`, `compareHubHydration.ts`,
+    `compareEditorSave.ts`; Roundtrip auf Staging.
+
+- **AC-56:** Given ein Ortsvergleich mit Snapshot, in dem der Eintrag `gust` fehlte, und der Nutzer
+  hat seither `gust` gesetzt, When der Snapshot per Rollback zurückgespielt wird, Then sendet der
+  Rollback für `gust` explizit `null` und stellt Einträge, die im Snapshot standen, mit ihrem
+  alten vollständigen Wert wieder her; Weglassen von `gust` wäre kein Zurücksetzen.
+  - Testart: Kern. Prüfling: `rollbackAlarmSnapshot`/`alarmeVergleichSpeicherung.ts`;
+    Mutations-Gegenprobe „Rollback ohne null".
+
+- **AC-57:** Given ein Ortsvergleich mit gespeichertem `alert_metric_channels`, When ein Nachbar-
+  Schreiber (`versandVergleichSpeicherung.ts`, `wertebereicheVergleichSpeicherung.ts`) einen
+  Teil-PUT absetzt, Then enthält dessen Nutzlast das Feld nicht in verändernder Form und der
+  gespeicherte Stand bleibt danach vollständig erhalten.
+  - Testart: Kern. Prüfling: beide Schreiber (unverändert), Test mit Bestandsmap.
+
+- **AC-58:** Given die vier Flächen Trip-Hub, Trip-Anlegen, Ortsvergleich-Editor und
+  Ortsvergleich-Anlegen, When der Alarme-Reiter geöffnet wird, Then erscheint auf allen vier
+  derselbe Block aus **einem** Baustein (`AlertMetricChannelsBlock.svelte`) ohne neue
+  `context===`-Weiche, und `context_herkunft_zweige_eingefroren.test.ts` ist nach neuer Messung
+  der AlarmeTab-Pins grün.
+  - Testart: Kern (Ratsche) und E2E. Prüfling: `AlarmeTab.svelte`, Ratsche.
+
+- **AC-59:** Given zwei verschiedene Nutzer A und B mit je eigenem Trip und Ortsvergleich und
+  unterschiedlichem `alert_metric_channels`, When Nutzer B im Block ändert, speichert und
+  zurückrollt, Then bleiben die Einträge von A unverändert, `user_id` kommt aus dem Auth-Kontext
+  und nie `"default"`, und der Block von A zeigt weiter A's Stand.
+  - Testart: Kern mit zwei Nutzern (ADR-0003; `fakeTripServer.ts` kennt das Feld bereits) und
+    Persistenz-Roundtrip; Staging-Login nur mit `default`, daher Kern als Hauptnachweis.
+
+- **AC-60:** (Wirkung am Leser) Given ein im Editor gesetzter Eintrag (z. B. `thunder` nur
+  Telegram) wurde über den echten Speicherweg persistiert, When der Python-Leser den
+  Abweichungsalarm für diese Größe versendet (`trip_alert.py` bzw. `compare_alert.py`), Then
+  geht der Alarm über den gewählten Kanal und nicht über den Abo-Satz; der Nachweis wird am
+  Leser geführt, nicht nur am Payload.
+  - Testart: Kern. Brücke über eine gemeinsame JSON-Testdatei (Nutzlast-Beispiel): der
+    Frontend-Test (`node --test`) weist nach, dass `alertMetricChannels.ts` für die
+    Beispiel-Bedienung genau diese Nutzlast erzeugt; der Python-Test lädt dieselbe Datei
+    über den echten Loader (`src/app/loader.py`) und schickt sie durch
+    `resolve_alert_channels` (`src/services/alert_channels.py`) bzw. den Versandpfad.
+    Zusätzlich Staging-E2E mit Zustellung im Test-Postfach. Parität Trip und Ortsvergleich
+    (ADR-0043).
+
+- **AC-61:** Given die Sprache des Nutzers ist DE bzw. EN, When der Block angezeigt wird, Then
+  stammen alle Texte (Überschrift, Umschalter, Hinweise, „nicht verfügbar") aus
+  `messages/{de,en}/alarme.json`, es gibt keinen hartkodierten Nutzertext, und
+  `hardcode_allowlist.json` bleibt `[]`; Protokoll-Token (Kanalnamen im Sinne von `sms_code`)
+  werden nicht übersetzt.
+  - Testart: Kern (Hardcode-Ratsche, Katalog-Parität DE/EN). Prüfling: `alarme.json`, Block.
+
+- **AC-62:** Given der Block auf Staging, When ein Nutzer eine Wahl setzt und speichert, Then
+  ist der Ablauf (Umschalten, Kanal wählen, Speichern, Neuladen, Zurück auf „wie Abo-Kanäle")
+  sowohl im Layout `.tn-mobile` als auch im Layout `.tn-desktop` bedienbar, ohne verdeckte oder
+  abgeschnittene Schalter, bei WCAG-AA-Kontrast.
+  - Testart: Playwright-E2E, beide Layouts, auf Staging.
+
 ## Known Limitations / Nicht-Ziele
 
 Diese Scheibe (S1) liefert ausschließlich Feld, Persistenz, Roundtrip, Doku und ADR.
@@ -807,27 +1074,28 @@ Diese Scheibe (S2) liefert Leser + Migration. Ausdrücklich **nicht** Teil von S
 | Scheibe | Inhalt | Workflow |
 |---|---|---|
 | S3a | Backend und Vertrag: Leser-Rückfall nach Tier-Gates, ADR-0077-Nachtrag, Schlüssel-Endpunkt, Go-Angleichung Top-Level-`null` | dieser Workflow |
-| S3b | Oberfläche: Block „Kanäle je Wettergröße" in Trip- und Vergleichs-Editor samt Anlegemasken, Payload, Snapshot/Rollback, DE/EN-Texte, Hinweise | eigener späterer Workflow unter #1895 |
-| S4 | Rückbau `alert_rules` | später, setzt S3b voraus |
+| S3b1 | Oberfläche: Block „Kanäle je Wettergröße" auf allen vier Flächen (Trip-Hub, Trip-Anlegen, Ortsvergleich, Ortsvergleich-Anlegen) samt Payload, Snapshot/Rollback, DE/EN-Texte, Hinweise „nicht im Abo-Satz", „metrikfreie Alarme" und Wind-Hinweis | Workflow `feat-1895-s3b-kanal-spalte` (Beschluss F1) |
+| S3b2 | Hinweis „Kanal ohne Empfänger" und Hinweis „Kanal-Schwelle über Metrik-Stufe" | **offen**, eigener späterer Workflow unter #1895 (kein neues Issue) |
+| S4 | Rückbau `alert_rules` | später, setzt S3b1 voraus (S3b2 ist keine Voraussetzung) |
 
 Ausdrücklich **nicht** Teil von S3a:
 
 - **Keine Oberfläche, für Nutzer unsichtbar.** Block „Kanäle je Wettergröße" (E1), „erbt"-Zustand
   und Abwahl aller Kanäle (E4/E5), freie Kanalwahl mit Tarif-Sperre (E6), Hinweistext für
-  metrikfreie Alarme (E9) und Anlegemasken (E10) sind S3b. Bis dahin schreibt kein Nutzer das
+  metrikfreie Alarme (E9) und Anlegemasken (E10) sind S3b1. Bis dahin schreibt kein Nutzer das
   Feld (Prod-Bestand: 0 Briefings), die Rückfall-Änderung wirkt auf keinen Bestand.
 - **Kanal-Schwelle (benanntes Restrisiko).** `split_by_threshold` (ADR-0046) läuft nach der
   Auflösung und bleibt unverändert. Ein Metrik-Arm `{sms}` mit SMS-Schwelle „hoch" unterdrückt
   eine niedrigere Warnung, auch wenn der Abo-Satz sie zugestellt hätte. Das gilt heute schon
-  gleich für den Abo-Satz; S3a macht es nicht schlechter. S3b zeigt dafür einen sichtbaren
-  Hinweis.
+  gleich für den Abo-Satz; S3a macht es nicht schlechter. Der sichtbare Hinweis dafür ist
+  **S3b2** (offen, nicht in S3b1).
 - **Fehlender Empfänger (benanntes Restrisiko).** `resolve_alert_channels` kennt keine
   Empfänger; ein gewählter Kanal ohne Empfänger (z. B. Telegram ohne verknüpften Chat) wird vom
-  Rückfall nicht erfasst. S3b zeigt dafür einen sichtbaren Hinweis.
+  Rückfall nicht erfasst. Der sichtbare Hinweis dafür ist **S3b2** (offen, nicht in S3b1).
 - **Windänderung hängt an zwei Schlüsseln.** Ein Windänderungs-Alarm, der über die Böen
   ausgelöst wird, folgt der Kanalwahl unter `gust`, einer über den Mittelwind der unter `wind`
   (so liest der S2-Leser heute, gemessen 2026-11-03). Der Endpunkt sagt das ehrlich
-  (`wind_change→[gust, wind]`); wie die Oberfläche diese Kopplung zeigt, entscheidet S3b.
+  (`wind_change→[gust, wind]`); wie die Oberfläche diese Kopplung zeigt, ist mit S3b1 entschieden (F6, AC-48).
 - **Metrikfreie Alarme unberührt.** Radar-/Regen-Alarme und amtliche Warnungen übergeben keinen
   Metrik-Parameter und gehen unverändert über den Abo-Satz (AC-13).
 - **Nebenbefund außerhalb des Umfangs.** `compare_alert.py:70-80` bildet `temp_min_c` auf
@@ -837,6 +1105,27 @@ Ausdrücklich **nicht** Teil von S3a:
 - **Keine Go-Schreibvalidierung** der Metrik-Schlüssel (E3) und **keine allgemeine
   „null = No-Op"-Regel** im Go-Merge (E8): nur `alert_metric_channels`.
 - **`/api/metrics` unverändert**; kein Rückbau von `alert_rules`; `has_active_rules` unangetastet.
+
+### Known Limitations / Nicht-Ziele (S3b1)
+
+- **S3b2 ist offen (kein stilles Versprechen).** Zwei Hinweise fehlen in S3b1 ausdrücklich und
+  bleiben bis S3b2 (weiter unter #1895) eine bekannte Lücke: (1) „Kanal ohne Empfänger" — das
+  Frontend kennt `mail_to`, `sms_to`, `telegram_chat_id`, `sms_verified` und `tier` im
+  Alarme-Reiter nicht, obwohl das Profil sie liefert, und es braucht erst einen Abgleich mit dem
+  Python-Transport (wann ein Kanal dort als „ohne Empfänger" gilt), sonst entstünde ein neues
+  Falschversprechen; (2) „Kanal-Schwelle über Metrik-Stufe" (ADR-0046: `split_by_threshold` läuft
+  nach der Auflösung). Bis dahin kann eine Kanalwahl ohne Empfänger oder unter einer hohen
+  Kanal-Schwelle einen Alarm nicht zustellen; der Nutzer sieht in S3b1 dazu keinen Hinweis.
+- **Kein neuer Backend-Code.** Kein Endpunkt, keine Leser-Änderung, keine Go-Schreibvalidierung;
+  die UI schreibt nur Schlüssel aus `accepted`.
+- **Keine Kanalwahl für metrikfreie Alarme.** Radar-/Regen-Alarme und amtliche Warnungen gehen
+  immer über die Abo-Kanäle (E9, AC-52).
+- **Kein Zustand „gemischt" für die Wind-Kopplung.** `gust` und `wind` bleiben zwei Zeilen (F6).
+- **Inaktive Bestandseinträge** werden nicht angezeigt, aber auch nicht gelöscht (F5, AC-42).
+- **Kein Rückbau von `alert_rules`** (S4), `has_active_rules` unangetastet, `/api/metrics`
+  unverändert.
+- **Staging kennt nur den Login `default`.** Die Mandantentrennung (AC-59) wird im Kern mit zwei
+  Nutzern bewiesen, nicht über zwei Staging-Konten.
 
 ## Architektur-Entscheidung (ADR)
 
@@ -871,3 +1160,9 @@ Ausdrücklich **nicht** Teil von S3a:
   Korrektur: `keys` liefert je Zeile die sortierte Schlüsselliste aus Lesersicht, AC-32 prüft
   Mengengleichheit; Implementation Details §3, Affected Files (Tie-Break bleibt in `loader.py`),
   Mutations-Gegenprobe und Known Limitations entsprechend angepasst.
+- 2026-11-03: Scheibe S3b1 ergänzt (Oberfläche „Kanäle je Wettergröße" auf allen vier Flächen,
+  AC-41 bis AC-62), Analyse-Grundlage `docs/context/feat-1895-s3b-kanal-spalte.md` Sektion
+  `## Analysis` (F1–F9). Scheibenschnitt auf S3a/S3b1/S3b2/S4 umgeschrieben; S3b2 (Hinweise
+  „Kanal ohne Empfänger" und „Kanal-Schwelle über Metrik-Stufe") ausdrücklich als offen
+  benannt. S1–S3a-Inhalte unverändert; die Zusagen „S3b zeigt Hinweis" (Kanal-Schwelle, fehlender
+  Empfänger) und „Wind-Kopplung entscheidet S3b" wurden auf S3b2 bzw. S3b1 präzisiert.

@@ -106,6 +106,7 @@ export function hydrateAlarmFieldsFromPreset(
 	// zuletzt besuchtem Reiter mal die Alarm-, mal die Briefing-Bedeutung).
 	state.channels = reconstructCompareAlertChannels(preset);
 	state.channelThresholds = (preset.alert_channel_thresholds as Record<string, string>) ?? {};
+	state.alertMetricChannels = { ...(preset.alert_metric_channels ?? {}) }; // Issue #1895 S3b1
 	state.alertCooldownMinutes = preset.alert_cooldown_minutes;
 	state.alertQuietFrom = preset.alert_quiet_from;
 	state.alertQuietTo = preset.alert_quiet_to;

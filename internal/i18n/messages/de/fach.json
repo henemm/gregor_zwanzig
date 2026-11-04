@@ -21,6 +21,7 @@
   "fach.fehler.unknown_format": "Das Format wurde nicht erkannt.",
   "fach.fehler.unsupported_url": "Diese Adresse wird nicht unterstützt.",
   "fach.fehler.resolve_failed": "Die Auflösung ist fehlgeschlagen.",
+  "fach.fehler.ampel_ungueltig": "Die Ampel ist ungültig: Die Grenzen müssen oben aufsteigend und unten absteigend angeordnet sein.",
   "fach.resolver.bereich": "Koordinaten ausserhalb des gültigen Bereichs (lat ∈ [-90,90], lon ∈ [-180,180]).",
   "fach.resolver.decimal_parse": "Dezimalkoordinaten konnten nicht geparst werden.",
   "fach.resolver.decimal_unbekannt": "Konnte Dezimalkoordinaten nicht erkennen.",

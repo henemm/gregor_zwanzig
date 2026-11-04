@@ -1,0 +1,35 @@
+# TDD RED #2792 S1a (Profil-Ampel), Basis cbf1556b2, 2026-11-04
+
+## uv run pytest tests/tdd/test_ampel_modell_und_aufloesung.py tests/test_trip_schema_drift.py
+E   ModuleNotFoundError: No module named 'app.ampel'
+ERROR tests/tdd/test_ampel_modell_und_aufloesung.py
+!!!!!!!!!!!!!!!!!!!! Interrupted: 1 error during collection !!!!!!!!!!!!!!!!!!!!
+
+## uv run pytest tests/test_trip_schema_drift.py
+/home/user/gregor_zwanzig/.claude/worktrees/agent-a5604c38ede87ac88/tests/test_trip_schema_drift.py:86: AssertionError: assert None == {'metrics': {'gust': {'alarm_ab': 'yellow', 'enabled': True, 'lower': {'orange': None, 'red': None, 'yellow': None}, '...r': {'orange': 55, 'red': 70, 'yellow': 42}}
+FAILED tests/test_trip_schema_drift.py::test_display_config_ampel_ueberlebt_python_roundtrip
+
+## go test ./internal/handler -run 'Ampel|EigeneVorlage'
+--- FAIL: TestAmpelUngueltig_WirdAbgelehntInAnfrageSpracheUndNichtsGeschrieben (0.01s)
+    ampel_validierung_test.go:136: oben_absteigend de PUT /api/trips/t1: Status 200, erwartet 400: {"id":"t1","name":"Tour alice","stages":[{"id":"S1","name":"D1","date":"2026-05-01","waypoints":[{"id":"W1","name":"P","lat":47,"lon":11,"elevation_m":500,"arrival_calculated":"08:00"}]}],"display_conf
+--- FAIL: TestAmpelUngueltig_PatchEigeneVorlageAbgelehnt (0.00s)
+    ampel_validierung_test.go:167: PATCH de: 200 {"id":"p-c8035edc902990b0","name":"Mein Gipfel","is_default":false,"metrics":[{"metric_id":"wind","enabled":true,"use_friendly_format":false,"horizons":{"today":true,"tomorrow":true,"day_after":true}}],"created_at":"2026-11-04T08:18:16.350427168Z"}
+--- FAIL: TestEigeneVorlageMitAmpel_SpeichernUndAnwendenLaesstZustellungUnveraendert (0.00s)
+    ampel_validierung_test.go:240: Vorlage laedt ohne Ampel/alarm_ab: [{ID:p-a874a0896c23602f Metrics:[map[enabled:true horizons:map[day_after:true today:true tomorrow:true] metric_id:wind use_friendly_format:false]] Ampel:<nil>}]
+FAIL
+FAIL	github.com/henemm/gregor-api/internal/handler	0.036s
+FAIL
+
+## go test ./internal/model -run Ampel
+--- FAIL: TestMetricPresetAmpel_JSONRoundtripBehaeltAmpelSamtAlarmAb (0.00s)
+    metric_preset_ampel_test.go:61: Ampel nach Roundtrip = <nil>
+--- FAIL: TestMetricPresetAmpel_StoreLadenSpeichernZweiNutzerGetrennt (0.00s)
+    metric_preset_ampel_test.go:80: Ampel nach Laden+Speichern = <nil>, erwartet map[metrics:map[wind:map[alarm_ab:yellow enabled:true lower:map[orange:<nil> red:<nil> yellow:<nil>] upper:map[orange:50 red:70 yellow:25]]] template:wandern thunder:map[hoch:red mittel:orange]]
+FAIL
+FAIL	github.com/henemm/gregor-api/internal/model	0.008s
+FAIL
+
+## cd frontend && npm test -- src/lib/components/shared/weather-metrics-tab/__tests__/vorlage_anwenden_uebernimmt_ampel.test.ts
+# SyntaxError: The requested module '../weatherMetricsSavePayload.ts' does not provide an export named 'ampelBeimAnwenden'
+# pass 0
+# fail 1

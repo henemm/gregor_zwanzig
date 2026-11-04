@@ -1,0 +1,10 @@
+{
+  "_zweck": "Issue #1895 S3b1 AC-60: Bruecke Frontend-Nutzlast -> Python-Leser. Bedienung: Zeile thunder auf eigene Wahl, nur Telegram an.",
+  "bedienung": { "schluessel": "thunder", "kanaele": { "telegram": true } },
+  "summary_key": "thunder_level_max",
+  "nutzlast": {
+    "alert_metric_channels": {
+      "thunder": { "email": false, "telegram": true, "sms": false, "premium_sms": false }
+    }
+  }
+}

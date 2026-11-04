@@ -1,0 +1,42 @@
+{
+  "_zweck": "Issue #2792 S1a: gemeinsame Testvektoren fuer Python app.ampel.validate_ampel und Go handler.validateAmpel (Regelgleichheit). Gelesen von tests/tdd/test_ampel_modell_und_aufloesung.py und internal/handler/ampel_validierung_test.go.",
+  "vektoren": [
+    {"name": "leer_ist_gueltig", "gueltig": true, "ampel": {}},
+    {"name": "voll_beidseitig_gueltig", "gueltig": true, "ampel": {"template": "skitouren", "metrics": {
+      "temperature": {"enabled": true, "lower": {"red": -30, "orange": -20, "yellow": -15}, "upper": {"yellow": 3, "orange": 8, "red": 15}, "alarm_ab": "orange"}}}},
+    {"name": "offene_grenzen_gueltig", "gueltig": true, "ampel": {"metrics": {
+      "wind": {"lower": {"red": null, "orange": 4, "yellow": 8}, "upper": {"yellow": 30, "orange": null, "red": 50}}}}},
+    {"name": "alarm_ab_never", "gueltig": true, "ampel": {"metrics": {"gust": {"alarm_ab": "never"}}}},
+    {"name": "alarm_ab_yellow", "gueltig": true, "ampel": {"metrics": {"gust": {"alarm_ab": "yellow"}}}},
+    {"name": "alarm_ab_orange", "gueltig": true, "ampel": {"metrics": {"gust": {"alarm_ab": "orange"}}}},
+    {"name": "alarm_ab_red", "gueltig": true, "ampel": {"metrics": {"gust": {"alarm_ab": "red"}}}},
+    {"name": "gleichheitsrand_unten_gelb_gleich_oben_gelb", "gueltig": true, "ampel": {"metrics": {
+      "temperature": {"lower": {"yellow": 20}, "upper": {"yellow": 20}}}}},
+    {"name": "gewitter_mittel_orange_hoch_red", "gueltig": true, "ampel": {"thunder": {"mittel": "orange", "hoch": "red"}}},
+    {"name": "gewitter_mittel_red_hoch_red", "gueltig": true, "ampel": {"thunder": {"mittel": "red", "hoch": "red"}}},
+    {"name": "gewitter_mittel_yellow_hoch_orange", "gueltig": true, "ampel": {"thunder": {"mittel": "yellow", "hoch": "orange"}}},
+    {"name": "gewitter_mittel_orange_hoch_orange", "gueltig": true, "ampel": {"thunder": {"mittel": "orange", "hoch": "orange"}}},
+
+    {"name": "unten_falsch_geordnet_red_ueber_orange", "gueltig": false, "ampel": {"metrics": {
+      "temperature": {"lower": {"red": 0, "orange": -5, "yellow": 5}}}}},
+    {"name": "unten_gelb_unter_orange", "gueltig": false, "ampel": {"metrics": {
+      "temperature": {"lower": {"orange": -5, "yellow": -10}}}}},
+    {"name": "oben_falsch_geordnet", "gueltig": false, "ampel": {"metrics": {
+      "gust": {"upper": {"yellow": 50, "orange": 45, "red": 60}}}}},
+    {"name": "oben_gleiche_werte", "gueltig": false, "ampel": {"metrics": {
+      "gust": {"upper": {"yellow": 45, "orange": 45}}}}},
+    {"name": "unten_gelb_ueber_oben_gelb", "gueltig": false, "ampel": {"metrics": {
+      "temperature": {"lower": {"yellow": 30}, "upper": {"yellow": 20}}}}},
+    {"name": "gewitter_hoch_yellow", "gueltig": false, "ampel": {"thunder": {"mittel": "yellow", "hoch": "yellow"}}},
+    {"name": "gewitter_hoch_yellow_allein", "gueltig": false, "ampel": {"thunder": {"hoch": "yellow"}}},
+    {"name": "gewitter_hoch_schwaecher_als_mittel", "gueltig": false, "ampel": {"thunder": {"mittel": "red", "hoch": "orange"}}},
+    {"name": "gewitter_mittel_unbekannt", "gueltig": false, "ampel": {"thunder": {"mittel": "lila"}}},
+    {"name": "alarm_ab_x", "gueltig": false, "ampel": {"metrics": {"gust": {"alarm_ab": "x"}}}},
+    {"name": "template_kein_string", "gueltig": false, "ampel": {"template": 5}},
+    {"name": "grenze_kein_zahlwert", "gueltig": false, "ampel": {"metrics": {"gust": {"upper": {"yellow": "viel"}}}}},
+    {"name": "enabled_kein_wahrheitswert", "gueltig": false, "ampel": {"metrics": {"gust": {"enabled": "ja"}}}},
+    {"name": "metrics_keine_tabelle", "gueltig": false, "ampel": {"metrics": ["gust"]}},
+    {"name": "metrik_kein_objekt", "gueltig": false, "ampel": {"metrics": {"gust": 30}}},
+    {"name": "ampel_kein_objekt", "gueltig": false, "ampel": ["gust"]}
+  ]
+}

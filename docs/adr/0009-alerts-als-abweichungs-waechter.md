@@ -6,6 +6,7 @@
   Briefing-Versand persistiert, ohne Briefing kein Anker" (Zeile 22-23, 41-43 unten) — siehe
   ADR-0056 für den rollierenden, briefing-unabhängigen Anker (Issue #1916).
 - **Datum:** 2026-06-16 (Epic #813)
+- **Ergänzt durch:** [ADR-0106](0106-profil-ampel-einzige-bewertung.md) (Akzeptiert 2026-11-04: Auslöser ist der Stufenwechsel der Profil-Ampel oder ein sehr großer Sprung innerhalb einer Stufe; der Abweichungs-Wächter selbst bleibt)
 - **Bezug:** GitHub-Epic #813 (Slices #816, #817), Issues #821, #822, #864/#859
 
 ## Kontext

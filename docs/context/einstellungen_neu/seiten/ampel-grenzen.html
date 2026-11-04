@@ -1,0 +1,363 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Ampel-Grenzen je Vorlage</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: Kopf, Vorlagen-Wahl, eine Tabelle je Vorlage mit Ampel-Leiste pro Metrik */
+:root{
+  --bg:#f6f4ee; --card:#ffffff; --card-alt:#faf8f1; --line:#dcd8c8; --line-soft:#ecead9;
+  --ink:#1a1a18; --ink-2:#45433d; --ink-3:#6b675c;
+  --accent:#c45a2a; --accent-deep:#8c3e1a; --accent-tint:rgba(196,90,42,.08);
+  --a-green:#15803d; --a-yellow:#d69500; --a-orange:#d4530a; --a-red:#a8104a; --a-none:#ecead9;
+  --ok:#2f6b3a; --bad:#a8104a;
+  --f-ui:'Inter Tight',system-ui,-apple-system,'Segoe UI',sans-serif;
+  --f-mono:'JetBrains Mono',ui-monospace,'SFMono-Regular',Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#151513; --card:#1e1e1b; --card-alt:#252521; --line:#3a3933; --line-soft:#2c2b27;
+  --ink:#f1efe7; --ink-2:#cfccc1; --ink-3:#a3a093;
+  --accent:#e07a48; --accent-deep:#f0a27b; --accent-tint:rgba(224,122,72,.12);
+  --a-green:#3fae63; --a-yellow:#e6b02e; --a-orange:#ee7a3a; --a-red:#e2457f; --a-none:#2c2b27;
+  --ok:#6cc27f; --bad:#ff7aa6; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#151513; --card:#1e1e1b; --card-alt:#252521; --line:#3a3933; --line-soft:#2c2b27;
+  --ink:#f1efe7; --ink-2:#cfccc1; --ink-3:#a3a093;
+  --accent:#e07a48; --accent-deep:#f0a27b; --accent-tint:rgba(224,122,72,.12);
+  --a-green:#3fae63; --a-yellow:#e6b02e; --a-orange:#ee7a3a; --a-red:#e2457f; --a-none:#2c2b27;
+  --ok:#6cc27f; --bad:#ff7aa6; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-ui);font-size:15px;line-height:1.5;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:28px 80px}
+.wrap{max-width:1120px;margin:0 auto;display:flex;flex-direction:column;gap:26px}
+h1{font-size:clamp(26px,4.5vw,36px);font-weight:700;line-height:1.1;margin:0;text-wrap:balance;letter-spacing:-.01em}
+p{margin:0;max-width:72ch}
+.eyebrow{font-family:var(--f-mono);font-size:11.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--ink-3)}
+.lead{color:var(--ink-2);font-size:16px}
+.muted{color:var(--ink-3)}
+.stack{display:flex;flex-direction:column;gap:10px}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:13.5px;color:var(--ink-2)}
+.sw{display:inline-block;width:12px;height:12px;border-radius:3px;vertical-align:-2px;margin-right:5px}
+.g{background:var(--a-green)}.y{background:var(--a-yellow)}.o{background:var(--a-orange)}.r{background:var(--a-red)}
+.vorlagen{display:flex;gap:8px;flex-wrap:wrap}
+.vorlagen button{font:inherit;font-size:14.5px;border:1.5px solid var(--line);background:var(--card);color:var(--ink);border-radius:999px;padding:7px 15px;cursor:pointer;display:inline-flex;gap:7px;align-items:center}
+.vorlagen button.on{border-color:var(--accent);background:var(--accent-tint);font-weight:600}
+.vorlagen button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.vorlagen .ck{font-size:12px;color:var(--ok)}
+.toolbar{display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap;background:var(--card);border:1px solid var(--line);border-radius:8px;padding:12px 16px}
+.btn{font:inherit;font-size:14px;font-weight:600;border-radius:5px;padding:7px 13px;border:1px solid var(--line);background:var(--card);color:var(--ink);cursor:pointer}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn.done{background:var(--ok);border-color:var(--ok);color:#fff}
+.btn:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.table{background:var(--card);border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.hrow,.mrow{display:grid;grid-template-columns:28px minmax(150px,1.1fr) 190px minmax(140px,1fr) 190px 118px;gap:12px;align-items:center;padding:10px 14px}
+.hrow{font-family:var(--f-mono);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-3);border-bottom:1px solid var(--line)}
+.mrow{border-bottom:1px solid var(--line-soft)}
+.mrow:last-child{border-bottom:0}
+.mrow.off{opacity:.55}
+.mrow.off:hover,.mrow.off:focus-within{opacity:.85}
+.grp{grid-column:1/-1;padding:14px 14px 4px;font-family:var(--f-mono);font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-3);background:var(--card-alt);border-bottom:1px solid var(--line-soft)}
+.nm b{font-weight:600;display:block}
+.nm small{color:var(--ink-3);font-size:12px;display:block;line-height:1.35}
+.bounds{display:flex;gap:4px;align-items:center}
+.bounds label{display:flex;flex-direction:column;align-items:center;gap:2px;font-size:10px;font-family:var(--f-mono);color:var(--ink-3)}
+.bounds input{width:56px;font:inherit;font-size:13px;font-family:var(--f-mono);text-align:right;padding:4px 5px;border:1px solid var(--line);border-radius:4px;background:var(--card-alt);color:var(--ink);font-variant-numeric:tabular-nums}
+.bounds input:focus-visible{outline:2px solid var(--accent);outline-offset:0}
+.bounds input.lr{border-bottom:3px solid var(--a-red)}.bounds input.lo{border-bottom:3px solid var(--a-orange)}.bounds input.ly{border-bottom:3px solid var(--a-yellow)}
+.bar{height:14px;border-radius:7px;overflow:hidden;display:flex;background:var(--a-none)}
+.bar span{height:100%}
+.scale{display:flex;justify-content:space-between;font-family:var(--f-mono);font-size:10px;color:var(--ink-3);margin-top:2px}
+.err{color:var(--bad);font-size:12px;margin-top:3px}
+select{font:inherit;font-size:13px;padding:4px 6px;border:1px solid var(--line);border-radius:4px;background:var(--card-alt);color:var(--ink);max-width:100%}
+select:disabled{opacity:.6}
+.na{font-size:12px;color:var(--ink-3)}
+.ord{display:flex;gap:6px;flex-wrap:wrap;align-items:center;font-size:12.5px;color:var(--ink-2)}
+input[type=checkbox]{width:17px;height:17px;accent-color:var(--accent)}
+textarea{width:100%;min-height:60px;font:inherit;font-size:14px;color:var(--ink);background:var(--card-alt);border:1px solid var(--line);border-radius:5px;padding:9px 11px;resize:vertical}
+.status{font-family:var(--f-mono);font-size:12px;color:var(--ink-3)}
+.status.saved{color:var(--ok)}
+.note{background:var(--card);border-left:3px solid var(--accent);padding:12px 16px;border-radius:0 6px 6px 0;color:var(--ink-2);font-size:14px}
+@media (max-width:900px){
+  .hrow{display:none}
+  .mrow{grid-template-columns:28px 1fr;grid-template-areas:"ck nm" "ck lo" "ck bar" "ck hi" "ck al"}
+  .mrow>.c-ck{grid-area:ck;align-self:start}.mrow>.c-nm{grid-area:nm}.mrow>.c-lo{grid-area:lo}.mrow>.c-bar{grid-area:bar}.mrow>.c-hi{grid-area:hi}.mrow>.c-al{grid-area:al}
+  .c-lo::before{content:"unten";}.c-hi::before{content:"oben";}
+  .c-lo::before,.c-hi::before{font-family:var(--f-mono);font-size:10px;color:var(--ink-3);width:40px;text-transform:uppercase}
+  .c-lo,.c-hi{display:flex;gap:8px;align-items:center}
+}
+</style>
+
+<div class="wrap">
+  <header class="stack">
+    <span class="eyebrow">Gregor Zwanzig · Schritt 3 · Vorschlag zum Prüfen</span>
+    <h1>Ampel-Grenzen je Vorlage</h1>
+    <p class="lead">Jede Vorlage bringt für jede Metrik eine beidseitige Ampel mit. Unten sind die Grenzen, ab denen es zu wenig ist, oben die, ab denen es zu viel ist. Leere Felder heißen: diese Seite ist offen. Ändere, was nicht passt, und markiere die Vorlage dann als geprüft.</p>
+    <div class="legend"><span><span class="sw r"></span>rot</span><span><span class="sw o"></span>orange</span><span><span class="sw y"></span>gelb</span><span><span class="sw g"></span>grün</span><span class="muted">· Werte vergleichen gegen das, was im Briefing steht (Tageshöchst, Tagestief, Spitze, Summe)</span></div>
+  </header>
+
+  <div class="note">Vorgeschlagen auf Basis der heutigen Katalog-Ampel (Vorlage „Allgemein“ entspricht ihr) und der Metrik-Listen der 7 heutigen Vorlagen. Neu sind die beidseitigen Fälle aus deiner Notiz, z.B. Skitour-Temperatur oder Flaute beim Wassersport. Nullgradgrenze und Schneefallgrenze sind <b>relativ</b>: Meter über der höchsten Stelle der Etappe bzw. über der Höhe des Orts, negativ heißt darunter. „Alarm ab“ ist bei Vorboten gesperrt (ADR-0010).</div>
+
+  <div class="vorlagen" id="vorlagen" role="tablist" aria-label="Vorlage"></div>
+
+  <div class="toolbar">
+    <div class="stack" style="gap:2px">
+      <b id="vTitle"></b>
+      <span class="status" id="vStatus">Speicher wird verbunden …</span>
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn" id="reset" type="button">Vorschlag wiederherstellen</button>
+      <button class="btn primary" id="passt" type="button">Vorlage passt</button>
+    </div>
+  </div>
+
+  <div class="table" id="table"></div>
+
+  <div><label for="notiz" class="muted" style="font-size:13px;display:block;margin-bottom:4px">Notiz zu dieser Vorlage (fehlende Vorlagen wie MTB oder Hochtour gern hier nennen)</label><textarea id="notiz"></textarea></div>
+</div>
+
+<script>
+(function(){
+const M=[
+ // id, label, unit, kind, [min,max], alarmable, vorbote, group, hint
+ ['temperature','Temperatur','°C','both',[-35,40],true,false,'Temperatur','Tageshöchst / Tagestief'],
+ ['temperature_night','Tiefsttemperatur Nacht','°C','both',[-30,25],true,false,'Temperatur','Nacht vor der Etappe'],
+ ['wind_chill','Gefühlte Temperatur','°C','both',[-40,40],false,true,'Temperatur',''],
+ ['dewpoint','Taupunkt','°C','up',[-10,28],false,true,'Temperatur','Schwüle'],
+ ['humidity','Luftfeuchte','%','none',[0,100],false,true,'Temperatur','nur Anzeige (über Taupunkt bewertet)'],
+ ['wind','Wind','km/h','both',[0,90],true,false,'Wind','Mittelwind'],
+ ['gust','Böen','km/h','up',[0,110],true,false,'Wind','Spitze'],
+ ['wind_direction','Windrichtung','','none',[0,1],false,false,'Wind','nur Anzeige'],
+ ['precipitation','Niederschlag','mm','up',[0,30],true,false,'Niederschlag','Summe'],
+ ['rain_probability','Regenwahrscheinlichkeit','%','up',[0,100],false,true,'Niederschlag',''],
+ ['thunder','Gewitter','','ordinal',[0,2],true,false,'Niederschlag','Stufe keins · mittel · hoch'],
+ ['visibility','Sichtweite','m','down',[0,10000],true,false,'Himmel & Sicht','Minimum'],
+ ['cloud_total','Bewölkung','%','up',[0,100],false,true,'Himmel & Sicht',''],
+ ['cloud_low','Tiefe Wolken','%','up',[0,100],false,false,'Himmel & Sicht','Gipfel in Wolken'],
+ ['sunshine','Sonnenstunden','h','down',[0,14],false,false,'Himmel & Sicht','Summe'],
+ ['uv_index','UV-Index','','up',[0,12],true,false,'Himmel & Sicht','Maximum'],
+ ['freezing_level','Nullgradgrenze','m rel.','both',[-1500,2500],true,false,'Schnee & Höhe','über höchster Stelle'],
+ ['snowfall_limit','Schneefallgrenze','m rel.','both',[-1500,2500],true,false,'Schnee & Höhe','über höchster Stelle'],
+ ['fresh_snow','Neuschnee','cm','up',[0,60],true,false,'Schnee & Höhe','Summe'],
+ ['snow_depth','Schneehöhe','cm','both',[0,300],true,false,'Schnee & Höhe','']
+];
+const META={};M.forEach(m=>META[m[0]]={id:m[0],label:m[1],unit:m[2],kind:m[3],scale:m[4],alarmable:m[5],vorbote:m[6],group:m[7],hint:m[8]});
+
+// d(on, lo=[rot,orange,gelb], hi=[gelb,orange,rot], alarm)
+const d=(on,lo,hi,alarm)=>({on,lo:lo||[null,null,null],hi:hi||[null,null,null],alarm:alarm||'nie'});
+const T=(on,mittel,hoch,alarm)=>({on,mittel:mittel||'orange',hoch:hoch||'rot',alarm:alarm||'orange'});
+const BASE={
+ temperature:d(true,[-15,-5,0],[28,31,34],'orange'),
+ temperature_night:d(false,[-10,-5,0],null,'orange'),
+ wind_chill:d(false,[-15,-5,0],[28,31,34]),
+ dewpoint:d(false,null,[16,18,21]),
+ humidity:d(false),
+ wind:d(true,null,[30,50,70],'orange'),
+ gust:d(true,null,[30,45,60],'orange'),
+ wind_direction:d(false),
+ precipitation:d(true,null,[1,5,10],'orange'),
+ rain_probability:d(true,null,[30,60,80]),
+ thunder:T(true),
+ visibility:d(false,[500,1000,2000],null,'orange'),
+ cloud_total:d(true,null,[60,85,null]),
+ cloud_low:d(false,null,[50,80,null]),
+ sunshine:d(true,[null,1,3],null),
+ uv_index:d(false,null,[3,6,8]),
+ freezing_level:d(false,[-300,0,300],null,'orange'),
+ snowfall_limit:d(false,[-300,0,300],null,'orange'),
+ fresh_snow:d(false,null,[10,20,30],'orange'),
+ snow_depth:d(false)
+};
+const V=[
+ ['alpen-trekking','Alpen-Trekking',{
+   temperature:d(true,[-10,-3,2],[27,30,33],'orange'), temperature_night:d(true,[-8,-3,0],null,'orange'),
+   wind_chill:d(true,[-15,-8,-2],null), wind:d(true,null,[30,45,60],'orange'), gust:d(true,null,[35,50,70],'orange'),
+   precipitation:d(true,null,[1,5,15],'orange'), rain_probability:d(true,null,[30,60,80]), thunder:T(true,'orange','rot','orange'),
+   visibility:d(true,[100,300,1000],null,'orange'), cloud_total:d(true,null,[70,90,null]), cloud_low:d(true,null,[50,80,null]),
+   sunshine:d(false,[null,1,3]), uv_index:d(true,null,[6,8,10],'nie'),
+   freezing_level:d(true,[-300,0,300],null,'orange'), snowfall_limit:d(true,[-500,0,300],null,'orange'), fresh_snow:d(false,null,[5,10,20],'orange')}],
+ ['wandern','Wandern',{
+   temperature:d(true,[-10,-5,0],[26,30,33],'orange'), temperature_night:d(true,[-8,-3,0],null,'orange'), humidity:d(true),
+   dewpoint:d(false,null,[16,18,21]), wind:d(true,null,[30,50,70],'orange'), gust:d(true,null,[40,60,75],'orange'),
+   precipitation:d(true,null,[1,5,10],'orange'), rain_probability:d(true,null,[30,60,80]), thunder:T(true,'orange','rot','orange'),
+   cloud_total:d(true,null,[70,90,null]), sunshine:d(true,[null,1,3]), uv_index:d(true,null,[5,7,9],'nie')}],
+ ['skitouren','Skitouren',{
+   temperature:d(true,[-30,-20,-15],[3,8,15],'orange'), temperature_night:d(true,[-25,-18,-12],[0,2,5],'orange'),
+   wind_chill:d(true,[-35,-25,-15],null), wind:d(true,null,[30,45,60],'orange'), gust:d(true,null,[40,55,70],'orange'),
+   precipitation:d(true,null,[2,10,20],'orange'), thunder:T(false), fresh_snow:d(true,null,[20,30,50],'orange'),
+   snow_depth:d(true,[15,30,50],null,'orange'), snowfall_limit:d(true,null,[0,300,800],'orange'),
+   freezing_level:d(true,null,[300,800,1500],'orange'), cloud_total:d(true,null,[70,90,null]), cloud_low:d(true,null,[40,70,90]),
+   visibility:d(true,[200,500,1000],null,'orange'), sunshine:d(false,[null,1,3]), rain_probability:d(false,null,[30,60,80])}],
+ ['wintersport','Wintersport',{
+   temperature:d(true,[-25,-20,-15],[5,10,15],'orange'), temperature_night:d(true,[-25,-18,-12],[0,2,5],'nie'),
+   wind_chill:d(true,[-30,-22,-15],null), wind:d(true,null,[30,50,70],'orange'), gust:d(true,null,[40,60,80],'orange'),
+   precipitation:d(true,null,[2,10,20],'orange'), rain_probability:d(false,null,[30,60,80]), thunder:T(false),
+   fresh_snow:d(true,null,null,'nie'), snow_depth:d(true,[10,20,40],null,'orange'),
+   cloud_total:d(true,null,[70,90,null]), sunshine:d(true,[null,1,3]), visibility:d(true,[200,500,1000],null,'orange')}],
+ ['radtour','Radtour',{
+   temperature:d(true,[-5,0,5],[28,32,35],'orange'), temperature_night:d(true,[-5,0,5],null,'nie'),
+   wind:d(true,null,[20,30,45],'orange'), wind_direction:d(true), gust:d(true,null,[35,50,65],'orange'),
+   precipitation:d(true,null,[0.5,2,5],'orange'), rain_probability:d(true,null,[30,50,70]), thunder:T(true,'orange','rot','orange'),
+   cloud_total:d(true,null,[80,95,null]), sunshine:d(true,[null,1,3]), uv_index:d(true,null,[6,8,10],'nie')}],
+ ['wassersport','Wassersport',{
+   temperature:d(true,[0,5,10],[30,33,36],'orange'), temperature_night:d(true,[0,5,8],null,'nie'),
+   wind:d(true,[null,4,8],[30,40,50],'orange'), wind_direction:d(true), gust:d(true,null,[40,50,62],'orange'),
+   precipitation:d(true,null,[2,5,10],'orange'), rain_probability:d(true,null,[30,60,80]), thunder:T(true,'rot','rot','orange'),
+   cloud_total:d(true,null,[80,95,null]), visibility:d(true,[500,1000,2000],null,'orange'), sunshine:d(false,[null,1,3]), uv_index:d(false,null,[6,8,10])}],
+ ['allgemein','Allgemein',{}]
+];
+function defaults(vid){
+  const ov=(V.find(v=>v[0]===vid)||[])[2]||{};
+  const out={};
+  Object.keys(META).forEach(k=>{
+    const base=ov[k]||BASE[k];
+    // Metriken, die die Vorlage nicht nennt, bleiben aus
+    const on = ov[k]? base.on : (vid==='allgemein'? base.on : false);
+    out[k]=JSON.parse(JSON.stringify({...base,on}));
+  });
+  return out;
+}
+
+const state={}; const meta={};
+V.forEach(v=>{state[v[0]]=defaults(v[0]);meta[v[0]]={notiz:'',passt:false};});
+let cur=V[0][0]; let db=null;
+
+const elV=document.getElementById('vorlagen'), elT=document.getElementById('table'), elTitle=document.getElementById('vTitle'),
+      elSt=document.getElementById('vStatus'), elN=document.getElementById('notiz'), elP=document.getElementById('passt'), elR=document.getElementById('reset');
+
+function renderTabs(){
+  elV.innerHTML='';
+  V.forEach(v=>{
+    const b=document.createElement('button');b.type='button';b.setAttribute('role','tab');
+    b.className=v[0]===cur?'on':'';b.setAttribute('aria-selected',String(v[0]===cur));
+    b.textContent=v[1];
+    if(meta[v[0]].passt){const s=document.createElement('span');s.className='ck';s.textContent='✓ geprüft';b.appendChild(s);}
+    b.addEventListener('click',()=>{cur=v[0];renderAll();});
+    elV.appendChild(b);
+  });
+}
+const COL={rot:'var(--a-red)',orange:'var(--a-orange)',gelb:'var(--a-yellow)',grün:'var(--a-green)'};
+function bands(m,r){
+  const [mn,mx]=m.scale, span=mx-mn;
+  if(m.kind==='ordinal'){return [['grün',1],[r.mittel,1],[r.hoch,1]];}
+  if(m.kind==='none') return [];
+  const pts=[]; // [pos, colorLeftOfPos]
+  const lo=r.lo, hi=r.hi;
+  const seq=[]; // build boundaries left to right
+  const L=[['rot',lo[0]],['orange',lo[1]],['gelb',lo[2]]].filter(x=>x[1]!=null&&x[1]!=='');
+  const H=[['gelb',hi[0]],['orange',hi[1]],['rot',hi[2]]].filter(x=>x[1]!=null&&x[1]!=='');
+  let prev=mn; const out=[];
+  L.forEach(([c,v])=>{const x=Math.max(mn,Math.min(mx,+v));out.push([c,Math.max(0,x-prev)]);prev=x;});
+  const firstHi=H.length?Math.max(prev,Math.min(mx,+H[0][1])):mx;
+  out.push(['grün',Math.max(0,firstHi-prev)]);prev=firstHi;
+  H.forEach(([c,v],i)=>{const nx=i+1<H.length?Math.max(prev,Math.min(mx,+H[i+1][1])):mx;out.push([c,Math.max(0,nx-prev)]);prev=nx;});
+  return out.map(([c,w])=>[c,w/span]);
+}
+function valid(m,r){
+  if(m.kind==='ordinal'||m.kind==='none') return '';
+  const n=a=>a.filter(v=>v!=null&&v!=='').map(Number);
+  const lo=n(r.lo), hi=n(r.hi);
+  for(let i=1;i<lo.length;i++) if(lo[i]<lo[i-1]) return 'Unten muss gelten: rot < orange < gelb';
+  for(let i=1;i<hi.length;i++) if(hi[i]<hi[i-1]) return 'Oben muss gelten: gelb < orange < rot';
+  if(lo.length&&hi.length&&lo[lo.length-1]>hi[0]) return 'Untere Grenzen liegen über den oberen';
+  return '';
+}
+function fmt(v){return (v==null||v==='')?'':String(v);}
+function inp(cls,val,lab,on){
+  return `<label>${lab}<input class="${cls}" inputmode="decimal" type="number" step="any" value="${fmt(val)}" data-f="${on}" aria-label="${lab}"></label>`;
+}
+function renderTable(){
+  const S=state[cur]; let html=`<div class="hrow"><span></span><span>Metrik</span><span>unten · zu wenig</span><span>Ampel</span><span>oben · zu viel</span><span>Alarm ab</span></div>`;
+  let lastG='';
+  Object.values(META).forEach(m=>{
+    const r=S[m.id];
+    if(m.group!==lastG){html+=`<div class="grp">${m.group}</div>`;lastG=m.group;}
+    const err=valid(m,r);
+    const b=bands(m,r).map(([c,w])=>`<span style="width:${(w*100).toFixed(2)}%;background:${COL[c]}"></span>`).join('');
+    let lo='',hi='',bar='';
+    if(m.kind==='ordinal'){
+      lo=`<div class="ord">mittel ist <select data-f="mittel" aria-label="Farbe bei mittel">${['gelb','orange','rot'].map(c=>`<option ${r.mittel===c?'selected':''}>${c}</option>`).join('')}</select></div>`;
+      hi=`<div class="ord">hoch ist <select data-f="hoch" aria-label="Farbe bei hoch">${['orange','rot'].map(c=>`<option ${r.hoch===c?'selected':''}>${c}</option>`).join('')}</select></div>`;
+      bar=`<div class="bar">${b}</div><div class="scale"><span>keins</span><span>mittel</span><span>hoch</span></div>`;
+    }else if(m.kind==='none'){
+      lo=`<span class="na">–</span>`;hi=`<span class="na">–</span>`;bar=`<span class="na">keine Ampel, nur Anzeige</span>`;
+    }else{
+      const showLo=m.kind!=='up', showHi=m.kind!=='down';
+      lo=showLo?`<div class="bounds">${inp('lr',r.lo[0],'rot &lt;','lo0')}${inp('lo',r.lo[1],'orange &lt;','lo1')}${inp('ly',r.lo[2],'gelb &lt;','lo2')}</div>`:`<span class="na">–</span>`;
+      hi=showHi?`<div class="bounds">${inp('ly',r.hi[0],'gelb &gt;','hi0')}${inp('lo',r.hi[1],'orange &gt;','hi1')}${inp('lr',r.hi[2],'rot &gt;','hi2')}</div>`:`<span class="na">–</span>`;
+      bar=`<div class="bar">${b}</div><div class="scale"><span>${m.scale[0]}</span><span>${m.scale[1]} ${m.unit}</span></div>${err?`<div class="err">${err}</div>`:''}`;
+    }
+    const canAlarm=m.alarmable&&m.kind!=='none';
+    const al=canAlarm?`<select data-f="alarm" aria-label="Alarm ab">${[['nie','Nie'],['gelb','Gelb'],['orange','Orange'],['rot','Rot']].map(([v,l])=>`<option value="${v}" ${r.alarm===v?'selected':''}>${l}</option>`).join('')}</select>`
+      :`<span class="na">${m.vorbote?'kein Alarm (Vorbote)':'kein Alarm'}</span>`;
+    html+=`<div class="mrow ${r.on?'':'off'}" data-m="${m.id}">
+      <div class="c-ck"><input type="checkbox" data-f="on" ${r.on?'checked':''} aria-label="${m.label} im Briefing"></div>
+      <div class="c-nm nm"><b>${m.label}</b><small>${[m.unit,m.hint].filter(Boolean).join(' · ')}</small></div>
+      <div class="c-lo">${lo}</div><div class="c-bar">${bar}</div><div class="c-hi">${hi}</div><div class="c-al">${al}</div></div>`;
+  });
+  elT.innerHTML=html;
+}
+function renderMeta(){
+  const v=V.find(x=>x[0]===cur);
+  const n=Object.values(state[cur]).filter(r=>r.on).length;
+  elTitle.textContent=v[1]+' · '+n+' Metriken im Briefing';
+  if(document.activeElement!==elN) elN.value=meta[cur].notiz||'';
+  elP.textContent=meta[cur].passt?'✓ Geprüft':'Vorlage passt';
+  elP.className='btn '+(meta[cur].passt?'done':'primary');
+}
+function renderAll(){renderTabs();renderTable();renderMeta();}
+
+elT.addEventListener('input',e=>{
+  const row=e.target.closest('.mrow'); if(!row) return;
+  const k=row.dataset.m, f=e.target.dataset.f, r=state[cur][k];
+  if(f==='on'){r.on=e.target.checked;}
+  else if(f==='alarm'||f==='mittel'||f==='hoch'){r[f]=e.target.value;}
+  else if(/^(lo|hi)\d$/.test(f)){const side=f.slice(0,2),i=+f[2];const v=e.target.value;r[side][i]=v===''?null:Number(v);}
+  else return;
+  meta[cur].passt=false;
+  // Nur die betroffene Zeile neu zeichnen, damit der Fokus im Eingabefeld bleibt
+  if(f==='on'){row.classList.toggle('off',!r.on);renderMeta();}
+  else if(/^(lo|hi)\d$/.test(f)||f==='mittel'||f==='hoch'){
+    const m=META[k];const bar=row.querySelector('.c-bar .bar');
+    if(bar) bar.innerHTML=bands(m,r).map(([c,w])=>`<span style="width:${(w*100).toFixed(2)}%;background:${COL[c]}"></span>`).join('');
+    const old=row.querySelector('.err'); if(old) old.remove();
+    const err=valid(m,r); if(err){const d2=document.createElement('div');d2.className='err';d2.textContent=err;row.querySelector('.c-bar').appendChild(d2);}
+  }
+  renderTabs();renderMeta();schedule(cur);
+});
+elN.addEventListener('input',()=>{meta[cur].notiz=elN.value;schedule(cur);});
+elP.addEventListener('click',()=>{meta[cur].passt=!meta[cur].passt;renderTabs();renderMeta();save(cur);});
+elR.addEventListener('click',()=>{state[cur]=defaults(cur);meta[cur].passt=false;renderAll();save(cur);});
+
+const timers={};
+function schedule(v){clearTimeout(timers[v]);elSt.textContent='Änderung …';elSt.classList.remove('saved');timers[v]=setTimeout(()=>save(v),900);}
+async function save(v){
+  if(!db){elSt.textContent='nur in dieser Ansicht, nicht gespeichert';return;}
+  elSt.textContent='speichert …';
+  try{
+    await db.doc('grenzwerte/'+v).set({werte:state[v],notiz:meta[v].notiz||'',passt:!!meta[v].passt,aktualisiert:new Date().toISOString()});
+    if(v===cur){elSt.textContent='gespeichert';elSt.classList.add('saved');}
+  }catch(e){elSt.textContent='nicht gespeichert: '+((e&&e.code)||'Fehler');}
+}
+
+renderAll();
+const to=setTimeout(()=>{if(!db) elSt.textContent='Speicher nicht erreichbar, Änderungen gelten nur hier';},10000);
+(async()=>{
+  try{
+    if(!window.claude||!window.claude.use){clearTimeout(to);elSt.textContent='Speicher nicht verfügbar';return;}
+    const d0=await window.claude.use('db'); clearTimeout(to);
+    if(!d0){elSt.textContent='Nicht angemeldet: Änderungen werden nicht gespeichert';return;}
+    db=d0; elSt.textContent='Speicher verbunden'; elSt.classList.add('saved');
+    const snap=await db.collection('grenzwerte').get();
+    snap.docs.forEach(doc=>{
+      const x=doc.data()||{}; if(!state[doc.id]) return;
+      if(x.werte&&typeof x.werte==='object'){
+        Object.keys(state[doc.id]).forEach(k=>{if(x.werte[k]&&typeof x.werte[k]==='object') state[doc.id][k]={...state[doc.id][k],...x.werte[k]};});
+      }
+      meta[doc.id]={notiz:typeof x.notiz==='string'?x.notiz:'',passt:!!x.passt};
+    });
+    renderAll();
+  }catch(e){clearTimeout(to);elSt.textContent='Speicher-Fehler: '+((e&&e.code)||'unbekannt');}
+})();
+})();
+</script>
+
+</body></html>

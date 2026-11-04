@@ -24,9 +24,16 @@ def get_config():
 
 @router.get("/templates")
 def get_templates() -> list[dict]:
-    """Return all weather activity templates."""
+    """Return all weather activity templates.
+
+    Issue #2792 S1a: zusaetzlich ``ampel`` je Vorlage (Grenzen, Gewitter,
+    ``alarm_ab``); die bisherigen Felder bleiben unveraendert.
+    """
+    import copy
+
+    from app.ampel_templates import AMPEL_TEMPLATES
     from app.metric_catalog import get_all_templates
-    return get_all_templates()
+    return [{**t, "ampel": copy.deepcopy(AMPEL_TEMPLATES[t["id"]])} for t in get_all_templates()]
 
 
 def sms_symbols_for(

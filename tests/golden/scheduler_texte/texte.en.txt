@@ -116,83 +116,83 @@ Created: 29 Oct 2026 05:00 (CET)
 Innsbruck
    Temperature Maximum: 14°C
    Wind: 12 km/h
+   Precipitation: 0.6 mm
+   Rain probability: 20%
+   Thunderstorm: –
+   Sunshine hours: 4.0h
+   Cloud cover: 40%
+   UV index: 2
+   Visibility: 9.0 km
+   Snow depth: -
+   Fresh snow: -
    Temperature Minimum: 4°C
    Wind gusts: 25 km/h
+   Freezing level: -
    Wind direction: -
    Feels-like temperature Minimum: -
    Feels-like temperature Maximum: -
    Low clouds: -
    Mid-level clouds: -
    High clouds: -
-   Precipitation: 0.6 mm
-   Rain probability: 20%
-   Thunderstorm: –
-   UV index: 2
-   Visibility: 9.0 km
-   Freezing level: -
    Humidity: -
    Dew point: -
    Air pressure: -
    Precipitation type: -
    Snow line: -
-   Sunshine hours: 4.0h
-   Cloud cover: 40%
-   Snow depth: -
-   Fresh snow: -
 
 Stubai
    Temperature Maximum: 14°C
    Wind: 12 km/h
+   Precipitation: 0.6 mm
+   Rain probability: 20%
+   Thunderstorm: –
+   Sunshine hours: 4.0h
+   Cloud cover: 40%
+   UV index: 2
+   Visibility: 9.0 km
+   Snow depth: -
+   Fresh snow: -
    Temperature Minimum: 4°C
    Wind gusts: 25 km/h
+   Freezing level: -
    Wind direction: -
    Feels-like temperature Minimum: -
    Feels-like temperature Maximum: -
    Low clouds: -
    Mid-level clouds: -
    High clouds: -
-   Precipitation: 0.6 mm
-   Rain probability: 20%
-   Thunderstorm: –
-   UV index: 2
-   Visibility: 9.0 km
-   Freezing level: -
    Humidity: -
    Dew point: -
    Air pressure: -
    Precipitation type: -
    Snow line: -
-   Sunshine hours: 4.0h
-   Cloud cover: 40%
-   Snow depth: -
-   Fresh snow: -
 
 Zillertal
    Temperature Maximum: 14°C
    Wind: 12 km/h
+   Precipitation: 0.6 mm
+   Rain probability: 20%
+   Thunderstorm: –
+   Sunshine hours: 4.0h
+   Cloud cover: 40%
+   UV index: 2
+   Visibility: 9.0 km
+   Snow depth: -
+   Fresh snow: -
    Temperature Minimum: 4°C
    Wind gusts: 25 km/h
+   Freezing level: -
    Wind direction: -
    Feels-like temperature Minimum: -
    Feels-like temperature Maximum: -
    Low clouds: -
    Mid-level clouds: -
    High clouds: -
-   Precipitation: 0.6 mm
-   Rain probability: 20%
-   Thunderstorm: –
-   UV index: 2
-   Visibility: 9.0 km
-   Freezing level: -
    Humidity: -
    Dew point: -
    Air pressure: -
    Precipitation type: -
    Snow line: -
-   Sunshine hours: 4.0h
-   Cloud cover: 40%
-   Snow depth: -
-   Fresh snow: -
 
 
 ── Reply commands ──

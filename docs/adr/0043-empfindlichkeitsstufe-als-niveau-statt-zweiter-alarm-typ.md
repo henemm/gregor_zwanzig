@@ -1,6 +1,6 @@
 # ADR-0043: Die Empfindlichkeitsstufe ist der einzige Alarm-Regler — bei Gefahrenstufen-Größen wirkt sie über das erreichte Niveau (löst ADR-0040 ab)
 
-- **Status:** Akzeptiert (PO-„go" 2026-08-02, erweitert 2026-08-03)
+- **Status:** Abgelöst durch [ADR-0106](0106-profil-ampel-einzige-bewertung.md) (2026-11-04, Epic #2791: „Alarm ab“ an der Profil-Ampel ersetzt die Empfindlichkeitsstufe; vorher Akzeptiert, PO-„go" 2026-08-02, erweitert 2026-08-03)
 - **Datum:** 2026-08-03
 - **Bezug:** Issue #1460 (Epic #1458 Scheibe 2, Teil 1), Spec `docs/specs/modules/rework_1460_t1_relevanzfilter.md`; **löst ADR-0040 ab**; bestätigt ADR-0009 (Alarme sind Abweichungs-Wächter) und ADR-0013 (`threshold` ist Δ-Sensitivität); berührt ADR-0016 (amtliche Warnungen als additiver Typ), ADR-0021 (geteilte `DeviationAlertEngine`)
 - **Ergänzt durch:** [ADR-0046](0046-alarm-kanal-schwelle.md) (ergänzt), [ADR-0090](0090-entwarnung-amtlicher-warnungen.md) (ergänzt)

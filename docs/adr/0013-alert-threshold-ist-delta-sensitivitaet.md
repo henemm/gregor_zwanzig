@@ -1,6 +1,6 @@
 # ADR-0013: Alert-Renderer — `threshold` ist die Δ-Sensitivitätsschwelle, kein Absolut-Referenzwert
 
-- **Status:** Akzeptiert
+- **Status:** Teilweise abgelöst durch [ADR-0106](0106-profil-ampel-einzige-bewertung.md) (2026-11-04: Auslösung über Stufenwechsel der Profil-Ampel; `threshold` bleibt als Sprung-Schwelle für den sehr großen Sprung innerhalb einer Stufe)
 - **Datum:** 2026-07-02
 - **Bezug:** GitHub-Issue #958 (Bündel #958/#980/#981/#982), `docs/specs/modules/fix_alert_bundle_958ff.md`, ADR-0009 (Alerts als Abweichungs-Wächter), ADR-0011 (ein Backend-Renderer)
 

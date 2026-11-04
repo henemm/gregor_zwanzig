@@ -30,6 +30,13 @@ import {
 	mergeAllCompareChannelActiveMetricsForSave,
 	type CompareChannelActiveMetrics
 } from '../shared/weather-metrics-tab/compareChannelMetricLayouts.ts';
+import { baueDiff, type KanalMap } from '../shared/alarme-tab/alertMetricChannels.ts';
+
+/** Issue #1895 S3b1: `{alert_metric_channels: Diff}` oder `{}` (kein Diff ⇒ Feld fehlt). */
+function kanalDiffFeld(basis: KanalMap | undefined, aktuell: KanalMap | undefined): { alert_metric_channels?: KanalMap } {
+	const diff = baueDiff(basis, aktuell);
+	return Object.keys(diff).length > 0 ? { alert_metric_channels: diff } : {};
+}
 
 export interface CompareEditorEdits {
 	name: string;
@@ -89,6 +96,8 @@ export interface CompareEditorEdits {
 	// Reiter), unabhängig von sendTelegram/sendSms/sendPremiumSms oben. Optional
 	// → rückwärtskompatibel (undefined = Feld nicht editiert → Round-Trip).
 	alertChannels?: { email: boolean; telegram: boolean; sms: boolean; premium_sms: boolean };
+	// Issue #1895 S3b1: Kanäle je Wettergröße; gesendet wird nur der Diff gegen `original`.
+	alertMetricChannels?: KanalMap;
 	// Issue #1232 Scheibe 2b: Zwei-Slot-Zeitplan + editierbare Laufzeit
 	// (VersandTab context="vergleich"). Optional → rückwärtskompatibel.
 	// endDate: undefined = unangetastet (Round-Trip), null = "bis auf Weiteres"
@@ -250,6 +259,11 @@ export function buildComparePresetSavePayload(
 		// Issue #2293 Scheibe S2: analoges Round-Trip-Prinzip für den Alarm-
 		// Kanal-Bestand (Alarme-Reiter) — unabhängig von den drei Feldern oben.
 		...(edits.alertChannels !== undefined ? { alert_channels: edits.alertChannels } : {}),
+		// Issue #1895 S3b1: Diff statt Vollmap (Server ersetzt je Schlüssel); kein Diff ⇒ `undefined`
+		// überdeckt den `...original`-Bestand, das Feld wird nicht gesendet.
+		...(edits.alertMetricChannels !== undefined
+			? { alert_metric_channels: kanalDiffFeld(original.alert_metric_channels, edits.alertMetricChannels).alert_metric_channels }
+			: {}),
 		// Issue #1232 Scheibe 2b: Zwei-Slot-Zeitplan + End-Datum-Lösch-Sentinel.
 		...(edits.morningEnabled !== undefined ? { morning_enabled: edits.morningEnabled } : {}),
 		...(edits.morningTime !== undefined ? { morning_time: toHHMMSS(edits.morningTime) } : {}),
@@ -371,6 +385,7 @@ export interface NewComparePresetFields {
 	// telegram:true, sms:false, premium_sms:false}`), damit `AlertChannels` beim
 	// Create nie `nil` ist.
 	alertChannels?: { email: boolean; telegram: boolean; sms: boolean; premium_sms: boolean };
+	alertMetricChannels?: KanalMap; // Issue #1895 S3b1
 	officialWarningsEnabled: boolean;
 	morningEnabled: boolean;
 	morningTime: string;
@@ -464,6 +479,7 @@ export function buildNewComparePresetPayload(fields: NewComparePresetFields): Re
 		// Issue #2518: Rueckfall ist der geteilte Neuanlage-Default (dieselbe Quelle
 		// wie der Alarme-Reiter), NICHT mehr aus den Briefing-Schaltern abgeleitet.
 		alert_channels: fields.alertChannels ?? newEntityAlertChannelDefault(),
+		...kanalDiffFeld({}, fields.alertMetricChannels),
 		// Issue #1258 S4 (AC-27/E3): unconditional wie die Geschwister-Booleans
 		// oben — Neuanlagen tragen immer official_warnings.enabled (F1-Default
 		// false), kein sources-Feld (FE schreibt sources nie).
@@ -588,6 +604,7 @@ export interface CompareFeldsatz {
 	officialWarningsEnabled: boolean; // Issue #1258
 	metricAlertLevels: Record<string, string>; // Issue #1170
 	channelThresholds: Record<string, string>; // Issue #1461 S3b-2b
+	alertMetricChannels: KanalMap; // Issue #1895 S3b1
 	telegramStyle: 'rich' | 'kurzform'; // Issue #1260 S5
 	alertCooldownMinutes: number | undefined;
 	alertQuietFrom: string | undefined;
@@ -632,6 +649,7 @@ export function compareFeldsatzStandard(): CompareFeldsatz {
 		officialWarningsEnabled: false,
 		metricAlertLevels: {},
 		channelThresholds: {},
+		alertMetricChannels: {},
 		telegramStyle: 'rich',
 		alertCooldownMinutes: undefined,
 		alertQuietFrom: undefined,
