@@ -82,5 +82,7 @@ export const WETTER_DISPLAY_KEYS = [
 	'outlook_metrics',
 	'outlook_metric_formats',
 	// Issue #1721: Schalter "Nacht-Stundentabelle in der Mail zeigen" (nur Trip).
-	'show_night_block'
+	'show_night_block',
+	// Issue #2792 S1a: Profil-Ampel, gesetzt beim Anwenden einer Vorlage.
+	'ampel'
 ] as const;

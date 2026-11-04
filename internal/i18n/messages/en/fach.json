@@ -21,6 +21,7 @@
   "fach.fehler.unknown_format": "The format was not recognized.",
   "fach.fehler.unsupported_url": "This address is not supported.",
   "fach.fehler.resolve_failed": "The lookup failed.",
+  "fach.fehler.ampel_ungueltig": "The traffic light is invalid: limits must increase on the upper side and decrease on the lower side.",
   "fach.resolver.bereich": "Coordinates are outside the valid range (lat ∈ [-90,90], lon ∈ [-180,180]).",
   "fach.resolver.decimal_parse": "Decimal coordinates could not be parsed.",
   "fach.resolver.decimal_unbekannt": "Could not recognize decimal coordinates.",

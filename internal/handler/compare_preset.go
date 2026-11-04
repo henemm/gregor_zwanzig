@@ -259,6 +259,10 @@ func CreateComparePresetHandler(s *store.Store) http.HandlerFunc {
 			WriteError(w, r, http.StatusBadRequest, "validation_error", i18n.Args{"detail": err.Error()})
 			return
 		}
+		// Issue #2792 S1a: ungueltige Profil-Ampel nie speichern.
+		if bailIf(w, r, displayConfigAmpelUngueltig(preset.DisplayConfig), http.StatusBadRequest, "ampel_ungueltig") {
+			return
+		}
 
 		// Issue #1395 S6: Sperre um den Schreibvorgang — erst hier moeglich, die
 		// ID entsteht oben im Handler (analog CreateTripHandler). Kein If-Match
@@ -418,6 +422,10 @@ func UpdateComparePresetHandler(s *store.Store) http.HandlerFunc {
 		bodyBytes, err := io.ReadAll(r.Body)
 		if err != nil {
 			WriteError(w, r, http.StatusBadRequest, "bad_request", nil)
+			return
+		}
+		// Issue #2792 S1a: ungueltige Profil-Ampel nie speichern.
+		if bailIf(w, r, patchAmpelUngueltig(bodyBytes), http.StatusBadRequest, "ampel_ungueltig") {
 			return
 		}
 		updated, err := applyComparePresetPatch(original, id, bodyBytes, time.Now().UTC())

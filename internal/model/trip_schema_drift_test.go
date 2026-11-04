@@ -235,3 +235,25 @@ func TestTripSchemaDrift_AllowlistIstExakt(t *testing.T) {
 		t.Errorf("Allowlist hat %d Eintraege, erwartet genau 2 (send_premium_sms, trip)", len(driftAllowlist))
 	}
 }
+
+// #2792 S1a: display_config.ampel (Profil-Ampel) ueberlebt den Go-Roundtrip
+// unveraendert — Go reicht display_config als Unterbaum durch. Python-Pendant:
+// test_display_config_ampel_ueberlebt_python_roundtrip.
+func TestTripSchemaDrift_DisplayConfigAmpelBleibtErhalten(t *testing.T) {
+	raw := driftFixture(t)
+	var in, out struct {
+		DisplayConfig map[string]interface{} `json:"display_config"`
+	}
+	if err := json.Unmarshal(raw, &in); err != nil {
+		t.Fatal(err)
+	}
+	if in.DisplayConfig["ampel"] == nil {
+		t.Fatal("Fixture ohne display_config.ampel macht diese Probe blind")
+	}
+	if err := json.Unmarshal(goRoundtrip(t, raw), &out); err != nil {
+		t.Fatal(err)
+	}
+	if !reflect.DeepEqual(out.DisplayConfig["ampel"], in.DisplayConfig["ampel"]) {
+		t.Fatalf("display_config.ampel nach Go-Roundtrip = %v", out.DisplayConfig["ampel"])
+	}
+}

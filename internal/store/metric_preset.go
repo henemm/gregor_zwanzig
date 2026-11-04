@@ -127,6 +127,11 @@ func migrateMetricPreset(rp map[string]interface{}) model.MetricPreset {
 		}
 		p.Metrics = append(p.Metrics, dm)
 	}
+	// Issue #2792 S1a: Profil-Ampel unveraendert durchreichen (sonst ginge sie
+	// beim naechsten Speichern verloren). Fehlt sie: nil = Vorlage "allgemein".
+	if a, ok := rp["ampel"].(map[string]interface{}); ok {
+		p.Ampel = a
+	}
 	return p
 }
 

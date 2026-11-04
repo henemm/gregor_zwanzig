@@ -34,6 +34,8 @@ type createPresetRequest struct {
 	IsDefault   bool            `json:"is_default"`
 	Metrics     json.RawMessage `json:"metrics"`
 	FriendlyIDs []string        `json:"friendly_ids"`
+	// Issue #2792 S1a: Profil-Ampel samt alarm_ab (optional).
+	Ampel map[string]interface{} `json:"ampel,omitempty"`
 }
 
 func newPresetID() string {
@@ -147,6 +149,9 @@ func CreateMetricPresetHandler(s *store.Store) http.HandlerFunc {
 			WriteError(w, r, http.StatusBadRequest, "name_required", nil)
 			return
 		}
+		if bailIf(w, r, req.Ampel != nil && !validateAmpel(req.Ampel), http.StatusBadRequest, "ampel_ungueltig") {
+			return
+		}
 
 		defer s.LockMetricPresets()() // #2158: Lesen+Schreiben unter einer Sperre
 		presets, err := s.LoadMetricPresets()
@@ -178,6 +183,7 @@ func CreateMetricPresetHandler(s *store.Store) http.HandlerFunc {
 			IsDefault:   req.IsDefault,
 			Metrics:     normalizeMetricsPayload(req.Metrics, req.FriendlyIDs),
 			CreatedAt:   time.Now().UTC(),
+			Ampel:       req.Ampel,
 		}
 		presets = append(presets, preset)
 
@@ -258,9 +264,14 @@ func PatchMetricPresetHandler(s *store.Store) http.HandlerFunc {
 			Description *string                `json:"description,omitempty"`
 			IsDefault   *bool                  `json:"is_default,omitempty"`
 			Metrics     *[]model.DisplayMetric `json:"metrics,omitempty"`
+			// Issue #2792 S1a: ganzer Unterbaum (Spec §1), nil = unveraendert.
+			Ampel *map[string]interface{} `json:"ampel,omitempty"`
 		}
 		if err := json.NewDecoder(r.Body).Decode(&patch); err != nil {
 			WriteError(w, r, http.StatusBadRequest, "bad_request", nil)
+			return
+		}
+		if bailIf(w, r, patch.Ampel != nil && !validateAmpel(*patch.Ampel), http.StatusBadRequest, "ampel_ungueltig") {
 			return
 		}
 
@@ -276,6 +287,9 @@ func PatchMetricPresetHandler(s *store.Store) http.HandlerFunc {
 		}
 		if patch.Metrics != nil {
 			existing.Metrics = *patch.Metrics
+		}
+		if patch.Ampel != nil {
+			existing.Ampel = *patch.Ampel
 		}
 
 		if patch.IsDefault != nil && *patch.IsDefault {

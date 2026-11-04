@@ -365,6 +365,8 @@ export interface MetricPreset {
 	is_default: boolean;
 	metrics: MetricPresetMetric[];
 	created_at: string;
+	/** Issue #2792 S1a: Profil-Ampel samt alarm_ab; fehlt = Vorlage „allgemein". */
+	ampel?: Record<string, unknown> | null;
 }
 
 export interface Trip {

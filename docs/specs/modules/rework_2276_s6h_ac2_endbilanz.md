@@ -109,8 +109,8 @@ Diese Scheibe:
 | `AlarmeTab.svelte:601` | Beispielwarnung: Ort- statt Etappen-Subjekt, zwei verschiedene Komponenten |
 | `VersandTab.svelte:370` | Markup-Baum Trip (`VTLaufzeitRoute`, Mehrtages-Trend, Premium-SMS) |
 | `VersandTab.svelte:406` | Markup-Baum Vergleich (`VTLaufzeitVergleich`, kein Mehrtages-Trend, eigener Premium-SMS-Schalter seit #2293 S2) — zwei komplette, unterschiedliche Komponenten-Bäume |
-| `WeatherMetricsTab.svelte:1457` | Metrik-Markup-Baum (#1311 C1: Vergleich-Grundauswahl) |
-| `WeatherMetricsTab.svelte:2042` | Schalter „Nacht-Stundentabelle in der Mail zeigen“ nur im Trip (#1721): die Nacht-Stundentabelle gibt es nur in der Trip-Mail, der Ortsvergleich hat keinen Nachtblock (Pendant-Sperre, Spec `fix_1721_nachtausgabe.md`) |
+| `WeatherMetricsTab.svelte:1467` | Metrik-Markup-Baum (#1311 C1: Vergleich-Grundauswahl) |
+| `WeatherMetricsTab.svelte:2052` | Schalter „Nacht-Stundentabelle in der Mail zeigen“ nur im Trip (#1721): die Nacht-Stundentabelle gibt es nur in der Trip-Mail, der Ortsvergleich hat keinen Nachtblock (Pendant-Sperre, Spec `fix_1721_nachtausgabe.md`) |
 | `versand-tab/vtBriefingChannelsText.ts:22` | SMS-Zeichenbudget: Trip 160 / Vergleich 153 (unterschiedliches Layout) |
 | `versand-tab/vtBriefingChannelsText.ts:29` | Einleitungstext: Etappen-Tabelle vs. Orts-Tabelle — inhaltlich verschiedene Datenform |
 | `versand-tab/VTSchedulePlan.svelte:57` | `isRoute`-Ableitung — Mehrtages-Trend-Karte existiert nur im Trip |
@@ -174,6 +174,9 @@ Abgleich der `context ===`-Zweige gegen die Soll-Liste bestanden, kein Zweig ent
   Trip) neu als FACHLICH; die fünf übrigen WeatherMetricsTab-Einträge nur verschoben
   (581→594, 596→609, 625→638, 638→651, 1429→1457), Bedingungstext unverändert.
   FACHLICH 27 → 28, Summe 47 → 48 (Ratsche und Doc-Compliance-Test nachgezogen).
+- 2026-11-04: #2792 S1a — `WeatherMetricsTab.svelte` 1457→1467 und 2042→2052 nur verschoben
+  (Ampel-Zustand beim Anwenden einer Vorlage im Script-Teil), Bedingungstext unverändert,
+  Summe bleibt 48.
 - 2026-10-05: #2287 (AC-11) — `alarme-tab/alarmeTabSections.ts:42` (`wertebereicheTabId`) entfällt mit der
   Funktion; DARSTELLUNG 6 → 5, Summe 47 → 46 (Ratsche und Doc-Compliance-Test nachgezogen).
 - 2026-09-25: Initial spec created (Scheibe S6h von #2276, Epic #2345, Fast Track)
