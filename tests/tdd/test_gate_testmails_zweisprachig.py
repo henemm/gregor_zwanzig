@@ -79,16 +79,20 @@ def draht(monkeypatch):
     return eingeliefert
 
 
-def _sende(draht, capsys, *argv) -> tuple[list, str]:
+def _sende(draht, capsys, *argv, herkunft=None) -> tuple[list, str]:
+    """``herkunft``: Test-Seam des Skripts (#2813); --lang en geht nur aus Staging."""
     vorher = len(draht)
-    assert _skript().main(list(argv)) == 0
+    kw = {} if herkunft is None else {"herkunft": herkunft}
+    assert _skript().main(list(argv), **kw) == 0
     token = re.search(r"Token fuer diesen Lauf: (\w+)", capsys.readouterr().out).group(1)
     return draht[vorher:], token
 
 
 @pytest.mark.parametrize("pfad", list(PFADE))
 def test_lang_en_an_subadresse_und_validator_besteht(draht, capsys, tmp_path, pfad):
-    mails, _ = _sende(draht, capsys, "--lang", "en", "--only", pfad)
+    # #2813: aus einem Worktree bricht --lang en ab; hier die Staging-Herkunft.
+    mails, _ = _sende(draht, capsys, "--lang", "en", "--only", pfad,
+                      herkunft=lambda _root: "staging")
     assert len(mails) == 1
     empfaenger, roh = mails[0]
     msg = email.message_from_string(roh)

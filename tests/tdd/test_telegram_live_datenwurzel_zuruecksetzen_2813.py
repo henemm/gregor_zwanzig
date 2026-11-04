@@ -56,6 +56,70 @@ def test_ohne_vorbestand_auch_wenn_der_test_fehlschlaegt(tmp_path):
     assert not (tmp_path / "users" / fx.TEST_USER_ID).exists()
 
 
+def test_ohne_users_vorher_bleibt_kein_leeres_users_zurueck(tmp_path):
+    """Kein ``users/`` vorher => keines nachher (kein leerer Rest im echten Baum)."""
+    assert not (tmp_path / "users").exists()
+    with fx.tg_live_datenwurzel_zuruecksetzen(str(tmp_path)):
+        (tmp_path / "users" / fx.TEST_USER_ID).mkdir(parents=True)
+        (tmp_path / "users" / fx.TEST_USER_ID / "user.json").write_text("{}", encoding="utf-8")
+    assert not (tmp_path / "users").exists()
+
+
+_DUMMY_LIVE_TESTS = '''
+import pytest
+from pathlib import Path
+
+from tests.tdd._telegram_live_fixture import (  # noqa: F401
+    tg_live_datenwurzel_zuruecksetzen_autouse,
+)
+
+SPUR = Path("data") / "users" / "tg-live-e2e"
+
+
+@pytest.mark.real_data_root
+def test_a_live_test_legt_spur_an():
+    (SPUR / "trips").mkdir(parents=True)
+    (SPUR / "user.json").write_text("{}", encoding="utf-8")
+    assert SPUR.exists()
+
+
+def test_b_danach_ist_die_spur_weg():
+    assert not SPUR.exists(), "real_data_root-Spur wurde nicht zurueckgesetzt"
+'''
+
+
+def test_autouse_fixture_raeumt_nach_real_data_root_test_wirklich_auf(tmp_path):
+    """F001: die GEMEINSAME autouse-Fixture in einem echten pytest-Lauf (Subprozess,
+    CWD = tmp_path, also ``data`` = tmp-Wurzel): ein ``real_data_root``-Test legt
+    ``data/users/tg-live-e2e`` an, der naechste Test und der Aufrufer sehen keine Spur."""
+    import subprocess
+    import sys
+
+    (tmp_path / "pytest.ini").write_text(
+        "[pytest]\nmarkers =\n    real_data_root: Test\n", encoding="utf-8")
+    (tmp_path / "test_dummy_live.py").write_text(_DUMMY_LIVE_TESTS, encoding="utf-8")
+    env = {**__import__("os").environ, "PYTHONPATH": str(ROOT)}
+    lauf = subprocess.run(
+        [sys.executable, "-m", "pytest", "-p", "no:cacheprovider", "-q",
+         "test_dummy_live.py"],
+        cwd=tmp_path, env=env, capture_output=True, text=True, timeout=120,
+    )
+    assert lauf.returncode == 0, lauf.stdout + lauf.stderr
+    assert "2 passed" in lauf.stdout, lauf.stdout
+    assert not (tmp_path / "data" / "users" / fx.TEST_USER_ID).exists()
+
+
+def test_beide_live_testdateien_registrieren_die_gemeinsame_fixture():
+    """F001 (Verdrahtung): pytest registriert Fixtures aus dem Modul-Namensraum --
+    fehlt der Import, laeuft der Live-Test ohne Zuruecksetzen."""
+    import importlib
+
+    for name in ("test_issue_686_telegram_functional_live", "test_telegram_live_zweisprachig"):
+        mod = importlib.import_module(f"tests.tdd.{name}")
+        assert getattr(mod, "tg_live_datenwurzel_zuruecksetzen_autouse", None) \
+            is fx.tg_live_datenwurzel_zuruecksetzen_autouse, name
+
+
 def test_mit_vorbestand_wird_der_urspruengliche_inhalt_wiederhergestellt(tmp_path):
     """AC-9: Datei veraendert, Neues angelegt, Vorbestand geloescht -> alles wie vorher."""
     spur = tmp_path / "users" / fx.TEST_USER_ID

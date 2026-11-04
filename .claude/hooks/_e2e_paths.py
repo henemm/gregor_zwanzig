@@ -63,6 +63,31 @@ def mail_waehlbar(headers, lang: str = "de", to_contains=None) -> bool:
     return mail_passt_zu_sprache(headers, lang)
 
 
+def betreff_text(headers) -> str:
+    """Betreff RFC-2047-dekodiert (fail-soft: Rohwert)."""
+    from email.header import decode_header, make_header
+    roh = headers.get("Subject") or ""
+    try:
+        return str(make_header(decode_header(str(roh))))
+    except Exception:
+        return str(roh)
+
+
+def betreff_fragment_pruefen(fragment) -> None:
+    """#2813: ein leeres Fragment steckt in JEDEM Betreff -> ValueError."""
+    if fragment is not None and not str(fragment).strip():
+        raise ValueError("subject_contains ist leer -- ein leeres Fragment "
+                         "schaltete den Betreff-Filter still ab")
+
+
+def betreff_enthaelt(headers, fragment) -> bool:
+    """#2813: dekodierter Betreff enthaelt ``fragment`` (None = kein Filter)."""
+    if fragment is None:
+        return True
+    betreff_fragment_pruefen(fragment)
+    return fragment in betreff_text(headers)
+
+
 def sprach_argumente(parser) -> None:
     """``--lang``/``--to-contains`` fuer die Validator-CLIs (IMAP-Default: de)."""
     parser.add_argument("--lang", choices=ERFORDERLICHE_SPRACHEN, default=None,

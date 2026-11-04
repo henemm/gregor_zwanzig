@@ -245,17 +245,21 @@ def _write_validation_log(success: bool, errors: list, warnings: list | None = N
         pass  # fail-soft
 
 
-def _message_matches(headers, lang: str = "de", to_contains: str | None = None) -> bool:
-    """Praedikat der Mail-Auswahl: Typ radar-alert, Sprache UND Empfaenger (#2681)."""
+def _message_matches(headers, lang: str = "de", to_contains: str | None = None,
+                     subject_contains: str | None = None) -> bool:
+    """Praedikat der Mail-Auswahl: Typ radar-alert, Sprache, Empfaenger, Betreff (#2681, #2813)."""
     return (headers.get("X-GZ-Mail-Type") == "radar-alert"
-            and _e2e_paths.mail_waehlbar(headers, lang, to_contains))
+            and _e2e_paths.mail_waehlbar(headers, lang, to_contains)
+            and _e2e_paths.betreff_enthaelt(headers, subject_contains))
 
 
 def fetch_latest_message(max_scan: int = 50, lang: str = "de",
-                         to_contains: str | None = None, imap=None) -> Message:
+                         to_contains: str | None = None, imap=None,
+                         subject_contains: str | None = None) -> Message:
     """Holt die neueste passende radar-alert-Mail aus dem Test-Postfach.
 
     ``imap``: fertige, angemeldete Verbindung (Test-Seam, #2681)."""
+    _e2e_paths.betreff_fragment_pruefen(subject_contains)
     own_connection = imap is None
     if own_connection:
         imap = _open_test_imap()
@@ -269,13 +273,14 @@ def fetch_latest_message(max_scan: int = 50, lang: str = "de",
         for mid in reversed(all_ids[-max_scan:]):
             _, hdr_data = imap.fetch(mid, "(BODY.PEEK[HEADER])")
             headers = email.message_from_bytes(hdr_data[0][1])
-            if _message_matches(headers, lang, to_contains):
+            if _message_matches(headers, lang, to_contains, subject_contains):
                 _, msg_data = imap.fetch(mid, "(RFC822)")
                 return email.message_from_bytes(msg_data[0][1])
 
         raise ValueError(
             f"Keine passende radar-alert-Mail gefunden (lang={lang!r}, "
-            f"to_contains={to_contains!r}, scan={max_scan} Mails)"
+            f"to_contains={to_contains!r}, subject_contains={subject_contains!r}, "
+            f"scan={max_scan} Mails)"
         )
     finally:
         if own_connection:
@@ -312,6 +317,8 @@ def main() -> None:
     parser.add_argument("--eml", metavar="PFAD", default=None,
                         help="Mail aus dieser .eml-Datei pruefen statt per IMAP (#2663)")
     _e2e_paths.sprach_argumente(parser)
+    parser.add_argument("--subject-contains", default=None,
+                        help="nur Mails, deren dekodierter Betreff diesen Text enthaelt (#2813)")
     args = parser.parse_args()
 
     print("=" * 70)
@@ -324,7 +331,8 @@ def main() -> None:
         if args.eml:  # #2663: Mail aus Datei statt IMAP
             msg = email.message_from_bytes(Path(args.eml).read_bytes())
         else:
-            msg = fetch_latest_message(lang=args.lang or "de", to_contains=args.to_contains)
+            msg = fetch_latest_message(lang=args.lang or "de", to_contains=args.to_contains,
+                                       subject_contains=args.subject_contains)
         success, errors = validate_message(msg, warnungen=warnungen)
         if args.eml:  # #2681: --lang/--to-contains gelten auch fuer die Datei
             auswahl = _e2e_paths.eml_auswahl_fehler(msg, args.lang, args.to_contains)
