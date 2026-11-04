@@ -782,6 +782,27 @@ Details (Regeltabelle, Adversary-Findings, AC-Zuordnung): Spec
 
 ---
 
+## Profil-Ampel aus Bestandsdaten (#2792 S1b)
+
+Ergänzt je Trip/Vergleich unter `<root>/<uid>/briefings/*.json` `display_config.ampel`
+(Vorlage aus `preset_name` bzw. `profil`, grünes Fenster aus `corridors` mit `mark`,
+Rückfall `ideal_ranges`), setzt `horizons` auf alle Tage und schaltet bei CAPE-Auswahl
+Gewitter an. Nur berichtet, nie verändert: Δ-Bereiche (`notify` ohne `mark`),
+`sms_threshold`, eigene Vorlagen (`metric_presets.json`); Alarmfelder bleiben unberührt.
+Reihenfolge: nach S1a (Lese-Code), vor S1c. Je Host, Probelauf zuerst:
+
+```bash
+uv run python3 scripts/migrate_2792_profil_ampel.py --root data/users             # Probelauf (Default)
+uv run python3 scripts/migrate_2792_profil_ampel.py --root data/users --execute   # tar.gz je Nutzer + Schreiben
+```
+
+Sicherung `.backups/migrate-2792-<uid>-<timestamp>.tar.gz` (Briefings + `metric_presets.json`).
+Wiederholbar: vorhandene Ampel-Teile werden nie überschrieben, unveränderte Dateien nicht
+geschrieben. Regeln (Klemm-Regel, Metrik-Zuordnung): Spec
+`docs/specs/modules/feat_2792_s1_profil_ampel.md` §4.
+
+---
+
 ## E-Mail-Bestätigung rückwirkend nachtragen (#2304, S1 aus #2271/#2146)
 
 Einmaliger Nachtrag-Lauf, der Bestandskonten ohne `email_verified_at` (angelegt, bevor der
