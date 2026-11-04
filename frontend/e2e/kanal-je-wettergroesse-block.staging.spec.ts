@@ -297,11 +297,7 @@ for (const kind of ['route', 'vergleich'] as const) {
 			const { key, zeile } = await blockPruefen(page, block);
 			await eigeneWahlMitTelegram(page, zeile, key);
 
-			// Abschluss: Trip „Speichern", Vergleich über Versand → „Briefing aktivieren".
-			if (kind === 'vergleich') {
-				if (l.mobil) await ANLEGE_SEL.vergleich.reiter(page, 'versand', true).click({ force: true });
-				else await page.getByTestId('compare-editor-continue-versand').click();
-			}
+			// Abschluss: Trip „Speichern", Vergleich „Briefing aktivieren" direkt nach Alarme (kein Versand-Schritt seit #1743).
 			const abschluss = ANLEGE_SEL[kind].abschluss(page, l.mobil);
 			await expect(abschluss, 'Abschluss-Knopf bleibt gesperrt').toBeEnabled({ timeout: 20_000 });
 			const antwort = page.waitForResponse(
