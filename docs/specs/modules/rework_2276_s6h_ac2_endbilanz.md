@@ -98,15 +98,15 @@ Diese Scheibe:
   Zählbefehl) und prüft, dass die drei Kategorie-Summen 27/6/14 ergeben.
   Verhindert, dass diese Dokumentation und die Ratsche künftig auseinanderlaufen.
 
-## Anhang: AC-2-Endbilanz — alle 48 Ratschen-Einträge (Stand `3cece096`, S6g live; seit #2287 ohne `alarmeTabSections.ts:42`; seit #1743 mit `WetterMetrikenVersandPanel.svelte:66`; seit #1721 mit `WeatherMetricsTab.svelte:2042`; AlarmeTab-Zeilen seit #1895 S3b1 nachgemessen)
+## Anhang: AC-2-Endbilanz — alle 48 Ratschen-Einträge (Stand `3cece096`, S6g live; seit #2287 ohne `alarmeTabSections.ts:42`; seit #1743 mit `WetterMetrikenVersandPanel.svelte:66`; seit #1721 mit `WeatherMetricsTab.svelte:2042`; AlarmeTab-Zeilen seit #1895 S3b1 und S3b2 nachgemessen)
 
 ### FACHLICH (28 — echter Sachunterschied, bleibt dauerhaft)
 
 | Datei:Zeile | Grund |
 |---|---|
-| `AlarmeTab.svelte:267` | Ableitung `unalertableSelectedMetricNames` — route liefert strukturell immer `[]` (#1435 AC-7) |
-| `AlarmeTab.svelte:550` | Anzeige-Zwilling der fachlichen Zusicherung aus `:267` |
-| `AlarmeTab.svelte:601` | Beispielwarnung: Ort- statt Etappen-Subjekt, zwei verschiedene Komponenten |
+| `AlarmeTab.svelte:268` | Ableitung `unalertableSelectedMetricNames` — route liefert strukturell immer `[]` (#1435 AC-7) |
+| `AlarmeTab.svelte:553` | Anzeige-Zwilling der fachlichen Zusicherung aus `:268` |
+| `AlarmeTab.svelte:604` | Beispielwarnung: Ort- statt Etappen-Subjekt, zwei verschiedene Komponenten |
 | `VersandTab.svelte:370` | Markup-Baum Trip (`VTLaufzeitRoute`, Mehrtages-Trend, Premium-SMS) |
 | `VersandTab.svelte:406` | Markup-Baum Vergleich (`VTLaufzeitVergleich`, kein Mehrtages-Trend, eigener Premium-SMS-Schalter seit #2293 S2) — zwei komplette, unterschiedliche Komponenten-Bäume |
 | `WeatherMetricsTab.svelte:1467` | Metrik-Markup-Baum (#1311 C1: Vergleich-Grundauswahl) |
@@ -137,7 +137,7 @@ Diese Scheibe:
 
 | Datei:Zeile | Grund |
 |---|---|
-| `AlarmeTab.svelte:568` | Kurzstil-Schalter — im Trip steht derselbe Schalter im Versand-Reiter (#1260 S5), reine Platzierung |
+| `AlarmeTab.svelte:571` | Kurzstil-Schalter — im Trip steht derselbe Schalter im Versand-Reiter (#1260 S5), reine Platzierung |
 | `corridor-editor/CorridorEditor.svelte:429` | Überschrift-/Lauftext-Wahl, keine Datenverzweigung |
 | `corridor-editor/CorridorEditorMobile.svelte:369` | Mobil-Zwilling von `CorridorEditor.svelte:429` |
 | `versand-tab/VTSchedulePlan.svelte:84` | Erklärtext „wie beim Trip" — reine Zusatzerklärung, keine Funktionsänderung |

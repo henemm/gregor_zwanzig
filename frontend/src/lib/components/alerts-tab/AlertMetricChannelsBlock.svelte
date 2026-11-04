@@ -8,10 +8,14 @@
 	import ChannelToggle from '$lib/components/shared/ChannelToggle.svelte';
 	import { alertMetricLabel } from '$lib/utils/alertMetricLabels';
 	import type { PremiumSmsAlarmGate } from '../shared/alarme-tab/premiumSmsAlarmGate.ts';
+	import type { ConnectionProfile } from '../shared/versand-tab/channelConnectionStatus.ts';
+	import { CHANNEL_THRESHOLD_KEYS, type AlertChannelThresholdState } from '../shared/alarme-tab/alertChannelState.ts';
 	import {
 		KANAELE,
 		KANAL_NAMEN,
 		hinweise,
+		kanaeleMitSchwelle,
+		kanaeleOhneEmpfaenger,
 		kanalZeilen,
 		ladeKanalSchluessel,
 		normalisiereEintrag,
@@ -27,9 +31,13 @@
 		premiumSmsGate: PremiumSmsAlarmGate;
 		/** Testhaken (Muster profileOverride): Objekt = Antwort, null = Abruf gescheitert. */
 		schluesselOverride?: KanalSchluessel | null;
+		/** S3b2: Profil des angemeldeten Nutzers; null/undefined = unbekannt (kein Empfänger-Hinweis). */
+		profil?: ConnectionProfile | null;
+		/** S3b2: Kanal-Schwellen (Alert-Kanäle), nur für den Schwellen-Hinweis gelesen. */
+		schwellen?: AlertChannelThresholdState;
 		onChange: (schluessel: string, eintrag: KanalEintrag) => void;
 	}
-	let { aktiveMetriken, eintraege, aboKanaele, premiumSmsGate, schluesselOverride, onChange }: Props = $props();
+	let { aktiveMetriken, eintraege, aboKanaele, premiumSmsGate, schluesselOverride, profil, schwellen, onChange }: Props = $props();
 
 	// undefined = lädt, null = nicht verfügbar (F3: nichts raten, nichts schreiben).
 	let antwort = $state<KanalSchluessel | null | undefined>(untrack(() => schluesselOverride));
@@ -97,6 +105,17 @@
 					{$t('alarme.kanaele.nicht_im_abo', { kanaele: aus.map((a) => KANAL_NAMEN[a]).join(', ') })}
 				</p>
 			{/if}
+			<!-- S3b2: nur Anzeige, nur bei eigener Wahl; sperrt nichts (AC-72). -->
+			{#each kanaeleOhneEmpfaenger(eintrag, profil) as kanal (kanal)}
+				<p class="amc-hinweis" data-testid="kanal-hinweis-kein-empfaenger-{kanal}">
+					{$t('alarme.kanaele.kein_empfaenger', { kanal: KANAL_NAMEN[kanal] })}
+				</p>
+			{/each}
+			{#each kanaeleMitSchwelle(eintrag, schwellen) as h (h.kanal)}
+				<p class="amc-hinweis" data-testid="kanal-hinweis-schwelle-{h.kanal}">
+					{$t('alarme.kanaele.schwelle_hinweis', { kanal: KANAL_NAMEN[h.kanal], schwelle: $t(CHANNEL_THRESHOLD_KEYS[h.schwelle]) })}
+				</p>
+			{/each}
 			{#if metrikenVon(k).includes('wind_change')}
 				<p class="amc-hinweis" data-testid="kanal-hinweis-wind-{k}">{$t('alarme.kanaele.wind_hinweis')}</p>
 			{/if}

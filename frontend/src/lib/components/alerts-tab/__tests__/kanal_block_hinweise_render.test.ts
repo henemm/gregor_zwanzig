@@ -10,7 +10,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import path from 'node:path';
 import { derivePremiumSmsAlarmGate } from '../../shared/alarme-tab/premiumSmsAlarmGate.ts';
 import { locale, trFor } from '../../../i18n/index.ts';
-import { umgebungFuer } from '../../shared/__tests__/svelteInstanzPruefstand.ts';
+import { umgebungFuer, findeKomponenten, attributAusdruck, werte, type Knoten } from '../../shared/__tests__/svelteInstanzPruefstand.ts';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const FRONTEND = path.resolve(HERE, '../../../../..');
@@ -105,11 +105,20 @@ test('AC-72: Hinweis sperrt nichts — Schalter bedienbar, Eintrag unverändert'
 	assert.notEqual(i, -1);
 	assert.doesNotMatch(h.slice(i, h.indexOf('</div>', i)), /\sdisabled/);
 	const rufe: unknown[][] = [];
-	const { u } = await umgebungFuer(path.join(HERE, '..', 'AlertMetricChannelsBlock.svelte'), props({
+	const { u, ast, quelle } = await umgebungFuer(path.join(HERE, '..', 'AlertMetricChannelsBlock.svelte'), props({
 		...over, onChange: (...a: unknown[]) => rufe.push(a)
 	}));
+	assert.deepStrictEqual(u.kanaeleOhneEmpfaenger(u.eintraege.thunder, u.profil), ['telegram'], 'Hinweis muss in der Umgebung ausgelöst sein');
 	u.kanalSetzen('thunder', 'email', true);
 	assert.deepStrictEqual(rufe, [['thunder', { ...TG, email: true }]]);
+	// Fix-Loop 1 (F002): derselbe Schaltvorgang über den ECHTEN onchange-Ausdruck des Kanal-Schalters im
+	// Markup — ein Hinweis darf den Aufruf auch dort nicht unterdrücken.
+	const schalter = findeKomponenten(ast, 'ChannelToggle').filter((e) =>
+		(e.attributes as Knoten[]).some((a) => a.name === 'testid' && quelle.slice(a.start, a.end).includes('kanal-schalter-')));
+	assert.strictEqual(schalter.length, 1, 'Kanal-Schalter-Einbettung nicht gefunden');
+	const onchange = werte(attributAusdruck(schalter[0], quelle, 'onchange')!, { ...u, k: 'thunder', kanal: 'sms' }) as (an: boolean) => void;
+	onchange(true);
+	assert.deepStrictEqual(rufe.at(-1), ['thunder', { ...TG, sms: true }], 'Schalten bei sichtbarem Hinweis muss onChange auslösen');
 });
 
 test('AC-73: zwei Nutzer — A (Chat) ohne, B (kein Chat) mit Hinweis', () => {

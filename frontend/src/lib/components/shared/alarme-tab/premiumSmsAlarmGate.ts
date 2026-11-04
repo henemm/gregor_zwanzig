@@ -5,10 +5,12 @@
 // `premiumSmsChannelState()` (shared/versand-tab/): der dortige Helfer
 // verrechnet zusaetzlich die Frische der gelernten Rueckadresse
 // (`premium_sms_reply_state`) zu `disabled`. Fuer den Versand-Reiter ist das
-// richtig; im Alarmpfad stellt das Backend diese Frage bewusst NICHT
-// (trip_alert.py:847-855, notification_service.py:1499) — volle
-// Wiederverwendung wuerde also einen Haken sperren, den das Backend
-// anstandslos bedient (D2).
+// richtig. Im Alarmpfad gilt (berichtigt #1895 S3b2): auch dort prueft der
+// Versand die Rueckadresse (`_premium_sms_output()` →
+// `PremiumSmsRecipient.for_user` → `check_reply_address`) und verwirft bei
+// fehlender oder veralteter Adresse. Die Frische wird im Alarme-Reiter aber
+// als Hinweis gezeigt (`kanaeleOhneEmpfaenger`, AlertMetricChannelsBlock),
+// nicht als Sperre — die Auswahl bleibt bedienbar (D2).
 //
 // Einziger Eingang ist deshalb `premium_sms_allowed` (Tarif-Gate,
 // model.PremiumSmsAllowed / user_tier.py:33). Die Funktion nimmt genau EIN
