@@ -3,7 +3,7 @@
 - **Status:** Abgelöst durch [ADR-0043](0043-empfindlichkeitsstufe-als-niveau-statt-zweiter-alarm-typ.md) (2026-08-03, Issue #1460)
 - **Datum:** 2026-08-01
 - **Bezug:** GitHub-Issue #1444 (Scheibe 1), Spec `docs/specs/modules/feat_1444_s1_schwellen_alarm.md`; berührt ADR-0009 (Alerts als Abweichungs-Wächter), ADR-0013 (`threshold` ist Δ-Sensitivität), ADR-0016 (amtliche Warnungen als additiver Typ), ADR-0021 (geteilte `DeviationAlertEngine`)
-- **Berührt durch:** [ADR-0106](0106-profil-ampel-einzige-bewertung.md) (Vorgeschlagen 2026-11-03: Wertebereiche/`corridors` entfallen ganz, die Profil-Ampel ist die einzige Bewertung; dieses ADR bleibt abgelöst)
+- **Ergänzt durch:** [ADR-0106](0106-profil-ampel-einzige-bewertung.md) (Akzeptiert 2026-11-04: Wertebereiche/`corridors` entfallen ganz, die Profil-Ampel ist die einzige Bewertung; dieses ADR bleibt abgelöst durch ADR-0043, das seinerseits durch ADR-0106 abgelöst ist)
 
 ## Kontext
 
