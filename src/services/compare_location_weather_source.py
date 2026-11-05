@@ -120,7 +120,7 @@ class CompareLocationWeatherSource:
                 "Zeitpunkt liesse offen, in welcher Zeitzone er gilt."
             )
         else:
-            now = now.astimezone(timezone.utc)
+            now = to_utc(now)
         if target_date is not None and tage_ab_ortstag is not None:
             raise ValueError(
                 "CompareLocationWeatherSource.fetch: `target_date` (absoluter "
