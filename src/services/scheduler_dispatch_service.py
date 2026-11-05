@@ -1271,6 +1271,13 @@ def _write_compare_alert_snapshots(
     start_hour, end_hour = resolve_compare_time_window(preset)
     source = CompareLocationWeatherSource()
     snapshot_service = CompareWeatherSnapshotService(user_id=user_id)
+    # Issue #1695: EIN Zeitpunkt fuer den ganzen Vergleich. Loeste jeder Ort
+    # "jetzt" selbst auf, zerfiele der Anker-Satz bei einer Ortsmitternacht
+    # zwischen zwei Orten auf zwei Kalendertage (falscher Aenderungs-Alarm).
+    # Bedingungslos uebergeben (wie `elevation_m`, #1991): eine
+    # Implementierung ohne den Parameter scheitert laut, statt still mit
+    # eigener Uhr weiterzulaufen.
+    now = _datetime.now(_timezone_mod.utc)
     for loc in locations:
         try:
             # Issue #1991 (AC-6, N2-Nachbesserung): `elevation_m` wird
@@ -1284,6 +1291,7 @@ def _write_compare_alert_snapshots(
                 "tage_ab_ortstag": tage_ab_ortstag,
                 "elevation_m": loc.elevation_m,
                 "user_id": user_id,  # Issue #2387 -- Budget-Topf je Nutzer
+                "now": now,  # Issue #1695 -- ein Zeitpunkt fuer alle Orte
             }
             point = source.fetch(
                 loc.id, loc.lat, loc.lon, start_hour, end_hour, **zusatz

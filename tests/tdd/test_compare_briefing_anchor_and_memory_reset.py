@@ -189,7 +189,7 @@ class _ScriptedWeatherSource:
         self, point_id: str, lat: float, lon: float,
         start_hour: int | None = None, end_hour: int | None = None,
         target_date=None, tage_ab_ortstag=None, elevation_m=None,
-        user_id=None,
+        user_id=None, now=None,
     ):
         # `target_date`/`tage_ab_ortstag` (Issue #1661 Teil B): der
         # Versandpfad reicht den gebriefeten Tag als VERSATZ gegen den Ortstag

@@ -59,6 +59,7 @@ class CompareLocationWeatherSource:
         elevation_m: Optional[int] = None,
         *,
         user_id: str,
+        now: Optional[datetime] = None,
     ) -> PointWeatherData:
         """Issue #1584 Scheibe C: das synthetische Segment deckt das
         TAGESFENSTER des laufenden lokalen Kalendertags am Ort ab, nicht mehr
@@ -100,7 +101,26 @@ class CompareLocationWeatherSource:
 
         Der AUFGELOESTE Tag wird auf das Ergebnis gestempelt, damit der
         15-Minuten-Frisch-Abruf spaeter DENSELBEN Tag holen kann.
+
+        Issue #1695: `now` (Schluesselwort, tz-aware) haelt EINEN Zeitpunkt
+        ueber alle Orte eines Vergleichs fest — der Schreibpfad
+        (`_write_compare_alert_snapshots`) bestimmt ihn einmal und reicht ihn
+        an jeden Ort durch, damit eine Ortsmitternacht zwischen zwei Orten
+        den Anker-Satz nicht auf zwei Kalendertage zerlegt. Der Kalendertag
+        entsteht weiterhin je Ort aus der ORTSZEIT. `None` = Systemuhr
+        (Bestandsverhalten, Leseseite). Ein naives `now` scheitert laut
+        (`ValueError`), statt still auf die Systemuhr zurueckzufallen.
         """
+        if now is None:
+            now = datetime.now(timezone.utc)
+        elif now.tzinfo is None or now.utcoffset() is None:
+            raise ValueError(
+                "CompareLocationWeatherSource.fetch: `now` muss zeitzonen-bewusst "
+                f"(tz-aware) sein (Ort {point_id}, now={now!r}) — ein naiver "
+                "Zeitpunkt liesse offen, in welcher Zeitzone er gilt."
+            )
+        else:
+            now = to_utc(now)
         if target_date is not None and tage_ab_ortstag is not None:
             raise ValueError(
                 "CompareLocationWeatherSource.fetch: `target_date` (absoluter "
@@ -118,7 +138,6 @@ class CompareLocationWeatherSource:
 
         start_hour, end_hour = resolve_configured_window(start_hour, end_hour)
         tz = tz_for_coords(lat, lon)
-        now = datetime.now(timezone.utc)
         # Der Kalendertag ist der LOKALE Tag am Ort, nicht der UTC-Tag —
         # sonst verschoebe sich das Fenster bei jedem Ort mit UTC-Versatz
         # (analog `trip_segments.py:264-268`).

@@ -414,13 +414,15 @@ def test_f001_versandpfad_reicht_das_preset_fenster_an_den_anker_durch(
         # scheitern — geprueft wird in DIESEM Test weiterhin nur das Fenster.
         def fetch(self, point_id, lat, lon, start_hour=None, end_hour=None,
                   target_date=None, tage_ab_ortstag=None, elevation_m=None,
-                  user_id=None):
+                  user_id=None, now=None):
+            # Issue #1695: der Schreibpfad reicht EINEN Zeitpunkt (`now`) an
+            # alle Orte durch; die Attrappe gibt ihn an den Pruefling weiter.
             aufgezeichnete_fenster.append((start_hour, end_hour))
             return super().fetch(point_id, lat, lon, start_hour, end_hour,
                                  target_date=target_date,
                                  tage_ab_ortstag=tage_ab_ortstag,
                                  elevation_m=elevation_m,
-                                 user_id=user_id)
+                                 user_id=user_id, now=now)
 
     # `_write_compare_alert_snapshots` importiert die Klasse erst zur Laufzeit
     # aus ihrem Heimatmodul — dort ist die Naht.
