@@ -42,9 +42,8 @@ export interface DisplayConfigBestand {
  * - Bestand-Auswahl: `displayConfig.metrics` (Read-Modify-Write statt
  *   Replace, CLAUDE.md #102) — eine weggelassene oder falsch ausgewaehlte
  *   Bestandsliste ist HIER, in einer reinen Funktion, per node:test bewacht.
- * - sms_threshold-Bereinigung: ein per RMW-Merge aus dem Bestand
- *   mitgebrachter alter Schwellwert wird entfernt, wenn der Editor-Wert
- *   leer/ungueltig ist; ein gesetzter Editor-Wert ueberschreibt ihn.
+ * - sms_threshold: ein gesetzter Editor-Wert ueberschreibt den Bestand; ist
+ *   er leer/ungueltig, bleibt der Bestandswert unveraendert (#2792 S1c-3).
  */
 export function buildGlobalMetricsForSave(
 	displayConfig: DisplayConfigBestand | null | undefined,
@@ -64,9 +63,9 @@ export function buildGlobalMetricsForSave(
 		if (parsed !== null && !isNaN(parsed)) {
 			return { ...m, sms_threshold: parsed };
 		}
-		const restOhneThreshold: Record<string, unknown> = { ...(m as unknown as Record<string, unknown>) };
-		delete restOhneThreshold.sms_threshold;
-		return restOhneThreshold as unknown as BucketWeatherConfigMetric;
+		// #2792 S1c-3 (AC-24): Regler gesperrt — leer/ungueltig heisst „nicht
+		// angefasst", der per RMW-Merge mitgebrachte Bestandswert bleibt (#102).
+		return m;
 	});
 }
 

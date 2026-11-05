@@ -1837,7 +1837,7 @@
 					<p class="option-hint">
 						{$t('wertebereiche.schwelle.hinweis')}
 					</p>
-					<div class="sms-thresholds" data-testid="sms-thresholds">
+					<div class="sms-thresholds" data-testid="sms-thresholds"><!-- #2792 S1c-3 (AC-22): Regler nur lesbar, Bestandswerte bleiben gespeichert. --><p class="option-hint" data-testid="sms-thresholds-gesperrt">{$t('wertebereiche.gesperrt.hinweis_sms')}</p>
 						<table class="threshold-table">
 							<tbody>
 								{#if !buckets.off.includes('wind')}
@@ -1847,7 +1847,7 @@
 									label={$t('wertebereiche.schwelle.wind')}
 									levels={stufen(15, 20, 30)}
 									currentFloat={smsThresholds['wind'] !== undefined && smsThresholds['wind'] !== '' ? parseFloat(smsThresholds['wind']) : null}
-									onChange={(id, f) => { userTouched = true; smsThresholds = { ...smsThresholds, [id]: String(f) }; scheduleAutoSave(); }}
+									readonly
 								/>
 								{/if}
 								{#if !buckets.off.includes('gust')}
@@ -1857,7 +1857,7 @@
 									label={$t('wertebereiche.schwelle.boeen')}
 									levels={stufen(30, 40, 50)}
 									currentFloat={smsThresholds['gust'] !== undefined && smsThresholds['gust'] !== '' ? parseFloat(smsThresholds['gust']) : null}
-									onChange={(id, f) => { userTouched = true; smsThresholds = { ...smsThresholds, [id]: String(f) }; scheduleAutoSave(); }}
+									readonly
 								/>
 								{/if}
 								{#if !buckets.off.includes('precipitation')}
@@ -1867,7 +1867,7 @@
 									label={$t('wertebereiche.schwelle.niederschlag')}
 									levels={stufen(0.3, 0.8, 1.5)}
 									currentFloat={smsThresholds['precipitation'] !== undefined && smsThresholds['precipitation'] !== '' ? parseFloat(smsThresholds['precipitation']) : null}
-									onChange={(id, f) => { userTouched = true; smsThresholds = { ...smsThresholds, [id]: String(f) }; scheduleAutoSave(); }}
+									readonly
 								/>
 								{/if}
 								{#if !buckets.off.includes('rain_probability')}
@@ -1877,7 +1877,7 @@
 									label={$t('wertebereiche.schwelle.regenwahrscheinlichkeit')}
 									levels={stufen(25, 40, 60)}
 									currentFloat={smsThresholds['rain_probability'] !== undefined && smsThresholds['rain_probability'] !== '' ? parseFloat(smsThresholds['rain_probability']) : null}
-									onChange={(id, f) => { userTouched = true; smsThresholds = { ...smsThresholds, [id]: String(f) }; scheduleAutoSave(); }}
+									readonly
 								/>
 								{/if}
 								{#if !buckets.off.includes('thunder')}
@@ -1888,7 +1888,7 @@
 									label={$t('wertebereiche.schwelle.gewitter')}
 									levels={thunderThresholdLevelsFromCatalog(compareCatalog, $locale)}
 									currentFloat={smsThresholds['thunder'] !== undefined && smsThresholds['thunder'] !== '' ? parseFloat(smsThresholds['thunder']) : null}
-									onChange={(id, f) => { userTouched = true; smsThresholds = { ...smsThresholds, [id]: String(f) }; scheduleAutoSave(); }}
+									readonly
 								/>
 								{:else}
 								<tr data-testid="threshold-metric-row-thunder-placeholder">
@@ -1904,7 +1904,7 @@
 									label={$t('wertebereiche.schwelle.schneehoehe')}
 									levels={stufen(5, 10, 20)}
 									currentFloat={smsThresholds['snow_depth'] !== undefined && smsThresholds['snow_depth'] !== '' ? parseFloat(smsThresholds['snow_depth']) : null}
-									onChange={(id, f) => { userTouched = true; smsThresholds = { ...smsThresholds, ['snow_depth']: String(f) }; scheduleAutoSave(); }}
+									readonly
 								/>
 								{/if}
 								{#if !buckets.off.includes('snowfall_limit')}
@@ -1914,7 +1914,7 @@
 									label={$t('wertebereiche.schwelle.schneefallgrenze')}
 									levels={stufen(2000, 1500, 1000)}
 									currentFloat={smsThresholds['snowfall_limit'] !== undefined && smsThresholds['snowfall_limit'] !== '' ? parseFloat(smsThresholds['snowfall_limit']) : null}
-									onChange={(id, f) => { userTouched = true; smsThresholds = { ...smsThresholds, ['snowfall_limit']: String(f) }; scheduleAutoSave(); }}
+									readonly
 								/>
 								{/if}
 								<!-- Fix #1613: Mehrfach-Symbol-Metriken ohne Schwellwert (kein onChange/levels). -->

@@ -284,7 +284,7 @@
 	// Issue #1425 (S2 Teil 2, Scheibe C, AC-3): zaehlt nur Marken, deren Schalter
 	// im aktuellen Kontext ueberhaupt sichtbar ist (geteilte Entscheidung
 	// countEffectiveMarks -> supportsMark).
-	const markN = $derived(countEffectiveMarks(rows, context));
+	const markN = $derived(countEffectiveMarks(rows, context)); const gesperrt = true; // #2792 S1c-3 (AC-22, E2): Korridor-Zeilen nur lesbar, patch/add/remove No-op, `corridors` unveraendert
 
 	// Issue #1371: der PUT ueberschreibt `display_config.metric_alert_levels`
 	// nicht mehr explizit — `trip!.display_config` wird unveraendert
@@ -358,16 +358,16 @@
 	}
 
 	function patch(metric: string, p: Partial<Pick<CorridorRowState, 'min' | 'max' | 'notify' | 'mark'>>) {
-		rows = patchRow(rows, metric, p);
+		if (gesperrt) return; rows = patchRow(rows, metric, p);
 		maybeSchedule();
 	}
 	function remove(metric: string) {
-		rows = removeRow(rows, metric);
+		if (gesperrt) return; rows = removeRow(rows, metric);
 		removedMetrics = [...removedMetrics, metric];
 		maybeSchedule();
 	}
 	function add(metric: string) {
-		// F002-Fix: war die Metrik beim Mount schon in active_metrics aktiv
+		if (gesperrt) return; // F002-Fix: war die Metrik beim Mount schon in active_metrics aktiv
 		// (Legacy-Bestand ohne Corridor-Eintrag) -> notify=true erhalten statt
 		// stillschweigend auf den Kontext-Default (false) zu fallen.
 		const next = context === 'vergleich'
@@ -425,7 +425,7 @@
 		     6 Metriken zu zeigen und die uebrigen nachpoppen zu lassen. -->
 		<div class="ce-eyebrow-row"><Eyebrow>{$t('layout.korridor.eyebrow')}</Eyebrow><BegriffErklaerung begriff="wertebereiche" suffix="ce-{context}" /></div>
 		<p class="ce-lead" aria-busy="true" data-testid="corridor-editor-route-loading">{$t('layout.korridor.lade')}</p>
-	{:else}
+	{:else}<!-- #2792 S1c-3 (AC-22): Hinweis oben, die Zeilen sind nur lesbar. --><p class="ce-gesperrt" role="note" data-testid="corridor-editor-gesperrt">{$t('wertebereiche.gesperrt.hinweis_reiter')}</p>
 	{#if context === 'vergleich'}
 		<div class="ce-eyebrow-row"><Eyebrow>{$t('layout.korridor.eyebrow_idealbereiche')}</Eyebrow><BegriffErklaerung begriff="wertebereiche" suffix="ce-{context}" /></div>
 		<h2 class="ce-h2">{$t('layout.korridor.titel_vergleich')}</h2>
@@ -505,43 +505,43 @@
 							     Zahlen-Eingabe — "Beschriftung der Stufen statt Zahlen". -->
 							<label class="ce-bound">{$t('layout.korridor.von')}
 								{#if row.min == null}
-									<button type="button" class="ce-open-btn" onclick={() => patch(row.metric, { min: row.scale[0] })}>{$t('layout.korridor.grenze_setzen')}</button>
+									<button type="button" class="ce-open-btn" disabled={gesperrt} onclick={() => patch(row.metric, { min: row.scale[0] })}>{$t('layout.korridor.grenze_setzen')}</button>
 								{:else}
 									<span class="ce-ordinal-group" data-testid="corridor-ordinal-min-{row.metric}">
 										{#each row.ordinalLabels ?? [] as lbl, idx (lbl)}
-											<button type="button" class="ce-ordinal-btn" class:on={row.min === idx} onclick={() => patch(row.metric, { min: clampBoundInput(idx, 'min', row) })}>{lbl}</button>
+											<button type="button" class="ce-ordinal-btn" disabled={gesperrt} class:on={row.min === idx} onclick={() => patch(row.metric, { min: clampBoundInput(idx, 'min', row) })}>{lbl}</button>
 										{/each}
 									</span>
-									<button type="button" class="ce-clear-btn" title={$t('layout.korridor.grenze_oeffnen')} onclick={() => patch(row.metric, { min: null })}>×</button>
+									<button type="button" class="ce-clear-btn" disabled={gesperrt} title={$t('layout.korridor.grenze_oeffnen')} onclick={() => patch(row.metric, { min: null })}>×</button>
 								{/if}
 							</label>
 							<label class="ce-bound">{$t('layout.korridor.bis')}
 								{#if row.max == null}
-									<button type="button" class="ce-open-btn" onclick={() => patch(row.metric, { max: row.scale[1] })}>{$t('layout.korridor.grenze_setzen')}</button>
+									<button type="button" class="ce-open-btn" disabled={gesperrt} onclick={() => patch(row.metric, { max: row.scale[1] })}>{$t('layout.korridor.grenze_setzen')}</button>
 								{:else}
 									<span class="ce-ordinal-group" data-testid="corridor-ordinal-max-{row.metric}">
 										{#each row.ordinalLabels ?? [] as lbl, idx (lbl)}
-											<button type="button" class="ce-ordinal-btn" class:on={row.max === idx} onclick={() => patch(row.metric, { max: clampBoundInput(idx, 'max', row) })}>{lbl}</button>
+											<button type="button" class="ce-ordinal-btn" disabled={gesperrt} class:on={row.max === idx} onclick={() => patch(row.metric, { max: clampBoundInput(idx, 'max', row) })}>{lbl}</button>
 										{/each}
 									</span>
-									<button type="button" class="ce-clear-btn" title={$t('layout.korridor.grenze_oeffnen')} onclick={() => patch(row.metric, { max: null })}>×</button>
+									<button type="button" class="ce-clear-btn" disabled={gesperrt} title={$t('layout.korridor.grenze_oeffnen')} onclick={() => patch(row.metric, { max: null })}>×</button>
 								{/if}
 							</label>
 						{:else}
 							<label class="ce-bound">{$t('layout.korridor.von')}
 								{#if row.min == null}
-									<button type="button" class="ce-open-btn" onclick={() => patch(row.metric, { min: row.scale[0] })}>{$t('layout.korridor.grenze_setzen')}</button>
+									<button type="button" class="ce-open-btn" disabled={gesperrt} onclick={() => patch(row.metric, { min: row.scale[0] })}>{$t('layout.korridor.grenze_setzen')}</button>
 								{:else}
-									<input type="number" step={row.step} value={row.min} oninput={(e) => patch(row.metric, { min: clampBoundInput(numOrNull(e.currentTarget.value), 'min', row) })} />
-									<button type="button" class="ce-clear-btn" title={$t('layout.korridor.grenze_oeffnen')} onclick={() => patch(row.metric, { min: null })}>×</button>
+									<input type="number" step={row.step} disabled={gesperrt} value={row.min} oninput={(e) => patch(row.metric, { min: clampBoundInput(numOrNull(e.currentTarget.value), 'min', row) })} />
+									<button type="button" class="ce-clear-btn" disabled={gesperrt} title={$t('layout.korridor.grenze_oeffnen')} onclick={() => patch(row.metric, { min: null })}>×</button>
 								{/if}
 							</label>
 							<label class="ce-bound">{$t('layout.korridor.bis')}
 								{#if row.max == null}
-									<button type="button" class="ce-open-btn" onclick={() => patch(row.metric, { max: row.scale[1] })}>{$t('layout.korridor.grenze_setzen')}</button>
+									<button type="button" class="ce-open-btn" disabled={gesperrt} onclick={() => patch(row.metric, { max: row.scale[1] })}>{$t('layout.korridor.grenze_setzen')}</button>
 								{:else}
-									<input type="number" step={row.step} value={row.max} oninput={(e) => patch(row.metric, { max: clampBoundInput(numOrNull(e.currentTarget.value), 'max', row) })} />
-									<button type="button" class="ce-clear-btn" title={$t('layout.korridor.grenze_oeffnen')} onclick={() => patch(row.metric, { max: null })}>×</button>
+									<input type="number" step={row.step} disabled={gesperrt} value={row.max} oninput={(e) => patch(row.metric, { max: clampBoundInput(numOrNull(e.currentTarget.value), 'max', row) })} />
+									<button type="button" class="ce-clear-btn" disabled={gesperrt} title={$t('layout.korridor.grenze_oeffnen')} onclick={() => patch(row.metric, { max: null })}>×</button>
 								{/if}
 							</label>
 						{/if}
@@ -555,9 +555,9 @@
 					     geteilte Entscheidung (corridorEditorState.ts) — im Trip haben
 					     Tages-Summen keine Stundenzelle zum Markieren. -->
 					{#if supportsMark(row.metric, context)}
-						<button type="button" class="ce-effect mark" class:on={row.mark} aria-pressed={row.mark} onclick={() => patch(row.metric, { mark: !row.mark })}>{$t('layout.korridor.markieren')}</button>
+						<button type="button" class="ce-effect mark" disabled={gesperrt} class:on={row.mark} aria-pressed={row.mark} onclick={() => patch(row.metric, { mark: !row.mark })}>{$t('layout.korridor.markieren')}</button>
 					{/if}
-					<button type="button" class="ce-remove" onclick={() => remove(row.metric)}>✕ {$t('layout.korridor.entfernen')}</button>
+					<button type="button" class="ce-remove" disabled={gesperrt} onclick={() => remove(row.metric)}>✕ {$t('layout.korridor.entfernen')}</button>
 				</div>
 			</div>
 		{/each}
@@ -565,7 +565,7 @@
 			<div class="ce-pool">
 				<span class="ce-pool-label">{$t('layout.korridor.metrik_hinzufuegen')}:</span>
 				{#each poolLeft as m (m.metric)}
-					<button type="button" class="ce-pool-btn" data-testid="corridor-editor-pool-item-{m.metric}" onclick={() => add(m.metric)}>＋ {(void $locale, zeilenLabel(m))}{#if 'aggregationLabel' in m && m.aggregationLabel}<span class="ce-aggregation">{m.aggregationLabel}</span>{/if}</button>
+					<button type="button" class="ce-pool-btn" disabled={gesperrt} data-testid="corridor-editor-pool-item-{m.metric}" onclick={() => add(m.metric)}>＋ {(void $locale, zeilenLabel(m))}{#if 'aggregationLabel' in m && m.aggregationLabel}<span class="ce-aggregation">{m.aggregationLabel}</span>{/if}</button>
 				{/each}
 			</div>
 		{/if}
@@ -601,6 +601,8 @@
 	.ce-swatch.mark { background: var(--g-good); opacity: 0.85; }
 	.ce-good { color: var(--g-good); }
 	.ce-error { color: #8a6210; background: rgba(192, 138, 26, 0.12); border: 1px solid rgba(192, 138, 26, 0.35); border-radius: var(--g-r-2, 6px); padding: 8px 12px; font-size: 13px; margin-bottom: 12px; }
+	.ce-gesperrt { color: var(--g-ink); background: var(--g-card-alt); border: 1px solid var(--g-rule); border-radius: var(--g-r-2, 6px); padding: 8px 12px; font-size: 13px; margin-bottom: 16px; }
+	.ce-table button:disabled, .ce-table input:disabled { cursor: not-allowed; }
 	.ce-table { background: var(--g-card); border: 1px solid var(--g-rule-soft); border-radius: var(--g-r-3, 10px); overflow: hidden; }
 	.ce-row { display: grid; grid-template-columns: 190px 1fr 224px; gap: 22px; padding: 18px 20px; border-bottom: 1px solid var(--g-rule-soft); align-items: start; }
 	.ce-label { font-size: 14px; font-weight: 600; color: var(--g-ink); }

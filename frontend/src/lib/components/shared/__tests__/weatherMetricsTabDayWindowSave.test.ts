@@ -143,10 +143,16 @@ describe('Gegenprobe: Metrik-Aenderungen loesen weiterhin die volle scheduleAuto
 		assert.match(body, /scheduleAutoSave\(\)/, 'onDndReorder muss weiterhin die volle scheduleAutoSave() ausloesen');
 	});
 
-	test('smsThresholds-Handler (Metrik-Schwellwerte) rufen weiterhin scheduleAutoSave()', () => {
-		const smsBlockStart = src.indexOf('smsThresholds = { ...smsThresholds');
-		assert.ok(smsBlockStart >= 0, 'smsThresholds-Handler nicht gefunden');
-		const line = src.slice(smsBlockStart, src.indexOf('\n', smsBlockStart));
-		assert.match(line, /scheduleAutoSave\(\)/, 'smsThresholds-Handler muessen weiterhin scheduleAutoSave() rufen (echte Metrik-Konfiguration)');
+	// #2792 S1c-3 (AC-22): die SMS-Schwellwert-Regler sind nur lesbar — kein
+	// Handler schreibt smsThresholds mehr oder loest einen Auto-Save aus; der
+	// Bestandswert wird beim Speichern unveraendert mitgegeben (AC-24).
+	test('SMS-Schwellwert-Regler sind gesperrt: kein Handler schreibt smsThresholds, jede Zeile ist readonly', () => {
+		assert.equal(src.indexOf('smsThresholds = { ...smsThresholds'), -1, 'ein Regler schreibt noch smsThresholds');
+		const zeilen = src.split('<ThresholdMetricRow').slice(1).map((t) => t.slice(0, t.indexOf('/>')));
+		assert.ok(zeilen.length >= 7, `Vorbedingung: 7 Regler erwartet, gefunden ${zeilen.length}`);
+		for (const z of zeilen) {
+			assert.match(z, /\breadonly\b/, `Regler nicht gesperrt: ${z.slice(0, 80)}`);
+			assert.doesNotMatch(z, /onChange|scheduleAutoSave/, `Regler hat noch einen Schreibweg: ${z.slice(0, 80)}`);
+		}
 	});
 });

@@ -60,6 +60,21 @@ function baueSaat(aufrufe: Aufrufe, mitCreateMode: boolean, kontext: 'route' | '
 	return saat;
 }
 
+/** #2792 S1c-3 (AC-22): bei geschlossener Sperre aendern patch/remove/add die
+ *  Zeilen nicht und melden/speichern nichts — je Fassung und Kontext am Wirkort. */
+function sperreGreift(u: Knoten, aufrufe: Aufrufe, mitAdd: boolean): void {
+	assert.equal(u.gesperrt, true, 'Messaufbau: die Sperre `gesperrt` fehlt im Editor.');
+	const vorher = structuredClone(u.rows);
+	const zeile = (u.rows as { metric: string }[])[0]?.metric ?? 'wind_gust';
+	u.patch(zeile, { max: 1 });
+	u.patch(zeile, { mark: true });
+	u.remove(zeile);
+	if (mitAdd) u.add('wind_gust');
+	assert.deepEqual(u.removedMetrics ?? [], [], 'S1c-3 FAIL: trotz Sperre wurde eine Metrik als entfernt vorgemerkt.');
+	assert.deepEqual(u.rows, vorher, 'S1c-3 FAIL: trotz Sperre wurden Wertebereich-Zeilen veraendert.');
+	assert.deepEqual(aufrufe, { schedule: 0, setDirty: 0, setUnsavedInput: 0 }, 'S1c-3 FAIL: trotz Sperre wurde gemeldet/gespeichert.');
+}
+
 async function pruefe(datei: string, mitCreateMode: boolean) {
 	const aufrufe: Aufrufe = { schedule: 0, setDirty: 0, setUnsavedInput: 0 };
 	const { u } = await umgebungFuer(join(HIER, '..', datei), baueSaat(aufrufe, mitCreateMode));
@@ -70,6 +85,10 @@ async function pruefe(datei: string, mitCreateMode: boolean) {
 	u.rows = pool.rows;
 	u.poolLeft = pool.poolLeft;
 	u.routeUnknownCorridors = pool.unknownCorridors;
+	// #2792 S1c-3: im Produkt gesperrt (altfelder_gesperrt_s1c3.test.ts); der Meldeweg
+	// dahinter bleibt erhalten und wird mit geoeffneter Sperre weiter bewacht.
+	sperreGreift(u, aufrufe, true);
+	u.gesperrt = false;
 	u.add('wind_gust');
 	u.patch('wind_gust', { max: 80 }); // gültiger Schritt → schedule
 	assert.equal(aufrufe.schedule >= 1, true, 'Messaufbau kaputt: der gültige Schritt hat keinen Save vorgemerkt.');
@@ -107,6 +126,8 @@ async function pruefeVergleich(datei: string, mitCreateMode: boolean) {
 	// mit den Zustandsfunktionen vorbereitet (gültiger Stand), erst `patch` läuft im Editor.
 	const gueltig = addRow(pool.rows, pool.poolLeft as never, 'wind_gust', ROUTE_CTX_DEFAULTS);
 	u.rows = patchRow(gueltig.rows, 'wind_gust', { max: 80 });
+	sperreGreift(u, aufrufe, false);
+	u.gesperrt = false; // #2792 S1c-3: Meldeweg hinter der Sperre weiter bewacht
 	u.patch('wind_gust', { max: null }); // Min UND Max leer → ungültiger Zwischenstand
 	return aufrufe;
 }
