@@ -429,7 +429,7 @@ def test_ac23_uebrige_schluessel_und_seiten(tmp_path):
     m = ampel["metrics"]
     assert m["rain_probability"]["upper"]["yellow"] == 61
     assert m["fresh_snow"]["upper"]["yellow"] == 11
-    assert m["wind_chill"]["lower"]["yellow"] == -5 and m["wind_chill"]["upper"]["yellow"] == 31
+    assert m["wind_chill"]["lower"]["yellow"] == -5 and m["wind_chill"]["upper"]["yellow"] == 30.1
     assert m["uv_index"]["upper"]["yellow"] == 7
     assert m["sunshine"]["lower"]["yellow"] == 4 and "upper" not in m["sunshine"]
     assert m["cloud_total"]["upper"]["yellow"] == 81
@@ -491,14 +491,55 @@ def test_ac23_neu_erkannte_nicht_zuordenbare_schluessel_stehen_im_bericht(tmp_pa
 
 
 def test_ac23_ratsche_jeder_vergleichsschluessel_ist_zugeordnet_oder_nicht_zuordenbar(tmp_path):
+    """Ratsche gegen die Tabellen des Skripts selbst (nicht gegen seinen Berichtstext):
+    ein neuer Schluessel in FRONTEND_TO_RENDERER_METRIC_ID ohne Eintrag macht sie rot."""
     from output.renderers.compare_metric_ids import FRONTEND_TO_RENDERER_METRIC_ID
     from app.ampel_templates import AMPEL_TEMPLATES
-    ungeklaert = []
+    mig = _modul()
+    zugeordnet, nicht = set(mig._ZUORDNUNG), set(mig._NICHT_ZUORDENBAR)
+    assert not zugeordnet & nicht
+    assert sorted(set(FRONTEND_TO_RENDERER_METRIC_ID) - zugeordnet - nicht) == []
     for i, key in enumerate(sorted(FRONTEND_TO_RENDERER_METRIC_ID)):
         ampel, out = _ein_trip(tmp_path / str(i), _vgl("v", [_band(key, 5, 50)]))
-        metrics = ampel.get("metrics", {})
-        if metrics:
-            assert set(metrics) <= set(AMPEL_TEMPLATES["allgemein"]["metrics"]), key
-        elif f"nicht zuordenbar: {key}" not in out:
-            ungeklaert.append(key)
-    assert ungeklaert == []
+        if key in nicht:
+            assert f"nicht zuordenbar: {key}" in out and not ampel.get("metrics"), key
+            continue
+        mid = mig._ZUORDNUNG[key][0]
+        assert mid in AMPEL_TEMPLATES["allgemein"]["metrics"], key
+        assert mid in ampel.get("metrics", {}), (key, out)
+
+
+@pytest.mark.parametrize("key, grund", [
+    ("thunder_level_max", "Gewitter hat keine Zahlengrenzen"),
+    ("cape_max_jkg", "CAPE hat keine eigene Farbe (P1)"),
+    ("wind_direction_deg", "Windrichtung hat keine Zahlengrenzen"),
+    ("cloud_mid_avg_pct", "keine Ampel-Metrik"), ("cloud_high_avg_pct", "keine Ampel-Metrik"),
+    ("pressure_avg_hpa", "keine Ampel-Metrik"), ("precip_type_dominant", "keine Zahlengrenzen")])
+def test_ac23_nicht_zuordenbar_mit_begruendung_und_bereich_bleibt_erhalten(tmp_path, key, grund):
+    band = _band(key, 1, 9)
+    ampel, out = _vgl_ampel(tmp_path, [band])
+    assert f"nicht zuordenbar: {key} [1, 9] (corridors): {grund}, erhalten, nicht migriert" in out
+    assert _lies(tmp_path / "einzel", "carla", "x")["corridors"] == [band]
+    assert not ampel.get("metrics")
+
+
+def test_ac23_temp_min_vorrang_gilt_auch_im_ideal_ranges_rueckfall(tmp_path):
+    ampel, _ = _vgl_ampel(tmp_path, [], ideal_ranges={
+        "temp_max_c": {"min": -50, "max": 25}, "temp_min_c": {"min": 2, "max": 99}})
+    t = ampel["metrics"]["temperature"]
+    assert t["lower"]["yellow"] == 2
+    assert t["upper"]["yellow"] == 25.1
+
+
+def test_ac23_text_und_bool_grenzen_werden_berichtet_nicht_uebernommen(tmp_path):
+    obj = _vgl("v", [_band("wind_max_kmh", None, "40"), _band("precip_sum_mm", None, True)])
+    obj["display_config"]["ampel"] = {"template": "alpen-trekking"}
+    r = tmp_path / "users"
+    (r / "alice" / "briefings").mkdir(parents=True)
+    pfad = r / "alice" / "briefings" / "v.json"
+    pfad.write_text(json.dumps(obj), encoding="utf-8")
+    vorher = pfad.read_bytes()
+    out = _lauf(r, "--execute")
+    assert "wind_max_kmh: bis=40 nicht übernommen" in out
+    assert "precip_sum_mm: bis=True nicht übernommen" in out
+    assert pfad.read_bytes() == vorher
