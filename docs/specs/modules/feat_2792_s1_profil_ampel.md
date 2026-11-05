@@ -2,9 +2,9 @@
 entity_id: feat_2792_s1_profil_ampel
 type: module
 created: 2026-11-04
-updated: 2026-11-04
+updated: 2026-11-05
 status: draft
-version: "1.1"
+version: "1.2"
 tags: [ampel, profil, vorlagen, migration, renderer, sms, telegram, mail, i18n, epic-2791]
 ---
 
@@ -13,7 +13,7 @@ tags: [ampel, profil, vorlagen, migration, renderer, sms, telegram, mail, i18n, 
 ## Approval
 
 - [x] Approved (PO-Freigabe 2026-11-04 per Rückfrage: „Freigabe“)
-- [ ] Approved v1.1 (S1c-Ergänzungen: Schnitt in vier PRs, Migrations-Nachtrag AC-23, AC-19 (d), Pfadkorrekturen)
+- [ ] Approved v1.2 (S1c-Ergänzungen v1.1: Schnitt in vier PRs, Migrations-Nachtrag AC-23, AC-19 (d), Pfadkorrekturen; v1.2: Schlüsselnamen `wind_chill_*_c` korrigiert, Schlüsselliste vollständig, Ratsche)
 
 ## Purpose
 
@@ -177,20 +177,30 @@ Der Compare erhält Vorlagen (Datenteil): `display_config.ampel.template` des `C
 
 Der Migrationsbericht vom 2026-11-04 (Kommentar in #2792) nennt Vergleichs-Wertebereiche als „nicht zuordenbar“, die nach dem Umschalten sichtbar fehlen würden (Prod: `henning/5f534011`, `cp-ac57aa1e29c65649`, `cp-eb6ba0b239d90e37`, `zillertal-t-glich`). Deshalb wird `_ZUORDNUNG` (`scripts/migrate_2792_profil_ampel.py`) ergänzt. Die Einheiten sind geprüft (Einheit des Katalogs = Einheit des Schlüssels).
 
-| Vergleichsschlüssel | Ampel-Metrik | Bemerkung |
-|---|---|---|
-| `wind_max_kmh` | `wind` | km/h |
-| `visibility_min_m` | `visibility` | m; wirkt auf der unteren Seite (`von`), Katalog `*_lt` |
-| `precip_sum_mm` | `precipitation` | mm; die Vergleichs-Übersicht färbt die Summe schon heute mit `precipitation` |
-| `pop_max_pct` | `rain_probability` | % |
-| `snow_new_sum_cm` | `fresh_snow` | cm |
-| `wind_chill_min` / `wind_chill_max` | `wind_chill` | °C; Seitenregel wie `temperature_min`/`temperature_max` (min → nur `von`, max → nur `bis`) |
-| `uv_index_max` | `uv_index` | –; UV gehört zu den 10 heutigen Ampel-Metriken |
-| `temp_min_c` | `temperature` | °C; nur `von` → `lower.yellow`. Sind `temp_min_c` und `temp_max_c` beide vorhanden, gilt für die untere Seite `temp_min_c` |
-| `sunny_hours_h`, `cloud_avg_pct`, `humidity_avg_pct`, `dewpoint_avg_c`, `freezing_level_m`, `snowfall_limit_m` | `sunshine`, `cloud_total`, `humidity`, `dewpoint`, `freezing_level`, `snowfall_limit` | nur Daten (in S1 kein Leser) |
-| `thunder_level_max`, `cape_max_jkg` | nicht zuordenbar | Gewitter hat keine Zahlengrenzen, CAPE keine Farbe (P1). Der Bericht nennt diese Begründung. Vor `/40` wird geprüft, ob die heutige Wertebereich-Markierung diese Spalten sichtbar färbt |
+| Vergleichsschlüssel | Ampel-Metrik | Übernommene Seite | Bemerkung |
+|---|---|---|---|
+| `wind_max_kmh` | `wind` | `bis` | km/h |
+| `visibility_min_m` | `visibility` | `von` | m; wirkt auf der unteren Seite (Katalog `*_lt`); falsche Seite würde die Sichtweiten-Ampel invertieren |
+| `precip_sum_mm` | `precipitation` | `bis` | mm; die Vergleichs-Übersicht färbt die Summe schon heute mit `precipitation` |
+| `pop_max_pct` | `rain_probability` | `bis` | % |
+| `snow_new_sum_cm` | `fresh_snow` | `bis` | cm |
+| `wind_chill_min_c` | `wind_chill` | `von` | °C. **Korrektur v1.2:** v1.1 nannte `wind_chill_min`; das ist die Renderer-ID, der echte Vergleichsschlüssel heißt `wind_chill_min_c` (sonst bliebe die Zuordnung wirkungslos) |
+| `wind_chill_max_c` | `wind_chill` | `bis` | °C, Korrektur wie oben |
+| `uv_index_max` | `uv_index` | `bis` | Indexwert |
+| `temp_min_c` | `temperature` | `von` | °C. Sind `temp_min_c` und `temp_max_c` beide vorhanden, gilt für die untere Seite `temp_min_c` (Vorrang, unabhängig von der Reihenfolge der Auswertung); `temp_max_c` liefert dann nur `bis` |
+| `sunny_hours_h` | `sunshine` | `von` | nur Daten (in S1 kein Leser) |
+| `cloud_avg_pct` | `cloud_total` | `bis` | nur Daten |
+| `cloud_low_avg_pct` | `cloud_low` | `bis` | **neu in v1.2**; nur Daten |
+| `humidity_avg_pct` | `humidity` | beide | nur Daten |
+| `dewpoint_avg_c` | `dewpoint` | `bis` | nur Daten |
+| `freezing_level_m` | `freezing_level` | `von` | nur Daten |
+| `snowfall_limit_m` | `snowfall_limit` | `von` | nur Daten |
+| `snow_depth_cm` | `snow_depth` | beide | **neu in v1.2**; nur Daten |
+| `thunder_level_max`, `cape_max_jkg` | nicht zuordenbar | – | Gewitter hat keine Zahlengrenzen, CAPE keine Farbe (P1). Der Bericht nennt diese Begründung |
+| `wind_direction_deg`, `cloud_mid_avg_pct`, `cloud_high_avg_pct`, `pressure_avg_hpa`, `precip_type_dominant` | nicht zuordenbar | – | **neu in v1.2**; keine Ampel-Metrik bzw. keine Zahlengrenzen. Bericht nennt sie mit Begründung, Altdaten bleiben erhalten |
 
-- **Vollständige Schlüsselliste** wird vor `/40` aus `compare_html.py` (Mapping `_DAILY_AGGREGATE_FIELD`, z. B. `precip_sum` → `precip_sum_mm`) und aus dem Probelauf gezogen, nicht nur aus dem Kommentar.
+- **Vollständige Schlüsselliste (v1.2, aus dem Code gezogen):** maßgeblich ist `FRONTEND_TO_RENDERER_METRIC_ID` (`src/output/renderers/compare_metric_ids.py`). **Ratsche:** ein Test zieht diese Schlüsselmenge; jeder Schlüssel ist entweder zugeordnet oder ausdrücklich „nicht zuordenbar“, sonst ist der Test rot. Jede zugeordnete Ampel-Metrik muss in `AMPEL_TEMPLATES` existieren. Bereits aus S1b bleiben `temp_max_c`, `gust_max_kmh` (beide Seiten).
+- **Offen für `/40`:** Welche Schlüssel auf Prod tatsächlich genutzt werden, liefert der Probelauf auf Prod (`sudo -n -u claude-gregor`, außerhalb des Worktree-Wächters); ob die heutige Wertebereich-Markierung `thunder_level_max`/`cape_max_jkg` sichtbar färbt, wird dort mitgeprüft.
 - **Bestand aus S1b bleibt:** `temp_max_c` → `temperature` und `gust_max_kmh` → `gust` übernehmen schon beide Seiten des Bands (`_BEIDE`); das gilt weiter, nur die Vorrang-Regel für `temp_min_c` (Tabelle) kommt hinzu.
 - **Abbildungsregel** wie für Trips: `von`/`bis` mit `Schritt`, Klemm-Regel, Metrik wird bei verletzter Validierung übersprungen.
 - **Wiederholbarkeit:** Ein erneuter `--execute` ergänzt fehlende Metriken in einer vorhandenen Ampel und überschreibt keine.
@@ -286,8 +296,8 @@ Farben werden **am Entstehungsort** getestet (Renderer-Ausgabe, `ampel_for`, `th
   - Test: Projektion und Rendern beider Kanäle mit beiden Abos
 - **AC-22:** Given ein Nutzer öffnet den Reiter Wertebereiche und die SMS-Schwellwerte im Reiter Wetter, in Trip und Vergleich / When die Seite in Deutsch bzw. Englisch angezeigt wird / Then sind die Felder nur lesbar, zeigen die gespeicherten Werte, und der Hinweis lautet DE „Wird gerade umgebaut – deine Werte sind übernommen.“ bzw. EN „Being rebuilt – your values have been carried over.“
   - Test: Komponententest für beide Kontexte und beide Sprachen; Paritätstest der Kataloge grün
-- **AC-23:** Given zwei Nutzer mit je einem Compare-Preset mit Wertebereichen für `wind_max_kmh`, `visibility_min_m` und `precip_sum_mm` (mark=True) und einem bereits migrierten Preset mit vorhandener Ampel / When der Migrations-Nachlauf mit `--execute` und danach ein zweites Mal läuft / Then trägt jedes Preset die Werte als Ampel-Grenzen für `wind`, `visibility` (untere Seite) und `precipitation`, vorhandene Ampel-Metriken sind nicht überschrieben, der zweite Lauf ändert keine Datei, `thunder_level_max`/`cape_max_jkg` stehen als nicht zuordenbar im Bericht, und vor dem Prod-Deploy von S1c-4 meldet der Probelauf auf Prod „nichts zu tun“
-  - Test: Migration auf Kopie, zwei Nutzer, Prüfsummen, Bericht
+- **AC-23:** Given zwei Nutzer mit je einem Compare-Preset mit Wertebereichen für `wind_max_kmh`, `visibility_min_m` und `precip_sum_mm` (mark=True) und einem bereits migrierten Preset mit vorhandener Ampel / When der Migrations-Nachlauf mit `--execute` und danach ein zweites Mal läuft / Then trägt jedes Preset die Werte als Ampel-Grenzen für `wind`, `visibility` (untere Seite) und `precipitation`, vorhandene Ampel-Metriken sind nicht überschrieben, der zweite Lauf ändert keine Datei, `thunder_level_max`/`cape_max_jkg` stehen als nicht zuordenbar im Bericht, jeder Schlüssel aus `FRONTEND_TO_RENDERER_METRIC_ID` ist zugeordnet oder ausdrücklich nicht zuordenbar (Ratsche), `temp_min_c` bestimmt die untere Temperatur-Seite auch bei vorhandenem `temp_max_c`, und vor dem Prod-Deploy von S1c-4 meldet der Probelauf auf Prod „nichts zu tun“
+  - Test: Migration auf Kopie, zwei Nutzer, Prüfsummen, Bericht; Ratsche auf die Schlüsselmenge aus `FRONTEND_TO_RENDERER_METRIC_ID`; Vorrang `temp_min_c` bei vorhandenem `temp_max_c` in beiden Reihenfolgen. Der Prod-Probelauf ist Deploy-Vorbedingung (Reihenfolge-Gate), kein automatischer Test
 
 ## Known Limitations
 
@@ -312,3 +322,4 @@ Farben werden **am Entstehungsort** getestet (Renderer-Ausgabe, `ampel_for`, `th
 - 2026-11-04: PO-Freigabe (approved)
 - 2026-11-04: Review Tech Lead: AC-1 Kurzkanäle als Hervorhebung, Temperatur-Zuordnung der Migration eindeutig, AC-19 Ausnahmen ehrlich benannt
 - 2026-11-04: v1.1 S1c-Ergänzungen (Schnitt S1c-1…S1c-4 mit Reihenfolge-Gate Migration vor Umschalt-Deploy, AC-23 Migrations-Nachtrag Vergleichsschlüssel, AC-19 (d) Wertebereich-Markierung entfällt, Pfadkorrekturen Alarm/Telegram, `thunder_color` nimmt das aufgelöste Objekt, Highlights unberührt, Temperatur-Token mit Stunde) — Freigabe ausstehend
+- 2026-11-05: v1.2 Nachtrag S1c-2 korrigiert: Vergleichsschlüssel `wind_chill_min_c`/`wind_chill_max_c` statt `wind_chill_min`/`_max`, sieben fehlende Schlüssel ergänzt (`cloud_low_avg_pct`, `snow_depth_cm`, nicht zuordenbar: `wind_direction_deg`, `cloud_mid_avg_pct`, `cloud_high_avg_pct`, `pressure_avg_hpa`, `precip_type_dominant`), Seitenspalte, Vorrang `temp_min_c`, Ratsche gegen Schlüssel-Drift — Freigabe ausstehend

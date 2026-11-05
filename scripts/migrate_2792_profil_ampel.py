@@ -41,7 +41,27 @@ _ZUORDNUNG = {
     "temperature_max": ("temperature", ("bis",)), "temperature_min": ("temperature", ("von",)),
     "snow_line": ("snowfall_limit", _BEIDE),
     "temp_max_c": ("temperature", _BEIDE), "gust_max_kmh": ("gust", _BEIDE),
+    # Nachtrag S1c-2 (Spec §4): Vergleichsschluessel aus FRONTEND_TO_RENDERER_METRIC_ID.
+    "wind_max_kmh": ("wind", ("bis",)), "visibility_min_m": ("visibility", ("von",)),
+    "precip_sum_mm": ("precipitation", ("bis",)), "pop_max_pct": ("rain_probability", ("bis",)),
+    "snow_new_sum_cm": ("fresh_snow", ("bis",)), "wind_chill_min_c": ("wind_chill", ("von",)),
+    "wind_chill_max_c": ("wind_chill", ("bis",)), "uv_index_max": ("uv_index", ("bis",)),
+    "temp_min_c": ("temperature", ("von",)), "sunny_hours_h": ("sunshine", ("von",)),
+    "cloud_avg_pct": ("cloud_total", ("bis",)), "cloud_low_avg_pct": ("cloud_low", ("bis",)),
+    "humidity_avg_pct": ("humidity", _BEIDE), "dewpoint_avg_c": ("dewpoint", ("bis",)),
+    "freezing_level_m": ("freezing_level", ("von",)), "snowfall_limit_m": ("snowfall_limit", ("von",)),
+    "snow_depth_cm": ("snow_depth", _BEIDE),
 }
+# Ausdruecklich nicht zuordenbare Vergleichsschluessel mit Begruendung (Spec §4 Nachtrag).
+_NICHT_ZUORDENBAR = {
+    "thunder_level_max": "Gewitter hat keine Zahlengrenzen",
+    "cape_max_jkg": "CAPE hat keine eigene Farbe (P1)",
+    "wind_direction_deg": "Windrichtung hat keine Zahlengrenzen",
+    "cloud_mid_avg_pct": "keine Ampel-Metrik", "cloud_high_avg_pct": "keine Ampel-Metrik",
+    "pressure_avg_hpa": "keine Ampel-Metrik", "precip_type_dominant": "keine Zahlengrenzen",
+}
+# Vorrang: temp_min_c bestimmt die untere Temperatur-Seite vor temp_max_c, in jeder Reihenfolge.
+_VORRANG = ("temp_min_c",)
 # Ampel-Metrik-IDs selbst (z.B. Trip-Bereich "temperature"); Gewitter hat keine Zahlengrenzen.
 _DIREKT = set(AMPEL_TEMPLATES[DEFAULT_TEMPLATE]["metrics"]) - {"thunder"}
 _FEINE_SCHRITTE = {"°C": 0.1, "mm": 0.1}  # sonst 1 (km/h, %, m, cm)
@@ -96,6 +116,10 @@ def _metrik_eintrag(mid: str, band: dict, vorlage: dict) -> tuple[dict | None, l
 
 
 def _band_eintragen(baender: dict, key: str, von, bis, quelle: str, bericht: list) -> None:
+    if key in _NICHT_ZUORDENBAR:
+        bericht.append(f"    nicht zuordenbar: {key} {[von, bis]} ({quelle}): {_NICHT_ZUORDENBAR[key]}, "
+                       "erhalten, nicht migriert")
+        return
     ziel = _ZUORDNUNG.get(key) or ((key, _BEIDE) if key in _DIREKT else None)
     if ziel is None:
         bericht.append(f"    nicht zuordenbar: {key} {[von, bis]} ({quelle}): erhalten, nicht migriert")
@@ -120,7 +144,10 @@ def _baender(obj: dict, bericht: list) -> dict:
     """Ampel-Metrik -> {von, bis, quellen}; ``ideal_ranges`` nur ohne Bereich."""
     baender, gesehen = {}, set()
     corridors = obj.get("corridors")
-    for c in corridors if isinstance(corridors, list) else []:
+    corridors = corridors if isinstance(corridors, list) else []
+    # Vorrang-Schluessel zuerst (stabil), damit sie ihre Seite vor allen anderen belegen.
+    corridors = sorted(corridors, key=lambda c: not (isinstance(c, dict) and c.get("metric") in _VORRANG))
+    for c in corridors:
         if not isinstance(c, dict):
             continue
         key, rng = c.get("metric"), c.get("range")
@@ -133,7 +160,8 @@ def _baender(obj: dict, bericht: list) -> dict:
             _band_eintragen(baender, key, rng[0], rng[1], "corridors", bericht)
         elif c.get("notify"):
             bericht.append(f"    Δ-Bereich {key} {rng[:2]} (notify ohne mark): erhalten, keine Ampel-Grenze (S2)")
-    for key, b in _dict(_dict(obj.get("display_config")).get("ideal_ranges")).items():
+    ideal = _dict(_dict(obj.get("display_config")).get("ideal_ranges")).items()
+    for key, b in sorted(ideal, key=lambda kv: kv[0] not in _VORRANG):
         if key not in gesehen and isinstance(b, dict):
             _band_eintragen(baender, key, b.get("min"), b.get("max"), "ideal_ranges", bericht)
     return baender
