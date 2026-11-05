@@ -1255,7 +1255,8 @@ Ausdrücklich **nicht** Teil von S1:
   Bestandsdaten mit dem abgelösten Schlüssel `snow_line` brechen.
 - **`has_active_rules` bleibt unangetastet.** Weder S1 noch S2–S4 fassen es an — ein
   Wegfall würde Trip-Verhalten ändern (überstimmt `alert_on_changes=False`) und wäre
-  nicht verhaltensneutral.
+  nicht verhaltensneutral. Das gilt ausdrücklich auch für S4 (Schnitt C, siehe Known
+  Limitations S4): das Gate geht unverändert an #2793 über.
 
 ### Known Limitations / Nicht-Ziele (S2)
 
@@ -1286,7 +1287,7 @@ Diese Scheibe (S2) liefert Leser + Migration. Ausdrücklich **nicht** Teil von S
 | S3a | Backend und Vertrag: Leser-Rückfall nach Tier-Gates, ADR-0077-Nachtrag, Schlüssel-Endpunkt, Go-Angleichung Top-Level-`null` | dieser Workflow |
 | S3b1 | Oberfläche: Block „Kanäle je Wettergröße" auf allen vier Flächen (Trip-Hub, Trip-Anlegen, Ortsvergleich, Ortsvergleich-Anlegen) samt Payload, Snapshot/Rollback, DE/EN-Texte, Hinweise „nicht im Abo-Satz", „metrikfreie Alarme" und Wind-Hinweis | Workflow `feat-1895-s3b-kanal-spalte` (Beschluss F1) |
 | S3b2 | Hinweis „Kanal ohne Empfänger" und Hinweis „Kanal-Schwelle über Metrik-Stufe" | dieser Workflow `feat-1895-s3b2-kanal-hinweise` (unter #1895, kein neues Issue) |
-| S4 | Rückbau `alert_rules` | später, setzt S3b1 voraus (S3b2 ist keine Voraussetzung) |
+| S4 | Rückbau des toten Codes rund um `alert_rules` (Schnitt C): nicht eingebundene Regel-Editor-Komponenten, tote Exporte in `alertMetricTable.ts`, `expand_preset`. Leser, Gate, Kanal-Union und Persistenz gehen an #2793 | Workflow `feat-1895-s4-alert-rules-rueckbau`, Spec `docs/specs/modules/feat_1895_s4_alert_rules_rueckbau.md` |
 
 Ausdrücklich **nicht** Teil von S3a:
 
@@ -1363,6 +1364,26 @@ Ausdrücklich **nicht** Teil von S3a:
 - **Profil nicht ladbar ⇒ kein Empfänger-Hinweis.** Die Lücke bleibt dann unsichtbar (bewusst:
   lieber kein Hinweis als ein Falschversprechen).
 
+### Known Limitations / Nicht-Ziele (S4)
+
+S4 (Spec `docs/specs/modules/feat_1895_s4_alert_rules_rueckbau.md`) löscht nur toten Code:
+die nicht eingebundenen Komponenten `AlertsTab`, `AlertCard`, `AlertMetricTable`,
+`AlertMetricRow`, `AlertPresetSelector` und `trip-detail/AlertsPreviewCard`, die toten Exporte
+in `alerts-tab/alertMetricTable.ts` und die Python-Hilfe `expand_preset` ohne Aufrufer
+(ADR-0043). Nutzerverhalten, Kanalwahl und Persistenz ändern sich nicht.
+
+- **Schnitt C, Übergabe an #2793.** Unverändert bleiben und gehen an #2793 (Epic #2791 S2,
+  ADR-0106): das Prüf-Gate `has_active_rules`, die Kanal-Union der Regel-Kanäle in
+  `alert_channels.py`, die Vorschau `AlertPreviewCard` (liest `trip.alert_rules`), der Badge in
+  `TripTabs.svelte` und `hubUebersichtModell.ts`, die Diagnose in `api/routers/validator.py`,
+  das Go-Modell samt `SyncAlertRules` sowie Loader und Persistenz des Feldes.
+- **Kein stilles Zurückdrehen.** Der Rückbau der Leser ist aufgeschoben, nicht aufgegeben; die
+  Entscheidung aus ADR-0077 (Rückbau von `alert_rules` als S4) gilt weiter und wird mit #2793
+  abgeschlossen (Nachtrag S4 in ADR-0077).
+- **Gate nicht verhaltensneutral umstellbar.** Die Gate-Fälle 1 bis 4 stehen in
+  `docs/context/feat-1895-s4-alert-rules-rueckbau.md`; `_has_active_alert_metric` ist kein
+  äquivalenter Ersatz.
+
 ## Architektur-Entscheidung (ADR)
 
 - **ADR-Nr.:** ADR-0077, Fortschreibung von ADR-0046 (`0046-alarm-kanal-schwelle.md`)
@@ -1408,3 +1429,8 @@ Ausdrücklich **nicht** Teil von S3a:
   Scheibenschnitt-Zeile S3b2 von „offen" auf „dieser Workflow" gesetzt; Kommentar in
   `premiumSmsAlarmGate.ts` zur Berichtigung vorgemerkt. S1–S3b1-Inhalte unverändert (nur der
   Stand-Vermerk in den Known Limitations S3b1).
+- 2026-11-05: Scheibe S4 ergänzt (Schnitt C: nur toter Code rund um `alert_rules` entfernt,
+  Leser/Gate/Kanal-Union/Persistenz an #2793), eigene Spec
+  `docs/specs/modules/feat_1895_s4_alert_rules_rueckbau.md`. Scheibenschnitt-Zeile S4 auf den
+  tatsächlichen Schnitt gesetzt, `has_active_rules`-Aussage (Known Limitations S1) präzisiert,
+  Abschnitt „Known Limitations / Nicht-Ziele (S4)" ergänzt.

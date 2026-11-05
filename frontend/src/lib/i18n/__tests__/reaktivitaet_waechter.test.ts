@@ -196,7 +196,9 @@ describe('Bestand: Sprachwechsel ohne Neuladen erreicht jede Anzeige', () => {
 		// AlarmeTab: Premium-SMS-Sperre (derived) und Gruppen-Ueberschrift (markup);
 		// AlertMetricLevelRow: Richtwert-Hinweis (derived).
 		const { dateien } = scanneEintraege(SRC, BEREICHE['F7 #2656 Alarme-Reiter, Alarm-Kanal-Picker, alerts-tab']);
-		assert.ok(dateien.length >= 12, `Messaufbau: nur ${dateien.length} Dateien`);
+		// #1895 S4: die fuenf toten alerts-tab-Bausteine (AlertsTab, AlertCard,
+		// AlertMetricTable/-Row, AlertPresetSelector) sind entfernt (13 -> 8 Dateien).
+		assert.ok(dateien.length >= 8, `Messaufbau: nur ${dateien.length} Dateien`);
 		let gezaehlt = 0;
 		for (const rel of dateien) {
 			const q = (readFileSync(join(SRC, rel), 'utf8') as string).replace(/\(void \$locale, /g, '(');

@@ -53,7 +53,7 @@ from utils.timezone import first_resolvable_tz, format_reference_at, tz_for_coor
 logger = logging.getLogger("compare_alert")
 
 # B2 (Spec): alle 12 Tabellenmetriken auf "standard" — äquivalent zu
-# expand_preset("standard") / expand_per_metric_levels(..., display_config=None).
+# expand_per_metric_levels(..., display_config=None) mit allen Stufen "standard".
 _STANDARD_METRIC_LEVELS: dict[str, str] = {row[0].value: "standard" for row in _PRESET_TABLE}
 _DEFAULT_COOLDOWN_MINUTES = 120
 # Issue #1584 Scheibe C: Hoechstalter des Δ-Ankers. Ohne aktuellen

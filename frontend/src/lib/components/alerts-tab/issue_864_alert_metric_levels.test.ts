@@ -4,14 +4,13 @@
 //
 // Tests scheitern heute (RED), weil:
 //   - `levelToThreshold()` in alertMetricTable.ts noch nicht existiert.
-//   - `migrateAlertPreset()` in alertMetricTable.ts noch nicht existiert.
 //   - `THRESHOLD_CROSSING_METRICS`-Set noch nicht exportiert wird.
 //
 // Geprüfte ACs (TypeScript-Helper):
 //   AC-3: levelToThreshold() gibt "Δ ≥ X unit" für Delta-Metriken zurück;
 //         "< X m" für visibility (THRESHOLD_CROSSING).
-//   AC-9: migrateAlertPreset() wandelt globalen Preset-String in
-//         Record<AlertMetric, SensLevel> um.
+//   (AC-9 migrateAlertPreset() ist mit #1895 S4 als toter Code entfernt,
+//    seine Tests sind mit dem Pruefling entfallen.)
 //
 // Ausführen (nach npm ci):
 //   cd frontend && node --experimental-strip-types --test \
@@ -22,7 +21,6 @@ import assert from 'node:assert/strict';
 
 import {
 	levelToThreshold,
-	migrateAlertPreset,
 	THRESHOLD_CROSSING_METRICS,
 } from './alertMetricTable.ts';
 
@@ -91,41 +89,4 @@ test('THRESHOLD_CROSSING_METRICS > enthält NICHT wind_gust', () => {
 		!THRESHOLD_CROSSING_METRICS.has('wind_gust' as AlertMetric),
 		'wind_gust darf NICHT in THRESHOLD_CROSSING_METRICS sein'
 	);
-});
-
-// ─── AC-9: migrateAlertPreset ──────────────────────────────────────────────
-
-test('migrateAlertPreset > "standard" mit 2 Metriken → alle auf standard', () => {
-	const activeMetrics = ['wind_gust', 'precipitation_sum'] as AlertMetric[];
-	const result = migrateAlertPreset('standard', activeMetrics);
-	assert.deepEqual(result, {
-		wind_gust: 'standard',
-		precipitation_sum: 'standard',
-	});
-});
-
-test('migrateAlertPreset > "entspannt" → alle Metriken auf entspannt', () => {
-	const activeMetrics = ['wind_gust', 'visibility'] as AlertMetric[];
-	const result = migrateAlertPreset('entspannt', activeMetrics);
-	assert.equal(result['wind_gust' as AlertMetric], 'entspannt');
-	assert.equal(result['visibility' as AlertMetric], 'entspannt');
-});
-
-test('migrateAlertPreset > "deaktiviert" → alle Metriken auf off', () => {
-	const activeMetrics = ['wind_gust'] as AlertMetric[];
-	const result = migrateAlertPreset('deaktiviert', activeMetrics);
-	assert.equal(result['wind_gust' as AlertMetric], 'off',
-		'"deaktiviert" muss zu SensLevel "off" gemappt werden');
-});
-
-test('migrateAlertPreset > "sensibel" → alle Metriken auf sensibel', () => {
-	const activeMetrics = ['wind_gust', 'cape'] as AlertMetric[];
-	const result = migrateAlertPreset('sensibel', activeMetrics);
-	assert.equal(result['wind_gust' as AlertMetric], 'sensibel');
-	assert.equal(result['cape' as AlertMetric], 'sensibel');
-});
-
-test('migrateAlertPreset > leere Metrik-Liste → leeres Objekt', () => {
-	const result = migrateAlertPreset('standard', []);
-	assert.deepEqual(result, {});
 });

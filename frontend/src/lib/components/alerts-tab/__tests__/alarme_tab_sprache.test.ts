@@ -96,11 +96,9 @@ function deutscheReste(text: string, ausnahmen: string[] = []): string[] {
 }
 /** Vergleichs-Katalog ohne label_en (Luftfeuchtigkeit, Gefühlte Temperatur (Minimum/Maximum)):
  *  der deutsche Name ist Fallback (AC-3) und enthaelt die Wortlaute dieser Anker. */
-const OHNE_LABEL_EN = ['alarme.metrik.humidity', 'alarme.preset.zeile.humidity', 'alarme.metrik.temperature_min', 'alarme.metrik.temperature_max'];
+const OHNE_LABEL_EN = ['alarme.metrik.humidity', 'alarme.metrik.temperature_min', 'alarme.metrik.temperature_max'];
 /** Servertext der geladenen Beispiel-Warnung (Betreff/Telegram/SMS der Fixture) bleibt Server-Sprache. */
 const ohneServerVorschau = (text: string) => text.replaceAll('[GR20] Böen 75 km/h', '').replaceAll('GR20 Böen 75', '');
-/** Die Preset-Zeilen nennen dieselben Woerter wie die Metrik-Namen; im Reiter stehen nur diese. */
-const PRESET_ZEILEN = ['alarme.preset.zeile.'];
 
 /** Schwellen, Einheiten, Vergleichssymbole, Zeiten und Eingabewerte eines Renders. */
 function zahlenUndEinheiten(h: string): string[] {
@@ -138,7 +136,7 @@ describe('AC-6: Deutsch byte-gleich zum Ist-Stand vor der Umstellung (Golden gol
 	});
 	test('Messaufbau: Golden enthaelt die deutschen Texte aller Bausteine', () => {
 		const alle = Object.keys(FAELLE).map((f) => readFileSync(path.join(GOLDEN_DIR, `${f}.de.html`), 'utf-8')).join('');
-		for (const s of ['Amtliche &amp; Radar-Warnungen', 'Radar-Alarm', 'Alert-Kanäle', 'Premium-SMS ab Level Premium verfügbar', 'Tarif wird geprüft', 'kein Kanal — Alerts gehen nirgends hin', 'sofortiger Push', '(Ortszeit des ersten Orts)', '(Ortszeit der Trip)', 'Stille Stunden über Mitternacht (22:00 bis 07:00 des nächsten Tages).', 'Für diese Größen gibt es keinen Alarm', 'Keine der gewählten Größen', 'Wähle im Tab „Wetter-Metriken"', 'Schwellwerte nach Preset', 'Tiefsttemperatur', 'title="Richtwert — wird je Wettermodell und Gebiet umgerechnet"', 'Lade…', 'title="Alert-Vorschau E-Mail"', 'Melde ab Änderung:', '— deaktiviert —', '1 von 2 · gemischt', '5 von 5 aktiv', 'Noch keine Orte konfiguriert', 'Standard-Konfiguration übernehmen'])
+		for (const s of ['Amtliche &amp; Radar-Warnungen', 'Radar-Alarm', 'Alert-Kanäle', 'Premium-SMS ab Level Premium verfügbar', 'Tarif wird geprüft', 'kein Kanal — Alerts gehen nirgends hin', 'sofortiger Push', '(Ortszeit des ersten Orts)', '(Ortszeit der Trip)', 'Stille Stunden über Mitternacht (22:00 bis 07:00 des nächsten Tages).', 'Für diese Größen gibt es keinen Alarm', 'Keine der gewählten Größen', 'Wähle im Tab „Wetter-Metriken"', 'title="Richtwert — wird je Wettermodell und Gebiet umgerechnet"', 'Lade…', 'title="Alert-Vorschau E-Mail"', '1 von 2 · gemischt', 'Noch keine Orte konfiguriert'])
 			assert.ok(alle.includes(s), s);
 	});
 });
@@ -188,7 +186,7 @@ describe('AC-1: Alarme-Reiter englisch in Trip und Ortsvergleich, Zahlen und Sym
 		hat(en, 'aria-label="Toggle Premium-SMS (Garmin inReach)"');
 		// Kanalnamen sind Eigennamen: in beiden Sprachen gleich.
 		for (const s of ['Telegram', 'SMS', 'Premium-SMS (Garmin inReach)', 'Email']) hat(text, s);
-		assert.deepEqual(deutscheReste(text, PRESET_ZEILEN), []);
+		assert.deepEqual(deutscheReste(text), []);
 		assert.deepEqual(zahlenUndEinheiten(en), zahlenUndEinheiten(de));
 		assert.ok(zahlenUndEinheiten(de).includes('Δ ≥ ~1200 J/kg'), 'Messaufbau: Schwellen fehlen');
 	});
@@ -211,7 +209,7 @@ describe('AC-1: Alarme-Reiter englisch in Trip und Ortsvergleich, Zahlen und Sym
 		])
 			hat(text, s);
 		hatNicht(text, 'Ortszeit');
-		assert.deepEqual(deutscheReste(text, [...PRESET_ZEILEN, ...OHNE_LABEL_EN]), []);
+		assert.deepEqual(deutscheReste(text, OHNE_LABEL_EN), []);
 		assert.deepEqual(zahlenUndEinheiten(en), zahlenUndEinheiten(de));
 	});
 	test('Leer- und Sonderzustaende englisch (Reiter, Kanal-Picker, Beispiel-Warnung, Stille Stunden)', () => {
@@ -233,40 +231,22 @@ describe('AC-1: Alarme-Reiter englisch in Trip und Ortsvergleich, Zahlen und Sym
 		])
 			hat(text, s);
 		hat(en, '<a href="?tab=wetter-metriken" data-testid="alert-preview-no-metrics-link"><strong>Weather metrics</strong></a>');
-		assert.deepEqual(deutscheReste(text, [...PRESET_ZEILEN, ...OHNE_LABEL_EN]), []);
+		assert.deepEqual(deutscheReste(text, OHNE_LABEL_EN), []);
 	});
-	test('Bausteine unter alerts-tab/ englisch (Alerts-Reiter, Karte, Tabellen, Preset, Vorschau)', () => {
+	test('Bausteine unter alerts-tab/ englisch (Stufen-Tabelle, Vorschau)', () => {
 		const { de, en } = deDannEn(() => bausteineRendern());
 		const text = sichtbar(en);
 		for (const s of [
-			'Alerts · instant notification',
-			'Instant notifications between briefings',
-			'No alerts configured.',
-			'Apply standard configuration',
-			'Select metrics above to configure alert thresholds.',
-			'5 of 5 active',
 			'1 of 2 · mixed',
 			'No alertable metrics active. Select metrics in the Weather metrics tab.',
-			'Notify from change of:',
-			'Channel:',
-			'Δ change (since last briefing)',
-			'Absolute threshold',
-			'— disabled —',
-			'Info Warning Critical',
 			'Off Relaxed Standard Sensitive',
-			'Thresholds by preset',
-			'Low temperature',
-			'High temperature',
-			'Temperature (change)',
 			'Loading…',
 			'Load preview'
 		])
 			hat(text, s);
-		hat(en, 'aria-label="Show threshold overview"');
-		hat(en, 'aria-label="Close"');
 		hat(en, 'title="Alert preview email"');
-		// Optionswerte (value) bleiben die Kennungen.
-		for (const v of ['value="info"', 'value="warning"', 'value="critical"', 'value="deaktiviert"', 'value="entspannt"']) hat(en, v);
+		// Issue #1895 S4: Texte und Optionswerte der toten Bausteine AlertsTab, AlertCard,
+		// AlertMetricTable und AlertPresetSelector sind mit ihnen entfallen.
 		assert.deepEqual(deutscheReste(ohneServerVorschau(text)), []);
 		assert.deepEqual(zahlenUndEinheiten(en), zahlenUndEinheiten(de));
 	});
@@ -414,11 +394,11 @@ describe('AC-4: zwei Nutzer, zwei Sprachen, gleiche Alarm-Regeln, gleiche Speich
 			return { lang: layout.lang as 'de' | 'en', t: await holen(sitzung, `/api/trips/${tripId}`), fremd: await holen(sitzung, `/api/trips/${fremdeId}`) };
 		});
 		locale.set(lang);
-		const zeilen = amt.alertRulesToRowState(t.alert_rules, t.alert_rules);
-		zeilen.wind_gust.deltaThreshold = 25;
-		zeilen.temperature_min.severity = 'warning';
+		// Issue #1895 S4: der Umweg ueber die Zeilen-Umrechner des toten Regel-Editors
+		// (alertRulesToRowState/rowStateToAlertRules) ist mit ihnen entfallen; die
+		// gespeicherten Regeln des Nutzers werden unveraendert verglichen.
 		const schwellen = kanal.applyThresholdChange(kanal.resolveAlertChannelThresholds({ telegram: 'MODERATE' }), 'sms', 'HIGH');
-		const regeln = amt.rowStateToAlertRules(zeilen, t.alert_rules);
+		const regeln = t.alert_rules;
 		const nutzlast = lieferung.buildAlarmeDeliveryPayload({
 			officialWarningsEnabled: true,
 			cooldownMinutes: t.alert_cooldown_minutes,
@@ -445,10 +425,9 @@ describe('AC-4: zwei Nutzer, zwei Sprachen, gleiche Alarm-Regeln, gleiche Speich
 		hat(b.reiter, 'Alert-Kanäle');
 		hat(b.reiter, 'Böen');
 		hat(b.reiter, 'Stille Stunden');
-		assert.deepEqual(deutscheReste(a.reiter, PRESET_ZEILEN), []);
+		assert.deepEqual(deutscheReste(a.reiter), []);
 		assert.equal(JSON.stringify(a.regeln), JSON.stringify(b.regeln));
 		assert.equal(JSON.stringify(a.nutzlast), JSON.stringify(b.nutzlast));
-		assert.equal(a.regeln.find((r: { id: string }) => r.id === 'r-gust-d').threshold, 25, 'geaenderte Schwelle gespeichert');
 		assert.equal(a.nutzlast.alert_channel_thresholds.sms, 'HIGH');
 		for (const s of [JSON.stringify(a.regeln), JSON.stringify(a.nutzlast)]) {
 			for (const wort of ['Wind gusts', 'Böen', 'Warning', 'Warnung', 'Critical', 'Kritisch', 'high', 'hoch', 'label', 'Quiet', 'Stille']) hatNicht(s, wort);

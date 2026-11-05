@@ -32,9 +32,9 @@ export const ALERT_METRIC_TO_CATALOG_ID: Partial<Record<AlertMetric, string>> = 
  * Aenderungs-Groessen: sie beschreiben den Sprung einer Groesse zwischen zwei
  * Zeitpunkten und haben deshalb keine eigene Entsprechung im Register.
  *
- * Bewusst NICHT identisch mit `DELTA_ONLY_METRICS`
- * (alert-rules-editor/alertRuleDefaults.ts): dort geht es um den zulaessigen
- * Regel-Modus, weshalb `thunder_level` dazugehoert — hier geht es um die
+ * Bewusst NICHT identisch mit der frueheren Menge der Delta-only-Metriken des
+ * Regel-Editors (mit #1895 S4 entfernt): dort ging es um den zulaessigen
+ * Regel-Modus, weshalb `thunder_level` dazugehoerte — hier geht es um die
  * Herkunft der Beschriftung, und `thunder_level` hat mit "thunder" eine
  * gueltige Register-Entsprechung.
  */

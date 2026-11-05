@@ -39,7 +39,8 @@ test('AC-1: ChannelToggle.svelte + wizardHelpers.ts (+Test) liegen in shared/', 
 
 // Issue #1232 Scheibe 1: ChannelToggle-Nutzung (Amtliche-Warnungen-Toggles) ist
 // von alerts-tab/AlertsTab.svelte in shared/VersandTab.svelte umgezogen —
-// AlertsTab bleibt reine Metrik-Level-Konfiguration. Importer-Liste angepasst,
+// AlertsTab blieb reine Metrik-Level-Konfiguration (mit #1895 S4 als toter Code
+// entfernt). Importer-Liste angepasst,
 // Kernaussage (3 Verbraucher importieren aus shared/) bleibt bestehen.
 //
 // Issue #1232 Scheibe 2b (2026-07-12): Step5Versand.svelte wurde gelöscht
@@ -113,8 +114,9 @@ const TOTER_STRANG = [
 	join('alert-rules-editor', 'AlertRulesEditor.svelte'),
 	join('alert-rules-editor', 'AlertRuleRow.svelte'),
 	join('alert-rules-editor', 'alertChannels.ts'),
-	// AC-6: DELTA_ONLY_METRICS ist nach alerts-tab/alertMetricTable.ts umgezogen —
-	// ein blosser Re-Export aus der alten Datei erfuellt „dort definiert" NICHT.
+	// AC-6: DELTA_ONLY_METRICS war nach alerts-tab/alertMetricTable.ts umgezogen —
+	// ein blosser Re-Export aus der alten Datei erfuellte „dort definiert" NICHT.
+	// Seit #1895 S4 ist die Konstante ganz entfernt (kein produktiver Nutzer).
 	join('alert-rules-editor', 'alertRuleDefaults.ts'),
 ];
 

@@ -7,17 +7,22 @@ Diese Tests beweisen die **Python-Backend**-Acceptance-Criteria der Spec
 unter `data/users/<user_id>/` (eindeutige tdd-846-* IDs, Cleanup in Fixture).
 
 Heute schlagen sie fehl (RED), weil:
-- `src/services/alert_preset.py::expand_preset` existiert noch nicht (ImportError).
+- `src/services/alert_preset.py` existiert noch nicht (ImportError).
 - `AlertMetric.FRESH_SNOW/CAPE/VISIBILITY/HUMIDITY` sind noch nicht im Enum
   (AttributeError).
 - Die Threshold-Crossing-Logik für Sichtweite in `detect_changes`
   (`src/services/weather_change_detection.py`) existiert noch nicht.
 
 Geprüfte ACs (nur Python):
-- AC-3: `expand_preset("deaktiviert")` → leere Liste; Service ohne Thresholds
+- AC-3: alle Stufen 'off' → leere Liste; Service ohne Thresholds
   liefert leere Change-Liste.
+
+Issue #1895 S4: Die globale Preset-Expansion ist als toter Code entfernt
+(ADR-0043). Die weiter geltenden Zusicherungen laufen ueber den produktiven
+Pfad `expand_per_metric_levels` (alle Tabellen-Metriken auf derselben Stufe,
+`_alle_auf`).
 - AC-4: Threshold-Crossing für `visibility_min_m` (genau bei Unterschreiten).
-- AC-6: `expand_preset("entspannt")` → exakt 13 Regeln, neue Metriken korrekt.
+- AC-6: alle Metriken 'entspannt' → exakt 14 Regeln, neue Metriken korrekt.
 - AC-7: Mandantentrennung zweier User über echtes Dateisystem.
 - AC-8: Preset hat Vorrang vor altem `alert_rules`-Array.
 
@@ -104,30 +109,35 @@ def clean_user_dirs():
             shutil.rmtree(path)
 
 
+def _alle_auf(level: str):
+    """Alle Metriken der Schwellwert-Tabelle auf dieselbe Stufe, ueber den
+    produktiven Pfad `expand_per_metric_levels` (#1895 S4)."""
+    from services.alert_preset import _PRESET_TABLE, expand_per_metric_levels
+
+    return expand_per_metric_levels({row[0].value: level for row in _PRESET_TABLE})
+
+
 # ═════════════════════════════ AC-3 ═════════════════════════════════════════
-# Preset "deaktiviert" → leere Regel-Liste → keine Changes.
+# Alle Stufen "off" (vormals Preset "deaktiviert") → leere Regel-Liste → keine Changes.
 
 
 def test_ac3_deaktiviert_expands_to_empty_list():
-    """AC-3: `expand_preset("deaktiviert")` liefert eine leere Liste."""
-    from services.alert_preset import expand_preset  # RED: Modul fehlt
-
-    rules = expand_preset("deaktiviert")
+    """AC-3: alle Metriken auf 'off' liefern eine leere Liste."""
+    rules = _alle_auf("off")
     assert rules == [], (
-        "Preset 'deaktiviert' muss zu einer leeren AlertRule-Liste expandieren "
-        "(kein Alert-Versand)"
+        "Stufe 'off' fuer alle Metriken muss zu einer leeren AlertRule-Liste "
+        "expandieren (kein Alert-Versand)"
     )
 
 
 def test_ac3_empty_service_yields_no_changes():
-    """AC-3: Preset 'deaktiviert' → `expand_preset` liefert leere Liste →
+    """AC-3: alle Stufen 'off' → `expand_per_metric_levels` liefert leere Liste →
     `from_alert_rules([])` → Service ohne Thresholds → leere Change-Liste
     unabhängig vom Wetter-Zustand. Geht durch den NEUEN Expansions-Pfad,
     damit der Nachweis nicht nur bestehendes Verhalten testet."""
-    from services.alert_preset import expand_preset  # RED: Modul fehlt
     from services.weather_change_detection import WeatherChangeDetectionService
 
-    rules = expand_preset("deaktiviert")
+    rules = _alle_auf("off")
     service = WeatherChangeDetectionService.from_alert_rules(rules)
 
     # Drastische Abweichung im Wetter — darf trotzdem KEINEN Change geben.
@@ -201,7 +211,7 @@ def test_ac4_visibility_already_below_threshold_no_realert():
 
 
 def test_ac6_entspannt_has_exactly_14_rules():
-    """AC-6: `expand_preset("entspannt")` liefert exakt 14 Regeln.
+    """AC-6: alle Metriken auf 'entspannt' liefern exakt 14 Regeln.
 
     Issue #889: humidity entfernt → 12.
     Issue #946: freezing_level ergänzt → 13.
@@ -218,9 +228,8 @@ def test_ac6_entspannt_has_exactly_14_rules():
     ergeben.
     """
     from app.models import AlertMetric
-    from services.alert_preset import expand_preset
 
-    rules = expand_preset("entspannt")
+    rules = _alle_auf("entspannt")
     assert len(rules) == 14, (
         f"Preset 'entspannt' muss exakt 14 Regeln liefern, erhielt: {len(rules)}"
     )
@@ -247,9 +256,7 @@ def _rule_for(rules, metric: AlertMetric):
 
 def test_ac6_entspannt_fresh_snow_threshold_20_delta():
     """AC-6: Neuschnee — threshold=20, kind=delta."""
-    from services.alert_preset import expand_preset
-
-    rule = _rule_for(expand_preset("entspannt"), AlertMetric.FRESH_SNOW)
+    rule = _rule_for(_alle_auf("entspannt"), AlertMetric.FRESH_SNOW)
     assert rule.threshold == 20, f"fresh_snow threshold erwartet 20, war {rule.threshold}"
     assert rule.kind == AlertRuleKind.DELTA, (
         f"fresh_snow kind erwartet delta, war {rule.kind}"
@@ -258,9 +265,7 @@ def test_ac6_entspannt_fresh_snow_threshold_20_delta():
 
 def test_ac6_entspannt_cape_threshold_1200_delta():
     """AC-6: CAPE — threshold=1200, kind=delta."""
-    from services.alert_preset import expand_preset
-
-    rule = _rule_for(expand_preset("entspannt"), AlertMetric.CAPE)
+    rule = _rule_for(_alle_auf("entspannt"), AlertMetric.CAPE)
     assert rule.threshold == 1200, f"cape threshold erwartet 1200, war {rule.threshold}"
     assert rule.kind == AlertRuleKind.DELTA, f"cape kind erwartet delta, war {rule.kind}"
 
@@ -268,9 +273,7 @@ def test_ac6_entspannt_cape_threshold_1200_delta():
 def test_ac6_entspannt_visibility_threshold_500_crossing():
     """AC-6: Sichtweite — threshold=500, kind=threshold_crossing
     (oder äquivalenter Marker, NICHT delta)."""
-    from services.alert_preset import expand_preset
-
-    rule = _rule_for(expand_preset("entspannt"), AlertMetric.VISIBILITY)
+    rule = _rule_for(_alle_auf("entspannt"), AlertMetric.VISIBILITY)
     assert rule.threshold == 500, (
         f"visibility threshold erwartet 500, war {rule.threshold}"
     )
@@ -283,11 +286,15 @@ def test_ac6_entspannt_visibility_threshold_500_crossing():
 
 def test_ac6_entspannt_has_no_humidity_rule():
     """Issue #889 / ADR-0010: Luftfeuchtigkeit ist Vorboten-Metrik —
-    das Preset darf keine HUMIDITY-Regel mehr liefern (ersetzt den vormaligen
+    die Stufe 'entspannt' darf keine HUMIDITY-Regel liefern, auch wenn
+    humidity ausdruecklich eine Stufe traegt (ersetzt den vormaligen
     #846-Vertrag threshold=25/delta)."""
-    from services.alert_preset import expand_preset
+    from services.alert_preset import _PRESET_TABLE, expand_per_metric_levels
 
-    rules = expand_preset("entspannt")
+    levels = {row[0].value: "entspannt" for row in _PRESET_TABLE}
+    levels["humidity"] = "entspannt"
+    rules = expand_per_metric_levels(levels)
+    assert rules, "Messaufbau: die Expansion liefert ueberhaupt Regeln"
     humidity_rules = [r for r in rules if r.metric == AlertMetric.HUMIDITY]
     assert humidity_rules == [], (
         "Preset 'entspannt' darf keine HUMIDITY-Regel mehr enthalten, "
@@ -325,15 +332,14 @@ def test_ac7_standard_gust_below_threshold_no_alert_and_user_isolation(
     von 18 km/h erreicht die Schwelle NICHT → kein Alert für user_a; user_b
     bleibt komplett unberührt (Mandantentrennung, echtes Dateisystem)."""
     from app.config import Settings
-    from services.alert_preset import expand_preset  # RED: Modul fehlt
     from services.trip_alert import TripAlertService
     from services.weather_change_detection import WeatherChangeDetectionService
 
     user_a = clean_user_dirs("tdd-846-usera")
     user_b = clean_user_dirs("tdd-846-userb")
 
-    # Standard-Preset → wind_gust Δ-Schwelle 20.
-    rules = expand_preset("standard")
+    # Alle Metriken 'standard' → wind_gust Δ-Schwelle 20.
+    rules = _alle_auf("standard")
     service_rules = WeatherChangeDetectionService.from_alert_rules(rules)
 
     # Böen-Delta 18 km/h (60→78) — unter Standard-Schwelle 20 → kein Change.
@@ -373,17 +379,34 @@ def test_ac7_standard_gust_below_threshold_no_alert_and_user_isolation(
 
 
 def test_ac8_standard_preset_gust_threshold_is_20():
-    """`expand_preset("standard")` liefert wind_gust mit Standard-Wert threshold=20.
+    """Stufe 'standard' liefert wind_gust mit Standard-Wert threshold=20.
 
     Issue #946: Der frühere Integrations-Teil dieses Tests (alert_preset überschreibt
     Legacy-alert_rules über _select_change_detector) wurde entfernt — dieser
     Routing-Pfad existiert nach #946 nicht mehr (metric_alert_levels ist einzige
-    Quelle). Die reine expand_preset-Zusicherung bleibt gültig.
+    Quelle). Die Schwellen-Zusicherung bleibt gültig, seit #1895 S4 über
+    `expand_per_metric_levels`.
     """
-    from services.alert_preset import expand_preset
-
-    rules = expand_preset("standard")
+    rules = _alle_auf("standard")
     gust = _rule_for(rules, AlertMetric.WIND_GUST)
     assert gust.threshold == 20, (
         f"Preset 'standard' muss Böen-Schwelle 20 liefern, war: {gust.threshold}"
+    )
+
+
+def test_sensibel_spalte_liefert_enge_schwellen():
+    """#1895 S4 (Adversary F003): die Stufe 'sensibel' waehlt die Sensibel-Spalte
+    der Schwellwert-Tabelle -- Boeen-Schwelle 12 (nicht 20/35), Nullgradgrenze 200."""
+    from services.alert_preset import expand_per_metric_levels
+
+    rules = expand_per_metric_levels({"wind_gust": "sensibel"})
+    assert len(rules) == 1, f"Genau eine Regel erwartet, erhielt: {rules}"
+    assert rules[0].metric == AlertMetric.WIND_GUST
+    assert rules[0].threshold == 12, (
+        f"Stufe 'sensibel' muss Boeen-Schwelle 12 liefern, war: {rules[0].threshold}"
+    )
+
+    freezing = _rule_for(_alle_auf("sensibel"), AlertMetric.FREEZING_LEVEL)
+    assert freezing.threshold == 200, (
+        f"Stufe 'sensibel' muss Nullgradgrenze-Schwelle 200 liefern, war: {freezing.threshold}"
     )

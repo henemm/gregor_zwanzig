@@ -181,7 +181,6 @@ const ALT = ['overview', 'stages', 'weather', 'alerts', 'briefings', 'preview', 
 // doc-compliance-test: hartkodierte href-/Handler-Literale haben keinen Funktionsaufruf.
 describe('AC-9 / AC-10 (Quelltext-Scan, doc-compliance-test): Trip-Sprunglinks nur mit neuen Trip-Kennungen', () => {
 	const ERWARTET: Record<string, string[]> = {
-		'lib/components/trip-detail/AlertsPreviewCard.svelte': ['wertebereiche'],
 		'lib/components/alerts-tab/AlertPreviewCard.svelte': ['wetter-metriken']
 	};
 	for (const [rel, erwartet] of Object.entries(ERWARTET)) {
@@ -326,7 +325,6 @@ describe('AC-10 / AC-15 (Quelltext-Scan, doc-compliance-test): kein Alt-Literal,
 		// #2682: geteilte Übersicht (Baustein + Modell)
 		'lib/components/shared/hub-uebersicht/HubUebersicht.svelte',
 		'lib/components/shared/hub-uebersicht/hubUebersichtModell.ts',
-		'lib/components/trip-detail/AlertsPreviewCard.svelte',
 		'lib/components/alerts-tab/AlertPreviewCard.svelte'
 	];
 	for (const rel of DATEIEN) {

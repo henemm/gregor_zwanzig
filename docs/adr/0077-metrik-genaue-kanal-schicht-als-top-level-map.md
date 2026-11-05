@@ -103,3 +103,23 @@ anbietet (Spec `docs/specs/modules/alert_metric_channels.md`, AC-25 bis AC-40):
 - **(d) Keine Go-Schreibvalidierung:** Go besitzt keinen Katalog (eine Kopie wäre Drift), eine
   Validierung bräche Bestandsdaten (Punkt 3), der Leser ist fail-soft. Es gibt keine Schreibvalidierung in Go;
   die Schlüsselmenge wird durch den zeilenweisen Wirk-Test (AC-32) bewacht.
+
+## Nachtrag S4 (2026-11-05, Issue #1895)
+
+Kein neues ADR, kein Statuswechsel. S4 setzt den in den Alternativen vorgesehenen Rückbau von
+`alert_rules` im **Schnitt C** um (Spec `docs/specs/modules/feat_1895_s4_alert_rules_rueckbau.md`,
+Analyse `docs/context/feat-1895-s4-alert-rules-rueckbau.md`):
+
+- **Entfernt** wird nur toter Code (ADR-0043: keine Konfigurationsfläche ohne Wirkung): die nicht
+  eingebundenen Regel-Editor-Komponenten (`AlertsTab`, `AlertCard`, `AlertMetricTable`,
+  `AlertMetricRow`, `AlertPresetSelector`, `trip-detail/AlertsPreviewCard`), die toten Umrechner
+  in `alerts-tab/alertMetricTable.ts` und die Python-Hilfe `expand_preset` ohne Aufrufer.
+- **Übergeben an #2793** (Epic #2791 S2, ADR-0106) werden die Leser: Prüf-Gate
+  `has_active_rules`, Kanal-Union der Regel-Kanäle (`alert_channels.py`), Alarm-Vorschau
+  (`AlertPreviewCard`), Badge (`TripTabs.svelte`, `hubUebersichtModell.ts`), Diagnose
+  (`api/routers/validator.py`), Go-Modell samt `SyncAlertRules`, Loader und Persistenz. Grund:
+  das Gate ist nicht verhaltensneutral umstellbar (Gate-Fälle 1 bis 4 der Analyse,
+  `_has_active_alert_metric` ist nicht äquivalent), und #2793 definiert die Leser ohnehin neu.
+- **Kein stilles Zurückdrehen.** Die Entscheidung, `alert_rules` zurückzubauen, bleibt bestehen;
+  aufgeschoben ist nur der Abbau der Leser und der Persistenz. Die Aussage „`has_active_rules`
+  bleibt in allen Scheiben unangetastet" gilt auch für S4.
