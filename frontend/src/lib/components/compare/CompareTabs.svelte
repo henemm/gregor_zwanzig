@@ -195,7 +195,6 @@
 	// Instanz) — Verhalten von `status`/`statusInfo` bleibt unveraendert, reine
 	// Reihenfolge-Korrektur. Issue #527/#558 + #631: Pause/Aktivieren-Zustand.
 	let localSchedule = $state<string>(preset.schedule ?? 'manual');
-	const status = $derived(deriveStatusWithScheduleOverride(preset, localSchedule));
 
 	// Issue #2682: „Nächster Versand" (Issue #1969, Backend-Wert, neu geladen nach jedem
 	// erfolgreichen Speichern ueber `saveController.savedAt`), Kanal-Namen, Profil-Label und
@@ -212,9 +211,11 @@
 	// Baseline defaultet (seit #2375 senden Orte/Status nur ihre Eigenfelder). Wird nach JEDEM erfolgreichen S6-PUT aus dem
 	// Response-Body aufgefrischt (internal/handler/compare_preset.go:390
 	// liefert das gespeicherte Preset zurueck — writeJSON(w, 200, updated)).
-	// Uebersicht-/Vorschau-Tab lesen bewusst weiterhin `preset` direkt
-	// (bekannte, akzeptierte Stale-Anzeige, s. Fix-Vorgabe Scope).
+	// Issue #2828: Auch die Uebersicht (HubUebersicht) und `status` lesen diesen
+	// lebenden Stand, nicht die eingefrorene Prop `preset` — wie TripTabs den lebenden
+	// `trip`. Der lokale Pausier-Override `localSchedule` gewinnt weiter vor dem Preset.
 	let currentPreset = $state<ComparePreset>(snapshotForRollback(preset));
+	const status = $derived(deriveStatusWithScheduleOverride(currentPreset, localSchedule));
 
 	// Fix-Loop 3 (#1433, F201): Hydrationsquelle der Reiter ist dieser Stand. Bei einem 412
 	// wird er lokal um die abgelehnte Eigenfeld-Nutzlast fortgeschrieben (Seitenstand =
@@ -692,7 +693,7 @@
 			     Aktivieren, `orte` die aufgeloesten Orte dieser Sitzung. -->
 			<HubUebersicht
 				context="vergleich"
-				{preset}
+				preset={currentPreset}
 				{status}
 				orte={resolvedLocations}
 				{saveController}

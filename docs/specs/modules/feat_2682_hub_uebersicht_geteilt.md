@@ -51,6 +51,7 @@ Ein Workflow, eine Spec, zwei Lieferschritte als getrennte Commits (kein Abspalt
 7. **Kennzahlen-Umfang.** Desktop (5): Status, Nächster Versand, Briefings (Zeiten), Zuletzt raus, Kanäle. Mobil (4): Status, Nächster Versand, Zuletzt raus, Kanäle. Beim Trip: Briefings-Zeiten aus `report_config.morning_time/evening_time` mit `reportSlotAktiv`, „Nächster Versand" aus `erstelleNaechstesBriefingLader({context:'route'})` und `formatNextBriefing(wert,'route')`, Kanäle aus den Briefing-Flags (E-Mail gilt als aktiv, solange `send_email !== false`, Muster `report_slot_aktiv.test.ts:185`).
 8. **Stat-Dublette** (`atoms/Stat` vs. `molecules/Stat`): der Baustein nutzt keine der beiden und verbreitet sie nicht; Aufräumen bleibt Nebenbefund #1199.
 9. **`hubActivationCard`** (`CompareTabs.svelte:1033-1051`) ist kein toter Code (Übergabe an `WetterMetrikenVersandPanel` in `:974`) und bleibt unberührt.
+10. **Übersicht liest lebenden Stand (`currentPreset`)** (Nachtrag #2828). Im Vergleich bekommt `HubUebersicht` von `CompareTabs` den lebenden Stand `currentPreset` (nach jedem Speichern aus der Serverantwort aufgefrischt), nicht die auf den Ladezeitpunkt eingefrorene Seiten-Prop `preset`; auch `status` leitet sich aus `currentPreset` ab (`deriveStatusWithScheduleOverride`, lokaler Pausier-Override `localSchedule` gewinnt). Das entspricht dem Trip, der den lebenden `trip` reicht. Der Baustein selbst bleibt unverändert.
 
 ## Stabile testids
 
@@ -193,3 +194,4 @@ Zusicherungen, die heute CompareTabs/HubOverview per Quelltextpfad lesen, ziehen
 ## Changelog
 
 - 2026-11-01: Initial spec created (Issue #2682, Epic #2345)
+- 2026-11-05: Hinweis „Übersicht liest lebenden Stand (`currentPreset`)" ergänzt (Issue #2828)

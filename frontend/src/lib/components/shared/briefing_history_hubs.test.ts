@@ -125,7 +125,8 @@ describe('AC-2 (a): beide Hubs binden den GETEILTEN Baustein ein', () => {
 		const e = komponenten(ast, 'HubUebersicht');
 		assert.equal(e.length, 1, 'CompareTabs bindet HubUebersicht nicht genau einmal ein.');
 		assert.equal(attrKurz(e[0], 'context'), '"vergleich"');
-		assert.equal(attrKurz(e[0], 'preset'), 'preset');
+		// Issue #2828: die Übersicht liest den lebenden Stand currentPreset, nicht die eingefrorene Prop.
+		assert.equal(attrKurz(e[0], 'preset'), 'currentPreset');
 		const b = bedingungen(ast.fragment, e[0]);
 		assert.ok(b && b.includes('activeTab === "uebersicht"'), `Einbindung steht nicht im Reiter Übersicht: ${JSON.stringify(b)}`);
 		assert.equal(komponenten(ast, 'BriefingHistory').length, 0, 'CompareTabs bettet die Historie zusätzlich ein (zwei Abrufe, AC-12).');
