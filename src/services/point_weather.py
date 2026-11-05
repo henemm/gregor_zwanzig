@@ -105,6 +105,14 @@ class LocationWeatherSource(Protocol):
     nur durch, wenn ein Tagesbezug tatsächlich vorliegt — eine bedingungslose
     Übergabe würde jede bestehende Implementierung ohne fachlichen Gewinn
     brechen.
+
+    Issue #1695: Implementierungen für den Schreibpfad DÜRFEN zusätzlich
+    `now` (Schlüsselwort, tz-aware) annehmen. Damit hält der Briefing-Versand
+    EINEN Zeitpunkt über alle Orte eines Vergleichs fest, sodass eine
+    Ortsmitternacht zwischen zwei Orten den Anker-Satz nicht auf zwei
+    Kalendertage zerlegt; den Kalendertag bildet die Implementierung weiterhin
+    je Ort aus der Ortszeit. Die Protocol-Signatur bleibt ohne `now`: nur der
+    Schreibpfad reicht es durch (wie `target_date`/`tage_ab_ortstag`).
     """
 
     def fetch(
