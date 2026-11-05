@@ -8,6 +8,7 @@ Spec: docs/specs/modules/issue_912_pill_textformat.md
 Referenz-Fixture: tests/tdd/test_issue_664_metrics_summary.py::_build_segments
 """
 from __future__ import annotations
+from app.ampel import resolve_ampel
 
 import sys
 from datetime import datetime, timezone
@@ -110,7 +111,7 @@ class TestAC1Temperature:
             _dp(8, t2m_c=11.0),
         ]
         segs = [_make_segment(dps, start_h_utc=6, end_h_utc=9)]
-        return build_metrics_summary_pills(segs, ["temperature"], {}, tz=TZ)
+        return build_metrics_summary_pills(segs, ["temperature"], {}, tz=TZ, ampel=resolve_ampel(None))
 
     def test_temperature_format_has_time(self):
         """SOLL: enthält ':00' (Uhrzeit des Maximums)."""
@@ -157,7 +158,7 @@ class TestAC2WindChill:
             _dp(8, t2m_c=15.0, wind_chill_c=6.6),
         ]
         segs = [_make_segment(dps, start_h_utc=6, end_h_utc=9)]
-        return build_metrics_summary_pills(segs, ["wind_chill"], {}, tz=TZ)
+        return build_metrics_summary_pills(segs, ["wind_chill"], {}, tz=TZ, ampel=resolve_ampel(None))
 
     def test_wind_chill_has_time(self):
         """SOLL: enthält ':00' (Uhrzeit des Minimums)."""
@@ -214,7 +215,7 @@ class TestAC3WindBelowThreshold:
             _dp(8, wind10m_kmh=7.0, gust_kmh=10.0),
         ]
         segs = [_make_segment(dps, start_h_utc=6, end_h_utc=9)]
-        return build_metrics_summary_pills(segs, ["wind"], {}, tz=TZ)
+        return build_metrics_summary_pills(segs, ["wind"], {}, tz=TZ, ampel=resolve_ampel(None))
 
     def test_wind_no_calm_form(self):
         """SOLL: 'Wind ruhig' erscheint nicht mehr."""
@@ -253,7 +254,7 @@ class TestAC4WindAboveThreshold:
             _dp(8, wind10m_kmh=40.0, gust_kmh=45.0),
         ]
         segs = [_make_segment(dps, start_h_utc=6, end_h_utc=9)]
-        return build_metrics_summary_pills(segs, ["wind"], {}, tz=TZ)
+        return build_metrics_summary_pills(segs, ["wind"], {}, tz=TZ, ampel=resolve_ampel(None))
 
     def test_wind_above_threshold_has_gt_prefix(self):
         """SOLL: enthält '>10 km/h ab 08:00' (Schwellenwert-Präfix)."""
@@ -300,7 +301,7 @@ class TestAC5Precipitation:
             _dp(8, precip_1h_mm=5.0),
         ]
         segs = [_make_segment(dps, start_h_utc=6, end_h_utc=9)]
-        return build_metrics_summary_pills(segs, ["precipitation"], {}, tz=TZ)
+        return build_metrics_summary_pills(segs, ["precipitation"], {}, tz=TZ, ampel=resolve_ampel(None))
 
     def test_precipitation_no_gesamt_suffix(self):
         """SOLL: 'gesamt' erscheint nicht mehr im Regen-Format."""
@@ -348,7 +349,7 @@ class TestAC6RainProbability:
             _dp(8, pop_pct=70),
         ]
         segs = [_make_segment(dps, start_h_utc=6, end_h_utc=9)]
-        return build_metrics_summary_pills(segs, ["rain_probability"], {}, tz=TZ)
+        return build_metrics_summary_pills(segs, ["rain_probability"], {}, tz=TZ, ampel=resolve_ampel(None))
 
     def test_rain_prob_no_regenrisiko_label(self):
         """SOLL: 'Regenrisiko' erscheint nicht mehr."""
@@ -395,7 +396,7 @@ class TestAC7CloudTotal:
             _dp(8, cloud_total_pct=95),
         ]
         segs = [_make_segment(dps, start_h_utc=6, end_h_utc=9)]
-        return build_metrics_summary_pills(segs, ["cloud_total"], {}, tz=TZ)
+        return build_metrics_summary_pills(segs, ["cloud_total"], {}, tz=TZ, ampel=resolve_ampel(None))
 
     def test_cloud_no_bewolkung_prefix(self):
         """SOLL: 'Bewölkung'-Label-Präfix erscheint nicht mehr."""
@@ -442,7 +443,7 @@ class TestAC8VisibilityGood:
             _dp(8, visibility_m=10000),
         ]
         segs = [_make_segment(dps, start_h_utc=6, end_h_utc=9)]
-        return build_metrics_summary_pills(segs, ["visibility"], {}, tz=TZ)
+        return build_metrics_summary_pills(segs, ["visibility"], {}, tz=TZ, ampel=resolve_ampel(None))
 
     def test_visibility_no_gute_sicht(self):
         """SOLL: 'gute Sicht' erscheint nicht mehr."""
@@ -481,7 +482,7 @@ class TestAC9FreezingLevel:
             _dp(8, freezing_level_m=2550),
         ]
         segs = [_make_segment(dps, start_h_utc=6, end_h_utc=9)]
-        return build_metrics_summary_pills(segs, ["freezing_level"], {}, tz=TZ)
+        return build_metrics_summary_pills(segs, ["freezing_level"], {}, tz=TZ, ampel=resolve_ampel(None))
 
     def test_freezing_level_no_old_label(self):
         """SOLL: '0°-Grenze' erscheint nicht mehr."""
@@ -528,7 +529,7 @@ class TestAC10HumidityBelowThreshold:
             _dp(8, humidity_pct=72),
         ]
         segs = [_make_segment(dps, start_h_utc=6, end_h_utc=9)]
-        return build_metrics_summary_pills(segs, ["humidity"], {}, tz=TZ)
+        return build_metrics_summary_pills(segs, ["humidity"], {}, tz=TZ, ampel=resolve_ampel(None))
 
     def test_humidity_no_luft_trocken(self):
         """SOLL: 'Luft trocken' erscheint nicht mehr."""
@@ -567,7 +568,7 @@ class TestAC11UvIndex:
             _dp(8, uv_index=2.4),
         ]
         segs = [_make_segment(dps, start_h_utc=6, end_h_utc=9)]
-        return build_metrics_summary_pills(segs, ["uv_index"], {}, tz=TZ)
+        return build_metrics_summary_pills(segs, ["uv_index"], {}, tz=TZ, ampel=resolve_ampel(None))
 
     def test_uv_no_old_format(self):
         """SOLL: 'UV bis' erscheint nicht mehr."""
@@ -606,7 +607,7 @@ class TestAC12Dewpoint:
             _dp(8, dewpoint_c=5.8),
         ]
         segs = [_make_segment(dps, start_h_utc=6, end_h_utc=9)]
-        return build_metrics_summary_pills(segs, ["dewpoint"], {}, tz=TZ)
+        return build_metrics_summary_pills(segs, ["dewpoint"], {}, tz=TZ, ampel=resolve_ampel(None))
 
     def test_dewpoint_no_range_format(self):
         """SOLL: 'Taupunkt 5–8 °C' (alter Bereich ohne Uhrzeit) erscheint nicht."""

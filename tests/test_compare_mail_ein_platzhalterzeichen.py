@@ -5,6 +5,7 @@ Heute: Compare-Mail mischt EM DASH "—" (Uebersicht, Tabellen, Warn-Zelle)
 mit EN DASH "–" (Ausblick). Echte DTOs, echter Renderer, kein Mock.
 """
 from __future__ import annotations
+from app.ampel import resolve_ampel
 
 import re
 from datetime import date, datetime
@@ -54,8 +55,8 @@ def test_platzhalter_kommt_aus_einer_konstante():
 
     assert NO_VALUE == EN
     assert format_outlook_value(None, {"kind": "numeric"}) == NO_VALUE
-    assert _cell("gibt_es_nicht", {}, set()) == NO_VALUE
-    assert _overview_line("temperature", [[]], set()).endswith(f" {NO_VALUE}")
+    assert _cell("gibt_es_nicht", {}, set(), ampel=resolve_ampel(None)) == NO_VALUE
+    assert _overview_line("temperature", [[]], set(), ampel=resolve_ampel(None)).endswith(f" {NO_VALUE}")
 
 
 @pytest.mark.parametrize("lang", ["de", "en"])

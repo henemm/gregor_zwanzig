@@ -37,7 +37,7 @@ from output.renderers.compare_hourly_metric_ids import (
 )
 from output.renderers.compare_metric_ids import resolve_enabled_metrics
 from output.renderers.email.compare_html import (
-    HOUR_METRICS, has_visible_hour_columns, render_compare_html,
+    _hour_zeilen, has_visible_hour_columns, render_compare_html,
 )
 from services.report_config_resolver import resolve_compare_render_options
 from tests.helpers.hourly_columns import (
@@ -45,6 +45,8 @@ from tests.helpers.hourly_columns import (
     hourly_excluded_metric_ids, hourly_excluded_metric_ids_for_parametrize,
 )
 
+# Issue #2792 S1c-1: Struktur der Stundenspalten (ohne gebundene Ampel).
+HOUR_METRICS = _hour_zeilen()
 _TAGS = re.compile(r"<[^>]+>")
 
 

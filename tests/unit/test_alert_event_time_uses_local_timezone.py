@@ -12,6 +12,7 @@ der Bündel-`tz`-Fallback und naive Provider-Zeitstempel.
 Kern-Schicht: kein Netz, keine Mocks, echte Katalog-/Detektor-Funktionen.
 """
 from __future__ import annotations
+from app.ampel import resolve_ampel
 
 from datetime import datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
@@ -87,7 +88,7 @@ def test_trip_alert_event_time_and_sms_token_are_local():
     # tz=UTC absichtlich: die Ortszeit MUSS aus den Etappen-Koordinaten kommen,
     # nicht aus dem mitgegebenen Bündel-tz.
     msg = to_alert_message([change], [new_data], "NZ-Trip",
-                           tz=ZoneInfo("UTC"), stand_at="12:00")
+                           tz=ZoneInfo("UTC"), stand_at="12:00", ampel=resolve_ampel(None))
     assert msg.events[0].occurred_at == PEAK_LOCAL, (
         f"Ereigniszeit muss Ortszeit {PEAK_LOCAL} sein (Peak {PEAK_UTC_HOUR:02d}:00 "
         f"UTC, Pacific/Auckland = UTC+12); bekam {msg.events[0].occurred_at!r}"
@@ -109,14 +110,14 @@ def test_compare_alert_event_time_is_local_per_location():
 
     change, _new_data = _wind_change()
     single = to_point_alert_message([change], [_Point(NZ_LAT, NZ_LON)], "Wellington",
-                                    tz=ZoneInfo("UTC"), stand_at="12:00")
+                                    tz=ZoneInfo("UTC"), stand_at="12:00", ampel=resolve_ampel(None))
     assert single.events[0].occurred_at == PEAK_LOCAL, (
         f"Einzel-Ort: erwartet {PEAK_LOCAL}, bekam {single.events[0].occurred_at!r}"
     )
     bundle = to_multi_point_alert_message(
         [("Wellington", [change], _Point(NZ_LAT, NZ_LON)),
          ("Berlin", [change], _Point(52.52, 13.40))],
-        tz=ZoneInfo("UTC"), stand_at="12:00",
+        tz=ZoneInfo("UTC"), stand_at="12:00", ampel=resolve_ampel(None),
     )
     by_loc = {e.location_label: e.occurred_at for e in bundle.events}
     assert by_loc == {"Wellington": PEAK_LOCAL, "Berlin": "05:00"}, (
@@ -131,7 +132,7 @@ def test_compare_alert_falls_back_to_bundle_tz_without_coordinates():
     change, _new_data = _wind_change()
     msg = to_multi_point_alert_message(
         [("Ohne Koordinaten", [change], _Point(None, None))],
-        tz=ZoneInfo("Pacific/Auckland"), stand_at="12:00",
+        tz=ZoneInfo("Pacific/Auckland"), stand_at="12:00", ampel=resolve_ampel(None),
     )
     assert msg.events[0].occurred_at == PEAK_LOCAL, (
         f"Fallback-tz muss wirken; erwartet {PEAK_LOCAL}, "
@@ -157,7 +158,7 @@ def test_naive_timestamp_yields_same_local_time_as_aware():
             f"aware={aware}: Peak-Erkennung darf nicht verstummen"
         )
         msg = to_alert_message([change], [data], "NZ-Trip",
-                               tz=ZoneInfo("UTC"), stand_at="12:00")
+                               tz=ZoneInfo("UTC"), stand_at="12:00", ampel=resolve_ampel(None))
         results.append(msg.events[0].occurred_at)
     assert results == [PEAK_LOCAL, PEAK_LOCAL], (
         f"[aware, naiv] = {results!r}, erwartet beide {PEAK_LOCAL}"

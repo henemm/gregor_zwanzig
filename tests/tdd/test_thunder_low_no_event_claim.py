@@ -22,6 +22,7 @@ RED-Ursache (heute, vor der Implementierung von #2176):
   existiert noch nicht -> ``ImportError``.
 """
 from __future__ import annotations
+from app.ampel import resolve_ampel
 
 from datetime import date, datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
@@ -196,7 +197,7 @@ def test_pill_for_metric_thunder_no_gewitter_word_for_low():
         ts=datetime(2026, 7, 11, 10, 0, tzinfo=timezone.utc),
         thunder_level=ThunderLevel.LOW, thunder_level_signals=["cape"],
     )
-    pill = _pill_for_metric("thunder", {}, [dp], tz=TZ)
+    pill = _pill_for_metric("thunder", {}, [dp], tz=TZ, ampel=resolve_ampel(None))
 
     assert pill is not None, "Testaufbau fehlerhaft -- keine Gewitter-Pille fuer LOW-Stunde"
     text, _tone = pill
@@ -222,7 +223,7 @@ def test_pill_for_metric_thunder_carries_cape_value_for_low():
         thunder_level=ThunderLevel.LOW, thunder_level_signals=["cape"],
         cape_jkg=587,
     )
-    pill = _pill_for_metric("thunder", {}, [dp], tz=TZ)
+    pill = _pill_for_metric("thunder", {}, [dp], tz=TZ, ampel=resolve_ampel(None))
 
     assert pill is not None, "Testaufbau fehlerhaft -- keine Gewitter-Pille fuer LOW-Stunde"
     text, _tone = pill
@@ -493,7 +494,7 @@ def test_ac6_pill_for_metric_keeps_gewitter_for_med_and_high():
     from output.renderers.email.helpers import _pill_for_metric
 
     for level, stufenwort in ((ThunderLevel.MED, "mittel"), (ThunderLevel.HIGH, "hoch")):
-        pill = _pill_for_metric("thunder", {}, [_thunder_dp(level)], tz=TZ)
+        pill = _pill_for_metric("thunder", {}, [_thunder_dp(level)], tz=TZ, ampel=resolve_ampel(None))
 
         assert pill is not None, f"Keine Gewitter-Pille fuer {level!r}"
         text, _tone = pill
@@ -574,7 +575,7 @@ def _thunder_deviation_message(value_from: float, value_to: float):
         threshold=1.0, cmp="über", occurred_at=None,
         km_from=0.0, km_to=4.0, segment_id="1",
     )
-    return AlertMessage(trip_short="KHW 403", stand_at="10:00", events=(ev,))
+    return AlertMessage(trip_short="KHW 403", stand_at="10:00", events=(ev,), ampel=resolve_ampel(None))
 
 
 def _thunder_deviation_surfaces(value_from: float, value_to: float) -> dict:

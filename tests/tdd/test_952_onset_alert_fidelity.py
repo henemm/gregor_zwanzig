@@ -23,6 +23,7 @@ FastAPI-TestClient für AC-7. KEIN Mock()/patch()/MagicMock.
 SPEC: docs/specs/modules/issue_952_onset_alert_fidelity.md
 """
 from __future__ import annotations
+from app.ampel import resolve_ampel
 
 import json
 import re
@@ -84,7 +85,7 @@ def _onset_msg(
     onset = OnsetEvent(**kwargs)
     return AlertMessage(
         trip_short="GR20", stand_at="14:23", events=(onset,),
-        source=source_label, cooldown_display=cooldown_display,
+        source=source_label, cooldown_display=cooldown_display, ampel=resolve_ampel(None),
     )
 
 
@@ -94,7 +95,7 @@ def _deviation_msg() -> AlertMessage:
         threshold=800.0, cmp="über", occurred_at="09:00",
         km_from=0.0, km_to=1.8,
     )
-    return AlertMessage(trip_short="KHW 403", stand_at="09:30", events=(event,), source=None)
+    return AlertMessage(trip_short="KHW 403", stand_at="09:30", events=(event,), source=None, ampel=resolve_ampel(None))
 
 
 class _GuaranteedWetRadar(RadarNowcastService):
@@ -742,7 +743,7 @@ def _onset_msg_2018(*, addendum_reference=_UNSET) -> AlertMessage:
     )
     if addendum_reference is not _UNSET:
         kwargs["addendum_reference"] = addendum_reference
-    return AlertMessage(**kwargs)
+    return AlertMessage(ampel=resolve_ampel(None), **kwargs)
 
 
 def _bundle_onset_msg_2018(*, addendum_reference=_UNSET) -> AlertMessage:
@@ -763,7 +764,7 @@ def _bundle_onset_msg_2018(*, addendum_reference=_UNSET) -> AlertMessage:
     )
     if addendum_reference is not _UNSET:
         kwargs["addendum_reference"] = addendum_reference
-    return AlertMessage(**kwargs)
+    return AlertMessage(ampel=resolve_ampel(None), **kwargs)
 
 
 class TestIssue2018AddendumEmailLine:

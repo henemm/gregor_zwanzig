@@ -17,6 +17,7 @@ SPEC: docs/specs/modules/fix_1927_risk_dot_farbpalette.md AC-2
 KONTEXT: docs/context/fix-1927-risk-farbe-mismatch.md
 """
 from __future__ import annotations
+from app.ampel import resolve_ampel
 
 from app.models import ThunderLevel
 from src.output.renderers.email.html import _row_risk
@@ -36,7 +37,7 @@ def test_low_visibility_triggers_risk():
     auf den Default zurueckfaellt und die tatsaechliche Sichtweite nie
     gelesen wird (Issue #1927)."""
     row = {**_HARMLESS_NO_VIS, "visibility": 200}
-    result = _row_risk(row)
+    result = _row_risk(row, ampel=resolve_ampel(None))
     assert result == "risk", (
         f"_row_risk mit visibility=200 liefert {result!r}, erwartet 'risk' — "
         f"Sichtweite fliesst nicht in die Berechnung ein, weil `_row_risk` "
@@ -52,7 +53,7 @@ def test_high_visibility_stays_ok_positivkontrolle():
     verschiebt (kein Test, der zufaellig auch bei einem ignorierten Feld
     gruen bliebe)."""
     row = {**_HARMLESS_NO_VIS, "visibility": 20000}
-    result = _row_risk(row)
+    result = _row_risk(row, ampel=resolve_ampel(None))
     assert result == "ok", (
         f"_row_risk mit visibility=20000 liefert {result!r}, erwartet 'ok'."
     )

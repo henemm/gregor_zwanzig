@@ -12,6 +12,7 @@ AC-1/AC-2: Import- und Signatur-Pruefung am echten Modul (kein
 Dateiinhalt-Check).
 """
 from __future__ import annotations
+from app.ampel import resolve_ampel
 
 import dataclasses
 import importlib
@@ -117,13 +118,13 @@ def build_messages() -> dict:
     now = datetime(2026, 5, 1, 7, 30, tzinfo=UTC)
     return {
         "mixed_plain": to_alert_message(
-            mixed, segments, trip.name, tz=TZ, stand_at="09:30"),
+            mixed, segments, trip.name, tz=TZ, stand_at="09:30", ampel=resolve_ampel(None)),
         "mixed_bezug": to_alert_message(
             mixed + onset, segments, trip.name, tz=TZ, stand_at="09:30",
-            reference_at="So 06:00", now_utc=now, stage_number=3),
+            reference_at="So 06:00", now_utc=now, stage_number=3, ampel=resolve_ampel(None)),
         "single_bezug": to_alert_message(
             single, segments, trip.name, tz=TZ, stand_at="09:30",
-            reference_at="So 06:00", now_utc=now, stage_number=3),
+            reference_at="So 06:00", now_utc=now, stage_number=3, ampel=resolve_ampel(None)),
     }
 
 
@@ -177,7 +178,7 @@ def test_ac1_corridor_hits_parameter_existiert_nirgends():
     ):
         assert "corridor_hits" not in inspect.signature(fn).parameters, fn.__qualname__
     with pytest.raises(TypeError):
-        to_alert_message([], [], "x", tz=TZ, stand_at="09:00", corridor_hits=[])
+        to_alert_message([], [], "x", tz=TZ, stand_at="09:00", corridor_hits=[], ampel=resolve_ampel(None))
 
 
 def test_ac1_klassen_und_funktionen_sind_weg():

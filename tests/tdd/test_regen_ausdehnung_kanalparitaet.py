@@ -18,6 +18,7 @@ Mock-frei: echte `OnsetEvent`/`RainZone`/`AlertMessage`-Objekte durch die
 echten Renderer.
 """
 from __future__ import annotations
+from app.ampel import resolve_ampel
 
 import re
 
@@ -41,7 +42,7 @@ def _msg() -> AlertMessage:
     )
     return AlertMessage(
         trip_short="KHW 403", stand_at="14:35", events=(event,),
-        source="Radar (DWD)",
+        source="Radar (DWD)", ampel=resolve_ampel(None),
     )
 
 

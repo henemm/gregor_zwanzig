@@ -19,6 +19,7 @@ Pfadregel #1409: der Pruefling wird relativ zur Testdatei aufgeloest (uebliche
 `pythonpath`-Konfiguration in `pyproject.toml`, kein fester Hauptrepo-Pfad).
 """
 from __future__ import annotations
+from app.ampel import resolve_ampel
 
 import re
 
@@ -41,7 +42,7 @@ def _single_event(*, value_from: float, value_to: float, threshold: float = 1000
 
 def _single_msg(*, value_from: float, value_to: float, threshold: float = 1000.0) -> AlertMessage:
     e = _single_event(value_from=value_from, value_to=value_to, threshold=threshold)
-    return AlertMessage(trip_short="KHW 403", stand_at="10:00", events=(e,))
+    return AlertMessage(trip_short="KHW 403", stand_at="10:00", events=(e,), ampel=resolve_ampel(None))
 
 
 def _multi_msg() -> AlertMessage:
@@ -57,7 +58,7 @@ def _multi_msg() -> AlertMessage:
         cmp="über", occurred_at="11:30", km_from=1.0, km_to=4.0,
     )
     return AlertMessage(
-        trip_short="KHW 403", stand_at="14:30", events=(e_gust, e_thunder), source=None,
+        trip_short="KHW 403", stand_at="14:30", events=(e_gust, e_thunder), source=None, ampel=resolve_ampel(None),
     )
 
 
@@ -172,7 +173,7 @@ def test_ac3_verdict_chip_und_datenzeile_nennen_dieselbe_aenderungsaussage():
         _single_event(value_from=280.0, value_to=380.0, threshold=1000.0),
     ]
     for e in fixtures:
-        msg = AlertMessage(trip_short="KHW 403", stand_at="10:00", events=(e,))
+        msg = AlertMessage(trip_short="KHW 403", stand_at="10:00", events=(e,), ampel=resolve_ampel(None))
         html, plain = render_email(msg)
         verdict = _verdict_line_plain(plain)
         row2 = _second_data_line_plain(plain)
@@ -240,7 +241,7 @@ def _multi_msg_mit_fallendem_ereignis() -> AlertMessage:
     )
     return AlertMessage(
         trip_short="KHW 403", stand_at="14:30",
-        events=(e_gust, e_visibility), source=None,
+        events=(e_gust, e_visibility), source=None, ampel=resolve_ampel(None),
     )
 
 
@@ -297,7 +298,7 @@ def test_ac11_prozent_metrik_bleibt_unveraendert_mit_prozentzeichen():
         metric_id="gust", value_from=20.0, value_to=80.0, threshold=40.0,
         cmp="über", occurred_at="11:00", km_from=0.0, km_to=4.0,
     )
-    msg = AlertMessage(trip_short="KHW 403", stand_at="14:30", events=(e_prob, e_gust))
+    msg = AlertMessage(trip_short="KHW 403", stand_at="14:30", events=(e_prob, e_gust), ampel=resolve_ampel(None))
     subject = render_subject(msg)
     assert "90%" in subject or "90 %" in subject, (
         f"Prozent-Metrik verliert ihr '%'-Zeichen: {subject!r}"

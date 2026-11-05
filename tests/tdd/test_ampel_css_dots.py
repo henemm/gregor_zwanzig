@@ -12,6 +12,7 @@ official-Notice und Plain-Pills tragen heute Emoji → alle Assertions unten
 schlagen fehl.
 """
 from __future__ import annotations
+from app.ampel import resolve_ampel
 
 from datetime import datetime, timezone
 from zoneinfo import ZoneInfo
@@ -46,7 +47,7 @@ class TestHtmlAmpelCellIsCssDot:
         from src.output.renderers.email.helpers import fmt_val
 
         for key, val in [("wind", 75), ("gust", 85), ("precip", 12), ("pop", 85)]:
-            out = fmt_val(key, val, html=True)
+            out = fmt_val(key, val, html=True, ampel=resolve_ampel(None))
             assert "border-radius:50%" in out, f"{key}: kein CSS-Dot: {out!r}"
             assert not any(e in out for e in CIRCLE_EMOJIS), (
                 f"{key}: Kreis-Emoji verblieben: {out!r}"
@@ -159,5 +160,5 @@ class TestNoCircleEmojiAnywhere:
         """
         from src.output.renderers.email.helpers import fmt_val
 
-        out = fmt_val("cloud", 95, html=True, friendly_keys={"cloud"})
+        out = fmt_val("cloud", 95, html=True, friendly_keys={"cloud"}, ampel=resolve_ampel(None))
         assert "☁️" in out, f"Wetter-Symbol faelschlich entfernt: {out!r}"

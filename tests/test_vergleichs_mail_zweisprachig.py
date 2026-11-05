@@ -152,9 +152,9 @@ def test_ac1_zellwoerter_gewitter_und_niederschlagsart_englisch():
 
 def _erwartete_uebersicht(lang: str) -> list[str]:
     from app.metric_catalog import aggregation_label, get_metric
-    from output.renderers.email.compare_html import CV2_METRICS
+    from output.renderers.email.compare_html import CV2_ZEILEN
 
-    zeilen = [m for m in CV2_METRICS if m.get("metric_id")]
+    zeilen = [m for m in CV2_ZEILEN if m.get("metric_id")]
     namen = [get_metric(m["metric_id"]).label(lang) for m in zeilen]
     doppelt = {n for n in namen if namen.count(n) > 1}
     return [t("vergleich.zeile.amtliche_warnungen", lang)] + [

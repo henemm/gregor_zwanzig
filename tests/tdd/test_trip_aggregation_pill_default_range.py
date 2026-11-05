@@ -27,6 +27,7 @@ AC-1 neu erzeugt werden (Spec-Abschnitt „Bewusste Golden-Fixture-
 Neuerzeugung", Werkzeug ``tests/golden/email/regenerate.py``).
 """
 from __future__ import annotations
+from app.ampel import resolve_ampel
 
 from tests.tdd._trip_aggregation_fixtures import TZ, dp, make_segment
 
@@ -46,7 +47,7 @@ def _wind_chill_pill_texts() -> list[str]:
         dp(7, wind_chill_c=8.0),
         dp(8, wind_chill_c=6.6),
     ])]
-    pills = build_metrics_summary_pills(segs, ["wind_chill"], {}, tz=TZ)
+    pills = build_metrics_summary_pills(segs, ["wind_chill"], {}, tz=TZ, ampel=resolve_ampel(None))
     return [text for text, _tone in pills]
 
 

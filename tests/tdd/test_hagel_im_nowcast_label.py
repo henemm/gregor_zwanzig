@@ -27,6 +27,7 @@ durch eine Klasse ersetzt, die jeden Versuch aufzeichnet; der Test verlangt
 eine LEERE Liste.
 """
 from __future__ import annotations
+from app.ampel import resolve_ampel
 
 import json
 import sys
@@ -110,7 +111,7 @@ def nowcast(tmp_path, monkeypatch):
 
 def _alarmtexte(ergebnis) -> dict[str, str]:
     msg = to_multi_location_onset_alert_message(
-        [("Testort", ergebnis)], tz=timezone.utc, stand_at="12:00",
+        [("Testort", ergebnis)], tz=timezone.utc, stand_at="12:00", ampel=resolve_ampel(None),
     )
     _html, plain = render_email(msg)
     return {"email": plain, "telegram": render_telegram(msg)}

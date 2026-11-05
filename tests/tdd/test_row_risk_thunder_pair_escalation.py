@@ -20,6 +20,7 @@ SPEC: docs/specs/modules/fix_1927_risk_dot_kombi_regel.md (v1.1) AC-4
 KONTEXT: docs/context/fix-1927-risk-dot-kombi-regel.md
 """
 from __future__ import annotations
+from app.ampel import resolve_ampel
 
 from app.models import ThunderLevel
 from src.output.renderers.email.html import _row_risk
@@ -43,7 +44,7 @@ def test_thunder_low_alone_no_yellow_partner_becomes_yellow_not_watch():
         "thunder": ThunderLevel.LOW,
         "wind": 5, "gust": 10, "precip": 0, "pop": 5, "vis": 20000,
     }
-    result = _row_risk(row)
+    result = _row_risk(row, ampel=resolve_ampel(None))
     assert result == "yellow", (
         f"_row_risk mit ThunderLevel.LOW und harmlosen Partnern liefert "
         f"{result!r}, erwartet 'yellow' -- alleinstehendes LOW-Gewitter ohne "
@@ -70,7 +71,7 @@ def test_thunder_low_with_yellow_gust_partner_becomes_watch():
         "thunder": ThunderLevel.LOW,
         "gust": 30, "wind": 5, "precip": 0, "pop": 5, "vis": 20000,
     }
-    result = _row_risk(row)
+    result = _row_risk(row, ampel=resolve_ampel(None))
     assert result == "watch", (
         f"_row_risk mit ThunderLevel.LOW und gust=30 (Katalog-Gelbschwelle) "
         f"liefert {result!r}, erwartet 'watch' (Spec v1.1 AC-4)."

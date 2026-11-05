@@ -10,6 +10,7 @@ Spannenzellen-Durchreichung.
 Pfadregel #1409: Pruefling relativ zur eigenen Testdatei aufloesen.
 """
 from __future__ import annotations
+from app.ampel import resolve_ampel
 
 import sys
 from pathlib import Path
@@ -428,7 +429,7 @@ def test_ac6_einfach_zeigt_nur_wort_kein_ampelpunkt_im_text():
             "die Hintergrundtoenung sichtbar sein, nicht im Text."
         )
 
-    bg = _metric_column_bg(column, 44)
+    bg = _metric_column_bg(column, 44, ampel=resolve_ampel(None))
     assert bg, (
         "_metric_column_bg(gust, 44) liefert keine Toenung -- 44 km/h liegt "
         "im gelben Ampelband (Schwelle 30/45/60); die Ampel-Information darf "

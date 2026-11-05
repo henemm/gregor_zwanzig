@@ -19,6 +19,7 @@ Mock-frei: echte `NowcastResult`/`OnsetEvent`-Objekte durch die echten
 Projektions- und Renderfunktionen. Die Uhr steht per `freeze_time`.
 """
 from __future__ import annotations
+from app.ampel import resolve_ampel
 
 import inspect
 from pathlib import Path
@@ -69,10 +70,10 @@ def _nowcast() -> NowcastResult:
 def _sieben_textstellen() -> dict[str, str]:
     nc = _nowcast()
     einzel = to_multi_location_onset_alert_message(
-        [("Sillian", nc)], tz=_TZ, stand_at="17:55",
+        [("Sillian", nc)], tz=_TZ, stand_at="17:55", ampel=resolve_ampel(None),
     )
     buendel = to_multi_location_onset_alert_message(
-        [("Sillian", nc), ("Obertilliach", nc)], tz=_TZ, stand_at="17:55",
+        [("Sillian", nc), ("Obertilliach", nc)], tz=_TZ, stand_at="17:55", ampel=resolve_ampel(None),
     )
     _html, plain_einzel = render_email(einzel)
     _html_buendel, plain_buendel = render_email(buendel)

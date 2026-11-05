@@ -42,6 +42,7 @@ Pfadregel #1409: der Prueling wird RELATIV ZU DIESER DATEI aufgeloest (ueber
 festen Hauptrepo-Pfad.
 """
 from __future__ import annotations
+from app.ampel import resolve_ampel
 
 import dataclasses
 from datetime import date, datetime, time, timedelta, timezone
@@ -150,7 +151,7 @@ def _uhr(tag: date, stunde: int, minute: int = 0) -> datetime:
 
 def _nachricht(changes, segmente, *, now_utc: datetime):
     """Projektion MIT Referenzzeit -- fest uebergeben, nie aus der Systemuhr."""
-    kwargs = dict(tz=TZ, stand_at=local_fmt(now_utc, TZ))
+    kwargs = dict(tz=TZ, stand_at=local_fmt(now_utc, TZ), ampel=resolve_ampel(None))
     return to_alert_message(changes, segmente, "Test-Trip",
                             now_utc=now_utc, **kwargs)
 
@@ -207,7 +208,7 @@ def _onset_shift_nachricht(*, to_is_past: bool):
     from output.renderers.alert.model import AlertMessage
     return AlertMessage(
         trip_short="Test-Trip", stand_at="15:30", events=(),
-        onset_shift_events=(_onset_shift(to_is_past=to_is_past),),
+        onset_shift_events=(_onset_shift(to_is_past=to_is_past),), ampel=resolve_ampel(None),
     )
 
 

@@ -49,7 +49,7 @@ from app.models import PrecipType, ThunderLevel
 from app.user import ComparisonResult, LocationResult, SavedLocation
 from output.renderers.comparison import render_comparison_text
 from output.renderers.email.compare_html import (
-    CV2_METRICS, derive_row_labels, render_compare_html,
+    CV2_ZEILEN as CV2_METRICS, derive_row_labels, render_compare_html,
 )
 
 TARGET_DATE = date(2026, 8, 18)

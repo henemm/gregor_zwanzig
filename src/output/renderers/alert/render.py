@@ -1353,11 +1353,14 @@ def _hours_note(e: AlertEvent, lang: Lang = "de") -> str:
     return t("alarm.abweichung.betroffen", lang, von=e.hours_range[0], bis=e.hours_range[1])
 
 
-def _hour_lines(e: AlertEvent, modes: dict | None, lang: Lang = "de") -> list[str]:
+def _hour_lines(
+    e: AlertEvent, modes: dict | None, lang: Lang = "de", *, ampel: dict,
+) -> list[str]:
     """Issue #1737: Stundenzeilen `HH:MM | alt → neu` (Klartext/Telegram) plus
     Hinweiszeile bei Kappung. Leer ohne Stundenreihe (Ausgabe unveraendert)."""
     lines = [
-        f"{r.time} | " + " → ".join(row_parts(e, r, modes, html=False)) for r in e.hours
+        f"{r.time} | " + " → ".join(row_parts(e, r, modes, html=False, ampel=ampel))
+        for r in e.hours
     ]
     if lines and e.hours_capped and e.hours_range:
         lines.append(_hours_note(e, lang))
@@ -1366,7 +1369,7 @@ def _hour_lines(e: AlertEvent, modes: dict | None, lang: Lang = "de") -> list[st
 
 def _hours_html(
     e: AlertEvent, modes: dict | None, indicators: frozenset = frozenset(),
-    lang: Lang = "de",
+    lang: Lang = "de", *, ampel: dict,
 ) -> str:
     """Issue #1737: EIN eigener Zeilenblock je Ereignis (keine gemeinsame
     Tabelle). EINFACH = CSS-Punkte aus `fmt_val`, nie Emoji (#2220)."""
@@ -1377,7 +1380,7 @@ def _hours_html(
     for r in e.hours:
         cell = " → ".join(
             p if p.startswith("<span") else _esc(p)
-            for p in row_parts(e, r, modes, html=True, indicators=indicators)
+            for p in row_parts(e, r, modes, html=True, indicators=indicators, ampel=ampel)
         )
         trs.append(f"<tr><td style=\"{td}\">{_esc(r.time)}</td><td style=\"{td}\">{cell}</td></tr>")
     if e.hours_capped and e.hours_range:
@@ -1430,7 +1433,7 @@ def render_email(msg: AlertMessage, *, lang: Lang = "de") -> tuple[str, str]:
         footer = _stand_footer(msg, lang)
         any_over = over_thr(e)
         plain_data = [f"{k}: {v}" for k, v in data_rows]
-        plain_data += _hour_lines(e, msg.format_modes.get("email"), lang)  # Issue #1737
+        plain_data += _hour_lines(e, msg.format_modes.get("email"), lang, ampel=msg.ampel)  # Issue #1737
     else:
         # Issue #981: Zähler zählt nur über-Schwelle-Events; sind es null,
         # wechselt die Formulierung auf "N Änderungen seit dem Briefing".
@@ -1492,7 +1495,7 @@ def render_email(msg: AlertMessage, *, lang: Lang = "de") -> tuple[str, str]:
         plain_data = []
         for e, (k, v) in zip(evs, data_rows):
             plain_data.append(f"{k}: {v}")
-            plain_data += _hour_lines(e, msg.format_modes.get("email"), lang)  # Issue #1737
+            plain_data += _hour_lines(e, msg.format_modes.get("email"), lang, ampel=msg.ampel)  # Issue #1737
 
     verdict_bg = G_DANGER if any_over else G_SUCCESS
     # Issue #1468 (PO-Entscheid): Beginn- UND Stufenaenderung werden beide
@@ -1510,12 +1513,12 @@ def render_email(msg: AlertMessage, *, lang: Lang = "de") -> tuple[str, str]:
         for idx, (label, value) in enumerate(data_rows):
             value_color = G_INK if idx != 1 else threshold_status_color
             rows.append(_datarow_html(label, value, value_color, not rows))
-        rows.append(_hours_html(e, msg.format_modes.get("email"), msg.indicator_keys.get("email", frozenset()), lang))  # Issue #1737
+        rows.append(_hours_html(e, msg.format_modes.get("email"), msg.indicator_keys.get("email", frozenset()), lang, ampel=msg.ampel))  # Issue #1737
     else:
         for e, (label, value) in zip(evs, data_rows):
             value_color = G_DANGER if over_thr(e) else G_INK_MUTED
             rows.append(_datarow_html(label, value, value_color, not rows))
-            rows.append(_hours_html(e, msg.format_modes.get("email"), msg.indicator_keys.get("email", frozenset()), lang))  # Issue #1737
+            rows.append(_hours_html(e, msg.format_modes.get("email"), msg.indicator_keys.get("email", frozenset()), lang, ampel=msg.ampel))  # Issue #1737
     for oe in msg.onset_shift_events:
         rows.append(_onset_shift_row(oe, not rows, lang))
 
@@ -1553,7 +1556,7 @@ def render_telegram(msg: AlertMessage, *, lang: Lang = "de") -> str:
         lines = [f"<b>{_esc(verdict)}</b>", _email_line(e, lang), _where_when(e, lang=lang)]
         if e.remaining_mm is not None:
             lines += [f"{k}: {v}" for k, v in _precip_rows(e, lang)]
-        lines += [_esc(ln) for ln in _hour_lines(e, msg.format_modes.get("telegram"), lang)]  # Issue #1737
+        lines += [_esc(ln) for ln in _hour_lines(e, msg.format_modes.get("telegram"), lang, ampel=msg.ampel)]  # Issue #1737
     else:
         # Issue #981: Kopfzeilen-Zähler nur über-Schwelle; null → Änderungs-Text.
         over_count = len([e for e in evs if over_thr(e)])
@@ -1575,7 +1578,7 @@ def render_telegram(msg: AlertMessage, *, lang: Lang = "de") -> str:
         lines = [f"<b>{_esc(verdict)}</b>", metric_line]
         # Issue #1737: je Ereignis ein eigener Stundenblock unter seiner Kopfzeile.
         for e in evs:
-            block = _hour_lines(e, msg.format_modes.get("telegram"), lang)
+            block = _hour_lines(e, msg.format_modes.get("telegram"), lang, ampel=msg.ampel)
             if block:
                 lines += [_esc(_deviation_label(e, lang)), *[_esc(ln) for ln in block]]
     # Issue #1468: Beginn-Verschiebungen desselben Laufs anhaengen -- eine

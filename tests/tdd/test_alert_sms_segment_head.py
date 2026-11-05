@@ -22,6 +22,7 @@ Kein Mock, keine Dateiinhalt-Checks -- echte `AlertEvent`/`AlertMessage`/
 :116-146`) durch die echten Renderer.
 """
 from __future__ import annotations
+from app.ampel import resolve_ampel
 
 import re
 import unicodedata
@@ -66,7 +67,7 @@ def _delta_event(*, segment_id: str, value_from: float, value_to: float,
 
 
 def _delta_msg(*events: AlertEvent, trip_short: str = "KHW 403") -> AlertMessage:
-    return AlertMessage(trip_short=trip_short, stand_at="10:00", events=events)
+    return AlertMessage(trip_short=trip_short, stand_at="10:00", events=events, ampel=resolve_ampel(None))
 
 
 # ---------------------------------------------------------------------------
@@ -210,12 +211,12 @@ def test_ac12_trip_radar_sms_verliert_den_namen_compare_radar_sms_behaelt_ihn():
     trip_msg = AlertMessage(
         trip_short="KHW 403", stand_at="10:00",
         events=(_onset_event(location_label=None),),
-        source="radar", cooldown_display="60 Min",
+        source="radar", cooldown_display="60 Min", ampel=resolve_ampel(None),
     )
     compare_msg = AlertMessage(
         trip_short="Vergleich", stand_at="10:00",
         events=(_onset_event(location_label="Vergleich"),),
-        source="radar", cooldown_display="60 Min",
+        source="radar", cooldown_display="60 Min", ampel=resolve_ampel(None),
     )
 
     sms_trip = render_sms(trip_msg)

@@ -25,6 +25,7 @@ import logging
 from datetime import datetime, timezone
 from zoneinfo import ZoneInfo
 
+from app.ampel import resolve_ampel
 from i18n import Lang, resolve_user_lang, t
 from services.fehler_code import fehler_mit_code
 
@@ -135,8 +136,10 @@ def _deviation(
     first = all_locations[ordered[0]]
     tz = tz_for_coords(first.lat, first.lon)
     stand_at = local_fmt(datetime.now(timezone.utc), tz)
+    # Issue #2792 S1c-1: Einstieg Alarm-Vorschau; bis S1c-4 „allgemein".
+    ampel = resolve_ampel(None)
     msg = to_multi_point_alert_message(
-        groups, tz=tz, stand_at=stand_at, anchor_points=anchors,
+        groups, tz=tz, stand_at=stand_at, anchor_points=anchors, ampel=ampel,
     )
     positions = CompareAlertService._location_positions(location_ids, all_locations)
     sms = render_sms(msg, limit=_SMS_LIMIT, location_positions=positions)
@@ -145,7 +148,7 @@ def _deviation(
     else:
         bubbles = [
             render_telegram(to_multi_point_alert_message(
-                [g], tz=tz, stand_at=stand_at, anchor_points=anchors,
+                [g], tz=tz, stand_at=stand_at, anchor_points=anchors, ampel=ampel,
             ), lang=lang)
             for g in groups
         ]
@@ -178,6 +181,7 @@ def _onset(
     msg = to_multi_location_onset_alert_message(
         entities, tz=tz, stand_at=stand_at,
         cooldown_display=_format_cooldown_display(cooldown, lang=lang),
+        ampel=resolve_ampel(None),  # Issue #2792 S1c-1, bis S1c-4 „allgemein"
     )
     sms = render_sms(msg, limit=_SMS_LIMIT, location_positions=None)
     bubbles = [sms] if style == "kurzform" else [render_telegram(msg, lang=lang)]

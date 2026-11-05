@@ -39,6 +39,7 @@ Pfadregel #1409: alles relativ zu DIESER Datei, nie ueber einen festen
 Hauptrepo-Pfad.
 """
 from __future__ import annotations
+from app.ampel import resolve_ampel
 
 import inspect
 import re
@@ -175,7 +176,7 @@ def _onset_event(**overrides) -> OnsetEvent:
 def _onset_msg(*events: OnsetEvent) -> AlertMessage:
     return AlertMessage(
         trip_short="KHW 403", stand_at="17:30", events=tuple(events),
-        source="Radar (DWD)",
+        source="Radar (DWD)", ampel=resolve_ampel(None),
     )
 
 
@@ -370,7 +371,7 @@ def test_ac6_ortsvergleich_traegt_dieselbe_kennzeichnung():
             f"{geprueft!r} tragen, war {nc.convective_checked!r}"
         )
         return to_multi_location_onset_alert_message(
-            [("Zermatt", nc)], tz=timezone.utc, stand_at="10:00",
+            [("Zermatt", nc)], tz=timezone.utc, stand_at="10:00", ampel=resolve_ampel(None),
         )
 
     with freeze_time(_UHR):

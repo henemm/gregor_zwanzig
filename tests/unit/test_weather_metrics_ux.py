@@ -9,7 +9,11 @@ Tests verify:
 3. Config UI shows col_label next to German label (checked via get_col_defs) — v1.0
 4. Per-metric friendly format toggle — v1.1
 """
+from functools import partial
+
 import pytest
+
+from app.ampel import resolve_ampel
 
 from app.metric_catalog import get_metric, get_col_defs
 
@@ -117,7 +121,7 @@ class TestCloudEmojiFormatting:
     @pytest.fixture()
     def fmt(self):
         from src.output.renderers.email.helpers import fmt_val
-        return fmt_val
+        return partial(fmt_val, ampel=resolve_ampel(None))
 
     # --- Plain text: emoji only ---
 
@@ -356,7 +360,7 @@ class TestFmtValFriendlyToggle:
     @pytest.fixture()
     def fmt(self):
         from src.output.renderers.email.helpers import fmt_val
-        return fmt_val
+        return partial(fmt_val, ampel=resolve_ampel(None))
 
     # --- Cloud: friendly ON → emoji (unchanged from v1.0) ---
 

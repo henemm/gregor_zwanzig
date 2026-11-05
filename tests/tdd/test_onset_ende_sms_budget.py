@@ -31,6 +31,7 @@ Mock-frei: echte `OnsetEvent`/`AlertMessage`-Objekte durch den echten
 Renderer, feste Zeitangaben (keine Wanduhr).
 """
 from __future__ import annotations
+from app.ampel import resolve_ampel
 
 import inspect
 from pathlib import Path
@@ -59,7 +60,7 @@ def _extremfall_msg(*, event_end_time: str, ortsname: str) -> AlertMessage:
     )
     return AlertMessage(
         trip_short="Alpen", stand_at="17:20", events=(event,),
-        source="Radar (DWD)",
+        source="Radar (DWD)", ampel=resolve_ampel(None),
     )
 
 

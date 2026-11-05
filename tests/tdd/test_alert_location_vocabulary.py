@@ -34,6 +34,7 @@ gruen wird):
 NICHT Gegenstand dieser Datei: AC-8 bis AC-12 (Mail-Koerper, Scheibe A2).
 """
 from __future__ import annotations
+from app.ampel import resolve_ampel
 
 import re
 import unicodedata
@@ -110,7 +111,7 @@ def _delta_message(specs):
     segments = [_segment(sid, a, b) for sid, a, b in specs]
     changes = [_change(sid) for sid, _a, _b in specs]
     return to_alert_message(
-        changes, segments, TRIP_NAME, tz=TRIP_TZ, stand_at="10:00",
+        changes, segments, TRIP_NAME, tz=TRIP_TZ, stand_at="10:00", ampel=resolve_ampel(None),
     )
 
 
@@ -143,7 +144,7 @@ def _onset_message(*, segment_id="__omit__", km_from: float = 8.0,
         ) from exc
     return AlertMessage(
         trip_short=TRIP_NAME, stand_at="10:00", events=(event,),
-        source="radar", cooldown_display="60 Min",
+        source="radar", cooldown_display="60 Min", ampel=resolve_ampel(None),
     )
 
 
@@ -362,7 +363,7 @@ def test_ortsvergleich_aenderungsalarm_nennt_weiterhin_den_ortsnamen():
 
     msg = to_point_alert_message(
         [_change("1")], [_saved_location("toulon", "Toulon", 43.12, 5.93)],
-        "Toulon", tz=ZoneInfo("Europe/Paris"), stand_at="10:00",
+        "Toulon", tz=ZoneInfo("Europe/Paris"), stand_at="10:00", ampel=resolve_ampel(None),
     )
 
     assert render_subject(msg) == "[Toulon] Toulon · ↑ Böen: 50 km/h→80 km/h"
@@ -393,7 +394,7 @@ def test_ortsvergleich_mehrere_orte_nennen_weiterhin_ihre_namen():
             ("Hyères", [_change("1", old=40.0, new=70.0)],
              _saved_location("hyeres", "Hyères", 43.12, 6.13)),
         ],
-        tz=ZoneInfo("Europe/Paris"), stand_at="10:00",
+        tz=ZoneInfo("Europe/Paris"), stand_at="10:00", ampel=resolve_ampel(None),
     )
 
     assert render_subject(msg) == (
@@ -421,14 +422,14 @@ def test_ortsvergleich_radaralarm_bleibt_unveraendert():
 
     single = to_multi_location_onset_alert_message(
         [("Toulon", _saved_location("toulon", "Toulon", 43.12, 5.93), _nc())],
-        tz=ZoneInfo("Europe/Paris"), stand_at="10:00",
+        tz=ZoneInfo("Europe/Paris"), stand_at="10:00", ampel=resolve_ampel(None),
     )
     multi = to_multi_location_onset_alert_message(
         [
             ("Toulon", _saved_location("toulon", "Toulon", 43.12, 5.93), _nc()),
             ("Hyères", _saved_location("hyeres", "Hyères", 43.12, 6.13), _nc()),
         ],
-        tz=ZoneInfo("Europe/Paris"), stand_at="10:00",
+        tz=ZoneInfo("Europe/Paris"), stand_at="10:00", ampel=resolve_ampel(None),
     )
 
     assert render_subject(single) == "[Toulon] km 0–0 · Regen in 30 Min"
@@ -468,7 +469,7 @@ def test_ortsname_schlaegt_die_segment_kennung():
     )
     msg = AlertMessage(
         trip_short="Toulon", stand_at="10:00", events=(event,),
-        location_label="Toulon",
+        location_label="Toulon", ampel=resolve_ampel(None),
     )
 
     assert _location_slot(render_subject(msg)) == "Toulon", (

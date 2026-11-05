@@ -8,6 +8,7 @@ auf bestehende Tests, kein neuer Test hier.
 
 Alles echte Aufrufe der kanonischen Renderer/Katalog-Funktionen, keine Mocks.
 """
+from app.ampel import resolve_ampel
 import sys
 
 sys.path.insert(0, ".")
@@ -26,7 +27,7 @@ def _cape_msg(value_from=1230.0, value_to=620.0, threshold=800.0):
         threshold=threshold, cmp="über", occurred_at="09:00",
         km_from=0.0, km_to=1.8,
     )
-    return AlertMessage(trip_short="KHW 403", stand_at="09:30", events=(event,), source=None)
+    return AlertMessage(trip_short="KHW 403", stand_at="09:30", events=(event,), source=None, ampel=resolve_ampel(None))
 
 
 class TestAC1KuerzelStattLangform:

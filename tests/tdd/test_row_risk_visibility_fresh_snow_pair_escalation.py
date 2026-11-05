@@ -15,6 +15,7 @@ SPEC: docs/specs/modules/fix_1927_risk_dot_kombi_regel.md (v1.1) AC-5
 KONTEXT: docs/context/fix-1927-risk-dot-kombi-regel.md
 """
 from __future__ import annotations
+from app.ampel import resolve_ampel
 
 from app.models import ThunderLevel
 from output.metric_format import severity_for
@@ -26,7 +27,7 @@ def test_visibility_and_fresh_snow_both_yellow_escalates_to_watch():
     UND `fresh_snow=10.0` (SLF/EAWS-Gelbschwelle) / When `_row_risk()`
     ausgewertet wird / Then eskaliert die Zeile auf 'watch' (=Orange, Weg
     unter Neuschnee nicht erkennbar, keine Fernsicht, Spec v1.1 AC-5)."""
-    assert severity_for("visibility", 1500.0) == "yellow", (
+    assert severity_for("visibility", 1500.0, ampel=resolve_ampel(None)) == "yellow", (
         "Erwartungs-Grundlage: 1500 m Sicht erreicht die Katalog-Gelbschwelle "
         "(< 2000 m)"
     )
@@ -36,7 +37,7 @@ def test_visibility_and_fresh_snow_both_yellow_escalates_to_watch():
         "thunder": ThunderLevel.NONE,
         "wind": 5, "gust": 10, "precip": 0, "pop": 5,
     }
-    result = _row_risk(row)
+    result = _row_risk(row, ampel=resolve_ampel(None))
     assert result == "watch", (
         f"_row_risk mit visibility=1500 (gelb) + fresh_snow=10.0 (gelb) "
         f"liefert {result!r}, erwartet 'watch' (Spec v1.1 AC-5)."
@@ -51,7 +52,7 @@ def test_visibility_yellow_alone_without_fresh_snow_stays_yellow():
         "thunder": ThunderLevel.NONE,
         "wind": 5, "gust": 10, "precip": 0, "pop": 5,
     }
-    result = _row_risk(row)
+    result = _row_risk(row, ampel=resolve_ampel(None))
     assert result == "yellow", (
         f"_row_risk mit visibility=1500 (gelb) ohne fresh_snow liefert "
         f"{result!r}, erwartet 'yellow' -- kein Partner, keine Eskalation "

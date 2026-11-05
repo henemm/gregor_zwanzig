@@ -33,6 +33,7 @@ Mocking-Framework) zu ersetzen -- siehe Docstring dort für die Begründung
 den Plain-Text-Body, nie den HTML-Body).
 """
 from __future__ import annotations
+from app.ampel import resolve_ampel
 
 from datetime import date, datetime, timezone
 from zoneinfo import ZoneInfo
@@ -238,7 +239,7 @@ def test_f002_dispatch_alert_message_embedded_plain_telegram_use_display_label(m
         metric_id="wind", value_from=20.0, value_to=48.0, threshold=15.0,
         cmp="über", occurred_at="14:00", km_from=5.0, km_to=12.0,
     )
-    alert_msg = AlertMessage(trip_short="KHW 403", stand_at="09:30", events=(ev,))
+    alert_msg = AlertMessage(trip_short="KHW 403", stand_at="09:30", events=(ev,), ampel=resolve_ampel(None))
     official_alert = _alert(
         3, "thunderstorm", "Orange Thunderstorm Warning", SA_FROM, SA_TO,
         region="Hermagor", source="meteoalarm",
@@ -505,7 +506,7 @@ def test_ac5_deviation_alert_footer_shows_open_meteo_fallback_not_path():
         metric_id="wind", value_from=20.0, value_to=48.0, threshold=15.0,
         cmp="über", occurred_at="14:00", km_from=5.0, km_to=12.0,
     )
-    msg = AlertMessage(trip_short="KHW 403", stand_at="09:30", events=(ev,))
+    msg = AlertMessage(trip_short="KHW 403", stand_at="09:30", events=(ev,), ampel=resolve_ampel(None))
     html, plain = render_alert_email(msg)
 
     assert "alert/render.py" not in html, (
@@ -532,7 +533,7 @@ def test_ac5_radar_alert_footer_shows_onset_source_label():
     )
     msg = AlertMessage(
         trip_short="KHW 403", stand_at="09:30", events=(onset,),
-        source="radar", cooldown_display="30 Min",
+        source="radar", cooldown_display="30 Min", ampel=resolve_ampel(None),
     )
     html, plain = render_alert_email(msg)
 
@@ -713,7 +714,7 @@ def test_ac6_dispatch_alert_message_embeds_wb_banner_not_raw_p(monkeypatch):
         metric_id="wind", value_from=20.0, value_to=48.0, threshold=15.0,
         cmp="über", occurred_at="14:00", km_from=5.0, km_to=12.0,
     )
-    alert_msg = AlertMessage(trip_short="KHW 403", stand_at="09:30", events=(ev,))
+    alert_msg = AlertMessage(trip_short="KHW 403", stand_at="09:30", events=(ev,), ampel=resolve_ampel(None))
     official_alert = OfficialAlert(
         source="geosphere_warn", hazard="thunderstorm", level=3, label="Gewitter",
         region_label="Hermagor", valid_from=SA_FROM, valid_to=SA_TO,

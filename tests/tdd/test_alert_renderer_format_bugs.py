@@ -5,6 +5,7 @@ Bug 1: _km_str() produziert "km 0 km-11 km" statt "km 0-11 km"
 Bug 2: SMS-Tripname <= 16 Zeichen schneidet mid-char (offene Klammer)
 Bug 3: Telegram-Zeilen haben mehrfache Leerzeichen als Trennzeichen
 """
+from app.ampel import resolve_ampel
 import sys
 from datetime import datetime, timezone
 from zoneinfo import ZoneInfo
@@ -59,7 +60,7 @@ def _make_msg(trip_name: str = "GR221 Mallorca", segment_id: str | None = "1"):
             segment_id="1", occurred_at=_local(10, 30, now),
         ),
     ]
-    return to_alert_message(changes, [weather_data], trip_name, tz=tz, stand_at="10:00")
+    return to_alert_message(changes, [weather_data], trip_name, tz=tz, stand_at="10:00", ampel=resolve_ampel(None))
 
 
 class TestKmStrNoDuplicatedUnit:

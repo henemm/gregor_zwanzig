@@ -44,6 +44,7 @@ der Kurzform ist englisch, auch wenn dieselbe Aussage in der E-Mail deutsch
 lautet: Langform `letzter Regen gegen 12:30`, Kurzform `R2.0 now@12:30`.
 """
 from __future__ import annotations
+from app.ampel import resolve_ampel
 
 import re
 import uuid
@@ -722,7 +723,7 @@ def test_ac12_ortsvergleich_buendel_traegt_den_laufenden_ort_mit():
     with freeze_time(_AT_LAUF):
         msg = to_multi_location_onset_alert_message(
             [("Laufend-Ort", laufend), ("Zukunft-Ort", kuenftig)],
-            tz=TZ_ORT, stand_at="12:07",
+            tz=TZ_ORT, stand_at="12:07", ampel=resolve_ampel(None),
         )
         _html, plain = render_email(msg)
         text = f"{plain}\n{render_telegram(msg)}"

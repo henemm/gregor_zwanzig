@@ -22,7 +22,7 @@ import pytest
 
 from app.config import Settings
 from output.renderers.comparison import render_comparison_text
-from output.renderers.email.compare_html import CV2_METRICS, render_compare_html
+from output.renderers.email.compare_html import CV2_ZEILEN as CV2_METRICS, render_compare_html
 from services.notification_service import NotificationService
 from tests.helpers.compare_order import (
     html_uebersicht_labels, klartext_uebersicht_labels,

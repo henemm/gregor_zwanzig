@@ -138,15 +138,17 @@ def format_value(metric_id: str, value: Optional[float], style: str = "plain") -
     return f"{text} {unit}"
 
 
-def severity_for(metric_id: str, value: Optional[float]) -> Optional[str]:
+def severity_for(metric_id: str, value: Optional[float], *, ampel: dict) -> Optional[str]:
     """Kanonisches Ampel-Band ``green/yellow/orange/red`` (oder ``None``).
 
-    Liest ``get_metric(metric_id).display_thresholds`` und delegiert die
-    reine Band-Auswertung an ``severity_from_thresholds`` (SSoT, Issue
-    #1377 Scheibe A — auch ``helpers._level_from_thresholds`` nutzt sie).
+    Issue #2792 S1c-1: liest die Schwellen aus dem durchgereichten,
+    aufgeloesten Ampel-Objekt (``resolve_ampel(sub)``) statt aus dem Katalog.
+    ``ampel`` ist Pflicht ohne Default: ein vergessenes Durchreichen soll laut
+    scheitern statt still „allgemein" zu faerben. Die Band-Auswertung bleibt
+    ``severity_from_thresholds`` (SSoT, Issue #1377 Scheibe A).
     """
-    thresholds = get_metric(metric_id).display_thresholds
-    return severity_from_thresholds(thresholds, value)
+    from app.ampel import schwellen_aus_ampel
+    return severity_from_thresholds(schwellen_aus_ampel(ampel, metric_id), value)
 
 
 def severity_from_thresholds(thresholds: dict, value: Optional[float]) -> Optional[str]:

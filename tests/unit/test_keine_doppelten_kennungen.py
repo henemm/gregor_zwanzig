@@ -34,6 +34,7 @@ Listen ausserhalb des Katalogs), ``test_sms_token_symbol_register_ratchet.py``
 (SMS-Symbole abweichend vom Katalog).
 """
 from __future__ import annotations
+from app.ampel import resolve_ampel
 
 import copy
 from collections import defaultdict
@@ -448,7 +449,7 @@ def test_schnee_alarm_nennt_die_groesse(metric_id, name):
         metric_id=metric_id, value_from=5.0, value_to=40.0, threshold=20.0,
         cmp="über", occurred_at="14:00", km_from=8.0, km_to=8.0, segment_id="Ziel",
     )
-    msg = AlertMessage(trip_short="KHW 403", stand_at="10:00", events=(ereignis,))
+    msg = AlertMessage(trip_short="KHW 403", stand_at="10:00", events=(ereignis,), ampel=resolve_ampel(None))
     telegram = render_telegram(msg)
     betreff_oder_html = render_email(msg)[0]
     assert name in telegram, f"AC-26 FAIL (Telegram, {metric_id}): {name!r} fehlt: {telegram!r}"

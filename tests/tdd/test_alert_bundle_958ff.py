@@ -14,6 +14,7 @@ ihre Fixtures mit `threshold` als Absolutwert konstruiert wurden. Das ist
 erwartetes Kollateral der GREEN-Phase, nicht dieser RED-Datei.
 """
 from __future__ import annotations
+from app.ampel import resolve_ampel
 
 import json
 import shutil
@@ -75,7 +76,7 @@ def _bundle_multi_msg():
     e_rain = AlertEvent(metric_id="rain_probability", value_from=70.0, value_to=90.0,
                          threshold=95.0, cmp="über", occurred_at=None, km_from=0.0, km_to=4.0)
     return AlertMessage(trip_short="TEST", stand_at="14:30",
-                         events=(e_gust, e_thunder, e_rain), source=None)
+                         events=(e_gust, e_thunder, e_rain), source=None, ampel=resolve_ampel(None))
 
 
 def _all_under_threshold_msg():
@@ -86,7 +87,7 @@ def _all_under_threshold_msg():
                      threshold=95.0, cmp="über", occurred_at=None, km_from=0.0, km_to=3.0)
     e2 = AlertEvent(metric_id="cape", value_from=500.0, value_to=550.0, threshold=100.0,
                      cmp="über", occurred_at="12:00", km_from=1.0, km_to=4.0)
-    return AlertMessage(trip_short="TEST", stand_at="15:00", events=(e1, e2), source=None)
+    return AlertMessage(trip_short="TEST", stand_at="15:00", events=(e1, e2), source=None, ampel=resolve_ampel(None))
 
 
 # ---------------------------------------------------------------------------
@@ -140,7 +141,7 @@ def test_ac2_render_email_change_wording_and_datablock():
         metric_id="freezing_level", value_from=2855.0, value_to=3285.0,
         threshold=400.0, cmp="unter", occurred_at="09:00", km_from=0.0, km_to=5.0,
     )
-    msg = AlertMessage(trip_short="TEST", stand_at="09:30", events=(event,), source=None)
+    msg = AlertMessage(trip_short="TEST", stand_at="09:30", events=(event,), source=None, ampel=resolve_ampel(None))
     html, plain = render_email(msg)
 
     for content in (html, plain):
@@ -369,7 +370,7 @@ def test_ac13_under_threshold_group_sorted_by_abs_severity():
         "beide Events müssen in der unter-Schwelle-Gruppe liegen (Vorbedingung)"
     )
 
-    msg = AlertMessage(trip_short="TEST", stand_at="16:00", events=(e_cape, e_gust), source=None)
+    msg = AlertMessage(trip_short="TEST", stand_at="16:00", events=(e_cape, e_gust), source=None, ampel=resolve_ampel(None))
     html, _ = render_email(msg)
 
     idx_gust = html.find("Böen")
@@ -399,7 +400,7 @@ def test_ac14_email_datablock_uses_two_column_table_rows():
         metric_id="cape", value_from=1230.0, value_to=620.0, threshold=800.0,
         cmp="über", occurred_at="09:00", km_from=0.0, km_to=1.8,
     )
-    single_msg = AlertMessage(trip_short="TEST", stand_at="09:30", events=(single_event,), source=None)
+    single_msg = AlertMessage(trip_short="TEST", stand_at="09:30", events=(single_event,), source=None, ampel=resolve_ampel(None))
     html_single, _ = render_email(single_msg)
 
     assert "<span" not in html_single, (
@@ -443,7 +444,7 @@ def test_ac15_onset_datablock_uses_two_column_table_rows():
     )
     msg = AlertMessage(
         trip_short="TEST", stand_at="15:45", events=(onset_event,),
-        source="radar_nowcast", cooldown_display=None,
+        source="radar_nowcast", cooldown_display=None, ampel=resolve_ampel(None),
     )
     html, _ = render_email(msg)
 

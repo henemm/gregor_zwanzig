@@ -23,6 +23,7 @@ if TYPE_CHECKING:
     from output.renderers.email.outlook_state_hint import OutlookState
     from services.day_comparison import DayComparison
 
+from app.ampel import resolve_ampel
 from app.metric_catalog import get_metric
 from i18n import Lang, fmt_date, t, tn
 from app.models import SegmentWeatherData, StabilityResult, ThunderLevel, UnifiedWeatherDisplayConfig
@@ -82,12 +83,12 @@ def _compact_label(metric_id: str) -> str:
         return metric_id[:2].upper()
 
 
-def _cell(metric_id: str, row: dict, friendly_keys: set[str]) -> str:
+def _cell(metric_id: str, row: dict, friendly_keys: set[str], *, ampel: dict) -> str:
     """Formatiere den Wert einer Metrik aus einem Tabellen-Row-Dict."""
     key = _col_key(metric_id)
     if key is None:
         return NO_VALUE
-    return fmt_val(key, row.get(key), friendly_keys=friendly_keys, row=row)
+    return fmt_val(key, row.get(key), friendly_keys=friendly_keys, row=row, ampel=ampel)
 
 
 def _wrap(text: str, width: int) -> list[str]:
@@ -116,7 +117,7 @@ def _wrap(text: str, width: int) -> list[str]:
 
 def _narrow_table(
     table_columns: list[str], rows: list[dict], friendly_keys: set[str],
-    width: int,
+    width: int, *, ampel: dict,
 ) -> list[str]:
     """Schmale Monospace-Tabelle: Zeit + gekappte Metrik-Spalten.
 
@@ -128,7 +129,7 @@ def _narrow_table(
     for r in rows:
         cells = [str(r.get("time", ""))]
         for mid in table_columns:
-            cells.append(_cell(mid, r, friendly_keys))
+            cells.append(_cell(mid, r, friendly_keys, ampel=ampel))
         matrix.append(cells)
 
     widths = [len(h) for h in headers]
@@ -450,6 +451,7 @@ def _overview_line(
     has_gap: bool = False,
     day_thunder_sev: Optional[int] = None,
     day_thunder_hail_note: Optional[str] = None,
+    ampel: dict,
 ) -> str:
     """Eine Kurzübersicht-Zeile ``{Kürzel} {Min}-{Max}@{Peak-Stunde}`` (oder
     Einzelwert/kategorisch).
@@ -516,15 +518,15 @@ def _overview_line(
 
     try:
         if hiking is not None:
-            lo = fmt_val(key, hiking[0], friendly_keys=fkeys)
-            hi = fmt_val(key, hiking[1], friendly_keys=fkeys)
+            lo = fmt_val(key, hiking[0], friendly_keys=fkeys, ampel=ampel)
+            hi = fmt_val(key, hiking[1], friendly_keys=fkeys, ampel=ampel)
             peak_hour = hiking[2]
         else:
             nums = [float(h[key]) for h in hits]
             lo_row = hits[nums.index(min(nums))]
             hi_row = hits[nums.index(max(nums))]
-            lo = _cell(metric_id, lo_row, fkeys)
-            hi = _cell(metric_id, hi_row, fkeys)
+            lo = _cell(metric_id, lo_row, fkeys, ampel=ampel)
+            hi = _cell(metric_id, hi_row, fkeys, ampel=ampel)
             peak_hour = hi_row.get("time", "")
         if metric_id in ("temperature", "wind_chill") and report_type == "evening":
             _night_val = (night_min_c if metric_id == "temperature"
@@ -563,9 +565,9 @@ def _overview_line(
                 if _thunder_severity(worst_row.get(key)) == 0 and has_gap:
                     value = "?"
                 else:
-                    value = _cell(metric_id, worst_row, fkeys)
+                    value = _cell(metric_id, worst_row, fkeys, ampel=ampel)
         else:
-            value = _cell(metric_id, hits[-1], fkeys)
+            value = _cell(metric_id, hits[-1], fkeys, ampel=ampel)
     return f"{label} {value}"
 
 
@@ -707,6 +709,8 @@ def render_telegram_bubbles(
     Luecke nicht selbst nach.
     """
     fkeys = friendly_keys if friendly_keys is not None else set()
+    # Issue #2792 S1c-1: Einstieg loest die Ampel auf; bis S1c-4 „allgemein".
+    ampel = resolve_ampel(None)
     layout = render_for_channel("telegram", dc, report_type)
     bubbles: list[TelegramBubble] = []
     # Issue #1319 Scheibe D: EINE Berechnung, an die Kurzuebersicht-
@@ -835,6 +839,7 @@ def render_telegram_bubbles(
             has_gap=has_gap,
             day_thunder_sev=_day_thunder_sev,
             day_thunder_hail_note=_day_thunder_hail_note,
+            ampel=ampel,
         )), _TG_PROSE_WIDTH))
     # Issue #1331/#1334 F008: has_gap kommt als expliziter Parameter vom
     # echten Versandpfad (notification_service.compute_has_gap() aus
@@ -884,7 +889,8 @@ def render_telegram_bubbles(
 
         text_lines = _wrap(_esc(_segment_mini_header(seg_data, lang=lang)), _TG_PROSE_WIDTH)
         if layout.table_columns and rows:
-            table_lines = _narrow_table(layout.table_columns, rows, fkeys, _TG_TABLE_WIDTH)
+            table_lines = _narrow_table(
+                layout.table_columns, rows, fkeys, _TG_TABLE_WIDTH, ampel=ampel)
             escaped_table = "\n".join(_esc(ln) for ln in table_lines)
             text_lines = text_lines + ["<pre>", escaped_table, "</pre>"]
         bubbles.append(TelegramBubble(text="\n".join(text_lines)))

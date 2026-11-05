@@ -43,7 +43,7 @@ from output.renderers.compare_metric_ids import (
     FRONTEND_TO_RENDERER_METRIC_ID,
     resolve_enabled_metrics,
 )
-from output.renderers.email.compare_html import CV2_METRICS
+from output.renderers.email.compare_html import CV2_ZEILEN as CV2_METRICS
 
 
 def test_unmapped_metric_logs_warning_instead_of_silent_drop(caplog):

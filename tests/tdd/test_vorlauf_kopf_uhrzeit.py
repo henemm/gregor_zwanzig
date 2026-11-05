@@ -21,6 +21,7 @@ durch die echte Pruefstrecke inklusive Tagesbezug bewacht
 `test_vorlauf_kanalparitaet.py` (AC-10).
 """
 from __future__ import annotations
+from app.ampel import resolve_ampel
 
 from output.renderers.alert.model import AlertMessage, OnsetEvent
 from output.renderers.alert.render import render_email, render_subject, render_telegram
@@ -39,7 +40,7 @@ def _event(**kw) -> OnsetEvent:
 def _msg(*events: OnsetEvent) -> AlertMessage:
     return AlertMessage(
         trip_short="KHW Test", stand_at="11:20", events=tuple(events),
-        source="radar",
+        source="radar", ampel=resolve_ampel(None),
     )
 
 

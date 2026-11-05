@@ -22,6 +22,7 @@ nur aus dem uebergebenen Objekt, s. `test_alert_sms_onset_zeitpunkt.py`
 fuer dasselbe Muster).
 """
 from __future__ import annotations
+from app.ampel import resolve_ampel
 
 import re
 from datetime import date as date_type
@@ -55,7 +56,7 @@ def _onset_event(**kw) -> OnsetEvent:
 
 def _onset_msg(event: OnsetEvent, *, trip_short: str = "KHW 403", source: str = "radar") -> AlertMessage:
     """`source is not None` routet die Renderer in den Onset-Zweig."""
-    return AlertMessage(trip_short=trip_short, stand_at="23:30", events=(event,), source=source)
+    return AlertMessage(trip_short=trip_short, stand_at="23:30", events=(event,), source=source, ampel=resolve_ampel(None))
 
 
 # ═══════════════════════════════ AC-4 ═════════════════════════════════════
@@ -318,11 +319,11 @@ def test_f001_compare_kurznachricht_traegt_das_tages_suffix():
     with freeze_time("2026-08-11T21:30:00+00:00"):
         wien_fuehrt = render_sms(to_multi_location_onset_alert_message(
             [("Wien", wien, nc), ("Reykjavik", rvk, nc)],
-            tz=ZoneInfo("Europe/Vienna"), stand_at="23:30",
+            tz=ZoneInfo("Europe/Vienna"), stand_at="23:30", ampel=resolve_ampel(None),
         ))
         rvk_fuehrt = render_sms(to_multi_location_onset_alert_message(
             [("Reykjavik", rvk, nc), ("Wien", wien, nc)],
-            tz=ZoneInfo("Europe/Vienna"), stand_at="23:30",
+            tz=ZoneInfo("Europe/Vienna"), stand_at="23:30", ampel=resolve_ampel(None),
         ))
 
     # Der 2026-08-11 ist ein DIENSTAG, der Folgetag also ein Mittwoch ("Mi").

@@ -37,12 +37,13 @@ def _numeric(metric_id: str, raw) -> float | None:
     return raw
 
 
-def _stage(metric_id: str, value) -> int | None:
-    """Stufe einer Stunde (Gewitter: Ordinale, sonst Ampelband-Index)."""
+def _stage(metric_id: str, value, *, ampel: dict) -> int | None:
+    """Stufe einer Stunde (Gewitter: Ordinale, sonst Ampelband-Index aus der
+    durchgereichten Ampel, Issue #2792 S1c-1)."""
     if metric_id == "thunder":
         return int(round(value))
     from output.renderers.email.helpers import _AMPEL_STAGE_ORDER, ampel_level
-    level = ampel_level(metric_id, value)
+    level = ampel_level(metric_id, value, ampel=ampel)
     return _AMPEL_STAGE_ORDER.index(level) if level in _AMPEL_STAGE_ORDER else None
 
 
@@ -62,21 +63,21 @@ def _series(ts, dp_field: str, metric_id: str, window) -> dict:
     return out
 
 
-def _is_affected(metric_id, old, new, threshold, level_metric) -> bool:
+def _is_affected(metric_id, old, new, threshold, level_metric, *, ampel) -> bool:
     if level_metric:
-        return _stage(metric_id, old) != _stage(metric_id, new)
+        return _stage(metric_id, old, ampel=ampel) != _stage(metric_id, new, ampel=ampel)
     return abs(new - old) >= threshold
 
 
-def _strength(metric_id, old, new, level_metric) -> tuple:
+def _strength(metric_id, old, new, level_metric, *, ampel) -> tuple:
     step = 0
     if level_metric and old is not None:
-        a, b = _stage(metric_id, old), _stage(metric_id, new)
+        a, b = _stage(metric_id, old, ampel=ampel), _stage(metric_id, new, ampel=ampel)
         step = abs((a or 0) - (b or 0))
     return (step, abs(new - old) if old is not None else float(new))
 
 
-def _affected_range(metric_id, series, old, threshold, value_from, level_metric):
+def _affected_range(metric_id, series, old, threshold, value_from, level_metric, *, ampel):
     """Zusammenhaengender Bereich [(ts, alt|None, neu)] von der ersten bis zur
     letzten betroffenen Stunde (AC-6/AC-10)."""
     if old:
@@ -94,14 +95,17 @@ def _affected_range(metric_id, series, old, threshold, value_from, level_metric)
             )
         hit = [
             i for i, (_t, o, n) in enumerate(hours)
-            if _is_affected(metric_id, o, n, threshold, level_metric)
+            if _is_affected(metric_id, o, n, threshold, level_metric, ampel=ampel)
         ]
         if not hit:  # verteilte Summe: jede abweichende Stunde zaehlt
             hit = [i for i, (_t, o, n) in enumerate(hours) if n != o]
     else:
         hours = [(t, None, series[t]) for t in sorted(series)]
         if level_metric:
-            hit = [i for i, (_t, _o, n) in enumerate(hours) if (_stage(metric_id, n) or 0) > 0]
+            hit = [
+                i for i, (_t, _o, n) in enumerate(hours)
+                if (_stage(metric_id, n, ampel=ampel) or 0) > 0
+            ]
         else:
             hit = [
                 i for i, (_t, _o, n) in enumerate(hours)
@@ -112,7 +116,7 @@ def _affected_range(metric_id, series, old, threshold, value_from, level_metric)
 
 def affected_hours(
     metric_id: str, fresh_ts, anchor_ts, *, threshold: float, value_from, tz,
-    window=None,
+    window=None, ampel: dict,
 ) -> dict:
     """Stundenzeilen EINES Ereignisses: `{hours, hours_range, hours_capped}`
     (leeres dict = keine Stundenreihe / keine betroffene Stunde).
@@ -126,13 +130,15 @@ def affected_hours(
     series = _series(fresh_ts, dp_field, metric_id, window)
     old = _series(anchor_ts, dp_field, metric_id, None) if anchor_ts is not None else {}
     level_metric = metric_id in _LEVEL_METRICS
-    rng = _affected_range(metric_id, series, old, threshold, value_from, level_metric)
+    rng = _affected_range(
+        metric_id, series, old, threshold, value_from, level_metric, ampel=ampel)
     if not rng:
         return {}
     shown = rng
     if len(rng) > MAX_ROWS:
         ranked = sorted(
-            rng, key=lambda h: _strength(metric_id, h[1], h[2], level_metric), reverse=True,
+            rng, key=lambda h: _strength(metric_id, h[1], h[2], level_metric, ampel=ampel),
+            reverse=True,
         )[:MAX_ROWS]
         shown = sorted(ranked, key=lambda h: h[0])
     rows = tuple(AlertHourRow(local_fmt(t, tz), o, n) for t, o, n in shown)
@@ -145,6 +151,7 @@ def affected_hours(
 
 def format_cell(
     metric_id: str, value, mode: str, *, html: bool, indicators: frozenset = frozenset(),
+    ampel: dict,
 ) -> str:
     """Zelle genau wie das Briefing (`fmt_val`): ROH = Wort/Zahl, sonst (HTML)
     CSS-Punkt aus derselben Quelle."""
@@ -159,9 +166,9 @@ def format_cell(
         return fmt_val(
             key, value, format_modes={key: mode},
             indicator_keys=({key} if mode != "raw" or col in indicators else set()),
-            html=True,
+            html=True, ampel=ampel,
         )
-    return fmt_val(key, value, format_modes={key: mode})
+    return fmt_val(key, value, format_modes={key: mode}, ampel=ampel)
 
 
 def mode_for(metric_id: str, modes: dict | None) -> str:
@@ -171,13 +178,16 @@ def mode_for(metric_id: str, modes: dict | None) -> str:
 
 def row_parts(
     e, row: AlertHourRow, modes: dict | None, *, html: bool,
-    indicators: frozenset = frozenset(),
+    indicators: frozenset = frozenset(), ampel: dict,
 ) -> list[str]:
     """`[alt, neu]` bzw. `[neu]` (ohne Anker) als Zellen (HTML: Markup)."""
     mode = mode_for(e.metric_id, modes)
-    parts = [format_cell(e.metric_id, row.value_to, mode, html=html, indicators=indicators)]
+    parts = [format_cell(
+        e.metric_id, row.value_to, mode, html=html, indicators=indicators, ampel=ampel,
+    )]
     if row.value_from is not None:
         parts.insert(0, format_cell(
             e.metric_id, row.value_from, mode, html=html, indicators=indicators,
+            ampel=ampel,
         ))
     return parts

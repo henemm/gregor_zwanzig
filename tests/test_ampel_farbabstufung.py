@@ -20,6 +20,7 @@ Sinne des Projektverbots (kein `Mock()`/`patch()`/`MagicMock`) -- es ist die
 Sonde, die die Kopplung an die zentrale Quelle misst, keine Ersatzlogik.
 """
 from __future__ import annotations
+from app.ampel import resolve_ampel
 
 import math
 from zoneinfo import ZoneInfo
@@ -106,7 +107,7 @@ class TestS1ToneCssIsSingleSourceOfTruth:
         # Wind 55 km/h liegt zwischen den Katalog-Schwellen orange (50) und
         # rot (70) -> orange Zell-Toenung (severity_for("wind", 55) == "orange").
         rows = [{"time": "08", "wind": 55.0}]
-        html_out = _render_html_table(rows, friendly_keys=set(), indicator_keys={"wind"})
+        html_out = _render_html_table(rows, friendly_keys=set(), indicator_keys={"wind"}, ampel=resolve_ampel(None))
 
         assert sentinel_bg in html_out, (
             "html.py._render_html_table faerbt die orange Ampel-Zelle nicht "
@@ -126,7 +127,7 @@ class TestS1ToneCssIsSingleSourceOfTruth:
         monkeypatch.setitem(design_tokens._TONE_CSS, "orange", (sentinel_bg, "#000000"))
 
         rows = [{"weekday": "Mo", "wind_kmh": 55.0}]
-        table_html = render_outlook_table(rows)
+        table_html = render_outlook_table(rows, ampel=resolve_ampel(None))
 
         assert sentinel_bg in table_html, (
             "outlook.py.render_outlook_table faerbt die orange Wind-Zelle "
@@ -146,7 +147,7 @@ class TestS1ToneCssIsSingleSourceOfTruth:
         monkeypatch.setitem(design_tokens._TONE_CSS, "orange", (sentinel_bg, "#000000"))
 
         rows = [{"weekday": "Mo", "thunder": "MED"}]
-        table_html = render_outlook_table(rows)
+        table_html = render_outlook_table(rows, ampel=resolve_ampel(None))
 
         assert sentinel_bg in table_html, (
             "outlook.py.render_outlook_table faerbt die Gewitter-Zelle bei "

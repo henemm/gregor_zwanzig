@@ -21,6 +21,7 @@ from app.models import (
     TripSegment,
     WeatherChange,
 )
+from app.ampel import resolve_ampel
 from app.profile import ActivityProfile
 from app.trip import Trip
 from app.user import ComparisonResult, LocationResult, SavedLocation
@@ -206,6 +207,7 @@ def render_alert_preview(
             events=(onset_ev,),
             source=body.onset.source_label,
             cooldown_display=body.onset.cooldown_display,
+            ampel=resolve_ampel(None),  # Issue #2792 S1c-1, bis S1c-4 „allgemein"
         )
     else:
         changes = [
@@ -256,16 +258,19 @@ def _deviation_preview_message(
     anchor, fresh = (None, None)
     if user_id:
         anchor, fresh = trip_preview_series(trip_obj, user_id=user_id, now_utc=now_utc)
+    # Issue #2792 S1c-1: Einstieg Alarm-Pfad; bis S1c-4 „allgemein".
+    ampel = resolve_ampel(None)
     if not fresh:
         return to_alert_message(
             changes, [_stub_segment(st) for st in segment_times], trip_obj.name,
-            tz=tz, stand_at=stand_at, now_utc=now_utc,
+            tz=tz, stand_at=stand_at, now_utc=now_utc, ampel=ampel,
         )
     return to_alert_message(
         changes, fresh, trip_obj.name, tz=tz, stand_at=stand_at, now_utc=now_utc,
         anchor_segments=anchor,
         format_modes=_alert_format_modes(trip_obj.display_config),
         indicator_keys=_alert_indicator_keys(trip_obj.display_config),
+        ampel=ampel,
     )
 
 

@@ -15,6 +15,7 @@ Alle Tests hier müssen vor der Implementierung ROT sein (kein
 Regressionswächter-Ausnahmefall in dieser Datei).
 """
 from __future__ import annotations
+from app.ampel import resolve_ampel
 
 import re
 
@@ -37,7 +38,7 @@ def _single_event_msg(
         threshold=threshold, cmp=cmp, occurred_at=occurred_at,
         km_from=km_from, km_to=km_to,
     )
-    return AlertMessage(trip_short=trip_short, stand_at=stand_at, events=(e,), source=None)
+    return AlertMessage(trip_short=trip_short, stand_at=stand_at, events=(e,), source=None, ampel=resolve_ampel(None))
 
 
 def _first_plain_data_line(plain: str) -> str:

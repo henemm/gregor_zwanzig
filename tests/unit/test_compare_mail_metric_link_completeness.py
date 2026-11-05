@@ -52,7 +52,10 @@ import copy
 import pytest
 
 from app.metric_catalog import get_metric
-from output.renderers.email.compare_html import CV2_METRICS, HOUR_METRICS
+from output.renderers.email.compare_html import CV2_ZEILEN as CV2_METRICS, _hour_zeilen
+
+# Issue #2792 S1c-1: Struktur der Stundenspalten (ohne gebundene Ampel).
+HOUR_METRICS = _hour_zeilen()
 
 
 def _linkage_findings(

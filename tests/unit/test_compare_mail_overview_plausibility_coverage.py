@@ -33,6 +33,7 @@ SPEC: docs/specs/modules/fix_1404_validator_spaltennamen.md (AC-3, AC-4)
       docs/specs/modules/fix_1453_namensformen.md (AC-6, Rueckbau)
 """
 from __future__ import annotations
+from app.ampel import resolve_ampel
 
 import importlib.util
 from pathlib import Path
@@ -51,7 +52,7 @@ from output.renderers.email.compare_html import _fmt_metric, _visible_metrics
 # allgemeine Beschriftungs-Ableitung. Uebersicht (deutsch) und Stundentabelle
 # (englisch) tragen seit dieser Lieferung verschiedene Formen -- wer hier die
 # allgemeine Ableitung befragt, prueft womoeglich die Form der anderen Tabelle.
-CV2_ROWS = _visible_metrics(None)
+CV2_ROWS = _visible_metrics(None, ampel=resolve_ampel(None))
 
 VALIDATOR_PATH = (
     Path(__file__).resolve().parents[2] / ".claude" / "hooks" / "email_spec_validator.py"

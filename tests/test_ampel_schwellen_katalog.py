@@ -16,6 +16,7 @@ Mock-frei: echte Katalog-/Renderer-Funktionen, echte `ForecastDataPoint`-Objekte
 `tests/tdd/test_issue_888_896_902_mail_bundle.py`). Kein Dateiinhalt-Check.
 """
 from __future__ import annotations
+from app.ampel import resolve_ampel
 
 import re
 from datetime import datetime, timezone
@@ -60,12 +61,12 @@ class TestAC1GustThresholds:
     def test_gust_35_is_yellow(self):
         """GIVEN der Katalog fuehrt fuer Boeen 30/45/60 / WHEN die
         Ampel-Auskunft fuer 35 km/h gefragt wird / THEN liefert sie 'gelb'."""
-        assert severity_for("gust", 35) == "yellow"
+        assert severity_for("gust", 35, ampel=resolve_ampel(None)) == "yellow"
 
     def test_gust_25_is_green(self):
         """GIVEN der Katalog fuehrt fuer Boeen 30/45/60 / WHEN die
         Ampel-Auskunft fuer 25 km/h gefragt wird / THEN liefert sie 'gruen'."""
-        assert severity_for("gust", 25) == "green"
+        assert severity_for("gust", 25, ampel=resolve_ampel(None)) == "green"
 
 
 # ===========================================================================
@@ -77,22 +78,22 @@ class TestAC2VisibilityInverted:
     def test_visibility_5000_is_green(self):
         """GIVEN die Sichtweite ist invertiert hinterlegt (<2000/<1000/<500) /
         WHEN die Ampel-Auskunft fuer 5000 m gefragt wird / THEN 'gruen'."""
-        assert severity_for("visibility", 5000) == "green"
+        assert severity_for("visibility", 5000, ampel=resolve_ampel(None)) == "green"
 
     def test_visibility_1500_is_yellow(self):
         """GIVEN dieselbe invertierte Hinterlegung / WHEN 1500 m gefragt
         wird / THEN 'gelb' (< 2000 m)."""
-        assert severity_for("visibility", 1500) == "yellow"
+        assert severity_for("visibility", 1500, ampel=resolve_ampel(None)) == "yellow"
 
     def test_visibility_800_is_orange(self):
         """GIVEN dieselbe invertierte Hinterlegung / WHEN 800 m gefragt
         wird / THEN 'orange' (< 1000 m)."""
-        assert severity_for("visibility", 800) == "orange"
+        assert severity_for("visibility", 800, ampel=resolve_ampel(None)) == "orange"
 
     def test_visibility_400_is_red(self):
         """GIVEN dieselbe invertierte Hinterlegung / WHEN 400 m gefragt
         wird / THEN 'rot' (< 500 m)."""
-        assert severity_for("visibility", 400) == "red"
+        assert severity_for("visibility", 400, ampel=resolve_ampel(None)) == "red"
 
 
 # ===========================================================================
@@ -105,13 +106,13 @@ class TestAC3TemperatureAndUvNewThresholds:
         """GIVEN Temperatur hat erstmals Schwellen (28/31/34) / WHEN die
         Ampel-Auskunft fuer 32 Grad gefragt wird / THEN 'orange' statt
         bisher 'keine Aussage'."""
-        assert severity_for("temperature", 32) == "orange"
+        assert severity_for("temperature", 32, ampel=resolve_ampel(None)) == "orange"
 
     def test_uv_index_7_is_orange(self):
         """GIVEN UV-Index hat erstmals Schwellen (3/6/8) / WHEN die
         Ampel-Auskunft fuer UV 7 gefragt wird / THEN 'orange' statt bisher
         'keine Aussage'."""
-        assert severity_for("uv_index", 7) == "orange"
+        assert severity_for("uv_index", 7, ampel=resolve_ampel(None)) == "orange"
 
 
 # ===========================================================================
@@ -123,22 +124,22 @@ class TestAC3bTemperatureBothSides:
     def test_temperature_15_is_green(self):
         """GIVEN Temperatur ist beidseitig hinterlegt / WHEN 15 Grad
         gefragt wird / THEN 'gruen' (keine Seite ausgeloest)."""
-        assert severity_for("temperature", 15) == "green"
+        assert severity_for("temperature", 15, ampel=resolve_ampel(None)) == "green"
 
     def test_temperature_minus1_is_yellow(self):
         """GIVEN Temperatur ist beidseitig hinterlegt / WHEN -1 Grad
         gefragt wird / THEN 'gelb' (Kaelte-Seite, < 0)."""
-        assert severity_for("temperature", -1) == "yellow"
+        assert severity_for("temperature", -1, ampel=resolve_ampel(None)) == "yellow"
 
     def test_temperature_minus6_is_orange(self):
         """GIVEN Temperatur ist beidseitig hinterlegt / WHEN -6 Grad
         gefragt wird / THEN 'orange' (Kaelte-Seite, < -5)."""
-        assert severity_for("temperature", -6) == "orange"
+        assert severity_for("temperature", -6, ampel=resolve_ampel(None)) == "orange"
 
     def test_temperature_minus20_is_red(self):
         """GIVEN Temperatur ist beidseitig hinterlegt / WHEN -20 Grad
         gefragt wird / THEN 'rot' (Kaelte-Seite, < -15)."""
-        assert severity_for("temperature", -20) == "red"
+        assert severity_for("temperature", -20, ampel=resolve_ampel(None)) == "red"
 
 
 # ===========================================================================
@@ -152,8 +153,8 @@ class TestAC3cWindChillMatchesTemperature:
         WHEN die Ampel-Auskunft fuer -8 Grad gefuehlt gefragt wird / THEN
         liefert sie dieselbe Stufe wie die gemessene Temperatur ('orange'),
         nicht mehr 'keine Aussage'."""
-        wind_chill_level = severity_for("wind_chill", -8)
-        temperature_level = severity_for("temperature", -8)
+        wind_chill_level = severity_for("wind_chill", -8, ampel=resolve_ampel(None))
+        temperature_level = severity_for("temperature", -8, ampel=resolve_ampel(None))
         assert wind_chill_level == "orange"
         assert wind_chill_level == temperature_level
 
@@ -162,7 +163,7 @@ class TestAC3cWindChillMatchesTemperature:
         WHEN eine Werte-Reihe von -25 bis +40 Grad (Schrittweite 1) geprueft
         wird / THEN liefern beide Metriken fuer JEDEN Wert dieselbe Stufe."""
         results = [
-            (value, severity_for("temperature", value), severity_for("wind_chill", value))
+            (value, severity_for("temperature", value, ampel=resolve_ampel(None)), severity_for("wind_chill", value, ampel=resolve_ampel(None)))
             for value in range(-25, 41)
         ]
         mismatches = [(v, t, w) for v, t, w in results if t != w]
@@ -190,7 +191,7 @@ class TestAC4NoSilentGreenDefault:
         """GIVEN Luftdruck hat keinerlei hinterlegte Schwellen / WHEN die
         Ampel-Auskunft gefragt wird / THEN liefert sie 'keine Aussage'
         (None) statt eines irrefuehrenden 'gruen'-Defaults (F001, #1214)."""
-        assert severity_for("pressure", 1013) is None
+        assert severity_for("pressure", 1013, ampel=resolve_ampel(None)) is None
 
 
 # ===========================================================================
@@ -209,7 +210,7 @@ class TestAC5VisibilityPlaintextLineTint:
             ts=datetime(2026, 7, 11, 8, 0, tzinfo=timezone.utc),
             visibility_m=800,
         )
-        pill = _pill_for_metric("visibility", {}, [dp], tz=TZ)
+        pill = _pill_for_metric("visibility", {}, [dp], tz=TZ, ampel=resolve_ampel(None))
         assert pill is not None, "Erwartete (text, tone)-Pille fuer visibility"
         text, tone = pill
         assert tone != "ampel_green", (
@@ -231,10 +232,10 @@ class TestAC6GustDotAndCellAgree:
         denselben Wert gebildet werden / THEN zeigen beide dieselbe Stufe
         (gelb) — der bisherige Widerspruch gruener Punkt/gelbe Zelle tritt
         nicht mehr auf."""
-        point_level = ampel_level("gust", 35.0)
+        point_level = ampel_level("gust", 35.0, ampel=resolve_ampel(None))
 
         rows = [{"time": "08:00", "gust": 35.0}]
-        html = _render_html_table(rows, friendly_keys=set(), indicator_keys=set())
+        html = _render_html_table(rows, friendly_keys=set(), indicator_keys=set(), ampel=resolve_ampel(None))
         cell_level = _cell_level(html, "Gust")
 
         assert point_level == "yellow", f"Punkt-Ampel war {point_level!r}, erwartet 'yellow'"

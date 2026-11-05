@@ -19,6 +19,7 @@ aus `render_email()` über echte `AlertMessage`/`OnsetEvent`-Fixtures, nicht
 ein Aufruf-Nachweis.
 """
 from __future__ import annotations
+from app.ampel import resolve_ampel
 
 # Der bestehende, bewusst unangetastete Kern des Satzes — vier
 # Bestandswächter prüfen genau diesen Substring.
@@ -46,7 +47,7 @@ def _message(events, cooldown_display="2 Stunden"):
 
     return AlertMessage(
         trip_short="GR20-Test", stand_at="14:23", events=tuple(events),
-        source="Radar (DWD)", cooldown_display=cooldown_display,
+        source="Radar (DWD)", cooldown_display=cooldown_display, ampel=resolve_ampel(None),
     )
 
 

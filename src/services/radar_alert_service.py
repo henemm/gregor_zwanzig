@@ -7,6 +7,7 @@ from __future__ import annotations
 
 from datetime import datetime, timedelta, timezone
 
+from app.ampel import resolve_ampel
 from app.config import Settings
 from i18n import Lang, tn
 from output.renderers.alert.model import AlertMessage, OnsetEvent
@@ -87,6 +88,7 @@ def build_onset_alert_message(
         events=(onset_ev,),
         source=source_label,
         cooldown_display=_cooldown_display(trip, lang=lang),
+        ampel=resolve_ampel(None),  # Issue #2792 S1c-1, bis S1c-4 „allgemein"
     )
 
 

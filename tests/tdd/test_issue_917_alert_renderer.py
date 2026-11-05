@@ -15,6 +15,7 @@ Slice 2 zu #914. Testet:
 KEINE Mocks. Echte Katalog-Funktionen, echte WeatherChange/Segment-Fixtures.
 """
 from __future__ import annotations
+from app.ampel import resolve_ampel
 
 import pytest
 from datetime import datetime, timezone
@@ -110,7 +111,7 @@ class TestAC1Projection:
                                threshold=0.0, segment_id="1", occurred_at="06:00")
         seg = _make_segment("1", km_from=0.0, km_to=12.5)
 
-        msg = to_alert_message([change], [seg], "GR20", tz=ZoneInfo("Europe/Berlin"), stand_at="06:30")
+        msg = to_alert_message([change], [seg], "GR20", tz=ZoneInfo("Europe/Berlin"), stand_at="06:30", ampel=resolve_ampel(None))
 
         assert len(msg.events) == 1
         ev = msg.events[0]
@@ -131,7 +132,7 @@ class TestAC1Projection:
                                threshold=60.0, segment_id="2", occurred_at="12:00")
         seg = _make_segment("2", km_from=15.0, km_to=28.0)
 
-        msg = to_alert_message([change], [seg], "GR20", tz=ZoneInfo("Europe/Berlin"), stand_at="10:00")
+        msg = to_alert_message([change], [seg], "GR20", tz=ZoneInfo("Europe/Berlin"), stand_at="10:00", ampel=resolve_ampel(None))
 
         ev = msg.events[0]
         assert ev.metric_id == "gust"
@@ -153,7 +154,7 @@ class TestAC1Projection:
         ]
         seg = _make_segment("1", km_from=0.0, km_to=12.0)
 
-        msg = to_alert_message(changes, [seg], "GR20", tz=ZoneInfo("Europe/Berlin"), stand_at="06:00")
+        msg = to_alert_message(changes, [seg], "GR20", tz=ZoneInfo("Europe/Berlin"), stand_at="06:00", ampel=resolve_ampel(None))
         assert len(msg.events) == 2
 
 
@@ -169,7 +170,7 @@ class TestAC2Subject:
         change = _make_change("gust_max_kmh", old=50.0, new=80.0, direction="increase",
                                threshold=60.0, segment_id="1", occurred_at="12:00")
         seg = _make_segment("1", km_from=5.0, km_to=18.0)
-        return to_alert_message([change], [seg], "GR20", tz=ZoneInfo("Europe/Berlin"), stand_at="10:00")
+        return to_alert_message([change], [seg], "GR20", tz=ZoneInfo("Europe/Berlin"), stand_at="10:00", ampel=resolve_ampel(None))
 
     def _make_msg_3events(self):
         from src.output.renderers.alert.project import to_alert_message
@@ -185,7 +186,7 @@ class TestAC2Subject:
                           threshold=10.0, segment_id="1"),
         ]
         seg = _make_segment("1", km_from=5.0, km_to=18.0)
-        return to_alert_message(changes, [seg], "GR20", tz=ZoneInfo("Europe/Berlin"), stand_at="10:00")
+        return to_alert_message(changes, [seg], "GR20", tz=ZoneInfo("Europe/Berlin"), stand_at="10:00", ampel=resolve_ampel(None))
 
     def test_1event_contains_trip_km_arrow_code(self):
         """1-Event-Betreff enthält Trip, km-Spanne, Pfeil, lesbaren Metriklabel."""
@@ -256,7 +257,7 @@ class TestAC3Email:
                           threshold=0.0, segment_id="1"),
         ]
         seg = _make_segment("1", km_from=0.0, km_to=15.0)
-        return to_alert_message(changes, [seg], "GR20", tz=ZoneInfo("Europe/Berlin"), stand_at="10:00")
+        return to_alert_message(changes, [seg], "GR20", tz=ZoneInfo("Europe/Berlin"), stand_at="10:00", ampel=resolve_ampel(None))
 
     def test_h1_no_interpretation_words(self):
         """H1 enthält keine abgeleiteten Deutungswörter wie 'halbiert', 'verdoppelt'."""
@@ -340,7 +341,7 @@ class TestAC4Telegram:
         change = _make_change("gust_max_kmh", old=50.0, new=80.0, direction="increase",
                                threshold=60.0, segment_id="1", occurred_at="12:00")
         seg = _make_segment("1", km_from=5.0, km_to=18.0)
-        return to_alert_message([change], [seg], "GR20", tz=ZoneInfo("Europe/Berlin"), stand_at="10:00")
+        return to_alert_message([change], [seg], "GR20", tz=ZoneInfo("Europe/Berlin"), stand_at="10:00", ampel=resolve_ampel(None))
 
     def test_bold_first_line(self):
         """Erste Zeile ist fett (Telegram-HTML-Markup <b>...</b>, parse_mode=HTML)."""
@@ -398,7 +399,7 @@ class TestAC5SMS:
         change = _make_change("gust_max_kmh", old=50.0, new=80.0, direction="increase",
                                threshold=60.0, segment_id="1", occurred_at="12:00")
         seg = _make_segment("1", km_from=5.0, km_to=18.0)
-        return to_alert_message([change], [seg], "GR20", tz=ZoneInfo("Europe/Berlin"), stand_at="10:00")
+        return to_alert_message([change], [seg], "GR20", tz=ZoneInfo("Europe/Berlin"), stand_at="10:00", ampel=resolve_ampel(None))
 
     def _make_msg_many_events(self):
         """Genug Events um einen ECHTEN Längenüberlauf >140 Zeichen zu erzwingen.
@@ -421,7 +422,7 @@ class TestAC5SMS:
                              occurred_at=f"{hour:02d}:00")
             )
         seg = _make_segment("1", km_from=5.0, km_to=18.0)
-        return to_alert_message(changes, [seg], "VERYLONG-TRIPNAME", tz=ZoneInfo("Europe/Berlin"), stand_at="10:00")
+        return to_alert_message(changes, [seg], "VERYLONG-TRIPNAME", tz=ZoneInfo("Europe/Berlin"), stand_at="10:00", ampel=resolve_ampel(None))
 
     def test_ascii_only(self):
         """Ausgabe ist reines ASCII."""
@@ -538,7 +539,7 @@ class TestAC7DynamicSubject:
         change = _make_change("gust_max_kmh", old=50.0, new=80.0, direction="increase",
                                threshold=60.0, segment_id="1", occurred_at="12:00")
         seg = _make_segment("1", km_from=5.0, km_to=18.0)
-        msg = to_alert_message([change], [seg], "GR20", tz=ZoneInfo("Europe/Berlin"), stand_at="10:00")
+        msg = to_alert_message([change], [seg], "GR20", tz=ZoneInfo("Europe/Berlin"), stand_at="10:00", ampel=resolve_ampel(None))
         subj = render_subject(msg)
 
         # Alter statischer Betreff (kein Inhalt)
@@ -723,7 +724,7 @@ class TestIssue940LabelInEmail:
         change = _make_change(field, old=old, new=new, direction=direction,
                                threshold=thr, segment_id="1")
         seg = _make_segment("1", km_from=0.0, km_to=10.0)
-        return to_alert_message([change], [seg], "TEST", tz=ZoneInfo("Europe/Berlin"), stand_at="08:00")
+        return to_alert_message([change], [seg], "TEST", tz=ZoneInfo("Europe/Berlin"), stand_at="08:00", ampel=resolve_ampel(None))
 
     # ── Blind spot 1+3: render_subject und _h1 (via render_email) ─────────────
 
@@ -772,7 +773,7 @@ class TestIssue940LabelInEmail:
         change = _make_change("gust_max_kmh", old=50.0, new=90.0, direction="increase",
                                threshold=60.0, segment_id="1")
         seg = _make_segment("1", km_from=0.0, km_to=10.0)
-        msg = to_alert_message([change], [seg], "TEST", tz=ZoneInfo("Europe/Berlin"), stand_at="08:00")
+        msg = to_alert_message([change], [seg], "TEST", tz=ZoneInfo("Europe/Berlin"), stand_at="08:00", ampel=resolve_ampel(None))
         html, plain = render_email(msg)
         assert "Böen" in html, f"'Böen' fehlt in H1 (HTML): {html[:200]!r}"
         assert "Böen" in plain, f"'Böen' fehlt in H1 (Plain): {plain[:200]!r}"

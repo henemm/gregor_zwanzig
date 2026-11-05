@@ -20,6 +20,7 @@ im Projektionsteil per `freeze_time`, weil der Buendel-Konstruktor
 `onset_time` selbst aus `datetime.now()` bildet.
 """
 from __future__ import annotations
+from app.ampel import resolve_ampel
 
 import inspect
 from datetime import datetime, timedelta, timezone
@@ -125,7 +126,7 @@ def test_ac6_beginn_ohne_versatz_ende_mit_versatz():
     und `OnsetEvent` kennt `event_end_day_offset` nicht."""
     msg = to_multi_location_onset_alert_message(
         [("Sillian", _nowcast(event_end_minutes=60))],
-        tz=_TZ, stand_at="23:40",
+        tz=_TZ, stand_at="23:40", ampel=resolve_ampel(None),
     )
     event = msg.events[0]
 
@@ -164,7 +165,7 @@ def test_ac6_ende_am_selben_tag_traegt_keinen_versatz():
     RED heute: `NowcastResult` kennt `event_end_minutes` nicht (`TypeError`)."""
     msg = to_multi_location_onset_alert_message(
         [("Sillian", _nowcast(event_end_minutes=15))],
-        tz=_TZ, stand_at="23:40",
+        tz=_TZ, stand_at="23:40", ampel=resolve_ampel(None),
     )
     event = msg.events[0]
 

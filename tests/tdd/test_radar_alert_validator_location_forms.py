@@ -24,6 +24,7 @@ kann der Renderer gar nicht erzeugen, genau deshalb ist sie die Gegenprobe.
 Vorbild fuer Aufbau und Modul-Laden: tests/tdd/test_official_alert_mail_validator.py
 """
 from __future__ import annotations
+from app.ampel import resolve_ampel
 
 import importlib.util
 import sys
@@ -65,7 +66,7 @@ def _rendered_radar_mail_plain(segment_id) -> str:
     )
     msg = AlertMessage(
         trip_short="GATE1241 probe", stand_at="13:05", events=(onset,),
-        source="Radar (DWD)", cooldown_display="2 Stunden",
+        source="Radar (DWD)", cooldown_display="2 Stunden", ampel=resolve_ampel(None),
     )
     return render_email(msg)[1]
 

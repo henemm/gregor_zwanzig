@@ -24,6 +24,7 @@ Kein Mock-Theater: Stufen und Traegerlisten entstehen ueber die ECHTE Fusion
 Schwelle.
 """
 from __future__ import annotations
+from app.ampel import resolve_ampel
 
 import inspect
 import json
@@ -147,7 +148,7 @@ def _neue_nacht_zelle(formatter: TripReportFormatter, dps: list[ForecastDataPoin
     fuer AC-6/AC-7/AC-8 vorgegebene zweistufige Pruefweg."""
     _reihe(dps)
     row = formatter._aggregate_night_block(dps, _dc())
-    return fmt_val("thunder", row.get("thunder"), row=row)
+    return fmt_val("thunder", row.get("thunder"), row=row, ampel=resolve_ampel(None))
 
 
 # ---------------------------------------------------------------------------
@@ -335,7 +336,7 @@ def test_ac9_ampel_kreis_modus_bleibt_unveraendert():
     erwartet = _ampel_dot_css(band, hail=hail)
     ergebnis = fmt_val(
         "thunder", row["thunder"], html=True,
-        indicator_keys={"thunder"}, row=row,
+        indicator_keys={"thunder"}, row=row, ampel=resolve_ampel(None),
     )
     assert ergebnis == erwartet, (
         f"Der Ampel-Kreis-Modus darf durch den neuen Seitenkanal NICHT "
@@ -347,8 +348,8 @@ def test_ac10_fmt_val_ohne_seitenkanal_bleibt_zeichengleich():
     fmt_val(key="thunder", ...) OHNE row oder mit row ohne
     "_thunder_signals", Then bleibt die Ausgabe zeichengleich zum Verhalten
     vor dieser Scheibe -- kein Fehler, kein leerer ·-Zusatz."""
-    ohne_row = fmt_val("thunder", ThunderLevel.LOW, row=None)
-    leeres_row = fmt_val("thunder", ThunderLevel.LOW, row={})
+    ohne_row = fmt_val("thunder", ThunderLevel.LOW, row=None, ampel=resolve_ampel(None))
+    leeres_row = fmt_val("thunder", ThunderLevel.LOW, row={}, ampel=resolve_ampel(None))
     assert ohne_row == "leicht", f"row=None muss unveraendert bleiben: {ohne_row!r}"
     assert leeres_row == "leicht", (
         f"row={{}} ohne '_thunder_signals' muss unveraendert bleiben: {leeres_row!r}")

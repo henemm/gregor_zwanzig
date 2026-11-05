@@ -37,6 +37,7 @@ verifiziert, nicht hier.
 SPEC: docs/specs/modules/issue_1169_compare_alert_consumer.md
 """
 from __future__ import annotations
+from app.ampel import resolve_ampel
 
 import imaplib
 import email
@@ -696,7 +697,7 @@ def test_ac7_point_alert_shows_location_name_not_km_zero():
     )
 
     msg = to_point_alert_message(
-        [change], [point], location_name, tz=ZoneInfo("UTC"), stand_at="14:00",
+        [change], [point], location_name, tz=ZoneInfo("UTC"), stand_at="14:00", ampel=resolve_ampel(None),
     )
 
     subject = render_subject(msg)
@@ -737,7 +738,7 @@ def test_ac7_trip_alert_rendering_unchanged():
         segment_id="1",
     )
 
-    msg = to_alert_message([change], [seg_data], "GR20", tz=ZoneInfo("UTC"), stand_at="14:00")
+    msg = to_alert_message([change], [seg_data], "GR20", tz=ZoneInfo("UTC"), stand_at="14:00", ampel=resolve_ampel(None))
     assert getattr(msg, "location_label", None) is None, (
         "Trip-Pfad darf location_label nie setzen (Regressions-Invariante, AC-7)"
     )

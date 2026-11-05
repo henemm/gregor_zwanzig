@@ -56,6 +56,7 @@ Projektion und Hinweis-Formatierer ihre Zeitpunkte selbst aus
 `datetime.now()` bilden.
 """
 from __future__ import annotations
+from app.ampel import resolve_ampel
 
 import inspect
 import re
@@ -137,11 +138,11 @@ def _texte(*, ongoing: bool) -> dict[str, str]:
     Mehr-Orte-Zweig."""
     nc = _nowcast(ongoing=ongoing)
     einzel = to_multi_location_onset_alert_message(
-        [("Sillian", nc)], tz=_TZ, stand_at="17:55",
+        [("Sillian", nc)], tz=_TZ, stand_at="17:55", ampel=resolve_ampel(None),
     )
     buendel = to_multi_location_onset_alert_message(
         [("Sillian", nc), ("Obertilliach", _nowcast(ongoing=ongoing))],
-        tz=_TZ, stand_at="17:55",
+        tz=_TZ, stand_at="17:55", ampel=resolve_ampel(None),
     )
     html_einzel, plain_einzel = render_email(einzel)
     _html_buendel, plain_buendel = render_email(buendel)

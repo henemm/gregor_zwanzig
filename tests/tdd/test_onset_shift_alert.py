@@ -49,6 +49,7 @@ ueber den festen Hauptrepo-Pfad -- sonst pruefte dieser Test aus dem Worktree
 die unveraenderte Hauptrepo-Kopie und meldete falsches Gruen.
 """
 from __future__ import annotations
+from app.ampel import resolve_ampel
 
 import http.server
 import inspect
@@ -187,7 +188,7 @@ def _texte(changes, *, tz=ZoneInfo("Atlantic/Reykjavik")) -> dict[str, str]:
     """
     segmente = [_data(lat=ISLAND_LAT, lon=ISLAND_LON)]
     msg = to_alert_message(changes, segmente, "Test-Trip", tz=tz,
-                           stand_at="09:00")
+                           stand_at="09:00", ampel=resolve_ampel(None))
     html, plain = render_email(msg)
     return {"email_html": html, "email_plain": plain,
             "telegram": render_telegram(msg), "sms": render_sms(msg)}
@@ -766,7 +767,7 @@ def test_ac9_beginn_alarm_erreicht_alle_vier_kanaele_in_beiden_flaechen(
                    distance_from_start_km=0.0)
     msg = to_multi_point_alert_message(
         [("Reykjavik", changes, ort)],
-        tz=ZoneInfo("Atlantic/Reykjavik"), stand_at="09:00",
+        tz=ZoneInfo("Atlantic/Reykjavik"), stand_at="09:00", ampel=resolve_ampel(None),
     )
     html, plain = render_email(msg)
     _pruefe_vier_kanaele("vergleich", {

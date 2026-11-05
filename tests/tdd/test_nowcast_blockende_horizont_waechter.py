@@ -43,6 +43,7 @@ Renderer-Teil ueber `freeze_time` festgestellt, weil der Buendel-Konstruktor
 `onset_time` selbst aus `datetime.now()` bildet.
 """
 from __future__ import annotations
+from app.ampel import resolve_ampel
 
 import inspect
 import re
@@ -130,7 +131,7 @@ def _alert_message(nc: NowcastResult):
     Einzel-Onset-Renderpfad, den auch der Trip-Radar-Alarm benutzt
     (ADR-0021: Trip und Ortsvergleich teilen die Ausgabe)."""
     return to_multi_location_onset_alert_message(
-        [("Sillian", nc)], tz=_TZ, stand_at="17:55",
+        [("Sillian", nc)], tz=_TZ, stand_at="17:55", ampel=resolve_ampel(None),
     )
 
 

@@ -30,6 +30,7 @@ GREEN-Zustand (nach Fix):
   - Header-Zeile bei 375 px nicht sichtbar
 """
 from __future__ import annotations
+from app.ampel import resolve_ampel
 
 import sys
 import re
@@ -157,7 +158,7 @@ class TestTableStructure:
         """
         from src.output.renderers.email.html import _render_html_table
         rows = [_FULL_ROW.copy() for _ in range(3)]
-        result = _render_html_table(rows, friendly_keys=set())
+        result = _render_html_table(rows, friendly_keys=set(), ampel=resolve_ampel(None))
         assert "<thead>" in result, (
             "FEHLT: <thead>-Tag in _render_html_table()-Ausgabe.\n"
             "Ohne <thead> kann CSS-Regel 'table.resp thead { display:none }' "
@@ -174,7 +175,7 @@ class TestTableStructure:
         """
         from src.output.renderers.email.html import _render_html_table
         rows = [_FULL_ROW.copy() for _ in range(3)]
-        result = _render_html_table(rows, friendly_keys=set())
+        result = _render_html_table(rows, friendly_keys=set(), ampel=resolve_ampel(None))
         assert "<tbody>" in result, (
             "FEHLT: <tbody>-Tag in _render_html_table()-Ausgabe.\n"
             "Ohne <tbody> ist das stacked-card-Layout auf Mobile unzuverlaessig."
@@ -190,7 +191,7 @@ class TestTableStructure:
         """
         from src.output.renderers.email.html import _render_html_table
         rows = [_FULL_ROW.copy() for _ in range(3)]
-        result = _render_html_table(rows, friendly_keys=set())
+        result = _render_html_table(rows, friendly_keys=set(), ampel=resolve_ampel(None))
         thead_start = result.find("<thead>")
         thead_end = result.find("</thead>")
         th_pos = result.find("<th ")
@@ -210,7 +211,7 @@ class TestTableStructure:
         THEN enthaelt es <thead> und <tbody> (kein nacktes <tr> auf top-level)
         """
         from src.output.renderers.email.html import _render_html_table
-        result = _render_html_table([], friendly_keys=set())
+        result = _render_html_table([], friendly_keys=set(), ampel=resolve_ampel(None))
         assert "<thead>" in result, f"Leerfall: kein <thead> — {result}"
         assert "<tbody>" in result, f"Leerfall: kein <tbody> — {result}"
 
@@ -633,7 +634,7 @@ class TestMobileCompactHeader:
         from src.output.renderers.email.html import _render_mobile_compact_rows
 
         result = _render_mobile_compact_rows(
-            [_HEADER_TEST_ROW], friendly_keys=set(), include_header=True
+            [_HEADER_TEST_ROW], friendly_keys=set(), include_header=True, ampel=resolve_ampel(None)
         )
         assert "<thead>" in result, "Kein <thead> bei include_header=True"
         assert "Time" in result, (
@@ -658,7 +659,7 @@ class TestMobileCompactHeader:
         from src.output.renderers.email.html import _render_mobile_compact_rows
 
         result = _render_mobile_compact_rows(
-            [_HEADER_TEST_ROW], friendly_keys=set(), include_header=True
+            [_HEADER_TEST_ROW], friendly_keys=set(), include_header=True, ampel=resolve_ampel(None)
         )
         header_pos = result.find("<thead>")
         data_pos = result.find("<tbody>")
@@ -678,7 +679,7 @@ class TestMobileCompactHeader:
         """
         from src.output.renderers.email.html import _render_mobile_compact_rows
 
-        result = _render_mobile_compact_rows([], friendly_keys=set(), include_header=True)
+        result = _render_mobile_compact_rows([], friendly_keys=set(), include_header=True, ampel=resolve_ampel(None))
         assert "Time" not in result, (
             f"Header unerwartet erzeugt bei leerer Rows-Liste — Output: {result!r}"
         )
@@ -697,7 +698,7 @@ class TestMobileCompactHeader:
         from src.output.renderers.email.html import _render_mobile_compact_rows
 
         result = _render_mobile_compact_rows(
-            [_HEADER_TEST_ROW], friendly_keys=set(), include_header=False
+            [_HEADER_TEST_ROW], friendly_keys=set(), include_header=False, ampel=resolve_ampel(None)
         )
         assert "<thead>" in result, (
             "FEHLT: <thead> auch bei include_header=False — Tabellen-Header "
@@ -720,7 +721,7 @@ class TestMobileCompactHeader:
             rows,
             friendly_keys=set(),
             allowed_col_keys={"temp", "wind"},
-            include_header=True,
+            include_header=True, ampel=resolve_ampel(None),
         )
         assert "Time" in result, "Header-Label 'Time' fehlt"
         assert "Temp" in result, "Spalten-Label 'Temp' fehlt im Header"

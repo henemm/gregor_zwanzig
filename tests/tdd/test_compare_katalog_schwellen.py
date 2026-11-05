@@ -23,6 +23,7 @@ NICHT Teil dieser Datei (B1, bereits gruen in `506c25f4`): `html.py`,
 vollstaendig).
 """
 from __future__ import annotations
+from app.ampel import resolve_ampel
 
 import re
 from datetime import date, datetime, timezone
@@ -36,9 +37,13 @@ from app.user import ComparisonResult, LocationResult, SavedLocation
 from output.metric_format import severity_for
 from output.renderers.compare_metric_ids import resolve_enabled_metrics
 from output.renderers.email.compare_html import (
-    CV2_METRICS, HOUR_METRICS, _sev_gust, _sev_pop, _sev_rain, _sev_temp,
-    _sev_thunder, _sev_uv, _sev_visibility, render_compare_html,
+    _sev_gust, _sev_pop, _sev_rain, _sev_temp, _sev_thunder, _sev_uv,
+    _sev_visibility, build_cv2_metrics, build_hour_metrics, render_compare_html,
 )
+
+# Issue #2792 S1c-1: die Listen entstehen je Ampel (hier „allgemein").
+CV2_METRICS = build_cv2_metrics(ampel=resolve_ampel(None))
+HOUR_METRICS = build_hour_metrics(ampel=resolve_ampel(None))
 from services.weather_metrics import WeatherMetricsService
 
 TARGET_DATE = date(2026, 7, 8)
@@ -123,9 +128,9 @@ def test_sev_pop_35_pct_becomes_caution():
     """Given 35% Regenwahrscheinlichkeit / When `_sev_pop` ausgewertet wird /
     Then 'caution' (Katalog-Schwelle 30/60/80) -- heute 'ok' (eigene
     Schwelle ab 40%)."""
-    expected = severity_for("rain_probability", 35.0)
+    expected = severity_for("rain_probability", 35.0, ampel=resolve_ampel(None))
     assert expected == "yellow", "Erwartungs-Grundlage: Katalog liefert fuer 35% 'yellow'"
-    result = _sev_pop(35.0)
+    result = _sev_pop(35.0, ampel=resolve_ampel(None))
     assert result == "caution", (
         f"_sev_pop(35.0) liefert {result!r}, erwartet 'caution' (Katalog-"
         f"Schwelle ab 30%). Heutige hartcodierte Schwelle (>=40%) liefert 'ok'."
@@ -136,9 +141,9 @@ def test_sev_rain_4_5mm_becomes_caution():
     """Given 4,5 mm Regen / When `_sev_rain` ausgewertet wird / Then
     'caution' (Katalog-Schwelle 1/5/10 mm) -- heute 'warn' (eigene Schwelle
     >4 mm)."""
-    expected = severity_for("precipitation", 4.5)
+    expected = severity_for("precipitation", 4.5, ampel=resolve_ampel(None))
     assert expected == "yellow", "Erwartungs-Grundlage: Katalog liefert fuer 4,5mm 'yellow'"
-    result = _sev_rain(4.5)
+    result = _sev_rain(4.5, ampel=resolve_ampel(None))
     assert result == "caution", (
         f"_sev_rain(4.5) liefert {result!r}, erwartet 'caution' (Katalog-"
         f"Schwelle 1/5/10mm). Heutige hartcodierte Schwelle (>4mm) liefert 'warn'."
@@ -151,9 +156,9 @@ def test_sev_visibility_1500m_becomes_caution():
     <2000/<1000/<500m) -- heute 'warn' (eigene Schwelle <3000m). Die
     Trip-Zelle (B1, bereits gruen) zeigt fuer denselben Wert bereits 'yellow'
     -- dies ist der noch fehlende Vergleichsmatrix-Teil von AC-4."""
-    expected = severity_for("visibility", 1500.0)
+    expected = severity_for("visibility", 1500.0, ampel=resolve_ampel(None))
     assert expected == "yellow", "Erwartungs-Grundlage: Katalog liefert fuer 1500m 'yellow'"
-    result = _sev_visibility(1500.0)
+    result = _sev_visibility(1500.0, ampel=resolve_ampel(None))
     assert result == "caution", (
         f"_sev_visibility(1500.0) liefert {result!r}, erwartet 'caution' "
         f"(Katalog-Schwelle <2000m). Heutige hartcodierte Schwelle (<3000m) "
@@ -166,9 +171,9 @@ def test_sev_visibility_4000m_becomes_ok():
     """Groesste Abweichung (Kontext-Vorgabe): Given 4000 m Sicht / When
     `_sev_visibility` ausgewertet wird / Then 'ok' (Katalog-Schwelle greift
     erst unter 2000m) -- heute 'caution' (eigene Schwelle <5000m)."""
-    expected = severity_for("visibility", 4000.0)
+    expected = severity_for("visibility", 4000.0, ampel=resolve_ampel(None))
     assert expected == "green", "Erwartungs-Grundlage: Katalog liefert fuer 4000m 'green'"
-    result = _sev_visibility(4000.0)
+    result = _sev_visibility(4000.0, ampel=resolve_ampel(None))
     assert result == "ok", (
         f"_sev_visibility(4000.0) liefert {result!r}, erwartet 'ok' (Katalog "
         f"faerbt erst unter 2000m). Heutige hartcodierte Schwelle (<5000m) "
@@ -182,9 +187,9 @@ def test_sev_gust_exact_30_becomes_caution():
     `_sev_gust` prueft exklusiv `> 30`, der Katalog (via `severity_for`,
     `>=`) faerbt bereits AB 30. Given genau 30 km/h Boeen / When `_sev_gust`
     ausgewertet wird / Then 'caution' -- heute 'ok'."""
-    expected = severity_for("gust", 30.0)
+    expected = severity_for("gust", 30.0, ampel=resolve_ampel(None))
     assert expected == "yellow", "Erwartungs-Grundlage: Katalog liefert fuer genau 30 km/h 'yellow'"
-    result = _sev_gust(30.0)
+    result = _sev_gust(30.0, ampel=resolve_ampel(None))
     assert result == "caution", (
         f"_sev_gust(30.0) liefert {result!r}, erwartet 'caution' (Katalog "
         f"wertet ab EINSCHLIESSLICH 30 km/h). Heutige hartcodierte Schwelle "
@@ -201,9 +206,9 @@ def test_sev_temp_cold_minus6c_becomes_warn():
     `_sev_temp` ausgewertet wird / Then 'warn' (orange) -- heute 'ok', weil
     `_sev_temp` bislang ausschliesslich die Hitze-Seite (>=28/31/34) kennt
     und keine Kaelte-Seite hat."""
-    expected = severity_for("temperature", -6.0)
+    expected = severity_for("temperature", -6.0, ampel=resolve_ampel(None))
     assert expected == "orange", "Erwartungs-Grundlage: Katalog liefert fuer -6 Grad 'orange' (Kaelte-Seite)"
-    result = _sev_temp(-6.0)
+    result = _sev_temp(-6.0, ampel=resolve_ampel(None))
     assert result == "warn", (
         f"_sev_temp(-6.0) liefert {result!r}, erwartet 'warn' (Katalog-"
         f"Kaelteschwelle orange_lt=-5 Grad). Heutige `_sev_temp` kennt keine "
@@ -216,9 +221,9 @@ def test_sev_temp_hot_32c_already_matches_catalog():
     (>=28/31/34) ist bereits identisch zum Katalog; AC-5 nennt 32 Grad, aber
     dieser Wert war schon vor B2 korrekt ('warn'). Nur die Kaelte-Seite
     (s.o.) ist der tatsaechliche B2-Migrationsfall fuer diese Funktion."""
-    expected = severity_for("temperature", 32.0)
+    expected = severity_for("temperature", 32.0, ampel=resolve_ampel(None))
     assert expected == "orange"
-    assert _sev_temp(32.0) == "warn"
+    assert _sev_temp(32.0, ampel=resolve_ampel(None)) == "warn"
 
 
 def test_sev_uv_regression_already_matches_catalog():
@@ -228,9 +233,9 @@ def test_sev_uv_regression_already_matches_catalog():
         (2.5, "green", "ok"), (3.0, "yellow", "caution"),
         (6.5, "orange", "warn"), (8.0, "red", "danger"),
     ]:
-        assert severity_for("uv_index", value) == expected_canonical
-        assert _sev_uv(value) == expected_compare, (
-            f"_sev_uv({value}) liefert {_sev_uv(value)!r}, erwartet "
+        assert severity_for("uv_index", value, ampel=resolve_ampel(None)) == expected_canonical
+        assert _sev_uv(value, ampel=resolve_ampel(None)) == expected_compare, (
+            f"_sev_uv({value}) liefert {_sev_uv(value, ampel=resolve_ampel(None))!r}, erwartet "
             f"{expected_compare!r} -- Regression, war schon vor B2 korrekt."
         )
 
@@ -240,9 +245,9 @@ def test_sev_thunder_regression_unchanged():
     NICHT Teil der Umstellung (kein `display_thresholds` im Katalog fuer
     `thunder`). `_sev_thunder` bleibt unveraendert bei seinem eigenen
     MED/HIGH-Vokabular."""
-    assert _sev_thunder(ThunderLevel.HIGH) == "danger"
-    assert _sev_thunder(ThunderLevel.MED) == "warn"
-    assert _sev_thunder(ThunderLevel.NONE) is None
+    assert _sev_thunder(ThunderLevel.HIGH, ampel=resolve_ampel(None)) == "danger"
+    assert _sev_thunder(ThunderLevel.MED, ampel=resolve_ampel(None)) == "warn"
+    assert _sev_thunder(ThunderLevel.NONE, ampel=resolve_ampel(None)) is None
     assert get_metric("thunder").display_thresholds == {}, (
         "Erwartungs-Grundlage: Katalog fuehrt fuer 'thunder' keine Schwellen -- "
         "Gewitter bleibt bewusst aussen vor (Known Limitations)."

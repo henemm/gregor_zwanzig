@@ -21,6 +21,7 @@ SPEC: docs/specs/modules/fix_1927_risk_dot_farbpalette.md AC-1
 KONTEXT: docs/context/fix-1927-risk-farbe-mismatch.md
 """
 from __future__ import annotations
+from app.ampel import resolve_ampel
 
 import re
 
@@ -48,7 +49,7 @@ _HARMLESS = {"wind": 5, "gust": 10, "precip": 0.0, "pop": 5, "visibility": 20000
 def _render_one(row: dict) -> str:
     """Rendert GENAU EINE Stundenzeile — jede gefundene Farbe ist dadurch
     eindeutig dieser Zeile zugeordnet (keine Zeilenverwechslung moeglich)."""
-    return _render_html_table([row], friendly_keys=set(), indicator_keys=set())
+    return _render_html_table([row], friendly_keys=set(), indicator_keys=set(), ampel=resolve_ampel(None))
 
 
 def _risk_dot_color(html: str) -> str:
@@ -137,7 +138,7 @@ def test_old_watch_and_risk_colors_vanish_from_full_table():
         {**_HARMLESS, "time": "12", "thunder": ThunderLevel.MED},
         {**_HARMLESS, "time": "13", "thunder": ThunderLevel.HIGH},
     ]
-    html = _render_html_table(rows, friendly_keys=set(), indicator_keys=set())
+    html = _render_html_table(rows, friendly_keys=set(), indicator_keys=set(), ampel=resolve_ampel(None))
     assert _OLD_WATCH not in html.lower(), (
         f"Alte Watch-Farbe {_OLD_WATCH!r} taucht noch im gerenderten HTML auf."
     )

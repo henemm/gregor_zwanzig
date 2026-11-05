@@ -7,6 +7,7 @@ Verifies that:
 only aggregate data points WITHIN the segment time windows.
 """
 from __future__ import annotations
+from app.ampel import resolve_ampel
 
 import sys
 from datetime import datetime, timezone
@@ -91,7 +92,7 @@ def test_pills_respect_segment_window():
     # Peak 95 um 00:00 UTC (02:00 Ortszeit), Segment ist 08:00-12:00 UTC
     seg = _build_segment_with_full_day_data(start_h=8, end_h=12, peak_h=0, peak_val=95.0)
     
-    pills = build_metrics_summary_pills([seg], ["gust"], {}, tz=TZ)
+    pills = build_metrics_summary_pills([seg], ["gust"], {}, tz=TZ, ampel=resolve_ampel(None))
     texts = [t for t, _ in pills]
     
     # RED: Momentan scannt build_metrics_summary_pills alle Datenpunkte der Timeseries.
@@ -196,7 +197,7 @@ def test_last_segment_arrival_hour_included():
 
     seg = _build_segment_with_precip(start_h=8, end_h=12, precip_h=12, precip_val=0.2)
 
-    pills = build_metrics_summary_pills([seg], ["precipitation"], {}, tz=TZ)
+    pills = build_metrics_summary_pills([seg], ["precipitation"], {}, tz=TZ, ampel=resolve_ampel(None))
     text = next((t for t, _ in pills), None)
 
     assert text is not None, "Kein Regen-Pill erzeugt"
@@ -220,7 +221,7 @@ def test_shared_boundary_hour_not_double_counted():
     seg1 = _build_segment_with_precip(start_h=8, end_h=12, precip_h=12, precip_val=5.0, segment_id=1)
     seg2 = _build_segment_with_precip(start_h=12, end_h=16, precip_h=12, precip_val=5.0, segment_id=2)
 
-    pills = build_metrics_summary_pills([seg1, seg2], ["precipitation"], {}, tz=TZ)
+    pills = build_metrics_summary_pills([seg1, seg2], ["precipitation"], {}, tz=TZ, ampel=resolve_ampel(None))
     text = next((t for t, _ in pills), None)
 
     assert text is not None, "Kein Regen-Pill erzeugt"

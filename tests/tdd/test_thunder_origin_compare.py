@@ -14,6 +14,7 @@ Kein Mock-Theater: echte ``ForecastDataPoint``-Rohwerte, echte Fusion
 ``app.model_registry``), echte Renderer bis zum zurueckgegebenen Body.
 """
 from __future__ import annotations
+from app.ampel import resolve_ampel
 
 import html as _html
 import re
@@ -284,7 +285,7 @@ def test_ac11_trip_stundenzelle_bleibt_ohne_herkunft():
     assert _html_zellen(html)[0] == "hoch · CAPE", (
         f"Gegenprobe gescheitert: die Tagesuebersicht MUSS die Herkunft "
         f"zeigen: {_html_zellen(html)[0]!r}")
-    assert fmt_val("thunder", ThunderLevel.HIGH, row={"_hail_flag": None}) == "hoch", (
+    assert fmt_val("thunder", ThunderLevel.HIGH, row={"_hail_flag": None}, ampel=resolve_ampel(None)) == "hoch", (
         "Die Gewitterzelle der TRIP-Stundentabelle (email/helpers.fmt_val) "
         "bleibt zeichengleich -- kein Herkunfts-Zusatz auf der Trip-Seite.")
 

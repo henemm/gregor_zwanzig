@@ -33,6 +33,7 @@ Netz, kein Dateiinhalt-Check. Echte ``ForecastDataPoint``-/
 ``SegmentWeatherSummary``-/``SegmentWeatherData``-Objekte, echter Renderpfad.
 """
 from __future__ import annotations
+from app.ampel import resolve_ampel
 
 import dataclasses
 import sys
@@ -147,7 +148,7 @@ def _spalten_und_zellen(summary) -> tuple[list[str], list[str]]:
     from output.renderers.email.outlook import render_outlook_table
 
     html = render_outlook_table([_ausblick_zeile(summary)], show_acc=True,
-                                metrics=_AUSWAHL)
+                                metrics=_AUSWAHL, ampel=resolve_ampel(None))
     kopf = [re.sub(r"<[^>]+>", "", t).strip()
             for t in re.findall(r"<th[^>]*>(.*?)</th>", html, re.DOTALL)]
     zellen = [re.sub(r"<[^>]+>", "", t).strip()

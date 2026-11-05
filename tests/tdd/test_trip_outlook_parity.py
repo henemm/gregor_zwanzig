@@ -46,6 +46,7 @@ Kern-Schicht, deterministisch: keine Mocks, kein Netz, echte
 SegmentWeatherSummary-/ForecastDataPoint-/HourlyValue-Objekte.
 """
 from __future__ import annotations
+from app.ampel import resolve_ampel
 
 import difflib
 from datetime import datetime, timezone
@@ -98,7 +99,7 @@ def test_trip_outlook_html_is_byte_identical():
     from output.renderers.email.outlook import render_outlook_table
 
     expected = (_FIXTURES / "trip_outlook_show_acc_true.html").read_text(encoding="utf-8")
-    actual = render_outlook_table(parity_rows(), show_acc=True)
+    actual = render_outlook_table(parity_rows(), show_acc=True, ampel=resolve_ampel(None))
 
     assert actual == expected, (
         "Die HTML-Ausblick-Tabelle der TRIP-Mail hat sich veraendert. Der "

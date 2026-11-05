@@ -17,6 +17,7 @@ Kontext: docs/context/fix-2010-2011-gewitter-stufenwoerter.md
 Kern-Schicht, deterministisch: keine Mocks/patch()/MagicMock, kein Netz.
 """
 from __future__ import annotations
+from app.ampel import resolve_ampel
 
 import re
 from datetime import date, datetime, timedelta, timezone
@@ -367,7 +368,7 @@ def test_ac6_row_risk_bleibt_fuer_none_gewitter_unveraendert_ok():
         "time": "14:00", "temp": 18.0, "wind": 10.0, "gust": 15.0,
         "precip": 0.0, "pop": 5.0, "thunder": ThunderLevel.NONE,
     }
-    assert _row_risk(row) == "ok"
+    assert _row_risk(row, ampel=resolve_ampel(None)) == "ok"
 
 
 # ---------------------------------------------------------------------------
@@ -381,7 +382,7 @@ CELL_ORANGE = "#fbe3cc"
 
 
 def _render_one(row: dict) -> str:
-    return _render_html_table([row], friendly_keys=set(), indicator_keys=set())
+    return _render_html_table([row], friendly_keys=set(), indicator_keys=set(), ampel=resolve_ampel(None))
 
 
 def _thunder_cell_bg(html: str):

@@ -103,9 +103,9 @@ def _preset() -> dict:
 
 
 def _hourly_keys() -> list[str]:
-    from output.renderers.email.compare_html import HOUR_METRICS
+    from output.renderers.email.compare_html import _hour_zeilen
 
-    return [m["key"] for m in HOUR_METRICS]
+    return [m["key"] for m in _hour_zeilen()]
 
 
 def _lang(lang):

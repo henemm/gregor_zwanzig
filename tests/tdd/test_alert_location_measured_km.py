@@ -17,6 +17,7 @@ RED-Zustand (fehlendes additives Feld/Argument aus der Spec), keine
 Verwechslung mit einem Tippfehler in diesem Testcode.
 """
 from __future__ import annotations
+from app.ampel import resolve_ampel
 
 import re
 
@@ -58,7 +59,7 @@ def _single_event_message(**kwargs):
 
     event = _measured_event(**kwargs)
     return AlertMessage(
-        trip_short="KHW 403", stand_at="10:00", events=(event,), source=None,
+        trip_short="KHW 403", stand_at="10:00", events=(event,), source=None, ampel=resolve_ampel(None),
     )
 
 
@@ -254,11 +255,11 @@ def test_ortsangabe_ohne_segmentkennung_ist_ueber_alle_event_typen_gleich():
 
     betreffe = {
         "AlertEvent": render_subject(AlertMessage(
-            trip_short="KHW 403", stand_at="10:00", events=(alert,), source=None,
+            trip_short="KHW 403", stand_at="10:00", events=(alert,), source=None, ampel=resolve_ampel(None),
         )),
         "OnsetShiftEvent": render_subject(AlertMessage(
             trip_short="KHW 403", stand_at="10:00", events=(), source=None,
-            onset_shift_events=(shift,),
+            onset_shift_events=(shift,), ampel=resolve_ampel(None),
         )),
     }
     for typ, betreff in betreffe.items():

@@ -17,6 +17,7 @@ Mock-frei: echte `NowcastResult`/`OnsetEvent`-Objekte durch die echten
 Projektions- und Renderfunktionen. Die Uhr steht per `freeze_time`.
 """
 from __future__ import annotations
+from app.ampel import resolve_ampel
 
 import inspect
 from pathlib import Path
@@ -63,7 +64,7 @@ def test_ac8_guete_zeile_sagt_unscharf_niemals_extrapoliert():
         is_convective=False, event_end_minutes=30,
     )
     msg = to_multi_location_onset_alert_message(
-        [("Sillian", nc)], tz=_TZ, stand_at="17:55",
+        [("Sillian", nc)], tz=_TZ, stand_at="17:55", ampel=resolve_ampel(None),
     )
     _html, plain = render_email(msg)
     betreff = render_subject(msg)

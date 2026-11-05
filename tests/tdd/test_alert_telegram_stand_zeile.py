@@ -15,6 +15,7 @@ AlertEvent/AlertMessage-Objekten. Kein Mock, keine Dateiinhalt-Checks.
 Alle Tests hier müssen vor der Implementierung ROT sein.
 """
 from __future__ import annotations
+from app.ampel import resolve_ampel
 
 from output.renderers.alert.model import AlertEvent, AlertMessage
 from output.renderers.alert.render import render_sms, render_telegram
@@ -33,7 +34,7 @@ def _single_thunder_msg(
     )
     return AlertMessage(
         trip_short=trip_short, stand_at=stand_at, events=(e,), source=None,
-        reference_at=reference_at,
+        reference_at=reference_at, ampel=resolve_ampel(None),
     )
 
 

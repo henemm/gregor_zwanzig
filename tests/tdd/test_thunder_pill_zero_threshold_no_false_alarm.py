@@ -18,6 +18,7 @@ Keine Mocks -- echte ForecastDataPoint-Stundenreihe, echter Aufruf von
 ``_pill_for_metric()`` (SSoT fuer die Mail-Prosa-Pille).
 """
 from __future__ import annotations
+from app.ampel import resolve_ampel
 
 import re
 from datetime import datetime, timezone
@@ -52,7 +53,7 @@ def test_zero_threshold_does_not_trigger_gewitter_ab_for_thunder_free_stage():
     Ordinal 0, ``0 >= 0.0`` ist wahr -- falscher Alarm."""
     from output.renderers.email.helpers import _pill_for_metric
 
-    result = _pill_for_metric("thunder", {"thunder": 0.0}, _dps_all_none(), tz=TZ)
+    result = _pill_for_metric("thunder", {"thunder": 0.0}, _dps_all_none(), tz=TZ, ampel=resolve_ampel(None))
     assert result is not None, "Erwartet ein (text, tone)-Tupel, erhalten None"
     text, _tone = result
     # #1493: gegen das MUSTER pruefen ("Gewitter <stufe> ab HH:00"), sonst

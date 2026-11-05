@@ -295,6 +295,13 @@ und weichen bei Niederschlag bewusst von den Stunden-Schwellen dieser Tabelle ab
 Quelle ist immer `display_thresholds` im Metrik-Katalog; ausgewertet wird ausschließlich über
 `metric_format.severity_for` (Issue #1377). Die Tabelle hier ist Abschrift, nicht Quelle.
 
+Seit #2792 S1c-1 (2026-11-05) liest kein Renderer `display_thresholds` mehr selbst: die Schwellen
+kommen über das keyword-only Pflichtparameter-Objekt `ampel=` (`src/app/ampel.py`: `resolve_ampel`,
+`ampel_for`) bis an jede Farbentscheidung; `AlertMessage` trägt das Pflichtfeld `ampel`. Die Einstiege
+übergeben noch `resolve_ampel(None)` (Vorlage „Allgemein“ = obige Werte), daher ist die Ausgabe
+byte-gleich. Ratsche: `tests/tdd/test_kein_leser_liest_display_thresholds.py` (kein Lesezugriff auf
+`display_thresholds` in `src/output/**`).
+
 **Nicht verwechseln:** `risk_thresholds` (Risk Engine, `api_contract.md` §7) ist eine getrennte
 Größe mit eigener LOW/MODERATE/HIGH-Skala und wird von der Ampel nicht berührt.
 

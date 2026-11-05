@@ -45,6 +45,7 @@ from zoneinfo import ZoneInfo
 import pytest
 
 from app.config import Settings
+from app.ampel import resolve_ampel
 from output.renderers.alert.model import AlertEvent, AlertMessage, OnsetEvent
 from output.renderers.alert.render import (
     render_email, render_sms, render_subject, render_telegram,
@@ -110,7 +111,7 @@ def _onset_msg(
     )
     if addendum_reference is not _UNSET:
         kwargs["addendum_reference"] = addendum_reference
-    return AlertMessage(**kwargs)
+    return AlertMessage(ampel=resolve_ampel(None), **kwargs)
 
 
 def _bundle_onset_msg(*, addendum_reference: object = _UNSET) -> AlertMessage:
@@ -131,7 +132,7 @@ def _bundle_onset_msg(*, addendum_reference: object = _UNSET) -> AlertMessage:
     )
     if addendum_reference is not _UNSET:
         kwargs["addendum_reference"] = addendum_reference
-    return AlertMessage(**kwargs)
+    return AlertMessage(ampel=resolve_ampel(None), **kwargs)
 
 
 def _thunder_deviation_msg(
@@ -154,7 +155,7 @@ def _thunder_deviation_msg(
     )
     if addendum_reference is not _UNSET:
         kwargs["addendum_reference"] = addendum_reference
-    return AlertMessage(**kwargs)
+    return AlertMessage(ampel=resolve_ampel(None), **kwargs)
 
 
 class _SevenIoStub:

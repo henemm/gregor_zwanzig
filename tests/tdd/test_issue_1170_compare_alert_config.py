@@ -28,6 +28,7 @@ Seam auf `CompareAlertService`) — keine Mocks, kein Netz, echte
 Preset-/Snapshot-Dateien unter `data/users/tdd-1170-*`.
 """
 from __future__ import annotations
+from app.ampel import resolve_ampel
 
 from datetime import datetime, timezone
 from pathlib import Path
@@ -404,7 +405,7 @@ def test_ac7_single_location_two_metrics_no_per_row_location_prefix():
 
     msg = to_point_alert_message(
         [change_wind, change_precip], [point], location_name,
-        tz=ZoneInfo("UTC"), stand_at="14:00",
+        tz=ZoneInfo("UTC"), stand_at="14:00", ampel=resolve_ampel(None),
     )
 
     _html, plain = render_email(msg)

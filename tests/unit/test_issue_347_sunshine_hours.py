@@ -9,6 +9,7 @@ KEINE Mocks (Projekt-Regel): echte ForecastDataPoint- und Settings-Instanzen.
 
 Spec: docs/specs/modules/issue_347_sunshine_hours.md
 """
+from app.ampel import resolve_ampel
 import sys
 from pathlib import Path
 from datetime import datetime
@@ -258,7 +259,7 @@ class TestAC8EmailRendererRendersHours:
     def test_email_renderer_renders_hours_with_suffix(self):
         row, dps = self._build_row()
         out = email_helpers.fmt_val(
-            "sunshine", row.get("sunshine"), friendly_keys=set(), row=row
+            "sunshine", row.get("sunshine"), friendly_keys=set(), row=row, ampel=resolve_ampel(None)
         )
         assert out == "4.0 h", (
             f"AC-8/F002: E-Mail-Renderer muss '4.0 h' rendern, war '{out}'"
@@ -267,7 +268,7 @@ class TestAC8EmailRendererRendersHours:
     def test_email_renderer_not_raw_dni_sum(self):
         row, dps = self._build_row()
         out = email_helpers.fmt_val(
-            "sunshine", row.get("sunshine"), friendly_keys=set(), row=row
+            "sunshine", row.get("sunshine"), friendly_keys=set(), row=row, ampel=resolve_ampel(None)
         )
         # Vorher: f"{val:.0f}" mit val=960 (rohe DNI-Summe in W/m²)
         assert out != "960", f"F002: rohe DNI-Summe (W/m²) gerendert: '{out}'"
@@ -295,7 +296,7 @@ class TestAC9RenderConsistency:
 
         email_row = {"time": "08", "sunshine": col_val, "_sunny_hours": direct}
         email_out = email_helpers.fmt_val(
-            "sunshine", email_row["sunshine"], friendly_keys=set(), row=email_row
+            "sunshine", email_row["sunshine"], friendly_keys=set(), row=email_row, ampel=resolve_ampel(None)
         )
 
         expected = f"{direct:.1f} h"

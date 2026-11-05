@@ -314,7 +314,7 @@ def _remaining_fields(eintrag, ch, now_utc, tz) -> dict:
     }
 
 
-def _hour_fields(metric_id, ch, fresh_ts, anchor_ts, tz, window=None) -> dict:
+def _hour_fields(metric_id, ch, fresh_ts, anchor_ts, tz, window=None, *, ampel) -> dict:
     """Stundenzeilen-Felder eines Ereignisses (Issue #1737) -- EINE Stelle fuer
     Trip UND Ortsvergleich. Best-effort: scheitert die Berechnung (Metrik ohne
     numerische Stundengroesse), bleibt das Ereignis ohne Zeilen -- der Alarm
@@ -322,7 +322,7 @@ def _hour_fields(metric_id, ch, fresh_ts, anchor_ts, tz, window=None) -> dict:
     try:
         return affected_hours(
             metric_id, fresh_ts, anchor_ts, threshold=ch.threshold,
-            value_from=ch.old_value, tz=tz, window=window,
+            value_from=ch.old_value, tz=tz, window=window, ampel=ampel,
         )
     except Exception:
         logger.warning("Stundenzeilen fuer %s nicht bestimmbar", metric_id, exc_info=True)
@@ -350,9 +350,12 @@ def _segment_window(eintrag):
 def to_alert_message(
     changes, segments, trip_name, *, tz, stand_at,
     reference_at=None, now_utc=None, stage_number=None,
-    anchor_segments=None, format_modes=None, indicator_keys=None,
+    anchor_segments=None, format_modes=None, indicator_keys=None, ampel: dict,
 ) -> AlertMessage:
     """WeatherChange-Events → kanonische AlertMessage. source bei Deviation = None.
+
+    Issue #2792 S1c-1: ``ampel`` (aufgeloeste Profil-Ampel des Trips) faerbt
+    die Stundenzeilen und reist auf der Nachricht mit (Pflicht, kein Default).
 
     Issue #1386: die Ereigniszeit („Wo & wann … · HH:MM", SMS `@HH`) wird HIER
     in ORTSZEIT formatiert — je Event aus den Koordinaten SEINER Etappe
@@ -426,20 +429,20 @@ def to_alert_message(
             **_hour_fields(
                 metric_id, ch, getattr(eintrag, "timeseries", None),
                 getattr(_anchor_entry(anchor_segments, match.segment_id), "timeseries", None),
-                ev_tz, _segment_window(eintrag),
+                ev_tz, _segment_window(eintrag), ampel=ampel,
             ),
         ))
     return AlertMessage(
         trip_short=trip_name, stand_at=stand_at, events=tuple(events), source=None,
         onset_shift_events=tuple(onset_events), reference_at=reference_at,
         format_modes=dict(format_modes or {}),
-        indicator_keys=dict(indicator_keys or {}),
+        indicator_keys=dict(indicator_keys or {}), ampel=ampel,
     )
 
 
 def to_multi_point_alert_message(
     groups, *, tz, stand_at, reference_at=None, anchor_points=None, format_modes=None,
-    indicator_keys=None,
+    indicator_keys=None, ampel: dict,
 ) -> AlertMessage:
     """WeatherChange-Events MEHRERER gleichzeitig betroffener Vergleichs-Orte
     (Issue #1170, AC-7-Bündelung) → EINE kanonische AlertMessage.
@@ -493,7 +496,7 @@ def to_multi_point_alert_message(
                 **_hour_fields(
                     metric_id, ch, getattr(point, "timeseries", None),
                     getattr((anchor_points or {}).get(location_name), "timeseries", None),
-                    point_tz,
+                    point_tz, ampel=ampel,
                 ),
             ))
     collective_label = ", ".join(name for name, _changes, _point in groups)
@@ -502,7 +505,7 @@ def to_multi_point_alert_message(
         location_label=collective_label,
         onset_shift_events=tuple(onset_events), reference_at=reference_at,
         format_modes=dict(format_modes or {}),
-        indicator_keys=dict(indicator_keys or {}),
+        indicator_keys=dict(indicator_keys or {}), ampel=ampel,
     )
 
 
@@ -523,7 +526,7 @@ def _tz_for_location(loc, fallback_tz):
 
 
 def to_multi_location_onset_alert_message(
-    groups, *, tz, stand_at, cooldown_display: str | None = None
+    groups, *, tz, stand_at, cooldown_display: str | None = None, ampel: dict,
 ) -> AlertMessage:
     """Radar-Onset-Ergebnisse MEHRERER gleichzeitig auslösender Vergleichs-Orte
     (Issue #1041 Slice 1a) → EINE kanonische AlertMessage.
@@ -666,11 +669,13 @@ def to_multi_location_onset_alert_message(
     )
     return AlertMessage(
         trip_short=trip_short, stand_at=stand_at, events=tuple(events),
-        source=COMPARE_RADAR_SOURCE, cooldown_display=cooldown_display,
+        source=COMPARE_RADAR_SOURCE, cooldown_display=cooldown_display, ampel=ampel,
     )
 
 
-def to_point_alert_message(changes, points, entity_name, *, tz, stand_at) -> AlertMessage:
+def to_point_alert_message(
+    changes, points, entity_name, *, tz, stand_at, ampel: dict,
+) -> AlertMessage:
     """WeatherChange-Events (Punkt-Kontext, Issue #1169) → kanonische
     AlertMessage — OHNE `_find_segment()`-Lookup (ein Vergleichs-Ort ist ein
     Punkt ohne km-Spanne, `km_from=km_to=0.0` als neutraler Platzhalter).
@@ -682,5 +687,5 @@ def to_point_alert_message(changes, points, entity_name, *, tz, stand_at) -> Ale
     """
     point = points[0] if points else None
     return to_multi_point_alert_message(
-        [(entity_name, changes, point)], tz=tz, stand_at=stand_at,
+        [(entity_name, changes, point)], tz=tz, stand_at=stand_at, ampel=ampel,
     )

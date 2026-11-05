@@ -22,9 +22,11 @@ from __future__ import annotations
 
 import html as _html
 from datetime import date, datetime, timezone
+from functools import partial
 from typing import Optional
 from zoneinfo import ZoneInfo
 
+from app.ampel import hat_ampel, resolve_ampel
 from app.metric_catalog import aggregation_label, get_metric
 from app.models import Corridor, ThunderLevel
 from app.profile import ActivityProfile
@@ -48,7 +50,7 @@ from output.renderers.email.design_tokens import (
     G_BOX_WARNING_BG, G_INK, G_INK_FAINT, G_INK_MUTED, G_PAPER, G_SUCCESS,
     G_WARNING, WEB_FONT_LINK, tone_css,
 )
-from output.renderers.email.outlook import build_outlook_row, render_outlook_table
+from output.renderers.email.outlook import _outlook_row, render_outlook_table
 from output.renderers.email.profile_signature import profile_signature
 from output.metric_format import (
     NO_VALUE, format_value, severity_for, thunder_ampel_band,
@@ -114,49 +116,48 @@ _ALERT_LEVEL_CELL = {
 }
 
 
-def _sev_temp(v: float) -> str:
-    # Issue #1377 Scheibe B2: nutzt die Katalog-Schwellen (Hitze 28/31/34 UND,
-    # seit Scheibe A neu, Kaelte 0/-5/-15) via severity_for statt der
-    # bisherigen rein hitzeseitigen Handschwelle. Bewusst gewollte Folge:
+# Issue #2792 S1c-1: jede `_sev_*` bekommt das aufgeloeste Ampel-Objekt als
+# Pflicht-Schluesselwort; gebunden wird es je Rendern in `build_cv2_metrics`/
+# `build_hour_metrics` (keine Modulliste mit eingebackener Ampel, AC-20).
+def _sev_temp(v: float, *, ampel: dict) -> str:
+    # Issue #1377 Scheibe B2: Hitze- UND Kaelte-Seite via severity_for statt
+    # der bisherigen rein hitzeseitigen Handschwelle. Bewusst gewollte Folge:
     # die Kaelte-Seite (z.B. -6°C -> "warn") wird in der Vergleichsmatrix
     # jetzt erstmals sichtbar, identisch zum Trip-Briefing.
-    return _to_compare(severity_for("temperature", v))
+    return _to_compare(severity_for("temperature", v, ampel=ampel))
 
 
-def _sev_wind(v: float) -> str:
-    # Issue #1214 Scheibe 2 (Wind-Schwellen-Angleichung, AC-3): nutzt die
-    # Katalog-Schwellen (wind.display_thresholds={yellow:30,orange:50,red:70})
-    # via severity_for statt der bislang hartcodierten >40/>30/>20. Sichtbare,
+def _sev_wind(v: float, *, ampel: dict) -> str:
+    # Issue #1214 Scheibe 2 (Wind-Schwellen-Angleichung, AC-3): via
+    # severity_for statt der bislang hartcodierten >40/>30/>20. Sichtbare,
     # bewusst gewollte Folge: 45 km/h zeigt jetzt gelb (caution) statt rot
     # (danger) — identisch zum Trip-Briefing (helpers.ampel_level).
-    return _to_compare(severity_for("wind", v))
+    return _to_compare(severity_for("wind", v, ampel=ampel))
 
 
-def _sev_gust(v: float) -> str:
-    # Issue #1377 Scheibe B2: Katalog-Schwellen (30/45/60) via severity_for
-    # statt hartcodierter Handschwellen. Die drei Zahlen waren bereits
-    # deckungsgleich, aber die Grenz-Inklusivitaet nicht (Katalog wertet
-    # via `>=` ab EINSCHLIESSLICH der Schwelle, die bisherige Handschwelle
-    # war exklusiv `>`) -- genau 30 km/h faerbt jetzt "caution" statt "ok".
-    return _to_compare(severity_for("gust", v))
+def _sev_gust(v: float, *, ampel: dict) -> str:
+    # Issue #1377 Scheibe B2: via severity_for statt hartcodierter
+    # Handschwellen. Grenz-Inklusivitaet: `>=` ab EINSCHLIESSLICH der
+    # Schwelle -- genau 30 km/h faerbt "caution" statt "ok".
+    return _to_compare(severity_for("gust", v, ampel=ampel))
 
 
-def _sev_rain(v: float) -> str:
-    return _to_compare(severity_for("precipitation", v))
+def _sev_rain(v: float, *, ampel: dict) -> str:
+    return _to_compare(severity_for("precipitation", v, ampel=ampel))
 
 
-def _sev_uv(v: float) -> str:
-    return _to_compare(severity_for("uv_index", v))
+def _sev_uv(v: float, *, ampel: dict) -> str:
+    return _to_compare(severity_for("uv_index", v, ampel=ampel))
 
 
-def _sev_pop(v: float) -> str:
-    return _to_compare(severity_for("rain_probability", v))
+def _sev_pop(v: float, *, ampel: dict) -> str:
+    return _to_compare(severity_for("rain_probability", v, ampel=ampel))
 
 
-def _sev_visibility(v: float) -> str:
-    """v in Metern -- niedrige Sicht ist kritischer (Katalog-Schwellen
-    <2000/<1000/<500m via severity_for statt der bisherigen <5000/<3000/<1000m)."""
-    return _to_compare(severity_for("visibility", v))
+def _sev_visibility(v: float, *, ampel: dict) -> str:
+    """v in Metern -- niedrige Sicht ist kritischer (<2000/<1000/<500m via
+    severity_for statt der bisherigen <5000/<3000/<1000m)."""
+    return _to_compare(severity_for("visibility", v, ampel=ampel))
 
 
 
@@ -241,7 +242,9 @@ def _fmt_thunder(
     return " · ".join(teile)
 
 
-def _sev_thunder(v):
+def _sev_thunder(v, *, ampel: dict):
+    # Issue #2792 S1c-1: `ampel` liegt schon an (einheitliche Bindung in
+    # `build_*_metrics`); die Gewitterfarbe liest sie erst ab S1c-4.
     # Issue #1491 Fix: `NONE` bleibt im Ortsvergleich bewusst UNMARKIERT
     # (anders als die Trip-Stundentabelle, die dafuer einen gruenen Punkt
     # zeigt) -- eigene Produktentscheidung, kein Versehen. LOW/MED/HIGH
@@ -251,8 +254,8 @@ def _sev_thunder(v):
     return _to_compare(thunder_ampel_band(v))
 
 
-def _sev_rain_safe(v) -> str:
-    return _sev_rain(v or 0.0)
+def _sev_rain_safe(v, *, ampel: dict) -> str:
+    return _sev_rain(v or 0.0, ampel=ampel)
 
 
 # Compare-eigene Woerter (Katalog ``vergleich.niederschlagsart.*``, Issue #2666).
@@ -324,7 +327,10 @@ def _fmt_visibility_overview(v) -> str:
 # bleiben hier nur noch die Angaben, die es im Register NICHT gibt: welche
 # Zeilen existieren, ihre Reihenfolge, "aggregation", "sev" und die drei
 # "fmt"-Ausnahmen fuer Nicht-Zahlwerte bzw. die m->km-Umrechnung.
-CV2_METRICS = [
+# Issue #2792 S1c-1 (AC-20): ``CV2_ZEILEN`` ist nur noch die STRUKTUR; die
+# "sev"-Funktionen sind ungebunden (Pflicht-``ampel``). Gerendert wird
+# ausschliesslich ueber ``build_cv2_metrics(ampel=...)``, je Rendern neu.
+CV2_ZEILEN = [
     {"key": "warn", "label": "Amtliche Warnungen", "kind": "warn",
      "label_key": "vergleich.zeile.amtliche_warnungen"},
     {"key": "temp_max", "metric_id": "temperature", "aggregation": "max",
@@ -436,16 +442,37 @@ def _make_hour_fmt(metric_id: str):
 
 def _make_hour_sev(metric_id: str):
     """Generische Ampel einer Stundenspalte -- dieselbe Formel wie im Trip
-    (`severity_for`), uebersetzt ins Compare-Vokabular."""
-    def sev(value):
-        return _to_compare(severity_for(metric_id, value))
+    (`severity_for`), uebersetzt ins Compare-Vokabular. Ungebunden wie die
+    `_sev_*` (Pflicht-``ampel``), gebunden in `build_hour_metrics`."""
+    def sev(value, *, ampel: dict):
+        return _to_compare(severity_for(metric_id, value, ampel=ampel))
     return sev
 
 
 _UNSET = object()  # "nicht in den Ausnahmen genannt" != "ausdruecklich keine Ampel"
 
 
-def _build_hour_metrics() -> list[dict]:
+def _mit_ampel(zeilen: list[dict], *, ampel: dict) -> list[dict]:
+    """Zeilen-Kopien, deren "sev" an DIESE Ampel gebunden ist (Issue #2792
+    S1c-1, AC-20): je Rendern neu, keine Zustandsuebernahme zwischen Abos."""
+    return [
+        {**z, "sev": partial(z["sev"], ampel=ampel)} if "sev" in z else dict(z)
+        for z in zeilen
+    ]
+
+
+def build_cv2_metrics(*, ampel: dict) -> list[dict]:
+    """Uebersichts-Zeilen (``CV2_ZEILEN``) mit an ``ampel`` gebundener Farbe."""
+    return _mit_ampel(CV2_ZEILEN, ampel=ampel)
+
+
+def build_hour_metrics(*, ampel: dict) -> list[dict]:
+    """Stunden-Spalten (``_hour_zeilen``) mit an ``ampel`` gebundener Farbe."""
+    return _mit_ampel(_hour_zeilen(), ampel=ampel)
+
+
+def _hour_zeilen() -> list[dict]:
+    """STRUKTUR der Stundenspalten; "sev" ungebunden (Pflicht-``ampel``)."""
     rows: list[dict] = []
     for metric_id in hourly_selectable_metric_ids():
         if metric_id in HOURLY_MERGE_ONLY_METRIC_IDS:
@@ -457,8 +484,8 @@ def _build_hour_metrics() -> list[dict]:
             "fmt": _HOUR_FMT_OVERRIDES.get(metric_id) or _make_hour_fmt(metric_id),
         }
         sev = _HOUR_SEV_OVERRIDES.get(metric_id, _UNSET)
-        if sev is _UNSET and metric.display_thresholds:
-            # Ohne Katalog-Schwellen KEINE Ampel verdrahten -- sonst uebersetzte
+        if sev is _UNSET and hat_ampel(metric_id):
+            # Ohne Ampel-Schwellen KEINE Ampel verdrahten -- sonst uebersetzte
             # "keine Aussage" in ein stilles Gruen (tests/tdd/
             # test_compare_katalog_schwellen.py).
             sev = _make_hour_sev(metric_id)
@@ -466,9 +493,6 @@ def _build_hour_metrics() -> list[dict]:
             row["sev"] = sev
         rows.append(row)
     return rows
-
-
-HOUR_METRICS = _build_hour_metrics()
 
 
 def derive_row_labels(
@@ -802,7 +826,9 @@ def _render_overview_row(
     return f'<tr style="border-bottom:1px solid #f0ece1;">{"".join(cells)}</tr>'
 
 
-def _visible_metrics(enabled_metrics: list[str] | None, lang: Lang = "de") -> list[dict]:
+def _visible_metrics(
+    enabled_metrics: list[str] | None, lang: Lang = "de", *, ampel: dict,
+) -> list[dict]:
     """Issue #1104: filtert die NUMERISCHEN Uebersichts-Zeilen auf
     ``enabled_metrics`` (Liste von Renderer-Metrik-IDs wie "wind_max"). Die
     Warn-Zeile ("Amtliche Warnungen") ist immer sichtbar UND immer erste
@@ -819,10 +845,11 @@ def _visible_metrics(enabled_metrics: list[str] | None, lang: Lang = "de") -> li
     (``form="long"``). Die Stundentabelle (``_visible_hour_metrics``) bleibt
     bei der englischen Kurzform -- beide Formen kommen aus derselben
     Ableitung, es gibt keine zweite Namensliste."""
-    warn_row = [m for m in CV2_METRICS if m["key"] == "warn"]
+    zeilen = build_cv2_metrics(ampel=ampel)
+    warn_row = [m for m in zeilen if m["key"] == "warn"]
     if enabled_metrics is None:
-        return derive_row_labels(CV2_METRICS, form="long", lang=lang)
-    by_key = {m["key"]: m for m in CV2_METRICS}
+        return derive_row_labels(zeilen, form="long", lang=lang)
+    by_key = {m["key"]: m for m in zeilen}
     ordered = [by_key[k] for k in enabled_metrics if k in by_key and k != "warn"]
     return derive_row_labels(warn_row + ordered, form="long", lang=lang)
 
@@ -858,6 +885,8 @@ def _render_overview_table(
     corridors: list[Corridor] | None = None,
     unresolved_count: int = 0,
     lang: Lang = "de",
+    *,
+    ampel: dict,
 ) -> str:
     header_cells = [
         f'<th style="text-align:left;padding:9px 5px;font-size:10px;'
@@ -876,7 +905,7 @@ def _render_overview_table(
         f'{"".join(header_cells)}</tr>'
     )
     marks = _mark_lookup(corridors, FRONTEND_TO_RENDERER_METRIC_ID)
-    visible = _visible_metrics(enabled_metrics, lang)
+    visible = _visible_metrics(enabled_metrics, lang, ampel=ampel)
     # Tages-Aggregate EINMAL je Ort ableiten (nicht je Zeile x Ort) -- nur wenn
     # ueberhaupt eine Zeile davon lebt.
     summaries: dict = {}
@@ -894,7 +923,7 @@ def _render_overview_table(
         f'font-variant-numeric:tabular-nums;">'
         f'<thead>{header_row}</thead><tbody>{rows}</tbody></table>'
     )
-    gap = rowless_count(enabled_metrics, {m["key"] for m in CV2_METRICS})
+    gap = rowless_count(enabled_metrics, {m["key"] for m in CV2_ZEILEN})
     return (
         f'<div style="overflow-x:auto;-webkit-overflow-scrolling:touch;'
         f'margin-top:12px;border:1px solid #e6e1d3;">{table}</div>'
@@ -987,7 +1016,9 @@ def _hour_td(
     )
 
 
-def _visible_hour_metrics(hourly_metrics: list[str] | None) -> list[dict]:
+def _visible_hour_metrics(
+    hourly_metrics: list[str] | None, zeilen: list[dict],
+) -> list[dict]:
     """Issue #1106: filtert ``HOUR_METRICS`` auf ``hourly_metrics`` (Liste von
     Renderer-Metrik-IDs wie "t2m_c").
 
@@ -1002,10 +1033,13 @@ def _visible_hour_metrics(hourly_metrics: list[str] | None) -> list[dict]:
     von ``hourly_metrics`` statt der festen ``HOUR_METRICS``-Deklarations-
     reihenfolge. "wind_direction_deg" ist bewusst KEIN ``HOUR_METRICS``-Key
     (reines Merge-Signal, s. ``_should_merge_wind_dir``) -- es erzeugt hier nie
-    eine eigene Spalte."""
-    by_key = {m["key"]: m for m in HOUR_METRICS}
+    eine eigene Spalte.
+
+    ``zeilen`` (Issue #2792 S1c-1): ``build_hour_metrics(ampel=...)`` fuer die
+    gefaerbte Tabelle, ``_hour_zeilen()`` fuer reine Struktur-Fragen."""
+    by_key = {m["key"]: m for m in zeilen}
     if hourly_metrics is None:
-        by_metric_id = {m["metric_id"]: m for m in HOUR_METRICS}
+        by_metric_id = {m["metric_id"]: m for m in zeilen}
         return derive_row_labels([
             by_metric_id[mid] for mid in HOURLY_DEFAULT_METRIC_IDS
             if mid in by_metric_id
@@ -1024,7 +1058,7 @@ def has_visible_hour_columns(hourly_metrics: list[str] | None) -> bool:
     aufloesbar, hat aber bewusst keinen ``HOUR_METRICS``-Eintrag (s.
     ``_should_merge_wind_dir``). ``None`` (kein Filter/Altbestand) = alle 9
     Spalten sichtbar."""
-    return bool(_visible_hour_metrics(hourly_metrics))
+    return bool(_visible_hour_metrics(hourly_metrics, _hour_zeilen()))
 
 
 def _should_merge_wind_dir(hourly_metrics: list[str] | None) -> bool:
@@ -1094,8 +1128,9 @@ def _render_hour_row(
 def _render_hour_table(
     loc: LocationResult, hourly_metrics: list[str] | None = None,
     corridors: list[Corridor] | None = None, lang: Lang = "de",
+    *, ampel: dict,
 ) -> str:
-    visible = _visible_hour_metrics(hourly_metrics)
+    visible = _visible_hour_metrics(hourly_metrics, build_hour_metrics(ampel=ampel))
     merge_wind_dir = _should_merge_wind_dir(hourly_metrics)
     marks = _mark_lookup(corridors, CORRIDOR_METRIC_TO_HOUR_KEY)
     tz = location_tz(loc.location)  # Issue #1378 — EIN Aufloeser (E3)
@@ -1166,6 +1201,7 @@ def _location_heading(
 def _render_location_section(
     loc: LocationResult, index: int, hourly_metrics: list[str] | None = None,
     corridors: list[Corridor] | None = None, lang: Lang = "de",
+    *, ampel: dict,
 ) -> str:
     """Ort-Kopf + Langform-Warn-Streifen + Stundentabelle. Entfaellt bei Fehler
     bzw. fehlenden Stundendaten (SPEC §4)."""
@@ -1185,7 +1221,8 @@ def _render_location_section(
         )
     return (
         f'<div style="padding:{20 if index else 14}px 24px 0;">'
-        f'{header}{strip}{_render_hour_table(loc, hourly_metrics, corridors, lang)}</div>'
+        f'{header}{strip}'
+        f'{_render_hour_table(loc, hourly_metrics, corridors, lang, ampel=ampel)}</div>'
     )
 
 
@@ -1211,6 +1248,8 @@ def _build_location_outlook_rows(
     loc: LocationResult, outlook_metrics: list[dict] | None = None,
     outlook_metric_formats: dict[str, bool] | None = None,
     lang: Lang = "de",
+    *,
+    ampel: dict,
 ) -> list[dict]:
     """AC-5/AC-8: bis zu 3 Tages-Zeilen aus `outlook_hourly_data`, ueber
     denselben Aggregator (`summarize_points`) und denselben Zeilenbau
@@ -1236,7 +1275,7 @@ def _build_location_outlook_rows(
     for day, day_points in _group_by_calendar_day(loc.outlook_hourly_data, tz):
         summary = summarize_points(day_points)
         weekday = fmt_weekday(day, lang)
-        rows.append(build_outlook_row(
+        rows.append(_outlook_row(
             summary, day_points, weekday, tz, metrics=outlook_metrics,
             # Issue #2049: der Ortsvergleich hat kein `trip_display_config`,
             # aus dem `build_outlook_row` die Zuordnung selbst holen koennte --
@@ -1245,6 +1284,9 @@ def _build_location_outlook_rows(
             outlook_metric_formats=outlook_metric_formats,
             # Issue #2750: Zellentexte (Wortskalen) in Nutzersprache.
             lang=lang,
+            # Issue #2792 S1c-1: Zell-Hintergruende nach der Ampel des
+            # Presets, nicht nach einer im Zeilenbau neu aufgeloesten.
+            ampel=ampel,
         ))
     return rows
 
@@ -1292,6 +1334,7 @@ def _render_location_outlook(
     with_location: bool = False,
     outlook_metric_formats: dict[str, bool] | None = None,
     lang: Lang = "de",
+    *, ampel: dict,
 ) -> str:
     """AC-5/AC-9: Ausblick-Tabelle je Ort; entfaellt fail-soft bei Fehler
     bzw. leerem `outlook_hourly_data` (kein Crash, restliche Mail
@@ -1310,7 +1353,7 @@ def _render_location_outlook(
     if loc.error is not None or not loc.outlook_hourly_data:
         return _render_outlook_unavailable(loc, index, with_location, lang)
     rows = _build_location_outlook_rows(
-        loc, outlook_metrics, outlook_metric_formats, lang)
+        loc, outlook_metrics, outlook_metric_formats, lang, ampel=ampel)
     if not rows:
         return _render_outlook_unavailable(loc, index, with_location, lang)
     # Issue #1378: dieselbe angeschriebene Zeitbasis wie beim Stundenblock
@@ -1322,7 +1365,8 @@ def _render_location_outlook(
         loc, loc.outlook_hourly_data[0].ts,
         eyebrow=t("vergleich.ausblick.eyebrow", lang), title=title,
     )
-    table = render_outlook_table(rows, show_acc=False, metrics=outlook_metrics, lang=lang)
+    table = render_outlook_table(
+        rows, show_acc=False, metrics=outlook_metrics, lang=lang, ampel=ampel)
     return (
         f'<div style="padding:{20 if index else 14}px 24px 0;">'
         f'{header}{table}</div>'
@@ -1506,7 +1550,7 @@ def _render_units_legend(
     zweite Zeile, die die englischen Kuerzel aufloest (ADR-0042-Bedingung).
     #2136/ADR-0068 (AC-5): ``outlook_enabled``/``outlook_metrics`` speisen die
     Spalten-Legende zusaetzlich mit den Ausblick-Kuerzeln."""
-    visible = _visible_hour_metrics(hourly_metrics)
+    visible = _visible_hour_metrics(hourly_metrics, _hour_zeilen())
     blocks = ""
     for text in (
         _units_legend_text(visible, lang),
@@ -1743,6 +1787,9 @@ def render_compare_html(
     `TypeError` statt still zu wirken wie eine Einstellung.
     """
     warnings = warnings or []
+    # Issue #2792 S1c-1: Einstieg loest die Ampel des Presets auf (je Rendern,
+    # AC-20); bis S1c-4 fest „allgemein" (byte-gleich).
+    ampel = resolve_ampel(None)
     sig = profile_signature(profile, lang=lang)
     locations = location_render_order(result.locations)
 
@@ -1770,7 +1817,7 @@ def render_compare_html(
     overview_html = (
         f'<div style="padding:6px 24px 0;">'
         f'{_render_section_head(*overview_head)}'
-        f'{_render_overview_table(locations, enabled_metrics, corridors, unresolved_count, lang)}</div>'
+        f'{_render_overview_table(locations, enabled_metrics, corridors, unresolved_count, lang, ampel=ampel)}</div>'
     )
     # Issue #1278 (Nebenbefund, AC-12): die dritte Angabe war fest "09–16 Uhr" --
     # ein toter Rest des mit #1268 abgeschafften Zeitfensters. Die Bewertung
@@ -1791,7 +1838,7 @@ def render_compare_html(
     # bei fehlenden Daten "").
     def _per_location(loc, i: int) -> str:
         section = (
-            _render_location_section(loc, i, hourly_metrics, corridors, lang)
+            _render_location_section(loc, i, hourly_metrics, corridors, lang, ampel=ampel)
             if hourly_enabled else ""
         )
         if not outlook_enabled:
@@ -1802,7 +1849,7 @@ def render_compare_html(
         # ortslos.
         return section + _render_location_outlook(
             loc, i, outlook_metrics, with_location=not section,
-            outlook_metric_formats=outlook_metric_formats, lang=lang,
+            outlook_metric_formats=outlook_metric_formats, lang=lang, ampel=ampel,
         )
 
     per_location_html = "".join(
@@ -1882,8 +1929,9 @@ th, td {{ vertical-align:top; }}
 
 __all__ = [
     "render_compare_html",
-    "CV2_METRICS",
-    "HOUR_METRICS",
+    "CV2_ZEILEN",
+    "build_cv2_metrics",
+    "build_hour_metrics",
     "derive_row_labels",
     "has_visible_hour_columns",
     "location_render_order",

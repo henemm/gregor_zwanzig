@@ -1,5 +1,6 @@
 """#2210 AC-7..AC-10: Rueckbau toter Code, keine leere Stundentabelle bei abgewaehlten Metriken."""
 from __future__ import annotations
+from app.ampel import resolve_ampel
 
 from zoneinfo import ZoneInfo
 
@@ -20,7 +21,7 @@ def test_ac8_alle_metriken_abgewaehlt_keine_tabelle():
     from output.renderers.email.html import _render_html_table
 
     rows = [_FULL_ROW.copy() for _ in range(3)]
-    assert _render_html_table(rows, friendly_keys=set(), allowed_col_keys=set()) == ""
+    assert _render_html_table(rows, friendly_keys=set(), allowed_col_keys=set(), ampel=resolve_ampel(None)) == ""
 
 
 def test_ac9_ganze_mail_ohne_stundengeruest():
@@ -47,7 +48,7 @@ def test_ac10_sichtbare_metrik_behaelt_geruest():
     from output.renderers.email.html import _render_html_table
 
     rows = [_FULL_ROW.copy() for _ in range(3)]
-    out = _render_html_table(rows, friendly_keys=set(), allowed_col_keys={"wind"})
+    out = _render_html_table(rows, friendly_keys=set(), allowed_col_keys={"wind"}, ampel=resolve_ampel(None))
     assert "Time" in out and "Risk" in out
-    assert "<thead>" in _render_html_table(rows, friendly_keys=set())
-    assert "<thead>" in _render_html_table([], friendly_keys=set(), allowed_col_keys=set())
+    assert "<thead>" in _render_html_table(rows, friendly_keys=set(), ampel=resolve_ampel(None))
+    assert "<thead>" in _render_html_table([], friendly_keys=set(), allowed_col_keys=set(), ampel=resolve_ampel(None))

@@ -60,6 +60,7 @@ from app.models import (
     SegmentWeatherData, SegmentWeatherSummary, TripSegment,
 )
 from app.trip import Stage, Trip, Waypoint
+from app.ampel import resolve_ampel
 from output.renderers.alert.project import to_alert_message
 from output.renderers.alert.render import (
     _render_sms_body, render_email, render_sms, render_telegram,
@@ -223,7 +224,8 @@ def _nachricht(changes, segmente, *, now_utc: datetime,
     setzt der Test ihn fest — sonst unterschieden sich die Texte schon an der
     Stand-Zeile, und der Vergleich sagte nichts ueber die Restmenge aus.
     """
-    kwargs = dict(tz=TZ, stand_at=stand_at or local_fmt(now_utc, TZ))
+    kwargs = dict(tz=TZ, stand_at=stand_at or local_fmt(now_utc, TZ),
+                  ampel=resolve_ampel(None))
     return to_alert_message(changes, segmente, "Test-Trip",
                             now_utc=now_utc, **kwargs)
 

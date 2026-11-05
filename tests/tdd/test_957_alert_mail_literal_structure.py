@@ -10,6 +10,7 @@ KEINE Beispielwerte aus der Mockup-Datei (1230/620/800/KHW 403 etc.) werden hier
 als erwartete Literale geprueft -- nur die STRUKTUR (Anzahl Zeilen, Marker-Strings,
 Werte die aus den Fixture-Feldern berechnet werden).
 """
+from app.ampel import resolve_ampel
 import sys
 
 sys.path.insert(0, ".")
@@ -25,7 +26,7 @@ def _single_event_msg(value_from=1230.0, value_to=620.0, threshold=800.0):
         threshold=threshold, cmp="über", occurred_at="09:00",
         km_from=0.0, km_to=1.8,
     )
-    return AlertMessage(trip_short="TEST", stand_at="09:30", events=(event,), source=None)
+    return AlertMessage(trip_short="TEST", stand_at="09:30", events=(event,), source=None, ampel=resolve_ampel(None))
 
 
 def _multi_event_msg():
@@ -37,7 +38,7 @@ def _multi_event_msg():
                      cmp="über", occurred_at="11:30", km_from=1.0, km_to=4.0)
     e3 = AlertEvent(metric_id="rain_probability", value_from=70.0, value_to=90.0,
                      threshold=95.0, cmp="über", occurred_at=None, km_from=0.0, km_to=3.0)
-    return AlertMessage(trip_short="TEST", stand_at="14:30", events=(e1, e2, e3), source=None)
+    return AlertMessage(trip_short="TEST", stand_at="14:30", events=(e1, e2, e3), source=None, ampel=resolve_ampel(None))
 
 
 class TestSingleEventVerdictAndDatablock:

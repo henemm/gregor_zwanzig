@@ -18,6 +18,7 @@ Fix:
 Spec: docs/specs/modules/bug_463_mobile_email_table_headers.md
 """
 from __future__ import annotations
+from app.ampel import resolve_ampel
 
 import sys
 from datetime import datetime, timezone
@@ -158,7 +159,7 @@ class TestMobileCompactHasColumnHeaders:
         result = _render_mobile_compact_rows(
             _ROWS_WITH_TEMP_WIND,
             friendly_keys=set(),
-            include_header=True,
+            include_header=True, ampel=resolve_ampel(None),
         )
         assert isinstance(result, str), (
             "FEHLT: _render_mobile_compact_rows() mit include_header=True "
@@ -181,7 +182,7 @@ class TestMobileCompactHasColumnHeaders:
         result = _render_mobile_compact_rows(
             _ROWS_WITH_TEMP_WIND,
             friendly_keys=set(),
-            include_header=True,
+            include_header=True, ampel=resolve_ampel(None),
         )
 
         # Ermittle die erwarteten Labels aus visible_cols
@@ -209,7 +210,7 @@ class TestMobileCompactHasColumnHeaders:
         result = _render_mobile_compact_rows(
             _ROWS_WITH_TEMP_WIND,
             friendly_keys=set(),
-            include_header=True,
+            include_header=True, ampel=resolve_ampel(None),
         )
 
         cols = visible_cols(_ROWS_WITH_TEMP_WIND)
@@ -286,7 +287,7 @@ class TestMobileCompactNightRowsHaveHeader:
         result = _render_mobile_compact_rows(
             night_only_rows,
             friendly_keys=set(),
-            include_header=True,
+            include_header=True, ampel=resolve_ampel(None),
         )
 
         cols = visible_cols(night_only_rows)
@@ -319,7 +320,7 @@ class TestMobileCompactEmptyRows:
         result = _render_mobile_compact_rows(
             [],
             friendly_keys=set(),
-            include_header=True,
+            include_header=True, ampel=resolve_ampel(None),
         )
         assert result == "", (
             f"FEHLER: Leere Rows sollten leeren String ergeben, nicht: {result!r}"
@@ -348,7 +349,7 @@ class TestMobileCompactDefaultNoHeader:
 
         result = _render_mobile_compact_rows(
             _ROWS_WITH_TEMP_WIND,
-            friendly_keys=set(),
+            friendly_keys=set(), ampel=resolve_ampel(None),
             # include_header nicht übergeben → Default False (No-Op seit dem Fix)
         )
 
@@ -402,7 +403,7 @@ class TestMobileCompactHeaderRespectsVisibleCols:
             _ROWS_WITH_TEMP_WIND,
             friendly_keys=set(),
             allowed_col_keys=only_temp,
-            include_header=True,
+            include_header=True, ampel=resolve_ampel(None),
         )
 
         # Wind-Label darf nicht im Header erscheinen

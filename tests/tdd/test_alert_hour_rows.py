@@ -83,6 +83,7 @@ Schnittstelle benutzen; Abwesenheits-Aussagen stehen immer NACH einer Anwesenhei
 (sonst waeren sie heute vakuum-gruen).
 """
 from __future__ import annotations
+from app.ampel import resolve_ampel
 
 import dataclasses
 import json
@@ -192,7 +193,8 @@ def _trip_msg(fx: dict, *, fresh_key: str = "fresh", anchor: bool = True,
         kwargs["format_modes"] = fm
     return to_alert_message(
         changes if changes is not None else [_wc(fx["change"])],
-        [_segment_data(fx, fx[fresh_key])], "Trip X", tz=TZ, stand_at=STAND, **kwargs,
+        [_segment_data(fx, fx[fresh_key])], "Trip X", tz=TZ, stand_at=STAND,
+        ampel=resolve_ampel(None), **kwargs,
     )
 
 
@@ -201,7 +203,7 @@ def _baseline_msg(fx: dict):
     from output.renderers.alert.project import to_alert_message
 
     return to_alert_message(
-        [_wc(fx["change"])], [_segment_data(fx, None)], "Trip X", tz=TZ, stand_at=STAND,
+        [_wc(fx["change"])], [_segment_data(fx, None)], "Trip X", tz=TZ, stand_at=STAND, ampel=resolve_ampel(None),
     )
 
 
@@ -224,7 +226,7 @@ def _cell(col: str, raw, mode: str) -> str:
     """Zelle wie das Briefing (Klartext/Telegram, ohne HTML)."""
     from output.renderers.email.helpers import fmt_val
 
-    return fmt_val(col, _briefing_value(col, raw), format_modes={col: mode})
+    return fmt_val(col, _briefing_value(col, raw), format_modes={col: mode}, ampel=resolve_ampel(None))
 
 
 def _html_cell(col: str, raw, mode: str) -> str:
@@ -233,7 +235,7 @@ def _html_cell(col: str, raw, mode: str) -> str:
 
     return fmt_val(
         col, _briefing_value(col, raw), format_modes={col: mode},
-        indicator_keys=set() if mode == "raw" else {col}, html=True,
+        indicator_keys=set() if mode == "raw" else {col}, html=True, ampel=resolve_ampel(None),
     )
 
 
@@ -552,7 +554,7 @@ def test_ac4_sms_ueberlauf_mit_zeitspannen_wird_im_limit_gekuerzt():
 
     changes, frisch, anker = _ueberlauf_eingaben()
     msg = to_alert_message(changes, frisch, "Trip X", tz=TZ, stand_at=STAND,
-                           anchor_segments=anker)
+                           anchor_segments=anker, ampel=resolve_ampel(None))
     ungekuerzt = render_sms(msg, limit=10_000)
     assert len(ungekuerzt) > 140 and "@14-16" in ungekuerzt, (
         f"Vorbedingung: ungekuerzt ueber 140 ({len(ungekuerzt)}): {ungekuerzt!r}")
@@ -647,7 +649,7 @@ def test_ac5_ortsvergleich_ereignis_zuordnung_nur_betroffene_orte():
     fx = _load("ortsvergleich_drei_orte.json")
     anchors, fresh, changes = _compare_inputs(fx)
     groups = [(n, changes[n], fresh[n]) for n in ("Alpe Nord", "Joch Mitte")]
-    msg = to_multi_point_alert_message(groups, tz=TZ, stand_at=STAND, anchor_points=anchors)
+    msg = to_multi_point_alert_message(groups, tz=TZ, stand_at=STAND, anchor_points=anchors, ampel=resolve_ampel(None))
     by_label = {e.location_label: e for e in msg.events}
     assert [h.time for h in by_label["Alpe Nord"].hours] == ["14:00", "15:00", "16:00"]
     assert [h.time for h in by_label["Joch Mitte"].hours] == ["15:00"]
@@ -969,7 +971,7 @@ def test_ac10_ohne_stundenreihe_bleibt_gleich_auch_mit_den_neuen_parametern():
     golden = _load("ohne_stundenreihe_golden.json")
     msg = to_alert_message(
         [_wc(fx["change"])], [_segment_data(fx, None)], "Trip X", tz=TZ, stand_at=STAND,
-        anchor_segments=None, format_modes=modes(RAW),
+        anchor_segments=None, format_modes=modes(RAW), ampel=resolve_ampel(None),
     )
     assert _ohne_reihe_ausgabe(msg) == golden
 
@@ -1764,14 +1766,14 @@ def test_f003_anker_kommt_vom_segment_der_aenderung_nicht_vom_ersten():
     change = _wc(dict(fx["change"], segment_id="2"))
     msg = to_alert_message(
         [change], [_segment_data(fx, fx["fresh"], "2")], "Trip X", tz=TZ, stand_at=STAND,
-        anchor_segments=[_segment_data(fx, falsch, "1"), _segment_data(fx, fx["anchor"], "2")],
+        anchor_segments=[_segment_data(fx, falsch, "1"), _segment_data(fx, fx["anchor"], "2")], ampel=resolve_ampel(None),
     )
     zeilen = [(h.time, h.value_from, h.value_to) for e in msg.events for h in e.hours]
     assert zeilen, "Vorbedingung: Stundenzeilen entstanden"
     assert all(von is not None and von > 0 for _t, von, _n in zeilen), zeilen
     ohne_passenden_anker = to_alert_message(
         [change], [_segment_data(fx, fx["fresh"], "2")], "Trip X", tz=TZ, stand_at=STAND,
-        anchor_segments=[_segment_data(fx, falsch, "1")],
+        anchor_segments=[_segment_data(fx, falsch, "1")], ampel=resolve_ampel(None),
     )
     assert all(h.value_from is None for e in ohne_passenden_anker.events for h in e.hours)
 
@@ -1783,11 +1785,11 @@ def test_f005_nicht_numerischer_stundenwert_laesst_den_alarm_raus_ohne_stundenze
 
     fx = _load("boeen_stufe_statt_schwelle.json")
     gut = to_alert_message([_wc(fx["change"])], [_segment_data(fx, fx["fresh"])], "Trip X",
-                           tz=TZ, stand_at=STAND, anchor_segments=[_segment_data(fx, fx["anchor"])])
+                           tz=TZ, stand_at=STAND, anchor_segments=[_segment_data(fx, fx["anchor"])], ampel=resolve_ampel(None))
     assert [h for e in gut.events for h in e.hours], "Vorbedingung: mit sauberen Daten Zeilen"
     kaputt = [dict(r, gust_kmh="boe") for r in fx["fresh"]]
     msg = to_alert_message([_wc(fx["change"])], [_segment_data(fx, kaputt)], "Trip X",
-                           tz=TZ, stand_at=STAND, anchor_segments=[_segment_data(fx, fx["anchor"])])
+                           tz=TZ, stand_at=STAND, anchor_segments=[_segment_data(fx, fx["anchor"])], ampel=resolve_ampel(None))
     assert len(msg.events) == 1
     assert all(not e.hours for e in msg.events)
 

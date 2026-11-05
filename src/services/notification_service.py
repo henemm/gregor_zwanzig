@@ -15,6 +15,7 @@ from types import SimpleNamespace
 from typing import TYPE_CHECKING, Optional
 from zoneinfo import ZoneInfo
 
+from app.ampel import resolve_ampel
 from app.config import Settings
 from i18n import Lang, resolve_user_lang, t
 from i18n.format import fmt_date_numeric
@@ -1136,6 +1137,8 @@ class NotificationService:
             anchor_segments=anchor_weather,
             format_modes=_alert_format_modes(trip.display_config),
             indicator_keys=_alert_indicator_keys(trip.display_config),
+            # Issue #2792 S1c-1: Einstieg Alarm-Pfad; bis S1c-4 „allgemein".
+            ampel=resolve_ampel(None),
         )
         return self._dispatch_alert_message(
             alert_msg=alert_msg,
@@ -1221,6 +1224,7 @@ class NotificationService:
         alert_msg = to_multi_point_alert_message(
             groups, tz=alert_tz, stand_at=stand_at, reference_at=reference_at,
             anchor_points=anchor_points,
+            ampel=resolve_ampel(None),  # Issue #2792 S1c-1, bis S1c-4 „allgemein"
         )
         target_name = ", ".join(name for name, _points, _changes in entities)
         # Issue #1467 S2 AG3a: NUR dieser Aufrufer (Ortsvergleich-
@@ -1300,6 +1304,7 @@ class NotificationService:
         alert_msg = to_multi_location_onset_alert_message(
             list(entities), tz=alert_tz, stand_at=resolved_stand_at,
             cooldown_display=cooldown_display,
+            ampel=resolve_ampel(None),  # Issue #2792 S1c-1, bis S1c-4 „allgemein"
         )
         target_name = ", ".join(name for name, _loc, _nc in entities)
         return self._dispatch_alert_message(
@@ -1950,6 +1955,7 @@ class NotificationService:
             source=source,
             cooldown_display=cooldown_display,
             addendum_reference=request.addendum_reference,  # Issue #2018
+            ampel=resolve_ampel(None),  # Issue #2792 S1c-1, bis S1c-4 „allgemein"
         )
         return self._dispatch_alert_message(
             alert_msg=alert_msg,
@@ -2186,6 +2192,7 @@ class NotificationService:
                                 anchor_points=anchor_points,
                                 format_modes=alert_msg.format_modes,
                                 indicator_keys=alert_msg.indicator_keys,
+                                ampel=alert_msg.ampel,
                             )
                             single_body = render_alert_telegram(single_msg, lang=lang)
                             self._telegram_output().send(

@@ -15,6 +15,7 @@ Renderer (Muster `test_onset_ende_textstellen.py`), echter
 Muster `test_issue_822_radar_nowcast_segment.py`).
 """
 from __future__ import annotations
+from app.ampel import resolve_ampel
 
 import uuid
 from datetime import datetime, timedelta, timezone
@@ -48,7 +49,7 @@ def _onset_event(**overrides) -> OnsetEvent:
 def _onset_msg(*events: OnsetEvent) -> AlertMessage:
     return AlertMessage(
         trip_short="KHW 403", stand_at="17:30", events=tuple(events),
-        source="Radar (DWD)",
+        source="Radar (DWD)", ampel=resolve_ampel(None),
     )
 
 
@@ -274,7 +275,7 @@ def test_ac15_ortsvergleich_pfad_setzt_rain_zones_nie():
         onset_minutes=15, intensity_label="Mäßiger Regen", source="radar",
     )
     msg = to_multi_location_onset_alert_message(
-        [("Sillian", nc)], tz=_TZ, stand_at="17:55",
+        [("Sillian", nc)], tz=_TZ, stand_at="17:55", ampel=resolve_ampel(None),
     )
 
     assert len(msg.events) == 1, f"Testvoraussetzung: genau 1 Event, war {msg.events!r}"

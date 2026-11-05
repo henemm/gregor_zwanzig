@@ -20,6 +20,7 @@ RED-Ursache (heute, vor der Implementierung):
   `official_notices` noch nicht -> TypeError bei AC-7.
 """
 from __future__ import annotations
+from app.ampel import resolve_ampel
 
 import json
 import shutil
@@ -659,7 +660,7 @@ class TestAC7SmsWithoutParity:
                 label="SMS darf mich nicht enthalten (#1088 AC-7)",
             )
             alert_msg = to_alert_message(
-                [change], weather, "AC7-Trip", tz=timezone.utc, stand_at="08:00",
+                [change], weather, "AC7-Trip", tz=timezone.utc, stand_at="08:00", ampel=resolve_ampel(None),
             )
             sms_before = render_alert_sms(alert_msg)
 

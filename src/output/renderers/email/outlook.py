@@ -28,6 +28,7 @@ if TYPE_CHECKING:
     from datetime import tzinfo
     from app.models import SegmentWeatherSummary, ForecastDataPoint
 
+from app.ampel import resolve_ampel, schwellen_aus_ampel
 from app.metric_catalog import aggregation_label_de, get_metric
 from i18n import Lang
 from i18n import t as _t
@@ -90,9 +91,12 @@ def _acc_wort(conf_pct, lang: Lang = "de") -> str:
 
 def render_outlook_table(
     rows: list[dict], *, show_acc: bool = True, metrics: Optional[list] = None,
-    lang: Lang = "de",
+    lang: Lang = "de", ampel: dict,
 ) -> str:
     """Rendert die HTML-Ausblick-Tabelle.
+
+    ``ampel`` (Issue #2792 S1c-1): aufgeloestes Ampel-Objekt fuer die
+    Zell-Hintergruende des festen Zweigs; Pflicht ohne Default.
 
     ``lang`` (Issue #2664): Spaltenkopf ``Tag`` und Gewitter-Stufenwort in
     Nutzersprache; ohne ``lang`` deutsch (Ortsvergleich bis P4).
@@ -128,11 +132,10 @@ def render_outlook_table(
         return ""
 
     def _catalog_thresholds(metric_id: str) -> tuple:
-        """Issue #1377 Scheibe B: (caution, warn, danger)-Tupel aus dem
-        zentralen Katalog statt hartcodierter Zahlen — derselbe Renderer
-        rendert Trip UND Ortsvergleich, diese eine Umstellung schliesst die
-        Ausblick-Luecke zwischen beiden Mail-Arten in einem Schritt."""
-        t = get_metric(metric_id).display_thresholds
+        """Issue #1377 Scheibe B: (caution, warn, danger)-Tupel statt
+        hartcodierter Zahlen — derselbe Renderer rendert Trip UND
+        Ortsvergleich. Issue #2792 S1c-1: aus der durchgereichten Ampel."""
+        t = schwellen_aus_ampel(ampel, metric_id)
         return (t.get("yellow"), t.get("orange"), t.get("red"))
 
     def _otd(content: str, *, bg: str = "", align: str = "center") -> str:
@@ -438,7 +441,7 @@ def render_outlook_plain(
 # build_outlook_row — extrahiert aus trip_report_scheduler.py (Z.1460-1488, AC-3)
 # ---------------------------------------------------------------------------
 
-def _metric_column_bg(col: dict, raw: object) -> str:
+def _metric_column_bg(col: dict, raw: object, *, ampel: dict) -> str:
     """Zell-Hintergrund einer Ausblick-Metrikspalte (#1849).
 
     Ampelband aus den SSoT-Helfern (``severity_for``/``thunder_ampel_band``),
@@ -457,7 +460,7 @@ def _metric_column_bg(col: dict, raw: object) -> str:
         if band == "yellow":
             return "background:#fbe6c3;"
     else:
-        band = severity_for(col.get("metric_id"), raw)
+        band = severity_for(col.get("metric_id"), raw, ampel=ampel)
     if band in (None, "green"):
         return ""
     return f"background:{tone_css(band)[0]};"
@@ -604,6 +607,42 @@ def build_outlook_row(
     (``_resolve_hiking_extrema``). Ein explizites ``hiking_extrema`` hat
     Vorrang vor ``segments``.
     """
+    # Issue #2792 S1c-1: Einstieg loest die Ampel des jeweiligen Abos auf
+    # (``trip_display_config``); bis S1c-4 fest „allgemein" (byte-gleich).
+    # Die Arbeit macht ``_outlook_row`` -- interne Aufrufer (Vergleich)
+    # reichen dort ihre eigene, bereits aufgeloeste Ampel durch.
+    return _outlook_row(
+        summary, points, weekday, tz,
+        sms_thresholds=sms_thresholds, metrics=metrics,
+        trip_display_config=trip_display_config, report_type=report_type,
+        day_window_start_hour=day_window_start_hour,
+        day_window_end_hour=day_window_end_hour,
+        hiking_extrema=hiking_extrema, segments=segments,
+        outlook_metric_formats=outlook_metric_formats, lang=lang,
+        ampel=resolve_ampel(None),
+    )
+
+
+def _outlook_row(
+    summary: "SegmentWeatherSummary",
+    points: list["ForecastDataPoint"],
+    weekday: str,
+    tz,
+    *,
+    sms_thresholds: Optional[dict] = None,
+    metrics: Optional[list] = None,
+    trip_display_config: object = None,
+    report_type: Optional[str] = None,
+    day_window_start_hour: Optional[int] = None,
+    day_window_end_hour: Optional[int] = None,
+    hiking_extrema: Optional[dict] = None,
+    segments: Optional[list] = None,
+    outlook_metric_formats: Optional[dict] = None,
+    lang: Lang = "de",
+    ampel: dict,
+) -> dict:
+    """Zeilenbau von ``build_outlook_row`` mit durchgereichter Ampel
+    (Issue #2792 S1c-1, Pflicht ohne Default). Parameter siehe dort."""
     hiking_extrema = _resolve_hiking_extrema(hiking_extrema, segments)
     if metrics is None and trip_display_config is not None:
         from output.renderers.compare_outlook_metric_ids import (
@@ -789,7 +828,7 @@ def build_outlook_row(
                 raw_min = _hiking_or_summary(summary, col.get("field_min"), hiking_extrema)
                 raw_max = _hiking_or_summary(summary, col.get("field_max"), hiking_extrema)
                 cells.append(format_outlook_range_cell(raw_min, raw_max, col))
-                cell_bg.append(_metric_column_bg(col, raw_max))
+                cell_bg.append(_metric_column_bg(col, raw_max, ampel=ampel))
                 continue
             raw = (
                 _thunder_value if ordinal
@@ -801,7 +840,7 @@ def build_outlook_row(
                  "signals": _thunder_signals if ordinal else _signals},
                 lang=lang,
             ))
-            cell_bg.append(_metric_column_bg(col, raw))
+            cell_bg.append(_metric_column_bg(col, raw, ampel=ampel))
         row["cells"] = cells
         row["cell_bg"] = cell_bg
 

@@ -22,6 +22,7 @@ Mock-frei: echte `OnsetEvent`/`OnsetShiftEvent`/`AlertMessage`-Objekte durch
 den echten Renderer. Alle Zeiten sind FEST gesetzt (keine Wanduhr).
 """
 from __future__ import annotations
+from app.ampel import resolve_ampel
 
 import re
 
@@ -53,7 +54,7 @@ def _onset_msg(event: OnsetEvent, *, trip_short: str = "KHW 403",
                source: str = "radar") -> AlertMessage:
     """`source is not None` routet `render_sms` in den Onset-Zweig."""
     return AlertMessage(
-        trip_short=trip_short, stand_at="10:00", events=(event,), source=source,
+        trip_short=trip_short, stand_at="10:00", events=(event,), source=source, ampel=resolve_ampel(None),
     )
 
 
@@ -114,7 +115,7 @@ def test_ac2_compare_radar_kopf_aus_trip_short_wird_auf_24_zeichen_gekappt():
     langer_name = _langer_name()
     msg = AlertMessage(
         trip_short=langer_name, stand_at="10:00", events=(_onset_event(),),
-        source=COMPARE_RADAR_SOURCE,
+        source=COMPARE_RADAR_SOURCE, ampel=resolve_ampel(None),
     )
     sms = render_sms(msg)
     kopf = _kopf(sms)
@@ -191,7 +192,7 @@ def test_ac5_onset_shift_kopf_wird_auf_24_zeichen_gekappt():
     )
     msg = AlertMessage(
         trip_short="KHW 403", stand_at="10:00", events=(),
-        location_label=langer_name, onset_shift_events=(shift,),
+        location_label=langer_name, onset_shift_events=(shift,), ampel=resolve_ampel(None),
     )
     sms = render_sms(msg)
     kopf = _kopf(sms)
@@ -303,7 +304,7 @@ def test_ac8_harter_endschnitt_bleibt_sicherheitsnetz_fuer_render_sms_onset_shif
     )
     msg = AlertMessage(
         trip_short="KHW 403", stand_at="10:00", events=(),
-        location_label=_langer_name(), onset_shift_events=(shift,),
+        location_label=_langer_name(), onset_shift_events=(shift,), ampel=resolve_ampel(None),
     )
     ergebnis = _render_sms_onset_shift_only(msg, limit=10)
 

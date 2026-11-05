@@ -43,6 +43,7 @@ Pfadregel #1409: alles relativ zu DIESER Datei, nie ueber einen festen
 Hauptrepo-Pfad.
 """
 from __future__ import annotations
+from app.ampel import resolve_ampel
 
 import inspect
 import json
@@ -254,7 +255,7 @@ def _onset_event(*, gap_km: object = _UNSET, **overrides) -> OnsetEvent:
 def _onset_msg(*events: OnsetEvent) -> AlertMessage:
     return AlertMessage(
         trip_short="KHW 403", stand_at="17:30", events=tuple(events),
-        source="Radar (DWD)",
+        source="Radar (DWD)", ampel=resolve_ampel(None),
     )
 
 

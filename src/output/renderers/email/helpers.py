@@ -708,7 +708,7 @@ def ampel_dot(value, thresholds: dict) -> str:
     return _ampel_dot_css(level)
 
 
-def _ampel_dot_severity(metric_id: str, value) -> str:
+def _ampel_dot_severity(metric_id: str, value, *, ampel: dict) -> str:
     """Issue #1214 Scheibe 3: Ampel-CSS-Dot mit ``severity_for`` als Levelquelle.
 
     Ersetzt in ``fmt_val`` fuer die 5 Ampel-Metriken (wind/gust/precip/pop/cape)
@@ -723,28 +723,24 @@ def _ampel_dot_severity(metric_id: str, value) -> str:
     # Lokaler Import vermeidet einen Zirkelbezug: metric_format importiert
     # (ueber design_tokens) das renderers-Paket, das wiederum helpers laedt.
     from output.metric_format import severity_for
-    level = severity_for(metric_id, value)
+    level = severity_for(metric_id, value, ampel=ampel)
     if level is None:
         return "–"
     return _ampel_dot_css(level)
 
 
-def ampel_level(metric_id: str, value) -> "Optional[str]":
+def ampel_level(metric_id: str, value, *, ampel: dict) -> "Optional[str]":
     """Issue #888: Ampel-Band-Level ('green'|'yellow'|'orange'|'red') fuer eine
-    Katalog-Metrik, aus denselben display_thresholds wie ampel_dot.
+    Metrik, aus derselben Schwellenquelle wie der Ampel-Punkt.
 
-    Wiederverwendbar fuer die Zell-Toenung in _render_html_table, damit Emoji
-    und Hintergrund garantiert aus derselben Schwellenquelle stammen.
-    Returns None wenn die Metrik unbekannt ist oder value None ist.
+    Issue #2792 S1c-1: die Schwellen kommen aus dem durchgereichten Ampel-
+    Objekt (``resolve_ampel``). Returns None wenn die Metrik keine Ampel hat
+    oder value None ist.
     """
-    try:
-        thresholds = get_metric(metric_id).display_thresholds
-    except Exception:
-        return None
     # Lokaler Import vermeidet einen Zirkelbezug: metric_format importiert
     # (ueber design_tokens) das renderers-Paket, das wiederum helpers laedt.
-    from output.metric_format import severity_from_thresholds
-    return severity_from_thresholds(thresholds, value)
+    from output.metric_format import severity_for
+    return severity_for(metric_id, value, ampel=ampel)
 
 
 # Mapping: fmt_val col_key → metric catalog id fuer Ampel-Lookup
@@ -763,8 +759,12 @@ _AMPEL_KEY_TO_METRIC_ID = {
 def fmt_val(key: str, val, *, friendly_keys: set[str] | None = None,
             html: bool = False, row: dict | None = None,
             format_modes: dict[str, str] | None = None,
-            indicator_keys: set[str] | None = None, lang: Lang = "de") -> str:
+            indicator_keys: set[str] | None = None, lang: Lang = "de",
+            ampel: dict) -> str:
     """Format single cell value. Respects per-metric format_mode toggle.
+
+    ``ampel`` (Issue #2792 S1c-1): aufgeloestes Ampel-Objekt fuer den
+    HTML-Ampel-Punkt; Pflicht ohne Default.
 
     Issue #435: when `format_modes` is provided, the per-column mode wins
     over the `friendly_keys` set. The two parameters coexist for backward
@@ -845,7 +845,7 @@ def fmt_val(key: str, val, *, friendly_keys: set[str] | None = None,
         # nicht durch mode (build_format_modes liefert immer 'raw' für diese Metriken).
         if html and _use_ampel:
             metric_id = _AMPEL_KEY_TO_METRIC_ID[key]
-            return _ampel_dot_severity(metric_id, val)
+            return _ampel_dot_severity(metric_id, val, ampel=ampel)
         s = format_value(key, val, style="bare")
         if key == "wind" and row and "_wind_dir_deg" in row:
             compass = degrees_to_compass(row["_wind_dir_deg"])
@@ -858,7 +858,7 @@ def fmt_val(key: str, val, *, friendly_keys: set[str] | None = None,
             return format_precip_intensity(val, lang=lang)
         # Issue #814: HTML-Ampel durch indicator_keys (use_friendly_format).
         if html and _use_ampel:
-            return _ampel_dot_severity("precipitation", val)
+            return _ampel_dot_severity("precipitation", val, ampel=ampel)
         return format_value("precipitation", val, style="bare")
     if key in ("snow_limit", "snow_depth"):
         return f"{val}" if val else "–"
@@ -890,13 +890,13 @@ def fmt_val(key: str, val, *, friendly_keys: set[str] | None = None,
     if key == "pop":
         # Issue #814: HTML-Ampel durch indicator_keys (use_friendly_format).
         if html and _use_ampel:
-            return _ampel_dot_severity("rain_probability", val)
+            return _ampel_dot_severity("rain_probability", val, ampel=ampel)
         return format_value("rain_probability", val, style="bare")
     if key == "cape":
         # Issue #814 AC-4: Einfach-HTML → Ampel via indicator_keys; Plain immer Zahl;
         # Roh-HTML → nackte Zahl ohne Highlight-Span.
         if html and _use_ampel:
-            return _ampel_dot_severity("cape", val)
+            return _ampel_dot_severity("cape", val, ampel=ampel)
         # Plain (html=False) oder Roh-HTML: nackte Zahl, kein Span.
         return format_value("cape", val, style="bare")
     if key == "visibility":
@@ -1581,7 +1581,7 @@ def _aggregation_pill_text(
     return f"{prefix}{body}"
 
 
-def _extreme_ampel_tone(metric_id: str, vals_ts: list) -> str:
+def _extreme_ampel_tone(metric_id: str, vals_ts: list, *, ampel: dict) -> str:
     """Issue #1377 Scheibe B (AC-5): Ampel-Toenung fuer zweiseitig gebaenderte
     Klasse-1-Metriken (Temperatur/gefuehlte Temperatur) aus dem jeweils
     massgeblichen Extremwert — Hitze-Seite aus dem Hoechstwert, Kaelte-Seite
@@ -1590,7 +1590,8 @@ def _extreme_ampel_tone(metric_id: str, vals_ts: list) -> str:
     schaerfere der beiden Stufen (``ampel_stage_tone`` teilt sich dieselbe
     Reihenfolge mit der Stundentabelle, Issue #795/AC-9).
     """
-    thresholds = get_metric(metric_id).display_thresholds
+    from app.ampel import schwellen_aus_ampel
+    thresholds = schwellen_aus_ampel(ampel, metric_id)
     values = [v for v, _ in vals_ts]
     hi_idx = ampel_stage_index(max(values), thresholds)
     lo_idx = ampel_stage_index(min(values), thresholds)
@@ -1605,6 +1606,7 @@ def _pill_for_metric(
     tz: "ZoneInfo",
     has_gap: bool = False,
     lang: Lang = "de",
+    ampel: dict,
 ) -> Optional[tuple[str, str]]:
     """Issue #795/RC0+RC5: (text, tone) pill je Metrik, analog SMS ausgeschrieben.
 
@@ -1617,6 +1619,7 @@ def _pill_for_metric(
     # Fix #1801 S2 AC-5: thunder_ampel_band ist die deklarierte SSoT
     # Gewitterstufe -> Ampelband (ADR-0025) -- der Gewitter-Chip liest sie
     # jetzt statt fest "ampel_red" zu liefern.
+    from app.ampel import schwellen_aus_ampel
     from output.metric_format import thunder_ampel_band, thunder_ordinal
 
     # ---- Klasse 2 — Bereichs-/Kontext-Metriken (mit Uhrzeit, neutral) ----
@@ -1648,7 +1651,7 @@ def _pill_for_metric(
         # Neutralitaet und bekommen wie Wind/Boeen eine Ampel-Toenung aus dem
         # jeweils massgeblichen Extremwert (Hitze: Hoechstwert, Kaelte:
         # Tiefstwert — schaerfere der beiden Stufen gewinnt).
-        tone = _extreme_ampel_tone(metric_id, vals_ts)
+        tone = _extreme_ampel_tone(metric_id, vals_ts, ampel=ampel)
         return (text, tone)
 
     if metric_id == "cloud_total":
@@ -1714,7 +1717,7 @@ def _pill_for_metric(
         # der ersten Schwelle zeigt der Chip "ampel_green", nicht neutral
         # (F001-Fix, #1801-Adversary).
         from output.metric_format import severity_for
-        _level = severity_for("uv_index", max_val)
+        _level = severity_for("uv_index", max_val, ampel=ampel)
         tone = f"ampel_{_level}" if _level else _PILL_NEUTRAL_TONE
         return (f"UV max {max_val:.1f} ({max_hh:02d}:00)", tone)
 
@@ -1740,8 +1743,7 @@ def _pill_for_metric(
             return None
         thr = _sms_mention_threshold(metric_id, sms_mention_thresholds)
         peak_val = max(v for v, _ in vals)
-        tone = ampel_stage_tone(peak_val,
-                                get_metric(metric_id).display_thresholds)
+        tone = ampel_stage_tone(peak_val, schwellen_aus_ampel(ampel, metric_id))
         fp = _first_and_peak(vals, thr, tz=tz) if thr is not None else None
         if fp is not None:
             first_hh, pv, pk_hh = fp
@@ -1765,8 +1767,7 @@ def _pill_for_metric(
         thr = _sms_mention_threshold("precipitation", sms_mention_thresholds)
         total = sum(v for v, _ in vals)
         peak_val = max(v for v, _ in vals)
-        tone = ampel_stage_tone(peak_val,
-                                get_metric("precipitation").display_thresholds)
+        tone = ampel_stage_tone(peak_val, schwellen_aus_ampel(ampel, "precipitation"))
         fp = _first_and_peak(vals, thr, tz=tz) if thr is not None else None
         if fp is not None:
             first_hh, _pv, _pk_hh = fp
@@ -1790,8 +1791,7 @@ def _pill_for_metric(
             return None
         thr = _sms_mention_threshold("rain_probability", sms_mention_thresholds)
         peak_val = max(v for v, _ in vals)
-        tone = ampel_stage_tone(
-            peak_val, get_metric("rain_probability").display_thresholds)
+        tone = ampel_stage_tone(peak_val, schwellen_aus_ampel(ampel, "rain_probability"))
         fp = _first_and_peak(vals, thr, tz=tz) if thr is not None else None
         if fp is not None:
             first_hh, pv, peak_hh = fp
@@ -1920,8 +1920,7 @@ def _pill_for_metric(
         if below:
             first_ts = min(below, key=lambda x: x[1])[1]
             first_hh = local_hour(first_ts, tz)
-            tone = ampel_stage_tone(
-                min_v, get_metric("visibility").display_thresholds)
+            tone = ampel_stage_tone(min_v, schwellen_aus_ampel(ampel, "visibility"))
             return (t("mail.pille.sicht_ereignis", lang, schwelle=f"{thr_km:.0f}",
                       ab=f"{first_hh:02d}:00", wert=f"{min_km:.1f}",
                       um=f"{min_hh:02d}:00"), tone)
@@ -1977,8 +1976,11 @@ def build_metrics_summary_pills(
     day_window_start_hour: int = DAY_WINDOW_START_HOUR,
     day_window_end_hour: int = DAY_WINDOW_END_HOUR,
     lang: Lang = "de",
+    ampel: dict,
 ) -> list[tuple[str, str]]:
     """Issue #664/#795: Build one (text, tone) pill per metric from segment data.
+
+    ``ampel`` (Issue #2792 S1c-1): aufgeloestes Ampel-Objekt fuer die Toenung.
 
     metric_ids: list of metric IDs to render (from display_config, E-Mail enabled).
         Issue #1703 S7: die REIHENFOLGE dieser Liste ist die Ausgabereihenfolge
@@ -2051,7 +2053,7 @@ def build_metrics_summary_pills(
         seen.add(mid)
         dps = window_dps if mid in _DAY_WINDOW_PILL_IDS else hiking_dps
         pill = _pill_for_metric(mid, sms_mention_thresholds, dps, tz=tz,
-                                has_gap=has_gap, lang=lang)
+                                has_gap=has_gap, lang=lang, ampel=ampel)
         if pill is not None:
             pills.append(pill)
     return pills

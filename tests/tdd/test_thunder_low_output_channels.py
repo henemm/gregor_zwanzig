@@ -23,6 +23,7 @@ Keine Mocks, kein Dateiinhalt-Check (jede Assertion prueft eine tatsaechlich
 gerenderte Ausgabe).
 """
 from __future__ import annotations
+from app.ampel import resolve_ampel
 
 from datetime import datetime, timezone
 from zoneinfo import ZoneInfo
@@ -43,7 +44,7 @@ def test_ac11_outlook_tabelle_zeigt_leicht():
         hourly_precip=(), hourly_wind=(), hourly_gust=(), hourly_thunder=(),
         rain_probability_pct=10,
     )
-    html = render_outlook_table([row], show_acc=True)
+    html = render_outlook_table([row], show_acc=True, ampel=resolve_ampel(None))
     assert "leicht" in html, (
         f"Die Outlook-Tabelle zeigt bei 'LOW' kein 'leicht'. HTML-Ausschnitt: "
         f"{html[:2000]!r}"
@@ -59,11 +60,11 @@ def test_ac11_compare_html_zeigt_leicht():
         f"_fmt_thunder(LOW) muss 'leicht' liefern, erhalten "
         f"{_fmt_thunder(ThunderLevel.LOW)!r}"
     )
-    assert _sev_thunder(ThunderLevel.LOW) is not None, (
+    assert _sev_thunder(ThunderLevel.LOW, ampel=resolve_ampel(None)) is not None, (
         "_sev_thunder(LOW) darf nicht None sein (faellt sonst auf 'kein "
         "Risiko' zurueck)"
     )
-    assert _sev_thunder(ThunderLevel.LOW) != _sev_thunder(ThunderLevel.NONE), (
+    assert _sev_thunder(ThunderLevel.LOW, ampel=resolve_ampel(None)) != _sev_thunder(ThunderLevel.NONE, ampel=resolve_ampel(None)), (
         "LOW muss sich in der Compare-Ampel von NONE unterscheiden"
     )
 

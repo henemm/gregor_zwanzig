@@ -304,6 +304,11 @@ class AlertMessage:
     # (`email.helpers.build_html_indicator_keys`: der Editor speichert "Einfach"
     # fuer Wind/Boeen/Regen/... als `use_friendly_format`, nicht als format_mode).
     indicator_keys: dict[str, frozenset[str]] = field(default_factory=dict)
+    # Issue #2792 S1c-1: aufgeloeste Profil-Ampel des Abos (``resolve_ampel``)
+    # -- Mail, Telegram und SMS faerben die Stundenzeilen danach. Pflicht ohne
+    # Default (keyword-only): ein vergessenes Setzen scheitert laut statt still
+    # „allgemein" zu faerben. ``repr=False`` haelt Log-Ausgaben unveraendert.
+    ampel: dict = field(kw_only=True, repr=False)
 
 
 def direction(e: AlertEvent) -> str:

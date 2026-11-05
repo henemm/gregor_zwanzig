@@ -77,6 +77,7 @@ AC-S7-6 -- die Pillen der Kurz-E-Mail verwarfen die eingestellte Ordnung
 Menge).
 """
 from __future__ import annotations
+from app.ampel import resolve_ampel
 
 import dataclasses
 import importlib
@@ -110,7 +111,7 @@ from output.renderers.alert.render import (
 from output.renderers.channel_layout import (
     CHANNEL_LIMITS, VISIBILITY_GATE_IDS, render_for_channel,
 )
-from output.renderers.email.compare_html import CV2_METRICS, derive_row_labels
+from output.renderers.email.compare_html import CV2_ZEILEN as CV2_METRICS, derive_row_labels
 from output.renderers.compare_metric_catalog import COMPARE_METRIC_CATALOG, get_compare_metric_catalog
 from output.renderers.compare_metric_ids import FRONTEND_TO_RENDERER_METRIC_ID, resolve_enabled_metrics
 from output.renderers.comparison import (
@@ -1887,7 +1888,7 @@ def _alert_event(
 
 
 def _alert_message(*events: AlertEvent) -> AlertMessage:
-    return AlertMessage(trip_short="T1703S1", stand_at="08:00", events=tuple(events))
+    return AlertMessage(trip_short="T1703S1", stand_at="08:00", events=tuple(events), ampel=resolve_ampel(None))
 
 
 def _label_kanaele(msg: AlertMessage) -> dict[str, str]:
@@ -3402,7 +3403,7 @@ def test_ac_s4_5_mobile_compact_rows_no_own_selection_logic():
     allowed_col_keys-Menge. Charakterisierung, keine eigene Achse (deckt
     sich mit Bestand AC-13)."""
     rows = [{"time": "12", "temp": 15.0, "wind": 20.0, "precip": 2.0}]
-    html = _render_mobile_compact_rows(rows, friendly_keys=set(), allowed_col_keys={"temp"})
+    html = _render_mobile_compact_rows(rows, friendly_keys=set(), allowed_col_keys={"temp"}, ampel=resolve_ampel(None))
     temp_label = get_metric("temperature").col_label
     wind_label = get_metric("wind").col_label
     assert temp_label in html, (

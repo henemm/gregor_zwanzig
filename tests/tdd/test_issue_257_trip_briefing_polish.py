@@ -12,6 +12,7 @@ RED-Zustand (jetzt):
   preview_email.py kennt kein --profile-Argument.
 """
 from __future__ import annotations
+from app.ampel import resolve_ampel
 
 import re
 import subprocess
@@ -302,7 +303,7 @@ def test_ac6_table_has_resp_class():
     """
     from src.output.renderers.email.html import _render_html_table
     rows = [{"time": "08:00", "temp": "15°C", "wind": "12 km/h"}]
-    result = _render_html_table(rows, friendly_keys=set())
+    result = _render_html_table(rows, friendly_keys=set(), ampel=resolve_ampel(None))
     assert 'data-table="resp"' in result, (
         f"<table> hat keinen data-table=\"resp\"-Marker: {result[:200]}"
     )
@@ -318,7 +319,7 @@ def test_ac6_table_td_has_data_label():
     """
     from src.output.renderers.email.html import _render_html_table
     rows = [{"time": "08:00", "temp": "15°C"}]
-    result = _render_html_table(rows, friendly_keys=set())
+    result = _render_html_table(rows, friendly_keys=set(), ampel=resolve_ampel(None))
     assert "data-label=" in result, (
         f"Keine data-label-Attribute auf <td>-Elementen: {result[:300]}"
     )

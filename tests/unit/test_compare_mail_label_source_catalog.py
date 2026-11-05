@@ -26,8 +26,11 @@ from app.models import (
 )
 from app.user import ComparisonResult, LocationResult, SavedLocation
 from output.renderers.compare_metric_ids import resolve_enabled_metrics
-from output.renderers.email.compare_html import HOUR_METRICS, render_compare_html
+from output.renderers.email.compare_html import _hour_zeilen, render_compare_html
 from output.renderers.email.helpers import format_units_legend
+
+# Issue #2792 S1c-1: Struktur der Stundenspalten (ohne gebundene Ampel).
+HOUR_METRICS = _hour_zeilen()
 
 TARGET_DATE = date(2026, 7, 8)
 

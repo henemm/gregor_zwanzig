@@ -6,6 +6,7 @@ SPEC: docs/specs/modules/issue_759_669_email_ampel_gewitter.md AC-1..AC-6
 IMPORTANT: NO mocks, NO patch, NO MagicMock. Real function calls only.
 """
 from __future__ import annotations
+from app.ampel import resolve_ampel
 
 from zoneinfo import ZoneInfo
 
@@ -103,13 +104,13 @@ class TestWindAmpelDotFourLevels:
         from src.output.renderers.email.helpers import fmt_val
 
         # html=True muss CSS-Dot in der richtigen Band-Farbe liefern (#1222).
-        _assert_css_dot_band(fmt_val("wind", 20, html=True), "green")
-        _assert_css_dot_band(fmt_val("wind", 40, html=True), "yellow")
-        _assert_css_dot_band(fmt_val("wind", 60, html=True), "orange")
-        _assert_css_dot_band(fmt_val("wind", 75, html=True), "red")
+        _assert_css_dot_band(fmt_val("wind", 20, html=True, ampel=resolve_ampel(None)), "green")
+        _assert_css_dot_band(fmt_val("wind", 40, html=True, ampel=resolve_ampel(None)), "yellow")
+        _assert_css_dot_band(fmt_val("wind", 60, html=True, ampel=resolve_ampel(None)), "orange")
+        _assert_css_dot_band(fmt_val("wind", 75, html=True, ampel=resolve_ampel(None)), "red")
 
         # html=True darf KEINE km/h-Zahl enthalten
-        result_20 = fmt_val("wind", 20, html=True)
+        result_20 = fmt_val("wind", 20, html=True, ampel=resolve_ampel(None))
         assert "km/h" not in result_20 and "20" not in result_20, (
             f"html=True should NOT contain numeric value: {result_20!r}"
         )
@@ -132,17 +133,17 @@ class TestGustAmpelRedBoundary80:
         """AC-2: fmt_val('gust', 59, html=True) → orange-Dot; (60, html=True) → red-Dot."""
         from src.output.renderers.email.helpers import fmt_val
 
-        result_59 = fmt_val("gust", 59, html=True)
-        result_60 = fmt_val("gust", 60, html=True)
+        result_59 = fmt_val("gust", 59, html=True, ampel=resolve_ampel(None))
+        result_60 = fmt_val("gust", 60, html=True, ampel=resolve_ampel(None))
 
         _assert_css_dot_band(result_59, "orange")
         _assert_css_dot_band(result_60, "red")
 
         # Vier Stufen (#1377: 30/45/60): 25→green, 35→yellow, 50→orange, 65→red
-        _assert_css_dot_band(fmt_val("gust", 25, html=True), "green")
-        _assert_css_dot_band(fmt_val("gust", 35, html=True), "yellow")
-        _assert_css_dot_band(fmt_val("gust", 50, html=True), "orange")
-        _assert_css_dot_band(fmt_val("gust", 65, html=True), "red")
+        _assert_css_dot_band(fmt_val("gust", 25, html=True, ampel=resolve_ampel(None)), "green")
+        _assert_css_dot_band(fmt_val("gust", 35, html=True, ampel=resolve_ampel(None)), "yellow")
+        _assert_css_dot_band(fmt_val("gust", 50, html=True, ampel=resolve_ampel(None)), "orange")
+        _assert_css_dot_band(fmt_val("gust", 65, html=True, ampel=resolve_ampel(None)), "red")
 
 
 # ---------------------------------------------------------------------------
@@ -156,16 +157,16 @@ class TestPrecipAmpelDotFourLevels:
         """AC-3: Regen-Werte 0/2/6/12 mm → CSS-Dot in Band-Farbe green/yellow/orange/red."""
         from src.output.renderers.email.helpers import fmt_val
 
-        _assert_css_dot_band(fmt_val("precip", 0.5, html=True), "green")
-        _assert_css_dot_band(fmt_val("precip", 2, html=True), "yellow")
-        _assert_css_dot_band(fmt_val("precip", 6, html=True), "orange")
-        _assert_css_dot_band(fmt_val("precip", 12, html=True), "red")
+        _assert_css_dot_band(fmt_val("precip", 0.5, html=True, ampel=resolve_ampel(None)), "green")
+        _assert_css_dot_band(fmt_val("precip", 2, html=True, ampel=resolve_ampel(None)), "yellow")
+        _assert_css_dot_band(fmt_val("precip", 6, html=True, ampel=resolve_ampel(None)), "orange")
+        _assert_css_dot_band(fmt_val("precip", 12, html=True, ampel=resolve_ampel(None)), "red")
 
         # Grenzen: <1 → green, ≥1 → yellow, ≥5 → orange, ≥10 → red
-        _assert_css_dot_band(fmt_val("precip", 0, html=True), "green")
-        _assert_css_dot_band(fmt_val("precip", 1, html=True), "yellow")
-        _assert_css_dot_band(fmt_val("precip", 5, html=True), "orange")
-        _assert_css_dot_band(fmt_val("precip", 10, html=True), "red")
+        _assert_css_dot_band(fmt_val("precip", 0, html=True, ampel=resolve_ampel(None)), "green")
+        _assert_css_dot_band(fmt_val("precip", 1, html=True, ampel=resolve_ampel(None)), "yellow")
+        _assert_css_dot_band(fmt_val("precip", 5, html=True, ampel=resolve_ampel(None)), "orange")
+        _assert_css_dot_band(fmt_val("precip", 10, html=True, ampel=resolve_ampel(None)), "red")
 
 
 # ---------------------------------------------------------------------------
@@ -179,16 +180,16 @@ class TestPopAmpelDotFourLevels:
         """AC-4: pop-Werte 10/40/65/85 % → CSS-Dot in Band-Farbe green/yellow/orange/red."""
         from src.output.renderers.email.helpers import fmt_val
 
-        _assert_css_dot_band(fmt_val("pop", 10, html=True), "green")
-        _assert_css_dot_band(fmt_val("pop", 40, html=True), "yellow")
-        _assert_css_dot_band(fmt_val("pop", 65, html=True), "orange")
-        _assert_css_dot_band(fmt_val("pop", 85, html=True), "red")
+        _assert_css_dot_band(fmt_val("pop", 10, html=True, ampel=resolve_ampel(None)), "green")
+        _assert_css_dot_band(fmt_val("pop", 40, html=True, ampel=resolve_ampel(None)), "yellow")
+        _assert_css_dot_band(fmt_val("pop", 65, html=True, ampel=resolve_ampel(None)), "orange")
+        _assert_css_dot_band(fmt_val("pop", 85, html=True, ampel=resolve_ampel(None)), "red")
 
         # Grenzen: <30 → green, ≥30 → yellow, ≥60 → orange, ≥80 → red
-        _assert_css_dot_band(fmt_val("pop", 0, html=True), "green")
-        _assert_css_dot_band(fmt_val("pop", 30, html=True), "yellow")
-        _assert_css_dot_band(fmt_val("pop", 60, html=True), "orange")
-        _assert_css_dot_band(fmt_val("pop", 80, html=True), "red")
+        _assert_css_dot_band(fmt_val("pop", 0, html=True, ampel=resolve_ampel(None)), "green")
+        _assert_css_dot_band(fmt_val("pop", 30, html=True, ampel=resolve_ampel(None)), "yellow")
+        _assert_css_dot_band(fmt_val("pop", 60, html=True, ampel=resolve_ampel(None)), "orange")
+        _assert_css_dot_band(fmt_val("pop", 80, html=True, ampel=resolve_ampel(None)), "red")
 
 
 # ---------------------------------------------------------------------------
@@ -203,7 +204,7 @@ class TestPlainTextStaysNumericAscii:
         from src.output.renderers.email.helpers import fmt_val
 
         # Wind: numerisch
-        result_wind = fmt_val("wind", 40, html=False)
+        result_wind = fmt_val("wind", 40, html=False, ampel=resolve_ampel(None))
         assert "40" in result_wind, f"Wind plain should contain '40': {result_wind!r}"
         assert result_wind.isascii(), f"Wind plain should be ASCII: {result_wind!r}"
         assert "🟡" not in result_wind and "🟢" not in result_wind, (
@@ -211,19 +212,19 @@ class TestPlainTextStaysNumericAscii:
         )
 
         # Gust: numerisch
-        result_gust = fmt_val("gust", 55, html=False)
+        result_gust = fmt_val("gust", 55, html=False, ampel=resolve_ampel(None))
         assert "55" in result_gust, f"Gust plain should contain '55': {result_gust!r}"
         assert result_gust.isascii(), f"Gust plain should be ASCII: {result_gust!r}"
         assert "🟡" not in result_gust, f"Gust plain must NOT contain ampel emoji: {result_gust!r}"
 
         # Precip: numerisch
-        result_precip = fmt_val("precip", 2, html=False)
+        result_precip = fmt_val("precip", 2, html=False, ampel=resolve_ampel(None))
         assert "2" in result_precip, f"Precip plain should contain '2': {result_precip!r}"
         assert result_precip.isascii(), f"Precip plain should be ASCII: {result_precip!r}"
         assert "🟡" not in result_precip, f"Precip plain must NOT contain ampel emoji: {result_precip!r}"
 
         # Pop: numerisch
-        result_pop = fmt_val("pop", 40, html=False)
+        result_pop = fmt_val("pop", 40, html=False, ampel=resolve_ampel(None))
         assert "40" in result_pop, f"Pop plain should contain '40': {result_pop!r}"
         assert result_pop.isascii(), f"Pop plain should be ASCII: {result_pop!r}"
         assert "🟡" not in result_pop, f"Pop plain must NOT contain ampel emoji: {result_pop!r}"

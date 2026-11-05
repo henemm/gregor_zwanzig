@@ -22,6 +22,7 @@ Gemessene Fakten (nicht neu hergeleitet, s. Team-Lead-Briefing):
     Preset "standard" für CAPE (Δ) == 600  →  wirksame Schwelle 600*0.30 == 180.0
 """
 from __future__ import annotations
+from app.ampel import resolve_ampel
 
 from datetime import datetime, timezone
 
@@ -326,7 +327,7 @@ def test_ac5_event_carries_effective_threshold_and_renderer_sees_over_thr():
     )
 
     message = to_alert_message(
-        [change], [new_data], "GR20-Test", tz=timezone.utc, stand_at="12:00",
+        [change], [new_data], "GR20-Test", tz=timezone.utc, stand_at="12:00", ampel=resolve_ampel(None),
     )
     assert len(message.events) == 1
     event = message.events[0]

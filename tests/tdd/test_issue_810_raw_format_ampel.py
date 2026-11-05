@@ -13,6 +13,7 @@ hier ausgelassen).
 IMPORTANT: NO mocks, NO patch, NO MagicMock. Real fmt_val calls only.
 """
 from __future__ import annotations
+from app.ampel import resolve_ampel
 
 from src.output.renderers.email.helpers import fmt_val
 
@@ -33,14 +34,14 @@ class TestWindGustRawFormat:
     """AC-1: format_modes={key:'raw'} liefert numerischen Wert ohne Ampelpunkt."""
 
     def test_issue810_wind_raw_shows_number_no_ampel(self):
-        result = fmt_val("wind", 33, html=True, format_modes={"wind": "raw"})
+        result = fmt_val("wind", 33, html=True, format_modes={"wind": "raw"}, ampel=resolve_ampel(None))
         assert "33" in result, f"Wind raw should contain '33': {result!r}"
         assert not _has_ampel(result), (
             f"Wind raw must NOT contain ampel emoji: {result!r}"
         )
 
     def test_issue810_gust_raw_shows_number_no_ampel(self):
-        result = fmt_val("gust", 55, html=True, format_modes={"gust": "raw"})
+        result = fmt_val("gust", 55, html=True, format_modes={"gust": "raw"}, ampel=resolve_ampel(None))
         assert "55" in result, f"Gust raw should contain '55': {result!r}"
         assert not _has_ampel(result), (
             f"Gust raw must NOT contain ampel emoji: {result!r}"
@@ -55,7 +56,7 @@ class TestPrecipRawFormat:
     """AC-2: format_modes={'precip':'raw'} liefert numerischen Wert ohne Ampelpunkt."""
 
     def test_issue810_precip_raw_shows_number_no_ampel(self):
-        result = fmt_val("precip", 2.4, html=True, format_modes={"precip": "raw"})
+        result = fmt_val("precip", 2.4, html=True, format_modes={"precip": "raw"}, ampel=resolve_ampel(None))
         assert "2.4" in result, f"Precip raw should contain '2.4': {result!r}"
         assert not _has_ampel(result), (
             f"Precip raw must NOT contain ampel emoji: {result!r}"
@@ -70,7 +71,7 @@ class TestPopRawFormat:
     """AC-3: format_modes={'pop':'raw'} liefert numerischen Wert ohne Ampelpunkt."""
 
     def test_issue810_pop_raw_shows_number_no_ampel(self):
-        result = fmt_val("pop", 60, html=True, format_modes={"pop": "raw"})
+        result = fmt_val("pop", 60, html=True, format_modes={"pop": "raw"}, ampel=resolve_ampel(None))
         assert "60" in result, f"Pop raw should contain '60': {result!r}"
         assert not _has_ampel(result), (
             f"Pop raw must NOT contain ampel emoji: {result!r}"
@@ -89,25 +90,25 @@ class TestSimplifiedFormatStillAmpel:
     """
 
     def test_issue810_wind_simplified_still_ampel(self):
-        result = fmt_val("wind", 33, html=True, format_modes={"wind": "simplified"})
+        result = fmt_val("wind", 33, html=True, format_modes={"wind": "simplified"}, ampel=resolve_ampel(None))
         assert _has_ampel(result), (
             f"Wind simplified/html must BE one ampel emoji: {result!r}"
         )
 
     def test_issue810_gust_simplified_still_ampel(self):
-        result = fmt_val("gust", 55, html=True, format_modes={"gust": "simplified"})
+        result = fmt_val("gust", 55, html=True, format_modes={"gust": "simplified"}, ampel=resolve_ampel(None))
         assert _has_ampel(result), (
             f"Gust simplified/html must BE one ampel emoji: {result!r}"
         )
 
     def test_issue810_precip_simplified_still_ampel(self):
-        result = fmt_val("precip", 2.4, html=True, format_modes={"precip": "simplified"})
+        result = fmt_val("precip", 2.4, html=True, format_modes={"precip": "simplified"}, ampel=resolve_ampel(None))
         assert _has_ampel(result), (
             f"Precip simplified/html must BE one ampel emoji: {result!r}"
         )
 
     def test_issue810_pop_simplified_still_ampel(self):
-        result = fmt_val("pop", 60, html=True, format_modes={"pop": "simplified"})
+        result = fmt_val("pop", 60, html=True, format_modes={"pop": "simplified"}, ampel=resolve_ampel(None))
         assert _has_ampel(result), (
             f"Pop simplified/html must BE one ampel emoji: {result!r}"
         )
@@ -121,19 +122,19 @@ class TestIndicatorFormatStillAmpel:
     """
 
     def test_issue810_wind_indicator_still_ampel(self):
-        result = fmt_val("wind", 33, html=True, format_modes={"wind": "indicator"})
+        result = fmt_val("wind", 33, html=True, format_modes={"wind": "indicator"}, ampel=resolve_ampel(None))
         assert _has_ampel(result), (
             f"Wind indicator must BE one ampel emoji: {result!r}"
         )
 
     def test_issue810_precip_indicator_still_ampel(self):
-        result = fmt_val("precip", 2.4, html=True, format_modes={"precip": "indicator"})
+        result = fmt_val("precip", 2.4, html=True, format_modes={"precip": "indicator"}, ampel=resolve_ampel(None))
         assert _has_ampel(result), (
             f"Precip indicator must BE one ampel emoji: {result!r}"
         )
 
     def test_issue810_pop_indicator_still_ampel(self):
-        result = fmt_val("pop", 60, html=True, format_modes={"pop": "indicator"})
+        result = fmt_val("pop", 60, html=True, format_modes={"pop": "indicator"}, ampel=resolve_ampel(None))
         assert _has_ampel(result), (
             f"Pop indicator must BE one ampel emoji: {result!r}"
         )
@@ -147,7 +148,7 @@ class TestPlainTextNoAmpel:
     """AC-5: html=False liefert nie ein Ampel-Emoji."""
 
     def test_issue810_wind_plain_indicator_no_ampel(self):
-        result = fmt_val("wind", 33, html=False, format_modes={"wind": "indicator"})
+        result = fmt_val("wind", 33, html=False, format_modes={"wind": "indicator"}, ampel=resolve_ampel(None))
         assert not _has_ampel(result), (
             f"Wind plain must NOT contain ampel emoji: {result!r}"
         )

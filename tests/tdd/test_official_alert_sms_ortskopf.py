@@ -28,6 +28,7 @@ FORMAT-Zusicherung (dem eigentlichen Befund) statt an einem TypeError; dass
 der Parameter verschwindet, prueft AC-9 eigens.
 """
 from __future__ import annotations
+from app.ampel import resolve_ampel
 
 import inspect
 import json
@@ -668,7 +669,7 @@ def test_ac14_amtliche_und_nowcast_sms_teilen_die_seg_kurzform():
         source_label="Radar (ICON-D2)", segment_id="4",
     )
     msg = AlertMessage(
-        trip_short="KHW 403", stand_at="10:00", events=(onset,), source="radar",
+        trip_short="KHW 403", stand_at="10:00", events=(onset,), source="radar", ampel=resolve_ampel(None),
     )
     nowcast_sms = render_sms(msg)
 
@@ -715,7 +716,7 @@ def test_ac14_beginn_verschiebungs_sms_teilt_dieselbe_seg_kurzform():
     )
     msg = AlertMessage(
         trip_short="KHW 403", stand_at="10:00", events=(),
-        onset_shift_events=(shift,),
+        onset_shift_events=(shift,), ampel=resolve_ampel(None),
     )
 
     sms = render_sms(msg)

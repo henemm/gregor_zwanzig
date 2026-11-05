@@ -8,6 +8,7 @@ Wrappers ``format_location_summary``. Uhrzeiten und Zahlen bleiben; der
 Ortsvergleich ohne ``lang`` bleibt deutsch (P4).
 """
 from __future__ import annotations
+from app.ampel import resolve_ampel
 
 from datetime import datetime, timezone
 from zoneinfo import ZoneInfo
@@ -121,7 +122,7 @@ def test_ausblick_klartext_fester_zweig_englisch():
 def test_ausblick_html_tabelle_englisch(metrics):
     from output.renderers.email.outlook import render_outlook_table
 
-    html = render_outlook_table(list(STAGES.values()), metrics=metrics, lang="en")
+    html = render_outlook_table(list(STAGES.values()), metrics=metrics, lang="en", ampel=resolve_ampel(None))
     assert "medium @13 (high @15) · Lightning density, Model runs · Hail: yes" in html
     assert "light @12" in html and ">high<" in html and ">light<" in html, html
     for deutsch in ("mittel", "leicht", ">hoch<", "Hagel", "Blitzdichte"):

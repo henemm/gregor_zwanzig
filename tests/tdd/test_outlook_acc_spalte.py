@@ -24,6 +24,7 @@ Netz, kein Dateiinhalt-Check. Echte ``SegmentWeatherSummary``-/
 ``ForecastDataPoint``-Objekte, echte Renderer-Aufrufe.
 """
 from __future__ import annotations
+from app.ampel import resolve_ampel
 
 import re
 import sys
@@ -176,7 +177,7 @@ def test_ac5_html_zeigt_acc_spalte_im_konfigurierbaren_zweig():
     from output.renderers.email.outlook import render_outlook_table
 
     zeilen = _zeilen([85])
-    html = render_outlook_table(zeilen, show_acc=True, metrics=_AUSWAHL)
+    html = render_outlook_table(zeilen, show_acc=True, metrics=_AUSWAHL, ampel=resolve_ampel(None))
 
     kopf = _kopf(html)
     assert kopf[-1] == _ACC_LABEL, (
@@ -185,7 +186,7 @@ def test_ac5_html_zeigt_acc_spalte_im_konfigurierbaren_zweig():
         "gelesen)."
     )
 
-    altform = render_outlook_table(zeilen, show_acc=True)
+    altform = render_outlook_table(zeilen, show_acc=True, ampel=resolve_ampel(None))
     erwarteter_punkt = _datenzellen(altform)[0][-1].decode_contents()
     assert _acc_zelle(html).decode_contents() == erwarteter_punkt, (
         "Die ACC-Zelle des konfigurierbaren Zweigs zeigt nicht denselben "
@@ -244,7 +245,7 @@ def test_ac7_hohe_und_niedrigste_stufe_unterscheiden_sich_sichtbar():
     )
 
     zeilen = _zeilen([85, 35])
-    html = render_outlook_table(zeilen, show_acc=True, metrics=_AUSWAHL)
+    html = render_outlook_table(zeilen, show_acc=True, metrics=_AUSWAHL, ampel=resolve_ampel(None))
 
     hoch, niedrig = _punkt_farbe(_acc_zelle(html, 0)), _punkt_farbe(_acc_zelle(html, 1))
     assert hoch is not None and niedrig is not None, (
@@ -287,7 +288,7 @@ def test_ac8_ortsvergleich_bleibt_ohne_acc_spalte():
 
     zeilen = _zeilen([85])
 
-    mit_acc = render_outlook_table(zeilen, show_acc=True, metrics=_AUSWAHL)
+    mit_acc = render_outlook_table(zeilen, show_acc=True, metrics=_AUSWAHL, ampel=resolve_ampel(None))
     assert _ACC_LABEL in _kopf(mit_acc), (
         f"Positivkontrolle gescheitert: schon mit show_acc=True fehlt die "
         f"ACC-Spalte ({_kopf(mit_acc)!r}) -- der Ausbleiben-Nachweis fuer den "
@@ -300,7 +301,7 @@ def test_ac8_ortsvergleich_bleibt_ohne_acc_spalte():
         "ACC-Spalte im Klartext (#2098 Befund C)."
     )
 
-    ohne_acc = render_outlook_table(zeilen, show_acc=False, metrics=_AUSWAHL)
+    ohne_acc = render_outlook_table(zeilen, show_acc=False, metrics=_AUSWAHL, ampel=resolve_ampel(None))
     kopf_ohne = _kopf(ohne_acc)
     assert _ACC_LABEL not in kopf_ohne, (
         f"Der Ortsvergleich zeigt eine ACC-Spalte: {kopf_ohne!r} (ADR-0005/"
@@ -345,7 +346,7 @@ def test_ac9_acc_spalte_ohne_dass_confidence_waehlbar_wird():
     )
     from output.renderers.email.outlook import render_outlook_table
 
-    html = render_outlook_table(_zeilen([85]), show_acc=True, metrics=_AUSWAHL)
+    html = render_outlook_table(_zeilen([85]), show_acc=True, metrics=_AUSWAHL, ampel=resolve_ampel(None))
     assert _ACC_LABEL in _kopf(html), (
         f"Die ACC-Spalte fehlt: {_kopf(html)!r} (#2098 Befund B)."
     )
@@ -392,7 +393,7 @@ def test_ac10_acc_steht_in_kopf_und_datenzeile_an_derselben_position():
     for auswahl in (["precipitation"], ["precipitation", "gust", "thunder",
                                         "sunshine"]):
         html = render_outlook_table(_zeilen([85], metrics=auswahl),
-                                    show_acc=True, metrics=auswahl)
+                                    show_acc=True, metrics=auswahl, ampel=resolve_ampel(None))
         kopf = _kopf(html)
         labels = [c["label"] for c in outlook_columns(auswahl)]
 
@@ -461,7 +462,7 @@ def test_ac11_klartext_wort_folgt_denselben_stufen_wie_der_farbpunkt():
 
     werte = [95, 85, 80, 79, 65, 60, 59, 45, 40, 39, 20, 0]
     zeilen = _zeilen(werte)
-    html = render_outlook_table(zeilen, show_acc=True, metrics=_AUSWAHL)
+    html = render_outlook_table(zeilen, show_acc=True, metrics=_AUSWAHL, ampel=resolve_ampel(None))
 
     farben = [_punkt_farbe(_acc_zelle(html, i)) for i in range(len(werte))]
     worte = [_acc_wort(z) for z in
@@ -504,7 +505,7 @@ def test_ac12_fehlende_genauigkeit_zeigt_strich_statt_absturz():
         "Vorbedingung: die erste Zeile darf keinen Genauigkeitswert tragen."
     )
 
-    html = render_outlook_table(zeilen, show_acc=True, metrics=_AUSWAHL)
+    html = render_outlook_table(zeilen, show_acc=True, metrics=_AUSWAHL, ampel=resolve_ampel(None))
     assert _acc_zelle(html, 0).get_text(strip=True) == _KEIN_WERT, (
         f"HTML-ACC ohne Wert: {_acc_zelle(html, 0).get_text(strip=True)!r} "
         f"statt {_KEIN_WERT!r}."

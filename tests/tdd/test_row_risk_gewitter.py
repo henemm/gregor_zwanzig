@@ -22,6 +22,7 @@ Renderer-Aufruf (`_row_risk`) mit echten Zeilen-Dicts. Kein Dateiinhalt-Check.
 SPEC: Issue #1418 Fehler 1 / Epic #1419 Schritt S1.
 """
 from __future__ import annotations
+from app.ampel import resolve_ampel
 
 from app.models import ThunderLevel
 from src.output.renderers.email.html import _row_risk
@@ -35,7 +36,7 @@ def test_thunder_high_enum_becomes_risk():
     liefert es 'ok', weil `_safe_float(ThunderLevel.HIGH)` beim `> 20`-Vergleich
     still auf 0.0 faellt."""
     row = {**_HARMLESS, "thunder": ThunderLevel.HIGH}
-    result = _row_risk(row)
+    result = _row_risk(row, ampel=resolve_ampel(None))
     assert result == "risk", (
         f"_row_risk mit ThunderLevel.HIGH liefert {result!r}, erwartet 'risk' "
         f"— der Warnpunkt bleibt bei Gewitter stumm (Issue #1418 Fehler 1)."
@@ -47,7 +48,7 @@ def test_thunder_high_string_becomes_risk():
     `outlook.py`/`helpers.py`: `.upper()` auf `stage.get('thunder', 'NONE')`) /
     When `_row_risk` berechnet wird / Then ist das Ergebnis ebenfalls 'risk'."""
     row = {**_HARMLESS, "thunder": "HIGH"}
-    result = _row_risk(row)
+    result = _row_risk(row, ampel=resolve_ampel(None))
     assert result == "risk", (
         f"_row_risk mit String 'HIGH' liefert {result!r}, erwartet 'risk'."
     )
@@ -58,7 +59,7 @@ def test_thunder_med_enum_becomes_at_least_watch():
     When `_row_risk` berechnet wird / Then ist das Ergebnis mindestens
     'watch' — heute liefert es 'ok'."""
     row = {**_HARMLESS, "thunder": ThunderLevel.MED}
-    result = _row_risk(row)
+    result = _row_risk(row, ampel=resolve_ampel(None))
     assert result in ("watch", "risk"), (
         f"_row_risk mit ThunderLevel.MED liefert {result!r}, erwartet "
         f"mindestens 'watch'."
@@ -68,7 +69,7 @@ def test_thunder_med_enum_becomes_at_least_watch():
 def test_thunder_med_string_becomes_at_least_watch():
     """Dieselbe Erwartung fuer die String-Form 'MED'."""
     row = {**_HARMLESS, "thunder": "MED"}
-    result = _row_risk(row)
+    result = _row_risk(row, ampel=resolve_ampel(None))
     assert result in ("watch", "risk"), (
         f"_row_risk mit String 'MED' liefert {result!r}, erwartet mindestens "
         f"'watch'."
@@ -80,21 +81,21 @@ def test_thunder_none_enum_stays_ok():
     When `_row_risk` berechnet wird / Then bleibt es 'ok' (kein
     Falsch-Alarm-Regress durch den Fix)."""
     row = {**_HARMLESS, "thunder": ThunderLevel.NONE}
-    assert _row_risk(row) == "ok"
+    assert _row_risk(row, ampel=resolve_ampel(None)) == "ok"
 
 
 def test_thunder_missing_stays_ok():
     """Regressionsschutz: fehlender Gewitter-Wert darf nie abstuerzen und
     bleibt 'ok'."""
     row = dict(_HARMLESS)
-    assert _row_risk(row) == "ok"
+    assert _row_risk(row, ampel=resolve_ampel(None)) == "ok"
 
 
 def test_thunder_unknown_string_no_crash_stays_ok():
     """Regressionsschutz: ein unbekannter String darf nicht abstuerzen und
     traegt nichts zum Risiko bei."""
     row = {**_HARMLESS, "thunder": "UNBEKANNT"}
-    assert _row_risk(row) == "ok"
+    assert _row_risk(row, ampel=resolve_ampel(None)) == "ok"
 
 
 def test_other_catalog_metrics_still_decide_risk_unchanged():
@@ -103,4 +104,4 @@ def test_other_catalog_metrics_still_decide_risk_unchanged():
     Gewitter-Fix. Boeen 65 km/h liegt ueber der roten Katalog-Schwelle (60)."""
     row = {"wind": 5, "gust": 65, "precip": 0.0, "pop": 5, "vis": 20000.0,
            "thunder": ThunderLevel.NONE}
-    assert _row_risk(row) == "risk"
+    assert _row_risk(row, ampel=resolve_ampel(None)) == "risk"

@@ -22,6 +22,7 @@ Ortsvergleich-Buendel (AC-4c), dessen Konstruktor `onset_time` selbst aus
 `datetime.now()` ableitet; dort wird auf Struktur statt Goldstring geprueft.
 """
 from __future__ import annotations
+from app.ampel import resolve_ampel
 
 import inspect
 import re
@@ -83,7 +84,7 @@ def _onset_msg(event: OnsetEvent) -> AlertMessage:
     """`source is not None` routet `render_sms` in den Onset-Zweig."""
     return AlertMessage(
         trip_short="KHW 403", stand_at="17:30", events=(event,),
-        source="Radar (DWD)",
+        source="Radar (DWD)", ampel=resolve_ampel(None),
     )
 
 
@@ -239,7 +240,7 @@ def test_ac4c_nowcast_ohne_belastbare_daten_rendert_ohne_zahl(flag):
         is_convective=False, onset_precip_mm=None, **{flag: True},
     )
     msg = to_multi_location_onset_alert_message(
-        [("Zermatt", nc)], tz=timezone.utc, stand_at="10:00",
+        [("Zermatt", nc)], tz=timezone.utc, stand_at="10:00", ampel=resolve_ampel(None),
     )
     sms = render_sms(msg)
 

@@ -11,6 +11,7 @@ SMS (und damit Premium-SMS und Telegram-Kurzstil) ist in jeder Sprache
 byte-gleich zur deutschen. Kern-Schicht, kein Netz.
 """
 from __future__ import annotations
+from app.ampel import resolve_ampel
 
 import json
 import re
@@ -140,7 +141,7 @@ def test_luftmasse_englisch():
     from output.renderers.alert.render import render_subject
 
     e = _gust(metric_id="thunder", value_from=0.0, value_to=1.0, threshold=1.0)
-    msg = AlertMessage(trip_short="T", stand_at="06:00", events=(e,))
+    msg = AlertMessage(trip_short="T", stand_at="06:00", events=(e,), ampel=resolve_ampel(None))
     assert t("alarm.abweichung.luftmasse", "en") in render_subject(msg, lang="en")
 
 
@@ -156,7 +157,7 @@ def test_niederschlag_zeilen_englisch_alle_zweige():
         "kein_weiterer": replace(regen, remaining_until_time=None),
     }
     for key, e in faelle.items():
-        msg = AlertMessage(trip_short="T", stand_at="06:00", events=(e,))
+        msg = AlertMessage(trip_short="T", stand_at="06:00", events=(e,), ampel=resolve_ampel(None))
         plain = render_email(msg, lang="en")[1]
         assert t("alarm.niederschlag.bis_jetzt", "en") in plain
         assert t("alarm.niederschlag.ab_jetzt", "en") in render_telegram(msg, lang="en")
@@ -172,11 +173,11 @@ def test_tagesworte_gestern_und_seit_englisch():
     from output.renderers.alert.render import render_email, render_telegram
 
     e = _gust(occurred_day_offset=-1, occurred_is_past=True)
-    msg = AlertMessage(trip_short="T", stand_at="06:00", events=(e,))
+    msg = AlertMessage(trip_short="T", stand_at="06:00", events=(e,), ampel=resolve_ampel(None))
     gestern = t("alarm.zeit.war", "en", zeit=t("alarm.zeit.gestern", "en", zeit="15:00"))
     assert gestern in render_email(msg, lang="en")[1]
     oe = replace(_verschiebung(), to_is_past=True)
-    nur = AlertMessage(trip_short="T", stand_at="06:00", events=(), onset_shift_events=(oe,))
+    nur = AlertMessage(trip_short="T", stand_at="06:00", events=(), onset_shift_events=(oe,), ampel=resolve_ampel(None))
     assert t("alarm.zeit.seit", "en", zeit="11:30") in render_telegram(nur, lang="en")
 
 
@@ -185,7 +186,7 @@ def test_beginn_verschiebung_allein_englisch():
     from output.renderers.alert.render import render_email, render_subject, render_telegram
 
     oe = _verschiebung()
-    msg = AlertMessage(trip_short="T", stand_at="06:00", events=(), onset_shift_events=(oe,))
+    msg = AlertMessage(trip_short="T", stand_at="06:00", events=(), onset_shift_events=(oe,), ampel=resolve_ampel(None))
     label = get_alert_label("precipitation", "en")
     frueher = t("alarm.beginn.frueher", "en", betrag="2.5")
     html, plain = render_email(msg, lang="en")
@@ -405,7 +406,7 @@ def test_legacy_abweichung_englisch_stand_und_alter_wert():
 def _einzel(**extra):
     from output.renderers.alert.model import AlertMessage
 
-    return AlertMessage(trip_short="T", stand_at="06:00", events=(_gust(**extra),))
+    return AlertMessage(trip_short="T", stand_at="06:00", events=(_gust(**extra),), ampel=resolve_ampel(None))
 
 
 def _alle_langform(msg) -> dict[str, str]:
@@ -474,7 +475,7 @@ def test_mehrfach_unter_schwelle_zeilen_englisch():
         _gust(metric_id="thunder", value_from=1.0, value_to=2.0, threshold=2.0, hail_flag=True, **ohne),
         _gust(metric_id="precipitation", value_from=1.0, value_to=9.0, threshold=2.5, **ohne),
     )
-    k = _alle_langform(AlertMessage(trip_short="T", stand_at="06:00", events=evs))
+    k = _alle_langform(AlertMessage(trip_short="T", stand_at="06:00", events=evs, ampel=resolve_ampel(None)))
     unter = t("alarm.abweichung.unter_schwelle", "en")
     assert f"{get_alert_label('gust', 'en')} · Segment 4 · " in k["klartext"]
     assert f"· {unter}: 50 → 55 km/h" in k["klartext"]
@@ -496,13 +497,13 @@ def test_beginn_verschiebung_am_ziel_morgen_englisch():
     zeile = f"{label}: 14:00 → {morgen} ({frueher} · {ziel})"
     for evs in ((), (_gust(),)):
         k = _alle_langform(AlertMessage(trip_short="T", stand_at="06:00", events=evs,
-                                        onset_shift_events=(oe,)))
+                                        onset_shift_events=(oe,), ampel=resolve_ampel(None)))
         assert zeile in k["klartext"] and zeile in k["telegram"]
         assert f"{label} · {ziel}" in k["html"] and f"14:00 → {morgen} ({frueher})" in k["html"]
         assert t("mail.herkunft.abweichungs_alarm", "en") in k["klartext"]
         for text in k.values():
             assert deutsch_treffer(text) == []
-    nur = _alle_langform(AlertMessage(trip_short="T", stand_at="06:00", events=(), onset_shift_events=(oe,)))
+    nur = _alle_langform(AlertMessage(trip_short="T", stand_at="06:00", events=(), onset_shift_events=(oe,), ampel=resolve_ampel(None)))
     assert nur["betreff"] == f"[T] {ziel} · {label} 11:30 ({frueher})"
 
 

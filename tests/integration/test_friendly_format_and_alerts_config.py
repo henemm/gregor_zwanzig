@@ -9,6 +9,7 @@ Verifies that:
 NO MOCKS — uses real TripReportFormatter, MetricCatalog, and WeatherChangeDetectionService.
 """
 
+from app.ampel import resolve_ampel
 from app.metric_catalog import build_default_display_config
 from app.models import MetricConfig, UnifiedWeatherDisplayConfig
 from output.renderers.trip_report import TripReportFormatter
@@ -335,25 +336,25 @@ class TestWindDirMergedFormatting:
     def test_wind_with_compass_merged(self) -> None:
         from src.output.renderers.email.helpers import fmt_val
         row = {"wind": 20, "_wind_dir_deg": 315}
-        result = fmt_val("wind", 20, row=row)
+        result = fmt_val("wind", 20, row=row, ampel=resolve_ampel(None))
         assert result == "20 NW"
 
     def test_wind_without_merge(self) -> None:
         from src.output.renderers.email.helpers import fmt_val
         row = {"wind": 20}
-        result = fmt_val("wind", 20, row=row)
+        result = fmt_val("wind", 20, row=row, ampel=resolve_ampel(None))
         assert result == "20"
 
     def test_wind_dir_none_no_compass(self) -> None:
         from src.output.renderers.email.helpers import fmt_val
         row = {"wind": 20, "_wind_dir_deg": None}
-        result = fmt_val("wind", 20, row=row)
+        result = fmt_val("wind", 20, row=row, ampel=resolve_ampel(None))
         assert result == "20"
 
     def test_separate_wind_dir_column(self) -> None:
         """When wind_dir is separate (friendly=False), it shows compass."""
         from src.output.renderers.email.helpers import fmt_val
-        result = fmt_val("wind_dir", 225)
+        result = fmt_val("wind_dir", 225, ampel=resolve_ampel(None))
         assert result == "SW"
 
     def test_dp_to_row_merged_skips_wind_dir_col(self) -> None:

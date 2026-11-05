@@ -34,6 +34,7 @@ Scheibe 1 hat den Sonderfall ersatzlos entfernt; die Literale unten fuehren
 Gewitter-Werte deshalb OHNE "%". Das "%" bei "Regen%" bleibt — das ist der
 Name der Metrik rain_probability, ihre Einheit ist tatsaechlich Prozent.
 """
+from app.ampel import resolve_ampel
 import sys
 
 sys.path.insert(0, ".")
@@ -64,7 +65,7 @@ def _multi_msg() -> AlertMessage:
     )
     return AlertMessage(
         trip_short="KHW 403", stand_at="14:30",
-        events=(e_gust, e_thunder, e_precip), source=None,
+        events=(e_gust, e_thunder, e_precip), source=None, ampel=resolve_ampel(None),
     )
 
 
@@ -80,7 +81,7 @@ def _decimal_precip_msg() -> AlertMessage:
         cmp="über", occurred_at="11:00", km_from=0.0, km_to=4.0,
     )
     return AlertMessage(
-        trip_short="TEST", stand_at="14:30", events=(e_decimal, e_gust), source=None,
+        trip_short="TEST", stand_at="14:30", events=(e_decimal, e_gust), source=None, ampel=resolve_ampel(None),
     )
 
 
@@ -96,7 +97,7 @@ def _thousand_visibility_decimal_msg() -> AlertMessage:
         cmp="über", occurred_at="11:00", km_from=0.0, km_to=4.0,
     )
     return AlertMessage(
-        trip_short="TEST", stand_at="14:30", events=(e_visibility, e_gust), source=None,
+        trip_short="TEST", stand_at="14:30", events=(e_visibility, e_gust), source=None, ampel=resolve_ampel(None),
     )
 
 
@@ -112,7 +113,7 @@ def _thousand_visibility_glatt_msg() -> AlertMessage:
         cmp="über", occurred_at="11:00", km_from=0.0, km_to=4.0,
     )
     return AlertMessage(
-        trip_short="TEST", stand_at="14:30", events=(e_visibility, e_gust), source=None,
+        trip_short="TEST", stand_at="14:30", events=(e_visibility, e_gust), source=None, ampel=resolve_ampel(None),
     )
 
 
@@ -129,7 +130,7 @@ def _thousand_cape_msg() -> AlertMessage:
         cmp="über", occurred_at="11:00", km_from=0.0, km_to=4.0,
     )
     return AlertMessage(
-        trip_short="TEST", stand_at="14:30", events=(e_cape, e_gust), source=None,
+        trip_short="TEST", stand_at="14:30", events=(e_cape, e_gust), source=None, ampel=resolve_ampel(None),
     )
 
 
@@ -327,7 +328,7 @@ def _mixed_over_under_msg() -> AlertMessage:
     )
     return AlertMessage(
         trip_short="KHW 403", stand_at="14:30",
-        events=(e_gust, e_thunder, e_rain, e_precip), source=None,
+        events=(e_gust, e_thunder, e_rain, e_precip), source=None, ampel=resolve_ampel(None),
     )
 
 

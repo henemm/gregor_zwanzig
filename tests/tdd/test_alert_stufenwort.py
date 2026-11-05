@@ -20,6 +20,7 @@ Implementierung) grün sein -- das ist beabsichtigt, s. jeweiligen Docstring.
 Alle übrigen Tests hier müssen vor der Implementierung ROT sein.
 """
 from __future__ import annotations
+from app.ampel import resolve_ampel
 
 from app.models import ThunderLevel
 from output.metric_format import THUNDER_LABEL_DE
@@ -48,7 +49,7 @@ def _single_thunder_msg(
         threshold=threshold, cmp="über", occurred_at=occurred_at,
         km_from=km_from, km_to=km_to,
     )
-    return AlertMessage(trip_short=trip_short, stand_at=stand_at, events=(e,), source=None)
+    return AlertMessage(trip_short=trip_short, stand_at=stand_at, events=(e,), source=None, ampel=resolve_ampel(None))
 
 
 def _multi_thunder_visibility_msg() -> AlertMessage:
@@ -62,7 +63,7 @@ def _multi_thunder_visibility_msg() -> AlertMessage:
         metric_id="visibility", value_from=1400.0, value_to=280.0, threshold=500.0,
         cmp="unter", occurred_at=None, km_from=8.0, km_to=8.0,
     )
-    return AlertMessage(trip_short="KHW 403", stand_at="09:00", events=(e_thunder, e_vis), source=None)
+    return AlertMessage(trip_short="KHW 403", stand_at="09:00", events=(e_thunder, e_vis), source=None, ampel=resolve_ampel(None))
 
 
 def _first_plain_data_line(plain: str) -> str:
@@ -179,7 +180,7 @@ def test_ac5_betreff_mehrere_ereignisse_top3_stufenwort():
         metric_id="thunder", value_from=1.0, value_to=2.0, threshold=1.0,
         cmp="über", occurred_at=None, km_from=0.0, km_to=0.0, segment_id="Ziel",
     )
-    msg = AlertMessage(trip_short="KHW 403", stand_at="09:00", events=(e_a, e_b), source=None)
+    msg = AlertMessage(trip_short="KHW 403", stand_at="09:00", events=(e_a, e_b), source=None, ampel=resolve_ampel(None))
     subject = render_subject(msg)
     expected = (
         f"[KHW 403] Segment 1, \U0001f3c1 Ziel · ↑ 2 über Schwelle: "
@@ -212,7 +213,7 @@ def test_ac6_schwelle_erscheint_niemals_als_stufenwort_plural():
         metric_id="thunder", value_from=0.0, value_to=3.0, threshold=2.0,
         cmp="über", occurred_at=None, km_from=0.0, km_to=4.0,
     )
-    msg = AlertMessage(trip_short="KHW 403", stand_at="09:00", events=(e,), source=None)
+    msg = AlertMessage(trip_short="KHW 403", stand_at="09:00", events=(e,), source=None, ampel=resolve_ampel(None))
     html, plain = render_email(msg)
     tg = render_telegram(msg)
     for label, text in (("html", html), ("plain", plain), ("telegram", tg)):
@@ -275,7 +276,7 @@ def test_ac15_nicht_stufen_metrik_zahlformat_unveraendert_regressionswaechter():
         metric_id="gust", value_from=20.0, value_to=80.0, threshold=40.0,
         cmp="über", occurred_at="11:00", km_from=0.0, km_to=4.0,
     )
-    msg = AlertMessage(trip_short="KHW 403", stand_at="09:30", events=(e,), source=None)
+    msg = AlertMessage(trip_short="KHW 403", stand_at="09:30", events=(e,), source=None, ampel=resolve_ampel(None))
     html, plain = render_email(msg)
     first_line = _first_plain_data_line(plain)
     assert "20 km/h ↑ 80 km/h" in first_line, (
@@ -302,7 +303,7 @@ def test_ac16_ortsvergleich_alarm_zeigt_ebenfalls_stufenwort():
         metric_id="thunder", value_from=2.0, value_to=3.0, threshold=1.0,
         cmp="über", occurred_at="15:00", km_from=0.0, km_to=0.0,
     )
-    msg = AlertMessage(trip_short="Vergleich", stand_at="10:00", events=(e,), location_label="Sixt")
+    msg = AlertMessage(trip_short="Vergleich", stand_at="10:00", events=(e,), location_label="Sixt", ampel=resolve_ampel(None))
     html, plain = render_email(msg)
     tg = render_telegram(msg)
     expected = f"{W_MED} ↑ {W_HIGH}"

@@ -15,6 +15,7 @@ Scheibe), `_pill_for_metric()` (Mail-Prosa-Pille) und `format_trend_tokens()`
 (Mail-Trend-Block). Kein Netz.
 """
 from __future__ import annotations
+from app.ampel import resolve_ampel
 
 import re
 from datetime import datetime, timezone
@@ -102,7 +103,7 @@ def test_ac1_unconfigured_trip_sms_thunder_token_default_threshold_unchanged():
 def test_ac5_prosa_pille_meldet_gewitter_ab_leicht_am_standard_trip():
     from output.renderers.email.helpers import _pill_for_metric
 
-    result = _pill_for_metric("thunder", {}, _dps_only_low(), tz=TZ)
+    result = _pill_for_metric("thunder", {}, _dps_only_low(), tz=TZ, ampel=resolve_ampel(None))
     assert result is not None, "Erwartet ein (text, tone)-Tupel, erhalten None"
     text, _tone = result
     # #1493 trug das Stufenwort nach, #2176 nimmt die Ereignisbehauptung
@@ -123,7 +124,7 @@ def test_ac6_konfigurierte_schwelle_haelt_prosa_pille_bei_leicht_still():
     from output.renderers.email.helpers import _pill_for_metric
 
     result = _pill_for_metric(
-        "thunder", {"thunder": 2.0}, _dps_only_low(), tz=TZ,
+        "thunder", {"thunder": 2.0}, _dps_only_low(), tz=TZ, ampel=resolve_ampel(None),
     )
     assert result is not None
     text, _tone = result
@@ -160,7 +161,7 @@ def test_ac6_konfigurierte_schwelle_ueber_med_haelt_prosa_pille_bei_med_still():
     from output.renderers.email.helpers import _pill_for_metric
 
     result = _pill_for_metric(
-        "thunder", {"thunder": 3.0}, _dps_reaching_med(), tz=TZ,
+        "thunder", {"thunder": 3.0}, _dps_reaching_med(), tz=TZ, ampel=resolve_ampel(None),
     )
     assert result is not None
     text, _tone = result

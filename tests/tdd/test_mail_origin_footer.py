@@ -20,6 +20,7 @@ RED-Erwartung gegen den unveränderten Ausgangscode:
 AC-11 (Nicht-Regression / Live-E2E) ist NICHT Teil dieser Kern-Suite.
 """
 from __future__ import annotations
+from app.ampel import resolve_ampel
 
 import re
 import sys
@@ -156,7 +157,7 @@ def _deviation_message():
         metric_id="wind", value_from=20.0, value_to=48.0, threshold=15.0,
         cmp="über", occurred_at="14:00", km_from=5.0, km_to=12.0,
     )
-    return AlertMessage(trip_short="GR20", stand_at="09:30", events=(ev,))
+    return AlertMessage(trip_short="GR20", stand_at="09:30", events=(ev,), ampel=resolve_ampel(None))
 
 
 def _radar_message():
@@ -167,7 +168,7 @@ def _radar_message():
     )
     return AlertMessage(
         trip_short="GR20", stand_at="09:30", events=(ev,),
-        source="radar", cooldown_display="30 Min",
+        source="radar", cooldown_display="30 Min", ampel=resolve_ampel(None),
     )
 
 
