@@ -52,8 +52,8 @@ export interface VersandSnapshot {
 }
 
 /** Ziel-Objekt der Versand-Felder: ALLE Felder optional, damit sowohl ein
- * Plain-Objekt-Stub (Kern-Test) als auch die reale `CompareWizardState`-
- * Instanz (CompareTabs.svelte) strukturell passen — Begründung 1:1 wie bei
+ * Plain-Objekt-Stub (Kern-Test) als auch der lokale `$state`-Feldsatz
+ * (`CompareFeldsatz`, CompareTabs.svelte) strukturell passen — Begründung 1:1 wie bei
  * `AlarmHydrationTarget`. */
 export interface VersandHydrationTarget {
 	sendTelegram?: boolean;

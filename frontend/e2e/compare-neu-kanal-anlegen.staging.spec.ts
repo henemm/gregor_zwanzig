@@ -6,11 +6,12 @@
 // (compare-uebersicht-kanal-bedienung/-persistenz) legen ihren Vergleich per
 // API an und fahren danach ausschliesslich den BEARBEITEN-Pfad des Hubs.
 // `/compare/new` mountet denselben `WeatherMetricsTab context="vergleich"`
-// (CompareNewEditor.svelte:394 Desktop / :491 Mobil) — die Kanal-Reiter sind
-// dort also ebenfalls bedienbar, aber der Weg dahinter ist ein voellig
-// anderer: KEIN PUT je Geste, sondern genau EIN POST beim „Briefing
-// aktivieren" (CompareWizardState.saveNewPreset:163 ->
-// buildNewComparePresetPayload:341/414 -> display_config.channel_active_metrics).
+// (im WetterMetrikenVersandPanel, CompareNewEditor.svelte:577 Desktop / :671
+// Mobil) — die Kanal-Reiter sind dort also ebenfalls bedienbar, aber der Weg
+// dahinter ist ein voellig anderer: KEIN PUT je Geste, sondern genau EIN POST
+// beim „Briefing aktivieren" (speichereNeuenVergleich, CompareNewEditor.svelte:294,
+// Kanal-Feld :327 -> buildNewComparePresetPayload, compareEditorSave.ts:443,
+// `channel_active_metrics` :530 -> display_config.channel_active_metrics).
 // Abgesichert war dieser Weg bisher nur an der reinen Payload-Funktion
 // (compareEditorSave.test.ts) — kein Browser hat die Anlege-Seite je mit einem
 // Kanal-Override gesehen. Ohne diese Datei ist die Kette „Reiter erscheint ->
@@ -95,20 +96,21 @@ async function oeffneAnlegeUebersicht(
 }
 
 /**
- * Rest der Kette (Wertebereiche -> Alarme -> Versand) und „Briefing
- * aktivieren". Jeder Reiterbesuch schaltet den naechsten frei (*Visited-Flags,
- * anlegeLockEngine.ts tailUnlocked); erst der Versand-Besuch macht den
- * Aktivieren-Knopf bedienbar (canFinish). Liefert die ID des angelegten
- * Vergleichs und traegt ihn zur Bereinigung ein.
+ * Rest der Kette (Wertebereiche -> Alarme) und „Briefing aktivieren". Einen
+ * eigenen Versand-Reiter gibt es seit #1743 nicht mehr (Versand steckt im
+ * WetterMetrikenVersandPanel des Reiters Wetter-Metriken). Jeder Reiterbesuch
+ * schaltet den naechsten frei (*Visited-Flags, anlegeLockEngine.ts
+ * tailUnlocked); erst der Alarme-Besuch macht den Aktivieren-Knopf bedienbar
+ * (canFinish, Kerntest compare_anlege_freischaltung.test.ts). Liefert die ID
+ * des angelegten Vergleichs und traegt ihn zur Bereinigung ein.
  */
 async function briefingAktivieren(page: Page): Promise<string> {
 	await page.getByTestId('compare-editor-continue-wertebereiche').click();
 	await page.getByTestId('compare-editor-continue-alarme').click();
-	await page.getByTestId('compare-editor-continue-versand').click();
 
 	const aktivieren = page.getByTestId('compare-editor-activate');
 	await expect(
-		aktivieren, 'Freischaltung: "Briefing aktivieren" bleibt nach dem Versand-Besuch gesperrt'
+		aktivieren, 'Freischaltung: "Briefing aktivieren" bleibt nach dem Alarme-Besuch gesperrt'
 	).toBeEnabled({ timeout: 20_000 });
 
 	const antwort = page.waitForResponse(
@@ -120,7 +122,7 @@ async function briefingAktivieren(page: Page): Promise<string> {
 	expect(res.ok(), `Anlage fehlgeschlagen: HTTP ${res.status()}`).toBeTruthy();
 	const angelegt = (await res.json()) as { id: string };
 	registerForCleanup('preset', angelegt.id);
-	// Erst der Redirect (saveNewPreset -> goto) belegt, dass der Editor die
+	// Erst der Redirect (speichereNeuenVergleich -> goto) belegt, dass der Editor die
 	// Anlage als durchgelaufen ansieht — nicht der blosse HTTP-Erfolg.
 	await page.waitForURL(new RegExp(`/compare/${angelegt.id}$`), { timeout: 20_000 });
 	return angelegt.id;
@@ -185,8 +187,8 @@ test.describe('#1703 S8: Anlege-Seite /compare/new — die Kanal-Reiter der Uebe
 		const presetId = await briefingAktivieren(page);
 
 		// (6) 🔴 Der Kern: am GESPEICHERTEN Stand, nicht an der Oberflaeche.
-		// Faellt `channelActiveMetricKeys` aus `saveNewPreset()` (Z. 163) oder
-		// `channel_active_metrics` aus `buildNewComparePresetPayload()` (Z. 414),
+		// Faellt `channelActiveMetricKeys` aus `speichereNeuenVergleich()` (CompareNewEditor.svelte:327)
+		// oder `channel_active_metrics` aus `buildNewComparePresetPayload()` (compareEditorSave.ts:530),
 		// bleibt die Bedienung oben unveraendert gruen — nur hier wird es rot.
 		expect(
 			await gespeicherteKanalAuswahl(request, presetId, 'sms'),

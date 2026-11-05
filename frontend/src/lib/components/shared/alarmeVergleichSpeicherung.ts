@@ -57,9 +57,9 @@ export interface AlarmSnapshot {
 }
 
 /** Ziel-Objekt fuer `hydrateAlarmFieldsFromPreset`: ALLE Felder optional, damit
- * sowohl ein frischer Plain-Objekt-Stub (Kern-Test) als auch die reale
- * `CompareWizardState`-Instanz (CompareTabs.svelte) strukturell passen —
- * eine `Record<string, unknown>`-Signatur waere fuer die Klasseninstanz NICHT
+ * sowohl ein frischer Plain-Objekt-Stub (Kern-Test) als auch der
+ * lokale `$state`-Feldsatz (`CompareFeldsatz`, CompareTabs.svelte) strukturell passen —
+ * eine `Record<string, unknown>`-Signatur waere fuer den Interface-Typ `CompareFeldsatz` NICHT
  * zuweisbar (kein Index-Signature), waehrend optionale benannte Felder in
  * beide Richtungen kompatibel sind. */
 export interface AlarmHydrationTarget {

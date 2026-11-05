@@ -304,10 +304,10 @@ describe('buildComparePresetSavePayload — corridors (#1231 Slice 4)', () => {
 // ─── Issue #1703 Scheibe 8: der ANLEGE-Pfad traegt die Kanal-Overrides mit ───
 //
 // `/compare/new` mountet DENSELBEN `WeatherMetricsTab context="vergleich"` wie
-// der Hub (CompareNewEditor.svelte:394/491) — die Kanal-Reiter der
+// der Hub (CompareNewEditor.svelte:577/671) — die Kanal-Reiter der
 // Uebersichtstabelle sind dort also bedienbar. Der Anlege-Pfad speichert aber
 // nicht ueber die Hub-Bridge, sondern ueber
-// `CompareWizardState.saveNewPreset()` -> `buildNewComparePresetPayload()`.
+// `speichereNeuenVergleich` (CompareNewEditor) -> `buildNewComparePresetPayload()`.
 // Kennt diese Funktion `channel_active_metrics` nicht, verlaesst der Nutzer den
 // Anlege-Editor mit sichtbar eingestellten Kanal-Abwahlen und bekommt einen
 // Vergleich ohne sie — lautloser Verlust, genau die Attrappe, die diese

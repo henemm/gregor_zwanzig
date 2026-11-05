@@ -36,7 +36,7 @@
 	// (Regel wie vergleichsMetrikLabel, compareMetricCatalogLoader.ts — ohne dessen Netz-Import.)
 	import { metricLabel, type MetricLabelFields } from '../../i18n/metricLabel.ts';
 
-	// Issue #1720 S1: flache Props statt `CompareWizardState`-Bindung — dasselbe
+	// Issue #1720 S1: flache Props statt Bindung an ein Zustandsobjekt — dasselbe
 	// Bauteil bedient jetzt Ortsvergleich UND Trip (parametrisiert statt
 	// kopiert, Trip/Compare-Teilungs-Invariante). Der Speicher-Weg bleibt wie
 	// bisher AUSSERHALB: der Vergleich schreibt in den wiz-State, der Trip in
