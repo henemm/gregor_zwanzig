@@ -4,7 +4,7 @@ type: module
 created: 2026-11-04
 updated: 2026-11-05
 status: draft
-version: "1.2"
+version: "1.3"
 tags: [ampel, profil, vorlagen, migration, renderer, sms, telegram, mail, i18n, epic-2791]
 ---
 
@@ -13,7 +13,7 @@ tags: [ampel, profil, vorlagen, migration, renderer, sms, telegram, mail, i18n, 
 ## Approval
 
 - [x] Approved (PO-Freigabe 2026-11-04 per Rückfrage: „Freigabe“)
-- [ ] Approved v1.2 (S1c-Ergänzungen v1.1: Schnitt in vier PRs, Migrations-Nachtrag AC-23, AC-19 (d), Pfadkorrekturen; v1.2: Schlüsselnamen `wind_chill_*_c` korrigiert, Schlüsselliste vollständig, Ratsche)
+- [ ] Approved v1.3 (S1c-Ergänzungen v1.1: Schnitt in vier PRs, Migrations-Nachtrag AC-23, AC-19 (d), Pfadkorrekturen; v1.2: Schlüsselnamen `wind_chill_*_c` korrigiert, Schlüsselliste vollständig, Ratsche; v1.3: Nachtrag S1c-3, Umfang der Sperre, Hinweis-Positionen, Datenerhalt)
 
 ## Purpose
 
@@ -91,7 +91,7 @@ Lieferung in **sechs Teilschritten, je eigener PR mit allen 6 CI-Checks** (`test
 | File | Change | Beschreibung | Schritt |
 |---|---|---|---|
 | `frontend/src/lib/components/shared/WeatherMetricsTab.svelte`, `weather-metrics-tab/weatherMetricsSavePayload.ts` | MODIFY | SMS-Schwellwert-Regler (Sensibel/Standard/Robust) nur lesbar + Hinweis; Speicher-Payload reicht Bestandswerte `sms_threshold` unverändert durch (nie weglassen, nie leeren) | S1c-3 |
-| `frontend/src/lib/components/shared/corridor-editor/CorridorEditor.svelte`, `CorridorEditorMobile.svelte`, `wertebereicheVergleichSpeicherung.ts` | MODIFY | gesamter Reiter nur lesbar + Hinweis, `context="route"\|"vergleich"`; `corridors` unverändert durchreichen (nie leeren) | S1c-3 |
+| `frontend/src/lib/components/shared/corridor-editor/CorridorEditor.svelte`, `CorridorEditorMobile.svelte`, `wertebereicheVergleichSpeicherung.ts` | MODIFY | Korridor-Zeilen des Reiters Wertebereiche nur lesbar + Hinweis (Eingaben, Setzen/×, Ordinal-Buttons, Markieren, Entfernen, Hinzufügen gesperrt; `patch/add/remove` zusätzlich als No-op-Guard), `context="route"\|"vergleich"`, Desktop und Mobil; `corridors` unverändert durchreichen (nie leeren). Die Tabelle „Alarm-Empfindlichkeit“ (`metric_alert_levels`) im selben Reiter bleibt editierbar (S2) | S1c-3 |
 | `frontend/src/lib/i18n/messages/{de,en}/wertebereiche.json` (SMS-Hinweis ggf. `trip.json`) | MODIFY | Hinweistext | S1c-3 |
 | `frontend/src/lib/i18n/__tests__/**`, Komponententests | MODIFY | Paritätstest bleibt grün; Test der Sperre | S1c-3 |
 
@@ -299,8 +299,12 @@ Farben werden **am Entstehungsort** getestet (Renderer-Ausgabe, `ampel_for`, `th
 - **AC-23:** Given zwei Nutzer mit je einem Compare-Preset mit Wertebereichen für `wind_max_kmh`, `visibility_min_m` und `precip_sum_mm` (mark=True) und einem bereits migrierten Preset mit vorhandener Ampel / When der Migrations-Nachlauf mit `--execute` und danach ein zweites Mal läuft / Then trägt jedes Preset die Werte als Ampel-Grenzen für `wind`, `visibility` (untere Seite) und `precipitation`, vorhandene Ampel-Metriken sind nicht überschrieben, der zweite Lauf ändert keine Datei, `thunder_level_max`/`cape_max_jkg` stehen als nicht zuordenbar im Bericht, jeder Schlüssel aus `FRONTEND_TO_RENDERER_METRIC_ID` ist zugeordnet oder ausdrücklich nicht zuordenbar (Ratsche), `temp_min_c` bestimmt die untere Temperatur-Seite auch bei vorhandenem `temp_max_c`, und vor dem Prod-Deploy von S1c-4 meldet der Probelauf auf Prod „nichts zu tun“
   - Test: Migration auf Kopie, zwei Nutzer, Prüfsummen, Bericht; Ratsche auf die Schlüsselmenge aus `FRONTEND_TO_RENDERER_METRIC_ID`; Vorrang `temp_min_c` bei vorhandenem `temp_max_c` in beiden Reihenfolgen. Der Prod-Probelauf ist Deploy-Vorbedingung (Reihenfolge-Gate), kein automatischer Test
 
+- **AC-24:** Given ein Trip und ein Vergleich mit gespeicherten `sms_threshold`-Werten und `corridors`, im Anlegen- und im Bearbeiten-Modus, Desktop und Mobil / When der Nutzer andere Einstellungen ändert und speichert (auch wenn der Regler-Zustand leer ist) / Then stehen `sms_threshold` und `corridors` danach unverändert in der gespeicherten Datei, kein Regler und keine Korridor-Eingabe löst ein Speichern aus, und die Alarm-Empfindlichkeit bleibt bearbeitbar
+  - Test: Funktionstest `buildGlobalMetricsForSave` (Bestand rein → identisch raus, auch bei leerem `smsThresholds`), Komponenten-Test der gesperrten Eingaben in beiden Kontexten, Zwei-Nutzer-Prüfung der gespeicherten Datei in `/e2e-verify`
+
 ## Known Limitations
 
+- **Nachtrag S1c-3 (v1.3):** (1) Gesperrt wird alles, was Wertebereiche (`corridors`) oder `sms_threshold` schreibt; die Alarm-Empfindlichkeit (`metric_alert_levels`) bleibt bis S2 bearbeitbar, weil sie nicht zu den Altfeldern aus E2 gehört. (2) Der Hinweis erscheint einmal oben im Reiter Wertebereiche und einmal im SMS-Schwellwert-Block, je ein Katalogschlüssel mit demselben Wortlaut aus AC-22. (3) Datenerhalt: `buildGlobalMetricsForSave` löscht `sms_threshold` nie mehr, der Bestandswert wird unverändert gespeichert (auch bei leerem Regler-Zustand); `corridors` laufen in Trip und Vergleich, auch im Anlegen-Modus, unverändert durch; die Vorbelegung im Anlegen-Modus bleibt funktionsfähig. (4) Es gibt keinen Weg mehr, die Altfelder zu ändern; vor S1c-4 wirken sie unverändert weiter (nie still wirkungslos).
 - **Alarm-Logik unverändert** (S2): `alarm_ab` wird gespeichert, aber nicht gelesen; Alarm-Trigger, `metric_alert_levels`, `alert_rules` und CAPE-Δ-Alarm bleiben bis S2 wie heute.
 - **Neue Bedienoberfläche** (S3a/S3b): in S1 nur Sperre der Altfelder; die Ampel ist noch nicht im Editor bearbeitbar (Änderungen laufen über API und Migration).
 - **Relative Höhen und weitere Metriken** (S7): Nullgradgrenze, Schneefallgrenze (relativ), Taupunkt, Sonnenstunden, Schneehöhe, Bewölkung u. a. liegen in den Vorlagendaten, haben in S1 aber keinen Leser.
@@ -323,3 +327,4 @@ Farben werden **am Entstehungsort** getestet (Renderer-Ausgabe, `ampel_for`, `th
 - 2026-11-04: Review Tech Lead: AC-1 Kurzkanäle als Hervorhebung, Temperatur-Zuordnung der Migration eindeutig, AC-19 Ausnahmen ehrlich benannt
 - 2026-11-04: v1.1 S1c-Ergänzungen (Schnitt S1c-1…S1c-4 mit Reihenfolge-Gate Migration vor Umschalt-Deploy, AC-23 Migrations-Nachtrag Vergleichsschlüssel, AC-19 (d) Wertebereich-Markierung entfällt, Pfadkorrekturen Alarm/Telegram, `thunder_color` nimmt das aufgelöste Objekt, Highlights unberührt, Temperatur-Token mit Stunde) — Freigabe ausstehend
 - 2026-11-05: v1.2 Nachtrag S1c-2 korrigiert: Vergleichsschlüssel `wind_chill_min_c`/`wind_chill_max_c` statt `wind_chill_min`/`_max`, sieben fehlende Schlüssel ergänzt (`cloud_low_avg_pct`, `snow_depth_cm`, nicht zuordenbar: `wind_direction_deg`, `cloud_mid_avg_pct`, `cloud_high_avg_pct`, `pressure_avg_hpa`, `precip_type_dominant`), Seitenspalte, Vorrang `temp_min_c`, Ratsche gegen Schlüssel-Drift — Freigabe ausstehend
+- 2026-11-05: v1.3 Nachtrag S1c-3: Sperre umfasst Korridor-Zeilen und SMS-Regler, Alarm-Empfindlichkeit bleibt bearbeitbar (S2), Hinweis oben im Reiter und im SMS-Block, Datenerhalt `sms_threshold`/`corridors` — Freigabe ausstehend
