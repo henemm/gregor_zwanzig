@@ -32,6 +32,7 @@ selbst aus `datetime.now()` ableitet; dort wird auf Struktur statt
 Goldstring geprueft.
 """
 from __future__ import annotations
+from app.ampel import resolve_ampel
 
 import http.server
 import inspect
@@ -133,7 +134,7 @@ def _onset_msg(*events: OnsetEvent) -> AlertMessage:
     """`source is not None` routet alle Renderer in den Onset-Zweig."""
     return AlertMessage(
         trip_short="KHW 403", stand_at="17:30", events=tuple(events),
-        source="Radar (DWD)",
+        source="Radar (DWD)", ampel=resolve_ampel(None),
     )
 
 
@@ -399,7 +400,7 @@ def test_ac10_mehr_orte_buendel_traegt_das_ende_des_fuehrenden_ortes(
     with freeze_time(gestellte_uhr):
         msg = to_multi_location_onset_alert_message(
             [("Zermatt", fuehrend), ("Chamonix", zweiter)],
-            tz=timezone.utc, stand_at="10:00",
+            tz=timezone.utc, stand_at="10:00", ampel=resolve_ampel(None),
         )
         _html, plain = render_email(msg)
         jetzt = datetime.now(timezone.utc)
@@ -451,7 +452,7 @@ def test_ac10_ohne_ende_bleibt_das_buendel_unveraendert():
                 source="AROME-FR", is_convective=False,
             )),
         ],
-        tz=timezone.utc, stand_at="10:00",
+        tz=timezone.utc, stand_at="10:00", ampel=resolve_ampel(None),
     )
     _html, plain = render_email(msg)
 

@@ -35,6 +35,7 @@ Verhaltens-Tests dieser Datei SIND die Zusicherungen, gegen die die
 Mutations-Gegenprobe spaeter antritt.
 """
 from __future__ import annotations
+from app.ampel import resolve_ampel
 
 import http.server
 import json
@@ -516,7 +517,7 @@ def test_ac7_message_spanning_two_stages_shows_range_then_list():
         raise AssertionError(
             f"AlertEvent traegt kein additives 'stage_number'-Feld: {exc}"
         ) from exc
-    msg_adjacent = AlertMessage(trip_short="X", stand_at="10:00", events=(e1, e2), source=None)
+    msg_adjacent = AlertMessage(trip_short="X", stand_at="10:00", events=(e1, e2), source=None, ampel=resolve_ampel(None))
     text_adjacent = render_sms(msg_adjacent)
     assert text_adjacent.startswith("S5-6 "), (
         f"AC-7: zwei benachbarte Etappen muessen als Bereich 'S5-6' "
@@ -525,7 +526,7 @@ def test_ac7_message_spanning_two_stages_shows_range_then_list():
 
     e3 = _gust_event(1.0, 2.0, "1", "11:00", stage_number=5)
     e4 = _gust_event(3.0, 4.0, "2", "11:30", stage_number=7)
-    msg_gap = AlertMessage(trip_short="X", stand_at="10:00", events=(e3, e4), source=None)
+    msg_gap = AlertMessage(trip_short="X", stand_at="10:00", events=(e3, e4), source=None, ampel=resolve_ampel(None))
     text_gap = render_sms(msg_gap)
     assert text_gap.startswith("S5,7 "), (
         f"AC-7: zwei NICHT benachbarte Etappen muessen aufgezaehlt werden "
@@ -553,7 +554,7 @@ def test_ac8_missing_stage_on_one_event_suppresses_the_whole_prefix():
     e1_no_stage = _gust_event(1.0, 2.0, "1", "11:00")
     e2_no_stage = _gust_event(3.0, 4.0, "2", "11:30")
     msg_none = AlertMessage(
-        trip_short="X", stand_at="10:00", events=(e1_no_stage, e2_no_stage), source=None,
+        trip_short="X", stand_at="10:00", events=(e1_no_stage, e2_no_stage), source=None, ampel=resolve_ampel(None),
     )
     text_none = render_sms(msg_none)
     assert text_none == BESTAND, (
@@ -570,7 +571,7 @@ def test_ac8_missing_stage_on_one_event_suppresses_the_whole_prefix():
     e2_missing_stage = _gust_event(3.0, 4.0, "2", "11:30")  # bewusst OHNE Etappe
     msg_mixed = AlertMessage(
         trip_short="X", stand_at="10:00",
-        events=(e1_with_stage, e2_missing_stage), source=None,
+        events=(e1_with_stage, e2_missing_stage), source=None, ampel=resolve_ampel(None),
     )
     text_mixed = render_sms(msg_mixed)
     assert text_mixed == BESTAND, (
@@ -583,7 +584,7 @@ def test_ac8_missing_stage_on_one_event_suppresses_the_whole_prefix():
     e1_both = _gust_event(1.0, 2.0, "1", "11:00", stage_number=5)
     e2_both = _gust_event(3.0, 4.0, "2", "11:30", stage_number=6)
     msg_both = AlertMessage(
-        trip_short="X", stand_at="10:00", events=(e1_both, e2_both), source=None,
+        trip_short="X", stand_at="10:00", events=(e1_both, e2_both), source=None, ampel=resolve_ampel(None),
     )
     text_both = render_sms(msg_both)
     assert text_both == f"S5-6 {BESTAND}", (
@@ -609,7 +610,7 @@ def test_ac9_compare_alert_never_carries_a_stage_prefix():
         ("Graz", [_change(new_value=30.0)], _gpx(47.07, 15.44)),
         ("Wien", [_change(new_value=45.0)], _gpx(48.21, 16.37)),
     ]
-    msg = to_multi_point_alert_message(groups, tz=TZ, stand_at="04.08. 08:00")
+    msg = to_multi_point_alert_message(groups, tz=TZ, stand_at="04.08. 08:00", ampel=resolve_ampel(None))
     for e in msg.events:
         assert getattr(e, "stage_number", None) is None, (
             "AC-9 Setup-Kontrolle: der Ortsvergleich-Pfad darf NIE eine "
@@ -628,7 +629,7 @@ def test_ac9_compare_alert_never_carries_a_stage_prefix():
             f"AlertEvent traegt kein additives 'stage_number'-Feld: {exc}"
         ) from exc
     msg_with_stage = AlertMessage(
-        trip_short="X", stand_at="10:00", events=(e_with_stage,), source=None,
+        trip_short="X", stand_at="10:00", events=(e_with_stage,), source=None, ampel=resolve_ampel(None),
     )
     text_with_stage = render_sms(msg_with_stage)
     assert text_with_stage.startswith("S5 "), (
@@ -652,7 +653,7 @@ def test_ac10_prefix_survives_truncation_and_length_budget_holds():
         raise AssertionError(
             f"AlertEvent traegt kein additives 'stage_number'-Feld: {exc}"
         ) from exc
-    msg = AlertMessage(trip_short="X", stand_at="10:00", events=events, source=None)
+    msg = AlertMessage(trip_short="X", stand_at="10:00", events=events, source=None, ampel=resolve_ampel(None))
     limit = 30
     text = render_sms(msg, limit=limit)
 

@@ -17,6 +17,7 @@ Keine Mocks: echte ForecastDataPoint-Reihe durch die echte Renderfunktion
 `_pill_for_metric()` (SSoT fuer die Mail-Pille), kein Netz.
 """
 from __future__ import annotations
+from app.ampel import resolve_ampel
 
 from datetime import datetime, timezone
 from zoneinfo import ZoneInfo
@@ -56,7 +57,7 @@ def test_ac5_1474b_nur_leicht_loest_den_uhrzeit_satz_am_standard_trip_aus():
     Erwaehnungsschwelle (Standard 1.0, SMS-identisch), nicht mehr fest MED."""
     from output.renderers.email.helpers import _pill_for_metric
 
-    result = _pill_for_metric("thunder", {}, _dps_only_low(), tz=TZ)
+    result = _pill_for_metric("thunder", {}, _dps_only_low(), tz=TZ, ampel=resolve_ampel(None))
     assert result is not None, "Erwartet ein (text, tone)-Tupel, erhalten None"
     text, _tone = result
     # #1493 trug das Stufenwort nach ("Gewitter leicht ab HH:00"); #2176 nimmt
@@ -75,7 +76,7 @@ def test_ac3_mittel_loest_den_uhrzeit_satz_aus():
     bleibt fuer MED/HIGH unveraendert."""
     from output.renderers.email.helpers import _pill_for_metric
 
-    result = _pill_for_metric("thunder", {}, _dps_reaching_med(), tz=TZ)
+    result = _pill_for_metric("thunder", {}, _dps_reaching_med(), tz=TZ, ampel=resolve_ampel(None))
     assert result is not None, "Erwartet ein (text, tone)-Tupel, erhalten None"
     text, _tone = result
     # #1493: Stufenwort im Satz (siehe oben).

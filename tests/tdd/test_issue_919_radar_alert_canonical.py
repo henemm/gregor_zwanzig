@@ -20,6 +20,7 @@ KEINE Mocks. Direkte Konstruktion der Dataclasses + echte Renderer-Aufrufe.
 SPEC: docs/specs/modules/issue_919_radar_alert_canonical.md
 """
 from __future__ import annotations
+from app.ampel import resolve_ampel
 
 import os
 
@@ -55,7 +56,7 @@ def _make_onset_msg(*, is_convective: bool, onset_minutes: int,
         stand_at="14:23",
         events=(onset,),
         source=source_label,
-        cooldown_display=cooldown_display,
+        cooldown_display=cooldown_display, ampel=resolve_ampel(None),
     )
 
 
@@ -224,7 +225,7 @@ class TestAC8DeviationRegression:
             trip_short="GR20",
             stand_at="10:00",
             events=(event,),
-            source=None,
+            source=None, ampel=resolve_ampel(None),
         )
 
     def test_ac8_deviation_subject_unveraendert(self):

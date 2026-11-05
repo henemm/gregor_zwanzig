@@ -13,6 +13,7 @@ pytest-Lauf selbst.
 KEINE Mocks — echte Renderer-/Modell-Aufrufe.
 """
 from __future__ import annotations
+from app.ampel import resolve_ampel
 
 
 def _three_thunder_events_trip_path():
@@ -36,7 +37,7 @@ def _three_thunder_events_trip_path():
                      cmp="über", occurred_at="12:00", km_from=8.0, km_to=10.0, segment_id="5")
     e6 = AlertEvent(metric_id="thunder", value_from=30.0, value_to=70.0, threshold=40.0,
                      cmp="über", occurred_at="14:00", km_from=10.0, km_to=12.0, segment_id="6")
-    return AlertMessage(trip_short="KHW 403", stand_at="09:00", events=(e4, e5, e6), source=None)
+    return AlertMessage(trip_short="KHW 403", stand_at="09:00", events=(e4, e5, e6), source=None, ampel=resolve_ampel(None))
 
 
 def _two_same_segment_different_time_events():
@@ -53,7 +54,7 @@ def _two_same_segment_different_time_events():
     e_afternoon = AlertEvent(metric_id="thunder", value_from=30.0, value_to=85.0, threshold=40.0,
                               cmp="über", occurred_at="13:00", km_from=6.0, km_to=8.0, segment_id="4")
     return AlertMessage(trip_short="KHW 403", stand_at="09:00",
-                         events=(e_morning, e_afternoon), source=None)
+                         events=(e_morning, e_afternoon), source=None, ampel=resolve_ampel(None))
 
 
 def _multi_event_data_lines(plain: str) -> list[str]:

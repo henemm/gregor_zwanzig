@@ -22,6 +22,7 @@ NICHT Teil dieser Datei (B2, eigener Workflow): `compare_html.py` (`_sev_*`),
 AC-9 (Golden-Regenerierung).
 """
 from __future__ import annotations
+from app.ampel import resolve_ampel
 
 import re
 from datetime import datetime, timezone
@@ -93,10 +94,10 @@ def test_ac1_trip_cell_pop_45_pct_is_yellow():
     gelb (Katalog-Schwelle ab 30 %) — heute bleibt sie farblos (eigene
     Schwelle erst ab >50 %)."""
     rows = [{"time": "08:00", "pop": 45.0}]
-    html = _render_html_table(rows, friendly_keys=set(), indicator_keys=set())
+    html = _render_html_table(rows, friendly_keys=set(), indicator_keys=set(), ampel=resolve_ampel(None))
     level = _cell_level(html, "Rain%")
 
-    expected = severity_for("rain_probability", 45.0)
+    expected = severity_for("rain_probability", 45.0, ampel=resolve_ampel(None))
     assert expected == "yellow", "Erwartungs-Grundlage: Katalog liefert fuer 45% 'yellow'"
     assert level == "yellow", (
         f"Trip-Zelle 'Rain%' bei 45% zeigt {level!r}, erwartet 'yellow' "
@@ -115,10 +116,10 @@ def test_ac2_outlook_precip_1_5mm_is_yellow():
     Regen-Zelle ('R') gelb (Katalog-Schwelle ab 1 mm) — heute bleibt sie
     farblos (Ausblicks-Schwelle erst ab >=2 mm)."""
     rows = [{"weekday": "Mo", "precip_mm": 1.5}]
-    html = render_outlook_table(rows, show_acc=True)
+    html = render_outlook_table(rows, show_acc=True, ampel=resolve_ampel(None))
     level = _outlook_cell_level(html, col_index=3)  # Spalte 'R'
 
-    expected = severity_for("precipitation", 1.5)
+    expected = severity_for("precipitation", 1.5, ampel=resolve_ampel(None))
     assert expected == "yellow", "Erwartungs-Grundlage: Katalog liefert fuer 1,5mm 'yellow'"
     assert level == "yellow", (
         f"Ausblicks-Zelle 'R' bei 1,5 mm zeigt {level!r}, erwartet 'yellow' "
@@ -137,10 +138,10 @@ def test_ac3_trip_cell_wind_35_kmh_is_yellow():
     (Katalog-Schwelle 30/50/70) — heute zeigt sie orange (eigene, zweistufige
     Schwelle >20/>30 km/h)."""
     rows = [{"time": "08:00", "wind": 35.0}]
-    html = _render_html_table(rows, friendly_keys=set(), indicator_keys=set())
+    html = _render_html_table(rows, friendly_keys=set(), indicator_keys=set(), ampel=resolve_ampel(None))
     level = _cell_level(html, "Wind")
 
-    expected = severity_for("wind", 35.0)
+    expected = severity_for("wind", 35.0, ampel=resolve_ampel(None))
     assert expected == "yellow", "Erwartungs-Grundlage: Katalog liefert fuer 35 km/h 'yellow'"
     assert level == "yellow", (
         f"Trip-Zelle 'Wind' bei 35 km/h zeigt {level!r}, erwartet 'yellow' "
@@ -161,10 +162,10 @@ def test_ac4_trip_cell_visibility_1500m_already_yellow():
     ACs (eigene Schwelle <3000 m -> orange) ist von B2 zu beheben, nicht Teil
     dieser Datei."""
     rows = [{"time": "08:00", "visibility": 1500.0}]
-    html = _render_html_table(rows, friendly_keys=set(), indicator_keys=set())
+    html = _render_html_table(rows, friendly_keys=set(), indicator_keys=set(), ampel=resolve_ampel(None))
     level = _cell_level(html, "Visib")
 
-    expected = severity_for("visibility", 1500.0)
+    expected = severity_for("visibility", 1500.0, ampel=resolve_ampel(None))
     assert expected == "yellow", "Erwartungs-Grundlage: Katalog liefert fuer 1500 m 'yellow'"
     assert level == "yellow", (
         f"Trip-Zelle 'Visib' bei 1500 m zeigt {level!r}, erwartet 'yellow'. "
@@ -183,15 +184,15 @@ def test_ac5_temperature_and_wind_chill_pill_32c_is_orange():
     `_PILL_NEUTRAL_TONE` (Kachel heute in jedem Fall neutral)."""
     dp = _dp(t2m_c=32.0, wind_chill_c=32.0)
 
-    pill_temp = _pill_for_metric("temperature", {}, [dp], tz=TZ)
-    pill_wc = _pill_for_metric("wind_chill", {}, [dp], tz=TZ)
+    pill_temp = _pill_for_metric("temperature", {}, [dp], tz=TZ, ampel=resolve_ampel(None))
+    pill_wc = _pill_for_metric("wind_chill", {}, [dp], tz=TZ, ampel=resolve_ampel(None))
 
     assert pill_temp is not None
     assert pill_wc is not None
     text_t, tone_t = pill_temp
     text_wc, tone_wc = pill_wc
 
-    expected = severity_for("temperature", 32.0)
+    expected = severity_for("temperature", 32.0, ampel=resolve_ampel(None))
     assert expected == "orange", "Erwartungs-Grundlage: Katalog liefert fuer 32 Grad 'orange'"
     expected_tone = ampel_stage_tone(32.0, get_metric("temperature").display_thresholds)
     assert expected_tone == "ampel_orange"
@@ -224,11 +225,11 @@ def test_ac6_outlook_precip_matches_trip_cell_same_value():
     heute zeigt die Trip-Zelle bereits gelb, der Ausblick aber farblos
     (unterschiedliche Schwellenquellen)."""
     trip_html = _render_html_table(
-        [{"time": "08:00", "precip": 1.5}], friendly_keys=set(), indicator_keys=set(),
+        [{"time": "08:00", "precip": 1.5}], friendly_keys=set(), indicator_keys=set(), ampel=resolve_ampel(None),
     )
     trip_level = _cell_level(trip_html, "Rain")
 
-    outlook_html = render_outlook_table([{"weekday": "Mo", "precip_mm": 1.5}], show_acc=True)
+    outlook_html = render_outlook_table([{"weekday": "Mo", "precip_mm": 1.5}], show_acc=True, ampel=resolve_ampel(None))
     outlook_level = _outlook_cell_level(outlook_html, col_index=3)
 
     assert trip_level == "yellow", f"Erwartungs-Grundlage: Trip-Zelle ist bereits 'yellow', war {trip_level!r}"
@@ -248,9 +249,9 @@ def test_ac7_thunder_row_risk_unchanged():
     der hartcodierten `thunder>20`-Schwelle) / When `_row_risk` berechnet
     wird / Then bleibt das Ergebnis 'risk' — Gewitter ist ausdruecklich NICHT
     Teil dieser Umstellung."""
-    assert _row_risk({"thunder": 25}) == "risk"
-    assert _row_risk({"thunder": 5}) == "watch"
-    assert _row_risk({}) == "ok"
+    assert _row_risk({"thunder": 25}, ampel=resolve_ampel(None)) == "risk"
+    assert _row_risk({"thunder": 5}, ampel=resolve_ampel(None)) == "watch"
+    assert _row_risk({}, ampel=resolve_ampel(None)) == "ok"
 
 
 def test_ac7_thunder_cell_tint_follows_level():
@@ -275,7 +276,7 @@ def test_ac7_thunder_cell_tint_follows_level():
     """
     def _thunder_level(value) -> str:
         rows = [{"time": "08:00", "thunder": value}]
-        html = _render_html_table(rows, friendly_keys=set(), indicator_keys=set())
+        html = _render_html_table(rows, friendly_keys=set(), indicator_keys=set(), ampel=resolve_ampel(None))
         return _cell_level(html, "Thdr")
 
     assert _thunder_level(ThunderLevel.HIGH) == "red"
@@ -297,16 +298,16 @@ def test_ac8_dewpoint_and_sunshine_pill_stay_neutral():
     keine `display_thresholds` im Katalog / When die Klartext-Kachel dafuer
     gerendert wird / Then bleibt sie `_PILL_NEUTRAL_TONE`, obwohl ein
     gueltiger Messwert vorliegt — sie wird NIE gruen/eingefaerbt."""
-    assert severity_for("dewpoint", 12.0) is None
-    assert severity_for("sunshine", 3.0) is None
+    assert severity_for("dewpoint", 12.0, ampel=resolve_ampel(None)) is None
+    assert severity_for("sunshine", 3.0, ampel=resolve_ampel(None)) is None
 
     dp = _dp(dewpoint_c=12.0)
-    pill_dew = _pill_for_metric("dewpoint", {}, [dp], tz=TZ)
+    pill_dew = _pill_for_metric("dewpoint", {}, [dp], tz=TZ, ampel=resolve_ampel(None))
     assert pill_dew is not None
     assert pill_dew[1] == _PILL_NEUTRAL_TONE
 
     dp_sun = _dp(dni_wm2=800.0, cloud_total_pct=10)
-    pill_sun = _pill_for_metric("sunshine", {}, [dp_sun], tz=TZ)
+    pill_sun = _pill_for_metric("sunshine", {}, [dp_sun], tz=TZ, ampel=resolve_ampel(None))
     assert pill_sun is not None, "Erwartungs-Grundlage: DNI-Wert erzeugt eine Sonnenschein-Kachel"
     assert pill_sun[1] == _PILL_NEUTRAL_TONE
 
@@ -317,7 +318,7 @@ def test_sunshine_pill_zeigt_stunden_nicht_minuten():
     Text Stunden mit einer Nachkommastelle ('X.Xh'), NICHT Minuten ('X min')
     — der Katalog definiert unit='h' mit decimals=1 fuer 'sunshine'."""
     dp_sun = _dp(dni_wm2=800.0, cloud_total_pct=10)
-    pill_sun = _pill_for_metric("sunshine", {}, [dp_sun], tz=TZ)
+    pill_sun = _pill_for_metric("sunshine", {}, [dp_sun], tz=TZ, ampel=resolve_ampel(None))
     assert pill_sun is not None, "Erwartungs-Grundlage: DNI-Wert erzeugt eine Sonnenschein-Kachel"
     text = pill_sun[0]
     assert "min" not in text, f"Zeigt noch Minuten: {text!r}"
@@ -334,8 +335,8 @@ def test_ac10_row_risk_wind_25_becomes_unauffaellig():
     Risiko-Punkt am Zeilenende berechnet wird / Then zeigt er kuenftig
     'ok' (unauffaellig) statt bisher 'watch' (Achtung) — die heutige
     Schwelle `wind>20` ist strenger als die Katalog-Schwelle (ab 30 km/h)."""
-    assert severity_for("wind", 25.0) == "green", "Erwartungs-Grundlage: 25 km/h liegt unter der Katalog-Gelbschwelle (30)"
-    result = _row_risk({"wind": 25})
+    assert severity_for("wind", 25.0, ampel=resolve_ampel(None)) == "green", "Erwartungs-Grundlage: 25 km/h liegt unter der Katalog-Gelbschwelle (30)"
+    result = _row_risk({"wind": 25}, ampel=resolve_ampel(None))
     assert result == "ok", (
         f"_row_risk({{'wind': 25}}) liefert {result!r}, erwartet 'ok' "
         f"(Katalog-Schwelle Wind ab 30 km/h). Heutige hartcodierte "
@@ -350,8 +351,8 @@ def test_ac1_row_risk_gust_30_becomes_yellow_not_orange():
     gelb) / When der Risiko-Punkt am Zeilenende berechnet wird / Then zeigt
     er den Gelb-Level -- NICHT mehr 'watch'/Orange, wie es die inzwischen
     abgeloeste 3-stufige Kollaps-Regel (gelb+orange -> watch) lieferte."""
-    assert severity_for("gust", 30.0) == "yellow", "Erwartungs-Grundlage: 30 km/h Boeen erreicht die Katalog-Gelbschwelle"
-    result = _row_risk({"gust": 30})
+    assert severity_for("gust", 30.0, ampel=resolve_ampel(None)) == "yellow", "Erwartungs-Grundlage: 30 km/h Boeen erreicht die Katalog-Gelbschwelle"
+    result = _row_risk({"gust": 30}, ampel=resolve_ampel(None))
     assert result == "yellow", (
         f"_row_risk({{'gust': 30}}) liefert {result!r}, erwartet 'yellow' "
         f"(vorher 'watch'/Orange) -- echte 4-Stufigkeit statt Kollaps von "

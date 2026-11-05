@@ -30,6 +30,7 @@ kein Verhalten wird durch `Mock()`/`patch()` vorgetaeuscht. Die Uhr steht
 per `freeze_time`.
 """
 from __future__ import annotations
+from app.ampel import resolve_ampel
 
 import inspect
 import re
@@ -112,7 +113,7 @@ def test_ac16_guete_zeile_kippt_am_gepatchten_grenzwert_nicht_am_alten(monkeypat
             is_convective=False,
         )
         msg = to_multi_location_onset_alert_message(
-            [("Sillian", nc)], tz=_TZ, stand_at="17:55",
+            [("Sillian", nc)], tz=_TZ, stand_at="17:55", ampel=resolve_ampel(None),
         )
         _html, plain = render_email(msg)
         return plain

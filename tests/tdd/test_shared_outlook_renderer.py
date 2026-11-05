@@ -15,6 +15,7 @@ SPEC: docs/specs/modules/epic_1301_b4_compare_outlook.md AC-1, AC-2, AC-3, AC-6
 KONTEXT: docs/context/epic-1301-b4-ausblick.md
 """
 from __future__ import annotations
+from app.ampel import resolve_ampel
 
 from datetime import datetime, timezone
 from zoneinfo import ZoneInfo
@@ -147,7 +148,7 @@ def test_show_acc_true_html_byte_identical_to_trip_render():
     html = _render_html(rows)
     table_before = _extract_outlook_table_html(html)
 
-    table_direct = render_outlook_table(rows, show_acc=True)
+    table_direct = render_outlook_table(rows, show_acc=True, ampel=resolve_ampel(None))
 
     assert table_direct == table_before, (
         "render_outlook_table(show_acc=True) muss byte-identisch zur bisherigen "
@@ -173,8 +174,8 @@ def test_show_acc_false_omits_acc_column():
         _trend_stage("Mo", "A", conf=82, temp_lo=8, temp_hi=20),
         _trend_stage("Di", "B", conf=55, temp_lo=10, temp_hi=18),
     ]
-    html_true = render_outlook_table(rows, show_acc=True)
-    html_false = render_outlook_table(rows, show_acc=False)
+    html_true = render_outlook_table(rows, show_acc=True, ampel=resolve_ampel(None))
+    html_false = render_outlook_table(rows, show_acc=False, ampel=resolve_ampel(None))
 
     soup_true = BeautifulSoup(html_true, "html.parser")
     soup_false = BeautifulSoup(html_false, "html.parser")

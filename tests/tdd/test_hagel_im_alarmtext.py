@@ -25,6 +25,7 @@ Geprueft wird am GERENDERTEN Text, der erwartete Wortlaut kommt aus der
 einzigen Wortlautquelle `metric_format.format_hail_note(True)`.
 """
 from __future__ import annotations
+from app.ampel import resolve_ampel
 
 import sys
 from datetime import datetime, timedelta, timezone
@@ -135,7 +136,7 @@ def stufen_aenderungsalarm(spitzen_code: int):
         f"Fixture-Fehler: genau eine Gewitter-Stufenaenderung erwartet, {changes!r}"
     )
     return to_alert_message(
-        changes, [frisch], "Test-Trip", tz=ALERT_TZ, stand_at="10:00",
+        changes, [frisch], "Test-Trip", tz=ALERT_TZ, stand_at="10:00", ampel=resolve_ampel(None),
     )
 
 

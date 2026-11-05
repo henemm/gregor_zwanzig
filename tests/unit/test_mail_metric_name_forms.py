@@ -35,6 +35,7 @@ verstellen und schauen, ob er in der Mail ankommt).
 SPEC: docs/specs/modules/fix_1453_namensformen.md (AC-1..AC-5, AC-8)
 """
 from __future__ import annotations
+from app.ampel import resolve_ampel
 
 import dataclasses
 import re
@@ -51,9 +52,12 @@ from app.user import ComparisonResult, LocationResult, SavedLocation
 from output.renderers.compare_metric_ids import resolve_enabled_metrics
 from output.renderers.comparison import render_comparison_text
 from output.renderers.email.compare_html import (
-    HOUR_METRICS, derive_row_labels, render_compare_html,
+    _hour_zeilen, derive_row_labels, render_compare_html,
 )
 from output.renderers.email.html import _render_html_table
+
+# Issue #2792 S1c-1: Struktur der Stundenspalten (ohne gebundene Ampel).
+HOUR_METRICS = _hour_zeilen()
 
 TARGET_DATE = date(2026, 7, 8)
 
@@ -268,7 +272,7 @@ def test_trip_hour_table_keeps_the_english_short_forms():
     Der Trip-Pfad ist vollstaendig getrennt (``helpers.visible_cols`` ->
     ``metric_catalog.get_col_defs``), liest aber dieselbe Registerspalte -- er
     muss von der Umstellung der Vergleichs-Uebersicht unberuehrt bleiben."""
-    html = _render_html_table(_trip_rows(), friendly_keys=set())
+    html = _render_html_table(_trip_rows(), friendly_keys=set(), ampel=resolve_ampel(None))
     header = _trip_hour_header(html)
 
     assert header, f"Keine Spaltenkoepfe in der Trip-Stundentabelle: {html[:200]}"
@@ -315,7 +319,7 @@ def test_compare_hour_table_shows_dew_and_press():
 def test_trip_hour_table_shows_dew_and_press():
     """AC-2 (zweiter Mail-Typ): dieselben zwei Spalten in der Trip-Mail. Das
     ist gewollt -- ein schlechtes Kuerzel ist in beiden Mails schlecht."""
-    header = _trip_hour_header(_render_html_table(_trip_rows(), friendly_keys=set()))
+    header = _trip_hour_header(_render_html_table(_trip_rows(), friendly_keys=set(), ampel=resolve_ampel(None)))
 
     assert "Dew" in header and "Press" in header, (
         f"Trip-Stundenkopf zeigt nicht 'Dew'/'Press': {header}"

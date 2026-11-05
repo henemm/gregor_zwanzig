@@ -18,6 +18,7 @@ diesen Schluesselworten schlaegt mit `TypeError` fehl -- das IST der
 RED-Zustand.
 """
 from __future__ import annotations
+from app.ampel import resolve_ampel
 
 from datetime import datetime, timezone
 
@@ -116,7 +117,7 @@ def test_ac15_alertevent_traegt_das_flag_aus_der_echten_projektion():
         threshold=20.0, severity=ChangeSeverity.MODERATE, direction="increase",
         segment_id="3", occurred_at=datetime(2026, 7, 1, 14, 0, tzinfo=UTC),
     )
-    msg = to_alert_message([change], [swd], "TDD-AC15", tz=TZ_VIENNA, stand_at="10:00")
+    msg = to_alert_message([change], [swd], "TDD-AC15", tz=TZ_VIENNA, stand_at="10:00", ampel=resolve_ampel(None))
 
     assert len(msg.events) == 1, f"Erwartete ein Event, erhielt: {msg.events!r}"
     event = msg.events[0]
@@ -170,7 +171,7 @@ def test_ac15_onsetshiftevent_traegt_das_flag_aus_der_echten_projektion():
         direction="increase", segment_id="3",
         occurred_at=datetime(2026, 7, 1, 14, 0, tzinfo=UTC),
     )
-    msg = to_alert_message([change], [swd], "TDD-AC15", tz=TZ_VIENNA, stand_at="10:00")
+    msg = to_alert_message([change], [swd], "TDD-AC15", tz=TZ_VIENNA, stand_at="10:00", ampel=resolve_ampel(None))
 
     assert len(msg.onset_shift_events) == 1, (
         f"Erwartete ein OnsetShiftEvent, erhielt: {msg.onset_shift_events!r}"
@@ -200,7 +201,7 @@ def test_ac15_flag_erreicht_am_ende_auch_den_renderer():
         raise AssertionError(
             f"AlertEvent traegt kein additives 'km_measured'-Feld: {exc}"
         ) from exc
-    msg = AlertMessage(trip_short="TDD", stand_at="10:00", events=(event,), source=None)
+    msg = AlertMessage(trip_short="TDD", stand_at="10:00", events=(event,), source=None, ampel=resolve_ampel(None))
 
     sms = render_sms(msg)
     assert "km 12-20" in sms, f"Flag wirkt nicht am Renderer: {sms!r}"

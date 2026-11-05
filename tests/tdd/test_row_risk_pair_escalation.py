@@ -24,6 +24,7 @@ SPEC: docs/specs/modules/fix_1927_risk_dot_kombi_regel.md AC-2, AC-6
 KONTEXT: docs/context/fix-1927-risk-dot-kombi-regel.md
 """
 from __future__ import annotations
+from app.ampel import resolve_ampel
 
 from output.metric_format import severity_for
 from src.output.renderers.email.html import _row_risk
@@ -41,13 +42,13 @@ def test_ac2_precip_and_temp_both_yellow_escalates_to_orange():
     (ImportError vor Implementierung). Dieser Test bleibt als
     Integrations-/Regressionsschutz erhalten -- er wird rot, sobald S1 (echte
     4-Stufigkeit) implementiert ist, S2 (Paar-Eskalation) aber fehlt."""
-    assert severity_for("precipitation", 1.0) == "yellow", (
+    assert severity_for("precipitation", 1.0, ampel=resolve_ampel(None)) == "yellow", (
         "Erwartungs-Grundlage: 1.0mm erreicht die Katalog-Gelbschwelle"
     )
-    assert severity_for("temperature", 28.0) == "yellow", (
+    assert severity_for("temperature", 28.0, ampel=resolve_ampel(None)) == "yellow", (
         "Erwartungs-Grundlage: 28.0°C erreicht die Katalog-Gelbschwelle"
     )
-    result = _row_risk({"precip": 1.0, "temp": 28.0})
+    result = _row_risk({"precip": 1.0, "temp": 28.0}, ampel=resolve_ampel(None))
     assert result == "watch", (
         f"_row_risk({{'precip': 1.0, 'temp': 28.0}}) liefert {result!r}, "
         f"erwartet 'watch' (=Orange, Paar-Eskalation Vereisungsgefahr, "
@@ -58,7 +59,7 @@ def test_ac2_precip_and_temp_both_yellow_escalates_to_orange():
 def test_ac6_precip_yellow_alone_stays_yellow_no_partner():
     """AC-6: nur precip gelb, kein temp-Wert in der Zeile (kein Partner) ->
     keine Eskalation, Ergebnis bleibt Gelb."""
-    result = _row_risk({"precip": 1.0})
+    result = _row_risk({"precip": 1.0}, ampel=resolve_ampel(None))
     assert result == "yellow", (
         f"_row_risk({{'precip': 1.0}}) liefert {result!r}, erwartet 'yellow' "
         f"-- kein temp-Partner vorhanden, keine Eskalation (Spec AC-6)."
@@ -68,10 +69,10 @@ def test_ac6_precip_yellow_alone_stays_yellow_no_partner():
 def test_ac6_precip_yellow_with_green_temp_stays_yellow():
     """AC-6: precip gelb, temp gruen (Partner vorhanden, aber nicht gelb) ->
     keine Eskalation."""
-    assert severity_for("temperature", 10.0) == "green", (
+    assert severity_for("temperature", 10.0, ampel=resolve_ampel(None)) == "green", (
         "Erwartungs-Grundlage: 10.0°C liegt unter jeder Temp-Schwelle"
     )
-    result = _row_risk({"precip": 1.0, "temp": 10.0})
+    result = _row_risk({"precip": 1.0, "temp": 10.0}, ampel=resolve_ampel(None))
     assert result == "yellow", (
         f"_row_risk({{'precip': 1.0, 'temp': 10.0}}) liefert {result!r}, "
         f"erwartet 'yellow' -- Partner temp ist gruen, keine Eskalation "
@@ -85,7 +86,7 @@ def test_ac8_red_gust_with_yellow_pair_stays_risk_not_downgraded():
     temp=28.0, beide auf Gelb-Schwelle) darf NICHT auf 'watch' heruntergestuft
     werden -- der Guard `if worst == "yellow":` um die Paar-Eskalation muss
     das verhindern."""
-    result = _row_risk({"gust": 100, "precip": 1.0, "temp": 28.0})
+    result = _row_risk({"gust": 100, "precip": 1.0, "temp": 28.0}, ampel=resolve_ampel(None))
     assert result == "risk", (
         f"_row_risk mit rotem gust + gelbem Paar (precip+temp) liefert "
         f"{result!r}, erwartet 'risk' -- eine rote Zeile darf durch ein "

@@ -12,6 +12,7 @@ umstellung; deshalb ruft der Builder bei ``lang="de"`` die Funktionen OHNE
 ``uv run python -m tests.helpers.alarm_fixture``.
 """
 from __future__ import annotations
+from app.ampel import resolve_ampel
 
 from datetime import datetime, timezone
 from pathlib import Path
@@ -72,7 +73,7 @@ def _abweichung_wind(lang):
 
     return AlertMessage(
         trip_short="GR20 Golden", stand_at="06:00", events=(_gust(),),
-        reference_at=_referenz(lang),
+        reference_at=_referenz(lang), ampel=resolve_ampel(None),
     )
 
 
@@ -116,7 +117,7 @@ def _abweichung_mehrfach(lang):
     return AlertMessage(
         trip_short="GR20 Golden", stand_at="06:00",
         events=(_gust(), regen, schnee, temp, gewitter),
-        onset_shift_events=(_verschiebung(),),
+        onset_shift_events=(_verschiebung(),), ampel=resolve_ampel(None),
     )
 
 
@@ -150,7 +151,7 @@ def _regen_einzel(lang):
     )
     return AlertMessage(
         trip_short="GR20 Golden", stand_at="06:00", events=(e,),
-        source="Radar (DWD)", cooldown_display=_cooldown_trip(120, lang),
+        source="Radar (DWD)", cooldown_display=_cooldown_trip(120, lang), ampel=resolve_ampel(None),
     )
 
 
@@ -165,7 +166,7 @@ def _regen_spaet(lang):
     )
     return AlertMessage(
         trip_short="GR20 Golden", stand_at="06:00", events=(e,),
-        source="Radar (DWD)", cooldown_display=_cooldown_trip(60, lang),
+        source="Radar (DWD)", cooldown_display=_cooldown_trip(60, lang), ampel=resolve_ampel(None),
     )
 
 
@@ -180,7 +181,7 @@ def _regen_buendel(lang):
                event_end_time="08:10", event_ongoing_beyond_horizon=True)
     return AlertMessage(
         trip_short="Innsbruck, Lienz", stand_at="06:00", events=(a, b),
-        source=COMPARE_RADAR_SOURCE, cooldown_display=_cooldown_vergleich(90, lang),
+        source=COMPARE_RADAR_SOURCE, cooldown_display=_cooldown_vergleich(90, lang), ampel=resolve_ampel(None),
     )
 
 
@@ -196,7 +197,7 @@ def _nachtrag(lang):
     return AlertMessage(
         trip_short="GR20 Golden", stand_at="06:00", events=(_onset(),),
         source="Radar (DWD)", cooldown_display=_cooldown_trip(150, lang),
-        addendum_reference=bezug,
+        addendum_reference=bezug, ampel=resolve_ampel(None),
     )
 
 

@@ -17,6 +17,7 @@ Mock-frei: echte Dataclass-Konstruktion, echte Renderer-Aufrufe.
 SPEC: docs/specs/modules/fix_2046_onset_menge.md, AC-8
 """
 from __future__ import annotations
+from app.ampel import resolve_ampel
 
 import inspect
 
@@ -32,7 +33,7 @@ def _onset_msg(*, onset_precip_mm: float | None) -> AlertMessage:
     )
     return AlertMessage(
         trip_short="GR20", stand_at="17:42", events=(onset,),
-        source="Radar (DWD)", cooldown_display="2 Stunden",
+        source="Radar (DWD)", cooldown_display="2 Stunden", ampel=resolve_ampel(None),
     )
 
 

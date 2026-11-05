@@ -37,8 +37,11 @@ from app.user import ComparisonResult, LocationResult, SavedLocation
 from output.renderers.compare_metric_ids import resolve_enabled_metrics
 from output.renderers.comparison import render_comparison_text
 from output.renderers.email.compare_html import (
-    CV2_METRICS, HOUR_METRICS, render_compare_html,
+    CV2_ZEILEN as CV2_METRICS, _hour_zeilen, render_compare_html,
 )
+
+# Issue #2792 S1c-1: Struktur der Stundenspalten (ohne gebundene Ampel).
+HOUR_METRICS = _hour_zeilen()
 
 TARGET_DATE = date(2026, 7, 8)
 

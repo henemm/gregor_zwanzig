@@ -16,6 +16,7 @@ das Trip-Briefing liefern. Dieser Test ist bewusst ROT gegen den
 unveraenderten compare_html.py-Code (siehe RED-Artefakt) und wird erst
 nach der Migration in Scheibe 2 gruen.
 """
+from app.ampel import resolve_ampel
 from src.output.renderers.email.compare_html import _sev_wind
 from src.output.renderers.email.helpers import ampel_level
 
@@ -23,12 +24,12 @@ from src.output.renderers.email.helpers import ampel_level
 def test_wind_45_kmh_matches_briefing_ampel_after_migration():
     """AC-3: Compare und Trip-Briefing zeigen fuer denselben Wind-Wert
     dieselbe Ampel-Farbe."""
-    briefing_level = ampel_level("wind", 45.0)
+    briefing_level = ampel_level("wind", 45.0, ampel=resolve_ampel(None))
     assert briefing_level == "yellow", (
         "Erwartungs-Grundlage: Katalog-Schwellen liefern fuer 45 km/h 'yellow'"
     )
 
-    compare_sev = _sev_wind(45.0)
+    compare_sev = _sev_wind(45.0, ampel=resolve_ampel(None))
     # Kanonisches Vokabular <-> Compare-lokales Vokabular: yellow<->caution.
     # Vor der Migration liefert _sev_wind(45.0) "danger" (hartcodierte
     # Schwelle >40) -- das ist der zu behebende Bug.

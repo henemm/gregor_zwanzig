@@ -41,6 +41,7 @@ String-Verhaltensnachweis. Das ist dieselbe Werkzeug-Klasse wie
 bleibt unveraendert scharf.
 """
 from __future__ import annotations
+from app.ampel import resolve_ampel
 
 import ast
 import difflib
@@ -85,7 +86,7 @@ def _current_grid() -> str:
                 except Exception as exc:  # noqa: BLE001 - Verhalten aufzeichnen
                     parts.append(f"<{type(exc).__name__}>")
             try:
-                sev = severity_for(metric.id, value)
+                sev = severity_for(metric.id, value, ampel=resolve_ampel(None))
             except Exception as exc:  # noqa: BLE001
                 sev = f"<{type(exc).__name__}>"
             zeilen.append(f"{metric.id}\t{value!r}\t{parts[0]}\t{parts[1]}\t{sev}")

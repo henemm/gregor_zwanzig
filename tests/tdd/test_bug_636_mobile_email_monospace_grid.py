@@ -26,6 +26,7 @@ Vertrag (testbar, ohne Mocks gegen den echten Renderer):
 Spec: docs/specs/fast/fix-mobile-grid-decouple-ampel.md
 """
 from __future__ import annotations
+from app.ampel import resolve_ampel
 
 import re
 import sys
@@ -107,7 +108,7 @@ class TestMobileTableGridAlignment:
         result = _render_mobile_compact_rows(
             _ROWS_VARYING_WIDTHS,
             friendly_keys=set(),
-            include_header=True,
+            include_header=True, ampel=resolve_ampel(None),
         )
         rows = _table_rows(result)
         assert len(rows) >= 4, (
@@ -137,7 +138,7 @@ class TestMobileTableGridAlignment:
         result = _render_mobile_compact_rows(
             _ROWS_VARYING_WIDTHS,
             friendly_keys=set(),
-            include_header=True,
+            include_header=True, ampel=resolve_ampel(None),
         )
         rows = _table_rows(result)
         row_08 = next((r for r in rows if ">08<" in r), None)
@@ -170,7 +171,7 @@ class TestMobileTableGridAlignment:
         result = _render_mobile_compact_rows(
             _ROWS_VARYING_WIDTHS,
             friendly_keys=set(),
-            include_header=True,
+            include_header=True, ampel=resolve_ampel(None),
         )
         assert "overflow-x" in result, (
             "FEHLER: Kein horizontal scrollbarer Container (overflow-x) im "
@@ -193,7 +194,7 @@ class TestMobileTableGridAlignment:
         result = _render_mobile_compact_rows(
             _ROWS_VARYING_WIDTHS,
             friendly_keys=set(),
-            include_header=True,
+            include_header=True, ampel=resolve_ampel(None),
         )
         rows = _table_rows(result)
         assert rows, "Kein Output"
@@ -228,7 +229,7 @@ class TestDesktopTableUnchanged:
 
         result = _render_html_table(
             _ROWS_VARYING_WIDTHS,
-            friendly_keys=set(),
+            friendly_keys=set(), ampel=resolve_ampel(None),
         )
         assert 'data-table="resp"' in result, (
             f"FEHLER: Desktop-Tabelle hat keinen data-table=\"resp\"-Marker mehr: {result[:300]!r}"

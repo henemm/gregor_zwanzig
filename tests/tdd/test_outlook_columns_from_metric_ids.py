@@ -22,6 +22,7 @@ Beschriftung SEINER Groesse steht.
 Kern-Schicht: keine Mocks, kein Netz. Pfadregel #1409.
 """
 from __future__ import annotations
+from app.ampel import resolve_ampel
 
 import json
 import logging
@@ -93,7 +94,7 @@ def zuordnung() -> dict[str, str]:
 
     zeile = build_outlook_row(_summary(), points=[], weekday="Mo", tz=_UTC,
                               metrics=AUSWAHL)
-    html = render_outlook_table([zeile], show_acc=False, metrics=AUSWAHL)
+    html = render_outlook_table([zeile], show_acc=False, metrics=AUSWAHL, ampel=resolve_ampel(None))
 
     kopf = [re.sub(r"<[^>]+>", "", t).strip()
             for t in re.findall(r"<th[^>]*>(.*?)</th>", html, re.DOTALL)]

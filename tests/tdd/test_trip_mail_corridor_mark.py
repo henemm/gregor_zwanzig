@@ -12,6 +12,7 @@ Match-Quelle, geteilt mit dem Ortsvergleich ueber
 SPEC: docs/specs/modules/fix_1425_trip_wertebereiche_wirkung.md
 """
 from __future__ import annotations
+from app.ampel import resolve_ampel
 
 from datetime import datetime, timezone
 from zoneinfo import ZoneInfo
@@ -72,7 +73,7 @@ class TestTripHourTableCorridorMark:
 
         rows = [{"time": "08:00", "temp": 5.0}, {"time": "09:00", "temp": 25.0}]
         marks = {"temp": [Corridor(metric="temperature_max", range=[None, 20], mark=True)]}
-        html = _render_html_table(rows, friendly_keys=set(), indicator_keys=set(), marks=marks)
+        html = _render_html_table(rows, friendly_keys=set(), indicator_keys=set(), marks=marks, ampel=resolve_ampel(None))
 
         assert _MARK in _tr_containing(html, "08:00"), "5.0 liegt innerhalb -- muss markiert sein"
         assert _MARK not in _tr_containing(html, "09:00"), "25.0 liegt ausserhalb -- darf nicht markiert sein"
@@ -89,7 +90,7 @@ class TestTripHourTableCorridorMark:
         rows = [{"time": "08:00", "temp": 5.0}]
         corridors = [Corridor(metric="temperature_max", range=[None, 20], notify=True, mark=False)]
         marks = mark_lookup_multi(corridors, TRIP_CORRIDOR_METRIC_TO_COL_KEY)
-        html = _render_html_table(rows, friendly_keys=set(), indicator_keys=set(), marks=marks)
+        html = _render_html_table(rows, friendly_keys=set(), indicator_keys=set(), marks=marks, ampel=resolve_ampel(None))
 
         assert _MARK not in html, "mark=False (notify-only) darf keine Markierung erzeugen"
 
@@ -104,7 +105,7 @@ class TestTripHourTableCorridorMark:
             {"time": "09:00", "thunder": ThunderLevel.HIGH},
         ]
         marks = {"thunder": [Corridor(metric="thunder_level", range=[None, 0], mark=True)]}
-        html = _render_html_table(rows, friendly_keys=set(), indicator_keys=set(), marks=marks)
+        html = _render_html_table(rows, friendly_keys=set(), indicator_keys=set(), marks=marks, ampel=resolve_ampel(None))
 
         assert _MARK in _tr_containing(html, "08:00"), "NONE (Ordinal 0) muss markiert sein"
         assert _MARK not in _tr_containing(html, "09:00"), "HIGH (Ordinal 2) darf nicht markiert sein"
@@ -120,7 +121,7 @@ class TestTripHourTableCorridorMark:
 
         rows = [{"time": "08:00", "thunder": ThunderLevel.HIGH}]
         marks = {"thunder": [Corridor(metric="thunder_level", range=[None, 40], mark=True)]}
-        html = _render_html_table(rows, friendly_keys=set(), indicator_keys=set(), marks=marks)
+        html = _render_html_table(rows, friendly_keys=set(), indicator_keys=set(), marks=marks, ampel=resolve_ampel(None))
 
         assert _MARK in html, (
             "Dokumentierter Ist-Zustand: Ordinal 2 <= Prozent-Schwelle 40 -- "

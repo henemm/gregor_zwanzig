@@ -16,6 +16,7 @@ Mock-frei: echte `OnsetEvent`/`RainZone`/`AlertMessage`-Objekte durch den
 echten Renderer, feste Zeitangaben, keine Wanduhr.
 """
 from __future__ import annotations
+from app.ampel import resolve_ampel
 
 import inspect
 from pathlib import Path
@@ -48,7 +49,7 @@ def _onset_event(**overrides) -> OnsetEvent:
 def _onset_msg(*events: OnsetEvent) -> AlertMessage:
     return AlertMessage(
         trip_short="KHW 403", stand_at="14:35", events=tuple(events),
-        source="Radar (DWD)",
+        source="Radar (DWD)", ampel=resolve_ampel(None),
     )
 
 
@@ -250,7 +251,7 @@ def _extremfall_msg(*zonen: RainZone) -> AlertMessage:
     )
     return AlertMessage(
         trip_short="Alpen", stand_at="17:20", events=(event,),
-        source="Radar (DWD)",
+        source="Radar (DWD)", ampel=resolve_ampel(None),
     )
 
 

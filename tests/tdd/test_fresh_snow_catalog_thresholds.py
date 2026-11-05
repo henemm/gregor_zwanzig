@@ -16,12 +16,13 @@ SPEC: docs/specs/modules/fix_1927_risk_dot_kombi_regel.md (v1.1) AC-5
 KONTEXT: docs/context/fix-1927-risk-dot-kombi-regel.md
 """
 from __future__ import annotations
+from app.ampel import resolve_ampel
 
 from output.metric_format import severity_for
 
 
 def test_fresh_snow_10cm_is_yellow():
-    result = severity_for("fresh_snow", 10.0)
+    result = severity_for("fresh_snow", 10.0, ampel=resolve_ampel(None))
     assert result == "yellow", (
         f"severity_for('fresh_snow', 10.0) liefert {result!r}, erwartet "
         f"'yellow' (SLF/EAWS-Gelbschwelle 10 cm/24h, Spec v1.1 AC-5)."
@@ -29,7 +30,7 @@ def test_fresh_snow_10cm_is_yellow():
 
 
 def test_fresh_snow_20cm_is_orange():
-    result = severity_for("fresh_snow", 20.0)
+    result = severity_for("fresh_snow", 20.0, ampel=resolve_ampel(None))
     assert result == "orange", (
         f"severity_for('fresh_snow', 20.0) liefert {result!r}, erwartet "
         f"'orange' (SLF/EAWS-Orangeschwelle 20 cm/24h, Spec v1.1 AC-5)."
@@ -37,7 +38,7 @@ def test_fresh_snow_20cm_is_orange():
 
 
 def test_fresh_snow_30cm_is_red():
-    result = severity_for("fresh_snow", 30.0)
+    result = severity_for("fresh_snow", 30.0, ampel=resolve_ampel(None))
     assert result == "red", (
         f"severity_for('fresh_snow', 30.0) liefert {result!r}, erwartet "
         f"'red' (SLF/EAWS-Rotschwelle 30 cm/24h, Spec v1.1 AC-5)."
@@ -51,7 +52,7 @@ def test_fresh_snow_5cm_below_yellow_is_green():
     (`severity_from_thresholds`-Docstring). Da diese Spec `fresh_snow`
     erstmals Schwellen gibt, wechselt das Ergebnis fuer 5.0 von None (heute,
     Katalog-Luecke) zu 'green' (nach Implementierung)."""
-    result = severity_for("fresh_snow", 5.0)
+    result = severity_for("fresh_snow", 5.0, ampel=resolve_ampel(None))
     assert result == "green", (
         f"severity_for('fresh_snow', 5.0) liefert {result!r}, erwartet "
         f"'green' -- unterhalb der SLF/EAWS-Gelbschwelle (10 cm/24h), aber "

@@ -19,6 +19,7 @@ Mock-frei: echte `OnsetEvent`/`RainZone`/`AlertMessage`-Objekte durch den
 echten Renderer mit seinem oeffentlichen `limit`-Parameter.
 """
 from __future__ import annotations
+from app.ampel import resolve_ampel
 
 import pytest
 
@@ -53,7 +54,7 @@ def _extremfall_msg(*zonen: RainZone, km_measured: bool = True) -> AlertMessage:
     )
     return AlertMessage(
         trip_short="Alpen", stand_at="17:20", events=(event,),
-        source="Radar (DWD)",
+        source="Radar (DWD)", ampel=resolve_ampel(None),
     )
 
 

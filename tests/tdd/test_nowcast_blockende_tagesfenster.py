@@ -19,6 +19,7 @@ Mock-frei: echte `RadarFrame`/`NowcastResult`-Objekte durch die echten
 Renderer; Uhr per `now=` bzw. `freeze_time` festgestellt.
 """
 from __future__ import annotations
+from app.ampel import resolve_ampel
 
 import inspect
 import re
@@ -121,7 +122,7 @@ def test_ac7_langform_nennt_das_echte_ende_ohne_kappung():
     RED heute: `NowcastResult` kennt `event_end_minutes` nicht (`TypeError`)."""
     msg = to_multi_location_onset_alert_message(
         [("Sillian", _nowcast(event_end_minutes=150))],
-        tz=_TZ, stand_at="19:45",
+        tz=_TZ, stand_at="19:45", ampel=resolve_ampel(None),
     )
 
     _, plain = render_email(msg)
@@ -148,7 +149,7 @@ def test_ac7_kurzform_nennt_das_echte_ende_ohne_kappung():
     RED heute: `NowcastResult` kennt `event_end_minutes` nicht (`TypeError`)."""
     msg = to_multi_location_onset_alert_message(
         [("Sillian", _nowcast(event_end_minutes=150))],
-        tz=_TZ, stand_at="19:45",
+        tz=_TZ, stand_at="19:45", ampel=resolve_ampel(None),
     )
 
     sms = render_sms(msg)

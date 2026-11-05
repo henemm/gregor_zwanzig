@@ -13,6 +13,7 @@ Mock-frei: echte `ForecastDataPoint`-Objekte + echte Renderer-Funktionen
 (text, tone)-Wert bzw. das gerenderte HTML, kein Dateiinhalt-Check.
 """
 from __future__ import annotations
+from app.ampel import resolve_ampel
 
 from datetime import datetime, timezone
 from zoneinfo import ZoneInfo
@@ -49,7 +50,7 @@ class TestAC5ThunderChipFollowsAmpelBand:
         assert thunder_ampel_band(ThunderLevel.MED) == "orange"
 
         dps = [_dp(10, thunder_level=ThunderLevel.MED)]
-        pill = _pill_for_metric("thunder", {}, dps, tz=TZ)
+        pill = _pill_for_metric("thunder", {}, dps, tz=TZ, ampel=resolve_ampel(None))
 
         assert pill is not None, "keine Gewitter-Pille fuer MED-Stunde"
         text, tone = pill
@@ -70,7 +71,7 @@ class TestAC5ThunderChipFollowsAmpelBand:
         assert thunder_ampel_band(ThunderLevel.HIGH) == "red"
 
         dps = [_dp(10, thunder_level=ThunderLevel.HIGH)]
-        pill = _pill_for_metric("thunder", {}, dps, tz=TZ)
+        pill = _pill_for_metric("thunder", {}, dps, tz=TZ, ampel=resolve_ampel(None))
 
         assert pill is not None, "keine Gewitter-Pille fuer HIGH-Stunde"
         _text, tone = pill
@@ -94,7 +95,7 @@ class TestAC6UvChipUsesThresholds:
         from output.renderers.email.helpers import _pill_for_metric
 
         dps = [_dp(14, uv_index=2.0)]
-        pill = _pill_for_metric("uv_index", {}, dps, tz=TZ)
+        pill = _pill_for_metric("uv_index", {}, dps, tz=TZ, ampel=resolve_ampel(None))
 
         assert pill is not None
         _text, tone = pill
@@ -109,7 +110,7 @@ class TestAC6UvChipUsesThresholds:
         from output.renderers.email.helpers import _pill_for_metric
 
         dps = [_dp(14, uv_index=4.5)]
-        pill = _pill_for_metric("uv_index", {}, dps, tz=TZ)
+        pill = _pill_for_metric("uv_index", {}, dps, tz=TZ, ampel=resolve_ampel(None))
 
         assert pill is not None
         _text, tone = pill
@@ -126,7 +127,7 @@ class TestAC6UvChipUsesThresholds:
         from output.renderers.email.helpers import _pill_for_metric
 
         dps = [_dp(14, uv_index=7.7)]
-        pill = _pill_for_metric("uv_index", {}, dps, tz=TZ)
+        pill = _pill_for_metric("uv_index", {}, dps, tz=TZ, ampel=resolve_ampel(None))
 
         assert pill is not None
         text, tone = pill
@@ -142,7 +143,7 @@ class TestAC6UvChipUsesThresholds:
         from output.renderers.email.helpers import _pill_for_metric
 
         dps = [_dp(14, uv_index=8.5)]
-        pill = _pill_for_metric("uv_index", {}, dps, tz=TZ)
+        pill = _pill_for_metric("uv_index", {}, dps, tz=TZ, ampel=resolve_ampel(None))
 
         assert pill is not None
         text, tone = pill
@@ -174,7 +175,7 @@ class TestAC7HumidityChipStaysNeutral:
         assert get_metric("humidity").display_thresholds == {}
 
         dps = [_dp(14, humidity_pct=95)]
-        pill = _pill_for_metric("humidity", {}, dps, tz=TZ)
+        pill = _pill_for_metric("humidity", {}, dps, tz=TZ, ampel=resolve_ampel(None))
 
         assert pill is not None, "keine Feuchte-Pille"
         text, tone = pill

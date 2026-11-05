@@ -563,10 +563,10 @@ def test_ac8_collision_legend_carries_the_aggregation_suffix():
     Tabelle vorkommt.
     """
     from output.renderers.email.compare_html import (
-        CV2_METRICS, _column_legend_text, derive_row_labels,
+        CV2_ZEILEN, _column_legend_text, derive_row_labels,
     )
 
-    rows = [m for m in CV2_METRICS if m.get("key") in ("temp_max", "temp_min")]
+    rows = [m for m in CV2_ZEILEN if m.get("key") in ("temp_max", "temp_min")]
     assert len(rows) == 2, (
         f"AC-8-Voraussetzung: temp_max und temp_min muessen als echte "
         f"Produktivzeilen existieren, gefunden: {rows!r}"

@@ -7,6 +7,7 @@ Ein Trip hat zwei Segmente mit eindeutig verschiedenen Anker-Boeen im betroffene
 die Alt-Reihe. Beide Faelle fordern NICHT-LEERE Zeilen (sonst waere die Aussage vakuum-gruen).
 """
 from __future__ import annotations
+from app.ampel import resolve_ampel
 
 from datetime import datetime, timedelta, timezone
 
@@ -56,7 +57,7 @@ def _zeilen(anchor_segments) -> list[tuple[str, float | None, float]]:
     frisch = [_segment("1", {}, ANKER_SEG1), _segment("2", STURM, FRISCH_BASIS)]
     msg = to_alert_message(
         [_aenderung_an_segment_2()], frisch, "Trip X", tz=UTC, stand_at="09:30",
-        anchor_segments=anchor_segments,
+        anchor_segments=anchor_segments, ampel=resolve_ampel(None),
     )
     return [(h.time, h.value_from, h.value_to) for e in msg.events for h in e.hours]
 

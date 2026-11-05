@@ -19,6 +19,7 @@ from __future__ import annotations
 
 from typing import Optional
 
+from app.ampel import resolve_ampel
 from app.metric_catalog import kurzform_kuerzel
 from app.models import Corridor, MetricConfig, UnifiedWeatherDisplayConfig
 from app.profile import ActivityProfile
@@ -34,7 +35,7 @@ from output.renderers.compare_metric_catalog import (
 )
 from output.renderers.compare_metric_ids import FRONTEND_TO_RENDERER_METRIC_ID
 from output.renderers.email.compare_html import (
-    CV2_METRICS, _build_location_outlook_rows,
+    CV2_ZEILEN, _build_location_outlook_rows, _hour_zeilen,
     _column_legend_text, _fmt_precip_type, _fmt_thunder,
     _fmt_visibility_overview, _metric_value, _should_merge_wind_dir,
     _units_legend_text, _visible_hour_metrics, derive_row_labels, fmt_word_cell,
@@ -137,7 +138,7 @@ def _sort_by_cv2_order(rows) -> tuple:
     Modulimport) mit ``ValueError`` ab, der den Schluessel nennt -- keine Zeile
     wird still ans Ende gehaengt.
     """
-    cv2_keys = [m["key"] for m in CV2_METRICS if m["key"] != "warn"]
+    cv2_keys = [m["key"] for m in CV2_ZEILEN if m["key"] != "warn"]
     by_id = {row[0]: row for row in rows}
     nur_plain = [k for k in by_id if k not in cv2_keys]
     nur_cv2 = [k for k in cv2_keys if k not in by_id]
@@ -155,7 +156,7 @@ _PLAIN_ROWS: tuple[tuple[str, str, object], ...] = _sort_by_cv2_order(
 
 # Beschriftungs-Quelle des Klartext-Zwillings: dieselben Register-Verknuepfungen
 # wie im HTML-Pfad, nach Zeilen-Key ansprechbar (Issue #1401 A2b).
-_CV2_BY_KEY: dict[str, dict] = {m["key"]: m for m in CV2_METRICS}
+_CV2_BY_KEY: dict[str, dict] = {m["key"]: m for m in CV2_ZEILEN}
 
 
 def _ordered_rows(rows, enabled_metrics: list[str] | None) -> list | tuple:
@@ -236,6 +237,9 @@ def render_comparison_text(
         Klartext-String fuer die E-Mail.
     """
     _ = profile  # akzeptiert fuer API-Konsistenz, aktuell ohne Wirkung
+    # Issue #2792 S1c-1: Einstieg loest die Ampel des Presets auf (fuer die
+    # Ausblick-Zeilen); bis S1c-4 fest „allgemein" (byte-gleich).
+    ampel = resolve_ampel(None)
 
     target_date = result.target_date
     created_at = result.created_at
@@ -322,7 +326,7 @@ def render_comparison_text(
     # HTML-Pfad -- ``hourly_metrics=None`` (Altbestand) liefert alle 9
     # Spalten in Katalog-Reihenfolge, eine gesetzte Auswahl nur die
     # gewaehlten, in der gewaehlten Reihenfolge (Issue #1335/#1359).
-    visible_hour_metrics = _visible_hour_metrics(hourly_metrics)
+    visible_hour_metrics = _visible_hour_metrics(hourly_metrics, _hour_zeilen())
     merge_wind_dir = _should_merge_wind_dir(hourly_metrics)
     section_lines: list[str] = []
     # Zweiter Staging-Fund (2026-07-26): `section_lines` ist ein GEMEINSAMER
@@ -345,7 +349,8 @@ def render_comparison_text(
             # Pflicht-Validator liest nur HTML und ist im Klartext blind
             # (#1366-Erfahrung), die Zellen muessen trotzdem uebereinstimmen.
             _build_location_outlook_rows(
-                loc_result, outlook_metrics, outlook_metric_formats, lang)
+                loc_result, outlook_metrics, outlook_metric_formats, lang,
+                ampel=ampel)
             if outlook_enabled and loc_result.outlook_hourly_data else []
         )
         # Fix #1505 (AC-4): bei eingeschaltetem Ausblick ohne Zeilen (weder

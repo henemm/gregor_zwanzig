@@ -58,6 +58,7 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(PROJECT_ROOT))
 sys.path.insert(0, str(PROJECT_ROOT / "src"))
 
+from app.ampel import resolve_ampel  # noqa: E402
 from app.config import Settings  # noqa: E402
 from app.origin_guard import classify_origin  # noqa: E402
 from app.metric_catalog import build_default_display_config  # noqa: E402
@@ -369,6 +370,7 @@ def build_radar_alert_message(token: str) -> AlertMessage:
         events=(onset,),
         source="Radar (DWD)",
         cooldown_display="2 Stunden",
+        ampel=resolve_ampel(None),  # Issue #2792 S1c-1: Pflichtfeld der Nachricht
     )
 
 

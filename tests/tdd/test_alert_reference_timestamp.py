@@ -18,6 +18,7 @@ Annahme (Spec nennt project.py als Durchreiche-Stelle fuer den neuen
 Referenz-Zeitpunkt), dokumentiert hier statt geraten und verschwiegen.
 """
 from __future__ import annotations
+from app.ampel import resolve_ampel
 
 import dataclasses
 import uuid
@@ -151,7 +152,7 @@ def test_ac3_sms_referenz_zeitpunkt_haelt_160_zeichen_budget_ein():
 
     msg = to_alert_message(
         changes, weather_data, "Sehr Langer Absurder Tripnamensname",
-        tz=tz, stand_at="10:00", reference_at="18:03",
+        tz=tz, stand_at="10:00", reference_at="18:03", ampel=resolve_ampel(None),
     )
     sms = render_sms(msg)
 
@@ -189,7 +190,7 @@ def test_ac4_compare_pfad_zeigt_referenz_zeitpunkt_ueber_denselben_renderer():
     )
     msg = to_multi_point_alert_message(
         [("Testort", [change], punkt)], tz=tz, stand_at="14:00",
-        reference_at="13:10",
+        reference_at="13:10", ampel=resolve_ampel(None),
     )
 
     _html, plain = render_email(msg)

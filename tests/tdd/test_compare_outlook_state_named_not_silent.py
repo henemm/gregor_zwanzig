@@ -17,6 +17,7 @@ Attribut-Rebind ersetzt (Muster
 restauriert.
 """
 from __future__ import annotations
+from app.ampel import resolve_ampel
 
 import logging
 from datetime import date, datetime, timedelta, timezone
@@ -261,7 +262,7 @@ def test_ac3_html_empty_rows_after_filtering_shows_state_text_no_engine_log(capl
     )
 
     with caplog.at_level(logging.DEBUG, logger=_ENGINE_LOGGER):
-        html = _render_location_outlook(loc, 0, outlook_metrics=[])
+        html = _render_location_outlook(loc, 0, outlook_metrics=[], ampel=resolve_ampel(None))
 
     assert _STATE_TEXT in html, (
         "Eine durch Metrik-Filterung leere Zeilenliste muss trotz "

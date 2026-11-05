@@ -19,6 +19,7 @@ Fall-Bezeichnungen wie in der Issue-Messtabelle:
   Fall C: Tag hoch 14:00, Nacht mittel 22:00
 """
 from __future__ import annotations
+from app.ampel import resolve_ampel
 
 from zoneinfo import ZoneInfo
 
@@ -192,7 +193,7 @@ class TestHtmlCellDayNight:
         Tagesteil verschwindet NICHT hinter dem staerkeren Nachtwert -- genau
         der Fehler 2, den #1653 behoben hat."""
         from src.output.renderers.email.outlook import render_outlook_table
-        html = render_outlook_table([_stage(hourly_thunder=_FALL_B_HOURLY, thunder="MED")])
+        html = render_outlook_table([_stage(hourly_thunder=_FALL_B_HOURLY, thunder="MED")], ampel=resolve_ampel(None))
         assert "mittel" in html and "@14" in html, (
             "Der Tagesteil fehlt in der Zelle -- er darf nicht hinter dem "
             f"staerkeren Nachtwert verschwinden: {html!r}"
@@ -207,7 +208,7 @@ class TestHtmlCellDayNight:
         der Nachtstunde."""
         from src.output.renderers.email.outlook import render_outlook_table
         import re
-        html = render_outlook_table([_stage(hourly_thunder=_FALL_B_HOURLY, thunder="MED")])
+        html = render_outlook_table([_stage(hourly_thunder=_FALL_B_HOURLY, thunder="MED")], ampel=resolve_ampel(None))
         # Der Tagesteil ("mittel @14") darf nicht "mittel @0" lauten.
         assert not re.search(r"mittel\s*@0\b", html), (
             f"Tageswort mit Nachtstunde vermischt: {html!r}"
@@ -225,7 +226,7 @@ class TestHtmlCellDayNight:
         from src.output.renderers.email.compare_html import _fmt_thunder
         from src.output.renderers.email.outlook import render_outlook_table
         import re
-        html = render_outlook_table([_stage(hourly_thunder=_FALL_A_HOURLY, thunder="NONE")])
+        html = render_outlook_table([_stage(hourly_thunder=_FALL_A_HOURLY, thunder="NONE")], ampel=resolve_ampel(None))
         zelle = re.findall(r">([^<>]*)</td>", html)[7]
         assert zelle == _fmt_thunder(None), (
             f"Erwartet das ausdrueckliche 'kein Gewitter'-Zeichen, erhalten: "
@@ -239,7 +240,7 @@ class TestHtmlCellDayNight:
         """AC-5 Regressionsschutz: ohne jedes Gewitter bleibt die Zelle wie
         bisher (kein neuer Text)."""
         from src.output.renderers.email.outlook import render_outlook_table
-        html_before = render_outlook_table([_stage(hourly_thunder=(), thunder="NONE")])
+        html_before = render_outlook_table([_stage(hourly_thunder=(), thunder="NONE")], ampel=resolve_ampel(None))
         assert "nachts" not in html_before
 
 
@@ -524,7 +525,7 @@ class TestStageTrendUsesConfiguredDayWindow:
             now_utc=datetime.now(timezone.utc), tz=ZoneInfo("UTC"),
         )
         assert result.rows
-        html = render_outlook_table(result.rows)
+        html = render_outlook_table(result.rows, ampel=resolve_ampel(None))
         cell = re.findall(r">([^<>]*)</td>", html)[7]
         # #1848 A3: der Nachtteil ('nachts hoch @14' -- die 14-Uhr-Stunde
         # liegt AUSSERHALB des konfigurierten Fensters 20-23) entfaellt aus
@@ -557,7 +558,7 @@ class TestDayWordComesFromDayToken:
         from src.output.renderers.email.outlook import render_outlook_table
         html = render_outlook_table([
             _stage(hourly_thunder=(_hv(16, 2.0),), thunder="NONE"),
-        ])
+        ], ampel=resolve_ampel(None))
         assert "mittel @16" in html, (
             "Das Tagesgewitter der Stundenreihe fehlt, weil die Zelle dem "
             f"geklemmten Aggregat folgt statt dem Tagesfenster:\n{html}"
@@ -571,7 +572,7 @@ class TestDayWordComesFromDayToken:
         import re
         html = render_outlook_table([
             _stage(hourly_thunder=_FALL_A_HOURLY, thunder="HIGH"),
-        ])
+        ], ampel=resolve_ampel(None))
         cell = re.findall(r">([^<>]*)</td>", html)[7]
         # #1848 A3: die Nachtangabe entfaellt aus der Vorschau -- geblieben
         # ist die eigentliche Zusicherung: aus dem Aggregat entsteht kein
@@ -591,7 +592,7 @@ class TestDayWordComesFromDayToken:
         import re
         html = render_outlook_table([
             _stage(hourly_thunder=(_hv(9, 1.0),), thunder="HIGH"),
-        ])
+        ], ampel=resolve_ampel(None))
         cell = re.findall(r">([^<>]*)</td>", html)[7]
         assert cell == "leicht @9", (
             f"Wort und Uhrzeit stammen aus verschiedenen Quellen: {cell!r}"
@@ -602,7 +603,7 @@ class TestDayWordComesFromDayToken:
         der Stufe des Aggregats ohne Uhrzeit (Alt-Fixtures, Compare)."""
         from src.output.renderers.email.outlook import render_outlook_table
         import re
-        html = render_outlook_table([_stage(hourly_thunder=(), thunder="MED")])
+        html = render_outlook_table([_stage(hourly_thunder=(), thunder="MED")], ampel=resolve_ampel(None))
         cell = re.findall(r">([^<>]*)</td>", html)[7]
         assert cell == "mittel", f"Got: {cell!r}"
 
@@ -805,7 +806,7 @@ class TestEscalationWithinWindowShowsPeak:
     def test_html_day_shows_peak_stage(self):
         from src.output.renderers.email.outlook import render_outlook_table
         html = render_outlook_table(
-            [_stage(hourly_thunder=_ESCALATION_DAY_HOURLY, thunder="HIGH")]
+            [_stage(hourly_thunder=_ESCALATION_DAY_HOURLY, thunder="HIGH")], ampel=resolve_ampel(None)
         )
         assert "hoch" in html, (
             f"Spitzenstufe des Tagesgewitters unterschlagen:\n{html}"
@@ -831,7 +832,7 @@ class TestEscalationWithinWindowShowsPeak:
         Kraft (s. ``test_html_day_shows_peak_stage`` oben)."""
         from src.output.renderers.email.outlook import render_outlook_table
         html = render_outlook_table(
-            [_stage(hourly_thunder=_ESCALATION_NIGHT_HOURLY, thunder="HIGH")]
+            [_stage(hourly_thunder=_ESCALATION_NIGHT_HOURLY, thunder="HIGH")], ampel=resolve_ampel(None)
         )
         assert "nachts" not in html, (
             f"Die Vorschau zeigt eine Nachtangabe (#1848 A3):\n{html}"
@@ -854,7 +855,7 @@ class TestEscalationWithinWindowShowsPeak:
             render_outlook_plain, render_outlook_table,
         )
         stage = _stage(hourly_thunder=(_hv(14, 2.0),), thunder="MED")
-        html = render_outlook_table([stage])
+        html = render_outlook_table([stage], ampel=resolve_ampel(None))
         plain = render_outlook_plain([stage])
         assert "mittel @14" in html and "(" not in html.split("mittel @14")[1][:6]
         assert "⚡mittel" in plain and "(" not in plain

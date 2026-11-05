@@ -39,6 +39,7 @@ Diese Tests sind RED gegen Prod-Stand 42794bea (alte ad-hoc Pill-Logik):
 SPEC: docs/specs/modules/issue_795_briefing_quality.md AC-1..AC-9
 """
 from __future__ import annotations
+from app.ampel import resolve_ampel
 
 import re
 import sys
@@ -223,7 +224,7 @@ class TestAC2AmpelEmojis:
         assert not any(e in block for e in _CIRCLE_EMOJIS), (
             f"Kreis-Emoji im Plain verblieben (Issue #1222 AC-4):\n{block}"
         )
-        pills = build_metrics_summary_pills(segs, ["wind"], {}, tz=TZ)
+        pills = build_metrics_summary_pills(segs, ["wind"], {}, tz=TZ, ampel=resolve_ampel(None))
         assert pills, "keine Wind-Pill fuer ruhige Lage"
         _text, tone = pills[0]
         assert tone == "ampel_green", (
@@ -242,7 +243,7 @@ class TestAC2AmpelEmojis:
         assert not any(e in block for e in _CIRCLE_EMOJIS), (
             f"Kreis-Emoji im Plain verblieben (Issue #1222 AC-4):\n{block}"
         )
-        pills = build_metrics_summary_pills(segs, ["thunder"], {}, tz=TZ)
+        pills = build_metrics_summary_pills(segs, ["thunder"], {}, tz=TZ, ampel=resolve_ampel(None))
         assert pills, "keine Gewitter-Pill"
         _text, tone = pills[0]
         assert tone == "ampel_orange", (
@@ -366,7 +367,7 @@ class TestAC3EventPills:
         assert wind_line is not None, f"keine Wind-Pill-Zeile:\n{block}"
 
         # Stufe kommt aus derselben Pill-Pipeline wie das Plain-Rendering.
-        pills = build_metrics_summary_pills(segs, ["wind"], {}, tz=TZ)
+        pills = build_metrics_summary_pills(segs, ["wind"], {}, tz=TZ, ampel=resolve_ampel(None))
         assert pills, f"keine Wind-Pill fuer Spitze 18 km/h: {wind_line!r}"
         _text, tone = pills[0]
         assert tone == "ampel_green", (
@@ -580,7 +581,7 @@ class TestAC7WcagFullColorFourStages:
 def _pill_tone_for(segments, metric_id: str) -> str:
     """Ruft die echte Pill-Pipeline auf und liefert den tone-String."""
     from src.output.renderers.email.helpers import build_metrics_summary_pills
-    pills = build_metrics_summary_pills(segments, [metric_id], {}, tz=TZ)
+    pills = build_metrics_summary_pills(segments, [metric_id], {}, tz=TZ, ampel=resolve_ampel(None))
     assert pills, f"keine Pill fuer {metric_id}"
     return pills[0][1]
 

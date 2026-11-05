@@ -22,6 +22,7 @@ SPEC: docs/specs/modules/fix_1418_gewitter_risikopunkt.md AC-1 bis AC-4
 KONTEXT: docs/context/fix-1418-gewitter-risikopunkt.md
 """
 from __future__ import annotations
+from app.ampel import resolve_ampel
 
 import re
 
@@ -51,7 +52,7 @@ _THUNDER_LABEL = "Thdr"
 def _render_one(row: dict) -> str:
     """Rendert GENAU EINE Stundenzeile — dadurch ist jede gefundene Farbe
     eindeutig dieser Zeile zugeordnet (keine Zeilenverwechslung moeglich)."""
-    return _render_html_table([row], friendly_keys=set(), indicator_keys=set())
+    return _render_html_table([row], friendly_keys=set(), indicator_keys=set(), ampel=resolve_ampel(None))
 
 
 def _single_row(html: str):

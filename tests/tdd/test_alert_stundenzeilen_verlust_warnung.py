@@ -6,6 +6,7 @@
     (Stundenzeilen ROH) -- ebenfalls gemeldet.
 """
 from __future__ import annotations
+from app.ampel import resolve_ampel
 
 import logging
 from datetime import datetime, timedelta, timezone
@@ -28,7 +29,7 @@ def test_stunden_ohne_anker_gegenstueck_werden_mit_bezug_1737_gemeldet(caplog):
     frisch = _reihe(t0, [10.0, 90.0, 90.0, 90.0])       # 10Z..13Z -> 12Z, 13Z ohne Anker
     with caplog.at_level(logging.WARNING, logger="output.renderers.alert.hours"):
         out = affected_hours("gust", frisch, anker, threshold=20.0, value_from=10.0,
-                             tz=timezone.utc)
+                             tz=timezone.utc, ampel=resolve_ampel(None))
     assert [r.time for r in out["hours"]] == ["11:00"], "Vorbedingung: nur gepaarte Stunden"
     meldungen = [r.getMessage() for r in caplog.records if r.levelno == logging.WARNING]
     assert any("#1737" in m and "2 Stunde" in m for m in meldungen), meldungen

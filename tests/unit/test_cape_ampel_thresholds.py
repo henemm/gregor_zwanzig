@@ -12,6 +12,7 @@ gegen `severity_for("cape", v)` -- kein Mock, direkter Katalog-Roundtrip.
 Muss VOR Fix A rot sein (aktuelle Katalog-Schwellen 1000/2500/3500 liefern
 z.B. fuer 300 "green" statt "yellow"), NACH Fix A gruen.
 """
+from app.ampel import resolve_ampel
 from src.app.metric_catalog import get_metric
 from src.output.metric_format import severity_for
 
@@ -24,19 +25,19 @@ class TestCapeAmpelThresholds:
         assert thresholds == {"yellow": 300.0, "orange": 800.0, "red": 1500.0}
 
     def test_299_is_green(self):
-        assert severity_for("cape", 299) == "green"
+        assert severity_for("cape", 299, ampel=resolve_ampel(None)) == "green"
 
     def test_300_is_yellow(self):
-        assert severity_for("cape", 300) == "yellow"
+        assert severity_for("cape", 300, ampel=resolve_ampel(None)) == "yellow"
 
     def test_799_is_yellow(self):
-        assert severity_for("cape", 799) == "yellow"
+        assert severity_for("cape", 799, ampel=resolve_ampel(None)) == "yellow"
 
     def test_800_is_orange(self):
-        assert severity_for("cape", 800) == "orange"
+        assert severity_for("cape", 800, ampel=resolve_ampel(None)) == "orange"
 
     def test_1499_is_orange(self):
-        assert severity_for("cape", 1499) == "orange"
+        assert severity_for("cape", 1499, ampel=resolve_ampel(None)) == "orange"
 
     def test_1500_is_red(self):
-        assert severity_for("cape", 1500) == "red"
+        assert severity_for("cape", 1500, ampel=resolve_ampel(None)) == "red"

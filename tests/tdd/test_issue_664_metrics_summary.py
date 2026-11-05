@@ -13,6 +13,7 @@ Fixture-Muster aus tests/tdd/test_issue_621_email_toggles.py übernommen.
 Spec: docs/specs/modules/email_metrics_summary_664.md
 """
 from __future__ import annotations
+from app.ampel import resolve_ampel
 
 import sys
 from datetime import datetime, timezone
@@ -231,7 +232,7 @@ class TestAC3HelperValues:
         from output.renderers.email.helpers import build_metrics_summary_pills
         segs = _build_segments(temps=[8.0, 9.0, 10.0, 11.0, 12.0, 15.0])
         # Erwartung: min=8°C, max=15°C; t2m_c-Maximum bei h=10 UTC → 12:00 CEST
-        pills = build_metrics_summary_pills(segs, ["temperature"], {}, tz=TZ)
+        pills = build_metrics_summary_pills(segs, ["temperature"], {}, tz=TZ, ampel=resolve_ampel(None))
         texts = [t for t, _ in pills]
         # Pille enthält Minimaltemperatur: min(8, 9, 11, 12) = 8
         assert any("8" in t for t in texts), f"8°C (min) nicht in Pillen: {texts}"
@@ -250,7 +251,7 @@ class TestAC3HelperValues:
         """
         from output.renderers.email.helpers import build_metrics_summary_pills
         segs = _build_segments()
-        pills = build_metrics_summary_pills(segs, ["temperature"], {}, tz=TZ)
+        pills = build_metrics_summary_pills(segs, ["temperature"], {}, tz=TZ, ampel=resolve_ampel(None))
         tones = [tone for _, tone in pills]
         assert any(tone == "ampel_green" for tone in tones), (
             f"ampel_green Tone erwartet (12 °C liegt unter allen Katalog-"
@@ -261,7 +262,7 @@ class TestAC3HelperValues:
         """precipitation-Pille bei Regen: enthält Summe '4 mm'."""
         from output.renderers.email.helpers import build_metrics_summary_pills
         segs = _build_segments()
-        pills = build_metrics_summary_pills(segs, ["precipitation"], {}, tz=TZ)
+        pills = build_metrics_summary_pills(segs, ["precipitation"], {}, tz=TZ, ampel=resolve_ampel(None))
         texts = [t for t, _ in pills]
         assert any("4" in t for t in texts), f"4 mm nicht in Pillen: {texts}"
 
@@ -269,7 +270,7 @@ class TestAC3HelperValues:
         """gust-Pille: max Böe = 40 km/h muss enthalten sein."""
         from output.renderers.email.helpers import build_metrics_summary_pills
         segs = _build_segments()
-        pills = build_metrics_summary_pills(segs, ["gust"], {}, tz=TZ)
+        pills = build_metrics_summary_pills(segs, ["gust"], {}, tz=TZ, ampel=resolve_ampel(None))
         texts = [t for t, _ in pills]
         assert any("40" in t for t in texts), f"40 km/h (max gust) nicht in Pillen: {texts}"
 
@@ -297,7 +298,7 @@ class TestAC3HelperValues:
 
         def _texts(reihenfolge):
             return [t for t, _ in build_metrics_summary_pills(
-                _build_segments(), reihenfolge, {}, tz=TZ,
+                _build_segments(), reihenfolge, {}, tz=TZ, ampel=resolve_ampel(None),
             )]
 
         # Katalog-Ordnung waere temperature VOR precipitation -- die Eingabe
@@ -355,7 +356,7 @@ class TestAC3HelperValues:
         # Uebergeben wird bewusst die VOLLE Standardliste -- das ist der echte
         # Fall-A-Pfad; Groessen ohne Pille fallen im Renderer weg.
         pillen = build_metrics_summary_pills(
-            _build_segments(), default_ids, {}, tz=TZ,
+            _build_segments(), default_ids, {}, tz=TZ, ampel=resolve_ampel(None),
         )
         assert len(pillen) == len(mit_pille), (
             f"Vakuum: {len(pillen)} Pillen fuer {len(mit_pille)} pillenfaehige "
@@ -403,7 +404,7 @@ class TestAC4ThresholdCrossing:
         )
         from app.metric_catalog import get_metric
         segs = _build_segments()
-        pills = build_metrics_summary_pills(segs, ["gust"], {}, tz=TZ)
+        pills = build_metrics_summary_pills(segs, ["gust"], {}, tz=TZ, ampel=resolve_ampel(None))
         tones = [tone for _, tone in pills]
         expected = ampel_stage_tone(40.0, get_metric("gust").display_thresholds)
         assert any(tone == expected for tone in tones), (
@@ -418,7 +419,7 @@ class TestAC4ThresholdCrossing:
         """
         from output.renderers.email.helpers import build_metrics_summary_pills
         segs = _build_segments()
-        pills = build_metrics_summary_pills(segs, ["gust"], {}, tz=TZ)
+        pills = build_metrics_summary_pills(segs, ["gust"], {}, tz=TZ, ampel=resolve_ampel(None))
         texts = [t for t, _ in pills]
         assert any("40" in t and "max" in t for t in texts), (
             f"Spitzenwert '40' und 'max' müssen im Text stehen: {texts}"
@@ -429,7 +430,7 @@ class TestAC4ThresholdCrossing:
         from output.renderers.email.helpers import build_metrics_summary_pills
         segs = _build_segments()
         pills = build_metrics_summary_pills(
-            segs, ["gust"], {"gust": 15.0}, tz=TZ
+            segs, ["gust"], {"gust": 15.0}, tz=TZ, ampel=resolve_ampel(None)
         )
         texts = [t for t, _ in pills]
         # Erste Überschreitung: h=7 UTC (gust=20) → 09:00 CEST, oder h=8 (gust=30) → 10:00
@@ -453,7 +454,7 @@ class TestAC4ThresholdCrossing:
         for seg in segs:
             for dp in seg.timeseries.data:
                 object.__setattr__(dp, "gust_kmh", 10.0)
-        pills = build_metrics_summary_pills(segs, ["gust"], {}, tz=TZ)
+        pills = build_metrics_summary_pills(segs, ["gust"], {}, tz=TZ, ampel=resolve_ampel(None))
         texts = [t for t, _ in pills]
         tones = [tone for _, tone in pills]
         assert any("Böen max" in t for t in texts), (

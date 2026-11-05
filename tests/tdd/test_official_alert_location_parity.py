@@ -18,6 +18,7 @@ Schluesselwort. Der Aufruf mit diesem Parameter schlaegt mit
 RED-Zustand.
 """
 from __future__ import annotations
+from app.ampel import resolve_ampel
 
 from datetime import date, datetime, timezone
 from zoneinfo import ZoneInfo
@@ -109,7 +110,7 @@ def _delta_subject_location(segment_id: str, km_from: float, km_to: float) -> st
         threshold=20.0, severity=ChangeSeverity.MODERATE, direction="increase",
         segment_id=segment_id, occurred_at=datetime(2026, 7, 1, 14, 0, tzinfo=UTC),
     )
-    msg = to_alert_message([change], [swd], TRIP_NAME, tz=TRIP_TZ, stand_at="10:00")
+    msg = to_alert_message([change], [swd], TRIP_NAME, tz=TRIP_TZ, stand_at="10:00", ampel=resolve_ampel(None))
     subject = render_subject(msg)
     match = re.match(r"^\[[^\]]*\]\s+(?P<where>.+?)\s+·\s+.+$", subject)
     assert match, f"Betreff hat nicht die Bauform '[Trip] <Ort> · <Kern>': {subject!r}"

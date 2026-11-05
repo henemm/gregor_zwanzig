@@ -13,6 +13,7 @@ durch den echten Renderer `render_compare_html()`; Auswertung am gerenderten
 HTML (BeautifulSoup), kein Dateiinhalt-Check am Quellcode.
 """
 from __future__ import annotations
+from app.ampel import resolve_ampel
 
 import re
 from datetime import date, datetime
@@ -200,8 +201,8 @@ def test_ac3_trip_briefing_hour_row_and_legend_unchanged():
     row = dp_to_row(dp, dc, tz=ZoneInfo("UTC"))
 
     assert row["time"] == "07", f"Trip-Zeit-Zelle veraendert: {row['time']!r}"
-    assert fmt_val("visibility", 8000) == "8.0", "Trip-Sicht-Zelle traegt ploetzlich eine Einheit"
-    assert fmt_val("visibility", 38300) == "38", "Trip-Sicht-Zelle (>=10 km) veraendert"
+    assert fmt_val("visibility", 8000, ampel=resolve_ampel(None)) == "8.0", "Trip-Sicht-Zelle traegt ploetzlich eine Einheit"
+    assert fmt_val("visibility", 38300, ampel=resolve_ampel(None)) == "38", "Trip-Sicht-Zelle (>=10 km) veraendert"
     legend = build_units_legend([row])
     assert legend.startswith("Einheiten: "), f"Trip-Legende veraendert: {legend!r}"
     assert "km" in legend, f"Trip-Legende nennt die Sicht-Einheit nicht mehr: {legend!r}"

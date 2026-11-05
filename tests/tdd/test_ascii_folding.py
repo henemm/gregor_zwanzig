@@ -20,6 +20,7 @@ Mock-frei: echte Renderer-Aufrufe, echte Domain-Objekte (`OfficialAlert`,
 benoetigten Attributen statt vollem Fixture-Aufbau).
 """
 from __future__ import annotations
+from app.ampel import resolve_ampel
 
 from datetime import timezone
 
@@ -236,7 +237,7 @@ def test_radar_alert_trip_short_survives_double_truncation():
     )
     msg = AlertMessage(
         trip_short=trip_short, stand_at="14:00", events=(event,), source=None,
-        location_label="Ort",
+        location_label="Ort", ampel=resolve_ampel(None),
     )
 
     sms = render_sms(msg)

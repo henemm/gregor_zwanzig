@@ -30,6 +30,7 @@ noch nicht geben kann.
 Mock-frei: echte Modelle durch die echten Renderer, feste Zeitangaben.
 """
 from __future__ import annotations
+from app.ampel import resolve_ampel
 
 import re
 from zoneinfo import ZoneInfo
@@ -84,7 +85,7 @@ def _onset_msg(*events: OnsetEvent) -> AlertMessage:
     """Bewusst OHNE `cooldown_display` — s. Modul-Kopf."""
     return AlertMessage(
         trip_short="KHW 403", stand_at="17:30", events=tuple(events),
-        source="Radar (DWD)",
+        source="Radar (DWD)", ampel=resolve_ampel(None),
     )
 
 
@@ -109,7 +110,7 @@ def _texte_mit_ende() -> dict[str, str]:
                 source="AROME-FR", is_convective=False, event_end_minutes=95,
             )),
         ],
-        tz=TZ, stand_at="10:00",
+        tz=TZ, stand_at="10:00", ampel=resolve_ampel(None),
     )
     _b_html, b_plain = render_email(buendel)
 

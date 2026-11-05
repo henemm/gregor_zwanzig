@@ -5,6 +5,7 @@ Echte Kette: Segment mit Hagel-Signal im Aggregat -> `to_alert_message`
 `_sms_hail_suffix` und den Erzeuger `hail_flag=` in der Projektion. Kein Mock.
 """
 from __future__ import annotations
+from app.ampel import resolve_ampel
 
 import dataclasses
 from datetime import datetime, timezone
@@ -29,7 +30,7 @@ def _msg(hail: bool | None):
         threshold=1.0, severity=ChangeSeverity.MAJOR, direction="increase",
         segment_id="1", occurred_at=datetime(2026, 5, 1, 10, 0, tzinfo=timezone.utc),
     )
-    return to_alert_message([ch], [seg], "Hagel Trip", tz=TZ, stand_at="09:30")
+    return to_alert_message([ch], [seg], "Hagel Trip", tz=TZ, stand_at="09:30", ampel=resolve_ampel(None))
 
 
 def test_hagel_hinweis_in_allen_kanaelen_bei_bestaetigtem_hagel():

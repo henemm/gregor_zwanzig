@@ -42,6 +42,7 @@ RED-Ursachen heute:
   * `OnsetPayload` der Alarm-Vorschau fuehrt nicht einmal den VERSATZ.
 """
 from __future__ import annotations
+from app.ampel import resolve_ampel
 
 import http.server
 import json
@@ -115,7 +116,7 @@ def onset_event(**kw) -> OnsetEvent:
 def onset_msg(event: OnsetEvent, *, trip_short: str = "KHW 403") -> AlertMessage:
     """`source is not None` routet die Renderer in den Onset-Zweig."""
     return AlertMessage(
-        trip_short=trip_short, stand_at="23:30", events=(event,), source="radar",
+        trip_short=trip_short, stand_at="23:30", events=(event,), source="radar", ampel=resolve_ampel(None),
     )
 
 
@@ -536,7 +537,7 @@ def test_ac7_ortsvergleich_buendel_traegt_das_kuerzel():
     with freeze_time(FREITAG_2330_UTC):
         sms = render_sms(to_multi_location_onset_alert_message(
             [("Reykjavik", rvk, nc)],
-            tz=ZoneInfo("Atlantic/Reykjavik"), stand_at="23:30",
+            tz=ZoneInfo("Atlantic/Reykjavik"), stand_at="23:30", ampel=resolve_ampel(None),
         ))
 
     assert "@Sa0:23" in sms, (
@@ -672,7 +673,7 @@ def test_ac9_kuerzel_nennt_den_ortstag_nicht_den_utc_tag():
     with freeze_time(FREITAG_2140_UTC):
         sms = render_sms(to_multi_location_onset_alert_message(
             [("Wien", wien, nc)],
-            tz=ZoneInfo("Europe/Vienna"), stand_at="23:40",
+            tz=ZoneInfo("Europe/Vienna"), stand_at="23:40", ampel=resolve_ampel(None),
         ))
 
     assert "@Sa0:33" in sms, (

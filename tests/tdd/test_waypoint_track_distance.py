@@ -18,6 +18,7 @@ Jede Konstruktion mit diesen Schluesselworten schlaegt mit `TypeError`
 fehl -- das IST der RED-Zustand.
 """
 from __future__ import annotations
+from app.ampel import resolve_ampel
 
 from datetime import date, datetime, time, timedelta, timezone
 from pathlib import Path
@@ -366,7 +367,7 @@ def test_ac13_pipeline_unvermessene_etappe_zeigt_nie_die_luftlinien_km():
     )
     from utils.timezone import tz_for_coords
     tz = tz_for_coords(segments[0].start_point.lat, segments[0].start_point.lon)
-    msg = to_alert_message([change], segments, "AC13-Trip", tz=tz, stand_at="10:00")
+    msg = to_alert_message([change], segments, "AC13-Trip", tz=tz, stand_at="10:00", ampel=resolve_ampel(None))
 
     subject = render_subject(msg)
     sms = render_sms(msg)

@@ -13,6 +13,7 @@ Mock-frei: echte ForecastDataPoint/SegmentWeatherData/TripSegment-Objekte.
 Spec: docs/specs/modules/issue_808_sonne_0_min.md
 """
 from __future__ import annotations
+from app.ampel import resolve_ampel
 
 import sys
 from datetime import datetime, timezone
@@ -114,7 +115,7 @@ class TestAC1SunshinePillPositiveMinutes:
         dps = [_sunny_dp(h) for h in range(8, 14)]  # 6 Stunden sonnig
         seg_data = _make_segment_data(dps, start_h=8, end_h=14)
 
-        pills = build_metrics_summary_pills([seg_data], ["sunshine"], {}, tz=TZ)
+        pills = build_metrics_summary_pills([seg_data], ["sunshine"], {}, tz=TZ, ampel=resolve_ampel(None))
 
         assert len(pills) == 1, f"Erwarte 1 Pille, war {len(pills)}: {pills}"
         text, _tone = pills[0]
@@ -148,7 +149,7 @@ class TestAC2NoSunshinePillWhenCloudy:
         dps = [_cloudy_dp(h) for h in range(8, 14)]
         seg_data = _make_segment_data(dps, start_h=8, end_h=14)
 
-        pills = build_metrics_summary_pills([seg_data], ["sunshine"], {}, tz=TZ)
+        pills = build_metrics_summary_pills([seg_data], ["sunshine"], {}, tz=TZ, ampel=resolve_ampel(None))
 
         assert len(pills) == 0, (
             f"Erwarte keine Pille bei vollständiger Bewölkung, war {pills!r}"

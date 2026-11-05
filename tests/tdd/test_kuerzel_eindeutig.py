@@ -44,6 +44,7 @@ Alle neuen Symbole werden per ``getattr(..., None)`` abgefragt — jeder Test
 scheitert mit eigener Assertion, nie mit einem Import-Fehler auf Modulebene.
 """
 from __future__ import annotations
+from app.ampel import resolve_ampel
 
 import re
 from datetime import date, datetime
@@ -820,7 +821,7 @@ def test_automatische_ausgaben_nach_t_umstellung():
         metric_id="temperature", value_from=20.0, value_to=28.0, threshold=25.0,
         cmp="über", occurred_at="14:00", km_from=8.0, km_to=8.0, segment_id="Ziel",
     )
-    alarm = render_sms(AlertMessage(trip_short="KHW 403", stand_at="10:00", events=(ereignis,)))
+    alarm = render_sms(AlertMessage(trip_short="KHW 403", stand_at="10:00", events=(ereignis,), ampel=resolve_ampel(None)))
     assert "T20->28" in alarm and "D20" not in alarm, (
         f"AC-22 FAIL (c): Temperatur-Alarm-SMS traegt nicht 'T': {alarm!r} "
         f"(D bedeutet in der SMS den Tageshoechstwert)."
@@ -842,7 +843,7 @@ def test_kaelte_alarm_traegt_t_statt_n():
         metric_id="temperature_cold", value_from=2.0, value_to=-4.0, threshold=0.0,
         cmp="unter", occurred_at="05:00", km_from=8.0, km_to=8.0, segment_id="Ziel",
     )
-    sms = render_sms(AlertMessage(trip_short="KHW 403", stand_at="10:00", events=(ereignis,)))
+    sms = render_sms(AlertMessage(trip_short="KHW 403", stand_at="10:00", events=(ereignis,), ampel=resolve_ampel(None)))
     assert "T2->-4" in sms and not re.search(r"(?<![A-Z])N-?\d", sms), (
         f"AC-28 FAIL: die Kaelte-Alarm-SMS traegt nicht 'T' (N bedeutet in der "
         f"SMS den Nachtwert): {sms!r}"

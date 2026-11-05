@@ -191,6 +191,37 @@ def ampel_for(subscription: Any) -> dict[str, dict]:
     return {mid: _schwellen(e) for mid, e in resolve_ampel(subscription)["metrics"].items()}
 
 
+# Issue #2792 S1c-1: die Metriken, die HEUTE (vor dem Umschalten) eine Farbe
+# tragen. Vorlagen-Zeilen ausserhalb dieser Menge (Taupunkt, Bewoelkung, ...)
+# haben in S1 keinen Leser und liefern leere Schwellen (Spec §2, AC-19).
+AMPEL_LESER = frozenset({
+    "temperature", "wind_chill", "wind", "gust", "precipitation",
+    "rain_probability", "visibility", "uv_index", "fresh_snow",
+})
+
+
+def hat_ampel(metric_id: Optional[str]) -> bool:
+    """Traegt diese Metrik in S1c-1 ueberhaupt eine Farbe? (die 9 Leser plus
+    die CAPE-Bruecke, siehe ``schwellen_aus_ampel``)."""
+    return metric_id in AMPEL_LESER or metric_id == "cape"
+
+
+def schwellen_aus_ampel(ampel: Mapping, metric_id: Optional[str]) -> dict:
+    """Schwellen-Dict (Form ``severity_from_thresholds``) einer Metrik aus dem
+    AUFGELOESTEN Ampel-Objekt (``resolve_ampel(sub)``). ``ampel_for`` taugt
+    dafuer nicht: das aufgeloeste Dict hat kein ``ampel``/``preset_name`` und
+    fiele still auf „allgemein" zurueck.
+
+    CAPE-Bruecke (nur S1c-1, entfaellt in S1c-4, P1): CAPE faerbt noch nach
+    Katalog, damit die Ausgabe byte-gleich bleibt."""
+    if metric_id == "cape":
+        from app.metric_catalog import get_metric
+        return dict(get_metric("cape").display_thresholds)
+    if metric_id not in AMPEL_LESER:
+        return {}
+    return _schwellen((ampel.get("metrics") or {}).get(metric_id) or {})
+
+
 def _vorlage_der_ampel(ampel: Optional[Mapping]) -> str:
     tid = (ampel or {}).get("template")
     return _bekannte_vorlage(tid, "ampel.template") if tid else DEFAULT_TEMPLATE

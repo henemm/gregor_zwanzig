@@ -11,6 +11,7 @@ from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Optional
 from zoneinfo import ZoneInfo
 
+from app.ampel import resolve_ampel
 from app.models import (
     SegmentWeatherData, ThunderLevel, UnifiedWeatherDisplayConfig,
     WeatherChange,
@@ -62,7 +63,7 @@ from output.renderers.email.outlook_state_hint import (
 def _render_text_table(rows: list[dict], *, friendly_keys: set[str],
                        format_modes: Optional[dict[str, str]] = None,
                        col_order: Optional[list[str]] = None,
-                       lang: Lang = "de") -> str:
+                       lang: Lang = "de", ampel: dict) -> str:
     """Plain-text table from row dicts."""
     if not rows:
         return f"  {t('mail.tabelle.keine_daten', lang)}"
@@ -81,7 +82,7 @@ def _render_text_table(rows: list[dict], *, friendly_keys: set[str],
         for r in rows:
             val_str = (
                 fmt_val(key, r.get(key), friendly_keys=friendly_keys,
-                        row=r, format_modes=format_modes, lang=lang)
+                        row=r, format_modes=format_modes, lang=lang, ampel=ampel)
                 if key != "time" else r["time"]
             )
             w = max(w, len(val_str))
@@ -96,7 +97,7 @@ def _render_text_table(rows: list[dict], *, friendly_keys: set[str],
             val_str = (
                 r["time"] if key == "time"
                 else fmt_val(key, r.get(key), friendly_keys=friendly_keys,
-                             row=r, format_modes=format_modes, lang=lang)
+                             row=r, format_modes=format_modes, lang=lang, ampel=ampel)
             )
             parts.append(val_str.ljust(w))
         lines.append(f"  {'  '.join(parts)}")
@@ -149,6 +150,8 @@ def render_plain(
     False) — s. ``render_html`` fuer die Begruendung.
     """
     sig = profile_signature(profile, lang=lang)
+    # Issue #2792 S1c-1: Einstieg loest die Ampel auf; bis S1c-4 „allgemein".
+    ampel = resolve_ampel(None)
     # Fix #1575 Scheibe 2: einmal berechnen, an beide Aufrufstellen von
     # _render_text_table() durchreichen (Segment- UND Nacht-Tabelle, AC-7).
     _col_order = resolve_metric_col_order(dc)
@@ -214,7 +217,7 @@ def render_plain(
             segments, _pill_metric_ids, _sms_mention_thresholds, tz=tz,
             night_weather=night_weather, has_gap=has_gap,
             day_window_start_hour=day_window_start_hour,
-            day_window_end_hour=day_window_end_hour, lang=lang,
+            day_window_end_hour=day_window_end_hour, lang=lang, ampel=ampel,
         )
         lines.append(f"━━ {t('mail.pille.ueberschrift', lang)} ━━")
         for _lbl, _tone in _plain_pills:
@@ -289,7 +292,7 @@ def render_plain(
             lines.append(f"━━ Segment {seg.segment_id}: {_km_range} | {local_fmt(seg.start_time, tz)}–{local_fmt(seg.end_time, tz)} | {elev_arrow}{s_elev}m → {e_elev}m ━━")
         lines.append(_render_text_table(rows, friendly_keys=friendly_keys,
                                          format_modes=format_modes,
-                                         col_order=_col_order, lang=lang))
+                                         col_order=_col_order, lang=lang, ampel=ampel))
         lines.append("")
 
     if night_rows:
@@ -299,7 +302,7 @@ def render_plain(
         lines.append(t("mail.nacht.ankunft", lang,
                        zeit=local_fmt(display_end_time(last_seg), tz)))
         lines.append(_render_text_table(night_rows, friendly_keys=friendly_keys,
-                                         col_order=_col_order, lang=lang))
+                                         col_order=_col_order, lang=lang, ampel=ampel))
         if any(mc.enabled and mc.metric_id in ("temperature", "freezing_level") for mc in dc.metrics):
             lines.append(f"  {t('mail.nacht.hinweis_minimum', lang)}")
         lines.append("")

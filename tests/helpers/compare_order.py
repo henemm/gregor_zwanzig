@@ -28,7 +28,7 @@ from output.renderers.compare_metric_catalog import (
     COMPARE_METRIC_CATALOG, get_compare_metric_catalog,
 )
 from output.renderers.compare_metric_ids import FRONTEND_TO_RENDERER_METRIC_ID
-from output.renderers.email.compare_html import CV2_METRICS
+from output.renderers.email.compare_html import CV2_ZEILEN as CV2_METRICS
 from tests.helpers.outlook_columns import nicht_waehlbare_compare_keys
 
 # Vakuum-Schutz-Untergrenze (Muster outlook_columns.py:37-40): ein Waechter,

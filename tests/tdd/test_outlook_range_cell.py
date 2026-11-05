@@ -20,6 +20,7 @@ Kern-Schicht: keine Mocks, kein Netz. Pfadregel #1409: Aufloesung relativ zu
 dieser Testdatei.
 """
 from __future__ import annotations
+from app.ampel import resolve_ampel
 
 import re
 from datetime import datetime, timezone
@@ -118,7 +119,7 @@ def test_ac7_html_and_plain_show_the_same_range_cell():
     summary = SegmentWeatherSummary(temp_min_c=9.0, temp_max_c=27.0)
     row = _row(summary, _TEMP_BOTH)
 
-    html = render_outlook_table([row], show_acc=False, metrics=_TEMP_BOTH)
+    html = render_outlook_table([row], show_acc=False, metrics=_TEMP_BOTH, ampel=resolve_ampel(None))
     plain = render_outlook_plain(
         [row], show_acc=False, metrics=_TEMP_BOTH, heading="Ausblick", show_name=False,
     )

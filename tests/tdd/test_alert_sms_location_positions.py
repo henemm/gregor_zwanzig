@@ -92,6 +92,7 @@ Pfadregel #1409: der Prueflings-Datenpfad wird relativ zur Testdatei
 aufgeloest, nie ueber einen festen Hauptrepo-Pfad.
 """
 from __future__ import annotations
+from app.ampel import resolve_ampel
 
 import http.server
 import re
@@ -517,7 +518,7 @@ def test_k1_multi_location_sms_has_no_head_at_all():
         ("Wien", [_change(45.0)], _gpx(48.21, 16.37)),
     ]
     msg = to_multi_point_alert_message(
-        groups, tz=ZoneInfo("Europe/Vienna"), stand_at="04.08. 08:00",
+        groups, tz=ZoneInfo("Europe/Vienna"), stand_at="04.08. 08:00", ampel=resolve_ampel(None),
     )
     text = render_sms(msg, location_positions={"Graz": 1, "Wien": 2})
 
@@ -896,7 +897,7 @@ def test_k3_sms_token_binds_position_to_location_name_not_to_token_order():
         ("Bruck", [_change(30.0)], _gpx(47.41, 15.27)),
     ]
     msg = to_multi_point_alert_message(
-        groups, tz=ZoneInfo("Europe/Vienna"), stand_at="04.08. 08:00",
+        groups, tz=ZoneInfo("Europe/Vienna"), stand_at="04.08. 08:00", ampel=resolve_ampel(None),
     )
 
     text = render_sms(msg, location_positions={"Bruck": 1, "Melk": 3})

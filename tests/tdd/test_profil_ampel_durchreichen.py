@@ -283,6 +283,21 @@ _INTERN = [
     ("output.renderers.alert.project", "to_point_alert_message"),
     ("output.renderers.email.compare_html", "build_cv2_metrics"),
     ("output.renderers.email.compare_html", "build_hour_metrics"),
+    # Fix-Loop 1 (Adversary F002): weitere Zwischenglieder der Kette.
+    ("output.renderers.alert.project", "to_multi_point_alert_message"),
+    ("output.renderers.alert.project", "to_multi_location_onset_alert_message"),
+    ("output.renderers.alert.project", "_hour_fields"),
+    ("output.renderers.email.helpers", "fmt_val"),
+    ("output.renderers.alert.hours", "format_cell"),
+    ("output.renderers.alert.hours", "row_parts"),
+    ("output.renderers.alert.render", "_hour_lines"),
+    ("output.renderers.alert.render", "_hours_html"),
+    ("output.renderers.email.plain", "_render_text_table"),
+    ("output.renderers.narrow", "_cell"),
+    ("output.renderers.narrow", "_narrow_table"),
+    ("output.renderers.narrow", "_overview_line"),
+    ("output.renderers.email.outlook", "_outlook_row"),
+    ("output.renderers.email.compare_html", "_build_location_outlook_rows"),
 ]
 
 

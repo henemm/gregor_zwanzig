@@ -26,6 +26,7 @@ konfiguriert) — niemals stiller Erfolg.
 SPEC: docs/specs/modules/issue_952_onset_alert_fidelity.md
 """
 from __future__ import annotations
+from app.ampel import resolve_ampel
 
 import email
 import imaplib
@@ -223,7 +224,7 @@ def test_ac9_onset_alert_real_telegram_delivery_bold_no_subject_duplicate():
     )
     msg = AlertMessage(
         trip_short="E2E952", stand_at="14:23", events=(onset,),
-        source="Radar (DWD)", cooldown_display="2 Stunden",
+        source="Radar (DWD)", cooldown_display="2 Stunden", ampel=resolve_ampel(None),
     )
     subject = render_subject(msg)
     body = render_telegram(msg)

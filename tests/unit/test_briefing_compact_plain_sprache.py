@@ -10,6 +10,7 @@ GERENDERTE Mail, nicht einzelne Bausteine -- faellt irgendwo ein
 ``lang=lang`` weg, steht dort wieder ein deutsches Wort.
 """
 from __future__ import annotations
+from app.ampel import resolve_ampel
 
 import email
 import importlib.util
@@ -166,15 +167,15 @@ def test_ac1_klartext_tabelle_englisch_signale_breite_und_leer():
                            thunder_level=ThunderLevel.LOW)
     row = dp_to_row(dp, dc, tz=ZoneInfo("UTC"))
     row["_thunder_signals"] = ["blitzdichte"]
-    tabelle = _render_text_table([row], friendly_keys=set(), lang="en")
+    tabelle = _render_text_table([row], friendly_keys=set(), lang="en", ampel=resolve_ampel(None))
     kopf, trenner, zeile = tabelle.split("\n")
     zelle = "light · Lightning density"
     assert zelle in zeile and "Blitzdichte" not in tabelle, tabelle
     # Spaltenbreite aus dem ENGLISCHEN Text: Trennstrich exakt Zelle + 1.
     spalte = kopf.split().index("Thdr")
     assert len(trenner.split()[spalte]) == len(zelle) + 1, tabelle
-    assert _render_text_table([], friendly_keys=set(), lang="en") == "  (no data)"
-    assert _render_text_table([], friendly_keys=set()) == "  (keine Daten)"
+    assert _render_text_table([], friendly_keys=set(), lang="en", ampel=resolve_ampel(None)) == "  (no data)"
+    assert _render_text_table([], friendly_keys=set(), ampel=resolve_ampel(None)) == "  (keine Daten)"
 
 
 def test_ac1_kompakt_fester_ausblick_zweig_englisch():

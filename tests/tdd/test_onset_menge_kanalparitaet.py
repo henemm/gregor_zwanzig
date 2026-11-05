@@ -19,6 +19,7 @@ Premium-SMS) und die Telegram-Bot-API, echter `NotificationService`-Lauf ueber
 Verhalten, kein externes Netz, kein echter Versand.
 """
 from __future__ import annotations
+from app.ampel import resolve_ampel
 
 import http.server
 import json
@@ -194,7 +195,7 @@ def test_ac6_ortsvergleich_buendel_traegt_dieselbe_menge_wie_der_trip_pfad():
 
     msg = to_multi_location_onset_alert_message(
         [("Zermatt", fuehrend), ("Chamonix", zweiter)],
-        tz=timezone.utc, stand_at="10:00",
+        tz=timezone.utc, stand_at="10:00", ampel=resolve_ampel(None),
     )
     sms = render_sms(msg)
 
@@ -591,7 +592,7 @@ def test_ac9_langer_ortsname_mit_extremwert_bleibt_im_zeichenbudget():
     )
     msg = AlertMessage(
         trip_short="Alpen", stand_at="17:20", events=(event,),
-        source="Radar (DWD)",
+        source="Radar (DWD)", ampel=resolve_ampel(None),
     )
     sms = render_sms(msg, limit=140)
 

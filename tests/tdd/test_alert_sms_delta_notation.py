@@ -10,6 +10,7 @@ Kein Mock, keine Dateiinhalt-Checks -- echte `AlertEvent`/`AlertMessage`
 durch den echten Renderer (Vorbild: `test_alert_sms_segment_head.py`).
 """
 from __future__ import annotations
+from app.ampel import resolve_ampel
 
 from output.renderers.alert.model import AlertEvent, AlertMessage
 from output.renderers.alert.render import render_sms
@@ -44,7 +45,7 @@ def test_ac1_kein_at_praefix_im_trip_delta_kopf():
     """
     msg = AlertMessage(
         trip_short="KHW 403", stand_at="10:00", events=(_visibility_event(),),
-        reference_at="18:03",
+        reference_at="18:03", ampel=resolve_ampel(None),
     )
     sms = render_sms(msg)
 
@@ -69,7 +70,7 @@ def test_ac2_numerisches_delta_token_ohne_vorzeichen_pfeil_notation():
     HEUTE ROT: `_sms_token()` (Z.707-711) liefert '-VS1400>280@14'.
     """
     msg = AlertMessage(
-        trip_short="KHW 403", stand_at="10:00", events=(_visibility_event(),),
+        trip_short="KHW 403", stand_at="10:00", events=(_visibility_event(),), ampel=resolve_ampel(None),
     )
     sms = render_sms(msg)
 
@@ -91,7 +92,7 @@ def test_ac3_gewitter_delta_token_stufenbuchstaben():
     HEUTE ROT: `_sms_token()` kennt keine Level-Erkennung -> 'TH2>3@16'.
     """
     msg = AlertMessage(
-        trip_short="KHW 403", stand_at="10:00", events=(_thunder_event(),),
+        trip_short="KHW 403", stand_at="10:00", events=(_thunder_event(),), ampel=resolve_ampel(None),
     )
     sms = render_sms(msg)
 
@@ -123,7 +124,7 @@ def test_ac4_compare_pfad_token_bleibt_byte_identisch_ohne_at_praefix():
         location_label="Ort",
     )
     msg = AlertMessage(
-        trip_short="Vergleich", stand_at="10:00", events=(e,), reference_at="18:03",
+        trip_short="Vergleich", stand_at="10:00", events=(e,), reference_at="18:03", ampel=resolve_ampel(None),
     )
     sms = render_sms(msg, location_positions={"Ort": 2})
 

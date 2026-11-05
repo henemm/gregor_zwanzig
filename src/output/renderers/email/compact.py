@@ -13,6 +13,7 @@ from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Optional
 from zoneinfo import ZoneInfo
 
+from app.ampel import resolve_ampel
 from app.models import SegmentWeatherData, UnifiedWeatherDisplayConfig
 from i18n import Lang, t
 from utils.ascii_fold import fold_ascii
@@ -208,6 +209,8 @@ def render_compact(
         night_weather=night_weather, has_gap=has_gap,
         day_window_start_hour=day_window_start_hour,
         day_window_end_hour=day_window_end_hour, lang=lang,
+        # Issue #2792 S1c-1: Einstieg loest die Ampel auf; bis S1c-4 „allgemein".
+        ampel=resolve_ampel(None),
     ) if metric_ids else []
     if pills:
         lines.append(f"== {_ascii(t('mail.pille.ueberschrift', lang))} ==")

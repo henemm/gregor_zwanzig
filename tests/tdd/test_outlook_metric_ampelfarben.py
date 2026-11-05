@@ -22,6 +22,7 @@ im selben Testfall gefordert, damit jeder Testfall insgesamt rot ist.
 Kern-Schicht, deterministisch. Kein Mock-Framework, kein Netz.
 """
 from __future__ import annotations
+from app.ampel import resolve_ampel
 
 import re
 import sys
@@ -85,7 +86,7 @@ def test_ac1_numerische_spalte_ueber_schwelle_bekommt_ampelfarbe_im_trip():
     Windspalte muss ``background:{tone_css('orange')[0]};`` tragen.
     """
     row = _row(_summary(wind_max_kmh=55.0), [WIND])
-    html = render_outlook_table([row], show_acc=True, metrics=[WIND])
+    html = render_outlook_table([row], show_acc=True, metrics=[WIND], ampel=resolve_ampel(None))
 
     styles = _cell_styles(html)
     # #2098: seit der Behebung traegt der Trip-Zweig (show_acc=True) hinter
@@ -107,8 +108,8 @@ def test_ac2_ortsvergleich_bekommt_dieselbe_farbe_wie_der_trip():
     """
     row = _row(_summary(wind_max_kmh=55.0), [WIND])
 
-    trip_html = render_outlook_table([row], show_acc=True, metrics=[WIND])
-    compare_html = render_outlook_table([row], show_acc=False, metrics=[WIND])
+    trip_html = render_outlook_table([row], show_acc=True, metrics=[WIND], ampel=resolve_ampel(None))
+    compare_html = render_outlook_table([row], show_acc=False, metrics=[WIND], ampel=resolve_ampel(None))
 
     trip_bg = _bg_of(_cell_styles(trip_html)[1])
     compare_bg = _bg_of(_cell_styles(compare_html)[1])
@@ -133,7 +134,7 @@ def test_ac3_ac4_ac5_gewitterspalte_folgt_der_ampelband_zuordnung_je_stufe():
              weekday=f"T{i}")
         for i, stufe in enumerate(stufen)
     ]
-    html = render_outlook_table(rows, show_acc=True, metrics=[GEWITTER])
+    html = render_outlook_table(rows, show_acc=True, metrics=[GEWITTER], ampel=resolve_ampel(None))
 
     styles = _cell_styles(html)
     # Gewitterspalte ist Index 1 JEDER Zeile. Die Zahl der Zellen je Zeile
@@ -169,7 +170,7 @@ def test_ac6_metrik_ohne_katalogschwellen_bleibt_farblos_trotz_hohem_wert():
     """
     auswahl = [WIND, SNOW]
     row = _row(_summary(wind_max_kmh=80.0, snow_depth_cm=150.0), auswahl)
-    html = render_outlook_table([row], show_acc=True, metrics=auswahl)
+    html = render_outlook_table([row], show_acc=True, metrics=auswahl, ampel=resolve_ampel(None))
 
     styles = _cell_styles(html)
     # #2098: + die fest angehaengte ACC-Zelle (show_acc=True, Trip).
@@ -193,7 +194,7 @@ def test_ac7_niederschlagsart_bleibt_immer_farblos():
     auswahl = [WIND, NIEDERSCHLAGSART]
     for wert in (PrecipType.RAIN, PrecipType.SNOW):
         row = _row(_summary(wind_max_kmh=80.0, precip_type_dominant=wert), auswahl)
-        html = render_outlook_table([row], show_acc=True, metrics=auswahl)
+        html = render_outlook_table([row], show_acc=True, metrics=auswahl, ampel=resolve_ampel(None))
         styles = _cell_styles(html)
 
         assert _bg_of(styles[1]) == f"background:{tone_css('red')[0]};", (
@@ -219,13 +220,13 @@ def test_ac7_enum_zweig_greift_vor_der_numerischen_auswertung():
     Assert stellt sicher, dass derselbe Wert im numerischen Zweig tatsaechlich
     faerbt -- ohne ihn wuerde der zweite nichts beweisen.
     """
-    numerisch = _metric_column_bg({"kind": "range", "metric_id": "wind"}, 80.0)
+    numerisch = _metric_column_bg({"kind": "range", "metric_id": "wind"}, 80.0, ampel=resolve_ampel(None))
     assert numerisch == f"background:{tone_css('red')[0]};", (
         f"Vorbedingung verletzt: derselbe Wert traegt im numerischen Zweig "
         f"{numerisch!r} statt rot -- der Enum-Vergleich unten wuerde dann "
         "nichts unterscheiden."
     )
-    assert _metric_column_bg({"kind": "enum", "metric_id": "wind"}, 80.0) == "", (
+    assert _metric_column_bg({"kind": "enum", "metric_id": "wind"}, 80.0, ampel=resolve_ampel(None)) == "", (
         "kind=='enum' muss VOR der numerischen Auswertung greifen und "
         "unabhaengig von vorhandenen Katalog-Schwellen farblos bleiben (AC-7)."
     )
@@ -245,7 +246,7 @@ def test_ac8_altpfad_ohne_auswahl_faerbt_weiterhin_wie_bisher():
     """
     row = _row(_summary(wind_max_kmh=55.0, thunder_level_max=ThunderLevel.MED),
                metrics=None)
-    html = render_outlook_table([row], show_acc=True, metrics=None)
+    html = render_outlook_table([row], show_acc=True, metrics=None, ampel=resolve_ampel(None))
 
     # Altpfad-Spalten: Tag, N, D, R, PR, Wind, Böen, Gew, ACC -- Wind ist
     # Index 5, Gewitter Index 7 (outlook.py:154-167).

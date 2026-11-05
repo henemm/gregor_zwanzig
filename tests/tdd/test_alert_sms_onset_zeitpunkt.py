@@ -19,6 +19,7 @@ ableitet (Compare-Buendel), wird auf Struktur statt auf einen Goldstring
 geprueft (Wanduhr-Ratsche #1940).
 """
 from __future__ import annotations
+from app.ampel import resolve_ampel
 
 import ast
 import inspect
@@ -62,7 +63,7 @@ def _onset_msg(event: OnsetEvent, *, trip_short: str = "KHW 403",
                source: str = "radar") -> AlertMessage:
     """`source is not None` routet `render_sms` in den Onset-Zweig."""
     return AlertMessage(
-        trip_short=trip_short, stand_at="10:00", events=(event,), source=source,
+        trip_short=trip_short, stand_at="10:00", events=(event,), source=source, ampel=resolve_ampel(None),
     )
 
 
@@ -262,7 +263,7 @@ def test_ac5_compare_buendel_kopf_nennt_nur_den_ortsnamen():
 
     msg = to_multi_location_onset_alert_message(
         [("Zermatt", _nowcast()), ("Chamonix", _nowcast())],
-        tz=timezone.utc, stand_at="10:00",
+        tz=timezone.utc, stand_at="10:00", ampel=resolve_ampel(None),
     )
     sms = render_sms(msg)
 
@@ -292,7 +293,7 @@ def test_ac6_ein_ort_compare_nennt_den_ortsnamen_aus_trip_short():
     from output.renderers.alert.project import to_multi_location_onset_alert_message
 
     msg = to_multi_location_onset_alert_message(
-        [("Zermatt", _nowcast())], tz=timezone.utc, stand_at="10:00",
+        [("Zermatt", _nowcast())], tz=timezone.utc, stand_at="10:00", ampel=resolve_ampel(None),
     )
 
     # Invariante des Konstruktors — Grundlage der Fallunterscheidung.
@@ -339,7 +340,7 @@ def test_ac7_abweichender_source_wert_faellt_auf_die_km_spanne_zurueck():
     )
 
     msg = to_multi_location_onset_alert_message(
-        [("Zermatt", _nowcast())], tz=timezone.utc, stand_at="10:00",
+        [("Zermatt", _nowcast())], tz=timezone.utc, stand_at="10:00", ampel=resolve_ampel(None),
     )
     # Setzstelle liest dieselbe Konstante wie die Lesestelle im Renderer.
     assert msg.source == COMPARE_RADAR_SOURCE, (
@@ -403,7 +404,7 @@ def test_ac9_nur_das_compare_ergebnis_traegt_den_ortsnamen():
     ))
     compare_sms = render_sms(to_multi_location_onset_alert_message(
         [("Zermatt", _nowcast()), ("Chamonix", _nowcast())],
-        tz=timezone.utc, stand_at="10:00",
+        tz=timezone.utc, stand_at="10:00", ampel=resolve_ampel(None),
     ))
 
     trip_kopf, compare_kopf = _kopf(trip_sms), _kopf(compare_sms)

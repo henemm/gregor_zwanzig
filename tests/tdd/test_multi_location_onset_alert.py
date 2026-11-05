@@ -9,6 +9,7 @@ echte `NowcastResult`-Fixtures, den echten Renderer und den echten Dispatch-Kern
 SPEC: docs/specs/modules/issue_1041_multi_location_onset_alert.md (Slice 1a/3)
 """
 from __future__ import annotations
+from app.ampel import resolve_ampel
 
 import uuid
 from datetime import timezone
@@ -149,7 +150,7 @@ def _build_single_onset_message():
     )
     return AlertMessage(
         trip_short="GR20-Test", stand_at="14:23", events=(onset,),
-        source="Radar (DWD)", cooldown_display="2 Stunden",
+        source="Radar (DWD)", cooldown_display="2 Stunden", ampel=resolve_ampel(None),
     )
 
 
@@ -317,7 +318,7 @@ def test_bundle_labels_convective_location_distinctly():
 
     msg = to_multi_location_onset_alert_message(
         [("Sturmdorf", nc_conv), ("Nieselhausen", nc_rain)],
-        tz=timezone.utc, stand_at="14:23",
+        tz=timezone.utc, stand_at="14:23", ampel=resolve_ampel(None),
     )
     _html, plain = render_email(msg)
 
@@ -356,7 +357,7 @@ def test_single_group_falls_back_to_single_onset_layout():
     )
 
     msg = to_multi_location_onset_alert_message(
-        [("Solo Ort", nc_solo)], tz=timezone.utc, stand_at="14:23",
+        [("Solo Ort", nc_solo)], tz=timezone.utc, stand_at="14:23", ampel=resolve_ampel(None),
     )
 
     assert len(msg.events) == 1, "Eine Gruppe muss genau EIN OnsetEvent erzeugen"
@@ -405,7 +406,7 @@ def test_bundle_footer_shows_distinct_sources():
 
     msg_mixed = to_multi_location_onset_alert_message(
         [("Zermatt", nc_radar), ("Chamonix", nc_arome)],
-        tz=timezone.utc, stand_at="14:23",
+        tz=timezone.utc, stand_at="14:23", ampel=resolve_ampel(None),
     )
     _html, plain_mixed = render_email(msg_mixed)
     footer_mixed = _line_for(plain_mixed, "Stand: heute")
@@ -422,7 +423,7 @@ def test_bundle_footer_shows_distinct_sources():
     )
     msg_same = to_multi_location_onset_alert_message(
         [("Zermatt", nc_radar), ("Nieselhausen", nc_radar_2)],
-        tz=timezone.utc, stand_at="14:23",
+        tz=timezone.utc, stand_at="14:23", ampel=resolve_ampel(None),
     )
     _html2, plain_same = render_email(msg_same)
     footer_same = _line_for(plain_same, "Stand: heute")
@@ -439,7 +440,7 @@ def test_empty_groups_raises_valueerror():
     from output.renderers.alert.project import to_multi_location_onset_alert_message
 
     with pytest.raises(ValueError):
-        to_multi_location_onset_alert_message([], tz=timezone.utc, stand_at="14:23")
+        to_multi_location_onset_alert_message([], tz=timezone.utc, stand_at="14:23", ampel=resolve_ampel(None))
 
 
 def test_none_onset_entries_filtered_or_raise():
@@ -468,7 +469,7 @@ def test_none_onset_entries_filtered_or_raise():
 
     msg = to_multi_location_onset_alert_message(
         [("Gueltigdorf", nc_valid_1), ("Leerdorf", nc_none), ("Zweitdorf", nc_valid_2)],
-        tz=timezone.utc, stand_at="14:23",
+        tz=timezone.utc, stand_at="14:23", ampel=resolve_ampel(None),
     )
     assert len(msg.events) == 2, "None-Onset-Ort darf nicht als Event landen"
     _html, plain = render_email(msg)
@@ -478,5 +479,5 @@ def test_none_onset_entries_filtered_or_raise():
 
     with pytest.raises(ValueError):
         to_multi_location_onset_alert_message(
-            [("Nur-Leerdorf", nc_none)], tz=timezone.utc, stand_at="14:23",
+            [("Nur-Leerdorf", nc_none)], tz=timezone.utc, stand_at="14:23", ampel=resolve_ampel(None),
         )

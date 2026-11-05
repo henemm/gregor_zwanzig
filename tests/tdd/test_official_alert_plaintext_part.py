@@ -28,6 +28,7 @@ Zustand zurueck — der Test wird wieder rot. Er prueft damit den GEBAUTEN
 Klartext, nicht den gestrippten.
 """
 from __future__ import annotations
+from app.ampel import resolve_ampel
 
 import re
 from datetime import date, datetime, timezone
@@ -160,7 +161,7 @@ def _nowcast_klartext() -> str:
             onset_minutes=25, onset_time="10:05", km_from=8.0, km_to=8.0,
             is_convective=True, intensity_label="stark",
             source_label="Radar (DWD)", segment_id="Ziel",
-        ),),
+        ),), ampel=resolve_ampel(None),
     )
     return render_email(msg)[1]
 
@@ -425,7 +426,7 @@ def _buendel_nowcast_klartext() -> str:
     )
     return render_email(AlertMessage(
         trip_short="KHW 403", stand_at="09:30", source="radar",
-        cooldown_display="60 Min", events=ereignisse,
+        cooldown_display="60 Min", events=ereignisse, ampel=resolve_ampel(None),
     ))[1]
 
 

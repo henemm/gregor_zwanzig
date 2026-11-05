@@ -9,6 +9,7 @@ Kanal-Renderer. Diese Tests pruefen Scheibe 1 (Modul + Tests, noch ohne
 Consumer-Migration) gegen konkrete, gegen den echten Metrik-Katalog
 verifizierte Erwartungswerte -- kein Mock, kein Dateiinhalt-Check.
 """
+from app.ampel import resolve_ampel
 import pytest
 
 from src.output.metric_format import format_value, severity_for, label
@@ -78,16 +79,16 @@ class TestSeverityFor:
         # 45 liegt zwischen yellow(30) und orange(50) -> "yellow".
         # Der alte, hartcodierte compare_html._sev_wind(45) gibt "danger"
         # (>40) zurueck -- genau diese Divergenz behebt Scheibe 2.
-        assert severity_for("wind", 45.0) == "yellow"
+        assert severity_for("wind", 45.0, ampel=resolve_ampel(None)) == "yellow"
 
     def test_wind_above_red_threshold(self):
-        assert severity_for("wind", 75.0) == "red"
+        assert severity_for("wind", 75.0, ampel=resolve_ampel(None)) == "red"
 
     def test_wind_below_all_thresholds_is_green(self):
-        assert severity_for("wind", 10.0) == "green"
+        assert severity_for("wind", 10.0, ampel=resolve_ampel(None)) == "green"
 
     def test_none_value_returns_none(self):
-        assert severity_for("wind", None) is None
+        assert severity_for("wind", None, ampel=resolve_ampel(None)) is None
 
     def test_temperature_now_has_thresholds_returns_red_not_none(self):
         # #1377 (PO-Entscheidung 2026-07-28): Der Katalog fuehrt fuer
@@ -95,14 +96,14 @@ class TestSeverityFor:
         # 0/-5/-15) -- die frueher hier getestete Known Limitation
         # "temperature hat keine Schwellen" ist damit aufgehoben (Scheibe A).
         # 40 Grad liegt oberhalb der roten Schwelle (34).
-        assert severity_for("temperature", 40.0) == "red"
+        assert severity_for("temperature", 40.0, ampel=resolve_ampel(None)) == "red"
 
     def test_visibility_inverted_threshold_now_supported(self):
         # #1377: severity_for() wertet jetzt invertierte Schwellen
         # (yellow_lt/orange_lt/red_lt) aus -- die frueher hier getestete
         # Known Limitation ("invertierte Schwellen nicht unterstuetzt") ist
         # aufgehoben. 100m Sicht liegt unterhalb der roten Schwelle (500m).
-        assert severity_for("visibility", 100.0) == "red"
+        assert severity_for("visibility", 100.0, ampel=resolve_ampel(None)) == "red"
 
     def test_pressure_has_no_thresholds_returns_none(self):
         # F001-Fix (Adversary-Fund, #1214) bleibt bestehen: pressure hat
@@ -110,7 +111,7 @@ class TestSeverityFor:
         # None liefern statt des impliziten "green"-Fallbacks -- temperature/
         # visibility dienten hier vor #1377 als Beispiel, haben inzwischen
         # aber eigene Schwellen bekommen (s. Tests oben).
-        assert severity_for("pressure", 1013.0) is None
+        assert severity_for("pressure", 1013.0, ampel=resolve_ampel(None)) is None
 
 
 class TestToneCss:

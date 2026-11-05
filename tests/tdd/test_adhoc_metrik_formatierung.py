@@ -24,6 +24,7 @@ Gegenprobe zu AC-13 veraendert den Katalog ueber `dataclasses.replace`
 (siehe `tests/helpers/adhoc_metrik_fixtures.katalog_eintrag_ersetzt`).
 """
 from __future__ import annotations
+from app.ampel import resolve_ampel
 
 import re
 
@@ -356,7 +357,7 @@ def test_2167_ac3_ad_hoc_und_briefing_nennen_denselben_wert():
         mc.enabled = mc.metric_id == "sunshine"
     dp = ForecastDataPoint(ts=fix.now, dni_wm2=dni)
     row = dp_to_row(dp, dc, tz=TRIP_TZ)
-    briefing_zelle = fmt_val("sunshine", row.get("sunshine"), row=row)
+    briefing_zelle = fmt_val("sunshine", row.get("sunshine"), row=row, ampel=resolve_ampel(None))
     briefing_treffer = _ZAHL_VOR_H.search(briefing_zelle)
     assert briefing_treffer is not None, (
         f"AC-3: Briefing-Zelle liefert kein '<Zahl> h'-Format: {briefing_zelle!r}"

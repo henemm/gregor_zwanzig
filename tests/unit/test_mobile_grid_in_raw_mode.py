@@ -12,6 +12,7 @@ fix-mobile-grid-decouple-ampel (Bug fast-track):
 Spec: docs/specs/fast/fix-mobile-grid-decouple-ampel.md
 """
 from __future__ import annotations
+from app.ampel import resolve_ampel
 
 import sys
 from pathlib import Path
@@ -42,7 +43,7 @@ def test_raw_mode_mobile_view_uses_bordered_table_not_pre():
         _ROWS_RAW,
         friendly_keys=set(),
         include_header=True,
-        indicator_keys=set(),
+        indicator_keys=set(), ampel=resolve_ampel(None),
     )
 
     assert "<pre" not in result, (
@@ -69,7 +70,7 @@ def test_raw_mode_mobile_table_wrapped_in_scroll_container():
         _ROWS_RAW,
         friendly_keys=set(),
         include_header=True,
-        indicator_keys=set(),
+        indicator_keys=set(), ampel=resolve_ampel(None),
     )
     scroll_pos = result.find("overflow-x:auto")
     table_pos = result.find("<table")

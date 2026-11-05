@@ -15,6 +15,7 @@ Zwei Aufgaben:
    ``uv run python -m tests.helpers.mail_lang_fixture``.
 """
 from __future__ import annotations
+from app.ampel import resolve_ampel
 
 import email
 import re
@@ -136,7 +137,7 @@ def vergleich_zeilen_en() -> dict[str, str]:
     from output.renderers.email.compare_html import _visible_metrics
 
     paare: dict[str, str] = {}
-    for zeile in _visible_metrics(None):
+    for zeile in _visible_metrics(None, ampel=resolve_ampel(None)):
         if "metric_id" not in zeile:
             continue
         m = get_metric(zeile["metric_id"])
@@ -364,7 +365,7 @@ def _radar_alert_eml(lang: str = "de") -> bytes:
     msg = AlertMessage(
         trip_short="GR20 Golden", stand_at="14:05", events=(onset,),
         source="Radar (DWD)",
-        cooldown_display="2 Stunden" if lang == "de" else cooldown_text(120, lang=lang),
+        cooldown_display="2 Stunden" if lang == "de" else cooldown_text(120, lang=lang), ampel=resolve_ampel(None),
     )
     if lang == "de":  # Aufruf wie vor #2667 (Fixture byte-gleich)
         html, plain = render_email(msg)

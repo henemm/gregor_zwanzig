@@ -15,6 +15,7 @@ from zoneinfo import ZoneInfo
 
 from app.metric_catalog import get_metric
 from i18n import Lang, fmt_weekday, t
+from app.ampel import resolve_ampel
 from app.models import (
     Corridor, SegmentWeatherData, ThunderLevel, UnifiedWeatherDisplayConfig,
     WeatherChange,
@@ -197,7 +198,7 @@ def _thunder_risk_level(thunder) -> Optional[str]:
     return None
 
 
-def _row_risk(r: dict) -> str:
+def _row_risk(r: dict, *, ampel: dict) -> str:
     """Bestimmt Risk-Level pro Tabellenzeile aus Katalog-Schwellen (Issue #1377
     Scheibe B, AC-10; Issue #1927 Wiedereroeffnung, Spec
     fix_1927_risk_dot_kombi_regel). Gewitter-Zellfaerbung bleibt hartcodiert
@@ -222,11 +223,11 @@ def _row_risk(r: dict) -> str:
     vis_num = _safe_float(vis_raw, 99.0)
     vis_m = vis_num if vis_num > 100 else vis_num * 1000
 
-    gust_sev = severity_for("gust", _safe_float(r.get("gust")))
-    wind_sev = severity_for("wind", _safe_float(r.get("wind")))
-    precip_sev = severity_for("precipitation", _safe_float(r.get("precip")))
-    pop_sev = severity_for("rain_probability", _safe_float(r.get("pop")))
-    visibility_sev = severity_for("visibility", vis_m)
+    gust_sev = severity_for("gust", _safe_float(r.get("gust")), ampel=ampel)
+    wind_sev = severity_for("wind", _safe_float(r.get("wind")), ampel=ampel)
+    precip_sev = severity_for("precipitation", _safe_float(r.get("precip")), ampel=ampel)
+    pop_sev = severity_for("rain_probability", _safe_float(r.get("pop")), ampel=ampel)
+    visibility_sev = severity_for("visibility", vis_m, ampel=ampel)
 
     _STAGES = ("green", "yellow", "orange", "red")
     levels = [gust_sev, wind_sev, precip_sev, pop_sev, visibility_sev]
@@ -235,13 +236,13 @@ def _row_risk(r: dict) -> str:
     if worst == "yellow":
         severities = {
             "precipitation": precip_sev,
-            "temperature": severity_for("temperature", _safe_float(r.get("temp"))),
+            "temperature": severity_for("temperature", _safe_float(r.get("temp")), ampel=ampel),
             "rain_probability": pop_sev,
             "thunder": thunder_level,
             "wind": wind_sev,
             "gust": gust_sev,
             "visibility": visibility_sev,
-            "fresh_snow": severity_for("fresh_snow", _safe_float(r.get("fresh_snow"))),
+            "fresh_snow": severity_for("fresh_snow", _safe_float(r.get("fresh_snow")), ampel=ampel),
         }
         if escalate_pair_watch(severities) == "orange":
             worst = "orange"
@@ -506,6 +507,7 @@ def _render_html_table(
     col_order: Optional[list[str]] = None,
     marks: Optional[dict[str, list[Corridor]]] = None,
     lang: Lang = "de",
+    ampel: dict,
 ) -> str:
     if not rows:
         # Empty rows: render a minimal table skeleton so callers can still
@@ -593,7 +595,7 @@ def _render_html_table(
             try:
                 cell = fmt_val(key, raw_val, friendly_keys=friendly_keys,
                                html=True, row=r, format_modes=format_modes,
-                               indicator_keys=indicator_keys, lang=lang)
+                               indicator_keys=indicator_keys, lang=lang, ampel=ampel)
             except (TypeError, ValueError):
                 cell = str(raw_val) if raw_val is not None else "–"
 
@@ -621,7 +623,7 @@ def _render_html_table(
             if _is_ampel_cell:
                 # Issue #888: Tönung aus dem Ampel-Level (Katalog-Schwellenquelle).
                 metric_id = _COL_KEY_TO_METRIC_ID.get(key)
-                level = ampel_level(metric_id, numeric) if metric_id else None
+                level = ampel_level(metric_id, numeric, ampel=ampel) if metric_id else None
                 cell_bg = _ampel_cell_bg(level)
             # Issue #1377 Scheibe B: Roh-Modus-Fallback (key nicht in
             # indicator_keys) fragt denselben Katalog wie der freundliche
@@ -634,7 +636,7 @@ def _render_html_table(
                 value = numeric
                 if key in ("vis", "visibility"):
                     value = numeric if numeric > 100 else numeric * 1000
-                level = severity_for(metric_id, value)
+                level = severity_for(metric_id, value, ampel=ampel)
                 cell_bg = _ampel_cell_bg(level)
             # Gewitter ist seit Issue #1491 eine reguläre 4-stufige
             # Ampel-Spalte (wie Wind/Böen/Regen/Regenwahrsch./CAPE) — die
@@ -682,7 +684,7 @@ def _render_html_table(
             else:
                 tds += f'<td{mark_cls} style="{_td_grid}{mark_extra}" data-label="{label}">{cell}</td>'
         # Issue #890 / AC-4: RiskDot-Spalte am Zeilenende (keine border-right — letzte Spalte).
-        _dot_color = _AMPEL_DOT_COLORS[_RISK_LEVEL_TO_AMPEL[_row_risk(r)]][0]
+        _dot_color = _AMPEL_DOT_COLORS[_RISK_LEVEL_TO_AMPEL[_row_risk(r, ampel=ampel)]][0]
         tds += (
             f'<td style="padding:8px 4px;text-align:center;'
             f'border-bottom:1px solid #f0ece1;">'
@@ -719,6 +721,7 @@ def _render_mobile_compact_rows(
     col_order: Optional[list[str]] = None,
     marks: Optional[dict[str, list[Corridor]]] = None,
     lang: Lang = "de",
+    ampel: dict,
 ) -> str:
     """fix-mobile-grid-decouple-ampel: Handy-Stundentabelle rendert IMMER als
     bordierte <table> (via _render_html_table), in overflow-x:auto gewickelt —
@@ -748,6 +751,7 @@ def _render_mobile_compact_rows(
         col_order=col_order,
         marks=marks,
         lang=lang,
+        ampel=ampel,
     )
     return (
         '<div style="overflow-x:auto;-webkit-overflow-scrolling:touch;padding:4px 0;">'
@@ -852,6 +856,9 @@ def render_html(
     geteilter Baustein in `corridor_mark.py`. `None`/`[]` = HTML
     unveraendert (Baseline-Schutz).
     """
+    # Issue #2792 S1c-1: Einstieg loest die Ampel EINMAL auf und reicht sie an
+    # jede Farbentscheidung durch. Bis S1c-4 fest „allgemein" (byte-gleich).
+    ampel = resolve_ampel(None)
     # Bug #397: Datums-Header in Ortszeit (passt zu lokalen Segment-Zeiten).
     report_date = local_fmt(segments[0].segment.start_time, tz, "%d.%m.%Y")
     # Issue #342: Tages-Basis für Pro-Metrik-Horizont-Filter.
@@ -1054,6 +1061,7 @@ def render_html(
                     col_order=_col_order,
                     marks=_marks,
                     lang=lang,
+                    ampel=ampel,
                 )
                 + "</div>"
             )
@@ -1066,6 +1074,7 @@ def render_html(
                 col_order=_col_order,
                 marks=_marks,
                 lang=lang,
+                ampel=ampel,
             )
             mobile_div = (
                 f'<div class="mobile-compact" style="padding:0 16px;">'
@@ -1108,6 +1117,7 @@ def render_html(
                     col_order=_col_order,
                     marks=_marks,
                     lang=lang,
+                    ampel=ampel,
                 )
                 + "</div>"
             )
@@ -1126,6 +1136,7 @@ def render_html(
                 col_order=_col_order,
                 marks=_marks,
                 lang=lang,
+                ampel=ampel,
             )
             mobile_div = (
                 '<div class="mobile-compact" style="padding:0 16px;">'
@@ -1144,14 +1155,14 @@ def render_html(
             night_hint = f'<p style="color:{G_INK_FAINT};font-size:11px;margin-top:4px">{t("mail.nacht.hinweis_minimum", lang)}</p>'
         night_elev = int(last_seg.end_point.elevation_m or 0)
         night_header = "🌙 " + t("mail.nacht.am_ziel", lang, hoehe=night_elev)
-        night_compact = _render_mobile_compact_rows(night_rows, friendly_keys=friendly_keys, format_modes=format_modes, include_header=True, indicator_keys=indicator_keys, col_order=_col_order, marks=_marks, lang=lang)
+        night_compact = _render_mobile_compact_rows(night_rows, friendly_keys=friendly_keys, format_modes=format_modes, include_header=True, indicator_keys=indicator_keys, col_order=_col_order, marks=_marks, lang=lang, ampel=ampel)
         night_html = (
             '<div class="section desktop-only">'
             "<h3>" + night_header + "</h3>"
             '<p style="color:' + G_INK_MUTED + ';font-size:13px">'
             + t("mail.nacht.ankunft", lang, zeit=local_fmt(display_end_time(last_seg), tz))
             + "</p>"
-            + _render_html_table(night_rows, friendly_keys=friendly_keys, format_modes=format_modes, indicator_keys=indicator_keys, col_order=_col_order, marks=_marks, lang=lang)
+            + _render_html_table(night_rows, friendly_keys=friendly_keys, format_modes=format_modes, indicator_keys=indicator_keys, col_order=_col_order, marks=_marks, lang=lang, ampel=ampel)
             + night_hint
             + "</div>"
             '<div class="mobile-compact" style="padding:0 16px">'
@@ -1219,7 +1230,8 @@ def render_html(
         # (Trip/Compare-Teilungs-Invariante) -- show_acc=True bleibt
         # byte-identisch zum bisherigen Inline-Verhalten.
         outlook_table = render_outlook_table(multi_day_trend, show_acc=True,
-                                             metrics=_outlook_metrics, lang=lang)
+                                             metrics=_outlook_metrics, lang=lang,
+                                             ampel=ampel)
 
         # Adversary F001 (#2136/ADR-0068): der frueher hier gepflegte
         # Altbestand-Kuerzel-Block (Pfad 1, "N Tagestief · D Tag-Hoch °C ...")
@@ -1297,6 +1309,7 @@ def render_html(
             day_window_start_hour=day_window_start_hour,
             day_window_end_hour=day_window_end_hour,
             lang=lang,
+            ampel=ampel,
         )
         # AC-7 (#911): Abstände laut Vorlage EmailMetricsSummary
         _chips_html = "".join(pill_html(lbl, tone) for lbl, tone in _pills)

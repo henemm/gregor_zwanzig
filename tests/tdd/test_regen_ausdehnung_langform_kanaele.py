@@ -15,6 +15,7 @@ echten Renderer (Muster `test_regen_ausdehnung_textstellen.py` aus S2a),
 feste Zeitangaben, keine Wanduhr.
 """
 from __future__ import annotations
+from app.ampel import resolve_ampel
 
 import inspect
 from pathlib import Path
@@ -41,7 +42,7 @@ def _onset_event(**overrides) -> OnsetEvent:
 def _onset_msg(*events: OnsetEvent) -> AlertMessage:
     return AlertMessage(
         trip_short="KHW 403", stand_at="14:35", events=tuple(events),
-        source="Radar (DWD)",
+        source="Radar (DWD)", ampel=resolve_ampel(None),
     )
 
 
@@ -202,7 +203,7 @@ def _buendel_msg(**overrides) -> AlertMessage:
     )
     return AlertMessage(
         trip_short="KHW 403", stand_at="17:30", events=(erster, zweiter),
-        source="Radar (DWD)",
+        source="Radar (DWD)", ampel=resolve_ampel(None),
     )
 
 

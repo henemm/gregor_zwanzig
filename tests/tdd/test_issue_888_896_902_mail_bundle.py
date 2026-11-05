@@ -9,6 +9,7 @@ SPEC: docs/specs/modules/fix_888_896_902_mail_bundle.md v1.1 AC-1..AC-5, AC-7
 IMPORTANT: NO mocks, NO patch, NO MagicMock. Real function calls only.
 """
 from __future__ import annotations
+from app.ampel import resolve_ampel
 
 import re
 
@@ -74,7 +75,7 @@ def test_ac1_wind_25_green_no_tint():
     """
     rows = [{"time": "08:00", "wind": 25.0}]
     html = _render_html_table(
-        rows, friendly_keys=set(), indicator_keys={"wind"}
+        rows, friendly_keys=set(), indicator_keys={"wind"}, ampel=resolve_ampel(None)
     )
     cell = _cell_for_label(html, "Wind")
     assert "#15803d" in cell, f"Expected green ampel CSS-Dot, got: {cell}"
@@ -91,7 +92,7 @@ def test_ac1_wind_35_yellow_tint():
     """
     rows = [{"time": "08:00", "wind": 35.0}]
     html = _render_html_table(
-        rows, friendly_keys=set(), indicator_keys={"wind"}
+        rows, friendly_keys=set(), indicator_keys={"wind"}, ampel=resolve_ampel(None)
     )
     cell = _cell_for_label(html, "Wind")
     assert "#d69500" in cell, f"Expected yellow ampel CSS-Dot, got: {cell}"
@@ -108,7 +109,7 @@ def test_ac1_wind_55_orange_tint():
     """
     rows = [{"time": "08:00", "wind": 55.0}]
     html = _render_html_table(
-        rows, friendly_keys=set(), indicator_keys={"wind"}
+        rows, friendly_keys=set(), indicator_keys={"wind"}, ampel=resolve_ampel(None)
     )
     cell = _cell_for_label(html, "Wind")
     assert "#d4530a" in cell, f"Expected orange ampel CSS-Dot, got: {cell}"
@@ -125,7 +126,7 @@ def test_ac1_wind_75_red_tint():
     """
     rows = [{"time": "08:00", "wind": 75.0}]
     html = _render_html_table(
-        rows, friendly_keys=set(), indicator_keys={"wind"}
+        rows, friendly_keys=set(), indicator_keys={"wind"}, ampel=resolve_ampel(None)
     )
     cell = _cell_for_label(html, "Wind")
     assert "#a8104a" in cell, f"Expected red ampel CSS-Dot, got: {cell}"
@@ -152,7 +153,7 @@ def test_ac2_wind_25_raw_mode_matches_catalog():
     orange auf gelb; 25 km/h liegt jetzt unter jeder Schwelle).
     """
     from output.metric_format import severity_for
-    assert severity_for("wind", 25.0) == "green", (
+    assert severity_for("wind", 25.0, ampel=resolve_ampel(None)) == "green", (
         "Erwartungs-Grundlage: Katalog-Gelbschwelle fuer Wind liegt bei 30 km/h"
     )
     rows = [{"time": "08:00", "wind": 25.0}]
@@ -160,7 +161,7 @@ def test_ac2_wind_25_raw_mode_matches_catalog():
         rows,
         friendly_keys=set(),
         format_modes={"wind": "raw"},
-        indicator_keys=set(),
+        indicator_keys=set(), ampel=resolve_ampel(None),
     )
     cell = _cell_for_label(html, "Wind")
     assert "background:" not in cell, (
@@ -225,7 +226,7 @@ def test_ac5_data_cells_carry_inline_border_style():
     identisch zur Time-Zelle, unabhaengig vom E-Mail-Client.
     """
     rows = [{"time": "08:00", "wind": 25.0, "gust": 30.0, "precip": 0.5}]
-    html = _render_html_table(rows, friendly_keys=set(), indicator_keys=set())
+    html = _render_html_table(rows, friendly_keys=set(), indicator_keys=set(), ampel=resolve_ampel(None))
 
     opening_tags = re.findall(r'<td[^>]*data-label="[^"]*"[^>]*>', html)
     assert opening_tags, f"No <td data-label=...> cells found in: {html}"
@@ -251,7 +252,7 @@ def test_ac7_visibility_below_500m_keeps_red_tint():
     von der #888-Aenderung.
     """
     rows = [{"time": "08:00", "visibility": 400.0}]
-    html = _render_html_table(rows, friendly_keys=set(), indicator_keys=set())
+    html = _render_html_table(rows, friendly_keys=set(), indicator_keys=set(), ampel=resolve_ampel(None))
     cell = _cell_for_label(html, "Visib")
     assert "background:#f7d3e2" in cell, (
         f"AC-7: visibility=400m (< 500m) must keep #f7d3e2 tint, got: {cell}"

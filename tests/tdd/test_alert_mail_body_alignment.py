@@ -25,6 +25,7 @@ Umbau ueberleben. Sie sind bewusst am Wirkort formuliert — an der gerenderten
 Mail bzw. am gerenderten Betreff —, nicht an Zwischenprodukten.
 """
 from __future__ import annotations
+from app.ampel import resolve_ampel
 
 import re
 from datetime import date, datetime, timezone
@@ -94,7 +95,7 @@ def _nowcast_mail() -> tuple[str, str]:
             onset_minutes=25, onset_time="10:05", km_from=8.0, km_to=8.0,
             is_convective=True, intensity_label="stark",
             source_label="Radar (DWD)", segment_id="Ziel",
-        ),),
+        ),), ampel=resolve_ampel(None),
     )
     return render_email(msg)
 
