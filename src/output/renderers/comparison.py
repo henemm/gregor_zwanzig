@@ -30,6 +30,7 @@ from output.renderers.channel_layout import (
     CHANNEL_LIMITS, render_for_channel, selection_gap_notice,
     telegram_metric_notice,
 )
+from output.renderers.fallback_notice import build_compare_fallback_lines
 from output.renderers.compare_metric_catalog import (
     COMPARE_METRIC_CATALOG, kuerzel_metric_id_for,
 )
@@ -188,9 +189,12 @@ def render_comparison_text(
     undelivered: list | None = None,
     unresolved_count: int = 0,
     lang: Lang = "de",
+    show_fallback_notice: bool = False,
 ) -> str:
     """
     Render ComparisonResult als Klartext (v2, Issue #1110). ``lang``: #2666.
+    ``show_fallback_notice`` (Issue #1563): Vertretungshinweis je Ort unter
+    der Uebersicht, nur Briefing; Default ``False``.
 
     Kein Score/🏆 mehr. Je Ort: Uebersichtswerte + amtliche Warnungen (via
     ``render_official_alerts_plain()``, kein Copy-Paste, ADR-0011). Danach
@@ -315,6 +319,14 @@ def render_comparison_text(
     )
     if gap_notice:
         lines.append(gap_notice)
+        lines.append("")
+
+    # Issue #1563: Vertretungshinweis je Ort, nur mit Zeilen (AC-4).
+    fallback_zeilen = (
+        build_compare_fallback_lines(locations, lang=lang) if show_fallback_notice else []
+    )
+    if fallback_zeilen:
+        lines.extend(fallback_zeilen)
         lines.append("")
 
     # Stundentabelle + 3-Tage-Ausblick (Epic #1301 B4) je Ort, direkt
@@ -495,6 +507,7 @@ def render_compare_email(
     preset: Optional[dict] = None,
     unresolved_count: int = 0,
     lang: Lang = "de",
+    show_fallback_notice: bool = False,
 ) -> tuple[str, str]:
     """Render both HTML and plain-text parts for a compare email (v2, #1110).
 
@@ -536,6 +549,8 @@ def render_compare_email(
         # Issue #1405 S3: dieselbe Zahl in BEIDE Fassungen der Mail.
         unresolved_count=unresolved_count,
         lang=lang,
+        # Issue #1563: Vertretungshinweis in BEIDE Fassungen (nur Briefing).
+        show_fallback_notice=show_fallback_notice,
     )
     text_body = render_comparison_text(
         result, profile=profile, enabled_metrics=enabled_metrics,
@@ -559,6 +574,7 @@ def render_compare_email(
         undelivered=undelivered,
         unresolved_count=unresolved_count,
         lang=lang,
+        show_fallback_notice=show_fallback_notice,
     )
     return html_body, text_body
 
@@ -771,8 +787,12 @@ def render_compare_telegram(
     preset_name: Optional[str] = None,
     unresolved_count: int = 0,
     lang: Lang = "de",
+    show_fallback_notice: bool = False,
 ) -> str:
     """Rendert einen Orts-Vergleich als Telegram-Nachricht (Issue #1270).
+
+    ``show_fallback_notice`` (Issue #1563): Vertretungshinweis je Ort als
+    Abschluss unter den Ortsbloecken (nur Briefing-Langform; Default ``False``).
 
     ``lang`` (Issue #2666): beschriftete Langform (Kopf, Zeilen, Hinweise) in
     Nutzersprache; Warnungs-Bubble folgt P6 (#2668).
@@ -884,12 +904,18 @@ def render_compare_telegram(
     # den jeweiligen `blocks` (s.o.) -- die folgende Ueberlauf-Logik behandelt
     # Ortsbloecke deshalb wieder atomar wie vor #1362, ohne einen separaten
     # Metrik-Hinweis mitzurechnen.
-    text = _join_telegram(header, blocks)
+    # Issue #1563: Vertretungshinweis als Abschluss, NICHT als eigener Block
+    # (sonst zaehlte die Einpass-Logik ihn als verworfenen Ort).
+    zeilen = build_compare_fallback_lines(locations, lang=lang) if show_fallback_notice else []
+    trailer = "\n\n" + "\n".join(zeilen) if zeilen else ""
+    text = _join_telegram(header, blocks) + trailer
     if max_chars is None or len(text) <= max_chars:
         return text
     # Issue #2666: EIN Hinweis-Baustein in Nutzersprache fuer alle drei
     # Stellen der Einpass-Logik (Laenge pruefen = Laenge anhaengen).
-    return _fit_telegram(header, blocks, max_chars, lambda n: _telegram_notice(n, lang))
+    return _fit_telegram(
+        header, blocks, max_chars - len(trailer), lambda n: _telegram_notice(n, lang),
+    ) + trailer
 
 
 def _fit_telegram(header: list[str], blocks: list[list[str]], max_chars: int, hinweis) -> str:

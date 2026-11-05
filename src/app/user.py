@@ -14,7 +14,9 @@ from enum import Enum
 from typing import TYPE_CHECKING, Dict, List, Optional, Tuple
 
 if TYPE_CHECKING:
-    from app.models import ForecastDataPoint, ThunderLevel, UnifiedWeatherDisplayConfig
+    from app.models import (
+        ForecastDataPoint, ForecastMeta, ThunderLevel, UnifiedWeatherDisplayConfig,
+    )
     from services.official_alerts.models import OfficialAlert
 
 
@@ -165,6 +167,9 @@ class LocationResult:
     # Issue #1441 S2 — Pro-Quelle-Ergebnis DESSELBEN Abrufs (transient,
     # `OfficialSourceQuery`); None = unbekannt -> das Briefing senkt nie.
     official_alert_query: Optional[object] = None
+    # Issue #1563 — Herkunft DESSELBEN Abrufs (transient, kein Persistenzfeld):
+    # traegt eine Vertretung durch eine Ersatzquelle bis zum Renderer.
+    forecast_meta: Optional["ForecastMeta"] = None
 
 
 @dataclass

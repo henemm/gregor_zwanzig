@@ -992,6 +992,8 @@ def send_one_compare_preset(
         # Issue #1405 S3: unmappbare Auswahl sichtbar, nicht nur im Log.
         unresolved_count=opts.unresolved_by_channel.get("email", 0),
         lang=lang,
+        # Issue #1563: Briefing zeigt den Vertretungshinweis je Ort.
+        show_fallback_notice=True,
     )
     # Issue #1169: Δ-Anker je Ort schreiben (ADR-0009 — Abweichung vom zuletzt
     # gemeldeten Stand). Best-effort: ein fehlgeschlagener Snapshot-Write darf
@@ -1054,6 +1056,7 @@ def send_one_compare_preset(
                 preset_name=name,
                 unresolved_count=opts.unresolved_by_channel.get("telegram", 0),
                 lang=lang,
+                show_fallback_notice=True,
             )
         # Issue #2587: Nachhol-Hinweis (nur Nachholversand), geteilter Baustein.
         html_body, text_body, _telegram_text = _apply_catchup_hint(

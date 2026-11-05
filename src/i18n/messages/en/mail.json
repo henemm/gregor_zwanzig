@@ -122,6 +122,7 @@
   "mail.fallback.gewitter_quelle": "Thunderstorm data from backup source: {name}",
   "mail.fallback.wetter_modell": "Some weather values from backup model: {name}",
   "mail.fallback.groeber": "coarser resolution",
+  "mail.fallback.compare_zeile": "{ort}: {text}",
   "mail.fallback.metrik.temperature_2m": "Temperature",
   "mail.fallback.metrik.apparent_temperature": "feels-like temperature",
   "mail.fallback.metrik.relative_humidity_2m": "Humidity",

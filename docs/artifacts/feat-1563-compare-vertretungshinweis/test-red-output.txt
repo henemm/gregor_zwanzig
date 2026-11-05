@@ -1,0 +1,409 @@
+Using CPython 3.12.3 interpreter at: /usr/bin/python3
+Creating virtual environment at: .venv
+   Building gregor-zwanzig @ file:///home/hem/gregor_zwanzig/.claude/worktrees/lovely-prancing-karp
+      Built gregor-zwanzig @ file:///home/hem/gregor_zwanzig/.claude/worktrees/lovely-prancing-karp
+Installed 57 packages in 93ms
+============================= test session starts ==============================
+platform linux -- Python 3.12.3, pytest-8.4.1, pluggy-1.6.0
+rootdir: /home/hem/gregor_zwanzig/.claude/worktrees/lovely-prancing-karp
+configfile: pyproject.toml
+plugins: anyio-4.12.0, timeout-2.4.0, socket-0.8.0
+timeout: 30.0s
+timeout method: signal
+timeout func_only: False
+collected 22 items
+
+tests/unit/test_compare_vertretungshinweis_renderer.py FFFFFFFFFFFFFFFFF [ 77%]
+.                                                                        [ 81%]
+tests/unit/test_compare_vertretungshinweis_datenweg.py FFFF              [100%]
+
+=================================== FAILURES ===================================
+_______ test_build_compare_fallback_lines_nur_betroffener_ort_mit_namen ________
+
+    def test_build_compare_fallback_lines_nur_betroffener_ort_mit_namen():
+>       from output.renderers.fallback_notice import build_compare_fallback_lines
+E       ImportError: cannot import name 'build_compare_fallback_lines' from 'output.renderers.fallback_notice' (/home/hem/gregor_zwanzig/.claude/worktrees/lovely-prancing-karp/src/output/renderers/fallback_notice.py)
+
+tests/unit/test_compare_vertretungshinweis_renderer.py:118: ImportError
+___ test_build_compare_fallback_lines_beide_betroffen_in_tabellenreihenfolge ___
+
+    def test_build_compare_fallback_lines_beide_betroffen_in_tabellenreihenfolge():
+>       from output.renderers.fallback_notice import build_compare_fallback_lines
+E       ImportError: cannot import name 'build_compare_fallback_lines' from 'output.renderers.fallback_notice' (/home/hem/gregor_zwanzig/.claude/worktrees/lovely-prancing-karp/src/output/renderers/fallback_notice.py)
+
+tests/unit/test_compare_vertretungshinweis_renderer.py:128: ImportError
+_______ test_build_compare_fallback_lines_kollision_zwei_zeilen_ein_ort ________
+
+    def test_build_compare_fallback_lines_kollision_zwei_zeilen_ein_ort():
+>       from output.renderers.fallback_notice import build_compare_fallback_lines
+E       ImportError: cannot import name 'build_compare_fallback_lines' from 'output.renderers.fallback_notice' (/home/hem/gregor_zwanzig/.claude/worktrees/lovely-prancing-karp/src/output/renderers/fallback_notice.py)
+
+tests/unit/test_compare_vertretungshinweis_renderer.py:138: ImportError
+_____ test_build_compare_fallback_lines_fehlerort_und_none_liefern_nichts ______
+
+    def test_build_compare_fallback_lines_fehlerort_und_none_liefern_nichts():
+>       from output.renderers.fallback_notice import build_compare_fallback_lines
+E       ImportError: cannot import name 'build_compare_fallback_lines' from 'output.renderers.fallback_notice' (/home/hem/gregor_zwanzig/.claude/worktrees/lovely-prancing-karp/src/output/renderers/fallback_notice.py)
+
+tests/unit/test_compare_vertretungshinweis_renderer.py:146: ImportError
+__________ test_build_compare_fallback_lines_englisch_aus_dem_katalog __________
+
+    def test_build_compare_fallback_lines_englisch_aus_dem_katalog():
+>       from output.renderers.fallback_notice import build_compare_fallback_lines
+E       ImportError: cannot import name 'build_compare_fallback_lines' from 'output.renderers.fallback_notice' (/home/hem/gregor_zwanzig/.claude/worktrees/lovely-prancing-karp/src/output/renderers/fallback_notice.py)
+
+tests/unit/test_compare_vertretungshinweis_renderer.py:155: ImportError
+_________ test_ac1_html_hinweiszeile_mit_ortsnamen_nur_betroffener_ort _________
+
+    def test_ac1_html_hinweiszeile_mit_ortsnamen_nur_betroffener_ort():
+>       html = _html_mail(_zwei_orte_zweiter_betroffen(), show_fallback_notice=True)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/unit/test_compare_vertretungshinweis_renderer.py:166: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+result = ComparisonResult(locations=[LocationResult(location=SavedLocation(id='loc-1', name='Innsbruck', lat=48.0, lon=11.0, el...y=None)], time_window=(9, 16), target_date=datetime.date(2026, 11, 5), created_at=datetime.datetime(2026, 11, 4, 6, 0))
+kw = {'show_fallback_notice': True}
+render_compare_html = <function render_compare_html at 0x7e4d884876a0>
+
+    def _html_mail(result, **kw) -> str:
+        from output.renderers.email.compare_html import render_compare_html
+>       return _html.unescape(render_compare_html(result, **kw))
+                              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       TypeError: render_compare_html() got an unexpected keyword argument 'show_fallback_notice'
+
+tests/unit/test_compare_vertretungshinweis_renderer.py:93: TypeError
+_______________ test_ac2_klartext_hinweiszeile_ohne_rohkennungen _______________
+
+    def test_ac2_klartext_hinweiszeile_ohne_rohkennungen():
+>       text = _text_mail(_zwei_orte_zweiter_betroffen(), show_fallback_notice=True)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/unit/test_compare_vertretungshinweis_renderer.py:173: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+result = ComparisonResult(locations=[LocationResult(location=SavedLocation(id='loc-1', name='Innsbruck', lat=48.0, lon=11.0, el...y=None)], time_window=(9, 16), target_date=datetime.date(2026, 11, 5), created_at=datetime.datetime(2026, 11, 4, 6, 0))
+kw = {'show_fallback_notice': True}
+render_comparison_text = <function render_comparison_text at 0x7e4d883b7d80>
+
+    def _text_mail(result, **kw) -> str:
+        from output.renderers.comparison import render_comparison_text
+>       return render_comparison_text(result, **kw)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       TypeError: render_comparison_text() got an unexpected keyword argument 'show_fallback_notice'
+
+tests/unit/test_compare_vertretungshinweis_renderer.py:98: TypeError
+_______________ test_ac3_telegram_hinweiszeile_ohne_rohkennungen _______________
+
+    def test_ac3_telegram_hinweiszeile_ohne_rohkennungen():
+>       tg = _telegram(_zwei_orte_zweiter_betroffen(), show_fallback_notice=True)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/unit/test_compare_vertretungshinweis_renderer.py:180: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+result = ComparisonResult(locations=[LocationResult(location=SavedLocation(id='loc-1', name='Innsbruck', lat=48.0, lon=11.0, el...y=None)], time_window=(9, 16), target_date=datetime.date(2026, 11, 5), created_at=datetime.datetime(2026, 11, 4, 6, 0))
+kw = {'show_fallback_notice': True}
+render_compare_telegram = <function render_compare_telegram at 0x7e4d883a4220>
+
+    def _telegram(result, **kw) -> str:
+        from output.renderers.comparison import render_compare_telegram
+>       return render_compare_telegram(result, **kw)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       TypeError: render_compare_telegram() got an unexpected keyword argument 'show_fallback_notice'
+
+tests/unit/test_compare_vertretungshinweis_renderer.py:103: TypeError
+______________ test_hinweis_steht_unter_der_tabelle_nicht_im_kopf ______________
+
+    def test_hinweis_steht_unter_der_tabelle_nicht_im_kopf():
+>       text = _text_mail(_zwei_orte_zweiter_betroffen(), show_fallback_notice=True)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/unit/test_compare_vertretungshinweis_renderer.py:187: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+result = ComparisonResult(locations=[LocationResult(location=SavedLocation(id='loc-1', name='Innsbruck', lat=48.0, lon=11.0, el...y=None)], time_window=(9, 16), target_date=datetime.date(2026, 11, 5), created_at=datetime.datetime(2026, 11, 4, 6, 0))
+kw = {'show_fallback_notice': True}
+render_comparison_text = <function render_comparison_text at 0x7e4d883b7d80>
+
+    def _text_mail(result, **kw) -> str:
+        from output.renderers.comparison import render_comparison_text
+>       return render_comparison_text(result, **kw)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       TypeError: render_comparison_text() got an unexpected keyword argument 'show_fallback_notice'
+
+tests/unit/test_compare_vertretungshinweis_renderer.py:98: TypeError
+__________ test_ac4_normalfall_byte_identisch_und_kein_leerer_rahmen ___________
+
+    def test_ac4_normalfall_byte_identisch_und_kein_leerer_rahmen():
+        ohne = _result(_lr("Innsbruck", 1), _lr("Seefeld", 2))
+        basis = _alle_ausgaben(ohne)  # Default: ohne Flag
+        assert basis == _alle_ausgaben(ohne)  # Determinismus der Messung
+        # Flag an, aber keine Vertretung -> unveraendert, nichts Zusaetzliches
+>       assert _alle_ausgaben(ohne, show_fallback_notice=True) == basis
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/unit/test_compare_vertretungshinweis_renderer.py:199: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/unit/test_compare_vertretungshinweis_renderer.py:107: in _alle_ausgaben
+    return {"html": _html_mail(result, **kw), "text": _text_mail(result, **kw),
+                    ^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+result = ComparisonResult(locations=[LocationResult(location=SavedLocation(id='loc-1', name='Innsbruck', lat=48.0, lon=11.0, el...y=None)], time_window=(9, 16), target_date=datetime.date(2026, 11, 5), created_at=datetime.datetime(2026, 11, 4, 6, 0))
+kw = {'show_fallback_notice': True}
+render_compare_html = <function render_compare_html at 0x7e4d884876a0>
+
+    def _html_mail(result, **kw) -> str:
+        from output.renderers.email.compare_html import render_compare_html
+>       return _html.unescape(render_compare_html(result, **kw))
+                              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       TypeError: render_compare_html() got an unexpected keyword argument 'show_fallback_notice'
+
+tests/unit/test_compare_vertretungshinweis_renderer.py:93: TypeError
+________________ test_ac5_fehlerort_erzeugt_keinen_hinweisblock ________________
+
+    def test_ac5_fehlerort_erzeugt_keinen_hinweisblock():
+        fehler = _lr("Seefeld", 2, _wetter_meta(), error="Abruf fehlgeschlagen")
+        res = _result(_lr("Innsbruck", 1), fehler)
+        ref = _result(_lr("Innsbruck", 1), _lr("Seefeld", 2, error="Abruf fehlgeschlagen"))
+>       assert _alle_ausgaben(res, show_fallback_notice=True) == _alle_ausgaben(ref)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/unit/test_compare_vertretungshinweis_renderer.py:211: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/unit/test_compare_vertretungshinweis_renderer.py:107: in _alle_ausgaben
+    return {"html": _html_mail(result, **kw), "text": _text_mail(result, **kw),
+                    ^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+result = ComparisonResult(locations=[LocationResult(location=SavedLocation(id='loc-1', name='Innsbruck', lat=48.0, lon=11.0, el...y=None)], time_window=(9, 16), target_date=datetime.date(2026, 11, 5), created_at=datetime.datetime(2026, 11, 4, 6, 0))
+kw = {'show_fallback_notice': True}
+render_compare_html = <function render_compare_html at 0x7e4d884876a0>
+
+    def _html_mail(result, **kw) -> str:
+        from output.renderers.email.compare_html import render_compare_html
+>       return _html.unescape(render_compare_html(result, **kw))
+                              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       TypeError: render_compare_html() got an unexpected keyword argument 'show_fallback_notice'
+
+tests/unit/test_compare_vertretungshinweis_renderer.py:93: TypeError
+____ test_ac6_kollision_zwei_zeilen_gleicher_ort_gewitterzeile_ohne_quelle _____
+
+    def test_ac6_kollision_zwei_zeilen_gleicher_ort_gewitterzeile_ohne_quelle():
+        res = _zwei_orte_zweiter_betroffen(_kollision_meta())
+        zeilen = _zeilen(_kollision_meta())
+        assert len(zeilen) == 2
+>       for name, ausgabe in _alle_ausgaben(res, show_fallback_notice=True).items():
+                             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/unit/test_compare_vertretungshinweis_renderer.py:220: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/unit/test_compare_vertretungshinweis_renderer.py:107: in _alle_ausgaben
+    return {"html": _html_mail(result, **kw), "text": _text_mail(result, **kw),
+                    ^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+result = ComparisonResult(locations=[LocationResult(location=SavedLocation(id='loc-1', name='Innsbruck', lat=48.0, lon=11.0, el...y=None)], time_window=(9, 16), target_date=datetime.date(2026, 11, 5), created_at=datetime.datetime(2026, 11, 4, 6, 0))
+kw = {'show_fallback_notice': True}
+render_compare_html = <function render_compare_html at 0x7e4d884876a0>
+
+    def _html_mail(result, **kw) -> str:
+        from output.renderers.email.compare_html import render_compare_html
+>       return _html.unescape(render_compare_html(result, **kw))
+                              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       TypeError: render_compare_html() got an unexpected keyword argument 'show_fallback_notice'
+
+tests/unit/test_compare_vertretungshinweis_renderer.py:93: TypeError
+_____________ test_ac7_englisch_katalogtext_ortsname_unuebersetzt ______________
+
+    def test_ac7_englisch_katalogtext_ortsname_unuebersetzt():
+        res = _zwei_orte_zweiter_betroffen()
+        en = _zeilen(_wetter_meta(), "en")[0]
+        de = _zeilen(_wetter_meta(), "de")[0]
+        assert en != de
+>       for name, ausgabe in _alle_ausgaben(
+                res, show_fallback_notice=True, lang="en").items():
+
+tests/unit/test_compare_vertretungshinweis_renderer.py:236: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/unit/test_compare_vertretungshinweis_renderer.py:107: in _alle_ausgaben
+    return {"html": _html_mail(result, **kw), "text": _text_mail(result, **kw),
+                    ^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+result = ComparisonResult(locations=[LocationResult(location=SavedLocation(id='loc-1', name='Innsbruck', lat=48.0, lon=11.0, el...y=None)], time_window=(9, 16), target_date=datetime.date(2026, 11, 5), created_at=datetime.datetime(2026, 11, 4, 6, 0))
+kw = {'lang': 'en', 'show_fallback_notice': True}
+render_compare_html = <function render_compare_html at 0x7e4d884876a0>
+
+    def _html_mail(result, **kw) -> str:
+        from output.renderers.email.compare_html import render_compare_html
+>       return _html.unescape(render_compare_html(result, **kw))
+                              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       TypeError: render_compare_html() got an unexpected keyword argument 'show_fallback_notice'
+
+tests/unit/test_compare_vertretungshinweis_renderer.py:93: TypeError
+_________ test_ac7_katalog_hat_muster_compare_zeile_in_beiden_sprachen _________
+
+    def test_ac7_katalog_hat_muster_compare_zeile_in_beiden_sprachen():
+        from i18n import t
+        for lang in ("de", "en"):
+            muster = t("mail.fallback.compare_zeile", lang, ort="X", text="Y")
+>           assert "X" in muster and "Y" in muster and "compare_zeile" not in muster
+E           AssertionError: assert ('X' in 'mail.fallback.compare_zeile')
+
+tests/unit/test_compare_vertretungshinweis_renderer.py:246: AssertionError
+------------------------------ Captured log call -------------------------------
+WARNING  i18n:catalog.py:39 i18n missing: mail.fallback.compare_zeile
+_________ test_ac8_default_aufruf_alarm_vorschau_zeigt_keinen_hinweis __________
+
+    def test_ac8_default_aufruf_alarm_vorschau_zeigt_keinen_hinweis():
+        res = _zwei_orte_zweiter_betroffen()
+        zeile = f"Seefeld: {_zeilen(_wetter_meta())[0]}"
+        default = _alle_ausgaben(res)
+>       briefing = _alle_ausgaben(res, show_fallback_notice=True)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+tests/unit/test_compare_vertretungshinweis_renderer.py:255: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/unit/test_compare_vertretungshinweis_renderer.py:107: in _alle_ausgaben
+    return {"html": _html_mail(result, **kw), "text": _text_mail(result, **kw),
+                    ^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+result = ComparisonResult(locations=[LocationResult(location=SavedLocation(id='loc-1', name='Innsbruck', lat=48.0, lon=11.0, el...y=None)], time_window=(9, 16), target_date=datetime.date(2026, 11, 5), created_at=datetime.datetime(2026, 11, 4, 6, 0))
+kw = {'show_fallback_notice': True}
+render_compare_html = <function render_compare_html at 0x7e4d884876a0>
+
+    def _html_mail(result, **kw) -> str:
+        from output.renderers.email.compare_html import render_compare_html
+>       return _html.unescape(render_compare_html(result, **kw))
+                              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       TypeError: render_compare_html() got an unexpected keyword argument 'show_fallback_notice'
+
+tests/unit/test_compare_vertretungshinweis_renderer.py:93: TypeError
+_______ test_ac8_render_compare_email_reicht_flag_an_html_und_text_durch _______
+
+    def test_ac8_render_compare_email_reicht_flag_an_html_und_text_durch():
+        from output.renderers.comparison import render_compare_email
+    
+        res = _zwei_orte_zweiter_betroffen()
+        zeile = f"Seefeld: {_zeilen(_wetter_meta())[0]}"
+        h0, t0 = render_compare_email(res)
+>       h1, t1 = render_compare_email(res, show_fallback_notice=True)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       TypeError: render_compare_email() got an unexpected keyword argument 'show_fallback_notice'
+
+tests/unit/test_compare_vertretungshinweis_renderer.py:267: TypeError
+_____ test_ac10_zwei_nutzer_hinweis_des_einen_nie_in_der_mail_des_anderen ______
+
+    def test_ac10_zwei_nutzer_hinweis_des_einen_nie_in_der_mail_des_anderen():
+        # Nutzer 1: Seefeld betroffen; Nutzer 2: Innsbruck betroffen (anderer Text)
+>       mail1 = _alle_ausgaben(_result(_lr("Innsbruck", 1),
+                                       _lr("Seefeld", 2, _wetter_meta())),
+                               show_fallback_notice=True)
+
+tests/unit/test_compare_vertretungshinweis_renderer.py:276: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+tests/unit/test_compare_vertretungshinweis_renderer.py:107: in _alle_ausgaben
+    return {"html": _html_mail(result, **kw), "text": _text_mail(result, **kw),
+                    ^^^^^^^^^^^^^^^^^^^^^^^^
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+result = ComparisonResult(locations=[LocationResult(location=SavedLocation(id='loc-1', name='Innsbruck', lat=48.0, lon=11.0, el...y=None)], time_window=(9, 16), target_date=datetime.date(2026, 11, 5), created_at=datetime.datetime(2026, 11, 4, 6, 0))
+kw = {'show_fallback_notice': True}
+render_compare_html = <function render_compare_html at 0x7e4d884876a0>
+
+    def _html_mail(result, **kw) -> str:
+        from output.renderers.email.compare_html import render_compare_html
+>       return _html.unescape(render_compare_html(result, **kw))
+                              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       TypeError: render_compare_html() got an unexpected keyword argument 'show_fallback_notice'
+
+tests/unit/test_compare_vertretungshinweis_renderer.py:93: TypeError
+___________ test_fetch_forecast_for_location_traegt_meta_im_ergebnis ___________
+
+provider = <test_compare_vertretungshinweis_datenweg.FallbackMetaProvider object at 0x7e4d89905340>
+
+    def test_fetch_forecast_for_location_traegt_meta_im_ergebnis(provider):
+        from services.comparison_engine import fetch_forecast_for_location
+    
+        res = fetch_forecast_for_location(_ort(), user_id="u-1563-a")
+        meta = res.get("forecast_meta")
+>       assert meta is not None
+E       assert None is not None
+
+tests/unit/test_compare_vertretungshinweis_datenweg.py:96: AssertionError
+_____________ test_engine_reicht_forecast_meta_ins_location_result _____________
+
+provider = <test_compare_vertretungshinweis_datenweg.FallbackMetaProvider object at 0x7e4d898089b0>
+
+    def test_engine_reicht_forecast_meta_ins_location_result(provider):
+        result = _run(_ort())
+        lr = result.locations[0]
+        assert lr.error is None
+>       assert lr.forecast_meta is not None
+               ^^^^^^^^^^^^^^^^
+E       AttributeError: 'LocationResult' object has no attribute 'forecast_meta'
+
+tests/unit/test_compare_vertretungshinweis_datenweg.py:105: AttributeError
+____________ test_ac9_cache_treffer_liefert_dasselbe_forecast_meta _____________
+
+provider = <test_compare_vertretungshinweis_datenweg.FallbackMetaProvider object at 0x7e4d77aa2db0>
+
+    def test_ac9_cache_treffer_liefert_dasselbe_forecast_meta(provider):
+        loc = _ort()
+>       frisch = _run(loc).locations[0].forecast_meta
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+E       AttributeError: 'LocationResult' object has no attribute 'forecast_meta'
+
+tests/unit/test_compare_vertretungshinweis_datenweg.py:112: AttributeError
+___________________ test_fehlerort_traegt_kein_forecast_meta ___________________
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7e4d77aa9340>
+
+    def test_fehlerort_traegt_kein_forecast_meta(monkeypatch):
+        import providers.base as registry
+        from providers.base import ProviderRequestError
+    
+        class Kaputt(FallbackMetaProvider):
+            def fetch_forecast(self, *a, **k):
+                raise ProviderRequestError("openmeteo", "stoerung-1563")
+    
+        monkeypatch.delenv("GZ_TEST_FIXTURE_DIR", raising=False)
+        if not registry._PROVIDER_FACTORIES:
+            registry._load_providers()
+        monkeypatch.setitem(registry._PROVIDER_FACTORIES, "openmeteo", lambda: Kaputt())
+        lr = _run(_ort()).locations[0]
+        assert lr.error
+>       assert lr.forecast_meta is None
+               ^^^^^^^^^^^^^^^^
+E       AttributeError: 'LocationResult' object has no attribute 'forecast_meta'
+
+tests/unit/test_compare_vertretungshinweis_datenweg.py:136: AttributeError
+------------------------------ Captured log call -------------------------------
+ERROR    services.segment_weather:segment_weather.py:301 Provider failed for segment vergleich-47.3944-11.2527: [openmeteo] stoerung-1563
+WARNING  comparison_engine:comparison_engine.py:224 Ort Seefeld: Ausblick nicht verfuegbar (Fetch-Fehler: [openmeteo] stoerung-1563)
+=========================== short test summary info ============================
+FAILED tests/unit/test_compare_vertretungshinweis_renderer.py::test_build_compare_fallback_lines_nur_betroffener_ort_mit_namen
+FAILED tests/unit/test_compare_vertretungshinweis_renderer.py::test_build_compare_fallback_lines_beide_betroffen_in_tabellenreihenfolge
+FAILED tests/unit/test_compare_vertretungshinweis_renderer.py::test_build_compare_fallback_lines_kollision_zwei_zeilen_ein_ort
+FAILED tests/unit/test_compare_vertretungshinweis_renderer.py::test_build_compare_fallback_lines_fehlerort_und_none_liefern_nichts
+FAILED tests/unit/test_compare_vertretungshinweis_renderer.py::test_build_compare_fallback_lines_englisch_aus_dem_katalog
+FAILED tests/unit/test_compare_vertretungshinweis_renderer.py::test_ac1_html_hinweiszeile_mit_ortsnamen_nur_betroffener_ort
+FAILED tests/unit/test_compare_vertretungshinweis_renderer.py::test_ac2_klartext_hinweiszeile_ohne_rohkennungen
+FAILED tests/unit/test_compare_vertretungshinweis_renderer.py::test_ac3_telegram_hinweiszeile_ohne_rohkennungen
+FAILED tests/unit/test_compare_vertretungshinweis_renderer.py::test_hinweis_steht_unter_der_tabelle_nicht_im_kopf
+FAILED tests/unit/test_compare_vertretungshinweis_renderer.py::test_ac4_normalfall_byte_identisch_und_kein_leerer_rahmen
+FAILED tests/unit/test_compare_vertretungshinweis_renderer.py::test_ac5_fehlerort_erzeugt_keinen_hinweisblock
+FAILED tests/unit/test_compare_vertretungshinweis_renderer.py::test_ac6_kollision_zwei_zeilen_gleicher_ort_gewitterzeile_ohne_quelle
+FAILED tests/unit/test_compare_vertretungshinweis_renderer.py::test_ac7_englisch_katalogtext_ortsname_unuebersetzt
+FAILED tests/unit/test_compare_vertretungshinweis_renderer.py::test_ac7_katalog_hat_muster_compare_zeile_in_beiden_sprachen
+FAILED tests/unit/test_compare_vertretungshinweis_renderer.py::test_ac8_default_aufruf_alarm_vorschau_zeigt_keinen_hinweis
+FAILED tests/unit/test_compare_vertretungshinweis_renderer.py::test_ac8_render_compare_email_reicht_flag_an_html_und_text_durch
+FAILED tests/unit/test_compare_vertretungshinweis_renderer.py::test_ac10_zwei_nutzer_hinweis_des_einen_nie_in_der_mail_des_anderen
+FAILED tests/unit/test_compare_vertretungshinweis_datenweg.py::test_fetch_forecast_for_location_traegt_meta_im_ergebnis
+FAILED tests/unit/test_compare_vertretungshinweis_datenweg.py::test_engine_reicht_forecast_meta_ins_location_result
+FAILED tests/unit/test_compare_vertretungshinweis_datenweg.py::test_ac9_cache_treffer_liefert_dasselbe_forecast_meta
+FAILED tests/unit/test_compare_vertretungshinweis_datenweg.py::test_fehlerort_traegt_kein_forecast_meta
+========================= 21 failed, 1 passed in 4.02s =========================
