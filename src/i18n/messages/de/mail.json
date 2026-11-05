@@ -122,6 +122,7 @@
   "mail.fallback.gewitter_quelle": "Gewitterdaten von Ersatzquelle: {name}",
   "mail.fallback.wetter_modell": "Einzelne Wetterwerte von Ersatzmodell: {name}",
   "mail.fallback.groeber": "gröbere Auflösung",
+  "mail.fallback.compare_zeile": "{ort}: {text}",
   "mail.fallback.metrik.temperature_2m": "Temperatur",
   "mail.fallback.metrik.apparent_temperature": "gefühlte Temperatur",
   "mail.fallback.metrik.relative_humidity_2m": "Luftfeuchtigkeit",

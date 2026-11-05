@@ -76,6 +76,8 @@ class ComparePreviewService:
             # Issue #1405 S3: dieselbe Zahl wie im Versand (Vorschau luegt nicht).
             unresolved_count=ctx["opts"].unresolved_by_channel.get("telegram", 0),
             lang=lang,
+            # Issue #1563: Briefing-Vorschau = Versand (kein Alarm-Pfad, R6).
+            show_fallback_notice=True,
         )
         sms = render_compare_sms(
             ctx["result"],
@@ -175,6 +177,7 @@ class ComparePreviewService:
             outlook_metric_formats=opts.outlook_metric_formats,
             unresolved_count=opts.unresolved_by_channel.get("email", 0),
             lang=lang,
+            show_fallback_notice=True,
         )
 
     def _load_preset(self, preset_id: str, *, user_id: str) -> dict:

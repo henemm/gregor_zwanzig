@@ -452,6 +452,7 @@ class ComparisonEngine:
                     pop_max_pct=metrics.get("pop_max_pct"),
                     hourly_data=filtered_data,
                     outlook_hourly_data=outlook_hourly_data,
+                    forecast_meta=raw_result.get("forecast_meta"),
                 ))
 
             except Exception as e:
@@ -505,6 +506,8 @@ def fetch_forecast_for_location(
             result["error"] = fetch_error
             result["score"] = 0
             return result
+        # Issue #1563: Herkunft je Ort (Vertretungshinweis im Ortsvergleich).
+        result["forecast_meta"] = forecast.meta
 
         # Fetch snow data from Bergfex if slug is available
         if loc.bergfex_slug:

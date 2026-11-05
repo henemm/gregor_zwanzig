@@ -879,6 +879,25 @@ def _render_selection_gap_html(count: int, lang: Lang = "de") -> str:
     )
 
 
+def _render_fallback_notice_html(locations: list[LocationResult], lang: Lang = "de") -> str:
+    """Vertretungshinweis je Ort unter der Uebersicht (Issue #1563, Spec R5).
+
+    Zeilen aus dem geteilten Baustein ``build_compare_fallback_lines``
+    (Formulierung einzig in ``fallback_notice``); ohne Zeilen ``""`` (AC-4).
+    """
+    from output.renderers.fallback_notice import build_compare_fallback_lines
+
+    zeilen = build_compare_fallback_lines(locations, lang=lang)
+    if not zeilen:
+        return ""
+    divs = "".join(
+        f'<div style="margin-top:4px;font-size:11px;font-family:{FONT_UI};'
+        f'color:{G_INK};">{_html.escape(z)}</div>'
+        for z in zeilen
+    )
+    return f'<div style="padding:6px 24px 0;">{divs}</div>'
+
+
 def _render_overview_table(
     locations: list[LocationResult],
     enabled_metrics: list[str] | None = None,
@@ -1718,6 +1737,7 @@ def render_compare_html(
     preset: Optional[dict] = None,
     unresolved_count: int = 0,
     lang: Lang = "de",
+    show_fallback_notice: bool = False,
 ) -> str:
     """Rendert ComparisonResult als HTML-Mail (v2-Layout, Issue #1110).
 
@@ -1777,6 +1797,9 @@ def render_compare_html(
             unter der Uebersichtstabelle; bei 0 kein Hinweis.
         lang: Issue #2666 -- Sprache aller Nutzertexte (``de`` byte-gleich zu
             vorher); Kurzformen der Stundentabelle bleiben (ADR-0042).
+        show_fallback_notice: Issue #1563 -- ``True`` (nur Briefing) zeigt
+            unter der Uebersicht je vertretenem Ort eine Hinweiszeile;
+            Default ``False`` (Alarm-Pfade, AC-8). Ohne Vertretung byte-gleich.
 
     Returns:
         HTML-String (DOCTYPE bis </html>).
@@ -1818,6 +1841,10 @@ def render_compare_html(
         f'<div style="padding:6px 24px 0;">'
         f'{_render_section_head(*overview_head)}'
         f'{_render_overview_table(locations, enabled_metrics, corridors, unresolved_count, lang, ampel=ampel)}</div>'
+    )
+    # Issue #1563: leer ohne Vertretung -> faellt durch den `if part`-Filter.
+    fallback_html = (
+        _render_fallback_notice_html(locations, lang) if show_fallback_notice else ""
     )
     # Issue #1278 (Nebenbefund, AC-12): die dritte Angabe war fest "09–16 Uhr" --
     # ein toter Rest des mit #1268 abgeschafften Zeitfensters. Die Bewertung
@@ -1885,7 +1912,7 @@ def render_compare_html(
     body_html = "\n".join(
         part for part in (
             header_html, warnings_html, warn_banner_html, unavailable_banner_html,
-            overview_html, hourly_head_html, per_location_html,
+            overview_html, fallback_html, hourly_head_html, per_location_html,
             undelivered_html, legend_html, abo_html, commands_html, app_footer_html,
         ) if part
     )

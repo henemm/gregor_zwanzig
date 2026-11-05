@@ -226,3 +226,23 @@ def build_fallback_lines(meta: Optional["ForecastMeta"], *, lang: Lang = "de") -
         lines.append(t("mail.fallback.wetter_modell", lang, name=name) + klammer)
 
     return lines
+
+
+def build_compare_fallback_lines(location_results, *, lang: Lang = "de") -> list:
+    """Mehrort-Huelle fuer den Ortsvergleich (Issue #1563, Spec R2).
+
+    Je betroffenem Ort die Zeilen aus ``build_fallback_lines(meta, lang=)``,
+    mit dem Ortsnamen vorangestellt (Muster ``mail.fallback.compare_zeile``).
+    Formulierung bleibt EINZIG in ``build_fallback_lines`` (Trip/Compare-
+    Teilung). Fehlerorte und Orte ohne Markierung liefern keine Zeile;
+    Reihenfolge = Reihenfolge der uebergebenen Liste (Vergleichstabelle).
+    ``[]`` wenn kein Ort betroffen ist.
+    """
+    zeilen: list = []
+    for lr in location_results or []:
+        if getattr(lr, "error", None) is not None:
+            continue
+        ort = lr.location.name
+        for text in build_fallback_lines(getattr(lr, "forecast_meta", None), lang=lang):
+            zeilen.append(t("mail.fallback.compare_zeile", lang, ort=ort, text=text))
+    return zeilen
