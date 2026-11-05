@@ -285,6 +285,8 @@ def _literal(pfad: Path, name: str, seite: str) -> tuple[list[str], int]:
 # eigenstaendige Sammlungen 34 (``WEATHER_TEMPLATES`` 7,
 # ``_ALERT_METRIC_TO_CATALOG_ID`` 2 und ``_DERIVED_METRIC_RULES`` 6 Zeilen
 # gehoeren je zu einer).
+# Nachtrag #2792 S1c-1: ``ampel.AMPEL_LESER`` kam als 47. Fundstelle hinzu
+# (literal, damit 45 hier + 2 Laufzeit-Eintraege).
 # Datei, Name, geprueffte Seite — je Fundstelle EINE Zeile; die Aufloesung
 # macht ``_literal`` generisch. Die Seite ist fachlich verschieden:
 # "schluessel"/"element" = die Kennung STEHT dort; "wert" = Uebersetzung INS
@@ -292,6 +294,9 @@ def _literal(pfad: Path, name: str, seite: str) -> tuple[list[str], int]:
 # ``frontend_key``) und deshalb NIE geprueft werden.
 _R = "src/output/renderers/"
 _BESTAND: tuple[tuple[str, str, str], ...] = (
+    # Issue #2792 S1c-1: AMPEL_LESER = Metriken, die vor dem Umschalten eine
+    # Ampelfarbe tragen (Katalog-Kennungen aus _METRICS).
+    ("src/app/ampel.py", "AMPEL_LESER", "element"),
     ("src/app/loader.py", "report_config.daily_summary_metrics", "element"),
     # #1728 S1/S3: je Regel-Zeile eine Fundstelle. Bis S3 trugen die vier
     # Tagesrichtungs-Zeilen ([2]..[5]) neben den Kennungen ein Auswertungswort
