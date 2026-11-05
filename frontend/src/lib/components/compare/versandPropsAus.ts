@@ -38,7 +38,7 @@
 // Kein Browser-/SvelteKit-Import — lauffähig unter node --experimental-strip-types.
 
 /** Strukturelle Sicht auf die Versandfelder des Compare-Wizard-Zustands —
- *  absichtlich nicht `CompareWizardState` selbst, damit diese Funktion auch
+ *  absichtlich nicht der lokale `$state`-Feldsatz (`CompareFeldsatz`, compareEditorSave.ts:568) selbst, damit diese Funktion auch
  *  gegen einen hydrierten Plain-Zustand arbeitet. */
 export interface VersandZustandsQuelle {
 	sendEmail?: boolean;

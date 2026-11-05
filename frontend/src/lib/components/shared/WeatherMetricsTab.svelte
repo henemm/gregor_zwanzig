@@ -109,7 +109,7 @@
 	import { reportConfigChangedByUser } from '$lib/components/shared/reportConfigDirty';
 	// Issue #1311 (C1 von Epic #1301): geteilter Baustein Trip + Ortsvergleich
 	// (Vorbild AlarmeTab.svelte) — context-Dispatch + Vergleich-Grundauswahl.
-	// Issue #2276 S6g: kein Laufzeit- oder Typ-Import von `CompareWizardState`
+	// Issue #2276 S6g: kein Laufzeit- oder Typ-Import eines Compare-Zustandsobjekts
 	// mehr — der Vergleichs-Zweig arbeitet nur noch auf Wertprops + Rueckrufen,
 	// das Buendel baut `compare/wetterMetrikenPropsAus.ts`.
 	import { weatherMetricsTabSections, type WeatherMetricsContext } from './weather-metrics-tab/weatherMetricsTabSections.ts';

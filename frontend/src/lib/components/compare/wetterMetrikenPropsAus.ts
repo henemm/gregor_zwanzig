@@ -49,7 +49,7 @@ const DEFAULT_DAY_WINDOW_START_HOUR = 4;
 const DEFAULT_DAY_WINDOW_END_HOUR = 19;
 
 /** Strukturelle Sicht auf die Wetter-Metriken/Layout-Felder des Compare-Wizard-
- *  Zustands — absichtlich nicht `CompareWizardState` selbst, damit diese
+ *  Zustands — absichtlich nicht der lokale `$state`-Feldsatz (`CompareFeldsatz`, compareEditorSave.ts:568) selbst, damit diese
  *  Funktion auch gegen einen hydrierten Plain-Zustand arbeitet. */
 export interface WetterMetrikenZustandsQuelle {
 	activeMetricKeys?: string[] | null;

@@ -17,7 +17,7 @@
 	// NICHT ein Auswertungs-Schluessel wie `temp_max_c`, den der Stunden-
 	// Aufloeser gar nicht kennt.
 	//
-	// Issue #2276 S6b: reine WERTPROPS statt `CompareWizardState`-Bindung —
+	// Issue #2276 S6b: reine WERTPROPS statt Bindung an ein Zustandsobjekt —
 	// dasselbe Muster, das der strukturelle Zwilling
 	// OutlookLayoutControls seit #1720 S1 fuehrt. Die Flaeche haelt
 	// keinen Zustand und kennt kein Zustandsobjekt mehr: sie bekommt die

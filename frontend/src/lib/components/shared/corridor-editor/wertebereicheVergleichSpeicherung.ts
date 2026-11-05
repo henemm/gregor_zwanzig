@@ -30,7 +30,7 @@ export interface CorridorSnapshot {
 }
 
 /** Wizard-Zustand, den der Wertebereiche-Reiter liest/schreibt (Teilmenge von
- *  CompareWizardState — bewusst locker typisiert, kein Laufzeit-Import). */
+ *  `CompareFeldsatz`, compareEditorSave.ts:568 — bewusst locker typisiert, kein Laufzeit-Import). */
 export type WertebereicheZustand = object;
 
 function felder(ws: WertebereicheZustand): Record<string, unknown> {

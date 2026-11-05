@@ -41,7 +41,7 @@ import {
 import type { KanalMap } from '../shared/alarme-tab/alertMetricChannels.ts';
 
 /** Strukturelle Sicht auf die Alarmfelder des Compare-Wizard-Zustands —
- *  absichtlich nicht `CompareWizardState` selbst, damit diese Funktion auch
+ *  absichtlich nicht der lokale `$state`-Feldsatz (`CompareFeldsatz`, compareEditorSave.ts:568) selbst, damit diese Funktion auch
  *  gegen einen hydrierten Plain-Zustand (Hub-Bridge) arbeitet.
  *
  *  Issue #2293 Scheibe S2 (AC-9 Entkopplung): `sendTelegram`/`sendSms`/

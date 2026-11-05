@@ -31,8 +31,8 @@ import { reconstructCompareAlertChannels } from './alarmePropsAus.ts';
 
 /** Plain-Objekt mit GENAU den 6 Feldern, die CorridorEditor.svelte im
  * vergleich-Kontext aus dem Wizard-State liest. Die Bridge-Komponente
- * (CompareTabs.svelte) uebertraegt dies auf eine echte CompareWizardState-
- * Instanz und ruft setContext(...). */
+ * (CompareTabs.svelte) uebertraegt dies auf den lokalen `$state`-Feldsatz
+ * (`CompareFeldsatz`, compareEditorSave.ts:568). */
 export interface HubFields {
 	isEditMode: true;
 	corridors: Corridor[];

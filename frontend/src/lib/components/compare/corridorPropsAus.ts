@@ -32,7 +32,7 @@ import type { ActivityProfile, Corridor } from '../../types.ts';
 import type { IdealRange } from '../shared/corridor-editor/corridorEditorState.ts';
 
 /** Strukturelle Sicht auf die Wertebereiche-Felder des Compare-Wizard-Zustands
- *  — absichtlich nicht `CompareWizardState` selbst, damit diese Funktion auch
+ *  — absichtlich nicht der lokale `$state`-Feldsatz (`CompareFeldsatz`, compareEditorSave.ts:568) selbst, damit diese Funktion auch
  *  gegen einen hydrierten Plain-Zustand (Hub-Bridge) arbeitet. */
 export interface CorridorZustandsQuelle {
 	corridors?: Corridor[];
