@@ -219,7 +219,7 @@
 	const validation = $derived.by(() => (void $locale, validateCorridorRows(rows)));
 	// Issue #1425 (S2 Teil 2, Scheibe C, AC-3): identisch zum Desktop-Editor —
 	// gezaehlt wird nur, was countEffectiveMarks/supportsMark zulaesst.
-	const markN = $derived(countEffectiveMarks(rows, context));
+	const markN = $derived(countEffectiveMarks(rows, context)); const gesperrt = true; // #2792 S1c-3 (AC-22, E2): analog Desktop — nur lesbar, patch/add/remove No-op
 
 	// Issue #1371: der PUT ueberschreibt `display_config.metric_alert_levels`
 	// nicht mehr explizit — `trip!.display_config` wird unveraendert
@@ -270,18 +270,18 @@
 		else saveController?.setUnsavedInput();
 	}
 	function patch(metric: string, p: Partial<Pick<CorridorRowState, 'min' | 'max' | 'notify' | 'mark'>>) {
-		rows = patchRow(rows, metric, p);
+		if (gesperrt) return; rows = patchRow(rows, metric, p);
 		maybeSchedule();
 	}
 	function patchBound(row: CorridorRowState, side: 'min' | 'max', value: number | null) {
 		patch(row.metric, side === 'min' ? { min: value } : { max: value });
 	}
 	function remove(metric: string) {
-		rows = removeRow(rows, metric);
+		if (gesperrt) return; rows = removeRow(rows, metric);
 		removedMetrics = [...removedMetrics, metric];
 		maybeSchedule();
 	}
-	function add(metric: string) {
+	function add(metric: string) { if (gesperrt) return;
 		const next = context === 'vergleich'
 			? addCompareRow(rows, poolLeft as CompareMetricDef[], metric, compareDefs ?? [], VERGLEICH_CTX_DEFAULTS, originalActiveMetricKeys.includes(metric))
 			: addRow(rows, poolLeft as RouteMetricDef[], metric, ROUTE_CTX_DEFAULTS);
@@ -365,7 +365,7 @@
 			<!-- Issue #1425 (AC-6): Ladezustand statt Nachpoppen der Zusatz-Metriken. -->
 			<div class="cem-eyebrow-row"><Eyebrow>{$t('layout.korridor.eyebrow')}</Eyebrow><BegriffErklaerung begriff="wertebereiche" suffix="cem-{context}" /></div>
 			<div class="cem-lead" aria-busy="true" data-testid="corridor-editor-mobile-route-loading">{$t('layout.korridor.lade')}</div>
-		{:else}
+		{:else}<!-- #2792 S1c-3 (AC-22): Hinweis oben, die Zeilen sind nur lesbar. --><p class="cem-gesperrt" role="note" data-testid="corridor-editor-mobile-gesperrt">{$t('wertebereiche.gesperrt.hinweis_reiter')}</p>
 		{#if context === 'vergleich'}
 			<div class="cem-eyebrow-row"><Eyebrow>{$t('layout.korridor.eyebrow_idealbereiche')}</Eyebrow><BegriffErklaerung begriff="wertebereiche" suffix="cem-{context}" /></div>
 			<div class="cem-title">{$t('layout.korridor.titel_vergleich')}</div>
@@ -441,26 +441,26 @@
 						<div class="cem-bound" class:cem-bound-full={row.kind === 'ordinal'}>
 							<div class="cem-bound-label">{side === 'min' ? $t('layout.korridor.von') : $t('layout.korridor.bis')}</div>
 							{#if value == null}
-								<button type="button" class="cem-open-btn" onclick={() => openBound(row, side)}>{$t('layout.korridor.grenze_setzen')}</button>
+								<button type="button" class="cem-open-btn" disabled={gesperrt} onclick={() => openBound(row, side)}>{$t('layout.korridor.grenze_setzen')}</button>
 							{:else if row.kind === 'ordinal'}
 								<div class="cem-ordinal-group" data-testid="corridor-mobile-ordinal-{side}-{row.metric}">
 									{#each row.ordinalLabels ?? [] as lbl, idx (lbl)}
-										<button type="button" class="cem-ordinal-btn" class:on={value === idx} onclick={() => patchBound(row, side, clampBoundInput(idx, side, row))}>{lbl}</button>
+										<button type="button" class="cem-ordinal-btn" disabled={gesperrt} class:on={value === idx} onclick={() => patchBound(row, side, clampBoundInput(idx, side, row))}>{lbl}</button>
 									{/each}
-									<button type="button" class="cem-clear-btn" title={$t('layout.korridor.grenze_oeffnen')} onclick={() => patchBound(row, side, null)}>×</button>
+									<button type="button" class="cem-clear-btn" disabled={gesperrt} title={$t('layout.korridor.grenze_oeffnen')} onclick={() => patchBound(row, side, null)}>×</button>
 								</div>
 							{:else}
 								<!-- AC-14 vs. JSX-Optik (Tech-Lead-Entscheidung): Hit-Area-Technik —
 								     .cem-step-btn selbst ist 44x44 (getBoundingClientRect-pflichtig),
 								     .cem-step-btn-glyph bleibt die 40px-JSX-Optik (Z. 100-105) innen zentriert. -->
 								<div class="cem-stepper">
-									<button type="button" class="cem-step-btn" onclick={() => nudge(row, side, -1)}><span class="cem-step-btn-glyph">−</span></button>
+									<button type="button" class="cem-step-btn" disabled={gesperrt} onclick={() => nudge(row, side, -1)}><span class="cem-step-btn-glyph">−</span></button>
 									<div class="cem-step-value">
 										<div class="cem-step-num">{value}</div>
 										<div class="cem-step-unit">{row.unit}</div>
 									</div>
-									<button type="button" class="cem-step-btn" onclick={() => nudge(row, side, 1)}><span class="cem-step-btn-glyph">+</span></button>
-									<button type="button" class="cem-clear-btn" title={$t('layout.korridor.grenze_oeffnen')} onclick={() => patchBound(row, side, null)}>×</button>
+									<button type="button" class="cem-step-btn" disabled={gesperrt} onclick={() => nudge(row, side, 1)}><span class="cem-step-btn-glyph">+</span></button>
+									<button type="button" class="cem-clear-btn" disabled={gesperrt} title={$t('layout.korridor.grenze_oeffnen')} onclick={() => patchBound(row, side, null)}>×</button>
 								</div>
 							{/if}
 						</div>
@@ -475,12 +475,12 @@
 					     wie im Desktop-Editor (corridorEditorState.ts::supportsMark) —
 					     kein zweiter Nachbau je Komponente. -->
 					{#if supportsMark(row.metric, context)}
-						<button type="button" class="cem-effect mark" class:on={row.mark} aria-pressed={row.mark} onclick={() => patch(row.metric, { mark: !row.mark })}>{$t('layout.korridor.markieren')}</button>
+						<button type="button" class="cem-effect mark" disabled={gesperrt} class:on={row.mark} aria-pressed={row.mark} onclick={() => patch(row.metric, { mark: !row.mark })}>{$t('layout.korridor.markieren')}</button>
 					{/if}
 				</div>
 
 				<div class="cem-remove-row">
-					<button type="button" class="cem-remove" onclick={() => remove(row.metric)}>✕ {$t('layout.korridor.entfernen')}</button>
+					<button type="button" class="cem-remove" disabled={gesperrt} onclick={() => remove(row.metric)}>✕ {$t('layout.korridor.entfernen')}</button>
 				</div>
 			</div>
 		{/each}
@@ -490,7 +490,7 @@
 				<div class="cem-pool-label">{$t('layout.korridor.metrik_hinzufuegen')}</div>
 				{#each poolLeft as m (m.metric)}
 					<div data-testid="corridor-editor-pool-item-{m.metric}">
-						<MBtn block variant="ghost" size="lg" onclick={() => add(m.metric)}>＋ {(void $locale, zeilenLabel(m))}{#if 'aggregationLabel' in m && m.aggregationLabel}<span class="cem-aggregation">{m.aggregationLabel}</span>{/if}</MBtn>
+						<MBtn block variant="ghost" size="lg" disabled={gesperrt} onclick={() => add(m.metric)}>＋ {(void $locale, zeilenLabel(m))}{#if 'aggregationLabel' in m && m.aggregationLabel}<span class="cem-aggregation">{m.aggregationLabel}</span>{/if}</MBtn>
 					</div>
 				{/each}
 			</div>
@@ -522,6 +522,8 @@
 	.cem-swatch.mark { background: var(--g-good); opacity: 0.85; }
 	.cem-good { color: var(--g-good); }
 	.cem-error { color: #8a6210; background: rgba(192, 138, 26, 0.12); border: 1px solid rgba(192, 138, 26, 0.35); border-radius: var(--g-r-2, 6px); padding: 8px 12px; font-size: 13px; margin-bottom: 12px; }
+	.cem-gesperrt { color: var(--g-ink); background: var(--g-card-alt); border: 1px solid var(--g-rule); border-radius: var(--g-r-2, 6px); padding: 8px 12px; font-size: 13px; margin-bottom: 12px; }
+	.cem-card button:disabled { cursor: not-allowed; }
 	.cem-card { background: var(--g-card); border: 1px solid var(--g-rule); border-radius: var(--g-r-3, 10px); padding: 14px 14px 12px; margin-bottom: 10px; }
 	.cem-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
 	.cem-label { font-size: 15px; font-weight: 600; color: var(--g-ink); }

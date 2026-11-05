@@ -15,13 +15,15 @@
 		label: string;
 		levels: Level[];
 		currentFloat: number | null;
-		onChange: (metricId: string, float: number) => void;
+		onChange?: (metricId: string, float: number) => void;
 		// Issue #1318 AC-9: SMS-Kuerzel dieser Metrik, aus dem Backend-Katalog
 		// (/api/sms-symbols). Fehlt es, entfaellt die Anzeige ersatzlos.
 		smsSymbol?: string;
+		// #2792 S1c-3 (AC-22): nur lesbar — Stufen gesperrt, aktuelle Stufe bleibt markiert.
+		readonly?: boolean;
 	}
 
-	let { metricId, label, levels, currentFloat, onChange, smsSymbol }: Props = $props();
+	let { metricId, label, levels, currentFloat, onChange, smsSymbol, readonly = false }: Props = $props();
 
 	// Reverse-Mapping: aktive Stufe aus currentFloat. Kein Treffer → erste Stufe (Fallback).
 	const activeId = $derived(
@@ -41,7 +43,8 @@
 			<button
 				type="button"
 				class:active={activeId === l.id}
-				onclick={() => onChange(metricId, l.float)}
+				disabled={readonly}
+				onclick={() => { if (!readonly) onChange?.(metricId, l.float); }}
 				aria-pressed={activeId === l.id}
 				data-testid="threshold-level-{metricId}-{l.id}"
 			>
@@ -88,6 +91,10 @@
 		color: var(--g-ink);
 		cursor: pointer;
 		font-size: 14px;
+	}
+
+	.segmented-control button:disabled {
+		cursor: not-allowed;
 	}
 
 	.segmented-control button.active {

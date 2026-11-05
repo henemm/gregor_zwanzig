@@ -136,8 +136,33 @@ async function baueEditor(createMode: unknown, metrics: unknown[] = NUR_BOEEN) {
 		(u.poolLeft as { metric: string }[]).some((d) => d.metric === 'wind_gust'),
 		'Messaufbau kaputt: `wind_gust` steht nicht im Pool — `add("wind_gust")` waere ein Nulleffekt.'
 	);
+	// #2792 S1c-3 (AC-22): im Produkt ist der Reiter gesperrt (eigener Test unten).
+	// Die Speicherwege dahinter bleiben erhalten und werden hier mit geoeffneter
+	// Sperre weiter bewacht (kein PUT im Anlege-Modus, kein Datenverlust).
+	assert.equal(u.gesperrt, true, 'Messaufbau: die Sperre `gesperrt` fehlt im Editor.');
+	u.gesperrt = false;
 	return { ...umgebung, spione };
 }
+
+describe('#2792 S1c-3 (AC-22): Korridor-Zeilen sind gesperrt — add/patch/remove aendern und melden nichts', () => {
+	for (const modus of [true, CREATE_MODE_FEHLT] as const) {
+		test(`createMode=${String(modus === true)}: Bedienung ist No-op, Zeilen bleiben, keine Meldung, kein PUT`, async () => {
+			const { u, spione } = await baueEditor(modus);
+			u.gesperrt = true;
+			const gesaet = buildRoutePool([{ metric: 'wind_gust', range: [null, 80], notify: true, mark: false }], NUR_BOEEN as never, []);
+			u.rows = gesaet.rows;
+			u.poolLeft = gesaet.poolLeft;
+			const vorher = structuredClone(gesaet.rows);
+			u.patch('wind_gust', { max: 50 });
+			u.patch('wind_gust', { mark: true });
+			u.remove('wind_gust');
+			if ((u.poolLeft as unknown[]).length > 0) u.add((u.poolLeft as { metric: string }[])[0].metric);
+			assert.deepEqual(u.rows, vorher, 'S1c-3 FAIL: gesperrte Zeilen wurden veraendert.');
+			assert.equal(spione.corridors.length + spione.schedule.length + spione.setDirty.length + spione.gebaut.length, 0,
+				'S1c-3 FAIL: trotz Sperre wurde gemeldet oder gespeichert.');
+		});
+	}
+});
 
 describe('AC-3: im Anlege-Modus bereitet der Editor NIE einen PUT vor', () => {
 	test('createMode=true: add + patch → saveController.schedule 0×, setDirty 0×, kein PUT gebaut', async () => {
