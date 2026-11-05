@@ -85,7 +85,8 @@ export function severityLabel(severity: string, lang: Lang): string {
 	return k ? trFor(lang, k) : severity;
 }
 
-/** Deutscher Schweregrad-Name (Bestand, z. B. trip-detail/AlertsPreviewCard bis F9). */
+/** Deutscher Schweregrad-Name (Bestand; die fruehere Nutzerin trip-detail/AlertsPreviewCard
+ * ist mit #1895 S4 entfernt). */
 export const SEVERITY_LABEL_DE: Record<AlertSeverity, string> = {
 	get info() {
 		return severityLabel('info', 'de');

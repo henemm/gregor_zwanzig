@@ -127,7 +127,6 @@ const K = {
 	PresetRow: await komp(td('PresetRow.svelte')),
 	MetricCheckbox: await komp(td('MetricCheckbox.svelte')),
 	TablePreview: await komp(td('TablePreview.svelte')),
-	AlertsPreviewCard: await komp(td('AlertsPreviewCard.svelte')),
 	WeatherV2Kanaele: await komp(td('WeatherV2Kanaele.svelte')),
 	TripTabs: await komp(td('TripTabs.svelte')),
 	BriefingScheduleStatus: await variante(td('BriefingScheduleTab.svelte'), [["let statusMsg = $state('');", "let statusMsg = $state('Gespeichert.');"]]),
@@ -238,23 +237,14 @@ export function layoutRendern(): string {
 		html(K.PresetRow, { id: 'eins', label: 'Eins', metricCount: 1, isActive: false, onSelect: nix }),
 		html(K.MetricCheckbox, { metric: metricById.gust, enabled: true, useIndicator: false, indicatorCapable: true, horizons: { today: true, tomorrow: true, day_after: false }, onToggle: nix, onModeChange: nix, onHorizonChange: nix }),
 		html(K.TablePreview, { catalog: KATALOG, enabledMap: { temperature: true, gust: true }, friendlyMap: { gust: true }, horizonsMap: { gust: { today: true, tomorrow: false, day_after: false }, temperature: { today: true, tomorrow: false, day_after: false } }, categoryOrder: ['temperature', 'wind'], indicatorCapable: (id: string) => id === 'gust' }),
-		html(K.AlertsPreviewCard, { trip: tripLaufend() }),
 		html(K.WeatherV2Kanaele, { channels: { email: true, telegram: true, sms: true }, primaryCount: 10, telegramKurzform: true, onChange: nix, onKurzformChange: nix, availability: { email: true, telegram: true, sms: false } }),
 		...(['morning', 'evening', 'alert'] as const).map((kind) => html(K.ReportLine, { kind, time: '07:00', channels: ['email', 'telegram'], active: true, alert: kind === 'alert' })),
 		html(K.BriefingScheduleStatus, { trip: tripLaufend() })
 	].join('\n');
 }
 
-/** Alarmregeln (Bestand #409) — Namen und Stufen aus F7 (alertMetricLabel/severityLabel). */
-export const ALARM_REGELN = [
-	{ id: 'r1', metric: 'wind_gust', threshold: 60, severity: 'warning', enabled: true },
-	{ id: 'r2', metric: 'precipitation_sum', threshold: 15, severity: 'critical', enabled: true },
-	{ id: 'r3', metric: 'unbekannt_x', threshold: 1, severity: 'info', enabled: true }
-];
-export function alarmRegelnRendern(): string {
-	return html(K.AlertsPreviewCard, { trip: tripLaufend({ alert_rules: ALARM_REGELN }) });
-}
-export const alarmLabels = await imp(path.join(FRONTEND, 'src/lib/utils/alertMetricLabels.ts'));
+// Issue #1895 S4: die tote Alarmregeln-Karte trip-detail/AlertsPreviewCard ist
+// entfernt; ihr Render (Ausgabe-Layout-Bausteine) und der Fall Alarmregeln fallen mit weg.
 
 export function wegpunkteRendern(): string {
 	const pause = { id: 'p1', name: 'Pausentag', date: '2026-07-02', waypoints: [], location: 'Carrozzu' };

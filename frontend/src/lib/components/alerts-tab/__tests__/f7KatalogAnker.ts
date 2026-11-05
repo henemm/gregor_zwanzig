@@ -7,8 +7,10 @@
 // alerts-tab/alertMetricTable.ts, lib/utils/alertMetricLabels.ts. Satzteile, die
 // im Bestand um ein Element herum standen (<strong>, Link), stehen als
 // Platzhalter. Kein Plural im Paket (keine Zaehlform je Anzahl).
-// Metrik-Namen (alarme.metrik.*) und Preset-Zeilen (alarme.preset.zeile.*): de
-// wortgleich zu ALERT_METRIC_LABELS bzw. POPOVER_ROWS, en laut Spec Abschnitt 3.
+// Metrik-Namen (alarme.metrik.*): de wortgleich zu ALERT_METRIC_LABELS, en laut
+// Spec Abschnitt 3. Issue #1895 S4: die Anker der toten Bausteine (AlertsTab,
+// AlertCard, AlertMetricTable/-Row, AlertPresetSelector samt Preset-Zeilen)
+// sind mit ihren Katalogschluesseln entfallen.
 // NICHT aus dem Katalog nachziehen: eine Abweichung ist ein Befund.
 // Verwendet in alarme_tab_sprache.test.ts (Wertvergleich + statischer Gegencheck).
 
@@ -49,14 +51,6 @@ export const F7_ANKER: [schluessel: string, de: string, en: string][] = [
 	['alarme.kanaele.kein_empfaenger', '<kanal> hat keinen Empfänger — diese Alarme kommen dort nicht an. Eintragen im Reiter Versand bzw. im Profil.', '<kanal> has no recipient — these alerts will not arrive there. Add it in the Delivery tab or in your profile.'],
 	['alarme.kanaele.schwelle_hinweis', '<kanal> hat die Dringlichkeits-Schwelle „<schwelle>“ — schwächere Warnungen kommen über diesen Kanal nicht an.', '<kanal> has the urgency threshold "<schwelle>" — weaker warnings will not arrive over this channel.'],
 	['alarme.premium_sms.tarif_wird_geprueft', 'Tarif wird geprüft — der Kanal lässt sich einen Moment lang nicht umschalten.', 'Checking your level — the channel cannot be switched for a moment.'],
-	// Alerts-Reiter (AlertsTab) und Alarm-Karte (AlertCard)
-	['alarme.tab.eyebrow', 'Alerts · Sofort-Meldung', 'Alerts · instant notification'],
-	['alarme.tab.titel', 'Sofort-Meldung zwischen den Briefings', 'Instant notifications between briefings'],
-	['alarme.tab.leer', 'Keine Alerts konfiguriert.', 'No alerts configured.'],
-	['alarme.tab.standard_uebernehmen', 'Standard-Konfiguration übernehmen', 'Apply standard configuration'],
-	['alarme.tab.metriken_waehlen', 'Wähle oben Metriken aus, um Alarm-Schwellen zu konfigurieren.', 'Select metrics above to configure alert thresholds.'],
-	['alarme.karte.melde_ab_aenderung', 'Melde ab Änderung:', 'Notify from change of:'],
-	['alarme.karte.kanal', 'Kanal:', 'Channel:'],
 	// Cooldown und Stille Stunden
 	['alarme.cooldown.titel', 'Cooldown', 'Cooldown'],
 	['alarme.cooldown.einheit', 'Minuten', 'minutes'],
@@ -69,7 +63,7 @@ export const F7_ANKER: [schluessel: string, de: string, en: string][] = [
 	['alarme.stille_stunden.von', 'Von', 'From'],
 	['alarme.stille_stunden.bis', 'Bis', 'To'],
 	['alarme.stille_stunden.mitternacht', 'Stille Stunden über Mitternacht (<von> bis <bis> des nächsten Tages).', 'Quiet hours across midnight (<von> to <bis> of the next day).'],
-	// Empfindlichkeits-Tabelle (AlertMetricLevelTable/-Row) und Schwellwert-Tabelle (AlertMetricTable/-Row)
+	// Empfindlichkeits-Tabelle (AlertMetricLevelTable/-Row)
 	['alarme.tabelle.alle_auf', 'Alle Metriken auf:', 'Set all metrics to:'],
 	['alarme.tabelle.zaehler', '<aktiv> von <gesamt> aktiv', '<aktiv> of <gesamt> active'],
 	['alarme.tabelle.zaehler_gemischt', '<aktiv> von <gesamt> · gemischt', '<aktiv> of <gesamt> · mixed'],
@@ -77,9 +71,6 @@ export const F7_ANKER: [schluessel: string, de: string, en: string][] = [
 	['alarme.tabelle.metrik', 'Metrik', 'Metric'],
 	['alarme.tabelle.empfindlichkeit', 'Empfindlichkeit', 'Sensitivity'],
 	['alarme.tabelle.schwellwert', 'Schwellwert', 'Threshold'],
-	['alarme.tabelle.delta', 'Δ-Änderung (seit letztem Briefing)', 'Δ change (since last briefing)'],
-	['alarme.tabelle.absolut', 'Absoluter Schwellwert', 'Absolute threshold'],
-	['alarme.tabelle.deaktiviert', '— deaktiviert —', '— disabled —'],
 	['alarme.richtwert', 'Richtwert — wird je Wettermodell und Gebiet umgerechnet', 'Guide value — converted per weather model and area'],
 	['alarme.empfindlichkeit.aus', 'Aus', 'Off'],
 	['alarme.empfindlichkeit.kurz.entspannt', 'Entsp.', 'Relax.'],
@@ -88,27 +79,11 @@ export const F7_ANKER: [schluessel: string, de: string, en: string][] = [
 	['alarme.stufe.info', 'Info', 'Info'],
 	['alarme.stufe.warning', 'Warnung', 'Warning'],
 	['alarme.stufe.critical', 'Kritisch', 'Critical'],
-	// Preset-Auswahl (AlertPresetSelector)
-	['alarme.preset.deaktiviert', 'Deaktiviert', 'Off'],
+	// Stufen-Namen (AlertMetricLevelTable/-Row; Schliessen auch LocationNewModal)
 	['alarme.preset.entspannt', 'Entspannt', 'Relaxed'],
 	['alarme.preset.standard', 'Standard', 'Standard'],
 	['alarme.preset.sensibel', 'Sensibel', 'Sensitive'],
-	['alarme.preset.uebersicht_anzeigen', 'Schwellwert-Übersicht anzeigen', 'Show threshold overview'],
-	['alarme.preset.uebersicht_titel', 'Schwellwerte nach Preset', 'Thresholds by preset'],
 	['alarme.preset.schliessen', 'Schließen', 'Close'],
-	['alarme.preset.zeile.wind_gust', 'Böen', 'Wind gusts'],
-	['alarme.preset.zeile.precipitation_sum', 'Niederschlag', 'Precipitation'],
-	['alarme.preset.zeile.thunder_level', 'Gewitter', 'Thunderstorm'],
-	['alarme.preset.zeile.snow_line', 'Schneefallgrenze', 'Snow line'],
-	['alarme.preset.zeile.temperature_min', 'Tiefsttemperatur', 'Low temperature'],
-	['alarme.preset.zeile.temperature_max', 'Höchsttemperatur', 'High temperature'],
-	['alarme.preset.zeile.temperature_change', 'Temperatur (Änderung)', 'Temperature (change)'],
-	['alarme.preset.zeile.wind_change', 'Wind (Änderung)', 'Wind (change)'],
-	['alarme.preset.zeile.precipitation_change', 'Niederschlag (Änderung)', 'Precipitation (change)'],
-	['alarme.preset.zeile.fresh_snow', 'Neuschnee', 'Fresh snow'],
-	['alarme.preset.zeile.cape', 'CAPE', 'CAPE'],
-	['alarme.preset.zeile.visibility', 'Sichtweite', 'Visibility'],
-	['alarme.preset.zeile.humidity', 'Luftfeuchtigkeit', 'Humidity'],
 	// Alarm-Metrik-Namen (ALERT_METRIC_LABELS, alertMetricLabel; Spec Abschnitt 3)
 	['alarme.metrik.wind_gust', 'Böen', 'Wind gusts'],
 	['alarme.metrik.precipitation_sum', 'Niederschlag', 'Precipitation'],

@@ -1,12 +1,15 @@
 """Issue #846 — Alert-Preset-Expansion (Epic #813 Slice 3).
 
-Expandiert einen Preset-Namen in eine Liste von AlertRule-Objekten.
+Expandiert Empfindlichkeitsstufen je Metrik (`expand_per_metric_levels`) in
+eine Liste von AlertRule-Objekten. Die fruehere Expansion eines globalen
+Preset-Namens hatte keinen Aufrufer mehr und ist mit #1895 S4 entfernt
+(ADR-0043).
 
-Presets:
-- "deaktiviert" → leere Liste (kein Alert-Versand)
-- "entspannt"   → lockere Schwellen (13 Regeln)
-- "standard"    → empfohlene Schwellen (13 Regeln, Default)
-- "sensibel"    → enge Schwellen (13 Regeln)
+Stufen:
+- "off"         → keine Regel fuer diese Metrik
+- "entspannt"   → lockere Schwellen
+- "standard"    → empfohlene Schwellen (Default)
+- "sensibel"    → enge Schwellen
 
 Schwellwert-Tabelle:
     Metrik                  Art               Entspannt  Standard  Sensibel
@@ -146,35 +149,6 @@ ONSET_METRICS: Final[frozenset[str]] = frozenset({
 })
 
 
-def expand_preset(name: str) -> list[AlertRule]:
-    """Expandiert einen Preset-Namen in eine AlertRule-Liste.
-
-    Args:
-        name: Preset-Name ("deaktiviert" | "entspannt" | "standard" | "sensibel").
-              Unbekannte Namen werden wie "standard" behandelt.
-
-    Returns:
-        Liste von AlertRule-Objekten. Leer bei "deaktiviert".
-    """
-    if name == "deaktiviert":
-        return []
-
-    col = _COL.get(name, _COL["standard"])
-    rules: list[AlertRule] = []
-    for row in _PRESET_TABLE:
-        metric, kind, *thresholds = row
-        threshold = float(thresholds[col - 2])
-        rules.append(AlertRule(
-            id=str(uuid.uuid4()),
-            kind=kind,
-            metric=metric,
-            threshold=threshold,
-            severity=AlertSeverity.WARNING,
-            enabled=True,
-        ))
-    return rules
-
-
 def expand_per_metric_levels(
     levels: dict[str, str],
     display_config: "UnifiedWeatherDisplayConfig | None" = None,
@@ -182,7 +156,7 @@ def expand_per_metric_levels(
 ) -> list[AlertRule]:
     """Konvertiert metric_alert_levels (metric → SensLevel) in AlertRule-Liste.
 
-    Level 'off' wird übersprungen. Nutzt dieselbe _PRESET_TABLE wie expand_preset().
+    Level 'off' wird übersprungen. Nutzt die _PRESET_TABLE (Spalte je Stufe, _COL).
 
     Issue #961 — Vertrag `should_fire = weather_tab_enabled AND level != 'off'`:
     Wird `display_config` übergeben (nicht None), wird der Weather-Tab-

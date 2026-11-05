@@ -4594,7 +4594,9 @@ export interface AlertRule {
 
 ### Frontend Alerts-Tab (JSX / Karten-Modell)
 
-**Komponente:** `AlertsTab.svelte` → `AlertCard.svelte` pro Alert
+> **Entfernt (2026-11-05, #1895 S4):** `AlertsTab.svelte` und `AlertCard.svelte` existieren nicht mehr; Alarme bedient der geteilte `AlarmeTab`. Der folgende Abschnitt beschreibt das historische Karten-Modell (#638).
+
+**Komponente (historisch):** `AlertsTab.svelte` → `AlertCard.svelte` pro Alert
 
 **Karten-Struktur:**
 - Label + `Metrik · Bedingung` (Monospace-Schriftart)

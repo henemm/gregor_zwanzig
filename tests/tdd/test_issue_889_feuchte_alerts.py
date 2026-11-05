@@ -14,8 +14,9 @@ Erwartung HEUTE (RED):
   erzeugt aktuell einen Change-Eintrag für `humidity_avg_pct` (Bug). Soll: keiner.
 - AC-2: persistierte `humidity`-AlertRule erzeugt aktuell über das
   Field-Mapping einen Feuchte-Change-Eintrag (Bug). Soll: keiner.
-- AC-3: `expand_preset("standard")` enthält aktuell eine `HUMIDITY`-Regel (Bug).
-  Soll: keine.
+- AC-3: die Stufen-Expansion enthält aktuell eine `HUMIDITY`-Regel (Bug).
+  Soll: keine. (Seit #1895 S4 über `expand_per_metric_levels`, die globale
+  Preset-Expansion ist als toter Code entfernt.)
 
 Regression-Guards (dürfen schon GRÜN sein):
 - AC-4: die 6 Metriken erscheinen weiter als Spalten mit numerischen Werten.
@@ -198,17 +199,20 @@ class TestAC2PersistedHumidityRule:
 
 
 class TestAC3PresetNoHumidity:
-    """AC-3: Standard-Preset enthält keinen HUMIDITY-Eintrag."""
+    """AC-3: keine Empfindlichkeitsstufe erzeugt einen HUMIDITY-Eintrag."""
 
     @pytest.mark.parametrize("preset_name", ["standard", "entspannt", "sensibel"])
     def test_preset_has_no_humidity_rule(self, preset_name):
-        """GIVEN ein frischer Trip-Kontext
-        WHEN expand_preset() geladen wird
+        """GIVEN alle Metriken der Schwellwert-Tabelle plus humidity auf einer Stufe
+        WHEN expand_per_metric_levels() die Stufen expandiert
         THEN keine Regel mit metric == AlertMetric.HUMIDITY.
         """
-        from services.alert_preset import expand_preset
+        from services.alert_preset import _PRESET_TABLE, expand_per_metric_levels
 
-        rules = expand_preset(preset_name)
+        levels = {row[0].value: preset_name for row in _PRESET_TABLE}
+        levels["humidity"] = preset_name
+        rules = expand_per_metric_levels(levels)
+        assert rules, "Messaufbau: die Expansion liefert ueberhaupt Regeln"
 
         humidity_rules = [
             r for r in rules

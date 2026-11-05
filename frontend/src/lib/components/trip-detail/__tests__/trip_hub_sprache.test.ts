@@ -247,7 +247,7 @@ describe('AC-4: Metrik-Namen ueber metricLabel, col_label unveraendert', () => {
 		const { de, en } = deDannEn(() => P.layoutRendern());
 		const sEn = sichtbar(en);
 		hat(sichtbar(de), 'Böen');
-		for (const s of ['Wind gusts', 'Temperature', 'Bewölkung', 'Code', 'Raw', 'Simple', 'raw value only', '→ Detail', '↑ Column', 'Limit', 'Telegram 9/7', '✂ from here Telegram cuts off (max 7 columns)', 'No entries — add metrics from “Not in the briefing”.', 'Not in the briefing', '3 more metrics', '1 more metric', '· not output', '▴ Collapse', '▾ Expand', '+ Column', '+ Detail', '6 metrics', '1 metric', 'Default', 'Indicator', 'Table preview', 'TODAY — 2 METRICS', 'TOMORROW — 0 METRICS', 'No metrics enabled for this horizon.', 'Time', '·simple', 'Alert rules', 'Alert thresholds', 'No alerts configured yet', 'Edit rules →', 'all columns · no limit', 'no grid · 140 characters', 'SMS not configured —', 'set up in your account', 'Daily max for remaining metrics', '3 metrics do not fit in the table — append as a compact daily summary', 'briefing schedule', 'Temperature', 'Wind', 'Atmosphere'])
+		for (const s of ['Wind gusts', 'Temperature', 'Bewölkung', 'Code', 'Raw', 'Simple', 'raw value only', '→ Detail', '↑ Column', 'Limit', 'Telegram 9/7', '✂ from here Telegram cuts off (max 7 columns)', 'No entries — add metrics from “Not in the briefing”.', 'Not in the briefing', '3 more metrics', '1 more metric', '· not output', '▴ Collapse', '▾ Expand', '+ Column', '+ Detail', '6 metrics', '1 metric', 'Default', 'Indicator', 'Table preview', 'TODAY — 2 METRICS', 'TOMORROW — 0 METRICS', 'No metrics enabled for this horizon.', 'Time', '·simple', 'all columns · no limit', 'no grid · 140 characters', 'SMS not configured —', 'set up in your account', 'Daily max for remaining metrics', '3 metrics do not fit in the table — append as a compact daily summary', 'briefing schedule', 'Temperature', 'Wind', 'Atmosphere'])
 			hat(sEn, s);
 		for (const s of ['title="Telegram: max 7 columns"', 'aria-label="Raw or simple"', 'aria-label="Enable Email"', 'aria-label="Wind gusts"']) hat(en, s);
 		// Voller Name englisch; die Kurzform (Fallback `label.slice(0, 5)`) bleibt wie jede Kurzform (ADR-0042).
@@ -262,27 +262,8 @@ describe('AC-4: Metrik-Namen ueber metricLabel, col_label unveraendert', () => {
 	});
 });
 
-describe('AC-4: Alarmregeln-Karte (AlertsPreviewCard) ueber F7-Helfer, Sprachwechsel ohne Neuladen', () => {
-	test('de wortgleich zum Bestand (label_de + SEVERITY_LABEL_DE), en Wind gusts / Warning', () => {
-		const { de, en } = deDannEn(() => sichtbar(P.alarmRegelnRendern()));
-		const L = P.alarmLabels;
-		// Bestandsformel vor F9: `${label_de} ${comparison} ${threshold}${unit}` und SEVERITY_LABEL_DE.
-		for (const r of P.ALARM_REGELN.slice(0, 2)) {
-			const m = L.ALERT_METRIC_LABELS[r.metric];
-			hat(de, `${m.label_de} ${m.comparison} ${r.threshold} ${m.unit}`);
-			hat(de, L.SEVERITY_LABEL_DE[r.severity]);
-			hat(en, `${m.label_en} ${m.comparison} ${r.threshold} ${m.unit}`);
-			hat(en, trFor('en', `alarme.stufe.${r.severity}`));
-		}
-		hat(de, 'Warnung');
-		hat(en, 'Warning');
-		hat(en, 'unbekannt_x');
-		hatNicht(en, 'Warnung');
-		hatNicht(en, L.ALERT_METRIC_LABELS.wind_gust.label_de + ' >');
-		assert.notEqual(L.ALERT_METRIC_LABELS.wind_gust.label_de, L.ALERT_METRIC_LABELS.wind_gust.label_en, 'Messaufbau');
-		hat(en, 'Alert rules');
-	});
-});
+// Issue #1895 S4: der Fall „Alarmregeln-Karte (AlertsPreviewCard)" ist mit der toten
+// Komponente trip-detail/AlertsPreviewCard entfallen.
 
 describe('AC-7: Trip-Status je Sprache', () => {
 	const STATUS = ['Aktiv', 'Pausiert', 'Entwurf', 'Archiviert', 'Fertig', 'Geplant'];

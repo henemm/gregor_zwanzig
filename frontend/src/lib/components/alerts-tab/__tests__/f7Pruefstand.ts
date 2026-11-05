@@ -48,15 +48,9 @@ export const { alarmePropsAus } = await imp(path.join(SHARED, '..', 'compare', '
 
 const AlarmeTab = await komp(path.join(SHARED, 'AlarmeTab.svelte'));
 const AlertChannelPicker = await komp(path.join(SHARED, 'AlertChannelPicker.svelte'));
-const AlertsTab = await komp(path.join(AT, 'AlertsTab.svelte'));
-const AlertCard = await komp(path.join(AT, 'AlertCard.svelte'));
-const AlertMetricTable = await komp(path.join(AT, 'AlertMetricTable.svelte'));
 const AlertMetricLevelTable = await komp(path.join(AT, 'AlertMetricLevelTable.svelte'));
 const AlertQuietHoursCard = await komp(path.join(AT, 'AlertQuietHoursCard.svelte'));
 const AlertPreviewCard = await komp(path.join(AT, 'AlertPreviewCard.svelte'));
-const PresetOffen = await variante(path.join(AT, 'AlertPresetSelector.svelte'), [
-	['let popoverOpen = $state(false);', 'let popoverOpen = $state(true);']
-]);
 const VORSCHAU_ZUSTAND: [string, string][] = [
 	["let subject = $state('');", 'let subject = $state(globalThis.__F7_VORSCHAU.subject);'],
 	["let emailHtml = $state('');", 'let emailHtml = $state(globalThis.__F7_VORSCHAU.emailHtml);'],
@@ -179,20 +173,16 @@ function vorschauRendern(zustand: Record<string, unknown>): string {
 	}
 }
 
-/** Bausteine unter alerts-tab/ ausserhalb des geteilten Reiters. */
+/** Bausteine unter alerts-tab/ ausserhalb des geteilten Reiters.
+ * Issue #1895 S4: die toten Bausteine AlertsTab, AlertCard, AlertMetricTable und
+ * AlertPresetSelector sind entfernt, ihre Renders fallen mit weg (die uebrigen
+ * Golden-Abschnitte bleiben byte-gleich). */
 export function bausteineRendern(): string {
-	const metriken = (ids: string[]) => ids.map((metric_id) => ({ metric_id, enabled: true }));
 	const leveled = { wind_gust: 'standard', temperature_min: 'standard', cape: 'standard' };
 	return [
-		html(AlertsTab, { trip: { ...trip(), display_config: {} } }),
-		html(AlertsTab, { trip: { ...trip(), display_config: { metric_alert_levels: {}, metrics: [] } } }),
-		html(AlertsTab, { trip: { ...trip(), display_config: { alert_preset: 'entspannt', metrics: metriken(['gust', 'temperature', 'cape']) } } }),
 		html(AlertMetricLevelTable, { activeMetrics: ['wind_gust', 'temperature_min', 'cape'], levels: leveled, onLevelChange: nix }),
 		html(AlertMetricLevelTable, { activeMetrics: ['wind_gust', 'temperature_min'], levels: { wind_gust: 'off', temperature_min: 'sensibel' }, onLevelChange: nix }),
 		html(AlertMetricLevelTable, { activeMetrics: [], levels: {}, onLevelChange: nix }),
-		html(AlertCard, { rule: REGELN[0], activeChannels: ['email', 'telegram'] }),
-		html(AlertMetricTable, { alert_rules: REGELN }),
-		html(PresetOffen, { value: 'entspannt' }),
 		vorschauRendern({ loading: true }),
 		vorschauRendern({ subject: '[GR20] Böen 75 km/h', emailHtml: '<p>Mail</p>', telegram: 'GR20 Böen 75', sms: 'GR20 G75' }),
 		vorschauRendern({ error: 'HTTP 503' })

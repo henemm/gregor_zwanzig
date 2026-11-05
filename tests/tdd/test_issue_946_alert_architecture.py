@@ -236,32 +236,25 @@ class TestAC3NoFallbackCalls:
             f"wurde aber {calls['count']}× aufgerufen."
         )
 
-    def test_alert_preset_branch_not_used(self, monkeypatch):
+    def test_alert_preset_branch_not_used(self):
         """
-        Selbst wenn ein alter alert_preset gesetzt ist, darf der alert_preset-Zweig
-        (expand_preset) nicht mehr aufgerufen werden — metric_alert_levels ist einzige Quelle.
+        Selbst wenn ein alter alert_preset gesetzt ist, darf daraus kein Alarm
+        entstehen -- metric_alert_levels ist einzige Quelle.
 
-        RED heute: alert_preset='standard' triggert expand_preset().
+        Issue #1895 S4: die globale Preset-Expansion ist als toter Code entfernt;
+        statt eines Aufruf-Zaehlers prueft der Test jetzt das Verhalten: ohne
+        metric_alert_levels und ohne aktive Weather-Tab-Metrik bleibt der
+        Detektor trotz alert_preset='standard' ein NoOp.
         """
-        import services.alert_preset as ap
         from services.trip_alert import TripAlertService
-
-        original = ap.expand_preset
-        calls = {"count": 0}
-
-        def wrapper(name):
-            calls["count"] += 1
-            return original(name)
-
-        monkeypatch.setattr(ap, "expand_preset", wrapper)
 
         trip = _trip(metric_alert_levels=None, alert_preset="standard", enabled_metrics=[])
         service = TripAlertService(user_id="default")
-        service._select_change_detector(trip)
+        detector = service._select_change_detector(trip)
 
-        assert calls["count"] == 0, (
-            f"expand_preset() (alert_preset-Zweig) darf nicht mehr aufgerufen werden, "
-            f"wurde aber {calls['count']}× aufgerufen — metric_alert_levels ist die einzige Quelle."
+        assert _detector_is_noop(detector), (
+            "alert_preset='standard' darf keine Alarm-Regeln erzeugen -- "
+            f"metric_alert_levels ist die einzige Quelle. Thresholds: {_detector_thresholds(detector)!r}."
         )
 
 

@@ -6,27 +6,19 @@
 // unter `node --test` ohne Svelte-Compiler laufen koennen.
 //
 // Inhalt:
-//  - METRIC_DEFAULTS:        Default-Schwellwerte pro AlertMetric.
-//  - ALL_ALERT_METRICS:      Geordnete Liste der 9 Metriken (Anzeige-Reihenfolge).
-//  - MetricRowState:         interner UI-Zustand einer Zeile.
-//  - alertRulesToRowState(): mappt persistierte AlertRule[] -> Row-State.
-//  - rowStateToAlertRules(): mappt Row-State -> AlertRule[] (Save-Pfad).
+//  - METRIC_DEFAULTS:    Default-Schwellwerte pro AlertMetric (Alarm-Vorschau).
+//  - ALERTABLE_METRICS:  alarmfaehige Metriken in Anzeige-Reihenfolge.
+//  - levelToThreshold(), thresholdTitle(): Schwellen-Text der Stufen-Tabelle.
+//
+// Issue #1895 S4: die Umrechner des toten Regel-Editors (Row-State, Modus
+// „Absolut/Delta/Beides", Preset-Migration, Katalog-Mapping) sind entfernt
+// (ADR-0043); `alert_rules` selbst und seine Leser gehen an #2793.
 
-import type { AlertMetric, AlertRule, AlertSeverity, SensLevel } from '../../types.ts';
-import { ALERT_METRIC_LABELS } from '../../utils/alertMetricLabels.ts';
+import type { AlertMetric, SensLevel } from '../../types.ts';
 import { tr } from '../../i18n/index.ts';
 // Fix #1435 Etappe E4: einzige Quelle der Preset-Schwellwerte, erzeugt von
 // scripts/generate_alert_preset_table.py aus src/services/alert_preset.py.
 import rawPresetThresholds from '../../generated/alertPresetThresholds.generated.json' with { type: 'json' };
-
-// Delta-only-Metriken (kein Absolut-Schwellwert). Frueher in
-// alert-rules-editor/alertRuleDefaults.ts (#2277 S3: Rueckbau, hierher umgezogen).
-export const DELTA_ONLY_METRICS: ReadonlySet<AlertMetric> = new Set<AlertMetric>([
-	'temperature_change',
-	'wind_change',
-	'precipitation_change',
-	'thunder_level'
-]);
 
 export const METRIC_DEFAULTS: Record<AlertMetric, number> = {
 	wind_gust: 50,
@@ -56,8 +48,8 @@ export const METRIC_DEFAULTS: Record<AlertMetric, number> = {
 // `frontend/src/lib/generated/alertPresetThresholds.generated.json`,
 // erzeugt von `scripts/generate_alert_preset_table.py`). Nicht mehr als
 // Literal pflegen -- Werte aendern heisst: Python-Quelle aendern, Skript
-// erneut laufen lassen.
-export type PresetName = 'deaktiviert' | 'entspannt' | 'standard' | 'sensibel';
+// erneut laufen lassen. Nur noch intern fuer levelToThreshold() (#1895 S4).
+type PresetName = 'deaktiviert' | 'entspannt' | 'standard' | 'sensibel';
 
 type GeneratedPresetEntry = {
 	kind: 'delta' | 'threshold_crossing';
@@ -73,7 +65,7 @@ const _RAW_PRESETS = rawPresetThresholds as Record<string, GeneratedPresetEntry>
 // ADR-0019/#889 tot bzw. abgeschafft) -- der Typ verlangt darum nicht mehr
 // alle 14 AlertMetric-Schluessel. `levelToThreshold()` behandelt einen
 // fehlenden Schluessel bereits korrekt (gibt null zurueck).
-export const METRIC_PRESETS: Record<
+const METRIC_PRESETS: Record<
 	PresetName,
 	Partial<Record<AlertMetric, number>> | null
 > = {
@@ -88,104 +80,6 @@ export const METRIC_PRESETS: Record<
 		Object.entries(_RAW_PRESETS).map(([metric, entry]) => [metric, entry.sensibel]),
 	) as Partial<Record<AlertMetric, number>>,
 };
-
-// Anzeige-Reihenfolge der Zeilen — siehe Spec §Reihenfolge.
-export const ALL_ALERT_METRICS: readonly AlertMetric[] = [
-	'wind_gust',
-	'precipitation_sum',
-	'thunder_level',
-	'snow_line',
-	'temperature_min',
-	'temperature_max',
-	'temperature_change',
-	'wind_change',
-	'precipitation_change',
-];
-
-export interface MetricRowState {
-	absEnabled: boolean;
-	absThreshold: number;
-	deltaEnabled: boolean;
-	deltaThreshold: number;
-	severity: AlertSeverity;
-}
-
-export type RowStateMap = Record<AlertMetric, MetricRowState>;
-
-/**
- * Wandelt eine Liste persistierter AlertRules in den UI-Row-State um.
- * Fehlende Regeln -> Defaults aus METRIC_DEFAULTS, Severity-Default 'warning'.
- */
-export function alertRulesToRowState(
-	rules: readonly AlertRule[],
-	_existing?: readonly AlertRule[],
-): RowStateMap {
-	const state = {} as RowStateMap;
-	for (const metric of ALL_ALERT_METRICS) {
-		const absRule = rules.find((r) => r.metric === metric && r.kind === 'absolute');
-		const deltaRule = rules.find((r) => r.metric === metric && r.kind === 'delta');
-		state[metric] = {
-			absEnabled: absRule?.enabled ?? false,
-			absThreshold: absRule?.threshold ?? METRIC_DEFAULTS[metric],
-			deltaEnabled: deltaRule?.enabled ?? false,
-			deltaThreshold: deltaRule?.threshold ?? METRIC_DEFAULTS[metric],
-			severity: absRule?.severity ?? deltaRule?.severity ?? 'warning',
-		};
-	}
-	return state;
-}
-
-function newId(): string {
-	if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
-		return crypto.randomUUID();
-	}
-	// Fallback fuer Node-Test-Umgebungen ohne globales crypto.
-	return `rule-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
-}
-
-/**
- * Wandelt den Row-State zurueck in AlertRule[]. Deaktivierte Zeilen werden
- * weggelassen. Vorhandene IDs aus `existing` bleiben pro Metric+Kind erhalten,
- * neue Regeln bekommen eine UUID. Delta-only-Metriken liefern keine absolute Rule.
- */
-export function rowStateToAlertRules(
-	state: RowStateMap,
-	existing: readonly AlertRule[] = [],
-): AlertRule[] {
-	const result: AlertRule[] = [];
-	for (const metric of ALL_ALERT_METRICS) {
-		const row = state[metric];
-		if (!row) continue;
-		const unit = ALERT_METRIC_LABELS[metric]?.unit || undefined;
-		const isDeltaOnly = DELTA_ONLY_METRICS.has(metric);
-
-		if (row.absEnabled && !isDeltaOnly) {
-			const prev = existing.find((r) => r.metric === metric && r.kind === 'absolute');
-			result.push({
-				id: prev?.id ?? newId(),
-				kind: 'absolute',
-				metric,
-				threshold: row.absThreshold,
-				...(unit ? { unit } : {}),
-				severity: row.severity,
-				enabled: true,
-			});
-		}
-		if (row.deltaEnabled) {
-			const prev = existing.find((r) => r.metric === metric && r.kind === 'delta');
-			result.push({
-				id: prev?.id ?? newId(),
-				kind: 'delta',
-				metric,
-				threshold: row.deltaThreshold,
-				...(unit ? { unit } : {}),
-				severity: row.severity,
-				enabled: true,
-			});
-		}
-	}
-	return result;
-}
 
 // ─── Issue #864/#859: Per-Metrik-Alert-Levels ─────────────────────────────
 
@@ -281,112 +175,4 @@ export function thresholdTitle(metric: AlertMetric): string | undefined {
 		return tr('alarme.richtwert'); // #2656: aktuelle Sprache; Aufrufer im Markup lesen $locale
 	}
 	return undefined;
-}
-
-/**
- * Wandelt globalen Preset-String in per-Metrik SensLevel-Record um.
- * "deaktiviert" → alle 'off'. Unbekannte Presets → 'standard'.
- */
-export function migrateAlertPreset(
-	preset: string,
-	activeMetrics: readonly AlertMetric[],
-): Record<AlertMetric, SensLevel> {
-	const level: SensLevel =
-		preset === 'deaktiviert' ? 'off'
-		: preset === 'entspannt' ? 'entspannt'
-		: preset === 'sensibel' ? 'sensibel'
-		: 'standard';
-	return Object.fromEntries(
-		activeMetrics.map((m) => [m, level]),
-	) as Record<AlertMetric, SensLevel>;
-}
-
-// ─── Issue #864: Catalog-ID → AlertMetric Mapping ─────────────────────────
-
-import type { WeatherConfigMetric } from '../../types.ts';
-
-/** Catalog metric_id → AlertMetric(s) die davon aktiviert werden. */
-const CATALOG_TO_ALERT_METRICS: Record<string, readonly AlertMetric[]> = {
-	// Direkte Treffer (falls Catalog bereits AlertMetric-Namen nutzt)
-	wind_gust:            ['wind_gust'],
-	precipitation_sum:    ['precipitation_sum'],
-	precipitation_change: ['precipitation_change'],
-	wind_change:          ['wind_change'],
-	temperature_min:      ['temperature_min'],
-	temperature_max:      ['temperature_max'],
-	temperature_change:   ['temperature_change'],
-	fresh_snow:           ['fresh_snow'],
-	snow_line:            ['freezing_level'],  // Issue #959: konsolidiert
-	cape:                 ['cape'],
-	visibility:           ['visibility'],
-	humidity:             ['humidity'],
-	thunder_level:        ['thunder_level'],
-	freezing_level:       ['freezing_level'],
-	// Kurz-IDs aus dem Catalog
-	gust:          ['wind_gust'],
-	wind:          ['wind_change'],
-	// Issue #1468: der Beginn erbt die Sichtbarkeit seiner Register-Groesse.
-	precipitation: ['precipitation_sum', 'precipitation_change', 'precipitation_heavy_onset'],
-	thunder:       ['thunder_level', 'thunder_onset'],
-	// Issue #959: snow_line/snowfall_limit aktivieren die konsolidierte Metrik freezing_level.
-	snowfall_limit: ['freezing_level'],
-	temperature:   ['temperature_min', 'temperature_max', 'temperature_change'],
-};
-
-/**
- * Gibt die alertable AlertMetrics zurück, die dem aktiven Wetter-Metriken-Set entsprechen.
- * Issue #933: KEIN Alle-Metriken-Fallback mehr — eine leere/nicht-gemappte Auswahl
- * liefert eine leere Liste, damit der Alerts-Tab nur Schwellen zu aktiv gewählten
- * Wetter-Metriken zeigt (statt aller 14).
- */
-export function activeAlertableMetrics(
-	configMetrics: readonly WeatherConfigMetric[] | undefined | null,
-): readonly AlertMetric[] {
-	if (!configMetrics || configMetrics.length === 0) return [];
-	const enabled = configMetrics.filter((m) => m.enabled);
-	if (enabled.length === 0) return [];
-
-	const seen = new Set<AlertMetric>();
-	for (const m of enabled) {
-		const mapped = CATALOG_TO_ALERT_METRICS[m.metric_id];
-		if (mapped) mapped.forEach((a) => seen.add(a));
-	}
-	// Reihenfolge aus ALERTABLE_METRICS beibehalten
-	return ALERTABLE_METRICS.filter((a) => seen.has(a));
-}
-
-// Issue #414 — Modus aus persistierten Rules ableiten.
-export function deriveAlertMode(rules: readonly AlertRule[]): 'absolute' | 'delta' | 'both' {
-	const hasAbs = rules.some((r) => r.kind === 'absolute' && r.enabled);
-	const hasDelta = rules.some((r) => r.kind === 'delta' && r.enabled);
-	if (hasAbs && hasDelta) return 'both';
-	if (hasDelta) return 'delta';
-	return 'both'; // Default: 'both' (auch bei leerem Array und nur-absolute)
-}
-
-// Issue #414 — Modus auf RowStateMap anwenden; mutiert in-place.
-// Threshold-Werte (absThreshold, deltaThreshold) werden NICHT geaendert.
-export function applyModeToRowState(
-	state: RowStateMap,
-	mode: 'absolute' | 'delta' | 'both',
-): void {
-	for (const metric of ALL_ALERT_METRICS) {
-		const row = state[metric];
-		if (!row) continue;
-		const isDeltaOnly = DELTA_ONLY_METRICS.has(metric);
-		switch (mode) {
-			case 'absolute':
-				row.absEnabled = !isDeltaOnly;
-				row.deltaEnabled = false;
-				break;
-			case 'delta':
-				row.absEnabled = false;
-				row.deltaEnabled = true;
-				break;
-			case 'both':
-				row.absEnabled = !isDeltaOnly;
-				row.deltaEnabled = true;
-				break;
-		}
-	}
 }

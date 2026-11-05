@@ -690,7 +690,9 @@ von Trip-Editor und Trip-Detail-Ansicht:
 
 `alert-rules-editor/` (`AlertRulesEditor`, `AlertRuleRow`, `alertChannels`, `alertRuleDefaults`) und
 `edit/TripEditView.svelte` sind mit #2277 S3 gelöscht; `/trips/[id]/edit` leitet nur noch um.
-`DELTA_ONLY_METRICS` lebt in `alerts-tab/alertMetricTable.ts`; Alarme bedient der geteilte `AlarmeTab`.
+Mit #1895 S4 (2026-11-05) sind auch `alerts-tab/{AlertsTab,AlertCard,AlertMetricTable,AlertMetricRow,AlertPresetSelector}.svelte`,
+`trip-detail/AlertsPreviewCard.svelte` und `DELTA_ONLY_METRICS` gelöscht; `alerts-tab/alertMetricTable.ts` hält nur noch
+die Metrik-Defaults/Schwellen-Helfer. Alarme bedient der geteilte `AlarmeTab`.
 
 ## Compare Components (`compare/`)
 

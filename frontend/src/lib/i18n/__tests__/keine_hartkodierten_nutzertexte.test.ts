@@ -507,13 +507,8 @@ describe('TypeScript-Ratsche (F11, AC-6)', () => {
 		const F7 = [
 			'lib/components/shared/AlarmeTab.svelte',
 			'lib/components/shared/AlertChannelPicker.svelte',
-			'lib/components/alerts-tab/AlertsTab.svelte',
-			'lib/components/alerts-tab/AlertCard.svelte',
-			'lib/components/alerts-tab/AlertPresetSelector.svelte',
 			'lib/components/alerts-tab/AlertMetricLevelTable.svelte',
 			'lib/components/alerts-tab/AlertMetricLevelRow.svelte',
-			'lib/components/alerts-tab/AlertMetricRow.svelte',
-			'lib/components/alerts-tab/AlertMetricTable.svelte',
 			'lib/components/alerts-tab/AlertQuietHoursCard.svelte',
 			'lib/components/alerts-tab/AlertCooldownCard.svelte',
 			'lib/components/alerts-tab/AlertPreviewCard.svelte'
