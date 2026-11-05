@@ -389,3 +389,116 @@ def test_ac17_vorlage_gesetzt_und_alarmfelder_unveraendert(root):
         assert neu.get("alert_rules") == alt.get("alert_rules")
         for k in ("metric_alert_levels", "alert_preset"):
             assert neu["display_config"].get(k) == alt["display_config"].get(k)
+
+
+# --- S1c-2 (AC-23): Vergleichsschluessel nachziehen ---------------------------
+
+def _vgl(cid, bereiche, **dc):
+    return _cmp(cid, "summer_trekking", ["temp_max_c"], bereiche, **dc)
+
+
+def _vgl_ampel(tmp_path, bereiche, **dc):
+    return _ein_trip(tmp_path, _vgl("v", bereiche, **dc))
+
+
+def test_ac23_wind_sicht_niederschlag_werden_ampel_grenzen_fuer_zwei_nutzer(tmp_path):
+    root = tmp_path / "users"
+    for uid, wind, sicht, regen in (("alice", 40, 3000, 8), ("bob", 55, 1500, 12)):
+        (root / uid / "briefings").mkdir(parents=True)
+        (root / uid / "briefings" / "v.json").write_text(json.dumps(_vgl("v", [
+            _band("wind_max_kmh", None, wind), _band("visibility_min_m", sicht, None),
+            _band("precip_sum_mm", None, regen)])), encoding="utf-8")
+    _lauf(root, "--execute")
+    for uid, wind, sicht, regen in (("alice", 40, 3000, 8), ("bob", 55, 1500, 12)):
+        m = _lies(root, uid, "v")["display_config"]["ampel"]["metrics"]
+        assert m["wind"]["upper"]["yellow"] == wind + 1
+        assert m["visibility"]["lower"]["yellow"] == sicht
+        assert "upper" not in m["visibility"]  # falsche Seite wuerde die Sichtweite invertieren
+        assert m["precipitation"]["upper"]["yellow"] == regen + 0.1
+
+
+def test_ac23_uebrige_schluessel_und_seiten(tmp_path):
+    ampel, _ = _vgl_ampel(tmp_path, [
+        _band("pop_max_pct", None, 60), _band("snow_new_sum_cm", None, 10),
+        _band("wind_chill_min_c", -5, None), _band("wind_chill_max_c", None, 30),
+        _band("uv_index_max", None, 6), _band("sunny_hours_h", 4, None),
+        _band("cloud_avg_pct", None, 80), _band("cloud_low_avg_pct", None, 50),
+        _band("dewpoint_avg_c", None, 15), _band("freezing_level_m", 2500, None),
+        _band("snowfall_limit_m", 1500, None), _band("humidity_avg_pct", 30, 90),
+        _band("snow_depth_cm", 10, 200)])
+    m = ampel["metrics"]
+    assert m["rain_probability"]["upper"]["yellow"] == 61
+    assert m["fresh_snow"]["upper"]["yellow"] == 11
+    assert m["wind_chill"]["lower"]["yellow"] == -5 and m["wind_chill"]["upper"]["yellow"] == 31
+    assert m["uv_index"]["upper"]["yellow"] == 7
+    assert m["sunshine"]["lower"]["yellow"] == 4 and "upper" not in m["sunshine"]
+    assert m["cloud_total"]["upper"]["yellow"] == 81
+    assert m["cloud_low"]["upper"]["yellow"] == 51
+    assert m["dewpoint"]["upper"]["yellow"] == 15.1
+    assert m["freezing_level"]["lower"]["yellow"] == 2500
+    assert m["snowfall_limit"]["lower"]["yellow"] == 1500
+    assert m["humidity"]["lower"]["yellow"] == 30 and m["humidity"]["upper"]["yellow"] == 91
+    assert m["snow_depth"]["lower"]["yellow"] == 10 and m["snow_depth"]["upper"]["yellow"] == 201
+
+
+@pytest.mark.parametrize("reihenfolge", ["min_zuerst", "max_zuerst"])
+def test_ac23_temp_min_bestimmt_untere_seite_unabhaengig_von_der_reihenfolge(tmp_path, reihenfolge):
+    bereiche = [_band("temp_min_c", 2, 99), _band("temp_max_c", -50, 25)]
+    if reihenfolge == "max_zuerst":
+        bereiche.reverse()
+    ampel, _ = _vgl_ampel(tmp_path, bereiche)
+    t = ampel["metrics"]["temperature"]
+    assert t["lower"]["yellow"] == 2
+    assert t["upper"]["yellow"] == 25.1
+
+
+def test_ac23_temp_min_allein_liefert_nur_untere_seite(tmp_path):
+    ampel, _ = _vgl_ampel(tmp_path, [_band("temp_min_c", 2, None)])
+    t = ampel["metrics"]["temperature"]
+    assert t["lower"]["yellow"] == 2 and "upper" not in t
+
+
+def test_ac23_vorhandene_ampel_bleibt_zweiter_lauf_aendert_keine_datei(tmp_path):
+    eigene = {"upper": {"yellow": 33, "orange": 44, "red": 77}}
+    obj = _vgl("v", [_band("wind_max_kmh", None, 40), _band("precip_sum_mm", None, 8)])
+    obj["display_config"]["ampel"] = {"metrics": {"wind": copy.deepcopy(eigene)}}
+    r = tmp_path / "users"
+    (r / "alice" / "briefings").mkdir(parents=True)
+    (r / "alice" / "briefings" / "v.json").write_text(json.dumps(obj), encoding="utf-8")
+    _lauf(r, "--execute")
+    m = _lies(r, "alice", "v")["display_config"]["ampel"]["metrics"]
+    assert m["wind"] == eigene
+    assert m["precipitation"]["upper"]["yellow"] == 8.1
+    nach_erstem = _summen(r)
+    out = _lauf(r, "--execute")
+    assert _summen(r) == nach_erstem
+    assert "Nichts zu tun" in out
+
+
+def test_ac23_gewitter_und_cape_stehen_nicht_zuordenbar_im_bericht(tmp_path):
+    ampel, out = _vgl_ampel(tmp_path, [_band("thunder_level_max", None, 2), _band("cape_max_jkg", None, 800)])
+    assert "nicht zuordenbar: thunder_level_max" in out
+    assert "nicht zuordenbar: cape_max_jkg" in out
+    assert "thunder" not in ampel.get("metrics", {})
+
+
+@pytest.mark.parametrize("key", ["wind_direction_deg", "cloud_mid_avg_pct", "cloud_high_avg_pct",
+                                 "pressure_avg_hpa", "precip_type_dominant"])
+def test_ac23_neu_erkannte_nicht_zuordenbare_schluessel_stehen_im_bericht(tmp_path, key):
+    ampel, out = _vgl_ampel(tmp_path, [_band(key, 1, 9)])
+    assert f"nicht zuordenbar: {key}" in out
+    assert not ampel.get("metrics")
+
+
+def test_ac23_ratsche_jeder_vergleichsschluessel_ist_zugeordnet_oder_nicht_zuordenbar(tmp_path):
+    from output.renderers.compare_metric_ids import FRONTEND_TO_RENDERER_METRIC_ID
+    from app.ampel_templates import AMPEL_TEMPLATES
+    ungeklaert = []
+    for i, key in enumerate(sorted(FRONTEND_TO_RENDERER_METRIC_ID)):
+        ampel, out = _ein_trip(tmp_path / str(i), _vgl("v", [_band(key, 5, 50)]))
+        metrics = ampel.get("metrics", {})
+        if metrics:
+            assert set(metrics) <= set(AMPEL_TEMPLATES["allgemein"]["metrics"]), key
+        elif f"nicht zuordenbar: {key}" not in out:
+            ungeklaert.append(key)
+    assert ungeklaert == []
