@@ -111,11 +111,33 @@ def test_ac3_sommerzeit_umstellung_endet_exakt_sechs_uhr_ortszeit():
     assert (local.year, local.month, local.day, local.hour, local.minute) == (2027, 3, 28, 6, 0)
 
 
-def test_ac4_nicht_aufloesbare_zone_behaelt_utc_rueckfall():
-    # (0, 0): Zeitzone nicht auflösbar bzw. UTC-gleich -> altes Ende 06:00 UTC am UTC-Datum+1
+class _FinderOhneTreffer:
+    """Zonen-Finder, der für keinen Ort eine Zone kennt (der in
+    ``resolve_location_tz`` dokumentierte Fall „TimezoneFinder findet nichts“).
+
+    Nötig, weil sich der Fall mit echten Koordinaten nicht herstellen lässt:
+    TimezoneFinder deckt auch die Ozeane ab ((0, 0) -> ``Etc/GMT``, also
+    aufgelöst), und fehlende bzw. ungültige Koordinaten scheitern schon vor
+    dem Provider (Segment-Validierung) — das angefragte Fenster wäre dann
+    gar nicht beobachtbar.
+    """
+
+    def timezone_at(self, *, lat, lng):
+        return None
+
+
+def test_ac4_nicht_aufloesbare_zone_behaelt_utc_rueckfall(monkeypatch):
+    import utils.timezone as tzmod
+
+    monkeypatch.setattr(tzmod, "_get_tf", lambda: _FinderOhneTreffer())
+    probe = SimpleNamespace(lat=0.01, lon=0.01)
+    assert tzmod.resolve_location_tz(probe) is None, "Vorbedingung: Zone muss unauflösbar sein"
+
+    # Ankunft 15:00 UTC -> Rückfall-Zone UTC -> Ende exakt 06:00 UTC am UTC-Datum+1.
+    # Jede andere Rückfall-Zone (z. B. UTC+3 -> 03:00 UTC) verschiebt das Ende.
     arrival = datetime(2026, 7, 20, 15, 0, tzinfo=UTC)
-    end, _ = _requested_end(_last_segment(0.0, 0.0, arrival))
-    assert end == datetime(2026, 7, 21, 6, 0, tzinfo=UTC)
+    end, _ = _requested_end(_last_segment(0.01, 0.01, arrival))
+    assert end == datetime(2026, 7, 21, 6, 0, tzinfo=UTC), f"Ende {end}"
 
 
 def test_ac5_versand_und_vorschau_liefern_dasselbe_fenster(monkeypatch):

@@ -8,7 +8,7 @@ SPEC: docs/specs/modules/segment_weather.md v1.0
 """
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, time, timedelta, timezone
 from typing import TYPE_CHECKING, Optional
 
 import logging
@@ -607,11 +607,19 @@ def fetch_night_weather(
     # Stunde fehlte in den Daten. Der halboffene Filter dieses Moduls
     # (`start_floor <= ts < end_floor`, Bug #806/#856) bleibt unberuehrt.
     arrival = display_end_time(seg)
+    # Issue #2223: das Fensterende ist 06:00 ORTSZEIT des auf die Ankunft
+    # folgenden Ortstags, nicht 06:00 UTC am UTC-Datum+1 — sonst ist das
+    # Fenster westlich von UTC einen Tag zu lang und in Mitteleuropa ein bis
+    # zwei Stunden zu lang. Unaufloesbare Zone => location_tz() faellt auf
+    # UTC zurueck, das ist exakt das bisherige Verhalten.
+    from utils.timezone import local_dt, location_tz
+    tz = location_tz(seg.end_point)
+    local_arrival = local_dt(arrival, tz)
     next_morning = datetime.combine(
-        arrival.date() + timedelta(days=1),
-        datetime.min.time(),
-        tzinfo=timezone.utc,
-    ).replace(hour=6)
+        local_arrival.date() + timedelta(days=1),
+        time(6, 0),
+        tzinfo=tz,
+    ).astimezone(timezone.utc)
 
     # Create a temporary segment spanning arrival → 06:00 next day
     night_segment = TripSegment(
