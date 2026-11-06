@@ -126,12 +126,17 @@ describe('#699 / #2284 S2 AC-2: Eyebrow nur Datumsbereich, Region in eigener Zei
 		assert.equal(eyebrow, DATUM, `Eyebrow ist nicht genau der Datumsbereich: „${eyebrow}"`);
 	});
 
-	test('Region steht in eigener Zeile unter dem Namen (nach </h1>, vor der Statuszeile)', async () => {
+	// #2837 S1 (ADR-0110): die eigene Statuszeile entfällt — Status und „Tag x von y" stehen in der
+	// Titelzeile (vor der Region). Anker ist deshalb nicht mehr die Statuszeile, sondern der
+	// Region-Stift; die Reihenfolge „Überschrift → Status → Region" prüft die Seiten-Ebene
+	// (shared/hub-kopf/__tests__/hub_kopf_seiten_paritaet.test.ts, „Reihenfolge …").
+	test('Region steht in eigener Zeile unter dem Namen (nach </h1>, bis zum Region-Stift)', async () => {
 		const b = await html(trip());
 		const nachH1 = b.split('</h1>')[1] ?? '';
-		const bisStatus = nachH1.split('data-testid="trip-detail-status-supplement"')[0].replace(/<[^>]*$/, '');
-		assert.ok(text(bisStatus).includes('Karnische Alpen'), `Region fehlt zwischen Name und Statuszeile: „${text(bisStatus)}"`);
-		assert.ok(bisStatus.includes('data-testid="trip-region-edit-toggle"'), 'Region-Stift fehlt in der Region-Zeile');
+		const bisStift = nachH1.split('data-testid="trip-region-edit-toggle"')[0].replace(/<[^>]*$/, '');
+		assert.ok(nachH1.includes('data-testid="trip-region-edit-toggle"'), 'Region-Stift fehlt unter dem Namen');
+		assert.ok(text(bisStift).includes('Karnische Alpen'), `Region fehlt zwischen Name und Region-Stift: „${text(bisStift)}"`);
+		assert.ok(!b.includes('class="status-line'), 'die eigene Statuszeile (.status-line) steht noch im Kopf');
 		assert.equal(text(b).split('Karnische Alpen').length - 1, 1, 'Region steht nicht genau einmal im Kopf');
 	});
 

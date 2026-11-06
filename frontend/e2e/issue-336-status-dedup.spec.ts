@@ -54,6 +54,29 @@ test.describe('Issue #336 — Status-Dedup im Trip-Kopf', () => {
 		await expect(header).not.toContainText('AKTIV');
 	});
 
+	// #2837 S1 (ADR-0110, Spec rework_2837_s1_hub_kopf.md AC-6) — UMGEDREHT: bisher stand der
+	// Status in einer EIGENEN Zeile unter dem Kopf (genau einmal). Jetzt steht er genau einmal
+	// als Badge IN DER TITELZEILE neben dem Namen, „Tag x von y" daneben; eine eigene
+	// Statuszeile gibt es nicht mehr. Gemessen am Desktop (1440 px): die senkrechte Mitte von
+	// Badge und Zusatz liegt innerhalb der Überschrift-Box.
+	test('AC-5 (#2837 S1): Status genau einmal, als Badge in der Titelzeile; Zusatz daneben; keine Statuszeile', async ({ page }) => {
+		await page.setViewportSize({ width: 1440, height: 900 });
+		await page.goto(`/trips/${ACTIVE_TRIP_ID}`);
+		const h1 = page.getByTestId('trip-detail-h1');
+		await expect(h1).toBeVisible();
+		const badge = page.getByTestId('trip-detail-status-badge');
+		await expect(badge).toHaveCount(1);
+		await expect(page.getByTestId('trip-detail-status-supplement')).toHaveCount(1);
+		const titel = (await h1.boundingBox())!;
+		for (const [name, loc] of [['Badge', badge], ['Zusatz', page.getByTestId('trip-detail-status-supplement')]] as const) {
+			const box = (await loc.boundingBox())!;
+			const mitte = box.y + box.height / 2;
+			expect(mitte, `${name} steht nicht in der Titelzeile (eigene Statuszeile?)`).toBeGreaterThanOrEqual(titel.y);
+			expect(mitte, `${name} steht nicht in der Titelzeile (eigene Statuszeile?)`).toBeLessThanOrEqual(titel.y + titel.height);
+		}
+		await expect(page.locator('.status-line'), 'eigene Statuszeile existiert noch').toHaveCount(0);
+	});
+
 	// AC-4: Zusatz ist gedämpfter Sekundärtext (--g-ink-muted), nicht Status-Accent.
 	test('AC-4: Supplement nutzt gedämpfte Sekundärfarbe (= .meta-line)', async ({ page }) => {
 		/**

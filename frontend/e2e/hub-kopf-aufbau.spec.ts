@@ -8,9 +8,10 @@
 // #2283 AC-13 „Senden nur im Hub-Kopf"); Zuordnung alt → neu: Spec-Tabelle Zeilen
 // 13-14, 18-23, 41.
 //
-// KA-6..KA-9 laufen NUR für `vergleich`: Eyebrow „Orts-Vergleich · Hub“,
-// Breadcrumb „ORTS-VERGLEICHE / Hub“ und die Orte-Anzahl sind Rahmen des
-// Orts-Vergleichs (compare/[id]/+page.svelte), kein Teil des geteilten Kopfs.
+// KA-6..KA-9 laufen NUR für `vergleich` (Orte-Anzahl = fachlich verschieden). Seit #2837 S1
+// (ADR-0110) UMGEDREHT: die Mobil-Eyebrow „Orts-Vergleich · Hub“ und der Krümel „Hub“
+// entfallen; der Breadcrumb „Orts-Vergleiche / <Name>“ kommt aus dem geteilten HubKopf
+// (Parität beider Arten: hub-kopf-paritaet-compare-trip.spec.ts).
 // Das Trip-Gegenstück („Eyebrow nur Datum“) bleibt in
 // trip-hub-kopf-region-aktivitaet.spec.ts AC-2.
 //
@@ -27,6 +28,7 @@ import { test, expect, type Page } from '@playwright/test';
 import {
 	createTestLocation,
 	HUB_KINDS,
+	HUB_KOPF_SEL,
 	HUB_SEL,
 	hubApiPath,
 	openHub,
@@ -345,6 +347,8 @@ for (const kind of HUB_KINDS) {
 
 			const kopfSenden = page.locator('[data-testid="subscription-hub-send"]:visible');
 			await expect(kopfSenden).toBeInViewport();
+			// #2837 S1: „Senden“ sitzt in der Leiste ganz oben (HubKopf), bei beiden Arten.
+			await expect(page.getByTestId(HUB_KOPF_SEL.leiste).locator('[data-testid="subscription-hub-send"]:visible')).toHaveCount(1);
 			await kopfSenden.click();
 			await expect(page.getByTestId('send-confirm-dialog')).toBeVisible();
 			expect(sende.length, 'das Öffnen des Dialogs sendet nichts').toBe(0);
@@ -406,6 +410,8 @@ for (const kind of HUB_KINDS) {
 
 			const kopfSenden = page.locator('[data-testid="subscription-hub-send"]:visible');
 			await expect(kopfSenden).toBeVisible();
+			// #2837 S1: „Senden“ sitzt in der Leiste ganz oben (HubKopf), bei beiden Arten.
+			await expect(page.getByTestId(HUB_KOPF_SEL.leiste).locator('[data-testid="subscription-hub-send"]:visible')).toHaveCount(1);
 			await kopfSenden.click();
 			await expect(page.getByTestId('send-confirm-dialog')).toBeVisible();
 			expect(sende.length, 'das Öffnen des Dialogs sendet nichts').toBe(0);
@@ -437,10 +443,12 @@ for (const kind of HUB_KINDS) {
 // ─── KA-10, KA-11 (#2347 S4): Rückweg vom Hub zur Liste ─────────────────────
 // Ersatz für compare-flow-navigation AC-28 (Desktop-Breadcrumb, mobiler
 // Zurück-Pfeil). Krümel-Beschriftung je kind (Trip „Trips", Vergleich
-// „ORTS-VERGLEICHE"); Zusicherung gleich: Klick führt zur Liste dieser Art.
+// „Orts-Vergleiche"); Zusicherung gleich: Klick führt zur Liste dieser Art.
+// #2837 S1 (ADR-0110): UMGEDREHT von „ORTS-VERGLEICHE" (Versalien im Markup) auf den
+// Katalog-Wortlaut im geteilten Breadcrumb des HubKopf — für beide Arten derselbe Ort.
 const KRUEMEL: Record<HubKind, (page: Page) => ReturnType<Page['locator']>> = {
-	route: (page) => page.getByTestId('trip-detail-breadcrumb-bar').getByRole('link', { name: 'Trips', exact: true }),
-	vergleich: (page) => page.getByRole('link', { name: 'ORTS-VERGLEICHE', exact: true })
+	route: (page) => page.getByTestId(HUB_KOPF_SEL.breadcrumb).getByRole('link', { name: 'Trips', exact: true }),
+	vergleich: (page) => page.getByTestId(HUB_KOPF_SEL.breadcrumb).getByRole('link', { name: /^Orts-Vergleiche$/i })
 };
 
 for (const kind of HUB_KINDS) {
@@ -484,14 +492,16 @@ for (const kind of HUB_KINDS) {
 test.describe('KA-6..KA-9 (vergleich, compare-eigen)', () => {
 	const kind: HubKind = 'vergleich';
 
-	test('KA-6 (vergleich): Mobil — Eyebrow „Orts-Vergleich · Hub“, Unterzeile „Wandern · 2 Orte“, kein „· ·“', async ({
+	// #2837 S1 (ADR-0110, Entscheidung 4) — UMGEDREHT: die Mobil-Eyebrow „Orts-Vergleich · Hub“
+	// entfällt (Trip hat keine); Unterzeile und „kein · ·“ bleiben.
+	test('KA-6 (vergleich): Mobil — keine Eyebrow „Orts-Vergleich · Hub“, Unterzeile „Wandern · 2 Orte“, kein „· ·“', async ({
 		page
 	}) => {
 		await page.setViewportSize(MOBIL);
 		const hub = await seedKopf(page, kind);
 		try {
 			await openHub(page, kind, hub.id);
-			await expect(page.getByText('Orts-Vergleich · Hub', { exact: true })).toBeVisible();
+			await expect(page.getByText(/Orts-Vergleich\s*·\s*Hub/i), 'KA-6: Mobil-Eyebrow „Orts-Vergleich · Hub“ steht noch').toHaveCount(0);
 			await expect(vergleichUnterzeile(page)).toBeVisible();
 			await expect(page.getByText(/·\s*·/)).toHaveCount(0);
 		} finally {
@@ -499,21 +509,29 @@ test.describe('KA-6..KA-9 (vergleich, compare-eigen)', () => {
 		}
 	});
 
-	test('KA-7 (vergleich): Desktop — keine Eyebrow, Breadcrumb „ORTS-VERGLEICHE / Hub“, Unterzeile mit Profil', async ({
+	// #2837 S1 (ADR-0110, Entscheidung 4) — UMGEDREHT: Breadcrumb „Orts-Vergleiche / <Name>“
+	// statt „ORTS-VERGLEICHE / Hub“; genau zwei Krümel bleiben, das Kind ist der
+	// Vergleichsname und kein Link, „Hub“ kommt im Kopf nicht mehr vor.
+	test('KA-7 (vergleich): Desktop — keine Eyebrow, Breadcrumb „Orts-Vergleiche / <Name>“, Unterzeile mit Profil', async ({
 		page
 	}) => {
 		await page.setViewportSize(DESKTOP);
 		const hub = await seedKopf(page, kind);
 		try {
 			await openHub(page, kind, hub.id);
-			await expect(page.getByText('Orts-Vergleich · Hub', { exact: true })).toBeHidden();
-			await expect(page.getByText(/Orts-Vergleiche/i).filter({ visible: true }).first()).toBeVisible();
-			await expect(page.getByText('Hub', { exact: true }).filter({ visible: true }).first()).toBeVisible();
+			const name = ((await (await page.request.get(hubApiPath(kind, hub.id))).json()) as { name: string }).name;
+			await expect(page.getByText(/Orts-Vergleich\s*·\s*Hub/i)).toHaveCount(0);
+			const krumen = page.getByTestId(HUB_KOPF_SEL.breadcrumb);
+			await expect(krumen).toBeVisible();
+			await expect(krumen.getByText('Hub', { exact: true }), 'KA-7: Krümel „Hub“ steht noch').toHaveCount(0);
+			await expect(page.getByTestId(HUB_KOPF_SEL.leiste).getByText('Hub', { exact: true })).toHaveCount(0);
 			// #2347 S4, Rumpf-Abgleich compare-hub-fidelity-s8c AC-10: genau ZWEI Krümel —
-			// ein Link „ORTS-VERGLEICHE", kein app-weiter Extra-Krümel „WORKSPACE".
-			const kruemel = page.locator('a.breadcrumb-link:visible');
+			// ein Link „Orts-Vergleiche", kein app-weiter Extra-Krümel „WORKSPACE".
+			const kruemel = krumen.locator('a:visible');
 			await expect(kruemel, 'KA-7: Breadcrumb hat nicht genau einen Link-Krümel').toHaveCount(1);
-			await expect(kruemel).toHaveText('ORTS-VERGLEICHE');
+			await expect(kruemel).toHaveText('Orts-Vergleiche');
+			await expect(krumen).toContainText(name);
+			await expect(kruemel, 'KA-7: der Vergleichsname ist Teil des Links').not.toContainText(name);
 			await expect(page.getByText('WORKSPACE', { exact: true }), 'KA-7: Extra-Krümel „WORKSPACE"').toHaveCount(0);
 			await expect(vergleichUnterzeile(page)).toBeVisible();
 		} finally {

@@ -38,6 +38,8 @@ const HUB_PAGE     = join(ROUTES_COMPARE, 'compare', '[id]', '+page.svelte');
 const COMPARE_TABS = join(COMPARE_DIR, 'CompareTabs.svelte');
 const MTABBAR      = join(COMPARE_DIR, '..', 'mobile', 'MTabBar.svelte');
 const HUB_UEBERSICHT = join(COMPARE_DIR, '..', 'shared', 'hub-uebersicht', 'HubUebersicht.svelte');
+// #2837 S1 (ADR-0110): der Breadcrumb des Hubs liegt im geteilten HubKopf (Trip und Vergleich).
+const HUB_KOPF = join(COMPARE_DIR, '..', 'shared', 'hub-kopf', 'HubKopf.svelte');
 
 // ═══════════════════════════════════════════════════════════════════
 // Block A — Compare-Liste
@@ -133,8 +135,8 @@ describe('AC-4: Compare-Hub — Full-width Header ohne max-w Container', () => {
 		);
 	});
 
-	test('AC-4c: Breadcrumb-Links nutzen font-family var(--g-font-mono)', () => {
-		const src = readFileSync(HUB_PAGE, 'utf-8');
+	test('AC-4c: Breadcrumb-Links nutzen font-family var(--g-font-mono) (im geteilten HubKopf, #2837 S1)', () => {
+		const src = readFileSync(HUB_KOPF, 'utf-8');
 		assert.match(
 			src,
 			/g-font-mono/,

@@ -8,7 +8,8 @@
 // AC-22 der entfernten mobilen Compare-Sammelspec; Zuordnung alt → neu:
 // Spec-Tabelle Zeilen 1-5, 36-38, 44-49.
 //
-// Kind-eigene Zweige NUR dort, wo die Spec sie ausweist: HT-8 (Optik-Werte je Art).
+// Kind-eigene Zweige NUR dort, wo die Spec sie ausweist: HT-8 (Größe je Art; die Zähler-Farbe ist
+// seit #2837 S1 für beide Arten GLEICH und neutral, ADR-0110).
 // HT-10 (Kennzahlen-Raster der Übersicht) läuft seit Issue #2682 für BEIDE Arten —
 // die Übersicht ist ein geteilter Baustein (shared/hub-uebersicht/, Spec
 // feat_2682_hub_uebersicht_geteilt.md AC-2/AC-17); nur die testids unterscheiden
@@ -20,7 +21,7 @@
 // Attribute. Anmeldung über den storageState aus global.setup.ts (Admin-Sitzung).
 
 import { test, expect, type APIRequestContext, type Page } from '@playwright/test';
-import { HUB_KINDS, HUB_SEL, seedHub, type HubKind, type SeededHub } from './helpers';
+import { HUB_KINDS, HUB_SEL, kontrastVerhaeltnis as kontrast, seedHub, type HubKind, type SeededHub } from './helpers';
 
 const MOBIL = { width: 390, height: 844 };
 const DESKTOP = { width: 1280, height: 900 };
@@ -199,29 +200,49 @@ for (const kind of HUB_KINDS) {
 		}
 	});
 
-	test(`HT-8 (${kind}): Desktop — Optik der Reiterleiste unverändert`, async ({ page }) => {
-		await page.setViewportSize(DESKTOP);
-		const hub = await seedDrei(page.request, kind);
-		try {
-			await oeffneDirekt(page, kind, hub.id, 'uebersicht');
-			// kind-Zweig (Spec HT-8): Optik-Werte sind nicht Gegenstand der Teilung —
-			// sie bleiben je Art exakt wie in den Alt-Specs.
-			if (kind === 'vergleich') {
-				// Altfall Zuordnung Zeile 5 — neutraler Badge (--g-paper-deep), 13-px-Trigger.
+	// #2837 S1 (ADR-0110, Spec rework_2837_s1_hub_kopf.md Entscheidung 7 / AC-10) — UMGEDREHT:
+	// vorher erzwang HT-8 je Art verschiedene Badge-Optik (Trip Accent-gefüllt, Vergleich grau).
+	// Jetzt: Zähler bei BEIDEN Arten und BEIDEN Breiten gleich und neutral (Grund --g-paper-deep
+	// = rgb(236, 234, 217), Schrift --g-ink-3 = rgb(107, 103, 92)), nie Accent (rgb(196, 90, 42)),
+	// Kontrast gemessen ≥ 4,5:1; der aktive Reiter bleibt am Desktop Accent-unterstrichen.
+	// Die übrigen Altfälle dieses Tests (Vergleich 13-px-Trigger, Trip transparenter Reiter)
+	// bleiben unverändert erhalten.
+	for (const breite of [DESKTOP, MOBIL]) {
+		test(`HT-8 (${kind}, ${breite.width} px): Zähler neutral und gleich, kein Accent, Kontrast ≥ 4,5:1`, async ({ page }) => {
+			await page.setViewportSize(breite);
+			const hub = await seedDrei(page.request, kind);
+			try {
+				await oeffneDirekt(page, kind, hub.id, 'uebersicht');
 				const badge = reiter(page, kind, sel.punkteReiter).locator('[data-slot="segmented-badge"]');
 				await expect(badge).toBeVisible();
-				expect(await badge.evaluate((el) => getComputedStyle(el).backgroundColor)).toBe('rgb(236, 234, 217)');
-				expect(await reiter(page, kind, 'uebersicht').evaluate((el) => getComputedStyle(el).fontSize)).toBe('13px');
-			} else {
-				// Altfall Zuordnung Zeile 49 — Unterline-Optik: aktiver Reiter transparent.
-				expect(
-					await reiter(page, kind, 'uebersicht').evaluate((el) => getComputedStyle(el).backgroundColor)
-				).toBe('rgba(0, 0, 0, 0)');
+				const farbe = await badge.evaluate((el) => {
+					const s = getComputedStyle(el);
+					return { grund: s.backgroundColor, schrift: s.color };
+				});
+				expect(farbe.grund, 'Zähler-Grund nicht neutral (--g-paper-deep)').toBe('rgb(236, 234, 217)');
+				expect(farbe.schrift, 'Zähler-Schrift nicht --g-ink-3').toBe('rgb(107, 103, 92)');
+				expect(farbe.grund, 'Zähler ist Accent-gefüllt').not.toBe('rgb(196, 90, 42)');
+				expect(kontrast(farbe.schrift, farbe.grund), 'Kontrast Zähler-Schrift/Grund').toBeGreaterThanOrEqual(4.5);
+				if (breite === DESKTOP) {
+					expect(
+						await reiter(page, kind, 'uebersicht').evaluate((el) => getComputedStyle(el).borderBottomColor),
+						'aktiver Reiter nicht Accent-unterstrichen'
+					).toBe('rgb(196, 90, 42)');
+					if (kind === 'vergleich') {
+						// Altfall Zuordnung Zeile 5 — 13-px-Trigger (Größe bleibt eine eigene Achse).
+						expect(await reiter(page, kind, 'uebersicht').evaluate((el) => getComputedStyle(el).fontSize)).toBe('13px');
+					} else {
+						// Altfall Zuordnung Zeile 49 — Unterline-Optik: aktiver Reiter transparent.
+						expect(
+							await reiter(page, kind, 'uebersicht').evaluate((el) => getComputedStyle(el).backgroundColor)
+						).toBe('rgba(0, 0, 0, 0)');
+					}
+				}
+			} finally {
+				await hub.aufraeumen();
 			}
-		} finally {
-			await hub.aufraeumen();
-		}
-	});
+		});
+	}
 
 	test(`HT-9 (${kind}): Mobil — echter Klick auf den Punkte-Reiter wechselt das Panel, Übersicht verlässt das DOM`, async ({
 		page
