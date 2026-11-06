@@ -264,12 +264,29 @@ for (const kind of HUB_KINDS) {
 
 // ─── KB-5 ──────────────────────────────────────────────────────────────────
 for (const kind of HUB_KINDS) {
-	test(`KB-5 (${kind}): Name ändern, dann Wertebereiche-Commit im selben Seitenaufenthalt ⇒ Name bleibt`, async ({
+	// #2792 S1c-3: der Reiter Wertebereiche ist nur lesbar (schreibt nichts). Der
+	// Reiter-Commit nach dem Umbenennen läuft deshalb über die weiterhin
+	// bearbeitbare Alarm-Empfindlichkeit (Reiter Alarme, `metric_alert_levels`).
+	// Seed: alarmfähige Böen-Auswahl je kind (Trip `gust`, Vergleich `gust_max_kmh`),
+	// Region des Vergleichs bleibt im selben display_config.
+	test(`KB-5 (${kind}): Name ändern, dann Alarm-Empfindlichkeit-Commit im selben Seitenaufenthalt ⇒ Name bleibt`, async ({
 		page
 	}) => {
 		test.setTimeout(60_000);
 		await page.setViewportSize(DESKTOP);
-		const hub = await seedKopf(page, kind);
+		const levels = { metric_alert_levels: { wind_gust: 'standard' } };
+		const hub = await seedHub(page.request, kind, {
+			extra:
+				kind === 'route'
+					? {
+							...START.route.extra,
+							display_config: { metrics: [{ metric_id: 'gust', enabled: true, bucket: 'primary', order: 0 }], ...levels }
+						}
+					: {
+							profil: START.vergleich.profil,
+							display_config: { region: START.vergleich.region, active_metrics: ['gust_max_kmh'], ...levels }
+						}
+		});
 		const pfad = hubApiPath(kind, hub.id);
 		const neu = `CrossTab ${Date.now()}`;
 		try {
@@ -285,22 +302,28 @@ for (const kind of HUB_KINDS) {
 
 			// 2) Im SELBEN Seitenaufenthalt (kein Reload/goto — ein Reload lüde den
 			//    Namen ohnehin frisch vom Server, Adversary-Fund F001 aus #1273 S2) per
-			//    In-Page-Klick in den Reiter Wertebereiche, eine Metrik hinzufügen und
-			//    einen Wert per blur() committen.
-			await page.locator(`[data-testid="${HUB_SEL[kind].reiter}-wertebereiche"]:visible`).first().click();
-			const panel = page.locator(`[data-testid="${HUB_SEL[kind].panel}-wertebereiche"]:visible`).first();
+			//    In-Page-Klick in den Reiter Alarme, die Böen-Empfindlichkeit umstellen.
+			await page.locator(`[data-testid="${HUB_SEL[kind].reiter}-alarme"]:visible`).first().click();
+			const panel = page.locator(`[data-testid="${HUB_SEL[kind].panel}-alarme"]:visible`).first();
 			await expect(panel).toBeVisible({ timeout: 10_000 });
-			await panel.locator('[data-testid^="corridor-editor-pool-item-"]:visible').first().click();
-			const field = panel.getByTestId('corridor-editor-table').locator('input[type="number"]').first();
-			await expect(field).toBeVisible({ timeout: 10_000 });
-			await field.focus();
-			await field.fill('42');
-			await field.blur();
+			const stufe = panel.locator('[data-testid="alert-level-wind_gust-sensibel"]:visible');
+			await expect(stufe).toBeVisible({ timeout: 10_000 });
+			await stufe.click();
+			await expect(stufe).toHaveAttribute('aria-pressed', 'true');
 
 			// Der Reiter-Commit hat wirklich geschrieben (sonst hielte „Name bleibt“ trivial).
 			await expect
-				.poll(() => bodies.length, { message: 'KB-5: der Wertebereiche-Commit löst keinen PUT aus', timeout: 10_000 })
+				.poll(() => bodies.length, { message: 'KB-5: der Alarm-Empfindlichkeit-Commit löst keinen PUT aus', timeout: 10_000 })
 				.toBeGreaterThanOrEqual(2);
+			await expect
+				.poll(
+					async () =>
+						((await holeStand(page, kind, hub.id)).display_config as Stand | undefined)?.metric_alert_levels as
+							| Record<string, string>
+							| undefined,
+					{ message: 'KB-5: die Alarm-Empfindlichkeit steht nicht auf dem Server', timeout: 10_000 }
+				)
+				.toMatchObject({ wind_gust: 'sensibel' });
 			expect(
 				bodies.slice(1).every((b) => !('name' in b) || b.name === neu),
 				'KB-5: ein Reiter-PUT schreibt einen alten Namen zurück'

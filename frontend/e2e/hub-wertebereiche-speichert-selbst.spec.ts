@@ -1,23 +1,26 @@
 // E2E — Issue #2347 S3a (Epic #2345, Etappe P6): der Reiter „Wertebereiche"
-// (geteilter CorridorEditor) speichert über GENAU EINEN Weg — EINE Zusicherung
-// für BEIDE Hubs (Trip und Ortsvergleich) per Schleife über HUB_KINDS.
+// (geteilter CorridorEditor) — EINE Zusicherung für BEIDE Hubs (Trip und
+// Ortsvergleich) per Schleife über HUB_KINDS.
 //
-// Spec: docs/specs/modules/feat_2347_s3a_paritaets_e2e.md § AC-3 (WS-1..WS-7)
+// Spec: docs/specs/modules/feat_2347_s3a_paritaets_e2e.md § AC-3 (WS-1..WS-8)
 //
-// Ersetzt compare-wertebereiche-speichert-selbst.spec.ts (#2276 S3, nur Vergleich):
-//   AC-1 zwei Metriken → ein PUT          → WS-1
-//   AC-2 Regler, Loslassen außerhalb     → WS-2
-//   AC-4 Reiterwechsel → Alarme          → WS-3
-//   AC-5 412 → „Nochmal speichern"       → WS-4
-//   AC-6 Pausieren flusht                → WS-5
-//   #2375 Roundtrip Korridor-Leerung     → WS-6
-//   AC-11 übrige Einstellungen bleiben   → WS-7 (in der Spec-Zuordnung nicht
-//                                           eigens benannt, 1:1 übernommen)
+// Issue #2792 S1c-3 (docs/specs/modules/feat_2792_s1_profil_ampel.md AC-22,
+// AC-24, Nachtrag v1.3, PO-Entscheidung E2): die Korridor-Zeilen sind bis S3a
+// NUR LESBAR. Der frühere Speicherweg des Reiters (ein PUT je Bedienfolge,
+// Flush vor Reiterwechsel/Pausieren, 412 → „Nochmal speichern", Leerung) ist
+// damit bewusst nicht mehr erreichbar. Die Fälle WS-1..WS-8 bleiben je Geste
+// bestehen und sichern jetzt das neue Soll: der Hinweis steht oben im Reiter,
+// die Bedienelemente sind gesperrt, ein Bedienversuch (auch erzwungener Klick
+// bzw. Ziehen am Griff — der Griff ist ein div ohne `disabled`, dort greift
+// allein der No-op-Wächter in `patch()`) sendet KEINEN PUT, und `corridors`
+// (Vergleich zusätzlich `ideal_ranges`/`active_metrics`) bleiben auf dem
+// Server unverändert. Wo der Altfall eine zweite, weiterhin erlaubte Schreib-
+// geste hatte (WS-3 Alarm, WS-4 fremder Name, WS-5 Pausieren), bleibt sie als
+// Gegenprobe erhalten. Den Konfliktschutz (412) bewacht hub-konfliktschutz-
+// zwei-kontexte.spec.ts über die weiterhin bearbeitbaren Reiter.
 //
-// Eigen-Seed statt erstem Pool-Eintrag: je kind eine benannte Seed-Zeile und
-// zwei benannte Pool-Metriken, deren Startwerte gültig sind (Trip:
-// ROUTE_METRIC_DEFS, Vergleich: _COMPARE_DEFAULTS in corridorEditorState.ts).
-// Kein fester Schlaf: „genau ein PUT" per Stabilitätsfenster (≥ alte 1,2-s-Nachfrist).
+// Kein fester Schlaf: „kein PUT" per Stabilitätsfenster (≥ alte 1,2-s-Nachfrist,
+// deutlich über dem 700-ms-Entprell-Fenster).
 //
 // Läuft im isolierten CI-Stack (frontend/e2e/ci-stack.sh), Anmeldung über den
 // storageState aus global.setup.ts. Wegwerf-Objekte E2E-GZ-, Aufräumen im finally.
@@ -28,24 +31,22 @@ import { HUB_KINDS, HUB_SEL, hubApiPath, openHub, seedHub, type HubKind } from '
 type Stand = Record<string, unknown>;
 const dc = (body: Stand) => (body.display_config as Stand | undefined) ?? {};
 
-/** kind-Tabelle: Seed-Zeile, Pool-Metriken, Eigenfelder, Alarm-Auslöser, Status-Weg. */
+/** Wortlaut aus AC-22 (Katalogschlüssel `wertebereiche.gesperrt.hinweis_reiter`). */
+const HINWEIS_DE = 'Wird gerade umgebaut – deine Werte sind übernommen.';
+
+/** kind-Tabelle: Seed-Zeile, Pool-Metriken, Alarm-Auslöser, Status-Weg. */
 const WS_SEL: Record<
 	HubKind,
 	{
 		zeile: string;
+		/** Von-Wert der Seed-Zeile (Anzeige im ersten Zahlenfeld). */
+		von: string;
 		seed: Record<string, unknown>;
-		/** zwei Pool-Metriken mit gültigen Startwerten (Startzustand: nicht in den Zeilen). */
+		/** zwei Pool-Metriken (Startzustand: nicht in den Zeilen). */
 		pool: [string, string];
-		/** Schlüssel des Wertebereiche-Rumpfs (sortiert) — Trip: nur `corridors`
-		 *  (CorridorEditor.svelte:268), Vergleich: `corridors` + `display_config`. */
-		rumpfSchluessel: string[];
-		/** Rumpf-Ausschnitt einer Korridor-Leerung (#2375). */
-		leerRumpf: Record<string, unknown>;
-		/** Felder oben im Objekt, die der Reiter schreiben darf (WS-7). */
-		obenEigen: Set<string>;
-		/** display_config-Schlüssel, die der Reiter schreiben darf (WS-7). */
-		dcEigen: Set<string>;
-		/** zweite Änderung im Alarme-Reiter (WS-3). */
+		/** Ausschnitt, den der gesperrte Reiter NIE verändern darf (AC-24). */
+		altfelder: (s: Stand) => Record<string, unknown>;
+		/** Gegenprobe im Alarme-Reiter (WS-3). */
 		alarm: (page: Page) => Locator;
 		alarmWert: (s: Stand) => unknown;
 		alarmNeu: boolean;
@@ -56,15 +57,13 @@ const WS_SEL: Record<
 > = {
 	route: {
 		zeile: 'wind_gust',
+		von: '30',
 		seed: {
 			official_warnings: { enabled: true },
 			corridors: [{ metric: 'wind_gust', range: [30, 70], notify: false, mark: false }]
 		},
 		pool: ['precipitation_sum', 'temperature_max'],
-		rumpfSchluessel: ['corridors'],
-		leerRumpf: { corridors: [] },
-		obenEigen: new Set(['corridors', 'updated_at', 'etag']),
-		dcEigen: new Set(),
+		altfelder: (s) => ({ corridors: s.corridors }),
 		alarm: (page) =>
 			page.locator('[data-testid="alerts-tab-official-alert-triggers-toggle"] input[type="checkbox"]').first(),
 		alarmWert: (s) => (s.official_warnings as { enabled?: boolean } | undefined)?.enabled,
@@ -75,6 +74,7 @@ const WS_SEL: Record<
 	},
 	vergleich: {
 		zeile: 'snow_depth_cm',
+		von: '30',
 		seed: {
 			radar_alert_enabled: false,
 			send_telegram: true,
@@ -88,10 +88,11 @@ const WS_SEL: Record<
 			}
 		},
 		pool: ['wind_max_kmh', 'precip_sum_mm'],
-		rumpfSchluessel: ['corridors', 'display_config'],
-		leerRumpf: { corridors: [], display_config: { ideal_ranges: {} } },
-		obenEigen: new Set(['corridors', 'display_config', 'updated_at', 'etag']),
-		dcEigen: new Set(['ideal_ranges', 'active_metrics', 'metric_alert_levels']),
+		altfelder: (s) => ({
+			corridors: s.corridors,
+			ideal_ranges: dc(s).ideal_ranges,
+			active_metrics: dc(s).active_metrics
+		}),
 		alarm: (page) => page.locator('[data-testid="alarme-radar-toggle"] input[type="checkbox"]').first(),
 		alarmWert: (s) => s.radar_alert_enabled,
 		alarmNeu: true,
@@ -158,21 +159,27 @@ async function stand(page: Page, kind: HubKind, id: string): Promise<Stand> {
 }
 
 const anzeige = (page: Page) => page.locator('[data-testid="save-indicator"]');
-const korridore = (body: Stand) => (body.corridors as Array<{ metric: string; range: unknown[] }>) ?? [];
+const zeilen = (editor: Locator) => editor.locator('[data-testid^="corridor-row-"]');
 
+/** Öffnet den Reiter und prüft den Sperr-Hinweis (AC-22) samt sichtbarer Seed-Zeile. */
 async function oeffneWertebereiche(page: Page, kind: HubKind, id: string): Promise<Locator> {
 	await openHub(page, kind, id, { tab: 'wertebereiche' });
 	// HubKind == context-Parameter des geteilten Korridor-Editors.
 	const editor = page.locator(`[data-testid="corridor-editor-${kind}"]:visible`);
 	await expect(editor).toBeVisible({ timeout: 10_000 });
 	await expect(editor.locator(`[data-testid="corridor-row-${WS_SEL[kind].zeile}"]`)).toBeVisible({ timeout: 10_000 });
+	await expect(
+		editor.locator('[data-testid="corridor-editor-gesperrt"]'),
+		'AC-22: der Sperr-Hinweis steht oben im Reiter Wertebereiche'
+	).toHaveText(HINWEIS_DE);
 	return editor;
 }
 
-/** Pool-Eintrag per Namen (Eigen-Seed), mit Sichtbarkeits-Vorbedingung. */
-async function poolEintrag(editor: Locator, metric: string): Promise<Locator> {
+/** Pool-Eintrag per Namen: sichtbar, aber gesperrt (AC-22). */
+async function gesperrterPoolEintrag(editor: Locator, metric: string): Promise<Locator> {
 	const btn = editor.locator(`[data-testid="corridor-editor-pool-item-${metric}"]`);
-	await expect(btn, `Vorbedingung: Pool bietet ${metric} an`).toBeVisible({ timeout: 10_000 });
+	await expect(btn, `Vorbedingung: Pool zeigt ${metric}`).toBeVisible({ timeout: 10_000 });
+	await expect(btn, `AC-22: „＋ ${metric}" ist gesperrt`).toBeDisabled();
 	return btn;
 }
 
@@ -180,51 +187,53 @@ for (const kind of HUB_KINDS) {
 	const sel = HUB_SEL[kind];
 	const ws = WS_SEL[kind];
 
-	test.describe(`Hub · Wertebereiche speichert über genau einen Weg (${kind})`, () => {
+	test.describe(`Hub · Wertebereiche ist gesperrt und schreibt nichts (${kind})`, () => {
 		test.beforeEach(async ({ page }) => {
 			await page.setViewportSize({ width: 1280, height: 900 });
 		});
 
-		// WS-1 (Alt AC-1) — fängt: zweiter Speicherweg (Wrapper) ⇒ zwei PUTs statt einem.
-		test(`WS-1 (${kind}): zwei Metriken schnell hintereinander hinzufügen → genau EIN PUT mit beiden, danach „Gespeichert"`, async ({
+		// WS-1 — fängt: Hinzufügen-Knopf wieder bedienbar bzw. add() ohne No-op-Wächter.
+		test(`WS-1 (${kind}): zwei Metriken hinzufügen versuchen → Knöpfe gesperrt, keine neue Zeile, KEIN PUT, Wertebereiche unverändert`, async ({
 			page
 		}) => {
 			const hub = await seedHub(page.request, kind, { extra: ws.seed });
 			try {
-				const { puts, beantwortet } = zaehlePuts(page, hubApiPath(kind, hub.id));
+				const vorher = ws.altfelder(await stand(page, kind, hub.id));
+				const { puts } = zaehlePuts(page, hubApiPath(kind, hub.id));
 				const editor = await oeffneWertebereiche(page, kind, hub.id);
 				expect(puts.length, 'Vorbedingung: das Öffnen des Reiters speichert nichts').toBe(0);
-				const [a, b] = [await poolEintrag(editor, ws.pool[0]), await poolEintrag(editor, ws.pool[1])];
+				const [a, b] = [await gesperrterPoolEintrag(editor, ws.pool[0]), await gesperrterPoolEintrag(editor, ws.pool[1])];
 
-				// beide Klicks innerhalb des Entprell-Fensters (700 ms)
-				await a.click();
-				await b.click();
-				await expect(editor.locator('[data-testid^="corridor-row-"]')).toHaveCount(3, { timeout: 5_000 });
+				// erzwungener Klick: der Browser stellt auf gesperrten Knöpfen keinen Klick zu
+				await a.click({ force: true });
+				await b.click({ force: true });
 
-				await expect.poll(() => beantwortet.length, { timeout: 10_000 }).toBeGreaterThanOrEqual(1);
-				await expect(anzeige(page)).toHaveAttribute('data-state', 'idle', { timeout: 10_000 });
-				await expect(anzeige(page)).toContainText('Gespeichert');
-				await bleibtBei(() => puts.length, 1, 1_200, 'genau EIN PUT für eine Bedienfolge im Entprell-Fenster');
-
-				expect(korridore(puts[0].postDataJSON() as Stand).length, 'der eine PUT trägt beide neuen Metriken').toBe(3);
-				expect(korridore(await stand(page, kind, hub.id)).length).toBe(3);
+				await bleibtBei(() => puts.length, 0, 1_200, 'WS-1: ein gesperrter Pool-Eintrag darf keinen PUT auslösen');
+				await expect(zeilen(editor), 'WS-1: es darf keine neue Zeile entstehen').toHaveCount(1);
+				await expect(anzeige(page)).toHaveAttribute('data-state', 'idle');
+				expect(ws.altfelder(await stand(page, kind, hub.id)), 'AC-24: Wertebereiche auf dem Server unverändert').toEqual(vorher);
 			} finally {
 				await hub.aufraeumen();
 			}
 		});
 
-		// WS-2 (Alt AC-2) — fängt: kein PUT nach Loslassen außerhalb bzw. zwei Wege.
-		test(`WS-2 (${kind}): Regler ziehen, Maus über dem Reiterkopf loslassen → gespeichert, genau EIN PUT, überlebt Neuladen`, async ({
+		// WS-2 — fängt: patch() ohne No-op-Wächter. Der Griff ist ein div ohne
+		// `disabled`, die Ziehgeste erreicht also patch() — nur der Wächter hält sie auf.
+		test(`WS-2 (${kind}): Regler ziehen, Maus über dem Reiterkopf loslassen → Wert bleibt, KEIN PUT, überlebt Neuladen`, async ({
 			page
 		}) => {
 			const hub = await seedHub(page.request, kind, { extra: ws.seed });
 			try {
-				const { puts, beantwortet } = zaehlePuts(page, hubApiPath(kind, hub.id));
+				const vorher = ws.altfelder(await stand(page, kind, hub.id));
+				const { puts } = zaehlePuts(page, hubApiPath(kind, hub.id));
 				const editor = await oeffneWertebereiche(page, kind, hub.id);
 				const row = editor.locator(`[data-testid="corridor-row-${ws.zeile}"]`);
+				const vonFeld = row.locator('input[type="number"]').first();
+				await expect(vonFeld).toHaveValue(ws.von);
+				await expect(vonFeld, 'AC-22: das Zahlenfeld ist gesperrt').toBeDisabled();
 				const handle = await row.locator('.ce-handle').first().boundingBox();
 				const kopf = await page.locator(`[data-testid="${sel.reiter}-uebersicht"]:visible`).boundingBox();
-				expect(handle).not.toBeNull();
+				expect(handle, 'Vorbedingung: der Von-Griff ist sichtbar').not.toBeNull();
 				expect(kopf).not.toBeNull();
 
 				await page.mouse.move(handle!.x + handle!.width / 2, handle!.y + handle!.height / 2);
@@ -233,67 +242,62 @@ for (const kind of HUB_KINDS) {
 				await page.mouse.move(kopf!.x + kopf!.width / 2, kopf!.y + kopf!.height / 2, { steps: 15 });
 				await page.mouse.up();
 
-				await expect.poll(() => beantwortet.length, { timeout: 10_000 }).toBeGreaterThanOrEqual(1);
-				await expect(anzeige(page)).toHaveAttribute('data-state', 'idle', { timeout: 10_000 });
-				await bleibtBei(() => puts.length, 1, 1_200, 'Loslassen außerhalb darf keinen zweiten, eigenen Speicherweg auslösen');
+				await bleibtBei(() => puts.length, 0, 1_200, 'WS-2: die Ziehgeste am gesperrten Regler darf keinen PUT auslösen');
+				await expect(vonFeld, 'WS-2: der Regler darf sich nicht bewegt haben').toHaveValue(ws.von);
+				expect(ws.altfelder(await stand(page, kind, hub.id)), 'AC-24: Wertebereiche auf dem Server unverändert').toEqual(vorher);
 
-				const minWert = await row.locator('input[type="number"]').first().inputValue();
-				expect(minWert, 'Vorbedingung: der Regler hat sich bewegt').not.toBe('30');
 				const neu = await oeffneWertebereiche(page, kind, hub.id);
 				await expect(
 					neu.locator(`[data-testid="corridor-row-${ws.zeile}"] input[type="number"]`).first()
-				).toHaveValue(minWert, { timeout: 5_000 });
+				).toHaveValue(ws.von, { timeout: 5_000 });
 			} finally {
 				await hub.aufraeumen();
 			}
 		});
 
-		// WS-3 (Alt AC-4) — fängt: Flush-Guard ohne 'wertebereiche' ⇒ der
-		// Alarm-Vorgang verdrängt die Wertebereich-Änderung.
-		test(`WS-3 (${kind}): Wertebereich ändern, sofort zu „Alarme", dort Alarm ändern → BEIDE Änderungen gespeichert`, async ({
+		// WS-3 — Gegenprobe: der gesperrte Reiter hält den Reiterwechsel nicht auf,
+		// die Alarm-Änderung danach wird genau einmal gespeichert, Wertebereiche bleiben.
+		test(`WS-3 (${kind}): Wertebereich ändern versuchen, sofort zu „Alarme", dort Alarm ändern → genau EIN PUT (Alarm), Wertebereiche unverändert`, async ({
 			page
 		}) => {
 			const hub = await seedHub(page.request, kind, { extra: ws.seed });
 			try {
+				const vorher = ws.altfelder(await stand(page, kind, hub.id));
 				const { puts, beantwortet } = zaehlePuts(page, hubApiPath(kind, hub.id));
 				const editor = await oeffneWertebereiche(page, kind, hub.id);
 
-				await (await poolEintrag(editor, ws.pool[0])).click();
-				await expect(editor.locator('[data-testid^="corridor-row-"]')).toHaveCount(2, { timeout: 5_000 });
-				// sofort, innerhalb des Entprell-Fensters, den Reiter wechseln
+				await (await gesperrterPoolEintrag(editor, ws.pool[0])).click({ force: true });
 				await page.locator(`[data-testid="${sel.reiter}-alarme"]:visible`).click();
 				await expect(page.locator('[data-testid="alarme-tab"]').first()).toBeVisible({ timeout: 10_000 });
-				expect(beantwortet.length, 'die Wertebereich-Änderung war beim Reiterwechsel noch nicht gesendet').toBeGreaterThanOrEqual(1);
+				expect(puts.length, 'WS-3: der Reiterwechsel darf aus dem gesperrten Reiter nichts senden').toBe(0);
 
 				await ws.alarm(page).click();
 				await expect(ws.alarm(page)).toBeChecked({ checked: ws.alarmNeu });
 
-				await expect.poll(() => beantwortet.length, { timeout: 10_000 }).toBe(2);
+				await expect.poll(() => beantwortet.length, { timeout: 10_000 }).toBe(1);
 				await expect(anzeige(page)).toHaveAttribute('data-state', 'idle', { timeout: 10_000 });
+				await bleibtBei(() => puts.length, 1, 1_200, 'WS-3: genau EIN PUT — der der Alarm-Änderung');
 
-				const [erster, zweiter] = puts.map((r) => r.postDataJSON() as Stand);
-				expect(korridore(erster).length, 'erster PUT = Wertebereich-Änderung').toBe(2);
-				expect(ws.alarmWert(zweiter)).toBe(ws.alarmNeu);
+				expect(ws.alarmWert(puts[0].postDataJSON() as Stand), 'der eine PUT trägt die Alarm-Änderung').toBe(ws.alarmNeu);
 				const s = await stand(page, kind, hub.id);
-				expect(korridore(s).length, 'die Wertebereich-Änderung ging beim Reiterwechsel verloren').toBe(2);
 				expect(ws.alarmWert(s)).toBe(ws.alarmNeu);
+				expect(ws.altfelder(s), 'AC-24: Wertebereiche auf dem Server unverändert').toEqual(vorher);
 			} finally {
 				await hub.aufraeumen();
 			}
 		});
 
-		// WS-4 (Alt AC-5) — fängt: 412 als generischer Fehler bzw. Rücknahme bei 412.
-		// Issue #2375: der Seitenaufbau übernimmt den ETag ⇒ schon der ERSTE PUT
-		// trägt If-Match; der Reiter sendet nur Eigenfelder ⇒ der fremde Name überlebt.
-		test(`WS-4 (${kind}): fremde Änderung dazwischen → erster PUT 412 → „Nochmal speichern" → gespeichert, fremder Name bleibt`, async ({
+		// WS-4 — Gegenprobe zum fremden Schreibvorgang: der gesperrte Reiter sendet
+		// nichts, also gibt es weder einen Konflikt noch ein Überschreiben des fremden Namens.
+		test(`WS-4 (${kind}): fremde Änderung dazwischen, dann Wertebereich ändern versuchen → KEIN PUT, kein Konflikt, fremder Name bleibt`, async ({
 			page
 		}) => {
 			const hub = await seedHub(page.request, kind, { extra: ws.seed });
 			try {
 				const pfad = hubApiPath(kind, hub.id);
-				const { puts, beantwortet } = zaehlePuts(page, pfad);
+				const { puts } = zaehlePuts(page, pfad);
 				const editor = await oeffneWertebereiche(page, kind, hub.id);
-				const neuerPool = await poolEintrag(editor, ws.pool[0]);
+				const neuerPool = await gesperrterPoolEintrag(editor, ws.pool[0]);
 
 				// GIVEN: Seite geladen, danach ändert ein anderes Gerät den Namen (ohne If-Match)
 				const vorher = await stand(page, kind, hub.id);
@@ -301,99 +305,70 @@ for (const kind of HUB_KINDS) {
 				const fremd = await page.request.put(pfad, { data: { name: fremderName } });
 				expect(fremd.status(), 'fremder Schreibvorgang ohne If-Match wird angenommen').toBe(200);
 
-				// WHEN: erste eigene Änderung auf dem jetzt veralteten Stand
-				await neuerPool.click();
-				await expect(editor.locator('[data-testid^="corridor-row-"]')).toHaveCount(2, { timeout: 5_000 });
+				// WHEN: Bedienversuch auf dem jetzt veralteten Stand
+				await neuerPool.click({ force: true });
+				await editor.locator(`[data-testid="corridor-row-${ws.zeile}"] .ce-remove`).click({ force: true });
 
-				// THEN: echter 412 schon beim ERSTEN PUT → „Nochmal speichern", keine Rücknahme
-				await expect(anzeige(page)).toHaveAttribute('data-state', 'conflict', { timeout: 10_000 });
-				expect(puts.length, 'Vorbedingung: der erste PUT wurde gesendet').toBe(1);
-				expect(
-					await puts[0].headerValue('if-match'),
-					'der erste PUT nach dem Laden muss If-Match aus dem Seitenaufbau tragen (#2375 Punkt 2)'
-				).toBeTruthy();
-				expect((await puts[0].response())?.status(), 'der Server muss den veralteten Stand ablehnen').toBe(412);
-				const nochmal = anzeige(page).getByRole('button', { name: 'Nochmal speichern' });
-				await expect(nochmal).toBeVisible();
-				await expect(editor.locator('[data-testid^="corridor-row-"]'), 'bei 412 kein Zurückspringen').toHaveCount(2);
-
-				// WHEN: „Nochmal speichern" → THEN: gespeichert, beide Änderungen auf dem Server
-				await nochmal.click();
-				await expect(anzeige(page)).toHaveAttribute('data-state', 'idle', { timeout: 10_000 });
-				await expect(anzeige(page)).toContainText('Gespeichert');
-				await expect(editor.locator('[data-testid^="corridor-row-"]')).toHaveCount(2);
-				await expect.poll(() => beantwortet.length, { timeout: 10_000 }).toBe(2);
-				expect(puts.length, 'der Wiederholungs-PUT wurde gesendet').toBe(2);
-				expect((await puts[1].response())?.status(), 'der Wiederholungs-PUT muss durchgehen').toBe(200);
-				expect(Object.keys(puts[1].postDataJSON() as Stand).sort(), 'der Wiederholungs-PUT trägt nur Eigenfelder').toEqual(
-					ws.rumpfSchluessel
-				);
+				// THEN: nichts gesendet, also auch kein 412/„Nochmal speichern"
+				await bleibtBei(() => puts.length, 0, 1_200, 'WS-4: der gesperrte Reiter darf keinen PUT senden');
+				await expect(anzeige(page)).toHaveAttribute('data-state', 'idle');
+				await expect(anzeige(page).getByRole('button', { name: 'Nochmal speichern' })).toHaveCount(0);
+				await expect(zeilen(editor)).toHaveCount(1);
 
 				const s = await stand(page, kind, hub.id);
-				expect(korridore(s).length, 'der Wiederholungs-PUT muss die Änderung tragen').toBe(2);
-				expect(s.name, '„Nochmal speichern" darf den fremd gespeicherten Namen nicht überschreiben (#2375)').toBe(
-					fremderName
-				);
+				expect(s.name, 'der fremd gespeicherte Name darf nicht überschrieben werden').toBe(fremderName);
+				expect(ws.altfelder(s), 'AC-24: Wertebereiche auf dem Server unverändert').toEqual(ws.altfelder(vorher));
 			} finally {
 				await hub.aufraeumen();
 			}
 		});
 
-		// WS-5 (Alt AC-6) — fängt: flush() vor dem Statuswechsel entfernt.
-		test(`WS-5 (${kind}): Pausieren direkt nach Wertebereich-Änderung → Wertebereich-Schreibvorgang zuerst, beide Werte bleiben`, async ({
+		// WS-5 — Gegenprobe Pausieren: der gesperrte Reiter hat nichts zu flushen,
+		// es gibt genau EINEN Schreibvorgang, und der trägt nur den Status.
+		test(`WS-5 (${kind}): Pausieren direkt nach Bedienversuch im Wertebereich → genau EIN Schreibvorgang (nur Status), Wertebereiche bleiben`, async ({
 			page
 		}) => {
 			const hub = await seedHub(page.request, kind, { extra: ws.seed });
 			try {
+				const vorher = ws.altfelder(await stand(page, kind, hub.id));
 				const { alle, fertig } = protokolliereSchreiber(page, hubApiPath(kind, hub.id));
 				const editor = await oeffneWertebereiche(page, kind, hub.id);
 
-				await (await poolEintrag(editor, ws.pool[0])).click();
-				await expect(editor.locator('[data-testid^="corridor-row-"]')).toHaveCount(2, { timeout: 5_000 });
-				// sofort (innerhalb der Entprellung) über den Kopf-Kebab pausieren
+				await (await gesperrterPoolEintrag(editor, ws.pool[0])).click({ force: true });
+				// sofort (innerhalb des früheren Entprell-Fensters) über den Kopf-Kebab pausieren
 				await page.getByRole('button', { name: 'Weitere Aktionen' }).first().click();
 				const pausieren = page.getByRole('menuitem', { name: 'Pausieren' });
 				await expect(pausieren, 'Vorbedingung: der Hub bietet „Pausieren" an').toBeVisible();
 				await pausieren.click();
 
-				await expect.poll(() => fertig.length, { timeout: 10_000 }).toBe(2);
+				await expect.poll(() => fertig.length, { timeout: 10_000 }).toBe(1);
 				await expect(anzeige(page)).toHaveAttribute('data-state', 'idle', { timeout: 10_000 });
+				await bleibtBei(() => alle.length, 1, 1_200, 'WS-5: genau EIN Schreibvorgang — der Status');
 
-				const [erster, zweiter] = alle.map((r) => r.postDataJSON() as Stand);
-				expect(alle[0].method(), 'erster Schreibvorgang ist der Wertebereich-PUT').toBe('PUT');
-				expect(korridore(erster).length, 'erster Schreibvorgang muss die Wertebereich-Änderung sein').toBe(2);
-				// #2375: der Wertebereiche-Rumpf trägt den Status gar nicht (Teilfeld-Nutzlast)
-				for (const k of ws.statusSchluessel) {
-					expect(Object.keys(erster), 'erster Schreibvorgang darf noch nicht pausieren').not.toContain(k);
-				}
-				expect(ws.statusPausiert(zweiter), 'zweiter Schreibvorgang pausiert').toBe(true);
-				// #2375 (AC-6/AC-9): der Pausieren-Rumpf trägt NUR den Status.
-				expect(Object.keys(zweiter).sort(), `Pausieren-Rumpf trägt nur { ${ws.statusSchluessel.join(', ')} }`).toEqual(
+				const rumpf = alle[0].postDataJSON() as Stand;
+				expect(ws.statusPausiert(rumpf), 'der Schreibvorgang pausiert').toBe(true);
+				expect(Object.keys(rumpf).sort(), `Pausieren-Rumpf trägt nur { ${ws.statusSchluessel.join(', ')} }`).toEqual(
 					ws.statusSchluessel
 				);
 
 				const s = await stand(page, kind, hub.id);
 				expect(ws.istPausiert(s), 'Server: pausiert').toBe(true);
-				expect(korridore(s).length).toBe(2);
-				expect(alle.length).toBe(2);
+				expect(ws.altfelder(s), 'AC-24: Wertebereiche auf dem Server unverändert').toEqual(vorher);
 			} finally {
 				await hub.aufraeumen();
 			}
 		});
 
-		// WS-8 (#2347 S3d; Alt compare-editor-autosave AC-14 + AC-1/#1371) — fängt: Rückruf des
-		// Markieren-Knopfs am Mount fehlt (kein PUT), Mark-Wert nicht umgekehrt gespeichert,
-		// „Warnen"-Bedienelement wieder in der Zeile. Der Schalter ist der EINE geteilte
-		// CorridorEditor; nur Zeile und Ausgangswert sind je kind (WS_SEL) verschieden.
-		test(`WS-8 (${kind}): „Markieren" umlegen → genau EIN PUT, mark umgekehrt, überlebt Neuladen; kein „Warnen"`, async ({
+		// WS-8 — fängt: Markieren-Knopf wieder bedienbar; „Warnen" zurück in der Zeile (#1371).
+		test(`WS-8 (${kind}): „Markieren" umlegen versuchen → gesperrt, mark unverändert, KEIN PUT, überlebt Neuladen; kein „Warnen"`, async ({
 			page
 		}) => {
 			const hub = await seedHub(page.request, kind, { extra: ws.seed });
 			try {
 				const zeileId = ws.zeile;
-				const markVorher = korridore(await stand(page, kind, hub.id)).find((k) => k.metric === zeileId) as
-					| { mark?: boolean }
-					| undefined;
+				const markVorher = ((await stand(page, kind, hub.id)).corridors as Array<{ metric: string; mark?: boolean }>).find(
+					(k) => k.metric === zeileId
+				);
 				expect(markVorher, `Vorbedingung: der Seed trägt die Zeile ${zeileId}`).toBeDefined();
 				const startMark = markVorher?.mark === true;
 
@@ -401,93 +376,95 @@ for (const kind of HUB_KINDS) {
 				const editor = await oeffneWertebereiche(page, kind, hub.id);
 				const zeile = editor.locator(`[data-testid="corridor-row-${zeileId}"]`);
 				const markieren = zeile.getByRole('button', { name: 'Markieren' });
+				const entfernen = zeile.getByRole('button', { name: '✕ entfernen' });
 
-				// #1371: kein „Warnen"-Bedienelement; „Markieren" und „✕ entfernen" sind da.
+				// #1371: kein „Warnen"-Bedienelement; „Markieren" und „✕ entfernen" sind da — gesperrt.
 				await expect(zeile.getByRole('button', { name: 'Warnen' }), 'WS-8 FAIL: „Warnen" ist wieder in der Zeile (#1371)').toHaveCount(0);
 				await expect(markieren).toBeVisible();
-				await expect(zeile.getByRole('button', { name: '✕ entfernen' })).toBeVisible();
-				await expect(markieren).toHaveAttribute('aria-pressed', String(startMark));
-				expect(puts.length, 'Vorbedingung: das Öffnen des Reiters speichert nichts').toBe(0);
+				await expect(markieren, 'AC-22: „Markieren" ist gesperrt').toBeDisabled();
+				await expect(entfernen).toBeVisible();
+				await expect(entfernen, 'AC-22: „✕ entfernen" ist gesperrt').toBeDisabled();
+				await expect(markieren, 'AC-22: der gespeicherte Wert wird angezeigt').toHaveAttribute('aria-pressed', String(startMark));
 
-				await markieren.click();
-				await expect(markieren, 'WS-8 FAIL: der Markieren-Knopf nimmt die Geste nicht an.').toHaveAttribute(
-					'aria-pressed',
-					String(!startMark)
+				await markieren.click({ force: true });
+				await bleibtBei(() => puts.length, 0, 1_200, 'WS-8: der gesperrte Markieren-Knopf darf keinen PUT auslösen');
+				await expect(markieren, 'WS-8: der Markieren-Wert darf sich nicht ändern').toHaveAttribute('aria-pressed', String(startMark));
+
+				const markNachher = ((await stand(page, kind, hub.id)).corridors as Array<{ metric: string; mark?: boolean }>).find(
+					(k) => k.metric === zeileId
 				);
-				await expect(anzeige(page)).toHaveAttribute('data-state', 'idle', { timeout: 10_000 });
-				await expect
-					.poll(
-						async () => (korridore(await stand(page, kind, hub.id)).find((k) => k.metric === zeileId) as { mark?: boolean } | undefined)?.mark === true,
-						{ timeout: 15_000, message: 'WS-8 FAIL: der umgelegte Markieren-Wert steht nicht auf dem Server.' }
-					)
-					.toBe(!startMark);
-				await bleibtBei(() => puts.length, 1, 1_200, 'WS-8 FAIL: genau EIN PUT für die Markieren-Geste');
+				expect(markNachher?.mark === true, 'AC-24: mark auf dem Server unverändert').toBe(startMark);
 
 				const neu = await oeffneWertebereiche(page, kind, hub.id);
 				await expect(
-					neu.locator(`[data-testid="corridor-row-${zeileId}"]`).getByRole('button', { name: 'Markieren' }),
-					'WS-8 FAIL: Markieren steht nach dem Neuladen wieder auf dem alten Wert.'
-				).toHaveAttribute('aria-pressed', String(!startMark));
+					neu.locator(`[data-testid="corridor-row-${zeileId}"]`).getByRole('button', { name: 'Markieren' })
+				).toHaveAttribute('aria-pressed', String(startMark));
 			} finally {
 				await hub.aufraeumen();
 			}
 		});
 
-		// WS-7 (Alt AC-11) — fängt: Teil-Nutzlast / fehlendes Bestandsfeld im PUT.
-		test(`WS-7 (${kind}): Korridor ändern → alle übrigen Einstellungen bleiben unverändert`, async ({ page }) => {
+		// WS-7 — fängt: irgendein Feld (auch `corridors`) ändert sich durch bloße
+		// Bedienversuche im gesperrten Reiter. Strenger als der Altfall: auch die
+		// Wertebereiche selbst gehören jetzt zu den unveränderten Feldern.
+		test(`WS-7 (${kind}): Bedienversuche im gesperrten Reiter → alle Einstellungen bleiben unverändert, auch die Wertebereiche`, async ({
+			page
+		}) => {
 			const hub = await seedHub(page.request, kind, { extra: ws.seed });
 			try {
 				const vorher = await stand(page, kind, hub.id);
-				const { beantwortet } = zaehlePuts(page, hubApiPath(kind, hub.id));
+				const { puts } = zaehlePuts(page, hubApiPath(kind, hub.id));
 				const editor = await oeffneWertebereiche(page, kind, hub.id);
+				const zeile = editor.locator(`[data-testid="corridor-row-${ws.zeile}"]`);
 
-				await (await poolEintrag(editor, ws.pool[0])).click();
-				await expect.poll(() => beantwortet.length, { timeout: 10_000 }).toBeGreaterThanOrEqual(1);
-				await expect(anzeige(page)).toHaveAttribute('data-state', 'idle', { timeout: 10_000 });
+				await (await gesperrterPoolEintrag(editor, ws.pool[0])).click({ force: true });
+				await zeile.getByRole('button', { name: 'Markieren' }).click({ force: true });
+				await zeile.locator('.ce-clear-btn').first().click({ force: true });
+				await zeile.locator('.ce-remove').click({ force: true });
+				await bleibtBei(() => puts.length, 0, 1_200, 'WS-7: kein Bedienversuch darf einen PUT auslösen');
 
 				const nachher = await stand(page, kind, hub.id);
 				for (const key of Object.keys(vorher)) {
-					if (ws.obenEigen.has(key)) continue;
-					expect(nachher[key], `Feld „${key}" hat sich durch das Wertebereiche-Speichern verändert`).toEqual(vorher[key]);
+					if (key === 'updated_at' || key === 'etag') continue;
+					expect(nachher[key], `Feld „${key}" hat sich im gesperrten Reiter verändert`).toEqual(vorher[key]);
 				}
 				const vdc = dc(vorher);
 				const ndc = dc(nachher);
 				for (const key of Object.keys(vdc)) {
-					if (ws.dcEigen.has(key)) continue;
 					expect(ndc[key], `display_config.${key} hat sich verändert`).toEqual(vdc[key]);
 				}
-				expect(korridore(nachher).length, 'nur der Wertebereich weicht ab').toBe(2);
 			} finally {
 				await hub.aufraeumen();
 			}
 		});
 
-		// WS-6 (Alt #2375 Test 13 / AC-8) — fängt: Leerung erreicht den Server nicht,
-		// weil die Teilfeld-Nutzlast die leere Liste weglässt.
-		test(`WS-6 (${kind}): #2375 Roundtrip — Korridor-Leerung → PUT trägt die Leerung → nach Neuladen leer`, async ({ page }) => {
+		// WS-6 — fängt: „✕ entfernen" wieder bedienbar bzw. remove() ohne No-op-Wächter
+		// (die Leerung erreichte sonst den Server, AC-24 „nie leeren").
+		test(`WS-6 (${kind}): Korridor leeren versuchen → „✕ entfernen" gesperrt, KEIN PUT, nach Neuladen steht die Zeile noch`, async ({
+			page
+		}) => {
 			const hub = await seedHub(page.request, kind, { extra: ws.seed });
 			try {
-				const { puts, beantwortet } = zaehlePuts(page, hubApiPath(kind, hub.id));
+				const vorher = ws.altfelder(await stand(page, kind, hub.id));
+				const { puts } = zaehlePuts(page, hubApiPath(kind, hub.id));
 				const editor = await oeffneWertebereiche(page, kind, hub.id);
 
-				await editor.locator(`[data-testid="corridor-row-${ws.zeile}"] .ce-remove`).click();
-				await expect(editor.locator('[data-testid^="corridor-row-"]')).toHaveCount(0, { timeout: 5_000 });
-				await expect.poll(() => beantwortet.length, { timeout: 10_000 }).toBeGreaterThanOrEqual(1);
-				await expect(anzeige(page)).toHaveAttribute('data-state', 'idle', { timeout: 10_000 });
-
-				const rumpf = puts.at(-1)!.postDataJSON() as Stand;
-				// Trip: { corridors: [] }; Vergleich zusätzlich display_config.ideal_ranges {}.
-				expect(rumpf, 'Leerung muss als [] (bzw. {} für ideal_ranges) gesendet werden').toMatchObject(ws.leerRumpf);
-				expect(rumpf.corridors, 'Leerung muss als [] gesendet werden').toEqual([]);
+				const entfernen = editor.locator(`[data-testid="corridor-row-${ws.zeile}"] .ce-remove`);
+				await expect(entfernen, 'AC-22: „✕ entfernen" ist gesperrt').toBeDisabled();
+				await entfernen.click({ force: true });
+				await bleibtBei(() => puts.length, 0, 1_200, 'WS-6: die Leerung darf keinen PUT auslösen');
+				await expect(zeilen(editor), 'WS-6: die Zeile darf nicht verschwinden').toHaveCount(1);
 
 				const s = await stand(page, kind, hub.id);
-				expect(korridore(s).length, 'die Korridor-Leerung hat den Server nicht erreicht').toBe(0);
-				expect(Object.keys((dc(s).ideal_ranges as object) ?? {}), 'die Ideal-Ranges wurden nicht geleert').toEqual([]);
+				expect(ws.altfelder(s), 'AC-24: Wertebereiche auf dem Server unverändert (nie geleert)').toEqual(vorher);
 
 				await openHub(page, kind, hub.id, { tab: 'wertebereiche' });
 				const neu = page.locator(`[data-testid="corridor-editor-${kind}"]:visible`);
 				await expect(neu).toBeVisible({ timeout: 10_000 });
-				await expect(neu.locator('[data-testid^="corridor-row-"]'), 'nach Neuladen muss die Leerung stehen').toHaveCount(0);
+				await expect(neu.locator(`[data-testid="corridor-row-${ws.zeile}"]`), 'nach Neuladen steht die Zeile noch').toBeVisible({
+					timeout: 10_000
+				});
+				await expect(zeilen(neu)).toHaveCount(1);
 			} finally {
 				await hub.aufraeumen();
 			}

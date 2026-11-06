@@ -5,7 +5,8 @@
 //
 // Spec: docs/specs/modules/feat_2347_s3c_paritaets_e2e.md
 //   KS-1 / AC-1 — A ändert den Namen, B speichert danach je Reiter (Alarme,
-//                 Wertebereiche, Versand [Abschnitt im Reiter Wetter-Metriken],
+//                 Alarm-Empfindlichkeit [statt Wertebereiche, die seit #2792
+//                 S1c-3 nur lesbar sind], Versand [Abschnitt im Reiter Wetter-Metriken],
 //                 Wetter-Metriken): erster PUT von B trägt If-Match aus dem
 //                 Seitenaufbau, 412, „Nochmal speichern", Name von A UND
 //                 Änderung von B stehen auf dem Server.
@@ -104,6 +105,26 @@ interface ReiterFall {
 const rc = (s: Stand) => (s.report_config as Stand | undefined) ?? {};
 const dc = (s: Stand) => (s.display_config as Stand | undefined) ?? {};
 
+// #2792 S1c-3: Alarm-Empfindlichkeit der Böen (`wind_gust`) — für beide kinds
+// dieselbe Zeile des geteilten AlarmeTab, Seed-Ausgangsstufe `standard`.
+const stufenKnopf = (p: Page, stufe: string) => p.locator(`[data-testid="alert-level-wind_gust-${stufe}"]:visible`);
+async function stufeBereit(p: Page): Promise<void> {
+	await expect(p.locator('[data-testid="alarme-tab"]').first()).toBeVisible({ timeout: 10_000 });
+	await expect(stufenKnopf(p, 'standard'), 'Vorbedingung: Ausgangsstufe standard').toHaveAttribute('aria-pressed', 'true', {
+		timeout: 10_000
+	});
+}
+async function stufeAendern(p: Page): Promise<void> {
+	await stufenKnopf(p, 'sensibel').click();
+	await expect(stufenKnopf(p, 'sensibel')).toHaveAttribute('aria-pressed', 'true');
+}
+function stufePruefe(s: Stand): void {
+	expect(
+		(dc(s).metric_alert_levels as Record<string, string> | undefined)?.wind_gust,
+		'Alarm-Empfindlichkeits-Änderung von B fehlt auf dem Server'
+	).toBe('sensibel');
+}
+
 // Auslöser je Reiter und kind: derselbe geteilte Reiter-Baustein, aber kind-eigene
 // Felder/Schalter (Spec „Kind-Kontraste"; Quellen: hub-alarme-/-wertebereiche-/
 // -wetter-metriken-/-versand-speichert-selbst). Der Trip hat keinen Radar-Alarm.
@@ -123,19 +144,21 @@ const KS_REITER: Record<HubKind, ReiterFall[]> = {
 				expect((s.official_warnings as { enabled?: boolean } | undefined)?.enabled, 'Alarme-Änderung von B fehlt auf dem Server').toBe(false)
 		},
 		{
-			reiter: 'Wertebereiche',
-			tab: 'wertebereiche',
-			seed: { corridors: [{ metric: 'wind_gust', range: [30, 70], notify: false, mark: false }] },
-			bereit: async (p) => {
-				const editor = p.locator('[data-testid="corridor-editor-route"]:visible');
-				await expect(editor.locator('[data-testid="corridor-row-wind_gust"]')).toBeVisible({ timeout: 10_000 });
+			// #2792 S1c-3: der Reiter Wertebereiche ist nur lesbar (schreibt nichts,
+			// kein Konfliktfall mehr). Statt seiner bewacht dieser Fall den zweiten
+			// Schreibweg des Reiters Alarme: die Alarm-Empfindlichkeit
+			// (`display_config.metric_alert_levels`), die bis S2 bearbeitbar bleibt.
+			reiter: 'Alarm-Empfindlichkeit',
+			tab: 'alarme',
+			seed: {
+				display_config: {
+					metrics: [{ metric_id: 'gust', enabled: true, bucket: 'primary', order: 0 }],
+					metric_alert_levels: { wind_gust: 'standard' }
+				}
 			},
-			aendern: async (p) => {
-				const editor = p.locator('[data-testid="corridor-editor-route"]:visible');
-				await editor.locator('[data-testid="corridor-editor-pool-item-precipitation_sum"]').click();
-				await expect(editor.locator('[data-testid^="corridor-row-"]')).toHaveCount(2, { timeout: 5_000 });
-			},
-			pruefe: (s) => expect((s.corridors as unknown[]).length, 'Wertebereiche-Änderung von B fehlt auf dem Server').toBe(2)
+			bereit: stufeBereit,
+			aendern: stufeAendern,
+			pruefe: stufePruefe
 		},
 		{
 			// #1743: kein eigener Reiter — Versand ist der Abschnitt `#versand` im Reiter Wetter-Metriken.
@@ -205,26 +228,21 @@ const KS_REITER: Record<HubKind, ReiterFall[]> = {
 			pruefe: (s) => expect(s.radar_alert_enabled, 'Alarme-Änderung von B fehlt auf dem Server').toBe(true)
 		},
 		{
-			reiter: 'Wertebereiche',
-			tab: 'wertebereiche',
+			// #2792 S1c-3: wie im Trip — Alarm-Empfindlichkeit statt des gesperrten
+			// Reiters Wertebereiche. `gust_max_kmh` ist im Vergleichs-Katalog alarmfähig
+			// (→ `wind_gust`), dieselbe Zeile wie im Trip.
+			reiter: 'Alarm-Empfindlichkeit',
+			tab: 'alarme',
 			seed: {
-				corridors: [{ metric: 'snow_depth_cm', range: [30, 200], notify: false, mark: true }],
 				display_config: {
-					ideal_ranges: { snow_depth_cm: { min: 30, max: 200 } },
-					active_metrics: ['snow_depth_cm'],
+					active_metrics: ['gust_max_kmh'],
+					metric_alert_levels: { wind_gust: 'standard' },
 					telegram_style: 'kurzform'
 				}
 			},
-			bereit: async (p) => {
-				const editor = p.locator('[data-testid="corridor-editor-vergleich"]:visible');
-				await expect(editor.locator('[data-testid="corridor-row-snow_depth_cm"]')).toBeVisible({ timeout: 10_000 });
-			},
-			aendern: async (p) => {
-				const editor = p.locator('[data-testid="corridor-editor-vergleich"]:visible');
-				await editor.locator('[data-testid="corridor-editor-pool-item-wind_max_kmh"]').click();
-				await expect(editor.locator('[data-testid^="corridor-row-"]')).toHaveCount(2, { timeout: 5_000 });
-			},
-			pruefe: (s) => expect((s.corridors as unknown[]).length, 'Wertebereiche-Änderung von B fehlt auf dem Server').toBe(2)
+			bereit: stufeBereit,
+			aendern: stufeAendern,
+			pruefe: stufePruefe
 		},
 		{
 			reiter: 'Versand',

@@ -56,6 +56,20 @@
 //
 // Filter A der e2e-Ratsche: bewusst KEIN `waitForTimeout` in dieser Datei.
 // ---------------------------------------------------------------------------
+// Issue #2792 S1c-3 (docs/specs/modules/feat_2792_s1_profil_ampel.md AC-22,
+// Nachtrag v1.3): der Reiter „Wertebereiche" ist bis S3a NUR LESBAR — seine
+// Zahlenfelder, Stepper und Ziehgriffe schreiben nichts mehr. Die Zusicherung
+// dieser Datei („eine noch nicht übertragene Änderung überlebt das Neuladen
+// und wird danach angezeigt") gilt aber unverändert. Die Fälle AC-10/AC-1,
+// AC-9/AC-5, AC-9-Mobil, AC-2 und AC-11 lösen sie deshalb jetzt über die
+// weiterhin bearbeitbare Alarm-Empfindlichkeit (`display_config.
+// metric_alert_levels`, Reiter Alarme, geteilter AlarmeTab) aus — in BEIDEN
+// Kontexten dieselbe Geste: Stufe einer Metrik umstellen und SOFORT neu laden,
+// bevor der 700-ms-Speichertakt abläuft. Böen ist in beiden Katalogen
+// alarmfähig (Trip `gust`, Vergleich `gust_max_kmh`, beide → `wind_gust`).
+// AC-9-Mobil prüfte vorher eine laufende Ziehgeste; der Mobil-Wertebereich ist
+// gesperrt, der Fall prüft jetzt denselben Entlade-Weg mobil per Tipp.
+// ---------------------------------------------------------------------------
 //
 // Projekt: Standard `tests` (Dateiname bewusst NICHT `pwa-*`, sonst landete die
 // Datei im `pwa`-Projekt, playwright.config.ts:41/56).
@@ -90,7 +104,10 @@ function collectLeaveDialogs(page: Page): string[] {
 type TripStand = {
 	corridors?: Array<{ metric: string; range: [number | null, number | null] }>;
 	alert_channel_thresholds?: Record<string, string>;
-	display_config?: { metrics?: Array<{ metric_id: string; enabled: boolean }> };
+	display_config?: {
+		metrics?: Array<{ metric_id: string; enabled: boolean }>;
+		metric_alert_levels?: Record<string, string>;
+	};
 	report_config?: { day_window_start_hour?: number };
 };
 
@@ -101,8 +118,62 @@ async function tripStand(page: Page, tripId: string): Promise<TripStand> {
 	return (await r.json()) as TripStand;
 }
 
-async function windGustRange(page: Page, tripId: string): Promise<[number | null, number | null] | null> {
-	return (await tripStand(page, tripId)).corridors?.find((c) => c.metric === 'wind_gust')?.range ?? null;
+// #2792 S1c-3: Auslöser ist die Alarm-Empfindlichkeit der Böen (`wind_gust`).
+const START_STUFE = 'standard';
+/** Trip: alarmfähige Metrik-Auswahl (Böen) + feste Ausgangsstufe. */
+const TRIP_ALARM_SEED = {
+	display_config: {
+		metrics: [{ metric_id: 'gust', enabled: true, bucket: 'primary', order: 0 }],
+		metric_alert_levels: { wind_gust: START_STUFE }
+	}
+};
+/** Vergleich: dieselbe Größe im Vergleichs-Katalog (`gust_max_kmh` → `wind_gust`). */
+const VERGLEICH_ALARM_DC = {
+	active_metrics: ['gust_max_kmh'],
+	metric_alert_levels: { wind_gust: START_STUFE }
+};
+
+/** Stufen-Knopf der Böen-Zeile in der Alarm-Empfindlichkeits-Tabelle. */
+const stufenKnopf = (page: Page, stufe: string) => page.locator(`[data-testid="alert-level-wind_gust-${stufe}"]:visible`);
+
+async function windGustStufe(page: Page, pfad: string): Promise<string | null> {
+	const r = await page.request.get(pfad);
+	expect(r.ok(), `GET ${pfad} HTTP ${r.status()}`).toBeTruthy();
+	const body = (await r.json()) as TripStand;
+	return body.display_config?.metric_alert_levels?.wind_gust ?? null;
+}
+
+/** Legt einen Ortsvergleich mit Böen-Alarm (Ausgangsstufe `standard`) an. */
+async function legeVergleichAn(page: Page, kennung: string): Promise<string> {
+	const loc = await createTestLocation(page.request, { name: `2316 Neuladen ${kennung}`, lat: 47.0, lon: 11.0 });
+	const presetRes = await page.request.post('/api/compare/presets', {
+		data: {
+			name: `${E2E_TEST_PREFIX}2316 Neuladen ${kennung} ${Date.now()}`,
+			location_ids: [loc.id],
+			schedule: 'daily',
+			profil: 'wandern',
+			hour_from: 7,
+			hour_to: 16,
+			empfaenger: ['urlauber@example.com'],
+			display_config: VERGLEICH_ALARM_DC
+		}
+	});
+	expect(presetRes.ok(), `Preset-Anlage HTTP ${presetRes.status()}`).toBeTruthy();
+	const presetId = ((await presetRes.json()) as { id: string }).id;
+	registerForCleanup('preset', presetId);
+	return presetId;
+}
+
+/** Öffnet den Reiter Alarme und prüft die Ausgangsstufe der Böen-Zeile. */
+async function oeffneAlarmStufen(page: Page, url: string): Promise<void> {
+	await page.goto(url);
+	await page.waitForLoadState('networkidle');
+	await expect(page.locator('[data-testid="alarme-tab"]:visible').first()).toBeVisible({ timeout: 15_000 });
+	await expect(stufenKnopf(page, START_STUFE), `Vorbedingung: die angelegte Böen-Stufe ${START_STUFE} ist ausgewählt`).toHaveAttribute(
+		'aria-pressed',
+		'true',
+		{ timeout: 10_000 }
+	);
 }
 
 /**
@@ -197,136 +268,76 @@ async function pruefeGehalten(halt: PutHalt, ac: string, mindestens = 1): Promis
 }
 
 test.describe('Issue #2316 Scheibe A: ausstehende Änderung überlebt das Neuladen der Detailseite', () => {
-	test('AC-10 / #2317 AC-1 (/trips/[id]): Wertebereich-Zahl ändern und sofort neu laden → Wert ist gespeichert und wird angezeigt', async ({
+	test('AC-10 / #2317 AC-1 (/trips/[id]): Alarm-Empfindlichkeit ändern und sofort neu laden → Stufe ist gespeichert und wird angezeigt', async ({
 		page
 	}) => {
-		const suffix = `${Date.now()}-${Math.floor(Math.random() * 1e6)}`;
-		const tripId = `e2e-gz-2316-trip-${suffix}`;
-		const seed = await page.request.post('/api/trips', {
-			data: {
-				id: tripId,
-				name: `${E2E_TEST_PREFIX}2316 Neuladen ${suffix}`,
-				region: 'Korsika',
-				stages: [
-					{
-						id: 's1',
-						name: 'Tag 1',
-						date: '2026-08-01',
-						waypoints: [
-							{ id: 'a', name: 'a', lat: 42.0, lon: 9.0, elevation_m: 800 },
-							{ id: 'b', name: 'b', lat: 42.04, lon: 9.0, elevation_m: 800 }
-						]
-					}
-				],
-				corridors: [{ metric: 'wind_gust', range: [null, 70], notify: false, mark: false }]
-			}
-		});
-		expect(seed.ok(), `Trip-Anlage HTTP ${seed.status()}`).toBeTruthy();
-		registerForCleanup('trip', tripId);
+		const tripId = await legeTripAn(page, 'ac10-alarm-stufe', TRIP_ALARM_SEED);
+		const pfad = `/api/trips/${tripId}`;
+		const ziel = 'sensibel';
 
-		await page.goto(`/trips/${tripId}?tab=wertebereiche`);
-		await page.waitForLoadState('networkidle');
-		const row = page.locator('[data-testid="corridor-editor-route"] [data-testid="corridor-row-wind_gust"]');
-		await expect(row).toBeVisible({ timeout: 10_000 });
-		const maxInput = row.locator('input[type="number"]').first();
-		await expect(maxInput).toHaveValue('70');
+		await oeffneAlarmStufen(page, `/trips/${tripId}?tab=alarme`);
 
 		const dialogs = collectLeaveDialogs(page);
 
-		const halt = await haltePutBisNeuemDokument(page, `/api/trips/${tripId}`);
+		const halt = await haltePutBisNeuemDokument(page, pfad);
 
-		// Änderung — und SOFORT neu laden: kein blur, kein Warten, der
-		// 700-ms-Speichertakt ist noch nicht abgelaufen.
-		await maxInput.fill('55');
+		// Änderung — und SOFORT neu laden: kein Warten, der 700-ms-Speichertakt
+		// ist noch nicht abgelaufen.
+		await stufenKnopf(page, ziel).click();
 		await page.reload();
 		halt.aktiv = false;
 
-		// #2317 AC-1: früher bewusst NICHT geprüft (gemessen 13.09.: Anzeige 70,
-		// Server 55). Genau das ist der gemeldete Fehler — jetzt Zusicherung.
-		const rowNachher = page.locator('[data-testid="corridor-editor-route"] [data-testid="corridor-row-wind_gust"]');
-		await expect(rowNachher).toBeVisible({ timeout: 10_000 });
+		// #2317 AC-1: nicht nur gespeichert, sondern nach dem Neuladen angezeigt.
+		await expect(page.locator('[data-testid="alarme-tab"]:visible').first()).toBeVisible({ timeout: 15_000 });
+		await expect(stufenKnopf(page, ziel)).toBeVisible({ timeout: 10_000 });
 		await expect(
-			rowNachher.locator('input[type="number"]').first(),
-			'#2317 AC-1: nach dem Neuladen muss binnen 3 s die eingegebene Obergrenze (55) angezeigt werden, nicht der alte Stand'
-		).toHaveValue('55', { timeout: 3_000 });
+			stufenKnopf(page, ziel),
+			`#2317 AC-1: nach dem Neuladen muss binnen 3 s die gewählte Stufe (${ziel}) angezeigt werden, nicht der alte Stand`
+		).toHaveAttribute('aria-pressed', 'true', { timeout: 3_000 });
 		await pruefeGehalten(halt, '#2317 AC-1');
 
 		await expect
-			.poll(() => windGustRange(page, tripId).then((r) => r?.[1] ?? null), {
-				message: 'AC-10 / #2317 AC-1: die vor dem Neuladen eingegebene Obergrenze muss gespeichert sein',
+			.poll(() => windGustStufe(page, pfad), {
+				message: 'AC-10 / #2317 AC-1: die vor dem Neuladen gewählte Stufe muss gespeichert sein',
 				timeout: 8_000
 			})
-			.toBe(55);
+			.toBe(ziel);
 
 		expect(dialogs, 'AC-10 / #2317 AC-16: beim Neuladen darf keine Verlassen-Rückfrage erscheinen').toEqual([]);
 	});
 
-	test('AC-9 / #2317 AC-5 (/compare/[id]): Idealwert-Zahl ändern und sofort neu laden → Wert ist gespeichert und wird angezeigt', async ({
+	test('AC-9 / #2317 AC-5 (/compare/[id]): Alarm-Empfindlichkeit ändern und sofort neu laden → Stufe ist gespeichert und wird angezeigt', async ({
 		page
 	}) => {
-		const loc = await createTestLocation(page.request, { name: '2316 Neuladen Ort', lat: 47.0, lon: 11.0 });
-		const presetRes = await page.request.post('/api/compare/presets', {
-			data: {
-				name: `${E2E_TEST_PREFIX}2316 Neuladen ${Date.now()}`,
-				location_ids: [loc.id],
-				schedule: 'daily',
-				profil: 'wandern',
-				hour_from: 7,
-				hour_to: 16,
-				empfaenger: ['urlauber@example.com'],
-				corridors: [{ metric: 'snow_depth_cm', range: [30, null], notify: false, mark: true }],
-				display_config: {
-					ideal_ranges: { snow_depth_cm: { min: 30, max: null } },
-					active_metrics: ['snow_depth_cm']
-				}
-			}
-		});
-		expect(presetRes.ok(), `Preset-Anlage HTTP ${presetRes.status()}`).toBeTruthy();
-		const presetId = ((await presetRes.json()) as { id: string }).id;
-		registerForCleanup('preset', presetId);
+		const presetId = await legeVergleichAn(page, 'ac9');
+		const pfad = `/api/compare/presets/${presetId}`;
+		const ziel = 'sensibel';
 
-		await page.goto(`/compare/${presetId}?tab=wertebereiche`);
-		await page.waitForLoadState('networkidle');
-		const editor = page.locator('[data-testid="corridor-editor-vergleich"]:visible');
-		await expect(editor).toBeVisible({ timeout: 10_000 });
-		const row = editor.locator('[data-testid="corridor-row-snow_depth_cm"]');
-		await expect(row).toBeVisible({ timeout: 10_000 });
-		const minInput = row.locator('input[type="number"]').first();
-		await expect(minInput).toHaveValue('30');
+		await oeffneAlarmStufen(page, `/compare/${presetId}?tab=alarme`);
 
 		const dialogs = collectLeaveDialogs(page);
 
-		// Dieselbe Geste wie im Trip: Änderung — und SOFORT neu laden, ohne das
-		// Feld zu verlassen (kein focusout/click-Commit).
-		const halt = await haltePutBisNeuemDokument(page, `/api/compare/presets/${presetId}`);
-		await minInput.fill('45');
+		// Dieselbe Geste wie im Trip: Änderung — und SOFORT neu laden.
+		const halt = await haltePutBisNeuemDokument(page, pfad);
+		await stufenKnopf(page, ziel).click();
 		await page.reload();
 		halt.aktiv = false;
 
-		// #2317 AC-5: gespeichert reicht nicht — die neu geladene Seite muss den Wert zeigen.
-		const rowNachher = page
-			.locator('[data-testid="corridor-editor-vergleich"]:visible')
-			.locator('[data-testid="corridor-row-snow_depth_cm"]');
-		await expect(rowNachher).toBeVisible({ timeout: 10_000 });
+		// #2317 AC-5: gespeichert reicht nicht — die neu geladene Seite muss die Stufe zeigen.
+		await expect(page.locator('[data-testid="alarme-tab"]:visible').first()).toBeVisible({ timeout: 15_000 });
+		await expect(stufenKnopf(page, ziel)).toBeVisible({ timeout: 10_000 });
 		await expect(
-			rowNachher.locator('input[type="number"]').first(),
-			'#2317 AC-5: nach dem Neuladen muss binnen 3 s die eingegebene Untergrenze (45) angezeigt werden, nicht der alte Stand'
-		).toHaveValue('45', { timeout: 3_000 });
+			stufenKnopf(page, ziel),
+			`#2317 AC-5: nach dem Neuladen muss binnen 3 s die gewählte Stufe (${ziel}) angezeigt werden, nicht der alte Stand`
+		).toHaveAttribute('aria-pressed', 'true', { timeout: 3_000 });
 		await pruefeGehalten(halt, '#2317 AC-5');
 
 		await expect
-			.poll(
-				async () => {
-					const r = await page.request.get(`/api/compare/presets/${presetId}`);
-					const preset = (await r.json()) as { corridors?: Array<{ metric: string; range: [number | null, number | null] }> };
-					return preset.corridors?.find((c) => c.metric === 'snow_depth_cm')?.range?.[0] ?? null;
-				},
-				{
-					message: 'AC-9: die vor dem Neuladen eingegebene Untergrenze muss gespeichert sein, nicht verloren',
-					timeout: 8_000
-				}
-			)
-			.toBe(45);
+			.poll(() => windGustStufe(page, pfad), {
+				message: 'AC-9: die vor dem Neuladen gewählte Stufe muss gespeichert sein, nicht verloren',
+				timeout: 8_000
+			})
+			.toBe(ziel);
 
 		expect(dialogs, 'AC-9 / #2317 AC-16: beim Neuladen darf keine Verlassen-Rückfrage erscheinen').toEqual([]);
 	});
@@ -340,122 +351,73 @@ test.describe('Issue #2316 Scheibe A: ausstehende Änderung überlebt das Neulad
 	// EINEN Weg — Speicher-Takt des Controllers; der fruehere Wrapper
 	// `.hub-corridor-wrap` und der fensterweite pointerup-Auffang sind entfallen.)
 	//
-	// Die echte Mobil-Entsprechung von "getippt, noch nicht verlassen" ist eine
-	// LAUFENDE Ziehgeste: `pointerdown` + `pointermove` haben `patchBound()`
-	// bereits ausgeloest (Wert im Wizard-Zustand geaendert und als ausstehender
-	// Speichervorgang eingeplant), die Geste ist aber noch NICHT beendet. Genau
-	// dort greift (oder greift eben NICHT) der geteilte beforeNavigate-Waechter.
-	test('AC-9-Mobil (/compare/[id]): Idealwert per Ziehgeste ändern, mitten in der Geste neu laden → Änderung ist gespeichert', async ({
+	// Die fruehere Mobil-Entsprechung von "getippt, noch nicht verlassen" war eine
+	// LAUFENDE Ziehgeste im Wertebereich. #2792 S1c-3: der Mobil-Wertebereich ist
+	// gesperrt (Griff schreibt nichts mehr) — der Fall prueft den geteilten
+	// beforeNavigate-Waechter mobil jetzt ueber einen Tipp auf die
+	// Alarm-Empfindlichkeit, der als ausstehender Speichervorgang eingeplant ist.
+	test('AC-9-Mobil (/compare/[id]): Alarm-Empfindlichkeit mobil antippen und sofort neu laden → Änderung ist gespeichert', async ({
 		page
 	}) => {
 		await page.setViewportSize({ width: 390, height: 844 });
 
-		const loc = await createTestLocation(page.request, { name: '2316 Neuladen Mobil Ort', lat: 47.0, lon: 11.0 });
-		const presetRes = await page.request.post('/api/compare/presets', {
-			data: {
-				name: `${E2E_TEST_PREFIX}2316 Neuladen Mobil ${Date.now()}`,
-				location_ids: [loc.id],
-				schedule: 'daily',
-				profil: 'wandern',
-				hour_from: 7,
-				hour_to: 16,
-				empfaenger: ['urlauber@example.com'],
-				corridors: [{ metric: 'snow_depth_cm', range: [30, null], notify: false, mark: true }],
-				display_config: {
-					ideal_ranges: { snow_depth_cm: { min: 30, max: null } },
-					active_metrics: ['snow_depth_cm']
-				}
-			}
-		});
-		expect(presetRes.ok(), `Preset-Anlage HTTP ${presetRes.status()}`).toBeTruthy();
-		const presetId = ((await presetRes.json()) as { id: string }).id;
-		registerForCleanup('preset', presetId);
+		const presetId = await legeVergleichAn(page, 'ac9-mobil');
+		const pfad = `/api/compare/presets/${presetId}`;
+		const ziel = 'entspannt';
 
-		await page.goto(`/compare/${presetId}?tab=wertebereiche`);
-		await page.waitForLoadState('networkidle');
-		const editor = page.locator('[data-testid="corridor-editor-mobile-vergleich"]');
-		await expect(editor).toBeVisible({ timeout: 10_000 });
-		const band = editor.locator('[data-testid="corridor-mobile-band-snow_depth_cm"]');
-		await expect(band).toBeVisible({ timeout: 10_000 });
-		const minHandle = band.locator('.cem-handle').first();
-		const handleBox = await minHandle.boundingBox();
-		const trackBox = await band.boundingBox();
-		if (!handleBox || !trackBox) throw new Error('Ziehgriff/Band-Track nicht gefunden');
+		await oeffneAlarmStufen(page, `/compare/${presetId}?tab=alarme`);
 
 		const dialogs = collectLeaveDialogs(page);
 
-		const startX = handleBox.x + handleBox.width / 2;
-		const startY = handleBox.y + handleBox.height / 2;
-		const zielX = Math.min(startX + trackBox.width * 0.3, trackBox.x + trackBox.width - 4);
-
-		await page.mouse.move(startX, startY);
-		await page.mouse.down();
-		// Geste laeuft noch — BEWUSST kein page.mouse.up(): der Commit
-		// (pointerup/handleWindowPointerUp) darf hier noch nicht gefeuert sein.
-		await page.mouse.move(zielX, startY, { steps: 5 });
-
+		// Tipp — und SOFORT neu laden, bevor der Speicher-Takt abläuft.
+		await stufenKnopf(page, ziel).click();
 		await page.reload();
 
 		await expect
-			.poll(
-				async () => {
-					const r = await page.request.get(`/api/compare/presets/${presetId}`);
-					const preset = (await r.json()) as { corridors?: Array<{ metric: string; range: [number | null, number | null] }> };
-					return preset.corridors?.find((c) => c.metric === 'snow_depth_cm')?.range?.[0] ?? null;
-				},
-				{
-					message: 'AC-9-Mobil: die mitten in der Ziehgeste veraenderte Untergrenze muss gespeichert sein, nicht verloren',
-					timeout: 8_000
-				}
-			)
-			.not.toBe(30);
+			.poll(() => windGustStufe(page, pfad), {
+				message: 'AC-9-Mobil: die vor dem Neuladen mobil gewählte Stufe muss gespeichert sein, nicht verloren',
+				timeout: 8_000
+			})
+			.toBe(ziel);
 
-		await page.mouse.up();
 		expect(dialogs, 'AC-9-Mobil: beim Neuladen darf keine Verlassen-Rückfrage erscheinen').toEqual([]);
 	});
 });
 
 test.describe('Issue #2317: jede Trip-Speicherung überlebt das Neuladen und wird danach angezeigt', () => {
-	// AC-2 — Mobil-Ansicht (CorridorEditorMobile.svelte, context="route"). Mobil
-	// gibt es kein Freitextfeld: die Grenze wird per Stepper gesetzt
-	// (nudge → patchBound → saveController.schedule, 700 ms). Anlage [null, 70]:
-	// „Von" ist offen, nur „Bis" hat einen Stepper.
-	test('AC-2 (/trips/[id], Mobil): Obergrenze per Stepper ändern und sofort neu laden → gespeichert und angezeigt', async ({
+	// AC-2 — Mobil-Ansicht (Trip). #2792 S1c-3: der Mobil-Wertebereich (Stepper)
+	// ist gesperrt; derselbe Entlade-Weg wird mobil über die Alarm-Empfindlichkeit
+	// (AlertMetricLevelRow, mobil verkürzte Beschriftung) ausgelöst.
+	test('AC-2 (/trips/[id], Mobil): Alarm-Empfindlichkeit antippen und sofort neu laden → gespeichert und angezeigt', async ({
 		page
 	}) => {
 		await page.setViewportSize({ width: 390, height: 844 });
-		const tripId = await legeTripAn(page, 'ac2-mobil');
+		const tripId = await legeTripAn(page, 'ac2-mobil', TRIP_ALARM_SEED);
+		const pfad = `/api/trips/${tripId}`;
+		const ziel = 'entspannt';
 
-		await page.goto(`/trips/${tripId}?tab=wertebereiche`);
-		await page.waitForLoadState('networkidle');
-		const row = page.locator('[data-testid="corridor-editor-mobile-route"] [data-testid="corridor-mobile-row-wind_gust"]');
-		await expect(row).toBeVisible({ timeout: 10_000 });
-		const bisWert = row.locator('.cem-stepper .cem-step-num');
-		await expect(bisWert, 'Vorbedingung: genau ein Stepper („Bis") mit dem angelegten Wert').toHaveText('70');
+		await oeffneAlarmStufen(page, `/trips/${tripId}?tab=alarme`);
 
 		const dialogs = collectLeaveDialogs(page);
 
-		const halt = await haltePutBisNeuemDokument(page, `/api/trips/${tripId}`);
+		const halt = await haltePutBisNeuemDokument(page, pfad);
 
-		// Änderung per „−" — und sofort neu laden, bevor der Speicher-Takt abläuft.
-		await row.locator('.cem-stepper .cem-step-btn').first().click();
-		await expect(bisWert).not.toHaveText('70', { timeout: 500 });
-		const ziel = Number((await bisWert.textContent())?.trim());
-		expect(Number.isFinite(ziel), `Stepper-Anzeige ist keine Zahl: ${await bisWert.textContent()}`).toBeTruthy();
+		// Tipp — und sofort neu laden, bevor der Speicher-Takt abläuft.
+		await stufenKnopf(page, ziel).click();
 		await page.reload();
 		halt.aktiv = false;
 
-		const rowNachher = page.locator('[data-testid="corridor-editor-mobile-route"] [data-testid="corridor-mobile-row-wind_gust"]');
-		await expect(rowNachher).toBeVisible({ timeout: 10_000 });
+		await expect(page.locator('[data-testid="alarme-tab"]:visible').first()).toBeVisible({ timeout: 15_000 });
+		await expect(stufenKnopf(page, ziel)).toBeVisible({ timeout: 10_000 });
 		await expect(
-			rowNachher.locator('.cem-stepper .cem-step-num'),
-			`#2317 AC-2: nach dem Neuladen muss binnen 3 s die geänderte Obergrenze (${ziel}) angezeigt werden, nicht 70`
-		).toHaveText(String(ziel), { timeout: 3_000 });
+			stufenKnopf(page, ziel),
+			`#2317 AC-2: nach dem Neuladen muss binnen 3 s die gewählte Stufe (${ziel}) angezeigt werden, nicht ${START_STUFE}`
+		).toHaveAttribute('aria-pressed', 'true', { timeout: 3_000 });
 		await pruefeGehalten(halt, '#2317 AC-2');
 
 		await expect
-			.poll(() => windGustRange(page, tripId).then((r) => r?.[1] ?? null), {
-				message: '#2317 AC-2: die mobil geänderte Obergrenze muss beim Server gespeichert sein',
+			.poll(() => windGustStufe(page, pfad), {
+				message: '#2317 AC-2: die mobil gewählte Stufe muss beim Server gespeichert sein',
 				timeout: 8_000
 			})
 			.toBe(ziel);
@@ -599,28 +561,25 @@ test.describe('Issue #2317: jede Trip-Speicherung überlebt das Neuladen und wir
 	test('AC-11 (/trips/[id]): nach dem Neuladen erneut ändern → Speichern ohne Konflikt-Hinweis, Server hat den Wert', async ({
 		page
 	}) => {
-		const tripId = await legeTripAn(page, 'ac11-konflikt');
+		// #2792 S1c-3: Auslöser ist die Alarm-Empfindlichkeit (Wertebereiche gesperrt).
+		const tripId = await legeTripAn(page, 'ac11-konflikt', TRIP_ALARM_SEED);
+		const pfad = `/api/trips/${tripId}`;
 
-		await page.goto(`/trips/${tripId}?tab=wertebereiche`);
-		await page.waitForLoadState('networkidle');
-		const row = page.locator('[data-testid="corridor-editor-route"] [data-testid="corridor-row-wind_gust"]');
-		await expect(row).toBeVisible({ timeout: 10_000 });
-		await expect(row.locator('input[type="number"]').first()).toHaveValue('70');
+		await oeffneAlarmStufen(page, `/trips/${tripId}?tab=alarme`);
 
 		const dialogs = collectLeaveDialogs(page);
 
-		const halt = await haltePutBisNeuemDokument(page, `/api/trips/${tripId}`);
-		await row.locator('input[type="number"]').first().fill('55');
+		const halt = await haltePutBisNeuemDokument(page, pfad);
+		await stufenKnopf(page, 'sensibel').click();
 		await page.reload();
 		halt.aktiv = false;
 
-		const rowNachher = page.locator('[data-testid="corridor-editor-route"] [data-testid="corridor-row-wind_gust"]');
-		await expect(rowNachher).toBeVisible({ timeout: 10_000 });
-		const maxNachher = rowNachher.locator('input[type="number"]').first();
+		await expect(page.locator('[data-testid="alarme-tab"]:visible').first()).toBeVisible({ timeout: 15_000 });
+		await expect(stufenKnopf(page, 'sensibel')).toBeVisible({ timeout: 10_000 });
 		await expect(
-			maxNachher,
-			'#2317 AC-11 (Vorbedingung): nach dem Neuladen muss binnen 3 s der gespeicherte Stand (55) angezeigt werden'
-		).toHaveValue('55', { timeout: 3_000 });
+			stufenKnopf(page, 'sensibel'),
+			'#2317 AC-11 (Vorbedingung): nach dem Neuladen muss binnen 3 s der gespeicherte Stand (sensibel) angezeigt werden'
+		).toHaveAttribute('aria-pressed', 'true', { timeout: 3_000 });
 		await pruefeGehalten(halt, '#2317 AC-11');
 
 		const konflikte: string[] = [];
@@ -630,14 +589,14 @@ test.describe('Issue #2317: jede Trip-Speicherung überlebt das Neuladen und wir
 			}
 		});
 
-		await maxNachher.fill('50');
+		await stufenKnopf(page, 'entspannt').click();
 
 		await expect
-			.poll(() => windGustRange(page, tripId).then((r) => r?.[1] ?? null), {
+			.poll(() => windGustStufe(page, pfad), {
 				message: '#2317 AC-11: die Änderung nach dem Neuladen muss gespeichert werden, nicht an einem Konflikt scheitern',
 				timeout: 8_000
 			})
-			.toBe(50);
+			.toBe('entspannt');
 		await expect(
 			page.getByTestId('save-indicator'),
 			'#2317 AC-11: nach dem Speichern darf kein Konflikt-/Fehlerzustand angezeigt werden'
