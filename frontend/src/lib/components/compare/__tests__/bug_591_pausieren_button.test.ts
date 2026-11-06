@@ -40,12 +40,14 @@ describe('AC-3: status leitet sich aus localSchedule ab (nicht aus preset)', () 
 		// siehe hub_status_pill_override.test.ts) statt der Inline-Spread-Variante —
 		// AC-3-Intent (status reagiert auf localSchedule, nicht auf unveraendertes
 		// preset) bleibt identisch, nur die konkrete Ableitungsfunktion aendert sich.
+		// Issue #2828: Basis ist seither der lebende Stand `currentPreset` (nicht die
+		// eingefrorene Prop `preset`), sonst zeigt die Uebersicht einen veralteten Status.
 		assert.match(
 			code,
-			/deriveStatusFromPreset\(\s*\{[^}]*localSchedule|deriveStatusWithScheduleOverride\(\s*preset\s*,\s*localSchedule/,
+			/deriveStatusFromPreset\(\s*\{[^}]*localSchedule|deriveStatusWithScheduleOverride\(\s*currentPreset\s*,\s*localSchedule/,
 			'AC-3 FAIL: status ist nicht auf localSchedule basiert. ' +
 			'Erwartet: deriveStatusFromPreset({ ...preset, schedule: localSchedule ... }) ' +
-			'oder deriveStatusWithScheduleOverride(preset, localSchedule)'
+			'oder deriveStatusWithScheduleOverride(currentPreset, localSchedule)'
 		);
 	});
 
