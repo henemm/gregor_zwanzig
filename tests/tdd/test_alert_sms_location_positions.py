@@ -105,6 +105,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
+from freezegun import freeze_time
+
 from app.config import Settings
 from app.models import (
     ChangeSeverity, GPXPoint, SegmentWeatherData, SegmentWeatherSummary,
@@ -1037,9 +1039,13 @@ def test_regression_compare_radar_alert_sms_text_unchanged(monkeypatch, tmp_path
             onset_minutes=15, intensity_label="maessiger Regen", source="radar",
             is_convective=False,
         )
-        svc.send_multi_location_radar_alert(
-            [("Zermatt", loc_a, nc_a), ("Chamonix", loc_b, nc_b)], {"sms"}, preset=None,
-        )
+        # Feste Uhr Mittag UTC (#2744): `onset_time` = jetzt + Vorlauf; kurz vor
+        # Mitternacht Ortszeit fiele der Zeitpunkt auf den Folgetag und der Text
+        # truege ein Wochentagskuerzel (`R@Mo0:03`).
+        with freeze_time("2026-11-05 12:00:00+00:00"):
+            svc.send_multi_location_radar_alert(
+                [("Zermatt", loc_a, nc_a), ("Chamonix", loc_b, nc_b)], {"sms"}, preset=None,
+            )
         # FORTGESCHRIEBEN (Issue #1948 S4): der Buendel-Kopf nennt den Ortsnamen
         # des fuehrenden Events statt des gekuerzten Sammelnamens mit km0-0.
         # `onset_time` leitet der Konstruktor aus `datetime.now()` ab -> Struktur

@@ -109,6 +109,22 @@ def render_reich(lang: str | None = None, *, dc=None, profile=None,
     return report
 
 
+# Fester Zeitpunkt fuer Vergleiche zweier Renderlaeufe (#2744): der
+# Erzeugungszeitstempel (``HH:MM``) ist Produktverhalten; laufen beide Renders
+# ueber einen Minutenwechsel, unterscheidet sich das HTML.
+FESTE_RENDER_UHR = "2026-10-29 04:00:00+00:00"
+
+
+def render_paar_bei_fester_uhr():
+    """``(render_reich(), render_reich("de"))`` in EINEM ``freeze_time``-Block
+    ohne ``tick``. Der innere Zeitpunkt gewinnt auch gegen einen aeusseren,
+    tickenden Rahmen (session-weite Wanduhr, ``auto_tick_seconds``)."""
+    from freezegun import freeze_time
+
+    with freeze_time(FESTE_RENDER_UHR):
+        return render_reich(), render_reich("de")
+
+
 def sichtbarer_text(html: str) -> str:
     s = re.sub(r"<head>.*?</head>", "", html, flags=re.S)
     s = re.sub(r"<[^>]+>", "\n", s)
