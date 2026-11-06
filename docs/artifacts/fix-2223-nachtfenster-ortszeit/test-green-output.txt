@@ -6,8 +6,20 @@ plugins: anyio-4.12.0, timeout-2.4.0, socket-0.8.0
 timeout: 30.0s
 timeout method: signal
 timeout func_only: False
-collected 8 items
+collected 139 items
 
-tests/tdd/test_night_window_ortszeit.py ........                         [100%]
+tests/tdd/test_night_window_ortszeit.py ........                         [  5%]
+tests/test_output_timezone_guard.py ..................                   [ 18%]
+tests/tdd/test_night_weather_fetch_failure_stays_honest.py .....         [ 22%]
+tests/tdd/test_issue_956_night_rows_date_bug.py ..                       [ 23%]
+tests/tdd/test_night_temp_evening_only.py ......                         [ 28%]
+tests/tdd/test_night_temp_own_metric_selection.py ....................   [ 42%]
+tests/unit/test_night_table_date_anchor.py ...                           [ 44%]
+tests/unit/test_preview_night_block.py ......                            [ 48%]
+tests/tdd/test_briefing_parity_night_thunder.py ..........               [ 56%]
+tests/unit/test_thunder_night_addendum.py ...............                [ 66%]
+tests/unit/test_thunder_night_addendum_parity.py ....                    [ 69%]
+tests/tdd/test_outlook_day_night_thunder_split.py ...................... [ 85%]
+....................                                                     [100%]
 
-============================== 8 passed in 1.90s ===============================
+============================= 139 passed in 26.58s =============================

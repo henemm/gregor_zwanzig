@@ -612,14 +612,14 @@ def fetch_night_weather(
     # Fenster westlich von UTC einen Tag zu lang und in Mitteleuropa ein bis
     # zwei Stunden zu lang. Unaufloesbare Zone => location_tz() faellt auf
     # UTC zurueck, das ist exakt das bisherige Verhalten.
-    from utils.timezone import local_dt, location_tz
+    from utils.timezone import local_dt, location_tz, to_utc
     tz = location_tz(seg.end_point)
     local_arrival = local_dt(arrival, tz)
-    next_morning = datetime.combine(
+    next_morning = to_utc(datetime.combine(
         local_arrival.date() + timedelta(days=1),
         time(6, 0),
         tzinfo=tz,
-    ).astimezone(timezone.utc)
+    ))
 
     # Create a temporary segment spanning arrival → 06:00 next day
     night_segment = TripSegment(
