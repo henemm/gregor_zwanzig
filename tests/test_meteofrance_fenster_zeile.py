@@ -86,8 +86,11 @@ def _fenster_zeilen(caplog) -> list[tuple[int, int]]:
     return [(int(m.group(1)), int(m.group(2))) for m in treffer]
 
 
-def _abruf(provider, **kw):
-    start = datetime.now(timezone.utc)
+def _abruf(provider, start=None, **kw):
+    # #2771: volle Stunde wie `_bezugszeitpunkt`, sonst kippt ein
+    # Sekundenwechsel zwischen zwei Abrufen den Cache-Schluessel.
+    if start is None:
+        start = datetime.now(timezone.utc).replace(minute=0, second=0, microsecond=0)
     return provider.fetch_thunder_signals_multi(
         [_PETRA_PIANA], start=start, end=start + timedelta(hours=3), **kw)
 
@@ -103,11 +106,12 @@ def test_ac14_kalter_abruf_schreibt_eine_zeile_mit_der_zahl_der_downloads(mf_ok,
 
 def test_ac14_warmer_abruf_aus_dem_zwischenspeicher_hat_null_downloads(mf_ok, caplog):
     provider = mf.MeteoFranceDirectProvider()
-    _abruf(provider)
+    start = datetime.now(timezone.utc).replace(minute=0, second=0, microsecond=0)
+    _abruf(provider, start)
     geladen = len(mf_ok)
     caplog.clear()
     caplog.set_level(logging.INFO)
-    _abruf(provider)
+    _abruf(provider, start)
     assert len(mf_ok) == geladen, "zweiter Abruf ging doch ans Netz"
     assert _fenster_zeilen(caplog) == [(0, geladen)]
 

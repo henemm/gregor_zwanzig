@@ -1700,7 +1700,8 @@ def test_geosphere_grundpfad_bricht_bei_haengender_gegenstelle_ab(monkeypatch):
     OBERHALB der Frist -- nur so misst der Test den Timeout-DECKEL mit),
     When `_request(endpoint, lat, lon, parameters)` OHNE `deadline_at`
     laeuft, Then bricht der Aufruf mit `(ProviderRequestError,
-    httpx.HTTPError)` ab, Wanduhr < 0,9s.
+    httpx.HTTPError)` ab, Wanduhr < 3,0s (#2771: Luft fuer Runner-Last;
+    ohne Frist >= 5,0s je Versuch, die Mutation bleibt rot).
 
     KEIN Ueberschreiben von `.retry.stop`: der Produktionsausdruck
     `stop_after_attempt(RETRY_ATTEMPTS) | stop_at_deadline` bleibt VOLLSTAENDIG
@@ -1729,8 +1730,8 @@ def test_geosphere_grundpfad_bricht_bei_haengender_gegenstelle_ab(monkeypatch):
             )
         elapsed = time.monotonic() - start
 
-    assert 0.2 <= elapsed < 0.9, (
-        f"_request() brauchte {elapsed:.2f}s -- die Frist (0.45s) muss den "
+    assert 0.2 <= elapsed < 3.0, (
+        f"_request() brauchte {elapsed:.2f}s -- erwartet < 3.0s, die Frist (0.45s) muss den "
         "Einzelversuch deckeln. Ein Wert um ~5.0s bedeutet: der gedeckelte "
         "Timeout wird nicht an den httpx-Client durchgereicht."
     )
@@ -1844,7 +1845,8 @@ def test_geosphere_fetch_combined_nwp_frist_bricht_ab_ohne_leeres_ergebnis(monke
     NWP-Endpunkt ist ein `_HangingServer`, When `fetch_combined` aufgerufen
     wird -- derselbe Pfad wie `at_direct` (`regional_stubs.py:88-95`) --,
     Then wirft der Aufruf `(ProviderRequestError, httpx.HTTPError)`, liefert
-    KEIN leeres/unvollstaendiges Ergebnis, Wanduhr < 0,9s. Bewusst
+    KEIN leeres/unvollstaendiges Ergebnis, Wanduhr < 3,0s (#2771: Luft fuer
+    Runner-Last; ohne Frist >= 5,0s je Versuch). Bewusst
     `fetch_combined`, nicht `fetch_forecast` (uebersetzt jeden httpx-Fehler
     und zeigte den Ausnahmetyp der Frist allein nicht mehr).
 
@@ -1866,8 +1868,8 @@ def test_geosphere_fetch_combined_nwp_frist_bricht_ab_ohne_leeres_ergebnis(monke
             provider.fetch_combined(_GEO_LAT, _GEO_LON, include_cloud_layers=False)
         elapsed = time.monotonic() - start
 
-    assert 0.2 <= elapsed < 0.9, (
-        f"fetch_combined() brauchte {elapsed:.2f}s -- erwartet < 0.9s. Ein "
+    assert 0.2 <= elapsed < 3.0, (
+        f"fetch_combined() brauchte {elapsed:.2f}s -- erwartet < 3.0s. Ein "
         "Wert um ~5.0s bedeutet: der NWP-Abruf ist nicht auf die Frist "
         "gedeckelt."
     )
