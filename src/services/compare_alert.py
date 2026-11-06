@@ -484,6 +484,8 @@ class CompareAlertService:
                 # Ortsvergleich-Alarm (ADR-0021, keine zweite Fassung).
                 telegram_style=telegram_style,
                 reference_at=reference_at,
+                # Issue #2792 S1c-4a: Preset durchreichen (Wirkung erst in 4b).
+                preset=preset,
                 # Issue #1737: ALTE Reihe je Ort. Ein Orts-Vergleich kennt noch
                 # keine ROH/EINFACH-Einstellung je Kanal (Datenmodell-Konvergenz,
                 # Epic #2345) -> kein `display_config`, Stundenzeilen in ROH.

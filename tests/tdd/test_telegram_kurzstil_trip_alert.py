@@ -436,7 +436,7 @@ class TestGuardCompareDeviationUnaffected:
             point = GPXPoint(lat=42.2, lon=9.05, elevation_m=400.0)
             svc.send_multi_location_deviation_alert(
                 entities=[("Ort A", [point], [_make_change()])],
-                effective_channels={"telegram"},
+                effective_channels={"telegram"}, preset=None,
             )
 
             assert len(tg_stub.sent) >= 1

@@ -544,8 +544,14 @@ def build_outlook_row(
     segments: Optional[list] = None,
     outlook_metric_formats: Optional[dict] = None,
     lang: Lang = "de",
+    context: str,
 ) -> dict:
     """Baut ein Ausblick-Row-Dict aus einer SegmentWeatherSummary + Punktliste.
+
+    ``context`` (Issue #2792 S1c-4a, Pflicht ohne Default): ``"route"``
+    (Trip) oder ``"vergleich"`` (Ortsvergleich) waehlt den Zweig, wie bei
+    den uebrigen geteilten Bausteinen; sonst ``ValueError``. Die Wahl haengt
+    nicht mehr an ``trip_display_config is None``.
 
     Reine Funktion, kein Netz-/Fetch-Aufruf: ``summary`` kommt von
     ``aggregate_stage`` (Trip) oder ``summarize_points`` (Compare) --
@@ -620,6 +626,7 @@ def build_outlook_row(
         hiking_extrema=hiking_extrema, segments=segments,
         outlook_metric_formats=outlook_metric_formats, lang=lang,
         ampel=resolve_ampel(None),
+        context=context,
     )
 
 
@@ -640,9 +647,12 @@ def _outlook_row(
     outlook_metric_formats: Optional[dict] = None,
     lang: Lang = "de",
     ampel: dict,
+    context: str,
 ) -> dict:
     """Zeilenbau von ``build_outlook_row`` mit durchgereichter Ampel
     (Issue #2792 S1c-1, Pflicht ohne Default). Parameter siehe dort."""
+    if context not in ("route", "vergleich"):
+        raise ValueError(f"context muss 'route' oder 'vergleich' sein, nicht {context!r}")  # i18n-log
     hiking_extrema = _resolve_hiking_extrema(hiking_extrema, segments)
     if metrics is None and trip_display_config is not None:
         from output.renderers.compare_outlook_metric_ids import (
@@ -785,7 +795,10 @@ def _outlook_row(
         # das Tagesfenster -- eine Herkunft, die nicht zur gezeigten Stufe
         # gehoert, waere der AC-12-Fehler aus Scheibe 1.
         _signals = getattr(summary, "thunder_level_max_signals", None)
-        # Issue #1841: im TRIP-Fall (trip_display_config gesetzt) liest die
+        # Issue #2792 S1c-4a: der Zweig haengt am ausdruecklichen `context`,
+        # nicht mehr an `trip_display_config` (ein Trip ohne display_config
+        # faellt sonst still in den Ortsvergleichs-Zweig).
+        # Issue #1841: im TRIP-Fall (context == "route") liest die
         # Gewitterspalte (kind == "ordinal") das konfigurierte TAGESFENSTER
         # statt des gehzeit-geklemmten Aggregats -- derselbe geteilte Helfer
         # wie Kompaktmail/Klartext-Altpfad/Telegram (#1671). Diskriminator ist
@@ -796,7 +809,7 @@ def _outlook_row(
         # bleibt unveraendert (AC-5).
         _thunder_value = summary.thunder_level_max
         _thunder_signals = _signals
-        if trip_display_config is not None:
+        if context == "route":
             from app.models import ThunderLevel as _ThunderLevel
 
             _tok = format_trend_tokens(row)

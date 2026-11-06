@@ -93,7 +93,7 @@ def test_ac7b_klartext_vergleich_zeigt_hagel_hinweis_nur_beim_true_ort():
     from output.renderers.comparison import render_comparison_text
 
     result = _result_ein_ort_true_ein_ort_none()
-    text = render_comparison_text(result, enabled_metrics=["thunder_max"])
+    text = render_comparison_text(result, enabled_metrics=["thunder_max"], preset=None)
 
     assert _HAGEL_HINWEIS in text, (
         f"Der Klartext-Vergleich muss beim Ort mit hail_flag=True den "

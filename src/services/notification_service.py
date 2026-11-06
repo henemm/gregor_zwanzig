@@ -1159,6 +1159,8 @@ class NotificationService:
         changes: list["WeatherChange"],
         effective_channels: set[str],
         mail_sink: Optional[object] = None,
+        *,
+        preset: Optional[dict],
     ) -> NotificationResult:
         """Trip-freier Deviation-Alert-Versand für EINEN generischen Ort
         (Compare, Issue #1169).
@@ -1172,6 +1174,7 @@ class NotificationService:
             entities=[(entity_name, points, changes)],
             effective_channels=effective_channels,
             mail_sink=mail_sink,
+            preset=preset,
         )
 
     def send_multi_location_deviation_alert(
@@ -1183,6 +1186,8 @@ class NotificationService:
         telegram_style: str = "rich",
         reference_at: Optional[str] = None,
         anchor_points: Optional[dict] = None,
+        *,
+        preset: Optional[dict],
     ) -> NotificationResult:
         """Gebündelter Deviation-Alert-Versand für MEHRERE gleichzeitig
         betroffene Orte EINES Compare-Presets (Issue #1170, Adversary F001).
@@ -1211,6 +1216,9 @@ class NotificationService:
         je Ort) speist die Stundenzeilen (additiv). Die Stundenwerte sind
         IMMER roh wie die Stundentabelle der Vergleichs-Mail (PO 2026-10-21,
         AC-5) -- der Ortsvergleich kennt keine Roh/Einfach-Wahl dafuer.
+
+        Issue #2792 S1c-4a: `preset` (rohes Vergleichs-Preset) ist Pflicht
+        ohne Default; aufgeloest wird bis S1c-4b weiter „allgemein".
         """
         from utils.timezone import tz_for_coords
 
@@ -1257,6 +1265,7 @@ class NotificationService:
         mail_sink: Optional[object] = None,
         cooldown_display: Optional[str] = None,
         telegram_style: str = "rich",
+        preset: Optional[dict],
     ) -> NotificationResult:
         """Gebündelter Onset-Alert-Versand für MEHRERE gleichzeitig auslösende
         Vergleichs-Orte EINES Compare-Presets (Issue #1041 Slice 1a).

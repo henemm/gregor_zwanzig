@@ -129,7 +129,7 @@ def test_ac4_klartext_hat_denselben_hinweis_mit_derselben_zahl():
     from output.renderers.comparison import render_comparison_text
 
     text = render_comparison_text(
-        _result(), enabled_metrics=["temp_max", OHNE_ZEILE], unresolved_count=1,
+        _result(), enabled_metrics=["temp_max", OHNE_ZEILE], unresolved_count=1, preset=None,
     )
     assert _zahlen(_HINWEIS_VERGLEICH, text) == [2]
 
@@ -146,7 +146,7 @@ def test_ac4_mail_beide_fassungen_tragen_dieselbe_zahl():
 def test_ac5_klartext_ohne_luecke_kein_hinweis():
     from output.renderers.comparison import render_comparison_text
 
-    text = render_comparison_text(_result(), enabled_metrics=["temp_max", "wind_max"])
+    text = render_comparison_text(_result(), enabled_metrics=["temp_max", "wind_max"], preset=None)
     assert "ohne Wert" not in text
 
 

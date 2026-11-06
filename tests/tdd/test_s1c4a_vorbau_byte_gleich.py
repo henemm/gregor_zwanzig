@@ -176,9 +176,10 @@ def _punkte(stunden_werte):
 def test_schwesterfunktion_liefert_minimum_und_maximum_je_mit_stunde():
     from output.renderers.day_window import hiking_field_min_max_ts
     pts = _punkte([(6, -2.0), (10, 5.0), (14, 9.0), (16, 3.0)])
+    # ForecastDataPoint normalisiert ts auf naive UTC (#1345)
     assert hiking_field_min_max_ts(pts, "t2m_c") == (
-        -2.0, 9.0, datetime(2026, 7, 20, 6, tzinfo=timezone.utc),
-        datetime(2026, 7, 20, 14, tzinfo=timezone.utc),
+        -2.0, 9.0, datetime(2026, 7, 20, 6),
+        datetime(2026, 7, 20, 14),
     )
 
 

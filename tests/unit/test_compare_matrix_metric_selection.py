@@ -177,7 +177,7 @@ def test_selected_rain_metric_appears_in_overview_matrix():
         f"Regen-Tageswert ist nicht die Tagessumme 3.0 mm: {row['cells']}"
     )
 
-    text = render_comparison_text(result, enabled_metrics=enabled)
+    text = render_comparison_text(result, enabled_metrics=enabled, preset=None)
     assert re.search(r"Niederschlag[^\n]*:", text), (
         "Klartext-Uebersicht hat keine Regen-Zeile, obwohl Regen gewaehlt ist."
     )

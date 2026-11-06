@@ -180,15 +180,15 @@ class TestAC4PlainTextFollowsMetricOrder:
     (comparison.py:126-127) prueft nur Mitgliedschaft, nicht Position."""
 
     def test_plaintext_order_follows_enabled_metrics_order_a(self):
-        text = render_comparison_text(_result(), enabled_metrics=list(ORDER_A))
+        text = render_comparison_text(_result(), enabled_metrics=list(ORDER_A), preset=None)
         assert _text_labels(text) == [_TEXT_LABEL[m] for m in ORDER_A], (
             "Klartext muss der uebergebenen Metrik-Reihenfolge folgen.\n"
             f"Text:\n{text}"
         )
 
     def test_plaintext_order_flips_with_reversed_selection(self):
-        text_a = render_comparison_text(_result(), enabled_metrics=list(ORDER_A))
-        text_b = render_comparison_text(_result(), enabled_metrics=list(ORDER_B))
+        text_a = render_comparison_text(_result(), enabled_metrics=list(ORDER_A), preset=None)
+        text_b = render_comparison_text(_result(), enabled_metrics=list(ORDER_B), preset=None)
         labels_a, labels_b = _text_labels(text_a), _text_labels(text_b)
         assert labels_a != labels_b, (
             "Dieselbe Metrik-MENGE in zwei Reihenfolgen muss zwei verschiedene "
@@ -208,7 +208,7 @@ class TestAC4PlainTextFollowsMetricOrder:
             ) if lbl != "Amtliche Warnungen"
         ]
         text_labels = _text_labels(
-            render_comparison_text(result, enabled_metrics=list(ORDER_A))
+            render_comparison_text(result, enabled_metrics=list(ORDER_A), preset=None)
         )
         assert text_labels == html_labels, (
             f"Klartext {text_labels} weicht von HTML {html_labels} derselben Mail ab."
@@ -225,7 +225,7 @@ class TestAC4PlainTextFollowsMetricOrder:
             },
         }
         opts = resolve_compare_render_options(preset)
-        text = render_comparison_text(_result(), enabled_metrics=opts.enabled_metrics)
+        text = render_comparison_text(_result(), enabled_metrics=opts.enabled_metrics, preset=None)
         assert _text_labels(text) == [
             "Bewölkung", "Temperatur", "Sonnenstunden", "Wind",
         ], (
@@ -275,7 +275,7 @@ class TestAC5TelegramFollowsMetricOrder:
         """AC-5 wortwoertlich: dieselbe Reihenfolge wie in der E-Mail."""
         result = _result()
         text_labels = _text_labels(
-            render_comparison_text(result, enabled_metrics=list(ORDER_B))
+            render_comparison_text(result, enabled_metrics=list(ORDER_B), preset=None)
         )
         tg_labels = _telegram_labels(
             render_compare_telegram(result, enabled_metrics=list(ORDER_B))
@@ -353,7 +353,7 @@ class TestAC6OfficialAlertsStayFirst:
 
     def test_plaintext_alert_line_survives_any_metric_order(self):
         for order in (ORDER_A, ORDER_B):
-            text = render_comparison_text(_result(_alert()), enabled_metrics=list(order))
+            text = render_comparison_text(_result(_alert()), enabled_metrics=list(order), preset=None)
             assert "⚠️" in text and "Gewitterwarnung Stufe Orange" in text, (
                 f"Warn-Zeile fehlt im Klartext bei Reihenfolge {order}.\nText:\n{text}"
             )
@@ -402,7 +402,7 @@ class TestAC7LegacyDefaultOrderUnchanged:
     FROZEN_PLAIN_ORDER = FROZEN_HTML_ORDER[1:]
 
     def test_plaintext_default_order_frozen(self):
-        text = render_comparison_text(_result(), enabled_metrics=None)
+        text = render_comparison_text(_result(), enabled_metrics=None, preset=None)
         assert _text_labels(text) == self.FROZEN_PLAIN_ORDER, (
             "Altbestand ohne gespeicherte Auswahl darf seine Zeilenfolge NICHT "
             f"aendern.\nText:\n{text}"
@@ -424,7 +424,7 @@ class TestAC7LegacyDefaultOrderUnchanged:
         """Der Weg, den ein Altbestand tatsaechlich nimmt (kein display_config)."""
         opts = resolve_compare_render_options({"id": "legacy", "display_config": {}})
         assert opts.enabled_metrics is None
-        text = render_comparison_text(_result(), enabled_metrics=opts.enabled_metrics)
+        text = render_comparison_text(_result(), enabled_metrics=opts.enabled_metrics, preset=None)
         assert _text_labels(text) == self.FROZEN_PLAIN_ORDER
 
 
@@ -443,7 +443,7 @@ class TestAC8ExplicitEmptySelection:
 
     def test_renderer_empty_list_renders_no_overview_rows(self):
         """GRUEN (Regression): `enabled_metrics=[]` blendet alle Zeilen aus."""
-        text = render_comparison_text(_result(), enabled_metrics=[])
+        text = render_comparison_text(_result(), enabled_metrics=[], preset=None)
         assert _text_labels(text) == [], (
             f"Leerauswahl darf keine Uebersichtszeile zeigen.\nText:\n{text}"
         )
@@ -462,7 +462,7 @@ class TestAC8ExplicitEmptySelection:
         opts = resolve_compare_render_options({
             "id": "p-empty", "display_config": {"active_metrics": []},
         })
-        text = render_comparison_text(_result(), enabled_metrics=opts.enabled_metrics)
+        text = render_comparison_text(_result(), enabled_metrics=opts.enabled_metrics, preset=None)
         assert _text_labels(text) == [], (
             "Bewusste Leerauswahl darf nicht durch die Altbestands-Regel (AC-7) "
             f"ueberschrieben werden.\nText:\n{text}"

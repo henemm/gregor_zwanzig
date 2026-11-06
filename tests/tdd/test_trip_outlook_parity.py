@@ -178,7 +178,7 @@ def test_build_outlook_row_without_selection_is_unchanged():
         "rain_probability_pct": 60,
     }
 
-    row = build_outlook_row(summary, points, "Mo", TZ)
+    row = build_outlook_row(summary, points, "Mo", TZ, context="vergleich")
 
     assert row == expected, (
         "Der Trip-Zeilenbau `build_outlook_row(...)` ohne Auswahl liefert nicht "

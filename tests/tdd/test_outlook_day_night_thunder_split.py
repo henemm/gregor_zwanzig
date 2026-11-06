@@ -360,7 +360,7 @@ class TestBuildOutlookRowWindowPassthrough:
                               gust_kmh=42.0, thunder_level=ThunderLevel.MED,
                               precip_1h_mm=1.5, wind10m_kmh=22.0),
         ]
-        row = build_outlook_row(summary, points, "Mo", ZoneInfo("Europe/Berlin"))
+        row = build_outlook_row(summary, points, "Mo", ZoneInfo("Europe/Berlin"), context="vergleich")
         assert "day_window_start_hour" not in row, (
             "Ohne uebergebenes Fenster darf kein neuer Schluessel entstehen "
             "(Parity zu test_trip_outlook_parity.py)"
@@ -384,7 +384,7 @@ class TestBuildOutlookRowWindowPassthrough:
         ]
         row = build_outlook_row(
             summary, points, "Mo", ZoneInfo("Europe/Berlin"),
-            day_window_start_hour=6, day_window_end_hour=18,
+            day_window_start_hour=6, day_window_end_hour=18, context="vergleich",
         )
         assert row.get("day_window_start_hour") == 6
         assert row.get("day_window_end_hour") == 18
@@ -766,12 +766,12 @@ class TestComparePathUnaffected:
         ]
         row_without_window = build_outlook_row(
             summary, points, "Mo", ZoneInfo("Europe/Berlin"),
-            metrics=[{"metric_id": "thunder", "aggregation": "max"}],
+            metrics=[{"metric_id": "thunder", "aggregation": "max"}], context="vergleich",
         )
         row_with_window = build_outlook_row(
             summary, points, "Mo", ZoneInfo("Europe/Berlin"),
             metrics=[{"metric_id": "thunder", "aggregation": "max"}],
-            day_window_start_hour=4, day_window_end_hour=19,
+            day_window_start_hour=4, day_window_end_hour=19, context="vergleich",
         )
         assert row_without_window["cells"] == row_with_window["cells"], (
             "Die Compare-Spaltenauswahl darf sich durch das neue Tagesfenster "

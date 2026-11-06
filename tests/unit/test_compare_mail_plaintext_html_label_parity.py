@@ -208,7 +208,7 @@ def test_overview_html_and_plaintext_show_the_same_catalog_derived_labels():
     enabled = resolve_enabled_metrics(ALL_OVERVIEW_SELECTION)
 
     html = render_compare_html(result, enabled_metrics=enabled)
-    text = render_comparison_text(result, enabled_metrics=enabled)
+    text = render_comparison_text(result, enabled_metrics=enabled, preset=None)
 
     html_labels = _html_overview_labels(html)
     plain_labels = _plain_overview_labels(text)
@@ -242,7 +242,7 @@ def test_hour_table_and_plaintext_hour_row_show_the_same_catalog_derived_labels(
         result, enabled_metrics=enabled, hourly_metrics=ALL_HOUR_SELECTION,
     )
     text = render_comparison_text(
-        result, enabled_metrics=enabled, hourly_metrics=ALL_HOUR_SELECTION,
+        result, enabled_metrics=enabled, hourly_metrics=ALL_HOUR_SELECTION, preset=None,
     )
 
     html_header = _html_hour_header(html)

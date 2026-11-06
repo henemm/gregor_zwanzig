@@ -202,7 +202,7 @@ def test_bundled_email_lists_all_locations():
     result = service.send_multi_location_radar_alert(
         [("Zermatt", loc_zermatt, nc_zermatt), ("Chamonix", loc_chamonix, nc_chamonix)],
         {"email"},
-        mail_sink=lambda subject, body: mail_calls.append((subject, body)),
+        mail_sink=lambda subject, body: mail_calls.append((subject, body)), preset=None,
     )
     after = datetime.now(timezone.utc)
 

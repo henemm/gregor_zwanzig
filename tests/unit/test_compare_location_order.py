@@ -139,7 +139,7 @@ class TestAC4RenderersFollowLocationOrder:
         )
 
     def test_plaintext_follows_input_order(self):
-        text = render_comparison_text(_result(ORDER_A))
+        text = render_comparison_text(_result(ORDER_A), preset=None)
         assert _order_of(text, NAMES_A) == NAMES_A, (
             f"Der Klartext-Teil muss {NAMES_A} zeigen.\nText:\n{text}"
         )
@@ -164,7 +164,7 @@ class TestAC4RenderersFollowLocationOrder:
         html = render_compare_html(result)
         matrix = _order_of(_html_matrix_region(html), NAMES_A)
         below = _order_of(_html_below_matrix(html), NAMES_A)
-        text = _order_of(render_comparison_text(result), NAMES_A)
+        text = _order_of(render_comparison_text(result, preset=None), NAMES_A)
         tg = _order_of(render_compare_telegram(result), NAMES_A)
         assert matrix == below == text == tg == NAMES_A, (
             f"Uneinheitlich: Matrix={matrix} Abschnitte={below} "
@@ -192,8 +192,8 @@ class TestAC2OrderFlipsWithInput:
         )
 
     def test_plaintext_flips_with_reversed_order(self):
-        a = _order_of(render_comparison_text(_result(ORDER_A)), NAMES_A)
-        b = _order_of(render_comparison_text(_result(ORDER_B)), NAMES_A)
+        a = _order_of(render_comparison_text(_result(ORDER_A), preset=None), NAMES_A)
+        b = _order_of(render_comparison_text(_result(ORDER_B), preset=None), NAMES_A)
         assert a != b and a == NAMES_A and b == NAMES_B, (
             f"Klartext muss mitkippen: A={a}, B={b}."
         )
@@ -240,7 +240,7 @@ class TestAC5ScoreDoesNotReorderRenderedOutput:
     def test_worst_score_location_stays_first_when_configured_first(self):
         result = self._scored_result()
         html_first = _order_of(_html_matrix_region(render_compare_html(result)), NAMES_A)[0]
-        text_first = _order_of(render_comparison_text(result), NAMES_A)[0]
+        text_first = _order_of(render_comparison_text(result, preset=None), NAMES_A)[0]
         assert html_first == "Zillertal" and text_first == "Zillertal", (
             "Der konfiguriert erste Ort ('Zillertal', schlechtester Score) muss "
             f"vorne bleiben; war HTML={html_first}, Klartext={text_first}."
@@ -283,7 +283,7 @@ class TestAC6AlphabeticalPresetUnchanged:
 
     def test_plaintext_and_telegram_alphabetical_input_frozen(self):
         result = self._alpha_result()
-        assert _order_of(render_comparison_text(result), self.FROZEN) == self.FROZEN
+        assert _order_of(render_comparison_text(result, preset=None), self.FROZEN) == self.FROZEN
         assert _order_of(render_compare_telegram(result), self.FROZEN) == self.FROZEN
 
     def test_sms_alphabetical_input_frozen(self):

@@ -324,7 +324,7 @@ def test_plaintext_overview_labels_are_the_register_names():
     text = render_comparison_text(
         _result(),
         enabled_metrics=resolve_enabled_metrics(ALL_OVERVIEW_SELECTION),
-        hourly_metrics=HISTORISCHE_STUNDEN_AUSWAHL,
+        hourly_metrics=HISTORISCHE_STUNDEN_AUSWAHL, preset=None,
     )
 
     assert _plain_overview_labels(text) == EXPECTED_OVERVIEW_LABELS_PLAIN, (
@@ -338,7 +338,7 @@ def test_plaintext_hour_row_labels_are_the_register_names():
     text = render_comparison_text(
         _result(),
         enabled_metrics=resolve_enabled_metrics(ALL_OVERVIEW_SELECTION),
-        hourly_metrics=HISTORISCHE_STUNDEN_AUSWAHL,
+        hourly_metrics=HISTORISCHE_STUNDEN_AUSWAHL, preset=None,
     )
 
     assert _plain_hour_labels(text) == EXPECTED_HOUR_LABELS_PLAIN, (

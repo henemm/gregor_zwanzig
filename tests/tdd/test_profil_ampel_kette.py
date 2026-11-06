@@ -648,7 +648,7 @@ def test_ausblick_zeilenbau_spannen_und_einzelspalte_folgen_der_ampel(metrik, am
     """``_outlook_row``: Spannen-Spalte Temperatur (Tageshoch +9 °C) und
     Einzelspalte Böen 52 km/h tragen den Hintergrund der übergebenen Ampel."""
     from output.renderers.email.outlook import _outlook_row
-    row = _outlook_row(_tageswerte(), [], "Mo", UTC, metrics=[metrik], ampel=ampel)
+    row = _outlook_row(_tageswerte(), [], "Mo", UTC, metrics=[metrik], ampel=ampel, context="vergleich")
     bg = "" if erwartet == "green" else f"background:{_tone_bg(erwartet)};"
     assert row["cell_bg"] == [bg]
 
@@ -658,8 +658,8 @@ def test_ausblick_einstieg_faerbt_in_s1c1_nach_allgemein():
     auf — +9 °C bleibt ohne Farbe (bei Skitouren wäre es orange). Kehrt sich
     in S1c-4 um, wenn der Einstieg die Abo-Ampel bekommt."""
     from output.renderers.email.outlook import build_outlook_row
-    assert build_outlook_row(_tageswerte(), [], "Mo", UTC, metrics=["temperature"])["cell_bg"] == [""]
-    assert build_outlook_row(_tageswerte(), [], "Mo", UTC, metrics=["gust"])["cell_bg"] == [
+    assert build_outlook_row(_tageswerte(), [], "Mo", UTC, metrics=["temperature"], context="vergleich")["cell_bg"] == [""]
+    assert build_outlook_row(_tageswerte(), [], "Mo", UTC, metrics=["gust"], context="vergleich")["cell_bg"] == [
         f"background:{_tone_bg('orange')};"]
 
 

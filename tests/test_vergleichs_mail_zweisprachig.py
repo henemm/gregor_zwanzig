@@ -283,8 +283,8 @@ def test_klartext_und_telegram_ohne_orte_englisch():
     from output.renderers.comparison import render_comparison_text
 
     leer = ComparisonResult(locations=[], time_window=(9, 16), target_date=build_result().target_date)
-    assert render_comparison_text(leer, lang="en") == t("vergleich.allgemein.keine_daten", "en")
-    assert render_comparison_text(leer) == "Keine Vergleichsdaten verfügbar."
+    assert render_comparison_text(leer, lang="en", preset=None) == t("vergleich.allgemein.keine_daten", "en")
+    assert render_comparison_text(leer, preset=None) == "Keine Vergleichsdaten verfügbar."
 
 
 # --------------------------------------------------------------------------- AC-6

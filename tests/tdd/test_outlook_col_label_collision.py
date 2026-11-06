@@ -147,7 +147,7 @@ def _ausblick_kopf(metrics: list[str]) -> list[str]:
         thunder_level_max=ThunderLevel.MED,
     )
     zeile = build_outlook_row(summary, points=[], weekday="Mo", tz=_UTC,
-                              metrics=metrics)
+                              metrics=metrics, context="vergleich")
     return _th_texte(render_outlook_table([zeile], show_acc=False, metrics=metrics, ampel=resolve_ampel(None)))
 
 

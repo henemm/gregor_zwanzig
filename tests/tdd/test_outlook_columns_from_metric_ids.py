@@ -93,7 +93,7 @@ def zuordnung() -> dict[str, str]:
     from output.renderers.email.outlook import build_outlook_row, render_outlook_table
 
     zeile = build_outlook_row(_summary(), points=[], weekday="Mo", tz=_UTC,
-                              metrics=AUSWAHL)
+                              metrics=AUSWAHL, context="vergleich")
     html = render_outlook_table([zeile], show_acc=False, metrics=AUSWAHL, ampel=resolve_ampel(None))
 
     kopf = [re.sub(r"<[^>]+>", "", t).strip()

@@ -617,7 +617,7 @@ def test_ac5_ortsvergleich_stundenzeilen_nur_bei_betroffenen_orten_ueber_den_ver
         entities=[(n, [fresh[n]], changes[n]) for n in ("Alpe Nord", "Joch Mitte")],
         effective_channels={"email", "telegram"},
         mail_sink=lambda subject, body: mails.append(body),
-        anchor_points=anchors,
+        anchor_points=anchors, preset=None,
     )
     exp = fx["erwartet_utc_stunden"]
     nord = [(_local(h), f"{_cell('thunder', _value_at(fx['orte'][0]['anchor'], h, 'thunder_level'), 'raw')} → "
@@ -768,7 +768,7 @@ def test_ac5_ortsvergleich_ignoriert_trip_anzeige_konfiguration(monkeypatch):
     extra = {"display_config": cfg} if "display_config" in params else {}
     NotificationService(settings, uid).send_multi_location_deviation_alert(
         entities=[("Alpe Nord", [fresh["Alpe Nord"]], changes["Alpe Nord"])],
-        effective_channels={"email"}, anchor_points=anchors, **extra,
+        effective_channels={"email"}, anchor_points=anchors, preset=None, **extra,
     )
     mails = mit.sendungen("email")
     assert len(mails) == 1, f"Vorbedingung: eine Mail ({mit!r})"
@@ -1372,7 +1372,7 @@ def _cmp_versand(monkeypatch, uid: str, preset: dict) -> tuple[list[str], list[l
     NotificationService(settings, uid).send_multi_location_deviation_alert(
         entities=entities, effective_channels={"email", "telegram"},
         mail_sink=lambda subject, body: mails.append(body), location_positions=positions,
-        telegram_style=effective_compare_telegram_style(preset), anchor_points=anchors,
+        telegram_style=effective_compare_telegram_style(preset), anchor_points=anchors, preset=None,
     )
     return mails, sorted(_rows(s["body"]) for s in mit.sendungen("telegram"))
 

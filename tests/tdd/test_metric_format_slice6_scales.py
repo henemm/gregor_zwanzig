@@ -164,7 +164,7 @@ class TestAC6SunshineCatalogAndMigration:
             time_window=(8, 16), target_date=date(2026, 7, 15),
             created_at=datetime(2026, 7, 12, 9, 0),
         )
-        text = render_comparison_text(result)
+        text = render_comparison_text(result, preset=None)
         assert "   Sonnenstunden: 4.7h\n" in text, (
             "AC-6: die Sonne-Zeile folgt nicht mehr der zentralen Formatierung "
             f"(sunshine.decimals=1).\nText:\n{text}"

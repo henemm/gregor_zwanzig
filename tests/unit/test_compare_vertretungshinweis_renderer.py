@@ -95,7 +95,7 @@ def _html_mail(result, **kw) -> str:
 
 def _text_mail(result, **kw) -> str:
     from output.renderers.comparison import render_comparison_text
-    return render_comparison_text(result, **kw)
+    return render_comparison_text(result, preset=kw.pop("preset", None), **kw)
 
 
 def _telegram(result, **kw) -> str:

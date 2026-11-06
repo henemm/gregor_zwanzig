@@ -450,7 +450,7 @@ def test_plaintext_hour_row_carries_the_same_columns_as_html():
     selection = ["t2m_c", dp_humid, "wind10m_kmh"]
 
     html = render_compare_html(_result(), hourly_metrics=selection)
-    plain = render_comparison_text(_result(), hourly_metrics=selection)
+    plain = render_comparison_text(_result(), hourly_metrics=selection, preset=None)
 
     html_columns = _html_hour_header(html)[1:]
     assert get_metric("humidity").col_label in html_columns, (

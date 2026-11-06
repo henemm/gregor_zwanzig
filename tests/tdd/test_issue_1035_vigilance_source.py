@@ -211,7 +211,7 @@ class TestIssue1035VigilanceSource:
             target_date=target,
             profile=ActivityProfile.ALLGEMEIN,
         )
-        text = render_comparison_text(result)
+        text = render_comparison_text(result, preset=None)
 
         # Erwartung strikt aus den echten Registry-Daten ableiten (gecachter
         # National-Call -> keine zusaetzlichen HTTP-Calls durch diese Aufrufe).
@@ -369,7 +369,7 @@ class TestIssue1035VigilanceSource:
                 target_date=target,
                 profile=ActivityProfile.ALLGEMEIN,
             )
-            baseline_text = render_comparison_text(baseline_result)
+            baseline_text = render_comparison_text(baseline_result, preset=None)
 
             alert = OfficialAlert(
                 source="test-vigilance",
@@ -387,7 +387,7 @@ class TestIssue1035VigilanceSource:
                 target_date=target,
                 profile=ActivityProfile.ALLGEMEIN,
             )
-            text = render_comparison_text(result)
+            text = render_comparison_text(result, preset=None)
 
             assert text.count(alert.label) == 1, (
                 f"Warnzeile mit Label '{alert.label}' muss genau einmal im "

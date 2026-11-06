@@ -316,7 +316,7 @@ def _deviation_reference(preset: dict, body: dict, user_id: str, wire: "_Wire") 
     service = NotificationService(wire.settings(user_id), user_id)
     return wire.capture(lambda mail_sink: service.send_multi_location_deviation_alert(
         entities, _CHANNELS, mail_sink=mail_sink, location_positions=positions,
-        telegram_style=effective_compare_telegram_style(preset),
+        telegram_style=effective_compare_telegram_style(preset), preset=preset,
     ))
 
 
@@ -392,7 +392,7 @@ def _onset_reference(preset: dict, body: dict, user_id: str, wire: "_Wire") -> d
     return wire.capture(lambda mail_sink: service.send_multi_location_radar_alert(
         entities, _CHANNELS, mail_sink=mail_sink,
         cooldown_display=_format_cooldown_display(COOLDOWN_MIN),
-        telegram_style=effective_compare_telegram_style(preset),
+        telegram_style=effective_compare_telegram_style(preset), preset=preset,
     ))
 
 

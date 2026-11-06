@@ -108,7 +108,7 @@ def test_vorbedingung_ac1_aggregat_und_tagesfenster_liefern_verschiedene_werte()
     das Aggregat meldet NONE, das Tagesfenster traegt ein Gewitter."""
     row = build_outlook_row(
         AC1_SUMMARY, AC1_POINTS, "Mo", _UTC,
-        day_window_start_hour=DAY_START, day_window_end_hour=DAY_END,
+        day_window_start_hour=DAY_START, day_window_end_hour=DAY_END, context="vergleich",
     )
     tok = format_trend_tokens(row)
     assert AC1_SUMMARY.thunder_level_max == ThunderLevel.NONE
@@ -125,7 +125,7 @@ def test_vorbedingung_ac2_aggregat_und_tagesfenster_liefern_verschiedene_werte()
     das Aggregat traegt eine Stufe, das Tagesfenster ist leer."""
     row = build_outlook_row(
         AC2_SUMMARY, AC2_POINTS, "Mo", _UTC,
-        day_window_start_hour=DAY_START, day_window_end_hour=DAY_END,
+        day_window_start_hour=DAY_START, day_window_end_hour=DAY_END, context="vergleich",
     )
     tok = format_trend_tokens(row)
     assert AC2_SUMMARY.thunder_level_max == ThunderLevel.HIGH
@@ -150,7 +150,7 @@ def test_ac1_tagesgewitter_sichtbar_trotz_none_im_aggregat():
     row = build_outlook_row(
         AC1_SUMMARY, AC1_POINTS, "Mo", _UTC,
         trip_display_config=dc, report_type="evening",
-        day_window_start_hour=DAY_START, day_window_end_hour=DAY_END,
+        day_window_start_hour=DAY_START, day_window_end_hour=DAY_END, context="route",
     )
     html, plain = render_trip_mail(dc, [row])
     # #1848 A3: der Metrik-Zweig ruft denselben Zellenbau wie der feste Zweig
@@ -197,7 +197,7 @@ def test_ac2_kein_gewitter_statt_nachtstufe_bei_leerem_tagesfenster():
     row = build_outlook_row(
         AC2_SUMMARY, AC2_POINTS, "Mo", _UTC,
         trip_display_config=dc, report_type="evening",
-        day_window_start_hour=DAY_START, day_window_end_hour=DAY_END,
+        day_window_start_hour=DAY_START, day_window_end_hour=DAY_END, context="route",
     )
     html, _ = render_trip_mail(dc, [row])
     erwartet = _fmt_thunder(ThunderLevel.NONE)
@@ -230,7 +230,7 @@ def test_ac3_keine_nachtangabe_im_metrik_zweig():
     row = build_outlook_row(
         AC2_SUMMARY, AC2_POINTS, "Mo", _UTC,
         trip_display_config=dc, report_type="evening",
-        day_window_start_hour=DAY_START, day_window_end_hour=DAY_END,
+        day_window_start_hour=DAY_START, day_window_end_hour=DAY_END, context="route",
     )
     html, plain = render_trip_mail(dc, [row])
 
@@ -259,7 +259,7 @@ def test_ac4_ohne_stundenreihe_bleibt_die_zelle_zeichengleich():
     row = build_outlook_row(
         summary, [], "Mo", _UTC,
         trip_display_config=dc, report_type="evening",
-        day_window_start_hour=DAY_START, day_window_end_hour=DAY_END,
+        day_window_start_hour=DAY_START, day_window_end_hour=DAY_END, context="route",
     )
     erwartet = [_fmt_thunder(ThunderLevel.MED, None, ["blitzdichte"])]
     assert row.get("cells") == erwartet, (
@@ -282,7 +282,7 @@ def test_ac5_ortsvergleich_bleibt_byte_identisch():
     ``True``)."""
     row = build_outlook_row(
         AC1_SUMMARY, AC1_POINTS, "Mo", _UTC, metrics=[GEWITTER],
-        day_window_start_hour=DAY_START, day_window_end_hour=DAY_END,
+        day_window_start_hour=DAY_START, day_window_end_hour=DAY_END, context="vergleich",
     )
     erwartet = [_fmt_thunder(ThunderLevel.NONE)]
     assert row["cells"] == erwartet, (
@@ -303,7 +303,7 @@ def test_ac6_herkunft_stammt_aus_demselben_fenster_wie_die_stufe():
     row = build_outlook_row(
         AC1_SUMMARY, AC1_POINTS, "Mo", _UTC,
         trip_display_config=dc, report_type="evening",
-        day_window_start_hour=DAY_START, day_window_end_hour=DAY_END,
+        day_window_start_hour=DAY_START, day_window_end_hour=DAY_END, context="route",
     )
     erwartet = [_fmt_thunder(ThunderLevel.HIGH, None, ["cape"])]
     assert row.get("cells") == erwartet, (
@@ -321,7 +321,7 @@ def test_ac6_ohne_traegerliste_erscheint_die_stufe_ohne_herkunft():
     row = build_outlook_row(
         AC1_SUMMARY, AC1_POINTS_OHNE_SIGNALE, "Mo", _UTC,
         trip_display_config=dc, report_type="evening",
-        day_window_start_hour=DAY_START, day_window_end_hour=DAY_END,
+        day_window_start_hour=DAY_START, day_window_end_hour=DAY_END, context="route",
     )
     erwartet = [_fmt_thunder(ThunderLevel.HIGH, None, None)]
     assert row.get("cells") == erwartet, (
@@ -348,7 +348,7 @@ def test_ac7_trip_ohne_grundauswahl_bleibt_altpfad_unberuehrt():
     row = build_outlook_row(
         AC2_SUMMARY, AC2_POINTS, "Mo", _UTC,
         trip_display_config=dc, report_type="evening",
-        day_window_start_hour=DAY_START, day_window_end_hour=DAY_END,
+        day_window_start_hour=DAY_START, day_window_end_hour=DAY_END, context="route",
     )
     assert "cells" not in row, (
         f"Row {row!r} traegt 'cells', obwohl keine Grundauswahl gesetzt "
@@ -361,7 +361,7 @@ def test_ac7_trip_ohne_grundauswahl_bleibt_altpfad_unberuehrt():
     row_mit = build_outlook_row(
         AC2_SUMMARY, AC2_POINTS, "Mo", _UTC,
         trip_display_config=display_config(), report_type="evening",
-        day_window_start_hour=DAY_START, day_window_end_hour=DAY_END,
+        day_window_start_hour=DAY_START, day_window_end_hour=DAY_END, context="route",
     )
     assert row_mit.get("cells"), (
         "Gegenprobe gescheitert: mit Grundauswahl muss der Metrik-Zweig "
@@ -437,7 +437,7 @@ def test_vorbedingung_m6_tagesfenster_max_und_24h_max_liefern_verschiedene_werte
 
     row = build_outlook_row(
         M6_SUMMARY, M6_POINTS, "Mo", _UTC,
-        day_window_start_hour=DAY_START, day_window_end_hour=DAY_END,
+        day_window_start_hour=DAY_START, day_window_end_hour=DAY_END, context="vergleich",
     )
     tok = format_trend_tokens(row)
     _24h_max = max(
@@ -470,7 +470,7 @@ def test_m6_tagesfenster_stufe_kommt_aus_dem_tagesfenster_nicht_aus_24h():
     row = build_outlook_row(
         M6_SUMMARY, M6_POINTS, "Mo", _UTC,
         trip_display_config=dc, report_type="evening",
-        day_window_start_hour=DAY_START, day_window_end_hour=DAY_END,
+        day_window_start_hour=DAY_START, day_window_end_hour=DAY_END, context="route",
     )
     html, _ = render_trip_mail(dc, [row])
     # #1848 A3: die Zelle traegt jetzt die Onset-Uhrzeit (#1493). Die

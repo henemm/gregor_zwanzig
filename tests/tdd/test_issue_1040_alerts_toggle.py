@@ -128,7 +128,7 @@ class TestIssue1040AlertsToggleAC1AC2:
             assert alert.label not in html, (
                 "Bei official_alerts_enabled=False darf die Warn-Zeile nicht im HTML erscheinen"
             )
-            text = render_comparison_text(result, profile=ActivityProfile.ALLGEMEIN)
+            text = render_comparison_text(result, profile=ActivityProfile.ALLGEMEIN, preset=None)
             assert alert.label not in text, (
                 "Bei official_alerts_enabled=False darf die Warn-Zeile nicht im Text erscheinen"
             )
@@ -180,7 +180,7 @@ class TestIssue1040AlertsToggleAC1AC2:
             assert alert.label in html, (
                 "Bei official_alerts_enabled=True muss die Warn-Zeile im HTML erscheinen"
             )
-            text = render_comparison_text(result, profile=ActivityProfile.ALLGEMEIN)
+            text = render_comparison_text(result, profile=ActivityProfile.ALLGEMEIN, preset=None)
             assert alert.label in text, (
                 "Bei official_alerts_enabled=True muss die Warn-Zeile im Text erscheinen"
             )

@@ -201,7 +201,7 @@ def test_plaintext_no_summary_sentence_and_no_double_blank_line_before_hourly():
     ])
     enabled = resolve_enabled_metrics(["temp_max_c", "precip_sum_mm"])
 
-    text = render_comparison_text(result, enabled_metrics=enabled)
+    text = render_comparison_text(result, enabled_metrics=enabled, preset=None)
 
     assert "STUNDENVERLAUF" in text, (
         "Vorbedingung verletzt: kein Stundenverlauf-Abschnitt im Klartext, "

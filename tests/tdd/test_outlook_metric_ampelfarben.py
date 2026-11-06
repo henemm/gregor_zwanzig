@@ -60,7 +60,7 @@ def _row(summary: SegmentWeatherSummary, metrics: list[dict], weekday: str = "Mo
     """Row-Dict wie ``aggregate_stage``/``summarize_points`` es lieferten --
     ``points=[]`` ist unschaedlich, die Stundenreihen sind fuer diese Tests
     ohne Bedeutung (kein Trip-Tagesfenster im Spiel, #1841 bleibt unberuehrt)."""
-    return build_outlook_row(summary, [], weekday, TZ, metrics=metrics)
+    return build_outlook_row(summary, [], weekday, TZ, metrics=metrics, context="vergleich")
 
 
 def _cell_styles(table_html: str) -> list[str]:

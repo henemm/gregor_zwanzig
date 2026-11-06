@@ -144,7 +144,7 @@ def _trend_row(thunder_by_hour, level_max):
 
     points = _tomorrow_points(thunder_by_hour)
     seg = _segment(points, thunder_level_max=level_max)
-    row = build_outlook_row(seg.aggregated, points, "Sa", _UTC)
+    row = build_outlook_row(seg.aggregated, points, "Sa", _UTC, context="vergleich")
     row["date"] = _TOMORROW
     return row
 

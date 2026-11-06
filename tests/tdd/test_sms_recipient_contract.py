@@ -788,7 +788,7 @@ def _aufrufer_ausloesen(aufrufer: str, dienst, uid: str, kanal: str):
     if aufrufer == "alarm_ortsvergleich":
         punkte = [GPXPoint(lat=46.0, lon=7.0, elevation_m=500.0)]
         return dienst.send_multi_location_deviation_alert(
-            [("Ort 1", punkte, [_boeen_aenderung()])], kanaele,
+            [("Ort 1", punkte, [_boeen_aenderung()])], kanaele, preset=None,
         )
     if aufrufer == "regen_radar_trip":
         return dienst.send_radar_alert(
@@ -806,7 +806,7 @@ def _aufrufer_ausloesen(aufrufer: str, dienst, uid: str, kanal: str):
             is_convective=False,
         )
         return dienst.send_multi_location_radar_alert(
-            [("Vergleichsort", _ort(uid), nowcast)], kanaele,
+            [("Vergleichsort", _ort(uid), nowcast)], kanaele, preset=None,
         )
     raise ValueError(aufrufer)
 

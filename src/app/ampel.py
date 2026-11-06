@@ -259,3 +259,36 @@ def thunder_color(level: Any, ampel: Optional[Mapping]) -> Optional[str]:
         return thunder_ampel_band(lvl)  # keins gruen, leicht fest gelb (P2)
     gewitter = _verschmelzen(_vorlage_der_ampel(ampel), ampel)["thunder"]
     return gewitter["mittel"] if lvl == ThunderLevel.MED else gewitter["hoch"]
+
+
+# Issue #2792 S1c-4a: Vorbau fuer das Umschalten (noch ohne Leser).
+_GELB_ODER_SCHLECHTER = frozenset({"yellow", "orange", "red"})
+
+
+def ampel_stufe(ampel: Mapping, metric_id: Optional[str], wert: Optional[float]) -> Optional[str]:
+    """Ampelstufe eines Werts aus dem AUFGELOESTEN Ampel-Objekt; derselbe
+    Vergleichs-Kern wie ``severity_for`` (``severity_from_thresholds``)."""
+    from output.metric_format import severity_from_thresholds
+    return severity_from_thresholds(schwellen_aus_ampel(ampel, metric_id), wert)
+
+
+def gelb_oder_schlechter(ampel: Mapping, metric_id: Optional[str], wert: Optional[float]) -> bool:
+    """Beidseitiges Hervorhebungs-Praedikat: Stufe gelb, orange oder rot."""
+    return ampel_stufe(ampel, metric_id, wert) in _GELB_ODER_SCHLECHTER
+
+
+def gewitter_gelb_oder_schlechter(level: Any) -> bool:
+    """Gewitter ab „leicht" (fest gelb, P2) ist gelb oder schlechter."""
+    if level is None:
+        return False
+    from app.thunder_scale import thunder_ordinal
+    return thunder_ordinal(ThunderLevel(level)) >= thunder_ordinal(ThunderLevel.LOW)
+
+
+def vorlage_label_schluessel(template_id: str) -> str:
+    """Katalogschluessel des Vorlagen-Labels (EINE Stelle). Der Katalog
+    erlaubt keinen Bindestrich, daher ``-`` -> ``_``; die Vorlagen-ID bleibt
+    Protokoll-Token. Unbekannte ID -> ``KeyError``."""
+    if template_id not in AMPEL_TEMPLATES:
+        raise KeyError(template_id)
+    return "mail.vorlage." + template_id.replace("-", "_")

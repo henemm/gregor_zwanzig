@@ -25,7 +25,7 @@ def _datumszeile(lang: str) -> str:
     from output.renderers.comparison import render_comparison_text
 
     result = replace(build_result(), target_date=date(2026, 11, 2))
-    text = render_comparison_text(result, lang=lang)
+    text = render_comparison_text(result, lang=lang, preset=None)
     zeilen = [z for z in text.splitlines() if "2026" in z and ("02.11" in z or "Nov" in z)]
     assert zeilen, f"Keine Datumszeile im Klartext gefunden:\n{text[:400]}"
     return zeilen[0]
