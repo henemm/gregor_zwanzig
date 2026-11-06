@@ -238,6 +238,10 @@ class _Wire:
             "sms_gateway_url": f"{self.sms.base_url}/api/sms",
             "seven_api_key": "sandbox-key-2283", "seven_sandbox_key": "sandbox-key-2283",
             "sms_to": "+49000000000", "sms_from": None,
+            # #2833: Drossel ist hier nicht Pruefgegenstand; 18 Plaetze am
+            # selben Chat reichen bei einer _stable-Wiederholung nicht
+            # (Praezedenz tests/helpers/kanal_fake_transporte.py:132).
+            "telegram_rate_limit_max_per_window": 10_000,
         })
 
     def capture(self, send) -> dict:
