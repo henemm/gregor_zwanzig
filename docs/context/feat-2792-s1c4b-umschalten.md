@@ -60,3 +60,52 @@ Alle 16 Einstiege lösen die Ampel des Abos auf statt `resolve_ampel(None)`. Dam
 4. **Mandantentrennung/Prozesszustand:** keine Modul-Caches mit Ampel; beide Reihenfolgen testen.
 5. **Zeilennummern** in Spec und Vorgänger-Kontext beziehen sich teils auf `5fb07bbc8`; vor Zitaten in /40 neu messen.
 6. **Staging-Mailweg:** laut Memory zeitweise kaputt (#2774); /e2e-verify-Nachweise ehrlich benennen.
+
+## Analysis
+
+### Type
+Feature (Umschalt-Schritt S1c-4b von #2792, Epic #2791). Delta-Analyse: die Vollanalyse (Befunde 1–11, Dateitabelle) in `docs/context/feat-2792-s1c4-umschalten.md` § Analysis gilt unverändert. Den Explore-Fächer und den Plan-Agenten habe ich übersprungen, weil schon alles gemessen ist. Unten steht nur, was 4b neu misst und entscheidet (gemessen 2026-11-06 gegen `24fa5e876`, also `4f3309cd4` plus Kontext-Commit).
+
+### Neue Befunde (Delta)
+1. **16 Einstiege bestätigt**, Zeilen wie im Abschnitt „Die 16 Einstiege“ oben (`grep -rn "resolve_ampel(None)" src` = 16 Treffer).
+2. **„Trip-Objekt statt `dc`“ ändert für die vier Trip-Renderer nichts.** `Trip` (`src/app/trip.py`) hat kein `preset_name`/`profil`, die Vorlage liegt nur in `display_config` (`models.py:827` `preset_name`, `:873` `ampel`). `_aufloesen` (`ampel.py`) liefert für einen Trip ohne `dc` dasselbe wie `resolve_ampel(None)`, also „allgemein“. `format_email` baut `dc = display_config or build_default_display_config()` (`trip_report.py:127`). Der Default (`metric_catalog.py:1286`) setzt weder `preset_name` noch `ampel` und ergibt damit ebenfalls „allgemein“. **Entscheidung:** `render_html`, `render_plain`, `render_compact` und `render_telegram_bubbles` lösen `resolve_ampel(dc)` mit der `dc` auf, die sie ohnehin bekommen. Einen neuen Parameter gibt es nicht. Ein RED-Test „Trip ohne `dc` ⇒ allgemein“ wäre nicht rot zu bekommen und entfällt. Pflicht ist stattdessen der Wirkungstest mit `dc.preset_name="skitouren"` bzw. `dc.ampel` (Skitouren ≠ Allgemein).
+3. **Vorschau und Versand haben dieselbe Quelle.** Der Versand nutzt `TripReportRequest.display_config = trip.display_config` (`trip_report_scheduler.py:2186`), die Vorschau `trip.display_config` (`preview_service.py:328`). Abgeleitete Kopien entstehen nur per `dataclasses.replace(dc, metrics=…)` (`trip_report.py:156`, `:298` `_dc_telegram`) und behalten `ampel`/`preset_name`. Eine Divergenz gibt es also nicht. **RED-Pflicht:** ein Wirkungstest über `format_email` mit Skitouren-`dc` muss in HTML, Plain, Compact **und** Telegram-Blasen die Skitouren-Bewertung zeigen. Er fängt eine Mutation, die beim `replace` die Ampel verliert.
+4. **Der Ausblick-Einstieg wandert in den Scheduler.** `build_outlook_row(ampel=)` wird Pflicht ohne Default. Der Aufruf `outlook.py:628` `resolve_ampel(None)` entfällt, dafür kommt `trip_report_scheduler.py` (~`:3044-3070`) mit `ampel=resolve_ampel(stage_trip)` hinzu. Der Import kommt aus `app.ampel`, und die Wache `test_scheduler_has_no_output_imports` (`tests/unit/test_notification_service.py:221`) verbietet nur `output.*`-Bezüge. Im selben Block entfallen `_sms_thr`/`sms_thresholds=` (`:3042-3048`, `:3062`). **AST-Listen in `test_profil_ampel_kette.py`:** `build_outlook_row` wandert aus der „löst auf“-Soll-Liste in eine neue Soll-Liste „nimmt `ampel` als Pflichtparameter ohne Default“ (per AST prüfen: Parameter da, kein Default). Die Scheduler-Funktion kommt neu in `DIENST_EINSTIEGE`. Das ist eine Erweiterung, keine Abschwächung: Jeder der 16 Wege bleibt bewacht, die Prüfung sitzt nur dort, wo aufgelöst wird. Die Zähl-Ratschen werden in /40 neu gemessen.
+5. **`format_sms(thresholds=)` hat genau einen Aufrufer:** `trip_report.py:471` (`SMSTripFormatter().format_sms(…, thresholds=_sms_thr or None, …)`), und `_sms_thr` stammt aus `sms_threshold`. In 4b reicht er stattdessen die Ampel durch (`resolve_ampel(dc)`, dieselbe `dc` wie für die Mail). `_sms_threshold`/`alert_channel_thresholds` (`:464`, amtliche Warnstufe der SMS, #1461) ist **etwas anderes** und bleibt unberührt.
+6. **F001/F002/Hinweis a/b** aus dem 4a-Lauf: siehe „Neue Pflichten aus dem 4a-Lauf“ oben, unverändert in den 4b-RED-Umfang übernommen.
+
+### Affected Files (with changes)
+Die Tabelle aus `feat-2792-s1c4-umschalten.md` § Analysis gilt. Ergänzungen bzw. Präzisierungen:
+
+| File | Change Type | Description |
+|------|-------------|-------------|
+| `src/output/renderers/trip_report.py` | MODIFY | `format_sms` bekommt die Ampel statt `thresholds=_sms_thr` (`:471`); `_sms_thr` fällt weg; `_sms_threshold` (#1461) bleibt |
+| `src/output/renderers/sms_trip.py` | MODIFY | `format_sms`/`render_sms`: `thresholds=` raus, Ampel rein, Hervorhebung über `gelb_oder_schlechter` |
+| `src/services/trip_report_scheduler.py` | MODIFY | `ampel=resolve_ampel(stage_trip)` an `build_outlook_row`; `_sms_thr`-Block raus |
+| `src/output/renderers/email/outlook.py` | MODIFY | `ampel` Pflicht ohne Default, `resolve_ampel(None)` `:628` raus, Gewitter über `thunder_color` |
+| `src/output/renderers/day_window.py` | MODIFY | Gleichstand im Minimum von `hiking_field_min_max_ts` deterministisch nach `ts` (/60-Hinweis a) |
+| `tests/tdd/test_profil_ampel_kette.py` | MODIFY | Übergangstests umkehren; neue Soll-Liste „Pflichtparameter `ampel`“ (`build_outlook_row`); Scheduler in `DIENST_EINSTIEGE` |
+| `tests/test_wind_chill_max_selectable.py`, `tests/test_selection_conservation_rendered.py` | MODIFY | Preset mit Ampel statt `preset=None` (/60-Hinweis b) |
+| `tests/tdd/test_s1c4b_*.py` | CREATE | 16 Wirkungstests, beide Reihenfolgen, zwei Nutzer, F001 (Scheduler, Trip mit/ohne `dc`, Gewitter nachts), F002 (Ein-Ort-Wrapper), `format_email`-Vierkanal-Test (Befund 3) |
+
+### Scope Assessment
+- Files: ca. 25 src + ca. 20 Tests + Goldens + 4 Doku (wie Vorgänger-Analyse, abzüglich der 4a-Mechanik)
+- Estimated LoC: Richtwert ca. 800, `loc_limit_override` 900 (Spec v1.4); src überwiegend Entfernen (CAPE-Brücke, `corridor_mark.py`, `_sms_thr`, Gewitter-Dubletten), Tests dominieren
+- Risk Level: **HIGH**. Der Schritt schaltet die Bewertung aller vier Kanäle gleichzeitig um und ändert auch bei „allgemein“ sichtbar die Erwähnungsschwellen und die Kopfzelle (AC-19 e/f).
+
+### Technical Approach
+Vorgehen nach Spec v1.4 §5, Nachtrag Punkte 1–10, unverändert. Präzisierungen aus den Befunden 2–5: Die Trip-Renderer lösen ihre `dc` auf. Der Ausblick bekommt die Ampel vom Scheduler, der sie aus `stage_trip` auflöst. Die SMS bekommt die Ampel aus derselben `dc` wie die Mail. Reihenfolge in /50: (1) `ampel.py` (`{}` scheitert, CAPE-Brücke raus) → (2) Gewitter-Dubletten → `thunder_color` → (3) 16 Einstiege + Scheduler → (4) Prädikat in Kurzkanälen und Mail-Erwähnungen, `DEFAULTS`/`spec.threshold`/`sms_threshold` ohne Wirkung → (5) Markierung aus → (6) Kopfzelle „Profil“ → (7) Goldens neu mit Zuordnung (a)–(f) → (8) Doku. Am Ende von /50 führe ich einen neuen Adversary-Dialog (Lehre S1c-3).
+
+### Befunde, die gegen den Plan sprechen
+- **Größe:** 800 bis 900 LoC in einem PR sind viel zu prüfen. Ein Teilen nach Kanälen verstieße gegen die Parität (ADR-0095, Spec-Reihenfolge-Regel). Ein dritter Schnitt ist laut Spec ausgeschlossen. Übersteigt der Umfang 900 deutlich, hebe ich `loc_limit_override` mit Begründung an und teile nicht.
+- **„allgemein“ ist bei Mutationen blind:** 11 von 12 Prod-Abos nutzen „allgemein“. Ein vergessener Einstieg fällt in Prod kaum auf. Abhilfe ist der Wirkungstest je Einstieg mit Skitouren-Abo (Pflicht).
+- Sonst keine: Befund 3 schließt die befürchtete Abweichung zwischen Vorschau und Versand aus, und Befund 2 macht keinen neuen Parameter nötig.
+
+### Spec-Status
+Spec v1.4 ist im Lauf `feat-2792-s1c4-umschalten` freigegeben (Archivlauf unter `_archive/`). Die Befunde 2–5 **passen zu v1.4 im vorliegenden Wortlaut**. §5.1 verlangt das Trip-Objekt nur dort, „wo `dc` fehlen kann“; das betrifft genau den Scheduler/Ausblick (Befund 4). Für die Renderer ist `dc` nach Befund 2 gleichwertig. §5.9 verlangt die Ampel an `format_sms` (Befund 5). **⇒ Kein v1.5-Nachtrag, keine neue Freigabe.** /30 trägt nur die freigegebene v1.4 im neuen Workflow ein (Spec-Pfad und Verweis auf die Freigabe im Archivlauf).
+
+### Open Questions
+- [x] Trip im Scope der vier Trip-Renderer? ⇒ nicht nötig, `dc` ist gleichwertig (Befund 2)
+- [x] Gleiche Quelle für Vorschau und Versand? ⇒ ja (Befund 3)
+- [x] AST-Listen bei wanderndem Ausblick-Einstieg ⇒ Erweiterung um eine Pflichtparameter-Liste (Befund 4)
+- [ ] /70 Reihenfolge-Gate: Migrations-Probelauf auf Prod „nichts zu tun“ vor dem Prod-Deploy (bleibt Pflicht, kein PO-Thema)
