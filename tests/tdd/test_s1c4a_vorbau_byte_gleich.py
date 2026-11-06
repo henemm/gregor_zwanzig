@@ -21,7 +21,9 @@ Nachtrag; AC-26; AC-27 Prädikat-Teil).
    die Aufrufer reichen das Preset durch. Aufgelöst wird dort weiter
    ``resolve_ampel(None)`` (die Wirkung kommt erst in 4b).
 4. ``build_outlook_row``/``_outlook_row`` bekommen einen expliziten
-   Zweig-Parameter ``kontext="route"|"vergleich"`` (Pflicht, ohne Default):
+   Zweig-Parameter ``context="route"|"vergleich"`` (Pflicht, ohne Default;
+   derselbe Name und dieselben Werte wie die übrigen geteilten Trip/Vergleich-
+   Bausteine, z. B. ``compact_summary.py``, ``narrow.py``):
    die Wahl zwischen Trip- und Ortsvergleichs-Zweig hängt nicht mehr an
    ``trip_display_config is None``.
 5. Katalogschlüssel für die 7 Vorlagen-Labels DE/EN. Abweichung zur
@@ -29,7 +31,10 @@ Nachtrag; AC-26; AC-27 Prädikat-Teil).
    Katalogs (``i18n.catalog.SCHLUESSEL_RE``) erlaubt keinen Bindestrich, daher
    ``mail.vorlage.<template_id mit "-" → "_">`` (``alpen-trekking`` →
    ``mail.vorlage.alpen_trekking``). Die Vorlagen-ID selbst bleibt
-   Protokoll-Token und wird nie übersetzt.
+   Protokoll-Token und wird nie übersetzt. Den Schlüssel bildet EINE Stelle,
+   ``app.ampel.vorlage_label_schluessel(template_id)`` (noch ohne Leser):
+   ``t(f"mail.vorlage.{tid}")`` gäbe für ``alpen-trekking`` still den rohen
+   Schlüssel zurück, weil ``t()`` auf den Schlüssel selbst zurückfällt.
 
 Grenzen für die Umsetzung (bleiben grün, von anderen Tests bewacht):
 kein neuer ``resolve_ampel``-Aufrufer (Zähl-Ratschen in
@@ -312,8 +317,8 @@ _THUNDER_SPALTE = [{"metric_id": "thunder", "aggregation": "max"}]
 
 def test_ausblick_verlangt_den_zweig_ausdruecklich():
     from output.renderers.email.outlook import _outlook_row, build_outlook_row
-    _pflicht_keyword_only(build_outlook_row, "kontext")
-    _pflicht_keyword_only(_outlook_row, "kontext")
+    _pflicht_keyword_only(build_outlook_row, "context")
+    _pflicht_keyword_only(_outlook_row, "context")
 
 
 def test_route_ohne_display_config_waehlt_trotzdem_den_trip_zweig():
@@ -324,7 +329,7 @@ def test_route_ohne_display_config_waehlt_trotzdem_den_trip_zweig():
     row = build_outlook_row(
         summary, points, "Mo", ZoneInfo("Europe/Berlin"),
         metrics=_THUNDER_SPALTE, outlook_metric_formats={},
-        trip_display_config=None, kontext="route",
+        trip_display_config=None, context="route",
     )
     assert row["cells"] == ["–"], row["cells"]
 
@@ -336,7 +341,7 @@ def test_vergleich_behaelt_das_aggregat_auch_mit_display_config():
     row = build_outlook_row(
         summary, points, "Mo", ZoneInfo("Europe/Berlin"),
         metrics=_THUNDER_SPALTE, outlook_metric_formats={},
-        trip_display_config=object(), kontext="vergleich",
+        trip_display_config=object(), context="vergleich",
     )
     assert row["cells"] == ["hoch"], row["cells"]
 
@@ -347,7 +352,7 @@ def test_unbekannter_zweig_scheitert_laut():
     with pytest.raises(ValueError):
         build_outlook_row(
             summary, points, "Mo", ZoneInfo("Europe/Berlin"),
-            metrics=_THUNDER_SPALTE, outlook_metric_formats={}, kontext="trip",
+            metrics=_THUNDER_SPALTE, outlook_metric_formats={}, context="trip",
         )
 
 
@@ -360,10 +365,10 @@ def test_produktive_aufrufer_nennen_ihren_zweig(datei, funktion, aufgerufen, zwe
     assert funde, f"kein Aufruf {aufgerufen} in {datei}"
     falsch = [
         c.lineno for c in funde
-        if not any(k.arg == "kontext" and isinstance(k.value, ast.Constant) and k.value.value == zweig
+        if not any(k.arg == "context" and isinstance(k.value, ast.Constant) and k.value.value == zweig
                    for k in c.keywords)
     ]
-    assert falsch == [], f"{datei}: {aufgerufen} ohne kontext={zweig!r} in Zeile {falsch}"
+    assert falsch == [], f"{datei}: {aufgerufen} ohne context={zweig!r} in Zeile {falsch}"
 
 
 # ---------------------------------------------------------------------------
@@ -398,3 +403,27 @@ def test_vorlagen_label_kommt_in_der_nutzersprache():
     en = t("mail.vorlage.alpen_trekking", "en")
     assert en and en != "mail.vorlage.alpen_trekking"
     assert t("mail.vorlage.allgemein", "de") == "Allgemein"
+
+
+def test_eine_stelle_bildet_den_label_schluessel_fuer_jede_vorlage():
+    """Kein Leser bildet den Schlüssel selbst: für jede eingebaute Vorlage
+    (auch ``alpen-trekking`` mit Bindestrich) liefert die Abbildung einen
+    Schlüssel, den der Katalog in DE und EN kennt."""
+    from app.ampel import vorlage_label_schluessel
+    from app.metric_catalog import WEATHER_TEMPLATES
+    from i18n import t
+    de, en = _mail_katalog("de"), _mail_katalog("en")
+    for tid, daten in WEATHER_TEMPLATES.items():
+        key = vorlage_label_schluessel(tid)
+        assert key in de and key in en, (tid, key)
+        assert t(key, "de") == daten["label"]
+        assert t(key, "en") == en[key]
+    assert vorlage_label_schluessel("alpen-trekking") == "mail.vorlage.alpen_trekking"
+
+
+def test_label_schluessel_fuer_unbekannte_vorlage_scheitert_laut():
+    """Eine unbekannte ID ist ein Programmierfehler (aufgelöst wird vorher
+    über ``resolve_ampel``, das unbekannte IDs schon auf „allgemein" setzt)."""
+    from app.ampel import vorlage_label_schluessel
+    with pytest.raises(KeyError):
+        vorlage_label_schluessel("gibt-es-nicht")
