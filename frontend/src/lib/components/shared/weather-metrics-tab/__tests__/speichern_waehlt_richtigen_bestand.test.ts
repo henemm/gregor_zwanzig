@@ -96,22 +96,22 @@ describe('F003: Bestand-Auswahl (welche Liste geht in den Merge ein)', () => {
 describe('F004: sms_threshold-Bereinigung (kein stiller Altwert, kein verlorener Neuwert)', () => {
 	const SMS_THRESHOLD_METRIC_IDS = ['wind'];
 
-	test('geleerter Editor-Wert entfernt einen alten Bestands-sms_threshold', () => {
+	test('S1c-3 (AC-24): leerer Regler-Zustand laesst den Bestands-sms_threshold UNVERAENDERT', () => {
 		const displayConfig: DisplayConfigBestand = {
 			metrics: [{ metric_id: 'wind', sms_threshold: 42 } as unknown as { metric_id: string }],
 		};
 		const buckets = { primary: ['wind'], secondary: [], off: [] };
-		// smsThresholds['wind'] fehlt (== Editor-Feld leer) -> Altwert muss weg.
+		// smsThresholds['wind'] fehlt (== Regler gesperrt/leer) -> Bestand bleibt (nie leeren, #2792 S1c-3).
 		const out = buildGlobalMetricsForSave(displayConfig, buckets, {}, {}, catalog, {}, SMS_THRESHOLD_METRIC_IDS);
 		const wind = out.find((m) => m.metric_id === 'wind') as unknown as Record<string, unknown>;
 		assert.equal(
-			wind.sms_threshold, undefined,
-			`Ein geleerter Editor-Wert darf den Bestands-Altwert (42) NICHT wiederbeleben -- ` +
-				`gefunden: ${JSON.stringify(wind.sms_threshold)} (Adversary M6).`,
+			wind.sms_threshold, 42,
+			`Der Regler ist gesperrt: der Bestandswert (42) muss unveraendert gespeichert werden -- ` +
+				`gefunden: ${JSON.stringify(wind.sms_threshold)}.`,
 		);
 	});
 
-	test('ungueltiger Editor-Wert (leerer String) entfernt ebenfalls den Bestands-Altwert', () => {
+	test('S1c-3 (AC-24): leerer String im Regler-Zustand loescht den Bestandswert ebenfalls nicht', () => {
 		const displayConfig: DisplayConfigBestand = {
 			metrics: [{ metric_id: 'wind', sms_threshold: 42 } as unknown as { metric_id: string }],
 		};
@@ -120,7 +120,7 @@ describe('F004: sms_threshold-Bereinigung (kein stiller Altwert, kein verlorener
 			displayConfig, buckets, {}, {}, catalog, { wind: '' }, SMS_THRESHOLD_METRIC_IDS,
 		);
 		const wind = out.find((m) => m.metric_id === 'wind') as unknown as Record<string, unknown>;
-		assert.equal(wind.sms_threshold, undefined);
+		assert.equal(wind.sms_threshold, 42);
 	});
 
 	test('gesetzter Editor-Wert ueberschreibt/ersetzt den Bestands-Altwert', () => {

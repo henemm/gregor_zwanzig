@@ -211,29 +211,23 @@ for (const kind of HUB_KINDS) {
 		}
 	});
 
-	test(`SC-3 (${kind}): Zahlenfeld in Wertebereiche fokussieren/verlassen ohne Änderung ⇒ Chip unverändert, null PUTs`, async ({
+	// #2792 S1c-3: die Zahlenfelder im Reiter Wertebereiche sind gesperrt (nicht
+	// fokussierbar). Die Zusicherung „Fokussieren/Verlassen ohne Wertänderung
+	// speichert nicht" wird deshalb am weiterhin bearbeitbaren Zahlenfeld
+	// „Cooldown" im Reiter Alarme geprüft (geteilter AlarmeTab, beide kinds) —
+	// dort löst ein blur() mit Änderung sehr wohl einen PUT aus (AW-4).
+	test(`SC-3 (${kind}): Zahlenfeld (Alarm-Cooldown) fokussieren/verlassen ohne Änderung ⇒ Chip unverändert, null PUTs`, async ({
 		page
 	}) => {
 		await page.setViewportSize(DESKTOP);
 		const hub = await seedHub(page.request, kind);
 		try {
 			const pfad = hubApiPath(kind, hub.id);
-			await openHub(page, kind, hub.id, { tab: 'wertebereiche' });
-			await expect(page.locator(`[data-testid="${sel.panel}-wertebereiche"]:visible`)).toBeVisible({ timeout: 10_000 });
-			// HubKind == context-Parameter des geteilten Korridor-Editors.
-			await expect(page.getByTestId(`corridor-editor-${kind}`)).toBeVisible({ timeout: 10_000 });
-
-			// Frischer Seed hat keine aktive Metrik — eine über den echten Klick-Pfad
-			// hinzufügen, damit ein Zahlenfeld entsteht. Dieser beabsichtigte PUT wird
-			// abgewartet, BEVOR der Zähler startet (sonst verfälscht er „null PUTs").
-			const hinzufuegePut = page.waitForResponse(
-				(r) => r.request().method() === 'PUT' && new URL(r.url()).pathname === pfad,
-				{ timeout: 10_000 }
-			);
-			await page.locator('[data-testid^="corridor-editor-pool-item-"]:visible').first().click();
-			expect((await hinzufuegePut).ok(), 'das Hinzufügen einer Metrik speichert auf dem Hub-Objekt').toBeTruthy();
-			const feld = page.getByTestId('corridor-editor-table').locator('input[type="number"]').first();
+			await openHub(page, kind, hub.id, { tab: 'alarme' });
+			await expect(page.locator(`[data-testid="${sel.panel}-alarme"]:visible`)).toBeVisible({ timeout: 10_000 });
+			const feld = page.locator('[data-testid="alert-cooldown-input"]:visible').first();
 			await expect(feld).toBeVisible({ timeout: 10_000 });
+			await expect(feld, 'Vorbedingung: das Cooldown-Feld ist bearbeitbar').toBeEnabled();
 			await expect(chip(page)).toHaveAttribute('data-state', 'idle', { timeout: 10_000 });
 
 			const puts = zaehlePuts(page, pfad);

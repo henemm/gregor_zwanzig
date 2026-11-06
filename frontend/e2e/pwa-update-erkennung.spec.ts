@@ -376,7 +376,38 @@ for (const anlegeSeite of ['/trips/new', '/compare/new'] as const) {
 
 // ===========================================================================
 // AC-10 — ausstehende Aenderung ueberlebt den ECHTEN Update-Weg
+//
+// #2792 S1c-3: der Reiter „Wertebereiche" ist nur lesbar (Korridor-Zeilen
+// gesperrt). Ausloeser der ausstehenden Aenderung ist deshalb die weiterhin
+// bearbeitbare Alarm-Empfindlichkeit der Boeen (`display_config.
+// metric_alert_levels`, Reiter Alarme) — gespeichert ueber denselben
+// Trip-Speicherweg (PUT /api/trips/<id>, 700-ms-Takt). Vorbild:
+// e2e/speicherung-ueberlebt-neuladen.spec.ts. Trip-Metrik `gust`, Alarmwert `wind_gust`.
 // ===========================================================================
+
+const START_STUFE = 'standard';
+const ZIEL_STUFE = 'sensibel';
+
+/** Trip: alarmfaehige Metrik-Auswahl (Boeen) + feste Ausgangsstufe. */
+const TRIP_ALARM_SEED = {
+	display_config: {
+		metrics: [{ metric_id: 'gust', enabled: true, bucket: 'primary', order: 0 }],
+		metric_alert_levels: { wind_gust: START_STUFE }
+	}
+};
+
+/** Stufen-Knopf der Boeen-Zeile in der Alarm-Empfindlichkeits-Tabelle. */
+function stufenKnopf(page: Page, stufe: string) {
+	return page.locator(`[data-testid="alert-level-wind_gust-${stufe}"]:visible`);
+}
+
+/** Server-Stand der Boeen-Stufe (am Browser vorbei, eigene API-Anfrage). */
+async function windGustStufe(page: Page, tripId: string): Promise<string | null> {
+	const r = await page.request.get(`/api/trips/${tripId}`);
+	expect(r.ok(), `GET /api/trips/${tripId} HTTP ${r.status()}`).toBeTruthy();
+	const trip = (await r.json()) as { display_config?: { metric_alert_levels?: Record<string, string> } };
+	return trip.display_config?.metric_alert_levels?.wind_gust ?? null;
+}
 
 test('AC-10: Aenderung auf /trips/[id], sofort „Aktualisieren" → nach dem Neuladen gespeichert', async ({
 	page
@@ -398,21 +429,23 @@ test('AC-10: Aenderung auf /trips/[id], sofort „Aktualisieren" → nach dem Ne
 						]
 					}
 				],
-				corridors: [{ metric: 'wind_gust', range: [null, 70], notify: false, mark: false }]
+				...TRIP_ALARM_SEED
 			}
 		});
 		expect(seed.ok(), `Trip-Anlage HTTP ${seed.status()}`).toBeTruthy();
 		registerForCleanup('trip', tripId);
 
 		const ladungen = await zaehleLadungen(page);
-		await appLaeuft(page, ausl, `/trips/${tripId}?tab=wertebereiche`);
+		await appLaeuft(page, ausl, `/trips/${tripId}?tab=alarme`);
 		await neueFassungMitHinweis(page, ausl);
 		const vorher = await ladungen();
 		const alteFassung = await fassungsKennung(page);
 
-		const maxInput = page.locator('[data-testid="corridor-row-wind_gust"] input[type="number"]').first();
-		await expect(maxInput).toHaveValue('70', { timeout: 10_000 });
-		await maxInput.fill('55');
+		await expect(
+			stufenKnopf(page, START_STUFE),
+			`Vorbedingung: die angelegte Boeen-Stufe ${START_STUFE} ist ausgewaehlt`
+		).toHaveAttribute('aria-pressed', 'true', { timeout: 10_000 });
+		await stufenKnopf(page, ZIEL_STUFE).click();
 		await aktualisieren(page).click();
 
 		await expect.poll(() => fassungsKennung(page).catch(() => alteFassung), { timeout: 30_000 }).not.toBe(
@@ -420,16 +453,11 @@ test('AC-10: Aenderung auf /trips/[id], sofort „Aktualisieren" → nach dem Ne
 		);
 		await expect.poll(ladungen, { timeout: 20_000 }).toBe(vorher + 1);
 		await expect
-			.poll(
-				async () => {
-					const trip = (await (await page.request.get(`/api/trips/${tripId}`)).json()) as {
-						corridors?: Array<{ metric: string; range: [number | null, number | null] }>;
-					};
-					return trip.corridors?.find((c) => c.metric === 'wind_gust')?.range?.[1] ?? null;
-				},
-				{ message: 'AC-10: die Aenderung ging beim Update verloren', timeout: 10_000 }
-			)
-			.toBe(55);
+			.poll(() => windGustStufe(page, tripId), {
+				message: 'AC-10: die Aenderung ging beim Update verloren',
+				timeout: 10_000
+			})
+			.toBe(ZIEL_STUFE);
 	});
 });
 
@@ -534,7 +562,7 @@ test('#2317 AC-6: ausstehende Eingabe + „Aktualisieren" → PUT regulaer abges
 						]
 					}
 				],
-				corridors: [{ metric: 'wind_gust', range: [null, 70], notify: false, mark: false }]
+				...TRIP_ALARM_SEED
 			}
 		});
 		expect(seed.ok(), `Trip-Anlage HTTP ${seed.status()}`).toBeTruthy();
@@ -542,19 +570,21 @@ test('#2317 AC-6: ausstehende Eingabe + „Aktualisieren" → PUT regulaer abges
 
 		const protokoll = await protokolliereSpeichernUndUebernahme(page);
 		const ladungen = await zaehleLadungen(page);
-		await appLaeuft(page, ausl, `/trips/${tripId}?tab=wertebereiche`);
+		await appLaeuft(page, ausl, `/trips/${tripId}?tab=alarme`);
 		await neueFassungMitHinweis(page, ausl);
 		const vorher = await ladungen();
 		const alteFassung = await fassungsKennung(page);
 
-		const maxInput = page.locator('[data-testid="corridor-row-wind_gust"] input[type="number"]').first();
-		await expect(maxInput).toHaveValue('70', { timeout: 10_000 });
+		await expect(
+			stufenKnopf(page, START_STUFE),
+			`Vorbedingung: die angelegte Boeen-Stufe ${START_STUFE} ist ausgewaehlt`
+		).toHaveAttribute('aria-pressed', 'true', { timeout: 10_000 });
 		// Marke: nur was AB der Eingabe protokolliert wird, zaehlt (ein etwaiges
 		// SKIP_WAITING der Erst-Aktivierung bleibt davor).
 		const marke = (await protokoll()).length;
 
 		// Eingabe liegt im 700-ms-Fenster — und sofort „Aktualisieren".
-		await maxInput.fill('55');
+		await stufenKnopf(page, ZIEL_STUFE).click();
 		await aktualisieren(page).click();
 
 		await expect.poll(() => fassungsKennung(page).catch(() => alteFassung), { timeout: 30_000 }).not.toBe(
@@ -591,13 +621,10 @@ test('#2317 AC-6: ausstehende Eingabe + „Aktualisieren" → PUT regulaer abges
 		).toBe(false);
 
 		await expect(
-			page.locator('[data-testid="corridor-row-wind_gust"] input[type="number"]').first(),
-			'#2317 AC-6: nach dem Fassungswechsel muss der eingegebene Wert (55) sichtbar sein'
-		).toHaveValue('55', { timeout: 10_000 });
-		const trip = (await (await page.request.get(`/api/trips/${tripId}`)).json()) as {
-			corridors?: Array<{ metric: string; range: [number | null, number | null] }>;
-		};
-		expect(trip.corridors?.find((c) => c.metric === 'wind_gust')?.range?.[1], '#2317 AC-6: Server-Stand').toBe(55);
+			stufenKnopf(page, ZIEL_STUFE),
+			`#2317 AC-6: nach dem Fassungswechsel muss die gewaehlte Stufe (${ZIEL_STUFE}) sichtbar sein`
+		).toHaveAttribute('aria-pressed', 'true', { timeout: 10_000 });
+		expect(await windGustStufe(page, tripId), '#2317 AC-6: Server-Stand').toBe(ZIEL_STUFE);
 	});
 });
 

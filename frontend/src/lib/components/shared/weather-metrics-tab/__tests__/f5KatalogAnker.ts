@@ -82,6 +82,9 @@ export const F5_ANKER: [schluessel: string, de: string, en: string][] = [
 	['wertebereiche.tagesfenster.von', 'Von', 'From'],
 	['wertebereiche.tagesfenster.bis', 'Bis', 'To'],
 	['wertebereiche.tagesfenster.ueber_mitternacht', 'Geht über Mitternacht — endet am Folgetag.', 'Crosses midnight — ends the next day.'],
+	// #2792 S1c-3 (AC-22): Sperr-Hinweis oben im Reiter Wertebereiche und im SMS-Schwellwert-Block
+	['wertebereiche.gesperrt.hinweis_reiter', 'Wird gerade umgebaut – deine Werte sind übernommen.', 'Being rebuilt – your values have been carried over.'],
+	['wertebereiche.gesperrt.hinweis_sms', 'Wird gerade umgebaut – deine Werte sind übernommen.', 'Being rebuilt – your values have been carried over.'],
 	// 04 Schwellwerte (WeatherMetricsTab)
 	['wertebereiche.schwelle.titel', '04 — Schwellwerte', '04 — Thresholds'],
 	['wertebereiche.schwelle.hinweis', 'Gelten für SMS-Token, Telegram-Kurzform und den E-Mail-Ausblick/Trend-Block', 'Apply to SMS tokens, Telegram compact style and the email outlook/trend block'],
