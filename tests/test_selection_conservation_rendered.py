@@ -36,6 +36,10 @@ from tests.tdd.test_compare_render_options_resolver import _make_comparison_resu
 
 #: Eine Renderer-Kennung ohne Zeilendefinition (Katalog kennt sie nicht).
 OHNE_ZEILE = "zzz_ohne_zeile"
+
+# #2792 S1c-4b: Preset mit Vorlage ≠ „allgemein", damit der Prüfinhalt nach dem
+# Umschalten nicht nur die Vorgabe-Ampel sieht.
+SKITOUREN_PRESET = {"display_config": {"ampel": {"template": "skitouren"}}}
 #: Gueltige Groesse, die in der Test-Fixture an KEINEM Ort einen Wert hat
 #: (``_make_comparison_result`` fuellt snow_depth_cm nicht).
 OHNE_WERT = "snow_depth_cm"
@@ -129,7 +133,7 @@ def test_ac4_klartext_hat_denselben_hinweis_mit_derselben_zahl():
     from output.renderers.comparison import render_comparison_text
 
     text = render_comparison_text(
-        _result(), enabled_metrics=["temp_max", OHNE_ZEILE], unresolved_count=1, preset=None,
+        _result(), enabled_metrics=["temp_max", OHNE_ZEILE], unresolved_count=1, preset=SKITOUREN_PRESET,
     )
     assert _zahlen(_HINWEIS_VERGLEICH, text) == [2]
 
@@ -146,7 +150,7 @@ def test_ac4_mail_beide_fassungen_tragen_dieselbe_zahl():
 def test_ac5_klartext_ohne_luecke_kein_hinweis():
     from output.renderers.comparison import render_comparison_text
 
-    text = render_comparison_text(_result(), enabled_metrics=["temp_max", "wind_max"], preset=None)
+    text = render_comparison_text(_result(), enabled_metrics=["temp_max", "wind_max"], preset=SKITOUREN_PRESET)
     assert "ohne Wert" not in text
 
 
