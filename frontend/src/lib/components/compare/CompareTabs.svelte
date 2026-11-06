@@ -673,7 +673,8 @@
 	<!-- Tab-Leiste — geteilter MTabBar-Baustein (Mobile Usability Paket 2,
 	     Spec mobile_tab_leisten_mtabbar, Iteration 2). Ersetzt das handgebaute
 	     compare-tabs-bar-Markup + das 1:1-kopierte Mobil-CSS (AP-006-Drift).
-	     size="sm" haelt die Compare-Optik (13px, 12/16px, neutraler Badge);
+	     size="sm" haelt die Compare-Optik (13px, 12/16px); der neutrale Zaehler
+	     ist seit #2837 S1 Standard fuer Trip UND Vergleich (nicht ueber size);
 	     Test-IDs bleiben. -->
 	<MTabBar
 		items={compareBarItems}

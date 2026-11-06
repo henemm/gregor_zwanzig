@@ -1192,7 +1192,10 @@ test.describe('Issue #2284 S2 — Trip-Hub-Kopf: Name, Region, Aktivitaet im get
 	// WIP gemessen — Wert + Quelle: docs/artifacts/feat-2284-s2-trip-kopf/ac18-desktop-basis.json.
 	const AC18_LANGER_NAME =
 		'E2E 2284-S2 Nordabschnitt Etappenplan mit einem ausgesprochen langen Namen der auf dem Handy gekuerzt werden muss';
-	const AC18_DESKTOP_VOR_S2 = { trip: '38px', vergleich: '30px' } as const;
+	// #2837 S1 (ADR-0110, Spec rework_2837_s1_hub_kopf.md Entscheidung 8 / AC-9) — UMGEDREHT für den
+	// Vergleich: die Titelgröße ist KEINE Whitelist-Ausnahme mehr, beide Hubs titeln am Desktop mit
+	// 38 px (`titleSize={38}`). Vorher (Basis vor #2284 S2) Vergleich 30 px; der Trip bleibt 38 px.
+	const AC18_DESKTOP_VOR_S2 = { trip: '38px', vergleich: '38px' } as const;
 
 	/** Misst die Titel-Ueberschrift: Schriftgroesse, Hoehe, Kuerzung, Seitenueberlauf. */
 	async function titelMessen(page: Page, h1: ReturnType<Page['locator']>) {

@@ -103,18 +103,39 @@ describe('F006: Dispatch der Listen — Aktion -> Zweig -> Wirkung', () => {
 	});
 });
 
+// #2837 S1 (ADR-0110, Spec rework_2837_s1_hub_kopf.md Test Plan): „Senden" und der Kebab
+// liegen im geteilten HubKopf (shared/hub-kopf/HubKopf.svelte). Die Zusicherungen bleiben
+// WÖRTLICH dieselben, sie wirken jetzt an zwei Stellen: (1) die Seite reicht exakt die
+// bisherigen Ausdrücke an die Kopf-Einbettung (die Komponente mit `onSend` — HubKopf
+// selbst oder die Trip-Hülle, die ihn einbettet), (2) HubKopf bindet seinen Senden-Btn
+// an genau diese Props (hub-kopf/__tests__/hub_kopf_seiten_bindung.test.ts).
+const kopfEinbettung = (ast: any, name: string) => {
+	const k = collect(ast.fragment, (n) => n.type === 'Component' && (n.attributes ?? []).some((a: any) => a.name === 'onSend'));
+	assert.equal(k.length, 1, `${name}: genau eine Kopf-Einbettung mit onSend erwartet (HubKopf), gefunden ${k.length}`);
+	return k[0];
+};
+const HUBKOPF_DATEI = path.join(SRC, 'lib/components/shared/hub-kopf/HubKopf.svelte');
+const hubKopf = () => ladeSvelte(HUBKOPF_DATEI);
+
 describe('F001: „Senden" oeffnet nur den Dialog; gesendet wird erst nach Bestaetigung', () => {
+	test('HubKopf: der Senden-Btn ruft nur onSend und ist an sendDisabled gesperrt', () => {
+		const btn = mitAttribut(hubKopf(), 'data-testid', 'subscription-hub-send')[0];
+		assert.ok(btn, 'HubKopf hat keinen Senden-Knopf');
+		assert.ok(['onSend', '() => onSend()', '() => onSend?.()'].includes(attrKurz(btn, 'onclick') ?? ''), `onclick: ${attrKurz(btn, 'onclick')}`);
+		assert.equal(attrKurz(btn, 'disabled'), 'sendDisabled');
+	});
 	test('Trip-Hub: Primaerknopf setzt nur sendDialogOpen, Dialog-Bestaetigung ist handleSendConfirm', () => {
-		const btn = mitAttribut(TRIP_HUB, 'data-testid', 'subscription-hub-send')[0];
-		assert.equal(attrKurz(btn, 'onclick'), '() => { sendDialogOpen = true }');
-		assert.equal(attrKurz(btn, 'disabled'), 'sendLoading || lifecycle === "archived" || lifecycle === "draft"');
+		const kopf = kopfEinbettung(TRIP_HUB, 'Trip-Hub');
+		assert.equal(attrKurz(kopf, 'onSend'), '() => { sendDialogOpen = true }');
+		assert.equal(attrKurz(kopf, 'sendDisabled'), 'sendLoading || lifecycle === "archived" || lifecycle === "draft"');
+		assert.ok([undefined, '"senden"'].includes(attrKurz(kopf, 'sendMode')), `Trip kennt keinen Setup-Modus: ${attrKurz(kopf, 'sendMode')}`);
 		assert.equal(attrKurz(dlg(TRIP_HUB), 'onConfirm'), 'handleSendConfirm');
 		assert.equal(attrKurz(dlg(TRIP_HUB), 'open'), 'sendDialogOpen');
 	});
 	test('Compare-Hub: Primaerknopf setzt nur sendDialogOpen, Bestaetigung schliesst und sendet', () => {
-		const btn = mitAttribut(CMP_HUB, 'data-testid', 'subscription-hub-send')[0];
-		assert.equal(attrKurz(btn, 'onclick'), '() => sendDialogOpen = true');
-		assert.equal(attrKurz(btn, 'disabled'), 'isSending || lifecycle === "archived"');
+		const kopf = kopfEinbettung(CMP_HUB, 'Compare-Hub');
+		assert.ok(['() => sendDialogOpen = true', '() => { sendDialogOpen = true }'].includes(attrKurz(kopf, 'onSend') ?? ''), `onSend: ${attrKurz(kopf, 'onSend')}`);
+		assert.equal(attrKurz(kopf, 'sendDisabled'), 'isSending || lifecycle === "archived"');
 		assert.equal(attrKurz(dlg(CMP_HUB), 'onConfirm'), '() => { sendDialogOpen = false; void handleTestSend() }');
 		assert.deepEqual(aufrufArgumente(funktion(CMP_HUB, 'handleTestSend'), 'sendSubscription'), [['"vergleich"', 'currentPreset.id']]);
 	});
@@ -200,14 +221,26 @@ describe('F008 (AC-5/AC-12): Trip-Hub Loeschdialog, Navigation, Menue-Flaeche', 
 		assert.deepEqual(aufrufArgumente(funktion(TRIP_HUB, 'handleArchiveConfirm'), 'sendStateUpdate'), [['undefined', 'nextArchived']]);
 	});
 	test('beide Huebs: Kebab und Blatt zeigen die Hub-Aktionen (Flaeche "hub")', () => {
+		// #2837 S1: der Kebab liegt im HubKopf; die Seiten reichen dieselben Werte an die
+		// Kopf-Einbettung (actions/onSelect wie SubscriptionKebab), der HubKopf gibt sie 1:1
+		// an SubscriptionKebab weiter (hub_kopf_seiten_bindung.test.ts).
+		const tk = kopfEinbettung(TRIP_HUB, 'Trip-Hub');
+		const ck = kopfEinbettung(CMP_HUB, 'Compare-Hub');
 		// i18n F9 (#2658): der Trip-Hub haelt die Liste in `hubAktionen` (liest `$locale`).
-		assert.equal(attrKurz(komponenten(TRIP_HUB, 'SubscriptionKebab')[0], 'actions'), 'hubAktionen');
+		assert.equal(attrKurz(tk, 'actions'), 'hubAktionen');
 		assert.match(readFileSync(TRIP_HUB_DATEI, 'utf-8'), /const hubAktionen = \$derived\.by\(\(\) => \(void \$locale, subscriptionActions\('trip', lifecycle, 'hub'\)\)\);/);
 		// i18n F10 (#2659): ebenso der Ortsvergleich-Hub.
-		assert.equal(attrKurz(komponenten(CMP_HUB, 'SubscriptionKebab')[0], 'actions'), 'hubAktionen');
+		assert.equal(attrKurz(ck, 'actions'), 'hubAktionen');
 		assert.match(readFileSync(CMP_HUB_DATEI, 'utf-8'), /const hubAktionen = \$derived\.by\(\(\) => \(void \$locale, subscriptionActions\('vergleich', lifecycle, 'hub'\)\)\);/);
-		assert.equal(attrKurz(komponenten(TRIP_HUB, 'SubscriptionKebab')[0], 'onSelect'), 'handleHubAction');
-		assert.equal(attrKurz(komponenten(CMP_HUB, 'SubscriptionKebab')[0], 'onSelect'), 'handleAction');
+		assert.equal(attrKurz(tk, 'onSelect'), 'handleHubAction');
+		assert.equal(attrKurz(ck, 'onSelect'), 'handleAction');
+		// mobil: der Kebab-Knopf öffnet das Aktionsblatt DIESER Seite (kein zweites Blatt im Kopf).
+		assert.equal(attrKurz(tk, 'mobil'), 'mobil');
+		assert.equal(attrKurz(ck, 'mobil'), 'mobil');
+		assert.ok(['() => { sheetOpen = true }', '() => sheetOpen = true'].includes(attrKurz(tk, 'onSheetOpen') ?? ''), `Trip onSheetOpen: ${attrKurz(tk, 'onSheetOpen')}`);
+		assert.ok(['() => actionSheetOpen = true', '() => { actionSheetOpen = true }'].includes(attrKurz(ck, 'onSheetOpen') ?? ''), `Compare onSheetOpen: ${attrKurz(ck, 'onSheetOpen')}`);
+		assert.equal(attrKurz(sheet(TRIP_HUB), 'open'), 'sheetOpen');
+		assert.equal(attrKurz(sheet(CMP_HUB), 'open'), 'actionSheetOpen');
 		for (const ast of [TRIP_HUB, CMP_HUB]) {
 			assert.equal(attrKurz(sheet(ast), 'surface'), '"hub"');
 			assert.equal(attrKurz(sheet(ast), 'status'), 'lifecycle');
@@ -258,13 +291,22 @@ describe('F019/F015/F018: die Bindung steht UNTER DER ERWARTETEN Bedingung (kein
 			assert.deepEqual(unter(ast, sheet(ast)), [], `${name}: SubscriptionActionSheet steht unter einer Bedingung`);
 		}
 	});
-	test('Hub-Kebab: Trip = „nicht mobil" (else von {#if mobil}), Compare = {#if !mobil} — exakt, ohne Zusatzbedingung', () => {
-		assert.deepEqual(unter(TRIP_HUB, komponenten(TRIP_HUB, 'SubscriptionKebab')[0]), ['!(mobil)']);
-		assert.deepEqual(unter(CMP_HUB, komponenten(CMP_HUB, 'SubscriptionKebab')[0]), ['!mobil']);
+	// #2837 S1: die Mobil/Desktop-Weiche des Kebab sitzt jetzt IM SubscriptionKebab (`mobil`-Prop);
+	// Seite und HubKopf binden ihn unbedingt ein — eine Zusatzbedingung wäre ein toter Zweig.
+	test('Hub-Kebab: Kopf-Einbettung auf beiden Seiten unbedingt; SubscriptionKebab im HubKopf unbedingt', () => {
+		assert.deepEqual(unter(TRIP_HUB, kopfEinbettung(TRIP_HUB, 'Trip-Hub')), []);
+		assert.deepEqual(unter(CMP_HUB, kopfEinbettung(CMP_HUB, 'Compare-Hub')), []);
+		const hk = hubKopf();
+		assert.deepEqual(unter(hk, komponenten(hk, 'SubscriptionKebab')[0]), []);
 	});
 	test('Hub-Primaerknopf „Senden": Trip unbedingt, Compare nur ausserhalb des Entwurfs', () => {
-		assert.deepEqual(unter(TRIP_HUB, mitAttribut(TRIP_HUB, 'data-testid', 'subscription-hub-send')[0]), []);
-		assert.deepEqual(unter(CMP_HUB, mitAttribut(CMP_HUB, 'data-testid', 'subscription-hub-send')[0]), ['!(status === "draft")']);
+		// Wörtlich dieselbe Entwurfs-Bedingung wie bisher (`status === "draft"`), jetzt als sendMode.
+		const hk = hubKopf();
+		assert.deepEqual(unter(hk, mitAttribut(hk, 'data-testid', 'subscription-hub-send')[0]), ['!(sendMode === "setup")']);
+		assert.ok([undefined, '"senden"'].includes(attrKurz(kopfEinbettung(TRIP_HUB, 'Trip-Hub'), 'sendMode')));
+		assert.equal(attrKurz(kopfEinbettung(CMP_HUB, 'Compare-Hub'), 'sendMode'), 'status === "draft" ? "setup" : "senden"');
+		// „Setup abschließen" führt wie bisher zum Versand-Abschnitt der Wetter-Metriken.
+		assert.equal(attrKurz(kopfEinbettung(CMP_HUB, 'Compare-Hub'), 'onSetup'), '() => { window.location.href = `?tab=wetter-metriken#versand` }');
 	});
 	test('Schreib-/Sendeaufrufe der Handler stehen unbedingt (kein if (false), kein toter Zweig)', () => {
 		for (const [ast, fn, ziel] of [
@@ -309,15 +351,23 @@ describe('Fix-Loop 2 (AC-3/AC-12): Senden-Primaerknopf ist auf JEDER Breite erre
 				const text = klasse ? collect(klasse, (k) => k.type === 'Text').map((k) => k.data).join(' ') : '';
 				return text.split(/\s+/).includes('hidden') ? [`${el.name}.${text}`] : [];
 			});
+	// #2837 S1: der Knopf liegt im HubKopf — geprüft wird dort UND an der Kopf-Einbettung der Seite.
+	test('HubKopf: kein Vorfahre des Senden-Knopfs ist unterhalb des Desktop-Breakpoints versteckt', () => {
+		const hk = hubKopf();
+		const btn = mitAttribut(hk, 'data-testid', 'subscription-hub-send')[0];
+		assert.ok(btn, 'HubKopf: Senden-Knopf fehlt');
+		assert.deepEqual(versteckendeVorfahren(hk, btn), []);
+	});
 	for (const [name, ast] of [['Trip-Hub', TRIP_HUB], ['Compare-Hub', CMP_HUB]] as const) {
-		test(`${name}: kein Vorfahre des Senden-Knopfs ist unterhalb des Desktop-Breakpoints versteckt`, () => {
-			const btn = mitAttribut(ast, 'data-testid', 'subscription-hub-send')[0];
-			assert.ok(btn, `${name}: Senden-Knopf fehlt`);
-			assert.deepEqual(versteckendeVorfahren(ast, btn), []);
+		test(`${name}: kein Vorfahre der Kopf-Einbettung (Senden) ist unterhalb des Desktop-Breakpoints versteckt`, () => {
+			assert.deepEqual(versteckendeVorfahren(ast, kopfEinbettung(ast, name)), []);
 		});
 	}
 	test('Compare-Hub: das Aktionsblatt bleibt mobil ueber den Kebab erreichbar (nicht doppelt gebaut)', () => {
-		assert.equal(mitAttribut(CMP_HUB, 'data-testid', 'subscription-kebab').length, 2);
+		// vorher: zwei eigene Kebab-Knoten der Seite (Desktop-Dropdown + Mobil-Knopf); jetzt EIN
+		// SubscriptionKebab im HubKopf (Weiche über `mobil`), die Seite baut keinen eigenen.
+		assert.equal(mitAttribut(CMP_HUB, 'data-testid', 'subscription-kebab').length, 0);
+		assert.equal(komponenten(hubKopf(), 'SubscriptionKebab').length, 1);
 		assert.equal(komponenten(CMP_HUB, 'SubscriptionActionSheet').length, 1);
 	});
 });

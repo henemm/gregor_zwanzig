@@ -6,11 +6,9 @@
 	// wird jetzt GENAU EINMAL gemountet und versorgt Desktop UND Mobile; die
 	// Viewport-Umschaltung (4-Stat-2×2 statt 5-Stat-Leiste, CorridorEditorMobile
 	// im Idealwerte-Tab) passiert INNERHALB von CompareTabs (matchMedia).
-	import { Btn, BackLink } from '$lib/components/atoms';
 	import { ConfirmDialog } from '$lib/components/molecules';
 	import CompareDetail from '$lib/components/compare/CompareDetail.svelte';
 	import CompareStatusPill from '$lib/components/compare/CompareStatusPill.svelte';
-	import SubscriptionKebab from '$lib/components/molecules/SubscriptionKebab.svelte';
 	import SendConfirmDialog from '$lib/components/molecules/SendConfirmDialog.svelte';
 	import SubscriptionActionSheet from '$lib/components/mobile/SubscriptionActionSheet.svelte';
 	import { subscriptionActions } from '$lib/components/shared/subscriptionActions.js';
@@ -36,8 +34,7 @@
 	import { baueSpeicherung, speichereKopfFeld } from '$lib/components/shared/tripSpeicherung';
 	import { adoptEtagBeiSeitenaufbau, adoptEtagFromPageLoad } from '$lib/etagRegistry';
 	import { ACTIVITY_PROFILE_OPTIONS, type ComparePreset } from '$lib/types';
-	import SubscriptionHeader from '$lib/components/shared/subscription-header/SubscriptionHeader.svelte';
-	import MoreHorizontalIcon from '@lucide/svelte/icons/more-horizontal';
+	import HubKopf from '$lib/components/shared/hub-kopf/HubKopf.svelte';
 	// Issue #2659 (i18n F10): Texte aus dem Katalog — Aktionen/Senden wortgleich zum Trip-Hub
 	// (aktionen.*). Fehler ohne Server-Text halten nur den Schluessel (Sprachwechsel ohne Neuladen).
 	import { locale, t, tn, type MessageKey } from '$lib/i18n';
@@ -351,87 +348,62 @@
      Ortsvergleich als „Gregor Zwanzig". -->
 <svelte:head><title>{`${currentPreset.name} — ${$t('bausteine.marke.name')}`}</title></svelte:head>
 
-<!-- Hub-Kopf (#491, #493, #582; #2284 S1): EIN Markup für Desktop und Mobil.
-     Seiten-Chrome (Breadcrumb Desktop, BackLink Mobil, Aktionen) bleibt hier;
-     Name/Region/Profil liefert der geteilte SubscriptionHeader. -->
-<div class="flex flex-col gap-4 p-4 desktop:block desktop:pt-[22px] desktop:px-10 desktop:pb-0 desktop:[border-bottom:1px_solid_var(--g-rule)]" style="position: relative">
-	<!-- Breadcrumb (Issue #582 + Bug #589). Issue #1256 S8c (AC-10): genau 2 Krümel. -->
-	<div class="hidden desktop:flex" style="align-items: center; gap: 8px; margin-bottom: 12px">
-		<a href="/compare" style="font-size: 11px; font-family: var(--g-font-mono); letter-spacing: 0.1em; text-transform: uppercase; color: var(--g-ink-3); text-decoration: none" class="breadcrumb-link">{$t('listen.vergleiche.titel').toUpperCase()}</a>
-		<span style="color: var(--g-ink-4); font-size: 11px">/</span>
-		<span style="font-size: 11px; font-family: var(--g-font-mono); letter-spacing: 0.1em; text-transform: uppercase; color: var(--g-ink-4)">{$t('vergleich.hub.krumel')}</span>
-	</div>
-	<div class="desktop:hidden"><BackLink href="/compare" label={$t('listen.archiv.vergleiche')} ariaLabel={$t('aktionen.zurueck_uebersicht')} /></div>
-
-	<div class="flex items-start gap-2 desktop:gap-6 desktop:justify-between">
-		<SubscriptionHeader
-			kind="vergleich"
-			name={currentPreset.name}
-			region={currentPreset.display_config?.region as string | undefined}
-			profile={currentPreset.profil}
-			{profileOptions}
-			{profileLabel}
-			regionMaxLength={60}
-			testidPrefix="compare-hub"
-			{onSaveField}
-			saveController={hubSaveCtl}
-		>
-			{#snippet eyebrow()}
-				<!-- Issue #1256 S8c (AC-12): Eyebrow nur mobil. -->
-				<span class="mono block desktop:hidden" style="font-size: 11px; color: var(--g-ink-muted); letter-spacing: 0.12em; text-transform: uppercase; line-height: 1;">{$t('vergleich.hub.eyebrow')}</span>
-			{/snippet}
-			{#snippet badges()}
-				<span class="flex-shrink-0"><CompareStatusPill {status} /></span>
-				{#if runtimeExceeded}
-					<span data-testid="runtime-exceeded-hint" class="flex-shrink-0 text-[11px] desktop:text-xs" style="font-weight: 600; color: var(--g-bad)">{$t('vergleich.hub.laufzeit_ueberschritten')}</span>
-				{/if}
-			{/snippet}
-			{#snippet meta()}
-				<!-- Orte-Anzahl je Viewport aus derselben Quelle wie vor #2284 S1:
-				     Desktop zählte die gespeicherten IDs, Mobil die aufgelösten Orte
-				     (weichen ab, wenn ein Ort gelöscht/nicht auflösbar ist). Getrennte
-				     testids je Viewport, damit jede Kopf-testid genau einmal im DOM steht (AC-8). -->
-				<span data-testid="compare-hub-orte-anzahl-desktop" class="hidden desktop:inline">{' · '}{$tn('listen.anzahl.orte', currentPreset.location_ids.length)}</span>
-				<span data-testid="compare-hub-orte-anzahl-mobil" class="desktop:hidden">{' · '}{$tn('listen.anzahl.orte', data.locations.length)}</span>
-			{/snippet}
-		</SubscriptionHeader>
-
-		<!-- Senden/Setup auf allen Breiten sichtbar (AC-3/AC-12, wie im Trip-Hub); mobil sitzt der Kebab daneben.
-		     mt-[25px] = Eyebrow (9px) + gap-4 (16px): Knopf steht auf Höhe der Namenszeile. -->
-		<div class="flex items-center mt-[25px] desktop:mt-0" style="gap: 8px; flex-shrink: 0">
-			{#if status === 'draft'}
-				<Btn variant="primary" class="min-h-[44px] desktop:min-h-0" onclick={() => { window.location.href = `?tab=wetter-metriken#versand`; }}>{$t('vergleich.hub.setup_abschliessen')}</Btn>
-			{:else}
-				<!-- Senden ist der Primaerknopf und oeffnet den Sende-Dialog (AC-3/AC-12) -->
-				<Btn variant="primary" class="min-h-[44px] desktop:min-h-0" data-testid="subscription-hub-send" onclick={() => (sendDialogOpen = true)} disabled={isSending || lifecycle === 'archived'}>
-					{isSending ? $t('aktionen.wird_gesendet') : $t('aktionen.senden')}
-				</Btn>
-			{/if}
-			{#if !mobil}
-				<SubscriptionKebab data-testid="subscription-kebab" actions={hubAktionen} onSelect={handleAction} />
-			{/if}
-			{#if mobil}
-				<button
-					type="button"
-					class="flex flex-shrink-0 items-center justify-center min-h-[44px] min-w-[44px] rounded-md"
-					data-testid="subscription-kebab"
-					aria-label={$t('aktionen.weitere')}
-					onclick={() => (actionSheetOpen = true)}
-				>
-					<MoreHorizontalIcon size={20} />
-				</button>
-			{/if}
-		</div>
-	</div>
-
-	<!-- sendMsg/pauseError wie bisher nur Desktop (mobil: Aktions-Sheet). -->
-	{#if sendMsg || sendKey}
-		<div class="hidden desktop:flex" style="font-size: 14px; color: var(--g-ink-3); margin-bottom: 8px">{sendKey ? $t(sendKey) : sendMsg}</div>
+<!-- Hub-Kopf (#491, #493, #582; #2284 S1; #2837 S1, ADR-0110): der geteilte HubKopf trägt
+     Leiste (Pfad, Zurück-Pfeil mobil, Senden bzw. im Entwurf „Setup abschließen", Kebab,
+     Meldungen) und Titelblock — derselbe Baustein wie im Trip-Hub. Vergleich-eigen bleiben
+     Status samt Laufzeit-Hinweis und die Orte-Anzahl (Whitelist, Spec Entscheidung 8). -->
+<!-- Status-Snippet ausserhalb des HubKopf-Tags: ein gleichnamiges Kind-Snippet `status` verdeckte dort
+     die Seiten-Variable `status` (auch in den Attributen). -->
+{#snippet statusBadge()}
+	<span class="flex-shrink-0"><CompareStatusPill {status} /></span>
+	{#if runtimeExceeded}
+		<span data-testid="runtime-exceeded-hint" class="flex-shrink-0 text-[11px] desktop:text-xs" style="font-weight: 600; color: var(--g-bad)">{$t('vergleich.hub.laufzeit_ueberschritten')}</span>
 	{/if}
-	{#if pauseError}
-		<div class="hidden desktop:flex" style="font-size: 14px; color: var(--g-bad); margin-bottom: 8px">{$t('listen.meldung.status_fehlgeschlagen')}</div>
-	{/if}
-</div>
+{/snippet}
+<!-- Kein eigener Wrapper: Abstand und Unterkante (Linie --g-rule, #582) trägt der HubKopf (Adversary F001). -->
+	<HubKopf
+		context="vergleich"
+		parent={{ label: $t('listen.vergleiche.titel'), href: '/compare' }}
+		crumb={currentPreset.name}
+		sendLabel={status === 'draft' ? $t('vergleich.hub.setup_abschliessen') : isSending ? $t('aktionen.wird_gesendet') : $t('aktionen.senden')}
+		sendMode={status === 'draft' ? 'setup' : 'senden'}
+		onSetup={() => { window.location.href = `?tab=wetter-metriken#versand`; }}
+		onSend={() => (sendDialogOpen = true)}
+		sendDisabled={isSending || lifecycle === 'archived'}
+		actions={hubAktionen}
+		onSelect={handleAction}
+		{mobil}
+		onSheetOpen={() => (actionSheetOpen = true)}
+		name={currentPreset.name}
+		region={currentPreset.display_config?.region as string | undefined}
+		profile={currentPreset.profil}
+		{profileOptions}
+		{profileLabel}
+		regionMaxLength={60}
+		testidPrefix="compare-hub"
+		titleSize={38}
+		{onSaveField}
+		saveController={hubSaveCtl}
+		status={statusBadge}
+	>
+		{#snippet meta()}
+			<!-- Orte-Anzahl je Viewport aus derselben Quelle wie vor #2284 S1:
+			     Desktop zählte die gespeicherten IDs, Mobil die aufgelösten Orte
+			     (weichen ab, wenn ein Ort gelöscht/nicht auflösbar ist). Getrennte
+			     testids je Viewport, damit jede Kopf-testid genau einmal im DOM steht (AC-8). -->
+			<span data-testid="compare-hub-orte-anzahl-desktop" class="hidden desktop:inline">{' · '}{$tn('listen.anzahl.orte', currentPreset.location_ids.length)}</span>
+			<span data-testid="compare-hub-orte-anzahl-mobil" class="desktop:hidden">{' · '}{$tn('listen.anzahl.orte', data.locations.length)}</span>
+		{/snippet}
+		{#snippet meldungen()}
+			<!-- #2837 S1: Meldungen wie beim Trip in jeder Breite (keine Whitelist-Ausnahme). -->
+			{#if sendMsg || sendKey}
+				<span style="font-size: 12px; color: var(--g-ink-3)">{sendKey ? $t(sendKey) : sendMsg}</span>
+			{/if}
+			{#if pauseError}
+				<span style="font-size: 12px; color: var(--g-bad)">{$t('listen.meldung.status_fehlgeschlagen')}</span>
+			{/if}
+		{/snippet}
+	</HubKopf>
 
 <!-- Issue #1256 Scheibe 8 (AC-22, Ein-Mount-Strategie): CompareDetail wird
      GENAU EINMAL gemountet (weder im Desktop- noch im Mobile-Block oben) —
@@ -487,10 +459,3 @@
 	onCancel={handleDeleteCancel}
 	onOpenChange={handleDeleteDialogOpenChange}
 />
-
-<style>
-	.breadcrumb-link:hover {
-		text-decoration: underline;
-	}
-</style>
-

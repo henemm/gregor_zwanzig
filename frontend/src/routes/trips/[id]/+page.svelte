@@ -7,12 +7,10 @@
 	import { goto, beforeNavigate } from '$app/navigation';
 	import { TripHeader } from '$lib/components/organisms';
 	import { TripTabs } from '$lib/components/trip-detail';
-	import { Btn, TopoBg, BackLink } from '$lib/components/atoms';
+	import { TopoBg } from '$lib/components/atoms';
 	import { ConfirmDialog } from '$lib/components/molecules';
 	import SendConfirmDialog from '$lib/components/molecules/SendConfirmDialog.svelte';
-	import SubscriptionKebab from '$lib/components/molecules/SubscriptionKebab.svelte';
 	import SubscriptionActionSheet from '$lib/components/mobile/SubscriptionActionSheet.svelte';
-	import EllipsisVerticalIcon from '@lucide/svelte/icons/ellipsis-vertical';
 	import { subscriptionActions, subscriptionLifecycle } from '$lib/components/shared/subscriptionActions';
 	import {
 		deleteSubscription,
@@ -308,44 +306,23 @@
 
 <main style="position: relative; overflow: hidden;">
 	<TopoBg opacity={0.14} />
-	<div class="breadcrumb-bar" data-testid="trip-detail-breadcrumb-bar">
-		<!-- #2347 S4 (KA-11): mobiler Zurück-Pfeil zur Liste wie im Vergleich-Hub
-		     (BackLink ariaLabel „Zurück zur Übersicht"); nur ≤899px, ohne Zeilenhöhe. -->
-		<div class="back-mobil"><BackLink href="/trips" label="" ariaLabel={$t('aktionen.zurueck_uebersicht')} /></div>
-		<div class="mono breadcrumb-path" style="font-size: 11px; color: var(--g-ink-3); letter-spacing: 0.06em;">
-			<a href="/trips" class="g-link-tap" style="opacity: 0.6; color: inherit; text-decoration: none;">{$t('listen.trips.titel')}</a>
-			<span style="margin: 0 8px;">/</span>
-			<span style="color: var(--g-ink);">{trip.shortcode ?? trip.name}</span>
-		</div>
-		<div class="hub-actions">
-			<!-- Senden ist der Primaerknopf und oeffnet den Sende-Dialog (AC-12) -->
-			<Btn
-				variant="accent"
-				size="sm"
-				data-testid="subscription-hub-send"
-				onclick={() => { sendDialogOpen = true; }}
-				disabled={sendLoading || lifecycle === 'archived' || lifecycle === 'draft'}
-			>
-				{sendLoading ? $t('aktionen.wird_gesendet') : $t('aktionen.senden')}
-			</Btn>
-			{#if mobil}
-				<button
-					type="button"
-					data-testid="subscription-kebab"
-					aria-label={$t('aktionen.weitere')}
-					title={$t('aktionen.weitere')}
-					onclick={() => { sheetOpen = true; }}
-					style="display: inline-flex; align-items: center; justify-content: center; width: 44px; height: 44px; background: transparent; border: none; cursor: pointer; color: var(--g-ink-2);"
-				>
-					<EllipsisVerticalIcon size={18} />
-				</button>
-			{:else}
-				<SubscriptionKebab
-					data-testid="subscription-kebab"
-					actions={hubAktionen}
-					onSelect={handleHubAction}
-				/>
-			{/if}
+	<!-- #2837 S1 (ADR-0110): Leiste (Pfad, Senden, Kebab, Meldungen) und Titelblock liegen im
+	     geteilten HubKopf, den TripHeader einbettet. Senden oeffnet nur den Sende-Dialog (AC-12). -->
+	<TripHeader
+		{trip}
+		{now}
+		onStatusChange={handleStatusChange}
+		onTripUpdate={handleTripUpdate}
+		saveController={tripSaveCtl}
+		sendLabel={sendLoading ? $t('aktionen.wird_gesendet') : $t('aktionen.senden')}
+		onSend={() => { sendDialogOpen = true; }}
+		sendDisabled={sendLoading || lifecycle === 'archived' || lifecycle === 'draft'}
+		actions={hubAktionen}
+		onSelect={handleHubAction}
+		{mobil}
+		onSheetOpen={() => { sheetOpen = true; }}
+	>
+		{#snippet meldungen()}
 			{#if sendStatus === 'ok'}
 				<span data-testid="test-briefing-success" style="font-size: 12px; color: var(--g-success, #2e7d32);">{$t('trip.hub.briefing_gesendet')}</span>
 			{:else if sendStatus === 'error'}
@@ -354,9 +331,8 @@
 			{#if errorKey || errorMsg}
 				<span data-testid="trip-detail-action-error" style="font-size: 12px; color: var(--g-error, #c62828);">{errorKey ? $t(errorKey) : errorMsg}</span>
 			{/if}
-		</div>
-	</div>
-	<TripHeader {trip} {now} onStatusChange={handleStatusChange} onTripUpdate={handleTripUpdate} saveController={tripSaveCtl} />
+		{/snippet}
+	</TripHeader>
 	{#key uebernommeneFassung}
 		<TripTabs
 			{initialTab}
@@ -420,48 +396,3 @@
 	name={trip.name}
 	onAction={handleHubAction}
 />
-
-<style>
-	.breadcrumb-bar {
-		display: flex;
-		align-items: center;
-		justify-content: space-between;
-		padding: 10px 40px;
-		border-bottom: 1px solid var(--g-rule-soft);
-		gap: 16px;
-		flex-wrap: wrap;
-	}
-	.hub-actions {
-		display: flex;
-		gap: 8px;
-		flex-wrap: wrap;
-	}
-	.back-mobil {
-		display: none;
-	}
-		/* #2284 S2 (AC-13): mobil 44-px-Tippflaechen ohne Layout-Hoehe. */
-	@media (max-width: 899px) {
-		/* #2347 S4 (KA-11): 36-px-Pfeil mit negativem Block-Rand — die Zeile bleibt
-		   so hoch wie bisher (Etappen-Liste oben ≤ 474 px, trip-hub-kopf-region AC-13). */
-		.back-mobil {
-			display: flex;
-			flex-shrink: 0;
-			margin-block: -8px;
-			margin-right: -12px;
-		}
-		/* #2278 (AC-13): Pfad kuerzt mit Ellipsis statt "Senden" + Kebab in eine zweite Zeile zu schieben
-		   (390 px, langer Name: +33 px Kopfhoehe). Der volle Name steht im Titel darunter. */
-		.breadcrumb-path {
-			flex: 1 1 0;
-			min-width: 0;
-			white-space: nowrap;
-			overflow: hidden;
-			text-overflow: ellipsis;
-		}
-		.hub-actions > :global([data-slot='btn']) {
-			min-height: 44px;
-			min-width: 44px;
-			margin-block: -8px;
-		}
-	}
-</style>

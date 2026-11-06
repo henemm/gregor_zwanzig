@@ -44,6 +44,7 @@ const TRIP_HUB = join(SRC, 'lib/components/trip-detail/TripTabs.svelte');
 const VERGLEICH_HUB = join(SRC, 'lib/components/compare/CompareTabs.svelte');
 const HUB_UEBERSICHT = join(SRC, 'lib/components/shared/hub-uebersicht/HubUebersicht.svelte');
 const VERGLEICH_SEITE = join(SRC, 'routes/compare/[id]/+page.svelte');
+const HUB_KOPF = join(SRC, 'lib/components/shared/hub-kopf/HubKopf.svelte');
 const HOME = join(SRC, 'routes/+page.svelte');
 
 register(pathToFileURL(join(FRONTEND, 'test-env-dynamic-private-stub-hooks.mjs')).href, pathToFileURL(FRONTEND + '/').href);
@@ -300,13 +301,32 @@ function sprungKnoepfe(hu: { ast: Knoten; quelle: string; u: Knoten }): Array<{ 
 // ── AC-24: „Setup abschliessen" ──────────────────────────────────────────────
 
 describe('#1743 AC-24: „Setup abschliessen" der Ortsvergleich-Detailseite oeffnet ?tab=wetter-metriken#versand', () => {
+	// Umgehängt durch #2837 S1 (ADR-0110, Entscheidung 3): der Knopf sitzt im geteilten HubKopf auf
+	// dem Platz von „Senden"; die Seite liefert Beschriftung (sendLabel), Modus (sendMode) und Ziel
+	// (onSetup). Ausgeloest wird die ECHTE Kette: onclick des Setup-Knopfs im HubKopf → onSetup der
+	// Seite (beide Ausdruecke in ihrer Komponente ausgewertet), gemessen an der geschriebenen Adresse.
 	test('Knopf ausloesen → Ziel ?tab=wetter-metriken#versand (ohne Legacy-Umweg)', async () => {
 		adresszeile('/compare/c-1', 'uebersicht');
 		const seite = await umgebungFuer(VERGLEICH_SEITE, { goto: gotoAufzeichnung }, { jsAlsTs: true });
-		const knoepfe = knoepfeMitText(seite.ast, 'Setup abschließen');
-		assert.equal(knoepfe.length, 1, 'genau ein „Setup abschließen"-Knopf erwartet');
+		const koepfe = findeKomponenten(seite.ast, 'HubKopf');
+		assert.equal(koepfe.length, 1, 'genau ein HubKopf auf der Vergleichs-Detailseite erwartet');
+		// Im Entwurf: Modus „setup", Beschriftung „Setup abschließen" (Seiten-Ausdruecke, Status = draft).
+		const entwurf = Object.assign(Object.create(seite.u), { status: 'draft' });
+		const ausdruck = (name: string) => {
+			const a = attributAusdruck(koepfe[0], seite.quelle, name);
+			assert.ok(a, `HubKopf ohne ${name}`);
+			return a;
+		};
+		assert.equal(werte(ausdruck('sendMode'), entwurf), 'setup');
+		assert.equal(werte(ausdruck('sendLabel'), entwurf), 'Setup abschließen');
+		const onSetup = werte(ausdruck('onSetup'), seite.u) as () => unknown;
+		// Der Setup-Knopf des HubKopf: genau ein Knopf, dessen onclick die Prop `onSetup` ausloest.
+		const hk = await umgebungFuer(HUB_KOPF, {}, { jsAlsTs: true });
+		const knoepfe = findeKomponenten(hk.ast, 'Btn').filter((b) => /\bonSetup\b/.test(attributAusdruck(b, hk.quelle, 'onclick') ?? ''));
+		assert.equal(knoepfe.length, 1, 'genau ein „Setup abschließen"-Knopf (onclick → onSetup) im HubKopf erwartet');
+		const ausloeser = werte(attributAusdruck(knoepfe[0], hk.quelle, 'onclick')!, Object.assign(Object.create(hk.u), { onSetup })) as () => unknown;
 		const vorher = (globalThis as Knoten).window.location.href;
-		await (werte(onclick(knoepfe[0], seite.quelle), seite.u) as () => unknown)();
+		await ausloeser();
 		const nachher = (globalThis as Knoten).window.location.href;
 		const zielUrl = nachher !== vorher ? String(nachher) : schreibungen.at(-1);
 		assert.ok(zielUrl, 'der Knopf hat kein Ziel angesteuert');
