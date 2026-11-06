@@ -24,6 +24,7 @@ import {
 	werte,
 	type Knoten
 } from '../../shared/__tests__/svelteInstanzPruefstand.ts';
+import { createController } from '../../shared/__tests__/versandVergleichPruefstand.ts';
 
 const HUB = join(dirname(fileURLToPath(import.meta.url)), '..', 'CompareTabs.svelte');
 
@@ -180,5 +181,28 @@ describe('#2828 AC-5/AC-6: Status-Kennzahl der Uebersicht folgt dem lebenden Sta
 		assert.strictEqual((lies('preset') as Record<string, unknown>).name, 'Prop-Neu', 'Effekt muss currentPreset aus der Prop setzen.');
 		assert.strictEqual(u.localSchedule, 'daily', 'AC-6: der Prop-Wechsel-Effekt darf localSchedule nicht schreiben.');
 		assert.strictEqual(statusDerUebersicht(), 'active', 'AC-6: der Effekt darf den Status der Uebersicht nicht verfaelschen.');
+	});
+});
+
+// Adversary F001 (fix-2828, AC-7): nach einem 412 schreibt der Hub sein currentPreset um
+// die abgelehnte Nutzlast fort (registriereAbgelehnt). Gemessen am ECHTEN Controller
+// (SaveStatus) und der ECHTEN Registrierung im CompareTabs-Skript: die Uebersicht zeigt
+// danach den Eingabestand, nicht den Ladestand.
+describe('#2828 AC-7: nach einem abgelehnten Speichern zeigt die Uebersicht den Eingabestand', () => {
+	test('AC-7: abgelehnte Nutzlast (412) wird in das preset der Uebersicht fortgeschrieben', async () => {
+		const { u, ast, quelle, lies } = await hub();
+		const ctl = createController('p1');
+		u.saveController = ctl;
+		const effekte = effekteVon(ast, quelle, u, 'registriereAbgelehnt');
+		assert.strictEqual(effekte.length, 1, 'Messaufbau: genau ein registriereAbgelehnt-Effekt erwartet.');
+		effekte[0]();
+		assert.strictEqual(typeof ctl.onAbgelehnt, 'function', 'Messaufbau: der Hub muss sich am Controller registrieren.');
+		assert.strictEqual((lies('preset') as Record<string, unknown>).name, 'Start', 'Vorbedingung: Ladestand.');
+		// So meldet der Controller bei einem 412 die abgelehnte Eigenfeld-Nutzlast.
+		ctl.onAbgelehnt!({ name: 'Eingabe', display_config: { x: 1 } });
+		const p = lies('preset') as Record<string, unknown>;
+		assert.strictEqual(p.name, 'Eingabe', 'AC-7: HubUebersicht.preset muss die abgelehnte Eingabe zeigen, nicht den Ladestand.');
+		assert.deepStrictEqual(p.display_config, { x: 1 });
+		assert.deepStrictEqual(p.location_ids, ['a'], 'nicht gemeldete Felder bleiben erhalten.');
 	});
 });

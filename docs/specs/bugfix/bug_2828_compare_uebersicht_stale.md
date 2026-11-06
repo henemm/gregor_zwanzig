@@ -24,7 +24,7 @@ Hinweis zum Wort „Vorschau" im Issue: Den Reiter „Vorschau" gibt es seit #17
 ## Source
 
 - **File:** `frontend/src/lib/components/compare/CompareTabs.svelte`
-- **Identifier:** `status` (`:198`), `currentPreset` (`:217`), Übergabe an `HubUebersicht` (`:695`), Kommentar „akzeptierte Stale-Anzeige" (`:213-216`)
+- **Identifier:** `status` (`:218`), `currentPreset` (`:217`), Übergabe an `HubUebersicht` (`:695`), Kommentar „akzeptierte Stale-Anzeige" (`:213-216`)
 
 **Ursache:** `CompareTabs` reicht die Seiten-Prop `preset` (eingefroren auf den Ladezeitpunkt) an `HubUebersicht` und leitet `status` ebenfalls daraus ab. Alle Reiter dagegen hydrieren und speichern über `currentPreset`, das nach jedem PUT aus der Antwort aufgefrischt wird. Nur die Orte sind schon live (`resolvedLocations`). Der Trip-Gegenpart `TripTabs.svelte:196` reicht den lebenden `trip`.
 
@@ -73,7 +73,8 @@ status = deriveStatusWithScheduleOverride(currentPreset, localSchedule)   // sta
 
 ## Acceptance Criteria
 
-- **AC-1:** Given ein Ortsvergleich im Hub, When der Nutzer im Reiter Wertebereiche einen Wert ändert, speichert und zur Übersicht wechselt, Then zeigt die Wertebereiche-Karte der Übersicht den neuen Wert, ohne dass die Seite neu geladen wurde.
+- **AC-1:** Given ein Ortsvergleich im Hub, When der Nutzer den Reiter Wertebereiche öffnet, Then ist er seit #2792 nur lesbar (kein Hinzufügen oder Ändern), und die Wertebereiche-Karte der Übersicht zeigt weiter den gespeicherten Stand des lebenden `currentPreset`; die Verdrahtung ist durch den Verdrahtungs-Test `compare_uebersicht_liest_lebenden_stand.test.ts` belegt.
+  - Spec-Änderung 2026-11-06 nach #2792 / PR #2829: Ursprünglich verlangte AC-1 das Ändern eines Werts im Reiter Wertebereiche und die Anzeige in der Übersicht. Das ist durch die Sperre des Editors gegenstandslos; AC-1 wurde auf den lesenden Stand umgestellt.
 - **AC-2:** Given ein Ortsvergleich im Hub, When der Nutzer im Reiter Orte einen Ort hinzufügt oder entfernt, speichert und zur Übersicht wechselt, Then zeigt die Orte-Karte der Übersicht die neue Ortsliste samt Anzahl ohne Neuladen.
 - **AC-3:** Given ein Ortsvergleich im Hub, When der Nutzer im Reiter Versand Kanäle oder Briefing-Zeiten ändert, speichert und zur Übersicht wechselt, Then zeigen Versand-Karte und Kennzahlen (Kanäle, Briefings) die neuen Kanäle und Zeiten ohne Neuladen.
 - **AC-4:** Given ein Ortsvergleich im Hub, When der Nutzer im Reiter Alarme eine Einstellung ändert und speichert, Then bleibt die Übersicht ohne Neuladen in sich stimmig (der Vergleichs-Kontext des Bausteins zeigt keine eigene Alarm-Angabe, `hubUebersichtModell.ts` kennt Alarme nur für den Trip), und ein erneutes Öffnen des Reiters Alarme zeigt den gespeicherten Wert; eine Alarm-Änderung setzt dabei keine anderen Übersichts-Werte zurück.
@@ -86,7 +87,7 @@ status = deriveStatusWithScheduleOverride(currentPreset, localSchedule)   // sta
 
 Reihenfolge: zuerst rot aus Nutzersicht, dann der Fix.
 
-1. **E2E (Nutzersicht, zuerst rot):** `frontend/e2e/compare-uebersicht-live.spec.ts`. Wert in einem Reiter ändern und speichern, zur Übersicht wechseln, neuen Wert sehen, ohne Reload (AC-1 bis AC-3, AC-5). Auf dem alten Code schlägt der Test fehl.
+1. **E2E (Nutzersicht, zuerst rot):** `frontend/e2e/compare-uebersicht-live.spec.ts`. Wert in einem Reiter ändern und speichern, zur Übersicht wechseln, neuen Wert sehen, ohne Reload (AC-2, AC-3, AC-5). Auf dem alten Code schlägt der Test fehl. Der Test zu AC-1 (Metrik im Reiter Wertebereiche hinzufügen) entfällt seit #2792, weil der Editor gesperrt ist; AC-1 ist stattdessen durch den Verdrahtungs-Test (Punkt 2) belegt.
 2. **Verdrahtungs-Test (node --test, kein Mock-Theater):** unter `frontend/src/lib/components/shared/hub-uebersicht/__tests__/` bzw. im Compare-Testordner. Prüft am echten Quelltext der Verdrahtung (Doc-Compliance-Kennzeichnung nur, wo nötig), dass `HubUebersicht` `currentPreset` erhält und `status` daraus abgeleitet wird; ergänzend Modell-Test mit Preset-Wechsel (AC-6, AC-8).
 3. **Regression:** bestehende Compare-Hub-E2E (`compare-hub-inline-edit.spec.ts`, `compare-hub-fidelity-s8c.spec.ts`) und Trip-Übersicht-Tests bleiben grün (AC-8).
 4. **412-Fall (AC-7):** falls im E2E nicht sauber erzeugbar, über den vorhandenen 412-Test-Pfad des Save-Controllers prüfen; sonst Verdrahtung plus Review-Nachweis.
@@ -103,3 +104,4 @@ Reihenfolge: zuerst rot aus Nutzersicht, dann der Fix.
 ## Changelog
 
 - 2026-11-05: Initial spec created (Issue #2828, B1-46)
+- 2026-11-06: AC-1 geändert (Wertebereiche-Editor seit #2792 / PR #2829 gesperrt, Metrik-Hinzufügen nicht mehr möglich); Testplan angepasst, E2E-Test zu AC-1 entfällt

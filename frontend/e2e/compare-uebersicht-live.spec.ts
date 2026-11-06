@@ -4,13 +4,13 @@
 // Wertebereiche, Versand) und nach Pausieren zeigt die Übersicht den neuen Stand,
 // OHNE dass die Seite neu geladen wird.
 //
-// Spec: docs/specs/bugfix/bug_2828_compare_uebersicht_stale.md § AC-1, AC-2, AC-3, AC-5
+// Spec: docs/specs/bugfix/bug_2828_compare_uebersicht_stale.md § AC-2, AC-3, AC-5 (AC-1 per Verdrahtungs-Test, Editor seit #2792 gesperrt)
 //
 // „Ohne Neuladen" wird belegt, nicht angenommen: vor der Änderung wird ein Merker im
 // `window` gesetzt; ein Neuladen würde ihn verwerfen, am Ende muss er noch stehen.
 //
 // Diskriminierend gegen den Alt-Code (Seiten-Prop `preset` an HubUebersicht):
-//   AC-1 (Wertebereiche-Karte), AC-3 (Briefings-Kennzahl). AC-2 (Orte-Karte) war schon
+//   AC-3 (Briefings-Kennzahl). AC-2 (Orte-Karte) war schon
 //   vorher lebend (`resolvedLocations`) und läuft hier als Regressionsschutz mit; AC-5
 //   (Status) prüft das Zusammenspiel `currentPreset` + lokaler Pausier-Override.
 //
@@ -95,55 +95,8 @@ test.describe('#2828: Compare-Übersicht zeigt den lebenden Stand ohne Neuladen'
 		}
 	});
 
-	// AC-1 — fängt: Wertebereiche-Karte liest die eingefrorene Prop.
-	test('AC-1: Metrik im Reiter Wertebereiche hinzufügen ⇒ Wertebereiche-Karte der Übersicht zeigt die neue Anzahl', async ({
-		page
-	}) => {
-		const hub = await seedHub(page.request, 'vergleich', {
-			extra: {
-				corridors: [{ metric: 'snow_depth_cm', range: [30, null], notify: false, mark: true }],
-				display_config: {
-					ideal_ranges: { snow_depth_cm: { min: 30 } },
-					active_metrics: ['snow_depth_cm'],
-					telegram_style: 'kurzform'
-				}
-			}
-		});
-		try {
-			await openHub(page, 'vergleich', hub.id);
-			const p = uebersicht(page);
-			await expect(p.getByText(/^1 Metriken mit Idealbereich/), 'Vorbedingung: eine Metrik').toBeVisible({
-				timeout: 10_000
-			});
-			await setzeKeinReloadMerker(page);
-
-			await page.locator('[data-testid="compare-detail-tab-wertebereiche"]:visible').first().click();
-			const editor = page.locator('[data-testid="corridor-editor-vergleich"]:visible');
-			await expect(editor).toBeVisible({ timeout: 10_000 });
-			const poolBtn = editor.locator('[data-testid="corridor-editor-pool-item-wind_max_kmh"]');
-			await expect(poolBtn, 'Vorbedingung: Pool bietet wind_max_kmh an').toBeVisible({ timeout: 10_000 });
-			const put = putAntwort(page, hub.id);
-			await poolBtn.click();
-			const res = await put;
-			expect(res.ok(), 'PUT nach Metrik-Hinzufügen fehlgeschlagen: ' + res.status()).toBeTruthy();
-
-			// Erwartung aus dem GESPEICHERTEN Stand, nicht aus einer Annahme über den Editor.
-			const gespeichert = await stand(page, hub.id);
-			const anzahl = Object.keys(
-				((gespeichert.display_config as Stand | undefined)?.ideal_ranges as Stand | undefined) ?? {}
-			).length;
-			expect(anzahl, 'Vorbedingung: der gespeicherte Stand trägt eine geänderte Anzahl Wertebereiche').not.toBe(1);
-
-			await zurUebersicht(page);
-			await expect(
-				p.getByText(new RegExp(`^${anzahl} Metriken mit Idealbereich`)),
-				'AC-1: die Wertebereiche-Karte zeigt noch den Ladezeitpunkt'
-			).toBeVisible({ timeout: 10_000 });
-			await erwarteKeinReload(page);
-		} finally {
-			await hub.aufraeumen();
-		}
-	});
+	// AC-1 entfällt hier: der Wertebereiche-Editor ist seit #2792 gesperrt (nur lesbar). Der lesende Stand
+	// der Wertebereiche-Karte ist durch compare_uebersicht_liest_lebenden_stand.test.ts belegt.
 
 	// AC-2 — Regressionsschutz: Orte-Karte zeigt die neue Ortsliste samt Anzahl.
 	test('AC-2: Ort im Reiter Orte entfernen ⇒ Orte-Karte der Übersicht zeigt neue Anzahl und Liste', async ({ page }) => {
