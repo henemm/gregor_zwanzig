@@ -2,13 +2,13 @@
 entity_id: fix_2774_staging_mailweg
 type: module
 created: 2026-11-03
-updated: 2026-11-03
+updated: 2026-11-06
 status: draft
-version: "1.0"
-tags: [tooling, staging, email, e2e-verify, validator, tests]
+version: "1.1"
+tags: [tooling, staging, email, e2e-verify, validator, tests, i18n, lang-en]
 ---
 
-# Staging-Mailweg für die Mail-Verifikation in `/e2e-verify` (#2774)
+# Staging-Mailweg für die Mail-Verifikation in `/e2e-verify` (#2774, englischer Pfad #2830)
 
 ## Approval
 
@@ -20,6 +20,8 @@ Schritt 3b von `/e2e-verify` (Trip- und Compare-Mail auf Staging zustellen und p
 
 Diese Spec liefert ein Prüfwerkzeug, das auf Staging **eine Trip-Mail und eine Compare-Mail wirklich zustellt** (Wegwerf-Nutzer mit eindeutiger Plus-Adresse `gregor-test+<tag>@henemm.com`, Bestätigung über das Helfer-Konto, Einzelversand mit Core-Auth) und den **pfadrichtigen, unveränderten Validator** gegen genau diese Mail laufen lässt. Dazu wird das Rezept in `/e2e-verify` ersetzt und der Weg in den Referenz-Dokumenten festgehalten. Es ändert **keinen Produktcode**, umgeht weder Absenderschutz noch Anmeldung und fasst keine Daten bestehender Nutzer an.
 
+**Erweiterung #2830 (englischer Pfad):** `staging_gate.py --write-verdict` verlangt Nachweise für `--langs de,en` (#2681), das Werkzeug kennt bisher nur den deutschen Wegwerf-Nutzer; #1563 steckt deshalb vor dem Gate fest. Das Werkzeug bekommt `--lang de|en` (Default `de`). Bei `en` meldet es den **festen** Staging-Nutzer `en` an (kein Wegwerf-Nutzer, denn nur dessen Empfängeradresse `gregor-test+en@henemm.com` besteht die To-Regel `+en@` der Validatoren), legt Trip bzw. Orte und Preset darunter an, stellt zu, prüft mit `--lang en --to-contains "+en@"` und löscht nur die selbst angelegten Objekte. Der Nutzer `en` wird nie gelöscht. Weiterhin kein Produktcode und keine Änderung der Validatoren.
+
 Ausdrücklich **nicht** gelöst, sondern als dokumentierte Grenze festgehalten: das Szenario „Ausblick ohne Winddaten" (AC-5 aus #1670, Wind-Zelle „–" statt „0"). Auf Staging liefern die echten Provider praktisch immer Wind, und der Seed-Endpoint (`staging_seed_endpoint`) setzt nur Tarif und SMS-Zähler, keine Wetterdaten. Dieser Fall bleibt per lokalem Render-Test belegt (abgedeckt in #1670); es gibt keinen Eingriff in Wetterdaten und keine Ersatzkonstruktion.
 
 ## Source
@@ -30,14 +32,17 @@ Ausdrücklich **nicht** gelöst, sondern als dokumentierte Grenze festgehalten: 
   - `.claude/commands/e2e-verify.md` (Schritt 3b ersetzt, Z. ~83-106)
   - `docs/reference/mail_validators.md` (Zustellweg und Subject-Filter)
   - `docs/reference/operations_playbook.md` (Staging-Rezept, neuer Abschnitt neben „Staging-Messlauf auslösen")
-- **Identifier:** `main()` im Werkzeug; reine Funktionen `baue_mail_tag`, `baue_trip_name`, `baue_preset`, `baue_validator_aufruf`, `waehle_validator`, `bestimme_exit`; HTTP-Rand `sende_einzelversand`, `lege_ort_an`, `lege_preset_an`.
+  - `docs/runbooks/staging_e2e_nutzer_en.md` (#2830: Aufruf des Werkzeugs für den Nutzer `en`)
+  - #2830 ergänzt `staging_mail_pruefen.py` (`--lang en`), den Test, `e2e-verify.md` (Schritt 3b), das Runbook und ggf. `mail_validators.md`/`operations_playbook.md`
+- **Identifier:** `main()` im Werkzeug; reine Funktionen `baue_mail_tag`, `baue_trip_name`, `baue_preset`, `baue_validator_aufruf(pfad, betreff, lang="de")`, `waehle_validator`, `bestimme_exit`; HTTP-Rand `sende_einzelversand`, `lege_ort_an`, `lege_preset_an`; #2830: Klasse `EnMailApi(MailApi)` mit `melde_an` und `loesche_nutzer` (No-op), Parameter `lang` in `fuehre_lauf` und `_raeume_auf`.
 
 > Schicht-Hinweis: Reines Werkzeug und Test-Schicht (`.claude/`, `tests/`, Doku). `src/`, `api/`, `internal/`, `frontend/` bleiben unverändert. Die Validatoren `.claude/hooks/briefing_mail_validator.py` und `.claude/hooks/email_spec_validator.py` bleiben **unverändert** (Gate-Dateien; das Renderer-Commit-Gate ist nicht betroffen, es sind keine Mail-Inhalts-Dateien).
 
 ## Estimated Scope
 
 - **LoC:** Werkzeug ca. +190, Kern-Tests ca. +130, Doku (`e2e-verify.md`, `mail_validators.md`, `operations_playbook.md`) ca. +70. Gesamt ca. +390. Ob `.claude/tools/*.py` zum Limit von 250 zählt, ist nicht sicher (wie bei #2542); vor `/50` mit `workflow.py status` gegenlesen und bei Bedarf `workflow.py set-field loc_limit_override 500` setzen (`*.md` zählt nicht).
-- **Files:** 5 (2 CREATE, 3 MODIFY)
+- **Erweiterung #2830:** Werkzeug ca. +90, Kern-Tests ca. +150, Doku ca. +15 (Runbook, `e2e-verify.md`, ggf. `mail_validators.md`/`operations_playbook.md`). Files 4-5, alles MODIFY, keine neue Datei. Das LoC-Limit ist wie oben vor `/50` zu prüfen (`loc_limit_override`).
+- **Files:** 5 (2 CREATE, 3 MODIFY) in der Erstfassung
   - CREATE `.claude/tools/staging_mail_pruefen.py` — Treiber (ca. +190)
   - CREATE `tests/tdd/test_staging_mail_pruefweg.py` — Kern-Tests (ca. +130)
   - MODIFY `.claude/commands/e2e-verify.md` — Schritt 3b neu (ca. +35)
@@ -60,6 +65,10 @@ Ausdrücklich **nicht** gelöst, sondern als dokumentierte Grenze festgehalten: 
 | `docs/reference/api_contract.md` §16 (ComparePreset) | Upstream (nur lesen) | Feldschema des Presets |
 | `fix_1670_mail_formatdetails.md` | Downstream | nutzt den Weg zur Staging-Verifikation; AC-5 dort bleibt per lokalem Render-Test belegt |
 | `/e2e-verify` (Hard Gate für Prod-Deploy) | Downstream | ruft das Werkzeug in Schritt 3b auf |
+| `scripts/staging_e2e_user_en.py` (#2681), Nutzer `en` auf Staging | Upstream (#2830, nur Voraussetzung, nicht geändert) | stellt den festen Nutzer sicher; `EnApi.anmelden` ist das Vorbild für den Login |
+| Staging-`.env`: `GZ_E2E_EN_USER`, `GZ_E2E_EN_PASS` (`GZ_E2E_EN_MAIL` nur Dokumentation) | Upstream (#2830) | Zugang zum Nutzer `en` (Werte nie ausgeben) |
+| `.claude/hooks/_e2e_paths.py` (`EN_SUBADRESSE = "+en@"`, `_empfaenger_passt`) | Upstream (#2830, unverändert) | begründet, warum nur der feste Nutzer `en` zustellbar ist; beide Validatoren nehmen `--lang` und `--to-contains` über `sprach_argumente` an |
+| `.claude/tools/staging_gate.py --write-verdict --langs de,en` | Downstream (#2830, unverändert) | verlangt je Sprache einen Nachweis; je Sprache ein eigener Werkzeug-Aufruf; #1563 wartet darauf |
 
 ## Implementation Details
 
@@ -111,11 +120,44 @@ Der Validator-Aufruf ist ein Unterprozess; sein Exit-Code wird durchgereicht (Ex
 
 **Dokumentierte Grenze „Ausblick ohne Winddaten":** Das Rezept in `e2e-verify.md` und `mail_validators.md` nennt: AC-5 aus #1670 (Wind-Zelle „–" bei fehlenden Winddaten) ist auf Staging nicht herstellbar (echte Provider liefern Wind, Seed-Endpoint setzt keine Wetterdaten); der Nachweis erfolgt per lokalem Render-Test (`tests/tdd/` zu #1670). Kein Eingriff in Wetterdaten, keine Sonderkonstruktion.
 
+### Englischer Pfad (#2830)
+
+Aufruf: `python3 .claude/tools/staging_mail_pruefen.py --typ trip|compare|beide --lang en` (zusätzlich zu den bisherigen Optionen). `--lang de|en`, Default `de`; **nur einzeln**, kein `de,en` in einem Lauf: zwei Aufrufe, das Gate (`staging_gate.py --langs de,en`) fasst je Sprache zusammen. Das deutsche Verhalten (AC-1 bis AC-11) bleibt unverändert.
+
+**Warum kein Wegwerf-Nutzer:** Die Validatoren lassen eine englische Mail nur zu, wenn `To` die Subadresse `+en@` enthält (`_e2e_paths._empfaenger_passt`). Diese Adresse (`gregor-test+en@henemm.com`) gehört dem festen Staging-Nutzer `en`; ein Wegwerf-Nutzer mit `+<tag>@` fiele durch die To-Regel. Also muss das Werkzeug **diesen** Nutzer anmelden.
+
+Ablauf bei `--lang en`:
+
+```
+1. tag = baue_mail_tag()                      # eindeutig je Lauf, nur fuer Betreff und Objektnamen
+2. Anmeldung: POST /api/auth/login mit GZ_E2E_EN_USER/GZ_E2E_EN_PASS (EnMailApi.melde_an),
+   KEINE Registrierung, KEIN Helfer-Konto; user_id = echte Kennung des Nutzers en (aus dem Login, nie "default")
+3. Trip- bzw. Compare-Pfad wie beim deutschen Lauf (Objektnamen mit Tag, Einzelversand mit Core-Auth)
+4. Validator: baue_validator_aufruf(pfad, betreff, lang="en") =
+   <de-Aufruf> + ["--lang", "en", "--to-contains", "+en@"]
+5. finally: nur selbst angelegte Objekte (Preset, Orte, Trip, erkennbar am Tag im Namen) loeschen;
+   der Nutzer en bleibt IMMER bestehen
+```
+
+**`EnMailApi(MailApi)`:** eigene Unterklasse statt Flag. `melde_an(user, passwort)` führt den Login aus und setzt Nutzer- und Passwort-Zustand (Vorbild `EnApi.anmelden` aus `scripts/staging_e2e_user_en.py`). `loesche_nutzer()` ist **strukturell ein No-op** und ruft nie `/api/auth/account/delete`; im en-Pfad gibt es keinen Weg, mit dem en-Passwort ein Konto zu löschen. `registriere` wird im en-Pfad nie aufgerufen.
+
+**`baue_validator_aufruf(pfad, betreff, lang="de")`:** Der Standard liefert den bisherigen Aufruf unverändert (kein `--lang`, kein `--to-contains`); bei `en` werden `--lang en --to-contains "+en@"` angehängt. Der Validator-Runner liest `--subject-contains` und `--mail-type` per `argv.index` und bleibt davon unberührt. Die Validatoren selbst bleiben unverändert (beide nehmen `--lang` und `--to-contains` bereits an, #2681).
+
+**`fuehre_lauf(..., lang)`:** verzweigt die Anmeldung (`de`: `registriere`, `en`: `melde_an`) und die Aufräum-Meldung. Im en-Pfad entfällt die Zeile „Wegwerf-Nutzer geloescht"; stattdessen steht ein Hinweis, dass der Nutzer `en` bestehen bleibt. Bleiben Objekte übrig (Löschen scheitert oder der Lauf bricht ab), werden die Kennungen von Trip, Orten und Preset ausgegeben und der Exit-Code ist ungleich 0. Das Trip-Kontingent (Tarif `free`: 3) bleibt geschützt, weil Trips im `finally` gelöscht werden; ein abgebrochener Lauf meldet übrig gebliebene Trip-, Orts- und Preset-Kennungen, damit sie von Hand entfernt werden können.
+
+**`main` bei `--lang en`:** liest `GZ_E2E_EN_USER` und `GZ_E2E_EN_PASS` aus der Staging-`.env`. Fehlt einer: Exit 2 **vor jeder Änderung und ohne Netzzugriff**, die Meldung nennt nur die Schlüsselnamen. Scheitert der Login: Exit 2 (Abbruch ohne Anlegen). `GZ_AUTH_USER/PASS` (Helfer-Konto) wird im en-Pfad nicht benötigt und nicht verlangt; `GZ_CORE_SHARED_SECRET` und die IMAP-Zugangsdaten bleiben Pflicht. Werte (Passwort, Secret) werden nie ausgegeben.
+
+**Multi-User:** Der en-Lauf arbeitet ausschließlich unter der echten Kennung des Nutzers `en`, berührt nie das Konto `default` und löscht keine Objekte, deren Namen den eigenen Tag nicht tragen (auch nicht andere Objekte des Nutzers `en`).
+
 ## Expected Behavior
 
 - **Input:** `python3 .claude/tools/staging_mail_pruefen.py --typ trip|compare|beide` (optional `--report-type`, `--timeout`, `--ohne-cleanup` nur zur Fehlersuche).
 - **Output:** je Pfad eine Zeile `PASS`/`FAIL` mit Betreff-Marker (Tag) und der Validator-Ausgabe; Gesamt-Exit 0 nur wenn alle gewählten Pfade bestehen. Exit 1 = Mail nicht zugestellt, Versand abgelehnt (z. B. `smtp_not_configured`, `send_failed`) oder Validator nicht Exit 0; Exit 2 = Aufruf-/Umgebungsfehler (fehlende Zugangsdaten oder Core-Secret, Registrierung abgelehnt, Aufräumen nicht möglich).
 - **Side effects:** legt auf Staging einen Wegwerf-Nutzer samt Trip, Orten und Preset an, löst zwei Einzelversände aus, erzeugt zwei Mails im Test-Postfach (nur Lesezugriff durch die Validatoren), räumt im `finally` weg.
+- **Input `--lang en` (#2830):** `python3 .claude/tools/staging_mail_pruefen.py --typ trip|compare|beide --lang en`; Voraussetzung `GZ_E2E_EN_USER`/`GZ_E2E_EN_PASS` in der Staging-`.env`. Ohne `--lang` gilt `de`. Andere Werte (auch `de,en`) lehnt die Argumentprüfung ab (Exit 2).
+- **Output `--lang en`:** wie beim deutschen Lauf eine Zeile `PASS`/`FAIL` je Pfad mit Betreff-Marker; am Ende der Hinweis, dass der Nutzer `en` bestehen bleibt, statt „Wegwerf-Nutzer geloescht".
+- **Exit-Codes `--lang en`:** 0, 1 und 2 mit derselben Bedeutung und derselben Ableitung (`bestimme_exit`) wie beim deutschen Lauf. Zusätzlich Exit 2: `GZ_E2E_EN_*` fehlt (vor jeder Änderung, ohne Netzzugriff) oder der Login des Nutzers `en` scheitert (Abbruch ohne Anlegen); Exit != 0 bei übrig gebliebenen eigenen Objekten.
+- **Side effects `--lang en`:** Login als Nutzer `en`; legt darunter Trip bzw. drei Orte und Preset an (alle mit Tag im Namen), löst Einzelversände aus, löscht im `finally` nur diese Objekte. Der Nutzer `en` und seine übrigen Objekte bleiben unberührt.
 
 ## Acceptance Criteria
 
@@ -152,6 +194,36 @@ Der Validator-Aufruf ist ein Unterprozess; sein Exit-Code wird durchgereicht (Ex
 - **AC-11:** Given die Mehr-Nutzer-Isolation / When zwei Läufe kurz nacheinander oder parallel starten / Then arbeitet jeder mit seinem eigenen Wegwerf-Nutzer, eigenem Tag und eigener `user_id`; der Lauf berührt nie das Konto `default` oder Daten bestehender Nutzer und löscht nur Objekte, deren Namen den eigenen Tag tragen.
   - Test: Kern, `test_zwei_laeufe_nutzen_getrennte_nutzer_und_loeschen_nur_eigenes` (zwei Läufe gegen eine lokale Ersatz-Staging-Schnittstelle mit zwei Nutzern; geprüft werden Anfragen und Löschungen je `user_id`).
 
+- **AC-12:** Given Staging läuft, der Nutzer `en` existiert und `GZ_E2E_EN_USER`/`GZ_E2E_EN_PASS` sind gesetzt / When der Mitarbeiter `--lang en` startet / Then meldet das Werkzeug den Nutzer `en` per Login an (keine Registrierung, kein Helfer-Konto), legt Trip bzw. Orte und Preset unter der Kennung dieses Nutzers an und stellt sie per Einzelversand mit Core-Auth zu.
+  - Test: Kern, `test_en_lauf_meldet_an_statt_zu_registrieren_und_legt_objekte_unter_nutzer_en_an` (das Ersatz-Staging zeichnet Login-, Registrierungs- und Anlege-Anfragen auf; keine Registrierung, Objekte unter der Kennung des Nutzers `en`).
+
+- **AC-13:** Given ein en- und ein de-Lauf / When das Werkzeug den Validator-Aufruf baut / Then trägt der en-Aufruf zusätzlich `--lang en --to-contains "+en@"` (für Trip und Compare, sonst identisch mit dem de-Aufruf), und der de-Aufruf trägt weder `--lang` noch `--to-contains`.
+  - Test: Kern, `test_validator_aufruf_traegt_lang_en_und_to_contains_nur_bei_en` (reine Funktion, positiv und Gegenprobe); `test_en_lauf_reicht_lang_en_an_den_validator_durch` (Ersatz-Staging mit Validator-Runner, der die tatsächlichen Argumente aufzeichnet).
+
+- **AC-14:** Given ein en-Lauf endet erfolgreich, mit Versandfehler, mit Validator-Befund oder mit fehlgeschlagenem Aufräumen / When das Werkzeug beendet wird / Then wurde nie `/api/auth/account/delete` aufgerufen, der Nutzer `en` besteht weiter, es wurden nur Objekte gelöscht, deren Namen den eigenen Tag tragen, und andere, vorab vorhandene Objekte des Nutzers `en` sind unverändert; bleiben eigene Objekte übrig, nennt das Werkzeug deren Kennungen (Trip, Orte, Preset) und endet mit Exit != 0.
+  - Test: Kern, `test_en_nutzer_wird_nie_geloescht_auch_nicht_bei_fehler` (Gegenprobe: das Ersatz-Staging protokolliert jeden Aufruf; kein `account/delete`), `test_en_lauf_loescht_nur_eigene_objekte_fremde_bleiben`, `test_en_aufraeumfehler_meldet_kennungen_und_exit_ungleich_0`, `test_en_mail_api_loesche_nutzer_ist_strukturell_noop` (die Methode ruft auch mit gesetztem Passwort keinen Transport auf).
+
+- **AC-15:** Given fehlende `GZ_E2E_EN_USER`/`GZ_E2E_EN_PASS` oder ein abgelehnter Login des Nutzers `en` / When der Mitarbeiter `--lang en` startet / Then endet der Lauf mit Exit 2; bei fehlenden Werten geschieht das vor jeder Änderung und ohne Netzzugriff (das Ersatz-Staging sieht keine einzige Anfrage), bei abgelehntem Login wird nichts angelegt; die Meldung nennt höchstens die Schlüsselnamen, nie Werte.
+  - Test: Kern, `test_main_en_ohne_zugangsdaten_ist_exit_2_ohne_netz`, `test_main_en_login_abgelehnt_ist_exit_2_ohne_anlegen`.
+
+- **AC-16:** Given ein en-Lauf mit allen Ausgängen (Erfolg, Versand abgelehnt, Core 401, Validator-Befund, Aufräumfehler, Login abgelehnt) / When das Werkzeug Ausgaben und Fehlermeldungen schreibt / Then enthalten Standard- und Fehlerausgabe weder das en-Passwort noch das Core-Secret noch das Helfer-Passwort.
+  - Test: Kern, `test_en_ausgaben_enthalten_keine_geheimnisse` (Platzhalter-Werte werden in `capsys` gesucht, über Erfolgs- und Fehlerpfade).
+
+- **AC-17:** Given die bestehenden Tests und Aufrufe des deutschen Pfads / When die Erweiterung #2830 umgesetzt ist / Then laufen sie ohne Änderung grün; ein Aufruf ohne `--lang` verhält sich exakt wie vor #2830 (Registrierung mit Plus-Adresse `+<tag>@`, Löschen des Wegwerf-Nutzers, Meldung „Wegwerf-Nutzer geloescht", Validator ohne `--lang`/`--to-contains`).
+  - Test: Kern, alle bestehenden Tests zu AC-1 bis AC-11 in `test_staging_mail_pruefweg.py` unverändert, zusätzlich `test_de_lauf_ohne_lang_verhaelt_sich_wie_vorher` (Default `de`).
+
+- **AC-18:** Given verschiedene Ausgänge eines en-Laufs (Validator Exit 0/1/2, Versand abgelehnt, Core 401, Login abgelehnt, Aufräumfehler) / When das Werkzeug den Exit-Code ableitet / Then gilt dieselbe Ableitung wie beim deutschen Lauf (Exit 0 nur bei Validator-Exit 0 aller Pfade, Exit 1 bei Mail-/Versand-/Validator-Befund, Exit 2 bei Umgebungsfehlern); ein abgelehnter Versand gilt nie als Erfolg.
+  - Test: Kern, `test_en_lauf_exit_je_ausgang_gegen_ersatz_staging` (parametrisiert wie `test_lauf_exit_je_ausgang_gegen_ersatz_staging`, mit `lang="en"`).
+
+- **AC-19:** Given Staging läuft mit dem Nutzer `en`, Core-Secret und IMAP-Zugang / When `--lang en` für Trip und Compare in `/e2e-verify` läuft / Then wird je eine englische Mail an `gregor-test+en@henemm.com` zugestellt und der pfadrichtige Validator mit `--lang en --to-contains "+en@" --subject-contains <Tag-Betreff>` endet mit Exit 0; der Nutzer `en` besteht danach weiter, ohne übrig gebliebene Trips (Kontingent von 3 unbelastet).
+  - Test: live/staging-Marker, `test_staging_mail_pruefweg.py::test_gesamtlauf_trip_en_auf_staging`, `test_gesamtlauf_compare_en_auf_staging` (nur in `/e2e-verify`, ohne Zugangsdaten übersprungen).
+
+- **AC-20:** Given ein Mitarbeiter liest das Runbook `docs/runbooks/staging_e2e_nutzer_en.md` und Schritt 3b in `.claude/commands/e2e-verify.md` / When er den englischen Mail-Nachweis führen will / Then findet er den Aufruf `staging_mail_pruefen.py --typ ... --lang en`, den Hinweis, dass der Nutzer `en` dabei nie gelöscht wird, und den Hinweis, dass `staging_gate.py --write-verdict` `--langs de,en` verlangt und deshalb je Sprache ein eigener Aufruf nötig ist (steht der Aufruf auch in `mail_validators.md` oder `operations_playbook.md`, dort ebenso).
+  - Test: `# doc-compliance-test` in `test_staging_mail_pruefweg.py::test_rezept_nennt_lang_en_aufruf_in_runbook_und_e2e_verify` (Pflicht-Stichworte `--lang en`, `staging_gate.py`, `--langs de,en`; ausdrücklich keine Verhaltensprüfung).
+
+- **AC-21:** Given die Mehr-Nutzer-Isolation im en-Pfad / When ein en-Lauf und ein de-Lauf nacheinander oder nebeneinander gegen dasselbe Ersatz-Staging laufen / Then tragen alle Anfragen des en-Laufs die echte Kontokennung des Nutzers `en` aus dem Login (nie `default`, nie die Kennung des Wegwerf-Nutzers), der de-Lauf behält seine eigene Kennung, und keiner löscht oder ändert Daten des anderen.
+  - Test: Kern, `test_en_und_de_lauf_nutzen_getrennte_kennungen_und_beruehren_keine_fremden_daten` (zwei Nutzer im Ersatz-Staging; geprüft werden Anfragen und Löschungen je `user_id`).
+
 ## Test Plan
 
 Alle Tests in `tests/tdd/test_staging_mail_pruefweg.py`; der Prüfling wird relativ zur Testdatei aufgelöst; kein `Mock()`/`patch()`, die Ränder werden durch einen lokalen Loopback-HTTP-Server bzw. Ersatzobjekte mit echtem Verhalten ersetzt.
@@ -169,7 +241,21 @@ Alle Tests in `tests/tdd/test_staging_mail_pruefweg.py`; der Prüfling wird rela
 - `test_gesamtlauf_trip_auf_staging` → AC-1
 - `test_gesamtlauf_compare_auf_staging` → AC-2
 
-**Review-Punkte (Adversary):** Validatoren und Produktcode im Diff unverändert (AC-8); Mutations-Gegenprobe an Exit-Code-Ableitung, Core-Auth-Header, `--subject-contains`-Bau und Cleanup-Reihenfolge.
+**Erweiterung #2830 (Kern, gegen das Ersatz-Staging `_Staging`, kein `Mock()`/`patch()`):**
+- `test_en_lauf_meldet_an_statt_zu_registrieren_und_legt_objekte_unter_nutzer_en_an` → AC-12
+- `test_validator_aufruf_traegt_lang_en_und_to_contains_nur_bei_en`, `test_en_lauf_reicht_lang_en_an_den_validator_durch` → AC-13
+- `test_en_nutzer_wird_nie_geloescht_auch_nicht_bei_fehler`, `test_en_lauf_loescht_nur_eigene_objekte_fremde_bleiben`, `test_en_aufraeumfehler_meldet_kennungen_und_exit_ungleich_0`, `test_en_mail_api_loesche_nutzer_ist_strukturell_noop` → AC-14
+- `test_main_en_ohne_zugangsdaten_ist_exit_2_ohne_netz`, `test_main_en_login_abgelehnt_ist_exit_2_ohne_anlegen` → AC-15
+- `test_en_ausgaben_enthalten_keine_geheimnisse` → AC-16
+- `test_de_lauf_ohne_lang_verhaelt_sich_wie_vorher` plus alle bestehenden Tests → AC-17
+- `test_en_lauf_exit_je_ausgang_gegen_ersatz_staging` → AC-18
+- `test_en_und_de_lauf_nutzen_getrennte_kennungen_und_beruehren_keine_fremden_daten` → AC-21
+- `test_rezept_nennt_lang_en_aufruf_in_runbook_und_e2e_verify` (`# doc-compliance-test`) → AC-20
+- Live/Staging (Marker `live` + `staging`, nur in `/e2e-verify`): `test_gesamtlauf_trip_en_auf_staging`, `test_gesamtlauf_compare_en_auf_staging` → AC-19
+
+Das Ersatz-Staging braucht dafür einen festen Nutzer `en` mit Login-Endpunkt, ein Protokoll aller Aufrufe (insbesondere `account/delete`) und die Möglichkeit, fremde, bereits vorhandene Objekte des Nutzers `en` vorzugeben.
+
+**Review-Punkte (Adversary):** Validatoren und Produktcode im Diff unverändert (AC-8); Mutations-Gegenprobe an Exit-Code-Ableitung, Core-Auth-Header, `--subject-contains`-Bau und Cleanup-Reihenfolge; #2830 zusätzlich am Anhängen von `--lang en`/`--to-contains`, am No-op von `EnMailApi.loesche_nutzer`, an der Prüfung der `GZ_E2E_EN_*`-Werte vor dem ersten Netzaufruf und an der Auswahl „nur eigene Objekte löschen".
 
 ## Out of Scope
 
@@ -178,6 +264,9 @@ Alle Tests in `tests/tdd/test_staging_mail_pruefweg.py`; der Prüfling wird rela
 - Radar-/Regen-Alarm-Mails, amtliche Warnmails und Befehls-Antworten (haben eigene Validatoren bzw. #2542).
 - Heben der Hilfsfunktionen aus `staging_befehl_pruefen.py` in ein gemeinsames Modul (Sammel-Eintrag #1199); das Werkzeug importiert sie unverändert.
 - Dauerhafter Cron-Lauf; das Werkzeug läuft nur im Rahmen von `/e2e-verify`.
+- #2830: Änderungen an Produktcode, Validatoren, am Gate-Skript `staging_gate.py` und an `scripts/staging_e2e_user_en.py`; kein ADR.
+- #2830: ein Aufruf mit `--lang de,en` in einem Lauf (bewusst zwei Aufrufe; das Gate fasst je Sprache zusammen) und ein englischer Wegwerf-Nutzer (scheitert an der To-Regel `+en@`).
+- #2830: der Vertretungshinweis (#1563) selbst; er bleibt per Unit-Test belegt, #2830 schließt nur die Sprachlücke im Staging-Nachweis.
 
 ## Known Limitations
 
@@ -186,6 +275,9 @@ Alle Tests in `tests/tdd/test_staging_mail_pruefweg.py`; der Prüfling wird rela
 - Registrierung ist auf 5 Versuche pro IP und Stunde begrenzt (#117): kein Wiederholungsversuch, mehrere Läufe in kurzer Folge können mit 429 abbrechen.
 - `compact`-Format: nur abgedeckt, wenn es per Trip-Konfiguration über die Staging-API setzbar ist (beim Bau zu klären, siehe Implementation Details); sonst lokal belegt.
 - „Ausblick ohne Winddaten" (#1670 AC-5) ist auf Staging nicht beobachtbar (siehe Out of Scope).
+- #2830: Der englische Pfad setzt den festen Nutzer `en` voraus (`scripts/staging_e2e_user_en.py`, `GZ_E2E_EN_*` in der Staging-`.env`); fehlt er, bricht der Lauf mit Exit 2 ab und legt den Nutzer nicht selbst an.
+- #2830: Fremde Objekte des Nutzers `en` (z. B. Trips aus anderen Läufen) belegen das Trip-Kontingent (Tarif `free`: 3) und können den Versand blockieren; das Werkzeug löscht sie bewusst nicht.
+- #2830: Zwei gleichzeitige en-Läufe teilen sich den Nutzer `en` und dessen Kontingent; Betreff-Marker und Objektnamen bleiben je Tag getrennt, das Kontingent nicht.
 - Das Werkzeug prüft Inhalt und Zustellung bis zum Test-Postfach, nicht die Darstellung im Mail-Programm des Nutzers.
 
 ## Architektur-Entscheidung (ADR)
@@ -196,3 +288,4 @@ Alle Tests in `tests/tdd/test_staging_mail_pruefweg.py`; der Prüfling wird rela
 ## Changelog
 
 - 2026-11-03: Initial spec created (Issue #2774). Entscheidungen: neues Werkzeug nach Muster #2542 (importiert statt kopiert), Validatoren unverändert (Filter über `--subject-contains`), AC-5 aus #1670 als dokumentierte Grenze statt Staging-Eingriff.
+- 2026-11-06: Erweiterung um den englischen Pfad `--lang en` (Issue #2830, Version 1.1). Entscheidungen: fester Nutzer `en` statt Wegwerf-Nutzer (To-Regel `+en@`), eigene Unterklasse `EnMailApi` mit No-op-`loesche_nutzer`, nur eine Sprache je Aufruf, Exit 2 vor jeder Änderung bei fehlenden `GZ_E2E_EN_*`, Validatoren und Gate-Skript unverändert. Neue ACs AC-12 bis AC-21.

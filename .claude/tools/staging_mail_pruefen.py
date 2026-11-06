@@ -10,7 +10,11 @@ unveraenderten Validator mit ``--subject-contains <Tag-Betreff>`` gegen genau
 diese Mail laufen. Aufraeumen (Preset, Orte, Trip, Nutzer) im ``finally``.
 Aendert keinen Produktcode und beruehrt keine Daten bestehender Nutzer.
 
-Aufruf:  python3 .claude/tools/staging_mail_pruefen.py --typ trip|compare|beide
+``--lang en`` (#2830): statt des Wegwerf-Nutzers wird der feste Staging-Nutzer ``en``
+(GZ_E2E_EN_USER/GZ_E2E_EN_PASS) angemeldet, der Validator laeuft mit
+``--lang en --to-contains +en@``; geloescht werden nur die eigenen Objekte, nie der Nutzer.
+
+Aufruf:  python3 .claude/tools/staging_mail_pruefen.py --typ trip|compare|beide [--lang de|en]
              [--report-type morning|evening] [--format full|compact] [--timeout 300] [--ohne-cleanup]
 Exit:    0 = alle gewaehlten Pfade bestanden (Validator Exit 0),
          1 = Mail nicht zugestellt, Versand abgelehnt oder Validator-Befund,
@@ -60,11 +64,13 @@ EINZELVERSAND_TIMEOUT_S = 300
 STANDARD_BASIS = "https://staging.gregor20.henemm.com"
 STANDARD_KERN = "http://127.0.0.1:8001"
 PFLICHT = ("GZ_CORE_SHARED_SECRET", "GZ_AUTH_USER", "GZ_AUTH_PASS")
+PFLICHT_EN = ("GZ_CORE_SHARED_SECRET", "GZ_E2E_EN_USER", "GZ_E2E_EN_PASS")
 PFLICHT_IMAP = ("GZ_TEST_IMAP_USER", "GZ_TEST_IMAP_PASS")
+EN_SUBADRESSE = "+en@"
 _VALIDATOREN = {"trip": ("briefing_mail_validator.py", "trip-briefing"),
                 "compare": ("email_spec_validator.py", "compare")}
-_EXIT_2 = {"core_401", "zugangsdaten_fehlen", "registrierung_abgelehnt", "umgebung",
-           "aufraeumen_fehlgeschlagen"}
+_EXIT_2 = {"core_401", "zugangsdaten_fehlen", "registrierung_abgelehnt", "login_abgelehnt",
+           "umgebung", "aufraeumen_fehlgeschlagen"}
 
 
 class KernAuthFehler(StagingFehler):
@@ -112,10 +118,13 @@ def waehle_validator(pfad: str) -> tuple[str, str]:
     return _VALIDATOREN[pfad]
 
 
-def baue_validator_aufruf(pfad: str, betreff: str) -> list[str]:
+def baue_validator_aufruf(pfad: str, betreff: str, lang: str = "de") -> list[str]:
     skript, mail_type = waehle_validator(pfad)
-    return ["uv", "run", "python3", str(HOOKS / skript),
-            "--mail-type", mail_type, "--subject-contains", betreff]
+    aufruf = ["uv", "run", "python3", str(HOOKS / skript),
+              "--mail-type", mail_type, "--subject-contains", betreff]
+    if lang == "en":
+        aufruf += ["--lang", "en", "--to-contains", EN_SUBADRESSE]
+    return aufruf
 
 
 def bestimme_exit(ausgaenge) -> int:
@@ -209,6 +218,31 @@ class MailApi(pw.StagingApi):
         return antwort if isinstance(antwort, dict) else {}
 
 
+class EnMailApi(MailApi):
+    """Fester Staging-Nutzer ``en`` (#2830): Login statt Registrierung, Nutzer wird nie geloescht."""
+
+    def __repr__(self) -> str:
+        return f"EnMailApi(basis={self._basis!r}, nutzer={self._username!r})"
+
+    def melde_an(self, nutzer: str, passwort: str) -> str:
+        antwort = self._rufe("POST", f"{self._basis}/api/auth/login",
+                             {"username": nutzer, "password": passwort})
+        # AC-21: die Kontokennung kommt aus der Login-Antwort (Go-API: {"id": uid}), nicht
+        # ungeprueft aus GZ_E2E_EN_USER. Fehlt sie, ist sie "default" oder weicht sie von der
+        # konfigurierten Kennung ab, gilt der Login als abgelehnt (keine Werte in der Meldung).
+        uid = antwort.get("id") if isinstance(antwort, dict) else None
+        if not isinstance(uid, str) or not uid.strip():
+            raise StagingFehler("Login-Antwort ohne Kontokennung - Nutzer en nicht bestaetigt")
+        if uid == "default" or uid != nutzer:
+            raise StagingFehler("Login-Kennung weicht von GZ_E2E_EN_USER ab - Nutzer en nicht bestaetigt")
+        self._username, self._passwort = uid, passwort
+        return self._username
+
+    def loesche_nutzer(self) -> None:
+        """Strukturell No-op: der feste Nutzer ``en`` bleibt immer bestehen."""
+        return None
+
+
 # ---------------------------------------------------------------------------
 # Lauf
 # ---------------------------------------------------------------------------
@@ -231,7 +265,8 @@ def _bereite_compare(api, tag, angelegt) -> tuple[str, str]:
     return preset_id, preset["name"]
 
 
-def _fahre_pfad(pfad, *, api, runner, tag, report_type, heute, angelegt, email_format) -> tuple:
+def _fahre_pfad(pfad, *, api, runner, tag, report_type, heute, angelegt, email_format,
+                lang="de") -> tuple:
     try:
         if pfad == "trip":
             oid, betreff = _bereite_trip(api, tag, heute, angelegt, email_format)
@@ -251,7 +286,7 @@ def _fahre_pfad(pfad, *, api, runner, tag, report_type, heute, angelegt, email_f
     if antwort.get("sent") is not True:
         print(f"FAIL {pfad}: Versand nicht erfolgt (status={_kennung(antwort) or '?'})", file=sys.stderr)
         return ("versand_abgelehnt", None)
-    code = runner(baue_validator_aufruf(pfad, betreff))
+    code = runner(baue_validator_aufruf(pfad, betreff, lang))
     print(f"{'PASS' if code == 0 else 'FAIL'} {pfad}: Betreff-Marker '{betreff}', Validator Exit {code}")
     return ("validator", code)
 
@@ -265,11 +300,28 @@ def _loesche(funktion, art, oid) -> bool:
         return False
 
 
-def _raeume_auf(api, angelegt, aufraeumen=True) -> bool:
+def _raeume_auf_en(api, angelegt) -> bool:
+    """en-Pfad (#2830): nur die selbst angelegten Objekte weg, der Nutzer ``en`` bleibt bestehen."""
+    uebrig = {art: [oid for oid in angelegt[art] if not _loesche(funktion, name, oid)]
+              for art, name, funktion in (("preset", "Preset", api.loesche_preset),
+                                          ("orte", "Ort", api.loesche_ort),
+                                          ("trip", "Trip", api.loesche_trip))}
+    print(f"Nutzer en ({api.nutzer_id or 'nicht angemeldet'}) bleibt bestehen, er wird nie geloescht")
+    if any(uebrig.values()):
+        print(f"WARNUNG: eigene Objekte beim Nutzer en uebrig geblieben, von Hand entfernen - "
+              f"Trip: {uebrig['trip']}, Orte: {uebrig['orte']}, Preset: {uebrig['preset']}",
+              file=sys.stderr)
+        return False
+    return True
+
+
+def _raeume_auf(api, angelegt, aufraeumen=True, lang="de") -> bool:
     kennung = getattr(api, "nutzer_id", None)
     if not aufraeumen:
         print(f"--ohne-cleanup: nichts geloescht. Nutzer-Kennung: {kennung}, Objekte: {angelegt}")
         return True
+    if lang == "en":
+        return _raeume_auf_en(api, angelegt)
     ok = all([_loesche(api.loesche_preset, "Preset", p) for p in angelegt["preset"]]
              + [_loesche(api.loesche_ort, "Ort", o) for o in angelegt["orte"]]
              + [_loesche(api.loesche_trip, "Trip", t) for t in angelegt["trip"]])
@@ -286,25 +338,41 @@ def _raeume_auf(api, angelegt, aufraeumen=True) -> bool:
     return ok
 
 
+def _melde_nutzer_an(api, tag, lang, en_zugang):
+    """de: Wegwerf-Nutzer registrieren; en: festen Nutzer anmelden. None = ok, sonst Abbruch-Ausgang."""
+    try:
+        if lang == "en":
+            nutzer = api.melde_an(*en_zugang)
+            print(f"Nutzer en {nutzer} angemeldet (keine Registrierung)")
+        else:
+            nutzer = api.registriere(baue_plus_adresse(tag))
+            print(f"Wegwerf-Nutzer {nutzer} ({baue_plus_adresse(tag)}) angelegt und bestaetigt")
+    except (StagingFehler, OSError) as exc:
+        if lang == "en":
+            print(f"Abbruch: Login des Nutzers en abgelehnt - {exc}", file=sys.stderr)
+            return ("login_abgelehnt", None)
+        print(f"Abbruch: Registrierung abgelehnt - {exc}", file=sys.stderr)
+        return ("registrierung_abgelehnt", None)
+    return None
+
+
 def fuehre_lauf(pfade, *, api, validator_runner, tag, report_type="morning", heute=None,
-                email_format="full", aufraeumen=True) -> int:
+                email_format="full", aufraeumen=True, lang="de", en_zugang=None) -> int:
     heute = heute or date.today()
     angelegt = {"preset": [], "orte": [], "trip": []}
     ausgaenge = []
     try:
-        try:
-            nutzer = api.registriere(baue_plus_adresse(tag))
-            print(f"Wegwerf-Nutzer {nutzer} ({baue_plus_adresse(tag)}) angelegt und bestaetigt")
-        except (StagingFehler, OSError) as exc:
-            print(f"Abbruch: Registrierung abgelehnt - {exc}", file=sys.stderr)
-            ausgaenge.append(("registrierung_abgelehnt", None))
+        abbruch = _melde_nutzer_an(api, tag, lang, en_zugang)
+        if abbruch is not None:
+            ausgaenge.append(abbruch)
         else:
             for pfad in pfade:
                 ausgaenge.append(_fahre_pfad(pfad, api=api, runner=validator_runner, tag=tag,
                                              report_type=report_type, heute=heute,
-                                             angelegt=angelegt, email_format=email_format))
+                                             angelegt=angelegt, email_format=email_format,
+                                             lang=lang))
     finally:
-        if not _raeume_auf(api, angelegt, aufraeumen):
+        if not _raeume_auf(api, angelegt, aufraeumen, lang):
             ausgaenge.append(("aufraeumen_fehlgeschlagen", None))
     return bestimme_exit(ausgaenge)
 
@@ -356,6 +424,8 @@ def _argumente(argv):
     p.add_argument("--format", choices=("full", "compact"), default="full", dest="email_format")
     p.add_argument("--timeout", type=int, default=EINZELVERSAND_TIMEOUT_S)
     p.add_argument("--ohne-cleanup", action="store_true", help="nur Fehlersuche: nichts loeschen")
+    p.add_argument("--lang", choices=("de", "en"), default="de",
+                   help="eine Sprache je Aufruf; en = fester Staging-Nutzer en (#2830)")
     return p.parse_args(argv)
 
 
@@ -366,23 +436,28 @@ def main(argv=None, *, transport=None, helfer_transport=None, validator_runner=N
     except SystemExit as exc:
         return 2 if exc.code else 0
     env = pw._lade_env()
-    pflicht = PFLICHT + (PFLICHT_IMAP if validator_runner is None else ())
+    en = args.lang == "en"
+    pflicht = (PFLICHT_EN if en else PFLICHT) + (PFLICHT_IMAP if validator_runner is None else ())
     fehlend = [k for k in pflicht if not env.get(k)]
     if fehlend:
         print(f"Zugangsdaten fehlen: {', '.join(fehlend)}", file=sys.stderr)
         return 2
-    api = MailApi(env.get("GZ_STAGING_BASE_URL", STANDARD_BASIS),
-                  env.get("GZ_STAGING_CORE_URL", STANDARD_KERN),
-                  env["GZ_CORE_SHARED_SECRET"], transport or pw.http_transport(),
-                  helfer_transport=helfer_transport or pw.http_transport(),
-                  helfer_zugang=(env["GZ_AUTH_USER"], env["GZ_AUTH_PASS"]),
-                  kern_timeout=args.timeout)
+    basis = (env.get("GZ_STAGING_BASE_URL", STANDARD_BASIS), env.get("GZ_STAGING_CORE_URL", STANDARD_KERN),
+             env["GZ_CORE_SHARED_SECRET"], transport or pw.http_transport())
+    if en:
+        api = EnMailApi(*basis, kern_timeout=args.timeout)
+    else:
+        api = MailApi(*basis, helfer_transport=helfer_transport or pw.http_transport(),
+                      helfer_zugang=(env["GZ_AUTH_USER"], env["GZ_AUTH_PASS"]),
+                      kern_timeout=args.timeout)
+    en_zugang = (env["GZ_E2E_EN_USER"], env["GZ_E2E_EN_PASS"]) if en else None
     runner = validator_runner or echter_validator_runner(env, max(args.timeout, EINZELVERSAND_TIMEOUT_S))
     pfade = ["trip", "compare"] if args.typ == "beide" else [args.typ]
     from zoneinfo import ZoneInfo
     return fuehre_lauf(pfade, api=api, validator_runner=runner, tag=baue_mail_tag(),
                        report_type=args.report_type, heute=datetime.now(ZoneInfo("Europe/Vienna")).date(),
-                       email_format=args.email_format, aufraeumen=not args.ohne_cleanup)
+                       email_format=args.email_format, aufraeumen=not args.ohne_cleanup,
+                       lang=args.lang, en_zugang=en_zugang)
 
 
 if __name__ == "__main__":

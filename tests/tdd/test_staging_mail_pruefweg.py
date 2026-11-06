@@ -42,6 +42,21 @@ Netzrand (injizierbar, echte lokale Ersatzimplementierungen, kein Mock/patch):
         und der Exit ist != 0. HTTP 401 vom Kern und Registrierungsfehler -> 2,
         sonstiger Versandfehler -> 1.
     main(argv, *, transport=None, helfer_transport=None, validator_runner=None) -> int
+
+Erweiterung #2830 (englischer Pfad, ``--lang en``)
+--------------------------------------------------
+    baue_validator_aufruf(pfad, betreff, lang="de")   lang="en" haengt ``--lang en --to-contains +en@``
+                                            an; Default ohne beides (de-Aufruf unveraendert).
+    EnMailApi(MailApi)                      ohne Helfer-Konto konstruierbar;
+        melde_an(user, passwort)            Login (POST /api/auth/login), keine Registrierung;
+                                            setzt ``nutzer_id`` = Anmeldename (die echte Kennung)
+        loesche_nutzer()                    strukturell No-op: nie ein Transportaufruf
+    fuehre_lauf(..., lang="de", en_zugang=None)
+        lang="en": ``en_zugang=(user, passwort)`` -> ``api.melde_an`` statt ``registriere``;
+        nur eigene (Tag-)Objekte loeschen, den Nutzer nie. (``en_zugang`` ist die einzige
+        Signatur-Ergaenzung ueber die Spec hinaus: fuehre_lauf muss die Zugangsdaten kennen.)
+    main(["--typ", ..., "--lang", "de"|"en"]) Default de; en liest GZ_E2E_EN_USER/GZ_E2E_EN_PASS,
+        fehlt eines: Exit 2 ohne Netzzugriff; Helfer-Konto (GZ_AUTH_*) wird nicht verlangt.
 """
 from __future__ import annotations
 
@@ -68,6 +83,8 @@ STAGING_ENV = Path("/home/hem/gregor_zwanzig_staging/.env")
 
 CORE_SECRET = "KERN-GEHEIMNIS-xq7731"
 HELFER_USER, HELFER_PASS = "helfer-konto", "HELFER-PASS-zz4410"
+EN_UID, EN_PASS = "u-en0e2830", "EN-PASS-vv9981"   # fester Staging-Nutzer ``en`` (#2830)
+RUNBOOK_EN = REPO_ROOT / "docs" / "runbooks" / "staging_e2e_nutzer_en.md"
 
 
 def _werkzeug():
@@ -98,6 +115,7 @@ class _Staging:
         self.feste_id: str | None = None        # Register vergibt diese id statt u-<hex>
         self.preset_ohne_id = False             # Preset-POST-Antwort ohne "id"
         self.kern_verzoegerung_s = 0.0          # Kern antwortet erst nach dieser Zeit
+        self.login_antwort: dict | None = None  # erzwingt eine abweichende Login-Antwort (F003)
         outer = self
 
         class H(BaseHTTPRequestHandler):
@@ -140,7 +158,10 @@ class _Staging:
                         return self._antwort(401, {"error": "bad"})
                     if not n["verified"]:
                         return self._antwort(403, {"error": "email_not_verified"})
-                    return self._antwort(200, {}, cookie=body["username"])
+                    # wie internal/handler/auth.go LoginHandler: Antwort {"id": uid}
+                    login_body = {"id": body["username"]} if outer.login_antwort is None \
+                        else outer.login_antwort
+                    return self._antwort(200, login_body, cookie=body["username"])
                 if pfad == "/api/auth/register":
                     uid = outer.feste_id or "u-" + secrets.token_hex(4)
                     u[uid] = {"pw": body["password"], "email": body["email"], "verified": False,
@@ -209,6 +230,18 @@ class _Staging:
         return w.MailApi(self.url, self.url, secret, w.pw.http_transport(),
                          helfer_transport=w.pw.http_transport(), helfer_zugang=(HELFER_USER, HELFER_PASS),
                          **kw)
+
+    def seed_en(self, uid=EN_UID, passwort=EN_PASS) -> str:
+        """Der feste, bestaetigte Nutzer ``en`` existiert schon (scripts/staging_e2e_user_en.py)."""
+        self.users[uid] = {"pw": passwort, "email": "gregor-test+en@henemm.com", "verified": True,
+                           "trips": {}, "locations": {}, "presets": {}, "token": "x"}
+        return uid
+
+    def en_api(self, w, secret=CORE_SECRET, **kw):
+        return w.EnMailApi(self.url, self.url, secret, w.pw.http_transport(), **kw)
+
+    def konto_loeschungen(self) -> list[tuple]:
+        return [e for e in self.log if e[2].endswith("/account/delete")]
 
     def trip_bodies(self) -> list[dict]:
         return [b for m, p, b in self.bodies if m == "POST" and p == "/api/trips"]
@@ -745,6 +778,323 @@ def test_rezept_nennt_grenze_ohne_winddaten():
 
 
 # ---------------------------------------------------------------------------
+# #2830: englischer Pfad (--lang en) gegen das Ersatz-Staging
+# ---------------------------------------------------------------------------
+
+def _lauf_en(w, staging, pfade=("trip",), *, runner=None, tag="e1-aaaa", passwort=EN_PASS, secret=CORE_SECRET):
+    return w.fuehre_lauf(list(pfade), api=staging.en_api(w, secret=secret), validator_runner=runner or _Runner(),
+                         tag=tag, lang="en", en_zugang=(EN_UID, passwort))
+
+
+def _eigene_loeschungen(staging):
+    return [(s, p) for s, m, p in staging.log if m == "DELETE"]
+
+
+# AC-12 -----------------------------------------------------------------------
+
+def test_en_lauf_meldet_an_statt_zu_registrieren_und_legt_objekte_unter_nutzer_en_an(staging):
+    w = _werkzeug()
+    staging.seed_en()
+    assert _lauf_en(w, staging, ("trip", "compare")) == 0
+    pfade = [p for _, _, p in staging.log]
+    assert "/api/auth/login" in pfade
+    assert not any(p in ("/api/auth/register", "/api/auth/verify-email",
+                         "/api/auth/verify-email/staging-token") for p in pfade), \
+        "der feste Nutzer en wird angemeldet, nie registriert oder ueber das Helfer-Konto bestaetigt"
+    anlegen = [s for s, m, p in staging.log if m == "POST" and p in
+               ("/api/trips", "/api/locations", "/api/compare/presets")]
+    assert len(anlegen) == 1 + 3 + 1 and set(anlegen) == {EN_UID}
+    assert [c["user_id"] for c in staging.kern] == [EN_UID, EN_UID]
+    assert all(c["auth"] == CORE_SECRET for c in staging.kern)
+
+
+# AC-13 -----------------------------------------------------------------------
+
+def test_validator_aufruf_traegt_lang_en_und_to_contains_nur_bei_en():
+    w = _werkzeug()
+    for pfad in ("trip", "compare"):
+        de = w.baue_validator_aufruf(pfad, "GZM x-1")
+        assert "--lang" not in de and "--to-contains" not in de
+        assert w.baue_validator_aufruf(pfad, "GZM x-1", lang="de") == de
+        en = w.baue_validator_aufruf(pfad, "GZM x-1", lang="en")
+        assert en[en.index("--lang") + 1] == "en"
+        assert en[en.index("--to-contains") + 1] == "+en@"
+        assert en[:len(de)] == de, "Skript, --mail-type und --subject-contains bleiben unveraendert"
+        assert en[en.index("--subject-contains") + 1] == "GZM x-1"
+        assert len(en) == len(de) + 4
+
+
+def test_en_lauf_reicht_lang_en_an_den_validator_durch(staging):
+    w = _werkzeug()
+    staging.seed_en()
+    r = _Runner()
+    assert _lauf_en(w, staging, ("trip", "compare"), runner=r, tag="e2-aaaa") == 0
+    assert len(r.aufrufe) == 2
+    for argv in r.aufrufe:
+        assert argv[argv.index("--lang") + 1] == "en"
+        assert argv[argv.index("--to-contains") + 1] == "+en@"
+        assert "e2-aaaa" in argv[argv.index("--subject-contains") + 1]
+
+
+# AC-14 -----------------------------------------------------------------------
+
+@pytest.mark.parametrize("ausgang", ["erfolg", "versand_abgelehnt", "validator_befund", "aufraeumen_scheitert"])
+def test_en_nutzer_wird_nie_geloescht_auch_nicht_bei_fehler(staging, ausgang):
+    w = _werkzeug()
+    staging.seed_en()
+    runner = _Runner({"briefing": 1}) if ausgang == "validator_befund" else _Runner()
+    if ausgang == "versand_abgelehnt":
+        staging.ablehnen = {"/api/scheduler/": 500}
+    if ausgang == "aufraeumen_scheitert":
+        staging.ablehnen = {"/api/trips/": 500}
+    rc = _lauf_en(w, staging, runner=runner, tag="e3-aaaa")
+    assert (rc == 0) == (ausgang == "erfolg")
+    assert staging.konto_loeschungen() == [], "account/delete darf im en-Pfad nie aufgerufen werden"
+    assert EN_UID in staging.users
+
+
+def test_en_lauf_loescht_nur_eigene_objekte_fremde_bleiben(staging):
+    w = _werkzeug()
+    staging.seed_en()
+    n = staging.users[EN_UID]
+    n["trips"]["fremd-trip"], n["locations"]["fremd-ort"], n["presets"]["fremd-preset"] = {}, {}, {}
+    assert _lauf_en(w, staging, ("trip", "compare"), tag="e4-aaaa") == 0
+    assert set(n["trips"]) == {"fremd-trip"} and set(n["locations"]) == {"fremd-ort"}
+    assert set(n["presets"]) == {"fremd-preset"}
+    loeschungen = _eigene_loeschungen(staging)
+    assert loeschungen and not any("fremd" in p for _, p in loeschungen)
+    assert {s for s, _ in loeschungen} == {EN_UID}
+
+
+def test_en_aufraeumfehler_meldet_kennungen_und_exit_ungleich_0(staging, capsys):
+    w = _werkzeug()
+    staging.seed_en()
+    staging.ablehnen = {"/api/trips/": 500, "/api/locations/": 500, "/api/compare/presets/": 500}
+    assert _lauf_en(w, staging, ("trip", "compare"), tag="e5-aaaa") != 0
+    n = staging.users[EN_UID]
+    uebrig = list(n["trips"]) + list(n["locations"]) + list(n["presets"])
+    assert len(uebrig) == 1 + 3 + 1
+    aus = capsys.readouterr()
+    for kennung in uebrig:
+        assert kennung in aus.out + aus.err, f"uebrig gebliebene Kennung {kennung} nicht gemeldet"
+
+
+def test_en_mail_api_loesche_nutzer_ist_strukturell_noop(staging):
+    w = _werkzeug()
+    staging.seed_en()
+    api = staging.en_api(w)
+    api.loesche_nutzer()                       # noch nicht angemeldet
+    api.melde_an(EN_UID, EN_PASS)
+    assert api.nutzer_id == EN_UID
+    vorher = len(staging.log)
+    api.loesche_nutzer()                       # angemeldet, Passwort bekannt - trotzdem nichts
+    assert len(staging.log) == vorher and staging.konto_loeschungen() == []
+    assert EN_UID in staging.users
+
+
+# AC-15 -----------------------------------------------------------------------
+
+def _env_en(monkeypatch, tmp_path, w, staging, *, user=True, passwort=True, wert=EN_PASS):
+    monkeypatch.setattr(w.pw, "STAGING_ENV", tmp_path / "keine.env")
+    for k in ("GZ_CORE_SHARED_SECRET", "GZ_AUTH_USER", "GZ_AUTH_PASS", "GZ_E2E_EN_USER", "GZ_E2E_EN_PASS"):
+        monkeypatch.delenv(k, raising=False)       # Helfer-Konto bewusst NICHT gesetzt
+    monkeypatch.setenv("GZ_CORE_SHARED_SECRET", CORE_SECRET)
+    monkeypatch.setenv("GZ_STAGING_BASE_URL", staging.url)
+    monkeypatch.setenv("GZ_STAGING_CORE_URL", staging.url)
+    if user:
+        monkeypatch.setenv("GZ_E2E_EN_USER", EN_UID)
+    if passwort:
+        monkeypatch.setenv("GZ_E2E_EN_PASS", wert)
+
+
+@pytest.mark.parametrize("user,passwort", [(False, False), (True, False), (False, True)])
+def test_main_en_ohne_zugangsdaten_ist_exit_2_ohne_netz(monkeypatch, tmp_path, capsys, staging, user, passwort):
+    w = _werkzeug()
+    staging.seed_en()
+    _env_en(monkeypatch, tmp_path, w, staging, user=user, passwort=passwort)
+    assert w.main(["--typ", "trip", "--lang", "en"], validator_runner=_Runner()) == 2
+    assert staging.log == [], "vor jeder Aenderung und ohne Netzzugriff"
+    err = capsys.readouterr().err
+    assert ("GZ_E2E_EN_USER" in err) == (not user) and ("GZ_E2E_EN_PASS" in err) == (not passwort)
+    assert EN_PASS not in err and EN_UID not in err
+
+
+def test_main_en_login_abgelehnt_ist_exit_2_ohne_anlegen(monkeypatch, tmp_path, capsys, staging):
+    w = _werkzeug()
+    staging.seed_en()
+    falsch = "FALSCHES-EN-PASS-k4471"
+    _env_en(monkeypatch, tmp_path, w, staging, wert=falsch)
+    r = _Runner()
+    assert w.main(["--typ", "beide", "--lang", "en"], validator_runner=r) == 2
+    assert r.aufrufe == [] and staging.kern == []
+    assert [(m, p) for _, m, p in staging.log] == [("POST", "/api/auth/login")], \
+        "genau ein abgelehnter Login-Versuch, sonst keine Anfrage (Abbruch ohne Anlegen)"
+    assert not any(m == "POST" and p in ("/api/trips", "/api/locations", "/api/compare/presets",
+                                         "/api/auth/register") for _, m, p in staging.log)
+    assert staging.konto_loeschungen() == [] and EN_UID in staging.users
+    aus = capsys.readouterr()
+    assert falsch not in aus.out + aus.err and EN_PASS not in aus.out + aus.err
+
+
+def test_main_lang_de_ist_default_und_de_en_wird_abgelehnt(monkeypatch, tmp_path, staging):
+    w = _werkzeug()
+    _env(monkeypatch, tmp_path, w)
+    monkeypatch.setenv("GZ_STAGING_BASE_URL", staging.url)
+    monkeypatch.setenv("GZ_STAGING_CORE_URL", staging.url)
+    assert w.main(["--typ", "trip", "--lang", "de,en"], validator_runner=_Runner()) == 2
+    assert staging.log == []
+    r = _Runner()
+    assert w.main(["--typ", "trip", "--lang", "de"], validator_runner=r) == 0
+    assert "--lang" not in r.aufrufe[0] and staging.users == {}
+
+
+def test_main_en_gegen_ersatz_staging_ist_exit_0_ohne_helfer_konto(monkeypatch, tmp_path, staging):
+    w = _werkzeug()
+    staging.seed_en()
+    _env_en(monkeypatch, tmp_path, w, staging)
+    r = _Runner()
+    assert w.main(["--typ", "beide", "--lang", "en"], validator_runner=r) == 0
+    assert len(r.aufrufe) == 2 and all("--lang" in a and "+en@" in a for a in r.aufrufe)
+    assert staging.users[EN_UID]["trips"] == {} and staging.users[EN_UID]["presets"] == {}
+    assert staging.konto_loeschungen() == []
+
+
+# AC-16 -----------------------------------------------------------------------
+
+def test_en_ausgaben_enthalten_keine_geheimnisse(monkeypatch, tmp_path, staging, capsys):
+    w = _werkzeug()
+    staging.seed_en()
+    _lauf_en(w, staging, tag="e6-aaaa")                                   # Erfolg
+    staging.ablehnen = {"/api/scheduler/": 500}
+    _lauf_en(w, staging, tag="e6-bbbb")                                   # Versand abgelehnt
+    staging.ablehnen = {"/api/trips/": 500}
+    _lauf_en(w, staging, tag="e6-cccc")                                   # Aufraeumfehler
+    staging.ablehnen = {}
+    _lauf_en(w, staging, tag="e6-dddd", secret="FALSCH-GEHEIM-k93x")      # Core 401
+    _lauf_en(w, staging, tag="e6-eeee", passwort="FALSCH-EN-zz81")        # Login abgelehnt
+    aus = capsys.readouterr()
+    for geheim in (EN_PASS, CORE_SECRET, HELFER_PASS, "FALSCH-GEHEIM-k93x", "FALSCH-EN-zz81"):
+        assert geheim not in aus.out and geheim not in aus.err
+    assert EN_PASS not in repr(staging.en_api(w))
+
+
+# AC-17 -----------------------------------------------------------------------
+
+@pytest.mark.parametrize("zusatz", [{}, {"lang": "de"}])
+def test_de_lauf_ohne_lang_verhaelt_sich_wie_vorher(staging, capsys, zusatz):
+    w = _werkzeug()
+    r = _Runner()
+    assert w.fuehre_lauf(["trip"], api=staging.api(w), validator_runner=r, tag="d1-aaaa", **zusatz) == 0
+    assert "--lang" not in r.aufrufe[0] and "--to-contains" not in r.aufrufe[0]
+    assert staging.users == {}, "Wegwerf-Nutzer wird geloescht"
+    assert len(staging.konto_loeschungen()) == 1
+    assert "/api/auth/register" in [p for _, _, p in staging.log]
+    assert "Wegwerf-Nutzer geloescht" in capsys.readouterr().out
+
+
+# AC-18 -----------------------------------------------------------------------
+
+def test_en_lauf_exit_je_ausgang_gegen_ersatz_staging(staging):
+    w = _werkzeug()
+    staging.seed_en()
+    assert _lauf_en(w, staging, tag="x1-aaaa") == 0
+    assert _lauf_en(w, staging, runner=_Runner({"briefing": 1}), tag="x2-aaaa") == 1
+    assert _lauf_en(w, staging, runner=_Runner({"briefing": 2}), tag="x2-bbbb") == 2
+    staging.kern_antwort = (500, {"error": "send_failed"})
+    r = _Runner()
+    assert _lauf_en(w, staging, runner=r, tag="x3-aaaa") == 1
+    assert r.aufrufe == [], "abgelehnter Versand darf keinen Validator auf eine aeltere Mail loslassen"
+    staging.kern_antwort = (200, {"status": "skipped", "sent": False})
+    assert _lauf_en(w, staging, runner=r, tag="x3-bbbb") == 1 and r.aufrufe == []
+    staging.kern_antwort = None
+    assert _lauf_en(w, staging, tag="x4-aaaa", secret="falsch") == 2
+    assert _lauf_en(w, staging, tag="x5-aaaa", passwort="falsch") == 2
+    assert staging.users[EN_UID]["trips"] == {}
+
+
+# AC-21 -----------------------------------------------------------------------
+
+def test_en_und_de_lauf_nutzen_getrennte_kennungen_und_beruehren_keine_fremden_daten(staging):
+    w = _werkzeug()
+    staging.seed_en()
+    assert _lauf_en(w, staging, ("trip", "compare"), tag="m1-aaaa") == 0
+    assert w.fuehre_lauf(["trip"], api=staging.api(w), validator_runner=_Runner(), tag="m2-bbbb") == 0
+    en_kern, de_kern = staging.kern[:2], staging.kern[2:]
+    assert {c["user_id"] for c in en_kern} == {EN_UID}
+    (de_uid,) = {c["user_id"] for c in de_kern}
+    assert re.fullmatch(r"u-[0-9a-f]{8}", de_uid) and de_uid != EN_UID
+    assert "default" not in {c["user_id"] for c in staging.kern}
+    assert list(staging.users) == [EN_UID], "der de-Wegwerf-Nutzer ist weg, der Nutzer en besteht"
+    for sid, methode, pfad in staging.log:
+        if methode == "DELETE" or pfad.endswith("/account/delete"):
+            assert sid in (EN_UID, de_uid)
+            if sid == de_uid:
+                assert "m1-aaaa" not in pfad
+            if sid == EN_UID:
+                assert "m2-bbbb" not in pfad and not pfad.endswith("/account/delete")
+
+
+# Adversary-Findings F001-F003 ------------------------------------------------
+
+@pytest.mark.parametrize("login_antwort", [{}, {"id": "default"}, {"id": "u-anders01"}, {"id": "  "}])
+def test_en_login_ohne_oder_mit_abweichender_kennung_ist_exit_2_ohne_anlegen(staging, capsys, login_antwort):
+    """F003 / AC-21: die Kennung stammt aus der Login-Antwort, nie ungeprueft aus GZ_E2E_EN_USER."""
+    w = _werkzeug()
+    staging.seed_en()
+    staging.login_antwort = login_antwort
+    r = _Runner()
+    assert _lauf_en(w, staging, ("trip", "compare"), runner=r, tag="f3-aaaa") == 2
+    assert r.aufrufe == [] and staging.kern == []
+    assert not any(m == "POST" and p in ("/api/trips", "/api/locations", "/api/compare/presets",
+                                         "/api/auth/register") for _, m, p in staging.log)
+    assert staging.konto_loeschungen() == [] and EN_UID in staging.users
+    aus = capsys.readouterr()
+    assert EN_PASS not in aus.out + aus.err
+    assert "Login des Nutzers en abgelehnt" in aus.err
+
+
+def test_en_mail_api_kennung_kommt_aus_der_login_antwort(staging):
+    w = _werkzeug()
+    staging.seed_en()
+    api = staging.en_api(w)
+    assert api.melde_an(EN_UID, EN_PASS) == EN_UID and api.nutzer_id == EN_UID
+
+
+def test_en_mail_api_repr_nach_anmeldung_ohne_passwort(staging):
+    """F001: repr() des angemeldeten Objekts (Passwort gesetzt) verraet es nicht."""
+    w = _werkzeug()
+    staging.seed_en()
+    api = staging.en_api(w)
+    api.melde_an(EN_UID, EN_PASS)
+    assert EN_PASS not in repr(api) and CORE_SECRET not in repr(api)
+    assert EN_PASS not in str(api)
+
+
+def test_en_lauf_meldet_nutzer_en_bleibt_bestehen_statt_wegwerf_nutzer_geloescht(staging, capsys):
+    """F002 / AC-14: am Ende des en-Laufs der Hinweis, dass der Nutzer en bestehen bleibt."""
+    w = _werkzeug()
+    staging.seed_en()
+    assert _lauf_en(w, staging, tag="f2-aaaa") == 0
+    aus = capsys.readouterr().out
+    hinweis = [z for z in aus.splitlines() if "Nutzer en" in z and "bleibt bestehen" in z]
+    assert hinweis and EN_UID in hinweis[0]
+    assert "Wegwerf-Nutzer geloescht" not in aus
+
+
+# AC-20 (doc-compliance-test) -------------------------------------------------
+
+def test_rezept_nennt_lang_en_aufruf_in_runbook_und_e2e_verify():
+    # doc-compliance-test
+    for pfad in (RUNBOOK_EN, E2E_VERIFY):
+        text = pfad.read_text(encoding="utf-8")
+        assert re.search(r"staging_mail_pruefen\.py[^\n]*--lang en", text), \
+            f"Aufruf 'staging_mail_pruefen.py ... --lang en' fehlt in {pfad.name}"
+        assert "--langs de,en" in text and "staging_gate.py" in text, f"Gate-Hinweis fehlt in {pfad.name}"
+        assert re.search(r"Nutzer `?en`?[^\n]*(nie|nicht)[^\n]*gel(oe|ö)scht|nie[^\n]*gel(oe|ö)scht[^\n]*`?en`?",
+                         text), f"Hinweis 'Nutzer en wird nie geloescht' fehlt in {pfad.name}"
+
+
+# ---------------------------------------------------------------------------
 # AC-1 / AC-2: Live gegen Staging (nur /e2e-verify)
 # ---------------------------------------------------------------------------
 
@@ -753,6 +1103,11 @@ def _staging_bereit():
         return STAGING_ENV.is_file() and STAGING_ENV.read_text()
     except OSError:
         return False
+
+
+def _staging_en_bereit():
+    text = _staging_bereit()
+    return bool(text) and "GZ_E2E_EN_USER" in text and "GZ_E2E_EN_PASS" in text
 
 
 @pytest.mark.live
@@ -767,3 +1122,19 @@ def test_gesamtlauf_trip_auf_staging():
 @pytest.mark.skipif(not _staging_bereit(), reason="Staging-Zugangsdaten nicht lesbar")
 def test_gesamtlauf_compare_auf_staging():
     assert _werkzeug().main(["--typ", "compare"]) == 0
+
+
+# AC-19: englischer Pfad live (nur /e2e-verify)
+
+@pytest.mark.live
+@pytest.mark.staging
+@pytest.mark.skipif(not _staging_en_bereit(), reason="Staging-Zugangsdaten des Nutzers en nicht lesbar")
+def test_gesamtlauf_trip_en_auf_staging():
+    assert _werkzeug().main(["--typ", "trip", "--lang", "en"]) == 0
+
+
+@pytest.mark.live
+@pytest.mark.staging
+@pytest.mark.skipif(not _staging_en_bereit(), reason="Staging-Zugangsdaten des Nutzers en nicht lesbar")
+def test_gesamtlauf_compare_en_auf_staging():
+    assert _werkzeug().main(["--typ", "compare", "--lang", "en"]) == 0
