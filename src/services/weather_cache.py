@@ -249,6 +249,12 @@ class WeatherCacheService:
         - model_id distinguishes different regional models at coordinates
           near a model boundary; enrich_ensemble/enrich_snow distinguish
           enriched vs. bare fetches.
+        - model_id kann einen Provider-Namensraum tragen (`"fixture:openmeteo"`,
+          Issue #2581): der Schluessel enthaelt keinen Provider, und der
+          FixtureProvider heisst bewusst "openmeteo" -- ohne Namensraum
+          teilten sich Demo- und Live-Abruf Eintrag und Single-Flight. Eine
+          `user_id` gehoert weiterhin NICHT in den Schluessel (Wetter ist
+          nutzerneutral, ADR-0032).
         - The TIME WINDOW is deliberately NOT part of this bucket key --
           it is stored as entry metadata (`window_start`/`window_end`) and
           matched via the "covers" rule in `get()`, so a wider window
