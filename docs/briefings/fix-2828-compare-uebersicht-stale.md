@@ -1,32 +1,32 @@
 ---
 spec_file: docs/specs/bugfix/bug_2828_compare_uebersicht_stale.md
-spec_sha256: 8711b1ec6628d0ef3aebbe2bc20502c1c2077b9d15f355a6a3db8b47c299ffb1
-spec_frozen_sha256: c3410d916acc7cbe98249beda5e9753839b86c7093c0a4813ccb6294297f71ee
+spec_sha256: dd43567970d853fd6a0cd47bb62f996c8f1da1a9921c41ae27cab81f1efa14df
+spec_frozen_sha256: 0c4c05b8a08b7c9378eeefb0166399a76020eb9f56e9ceaefa3e222c84ed366c
 ---
 
 # PO-Briefing: fix-2828-compare-uebersicht-stale
 
 - **Spec:** docs/specs/bugfix/bug_2828_compare_uebersicht_stale.md
 - **Issue:** #2828
-- **Erstellt:** 2026-11-05
+- **Erstellt:** 2026-11-06
 
 ## Was gebaut wird
 
-Die Übersicht des Ortsvergleichs zeigt nach dem Speichern in einem anderen Reiter sofort den neuen Stand, ohne Neuladen.
+Die Übersicht im Ortsvergleich zeigt nach dem Speichern in einem Reiter sofort den neuen Stand, ohne Neuladen.
 
 ## Definition of Done
 
-Nach Ändern und Speichern von Orten, Wertebereichen oder Versand zeigt die Übersicht den neuen Wert ohne Seitenneuladen; Trip-Übersicht verhält sich unverändert.
+Nach Speichern von Orten oder Versand zeigt die Übersicht ohne Neuladen die neuen Werte; Pausieren ändert den Status sofort, Trip-Übersicht bleibt unverändert.
 
 ## Wie geprüft wird
 
-Ein Browser-Test ändert und speichert Werte und prüft die Übersicht; der Konfliktfall (412) ist womöglich nur per Quelltext-Prüfung belegt.
+Browser-Tests ändern, speichern und lesen die Übersicht; Wertebereiche und der Konfliktfall sind nur über Quelltext-Verdrahtung bzw. Review belegt, nicht im Verhalten.
 
 ## Kritische Anmerkungen
 
-- Das Ticket nennt einen „Vorschau"-Reiter; den gibt es nicht mehr, geprüft wird stattdessen die Übersicht.
-- Bei Speicherkonflikt zeigt die Übersicht den eingegebenen, ungespeicherten Stand; die Spec nennt das bewusst entschieden.
-- Alarm-Änderungen sind in der Vergleichs-Übersicht nicht sichtbar; die Prüfung dort ist schwach.
+- AC-1 wurde abgeschwächt (Wertebereiche gesperrt durch #2792); Nachweis nur Quelltext-Prüfung, kein Verhaltenstest.
+- Testplan verlangt noch Werteänderung im Wertebereiche-Reiter, obwohl gesperrt; Plan widerspricht AC-1.
+- AC-4 „in sich stimmig" ist vage; AC-7 (Konflikt) evtl. ohne automatischen Test.
 
 ## Freigabe-Frage
 
