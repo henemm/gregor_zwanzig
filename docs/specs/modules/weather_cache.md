@@ -153,6 +153,8 @@ All public methods use `self._lock` to ensure thread-safe operations.
 4. **Simple LRU** - No priority weighting
 5. **No Cache Warming** - Starts empty
 
+> Der `model_id`-Teil des Bucket-Schlüssels kann einen Provider-Namensraum (`<namespace>:`, z. B. `fixture:openmeteo`) tragen, siehe `fix_2581_demo_cache_vergiftung.md` (Issue #2581).
+
 ## Integration Points
 
 ### SegmentWeatherService Integration
