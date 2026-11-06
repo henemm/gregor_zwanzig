@@ -41,7 +41,7 @@ def test_ac1_klartext_folgt_html_reihenfolge_bei_standard():
     THEN stehen die Uebersichts-Labels im Klartext in derselben Reihenfolge."""
     ergebnis = _result()
     html = render_compare_html(ergebnis, enabled_metrics=None)
-    text = render_comparison_text(ergebnis, enabled_metrics=None)
+    text = render_comparison_text(ergebnis, enabled_metrics=None, preset=None)
 
     html_labels = html_uebersicht_labels(html)
     text_labels = klartext_uebersicht_labels(text)
@@ -154,7 +154,7 @@ def test_ac7_klartext_reihenfolge_am_sink_gleich_html_reihenfolge():
     folgt der HTML-Reihenfolge."""
     ergebnis = _result()
     html = render_compare_html(ergebnis, enabled_metrics=None)
-    text = render_comparison_text(ergebnis, enabled_metrics=None)
+    text = render_comparison_text(ergebnis, enabled_metrics=None, preset=None)
     erhalten: dict = {}
     _dienst().send_compare_report(
         subject="s", html_body=html, text_body=text, telegram_text="t",
@@ -253,8 +253,8 @@ def test_ac5_klartext_zeilen_und_werte_mengengleich_zur_alten_folge():
     from output.renderers import comparison
 
     alte_folge = [row[0] for row in comparison._PLAIN_ROWS_UNSORTED]
-    alt = render_comparison_text(_result(), enabled_metrics=alte_folge)
-    neu = render_comparison_text(_result(), enabled_metrics=None)
+    alt = render_comparison_text(_result(), enabled_metrics=alte_folge, preset=None)
+    neu = render_comparison_text(_result(), enabled_metrics=None, preset=None)
 
     alt_labels = klartext_uebersicht_labels(alt)
     assert len(alt_labels) >= 20, f"Vakuum-Schutz: nur {len(alt_labels)} Zeilen"

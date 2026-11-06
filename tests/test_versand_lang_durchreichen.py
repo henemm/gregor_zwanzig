@@ -183,7 +183,7 @@ def _abweichung_vergleich(rig, dienst, uid, lang):
                                 threshold=20.0, severity=ChangeSeverity.MAJOR,
                                 direction="increase", occurred_at=zeit)
         entities.append((name, [punkt], [wechsel]))
-    dienst.send_multi_location_deviation_alert(entities, {"email", "telegram"})
+    dienst.send_multi_location_deviation_alert(entities, {"email", "telegram"}, preset=None)
 
 
 def _vergleich_briefing(rig, dienst, uid, lang):

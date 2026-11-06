@@ -374,7 +374,7 @@ def test_ac6_plaintext_branch_runs_and_shows_register_label_unaffected():
     ueber eigene Lambdas, s. `_PLAIN_ROWS`) und duerfen ihn nicht brechen."""
     text = render_comparison_text(
         _comparison_result(_loc(temp_max=21.0)),
-        enabled_metrics=["temp_max"], hourly_enabled=False,
+        enabled_metrics=["temp_max"], hourly_enabled=False, preset=None,
     )
 
     assert "Temperatur:" in text, (

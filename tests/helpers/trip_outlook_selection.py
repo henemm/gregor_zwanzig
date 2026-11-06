@@ -196,6 +196,8 @@ def outlook_rows(
                 _TAGE[i][0], TZ,
                 metrics=metrics if trip_display_config is None else None,
                 trip_display_config=trip_display_config,
+                # Issue #2792 S1c-4a: derselbe Zweig wie bisher (dc is None).
+                context="vergleich" if trip_display_config is None else "route",
                 report_type=report_type,
                 day_window_start_hour=day_window_start_hour,
                 day_window_end_hour=day_window_end_hour,

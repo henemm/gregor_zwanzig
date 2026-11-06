@@ -232,7 +232,7 @@ class TestAC4KlartextSchneeKonsistenz:
         from output.renderers.comparison import render_comparison_text
 
         result = _make_snow_result()
-        text_body = render_comparison_text(result, profile=ActivityProfile.ALLGEMEIN)
+        text_body = render_comparison_text(result, profile=ActivityProfile.ALLGEMEIN, preset=None)
 
         assert "Schneehöhe" in text_body, (
             "Klartext muss eine 'Schneehöhe'-Zeile fuer Chamonix zeigen, "
@@ -259,7 +259,7 @@ class TestAC4KlartextSchneeKonsistenz:
         html = render_compare_html(
             result, profile=ActivityProfile.ALLGEMEIN, enabled_metrics={"snow_depth_cm"},
         )
-        text_body = render_comparison_text(result, profile=ActivityProfile.ALLGEMEIN)
+        text_body = render_comparison_text(result, profile=ActivityProfile.ALLGEMEIN, preset=None)
 
         table = _find_overview_table(html)
         assert table, "Uebersichtstabelle nicht gefunden"

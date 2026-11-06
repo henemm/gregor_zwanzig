@@ -202,7 +202,7 @@ def test_compare_plain_shows_outlook_per_location():
         target_date=TARGET_DATE, created_at=datetime(2026, 7, 20, 4, 1),
     )
 
-    text = render_comparison_text(result, outlook_enabled=True)
+    text = render_comparison_text(result, outlook_enabled=True, preset=None)
 
     # #1848 A1 AC-9: Trenner auf den SMS-Schraegstrich gezogen (vorher Halb-
     # geviertstrich "9–20°C") -- RED bis der Altform-Klartext mitgezogen ist.
@@ -424,7 +424,7 @@ def test_outlook_daily_value_matches_1285_daily_summary():
 
     day1_points = [p for p in loc.outlook_hourly_data if p.ts.date() == TARGET_DATE]
     day1_summary = summarize_points(day1_points)
-    row = build_outlook_row(day1_summary, day1_points, "Mo", ZoneInfo("UTC"))
+    row = build_outlook_row(day1_summary, day1_points, "Mo", ZoneInfo("UTC"), context="vergleich")
 
     assert row["precip_mm"] == pytest.approx(expected.precip_sum_mm)
     assert row["rain_probability_pct"] == expected.pop_max_pct
@@ -457,7 +457,7 @@ def test_outlook_fail_soft_on_missing_data():
     )
 
     html = render_compare_html(result, outlook_enabled=True)  # darf nicht crashen
-    text = render_comparison_text(result, outlook_enabled=True)
+    text = render_comparison_text(result, outlook_enabled=True, preset=None)
 
     assert "Innsbruck" in html and "Fehlerort" in html, (
         "Beide Orte muessen trotz Fehlerzustand des zweiten Ortes in der HTML-Mail erscheinen"

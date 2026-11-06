@@ -44,7 +44,7 @@ _SINGLE_AGGREGATION = ["gust"]
 
 
 def _row(summary, metrics):
-    return build_outlook_row(summary, points=[], weekday="Mo", tz=_UTC, metrics=metrics)
+    return build_outlook_row(summary, points=[], weekday="Mo", tz=_UTC, metrics=metrics, context="vergleich")
 
 
 # ---------------------------------------------------------------------------
@@ -165,7 +165,7 @@ def test_ac8_compare_range_cell_without_hiking_shows_slash_too():
     summary = summarize_points(day_points)
     assert summary is not None, "Testaufbau: summarize_points() liefert kein Aggregat"
 
-    row = build_outlook_row(summary, day_points, "Mo", _UTC, metrics=_TEMP_BOTH)
+    row = build_outlook_row(summary, day_points, "Mo", _UTC, metrics=_TEMP_BOTH, context="vergleich")
 
     assert row["cells"] == ["9/27"], (
         f"Ortsvergleich-Ausblick ohne Gehzeit zeigt keine Spannen-Zelle: {row['cells']}"

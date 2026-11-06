@@ -3064,6 +3064,8 @@ class TripReportSchedulerService:
                     # nicht selbst aufloesen -- Renderer-Vokabular gehoert in
                     # die Ausgabeschicht (test_scheduler_has_no_output_imports).
                     trip_display_config=dc, report_type=report_type,
+                    # Issue #2792 S1c-4a: Trip-Zweig ausdruecklich, auch ohne dc.
+                    context="route",
                     day_window_start_hour=_win_start,
                     day_window_end_hour=_win_end,
                     # #1848 A1 (AC-1/AC-2/AC-3): Gehzeit-Fenster statt

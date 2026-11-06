@@ -161,7 +161,7 @@ def test_plain_outlook_nested_per_location():
         _loc("Alphaville", [(6, 18), (9, 20), (11, 23)]),
         _loc("Betatown", [(20, 31), (21, 33), (19, 29)]),
     ])
-    text = render_comparison_text(result, outlook_enabled=True)
+    text = render_comparison_text(result, outlook_enabled=True, preset=None)
 
     sv = text.index("STUNDENVERLAUF")
     pos_alpha_hours = text.index("Alphaville", sv)

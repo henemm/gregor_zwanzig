@@ -163,7 +163,7 @@ class TestAC1GoldenIdentical:
         """AC-1: GIVEN repraesentativer ComparisonResult / WHEN
         render_comparison_text laeuft / THEN zeichen-identisch zum
         Vorher-Anker (Golden aus unmigriertem Code)."""
-        assert render_comparison_text(_fixture_result()) == GOLDEN
+        assert render_comparison_text(_fixture_result(), preset=None) == GOLDEN
 
 
 class TestAC2FormatValueCalls:
@@ -195,7 +195,7 @@ class TestAC2FormatValueCalls:
             time_window=(8, 16), target_date=date(2026, 7, 15),
             created_at=datetime(2026, 7, 12, 9, 0),
         )
-        text = render_comparison_text(result)
+        text = render_comparison_text(result, preset=None)
         expected = {
             "Temperatur Maximum": format_value("temperature", 12.6, style="plain"),
             "Temperatur Minimum": format_value("temperature", 3.4, style="plain"),

@@ -34,7 +34,7 @@ def _cells(html):
 
 def _render(wind, gust, wmax, gmax):
     summary = SegmentWeatherSummary(wind_max_kmh=wmax, gust_max_kmh=gmax)
-    row = build_outlook_row(summary, _pts(wind, gust), "Di", timezone.utc)
+    row = build_outlook_row(summary, _pts(wind, gust), "Di", timezone.utc, context="vergleich")
     return render_outlook_table([row], show_acc=False, ampel=resolve_ampel(None))
 
 

@@ -105,7 +105,7 @@ def _compare_html() -> str:
 def _compare_text() -> str:
     from output.renderers.comparison import render_comparison_text
 
-    return render_comparison_text(_compare_result())
+    return render_comparison_text(_compare_result(), preset=None)
 
 
 # ---------------------------------------------------------------------------

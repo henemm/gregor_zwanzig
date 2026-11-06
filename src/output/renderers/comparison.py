@@ -190,9 +190,12 @@ def render_comparison_text(
     unresolved_count: int = 0,
     lang: Lang = "de",
     show_fallback_notice: bool = False,
+    preset: Optional[dict],
 ) -> str:
     """
     Render ComparisonResult als Klartext (v2, Issue #1110). ``lang``: #2666.
+    ``preset`` (Issue #2792 S1c-4a): rohes Vergleichs-Preset, Pflicht ohne
+    Default; aufgeloest wird bis S1c-4b weiter „allgemein".
     ``show_fallback_notice`` (Issue #1563): Vertretungshinweis je Ort unter
     der Uebersicht, nur Briefing; Default ``False``.
 
@@ -575,6 +578,7 @@ def render_compare_email(
         unresolved_count=unresolved_count,
         lang=lang,
         show_fallback_notice=show_fallback_notice,
+        preset=preset,
     )
     return html_body, text_body
 

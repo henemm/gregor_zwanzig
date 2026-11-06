@@ -160,5 +160,12 @@
   "mail.zusammenfassung.wind.schwach": "light wind",
   "mail.zusammenfassung.boeen": ", gusts up to {wert} km/h from {ab}:00",
   "mail.zusammenfassung.gewitter_moeglich": "Thunderstorm possible",
-  "mail.zusammenfassung.gewitter_symbol": "⚡ possible"
+  "mail.zusammenfassung.gewitter_symbol": "⚡ possible",
+  "mail.vorlage.alpen_trekking": "Alpine trekking",
+  "mail.vorlage.wandern": "Hiking",
+  "mail.vorlage.skitouren": "Ski touring",
+  "mail.vorlage.wintersport": "Winter sports",
+  "mail.vorlage.radtour": "Cycling",
+  "mail.vorlage.wassersport": "Water sports",
+  "mail.vorlage.allgemein": "General"
 }

@@ -160,5 +160,12 @@
   "mail.zusammenfassung.wind.schwach": "schwacher Wind",
   "mail.zusammenfassung.boeen": ", Böen bis {wert} km/h ab {ab}:00",
   "mail.zusammenfassung.gewitter_moeglich": "Gewitter möglich",
-  "mail.zusammenfassung.gewitter_symbol": "⚡ möglich"
+  "mail.zusammenfassung.gewitter_symbol": "⚡ möglich",
+  "mail.vorlage.alpen_trekking": "Alpen-Trekking",
+  "mail.vorlage.wandern": "Wandern",
+  "mail.vorlage.skitouren": "Skitouren",
+  "mail.vorlage.wintersport": "Wintersport",
+  "mail.vorlage.radtour": "Radtour",
+  "mail.vorlage.wassersport": "Wassersport",
+  "mail.vorlage.allgemein": "Allgemein"
 }

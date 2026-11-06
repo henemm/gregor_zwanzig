@@ -1038,7 +1038,7 @@ def test_regression_compare_radar_alert_sms_text_unchanged(monkeypatch, tmp_path
             is_convective=False,
         )
         svc.send_multi_location_radar_alert(
-            [("Zermatt", loc_a, nc_a), ("Chamonix", loc_b, nc_b)], {"sms"},
+            [("Zermatt", loc_a, nc_a), ("Chamonix", loc_b, nc_b)], {"sms"}, preset=None,
         )
         # FORTGESCHRIEBEN (Issue #1948 S4): der Buendel-Kopf nennt den Ortsnamen
         # des fuehrenden Events statt des gekuerzten Sammelnamens mit km0-0.

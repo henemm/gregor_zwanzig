@@ -182,7 +182,7 @@ def test_compare_plain_renderer_shows_wind_chill_max_value():
     loc.wind_chill_max = 11.0
     result = _result(loc)
 
-    text = render_comparison_text(result, enabled_metrics={"wind_chill_max"})
+    text = render_comparison_text(result, enabled_metrics={"wind_chill_max"}, preset=None)
 
     # #1453: die Uebersichts-Beschriftung ist der ausgeschriebene deutsche
     # Registername. Ist nur EINE der beiden Auswertungen gewaehlt, traegt die
@@ -239,7 +239,7 @@ def test_compare_renderers_show_wind_chill_min_only_selection_unchanged():
     )
     result = _result(loc)
 
-    text = render_comparison_text(result, enabled_metrics={"wind_chill_min"})
+    text = render_comparison_text(result, enabled_metrics={"wind_chill_min"}, preset=None)
     plain_line = _plain_row_value(text, "gefühlte temperatur")
     assert plain_line is not None, f"Klartext-Regression: keine min-Zeile mehr:\n{text}"
     assert _number(plain_line) == -3.0

@@ -57,18 +57,18 @@ def test_ac4_gesetzte_sms_schwelle_thunder_kommt_in_row_an():
     tz = ZoneInfo("Europe/Vienna")
 
     row = build_outlook_row(
-        summary, [], "Mo", tz, sms_thresholds={"thunder": 3.0},
+        summary, [], "Mo", tz, sms_thresholds={"thunder": 3.0}, context="vergleich",
     )
     assert row["sms_threshold_thunder"] == 3.0, (
         f"Gesetzte Gewitterschwelle muss ankommen, erhalten: {row.get('sms_threshold_thunder')!r}"
     )
 
-    row_empty = build_outlook_row(summary, [], "Mo", tz, sms_thresholds={})
+    row_empty = build_outlook_row(summary, [], "Mo", tz, sms_thresholds={}, context="vergleich")
     assert "sms_threshold_thunder" not in row_empty, (
         f"Ohne gesetzte Schwelle darf der Schlüssel nicht auftauchen, erhalten: {row_empty}"
     )
 
-    row_none = build_outlook_row(summary, [], "Mo", tz, sms_thresholds={"thunder": None})
+    row_none = build_outlook_row(summary, [], "Mo", tz, sms_thresholds={"thunder": None}, context="vergleich")
     assert "sms_threshold_thunder" not in row_none, (
         f"None-Schwelle muss gefiltert werden, erhalten: {row_none}"
     )

@@ -134,7 +134,7 @@ def _mehrsegment_etappe():
 def _ausblick_zeile(summary):
     from output.renderers.email.outlook import build_outlook_row
 
-    return build_outlook_row(summary, _punkte(), "Mo", TZ, metrics=_AUSWAHL)
+    return build_outlook_row(summary, _punkte(), "Mo", TZ, metrics=_AUSWAHL, context="vergleich")
 
 
 def _spalten_und_zellen(summary) -> tuple[list[str], list[str]]:

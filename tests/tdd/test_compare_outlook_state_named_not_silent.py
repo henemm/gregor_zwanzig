@@ -290,7 +290,7 @@ def test_ac4_plain_empty_outlook_no_error_shows_state_text_location_stays():
                               name="Alphaville")
     result = _comparison_result([loc])
 
-    text = render_comparison_text(result, outlook_enabled=True)
+    text = render_comparison_text(result, outlook_enabled=True, preset=None)
 
     assert "Alphaville" in text, (
         "Ein fehlerfreier Ort mit leerem Ausblick darf im Klartext NICHT "
@@ -327,7 +327,7 @@ def test_ac5_found_state_unchanged_no_state_text_no_warning(caplog):
     )
 
     html = render_compare_html(result, outlook_enabled=True)
-    text = render_comparison_text(result, outlook_enabled=True)
+    text = render_comparison_text(result, outlook_enabled=True, preset=None)
 
     assert OUTLOOK_HEADING in html, (
         f"Normalfall muss die Ausblick-Tabelle zeigen. HTML-Ausschnitt: "
@@ -422,7 +422,7 @@ def test_ac7_multi_location_html_shows_all_three_with_correct_state():
         f"HTML-Ausschnitt: ...{html[-600:]}"
     )
 
-    text = render_comparison_text(result, outlook_enabled=True)
+    text = render_comparison_text(result, outlook_enabled=True, preset=None)
     assert "OrtA" in text and "OrtC" in text, (
         f"Orte A und C muessen im Klartext erscheinen. Text: {text!r}"
     )

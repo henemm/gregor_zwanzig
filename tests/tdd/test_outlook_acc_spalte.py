@@ -99,7 +99,7 @@ def _zeilen(confidences, *, metrics=None):
     tage = ("Mo", "Di", "Mi", "Do", "Fr", "Sa", "So")
     return [
         build_outlook_row(_summary(conf), _punkte(), tage[i % len(tage)], TZ,
-                          metrics=auswahl)
+                          metrics=auswahl, context="vergleich")
         for i, conf in enumerate(confidences)
     ]
 

@@ -212,5 +212,5 @@ def test_ac11_ortsvergleich_klartext_kein_ratschlagstext():
         locations=[loc], time_window=(12, 16), target_date=datetime(2026, 8, 6).date(),
         created_at=datetime(2026, 8, 5, 18, 0),
     )
-    text = render_comparison_text(result, enabled_metrics=["thunder_max"])
+    text = render_comparison_text(result, enabled_metrics=["thunder_max"], preset=None)
     _pruefe_kanal("Ortsvergleich (Klartext)", text)

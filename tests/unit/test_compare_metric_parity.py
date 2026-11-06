@@ -454,7 +454,7 @@ def test_plaintext_shows_all_ten_new_rows():
         "humidity_avg_pct", "dewpoint_avg_c", "pressure_avg_hpa",
         "precip_type_dominant", "snowfall_limit_m",
     ])
-    text = render_comparison_text(result, enabled_metrics=enabled)
+    text = render_comparison_text(result, enabled_metrics=enabled, preset=None)
 
     hourly = _hourly()
     svc = WeatherMetricsService()

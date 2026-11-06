@@ -540,7 +540,7 @@ def test_ac7_ausblick_zelle_zeigt_traeger_und_hagel_aus_der_etappe():
         agg, [dp for s in segmente for dp in s.timeseries.data], "Fr", _UTC,
         sms_thresholds={}, trip_display_config=dc, report_type="evening",
         day_window_start_hour=fenster[0], day_window_end_hour=fenster[1],
-        segments=segmente,
+        segments=segmente, context="route",
     )
     zeile["date"] = _MORGEN
     zeile["name"] = "Etappe B"

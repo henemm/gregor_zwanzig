@@ -190,7 +190,7 @@ def _ausblick_zeile(punkte: list[ForecastDataPoint]) -> dict:
     win_start, win_end = resolve_configured_window(None, None)
     zeile = build_outlook_row(
         summarize_points(punkte), punkte, _WOCHENTAG, _TZ,
-        day_window_start_hour=win_start, day_window_end_hour=win_end,
+        day_window_start_hour=win_start, day_window_end_hour=win_end, context="vergleich",
     )
     zeile["name"] = "Etappe B"
     return zeile
@@ -299,7 +299,7 @@ def _compare_klartext(punkte: list[ForecastDataPoint]) -> str:
         created_at=datetime(2026, 8, 20, 4, 1),
     )
     return render_comparison_text(ergebnis, outlook_enabled=True,
-                                  outlook_metrics=None)
+                                  outlook_metrics=None, preset=None)
 
 
 def _gewitterfeld(zeile: str) -> str:

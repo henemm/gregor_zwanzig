@@ -227,8 +227,8 @@ def test_ac5b_outlook_tabelle_zeigt_hagel_hinweis_in_gewitter_zelle():
         temp_min_c=12.0, temp_max_c=22.0, thunder_level_max=ThunderLevel.HIGH,
         hail_flag=None,
     )
-    row_true = build_outlook_row(summary_true, points, "Do", _TZ)
-    row_unbekannt = build_outlook_row(summary_unbekannt, points, "Do", _TZ)
+    row_true = build_outlook_row(summary_true, points, "Do", _TZ, context="vergleich")
+    row_unbekannt = build_outlook_row(summary_unbekannt, points, "Do", _TZ, context="vergleich")
 
     table_true = render_outlook_table([row_true], ampel=resolve_ampel(None))
     table_unbekannt = render_outlook_table([row_unbekannt], ampel=resolve_ampel(None))

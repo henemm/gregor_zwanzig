@@ -1306,6 +1306,8 @@ def _build_location_outlook_rows(
             # Issue #2792 S1c-1: Zell-Hintergruende nach der Ampel des
             # Presets, nicht nach einer im Zeilenbau neu aufgeloesten.
             ampel=ampel,
+            # Issue #2792 S1c-4a: Zweig ausdruecklich, nicht ueber `dc is None`.
+            context="vergleich",
         ))
     return rows
 

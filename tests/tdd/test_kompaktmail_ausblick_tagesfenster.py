@@ -506,7 +506,7 @@ def _mit_herkunft_ausblick_zeile() -> dict:
         punkte, cape_ladder_thresholds_jkg(_MODELL, region),
         lpi_thresholds_jkg(region),
     )
-    zeile = build_outlook_row(summarize_points(punkte), punkte, _WOCHENTAG, _TZ)
+    zeile = build_outlook_row(summarize_points(punkte), punkte, _WOCHENTAG, _TZ, context="vergleich")
     zeile["name"] = "Etappe B"
     return zeile
 

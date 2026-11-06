@@ -93,7 +93,7 @@ def test_ac1_altform_temp_hi_matches_hiking_window_not_stage_aggregate():
 
     row = build_outlook_row(
         summary, points=[], weekday="Mo", tz=F.TZ,
-        hiking_extrema={"t2m_c": hiking},
+        hiking_extrema={"t2m_c": hiking}, context="vergleich",
     )
 
     assert row["temp_hi"] == int(hiking[1]), (
@@ -122,7 +122,7 @@ def test_ac1_configurable_path_temp_cell_matches_hiking_window():
 
     row = build_outlook_row(
         summary, points=[], weekday="Mo", tz=F.TZ, metrics=metrics,
-        hiking_extrema={"t2m_c": hiking},
+        hiking_extrema={"t2m_c": hiking}, context="vergleich",
     )
 
     cell = row["cells"][0]
@@ -156,7 +156,7 @@ def test_ac2_fail_soft_keeps_stage_aggregate_when_no_hiking_extrema_supplied():
     from output.renderers.email.outlook import build_outlook_row
 
     summary = SegmentWeatherSummary(temp_min_c=3.0, temp_max_c=11.0)
-    row = build_outlook_row(summary, points=[], weekday="Mo", tz=F.TZ)
+    row = build_outlook_row(summary, points=[], weekday="Mo", tz=F.TZ, context="vergleich")
 
     assert row["temp_lo"] == 3 and row["temp_hi"] == 11, (
         f"Fail-soft-Rueckfall gebrochen: temp_lo/temp_hi={row['temp_lo']}/"
@@ -198,7 +198,7 @@ def test_ac3_configurable_path_wind_chill_cell_matches_hiking_window():
 
     row = build_outlook_row(
         summary, points=[], weekday="Mo", tz=F.TZ, metrics=metrics,
-        hiking_extrema={"wind_chill_c": hiking},
+        hiking_extrema={"wind_chill_c": hiking}, context="vergleich",
     )
 
     cell = row["cells"][0]

@@ -95,7 +95,7 @@ def _onset_reference_wie_versand(preset: dict, body: dict, user_id: str, wire) -
     return wire.capture(lambda mail_sink: service.send_multi_location_radar_alert(
         entities, _CHANNELS, mail_sink=mail_sink,
         cooldown_display=_format_cooldown_display(COOLDOWN_MIN, lang=lang),
-        telegram_style=effective_compare_telegram_style(preset),
+        telegram_style=effective_compare_telegram_style(preset), preset=preset,
     ))
 
 

@@ -239,7 +239,7 @@ def test_build_outlook_row_pure_function():
                            gust_kmh=38.0, thunder_level=ThunderLevel.NONE),
     ]
 
-    row = build_outlook_row(summary, points, "Mo", ZoneInfo("Europe/Vienna"))
+    row = build_outlook_row(summary, points, "Mo", ZoneInfo("Europe/Vienna"), context="vergleich")
 
     assert isinstance(row, dict)
     assert row["weekday"] == "Mo"
@@ -256,7 +256,7 @@ def test_build_outlook_row_pure_function():
     # None-Werte werden gefiltert (analog trip_report_scheduler._build_stage_trend).
     row2 = build_outlook_row(
         summary, points, "Mo", ZoneInfo("Europe/Vienna"),
-        sms_thresholds={"precipitation": 5.0, "wind": 30.0, "gust": 50.0, "thunder": None},
+        sms_thresholds={"precipitation": 5.0, "wind": 30.0, "gust": 50.0, "thunder": None}, context="vergleich",
     )
     assert row2["sms_threshold_precip"] == 5.0
     assert row2["sms_threshold_wind"] == 30.0

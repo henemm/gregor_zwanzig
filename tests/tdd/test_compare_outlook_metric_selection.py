@@ -422,7 +422,7 @@ def test_plain_outlook_row_has_no_empty_stage_name_gap():
     # steht im Klartext-Ausblick des ORTSVERGLEICHS das nie befuellte
     # 26-Zeichen-Etappenname-Feld (Compare setzt `row["name"]` nicht).
     ist_zustand = _plain_outlook_blocks(
-        render_comparison_text(_result(), outlook_enabled=True)
+        render_comparison_text(_result(), outlook_enabled=True, preset=None)
     )
     ist_zeilen = ist_zustand[0][1] if ist_zustand else []
 

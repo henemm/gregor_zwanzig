@@ -359,7 +359,7 @@ def test_plaintext_overview_shows_the_same_german_names_as_the_html_part():
 
     html_labels = _html_overview_labels(render_compare_html(result, enabled_metrics=enabled))
     plain_labels = _plain_overview_labels(
-        render_comparison_text(result, enabled_metrics=enabled)
+        render_comparison_text(result, enabled_metrics=enabled, preset=None)
     )
 
     assert plain_labels == EXPECTED_OVERVIEW_LABELS_PLAIN, (
@@ -462,7 +462,7 @@ def test_overview_label_follows_the_register_not_a_typed_copy(monkeypatch):
         render_compare_html(result, enabled_metrics=enabled)
     )
     plain_labels = _plain_overview_labels(
-        render_comparison_text(result, enabled_metrics=enabled)
+        render_comparison_text(result, enabled_metrics=enabled, preset=None)
     )
 
     assert "Pruefname Feuchte" in html_labels, (

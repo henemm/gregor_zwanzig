@@ -337,7 +337,7 @@ def _trend_zeile(punkte: list[ForecastDataPoint], *,
     )
     zeile = build_outlook_row(
         summarize_points(punkte), punkte, "Fr", _TZ,
-        day_window_start_hour=win_start, day_window_end_hour=win_end,
+        day_window_start_hour=win_start, day_window_end_hour=win_end, context="vergleich",
     )
     zeile["date"] = _MORGEN
     zeile["name"] = "Etappe B"

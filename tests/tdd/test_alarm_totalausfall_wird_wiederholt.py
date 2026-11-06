@@ -199,7 +199,7 @@ def _versende(pfad: str, dienst, kanaele: set[str], *, orte: int = 1):
              [_aenderung()])
             for i in range(orte)
         ]
-        return dienst.send_multi_location_deviation_alert(entities, set(kanaele))
+        return dienst.send_multi_location_deviation_alert(entities, set(kanaele), preset=None)
     if pfad == "send_multi_location_official_alert":
         ort = SavedLocation(id="loc-a", name="Vergleichsort", lat=LAT, lon=LON, elevation_m=1000)
         return dienst.send_multi_location_official_alert(

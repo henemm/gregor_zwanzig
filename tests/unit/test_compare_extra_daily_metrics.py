@@ -298,7 +298,7 @@ def test_plaintext_shows_the_three_remaining_new_rows():
     enabled = resolve_enabled_metrics([
         "temp_min_c", "gust_max_kmh", "cape_max_jkg", "freezing_level_m",
     ])
-    text = render_comparison_text(result, enabled_metrics=enabled)
+    text = render_comparison_text(result, enabled_metrics=enabled, preset=None)
 
     hourly = _hourly()
     svc = WeatherMetricsService()

@@ -92,7 +92,7 @@ def _make_result(with_alert: bool = False) -> ComparisonResult:
 class TestAC1FilteredMetricsHideOtherLines:
     def test_ac1_only_temp_max_visible_when_filtered(self):
         result = _make_result()
-        text_body = render_comparison_text(result, enabled_metrics={"temp_max"})
+        text_body = render_comparison_text(result, enabled_metrics={"temp_max"}, preset=None)
 
         assert "Temperatur:" in text_body, f"Temp-max-Zeile muss sichtbar sein, Text:\n{text_body}"
         assert "Wind:" not in text_body, f"Wind-Zeile darf nicht erscheinen, Text:\n{text_body}"
@@ -105,7 +105,7 @@ class TestAC1FilteredMetricsHideOtherLines:
 class TestAC2NoneShowsAllSixLines:
     def test_ac2_enabled_metrics_none_shows_all_six_lines(self):
         result = _make_result()
-        text_body = render_comparison_text(result, profile=ActivityProfile.ALLGEMEIN, enabled_metrics=None)
+        text_body = render_comparison_text(result, profile=ActivityProfile.ALLGEMEIN, enabled_metrics=None, preset=None)
 
         for label in (
             "Temperatur Maximum", "Wind:", "Sonnenstunden:", "Bewölkung:",
@@ -117,7 +117,7 @@ class TestAC2NoneShowsAllSixLines:
 class TestAC3OfficialAlertsAlwaysVisible:
     def test_ac3_alert_line_visible_despite_filter(self):
         result = _make_result(with_alert=True)
-        text_body = render_comparison_text(result, enabled_metrics={"temp_max"})
+        text_body = render_comparison_text(result, enabled_metrics={"temp_max"}, preset=None)
 
         assert "⚠️" in text_body, f"Amtliche Warn-Zeile muss trotz Filter sichtbar sein, Text:\n{text_body}"
         assert "Gewitterwarnung Stufe Orange" in text_body, (
