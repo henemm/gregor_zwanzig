@@ -1020,6 +1020,10 @@ unveränderten Validator gegen genau diese Mail laufen (Schritt 3b in `/e2e-veri
   `--ohne-cleanup` nur zur Fehlersuche). Zugangsdaten (`GZ_CORE_SHARED_SECRET`, `GZ_AUTH_USER`/
   `GZ_AUTH_PASS`, `GZ_TEST_IMAP_*`) aus `/home/hem/gregor_zwanzig_staging/.env` plus `GZ_*`-Umgebung;
   nichts davon wird ausgegeben.
+- **Englisch (#2830):** `python3 .claude/tools/staging_mail_pruefen.py --typ trip|compare|beide --lang en`
+  meldet den festen Nutzer `en` an (`GZ_E2E_EN_USER`/`GZ_E2E_EN_PASS`, kein Helfer-Konto), prüft mit
+  `--lang en --to-contains "+en@"`; der Nutzer `en` wird nie gelöscht, nur die eigenen Objekte.
+  `staging_gate.py --write-verdict` verlangt `--langs de,en`, daher je Sprache ein eigener Aufruf.
 - **Ablauf:** Wegwerf-Nutzer `gregor-test+<tag>@henemm.com` (bestätigt über das Helfer-Konto) →
   Trip `GZM <tag>` bzw. drei Orte + Preset `GZM <tag> Vergleich` (`schedule: manual`) →
   Einzelversand am Kern (Port 8001, Header `X-GZ-Core-Auth`, Zeitlimit 300 s) → warten, bis die Mail

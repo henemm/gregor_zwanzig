@@ -18,6 +18,10 @@ Schritt: `python3 .claude/tools/staging_mail_pruefen.py --typ trip|compare|beide
 
 - **Empfänger:** ein Wegwerf-Nutzer mit Plus-Adresse `gregor-test+<tag>@henemm.com`.
   `gregor-test@henemm.com` selbst taugt nicht als Trip-Empfänger (Go: `email_taken`).
+- **Englisch (#2830):** `python3 .claude/tools/staging_mail_pruefen.py --typ trip|compare|beide --lang en`
+  meldet den festen Nutzer `en` an (Empfänger `gregor-test+en@henemm.com`), der Validator läuft mit
+  `--lang en --to-contains "+en@"`; der Nutzer `en` wird nie gelöscht, nur die eigenen Objekte.
+  `staging_gate.py --write-verdict` verlangt `--langs de,en`, daher je Sprache ein eigener Aufruf.
 - **Versand:** Einzelversand am Kern (Port 8001) mit Header `X-GZ-Core-Auth`.
 - **Subject-Filter:** Beide Validatoren lesen das **ganze** Postfach und filtern nur nach
   `X-GZ-Mail-Type` und `--subject-contains`, nicht nach Empfängeradresse. Eindeutig wird die

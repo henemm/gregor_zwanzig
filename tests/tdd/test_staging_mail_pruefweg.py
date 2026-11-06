@@ -115,6 +115,7 @@ class _Staging:
         self.feste_id: str | None = None        # Register vergibt diese id statt u-<hex>
         self.preset_ohne_id = False             # Preset-POST-Antwort ohne "id"
         self.kern_verzoegerung_s = 0.0          # Kern antwortet erst nach dieser Zeit
+        self.login_antwort: dict | None = None  # erzwingt eine abweichende Login-Antwort (F003)
         outer = self
 
         class H(BaseHTTPRequestHandler):
@@ -157,7 +158,10 @@ class _Staging:
                         return self._antwort(401, {"error": "bad"})
                     if not n["verified"]:
                         return self._antwort(403, {"error": "email_not_verified"})
-                    return self._antwort(200, {}, cookie=body["username"])
+                    # wie internal/handler/auth.go LoginHandler: Antwort {"id": uid}
+                    login_body = {"id": body["username"]} if outer.login_antwort is None \
+                        else outer.login_antwort
+                    return self._antwort(200, login_body, cookie=body["username"])
                 if pfad == "/api/auth/register":
                     uid = outer.feste_id or "u-" + secrets.token_hex(4)
                     u[uid] = {"pw": body["password"], "email": body["email"], "verified": False,
@@ -1028,6 +1032,53 @@ def test_en_und_de_lauf_nutzen_getrennte_kennungen_und_beruehren_keine_fremden_d
                 assert "m1-aaaa" not in pfad
             if sid == EN_UID:
                 assert "m2-bbbb" not in pfad and not pfad.endswith("/account/delete")
+
+
+# Adversary-Findings F001-F003 ------------------------------------------------
+
+@pytest.mark.parametrize("login_antwort", [{}, {"id": "default"}, {"id": "u-anders01"}, {"id": "  "}])
+def test_en_login_ohne_oder_mit_abweichender_kennung_ist_exit_2_ohne_anlegen(staging, capsys, login_antwort):
+    """F003 / AC-21: die Kennung stammt aus der Login-Antwort, nie ungeprueft aus GZ_E2E_EN_USER."""
+    w = _werkzeug()
+    staging.seed_en()
+    staging.login_antwort = login_antwort
+    r = _Runner()
+    assert _lauf_en(w, staging, ("trip", "compare"), runner=r, tag="f3-aaaa") == 2
+    assert r.aufrufe == [] and staging.kern == []
+    assert not any(m == "POST" and p in ("/api/trips", "/api/locations", "/api/compare/presets",
+                                         "/api/auth/register") for _, m, p in staging.log)
+    assert staging.konto_loeschungen() == [] and EN_UID in staging.users
+    aus = capsys.readouterr()
+    assert EN_PASS not in aus.out + aus.err
+    assert "Login des Nutzers en abgelehnt" in aus.err
+
+
+def test_en_mail_api_kennung_kommt_aus_der_login_antwort(staging):
+    w = _werkzeug()
+    staging.seed_en()
+    api = staging.en_api(w)
+    assert api.melde_an(EN_UID, EN_PASS) == EN_UID and api.nutzer_id == EN_UID
+
+
+def test_en_mail_api_repr_nach_anmeldung_ohne_passwort(staging):
+    """F001: repr() des angemeldeten Objekts (Passwort gesetzt) verraet es nicht."""
+    w = _werkzeug()
+    staging.seed_en()
+    api = staging.en_api(w)
+    api.melde_an(EN_UID, EN_PASS)
+    assert EN_PASS not in repr(api) and CORE_SECRET not in repr(api)
+    assert EN_PASS not in str(api)
+
+
+def test_en_lauf_meldet_nutzer_en_bleibt_bestehen_statt_wegwerf_nutzer_geloescht(staging, capsys):
+    """F002 / AC-14: am Ende des en-Laufs der Hinweis, dass der Nutzer en bestehen bleibt."""
+    w = _werkzeug()
+    staging.seed_en()
+    assert _lauf_en(w, staging, tag="f2-aaaa") == 0
+    aus = capsys.readouterr().out
+    hinweis = [z for z in aus.splitlines() if "Nutzer en" in z and "bleibt bestehen" in z]
+    assert hinweis and EN_UID in hinweis[0]
+    assert "Wegwerf-Nutzer geloescht" not in aus
 
 
 # AC-20 (doc-compliance-test) -------------------------------------------------

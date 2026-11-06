@@ -33,6 +33,20 @@ Idempotent: sind `GZ_E2E_EN_*` gesetzt und gültig, wird nur angemeldet und die 
 (abweichend → `PUT /api/auth/profile {"language":"en"}`). Höchstens **eine** Registrierung je Lauf,
 nie ein zweites Konto, nie Löschen.
 
+## Englischer Mail-Nachweis (#2830)
+
+```bash
+python3 .claude/tools/staging_mail_pruefen.py --typ trip|compare|beide --lang en
+```
+
+Das Werkzeug meldet sich als Nutzer `en` an (`GZ_E2E_EN_USER`/`GZ_E2E_EN_PASS`, kein
+Helfer-Konto), legt Trip bzw. Orte und Preset mit dem Lauf-Tag im Namen an, stellt per
+Einzelversand an `gregor-test+en@henemm.com` zu und prüft mit `--lang en --to-contains "+en@"`.
+Der Nutzer `en` wird dabei nie gelöscht; gelöscht werden nur die selbst angelegten Objekte.
+Bleiben welche übrig, nennt das Werkzeug ihre Kennungen (Exit != 0), damit sie von Hand
+entfernt werden (Trip-Kontingent `free`: 3). `staging_gate.py --write-verdict` verlangt
+`--langs de,en`, deshalb ist je Sprache ein eigener Aufruf nötig (ohne `--lang` = `de`).
+
 ## Secrets
 
 | Schlüssel | Inhalt | Ort |
@@ -61,5 +75,8 @@ Bei 429: eine Stunde warten, nicht wiederholen.
   erneut starten.
 - **Exit 2 mit `409 (email_taken)`**: die Subadresse gehört schon einem Konto, dessen Zugangsdaten
   fehlen. Altes Konto über die Admin-Nutzerverwaltung auf Staging löschen, dann das Skript erneut starten.
-- Bekannter Blocker des Staging-Mailwegs für `/e2e-verify` Schritt 3b: #2774 (Plus-Adresse und
-  Helfer-Konto nach Muster `.claude/tools/staging_befehl_pruefen.py`).
+- Der Staging-Mailweg für `/e2e-verify` Schritt 3b (#2774) ist gelöst: Trip- und Compare-Mail des
+  Nutzers `en` prüft `.claude/tools/staging_mail_pruefen.py --typ ... --lang en` (#2830).
+- **Exit 2 „Login des Nutzers en abgelehnt"** im Prüfwerkzeug: auch dann, wenn die Login-Antwort keine
+  oder eine andere Kontokennung als `GZ_E2E_EN_USER` nennt (z. B. `default`); nichts wird angelegt.
+  `GZ_E2E_EN_USER` muss die Server-Kennung `u-…` sein, nicht der Anzeigename.

@@ -151,13 +151,37 @@ Standard-Testnutzer (`de`, Basispostfach `gregor-test@henemm.com`) und einmal mi
 Staging-Nutzer `en` (Anmeldung mit `GZ_E2E_EN_USER`/`GZ_E2E_EN_PASS`, Empfaenger die
 Subadresse `gregor-test+en@henemm.com`). Anlegen/Absichern des Nutzers `en`:
 `python3 scripts/staging_e2e_user_en.py` (Runbook `docs/runbooks/staging_e2e_nutzer_en.md`).
-Je Mail-Pfad der zustaendige Validator mit Sprache und Empfaenger:
+
+Trip- und Compare-Mail auf Englisch (#2830) — derselbe Werkzeug-Aufruf mit `--lang en`:
 
 ```bash
-uv run python3 .claude/hooks/briefing_mail_validator.py --lang de
-uv run python3 .claude/hooks/briefing_mail_validator.py --lang en --to-contains "+en@"
-uv run python3 .claude/hooks/email_spec_validator.py --lang de
-uv run python3 .claude/hooks/email_spec_validator.py --lang en --to-contains "+en@"
+python3 .claude/tools/staging_mail_pruefen.py --typ beide --lang en   # Trip + Compare, Nutzer en
+```
+
+Mit `--lang en` meldet das Werkzeug den festen Nutzer `en` an (keine Registrierung, kein
+Helfer-Konto; Pflicht: `GZ_E2E_EN_USER`/`GZ_E2E_EN_PASS`, sonst Exit 2 ohne Netzzugriff) und
+prueft mit `--lang en --to-contains "+en@"`. Der Nutzer `en` wird dabei nie geloescht, nur die
+selbst angelegten Objekte (Tag im Namen); bleiben welche uebrig, nennt es deren Kennungen
+(Exit != 0). `staging_gate.py --write-verdict` verlangt `--langs de,en`, deshalb ist je Sprache
+ein eigener Aufruf noetig (ohne `--lang` = `de`, einmal mit `--lang en`; `--lang de,en` wird
+abgelehnt).
+
+Fuer Trip- und Compare-Mail ist das Werkzeug oben (`staging_mail_pruefen.py`, ohne und mit
+`--lang en`) der **Hauptweg**; es ruft den Validator selbst mit dem Tag-Betreff auf. Die
+direkten Validator-Aufrufe fuer Trip/Compare sind nur ein **Nebenweg zur Fehlersuche** (z. B.
+nach `--ohne-cleanup`) und immer mit dem Tag-Betreff des Laufs, sonst greift der Validator
+die neueste Mail im geteilten Postfach:
+
+```bash
+uv run python3 .claude/hooks/briefing_mail_validator.py --lang de --mail-type trip-briefing --subject-contains "<Tag-Betreff>"
+uv run python3 .claude/hooks/briefing_mail_validator.py --lang en --to-contains "+en@" --mail-type trip-briefing --subject-contains "<Tag-Betreff>"
+uv run python3 .claude/hooks/email_spec_validator.py --lang de --mail-type compare --subject-contains "<Tag-Betreff>"
+uv run python3 .claude/hooks/email_spec_validator.py --lang en --to-contains "+en@" --mail-type compare --subject-contains "<Tag-Betreff>"
+```
+
+Die Alarm-Pfade laufen nicht ueber das Werkzeug; hier ist der direkte Aufruf der regulaere Weg:
+
+```bash
 # Alarm-Pfade (official-alert, radar-alert) je Sprache:
 uv run python3 scripts/send_gate_test_mails.py --lang en --only official
 uv run python3 .claude/hooks/official_alert_mail_validator.py --lang en --to-contains "+en@" --subject-contains <token>
@@ -181,7 +205,7 @@ aus dem Staging-Checkout, mit `-m live` und den Werten aus dessen `.env`.
 Der Kopf `X-GZ-Lang` ist Pflicht: fehlt er, endet jeder Validator mit Exit 1. Die Auswahl
 nimmt nur Mails der gewaehlten Sprache **und** ihres Empfaengers (`de`: To ohne `+en@`,
 `en`: To mit `+en@`); eine Mail des anderen Nutzers erfuellt den Lauf nie.
-Bekannter Blocker des Staging-Mailwegs: #2774 (Wegwerf-Konten, Plus-Adresse, Helfer-Konto).
+Der Staging-Mailweg fuer Trip und Compare ist mit `staging_mail_pruefen.py` geloest (#2774, `en`: #2830).
 
 ### Rezept: Befehl per echtem Mail-Eingang auf Staging
 
