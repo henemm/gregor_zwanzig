@@ -24,6 +24,7 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { join } from 'node:path';
 import { quelleMitKatalog } from '../../../lib/i18n/__tests__/quelleMitKatalog.ts';
+import { compile } from 'svelte/compiler';
 
 const ROUTES_COMPARE = join(fileURLToPath(import.meta.url), '..', '..', '..');
 const COMPARE_DIR = join(ROUTES_COMPARE, '..', 'lib', 'components', 'compare');
@@ -126,12 +127,17 @@ describe('AC-4: Compare-Hub — Full-width Header ohne max-w Container', () => {
 		);
 	});
 
-	test('AC-4b: Desktop-Header hat border-bottom mit var(--g-rule)', () => {
-		const src = readFileSync(HUB_PAGE, 'utf-8');
+	// Umgehängt durch #2837 S1 (ADR-0110, Adversary F001): die Unterkante des Hub-Kopfs gehört dem
+	// geteilten HubKopf (Trip und Vergleich gleich), nicht der Seite. Geprüft am ECHTEN Stylesheet
+	// des Bausteins (svelte/compiler, wie der Browser es bekommt): Desktop-Regel (min-width 900px)
+	// am Wurzelelement .hub-kopf mit border-bottom 1px solid var(--g-rule). Dass beide Seiten dieses
+	// Wurzelelement ohne eigenen Rahmen/Abstand tragen: hub_kopf_seiten_paritaet „Unterkante".
+	test('AC-4b: Desktop-Header hat border-bottom mit var(--g-rule) (im geteilten HubKopf)', () => {
+		const css = compile(readFileSync(HUB_KOPF, 'utf-8'), { generate: 'client', filename: HUB_KOPF }).css?.code.replace(/\s+/g, '') ?? '';
 		assert.match(
-			src,
-			/border-bottom.*g-rule|g-rule.*border-bottom/,
-			'Desktop-Header braucht border-bottom: 1px solid var(--g-rule) — IST: nicht vorhanden'
+			css,
+			/@media\(min-width:900px\)\{\.hub-kopf(\.svelte-[a-z0-9]+)?\{border-bottom:1pxsolidvar\(--g-rule\);?\}/,
+			`HubKopf braucht am Desktop border-bottom: 1px solid var(--g-rule) — IST: ${css.slice(0, 400)}`
 		);
 	});
 

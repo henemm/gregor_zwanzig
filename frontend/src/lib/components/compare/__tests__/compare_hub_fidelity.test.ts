@@ -140,11 +140,14 @@ describe('AC-11: Desktop-Unterzeile Profil-Label (jsx:78-80)', () => {
 	});
 });
 
-describe('AC-12: mobile Eyebrow „Orts-Vergleich · Hub" (screen-compare-detail-mobile.jsx:51)', () => {
-	test('Eyebrow-Text im Mobile-Header vorhanden', () => {
+// Umgedreht durch #2837 S1 (ADR-0110, Spec rework_2837_s1_hub_kopf.md Entscheidung 4): die
+// Mobil-Eyebrow „Orts-Vergleich · Hub" entfällt (Schlüssel vergleich.hub.eyebrow gestrichen).
+// Gerendert (de/en) bewacht in vergleich_hub_sprache.test.ts AC-1 und hub_kopf_seiten_paritaet AC-13.
+describe('AC-12 (#2837 S1 umgedreht): keine mobile Eyebrow „Orts-Vergleich · Hub" mehr', () => {
+	test('Eyebrow-Text steht nicht mehr im Hub-Kopf', () => {
 		assert.ok(
-			page().includes('Orts-Vergleich · Hub'),
-			'AC-12 FAIL: mobile Eyebrow-Zeile „Orts-Vergleich · Hub" fehlt'
+			!page().includes('Orts-Vergleich · Hub') && !page().includes('vergleich.hub.eyebrow'),
+			'AC-12: die Mobil-Eyebrow „Orts-Vergleich · Hub" steht noch im Hub-Kopf'
 		);
 	});
 });

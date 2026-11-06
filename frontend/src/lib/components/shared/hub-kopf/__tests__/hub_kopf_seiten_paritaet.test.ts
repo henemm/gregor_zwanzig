@@ -26,6 +26,10 @@
 
 import { test, describe, afterEach } from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
+import path from 'node:path';
+import { compile } from 'svelte/compiler';
 import { baum, alle, einzig, mitTestid, text, liegtIn, lage, vorfahren, klassen, type Knoten } from './htmlBaum.ts';
 
 const T = await import('../../../trip-detail/__tests__/f9Pruefstand.ts');
@@ -52,6 +56,12 @@ const ELTERN: Record<Art, { schluessel: string; href: string }> = {
 };
 /** Kind des Breadcrumbs: Trip = Kürzel ?? Name, Vergleich = Name. */
 const KIND: Record<Art, string> = { route: 'GR20', vergleich: 'Skitouren Tirol' };
+/** Text des Kind-Krümels: das einzige Kind-Element des Breadcrumbs, das weder Link noch Trenner „/" ist. */
+const kindKruemel = (krumen: Knoten): string => {
+	const k = krumen.kinder.filter((n) => n.tag !== 'a' && text(n) !== '/');
+	assert.equal(k.length, 1, `Breadcrumb: genau ein Kind-Krümel erwartet, gefunden ${k.length}`);
+	return text(k[0]);
+};
 
 const ueberschrift = (w: Knoten): Knoten => {
 	const t = alle(w, (n) => n.tag === 'h1');
@@ -91,7 +101,8 @@ for (const art of ARTEN) {
 			assert.equal(links.length, 1, `genau ein Link im Breadcrumb erwartet, gefunden ${links.length}`);
 			assert.equal(links[0].attrs.href, ELTERN[art].href);
 			assert.equal(text(links[0]), trFor('de', ELTERN[art].schluessel as never), 'Elternteil-Text nicht aus dem Katalog (bzw. im Markup umgeschrieben)');
-			assert.ok(text(krumen).includes(KIND[art]), `Kind „${KIND[art]}" fehlt: „${text(krumen)}"`);
+			// Adversary F003: Kind EXAKT (nicht includes — „GR20 Nord 2026" enthielte „GR20").
+			assert.equal(kindKruemel(krumen), KIND[art]);
 			assert.ok(!text(links[0]).includes(KIND[art]), 'Kind ist Teil des Links');
 		});
 
@@ -211,7 +222,7 @@ describe('#2837 S1 AC-5 — Trip ohne Kürzel: Breadcrumb zeigt den Namen', () =
 	test('shortcode fehlt ⇒ Kind = Trip-Name, kein Link', () => {
 		const w = seite('route', T.tripLaufend({ shortcode: undefined }));
 		const krumen = einzig(w, 'hub-kopf-breadcrumb');
-		assert.ok(text(krumen).includes('GR20 Nord 2026'), `Name fehlt im Breadcrumb: „${text(krumen)}"`);
+		assert.equal(kindKruemel(krumen), 'GR20 Nord 2026', `Kind des Breadcrumbs ist nicht exakt der Name: „${text(krumen)}"`);
 		const links = alle(krumen, (n) => n.tag === 'a');
 		assert.equal(links.length, 1);
 		assert.ok(!text(links[0]).includes('GR20 Nord 2026'));
@@ -253,6 +264,49 @@ describe('#2837 S1 AC-13 — Breadcrumb und Kopftexte folgen der Nutzersprache (
 			const enText = text(en);
 			for (const alt of ['Location comparison · Hub', 'LOCATION COMPARISONS', 'Orts-Vergleich · Hub', 'ORTS-VERGLEICHE'])
 				assert.ok(!enText.includes(alt) && !text(de).includes(alt), `alter Kopftext „${alt}" steht noch auf der Seite`);
+		});
+	}
+});
+
+// Adversary F001 (#2837 S1): Abstand und Unterkante (Linie --g-rule) gehören allein dem HubKopf.
+// Rot, sobald eine Seite (oder die Trip-Hülle) wieder einen eigenen Rahmen, Abstand oder eine Linie
+// um den HubKopf legt — als Klasse/Inline-Stil im gerenderten Markup ODER als Regel im echten
+// Stylesheet (svelte/compiler) einer der Dateien, die diese umgebenden Elemente bauen.
+describe('#2837 S1 Parität — die Unterkante des Kopfs trägt nur der HubKopf (kein Seiten-Wrapper)', () => {
+	const SRC = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../../../..');
+	const UMGEBUNG: Record<Art, string[]> = {
+		route: ['routes/trips/[id]/+page.svelte', 'lib/components/trip-detail/TripHeader.svelte'],
+		vergleich: ['routes/compare/[id]/+page.svelte']
+	};
+	const RAHMEN = /^(border|padding|margin)/;
+	const RAHMEN_KLASSE = /(^|:)(border|p[trblxy]?-|m[trblxy]?-|\[border|\[padding|\[margin)|g-rule/;
+	const kopfWurzel = (w: Knoten, art: Art): Knoten => {
+		const leiste = einzig(w, 'hub-kopf-leiste');
+		const wurzel = vorfahren(leiste).find((n) => n.attrs['data-kind'] === art);
+		assert.ok(wurzel, 'HubKopf-Wurzel (data-kind) nicht gefunden');
+		return wurzel;
+	};
+	for (const art of ARTEN) {
+		test(`${art}: kein Vorfahre der HubKopf-Wurzel trägt Rahmen/Abstand/Linie (Markup)`, () => {
+			const verstoesse = vorfahren(kopfWurzel(seite(art), art)).flatMap((n) => [
+				...klassen(n).filter((k) => RAHMEN_KLASSE.test(k)).map((k) => `<${n.tag} class=…${k}>`),
+				...(n.attrs.style ?? '').split(';').filter((d) => RAHMEN.test(d.trim()) || /g-rule/.test(d)).map((d) => `<${n.tag} style=…${d.trim()}>`)
+			]);
+			assert.deepEqual(verstoesse, []);
+		});
+		test(`${art}: kein Stylesheet der Seite/Hülle gibt den Vorfahren des HubKopf Rahmen/Abstand/Linie`, () => {
+			const vorfahrenKlassen = new Set(vorfahren(kopfWurzel(seite(art), art)).flatMap((n) => klassen(n)).filter((k) => !/^svelte-/.test(k)));
+			const verstoesse: string[] = [];
+			for (const rel of UMGEBUNG[art]) {
+				const datei = path.join(SRC, rel);
+				const css = compile(readFileSync(datei, 'utf-8'), { generate: 'client', filename: datei }).css?.code.replace(/\/\*[\s\S]*?\*\//g, '') ?? '';
+				for (const m of css.matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
+					const sel = m[1].trim();
+					const treffer = [...vorfahrenKlassen].filter((k) => new RegExp(`\\.${k.replace(/[^a-zA-Z0-9_-]/g, '\\$&')}(?![a-zA-Z0-9_-])`).test(sel));
+					if (treffer.length && m[2].split(';').some((d) => RAHMEN.test(d.trim()) || /g-rule/.test(d))) verstoesse.push(`${rel}: ${sel} { ${m[2].trim()} }`);
+				}
+			}
+			assert.deepEqual(verstoesse, []);
 		});
 	}
 });

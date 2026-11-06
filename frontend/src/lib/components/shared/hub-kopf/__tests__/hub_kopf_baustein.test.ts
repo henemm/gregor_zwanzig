@@ -258,6 +258,33 @@ describe('#2837 S1 Entscheidung 1 — ein Markup, context wählt nur Text und Da
 	});
 });
 
+// Adversary F006 (#2837 S1): die Optik des HubKopf darf nicht nach Art unterscheiden — weder über
+// das Stylesheet (Selektor nach data-kind bzw. einer aus context abgeleiteten Klasse) noch über
+// class/style im Markup. Das Markup deckt „der einzige Attribut-Unterschied ist data-kind" oben ab
+// (alle Attribute inkl. class/style, beide Arten mit identischen Durchreich-Props gerendert);
+// hier zusätzlich class/style ausdrücklich, mobil wie Desktop, und das ECHTE Stylesheet.
+// Ausnahme Testids: der Präfix (`testidPrefix`, z. B. trip-/compare-hub-) kommt bewusst von der Seite
+// und ist Prüf-Anker, keine Optik; im Baustein-Render tragen beide Arten denselben Präfix.
+describe('#2837 S1 Entscheidung 1 / F006 — keine Optik nach Art', () => {
+	test('kompiliertes CSS des HubKopf: kein Selektor nach data-kind oder nach Art benannten Klassen', async () => {
+		const { compile } = await import('svelte/compiler');
+		const { readFileSync } = await import('node:fs');
+		const css = (compile(readFileSync(PRUEFLING, 'utf-8'), { generate: 'client', filename: PRUEFLING }).css?.code ?? '').replace(/\/\*[\s\S]*?\*\//g, '');
+		assert.ok(css.includes('.hub-kopf'), 'Messaufbau: kein Stylesheet des HubKopf gefunden');
+		const selektoren = [...css.matchAll(/([^{}@]+)\{/g)].map((m) => m[1].trim());
+		const nachArt = selektoren.filter((s) => /data-kind|\[kind\b|\.(route|vergleich|trip|compare)(?![a-zA-Z0-9_-])|\.kind-|\.context-/.test(s));
+		assert.deepEqual(nachArt, [], 'Stylesheet unterscheidet nach Art (F006)');
+	});
+	for (const mobil of [false, true]) {
+		test(`class und style aller Elemente gleich für route und vergleich (mobil=${mobil})`, async () => {
+			const stil = (w: Knoten) => alle(w, () => true).map((n) => `${n.tag}|${n.attrs.class ?? ''}|${n.attrs.style ?? ''}`);
+			const a = await render_(props('route', { mobil }));
+			const b = await render_(props('vergleich', { mobil }));
+			assert.deepEqual(stil(b.wurzel), stil(a.wurzel));
+		});
+	}
+});
+
 describe('#2837 S1 AC-13 — Texte des Bausteins aus dem Katalog (de und en)', () => {
 	for (const context of ['route', 'vergleich'] as const) {
 		test(`${context}: Aria-Texte von Zurück und Kebab folgen der Nutzersprache`, async () => {

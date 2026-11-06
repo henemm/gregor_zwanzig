@@ -208,8 +208,48 @@ for (const kind of HUB_KINDS) {
 	});
 }
 
+/** Unterkante des Kopfs (Adversary F001/F006): berechneter Stil der HubKopf-Wurzel und des Titelblocks,
+ *  dazu der Abstand Kopf-Unterkante → Reiterleiste. */
+async function unterkante(page: Page) {
+	const wurzel = leiste(page).locator('xpath=ancestor::*[@data-kind][1]');
+	const titelBlock = wurzel.locator('.hub-kopf-titel');
+	const w = await wurzel.evaluate((el) => {
+		const s = getComputedStyle(el);
+		return { breite: s.borderBottomWidth, art: s.borderBottomStyle, farbe: s.borderBottomColor };
+	});
+	const padding = await titelBlock.evaluate((el) => getComputedStyle(el).paddingBottom);
+	const k = await box(wurzel, 'HubKopf-Wurzel');
+	const r = await box(page.locator('[data-slot="segmented"][role="tablist"]').first(), 'Reiterleiste');
+	return { ...w, padding, abstand: r.y - (k.y + k.height) };
+}
+
 test.describe('HP Parität — beide Arten nebeneinander gemessen', () => {
 	for (const vp of BREITEN) {
+		test(`HP-14 (${vp.width} px): Unterkante des Kopfs gleich — Linie, Abstand unter dem Titelblock, Abstand zur Reiterleiste`, async ({ page }) => {
+			await page.setViewportSize(vp);
+			const mass: Record<string, Awaited<ReturnType<typeof unterkante>>> = {};
+			for (const kind of HUB_KINDS) {
+				const hub = await seed(page.request, kind);
+				try {
+					await openHub(page, kind, hub.id);
+					mass[kind] = await unterkante(page);
+				} finally {
+					await hub.aufraeumen();
+				}
+			}
+			const { route, vergleich } = mass;
+			expect(vergleich.breite, 'Linienstärke der Unterkante verschieden').toBe(route.breite);
+			expect(vergleich.art, 'Linienart der Unterkante verschieden').toBe(route.art);
+			expect(vergleich.farbe, 'Linienfarbe der Unterkante verschieden').toBe(route.farbe);
+			expect(vergleich.padding, 'Abstand unter dem Titelblock verschieden (F006)').toBe(route.padding);
+			expect(Math.abs(vergleich.abstand - route.abstand), 'Abstand Kopf-Unterkante → Reiterleiste verschieden').toBeLessThanOrEqual(4);
+			if (vp.width === DESKTOP.width) {
+				expect(route.breite, 'Desktop: Unterkante ohne 1-px-Linie').toBe('1px');
+				expect(route.art).toBe('solid');
+			}
+		});
+
+
 		test(`HP-1/HP-2 (${vp.width} px): „Senden" sitzt bei Trip und Vergleich an derselben Stelle der Leiste`, async ({ page }) => {
 			await page.setViewportSize(vp);
 			const lagen: Record<string, Awaited<ReturnType<typeof sendenLage>>> = {};

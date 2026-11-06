@@ -16,7 +16,8 @@
 	// - Mobile (<900px): horizontales Band + 16px-Fade + Scroll-Snap,
 	//   Trigger min-height 44px, Pill-Optik, Badges neutral.
 	// - Desktop (>=900px): Underline-Optik 1:1 wie bisheriger TripTabs-Stand
-	//   (padding 0.5rem/1rem, 0.875rem, Accent-Unterstrich, Accent-Fill-Badges).
+	//   (padding 0.5rem/1rem, 0.875rem, Accent-Unterstrich); Zähler-Badges neutral
+	//   in jeder Breite und Größe (#2837 S1, ADR-0110).
 	// - data-slot-Vertrag (segmented/segmented-item/segmented-badge) bleibt
 	//   bestehen — bestehende Test-IDs und der app.css-Fallback greifen weiter.
 	import { tick } from 'svelte';
@@ -36,7 +37,7 @@
 		/** Beschriftung der Leiste für Screenreader. */
 		ariaLabel: string;
 		/** Desktop-Optik: 'md' = Trip-Unterline (default), 'sm' = Compare-Reihe
-		 *  (13px, 12/16px, inaktiv --g-ink-3, Badge neutral in beiden Breiten). */
+		 *  (13px, 12/16px, inaktiv --g-ink-3). Die Badge-Farbe hängt NICHT an size. */
 		size?: 'md' | 'sm';
 	}
 
@@ -136,9 +137,13 @@
 		margin-left: 0.375rem;
 		padding: 0.125rem 0.375rem;
 		border-radius: 9999px;
-		background: var(--g-accent);
-		color: #fff;
-		font-size: 0.75rem;
+		/* #2837 S1 (ADR-0110, AC-10): Zähler neutral für Trip UND Vergleich (ink-3 auf
+		   paper-deep ≈ 4,7:1, WCAG-AA) — Standard, nicht über `size` gesteuert.
+		   Accent bleibt allein der Unterstrich des aktiven Reiters. */
+		background: var(--g-paper-deep);
+		color: var(--g-ink-3);
+		font-family: var(--g-font-mono);
+		font-size: var(--g-text-xs);
 		font-weight: 600;
 	}
 
@@ -156,16 +161,6 @@
 		font-weight: 600;
 		color: var(--g-ink);
 	}
-	/* Badge neutral wie bisheriger Compare-Stil (paper-deep/ink-3, mono) —
-	   Badges neutral war der Vorschlag aus dem Design-Doc Paket 2. */
-	.mtabbar.sm :global([data-slot='segmented-badge']) {
-		background: var(--g-paper-deep);
-		color: var(--g-ink-3);
-		font-family: var(--g-font-mono);
-		font-size: var(--g-text-xs);
-		font-weight: 600;
-	}
-
 	/* Mobile (<900px): horizontales Band + Fade (#1231) + Pill-Trigger. */
 	@media (max-width: 899px) {
 		.mtabbar {

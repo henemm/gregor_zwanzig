@@ -19,9 +19,12 @@ import path from 'node:path';
 const HIER = path.dirname(fileURLToPath(import.meta.url));
 const SRC = path.resolve(HIER, '../../../..');
 const MSG = path.join(SRC, 'lib', 'i18n', 'messages');
-const FLAECHEN = ['lib/components/compare', 'lib/components/compare-new', 'lib/components/shared/hub-uebersicht', 'routes/compare/[id]', 'routes/compare/new'];
+// #2837 S1 (ADR-0110): Kopf-Aktionen (Zurück, Kebab) des Vergleichs-Hubs stehen im geteilten
+// HubKopf bzw. im SubscriptionKebab — beide gehören deshalb zu den Compare-Flächen.
+const FLAECHEN = ['lib/components/compare', 'lib/components/compare-new', 'lib/components/shared/hub-uebersicht', 'lib/components/shared/hub-kopf', 'lib/components/molecules/SubscriptionKebab.svelte', 'routes/compare/[id]', 'routes/compare/new'];
 
 function dateien(verz: string): string[] {
+	if (statSync(verz).isFile()) return [verz];
 	const aus: string[] = [];
 	for (const n of readdirSync(verz)) {
 		const p = path.join(verz, n);

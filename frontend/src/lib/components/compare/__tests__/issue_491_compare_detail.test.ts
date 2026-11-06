@@ -62,14 +62,16 @@ describe('AC-1: Preset-Name, Status, Schedule, Empfänger angezeigt', () => {
 	});
 
 	// Issue #2278: das Aktionsmenue ist das geteilte SubscriptionKebab (loest CompareKebab ab).
-	test('+page.svelte importiert SubscriptionKebab für Aktionsmenü', () => {
+	// Umgehängt durch #2837 S1 (ADR-0110, Entscheidung 6): der Kebab liegt im geteilten HubKopf;
+	// die Seite reicht nur Aktionen und Handler an ihn. Bindung am AST bewacht in
+	// shared/hub-kopf/__tests__/hub_kopf_seiten_bindung.test.ts und aktionsmodell_seiten_bindung.test.ts.
+	test('+page.svelte reicht das Aktionsmenü an den HubKopf (SubscriptionKebab nicht mehr selbst eingebunden)', () => {
 		assert.ok(existsSync(PAGE_SVELTE), '+page.svelte fehlt');
 		const src = readFileSync(PAGE_SVELTE, 'utf-8');
-		assert.match(
-			src,
-			/SubscriptionKebab/,
-			'SubscriptionKebab wird in +page.svelte nicht importiert — Aktionsmenü fehlt'
-		);
+		assert.ok(!/SubscriptionKebab/.test(src), '+page.svelte bindet SubscriptionKebab noch selbst ein (gehört in den HubKopf)');
+		assert.match(src, /<HubKopf[\s\S]*?actions=\{hubAktionen\}[\s\S]*?onSelect=\{handleAction\}/, 'HubKopf bekommt das Aktionsmenü (actions/onSelect) nicht');
+		const hubKopf = readFileSync(join(COMPARE_DIR, '..', 'shared', 'hub-kopf', 'HubKopf.svelte'), 'utf-8');
+		assert.match(hubKopf, /<SubscriptionKebab[^>]*\{actions\}[^>]*\{onSelect\}/, 'HubKopf reicht actions/onSelect nicht an SubscriptionKebab weiter');
 	});
 
 	test('+page.svelte zeigt Preset-Name an', () => {

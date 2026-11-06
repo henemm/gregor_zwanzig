@@ -30,6 +30,9 @@ const ROUTES_CMP_ID = join(ROUTES_CMP, '[id]');
 const ACTION_SHEET  = join(MOBILE_DIR, 'SubscriptionActionSheet.svelte');
 const CMP_PAGE      = join(ROUTES_CMP, '+page.svelte');
 const DETAIL_PAGE   = join(ROUTES_CMP_ID, '+page.svelte');
+// #2837 S1: geteilter Hub-Kopf (Trip und Vergleich) und sein Kebab.
+const HUB_KOPF      = join(COMPARE_DIR, '..', 'shared', 'hub-kopf', 'HubKopf.svelte');
+const KEBAB         = join(COMPARE_DIR, '..', 'molecules', 'SubscriptionKebab.svelte');
 
 // ── AC-1: SubscriptionActionSheet ─────────────────────────────────────────────
 
@@ -152,26 +155,27 @@ describe('AC-4: /compare/[id]/+page.svelte hat mobilen Render-Pfad', () => {
 		);
 	});
 
-	test('/compare/[id]/+page.svelte hat 44px Back-Button in mobiler TopBar', () => {
+	// Umgehängt durch #2837 S1 (ADR-0110): die mobile Kopfleiste der Detailseite ist der geteilte
+	// HubKopf (Zurück-Pfeil, Senden, Kebab). Die 44-px-Tippflächen stehen dort (Leisten-Knöpfe)
+	// bzw. im mobilen SubscriptionKebab-Knopf; gemessen im Browser: e2e/hub-kopf-paritaet-compare-trip HP-2/HP-7.
+	test('/compare/[id]: der HubKopf der Seite hat 44px-Tippflächen in der mobilen Kopfleiste', () => {
 		assert.ok(existsSync(DETAIL_PAGE), '/compare/[id]/+page.svelte fehlt');
-		const src = readFileSync(DETAIL_PAGE, 'utf-8');
-		assert.match(
-			src,
-			/min-h-\[44px\]|min-w-\[44px\]/,
-			'/compare/[id]/+page.svelte hat kein 44px-Tap-Target für mobile TopBar-Buttons'
-		);
+		assert.match(readFileSync(DETAIL_PAGE, 'utf-8'), /<HubKopf\b/, '/compare/[id]/+page.svelte bindet den HubKopf nicht ein');
+		const hubKopf = readFileSync(HUB_KOPF, 'utf-8');
+		assert.match(hubKopf, /min-height:\s*44px;[\s\S]*?min-width:\s*44px;/, 'HubKopf hat kein 44px-Tap-Target für mobile Leisten-Knöpfe');
+		assert.match(readFileSync(KEBAB, 'utf-8'), /style:width="44px"[\s\S]*?style:height="44px"/, 'mobiler Kebab-Knopf ohne 44×44-Tippfläche');
 	});
 
 	// Mobile-Shell S2: Rücksprung als <BackLink> im Inhalt (Mono-Caps, 36 px)
 	// statt ArrowLeft-Icon in einer nachgebauten TopBar.
-	test('/compare/[id]/+page.svelte hat <BackLink> für Back-Navigation', () => {
+	// Umgehängt durch #2837 S1: der <BackLink> steht im HubKopf und zielt auf das Elternteil, das die
+	// Seite mit href '/compare' übergibt (gerendert: hub_kopf_seiten_paritaet AC-2 „führt zur Liste").
+	test('/compare/[id]: <BackLink> für Back-Navigation (HubKopf, Ziel /compare)', () => {
 		assert.ok(existsSync(DETAIL_PAGE), '/compare/[id]/+page.svelte fehlt');
 		const src = readFileSync(DETAIL_PAGE, 'utf-8');
-		assert.match(
-			src,
-			/<BackLink href="\/compare"/,
-			'/compare/[id]/+page.svelte hat keinen <BackLink href="/compare"> für die Back-Navigation im mobilen Kopf'
-		);
-		assert.ok(!/ArrowLeft/.test(src), '/compare/[id]/+page.svelte nutzt noch das ArrowLeft-Icon der abgeschafften TopBar');
+		const hubKopf = readFileSync(HUB_KOPF, 'utf-8');
+		assert.match(hubKopf, /<BackLink href=\{parent\.href\}/, 'HubKopf hat keinen <BackLink> auf das Elternteil');
+		assert.match(src, /<HubKopf[\s\S]*?parent=\{\{[^}]*href: '\/compare' \}\}/, 'die Seite gibt dem HubKopf nicht /compare als Elternteil');
+		assert.ok(!/ArrowLeft/.test(src) && !/ArrowLeft/.test(hubKopf), 'der Hub-Kopf nutzt noch das ArrowLeft-Icon der abgeschafften TopBar');
 	});
 });

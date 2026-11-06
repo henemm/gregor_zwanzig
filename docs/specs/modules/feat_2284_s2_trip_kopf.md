@@ -118,6 +118,7 @@ mehr. Die neue Entscheidung 16 ist die „F1 im Baustein".
    `trip-header-mobile-metrics` bleiben (Spec 336 bewacht sie). Die Hülle mountet den Baustein.
 8. **Status und Meta außerhalb des Bausteins.** Das `meta`-Snippet des Bausteins rendert in der Region-Zeile
    und verschwindet beim Region-Bearbeiten; `badges`/`meta` bleiben beim Trip daher leer.
+   > Abgelöst durch ADR-0110 (#2837 S1): Entscheidungen 7 und 8 — `TripHeader` bleibt Hülle für Datum, Kürzel, km/Hm und Mobil-Kacheln und bettet den geteilten `HubKopf` ein; die eigene Statuszeile entfällt, der Status (samt „Tag x von y") steht als Badge in der Titelzeile.
 9. **Konflikt-Schlüssel vereinheitlicht** auf `kopf-name` / `kopf-region` / `kopf-profil` (bisher Trip:
    `'kopf'` und `'aktivitaet'`). Gemessen: beide alten Schlüssel kommen in `frontend/src` nur an den zwei
    Save-Aufrufen vor; kein Test und keine Dedup-Logik liest sie.
@@ -583,6 +584,7 @@ loc_limit_override 500` setzen (kein Teilen der Scheibe, die Änderungen gehöre
 
 ## Changelog
 
+- 2026-11-06: Abgelöst durch ADR-0110 (#2837 S1): Entscheidungen 7 und 8 (Status außerhalb des Bausteins, eigene Statuszeile) — Status als Badge in der Titelzeile des geteilten `HubKopf` (Spec `rework_2837_s1_hub_kopf.md`).
 - 2026-10-03: Initial spec created (Scheibe S2 von #2284, Epic #2345 Etappe P2)
 - 2026-10-03 (v1.1, Fix-Loop nach CI-Rot, PO-Entscheidungen): Entscheidung 14 (Handy-Kompaktknopf) und 15
   („Nicht schlechter als vorher": Test-Briefing in Breadcrumb-Zeile, Abstände 16→8 px) neu; AC-4 (Desktop

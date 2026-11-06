@@ -51,6 +51,8 @@ eigener Issue.
 | `--g-ink-muted` | `#5c5a52` | Sekundärtext, Body |
 | `--g-ink-faint` | `#9c9a90` | Tertiär, Labels, Placeholder, Borders |
 
+**Hauptaktion = Ink (`Btn primary`, `--g-ink`)** — z. B. „Senden“ im Hub-Kopf. Weiß auf `--g-accent` erreicht nur 4,34:1 und verfehlt WCAG-AA (4,5:1 für kleinen Text); Ink auf Papier etwa 15:1 (Leitprinzip oben, ADR-0110, #2837).
+
 **Design-Vision (nicht implementiert):** vierte Stufe (`--g-ink-4`) für Hint/Placeholder
 — `--g-ink-faint` deckt beide ab.
 
@@ -61,7 +63,7 @@ eigener Issue.
 ### Accent — Burnt Orange (alpin, markant)
 | Token | Hex | Verwendung |
 |---|---|---|
-| `--g-accent` | `#c45a2a` | Primär-Akzent (CTA, KI-Vorschlag, Logo-Blitz) |
+| `--g-accent` | `#c45a2a` | Akzent für Weiter / Aktiv-Zustand (Unterstrich des aktiven Reiters), KI-Vorschlag, Logo-Blitz |
 
 **Design-Vision (nicht implementiert):** `--g-accent-deep` (Akzent-Text auf Tint),
 `--g-accent-soft` (Hintergrund-Badge), `--g-accent-tint` (subtiler Fond) —
