@@ -17,7 +17,8 @@ from pathlib import Path
 import pytest
 
 from tests.helpers.briefing_html_sprache_fixture import (
-    ohne_spaetere_pakete, render_reich, sichtbarer_text,
+    ohne_spaetere_pakete, render_paar_bei_fester_uhr, render_reich,
+    sichtbarer_text,
 )
 from tests.helpers.mail_lang_fixture import FIXTURE_DIR, lade, validator_lauf
 
@@ -136,7 +137,10 @@ def test_ac1_golden_szenarien_englisch_ohne_signalwoerter(nr):
 
 
 def test_ac1_deutsch_ohne_lang_gleich_lang_de():
-    assert render_reich().email_html == render_reich("de").email_html
+    # Beide Renders bei fester Uhr: der Erzeugungszeitstempel darf nicht ueber
+    # einen Minutenwechsel laufen (#2744).
+    ohne_lang, mit_de = render_paar_bei_fester_uhr()
+    assert ohne_lang.email_html == mit_de.email_html
 
 
 # --------------------------------------------------------------------------- #

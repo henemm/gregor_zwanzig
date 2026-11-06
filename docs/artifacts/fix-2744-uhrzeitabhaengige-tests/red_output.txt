@@ -1,0 +1,19 @@
+E       assert 0 >= 1
+
+tests/tdd/test_ruhezeit_und_zaehler_folgen_der_ortszone.py:1688: AssertionError
+=========================== short test summary info ============================
+FAILED tests/tdd/test_ruhezeit_und_zaehler_folgen_der_ortszone.py::test_f002_ruhezeit_folgt_der_heutigen_etappe_nicht_der_ersten
+FAILED tests/tdd/test_ruhezeit_und_zaehler_folgen_der_ortszone.py::test_f002_tageszaehler_folgt_der_heutigen_etappe_nicht_der_ersten
+---AC5-22:55UTC
+tests/tdd/test_alert_sms_location_positions.py:1049: AssertionError
+=========================== short test summary info ============================
+FAILED tests/tdd/test_alert_sms_location_positions.py::test_regression_compare_radar_alert_sms_text_unchanged
+---neue-Tests
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+tests/unit/test_briefing_html_minutenfest.py:14: in <module>
+    from tests.helpers.briefing_html_sprache_fixture import (
+E   ImportError: cannot import name 'render_paar_bei_fester_uhr' from 'tests.helpers.briefing_html_sprache_fixture' (/home/hem/gregor_zwanzig/.claude/worktrees/fluffy-sleeping-phoenix/tests/helpers/briefing_html_sprache_fixture.py)
+=========================== short test summary info ============================
+ERROR tests/tdd/test_gestern_zone_hilfe.py
+ERROR tests/unit/test_briefing_html_minutenfest.py
+!!!!!!!!!!!!!!!!!!! Interrupted: 2 errors during collection !!!!!!!!!!!!!!!!!!!!

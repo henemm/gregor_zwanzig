@@ -26,6 +26,7 @@ from pathlib import Path
 import pytest
 from freezegun import freeze_time
 
+from tests.helpers.gestern_zone import echte_utc_jetzt, gestern_zone_fuer
 from tests.helpers.ortstag import ortstag, utc_tag  # utc_tag: ERGAENZUNG #2314 D2
 
 # Drei Zonen, die im Kontrollzeitraum (22:00-04:30 UTC, Spec-Nachtfenster)
@@ -147,21 +148,6 @@ def test_utc_tag_ueberschreitet_die_tagesgrenze_eine_minute_spaeter():
     assert utc_tag(now_utc=zeitpunkt) == date(2026, 9, 15)
 
 
-def _echte_utc_jetzt() -> datetime:
-    """Real-Zeit-UTC-`jetzt`, UNBEEINFLUSST von einer evtl. gesetzten Wanduhr
-    (``GZ_TEST_WALL_CLOCK_UTC``/``freeze_time``, Session-Fixture
-    ``_gestellte_wanduhr``, #2096) -- gelesen per Subprozess (``date -u``),
-    Vorbild ``test_prozesszonen_schalter.py::_echte_utc_jetzt`` (Adversary-
-    Fund F001, Folgebefund): die ZONENWAHL fuer den Sonden-Subprozess muss
-    die ECHTE Zeit sehen, weil der Sonden-Subprozess selbst NIE eingefroren
-    ist."""
-    proc = subprocess.run(
-        ["date", "-u", "+%s"], capture_output=True, text=True,
-        timeout=10, check=True,
-    )
-    return datetime.fromtimestamp(int(proc.stdout.strip()), tz=timezone.utc)
-
-
 def _lauf_utc_tag_im_subprozess(env_overrides: dict[str, str]) -> dict:
     """Subprozess-Sonde analog zu
     ``tests/tdd/test_prozesszonen_schalter.py::_lauf_sonde`` -- ruft aber
@@ -225,11 +211,11 @@ def test_utc_tag_unter_gestern_zone_weicht_vom_prozesstag_ab():
     Datei mit ImportError, bevor dieser Test ueberhaupt laeuft (s.
     Abschnitts-Kommentar oben).
 
-    Zonenwahl per ``_echte_utc_jetzt()``, NICHT ``datetime.now(timezone.utc)``:
+    Startzeit per ``echte_utc_jetzt()``, NICHT ``datetime.now(timezone.utc)``:
     unter session-weit gestellter Wanduhr waere dieser Prozess selbst
-    eingefroren, waehrend der Sonden-Subprozess unten real laeuft."""
-    zone = ("Pacific/Marquesas" if _echte_utc_jetzt().hour < 9
-            else "<-2330>+23:30")
+    eingefroren, waehrend der Sonden-Subprozess unten real laeuft. Die
+    Zonenwahl steht an EINER Stelle (``tests/helpers/gestern_zone.py``, #2744)."""
+    zone = gestern_zone_fuer(echte_utc_jetzt())
     ergebnis = _lauf_utc_tag_im_subprozess({"GZ_TEST_PROCESS_TZ": zone})
     assert ergebnis["exit_code"] == 0, (
         f"Sonde fehlgeschlagen:\n{ergebnis.get('stdout')}\n{ergebnis.get('stderr')}"

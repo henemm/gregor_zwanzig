@@ -74,6 +74,7 @@ from pathlib import Path
 from zoneinfo import ZoneInfo
 
 import pytest
+from freezegun import freeze_time
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "src"))
@@ -1592,31 +1593,43 @@ def trip_zwei_zonen(user_id: str, trip_id: str, *, erste_zone: str,
     return trip
 
 
+# Feste Uhr für alle F002-Tests (#2744): Die heutige Etappe trägt den
+# Weltzeit-Tag; kurz vor UTC-Mitternacht ist in Auckland aber schon der
+# Folgetag (dokumentierte Grenze von `trip_day.anchor_tz`). Um 09:30 UTC am
+# 12.8. liegen Auckland (21:30), Los Angeles (02:30) und Wien (11:30) am
+# selben Kalendertag wie UTC; die ±45-Minuten-Fenster bleiben unterscheidbar.
+# Ohne `tick`: gilt für ALLE Zeitquellen (Fenster, Ortstag, Trip-Datum,
+# `local_today`, Prüfling) und schlägt die session-weit gestellte Wanduhr.
+F002_FESTE_UHR = "2026-08-12 09:30:00+00:00"
+
+
 def test_f002_anchor_tz_und_trip_tz_liefern_bei_diesem_trip_verschiedene_zonen():
     """F002 (Vorbedingung, grüner Anker): Der Prüf-Trip der beiden folgenden
     Tests trennt die zwei Auflösungen tatsächlich.
 
     Kein Prüfling-Test — er sichert nur, dass die folgenden Zusicherungen
     überhaupt etwas unterscheiden können. Fiele er, wären sie so blind wie die
-    einetappigen Fixturen, die den Fehler durchgelassen haben.
+    einetappigen Fixturen, die den Fehler durchgelassen haben. Läuft unter
+    derselben festen Uhr wie die beiden Tests, die er absichert.
     """
     from services.trip_day import anchor_tz, trip_tz
 
-    trip = trip_zwei_zonen(
-        _uid("f002-vorbedingung"), "t-vorbedingung",
-        erste_zone="America/Los_Angeles", heutige_zone="Pacific/Auckland",
-        quiet=(None, None),
-    )
-    jetzt = datetime.now(UTC)
+    with freeze_time(F002_FESTE_UHR):
+        trip = trip_zwei_zonen(
+            _uid("f002-vorbedingung"), "t-vorbedingung",
+            erste_zone="America/Los_Angeles", heutige_zone="Pacific/Auckland",
+            quiet=(None, None),
+        )
+        jetzt = datetime.now(UTC)
 
-    assert str(trip_tz(trip)) == "America/Los_Angeles", (
-        "Die erste Etappe mit Wegpunkten liegt in Los Angeles."
-    )
-    assert str(anchor_tz(trip, jetzt)) == "Pacific/Auckland", (
-        "Die Etappe des heutigen Weltzeit-Tages liegt in Auckland — nur wenn "
-        "beide Auflösungen hier auseinanderfallen, messen die folgenden Tests "
-        "die Wahl zwischen ihnen."
-    )
+        assert str(trip_tz(trip)) == "America/Los_Angeles", (
+            "Die erste Etappe mit Wegpunkten liegt in Los Angeles."
+        )
+        assert str(anchor_tz(trip, jetzt)) == "Pacific/Auckland", (
+            "Die Etappe des heutigen Weltzeit-Tages liegt in Auckland — nur wenn "
+            "beide Auflösungen hier auseinanderfallen, messen die folgenden Tests "
+            "die Wahl zwischen ihnen."
+        )
     clean_uid(_uid("f002-vorbedingung"))
 
 
@@ -1644,12 +1657,13 @@ def test_f002_ruhezeit_folgt_der_heutigen_etappe_nicht_der_ersten(sauberer_nutze
     kippen BEIDE Zusicherungen gleichzeitig — der Auckland-Lauf liefe weiter,
     der Los-Angeles-Lauf würde stillgelegt.
     """
-    abrufe_heutige_etappe = _zwei_zonen_lauf(
-        sauberer_nutzer("f002-ruhe-heute"), fenster_um_jetzt(AUCKLAND),
-    )
-    abrufe_erste_etappe = _zwei_zonen_lauf(
-        sauberer_nutzer("f002-ruhe-erste"), fenster_um_jetzt(LOS_ANGELES),
-    )
+    with freeze_time(F002_FESTE_UHR):
+        abrufe_heutige_etappe = _zwei_zonen_lauf(
+            sauberer_nutzer("f002-ruhe-heute"), fenster_um_jetzt(AUCKLAND),
+        )
+        abrufe_erste_etappe = _zwei_zonen_lauf(
+            sauberer_nutzer("f002-ruhe-erste"), fenster_um_jetzt(LOS_ANGELES),
+        )
 
     assert abrufe_heutige_etappe == 0, (
         "Die Ruhezeit muss der Zone der heutigen Etappe (Auckland) folgen."
@@ -1678,8 +1692,9 @@ def test_f002_tageszaehler_folgt_der_heutigen_etappe_nicht_der_ersten(sauberer_n
         seed_daily_counter(user_id, 1, zone=zone)
         return _zwei_zonen_lauf(user_id, (None, None))
 
-    abrufe_bei_vollem_auckland = lauf(AUCKLAND, "f002-zaehler-heute")
-    abrufe_bei_vollem_la = lauf(LOS_ANGELES, "f002-zaehler-erste")
+    with freeze_time(F002_FESTE_UHR):
+        abrufe_bei_vollem_auckland = lauf(AUCKLAND, "f002-zaehler-heute")
+        abrufe_bei_vollem_la = lauf(LOS_ANGELES, "f002-zaehler-erste")
 
     assert abrufe_bei_vollem_auckland == 0, (
         "Erschöpftes Kontingent in der Zone der HEUTIGEN Etappe muss den "

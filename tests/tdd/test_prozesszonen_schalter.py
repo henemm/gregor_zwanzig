@@ -60,7 +60,7 @@ import tempfile
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
-import pytest
+from tests.helpers.gestern_zone import GESTERN_ZONE, echte_utc_jetzt, gestern_zone_fuer
 
 # Wurzel DIESES Checkouts (Worktree, #1409) -- Subprozesse laufen mit dieser
 # cwd, damit Root-`conftest.py` fuer sie greift.
@@ -69,34 +69,8 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 _SUBPROC_TIMEOUT_SEC = 60
 
 
-def _echte_utc_jetzt() -> datetime:
-    """Real-Zeit-UTC-`jetzt`, UNBEEINFLUSST von einer evtl. gesetzten Wanduhr
-    (``GZ_TEST_WALL_CLOCK_UTC``/``freeze_time``, Session-Fixture
-    ``_gestellte_wanduhr``, #2096) -- gelesen per Subprozess (``date -u``),
-    weil freezegun sowohl ``datetime.now()`` als auch ``time.time()``/
-    ``time.gmtime()`` im LAUFENDEN Prozess patcht. Die ZONENWAHL fuer den
-    Sonden-Subprozess muss die ECHTE Zeit sehen -- der Sonden-Subprozess
-    selbst ist NIE eingefroren (freezegun wirkt nicht ueber Prozessgrenzen),
-    sonst waehlte diese Funktion unter gestellter Uhr eine Zone, die zum
-    TATSAECHLICHEN Start der Sonde gar nicht traegt (Adversary-Fund F001,
-    Folgebefund)."""
-    proc = subprocess.run(
-        ["date", "-u", "+%s"], capture_output=True, text=True,
-        timeout=10, check=True,
-    )
-    return datetime.fromtimestamp(int(proc.stdout.strip()), tz=timezone.utc)
-
-
-def _gestern_zone_fuer_jetzt(jetzt_utc: datetime | None = None) -> str:
-    """Waehlt die Gestern-Zone, die JETZT traegt (Spec, Messreferenz-Tabelle):
-    ``Pacific/Marquesas`` traegt 00:00-09:30 UTC, danach ``<-2330>+23:30``
-    (00:00-23:30 UTC). Kein Nachweis dieser Spec haengt an einer festen
-    Uhrzeit -- die Wahl folgt der tatsaechlichen Laufzeit."""
-    jetzt_utc = jetzt_utc if jetzt_utc is not None else _echte_utc_jetzt()
-    grenze = jetzt_utc.replace(hour=9, minute=30, second=0, microsecond=0)
-    if jetzt_utc < grenze:
-        return "Pacific/Marquesas"
-    return "<-2330>+23:30"
+# Echte Uhr (``date -u`` im Subprozess, #2096) und Zonenwahl stehen seit #2744
+# an EINER Stelle: ``tests/helpers/gestern_zone.py``.
 
 
 def _lauf_sonde(env_overrides: dict[str, str]) -> dict:
@@ -179,13 +153,13 @@ def test_ac2_gestern_zone_liefert_prozesstag_gleich_utc_tag_minus_eins():
     bleibt St_Johns, ``prozess_heute`` weicht i. A. nicht um genau 1 Tag vom
     UTC-Tag ab.
 
-    Zonenwahl per ``_echte_utc_jetzt()``, NICHT ``datetime.now(timezone.utc)``:
+    Startzeit per ``echte_utc_jetzt()``, NICHT ``datetime.now(timezone.utc)``:
     unter einer session-weit gestellten Wanduhr (``GZ_TEST_WALL_CLOCK_UTC``,
     #2096) waere dieser Prozess selbst eingefroren, waehrend der Sonden-
-    Subprozess unten real laeuft -- eine an der GEFRORENEN Zeit gewaehlte
-    Zone koennte zur ECHTEN Startzeit der Sonde gar nicht tragen."""
-    start_utc = _echte_utc_jetzt()
-    zone = _gestern_zone_fuer_jetzt(start_utc)
+    Subprozess unten real laeuft. Die Zone (``gestern_zone_fuer``) traegt
+    den ganzen UTC-Tag (#2744)."""
+    start_utc = echte_utc_jetzt()
+    zone = gestern_zone_fuer(start_utc)
     ergebnis = _lauf_sonde({"GZ_TEST_PROCESS_TZ": zone})
     assert ergebnis["exit_code"] == 0, (
         f"Sonde mit gesetzter Gestern-Zone {zone!r} ist unerwartet "
@@ -212,7 +186,9 @@ def test_ac3_selbstschutz_bei_nicht_tragender_zone_scheitert_sichtbar():
     gruen durchzulaufen. ROT heute, weil dieser Selbstschutz nirgends
     implementiert ist: die Sonde laeuft anstandslos durch (Exit 0), obwohl
     sie eine garantiert wirkungslose Zone gesetzt bekommt."""
-    start_utc = datetime.now(timezone.utc)
+    # Echte Zeit (``date -u``): die Sonde laeuft nie eingefroren, ihre Meldung
+    # nennt die ECHTE UTC-Zeit, auch unter gestellter Wanduhr (#2744, AC-6).
+    start_utc = echte_utc_jetzt()
     ergebnis = _lauf_sonde({"GZ_TEST_PROCESS_TZ": "UTC"})
     meldungstext = (ergebnis.get("stdout") or "") + (ergebnis.get("stderr") or "")
     assert ergebnis["exit_code"] != 0, (
@@ -231,13 +207,13 @@ def test_ac3_selbstschutz_bei_nicht_tragender_zone_scheitert_sichtbar():
     )
 
 
-@pytest.mark.parametrize("zone", ["Pacific/Marquesas", "<-2330>+23:30"])
-def test_gestern_zone_auswahl_ist_zeitpunktabhaengig(zone):
-    """Selbstbeleg des Auswahlhelfers ``_gestern_zone_fuer_jetzt`` (kein
-    AC-Nachweis, sondern Absicherung, dass die Nachweislaeufe die RICHTIGE
-    Zone waehlen): vor 09:30 UTC Marquesas, danach die POSIX-Zone."""
-    vor_grenze = datetime(2026, 9, 15, 9, 0, tzinfo=timezone.utc)
-    nach_grenze = datetime(2026, 9, 15, 12, 0, tzinfo=timezone.utc)
-    assert _gestern_zone_fuer_jetzt(vor_grenze) == "Pacific/Marquesas"
-    assert _gestern_zone_fuer_jetzt(nach_grenze) == "<-2330>+23:30"
-    assert zone in {"Pacific/Marquesas", "<-2330>+23:30"}
+def test_gestern_zone_ist_dieselbe_wie_die_gemeinsame_hilfe():
+    """Selbstbeleg (kein AC-Nachweis): dieser Test nutzt die gemeinsame
+    Zonenwahl (#2744) und keine eigene Stundengrenze -- vor und nach den
+    frueheren Grenzen (09:30, 23:30 UTC) dieselbe Zone. Dass sie traegt,
+    belegt ``tests/tdd/test_gestern_zone_hilfe.py``."""
+    zonen = {
+        gestern_zone_fuer(datetime(2026, 9, 15, h, m, tzinfo=timezone.utc))
+        for h, m in ((0, 0), (9, 0), (9, 45), (12, 0), (23, 45))
+    }
+    assert zonen == {GESTERN_ZONE}
