@@ -862,7 +862,8 @@ frontend/
 │   │   │   ├── compare/           # Vergleichs-Screen (CompareTabs, CompareDetail, CompareMatrix, …)
 │   │   │   ├── shared/            # Geteilte Tab-Organismen route|vergleich (WeatherMetricsTab,
 │   │   │   │                      #   layout-tab/, versand-tab/, alarme-tab/, OutputLayoutEditor,
-│   │   │   │                      #   subscription-header/ = geteilter Hub-Kopf, #2284)
+│   │   │   │                      #   subscription-header/ = Hub-Kopf-Inhalt, #2284;
+│   │   │   │                      #   hub-kopf/ = geteilter Hub-Kopf-Rahmen, #2837)
 │   │   │   ├── preview/           # Email/SMS preview renderers
 │   │   │   ├── email-preview/     # Email rendering
 │   │   │   ├── mobile/            # Mobile-only components
@@ -1204,6 +1205,12 @@ Editor-Muster (PO-Invariante, CLAUDE.md „Trip/Ortsvergleich-Code-Teilung“):
   (Trip 38 px, Vergleich 30 px). Etappenliste mobil nicht tiefer als vorher (≤474 px).
   Region leer wird als „—" gezeigt. Specs: `docs/specs/modules/feat_2284_s1_subscription_header.md`,
   `docs/specs/modules/feat_2284_s2_trip_kopf.md`.
+  **Abgelöst durch #2837 S1 (ADR-0110, 2026-11-06):** Der Kopf beider Hubs ist jetzt der Baustein
+  `shared/hub-kopf/HubKopf.svelte` (`context="route"|"vergleich"`). „Senden" sitzt in der obersten
+  Leiste rechts (Ink; Vergleich-Entwurf: „Setup abschließen", Trip-Entwurf: gesperrt). Breadcrumb
+  „Trips / Kürzel|Name" bzw. „Orts-Vergleiche / Name" (kein „Hub"-Krümel, mobil Zurück-Pfeil). Status
+  als Badge in der Titelzeile (keine eigene Statuszeile), Titel bei beiden 38 px. Kebab mobil vertikal
+  (`SubscriptionKebab`), Reiter-Zähler in `MTabBar` neutral grau.
 - **Persistenz:** `/api/trips` bzw. `/api/compare/presets` (nicht
   `/api/subscriptions` — entfernt, 404).
 
@@ -1221,7 +1228,7 @@ Ein gemeinsames Aktionsmodell für Liste, Detail-Hub und Mobil (Spec: `docs/spec
 - **Tabelle:** `shared/subscriptionActions.ts` leitet die Aktionen aus Art (Trip/Ortsvergleich) × Status × Fläche (Liste/Hub/Mobil) ab.
 - **Ausführung:** `shared/subscriptionExec.ts` (Adapter); Pausieren/Fortsetzen per Read-Modify-Write.
 - **Senden:** nur nach Bestätigung im `SendConfirmDialog`. Er zeigt das Versandziel, sperrt ohne zustellbaren Kanal; Morgen/Abend gibt es nur beim Trip (Default Morgen). Das Profil lädt `lib/server/profileLoader.ts` serverseitig aus der Session, ohne Default-Fallback.
-- **Hub:** Lebenszyklus-Kebab (Pausieren/Fortsetzen, Archivieren/Reaktivieren, Löschen mit Bestätigung); „Senden" ist der Primärknopf.
+- **Hub:** Lebenszyklus-Kebab (Pausieren/Fortsetzen, Archivieren/Reaktivieren, Löschen mit Bestätigung); „Senden" ist der Primärknopf (seit #2837/ADR-0110 in der obersten Leiste rechts, Ink).
 - **Gemeinsame Bausteine:** `SubscriptionCard`, `SubscriptionActionSheet`, `SubscriptionKebab`, `StatusFilterPills`.
 - **Entfallen:** `CompareTile`, `MCompareActionSheet`, `ReportConfigDialog`, `TestReportDialog`, `tripListSend`. Alarme und Wetter-Metriken liegen auf den Editor-Reitern. Die Startseiten-Kachel hat nur „Bearbeiten"; archivierte Trips verschwinden aus der Liste.
 - **Wächter:** Ein Kern-Test übersetzt jede `.svelte`-Datei unter `frontend/src` mit dem Svelte-Compiler und parst das JS (fängt Build-Brüche, die `svelte-check` nicht sieht).
