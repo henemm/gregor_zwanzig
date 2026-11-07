@@ -85,6 +85,7 @@
 	"alarme.vorschau.regel_aktivieren": "Activate at least one alert rule to load the preview.",
 	"alarme.vorschau.laden": "Load preview",
 	"alarme.vorschau.lade": "Loading…",
+	"alarme.vorschau.berechnet": "Computing preview…",
 	"alarme.vorschau.fehler": "Preview could not be loaded",
 	"alarme.vorschau.iframe_titel": "Alert preview email"
 }
