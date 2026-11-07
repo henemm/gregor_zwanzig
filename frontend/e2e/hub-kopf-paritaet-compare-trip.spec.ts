@@ -313,7 +313,7 @@ test.describe('HP Parität — beide Arten nebeneinander gemessen', () => {
 				const k = await box(kebab, 'Kebab');
 				expect(k.height, `${kind}: Kebab-Tippfläche < 44 px`).toBeGreaterThanOrEqual(44);
 				await kebab.click();
-				const blatt = page.getByRole('dialog').filter({ visible: true });
+				const blatt = page.locator('div[data-snap]').filter({ has: page.getByTestId('sheet-handle') }).filter({ visible: true });
 				await expect(blatt).toBeVisible();
 				eintraege[kind] = await blatt.locator('[data-testid^="subscription-action-"]').evaluateAll((els) => els.map((e) => e.getAttribute('data-testid') ?? ''));
 				expect(eintraege[kind].length, `${kind}: Aktionsblatt ohne Einträge`).toBeGreaterThan(0);
