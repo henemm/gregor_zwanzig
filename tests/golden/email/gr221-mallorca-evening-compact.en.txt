@@ -6,8 +6,8 @@ GR221 Tag1
 == Metrics overview ==
   18-19C - Max 16:00
   feels 11.8-12.8C - Max 16:00
-  Wind >10 km/h from 04:00 - max 19 (16:00)
-  ! Wind gusts >20 km/h from 04:00 - max 44 (16:00)
+  Wind max 19 km/h (16:00)
+  ! Wind gusts >30 km/h from 04:00 - max 44 (16:00)
   no rain
   no thunderstorm
   50% cloud cover - Max 11:00

@@ -16,6 +16,7 @@ echten Provider-Registry und der vorgesehenen Premium-SMS-Senke.
   keinen Hinweis und bleibt innerhalb von 160 Zeichen.
 """
 from __future__ import annotations
+from tests.helpers.ampel_allgemein import PRESET_ALLGEMEIN
 
 import html as _html
 import threading
@@ -66,7 +67,7 @@ def test_f001_ortsname_mit_markup_erscheint_im_html_hinweis_maskiert():
 
     name = "<script>alert(1)</script>"
     res = _result([_lr("Innsbruck", 1), _lr(name, 2, _meta())])
-    roh = render_compare_html(res, show_fallback_notice=True)  # bewusst KEIN unescape
+    roh = render_compare_html(res, show_fallback_notice=True, preset=PRESET_ALLGEMEIN)  # bewusst KEIN unescape
     zeile = f"{name}: {build_fallback_lines(_meta(), lang='de')[0]}"
     assert name not in roh, "Roh-Markup des Ortsnamens darf nie im HTML stehen"
     assert _html.escape(zeile) in roh, "Hinweiszeile muss maskiert im HTML stehen"

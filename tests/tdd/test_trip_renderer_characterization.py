@@ -206,7 +206,12 @@ _GENERATED_PLACEHOLDER = "Generated: <normalized-for-characterization-test>"
 # -> "display:inline-block;vertical-align:middle;" (8 Pillen). NACHGEMESSEN:
 # mit dem alten Stil zurueckersetzt ergibt der neue Output exakt den alten
 # Digest 8116c661…; kein anderer Unterschied. Neuer Digest 2a8ee9cf….
-_EXPECTED_SHA256 = "2a8ee9cfac8afd1535612b31efee8e1426018306e8510ce27a5a9474513abe48"
+# Issue #2792 S1c-4b (E1, AC-19 e) -- BEWUSST NEU GEMESSEN: einziger
+# Unterschied zum Vorher-Digest (2a8ee9cf…) ist die Erwaehnungsgrenze in drei
+# Pillen-Texten nach der Ampel „allgemein" („Wind >30", „Böen >30",
+# „Regen-W. >30%" statt >10/>20/>20), gemessen per Render-Diff HEAD vs.
+# Arbeitsstand; Farben und alle uebrigen Zeichen sind unveraendert.
+_EXPECTED_SHA256 = "7b878bc8492c232018b0a75c732d4ca290042c948fd9030679186d8eeb3c43ae"
 
 _ENABLED_METRICS = {
     "temperature", "wind", "wind_direction", "gust", "precipitation",

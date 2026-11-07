@@ -22,6 +22,7 @@ AC-Zuordnung:
   seit der Zeichen-Budget-Kuerzung keine feste Zwei-Metriken-Grenze mehr)
 """
 from __future__ import annotations
+from tests.helpers.ampel_allgemein import PRESET_ALLGEMEIN
 
 import re
 from datetime import date, datetime
@@ -204,7 +205,7 @@ class TestAC4PlainTextFollowsMetricOrder:
         result = _result()
         html_labels = [
             lbl for lbl in _html_labels(
-                render_compare_html(result, enabled_metrics=list(ORDER_A))
+                render_compare_html(result, enabled_metrics=list(ORDER_A), preset=PRESET_ALLGEMEIN)
             ) if lbl != "Amtliche Warnungen"
         ]
         text_labels = _text_labels(
@@ -241,7 +242,7 @@ class TestAC4HtmlOrderRegression:
     def test_html_order_follows_enabled_metrics(self):
         for order in (ORDER_A, ORDER_B):
             labels = _html_labels(
-                render_compare_html(_result(), enabled_metrics=list(order))
+                render_compare_html(_result(), enabled_metrics=list(order), preset=PRESET_ALLGEMEIN)
             )
             assert labels == ["Amtliche Warnungen"] + [_HTML_LABEL[m] for m in order], (
                 f"HTML-Reihenfolge fuer {order} war {labels}."
@@ -335,7 +336,7 @@ class TestAC6OfficialAlertsStayFirst:
     def test_html_warn_row_first_for_any_metric_order(self):
         for order in (ORDER_A, ORDER_B):
             labels = _html_labels(
-                render_compare_html(_result(_alert()), enabled_metrics=list(order))
+                render_compare_html(_result(_alert()), enabled_metrics=list(order), preset=PRESET_ALLGEMEIN)
             )
             assert labels[0] == "Amtliche Warnungen", (
                 f"Warn-Zeile muss erste Zeile sein, Reihenfolge war {labels}."
@@ -344,7 +345,7 @@ class TestAC6OfficialAlertsStayFirst:
     def test_html_warn_row_first_even_if_warn_listed_in_the_middle(self):
         order = ["cloud_avg", "warn", "temp_max"]
         labels = _html_labels(
-            render_compare_html(_result(_alert()), enabled_metrics=order)
+            render_compare_html(_result(_alert()), enabled_metrics=order, preset=PRESET_ALLGEMEIN)
         )
         assert labels == ["Amtliche Warnungen", "Bewölkung", "Temperatur"], (
             f"'warn' mitten in der Auswahl darf die Warn-Zeile nicht verschieben "
@@ -415,7 +416,7 @@ class TestAC7LegacyDefaultOrderUnchanged:
         )
 
     def test_html_default_order_frozen(self):
-        labels = _html_labels(render_compare_html(_result(), enabled_metrics=None))
+        labels = _html_labels(render_compare_html(_result(), enabled_metrics=None, preset=PRESET_ALLGEMEIN))
         assert labels == self.FROZEN_HTML_ORDER, (
             f"HTML-Default-Reihenfolge veraendert: {labels}"
         )
@@ -447,7 +448,7 @@ class TestAC8ExplicitEmptySelection:
         assert _text_labels(text) == [], (
             f"Leerauswahl darf keine Uebersichtszeile zeigen.\nText:\n{text}"
         )
-        html_labels = _html_labels(render_compare_html(_result(), enabled_metrics=[]))
+        html_labels = _html_labels(render_compare_html(_result(), enabled_metrics=[], preset=PRESET_ALLGEMEIN))
         assert html_labels == ["Amtliche Warnungen"], (
             f"HTML darf bei Leerauswahl nur die Warn-Zeile zeigen: {html_labels}"
         )

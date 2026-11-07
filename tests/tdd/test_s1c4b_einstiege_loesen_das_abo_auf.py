@@ -262,7 +262,8 @@ def test_scheduler_ausblick_trip_ohne_display_config_bleibt_allgemein_im_trip_zw
     from output.renderers.email.helpers import format_trend_tokens
     zeile = _ausblick_zeile(None)
     assert "cells" not in zeile and zeile["temp_hi"] == 9
-    assert format_trend_tokens(zeile)["thunder_day_token"] == "-"
+    from tests.helpers.ampel_allgemein import AMPEL_ALLGEMEIN
+    assert format_trend_tokens(zeile, ampel=AMPEL_ALLGEMEIN)["thunder_day_token"] == "-"
 
 
 # ---------------------------------------------------------------------------

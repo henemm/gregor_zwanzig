@@ -19,6 +19,7 @@ Fall-Bezeichnungen wie in der Issue-Messtabelle:
   Fall C: Tag hoch 14:00, Nacht mittel 22:00
 """
 from __future__ import annotations
+from tests.helpers.ampel_allgemein import AMPEL_ALLGEMEIN
 from app.ampel import resolve_ampel
 
 from zoneinfo import ZoneInfo
@@ -105,7 +106,7 @@ class TestFormatTrendTokensDayNightSplit:
     def test_day_night_token_keys_exist(self):
         from src.output.renderers.email.helpers import format_trend_tokens
         stage = _stage(hourly_thunder=_FALL_B_HOURLY, thunder="MED")
-        tok = format_trend_tokens(stage)
+        tok = format_trend_tokens(stage, ampel=AMPEL_ALLGEMEIN)
         assert "thunder_day_token" in tok, f"Keys: {sorted(tok.keys())}"
         assert "thunder_night_token" in tok, f"Keys: {sorted(tok.keys())}"
 
@@ -114,7 +115,7 @@ class TestFormatTrendTokensDayNightSplit:
         obwohl die Nacht (hoch, 24h-Peak) staerker ist als der Tag (mittel)."""
         from src.output.renderers.email.helpers import format_trend_tokens
         stage = _stage(hourly_thunder=_FALL_B_HOURLY, thunder="MED")
-        tok = format_trend_tokens(stage)
+        tok = format_trend_tokens(stage, ampel=AMPEL_ALLGEMEIN)
         dt = tok["thunder_day_token"]
         assert "@14" in dt, f"Tagestoken sollte @14 zeigen: {dt!r}"
         assert "@0" not in dt, f"Tagestoken zeigt faelschlich Nachtstunde: {dt!r}"
@@ -123,7 +124,7 @@ class TestFormatTrendTokensDayNightSplit:
     def test_night_token_ignores_day_hour_fall_b(self):
         from src.output.renderers.email.helpers import format_trend_tokens
         stage = _stage(hourly_thunder=_FALL_B_HOURLY, thunder="MED")
-        tok = format_trend_tokens(stage)
+        tok = format_trend_tokens(stage, ampel=AMPEL_ALLGEMEIN)
         nt = tok["thunder_night_token"]
         assert "@0" in nt, f"Nachttoken sollte @0 zeigen: {nt!r}"
         assert "@14" not in nt, f"Nachttoken zeigt faelschlich Tagesstunde: {nt!r}"
@@ -134,7 +135,7 @@ class TestFormatTrendTokensDayNightSplit:
         trotzdem gefuellt sein (nicht nur wenn auch Tag vorliegt)."""
         from src.output.renderers.email.helpers import format_trend_tokens
         stage = _stage(hourly_thunder=_FALL_A_HOURLY, thunder="NONE")
-        tok = format_trend_tokens(stage)
+        tok = format_trend_tokens(stage, ampel=AMPEL_ALLGEMEIN)
         assert tok["thunder_day_token"] == "-"
         assert "@0" in tok["thunder_night_token"]
         assert "hoch" in tok["thunder_night_token"]
@@ -144,7 +145,7 @@ class TestFormatTrendTokensDayNightSplit:
         unabhaengig gefuellt sein (nicht nur der Peak)."""
         from src.output.renderers.email.helpers import format_trend_tokens
         stage = _stage(hourly_thunder=_FALL_C_HOURLY, thunder="HIGH")
-        tok = format_trend_tokens(stage)
+        tok = format_trend_tokens(stage, ampel=AMPEL_ALLGEMEIN)
         assert "@14" in tok["thunder_day_token"]
         assert "hoch" in tok["thunder_day_token"]
         assert "@22" in tok["thunder_night_token"]
@@ -154,7 +155,7 @@ class TestFormatTrendTokensDayNightSplit:
         """AC-5 Regressionsschutz: kein Gewitter -- beide Token bleiben '-'."""
         from src.output.renderers.email.helpers import format_trend_tokens
         stage = _stage(hourly_thunder=(), thunder="NONE")
-        tok = format_trend_tokens(stage)
+        tok = format_trend_tokens(stage, ampel=AMPEL_ALLGEMEIN)
         assert tok["thunder_day_token"] == "-"
         assert tok["thunder_night_token"] == "-"
 
@@ -164,7 +165,7 @@ class TestFormatTrendTokensDayNightSplit:
         (test_issue_640_trend_threshold_times.py) pruefen es weiterhin."""
         from src.output.renderers.email.helpers import format_trend_tokens
         stage = _stage(hourly_thunder=_FALL_B_HOURLY, thunder="MED")
-        tok = format_trend_tokens(stage)
+        tok = format_trend_tokens(stage, ampel=AMPEL_ALLGEMEIN)
         assert tok["thunder_token"] == "hoch@0", f"Got: {tok['thunder_token']!r}"
 
     def test_custom_day_window_respected(self):
@@ -176,7 +177,7 @@ class TestFormatTrendTokensDayNightSplit:
             hourly_thunder=_FALL_C_HOURLY, thunder="HIGH",
             day_window_start_hour=20, day_window_end_hour=23,
         )
-        tok = format_trend_tokens(stage)
+        tok = format_trend_tokens(stage, ampel=AMPEL_ALLGEMEIN)
         assert "@22" in tok["thunder_day_token"], f"Got: {tok['thunder_day_token']!r}"
         assert "@14" in tok["thunder_night_token"], f"Got: {tok['thunder_night_token']!r}"
 
@@ -254,7 +255,7 @@ class TestPlainLineDayNight:
         eine Nachtangabe mit Uhrzeit". Die Vorschau zeigt seither nur das
         Tagesfenster -- ein rein naechtliches Gewitter erscheint nicht."""
         from src.output.renderers.email.outlook import render_outlook_plain
-        plain = render_outlook_plain([_stage(hourly_thunder=_FALL_A_HOURLY, thunder="NONE")])
+        plain = render_outlook_plain([_stage(hourly_thunder=_FALL_A_HOURLY, thunder="NONE")], ampel=AMPEL_ALLGEMEIN)
         assert "hoch" not in plain and "nachts" not in plain, (
             f"Die Klartext-Vorschau zeigt eine Nachtangabe (#1848 A3):\n{plain}"
         )
@@ -264,7 +265,7 @@ class TestPlainLineDayNight:
         eingefordert. Geblieben ist die #1653-Substanz: der Tagesteil steht
         da und verschwindet nicht hinter dem staerkeren Nachtwert."""
         from src.output.renderers.email.outlook import render_outlook_plain
-        plain = render_outlook_plain([_stage(hourly_thunder=_FALL_B_HOURLY, thunder="MED")])
+        plain = render_outlook_plain([_stage(hourly_thunder=_FALL_B_HOURLY, thunder="MED")], ampel=AMPEL_ALLGEMEIN)
         assert "mittel" in plain and "@14" in plain, (
             f"Der Tagesteil fehlt in der Klartext-Zeile:\n{plain}"
         )
@@ -275,7 +276,7 @@ class TestPlainLineDayNight:
     def test_plain_line_unchanged_without_thunder(self):
         """AC-5 Regressionsschutz."""
         from src.output.renderers.email.outlook import render_outlook_plain
-        plain = render_outlook_plain([_stage(hourly_thunder=(), thunder="NONE")])
+        plain = render_outlook_plain([_stage(hourly_thunder=(), thunder="NONE")], ampel=AMPEL_ALLGEMEIN)
         assert "nachts" not in plain
 
 
@@ -360,7 +361,7 @@ class TestBuildOutlookRowWindowPassthrough:
                               gust_kmh=42.0, thunder_level=ThunderLevel.MED,
                               precip_1h_mm=1.5, wind10m_kmh=22.0),
         ]
-        row = build_outlook_row(summary, points, "Mo", ZoneInfo("Europe/Berlin"), context="vergleich")
+        row = build_outlook_row(summary, points, "Mo", ZoneInfo("Europe/Berlin"), context="vergleich", ampel=AMPEL_ALLGEMEIN)
         assert "day_window_start_hour" not in row, (
             "Ohne uebergebenes Fenster darf kein neuer Schluessel entstehen "
             "(Parity zu test_trip_outlook_parity.py)"
@@ -384,7 +385,7 @@ class TestBuildOutlookRowWindowPassthrough:
         ]
         row = build_outlook_row(
             summary, points, "Mo", ZoneInfo("Europe/Berlin"),
-            day_window_start_hour=6, day_window_end_hour=18, context="vergleich",
+            day_window_start_hour=6, day_window_end_hour=18, context="vergleich", ampel=AMPEL_ALLGEMEIN,
         )
         assert row.get("day_window_start_hour") == 6
         assert row.get("day_window_end_hour") == 18
@@ -489,7 +490,7 @@ class TestStageTrendUsesConfiguredDayWindow:
             f"Kein Ausblick gebaut (state={result.state}) -- der Test misst "
             "sonst nichts."
         )
-        return format_trend_tokens(result.rows[0])
+        return format_trend_tokens(result.rows[0], ampel=AMPEL_ALLGEMEIN)
 
     def test_individual_window_moves_the_day_night_border(self):
         """Fenster 20-23: 22 Uhr ist Tag, 14 Uhr ist Nacht. Faellt die
@@ -631,7 +632,7 @@ class TestPlainDayWordComesFromDayToken:
         from src.output.renderers.email.outlook import render_outlook_plain
         row = self._first_row(render_outlook_plain([
             _stage(hourly_thunder=(_hv(16, 2.0),), thunder="NONE"),
-        ]))
+        ], ampel=AMPEL_ALLGEMEIN))
         assert "⚡mittel" in row, (
             "Das Tagesgewitter der Stundenreihe fehlt, weil die Klartext-Zeile "
             f"dem geklemmten Aggregat folgt statt dem Tagesfenster: {row!r}"
@@ -645,7 +646,7 @@ class TestPlainDayWordComesFromDayToken:
         from src.output.renderers.email.outlook import render_outlook_plain
         row = self._first_row(render_outlook_plain([
             _stage(hourly_thunder=_FALL_A_HOURLY, thunder="HIGH"),
-        ]))
+        ], ampel=AMPEL_ALLGEMEIN))
         # #1848 A3: der Nachtzusatz entfaellt; die Zusicherung bleibt --
         # aus dem Aggregat entsteht kein Tagesgewitter.
         assert row.endswith("⚡–"), (
@@ -661,7 +662,7 @@ class TestPlainDayWordComesFromDayToken:
         from src.output.renderers.email.outlook import render_outlook_plain
         row = self._first_row(render_outlook_plain([
             _stage(hourly_thunder=(_hv(9, 1.0),), thunder="HIGH"),
-        ]))
+        ], ampel=AMPEL_ALLGEMEIN))
         # #1493: das Tageswort traegt jetzt die Onset-Stunde -- geprueft
         # bleibt, dass Wort UND Stunde aus dem Tagestoken stammen (Stunde 9),
         # nicht aus dem Aggregat ("HIGH").
@@ -677,7 +678,7 @@ class TestPlainDayWordComesFromDayToken:
         from src.output.renderers.email.outlook import render_outlook_plain
         row = self._first_row(render_outlook_plain([
             _stage(hourly_thunder=(), thunder="MED"),
-        ]))
+        ], ampel=AMPEL_ALLGEMEIN))
         # Issue #1488 B: Aggregatwort kommt aus THUNDER_LABEL_DE ("mittel").
         assert row.endswith("⚡mittel"), f"Got: {row!r}"
 
@@ -710,7 +711,7 @@ class TestComparePlainMetricsBranch:
         from src.output.renderers.email.outlook import render_outlook_plain
         out = render_outlook_plain(
             self._rows(), show_acc=False, metrics=self._METRICS,
-            heading="3-Tages-Ausblick", show_name=False,
+            heading="3-Tages-Ausblick", show_name=False, ampel=AMPEL_ALLGEMEIN,
         )
         # #2136/ADR-0068: das Spaltenpraefix ist seither `col_label` ("Temp"),
         # nicht mehr der deutsche Compare-Katalog-Langname ("Temperatur").
@@ -730,7 +731,7 @@ class TestComparePlainMetricsBranch:
         from src.output.renderers.email.outlook import render_outlook_plain
         out = render_outlook_plain(
             self._rows(), show_acc=False, metrics=self._METRICS,
-            heading="3-Tages-Ausblick", show_name=False,
+            heading="3-Tages-Ausblick", show_name=False, ampel=AMPEL_ALLGEMEIN,
         )
         for fremd in ("⚡", "°C", "↳", "nachts"):
             assert fremd not in out, (
@@ -766,12 +767,12 @@ class TestComparePathUnaffected:
         ]
         row_without_window = build_outlook_row(
             summary, points, "Mo", ZoneInfo("Europe/Berlin"),
-            metrics=[{"metric_id": "thunder", "aggregation": "max"}], context="vergleich",
+            metrics=[{"metric_id": "thunder", "aggregation": "max"}], context="vergleich", ampel=AMPEL_ALLGEMEIN,
         )
         row_with_window = build_outlook_row(
             summary, points, "Mo", ZoneInfo("Europe/Berlin"),
             metrics=[{"metric_id": "thunder", "aggregation": "max"}],
-            day_window_start_hour=4, day_window_end_hour=19, context="vergleich",
+            day_window_start_hour=4, day_window_end_hour=19, context="vergleich", ampel=AMPEL_ALLGEMEIN,
         )
         assert row_without_window["cells"] == row_with_window["cells"], (
             "Die Compare-Spaltenauswahl darf sich durch das neue Tagesfenster "
@@ -799,7 +800,7 @@ class TestEscalationWithinWindowShowsPeak:
         entsteht erst beim Rendern."""
         from src.output.renderers.email.helpers import format_trend_tokens
         tok = format_trend_tokens(
-            _stage(hourly_thunder=_ESCALATION_DAY_HOURLY, thunder="HIGH")
+            _stage(hourly_thunder=_ESCALATION_DAY_HOURLY, thunder="HIGH"), ampel=AMPEL_ALLGEMEIN
         )
         assert tok["thunder_day_token"] == "leicht@5(hoch@15)"
 
@@ -817,7 +818,7 @@ class TestEscalationWithinWindowShowsPeak:
     def test_plain_day_shows_peak_stage(self):
         from src.output.renderers.email.outlook import render_outlook_plain
         plain = render_outlook_plain(
-            [_stage(hourly_thunder=_ESCALATION_DAY_HOURLY, thunder="HIGH")]
+            [_stage(hourly_thunder=_ESCALATION_DAY_HOURLY, thunder="HIGH")], ampel=AMPEL_ALLGEMEIN
         )
         assert "hoch" in plain, (
             f"Spitzenstufe des Tagesgewitters unterschlagen:\n{plain}"
@@ -842,7 +843,7 @@ class TestEscalationWithinWindowShowsPeak:
         """Klartext-Pendant zum Test darueber."""
         from src.output.renderers.email.outlook import render_outlook_plain
         plain = render_outlook_plain(
-            [_stage(hourly_thunder=_ESCALATION_NIGHT_HOURLY, thunder="HIGH")]
+            [_stage(hourly_thunder=_ESCALATION_NIGHT_HOURLY, thunder="HIGH")], ampel=AMPEL_ALLGEMEIN
         )
         assert "nachts" not in plain, (
             f"Die Vorschau zeigt eine Nachtangabe (#1848 A3):\n{plain}"
@@ -856,7 +857,7 @@ class TestEscalationWithinWindowShowsPeak:
         )
         stage = _stage(hourly_thunder=(_hv(14, 2.0),), thunder="MED")
         html = render_outlook_table([stage], ampel=resolve_ampel(None))
-        plain = render_outlook_plain([stage])
+        plain = render_outlook_plain([stage], ampel=AMPEL_ALLGEMEIN)
         assert "mittel @14" in html and "(" not in html.split("mittel @14")[1][:6]
         assert "⚡mittel" in plain and "(" not in plain
 

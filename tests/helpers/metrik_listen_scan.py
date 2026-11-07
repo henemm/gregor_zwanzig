@@ -359,7 +359,13 @@ _BESTAND: tuple[tuple[str, str, str], ...] = (
     (_R + "email/helpers.py", "_PILL_CATALOG_ORDER", "element"),
     (_R + "email/helpers.py", "_PILL_CLASS1", "element"),
     (_R + "email/helpers.py", "_PILL_CLASS2", "element"),
-    (_R + "email/helpers.py", "_id_to_sms_symbol", "schluessel"),
+    # Issue #2792 S1c-4b (E1): ``_id_to_sms_symbol`` diente nur dem
+    # ``sms_threshold``-Nachschlag in ``format_trend_tokens`` und ist mit ihm
+    # entfallen; die Hervorhebung liest jetzt die Ampel ueber
+    # ``AMPEL_METRIK_JE_KUERZEL`` (Kuerzel -> Ampel-Metrik) im Token-Builder.
+    ("src/output/tokens/builder.py", "AMPEL_METRIK_JE_KUERZEL", "wert"),
+    # Nachtrag VS: Invers-Min-Kuerzel (VS/TF) -> Ampel-Metrik.
+    ("src/output/tokens/builder.py", "INVERS_MIN_AMPEL_METRIK", "wert"),
     (_R + "email/helpers.py", "_AGGREGATION_PILL_METRICS", "schluessel"),
     (_R + "email/helpers.py", "_DAY_WINDOW_PILL_IDS", "element"),
     (_R + "email/html.py", "_COL_KEY_TO_METRIC_ID", "wert"),

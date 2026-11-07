@@ -8,8 +8,8 @@ GR20 E1: 17–18°C, gef. 11–12°C, ⛅, starker Regen max 8:00, mäßiger Win
 ━━ Metriken-Überblick ━━
   17–18°C · Max 12:00
   gef. 11.2–12.0°C · Max 12:00
-  Wind >10 km/h ab 04:00 · max 17 (12:00)
-  Böen >20 km/h ab 04:00 · max 70 (08:00)
+  Wind max 17 km/h (12:00)
+  Böen >30 km/h ab 04:00 · max 70 (08:00)
   Regen ab 08:00 · 18.5 mm
   Gewitter mittel ab 04:00 · stärkste 04:00
   50% bewölkt · Max 08:00

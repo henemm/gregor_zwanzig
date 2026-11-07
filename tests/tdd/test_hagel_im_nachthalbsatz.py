@@ -25,6 +25,7 @@ Nachgebildet ist nur der Netzabruf (Unterklasse ``_ZeitplanerOhneNetz``,
 Muster ``tests/tdd/test_thunder_origin_preview.py``), kein Mock.
 """
 from __future__ import annotations
+from tests.helpers.ampel_allgemein import AMPEL_ALLGEMEIN
 
 import sys
 from datetime import date, datetime, timezone
@@ -166,7 +167,7 @@ def _eintrag(tag_code: int, nacht_code: int, weg: str, *, punkte=None,
         win_start, win_end = resolve_configured_window(None, None)
         zeile = build_outlook_row(
             summarize_points(punkte), punkte, "Fr", _TZ,
-            day_window_start_hour=win_start, day_window_end_hour=win_end, context="vergleich",
+            day_window_start_hour=win_start, day_window_end_hour=win_end, context="vergleich", ampel=AMPEL_ALLGEMEIN,
         )
         zeile["date"] = _MORGEN
         zeile["name"] = "Etappe B"

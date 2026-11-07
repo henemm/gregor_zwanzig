@@ -6,8 +6,8 @@ Arlberg
 == Metrics overview ==
   17-19C - Max 15:00
   feels 11.6-12.6C - Max 15:00
-  Wind >10 km/h from 04:00 - max 18 (15:00)
-  !!! Wind gusts >20 km/h from 04:00 - max 110 (10:00)
+  Wind max 18 km/h (15:00)
+  !!! Wind gusts >30 km/h from 04:00 - max 110 (10:00)
   no rain
   no thunderstorm
   50% cloud cover - Max 10:00

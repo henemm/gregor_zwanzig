@@ -17,6 +17,7 @@ RED-Zustand (jetzt):
 GREEN-Zustand (nach β3-Implementation):
   format_sms() ruft intern render_sms() auf und liefert v2.0-konformen Output.
 """
+from tests.helpers.ampel_allgemein import AMPEL_ALLGEMEIN
 from datetime import datetime, timezone
 
 import pytest
@@ -98,7 +99,7 @@ def test_format_sms_single_segment_v2():
 
     segments = [create_test_segment(1, temp_min=12, temp_max=18, wind_max=30, precip_sum=5)]
     formatter = SMSTripFormatter()
-    sms = formatter.format_sms(segments)
+    sms = formatter.format_sms(segments, ampel=AMPEL_ALLGEMEIN)
 
     assert "N12" in sms, f"v2.0 erwartet 'N12' (Tag-Min): {sms!r}"
     # Issue #1824 (A): Tiefst- UND Hoechstwert gewaehlt -> EIN Bereichs-Token.
@@ -121,7 +122,7 @@ def test_format_sms_validates_length():
 
     segments = [create_test_segment()]
     formatter = SMSTripFormatter()
-    sms = formatter.format_sms(segments)
+    sms = formatter.format_sms(segments, ampel=AMPEL_ALLGEMEIN)
 
     assert len(sms) <= 160
 
@@ -140,7 +141,7 @@ def test_format_sms_v2_wire_format():
 
     segments = [create_test_segment(1, temp_min=12, temp_max=18, wind_max=30, precip_sum=5)]
     formatter = SMSTripFormatter()
-    sms = formatter.format_sms(segments, stage_name="GR20 E1")
+    sms = formatter.format_sms(segments, stage_name="GR20 E1", ampel=AMPEL_ALLGEMEIN)
 
     assert sms.startswith("GR20 E1: "), (
         f"v2.0 §2: Stage-Prefix 'GR20 E1: ' erwartet: {sms!r}"

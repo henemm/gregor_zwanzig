@@ -15,6 +15,7 @@ KEINE Mocks — echter Import von sms_trip, echter Aufruf von build_outlook_row.
 """
 
 from __future__ import annotations
+from tests.helpers.ampel_allgemein import AMPEL_ALLGEMEIN
 
 from zoneinfo import ZoneInfo
 
@@ -56,19 +57,16 @@ def test_ac4_gesetzte_sms_schwelle_thunder_kommt_in_row_an():
     )
     tz = ZoneInfo("Europe/Vienna")
 
-    row = build_outlook_row(
-        summary, [], "Mo", tz, sms_thresholds={"thunder": 3.0}, context="vergleich",
-    )
-    assert row["sms_threshold_thunder"] == 3.0, (
-        f"Gesetzte Gewitterschwelle muss ankommen, erhalten: {row.get('sms_threshold_thunder')!r}"
-    )
-
-    row_empty = build_outlook_row(summary, [], "Mo", tz, sms_thresholds={}, context="vergleich")
-    assert "sms_threshold_thunder" not in row_empty, (
-        f"Ohne gesetzte Schwelle darf der Schlüssel nicht auftauchen, erhalten: {row_empty}"
-    )
-
-    row_none = build_outlook_row(summary, [], "Mo", tz, sms_thresholds={"thunder": None}, context="vergleich")
-    assert "sms_threshold_thunder" not in row_none, (
-        f"None-Schwelle muss gefiltert werden, erhalten: {row_none}"
+    # Issue #2792 S1c-4b (E1, AC-19 e) -- umgekehrt: die SMS-Schwelle wirkt
+    # im Ausblick nicht mehr; ``build_outlook_row`` nimmt sie nicht mehr an
+    # und die Zeile traegt keinen ``sms_threshold_*``-Schluessel.
+    import pytest
+    with pytest.raises(TypeError):
+        build_outlook_row(
+            summary, [], "Mo", tz, sms_thresholds={"thunder": 3.0},
+            context="vergleich", ampel=AMPEL_ALLGEMEIN,
+        )
+    row = build_outlook_row(summary, [], "Mo", tz, context="vergleich", ampel=AMPEL_ALLGEMEIN)
+    assert not [k for k in row if k.startswith("sms_threshold")], (
+        f"Die Ausblick-Zeile darf keine SMS-Schwelle mehr tragen, erhalten: {row}"
     )

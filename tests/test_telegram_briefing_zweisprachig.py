@@ -5,6 +5,7 @@ AC-12). Echter Renderer ``render_telegram_bubbles`` auf der Golden-Fixture,
 echter Katalog, echte ``user.json`` je Nutzer -- kein Mock.
 """
 from __future__ import annotations
+from tests.helpers.ampel_allgemein import AMPEL_ALLGEMEIN
 
 import json
 import re
@@ -184,7 +185,7 @@ def _stage(d: date) -> dict:
     ("de", "Ausblick", "Do 30.10."), ("en", "Outlook", "Thu 30 Oct"),
 ])
 def test_ac8_ausblick_datum_aus_i18n_kern(lang, kopf, datum):
-    zeilen = _outlook_lines([_stage(date(2025, 10, 30))], lang=lang)
+    zeilen = _outlook_lines([_stage(date(2025, 10, 30))], lang=lang, ampel=AMPEL_ALLGEMEIN)
     assert zeilen[0] == kopf
     assert zeilen[1] == f"{datum}  5.0/15.0°C  R–  NW20.0  ⚡–"
 
@@ -258,9 +259,14 @@ def _stage_mit_stundenwerten() -> dict:
 
 
 def test_f002_legacy_ausblick_protokoll_kuerzel_r_w_sprachgleich():
-    zeile = "Di  12/15°C  R0.6@10(6.0@15)  W35@9(45@14)  ⚡–"
+    # Issue #2792 S1c-4b (AC-19 e): Hervorhebung nach der Ampel „allgemein"
+    # -- Regen 0.6 unter Gelb (1 mm), Wind 35/45 beide gelb; frueher
+    # R0.6@10(6.0@15) W35@9(45@14).
+    # Fix-Loop 1 (F008): die Klammer zeigt wieder den Hoechstwert der
+    # hervorgehobenen Stunden -> W35@9(45@14); Regen beginnt erst bei 6.0@15.
+    zeile = "Di  12/15°C  R6.0@15  W35@9(45@14)  ⚡–"
     for lang, kopf in (("de", "Ausblick"), ("en", "Outlook")):
-        assert _outlook_lines([_stage_mit_stundenwerten()], None, lang=lang) == [kopf, zeile]
+        assert _outlook_lines([_stage_mit_stundenwerten()], None, lang=lang, ampel=AMPEL_ALLGEMEIN) == [kopf, zeile]
 
 
 @pytest.mark.parametrize("lang", ["de", "en"])

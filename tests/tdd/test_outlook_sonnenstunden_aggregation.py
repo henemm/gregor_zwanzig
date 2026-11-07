@@ -33,6 +33,7 @@ Netz, kein Dateiinhalt-Check. Echte ``ForecastDataPoint``-/
 ``SegmentWeatherSummary``-/``SegmentWeatherData``-Objekte, echter Renderpfad.
 """
 from __future__ import annotations
+from tests.helpers.ampel_allgemein import AMPEL_ALLGEMEIN
 from app.ampel import resolve_ampel
 
 import dataclasses
@@ -134,7 +135,7 @@ def _mehrsegment_etappe():
 def _ausblick_zeile(summary):
     from output.renderers.email.outlook import build_outlook_row
 
-    return build_outlook_row(summary, _punkte(), "Mo", TZ, metrics=_AUSWAHL, context="vergleich")
+    return build_outlook_row(summary, _punkte(), "Mo", TZ, metrics=_AUSWAHL, context="vergleich", ampel=AMPEL_ALLGEMEIN)
 
 
 def _spalten_und_zellen(summary) -> tuple[list[str], list[str]]:

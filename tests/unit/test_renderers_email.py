@@ -13,6 +13,7 @@ GREEN-Zustand (nach β3-Implementation):
   ist eine Pure Function ohne Klasseninstanz.
 """
 from __future__ import annotations
+from tests.helpers.ampel_allgemein import AMPEL_ALLGEMEIN
 
 from datetime import datetime, timezone
 from zoneinfo import ZoneInfo
@@ -99,7 +100,7 @@ def _make_token_line(stage_name: str = "GR20 E3", report_type: str = "evening") 
     return build_token_line(
         forecast, None,
         report_type=report_type,
-        stage_name=stage_name,
+        stage_name=stage_name, ampel=AMPEL_ALLGEMEIN,
     )
 
 

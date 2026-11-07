@@ -6,8 +6,8 @@ GR20 E1
 == Metrics overview ==
   17-18C - Max 12:00
   feels 11.2-12.0C - Max 12:00
-  Wind >10 km/h from 04:00 - max 17 (12:00)
-  !!! Wind gusts >20 km/h from 04:00 - max 70 (08:00)
+  Wind max 17 km/h (12:00)
+  !!! Wind gusts >30 km/h from 04:00 - max 70 (08:00)
   !!! Rain from 08:00 - 18.5 mm
   !! Thunderstorm medium from 04:00 - strongest 04:00
   50% cloud cover - Max 08:00

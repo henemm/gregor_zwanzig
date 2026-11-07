@@ -330,8 +330,11 @@ class TestCreateFlowPayloadRendersExactlySevenDefaults:
     # _build_segments()/oben).
     _PILL_MARKERS = (
         ("°C · Max", "temperature"),
-        ("Wind >10 km/h", "wind"),
-        ("Böen >20 km/h", "gust"),
+        # Issue #2792 S1c-4b (E1, AC-19 e): Erwaehnung ab Gelb der Ampel
+        # („allgemein": Wind/Böen 30) statt der frueheren SMS-Standardwerte
+        # 10/20 -- Wind (max 15) steht in der Fallform, Böen (30) als Ereignis.
+        ("Wind max 15 km/h", "wind"),
+        ("Böen >30 km/h", "gust"),
         ("Regen ab 09:00", "precipitation"),
         # #1493: Stufenwort in der Pille -- Marker bleibt Pillen-exklusiv.
         ("Gewitter mittel ab 08:00", "thunder"),

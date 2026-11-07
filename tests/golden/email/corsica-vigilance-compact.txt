@@ -6,8 +6,8 @@ Corsica E5
 == Metriken-Ueberblick ==
   18-20C - Max 17:00
   gef. 12.0-13.0C - Max 17:00
-  Wind >10 km/h ab 04:00 - max 19 (17:00)
-  !!! Boeen >20 km/h ab 04:00 - max 85 (12:00)
+  Wind max 19 km/h (17:00)
+  !!! Boeen >30 km/h ab 04:00 - max 85 (12:00)
   !! Regen ab 12:00 - 8 mm
   !!! Gewitter hoch ab 04:00 - staerkste 04:00
   50% bewoelkt - Max 12:00

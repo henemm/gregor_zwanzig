@@ -18,6 +18,7 @@ Teil 7 ist ein Regressions-Guard (AC-5): reine Tiefstwert-Auswahl bleibt
 unverändert und ist bereits HEUTE grün.
 """
 from __future__ import annotations
+from tests.helpers.ampel_allgemein import PRESET_ALLGEMEIN
 
 import re
 from dataclasses import fields
@@ -213,7 +214,7 @@ def test_compare_html_renderer_shows_wind_chill_max_value():
     loc.wind_chill_max = 13.0
     result = _result(loc)
 
-    html = render_compare_html(result, enabled_metrics=["wind_chill_max"])
+    html = render_compare_html(result, enabled_metrics=["wind_chill_max"], preset=PRESET_ALLGEMEIN)
 
     # #1453: kein Auswertungs-Zusatz bei nur EINER gewaehlten Auswertung
     # (s. Kommentar im Klartext-Zwilling oben) -- der Nachweis laeuft ueber
@@ -248,7 +249,7 @@ def test_compare_renderers_show_wind_chill_min_only_selection_unchanged():
     assert plain_line is not None, f"Klartext-Regression: keine min-Zeile mehr:\n{text}"
     assert _number(plain_line) == -3.0
 
-    html = render_compare_html(result, enabled_metrics=["wind_chill_min"])
+    html = render_compare_html(result, enabled_metrics=["wind_chill_min"], preset=PRESET_ALLGEMEIN)
     html_row = _find_row(html, lambda l: l == "gefühlte temperatur")
     assert html_row is not None, f"HTML-Regression: keine min-Zeile mehr:\n{html}"
     assert any(_number(c) == -3.0 for c in html_row["cells"])

@@ -15,6 +15,7 @@ Wirkort entsprechen (Muster aus mehreren Vorfaellen, s. CLAUDE.md).
 SPEC: docs/specs/modules/fix_1660b_sms_token_wiring.md DEC-3/§9, AC-10.
 """
 from __future__ import annotations
+from tests.helpers.ampel_allgemein import AMPEL_ALLGEMEIN
 
 from datetime import datetime, timezone
 from zoneinfo import ZoneInfo
@@ -86,7 +87,7 @@ def test_precip_type_null_form_when_active_without_data():
 
     sms = SMSTripFormatter().format_sms(
         segments, stage_name="Etappe1", report_type="evening", tz=_TZ,
-        disabled_specs=build_extended_metric_specs({"precip_type"}),
+        disabled_specs=build_extended_metric_specs({"precip_type"}), ampel=AMPEL_ALLGEMEIN,
     )
     assert "PT:-" in sms, f"PT-Null-Form fehlt (Bug: Token entfaellt komplett): {sms!r}"
 
@@ -99,14 +100,14 @@ def test_cloud_total_null_and_gap_form_when_active_without_data():
 
     sms = SMSTripFormatter().format_sms(
         segments, stage_name="Etappe1", report_type="evening", tz=_TZ,
-        disabled_specs=build_extended_metric_specs({"cloud_total"}),
+        disabled_specs=build_extended_metric_specs({"cloud_total"}), ampel=AMPEL_ALLGEMEIN,
     )
     assert "CT-" in sms, f"CT-Null-Form fehlt: {sms!r}"
 
     sms_gap = SMSTripFormatter().format_sms(
         segments, stage_name="Etappe1", report_type="evening", tz=_TZ,
         disabled_specs=build_extended_metric_specs({"cloud_total"}),
-        has_gap=True,
+        has_gap=True, ampel=AMPEL_ALLGEMEIN,
     )
     assert "CT?" in sms_gap, f"CT-Gap-Form fehlt: {sms_gap!r}"
     assert "CT-" not in sms_gap, f"bei Gap darf keine '-'-Form mehr stehen: {sms_gap!r}"
@@ -119,7 +120,7 @@ def test_visibility_null_form_when_active_without_data():
 
     sms = SMSTripFormatter().format_sms(
         segments, stage_name="Etappe1", report_type="evening", tz=_TZ,
-        disabled_specs=build_extended_metric_specs({"visibility"}),
+        disabled_specs=build_extended_metric_specs({"visibility"}), ampel=AMPEL_ALLGEMEIN,
     )
     assert "VS-" in sms, f"VS-Null-Form fehlt: {sms!r}"
 
@@ -139,7 +140,7 @@ def test_empty_active_set_matches_all_disabled_byte_identical():
 
     sms_via_helper = SMSTripFormatter().format_sms(
         segments, stage_name="Etappe1", report_type="evening", tz=_TZ,
-        disabled_specs=build_extended_metric_specs(set()),
+        disabled_specs=build_extended_metric_specs(set()), ampel=AMPEL_ALLGEMEIN,
     )
     old_style_all_disabled = [
         MetricSpec(symbol=SMS_SYMBOL_BY_METRIC[mid], enabled=False)
@@ -147,7 +148,7 @@ def test_empty_active_set_matches_all_disabled_byte_identical():
     ]
     sms_via_old_pattern = SMSTripFormatter().format_sms(
         segments, stage_name="Etappe1", report_type="evening", tz=_TZ,
-        disabled_specs=old_style_all_disabled,
+        disabled_specs=old_style_all_disabled, ampel=AMPEL_ALLGEMEIN,
     )
     assert sms_via_helper == sms_via_old_pattern, (
         f"leeres active-Set muss zeichengleich zum alten disabled-only-Muster sein:\n"

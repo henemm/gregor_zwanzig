@@ -13,6 +13,7 @@ Klassen:
 - TestCompareHTMLRenderer   -- schnell, kein SMTP, prueft Renderer-Output (v2)
 - TestCompareEmailE2E       -- echter SMTP-Send + IMAP-Verifikation (@pytest.mark.email)
 """
+from tests.helpers.ampel_allgemein import PRESET_ALLGEMEIN
 import pytest
 from datetime import date, datetime
 
@@ -88,7 +89,7 @@ class TestCompareHTMLRenderer:
         from output.renderers.email.compare_html import render_compare_html
 
         result = _make_result()
-        html = render_compare_html(result, profile=ActivityProfile.WINTERSPORT)
+        html = render_compare_html(result, profile=ActivityProfile.WINTERSPORT, preset=PRESET_ALLGEMEIN)
 
         assert "<!DOCTYPE html>" in html, "HTML muss mit DOCTYPE beginnen"
         assert "Schneepatrouille" in html, "Erster Ortsname muss im HTML erscheinen"
@@ -104,7 +105,7 @@ class TestCompareHTMLRenderer:
         from output.renderers.email.compare_html import render_compare_html
 
         result = _make_result()
-        html = render_compare_html(result, profile=ActivityProfile.WINTERSPORT)
+        html = render_compare_html(result, profile=ActivityProfile.WINTERSPORT, preset=PRESET_ALLGEMEIN)
 
         assert "@media" in html, "HTML muss @media-Block fuer Mobile-Layout enthalten"
         assert "480px" in html, "Breakpoint 480px muss im @media-Block stehen"
@@ -127,7 +128,7 @@ class TestCompareHTMLRenderer:
         html = render_compare_html(
             result,
             profile=ActivityProfile.WINTERSPORT,
-            warnings=[warning_text],
+            warnings=[warning_text], preset=PRESET_ALLGEMEIN,
         )
 
         assert warning_text in html, \
@@ -156,7 +157,7 @@ class TestCompareHTMLRenderer:
             created_at=datetime.now(),
         )
 
-        html = render_compare_html(result, profile=ActivityProfile.WINTERSPORT)
+        html = render_compare_html(result, profile=ActivityProfile.WINTERSPORT, preset=PRESET_ALLGEMEIN)
 
         # Issue #1670: Platzhalter ist der EN DASH aus metric_format.NO_VALUE.
         assert ">–<" in html, \
@@ -170,7 +171,7 @@ class TestCompareHTMLRenderer:
         from output.renderers.email.compare_html import render_compare_html
 
         result = _make_result()
-        html = render_compare_html(result, profile=ActivityProfile.ALLGEMEIN)
+        html = render_compare_html(result, profile=ActivityProfile.ALLGEMEIN, preset=PRESET_ALLGEMEIN)
 
         assert "#1a1a18" in html, \
             "Footer muss Hintergrundfarbe G_INK (#1a1a18) haben"
@@ -188,7 +189,7 @@ class TestCompareHTMLRenderer:
             ActivityProfile.SUMMER_TREKKING,
             ActivityProfile.ALLGEMEIN,
         ]:
-            html = render_compare_html(result, profile=profile)
+            html = render_compare_html(result, profile=profile, preset=PRESET_ALLGEMEIN)
             assert len(html) > 500, \
                 f"Profil {profile}: HTML muss nicht-trivial sein (> 500 Zeichen)"
 
@@ -199,7 +200,7 @@ class TestCompareHTMLRenderer:
         from output.renderers.email.compare_html import render_compare_html
 
         result = _make_result()
-        html = render_compare_html(result, profile=None)
+        html = render_compare_html(result, profile=None, preset=PRESET_ALLGEMEIN)
         assert "<!DOCTYPE html>" in html
 
     def test_header_label(self):
@@ -218,7 +219,7 @@ class TestCompareHTMLRenderer:
         from output.renderers.email.compare_html import render_compare_html
 
         result = _make_result()
-        html = render_compare_html(result, profile=ActivityProfile.WINTERSPORT)
+        html = render_compare_html(result, profile=ActivityProfile.WINTERSPORT, preset=PRESET_ALLGEMEIN)
 
         assert "ORTS-VERGLEICH" in html, "Profil-Label-Prefix 'ORTS-VERGLEICH' muss im Header erscheinen"
 
@@ -238,7 +239,7 @@ class TestCompareHTMLRenderer:
         )
         result = _make_result()
         with pytest.raises(TypeError):
-            mod.render_compare_html(result, profile=ActivityProfile.WINTERSPORT, winner_tags=[])
+            mod.render_compare_html(result, profile=ActivityProfile.WINTERSPORT, winner_tags=[], preset=PRESET_ALLGEMEIN)
 
 
 # Issue #1407: TestHeartbeatIntegration (AC-7) entfernt — pruefte
@@ -289,7 +290,7 @@ class TestCompareMailWithoutTimeWindow:
         from output.renderers.email.compare_html import render_compare_html
 
         result = _make_result()  # time_window=(9, 16)
-        html = render_compare_html(result, profile=ActivityProfile.WINTERSPORT)
+        html = render_compare_html(result, profile=ActivityProfile.WINTERSPORT, preset=PRESET_ALLGEMEIN)
 
         match = self.TIME_WINDOW_PATTERN.search(html)
         assert match is None, (
@@ -311,7 +312,7 @@ class TestCompareMailWithoutTimeWindow:
 
         result = _make_result()
         result.time_window = (0, 23)
-        html = render_compare_html(result, profile=ActivityProfile.WINTERSPORT)
+        html = render_compare_html(result, profile=ActivityProfile.WINTERSPORT, preset=PRESET_ALLGEMEIN)
 
         match = self.TIME_WINDOW_PATTERN.search(html)
         assert match is None, (
@@ -331,7 +332,7 @@ class TestCompareMailWithoutTimeWindow:
 
         result = _make_result()
         result.target_date = date(2026, 7, 16)  # Donnerstag
-        html = render_compare_html(result, profile=ActivityProfile.WINTERSPORT)
+        html = render_compare_html(result, profile=ActivityProfile.WINTERSPORT, preset=PRESET_ALLGEMEIN)
 
         assert "16.07.2026" in html, "Das Zieldatum muss in der Kopfzeile erhalten bleiben"
         assert "Do" in html, "Der Wochentag muss in der Kopfzeile erhalten bleiben"
@@ -350,7 +351,7 @@ class TestCompareMailWithoutTimeWindow:
         from output.renderers.comparison import render_compare_email
 
         result = _make_result()
-        rendered = render_compare_email(result, profile=ActivityProfile.WINTERSPORT)
+        rendered = render_compare_email(result, profile=ActivityProfile.WINTERSPORT, preset=PRESET_ALLGEMEIN)
         text = rendered[1] if isinstance(rendered, tuple) else rendered
 
         zeitfenster_zeilen = [ln for ln in text.splitlines() if "Zeitfenster" in ln]
@@ -378,7 +379,7 @@ class TestCompareMailWithoutTimeWindow:
         from output.renderers.email.compare_html import render_compare_html
 
         result = _make_result()
-        html = render_compare_html(result, profile=ActivityProfile.WINTERSPORT)
+        html = render_compare_html(result, profile=ActivityProfile.WINTERSPORT, preset=PRESET_ALLGEMEIN)
 
         assert "Horizont" not in html, (
             "Die Horizont-Kachel entfaellt ersatzlos (Issue #1305)."

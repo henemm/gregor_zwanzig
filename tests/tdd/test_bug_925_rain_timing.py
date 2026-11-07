@@ -11,6 +11,7 @@ deckungsgleich mit der E-Mail.
 KEINE Mocks. Echte Domänen-Objekte; SMS UND E-Mail aus DENSELBEN Segment-Daten.
 """
 from __future__ import annotations
+from tests.helpers.ampel_allgemein import AMPEL_ALLGEMEIN
 
 import re
 from datetime import datetime, timezone
@@ -99,7 +100,9 @@ class TestAC1RainOnsetHour:
     def test_sms_rain_token_anchors_at_onset_not_segment_start(self):
         from output.renderers.sms_trip import SMSTripFormatter
         seg = _segment_rain_from_11()
-        sms = SMSTripFormatter().format_sms([seg], tz=BERLIN, thresholds={"R": 0.2})
+        # Issue #2792 S1c-4b (E1): statt `thresholds={"R": 0.2}` entscheidet die
+        # Ampel („allgemein": Regen gelb ab 1 mm) -- Onset 11 liegt genau dort.
+        sms = SMSTripFormatter().format_sms([seg], tz=BERLIN, ampel=AMPEL_ALLGEMEIN)
         onset = _sms_token_onset_hour(sms, "R")
         assert onset == 11, (
             f"SMS-Regen-Onset muss 11 (echte erste Regen-Stunde) sein, "
@@ -115,7 +118,7 @@ class TestAC2SmsEmailConsistent:
     def test_sms_onset_matches_email_first_rain_hour(self):
         from output.renderers.sms_trip import SMSTripFormatter
         seg = _segment_rain_from_11()
-        sms = SMSTripFormatter().format_sms([seg], tz=BERLIN, thresholds={"R": 0.2})
+        sms = SMSTripFormatter().format_sms([seg], tz=BERLIN, ampel=AMPEL_ALLGEMEIN)  # #2792 E1
         sms_onset = _sms_token_onset_hour(sms, "R")
         email_onset = _email_first_rain_hour(seg, threshold=0.2)
         assert email_onset == 11, f"E-Mail erste Regen-Stunde sollte 11 sein: {email_onset}"
@@ -133,15 +136,18 @@ class TestAC3HourlyValueNotSegmentSum:
     def test_rain_token_uses_hourly_value_not_segment_sum(self):
         from output.renderers.sms_trip import SMSTripFormatter
         seg = _segment_rain_from_11()
-        sms = SMSTripFormatter().format_sms([seg], tz=BERLIN, thresholds={"R": 0.2})
+        sms = SMSTripFormatter().format_sms([seg], tz=BERLIN, ampel=AMPEL_ALLGEMEIN)  # #2792 E1
         m = re.search(r'R[-\d.]+@\d+(?:\(([-\d.]+)@\d+\))?', sms)
         assert m, f"Kein Regen-Token gefunden: {sms!r}"
         # Etappen-Summe 4.0 darf NICHT als Token-Wert auftauchen
         assert "R4.0@" not in sms, (
             f"SMS darf nicht die Etappen-Summe 4.0 als Stundenwert zeigen: {sms!r}"
         )
-        # Peak-Stundenwert 3.0 muss vorkommen (entweder als Onset- oder Peak-Wert)
-        assert "3.0" in sms, f"Peak-Stundenwert 3.0 erwartet: {sms!r}"
+        # Issue #2792 S1c-4b (AC-19 e): Einsatz ab Gelb (1 mm bei „allgemein")
+        # -> erster Stundenwert 1.0@11; die Klammer traegt den Hoechstwert der
+        # hervorgehobenen Stunden (Fix-Loop 1, F008) -- weiterhin
+        # Stundenwerte, keine Summe.
+        assert "R1.0@11" in sms, f"Stundenwert 1.0@11 erwartet: {sms!r}"
 
 
 # ---------------------------------------------------------------------------
@@ -154,7 +160,7 @@ class TestAC4WindGustHourly:
         seg = _segment_rain_from_11()
         # Böen-Peak (33) liegt bei 11:00 Ortszeit. Alt: G33@10 (Etappenstart).
         # Neu (per-Stunde): Peak-Wert 33 an echter Stunde 11 → '33@11' im Token.
-        sms = SMSTripFormatter().format_sms([seg], tz=BERLIN)
+        sms = SMSTripFormatter().format_sms([seg], tz=BERLIN, ampel=AMPEL_ALLGEMEIN)
         assert "33@11" in sms, (
             f"Böen-Peak 33 muss an der echten Spitzenstunde 11 verankert sein "
             f"(per-Stunde), nicht am Etappenstart. SMS={sms!r}"

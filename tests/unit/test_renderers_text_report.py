@@ -17,6 +17,7 @@ Tests bauen TokenLine + WaypointDetail direkt, ohne den Adapter — pure
 Renderer-Tests gemäß §A5 (profile-agnostisch).
 """
 from __future__ import annotations
+from tests.helpers.ampel_allgemein import AMPEL_ALLGEMEIN
 
 
 from src.output.tokens.builder import build_token_line
@@ -69,7 +70,7 @@ def _wintersport_token_line(stage_name: str = "Stubaier") -> TokenLine:
     return build_token_line(
         forecast, config,
         report_type="evening",
-        stage_name=stage_name,
+        stage_name=stage_name, ampel=AMPEL_ALLGEMEIN,
     )
 
 
@@ -88,7 +89,7 @@ def _standard_token_line(stage_name: str = "GR20") -> TokenLine:
     return build_token_line(
         forecast, None,
         report_type="evening",
-        stage_name=stage_name,
+        stage_name=stage_name, ampel=AMPEL_ALLGEMEIN,
     )
 
 

@@ -30,6 +30,7 @@ Test-Kontrakt (von dieser RED-Phase festgelegt, Implementierung folgt in
     liefert zusätzlich die ueberlebenden Token-Symbole).
 """
 from __future__ import annotations
+from tests.helpers.ampel_allgemein import AMPEL_ALLGEMEIN
 
 import pytest
 from fastapi import FastAPI
@@ -116,7 +117,7 @@ def _independent_line_and_survivors(metric_ids: list[str]) -> tuple[str, set[str
     specs = build_sms_fidelity_specs(metric_ids)
     token_line = build_token_line(
         SMS_FIDELITY_SAMPLE_FORECAST, specs,
-        report_type="evening", stage_name="Etappe",
+        report_type="evening", stage_name="Etappe", ampel=AMPEL_ALLGEMEIN,
     )
     return render_line_with_survivors(token_line, 160)
 
@@ -243,7 +244,7 @@ class TestAC2_TruncationByteIdenticalAndCarriedIdsCorrect:
         specs = build_sms_fidelity_specs(ALL_SMS_METRIC_IDS)
         token_line = build_token_line(
             SMS_FIDELITY_SAMPLE_FORECAST, specs,
-            report_type="evening", stage_name="Etappe",
+            report_type="evening", stage_name="Etappe", ampel=AMPEL_ALLGEMEIN,
         )
         full_raw = (
             f"{token_line.stage_name}: "
@@ -383,7 +384,7 @@ class TestAC9_RenderLineUnchangedByAdditiveFunction:
         specs = build_sms_fidelity_specs(ALL_SMS_METRIC_IDS)
         return build_token_line(
             SMS_FIDELITY_SAMPLE_FORECAST, specs,
-            report_type="evening", stage_name="Etappe",
+            report_type="evening", stage_name="Etappe", ampel=AMPEL_ALLGEMEIN,
         )
 
     def test_render_line_output_byte_identical_to_pre_change_baseline(self):
@@ -426,9 +427,18 @@ class TestAC9_RenderLineUnchangedByAdditiveFunction:
         # DROP_ORDER 'NS24+...' (Schnee vor Komfort-Angaben). Nur bei aktivem
         # wind_chill aendert sich diese Zeile; die Zusicherung (render_line()
         # bleibt von der additiven Nachbarfunktion unberuehrt) ist dieselbe.
+        #
+        # #2792 S1c-4b (E1, AC-19 e) -- BEWUSST NEU GEMESSEN: Hervorhebung nach
+        # der Ampel „allgemein" (erste Stunde ab Gelb) statt DEFAULTS. Die Beispiel-
+        # Vorhersage traegt dafuer in der ersten Stunde gelbe Werte (sonst
+        # fiele die volle Zeile unter 160). Zusicherung unveraendert.
+        # Fix-Loop 1 (F008, Koordinator-Entscheid): die Klammer zeigt wieder den
+        # Hoechstwert mit Stunde (wie vor S1c-4b, z. B. '(845.0@14)'); nur AB WANN
+        # hervorgehoben wird, folgt der Ampel. Die laengeren Klammern verdraengen
+        # per DROP_ORDER 'NS24+...' -- neu gemessen.
         baseline = (
-            "Etappe: N-15 D-12/28 FN-21 FD-18/24 TF-18@6 R245.0@6(845.0@14) "
-            "PR25%@7(98%@14) W850@6(1420@16) G1200@6(2080@16) TH:L@8(H@12) "
+            "Etappe: N-15 D-12/28 FN-21 FD-18/24 TF-18@6 R2.0@6(845.0@14) "
+            "PR35%@8(98%@14) W35@6(1420@16) G40@6(2080@16) TH:L@8(H@12) "
             "TH+:M@10 SD2450000000000"
         )
         line = self._truncating_line()

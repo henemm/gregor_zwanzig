@@ -26,6 +26,7 @@ Epics #1033), damit `_select_provider_for_location()` den `openmeteo`-Zweig
 waehlt und der Fixture-Provider greift statt eines echten GeoSphere-Netzwerkrufs.
 """
 from __future__ import annotations
+from tests.helpers.ampel_allgemein import PRESET_ALLGEMEIN
 
 import uuid
 from datetime import date, timedelta
@@ -124,7 +125,7 @@ class TestIssue1040AlertsToggleAC1AC2:
                     f"fuer {loc_result.location.name}"
                 )
 
-            html = render_compare_html(result, profile=ActivityProfile.ALLGEMEIN)
+            html = render_compare_html(result, profile=ActivityProfile.ALLGEMEIN, preset=PRESET_ALLGEMEIN)
             assert alert.label not in html, (
                 "Bei official_alerts_enabled=False darf die Warn-Zeile nicht im HTML erscheinen"
             )
@@ -176,7 +177,7 @@ class TestIssue1040AlertsToggleAC1AC2:
                 f"Quelle ausloesen, aber fetch() wurde {counting_source.fetch_calls}x aufgerufen"
             )
 
-            html = render_compare_html(result, profile=ActivityProfile.ALLGEMEIN)
+            html = render_compare_html(result, profile=ActivityProfile.ALLGEMEIN, preset=PRESET_ALLGEMEIN)
             assert alert.label in html, (
                 "Bei official_alerts_enabled=True muss die Warn-Zeile im HTML erscheinen"
             )
@@ -227,7 +228,7 @@ class TestIssue1040AlertsToggleAC1AC2:
                 f"Ohne Parameter (Default) muss der Fetch weiterhin ausgeloest werden, "
                 f"aber fetch() wurde {counting_source.fetch_calls}x aufgerufen"
             )
-            html = render_compare_html(result, profile=ActivityProfile.ALLGEMEIN)
+            html = render_compare_html(result, profile=ActivityProfile.ALLGEMEIN, preset=PRESET_ALLGEMEIN)
             assert alert.label in html, (
                 "Ohne Parameter (Default) muss die Warn-Zeile weiterhin im HTML erscheinen"
             )

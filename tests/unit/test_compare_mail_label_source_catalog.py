@@ -16,6 +16,7 @@ uebernommen aus ``tests/unit/test_compare_mail_labels_unchanged.py``.
 SPEC: docs/specs/modules/fix_1401_a2_mailtabellen.md (AC-1)
 """
 from __future__ import annotations
+from tests.helpers.ampel_allgemein import PRESET_ALLGEMEIN
 
 import re
 from datetime import date, datetime, timezone
@@ -181,7 +182,7 @@ def test_overview_header_uses_catalog_label_without_collision():
     result = _result()
     enabled = resolve_enabled_metrics(NO_COLLISION_SELECTION)
 
-    html = render_compare_html(result, enabled_metrics=enabled)
+    html = render_compare_html(result, enabled_metrics=enabled, preset=PRESET_ALLGEMEIN)
 
     assert _html_overview_labels(html) == EXPECTED_OVERVIEW_LABELS, (
         "Die Uebersichtstabelle zeigt nicht den aus dem zentralen Register "
@@ -197,7 +198,7 @@ def test_hour_header_uses_catalog_label():
     result = _result()
     enabled = resolve_enabled_metrics(NO_COLLISION_SELECTION)
 
-    html = render_compare_html(result, enabled_metrics=enabled, hourly_metrics=None)
+    html = render_compare_html(result, enabled_metrics=enabled, hourly_metrics=None, preset=PRESET_ALLGEMEIN)
 
     assert _html_hour_header(html) == EXPECTED_HOUR_HEADER, (
         "Die Stundentabelle zeigt nicht die aus dem zentralen Register "
@@ -221,7 +222,7 @@ def test_units_legend_matches_catalog_label_not_table_header_typed_string():
     # er weiterhin ALLE Spalten gegen `col_label` haelt.
     html = render_compare_html(
         result, enabled_metrics=enabled,
-        hourly_metrics=[m["key"] for m in HOUR_METRICS],
+        hourly_metrics=[m["key"] for m in HOUR_METRICS], preset=PRESET_ALLGEMEIN,
     )
 
     assert _legend_text(html) == _expected_legend_text(), (

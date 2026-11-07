@@ -18,6 +18,7 @@ SMS-Text erscheinen.
 KEIN Mock — echte SegmentWeatherData, echter SMSTripFormatter, echter
 Aufrufpfad über format_sms() (NICHT direkt _wintersport()).
 """
+from tests.helpers.ampel_allgemein import AMPEL_ALLGEMEIN
 from datetime import datetime, timezone
 
 import pytest
@@ -131,7 +132,7 @@ def test_wind_chill_erzeugt_kein_wc_token_mehr():
     segments = [_felt_temp_segment()]
     formatter = SMSTripFormatter()
 
-    sms = formatter.format_sms(segments, stage_name="Etappe 1")
+    sms = formatter.format_sms(segments, stage_name="Etappe 1", ampel=AMPEL_ALLGEMEIN)
 
     assert "WC" not in sms, (
         f"'WC'-Token erscheint weiterhin trotz PO-Entscheid, das Kuerzel "
@@ -152,7 +153,7 @@ def test_enabled_snow_depth_appears_in_sms():
     segments = [_snow_segment()]
     formatter = SMSTripFormatter()
 
-    sms = formatter.format_sms(segments, stage_name="Etappe 1")
+    sms = formatter.format_sms(segments, stage_name="Etappe 1", ampel=AMPEL_ALLGEMEIN)
 
     assert "SD" in sms, (
         f"Bug #1450: 'SD'-Token fehlt trotz aktivierter Schneehoehe-Metrik "

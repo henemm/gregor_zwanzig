@@ -8,6 +8,7 @@ Die Stunden-Vollstaendigkeitspruefung war bis hierher von KEINEM Test gedeckt
 sie an einer echt zugestellten Mail auffiel. Diese Datei schliesst die Luecke:
 gepruefft wird gegen den ECHTEN `render_compare_html`-Output, kein Fixture-Text.
 """
+from tests.helpers.ampel_allgemein import PRESET_ALLGEMEIN
 import importlib.util
 import sys
 from pathlib import Path
@@ -56,7 +57,7 @@ def _real_compare_html(names: list[str]) -> str:
 
     result = _make_comparison_result(names)
     return render_compare_html(
-        result, profile=ActivityProfile.ALLGEMEIN, hourly_enabled=True
+        result, profile=ActivityProfile.ALLGEMEIN, hourly_enabled=True, preset=PRESET_ALLGEMEIN
     )
 
 

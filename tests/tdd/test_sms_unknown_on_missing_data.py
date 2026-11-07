@@ -18,6 +18,7 @@ Provider-Fehlern real erzeugt), reale Aufrufe von
 `SMSTripFormatter().format_sms()`.
 """
 from __future__ import annotations
+from tests.helpers.ampel_allgemein import AMPEL_ALLGEMEIN
 
 from datetime import datetime, timezone
 from zoneinfo import ZoneInfo
@@ -177,7 +178,7 @@ def _format(
     return SMSTripFormatter().format_sms(
         segments, stage_name="E1", report_type=report_type, tz=_TZ,
         night_weather=night_weather, has_gap=has_gap,
-        disabled_specs=disabled_specs,
+        disabled_specs=disabled_specs, ampel=AMPEL_ALLGEMEIN,
     )
 
 

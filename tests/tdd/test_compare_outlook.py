@@ -21,6 +21,7 @@ SPEC: docs/specs/modules/epic_1301_b4_compare_outlook.md AC-4..AC-9
 KONTEXT: docs/context/epic-1301-b4-ausblick.md
 """
 from __future__ import annotations
+from tests.helpers.ampel_allgemein import AMPEL_ALLGEMEIN, PRESET_ALLGEMEIN
 
 import uuid
 from datetime import date, datetime, timedelta, timezone
@@ -150,7 +151,7 @@ def test_compare_html_shows_outlook_per_location():
         target_date=TARGET_DATE, created_at=datetime(2026, 7, 20, 4, 1),
     )
 
-    html = render_compare_html(result, outlook_enabled=True)
+    html = render_compare_html(result, outlook_enabled=True, preset=PRESET_ALLGEMEIN)
     soup = BeautifulSoup(html, "html.parser")
 
     # Korrigierter Marker (Entwickler-Fix, s. Rueckmeldung an PO/QA): 'Böen'
@@ -383,8 +384,8 @@ def test_outlook_enabled_false_suppresses_both_formats(compare_env, tmp_path):
         target_date=TARGET_DATE, created_at=datetime(2026, 7, 20, 4, 1),
     )
 
-    html_off, text_off = render_compare_email(result, outlook_enabled=False)
-    html_on, text_on = render_compare_email(result, outlook_enabled=True)
+    html_off, text_off = render_compare_email(result, outlook_enabled=False, preset=PRESET_ALLGEMEIN)
+    html_on, text_on = render_compare_email(result, outlook_enabled=True, preset=PRESET_ALLGEMEIN)
 
     # Korrigierter Marker (Entwickler-Fix, s. Rueckmeldung an PO/QA): 'Böen'
     # allein ist NICHT exklusiv fuer die Ausblick-Tabelle -- sowohl die
@@ -424,7 +425,7 @@ def test_outlook_daily_value_matches_1285_daily_summary():
 
     day1_points = [p for p in loc.outlook_hourly_data if p.ts.date() == TARGET_DATE]
     day1_summary = summarize_points(day1_points)
-    row = build_outlook_row(day1_summary, day1_points, "Mo", ZoneInfo("UTC"), context="vergleich")
+    row = build_outlook_row(day1_summary, day1_points, "Mo", ZoneInfo("UTC"), context="vergleich", ampel=AMPEL_ALLGEMEIN)
 
     assert row["precip_mm"] == pytest.approx(expected.precip_sum_mm)
     assert row["rain_probability_pct"] == expected.pop_max_pct
@@ -456,7 +457,7 @@ def test_outlook_fail_soft_on_missing_data():
         target_date=TARGET_DATE, created_at=datetime(2026, 7, 20, 4, 1),
     )
 
-    html = render_compare_html(result, outlook_enabled=True)  # darf nicht crashen
+    html = render_compare_html(result, outlook_enabled=True, preset=PRESET_ALLGEMEIN)  # darf nicht crashen
     text = render_comparison_text(result, outlook_enabled=True, preset=None)
 
     assert "Innsbruck" in html and "Fehlerort" in html, (

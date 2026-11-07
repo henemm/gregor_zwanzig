@@ -18,6 +18,7 @@ Fixture-Muster uebernommen aus:
   tests/tdd/test_bug_874_th_plus_sms.py (SMS TH+-Token-Nachweis)
 """
 from __future__ import annotations
+from tests.helpers.ampel_allgemein import AMPEL_ALLGEMEIN
 
 import dataclasses
 from datetime import datetime, timezone
@@ -284,7 +285,7 @@ class TestAC5SmsThunderTokenUnaffected:
         sms = SMSTripFormatter().format_sms(
             [_segment()],
             report_type="evening",
-            thunder_forecast=_thunder_forecast(),
+            thunder_forecast=_thunder_forecast(), ampel=AMPEL_ALLGEMEIN,
         )
         assert "TH+:H@" in sms, (
             f"TH+:H@ fehlt im SMS-Text obwohl thunder_forecast['+1'] HIGH "

@@ -40,6 +40,7 @@ wirkungslos. Diese Scheibe raeumt ihn weg. Was hier nachgewiesen wird:
 KEINE Mocks/patch/MagicMock. Kein Netzwerk. Kein I/O auf Modul-Ebene.
 """
 from __future__ import annotations
+from tests.helpers.ampel_allgemein import PRESET_ALLGEMEIN
 
 import json
 from datetime import date, datetime
@@ -266,7 +267,7 @@ def test_render_compare_email_rejects_top_n_details_argument():
 
     result = _load_comparison_result()
     with pytest.raises(TypeError):
-        render_compare_email(result, top_n_details=3)
+        render_compare_email(result, top_n_details=3, preset=PRESET_ALLGEMEIN)
 
 
 def test_render_compare_html_rejects_top_n_details_argument():
@@ -279,7 +280,7 @@ def test_render_compare_html_rejects_top_n_details_argument():
 
     result = _load_comparison_result()
     with pytest.raises(TypeError):
-        render_compare_html(result, top_n_details=3)
+        render_compare_html(result, top_n_details=3, preset=PRESET_ALLGEMEIN)
 
 
 class _RenderCallRecorded(Exception):

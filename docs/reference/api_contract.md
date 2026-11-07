@@ -832,7 +832,7 @@ Epochensekunden**; die lesbare Aufbereitung dort ist als Nebenbefund in #1199 no
 | horizons            | dict \| None     | Pro-Metrik-Zeithorizont-Filter (None = alle sichtbar)  |
 | bucket              | str              | Spalten-Gruppierung: `"primary"` (eigene Spalte) \| `"secondary"` (heute ohne eigene Ausgabe), default: `"primary"`. **Es gibt keine Detail-Zeile mehr** (PO-Entscheid 2026-06-06, #587); `secondary` bleibt nur aus Altdaten-Kompatibilität und wird seit #1741 nirgends gerendert. Was jenseits des Telegram-Spaltenbudgets liegt, erscheint in der Kurzübersicht als Tageswert plus Kappungshinweis — siehe `docs/specs/modules/fix_1741_telegram_kappungshinweis.md` |
 | order               | int              | Sortier-Reihenfolge innerhalb des Buckets (default: 0) |
-| sms_threshold       | float \| None    | **Neu Issue #624:** Schwellenwert für SMS-/Telegram-Kurzform (R/PR/W/G). None = Catalog/DEFAULTS-Fallback. Nur für threshold-fähige Metriken sichtbar (Niederschlag, Regenwahrscheinlichkeit, Wind, Böen) |
+| sms_threshold       | float \| None    | **Ohne Wirkung seit #2792 S1c-4b** (Profil-Ampel ist die einzige Bewertung, ADR-0106). Der Wert bleibt gespeichert und wird nicht ausgewertet; die Hervorhebung in SMS/Premium-SMS/Telegram folgt `display_config.ampel` (§11 „Profil-Ampel“). Ursprünglich Issue #624 |
 
 **Format Mode Details:**
 - `raw`: Numerischer Wert mit Einheit (z.B. `18.5°C`, `22 km/h`)
@@ -1324,7 +1324,7 @@ Convenience-Layer ueber die bestehenden CRUD-Handler. Erlaubt gezieltes Lesen un
 
 ### Profil-Ampel `display_config.ampel` (Issue #2792 S1a, ADR-0106)
 
-Gilt identisch fuer Trip (§10.5, Python `UnifiedWeatherDisplayConfig.ampel`), ComparePreset (§16, Dict) und `PUT /api/trips/{id}/weather-config`. Fehlt das Feld, gilt die Vorlage (`ampel.template` → Trip `preset_name` → Compare `profil` → `allgemein`; Compare-Zuordnung `summer_trekking`→`alpen-trekking`, sonst gleichnamig, Gross-/Kleinschreibung egal). In S1a liest noch kein Renderer die Ampel (Umschaltung S1c).
+Gilt identisch fuer Trip (§10.5, Python `UnifiedWeatherDisplayConfig.ampel`), ComparePreset (§16, Dict) und `PUT /api/trips/{id}/weather-config`. Fehlt das Feld, gilt die Vorlage (`ampel.template` → Trip `preset_name` → Compare `profil` → `allgemein`; Compare-Zuordnung `summer_trekking`→`alpen-trekking`, sonst gleichnamig, Gross-/Kleinschreibung egal). Seit #2792 S1c-4b (2026-11-06) ist die Ampel die **einzige Bewertung** (ADR-0106): alle Leser (Mail, Ausblick, Vergleich, Alarm, SMS, Premium-SMS, Telegram) lösen das Abo auf. Die Altfelder `sms_threshold` (Abschnitt „MetricConfig“) und `corridors` (§24) bleiben gespeichert, wirken aber nicht mehr; `display_thresholds` ist keine Nutzer-Bewertung mehr.
 
 ```
 ampel = { template: "<vorlagen-id>",
@@ -4774,7 +4774,7 @@ die Python-`RiskEngine` — künftige Single Source of Truth der Cockpit-Risiko-
 Section 22) und Compare-Idealbereiche (`display_config["ideal_ranges"]`, Section 16) auf **einer**
 gemeinsamen, rein additiven Datenstruktur. User-facing Label: „Wertebereich(e)"; Code-/Datenterm
 bleibt `corridor`. Ein `Corridor` trägt zwei unabhängig kombinierbare Wirkungen: `notify` (warnen,
-wenn ein Wert den Bereich verlässt) und `mark` (im Briefing markieren, solange ein Wert im
+wenn ein Wert den Bereich verlässt) und `mark` (seit #2792 S1c-4b ohne Wirkung, früher im Briefing markieren, solange ein Wert im
 Bereich liegt).
 
 **`notify` löst seit #1460 T1 (2026-08-03, ADR-0043) KEINEN Alarm mehr aus.** Zwischen #1444 S1
@@ -4792,7 +4792,7 @@ unverändert im Repo bestehen, hat aber keinen Aufrufer mehr — ebenso der Rend
 Eine Tour, deren einzige Alarmquelle Korridore mit `notify` waren, alarmiert seither wieder
 gar nicht mehr, bis eine Empfindlichkeitsstufe gesetzt wird — beabsichtigt, nicht stillschweigend
 in Kauf genommen. `corridors[].notify` bleibt Feld in Datenmodell und Persistenz (kein
-Datenverlust), nur wirkungslos. `corridors[].mark` (Anzeige-Markierung) ist davon unberührt.
+Datenverlust), nur wirkungslos. `corridors[].mark` (Anzeige-Markierung) wirkt seit #2792 S1c-4b (2026-11-06) ebenfalls nicht mehr: die Markierung entfällt, die Ampel ist die einzige Bewertung. Die gespeicherten Werte bleiben erhalten (Migration nach `display_config.ampel`, §11 „Profil-Ampel“).
 Spec: `docs/specs/modules/rework_1460_t1_relevanzfilter.md`, ADR: `docs/adr/0043-empfindlichkeitsstufe-als-niveau-statt-zweiter-alarm-typ.md`.
 
 **Bei Gefahrenstufen-Größen (aktuell: Gewitter/`thunder_level_max`) wirkt die
@@ -4907,7 +4907,7 @@ export interface Corridor {
 | metric | string | Metrik-ID, kontextabhängig: `route` bot ursprünglich (Issue #1231) nur die 6 `AlertableMetrics` (`wind_gust`, `precipitation_sum`, `temperature_min`, `temperature_max`, `thunder_level`, `snow_line`) — seit #1425 S2 kommen 17 weitere Größen aus dem zentralen Katalog (`GET /api/compare/metrics`) hinzu (23 insgesamt), `thunder_level` bleibt bewusst ausgenommen (weiterhin Prozent-Skala statt Katalog-Ordinalskala; Vereinheitlichung ist ein separater Folge-Workflow). `vergleich` nutzt die 10 Compare-Summary-Keys (`temp_max_c`, `temp_min_c`, `wind_max_kmh`, `gust_max_kmh`, `precip_sum_mm`, `thunder_level_max`, `visibility_min_m`, `snow_new_sum_cm`, `cape_max_jkg`, `freezing_level_m`) für `notify` — diese Liste selbst ist unverändert, ihre Herkunft im Backend seit #1435 E1a-1 aber nicht mehr die eigenständige `alarmCapable`-Prüfung des Compare-Katalogs, sondern dessen register-abgeleitetes `alertMetric` (s. Section 15.1); darüber hinaus stehen beiden Kontexten inzwischen dieselben Katalog-Größen als `mark`-fähige Wertebereiche zur Verfügung. `confidence_pct` (`selectable=false`, #710) darf in keinem der beiden Pools erscheinen. |
 | range | `[min\|null, max\|null]` | Wertebereich; jede Seite unabhängig auf `null` (offen) setzbar, mind. eine Seite muss gesetzt sein (Editor-Validierung, UI-seitig — Slice 3+). `corridorInside(v, min, max)`: `v==null → null`; `v<min → false`; `v>max → false`; sonst `true` (`<`/`>` exklusiv geprüft, Grenzwert exakt gilt als „innen"). |
 | notify | bool | Seit #1460 T1 (ADR-0043) **ohne Alarm-Wirkung** — verbleibt aus Bestandsschutz im Datenmodell (kein Feld-Entfernen), wird aber von keiner Auswertung mehr gelesen. Alarme laufen ausschließlich über `display_config.metric_alert_levels[metric]` (entspannt/standard/sensibel), unabhängig von diesem Schalter. Die Stufen-Feinwahl ist im CorridorEditor nicht einzeln wählbar (Known Limitation, gespeicherter Wert bleibt erhalten). |
-| mark | bool | Markiert im Compare-Mail-Renderer (`compare_html.py`) die Zelle grün, solange `corridorInside(value)===true` — additiv zur bestehenden Severity-Färbung, ohne Einfluss auf `comparison_scoring.py::calculate_score()`. |
+| mark | bool | **Ohne Wirkung seit #2792 S1c-4b:** die Wertebereich-Markierung im Compare-Mail-Renderer entfällt (`corridor_mark.py` gelöscht); die Farbe kommt aus der Profil-Ampel. Feld bleibt gespeichert. Kein Einfluss auf `comparison_scoring.py::calculate_score()`. |
 | prio | enum \| optional | `"hoch"` \| `"mittel"` \| `"niedrig"` — **nur** Anzeige-Reihenfolge im Editor, kein Rang-/Score-Einfluss. |
 
 ### Single-Source-Matchlogik `corridorInside()`
@@ -5001,6 +5001,7 @@ Sprache ist Eigenschaft des Nutzers (ADR-0104); Werte `de`/`en`, Standard `de`. 
 
 ## Changelog
 
+- 2026-11-06: Issue #2792 S1c-4b — Ampel als einzige Bewertung (ADR-0106): `sms_threshold` und `corridors[].mark` ohne Wirkung (Werte bleiben gespeichert); §11 „Profil-Ampel“ beschreibt die Umschaltung; SMS/Premium-SMS/Telegram-Hervorhebung nach Ampel (s. `sms_format.md` v2.38).
 - 2026-11-04: Issue #2792 S1a — Profil-Ampel `display_config.ampel` (Trip, ComparePreset, Weather Config; §11 „Profil-Ampel"), `MetricPreset.ampel` (§15.5), `GET /api/templates` mit `ampel` je Vorlage, Fehlercode `ampel_ungueltig`.
 - 2026-10-30: Issue #2645 (S0, Doku) — Abschnitt 26 „Nutzerprofil und Sprache“: `language`, `invalid_language`, Cookie `gz_lang`.
 - 2026-10-24: Issue #2359 — Kennungsraum Trip/Ortsvergleich: `POST /api/trips` (neuer Abschnitt „Kennungs-Konflikt“) sowie Compare-Preset POST/PUT antworten bei belegter Kennung mit 409 `id_conflict` (statt 500 `store_error`).

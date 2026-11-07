@@ -12,6 +12,7 @@ echte Renderer geprüft.
 Parent-Spec: docs/specs/modules/issue_479_f12_confidence_refactor.md v1.0
 """
 from __future__ import annotations
+from tests.helpers.ampel_allgemein import AMPEL_ALLGEMEIN
 
 from datetime import date, timedelta
 
@@ -284,7 +285,7 @@ class TestSmsToken:
             forecast=forecast,
             config=None,
             report_type="morning",
-            stage_name="Etappe",
+            stage_name="Etappe", ampel=AMPEL_ALLGEMEIN,
         )
         wl_tokens = [t for t in token_line.tokens if t.symbol == "WL"]
         assert len(wl_tokens) == 0, (
@@ -317,7 +318,7 @@ class TestSmsBudget:
             forecast=forecast,
             config=None,
             report_type="morning",
-            stage_name="Etappe4",
+            stage_name="Etappe4", ampel=AMPEL_ALLGEMEIN,
         )
         sms_text = render_sms(token_line, max_length=160)
         assert len(sms_text) <= 160, (

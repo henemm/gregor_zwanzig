@@ -8,6 +8,7 @@ fuenf Golden-Szenarien; der Validator laeuft als echter Prozess gegen die
 eingecheckten ``.eml``-Dateien aus ``build_mime_message``.
 """
 from __future__ import annotations
+from tests.helpers.ampel_allgemein import AMPEL_ALLGEMEIN
 
 import email
 import importlib.util
@@ -210,9 +211,9 @@ def test_ac6_gewitter_stufenwort_und_hagel():
     from output.renderers.email.helpers import format_trend_tokens
 
     stufe = {"thunder": "MED"}
-    assert format_trend_tokens(stufe)["thunder_word"] == "mittel"
-    assert format_trend_tokens(stufe, lang="en")["thunder_word"] == "medium"
-    assert format_trend_tokens(stufe, lang="en")["thunder_plain"] == "⚡medium"
+    assert format_trend_tokens(stufe, ampel=AMPEL_ALLGEMEIN)["thunder_word"] == "mittel"
+    assert format_trend_tokens(stufe, lang="en", ampel=AMPEL_ALLGEMEIN)["thunder_word"] == "medium"
+    assert format_trend_tokens(stufe, lang="en", ampel=AMPEL_ALLGEMEIN)["thunder_plain"] == "⚡medium"
     assert format_hail_note(True) == "Hagel: ja"
     assert format_hail_note(True, lang="en") == "Hail: yes"
     assert format_hail_note(None, lang="en") is None
@@ -223,9 +224,9 @@ def test_ac6_trend_token_stufenwort_folgt_sprache():
     from output.tokens.dto import HourlyValue
 
     stufe = {"thunder": "HIGH", "hourly_thunder": (HourlyValue(13, 2.0), HourlyValue(15, 3.0))}
-    assert format_trend_tokens(stufe)["thunder_token"] == format_trend_tokens(stufe, lang="de")["thunder_token"]
-    assert "mittel" in format_trend_tokens(stufe)["thunder_token"]
-    assert "medium" in format_trend_tokens(stufe, lang="en")["thunder_token"]
+    assert format_trend_tokens(stufe, ampel=AMPEL_ALLGEMEIN)["thunder_token"] == format_trend_tokens(stufe, lang="de", ampel=AMPEL_ALLGEMEIN)["thunder_token"]
+    assert "mittel" in format_trend_tokens(stufe, ampel=AMPEL_ALLGEMEIN)["thunder_token"]
+    assert "medium" in format_trend_tokens(stufe, lang="en", ampel=AMPEL_ALLGEMEIN)["thunder_token"]
 
 
 def test_ac1_verlaesslichkeits_hinweis_mit_wochentag_in_nutzersprache():

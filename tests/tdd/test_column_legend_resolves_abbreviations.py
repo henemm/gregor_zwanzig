@@ -22,6 +22,7 @@ GERENDERTE Ausgabe der echten Renderer, gespeist aus echten DTOs
 Metrik-Register.
 """
 from __future__ import annotations
+from tests.helpers.ampel_allgemein import PRESET_ALLGEMEIN
 
 import dataclasses
 from datetime import date, datetime, timezone
@@ -154,7 +155,7 @@ def _comparison_result() -> ComparisonResult:
 
 def _render_compare(hourly_metrics: list[str]) -> tuple[str, str]:
     """(html_body, text_body) — beide Teile derselben Vergleichs-Mail."""
-    return render_compare_email(_comparison_result(), hourly_metrics=hourly_metrics)
+    return render_compare_email(_comparison_result(), hourly_metrics=hourly_metrics, preset=PRESET_ALLGEMEIN)
 
 
 # ---------------------------------------------------------------------------

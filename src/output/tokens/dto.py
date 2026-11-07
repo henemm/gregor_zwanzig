@@ -42,6 +42,13 @@ class DailyForecast:
     wind_chill_max_c: Optional[float] = None       # Gehzeit-Hoechst, gefuehlt (FD)
     night_temp_min_c: Optional[float] = None       # Nacht-Tiefst am Ziel, gemessen (N)
     night_wind_chill_min_c: Optional[float] = None  # Nacht-Tiefst am Ziel, gefuehlt (FN)
+    # Issue #2792 S1c-4b (AC-1, §5 Temperatur in Kurzkanaelen): Ortszeit-Stunde
+    # des jeweiligen Gehzeit-Extremwerts fuer das `@h` der Token L/D/FL/FD.
+    # Default None -> kein Stunden-Anhang (Bestandsaufrufer).
+    temp_min_hour: Optional[int] = None
+    temp_max_hour: Optional[int] = None
+    wind_chill_min_hour: Optional[int] = None
+    wind_chill_max_hour: Optional[int] = None
     confidence_pct_min: Optional[int] = None  # Issue #121: worst-case daily confidence
     has_data_gap: bool = False  # Issue #1328: True -> "-" wird zu "?" (unbekannt)
     # Issue #1475 S5a: Hagel-Kennzeichen des Tages (ja/unbekannt/nein). Additiv,

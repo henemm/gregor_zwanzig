@@ -11,6 +11,7 @@ jeder Sprache byte-gleich (PO-Korrektur 2026-10-31) und ist von der Ratsche
 ausgenommen.
 """
 from __future__ import annotations
+from tests.helpers.ampel_allgemein import PRESET_ALLGEMEIN
 
 import html as _html
 import json
@@ -406,7 +407,7 @@ def test_ortsvergleich_banner_stufe_und_quelle_englisch():
     result = build_result()
     brand = _alarm("wildfire_risk", 4, "Waldbrand-Gefahr — Stufe 4", source="meteo_forets")
     orte = [replace(loc, official_alerts=[brand]) if i == 0 else loc for i, loc in enumerate(result.locations)]
-    html = "\n".join(sichtbar(render_compare_html(replace(result, locations=orte), lang="en")))
+    html = "\n".join(sichtbar(render_compare_html(replace(result, locations=orte), lang="en", preset=PRESET_ALLGEMEIN)))
     stufe = t("warnung.stufe.rot", "en")
     assert t("vergleich.warn.hoechste_stufe", "en", stufe=stufe, ort=orte[0].location.name) in html
     assert oa.official_alert_source_label("meteo_forets", lang="en") in html

@@ -32,6 +32,7 @@ Trip-Pfad inkl. Metrik-Auswahl) bzw. fuer AC-18 die Endpoint-Funktion
 ``patch()``, kein Netz.
 """
 from __future__ import annotations
+from tests.helpers.ampel_allgemein import AMPEL_ALLGEMEIN
 
 import pytest
 
@@ -163,7 +164,7 @@ def _line(max_length: int) -> str:
         stage_name=F.STAGE_NAME, report_type="evening", tz=F.TZ,
         night_weather=F.night_weather(), max_length=max_length,
         disabled_specs=build_extended_metric_specs(
-            {"wind_direction", "precip_type"}),
+            {"wind_direction", "precip_type"}), ampel=AMPEL_ALLGEMEIN,
     )
 
 
@@ -182,8 +183,11 @@ def _line(max_length: int) -> str:
 # der jetzt als Anker ``SD180`` dient. Bewusst NICHT auf einen strukturellen
 # ``POS_INDEX``-Vergleich ausgewichen -- das verschoebe den Pruefort von der
 # gerenderten Zeile auf die Tabelle.
+# Issue #2792 S1c-4b (E1, AC-19 e): Regen-Hervorhebung ab Gelb der Ampel
+# „allgemein" (1 mm) -- der Regen-Token lautet ``R8.4@11`` statt
+# ``R0.5@5(8.4@11)`` (DEFAULTS 0,2); Rangfolge-Zusicherung unveraendert.
 _OUTRANKS_THE_FOURTEEN = ("SD180", "PR40%@5(95%@11)", "FN7", "FD10/20",
-                          "N9", "D13/27", "R0.5@5(8.4@11)")
+                          "N9", "D13/27", "R8.4@11")
 
 
 class TestDropOrderKnowsTheGrammarColon:

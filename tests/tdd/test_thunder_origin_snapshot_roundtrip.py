@@ -11,6 +11,7 @@ zu rettende Wert entsteht auf dem ECHTEN Rechenweg (``_fuse_thunder_levels()``
 -> ``summarize_points()``), nicht von Hand getippt (s. ``_echt_gerechnet()``).
 """
 from __future__ import annotations
+from tests.helpers.ampel_allgemein import PRESET_ALLGEMEIN
 
 import logging
 import sys
@@ -146,7 +147,7 @@ def test_ac9_alter_schnappschuss_ohne_feld_laedt_und_rendert_ohne_herkunft():
     html, _ = render_compare_email(
         ComparisonResult(locations=[ort], time_window=(12, 20), target_date=_TAG,
                          created_at=datetime(2026, 8, 5, 18, 0)),
-        enabled_metrics=["thunder_max"], hourly_enabled=False,
+        enabled_metrics=["thunder_max"], hourly_enabled=False, preset=PRESET_ALLGEMEIN,
     )
     assert _html_zellen(html) == ["hoch"], (
         f"Ohne gespeicherte Herkunft zeigt die Zeile nur die Stufe: "

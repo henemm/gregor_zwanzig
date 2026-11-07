@@ -27,6 +27,7 @@ aus einer echten Codepfad-Verzweigung (Folge-Etappe mit nur EINEM Waypoint ->
 ``tests/tdd/test_thunder_forecast_fail_soft.py``).
 """
 from __future__ import annotations
+from tests.helpers.ampel_allgemein import AMPEL_ALLGEMEIN
 
 from datetime import date, datetime, timedelta, timezone
 from typing import Optional
@@ -97,7 +98,7 @@ def _direct_sms(thunder_forecast) -> str:
         [F.segment()],
         report_type="evening",
         tz=F.TZ,
-        thunder_forecast=thunder_forecast,
+        thunder_forecast=thunder_forecast, ampel=AMPEL_ALLGEMEIN,
     )
 
 
@@ -321,13 +322,13 @@ class TestAC4NoFollowUpDayKeepsNullForm:
 class TestAC6ConfiguredThresholdAppliesToThPlus:
     """Der Schwellwert der Metrik 'Gewitter' gilt fuer beide Kuerzel."""
 
-    def test_th_plus_respects_configured_sms_threshold(self):
-        """
+    def test_th_plus_ignores_configured_sms_threshold(self):
+        """Issue #2792 S1c-4b (E1, AC-19 e) -- umgekehrt:
         GIVEN: Metrik 'Gewitter' gewaehlt mit sms_threshold=2.0, Folge-Etappe
-               mit Gewitter der Stufe LOW (Renderwert 1.0 — auf Hoehe des
-               hartkodierten Defaults 1.0, aber unter dem konfigurierten 2.0)
+               mit Gewitter der Stufe LOW (Renderwert 1.0)
         WHEN:  das Briefing gerendert wird
-        THEN:  'TH+:-' (kein Ausloesen unter der Schwelle), nicht 'TH+:L@15'
+        THEN:  'TH+:L@15' -- die SMS-Schwelle wirkt nicht mehr, Gewitter
+               zaehlt ab „leicht" (gelb oder schlechter, P2)
         """
         sms = _trip_sms(
             "morning",
@@ -335,14 +336,8 @@ class TestAC6ConfiguredThresholdAppliesToThPlus:
             thunder_forecast=_TOMORROW_LOW,
         )
 
-        assert "TH+:L@15" not in sms, (
-            f"'TH+:' loest unterhalb des konfigurierten Schwellwerts (2.0) "
-            f"aus — der Schwellwert der Metrik 'Gewitter' wird an das Kuerzel "
-            f"der Folge-Etappe nicht weitergereicht.\nSMS: {sms}"
-        )
-        assert "TH+:-" in sms, (
-            f"Unter der konfigurierten Schwelle gehoert die Null-Form "
-            f"'TH+:-' in die Zeile.\nSMS: {sms}"
+        assert "TH+:L@15" in sms, (
+            f"E1: 'TH+:' muss trotz sms_threshold 2.0 ab 'leicht' ausloesen.\nSMS: {sms}"
         )
 
     def test_configured_threshold_still_lets_strong_thunder_through(self):

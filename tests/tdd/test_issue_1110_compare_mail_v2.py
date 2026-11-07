@@ -18,6 +18,7 @@ Klassen:
 - TestCompareMailV2Text       -- AC-10, render_comparison_text() via render_compare_email()
 """
 from __future__ import annotations
+from tests.helpers.ampel_allgemein import PRESET_ALLGEMEIN
 
 import importlib.util
 import re
@@ -241,7 +242,7 @@ class TestCompareMailV2HTML:
         from output.renderers.email.compare_html import render_compare_html
 
         result = _make_v2_result()
-        html = render_compare_html(result, profile=ActivityProfile.ALLGEMEIN)
+        html = render_compare_html(result, profile=ActivityProfile.ALLGEMEIN, preset=PRESET_ALLGEMEIN)
 
         for forbidden in ("Score", "Empfehlung", "Bester Standort", "🏆"):
             assert forbidden not in html, (
@@ -272,7 +273,7 @@ class TestCompareMailV2HTML:
         from output.renderers.email.compare_html import render_compare_html
 
         result = _make_v2_result()
-        html = render_compare_html(result, profile=ActivityProfile.ALLGEMEIN)
+        html = render_compare_html(result, profile=ActivityProfile.ALLGEMEIN, preset=PRESET_ALLGEMEIN)
 
         table = _find_overview_table(html)
         assert table, "Uebersichtstabelle mit Metrik-Zeile 'Amtliche Warnungen' nicht gefunden"
@@ -308,7 +309,7 @@ class TestCompareMailV2HTML:
         from output.renderers.email.compare_html import render_compare_html
 
         result = _make_v2_result()
-        html = render_compare_html(result, profile=ActivityProfile.ALLGEMEIN)
+        html = render_compare_html(result, profile=ActivityProfile.ALLGEMEIN, preset=PRESET_ALLGEMEIN)
 
         assert "rgba(61,107,58,0.14)" not in html, (
             "Der gruene Best-Wert-Marker darf im v2-HTML nicht mehr vorkommen (F001)"
@@ -325,7 +326,7 @@ class TestCompareMailV2HTML:
 
         result = _make_v2_result()
         html = render_compare_html(
-            result, profile=ActivityProfile.ALLGEMEIN, enabled_metrics={"wind_max"},
+            result, profile=ActivityProfile.ALLGEMEIN, enabled_metrics={"wind_max"}, preset=PRESET_ALLGEMEIN,
         )
 
         table = _find_overview_table(html)
@@ -350,7 +351,7 @@ class TestCompareMailV2HTML:
         from output.renderers.email.compare_html import render_compare_html
 
         result = _make_v2_result()
-        html = render_compare_html(result, profile=ActivityProfile.ALLGEMEIN, enabled_metrics=None)
+        html = render_compare_html(result, profile=ActivityProfile.ALLGEMEIN, enabled_metrics=None, preset=PRESET_ALLGEMEIN)
 
         table = _find_overview_table(html)
         assert table, "Uebersichtstabelle nicht gefunden"
@@ -376,7 +377,7 @@ class TestCompareMailV2HTML:
         from output.renderers.email.compare_html import render_compare_html
 
         result = _make_v2_result()
-        html = render_compare_html(result, profile=ActivityProfile.ALLGEMEIN)
+        html = render_compare_html(result, profile=ActivityProfile.ALLGEMEIN, preset=PRESET_ALLGEMEIN)
 
         table = _find_overview_table(html)
         assert table, "Uebersichtstabelle nicht gefunden"
@@ -397,7 +398,7 @@ class TestCompareMailV2HTML:
         from output.renderers.email.compare_html import render_compare_html
 
         result = _make_v2_result()
-        html = render_compare_html(result, profile=ActivityProfile.ALLGEMEIN)
+        html = render_compare_html(result, profile=ActivityProfile.ALLGEMEIN, preset=PRESET_ALLGEMEIN)
 
         assert 'class="wb ' in html, (
             "Aggregat-WarnBlock-Banner ('class=\"wb ...') muss erscheinen, "
@@ -418,7 +419,7 @@ class TestCompareMailV2HTML:
         result = _make_v2_result()
         for loc in result.locations:
             loc.official_alerts = []
-        html = render_compare_html(result, profile=ActivityProfile.ALLGEMEIN)
+        html = render_compare_html(result, profile=ActivityProfile.ALLGEMEIN, preset=PRESET_ALLGEMEIN)
 
         assert 'class="wb ' not in html, (
             "Aggregat-WarnBlock-Banner darf bei 0 Warnungen ueber alle Orte fehlen"
@@ -435,7 +436,7 @@ class TestCompareMailV2HTML:
         from output.renderers.email.compare_html import render_compare_html
 
         result = _make_v2_result()
-        html = render_compare_html(result, profile=ActivityProfile.ALLGEMEIN)
+        html = render_compare_html(result, profile=ActivityProfile.ALLGEMEIN, preset=PRESET_ALLGEMEIN)
         n = len(result.locations)
 
         section0 = _location_section_before_hours(html, 0, n)
@@ -461,7 +462,7 @@ class TestCompareMailV2HTML:
         from output.renderers.email.compare_html import render_compare_html
 
         result = _make_v2_result()
-        html = render_compare_html(result, profile=ActivityProfile.ALLGEMEIN)
+        html = render_compare_html(result, profile=ActivityProfile.ALLGEMEIN, preset=PRESET_ALLGEMEIN)
         n = len(result.locations)
 
         section0 = _location_section_before_hours(html, 0, n)
@@ -479,7 +480,7 @@ class TestCompareMailV2HTML:
         from output.renderers.email.compare_html import render_compare_html
 
         result = _make_v2_result()
-        html = render_compare_html(result, profile=ActivityProfile.ALLGEMEIN)
+        html = render_compare_html(result, profile=ActivityProfile.ALLGEMEIN, preset=PRESET_ALLGEMEIN)
         n = len(result.locations)
 
         expected = [
@@ -504,7 +505,7 @@ class TestCompareMailV2HTML:
         from output.renderers.email.compare_html import render_compare_html
 
         result = _make_v2_result()
-        html = render_compare_html(result, profile=ActivityProfile.ALLGEMEIN)
+        html = render_compare_html(result, profile=ActivityProfile.ALLGEMEIN, preset=PRESET_ALLGEMEIN)
 
         table = _location_hour_table(html, 0, len(result.locations))
         rows_raw = _rows_raw(table)
@@ -538,7 +539,7 @@ class TestCompareMailV2HTML:
         from output.renderers.email.compare_html import render_compare_html
 
         result = _make_v2_result()
-        html = render_compare_html(result, profile=ActivityProfile.ALLGEMEIN)
+        html = render_compare_html(result, profile=ActivityProfile.ALLGEMEIN, preset=PRESET_ALLGEMEIN)
 
         table = _location_hour_table(html, 0, len(result.locations))
         rows = _rows(table)
@@ -559,7 +560,7 @@ class TestCompareMailV2HTML:
         from output.renderers.email.compare_html import render_compare_html
 
         result = _make_v2_result()
-        html = render_compare_html(result, profile=ActivityProfile.ALLGEMEIN)
+        html = render_compare_html(result, profile=ActivityProfile.ALLGEMEIN, preset=PRESET_ALLGEMEIN)
 
         assert re.search(r"@media\s*\(\s*max-width:\s*480px\s*\)", html), (
             "HTML muss einen @media (max-width: 480px)-Block enthalten"
@@ -607,7 +608,7 @@ class TestCompareMailV2Validator:
         from output.renderers.email.compare_html import render_compare_html
 
         result = _make_v2_result()
-        html = render_compare_html(result, profile=ActivityProfile.ALLGEMEIN)
+        html = render_compare_html(result, profile=ActivityProfile.ALLGEMEIN, preset=PRESET_ALLGEMEIN)
 
         errors = validator_module.validate_structure(html)
         assert not errors, (
@@ -632,7 +633,7 @@ class TestCompareMailV2Text:
         from output.renderers.comparison import render_compare_email
 
         result = _make_v2_result()
-        _html_body, text_body = render_compare_email(result, profile=ActivityProfile.ALLGEMEIN)
+        _html_body, text_body = render_compare_email(result, profile=ActivityProfile.ALLGEMEIN, preset=PRESET_ALLGEMEIN)
 
         assert "Score" not in text_body, "Klartext darf kein 'Score' mehr enthalten"
         assert "🏆" not in text_body, "Klartext darf kein 🏆-Symbol mehr enthalten"
@@ -655,7 +656,7 @@ class TestCompareMailV2Text:
         from output.renderers.comparison import render_compare_email
 
         result = _make_v2_result()
-        _html_body, text_body = render_compare_email(result, profile=ActivityProfile.ALLGEMEIN)
+        _html_body, text_body = render_compare_email(result, profile=ActivityProfile.ALLGEMEIN, preset=PRESET_ALLGEMEIN)
 
         expected_order = ["Collobrières", "Marseille", "Fréjus"]
         positions = [text_body.index(name) for name in expected_order]

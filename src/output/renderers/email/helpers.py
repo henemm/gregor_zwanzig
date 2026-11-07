@@ -817,7 +817,7 @@ def fmt_val(key: str, val, *, friendly_keys: set[str] | None = None,
         # Textzusatz im Roh-/Text-Modus. Die Gewitterstufe selbst bleibt davon
         # UNBERUEHRT (Spec AC-10).
         from app.thunder_scale import thunder_label
-        from output.metric_format import format_hail_note, thunder_ampel_band
+        from output.metric_format import format_hail_note
         hail = (row.get("_hail_flag") is True) if row else False
         if mode == "raw" or not html:
             from output.metric_format import thunder_signal_label
@@ -830,7 +830,8 @@ def fmt_val(key: str, val, *, friendly_keys: set[str] | None = None,
             if note:
                 teile.append(note)
             return " · ".join(teile)
-        band = thunder_ampel_band(val)
+        # Issue #2792 S1c-4b (AC-5): Kreis aus der zentralen Abbildung.
+        band = _thunder_band(val, ampel=ampel)
         if band is None:
             return "–"
         return _ampel_dot_css(band, hail=hail)
@@ -969,7 +970,7 @@ def _thunder_map(lang: Lang) -> dict:
     }
 
 
-def format_trend_tokens(stage: dict, *, lang: Lang = "de") -> dict:
+def format_trend_tokens(stage: dict, *, lang: Lang = "de", ampel: dict) -> dict:
     """Issue #623/#640: Compute all display tokens for one trend stage.
 
     Single source of truth for trend semantics across HTML, plain-text,
@@ -977,15 +978,15 @@ def format_trend_tokens(stage: dict, *, lang: Lang = "de") -> dict:
 
     Issue #640 adds @-time tokens: precip_token, wind_token, gust_token,
     thunder_token — computed from hourly_precip/hourly_wind/hourly_gust/
-    hourly_thunder sample tuples (HourlyValue). Per-metric custom threshold
-    via sms_threshold_precip / sms_threshold_wind / sms_threshold_gust keys.
+    hourly_thunder sample tuples (HourlyValue). Issue #2792 S1c-4b: die
+    Hervorhebung folgt der Abo-Ampel (``ampel``, Pflicht ohne Default, gelb
+    oder schlechter); ``sms_threshold_*``-Schluessel wirken nicht mehr.
 
     Args:
         stage: dict with keys weekday, name, temp_lo, temp_hi, precip_mm,
                wind_dir, wind_kmh, thunder ('NONE'|'MED'|'HIGH'), note,
                and optionally: hourly_precip, hourly_wind, hourly_gust,
-               hourly_thunder (tuples of HourlyValue), sms_threshold_precip,
-               sms_threshold_wind, sms_threshold_gust.
+               hourly_thunder (tuples of HourlyValue).
 
     Returns:
         dict with keys:
@@ -1006,13 +1007,8 @@ def format_trend_tokens(stage: dict, *, lang: Lang = "de") -> dict:
             gust_token      — '{v}@{h}(...)' or '-' (#640)
             thunder_token   — 'M@{h}(H@{h})' or '-' (#640)
     """
+    from app.ampel import ampel_schaerfe, ampel_stufe
     from output.tokens.metrics import render_threshold_peak_value
-
-    # Default thresholds (AC-2)
-    _DEFAULT_PRECIP_THR = 0.5   # mm
-    _DEFAULT_WIND_THR = 30.0    # km/h
-    _DEFAULT_GUST_THR = 50.0    # km/h
-    # Thunder threshold: MED = level >= 1 (is_level=True)
 
     # Temperature
     tl = stage.get("temp_lo")
@@ -1054,13 +1050,19 @@ def format_trend_tokens(stage: dict, *, lang: Lang = "de") -> dict:
     hourly_gust = stage.get("hourly_gust") or ()
     hourly_thunder = stage.get("hourly_thunder") or ()
 
-    precip_thr = stage.get("sms_threshold_precip", _DEFAULT_PRECIP_THR)
-    wind_thr = stage.get("sms_threshold_wind", _DEFAULT_WIND_THR)
-    gust_thr = stage.get("sms_threshold_gust", _DEFAULT_GUST_THR)
+    # Issue #2792 S1c-4b (E1, AC-19 e): Hervorhebung = erste Stunde, in der
+    # die Groesse nach der Abo-Ampel gelb oder schlechter ist (beidseitig) --
+    # dasselbe Praedikat wie SMS und Mail-Erwaehnung; die frueheren festen
+    # Werte (0,5 mm / 30 / 50 km/h) und `sms_threshold_*` wirken nicht mehr.
+    def _token(symbol: str, samples, metric_id: str) -> str:
+        return render_threshold_peak_value(
+            symbol, samples, None,
+            ampel_stufe=lambda v: ampel_stufe(ampel, metric_id, v),
+            ampel_schaerfe=lambda v: ampel_schaerfe(ampel, metric_id, v))
 
-    precip_token = render_threshold_peak_value("R", hourly_precip, precip_thr)
-    wind_token = render_threshold_peak_value("W", hourly_wind, wind_thr)
-    gust_token = render_threshold_peak_value("G", hourly_gust, gust_thr)
+    precip_token = _token("R", hourly_precip, "precipitation")
+    wind_token = _token("W", hourly_wind, "wind")
+    gust_token = _token("G", hourly_gust, "gust")
     # Thunder: is_level=True, threshold=1 (jede Stufe ab LOW ist meldenswert).
     # Issue #640 F001: use MED/HIGH labels (not the SMS L/M/H vigilance scale).
     # _TREND_THUNDER_LABELS aligns with _THUNDER_MAP above and #623 plain tokens.
@@ -1072,10 +1074,10 @@ def format_trend_tokens(stage: dict, *, lang: Lang = "de") -> dict:
     _TREND_THUNDER_LABELS = {
         1: _tmap["LOW"]["word"], 2: _tmap["MED"]["word"], 3: _tmap["HIGH"]["word"],
     }
-    # Issue #1474b: liest die laengst vorhandene, bisher ignorierte
-    # Verdrahtung `sms_threshold_thunder` (outlook.py:409,
-    # trip_report_scheduler.py:1433-1443) statt eines fest verdrahteten 1.0.
-    thunder_thr = stage.get("sms_threshold_thunder", 1.0)
+    # Issue #2792 S1c-4b (§5 Punkt 9): Gewitter ist ordinal, hervorgehoben
+    # wird ab „leicht" (Render-Wert 1, gelb oder schlechter, P2);
+    # `sms_threshold_thunder` (#1474b) wirkt nicht mehr (E1).
+    thunder_thr = 1.0
     thunder_token = render_threshold_peak_value(
         "TH", hourly_thunder, threshold=thunder_thr, is_level=True,
         level_labels=_TREND_THUNDER_LABELS,
@@ -1425,50 +1427,72 @@ _PILL_CLASS2 = {
 }
 
 
-def _sms_mention_threshold(
-    metric_id: str, configured: Optional[dict[str, float]] = None,
-) -> Optional[float]:
-    """Issue #795/RC0, Issue #1474b: SMS-identische Erwaehnungsschwelle aus
-    EINER Quelle.
-
-    Wind/Boen/Regen/Regenwahrsch./Gewitter teilen sich die SMS-DEFAULTS aus
-    builder.DEFAULTS (kein zweites Hardcoding). Sicht (2 km) und Luftfeuchte
-    (90 %) sind in der SMS keine POSITIONAL-Tokens und behalten ihre eigene,
-    hier zentral gepflegte Schwelle.
-
-    `configured` (Issue #1474b): optionale, pro Trip eingestellte
-    Erwaehnungsschwellen im `metric_id`-Raum (aus `MetricConfig.sms_threshold`).
-    Ist ein Wert fuer `metric_id` gesetzt, hat er Vorrang vor `DEFAULTS`. Nur
-    diese Funktion uebersetzt intern auf das SMS-Symbol fuer den
-    `DEFAULTS`-Fallback -- exakt EINE Uebersetzungsstelle.
-    """
-    if configured is not None and configured.get(metric_id) is not None:
-        return configured[metric_id]
-    from output.tokens.builder import DEFAULTS
-    _id_to_sms_symbol = {
-        "wind": "W", "gust": "G", "precipitation": "R",
-        "rain_probability": "PR", "thunder": "TH:",
-    }
-    sym = _id_to_sms_symbol.get(metric_id)
-    if sym is not None:
-        return DEFAULTS.get(sym)
-    if metric_id == "visibility":
-        return 2.0   # km
-    if metric_id == "humidity":
-        return 90.0  # %
-    return None
+def _thunder_band(raw, *, ampel: dict) -> Optional[str]:
+    """Issue #2792 S1c-4b (AC-5): Gewitterstufe (Enum oder Name) -> Ampelfarbe
+    ueber die zentrale Abbildung ``thunder_color`` mit der Abo-Ampel; keine
+    erkennbare Stufe -> ``None`` (keine Aussage, keine Farbe)."""
+    from app.ampel import thunder_color
+    from app.models import ThunderLevel
+    # Fix-Loop 2 Nachtrag: nur ein unbekanntes Stufenwort ergibt ``None``;
+    # eine leere Ampel scheitert in ``thunder_color`` laut (AC-27) und wird
+    # hier nicht mehr verschluckt.
+    try:
+        stufe = None if raw is None else ThunderLevel(raw)
+    except ValueError:
+        stufe = None
+    return thunder_color(stufe, ampel)
 
 
-def _first_and_peak(vals: list[tuple[float, datetime]], threshold: float,
+#: Issue #2792 S1c-4b (Spec §5 Punkt 5): Luftfeuchte fest ab 90 % -- dieselbe
+#: Konstante wie im Kurzkanal.
+from output.tokens.builder import LUFTFEUCHTE_ERWAEHNUNG_AB_PCT  # noqa: E402
+
+
+def _mention_threshold(metric_id: str, *, ampel: dict, seite: str) -> Optional[float]:
+    """Issue #2792 S1c-4b: die im Ereignis-Text genannte Schwelle = mildeste
+    Grenze der Abo-Ampel auf der ausloesenden ``seite`` (``oben``/``unten``,
+    Fix-Loop 2 F002). Ob erwaehnt wird, entscheidet allein
+    ``gelb_oder_schlechter`` (``_erwaehnt``)."""
+    from app.ampel import _mildeste_grenze, schwellen_aus_ampel
+    return _mildeste_grenze(schwellen_aus_ampel(ampel, metric_id), seite)
+
+
+def _first_and_worst(vals: list[tuple[float, datetime]], metric_id: str,
+                     *, ampel: dict, tz: "ZoneInfo"):
+    """Fix-Loop 2 (F002): Beginn = erste hervorgehobene Stunde (wie SMS
+    ``@h``), Spitze = schlimmster hervorgehobener Wert (``schlimmster_index``,
+    dieselbe Regel wie die SMS-Klammer) samt seiner Seite. Liefert
+    ``(first_hh, wert, hh, seite)`` oder ``None``."""
+    from app.ampel import ampel_schaerfe, ampel_seite, gelb_oder_schlechter, schlimmster_index
+    getroffen = [(v, ts) for v, ts in sorted(vals, key=lambda x: x[1])
+                 if gelb_oder_schlechter(ampel, metric_id, v)]
+    if not getroffen:
+        return None
+    wert, ts = getroffen[schlimmster_index(
+        [v for v, _ in getroffen], lambda v: ampel_schaerfe(ampel, metric_id, v))]
+    return (local_hour(getroffen[0][1], tz), wert, local_hour(ts, tz),
+            ampel_seite(ampel, metric_id, wert))
+
+
+def _erwaehnt(metric_id: str, *, ampel: dict):
+    """Issue #2792 S1c-4b (AC-27, §5 Punkt 9): EIN Praedikat fuer Mail-
+    Erwaehnung und Kurzkanal-Hervorhebung -- gelb oder schlechter, beidseitig.
+    ``sms_threshold``/``DEFAULTS`` wirken nicht mehr (E1)."""
+    from app.ampel import gelb_oder_schlechter
+    return lambda v: gelb_oder_schlechter(ampel, metric_id, v)
+
+
+def _first_and_peak(vals: list[tuple[float, datetime]], erwaehnt,
                     *, tz: "ZoneInfo"):
     """Issue #795/RC0: SMS-Peak-Logik (render_threshold_peak_value-Muster).
 
-    Erste Stunde >= threshold = „ab"; Tagesspitze (max value, bei Gleichstand
-    fruehste Stunde) = „Spitze". Liefert (first_hh, peak_val, peak_hh) als
-    lokale Stunden — oder None, wenn keine Stunde die Schwelle erreicht.
+    Erste Stunde, fuer die ``erwaehnt(wert)`` gilt = „ab"; Tagesspitze (max
+    value, bei Gleichstand fruehste Stunde) = „Spitze". Liefert
+    (first_hh, peak_val, peak_hh) als lokale Stunden — oder None, wenn keine
+    Stunde erwaehnt wird.
     """
     by_hour = sorted(vals, key=lambda x: x[1])
-    first = next(((v, ts) for v, ts in by_hour if v >= threshold), None)
+    first = next(((v, ts) for v, ts in by_hour if erwaehnt(v)), None)
     if first is None:
         return None
     # Tagesspitze: max value, bei Gleichstand frueheste Stunde.
@@ -1610,17 +1634,18 @@ def _pill_for_metric(
 ) -> Optional[tuple[str, str]]:
     """Issue #795/RC0+RC5: (text, tone) pill je Metrik, analog SMS ausgeschrieben.
 
-    Klasse 1 (Ereignis): SMS-Erwaehnungsschwelle entscheidet Ereignis vs. ruhige
-    Klartext-Form; die FARBE/Stufe kommt aus ampel_dot(spitzenwert,
-    display_thresholds) (EIN Ampel-System mit der #759-Tabelle, AC-9), nie aus
-    der Erwaehnungsschwelle. Klasse 2 (Bereich): „min–max Einheit", neutral.
+    Klasse 1 (Ereignis): das Praedikat „gelb oder schlechter" der Abo-Ampel
+    (Issue #2792 S1c-4b, dasselbe wie in den Kurzkanaelen) entscheidet
+    Ereignis vs. ruhige Klartext-Form; die FARBE kommt aus derselben Ampel.
+    Klasse 2 (Bereich): „min–max Einheit", neutral.
+
+    ``sms_mention_thresholds`` ist seit S1c-4b ohne Wirkung (E1); der
+    Positionsparameter bleibt fuer bestehende Aufrufer.
     """
+    del sms_mention_thresholds  # E1: gespeicherte sms_threshold wirkt nicht mehr
     # Issue #1214 Scheibe 6: kanonische Ordnungsquelle statt lokalem Dict.
-    # Fix #1801 S2 AC-5: thunder_ampel_band ist die deklarierte SSoT
-    # Gewitterstufe -> Ampelband (ADR-0025) -- der Gewitter-Chip liest sie
-    # jetzt statt fest "ampel_red" zu liefern.
     from app.ampel import schwellen_aus_ampel
-    from output.metric_format import thunder_ampel_band, thunder_ordinal
+    from output.metric_format import thunder_ordinal
 
     # ---- Klasse 2 — Bereichs-/Kontext-Metriken (mit Uhrzeit, neutral) ----
     # Issue #1357: Temperatur ("8–11°C · Max 15:00") und gefuehlte Temperatur
@@ -1741,15 +1766,19 @@ def _pill_for_metric(
         vals = [(v, ts) for v, ts in vals if v is not None]
         if not vals:
             return None
-        thr = _sms_mention_threshold(metric_id, sms_mention_thresholds)
         peak_val = max(v for v, _ in vals)
         tone = ampel_stage_tone(peak_val, schwellen_aus_ampel(ampel, metric_id))
-        fp = _first_and_peak(vals, thr, tz=tz) if thr is not None else None
-        if fp is not None:
-            first_hh, pv, pk_hh = fp
-            text = t("mail.pille.wind_ereignis", lang, label=label, schwelle=int(thr),
-                     ab=f"{first_hh:02d}:00", spitze=int(pv), um=f"{pk_hh:02d}:00")
-            return (text, tone)
+        # Fix-Loop 2 (F002): Text und Ton folgen der ausloesenden Seite --
+        # untere Grenze ("<8 km/h", "min"), Spitze und Ton aus dem schlimmsten
+        # hervorgehobenen Wert; Beginn und Spitze wie SMS ``W6@9(3@12)``.
+        fw = _first_and_worst(vals, metric_id, ampel=ampel, tz=tz)
+        if fw is not None:
+            first_hh, wv, w_hh, seite = fw
+            thr = _mention_threshold(metric_id, ampel=ampel, seite=seite)
+            schluessel = "mail.pille.wind_ereignis" + ("_unten" if seite == "unten" else "")
+            text = t(schluessel, lang, label=label, schwelle=int(thr),
+                     ab=f"{first_hh:02d}:00", spitze=int(wv), um=f"{w_hh:02d}:00")
+            return (text, ampel_stage_tone(wv, schwellen_aus_ampel(ampel, metric_id)))
         # Issue #1331 F001: Keine Schwellenueberschreitung entspricht SMS "-";
         # bei Ziel-Datenluecke keine positive Entwarnung vortaeuschen.
         if has_gap:
@@ -1764,11 +1793,10 @@ def _pill_for_metric(
         vals = [(dp.precip_1h_mm or 0.0, dp.ts) for dp in all_dps]
         if not vals:
             return None
-        thr = _sms_mention_threshold("precipitation", sms_mention_thresholds)
         total = sum(v for v, _ in vals)
         peak_val = max(v for v, _ in vals)
         tone = ampel_stage_tone(peak_val, schwellen_aus_ampel(ampel, "precipitation"))
-        fp = _first_and_peak(vals, thr, tz=tz) if thr is not None else None
+        fp = _first_and_peak(vals, _erwaehnt("precipitation", ampel=ampel), tz=tz)
         if fp is not None:
             first_hh, _pv, _pk_hh = fp
             total_str = f"{total:.1f}".rstrip("0").rstrip(".")
@@ -1789,11 +1817,11 @@ def _pill_for_metric(
                 if dp.pop_pct is not None]
         if not vals:
             return None
-        thr = _sms_mention_threshold("rain_probability", sms_mention_thresholds)
+        thr = _mention_threshold("rain_probability", ampel=ampel, seite="oben")
         peak_val = max(v for v, _ in vals)
         tone = ampel_stage_tone(peak_val, schwellen_aus_ampel(ampel, "rain_probability"))
-        fp = _first_and_peak(vals, thr, tz=tz) if thr is not None else None
-        if fp is not None:
+        fp = _first_and_peak(vals, _erwaehnt("rain_probability", ampel=ampel), tz=tz)
+        if fp is not None and thr is not None:
             first_hh, pv, peak_hh = fp
             text = t("mail.pille.regenw_ereignis", lang, schwelle=int(thr),
                      ab=f"{first_hh:02d}:00", spitze=int(pv), um=f"{peak_hh:02d}:00")
@@ -1813,22 +1841,15 @@ def _pill_for_metric(
         first_thunder_ts = None
         peak_ts = None
         peak_dp = None
-        # Issue #1474b: die Erwaehnungsschwelle kommt aus derselben Quelle
-        # wie SMS/Telegram (Trip-Einstellung ?? DEFAULTS["TH:"] = 1.0, "ab
-        # leicht") -- nicht mehr fest an ThunderLevel.MED gebunden.
-        _mention_thr = _sms_mention_threshold("thunder", sms_mention_thresholds)
+        # Issue #2792 S1c-4b (§5 Punkt 9): Gewitter ist ordinal, erwaehnt
+        # wird ab „leicht" (gelb oder schlechter, P2) -- dasselbe Praedikat
+        # wie die Kurzkanaele; `sms_threshold`/`DEFAULTS` wirken nicht mehr.
+        from app.ampel import gewitter_gelb_oder_schlechter
         for dp in all_dps:
             lvl = dp.thunder_level
             if lvl is None:
                 continue
-            # Adversary-Befund F002 (Nachbesserung #1474b, PO-Freigabe
-            # 2026-08-04): eine Schwelle 0.0 ("ab kein") darf den Satz
-            # trotzdem niemals fuer ThunderLevel.NONE (Ordinal 0) ausloesen
-            # -- zusaetzlich zur Schwellenbedingung verlangen, dass
-            # ueberhaupt eine Gewitterstufe >= LOW vorliegt.
-            if (_mention_thr is not None and thunder_ordinal(lvl) >= _mention_thr
-                    and thunder_ordinal(lvl) >= thunder_ordinal(ThunderLevel.LOW)
-                    and first_thunder_ts is None):
+            if gewitter_gelb_oder_schlechter(lvl) and first_thunder_ts is None:
                 first_thunder_ts = dp.ts
             if thunder_ordinal(lvl) > thunder_ordinal(max_lvl):
                 max_lvl = lvl
@@ -1874,7 +1895,7 @@ def _pill_for_metric(
             # Fix #1801 S2 AC-5: Ton aus derselben SSoT wie die Stundentabelle
             # (thunder_ampel_band), nicht mehr fest "ampel_red" -- max_lvl ist
             # hier bereits die hoechste Stufe der Stunden.
-            _band = thunder_ampel_band(max_lvl)
+            _band = _thunder_band(max_lvl, ampel=ampel)
             _tone = f"ampel_{_band}" if _band else "ampel_red"
             # Issue #1493: die Stufe steckte bisher ausschliesslich im
             # Ampelton -- im Klartext, wo Farbe nicht ankommt, war sie damit
@@ -1911,13 +1932,16 @@ def _pill_for_metric(
                 if dp.visibility_m is not None]
         if not vals:
             return None
-        thr_km = _sms_mention_threshold("visibility")  # km
+        # Issue #2792 S1c-4b (§5 Punkt 5): Sicht aus der Ampel (untere Seite)
+        # statt des festen 2-km-Literals; erwaehnt wird ab gelb.
+        thr_m = _mention_threshold("visibility", ampel=ampel, seite="unten")
         min_v, min_ts_raw = min(vals, key=lambda x: x[0])
         min_km = min_v / 1000.0
         min_hh = local_hour(min_ts_raw, tz)
-        # Unterschreitung der Schwelle = Ereignis (orange/rot je nach Tiefe).
-        below = [(v, ts) for v, ts in vals if v < thr_km * 1000.0]
-        if below:
+        _ist = _erwaehnt("visibility", ampel=ampel)
+        below = [(v, ts) for v, ts in vals if _ist(v)]
+        if below and thr_m is not None:
+            thr_km = thr_m / 1000.0
             first_ts = min(below, key=lambda x: x[1])[1]
             first_hh = local_hour(first_ts, tz)
             tone = ampel_stage_tone(min_v, schwellen_aus_ampel(ampel, "visibility"))
@@ -1934,9 +1958,9 @@ def _pill_for_metric(
                 if dp.humidity_pct is not None]
         if not vals:
             return None
-        thr = _sms_mention_threshold("humidity")
+        thr = LUFTFEUCHTE_ERWAEHNUNG_AB_PCT
         peak_val = max(v for v, _ in vals)
-        fp = _first_and_peak(vals, thr, tz=tz) if thr is not None else None
+        fp = _first_and_peak(vals, lambda v: v >= thr, tz=tz)
         # Fix #1801 S2 AC-7: humidity fuehrt im Katalog KEINE display_thresholds
         # -- der Chip bleibt deshalb IMMER neutral, unabhaengig vom Wert (Regel:
         # Schwellen vorhanden -> Ampelfarbe, sonst neutral), analog Wolken/
@@ -1994,12 +2018,8 @@ def build_metrics_summary_pills(
         Config-Eintraege und trug keine Absicht; Katalogordnung war die
         stabilere Wahl. Seit die Eingabe eine Nutzerabsicht traegt, verwirft
         die Katalogordnung sie.
-    sms_mention_thresholds: dict[metric_id -> float] (Issue #1474b) —
-        pro Trip eingestellte Erwaehnungsschwellen (aus `MetricConfig.
-        sms_threshold`), im `metric_id`-Raum. Gelesen von den Zweigen
-        Wind/Boeen/Regen/Regenwahrsch./Gewitter in `_pill_for_metric` (Issue
-        #2422 S3: vorher nur Gewitter); ohne Eintrag gilt der `DEFAULTS`-
-        Fallback aus `_sms_mention_threshold`.
+    sms_mention_thresholds: ohne Wirkung seit Issue #2792 S1c-4b (E1) --
+        erwaehnt wird nach dem Praedikat „gelb oder schlechter" der Ampel.
     tz: local timezone for hour formatting.
     night_weather: Issue #1317 / Epic #1319 — Rohdaten Ankunft→06:00 am Ziel;
         None = fail-soft, reine Segment-Fensterung (AC-9). Nur die Wert-Pillen

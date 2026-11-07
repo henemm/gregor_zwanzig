@@ -5,6 +5,7 @@ Heute: Compare-Mail mischt EM DASH "—" (Uebersicht, Tabellen, Warn-Zelle)
 mit EN DASH "–" (Ausblick). Echte DTOs, echter Renderer, kein Mock.
 """
 from __future__ import annotations
+from tests.helpers.ampel_allgemein import PRESET_ALLGEMEIN
 from app.ampel import resolve_ampel
 
 import re
@@ -40,7 +41,7 @@ def _result():
 def test_keine_zelle_oder_span_besteht_nur_aus_em_dash(lang):
     from output.renderers.email.compare_html import render_compare_html
 
-    html = render_compare_html(_result(), outlook_enabled=True, lang=lang)
+    html = render_compare_html(_result(), outlook_enabled=True, lang=lang, preset=PRESET_ALLGEMEIN)
     nur_em = re.findall(rf"<(?:td|span|th)[^>]*>\s*{EM}\s*</(?:td|span|th)>", html)
     assert nur_em == [], f"{len(nur_em)} Platzhalter-Zellen mit EM DASH"
     assert re.search(rf">\s*{EN}\s*<", html), "EN-DASH-Platzhalter fehlt ganz"
@@ -65,7 +66,7 @@ def test_compare_mail_enthaelt_keinen_em_dash(lang):
     nirgends mehr den EM DASH -- auch nicht als Teil eines Zelltexts."""
     from output.renderers.email.compare_html import render_compare_html
 
-    html = render_compare_html(_result(), outlook_enabled=True, lang=lang)
+    html = render_compare_html(_result(), outlook_enabled=True, lang=lang, preset=PRESET_ALLGEMEIN)
     assert EM not in html
 
 
@@ -86,7 +87,7 @@ def test_validator_akzeptiert_en_dash_als_fehlwert(lang):
     from output.renderers.email.compare_html import render_compare_html
 
     mod = _load_validator()
-    html = render_compare_html(_result(), outlook_enabled=True, lang=lang)
+    html = render_compare_html(_result(), outlook_enabled=True, lang=lang, preset=PRESET_ALLGEMEIN)
     assert mod.extract_table_rows(html, lang), "Uebersichtstabelle nicht gefunden"
     assert mod.validate_format(html, lang=lang) == []
     assert mod.validate_plausibility(html, lang=lang) == []

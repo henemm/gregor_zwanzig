@@ -27,6 +27,7 @@ Test leckte, erzeugte dort ein falsches Rot oder ein falsches Gruen.
 Pfadregel #1409: Pruefling relativ zur eigenen Testdatei aufloesen.
 """
 from __future__ import annotations
+from tests.helpers.ampel_allgemein import AMPEL_ALLGEMEIN
 from app.ampel import resolve_ampel
 
 import contextlib
@@ -147,7 +148,7 @@ def _ausblick_kopf(metrics: list[str]) -> list[str]:
         thunder_level_max=ThunderLevel.MED,
     )
     zeile = build_outlook_row(summary, points=[], weekday="Mo", tz=_UTC,
-                              metrics=metrics, context="vergleich")
+                              metrics=metrics, context="vergleich", ampel=AMPEL_ALLGEMEIN)
     return _th_texte(render_outlook_table([zeile], show_acc=False, metrics=metrics, ampel=resolve_ampel(None)))
 
 

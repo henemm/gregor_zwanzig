@@ -20,6 +20,7 @@ Keine Mocks/patch()/MagicMock — echte SegmentWeatherData, echter
 SMSTripFormatter, echte TripReportFormatter-Pipeline (Telegram-Bubbles).
 """
 from __future__ import annotations
+from tests.helpers.ampel_allgemein import AMPEL_ALLGEMEIN
 
 import sys
 from datetime import datetime, timezone
@@ -77,7 +78,7 @@ def _render_sms(hail_flag) -> str:
 
     return SMSTripFormatter().format_sms(
         [_make_segment(hail_flag)], stage_name="Etappe1",
-        report_type="evening", tz=_TZ, max_length=160,
+        report_type="evening", tz=_TZ, max_length=160, ampel=AMPEL_ALLGEMEIN,
     )
 
 

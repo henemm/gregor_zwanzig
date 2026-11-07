@@ -42,6 +42,7 @@ Nachkommastellen sind ein reines Testwerkzeug, um den Grenzfall
 deterministisch zu treffen, ohne von der realen Tageszeit abzuhaengen.
 """
 from __future__ import annotations
+from tests.helpers.ampel_allgemein import AMPEL_ALLGEMEIN
 
 import json
 import re
@@ -362,7 +363,7 @@ def test_ac2_langform_email_und_telegram_bleiben_zeichengleich_WAECHTER():
     )
 
     tcp = TripCommandProcessor()
-    fmt = _metric_formatter(VIS)
+    fmt = _metric_formatter(VIS, ampel=AMPEL_ALLGEMEIN)
     email = tcp._format_drilldown(res, VIS.label_de, fmt, TZ, with_emoji=False)
     telegram = tcp._format_drilldown(res, VIS.label_de, fmt, TZ, with_emoji=True)
 
@@ -496,7 +497,7 @@ def test_ac5_windrichtung_kurzform_zeigt_himmelsrichtung_langform_unveraendert()
         "10:00  NW"
     )
     tcp = TripCommandProcessor()
-    fmt = _metric_formatter(WDIR)
+    fmt = _metric_formatter(WDIR, ampel=AMPEL_ALLGEMEIN)
     for label, with_emoji in (("email", False), ("telegram", True)):
         lang = tcp._format_drilldown(res, WDIR.label_de, fmt, TZ, with_emoji=with_emoji)
         assert lang == erwartet_lang, (
@@ -547,7 +548,7 @@ def test_ac5_gewitterstufen_kurzform_zeigt_stufenbuchstaben_langform_unveraender
     )
     tcp = TripCommandProcessor()
     lang = tcp._format_drilldown(
-        res, THDR.label_de, _metric_formatter(THDR), TZ, with_emoji=False,
+        res, THDR.label_de, _metric_formatter(THDR, ampel=AMPEL_ALLGEMEIN), TZ, with_emoji=False,
     )
     assert lang == erwartet_lang, (
         f"AC-5/AC-2: die Langform darf sich durch die Kurzform-Korrektur "
@@ -1068,7 +1069,7 @@ def test_ac14_langform_und_kurzform_teilen_dieselbe_gruppierung():
         (16, 5000.0),
     ])
     tcp = TripCommandProcessor()
-    fmt = _metric_formatter(VIS)
+    fmt = _metric_formatter(VIS, ampel=AMPEL_ALLGEMEIN)
     langform = tcp._format_drilldown(res, VIS.label_de, fmt, TZ, with_emoji=False)
     kurzform = _kurzform(res, VIS)
 

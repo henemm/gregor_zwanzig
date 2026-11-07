@@ -9,6 +9,7 @@ TDD RED. Nachweis ueber den echten Renderer
 Dateiinhalt-Pruefungen — gelesen wird ausschliesslich die gerenderte Zeile.
 """
 from __future__ import annotations
+from tests.helpers.ampel_allgemein import AMPEL_ALLGEMEIN
 
 import pytest
 
@@ -25,7 +26,7 @@ def _sms(report_type: str, *, max_length: int = 160) -> str:
         stage_name=F.STAGE_NAME,
         report_type=report_type,
         tz=F.TZ,
-        night_weather=F.night_weather(),
+        night_weather=F.night_weather(), ampel=AMPEL_ALLGEMEIN,
     )
 
 

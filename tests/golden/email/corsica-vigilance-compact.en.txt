@@ -6,8 +6,8 @@ Corsica E5
 == Metrics overview ==
   18-20C - Max 17:00
   feels 12.0-13.0C - Max 17:00
-  Wind >10 km/h from 04:00 - max 19 (17:00)
-  !!! Wind gusts >20 km/h from 04:00 - max 85 (12:00)
+  Wind max 19 km/h (17:00)
+  !!! Wind gusts >30 km/h from 04:00 - max 85 (12:00)
   !! Rain from 12:00 - 8 mm
   !!! Thunderstorm high from 04:00 - strongest 04:00
   50% cloud cover - Max 12:00

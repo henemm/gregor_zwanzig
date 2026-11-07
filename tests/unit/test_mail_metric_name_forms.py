@@ -35,6 +35,7 @@ verstellen und schauen, ob er in der Mail ankommt).
 SPEC: docs/specs/modules/fix_1453_namensformen.md (AC-1..AC-5, AC-8)
 """
 from __future__ import annotations
+from tests.helpers.ampel_allgemein import PRESET_ALLGEMEIN
 from app.ampel import resolve_ampel
 
 import dataclasses
@@ -240,7 +241,7 @@ def test_compare_hour_table_keeps_the_english_short_forms():
     html = render_compare_html(
         _result(),
         enabled_metrics=resolve_enabled_metrics(ALL_OVERVIEW_SELECTION),
-        hourly_metrics=[m["key"] for m in HOUR_METRICS],
+        hourly_metrics=[m["key"] for m in HOUR_METRICS], preset=PRESET_ALLGEMEIN,
     )
     header = _html_hour_header(html)
 
@@ -308,7 +309,7 @@ def test_compare_hour_table_shows_dew_and_press():
     html = render_compare_html(
         _result(),
         enabled_metrics=resolve_enabled_metrics(["temp_max_c"]),
-        hourly_metrics=["t2m_c", "dewpoint_c", "pressure_msl_hpa"],
+        hourly_metrics=["t2m_c", "dewpoint_c", "pressure_msl_hpa"], preset=PRESET_ALLGEMEIN,
     )
 
     assert _html_hour_header(html) == ["Zeit", "Temp", "Dew", "Press"], (
@@ -341,7 +342,7 @@ def test_overview_rows_show_the_written_out_german_names():
     dort der ausgeschriebene deutsche Name der Wettergroesse statt der
     englischen Kurzform."""
     html = render_compare_html(
-        _result(), enabled_metrics=resolve_enabled_metrics(ALL_OVERVIEW_SELECTION),
+        _result(), enabled_metrics=resolve_enabled_metrics(ALL_OVERVIEW_SELECTION), preset=PRESET_ALLGEMEIN,
     )
 
     assert _html_overview_labels(html) == EXPECTED_OVERVIEW_LABELS, (
@@ -357,7 +358,7 @@ def test_plaintext_overview_shows_the_same_german_names_as_the_html_part():
     result = _result()
     enabled = resolve_enabled_metrics(ALL_OVERVIEW_SELECTION)
 
-    html_labels = _html_overview_labels(render_compare_html(result, enabled_metrics=enabled))
+    html_labels = _html_overview_labels(render_compare_html(result, enabled_metrics=enabled, preset=PRESET_ALLGEMEIN))
     plain_labels = _plain_overview_labels(
         render_comparison_text(result, enabled_metrics=enabled, preset=None)
     )
@@ -382,10 +383,10 @@ def test_single_evaluation_shows_the_plain_german_name():
     result = _result()
 
     nur_max = _html_overview_labels(
-        render_compare_html(result, enabled_metrics=resolve_enabled_metrics(["temp_max_c"]))
+        render_compare_html(result, enabled_metrics=resolve_enabled_metrics(["temp_max_c"]), preset=PRESET_ALLGEMEIN)
     )
     nur_min = _html_overview_labels(
-        render_compare_html(result, enabled_metrics=resolve_enabled_metrics(["temp_min_c"]))
+        render_compare_html(result, enabled_metrics=resolve_enabled_metrics(["temp_min_c"]), preset=PRESET_ALLGEMEIN)
     )
 
     assert nur_max == ["Amtliche Warnungen", "Temperatur"], nur_max
@@ -403,7 +404,7 @@ def test_two_evaluations_of_the_same_quantity_get_the_german_evaluation_word():
         "temp_max_c", "temp_min_c", "wind_chill_min_c", "wind_chill_max_c",
     ])
 
-    labels = _html_overview_labels(render_compare_html(result, enabled_metrics=enabled))
+    labels = _html_overview_labels(render_compare_html(result, enabled_metrics=enabled, preset=PRESET_ALLGEMEIN))
 
     assert labels == [
         "Amtliche Warnungen",
@@ -450,7 +451,7 @@ def test_overview_label_follows_the_register_not_a_typed_copy(monkeypatch):
 
     # Gegenprobe zuerst: unveraendertes Register -> Registername in der Zeile.
     assert "Luftfeuchtigkeit" in _html_overview_labels(
-        render_compare_html(result, enabled_metrics=enabled)
+        render_compare_html(result, enabled_metrics=enabled, preset=PRESET_ALLGEMEIN)
     )
 
     monkeypatch.setitem(
@@ -459,7 +460,7 @@ def test_overview_label_follows_the_register_not_a_typed_copy(monkeypatch):
     )
 
     html_labels = _html_overview_labels(
-        render_compare_html(result, enabled_metrics=enabled)
+        render_compare_html(result, enabled_metrics=enabled, preset=PRESET_ALLGEMEIN)
     )
     plain_labels = _plain_overview_labels(
         render_comparison_text(result, enabled_metrics=enabled, preset=None)

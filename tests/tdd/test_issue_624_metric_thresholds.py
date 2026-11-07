@@ -23,6 +23,7 @@ echter Loader-Parse.
 """
 
 from __future__ import annotations
+from tests.helpers.ampel_allgemein import AMPEL_ALLGEMEIN
 
 from datetime import datetime, timezone
 from zoneinfo import ZoneInfo
@@ -85,16 +86,17 @@ def test_ac1_metric_id_to_sms_symbol_mapping():
     assert SMS_SYMBOL_BY_METRIC["thunder"] == "TH:"
 
 
-def test_ac1_configured_threshold_shifts_first_crossing():
-    """GIVEN Wind-Schwellwert 25 km/h WHEN Kurzform gerendert (Wind 18@10, 28@14, 40@16)
-    THEN erste-Überschreitung = 14 Uhr (W28@14...), NICHT der Default 10 Uhr (W18@10)."""
+def test_ac1_configured_threshold_shifts_first_crossing_no_more():
+    """Issue #2792 S1c-4b (E1, AC-19 e) -- umgekehrt: ein Wind-Schwellwert
+    wirkt nicht mehr; ``format_sms`` nimmt keinen ``thresholds``-Parameter an,
+    die erste Hervorhebung ist die erste Stunde ab Gelb der Ampel."""
+    import pytest
     from src.output.renderers.sms_trip import SMSTripFormatter
-    out = SMSTripFormatter().format_sms(
-        _segments(), stage_name="T", report_type="evening",
-        tz=ZoneInfo("UTC"), max_length=4000, thresholds={"W": 25.0},
-    )
-    assert "W28@14" in out, f"erwartete erste-Überschreitung 14 Uhr, war: {out!r}"
-    assert "W18@10" not in out, f"Default-Schwellwert fälschlich aktiv: {out!r}"
+    with pytest.raises(TypeError):
+        SMSTripFormatter().format_sms(
+            _segments(), stage_name="T", report_type="evening",
+            tz=ZoneInfo("UTC"), max_length=4000, thresholds={"W": 25.0}, ampel=AMPEL_ALLGEMEIN,
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -102,14 +104,16 @@ def test_ac1_configured_threshold_shifts_first_crossing():
 # ---------------------------------------------------------------------------
 
 def test_ac2_default_baseline_unchanged():
-    """GIVEN keine Schwellwert-Konfiguration WHEN Kurzform gerendert THEN bestehendes
-    Default-Verhalten (W18@10(40@16)) — Guard, muss vor UND nach Fix grün sein."""
+    """Issue #2792 S1c-4b (E1, AC-19 e) -- umgekehrt: statt des Standardwerts
+    10 km/h (frueher W18@10(40@16)) hebt die Ampel „allgemein" ab Gelb 30 km/h
+    hervor: 18 und 28 bleiben unerwaehnt, erste Stunde ab Gelb = Spitze 40@16."""
     from src.output.renderers.sms_trip import SMSTripFormatter
     out = SMSTripFormatter().format_sms(
         _segments(), stage_name="T", report_type="evening",
-        tz=ZoneInfo("UTC"), max_length=4000,
+        tz=ZoneInfo("UTC"), max_length=4000, ampel=AMPEL_ALLGEMEIN,
     )
-    assert "W18@10(40@16)" in out
+    assert " W40@16 " in f"{out} ", out
+    assert "W18@10" not in out, out
 
 
 # ---------------------------------------------------------------------------

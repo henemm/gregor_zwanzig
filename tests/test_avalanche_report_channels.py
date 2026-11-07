@@ -9,6 +9,7 @@ auf aufgezeichneten Bulletins (Stufe 5: abgeleitete Datei, siehe README der Fixt
 SMS-Anteil von AC-19: Zeilen mit `sms` im Namen; alle uebrigen SMS-Faelle in `test_avalanche_report_sms.py`.
 """
 from __future__ import annotations
+from tests.helpers.ampel_allgemein import AMPEL_ALLGEMEIN
 
 import re
 from datetime import datetime, timezone
@@ -320,7 +321,7 @@ def _briefing_fuer(lat, lon, now, source_holder):
     html = render_trip_mail(alerts, lat=lat, lon=lon)
     seg = _segment(alerts)
     seg.official_alerts_unavailable = unavailable
-    sms = SMSTripFormatter().format_sms([seg], stage_name="Etappe 5", tz=_TZ, disabled_specs=_DISABLE_NEW_14)
+    sms = SMSTripFormatter().format_sms([seg], stage_name="Etappe 5", tz=_TZ, disabled_specs=_DISABLE_NEW_14, ampel=AMPEL_ALLGEMEIN)
     return alerts, unavailable, html, sms
 
 

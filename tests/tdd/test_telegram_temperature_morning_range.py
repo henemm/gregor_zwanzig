@@ -20,7 +20,10 @@ from output.renderers.trip_report import TripReportFormatter
 
 from tests.tdd import _min_temp_felt_fixtures as F
 
-_SPAN = re.compile(r"^T (?P<lo>-?\d+\.\d)-(?P<hi>-?\d+\.\d)@(?P<hour>\d{1,2})$")
+# Issue #2792 S1c-4b (AC-1, §5): `@h` nur an einer Haelfte, die nach der
+# Ampel gelb oder schlechter ist; 3..20 °C sind bei „allgemein" beidseitig
+# gruen -- die Spanne steht deshalb ohne Stunde.
+_SPAN = re.compile(r"^T (?P<lo>-?\d+\.\d)-(?P<hi>-?\d+\.\d)$")
 
 
 def _report(report_type: str):
@@ -65,8 +68,8 @@ class TestAC12MeasuredOverviewShowsRangeInMorning:
             f"Obergrenze ist {m.group('hi')} statt {F.HIKE_MAX_C}.\n"
             f"Zeile: {line!r}"
         )
-        assert int(m.group("hour")) == F.WARM_HOUR, (
-            f"Spitzenstunde ist {m.group('hour')} statt {F.WARM_HOUR}.\n"
+        assert "@" not in line, (
+            f"Gruene Haelften tragen keine Stunde (#2792 AC-1).\n"
             f"Zeile: {line!r}"
         )
 

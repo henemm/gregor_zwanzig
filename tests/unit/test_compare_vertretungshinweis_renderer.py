@@ -19,6 +19,7 @@ Beobachtungspunkt: das Rendererergebnis (dort WIRKT die Zusicherung); der
 erwartete Klartext kommt aus der echten ``build_fallback_lines``.
 """
 from __future__ import annotations
+from tests.helpers.ampel_allgemein import PRESET_ALLGEMEIN
 
 import html as _html
 from datetime import date, datetime, timedelta, timezone
@@ -90,6 +91,7 @@ def _zeilen(meta, lang="de") -> list:
 
 def _html_mail(result, **kw) -> str:
     from output.renderers.email.compare_html import render_compare_html
+    kw.setdefault("preset", PRESET_ALLGEMEIN)
     return _html.unescape(render_compare_html(result, **kw))
 
 
@@ -263,8 +265,8 @@ def test_ac8_render_compare_email_reicht_flag_an_html_und_text_durch():
 
     res = _zwei_orte_zweiter_betroffen()
     zeile = f"Seefeld: {_zeilen(_wetter_meta())[0]}"
-    h0, t0 = render_compare_email(res)
-    h1, t1 = render_compare_email(res, show_fallback_notice=True)
+    h0, t0 = render_compare_email(res, preset=PRESET_ALLGEMEIN)
+    h1, t1 = render_compare_email(res, show_fallback_notice=True, preset=PRESET_ALLGEMEIN)
     assert zeile not in _html.unescape(h0) and zeile not in t0
     assert zeile in _html.unescape(h1) and zeile in t1
 

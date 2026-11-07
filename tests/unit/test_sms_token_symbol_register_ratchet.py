@@ -29,6 +29,7 @@ nie etwas geprueft hatten):
 Regel-Budget (CLAUDE.md): Pruefdatum 2026-10-30.
 """
 from __future__ import annotations
+from tests.helpers.ampel_allgemein import AMPEL_ALLGEMEIN
 
 import ast
 import dataclasses
@@ -345,7 +346,7 @@ def _extended_block_symbols() -> set[str]:
     line = build_token_line(
         NormalizedForecast(days=(day,)),
         build_extended_metric_specs(set(SMS_NULLFORM_METRIC_IDS)),
-        report_type="evening", stage_name="E1",
+        report_type="evening", stage_name="E1", ampel=AMPEL_ALLGEMEIN,
     )
     erwartet = {SMS_SYMBOL_BY_METRIC[mid] for mid in SMS_NULLFORM_METRIC_IDS}
     return {t.symbol for t in line.tokens} & erwartet
@@ -900,7 +901,7 @@ def test_builder_positionaltoken_literale_noch_nicht_auf_fix_1926_nachgezogen():
     line = build_token_line(
         NormalizedForecast(days=(day,)),
         [MetricSpec(symbol="D", enabled=False), MetricSpec(symbol="FD", enabled=False)],
-        report_type="evening", stage_name="E1",
+        report_type="evening", stage_name="E1", ampel=AMPEL_ALLGEMEIN,
     )
     symbole = {t.symbol for t in line.tokens}
 

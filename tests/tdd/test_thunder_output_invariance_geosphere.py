@@ -27,6 +27,7 @@ beim Bauen des Vergleichsfalls (unerwartetes Keyword-Argument).
 Testart: Kern-Schicht, keine Netzzugriffe, keine Mocks.
 """
 from __future__ import annotations
+from tests.helpers.ampel_allgemein import AMPEL_ALLGEMEIN, PRESET_ALLGEMEIN
 
 import sys
 from datetime import date, datetime, timezone
@@ -113,7 +114,7 @@ def _segment(mit_neuen_feldern: bool) -> SegmentWeatherData:
 def _sms(mit_neuen_feldern: bool) -> str:
     return SMSTripFormatter().format_sms(
         [_segment(mit_neuen_feldern)],
-        stage_name="Karnisch-1", report_type="morning", tz=_TZ,
+        stage_name="Karnisch-1", report_type="morning", tz=_TZ, ampel=AMPEL_ALLGEMEIN,
     )
 
 
@@ -169,8 +170,8 @@ def test_ac9_compare_mail_bleibt_mit_und_ohne_die_neuen_geosphere_rohwerte_ident
     Klartext) gerendert wird, Then sind beide Teile zeichengleich."""
     from output.renderers.comparison import render_compare_email
 
-    html_ohne, text_ohne = render_compare_email(_compare_result(False))
-    html_mit, text_mit = render_compare_email(_compare_result(True))
+    html_ohne, text_ohne = render_compare_email(_compare_result(False), preset=PRESET_ALLGEMEIN)
+    html_mit, text_mit = render_compare_email(_compare_result(True), preset=PRESET_ALLGEMEIN)
     assert text_ohne.strip(), "Compare-Klartext ist leer -- Vergleich pruefte nichts"
     assert html_mit == html_ohne, "Compare-Mail-HTML aendert sich durch die GeoSphere-Rohwerte"
     assert text_mit == text_ohne, "Compare-Mail-Klartext aendert sich durch die GeoSphere-Rohwerte"

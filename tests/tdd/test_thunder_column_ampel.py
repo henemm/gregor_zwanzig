@@ -18,6 +18,7 @@ Keine Mocks/patch/MagicMock -- echte `ForecastDataPoint`-/`SegmentWeatherData`-
 /`LocationResult`-Objekte, echte Renderer, kein Netz.
 """
 from __future__ import annotations
+from tests.helpers.ampel_allgemein import PRESET_ALLGEMEIN
 
 import re
 from datetime import date, datetime, timezone
@@ -536,7 +537,7 @@ def test_ac7_ortsvergleich_unveraendertes_label_und_ampel(level, expected_word, 
     from output.renderers.email.compare_html import render_compare_html
 
     result = _compare_location(level)
-    html = render_compare_html(result)
+    html = render_compare_html(result, preset=PRESET_ALLGEMEIN)
     cell = _compare_thunder_cell(html)
     assert expected_word in cell, (
         f"AC-7: Stufe {level!r} muss weiterhin das Wort {expected_word!r} "

@@ -11,6 +11,7 @@ PHASE: TDD RED — all tests MUST FAIL with current code.
 No mocks. E-Mail-E2E uses real Gmail SMTP + IMAP via TestRealGmailE2E pattern.
 """
 from __future__ import annotations
+from tests.helpers.ampel_allgemein import AMPEL_ALLGEMEIN
 
 from datetime import datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
@@ -29,7 +30,7 @@ class TestConfidenceSymbolMapping:
         from output.tokens.builder import build_token_line
         from output.tokens.dto import DailyForecast, NormalizedForecast
         fc = NormalizedForecast(days=(DailyForecast(confidence_pct_min=80),))
-        line = build_token_line(fc, None, report_type="morning", stage_name="Stage")
+        line = build_token_line(fc, None, report_type="morning", stage_name="Stage", ampel=AMPEL_ALLGEMEIN)
         c_tokens = [t for t in line.tokens if t.symbol == "C"]
         assert len(c_tokens) == 0  # C-Token nicht mehr emittiert
 
@@ -37,7 +38,7 @@ class TestConfidenceSymbolMapping:
         from output.tokens.builder import build_token_line
         from output.tokens.dto import DailyForecast, NormalizedForecast
         fc = NormalizedForecast(days=(DailyForecast(confidence_pct_min=60),))
-        line = build_token_line(fc, None, report_type="morning", stage_name="Stage")
+        line = build_token_line(fc, None, report_type="morning", stage_name="Stage", ampel=AMPEL_ALLGEMEIN)
         c_tokens = [t for t in line.tokens if t.symbol == "C"]
         assert len(c_tokens) == 0
 
@@ -45,7 +46,7 @@ class TestConfidenceSymbolMapping:
         from output.tokens.builder import build_token_line
         from output.tokens.dto import DailyForecast, NormalizedForecast
         fc = NormalizedForecast(days=(DailyForecast(confidence_pct_min=35),))
-        line = build_token_line(fc, None, report_type="morning", stage_name="Stage")
+        line = build_token_line(fc, None, report_type="morning", stage_name="Stage", ampel=AMPEL_ALLGEMEIN)
         c_tokens = [t for t in line.tokens if t.symbol == "C"]
         assert len(c_tokens) == 0
 
@@ -53,7 +54,7 @@ class TestConfidenceSymbolMapping:
         from output.tokens.builder import build_token_line
         from output.tokens.dto import DailyForecast, NormalizedForecast
         fc = NormalizedForecast(days=(DailyForecast(confidence_pct_min=None),))
-        line = build_token_line(fc, None, report_type="morning", stage_name="Stage")
+        line = build_token_line(fc, None, report_type="morning", stage_name="Stage", ampel=AMPEL_ALLGEMEIN)
         c_tokens = [t for t in line.tokens if t.symbol == "C"]
         assert len(c_tokens) == 0
 
@@ -76,7 +77,7 @@ class TestTokenBuilderConfidenceToken:
         from output.tokens.builder import build_token_line
 
         fc = self._build_forecast(80)
-        line = build_token_line(fc, None, report_type="morning", stage_name="Stage")
+        line = build_token_line(fc, None, report_type="morning", stage_name="Stage", ampel=AMPEL_ALLGEMEIN)
         c_tokens = [t for t in line.tokens if t.symbol == "C"]
         assert len(c_tokens) == 0
 
@@ -85,7 +86,7 @@ class TestTokenBuilderConfidenceToken:
         from output.tokens.builder import build_token_line
 
         fc = self._build_forecast(60)
-        line = build_token_line(fc, None, report_type="morning", stage_name="Stage")
+        line = build_token_line(fc, None, report_type="morning", stage_name="Stage", ampel=AMPEL_ALLGEMEIN)
         c_tokens = [t for t in line.tokens if t.symbol == "C"]
         assert len(c_tokens) == 0
 
@@ -94,7 +95,7 @@ class TestTokenBuilderConfidenceToken:
         from output.tokens.builder import build_token_line
 
         fc = self._build_forecast(35)
-        line = build_token_line(fc, None, report_type="morning", stage_name="Stage")
+        line = build_token_line(fc, None, report_type="morning", stage_name="Stage", ampel=AMPEL_ALLGEMEIN)
         c_tokens = [t for t in line.tokens if t.symbol == "C"]
         assert len(c_tokens) == 0
 
@@ -102,7 +103,7 @@ class TestTokenBuilderConfidenceToken:
         from output.tokens.builder import build_token_line
 
         fc = self._build_forecast(None)
-        line = build_token_line(fc, None, report_type="morning", stage_name="Stage")
+        line = build_token_line(fc, None, report_type="morning", stage_name="Stage", ampel=AMPEL_ALLGEMEIN)
         c_tokens = [t for t in line.tokens if t.symbol == "C"]
         assert len(c_tokens) == 0
 
@@ -136,7 +137,7 @@ class TestSMSLengthWithConfidence:
             for i in range(7)
         )
         fc = NormalizedForecast(days=days)
-        line = build_token_line(fc, None, report_type="morning", stage_name="LongTrip")
+        line = build_token_line(fc, None, report_type="morning", stage_name="LongTrip", ampel=AMPEL_ALLGEMEIN)
         rendered = line.render(max_length=160)
         assert len(rendered) <= 160, (
             f"SMS exceeds 160 chars: {len(rendered)} — {rendered!r}"

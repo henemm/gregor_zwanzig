@@ -17,6 +17,7 @@ erst nach Deploy im Post-Push-Workflow gegen die echte IMAP-Mail erbracht
 SPEC: docs/specs/modules/issue_1108_email_spec_validator_v2.md
 """
 from __future__ import annotations
+from tests.helpers.ampel_allgemein import PRESET_ALLGEMEIN
 
 import importlib.util
 import re
@@ -98,6 +99,7 @@ def _make_three_location_result(*, hourly_names: list[str] | None = None) -> Com
 
 def _render_v2(**kwargs) -> str:
     result = _make_three_location_result()
+    kwargs.setdefault("preset", PRESET_ALLGEMEIN)
     return render_compare_html(result, profile=ActivityProfile.ALLGEMEIN, **kwargs)
 
 
@@ -184,7 +186,7 @@ def test_ac3_fehlende_stundentabelle_fuer_gelisteten_ort_wird_benannt():
     # bekommt aber keine Stundentabelle (hourly_data leer).
     html = _render_v2()
     result_no_frejus_hours = _make_three_location_result(hourly_names=["Collobrières", "Marseille"])
-    html = render_compare_html(result_no_frejus_hours, profile=ActivityProfile.ALLGEMEIN)
+    html = render_compare_html(result_no_frejus_hours, profile=ActivityProfile.ALLGEMEIN, preset=PRESET_ALLGEMEIN)
 
     errors = mod.validate_structure(html)
 
@@ -308,7 +310,7 @@ def _make_two_named_location_result(name_a: str, name_b: str) -> ComparisonResul
 def test_f001_ortsnamen_mit_score_winner_teilstring_bleiben_fehlerfrei():
     mod = _load_validator()
     result = _make_two_named_location_result("Scoresbysund", "Gewinnerort")
-    html = render_compare_html(result, profile=ActivityProfile.ALLGEMEIN)
+    html = render_compare_html(result, profile=ActivityProfile.ALLGEMEIN, preset=PRESET_ALLGEMEIN)
 
     errors = mod.validate_structure(html)
 
@@ -360,7 +362,7 @@ def _make_duplicate_name_result(*, truncate_second: bool) -> str:
         locations=locations, time_window=(9, 16),
         target_date=date(2026, 7, 8), created_at=datetime(2026, 7, 8, 4, 1),
     )
-    html = render_compare_html(result, profile=ActivityProfile.ALLGEMEIN)
+    html = render_compare_html(result, profile=ActivityProfile.ALLGEMEIN, preset=PRESET_ALLGEMEIN)
     if not truncate_second:
         return html
 

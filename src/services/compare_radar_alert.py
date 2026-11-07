@@ -427,7 +427,7 @@ class CompareRadarAlertService:
             entities=entities, effective_channels=allowed, mail_sink=self._mail_sink,
             cooldown_display=_format_cooldown_display(cooldown_minutes, lang=self._lang),
             telegram_style=effective_compare_telegram_style(preset),
-            preset=preset,  # Issue #2792 S1c-4a (Wirkung erst in 4b)
+            preset=preset,  # Issue #2792 S1c-4b: Ampel des Presets
         )
         # Issue #2050 S6 (E-1): nur, wenn ALLE getriggerten Orte uebereinstimmen
         # (`unique_or_none`) -- `reference_at` bleibt strukturell `None`

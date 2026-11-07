@@ -18,6 +18,7 @@ NO MOCKS — echte DTOs, echter FastAPI TestClient, echte Renderer-Aufrufe,
 echte Source-Datei-Inspektion via ast.
 """
 from __future__ import annotations
+from tests.helpers.ampel_allgemein import AMPEL_ALLGEMEIN
 
 from datetime import datetime, timedelta, timezone
 
@@ -620,11 +621,11 @@ class TestAC8SMSTokenSymbolParity:
 
         line_legacy = build_token_line(
             forecast, [spec_legacy],
-            report_type="morning", stage_name="AC8-Stage",
+            report_type="morning", stage_name="AC8-Stage", ampel=AMPEL_ALLGEMEIN,
         )
         line_new = build_token_line(
             forecast, [spec_new],
-            report_type="morning", stage_name="AC8-Stage",
+            report_type="morning", stage_name="AC8-Stage", ampel=AMPEL_ALLGEMEIN,
         )
 
         # Filter nur die CAPE-Token raus (beide Renderings müssen dieselbe

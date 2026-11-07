@@ -24,20 +24,18 @@ class TestCapeAmpelThresholds:
         thresholds = get_metric("cape").display_thresholds
         assert thresholds == {"yellow": 300.0, "orange": 800.0, "red": 1500.0}
 
-    def test_299_is_green(self):
-        assert severity_for("cape", 299, ampel=resolve_ampel(None)) == "green"
+    # Issue #2792 S1c-4b (AC-6, AC-19 a) -- umgekehrt: CAPE traegt keine eigene
+    # Farbe mehr (die Gewitterstufe faerbt ueber ``thunder_level_from_signals``).
+    # Die frueheren Bandgrenzen 300/800/1500 und der AC-6-Wert 1600 liefern in
+    # jeder Vorlage keine Stufe; der Katalog-Wert oben bleibt unveraendert.
+    def test_cape_ohne_farbe_an_allen_frueheren_bandgrenzen(self):
+        from app.ampel import AMPEL_TEMPLATES
+        for vorlage in AMPEL_TEMPLATES:
+            ampel = resolve_ampel({"ampel": {"template": vorlage}})
+            for wert in (299, 300, 799, 800, 1499, 1500, 1600):
+                assert severity_for("cape", wert, ampel=ampel) is None, (vorlage, wert)
 
-    def test_300_is_yellow(self):
-        assert severity_for("cape", 300, ampel=resolve_ampel(None)) == "yellow"
-
-    def test_799_is_yellow(self):
-        assert severity_for("cape", 799, ampel=resolve_ampel(None)) == "yellow"
-
-    def test_800_is_orange(self):
-        assert severity_for("cape", 800, ampel=resolve_ampel(None)) == "orange"
-
-    def test_1499_is_orange(self):
-        assert severity_for("cape", 1499, ampel=resolve_ampel(None)) == "orange"
-
-    def test_1500_is_red(self):
-        assert severity_for("cape", 1500, ampel=resolve_ampel(None)) == "red"
+    def test_andere_metrik_wird_weiter_gefaerbt(self):
+        # Gegenprobe: ``severity_for`` liefert fuer Ampel-Metriken weiter Stufen,
+        # das ``None`` oben ist CAPE-spezifisch und kein allgemeiner Ausfall.
+        assert severity_for("gust", 60, ampel=resolve_ampel(None)) in ("orange", "red")

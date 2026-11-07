@@ -870,25 +870,34 @@ def test_zeitfeld_mit_minuten_loest_zur_stunde_aus(mit):
 
 # ═══════════════════════════ AC-15 ═══════════════════════════════════════════
 
-#: Stundenwert Niederschlag: ueber der Golden-D-Schwelle (0,1), unter dem
-#: Standard (0,2) -- nur so kann der Test "Schwelle wirkt" von "Standard" trennen.
+#: Stundenwert Niederschlag: ueber der Golden-D-Schwelle (0,1) und dem frueheren
+#: Standard (0,2 bis #2792), unter Gelb „allgemein“ (1 mm). Seit #2792 S1c-4b
+#: (E1) belegt er, dass keine dieser Schwellen mehr eine Erwaehnung ausloest.
 _STUNDENWERT_MM = 0.15
-#: Standard-Erwaehnungsschwelle Regen ohne Nutzerwert (``metric_catalog`` DEFAULTS).
-_STANDARD_SCHWELLE_MM = 0.2
 
 
-@pytest.fixture
-def stundenwert_015(monkeypatch, tmp_path):
-    """Die echte Offline-Stundenreihe (Innsbruck-Fixture), nur mit kontrolliertem
-    Niederschlags-Stundenwert 0,15 mm -- Renderer und Schwellenlogik laufen echt."""
+#: Issue #2792 S1c-4b (E1): Stundenwert ueber Gelb der Ampel „allgemein"
+#: (Regen 1 mm) -- Positivfall, damit „ueberall ``-``" nicht trivial besteht.
+_STUNDENWERT_GELB_MM = 1.5
+
+
+def _stundenreihe_mit(monkeypatch, tmp_path, mm: float) -> float:
     quelle = ROOT / "fixtures" / "openmeteo"
     for datei in quelle.glob("*.json"):
         roh = json.loads(datei.read_text())
         for punkt in roh["data"]:
-            punkt["precip_1h_mm"] = _STUNDENWERT_MM
+            punkt["precip_1h_mm"] = mm
         (tmp_path / datei.name).write_text(json.dumps(roh))
     monkeypatch.setenv("GZ_TEST_FIXTURE_DIR", str(tmp_path))
-    return _STUNDENWERT_MM
+    return mm
+
+
+@pytest.fixture(params=[_STUNDENWERT_MM, _STUNDENWERT_GELB_MM], ids=["unter_gelb", "ueber_gelb"])
+def stundenwert_015(request, monkeypatch, tmp_path):
+    """Die echte Offline-Stundenreihe (Innsbruck-Fixture), nur mit kontrolliertem
+    Niederschlags-Stundenwert -- Renderer und Hervorhebungslogik laufen echt.
+    Seit #2792 S1c-4b zwei Werte: 0,15 mm (unter Gelb) und 1,5 mm (ueber Gelb)."""
+    return _stundenreihe_mit(monkeypatch, tmp_path, request.param)
 
 
 def _regen_metrik(d: dict) -> dict:
@@ -928,6 +937,9 @@ def test_globale_sms_schwelle_wirkt_in_allen_drei_sms_texten(mit, stundenwert_01
          Token weg -- A..D allein trennten "0,15" nicht von "0,1".
     Die Erwartung folgt aus dem gespeicherten JSON (Schwelle <= Stundenwert).
     Charakterisierung, heute GRUEN.
+
+    Issue #2792 S1c-4b (E1): umgekehrt -- die Schwelle wirkt NICHT mehr; siehe
+    Kommentar unten. Der Testname bleibt fuer die Rueckverfolgbarkeit.
     """
     def _fall(aendern) -> tuple[dict, dict[str, str | None]]:
         d = _golden_beide_an()
@@ -936,10 +948,6 @@ def test_globale_sms_schwelle_wirkt_in_allen_drei_sms_texten(mit, stundenwert_01
         mit.leeren()
         _lauf(profil, _jetzt(6))
         return d, _regen_wert_je_kanal(mit)
-
-    def _erwartet(d: dict) -> bool:
-        schwelle = _regen_metrik(d).get("sms_threshold")
-        return _STUNDENWERT_MM >= (_STANDARD_SCHWELLE_MM if schwelle is None else schwelle)
 
     def _global_weg(d): _regen_metrik(d).pop("sms_threshold", None)
 
@@ -970,20 +978,26 @@ def test_globale_sms_schwelle_wirkt_in_allen_drei_sms_texten(mit, stundenwert_01
         "E_global_0_12": _global_012,
         "F_global_0_1_email_layout_ohne_regen": _email_layout_ohne_regen,
     }
+    # Issue #2792 S1c-4b (E1, AC-19 e) -- umgekehrt: keine ``sms_threshold``
+    # (global wie am Layout) wirkt mehr; Hervorhebung ab Gelb der Ampel
+    # „allgemein" (Regen 1 mm). Die Erwartung haengt NUR am Stundenwert, in
+    # allen sechs Faellen gleich: 0,15 mm -> Nullform ``-`` (Token vorhanden,
+    # nicht erwaehnt), 1,5 mm -> erwaehnt -- in ALLEN drei Texten.
     for name, aendern in faelle.items():
         d, werte = _fall(aendern)
-        erwartet = _erwartet(d)
-        token = {kanal: _erwaehnt(w) for kanal, w in werte.items()}
-        assert token == {"sms": erwartet, "telegram_kurzform": erwartet, "premium_sms": erwartet}, (
-            f"AC-15 [{name}]: Stundenwert {_STUNDENWERT_MM} mm, globale Schwelle "
-            f"{_regen_metrik(d).get('sms_threshold')!r} -> Regen-Token erwartet: {erwartet}; "
-            f"tatsaechlich je Kanal (Rohwert): {werte} ({_kurz(mit)})"
-        )
-    # Gegenprobe: A und B muessen sich unterscheiden, sonst trennt der Aufbau nichts.
-    assert _erwartet(_golden_beide_an()) is True
-    d_b = _golden_beide_an()
-    _global_weg(d_b)
-    assert _erwartet(d_b) is False
+        if stundenwert_015 < 1.0:
+            assert werte == {"sms": "-", "telegram_kurzform": "-", "premium_sms": "-"}, (
+                f"E1 [{name}]: Stundenwert {stundenwert_015} mm (unter Gelb), globale "
+                f"Schwelle {_regen_metrik(d).get('sms_threshold')!r} -> Regen-Nullform "
+                f"in allen drei Texten erwartet; tatsaechlich: {werte} ({_kurz(mit)})"
+            )
+        else:
+            token = {kanal: _erwaehnt(w) for kanal, w in werte.items()}
+            assert token == {"sms": True, "telegram_kurzform": True, "premium_sms": True}, (
+                f"E1 [{name}]: Stundenwert {stundenwert_015} mm (ueber Gelb), globale "
+                f"Schwelle {_regen_metrik(d).get('sms_threshold')!r} -> Regen-Token in "
+                f"allen drei Texten erwartet; tatsaechlich: {werte} ({_kurz(mit)})"
+            )
 
 
 _TAG_RE = re.compile(r"<[^>]+>")

@@ -25,6 +25,7 @@ pruefen:
 eigene Datei um: ``tests/unit/test_trip_summary_text.py`` (Begruendung dort).
 """
 from __future__ import annotations
+from tests.helpers.ampel_allgemein import PRESET_ALLGEMEIN
 
 import re
 from datetime import date, datetime, timezone
@@ -167,7 +168,7 @@ def test_html_no_location_summary_sentence_anywhere_in_document():
     ])
     enabled = resolve_enabled_metrics(["temp_max_c", "precip_sum_mm"])
 
-    html = render_compare_html(result, enabled_metrics=enabled)
+    html = render_compare_html(result, enabled_metrics=enabled, preset=PRESET_ALLGEMEIN)
 
     for name in ("Andermatt", "Zermatt"):
         assert not re.search(_SUMMARY_SENTENCE_RE.format(name=re.escape(name)), html), (
@@ -258,7 +259,7 @@ def test_dispatch_and_preview_share_render_path_without_summary_block():
         enabled_metrics=opts.enabled_metrics,
         hourly_metrics=opts.hourly_metrics,
         hourly_enabled=opts.hourly_enabled,
-        corridors=opts.corridors,
+        corridors=opts.corridors, preset=PRESET_ALLGEMEIN,
     )
 
     for name in ("Andermatt", "Zermatt"):
@@ -310,7 +311,7 @@ def test_matrix_five_1285_metrics_stay_live_derived_from_daily_summary():
     assert summary.uv_index_max == 6.0
     assert summary.visibility_min_m == 3000
 
-    html = render_compare_html(result, enabled_metrics=enabled)
+    html = render_compare_html(result, enabled_metrics=enabled, preset=PRESET_ALLGEMEIN)
     region = _matrix_region(html)
 
     assert _cell_value_for_label(region, "Niederschlag") == f"{summary.precip_sum_mm:.1f} mm", (
@@ -427,7 +428,7 @@ def test_hourly_head_no_dead_time_window_string():
     Zeitfensters)."""
     result = _comparison_result([_location_result("Sóller", _hourly())])
 
-    html = render_compare_html(result)
+    html = render_compare_html(result, preset=PRESET_ALLGEMEIN)
 
     assert "09–16 Uhr" not in html, (
         "STUNDEN-Kopf behauptet weiterhin ein Zeitfenster 09–16 Uhr, obwohl "

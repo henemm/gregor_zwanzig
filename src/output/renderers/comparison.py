@@ -190,12 +190,12 @@ def render_comparison_text(
     unresolved_count: int = 0,
     lang: Lang = "de",
     show_fallback_notice: bool = False,
-    preset: Optional[dict],
+    preset: dict,
 ) -> str:
     """
     Render ComparisonResult als Klartext (v2, Issue #1110). ``lang``: #2666.
-    ``preset`` (Issue #2792 S1c-4a): rohes Vergleichs-Preset, Pflicht ohne
-    Default; aufgeloest wird bis S1c-4b weiter „allgemein".
+    ``preset`` (Issue #2792 S1c-4a/4b): rohes Vergleichs-Preset, Pflicht ohne
+    Default; seine Ampel bewertet die Ausblick-Zeilen.
     ``show_fallback_notice`` (Issue #1563): Vertretungshinweis je Ort unter
     der Uebersicht, nur Briefing; Default ``False``.
 
@@ -244,9 +244,9 @@ def render_comparison_text(
         Klartext-String fuer die E-Mail.
     """
     _ = profile  # akzeptiert fuer API-Konsistenz, aktuell ohne Wirkung
-    # Issue #2792 S1c-1: Einstieg loest die Ampel des Presets auf (fuer die
-    # Ausblick-Zeilen); bis S1c-4 fest „allgemein" (byte-gleich).
-    ampel = resolve_ampel(None)
+    # Issue #2792 S1c-4b: Einstieg loest die Ampel des Presets auf (fuer die
+    # Ausblick-Zeilen).
+    ampel = resolve_ampel(preset)
 
     target_date = result.target_date
     created_at = result.created_at
@@ -440,6 +440,7 @@ def render_comparison_text(
             section_lines.append(render_outlook_plain(
                 outlook_rows, show_acc=False, metrics=outlook_metrics,
                 heading=t("vergleich.ausblick.titel", lang), show_name=False, lang=lang,
+                ampel=ampel,
             ).strip("\n"))
         elif outlook_state_text:
             # Fix #1505 (AC-4): benannter Zustand an derselben Stelle wie
@@ -507,7 +508,7 @@ def render_compare_email(
     outlook_metrics: list[dict] | None = None,
     outlook_metric_formats: dict[str, bool] | None = None,
     undelivered: list | None = None,
-    preset: Optional[dict] = None,
+    preset: dict,
     unresolved_count: int = 0,
     lang: Lang = "de",
     show_fallback_notice: bool = False,

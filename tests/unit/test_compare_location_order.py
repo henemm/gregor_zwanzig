@@ -24,6 +24,7 @@ Mail-Validator in der Deploy-Phase gegen eine echt zugestellte Staging-Mail):
 - AC-8: die SMS zeigt die VORDERSTEN Orte der Reihenfolge, "+k" stimmt    -> RED
 """
 from __future__ import annotations
+from tests.helpers.ampel_allgemein import PRESET_ALLGEMEIN
 
 import re
 from datetime import date, datetime, timezone
@@ -132,7 +133,7 @@ class TestAC4RenderersFollowLocationOrder:
     ``result.locations``-Reihenfolge ueberschreibt."""
 
     def test_html_matrix_columns_follow_input_order(self):
-        html = render_compare_html(_result(ORDER_A))
+        html = render_compare_html(_result(ORDER_A), preset=PRESET_ALLGEMEIN)
         assert _order_of(_html_matrix_region(html), NAMES_A) == NAMES_A, (
             "Die Matrix-Spalten muessen der konfigurierten Orts-Reihenfolge "
             f"folgen ({NAMES_A}), nicht alphabetisch ({ALPHABETICAL})."
@@ -151,7 +152,7 @@ class TestAC4RenderersFollowLocationOrder:
         )
 
     def test_html_below_matrix_sections_follow_input_order(self):
-        html = render_compare_html(_result(ORDER_A))
+        html = render_compare_html(_result(ORDER_A), preset=PRESET_ALLGEMEIN)
         assert _order_of(_html_below_matrix(html), NAMES_A) == NAMES_A, (
             "Die Orts-Abschnitte unterhalb der Matrix muessen der "
             f"konfigurierten Reihenfolge folgen ({NAMES_A})."
@@ -161,7 +162,7 @@ class TestAC4RenderersFollowLocationOrder:
         """AC-4 Kern: es darf nicht zwei verschiedene Orts-Sortierungen
         innerhalb derselben Auslieferung geben."""
         result = _result(ORDER_A)
-        html = render_compare_html(result)
+        html = render_compare_html(result, preset=PRESET_ALLGEMEIN)
         matrix = _order_of(_html_matrix_region(html), NAMES_A)
         below = _order_of(_html_below_matrix(html), NAMES_A)
         text = _order_of(render_comparison_text(result, preset=None), NAMES_A)
@@ -181,8 +182,8 @@ class TestAC2OrderFlipsWithInput:
     Mail 'kippt' nicht mit der Einstellung mit."""
 
     def test_html_matrix_flips_with_reversed_order(self):
-        a = _order_of(_html_matrix_region(render_compare_html(_result(ORDER_A))), NAMES_A)
-        b = _order_of(_html_matrix_region(render_compare_html(_result(ORDER_B))), NAMES_A)
+        a = _order_of(_html_matrix_region(render_compare_html(_result(ORDER_A), preset=PRESET_ALLGEMEIN)), NAMES_A)
+        b = _order_of(_html_matrix_region(render_compare_html(_result(ORDER_B), preset=PRESET_ALLGEMEIN)), NAMES_A)
         assert a != b, (
             "Dieselbe Orte-MENGE in zwei Reihenfolgen muss zwei verschiedene "
             f"Matrix-Spaltenfolgen ergeben, ergab aber beide Male {a}."
@@ -239,7 +240,7 @@ class TestAC5ScoreDoesNotReorderRenderedOutput:
 
     def test_worst_score_location_stays_first_when_configured_first(self):
         result = self._scored_result()
-        html_first = _order_of(_html_matrix_region(render_compare_html(result)), NAMES_A)[0]
+        html_first = _order_of(_html_matrix_region(render_compare_html(result, preset=PRESET_ALLGEMEIN)), NAMES_A)[0]
         text_first = _order_of(render_comparison_text(result, preset=None), NAMES_A)[0]
         assert html_first == "Zillertal" and text_first == "Zillertal", (
             "Der konfiguriert erste Ort ('Zillertal', schlechtester Score) muss "
@@ -277,7 +278,7 @@ class TestAC6AlphabeticalPresetUnchanged:
         )
 
     def test_html_alphabetical_input_order_frozen(self):
-        html = render_compare_html(self._alpha_result())
+        html = render_compare_html(self._alpha_result(), preset=PRESET_ALLGEMEIN)
         assert _order_of(_html_matrix_region(html), self.FROZEN) == self.FROZEN
         assert _order_of(_html_below_matrix(html), self.FROZEN) == self.FROZEN
 

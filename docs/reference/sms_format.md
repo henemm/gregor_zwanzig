@@ -1,10 +1,10 @@
 ---
 entity_id: sms_format
 type: reference
-version: "2.37"
+version: "2.38"
 status: active
 created: 2025-12-27
-updated: 2026-10-27
+updated: 2026-11-06
 tags: [sms, compact, tokens, single-source-of-truth]
 ---
 
@@ -158,13 +158,19 @@ dieser Zweig hat heute aber keinen eingehenden Aufrufer.
 | `FN{temp}` / `FN-` (**nur Abendbriefing**, nur bei aktivierter Metrik „Gefühlte Nacht-Tiefsttemperatur“, `wind_chill_night`, Issue #1660) | **Gefühlte** Nacht-Tiefsttemperatur °C am Schlafplatz — Parität zu `N`, gleiches Fenster Ankunft→06:00 Folgetag. | `night_wind_chill_min_c()` aus `night_weather` (Fallback: Gehzeit-`wind_chill_min_c`) | `FN6` |
 | `FL{temp}` / `FL-` (bis 2026-08-17 `FK`/`FK-`, Fix #1926; nur bei aktivierter Metrik „Gefühlte Tages-Tiefsttemperatur (Gehzeit)“, `wind_chill_day_low`, Issue #1728, 2026-08-15; bis dahin an „Gefühlte Temperatur“ + Auswertungswahl gekoppelt, Issue #1660 A) | **Gefühlte** Tiefsttemperatur unterwegs °C — Parität zu `L`, identisches Gehzeit-Fenster. | dieselbe Quelle wie `L`, aber `hiking_field_min_max("wind_chill_c")`, MIN | `FL1` |
 | `FD{temp}` / `FD-` (nur bei aktivierter Metrik „Gefühlte Tages-Höchsttemperatur (Gehzeit)“, `wind_chill_day_high`, Issue #1728, 2026-08-15; bis dahin an „Gefühlte Temperatur“ gekoppelt) | **Gefühlte** Höchsttemperatur während der Gehzeit °C — Parität zu `D`. | dieselbe Quelle wie `FL`, MAX | `FD18` |
-| `R{mm}@{h}({max}@{h})` / `R-` | Regen Threshold@Stunde + Peak | Hourly `precip_1h_mm`, Threshold aus `config.rain_amount_threshold` | `R0.2@6(1.4@16)` |
-| `PR{p}%@{h}({max}%@{h})` / `PR-` | Regenwahrscheinlichkeit Threshold + Peak (Issue #887: auch SMS via `pop_hourly` aus `agg.pop_max_pct` synthetisiert) | Hourly `pop_pct`, Threshold aus `config.rain_probability_threshold` | `PR20%@11(100%@17)` |
-| `W{v}@{h}({max}@{h})` / `W-` | Wind km/h Threshold + Peak | Hourly `wind10m_kmh`, Threshold aus `config.wind_speed_threshold` | `W10@11(15@17)` |
-| `G{v}@{h}({max}@{h})` / `G-` | Böen km/h Threshold + Peak | Hourly `gust_kmh`, Threshold aus `config.wind_gust_threshold` | `G20@11(30@17)` |
+| `R{mm}@{h}({max}@{h})` / `R-` | Regen Threshold@Stunde + Peak | Hourly `precip_1h_mm`, Hervorhebung nach Profil-Ampel (gelb oder schlechter, #2792 S1c-4b) | `R0.2@6(1.4@16)` |
+| `PR{p}%@{h}({max}%@{h})` / `PR-` | Regenwahrscheinlichkeit Threshold + Peak (Issue #887: auch SMS via `pop_hourly` aus `agg.pop_max_pct` synthetisiert) | Hourly `pop_pct`, Hervorhebung nach Profil-Ampel (gelb oder schlechter, #2792 S1c-4b) | `PR20%@11(100%@17)` |
+| `W{v}@{h}({max}@{h})` / `W-` | Wind km/h Threshold + Peak | Hourly `wind10m_kmh`, Hervorhebung nach Profil-Ampel (gelb oder schlechter, #2792 S1c-4b) | `W10@11(15@17)` |
+| `G{v}@{h}({max}@{h})` / `G-` | Böen km/h Threshold + Peak | Hourly `gust_kmh`, Hervorhebung nach Profil-Ampel (gelb oder schlechter, #2792 S1c-4b) | `G20@11(30@17)` |
 | `TH:{level}@{h}({max}@{h})` / `TH:-` | Gewitter der **berichteten** Etappe (L/M/H — seit Issue #1474 vierstufig, `L`="leicht" besetzt den vorher unerreichbaren Token-Platz, s. `docs/reference/decision_matrix.md`) | Hourly `dp.thunder_level` aus `seg.timeseries`, auf die Wanderzeit gefenstert | `TH:M@16(H@18)` (bzw. `TH:L@16` bei reinem „leicht") |
 | `TH:…+HL` (Suffix am `TH:`- bzw. `TH+:`-Token) | **Hagel-Kennzeichen** der berichteten Etappe (Issue #1475 S5a, 2026-08-04; Kürzel seit der Nachbesserung 2026-08-05 `+HL` statt vormals `+H`+`G`). Rein deskriptiv, kein eigenes Kürzel und keine eigene Truncation-Priorität — der Suffix hängt am Gewitter-Token, das er beschreibt, und fällt mit ihm. Gilt gleichermaßen für den Folgetag (`TH+:`). Erscheint **ausschließlich** bei bestätigtem Hagel (`hail_flag is True`, WMO-Code 96/99); „unbekannt“ (jeder andere Code, auch 95) und „nein“ lassen die Zeile **zeichengleich** — es gibt bewusst KEINE Null-Form `TH:…-HL`, weil der WMO-Code Hagel nur bejahen, nie verneinen kann | `dp.hail_flag` aus derselben Tagesfensterung wie `TH:`, aggregiert über `metric_format.hail_priority()` (ja > unbekannt > nein) | `TH:M@16(H@18)+HL` |
 | `TH+:{level}@{h}({max}@{h})` / `TH+:-` / `TH+:?` | Gewitter der Etappe **danach**. `?` seit Fix #1482 (2026-08-04) bei einer echten Datenlücke (Folge-Etappe existiert, ihre Daten sind nicht beschaffbar) — `-` bleibt unverändert reserviert für „kein Folgetag“ (letzte Etappe des Trips), diese beiden Fälle dürfen nicht verwechselt werden | Folge-Etappe via `thunder_forecast["+1"]` (Level **und** Stunde) | `TH+:M@14(H@17)` bzw. `TH+:?` |
+
+**Temperatur mit Stunde (#2792 S1c-4b, Profil-Ampel):** Bei `L`, `D`, `FL`, `FD` steht die Stunde des Werts hinter dem Wert (`@{h}`), **nur wenn der Wert laut Ampel gelb oder schlechter ist**; sonst bleibt es bei der bisherigen Form.
+- Einzelform: `D9@14`, `L-17@6`. Unter Gelb: `D9`.
+- Bereichs-Token (`D`/`FD`, Issue #1824): **jede Hälfte** trägt ihr `@h` unabhängig, nur wenn sie gelb oder schlechter ist. Beispiel `D-2/9@14` bei Vorlage Skitouren: -2 °C ist grün, 9 °C ist orange. Beide gelb: `D-17@6/9@14`.
+- Haben mehrere Stunden denselben Minimalwert, gilt die **früheste** Stunde.
+- `N`/`FN` bleiben ohne Stunde (unverändert).
 
 **`N` ist report-type-abhängig (Issue #1319 Scheibe D, 2026-07-23):** anders als `D R PR W G TH: TH+:`
 hat `N` keine feste Sichtbarkeit — es erscheint ausschließlich im Abendbriefing. Wert-Quelle ist die
@@ -218,6 +224,7 @@ Etappe, über die der Report spricht — nicht auf „heute"/„morgen" im Kalen
 und übermorgen (`TH+:`). Die frühere absolute Lesart war falsch.
 
 Levels für `TH`/`TH+`:
+- `L` = leicht (fest gelb in der Profil-Ampel, P2; seit #1474)
 - `M` = med (Averses orageuses)
 - `H` = high (Orages)
 - `-` = none
@@ -226,10 +233,26 @@ Levels für `TH`/`TH+`:
 > **unerreichbar**: `ThunderLevel` (`src/app/models.py:33-37`) hat kein LOW, und
 > `openmeteo.py:524-538` liefert ausschließlich HIGH oder NONE (WMO 95/96/99). `L` bleibt nur
 > aus Golden-Snapshot-Kompatibilität im Code stehen und ist kein Teil des Format-Vertrags.
+>
+> **Korrektur 2026-11-06 (#2792 S1c-4b, Stand #1474):** Die Aussage oben ist überholt. `L` („leicht“) ist seit #1474 als vierte Gewitterstufe erreichbar (`NONE<LOW<MED<HIGH`, s. Changelog 2.16) und gilt in der Profil-Ampel als fest gelb (P2). Die Darstellung oben (M/H/-) bleibt als historischer Stand stehen.
 
-**Threshold-Logik:** `R`, `PR`, `W`, `G`, `TH`, `TH+` zeigen den **ersten Zeitpunkt** im Tagesfenster, an dem der konfigurierte Threshold erreicht/überschritten wird, gefolgt vom **Tagesmaximum** in Klammern. Wenn kein Wert ≥ Threshold: Token ist `R-` / `W-` / etc.
+**Threshold-Logik:** `R`, `PR`, `W`, `G`, `TH`, `TH+` zeigen den **ersten Zeitpunkt** im Tagesfenster, an dem die Metrik laut **Profil-Ampel** des Abos (gelb oder schlechter) liegt, gefolgt vom **schlimmsten Wert** in Klammern (obere Grenze: Maximum, untere Grenze: Minimum). Wenn keine Stunde gelb oder schlechter ist: Token ist `R-` / `W-` / etc. Details zur Ampel: „Hervorhebung nach der Profil-Ampel“ unten.
 
-**Threshold-Konfiguration (Issue #624):** Die Schwellwerte für `R`, `PR`, `W`, `G` sind pro Trip und Metrik im Trip-Editor (Wetter-Metriken-Tab) optional konfigurierbar über `MetricConfig.sms_threshold`. Leeres Feld → bisheriges fest eingebautes Standardverhalten (Fallback auf `DEFAULTS` in builder.py). E-Mail-Tabelle nutzt weiterhin das separate `display_thresholds`-Farbkonzept (nicht vereinheitlicht).
+**Hervorhebung nach der Profil-Ampel (#2792 S1c-4b, ADR-0106):** Die Profil-Ampel des Abos (Trip bzw. Ortsvergleich, Vorlage „allgemein“ wenn keine gespeichert ist) ist die **einzige** Bewertung für SMS, Premium-SMS und Telegram.
+- Eine Stunde ist hervorgehoben (`@{h}`), wenn die Metrik dort **gelb oder schlechter** ist. Das gilt **beidseitig**, also auch beim Unterschreiten der unteren Grenze (z. B. Wassersport-Wind unter 8 km/h).
+- Gewitter (`TH:`/`TH+:`) ist ab „leicht“ hervorgehoben (leicht ist fest gelb, P2).
+- `@h` vorn ist die erste Stunde gelb oder schlechter. Die Klammer nennt den **schlimmsten Wert** unter den hervorgehobenen Stunden mit seiner Stunde: höchste Ampelstufe, bei gleicher Stufe der weiter vom grünen Bereich entfernte, dann die früheste Stunde. Sie steht nur, wenn dieser Wert vom ersten verschieden ist.
+  - Obere Grenze: das Maximum, z. B. `G70@8(110@13)`; ist der erste Wert schon der schlimmste, entfällt die Klammer (`W45@10`).
+  - Untere Grenze: das Minimum, z. B. Wassersport-Wind `W7@9(3@12)`.
+  - „Verschieden“ heißt: der **angezeigte** (gerundete) Wert unterscheidet sich. Sind erster und schlimmster Wert nach dem Runden gleich, entfällt die Klammer bewusst, z. B. Böen 35.1 um 8 und 35.4 um 10 Uhr ⇒ `G35@8` statt `G35@8(35@10)` (Issue #2792 S1c-4b).
+  - Dieselbe Regel gilt für Premium-SMS, den 3-Tages-Ausblick und die Mail-Kachel (`app.ampel.schlimmster_index`).
+- Ist keine Stunde gelb oder schlechter, bleibt es bei der Null-Form (`R-`, `TH:-`, …).
+- Die Ampel-Hervorhebung gilt für `R`, `PR`, `W`, `G`, `UV`, `TH:`/`TH+:` sowie `L`/`D`/`FL`/`FD` (Temperatur, s. unten). Für `HU` gilt die feste Grenze 90 % (§3.2a). Die übrigen Klasse-(a)-Größen haben keinen Ampel-Leser (§3.2a).
+- `render_compare_sms` (Ortsvergleich) hat keinen Hervorhebungsleser und bleibt unverändert.
+- `sms_threshold` und die früheren Standardwerte (`DEFAULTS`) wirken **nicht mehr**. Die Werte bleiben gespeichert, werden aber nicht ausgewertet (E1).
+- Die Mail-Erwähnungen nutzen dasselbe Prädikat „gelb oder schlechter“, damit Mail und Kurzkanal bei jedem Wert gleich entscheiden.
+
+**Threshold-Konfiguration (Issue #624, ab #2792 S1c-4b ohne Wirkung):** Das frühere Feld `MetricConfig.sms_threshold` (Trip-Editor) ist gespeichert, wirkt aber nicht mehr; die Grenzen kommen aus der Profil-Ampel (s. oben). E-Mail-Tabelle nutzt das Ampel-Farbkonzept (nicht mehr `display_thresholds`).
 
 ### 3.2a Erweiterte Metrik-Tokens (Issue #1660 Scheibe B)
 
@@ -237,8 +260,8 @@ Levels für `TH`/`TH+`:
 
 Drei Wertegrammatik-Klassen:
 
-- **(a) Threshold-Peak** (wie `R`/`W`/`G`, ganzzahlig): `HU` (Luftfeuchtigkeit %), `DP` (Taupunkt °C), `CP` (CAPE J/kg), `UV` (UV-Index), `CT`/`CL`/`CM`/`CH` (Bewölkung gesamt/tief/mittel/hoch %). Beispiel: `HU88@14(92@17)`.
-- **(b) Invers-Min** (wie `SL`, aber MIT Stunde und Null-Form statt Weglassen): `VS` (Sichtweite, angezeigt in km mit einer Dezimale, DTO-Feld ist Meter), `FZ` (Nullgradgrenze, m ganzzahlig; bis 2026-08-17 `NL`, wegen Kollisionsvermeidung mit dem Schnee-/`SL`-Bereich auf `FZ` umgestellt, Fix #1926). Zeigt den Tages-**Tiefst**wert; mit konfiguriertem Schwellwert nur, wenn der Tiefstwert die Schwelle unterschreitet (`min <= threshold`), sonst Null-Form. Beispiel: `VS0.6@11`.
+- **(a) Threshold-Peak** (ganzzahlig): `HU` (Luftfeuchtigkeit %), `DP` (Taupunkt °C), `CP` (CAPE J/kg), `UV` (UV-Index), `CT`/`CL`/`CM`/`CH` (Bewölkung gesamt/tief/mittel/hoch %). Beispiel: `HU88@14(92@17)`. **Stand #2792 S1c-4b:** `UV` ist Ampel-gesteuert (gelb oder schlechter, Form wie bei `W`). `HU` erwähnt ab **fest 90 %** (benannte Konstante, keine Ampel-Grenze). `DP`, `CP`, `CT`, `CL`, `CM`, `CH` haben keinen Ampel-Leser: sie zeigen immer den **Spitzenwert mit Stunde** (`{max}@{h}`, z. B. `CT:SCT@4`), ohne Hervorhebung; nur bei fehlenden bzw. nicht positiven Werten die Null-Form.
+- **(b) Invers-Min** (wie `SL`, aber MIT Stunde und Null-Form statt Weglassen): `VS` (Sichtweite, angezeigt in km mit einer Dezimale, DTO-Feld ist Meter), `FZ` (Nullgradgrenze, m ganzzahlig; bis 2026-08-17 `NL`, wegen Kollisionsvermeidung mit dem Schnee-/`SL`-Bereich auf `FZ` umgestellt, Fix #1926). Zeigt den Tages-**Tiefst**wert mit Stunde. Die frühere schwellenabhängige Anzeige über `sms_threshold` entfällt mit #2792 S1c-4b. Beispiel: `VS0.6@11`. Die Sicht-Erwähnung in der Mail folgt der Ampel (untere Seite, gelb oder schlechter).
 - **(c) Tageswert ohne Stunde:** `WD:` (dominante 8-Sektor-Windrichtung N/NO/O/SO/S/SW/W/NW, Beispiel `WD:NW`), `PT:` (dominante Niederschlagsart, Rang `FREEZING_RAIN`>`SNOW`>`MIXED`>`RAIN`, Codes `G`/`S`/`M`/`R`, Beispiel `PT:S`), `SU` (Sonnenstunden, gerundet), `HP` (Luftdruck-Tagesmittel hPa, gerundet).
 
 **Doppelpunkt bei Buchstaben-Werten (Issue #1824, 2026-08-14):** `WD` und `PT` sind die einzigen beiden Kürzel, deren Wert mit einem **Buchstaben** beginnt — ohne Trenner verschmolzen Kürzel und Wert zu einem Wort (`WDNW`, `PTS`) und waren nicht mehr auseinanderzulesen. Sie tragen jetzt denselben Doppelpunkt wie `TH:`/`HR:`: der Trenner gehört zum **Symbol**, nicht zum Wert, wodurch Null- und Lückenform ihn automatisch mitziehen (`WD:-`, `WD:?`, `PT:-`, `PT:?`). Für den Trip-Editor ändert sich nichts — `/api/sms-symbols` schneidet den Doppelpunkt ab, die Badge bleibt `WD`/`PT`. Unberührt bleiben `DBG[...]` (Wert beginnt mit `[`) und `CL` (amtliches `access_ban`-Flag ohne Wert, §3.4c).
@@ -478,11 +501,13 @@ Nur in Dry-Run / Debug-Modus angehängt, ansonsten weggelassen.
 | `D{min}/{max}` bzw. `FD{min}/{max}` (Bereich, Issue #1824) | je Hälfte einzeln: `D13/-`, `D-/27`, `D-/-`, `D13/?`, `D?/?` | Jede Hälfte trägt unabhängig Wert, Null-Form oder Lückenform. Weil die `-`/`?`-Wahl heute an EINEM tagesweiten Lücken-Flag hängt, sind die gemischten Formen `D-/?` und `D?/-` praktisch nicht erreichbar — syntaktisch erlaubt sind sie dennoch |
 | `FN` | `FN-` | **Nur** bei aktivierter Metrik „Gefühlte Nacht-Tiefsttemperatur“ (`wind_chill_night`, Issue #1660; vorher „Gefühlte Temperatur“, Issue #1410), wenn lediglich die Daten fehlen. Ist die Metrik nicht gewählt, erscheint gar nichts — auch keine Null-Form — zur zusätzlichen `?`-Form bei Datenlücke s. Hinweis unten |
 | `FL` / `FD` (bis 2026-08-17 `FK`, Fix #1926) | `FL-` / `FD-` | **Nur** bei aktivierter Metrik „Gefühlte Tages-Tiefsttemperatur (Gehzeit)“ bzw. „Gefühlte Tages-Höchsttemperatur (Gehzeit)“ (`wind_chill_day_low`/`wind_chill_day_high`, Issue #1728, 2026-08-15; bis dahin gemeinsam an „Gefühlte Temperatur“ + Auswertungswahl gekoppelt, Issue #1660), wenn lediglich die Daten fehlen. Ist die jeweilige Metrik nicht gewählt, erscheint gar nichts — auch keine Null-Form (Issue #1410) — zur zusätzlichen `?`-Form bei Datenlücke s. Hinweis unten |
-| `R` / `PR` | `R-` / `PR-` | Bei fehlendem oder Sub-Threshold-Niederschlag |
-| `W` / `G` | `W-` / `G-` | Bei fehlendem oder Sub-Threshold-Wind |
-| `TH` / `TH+` | `TH:-` / `TH+:-` | Bei fehlendem oder Sub-Threshold-Gewitter — zur zusätzlichen `?`-Form bei Datenlücke s. Hinweis unten |
-| `HU`/`DP`/`CP`/`UV`/`CT`/`CL`/`CM`/`CH` | `HU-` usw. | Klasse (a), bei fehlendem oder Sub-Threshold-Wert — Issue #1660 Scheibe B, zusätzliche `?`-Form bei Datenlücke s. Hinweis unten |
-| `VS` / `FZ` (bis 2026-08-17 `NL`, Fix #1926) | `VS-` / `FZ-` | Klasse (b), bei fehlenden Stundenwerten ODER wenn der Tiefstwert eine konfigurierte Schwelle NICHT unterschreitet (Invers-Gate) |
+| `R` / `PR` | `R-` / `PR-` | Bei fehlendem Niederschlag oder keiner Stunde gelb oder schlechter (Ampel) |
+| `W` / `G` | `W-` / `G-` | Bei fehlendem Wind oder keiner Stunde gelb oder schlechter (Ampel) |
+| `TH` / `TH+` | `TH:-` / `TH+:-` | Bei fehlendem Gewitter oder keiner Stunde ab „leicht“ — zur zusätzlichen `?`-Form bei Datenlücke s. Hinweis unten |
+| `UV` | `UV-` | Bei fehlendem Wert oder keiner Stunde gelb oder schlechter (Ampel) |
+| `HU` | `HU-` | Bei fehlendem Wert oder keiner Stunde ab 90 % (fest) — zusätzliche `?`-Form bei Datenlücke s. Hinweis unten |
+| `DP`/`CP`/`CT`/`CL`/`CM`/`CH` | `DP-` usw. | Nur bei fehlendem Wert bzw. nicht positivem Spitzenwert (keine Ampel-Gate, s. §3.2a) — zusätzliche `?`-Form bei Datenlücke s. Hinweis unten |
+| `VS` / `FZ` (bis 2026-08-17 `NL`, Fix #1926) | `VS-` / `FZ-` | Klasse (b), bei fehlenden Stundenwerten (das frühere Invers-Gate über `sms_threshold` entfällt mit #2792 S1c-4b) |
 | `WD:` / `PT:` / `SU` / `HP` | `WD:-` / `PT:-` / `SU-` / `HP-` | Klasse (c), bei fehlendem Tageswert — anders als bei den Wintersport-Token (unten) gibt es hier eine Null-Form, kein komplettes Weglassen (DEC-3, `fix_1660b_sms_token_wiring.md`). Der Doppelpunkt bei `WD:`/`PT:` gehört zum Symbol und steht deshalb auch in Null- und Lückenform (Issue #1824, Muster `TH:-`) |
 | `VR` / `VT` (Vigilance) | `VR:-VT:-` | Bei keiner Vigilance-Warnung; immer paarweise |
 | `Z` / `M` (Fire) | komplett weglassen | Kein `Z:-`, einfach Block entfernen |
@@ -677,10 +702,10 @@ Ballone: N9 D16 R- PR- W- G- TH:- TH+:-
 |-------|--------|-------------|--------------------------|
 | `N` (nur Abend, Issue #1319) | `night_weather` (Ankunft→06:00 Folgetag am Etappenziel) via `night_temp_min_c()`; Fallback `SegmentWeatherSummary.temp_min_c` wenn `night_weather` fehlt | MIN über `t2m_c` im Nachtfenster; im Morgenbriefing entfällt der Token komplett | ✅ vorhanden |
 | `D` | `SegmentWeatherSummary.temp_max_c` (Tag-Segment) | MAX über alle Geo-Punkte | ✅ vorhanden |
-| `R` | `precip_1h_mm` hourly | Threshold + MAX | ✅ vorhanden |
-| `PR` | `pop_pct` hourly | Threshold + MAX | ✅ vorhanden |
-| `W` | `wind10m_kmh` hourly | Threshold + MAX | ✅ vorhanden |
-| `G` | `gust_kmh` hourly | Threshold + MAX | ✅ vorhanden |
+| `R` | `precip_1h_mm` hourly | Ampel-Hervorhebung + MAX | ✅ vorhanden |
+| `PR` | `pop_pct` hourly | Ampel-Hervorhebung + MAX | ✅ vorhanden |
+| `W` | `wind10m_kmh` hourly | Ampel-Hervorhebung + MAX | ✅ vorhanden |
+| `G` | `gust_kmh` hourly | Ampel-Hervorhebung + MAX | ✅ vorhanden |
 | `TH` | `thunder_level` hourly | Threshold + MAX (NONE<LOW<MED<HIGH, seit Issue #1474 vierstufig) | ✅ vorhanden |
 | `TH+` | Folgetag `thunder_level` | wie TH, aber +1 Tag | ✅ vorhanden |
 | `HR` (Vigilance) | Météo France `get_warning_full()` | offizielle Warnung | ⚠️ Provider TODO |
@@ -691,11 +716,11 @@ Ballone: N9 D16 R- PR- W- G- TH:- TH+:-
 | `AV` | amtlicher Lagebericht `avalanche.report` (`avalanche_bulletin`, Warn-Block) | CAAML v6, EAWS 1-5 | ✅ seit #1441 (Tirol, Südtirol, Trentino, Kärnten) |
 | `FN` / `FL` / `FD` (bis 2026-08-17 `FK`, Fix #1926) | `night_wind_chill_min_c` / `wind_chill_min_c` / `wind_chill_max_c` | Open-Meteo `apparent_temperature`, GeoSphere | ✅ vorhanden (Issue #1410) — `FL`/`FD` seit #1728 (2026-08-15) über die eigenen Metriken `wind_chill_day_low`/`wind_chill_day_high` gegated (s. §2) |
 | `L` (bis 2026-08-17 `K`, Fix #1926) | `temp_min_c` (Gehzeit-Fenster) | Provider | ✅ vorhanden (Issue #1410) — seit #1728 (2026-08-15) nur bei aktivierter Metrik „Tages-Tiefsttemperatur (Gehzeit)“ (`temperature_day_low`); bis dahin hing das Kürzel an der Auswertungswahl „nur Tiefstwert“ von „Temperatur“. Ist zusätzlich `temperature_day_high` aktiv, trägt `D{min}/{max}` denselben Wert in der ersten Hälfte (Issue #1824) |
-| `HU` | `humidity_pct` hourly | Threshold + MAX (Klasse a) | ✅ vorhanden (Issue #1660 Scheibe B) |
-| `DP` | `dewpoint_c` hourly | Threshold + MAX (Klasse a, nur `> 0`, s. Known Limitations) | ✅ vorhanden (Issue #1660 Scheibe B) |
-| `CP` | `cape_jkg` hourly | Threshold + MAX (Klasse a) | ✅ vorhanden (Issue #1660 Scheibe B) |
-| `UV` | `uv_index` hourly | Threshold + MAX (Klasse a) | ✅ vorhanden (Issue #1660 Scheibe B) |
-| `CT`/`CL`/`CM`/`CH` | `cloud_total_pct`/`cloud_low_pct`/`cloud_mid_pct`/`cloud_high_pct` hourly | Threshold + MAX (Klasse a) | ✅ vorhanden (Issue #1660 Scheibe B) |
+| `HU` | `humidity_pct` hourly | Spitze + MAX (Klasse a; Erwähnung fest ab 90 %, #2792 S1c-4b) | ✅ vorhanden (Issue #1660 Scheibe B) |
+| `DP` | `dewpoint_c` hourly | Spitze + MAX (Klasse a, nur `> 0`, kein Ampel-Leser, s. §3.2a) | ✅ vorhanden (Issue #1660 Scheibe B) |
+| `CP` | `cape_jkg` hourly | Spitze + MAX (Klasse a, kein Ampel-Leser, s. §3.2a) | ✅ vorhanden (Issue #1660 Scheibe B) |
+| `UV` | `uv_index` hourly | Ampel-Hervorhebung + MAX (Klasse a) | ✅ vorhanden (Issue #1660 Scheibe B) |
+| `CT`/`CL`/`CM`/`CH` | `cloud_total_pct`/`cloud_low_pct`/`cloud_mid_pct`/`cloud_high_pct` hourly | Spitze + MAX (Klasse a, kein Ampel-Leser, s. §3.2a) | ✅ vorhanden (Issue #1660 Scheibe B) |
 | `VS` | `visibility_m` hourly | Tages-MIN + Stunde, Anzeige in km (Klasse b, Invers-Gate) | ✅ vorhanden (Issue #1660 Scheibe B) |
 | `FZ` (bis 2026-08-17 `NL`, Fix #1926) | `freezing_level_m` hourly | Tages-MIN + Stunde (Klasse b, Invers-Gate) | ✅ vorhanden (Issue #1660 Scheibe B) |
 | `WD:` | `wind_direction_deg` hourly | dominanter 8-Sektor, Gleichstand → Sektor des Wind-Peaks (Klasse c) | ✅ vorhanden (Issue #1660 Scheibe B; Doppelpunkt seit #1824) |
@@ -782,6 +807,7 @@ Implementationen, die SMS-Text und E-Mail-Subject getrennt erzeugen, sind als **
 | 2.35 | 2026-10-21 | Neuer §1a: Befehlseingang je Kanal (Ist-Stand) — normale SMS hat keinen Befehlseingang; Verweise auf `telegram_format.md` und `premium_sms_format.md`. Keine Formatänderung. |
 | 2.36 | 2026-10-21 | Neuer §3.4f: Abweichungs-Alarm-Token trägt die Zeitspanne `HH-HH` der betroffenen Stunden (ASCII-Bindestrich, GSM-7), Stufen-Tokens unverändert (Issue #1737). |
 | 2.37 | 2026-10-27 | Neuer §5b: Ortsvergleich-SMS trägt im Ortsteil den Zähler `?N` für gewählte, aber fehlende bzw. nicht darstellbare Größen (nach den Wertzellen, vor `!`); Normalfall unverändert (Issue #1405 S3, Spec `feat_1405_s3_mengenerhalt.md`). |
+| 2.38 | 2026-11-06 | **Profil-Ampel als einzige Bewertung (Issue #2792 S1c-4b, ADR-0106).** Die Hervorhebung `@{h}` (Spitzenwert bei `R`/`PR`/`W`/`G`/`TH:`/`TH+:`) folgt der Ampel des Abos: erste Stunde gelb oder schlechter, beidseitig; Gewitter ab „leicht“. `sms_threshold` und `DEFAULTS` wirken nicht mehr (Werte bleiben gespeichert). Temperatur-Token `L`/`D`/`FL`/`FD` tragen `@{h}` nur ab gelb, Bereichs-Token je Hälfte einzeln (`D-2/9@14`). `HU` erwähnt ab fest 90 %; `VS` ohne Schwellen-Gate über `sms_threshold`. Betrifft §3.2, §3.2a, §4. Gilt identisch für Premium-SMS (gleicher Text) und Telegram-Kurzform. Spec: `docs/specs/modules/feat_2792_s1_profil_ampel.md` §5 (v1.5). |
 
 **Quellen für v2.0:**
 - Vorgänger-Repo `henemm/weather_email_autobot`:

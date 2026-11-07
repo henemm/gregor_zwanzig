@@ -13,6 +13,7 @@ durch den echten Renderer `render_compare_html()`; Auswertung am gerenderten
 HTML (BeautifulSoup), kein Dateiinhalt-Check am Quellcode.
 """
 from __future__ import annotations
+from tests.helpers.ampel_allgemein import PRESET_ALLGEMEIN
 from app.ampel import resolve_ampel
 
 import re
@@ -76,7 +77,7 @@ def _result() -> ComparisonResult:
 def _render() -> str:
     from output.renderers.email.compare_html import render_compare_html
 
-    return render_compare_html(_result(), hourly_metrics=HOURLY_METRICS)
+    return render_compare_html(_result(), hourly_metrics=HOURLY_METRICS, preset=PRESET_ALLGEMEIN)
 
 
 def _hour_tables(html: str) -> list[list[list[str]]]:

@@ -8,8 +8,8 @@ GR221 Tag1: 18–19°C, feels 12–13°C, ⛅, dry, moderate wind 19 km/h, gusts
 ━━ Metrics overview ━━
   18–19°C · Max 16:00
   feels 11.8–12.8°C · Max 16:00
-  Wind >10 km/h from 04:00 · max 19 (16:00)
-  Wind gusts >20 km/h from 04:00 · max 44 (16:00)
+  Wind max 19 km/h (16:00)
+  Wind gusts >30 km/h from 04:00 · max 44 (16:00)
   no rain
   no thunderstorm
   50% cloud cover · Max 11:00

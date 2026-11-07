@@ -25,6 +25,7 @@ in den Konfigurations-Tests ist ein einfaches Datenobjekt (echte Attribute,
 kein Mock()/patch()).
 """
 from __future__ import annotations
+from tests.helpers.ampel_allgemein import AMPEL_ALLGEMEIN
 
 from datetime import date, datetime, timezone
 from zoneinfo import ZoneInfo
@@ -144,7 +145,7 @@ def _trend_row(thunder_by_hour, level_max):
 
     points = _tomorrow_points(thunder_by_hour)
     seg = _segment(points, thunder_level_max=level_max)
-    row = build_outlook_row(seg.aggregated, points, "Sa", _UTC, context="vergleich")
+    row = build_outlook_row(seg.aggregated, points, "Sa", _UTC, context="vergleich", ampel=AMPEL_ALLGEMEIN)
     row["date"] = _TOMORROW
     return row
 

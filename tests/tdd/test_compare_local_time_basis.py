@@ -23,6 +23,7 @@ Alle Pruefungen sind Nutzersicht: was steht in der gerenderten Mail / SMS,
 nicht welche Funktion aufgerufen wurde.
 """
 from __future__ import annotations
+from tests.helpers.ampel_allgemein import PRESET_ALLGEMEIN
 
 import os
 import re
@@ -325,7 +326,7 @@ def test_html_hour_labels_show_local_hour_of_the_datapoint():
         hourly_data=_hour_points_for_local_window(VIENNA_OFFSET_H),
     )
     html, _text = render_compare_email(
-        _result([loc_result]), hourly_metrics=["t2m_c"], outlook_enabled=False,
+        _result([loc_result]), hourly_metrics=["t2m_c"], outlook_enabled=False, preset=PRESET_ALLGEMEIN,
     )
 
     rows = _html_hour_rows(html)
@@ -355,7 +356,7 @@ def test_plaintext_hour_labels_show_local_hour_of_the_datapoint():
         hourly_data=_hour_points_for_local_window(VIENNA_OFFSET_H),
     )
     _html, text = render_compare_email(
-        _result([loc_result]), hourly_metrics=["t2m_c"], outlook_enabled=False,
+        _result([loc_result]), hourly_metrics=["t2m_c"], outlook_enabled=False, preset=PRESET_ALLGEMEIN,
     )
 
     rows = _plain_hour_rows(text)
@@ -377,7 +378,7 @@ def test_plaintext_and_html_hour_labels_are_identical_in_the_same_mail():
         hourly_data=_hour_points_for_local_window(VIENNA_OFFSET_H),
     )
     html, text = render_compare_email(
-        _result([loc_result]), hourly_metrics=["t2m_c"], outlook_enabled=False,
+        _result([loc_result]), hourly_metrics=["t2m_c"], outlook_enabled=False, preset=PRESET_ALLGEMEIN,
     )
 
     html_rows = [(hh, val) for hh, val in _html_hour_rows(html)]
@@ -414,7 +415,7 @@ def test_created_header_shows_local_time_of_first_configured_location():
         hourly_data=_hour_points_for_local_window(DENVER_OFFSET_H),
     )
     html, text = render_compare_email(
-        _result([first, second]), hourly_metrics=["t2m_c"], outlook_enabled=False,
+        _result([first, second]), hourly_metrics=["t2m_c"], outlook_enabled=False, preset=PRESET_ALLGEMEIN,
     )
 
     html_created = _html_created_value(html)
@@ -464,7 +465,7 @@ def test_outlook_resolves_timezone_from_coordinates_without_stored_field():
     )
     html, _text = render_compare_email(
         _result([loc_result]), hourly_metrics=["t2m_c"],
-        hourly_enabled=False, outlook_enabled=True,
+        hourly_enabled=False, outlook_enabled=True, preset=PRESET_ALLGEMEIN,
     )
 
     rows = _html_outlook_rows(html)
@@ -508,7 +509,7 @@ def test_outlook_day_grouping_uses_local_midnight_not_utc_midnight():
     )
     html, _text = render_compare_email(
         _result([loc_result]), hourly_metrics=["t2m_c"],
-        hourly_enabled=False, outlook_enabled=True,
+        hourly_enabled=False, outlook_enabled=True, preset=PRESET_ALLGEMEIN,
     )
 
     rows = _html_outlook_rows(html)
@@ -559,7 +560,7 @@ def test_two_locations_in_different_timezones_each_use_their_own_local_hours():
     )
 
     html, _text = render_compare_email(
-        result, hourly_metrics=["t2m_c"], outlook_enabled=False,
+        result, hourly_metrics=["t2m_c"], outlook_enabled=False, preset=PRESET_ALLGEMEIN,
     )
     blocks = _html_hour_rows_by_location(html)
     expected_labels = [f"{h:02d}" for h in range(WINDOW[0], WINDOW[1] + 1)]
@@ -585,7 +586,7 @@ def test_unresolvable_coordinates_are_marked_as_utc_in_both_mail_parts():
         hourly_data=_hour_points_for_local_window(0),
     )
     html, text = render_compare_email(
-        _result([loc_result]), hourly_metrics=["t2m_c"], outlook_enabled=False,
+        _result([loc_result]), hourly_metrics=["t2m_c"], outlook_enabled=False, preset=PRESET_ALLGEMEIN,
     )
 
     html_created = _html_created_value(html)
@@ -627,7 +628,7 @@ def test_each_location_block_names_its_own_time_basis():
     )
     html, text = render_compare_email(
         _result([resolvable, unresolvable]), hourly_metrics=["t2m_c"],
-        outlook_enabled=False,
+        outlook_enabled=False, preset=PRESET_ALLGEMEIN,
     )
 
     for part, headings in (
@@ -673,7 +674,7 @@ def test_two_resolvable_zones_each_block_is_labelled_with_its_own_zone():
         hourly_data=_hour_points_for_local_window(DENVER_OFFSET_H),
     )
     html, text = render_compare_email(
-        _result([vienna, denver]), hourly_metrics=["t2m_c"], outlook_enabled=False,
+        _result([vienna, denver]), hourly_metrics=["t2m_c"], outlook_enabled=False, preset=PRESET_ALLGEMEIN,
     )
 
     # Vorbedingung: beide Bloecke zeigen wirklich dieselben Beschriftungen.
@@ -724,7 +725,7 @@ def test_single_mail_uses_one_time_basis_across_hours_outlook_and_header():
         outlook_hourly_data=outlook_points,
     )
     html, text = render_compare_email(
-        _result([loc_result]), hourly_metrics=["t2m_c"], outlook_enabled=True,
+        _result([loc_result]), hourly_metrics=["t2m_c"], outlook_enabled=True, preset=PRESET_ALLGEMEIN,
     )
 
     findings: list[str] = []

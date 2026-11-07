@@ -11,6 +11,7 @@ Drei Lücken:
 KEINE Mocks — echte Modell-Strukturen, echte Formatter.
 """
 from __future__ import annotations
+from tests.helpers.ampel_allgemein import AMPEL_ALLGEMEIN
 
 from datetime import datetime, timezone
 from zoneinfo import ZoneInfo
@@ -110,7 +111,7 @@ def test_ac1_sms_shows_pr_token_when_pop_max_pct_set():
         [seg],
         stage_name="E1",
         report_type="evening",
-        tz=ZoneInfo("Europe/Vienna"),
+        tz=ZoneInfo("Europe/Vienna"), ampel=AMPEL_ALLGEMEIN,
     )
     # PR– bedeutet: keine pop_hourly-Daten → Fehler
     assert "PR-" not in result, f"PR- found (pop_hourly leer): {result!r}"
@@ -132,7 +133,7 @@ def test_ac1_sms_pr_token_format_contains_percent():
         [seg],
         stage_name="E1",
         report_type="morning",
-        tz=ZoneInfo("Europe/Vienna"),
+        tz=ZoneInfo("Europe/Vienna"), ampel=AMPEL_ALLGEMEIN,
     )
     assert "65%" in result, f"Kein '65%' im SMS-Ergebnis: {result!r}"
 
@@ -197,7 +198,7 @@ def test_ac4_sms_no_crash_when_pop_max_pct_is_none():
 
     seg = _make_segment(pop_max_pct=None, precip_sum_mm=2.0)
     result = SMSTripFormatter().format_sms(
-        [seg], stage_name="E1", report_type="evening", tz=ZoneInfo("UTC"),
+        [seg], stage_name="E1", report_type="evening", tz=ZoneInfo("UTC"), ampel=AMPEL_ALLGEMEIN,
     )
     assert isinstance(result, str) and len(result) > 0
 

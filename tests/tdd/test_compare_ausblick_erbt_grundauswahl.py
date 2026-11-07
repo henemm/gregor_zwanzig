@@ -16,6 +16,7 @@ Kein Mock-Framework, kein Netz. Vorbild/geteilte Bausteine:
 ``tests/tdd/test_compare_outlook_metric_selection.py``.
 """
 from __future__ import annotations
+from tests.helpers.ampel_allgemein import PRESET_ALLGEMEIN
 
 from datetime import date, datetime, timedelta, timezone
 
@@ -101,7 +102,7 @@ def _render_mail(opts):
     return render_compare_email(
         _result(),
         outlook_enabled=opts.outlook_enabled,
-        outlook_metrics=opts.outlook_metrics,
+        outlook_metrics=opts.outlook_metrics, preset=PRESET_ALLGEMEIN,
     )
 
 

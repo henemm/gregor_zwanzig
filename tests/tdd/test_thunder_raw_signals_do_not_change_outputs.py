@@ -23,6 +23,7 @@ beim Bauen des Vergleichsfalls.
 Testart: Kern-Schicht, keine Netzzugriffe, keine Mocks.
 """
 from __future__ import annotations
+from tests.helpers.ampel_allgemein import AMPEL_ALLGEMEIN
 
 import sys
 from datetime import datetime, timezone
@@ -115,7 +116,7 @@ def _segment(mit_neuen_feldern: bool) -> SegmentWeatherData:
 def _sms(mit_neuen_feldern: bool) -> str:
     return SMSTripFormatter().format_sms(
         [_segment(mit_neuen_feldern)],
-        stage_name="Karnisch-1", report_type="morning", tz=_TZ,
+        stage_name="Karnisch-1", report_type="morning", tz=_TZ, ampel=AMPEL_ALLGEMEIN,
     )
 
 

@@ -13,6 +13,7 @@ Keine Mocks/patch()/MagicMock — echte DailyForecast/NormalizedForecast-DTOs,
 echter Token-Builder.
 """
 from __future__ import annotations
+from tests.helpers.ampel_allgemein import AMPEL_ALLGEMEIN
 
 import sys
 from pathlib import Path
@@ -41,7 +42,7 @@ def _forecast_mit_bestaetigtem_hagel() -> NormalizedForecast:
 def test_ac1_gerendertes_token_traegt_hl_suffix():
     line = build_token_line(
         _forecast_mit_bestaetigtem_hagel(), config=None,
-        report_type="evening", stage_name="Etappe1",
+        report_type="evening", stage_name="Etappe1", ampel=AMPEL_ALLGEMEIN,
     )
     rendered = line.render()
 
@@ -57,7 +58,7 @@ def test_ac1_negativer_beleg_altes_hg_kuerzel_verschwindet():
     das Alte nachweisbar weg ist, nicht nur, wenn das Neue da ist."""
     line = build_token_line(
         _forecast_mit_bestaetigtem_hagel(), config=None,
-        report_type="evening", stage_name="Etappe1",
+        report_type="evening", stage_name="Etappe1", ampel=AMPEL_ALLGEMEIN,
     )
     rendered = line.render()
 

@@ -13,6 +13,7 @@ GREEN-Zustand (nach β3-Implementation):
   output.tokens.render.render_line() (β1) und ist bit-identisch.
 """
 from __future__ import annotations
+from tests.helpers.ampel_allgemein import AMPEL_ALLGEMEIN
 
 
 from src.output.tokens.builder import build_token_line
@@ -39,7 +40,7 @@ def _short_token_line(stage_name: str = "GR20 E3"):
         NormalizedForecast(days=(today,)),
         None,
         report_type="evening",
-        stage_name=stage_name,
+        stage_name=stage_name, ampel=AMPEL_ALLGEMEIN,
     )
 
 
@@ -67,7 +68,7 @@ def _long_token_line(stage_name: str = "Sehr Lange Etappe"):
         ),
         None,
         report_type="evening",
-        stage_name=stage_name,
+        stage_name=stage_name, ampel=AMPEL_ALLGEMEIN,
     )
 
 

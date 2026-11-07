@@ -21,6 +21,7 @@ Keine Mocks, keine Dateiinhalt-Checks. Reale Fixtures, reale Aufrufe.
 """
 
 from __future__ import annotations
+from tests.helpers.ampel_allgemein import AMPEL_ALLGEMEIN
 
 from datetime import datetime, timezone
 from zoneinfo import ZoneInfo
@@ -125,7 +126,7 @@ def _sms(segments, report_type="evening", thunder_forecast=None, night_weather=N
         report_type=report_type,
         tz=_TZ,
         thunder_forecast=thunder_forecast,
-        night_weather=night_weather,
+        night_weather=night_weather, ampel=AMPEL_ALLGEMEIN,
     )
 
 

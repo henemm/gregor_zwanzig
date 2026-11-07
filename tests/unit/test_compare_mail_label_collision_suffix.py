@@ -16,6 +16,7 @@ Renderer-Aufrufe, keine Mocks, kein ``patch()``, kein Netz.
 SPEC: docs/specs/modules/fix_1401_a2_mailtabellen.md (AC-4)
 """
 from __future__ import annotations
+from tests.helpers.ampel_allgemein import PRESET_ALLGEMEIN
 
 import re
 from datetime import date, datetime, timezone
@@ -112,7 +113,7 @@ def test_temperature_max_alone_shows_plain_short_form():
     result = _result()
     enabled = resolve_enabled_metrics(["temp_max_c"])
 
-    html = render_compare_html(result, enabled_metrics=enabled)
+    html = render_compare_html(result, enabled_metrics=enabled, preset=PRESET_ALLGEMEIN)
 
     assert _html_overview_labels(html) == ["Amtliche Warnungen", "Temperatur"], (
         "Nur Temperatur max gewaehlt -- die Zeile muss 'Temperatur' ohne "
@@ -125,7 +126,7 @@ def test_temperature_min_alone_shows_plain_short_form():
     result = _result()
     enabled = resolve_enabled_metrics(["temp_min_c"])
 
-    html = render_compare_html(result, enabled_metrics=enabled)
+    html = render_compare_html(result, enabled_metrics=enabled, preset=PRESET_ALLGEMEIN)
 
     assert _html_overview_labels(html) == ["Amtliche Warnungen", "Temperatur"], (
         "Nur Temperatur min gewaehlt -- die Zeile muss 'Temperatur' ohne "
@@ -150,7 +151,7 @@ def test_temperature_max_and_min_together_get_the_evaluation_suffix():
     result = _result()
     enabled = resolve_enabled_metrics(["temp_max_c", "temp_min_c"])
 
-    html = render_compare_html(result, enabled_metrics=enabled)
+    html = render_compare_html(result, enabled_metrics=enabled, preset=PRESET_ALLGEMEIN)
 
     assert _html_overview_labels(html) == [
         "Amtliche Warnungen", "Temperatur Maximum", "Temperatur Minimum",
@@ -170,7 +171,7 @@ def test_wind_chill_min_alone_shows_plain_short_form():
     result = _result()
     enabled = resolve_enabled_metrics(["wind_chill_min_c"])
 
-    html = render_compare_html(result, enabled_metrics=enabled)
+    html = render_compare_html(result, enabled_metrics=enabled, preset=PRESET_ALLGEMEIN)
 
     assert _html_overview_labels(html) == [
         "Amtliche Warnungen", "Gefühlte Temperatur",
@@ -185,7 +186,7 @@ def test_wind_chill_max_alone_shows_plain_short_form():
     result = _result()
     enabled = resolve_enabled_metrics(["wind_chill_max_c"])
 
-    html = render_compare_html(result, enabled_metrics=enabled)
+    html = render_compare_html(result, enabled_metrics=enabled, preset=PRESET_ALLGEMEIN)
 
     assert _html_overview_labels(html) == [
         "Amtliche Warnungen", "Gefühlte Temperatur",
@@ -201,7 +202,7 @@ def test_wind_chill_min_and_max_together_get_the_evaluation_suffix():
     result = _result()
     enabled = resolve_enabled_metrics(["wind_chill_min_c", "wind_chill_max_c"])
 
-    html = render_compare_html(result, enabled_metrics=enabled)
+    html = render_compare_html(result, enabled_metrics=enabled, preset=PRESET_ALLGEMEIN)
 
     assert _html_overview_labels(html) == [
         "Amtliche Warnungen",
@@ -228,7 +229,7 @@ def test_temperature_and_wind_chill_collisions_are_independent():
         "temp_max_c", "temp_min_c", "wind_chill_min_c", "wind_chill_max_c",
     ])
 
-    html = render_compare_html(result, enabled_metrics=enabled)
+    html = render_compare_html(result, enabled_metrics=enabled, preset=PRESET_ALLGEMEIN)
 
     assert _html_overview_labels(html) == [
         "Amtliche Warnungen", "Temperatur Maximum", "Temperatur Minimum",

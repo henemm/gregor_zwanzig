@@ -27,6 +27,7 @@ RED-Ursache (heute):
 Keine Mocks/patch()/MagicMock.
 """
 from __future__ import annotations
+from tests.helpers.ampel_allgemein import AMPEL_ALLGEMEIN
 from app.ampel import resolve_ampel
 
 import sys
@@ -227,13 +228,13 @@ def test_ac5b_outlook_tabelle_zeigt_hagel_hinweis_in_gewitter_zelle():
         temp_min_c=12.0, temp_max_c=22.0, thunder_level_max=ThunderLevel.HIGH,
         hail_flag=None,
     )
-    row_true = build_outlook_row(summary_true, points, "Do", _TZ, context="vergleich")
-    row_unbekannt = build_outlook_row(summary_unbekannt, points, "Do", _TZ, context="vergleich")
+    row_true = build_outlook_row(summary_true, points, "Do", _TZ, context="vergleich", ampel=AMPEL_ALLGEMEIN)
+    row_unbekannt = build_outlook_row(summary_unbekannt, points, "Do", _TZ, context="vergleich", ampel=AMPEL_ALLGEMEIN)
 
     table_true = render_outlook_table([row_true], ampel=resolve_ampel(None))
     table_unbekannt = render_outlook_table([row_unbekannt], ampel=resolve_ampel(None))
-    plain_true = render_outlook_plain([row_true])
-    plain_unbekannt = render_outlook_plain([row_unbekannt])
+    plain_true = render_outlook_plain([row_true], ampel=AMPEL_ALLGEMEIN)
+    plain_unbekannt = render_outlook_plain([row_unbekannt], ampel=AMPEL_ALLGEMEIN)
 
     assert _HAGEL_HINWEIS in table_true, (
         f"Ausblick-HTML-Tabelle mit summary.hail_flag=True muss "
@@ -270,11 +271,11 @@ def test_ac5c_sms_token_th_plus_traegt_hl_suffix_bei_tomorrow_hail_true():
 
     line_true = build_token_line(
         NormalizedForecast(days=(today, tomorrow_true)), config=None,
-        report_type="evening", stage_name="Etappe1",
+        report_type="evening", stage_name="Etappe1", ampel=AMPEL_ALLGEMEIN,
     )
     line_unbekannt = build_token_line(
         NormalizedForecast(days=(today, tomorrow_unbekannt)), config=None,
-        report_type="evening", stage_name="Etappe1",
+        report_type="evening", stage_name="Etappe1", ampel=AMPEL_ALLGEMEIN,
     )
     rendered_true = line_true.render()
     rendered_unbekannt = line_unbekannt.render()
@@ -300,11 +301,11 @@ def test_ac6_sms_trip_tomorrow_traegt_hail_flag_konsistent_zu_today():
     seg = _segment_heute_ohne_gewitter()
     sms_true = SMSTripFormatter().format_sms(
         [seg], report_type="evening", tz=_TZ,
-        thunder_forecast=_thunder_forecast(True),
+        thunder_forecast=_thunder_forecast(True), ampel=AMPEL_ALLGEMEIN,
     )
     sms_unbekannt = SMSTripFormatter().format_sms(
         [seg], report_type="evening", tz=_TZ,
-        thunder_forecast=_thunder_forecast(None),
+        thunder_forecast=_thunder_forecast(None), ampel=AMPEL_ALLGEMEIN,
     )
     assert "+HL" in sms_true, (
         f"SMS-Trip-Briefing mit thunder_forecast['+1']['hail']=True muss den "

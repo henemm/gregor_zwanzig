@@ -9,6 +9,7 @@ TDD RED — Issue #357 + #358
 #358: G_BOX_WARNING_BG in compare_html.py (nicht compare_subscription.py)
   AC-4: Token G_BOX_WARNING_BG ist in compare_html.py referenziert
 """
+from tests.helpers.ampel_allgemein import AMPEL_ALLGEMEIN
 from datetime import datetime, timezone
 
 
@@ -87,7 +88,7 @@ def test_ac1_sms_grat_wind_moderate():
     exposed = [ExposedSection(start_km=0.0, end_km=2.0, max_elevation_m=2400.0, exposition_type="GRAT")]
 
     formatter = SMSTripFormatter()
-    sms = formatter.format_sms(segments=[seg], exposed_sections=exposed)
+    sms = formatter.format_sms(segments=[seg], exposed_sections=exposed, ampel=AMPEL_ALLGEMEIN)
 
     assert "GratWind" in sms, f"Erwartet 'GratWind' in SMS, aber war nicht vorhanden. SMS: {sms!r}"
 
@@ -108,8 +109,8 @@ def test_ac2_sms_no_exposition_no_label():
     seg = _seg(start_km=0.0, end_km=2.0, elev_m=1500.0, wind_max=35.0, gust_max=40.0)
 
     formatter = SMSTripFormatter()
-    sms = formatter.format_sms(segments=[seg], exposed_sections=[])
-    sms_none = formatter.format_sms(segments=[seg], exposed_sections=None)
+    sms = formatter.format_sms(segments=[seg], exposed_sections=[], ampel=AMPEL_ALLGEMEIN)
+    sms_none = formatter.format_sms(segments=[seg], exposed_sections=None, ampel=AMPEL_ALLGEMEIN)
 
     for result in (sms, sms_none):
         assert "GratWind" not in result, f"Unerwartetes 'GratWind' in SMS: {result!r}"
@@ -133,7 +134,7 @@ def test_ac3_sms_grat_sturm_high():
     exposed = [ExposedSection(start_km=0.0, end_km=2.0, max_elevation_m=2400.0, exposition_type="GRAT")]
 
     formatter = SMSTripFormatter()
-    sms = formatter.format_sms(segments=[seg], exposed_sections=exposed)
+    sms = formatter.format_sms(segments=[seg], exposed_sections=exposed, ampel=AMPEL_ALLGEMEIN)
 
     assert "GratSturm" in sms, f"Erwartet 'GratSturm' in SMS, aber war nicht vorhanden. SMS: {sms!r}"
 

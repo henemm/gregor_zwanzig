@@ -17,6 +17,7 @@ KEINE Mocks (Projektkonvention CLAUDE.md) -- echte ``LocationResult``/
 ``render_compare_html()``-Aufruf (pure function, kein Netzwerk).
 """
 from __future__ import annotations
+from tests.helpers.ampel_allgemein import PRESET_ALLGEMEIN
 
 import re
 from datetime import date, datetime
@@ -123,7 +124,7 @@ class TestOverviewRowOrder:
         result = _make_overview_result()
         html = render_compare_html(
             result, profile=ActivityProfile.ALLGEMEIN,
-            enabled_metrics=["precip_sum", "wind_max", "temp_max"],
+            enabled_metrics=["precip_sum", "wind_max", "temp_max"], preset=PRESET_ALLGEMEIN,
         )
 
         table = _find_overview_table(html)
@@ -157,7 +158,7 @@ class TestHourColumnOrder:
         result = _make_hour_result()
         html = render_compare_html(
             result, profile=ActivityProfile.ALLGEMEIN,
-            hourly_metrics=["precip_1h_mm", "t2m_c", "wind10m_kmh"],
+            hourly_metrics=["precip_1h_mm", "t2m_c", "wind10m_kmh"], preset=PRESET_ALLGEMEIN,
         )
 
         table = _hour_table_html(html)
@@ -177,7 +178,7 @@ class TestHourColumnOrder:
         from output.renderers.email.compare_html import render_compare_html
 
         result = _make_hour_result()
-        html = render_compare_html(result, profile=ActivityProfile.ALLGEMEIN, hourly_metrics=None)
+        html = render_compare_html(result, profile=ActivityProfile.ALLGEMEIN, hourly_metrics=None, preset=PRESET_ALLGEMEIN)
 
         table = _hour_table_html(html)
         header = _rows(table)[0]
@@ -202,7 +203,7 @@ class TestWindDirectionMerge:
         result = _make_hour_result(wind_dir_deg=225, wind_kmh=20.0)
         html = render_compare_html(
             result, profile=ActivityProfile.ALLGEMEIN,
-            hourly_metrics=["wind10m_kmh", "wind_direction_deg"],
+            hourly_metrics=["wind10m_kmh", "wind_direction_deg"], preset=PRESET_ALLGEMEIN,
         )
 
         table = _hour_table_html(html)
@@ -222,7 +223,7 @@ class TestWindDirectionMerge:
         # Keine eigenstaendige Windrichtungs-Spalte -- Spaltenzahl bleibt
         # unveraendert ggue. einer Auswahl ohne 'wind_direction_deg'.
         html_without = render_compare_html(
-            result, profile=ActivityProfile.ALLGEMEIN, hourly_metrics=["wind10m_kmh"],
+            result, profile=ActivityProfile.ALLGEMEIN, hourly_metrics=["wind10m_kmh"], preset=PRESET_ALLGEMEIN,
         )
         header_without = _rows(_hour_table_html(html_without))[0]
         assert len(header) == len(header_without), (
@@ -245,7 +246,7 @@ class TestWindDirectionNoMergeWithoutSelection:
 
         result = _make_hour_result(wind_dir_deg=225, wind_kmh=20.0)
         html = render_compare_html(
-            result, profile=ActivityProfile.ALLGEMEIN, hourly_metrics=["wind10m_kmh"],
+            result, profile=ActivityProfile.ALLGEMEIN, hourly_metrics=["wind10m_kmh"], preset=PRESET_ALLGEMEIN,
         )
 
         table = _hour_table_html(html)
@@ -273,7 +274,7 @@ class TestOverviewWindDirectionRegress:
         result = _make_overview_result()
         html = render_compare_html(
             result, profile=ActivityProfile.ALLGEMEIN,
-            enabled_metrics=["temp_max", "wind_direction_avg"],
+            enabled_metrics=["temp_max", "wind_direction_avg"], preset=PRESET_ALLGEMEIN,
         )
 
         table = _find_overview_table(html)

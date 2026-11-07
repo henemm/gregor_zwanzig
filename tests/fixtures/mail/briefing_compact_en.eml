@@ -18,8 +18,8 @@ Etappe 3
 == Metrics overview ==
   11-15C - Max 10:00
   feels 9.0C - Max 08:00
-  Wind >10 km/h from 08:00 - max 14 (08:00)
-  Wind gusts >20 km/h from 08:00 - max 28 (08:00)
+  Wind max 14 km/h (08:00)
+  Wind gusts max 28 km/h (08:00)
   no rain
   no thunderstorm
   30% cloud cover - Max 08:00
@@ -30,6 +30,6 @@ Fr                             7/14C   -     12    T-
 Sa                             6/12C   1.2mm 18    T-
 
 ----------------------------------------
-Generated: 2026-10-31 15:14 UTC
+Generated: 2026-11-06 15:04 UTC
 Data: openmeteo (arome_france)
 Stage briefing - compact - openmeteo

@@ -673,6 +673,8 @@ def test_ac11_matrix_ist_vollstaendig(monkeypatch):
 #: textuell im Klartext-Teil derselben Mail, per ``parse_email_plain``
 #: separat geprueft).
 _AC12_ERLAUBTE_PLATZHALTER: set[tuple[str, str]] = {("thunder", "email_html")}
+#: SMS-artige Texte, in denen ``-`` seit #2792 S1c-4b (E1) die Nullform ist.
+_AC12_SMS_ARTIG = ("sms", "telegram_kurzform", "premium_sms")
 
 
 def test_ac12_keine_rote_zelle_durch_fehlende_rohdaten(monkeypatch):
@@ -701,6 +703,20 @@ def test_ac12_keine_rote_zelle_durch_fehlende_rohdaten(monkeypatch):
                 if mid not in ist_ids:
                     continue  # "erscheint"-Abweichung, nicht Gegenstand von AC-12
                 if (mid, kanal) in _AC12_ERLAUBTE_PLATZHALTER:
+                    continue
+                if (kanal in _AC12_SMS_ARTIG and ist_modi.get(mid) is None
+                        and roh_wert_der_metrik(mitschrift, kanal, mid) == "-"):
+                    # Issue #2792 S1c-4b (E1): ``-`` ist in SMS-artigen Texten die
+                    # Nullform „unter Gelb, nicht erwaehnt" (z.B. Wind 20 km/h <
+                    # Gelb 30) -- KEINE fehlende Rohdaten-Zelle. Beweis wie bei der
+                    # thunder-Ausnahme: derselbe Wert steht als Zahl im Klartext
+                    # derselben Mail.
+                    _, modi_plain = parse_kanal(mitschrift, "email_plain")
+                    assert modi_plain.get(mid) is not None, (
+                        f"AC-12: {mid!r} steht in Kanal {kanal!r} ({golden_name}) als "
+                        f"Nullform '-' UND fehlt als Wert im E-Mail-Klartext -- "
+                        f"fehlende Rohdaten statt Nullform."
+                    )
                     continue
                 assert ist_modi.get(mid) is not None, (
                     f"AC-12: {mid!r} zeigt in Kanal {kanal!r} ({golden_name}) "
@@ -749,9 +765,13 @@ def test_ac13_naht_liegt_nur_am_transport(monkeypatch):
     # weitere aktive Metrik, damit gust WEITERHIN die 8. Kandidatin ist -- und
     # erscheint statt dessen in der begleitenden Kurzuebersicht-Bubble
     # ("G 45") -- ``roh_wert_der_metrik`` sucht beide Fundstellen.
-    assert roh_wert_der_metrik(mit_b, "telegram_rich", "gust") == "45", (
+    # Issue #2792 S1c-4b (AC-7, Spec §5 Einzelform): 45 km/h liegt ueber Gelb
+    # (30), die Kurzuebersicht traegt daher die Stunde („45@08"); geprueft wird
+    # wie bei der SMS der Wert vor dem ``@``.
+    tg_wert = roh_wert_der_metrik(mit_b, "telegram_rich", "gust")
+    assert tg_wert is not None and tg_wert.split("@")[0] == "45", (
         "AC-13: Telegram muss den Boen-Wert an der gust-Stelle tragen "
-        "(Stunden-Tabelle oder Kurzuebersicht-Zeile)."
+        f"(Stunden-Tabelle oder Kurzuebersicht-Zeile), erhalten {tg_wert!r}."
     )
 
 

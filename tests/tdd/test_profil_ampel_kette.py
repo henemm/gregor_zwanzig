@@ -748,16 +748,26 @@ def test_alarm_nachricht_ampel_ist_pflichtfeld_ohne_default():
 # 8. Spitzenwert-Gleichstand und CAPE-Brücke (F003)
 # ---------------------------------------------------------------------------
 
-def test_spitzenwert_bei_gleicher_stufe_gewinnt_die_frueheste_stunde():
-    """31 @12 und 35 @15 sind bei Allgemein-Wind beide gelb: Spitze =
-    früheste Stunde ⇒ „31@12" (nicht „31@12(35@15)")."""
+def _schaerfe(ampel, metric_id, v):
+    """Fix-Loop 2 (F003): ``ampel_schaerfe`` ist neben ``ampel_stufe`` Pflicht
+    (Klammer = schlimmster Wert je Seite); mechanisch ergaenzt."""
+    from app.ampel import ampel_schaerfe
+    return ampel_schaerfe(ampel, metric_id, v)
+
+
+def test_spitzenwert_bei_gleicher_stufe_zeigt_das_maximum():
+    """31 @12 und 35 @15 sind bei Allgemein-Wind beide gelb. Issue #2792
+    S1c-4b Fix-Loop 1 (F008, Koordinator-Entscheid) -- umgekehrt: die Klammer
+    zeigt weiter den Hoechstwert mit Stunde (bisherige Token-Semantik, kein
+    Informationsverlust) ⇒ „31@12(35@15)"; frueher (S1c-4a) „31@12"."""
     from output.metric_format import severity_for
     from output.tokens.dto import HourlyValue
     from output.tokens.metrics import render_threshold_peak_value
     samples = (HourlyValue(hour=12, value=31.0), HourlyValue(hour=15, value=35.0))
     assert render_threshold_peak_value(
         "W", samples, None,
-        ampel_stufe=lambda v: severity_for("wind", v, ampel=ALLG)) == "31@12"
+        ampel_stufe=lambda v: severity_for("wind", v, ampel=ALLG),
+        ampel_schaerfe=lambda v: _schaerfe(ALLG, "wind", v)) == "31@12(35@15)"
 
 
 def test_spitzenwert_rot_schlaegt_orange_und_reihenfolge_egal():
@@ -770,7 +780,8 @@ def test_spitzenwert_rot_schlaegt_orange_und_reihenfolge_egal():
                HourlyValue(hour=13, value=50.0))
     assert render_threshold_peak_value(
         "W", samples, None,
-        ampel_stufe=lambda v: severity_for("wind", v, ampel=ALLG)) == "31@10(70@16)"
+        ampel_stufe=lambda v: severity_for("wind", v, ampel=ALLG),
+        ampel_schaerfe=lambda v: _schaerfe(ALLG, "wind", v)) == "31@10(70@16)"
 
 
 def test_spitzenwert_ampelstufe_hat_vorrang_vor_gespeicherter_schwelle():
@@ -786,7 +797,8 @@ def test_spitzenwert_ampelstufe_hat_vorrang_vor_gespeicherter_schwelle():
     assert render_threshold_peak_value("W", samples, 30.0) == "-"
     assert render_threshold_peak_value(
         "W", samples, 30.0,
-        ampel_stufe=lambda v: severity_for("wind", v, ampel=WASSER)) == "3@14"
+        ampel_stufe=lambda v: severity_for("wind", v, ampel=WASSER),
+        ampel_schaerfe=lambda v: _schaerfe(WASSER, "wind", v)) == "3@14"
 
 
 def test_cape_traegt_keine_eigene_farbe():
@@ -815,6 +827,9 @@ EINSTIEGE = {
     ("renderers/email/compare_html.py", "render_compare_html"): 1,
     ("renderers/comparison.py", "render_comparison_text"): 1,
     ("renderers/narrow.py", "render_telegram_bubbles"): 1,
+    # S1c-4b (Spec v1.5 Punkt 4): die SMS bekommt die Ampel aus derselben dc
+    # wie die Mail; aufgeloest im Formatter, der format_sms ruft.
+    ("renderers/trip_report.py", "format_email"): 1,
 }
 
 # S1c-4b: ``build_outlook_row`` löst nicht mehr selbst auf (er war Einstieg in
@@ -884,6 +899,14 @@ DIENST_EINSTIEGE = {
     ("validator_render_service.py", "render_alert_preview"): 1,
     # S1c-4b: der Ausblick wird je stage_trip mit dessen Ampel gebaut.
     ("trip_report_scheduler.py", "_build_stage_trend"): 1,
+    # S1c-4b (Spec v1.4 Punkt 7): die Telegram-Drilldowns loesen die Trip-
+    # Ampel fuer das Gewitter-Emoji (thunder_color) auf.
+    ("trip_command_processor.py", "_handle_drilldown"): 1,
+    ("trip_command_processor.py", "_handle_hours_drilldown"): 1,
+    ("trip_command_processor.py", "_handle_metric_drilldown"): 1,
+    # S1c-4b (Koordinator-Freigabe): zustandslose SMS-Editor-Vorschau, Body nur
+    # metric_ids, kein Trip/keine dc -- bewusst Vorlage „allgemein".
+    ("validator_render_service.py", "render_sms_fidelity_preview"): 1,
 }
 
 

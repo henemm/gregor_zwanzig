@@ -22,6 +22,7 @@ im selben Testfall gefordert, damit jeder Testfall insgesamt rot ist.
 Kern-Schicht, deterministisch. Kein Mock-Framework, kein Netz.
 """
 from __future__ import annotations
+from tests.helpers.ampel_allgemein import AMPEL_ALLGEMEIN
 from app.ampel import resolve_ampel
 
 import re
@@ -60,7 +61,7 @@ def _row(summary: SegmentWeatherSummary, metrics: list[dict], weekday: str = "Mo
     """Row-Dict wie ``aggregate_stage``/``summarize_points`` es lieferten --
     ``points=[]`` ist unschaedlich, die Stundenreihen sind fuer diese Tests
     ohne Bedeutung (kein Trip-Tagesfenster im Spiel, #1841 bleibt unberuehrt)."""
-    return build_outlook_row(summary, [], weekday, TZ, metrics=metrics, context="vergleich")
+    return build_outlook_row(summary, [], weekday, TZ, metrics=metrics, context="vergleich", ampel=AMPEL_ALLGEMEIN)
 
 
 def _cell_styles(table_html: str) -> list[str]:
@@ -124,8 +125,9 @@ def test_ac2_ortsvergleich_bekommt_dieselbe_farbe_wie_der_trip():
 def test_ac3_ac4_ac5_gewitterspalte_folgt_der_ampelband_zuordnung_je_stufe():
     """AC-3: NONE bleibt farblos (kein gruener Teppich trotz
     ``thunder_ampel_band(NONE) == "green"``).
-    AC-4: LOW traegt exakt ``background:#fbe6c3;`` (Altpfad-Hellgelbton),
-    NICHT ``tone_css('yellow')``.
+    AC-4, umgekehrt durch #2792 S1c-4b (AC-5, AC-19 c): LOW traegt das
+    Gelb der zentralen Abbildung ``thunder_color`` (``tone_css('yellow')``),
+    kein eigener Hellgelbton mehr.
     AC-5: MED/HIGH tragen ``tone_css('orange')``/``tone_css('red')``.
     """
     stufen = ["NONE", "LOW", "MED", "HIGH"]
@@ -145,15 +147,16 @@ def test_ac3_ac4_ac5_gewitterspalte_folgt_der_ampelband_zuordnung_je_stufe():
 
     erwartet = [
         "",  # NONE
-        "background:#fbe6c3;",  # LOW -- Altpfad-Hellgelbton, kein tone_css('yellow')
+        f"background:{tone_css('yellow')[0]};",  # LOW -- zentral gelb (#2792, P2)
         f"background:{tone_css('orange')[0]};",  # MED
         f"background:{tone_css('red')[0]};",  # HIGH
     ]
     assert gewitter_bg == erwartet, (
         f"Gewitter-Hintergruende {gewitter_bg!r} statt {erwartet!r} fuer die "
-        "Stufen NONE/LOW/MED/HIGH (AC-3/AC-4/AC-5). Vorsicht bei tone_css('yellow') "
-        f"({tone_css('yellow')[0]!r}) statt des LOW-Sonderfarbtons #fbe6c3."
+        "Stufen NONE/LOW/MED/HIGH (AC-3/AC-4/AC-5; #2792: LOW = tone_css('yellow'), "
+        "kein Sonderfarbton #fbe6c3 mehr)."
     )
+    assert "#fbe6c3" not in html, "Der alte LOW-Sonderfarbton darf nicht mehr erscheinen"
 
 
 # ═══════════════ AC-6 / AC-7 — dauerhaft farblose Spalten ═══════════════════

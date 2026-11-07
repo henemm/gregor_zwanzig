@@ -15,6 +15,7 @@ Kern-Schicht: echte DTOs, echter Renderpfad, kein Netz, kein Mock-Framework.
 Pfadregel #1409.
 """
 from __future__ import annotations
+from tests.helpers.ampel_allgemein import PRESET_ALLGEMEIN
 
 import json
 import re
@@ -110,7 +111,7 @@ def test_ac9_ortsvergleich_rundlauf_temperatur_als_spanne_wind_als_einzelwert(tm
 
     html, _text = render_compare_email(
         _result(), outlook_enabled=opts.outlook_enabled,
-        outlook_metrics=opts.outlook_metrics,
+        outlook_metrics=opts.outlook_metrics, preset=PRESET_ALLGEMEIN,
     )
     tabellen = _outlook_tables(html)
     assert tabellen, (
