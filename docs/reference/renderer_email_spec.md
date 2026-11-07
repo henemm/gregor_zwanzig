@@ -275,7 +275,7 @@ und weichen bei Niederschlag bewusst von den Stunden-Schwellen dieser Tabelle ab
 
 | Kategorie | Metriken | Einfach (HTML) | Einfach (Plain) | Roh (HTML) | Roh (Plain) | Notiz |
 |---|---|---|---|---|---|---|
-| **Severity-Ampel** 🟢🟡🟠🔴 | wind, gust, precip, pop, cape | Ampelpunkt nach `display_thresholds` | Zahl + Einheit | Zahl + Einheit, **keine Markierung** | Zahl + Einheit | Nur HTML hat Ampel; Plain & Roh immer numerisch |
+| **Severity-Ampel** 🟢🟡🟠🔴 | wind, gust, precip, pop | Ampelpunkt nach Profil-Ampel des Abos (seit #2792 S1c-4b) | Zahl + Einheit | Zahl + Einheit, **keine Markierung** | Zahl + Einheit | Nur HTML hat Ampel; Plain & Roh immer numerisch. **CAPE trägt keine Farbe** (nackte Zahl, nie „–“) |
 | **Wetterbild-Piktogramm** | cloud_total, cloud_low, cloud_mid, cloud_high, sunshine | Emoji (☀️🌤️⛅🌥️☁️) | Emoji (gleich) | Zahl | Zahl | Emoji in Einfach (HTML+Plain), Zahl in Roh — unverändert seit #435 |
 | **Severity-Ampel** 🟢🟡🟠🔴 | thunder | Ampelpunkt (NONE=grün, LOW=gelb, MED=orange, HIGH=rot); **keine Aussage (`None`) = „–"** | deutsches Wort (kein / leicht / mittel / hoch) | deutsches Wort | deutsches Wort | Seit #1491 reguläre Ampel-Spalte: kein ⚡, kein „mögl." mehr. „–" heißt ausschließlich „keine Aussage", nie „keine Gefahr" (`thunder_ampel_band()` liefert für `None` bewusst `None`). Die Gewitter-Pille im Prosa-Block (Zeile 87) behält ihr ⚡ — sie ist nicht Teil der Spalte. 🔴 **Nur die Trip-Stundentabelle zeigt bei `NONE` einen grünen Punkt** — die Übersichtsmatrix des **Orts-Vergleichs** lässt `NONE` bewusst **unmarkiert** (`compare_html._sev_thunder` liefert dort `None`). Bewusste Unterscheidung, kein Versehen: die Trip-Tabelle listet jede Stunde und braucht die Aussage „geprüft, ruhig"; die Vergleichsmatrix zeigt Tageswerte und würde sonst flächig grün markiert. Ein Umbau, der `NONE` über die geteilte Bandzuordnung laufen lässt, kippt das still um (passiert in #1491, korrigiert in `99da3131`) |
 | **Zahl (kein Modus-Unterschied)** | visibility, temperature, wind_chill, dewpoint, humidity, pressure, uv_index, freezing_level, snowfall_limit, snow_depth, fresh_snow, precip_type | Zahl + Einheit | Zahl + Einheit | Zahl + Einheit | Zahl + Einheit | Unverändert in beiden Modi |
@@ -288,7 +288,7 @@ und weichen bei Niederschlag bewusst von den Stunden-Schwellen dieser Tabelle ab
 | gust (km/h) | 30 | 45 | 60 | PO-Entscheidung #1377: die Werte, die die Stundentabelle bereits färbte |
 | precip (mm/h) | 1 | 5 | 10 | Regenintensität leicht/mäßig/stark |
 | pop (%) | 30 | 60 | 80 | Niederschlagswahrscheinlichkeit |
-| cape (J/kg) | 300 | 800 | 1500 | Katalog-Ist-Stand (`metric_catalog.py:264`) |
+| cape (J/kg) | – | – | – | seit #2792 S1c-4b ohne Farbe (früher 300/800/1500) |
 | temperature / wind_chill (°C) | ≥28 · <0 | ≥31 · <−5 | ≥34 · <−15 | PO-Entscheidung #1377, beidseitig (Hitze und Kälte) |
 | uv_index | 3 | 6 | 8 | PO-Entscheidung #1377 |
 
@@ -298,8 +298,9 @@ Quelle ist immer `display_thresholds` im Metrik-Katalog; ausgewertet wird aussch
 Seit #2792 S1c-1 (2026-11-05) liest kein Renderer `display_thresholds` mehr selbst: die Schwellen
 kommen über das keyword-only Pflichtparameter-Objekt `ampel=` (`src/app/ampel.py`: `resolve_ampel`,
 `ampel_for`) bis an jede Farbentscheidung; `AlertMessage` trägt das Pflichtfeld `ampel`. Die Einstiege
-übergeben noch `resolve_ampel(None)` (Vorlage „Allgemein“ = obige Werte), daher ist die Ausgabe
-byte-gleich. Ratsche: `tests/tdd/test_kein_leser_liest_display_thresholds.py` (kein Lesezugriff auf
+übergaben in S1c-1 noch `resolve_ampel(None)` (Vorlage „Allgemein“ = obige Werte, byte-gleich).
+**Seit S1c-4b (2026-11-06/07)** lösen alle Einstiege die Ampel des jeweiligen Abos auf (Vorlage plus
+eigene Abweichungen); die Tabelle zeigt damit nur die Vorlage „Allgemein“. Ratsche: `tests/tdd/test_kein_leser_liest_display_thresholds.py` (kein Lesezugriff auf
 `display_thresholds` in `src/output/**`).
 
 **Nicht verwechseln:** `risk_thresholds` (Risk Engine, `api_contract.md` §7) ist eine getrennte
@@ -311,7 +312,8 @@ Für die **Tabellenspalte** gilt die Entscheidung aus #814 unverändert: kein Am
 Echte Wetterdaten zeigen Median 16–54 km, ≥10 km in 90–100 % aller Stunden — eine Spaltenampel
 wäre dauergrün und wertlos, die nackte km-Zahl trägt mehr Information. `visibility` steht
 deshalb weiterhin nicht in `_COL_KEY_TO_METRIC_ID` (`html.py:565`, das Mapping für den
-Ampelpunkt der fünf Ampel-fähigen Metriken wind/gust/precip/pop/cape).
+Ampelpunkt der Ampel-fähigen Metriken wind/gust/precip/pop; ein toter `cape`-Eintrag steht
+dort noch, wirkt aber nicht, seit CAPE keine Farbe mehr trägt, #2792 S1c-4b).
 
 **Seit Issue #1377 Scheibe B1 (`506c25f4`) bekommt die Sicht-Zelle aber einen getönten
 Hintergrund:** Der Roh-Modus-Fallback in `_render_html_table` fragt für `vis`/`visibility`
