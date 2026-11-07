@@ -13,6 +13,7 @@ blind, s. #1366). Geprueft wird, was in der gerenderten Mail steht, nicht
 welche Funktion aufgerufen wurde. Kein Dateiinhalt-Check.
 """
 from __future__ import annotations
+from tests.helpers.ampel_allgemein import PRESET_ALLGEMEIN
 
 import logging
 import re
@@ -145,7 +146,7 @@ def _render_mail(*, outlook_enabled: bool = True, outlook_metrics=None):
         return render_compare_email(
             _result(),
             outlook_enabled=outlook_enabled,
-            outlook_metrics=outlook_metrics,
+            outlook_metrics=outlook_metrics, preset=PRESET_ALLGEMEIN,
         )
     except TypeError as exc:
         raise AssertionError(
@@ -647,7 +648,7 @@ def test_ac5_column_legend_resolves_outlook_only_abbreviations():
         _result(), outlook_enabled=True, outlook_metrics=gewaehlt,
         # Stundentabelle bewusst auf eine ANDERE Groesse verengt: nur so ist
         # messbar, ob die Legende den Ausblick ueberhaupt ansieht.
-        hourly_metrics={"temp_max_c"},
+        hourly_metrics={"temp_max_c"}, preset=PRESET_ALLGEMEIN,
     )
 
     for metric_id in gewaehlt:

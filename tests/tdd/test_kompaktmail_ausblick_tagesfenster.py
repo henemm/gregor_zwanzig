@@ -36,6 +36,7 @@ AC-6-Gegenprobe wird die ECHTE Traeger-Fusion verwendet (wie
 NACHWEISLICH entstehen muss, nicht nur behauptet werden darf.
 """
 from __future__ import annotations
+from tests.helpers.ampel_allgemein import AMPEL_ALLGEMEIN
 
 import re
 import sys
@@ -506,7 +507,7 @@ def _mit_herkunft_ausblick_zeile() -> dict:
         punkte, cape_ladder_thresholds_jkg(_MODELL, region),
         lpi_thresholds_jkg(region),
     )
-    zeile = build_outlook_row(summarize_points(punkte), punkte, _WOCHENTAG, _TZ, context="vergleich")
+    zeile = build_outlook_row(summarize_points(punkte), punkte, _WOCHENTAG, _TZ, context="vergleich", ampel=AMPEL_ALLGEMEIN)
     zeile["name"] = "Etappe B"
     return zeile
 

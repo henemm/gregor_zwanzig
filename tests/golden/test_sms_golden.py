@@ -23,6 +23,7 @@ contain '# WILL BE FROZEN IN PHASE 6'.
 NO cross-check against legacy output.renderers.sms_trip — see spec §A1.
 """
 from __future__ import annotations
+from tests.helpers.ampel_allgemein import AMPEL_ALLGEMEIN
 
 import re
 from pathlib import Path
@@ -222,7 +223,7 @@ def _build_golden_line(stem: str) -> TokenLine:
         forecast,
         config,
         report_type=meta["report_type"],
-        stage_name=meta["stage_name"],
+        stage_name=meta["stage_name"], ampel=AMPEL_ALLGEMEIN,
     )
 
 

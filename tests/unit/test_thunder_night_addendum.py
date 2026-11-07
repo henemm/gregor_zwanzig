@@ -20,6 +20,7 @@ KEINE Mocks: reale Model-Objekte, echte Scheduler-Methoden. Die Fixtures
 -- derselbe Pruefling, dieselben Daten, EINE Quelle statt einer Kopie.
 """
 from __future__ import annotations
+from tests.helpers.ampel_allgemein import AMPEL_ALLGEMEIN
 
 from datetime import date, datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
@@ -58,7 +59,7 @@ def _trend_row(thunder_by_hour, level_max, fc_date: date = _TOMORROW):
 
     points = _day_points(fc_date, thunder_by_hour)
     seg = _segment(points, thunder_level_max=level_max)
-    row = build_outlook_row(seg.aggregated, points, "Sa", _UTC, context="vergleich")
+    row = build_outlook_row(seg.aggregated, points, "Sa", _UTC, context="vergleich", ampel=AMPEL_ALLGEMEIN)
     row["date"] = fc_date
     return row
 
@@ -445,7 +446,7 @@ def test_ac8_sms_token_ignoriert_die_nacht_angabe():
     sms = SMSTripFormatter().format_sms(
         [_segment(_day_points(_TODAY, {}))],
         report_type="morning",
-        thunder_forecast={"+1": entry},
+        thunder_forecast={"+1": entry}, ampel=AMPEL_ALLGEMEIN,
     )
     assert "TH+:-" in sms, (
         "Die Nacht-Angabe ist in die Kurznachricht durchgeschlagen -- die SMS "

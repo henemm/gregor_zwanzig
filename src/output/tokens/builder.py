@@ -4,6 +4,7 @@ from __future__ import annotations
 from dataclasses import replace
 from typing import Iterable, Optional
 
+from app.ampel import ampel_schaerfe, ampel_stufe, gelb_oder_schlechter
 from utils.ascii_fold import fold_ascii
 
 from output.tokens.dto import (
@@ -162,8 +163,20 @@ FORMAT_BEDEUTUNG_DE: dict[str, str] = katalog_bedeutung(
 # Vorhersage-Position auf den Vigilance-Token durchschlaegt.
 _POSITION_SORTABLE_CATEGORIES = {"forecast", "wintersport"}
 
-DEFAULTS = {"R": 0.2, "PR": 20.0, "W": 10.0, "G": 20.0,
-            FORECAST_TH: 1.0, FORECAST_THP: 1.0}
+# Issue #2792 S1c-4b (E1, Spec §5 Punkt 9): die frueheren festen
+# Hervorhebungsschwellen (``DEFAULTS``) und ``MetricSpec.threshold`` wirken
+# nicht mehr. Hervorgehoben wird die erste Stunde, in der die Metrik nach der
+# Abo-Ampel gelb oder schlechter ist (beidseitig); Gewitter ab „leicht".
+#: Kuerzel -> Metrik der Profil-Ampel (nur Groessen mit Ampel-Leser).
+AMPEL_METRIK_JE_KUERZEL: dict[str, str] = {
+    "R": "precipitation", "PR": "rain_probability", "W": "wind", "G": "gust",
+    "UV": "uv_index",
+}
+#: Gewitter ist ordinal: „leicht" (Render-Wert 1) ist gelb oder schlechter (P2).
+_GEWITTER_AB_LEICHT = 1.0
+#: Issue #2792 S1c-4b (Spec §5 Punkt 5): Luftfeuchte hat keinen Ampel-Leser;
+#: Erwaehnung/Hervorhebung fest ab diesem Wert (Prozent), Kurzkanal und Mail.
+LUFTFEUCHTE_ERWAEHNUNG_AB_PCT = 90.0
 
 
 def _visible(spec: Optional[MetricSpec], rt: ReportType) -> bool:
@@ -204,7 +217,8 @@ def _gap_or(value: str, has_gap: bool) -> str:
 
 def _mk_metric(symbol: str, samples: tuple, spec: Optional[MetricSpec],
                rt: ReportType, is_level: bool = False,
-               has_gap: bool = False, value_suffix: str = "") -> Optional[Token]:
+               has_gap: bool = False, value_suffix: str = "",
+               *, ampel: dict) -> Optional[Token]:
     if not _visible(spec, rt):
         return None
     stufe_fn = (STUFEN_FN.get(symbol)
@@ -212,12 +226,24 @@ def _mk_metric(symbol: str, samples: tuple, spec: Optional[MetricSpec],
     if stufe_fn is None and spec and _spec_uses_friendly_token(spec) and spec.friendly_label:
         value = f"\x00{spec.friendly_label}"
     else:
-        thr = spec.threshold if (spec and spec.threshold is not None) \
-            else DEFAULTS.get(symbol)
+        # Issue #2792 S1c-4b: Hervorhebung nach der Abo-Ampel (gelb oder
+        # schlechter, beidseitig) statt `DEFAULTS`/`spec.threshold` (E1);
+        # Gewitter ab „leicht"; Groessen ohne Ampel-Leser zeigen ihre Spitze.
+        metrik = AMPEL_METRIK_JE_KUERZEL.get(symbol)
+        ampel_stufe_fn = (
+            (lambda v, _m=metrik: ampel_stufe(ampel, _m, v)) if metrik else None
+        )
+        # Fix-Loop 2 (F003): Klammer = schlimmster Wert je Seite.
+        ampel_schaerfe_fn = (
+            (lambda v, _m=metrik: ampel_schaerfe(ampel, _m, v)) if metrik else None
+        )
+        thr = (_GEWITTER_AB_LEICHT if is_level
+               else LUFTFEUCHTE_ERWAEHNUNG_AB_PCT if symbol == "HU" else None)
         # Issue #2422 S6 (B2): Einfach = GSM-7-Stufe (``CT:SCT@4``) statt des
         # Emoji-Labels -- nur fuer Groessen mit SMS-Einfachform (STUFEN_FN).
         value = render_threshold_peak_value(
-            symbol, samples, thr, is_level=is_level, stufe_fn=stufe_fn)
+            symbol, samples, thr, is_level=is_level, stufe_fn=stufe_fn,
+            ampel_stufe=ampel_stufe_fn, ampel_schaerfe=ampel_schaerfe_fn)
         # Issue #1328 (verschaerft 2026-07-20, PO-Entscheidung): jede
         # Entwarnung "-" wird bei einer Datenluecke im Fenster zu "?"
         # ("unbekannt"), unabhaengig davon, ob unterschwellige Stichproben
@@ -233,18 +259,39 @@ def _mk_metric(symbol: str, samples: tuple, spec: Optional[MetricSpec],
     )
 
 
+#: Issue #2792 S1c-4b (Nachtrag VS, §5 Punkt 5 + 9): Invers-Min-Kuerzel mit
+#: Ampel-Leser. ``FZ`` (Nullgradgrenze) hat keinen und bleibt unveraendert.
+INVERS_MIN_AMPEL_METRIK: dict[str, str] = {"VS": "visibility", "TF": "wind_chill"}
+
+
 def _mk_inverse_min_metric(symbol: str, samples: tuple, spec: Optional[MetricSpec],
                            rt: ReportType, has_gap: bool = False,
-                           unit_factor: float = 1.0, decimals: int = 0) -> Optional[Token]:
-    """Klasse (b) — Invers-Min (VS/NL). Issue #1660 Scheibe B, DEC-2b."""
+                           unit_factor: float = 1.0, decimals: int = 0,
+                           *, ampel: dict) -> Optional[Token]:
+    """Klasse (b) — Invers-Min (VS/NL). Issue #1660 Scheibe B, DEC-2b.
+
+    Issue #2792 S1c-4b: fuer Kuerzel mit Ampel-Leser (VS, TF) zeigt der Token
+    den Tiefstwert nur, wenn er nach der Abo-Ampel gelb oder schlechter ist
+    (dasselbe Praedikat wie die Mail-Erwaehnung); sonst Nullform ``-``.
+    ``spec.threshold`` wirkt dort nicht mehr (E1)."""
     if not _visible(spec, rt):
         return None
     if spec and _spec_uses_friendly_token(spec) and spec.friendly_label:
         value = f"\x00{spec.friendly_label}"
     else:
-        thr = spec.threshold if (spec and spec.threshold is not None) else None
-        value = render_inverse_min_value(symbol, samples, thr,
-                                          unit_factor=unit_factor, decimals=decimals)
+        metrik = INVERS_MIN_AMPEL_METRIK.get(symbol)
+        if metrik is not None:
+            value = render_inverse_min_value(symbol, samples, None,
+                                              unit_factor=unit_factor, decimals=decimals)
+            if samples:
+                tiefst = min(samples, key=lambda s: (s.value, s.hour)).value
+                # Ampel-Grenzen in DTO-Einheit (Sicht in Metern).
+                if not gelb_oder_schlechter(ampel, metrik, tiefst):
+                    value = "-"
+        else:
+            thr = spec.threshold if (spec and spec.threshold is not None) else None
+            value = render_inverse_min_value(symbol, samples, thr,
+                                              unit_factor=unit_factor, decimals=decimals)
         value = _gap_or(value, has_gap)
     return Token(
         symbol=symbol, value=value, category="forecast",
@@ -343,8 +390,12 @@ def build_token_line(
     report_type: ReportType,
     stage_name: str,
     risk_engine: object | None = None,
+    ampel: dict,
 ) -> TokenLine:
     """Build the canonical TokenLine per sms_format.md v2.3.
+
+    ``ampel`` (Issue #2792 S1c-4b, Pflicht ohne Default): aufgeloeste Ampel
+    des Abos; entscheidet die Hervorhebung (gelb oder schlechter).
 
     Deterministic: identical inputs -> bit-identical render() output.
     Raises ValueError on empty forecast or invalid stage_name.
@@ -362,13 +413,15 @@ def build_token_line(
     # Issue #1410: sechs Temperatur-Token (Symbol, Wert, nur-abends,
     # braucht-Spec). K/D/FK/FD erscheinen in beiden Report-Typen, N/FN nur
     # abends (DEC-1 unveraendert).
-    for sym, val, evening_only, needs_spec in (
-        ("N", today.night_temp_min_c, True, False),
-        ("L", today.temp_min_c, False, False),
-        ("D", today.temp_max_c, False, False),
-        ("FN", today.night_wind_chill_min_c, True, True),
-        ("FL", today.wind_chill_min_c, False, True),
-        ("FD", today.wind_chill_max_c, False, True),
+    # Issue #2792 S1c-4b (AC-1): L/D/FL/FD tragen `@h` (Stunde des Werts),
+    # wenn der Wert nach der Abo-Ampel gelb oder schlechter ist; N/FN nie.
+    for sym, val, evening_only, needs_spec, metrik, stunde in (
+        ("N", today.night_temp_min_c, True, False, None, None),
+        ("L", today.temp_min_c, False, False, "temperature", today.temp_min_hour),
+        ("D", today.temp_max_c, False, False, "temperature", today.temp_max_hour),
+        ("FN", today.night_wind_chill_min_c, True, True, None, None),
+        ("FL", today.wind_chill_min_c, False, True, "wind_chill", today.wind_chill_min_hour),
+        ("FD", today.wind_chill_max_c, False, True, "wind_chill", today.wind_chill_max_hour),
     ):
         spec = by_sym.get(sym)
         # Issue #1319 Scheibe D (DEC-1/DEC-2): N/FN haben ohne Trip-Kontext
@@ -394,9 +447,13 @@ def build_token_line(
         # ein fehlender Temperaturwert BEI Datenluecke ist "unbekannt", nicht
         # "geprueft und unauffaellig". Ein gefundener Wert bleibt unberuehrt
         # (render_temperature() liefert dann kein "-").
+        wert = _gap_or(render_temperature(val), today.has_data_gap)
+        if (metrik and stunde is not None and val is not None
+                and gelb_oder_schlechter(ampel, metrik, val)):
+            wert = f"{wert}@{stunde}"
         tokens.append(Token(
             symbol=sym,
-            value=_gap_or(render_temperature(val), today.has_data_gap),
+            value=wert,
             category="forecast",
             priority=PRIORITY[sym],
             morning_visible=spec.morning_enabled if spec else True,
@@ -443,7 +500,7 @@ def build_token_line(
         # segmentweiten `has_data_gap`.
         gap = today.has_data_gap or (sym == "PR" and today.pop_all_missing)
         tok = _mk_metric(sym, samples, spec, report_type, is_lvl,
-                          has_gap=gap, value_suffix=suffix)
+                          has_gap=gap, value_suffix=suffix, ampel=ampel)
         if tok:
             tokens.append(tok)
 
@@ -462,7 +519,7 @@ def build_token_line(
         if spec is None and not samples:
             continue
         tok = _mk_metric(sym, samples, spec, report_type, is_level=False,
-                          has_gap=today.has_data_gap)
+                          has_gap=today.has_data_gap, ampel=ampel)
         if tok:
             tokens.append(tok)
 
@@ -484,7 +541,8 @@ def build_token_line(
             continue
         tok = _mk_inverse_min_metric(sym, samples, spec, report_type,
                                       has_gap=today.has_data_gap,
-                                      unit_factor=unit_factor, decimals=decimals)
+                                      unit_factor=unit_factor, decimals=decimals,
+                                      ampel=ampel)
         if tok:
             tokens.append(tok)
 
@@ -532,7 +590,7 @@ def build_token_line(
         tok = _mk_metric(FORECAST_THP, tomorrow.thunder_hourly, spec,
                          report_type, is_level=True,
                          has_gap=tomorrow.has_data_gap,
-                         value_suffix=tomorrow_suffix)
+                         value_suffix=tomorrow_suffix, ampel=ampel)
         if tok:
             tokens.append(tok)
 

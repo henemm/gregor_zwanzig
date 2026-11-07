@@ -192,7 +192,10 @@ def test_unrelated_trip_without_derived_families_follows_global_order(tmp_path):
 
     source, sms = _render_sms(tmp_path, "unrelated")
     assert source == "global", f"Vorbedingung verletzt (source={source!r})"
-    assert sms == "E7: W12@4(45@10) G22@4(70@10) R0.5@5(8.4@11)", (
+    # Issue #2792 S1c-4b (E1, AC-19 e): Hervorhebung ab Gelb der Ampel
+    # „allgemein" -- die Einsatzwerte W12/G22/R0.5 liegen darunter (frueher
+    # W12@4(45@10) G22@4(70@10) R0.5@5(8.4@11)); Reihenfolge W,G,R unveraendert.
+    assert sms == "E7: W45@10 G70@10 R8.4@11", (
         f"AC-13/B9-Fix: bei Kaskadenquelle 'global' muss die SMS jetzt der "
         f"globalen Editor-Reihenfolge (wind,gust,precipitation -> W,G,R) "
         f"folgen, nicht mehr der alten festen POSITIONAL-Reihenfolge "

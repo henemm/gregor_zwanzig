@@ -16,6 +16,7 @@ Zwei Aufgaben:
 """
 from __future__ import annotations
 from app.ampel import resolve_ampel
+from tests.helpers.ampel_allgemein import PRESET_ALLGEMEIN
 
 import email
 import re
@@ -226,7 +227,8 @@ def _compare_eml(lang: str = "de") -> bytes:
         created_at=datetime(2026, 10, 29, 4, 0),
     )
     kw = {} if lang == "de" else {"lang": lang}  # de: Aufruf wie vor #2666
-    html = render_compare_html(result, profile=ActivityProfile.ALLGEMEIN, hourly_enabled=True, **kw)
+    html = render_compare_html(result, profile=ActivityProfile.ALLGEMEIN, hourly_enabled=True,
+                               preset=PRESET_ALLGEMEIN, **kw)
     return _mime("compare", subject="[Golden] Ortsvergleich", body=html, html=True,
                  plain=None, mail_type="compare", compare_hourly_enabled=True, lang=lang)
 

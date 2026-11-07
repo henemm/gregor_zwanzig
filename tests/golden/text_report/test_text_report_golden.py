@@ -15,6 +15,7 @@ GREEN-Zustand (nach β4-Implementation):
   (nicht aus altem WintersportFormatter.format()-Output kopieren — Spec §8.2).
 """
 from __future__ import annotations
+from tests.helpers.ampel_allgemein import AMPEL_ALLGEMEIN
 
 from pathlib import Path
 
@@ -83,7 +84,7 @@ def _stubaier_token_line() -> TokenLine:
     return build_token_line(
         forecast, config,
         report_type="evening",
-        stage_name="Stubaier",
+        stage_name="Stubaier", ampel=AMPEL_ALLGEMEIN,
     )
 
 

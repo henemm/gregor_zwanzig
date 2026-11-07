@@ -8,6 +8,7 @@ ECHTEN Loader/Kaskade/Formatter; einzige Naht ist der Transport-Aufzeichner.
 SPEC: docs/specs/modules/fix_2422_s6_register_leeren.md
 """
 from __future__ import annotations
+from tests.helpers.ampel_allgemein import AMPEL_ALLGEMEIN
 
 import re
 
@@ -143,7 +144,7 @@ def zeile(forecast_kwargs: dict, specs, *, max_length: int = 160) -> str:
     except TypeError as exc:
         pytest.fail(f"DailyForecast kennt das Feld noch nicht: {exc}")
     line = build_token_line(
-        NormalizedForecast(days=(tag,)), specs, report_type="evening", stage_name="E1",
+        NormalizedForecast(days=(tag,)), specs, report_type="evening", stage_name="E1", ampel=AMPEL_ALLGEMEIN,
     )
     return render_line(line, max_length)
 

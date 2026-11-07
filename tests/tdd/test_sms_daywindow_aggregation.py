@@ -410,18 +410,22 @@ class TestAC3CompanionValuesAtSameHour:
     Regen')."""
 
     def test_sms_shows_rain_pr_gust_at_same_hour(self):
-        segments = [_segment(day=20, agg_precip_sum_mm=0.5)]
+        # Issue #2792 S1c-4b (E1, AC-19 e): erwaehnt wird ab Gelb der Ampel
+        # „allgemein" (Regen 1 mm, Regen-W. 30 %, Böen 30 km/h) statt der
+        # SMS-Standardwerte -- die Begleitwerte liegen deshalb ab Gelb
+        # (frueher 0.5 mm / 25 km/h); Pruefzweck (dieselbe Stunde) unveraendert.
+        segments = [_segment(day=20, agg_precip_sum_mm=1.5)]
         night = _night_weather(
             day=20, event_hour=14, thunder=ThunderLevel.HIGH,
-            precip=0.5, pop=30, gust=25.0,
+            precip=1.5, pop=30, gust=35.0,
         )
         report = _report(segments, night, dc=_dc(rain_probability=True))
         sms = report.sms_text
 
         assert "TH:H@14" in sms, f"SMS: {sms}"
-        assert "R0.5@14" in sms, f"Erwartet Regen-Token R0.5@14.\nSMS: {sms}"
+        assert "R1.5@14" in sms, f"Erwartet Regen-Token R1.5@14.\nSMS: {sms}"
         assert "PR30%@14" in sms, f"Erwartet Regenwahrsch.-Token PR30%@14.\nSMS: {sms}"
-        assert "G25@14" in sms, f"Erwartet Boeen-Token G25@14.\nSMS: {sms}"
+        assert "G35@14" in sms, f"Erwartet Boeen-Token G35@14.\nSMS: {sms}"
 
     def test_compact_summary_names_rain_start_hour(self):
         segments = [_segment(day=20, agg_precip_sum_mm=0.5)]
@@ -440,20 +444,23 @@ class TestAC3CompanionValuesAtSameHour:
         )
 
     def test_pills_show_rain_pr_gust_at_same_hour(self):
-        segments = [_segment(day=20, agg_precip_sum_mm=0.5)]
+        # Issue #2792 S1c-4b (E1, AC-19 e): Erwaehnung ab Gelb der Ampel
+        # „allgemein" -- Werte und Erwaehnungsgrenzen (30 % / 30 km/h) siehe
+        # test_sms_shows_rain_pr_gust_at_same_hour.
+        segments = [_segment(day=20, agg_precip_sum_mm=1.5)]
         night = _night_weather(
             day=20, event_hour=14, thunder=ThunderLevel.HIGH,
-            precip=0.5, pop=30, gust=25.0,
+            precip=1.5, pop=30, gust=35.0,
         )
         report = _report(segments, night, dc=_dc(rain_probability=True))
         plain = report.email_plain
 
         assert "Gewitter hoch ab 14:00 · stärkste 14:00" in plain, f"Plain:\n{plain}"
-        assert "Regen ab 14:00 · 0.5 mm" in plain, f"Regen-Pille fehlt.\nPlain:\n{plain}"
-        assert "Regen-W. >20% ab 14:00 · max 30% (14:00)" in plain, (
+        assert "Regen ab 14:00 · 1.5 mm" in plain, f"Regen-Pille fehlt.\nPlain:\n{plain}"
+        assert "Regen-W. >30% ab 14:00 · max 30% (14:00)" in plain, (
             f"Regenwahrsch.-Pille fehlt.\nPlain:\n{plain}"
         )
-        assert "Böen >20 km/h ab 14:00 · max 25 (14:00)" in plain, (
+        assert "Böen >30 km/h ab 14:00 · max 35 (14:00)" in plain, (
             f"Boeen-Pille fehlt.\nPlain:\n{plain}"
         )
 
@@ -911,7 +918,9 @@ class TestAC5FoundValueStaysVisibleDespiteGap:
     def test_sms_keeps_found_rain_but_marks_rest_unknown(self):
         segments = [_segment_with_hour_overrides(
             day=20, start_h=_WALK_START_H, end_h=_ARRIVAL_H,
-            overrides={10: {"precip": 0.5}},
+            # Issue #2792 S1c-4b (E1): ein Fund ist ab Gelb der Ampel
+            # „allgemein" (1 mm) erwaehnenswert -- frueher 0.5 mm (> 0,2).
+            overrides={10: {"precip": 1.5}},
         )]
         report = _report(
             segments, None, report_type="morning",
@@ -921,9 +930,9 @@ class TestAC5FoundValueStaysVisibleDespiteGap:
 
         # Reihenfolge W/G vor R/PR seit Issue #2422 S2a AC-13 (B9-Fix, s.
         # Kommentar bei test_sms_shows_unknown_for_all_five_window_symbols).
-        assert "E7: D15/15 W? G? R0.5@10 PR? TH:? TH+:-" in sms, (
+        assert "E7: D15/15 W? G? R1.5@10 PR? TH:? TH+:-" in sms, (
             f"Erwartet: gefundener Regen (10:00, vor Ankunft) bleibt "
-            f"sichtbar (`R0.5@10`), waehrend PR/W/G/TH: ohne Fund im "
+            f"sichtbar (`R1.5@10`), waehrend PR/W/G/TH: ohne Fund im "
             f"unbeobachteten Zielfenster auf `?` wechseln.\nSMS: {sms}"
         )
 
@@ -935,14 +944,14 @@ class TestAC5FoundValueStaysVisibleDespiteGap:
         mit SMS `R0.5@10 PR? W? G? TH:?`)."""
         segments = [_segment_with_hour_overrides(
             day=20, start_h=_WALK_START_H, end_h=_ARRIVAL_H,
-            overrides={10: {"precip": 0.5}},
+            overrides={10: {"precip": 1.5}},  # #2792 E1: ab Gelb (1 mm)
         )]
         report = _report(
             segments, None, report_type="morning", dc=_dc(rain_probability=True), has_gap=True,
         )
         plain = report.email_plain
 
-        assert "Regen ab 10:00 · 0.5 mm" in plain, (
+        assert "Regen ab 10:00 · 1.5 mm" in plain, (
             f"Erwartet: der gefundene Regen-Wert (10:00, vor Ankunft) bleibt "
             f"in der Regen-Pille sichtbar, statt durch `?` verdraengt zu "
             f"werden.\nPlain:\n{plain}"

@@ -31,6 +31,7 @@ die Datenquelle. KEIN echter Versand: alle drei Kanaele sind abgeschaltet,
 der Versandlauf endet mit "no_channels".
 """
 from __future__ import annotations
+from tests.helpers.ampel_allgemein import AMPEL_ALLGEMEIN
 
 import datetime as _dt
 
@@ -326,7 +327,7 @@ def test_ac3_nacht_angabe_und_nacht_tabelle_nennen_dieselbe_stunde():
         temp_min_c=10.0, temp_max_c=20.0, wind_max_kmh=10.0,
         precip_sum_mm=0.0, thunder_level_max=ThunderLevel.NONE,
     )
-    row = build_outlook_row(summary, quiet_points, "So", _UTC, context="vergleich")
+    row = build_outlook_row(summary, quiet_points, "So", _UTC, context="vergleich", ampel=AMPEL_ALLGEMEIN)
     row["date"] = date(2026, 7, 12)
 
     forecast = TripReportSchedulerService(user_id="default")._build_thunder_forecast_from_trend_or_fetch(

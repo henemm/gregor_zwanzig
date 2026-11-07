@@ -16,6 +16,7 @@ KEINE Mocks (CLAUDE.md-Projektkonvention "KEINE MOCKED TESTS!"):
 - AC-3 entfernt die ENV-Variable temporaer und prueft echtes fail-soft-Verhalten.
 """
 from __future__ import annotations
+from tests.helpers.ampel_allgemein import PRESET_ALLGEMEIN
 
 import os
 from datetime import date, timedelta
@@ -130,7 +131,7 @@ class TestIssue1036MeteoForetsSource:
             target_date=target,
             profile=ActivityProfile.ALLGEMEIN,
         )
-        html = render_compare_html(result)
+        html = render_compare_html(result, preset=PRESET_ALLGEMEIN)
         assert "Waldbrand-Gefahr — Stufe 4" in html
         assert G_DANGER in html
 

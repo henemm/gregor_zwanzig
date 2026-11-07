@@ -88,6 +88,10 @@ def test_allgemein_liefert_genau_die_heutigen_katalog_schwellen(metric_id):
     (P1, AC-6/AC-19 a: CAPE ohne Farbe) — dort anpassen, nie lockern."""
     schwellen = _schwellen_aus_ampel()
     erwartet = {k: float(v) for k, v in get_metric(metric_id).display_thresholds.items()}
+    if metric_id == "cape":
+        # Issue #2792 S1c-4b (P1, AC-6/AC-19 a): umgekehrt -- CAPE traegt
+        # keine eigene Farbe mehr, die Bruecke ist entfernt.
+        erwartet = {}
     ist = {k: float(v) for k, v in schwellen(ALLG, metric_id).items()}
     assert ist == erwartet
 
@@ -219,15 +223,24 @@ def _stufe(metric_id, ampel):
     return lambda v: severity_for(metric_id, v, ampel=ampel)
 
 
+def _schaerfe(metric_id, ampel):
+    """Fix-Loop 2 (F003): ``ampel_schaerfe`` ist neben ``ampel_stufe`` Pflicht
+    (Klammer = schlimmster Wert je Seite); mechanisch ergaenzt."""
+    from app.ampel import ampel_schaerfe
+    return lambda v: ampel_schaerfe(ampel, metric_id, v)
+
+
 def test_spitzenwert_per_stufe_oben_ab_gelb():
     """Given Allgemein-Wind (gelb ab 30) / When 25, 31 @14, 28 / Then „31@14";
     ohne Gelb „-" (E1-Vorbereitung, AC-7 erste Hälfte)."""
     from output.tokens.metrics import render_threshold_peak_value
     stufe = _stufe("wind", ALLG)
     assert render_threshold_peak_value(
-        "W", _hv((12, 25.0), (14, 31.0), (16, 28.0)), None, ampel_stufe=stufe) == "31@14"
+        "W", _hv((12, 25.0), (14, 31.0), (16, 28.0)), None, ampel_stufe=stufe,
+        ampel_schaerfe=_schaerfe("wind", ALLG)) == "31@14"
     assert render_threshold_peak_value(
-        "W", _hv((12, 25.0), (14, 20.0)), None, ampel_stufe=stufe) == "-"
+        "W", _hv((12, 25.0), (14, 20.0)), None, ampel_stufe=stufe,
+        ampel_schaerfe=_schaerfe("wind", ALLG)) == "-"
 
 
 def test_spitzenwert_per_stufe_erste_stunde_und_schlimmste_stunde():
@@ -236,7 +249,7 @@ def test_spitzenwert_per_stufe_erste_stunde_und_schlimmste_stunde():
     from output.tokens.metrics import render_threshold_peak_value
     assert render_threshold_peak_value(
         "W", _hv((10, 20.0), (12, 31.0), (15, 55.0)), None,
-        ampel_stufe=_stufe("wind", ALLG)) == "31@12(55@15)"
+        ampel_stufe=_stufe("wind", ALLG), ampel_schaerfe=_schaerfe("wind", ALLG)) == "31@12(55@15)"
 
 
 def test_spitzenwert_per_stufe_unterschreiten_der_unteren_grenze():
@@ -245,7 +258,7 @@ def test_spitzenwert_per_stufe_unterschreiten_der_unteren_grenze():
     from output.tokens.metrics import render_threshold_peak_value
     assert render_threshold_peak_value(
         "W", _hv((10, 15.0), (14, 3.0), (16, 12.0)), None,
-        ampel_stufe=_stufe("wind", WASSER)) == "3@14"
+        ampel_stufe=_stufe("wind", WASSER), ampel_schaerfe=_schaerfe("wind", WASSER)) == "3@14"
 
 
 def test_spitzenwert_per_stufe_wert_null_wird_nicht_verschluckt():
@@ -254,7 +267,7 @@ def test_spitzenwert_per_stufe_wert_null_wird_nicht_verschluckt():
     from output.tokens.metrics import render_threshold_peak_value
     assert render_threshold_peak_value(
         "W", _hv((9, 15.0), (14, 0.0)), None,
-        ampel_stufe=_stufe("wind", WASSER)) == "0@14"
+        ampel_stufe=_stufe("wind", WASSER), ampel_schaerfe=_schaerfe("wind", WASSER)) == "0@14"
 
 
 # ---------------------------------------------------------------------------

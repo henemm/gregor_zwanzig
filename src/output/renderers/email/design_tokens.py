@@ -26,8 +26,8 @@ G_SUCCESS = '#3a7d44'
 # Fix #1801 S2 (WCAG-AA-Fix, ADR-0008): eigenstaendige Konstante fuer den
 # gruenen Ampel-Zelltext, getrennt von G_SUCCESS. G_SUCCESS bleibt
 # unveraendert -- er wird von der amtlichen Warnstufe 1
-# (compare_html._ALERT_LEVEL_CELL) und dem Korridor-Marker (corridor_mark.py)
-# geteilt, deren Farbe diese Spec NICHT aendert (Scoping-Entscheidung, s.
+# (compare_html._ALERT_LEVEL_CELL) genutzt (der fruehere Korridor-Marker
+# entfiel mit #2792 S1c-4b), deren Farbe diese Spec NICHT aendert (s.
 # Spec "Nicht-Ziele"). #3a7d44 auf #dbeadd erreicht nur 4.01:1 (< WCAG-AA
 # 4.5:1); #2f6b39 erreicht 5.12:1.
 G_AMPEL_TEXT_GREEN = '#2f6b39'

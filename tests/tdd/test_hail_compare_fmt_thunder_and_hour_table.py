@@ -19,6 +19,7 @@ Keine Mocks/patch()/MagicMock — echte `ComparisonResult`/`LocationResult`/
 `ForecastDataPoint`-DTOs, echte Renderer.
 """
 from __future__ import annotations
+from tests.helpers.ampel_allgemein import PRESET_ALLGEMEIN
 
 import sys
 from datetime import date, datetime, timezone
@@ -62,7 +63,7 @@ def test_ac7a_html_uebersicht_zeigt_hagel_hinweis_nur_beim_true_ort():
     from output.renderers.email.compare_html import render_compare_html
 
     result = _result_ein_ort_true_ein_ort_none()
-    html = render_compare_html(result, enabled_metrics=["thunder_max"])
+    html = render_compare_html(result, enabled_metrics=["thunder_max"], preset=PRESET_ALLGEMEIN)
 
     assert _HAGEL_HINWEIS in html, (
         f"Die HTML-Uebersichtstabelle muss beim Ort mit hail_flag=True den "
@@ -134,7 +135,7 @@ def test_ac8_compare_stundentabelle_zeigt_hagel_als_text_nicht_als_ring():
 
     result = _result_ein_ort_true_ein_ort_none()
     html = render_compare_html(
-        result, enabled_metrics=["thunder_max"], hourly_metrics=["thunder_level"],
+        result, enabled_metrics=["thunder_max"], hourly_metrics=["thunder_level"], preset=PRESET_ALLGEMEIN,
     )
 
     assert _HAGEL_HINWEIS in html, (

@@ -19,6 +19,7 @@ Stundentabelle; kein gesammelter Ausblick-Sammel-Head mehr.
 SPEC: docs/specs/modules/fix_1323_compare_outlook_placement.md AC-1..AC-6
 """
 from __future__ import annotations
+from tests.helpers.ampel_allgemein import PRESET_ALLGEMEIN
 
 import re
 from datetime import date, datetime, timedelta, timezone
@@ -106,7 +107,7 @@ def test_html_outlook_sits_under_each_location_hourly_table():
         _loc("Innsbruck", [(6, 18), (9, 20), (11, 23)], tz="Europe/Vienna"),
         _loc("Fréjus", [(20, 31), (21, 33), (19, 29)], tz="Europe/Paris"),
     ])
-    html = render_compare_html(result, outlook_enabled=True)
+    html = render_compare_html(result, outlook_enabled=True, preset=PRESET_ALLGEMEIN)
 
     ort_pos = _positions(html, _HOURLY_TABLE_MARKER)
     outlook_pos = _positions(html, _OUTLOOK_TABLE_MARKER)
@@ -137,7 +138,7 @@ def test_html_has_no_bundled_outlook_section_head():
         _loc("Innsbruck", [(6, 18), (9, 20), (11, 23)]),
         _loc("Fréjus", [(20, 31), (21, 33), (19, 29)]),
     ])
-    html = render_compare_html(result, outlook_enabled=True)
+    html = render_compare_html(result, outlook_enabled=True, preset=PRESET_ALLGEMEIN)
 
     n = html.count(_BUNDLE_HEAD_MARKER)
     assert n <= 1, (
@@ -191,7 +192,7 @@ def test_outlook_enabled_hourly_disabled_no_bundle_no_crash():
         _loc("Innsbruck", [(6, 18), (9, 20), (11, 23)]),
         _loc("Fréjus", [(20, 31), (21, 33), (19, 29)]),
     ])
-    html = render_compare_html(result, outlook_enabled=True, hourly_enabled=False)
+    html = render_compare_html(result, outlook_enabled=True, hourly_enabled=False, preset=PRESET_ALLGEMEIN)
 
     assert len(_positions(html, _OUTLOOK_TABLE_MARKER)) == 2, \
         "Bei hourly aus / outlook an muss je Ort eine Ausblick-Tabelle erscheinen."
@@ -215,7 +216,7 @@ def test_missing_outlook_data_failsoft_keeps_nesting_and_order():
         _loc("Bbb", [(5, 15), (7, 17), (8, 18)], with_outlook=False),
         _loc("Ccc", [(20, 31), (21, 33), (19, 29)]),
     ])
-    html = render_compare_html(result, outlook_enabled=True)
+    html = render_compare_html(result, outlook_enabled=True, preset=PRESET_ALLGEMEIN)
 
     ort_pos = _positions(html, _HOURLY_TABLE_MARKER)      # 3 Ort-Sektionen
     outlook_pos = _positions(html, _OUTLOOK_TABLE_MARKER)  # nur 2 Ausblicke

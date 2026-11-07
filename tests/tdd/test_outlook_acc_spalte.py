@@ -24,6 +24,7 @@ Netz, kein Dateiinhalt-Check. Echte ``SegmentWeatherSummary``-/
 ``ForecastDataPoint``-Objekte, echte Renderer-Aufrufe.
 """
 from __future__ import annotations
+from tests.helpers.ampel_allgemein import AMPEL_ALLGEMEIN
 from app.ampel import resolve_ampel
 
 import re
@@ -99,7 +100,7 @@ def _zeilen(confidences, *, metrics=None):
     tage = ("Mo", "Di", "Mi", "Do", "Fr", "Sa", "So")
     return [
         build_outlook_row(_summary(conf), _punkte(), tage[i % len(tage)], TZ,
-                          metrics=auswahl, context="vergleich")
+                          metrics=auswahl, context="vergleich", ampel=AMPEL_ALLGEMEIN)
         for i, conf in enumerate(confidences)
     ]
 
@@ -211,7 +212,7 @@ def test_ac6_klartext_zeigt_acc_wort_hinter_den_gewaehlten_spalten():
     """
     from output.renderers.email.outlook import render_outlook_plain
 
-    block = render_outlook_plain(_zeilen([85]), show_acc=True, metrics=_AUSWAHL)
+    block = render_outlook_plain(_zeilen([85]), show_acc=True, metrics=_AUSWAHL, ampel=AMPEL_ALLGEMEIN)
     zeile = _klartext_zeilen(block)[0]
 
     assert _ACC_LABEL in zeile, (
@@ -259,7 +260,7 @@ def test_ac7_hohe_und_niedrigste_stufe_unterscheiden_sich_sichtbar():
 
     worte = [_acc_wort(z) for z in
              _klartext_zeilen(render_outlook_plain(zeilen, show_acc=True,
-                                                   metrics=_AUSWAHL))]
+                                                   metrics=_AUSWAHL, ampel=AMPEL_ALLGEMEIN))]
     assert worte == [_STUFEN_WORT[85], _STUFEN_WORT[35]], (
         f"Klartext-Worte {worte!r} statt "
         f"{[_STUFEN_WORT[85], _STUFEN_WORT[35]]!r}."
@@ -295,7 +296,7 @@ def test_ac8_ortsvergleich_bleibt_ohne_acc_spalte():
         "Ortsvergleich waere wertlos (#2098 Befund B)."
     )
     mit_acc_klartext = render_outlook_plain(zeilen, show_acc=True,
-                                            metrics=_AUSWAHL, show_name=False)
+                                            metrics=_AUSWAHL, show_name=False, ampel=AMPEL_ALLGEMEIN)
     assert _ACC_LABEL in _klartext_zeilen(mit_acc_klartext)[0], (
         "Positivkontrolle gescheitert: schon mit show_acc=True fehlt die "
         "ACC-Spalte im Klartext (#2098 Befund C)."
@@ -318,7 +319,7 @@ def test_ac8_ortsvergleich_bleibt_ohne_acc_spalte():
     )
 
     ohne_acc_klartext = render_outlook_plain(zeilen, show_acc=False,
-                                             metrics=_AUSWAHL, show_name=False)
+                                             metrics=_AUSWAHL, show_name=False, ampel=AMPEL_ALLGEMEIN)
     assert _ACC_LABEL not in ohne_acc_klartext, (
         f"Der Klartext-Ortsvergleich zeigt ACC: {ohne_acc_klartext!r}"
     )
@@ -434,7 +435,7 @@ def test_ac11_vier_stufen_tragen_vier_eindeutige_klartext_worte():
     from output.renderers.email.outlook import render_outlook_plain
 
     werte = list(_STUFEN_WORT)
-    block = render_outlook_plain(_zeilen(werte), show_acc=True, metrics=_AUSWAHL)
+    block = render_outlook_plain(_zeilen(werte), show_acc=True, metrics=_AUSWAHL, ampel=AMPEL_ALLGEMEIN)
     worte = [_acc_wort(z) for z in _klartext_zeilen(block)]
 
     assert worte == [_STUFEN_WORT[w] for w in werte], (
@@ -467,7 +468,7 @@ def test_ac11_klartext_wort_folgt_denselben_stufen_wie_der_farbpunkt():
     farben = [_punkt_farbe(_acc_zelle(html, i)) for i in range(len(werte))]
     worte = [_acc_wort(z) for z in
              _klartext_zeilen(render_outlook_plain(zeilen, show_acc=True,
-                                                   metrics=_AUSWAHL))]
+                                                   metrics=_AUSWAHL, ampel=AMPEL_ALLGEMEIN))]
 
     assert None not in farben and None not in worte, (
         f"Unvollstaendige Ausgabe -- Farben: {farben!r}, Worte: {worte!r}"
@@ -515,7 +516,7 @@ def test_ac12_fehlende_genauigkeit_zeigt_strich_statt_absturz():
     )
 
     klartext = _klartext_zeilen(render_outlook_plain(zeilen, show_acc=True,
-                                                     metrics=_AUSWAHL))
+                                                     metrics=_AUSWAHL, ampel=AMPEL_ALLGEMEIN))
     assert _acc_wort(klartext[0]) == _KEIN_WERT, (
         f"Klartext-ACC ohne Wert: {_acc_wort(klartext[0])!r} statt "
         f"{_KEIN_WERT!r} in {klartext[0]!r}."

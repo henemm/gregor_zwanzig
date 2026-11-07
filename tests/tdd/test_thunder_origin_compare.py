@@ -14,6 +14,7 @@ Kein Mock-Theater: echte ``ForecastDataPoint``-Rohwerte, echte Fusion
 ``app.model_registry``), echte Renderer bis zum zurueckgegebenen Body.
 """
 from __future__ import annotations
+from tests.helpers.ampel_allgemein import PRESET_ALLGEMEIN
 from app.ampel import resolve_ampel
 
 import html as _html
@@ -86,7 +87,7 @@ def _mail(*orte: LocationResult, stunden=False) -> tuple[str, str]:
     return render_compare_email(
         _vergleich(*orte), enabled_metrics=["thunder_max"],
         hourly_metrics=["thunder_level"] if stunden else None,
-        hourly_enabled=stunden,
+        hourly_enabled=stunden, preset=PRESET_ALLGEMEIN,
     )
 
 

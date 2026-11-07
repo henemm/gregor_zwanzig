@@ -1137,8 +1137,8 @@ class NotificationService:
             anchor_segments=anchor_weather,
             format_modes=_alert_format_modes(trip.display_config),
             indicator_keys=_alert_indicator_keys(trip.display_config),
-            # Issue #2792 S1c-1: Einstieg Alarm-Pfad; bis S1c-4 „allgemein".
-            ampel=resolve_ampel(None),
+            # Issue #2792 S1c-4b: Einstieg Alarm-Pfad, Ampel des Trips.
+            ampel=resolve_ampel(trip),
         )
         return self._dispatch_alert_message(
             alert_msg=alert_msg,
@@ -1218,7 +1218,7 @@ class NotificationService:
         AC-5) -- der Ortsvergleich kennt keine Roh/Einfach-Wahl dafuer.
 
         Issue #2792 S1c-4a: `preset` (rohes Vergleichs-Preset) ist Pflicht
-        ohne Default; aufgeloest wird bis S1c-4b weiter „allgemein".
+        ohne Default; seit S1c-4b bewertet seine Ampel die Stundenzeilen.
         """
         from utils.timezone import tz_for_coords
 
@@ -1232,7 +1232,7 @@ class NotificationService:
         alert_msg = to_multi_point_alert_message(
             groups, tz=alert_tz, stand_at=stand_at, reference_at=reference_at,
             anchor_points=anchor_points,
-            ampel=resolve_ampel(None),  # Issue #2792 S1c-1, bis S1c-4 „allgemein"
+            ampel=resolve_ampel(preset),  # Issue #2792 S1c-4b: Ampel des Presets
         )
         target_name = ", ".join(name for name, _points, _changes in entities)
         # Issue #1467 S2 AG3a: NUR dieser Aufrufer (Ortsvergleich-
@@ -1313,7 +1313,7 @@ class NotificationService:
         alert_msg = to_multi_location_onset_alert_message(
             list(entities), tz=alert_tz, stand_at=resolved_stand_at,
             cooldown_display=cooldown_display,
-            ampel=resolve_ampel(None),  # Issue #2792 S1c-1, bis S1c-4 „allgemein"
+            ampel=resolve_ampel(preset),  # Issue #2792 S1c-4b: Ampel des Presets
         )
         target_name = ", ".join(name for name, _loc, _nc in entities)
         return self._dispatch_alert_message(
@@ -1964,7 +1964,7 @@ class NotificationService:
             source=source,
             cooldown_display=cooldown_display,
             addendum_reference=request.addendum_reference,  # Issue #2018
-            ampel=resolve_ampel(None),  # Issue #2792 S1c-1, bis S1c-4 „allgemein"
+            ampel=resolve_ampel(trip),  # Issue #2792 S1c-4b: Ampel des Trips
         )
         return self._dispatch_alert_message(
             alert_msg=alert_msg,

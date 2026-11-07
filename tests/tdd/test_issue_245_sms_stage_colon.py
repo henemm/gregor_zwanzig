@@ -15,6 +15,7 @@ Fix (2 Stellen):
   1. _sanitize_stage_name in builder.py: [:10].strip()
   2. preview_service.py: .replace(":", "").strip() (Defense-in-Depth)
 """
+from tests.helpers.ampel_allgemein import AMPEL_ALLGEMEIN
 import pytest
 
 from src.output.tokens.builder import _sanitize_stage_name, build_token_line
@@ -88,7 +89,7 @@ class TestAC1BuildTokenLine:
             forecast,
             None,
             report_type="morning",
-            stage_name="Tag 1 von Valldemossa nach Deià",
+            stage_name="Tag 1 von Valldemossa nach Deià", ampel=AMPEL_ALLGEMEIN,
         )
         rendered = token_line.render()
         assert " :" not in rendered, (
@@ -106,7 +107,7 @@ class TestAC1BuildTokenLine:
             forecast,
             None,
             report_type="morning",
-            stage_name=" von Valldemossa nach Deià",
+            stage_name=" von Valldemossa nach Deià", ampel=AMPEL_ALLGEMEIN,
         )
         rendered = token_line.render()
         assert not rendered.startswith(" "), (
@@ -127,7 +128,7 @@ class TestAC2Regression:
             forecast,
             None,
             report_type="morning",
-            stage_name="GR20 E1",
+            stage_name="GR20 E1", ampel=AMPEL_ALLGEMEIN,
         )
         rendered = token_line.render()
         assert rendered.startswith("GR20 E1: "), (

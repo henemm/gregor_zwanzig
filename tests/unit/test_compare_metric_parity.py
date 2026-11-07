@@ -24,6 +24,7 @@ nicht nach Issue-Nummer -- ``test_naming_gate.py`` blockt neue
 issue-nummerierte Dateien).
 """
 from __future__ import annotations
+from tests.helpers.ampel_allgemein import PRESET_ALLGEMEIN
 
 import re
 from datetime import date, datetime, timezone
@@ -235,7 +236,7 @@ def test_selected_wind_direction_metric_appears_in_overview_matrix():
     result = _result()
     enabled = resolve_enabled_metrics(["wind_direction_deg"])
 
-    html = render_compare_html(result, enabled_metrics=enabled)
+    html = render_compare_html(result, enabled_metrics=enabled, preset=PRESET_ALLGEMEIN)
     row = _assert_row_with_values(html, _IS_WIND_DIR, "Windrichtung")
 
     assert _number(row["cells"][0]) == WIND_DIRECTION_AVG_DEG, (
@@ -250,7 +251,7 @@ def test_selected_wind_chill_min_metric_appears_in_overview_matrix():
     result = _result()
     enabled = resolve_enabled_metrics(["wind_chill_min_c"])
 
-    html = render_compare_html(result, enabled_metrics=enabled)
+    html = render_compare_html(result, enabled_metrics=enabled, preset=PRESET_ALLGEMEIN)
     row = _assert_row_with_values(html, _IS_WIND_CHILL_MIN, "Wind Chill min")
 
     expected = _wind_chill_min(_hourly())
@@ -265,7 +266,7 @@ def test_selected_cloud_low_metric_appears_in_overview_matrix():
     result = _result()
     enabled = resolve_enabled_metrics(["cloud_low_avg_pct"])
 
-    html = render_compare_html(result, enabled_metrics=enabled)
+    html = render_compare_html(result, enabled_metrics=enabled, preset=PRESET_ALLGEMEIN)
     row = _assert_row_with_values(html, _IS_CLOUD_LOW, "Wolken tief")
 
     assert _number(row["cells"][0]) == CLOUD_LOW_AVG_PCT
@@ -276,7 +277,7 @@ def test_selected_cloud_mid_metric_appears_in_overview_matrix():
     result = _result()
     enabled = resolve_enabled_metrics(["cloud_mid_avg_pct"])
 
-    html = render_compare_html(result, enabled_metrics=enabled)
+    html = render_compare_html(result, enabled_metrics=enabled, preset=PRESET_ALLGEMEIN)
     row = _assert_row_with_values(html, _IS_CLOUD_MID, "Wolken mittel")
 
     assert _number(row["cells"][0]) == CLOUD_MID_AVG_PCT
@@ -287,7 +288,7 @@ def test_selected_cloud_high_metric_appears_in_overview_matrix():
     result = _result()
     enabled = resolve_enabled_metrics(["cloud_high_avg_pct"])
 
-    html = render_compare_html(result, enabled_metrics=enabled)
+    html = render_compare_html(result, enabled_metrics=enabled, preset=PRESET_ALLGEMEIN)
     row = _assert_row_with_values(html, _IS_CLOUD_HIGH, "Wolken hoch")
 
     assert _number(row["cells"][0]) == CLOUD_HIGH_AVG_PCT
@@ -304,7 +305,7 @@ def test_selected_humidity_metric_appears_in_overview_matrix():
     result = _result()
     enabled = resolve_enabled_metrics(["humidity_avg_pct"])
 
-    html = render_compare_html(result, enabled_metrics=enabled)
+    html = render_compare_html(result, enabled_metrics=enabled, preset=PRESET_ALLGEMEIN)
     row = _assert_row_with_values(html, _IS_HUMIDITY, "Luftfeuchtigkeit")
 
     expected = WeatherMetricsService().compute_basis_metrics(_timeseries(_hourly()), tz=None).humidity_avg_pct
@@ -321,7 +322,7 @@ def test_selected_dewpoint_metric_appears_in_overview_matrix():
     result = _result()
     enabled = resolve_enabled_metrics(["dewpoint_avg_c"])
 
-    html = render_compare_html(result, enabled_metrics=enabled)
+    html = render_compare_html(result, enabled_metrics=enabled, preset=PRESET_ALLGEMEIN)
     row = _assert_row_with_values(html, _IS_DEWPOINT, "Taupunkt")
 
     svc = WeatherMetricsService()
@@ -339,7 +340,7 @@ def test_selected_pressure_metric_appears_in_overview_matrix():
     result = _result()
     enabled = resolve_enabled_metrics(["pressure_avg_hpa"])
 
-    html = render_compare_html(result, enabled_metrics=enabled)
+    html = render_compare_html(result, enabled_metrics=enabled, preset=PRESET_ALLGEMEIN)
     row = _assert_row_with_values(html, _IS_PRESSURE, "Luftdruck")
 
     svc = WeatherMetricsService()
@@ -358,7 +359,7 @@ def test_selected_precip_type_metric_appears_in_overview_matrix():
     result = _result()
     enabled = resolve_enabled_metrics(["precip_type_dominant"])
 
-    html = render_compare_html(result, enabled_metrics=enabled)
+    html = render_compare_html(result, enabled_metrics=enabled, preset=PRESET_ALLGEMEIN)
     row = _assert_row_with_values(html, _IS_PRECIP_TYPE, "Niederschlagsart")
 
     svc = WeatherMetricsService()
@@ -380,7 +381,7 @@ def test_selected_snowfall_limit_metric_appears_in_overview_matrix():
     result = _result()
     enabled = resolve_enabled_metrics(["snowfall_limit_m"])
 
-    html = render_compare_html(result, enabled_metrics=enabled)
+    html = render_compare_html(result, enabled_metrics=enabled, preset=PRESET_ALLGEMEIN)
     row = _assert_row_with_values(html, _IS_SNOWFALL_LIMIT, "Schneefallgrenze")
 
     expected = _snowfall_limit_min(_hourly())
@@ -548,7 +549,7 @@ def test_existing_fifteen_metrics_unchanged_after_addition():
     result = _result()
     enabled = resolve_enabled_metrics(["temp_max_c", "wind_max_kmh", "cloud_avg_pct"])
 
-    html = render_compare_html(result, enabled_metrics=enabled)
+    html = render_compare_html(result, enabled_metrics=enabled, preset=PRESET_ALLGEMEIN)
 
     assert _labels(html) == [
         "Amtliche Warnungen", "Temperatur", "Wind", "Bewölkung",

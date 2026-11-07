@@ -22,6 +22,7 @@ KEINE Mocks (CLAUDE.md-Projektkonvention "KEINE MOCKED TESTS!"):
 - F002-Regression: reale Var-Grenz-Orte müssen `covers() == True` liefern.
 """
 from __future__ import annotations
+from tests.helpers.ampel_allgemein import PRESET_ALLGEMEIN
 
 import datetime
 from pathlib import Path
@@ -139,7 +140,7 @@ class TestIssue1037MassifClosure:
             locations, time_window=(9, 16), target_date=target,
             profile=ActivityProfile.ALLGEMEIN,
         )
-        html = render_compare_html(result)
+        html = render_compare_html(result, preset=PRESET_ALLGEMEIN)
         expected_word = "eingeschränkt" if best_niveau == 3 else "gesperrt"
         assert best_name in html
         assert expected_word.lower() in html.lower()

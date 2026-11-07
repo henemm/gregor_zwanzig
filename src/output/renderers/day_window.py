@@ -252,12 +252,14 @@ def hiking_field_min_max_ts(
 ) -> Optional[tuple[float, float, datetime, datetime]]:
     """``(min_value, max_value, min_ts, max_ts)`` — Schwesterfunktion von
     ``hiking_field_min_max`` mit Stunde des Minimums (Issue #2792 S1c-4a).
-    Bei Gleichstand gilt die frueheste Stunde."""
+    Bei Gleichstand im Minimum gilt deterministisch die frueheste Stunde,
+    unabhaengig von der Reihenfolge der Punkte (S1c-4b, Spec v1.5 Punkt 7);
+    ``max_ts`` bleibt wie in ``hiking_field_min_max`` (AC-26)."""
     vals_ts = [(getattr(dp, field, None), dp.ts) for dp in points]
     vals_ts = [(float(v), ts) for v, ts in vals_ts if v is not None]
     if not vals_ts:
         return None
-    min_val, min_ts = min(vals_ts, key=lambda x: x[0])
+    min_val, min_ts = min(vals_ts, key=lambda x: (x[0], x[1]))
     max_val, max_ts = max(vals_ts, key=lambda x: x[0])
     return min_val, max_val, min_ts, max_ts
 

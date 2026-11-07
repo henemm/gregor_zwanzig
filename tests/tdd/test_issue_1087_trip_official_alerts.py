@@ -17,6 +17,7 @@ auf den 60s-IMAP-Poll warten zu muessen. Nach der Implementierung (GREEN)
 laeuft der Test weiter bis zur echten IMAP-Verifikation des Warn-Labels.
 """
 from __future__ import annotations
+from tests.helpers.ampel_allgemein import AMPEL_ALLGEMEIN, PRESET_ALLGEMEIN
 
 import imaplib
 import json
@@ -391,7 +392,7 @@ class TestAC2SharedRendererNoDuplicate:
         lr = LocationResult(location=loc, score=80, official_alerts=[alert], hourly_data=[dp])
         result = ComparisonResult(locations=[lr], time_window=(9, 16), target_date=date.today())
 
-        html = render_compare_html(result, profile=ActivityProfile.ALLGEMEIN)
+        html = render_compare_html(result, profile=ActivityProfile.ALLGEMEIN, preset=PRESET_ALLGEMEIN)
         assert golden in html, (
             "Compare-HTML Alert-Badge weicht vom eingefrorenen Level-Golden "
             "(#1056 v2.0) ab."
@@ -766,10 +767,10 @@ class TestAC6SmsWithoutAlertBlock:
 
         formatter = SMSTripFormatter()
         sms_without = formatter.format_sms(
-            [seg_without], stage_name="Etappe 1", report_type="morning",
+            [seg_without], stage_name="Etappe 1", report_type="morning", ampel=AMPEL_ALLGEMEIN,
         )
         sms_with = formatter.format_sms(
-            [seg_with], stage_name="Etappe 1", report_type="morning",
+            [seg_with], stage_name="Etappe 1", report_type="morning", ampel=AMPEL_ALLGEMEIN,
         )
 
         assert alert.label not in sms_with, "SMS darf keinen Alert-Text enthalten (bewusst ohne Paritaet)"

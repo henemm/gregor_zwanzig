@@ -26,6 +26,7 @@ KEIN MOCK-THEATER. Echte ``ForecastDataPoint``/``SegmentWeatherSummary``,
 echter Renderer-Aufruf. Kein Netz.
 """
 from __future__ import annotations
+from tests.helpers.ampel_allgemein import AMPEL_ALLGEMEIN
 
 import sys
 from datetime import datetime, timezone
@@ -108,9 +109,9 @@ def test_vorbedingung_ac1_aggregat_und_tagesfenster_liefern_verschiedene_werte()
     das Aggregat meldet NONE, das Tagesfenster traegt ein Gewitter."""
     row = build_outlook_row(
         AC1_SUMMARY, AC1_POINTS, "Mo", _UTC,
-        day_window_start_hour=DAY_START, day_window_end_hour=DAY_END, context="vergleich",
+        day_window_start_hour=DAY_START, day_window_end_hour=DAY_END, context="vergleich", ampel=AMPEL_ALLGEMEIN,
     )
-    tok = format_trend_tokens(row)
+    tok = format_trend_tokens(row, ampel=AMPEL_ALLGEMEIN)
     assert AC1_SUMMARY.thunder_level_max == ThunderLevel.NONE
     assert tok["thunder_day_token"] != "-", (
         "Vorbedingung verletzt: die AC-1-Fixture zeigt im Tagesfenster kein "
@@ -125,9 +126,9 @@ def test_vorbedingung_ac2_aggregat_und_tagesfenster_liefern_verschiedene_werte()
     das Aggregat traegt eine Stufe, das Tagesfenster ist leer."""
     row = build_outlook_row(
         AC2_SUMMARY, AC2_POINTS, "Mo", _UTC,
-        day_window_start_hour=DAY_START, day_window_end_hour=DAY_END, context="vergleich",
+        day_window_start_hour=DAY_START, day_window_end_hour=DAY_END, context="vergleich", ampel=AMPEL_ALLGEMEIN,
     )
-    tok = format_trend_tokens(row)
+    tok = format_trend_tokens(row, ampel=AMPEL_ALLGEMEIN)
     assert AC2_SUMMARY.thunder_level_max == ThunderLevel.HIGH
     assert tok["thunder_day_token"] == "-", (
         "Vorbedingung verletzt: die AC-2-Fixture zeigt im Tagesfenster ein "
@@ -150,7 +151,7 @@ def test_ac1_tagesgewitter_sichtbar_trotz_none_im_aggregat():
     row = build_outlook_row(
         AC1_SUMMARY, AC1_POINTS, "Mo", _UTC,
         trip_display_config=dc, report_type="evening",
-        day_window_start_hour=DAY_START, day_window_end_hour=DAY_END, context="route",
+        day_window_start_hour=DAY_START, day_window_end_hour=DAY_END, context="route", ampel=AMPEL_ALLGEMEIN,
     )
     html, plain = render_trip_mail(dc, [row])
     # #1848 A3: der Metrik-Zweig ruft denselben Zellenbau wie der feste Zweig
@@ -197,7 +198,7 @@ def test_ac2_kein_gewitter_statt_nachtstufe_bei_leerem_tagesfenster():
     row = build_outlook_row(
         AC2_SUMMARY, AC2_POINTS, "Mo", _UTC,
         trip_display_config=dc, report_type="evening",
-        day_window_start_hour=DAY_START, day_window_end_hour=DAY_END, context="route",
+        day_window_start_hour=DAY_START, day_window_end_hour=DAY_END, context="route", ampel=AMPEL_ALLGEMEIN,
     )
     html, _ = render_trip_mail(dc, [row])
     erwartet = _fmt_thunder(ThunderLevel.NONE)
@@ -230,7 +231,7 @@ def test_ac3_keine_nachtangabe_im_metrik_zweig():
     row = build_outlook_row(
         AC2_SUMMARY, AC2_POINTS, "Mo", _UTC,
         trip_display_config=dc, report_type="evening",
-        day_window_start_hour=DAY_START, day_window_end_hour=DAY_END, context="route",
+        day_window_start_hour=DAY_START, day_window_end_hour=DAY_END, context="route", ampel=AMPEL_ALLGEMEIN,
     )
     html, plain = render_trip_mail(dc, [row])
 
@@ -259,7 +260,7 @@ def test_ac4_ohne_stundenreihe_bleibt_die_zelle_zeichengleich():
     row = build_outlook_row(
         summary, [], "Mo", _UTC,
         trip_display_config=dc, report_type="evening",
-        day_window_start_hour=DAY_START, day_window_end_hour=DAY_END, context="route",
+        day_window_start_hour=DAY_START, day_window_end_hour=DAY_END, context="route", ampel=AMPEL_ALLGEMEIN,
     )
     erwartet = [_fmt_thunder(ThunderLevel.MED, None, ["blitzdichte"])]
     assert row.get("cells") == erwartet, (
@@ -282,7 +283,7 @@ def test_ac5_ortsvergleich_bleibt_byte_identisch():
     ``True``)."""
     row = build_outlook_row(
         AC1_SUMMARY, AC1_POINTS, "Mo", _UTC, metrics=[GEWITTER],
-        day_window_start_hour=DAY_START, day_window_end_hour=DAY_END, context="vergleich",
+        day_window_start_hour=DAY_START, day_window_end_hour=DAY_END, context="vergleich", ampel=AMPEL_ALLGEMEIN,
     )
     erwartet = [_fmt_thunder(ThunderLevel.NONE)]
     assert row["cells"] == erwartet, (
@@ -303,7 +304,7 @@ def test_ac6_herkunft_stammt_aus_demselben_fenster_wie_die_stufe():
     row = build_outlook_row(
         AC1_SUMMARY, AC1_POINTS, "Mo", _UTC,
         trip_display_config=dc, report_type="evening",
-        day_window_start_hour=DAY_START, day_window_end_hour=DAY_END, context="route",
+        day_window_start_hour=DAY_START, day_window_end_hour=DAY_END, context="route", ampel=AMPEL_ALLGEMEIN,
     )
     erwartet = [_fmt_thunder(ThunderLevel.HIGH, None, ["cape"])]
     assert row.get("cells") == erwartet, (
@@ -321,7 +322,7 @@ def test_ac6_ohne_traegerliste_erscheint_die_stufe_ohne_herkunft():
     row = build_outlook_row(
         AC1_SUMMARY, AC1_POINTS_OHNE_SIGNALE, "Mo", _UTC,
         trip_display_config=dc, report_type="evening",
-        day_window_start_hour=DAY_START, day_window_end_hour=DAY_END, context="route",
+        day_window_start_hour=DAY_START, day_window_end_hour=DAY_END, context="route", ampel=AMPEL_ALLGEMEIN,
     )
     erwartet = [_fmt_thunder(ThunderLevel.HIGH, None, None)]
     assert row.get("cells") == erwartet, (
@@ -348,7 +349,7 @@ def test_ac7_trip_ohne_grundauswahl_bleibt_altpfad_unberuehrt():
     row = build_outlook_row(
         AC2_SUMMARY, AC2_POINTS, "Mo", _UTC,
         trip_display_config=dc, report_type="evening",
-        day_window_start_hour=DAY_START, day_window_end_hour=DAY_END, context="route",
+        day_window_start_hour=DAY_START, day_window_end_hour=DAY_END, context="route", ampel=AMPEL_ALLGEMEIN,
     )
     assert "cells" not in row, (
         f"Row {row!r} traegt 'cells', obwohl keine Grundauswahl gesetzt "
@@ -361,7 +362,7 @@ def test_ac7_trip_ohne_grundauswahl_bleibt_altpfad_unberuehrt():
     row_mit = build_outlook_row(
         AC2_SUMMARY, AC2_POINTS, "Mo", _UTC,
         trip_display_config=display_config(), report_type="evening",
-        day_window_start_hour=DAY_START, day_window_end_hour=DAY_END, context="route",
+        day_window_start_hour=DAY_START, day_window_end_hour=DAY_END, context="route", ampel=AMPEL_ALLGEMEIN,
     )
     assert row_mit.get("cells"), (
         "Gegenprobe gescheitert: mit Grundauswahl muss der Metrik-Zweig "
@@ -408,7 +409,7 @@ def test_ac9_format_trend_tokens_liefert_zusaetzlich_thunder_day_level():
         hourly_thunder=(HourlyValue(hour=14, value=3.0),),
         day_window_start_hour=DAY_START, day_window_end_hour=DAY_END,
     )
-    tok = format_trend_tokens(stage)
+    tok = format_trend_tokens(stage, ampel=AMPEL_ALLGEMEIN)
     assert tok["thunder_day_token"] == "hoch@14", (
         "Testaufbau: Bestandsverhalten nicht wie erwartet, tatsaechlich "
         f"{tok['thunder_day_token']!r}."
@@ -437,9 +438,9 @@ def test_vorbedingung_m6_tagesfenster_max_und_24h_max_liefern_verschiedene_werte
 
     row = build_outlook_row(
         M6_SUMMARY, M6_POINTS, "Mo", _UTC,
-        day_window_start_hour=DAY_START, day_window_end_hour=DAY_END, context="vergleich",
+        day_window_start_hour=DAY_START, day_window_end_hour=DAY_END, context="vergleich", ampel=AMPEL_ALLGEMEIN,
     )
-    tok = format_trend_tokens(row)
+    tok = format_trend_tokens(row, ampel=AMPEL_ALLGEMEIN)
     _24h_max = max(
         (p.thunder_level for p in M6_POINTS if p.thunder_level is not None),
         key=thunder_ordinal,
@@ -470,7 +471,7 @@ def test_m6_tagesfenster_stufe_kommt_aus_dem_tagesfenster_nicht_aus_24h():
     row = build_outlook_row(
         M6_SUMMARY, M6_POINTS, "Mo", _UTC,
         trip_display_config=dc, report_type="evening",
-        day_window_start_hour=DAY_START, day_window_end_hour=DAY_END, context="route",
+        day_window_start_hour=DAY_START, day_window_end_hour=DAY_END, context="route", ampel=AMPEL_ALLGEMEIN,
     )
     html, _ = render_trip_mail(dc, [row])
     # #1848 A3: die Zelle traegt jetzt die Onset-Uhrzeit (#1493). Die

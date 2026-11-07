@@ -257,11 +257,15 @@ class TestAC4WindAboveThreshold:
         return build_metrics_summary_pills(segs, ["wind"], {}, tz=TZ, ampel=resolve_ampel(None))
 
     def test_wind_above_threshold_has_gt_prefix(self):
-        """SOLL: enthält '>10 km/h ab 08:00' (Schwellenwert-Präfix)."""
+        """SOLL: enthält '>30 km/h ab 09:00' (Schwellenwert-Präfix).
+
+        Issue #2792 S1c-4b (E1, AC-19 e): Schwelle ist Gelb der Ampel
+        „allgemein“ (Wind 30) statt des SMS-Defaults 10; 30 km/h erst um
+        CEST 9 (UTC 7)."""
         pills = self._pills()
         texts = [t for t, _ in pills]
-        assert any(">10 km/h ab 08:00" in t for t in texts), (
-            f"AC-4: '>10 km/h ab 08:00' erwartet — got: {texts}"
+        assert any(">30 km/h ab 09:00" in t for t in texts), (
+            f"AC-4: '>30 km/h ab 09:00' erwartet — got: {texts}"
         )
 
     def test_wind_above_threshold_has_max(self):
@@ -368,11 +372,14 @@ class TestAC6RainProbability:
         )
 
     def test_rain_prob_format_with_threshold_prefix(self):
-        """SOLL: enthält '>20%' (Schwellenwert-Präfix) und 'ab 09:00'."""
+        """SOLL: enthält '>30%' (Schwellenwert-Präfix) und 'ab 09:00'.
+
+        Issue #2792 S1c-4b (E1, AC-19 e): Schwelle ist Gelb der Ampel
+        „allgemein“ (Regen-W. 30 %) statt des SMS-Defaults 20; 55 % um 09:00."""
         pills = self._pills()
         texts = [t for t, _ in pills]
-        assert any(">20%" in t and "ab 09:00" in t for t in texts), (
-            f"AC-6: '>20% ab 09:00' erwartet — got: {texts}"
+        assert any(">30%" in t and "ab 09:00" in t for t in texts), (
+            f"AC-6: '>30% ab 09:00' erwartet — got: {texts}"
         )
 
 

@@ -46,6 +46,7 @@ Kern-Schicht, deterministisch: keine Mocks, kein Netz, echte
 SegmentWeatherSummary-/ForecastDataPoint-/HourlyValue-Objekte.
 """
 from __future__ import annotations
+from tests.helpers.ampel_allgemein import AMPEL_ALLGEMEIN
 from app.ampel import resolve_ampel
 
 import difflib
@@ -120,7 +121,7 @@ def test_trip_outlook_plain_is_byte_identical():
     from output.renderers.email.outlook import render_outlook_plain
 
     expected = (_FIXTURES / "trip_outlook_show_acc_true.txt").read_text(encoding="utf-8")
-    actual = render_outlook_plain(parity_rows(), show_acc=True)
+    actual = render_outlook_plain(parity_rows(), show_acc=True, ampel=AMPEL_ALLGEMEIN)
 
     assert actual == expected, (
         "Der Klartext-Ausblick der TRIP-Mail hat sich veraendert. Der neue "
@@ -178,7 +179,7 @@ def test_build_outlook_row_without_selection_is_unchanged():
         "rain_probability_pct": 60,
     }
 
-    row = build_outlook_row(summary, points, "Mo", TZ, context="vergleich")
+    row = build_outlook_row(summary, points, "Mo", TZ, context="vergleich", ampel=AMPEL_ALLGEMEIN)
 
     assert row == expected, (
         "Der Trip-Zeilenbau `build_outlook_row(...)` ohne Auswahl liefert nicht "

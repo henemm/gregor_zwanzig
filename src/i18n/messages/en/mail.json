@@ -52,6 +52,7 @@
   "mail.pille.taupunkt": "Dew point min {wert}°C ({zeit})",
   "mail.pille.sonne": "Sun {wert}h",
   "mail.pille.wind_ereignis": "{label} >{schwelle} km/h from {ab} · max {spitze} ({um})",
+  "mail.pille.wind_ereignis_unten": "{label} <{schwelle} km/h from {ab} · min {spitze} ({um})",
   "mail.pille.regen_ab": "Rain from {ab} · {summe} mm",
   "mail.pille.regen_unbekannt": "Rain ?",
   "mail.pille.regen_gesamt": "Rain total {summe} mm",

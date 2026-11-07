@@ -18,6 +18,7 @@ ComparisonResult) + tests/tdd/test_issue_1034_official_alerts_foundation.py
 (ComparisonEngine.run + _REGISTERED_SOURCES-Isolation).
 """
 from __future__ import annotations
+from tests.helpers.ampel_allgemein import PRESET_ALLGEMEIN
 
 from datetime import date, datetime, timedelta
 
@@ -58,7 +59,7 @@ def _real_alert():
 
 def _render(locs):
     from output.renderers.email.compare_html import render_compare_html
-    return render_compare_html(_result(locs))
+    return render_compare_html(_result(locs), preset=PRESET_ALLGEMEIN)
 
 
 def test_ac1_flag_gesetzt_zeigt_banner():

@@ -9,6 +9,7 @@ Geprueft wird an der Stelle, an der die Zusicherung WIRKT: der Text der Banner-K
 Streifen nennt "Lawinenstufe 5 (sehr groß)" ohnehin).
 """
 from __future__ import annotations
+from tests.helpers.ampel_allgemein import PRESET_ALLGEMEIN
 
 from tests.helpers.avalanche_report_support import parse_alert, render_compare_mail, wb_count_texts
 
@@ -65,7 +66,7 @@ def _zwei_orte_kopfzeile(erst: tuple[str, list], zweit: tuple[str, list]) -> lis
         locations=[_loc(0, *erst), _loc(1, *zweit)],
         time_window=(9, 16), target_date=date(2026, 2, 20),
     )
-    return wb_count_texts(render_compare_html(result, profile=ActivityProfile.ALLGEMEIN))
+    return wb_count_texts(render_compare_html(result, profile=ActivityProfile.ALLGEMEIN, preset=PRESET_ALLGEMEIN))
 
 
 def _sturm_rot():

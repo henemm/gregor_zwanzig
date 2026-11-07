@@ -13,6 +13,7 @@ import argparse
 import sys
 from typing import Optional
 
+from app.ampel import resolve_ampel
 from app.config import Settings
 from app.debug import DebugBuffer
 from app.egress_guard import install_egress_guard
@@ -230,6 +231,9 @@ def _run_trip_report(args, settings: Settings, provider, debug: DebugBuffer) -> 
         config,
         report_type=settings.report_type,
         stage_name=trip.name,
+        # Issue #2792 S1c-4b: Hervorhebung nach der Ampel des Trips (ohne
+        # gespeicherte Vorlage „allgemein").
+        ampel=resolve_ampel(trip),
     )
 
     if args.compact:

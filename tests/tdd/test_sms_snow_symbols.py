@@ -20,6 +20,7 @@ Keine Mocks: echte DailyForecast/NormalizedForecast, echter build_token_line(),
 echter render_line(), echter FastAPI-Router.
 """
 from __future__ import annotations
+from tests.helpers.ampel_allgemein import AMPEL_ALLGEMEIN
 
 from datetime import datetime, timezone
 
@@ -77,7 +78,7 @@ def _line(
     return build_token_line(
         forecast, config,
         report_type=report_type,  # type: ignore[arg-type]
-        stage_name="Arlberg",
+        stage_name="Arlberg", ampel=AMPEL_ALLGEMEIN,
     )
 
 
@@ -371,14 +372,14 @@ def test_wind_chill_hat_nie_mehr_ein_wc_token_ab_oder_zugewaehlt():
     )
     segments = [_winter_segment()]
 
-    unfiltered = SMSTripFormatter().format_sms(segments, stage_name="Etappe 1")
+    unfiltered = SMSTripFormatter().format_sms(segments, stage_name="Etappe 1", ampel=AMPEL_ALLGEMEIN)
     assert "WC" not in unfiltered, (
         "'WC' erscheint weiterhin ohne Abwahl, obwohl das Kuerzel ersatzlos "
         f"entfallen ist (PO-Entscheid): {unfiltered!r}"
     )
 
     sms = SMSTripFormatter().format_sms(
-        segments, stage_name="Etappe 1", disabled_specs=disabled,
+        segments, stage_name="Etappe 1", disabled_specs=disabled, ampel=AMPEL_ALLGEMEIN,
     )
     assert "WC" not in sms, (
         f"'WC' erscheint weiterhin mit Abwahl von 'wind_chill': {sms!r}"
@@ -396,14 +397,14 @@ def test_f001_deselected_fresh_snow_has_no_ns24_token():
     segments = [_winter_segment()]
 
     # Nicht-Leerlauf-Nachweis: ohne Abwahl erscheint NS24+.
-    unfiltered = SMSTripFormatter().format_sms(segments, stage_name="Etappe 1")
+    unfiltered = SMSTripFormatter().format_sms(segments, stage_name="Etappe 1", ampel=AMPEL_ALLGEMEIN)
     assert "NS24+" in unfiltered, (
         "F001 Vorbedingung: ohne Abwahl MUSS NS24+ erscheinen — sonst misst "
         f"dieser Test nichts: {unfiltered!r}"
     )
 
     sms = SMSTripFormatter().format_sms(
-        segments, stage_name="Etappe 1", disabled_specs=disabled,
+        segments, stage_name="Etappe 1", disabled_specs=disabled, ampel=AMPEL_ALLGEMEIN,
     )
     assert "NS24+" not in sms, (
         "F001: fresh_snow ist nicht in active_metric_ids — der NS24+-Token "

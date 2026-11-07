@@ -16,6 +16,7 @@ AC-Zuordnung (RED = schlaegt vor der Umsetzung fehl):
 - AC-9: Amtswarn-Sinks bleiben bei subject/body                   -> GRUEN (Regression)
 """
 from __future__ import annotations
+from tests.helpers.ampel_allgemein import PRESET_ALLGEMEIN
 
 
 import pytest
@@ -40,7 +41,7 @@ def test_ac1_klartext_folgt_html_reihenfolge_bei_standard():
     WHEN HTML und Klartext gerendert werden
     THEN stehen die Uebersichts-Labels im Klartext in derselben Reihenfolge."""
     ergebnis = _result()
-    html = render_compare_html(ergebnis, enabled_metrics=None)
+    html = render_compare_html(ergebnis, enabled_metrics=None, preset=PRESET_ALLGEMEIN)
     text = render_comparison_text(ergebnis, enabled_metrics=None, preset=None)
 
     html_labels = html_uebersicht_labels(html)
@@ -153,7 +154,7 @@ def test_ac7_klartext_reihenfolge_am_sink_gleich_html_reihenfolge():
     """AC-1 am Sink statt am Echt-Pfad: der Klartext, der den Sink erreicht,
     folgt der HTML-Reihenfolge."""
     ergebnis = _result()
-    html = render_compare_html(ergebnis, enabled_metrics=None)
+    html = render_compare_html(ergebnis, enabled_metrics=None, preset=PRESET_ALLGEMEIN)
     text = render_comparison_text(ergebnis, enabled_metrics=None, preset=None)
     erhalten: dict = {}
     _dienst().send_compare_report(

@@ -4,6 +4,7 @@ Spec: docs/specs/modules/fix_1670_mail_formatdetails.md
 Echte Punkte, echter build_outlook_row/render_outlook_table, kein Mock.
 """
 from __future__ import annotations
+from tests.helpers.ampel_allgemein import AMPEL_ALLGEMEIN
 from app.ampel import resolve_ampel
 
 import re
@@ -34,7 +35,7 @@ def _cells(html):
 
 def _render(wind, gust, wmax, gmax):
     summary = SegmentWeatherSummary(wind_max_kmh=wmax, gust_max_kmh=gmax)
-    row = build_outlook_row(summary, _pts(wind, gust), "Di", timezone.utc, context="vergleich")
+    row = build_outlook_row(summary, _pts(wind, gust), "Di", timezone.utc, context="vergleich", ampel=AMPEL_ALLGEMEIN)
     return render_outlook_table([row], show_acc=False, ampel=resolve_ampel(None))
 
 

@@ -22,6 +22,7 @@ Pruefling-Importe (``services.official_alerts.slf`` ueber den Helper, Feld ``lev
 stehen nur innerhalb der Tests.
 """
 from __future__ import annotations
+from tests.helpers.ampel_allgemein import AMPEL_ALLGEMEIN, PRESET_ALLGEMEIN
 
 import dataclasses
 import re
@@ -169,7 +170,7 @@ def _compare_mail(alerts: list) -> tuple[str, str]:
         locations=[_loc("loc-ch", "Muenstertal", 0.0, alerts), _loc("loc-frei", "Talort", 0.3, [])],
         time_window=(9, 16), target_date=date(2026, 3, 1),
     )
-    return render_compare_email(result, profile=ActivityProfile.ALLGEMEIN)
+    return render_compare_email(result, profile=ActivityProfile.ALLGEMEIN, preset=PRESET_ALLGEMEIN)
 
 
 def _notice(alert, *, sms_scope: str = "ges.Route"):
@@ -195,7 +196,7 @@ def _briefing_sms(alerts) -> str:
     from tests.tdd.test_sms_official_alert_tokens import _DISABLE_NEW_14, _segment
 
     return SMSTripFormatter().format_sms([_segment(alerts)], stage_name="Etappe 1",
-                                         tz=ZoneInfo("UTC"), disabled_specs=list(_DISABLE_NEW_14))
+                                         tz=ZoneInfo("UTC"), disabled_specs=list(_DISABLE_NEW_14), ampel=AMPEL_ALLGEMEIN)
 
 
 def _av_token(text: str, ziffer: int) -> list[str]:

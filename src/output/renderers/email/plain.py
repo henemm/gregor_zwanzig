@@ -150,8 +150,8 @@ def render_plain(
     False) — s. ``render_html`` fuer die Begruendung.
     """
     sig = profile_signature(profile, lang=lang)
-    # Issue #2792 S1c-1: Einstieg loest die Ampel auf; bis S1c-4 „allgemein".
-    ampel = resolve_ampel(None)
+    # Issue #2792 S1c-4b: Einstieg loest die Ampel des Abos (``dc``) auf.
+    ampel = resolve_ampel(dc)
     # Fix #1575 Scheibe 2: einmal berechnen, an beide Aufrufstellen von
     # _render_text_table() durchreichen (Segment- UND Nacht-Tabelle, AC-7).
     _col_order = resolve_metric_col_order(dc)
@@ -204,17 +204,11 @@ def render_plain(
         dc.metrics, altbestand=trip_metrics_altbestand,
     )
     if _pill_metric_ids:
-        # Issue #1474b: die Erwaehnungsschwelle (nicht die Alarm-Schwelle,
-        # ADR-0043 -- andere Achse) treibt die Mail-Pillen, SMS-identisch.
-        _sms_mention_thresholds = {
-            mc.metric_id: mc.sms_threshold
-            for mc in dc.metrics
-            if mc.sms_threshold is not None
-        }
-        # Issue #1728 Scheibe 1 (DEC-5): unbedingt die Spanne, kein
-        # Lesen von ``mc.aggregations``.
+        # Issue #2792 S1c-4b (E1): Erwaehnung nach der Ampel, `sms_threshold`
+        # wirkt nicht mehr. Issue #1728 Scheibe 1 (DEC-5): unbedingt die
+        # Spanne, kein Lesen von ``mc.aggregations``.
         _plain_pills = build_metrics_summary_pills(
-            segments, _pill_metric_ids, _sms_mention_thresholds, tz=tz,
+            segments, _pill_metric_ids, {}, tz=tz,
             night_weather=night_weather, has_gap=has_gap,
             day_window_start_hour=day_window_start_hour,
             day_window_end_hour=day_window_end_hour, lang=lang, ampel=ampel,
@@ -341,7 +335,8 @@ def render_plain(
         # extrahiert (Trip/Compare-Teilungs-Invariante) -- show_acc=True
         # bleibt zeichengleich zum bisherigen Inline-Verhalten.
         lines.append(render_outlook_plain(multi_day_trend, show_acc=True,
-                                          metrics=_outlook_metrics, lang=lang))
+                                          metrics=_outlook_metrics, lang=lang,
+                                          ampel=ampel))
     elif (
         show_outlook
         and outlook_state is not None

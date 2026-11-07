@@ -20,6 +20,7 @@ Kern-Schicht: keine Mocks, kein Netz. Pfadregel #1409: Aufloesung relativ zu
 dieser Testdatei.
 """
 from __future__ import annotations
+from tests.helpers.ampel_allgemein import AMPEL_ALLGEMEIN
 from app.ampel import resolve_ampel
 
 import re
@@ -44,7 +45,7 @@ _SINGLE_AGGREGATION = ["gust"]
 
 
 def _row(summary, metrics):
-    return build_outlook_row(summary, points=[], weekday="Mo", tz=_UTC, metrics=metrics, context="vergleich")
+    return build_outlook_row(summary, points=[], weekday="Mo", tz=_UTC, metrics=metrics, context="vergleich", ampel=AMPEL_ALLGEMEIN)
 
 
 # ---------------------------------------------------------------------------
@@ -121,7 +122,7 @@ def test_ac7_html_and_plain_show_the_same_range_cell():
 
     html = render_outlook_table([row], show_acc=False, metrics=_TEMP_BOTH, ampel=resolve_ampel(None))
     plain = render_outlook_plain(
-        [row], show_acc=False, metrics=_TEMP_BOTH, heading="Ausblick", show_name=False,
+        [row], show_acc=False, metrics=_TEMP_BOTH, heading="Ausblick", show_name=False, ampel=AMPEL_ALLGEMEIN,
     )
 
     soup = BeautifulSoup(html, "html.parser")
@@ -165,7 +166,7 @@ def test_ac8_compare_range_cell_without_hiking_shows_slash_too():
     summary = summarize_points(day_points)
     assert summary is not None, "Testaufbau: summarize_points() liefert kein Aggregat"
 
-    row = build_outlook_row(summary, day_points, "Mo", _UTC, metrics=_TEMP_BOTH, context="vergleich")
+    row = build_outlook_row(summary, day_points, "Mo", _UTC, metrics=_TEMP_BOTH, context="vergleich", ampel=AMPEL_ALLGEMEIN)
 
     assert row["cells"] == ["9/27"], (
         f"Ortsvergleich-Ausblick ohne Gehzeit zeigt keine Spannen-Zelle: {row['cells']}"

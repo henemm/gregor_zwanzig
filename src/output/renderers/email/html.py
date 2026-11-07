@@ -21,9 +21,7 @@ from app.models import (
     WeatherChange,
 )
 from output.metric_format import escalate_pair_watch, severity_for, thunder_ampel_band
-from output.renderers.email.corridor_mark import (
-    is_marked_any, mark_cell_style, mark_lookup_multi,
-)
+from output.renderers.email.helpers import _thunder_band
 
 if TYPE_CHECKING:
     from app.models import NormalizedTimeseries, StabilityResult
@@ -163,7 +161,7 @@ def _safe_float(v, default: float = 0.0) -> float:
 _AMPEL_BAND_RISK = {"green": "ok", "yellow": "yellow", "orange": "watch", "red": "risk"}
 
 
-def _thunder_risk_level(thunder) -> Optional[str]:
+def _thunder_risk_level(thunder, *, ampel: dict) -> Optional[str]:
     """Bestimmt den Risiko-Beitrag von Gewitter fuer `_row_risk` (Issue #1418
     Fehler 1; Issue #1927 v1.1: eigenstaendige Gelb-Stufe fuer LOW). `r["thunder"]`
     traegt in beiden Produktionspfaden (`trip_report.py: _dp_to_row` /
@@ -182,9 +180,15 @@ def _thunder_risk_level(thunder) -> Optional[str]:
     'ok' statt None (an jeder Pruefstelle gleich wirkungslos, s. Spec
     fix_2010_2011_gewitter_stufenwoerter „Known Limitations").
     Liefert 'risk'/'watch'/'yellow'/'ok'/None (kein Beitrag) — nie einen Absturz.
+
+    Issue #2792 S1c-4b Fix-Loop 1 (F001, AC-5, Spec Punkt 7): der Zeilenpunkt
+    ist eine Farbe -- die Stufe wird ueber dieselbe zentrale Abbildung
+    ``thunder_color`` mit der Abo-Ampel uebersetzt wie die Gewitterzelle
+    (Wassersport „mittel" = rot), nicht ueber das statische Band.
     """
     if isinstance(thunder, str):
-        band = thunder_ampel_band(ThunderLevel.__members__.get(thunder.upper()))
+        stufe = ThunderLevel.__members__.get(thunder.upper())
+        band = _thunder_band(stufe, ampel=ampel) if stufe is not None else None
         if band is not None:
             return _AMPEL_BAND_RISK[band]
 
@@ -212,16 +216,21 @@ def _row_risk(r: dict, *, ampel: dict) -> str:
     definierten Metrik-Paare (`escalate_pair_watch`) beide Partner gleichzeitig
     gelb liefert.
     """
-    thunder_level = _thunder_risk_level(r.get("thunder"))
+    thunder_level = _thunder_risk_level(r.get("thunder"), ampel=ampel)
     if thunder_level == "risk":
         return "risk"
 
     # Fix #1927: Katalog-Spaltenschluessel ist "visibility"
     # (metric_catalog.py:556, col_key="visibility") — "vis" existiert in keiner
     # Produktionszeile und fiel deshalb immer auf den Default 99 km zurueck.
+    # Issue #2792 S1c-4b Fix-Loop 1: die Zeilen tragen Sicht in Metern
+    # (``_dp_to_row``); die fruehere Vermutung „<= 100 heisst km" machte
+    # dichten Nebel (80 m) zu 80 km und den Zeilenpunkt gruen. Fehlt der Wert,
+    # bleibt die Sicht unbewertet (kein Ersatzwert).
     vis_raw = r.get("visibility")
-    vis_num = _safe_float(vis_raw, 99.0)
-    vis_m = vis_num if vis_num > 100 else vis_num * 1000
+    vis_m = None if vis_raw is None else _safe_float(vis_raw, float("nan"))
+    if vis_m is not None and vis_m != vis_m:  # nicht numerisch
+        vis_m = None
 
     gust_sev = severity_for("gust", _safe_float(r.get("gust")), ampel=ampel)
     wind_sev = severity_for("wind", _safe_float(r.get("wind")), ampel=ampel)
@@ -505,7 +514,6 @@ def _render_html_table(
     format_modes: Optional[dict[str, str]] = None,
     indicator_keys: Optional[set[str]] = None,
     col_order: Optional[list[str]] = None,
-    marks: Optional[dict[str, list[Corridor]]] = None,
     lang: Lang = "de",
     ampel: dict,
 ) -> str:
@@ -565,6 +573,8 @@ def _render_html_table(
         "pop": "rain_probability",
         "vis": "visibility",
         "visibility": "visibility",
+        # Issue #2792 S1c-4b (AC-1/AC-4): Temperatur beidseitig nach Abo-Ampel.
+        "temp": "temperature",
     }
 
     _dcstyle_base = (
@@ -628,15 +638,12 @@ def _render_html_table(
             # Issue #1377 Scheibe B: Roh-Modus-Fallback (key nicht in
             # indicator_keys) fragt denselben Katalog wie der freundliche
             # Modus oben (severity_for statt eigener hartcodierter Schwellen).
-            # Sichtweite kommt teils in Metern (>100), teils bereits in km
-            # (<=100, ältere Rows/Tests) an — auf Meter normalisieren, weil
-            # der Katalog dort seine Schwellen führt (2000/1000/500 m).
+            # Issue #2792 S1c-4b Fix-Loop 1 Nachtrag 2: die Zeilen tragen
+            # Sicht in Metern (``_dp_to_row``), wie die Ampel-Schwellen; die
+            # fruehere Vermutung „<= 100 heisst km" liess 80 m Nebel ungetoent.
             elif key in _FALLBACK_COL_KEY_TO_METRIC_ID and numeric is not None:
                 metric_id = _FALLBACK_COL_KEY_TO_METRIC_ID[key]
-                value = numeric
-                if key in ("vis", "visibility"):
-                    value = numeric if numeric > 100 else numeric * 1000
-                level = severity_for(metric_id, value, ampel=ampel)
+                level = severity_for(metric_id, numeric, ampel=ampel)
                 cell_bg = _ampel_cell_bg(level)
             # Gewitter ist seit Issue #1491 eine reguläre 4-stufige
             # Ampel-Spalte (wie Wind/Böen/Regen/Regenwahrsch./CAPE) — die
@@ -650,39 +657,29 @@ def _render_html_table(
             # Stufen und liefert dafuer still `None` (kein Hintergrund). Der
             # Zahlen-Rueckfall ueber `_thunder_risk_level` (risk/watch,
             # Stand vor #1491) bleibt an dieser EINEN Stelle erhalten.
+            # Issue #2792 S1c-4b (AC-5): Stufenwert ueber die zentrale
+            # Abbildung `thunder_color` mit der Abo-Ampel.
             elif key == "thunder":
                 if isinstance(raw_val, str):
-                    cell_bg = _ampel_cell_bg(thunder_ampel_band(raw_val))
+                    cell_bg = _ampel_cell_bg(_thunder_band(raw_val, ampel=ampel))
                 else:
                     _numeric_thunder_level = {
                         "risk": "red", "watch": "orange",
-                    }.get(_thunder_risk_level(raw_val))
+                    }.get(_thunder_risk_level(raw_val, ampel=ampel))
                     cell_bg = _ampel_cell_bg(_numeric_thunder_level)
 
-            # Issue #1425 Schritt 1: Korridor-mark-Markierung, geteilter
-            # Baustein mit dem Compare-Renderer (corridor_mark.py). Trip-
-            # eigene Kollisionsfaelle (temperature_min/temperature_max ->
-            # dieselbe "temp"-Spalte) sind bereits in `marks` (Liste je Key)
-            # abgebildet; is_marked_any() markiert, sobald EIN Corridor
-            # passt. `raw_val` (nicht `numeric`) traegt bei Gewitter das
-            # ThunderLevel-Enum unveraendert weiter.
-            marked = is_marked_any((marks or {}).get(key), raw_val)
-            mark_cls = ' class="corridor-mark"' if marked else ""
-            cell_bg, mark_extra = mark_cell_style(cell_bg or "transparent", marked)
-            if cell_bg == "transparent":
-                cell_bg = None
-
+            # Issue #2792 S1c-4b (AC-24): keine Korridor-Markierung mehr.
             # Issue #995 (Gruppe B): Zell-Tönung + Padding direkt inline auf das
             # <td> selbst (Vorbild _otd()-Muster), kein Span/Negativ-Margin-Trick
             # mehr — füllt die Zelle auch in Clients ohne <style>-Block vollflächig.
             # Issue #902: Inline-Border (Outlook-fest), identisch zur Time-Zelle.
-            if cell_bg:
+            if cell_bg and cell_bg != "transparent":
                 tds += (
-                    f'<td{mark_cls} style="{_td_grid}{mark_extra}background:{cell_bg};padding:6px;" '
+                    f'<td style="{_td_grid}background:{cell_bg};padding:6px;" '
                     f'data-label="{label}">{cell}</td>'
                 )
             else:
-                tds += f'<td{mark_cls} style="{_td_grid}{mark_extra}" data-label="{label}">{cell}</td>'
+                tds += f'<td style="{_td_grid}" data-label="{label}">{cell}</td>'
         # Issue #890 / AC-4: RiskDot-Spalte am Zeilenende (keine border-right — letzte Spalte).
         _dot_color = _AMPEL_DOT_COLORS[_RISK_LEVEL_TO_AMPEL[_row_risk(r, ampel=ampel)]][0]
         tds += (
@@ -719,7 +716,6 @@ def _render_mobile_compact_rows(
     include_header: bool = False,
     indicator_keys: Optional[set[str]] = None,
     col_order: Optional[list[str]] = None,
-    marks: Optional[dict[str, list[Corridor]]] = None,
     lang: Lang = "de",
     ampel: dict,
 ) -> str:
@@ -749,7 +745,6 @@ def _render_mobile_compact_rows(
         format_modes=format_modes,
         indicator_keys=indicator_keys,
         col_order=col_order,
-        marks=marks,
         lang=lang,
         ampel=ampel,
     )
@@ -850,24 +845,16 @@ def render_html(
     ``notification_service.compute_has_gap()`` (aus
     ``day_window.build_day_window_points()``).
 
-    Issue #1425 Schritt 1: ``corridors`` (``trip.corridors``, Route-
-    Namensraum) markiert Stundentabellen-Zellen additiv zur Severity-
-    Faerbung — analog `compare_html.render_compare_html(corridors=...)`,
-    geteilter Baustein in `corridor_mark.py`. `None`/`[]` = HTML
-    unveraendert (Baseline-Schutz).
+    ``corridors`` ist seit Issue #2792 S1c-4b ein ignoriertes Argument
+    (Markierung abgeschaltet, AC-24; die gespeicherten Bereiche bleiben).
     """
-    # Issue #2792 S1c-1: Einstieg loest die Ampel EINMAL auf und reicht sie an
-    # jede Farbentscheidung durch. Bis S1c-4 fest „allgemein" (byte-gleich).
-    ampel = resolve_ampel(None)
+    # Issue #2792 S1c-4b: Einstieg loest die Ampel des Abos (``dc``) EINMAL
+    # auf und reicht sie an jede Farbentscheidung durch.
+    ampel = resolve_ampel(dc)
     # Bug #397: Datums-Header in Ortszeit (passt zu lokalen Segment-Zeiten).
     report_date = local_fmt(segments[0].segment.start_time, tz, "%d.%m.%Y")
     # Issue #342: Tages-Basis für Pro-Metrik-Horizont-Filter.
     report_date_obj = segments[0].segment.start_time.date()
-    # Issue #1425 Schritt 1: EIN Lookup fuer alle Zellen dieses Emails (Route-
-    # Korridor-Key -> Renderer-col_key -> Liste passender Corridors).
-    # Schritt 2, Teil 2, Scheibe A: die id_map umfasst zusaetzlich die per
-    # Katalog aufgeloesten Groessen (build_trip_corridor_id_map()).
-    _marks = mark_lookup_multi(corridors, build_trip_corridor_id_map())
 
     # AC-3 (#911): Spalten-Reihenfolge aus konfiguriertem dc.metrics (links→rechts).
     # Zeit/Temp bleiben implizit vorn; col_order bestimmt nur Metrik-Spalten.
@@ -1059,7 +1046,6 @@ def render_html(
                     format_modes=format_modes,
                     indicator_keys=indicator_keys,
                     col_order=_col_order,
-                    marks=_marks,
                     lang=lang,
                     ampel=ampel,
                 )
@@ -1072,7 +1058,6 @@ def render_html(
                 include_header=True,
                 indicator_keys=indicator_keys,
                 col_order=_col_order,
-                marks=_marks,
                 lang=lang,
                 ampel=ampel,
             )
@@ -1115,7 +1100,6 @@ def render_html(
                     format_modes=format_modes,
                     indicator_keys=indicator_keys,
                     col_order=_col_order,
-                    marks=_marks,
                     lang=lang,
                     ampel=ampel,
                 )
@@ -1134,7 +1118,6 @@ def render_html(
                 include_header=True,
                 indicator_keys=indicator_keys,
                 col_order=_col_order,
-                marks=_marks,
                 lang=lang,
                 ampel=ampel,
             )
@@ -1155,14 +1138,14 @@ def render_html(
             night_hint = f'<p style="color:{G_INK_FAINT};font-size:11px;margin-top:4px">{t("mail.nacht.hinweis_minimum", lang)}</p>'
         night_elev = int(last_seg.end_point.elevation_m or 0)
         night_header = "🌙 " + t("mail.nacht.am_ziel", lang, hoehe=night_elev)
-        night_compact = _render_mobile_compact_rows(night_rows, friendly_keys=friendly_keys, format_modes=format_modes, include_header=True, indicator_keys=indicator_keys, col_order=_col_order, marks=_marks, lang=lang, ampel=ampel)
+        night_compact = _render_mobile_compact_rows(night_rows, friendly_keys=friendly_keys, format_modes=format_modes, include_header=True, indicator_keys=indicator_keys, col_order=_col_order, lang=lang, ampel=ampel)
         night_html = (
             '<div class="section desktop-only">'
             "<h3>" + night_header + "</h3>"
             '<p style="color:' + G_INK_MUTED + ';font-size:13px">'
             + t("mail.nacht.ankunft", lang, zeit=local_fmt(display_end_time(last_seg), tz))
             + "</p>"
-            + _render_html_table(night_rows, friendly_keys=friendly_keys, format_modes=format_modes, indicator_keys=indicator_keys, col_order=_col_order, marks=_marks, lang=lang, ampel=ampel)
+            + _render_html_table(night_rows, friendly_keys=friendly_keys, format_modes=format_modes, indicator_keys=indicator_keys, col_order=_col_order, lang=lang, ampel=ampel)
             + night_hint
             + "</div>"
             '<div class="mobile-compact" style="padding:0 16px">'
@@ -1294,17 +1277,11 @@ def render_html(
         dc.metrics, altbestand=trip_metrics_altbestand,
     )
     if _pill_metric_ids:
-        # Issue #1474b: die Erwaehnungsschwelle (nicht die Alarm-Schwelle,
-        # ADR-0043 -- andere Achse) treibt die Mail-Pillen, SMS-identisch.
-        _sms_mention_thresholds = {
-            mc.metric_id: mc.sms_threshold
-            for mc in dc.metrics
-            if mc.sms_threshold is not None
-        }
-        # Issue #1728 Scheibe 1 (DEC-5): die Kachel zeigt unbedingt die
-        # Spanne -- ``mc.aggregations`` wird hier NICHT mehr gelesen.
+        # Issue #2792 S1c-4b (E1): Erwaehnung nach der Ampel, `sms_threshold`
+        # wirkt nicht mehr. Issue #1728 Scheibe 1 (DEC-5): die Kachel zeigt
+        # unbedingt die Spanne -- ``mc.aggregations`` wird nicht gelesen.
         _pills = build_metrics_summary_pills(
-            segments, _pill_metric_ids, _sms_mention_thresholds, tz=tz,
+            segments, _pill_metric_ids, {}, tz=tz,
             night_weather=night_weather, has_gap=has_gap,
             day_window_start_hour=day_window_start_hour,
             day_window_end_hour=day_window_end_hour,

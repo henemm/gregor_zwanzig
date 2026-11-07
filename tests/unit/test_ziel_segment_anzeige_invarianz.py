@@ -19,6 +19,7 @@ Ausfuehrung:
         --disable-socket --allow-hosts=127.0.0.1
 """
 from __future__ import annotations
+from tests.helpers.ampel_allgemein import AMPEL_ALLGEMEIN
 
 from datetime import date, datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
@@ -304,7 +305,7 @@ def test_ac15_kachelzeile_sms_und_kurzuebersicht_ohne_20_uhr_wert():
     segmente = _segmente()
     ausgaben = {
         "Mail (inkl. Kachelzeile)": _ohne_erzeugungszeit(_mail().email_plain),
-        "SMS": SMSTripFormatter().format_sms(segmente, tz=TZ),
+        "SMS": SMSTripFormatter().format_sms(segmente, tz=TZ, ampel=AMPEL_ALLGEMEIN),
         "Telegram-Kurzuebersicht": CompactSummaryFormatter().format_stage_summary(
             segmente, "Tag 1", build_default_display_config(), tz=TZ),
     }

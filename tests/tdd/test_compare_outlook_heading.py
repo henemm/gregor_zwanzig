@@ -14,6 +14,7 @@ Kern-Schicht, deterministisch: keine Mocks, kein Netz, echte DTOs, echter
 Renderpfad ``render_compare_email()`` (HTML UND Klartext desselben Aufrufs).
 """
 from __future__ import annotations
+from tests.helpers.ampel_allgemein import PRESET_ALLGEMEIN
 
 from datetime import date, datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
@@ -66,7 +67,7 @@ def _render():
         time_window=(9, 16), target_date=TARGET_DATE,
         created_at=datetime(2026, 7, 20, 4, 1),
     )
-    return render_compare_email(result, outlook_enabled=True)
+    return render_compare_email(result, outlook_enabled=True, preset=PRESET_ALLGEMEIN)
 
 
 # ---------------------------------------------------------------------------

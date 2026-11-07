@@ -35,6 +35,7 @@ SPEC: docs/specs/modules/fix_1401_a2_mailtabellen.md (A2b),
       docs/specs/modules/feat_1406b_stundenverlauf_katalog.md (Sanierung)
 """
 from __future__ import annotations
+from tests.helpers.ampel_allgemein import PRESET_ALLGEMEIN
 
 import re
 from datetime import date, datetime, timezone
@@ -288,7 +289,7 @@ def test_html_overview_labels_are_the_register_names():
     html = render_compare_html(
         _result(),
         enabled_metrics=resolve_enabled_metrics(ALL_OVERVIEW_SELECTION),
-        hourly_metrics=HISTORISCHE_STUNDEN_AUSWAHL,
+        hourly_metrics=HISTORISCHE_STUNDEN_AUSWAHL, preset=PRESET_ALLGEMEIN,
     )
 
     assert _html_overview_labels(html) == EXPECTED_OVERVIEW_LABELS, (
@@ -303,7 +304,7 @@ def test_html_hour_table_header_are_the_register_names():
     html = render_compare_html(
         _result(),
         enabled_metrics=resolve_enabled_metrics(ALL_OVERVIEW_SELECTION),
-        hourly_metrics=HISTORISCHE_STUNDEN_AUSWAHL,
+        hourly_metrics=HISTORISCHE_STUNDEN_AUSWAHL, preset=PRESET_ALLGEMEIN,
     )
     headers = _html_hour_headers(html)
 

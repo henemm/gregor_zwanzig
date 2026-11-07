@@ -77,6 +77,7 @@ AC-S7-6 -- die Pillen der Kurz-E-Mail verwarfen die eingestellte Ordnung
 Menge).
 """
 from __future__ import annotations
+from tests.helpers.ampel_allgemein import PRESET_ALLGEMEIN
 from app.ampel import resolve_ampel
 
 import dataclasses
@@ -2454,7 +2455,7 @@ def _s2_mail(thunder_name: str = "MED") -> tuple[str, str]:
         created_at=datetime(2026, 7, 20, 4, 1),
     )
     return render_compare_email(
-        ergebnis, outlook_enabled=True, outlook_metrics=list(_S2_SOLL_KENNUNGEN),
+        ergebnis, outlook_enabled=True, outlook_metrics=list(_S2_SOLL_KENNUNGEN), preset=PRESET_ALLGEMEIN,
     )
 
 
@@ -3802,7 +3803,7 @@ def _s5_mail_neue_felder() -> tuple[str, str]:
         locations=[ort], time_window=(6, 18), target_date=date(2026, 8, 12),
         created_at=datetime(2026, 8, 12, 4, 1),
     )
-    return render_compare_email(ergebnis, enabled_metrics=list(_S5_NEU_GEPRUEFT_ORDER))
+    return render_compare_email(ergebnis, enabled_metrics=list(_S5_NEU_GEPRUEFT_ORDER), preset=PRESET_ALLGEMEIN)
 
 
 # --- AC-S5-1: Soll-Menge gerechnet, Bucket-Vollstaendigkeit ---------------
@@ -3912,7 +3913,7 @@ def test_ac_s5_3_engine_feld_hat_vorrang_vor_live_ableitung(key):
         locations=[ort], time_window=(6, 18), target_date=date(2026, 8, 12),
         created_at=datetime(2026, 8, 12, 4, 1),
     )
-    html, text = render_compare_email(ergebnis, enabled_metrics=[key])
+    html, text = render_compare_email(ergebnis, enabled_metrics=[key], preset=PRESET_ALLGEMEIN)
     label = _s5_label(key)
     erwartet = round(engine_wert, _S5_DECIMALS[key])
 
@@ -4035,7 +4036,7 @@ def test_ac_s5_5_fehlzeichen_html_em_dash_klartext_hyphen(key):
         locations=[ort], time_window=(6, 18), target_date=date(2026, 8, 12),
         created_at=datetime(2026, 8, 12, 4, 1),
     )
-    html, text = render_compare_email(ergebnis, enabled_metrics=[key])
+    html, text = render_compare_email(ergebnis, enabled_metrics=[key], preset=PRESET_ALLGEMEIN)
     label = _s5_label(key)
 
     # Issue #1670 (AC-3/AC-4): HTML-Platzhalter ist jetzt die EINE Konstante
@@ -4198,8 +4199,8 @@ def _s7_mail_paar(metric_id: str):
     getrennte Aufrufe verdeckt wird."""
     partner = partner_von(metric_id)
     return (
-        render_compare_email(_s7_result(), enabled_metrics=[metric_id, partner]),
-        render_compare_email(_s7_result(), enabled_metrics=[partner, metric_id]),
+        render_compare_email(_s7_result(), enabled_metrics=[metric_id, partner], preset=PRESET_ALLGEMEIN),
+        render_compare_email(_s7_result(), enabled_metrics=[partner, metric_id], preset=PRESET_ALLGEMEIN),
     )
 
 
@@ -4299,7 +4300,7 @@ def test_ac_s7_4_altbestand_klartext_folgt_html_reihenfolge():
     charakterisierte dieser Test die Divergenz (erste Abweichung Position 3:
     HTML ``precip_sum``, Klartext ``temp_min``). Die HTML-Zeile "Amtliche
     Warnungen" erfasst ``html_uebersicht_labels`` nicht."""
-    html, text = render_compare_email(_s7_result(), enabled_metrics=None)
+    html, text = render_compare_email(_s7_result(), enabled_metrics=None, preset=PRESET_ALLGEMEIN)
     html_labels = html_uebersicht_labels(html)
     text_labels = klartext_uebersicht_labels(text)
     assert len(html_labels) == len(_S7_SOLL) == len(text_labels), (
@@ -4638,13 +4639,19 @@ def test_ac_s7_6_kurz_email_pillen_folgen_der_eingestellten_reihenfolge(metric_i
 # SMS laeuft ueber den eigenstaendigen SMSTripFormatter (sms_trip.py), Telegram
 # ueber compact_summary.py/trip_report.py -- keiner der beiden importiert
 # build_metrics_summary_pills. Betrifft also nur den E-Mail-Kanal.
+#
+# Issue #2792 S1c-4b (E1, AC-19 e) -- BEWUSST FORTGESCHRIEBEN: die
+# Erwaehnung folgt der Ampel „allgemein" (Wind/Böen/Regen-W. ab 30, Regen ab
+# 1 mm) statt der SMS-Standardwerte 10/20/0,2/20 -- Erwaehnungsgrenze und
+# Einsatzstunde der Wind-/Böen-/Regen-/Regen-W.-Pille aendern sich; Auswahl,
+# Abwahl, Ampelpraefix und Reihenfolge (Pruefzweck) sind unveraendert.
 _S7_PILLEN_BASIS_KATALOGORDNUNG = [
     "3-20C - Max 11:00",
     "gef. 1.0-18.0C - Max 11:00",
-    "! Wind >10 km/h ab 04:00 - max 45 (10:00)",
-    "!!! Boeen >20 km/h ab 04:00 - max 70 (10:00)",
-    "!! Regen ab 05:00 - 8.9 mm",
-    "!!! Regen-W. >20% ab 05:00 - max 95% (11:00)",
+    "! Wind >30 km/h ab 10:00 - max 45 (10:00)",
+    "!!! Boeen >30 km/h ab 10:00 - max 70 (10:00)",
+    "!! Regen ab 11:00 - 8.9 mm",
+    "!!! Regen-W. >30% ab 05:00 - max 95% (11:00)",
     # #1493: Stufenwort in der Pille (Ampelpraefix und Reihenfolge unveraendert).
     "!! Gewitter mittel ab 11:00 - staerkste 11:00",
     "50% bewoelkt - Max 08:00",

@@ -19,6 +19,7 @@ Builder-Muster aus tests/tdd/test_issue_360_channel_renderer.py übernommen.
 """
 
 from __future__ import annotations
+from tests.helpers.ampel_allgemein import AMPEL_ALLGEMEIN
 
 from datetime import datetime, timezone
 from zoneinfo import ZoneInfo
@@ -208,7 +209,7 @@ def test_ac4_sms_format_unchanged():
         stage_name="KHW403",
         report_type="evening",
         tz=ZoneInfo("Europe/Berlin"),
-        max_length=160,
+        max_length=160, ampel=AMPEL_ALLGEMEIN,
     )
     assert sms.startswith("KHW403: ")
     assert len(sms) <= 160

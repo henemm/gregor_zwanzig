@@ -15,6 +15,7 @@ SPEC: docs/specs/modules/epic_1301_b4_compare_outlook.md AC-1, AC-2, AC-3, AC-6
 KONTEXT: docs/context/epic-1301-b4-ausblick.md
 """
 from __future__ import annotations
+from tests.helpers.ampel_allgemein import AMPEL_ALLGEMEIN
 from app.ampel import resolve_ampel
 
 from datetime import datetime, timezone
@@ -239,7 +240,7 @@ def test_build_outlook_row_pure_function():
                            gust_kmh=38.0, thunder_level=ThunderLevel.NONE),
     ]
 
-    row = build_outlook_row(summary, points, "Mo", ZoneInfo("Europe/Vienna"), context="vergleich")
+    row = build_outlook_row(summary, points, "Mo", ZoneInfo("Europe/Vienna"), context="vergleich", ampel=AMPEL_ALLGEMEIN)
 
     assert isinstance(row, dict)
     assert row["weekday"] == "Mo"
@@ -252,16 +253,15 @@ def test_build_outlook_row_pure_function():
     assert isinstance(row["hourly_gust"], tuple) and len(row["hourly_gust"]) == 2
     assert all(isinstance(hv, HourlyValue) for hv in row["hourly_gust"])
 
-    # Optionaler sms_thresholds-Kwarg: metric_id -> sms_threshold_<metric>-Key,
-    # None-Werte werden gefiltert (analog trip_report_scheduler._build_stage_trend).
-    row2 = build_outlook_row(
-        summary, points, "Mo", ZoneInfo("Europe/Vienna"),
-        sms_thresholds={"precipitation": 5.0, "wind": 30.0, "gust": 50.0, "thunder": None}, context="vergleich",
-    )
-    assert row2["sms_threshold_precip"] == 5.0
-    assert row2["sms_threshold_wind"] == 30.0
-    assert row2["sms_threshold_gust"] == 50.0
-    assert "sms_threshold_thunder" not in row2
+    # Issue #2792 S1c-4b (E1, AC-19 e) -- umgekehrt: der fruehere
+    # sms_thresholds-Kwarg ist entfallen, die Zeile traegt keine SMS-Schwelle.
+    import pytest
+    with pytest.raises(TypeError):
+        build_outlook_row(
+            summary, points, "Mo", ZoneInfo("Europe/Vienna"),
+            sms_thresholds={"precipitation": 5.0}, context="vergleich", ampel=AMPEL_ALLGEMEIN,
+        )
+    assert not [k for k in row if k.startswith("sms_threshold")]
 
 
 # ---------------------------------------------------------------------------
@@ -286,7 +286,7 @@ def test_plain_trip_output_unchanged():
     end = plain.index("── Antwort-Kommandos ──")
     expected_block = plain[start:end].strip("\n")
 
-    direct_block = render_outlook_plain(rows, show_acc=True)
+    direct_block = render_outlook_plain(rows, show_acc=True, ampel=AMPEL_ALLGEMEIN)
 
     assert direct_block.strip("\n") == expected_block, (
         "render_outlook_plain muss den bisherigen Inline-Block in render_plain "

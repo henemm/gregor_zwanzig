@@ -42,6 +42,7 @@ ohne diese Gegenprobe bewacht ein Abwesenheits-Test nichts (Muster S1-S4).
 Genau diese Gegenproben machen die Abwesenheits-Tests heute rot.
 """
 from __future__ import annotations
+from tests.helpers.ampel_allgemein import AMPEL_ALLGEMEIN, PRESET_ALLGEMEIN
 
 import sys
 from datetime import date, datetime, timezone
@@ -183,7 +184,7 @@ def _ausblick_zeile(punkte: list[ForecastDataPoint], *,
     )
     zeile = build_outlook_row(
         summarize_points(punkte), punkte, _WOCHENTAG, _TZ,
-        day_window_start_hour=win_start, day_window_end_hour=win_end, context="vergleich",
+        day_window_start_hour=win_start, day_window_end_hour=win_end, context="vergleich", ampel=AMPEL_ALLGEMEIN,
     )
     zeile["name"] = "Etappe B"
     return zeile
@@ -303,7 +304,7 @@ def _compare_mail(punkte: list[ForecastDataPoint], *,
     )
     return (
         render_compare_html(ergebnis, outlook_enabled=True,
-                            outlook_metrics=outlook_metrics),
+                            outlook_metrics=outlook_metrics, preset=PRESET_ALLGEMEIN),
         render_comparison_text(ergebnis, outlook_enabled=True,
                                outlook_metrics=outlook_metrics, preset=None),
     )

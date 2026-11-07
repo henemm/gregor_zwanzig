@@ -35,7 +35,7 @@ from output.metric_format import hail_priority, thunder_label_value
 from output.renderers.alert.official_alerts import official_alerts_to_sms_entries
 from output.renderers.day_window import (
     DAY_WINDOW_END_HOUR, DAY_WINDOW_START_HOUR, build_day_window_points,
-    collect_hiking_window_points, hiking_field_min_max,
+    collect_hiking_window_points, hiking_field_min_max_ts,
     night_temp_min_c, night_wind_chill_min_c,
 )
 from output.renderers.sms import render_sms
@@ -257,8 +257,18 @@ def _segments_to_normalized_forecast(
     # SMS `K13 D16` fuer dieselbe Etappe. Issue #1410 (gefuehlt) verhaelt sich
     # dabei weiterhin exakt wie die gemessene Temperatur (F3).
     _hiking_points = collect_hiking_window_points(segments)
-    _temp_extrema = hiking_field_min_max(_hiking_points, "t2m_c")
-    _felt_extrema = hiking_field_min_max(_hiking_points, "wind_chill_c")
+    # Issue #2792 S1c-4b: mit Stunde des Minimums UND Maximums (`@h` der
+    # Temperatur-Token, AC-1); Werte unveraendert wie hiking_field_min_max.
+    _temp_extrema = hiking_field_min_max_ts(_hiking_points, "t2m_c")
+    _felt_extrema = hiking_field_min_max_ts(_hiking_points, "wind_chill_c")
+
+    def _stunden(extrema) -> tuple[Optional[int], Optional[int]]:
+        if extrema is None:
+            return None, None
+        return local_hour(extrema[2], tz), local_hour(extrema[3], tz)
+
+    temp_min_hour, temp_max_hour = _stunden(_temp_extrema)
+    felt_min_hour, felt_max_hour = _stunden(_felt_extrema)
 
     def _agg(field_min: str, field_max: str) -> tuple[Optional[float], Optional[float]]:
         """Fail-soft: kein Etappenteil mit verwertbarer Zeitreihe (z. B. alle
@@ -492,6 +502,10 @@ def _segments_to_normalized_forecast(
         wind_chill_max_c=felt_max,
         night_temp_min_c=night_min,
         night_wind_chill_min_c=night_felt_min,
+        temp_min_hour=temp_min_hour,
+        temp_max_hour=temp_max_hour,
+        wind_chill_min_hour=felt_min_hour,
+        wind_chill_max_hour=felt_max_hour,
         rain_hourly=rain_samples_d,
         pop_hourly=pop_samples_d,
         pop_all_missing=pop_all_missing,
@@ -553,7 +567,6 @@ class SMSTripFormatter:
         stage_name: Optional[str] = None,
         report_type: str = "evening",
         tz: ZoneInfo = ZoneInfo("UTC"),
-        thresholds: Optional[dict[str, float]] = None,
         thunder_forecast: Optional[dict] = None,
         disabled_specs: Optional[list[MetricSpec]] = None,
         night_weather: Optional[NormalizedTimeseries] = None,
@@ -561,6 +574,7 @@ class SMSTripFormatter:
         day_window_start_hour: int = DAY_WINDOW_START_HOUR,
         day_window_end_hour: int = DAY_WINDOW_END_HOUR,
         sms_alert_min_level: Optional[int] = None,
+        ampel: dict,
     ) -> str:
         """Generate v2.0 SMS via TokenLine pipeline.
 
@@ -572,8 +586,10 @@ class SMSTripFormatter:
             report_type: 'morning' or 'evening' (default 'evening').
             tz: Zielzeitzone für Stunden-Token (Bug #398). Default UTC
                 (abwärtskompatibel: UTC→UTC = keine Verschiebung).
-            thresholds: Issue #624 — optionale Map {SMS-Symbol: Schwellwert}.
-                None = bisheriges DEFAULTS-Verhalten (bit-identisch).
+            ampel: Issue #2792 S1c-4b — aufgeloeste Ampel des Abos (Pflicht,
+                ohne Default); entscheidet die Hervorhebung (gelb oder
+                schlechter). Ersetzt die fruehere ``thresholds``-Map (#624,
+                ``sms_threshold``), die nicht mehr wirkt (E1).
             night_weather: Issue #1317 / Epic #1319 — Rohdaten Ankunft→06:00
                 am Ziel; None = fail-soft, reine Segment-Fensterung (AC-9).
             has_gap: Issue #1331/#1334 F003 — vom echten Versandpfad bereits
@@ -655,7 +671,9 @@ class SMSTripFormatter:
                     break
                 we_label = "GratWind"
 
-        # MetricSpec-Config: WE-Label + Issue #624 per-Symbol-Schwellwerte.
+        # MetricSpec-Config: WE-Label. Issue #2792 S1c-4b (E1): die frueheren
+        # per-Symbol-Schwellwerte (#624, `sms_threshold`) entfallen -- die
+        # Hervorhebung folgt der Abo-Ampel (`ampel`, build_token_line).
         config: list[MetricSpec] = []
         if we_label is not None:
             config.append(MetricSpec(
@@ -663,28 +681,6 @@ class SMSTripFormatter:
                 use_friendly_format=True,
                 friendly_label=we_label,
             ))
-        # Issue #624: threshold-fähige Symbole mit konfiguriertem Schwellwert
-        # als MetricSpec in die Config mergen (additiv, bestehende WE-Spec bleibt).
-        if thresholds:
-            existing_syms = {s.symbol for s in config}
-            for sym, thr in thresholds.items():
-                if sym in existing_syms:
-                    # Bestehende Spec aktualisieren (threshold setzen, Rest erhalten).
-                    config = [
-                        MetricSpec(
-                            symbol=s.symbol,
-                            enabled=s.enabled,
-                            morning_enabled=s.morning_enabled,
-                            evening_enabled=s.evening_enabled,
-                            threshold=thr if s.symbol == sym else s.threshold,
-                            use_friendly_format=s.use_friendly_format,
-                            friendly_label=s.friendly_label,
-                            format_mode=s.format_mode,
-                        )
-                        for s in config
-                    ]
-                else:
-                    config.append(MetricSpec(symbol=sym, threshold=thr))
 
         # Bug #944: explizit deaktivierte Metriken (enabled=False) ans Config-Ende
         # hängen. Seit #1450 entstehen Wintersport-Token (SD/SL/NS24+/AV,
@@ -724,6 +720,7 @@ class SMSTripFormatter:
             config if config else None,
             report_type=report_type,
             stage_name=_sms_stage_prefix(stage_name or "Etappe"),
+            ampel=ampel,
         )
         return render_sms(token_line, max_length=max_length)
 

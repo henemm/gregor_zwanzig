@@ -6,10 +6,10 @@ Morning 29.10.2026
 MeteoAlarm
 ---
 Kurzübersicht
-T 10.5-14.5@17
-W 17-26@16
+T 10.5-14.5
+W 17-26
 G 27-36@16
-R 0.0-0.2@12
+R 0.0-0.2
 TH leicht
 VS 15
 FZ 2800

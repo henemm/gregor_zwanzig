@@ -15,6 +15,7 @@ Scheibe), `_pill_for_metric()` (Mail-Prosa-Pille) und `format_trend_tokens()`
 (Mail-Trend-Block). Kein Netz.
 """
 from __future__ import annotations
+from tests.helpers.ampel_allgemein import AMPEL_ALLGEMEIN
 from app.ampel import resolve_ampel
 
 import re
@@ -74,19 +75,19 @@ def test_ac1_unconfigured_trip_sms_thunder_token_default_threshold_unchanged():
     leicht") -- unveraendert durch diese Scheibe, die ausschliesslich
     `email/helpers.py` und `services/stage_weather.py` aendert, nie
     `output/tokens/builder.py`."""
-    from output.tokens.builder import DEFAULTS, FORECAST_TH, _mk_metric
+    import output.tokens.builder as builder
+    from output.tokens.builder import FORECAST_TH, _mk_metric
 
-    assert DEFAULTS[FORECAST_TH] == 1.0, (
-        "Vorbedingung verletzt: DEFAULTS['TH:'] ist nicht mehr 1.0 -- "
-        "Testannahme fuer AC-1 muesste ueberprueft werden"
-    )
+    # Issue #2792 S1c-4b (E1, AC-19 e): `DEFAULTS` ist entfallen; Gewitter
+    # zaehlt fest ab „leicht" (gelb oder schlechter, P2) -- dasselbe Ergebnis.
+    assert not hasattr(builder, "DEFAULTS"), "E1: builder.DEFAULTS darf nicht mehr wirken"
 
     samples = (
         _hv(6, 0.0),
         _hv(10, 1.0),  # LOW (Ordinal 1, thunder_label_value)
         _hv(18, 0.0),
     )
-    token = _mk_metric(FORECAST_TH, samples, spec=None, rt="evening", is_level=True)
+    token = _mk_metric(FORECAST_TH, samples, spec=None, rt="evening", is_level=True, ampel=AMPEL_ALLGEMEIN)
 
     assert token is not None
     assert token.value == "L@10", (
@@ -120,7 +121,9 @@ def test_ac5_prosa_pille_meldet_gewitter_ab_leicht_am_standard_trip():
 # UND Trend-Block -- bei reinem LOW still.
 # ---------------------------------------------------------------------------
 
-def test_ac6_konfigurierte_schwelle_haelt_prosa_pille_bei_leicht_still():
+def test_ac6_konfigurierte_schwelle_haelt_prosa_pille_bei_leicht_nicht_mehr_still():
+    """Issue #2792 S1c-4b (E1, AC-19 e) -- umgekehrt: die eingestellte
+    Schwelle 2.0 wirkt nicht mehr; die Pille meldet ab „leicht" (P2)."""
     from output.renderers.email.helpers import _pill_for_metric
 
     result = _pill_for_metric(
@@ -128,17 +131,16 @@ def test_ac6_konfigurierte_schwelle_haelt_prosa_pille_bei_leicht_still():
     )
     assert result is not None
     text, _tone = result
-    # #1493: gegen das MUSTER pruefen, nicht gegen den alten Wortlaut --
-    # "Gewitter ab" allein waere nach #1493 trivial abwesend und der Test
-    # damit blind.
-    assert _UHRZEIT_SATZ_RE.search(text) is None, (
-        "AC-6: Mit eingestellter Schwelle 2.0 ('mittel') darf die Prosa-"
-        f"Pille bei reinem 'leicht' NICHT ausloesen. Erhalten: {text!r}"
+    assert "Schwaches Signal (leicht) ab 12:00" in text, (
+        "E1: Trotz eingestellter Schwelle 2.0 ('mittel') muss die Prosa-"
+        f"Pille bei reinem 'leicht' den Uhrzeit-Satz zeigen. Erhalten: {text!r}"
     )
 
 
-def test_ac6_konfigurierte_schwelle_ueber_med_haelt_prosa_pille_bei_med_still():
-    """AC-6, WIRKUNGS-Nachweis (PO-Nachbesserung 2026-08-04): der obige Test
+def test_ac6_konfigurierte_schwelle_ueber_med_haelt_prosa_pille_bei_med_nicht_still():
+    """Issue #2792 S1c-4b (E1, AC-19 e) -- umgekehrt: die eingestellte
+    Schwelle 3.0 wirkt nicht mehr; bei MED meldet die Pille „Gewitter mittel
+    ab …". Historie (vor E1) -- AC-6, WIRKUNGS-Nachweis (PO-Nachbesserung 2026-08-04): der obige Test
     (`..._bei_leicht_still`) ist heute zufaellig gruen -- die Pille schweigt
     bei reinem LOW, WEIL sie fest gegen MED vergleicht, nicht weil sie die
     Schwelle 2.0 tatsaechlich liest. Er kann "liest die Schwelle" nicht von
@@ -166,28 +168,26 @@ def test_ac6_konfigurierte_schwelle_ueber_med_haelt_prosa_pille_bei_med_still():
     assert result is not None
     text, _tone = result
     # #1493: Muster statt Wortlaut (siehe oben).
-    assert _UHRZEIT_SATZ_RE.search(text) is None, (
-        "AC-6 (WIRKUNGS-Nachweis): Mit eingestellter Schwelle 3.0 ('hoch') "
-        "darf die Prosa-Pille bei einer Stundenreihe, die nur MED erreicht "
-        f"(unter der Schwelle), NICHT ausloesen. Erhalten: {text!r} -- "
-        "deutet darauf hin, dass die Pille weiterhin fest gegen MED "
-        "vergleicht statt die uebergebene Schwelle zu lesen."
+    assert _UHRZEIT_SATZ_RE.search(text) is not None, (
+        "E1: Trotz eingestellter Schwelle 3.0 ('hoch') muss die Prosa-Pille "
+        f"bei einer Stundenreihe, die MED erreicht, ausloesen. Erhalten: {text!r}"
     )
 
 
-def test_ac6_konfigurierte_schwelle_haelt_trend_block_bei_leicht_still():
+def test_ac6_konfigurierte_schwelle_haelt_trend_block_bei_leicht_nicht_mehr_still():
+    """Issue #2792 S1c-4b (E1, AC-19 e) -- umgekehrt: `sms_threshold_thunder`
+    in der Zeile wirkt nicht mehr; der Trend-Block meldet ab „leicht"."""
     from output.renderers.email.helpers import format_trend_tokens
 
     stage = {
         "hourly_thunder": (_hv(10, 1.0),),  # LOW
         "sms_threshold_thunder": 2.0,
     }
-    result = format_trend_tokens(stage)
+    result = format_trend_tokens(stage, ampel=AMPEL_ALLGEMEIN)
     thunder_token = result["thunder_token"]
-    assert thunder_token == "-", (
-        "AC-6: Mit eingestellter Schwelle 2.0 ('mittel') darf der Trend-"
-        f"Block bei reinem 'leicht' KEINEN Ausloeser zeigen. Erhalten: "
-        f"{thunder_token!r} (erwartet '-')"
+    assert thunder_token == "leicht@10", (
+        "E1: Trotz eingestellter Schwelle 2.0 ('mittel') muss der Trend-"
+        f"Block bei reinem 'leicht' ausloesen. Erhalten: {thunder_token!r}"
     )
 
 
@@ -197,7 +197,9 @@ def test_ac6_konfigurierte_schwelle_haelt_trend_block_bei_leicht_still():
 # Trip-Schwelle unterschiedliche Ergebnisse liefern.
 # ---------------------------------------------------------------------------
 
-def test_ac7_trend_block_reagiert_auf_unterschiedliche_konfigurierte_schwelle():
+def test_ac7_trend_block_reagiert_nicht_mehr_auf_konfigurierte_schwelle():
+    """Issue #2792 S1c-4b (E1, AC-19 e) -- umgekehrt: dieselbe Stundenreihe
+    liefert bei jeder `sms_threshold_thunder` dasselbe Token (ab „leicht")."""
     from output.renderers.email.helpers import format_trend_tokens
 
     hourly = (
@@ -207,12 +209,10 @@ def test_ac7_trend_block_reagiert_auf_unterschiedliche_konfigurierte_schwelle():
     stage_low_thr = {"hourly_thunder": hourly, "sms_threshold_thunder": 1.0}
     stage_med_thr = {"hourly_thunder": hourly, "sms_threshold_thunder": 2.0}
 
-    token_at_1_0 = format_trend_tokens(stage_low_thr)["thunder_token"]
-    token_at_2_0 = format_trend_tokens(stage_med_thr)["thunder_token"]
+    token_at_1_0 = format_trend_tokens(stage_low_thr, ampel=AMPEL_ALLGEMEIN)["thunder_token"]
+    token_at_2_0 = format_trend_tokens(stage_med_thr, ampel=AMPEL_ALLGEMEIN)["thunder_token"]
 
-    assert token_at_1_0 != token_at_2_0, (
-        "AC-7: Dieselbe Stundenreihe muss bei Schwelle 1.0 vs. 2.0 "
-        f"unterschiedliche Trend-Token liefern. Beide waren: {token_at_1_0!r} "
-        "-- deutet auf den fest verdrahteten Literal threshold=1.0 hin "
-        "(helpers.py:865), der `stage['sms_threshold_thunder']` ignoriert."
+    assert token_at_1_0 == token_at_2_0 == "leicht@10(mittel@14)", (
+        "E1: Dieselbe Stundenreihe muss bei Schwelle 1.0 und 2.0 dasselbe "
+        f"Trend-Token ab 'leicht' liefern: {token_at_1_0!r} / {token_at_2_0!r}"
     )

@@ -23,7 +23,7 @@ if TYPE_CHECKING:
     from output.renderers.email.outlook_state_hint import OutlookState
     from services.day_comparison import DayComparison
 
-from app.ampel import resolve_ampel
+from app.ampel import gelb_oder_schlechter, hat_ampel, resolve_ampel
 from app.metric_catalog import get_metric
 from i18n import Lang, fmt_date, t, tn
 from app.models import SegmentWeatherData, StabilityResult, ThunderLevel, UnifiedWeatherDisplayConfig
@@ -36,7 +36,7 @@ from output.renderers.channel_layout import (
 )
 from output.renderers.day_window import (
     DAY_WINDOW_END_HOUR, DAY_WINDOW_START_HOUR, collect_hiking_window_points,
-    hiking_field_min_max, night_temp_min_c, night_wind_chill_min_c,
+    hiking_field_min_max_ts, night_temp_min_c, night_wind_chill_min_c,
 )
 from output.metric_format import NO_VALUE, THUNDER_LABEL_DE
 from output.renderers.compare_outlook_metric_ids import outlook_columns
@@ -442,6 +442,15 @@ def _official_alert_bubble(
     ))
 
 
+def _gelb(metric_id: str, value: float, *, ampel: dict) -> bool:
+    """Issue #2792 S1c-4b: das gemeinsame Praedikat „gelb oder schlechter".
+    Fix-Loop 1 (F003): Sicht steht in den Zeilen in METERN (``_dp_to_row``,
+    Anzeige in km erst in ``fmt_val``) -- dieselbe Einheit wie die Ampel-
+    Grenzen, keine Umrechnung (eine „<= 100 heisst km"-Vermutung machte
+    dichten Nebel unter 100 m gruen)."""
+    return gelb_oder_schlechter(ampel, metric_id, value)
+
+
 def _overview_line(
     metric_id: str, seg_tables: list[list[dict]], fkeys: set[str],
     *, report_type: str = "evening", night_min_c: Optional[float] = None,
@@ -520,20 +529,37 @@ def _overview_line(
         if hiking is not None:
             lo = fmt_val(key, hiking[0], friendly_keys=fkeys, ampel=ampel)
             hi = fmt_val(key, hiking[1], friendly_keys=fkeys, ampel=ampel)
+            lo_num, hi_num = float(hiking[0]), float(hiking[1])
             peak_hour = hiking[2]
+            min_hour = hiking[3] if len(hiking) > 3 else ""
         else:
             nums = [float(h[key]) for h in hits]
             lo_row = hits[nums.index(min(nums))]
             hi_row = hits[nums.index(max(nums))]
             lo = _cell(metric_id, lo_row, fkeys, ampel=ampel)
             hi = _cell(metric_id, hi_row, fkeys, ampel=ampel)
+            lo_num, hi_num = min(nums), max(nums)
             peak_hour = hi_row.get("time", "")
+            min_hour = lo_row.get("time", "")
+        lo_is_night = False
         if metric_id in ("temperature", "wind_chill") and report_type == "evening":
             _night_val = (night_min_c if metric_id == "temperature"
                           else night_wind_chill_min_c)
             if _night_val is not None:
                 lo = f"{_night_val:.1f}"
-        if lo == hi:
+                lo_is_night = True
+        if hat_ampel(metric_id):
+            # Issue #2792 S1c-4b (AC-1/AC-7, §5): `@h` nur an einer Haelfte,
+            # die nach der Abo-Ampel gelb oder schlechter ist (beidseitig);
+            # der Nachtwert am Ziel traegt nie eine Stunde (wie N/FN).
+            lo_tag = (f"@{min_hour}" if min_hour and not lo_is_night
+                      and _gelb(metric_id, lo_num, ampel=ampel) else "")
+            hi_tag = f"@{peak_hour}" if peak_hour and _gelb(metric_id, hi_num, ampel=ampel) else ""
+            if lo == hi:
+                value = f"{hi}{hi_tag or lo_tag}"
+            else:
+                value = f"{lo}{lo_tag}-{hi}{hi_tag}"
+        elif lo == hi:
             value = lo
         else:
             value = f"{lo}-{hi}@{peak_hour}" if peak_hour else f"{lo}-{hi}"
@@ -596,7 +622,7 @@ def _stage_day(stage: dict, lang: Lang) -> str:
 def _outlook_lines(
     multi_day_trend: list[dict],
     outlook_metrics: Optional[list[dict]] = None,
-    *, lang: Lang = "de",
+    *, lang: Lang = "de", ampel: dict,
 ) -> list[str]:
     """3-Tage-Trend-Zeilen (Issue #623/#640-Rechenlogik, jetzt Ausblick-Bubble).
 
@@ -618,7 +644,7 @@ def _outlook_lines(
             texte = [cells[i] if i < len(cells) else NO_VALUE for i in range(len(columns))]
             if gew_index is not None:
                 texte[gew_index] = thunder_cell_telegram(
-                    format_trend_tokens(stage), stage,
+                    format_trend_tokens(stage, ampel=ampel), stage,
                 )
             values = "  ".join(
                 f"{c['label']}: {texte[i]}" for i, c in enumerate(columns)
@@ -629,7 +655,8 @@ def _outlook_lines(
                 lines.extend(_wrap(f"    ↳ {note}", _TG_PROSE_WIDTH))
         return lines
     for stage in multi_day_trend:
-        tok = format_trend_tokens(stage)
+        # Issue #2792 S1c-4b: Spitzenwerte nach der Abo-Ampel (AC-19 e).
+        tok = format_trend_tokens(stage, ampel=ampel)
         weekday = _stage_day(stage, lang)
         pt, wt = tok["precip_token"], tok["wind_token"]
         precip_part = f"R{pt}" if pt != "-" else (tok["precip_str"] if tok["precip_str"] != NO_VALUE else f"R{NO_VALUE}")
@@ -709,8 +736,8 @@ def render_telegram_bubbles(
     Luecke nicht selbst nach.
     """
     fkeys = friendly_keys if friendly_keys is not None else set()
-    # Issue #2792 S1c-1: Einstieg loest die Ampel auf; bis S1c-4 „allgemein".
-    ampel = resolve_ampel(None)
+    # Issue #2792 S1c-4b: Einstieg loest die Ampel des Abos (``dc``) auf.
+    ampel = resolve_ampel(dc)
     layout = render_for_channel("telegram", dc, report_type)
     bubbles: list[TelegramBubble] = []
     # Issue #1319 Scheibe D: EINE Berechnung, an die Kurzuebersicht-
@@ -726,11 +753,14 @@ def render_telegram_bubbles(
     # Ableitung liefert die Spitzenstunde (Format wie `_dp_to_row`: `%02d`).
     _hiking_points = collect_hiking_window_points(segments)
 
-    def _extrema(field: str) -> Optional[tuple[float, float, str]]:
-        found = hiking_field_min_max(_hiking_points, field)
+    def _extrema(field: str) -> Optional[tuple[float, float, str, str]]:
+        # Issue #2792 S1c-4b: zusaetzlich die Stunde des Minimums (`@h` der
+        # unteren Haelfte, wenn sie gelb oder schlechter ist).
+        found = hiking_field_min_max_ts(_hiking_points, field)
         if found is None:
             return None
-        return found[0], found[1], f"{local_hour(found[2], tz):02d}"
+        return (found[0], found[1], f"{local_hour(found[3], tz):02d}",
+                f"{local_hour(found[2], tz):02d}")
 
     _hiking_temp = _extrema("t2m_c")
     _hiking_felt = _extrema("wind_chill_c")
@@ -901,7 +931,7 @@ def render_telegram_bubbles(
     if outlook_metrics != []:
         if multi_day_trend:
             outlook = [_esc(ln) for ln in
-                       _outlook_lines(multi_day_trend, outlook_metrics, lang=lang)]
+                       _outlook_lines(multi_day_trend, outlook_metrics, lang=lang, ampel=ampel)]
             bubbles.append(TelegramBubble(text="\n".join(outlook)))
         elif outlook_state is not None and outlook_state != _OutlookState.FOUND:
             # Fix #1486: der vierte, gern vergessene Ausgabeweg — Telegram liess

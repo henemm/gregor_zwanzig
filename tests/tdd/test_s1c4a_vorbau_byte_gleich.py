@@ -43,6 +43,7 @@ bleibt Pflicht + keyword-only, die Übergangstests ``:656/:779/:905`` bleiben
 grün, alle Golden-Dateien und ``test_issue_811_mode_matrix.py`` unverändert.
 """
 from __future__ import annotations
+from tests.helpers.ampel_allgemein import AMPEL_ALLGEMEIN
 
 import ast
 import inspect
@@ -125,7 +126,7 @@ def test_ampel_stufe_passt_als_callable_in_die_kurzkanal_hervorhebung():
     """``render_threshold_peak_value(ampel_stufe=)`` (vorbereitet in S1c-1)
     nimmt Wert -> Stufe. Das neue ``ampel_stufe`` muss dort direkt passen:
     Allgemein-Wind 25 bleibt ohne Spitzenwert, 31 um 14 Uhr erscheint (AC-7)."""
-    from app.ampel import ampel_stufe
+    from app.ampel import ampel_schaerfe, ampel_stufe
     from output.tokens.dto import HourlyValue
     from output.tokens.metrics import render_threshold_peak_value
     allg = _ampel("allgemein")
@@ -133,10 +134,16 @@ def test_ampel_stufe_passt_als_callable_in_die_kurzkanal_hervorhebung():
     def stufe(v):
         return ampel_stufe(allg, "wind", v)
 
+    # Fix-Loop 2 (F003): ``ampel_schaerfe`` ist neben ``ampel_stufe`` Pflicht.
+    def schaerfe(v):
+        return ampel_schaerfe(allg, "wind", v)
+
     ruhig = (HourlyValue(hour=10, value=20.0), HourlyValue(hour=14, value=25.0))
-    assert render_threshold_peak_value("W", ruhig, None, ampel_stufe=stufe) == "-"
+    assert render_threshold_peak_value("W", ruhig, None, ampel_stufe=stufe,
+                                       ampel_schaerfe=schaerfe) == "-"
     boeig = (HourlyValue(hour=10, value=20.0), HourlyValue(hour=14, value=31.0))
-    assert render_threshold_peak_value("W", boeig, None, ampel_stufe=stufe) == "31@14"
+    assert render_threshold_peak_value("W", boeig, None, ampel_stufe=stufe,
+                                       ampel_schaerfe=schaerfe) == "31@14"
 
 
 @pytest.mark.parametrize("stufe,erwartet", [
@@ -330,7 +337,7 @@ def test_route_ohne_display_config_waehlt_trotzdem_den_trip_zweig():
     row = build_outlook_row(
         summary, points, "Mo", ZoneInfo("Europe/Berlin"),
         metrics=_THUNDER_SPALTE, outlook_metric_formats={},
-        trip_display_config=None, context="route",
+        trip_display_config=None, context="route", ampel=AMPEL_ALLGEMEIN,
     )
     assert row["cells"] == ["–"], row["cells"]
 
@@ -342,7 +349,7 @@ def test_vergleich_behaelt_das_aggregat_auch_mit_display_config():
     row = build_outlook_row(
         summary, points, "Mo", ZoneInfo("Europe/Berlin"),
         metrics=_THUNDER_SPALTE, outlook_metric_formats={},
-        trip_display_config=object(), context="vergleich",
+        trip_display_config=object(), context="vergleich", ampel=AMPEL_ALLGEMEIN,
     )
     assert row["cells"] == ["hoch"], row["cells"]
 
@@ -353,7 +360,7 @@ def test_unbekannter_zweig_scheitert_laut():
     with pytest.raises(ValueError):
         build_outlook_row(
             summary, points, "Mo", ZoneInfo("Europe/Berlin"),
-            metrics=_THUNDER_SPALTE, outlook_metric_formats={}, context="trip",
+            metrics=_THUNDER_SPALTE, outlook_metric_formats={}, context="trip", ampel=AMPEL_ALLGEMEIN,
         )
 
 

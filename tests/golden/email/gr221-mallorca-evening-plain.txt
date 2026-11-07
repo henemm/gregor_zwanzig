@@ -8,8 +8,8 @@ GR221 Tag1: 18–19°C, gef. 12–13°C, ⛅, trocken, mäßiger Wind 19 km/h, B
 ━━ Metriken-Überblick ━━
   18–19°C · Max 16:00
   gef. 11.8–12.8°C · Max 16:00
-  Wind >10 km/h ab 04:00 · max 19 (16:00)
-  Böen >20 km/h ab 04:00 · max 44 (16:00)
+  Wind max 19 km/h (16:00)
+  Böen >30 km/h ab 04:00 · max 44 (16:00)
   kein Regen
   kein Gewitter
   50% bewölkt · Max 11:00

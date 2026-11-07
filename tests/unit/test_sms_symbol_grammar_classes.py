@@ -37,6 +37,7 @@ Regel-Budget (CLAUDE.md): kein eigenes Pruefdatum — laeuft im bereits
 etablierten tests/unit/-Kern wie jeder andere Kern-Test (s. Spec ADR).
 """
 from __future__ import annotations
+from tests.helpers.ampel_allgemein import AMPEL_ALLGEMEIN
 
 from pathlib import Path
 
@@ -272,7 +273,7 @@ def test_ac_s6_5_no_non_alert_token_render_starts_with_bang():
     bleibt exklusiv dem amtlichen Warnblock vorbehalten."""
     forecast, config = _build_full_coverage_forecast()
     line = build_token_line(
-        forecast, config, report_type="evening", stage_name="Etappe1",
+        forecast, config, report_type="evening", stage_name="Etappe1", ampel=AMPEL_ALLGEMEIN,
     )
     non_alert_tokens = [t for t in line.tokens if t.category != "official_alert"]
 
@@ -309,7 +310,7 @@ def test_ac_s6_5_access_ban_bare_never_collides_with_forecast_cloud_low():
         official_alerts=((access_ban_symbol, "", None),),
     )
     line_ab = build_token_line(
-        forecast_ab, [], report_type="evening", stage_name="EtappeAB",
+        forecast_ab, [], report_type="evening", stage_name="EtappeAB", ampel=AMPEL_ALLGEMEIN,
     )
     ab_tokens = [
         t for t in line_ab.tokens
@@ -330,7 +331,7 @@ def test_ac_s6_5_access_ban_bare_never_collides_with_forecast_cloud_low():
     )
     line_cl = build_token_line(
         forecast_cl, [MetricSpec(symbol="CL", enabled=True)],
-        report_type="evening", stage_name="EtappeCL",
+        report_type="evening", stage_name="EtappeCL", ampel=AMPEL_ALLGEMEIN,
     )
     cl_forecast_tokens = [
         t for t in line_cl.tokens if t.symbol == "CL" and t.category == "forecast"
@@ -371,7 +372,7 @@ def test_ac_s6_6_unavailable_marker_must_never_collide_with_wind_gap_marker():
     forecast_a = NormalizedForecast(days=(today_a,), official_alerts_unavailable=False)
     line_a = build_token_line(
         forecast_a, [MetricSpec(symbol="W", enabled=True)],
-        report_type="evening", stage_name="EtappeWindGap",
+        report_type="evening", stage_name="EtappeWindGap", ampel=AMPEL_ALLGEMEIN,
     )
     wind_gap_tokens = [
         t for t in line_a.tokens if t.symbol == "W" and t.category == "forecast"
@@ -385,7 +386,7 @@ def test_ac_s6_6_unavailable_marker_must_never_collide_with_wind_gap_marker():
     today_b = DailyForecast(has_data_gap=False)
     forecast_b = NormalizedForecast(days=(today_b,), official_alerts_unavailable=True)
     line_b = build_token_line(
-        forecast_b, [], report_type="evening", stage_name="EtappeWarnAusfall",
+        forecast_b, [], report_type="evening", stage_name="EtappeWarnAusfall", ampel=AMPEL_ALLGEMEIN,
     )
     unavailable_tokens = [t for t in line_b.tokens if t.category == "unavailable"]
     assert len(unavailable_tokens) == 1, (

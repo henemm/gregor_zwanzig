@@ -49,6 +49,7 @@ ueber einen echt gespeicherten und wieder geladenen Wetter-Schnappschuss.
 Zeitfenster -- der Gegenstand dieser Datei -- sind unveraendert.
 """
 from __future__ import annotations
+from tests.helpers.ampel_allgemein import PRESET_ALLGEMEIN
 
 import html as _html
 import json
@@ -312,7 +313,7 @@ def _compare_mail(*orte: LocationResult) -> tuple[str, str]:
     """(html_body, text_body) des Ortsvergleichs MIT Stundentabelle."""
     return render_compare_email(
         _vergleich(*orte), enabled_metrics=["thunder_max"],
-        hourly_metrics=["thunder_level"], hourly_enabled=True,
+        hourly_metrics=["thunder_level"], hourly_enabled=True, preset=PRESET_ALLGEMEIN,
     )
 
 

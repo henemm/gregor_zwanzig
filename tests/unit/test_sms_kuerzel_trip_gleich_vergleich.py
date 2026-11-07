@@ -19,6 +19,7 @@ Test-Politik (CLAUDE.md, Schicht "Kern"): deterministisch, kein Netz, kein
 Mock/``patch()``, kein Versand.
 """
 from __future__ import annotations
+from tests.helpers.ampel_allgemein import AMPEL_ALLGEMEIN
 
 from pathlib import Path
 
@@ -58,7 +59,9 @@ _FAELLE = [
     # Zwei Stichproben AUSSERHALB der Temperatur-Familie: sie waren nie
     # verschieden und muessen es bleiben -- sonst prueft dieser Waechter nur
     # die vier Groessen, die diese Scheibe ohnehin anfasst.
-    ("Wind", {"wind_hourly": (HourlyValue(12, 15),)}, "wind_max", {"wind_max": 15.0}),
+    # Issue #2792 S1c-4b (E1): Wert ab Gelb der Ampel „allgemein" (30 km/h),
+    # sonst bliebe der Trip-Token „W-" und das Kuerzel waere nicht abtastbar.
+    ("Wind", {"wind_hourly": (HourlyValue(12, 35),)}, "wind_max", {"wind_max": 35.0}),
     ("Niederschlag",
      {"rain_hourly": (HourlyValue(12, 3.0),)}, "precip_sum", {"precip_sum_mm": 3.0}),
 ]
@@ -76,7 +79,7 @@ def _trip_kuerzel_ermitteln(trip_feld: dict) -> str:
             t for t in build_token_line(
                 forecast,
                 [MetricSpec(symbol=s, enabled=s == symbol) for s in _TRIP_SYMBOLS],
-                report_type="morning", stage_name="E1",
+                report_type="morning", stage_name="E1", ampel=AMPEL_ALLGEMEIN,
             ).tokens
             if t.category == "forecast" and t.value not in ("-", "?")
         ]

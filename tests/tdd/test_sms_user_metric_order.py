@@ -56,6 +56,7 @@ Keine Mocks, kein Netz -- reine Datenmodell-Objekte + Renderer-Aufrufe
 (CLAUDE.md Test-Politik, Schicht "Kern").
 """
 from __future__ import annotations
+from tests.helpers.ampel_allgemein import AMPEL_ALLGEMEIN
 
 import dataclasses
 import re
@@ -214,7 +215,11 @@ def test_ac2_default_order_byte_identical_without_sms_layout():
     RED heute (Aktivierungs-Gate noch vorhanden): die SMS faellt weiterhin
     auf die alte POSITIONAL-Reihenfolge (R,W,G) zurueck."""
     dc = F.dc("gust", "wind", "precipitation")
-    expected = "E7: G22@4(70@10) W12@4(45@10) R0.5@5(8.4@11)"
+    # Issue #2792 S1c-4b (E1, AC-19 e): Hervorhebung ab Gelb der Ampel
+    # „allgemein" -- die Einsatzwerte W12/G22/R0.5 liegen darunter, erste
+    # Stunde ab Gelb ist die Spitze (frueher G22@4(70@10) W12@4(45@10)
+    # R0.5@5(8.4@11)). Gepruefte Zusicherung (Reihenfolge G,W,R) unveraendert.
+    expected = "E7: G70@10 W45@10 R8.4@11"
     assert _render_sms(dc, "evening") == expected, (
         "AC-13/B9-Fix: Abend-SMS muss bei Kaskadenquelle 'global' jetzt der "
         "globalen Editor-Reihenfolge (G,W,R) folgen, nicht mehr der alten "
@@ -278,11 +283,12 @@ def test_ac4_vigilance_block_stays_behind_forecast_and_fused():
     specs = [
         MetricSpec(symbol="TH:", enabled=True, position=0),  # type: ignore[call-arg]
     ]
-    line = build_token_line(forecast, specs, report_type="evening", stage_name="E7")
+    line = build_token_line(forecast, specs, report_type="evening", stage_name="E7", ampel=AMPEL_ALLGEMEIN)
     body = line.render(160).split(": ", 1)[1]
 
     i_th_forecast = body.index("TH:M@11")
-    i_w = body.index("W25@10")
+    # Issue #2792 S1c-4b (E1): 25 km/h liegt unter Gelb „allgemein" -> „W-".
+    i_w = body.index("W-")
     i_vigi = body.index("VR:M@14VT:H@17")
     assert i_th_forecast < i_w < i_vigi, (
         f"Erwartet: Vorhersage-TH: (Position 0) vor W vor dem fusionierten "
@@ -373,6 +379,13 @@ def test_ac6_drop_order_ignores_display_position():
         seg.aggregated, snow_depth_cm=25.0, snowfall_limit_m=1800.0, snow_new_sum_cm=5.0,
     )
     seg = dataclasses.replace(seg, aggregated=agg)
+    # Issue #2792 S1c-4b (E1, AC-19 e): Hervorhebung erst ab Gelb der Ampel
+    # („allgemein": Wind/Böen 30, Regen 1 mm). Die Fixture-Einsatzwerte
+    # (W12/G22 @4, R0.5 @5) liegen darunter, die Zeile wuerde kuerzer und der
+    # Kuerzungsdruck (Praemisse) entfiele. Einsatzwerte daher ab Gelb --
+    # dieselbe Token-Form „Einsatz(Spitze)" wie zuvor.
+    _ts = seg.timeseries.data
+    _ts[4].wind10m_kmh, _ts[4].gust_kmh, _ts[5].precip_1h_mm = 32.0, 33.0, 1.5
     report = TripReportFormatter().format_email(
         [seg], trip_name="Issue1677", report_type="evening",
         night_weather=F.night_weather(), display_config=dc_full,
@@ -609,10 +622,13 @@ def test_fixloop_f002_last_resort_priority_ignores_display_position():
     Mutation "Token.priority aus spec.position ableiten" wuerde ``TH:``
     (Position 0 = niedrigster Wert) stattdessen als ERSTES Kern-Token
     entfernt -- exakt die DEC-6-Verletzung, die dieser Test fangen muss."""
+    # Issue #2792 S1c-4b (E1, AC-19 e): W/G ab Gelb der Ampel „allgemein"
+    # (30 km/h), sonst stuenden sie als „W-"/„G-" und die Zeile laege unter
+    # dem Kuerzungsdruck -- Praemisse dieses Tests.
     today = DailyForecast(
         rain_hourly=(HourlyValue(5, 3.0),),
-        wind_hourly=(HourlyValue(4, 12.0),),
-        gust_hourly=(HourlyValue(4, 22.0),),
+        wind_hourly=(HourlyValue(4, 32.0),),
+        gust_hourly=(HourlyValue(4, 42.0),),
         thunder_hourly=(HourlyValue(11, 2.0),),
     )
     forecast = NormalizedForecast(days=(today,))
@@ -622,7 +638,7 @@ def test_fixloop_f002_last_resort_priority_ignores_display_position():
         MetricSpec(symbol="G", position=2),
         MetricSpec(symbol="R", position=3),
     ]
-    line = build_token_line(forecast, specs, report_type="evening", stage_name="E7")
+    line = build_token_line(forecast, specs, report_type="evening", stage_name="E7", ampel=AMPEL_ALLGEMEIN)
     rendered = line.render(25)
     assert _present(rendered, "TH:"), (
         f"Gewitter (hoechste PRIORITY=10, unabhaengig von Anzeigeposition 0) "

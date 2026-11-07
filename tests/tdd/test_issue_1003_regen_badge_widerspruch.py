@@ -136,12 +136,14 @@ class TestAC4BestehenderThresholdFallUnveraendert:
     def test_existing_threshold_case_unaffected(self):
         segs = [_seg_with_hours([
             {"hour": 6, "temp": 12, "wind": 3, "gust": 5, "precip": 0.1, "pop": 20},
-            {"hour": 7, "temp": 13, "wind": 3, "gust": 5, "precip": 0.5, "pop": 60},
+            # Issue #2792 S1c-4b (E1, AC-19 e): Erwaehnung ab Gelb der Ampel
+            # „allgemein" (1 mm) statt 0,2 mm -- Einzelstunde daher 1.5 mm.
+            {"hour": 7, "temp": 13, "wind": 3, "gust": 5, "precip": 1.5, "pop": 60},
             {"hour": 8, "temp": 14, "wind": 3, "gust": 5, "precip": 0.0, "pop": 0},
         ])]
         html = _render_html(segs)
         block = _metrics_block_html(html)
-        assert "Regen ab 09:00 · 0.6 mm" in block, (
+        assert "Regen ab 09:00 · 1.6 mm" in block, (
             f"Bestehender Threshold-Fall (Einzelstunde >= 0.2mm) sollte "
             f"unveraendert 'Regen ab HH:00 · X mm' zeigen:\n{block}"
         )

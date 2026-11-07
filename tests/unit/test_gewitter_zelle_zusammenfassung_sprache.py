@@ -8,6 +8,7 @@ Wrappers ``format_location_summary``. Uhrzeiten und Zahlen bleiben; der
 Ortsvergleich ohne ``lang`` bleibt deutsch (P4).
 """
 from __future__ import annotations
+from tests.helpers.ampel_allgemein import AMPEL_ALLGEMEIN
 from app.ampel import resolve_ampel
 
 from datetime import datetime, timezone
@@ -64,7 +65,7 @@ def test_gewitter_zelle_html_plain_compact(lang, name):
     )
 
     stage = STAGES[name]
-    tok = format_trend_tokens(stage, lang=lang)
+    tok = format_trend_tokens(stage, lang=lang, ampel=AMPEL_ALLGEMEIN)
     zellen = (thunder_cell_html(tok, stage, lang=lang), thunder_cell_plain(tok, stage, lang=lang),
               thunder_cell_compact(tok, stage, lang=lang))
     assert zellen == ERWARTET[lang][name]
@@ -78,7 +79,7 @@ def test_gewitter_zelle_ohne_lang_bleibt_deutsch(name):
     )
 
     stage = STAGES[name]
-    tok = format_trend_tokens(stage)
+    tok = format_trend_tokens(stage, ampel=AMPEL_ALLGEMEIN)
     assert (thunder_cell_html(tok, stage), thunder_cell_plain(tok, stage),
             thunder_cell_compact(tok, stage)) == ERWARTET["de"][name]
     # Telegram-Kurzform: der rohe Token, unveraendert deutsch (Kurzform bleibt).
@@ -96,25 +97,25 @@ def test_telegram_zelle_ohne_stundenreihe_bleibt_deutsch(lang, stufe, erwartet):
     from output.renderers.email.thunder_branch import thunder_cell_telegram
 
     stage = {"weekday": "Fr", "thunder": stufe}
-    tok = format_trend_tokens(stage)
+    tok = format_trend_tokens(stage, ampel=AMPEL_ALLGEMEIN)
     assert thunder_cell_telegram(tok, stage) == erwartet
     # Selbst wenn ein Aufrufer englische Tokens hereinreicht, bleibt das
     # Stufenwort deutsch -- es kommt nicht aus ``tok`` sondern aus der Kurzform.
     if stufe == "LOW":
-        assert thunder_cell_telegram(format_trend_tokens(stage, lang=lang), stage) == "leicht"
+        assert thunder_cell_telegram(format_trend_tokens(stage, lang=lang, ampel=AMPEL_ALLGEMEIN), stage) == "leicht"
 
 
 def test_ausblick_klartext_fester_zweig_englisch():
     from output.renderers.email.outlook import render_outlook_plain
 
-    text = render_outlook_plain(list(STAGES.values()), lang="en")
+    text = render_outlook_plain(list(STAGES.values()), lang="en", ampel=AMPEL_ALLGEMEIN)
     assert text.split("\n")[1] == "Next stages"
     assert ("Thdr ⚡medium@13 (high @15) · Lightning density, Model runs · Hail: yes"
             in text), text
     assert "Thdr light@12" in text and "Thdr ⚡high" in text, text
     for deutsch in ("mittel", "leicht", "hoch", "Hagel", "Blitzdichte"):
         assert deutsch not in text, (deutsch, text)
-    assert render_outlook_plain(list(STAGES.values())).split("\n")[1] == "Nächste Etappen"
+    assert render_outlook_plain(list(STAGES.values()), ampel=AMPEL_ALLGEMEIN).split("\n")[1] == "Nächste Etappen"
 
 
 @pytest.mark.parametrize("metrics", [None, [{"metric_id": "thunder", "aggregation": "max"}]],
@@ -134,8 +135,8 @@ def test_ausblick_acc_wort_englisch():
 
     stages = [{"weekday": "Fr", "confidence_pct": c, "cells": ["8"]} for c in (90, 70, 50, 10)]
     metrics = [{"metric_id": "temperature", "aggregation": "max"}]
-    en = render_outlook_plain(stages, metrics=metrics, lang="en")
-    de = render_outlook_plain(stages, metrics=metrics)
+    en = render_outlook_plain(stages, metrics=metrics, lang="en", ampel=AMPEL_ALLGEMEIN)
+    de = render_outlook_plain(stages, metrics=metrics, ampel=AMPEL_ALLGEMEIN)
     assert [z.split("ACC ")[1] for z in en.split("\n") if "ACC" in z] == [
         "high", "medium", "low", "very low"]
     assert [z.split("ACC ")[1] for z in de.split("\n") if "ACC" in z] == [

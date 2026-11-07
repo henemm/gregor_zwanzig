@@ -18,6 +18,7 @@ NO MOCKS! All real API calls, real email, real weather data.
 Usage:
     uv run pytest tests/e2e/test_e2e_story3_reports.py -v
 """
+from tests.helpers.ampel_allgemein import AMPEL_ALLGEMEIN
 import email
 import imaplib
 import re
@@ -282,7 +283,7 @@ class TestReportFormatting:
         N/D/R/PR/W/G/TH:/TH+:-Tokens (kein Legacy-Praefix mehr)."""
         weather = self._get_weather_data(segments_from_trip)
         formatter = SMSTripFormatter()
-        sms = formatter.format_sms(weather)
+        sms = formatter.format_sms(weather, ampel=AMPEL_ALLGEMEIN)
 
         assert len(sms) <= 160, f"SMS too long: {len(sms)} chars: {sms}"
         assert sms.startswith("Etappe:")
@@ -295,7 +296,7 @@ class TestReportFormatting:
         aggregierte Werte fehlen) ein gueltiger Platzhalter-Wert, kein Crash."""
         weather = self._get_weather_data(segments_from_trip)
         formatter = SMSTripFormatter()
-        sms = formatter.format_sms(weather)
+        sms = formatter.format_sms(weather, ampel=AMPEL_ALLGEMEIN)
 
         assert re.search(r"\bN(-|\d)", sms), f"N-Temperatur-Token fehlt: {sms}"
         assert re.search(r"\bD(-|\d)", sms), f"D-Temperatur-Token fehlt: {sms}"

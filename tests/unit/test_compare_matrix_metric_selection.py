@@ -15,6 +15,7 @@ Implementierungsdetail und werden hier nirgends hart verdrahtet; geprueft wird,
 was der Nutzer sieht: erscheint die Matrix-ZEILE mit einem echten Wert?
 """
 from __future__ import annotations
+from tests.helpers.ampel_allgemein import PRESET_ALLGEMEIN
 
 import re
 from datetime import date, datetime, timezone
@@ -171,7 +172,7 @@ def test_selected_rain_metric_appears_in_overview_matrix():
     result = _result()
     enabled = resolve_enabled_metrics(["temp_max_c", "precip_sum_mm"])
 
-    html = render_compare_html(result, enabled_metrics=enabled)
+    html = render_compare_html(result, enabled_metrics=enabled, preset=PRESET_ALLGEMEIN)
     row = _assert_row_with_values(html, _IS_RAIN, "Regen")
     assert _number(row["cells"][0]) == 3.0, (
         f"Regen-Tageswert ist nicht die Tagessumme 3.0 mm: {row['cells']}"
@@ -189,7 +190,7 @@ def test_selected_thunder_metric_appears_in_overview_matrix():
     result = _result()
     enabled = resolve_enabled_metrics(["temp_max_c", "thunder_level_max"])
 
-    html = render_compare_html(result, enabled_metrics=enabled)
+    html = render_compare_html(result, enabled_metrics=enabled, preset=PRESET_ALLGEMEIN)
     row = _assert_row_with_values(html, _IS_THUNDER, "Gewitter")
     assert re.search(r"mittel|med", row["cells"][0], re.I), (
         f"Gewitter-Tageswert bildet die hoechste Stufe (MED) nicht ab: {row['cells']}"
@@ -202,7 +203,7 @@ def test_selected_visibility_metric_appears_in_overview_matrix():
     result = _result()
     enabled = resolve_enabled_metrics(["temp_max_c", "visibility_min_m"])
 
-    html = render_compare_html(result, enabled_metrics=enabled)
+    html = render_compare_html(result, enabled_metrics=enabled, preset=PRESET_ALLGEMEIN)
     row = _assert_row_with_values(html, _IS_VISIBILITY, "Sicht")
     # 3000 m oder 3.0 km — die Einheit der Zelle ist Implementierungsdetail
     # (``_fmt_visibility`` zeigt heute km), der Wert nicht.
@@ -225,13 +226,13 @@ def test_uv_metric_appears_regardless_of_combination():
     result = _result()
 
     html_alone = render_compare_html(
-        result, enabled_metrics=resolve_enabled_metrics(["uv_index_max"])
+        result, enabled_metrics=resolve_enabled_metrics(["uv_index_max"]), preset=PRESET_ALLGEMEIN
     )
     row_alone = _assert_row_with_values(html_alone, _IS_UV, "UV (allein gewaehlt)")
     assert _number(row_alone["cells"][0]) == 6.0
 
     html_combo = render_compare_html(
-        result, enabled_metrics=resolve_enabled_metrics(["uv_index_max", "temp_max_c"])
+        result, enabled_metrics=resolve_enabled_metrics(["uv_index_max", "temp_max_c"]), preset=PRESET_ALLGEMEIN
     )
     row_combo = _assert_row_with_values(
         html_combo, _IS_UV, "UV (zusammen mit Temperatur gewaehlt)"
@@ -252,7 +253,7 @@ def test_selected_rain_probability_metric_appears_in_overview_matrix():
     result = _result()
     enabled = resolve_enabled_metrics(["temp_max_c", "pop_max_pct"])
 
-    html = render_compare_html(result, enabled_metrics=enabled)
+    html = render_compare_html(result, enabled_metrics=enabled, preset=PRESET_ALLGEMEIN)
     row = _assert_row_with_values(html, _IS_POP, "Regenwahrscheinlichkeit")
     assert _number(row["cells"][0]) == 70.0, (
         f"Regenwahrscheinlichkeit ist nicht das Tages-Maximum 70 %: {row['cells']}"
@@ -289,7 +290,7 @@ def test_daily_aggregate_matches_trip_path_computation():
         "precip_sum_mm", "thunder_level_max", "visibility_min_m",
         "uv_index_max", "pop_max_pct",
     ])
-    html = render_compare_html(result, enabled_metrics=enabled)
+    html = render_compare_html(result, enabled_metrics=enabled, preset=PRESET_ALLGEMEIN)
 
     rain = _assert_row_with_values(html, _IS_RAIN, "Regen")
     assert _number(rain["cells"][0]) == trip.precip_sum_mm, (
@@ -430,7 +431,7 @@ def test_engine_built_result_renders_all_five_rows():
         "precip_sum_mm", "thunder_level_max", "visibility_min_m",
         "uv_index_max", "pop_max_pct",
     ])
-    html = render_compare_html(result, enabled_metrics=enabled)
+    html = render_compare_html(result, enabled_metrics=enabled, preset=PRESET_ALLGEMEIN)
 
     assert _number(_assert_row_with_values(html, _IS_RAIN, "Regen")["cells"][0]) == 3.0
     assert re.search(r"mittel|med", _assert_row_with_values(html, _IS_THUNDER, "Gewitter")["cells"][0], re.I)
@@ -455,7 +456,7 @@ def test_unselected_new_metrics_leave_existing_matrix_unchanged():
     result = _result()
     enabled = resolve_enabled_metrics(["temp_max_c", "wind_max_kmh", "cloud_avg_pct"])
 
-    html = render_compare_html(result, enabled_metrics=enabled)
+    html = render_compare_html(result, enabled_metrics=enabled, preset=PRESET_ALLGEMEIN)
 
     assert _labels(html) == [
         "Amtliche Warnungen", "Temperatur", "Wind", "Bewölkung",

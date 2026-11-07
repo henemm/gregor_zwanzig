@@ -27,6 +27,7 @@ Vergleich zoege bei jeder Erweiterung stumm mit.
 Kern-Schicht, deterministisch: echte Renderer-Aufrufe, kein Netz, keine Mocks.
 """
 from __future__ import annotations
+from tests.helpers.ampel_allgemein import PRESET_ALLGEMEIN
 
 import re
 from datetime import date, datetime
@@ -111,7 +112,7 @@ def test_legacy_preset_renders_exactly_the_columns_of_today():
 
     html, _plain = render_compare_email(
         _result(), hourly_metrics=options.hourly_metrics,
-        hourly_enabled=options.hourly_enabled,
+        hourly_enabled=options.hourly_enabled, preset=PRESET_ALLGEMEIN,
     )
 
     assert _hour_header(html) == HEUTIGE_SPALTEN, (
@@ -199,7 +200,7 @@ def test_never_configured_comparison_keeps_the_nine_columns_of_today():
         "einen anderen Fall als den gemeinten."
     )
 
-    html = render_compare_html(_result(), hourly_metrics=None)
+    html = render_compare_html(_result(), hourly_metrics=None, preset=PRESET_ALLGEMEIN)
     ist = _hour_header(html)
 
     assert ist == HEUTIGE_SPALTEN, (

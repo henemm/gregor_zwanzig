@@ -321,6 +321,10 @@ def build_compare_mail(token: str, lang: str = "de") -> tuple[str, str, str]:
     html, plain = render_compare_email(
         result, profile=ActivityProfile.ALLGEMEIN,
         preset_name=f"GATE1233 Compare {token}", lang=lang,
+        # Issue #2792 S1c-4b: ``preset`` ist Pflicht. Die Gate-Testmail hat
+        # kein Abo -- bewusst Vorlage „allgemein"; ``schedule: manual`` haelt
+        # den Fuss „Naechster Versand" wie bisher bei „–".
+        preset={"schedule": "manual", "display_config": {"ampel": {"template": "allgemein"}}},
     )
     subject = f"[GATE1233 {token}] Orts-Vergleich"
     return subject, html, plain

@@ -447,10 +447,10 @@ class TestTelegramOverviewSurvivesTheCatalogChange:
         report = _report(dc)
         bubble = F.overview_bubble(report)
 
-        erwartet_t = (f"T {F.HIKE_MIN_C:.1f}-{F.HIKE_MAX_C:.1f}"
-                      f"@{F.WARM_HOUR}")
-        erwartet_tf = (f"TF {F.FELT_HIKE_MIN_C:.1f}-{F.FELT_HIKE_MAX_C:.1f}"
-                       f"@{F.WARM_HOUR}")
+        # Issue #2792 S1c-4b (AC-1, §5): `@h` nur an gelben oder schlechteren
+        # Haelften -- die Fixture ist bei „allgemein" beidseitig gruen.
+        erwartet_t = f"T {F.HIKE_MIN_C:.1f}-{F.HIKE_MAX_C:.1f}"
+        erwartet_tf = f"TF {F.FELT_HIKE_MIN_C:.1f}-{F.FELT_HIKE_MAX_C:.1f}"
         assert F.overview_line(report, "T") == erwartet_t, (
             f"Die T-Zeile der Kurzuebersicht hat sich veraendert: "
             f"{F.overview_line(report, 'T')!r} statt {erwartet_t!r}.\n"

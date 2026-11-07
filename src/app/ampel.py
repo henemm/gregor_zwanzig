@@ -14,7 +14,7 @@ from __future__ import annotations
 
 import copy
 import logging
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping, Sequence
 from numbers import Real
 from typing import Any, Optional
 
@@ -201,9 +201,18 @@ AMPEL_LESER = frozenset({
 
 
 def hat_ampel(metric_id: Optional[str]) -> bool:
-    """Traegt diese Metrik in S1c-1 ueberhaupt eine Farbe? (die 9 Leser plus
-    die CAPE-Bruecke, siehe ``schwellen_aus_ampel``)."""
-    return metric_id in AMPEL_LESER or metric_id == "cape"
+    """Traegt diese Metrik ueberhaupt eine Farbe? (die 9 Leser; CAPE seit
+    S1c-4b nicht mehr, P1/AC-6)."""
+    return metric_id in AMPEL_LESER
+
+
+def _pruefe_aufgeloest(ampel: Any) -> None:
+    """EINE Pruefung fuer alle Ampel-Leser (Schwellen UND Gewitterfarbe):
+    ``None``, ``{}``, ``{"metrics": {}}`` oder ein unaufgeloestes Abo-Ampel-
+    Fragment ohne ``metrics`` sind Programmierfehler -> ``ValueError``
+    (AC-27, Fix-Loop 2 Nachtrag) statt still „allgemein"."""
+    if not isinstance(ampel, Mapping) or not ampel.get("metrics"):
+        raise ValueError("Profil-Ampel leer: aufgeloestes Ampel-Objekt erwartet")  # i18n-log
 
 
 def schwellen_aus_ampel(ampel: Mapping, metric_id: Optional[str]) -> dict:
@@ -212,14 +221,12 @@ def schwellen_aus_ampel(ampel: Mapping, metric_id: Optional[str]) -> dict:
     dafuer nicht: das aufgeloeste Dict hat kein ``ampel``/``preset_name`` und
     fiele still auf „allgemein" zurueck.
 
-    CAPE-Bruecke (nur S1c-1, entfaellt in S1c-4, P1): CAPE faerbt noch nach
-    Katalog, damit die Ausgabe byte-gleich bleibt."""
-    if metric_id == "cape":
-        from app.metric_catalog import get_metric
-        return dict(get_metric("cape").display_thresholds)
+    Eine leere Ampel (``{}`` bzw. ohne ``metrics``) ist ein Programmierfehler
+    und scheitert laut, fuer jede Metrik (S1c-4b, AC-27)."""
+    _pruefe_aufgeloest(ampel)
     if metric_id not in AMPEL_LESER:
         return {}
-    return _schwellen((ampel.get("metrics") or {}).get(metric_id) or {})
+    return _schwellen(ampel["metrics"].get(metric_id) or {})
 
 
 def _vorlage_der_ampel(ampel: Optional[Mapping]) -> str:
@@ -246,9 +253,13 @@ def deviation_count(ampel: Optional[Mapping]) -> int:
     return n + (gewitter != vorlage["thunder"])
 
 
-def thunder_color(level: Any, ampel: Optional[Mapping]) -> Optional[str]:
+def thunder_color(level: Any, ampel: Mapping) -> Optional[str]:
     """Gewitterstufe -> Ampelfarbe: keins gruen, leicht fest gelb (P2), mittel/
-    hoch nach ``ampel.thunder`` (sonst Vorlage). ``None`` = keine Aussage."""
+    hoch nach ``ampel.thunder`` (sonst Vorlage). ``None`` = keine Aussage.
+
+    Fix-Loop 2 Nachtrag (AC-27): ``ampel`` ist die AUFGELOESTE Abo-Ampel;
+    leer/fehlend scheitert laut, fuer jede Stufe (kein stilles „allgemein")."""
+    _pruefe_aufgeloest(ampel)
     if level is None:
         return None
     from app.thunder_scale import thunder_ordinal
@@ -275,6 +286,52 @@ def ampel_stufe(ampel: Mapping, metric_id: Optional[str], wert: Optional[float])
 def gelb_oder_schlechter(ampel: Mapping, metric_id: Optional[str], wert: Optional[float]) -> bool:
     """Beidseitiges Hervorhebungs-Praedikat: Stufe gelb, orange oder rot."""
     return ampel_stufe(ampel, metric_id, wert) in _GELB_ODER_SCHLECHTER
+
+
+_STUFEN_RANG = {"yellow": 1, "orange": 2, "red": 3}
+
+
+def _mildeste_grenze(schwellen: Mapping, seite: str) -> Optional[float]:
+    """Mildeste gesetzte Grenze einer Seite (``oben``: yellow/orange/red,
+    ``unten``: yellow_lt/orange_lt/red_lt) -- dort beginnt die Hervorhebung."""
+    folge = ("yellow", "orange", "red") if seite == "oben" else ("yellow_lt", "orange_lt", "red_lt")
+    return next((schwellen[k] for k in folge if schwellen.get(k) is not None), None)
+
+
+def ampel_seite(ampel: Mapping, metric_id: Optional[str], wert: Optional[float]) -> Optional[str]:
+    """Ausloesende Seite eines hervorgehobenen Werts: ``oben``/``unten``;
+    ``None``, wenn der Wert gruen ist. Liegen beide Seiten an (nur bei
+    sich kreuzenden Grenzen denkbar), gilt die weiter vom Gruen entfernte."""
+    if not gelb_oder_schlechter(ampel, metric_id, wert):
+        return None
+    schwellen = schwellen_aus_ampel(ampel, metric_id)
+    oben, unten = _mildeste_grenze(schwellen, "oben"), _mildeste_grenze(schwellen, "unten")
+    ab_oben = wert - oben if oben is not None and wert >= oben else None
+    ab_unten = unten - wert if unten is not None and wert < unten else None
+    if ab_unten is None:
+        return "oben"
+    if ab_oben is None:
+        return "unten"
+    return "oben" if ab_oben >= ab_unten else "unten"
+
+
+def ampel_schaerfe(ampel: Mapping, metric_id: Optional[str], wert: Optional[float]) -> tuple:
+    """Wie schlimm ist ein Wert? ``(Stufenrang 0..3, Abstand vom gruenen
+    Bereich)`` -- Abstand zur mildesten Grenze der ausloesenden Seite.
+    Issue #2792 S1c-4b Fix-Loop 2 (F003): EINE Regel fuer die SMS-Klammer,
+    den Ausblick und die Mail-Kachel (``schlimmster_index``)."""
+    seite = ampel_seite(ampel, metric_id, wert)
+    if seite is None:
+        return (0, 0.0)
+    grenze = _mildeste_grenze(schwellen_aus_ampel(ampel, metric_id), seite)
+    abstand = wert - grenze if seite == "oben" else grenze - wert
+    return (_STUFEN_RANG[ampel_stufe(ampel, metric_id, wert)], float(abstand))
+
+
+def schlimmster_index(werte_zeitlich: Sequence[float], schaerfe: Callable[[float], tuple]) -> int:
+    """Index des schlimmsten Werts einer zeitlich sortierten Reihe: hoechste
+    Stufe, dann weiter vom gruenen Bereich, dann die frueheste Stunde."""
+    return max(range(len(werte_zeitlich)), key=lambda i: (schaerfe(werte_zeitlich[i]), -i))
 
 
 def gewitter_gelb_oder_schlechter(level: Any) -> bool:

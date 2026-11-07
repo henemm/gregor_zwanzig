@@ -10,6 +10,7 @@ Spannenzellen-Durchreichung.
 Pfadregel #1409: Pruefling relativ zur eigenen Testdatei aufloesen.
 """
 from __future__ import annotations
+from tests.helpers.ampel_allgemein import PRESET_ALLGEMEIN
 from app.ampel import resolve_ampel
 
 import sys
@@ -547,7 +548,7 @@ def _compare_mail(formats):
             _result(),
             outlook_enabled=True,
             outlook_metrics=_COMPARE_AUSWAHL,
-            outlook_metric_formats=formats,
+            outlook_metric_formats=formats, preset=PRESET_ALLGEMEIN,
         )
     except TypeError as exc:
         raise AssertionError(

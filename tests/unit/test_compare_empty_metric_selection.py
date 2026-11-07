@@ -8,6 +8,7 @@ Mail-Versendungen, kein Mock/patch. Der Live-Nachweis (echte Staging-Mail) ist
 nicht Teil dieser Datei (s. Spec Test Plan, Abschnitt Live-E2E).
 """
 from __future__ import annotations
+from tests.helpers.ampel_allgemein import PRESET_ALLGEMEIN
 
 import logging
 from datetime import date, datetime
@@ -229,7 +230,7 @@ class TestMailWirkungAC1AC9:
             result,
             enabled_metrics=options.enabled_metrics,
             hourly_metrics=options.hourly_metrics,
-            hourly_enabled=options.hourly_enabled,
+            hourly_enabled=options.hourly_enabled, preset=PRESET_ALLGEMEIN,
         )
         assert "Amtliche Warnungen" in html, "Warn-Zeile muss trotz Leerauswahl stehen bleiben"
         for label in ("Temp max", "Wind", "Sonne", "Wolken"):
@@ -268,7 +269,7 @@ class TestKlartextStundenverlaufAC4:
             _result_mit_stunden(mit_ausblick=True),
             hourly_metrics=options.hourly_metrics,
             hourly_enabled=options.hourly_enabled,
-            outlook_enabled=True,
+            outlook_enabled=True, preset=PRESET_ALLGEMEIN,
         )
         assert "3-Tages-Ausblick" in plain, (
             "Voraussetzung: der 3-Tages-Ausblick steht im Klartext (nur dann "
@@ -294,7 +295,7 @@ class TestKlartextStundenverlaufAC4:
             _result_mit_stunden(mit_ausblick=True),
             hourly_metrics=options.hourly_metrics,
             hourly_enabled=options.hourly_enabled,
-            outlook_enabled=True,
+            outlook_enabled=True, preset=PRESET_ALLGEMEIN,
         )
         assert "STUNDENVERLAUF" in plain
         # Beschriftung hergeleitet (Issue #1378 -- Klartext beschriftet in
@@ -327,7 +328,7 @@ class TestKlartextStundenverlaufAC4:
             _result_mit_stunden(mit_ausblick=True),
             hourly_metrics=options.hourly_metrics,
             hourly_enabled=options.hourly_enabled,
-            outlook_enabled=True,
+            outlook_enabled=True, preset=PRESET_ALLGEMEIN,
         )
         assert "3-Tages-Ausblick" in plain, f"Ausblick muss stehen bleiben:\n{plain}"
         assert "Innsbruck" in plain.split("3-Tages-Ausblick")[0], (
@@ -360,7 +361,7 @@ class TestNurMergeSignalGewaehlt:
         html, plain = render_compare_email(
             _result_mit_stunden(),
             hourly_metrics=options.hourly_metrics,
-            hourly_enabled=options.hourly_enabled,
+            hourly_enabled=options.hourly_enabled, preset=PRESET_ALLGEMEIN,
         )
         assert "STUNDENVERLAUF" not in plain, (
             "Klartext darf keinen Stundenverlauf-Abschnitt zeigen, wenn keine "
@@ -385,7 +386,7 @@ class TestNurMergeSignalGewaehlt:
         html, plain = render_compare_email(
             _result_mit_stunden(),
             hourly_metrics=options.hourly_metrics,
-            hourly_enabled=options.hourly_enabled,
+            hourly_enabled=options.hourly_enabled, preset=PRESET_ALLGEMEIN,
         )
         msg = build_mime_message(
             subject="Ortsvergleich", body=html,

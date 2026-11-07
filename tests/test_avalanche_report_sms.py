@@ -42,6 +42,9 @@ def _briefing_sms(alerts, av_spec_enabled: bool | None, **kwargs) -> str:
     from output.tokens.dto import MetricSpec
     from tests.tdd.test_sms_official_alert_tokens import _DISABLE_NEW_14, _segment
 
+    from tests.helpers.ampel_allgemein import AMPEL_ALLGEMEIN
+
+    kwargs.setdefault("ampel", AMPEL_ALLGEMEIN)
     disabled = list(_DISABLE_NEW_14)
     if av_spec_enabled is not None:
         disabled.append(MetricSpec(symbol="AV", enabled=av_spec_enabled))

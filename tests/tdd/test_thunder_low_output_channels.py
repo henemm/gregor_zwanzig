@@ -23,6 +23,7 @@ Keine Mocks, kein Dateiinhalt-Check (jede Assertion prueft eine tatsaechlich
 gerenderte Ausgabe).
 """
 from __future__ import annotations
+from tests.helpers.ampel_allgemein import AMPEL_ALLGEMEIN
 from app.ampel import resolve_ampel
 
 from datetime import datetime, timezone
@@ -79,7 +80,7 @@ def test_ac11_trend_block_zeigt_leicht():
         precip_mm=0.0, wind_dir="W", wind_kmh=10, thunder="LOW", note=None,
         hourly_precip=(), hourly_wind=(), hourly_gust=(), hourly_thunder=(),
     )
-    tokens = format_trend_tokens(stage)
+    tokens = format_trend_tokens(stage, ampel=AMPEL_ALLGEMEIN)
     assert tokens["thunder_word"] == "leicht", (
         f"format_trend_tokens()['thunder_word'] muss bei 'LOW' 'leicht' "
         f"liefern, erhalten {tokens['thunder_word']!r}"
@@ -98,12 +99,12 @@ def test_ac11_prosa_risikofarbe_kennt_low():
     das ist die eigentliche AC-11-Zusicherung dieser Datei."""
     from output.renderers.email.html import _thunder_risk_level
 
-    assert _thunder_risk_level("LOW") == "yellow", (
-        f"_thunder_risk_level('LOW') muss 'yellow' liefern (eigenstaendige "
+    assert _thunder_risk_level("LOW", ampel=AMPEL_ALLGEMEIN) == "yellow", (
+        f"_thunder_risk_level('LOW', ampel=AMPEL_ALLGEMEIN) muss 'yellow' liefern (eigenstaendige "
         f"Gelb-Stufe seit Spec fix_1927_risk_dot_kombi_regel v1.1 AC-4), "
-        f"erhalten {_thunder_risk_level('LOW')!r}"
+        f"erhalten {_thunder_risk_level('LOW', ampel=AMPEL_ALLGEMEIN)!r}"
     )
-    assert _thunder_risk_level(ThunderLevel.LOW) == "yellow", (
+    assert _thunder_risk_level(ThunderLevel.LOW, ampel=AMPEL_ALLGEMEIN) == "yellow", (
         "_thunder_risk_level() muss auch die Enum-Instanz (nicht nur den "
         "rohen String) erkennen"
     )

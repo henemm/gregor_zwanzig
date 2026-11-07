@@ -1,10 +1,10 @@
 ---
 entity_id: telegram_format
 type: reference
-version: "1.0"
+version: "1.1"
 status: active
 created: 2026-10-21
-updated: 2026-10-21
+updated: 2026-11-06
 tags: [telegram, channel, renderer, inbound, reference]
 ---
 
@@ -41,6 +41,12 @@ Der Stil wird je Trip/Vergleich über `report_config.telegram_style` gewählt: `
 | **Änderungs-/Radar-Alarm** | eine Nachricht aus `alert/render.py::render_telegram()` (fette Kopfzeile, dieselben Sätze wie die E-Mail, #2020), `parse_mode="HTML"`; Ortsvergleich ggf. je Ort aufgefächert | **eine** gemeinsame Nachricht mit dem SMS-Alarmtext, Vorrang vor dem Fan-out je Ort (#1467 K-6) |
 | **Amtliche Warnung** | reiche Warnvorlage `render_official_alert_telegram` (+ Entwarnung), `parse_mode="HTML"`, ohne Betreffzeile | SMS-Text, `parse_mode=None` |
 | **Befehlsantwort** | Klartext-Bestätigung, optional mit Inline-Keyboard (Zoom-Navigation per `callback_query` + `editMessageText`, #655) | — |
+
+**Hervorhebung im Trip-Briefing (Profil-Ampel, #2792 S1c-4b):** Die Hervorhebung folgt der Profil-Ampel des Abos, nicht mehr `sms_threshold`: Spitzenwert `@{h}` ab gelb oder schlechter (beidseitig), Gewitter ab „leicht“, Temperatur mit Stunde nur ab Gelb. Die Regeln stehen in `sms_format.md` §3.2 und §3.2a.
+- **`kurzform`:** sendet den SMS-Text, daher gilt der Token-Vertrag der SMS unverändert.
+- **`rich`:** behält sein eigenes Zeilenformat (Symbol, Leerzeichen, Wert, Temperatur mit Dezimalstelle, zweistellige Stunde), z. B. `T -5.0@08` und `G 30@08` (Fixture `tests/fixtures/befehl_antwortzeit/golden_berichte.json`). Dieselben Hervorhebungsregeln gelten, nur die Schreibweise ist eine andere.
+- Die Alarm-Stundenzeilen (Änderungs-Alarm) nutzen dieselbe Ampel des Abos.
+- Vergleichs-Telegram (`render_compare_telegram`) hat keinen Hervorhebungsleser und bleibt unverändert.
 
 **Stundenzeilen im Änderungs-Alarm (`rich`, #1737):** Unter der Kopfzeile jedes Ereignisses steht je betroffener Stunde eine Zeile `HH:MM | alt → neu` (Ortszeit), dieselben Stunden wie in der E-Mail. Trip: Zellformat (ROH oder EINFACH) des Telegram-Briefings desselben Trips; Ortsvergleich: Werte roh, nur unter betroffenen Orten. Höchstens 6 stärkste Stunden in Zeitfolge plus Hinweiszeile „betroffen HH:MM–HH:MM"; Summen-Metriken tragen die Summe in der Kopfzeile. Ohne Anker nur der neue Wert, ohne Stundenreihe unverändert. Nur Daten, keine Empfehlung. Die Kurzform (`kurzform`) sendet den SMS-Alarmtext mit der Zeitspanne `HH-HH` (`sms_format.md` §3.4f).
 

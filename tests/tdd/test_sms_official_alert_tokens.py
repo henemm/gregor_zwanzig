@@ -23,6 +23,7 @@ Objekte, echte Renderer-Aufrufe (`SMSTripFormatter().format_sms`,
 `render_official_alert_sms`), netzfrei.
 """
 from __future__ import annotations
+from tests.helpers.ampel_allgemein import AMPEL_ALLGEMEIN
 
 import re
 from datetime import datetime, timezone
@@ -181,6 +182,7 @@ def _segment(
 def _sms(alerts: list[OfficialAlert] | None = None, **kwargs) -> str:
     seg = _segment(alerts)
     kwargs.setdefault("disabled_specs", _DISABLE_NEW_14)
+    kwargs.setdefault("ampel", AMPEL_ALLGEMEIN)
     return SMSTripFormatter().format_sms(
         [seg], stage_name="Etappe 5", tz=_TZ, **kwargs
     )
@@ -267,8 +269,11 @@ def test_ac3_yellow_warning_appears_at_trip_default():
 # Issue #1824 (A): Tiefst- UND Hoechstwert sind gewaehlt, deshalb steht die
 # Temperatur als EIN Bereichs-Token ('D18/18') statt als 'K18 D18'.
 GOLDEN_NO_ALERTS = "E5: N18 D18/18 R- PR- W- G- TH:- TH+:-"
+# Issue #2792 S1c-4b (E1, AC-19 e): Hervorhebung ab Gelb der Ampel
+# „allgemein" -- R0.4 (unter 1 mm) und Wind 18/28 (unter 30) bleiben
+# unerwaehnt (frueher R0.4@11(2.5@16) W18@11(28@16) nach DEFAULTS).
 GOLDEN_WET_NO_ALERTS = (
-    "E5: N18 D18/18 R0.4@11(2.5@16) PR60%@11(80%@16) W18@11(28@16) "
+    "E5: N18 D18/18 R2.5@16 PR60%@11(80%@16) W- "
     "G30@11(45@16) TH:M@16 TH+:-"
 )
 
@@ -292,7 +297,7 @@ def test_ac4_wet_day_without_alerts_is_bit_identical():
                      thunder=ThunderLevel.MED)
     seg = _segment([], hourly=hourly)
     sms = SMSTripFormatter().format_sms(
-        [seg], stage_name="Etappe 5", tz=_TZ, disabled_specs=_DISABLE_NEW_14,
+        [seg], stage_name="Etappe 5", tz=_TZ, disabled_specs=_DISABLE_NEW_14, ampel=AMPEL_ALLGEMEIN,
     )
     assert sms == GOLDEN_WET_NO_ALERTS, (
         "Token-Zeile (Regentag) ohne amtliche Warnung hat sich veraendert.\n"
@@ -347,7 +352,7 @@ def test_ac7_warn_block_survives_truncation_before_pr():
     seg = _segment([_alert("thunderstorm", 4)], hourly=hourly)
     formatter = SMSTripFormatter()
 
-    full = formatter.format_sms([seg], stage_name="Etappe 5", tz=_TZ, max_length=1000)
+    full = formatter.format_sms([seg], stage_name="Etappe 5", tz=_TZ, max_length=1000, ampel=AMPEL_ALLGEMEIN)
     assert "PR" in full, f"Fixture taugt nicht: kein PR-Token in {full!r}"
     assert "!TS:H@14" in full, f"Fixture taugt nicht: kein Warn-Block in {full!r}"
 
@@ -359,7 +364,7 @@ def test_ac7_warn_block_survives_truncation_before_pr():
     for budget in range(40, min(len(full), 160) + 1):
         try:
             short = formatter.format_sms(
-                [seg], stage_name="Etappe 5", tz=_TZ, max_length=budget,
+                [seg], stage_name="Etappe 5", tz=_TZ, max_length=budget, ampel=AMPEL_ALLGEMEIN,
             )
         except ValueError:
             continue  # Budget unterhalb der Mindestzeile — nicht Gegenstand des ACs
@@ -397,11 +402,11 @@ def test_ac12_warning_of_user_a_does_not_leak_into_user_b():
 
     sms_a = formatter.format_sms(
         [seg_a], stage_name="Etappe 5", tz=_TZ, night_weather=night,
-        disabled_specs=_DISABLE_NEW_14,
+        disabled_specs=_DISABLE_NEW_14, ampel=AMPEL_ALLGEMEIN,
     )
     sms_b = formatter.format_sms(
         [seg_b], stage_name="Etappe 5", tz=_TZ, night_weather=night,
-        disabled_specs=_DISABLE_NEW_14,
+        disabled_specs=_DISABLE_NEW_14, ampel=AMPEL_ALLGEMEIN,
     )
 
     assert "!TS:H@14" in sms_a, f"Nutzer A ohne Warn-Block: {sms_a!r}"

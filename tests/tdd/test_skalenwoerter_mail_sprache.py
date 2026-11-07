@@ -13,6 +13,7 @@ Mocks. Erwartete Woerter kommen aus dem Katalog (``i18n``), nie getippt.
 Pfadregel #1409: Pruefling relativ zur Testdatei aufloesen.
 """
 from __future__ import annotations
+from tests.helpers.ampel_allgemein import PRESET_ALLGEMEIN
 
 import importlib.util
 import re
@@ -134,7 +135,7 @@ def _vergleich_ausblick(lang: str) -> tuple[str, str]:
             hourly_enabled=True, preset_name="Golden-Vergleich",
             outlook_enabled=True, outlook_metrics=_AUSBLICK_IDS,
             outlook_metric_formats={i: True for i in _AUSBLICK_IDS},
-            lang=lang,
+            lang=lang, preset=PRESET_ALLGEMEIN,
         )
     return html, text
 

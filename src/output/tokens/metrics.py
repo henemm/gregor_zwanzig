@@ -52,22 +52,27 @@ _STUFEN_RANG = {"yellow": 1, "orange": 2, "red": 3}
 def _peak_per_ampel_stufe(
     symbol: str, samples: tuple[HourlyValue, ...],
     ampel_stufe: Callable[[float], Optional[str]],
+    ampel_schaerfe: Callable[[float], tuple],
 ) -> str:
     """Hervorhebung nach Ampelstufe (Issue #2792, E1/AC-7): beidseitig ab
-    Gelb, erste Stunde ab Gelb, Spitze = schlimmste Stufe (bei Gleichstand
-    die frueheste Stunde). Ein Wert 0 wird nicht verschluckt (Windstille kann
-    bei Wassersport orange sein)."""
-    getroffen = [
-        (s, _STUFEN_RANG.get(ampel_stufe(s.value), 0))
-        for s in sorted(samples, key=lambda s: s.hour)
-    ]
-    getroffen = [(s, r) for s, r in getroffen if r > 0]
+    Gelb, erste Stunde ab Gelb. Ein Wert 0 wird nicht verschluckt (Windstille
+    kann bei Wassersport orange sein).
+
+    Fix-Loop 2 (F003, Koordinator-Entscheid): die Klammer nennt den
+    SCHLIMMSTEN Wert unter den hervorgehobenen Stunden mit Stunde
+    (``app.ampel.schlimmster_index``: hoechste Stufe, dann weiter vom gruenen
+    Bereich, dann die frueheste Stunde), wenn er vom ersten Wert verschieden
+    ist. Obere Grenze = Maximum (``G70@8(110@13)``), untere = Minimum
+    (Wassersport-Wind ``7@9(3@12)``)."""
+    from app.ampel import schlimmster_index
+    ordnung = sorted(samples, key=lambda s: s.hour)
+    getroffen = [s for s in ordnung if _STUFEN_RANG.get(ampel_stufe(s.value), 0) > 0]
     if not getroffen:
         return "-"
-    first = getroffen[0][0]
-    peak = max(getroffen, key=lambda sr: (sr[1], -sr[0].hour))[0]
+    first = getroffen[0]
+    peak = getroffen[schlimmster_index([s.value for s in getroffen], ampel_schaerfe)]
     f_str, p_str = _fmt_num(symbol, first.value), _fmt_num(symbol, peak.value)
-    if f_str == p_str and first.hour == peak.hour:
+    if peak is first or f_str == p_str:
         return f"{f_str}@{first.hour}"
     return f"{f_str}@{first.hour}({p_str}@{peak.hour})"
 
@@ -78,12 +83,16 @@ def render_threshold_peak_value(
     level_labels: Optional[dict] = None,
     stufe_fn: Optional[Callable[[float], str]] = None,
     ampel_stufe: Optional[Callable[[float], Optional[str]]] = None,
+    ampel_schaerfe: Optional[Callable[[float], tuple]] = None,
 ) -> str:
     """Render value-tail per §5. '-' for null form.
 
-    ``ampel_stufe`` (Issue #2792 S1c-1, vorbereitet, noch nicht verdrahtet):
-    Wert -> Ampelstufe. Gesetzt ersetzt es ``threshold`` (siehe
-    ``_peak_per_ampel_stufe``); ``None`` laesst die Ausgabe unveraendert.
+    ``ampel_stufe`` (Issue #2792, verdrahtet in S1c-4b ueber
+    ``builder._mk_metric``): Wert -> Ampelstufe. Gesetzt ersetzt es
+    ``threshold`` (siehe ``_peak_per_ampel_stufe``). Dann ist auch
+    ``ampel_schaerfe`` (Wert -> ``app.ampel.ampel_schaerfe``) Pflicht: sie
+    waehlt die Klammer je Seite (Fix-Loop 2, F003); ohne sie scheitert der
+    Aufruf laut statt still das Maximum zu nehmen.
 
     Args:
         symbol:       Metric symbol (e.g. 'R', 'W', 'TH').
@@ -102,7 +111,9 @@ def render_threshold_peak_value(
     if not samples:
         return "-"
     if ampel_stufe is not None:
-        return _peak_per_ampel_stufe(symbol, samples, ampel_stufe)
+        if ampel_schaerfe is None:
+            raise ValueError("ampel_stufe ohne ampel_schaerfe: Klammer je Seite nicht bestimmbar")  # i18n-log
+        return _peak_per_ampel_stufe(symbol, samples, ampel_stufe, ampel_schaerfe)
     peak = max(samples, key=lambda s: (s.value, -s.hour))
     if peak.value <= 0:
         return "-"

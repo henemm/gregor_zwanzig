@@ -183,21 +183,19 @@ _RENDER_FUNCS = {
 
 
 @pytest.mark.parametrize("renderer_name", ["html", "plain", "compact"])
-def test_configured_threshold_above_med_suppresses_gewitter_ab_sentence(renderer_name):
-    """F001/F003: ein Trip mit eigener Gewitter-Erwaehnungsschwelle 3.0
-    ('hoch', oberhalb von MED) darf den Satz 'Gewitter ab' in KEINEM der drei
-    Renderer-Einstiege zeigen, obwohl die Stundenreihe MED erreicht --
-    render_html()/render_plain()/render_compact() muessen die Schwelle aus
-    dc.metrics tatsaechlich lesen, nicht nur intern verdrahtet lassen."""
+def test_configured_threshold_above_med_no_longer_suppresses_gewitter_ab_sentence(renderer_name):
+    """Issue #2792 S1c-4b (E1, AC-19 e) -- umgekehrt: eine eigene
+    Gewitter-Erwaehnungsschwelle 3.0 ('hoch') wirkt in KEINEM der drei
+    Renderer-Einstiege mehr; bei einer Stundenreihe, die MED erreicht, zeigen
+    render_html()/render_plain()/render_compact() den Uhrzeit-Satz -- das
+    Praedikat ist die Ampel (Gewitter ab „leicht")."""
     dc = _dc_with_thunder_threshold(3.0)
     output = _RENDER_FUNCS[renderer_name](dc)
-    # #1493: Muster statt Wortlaut -- "Gewitter ab" ist nach #1493 auch im
-    # Positivfall abwesend, die Pruefung waere sonst blind.
-    assert _UHRZEIT_SATZ_RE.search(output) is None, (
-        f"F001/F003 ({renderer_name}): mit eingestellter Schwelle 3.0 "
-        "('hoch') darf der Renderer bei einer Stundenreihe, die nur MED "
-        f"erreicht (unter der Schwelle), den Satz 'Gewitter ab' NICHT "
-        f"zeigen.\n{renderer_name}:\n{output}"
+    # #1493: Muster statt Wortlaut.
+    assert _UHRZEIT_SATZ_RE.search(output) is not None, (
+        f"E1 ({renderer_name}): trotz eingestellter Schwelle 3.0 ('hoch') "
+        "muss der Renderer bei einer Stundenreihe, die MED erreicht, den "
+        f"Uhrzeit-Satz zeigen.\n{renderer_name}:\n{output}"
     )
 
 
