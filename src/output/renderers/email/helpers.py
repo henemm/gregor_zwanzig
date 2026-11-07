@@ -894,11 +894,9 @@ def fmt_val(key: str, val, *, friendly_keys: set[str] | None = None,
             return _ampel_dot_severity("rain_probability", val, ampel=ampel)
         return format_value("rain_probability", val, style="bare")
     if key == "cape":
-        # Issue #814 AC-4: Einfach-HTML → Ampel via indicator_keys; Plain immer Zahl;
-        # Roh-HTML → nackte Zahl ohne Highlight-Span.
-        if html and _use_ampel:
-            return _ampel_dot_severity("cape", val, ampel=ampel)
-        # Plain (html=False) oder Roh-HTML: nackte Zahl, kein Span.
+        # Issue #2792 S1c-4b (AC-6, P1): CAPE traegt keine eigene Farbe mehr —
+        # in jedem Modus die nackte Zahl, kein Ampel-Punkt (frueher lieferte
+        # der Punkt-Zweig mangels CAPE-Schwellen "–" fuer jeden Wert).
         return format_value("cape", val, style="bare")
     if key == "visibility":
         # Issue #814 AC-5: Sicht zeigt immer km-Zahl — kein englisches Wort,
@@ -1280,7 +1278,8 @@ def build_format_modes(dc: UnifiedWeatherDisplayConfig) -> dict[str, str]:
 
 
 # Issue #814: Metrik-IDs die eine HTML-Ampel erhalten können.
-_AMPEL_CAPABLE_METRIC_IDS = frozenset({"wind", "gust", "precipitation", "rain_probability", "cape"})
+# Issue #2792 S1c-4b (AC-6): "cape" entfaellt — CAPE traegt keine eigene Farbe.
+_AMPEL_CAPABLE_METRIC_IDS = frozenset({"wind", "gust", "precipitation", "rain_probability"})
 
 
 def build_html_indicator_keys(dc: UnifiedWeatherDisplayConfig) -> set[str]:
