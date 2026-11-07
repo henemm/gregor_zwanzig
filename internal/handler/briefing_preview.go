@@ -35,7 +35,7 @@ func briefingPreviewTarget(w http.ResponseWriter, r *http.Request, pythonURL, su
 }
 
 // POST /api/briefings/{id}/alert-preview?kind=route|vergleich
-// Alarm-Koerper geht unveraendert durch; Zeitlimit 30 s wie die Alt-Route
+// Alarm-Koerper geht unveraendert durch; Zeitlimit previewProxyTimeout (120 s, #1839) wie die Alt-Route
 // POST /api/trips/{id}/alert-preview.
 func BriefingAlertPreviewHandler(pythonURL string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {

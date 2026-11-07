@@ -1,0 +1,7 @@
+# github.com/henemm/gregor-api/internal/handler [github.com/henemm/gregor-api/internal/handler.test]
+internal/handler/proxy_timeout_chain_test.go:185:2: cannot assign to previewProxyTimeout (neither addressable nor a map index expression)
+internal/handler/proxy_timeout_chain_test.go:186:21: cannot assign to previewProxyTimeout (neither addressable nor a map index expression)
+internal/handler/proxy_timeout_chain_test.go:200:2: cannot assign to previewProxyTimeout (neither addressable nor a map index expression)
+internal/handler/proxy_timeout_chain_test.go:201:21: cannot assign to previewProxyTimeout (neither addressable nor a map index expression)
+FAIL	github.com/henemm/gregor-api/internal/handler [build failed]
+FAIL

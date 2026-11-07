@@ -1,0 +1,41 @@
+============================= test session starts ==============================
+platform linux -- Python 3.12.3, pytest-8.4.1, pluggy-1.6.0
+rootdir: /home/hem/gregor_zwanzig/.claude/worktrees/bright-dreaming-cloud
+configfile: pyproject.toml
+plugins: anyio-4.12.0, timeout-2.4.0, socket-0.8.0
+timeout: 30.0s
+timeout method: signal
+timeout func_only: False
+collected 6 items
+
+tests/test_preview_trend_laeuft_nebenlaeufig.py F.....                   [100%]
+
+=================================== FAILURES ===================================
+_______ test_ac3_trend_laeuft_gleichzeitig_zu_hauptabruf_und_nachtwetter _______
+
+spur = <test_preview_trend_laeuft_nebenlaeufig._Spur object at 0x749295c45be0>
+
+    def test_ac3_trend_laeuft_gleichzeitig_zu_hauptabruf_und_nachtwetter(spur):
+        """AC-3: Gesamtzeit nahe am laengeren Teil (2 x 0,3 s), nicht an der Summe (0,9 s)."""
+        trip, heute = _trip()
+        _PROBE.set("kontext-wert")
+        t0 = time.monotonic()
+        _bau(trip, heute)
+        gesamt = time.monotonic() - t0
+    
+        assert set(spur.iv) == {"fetch", "night", "trend"}, f"Testaufbau: Zweige fehlen {spur.iv}"
+        t_start, t_ende = spur.iv["trend"]
+        haupt_start, haupt_ende = spur.iv["fetch"][0], spur.iv["night"][1]
+        ueberlappung = min(t_ende, haupt_ende) - max(t_start, haupt_start)
+>       assert ueberlappung >= _DAUER, (
+            f"AC-3: Trend und Hauptabruf+Nachtwetter ueberlappen nur {ueberlappung:.2f}s "
+            f"(erwartet >= {_DAUER}s) -- der Trend laeuft noch hinter dem Nachtwetter "
+            f"(Gesamtzeit {gesamt:.2f}s)"
+        )
+E       AssertionError: AC-3: Trend und Hauptabruf+Nachtwetter ueberlappen nur -0.00s (erwartet >= 0.3s) -- der Trend laeuft noch hinter dem Nachtwetter (Gesamtzeit 3.55s)
+E       assert -5.139969289302826e-06 >= 0.3
+
+tests/test_preview_trend_laeuft_nebenlaeufig.py:117: AssertionError
+=========================== short test summary info ============================
+FAILED tests/test_preview_trend_laeuft_nebenlaeufig.py::test_ac3_trend_laeuft_gleichzeitig_zu_hauptabruf_und_nachtwetter
+========================= 1 failed, 5 passed in 22.57s =========================

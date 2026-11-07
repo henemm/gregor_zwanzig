@@ -10,10 +10,14 @@ import (
 	"github.com/henemm/gregor-api/internal/middleware"
 )
 
-// Issue #2283 S1 (AC-5): Zeitgrenze der Vorschau-Proxys. Trip-Vorschau und
-// Alarm-Vorschau 30 s (Wetter-Fetch). Die Orts-Vergleich-Vorschau (60 s) ist
+// Issue #2283 S1 (AC-5): Zeitgrenze der Vorschau-Proxys (SMS-Vorschau, Trip-
+// und kind-neutrale Alarm-Vorschau). Die Orts-Vergleich-Vorschau (60 s) ist
 // mit #1743 entfallen.
-const previewProxyTimeout = 30 * time.Second
+// Issue #1839: 120 s statt 30 s — kalter Wetter-Cache braucht laenger als 30 s
+// (sonst 502). Kette: Browser 130 s (ZEITLIMIT_ALARM_VORSCHAU_MS) > Go 120 s
+// < nginx 330 s (nginxProxyReadTimeout, Puffer >= 30 s). Paket-`var`, damit
+// ein Test den Wirkort (http.Client.Timeout) beobachten kann.
+var previewProxyTimeout = 120 * time.Second
 
 // forwardPreview ist die EINE Proxy-Behandlung aller Vorschau-Routen (Issue
 // #2283 AC-5): Alt-Routen und kind-neutrale Briefing-Routen laufen beide hier
@@ -63,7 +67,8 @@ func forwardPreview(w http.ResponseWriter, r *http.Request, method, path string,
 // Staging-Specs metrik-*-kanal*.staging.spec.ts); email/telegram/compare sind
 // mit der Briefing-Vorschau entfallen. Trip ID via chi.URLParam,
 // user_id from auth context appended to query. Original query params
-// (type, date) are forwarded verbatim. Timeout 30s wegen Wetter-Fetch.
+// (type, date) are forwarded verbatim. Timeout previewProxyTimeout (120 s,
+// #1839) wegen Wetter-Fetch bei kaltem Cache.
 //
 // Issue #2283 AC-5: Alt-Route, Delegate auf forwardPreview.
 //

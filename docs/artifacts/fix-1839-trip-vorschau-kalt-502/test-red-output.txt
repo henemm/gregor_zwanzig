@@ -1,0 +1,466 @@
+============================= test session starts ==============================
+platform linux -- Python 3.12.3, pytest-8.4.1, pluggy-1.6.0
+rootdir: /home/hem/gregor_zwanzig/.claude/worktrees/bright-dreaming-cloud
+configfile: pyproject.toml
+plugins: anyio-4.12.0, timeout-2.4.0, socket-0.8.0
+timeout: 30.0s
+timeout method: signal
+timeout func_only: False
+collected 6 items
+
+tests/test_preview_trend_laeuft_nebenlaeufig.py F.....                   [100%]
+
+=================================== FAILURES ===================================
+_______ test_ac3_trend_laeuft_gleichzeitig_zu_hauptabruf_und_nachtwetter _______
+
+spur = <test_preview_trend_laeuft_nebenlaeufig._Spur object at 0x749295c45be0>
+
+    def test_ac3_trend_laeuft_gleichzeitig_zu_hauptabruf_und_nachtwetter(spur):
+        """AC-3: Gesamtzeit nahe am laengeren Teil (2 x 0,3 s), nicht an der Summe (0,9 s)."""
+        trip, heute = _trip()
+        _PROBE.set("kontext-wert")
+        t0 = time.monotonic()
+        _bau(trip, heute)
+        gesamt = time.monotonic() - t0
+    
+        assert set(spur.iv) == {"fetch", "night", "trend"}, f"Testaufbau: Zweige fehlen {spur.iv}"
+        t_start, t_ende = spur.iv["trend"]
+        haupt_start, haupt_ende = spur.iv["fetch"][0], spur.iv["night"][1]
+        ueberlappung = min(t_ende, haupt_ende) - max(t_start, haupt_start)
+>       assert ueberlappung >= _DAUER, (
+            f"AC-3: Trend und Hauptabruf+Nachtwetter ueberlappen nur {ueberlappung:.2f}s "
+            f"(erwartet >= {_DAUER}s) -- der Trend laeuft noch hinter dem Nachtwetter "
+            f"(Gesamtzeit {gesamt:.2f}s)"
+        )
+E       AssertionError: AC-3: Trend und Hauptabruf+Nachtwetter ueberlappen nur -0.00s (erwartet >= 0.3s) -- der Trend laeuft noch hinter dem Nachtwetter (Gesamtzeit 3.55s)
+E       assert -5.139969289302826e-06 >= 0.3
+
+tests/test_preview_trend_laeuft_nebenlaeufig.py:117: AssertionError
+=========================== short test summary info ============================
+FAILED tests/test_preview_trend_laeuft_nebenlaeufig.py::test_ac3_trend_laeuft_gleichzeitig_zu_hauptabruf_und_nachtwetter
+========================= 1 failed, 5 passed in 22.57s =========================
+# github.com/henemm/gregor-api/internal/handler [github.com/henemm/gregor-api/internal/handler.test]
+internal/handler/proxy_timeout_chain_test.go:185:2: cannot assign to previewProxyTimeout (neither addressable nor a map index expression)
+internal/handler/proxy_timeout_chain_test.go:186:21: cannot assign to previewProxyTimeout (neither addressable nor a map index expression)
+internal/handler/proxy_timeout_chain_test.go:200:2: cannot assign to previewProxyTimeout (neither addressable nor a map index expression)
+internal/handler/proxy_timeout_chain_test.go:201:21: cannot assign to previewProxyTimeout (neither addressable nor a map index expression)
+FAIL	github.com/henemm/gregor-api/internal/handler [build failed]
+FAIL
+
+> frontend@0.0.1 test
+> node --import ./test-lib-loader.mjs --experimental-strip-types --experimental-test-module-mocks --test src/lib/components/alerts-tab/__tests__/alertPreviewBerechnetHinweis.test.ts
+
+TAP version 13
+# Subtest: AC-6: Katalogtext alarme.vorschau.berechnet existiert (de) und unterscheidet sich vom Knopftext
+not ok 1 - AC-6: Katalogtext alarme.vorschau.berechnet existiert (de) und unterscheidet sich vom Knopftext
+  ---
+  duration_ms: 1.443521
+  type: 'test'
+  location: '/home/hem/gregor_zwanzig/.claude/worktrees/bright-dreaming-cloud/frontend/src/lib/components/alerts-tab/__tests__/alertPreviewBerechnetHinweis.test.ts:35:2'
+  failureType: 'testCodeFailure'
+  error: |-
+    alarme.vorschau.berechnet fehlt in de/alarme.json
+    + actual - expected
+    
+    + 'undefined'
+    - 'string'
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 'string'
+  actual: 'undefined'
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/bright-dreaming-cloud/frontend/src/lib/components/alerts-tab/__tests__/alertPreviewBerechnetHinweis.test.ts:38:10)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.start (node:internal/test_runner/test:944:17)
+    startSubtestAfterBootstrap (node:internal/test_runner/harness:296:17)
+  ...
+# Subtest: AC-6: Katalogtext alarme.vorschau.berechnet existiert (en) und unterscheidet sich vom Knopftext
+not ok 2 - AC-6: Katalogtext alarme.vorschau.berechnet existiert (en) und unterscheidet sich vom Knopftext
+  ---
+  duration_ms: 0.2368
+  type: 'test'
+  location: '/home/hem/gregor_zwanzig/.claude/worktrees/bright-dreaming-cloud/frontend/src/lib/components/alerts-tab/__tests__/alertPreviewBerechnetHinweis.test.ts:35:2'
+  failureType: 'testCodeFailure'
+  error: |-
+    alarme.vorschau.berechnet fehlt in en/alarme.json
+    + actual - expected
+    
+    + 'undefined'
+    - 'string'
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 'string'
+  actual: 'undefined'
+  operator: 'strictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/bright-dreaming-cloud/frontend/src/lib/components/alerts-tab/__tests__/alertPreviewBerechnetHinweis.test.ts:38:10)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+  ...
+# Subtest: AC-6: DE nennt "berechnet", EN nennt "preview" (gleichwertige Aussage)
+not ok 3 - AC-6: DE nennt "berechnet", EN nennt "preview" (gleichwertige Aussage)
+  ---
+  duration_ms: 0.34918
+  type: 'test'
+  location: '/home/hem/gregor_zwanzig/.claude/worktrees/bright-dreaming-cloud/frontend/src/lib/components/alerts-tab/__tests__/alertPreviewBerechnetHinweis.test.ts:45:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    The input did not match the regular expression /berechnet/i. Input:
+    
+    ''
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+  actual: ''
+  operator: 'match'
+  stack: |-
+    TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/bright-dreaming-cloud/frontend/src/lib/components/alerts-tab/__tests__/alertPreviewBerechnetHinweis.test.ts:46:9)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+1..3
+# tests 3
+# suites 0
+# pass 0
+# fail 3
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 147.488414
+
+> frontend@0.0.1 test
+> node --import ./test-lib-loader.mjs --experimental-strip-types --experimental-test-module-mocks --test src/lib/__tests__/apiZeitlimit.test.ts
+
+TAP version 13
+# Subtest: \#2361 Default-Budget
+    # Subtest: das Default-Budget betraegt 25 Sekunden (EDGE-tauglich)
+    ok 1 - das Default-Budget betraegt 25 Sekunden (EDGE-tauglich)
+      ---
+      duration_ms: 0.68122
+      type: 'test'
+      ...
+    1..1
+ok 1 - \#2361 Default-Budget
+  ---
+  duration_ms: 154.14793
+  type: 'suite'
+  ...
+# Subtest: AC-1: tote Verbindung ⇒ TimeoutError und Meldung „offline"
+    # Subtest: send() wirft nach Ablauf TimeoutError, meldet genau einmal Fehlschlag, nie Erfolg
+    ok 1 - send() wirft nach Ablauf TimeoutError, meldet genau einmal Fehlschlag, nie Erfolg
+      ---
+      duration_ms: 21.694379
+      type: 'test'
+      ...
+    # Subtest: auch ein schreibender Abruf (POST) laeuft ins Zeitlimit
+    ok 2 - auch ein schreibender Abruf (POST) laeuft ins Zeitlimit
+      ---
+      duration_ms: 21.101036
+      type: 'test'
+      ...
+    1..2
+ok 2 - AC-1: tote Verbindung ⇒ TimeoutError und Meldung „offline"
+  ---
+  duration_ms: 43.000455
+  type: 'suite'
+  ...
+# Subtest: AC-2: langsame Antwort innerhalb des Budgets
+    # Subtest: Antwort nach der Haelfte des Limits kommt an und meldet Erfolg
+    ok 1 - Antwort nach der Haelfte des Limits kommt an und meldet Erfolg
+      ---
+      duration_ms: 45.138348
+      type: 'test'
+      ...
+    # Subtest: nach erfolgreicher Antwort bleibt kein Zeitlimit-Timer zurueck (Signal bleibt unberuehrt)
+    ok 2 - nach erfolgreicher Antwort bleibt kein Zeitlimit-Timer zurueck (Signal bleibt unberuehrt)
+      ---
+      duration_ms: 82.13153
+      type: 'test'
+      ...
+    1..2
+ok 3 - AC-2: langsame Antwort innerhalb des Budgets
+  ---
+  duration_ms: 127.711768
+  type: 'suite'
+  ...
+# Subtest: AC-3: eigenes Budget je Aufruf (`zeitlimitMs`)
+    # Subtest: api.get: laenger als der Default, kuerzer als das eigene Budget ⇒ gelingt
+    ok 1 - api.get: laenger als der Default, kuerzer als das eigene Budget ⇒ gelingt
+      ---
+      duration_ms: 62.471822
+      type: 'test'
+      ...
+    # Subtest: api.post: laenger als der Default, kuerzer als das eigene Budget ⇒ gelingt
+    ok 2 - api.post: laenger als der Default, kuerzer als das eigene Budget ⇒ gelingt
+      ---
+      duration_ms: 61.981472
+      type: 'test'
+      ...
+    # Subtest: api.put: laenger als der Default, kuerzer als das eigene Budget ⇒ gelingt
+    ok 3 - api.put: laenger als der Default, kuerzer als das eigene Budget ⇒ gelingt
+      ---
+      duration_ms: 63.191043
+      type: 'test'
+      ...
+    # Subtest: api.patch: laenger als der Default, kuerzer als das eigene Budget ⇒ gelingt
+    ok 4 - api.patch: laenger als der Default, kuerzer als das eigene Budget ⇒ gelingt
+      ---
+      duration_ms: 61.300971
+      type: 'test'
+      ...
+    # Subtest: api.del: laenger als der Default, kuerzer als das eigene Budget ⇒ gelingt
+    ok 5 - api.del: laenger als der Default, kuerzer als das eigene Budget ⇒ gelingt
+      ---
+      duration_ms: 62.198282
+      type: 'test'
+      ...
+    # Subtest: das eigene Budget ist wirklich ein Limit, nicht nur „kein Limit"
+    ok 6 - das eigene Budget ist wirklich ein Limit, nicht nur „kein Limit"
+      ---
+      duration_ms: 61.628991
+      type: 'test'
+      ...
+    1..6
+ok 4 - AC-3: eigenes Budget je Aufruf (`zeitlimitMs`)
+  ---
+  duration_ms: 373.955594
+  type: 'suite'
+  ...
+# Subtest: AC-4: keepalive (Unload-Flush) bekommt kein Zeitlimit
+    # Subtest: ein keepalive-PUT wird vom Zeitlimit nicht abgebrochen
+    ok 1 - ein keepalive-PUT wird vom Zeitlimit nicht abgebrochen
+      ---
+      duration_ms: 82.81313
+      type: 'test'
+      ...
+    1..1
+ok 5 - AC-4: keepalive (Unload-Flush) bekommt kein Zeitlimit
+  ---
+  duration_ms: 83.06101
+  type: 'suite'
+  ...
+# Subtest: AC-5: Abbruch durch den Aufrufer
+    # Subtest: Aufrufer bricht vor dem Limit ab ⇒ AbortError, keine Verbindungsstoerung
+    ok 1 - Aufrufer bricht vor dem Limit ab ⇒ AbortError, keine Verbindungsstoerung
+      ---
+      duration_ms: 11.340221
+      type: 'test'
+      ...
+    # Subtest: ein mitgegebenes Aufrufer-Signal verdraengt das Zeitlimit nicht
+    ok 2 - ein mitgegebenes Aufrufer-Signal verdraengt das Zeitlimit nicht
+      ---
+      duration_ms: 19.459367
+      type: 'test'
+      ...
+    1..2
+ok 6 - AC-5: Abbruch durch den Aufrufer
+  ---
+  duration_ms: 31.122326
+  type: 'suite'
+  ...
+# Subtest: AC-6: keine automatische Wiederholung nach Zeitlimit
+    # Subtest: GET: genau ein fetch-Aufruf, auch nach mehreren Limits
+    ok 1 - GET: genau ein fetch-Aufruf, auch nach mehreren Limits
+      ---
+      duration_ms: 121.336742
+      type: 'test'
+      ...
+    # Subtest: PUT: genau ein fetch-Aufruf, auch nach mehreren Limits
+    ok 2 - PUT: genau ein fetch-Aufruf, auch nach mehreren Limits
+      ---
+      duration_ms: 122.559892
+      type: 'test'
+      ...
+    1..2
+ok 7 - AC-6: keine automatische Wiederholung nach Zeitlimit
+  ---
+  duration_ms: 244.439336
+  type: 'suite'
+  ...
+# Subtest: AC-7: PUT im Zeitlimit, Server hat ihn trotzdem angenommen
+    # Subtest: Folge-PUT startet, traegt das alte If-Match und endet im 412-Konfliktpfad
+    ok 1 - Folge-PUT startet, traegt das alte If-Match und endet im 412-Konfliktpfad
+      ---
+      duration_ms: 27.049112
+      type: 'test'
+      ...
+    1..1
+ok 8 - AC-7: PUT im Zeitlimit, Server hat ihn trotzdem angenommen
+  ---
+  duration_ms: 27.315284
+  type: 'suite'
+  ...
+# Subtest: F002: Langlaeufer tragen ihr eigenes Budget (gestellte Uhr)
+    # Subtest: Compare-Vorschau ist entfernt: kein `compareVorschau`, kein ZEITLIMIT_COMPARE_VORSCHAU_MS
+    ok 1 - Compare-Vorschau ist entfernt: kein `compareVorschau`, kein ZEITLIMIT_COMPARE_VORSCHAU_MS
+      ---
+      duration_ms: 0.40681
+      type: 'test'
+      ...
+# (node:2028012) ExperimentalWarning: The MockTimers API is an experimental feature and might change at any time
+# (Use `node --trace-warnings ...` to show where the warning was created)
+    # Subtest: Test-Versand: 130 s (Go-Proxy 120 s), POST /api/notify/test {channel}
+    ok 2 - Test-Versand: 130 s (Go-Proxy 120 s), POST /api/notify/test {channel}
+      ---
+      duration_ms: 7.459346
+      type: 'test'
+      ...
+    # Subtest: Alarm-Vorschau: 130 s (Go-Proxy 120 s, \#1839), POST /api/trips/{id}/alert-preview
+    not ok 3 - Alarm-Vorschau: 130 s (Go-Proxy 120 s, \#1839), POST /api/trips/{id}/alert-preview
+      ---
+      duration_ms: 5.190834
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/bright-dreaming-cloud/frontend/src/lib/__tests__/apiZeitlimit.test.ts:399:2'
+      failureType: 'testCodeFailure'
+      error: |-
+        der Abruf wurde vor seinem Budget von 130000 ms abgebrochen
+        + actual - expected
+        
+        + {
+        +   fehler: Error [TimeoutError]: Die Verbindung ist zu langsam — der Server hat nicht rechtzeitig geantwortet.
+        +       at zeitlimitFehler (file:///home/hem/gregor_zwanzig/.claude/worktrees/bright-dreaming-cloud/frontend/src/lib/api.ts:94:17)
+        +       at send (file:///home/hem/gregor_zwanzig/.claude/worktrees/bright-dreaming-cloud/frontend/src/lib/api.ts:169:29),
+        +   ok: false
+        + }
+        - null
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: ~
+      actual:
+        ok: false
+        fehler:
+        error: 'Die Verbindung ist zu langsam — der Server hat nicht rechtzeitig geantwortet.'
+        stack: |-
+          zeitlimitFehler (file:///home/hem/gregor_zwanzig/.claude/worktrees/bright-dreaming-cloud/frontend/src/lib/api.ts:94:17)
+          send (file:///home/hem/gregor_zwanzig/.claude/worktrees/bright-dreaming-cloud/frontend/src/lib/api.ts:169:29)
+      operator: 'strictEqual'
+      stack: |-
+        pruefeBudgetGrenze (file:///home/hem/gregor_zwanzig/.claude/worktrees/bright-dreaming-cloud/frontend/src/lib/__tests__/apiZeitlimit.test.ts:364:10)
+        async TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/bright-dreaming-cloud/frontend/src/lib/__tests__/apiZeitlimit.test.ts:400:19)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: Orts-Aufloesung (Step2Orte/LocationNewModal): `api.post` mit ZEITLIMIT_ORT_AUFLOESEN_MS laeuft 40 s
+    ok 4 - Orts-Aufloesung (Step2Orte/LocationNewModal): `api.post` mit ZEITLIMIT_ORT_AUFLOESEN_MS laeuft 40 s
+      ---
+      duration_ms: 2.994652
+      type: 'test'
+      ...
+    1..4
+not ok 9 - F002: Langlaeufer tragen ihr eigenes Budget (gestellte Uhr)
+  ---
+  duration_ms: 16.668794
+  type: 'suite'
+  location: '/home/hem/gregor_zwanzig/.claude/worktrees/bright-dreaming-cloud/frontend/src/lib/__tests__/apiZeitlimit.test.ts:379:1'
+  failureType: 'subtestsFailed'
+  error: '1 subtest failed'
+  code: 'ERR_TEST_FAILURE'
+  ...
+# Subtest: \#2283: alarmVorschau (kind-neutral, gestellte Uhr)
+    # Subtest: Alarm-Vorschau vergleich: 130 s, POST /api/briefings/{id}/alert-preview?kind=vergleich
+    not ok 1 - Alarm-Vorschau vergleich: 130 s, POST /api/briefings/{id}/alert-preview?kind=vergleich
+      ---
+      duration_ms: 3.359384
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/bright-dreaming-cloud/frontend/src/lib/__tests__/apiZeitlimit.test.ts:438:3'
+      failureType: 'testCodeFailure'
+      error: |-
+        der Abruf wurde vor seinem Budget von 130000 ms abgebrochen
+        + actual - expected
+        
+        + {
+        +   fehler: Error [TimeoutError]: Die Verbindung ist zu langsam — der Server hat nicht rechtzeitig geantwortet.
+        +       at zeitlimitFehler (file:///home/hem/gregor_zwanzig/.claude/worktrees/bright-dreaming-cloud/frontend/src/lib/api.ts:94:17)
+        +       at send (file:///home/hem/gregor_zwanzig/.claude/worktrees/bright-dreaming-cloud/frontend/src/lib/api.ts:169:29),
+        +   ok: false
+        + }
+        - null
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: ~
+      actual:
+        ok: false
+        fehler:
+        error: 'Die Verbindung ist zu langsam — der Server hat nicht rechtzeitig geantwortet.'
+        stack: |-
+          zeitlimitFehler (file:///home/hem/gregor_zwanzig/.claude/worktrees/bright-dreaming-cloud/frontend/src/lib/api.ts:94:17)
+          send (file:///home/hem/gregor_zwanzig/.claude/worktrees/bright-dreaming-cloud/frontend/src/lib/api.ts:169:29)
+      operator: 'strictEqual'
+      stack: |-
+        pruefeBudgetGrenze (file:///home/hem/gregor_zwanzig/.claude/worktrees/bright-dreaming-cloud/frontend/src/lib/__tests__/apiZeitlimit.test.ts:364:10)
+        async TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/bright-dreaming-cloud/frontend/src/lib/__tests__/apiZeitlimit.test.ts:443:20)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Promise.all (index 0)
+        async Suite.run (node:internal/test_runner/test:1442:7)
+        async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: Alarm-Vorschau route: 130 s, POST /api/briefings/{id}/alert-preview?kind=route
+    not ok 2 - Alarm-Vorschau route: 130 s, POST /api/briefings/{id}/alert-preview?kind=route
+      ---
+      duration_ms: 2.350713
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/bright-dreaming-cloud/frontend/src/lib/__tests__/apiZeitlimit.test.ts:438:3'
+      failureType: 'testCodeFailure'
+      error: |-
+        der Abruf wurde vor seinem Budget von 130000 ms abgebrochen
+        + actual - expected
+        
+        + {
+        +   fehler: Error [TimeoutError]: Die Verbindung ist zu langsam — der Server hat nicht rechtzeitig geantwortet.
+        +       at zeitlimitFehler (file:///home/hem/gregor_zwanzig/.claude/worktrees/bright-dreaming-cloud/frontend/src/lib/api.ts:94:17)
+        +       at send (file:///home/hem/gregor_zwanzig/.claude/worktrees/bright-dreaming-cloud/frontend/src/lib/api.ts:169:29),
+        +   ok: false
+        + }
+        - null
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: ~
+      actual:
+        ok: false
+        fehler:
+        error: 'Die Verbindung ist zu langsam — der Server hat nicht rechtzeitig geantwortet.'
+        stack: |-
+          zeitlimitFehler (file:///home/hem/gregor_zwanzig/.claude/worktrees/bright-dreaming-cloud/frontend/src/lib/api.ts:94:17)
+          send (file:///home/hem/gregor_zwanzig/.claude/worktrees/bright-dreaming-cloud/frontend/src/lib/api.ts:169:29)
+      operator: 'strictEqual'
+      stack: |-
+        pruefeBudgetGrenze (file:///home/hem/gregor_zwanzig/.claude/worktrees/bright-dreaming-cloud/frontend/src/lib/__tests__/apiZeitlimit.test.ts:364:10)
+        async TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/bright-dreaming-cloud/frontend/src/lib/__tests__/apiZeitlimit.test.ts:443:20)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    1..2
+not ok 10 - \#2283: alarmVorschau (kind-neutral, gestellte Uhr)
+  ---
+  duration_ms: 6.228324
+  type: 'suite'
+  location: '/home/hem/gregor_zwanzig/.claude/worktrees/bright-dreaming-cloud/frontend/src/lib/__tests__/apiZeitlimit.test.ts:429:1'
+  failureType: 'subtestsFailed'
+  error: '2 subtests failed'
+  code: 'ERR_TEST_FAILURE'
+  ...
+1..10
+# tests 23
+# suites 10
+# pass 20
+# fail 3
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 1445.229165

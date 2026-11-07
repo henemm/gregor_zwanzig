@@ -261,8 +261,8 @@ export const api = {
  */
 /** Test-Versand (notify/test): Go-Proxy begrenzt auf 120 s (internal/handler/notify.go). */
 export const ZEITLIMIT_TEST_NACHRICHT_MS = 130_000;
-/** Alarm-Vorschau: Go-Proxy begrenzt auf ca. 30 s. */
-export const ZEITLIMIT_ALARM_VORSCHAU_MS = 40_000;
+/** Alarm-Vorschau: Go-Proxy begrenzt auf 120 s (previewProxyTimeout, #1839). */
+export const ZEITLIMIT_ALARM_VORSCHAU_MS = 130_000;
 /**
  * Orts-Aufloesung (locations/resolve): Resolver gesamt bis ca. 30 s. Die beiden
  * Aufrufstellen (Step2Orte, LocationNewModal) rufen `api.post` direkt mit
@@ -283,7 +283,7 @@ export const langlaeufer = {
 
 export type BriefingKind = 'route' | 'vergleich';
 
-/** #2283: kind-neutrale Alarm-Vorschau (POST /api/briefings/{id}/alert-preview?kind=…), 40 s. */
+/** #2283: kind-neutrale Alarm-Vorschau (POST /api/briefings/{id}/alert-preview?kind=…), 130 s (#1839). */
 export function alarmVorschau<T>(kind: BriefingKind, id: string, payload: unknown): Promise<T> {
 	return api.post<T>(`/api/briefings/${encodeURIComponent(id)}/alert-preview?kind=${kind}`, payload, {
 		zeitlimitMs: ZEITLIMIT_ALARM_VORSCHAU_MS

@@ -43,7 +43,7 @@
 		sms = '';
 		try {
 			const payload = buildAlertPreviewBody(kind, { rules: alertRules, stages, locationIds });
-			// #2361: eigenes Budget 40 s (Go-Proxy ca. 30 s), s. `alarmVorschau` in api.ts.
+			// #2361/#1839: eigenes Budget 130 s (Go-Proxy 120 s), s. `alarmVorschau` in api.ts.
 			const result = await alarmVorschau<{
 				subject: string;
 				email_html: string;
@@ -98,6 +98,12 @@
 		>
 			{loading ? $t('alarme.vorschau.lade') : $t('alarme.vorschau.laden')}
 		</button>
+		{#if loading}
+			<!-- Issue #1839 AC-6: kalter Cache rechnet bis zu zwei Minuten — Hinweis statt Absturz-Eindruck. -->
+			<p class="empty" role="status" data-testid="alert-preview-berechnet">
+				{$t('alarme.vorschau.berechnet')}
+			</p>
+		{/if}
 	{/if}
 
 	{#if emailHtml !== '' || subject !== ''}
