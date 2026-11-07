@@ -219,3 +219,4 @@ Weitere zu prüfende Tests (Zuordnung in Phase 4): `trip-detail/TripHeader.spaci
 ## Changelog
 
 - 2026-11-06: Initial spec created (Issue #2837, Epic #2345, Scheibe S1 Hub-Kopf; Anlege-Rahmen als Scheibe S2 ausgegliedert)
+- 2026-11-07: Staging-Befund AC-15 (Fresh-Eyes, beide Arten „pausiert“): Status-Schild sah je Art anders aus (Trip `TripStatusBadge` groß/gelb, Vergleich `CompareStatusPill` klein/grau) und der Trip zeigte kein Profil in der Meta-Zeile (AC-9). Die Zeilen „`TripStatusBadge`, `CompareStatusPill` unverändert wiederverwendet“ (Source, Entscheidung 5, Dependencies) weichen damit von AC-15 ab; bindend ist AC-15 (Status-Schild steht nicht auf der Whitelist). BROKEN-Fix: ein gemeinsames Status-Schild im Hub-Kopf nach Design-System §Pill/Badge, `profileLabel` auch beim Trip. `CompareStatusPill` selbst bleibt unverändert.

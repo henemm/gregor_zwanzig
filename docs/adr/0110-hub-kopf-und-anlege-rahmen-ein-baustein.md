@@ -34,3 +34,7 @@ Kontrast, gemessen: Weiß auf `--g-accent #c45a2a` erreicht 4,34:1 und verfehlt 
 
 - **Positiv:** Trip und Ortsvergleich teilen den Kopf (ADR-0097); Lesbarkeit nach WCAG-AA; eine Zeile weniger beim Trip.
 - **Negativ:** Viele Tests und E2E verankerten die Divergenz und wurden umgedreht (nicht gelöscht). Wer später wieder Orange für die Hauptaktion will, braucht ein neues ADR.
+
+## Nachtrag 2026-11-07 (#2837 AC-15)
+
+Das Status-Badge aus Entscheidung 4 ist ein geteiltes Atom: Beide Hub-Köpfe nutzen `shared/hub-kopf/HubStatusBadge.svelte` (Pill nach Design-System, Wörter aus `trip.status.*`). `TripStatusBadge` ist nur noch ein dünner Wrapper darum; `CompareStatusPill` wird von keiner Seite mehr genutzt. Der Trip-Kopf zeigt außerdem das Profil wie der Vergleich. Die Entscheidung selbst bleibt unverändert.

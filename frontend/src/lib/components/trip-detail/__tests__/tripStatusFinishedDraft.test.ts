@@ -23,7 +23,8 @@ import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
 const here = dirname(fileURLToPath(import.meta.url));
-const BADGE = join(here, '../TripStatusBadge.svelte');
+// #2837 AC-15 (BROKEN-Fix): TONE_MAP/LABEL_MAP liegen im geteilten HubStatusBadge (TripStatusBadge = Wrapper).
+const BADGE = join(here, '../../shared/hub-kopf/HubStatusBadge.svelte');
 const HEADER = join(here, '../TripHeader.svelte');
 
 const badgeSource = quelleMitKatalogUndTabellen(readFileSync(BADGE, 'utf8'));

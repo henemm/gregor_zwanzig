@@ -21,7 +21,9 @@ import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
 const here = dirname(fileURLToPath(import.meta.url));
-const BADGE = join(here, 'TripStatusBadge.svelte');
+// #2837 AC-15 (BROKEN-Fix): Ton-Zuordnung und Pill liegen seit dem Fix im geteilten
+// HubStatusBadge (TripStatusBadge ist ein dünner Wrapper darum) — dort wird geprüft.
+const BADGE = join(here, '../shared/hub-kopf/HubStatusBadge.svelte');
 const CSS = join(here, '../../../app.css');
 
 const badgeSource = readFileSync(BADGE, 'utf8');

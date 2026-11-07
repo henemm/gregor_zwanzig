@@ -80,6 +80,8 @@
 	// Issue #2284 S2 — Eyebrow zeigt nur noch den Datumsbereich; die Region steht in der Region-Zeile des Bausteins.
 	const daysLabel = $derived.by(() => (void $locale, getDaysLabel(trip, now)));
 	const aktivitaeten = $derived(ACTIVITY_TYPE_OPTIONS.map((o) => ({ value: o.value, label: $t(AKTIVITAET[o.value]) })));
+	// #2837 AC-9 (BROKEN-Fix): Profil in der Meta-Zeile wie beim Ortsvergleich („· Trekking").
+	const profileLabel = $derived(aktivitaeten.find((o) => o.value === trip.activity)?.label ?? '');
 
 	// Issue #416 — Mobile Kennzahlen-Kacheln (sichtbar nur ≤ 899px).
 	// Spec: docs/specs/modules/issue_416_mobile_trip_kennzahlen.md
@@ -151,6 +153,7 @@
 		region={trip.region}
 		profile={trip.activity}
 		profileOptions={aktivitaeten}
+		{profileLabel}
 		regionMaxLength={60}
 		testidPrefix="trip"
 		titleTestid="trip-detail-h1"

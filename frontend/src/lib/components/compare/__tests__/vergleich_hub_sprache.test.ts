@@ -121,8 +121,10 @@ describe('AC-1: Ortsvergleich-Hub englisch, Namen unveraendert, Aktionen wie im 
 		// kein Krümel „Hub“, keine Mobil-Eyebrow „Orts-Vergleich · Hub“.
 		for (const alt of ['ORTS-VERGLEICHE', 'Orts-Vergleich · Hub']) hatNicht(sichtbar(de), alt);
 		const s = sichtbar(e);
-		for (const t of ['Runs automatically', 'Runs auto.', 'Draft · not active', 'Next delivery', 'Last sent', 'Channels', 'Email · Telegram', 'Morning 07:00 · Evening 18:00', '3 candidates', '1 candidate', 'Edit →', 'Delivery', 'Not scheduled yet', '2 metrics with a target range', '2 metrics · highlighted, no score', 'Location comparisons', 'End date passed', 'Finish setup', 'Send', 'Sending…', 'Status change failed. Please try again.', '3 locations', '1 location', 'Winter sports', '27 Oct 2026', 'No delivery yet', 'active', 'paused'])
+		for (const t of ['Runs automatically', 'Runs auto.', 'Draft · not active', 'Next delivery', 'Last sent', 'Channels', 'Email · Telegram', 'Morning 07:00 · Evening 18:00', '3 candidates', '1 candidate', 'Edit →', 'Delivery', 'Not scheduled yet', '2 metrics with a target range', '2 metrics · highlighted, no score', 'Location comparisons', 'End date passed', 'Finish setup', 'Send', 'Sending…', 'Status change failed. Please try again.', '3 locations', '1 location', 'Winter sports', '27 Oct 2026', 'No delivery yet', 'Active', 'Paused'])
 			hat(s, t);
+		// #2837 AC-15 (BROKEN-Fix): das Kopf-Schild ist der geteilte HubStatusBadge (Wort aus trip.status.*,
+		// wie beim Trip) — nicht mehr CompareStatusPill mit listen.status.* („active"/„paused").
 		for (const t of ['aria-label="More actions"', 'aria-label="Back to overview"']) hat(e, t);
 		// #2837 S1: kein „Hub“-Krümel, keine Versalien im Markup, keine Mobil-Eyebrow.
 		for (const t of ['LOCATION COMPARISONS', 'Location comparison · Hub']) hatNicht(s, t);
