@@ -58,8 +58,6 @@ export const F10_ANKER: [schluessel: string, de: string, en: string][] = [
 	['vergleich.hub.reihenfolge_hinweis', 'Reihenfolge = Spalten im Briefing · ziehen zum Sortieren', 'Order = columns in the briefing · drag to sort'],
 	['vergleich.hub.keine_orte', 'Noch keine Orte ausgewählt.', 'No locations selected yet.'],
 	['vergleich.hub.keine_weiteren', 'Keine weiteren gespeicherten Orte verfügbar.', 'No other saved locations available.'],
-	['vergleich.hub.krumel', 'Hub', 'Hub'],
-	['vergleich.hub.eyebrow', 'Orts-Vergleich · Hub', 'Location comparison · Hub'],
 	['vergleich.hub.laufzeit_ueberschritten', 'Laufzeit überschritten', 'End date passed'],
 	['vergleich.hub.setup_abschliessen', 'Setup abschließen', 'Finish setup'],
 	['vergleich.hub.test_gesendet', 'Test-Briefing gesendet', 'Test briefing sent'],

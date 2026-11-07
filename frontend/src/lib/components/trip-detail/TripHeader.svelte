@@ -2,9 +2,13 @@
 	// Issue #302 — Trip-Detail Header (Soll-Mockup).
 	// Spec: docs/specs/modules/issue_302_trip_detail_page.md §3.
 	//
-	// Zweispaltig: Links Breadcrumb + H1 + Statuszeile + Meta. Rechts 3 Buttons.
-	// Pause/Archive-Logik ist in +page.svelte als Danger-Zone gewandert.
+	// #2837 S1 (ADR-0110): Hülle um den geteilten HubKopf (Leiste + Titelblock, wie beim
+	// Ortsvergleich). Trip-eigen bleiben nur Datum (eyebrow), Kürzel (namePrefix), Status mit
+	// „Tag x von y" (status-Snippet in der Titelzeile), km/Hm und die Mobil-Kacheln.
+	// Senden/Kebab/Meldungen reicht die Seite durch; der Kopf ruft keine API.
+	import type { Snippet } from 'svelte';
 	import TripStatusBadge from './TripStatusBadge.svelte';
+	import HubKopf from '$lib/components/shared/hub-kopf/HubKopf.svelte';
 	import { api } from '$lib/api.js';
 	import { formatDateRange, getDaysLabel } from '$lib/utils/tripHero';
 	import { computeTripStats } from '$lib/utils/tripStats';
@@ -12,7 +16,6 @@
 	import { getReportSchedule } from '$lib/utils/rightColumn';
 	import Stat from '$lib/components/molecules/Stat.svelte';
 	import { ACTIVITY_TYPE_OPTIONS, type Trip } from '$lib/types';
-	import SubscriptionHeader from '$lib/components/shared/subscription-header/SubscriptionHeader.svelte';
 	import { baueTripSpeicherung, speichereKopfFeld } from '$lib/components/shared/tripSpeicherung';
 	import type { SaveStatus } from '$lib/stores/saveStatusStore.svelte';
 	import { t, locale, type MessageKey } from '$lib/i18n';
@@ -38,9 +41,21 @@
 		now?: Date;
 		/** Issue #758: SaveStatus controller — der Speicher-Chip kommt seit #2284 S2 vom SubscriptionHeader. */
 		saveController?: SaveStatus;
+		/** #2837 S1: Leiste des HubKopf — Senden öffnet nur den Dialog der Seite. */
+		sendLabel?: string;
+		onSend?: () => void;
+		sendDisabled?: boolean;
+		actions?: Array<{ id: string; label: string; danger?: boolean }>;
+		onSelect?: (id: string) => void;
+		mobil?: boolean;
+		onSheetOpen?: () => void;
+		meldungen?: Snippet;
 	}
 
-	let { trip, onTripUpdate, now = new Date(), saveController }: Props = $props();
+	let {
+		trip, onTripUpdate, now = new Date(), saveController,
+		sendLabel, onSend, sendDisabled = false, actions = [], onSelect, mobil = false, onSheetOpen, meldungen
+	}: Props = $props();
 
 	// Issue #2284 S2 — Name, Region und Aktivität speichert der geteilte Baustein
 	// über diese Funktion. Rumpf = NUR das Eigenfeld (kein Spread des Seiten-Trips,
@@ -119,92 +134,73 @@
 </script>
 
 <header class="trip-header">
-	<div class="header-main">
-		<div class="header-left">
-			<SubscriptionHeader
-				kind="trip"
-				name={trip.name}
-				region={trip.region}
-				profile={trip.activity}
-				profileOptions={aktivitaeten}
-				regionMaxLength={60}
-				testidPrefix="trip"
-				titleTestid="trip-detail-h1"
-				titleSize={38}
-				{saveController}
-				{onSaveField}
-			>
-				{#snippet eyebrow()}
-					<div class="trip-eyebrow-region">{dateRange}</div>
-				{/snippet}
-				{#snippet namePrefix()}
-					{#if trip.shortcode}<span class="h1-shortcode">{trip.shortcode}</span> ·&nbsp;{/if}
-				{/snippet}
-			</SubscriptionHeader>
-
-			<div class="status-line">
-				<span class="status-supplement" data-testid="trip-detail-status-supplement">
-					{daysLabel}
-				</span>
-				<TripStatusBadge {trip} {now} />
-			</div>
-
+	<HubKopf
+		context="route"
+		parent={{ label: $t('listen.trips.titel'), href: '/trips' }}
+		crumb={trip.shortcode ?? trip.name}
+		sendLabel={sendLabel ?? $t('aktionen.senden')}
+		{onSend}
+		{sendDisabled}
+		{actions}
+		{onSelect}
+		{mobil}
+		{onSheetOpen}
+		{meldungen}
+		leisteTestid="trip-detail-breadcrumb-bar"
+		name={trip.name}
+		region={trip.region}
+		profile={trip.activity}
+		profileOptions={aktivitaeten}
+		regionMaxLength={60}
+		testidPrefix="trip"
+		titleTestid="trip-detail-h1"
+		titleSize={38}
+		{saveController}
+		{onSaveField}
+	>
+		{#snippet eyebrow()}
+			<div class="trip-eyebrow-region">{dateRange}</div>
+		{/snippet}
+		{#snippet namePrefix()}
+			{#if trip.shortcode}<span class="h1-shortcode">{trip.shortcode}</span> ·&nbsp;{/if}
+		{/snippet}
+		{#snippet status()}
+			<TripStatusBadge {trip} {now} />
+			<span class="status-supplement" data-testid="trip-detail-status-supplement">{daysLabel}</span>
+		{/snippet}
+		<!-- Whitelist (Entscheidung 8): km/Hm und Mobil-Kacheln im Titelblock, über der Unterkante des HubKopf. -->
+		{#snippet unten()}
 			<div class="meta-line" data-testid="trip-detail-meta">
 				<span>{`${stats.kmTotal.toFixed(1)} km`}</span>
 				· <span>{`↑${Math.round(stats.ascentM).toLocaleString($locale === 'en' ? 'en-GB' : 'de-DE')} m`}</span>
 			</div>
-		</div>
 
-	</div>
-
-	<div class="mobile-metrics" data-testid="trip-header-mobile-metrics">
-		<div data-testid="metric-etappe">
-			<Stat label={$t('trip.kopf.etappe')} value={etappeValue} size="sm" mono />
-		</div>
-		<div data-testid="metric-briefing">
-			<Stat label={$t('trip.kopf.briefing')} value={briefingValue} size="sm" mono />
-		</div>
-		<div data-testid="metric-start">
-			<Stat label={startLabel} value={startValue} size="sm" mono />
-		</div>
-	</div>
+			<div class="mobile-metrics" data-testid="trip-header-mobile-metrics">
+				<div data-testid="metric-etappe">
+					<Stat label={$t('trip.kopf.etappe')} value={etappeValue} size="sm" mono />
+				</div>
+				<div data-testid="metric-briefing">
+					<Stat label={$t('trip.kopf.briefing')} value={briefingValue} size="sm" mono />
+				</div>
+				<div data-testid="metric-start">
+					<Stat label={startLabel} value={startValue} size="sm" mono />
+				</div>
+			</div>
+		{/snippet}
+	</HubKopf>
 </header>
 
 <style>
-	.trip-header {
-		display: flex;
-		flex-direction: column;
-		gap: 0.5rem;
-		margin-bottom: 1.25rem;
-		padding: 26px 40px 18px;
-	}
-	.header-main {
-		display: flex;
-		gap: 1.5rem;
-		align-items: flex-start;
-		justify-content: space-between;
-		flex-wrap: wrap;
-	}
-	.header-left {
-		display: flex;
-		flex-direction: column;
-		gap: 0.5rem;
-		min-width: 0;
-		flex: 1 1 320px;
-	}
+	/* #2837 S1 (Adversary F001): Abstände und Unterkante trägt allein der HubKopf — die Hülle
+	   legt keinen eigenen Rand, Abstand oder Linie um ihn (Parität zum Ortsvergleich). */
 	.h1-shortcode {
 		font-family: var(--g-font-mono, ui-monospace, monospace);
 		color: var(--g-accent); /* audit:exempt — Large-Text in <h1> (≥18pt → WCAG AA-large) */
 	}
-	.status-line {
-		display: flex;
-		align-items: center;
-		gap: 0.75rem;
-		flex-wrap: wrap;
-	}
 	.status-supplement {
 		font-size: var(--g-text-sm);
 		color: var(--g-ink-muted);
+		white-space: nowrap;
 	}
 	.meta-line {
 		display: flex;
@@ -213,16 +209,6 @@
 		font-size: var(--g-text-sm);
 		color: var(--g-ink-muted);
 		font-variant-numeric: tabular-nums;
-	}
-	.header-actions {
-		display: flex;
-		gap: 0.5rem;
-		flex-wrap: wrap;
-		flex-shrink: 0;
-	}
-	.briefing-msg {
-		margin: 0;
-		font-size: var(--g-text-sm);
 	}
 	.trip-eyebrow-region {
 		font-size: 11px;
@@ -239,12 +225,6 @@
 			display: flex;
 			gap: var(--g-s-3);
 			padding-top: var(--g-s-2);
-		}
-	}
-	/* #2284 S2 (AC-13): Kopf mobil um 7 px gestrafft (oberer Innenabstand), kein Inhalt entfernt. */
-	@media (max-width: 899px) {
-		.trip-header {
-			padding-top: 19px;
 		}
 	}
 </style>

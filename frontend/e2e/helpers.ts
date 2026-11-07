@@ -735,6 +735,54 @@ export async function openHub(
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Issue #2837 S1 (Epic #2345, ADR-0110): geteilter Hub-Kopf `shared/hub-kopf/HubKopf.svelte`.
+// Seine testids sind für BEIDE Arten gleich (kein kind-Eintrag nötig) — deshalb ein
+// eigenes Konstanten-Objekt statt neuer HUB_SEL-Felder; HUB_SEL bleibt unverändert.
+// Reine Selektoren/Werte, keine Assertions.
+// ─────────────────────────────────────────────────────────────────────────────
+
+export const HUB_KOPF_SEL = {
+	/** Leiste ganz oben: Breadcrumb bzw. Zurück-Pfeil, Senden, Kebab, Meldungen. */
+	leiste: 'hub-kopf-leiste',
+	/** Breadcrumb „Elternteil (Link) / Kind (kein Link)". */
+	breadcrumb: 'hub-kopf-breadcrumb',
+	/** Status-Badge samt Zusatz in der Titelzeile (status-Snippet). */
+	status: 'hub-kopf-status',
+	/** Senden-Knopf (stabil seit #2278). */
+	senden: 'subscription-hub-send',
+	/** Kebab (Desktop-Dropdown bzw. mobiler Knopf zum Aktionsblatt). */
+	kebab: 'subscription-kebab',
+	/** Überschrift: Trip trägt eine testid, der Vergleich nicht — gemeinsam über die Rolle. */
+	titelRolle: { role: 'heading', level: 1 } as const
+} as const;
+
+/** Berechnete Token-Farben aus app.css (getComputedStyle-Form). */
+export const TOKEN_RGB = {
+	ink: 'rgb(26, 26, 24)',
+	accent: 'rgb(196, 90, 42)',
+	paperDeep: 'rgb(236, 234, 217)',
+	ink3: 'rgb(107, 103, 92)'
+} as const;
+
+/** WCAG-Kontrastverhältnis zweier `rgb(...)`/`rgba(...)`-Werte aus getComputedStyle. */
+export function kontrastVerhaeltnis(vorne: string, hinten: string): number {
+	const kanal = (c: string): number[] => {
+		const m = /rgba?\(\s*([\d.]+)[,\s]+([\d.]+)[,\s]+([\d.]+)/.exec(c);
+		if (!m) throw new Error(`kontrastVerhaeltnis: keine rgb-Farbe „${c}"`);
+		return [m[1], m[2], m[3]].map(Number);
+	};
+	const lum = (c: string): number => {
+		const [r, g, b] = kanal(c).map((v) => {
+			const s = v / 255;
+			return s <= 0.03928 ? s / 12.92 : ((s + 0.055) / 1.055) ** 2.4;
+		});
+		return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+	};
+	const [a, b] = [lum(vorne), lum(hinten)].sort((x, y) => y - x);
+	return (a + 0.05) / (b + 0.05);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Issue #2347 S4 (Epic #2345, Etappe P6): Anlege-Seite und Listenseite je kind.
 // Spec: docs/specs/modules/feat_2347_s4_paritaets_e2e.md § „Kind-Kontraste".
 //

@@ -614,3 +614,13 @@ e2e/langlaeufer-zeitbudget-wirkort.spec.ts
 # der anderen Specs bleibt unberuehrt). Filter C: Screenshots nach
 # ../docs/artifacts/ (ignoriert). Fallzahl: 7.
 e2e/sprachwechsel.spec.ts
+#
+# Aufnahme 2026-11-06 (#2837 S1 Hub-Kopf, Epic #2345, ADR-0110):
+# hub-kopf-paritaet-compare-trip.spec.ts -- Paritaet des geteilten Hub-Kopfs je
+# HUB_KINDS bei 1440 und 390 px (Lage/Farbe Senden, Entwurf, Breadcrumb, Status in
+# der Titelzeile, Kebab vertikal, langer Name, Titelblock, Zaehler-Kontrast, de/en
+# ueber den Zweitnutzer). Filter A: kein waitForTimeout/skip/fixme, kein
+# .staging.spec. In RED aufgenommen (bis GREEN rot); Filter B (3x gruen im
+# Zielverbund) misst der CI-Hauptlauf des PR. Filter C: kein Screenshot-Schreibziel.
+# Fallzahl: 24 (+ global.setup).
+e2e/hub-kopf-paritaet-compare-trip.spec.ts

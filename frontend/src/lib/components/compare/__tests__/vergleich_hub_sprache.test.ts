@@ -96,7 +96,7 @@ describe('AC-6: Deutsch byte-gleich zum Ist-Stand vor der Umstellung (Golden gol
 	});
 	test('Messaufbau: Golden enthaelt die deutschen Texte der Flaechen', () => {
 		const alle = [...Object.keys(FAELLE).map((f) => `${f}.de.html`), 'funktionen.de.txt'].map((f) => readFileSync(path.join(P.GOLDEN_DIR, f), 'utf-8')).join('');
-		for (const s of ['Läuft automatisch', 'Läuft autom.', 'Verglichene Orte', 'Ort hinzufügen', 'Nächster Versand', 'Zuletzt raus', '3 Kandidaten', 'Bearbeiten →', 'ORTS-VERGLEICHE', 'Laufzeit überschritten', 'Setup abschließen', 'Stundenverlauf', 'Erscheint nur in der E-Mail.', 'Neuer Ort', 'Erkannt · Vorschau', 'min. 2 erforderlich', 'viel — Empfehlung 3–5', 'Eckdaten', 'noch 1 Ort nötig', 'noch 2 Orte nötig', 'erst Vergleich benennen', 'Gesperrt — erst Vergleich benennen', 'Keine weiteren gespeicherten Orte verfügbar.', 'Status-Änderung fehlgeschlagen', 'Täglich 7–9 Uhr', 'vor 1 Woche', 'vor 2 Wochen', 'Neuer Auto-Report'])
+		for (const s of ['Läuft automatisch', 'Läuft autom.', 'Verglichene Orte', 'Ort hinzufügen', 'Nächster Versand', 'Zuletzt raus', '3 Kandidaten', 'Bearbeiten →', 'Orts-Vergleiche', 'Laufzeit überschritten', 'Setup abschließen', 'Stundenverlauf', 'Erscheint nur in der E-Mail.', 'Neuer Ort', 'Erkannt · Vorschau', 'min. 2 erforderlich', 'viel — Empfehlung 3–5', 'Eckdaten', 'noch 1 Ort nötig', 'noch 2 Orte nötig', 'erst Vergleich benennen', 'Gesperrt — erst Vergleich benennen', 'Keine weiteren gespeicherten Orte verfügbar.', 'Status-Änderung fehlgeschlagen', 'Täglich 7–9 Uhr', 'vor 1 Woche', 'vor 2 Wochen', 'Neuer Auto-Report'])
 			assert.ok(alle.includes(s), s);
 	});
 	test('Messaufbau: jeder deutsche Anker-Text (Festteile) steht im Golden oder in der Funktionstabelle', () => {
@@ -116,11 +116,16 @@ describe('AC-6: Deutsch byte-gleich zum Ist-Stand vor der Umstellung (Golden gol
 describe('AC-1: Ortsvergleich-Hub englisch, Namen unveraendert, Aktionen wie im Trip-Hub', () => {
 	test('Uebersicht und Seite: Kennzahlen, Karten, Kopf englisch (erst de, dann ohne Neuladen en)', () => {
 		const { de, en: e } = deDannEn(() => P.hubUebersichtRendern() + P.hubSeiteRendern());
-		for (const s of ['Läuft automatisch', 'Nächster Versand', 'Zuletzt raus', 'ORTS-VERGLEICHE']) hat(sichtbar(de), s);
+		for (const s of ['Läuft automatisch', 'Nächster Versand', 'Zuletzt raus', 'Orts-Vergleiche']) hat(sichtbar(de), s);
+		// #2837 S1 (ADR-0110): Breadcrumb aus dem geteilten HubKopf — Elternteil im Katalog-Wortlaut,
+		// kein Krümel „Hub“, keine Mobil-Eyebrow „Orts-Vergleich · Hub“.
+		for (const alt of ['ORTS-VERGLEICHE', 'Orts-Vergleich · Hub']) hatNicht(sichtbar(de), alt);
 		const s = sichtbar(e);
-		for (const t of ['Runs automatically', 'Runs auto.', 'Draft · not active', 'Next delivery', 'Last sent', 'Channels', 'Email · Telegram', 'Morning 07:00 · Evening 18:00', '3 candidates', '1 candidate', 'Edit →', 'Delivery', 'Not scheduled yet', '2 metrics with a target range', '2 metrics · highlighted, no score', 'LOCATION COMPARISONS', 'Location comparison · Hub', 'End date passed', 'Finish setup', 'Send', 'Sending…', 'Status change failed. Please try again.', '3 locations', '1 location', 'Winter sports', '27 Oct 2026', 'No delivery yet', 'active', 'paused'])
+		for (const t of ['Runs automatically', 'Runs auto.', 'Draft · not active', 'Next delivery', 'Last sent', 'Channels', 'Email · Telegram', 'Morning 07:00 · Evening 18:00', '3 candidates', '1 candidate', 'Edit →', 'Delivery', 'Not scheduled yet', '2 metrics with a target range', '2 metrics · highlighted, no score', 'Location comparisons', 'End date passed', 'Finish setup', 'Send', 'Sending…', 'Status change failed. Please try again.', '3 locations', '1 location', 'Winter sports', '27 Oct 2026', 'No delivery yet', 'active', 'paused'])
 			hat(s, t);
 		for (const t of ['aria-label="More actions"', 'aria-label="Back to overview"']) hat(e, t);
+		// #2837 S1: kein „Hub“-Krümel, keine Versalien im Markup, keine Mobil-Eyebrow.
+		for (const t of ['LOCATION COMPARISONS', 'Location comparison · Hub']) hatNicht(s, t);
 		// Plural exakt am Wirkort (Orte-Karte): Einzahl ohne „s", Mehrzahl mit.
 		assert.match(s, /\b1 candidate(?!s)/);
 		hatNicht(s, '1 candidates');

@@ -213,9 +213,14 @@ describe('#2284 S2 AC-10/AC-4 — TripHeader mountet den Baustein: alles genau e
 		]
 	};
 
+	// #2837 S1 (ADR-0110): Status-Badge und Zusatz „Tag x von y" (`trip-detail-status-supplement`)
+	// wandern aus der eigenen Statuszeile der Hülle in die Titelzeile des geteilten HubKopf
+	// (status-Snippet). Ob sie dann noch im TripHeader-Render stehen, hängt vom Einbau ab —
+	// ihr „genau einmal" wird deshalb auf SEITEN-Ebene gezählt (strenger: ganze Seite):
+	// shared/hub-kopf/__tests__/hub_kopf_seiten_paritaet.test.ts („AC-6 … Status genau einmal",
+	// „Zusatz trip-detail-status-supplement genau einmal, in der Titelzeile").
 	const HUELLE_IDS = [
 		...TRIP_KOPF_IDS,
-		'trip-detail-status-supplement',
 		'trip-detail-meta',
 		'trip-header-mobile-metrics'
 	];

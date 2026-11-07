@@ -96,6 +96,7 @@ Was der Baustein leistet:
    gehören nicht zum Baustein (Aktionsmodell → #2278). Die Mobil-Eyebrow „Orts-Vergleich · Hub" wird als
    `eyebrow`-Snippet übergeben (nur mobil sichtbar), der Status samt „Laufzeit überschritten" als
    `badges`-Snippet.
+   > Abgelöst durch ADR-0110 (#2837 S1): Entscheidung 6 gilt nicht mehr — Breadcrumb, Zurück-Pfeil, „Senden", Kebab und mobiler Weitere-Aktionen-Knopf liegen im geteilten `shared/hub-kopf/HubKopf.svelte`; die Mobil-Eyebrow „Orts-Vergleich · Hub" entfällt. Das Aktionsmodell (#2278) bleibt gültig.
 7. **Fehler- und Offen-Verhalten unverändert übernommen:** Bei fehlgeschlagenem Speichern von Name oder
    Region bleibt das Eingabefeld **offen** mit dem eingetippten Wert (kein Rücksprung in den Anzeige-
    Modus, kein `<h1>`); die Fehlermeldung erscheint unter dem Feld mit `role="alert"`. Der Profil-Klick
@@ -275,6 +276,7 @@ geschützt durch bestehende E2E mit unveränderten testids). Passt in das LoC-Li
 
 ## Changelog
 
+- 2026-11-06: Abgelöst durch ADR-0110 (#2837 S1): Entscheidung 6 („Seiten-Chrome bleibt in der Seite") — die Seiten-Chrome liegt jetzt im geteilten `HubKopf` (Spec `rework_2837_s1_hub_kopf.md`).
 - 2026-10-03: Entscheidung 3 um den Konfliktausgang (`schliessen`-Callback) ergänzt — Integration von #1433 / PR #2486
 - 2026-10-03: AC-12 präzisiert — Selektor-Eingrenzung in `compare-hub-fidelity-s8c` erlaubt (Widerspruch zu AC-8 aufgelöst, PO-Entscheid)
 - 2026-10-03: Initial spec created (Scheibe S1 von #2284, Epic #2345 Etappe P2)

@@ -69,8 +69,17 @@ describe('AC-13: Breadcrumb "Trips" ist ein Link auf /trips', () => {
 		assert.equal(trFor('de', TRIPS_KEY), 'Trips');
 	});
 
-	test('Trip-Hub: "Trips" ist verlinkt (heute toter <span>)', () => {
-		assert.ok(trips_link_vorhanden(HUB), 'Trip-Hub: Breadcrumb "Trips" ist kein Link auf /trips');
+	// Umgehängt durch #2837 S1 (ADR-0110): die Breadcrumb des Trip-Hubs baut der geteilte HubKopf,
+	// den TripHeader einbettet. Geprüft wird deshalb der ECHTE Render der Kopf-Hülle (svelte/server):
+	// im Breadcrumb ein <a href="/trips"> mit dem Katalogtext „Trips".
+	test('Trip-Hub: "Trips" ist verlinkt (Breadcrumb des HubKopf im gerenderten TripHeader)', async () => {
+		const TripHeader = (await import(pathToFileURL(path.join(FRONTEND, 'src/lib/components/trip-detail/TripHeader.svelte')).href)).default;
+		const html = render(TripHeader, { props: { trip: { id: 't-1', name: 'GR20 Nord', shortcode: 'GR20', stages: [] } } }).body.replace(/<!--[\s\S]*?-->/g, '');
+		const m = /<div[^>]*data-testid="hub-kopf-breadcrumb"[^>]*>([\s\S]*?)<\/div>/.exec(html);
+		assert.ok(m, 'Trip-Hub: kein Breadcrumb im Kopf');
+		assert.match(m[1], new RegExp(`<a[^>]*href="/trips"[^>]*>\\s*${trFor('de', TRIPS_KEY)}\\s*</a>`), 'Trip-Hub: Breadcrumb "Trips" ist kein Link auf /trips');
+		// … und die Trip-Hub-Seite bettet genau diese Hülle ein (sonst wäre der Render oben ohne Wirkung).
+		assert.equal(collect(ladeSvelte(HUB).fragment, (n) => n.type === 'Component' && n.name === 'TripHeader').length, 1, 'Trip-Hub bettet TripHeader nicht genau einmal ein');
 	});
 
 	test('Trip-Anlegen-Editor: "Trips" ist verlinkt (Guard)', () => {

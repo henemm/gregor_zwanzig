@@ -77,8 +77,35 @@ const text = (b: string): string =>
 		.replace(/\s+/g, ' ')
 		.trim();
 
-/** Alles, was im Kopf VOR der Überschrift steht (= Eyebrow). */
-const vorH1 = (b: string): string => text(b.split(/<h1[\s>]/)[0]);
+/**
+ * Eyebrow = alles, was zwischen dem ENDE der Kopfleiste (`hub-kopf-leiste`) und der Überschrift steht.
+ * #2837 S1 (ADR-0110): TripHeader bettet den geteilten HubKopf ein; über dem Titelblock steht jetzt
+ * die Leiste (Pfad, Senden, Kebab). Damit vor der Leiste nichts Neues entstehen kann, muss der Text
+ * VOR der Leiste leer sein (sonst ''-Fehlschlag mit dem Fund). Das Leisten-Ende wird über die
+ * div-Schachtelung bestimmt (Markup-Zählung, keine komponenten-internen Klassen).
+ */
+const vorH1 = (b: string): string => {
+	const roh = b.replace(/<!--[\s\S]*?-->/g, '');
+	const marke = roh.indexOf('data-testid="hub-kopf-leiste"');
+	assert.ok(marke >= 0, 'Kopfleiste hub-kopf-leiste fehlt im TripHeader');
+	assert.equal(roh.split('data-testid="hub-kopf-leiste"').length - 1, 1, 'Kopfleiste nicht genau einmal');
+	const start = roh.lastIndexOf('<div', marke);
+	const davor = text(roh.slice(0, start));
+	if (davor !== '') return `VOR DER LEISTE: ${davor}`;
+	let tiefe = 0;
+	let ende = -1;
+	for (const m of roh.slice(start).matchAll(/<(\/?)div\b[^>]*>/g)) {
+		tiefe += m[1] ? -1 : 1;
+		if (tiefe === 0) {
+			ende = start + m.index! + m[0].length;
+			break;
+		}
+	}
+	assert.ok(ende > 0, 'Ende der Kopfleiste nicht gefunden');
+	const h1 = roh.slice(ende).search(/<h1[\s>]/);
+	assert.ok(h1 >= 0, 'keine Überschrift nach der Kopfleiste');
+	return text(roh.slice(ende, ende + h1));
+};
 
 /** Text eines Elements mit testid (erstes Vorkommen, gleichnamiges Tag bis zum Ende). */
 function elementText(b: string, id: string): string {
@@ -89,6 +116,8 @@ function elementText(b: string, id: string): string {
 	return text(rest.slice(0, ende));
 }
 
+// #2837 S1: „genau EINE Breadcrumb im Seiten-Render" sichert hub_kopf_seiten_paritaet.test.ts
+// („AC-11 (route): … genau ein Breadcrumb …", einzig(hub-kopf-breadcrumb) auf der echten Seite).
 describe('#699 AC-1: keine zweite Breadcrumb im Trip-Kopf', () => {
 	test('gerenderter Kopf enthält kein „MEINE TRIPS"', async () => {
 		assert.ok(!text(await html(trip())).toUpperCase().includes('MEINE TRIPS'));
@@ -126,12 +155,17 @@ describe('#699 / #2284 S2 AC-2: Eyebrow nur Datumsbereich, Region in eigener Zei
 		assert.equal(eyebrow, DATUM, `Eyebrow ist nicht genau der Datumsbereich: „${eyebrow}"`);
 	});
 
-	test('Region steht in eigener Zeile unter dem Namen (nach </h1>, vor der Statuszeile)', async () => {
+	// #2837 S1 (ADR-0110): die eigene Statuszeile entfällt — Status und „Tag x von y" stehen in der
+	// Titelzeile (vor der Region). Anker ist deshalb nicht mehr die Statuszeile, sondern der
+	// Region-Stift; die Reihenfolge „Überschrift → Status → Region" prüft die Seiten-Ebene
+	// (shared/hub-kopf/__tests__/hub_kopf_seiten_paritaet.test.ts, „Reihenfolge …").
+	test('Region steht in eigener Zeile unter dem Namen (nach </h1>, bis zum Region-Stift)', async () => {
 		const b = await html(trip());
 		const nachH1 = b.split('</h1>')[1] ?? '';
-		const bisStatus = nachH1.split('data-testid="trip-detail-status-supplement"')[0].replace(/<[^>]*$/, '');
-		assert.ok(text(bisStatus).includes('Karnische Alpen'), `Region fehlt zwischen Name und Statuszeile: „${text(bisStatus)}"`);
-		assert.ok(bisStatus.includes('data-testid="trip-region-edit-toggle"'), 'Region-Stift fehlt in der Region-Zeile');
+		const bisStift = nachH1.split('data-testid="trip-region-edit-toggle"')[0].replace(/<[^>]*$/, '');
+		assert.ok(nachH1.includes('data-testid="trip-region-edit-toggle"'), 'Region-Stift fehlt unter dem Namen');
+		assert.ok(text(bisStift).includes('Karnische Alpen'), `Region fehlt zwischen Name und Region-Stift: „${text(bisStift)}"`);
+		assert.ok(!b.includes('class="status-line'), 'die eigene Statuszeile (.status-line) steht noch im Kopf');
 		assert.equal(text(b).split('Karnische Alpen').length - 1, 1, 'Region steht nicht genau einmal im Kopf');
 	});
 
