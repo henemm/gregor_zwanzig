@@ -1,6 +1,10 @@
 package handler
 
-import "github.com/henemm/gregor-api/internal/mail"
+import (
+	"time"
+
+	"github.com/henemm/gregor-api/internal/mail"
+)
 
 // ResetOTPStoreForTest empties the package-level otpStore used by the
 // magic-link handlers. Tests call this via t.Cleanup to keep their state
@@ -32,4 +36,15 @@ func ObserveVerificationMailForTest(rec func(cfg mail.MailConfig, to string, msg
 	orig := sendVerificationMailFn
 	sendVerificationMailFn = rec
 	return func() { sendVerificationMailFn = orig }
+}
+
+// SetPreviewProxyTimeoutForTest setzt die Paket-`var` previewProxyTimeout
+// (preview_proxy.go) fuer das EXTERNE Testpaket `handler_test` und gibt die
+// Wiederherstellungsfunktion zurueck. Issue #1839: der Wert ist 120 s; die
+// Router-Messung in briefing_preview_test.go setzt ihn kurz, um den Wirkort
+// zu beobachten, ohne zwei Minuten zu warten.
+func SetPreviewProxyTimeoutForTest(d time.Duration) func() {
+	orig := previewProxyTimeout
+	previewProxyTimeout = d
+	return func() { previewProxyTimeout = orig }
 }

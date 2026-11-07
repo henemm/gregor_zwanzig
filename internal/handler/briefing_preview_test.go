@@ -245,25 +245,27 @@ func vbOwnershipResponder(owned map[string]string) func(c vbUpstreamCall) (int, 
 }
 
 // ---------------------------------------------------------------------------
-// Zeitlimit der Alarm-Vorschau: 30 s, auch bei kind=vergleich
+// Zeitlimit der Alarm-Vorschau: previewProxyTimeout, auch bei kind=vergleich
 // ---------------------------------------------------------------------------
 //
 // Am Wirkort gemessen (Adversary-Runde #2283, F002): ein echter, langsamer
-// Python-Core antwortet erst nach 32 s; die Alarm-Vorschau bricht nach 30 s
-// ab (nicht 60 s wie die frühere, seit #1743 entfernte Vergleichs-Vorschau).
+// Python-Core antwortet erst nach der Grenze; die Alarm-Vorschau bricht nach
+// previewProxyTimeout ab (nicht nach einer eigenen Vergleichs-Grenze wie die
+// frühere, seit #1743 entfernte Vergleichs-Vorschau). Issue #1839: der Wert
+// ist jetzt 120 s (Wert-Test in proxy_timeout_chain_test.go); hier wird er
+// kurz gesetzt, damit die Messung nicht zwei Minuten dauert.
 
-func TestBriefingAlertPreview_Zeitlimit30sAuchBeiVergleich(t *testing.T) {
-	if testing.Short() {
-		t.Skip("Zeitlimit-Messung dauert ~30 s")
-	}
+func TestBriefingAlertPreview_ZeitlimitPreviewProxyTimeoutAuchBeiVergleich(t *testing.T) {
+	t.Cleanup(handler.SetPreviewProxyTimeoutForTest(300 * time.Millisecond))
+
 	py := newVBUpstream(t, nil)
-	py.delay = 32 * time.Second
+	py.delay = 3 * time.Second
 	env := newVBEnv(t, py.srv.URL, "alice")
 
 	start := time.Now()
 	w := env.do(t, "POST", "/api/briefings/cmp-7/alert-preview?kind=vergleich", "alice", "{}")
 	took := time.Since(start)
-	if w.Code != http.StatusBadGateway || took < 29*time.Second || took > 31*time.Second {
-		t.Errorf("alert-preview kind=vergleich: Status %d nach %v, erwartet 502 nach ~30 s", w.Code, took)
+	if w.Code != http.StatusBadGateway || took < 250*time.Millisecond || took > 1500*time.Millisecond {
+		t.Errorf("alert-preview kind=vergleich: Status %d nach %v, erwartet 502 nach ~300 ms (previewProxyTimeout)", w.Code, took)
 	}
 }

@@ -110,6 +110,8 @@ export const F7_ANKER: [schluessel: string, de: string, en: string][] = [
 	['alarme.vorschau.regel_aktivieren', 'Aktiviere mindestens eine Alert-Regel, um die Vorschau zu laden.', 'Activate at least one alert rule to load the preview.'],
 	['alarme.vorschau.laden', 'Vorschau laden', 'Load preview'],
 	['alarme.vorschau.lade', 'Lade…', 'Loading…'],
+	// Issue #1839 AC-6: Ladehinweis waehrend der Berechnung (neu, kein Bestandstext).
+	['alarme.vorschau.berechnet', 'Vorschau wird berechnet…', 'Computing preview…'],
 	['alarme.vorschau.fehler', 'Vorschau konnte nicht geladen werden', 'Preview could not be loaded'],
 	['alarme.vorschau.iframe_titel', 'Alert-Vorschau E-Mail', 'Alert preview email']
 ];

@@ -396,10 +396,10 @@ describe('F002: Langlaeufer tragen ihr eigenes Budget (gestellte Uhr)', () => {
 		assert.deepEqual(JSON.parse(String(aufrufe[0].init?.body)), { channel: 'telegram' });
 	});
 
-	test('Alarm-Vorschau: 40 s (Go-Proxy ca. 30 s), POST /api/trips/{id}/alert-preview', FRIST, async () => {
+	test('Alarm-Vorschau: 130 s (Go-Proxy 120 s, #1839), POST /api/trips/{id}/alert-preview', FRIST, async () => {
 		const aufrufe = await pruefeBudgetGrenze(
 			() => langlaeufer().alarmVorschau('t-1', { rules: [] }),
-			40_000
+			130_000
 		);
 		assert.equal(aufrufe[0].path, '/api/trips/t-1/alert-preview');
 		assert.deepEqual(JSON.parse(String(aufrufe[0].init?.body)), { rules: [] });
@@ -420,7 +420,7 @@ describe('F002: Langlaeufer tragen ihr eigenes Budget (gestellte Uhr)', () => {
 // `alarmVorschau(tripId, payload)` schon anders, s. F002 oben):
 //   * `alarmVorschau(kind, id, payload)` → POST
 //     /api/briefings/{id}/alert-preview?kind=route|vergleich, JSON-Koerper =
-//     payload, Budget 40 s (= ZEITLIMIT_ALARM_VORSCHAU_MS, unveraendert)
+//     payload, Budget 130 s (= ZEITLIMIT_ALARM_VORSCHAU_MS, unveraendert)
 // Die Briefing-Vorschau (GET /api/briefings/{id}/preview) entfiel mit #1743.
 type KindAbrufe = {
 	alarmVorschau?: (kind: string, id: string, payload: unknown) => Promise<unknown>;
@@ -435,12 +435,12 @@ describe('#2283: alarmVorschau (kind-neutral, gestellte Uhr)', () => {
 	const q = (url: string) => new URL(url, 'http://localhost');
 
 	for (const kind of ['vergleich', 'route']) {
-		test(`Alarm-Vorschau ${kind}: 40 s, POST /api/briefings/{id}/alert-preview?kind=${kind}`, FRIST, async () => {
+		test(`Alarm-Vorschau ${kind}: 130 s, POST /api/briefings/{id}/alert-preview?kind=${kind}`, FRIST, async () => {
 			const koerper =
 				kind === 'vergleich'
 					? { changes: [{ location_id: 'l-1', metric: 'gust_max_kmh', old_value: 25, new_value: 72, delta: 47, threshold: 60, severity: 'major', direction: 'increase' }] }
 					: { changes: [], segment_times: [] };
-			const aufrufe = await pruefeBudgetGrenze(() => abrufe().alarmVorschau(kind, 'e-1', koerper), 40_000);
+			const aufrufe = await pruefeBudgetGrenze(() => abrufe().alarmVorschau(kind, 'e-1', koerper), 130_000);
 			const u = q(aufrufe[0].path);
 			assert.equal(u.pathname, '/api/briefings/e-1/alert-preview');
 			assert.deepEqual([...u.searchParams.entries()], [['kind', kind]]);

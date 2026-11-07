@@ -154,3 +154,77 @@ func TestTimeoutChain_StagesWeatherAbove60sBelowNginx(t *testing.T) {
 			stagesWeatherProxyTimeout, nginxProxyReadTimeout)
 	}
 }
+
+// ── Issue #1839 (AC-1, AC-2): Vorschau-Zeitgrenze 120 s statt 30 s ─────────
+//
+// Spec: docs/specs/modules/fix_1839_trip_vorschau_kalt.md
+//
+// Vom Developer exakt so zu implementieren (package handler):
+//   var previewProxyTimeout = 120 * time.Second   // vorher const 30 s
+//
+// RED heute: `previewProxyTimeout` ist `const` -> die Zuweisung unten ist ein
+// Compile-Fehler (gueltiges RED, wie bei #2124).
+
+type previewHandlerFall struct {
+	name, method, pattern, path string
+	h                           http.HandlerFunc
+}
+
+func previewHandlerFaelle(pyURL string) []previewHandlerFall {
+	return []previewHandlerFall{
+		{"SMS-Vorschau", http.MethodGet, "/api/preview/{trip_id}/sms", "/api/preview/t-1839/sms", PreviewProxyHandler(pyURL, "sms")},
+		{"Trip-Alarm-Vorschau", http.MethodPost, "/api/trips/{id}/alert-preview", "/api/trips/t-1839/alert-preview", AlertPreviewProxyHandler(pyURL)},
+		{"Briefing-Alarm-Vorschau route", http.MethodPost, "/api/briefings/{id}/alert-preview", "/api/briefings/t-1839/alert-preview?kind=route", BriefingAlertPreviewHandler(pyURL)},
+		{"Briefing-Alarm-Vorschau vergleich", http.MethodPost, "/api/briefings/{id}/alert-preview", "/api/briefings/cp-1839/alert-preview?kind=vergleich", BriefingAlertPreviewHandler(pyURL)},
+	}
+}
+
+// AC-1 (Wirkort): eine Antwort, die vor der Grenze kommt, geht durch (kein 502).
+func TestTimeoutChain_PreviewHandlersWaitForSlowUpstreamWithinTimeout(t *testing.T) {
+	orig := previewProxyTimeout
+	previewProxyTimeout = 1 * time.Second
+	t.Cleanup(func() { previewProxyTimeout = orig })
+
+	py := startSlowUpstream(t, 100*time.Millisecond)
+	for _, c := range previewHandlerFaelle(py.URL) {
+		code, _ := serveTimed(c.h, c.method, c.pattern, c.path)
+		if code != http.StatusOK {
+			t.Errorf("%s: Status %d, erwartet 200 (Antwort kommt vor previewProxyTimeout)", c.name, code)
+		}
+	}
+}
+
+// AC-1 (Wirkort): erst NACH der Grenze entsteht der 502.
+func TestTimeoutChain_PreviewHandlersHonourPreviewProxyTimeout(t *testing.T) {
+	orig := previewProxyTimeout
+	previewProxyTimeout = 100 * time.Millisecond
+	t.Cleanup(func() { previewProxyTimeout = orig })
+
+	py := startSlowUpstream(t, 2*time.Second)
+	for _, c := range previewHandlerFaelle(py.URL) {
+		code, took := serveTimed(c.h, c.method, c.pattern, c.path)
+		if code != http.StatusBadGateway || took > time.Second {
+			t.Errorf("%s ignoriert previewProxyTimeout: Status %d nach %v (erwartet 502 nach ~100ms)",
+				c.name, code, took)
+		}
+	}
+}
+
+func TestTimeoutChain_PreviewProxyTimeoutIs120Seconds(t *testing.T) {
+	if previewProxyTimeout != 120*time.Second {
+		t.Errorf("previewProxyTimeout = %v, erwartet 120s (#1839, gleich stagesWeatherProxyTimeout)",
+			previewProxyTimeout)
+	}
+}
+
+// AC-2: Vorschau-Grenze unter nginx, mit mindestens 30 s Puffer.
+func TestTimeoutChain_PreviewProxyTimeoutBelowNginxWithBuffer(t *testing.T) {
+	if previewProxyTimeout >= nginxProxyReadTimeout {
+		t.Errorf("previewProxyTimeout = %v ist nicht kleiner als nginxProxyReadTimeout = %v",
+			previewProxyTimeout, nginxProxyReadTimeout)
+	}
+	if nginxProxyReadTimeout-previewProxyTimeout < 30*time.Second {
+		t.Errorf("Puffer nginx - previewProxyTimeout = %v, erwartet >= 30s",
+			nginxProxyReadTimeout-previewProxyTimeout)
+	}
+}
