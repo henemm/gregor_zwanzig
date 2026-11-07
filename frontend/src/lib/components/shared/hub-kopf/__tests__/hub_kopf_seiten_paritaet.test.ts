@@ -68,9 +68,9 @@ const ueberschrift = (w: Knoten): Knoten => {
 	assert.equal(t.length, 1, `genau eine Überschrift auf der Seite erwartet, gefunden ${t.length}`);
 	return t[0];
 };
-/** Das Status-Badge der Art: Trip = TripStatusBadge, Vergleich = CompareStatusPill (data-status). */
-const statusBadge = (w: Knoten, art: Art): Knoten[] =>
-	art === 'route' ? mitTestid(w, 'trip-detail-status-badge') : alle(w, (n) => n.tag === 'span' && n.attrs['data-status'] !== undefined);
+/** Das Status-Badge der Art: beide Köpfe rendern den geteilten HubStatusBadge (Merkmal
+ *  data-hub-status-badge, BROKEN-Fix AC-15; vorher Vergleich = CompareStatusPill). */
+const statusBadge = (w: Knoten, _art: Art): Knoten[] => alle(w, (n) => n.attrs['data-hub-status-badge'] !== undefined);
 
 for (const art of ARTEN) {
 	describe(`#2837 S1 Seite ${art} — Hub-Kopf über den geteilten Baustein`, () => {
@@ -168,6 +168,75 @@ describe('#2837 S1 Parität — beide Seiten bauen die Leiste gleich', () => {
 	test('AC-15 (SSR-Anteil): das Leisten-Gerüst ist bei Trip und Vergleich identisch', () => {
 		assert.deepEqual(leistenGeruest(seite('vergleich')), leistenGeruest(seite('route')));
 	});
+});
+
+// BROKEN-Fix AC-15 (Fresh-Eyes Trip gegen Vergleich, beide „pausiert"): der Vergleich zeigte
+// CompareStatusPill (Kleinbuchstaben, Inline-Stil, grau umrandet), der Trip das Pill-Atom
+// (Großbuchstaben, Ton). Vorlage ist der Trip (design_system.md §Pill/Badge). Wort für beide
+// aus trip.status.* — listen.status.* liefert andere Wörter (Kleinschreibung; Entwurf ≠ „draft").
+// Mutation „Vergleich zurück auf CompareStatusPill" ⇒ diese Tests rot.
+describe('#2837 AC-15 (BROKEN-Fix) — Status-Schild: Trip und Vergleich zeigen im selben Zustand dasselbe Schild', () => {
+	const ZUSTAENDE = [
+		{ status: 'active', ton: 'accent', trip: () => T.tripLaufend(), vergleich: () => C.vergleichAktiv() },
+		{ status: 'paused', ton: 'warning', trip: () => T.tripPausiert(), vergleich: () => C.vergleichPausiert() },
+		{ status: 'draft', ton: 'default', trip: () => T.tripEntwurf(), vergleich: () => C.vergleichEntwurf() }
+	] as const;
+	/** Das Schild in der Titelzeile: das erste Element in hub-kopf-status, das ein Status-Schild ist
+	 *  (Pill-Atom oder ein Element mit data-status) — unabhängig davon, welcher Baustein es rendert. */
+	const schild = (art: Art, daten: Record<string, unknown>): Knoten => {
+		const huelle = einzig(seite(art, daten), 'hub-kopf-status');
+		const s = alle(huelle, (n) => n.attrs['data-slot'] === 'pill' || n.attrs['data-status'] !== undefined);
+		assert.ok(s.length >= 1, `${art}: kein Status-Schild in der Titelzeile`);
+		return s[0];
+	};
+	test('beide Köpfe tragen den geteilten Baustein (Merkmal data-hub-status-badge, genau einmal im Kopf)', () => {
+		for (const [art, daten] of [['route', T.tripPausiert()], ['vergleich', C.vergleichPausiert()]] as const) {
+			const huelle = einzig(seite(art, daten), 'hub-kopf-status');
+			const s = alle(huelle, (n) => n.attrs['data-hub-status-badge'] !== undefined);
+			assert.equal(s.length, 1, `${art}: geteilter HubStatusBadge ${s.length}× im Kopf (erwartet 1)`);
+		}
+	});
+	const ohneTestid = (k: Knoten) => Object.entries(k.attrs).filter(([a]) => a !== 'data-testid').sort();
+	for (const z of ZUSTAENDE) {
+		for (const lang of ['de', 'en'] as const) {
+			test(`${z.status} (${lang}): gleiche Pill (Ton ${z.ton}, umrandet, kein Inline-Stil) und gleiches Wort aus trip.status.${z.status}`, () => {
+				locale.set(lang);
+				const a = schild('route', z.trip());
+				const b = schild('vergleich', z.vergleich());
+				const wort = trFor(lang, `trip.status.${z.status}` as never);
+				const maengel: string[] = [];
+				for (const [art, k] of [['route', a], ['vergleich', b]] as const) {
+					if (k.attrs['data-slot'] !== 'pill') maengel.push(`${art}: kein Pill-Atom (data-slot=${k.attrs['data-slot']})`);
+					if (k.attrs['data-tone'] !== z.ton) maengel.push(`${art}: Ton ${k.attrs['data-tone']} statt ${z.ton}`);
+					if (!('data-outlined' in k.attrs)) maengel.push(`${art}: data-outlined fehlt`);
+					if ('style' in k.attrs) maengel.push(`${art}: Inline-Stil „${k.attrs.style}"`);
+					if (text(k) !== wort) maengel.push(`${art}: Wort „${text(k)}" statt „${wort}"`);
+				}
+				assert.deepEqual(maengel, [], 'Status-Schild weicht ab');
+				assert.deepEqual(ohneTestid(b), ohneTestid(a), 'Attribute des Schilds verschieden');
+			});
+		}
+	}
+});
+
+// BROKEN-Fix AC-9: der Trip übergab profile/profileOptions, aber kein profileLabel — die
+// Meta-Zeile ließ das Profil weg, der Vergleich zeigte „· Wandern". Mutation „profileLabel beim
+// Trip entfernen" ⇒ route-Fälle rot.
+describe('#2837 AC-9 (BROKEN-Fix) — Meta-Zeile zeigt bei beiden Arten das Profil', () => {
+	const PRAEFIX: Record<Art, string> = { route: 'trip', vergleich: 'compare-hub' };
+	const PROFIL_SCHLUESSEL: Record<Art, string> = { route: 'trip.aktivitaet.trekking', vergleich: 'bausteine.profil.wintersport' };
+	for (const art of ARTEN) {
+		for (const lang of ['de', 'en'] as const) {
+			test(`${art} (${lang}): direkt nach dem Region-Stift steht „· ${trFor(lang, PROFIL_SCHLUESSEL[art] as never)}"`, () => {
+				locale.set(lang);
+				const stift = einzig(seite(art), `${PRAEFIX[art]}-region-edit-toggle`);
+				const geschwister = stift.eltern!.kinder;
+				const naechster = geschwister[geschwister.indexOf(stift) + 1];
+				assert.ok(naechster, `${art}: nach dem Region-Stift folgt nichts (Profil fehlt in der Meta-Zeile)`);
+				assert.equal(text(naechster), `· ${trFor(lang, PROFIL_SCHLUESSEL[art] as never)}`);
+			});
+		}
+	}
 });
 
 describe('#2837 S1 AC-10 — Reiter-Zähler: Trip und Vergleich rendern dasselbe Badge (Mutation b, Seiten-Anteil)', () => {

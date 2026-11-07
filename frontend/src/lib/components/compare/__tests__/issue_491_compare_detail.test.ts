@@ -51,14 +51,14 @@ describe('AC-Exist: Neue Dateien erstellt', () => {
 // ── AC-1: Preset-Daten werden angezeigt ──────────────────────────────────────
 
 describe('AC-1: Preset-Name, Status, Schedule, Empfänger angezeigt', () => {
-	test('+page.svelte importiert CompareStatusPill', () => {
+	// Umgedreht durch #2837 AC-15 (BROKEN-Fix): der Kopf zeigt dasselbe Status-Schild wie der
+	// Trip (geteilter HubStatusBadge), nicht mehr CompareStatusPill. Verhalten bewacht im
+	// SSR-Render: shared/hub-kopf/__tests__/hub_kopf_seiten_paritaet.test.ts (AC-15-Block).
+	test('+page.svelte nutzt im Kopf den geteilten HubStatusBadge, nicht CompareStatusPill', () => {
 		assert.ok(existsSync(PAGE_SVELTE), '+page.svelte fehlt');
 		const src = readFileSync(PAGE_SVELTE, 'utf-8');
-		assert.match(
-			src,
-			/CompareStatusPill/,
-			'CompareStatusPill wird in +page.svelte nicht importiert oder verwendet'
-		);
+		assert.match(src, /<HubStatusBadge\b/, 'HubStatusBadge wird in +page.svelte nicht verwendet');
+		assert.doesNotMatch(src, /CompareStatusPill/, 'CompareStatusPill steht noch im Detailkopf');
 	});
 
 	// Issue #2278: das Aktionsmenue ist das geteilte SubscriptionKebab (loest CompareKebab ab).

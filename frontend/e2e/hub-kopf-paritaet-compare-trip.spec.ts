@@ -250,6 +250,43 @@ test.describe('HP Parität — beide Arten nebeneinander gemessen', () => {
 		});
 
 
+		// BROKEN-Fix AC-15 (Fresh-Eyes, beide „pausiert"): der Vergleich zeigte CompareStatusPill
+		// (klein, grau umrandet), der Trip das Pill-Atom (GROSS, gelb). Gemessen wird Trip GEGEN
+		// Vergleich im selben Zustand am geteilten Merkmal data-hub-status-badge (nicht an der
+		// Hülle hub-kopf-status, die auch den Zusatz trägt). textContent + text-transform statt
+		// innerText (innerText liefert CSS-Versalien). Dazu AC-9: Profil in der Meta-Zeile.
+		test(`HP-15 (${vp.width} px): pausiert — Status-Schild bei Trip und Vergleich gleich, Profil in der Meta-Zeile`, async ({ page }) => {
+			await page.setViewportSize(vp);
+			const PROFIL: Record<HubKind, string> = { route: 'Trekking', vergleich: 'Wandern' };
+			const mass: Record<string, { stil: Record<string, string>; wort: string }> = {};
+			for (const kind of HUB_KINDS) {
+				const hub = await seed(page.request, kind, 'pausiert', kind === 'route' ? { activity: 'trekking' } : {});
+				try {
+					await openHub(page, kind, hub.id);
+					const schild = page.locator('[data-hub-status-badge]:visible');
+					await expect(schild, `${kind}: geteiltes Status-Schild nicht genau einmal sichtbar`).toHaveCount(1);
+					await expect(page.getByTestId(HUB_KOPF_SEL.status).filter({ visible: true }).locator('[data-hub-status-badge]')).toHaveCount(1);
+					const stil = await schild.evaluate((el) => {
+						const s = getComputedStyle(el);
+						return {
+							textTransform: s.textTransform, fontSize: s.fontSize, fontFamily: s.fontFamily,
+							color: s.color, borderColor: s.borderTopColor, backgroundColor: s.backgroundColor
+						};
+					});
+					mass[kind] = { stil, wort: ((await schild.textContent()) ?? '').trim() };
+					const region = page.getByTestId(`${HUB_SEL[kind].kopf}-region-edit-toggle`).filter({ visible: true }).first();
+					await expect(region.locator('xpath=following-sibling::span[1]'), `${kind}: Profil fehlt in der Meta-Zeile (AC-9)`).toHaveText(`· ${PROFIL[kind]}`);
+				} finally {
+					await hub.aufraeumen();
+				}
+			}
+			const { route, vergleich } = mass;
+			expect(route.wort, 'Vorbedingung: Trip ist pausiert').toBe('Pausiert');
+			expect(vergleich.wort, 'Status-Wort verschieden').toBe(route.wort);
+			expect(route.stil.textTransform, 'Design-System: Pill in Großbuchstaben').toBe('uppercase');
+			expect(vergleich.stil, 'Status-Schild sieht bei Trip und Vergleich verschieden aus').toEqual(route.stil);
+		});
+
 		test(`HP-1/HP-2 (${vp.width} px): „Senden" sitzt bei Trip und Vergleich an derselben Stelle der Leiste`, async ({ page }) => {
 			await page.setViewportSize(vp);
 			const lagen: Record<string, Awaited<ReturnType<typeof sendenLage>>> = {};
