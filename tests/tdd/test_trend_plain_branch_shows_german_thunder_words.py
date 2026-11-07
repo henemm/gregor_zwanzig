@@ -20,6 +20,7 @@ RED-Ursache (heute, vor der Implementierung):
 Keine Mocks, kein Dateiinhalt-Check.
 """
 from __future__ import annotations
+from tests.helpers.ampel_allgemein import AMPEL_ALLGEMEIN
 
 
 def _stage_ohne_stundenreihe(thunder: str) -> dict:
@@ -41,7 +42,7 @@ def test_ac1_ac3_plain_zweig_zeigt_deutsche_gewitterworte():
 
     for level, deutsches_wort in (("MED", "mittel"), ("HIGH", "hoch")):
         stage = _stage_ohne_stundenreihe(level)
-        tok = format_trend_tokens(stage)
+        tok = format_trend_tokens(stage, ampel=AMPEL_ALLGEMEIN)
 
         # AC-3: der Zweig ist erreichbar -- kein toter Code
         branch = resolve_thunder_day_branch(tok, stage)
@@ -51,7 +52,7 @@ def test_ac1_ac3_plain_zweig_zeigt_deutsche_gewitterworte():
         )
 
         # AC-1: Klartext-Ausblick (outlook.py)
-        plain_text = render_outlook_plain([stage])
+        plain_text = render_outlook_plain([stage], ampel=AMPEL_ALLGEMEIN)
         assert f"⚡{deutsches_wort}" in plain_text, (
             f"Klartext-Ausblick zeigt bei thunder={level!r} nicht "
             f"'⚡{deutsches_wort}'. Ausgabe: {plain_text!r}"
@@ -69,7 +70,7 @@ def test_ac1_ac3_plain_zweig_zeigt_deutsche_gewitterworte():
         )
 
         # AC-1: Telegram/SMS-Trendblock (narrow.py)
-        telegram_text = "\n".join(_outlook_lines([stage]))
+        telegram_text = "\n".join(_outlook_lines([stage], ampel=AMPEL_ALLGEMEIN))
         assert f"⚡{deutsches_wort}" in telegram_text, (
             f"Telegram-Trendblock zeigt bei thunder={level!r} nicht "
             f"'⚡{deutsches_wort}'. Ausgabe: {telegram_text!r}"
@@ -100,7 +101,7 @@ def test_ac2_positivkontrolle_day_zweig_unveraendert():
         # in _TREND_THUNDER_LABELS.
         hourly_thunder=(HourlyValue(hour=12, value=2.0),),
     )
-    tok = format_trend_tokens(stage)
+    tok = format_trend_tokens(stage, ampel=AMPEL_ALLGEMEIN)
     branch = resolve_thunder_day_branch(tok, stage)
     assert branch == "day", (
         f"Testaufbau fehlerhaft -- Positivkontrolle braucht den 'day'-Zweig, "
@@ -108,7 +109,7 @@ def test_ac2_positivkontrolle_day_zweig_unveraendert():
     )
     assert tok["thunder_day_token"] != "-"
 
-    plain_text = render_outlook_plain([stage])
+    plain_text = render_outlook_plain([stage], ampel=AMPEL_ALLGEMEIN)
     assert "mittel" in plain_text, (
         f"Der 'day'-Zweig muss unveraendert das Tageswort aus dem Token "
         f"zeigen (nicht aus _THUNDER_MAP). Ausgabe: {plain_text!r}"
@@ -120,7 +121,7 @@ def test_ac2_positivkontrolle_day_zweig_unveraendert():
 def test_ac5_tote_felder_entfernt():
     from output.renderers.email.helpers import format_trend_tokens
 
-    tokens = format_trend_tokens(_stage_ohne_stundenreihe("HIGH"))
+    tokens = format_trend_tokens(_stage_ohne_stundenreihe("HIGH"), ampel=AMPEL_ALLGEMEIN)
     tote_felder = {"thunder_sms", "thunder_sq_color", "thunder_word_color"}
     vorhanden = tote_felder & tokens.keys()
     assert not vorhanden, (

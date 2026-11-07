@@ -24,6 +24,7 @@ Level-Faerbung statt der urspruenglichen Hazard-Divergenz. AC-2/AC-2a
 (Dedup) sind von #1056 UNBERUEHRT und bleiben unveraendert gruen.
 """
 from __future__ import annotations
+from tests.helpers.ampel_allgemein import PRESET_ALLGEMEIN
 
 from datetime import date, datetime
 
@@ -75,7 +76,7 @@ class TestAC1HazardAwareBadgeColor:
             locations=[loc], time_window=(9, 16), target_date=date.today(),
         )
 
-        html = render_compare_html(result, profile=ActivityProfile.ALLGEMEIN)
+        html = render_compare_html(result, profile=ActivityProfile.ALLGEMEIN, preset=PRESET_ALLGEMEIN)
 
         level4_badge = f"border-left:4px solid {G_ALERT_L4}"
         warn_badge = f"border-left:4px solid {G_WARNING}"
@@ -153,7 +154,7 @@ class TestAC2DedupIdenticalAlerts:
             locations=[loc], time_window=(9, 16), target_date=date.today(),
         )
 
-        html = render_compare_html(result, profile=ActivityProfile.ALLGEMEIN)
+        html = render_compare_html(result, profile=ActivityProfile.ALLGEMEIN, preset=PRESET_ALLGEMEIN)
 
         assert html.count(unique_label) == 1, (
             f"Identische Warnung muss genau EINMAL erscheinen, gefunden "
@@ -187,7 +188,7 @@ class TestAC2aNoFalsePositiveDedup:
             locations=[loc], time_window=(9, 16), target_date=date.today(),
         )
 
-        html = render_compare_html(result, profile=ActivityProfile.ALLGEMEIN)
+        html = render_compare_html(result, profile=ActivityProfile.ALLGEMEIN, preset=PRESET_ALLGEMEIN)
 
         assert html.count(label_a) == 1, (
             f"Massiv Alpha muss genau einmal erscheinen, gefunden {html.count(label_a)}x."

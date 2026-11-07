@@ -7,6 +7,7 @@ SPEC: docs/specs/modules/issue_640_trend_threshold_times.md AC-1..AC-9
 IMPORTANT: NO mocks, NO patch, NO MagicMock. Real function calls only.
 """
 from __future__ import annotations
+from tests.helpers.ampel_allgemein import AMPEL_ALLGEMEIN
 
 from zoneinfo import ZoneInfo
 
@@ -101,7 +102,7 @@ class TestFormatTrendTokensTimestamps:
         stage = _trend_stage_with_hourly(
             hourly_precip=(_hv(10, 0.5), _hv(15, 6.0)),
         )
-        tok = format_trend_tokens(stage)
+        tok = format_trend_tokens(stage, ampel=AMPEL_ALLGEMEIN)
         assert "precip_token" in tok
 
     def test_wind_token_key_exists(self):
@@ -110,7 +111,7 @@ class TestFormatTrendTokensTimestamps:
         stage = _trend_stage_with_hourly(
             hourly_wind=(_hv(16, 17.0),),
         )
-        tok = format_trend_tokens(stage)
+        tok = format_trend_tokens(stage, ampel=AMPEL_ALLGEMEIN)
         assert "wind_token" in tok
 
     def test_thunder_token_key_exists(self):
@@ -119,18 +120,20 @@ class TestFormatTrendTokensTimestamps:
         stage = _trend_stage_with_hourly(
             hourly_thunder=(_hv(14, 1.0),),
         )
-        tok = format_trend_tokens(stage)
+        tok = format_trend_tokens(stage, ampel=AMPEL_ALLGEMEIN)
         assert "thunder_token" in tok
 
     def test_precip_token_erst_and_peak(self):
         """AC-1: Given precip at h10=0.5mm (threshold) and h15=6mm (peak),
         Then precip_token='0.5@10(6@15)'."""
         from src.output.renderers.email.helpers import format_trend_tokens
+        # Issue #2792 S1c-4b (AC-19 e): Einsatz = erste Stunde ab Gelb der
+        # Ampel „allgemein" (1 mm), Spitze = hoechste Stufe (orange ab 5 mm);
+        # frueher 0.5 mm nach fester Schwelle.
         stage = _trend_stage_with_hourly(
-            hourly_precip=(_hv(10, 0.5), _hv(15, 6.0)),
+            hourly_precip=(_hv(10, 1.5), _hv(15, 6.0)),
         )
-        tok = format_trend_tokens(stage)
-        # Default threshold: 0.5 → erst at h10, peak at h15
+        tok = format_trend_tokens(stage, ampel=AMPEL_ALLGEMEIN)
         assert "@10" in tok["precip_token"], f"Got: {tok['precip_token']}"
         assert "@15" in tok["precip_token"], f"Got: {tok['precip_token']}"
 
@@ -141,7 +144,7 @@ class TestFormatTrendTokensTimestamps:
         stage = _trend_stage_with_hourly(
             hourly_precip=(_hv(12, 2.0),),
         )
-        tok = format_trend_tokens(stage)
+        tok = format_trend_tokens(stage, ampel=AMPEL_ALLGEMEIN)
         assert tok["precip_token"] == "2.0@12", f"Got: {tok['precip_token']}"
 
     def test_precip_token_never_exceeds_threshold(self):
@@ -151,7 +154,7 @@ class TestFormatTrendTokensTimestamps:
         stage = _trend_stage_with_hourly(
             hourly_precip=(_hv(10, 0.1), _hv(11, 0.2)),
         )
-        tok = format_trend_tokens(stage)
+        tok = format_trend_tokens(stage, ampel=AMPEL_ALLGEMEIN)
         assert tok["precip_token"] == "-"
         assert "@" not in tok["precip_token"]
 
@@ -161,7 +164,7 @@ class TestFormatTrendTokensTimestamps:
         stage = _trend_stage_with_hourly(
             hourly_wind=(_hv(16, 35.0),),
         )
-        tok = format_trend_tokens(stage)
+        tok = format_trend_tokens(stage, ampel=AMPEL_ALLGEMEIN)
         assert tok["wind_token"] == "35@16", f"Got: {tok['wind_token']}"
 
     def test_wind_token_never_exceeds_threshold(self):
@@ -170,7 +173,7 @@ class TestFormatTrendTokensTimestamps:
         stage = _trend_stage_with_hourly(
             hourly_wind=(_hv(12, 10.0), _hv(14, 25.0)),
         )
-        tok = format_trend_tokens(stage)
+        tok = format_trend_tokens(stage, ampel=AMPEL_ALLGEMEIN)
         assert tok["wind_token"] == "-"
         assert "@" not in tok["wind_token"]
 
@@ -180,7 +183,7 @@ class TestFormatTrendTokensTimestamps:
         stage = _trend_stage_with_hourly(
             hourly_wind=(_hv(14, 35.0),),
         )
-        tok = format_trend_tokens(stage)
+        tok = format_trend_tokens(stage, ampel=AMPEL_ALLGEMEIN)
         assert "@14" in tok["wind_token"], f"Got: {tok['wind_token']}"
 
     def test_thunder_token_level(self):
@@ -201,7 +204,7 @@ class TestFormatTrendTokensTimestamps:
             hourly_thunder=(_hv(14, 2.0), _hv(16, 3.0)),  # MED=2, HIGH=3
             thunder="HIGH",
         )
-        tok = format_trend_tokens(stage)
+        tok = format_trend_tokens(stage, ampel=AMPEL_ALLGEMEIN)
         tt = tok["thunder_token"]
         assert "@14" in tt, f"Missing erst hour @14: {tt}"
         assert "@16" in tt, f"Missing peak hour @16: {tt}"
@@ -221,7 +224,7 @@ class TestFormatTrendTokensTimestamps:
             hourly_thunder=(_hv(14, 2.0),),  # MED=2
             thunder="MED",
         )
-        tok = format_trend_tokens(stage)
+        tok = format_trend_tokens(stage, ampel=AMPEL_ALLGEMEIN)
         tt = tok["thunder_token"]
         assert tt == "mittel@14", f"Expected 'mittel@14', got: {tt!r}"
         assert "L" not in tt, f"SMS label 'L' must not appear: {tt!r}"
@@ -233,14 +236,14 @@ class TestFormatTrendTokensTimestamps:
             hourly_thunder=(_hv(12, 0.0),),  # NONE level
             thunder="NONE",
         )
-        tok = format_trend_tokens(stage)
+        tok = format_trend_tokens(stage, ampel=AMPEL_ALLGEMEIN)
         assert tok["thunder_token"] == "-"
 
     def test_no_hourly_data_token_is_dash(self):
         """Edge case: no hourly_precip → precip_token='-' (fallback, no @)."""
         from src.output.renderers.email.helpers import format_trend_tokens
         stage = _trend_stage_with_hourly(hourly_precip=())
-        tok = format_trend_tokens(stage)
+        tok = format_trend_tokens(stage, ampel=AMPEL_ALLGEMEIN)
         assert tok["precip_token"] == "-"
         assert "@" not in tok["precip_token"]
 
@@ -251,7 +254,7 @@ class TestFormatTrendTokensTimestamps:
             temp_lo=12, temp_hi=15,
             hourly_precip=(_hv(10, 2.0),),
         )
-        tok = format_trend_tokens(stage)
+        tok = format_trend_tokens(stage, ampel=AMPEL_ALLGEMEIN)
         assert "@" not in tok["temp_str"]
 
 
@@ -272,19 +275,23 @@ class TestThresholdSource:
         )
         # Inject custom threshold via stage dict key
         stage["sms_threshold_precip"] = 2.0
-        tok = format_trend_tokens(stage)
+        tok = format_trend_tokens(stage, ampel=AMPEL_ALLGEMEIN)
         # With threshold=2.0, erst should be h12, not h10
         assert "@12" in tok["precip_token"], f"Got: {tok['precip_token']}"
         assert "@10" not in tok["precip_token"], f"Got: {tok['precip_token']}"
 
-    def test_default_precip_threshold_is_0_5(self):
-        """AC-2: Default precip threshold is 0.5mm — sample at 0.5 triggers token."""
+    def test_default_precip_threshold_is_0_5_no_more(self):
+        """AC-2, umgekehrt durch Issue #2792 S1c-4b (AC-19 e): die feste
+        Schwelle 0,5 mm wirkt nicht mehr -- 0,5 mm liegt unter Gelb der Ampel
+        „allgemein" (1 mm) und bleibt unerwaehnt; 1,0 mm loest aus."""
         from src.output.renderers.email.helpers import format_trend_tokens
         stage = _trend_stage_with_hourly(
             hourly_precip=(_hv(10, 0.5),),
         )
-        tok = format_trend_tokens(stage)
-        # 0.5 >= 0.5 → should produce a token with @
+        tok = format_trend_tokens(stage, ampel=AMPEL_ALLGEMEIN)
+        assert tok["precip_token"] == "-", f"Got: {tok['precip_token']}"
+        stage = _trend_stage_with_hourly(hourly_precip=(_hv(10, 1.0),))
+        tok = format_trend_tokens(stage, ampel=AMPEL_ALLGEMEIN)
         assert "@10" in tok["precip_token"], f"Got: {tok['precip_token']}"
 
     def test_default_wind_threshold_is_30(self):
@@ -293,7 +300,7 @@ class TestThresholdSource:
         stage = _trend_stage_with_hourly(
             hourly_wind=(_hv(12, 30.0),),
         )
-        tok = format_trend_tokens(stage)
+        tok = format_trend_tokens(stage, ampel=AMPEL_ALLGEMEIN)
         # 30 >= 30 → should produce a token with @
         assert "@12" in tok["wind_token"], f"Got: {tok['wind_token']}"
 
@@ -476,7 +483,7 @@ class TestTokenSourceOfTruth:
             hourly_gust=(_hv(15, 55.0),),
             hourly_thunder=(_hv(14, 1.0),),
         )
-        tok = format_trend_tokens(stage)
+        tok = format_trend_tokens(stage, ampel=AMPEL_ALLGEMEIN)
         for key in ("precip_token", "wind_token", "thunder_token"):
             assert key in tok, f"Missing key '{key}' in format_trend_tokens output"
 
@@ -492,7 +499,7 @@ class TestTokenSourceOfTruth:
             hourly_wind=(_hv(16, 17.0),),
         )
         # What format_trend_tokens says should be what Telegram shows
-        tok = format_trend_tokens(stage)
+        tok = format_trend_tokens(stage, ampel=AMPEL_ALLGEMEIN)
         precip_token = tok["precip_token"]
 
         body = _render_narrow("telegram", trend=[stage])
@@ -538,7 +545,7 @@ class TestUnchangedAreas:
             wind_dir="W", wind_kmh=20, thunder="NONE", note=None,
         )
         from src.output.renderers.email.helpers import format_trend_tokens
-        tok = format_trend_tokens(old_stage)
+        tok = format_trend_tokens(old_stage, ampel=AMPEL_ALLGEMEIN)
         # Should not crash; tokens should fallback to '-' or simple values
         assert "precip_token" in tok
         assert tok["precip_token"] == "-"

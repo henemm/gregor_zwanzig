@@ -24,6 +24,7 @@ AC-Zuordnung:
   Wert wie die HTML-Uebersichtstabelle (HTML/Text-Konsistenz).
 """
 from __future__ import annotations
+from tests.helpers.ampel_allgemein import PRESET_ALLGEMEIN
 
 import re
 from datetime import date, datetime
@@ -138,7 +139,7 @@ class TestAC1SchneeZeilenOhneFilter:
         from output.renderers.email.compare_html import render_compare_html
 
         result = _make_snow_result()
-        html = render_compare_html(result, profile=ActivityProfile.ALLGEMEIN, enabled_metrics=None)
+        html = render_compare_html(result, profile=ActivityProfile.ALLGEMEIN, enabled_metrics=None, preset=PRESET_ALLGEMEIN)
 
         labels = _overview_labels(html)
         assert any("Schneehöhe" in lbl for lbl in labels), (
@@ -162,7 +163,7 @@ class TestAC2GuardEnabledMetricsOhneSchnee:
 
         result = _make_snow_result()
         html = render_compare_html(
-            result, profile=ActivityProfile.ALLGEMEIN, enabled_metrics={"temp_max", "wind_max"},
+            result, profile=ActivityProfile.ALLGEMEIN, enabled_metrics={"temp_max", "wind_max"}, preset=PRESET_ALLGEMEIN,
         )
 
         labels = _overview_labels(html)
@@ -196,7 +197,7 @@ class TestAC3SchneehoeheGezieltAusgewaehlt:
 
         result = _make_snow_result()
         html = render_compare_html(
-            result, profile=ActivityProfile.ALLGEMEIN, enabled_metrics={"snow_depth_cm"},
+            result, profile=ActivityProfile.ALLGEMEIN, enabled_metrics={"snow_depth_cm"}, preset=PRESET_ALLGEMEIN,
         )
 
         table = _find_overview_table(html)
@@ -257,7 +258,7 @@ class TestAC4KlartextSchneeKonsistenz:
 
         result = _make_snow_result()
         html = render_compare_html(
-            result, profile=ActivityProfile.ALLGEMEIN, enabled_metrics={"snow_depth_cm"},
+            result, profile=ActivityProfile.ALLGEMEIN, enabled_metrics={"snow_depth_cm"}, preset=PRESET_ALLGEMEIN,
         )
         text_body = render_comparison_text(result, profile=ActivityProfile.ALLGEMEIN, preset=None)
 

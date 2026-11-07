@@ -20,6 +20,7 @@ RED-Erwartung gegen den unveränderten Ausgangscode:
 AC-11 (Nicht-Regression / Live-E2E) ist NICHT Teil dieser Kern-Suite.
 """
 from __future__ import annotations
+from tests.helpers.ampel_allgemein import PRESET_ALLGEMEIN
 from app.ampel import resolve_ampel
 
 import re
@@ -264,7 +265,7 @@ class TestAC3CompareFooter:
         from output.renderers.email.compare_html import render_compare_html
         from app.profile import ActivityProfile
 
-        html = render_compare_html(self._result(), profile=ActivityProfile.WINTERSPORT)
+        html = render_compare_html(self._result(), profile=ActivityProfile.WINTERSPORT, preset=PRESET_ALLGEMEIN)
 
         assert LBL_COMPARE in html, "Compare-Footer-Label 'Ortsvergleich' fehlt"
         # warnmail-Spec AC-5/Befund 4a: Compare hat keine echte per-Event-

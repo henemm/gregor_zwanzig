@@ -15,6 +15,7 @@ Critical rules from spec:
 - @hour-Pflicht fuer R, PR, W, G, TH, TH+, HR; Stunde 0-23 ohne fuehrende Null.
 """
 from __future__ import annotations
+from tests.helpers.ampel_allgemein import AMPEL_ALLGEMEIN
 
 import pytest
 
@@ -61,7 +62,7 @@ def _build_default_line(
     if _EMPTY_FORECAST:
         forecast = NormalizedForecast(days=())
         return build_token_line(
-            forecast, [], report_type=report_type, stage_name=stage_name,
+            forecast, [], report_type=report_type, stage_name=stage_name, ampel=AMPEL_ALLGEMEIN,
         )
 
     today = DailyForecast(
@@ -135,7 +136,7 @@ def _build_default_line(
         # (verdoppelte nachweislich 'FK') -- kein MetricSpec mehr hier.
     ]
     return build_token_line(
-        forecast, config, report_type=report_type, stage_name=stage_name,
+        forecast, config, report_type=report_type, stage_name=stage_name, ampel=AMPEL_ALLGEMEIN,
     )
 
 
@@ -206,10 +207,15 @@ def test_threshold_peak_format():
     at 16h must render as 'R0.2@6(1.4@16)'. Hour without leading zero.
     Threshold == Max optimisation does NOT apply (different values + hours).
     """
+    # Issue #2792 S1c-4b (E1, AC-19 e): Schwelle = Gelb der Ampel („allgemein":
+    # Regen ab 1 mm) statt DEFAULTS 0,2 -- 0,2 @6 bleibt unerwaehnt, erste
+    # Stunde ab Gelb = Spitze 1.4 @16 (Optimierung „Einsatz == Spitze").
+    # Die Form „Einsatz(Spitze)" bei hoeherer Stufe bewacht
+    # tests/tdd/test_profil_ampel_kette.py::test_spitzenwert_rot_schlaegt_orange_*.
     line = _build_default_line()
     rendered = line.render(160)
-    assert "R0.2@6(1.4@16)" in rendered, (
-        f"Threshold+Peak format wrong; expected 'R0.2@6(1.4@16)' in {rendered!r}"
+    assert " R1.4@16 " in rendered, (
+        f"Threshold+Peak format wrong; expected 'R1.4@16' in {rendered!r}"
     )
 
 
@@ -273,7 +279,7 @@ def test_wintersport_never_shows_unknown_marker_on_gap():
     today_missing = DailyForecast(has_data_gap=True)
     line_missing = build_token_line(
         NormalizedForecast(days=(today_missing,)),
-        _WINTERSPORT_CONFIG, report_type="evening", stage_name="E1",
+        _WINTERSPORT_CONFIG, report_type="evening", stage_name="E1", ampel=AMPEL_ALLGEMEIN,
     )
     rendered_missing = line_missing.render(300)
     for sym in ("SD", "NS24+", "SL", "AV"):
@@ -293,7 +299,7 @@ def test_wintersport_never_shows_unknown_marker_on_gap():
     )
     line_present = build_token_line(
         NormalizedForecast(days=(today_present,)),
-        _WINTERSPORT_CONFIG, report_type="evening", stage_name="E1",
+        _WINTERSPORT_CONFIG, report_type="evening", stage_name="E1", ampel=AMPEL_ALLGEMEIN,
     )
     rendered_present = line_present.render(300)
     for sym in ("SD", "NS24+", "SL", "AV"):
@@ -349,7 +355,7 @@ def test_empty_forecast_raises():
             NormalizedForecast(days=()),
             [],
             report_type="evening",
-            stage_name="X",
+            stage_name="X", ampel=AMPEL_ALLGEMEIN,
         )
 
 

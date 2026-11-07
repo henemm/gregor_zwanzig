@@ -16,6 +16,8 @@ KEINE Mocks: echte ``SegmentWeatherData``/``OfficialAlert``/
 """
 from __future__ import annotations
 
+from tests.helpers.ampel_allgemein import AMPEL_ALLGEMEIN
+
 from datetime import datetime, timezone
 from zoneinfo import ZoneInfo
 
@@ -156,7 +158,7 @@ def test_trip_briefing_sms_stays_gsm7_clean_with_dense_token_line():
     kwargs = dict(
         report_type="evening", tz=_UTC, night_weather=_night(),
         thunder_forecast={"+1": {"level": "HIGH", "hour": 15, "hail": True}},
-        stage_name="Świnica", sms_alert_min_level=3,
+        stage_name="Świnica", sms_alert_min_level=3, ampel=AMPEL_ALLGEMEIN,
     )
     sms = formatter.format_sms([_dense_segment()], **kwargs)
     full = formatter.format_sms([_dense_segment()], max_length=2000, **kwargs)
@@ -220,6 +222,7 @@ def test_trip_briefing_sms_einfach_modi_bleiben_gsm7_rein_und_tragen_stufen_toke
         report_type="evening", tz=_UTC, night_weather=_night(),
         thunder_forecast={"+1": {"level": "HIGH", "hour": 15, "hail": True}},
         stage_name="Świnica", sms_alert_min_level=3, disabled_specs=specs,
+        ampel=AMPEL_ALLGEMEIN,
     )
     sms = formatter.format_sms([_dense_segment()], **kwargs)
     full = formatter.format_sms([_dense_segment()], max_length=2000, **kwargs)

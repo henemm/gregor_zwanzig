@@ -17,7 +17,7 @@ Delivered late — the weather service was unavailable at 6:00
 ----- nachlieferung.komplett.telegram -----
 Delivered late — the weather service was unavailable at 6:00
 ----- nachlieferung.komplett.sms -----
-E1: TF- W15@4 G22@4 R- CT:SCT@4 VS9.0@4 SU16 SD5
+E1: TF- W- G- R- CT:SCT@4 VS- SU16 SD5
 ----- nachlieferung.vollstaendig.ergebnis -----
 (1, 0)
 ----- nachlieferung.vollstaendig.betreff -----
@@ -29,7 +29,7 @@ Updated — now with complete data
 ----- nachlieferung.vollstaendig.telegram -----
 Updated — now with complete data
 ----- nachlieferung.vollstaendig.sms -----
-E1: TF- W15@4 G22@4 R- CT:SCT@4 VS9.0@4 SU16 SD5
+E1: TF- W- G- R- CT:SCT@4 VS- SU16 SD5
 ----- nachlieferung.unvollstaendig.ergebnis -----
 (1, 0)
 ----- nachlieferung.unvollstaendig.betreff -----
@@ -41,7 +41,7 @@ Updated — still incomplete, see the note for details
 ----- nachlieferung.unvollstaendig.telegram -----
 Updated — still incomplete, see the note for details
 ----- nachlieferung.unvollstaendig.sms -----
-E1: TF? W15@4 G22@4 R? CT:SCT@4 VS9.0@4 SU9 SD5
+E1: TF? W? G? R? CT:SCT@4 VS? SU9 SD5
 ----- nachlieferung.versandfehler.ergebnis -----
 (1, 0)
 ----- nachlieferung.versandfehler.betreff -----
@@ -53,7 +53,7 @@ Delivered late — delivery at 06:00 failed
 ----- nachlieferung.versandfehler.telegram -----
 Delivered late — delivery at 06:00 failed
 ----- nachlieferung.versandfehler.sms -----
-E1: TF- W15@4 G22@4 R- CT:SCT@4 VS9.0@4 SU16 SD5
+E1: TF- W- G- R- CT:SCT@4 VS- SU16 SD5
 ----- ausfall.ausgang -----
 no_weather
 ----- ausfall.betreff -----
@@ -79,7 +79,7 @@ Note: weather data is currently missing for the following sections (Segment Dest
 ----- teilausfall.telegram -----
 Note: weather data is currently missing for the following sections (Segment Destination) — an update will follow.
 ----- teilausfall.sms -----
-E1: D2/2 TF? FD?/? W15@4 G22@4 R? TH:? TH+:- SL2200 CT:SCT@4 SU9
+E1: D2/2 TF? FD?/? W? G? R? TH:? TH+:- SL2200 CT:SCT@4 SU9
 ----- servicefehler.betreff -----
 [GR20] Weather data unavailable
 ----- servicefehler.header -----

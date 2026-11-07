@@ -18,6 +18,7 @@ Kern-Schicht, deterministisch: keine Mocks, kein Netz. Die Engine laeuft gegen
 den Offline-Fixture-Provider (autouse-Fixture in tests/conftest.py, Issue #346).
 """
 from __future__ import annotations
+from tests.helpers.ampel_allgemein import PRESET_ALLGEMEIN
 
 from datetime import date, timedelta
 
@@ -65,7 +66,7 @@ def _outlook_weekday_labels(result) -> list[str]:
     HTML-Mail — das ist, was der Empfaenger tatsaechlich liest."""
     from output.renderers.email.compare_html import render_compare_html
 
-    html = render_compare_html(result, outlook_enabled=True)
+    html = render_compare_html(result, outlook_enabled=True, preset=PRESET_ALLGEMEIN)
     soup = BeautifulSoup(html, "html.parser")
     tables = [t for t in soup.find_all("table")
               if _OUTLOOK_TABLE_MARKER in str(t.get("style", ""))]

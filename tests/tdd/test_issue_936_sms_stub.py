@@ -10,6 +10,7 @@ und gibt die gesendeten Daten zurück — ohne externe API-Abhängigkeit.
 Kein Mock, kein patch() — echter HTTP-Roundtrip über localhost.
 """
 from __future__ import annotations
+from tests.helpers.ampel_allgemein import AMPEL_ALLGEMEIN
 
 import http.server
 import threading
@@ -108,7 +109,7 @@ def _token_line_with_km_stage():
         NormalizedForecast(days=(today,)),
         None,
         report_type="evening",
-        stage_name="GR221 Mallorca km0-11",
+        stage_name="GR221 Mallorca km0-11", ampel=AMPEL_ALLGEMEIN,
     )
 
 
@@ -284,7 +285,7 @@ def _token_line_extreme_weather():
         NormalizedForecast(days=(today, tomorrow)),
         None,
         report_type="evening",
-        stage_name="Extremwetter km0-42",
+        stage_name="Extremwetter km0-42", ampel=AMPEL_ALLGEMEIN,
     )
 
 
@@ -319,7 +320,7 @@ def _token_line_with_km_stage_morning():
         NormalizedForecast(days=(today,)),
         None,
         report_type="morning",
-        stage_name="GR221 Mallorca km0-11",
+        stage_name="GR221 Mallorca km0-11", ampel=AMPEL_ALLGEMEIN,
     )
 
 

@@ -85,6 +85,7 @@
 	"alarme.vorschau.regel_aktivieren": "Aktiviere mindestens eine Alert-Regel, um die Vorschau zu laden.",
 	"alarme.vorschau.laden": "Vorschau laden",
 	"alarme.vorschau.lade": "Lade…",
+	"alarme.vorschau.berechnet": "Vorschau wird berechnet…",
 	"alarme.vorschau.fehler": "Vorschau konnte nicht geladen werden",
 	"alarme.vorschau.iframe_titel": "Alert-Vorschau E-Mail"
 }

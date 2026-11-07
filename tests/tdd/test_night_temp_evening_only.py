@@ -26,6 +26,7 @@ alle drei Kurzformen abends noch 3 (Tagessegment-Min) statt 11
 Keine Mocks, keine Dateiinhalt-Checks. Reale Fixtures, reale Aufrufe.
 """
 from __future__ import annotations
+from tests.helpers.ampel_allgemein import AMPEL_ALLGEMEIN
 
 import re
 from datetime import datetime, timezone
@@ -410,7 +411,7 @@ class TestAC5LegacyTripRendersWithoutMigration:
     def test_legacy_trip_renders_without_migration(self):
         segments = [_segment()]
 
-        sms = SMSTripFormatter().format_sms(segments, stage_name="E7", tz=_TZ)
+        sms = SMSTripFormatter().format_sms(segments, stage_name="E7", tz=_TZ, ampel=AMPEL_ALLGEMEIN)
         assert sms, "SMS-Rendering eines Bestandstrips liefert leeren Text"
 
         compact = CompactSummaryFormatter().format_stage_summary(

@@ -21,6 +21,7 @@ from datetime import date, datetime, timedelta, timezone
 from pathlib import Path
 from typing import TYPE_CHECKING, NamedTuple, Optional
 
+from app.ampel import resolve_ampel, thunder_color
 from app.loader import (
     LoaderError,
     get_data_dir,
@@ -43,7 +44,6 @@ from output.metric_format import (
     PRECIP_TYPE_LABEL_DE,
     THUNDER_LABEL_DE,
     format_value,
-    thunder_ampel_band,
     thunder_label_value,
 )
 from output.tokens.metrics import LEVELS as _STUFENBUCHSTABEN
@@ -573,8 +573,9 @@ def _tag_buttons(tag: str, lang: Lang = "de") -> dict:
         [{"text": "🕐 Timeline", "callback_data": f"tl_{tag}"}],
     ]}
 
-# Kreis-Emoji je Ampelband der Stufe (`thunder_ampel_band`, metric_format.py) --
-# das Symbol stellt das Band dar, es ist keine zweite Stufen-Zuordnung.
+# Kreis-Emoji je Ampelfarbe der Stufe -- das Symbol stellt die Farbe der
+# zentralen Abbildung `thunder_color` dar (Issue #2792 S1c-4b, AC-5), es ist
+# keine zweite Stufen-Zuordnung.
 _BAND_EMOJI = {"green": "🟢", "yellow": "🟡", "orange": "🟠", "red": "🔴"}
 
 
@@ -585,10 +586,11 @@ def _thunder_words(lang: Lang = "de") -> dict:
     return {level.name: thunder_label(level, lang=lang) for level in THUNDER_LABEL_DE}
 
 
-def _thunder_symbols() -> dict:
-    """Stufenname -> Kreis-Emoji, ueber das Ampelband der Stufe abgeleitet."""
+def _thunder_symbols(*, ampel: dict) -> dict:
+    """Stufenname -> Kreis-Emoji, ueber ``thunder_color`` mit der aufgeloesten
+    Trip-Ampel abgeleitet (Issue #2792 S1c-4b: Wassersport „mittel" = 🔴)."""
     return {
-        level.name: _BAND_EMOJI[thunder_ampel_band(level)]
+        level.name: _BAND_EMOJI[thunder_color(level, ampel)]
         for level in THUNDER_LABEL_DE
     }
 
@@ -662,14 +664,15 @@ _DRILLDOWN_PATTERN = re.compile(r"^dd_(thunder|wind|precip)_(today|tomorrow)$")
 _HOURS_PATTERN = re.compile(r"^dd_hours_(today|tomorrow)$")
 
 
-def _thunder_fmt(value, *, with_emoji: bool = True, lang: Lang = "de") -> str:
+def _thunder_fmt(value, *, with_emoji: bool = True, lang: Lang = "de", ampel: dict) -> str:
     """Formatiert ThunderLevel (Enum oder String nach Roundtrip) als deutsches Label.
 
     Issue #1222 AC-6: E-Mail/SMS bekommen KEIN Kreis-Emoji (nur das Wort),
-    Telegram bleibt byte-identisch mit Emoji.
+    Telegram bleibt byte-identisch mit Emoji. ``ampel`` (Issue #2792 S1c-4b):
+    aufgeloeste Trip-Ampel fuer die Emoji-Farbe.
     """
     _MAP_PLAIN = _thunder_words(lang)
-    _symbole = _thunder_symbols()
+    _symbole = _thunder_symbols(ampel=ampel)
     _MAP_EMOJI = {k: f"{_symbole[k]} {wort}" for k, wort in _MAP_PLAIN.items()}
     keine = t("inbound.antwort.keine_daten", lang)
     if value is None:
@@ -726,7 +729,7 @@ _DRILLDOWN_TOKEN_EMOJI: dict[str, str] = {
 }
 
 
-def _metric_formatter(metric, lang: Lang = "de"):
+def _metric_formatter(metric, lang: Lang = "de", *, ampel: dict):
     """Formatierer EINER Katalog-Groesse — die Wahl haengt an EIGENSCHAFTEN
     des Eintrags, nicht an seiner Kennung (Spec "Formatierer folgt aus dem
     Katalogeintrag").
@@ -739,7 +742,7 @@ def _metric_formatter(metric, lang: Lang = "de"):
     keine = t("inbound.antwort.keine_daten", lang)
     if metric.is_level:
         return lambda value, *, with_emoji=True: _thunder_fmt(
-            value, with_emoji=with_emoji, lang=lang)
+            value, with_emoji=with_emoji, lang=lang, ampel=ampel)
     if metric.dp_field == "wind_direction_deg":
         def _compass(value, *, with_emoji: bool = True) -> str:
             if value is None:
@@ -1856,7 +1859,8 @@ class TripCommandProcessor:
         definition = get_metric(_DRILLDOWN_TOKEN_METRIC[metric])
         field = definition.dp_field
         header = f"{_DRILLDOWN_TOKEN_EMOJI[metric]} {definition.label(self._sprache)}"
-        fmt = _metric_formatter(definition, self._sprache)
+        # Issue #2792 S1c-4b: Gewitter-Emoji nach der Ampel des Trips.
+        fmt = _metric_formatter(definition, self._sprache, ampel=resolve_ampel(trip))
 
         from_time, hours, day_date, tz = self._day_window(trip, day_token, received_at)
 
@@ -1977,7 +1981,9 @@ class TripCommandProcessor:
                 )
             else:
                 body = self._format_drilldown(
-                    res, name, _metric_formatter(metric, self._sprache), tz,
+                    res, name,
+                    # Issue #2792 S1c-4b: Gewitter-Emoji nach der Trip-Ampel.
+                    _metric_formatter(metric, self._sprache, ampel=resolve_ampel(trip)), tz,
                     with_emoji=(channel == "telegram"),
                 )
             back = "tl_today" if day_token == "today" else "tl_tomorrow"
@@ -2020,7 +2026,8 @@ class TripCommandProcessor:
         # Issue #2010: dieselbe abgeleitete Quelle wie `_thunder_fmt` statt
         # einer eigenen Verzweigung mit eigenen Woertern. #2417: englisch die
         # Stufenbedeutung aus hazard_symbols.
-        thunder_karte = _thunder_symbols() if with_emoji else _thunder_words(self._sprache)
+        thunder_karte = (_thunder_symbols(ampel=resolve_ampel(trip)) if with_emoji
+                         else _thunder_words(self._sprache))
         if self._en:
             thunder_karte = {k: self._stufe_en(k) for k in thunder_karte}
 

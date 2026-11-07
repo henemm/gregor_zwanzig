@@ -72,6 +72,12 @@ class FixtureProvider:
     Thread-safe: no shared mutable state — each fetch_forecast reads from disk.
     """
 
+    # Issue #2581: eigener Cache-Namensraum. `name` bleibt "openmeteo"
+    # (Aufrufer-Transparenz), kollidiert aber mit dem Open-Meteo-Rueckfall.
+    # SegmentWeatherService stellt diesen Namensraum der model_id voran
+    # (Cache + Single-Flight getrennt) und laesst das Prognose-Archiv aus.
+    cache_namespace = "fixture"
+
     def __init__(self, fixture_dir: str) -> None:
         self._dir = fixture_dir  # relative or absolute path
 

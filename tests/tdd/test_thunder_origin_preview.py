@@ -70,6 +70,7 @@ ohne diese Gegenprobe waere ein Abwesenheits-Test auch dann gruen, wenn die
 ganze Kette nichts produziert (vakuum-gruen).
 """
 from __future__ import annotations
+from tests.helpers.ampel_allgemein import AMPEL_ALLGEMEIN
 
 import sys
 from datetime import date, datetime, timezone
@@ -337,7 +338,7 @@ def _trend_zeile(punkte: list[ForecastDataPoint], *,
     )
     zeile = build_outlook_row(
         summarize_points(punkte), punkte, "Fr", _TZ,
-        day_window_start_hour=win_start, day_window_end_hour=win_end, context="vergleich",
+        day_window_start_hour=win_start, day_window_end_hour=win_end, context="vergleich", ampel=AMPEL_ALLGEMEIN,
     )
     zeile["date"] = _MORGEN
     zeile["name"] = "Etappe B"

@@ -6,6 +6,7 @@ Scheduler → Formatter → RiskEngine
 
 SPEC: docs/specs/modules/wind_exposition_pipeline.md v1.0
 """
+from tests.helpers.ampel_allgemein import AMPEL_ALLGEMEIN
 from datetime import datetime, time, timezone
 from dataclasses import dataclass, field
 from typing import Optional
@@ -315,7 +316,7 @@ class TestSMSExposedSections:
         # This should NOT raise TypeError
         sms = formatter.format_sms(
             segments=[seg],
-            exposed_sections=[],
+            exposed_sections=[], ampel=AMPEL_ALLGEMEIN,
         )
         assert isinstance(sms, str)
 
@@ -329,7 +330,7 @@ class TestSMSExposedSections:
         formatter = SMSTripFormatter()
         sms = formatter.format_sms(
             segments=[seg],
-            exposed_sections=exposed,
+            exposed_sections=exposed, ampel=AMPEL_ALLGEMEIN,
         )
 
         assert "GratWind" in sms

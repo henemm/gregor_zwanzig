@@ -37,6 +37,7 @@ Die Helper werden hier per Import wiederverwendet statt dupliziert
 mit unterschiedlicher Signatur besitzen).
 """
 from __future__ import annotations
+from tests.helpers.ampel_allgemein import PRESET_ALLGEMEIN
 
 from datetime import date, datetime, timedelta
 
@@ -254,7 +255,7 @@ class TestCompareForecastHorizonMailHeader:
         from output.renderers.email.compare_html import render_compare_html
 
         result = _make_result()
-        html = render_compare_html(result, profile=ActivityProfile.WINTERSPORT)
+        html = render_compare_html(result, profile=ActivityProfile.WINTERSPORT, preset=PRESET_ALLGEMEIN)
 
         assert "Horizont" not in html, (
             "RED: Kopfzeile enthaelt weiterhin das Wort 'Horizont' — die "

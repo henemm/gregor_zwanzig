@@ -653,14 +653,27 @@ def test_ausblick_zeilenbau_spannen_und_einzelspalte_folgen_der_ampel(metrik, am
     assert row["cell_bg"] == [bg]
 
 
-def test_ausblick_einstieg_faerbt_in_s1c1_nach_allgemein():
-    """F004: der Einstieg ``build_outlook_row`` löst in S1c-1 fest „allgemein"
-    auf — +9 °C bleibt ohne Farbe (bei Skitouren wäre es orange). Kehrt sich
-    in S1c-4 um, wenn der Einstieg die Abo-Ampel bekommt."""
+def test_ausblick_einstieg_verlangt_die_ampel_des_abos():
+    """S1c-4b (umgekehrt aus dem S1c-1-Übergangstest): ``build_outlook_row``
+    löst nicht mehr selbst „allgemein" auf, sondern verlangt ``ampel=`` ohne
+    Default — ein Aufruf ohne Ampel scheitert laut (AC-27)."""
     from output.renderers.email.outlook import build_outlook_row
-    assert build_outlook_row(_tageswerte(), [], "Mo", UTC, metrics=["temperature"], context="vergleich")["cell_bg"] == [""]
-    assert build_outlook_row(_tageswerte(), [], "Mo", UTC, metrics=["gust"], context="vergleich")["cell_bg"] == [
-        f"background:{_tone_bg('orange')};"]
+    with pytest.raises(TypeError):
+        build_outlook_row(_tageswerte(), [], "Mo", UTC, metrics=["temperature"], context="vergleich")
+
+
+@pytest.mark.parametrize("metrik,ampel,erwartet", [
+    ("temperature", SKI, "orange"), ("temperature", ALLG, "green"),
+    ("gust", SKI, "yellow"), ("gust", ALLG, "orange"),
+])
+def test_ausblick_einstieg_faerbt_nach_der_uebergebenen_abo_ampel(metrik, ampel, erwartet):
+    """S1c-4b: der Einstieg färbt nach der übergebenen Abo-Ampel — +9 °C bei
+    Skitouren orange, bei Allgemein ohne Farbe; Böen 52 km/h Skitouren gelb,
+    Allgemein orange (AC-25)."""
+    from output.renderers.email.outlook import build_outlook_row
+    row = build_outlook_row(_tageswerte(), [], "Mo", UTC, metrics=[metrik], context="vergleich", ampel=ampel)
+    bg = "" if erwartet == "green" else f"background:{_tone_bg(erwartet)};"
+    assert row["cell_bg"] == [bg]
 
 
 # F003b: Kappung auf MAX_ROWS — welche Stunden die stärksten sind, hängt an der
@@ -735,16 +748,26 @@ def test_alarm_nachricht_ampel_ist_pflichtfeld_ohne_default():
 # 8. Spitzenwert-Gleichstand und CAPE-Brücke (F003)
 # ---------------------------------------------------------------------------
 
-def test_spitzenwert_bei_gleicher_stufe_gewinnt_die_frueheste_stunde():
-    """31 @12 und 35 @15 sind bei Allgemein-Wind beide gelb: Spitze =
-    früheste Stunde ⇒ „31@12" (nicht „31@12(35@15)")."""
+def _schaerfe(ampel, metric_id, v):
+    """Fix-Loop 2 (F003): ``ampel_schaerfe`` ist neben ``ampel_stufe`` Pflicht
+    (Klammer = schlimmster Wert je Seite); mechanisch ergaenzt."""
+    from app.ampel import ampel_schaerfe
+    return ampel_schaerfe(ampel, metric_id, v)
+
+
+def test_spitzenwert_bei_gleicher_stufe_zeigt_das_maximum():
+    """31 @12 und 35 @15 sind bei Allgemein-Wind beide gelb. Issue #2792
+    S1c-4b Fix-Loop 1 (F008, Koordinator-Entscheid) -- umgekehrt: die Klammer
+    zeigt weiter den Hoechstwert mit Stunde (bisherige Token-Semantik, kein
+    Informationsverlust) ⇒ „31@12(35@15)"; frueher (S1c-4a) „31@12"."""
     from output.metric_format import severity_for
     from output.tokens.dto import HourlyValue
     from output.tokens.metrics import render_threshold_peak_value
     samples = (HourlyValue(hour=12, value=31.0), HourlyValue(hour=15, value=35.0))
     assert render_threshold_peak_value(
         "W", samples, None,
-        ampel_stufe=lambda v: severity_for("wind", v, ampel=ALLG)) == "31@12"
+        ampel_stufe=lambda v: severity_for("wind", v, ampel=ALLG),
+        ampel_schaerfe=lambda v: _schaerfe(ALLG, "wind", v)) == "31@12(35@15)"
 
 
 def test_spitzenwert_rot_schlaegt_orange_und_reihenfolge_egal():
@@ -757,7 +780,8 @@ def test_spitzenwert_rot_schlaegt_orange_und_reihenfolge_egal():
                HourlyValue(hour=13, value=50.0))
     assert render_threshold_peak_value(
         "W", samples, None,
-        ampel_stufe=lambda v: severity_for("wind", v, ampel=ALLG)) == "31@10(70@16)"
+        ampel_stufe=lambda v: severity_for("wind", v, ampel=ALLG),
+        ampel_schaerfe=lambda v: _schaerfe(ALLG, "wind", v)) == "31@10(70@16)"
 
 
 def test_spitzenwert_ampelstufe_hat_vorrang_vor_gespeicherter_schwelle():
@@ -773,12 +797,15 @@ def test_spitzenwert_ampelstufe_hat_vorrang_vor_gespeicherter_schwelle():
     assert render_threshold_peak_value("W", samples, 30.0) == "-"
     assert render_threshold_peak_value(
         "W", samples, 30.0,
-        ampel_stufe=lambda v: severity_for("wind", v, ampel=WASSER)) == "3@14"
+        ampel_stufe=lambda v: severity_for("wind", v, ampel=WASSER),
+        ampel_schaerfe=lambda v: _schaerfe(WASSER, "wind", v)) == "3@14"
 
 
-def test_cape_traegt_in_s1c1_noch_eine_farbe():
+def test_cape_traegt_keine_eigene_farbe():
+    """S1c-4b, AC-6/P1 (umgekehrt aus dem S1c-1-Übergangstest): die
+    CAPE-Brücke ist entfernt, CAPE hat keinen Ampel-Leser mehr."""
     from app.ampel import hat_ampel
-    assert hat_ampel("cape") is True
+    assert hat_ampel("cape") is False
     assert hat_ampel("gust") is True
     assert hat_ampel("dewpoint") is False
 
@@ -799,8 +826,18 @@ EINSTIEGE = {
     ("renderers/email/compact.py", "render_compact"): 1,
     ("renderers/email/compare_html.py", "render_compare_html"): 1,
     ("renderers/comparison.py", "render_comparison_text"): 1,
-    ("renderers/email/outlook.py", "build_outlook_row"): 1,
     ("renderers/narrow.py", "render_telegram_bubbles"): 1,
+    # S1c-4b (Spec v1.5 Punkt 4): die SMS bekommt die Ampel aus derselben dc
+    # wie die Mail; aufgeloest im Formatter, der format_sms ruft.
+    ("renderers/trip_report.py", "format_email"): 1,
+}
+
+# S1c-4b: ``build_outlook_row`` löst nicht mehr selbst auf (er war Einstieg in
+# S1c-1), sondern nimmt die Ampel als keyword-only Pflichtparameter ohne
+# Default; aufgelöst wird beim Aufrufer im Scheduler (DIENST_EINSTIEGE).
+# Darf nur wachsen.
+AMPEL_PFLICHT_OHNE_DEFAULT = {
+    ("renderers/email/outlook.py", "build_outlook_row"),
 }
 
 # Alles aus src/app/ampel.py, womit sich eine Ampel bzw. Vorlage beschaffen
@@ -860,7 +897,41 @@ DIENST_EINSTIEGE = {
     ("radar_alert_service.py", "build_onset_alert_message"): 1,
     ("validator_render_service.py", "_deviation_preview_message"): 1,
     ("validator_render_service.py", "render_alert_preview"): 1,
+    # S1c-4b: der Ausblick wird je stage_trip mit dessen Ampel gebaut.
+    ("trip_report_scheduler.py", "_build_stage_trend"): 1,
+    # S1c-4b (Spec v1.4 Punkt 7): die Telegram-Drilldowns loesen die Trip-
+    # Ampel fuer das Gewitter-Emoji (thunder_color) auf.
+    ("trip_command_processor.py", "_handle_drilldown"): 1,
+    ("trip_command_processor.py", "_handle_hours_drilldown"): 1,
+    ("trip_command_processor.py", "_handle_metric_drilldown"): 1,
+    # S1c-4b (Koordinator-Freigabe): zustandslose SMS-Editor-Vorschau, Body nur
+    # metric_ids, kein Trip/keine dc -- bewusst Vorlage „allgemein".
+    ("validator_render_service.py", "render_sms_fidelity_preview"): 1,
 }
+
+
+def _funktion(datei: Path, name: str):
+    for node in ast.walk(ast.parse(datei.read_text(encoding="utf-8"), filename=str(datei))):
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)) and node.name == name:
+            return node
+    raise AssertionError(f"{datei}:{name} nicht gefunden")
+
+
+@pytest.mark.parametrize("rel,name", sorted(AMPEL_PFLICHT_OHNE_DEFAULT))
+def test_ausblick_nimmt_die_ampel_als_pflichtparameter_ohne_default(rel, name):
+    """S1c-4b, AC-27: wer nicht mehr selbst auflöst, verlangt die Ampel —
+    keyword-only, ohne Default (kein stilles „allgemein")."""
+    a = _funktion(_OUTPUT / rel, name).args
+    kw = {p.arg: d for p, d in zip(a.kwonlyargs, a.kw_defaults)}
+    assert "ampel" in kw, f"{rel}:{name} hat keinen keyword-only Parameter ampel"
+    assert kw["ampel"] is None, f"{rel}:{name}: ampel hat einen Default"
+
+
+def test_ausblick_ist_kein_aufloeser_mehr():
+    """S1c-4b: im Ausblick-Einstieg steht kein Auflöser mehr (sonst würde er
+    die übergebene Ampel still überschreiben)."""
+    for schluessel in AMPEL_PFLICHT_OHNE_DEFAULT:
+        assert schluessel not in _aufrufe_je_funktion()
 
 
 def test_ratsche_scan_sieht_die_einstiege():
@@ -902,42 +973,50 @@ def _aufloesungen(wurzel: Path) -> list:
 
 @pytest.mark.parametrize("wurzel,anzahl", [(_OUTPUT, len(EINSTIEGE)), (_SERVICES, len(DIENST_EINSTIEGE))],
                          ids=["src_output", "src_services"])
-def test_jeder_einstieg_loest_in_s1c1_genau_allgemein_auf(wurzel, anzahl):
-    """Fix-Loop 3 F001: in S1c-1 ruft JEDER Einstieg (Renderer UND Dienste)
-    exakt ``resolve_ampel(None)`` auf — genau ein Positionsargument, das
-    Literal ``None``, keine Schlüsselwörter. Damit fällt ein vorzeitig auf
-    ein Abo (oder eine Vorlage) verdrahteter Einstieg auf, den Golden und
-    Modus-Matrix nicht unterscheiden.
-
-    S1c-4 stellt diese Prüfung um: dort muss jeder Einstieg das ABO seines
-    Kontexts übergeben (Trip, Compare-Preset), nicht mehr ``None``."""
+def test_kein_einstieg_loest_still_none_auf(wurzel, anzahl):
+    """S1c-4b, AC-25 (umgekehrt aus dem S1c-1-Übergangstest
+    ``…loest_in_s1c1_genau_allgemein_auf``): jeder Einstieg (Renderer UND
+    Dienste) ruft ``resolve_ampel`` genau einmal auf und übergibt das ABO
+    seines Kontexts (Trip, ``display_config``, Compare-Preset) — nie das
+    Literal ``None``. Ein Einstieg, der still „allgemein" auflöst, verlöre
+    bei Skitouren- und Wassersport-Abos die Bewertung."""
     funde = _aufloesungen(wurzel)
     assert len(funde) == anzahl
-    assert [f for f in funde if not f[2]] == []
+    assert [f for f in funde if f[2]] == []
 
 
 # ---------------------------------------------------------------------------
 # 10. Dienst-Einstiege: die gebaute Alarm-Nachricht trägt „allgemein" (S1c-1)
 # ---------------------------------------------------------------------------
 
-def test_radar_alarm_nachricht_traegt_in_s1c1_die_allgemein_ampel():
-    """``build_onset_alert_message`` (Radar-Alarm, Trip) — echter Aufruf mit
-    Datenobjekten wie in tests/test_alarm_intensitaet_logik_unveraendert.py."""
+@pytest.mark.parametrize("display_config,erwartet,andere", [
+    ({"preset_name": "skitouren"}, SKI, ALLG),
+    (None, ALLG, SKI),
+], ids=["skitouren", "ohne_vorlage"])
+def test_radar_alarm_nachricht_traegt_die_ampel_des_trips(display_config, erwartet, andere):
+    """S1c-4b (umgekehrt aus ``…traegt_in_s1c1_die_allgemein_ampel``):
+    ``build_onset_alert_message`` (Radar-Alarm, Trip) trägt die Ampel des
+    Trips — Skitouren-Trip ⇒ Skitouren, Trip ohne Vorlage ⇒ „allgemein"."""
     from types import SimpleNamespace
 
     from services.radar_alert_service import build_onset_alert_message
-    trip = SimpleNamespace(name="GR20", alert_cooldown_minutes=120)
+    trip = SimpleNamespace(name="GR20", alert_cooldown_minutes=120, display_config=display_config)
     active = SimpleNamespace(start_point=SimpleNamespace(lat=42.2, lon=9.0), distance_km=8.0)
     msg = build_onset_alert_message(trip, active, 25, "06:25", "Leichter Regen", "Radar (DWD)")
-    assert msg.ampel == ALLG
-    assert msg.ampel != SKI
+    assert msg.ampel == erwartet
+    assert msg.ampel != andere
 
 
-def test_trip_abweichungsalarm_faerbt_ueber_den_versandweg_nach_allgemein(monkeypatch):
+@pytest.mark.parametrize("preset_name,gelb_erwartet", [("skitouren", False), (None, True)],
+                         ids=["skitouren", "allgemein"])
+def test_trip_abweichungsalarm_faerbt_ueber_den_versandweg_nach_der_trip_ampel(
+        monkeypatch, preset_name, gelb_erwartet):
     """``NotificationService.send_deviation_alert`` (Trip-Alarm-Pfad) über den
     echten Versandweg (Transport-Mitschrift, keine Sockets): Böen 31 km/h um
-    12 Uhr UTC sind bei Allgemein gelb (bei Skitouren grün). Die Mail trägt
-    den gelben Punkt — der Dienst-Einstieg löst also „allgemein" auf."""
+    12 Uhr UTC sind bei Allgemein gelb, bei Skitouren grün (gelb ab 40).
+    S1c-4b (umgekehrt aus ``…versandweg_nach_allgemein``): der Dienst-Einstieg
+    löst die Ampel des Trips auf — der Skitouren-Trip trägt keinen gelben
+    Punkt, der Trip ohne Vorlage den gelben „allgemein"-Punkt."""
     from app.models import MetricConfig, UnifiedWeatherDisplayConfig
     from app.trip import Stage, Trip, Waypoint
     from services.notification_service import NotificationService
@@ -956,7 +1035,8 @@ def test_trip_abweichungsalarm_faerbt_ueber_den_versandweg_nach_allgemein(monkey
                       waypoints=[Waypoint(id="G1", name="Start", lat=47.0, lon=11.0,
                                           elevation_m=1000.0)])],
         display_config=UnifiedWeatherDisplayConfig(
-            trip_id=tid, metrics=[MetricConfig(metric_id="gust", enabled=True)],
+            trip_id=tid, preset_name=preset_name,
+            metrics=[MetricConfig(metric_id="gust", enabled=True)],
             per_channel_layouts={"email": [
                 MetricConfig(metric_id="gust", enabled=True, format_mode="simplified")]},
         ),
@@ -969,4 +1049,4 @@ def test_trip_abweichungsalarm_faerbt_ueber_den_versandweg_nach_allgemein(monkey
     assert len(mails) == 1, f"Vorbedingung: eine Mail ({mit!r})"
     punkte = _stundenzellen(mails[0]["body"])
     assert punkte, "Vorbedingung: Stundenzeilen mit Ampel-Punkten"
-    assert _dot_fill("yellow") in punkte
+    assert (_dot_fill("yellow") in punkte) is gelb_erwartet

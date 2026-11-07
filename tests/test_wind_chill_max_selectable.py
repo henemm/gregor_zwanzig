@@ -18,6 +18,7 @@ Teil 7 ist ein Regressions-Guard (AC-5): reine Tiefstwert-Auswahl bleibt
 unverändert und ist bereits HEUTE grün.
 """
 from __future__ import annotations
+from tests.helpers.ampel_allgemein import PRESET_ALLGEMEIN
 
 import re
 from dataclasses import fields
@@ -29,6 +30,10 @@ from output.renderers.comparison import render_comparison_text
 from output.renderers.compare_metric_catalog import get_compare_metric_catalog
 from output.renderers.compare_metric_ids import FRONTEND_TO_RENDERER_METRIC_ID
 from output.renderers.email.compare_html import render_compare_html
+
+# #2792 S1c-4b: Preset mit Vorlage ≠ „allgemein", damit der Prüfinhalt nach dem
+# Umschalten nicht nur die Vorgabe-Ampel sieht.
+SKITOUREN_PRESET = {"display_config": {"ampel": {"template": "skitouren"}}}
 
 TARGET_DATE = date(2026, 7, 24)
 
@@ -182,7 +187,7 @@ def test_compare_plain_renderer_shows_wind_chill_max_value():
     loc.wind_chill_max = 11.0
     result = _result(loc)
 
-    text = render_comparison_text(result, enabled_metrics={"wind_chill_max"}, preset=None)
+    text = render_comparison_text(result, enabled_metrics={"wind_chill_max"}, preset=SKITOUREN_PRESET)
 
     # #1453: die Uebersichts-Beschriftung ist der ausgeschriebene deutsche
     # Registername. Ist nur EINE der beiden Auswertungen gewaehlt, traegt die
@@ -209,7 +214,7 @@ def test_compare_html_renderer_shows_wind_chill_max_value():
     loc.wind_chill_max = 13.0
     result = _result(loc)
 
-    html = render_compare_html(result, enabled_metrics=["wind_chill_max"])
+    html = render_compare_html(result, enabled_metrics=["wind_chill_max"], preset=PRESET_ALLGEMEIN)
 
     # #1453: kein Auswertungs-Zusatz bei nur EINER gewaehlten Auswertung
     # (s. Kommentar im Klartext-Zwilling oben) -- der Nachweis laeuft ueber
@@ -239,12 +244,12 @@ def test_compare_renderers_show_wind_chill_min_only_selection_unchanged():
     )
     result = _result(loc)
 
-    text = render_comparison_text(result, enabled_metrics={"wind_chill_min"}, preset=None)
+    text = render_comparison_text(result, enabled_metrics={"wind_chill_min"}, preset=SKITOUREN_PRESET)
     plain_line = _plain_row_value(text, "gefühlte temperatur")
     assert plain_line is not None, f"Klartext-Regression: keine min-Zeile mehr:\n{text}"
     assert _number(plain_line) == -3.0
 
-    html = render_compare_html(result, enabled_metrics=["wind_chill_min"])
+    html = render_compare_html(result, enabled_metrics=["wind_chill_min"], preset=PRESET_ALLGEMEIN)
     html_row = _find_row(html, lambda l: l == "gefühlte temperatur")
     assert html_row is not None, f"HTML-Regression: keine min-Zeile mehr:\n{html}"
     assert any(_number(c) == -3.0 for c in html_row["cells"])

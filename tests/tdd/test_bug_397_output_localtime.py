@@ -39,6 +39,7 @@ Expected at RED-time:
     AC-4, AC-5             → PASS (no regression / UTC case unaffected)
 """
 from __future__ import annotations
+from tests.helpers.ampel_allgemein import AMPEL_ALLGEMEIN
 
 import re
 from datetime import datetime, timezone
@@ -499,7 +500,7 @@ class TestAC7SmsPreviewLocalTokens:
 
         seg = self._rainy_segment()
         line = SMSTripFormatter().format_sms(
-            [seg], stage_name="Test", report_type="morning", tz=_CEST,
+            [seg], stage_name="Test", report_type="morning", tz=_CEST, ampel=AMPEL_ALLGEMEIN,
         )
         assert "@10" in line, (
             f"CEST-SMS-Token zeigt nicht die lokale Peak-Stunde @10: {line!r}"
@@ -514,7 +515,7 @@ class TestAC7SmsPreviewLocalTokens:
 
         seg = self._rainy_segment()
         line = SMSTripFormatter().format_sms(
-            [seg], stage_name="Test", report_type="morning", tz=_UTC,
+            [seg], stage_name="Test", report_type="morning", tz=_UTC, ampel=AMPEL_ALLGEMEIN,
         )
         assert "@8" in line, f"UTC-Fall: Peak-Stunde @8 fehlt: {line!r}"
         assert "@10" not in line, f"UTC-Fall: Stunde fälschlich verschoben: {line!r}"

@@ -16,6 +16,7 @@ erwartete Datei per Hand aus dem neuen Output ersetzen und die Aenderung im
 PR begruenden.
 """
 from __future__ import annotations
+from tests.helpers.ampel_allgemein import AMPEL_ALLGEMEIN
 from app.ampel import resolve_ampel
 
 from pathlib import Path
@@ -50,7 +51,7 @@ def _render() -> str:
     return (
         render_outlook_table(ROWS, ampel=resolve_ampel(None))
         + "\n---\n"
-        + render_outlook_plain(ROWS)
+        + render_outlook_plain(ROWS, ampel=AMPEL_ALLGEMEIN)
     )
 
 

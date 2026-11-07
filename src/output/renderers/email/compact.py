@@ -195,22 +195,17 @@ def render_compact(
     metric_ids = resolve_trip_active_metrics(
         dc.metrics, altbestand=trip_metrics_altbestand,
     )
-    # Issue #1474b: die Erwaehnungsschwelle (nicht die Alarm-Schwelle,
-    # ADR-0043 -- andere Achse) treibt die Mail-Pillen, SMS-identisch.
-    sms_mention_thresholds = {
-        mc.metric_id: mc.sms_threshold
-        for mc in dc.metrics
-        if mc.sms_threshold is not None
-    }
-    # Issue #1728 Scheibe 1 (DEC-5): unbedingt die Spanne, kein
-    # Lesen von ``mc.aggregations``.
+    # Issue #2792 S1c-4b: Einstieg loest die Ampel des Abos (``dc``) EINMAL
+    # auf. (E1): Erwaehnung nach der Ampel, `sms_threshold` wirkt nicht mehr.
+    # Issue #1728 Scheibe 1 (DEC-5): unbedingt die Spanne, kein Lesen von
+    # ``mc.aggregations``.
+    ampel = resolve_ampel(dc)
     pills = build_metrics_summary_pills(
-        segments, metric_ids, sms_mention_thresholds, tz=tz,
+        segments, metric_ids, {}, tz=tz,
         night_weather=night_weather, has_gap=has_gap,
         day_window_start_hour=day_window_start_hour,
         day_window_end_hour=day_window_end_hour, lang=lang,
-        # Issue #2792 S1c-1: Einstieg loest die Ampel auf; bis S1c-4 „allgemein".
-        ampel=resolve_ampel(None),
+        ampel=ampel,
     ) if metric_ids else []
     if pills:
         lines.append(f"== {_ascii(t('mail.pille.ueberschrift', lang))} ==")
@@ -276,7 +271,7 @@ def render_compact(
                              for i in range(len(columns))]
                     if gew_index is not None:
                         texte[gew_index] = _compact_thunder_field(
-                            format_trend_tokens(stage, lang=lang), stage, lang,
+                            format_trend_tokens(stage, lang=lang, ampel=ampel), stage, lang,
                         )
                     values = "  ".join(
                         f"{c['label']} {texte[i]}" for i, c in enumerate(columns)
@@ -284,7 +279,7 @@ def render_compact(
                     lines.append(_ascii(f"{weekday:<3} {values}".rstrip()))
             else:
                 for stage in multi_day_trend:
-                    tok = format_trend_tokens(stage, lang=lang)
+                    tok = format_trend_tokens(stage, lang=lang, ampel=ampel)
                     weekday = stage.get("weekday", "")
                     name = stage.get("name", "")
                     thunder_field = _compact_thunder_field(tok, stage, lang)

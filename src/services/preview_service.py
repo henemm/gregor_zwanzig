@@ -8,8 +8,10 @@ ruft dann format_email() direkt auf — kein Versand, nur Render.
 """
 from __future__ import annotations
 
+import contextvars
 import json
 import logging
+from concurrent.futures import ThreadPoolExecutor
 from datetime import date, datetime, timezone
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -187,17 +189,8 @@ class PreviewService:
             provider = FixtureProvider(str(_FIXTURE_DIR))
         else:
             provider = None
-        segment_weather = scheduler._fetch_weather(segments, provider=provider)
-        if not segment_weather:
-            raise fehler_mit_code(RuntimeError, "vorschau_wetter_fehlt",
-                                  trip_id=trip.id, datum=target.isoformat())
-
         from utils.timezone import tz_for_coords
         trip_tz = tz_for_coords(segments[0].start_point.lat, segments[0].start_point.lon)
-
-        stage = trip.get_stage_for_date(target)
-        stage_name = trip.numbered_stage_label(stage) if stage else None
-        stage_stats = scheduler._compute_stage_stats(stage) if stage else None
 
         # Issue #1209 (Scheibe B): EINZIGER Ableitungspfad report_config ->
         # render-wirksame Optionen, ersetzt den Patch-Hack (F002), der
@@ -206,6 +199,50 @@ class PreviewService:
         render_options = resolve_report_render_options(
             trip.report_config, trip.display_config, report_type,
         )
+
+        # Issue #1839 (Ae3): der Etappen-Trend haengt weder vom Hauptabruf noch
+        # vom Nachtwetter ab und laeuft deshalb in EIGENEM Thread gleichzeitig
+        # dazu (nicht im gemeinsamen Pool, dort liefe er bei Vollbelegung
+        # inline seriell). copy_context() bringt ContextVar-Werte (call_log-
+        # Quelle u. a.) in den Zweig. Der `with`-Block wartet beim Verlassen
+        # IMMER auf den Trend-Thread -- auch wenn der Hauptzweig wirft (kein
+        # verwaister Thread).
+        with ThreadPoolExecutor(max_workers=1, thread_name_prefix="preview-trend") as pool:
+            trend_future = None
+            if render_options.show_multi_day_trend:
+                # Issue #1720 S1: `report_type` ist hier NICHT optional -- der
+                # Zeilenbau loest damit die Ausblick-Spalten auf. Ohne ihn baute
+                # die Vorschau die Zellen nach dem Abend-Default (Spaltenversatz
+                # bei Morgen-/Abend-Overrides, nur in der Vorschau).
+                trend_future = pool.submit(
+                    contextvars.copy_context().run,
+                    scheduler._build_stage_trend,
+                    trip, target, now_utc=now_utc, tz=trip_tz,
+                    report_type=report_type,
+                )
+            try:
+                segment_weather, night_weather = self._fetch_main_and_night(
+                    scheduler, segments, trip, target, provider, user_id,
+                )
+            except BaseException:
+                # Hauptzweig wirft: Trend abwarten, seinen Fehler nicht still
+                # verschlucken (protokollieren), Ausnahme des Hauptzweigs steigt
+                # unveraendert auf.
+                if trend_future is not None:
+                    trend_exc = trend_future.exception()
+                    if trend_exc is not None:
+                        logger.warning(
+                            "Vorschau-Trend verworfen, Hauptabruf gescheitert: %r",  # i18n-log
+                            trend_exc,
+                        )
+                raise
+            # Zusammenfuehrung: ein Trend-Fehler steigt hier auf wie frueher
+            # beim seriellen Aufruf.
+            trend_result = trend_future.result() if trend_future is not None else None
+
+        stage = trip.get_stage_for_date(target)
+        stage_name = trip.numbered_stage_label(stage) if stage else None
+        stage_stats = scheduler._compute_stage_stats(stage) if stage else None
 
         # Fix #1297: Vorschau-Pfad war nicht Teil von ADR-0025. multi_day_trend
         # und thunder_forecast werden hier ueber DIESELBEN Scheduler-Methoden
@@ -232,13 +269,7 @@ class PreviewService:
         # Vorschau-Eintrag (vorher danach) — sonst faehrt der Vorschau-Pfad
         # den Vorschau-Satz ohne die Nacht-Reihe und divergiert vom Versand
         # (AC-9). Reine Umstellung, kein zusaetzlicher Abruf.
-        from services.segment_weather import fetch_night_weather, night_weather_needed
-        night_weather = None
-        if segment_weather and night_weather_needed(trip.display_config):
-            night_weather = fetch_night_weather(
-                segment_weather[-1], provider=provider, user_id=user_id,
-            )
-
+        # (Beschaffung: _fetch_main_and_night, oben vor dem Trend zusammengefuehrt.)
         multi_day_trend = None
         outlook_state = None
         outlook_horizon_days = None
@@ -248,15 +279,7 @@ class PreviewService:
         # bereits die Etappe gewaehlt hat. Die frueher hier lokal aufgeloeste
         # zweite `datetime.now(timezone.utc)` entfaellt ersatzlos (ADR-0051
         # Regel 3, keine Umgebungsuhr).
-        if segment_weather and render_options.show_multi_day_trend:
-            # Issue #1720 S1: `report_type` ist hier NICHT optional -- der
-            # Zeilenbau loest damit die Ausblick-Spalten auf. Ohne ihn baute
-            # die Vorschau die Zellen nach dem Abend-Default (Spaltenversatz
-            # bei Morgen-/Abend-Overrides, nur in der Vorschau).
-            trend_result = scheduler._build_stage_trend(
-                trip, target, now_utc=now_utc, tz=trip_tz,
-                report_type=report_type,
-            )
+        if trend_result is not None:
             multi_day_trend = trend_result.rows
             outlook_state = trend_result.state
             outlook_horizon_days = trend_result.horizon_days
@@ -296,6 +319,25 @@ class PreviewService:
             night_weather=night_weather,
         )
         return report, segment_weather, stage_name, trip_tz
+
+    @staticmethod
+    def _fetch_main_and_night(scheduler, segments, trip, target, provider, user_id):
+        """Hauptabruf plus Nachtwetter (Issue #1839: Hauptzweig neben dem Trend).
+
+        Reihenfolge und Aufrufe unveraendert gegenueber dem frueheren seriellen
+        Pfad: Nachtwetter wartet auf ``segment_weather[-1]``.
+        """
+        segment_weather = scheduler._fetch_weather(segments, provider=provider)
+        if not segment_weather:
+            raise fehler_mit_code(RuntimeError, "vorschau_wetter_fehlt",
+                                  trip_id=trip.id, datum=target.isoformat())
+        from services.segment_weather import fetch_night_weather, night_weather_needed
+        night_weather = None
+        if night_weather_needed(trip.display_config):
+            night_weather = fetch_night_weather(
+                segment_weather[-1], provider=provider, user_id=user_id,
+            )
+        return segment_weather, night_weather
 
     def _render_email(
         self,

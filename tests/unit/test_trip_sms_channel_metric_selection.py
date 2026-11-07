@@ -191,8 +191,12 @@ def test_ohne_sms_layout_gilt_weiterhin_die_globale_auswahl():
     )
 
 
-def test_globaler_sms_schwellwert_wirkt_auch_bei_sms_eigener_auswahl():
-    """AC-9-Leitplanke: ``sms_threshold`` bleibt eine GLOBALE Groesse.
+def test_globaler_sms_schwellwert_wirkt_nicht_mehr_auch_bei_sms_eigener_auswahl():
+    """Issue #2792 S1c-4b (E1, AC-19 e) -- umgekehrt: die globale SMS-Schwelle
+    (50 km/h) wirkt NICHT mehr; die Hervorhebung folgt der Ampel („allgemein":
+    Böen gelb ab 30) -- Böen 30 @10 erscheinen, Wind (max 15) bleibt „W-".
+
+    Historie (vor E1) -- AC-9-Leitplanke: ``sms_threshold`` bleibt eine GLOBALE Groesse.
 
     Die vom Editor geschriebenen Kanal-Layouts (``buildWeatherConfigMetrics``,
     metricsEditor.ts:332) fuehren KEIN ``sms_threshold``-Feld. Wird ``_sms_thr``
@@ -213,8 +217,7 @@ def test_globaler_sms_schwellwert_wirkt_auch_bei_sms_eigener_auswahl():
         },
     )
     sms = _render_sms(dc)
-    assert "W-" in sms.split() and "G-" in sms.split(), (
-        "AC-9-Leitplanke FAIL: der global konfigurierte SMS-Schwellwert (50 km/h) "
-        "unterdrueckt Wind/Boeen nicht mehr, sobald der SMS-Kanal eine eigene "
-        f"Metrikliste hat. SMS-Text: {sms!r}."
+    assert "W-" in sms.split() and "G30@10" in sms.split(), (
+        "E1: die globale SMS-Schwelle (50 km/h) darf Böen ab Gelb (30) nicht "
+        f"mehr unterdruecken. SMS-Text: {sms!r}."
     )

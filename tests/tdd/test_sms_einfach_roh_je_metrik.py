@@ -33,6 +33,7 @@ Keine Mocks: Builder mit echten ``DailyForecast``-Werten, Produkt-Durchlaeufe ue
 echten Loader/Kaskade/Formatter mit dem Transport-Aufzeichner als einziger Naht.
 """
 from __future__ import annotations
+from tests.helpers.ampel_allgemein import AMPEL_ALLGEMEIN
 
 
 import pytest
@@ -133,21 +134,22 @@ def test_ac5_wolken_erst_und_spitzenwert_als_stufen():
     ``CT:BKN@4(OVC@9)`` (Worst-Case-Beispiel der Spec). Gleiche Stufe an
     verschiedenen Stunden kollabiert NICHT (``CT:SCT@4(SCT@9)``); die Schwelle
     selbst arbeitet weiter auf den ZAHLEN."""
+    # Issue #2792 S1c-4b (E1) -- umgestellt: die eingestellte Schwelle
+    # (`threshold=`) wirkt nicht mehr; Bewoelkung hat keinen Ampel-Leser,
+    # das Token zeigt deshalb in beiden Modi die Spitze (frueher
+    # CT75@4(95@9) / CT:BKN@4(OVC@9) / CT:SCT@4(SCT@9) / CT:SCT@9).
     serie = (_hv(4, 75), _hv(9, 95))
     roh = zeile({"cloud_total_hourly": serie}, [spec("CT", "raw", "cloud_total", threshold=50.0)])
     einfach = zeile({"cloud_total_hourly": serie}, [spec("CT", "symbol", "cloud_total", threshold=50.0)])
-    assert "CT75@4(95@9)" in tokens_von(roh), roh
-    assert "CT:BKN@4(OVC@9)" in tokens_von(einfach), (
-        f"AC-5: erwartet 'CT:BKN@4(OVC@9)', erhalten {einfach!r}"
+    assert "CT95@9" in tokens_von(roh), roh
+    assert "CT:OVC@9" in tokens_von(einfach), (
+        f"AC-5: erwartet 'CT:OVC@9', erhalten {einfach!r}"
     )
     gleich = (_hv(4, 60), _hv(9, 70))
-    einfach2 = zeile({"cloud_total_hourly": gleich},
-                     [spec("CT", "symbol", "cloud_total", threshold=50.0)])
-    assert "CT:SCT@4(SCT@9)" in tokens_von(einfach2), einfach2
-    # Schwelle arbeitet auf Zahlen: Erstwert erst ab 62 % -> Stunde 9 ist der Erstwert.
-    schwelle = zeile({"cloud_total_hourly": gleich},
-                     [spec("CT", "symbol", "cloud_total", threshold=65.0)])
-    assert "CT:SCT@9" in tokens_von(schwelle), schwelle
+    for thr in (50.0, 65.0):
+        einfach2 = zeile({"cloud_total_hourly": gleich},
+                         [spec("CT", "symbol", "cloud_total", threshold=thr)])
+        assert "CT:SCT@9" in tokens_von(einfach2), (thr, einfach2)
 
 
 def test_ac5_orakel_liest_roh_als_raw_und_einfach_als_friendly():
@@ -353,7 +355,7 @@ def test_s6b_ac4_vorschau_kennt_keine_cape_einfachform():
     def vorschau(fm: str) -> str:
         specs = build_sms_fidelity_specs(["cloud_total", "cape"], format_by_metric={"cape": fm})
         return render_line(
-            build_token_line(forecast, specs, report_type="evening", stage_name="E1"), 160,
+            build_token_line(forecast, specs, report_type="evening", stage_name="E1", ampel=AMPEL_ALLGEMEIN), 160,
         )
 
     einfach, roh = vorschau("symbol"), vorschau("raw")
@@ -574,7 +576,9 @@ def test_ac8_vakuum_schutz_jede_produkterreichbare_groesse_hat_einen_geprueften_
 
 #: Golden-SMS nach S6 (AC-1 + AC-9): ``TF`` neu (+7), Wolken als Stufe (+2) --
 #: 55 -> 64 Zeichen.
-GOLDEN_SMS_NACH_S6 = "E1: TF-3@6 W20@4 R2.0@4 PR60%@4 G45@4 TH:M@4 TH+:- CT:SCT@4 SU16"
+#: Issue #2792 S1c-4b (E1, AC-19 e): Wind 20 liegt unter Gelb der Ampel
+#: „allgemein" (30) -> ``W-`` statt ``W20@4`` (61 Zeichen).
+GOLDEN_SMS_NACH_S6 = "E1: TF-3@6 W- R2.0@4 PR60%@4 G45@4 TH:M@4 TH+:- CT:SCT@4 SU16"
 
 
 def test_ac9_golden_sms_text_und_laenge_nach_s6(monkeypatch):
@@ -584,7 +588,7 @@ def test_ac9_golden_sms_text_und_laenge_nach_s6(monkeypatch):
     64 Zeichen, in SMS, Premium-SMS und Telegram-Kurzform. HANDGESCHRIEBENE
     Soll-Werte (nicht aus dem aktuellen Output eingefroren). Die unveraenderten
     Goldens tragen ``cloud_total`` mit ``use_friendly_format: true``."""
-    assert len(GOLDEN_SMS_NACH_S6) == 64
+    assert len(GOLDEN_SMS_NACH_S6) == 61
     mit_b, _ = render_golden(monkeypatch, "golden_b")
     mit_a, _ = render_golden(monkeypatch, "golden_a")
     kurz = [s for s in mit_a.sendungen("telegram") if s["parse_mode"] is None][0]["body"]
@@ -594,7 +598,7 @@ def test_ac9_golden_sms_text_und_laenge_nach_s6(monkeypatch):
         ("telegram_kurzform", kurz),
     ):
         assert text == GOLDEN_SMS_NACH_S6, (
-            f"AC-9 ({kanal}): erwartet {GOLDEN_SMS_NACH_S6!r} (64 Zeichen), "
+            f"AC-9 ({kanal}): erwartet {GOLDEN_SMS_NACH_S6!r} (61 Zeichen), "
             f"erhalten {text!r} ({len(text)} Zeichen)"
         )
 
@@ -652,7 +656,7 @@ def test_ac11_vorschau_und_versand_tragen_dieselben_wolken_token(monkeypatch):
             f"(erwartet Schluesselwort 'format_by_metric'): {exc}"
         )
     vorschau = render_line(
-        build_token_line(forecast, specs, report_type="evening", stage_name="E1"), 160,
+        build_token_line(forecast, specs, report_type="evening", stage_name="E1", ampel=AMPEL_ALLGEMEIN), 160,
     )
     for sym in ("CT", "CL", "CM", "CH"):
         assert token(vorschau, sym) == token(real, sym) and token(real, sym) is not None, (

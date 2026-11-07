@@ -36,6 +36,7 @@ Prueforte:
 Kein ``Mock()``, kein ``patch()``, kein Netz, keine Mail.
 """
 from __future__ import annotations
+from tests.helpers.ampel_allgemein import AMPEL_ALLGEMEIN
 
 import re
 from pathlib import Path
@@ -107,7 +108,10 @@ class TestAC2NegativeRange:
         sms = F.sms(*_TEMP_BOTH,
                     segments=[F.segment(temp_min=-12.0, temp_max=-4.0)])
 
-        assert "D-12/-4" in F.tokens(sms), (
+        # Issue #2792 S1c-4b (AC-1, §5): beide Haelften sind bei „allgemein"
+        # gelb oder schlechter (Frost) und tragen deshalb ihre Stunde; das
+        # Minuszeichen bleibt Vorzeichen, ``/`` der einzige Trenner.
+        assert "D-12@8/-4@11" in F.tokens(sms), (
             "Wintertag mit −12/−4 °C muss als 'D-12/-4' erscheinen; ein "
             "Bindestrich als Trenner ('D-12--4') waere nicht eindeutig "
             f"parsbar.\nSMS: {sms}"
@@ -315,7 +319,7 @@ class TestAC16RangeTokenIsAtomicUnderTruncation:
         for max_length in range(20, 130):
             sms = SMSTripFormatter().format_sms(
                 segments, stage_name=F.STAGE_NAME, report_type="evening",
-                tz=F.TZ, night_weather=F.night_weather(), max_length=max_length,
+                tz=F.TZ, night_weather=F.night_weather(), max_length=max_length, ampel=AMPEL_ALLGEMEIN,
             )
             toks = F.tokens(sms)
             d_token = F.token_with_symbol(sms, "D")

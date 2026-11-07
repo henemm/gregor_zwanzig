@@ -26,6 +26,7 @@ if TYPE_CHECKING:
 
 from utils.timezone import local_dt, local_fmt, local_hour
 
+from app.ampel import resolve_ampel
 from app.metric_catalog import build_default_display_config, get_col_defs, get_metric, get_metric_by_col_key
 from app.models import (
     ExposedSection,
@@ -368,25 +369,9 @@ class TripReportFormatter:
         _sms_position_by_metric: dict[str, int] = {
             m.metric_id: i for i, m in enumerate(_sms_metrics_ordered)
         }
-        _global_metrics = {m.metric_id: m for m in _dc_uncollapsed.metrics}
-        # Issue #624: konfigurierte Schwellwerte aus MetricConfig ableiten.
-        _sms_thr = {
-            SMS_SYMBOL_BY_METRIC[mid]: _global_metrics[mid].sms_threshold
-            for mid in sms_metric_ids
-            if mid in SMS_SYMBOL_BY_METRIC
-            and mid in _global_metrics
-            and _global_metrics[mid].sms_threshold is not None
-        }
-        # Fix #1482 (AC-6): der Gewitter-Schwellwert gilt fuer BEIDE Kuerzel.
-        # SMS_SYMBOL_BY_METRIC bildet 1:1 ab und kennt nur 'TH:', deshalb fiel
-        # 'TH+:' bisher immer auf den hartkodierten Default (1.0) zurueck.
-        _thunder_global = _global_metrics.get("thunder")
-        if (
-            "thunder" in sms_metric_ids
-            and _thunder_global is not None
-            and _thunder_global.sms_threshold is not None
-        ):
-            _sms_thr["TH+:"] = _thunder_global.sms_threshold
+        # Issue #2792 S1c-4b (E1, Spec v1.5 Punkt 4): die frueheren SMS-
+        # Schwellwerte aus `MetricConfig.sms_threshold` (#624/#1482) entfallen;
+        # die SMS bekommt die Ampel derselben dc wie die Mail (unten).
         # Bug #944: SMS-Symbole ohne aktive Metrik als deaktivierte Specs führen,
         # damit SD/SL nicht erscheinen, wenn die Metrik im Trip nicht gewählt ist —
         # unabhängig davon, ob Schneedaten in der Vorhersage vorhanden sind.
@@ -474,7 +459,6 @@ class TripReportFormatter:
             report_type=report_type,
             tz=self._tz,
             max_length=160,
-            thresholds=_sms_thr or None,
             thunder_forecast=thunder_forecast,
             disabled_specs=_disabled_sms_specs or None,
             night_weather=night_weather,
@@ -482,6 +466,8 @@ class TripReportFormatter:
             day_window_start_hour=_dw_start,
             day_window_end_hour=_dw_end,
             sms_alert_min_level=_sms_alert_min_level,
+            # Issue #2792 S1c-4b: Ampel aus derselben dc wie die Mail.
+            ampel=resolve_ampel(_dc_uncollapsed),
         )
 
         # Issue #1001 AC-10: telegram_kurzform ist wirkungslos (Kurzuebersicht-

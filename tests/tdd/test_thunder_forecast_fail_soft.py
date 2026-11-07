@@ -13,6 +13,7 @@ Datenlücken greift. Dadurch wird `_fetch_weather()` gar nicht erst aufgerufen
 Spec: docs/specs/bugfix/fix_1275_sms_th_mismatch.md (AC-3)
 """
 from __future__ import annotations
+from tests.helpers.ampel_allgemein import AMPEL_ALLGEMEIN
 
 from datetime import date, timedelta
 
@@ -125,7 +126,7 @@ class TestThunderForecastFailSoft:
         sms = SMSTripFormatter().format_sms(
             [_today_segment()],
             report_type="evening",
-            thunder_forecast=thunder_forecast,
+            thunder_forecast=thunder_forecast, ampel=AMPEL_ALLGEMEIN,
         )
         assert "TH+:-" in sms, (
             f"Fail-soft: ohne beschaffbare Folge-Etappe muss die SMS 'TH+:-' "

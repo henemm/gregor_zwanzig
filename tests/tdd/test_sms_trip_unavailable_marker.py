@@ -16,6 +16,7 @@ Segment-Builder-Muster uebernommen aus
 tests/tdd/test_official_alerts_unavailable_hint.py.
 """
 from __future__ import annotations
+from tests.helpers.ampel_allgemein import AMPEL_ALLGEMEIN
 
 from datetime import datetime, timezone
 from zoneinfo import ZoneInfo
@@ -86,7 +87,7 @@ def _render_sms(segments):
     from output.renderers.sms_trip import SMSTripFormatter
     return SMSTripFormatter().format_sms(
         segments, max_length=160, tz=_TZ, report_type="evening",
-        stage_name="Etappe 1",
+        stage_name="Etappe 1", ampel=AMPEL_ALLGEMEIN,
     )
 
 

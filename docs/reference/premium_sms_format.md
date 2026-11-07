@@ -1,10 +1,10 @@
 ---
 entity_id: premium_sms_format
 type: reference
-version: "1.0"
+version: "1.1"
 status: active
 created: 2026-10-21
-updated: 2026-10-21
+updated: 2026-11-06
 tags: [premium-sms, garmin, inreach, sms, channel, inbound, reference]
 ---
 
@@ -28,6 +28,8 @@ ADR-0049 (eigener Kanal), ADR-0095 (Kanal-Parität, Alarm-Kanal in Trip und Orts
 | Zeichensatz | ASCII/GSM-7 über `fold_ascii()` (ADR-0022): Umlaut-Digraphen, dann `anyascii`; nicht faltbar → `?`. Ein GSM-7-fremdes Zeichen schaltete auf UCS-2 und halbierte das Budget |
 | Ad-hoc-Verlauf (Befehl) | Kurzform `sms_format.md` §5a, immer **genau eine** Nachricht (`_KURZFORM_KANAELE = ("premium_sms", "sms")`) |
 | Mehrteilig | nein — jede Sendung ist ein einzelner seven.io-Aufruf |
+
+**Hervorhebung (#2792 S1c-4b):** Da der Text der SMS entspricht, gilt auch hier die Profil-Ampel des Abos: Spitzenwerte `@{h}` ab gelb oder schlechter (beidseitig), Gewitter ab „leicht“, Temperatur mit Stunde nur ab Gelb. Die Regeln stehen in `sms_format.md` §3.2 und §3.2a; `sms_threshold` wirkt nicht mehr.
 
 ## 2. Unterschiede zur normalen SMS
 

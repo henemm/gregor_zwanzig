@@ -14,6 +14,7 @@ Verhaltenstests — KEINE Mocks. Echte `ComparisonResult`/`LocationResult`/
 `SavedLocation`/`OfficialAlert`-Objekte durch die echte `render_compare_html`.
 """
 from __future__ import annotations
+from tests.helpers.ampel_allgemein import PRESET_ALLGEMEIN
 
 from datetime import date, datetime, timezone
 
@@ -74,7 +75,7 @@ def _seven_locations_six_alerts():
 def test_ac4_banner_and_matrix_and_per_location_strip_all_present():
     from output.renderers.email.compare_html import render_compare_html
     html = render_compare_html(
-        _seven_locations_six_alerts(), profile=ActivityProfile.ALLGEMEIN,
+        _seven_locations_six_alerts(), profile=ActivityProfile.ALLGEMEIN, preset=PRESET_ALLGEMEIN,
     )
 
     # (1) Aggregat-Banner: höchste amtliche Stufe ROT + führender Ort Marseille.
@@ -101,7 +102,7 @@ def test_ac4_banner_and_matrix_and_per_location_strip_all_present():
 def test_ac4_banner_counts_affected_locations():
     from output.renderers.email.compare_html import render_compare_html
     html = render_compare_html(
-        _seven_locations_six_alerts(), profile=ActivityProfile.ALLGEMEIN,
+        _seven_locations_six_alerts(), profile=ActivityProfile.ALLGEMEIN, preset=PRESET_ALLGEMEIN,
     )
     assert "6 von 7" in html, (
         f"Aggregat-Banner muss die betroffenen Orte zählen (6 von 7): {html[:400]!r}"

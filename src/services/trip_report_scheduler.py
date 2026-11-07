@@ -23,6 +23,7 @@ from zoneinfo import ZoneInfo
 
 import httpx
 
+from app.ampel import resolve_ampel
 from app.config import Settings, resolve_public_url
 from app.loader import LoaderError, get_data_dir, load_all_trips, update_trip
 from i18n import Lang, resolve_user_lang, t
@@ -3039,13 +3040,7 @@ class TripReportSchedulerService:
                     for dp in sw.timeseries.data
                 ]
 
-                # Resolve per-metric sms_threshold from trip display config (AC-2)
-                _sms_thr: dict = {}
                 dc = getattr(stage_trip, "display_config", None)
-                if dc is not None:
-                    for mc in dc.metrics:
-                        if mc.sms_threshold is not None:
-                            _sms_thr[mc.metric_id] = mc.sms_threshold
 
                 # Issue #1653: konfiguriertes Tagesfenster durchreichen, damit
                 # die Gewitter-Zelle des Ausblicks Tag und Nacht am selben
@@ -3059,7 +3054,9 @@ class TripReportSchedulerService:
                 )
                 row = build_outlook_row(
                     agg, _flat_points, fmt_weekday(stage.date, self._lang), _tz,
-                    sms_thresholds=_sms_thr,
+                    # Issue #2792 S1c-4b (Spec v1.5 Punkt 3): je stage_trip
+                    # dessen Ampel; `sms_threshold` wirkt nicht mehr (E1).
+                    ampel=resolve_ampel(stage_trip),
                     # #1720 S1: ungekollabierte Konfiguration durchreichen,
                     # nicht selbst aufloesen -- Renderer-Vokabular gehoert in
                     # die Ausgabeschicht (test_scheduler_has_no_output_imports).

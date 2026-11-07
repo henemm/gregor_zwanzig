@@ -20,6 +20,7 @@ Grammatik-Klassen gleichzeitig ein konsistentes Ergebnis liefert -- das ist
 die EINE Quelle, die Telegram-Kurzform unveraendert uebernimmt.
 """
 from __future__ import annotations
+from tests.helpers.ampel_allgemein import AMPEL_ALLGEMEIN
 
 import dataclasses
 
@@ -32,7 +33,7 @@ def _render(today: DailyForecast, config: list[MetricSpec], *,
             max_length: int = 160) -> str:
     forecast = NormalizedForecast(days=(today,))
     line = build_token_line(
-        forecast, config, report_type=report_type, stage_name=stage_name,
+        forecast, config, report_type=report_type, stage_name=stage_name, ampel=AMPEL_ALLGEMEIN,
     )
     return line.render(max_length)
 
@@ -157,7 +158,10 @@ def test_ac12_new_tokens_drop_before_any_wintersport_token():
             f"Wintersport-Token {wintersport_token!r} darf bei dieser Ueberlaenge "
             f"NICHT vor den 14 neuen Token entfernt werden: {truncated!r}"
         )
-    for safety_token_prefix in ("R0.2@6", "PR40%@11", "W18@11", "G25@11", "TH:M@16"):
+    # Issue #2792 S1c-4b (E1, AC-19 e): Hervorhebung ab Gelb der Ampel
+    # „allgemein" statt DEFAULTS -- R ab 1 mm (1.4@16), Wind 18/28 unter 30
+    # („W-"), Böen ab 30 (40@15); frueher R0.2@6 / W18@11 / G25@11.
+    for safety_token_prefix in ("R1.4@16", "PR40%@11", " W- ", "G40@15", "TH:M@16"):
         assert safety_token_prefix in truncated, (
             f"Sicherheitstoken {safety_token_prefix!r} darf bei dieser moderaten "
             f"Ueberlaenge nicht betroffen sein: {truncated!r}"
@@ -189,7 +193,9 @@ def test_ac14_sms_and_telegram_kurzform_share_the_same_rendered_text():
     # diese Erwartung fuer alle drei Grammatik-Klassen gleichzeitig.
     telegram_kurzform_line = sms_line
 
-    assert "HU88@14(92@17)" in sms_line
+    # Issue #2792 S1c-4b (Spec §5 Punkt 5): Luftfeuchte fest ab 90 % statt
+    # `threshold=85.0` (E1) -- 88 bleibt unerwaehnt (frueher HU88@14(92@17)).
+    assert "HU92@17" in sms_line
     assert "VS0.6@11" in sms_line
     assert "WD:NW" in sms_line
     assert sms_line == telegram_kurzform_line, (

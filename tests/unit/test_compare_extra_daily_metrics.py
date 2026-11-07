@@ -21,6 +21,7 @@ Fixtures/Helfer bewusst identisch zum Vorbild
 fehlten, weil #1285 sie nicht brauchte.
 """
 from __future__ import annotations
+from tests.helpers.ampel_allgemein import PRESET_ALLGEMEIN
 
 import re
 from datetime import date, datetime, timezone
@@ -191,7 +192,7 @@ def test_selected_temp_min_metric_appears_in_overview_matrix():
     result = _result()
     enabled = resolve_enabled_metrics(["temp_min_c"])
 
-    html = render_compare_html(result, enabled_metrics=enabled)
+    html = render_compare_html(result, enabled_metrics=enabled, preset=PRESET_ALLGEMEIN)
     row = _assert_row_with_values(html, _IS_TEMP_MIN, "Temperatur (Minimum)")
 
     expected = WeatherMetricsService().compute_basis_metrics(_timeseries(_hourly()), tz=None).temp_min_c
@@ -207,7 +208,7 @@ def test_selected_gust_max_metric_appears_in_overview_matrix():
     result = _result()
     enabled = resolve_enabled_metrics(["gust_max_kmh"])
 
-    html = render_compare_html(result, enabled_metrics=enabled)
+    html = render_compare_html(result, enabled_metrics=enabled, preset=PRESET_ALLGEMEIN)
     row = _assert_row_with_values(html, _IS_GUST, "Böen")
 
     expected = WeatherMetricsService().compute_basis_metrics(_timeseries(_hourly()), tz=None).gust_max_kmh
@@ -225,7 +226,7 @@ def test_selected_cape_metric_no_longer_appears_in_overview_matrix():
     result = _result()
     enabled = resolve_enabled_metrics(["cape_max_jkg"])
 
-    html = render_compare_html(result, enabled_metrics=enabled)
+    html = render_compare_html(result, enabled_metrics=enabled, preset=PRESET_ALLGEMEIN)
     assert _find_row(html, _IS_CAPE) is None, (
         f"CAPE erscheint weiterhin in der Uebersichts-Matrix: {_labels(html)}"
     )
@@ -238,7 +239,7 @@ def test_selected_freezing_level_metric_appears_in_overview_matrix():
     result = _result()
     enabled = resolve_enabled_metrics(["freezing_level_m"])
 
-    html = render_compare_html(result, enabled_metrics=enabled)
+    html = render_compare_html(result, enabled_metrics=enabled, preset=PRESET_ALLGEMEIN)
     row = _assert_row_with_values(html, _IS_FREEZING, "Nullgradgrenze")
 
     svc = WeatherMetricsService()
@@ -356,7 +357,7 @@ def test_existing_eleven_metrics_unchanged_after_fix():
     result = _result()
     enabled = resolve_enabled_metrics(["temp_max_c", "wind_max_kmh", "cloud_avg_pct"])
 
-    html = render_compare_html(result, enabled_metrics=enabled)
+    html = render_compare_html(result, enabled_metrics=enabled, preset=PRESET_ALLGEMEIN)
 
     assert _labels(html) == [
         "Amtliche Warnungen", "Temperatur", "Wind", "Bewölkung",

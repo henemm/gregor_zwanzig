@@ -29,6 +29,7 @@ Mock-frei: echte `OfficialAlert`/`OfficialAlertNotice`-DTOs, echte Renderer
 gerenderten HTML per BeautifulSoup, kein Dateiinhalt-Check am Quellcode.
 """
 from __future__ import annotations
+from tests.helpers.ampel_allgemein import PRESET_ALLGEMEIN
 
 import re
 from datetime import date, datetime, timezone
@@ -689,7 +690,7 @@ def test_f004_compare_aggregate_banner_no_duplicate_level_in_type():
         locations=[toulon, marseille], time_window=(7, 16),
         target_date=date(2026, 7, 14), created_at=_dt(2026, 7, 13, 4, 1),
     )
-    html = render_compare_html(result)
+    html = render_compare_html(result, preset=PRESET_ALLGEMEIN)
     soup = BeautifulSoup(html, "html.parser")
 
     type_texts = [el.get_text(strip=True) for el in soup.select(".wb-type")]

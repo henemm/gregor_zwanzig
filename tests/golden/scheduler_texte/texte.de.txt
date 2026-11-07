@@ -17,7 +17,7 @@ Nachgeliefert — der Wetterdienst war um 6:00 nicht erreichbar
 ----- nachlieferung.komplett.telegram -----
 Nachgeliefert — der Wetterdienst war um 6:00 nicht erreichbar
 ----- nachlieferung.komplett.sms -----
-E1: TF- W15@4 G22@4 R- CT:SCT@4 VS9.0@4 SU16 SD5
+E1: TF- W- G- R- CT:SCT@4 VS- SU16 SD5
 ----- nachlieferung.vollstaendig.ergebnis -----
 (1, 0)
 ----- nachlieferung.vollstaendig.betreff -----
@@ -29,7 +29,7 @@ Aktualisiert — jetzt mit vollständigen Daten
 ----- nachlieferung.vollstaendig.telegram -----
 Aktualisiert — jetzt mit vollständigen Daten
 ----- nachlieferung.vollstaendig.sms -----
-E1: TF- W15@4 G22@4 R- CT:SCT@4 VS9.0@4 SU16 SD5
+E1: TF- W- G- R- CT:SCT@4 VS- SU16 SD5
 ----- nachlieferung.unvollstaendig.ergebnis -----
 (1, 0)
 ----- nachlieferung.unvollstaendig.betreff -----
@@ -41,7 +41,7 @@ Aktualisiert — weiterhin unvollständig, Details im Hinweis
 ----- nachlieferung.unvollstaendig.telegram -----
 Aktualisiert — weiterhin unvollständig, Details im Hinweis
 ----- nachlieferung.unvollstaendig.sms -----
-E1: TF? W15@4 G22@4 R? CT:SCT@4 VS9.0@4 SU9 SD5
+E1: TF? W? G? R? CT:SCT@4 VS? SU9 SD5
 ----- nachlieferung.versandfehler.ergebnis -----
 (1, 0)
 ----- nachlieferung.versandfehler.betreff -----
@@ -53,7 +53,7 @@ Nachgeliefert — die Zustellung um 06:00 ist fehlgeschlagen
 ----- nachlieferung.versandfehler.telegram -----
 Nachgeliefert — die Zustellung um 06:00 ist fehlgeschlagen
 ----- nachlieferung.versandfehler.sms -----
-E1: TF- W15@4 G22@4 R- CT:SCT@4 VS9.0@4 SU16 SD5
+E1: TF- W- G- R- CT:SCT@4 VS- SU16 SD5
 ----- ausfall.ausgang -----
 no_weather
 ----- ausfall.betreff -----
@@ -79,7 +79,7 @@ Hinweis: Für folgende Abschnitte liegen aktuell keine Wetterdaten vor (Segment 
 ----- teilausfall.telegram -----
 Hinweis: Für folgende Abschnitte liegen aktuell keine Wetterdaten vor (Segment Ziel) — eine Aktualisierung wird nachgeliefert.
 ----- teilausfall.sms -----
-E1: D2/2 TF? FD?/? W15@4 G22@4 R? TH:? TH+:- SL2200 CT:SCT@4 SU9
+E1: D2/2 TF? FD?/? W? G? R? TH:? TH+:- SL2200 CT:SCT@4 SU9
 ----- servicefehler.betreff -----
 [GR20] Wetterdaten nicht verfuegbar
 ----- servicefehler.header -----

@@ -17,6 +17,7 @@ Kontext: docs/context/fix-2010-2011-gewitter-stufenwoerter.md
 Kern-Schicht, deterministisch: keine Mocks/patch()/MagicMock, kein Netz.
 """
 from __future__ import annotations
+from tests.helpers.ampel_allgemein import AMPEL_ALLGEMEIN
 from app.ampel import resolve_ampel
 
 import re
@@ -39,7 +40,7 @@ from app.models import (
     TripSegment,
 )
 from app.trip import Stage, Trip, Waypoint
-from output.metric_format import THUNDER_LABEL_DE, _THUNDER_AMPEL_BAND
+from output.metric_format import THUNDER_LABEL_DE
 from services.trip_command_processor import (
     CommandResult,
     InboundMessage,
@@ -68,7 +69,7 @@ def test_ac1_thunder_fmt_plain_zeigt_die_vier_korrekten_woerter(level, expected_
     """AC-1: Klartext-Pfad (``with_emoji=False``) zeigt fuer jede Stufe genau
     das kanonische Wort -- insbesondere 'mittel' statt 'mäßig' und 'kein'
     statt 'keins'."""
-    text = _thunder_fmt(level, with_emoji=False)
+    text = _thunder_fmt(level, with_emoji=False, ampel=AMPEL_ALLGEMEIN)
     assert text == expected_word, f"{level}: erwartet {expected_word!r}, erhalten {text!r}"
     assert "mäßig" not in text and "keins" not in text
 
@@ -93,7 +94,7 @@ def test_ac2_thunder_fmt_emoji_behaelt_symbol_und_korrigiert_wort(level, expecte
     Exakter Split statt Teilstring-Suche: 'kein' ist Teilstring von 'keins'
     -- eine reine ``in``-Pruefung wuerde den Bug nicht fangen.
     """
-    text = _thunder_fmt(level, with_emoji=True)
+    text = _thunder_fmt(level, with_emoji=True, ampel=AMPEL_ALLGEMEIN)
     parts = text.split(" ", 1)
     assert len(parts) == 2, f"{level}: erwartet 'EMOJI WORT', erhalten {text!r}"
     assert parts[0] == expected_emoji, f"{level}: Emoji {parts[0]!r}, erwartet {expected_emoji!r}"
@@ -225,7 +226,8 @@ _NONE_STUNDEN = ("10", "13")
 
 @pytest.mark.parametrize(
     "channel,karte",
-    [("email", _thunder_words), ("telegram", _thunder_symbols)],
+    [("email", _thunder_words),
+     ("telegram", lambda: _thunder_symbols(ampel=AMPEL_ALLGEMEIN))],
 )
 def test_ac3_hours_drilldown_none_stunde_zeigt_strich_statt_stufenwort(env, channel, karte):
     """AC-3 / Implementation Details #2010: der NONE-Sonderfall bleibt ein
@@ -268,7 +270,7 @@ def test_ac4_thunder_fmt_plain_folgt_veraendertem_quellwort(monkeypatch):
     ueber ``_thunder_fmt()`` gerenderten Wort erscheinen -- Beleg fuer
     Ableitung statt einmaliger Wert-Kopie."""
     monkeypatch.setitem(THUNDER_LABEL_DE, ThunderLevel.MED, "XTESTWORT")
-    text = _thunder_fmt(ThunderLevel.MED, with_emoji=False)
+    text = _thunder_fmt(ThunderLevel.MED, with_emoji=False, ampel=AMPEL_ALLGEMEIN)
     assert text == "XTESTWORT", (
         f"Erwartet den veraenderten Quellwert 'XTESTWORT', erhalten {text!r} -- "
         "_thunder_fmt() liest THUNDER_LABEL_DE offenbar nicht bei jedem Aufruf."
@@ -320,7 +322,7 @@ def test_ac4_zusammenfassung_glance_timeline_folgen_veraendertem_quellwort(
     ],
 )
 def test_ac5_thunder_risk_level_uebersetzt_alle_vier_stufen_enum(level, expected):
-    assert _thunder_risk_level(level) == expected
+    assert _thunder_risk_level(level, ampel=AMPEL_ALLGEMEIN) == expected
 
 
 @pytest.mark.parametrize(
@@ -328,21 +330,23 @@ def test_ac5_thunder_risk_level_uebersetzt_alle_vier_stufen_enum(level, expected
     [("NONE", "ok"), ("LOW", "yellow"), ("MED", "watch"), ("HIGH", "risk")],
 )
 def test_ac5_thunder_risk_level_uebersetzt_alle_vier_stufen_string(raw, expected):
-    assert _thunder_risk_level(raw) == expected
+    assert _thunder_risk_level(raw, ampel=AMPEL_ALLGEMEIN) == expected
 
 
-def test_ac5_thunder_risk_level_folgt_veraendertem_ampel_band_fuer_med(monkeypatch):
-    """AC-5: Ableitungsnachweis -- ein testlokal veraenderter Eintrag in
-    ``_THUNDER_AMPEL_BAND[MED]`` aendert das Ergebnis fuer MED entsprechend,
-    weil die Uebersetzung jetzt tatsaechlich ueber ``thunder_ampel_band()``
-    laeuft statt ueber eine eigene Wort-Kette."""
-    monkeypatch.setitem(_THUNDER_AMPEL_BAND, ThunderLevel.MED, "red")
-    ergebnis = _thunder_risk_level(ThunderLevel.MED)
+def test_ac5_thunder_risk_level_folgt_der_abo_ampel_fuer_med():
+    """AC-5: Ableitungsnachweis -- die Uebersetzung laeuft ueber die zentrale
+    Abbildung statt ueber eine eigene Wort-Kette. Issue #2792 S1c-4b Fix-Loop 1
+    (F001, Spec Punkt 7) -- umgestellt: „mittel"/„hoch" folgen der Abo-Ampel
+    (``thunder_color``), nicht mehr dem statischen ``_THUNDER_AMPEL_BAND``:
+    Wassersport „mittel" = rot -> 'risk', Allgemein „mittel" = orange ->
+    'watch'. Ein testlokal veraendertes statisches Band wirkt nicht mehr."""
+    ergebnis = _thunder_risk_level(ThunderLevel.MED, ampel=resolve_ampel(
+        {"ampel": {"template": "wassersport"}}))
     assert ergebnis == "risk", (
-        f"Veraendertes Ampelband fuer MED ('red') liefert {ergebnis!r}, erwartet "
-        "'risk' -- _thunder_risk_level() scheint eine eigene Wort-Kette statt "
-        "thunder_ampel_band() zu nutzen."
+        f"Wassersport-MED (rot) liefert {ergebnis!r}, erwartet 'risk' -- "
+        "_thunder_risk_level() liest nicht die Abo-Ampel."
     )
+    assert _thunder_risk_level(ThunderLevel.MED, ampel=AMPEL_ALLGEMEIN) == "watch"
 
 
 # ---------------------------------------------------------------------------
@@ -355,8 +359,8 @@ def test_ac6_thunder_risk_level_none_liefert_ok_statt_none():
     Erweiterung, verhaltensneutral abgesichert (Regressionsschutz-Nachweis
     fuer die Downstream-Wirkung: siehe
     test_thunder_risk_dot_and_tint.py::test_ac4_..., unveraendert gruen)."""
-    assert _thunder_risk_level(ThunderLevel.NONE) == "ok"
-    assert _thunder_risk_level("NONE") == "ok"
+    assert _thunder_risk_level(ThunderLevel.NONE, ampel=AMPEL_ALLGEMEIN) == "ok"
+    assert _thunder_risk_level("NONE", ampel=AMPEL_ALLGEMEIN) == "ok"
 
 
 def test_ac6_row_risk_bleibt_fuer_none_gewitter_unveraendert_ok():

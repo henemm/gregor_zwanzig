@@ -45,6 +45,7 @@ Go-Teil (AC-5) und Frontend-Teil (AC-6) liegen in separaten Dateien:
 ``frontend/src/lib/components/compare/compareEditorHourlyToggle.test.ts``.
 """
 from __future__ import annotations
+from tests.helpers.ampel_allgemein import PRESET_ALLGEMEIN
 
 import email as email_mod
 import imaplib
@@ -129,7 +130,7 @@ class TestRenderCompareHtmlHourlyToggle:
 
         result = _make_comparison_result(["Ort A", "Ort B", "Ort C"])
         html = render_compare_html(
-            result, profile=ActivityProfile.ALLGEMEIN, hourly_enabled=False
+            result, profile=ActivityProfile.ALLGEMEIN, hourly_enabled=False, preset=PRESET_ALLGEMEIN
         )
 
         assert "STUNDEN" not in html, (
@@ -151,9 +152,9 @@ class TestRenderCompareHtmlHourlyToggle:
 
         result = _make_comparison_result(["Ort A", "Ort B", "Ort C"])
         html_explicit = render_compare_html(
-            result, profile=ActivityProfile.ALLGEMEIN, hourly_enabled=True
+            result, profile=ActivityProfile.ALLGEMEIN, hourly_enabled=True, preset=PRESET_ALLGEMEIN
         )
-        html_default = render_compare_html(result, profile=ActivityProfile.ALLGEMEIN)
+        html_default = render_compare_html(result, profile=ActivityProfile.ALLGEMEIN, preset=PRESET_ALLGEMEIN)
 
         for html, label in ((html_explicit, "hourly_enabled=True"), (html_default, "Default")):
             assert "STUNDEN" in html, (
@@ -438,7 +439,7 @@ def _real_html_with_missing_location_table(missing_location_name: str = "Ort B")
     from output.renderers.email.compare_html import render_compare_html
 
     result = _make_comparison_result(["Ort A", missing_location_name, "Ort C"])
-    html = render_compare_html(result, profile=ActivityProfile.ALLGEMEIN)
+    html = render_compare_html(result, profile=ActivityProfile.ALLGEMEIN, preset=PRESET_ALLGEMEIN)
 
     import re
 
@@ -464,7 +465,7 @@ class TestValidatorHourlyEnabledGating:
         result = _make_comparison_result(["Ort A", "Ort B", "Ort C"])
         from output.renderers.email.compare_html import render_compare_html
 
-        html = render_compare_html(result, profile=ActivityProfile.ALLGEMEIN, hourly_enabled=False)
+        html = render_compare_html(result, profile=ActivityProfile.ALLGEMEIN, hourly_enabled=False, preset=PRESET_ALLGEMEIN)
 
         errors = mod.validate_structure(html, hourly_enabled=False)
         assert errors == [], (

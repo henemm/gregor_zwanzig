@@ -44,6 +44,7 @@ Alle neuen Symbole werden per ``getattr(..., None)`` abgefragt — jeder Test
 scheitert mit eigener Assertion, nie mit einem Import-Fehler auf Modulebene.
 """
 from __future__ import annotations
+from tests.helpers.ampel_allgemein import AMPEL_ALLGEMEIN
 from app.ampel import resolve_ampel
 
 import re
@@ -587,7 +588,7 @@ def _briefing_zeile(segment, stage_name: str = "Heute") -> str:
     return SMSTripFormatter().format_sms(
         [segment], tz=TZ, report_type="evening",
         day_window_start_hour=0, day_window_end_hour=23,
-        stage_name=stage_name, max_length=400,
+        stage_name=stage_name, max_length=400, ampel=AMPEL_ALLGEMEIN,
     )
 
 
@@ -758,9 +759,17 @@ def test_kein_befehlswort_kollidiert_mit_verknuepfungscode():
 
 #: Trip-Briefing-Kurzformzeile vom 27.09.2026 (vor der Umstellung), echter
 #: Renderer, fester Datenstand (Stage 2026-07-03, Stunde i -> 5+i °C).
+#:
+#: Issue #2792 S1c-4b -- BEWUSST NEU EINGEFROREN (E1, AC-1, AC-19 e, §5
+#: Punkt 5): Hervorhebung ab Gelb der Ampel „allgemein" (R0.4 und W18
+#: darunter -> ``R-``/``W-``), Luftfeuchte fest ab 90 % (55 -> ``HU-``),
+#: Tageshoch 28 °C ist gelb und traegt seine Stunde (``D5/28@23``). Der
+#: Kuerzel-Bestand (``D`` = Tageshoechst) -- Pruefzweck von AC-22 -- ist
+#: unveraendert. Nachtrag VS: Sicht 8 km liegt ueber Gelb (2 km) -> ``VS-``;
+#: FZ hat keinen Ampel-Leser und bleibt.
 BRIEFING_ZEILE_VORHER = (
-    "Heute: N5 D5/28 FN1 FD1/24 R0.4@0 PR40%@0 W18@0 G30@0 TH:M@0 TH+:- "
-    "HU55@0 DP6@0 WD:SW PT:R CT60@0 CL40@0 CM20@0 CH10@0 VS8.0@0 SU12 HP1013 "
+    "Heute: N5 D5/28@23 FN1 FD1/24 R- PR40%@0 W- G30@0 TH:M@0 TH+:- "
+    "HU- DP6@0 WD:SW PT:R CT60@0 CL40@0 CM20@0 CH10@0 VS- SU12 HP1013 "
     "FZ2200@0"
 )
 

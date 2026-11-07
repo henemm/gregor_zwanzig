@@ -378,7 +378,11 @@ _MAIL_FELT_PILL = re.compile(
     rf"{_SPAN_UNIT} · Max (?P<h>\d{{2}}):00$"
 )
 # Telegram-Kurzuebersicht: "T 5.0-22.0@12" bzw. "T 15.0".
-_TG_SPAN = re.compile(r"^(?P<lo>-?\d+\.\d)(?:-(?P<hi>-?\d+\.\d))?(?:@(?P<h>\d{1,2}))?$")
+# Issue #2792 S1c-4b (AC-1, §5): jede Haelfte, die nach der Ampel gelb oder
+# schlechter ist, traegt ihre Stunde -- auch die untere ("TF -4.0@12-17.0").
+_TG_SPAN = re.compile(
+    r"^(?P<lo>-?\d+\.\d)(?:@(?P<lh>\d{1,2}))?(?:-(?P<hi>-?\d+\.\d))?(?:@(?P<h>\d{1,2}))?$"
+)
 # Kurzzusammenfassung gemessen: "5–22°C"; gefuehlt: "gef. 0–17°C".
 _COMPACT_TEMP = re.compile(rf"^(?P<lo>-?\d+)(?:{_DASH}(?P<hi>-?\d+))?{_SPAN_UNIT}$")
 _COMPACT_FELT = re.compile(rf"^gef\. (?P<lo>-?\d+)(?:{_DASH}(?P<hi>-?\d+))?{_SPAN_UNIT}$")
@@ -470,7 +474,9 @@ def mail_felt(report) -> Extrema:
 # weiterhin den Tiefstwert, 'D'/'FD' den Hoechstwert.
 # Fix #1926: temperature_day_low/wind_chill_day_low SMS-Wire-Token K->L,
 # FK->FL (PO-Konsistenzentscheid 2026-08-17, Kollisionsvermeidung).
-_HALF = r"-?\d+|-|\?"
+# Issue #2792 S1c-4b (AC-1, §5): eine Haelfte ab Gelb traegt ``@h``
+# ("D-12@8/-4@11"); gelesen wird nur der Wert.
+_HALF = r"-?\d+(?:@\d{1,2})?|-|\?"
 _RANGE_PARTNER = {"L": "D", "FL": "FD"}
 
 
@@ -502,7 +508,7 @@ def _sms_num(sms: str, symbol: str) -> Optional[float]:
     raw = sms_token_value(sms, symbol)
     if raw is None or raw in ("-", "?"):
         return None
-    return float(raw)
+    return float(raw.split("@", 1)[0])
 
 
 def sms_temp(report) -> Extrema:

@@ -26,6 +26,7 @@ Heute GRUEN (Bestandsschutz, Rueckdreh-Gegenprobe in der Mutation AC-27):
 AC-3, -5, -7, -8(ohne Unmappbares), -9, -11, -16, -17, -20 .. -23.
 """
 from __future__ import annotations
+from tests.helpers.ampel_allgemein import AMPEL_ALLGEMEIN, PRESET_ALLGEMEIN
 
 import re
 
@@ -36,6 +37,10 @@ from tests.tdd.test_compare_render_options_resolver import _make_comparison_resu
 
 #: Eine Renderer-Kennung ohne Zeilendefinition (Katalog kennt sie nicht).
 OHNE_ZEILE = "zzz_ohne_zeile"
+
+# #2792 S1c-4b: Preset mit Vorlage ≠ „allgemein", damit der Prüfinhalt nach dem
+# Umschalten nicht nur die Vorgabe-Ampel sieht.
+SKITOUREN_PRESET = {"display_config": {"ampel": {"template": "skitouren"}}}
 #: Gueltige Groesse, die in der Test-Fixture an KEINEM Ort einen Wert hat
 #: (``_make_comparison_result`` fuellt snow_depth_cm nicht).
 OHNE_WERT = "snow_depth_cm"
@@ -90,7 +95,7 @@ def _telegram_ortsbloecke(text: str) -> dict[str, list[str]]:
 def test_ac1_html_hinweis_fuer_groesse_ohne_zeilendefinition():
     from output.renderers.email.compare_html import render_compare_html
 
-    html = render_compare_html(_result(), enabled_metrics=["temp_max", OHNE_ZEILE, "wind_max"])
+    html = render_compare_html(_result(), enabled_metrics=["temp_max", OHNE_ZEILE, "wind_max"], preset=PRESET_ALLGEMEIN)
 
     assert _zahlen(_HINWEIS_VERGLEICH, html) == [1], (
         "Unter der Uebersichtstabelle muss stehen, wie viele gewaehlte Groessen "
@@ -104,12 +109,12 @@ def test_ac2_html_unmappbarer_schluessel_zaehlt_in_der_hinweiszahl():
     from output.renderers.email.compare_html import render_compare_html
 
     html = render_compare_html(
-        _result(), enabled_metrics=["temp_max", "wind_max"], unresolved_count=1,
+        _result(), enabled_metrics=["temp_max", "wind_max"], unresolved_count=1, preset=PRESET_ALLGEMEIN,
     )
     assert _zahlen(_HINWEIS_VERGLEICH, html) == [1]
 
     html2 = render_compare_html(
-        _result(), enabled_metrics=["temp_max", OHNE_ZEILE], unresolved_count=2,
+        _result(), enabled_metrics=["temp_max", OHNE_ZEILE], unresolved_count=2, preset=PRESET_ALLGEMEIN,
     )
     assert _zahlen(_HINWEIS_VERGLEICH, html2) == [3], (
         "Zahl = nicht darstellbare Groessen INSGESAMT (ohne Zeile + unmappbar)"
@@ -119,7 +124,7 @@ def test_ac2_html_unmappbarer_schluessel_zaehlt_in_der_hinweiszahl():
 def test_ac3_html_ohne_luecke_kein_hinweis_und_zeilen_unveraendert():
     from output.renderers.email.compare_html import render_compare_html
 
-    html = render_compare_html(_result(), enabled_metrics=["temp_max", "wind_max"])
+    html = render_compare_html(_result(), enabled_metrics=["temp_max", "wind_max"], preset=PRESET_ALLGEMEIN)
     assert "ohne Wert in diesem Vergleich" not in html
     assert "ohne Wert" not in html.replace("ohne Wert an", "")
     assert html.index("Temperatur") < html.index("Wind")
@@ -129,7 +134,7 @@ def test_ac4_klartext_hat_denselben_hinweis_mit_derselben_zahl():
     from output.renderers.comparison import render_comparison_text
 
     text = render_comparison_text(
-        _result(), enabled_metrics=["temp_max", OHNE_ZEILE], unresolved_count=1, preset=None,
+        _result(), enabled_metrics=["temp_max", OHNE_ZEILE], unresolved_count=1, preset=SKITOUREN_PRESET,
     )
     assert _zahlen(_HINWEIS_VERGLEICH, text) == [2]
 
@@ -138,7 +143,7 @@ def test_ac4_mail_beide_fassungen_tragen_dieselbe_zahl():
     from output.renderers.comparison import render_compare_email
 
     html, text = render_compare_email(
-        _result(), enabled_metrics=["temp_max", OHNE_ZEILE], unresolved_count=1,
+        _result(), enabled_metrics=["temp_max", OHNE_ZEILE], unresolved_count=1, preset=PRESET_ALLGEMEIN,
     )
     assert _zahlen(_HINWEIS_VERGLEICH, html) == _zahlen(_HINWEIS_VERGLEICH, text) == [2]
 
@@ -146,7 +151,7 @@ def test_ac4_mail_beide_fassungen_tragen_dieselbe_zahl():
 def test_ac5_klartext_ohne_luecke_kein_hinweis():
     from output.renderers.comparison import render_comparison_text
 
-    text = render_comparison_text(_result(), enabled_metrics=["temp_max", "wind_max"], preset=None)
+    text = render_comparison_text(_result(), enabled_metrics=["temp_max", "wind_max"], preset=SKITOUREN_PRESET)
     assert "ohne Wert" not in text
 
 
@@ -416,7 +421,7 @@ def test_ac3_warn_in_der_auswahl_ist_keine_luecke():
     Auswahl darf weder im HTML noch im Klartext als fehlend gezaehlt werden."""
     from output.renderers.comparison import render_compare_email
 
-    html, text = render_compare_email(_result(), enabled_metrics=["warn", "temp_max"])
+    html, text = render_compare_email(_result(), enabled_metrics=["warn", "temp_max"], preset=PRESET_ALLGEMEIN)
     assert "ohne Wert in diesem Vergleich" not in html
     assert "ohne Wert in diesem Vergleich" not in text
 
@@ -519,7 +524,7 @@ def test_ac22_trip_sms_token_fehlt_nicht_sondern_traegt_null_oder_luecken_form()
     from output.renderers.sms_trip import SMSTripFormatter
 
     seg = _trip_segment_ohne("wind10m_kmh", "wind_max_kmh")
-    sms = SMSTripFormatter().format_sms([seg], stage_name="E1")
+    sms = SMSTripFormatter().format_sms([seg], stage_name="E1", ampel=AMPEL_ALLGEMEIN)
     token = [t for t in sms.split() if t.startswith("W") and not t.startswith(("WD", "WC"))]
     assert token and token[0] in ("W-", "W?"), (
         f"Token W muss in Null- ('-') oder Lueckenform ('?') vorhanden sein: {sms!r}"

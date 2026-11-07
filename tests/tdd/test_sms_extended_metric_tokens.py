@@ -31,6 +31,7 @@ Konstruktor-Keyword) oder AssertionError (Symbol fehlt in der Zeile). Einzige
 Ausnahme ist der AC-11-Golden-Test, der HEUTE bereits gruen ist.
 """
 from __future__ import annotations
+from tests.helpers.ampel_allgemein import AMPEL_ALLGEMEIN
 
 from datetime import datetime, timezone
 from zoneinfo import ZoneInfo
@@ -64,7 +65,7 @@ def _render(today: DailyForecast, config: list[MetricSpec], *,
             report_type: str = "evening", stage_name: str = "Etappe1") -> str:
     forecast = NormalizedForecast(days=(today,))
     line = build_token_line(
-        forecast, config, report_type=report_type, stage_name=stage_name,
+        forecast, config, report_type=report_type, stage_name=stage_name, ampel=AMPEL_ALLGEMEIN,
     )
     return line.render(160)
 
@@ -120,11 +121,18 @@ def _single_day_segment(points: list[ForecastDataPoint]) -> SegmentWeatherData:
 
 
 def test_ac1_humidity_threshold_peak_renders_onset_and_peak():
-    """AC-1: HU mit sms_threshold=85, erstes Erreichen 88@14, Peak 92@17."""
+    """AC-1: HU mit sms_threshold=85, erstes Erreichen 88@14, Peak 92@17.
+
+    Issue #2792 S1c-4b (Spec §5 Punkt 5, E1) -- umgestellt: die Schwelle 85
+    wirkt nicht mehr, Luftfeuchte zaehlt fest ab 90 % -- erstes Erreichen
+    = Spitze 92@17 (frueher HU88@14(92@17)); Form „Einsatz(Spitze)" bei
+    fruehem Erreichen bleibt (zweite Reihe)."""
     today = DailyForecast(humidity_hourly=(HourlyValue(14, 88), HourlyValue(17, 92)))
     config = [MetricSpec(symbol="HU", enabled=True, threshold=85.0)]
     line = _render(today, config)
-    assert "HU88@14(92@17)" in line, f"HU-Token fehlt/falsch: {line!r}"
+    assert "HU92@17" in line, f"HU-Token fehlt/falsch: {line!r}"
+    frueh = DailyForecast(humidity_hourly=(HourlyValue(14, 91), HourlyValue(17, 96)))
+    assert "HU91@14(96@17)" in _render(frueh, config), _render(frueh, config)
 
 
 def test_ac2_cape_without_threshold_renders_peak_only():
@@ -199,7 +207,7 @@ def test_ac6_wind_direction_dominant_sector_over_window():
     segments = [_single_day_segment(points)]
 
     sms = SMSTripFormatter().format_sms(
-        segments, stage_name="Etappe1", report_type="evening", tz=_TZ,
+        segments, stage_name="Etappe1", report_type="evening", tz=_TZ, ampel=AMPEL_ALLGEMEIN,
     )
     # Issue #1824 (B): Trenner zwischen Kuerzel und Buchstaben-Wert ('WD:NW').
     assert "WD:NW" in sms, f"WD-Sektor-Mehrheitstoken fehlt/falsch: {sms!r}"
@@ -217,7 +225,7 @@ def test_ac7_precip_type_dominant_majority():
     segments = [_single_day_segment(points)]
 
     sms = SMSTripFormatter().format_sms(
-        segments, stage_name="Etappe1", report_type="evening", tz=_TZ,
+        segments, stage_name="Etappe1", report_type="evening", tz=_TZ, ampel=AMPEL_ALLGEMEIN,
     )
     # Issue #1824 (B): Trenner zwischen Kuerzel und Buchstaben-Wert ('PT:S').
     assert "PT:S" in sms, f"PT-Dominanz-Token fehlt/falsch: {sms!r}"
@@ -235,7 +243,7 @@ def test_ac7_precip_type_tie_break_rank():
     segments = [_single_day_segment(points)]
 
     sms = SMSTripFormatter().format_sms(
-        segments, stage_name="Etappe1", report_type="evening", tz=_TZ,
+        segments, stage_name="Etappe1", report_type="evening", tz=_TZ, ampel=AMPEL_ALLGEMEIN,
     )
     assert "PT:S" in sms, f"PT-Gleichstand-Rang-Token fehlt/falsch (SNOW muss RAIN schlagen): {sms!r}"
 
@@ -263,7 +271,7 @@ def test_ac8_sunshine_and_pressure_daily_values():
     expected_pressure_avg = sum(p.pressure_msl_hpa for p in points) / len(points)
 
     sms = SMSTripFormatter().format_sms(
-        segments, stage_name="Etappe1", report_type="evening", tz=_TZ,
+        segments, stage_name="Etappe1", report_type="evening", tz=_TZ, ampel=AMPEL_ALLGEMEIN,
     )
     assert f"SU{round(expected_sunny_hours)}" in sms, (
         f"SU-Token fehlt/falsch (erwartet SU{round(expected_sunny_hours)}): {sms!r}"
@@ -293,7 +301,8 @@ def test_ac9_deselecting_two_metrics_removes_them_completely():
         MetricSpec(symbol="UV", enabled=True),
     ]
     before = _render(today, base_config)
-    assert "HU88@14(92@17)" in before
+    # Issue #2792 S1c-4b (§5 Punkt 5): Luftfeuchte fest ab 90 % -> HU92@17.
+    assert "HU92@17" in before
     assert "CP1200@16" in before
     assert "UV8@13" in before
 
@@ -302,7 +311,7 @@ def test_ac9_deselecting_two_metrics_removes_them_completely():
         MetricSpec(symbol="UV", enabled=False),
     ]
     after = _render(today, after_config)
-    assert "HU88@14(92@17)" in after, (
+    assert "HU92@17" in after, (
         f"HU muss nach Abwahl von CP/UV unveraendert bleiben: {after!r}"
     )
     assert "CP" not in after, f"CP muss nach Abwahl VOLLSTAENDIG fehlen (auch keine Null-Form): {after!r}"
@@ -372,13 +381,19 @@ def test_ac11_golden_byte_identity_without_the_14_new_metrics():
     # eigene MetricSpec, allein weil ``wind_chill_c`` gesetzt ist
     # (``_visible(spec=None, rt)`` liefert True) -- der eingefrorene String
     # traegt es trotzdem, und muss deshalb explizit angepasst werden.
+    #
+    # Issue #2792 S1c-4b (E1, AC-19 e) -- BEWUSST NEU EINGEFROREN: die
+    # `threshold=`-Werte der MetricSpecs wirken nicht mehr; Hervorhebung ab
+    # Gelb der Ampel „allgemein" (Regen 1 mm, Wind/Böen 30). R0.3, W15/22
+    # und G20 liegen darunter (frueher R0.3@6(1.8@15) W15@11(22@14)
+    # G20@11(35@14)).
     assert evening == (
-        "Etappe 3 B: N- D8/19 FD-3/5 R0.3@6(1.8@15) PR35%@10(80%@16) "
-        "W15@11(22@14) G20@11(35@14) TH:M@15"
+        "Etappe 3 B: N- D8/19 FD-3/5 R1.8@15 PR35%@10(80%@16) "
+        "W- G35@14 TH:M@15"
     ), f"Byte-Identitaet gebrochen (evening): {evening!r}"
     assert morning == (
-        "Etappe 3 B: D8/19 FD-3/5 R0.3@6(1.8@15) PR35%@10(80%@16) "
-        "W15@11(22@14) G20@11(35@14) TH:M@15"
+        "Etappe 3 B: D8/19 FD-3/5 R1.8@15 PR35%@10(80%@16) "
+        "W- G35@14 TH:M@15"
     ), f"Byte-Identitaet gebrochen (morning): {morning!r}"
 
 

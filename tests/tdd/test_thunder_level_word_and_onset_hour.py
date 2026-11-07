@@ -51,6 +51,7 @@ vergessener RED-Test: eine Aenderung, die AC-1..AC-4 gruen macht und dabei
 einen dieser drei kippt, ist falsch implementiert.
 """
 from __future__ import annotations
+from tests.helpers.ampel_allgemein import AMPEL_ALLGEMEIN
 
 import sys
 from datetime import date, datetime, timezone
@@ -190,7 +191,7 @@ def _ausblick_zeile(punkte: list[ForecastDataPoint]) -> dict:
     win_start, win_end = resolve_configured_window(None, None)
     zeile = build_outlook_row(
         summarize_points(punkte), punkte, _WOCHENTAG, _TZ,
-        day_window_start_hour=win_start, day_window_end_hour=win_end, context="vergleich",
+        day_window_start_hour=win_start, day_window_end_hour=win_end, context="vergleich", ampel=AMPEL_ALLGEMEIN,
     )
     zeile["name"] = "Etappe B"
     return zeile

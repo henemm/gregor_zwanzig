@@ -13,6 +13,7 @@ wird zusaetzlich per echter Zustellung ans Stalwart-Test-Postfach verifiziert
 """
 
 from __future__ import annotations
+from tests.helpers.ampel_allgemein import PRESET_ALLGEMEIN
 
 import email.message
 import importlib.util
@@ -101,7 +102,7 @@ def _real_html_with_missing_location_table(missing_location_name: str = "Ort B")
     import re
 
     result = _make_comparison_result(["Ort A", missing_location_name, "Ort C"])
-    html = render_compare_html(result, profile=ActivityProfile.ALLGEMEIN)
+    html = render_compare_html(result, profile=ActivityProfile.ALLGEMEIN, preset=PRESET_ALLGEMEIN)
 
     m = re.search(
         r">ORT</span>\s*<span[^>]*>" + re.escape(missing_location_name) + r"</span>", html
@@ -122,7 +123,7 @@ def _render_and_drop_table(names: list, drop_name: str) -> str:
     import re
 
     result = _make_comparison_result(names)
-    html = render_compare_html(result, profile=ActivityProfile.ALLGEMEIN)
+    html = render_compare_html(result, profile=ActivityProfile.ALLGEMEIN, preset=PRESET_ALLGEMEIN)
 
     m = re.search(
         r">ORT</span>\s*<span[^>]*>" + re.escape(drop_name) + r"</span>", html
@@ -148,7 +149,7 @@ def test_ac1_hourly_false_skips_hourly_table_requirement():
     mod = _load_validator()
     result = _make_comparison_result(["Ort A", "Ort B", "Ort C"])
     html = render_compare_html(
-        result, profile=ActivityProfile.ALLGEMEIN, hourly_enabled=False
+        result, profile=ActivityProfile.ALLGEMEIN, hourly_enabled=False, preset=PRESET_ALLGEMEIN
     )
 
     errors = mod.validate_structure(html, hourly_enabled=False)
@@ -172,7 +173,7 @@ def test_ac2_hourly_true_full_mail_passes():
     mod = _load_validator()
     result = _make_comparison_result(["Ort A", "Ort B", "Ort C"])
     html = render_compare_html(
-        result, profile=ActivityProfile.ALLGEMEIN, hourly_enabled=True
+        result, profile=ActivityProfile.ALLGEMEIN, hourly_enabled=True, preset=PRESET_ALLGEMEIN
     )
 
     errors = mod.validate_structure(html, hourly_enabled=True)

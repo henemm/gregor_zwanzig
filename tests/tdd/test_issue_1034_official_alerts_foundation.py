@@ -23,6 +23,7 @@ des Epics #1033), damit `_select_provider_for_location()` den `openmeteo`-Zweig
 waehlt und der Fixture-Provider greift statt eines echten GeoSphere-Netzwerkrufs.
 """
 from __future__ import annotations
+from tests.helpers.ampel_allgemein import PRESET_ALLGEMEIN
 
 import re
 from datetime import date, timedelta
@@ -159,7 +160,7 @@ class TestIssue1034OfficialAlertsFoundation:
             # class="matrix-table" mehr -- die Uebersichtstabelle mit der
             # Warn-Zeile "Amtliche Warnungen" ist ihr strukturelles Aequivalent).
             html = render_compare_html(
-                result, profile=ActivityProfile.ALLGEMEIN, warnings=["Sturmwarnung Test"]
+                result, profile=ActivityProfile.ALLGEMEIN, warnings=["Sturmwarnung Test"], preset=PRESET_ALLGEMEIN
             )
             banner_end = html.index("Sturmwarnung Test</div>") + len("Sturmwarnung Test</div>")
             overview_start = html.index("Amtliche Warnungen", banner_end)
@@ -303,7 +304,7 @@ class TestIssue1034OfficialAlertsFoundation:
                 target_date=target,
                 profile=ActivityProfile.ALLGEMEIN,
             )
-            baseline_html = render_compare_html(baseline_result, profile=ActivityProfile.ALLGEMEIN)
+            baseline_html = render_compare_html(baseline_result, profile=ActivityProfile.ALLGEMEIN, preset=PRESET_ALLGEMEIN)
             tables_baseline = [m.start() for m in re.finditer(r"<table", baseline_html)]
 
             alert = OfficialAlert(
@@ -322,7 +323,7 @@ class TestIssue1034OfficialAlertsFoundation:
                 target_date=target,
                 profile=ActivityProfile.ALLGEMEIN,
             )
-            html = render_compare_html(result, profile=ActivityProfile.ALLGEMEIN)
+            html = render_compare_html(result, profile=ActivityProfile.ALLGEMEIN, preset=PRESET_ALLGEMEIN)
 
             tables_mit_badge = [m.start() for m in re.finditer(r"<table", html)]
             assert len(tables_mit_badge) == len(tables_baseline), (

@@ -16,6 +16,7 @@ RED-Stand (vor Fix):
   rutschen durch (#1217); Segment-Bezug fehlt komplett.
 """
 from __future__ import annotations
+from tests.helpers.ampel_allgemein import PRESET_ALLGEMEIN
 
 from datetime import date, datetime, timezone
 from zoneinfo import ZoneInfo
@@ -120,7 +121,7 @@ def test_ac2_overview_and_strip_use_same_dedup():
     b = _heat(3, label="Hitze identisch")
     loc = _loc_with_alerts("l2", "Ospedale", [a, b])
     result = ComparisonResult(locations=[loc], time_window=(9, 16), target_date=date.today())
-    html = render_compare_html(result, profile=ActivityProfile.ALLGEMEIN)
+    html = render_compare_html(result, profile=ActivityProfile.ALLGEMEIN, preset=PRESET_ALLGEMEIN)
     chips = html.count(CHIP_SIG)
     badges = html.count(BADGE_SIG)
     assert chips == badges, (

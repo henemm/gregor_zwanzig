@@ -36,6 +36,7 @@ Fixture-Muster uebernommen aus `test_compare_mail_label_source_catalog.py`.
 SPEC: docs/specs/modules/feat_1848_b_einheiten_register.md
 """
 from __future__ import annotations
+from tests.helpers.ampel_allgemein import PRESET_ALLGEMEIN
 
 import dataclasses
 import re
@@ -134,7 +135,7 @@ def _single_row_value(html: str) -> str:
 
 def _render_one(loc: LocationResult, cv2_key: str) -> str:
     html = render_compare_html(
-        _comparison_result(loc), enabled_metrics=[cv2_key], hourly_enabled=False,
+        _comparison_result(loc), enabled_metrics=[cv2_key], hourly_enabled=False, preset=PRESET_ALLGEMEIN,
     )
     return _single_row_value(html)
 
@@ -353,7 +354,7 @@ def test_ac5_warn_row_without_alerts_unaffected():
     exakt beim bestehenden Markup -- sie hatte nie ein 'unit'/'decimals'-Feld
     und geht ohnehin nicht durch `_fmt_metric`."""
     html = render_compare_html(
-        _comparison_result(_loc()), enabled_metrics=["temp_max"], hourly_enabled=False,
+        _comparison_result(_loc()), enabled_metrics=["temp_max"], hourly_enabled=False, preset=PRESET_ALLGEMEIN,
     )
     rows = _overview_rows_raw(html)
     _warn_label, warn_cells = rows[0]

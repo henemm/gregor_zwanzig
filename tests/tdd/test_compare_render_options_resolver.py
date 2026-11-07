@@ -17,6 +17,7 @@ tests/tdd/test_issue_1107_compare_sections.py::_make_comparison_result) und
 direkt an `render_compare_email()` uebergeben — kein Netzwerk, kein Mock.
 """
 from __future__ import annotations
+from tests.helpers.ampel_allgemein import PRESET_ALLGEMEIN
 
 from datetime import date, datetime
 
@@ -254,7 +255,7 @@ def test_disabled_metric_absent_from_rendered_compare_mail_html_and_plain():
         result,
         enabled_metrics=options.enabled_metrics,
         hourly_metrics=options.hourly_metrics,
-        hourly_enabled=options.hourly_enabled,
+        hourly_enabled=options.hourly_enabled, preset=PRESET_ALLGEMEIN,
     )
 
     assert ">Temperatur<" in html, (

@@ -8,7 +8,7 @@ SPEC: docs/specs/modules/segment_weather.md v1.0
 """
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, time, timedelta, timezone
 from typing import TYPE_CHECKING, Optional
 
 import logging
@@ -395,18 +395,21 @@ class SegmentWeatherService:
         # alarm-/briefingrelevanten Konsumenten sieht. Eigenes try/except
         # ZUSAETZLICH zum fail-soft im Writer -- es faengt auch einen
         # Importfehler ab (Muster radar_service.py:727).
-        try:
-            from services.forecast_capture import capture_segment_forecast
-            capture_segment_forecast(
-                segment=segment, aggregated=extended_summary,
-                fetched_at=fetched_at, cache_hit=cache_hit,
-                provider=self._provider.name,
-                model=self._resolve_model_id(
-                    segment.start_point.lat, segment.start_point.lon
-                ),
-            )
-        except Exception:
-            pass  # Diagnose darf Briefing und Alarm NIE beeintraechtigen
+        # Issue #2581: Provider mit Cache-Namensraum (FixtureProvider, Demo)
+        # liefern Beispielwerte -- die gehoeren NICHT ins Prognose-Archiv.
+        if not getattr(self._provider, "cache_namespace", None):
+            try:
+                from services.forecast_capture import capture_segment_forecast
+                capture_segment_forecast(
+                    segment=segment, aggregated=extended_summary,
+                    fetched_at=fetched_at, cache_hit=cache_hit,
+                    provider=self._provider.name,
+                    model=self._resolve_model_id(
+                        segment.start_point.lat, segment.start_point.lon
+                    ),
+                )
+            except Exception:
+                pass  # Diagnose darf Briefing und Alarm NIE beeintraechtigen
 
         return SegmentWeatherData(
             segment=segment,
@@ -424,18 +427,32 @@ class SegmentWeatherService:
         implementiert nur `OpenMeteoProvider.select_model()`
         (`providers/openmeteo.py:411`), eine reine Funktion der Koordinate
         ohne Netzzugriff. Provider ohne diese Methode (z.B. GeoSphereProvider,
-        FixtureProvider, Test-Fakes) fallen auf den Provider-Namen zurueck:
+        Test-Fakes) fallen auf den Provider-Namen zurueck:
         unterscheidet ausreichend zwischen Anbietern, auch wenn er innerhalb
         eines Anbieters keine Modellvarianten kennt (Tech-Lead-Entscheidung
         2026-07-20, ersetzt die urspruengliche Spec-Vorgabe eines direkten
         Modul-Imports von `select_model`, das tatsaechlich eine
         Instanzmethode ist).
+
+        Issue #2581: Traegt der Provider ein nicht leeres Merkmal
+        `cache_namespace`, wird es vorangestellt (`"<ns>:<model_id>"`). Der
+        FixtureProvider meldet sich bewusst als `"openmeteo"` und kollidierte
+        ohne Namensraum mit dem Open-Meteo-Rueckfall -- Demo-Beispielwerte
+        und echte Werte haetten sich Cache-Eintrag und Single-Flight geteilt.
+        Der Cache-Schluessel traegt keinen Provider, daher steht der
+        Namensraum im `model_id`-Teil. Die `user_id` steht weiterhin NICHT im
+        Schluessel: Wetter ist nutzerneutral, getrennt wird nach Datenquelle.
+        Ohne Namensraum ist die Rueckgabe unveraendert.
         """
         select_model = getattr(self._provider, "select_model", None)
         if callable(select_model):
             model_id, _, _ = select_model(lat, lon)
-            return model_id
-        return self._provider.name
+        else:
+            model_id = self._provider.name
+        namespace = getattr(self._provider, "cache_namespace", None)
+        if namespace:
+            return f"{namespace}:{model_id}"
+        return model_id
 
     def _validate_segment(self, segment: TripSegment) -> None:
         """
@@ -590,11 +607,19 @@ def fetch_night_weather(
     # Stunde fehlte in den Daten. Der halboffene Filter dieses Moduls
     # (`start_floor <= ts < end_floor`, Bug #806/#856) bleibt unberuehrt.
     arrival = display_end_time(seg)
-    next_morning = datetime.combine(
-        arrival.date() + timedelta(days=1),
-        datetime.min.time(),
-        tzinfo=timezone.utc,
-    ).replace(hour=6)
+    # Issue #2223: das Fensterende ist 06:00 ORTSZEIT des auf die Ankunft
+    # folgenden Ortstags, nicht 06:00 UTC am UTC-Datum+1 — sonst ist das
+    # Fenster westlich von UTC einen Tag zu lang und in Mitteleuropa ein bis
+    # zwei Stunden zu lang. Unaufloesbare Zone => location_tz() faellt auf
+    # UTC zurueck, das ist exakt das bisherige Verhalten.
+    from utils.timezone import local_dt, location_tz, to_utc
+    tz = location_tz(seg.end_point)
+    local_arrival = local_dt(arrival, tz)
+    next_morning = to_utc(datetime.combine(
+        local_arrival.date() + timedelta(days=1),
+        time(6, 0),
+        tzinfo=tz,
+    ))
 
     # Create a temporary segment spanning arrival → 06:00 next day
     night_segment = TripSegment(

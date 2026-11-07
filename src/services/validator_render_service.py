@@ -207,7 +207,7 @@ def render_alert_preview(
             events=(onset_ev,),
             source=body.onset.source_label,
             cooldown_display=body.onset.cooldown_display,
-            ampel=resolve_ampel(None),  # Issue #2792 S1c-1, bis S1c-4 „allgemein"
+            ampel=resolve_ampel(trip_obj),  # Issue #2792 S1c-4b: Ampel des Trips
         )
     else:
         changes = [
@@ -258,8 +258,8 @@ def _deviation_preview_message(
     anchor, fresh = (None, None)
     if user_id:
         anchor, fresh = trip_preview_series(trip_obj, user_id=user_id, now_utc=now_utc)
-    # Issue #2792 S1c-1: Einstieg Alarm-Pfad; bis S1c-4 „allgemein".
-    ampel = resolve_ampel(None)
+    # Issue #2792 S1c-4b: Einstieg Alarm-Pfad, Ampel des Trips.
+    ampel = resolve_ampel(trip_obj)
     if not fresh:
         return to_alert_message(
             changes, [_stub_segment(st) for st in segment_times], trip_obj.name,
@@ -451,6 +451,9 @@ def render_compare_email_preview(body: Any) -> str:
         profile=profile_enum,
         hourly_enabled=body.hourly_enabled,
         hourly_metrics=getattr(body, "hourly_metrics", None),
+        # Issue #2792 S1c-4b: die Vorschau kennt nur das Profil des
+        # Validators; daraus loest der Renderer die Vorlage auf.
+        preset={"profil": body.profile},
     )
 
 
@@ -494,7 +497,10 @@ SMS_FIDELITY_SAMPLE_FORECAST = NormalizedForecast(
             rain_hourly=tuple(
                 HourlyValue(h, v) for h, v in zip(
                     range(6, 18),
-                    (245.0, 318.0, 432.0, 555.0, 585.0, 625.0,
+                    # Issue #2792 S1c-4b (E1): erste Stunde gelb, danach rot --
+                    # die Hervorhebung nach der Ampel zeigt so wieder
+                    # „Einsatz(Spitze)" und die volle Zeile bleibt > 160.
+                    (2.0, 318.0, 432.0, 555.0, 585.0, 625.0,
                      670.0, 720.0, 845.0, 660.0, 445.0, 260.0),
                 )
             ),
@@ -506,13 +512,13 @@ SMS_FIDELITY_SAMPLE_FORECAST = NormalizedForecast(
             wind_hourly=tuple(
                 HourlyValue(h, v) for h, v in zip(
                     range(6, 18),
-                    (850, 926, 938, 952, 970, 990, 1012, 1128, 1142, 1180, 1420, 1350),
+                    (35, 926, 938, 952, 970, 990, 1012, 1128, 1142, 1180, 1420, 1350),
                 )
             ),
             gust_hourly=tuple(
                 HourlyValue(h, v) for h, v in zip(
                     range(6, 18),
-                    (1200, 1244, 1258, 1278, 1302, 1330, 1358, 1385, 1415, 1455, 2080, 1980),
+                    (40, 1244, 1258, 1278, 1302, 1330, 1358, 1385, 1415, 1455, 2080, 1980),
                 )
             ),
             thunder_hourly=tuple(
@@ -595,6 +601,11 @@ def render_sms_fidelity_preview(metric_ids: list[str]) -> dict:
     token_line = build_token_line(
         SMS_FIDELITY_SAMPLE_FORECAST, specs,
         report_type="evening", stage_name="Etappe",
+        # Issue #2792 S1c-4b: die zustandslose Editor-Vorschau kennt kein Abo
+        # (Request-Body nur ``metric_ids``, kein Trip, keine dc, kein Nutzer)
+        # -- bewusst die Vorlage „allgemein". Folge: die Vorschau kann vom
+        # Versand eines Abos mit anderer Vorlage abweichen (Nebenbefund).
+        ampel=resolve_ampel({"display_config": {"preset_name": "allgemein"}}),
     )
     line, survivor_symbols = render_line_with_survivors(token_line, 160)
     carried_ids = [

@@ -8,8 +8,8 @@ GR20 E3: 18–20°C, gef. 12–13°C, mäßiger Regen max 11:00, mäßiger Wind 
 ━━ Metriken-Überblick ━━
   18–20°C · Max 18:00
   gef. 11.8–13.2°C · Max 18:00
-  Wind >10 km/h ab 04:00 · max 20 (18:00)
-  Böen >20 km/h ab 04:00 · max 46 (18:00)
+  Wind max 20 km/h (18:00)
+  Böen >30 km/h ab 04:00 · max 46 (18:00)
   Regen ab 11:00 · 2.5 mm
   kein Gewitter
   50% bewölkt · Max 11:00

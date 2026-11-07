@@ -59,7 +59,11 @@ _METRIC_IDS = (
 # jetzt das EIGENE Stundenwert-Kuerzel 'TF' (Tiefstwert im Tagesfenster mit
 # Uhrzeit) am Ende der Liste -- 'WC' bleibt entfallen, die sechs uebrigen Token
 # stehen unveraendert (Positionsvergleich gilt weiter).
-_ERWARTET_OHNE_WC = "E7: D3/20 N11 FD1/18 FN9 TF1@8"
+#
+# Issue #2792 S1c-4b (Nachtrag VS, E1): 'TF' zeigt den Tiefstwert nur ab Gelb
+# der Ampel („allgemein": gefuehlt gelb unter 0 °C); 1 °C -> Nullform 'TF-'.
+# Token-Menge und Positionen bleiben unveraendert.
+_ERWARTET_OHNE_WC = "E7: D3/20 N11 FD1/18 FN9 TF-"
 
 
 def _sms() -> str:

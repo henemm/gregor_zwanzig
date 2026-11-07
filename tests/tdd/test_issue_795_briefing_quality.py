@@ -277,34 +277,39 @@ class TestAC2AmpelEmojis:
 class TestAC3EventPills:
 
     def test_wind_threshold_matches_sms_default(self):
-        """Wind-Erwähnungsschwelle MUSS dem SMS-DEFAULT (10 km/h) entsprechen.
+        """Wind-Erwähnungsschwelle MUSS der der SMS entsprechen.
 
-        Issue #912: Format '>10 km/h ab HH:00 · max X (HH:00)' statt 'ab HH:00'.
+        Issue #2792 S1c-4b (E1, AC-19 e): ``DEFAULTS`` gibt es nicht mehr; Mail
+        und SMS erwaehnen beide ab Gelb der Abo-Ampel (Vorlage „allgemein“:
+        Wind gelb ab 30 km/h). Issue #912: Format '>30 km/h ab HH:00 · max X'.
         """
-        from src.output.tokens.builder import DEFAULTS
-        assert DEFAULTS["W"] == 10.0, "SMS-Wind-Default sollte 10 km/h sein"
-        # Wind steigt von 6 → 12 → 18 km/h; Schwelle 10 wird in der 2. Stunde
-        # (UTC 7 = local 09) überschritten, Spitze 18 in der 3. (UTC 8 = local 10).
+        from app.ampel import gelb_oder_schlechter
+        ampel = resolve_ampel(None)
+        assert not gelb_oder_schlechter(ampel, "wind", 29.0)
+        assert gelb_oder_schlechter(ampel, "wind", 30.0)
+        # Wind steigt von 20 → 32 → 40 km/h; Gelb 30 wird in der 2. Stunde
+        # (UTC 7 = local 09) erreicht, Spitze 40 in der 3. (UTC 8 = local 10).
         segs = [_seg_with_hours([
-            {"hour": 6, "temp": 12, "wind": 6, "gust": 8},
-            {"hour": 7, "temp": 14, "wind": 12, "gust": 18},
-            {"hour": 8, "temp": 16, "wind": 18, "gust": 25},
+            {"hour": 6, "temp": 12, "wind": 20, "gust": 25},
+            {"hour": 7, "temp": 14, "wind": 32, "gust": 38},
+            {"hour": 8, "temp": 16, "wind": 40, "gust": 45},
         ])]
         html = _render_html(segs)
         block = _metrics_block_html(html)
-        # Schwelle 10 (SMS) → Wind als Ereignis mit >-Präfix-Format (Issue #912).
-        assert re.search(r"Wind.*10.*ab \d{2}:00", block), (
-            "Wind ≥ 10 km/h (SMS-Schwelle) muss als '...10...ab HH:00' erscheinen; "
+        # Gelb 30 → Wind als Ereignis mit >-Präfix-Format (Issue #912).
+        assert re.search(r"Wind.*30.*ab 09:00", block), (
+            "Wind ≥ 30 km/h (Gelb, wie SMS) muss als '...30...ab 09:00' erscheinen; "
             f"Block:\n{block}"
         )
 
     def test_wind_event_written_out_with_peak(self):
         """Über Schwelle: neues Format '>thr km/h ab HH:00 · max X (HH:00)',
-        KEIN @-Token, KEIN 'Spitze'."""
+        KEIN @-Token, KEIN 'Spitze'. Seit #2792 S1c-4b ist die Schwelle Gelb
+        der Ampel (30 km/h), daher Werte darueber."""
         segs = [_seg_with_hours([
-            {"hour": 6, "temp": 12, "wind": 6, "gust": 8},
-            {"hour": 7, "temp": 14, "wind": 12, "gust": 18},
-            {"hour": 8, "temp": 16, "wind": 18, "gust": 25},
+            {"hour": 6, "temp": 12, "wind": 20, "gust": 25},
+            {"hour": 7, "temp": 14, "wind": 32, "gust": 38},
+            {"hour": 8, "temp": 16, "wind": 40, "gust": 45},
         ])]
         html = _render_html(segs)
         block = _metrics_block_html(html)
@@ -312,8 +317,8 @@ class TestAC3EventPills:
         assert "Spitze" not in block, (
             f"'Spitze' darf im neuen Format nicht erscheinen:\n{block}"
         )
-        assert re.search(r"max\s+18\s*\(\d{2}:00\)", block), (
-            f"'max 18 (HH:00)' fehlt im neuen Format:\n{block}"
+        assert re.search(r"max\s+40\s*\(\d{2}:00\)", block), (
+            f"'max 40 (HH:00)' fehlt im neuen Format:\n{block}"
         )
 
     def test_wind_below_threshold_calm_form(self):

@@ -10,6 +10,7 @@ deutschen Katalogtext und kein Umlaut-Wort (Ausnahmen unten, je mit Paket).
 SMS bleibt in jeder Sprache byte-gleich (PO-Korrektur 2026-10-31).
 """
 from __future__ import annotations
+from tests.helpers.ampel_allgemein import PRESET_ALLGEMEIN
 
 import html as _html
 import json
@@ -352,8 +353,8 @@ def test_warnchips_der_uebersicht_englisch(hazard, level, native, key, params):
     from output.renderers.email.compare_html import render_compare_html
 
     result = _mit_warnungen([(hazard, level, native)], [], [])
-    html_en = render_compare_html(result, lang="en")
-    html_de = render_compare_html(result)
+    html_en = render_compare_html(result, lang="en", preset=PRESET_ALLGEMEIN)
+    html_de = render_compare_html(result, preset=PRESET_ALLGEMEIN)
     chip_en, chip_de = t(key, "en", **params), t(key, "de", **params)
     assert chip_en != chip_de
     assert f">{_html.escape(chip_en)}</div>" in html_en
@@ -364,18 +365,18 @@ def test_warnbanner_rahmen_englisch():
     from output.renderers.email.compare_html import render_compare_html
 
     result = _mit_warnungen([("extreme_heat", 3, None)], [("extreme_heat", 2, None)], [])
-    html_en = render_compare_html(result, lang="en")
+    html_en = render_compare_html(result, lang="en", preset=PRESET_ALLGEMEIN)
     assert t("vergleich.warn.n_von_m_orten", "en", n=2, gesamt=3) in html_en
     assert "von 3 Orten" not in html_en
     from output.renderers.alert.official_alerts import _LEVEL_WORDS
 
     stufe = _LEVEL_WORDS[3][1]  # Stufenwort selbst: P6 (#2668)
     assert t("vergleich.warn.hoechste_stufe", "en", stufe=stufe, ort="Innsbruck") in html_en
-    assert f"höchste Stufe {stufe} · Innsbruck" in render_compare_html(result)
+    assert f"höchste Stufe {stufe} · Innsbruck" in render_compare_html(result, preset=PRESET_ALLGEMEIN)
     lawine = _mit_warnungen([("avalanche_bulletin", 4, 5)], [], [])
     assert t("vergleich.warn.lawinenstufe", "en", stufe=5, ort="Innsbruck") in render_compare_html(
-        lawine, lang="en")
-    assert "Lawinenstufe 5 · Innsbruck" in render_compare_html(lawine)
+        lawine, lang="en", preset=PRESET_ALLGEMEIN)
+    assert "Lawinenstufe 5 · Innsbruck" in render_compare_html(lawine, preset=PRESET_ALLGEMEIN)
 
 
 def test_legende_warnkuerzel_englisch():
@@ -395,7 +396,7 @@ def test_gewaehlte_metriken_uebersicht_englisch():
     from output.renderers.email.compare_html import render_compare_html
 
     auswahl = ["precip_sum", "gust_max"]
-    html_en = render_compare_html(build_result(), enabled_metrics=auswahl, lang="en")
+    html_en = render_compare_html(build_result(), enabled_metrics=auswahl, lang="en", preset=PRESET_ALLGEMEIN)
     uebersicht = next(tab for tab in _tabellen(html_en)
                       if len(tab) > 1 and tab[1][0] == t("vergleich.zeile.amtliche_warnungen", "en"))
     assert [z[0] for z in uebersicht[2:]] == [
@@ -408,7 +409,7 @@ def test_ausblick_leere_auswahl_zeigt_zustand_englisch():
     from output.renderers.email.outlook_state_hint import OutlookState, outlook_state_text
 
     html_en = render_compare_html(build_result(mit_fehlerort=False), outlook_enabled=True,
-                                  outlook_metrics=[], lang="en")
+                                  outlook_metrics=[], lang="en", preset=PRESET_ALLGEMEIN)
     vis = sichtbar(html_en)
     assert outlook_state_text(OutlookState.UNAVAILABLE, lang="en") in vis
     assert t("vergleich.ausblick.eyebrow", "en") in vis
@@ -422,7 +423,7 @@ def test_spaltenlegende_des_ausblicks_englisch():
     from output.renderers.email.helpers import format_column_legend, outlook_legend_pairs
 
     html_en = render_compare_html(build_result(mit_fehlerort=False), hourly_metrics=[],
-                                  outlook_enabled=True, lang="en")
+                                  outlook_enabled=True, lang="en", preset=PRESET_ALLGEMEIN)
     erwartet = format_column_legend(outlook_legend_pairs(None, lang="en"), lang="en")
     assert erwartet and erwartet in sichtbar(html_en)
     assert erwartet != format_column_legend(outlook_legend_pairs(None))

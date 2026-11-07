@@ -55,6 +55,12 @@ class CountingFakeProvider:
     `get_provider("openmeteo")`, das durch die autouse-Fixture in
     tests/conftest.py auf die netzfreie `FixtureProvider` umgeleitet wird."""
 
+    # Issue #2581: der Alarm-Pfad laeuft im Test ueber den FixtureProvider, der
+    # einen eigenen Cache-Namensraum "fixture" hat. Der Seeding-Fake teilt
+    # ihn, damit beide denselben Cache-Eintrag meinen (frueher trafen sie sich
+    # nur ueber die Namensvermischung, die #2581 abstellt).
+    cache_namespace = "fixture"
+
     def __init__(self) -> None:
         self.call_count = 0
 

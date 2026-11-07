@@ -39,6 +39,7 @@ Hauptrepo-Pfad — alle Zugriffe laufen ueber ``get_data_dir()`` bzw. die
 bestehenden DI-Naehte.
 """
 from __future__ import annotations
+from tests.helpers.ampel_allgemein import AMPEL_ALLGEMEIN
 
 import http.server
 import json
@@ -667,7 +668,7 @@ def test_ac12_kurznachricht_zeigt_gelbe_amtliche_warnung_bei_startschwelle():
 
     out = SMSTripFormatter().format_sms(
         [segment], max_length=160, tz=_SMS_TZ, report_type="evening",
-        stage_name="Etappe 1",
+        stage_name="Etappe 1", ampel=AMPEL_ALLGEMEIN,
     )
 
     assert "WG:L" in out, (

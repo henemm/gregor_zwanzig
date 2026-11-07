@@ -21,6 +21,7 @@ Kern-Schicht, deterministisch: echte ``ForecastDataPoint``-Objekte, echte
 Renderer-Aufrufe, kein Netz, keine Mocks/``patch()``.
 """
 from __future__ import annotations
+from tests.helpers.ampel_allgemein import PRESET_ALLGEMEIN
 
 import re
 from datetime import date, datetime
@@ -174,7 +175,7 @@ def test_newly_selectable_metric_appears_in_html_and_plaintext_with_same_values(
 
     html, plain = render_compare_email(
         _result(), hourly_metrics=options.hourly_metrics,
-        hourly_enabled=options.hourly_enabled,
+        hourly_enabled=options.hourly_enabled, preset=PRESET_ALLGEMEIN,
     )
 
     humid_label = get_metric("humidity").col_label
@@ -229,8 +230,8 @@ def test_deselecting_a_new_metric_removes_its_column_again():
     humid_label = get_metric("humidity").col_label
     dp_humid = get_metric("humidity").dp_field
 
-    mit = render_compare_html(_result(), hourly_metrics=["t2m_c", dp_humid])
-    ohne = render_compare_html(_result(), hourly_metrics=["t2m_c"])
+    mit = render_compare_html(_result(), hourly_metrics=["t2m_c", dp_humid], preset=PRESET_ALLGEMEIN)
+    ohne = render_compare_html(_result(), hourly_metrics=["t2m_c"], preset=PRESET_ALLGEMEIN)
 
     assert humid_label in _html_hour_header(mit)
     assert humid_label not in _html_hour_header(ohne), (
@@ -364,7 +365,7 @@ def test_an_exempt_metric_never_produces_an_hour_column(metric_id):
     # Temperatur-Spalte. Der Aufloeser-Check oben deckt diesen Fall ab.
     if not _owners:
         html = render_compare_html(
-            _result(), hourly_metrics=["t2m_c", metric.dp_field],
+            _result(), hourly_metrics=["t2m_c", metric.dp_field], preset=PRESET_ALLGEMEIN,
         )
         assert _html_hour_header(html) == ["Zeit", get_metric("temperature").col_label], (
             f"Die ausgenommene Groesse '{metric_id}' hat doch eine Spalte "
@@ -395,7 +396,7 @@ def test_hourly_overview_and_outlook_orders_stay_independent():
 
     html = render_compare_html(
         result, enabled_metrics=overview, hourly_metrics=hourly,
-        outlook_enabled=True, outlook_metrics=outlook,
+        outlook_enabled=True, outlook_metrics=outlook, preset=PRESET_ALLGEMEIN,
     )
 
     header = _html_hour_header(html)
@@ -429,7 +430,7 @@ def test_wind_direction_still_merges_into_the_wind_cell_next_to_a_new_metric():
     dp_humid = get_metric("humidity").dp_field
     html = render_compare_html(
         _result(),
-        hourly_metrics=["wind10m_kmh", "wind_direction_deg", dp_humid],
+        hourly_metrics=["wind10m_kmh", "wind_direction_deg", dp_humid], preset=PRESET_ALLGEMEIN,
     )
 
     header = _html_hour_header(html)
@@ -449,7 +450,7 @@ def test_plaintext_hour_row_carries_the_same_columns_as_html():
     dp_humid = get_metric("humidity").dp_field
     selection = ["t2m_c", dp_humid, "wind10m_kmh"]
 
-    html = render_compare_html(_result(), hourly_metrics=selection)
+    html = render_compare_html(_result(), hourly_metrics=selection, preset=PRESET_ALLGEMEIN)
     plain = render_comparison_text(_result(), hourly_metrics=selection, preset=None)
 
     html_columns = _html_hour_header(html)[1:]

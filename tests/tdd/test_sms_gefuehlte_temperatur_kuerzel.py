@@ -26,6 +26,7 @@ GUARDS (heute gruen, muessen gruen bleiben):
 nicht uebersteuert) und ``test_ac2_grammatik_minus_vor_zahl_auch_ohne_tf``.
 """
 from __future__ import annotations
+from tests.helpers.ampel_allgemein import AMPEL_ALLGEMEIN
 
 import dataclasses
 import re
@@ -184,7 +185,7 @@ def _zeile(forecast_kwargs: dict, specs, *, max_length: int = 160) -> str:
     except TypeError as exc:
         pytest.fail(f"AC-2: DailyForecast kennt das Feld noch nicht: {exc}")
     line = build_token_line(
-        NormalizedForecast(days=(tag,)), specs, report_type="evening", stage_name="E1",
+        NormalizedForecast(days=(tag,)), specs, report_type="evening", stage_name="E1", ampel=AMPEL_ALLGEMEIN,
     )
     return render_line(line, max_length)
 
@@ -210,7 +211,9 @@ def test_ac2_nullform_und_luecke():
     "werte, erwartet",
     [
         (((6, -3.0), (9, 8.0)), "TF-3@6"),   # negativer Tiefstwert
-        (((6, 3.0), (9, 8.0)), "TF3@6"),     # positiver Tiefstwert
+        # Issue #2792 S1c-4b (Nachtrag VS, E1): Tiefstwert nur ab Gelb der
+        # Ampel („allgemein“: gefuehlt gelb unter 0 °C) -- 3 °C -> Nullform.
+        (((6, 3.0), (9, 8.0)), "TF-"),       # positiver Tiefstwert, unter Gelb
         (((7, 1.4), (9, -0.4)), "TF0@9"),    # ganze Grad gerundet, Stunde des Minimums
     ],
 )

@@ -34,6 +34,7 @@ Listen ausserhalb des Katalogs), ``test_sms_token_symbol_register_ratchet.py``
 (SMS-Symbole abweichend vom Katalog).
 """
 from __future__ import annotations
+from tests.helpers.ampel_allgemein import AMPEL_ALLGEMEIN
 from app.ampel import resolve_ampel
 
 import copy
@@ -509,7 +510,7 @@ def test_meteo_france_block_traegt_vr_und_vt():
         vigilance_hr_level="M", vigilance_hr_hour=14,
         vigilance_th_level="H", vigilance_th_hour=17,
     )
-    line = build_token_line(forecast, [], report_type="evening", stage_name="Heute")
+    line = build_token_line(forecast, [], report_type="evening", stage_name="Heute", ampel=AMPEL_ALLGEMEIN)
     vigilance = [t.symbol for t in line.tokens if t.category == "vigilance"]
     text = line.render(400)
     assert vigilance and set(vigilance) == {"VR:", "VT:"}, (

@@ -88,7 +88,7 @@ def build_onset_alert_message(
         events=(onset_ev,),
         source=source_label,
         cooldown_display=_cooldown_display(trip, lang=lang),
-        ampel=resolve_ampel(None),  # Issue #2792 S1c-1, bis S1c-4 „allgemein"
+        ampel=resolve_ampel(trip),  # Issue #2792 S1c-4b: Ampel des Trips
     )
 
 

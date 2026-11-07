@@ -6,8 +6,8 @@ GR20 E1
 == Metriken-Ueberblick ==
   17-18C - Max 12:00
   gef. 11.2-12.0C - Max 12:00
-  Wind >10 km/h ab 04:00 - max 17 (12:00)
-  !!! Boeen >20 km/h ab 04:00 - max 70 (08:00)
+  Wind max 17 km/h (12:00)
+  !!! Boeen >30 km/h ab 04:00 - max 70 (08:00)
   !!! Regen ab 08:00 - 18.5 mm
   !! Gewitter mittel ab 04:00 - staerkste 04:00
   50% bewoelkt - Max 08:00

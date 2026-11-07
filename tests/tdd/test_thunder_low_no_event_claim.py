@@ -22,6 +22,7 @@ RED-Ursache (heute, vor der Implementierung von #2176):
   existiert noch nicht -> ``ImportError``.
 """
 from __future__ import annotations
+from tests.helpers.ampel_allgemein import AMPEL_ALLGEMEIN
 from app.ampel import resolve_ampel
 
 from datetime import date, datetime, timedelta, timezone
@@ -246,7 +247,7 @@ def test_render_outlook_plain_no_asterisk_directly_before_stufenwort_for_low():
         precip_mm=0.0, wind_dir="W", wind_kmh=10, thunder="LOW", note=None,
         hourly_precip=(), hourly_wind=(), hourly_gust=(), hourly_thunder=(),
     )
-    plain_text_plain_branch = render_outlook_plain([stage_plain])
+    plain_text_plain_branch = render_outlook_plain([stage_plain], ampel=AMPEL_ALLGEMEIN)
     assert "⚡leicht" not in plain_text_plain_branch, (
         f"AC-1: '⚡' steht im 'plain'-Zweig noch unmittelbar vor dem "
         f"LOW-Stufenwort 'leicht': {plain_text_plain_branch!r}"
@@ -260,11 +261,11 @@ def test_render_outlook_plain_no_asterisk_directly_before_stufenwort_for_low():
         hourly_precip=(), hourly_wind=(), hourly_gust=(),
         hourly_thunder=(HourlyValue(hour=12, value=1.0),),
     )
-    tok = format_trend_tokens(stage_day)
+    tok = format_trend_tokens(stage_day, ampel=AMPEL_ALLGEMEIN)
     assert tok["thunder_day_token"] != "-", (
         "Testaufbau fehlerhaft -- kein Tages-Token fuer LOW erzeugt"
     )
-    plain_text_day_branch = render_outlook_plain([stage_day])
+    plain_text_day_branch = render_outlook_plain([stage_day], ampel=AMPEL_ALLGEMEIN)
     assert "⚡leicht" not in plain_text_day_branch, (
         f"AC-1: '⚡' steht im 'day'-Zweig noch unmittelbar vor dem "
         f"LOW-Stufenwort 'leicht': {plain_text_day_branch!r}"

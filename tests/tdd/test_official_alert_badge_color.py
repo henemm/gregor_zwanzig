@@ -10,6 +10,7 @@ Spec: docs/specs/modules/issue_1056_vigilance_badge_color.md (v2.0).
 Kern-Schicht, deterministisch: reine HTML-Renderer, kein Netz, kein Mock.
 """
 from __future__ import annotations
+from tests.helpers.ampel_allgemein import PRESET_ALLGEMEIN
 
 import re
 import types
@@ -51,7 +52,7 @@ def _compare_html_with(alerts: list[OfficialAlert]) -> str:
     dp = ForecastDataPoint(ts=datetime(2026, 7, 8, 9, 0), t2m_c=25.0)
     lr = LocationResult(location=loc, score=80, official_alerts=alerts, hourly_data=[dp])
     result = ComparisonResult(locations=[lr], time_window=(9, 16), target_date=date.today())
-    return render_compare_html(result, profile=ActivityProfile.ALLGEMEIN)
+    return render_compare_html(result, profile=ActivityProfile.ALLGEMEIN, preset=PRESET_ALLGEMEIN)
 
 
 # --- AC-1..AC-4: geteilter Renderer, level-basiert -------------------------

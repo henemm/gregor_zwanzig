@@ -6,8 +6,8 @@ GR20 E3
 == Metrics overview ==
   18-20C - Max 18:00
   feels 11.8-13.2C - Max 18:00
-  Wind >10 km/h from 04:00 - max 20 (18:00)
-  !! Wind gusts >20 km/h from 04:00 - max 46 (18:00)
+  Wind max 20 km/h (18:00)
+  !! Wind gusts >30 km/h from 04:00 - max 46 (18:00)
   ! Rain from 11:00 - 2.5 mm
   no thunderstorm
   50% cloud cover - Max 11:00

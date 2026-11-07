@@ -13,7 +13,7 @@ byte-/zeichengleich zum bisherigen Inline-Verhalten (Trip-Default) --
 ``show_acc=False`` laesst NUR die ACC-Kopfzelle/-Datenzelle strukturell
 entfallen (Compare-Ausblick, ADR-0005/#710: Confidence keine per-Ort-Metrik).
 
-``build_outlook_row(summary, points, weekday, tz, *, sms_thresholds=None)``
+``build_outlook_row(summary, points, weekday, tz, *, context, ampel)``
 ist eine reine Funktion (kein Netz-/Fetch-Aufruf) -- ``summary`` ist eine
 ``SegmentWeatherSummary``, geliefert von ``aggregate_stage`` (Trip) ODER
 ``summarize_points`` (Compare); ``points`` die flache Stundenpunktliste fuer
@@ -28,11 +28,10 @@ if TYPE_CHECKING:
     from datetime import tzinfo
     from app.models import SegmentWeatherSummary, ForecastDataPoint
 
-from app.ampel import resolve_ampel, schwellen_aus_ampel
 from app.metric_catalog import aggregation_label_de, get_metric
 from i18n import Lang
 from i18n import t as _t
-from output.renderers.email.helpers import format_trend_tokens
+from output.renderers.email.helpers import _thunder_band, format_trend_tokens
 from output.renderers.email.thunder_branch import (
     resolve_thunder_day_branch, thunder_cell_html, thunder_cell_plain,
     thunder_column_index,
@@ -112,32 +111,6 @@ def render_outlook_table(
     Compare-Altbestand) laesst die Ausgabe byte-identisch.
     """
 
-    def _outlook_cell_bg(val, thresholds: tuple) -> str:
-        """Bestimmt Zell-BG aus Schwellwert-Tupel (caution, warn, danger)."""
-        if val is None:
-            return ""
-        try:
-            v = float(val)
-        except (TypeError, ValueError):
-            return ""
-        c, w, d = thresholds
-        # Fix #1801 S1: Hex-Werte aus der EINEN Quelle tone_css() statt
-        # dreier lokaler Kopien.
-        if d is not None and v >= d:
-            return f"background:{tone_css('red')[0]};"
-        if w is not None and v >= w:
-            return f"background:{tone_css('orange')[0]};"
-        if c is not None and v >= c:
-            return f"background:{tone_css('yellow')[0]};"
-        return ""
-
-    def _catalog_thresholds(metric_id: str) -> tuple:
-        """Issue #1377 Scheibe B: (caution, warn, danger)-Tupel statt
-        hartcodierter Zahlen — derselbe Renderer rendert Trip UND
-        Ortsvergleich. Issue #2792 S1c-1: aus der durchgereichten Ampel."""
-        t = schwellen_aus_ampel(ampel, metric_id)
-        return (t.get("yellow"), t.get("orange"), t.get("red"))
-
     def _otd(content: str, *, bg: str = "", align: str = "center") -> str:
         """Outlook-Table-Datenzelle (kompakte inline-styles für Outlook).
 
@@ -193,7 +166,7 @@ def render_outlook_table(
             texte = [cells[i] if i < len(cells) else NO_VALUE for i in range(len(columns))]
             if gew_index is not None:
                 texte[gew_index] = thunder_cell_html(
-                    format_trend_tokens(stage, lang=lang), stage, lang=lang,
+                    format_trend_tokens(stage, lang=lang, ampel=ampel), stage, lang=lang,
                 )
             # #2098 Befund B: ACC HINTER den gewaehlten Spalten -- am
             # `outlook_columns()`/`cells`-Mechanismus vorbei, damit
@@ -251,18 +224,9 @@ def render_outlook_table(
         + '</tr></thead>'
     )
 
-    # Fix #1801 S1: MED/HIGH aus tone_css() (EINE Quelle); LOW bleibt bewusst
-    # ein abweichender, eigener Gelbton ausserhalb des Ampel-Vokabulars
-    # (Spec „Nicht-Ziele").
-    _THUNDER_LEVEL_BG = {
-        "LOW": "background:#fbe6c3;",
-        "MED": f"background:{tone_css('orange')[0]};",
-        "HIGH": f"background:{tone_css('red')[0]};",
-    }
-
     outlook_rows = ""
     for stage in rows:
-        tokens = format_trend_tokens(stage, lang=lang)
+        tokens = format_trend_tokens(stage, lang=lang, ampel=ampel)
         weekday = stage.get("weekday", NO_VALUE)
         # F005 (#911): Scheduler schreibt temp_lo/temp_hi (trip_report_scheduler
         # _build_stage_trend). temp_min_c/temp_max_c nur Fallback (Alt-Fixtures).
@@ -293,13 +257,22 @@ def render_outlook_table(
         gust_str = f"{gust_kmh:.0f}" if gust_kmh is not None else NO_VALUE
 
         tag_bg = ""
-        n_bg = ""
-        d_bg = ""
-        r_bg = _outlook_cell_bg(precip_mm, _catalog_thresholds("precipitation"))
-        pr_bg = _outlook_cell_bg(pr_pct, _catalog_thresholds("rain_probability"))
-        wind_bg = _outlook_cell_bg(wind_kmh, _catalog_thresholds("wind"))
-        gust_bg = _outlook_cell_bg(gust_kmh, _catalog_thresholds("gust"))
-        gew_bg = _THUNDER_LEVEL_BG.get(thunder_level, "")
+        # Issue #2792 S1c-4b (AC-4/AC-19 b): Temperatur beidseitig nach der
+        # Abo-Ampel -- Tief- und Hochwert je nach ihrer Seite; gruen faerbt nicht.
+        n_bg = _metric_column_bg({"metric_id": "temperature"}, temp_min, ampel=ampel)
+        d_bg = _metric_column_bg({"metric_id": "temperature"}, temp_max, ampel=ampel)
+        # Fix-Loop 2 (F001, AC-3): R/PR/Wind/Boeen beidseitig ueber dieselbe
+        # Abo-Ampel-Bewertung wie der konfigurierte Zweig (``severity_for``),
+        # nicht mehr nur nach oben -- Wassersport-Wind 3 km/h ist orange.
+        r_bg = _metric_column_bg({"metric_id": "precipitation"}, precip_mm, ampel=ampel)
+        pr_bg = _metric_column_bg({"metric_id": "rain_probability"}, pr_pct, ampel=ampel)
+        wind_bg = _metric_column_bg({"metric_id": "wind"}, wind_kmh, ampel=ampel)
+        gust_bg = _metric_column_bg({"metric_id": "gust"}, gust_kmh, ampel=ampel)
+        # Issue #2792 S1c-4b (AC-5/AC-19 c): Gewitter aus der zentralen
+        # Abbildung mit der Abo-Ampel; gruen faerbt nicht.
+        _gew_band = _thunder_band(thunder_level, ampel=ampel)
+        gew_bg = ("" if _gew_band in (None, "green")
+                  else f"background:{tone_css(_gew_band)[0]};")
         acc_bg = ""
 
         acc_td = _otd(_acc_dot(conf_pct), bg=acc_bg) if show_acc else ""
@@ -342,6 +315,7 @@ def render_outlook_plain(
     heading: Optional[str] = None,
     show_name: bool = True,
     lang: Lang = "de",
+    ampel: dict,
 ) -> str:
     """Rendert den Klartext-Ausblick-Block.
 
@@ -380,7 +354,7 @@ def render_outlook_plain(
             gew_index = thunder_column_index(columns)
             if gew_index is not None:
                 texte[gew_index] = thunder_cell_plain(
-                    format_trend_tokens(stage, lang=lang), stage, lang=lang,
+                    format_trend_tokens(stage, lang=lang, ampel=ampel), stage, lang=lang,
                 )
             values = "  ".join(
                 [f"{c['label']} {texte[i]}" for i, c in enumerate(columns)]
@@ -403,7 +377,7 @@ def render_outlook_plain(
                 lines.append(f"    ↳ {note}")
             continue
 
-        tok = format_trend_tokens(stage, lang=lang)
+        tok = format_trend_tokens(stage, lang=lang, ampel=ampel)
         name = stage.get("name", "")
         # Precip str — zero decision from format_trend_tokens
         precip_str = tok["precip_str"]
@@ -444,21 +418,18 @@ def render_outlook_plain(
 def _metric_column_bg(col: dict, raw: object, *, ampel: dict) -> str:
     """Zell-Hintergrund einer Ausblick-Metrikspalte (#1849).
 
-    Ampelband aus den SSoT-Helfern (``severity_for``/``thunder_ampel_band``),
-    Hex-Wert aus ``tone_css`` -- dieselben Quellen wie der Altpfad. ``green``
-    faerbt bewusst NICHT (Altpfad-Paritaet, kein gruener Teppich), und die
-    Gewitterstufe LOW traegt den abweichenden Altpfad-Hellgelbton
-    (``_THUNDER_LEVEL_BG``), nicht ``tone_css('yellow')``.
+    Ampelband aus ``severity_for`` bzw. fuer Gewitter aus der zentralen
+    Abbildung ``thunder_color`` (Issue #2792 S1c-4b, AC-5: „leicht" fest
+    gelb, mittel/hoch nach Abo-Ampel, kein eigenes Hellgelb mehr), Hex-Wert
+    aus ``tone_css``. ``green`` faerbt bewusst NICHT (kein gruener Teppich).
     """
-    from output.metric_format import severity_for, thunder_ampel_band
+    from output.metric_format import severity_for
 
     kind = col.get("kind")
     if kind == "enum":
         return ""
     if kind == "ordinal":
-        band = thunder_ampel_band(raw)
-        if band == "yellow":
-            return "background:#fbe6c3;"
+        band = _thunder_band(raw, ampel=ampel)
     else:
         band = severity_for(col.get("metric_id"), raw, ampel=ampel)
     if band in (None, "green"):
@@ -534,7 +505,6 @@ def build_outlook_row(
     weekday: str,
     tz,
     *,
-    sms_thresholds: Optional[dict] = None,
     metrics: Optional[list] = None,
     trip_display_config: object = None,
     report_type: Optional[str] = None,
@@ -545,8 +515,12 @@ def build_outlook_row(
     outlook_metric_formats: Optional[dict] = None,
     lang: Lang = "de",
     context: str,
+    ampel: dict,
 ) -> dict:
     """Baut ein Ausblick-Row-Dict aus einer SegmentWeatherSummary + Punktliste.
+
+    ``ampel`` (Issue #2792 S1c-4b, Pflicht ohne Default): aufgeloeste Ampel
+    des Abos; aufgeloest wird beim Aufrufer (Scheduler je ``stage_trip``).
 
     ``context`` (Issue #2792 S1c-4a, Pflicht ohne Default): ``"route"``
     (Trip) oder ``"vergleich"`` (Ortsvergleich) waehlt den Zweig, wie bei
@@ -561,11 +535,8 @@ def build_outlook_row(
     Ist-Zustand), damit die Tabelle weiterhin ``hourly_gust`` (nicht
     ``summary.gust_max_kmh``) liest.
 
-    ``sms_thresholds``: optionales Mapping metric_id -> Schwellwert
-    (``precipitation``/``wind``/``gust``/``thunder``), wird auf
-    ``sms_threshold_precip``/``sms_threshold_wind``/``sms_threshold_gust``/
-    ``sms_threshold_thunder`` abgebildet; ``None``-Werte werden gefiltert
-    (analog ``trip_report_scheduler._build_stage_trend``).
+    Issue #2792 S1c-4b (E1): ``sms_thresholds`` entfaellt -- die
+    Hervorhebung folgt der Ampel (``format_trend_tokens(ampel=)``).
 
     ``metrics`` (#1361, Compare): gesetzte Auswahl im Neuformat
     (``{"metric_id", "aggregation"}``) ergaenzt das Dict um ``cells`` -- die
@@ -613,19 +584,17 @@ def build_outlook_row(
     (``_resolve_hiking_extrema``). Ein explizites ``hiking_extrema`` hat
     Vorrang vor ``segments``.
     """
-    # Issue #2792 S1c-1: Einstieg loest die Ampel des jeweiligen Abos auf
-    # (``trip_display_config``); bis S1c-4 fest „allgemein" (byte-gleich).
-    # Die Arbeit macht ``_outlook_row`` -- interne Aufrufer (Vergleich)
-    # reichen dort ihre eigene, bereits aufgeloeste Ampel durch.
+    # Issue #2792 S1c-4b: kein eigener Aufloeser mehr -- die Ampel kommt vom
+    # Aufrufer. Die Arbeit macht ``_outlook_row``.
     return _outlook_row(
         summary, points, weekday, tz,
-        sms_thresholds=sms_thresholds, metrics=metrics,
+        metrics=metrics,
         trip_display_config=trip_display_config, report_type=report_type,
         day_window_start_hour=day_window_start_hour,
         day_window_end_hour=day_window_end_hour,
         hiking_extrema=hiking_extrema, segments=segments,
         outlook_metric_formats=outlook_metric_formats, lang=lang,
-        ampel=resolve_ampel(None),
+        ampel=ampel,
         context=context,
     )
 
@@ -636,7 +605,6 @@ def _outlook_row(
     weekday: str,
     tz,
     *,
-    sms_thresholds: Optional[dict] = None,
     metrics: Optional[list] = None,
     trip_display_config: object = None,
     report_type: Optional[str] = None,
@@ -680,7 +648,7 @@ def _outlook_row(
     precip_mm = float(summary.precip_sum_mm or 0.0)
     # Issue #1670 (AC-5): fehlen alle Windwerte, bleibt der Wert None (Zelle
     # "–") statt eines erfundenen "0"; Leser (format_trend_tokens,
-    # _outlook_cell_bg) behandeln None bereits.
+    # _metric_column_bg) behandeln None bereits.
     _wind_raw = summary.wind_max_kmh
     wind_kmh = int(_wind_raw) if _wind_raw is not None else None
     wind_dir = degrees_to_compass(getattr(summary, "wind_direction_avg_deg", None))
@@ -744,7 +712,6 @@ def _outlook_row(
     _conf_pct_raw = getattr(summary, "confidence_pct_min", None)
     _conf_pct = round(_conf_pct_raw) if _conf_pct_raw is not None else None
 
-    _sms = sms_thresholds or {}
     optional = {
         # Issue #1475 Nachbesserung (Punkt 4b): Hagel-Kennzeichen der Etappe —
         # Quelle fuer den Textzusatz in der Gewitter-Zelle von
@@ -756,10 +723,6 @@ def _outlook_row(
         "hail": getattr(summary, "hail_flag", None),
         "confidence_pct": _conf_pct,
         "rain_probability_pct": getattr(summary, "pop_max_pct", None),
-        "sms_threshold_precip": _sms.get("precipitation"),
-        "sms_threshold_wind": _sms.get("wind"),
-        "sms_threshold_gust": _sms.get("gust"),
-        "sms_threshold_thunder": _sms.get("thunder"),
         # Issue #1653: konfiguriertes Tagesfenster fuer die Tag/Nacht-Trennung
         # der Gewitter-Zelle. Ebenfalls None-gefiltert -- Aufrufer ohne Fenster
         # (Compare, Bestandstests) erhalten ein zeichengleiches Row-Dict.
@@ -812,7 +775,7 @@ def _outlook_row(
         if context == "route":
             from app.models import ThunderLevel as _ThunderLevel
 
-            _tok = format_trend_tokens(row)
+            _tok = format_trend_tokens(row, ampel=ampel)
             _zweig = resolve_thunder_day_branch(_tok, row)
             if _zweig == "day":
                 # Stufe UND Herkunft aus DEMSELBEN Fenster (AC-6) -- beide

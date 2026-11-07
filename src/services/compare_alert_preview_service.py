@@ -136,8 +136,8 @@ def _deviation(
     first = all_locations[ordered[0]]
     tz = tz_for_coords(first.lat, first.lon)
     stand_at = local_fmt(datetime.now(timezone.utc), tz)
-    # Issue #2792 S1c-1: Einstieg Alarm-Vorschau; bis S1c-4 „allgemein".
-    ampel = resolve_ampel(None)
+    # Issue #2792 S1c-4b: Einstieg Alarm-Vorschau, Ampel des Presets.
+    ampel = resolve_ampel(preset)
     msg = to_multi_point_alert_message(
         groups, tz=tz, stand_at=stand_at, anchor_points=anchors, ampel=ampel,
     )
@@ -181,7 +181,7 @@ def _onset(
     msg = to_multi_location_onset_alert_message(
         entities, tz=tz, stand_at=stand_at,
         cooldown_display=_format_cooldown_display(cooldown, lang=lang),
-        ampel=resolve_ampel(None),  # Issue #2792 S1c-1, bis S1c-4 „allgemein"
+        ampel=resolve_ampel(preset),  # Issue #2792 S1c-4b: Ampel des Presets
     )
     sms = render_sms(msg, limit=_SMS_LIMIT, location_positions=None)
     bubbles = [sms] if style == "kurzform" else [render_telegram(msg, lang=lang)]

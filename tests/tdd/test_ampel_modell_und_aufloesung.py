@@ -167,20 +167,33 @@ def test_abweichungszahl_zaehlt_grenzen_und_gewitter_nicht_alarmstufe():
                             "thunder": {"mittel": "red", "hoch": "red"}}) == 2
 
 
+def _aufgeloest(abo_ampel):
+    """#2792 S1c-4b Fix-Loop 2 Nachtrag (AC-27): ``thunder_color`` liest die
+    AUFGELOESTE Ampel (wie ``schwellen_aus_ampel``); das Abo-Ampel-Fragment
+    geht deshalb ueber ``resolve_ampel`` -- mechanisch umgestellt."""
+    from app.ampel import resolve_ampel
+    return resolve_ampel({"ampel": abo_ampel})
+
+
 @pytest.mark.parametrize("tid", list(AMPEL_TEMPLATES))
 def test_gewitter_keins_gruen_leicht_immer_gelb(tid):
-    ampel = {"template": tid}
+    ampel = _aufgeloest({"template": tid})
     assert thunder_color(ThunderLevel.NONE, ampel) == "green"
     assert thunder_color(ThunderLevel.LOW, ampel) == "yellow"
     assert thunder_color(ThunderLevel.HIGH, ampel) in ("orange", "red")
 
 
 def test_gewitter_mittel_nach_vorlage_und_abo():
-    assert thunder_color(ThunderLevel.MED, {"template": "wassersport"}) == "red"
-    assert thunder_color(ThunderLevel.MED, {"template": "allgemein"}) == "orange"
-    assert thunder_color(ThunderLevel.MED, None) == "orange"
-    assert thunder_color(ThunderLevel.MED, {"thunder": {"mittel": "yellow", "hoch": "orange"}}) == "yellow"
-    assert thunder_color(None, None) is None
+    assert thunder_color(ThunderLevel.MED, _aufgeloest({"template": "wassersport"})) == "red"
+    assert thunder_color(ThunderLevel.MED, _aufgeloest({"template": "allgemein"})) == "orange"
+    assert thunder_color(ThunderLevel.MED, _aufgeloest(
+        {"thunder": {"mittel": "yellow", "hoch": "orange"}})) == "yellow"
+    assert thunder_color(None, _aufgeloest({"template": "allgemein"})) is None
+    # Umgekehrt (Koordinator-Entscheid Fix-Loop 2 Nachtrag, AC-27): fehlende
+    # Ampel faellt nicht mehr still auf „allgemein" (frueher MED -> "orange").
+    for leer in (None, {}):
+        with pytest.raises(ValueError, match="Profil-Ampel leer"):
+            thunder_color(ThunderLevel.MED, leer)
 
 
 # --- Loader: lesen, schreiben, merge-sicher ---------------------------------

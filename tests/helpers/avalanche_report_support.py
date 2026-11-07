@@ -14,6 +14,7 @@ Alle Importe der zu pruefenden Module stehen INNERHALB der Funktionen, damit ein
 Modul im RED nur den jeweiligen Test (an der Assertion/dem Import) rot macht, nicht das Sammeln.
 """
 from __future__ import annotations
+from tests.helpers.ampel_allgemein import PRESET_ALLGEMEIN
 
 import json
 import re
@@ -280,7 +281,7 @@ def render_compare_mail(alerts: list, *, lat: float = 46.94, lon: float = 12.68)
         locations=[_loc("loc-tirol", "Tirol-Hütte", 0.0, alerts), _loc("loc-frei", "Talort", 0.3, [])],
         time_window=(9, 16), target_date=date(2026, 2, 20),
     )
-    return render_compare_html(result, profile=ActivityProfile.ALLGEMEIN)
+    return render_compare_html(result, profile=ActivityProfile.ALLGEMEIN, preset=PRESET_ALLGEMEIN)
 
 
 def wb_count_texts(html: str) -> list[str]:

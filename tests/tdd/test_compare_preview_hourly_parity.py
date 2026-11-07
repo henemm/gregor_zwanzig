@@ -24,6 +24,7 @@ API-Vertrag reisen und nicht nur durch eine testeigene Attrappe.
 Kern-Schicht, deterministisch: kein Netz, kein SMTP, keine Mocks/``patch()``.
 """
 from __future__ import annotations
+from tests.helpers.ampel_allgemein import PRESET_ALLGEMEIN
 
 import re
 
@@ -99,7 +100,7 @@ def test_preview_and_delivered_mail_show_the_same_columns():
         render_compare_email_preview(_body(hourly_metrics=AUSWAHL))
     )
     versand = _units_legend(
-        render_compare_html(_leerer_vergleich(), hourly_metrics=AUSWAHL)
+        render_compare_html(_leerer_vergleich(), hourly_metrics=AUSWAHL, preset=PRESET_ALLGEMEIN)
     )
 
     assert vorschau == versand, (

@@ -15,6 +15,7 @@ Root-Cause:
 Diese Tests beweisen das VERHALTEN: thunder_forecast["+1"] → TH+: im SMS-String.
 """
 from __future__ import annotations
+from tests.helpers.ampel_allgemein import AMPEL_ALLGEMEIN
 
 from datetime import datetime, timezone
 from zoneinfo import ZoneInfo
@@ -124,7 +125,7 @@ class TestAC1MorningMedThunder:
         sms = SMSTripFormatter().format_sms(
             [_segment()],
             report_type="morning",
-            thunder_forecast=thunder_forecast,
+            thunder_forecast=thunder_forecast, ampel=AMPEL_ALLGEMEIN,
         )
         assert "TH+:M@" in sms, (
             f"Erwarte 'TH+:M@' im SMS für MED-Gewitter morgen (morning-Briefing), "
@@ -162,7 +163,7 @@ class TestAC2EveningHighThunder:
         sms = SMSTripFormatter().format_sms(
             [_segment()],
             report_type="evening",
-            thunder_forecast=thunder_forecast,
+            thunder_forecast=thunder_forecast, ampel=AMPEL_ALLGEMEIN,
         )
         assert "TH+:H@" in sms, (
             f"Erwarte 'TH+:H@' im SMS für HIGH-Gewitter (evening-Briefing, "
@@ -192,7 +193,7 @@ class TestAC3NoneLevel:
         }
         sms = SMSTripFormatter().format_sms(
             [_segment()],
-            thunder_forecast=thunder_forecast,
+            thunder_forecast=thunder_forecast, ampel=AMPEL_ALLGEMEIN,
         )
         assert "TH+:-" in sms, (
             f"Erwarte 'TH+:-' bei Level NONE, bekommen: {sms!r}"
@@ -216,7 +217,7 @@ class TestAC4NoForecast:
         """
         sms = SMSTripFormatter().format_sms(
             [_segment()],
-            thunder_forecast=None,
+            thunder_forecast=None, ampel=AMPEL_ALLGEMEIN,
         )
         assert "TH+:-" in sms, (
             f"Erwarte 'TH+:-' bei thunder_forecast=None, bekommen: {sms!r}"
@@ -230,7 +231,7 @@ class TestAC4NoForecast:
         """
         sms = SMSTripFormatter().format_sms(
             [_segment()],
-            thunder_forecast={},
+            thunder_forecast={}, ampel=AMPEL_ALLGEMEIN,
         )
         assert "TH+:-" in sms, (
             f"Erwarte 'TH+:-' bei thunder_forecast={{}}, bekommen: {sms!r}"

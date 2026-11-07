@@ -17,6 +17,7 @@ Attribut-Rebind ersetzt (Muster
 restauriert.
 """
 from __future__ import annotations
+from tests.helpers.ampel_allgemein import PRESET_ALLGEMEIN
 from app.ampel import resolve_ampel
 
 import logging
@@ -161,7 +162,7 @@ def test_ac1_html_error_location_shows_state_text_and_logs_warning(caplog):
     loc_result = result.locations[0]
     assert loc_result.error is not None, "Vorbedingung: Fetch muss fehlschlagen"
 
-    html = render_compare_html(result, outlook_enabled=True)
+    html = render_compare_html(result, outlook_enabled=True, preset=PRESET_ALLGEMEIN)
     assert _STATE_TEXT in html, (
         "Bei einem Fehler muss der Ausblick-Block einen Zustandstext zeigen "
         f"statt zu verschwinden. HTML-Ausschnitt: ...{html[-400:]}"
@@ -196,7 +197,7 @@ def test_ac1b_html_exception_during_fetch_shows_state_text_and_logs_warning(capl
         f"{loc_result.error!r}"
     )
 
-    html = render_compare_html(result, outlook_enabled=True)
+    html = render_compare_html(result, outlook_enabled=True, preset=PRESET_ALLGEMEIN)
     assert _STATE_TEXT in html, (
         "Auch ein Abbruch per Exception muss den Zustandstext zeigen statt "
         f"zu verschwinden. HTML-Ausschnitt: ...{html[-400:]}"
@@ -232,7 +233,7 @@ def test_ac2_html_empty_outlook_data_shows_state_text_and_logs_warning(caplog):
         f"{loc_result.outlook_hourly_data}"
     )
 
-    html = render_compare_html(result, outlook_enabled=True)
+    html = render_compare_html(result, outlook_enabled=True, preset=PRESET_ALLGEMEIN)
     assert _STATE_TEXT in html, (
         "Bei leeren Ausblicksdaten muss ein Zustandstext erscheinen statt "
         f"einer Leerstelle. HTML-Ausschnitt: ...{html[-400:]}"
@@ -326,7 +327,7 @@ def test_ac5_found_state_unchanged_no_state_text_no_warning(caplog):
         "leer sein"
     )
 
-    html = render_compare_html(result, outlook_enabled=True)
+    html = render_compare_html(result, outlook_enabled=True, preset=PRESET_ALLGEMEIN)
     text = render_comparison_text(result, outlook_enabled=True, preset=None)
 
     assert OUTLOOK_HEADING in html, (
@@ -363,7 +364,7 @@ def test_ac6_no_duplicate_warning_across_html_and_plain_render(caplog):
 
     with caplog.at_level(logging.DEBUG, logger=_ENGINE_LOGGER):
         result = _run_engine_with_fetch([_location()], _error_fetch)
-        render_compare_email(result, outlook_enabled=True)
+        render_compare_email(result, outlook_enabled=True, preset=PRESET_ALLGEMEIN)
 
     # Adversary F001: OHNE Logger-Namensfilter. Der frueher hier benutzte
     # `_engine_warnings()` haette einen zweiten Log-Aufruf aus einem der
@@ -410,7 +411,7 @@ def test_ac7_multi_location_html_shows_all_three_with_correct_state():
     loc_c = _loc_result_direct(error=None, outlook_hourly_data=[], name="OrtC")
     result = _comparison_result([loc_a, loc_b, loc_c])
 
-    html = render_compare_html(result, outlook_enabled=True)
+    html = render_compare_html(result, outlook_enabled=True, preset=PRESET_ALLGEMEIN)
     for name in ("OrtA", "OrtB", "OrtC"):
         assert name in html, (
             f"Ort {name} muss in der HTML-Mail erscheinen — kein Ort darf "

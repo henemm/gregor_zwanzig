@@ -26,7 +26,7 @@ from functools import partial
 from typing import Optional
 from zoneinfo import ZoneInfo
 
-from app.ampel import hat_ampel, resolve_ampel
+from app.ampel import hat_ampel, resolve_ampel, vorlage_label_schluessel
 from app.metric_catalog import aggregation_label, get_metric
 from app.models import Corridor, ThunderLevel
 from app.profile import ActivityProfile
@@ -38,22 +38,17 @@ from output.renderers.compare_hourly_metric_ids import (
     HOURLY_DEFAULT_METRIC_IDS, HOURLY_MERGE_ONLY_METRIC_IDS,
     hourly_selectable_metric_ids,
 )
-from output.renderers.compare_metric_ids import (
-    CORRIDOR_METRIC_TO_HOUR_KEY, FRONTEND_TO_RENDERER_METRIC_ID,
-)
-from output.renderers.email.corridor_mark import (
-    MARK_BORDER as _MARK_BORDER, is_marked as _is_marked,
-    mark_cell_style as _mark_cell_style, mark_lookup as _mark_lookup,
-)
 from output.renderers.email.design_tokens import (
     FONT_DATA, FONT_UI, G_ACCENT, G_ALERT_L2, G_ALERT_L3, G_ALERT_L4,
     G_BOX_WARNING_BG, G_INK, G_INK_FAINT, G_INK_MUTED, G_PAPER, G_SUCCESS,
     G_WARNING, WEB_FONT_LINK, tone_css,
 )
-from output.renderers.email.outlook import _outlook_row, render_outlook_table
+from output.renderers.email.outlook import (
+    _outlook_row, _thunder_band, render_outlook_table,
+)
 from output.renderers.email.profile_signature import profile_signature
 from output.metric_format import (
-    NO_VALUE, format_value, severity_for, thunder_ampel_band,
+    NO_VALUE, format_value, severity_for,
 )
 from utils.geo import degrees_to_compass
 from utils.timezone import (
@@ -243,15 +238,11 @@ def _fmt_thunder(
 
 
 def _sev_thunder(v, *, ampel: dict):
-    # Issue #2792 S1c-1: `ampel` liegt schon an (einheitliche Bindung in
-    # `build_*_metrics`); die Gewitterfarbe liest sie erst ab S1c-4.
-    # Issue #1491 Fix: `NONE` bleibt im Ortsvergleich bewusst UNMARKIERT
-    # (anders als die Trip-Stundentabelle, die dafuer einen gruenen Punkt
-    # zeigt) -- eigene Produktentscheidung, kein Versehen. LOW/MED/HIGH
-    # teilen weiterhin die eine Ampelband-Quelle (`thunder_ampel_band`).
-    if v is None or v == ThunderLevel.NONE:
-        return None
-    return _to_compare(thunder_ampel_band(v))
+    # Issue #2792 S1c-4b (AC-5/AC-19 c): Gewitterfarbe aus der zentralen
+    # Abbildung `thunder_color` mit der Preset-Ampel -- „keins" ist jetzt
+    # gruen wie in der Trip-Tabelle (die fruehere Sonderregel „NONE
+    # unmarkiert", #1491, ist damit abgeloest).
+    return _to_compare(_thunder_band(v, ampel=ampel))
 
 
 def _sev_rain_safe(v, *, ampel: dict) -> str:
@@ -574,14 +565,10 @@ def derive_row_labels(
     return out
 
 
-# ---------------------------------------------------------------------------
-# Korridor-mark-Markierung (Issue #1231, Slice 7, AC-19) — rein additive
-# Anzeige-Signatur neben der bestehenden Severity-Faerbung. AC-20: wirkt
-# ausschliesslich hier im Renderer, calculate_score() bleibt unberuehrt.
-# Issue #1425 Schritt 1: die Bausteine (_mark_lookup/_is_marked/_MARK_BORDER/
-# _mark_cell_style) liegen jetzt in corridor_mark.py (s. Modul-Import oben) --
-# geteilt mit dem Trip-Renderer, kein zweiter Nachbau.
-# ---------------------------------------------------------------------------
+# Issue #2792 S1c-4b (AC-24, ADR-0106): die Korridor-mark-Markierung (#1231
+# Slice 7, #1425) ist abgeschaltet -- die Ampel ist die einzige Bewertung,
+# die markierten Bereiche stehen per Migration in der Ampel. ``corridors=``
+# bleibt an ``render_compare_html`` als ignoriertes Argument.
 
 
 # ---------------------------------------------------------------------------
@@ -771,10 +758,9 @@ def _fmt_metric(value, decimals, unit: str) -> str:
 
 
 def _render_overview_row(
-    m: dict, locations: list[LocationResult], marks: dict | None = None,
+    m: dict, locations: list[LocationResult],
     summaries: dict | None = None, lang: Lang = "de",
 ) -> str:
-    marks = marks or {}
     summaries = summaries or {}
     label_cell = (
         f'<td style="text-align:left;padding:8px 5px;font-family:{FONT_UI};'
@@ -815,12 +801,9 @@ def _render_overview_row(
             text = fmt_word_cell(fmt_fn, value, lang)
         else:
             text = _fmt_metric(value, m.get("decimals"), m.get("unit", ""))
-        marked = _is_marked(marks.get(m["key"]), value)
-        cls = ' class="corridor-mark"' if marked else ""
-        bg, extra_style = _mark_cell_style(bg, marked)
         cells.append(
-            f'<td{cls} style="text-align:center;padding:8px 5px;font-family:{FONT_DATA};'
-            f'font-size:12.5px;{extra_style}background:{bg};color:{fg};font-weight:{weight};'
+            f'<td style="text-align:center;padding:8px 5px;font-family:{FONT_DATA};'
+            f'font-size:12.5px;background:{bg};color:{fg};font-weight:{weight};'
             f'border-right:1px solid #f0ece1;">{text}</td>'
         )
     return f'<tr style="border-bottom:1px solid #f0ece1;">{"".join(cells)}</tr>'
@@ -901,7 +884,6 @@ def _render_fallback_notice_html(locations: list[LocationResult], lang: Lang = "
 def _render_overview_table(
     locations: list[LocationResult],
     enabled_metrics: list[str] | None = None,
-    corridors: list[Corridor] | None = None,
     unresolved_count: int = 0,
     lang: Lang = "de",
     *,
@@ -923,7 +905,6 @@ def _render_overview_table(
         f'<tr style="background:{G_PAPER};border-bottom:1px solid #e6e1d3;">'
         f'{"".join(header_cells)}</tr>'
     )
-    marks = _mark_lookup(corridors, FRONTEND_TO_RENDERER_METRIC_ID)
     visible = _visible_metrics(enabled_metrics, lang, ampel=ampel)
     # Tages-Aggregate EINMAL je Ort ableiten (nicht je Zeile x Ort) -- nur wenn
     # ueberhaupt eine Zeile davon lebt.
@@ -934,7 +915,7 @@ def _render_overview_table(
             for loc in locations if loc.error is None and loc.hourly_data
         }
     rows = "".join(
-        _render_overview_row(m, locations, marks, summaries, lang) for m in visible
+        _render_overview_row(m, locations, summaries, lang) for m in visible
     )
     table = (
         f'<table cellspacing="0" cellpadding="0" style="width:100%;min-width:760px;'
@@ -1024,13 +1005,11 @@ def _sev_cell_style(level: Optional[str]) -> tuple[str, str, str]:
 
 def _hour_td(
     text: str, bg: str = "transparent", fg: str = G_INK, weight: str = "500",
-    align: str = "center", marked: bool = False,
+    align: str = "center",
 ) -> str:
-    cls = ' class="corridor-mark"' if marked else ""
-    bg, extra_style = _mark_cell_style(bg, marked)
     return (
-        f'<td{cls} style="text-align:{align};padding:8px 4px;font-size:13px;'
-        f'{extra_style}background:{bg};color:{fg};font-weight:{weight};'
+        f'<td style="text-align:{align};padding:8px 4px;font-size:13px;'
+        f'background:{bg};color:{fg};font-weight:{weight};'
         f'border-right:1px solid #f0ece1;">{text}</td>'
     )
 
@@ -1094,7 +1073,7 @@ def _should_merge_wind_dir(hourly_metrics: list[str] | None) -> bool:
 
 
 def _render_hour_row(
-    dp, visible: list[dict], marks: dict, merge_wind_dir: bool = False,
+    dp, visible: list[dict], merge_wind_dir: bool = False,
     *, tz: ZoneInfo, lang: Lang = "de",
 ) -> str:
     # Issue #1237 (AC-1): nur die Stunde ("07"), kein Minutenanteil -- identisch
@@ -1138,20 +1117,17 @@ def _render_hour_row(
                 text = f"{text} {compass}"
         sev_fn = m.get("sev")
         sev_level = sev_fn(value) if (sev_fn and value is not None) else None
-        style = _sev_cell_style(sev_level)
-        marked = _is_marked(marks.get(m["key"]), value)
-        cells += _hour_td(text, *style, marked=marked)
+        cells += _hour_td(text, *_sev_cell_style(sev_level))
     return f'<tr style="border-bottom:1px solid #f0ece1;">{cells}</tr>'
 
 
 def _render_hour_table(
     loc: LocationResult, hourly_metrics: list[str] | None = None,
-    corridors: list[Corridor] | None = None, lang: Lang = "de",
+    lang: Lang = "de",
     *, ampel: dict,
 ) -> str:
     visible = _visible_hour_metrics(hourly_metrics, build_hour_metrics(ampel=ampel))
     merge_wind_dir = _should_merge_wind_dir(hourly_metrics)
-    marks = _mark_lookup(corridors, CORRIDOR_METRIC_TO_HOUR_KEY)
     tz = location_tz(loc.location)  # Issue #1378 — EIN Aufloeser (E3)
     columns = [t("vergleich.stunden.zeit", lang)] + [m["label"] for m in visible]
     # Issue #2666: Ausrichtung nach Position (erste Spalte = Zeit), nicht Wort.
@@ -1163,7 +1139,7 @@ def _render_hour_table(
     )
     header = f'<tr style="background:{G_PAPER};border-bottom:1px solid #e6e1d3;">{ths}</tr>'
     rows = "".join(
-        _render_hour_row(dp, visible, marks, merge_wind_dir, tz=tz, lang=lang)
+        _render_hour_row(dp, visible, merge_wind_dir, tz=tz, lang=lang)
         for dp in loc.hourly_data
     )
     table = (
@@ -1219,7 +1195,7 @@ def _location_heading(
 
 def _render_location_section(
     loc: LocationResult, index: int, hourly_metrics: list[str] | None = None,
-    corridors: list[Corridor] | None = None, lang: Lang = "de",
+    lang: Lang = "de",
     *, ampel: dict,
 ) -> str:
     """Ort-Kopf + Langform-Warn-Streifen + Stundentabelle. Entfaellt bei Fehler
@@ -1241,7 +1217,7 @@ def _render_location_section(
     return (
         f'<div style="padding:{20 if index else 14}px 24px 0;">'
         f'{header}{strip}'
-        f'{_render_hour_table(loc, hourly_metrics, corridors, lang, ampel=ampel)}</div>'
+        f'{_render_hour_table(loc, hourly_metrics, lang, ampel=ampel)}</div>'
     )
 
 
@@ -1423,7 +1399,9 @@ def _render_warning_banner(warning_text: str) -> str:
     )
 
 
-def _render_header(result: ComparisonResult, sig, tz: ZoneInfo, lang: Lang = "de") -> str:
+def _render_header(
+    result: ComparisonResult, sig, tz: ZoneInfo, lang: Lang = "de", *, profil_label: str,
+) -> str:
     label_text = f"{t('vergleich.kopf.titel', lang)} · {_html.escape(sig.eyebrow)}"
     label_style = (
         f"font-family:{FONT_DATA};font-size:10px;"
@@ -1438,7 +1416,7 @@ def _render_header(result: ComparisonResult, sig, tz: ZoneInfo, lang: Lang = "de
     date_line = f"{weekday}, {date_str}"
     date_style = f"font-family:{FONT_DATA};font-size:13px;color:{G_INK};margin-top:6px;"
 
-    profil_val = _html.escape(sig.eyebrow)
+    profil_val = _html.escape(profil_label)
     orte_val = str(len(result.locations))
     # Issue #1378 (AC-4/AC-8): Erzeugungszeit des Vergleichs (`created_at`,
     # dieselbe Quelle wie der Klartext-Teil -- vorher `datetime.now()`, das
@@ -1736,12 +1714,17 @@ def render_compare_html(
     outlook_metrics: list[dict] | None = None,
     outlook_metric_formats: dict[str, bool] | None = None,
     undelivered: list | None = None,
-    preset: Optional[dict] = None,
+    preset: dict,
     unresolved_count: int = 0,
     lang: Lang = "de",
     show_fallback_notice: bool = False,
 ) -> str:
     """Rendert ComparisonResult als HTML-Mail (v2-Layout, Issue #1110).
+
+    Issue #2792 S1c-4b: ``preset`` ist Pflicht ohne Default; die Farben
+    folgen der Ampel des Presets (``resolve_ampel(preset)``), die Kopfzelle
+    „Profil" zeigt das Label der aufgeloesten Vorlage. ``corridors`` ist ein
+    ignoriertes Argument (Markierung abgeschaltet, AC-24).
 
     Pure Function — keine Seiteneffekte, kein Netzwerk. Kein Score/Winner.
 
@@ -1774,11 +1757,8 @@ def render_compare_html(
             Versand" nennt daraus den echten Termin (Slots, Wochentag,
             ``end_date``, Pause). Fehlt es, steht dort ``NO_VALUE``. Die frueheren
             Parameter ``preset_schedule``/``preset_weekday`` sind entfallen.
-        corridors: Issue #1231, Slice 7 -- Corridor-Liste des Presets. Zellen,
-            deren Wert bei einem `mark=True`-Corridor innerhalb dessen `range`
-            liegt (`corridor_inside()`, C5), erhalten zusaetzlich
-            `class="corridor-mark"` (additiv zur Severity-Faerbung, AC-19).
-            `None`/`[]` = kein Korridor konfiguriert, HTML unveraendert.
+        corridors: ohne Wirkung seit Issue #2792 S1c-4b (AC-24); die
+            gespeicherten Bereiche bleiben erhalten, markiert wird nicht mehr.
         outlook_enabled: Epic #1301 B4 -- ``True`` zeigt je Ort einen bis zu
             3-Tage-Ausblick (Tagestabelle ohne ACC-Spalte, `show_acc=False`,
             ADR-0005/#710). Default ``False`` (rueckwaertskompatibel; der
@@ -1812,9 +1792,9 @@ def render_compare_html(
     `TypeError` statt still zu wirken wie eine Einstellung.
     """
     warnings = warnings or []
-    # Issue #2792 S1c-1: Einstieg loest die Ampel des Presets auf (je Rendern,
-    # AC-20); bis S1c-4 fest „allgemein" (byte-gleich).
-    ampel = resolve_ampel(None)
+    # Issue #2792 S1c-4b: Einstieg loest die Ampel des Presets auf (je
+    # Rendern, AC-20/AC-25).
+    ampel = resolve_ampel(preset)
     sig = profile_signature(profile, lang=lang)
     locations = location_render_order(result.locations)
 
@@ -1822,7 +1802,9 @@ def render_compare_html(
     # Ortes der konfigurierten Reihenfolge (`location_render_order`, #1359) --
     # nicht alphabetisch, nicht Serverzeit.
     header_tz = location_tz(locations[0].location) if locations else UTC
-    header_html = _render_header(result, sig, header_tz, lang)
+    # AC-15/AC-19 f: Kopfzelle „Profil" = Label der aufgeloesten Vorlage.
+    profil_label = t(vorlage_label_schluessel(ampel["template"]), lang)
+    header_html = _render_header(result, sig, header_tz, lang, profil_label=profil_label)
     warnings_html = "".join(_render_warning_banner(w) for w in warnings)
     warn_banner_html = _render_warn_banner(locations, lang)
     # Issue #1349 (Scheibe 3) — geteilter Baustein aus unavailable_hint.py,
@@ -1842,7 +1824,7 @@ def render_compare_html(
     overview_html = (
         f'<div style="padding:6px 24px 0;">'
         f'{_render_section_head(*overview_head)}'
-        f'{_render_overview_table(locations, enabled_metrics, corridors, unresolved_count, lang, ampel=ampel)}</div>'
+        f'{_render_overview_table(locations, enabled_metrics, unresolved_count, lang, ampel=ampel)}</div>'
     )
     # Issue #1563: leer ohne Vertretung -> faellt durch den `if part`-Filter.
     fallback_html = (
@@ -1867,7 +1849,7 @@ def render_compare_html(
     # bei fehlenden Daten "").
     def _per_location(loc, i: int) -> str:
         section = (
-            _render_location_section(loc, i, hourly_metrics, corridors, lang, ampel=ampel)
+            _render_location_section(loc, i, hourly_metrics, lang, ampel=ampel)
             if hourly_enabled else ""
         )
         if not outlook_enabled:
@@ -1919,18 +1901,12 @@ def render_compare_html(
         ) if part
     )
 
-    # Adversary F001(b): zusaetzliche <style>-Regel als Backup fuer Clients,
-    # die Klassen respektieren -- nur bei tatsaechlich konfigurierten
-    # Korridoren, damit corridors=None/[] das HTML byte-identisch laesst
-    # (Baseline-Schutz, s. test_kein_corridor_rendert_wie_bisher).
-    mark_css = f".corridor-mark {{ border-left:3px solid {G_SUCCESS} !important; }}\n" if corridors else ""
-
     style_block = f"""<style>
 body {{ margin:0;padding:0;background:{G_PAPER};font-family:{FONT_UI};color:{G_INK}; }}
 .container {{ max-width:680px;margin:0 auto;background:#ffffff; }}
 table {{ border-collapse:collapse; }}
 th, td {{ vertical-align:top; }}
-{mark_css}@media (max-width: 480px) {{
+@media (max-width: 480px) {{
     .container {{ max-width:100% !important; }}
     .header-stats-desktop {{ display:none !important; }}
     .header-stats-mobile {{ display:table !important; }}

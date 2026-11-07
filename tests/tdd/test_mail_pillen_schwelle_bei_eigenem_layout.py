@@ -83,12 +83,19 @@ FIXTURE_INNSBRUCK = ROOT / "fixtures" / "openmeteo" / "innsbruck.json"
 _PILLE = re.compile(r"Regen ab \d{2}:\d{2} [·-] [\d.]+ mm")
 
 #: (id, Layout-Schwelle, globale Schwelle, mm je Stunde, Pille erwartet)
+#:
+#: Issue #2792 S1c-4b (E1, AC-19 e) -- umgekehrt: die eingestellte
+#: ``sms_threshold`` (global wie am Layout-Eintrag) wirkt NICHT mehr; die
+#: Ereignisform erscheint genau dann, wenn der Wert nach der Ampel des Trips
+#: gelb oder schlechter ist (Golden D = Vorlage „allgemein", Regen gelb ab
+#: 1 mm). Unter Gelb hilft keine noch so niedrige Schwelle, ab Gelb hindert
+#: keine noch so hohe.
 SZENARIEN = [
-    ("golden_d", None, 0.1, 0.15, True),
-    ("positivkontrolle_0_3_mm", None, 0.1, 0.3, True),
-    ("ohne_globale_schwelle_standard_0_2", None, None, 0.15, False),
-    ("layout_eigene_0_2_gegen_global_0_1", 0.2, 0.1, 0.15, False),
-    ("layout_eigene_0_1_gegen_global_0_3", 0.1, 0.3, 0.15, True),
+    ("golden_d_0_15_mm_unter_gelb", None, 0.1, 0.15, False),
+    ("positivkontrolle_1_2_mm_ab_gelb", None, 0.1, 1.2, True),
+    ("ohne_globale_schwelle_unter_gelb", None, None, 0.15, False),
+    ("layout_eigene_0_1_unter_gelb_keine_pille", 0.1, 0.3, 0.15, False),
+    ("layout_eigene_5_0_ab_gelb_trotzdem_pille", 5.0, 0.1, 1.2, True),
 ]
 SZENARIO_IDS = [s[0] for s in SZENARIEN]
 
@@ -191,12 +198,10 @@ def _rendern(form: str, d: dict, mm: float, report_type: str) -> str:
 def test_regen_pille_folgt_der_eingestellten_schwelle_in_allen_drei_formen(
     szenario, form, report_type,
 ):
-    """AC-16: E-Mail-Layout ohne eigene Schwelle + globale Schwelle 0,1 mm +
-    Stundenwert 0,15 mm -> die Regen-Pille (Ereignisform ``Regen ab HH:MM ·``)
-    erscheint in HTML, Klartext UND Kompaktform, morgens wie abends.
-
-    Ein Layout-Eintrag mit EIGENER Schwelle behaelt Vorrang vor der globalen;
-    ohne globale Schwelle bleibt der Standardwert 0,2 (0,15 mm -> keine Pille).
+    """AC-16, umgekehrt durch #2792 S1c-4b (E1): die Regen-Pille
+    (Ereignisform ``Regen ab HH:MM ·``) folgt in HTML, Klartext UND
+    Kompaktform, morgens wie abends, der Ampel des Trips -- die eingestellte
+    Schwelle (global oder am Layout-Eintrag) entscheidet nicht mehr.
     """
     name, layout_thr, global_thr, mm, erwartet = szenario
     d = _dict_mit_schwellen(layout_thr, global_thr)
@@ -212,31 +217,37 @@ def test_regen_pille_folgt_der_eingestellten_schwelle_in_allen_drei_formen(
 
 # ─────────────── je Metrik: Wind, Böen, Regen, Regenwahrscheinlichkeit ───────
 
-#: (metric_id, Wetterfeld, Stundenwert, eingestellte Schwelle, hohe Schwelle,
-#:  Label-Muster, Ereignis-Muster). Der Stundenwert liegt ZWISCHEN der
-#: eingestellten Schwelle und dem Standardwert (``builder.DEFAULTS``: W 10,
-#: G 20, R 0,2, PR 20) -- nur so unterscheidet die Pille "eingestellt" von
-#: "Standard". Die hohe Schwelle liegt ueber dem Stundenwert.
+#: (metric_id, Wetterfeld, Stundenwert unter Gelb, Stundenwert ab Gelb,
+#:  eingestellte Schwelle, hohe Schwelle, Label-Muster, Ereignis-Muster).
+#: Issue #2792 S1c-4b (E1, AC-19 e) -- umgekehrt: die Ereignisform folgt der
+#: Ampel des Trips (Golden D = „allgemein": Wind/Böen/Regen-W. gelb ab 30,
+#: Regen ab 1 mm), der Erwaehnungstext nennt die Gelb-Grenze. Die
+#: eingestellte Schwelle liegt unter dem Wert unter Gelb (frueher: Pille),
+#: die hohe ueber dem Wert ab Gelb (frueher: keine Pille) -- beide wirken
+#: nicht mehr.
 _BOEEN = r"B(?:ö|oe|o)en"
 METRIK_FAELLE = [
-    ("wind", "wind10m_kmh", 7.0, 5.0, 20.0,
-     r"\bWind (?:>|max)", r"\bWind >5 km/h ab \d{2}:\d{2}"),
-    ("gust", "gust_kmh", 15.0, 10.0, 30.0,
-     _BOEEN + r" (?:>|max)", _BOEEN + r" >10 km/h ab \d{2}:\d{2}"),
-    ("precipitation", "precip_1h_mm", 0.15, 0.1, 0.3,
+    ("wind", "wind10m_kmh", 7.0, 35.0, 5.0, 50.0,
+     r"\bWind (?:>|max)", r"\bWind >30 km/h ab \d{2}:\d{2}"),
+    ("gust", "gust_kmh", 15.0, 35.0, 10.0, 50.0,
+     _BOEEN + r" (?:>|max)", _BOEEN + r" >30 km/h ab \d{2}:\d{2}"),
+    ("precipitation", "precip_1h_mm", 0.15, 1.2, 0.1, 5.0,
      r"Regen (?:ab|ges\.)|kein Regen", r"Regen ab \d{2}:\d{2}"),
-    ("rain_probability", "pop_pct", 15.0, 10.0, 30.0,
-     r"Regen-W\. (?:>|max)", r"Regen-W\. >10% ab \d{2}:\d{2}"),
+    ("rain_probability", "pop_pct", 15.0, 40.0, 10.0, 50.0,
+     r"Regen-W\. (?:>|max)", r"Regen-W\. >30% ab \d{2}:\d{2}"),
 ]
 
-#: (id, Schwelle global, Schwelle am Layout-Eintrag, Ereignisform erwartet).
-#: "set"/"hoch" werden je Metrik aus METRIK_FAELLE eingesetzt.
+#: (id, Schwelle global, Schwelle am Layout-Eintrag). "set"/"hoch" werden je
+#: Metrik aus METRIK_FAELLE eingesetzt; keine Anordnung aendert das Ergebnis.
 SCHWELLEN_FAELLE = [
-    ("global_eingestellt", "set", None, True),
-    ("ohne_schwelle_standardwert", None, None, False),
-    ("layout_hoch_gewinnt_gegen_global", "set", "hoch", False),
-    ("layout_eingestellt_gewinnt_gegen_global_hoch", "hoch", "set", True),
+    ("global_eingestellt", "set", None),
+    ("ohne_schwelle", None, None),
+    ("layout_hoch_gegen_global", "set", "hoch"),
+    ("layout_eingestellt_gegen_global_hoch", "hoch", "set"),
 ]
+
+#: (id, Ampel-Lage des Stundenwerts, Ereignisform erwartet)
+WERT_LAGEN = [("unter_gelb", False), ("ab_gelb", True)]
 
 
 def _dict_metrik_schwellen(metric_id: str, global_thr, layout_thr) -> dict:
@@ -265,23 +276,27 @@ def _dict_metrik_schwellen(metric_id: str, global_thr, layout_thr) -> dict:
     return d
 
 
+@pytest.mark.parametrize("lage", WERT_LAGEN, ids=[w[0] for w in WERT_LAGEN])
 @pytest.mark.parametrize("form", FORMEN)
 @pytest.mark.parametrize("fall", SCHWELLEN_FAELLE, ids=[f[0] for f in SCHWELLEN_FAELLE])
 @pytest.mark.parametrize("metrik", METRIK_FAELLE, ids=[m[0] for m in METRIK_FAELLE])
-def test_pille_je_metrik_folgt_der_eingestellten_schwelle(metrik, fall, form):
-    """#2422 S3 (AC-16, Adversary F001): Wind, Böen, Regen und
-    Regenwahrscheinlichkeit folgen in den Mail-Pillen der im Editor
-    eingestellten Erwaehnungsschwelle -- wie die SMS.
+def test_pille_je_metrik_folgt_der_ampel_nicht_der_eingestellten_schwelle(
+    metrik, fall, form, lage,
+):
+    """#2422 S3 (AC-16, Adversary F001), umgekehrt durch #2792 S1c-4b (E1,
+    AC-19 e): Wind, Böen, Regen und Regenwahrscheinlichkeit folgen in den
+    Mail-Pillen der Ampel des Trips -- wie die SMS.
 
-    GIVEN ein Stundenwert zwischen eingestellter Schwelle und Standardwert.
+    GIVEN ein Stundenwert unter bzw. ab Gelb und eine beliebige Anordnung
+          eingestellter Schwellen (global / am Layout-Eintrag).
     WHEN  die Mail (HTML, Klartext, Kompaktform) gerendert wird.
-    THEN  zeigt die Pille die Ereignisform ("… >Schwelle ab HH:00"), wenn die
-          eingestellte Schwelle gilt; ohne Schwelle gilt der Standardwert
-          (keine Ereignisform); eine Schwelle am Layout-Eintrag gewinnt in
-          beide Richtungen gegen die globale.
+    THEN  zeigt die Pille die Ereignisform ("… >Gelb-Grenze ab HH:00") genau
+          ab Gelb; die eingestellte Schwelle aendert daran nichts.
     """
-    metric_id, feld, wert, eingestellt, hoch, label, ereignis = metrik
-    name, global_thr, layout_thr, erwartet = fall
+    metric_id, feld, wert_unter, wert_ab, eingestellt, hoch, label, ereignis = metrik
+    name, global_thr, layout_thr = fall
+    lage_name, erwartet = lage
+    wert = wert_ab if erwartet else wert_unter
     einsetzen = {"set": eingestellt, "hoch": hoch, None: None}
     d = _dict_metrik_schwellen(metric_id, einsetzen[global_thr], einsetzen[layout_thr])
 
@@ -305,7 +320,7 @@ def test_pille_je_metrik_folgt_der_eingestellten_schwelle(metrik, fall, form):
     )
     da = bool(re.search(ereignis, block))
     assert da is erwartet, (
-        f"F001 [{metric_id}/{name}/{form}]: Wert {wert}, global={einsetzen[global_thr]}, "
+        f"F001 [{metric_id}/{name}/{form}/{lage_name}]: Wert {wert}, global={einsetzen[global_thr]}, "
         f"Layout={einsetzen[layout_thr]} -> Ereignisform "
         f"{'erwartet' if erwartet else 'NICHT erwartet'}. Pillenblock: {block!r}"
     )

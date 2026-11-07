@@ -14,6 +14,7 @@ direkt auf und durchlaeuft diese Stellen nie.
 Kein Mock-Framework, kein Netz.
 """
 from __future__ import annotations
+from tests.helpers.ampel_allgemein import AMPEL_ALLGEMEIN
 
 import contextlib
 import dataclasses
@@ -200,7 +201,7 @@ def outlook_rows(
                 context="vergleich" if trip_display_config is None else "route",
                 report_type=report_type,
                 day_window_start_hour=day_window_start_hour,
-                day_window_end_hour=day_window_end_hour,
+                day_window_end_hour=day_window_end_hour, ampel=AMPEL_ALLGEMEIN,
             )
             for i in range(len(_TAGE))
         ]

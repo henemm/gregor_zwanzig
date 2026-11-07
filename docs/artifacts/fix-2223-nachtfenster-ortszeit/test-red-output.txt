@@ -1,0 +1,188 @@
+Using CPython 3.12.3 interpreter at: /usr/bin/python3
+Creating virtual environment at: .venv
+   Building gregor-zwanzig @ file:///home/hem/gregor_zwanzig/.claude/worktrees/scalable-snacking-perlis
+      Built gregor-zwanzig @ file:///home/hem/gregor_zwanzig/.claude/worktrees/scalable-snacking-perlis
+Installed 57 packages in 146ms
+============================= test session starts ==============================
+platform linux -- Python 3.12.3, pytest-8.4.1, pluggy-1.6.0
+rootdir: /home/hem/gregor_zwanzig/.claude/worktrees/scalable-snacking-perlis
+configfile: pyproject.toml
+plugins: anyio-4.12.0, timeout-2.4.0, socket-0.8.0
+timeout: 30.0s
+timeout method: signal
+timeout func_only: False
+collected 8 items
+
+tests/tdd/test_night_window_ortszeit.py FFFFFF.F                         [100%]
+
+=================================== FAILURES ===================================
+__________ test_ac1_utc_minus_5_ortsabend_endet_um_sechs_uhr_ortszeit __________
+
+    def test_ac1_utc_minus_5_ortsabend_endet_um_sechs_uhr_ortszeit():
+        # Bogotá (UTC−5), Ankunft 20:00 Ortszeit = 01:00 UTC des Folgetags
+        arrival = datetime(2026, 7, 21, 1, 0, tzinfo=UTC)
+        end, prov = _requested_end(_last_segment(4.71, -74.07, arrival))
+        start = prov.requests[-1][0]
+        hours = (end - start).total_seconds() / 3600
+>       assert end == datetime(2026, 7, 21, 11, 0, tzinfo=UTC), f"Ende {end}"
+E       AssertionError: Ende 2026-07-22 06:00:00+00:00
+E       assert datetime.datetime(2026, 7, 22, 6, 0, tzinfo=datetime.timezone.utc) == datetime.datetime(2026, 7, 21, 11, 0, tzinfo=datetime.timezone.utc)
+E        +  where datetime.datetime(2026, 7, 21, 11, 0, tzinfo=datetime.timezone.utc) = datetime(2026, 7, 21, 11, 0, tzinfo=datetime.timezone.utc)
+
+tests/tdd/test_night_window_ortszeit.py:85: AssertionError
+_ test_ac2_europa_endet_um_sechs_uhr_ortszeit[39.65-2.91-Europe/Madrid-arrival0-expected_end_utc0] _
+
+lat = 39.65, lon = 2.91, tzname = 'Europe/Madrid'
+arrival = datetime.datetime(2026, 7, 20, 15, 0, tzinfo=datetime.timezone.utc)
+expected_end_utc = datetime.datetime(2026, 7, 21, 4, 0, tzinfo=datetime.timezone.utc)
+
+    @pytest.mark.parametrize("lat,lon,tzname,arrival,expected_end_utc", [
+        (39.65, 2.91, "Europe/Madrid", datetime(2026, 7, 20, 15, 0, tzinfo=UTC),
+         datetime(2026, 7, 21, 4, 0, tzinfo=UTC)),   # Mallorca Sommer UTC+2
+        (39.66, 2.92, "Europe/Madrid", datetime(2026, 12, 10, 15, 0, tzinfo=UTC),
+         datetime(2026, 12, 11, 5, 0, tzinfo=UTC)),  # Mallorca Winter UTC+1
+        (42.03, 9.03, "Europe/Paris", datetime(2026, 7, 20, 15, 0, tzinfo=UTC),
+         datetime(2026, 7, 21, 4, 0, tzinfo=UTC)),   # Korsika Sommer
+        (42.04, 9.04, "Europe/Paris", datetime(2026, 12, 10, 15, 0, tzinfo=UTC),
+         datetime(2026, 12, 11, 5, 0, tzinfo=UTC)),  # Korsika Winter
+    ])
+    def test_ac2_europa_endet_um_sechs_uhr_ortszeit(lat, lon, tzname, arrival, expected_end_utc):
+        end, _ = _requested_end(_last_segment(lat, lon, arrival))
+        local = end.astimezone(ZoneInfo(tzname))
+>       assert (local.hour, local.minute) == (6, 0), f"Ende in Ortszeit {local}"
+E       AssertionError: Ende in Ortszeit 2026-07-21 08:00:00+02:00
+E       assert (8, 0) == (6, 0)
+E         
+E         At index 0 diff: 8 != 6
+E         Use -v to get more diff
+
+tests/tdd/test_night_window_ortszeit.py:102: AssertionError
+_ test_ac2_europa_endet_um_sechs_uhr_ortszeit[39.66-2.92-Europe/Madrid-arrival1-expected_end_utc1] _
+
+lat = 39.66, lon = 2.92, tzname = 'Europe/Madrid'
+arrival = datetime.datetime(2026, 12, 10, 15, 0, tzinfo=datetime.timezone.utc)
+expected_end_utc = datetime.datetime(2026, 12, 11, 5, 0, tzinfo=datetime.timezone.utc)
+
+    @pytest.mark.parametrize("lat,lon,tzname,arrival,expected_end_utc", [
+        (39.65, 2.91, "Europe/Madrid", datetime(2026, 7, 20, 15, 0, tzinfo=UTC),
+         datetime(2026, 7, 21, 4, 0, tzinfo=UTC)),   # Mallorca Sommer UTC+2
+        (39.66, 2.92, "Europe/Madrid", datetime(2026, 12, 10, 15, 0, tzinfo=UTC),
+         datetime(2026, 12, 11, 5, 0, tzinfo=UTC)),  # Mallorca Winter UTC+1
+        (42.03, 9.03, "Europe/Paris", datetime(2026, 7, 20, 15, 0, tzinfo=UTC),
+         datetime(2026, 7, 21, 4, 0, tzinfo=UTC)),   # Korsika Sommer
+        (42.04, 9.04, "Europe/Paris", datetime(2026, 12, 10, 15, 0, tzinfo=UTC),
+         datetime(2026, 12, 11, 5, 0, tzinfo=UTC)),  # Korsika Winter
+    ])
+    def test_ac2_europa_endet_um_sechs_uhr_ortszeit(lat, lon, tzname, arrival, expected_end_utc):
+        end, _ = _requested_end(_last_segment(lat, lon, arrival))
+        local = end.astimezone(ZoneInfo(tzname))
+>       assert (local.hour, local.minute) == (6, 0), f"Ende in Ortszeit {local}"
+E       AssertionError: Ende in Ortszeit 2026-12-11 07:00:00+01:00
+E       assert (7, 0) == (6, 0)
+E         
+E         At index 0 diff: 7 != 6
+E         Use -v to get more diff
+
+tests/tdd/test_night_window_ortszeit.py:102: AssertionError
+_ test_ac2_europa_endet_um_sechs_uhr_ortszeit[42.03-9.03-Europe/Paris-arrival2-expected_end_utc2] _
+
+lat = 42.03, lon = 9.03, tzname = 'Europe/Paris'
+arrival = datetime.datetime(2026, 7, 20, 15, 0, tzinfo=datetime.timezone.utc)
+expected_end_utc = datetime.datetime(2026, 7, 21, 4, 0, tzinfo=datetime.timezone.utc)
+
+    @pytest.mark.parametrize("lat,lon,tzname,arrival,expected_end_utc", [
+        (39.65, 2.91, "Europe/Madrid", datetime(2026, 7, 20, 15, 0, tzinfo=UTC),
+         datetime(2026, 7, 21, 4, 0, tzinfo=UTC)),   # Mallorca Sommer UTC+2
+        (39.66, 2.92, "Europe/Madrid", datetime(2026, 12, 10, 15, 0, tzinfo=UTC),
+         datetime(2026, 12, 11, 5, 0, tzinfo=UTC)),  # Mallorca Winter UTC+1
+        (42.03, 9.03, "Europe/Paris", datetime(2026, 7, 20, 15, 0, tzinfo=UTC),
+         datetime(2026, 7, 21, 4, 0, tzinfo=UTC)),   # Korsika Sommer
+        (42.04, 9.04, "Europe/Paris", datetime(2026, 12, 10, 15, 0, tzinfo=UTC),
+         datetime(2026, 12, 11, 5, 0, tzinfo=UTC)),  # Korsika Winter
+    ])
+    def test_ac2_europa_endet_um_sechs_uhr_ortszeit(lat, lon, tzname, arrival, expected_end_utc):
+        end, _ = _requested_end(_last_segment(lat, lon, arrival))
+        local = end.astimezone(ZoneInfo(tzname))
+>       assert (local.hour, local.minute) == (6, 0), f"Ende in Ortszeit {local}"
+E       AssertionError: Ende in Ortszeit 2026-07-21 08:00:00+02:00
+E       assert (8, 0) == (6, 0)
+E         
+E         At index 0 diff: 8 != 6
+E         Use -v to get more diff
+
+tests/tdd/test_night_window_ortszeit.py:102: AssertionError
+_ test_ac2_europa_endet_um_sechs_uhr_ortszeit[42.04-9.04-Europe/Paris-arrival3-expected_end_utc3] _
+
+lat = 42.04, lon = 9.04, tzname = 'Europe/Paris'
+arrival = datetime.datetime(2026, 12, 10, 15, 0, tzinfo=datetime.timezone.utc)
+expected_end_utc = datetime.datetime(2026, 12, 11, 5, 0, tzinfo=datetime.timezone.utc)
+
+    @pytest.mark.parametrize("lat,lon,tzname,arrival,expected_end_utc", [
+        (39.65, 2.91, "Europe/Madrid", datetime(2026, 7, 20, 15, 0, tzinfo=UTC),
+         datetime(2026, 7, 21, 4, 0, tzinfo=UTC)),   # Mallorca Sommer UTC+2
+        (39.66, 2.92, "Europe/Madrid", datetime(2026, 12, 10, 15, 0, tzinfo=UTC),
+         datetime(2026, 12, 11, 5, 0, tzinfo=UTC)),  # Mallorca Winter UTC+1
+        (42.03, 9.03, "Europe/Paris", datetime(2026, 7, 20, 15, 0, tzinfo=UTC),
+         datetime(2026, 7, 21, 4, 0, tzinfo=UTC)),   # Korsika Sommer
+        (42.04, 9.04, "Europe/Paris", datetime(2026, 12, 10, 15, 0, tzinfo=UTC),
+         datetime(2026, 12, 11, 5, 0, tzinfo=UTC)),  # Korsika Winter
+    ])
+    def test_ac2_europa_endet_um_sechs_uhr_ortszeit(lat, lon, tzname, arrival, expected_end_utc):
+        end, _ = _requested_end(_last_segment(lat, lon, arrival))
+        local = end.astimezone(ZoneInfo(tzname))
+>       assert (local.hour, local.minute) == (6, 0), f"Ende in Ortszeit {local}"
+E       AssertionError: Ende in Ortszeit 2026-12-11 07:00:00+01:00
+E       assert (7, 0) == (6, 0)
+E         
+E         At index 0 diff: 7 != 6
+E         Use -v to get more diff
+
+tests/tdd/test_night_window_ortszeit.py:102: AssertionError
+________ test_ac3_sommerzeit_umstellung_endet_exakt_sechs_uhr_ortszeit _________
+
+    def test_ac3_sommerzeit_umstellung_endet_exakt_sechs_uhr_ortszeit():
+        # Madrid, Umstellung 28.03.2027 (CET -> CEST); Ankunft Vorabend 20:00 CET
+        arrival = datetime(2027, 3, 27, 19, 0, tzinfo=UTC)
+        end, _ = _requested_end(_last_segment(40.41, -3.70, arrival))
+        local = end.astimezone(ZoneInfo("Europe/Madrid"))
+>       assert (local.year, local.month, local.day, local.hour, local.minute) == (2027, 3, 28, 6, 0)
+E       assert (2027, 3, 28, 8, 0) == (2027, 3, 28, 6, 0)
+E         
+E         At index 3 diff: 8 != 6
+E         Use -v to get more diff
+
+tests/tdd/test_night_window_ortszeit.py:111: AssertionError
+____________ test_ac5_versand_und_vorschau_liefern_dasselbe_fenster ____________
+
+monkeypatch = <_pytest.monkeypatch.MonkeyPatch object at 0x7c78164251c0>
+
+    def test_ac5_versand_und_vorschau_liefern_dasselbe_fenster(monkeypatch):
+        import providers.base as pbase
+        from services.trip_report_scheduler import TripReportSchedulerService
+    
+        arrival = datetime(2026, 7, 21, 1, 0, tzinfo=UTC)
+        seg_a = _last_segment(4.80, -74.10, arrival)
+        seg_b = _last_segment(4.81, -74.11, arrival)
+    
+        versand_prov = _RecordingProvider()
+        monkeypatch.setattr(pbase, "get_provider", lambda name: versand_prov)
+        TripReportSchedulerService._fetch_night_weather(
+            SimpleNamespace(_user_id="nutzer_nacht_a"), seg_a,
+        )
+        vorschau_end, _ = _requested_end(seg_b)
+    
+        assert versand_prov.requests, "Versand-Delegator hat den Provider nicht angefragt"
+>       assert versand_prov.requests[-1][1] == vorschau_end == datetime(2026, 7, 21, 11, 0, tzinfo=UTC)
+E       assert datetime.datetime(2026, 7, 22, 6, 0, tzinfo=datetime.timezone.utc) == datetime.datetime(2026, 7, 21, 11, 0, tzinfo=datetime.timezone.utc)
+E        +  where datetime.datetime(2026, 7, 21, 11, 0, tzinfo=datetime.timezone.utc) = datetime(2026, 7, 21, 11, 0, tzinfo=datetime.timezone.utc)
+
+tests/tdd/test_night_window_ortszeit.py:137: AssertionError
+=========================== short test summary info ============================
+FAILED tests/tdd/test_night_window_ortszeit.py::test_ac1_utc_minus_5_ortsabend_endet_um_sechs_uhr_ortszeit
+FAILED tests/tdd/test_night_window_ortszeit.py::test_ac2_europa_endet_um_sechs_uhr_ortszeit[39.65-2.91-Europe/Madrid-arrival0-expected_end_utc0]
+FAILED tests/tdd/test_night_window_ortszeit.py::test_ac2_europa_endet_um_sechs_uhr_ortszeit[39.66-2.92-Europe/Madrid-arrival1-expected_end_utc1]
+FAILED tests/tdd/test_night_window_ortszeit.py::test_ac2_europa_endet_um_sechs_uhr_ortszeit[42.03-9.03-Europe/Paris-arrival2-expected_end_utc2]
+FAILED tests/tdd/test_night_window_ortszeit.py::test_ac2_europa_endet_um_sechs_uhr_ortszeit[42.04-9.04-Europe/Paris-arrival3-expected_end_utc3]
+FAILED tests/tdd/test_night_window_ortszeit.py::test_ac3_sommerzeit_umstellung_endet_exakt_sechs_uhr_ortszeit
+FAILED tests/tdd/test_night_window_ortszeit.py::test_ac5_versand_und_vorschau_liefern_dasselbe_fenster
+========================= 7 failed, 1 passed in 2.01s ==========================

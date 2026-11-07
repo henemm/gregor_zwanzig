@@ -29,6 +29,7 @@ nicht mehr SN / SFL — Registerwerte aus metric_catalog.
 
 KEIN Mock — echte SegmentWeatherData, echter SMSTripFormatter, echter Call.
 """
+from tests.helpers.ampel_allgemein import AMPEL_ALLGEMEIN
 from datetime import datetime, timezone
 
 import pytest
@@ -109,7 +110,7 @@ def test_disabled_snow_metrics_not_in_sms():
         disabled_specs=[
             MetricSpec(symbol="SD", enabled=False),
             MetricSpec(symbol="SL", enabled=False),
-        ],
+        ], ampel=AMPEL_ALLGEMEIN,
     )
 
     assert "SD" not in sms, (

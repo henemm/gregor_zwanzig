@@ -24,6 +24,7 @@ sowohl einen verschluckten Punkt als auch einen Bereich, der eine Datenluecke
 ueberbrueckt.
 """
 from __future__ import annotations
+from tests.helpers.ampel_allgemein import AMPEL_ALLGEMEIN
 
 import re
 from datetime import datetime, timedelta, timezone
@@ -52,8 +53,8 @@ TZ = ZoneInfo("Europe/Paris")
 START = datetime(2026, 9, 10, 6, 0, tzinfo=timezone.utc)   # 08:00 Ortszeit
 STUNDE = timedelta(hours=1)
 
-TEMP_FMT = _metric_formatter(get_metric("temperature"))
-THUNDER_FMT = _metric_formatter(get_metric("thunder"))
+TEMP_FMT = _metric_formatter(get_metric("temperature"), ampel=AMPEL_ALLGEMEIN)
+THUNDER_FMT = _metric_formatter(get_metric("thunder"), ampel=AMPEL_ALLGEMEIN)
 
 
 # ---------------------------------------------------------------------------

@@ -63,6 +63,7 @@ in allen 3 Fixtures) und Sicht (``visibility_m=9000`` in der
 Innsbruck-Fixture) ab.
 """
 from __future__ import annotations
+from tests.helpers.ampel_allgemein import PRESET_ALLGEMEIN
 
 import importlib.util
 import re
@@ -235,7 +236,7 @@ class TestHourMetricsRendererUnit:
         html = render_compare_html(
             result,
             profile=ActivityProfile.ALLGEMEIN,
-            hourly_metrics={"t2m_c", "wind10m_kmh"},
+            hourly_metrics={"t2m_c", "wind10m_kmh"}, preset=PRESET_ALLGEMEIN,
         )
         zeit_pos = html.find(">Zeit<")
         temp_pos = html.find(">Temp<")
@@ -255,7 +256,7 @@ class TestHourMetricsRendererUnit:
         from output.renderers.email.compare_html import render_compare_html
 
         result = _make_hourly_result()
-        html = render_compare_html(result, profile=ActivityProfile.ALLGEMEIN)
+        html = render_compare_html(result, profile=ActivityProfile.ALLGEMEIN, preset=PRESET_ALLGEMEIN)
 
         zeit_pos = html.find(">Zeit<")
         assert zeit_pos != -1, "Stundentabelle ('Zeit'-Spalte) nicht gefunden"
@@ -296,7 +297,7 @@ class TestHourMetricsRendererUnit:
             html = render_compare_html(
                 result,
                 profile=ActivityProfile.ALLGEMEIN,
-                hourly_metrics=auswahl,
+                hourly_metrics=auswahl, preset=PRESET_ALLGEMEIN,
             )
             erste_pos = html.find(erste)
             zweite_pos = html.find(zweite)
@@ -319,7 +320,7 @@ class TestHourMetricsRendererUnit:
             _dp(10, thunder_level=ThunderLevel.HIGH),
         ]
         result = _make_hourly_result(dps=dps)
-        html = render_compare_html(result, profile=ActivityProfile.ALLGEMEIN)
+        html = render_compare_html(result, profile=ActivityProfile.ALLGEMEIN, preset=PRESET_ALLGEMEIN)
 
         assert "mittel" in html, (
             "RED: Gewitter-Risiko MED muss als Wortlaut 'mittel' erscheinen -- "
@@ -583,7 +584,7 @@ def _real_html_with_spliced_hour_table(new_table_html: str) -> str:
     from output.renderers.email.compare_html import render_compare_html
 
     result = _make_hourly_result(name="Testort")
-    html = render_compare_html(result, profile=ActivityProfile.ALLGEMEIN)
+    html = render_compare_html(result, profile=ActivityProfile.ALLGEMEIN, preset=PRESET_ALLGEMEIN)
 
     zeit_positions = [m.start() for m in re.finditer(r">Zeit<", html)]
     assert len(zeit_positions) == 1, f"Erwartet genau 1 Stundentabelle, gefunden: {len(zeit_positions)}"

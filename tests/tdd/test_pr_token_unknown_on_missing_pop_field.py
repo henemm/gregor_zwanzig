@@ -24,6 +24,7 @@ Versandpfad erzeugt), reale Aufrufe von `compute_has_gap()` und
 `SMSTripFormatter().format_sms()`.
 """
 from __future__ import annotations
+from tests.helpers.ampel_allgemein import AMPEL_ALLGEMEIN
 
 from datetime import datetime, timezone
 from zoneinfo import ZoneInfo
@@ -188,7 +189,7 @@ def _format(segments: list[SegmentWeatherData], night_weather: NormalizedTimeser
     sms = SMSTripFormatter().format_sms(
         segments, stage_name="GR20", report_type="morning", tz=_TZ,
         night_weather=night_weather, has_gap=has_gap,
-        disabled_specs=_ALL_EXCEPT_PR_OFF,
+        disabled_specs=_ALL_EXCEPT_PR_OFF, ampel=AMPEL_ALLGEMEIN,
     )
     return sms, has_gap
 

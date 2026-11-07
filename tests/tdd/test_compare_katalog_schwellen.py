@@ -23,6 +23,7 @@ NICHT Teil dieser Datei (B1, bereits gruen in `506c25f4`): `html.py`,
 vollstaendig).
 """
 from __future__ import annotations
+from tests.helpers.ampel_allgemein import PRESET_ALLGEMEIN
 from app.ampel import resolve_ampel
 
 import re
@@ -244,10 +245,14 @@ def test_sev_thunder_regression_unchanged():
     """AC-7 (Regressionsschutz, Vergleichs-Teil): Gewitter ist ausdruecklich
     NICHT Teil der Umstellung (kein `display_thresholds` im Katalog fuer
     `thunder`). `_sev_thunder` bleibt unveraendert bei seinem eigenen
-    MED/HIGH-Vokabular."""
+    MED/HIGH-Vokabular.
+
+    Issue #2792 S1c-4b (AC-5, AC-19 c) -- umgestellt: `_sev_thunder` ruft
+    die zentrale Abbildung `thunder_color`; „keins" ist dort gruen (`ok`)
+    statt ungefaerbt."""
     assert _sev_thunder(ThunderLevel.HIGH, ampel=resolve_ampel(None)) == "danger"
     assert _sev_thunder(ThunderLevel.MED, ampel=resolve_ampel(None)) == "warn"
-    assert _sev_thunder(ThunderLevel.NONE, ampel=resolve_ampel(None)) is None
+    assert _sev_thunder(ThunderLevel.NONE, ampel=resolve_ampel(None)) == "ok"
     assert get_metric("thunder").display_thresholds == {}, (
         "Erwartungs-Grundlage: Katalog fuehrt fuer 'thunder' keine Schwellen -- "
         "Gewitter bleibt bewusst aussen vor (Known Limitations)."
@@ -296,7 +301,7 @@ def test_kern_pop_35_pct_full_matrix_render_shows_yellow_not_green():
     erfasst."""
     result = _result(pop_pct=35)
     enabled = resolve_enabled_metrics(["pop_max_pct"])
-    html = render_compare_html(result, enabled_metrics=enabled)
+    html = render_compare_html(result, enabled_metrics=enabled, preset=PRESET_ALLGEMEIN)
     row_html = _overview_row_html(html, "Regenwahrscheinlichkeit")
 
     assert "#fdf4cd" in row_html, (
@@ -314,7 +319,7 @@ def test_kern_visibility_4000m_full_matrix_render_shows_no_tint():
     (background:#fbeeb8, eigene Schwelle <5000m)."""
     result = _result(visibility_m=4000)
     enabled = resolve_enabled_metrics(["visibility_min_m"])
-    html = render_compare_html(result, enabled_metrics=enabled)
+    html = render_compare_html(result, enabled_metrics=enabled, preset=PRESET_ALLGEMEIN)
     row_html = _overview_row_html(html, "Sichtweite")
 
     assert "#fbeeb8" not in row_html and "#fad6b8" not in row_html and "#f6c5bf" not in row_html, (
