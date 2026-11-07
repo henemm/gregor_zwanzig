@@ -18,7 +18,7 @@ on:
 
 jobs:
   test:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
       - name: Install uv
@@ -66,7 +66,7 @@ jobs:
             --tb=short -rfE
 
   go-test:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
       - name: Set up Go
@@ -77,7 +77,7 @@ jobs:
         run: go test ./...
 
   frontend-test:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     defaults:
       run:
         working-directory: frontend
@@ -125,7 +125,7 @@ jobs:
     # Baseline-Gate (Issue #1018): darf nur "nicht schlechter werden".
     # Hart auf 0 Fehler erst nach Frontend-Bereinigung (Roadmap Phase 3.2).
     # Bei Verbesserung: Baseline-Werte hier absenken.
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     env:
       # Abgesenkt 2026-08-04 (#1196): 70/171 -> 36/141 nach Typ-Drift-Bereinigung
       # der Compare-Editor-Tests + Entfernung toter CSS-Regeln in CompareTabs.
@@ -170,7 +170,7 @@ jobs:
           exit $FAIL
 
   lint:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
       - name: Install uv
@@ -189,7 +189,7 @@ jobs:
   # gegen die Positivliste .github/ci_e2e_specs.txt.
   # Details: docs/specs/modules/fix_1771_s2_playwright_ci_ampel.md
   e2e:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     env:
       # Werte belegt gegen den isolierten Stack (Ports 8095/8005), zuletzt
       # nachgemessen am 2026-08-14 (#1771 S3 Block B, Listenwachstum auf 45
@@ -513,7 +513,7 @@ jobs:
   deploy:
     # C4-71 (#2047 S2): Deploy haengt an allen sechs Ampel-Checks.
     needs: [test, lint, go-test, frontend-test, svelte-check, e2e]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     # #2047 S2b: zwei Merges liefern nie gleichzeitig aus; ein laufender
     # Deploy wird nie abgebrochen (der naechste reiht sich ein).
