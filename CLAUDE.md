@@ -26,7 +26,7 @@ SvelteKit-Frontend  ->  Go-API (Port 8090)  ->  Python-Core (FastAPI, intern Por
                         Auth/Store/Scheduler     Provider -> Risk Engine -> Renderer -> Channel
 ```
 
-Go-API (`internal/`, `cmd/`): Auth, Mandantentrennung, Persistenz, einziger Cron-Taktgeber (ruft `POST /api/scheduler/*`; Python entscheidet Fälligkeit und versendet), Proxy. Python-Core (`api/`, `src/`): Wetter-Domäne, Kanal-Renderer/-Transporte, Alerts, Inbound. Legacy-CLI `python -m src.app.cli` = Debug-Werkzeug. Details: `docs/features/architecture.md`.
+Go-API (`internal/`, `cmd/`): Auth, Mandantentrennung, Persistenz, einziger Cron-Taktgeber (ruft `POST /api/scheduler/*`; Python entscheidet Fälligkeit und versendet), Proxy. Python-Core (`api/`, `src/`): Wetter-Domäne, Renderer/Transporte, Alerts, Inbound. Legacy-CLI `python -m src.app.cli` = Debug-Werkzeug. Details: `docs/features/architecture.md`.
 
 ## Wichtige Referenzen
 
@@ -67,7 +67,7 @@ Verifikation läuft **nach** dem Push gegen staging (`https://staging.gregor20.h
 
 ## Mail-Validatoren & Renderer-Gate
 
-Je Mail-Pfad ein eigener Validator gegen **echt zugestellte Staging-Mail** im Stalwart-Test-Postfach (kein Mock, kein Gmail): Orts-Vergleich `email_spec_validator.py` (Exit 0 = „E2E bestanden"), Trip-Briefing `briefing_mail_validator.py`, amtliche Warnung `official_alert_mail_validator.py`, Radar-/Regen-Alarm `radar_alert_mail_validator.py` (alle in `.claude/hooks/`). Renderer-Commit-Gate blockt Mail-Inhalts-Commits bis Modus-Matrix-Test und Validator frisch grün. Details: `docs/reference/mail_validators.md`, `docs/reference/gates_und_ratschen.md`.
+Je Mail-Pfad ein eigener Validator gegen **echt zugestellte Staging-Mail** im Stalwart-Test-Postfach (kein Mock, kein Gmail): Orts-Vergleich (Vergleichstabelle) `email_spec_validator.py` (Exit 0 = „E2E bestanden"), Trip-Briefing `briefing_mail_validator.py`, amtliche Warnung `official_alert_mail_validator.py`, Radar-Alarm `radar_alert_mail_validator.py` (`.claude/hooks/`). Renderer-Commit-Gate blockt Mail-Inhalts-Commits bis Modus-Matrix-Test und Validator frisch grün. Details: `docs/reference/mail_validators.md`, `docs/reference/gates_und_ratschen.md`.
 
 ## Design-Leitprinzip
 
