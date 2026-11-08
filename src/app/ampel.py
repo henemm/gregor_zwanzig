@@ -243,15 +243,24 @@ def _ohne_offene(seite: Any) -> dict:
 
 
 def deviation_count(ampel: Optional[Mapping]) -> int:
-    """Anzahl Metriken (plus Gewitter), deren Grenzen von der Vorlage abweichen.
-    ``alarm_ab`` und ``enabled`` zaehlen nicht (Spec §1)."""
+    """Anzahl Metriken (plus Gewitter), die von der Vorlage abweichen.
+
+    Issue #2794 S3a (AC-28): je Metrik zaehlen Grenzen, ``enabled`` (Metrik
+    hinzugefuegt/entfernt) und ``alarm_ab``, hoechstens einmal je Metrik; die
+    Gewitterfarbe zaehlt einmal. Ein Wert gleich dem Vorlagenwert zaehlt nicht.
+    Metrik ohne Vorlagen-Zeile: Vorlage gilt als aus, ``alarm_ab`` = never
+    (wie ``_verschmelzen``). Paritaet zum Frontend-Spiegel ueber
+    ``tests/fixtures/ampel_deviation_cases.json``."""
     if not ampel:
         return 0
     vorlage = AMPEL_TEMPLATES[_vorlage_der_ampel(ampel)]
+    ohne_zeile = {"enabled": False, "lower": {}, "upper": {}, "alarm_ab": "never"}
     n = 0
     for mid, e in (ampel.get("metrics") or {}).items():
-        v = vorlage["metrics"].get(mid, {})
-        if any(k in e and _ohne_offene(e[k]) != _ohne_offene(v.get(k)) for k in ("lower", "upper")):
+        v = vorlage["metrics"].get(mid, ohne_zeile)
+        grenzen = any(k in e and _ohne_offene(e[k]) != _ohne_offene(v.get(k)) for k in ("lower", "upper"))
+        werte = any(e.get(k) is not None and e[k] != v.get(k) for k in ("enabled", "alarm_ab"))
+        if grenzen or werte:
             n += 1
     gewitter = {**vorlage["thunder"], **_ohne_offene(ampel.get("thunder"))}
     return n + (gewitter != vorlage["thunder"])

@@ -111,7 +111,7 @@ def get_alert_metric_channel_keys():
 def get_metrics():
     from app.metric_catalog import (
         SMS_FORMAT_MODE_METRIC_IDS, aggregation_label, aggregation_label_de,
-        available_aggregations, get_all_metrics,
+        available_aggregations, get_all_metrics, reiter_wetter_eigenschaften,
     )
     metrics = get_all_metrics()
     result = {}
@@ -167,5 +167,8 @@ def get_metrics():
                 }
                 for a in available_aggregations(m.id)
             ],
+            # Issue #2794 S3a (AC-27): group, alertable, is_precursor,
+            # allowed_sides, display_only fuer den Reiter Wetter.
+            **reiter_wetter_eigenschaften(m),
         })
     return result

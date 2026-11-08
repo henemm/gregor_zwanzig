@@ -1205,6 +1205,63 @@ def get_all_metrics() -> list[MetricDefinition]:
     return [m for m in _METRICS if m.selectable]
 
 
+# Issue #2794 S3a (AC-27): Eigenschaften je Metrik fuer den Reiter Wetter, EINE
+# Quelle fuer /api/metrics (keine Frontend-Kopie). Stammdaten aus
+# docs/context/einstellungen_neu.md §4.2/§4.4. Je Metrik:
+# (UI-Gruppe, alarmfaehig, erlaubte Ampel-Seiten, nur Anzeige).
+# Seiten: both|upper|lower|level; None nur bei reiner Anzeige (keine Ampel).
+# Metriken ohne Vorlagen-Zeile in ampel_templates (Tages-/Nacht-Varianten,
+# Luftdruck, Niederschlagsart, mittlere/hohe Wolken) tragen keine Ampel und
+# sind daher reine Anzeige. is_precursor kommt unveraendert aus dem Katalog.
+WETTER_GRUPPEN: tuple[str, ...] = (
+    "temperature", "wind", "precip_thunder", "sky_visibility", "snow_height",
+)
+_REITER_WETTER: dict[str, tuple[str, bool, Optional[str], bool]] = {
+    "temperature": ("temperature", True, "both", False),
+    "temperature_night": ("temperature", True, "both", False),
+    "temperature_day_low": ("temperature", False, None, True),
+    "temperature_day_high": ("temperature", False, None, True),
+    "wind_chill": ("temperature", False, "both", False),
+    "wind_chill_night": ("temperature", False, None, True),
+    "wind_chill_day_low": ("temperature", False, None, True),
+    "wind_chill_day_high": ("temperature", False, None, True),
+    "humidity": ("temperature", False, "upper", False),
+    "dewpoint": ("temperature", False, "upper", False),
+    "wind": ("wind", True, "both", False),
+    "gust": ("wind", True, "upper", False),
+    "wind_direction": ("wind", False, None, True),
+    "precipitation": ("precip_thunder", True, "upper", False),
+    "rain_probability": ("precip_thunder", False, "upper", False),
+    "thunder": ("precip_thunder", True, "level", False),
+    "precip_type": ("precip_thunder", False, None, True),
+    "cloud_total": ("sky_visibility", False, "upper", False),
+    "cloud_low": ("sky_visibility", False, "upper", False),
+    "cloud_mid": ("sky_visibility", False, None, True),
+    "cloud_high": ("sky_visibility", False, None, True),
+    "visibility": ("sky_visibility", True, "lower", False),
+    "sunshine": ("sky_visibility", False, "lower", False),
+    "uv_index": ("sky_visibility", True, "upper", False),
+    "pressure": ("sky_visibility", False, None, True),
+    "snowfall_limit": ("snow_height", True, "both", False),
+    "freezing_level": ("snow_height", True, "both", False),
+    "fresh_snow": ("snow_height", True, "upper", False),
+    "snow_depth": ("snow_height", True, "both", False),
+}
+
+
+def reiter_wetter_eigenschaften(m: MetricDefinition) -> dict:
+    """Felder des Reiters Wetter fuer eine Metrik (Issue #2794 S3a, AC-27).
+    Unbekannte Metrik -> ``KeyError`` (neue Metrik muss hier eingetragen werden)."""
+    group, alertable, sides, display_only = _REITER_WETTER[m.id]
+    return {
+        "group": group,
+        "alertable": alertable and not m.is_precursor and not display_only,
+        "is_precursor": m.is_precursor,
+        "allowed_sides": sides,
+        "display_only": display_only,
+    }
+
+
 def normalize_command_word(word: str) -> str:
     """Normalisiert ein getipptes Abrufwort (Issue #2134).
 

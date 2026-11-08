@@ -312,6 +312,53 @@ func TestS3a2794_AC23_PatchUmbenennungAufDuplikatAbgelehnt(t *testing.T) {
 }
 
 // =============================================================================
+// AC-23/AC-24: PATCH nur mit kind (Art-Wechsel) prueft die Eindeutigkeit in der
+// Zielart — auch ohne Feld name im PATCH (Adversary F001).
+// =============================================================================
+
+func TestS3a2794_AC24_PatchNurKindWechselAufDuplikatInZielartAbgelehnt(t *testing.T) {
+	s := newTestStore(t)
+	h := v2794Router(s)
+	// alice: „Bergtag“ als vergleich; „bergtag“ (andere Schreibung) als route.
+	if code, resp := v2794Vorlage(t, h, "alice", obj{"name": "Bergtag", "kind": "vergleich"}); code != http.StatusCreated {
+		t.Fatalf("POST vergleich Bergtag: %d %v", code, resp)
+	}
+	code, route := v2794Vorlage(t, h, "alice", obj{"name": "bergtag", "kind": "route"})
+	if code != http.StatusCreated {
+		t.Fatalf("POST route bergtag: %d %v", code, route)
+	}
+	id, _ := route["id"].(string)
+	// bob hat nur eine route „Bergtag“: sein Art-Wechsel ist frei, alices
+	// Vergleichsvorlage gleichen Namens zaehlt fuer ihn nicht.
+	code, bobRoute := v2794Vorlage(t, h, "bob", obj{"name": "Bergtag", "kind": "route"})
+	if code != http.StatusCreated {
+		t.Fatalf("POST bob route Bergtag: %d %v", code, bobRoute)
+	}
+	bobID, _ := bobRoute["id"].(string)
+
+	vorherA := v2794DateiRoh(t, s, "alice")
+	for _, lang := range []string{"de", "en"} {
+		w := v2794Anfrage(t, h, "PATCH", "/api/metric-presets/"+id, "alice", lang, obj{"kind": "vergleich"})
+		v2794PruefeDuplikat(t, w, lang, "PATCH nur kind route→vergleich auf „Bergtag“")
+	}
+	if v2794DateiRoh(t, s, "alice") != vorherA {
+		t.Error("AC-24: abgelehnter Art-Wechsel hat die Datei von alice veraendert")
+	}
+	if p := v2794NachName(t, v2794Datei(t, s, "alice"), "bergtag"); p["kind"] != "route" {
+		t.Errorf("AC-24: abgelehnter Art-Wechsel: kind=%v, erwartet route", p["kind"])
+	}
+
+	// bob: gleicher Name in alices Zielart stoert nicht — Wechsel erlaubt.
+	w := v2794Anfrage(t, h, "PATCH", "/api/metric-presets/"+bobID, "bob", "de", obj{"kind": "vergleich"})
+	if w.Code != http.StatusOK {
+		t.Errorf("AC-24: bobs Art-Wechsel muss erlaubt sein: %d %s", w.Code, w.Body.String())
+	}
+	if p := v2794NachName(t, v2794Datei(t, s, "bob"), "Bergtag"); p["kind"] != "vergleich" {
+		t.Errorf("AC-24: bobs Art-Wechsel nicht gespeichert: kind=%v", p["kind"])
+	}
+}
+
+// =============================================================================
 // AC-24: Feld kind — Lese-Default route (Store + Handler)
 // =============================================================================
 

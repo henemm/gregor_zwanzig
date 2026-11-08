@@ -15,6 +15,7 @@
   "fach.fehler.upstream_unreachable": "The service is not reachable.",
   "fach.fehler.name_required": "The name is required.",
   "fach.fehler.name_exists": "This name is already in use.",
+  "fach.fehler.name_exists_vorlage": "A template named ‘{name}’ already exists. Choose a different name.",
   "fach.fehler.invalid_params": "The parameters are invalid.",
   "fach.fehler.budget_exceeded": "The daily quota for forecast requests is used up.",
   "fach.fehler.provider_error": "The weather provider is not reachable.",

@@ -15,6 +15,7 @@
     {"name": "alarm_ab_zurueck_auf_vorlagenwert", "ampel": {"template": "wandern", "metrics": {"wind": {"alarm_ab": "orange"}}}, "expected": 0},
     {"name": "enabled_zurueck_auf_vorlagenwert", "ampel": {"template": "wandern", "metrics": {"dewpoint": {"enabled": false}, "wind": {"enabled": true}}}, "expected": 0},
     {"name": "ausgeschaltet_ohne_vorlagenzeile_keine_abweichung", "ampel": {"template": "wandern", "metrics": {"pressure": {"enabled": false}}}, "expected": 0},
+    {"name": "ohne_vorlagenzeile_aus_und_alarm_nie_keine_abweichung", "ampel": {"template": "wandern", "metrics": {"pressure": {"enabled": false, "alarm_ab": "never"}}}, "expected": 0},
     {"name": "mehrere_arten_an_einer_metrik_zaehlt_einmal", "ampel": {"template": "wandern", "metrics": {"gust": {"upper": {"yellow": 45, "orange": 60, "red": 75}, "alarm_ab": "red"}}}, "expected": 1},
     {"name": "kombination", "ampel": {"template": "wandern", "metrics": {
       "gust": {"upper": {"yellow": 45, "orange": 60, "red": 75}},

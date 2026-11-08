@@ -275,6 +275,16 @@ func CreateComparePresetHandler(s *store.Store) http.HandlerFunc {
 		if !quotaAllows(w, r, s, quotaComparePresets) {
 			return
 		}
+		// Issue #2794 S3a (AC-25): Neuanlage ohne mitgeschickte display_config
+		// bekommt die Orts-Standardvorlage DIESES Nutzers (nur Art vergleich).
+		if preset.DisplayConfig == nil {
+			std, err := standardVorlage(s, model.PresetKindVergleich)
+			if err != nil {
+				WriteError(w, r, http.StatusInternalServerError, "store_error", nil)
+				return
+			}
+			preset.DisplayConfig = displayConfigAusVorlage(std, false)
+		}
 
 		unlockB, okB := lockBriefingOr503(w, r, s, preset.ID)
 		if !okB {

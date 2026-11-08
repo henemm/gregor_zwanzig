@@ -16,6 +16,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
+	"github.com/henemm/gregor-api/internal/i18n"
 	"github.com/henemm/gregor-api/internal/middleware"
 	"github.com/henemm/gregor-api/internal/model"
 	"github.com/henemm/gregor-api/internal/store"
@@ -36,6 +37,94 @@ type createPresetRequest struct {
 	FriendlyIDs []string        `json:"friendly_ids"`
 	// Issue #2792 S1a: Profil-Ampel samt alarm_ab (optional).
 	Ampel map[string]interface{} `json:"ampel,omitempty"`
+	// Issue #2794 S3a: Art route|vergleich, fehlend = route.
+	Kind string `json:"kind,omitempty"`
+}
+
+// systemVorlagenNamen sind die Namen der 7 Systemvorlagen (Python-SSOT
+// src/app/metric_catalog.py WEATHER_TEMPLATES "label"; kleingeschrieben
+// zugleich die Vorlagen-IDs). Eigene Vorlagen duerfen keinen davon tragen
+// (Issue #2794 S3a, AC-23).
+var systemVorlagenNamen = []string{
+	"Alpen-Trekking", "Wandern", "Skitouren", "Wintersport", "Radtour", "Wassersport", "Allgemein",
+}
+
+// presetNameVergeben prueft name (getrimmt, ohne Gross-/Kleinschreibung)
+// gegen die Systemvorlagen und die eigenen Vorlagen derselben Art; skip ist
+// der Index der gerade umbenannten Vorlage (-1 beim Anlegen).
+func presetNameVergeben(presets []model.MetricPreset, name, kind string, skip int) bool {
+	n := strings.ToLower(strings.TrimSpace(name))
+	for _, sys := range systemVorlagenNamen {
+		if strings.ToLower(sys) == n {
+			return true
+		}
+	}
+	for i, p := range presets {
+		if i != skip && p.Kind == kind && strings.ToLower(strings.TrimSpace(p.Name)) == n {
+			return true
+		}
+	}
+	return false
+}
+
+func writeNameExists(w http.ResponseWriter, r *http.Request, name string) {
+	WriteError(w, r, http.StatusConflict, "name_exists", i18n.Args{"variante": "vorlage", "name": name})
+}
+
+// standardVorlage liefert die Standardvorlage („Als Standard fuer neue") der
+// Art kind des Nutzers von s (per WithUser aus dem Auth-Kontext gebunden),
+// nil wenn keine gesetzt ist (Issue #2794 S3a, AC-25).
+func standardVorlage(s *store.Store, kind string) (*model.MetricPreset, error) {
+	// gz-store-scope-call: Hilfsfunktion, jeder Aufrufer reicht seinen bereits per WithUser gebundenen Store durch
+	presets, err := s.LoadMetricPresets()
+	if err != nil {
+		return nil, err
+	}
+	for i := range presets {
+		if presets[i].IsDefault && presets[i].Kind == kind {
+			return &presets[i], nil
+		}
+	}
+	return nil, nil
+}
+
+// displayConfigAusVorlage baut die display_config einer Neuanlage aus der
+// Standardvorlage (Issue #2794 S3a, AC-25): Ampel samt alarm_ab und, beim
+// Trip (mitMetriken), die Metrik-Auswahl. nil-Vorlage -> nil (Bestandsverhalten:
+// Python leitet dann die Vorbelegung aus dem Profil ab). Der Vergleich fuehrt
+// seine Auswahl in einem eigenen Schluesselraum (active_metrics), daher dort
+// nur die Ampel (ampel.metrics.<id>.enabled traegt die Auswahl der Ampel).
+func displayConfigAusVorlage(p *model.MetricPreset, mitMetriken bool) map[string]interface{} {
+	if p == nil {
+		return nil
+	}
+	dc := map[string]interface{}{}
+	if mitMetriken {
+		metrics := make([]interface{}, 0, len(p.Metrics))
+		for _, m := range p.Metrics {
+			metrics = append(metrics, map[string]interface{}{
+				"metric_id": m.MetricID, "enabled": m.Enabled, "use_friendly_format": m.UseFriendlyFormat,
+			})
+		}
+		dc["metrics"] = metrics
+	}
+	if p.Ampel != nil {
+		dc["ampel"] = p.Ampel
+	}
+	if len(dc) == 0 {
+		return nil
+	}
+	return dc
+}
+
+// standardExklusiv nimmt das Standard-Flag allen anderen Vorlagen derselben
+// Art (Issue #2794 S3a, AC-25: exklusiv je Art).
+func standardExklusiv(presets []model.MetricPreset, keep int, kind string) {
+	for i := range presets {
+		if i != keep && presets[i].Kind == kind {
+			presets[i].IsDefault = false
+		}
+	}
 }
 
 func newPresetID() string {
@@ -149,6 +238,13 @@ func CreateMetricPresetHandler(s *store.Store) http.HandlerFunc {
 			WriteError(w, r, http.StatusBadRequest, "name_required", nil)
 			return
 		}
+		kind := req.Kind
+		if kind == "" {
+			kind = model.PresetKindRoute
+		}
+		if bailIf(w, r, !model.ValidPresetKind(kind), http.StatusBadRequest, "bad_request") {
+			return
+		}
 		if bailIf(w, r, req.Ampel != nil && !validateAmpel(req.Ampel), http.StatusBadRequest, "ampel_ungueltig") {
 			return
 		}
@@ -160,26 +256,24 @@ func CreateMetricPresetHandler(s *store.Store) http.HandlerFunc {
 			return
 		}
 
-		// Issue #690: Eindeutigkeit pro Nutzer (case-insensitive, getrimmt).
-		nameLower := strings.ToLower(name)
-		for _, p := range presets {
-			if strings.ToLower(strings.TrimSpace(p.Name)) == nameLower {
-				WriteError(w, r, http.StatusConflict, "name_exists", nil)
-				return
-			}
+		// Issue #690 / #2794 S3a: Eindeutigkeit je Nutzer und Art sowie gegen
+		// die Systemvorlagen (case-insensitive, getrimmt).
+		if presetNameVergeben(presets, name, kind, -1) {
+			writeNameExists(w, r, name)
+			return
 		}
 
-		// Wenn IsDefault=true → alle anderen auf false setzen (genau ein Default).
+		// Wenn IsDefault=true → alle anderen derselben Art auf false (genau ein
+		// Default je Art).
 		if req.IsDefault {
-			for i := range presets {
-				presets[i].IsDefault = false
-			}
+			standardExklusiv(presets, -1, kind)
 		}
 
 		preset := model.MetricPreset{
 			ID:          newPresetID(),
 			Name:        name,
 			Description: req.Description,
+			Kind:        kind,
 			IsDefault:   req.IsDefault,
 			Metrics:     normalizeMetricsPayload(req.Metrics, req.FriendlyIDs),
 			CreatedAt:   time.Now().UTC(),
@@ -266,9 +360,14 @@ func PatchMetricPresetHandler(s *store.Store) http.HandlerFunc {
 			Metrics     *[]model.DisplayMetric `json:"metrics,omitempty"`
 			// Issue #2792 S1a: ganzer Unterbaum (Spec §1), nil = unveraendert.
 			Ampel *map[string]interface{} `json:"ampel,omitempty"`
+			// Issue #2794 S3a: Art route|vergleich, nil = unveraendert.
+			Kind *string `json:"kind,omitempty"`
 		}
 		if err := json.NewDecoder(r.Body).Decode(&patch); err != nil {
 			WriteError(w, r, http.StatusBadRequest, "bad_request", nil)
+			return
+		}
+		if bailIf(w, r, patch.Kind != nil && !model.ValidPresetKind(*patch.Kind), http.StatusBadRequest, "bad_request") {
 			return
 		}
 		if bailIf(w, r, patch.Ampel != nil && !validateAmpel(*patch.Ampel), http.StatusBadRequest, "ampel_ungueltig") {
@@ -276,8 +375,22 @@ func PatchMetricPresetHandler(s *store.Store) http.HandlerFunc {
 		}
 
 		existing := presets[idx]
+		if patch.Kind != nil {
+			existing.Kind = *patch.Kind
+		}
 		if patch.Name != nil {
-			existing.Name = *patch.Name
+			name := strings.TrimSpace(*patch.Name)
+			if name == "" {
+				WriteError(w, r, http.StatusBadRequest, "name_required", nil)
+				return
+			}
+			existing.Name = name
+		}
+		// Issue #2794 S3a (AC-23/AC-24): Umbenennen und Art-Wechsel pruefen
+		// dieselbe Eindeutigkeit wie das Anlegen.
+		if (patch.Name != nil || patch.Kind != nil) && presetNameVergeben(presets, existing.Name, existing.Kind, idx) {
+			writeNameExists(w, r, existing.Name)
+			return
 		}
 		if patch.Description != nil {
 			existing.Description = *patch.Description
@@ -292,12 +405,8 @@ func PatchMetricPresetHandler(s *store.Store) http.HandlerFunc {
 			existing.Ampel = *patch.Ampel
 		}
 
-		if patch.IsDefault != nil && *patch.IsDefault {
-			for i := range presets {
-				if i != idx {
-					presets[i].IsDefault = false
-				}
-			}
+		if existing.IsDefault && (patch.IsDefault != nil || patch.Kind != nil) {
+			standardExklusiv(presets, idx, existing.Kind)
 		}
 		presets[idx] = existing
 
