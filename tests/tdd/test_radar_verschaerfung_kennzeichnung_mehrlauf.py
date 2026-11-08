@@ -53,7 +53,7 @@ from services.radar_service import RadarNowcastService
 
 from tests.helpers.alarm_pruefstrecke import AlarmPruefstrecke
 from tests.helpers.nowcast_gate_fixtures import (
-    clean_uid, compare_radar_service, location, radar_preset,
+    clean_uid, location, radar_preset,
     settings_email_only, write_presets, write_user_tier,
 )
 from tests.tdd.test_952_onset_alert_fidelity import _clean_user
