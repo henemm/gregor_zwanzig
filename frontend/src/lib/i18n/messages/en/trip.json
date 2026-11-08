@@ -231,6 +231,7 @@
 	"trip.anlegen.kein_name": "No name yet",
 	"trip.anlegen.nichts_eingerichtet": "Nothing set up yet",
 	"trip.anlegen.abschnitte": "{n} / {gesamt} sections set up",
+	"trip.anlegen.abschnitte_kurz": "{n}/{gesamt}",
 	"trip.anlegen.optional": "optional",
 	"trip.anlegen.opt": "opt",
 	"trip.anlegen.grunddaten": "Trip basics",

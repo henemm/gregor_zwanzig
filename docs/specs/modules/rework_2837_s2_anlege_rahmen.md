@@ -211,6 +211,7 @@ Per testid-Treffer zusätzlich zu prüfen (Umhängung im Commit benannt, nichts 
 - Profil-Auswahl (#2792) und Reiterleiste Desktop (#2845) sind nicht Teil dieser Scheibe.
 - Etappen-Tab-Buttons (`TripNewEditor.svelte:850-910`, rohe Buttons ohne testid) sind Schritt-Inhalt; sie werden geprüft, aber nur angefasst, wenn der Umbau es erzwingt.
 - Handy-Eyebrow (AC-4): Sobald ein Name eingegeben ist, zeigt das Handy über dem Reiter-Titel den Namen statt „Neuer Trip“/„Neuer Vergleich“ (Bestandsverhalten, bei beiden Arten gleich). Auf dem Handy ist das die einzige Stelle, an der der Name beim Anlegen sichtbar ist; AC-4 gilt für den Zustand ohne Namen (geprüft in E2E AR-4). Festgestellt in /60-validate.
+- **Richtigstellung (2026-11-08, S2b):** Die Annahme in der Whitelist-Sektion, die Fortschrittsanzeige (5 Segmente) sei „schon heute gleich“, war falsch. Der Balken war viermal gebaut (je Art für Computer und Handy), auf dem Handy tönte der Ortsvergleich den aktiven Schritt (mit Rückfallwert `#bcd`), der Trip nicht. Vereinheitlicht in `docs/specs/modules/rework_2837_s2b_anlege_fortschritt.md` (Baustein `AnlegeFortschritt`).
 - Nebenbefund: PR #2846 (S1-Erstversuch `HubStatusBadge`, durch #2854 überholt) ist ohne Merge zu schließen; nicht Teil dieser Lieferung.
 
 ## Risiken
@@ -229,3 +230,4 @@ Per testid-Treffer zusätzlich zu prüfen (Umhängung im Commit benannt, nichts 
 ## Changelog
 
 - 2026-11-08: Initial spec created (Issue #2837, Epic #2345, Scheibe S2 Anlege-Rahmen)
+- 2026-11-08: Known Limitations um Richtigstellung „Fortschrittsanzeige schon heute gleich“ ergänzt, Verweis auf S2b-Spec `rework_2837_s2b_anlege_fortschritt.md`

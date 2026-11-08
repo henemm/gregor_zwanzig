@@ -8,9 +8,12 @@
 	// Kind kein Link), Eyebrow, Titel, Fortschritt, Inhalt, Fuß (Abbrechen links; Hinweis,
 	// Standardwerte, Hauptaktion rechts). Der mobile Kopf und Fuß bleiben in den Editoren.
 	// Fachlich Verschiedenes (Whitelist) kommt über Props und Snippets. Keine API-Aufrufe.
+	// #2837 S2b: der Fortschritt ist Teil des Rahmens (AnlegeFortschritt, variante="desktop");
+	// der frühere Snippet-Slot `fortschritt` entfällt.
 	import type { Snippet } from 'svelte';
 	import { Btn, Eyebrow, TopoBg } from '$lib/components/atoms';
 	import EditorStickyFooter from '$lib/components/shared/EditorStickyFooter.svelte';
+	import AnlegeFortschritt from './AnlegeFortschritt.svelte';
 	import { t, type MessageKey } from '$lib/i18n';
 
 	type Context = 'route' | 'vergleich';
@@ -33,13 +36,20 @@
 		navClearance?: boolean;
 		hinweis?: Snippet;
 		standardwerte?: Snippet;
-		fortschritt?: Snippet;
+		/** #2837 S2b: Schritt-Kennungen (PROGRESS_STEPS) für den Fortschritt im Kopf. */
+		steps: readonly string[];
+		/** #2837 S2b: Zahl erledigter Schritte (Ergebnis von `progressCount`). */
+		done: number;
+		/** #2837 S2b F003: Menge erledigter Schritte — Segmentfarbe je Schritt. */
+		erledigt?: ReadonlySet<string>;
+		/** #2837 S2b: aktiver Schritt — nur aria-current, keine Optik. */
+		aktiv?: string;
 		children?: Snippet;
 	}
 
 	let {
 		context, name, onCancel, cancelHref, abschlussLabel, abschlussTestid, canFinish, onFinish,
-		testidPrefix, navClearance = false, hinweis, standardwerte, fortschritt, children
+		testidPrefix, navClearance = false, hinweis, standardwerte, steps, done, erledigt, aktiv, children
 	}: Props = $props();
 
 	// Whitelist Nr. 5: Texte und Elternteil-Link je Art — reine Datentabelle.
@@ -47,6 +57,8 @@
 		route: { eltern: 'listen.trips.titel', neu: 'trip.anlegen.neuer_trip', href: '/trips' },
 		vergleich: { eltern: 'listen.vergleiche.titel', neu: 'vergleich.neu.neuer_vergleich', href: '/compare' }
 	};
+	// #2837 S2b: Testid des Desktop-Fortschritts je Art (bestehende Kennungen bleiben erhalten).
+	const FORTSCHRITT_TESTID: Record<Context, string> = { route: 'trip-new-progress', vergleich: 'compare-editor-progress' };
 	const art = $derived(ART[context]);
 
 	// Trip: der Pfad-Link ruft Abbrechen (kein Autosave); die Adresse bleibt als href erhalten.
@@ -69,7 +81,7 @@
 		<div class="ar-held">
 			<Eyebrow>{$t(art.neu)}</Eyebrow>
 			<h1 class="ar-titel" class:ar-titel-leer={!name.trim()}>{name.trim() || $t('trip.anlegen.kein_name')}</h1>
-			{@render fortschritt?.()}
+			<AnlegeFortschritt {steps} {done} {erledigt} {aktiv} variante="desktop" testidPrefix={FORTSCHRITT_TESTID[context]} />
 		</div>
 	</TopoBg>
 

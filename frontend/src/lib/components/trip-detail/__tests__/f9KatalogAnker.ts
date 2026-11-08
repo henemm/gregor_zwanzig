@@ -302,6 +302,8 @@ export const F9_ANKER: [schluessel: string, de: string, en: string][] = [
 	['trip.anlegen.kein_name', 'Noch kein Name', 'No name yet'],
 	['trip.anlegen.nichts_eingerichtet', 'Noch nichts eingerichtet', 'Nothing set up yet'],
 	['trip.anlegen.abschnitte', '<n> / <gesamt> Abschnitte eingerichtet', '<n> / <gesamt> sections set up'],
+	// #2837 S2b: Handy-Zähler des Anlege-Fortschritts (Bestandstext „n/5", vorher Template-Literal)
+	['trip.anlegen.abschnitte_kurz', '<n>/<gesamt>', '<n>/<gesamt>'],
 	['trip.anlegen.optional', 'optional', 'optional'],
 	['trip.anlegen.opt', 'opt', 'opt'],
 	['trip.anlegen.grunddaten', 'Trip-Grunddaten', 'Trip basics'],

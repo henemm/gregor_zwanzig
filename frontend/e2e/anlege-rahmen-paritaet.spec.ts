@@ -438,3 +438,208 @@ for (const kind of HUB_KINDS) {
 		}
 	});
 }
+
+// ═════════════════════════════════════════════════════════════════════════════════════════════
+// #2837 Scheibe S2b — Fortschrittsbalken als EIN Baustein `AnlegeFortschritt` (Computer im
+// Rahmen, Handy an der Handy-Stelle des Editors). Spec: docs/specs/modules/
+// rework_2837_s2b_anlege_fortschritt.md — AC-1 … AC-8, AC-11 (AR-19 … AR-24).
+// Gemessen im Browser: berechnete Hintergrundfarbe je Segment gegen die aufgelösten Tokens
+// --g-accent / --g-rule (Hilfselement mit `background: var(--token)`), data-done, Zählertext,
+// Sichtbarkeit je Breite. Trip und Vergleich werden gegeneinander verglichen (Parität).
+// Pflicht-Mutationen: Tönung des aktiven Schritts ⇒ AR-20/AR-22 rot; Farbregel vertauscht ⇒
+// AR-19/AR-21 rot; Handy-Zähler mit Computer-Text ⇒ AR-19/AR-23 rot; data-done entfernt ⇒
+// AR-19 rot; Trip-Handy ohne tn-mobile-progress ⇒ AR-19/AR-24 rot.
+// Status: in RED geschrieben, lokal NICHT ausgeführt; Lauf in /e2e-verify bzw. CI-`e2e`.
+// ═════════════════════════════════════════════════════════════════════════════════════════════
+
+type Geraet = 'desktop' | 'mobil';
+/** Testids des Fortschritts je Art und Gerät (Spec Implementation Details 4) — feste Werte. */
+const BALKEN: Record<HubKind, Record<Geraet, string>> = {
+	route: { desktop: 'trip-new-progress', mobil: 'tn-mobile-progress' },
+	vergleich: { desktop: 'compare-editor-progress', mobil: 'cm-mobile-progress' }
+};
+/** Zählertexte (Katalog trip.anlegen.nichts_eingerichtet / trip.anlegen.abschnitte) — feste Soll-Werte. */
+const ZAEHLER: Record<'de' | 'en', Record<Geraet, (n: number) => string>> = {
+	de: { desktop: (n) => (n === 0 ? 'Noch nichts eingerichtet' : `${n} / 5 Abschnitte eingerichtet`), mobil: (n) => `${n}/5` },
+	en: { desktop: (n) => (n === 0 ? 'Nothing set up yet' : `${n} / 5 sections set up`), mobil: (n) => `${n}/5` }
+};
+const geraetVon = (vp: { width: number }): Geraet => (vp.width < 900 ? 'mobil' : 'desktop');
+const andere = (g: Geraet): Geraet => (g === 'mobil' ? 'desktop' : 'mobil');
+
+const balken = (page: Page, kind: HubKind, g: Geraet) => page.locator(`[data-testid="${BALKEN[kind][g]}"]:visible`);
+const segmente = (page: Page, kind: HubKind, g: Geraet) => page.locator(`[data-testid="${BALKEN[kind][g]}-segment"]:visible`);
+/** Zähler = letztes Kind des Containers, `<span class="mono">` (AC-9). */
+const zaehler = (page: Page, kind: HubKind, g: Geraet) => balken(page, kind, g).locator('> span.mono:last-child');
+
+/** Token-Farbe so, wie der Browser sie als Hintergrund berechnet (rgb(...)). */
+async function tokenFarbe(page: Page, token: '--g-accent' | '--g-rule'): Promise<string> {
+	return page.evaluate((t) => {
+		const el = document.createElement('div');
+		el.style.background = `var(${t})`;
+		document.body.appendChild(el);
+		const farbe = getComputedStyle(el).backgroundColor;
+		el.remove();
+		return farbe;
+	}, token);
+}
+
+interface Segment {
+	done: string | null;
+	farbe: string;
+}
+
+/**
+ * Liest data-done und berechnete Farbe aller sichtbaren Segmente. Wartet, bis jede Farbe eine
+ * der beiden Token-Farben ist (der Balken blendet 350 ms über — kein fester Schlaf).
+ */
+async function lies(page: Page, kind: HubKind, g: Geraet): Promise<Segment[]> {
+	const accent = await tokenFarbe(page, '--g-accent');
+	const rule = await tokenFarbe(page, '--g-rule');
+	let gelesen: Segment[] = [];
+	await expect
+		.poll(
+			async () => {
+				gelesen = await segmente(page, kind, g).evaluateAll((els) =>
+					els.map((e) => ({ done: e.getAttribute('data-done'), farbe: getComputedStyle(e).backgroundColor }))
+				);
+				return gelesen.length === 5 && gelesen.every((s) => s.farbe === accent || s.farbe === rule);
+			},
+			{ message: `${BALKEN[kind][g]}: 5 Segmente in Token-Farben (--g-accent/--g-rule) erwartet`, timeout: 10_000 }
+		)
+		.toBe(true);
+	return gelesen;
+}
+
+/** Farbregel: data-done="true" ⇔ --g-accent, sonst --g-rule; erledigte Segmente stehen vorn. */
+async function pruefeRegel(page: Page, folge: Segment[], n: number, wo: string): Promise<void> {
+	const accent = await tokenFarbe(page, '--g-accent');
+	const rule = await tokenFarbe(page, '--g-rule');
+	expect(accent, 'Messaufbau: --g-accent und --g-rule sind gleich').not.toBe(rule);
+	expect(folge.map((s) => s.done), `${wo}: data-done-Folge`).toEqual([0, 1, 2, 3, 4].map((i) => String(i < n)));
+	folge.forEach((s, i) => expect(s.farbe, `${wo}: Segment ${i} (data-done=${s.done})`).toBe(s.done === 'true' ? accent : rule));
+}
+
+/** Erster Schritt ohne Seitenwechsel: Trip Name + Startdatum, Vergleich Name (sprachunabhängig). */
+async function kopfAusfuellen(page: Page, kind: HubKind, mobil: boolean, name: string): Promise<void> {
+	await ANLEGE_SEL[kind].name(page, mobil).fill(name);
+	if (kind === 'route') {
+		const datum = new Date(Date.now() + 7 * 86_400_000).toISOString().slice(0, 10);
+		await (mobil ? page.getByTestId('trip-new-date-input') : page.locator('.tn-desktop input[type="date"]')).fill(datum);
+	}
+}
+
+for (const kind of HUB_KINDS) {
+	const sel = ANLEGE_SEL[kind];
+
+	test.describe(`Anlege-Fortschritt S2b (${kind})`, () => {
+		for (const vp of BREITEN) {
+			const g = geraetVon(vp);
+			const mobil = g === 'mobil';
+			const id = BALKEN[kind][g];
+
+			// ── AR-19: AC-1/AC-2/AC-6/AC-11 — Balken der Breite sichtbar, 5 Segmente, Regel, Zähler ──
+			test(`AR-19 (${kind}, ${vp.width} px): ${id} sichtbar, 5 Segmente offen in --g-rule, Zähler „${ZAEHLER.de[g](0)}", der andere Balken unsichtbar`, async ({ page }) => {
+				await page.setViewportSize(vp);
+				await page.goto(sel.url);
+				await expect(balken(page, kind, g), `AR-19: ${id} nicht sichtbar`).toHaveCount(1, { timeout: 15_000 });
+				await expect(balken(page, kind, andere(g)), `AC-11: ${BALKEN[kind][andere(g)]} ist bei ${vp.width} px zusätzlich sichtbar`).toHaveCount(0);
+				await expect(segmente(page, kind, g)).toHaveCount(5);
+				await pruefeRegel(page, await lies(page, kind, g), 0, `AR-19 ${id}`);
+				await expect(zaehler(page, kind, g), 'AR-19: Zähler').toHaveText(ZAEHLER.de[g](0));
+			});
+
+			// ── AR-21: AC-5 — ein Schritt mehr ⇒ genau ein Segment mehr, Zähler +1 ────────────────
+			test(`AR-21 (${kind}, ${vp.width} px): ersten Schritt erfüllen ⇒ genau Segment 0 erledigt (--g-accent), Zähler 0 → 1`, async ({ page }) => {
+				await page.setViewportSize(vp);
+				await page.goto(sel.url);
+				await expect(balken(page, kind, g)).toHaveCount(1, { timeout: 15_000 });
+				const vorher = await lies(page, kind, g);
+				await pruefeRegel(page, vorher, 0, 'AR-21 vorher');
+				await expect(zaehler(page, kind, g)).toHaveText(ZAEHLER.de[g](0));
+				await kopfAusfuellen(page, kind, mobil, einName(`AR21-${vp.width}`));
+				await expect(zaehler(page, kind, g), 'AR-21: Zähler wächst nicht um eins').toHaveText(ZAEHLER.de[g](1), { timeout: 10_000 });
+				const nachher = await lies(page, kind, g);
+				await pruefeRegel(page, nachher, 1, 'AR-21 nachher');
+				expect(nachher.filter((s, i) => s.done !== vorher[i].done), 'AR-21: nicht genau ein Segment hat gewechselt').toHaveLength(1);
+			});
+
+			// ── AR-20: AC-3 — aktiver, offener Schritt ohne Sonderfarbe ─────────────────────────────
+			test(`AR-20 (${kind}, ${vp.width} px): aktiver offener Schritt ${sel.punkteSchritt} hat --g-rule wie jeder offene Schritt`, async ({ page }) => {
+				await page.setViewportSize(vp);
+				await page.goto(sel.url);
+				await expect(balken(page, kind, g)).toHaveCount(1, { timeout: 15_000 });
+				await kopfAusfuellen(page, kind, mobil, einName(`AR20-${vp.width}`));
+				await expect(zaehler(page, kind, g)).toHaveText(ZAEHLER.de[g](1), { timeout: 10_000 });
+				await sel.reiter(page, sel.punkteSchritt, mobil).click({ force: mobil });
+				await expect
+					.poll(async () => (await sel.zustand(sel.reiter(page, sel.punkteSchritt, mobil))).aktiv, { message: 'Vorbedingung: Punkte-Schritt ist aktiv' })
+					.toBe(true);
+				const folge = await lies(page, kind, g);
+				await pruefeRegel(page, folge, 1, `AR-20 ${id}`);
+				expect(folge[1].farbe, 'AC-3: aktiver offener Schritt getönt').toBe(await tokenFarbe(page, '--g-rule'));
+				const stile = await segmente(page, kind, g).evaluateAll((els) => els.map((e) => e.getAttribute('style') ?? ''));
+				expect(stile.join(' '), 'AC-3: --g-accent-soft/#bcd im Balken').not.toMatch(/--g-accent-soft|#bcd/i);
+			});
+		}
+
+		// ── AR-24: AC-8 — Testids je genau einmal im Dokument, Segmente je 5×, data-done ────────
+		test(`AR-24 (${kind}): ${BALKEN[kind].desktop} und ${BALKEN[kind].mobil} je einmal, je 5 Segmente mit data-done`, async ({ page }) => {
+			await page.setViewportSize(DESKTOP);
+			await page.goto(sel.url);
+			await expect(balken(page, kind, 'desktop')).toHaveCount(1, { timeout: 15_000 });
+			for (const g of ['desktop', 'mobil'] as const) {
+				const id = BALKEN[kind][g];
+				await expect(page.getByTestId(id), `AR-24: ${id}`).toHaveCount(1);
+				await expect(page.getByTestId(`${id}-segment`), `AR-24: ${id}-segment (nicht 10)`).toHaveCount(5);
+				for (const s of await page.getByTestId(`${id}-segment`).all()) await expect(s).toHaveAttribute('data-done', /^(true|false)$/);
+			}
+		});
+	});
+}
+
+// ── AR-22: AC-4 — Parität Trip = Vergleich je Gerät (data-done-Folge und Farben) ──────────────
+for (const vp of BREITEN) {
+	const g = geraetVon(vp);
+	const mobil = g === 'mobil';
+	test(`AR-22 (${vp.width} px): Trip und Vergleich zeigen im selben Zustand dieselbe Folge (data-done, Farbe) — leer, nach Schritt 1, Punkte-Schritt aktiv`, async ({ page }) => {
+		await page.setViewportSize(vp);
+		const folgen: Record<HubKind, Segment[][]> = { route: [], vergleich: [] };
+		for (const kind of HUB_KINDS) {
+			const sel = ANLEGE_SEL[kind];
+			await page.goto(sel.url);
+			await expect(balken(page, kind, g)).toHaveCount(1, { timeout: 15_000 });
+			folgen[kind].push(await lies(page, kind, g));
+			await kopfAusfuellen(page, kind, mobil, einName(`AR22-${vp.width}`));
+			await expect(zaehler(page, kind, g)).toHaveText(ZAEHLER.de[g](1), { timeout: 10_000 });
+			folgen[kind].push(await lies(page, kind, g));
+			await sel.reiter(page, sel.punkteSchritt, mobil).click({ force: mobil });
+			folgen[kind].push(await lies(page, kind, g));
+		}
+		expect(folgen.vergleich, `AR-22 (${vp.width} px): Vergleich ≠ Trip`).toEqual(folgen.route);
+		await pruefeRegel(page, folgen.route[0], 0, 'AR-22 leer');
+		await pruefeRegel(page, folgen.route[1], 1, 'AR-22 Schritt 1');
+		await pruefeRegel(page, folgen.route[2], 1, 'AR-22 Punkte-Schritt aktiv');
+	});
+}
+
+// ── AR-23: AC-6/AC-7 — Zählertexte de und en, Computer und Handy ─────────────────────────────
+for (const kind of HUB_KINDS) {
+	testMitZustellbaremZiel(`AR-23 (${kind}): Zähler de/en auf Computer („${ZAEHLER.de.desktop(0)}"/„${ZAEHLER.en.desktop(0)}") und Handy („0/5"), nach Schritt 1 um eins höher`, async ({ page }) => {
+		try {
+			for (const lang of SPRACHEN) {
+				await sprache(page, lang);
+				for (const vp of BREITEN) {
+					const g = geraetVon(vp);
+					await page.setViewportSize(vp);
+					await page.goto(ANLEGE_SEL[kind].url);
+					await expect(balken(page, kind, g), `AR-23 (${lang}, ${vp.width} px): ${BALKEN[kind][g]}`).toHaveCount(1, { timeout: 15_000 });
+					await expect(zaehler(page, kind, g), `AR-23 (${lang}, ${vp.width} px): 0`).toHaveText(ZAEHLER[lang][g](0));
+					await kopfAusfuellen(page, kind, g === 'mobil', einName(`AR23-${lang}-${vp.width}`));
+					await expect(zaehler(page, kind, g), `AR-23 (${lang}, ${vp.width} px): 1`).toHaveText(ZAEHLER[lang][g](1), { timeout: 10_000 });
+				}
+			}
+		} finally {
+			await page.request.put('/api/auth/profile', { data: { language: 'de' } }).catch(() => {});
+		}
+	});
+}

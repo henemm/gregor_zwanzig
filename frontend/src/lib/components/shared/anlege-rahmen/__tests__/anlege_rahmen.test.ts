@@ -17,7 +17,13 @@
 //   abschlussTestid* (Trip `trip-new-save-btn`, Vergleich `compare-editor-activate`, AC-16),
 //   canFinish, onFinish, testidPrefix ('tn' | 'cm' ⇒ Fuß `${testidPrefix}-desktop-footer`,
 //   AC-16: `tn-desktop-footer` bleibt, `cm-desktop-footer` neu), navClearance;
-//   Snippets hinweis, standardwerte, fortschritt, children.
+//   Snippets hinweis, standardwerte, children.
+//   #2837 S2b (Spec rework_2837_s2b_anlege_fortschritt.md, Entscheidung 4, AC-10): der Snippet-
+//   Slot `fortschritt` entfällt; der Rahmen nimmt `steps` (readonly string[]), `done` (number,
+//   Ergebnis von `progressCount`) und `aktiv?` entgegen und rendert `AnlegeFortschritt
+//   variante="desktop"` selbst im Kopf — Testid je Art `trip-new-progress` /
+//   `compare-editor-progress`, Segmente `${…}-segment` mit data-done. Ein trotzdem übergebenes
+//   `fortschritt`-Snippet wird NICHT gerendert.
 //   Texte (Katalog): Elternteil `listen.trips.titel` / `listen.vergleiche.titel`,
 //   Eyebrow = Kind des Breadcrumbs „Neuer Trip" / „Neuer Vergleich" (en „New trip" /
 //   „New comparison"), Abbrechen `aktionen.abbrechen`, h1 Name oder `trip.anlegen.kein_name`.
@@ -77,6 +83,13 @@ const ART: Record<Ctx, { liste: string; elternKey: string; neu: Record<Lang, str
 };
 
 const FUSS = (c: Ctx) => `${ART[c].prefix}-desktop-footer`;
+/** #2837 S2b: Testid des Desktop-Fortschritts je Art (Spec Implementation Details 4) — fester Wert. */
+const FORTSCHRITT: Record<Ctx, string> = { route: 'trip-new-progress', vergleich: 'compare-editor-progress' };
+/** Fünf Pflicht-Schritte je Art (Spec AN-2) — feste Werte, nicht aus dem Produkt. */
+const SCHRITTE: Record<Ctx, readonly string[]> = {
+	route: ['route', 'etappen', 'wetter-metriken', 'wertebereiche', 'alarme'],
+	vergleich: ['vergleich', 'orte', 'wetter-metriken', 'wertebereiche', 'alarme']
+};
 
 function props(context: Ctx, extra: Record<string, unknown> = {}, lang: Lang = 'de'): Record<string, unknown> {
 	const a = ART[context];
@@ -91,8 +104,12 @@ function props(context: Ctx, extra: Record<string, unknown> = {}, lang: Lang = '
 		onFinish: () => {},
 		testidPrefix: a.prefix,
 		navClearance: false,
+		steps: SCHRITTE[context],
+		done: 0,
+		aktiv: SCHRITTE[context][0],
 		hinweis: roh('<span data-testid="probe-hinweis">Hinweis</span>'),
 		standardwerte: roh('<button type="button" data-testid="probe-standardwerte">Std</button>'),
+		// #2837 S2b: der Slot entfällt — die Probe bleibt übergeben und darf NICHT erscheinen.
 		fortschritt: roh('<div data-testid="probe-fortschritt">0/5</div>'),
 		children: roh('<div data-testid="probe-inhalt">Inhalt</div>'),
 		...extra
@@ -172,14 +189,35 @@ for (const context of ['route', 'vergleich'] as const) {
 			assert.equal(text(h1(mit.wurzel)), 'Dolomiten Süd');
 		});
 
-		test(`Aufbau (${context}): Überschrift → Fortschritt → Inhalt → Fuß, jedes Snippet genau einmal`, async () => {
+		test(`Aufbau (${context}): Überschrift → Fortschritt (${FORTSCHRITT[context]}, vom Rahmen selbst) → Inhalt → Fuß`, async () => {
 			const { wurzel } = await render_(props(context));
-			const f = einzig(wurzel, 'probe-fortschritt');
+			const f = einzig(wurzel, FORTSCHRITT[context]);
 			const i = einzig(wurzel, 'probe-inhalt');
 			const fuss = einzig(wurzel, FUSS(context));
 			assert.ok(h1(wurzel).nr < f.nr && f.nr < i.nr && i.nr < fuss.nr, 'Reihenfolge Titel/Fortschritt/Inhalt/Fuß falsch');
 			assert.ok(!liegtIn(i, fuss) && !liegtIn(f, fuss), 'Inhalt/Fortschritt stehen im Fuß');
 		});
+
+		test(`S2b AC-10 (${context}): kein Snippet-Slot fortschritt mehr — übergebene Probe erscheint nicht`, async () => {
+			const { wurzel } = await render_(props(context));
+			assert.equal(mitTestid(wurzel, 'probe-fortschritt').length, 0, 'Rahmen rendert noch das Snippet `fortschritt`');
+		});
+
+		for (const done of [0, 2]) {
+			test(`S2b AC-1/AC-10 (${context}, done=${done}): Rahmen zeichnet ${FORTSCHRITT[context]} mit 5 Segmenten, die ersten ${done} erledigt, Zähler aus dem Katalog`, async () => {
+				const { wurzel } = await render_(props(context, { done, aktiv: SCHRITTE[context][Math.min(done, 4)] }));
+				const f = einzig(wurzel, FORTSCHRITT[context]);
+				assert.ok(!imMobilKopf(f), 'Fortschritt steht im mobilen Kopf statt im Desktop-Kopf');
+				const seg = mitTestid(wurzel, `${FORTSCHRITT[context]}-segment`);
+				assert.equal(seg.length, 5, `${FORTSCHRITT[context]}-segment: ${seg.length}× (erwartet 5)`);
+				for (const s of seg) assert.ok(liegtIn(s, f), 'Segment außerhalb des Fortschritts-Containers');
+				assert.deepEqual(seg.map((s) => s.attrs['data-done']), [0, 1, 2, 3, 4].map((i) => String(i < done)));
+				const zaehler = f.kinder[f.kinder.length - 1];
+				assert.equal(zaehler?.tag, 'span', 'Zähler ist nicht das letzte Kind (<span class="mono">)');
+				const soll = done === 0 ? trFor('de', 'trip.anlegen.nichts_eingerichtet') : trFor('de', 'trip.anlegen.abschnitte', { n: done, gesamt: 5 });
+				assert.equal(text(zaehler), soll);
+			});
+		}
 	});
 
 	describe(`#2837 S2 AnlegeRahmen (${context}) — Fuß`, () => {
