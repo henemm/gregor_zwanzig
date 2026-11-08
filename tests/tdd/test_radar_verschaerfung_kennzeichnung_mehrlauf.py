@@ -37,6 +37,7 @@ from __future__ import annotations
 import json
 import re
 import uuid
+from pathlib import Path
 from datetime import datetime, timedelta, timezone
 
 import pytest
@@ -484,30 +485,73 @@ def _vergleichs_quelle(rate_mm_h: float):
     return _quelle
 
 
+def _ortsvergleich_service_klasse(protokoll: list):
+    """Echte Unterklasse des Ortsvergleich-Dienstes (DI-Naht, kein Mock): der
+    Versandweg `send_multi_location_radar_alert` laeuft unveraendert, nur das
+    Alarm-Objekt, das der Ortsvergleichs-Pfad dem Renderer/Transport uebergibt
+    (`_dispatch_alert_message(alert_msg=...)`), wird mitgeschrieben."""
+    from services.compare_radar_alert import CompareRadarAlertService
+
+    class _Aufzeichnend(CompareRadarAlertService):
+        def _notification_service_for(self, preset):
+            ns = super()._notification_service_for(preset)
+
+            class _Mitschreiber(type(ns)):
+                def _dispatch_alert_message(self, alert_msg, *a, **kw):
+                    protokoll.append(alert_msg)
+                    return super()._dispatch_alert_message(alert_msg, *a, **kw)
+
+            ns.__class__ = _Mitschreiber
+            return ns
+
+    return _Aufzeichnend
+
+
+def _ortsvergleich_verdopplung(uid: str, preset_id: str):
+    """Zwei Ortsvergleich-Radar-Laeufe (2 -> 6 mm/h, Cooldown 0), Uhr gestellt.
+    Liefert (zugestellt je Lauf, [(subject, body)], uebergebene Alarm-Objekte)."""
+    clean_uid(uid)
+    write_user_tier(uid, "premium")
+    save_location(location("loc-2848", "Verschaerfungsdorf"), user_id=uid)
+    write_presets(uid, [radar_preset(preset_id, ["loc-2848"], user_id=uid,
+                                     cooldown_minutes=0)])
+    mails: list = []
+    alarme: list = []
+    gesendet = []
+    klasse = _ortsvergleich_service_klasse(alarme)
+    for at, rate in ((_AT, 2.0), (_AT + timedelta(minutes=15), 6.0)):
+        with freeze_time(at):
+            dienst = klasse(
+                settings=settings_email_only(), user_id=uid,
+                radar_service=RadarNowcastService(
+                    frame_source=_vergleichs_quelle(rate)),
+                mail_sink=lambda subject, body: mails.append((subject, body)),
+            )
+            gesendet.append(dienst.check_all_compare_presets())
+    return gesendet, mails, alarme
+
+
+_GOLDEN_AC8 = (
+    Path(__file__).resolve().parent.parent / "fixtures" / "alarm_kette"
+    / "ortsvergleich_radar_verdopplung_vor_2848.json"
+)
+
+
 @pytest.mark.timeout(120)
 def test_ac8_ortsvergleich_radar_nach_mengenverdopplung_ohne_hinweis():
     """AC-8 (WAECHTER, heute gruen). GIVEN ein Ortsvergleich mit Radar-Alarm,
     dessen Menge sich zwischen zwei Laeufen mehr als verdoppelt (2 -> 6 mm/h,
     MODERATE -> HIGH, ohne Sperrzeit, damit der zweite Lauf ueberhaupt
     zugestellt wird), WHEN die Radar-Alarme des Ortsvergleichs zugestellt
-    werden, THEN traegt keiner einen Verschaerfungs-Hinweis — #2065 wirkt im
-    Ortsvergleich bewusst nicht. Byte-Gleichheit des geteilten Renderers fuer
-    den Ortsvergleich bewacht die Renderer-Datei (Golden `regen_buendel`)."""
+    werden, THEN (1) traegt keiner einen Verschaerfungs-Hinweis, (2) sind
+    Betreff und Text BYTE-IDENTISCH zum Alarm vor der Aenderung (Golden-
+    Snapshot, erzeugt am Basisstand c102b66cb, Code vor #2848) und (3) kennt
+    der Ortsvergleichs-Pfad das Kennzeichen nicht: das dem Renderer
+    uebergebene Alarm-Objekt hat `verschaerfung is None` — in BEIDEN Laeufen,
+    auch nach der Verdopplung (#2065 wirkt im Ortsvergleich bewusst nicht)."""
     uid, preset_id = _uid("ac8"), "cp-2848-ac8"
-    clean_uid(uid)
     try:
-        write_user_tier(uid, "premium")
-        save_location(location("loc-2848", "Verschaerfungsdorf"), user_id=uid)
-        write_presets(uid, [radar_preset(preset_id, ["loc-2848"], user_id=uid,
-                                         cooldown_minutes=0)])
-        mails: list = []
-        gesendet = []
-        for at, rate in ((_AT, 2.0), (_AT + timedelta(minutes=15), 6.0)):
-            with freeze_time(at):
-                gesendet.append(compare_radar_service(
-                    uid, settings_email_only(), _vergleichs_quelle(rate),
-                    lambda subject, body: mails.append((subject, body)),
-                ).check_all_compare_presets())
+        gesendet, mails, alarme = _ortsvergleich_verdopplung(uid, preset_id)
         assert gesendet == [1, 1], (
             f"AC-8 Vorbedingung: beide Laeufe muessen zustellen — sonst sieht der "
             f"Test den Alarm nach der Verdopplung gar nicht ({gesendet!r})"
@@ -518,6 +562,22 @@ def test_ac8_ortsvergleich_radar_nach_mengenverdopplung_ohne_hinweis():
                 f"AC-8: der Ortsvergleich darf nie einen Verschaerfungs-Hinweis "
                 f"tragen: {subject!r} / {body!r}"
             )
+        # (b) Aufrufer-Test: Kennzeichen am uebergebenen Alarm-Objekt.
+        assert len(alarme) == 2, (
+            f"AC-8: der Ortsvergleichs-Pfad muss je Lauf genau ein Alarm-Objekt "
+            f"an den Versand uebergeben, war {len(alarme)}"
+        )
+        for nr, alarm in enumerate(alarme, start=1):
+            assert hasattr(alarm, "verschaerfung"), "Testaufbau: Feld unbekannt"
+            assert alarm.verschaerfung is None, (
+                f"AC-8: der Ortsvergleichs-Pfad darf das Kennzeichen in Lauf {nr} "
+                f"nicht setzen, war {alarm.verschaerfung!r}"
+            )
+        # (a) Byte-Vergleich mit dem Alarm vor der Aenderung.
+        golden = json.loads(_GOLDEN_AC8.read_text(encoding="utf-8"))
+        assert [list(m) for m in mails] == golden["mails"], (
+            "AC-8: Ortsvergleich-Mail weicht byte-genau vom Stand vor #2848 ab"
+        )
     finally:
         clean_uid(uid)
 

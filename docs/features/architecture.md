@@ -744,6 +744,13 @@ Scheibe 3 (#1170). Scheduler: `POST /api/scheduler/compare-alert-checks`, Go-Cro
      Viertelstunden-Anker). Trip (`trip_alert.py`) und Ortsvergleich (`compare_radar_alert.py`)
      nutzen dieselbe Ableitung. Erwartete Vorläufe im 5-Min-Takt `3-58/5` gegen 15-Min-INCA-Frames:
      2/7/12 mod 15. Nutzertext unverändert („läuft bereits").
+   - **Radar-Verschärfung im Entscheidungs-Log (#2848):** Bricht ein Trip-Radar-Alarm per
+     Mengen-Durchbruch (#2065) gegen einen Radar-Alarm desselben Ereignisses durch, trägt der
+     Eintrag zusätzlich die optionalen Felder `escalation_from_mm` / `escalation_to_mm`
+     (`alert_log.append_entry`, additiv wie `is_addendum`; Absenz = Normalfall, Alt-Einträge
+     und Ortsvergleich unverändert). Der Alarm selbst nennt „Dasselbe Ereignis, jetzt stärker:
+     X statt Y mm" bzw. SMS-Token `UP Y>X` (`sms_format.md` §3.4g). Entscheidung zu senden
+     bleibt unberührt.
    - Drei Mount-Punkte: Zweig a (Δ-Alarm, vor `_send_alert` in `trip_alert.py`,
      nutzerskopiert) · Zweig b (amtliche Warnung, `official_alerts/warn_egress.py::cached_fetch`,
      System-Ablage) · Zweig c (Radar-Nowcast, vor `_derive_result` in

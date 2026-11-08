@@ -3,7 +3,7 @@ entity_id: fix_2848_radar_verschaerfung_kennzeichnen
 type: module
 created: 2026-11-08
 updated: 2026-11-08
-status: draft
+status: implemented
 workflow: fix-2848-radar-alarm-dreifach
 version: "1.0"
 tags: [alarm, nowcast, radar, verschaerfung, kanal-paritaet, i18n]
@@ -13,7 +13,7 @@ tags: [alarm, nowcast, radar, verschaerfung, kanal-paritaet, i18n]
 
 ## Approval
 
-- [ ] Approved
+- [x] Approved — automatische Spec-Freigabe im Auto-Modus (`workflow.py approvals`: spec · auto · 2026-11-08T09:45); fachliche Grundlage: PO-Entscheid Option B vom 2026-11-08 per AskUserQuestion (`docs/context/fix-2848-radar-alarm-dreifach.md`).
 
 ## Purpose
 
@@ -277,6 +277,15 @@ Staging" benennen.
 - **Wortwahl:** „Ereignis" statt „Regenereignis" gewählt, da dieselbe Zeile auch bei Gewitter-Radar
   steht; PO-Formulierung war „sinngemäß".
 - **Keine Handlungsempfehlungen** im Text (Produktregel: nur Daten).
+- **Telegram-Langform mit `addendum_reference`:** Ist `addendum_reference` gesetzt, entfällt der
+  Verschärfungs-Satz (`_render_telegram_onset` kennt nur eine der beiden Zusatzzeilen). In der
+  Praxis schließen sich beide aus, weil der Nachtrags-Zweig im Gate vor dem Radar-Zweig liegt
+  und `ist_mengen_verschaerfung` bei `addendum_direction` nie gesetzt wird.
+- **Umfang der Umsetzung (2026-11-08):** Der Fix berührt 8 Produktiv-/Katalogdateien (86 LoC)
+  statt der im Workflow üblichen 5, weil Vier-Kanal-Parität (ADR-0095), i18n (de/en) und
+  Alarmlog dies erzwingen. Die Schätzung „7 Dateien" in Estimated Scope war ein Zählfehler
+  (tatsächlich: `alert_gate.py`, `trip_alert.py`, `notification_service.py`, `alert/model.py`,
+  `alert/render.py`, `alert_log.py`, `de/alarm.json`, `en/alarm.json`).
 
 ## Architektur-Entscheidung (ADR)
 
@@ -288,3 +297,4 @@ Staging" benennen.
 ## Changelog
 
 - 2026-11-08: Initial spec created (Issue #2848, PO-Entscheid Option B)
+- 2026-11-08: Implementiert (status implemented): `GateResult.ist_mengen_verschaerfung`, `RadarAlertRequest.verschaerfung` → `AlertMessage.verschaerfung`, Hinweis in E-Mail/Telegram-Langform (Katalog `alarm.verschaerfung`, de/en), SMS-Token `UP <Y>><X>` (SMS, Premium-SMS, Telegram-Kurzform), Alarmlog `escalation_from_mm`/`escalation_to_mm`. Tests: `tests/tdd/test_radar_verschaerfung_kennzeichnung_{mehrlauf,renderer}.py`, Fixture `tests/fixtures/alarm_kette/ortsvergleich_radar_verdopplung_vor_2848.json`. Known Limitations ergänzt. Doku: `sms_format.md` §3.4g, `premium_sms_format.md`, `architecture.md`.
