@@ -1,5 +1,5 @@
 {
-  "_zweck": "Issue #2792 S1a: gemeinsame Testvektoren fuer Python app.ampel.validate_ampel und Go handler.validateAmpel (Regelgleichheit). Gelesen von tests/tdd/test_ampel_modell_und_aufloesung.py und internal/handler/ampel_validierung_test.go.",
+  "_zweck": "Issue #2792 S1a (#2793 S2a: Gewitter alarm_ab nie gelb): gemeinsame Testvektoren fuer Python app.ampel.validate_ampel und Go handler.validateAmpel (Regelgleichheit). Gelesen von tests/tdd/test_ampel_modell_und_aufloesung.py und internal/handler/ampel_validierung_test.go.",
   "vektoren": [
     {"name": "leer_ist_gueltig", "gueltig": true, "ampel": {}},
     {"name": "voll_beidseitig_gueltig", "gueltig": true, "ampel": {"template": "skitouren", "metrics": {
@@ -10,6 +10,9 @@
     {"name": "alarm_ab_yellow", "gueltig": true, "ampel": {"metrics": {"gust": {"alarm_ab": "yellow"}}}},
     {"name": "alarm_ab_orange", "gueltig": true, "ampel": {"metrics": {"gust": {"alarm_ab": "orange"}}}},
     {"name": "alarm_ab_red", "gueltig": true, "ampel": {"metrics": {"gust": {"alarm_ab": "red"}}}},
+    {"name": "gewitter_alarm_ab_never", "gueltig": true, "ampel": {"metrics": {"thunder": {"alarm_ab": "never"}}}},
+    {"name": "gewitter_alarm_ab_orange", "gueltig": true, "ampel": {"metrics": {"thunder": {"alarm_ab": "orange"}}}},
+    {"name": "gewitter_alarm_ab_red", "gueltig": true, "ampel": {"metrics": {"thunder": {"alarm_ab": "red"}}}},
     {"name": "gleichheitsrand_unten_gelb_gleich_oben_gelb", "gueltig": true, "ampel": {"metrics": {
       "temperature": {"lower": {"yellow": 20}, "upper": {"yellow": 20}}}}},
     {"name": "gewitter_mittel_orange_hoch_red", "gueltig": true, "ampel": {"thunder": {"mittel": "orange", "hoch": "red"}}},
@@ -32,6 +35,7 @@
     {"name": "gewitter_hoch_schwaecher_als_mittel", "gueltig": false, "ampel": {"thunder": {"mittel": "red", "hoch": "orange"}}},
     {"name": "gewitter_mittel_unbekannt", "gueltig": false, "ampel": {"thunder": {"mittel": "lila"}}},
     {"name": "alarm_ab_x", "gueltig": false, "ampel": {"metrics": {"gust": {"alarm_ab": "x"}}}},
+    {"name": "gewitter_alarm_ab_yellow_2793", "gueltig": false, "ampel": {"metrics": {"thunder": {"alarm_ab": "yellow"}}}},
     {"name": "template_kein_string", "gueltig": false, "ampel": {"template": 5}},
     {"name": "grenze_kein_zahlwert", "gueltig": false, "ampel": {"metrics": {"gust": {"upper": {"yellow": "viel"}}}}},
     {"name": "enabled_kein_wahrheitswert", "gueltig": false, "ampel": {"metrics": {"gust": {"enabled": "ja"}}}},
