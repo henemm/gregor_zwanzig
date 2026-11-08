@@ -3,7 +3,7 @@ entity_id: fix_2009_laufender_regen_vorlauf
 type: bugfix
 created: 2026-11-08
 updated: 2026-11-08
-status: draft
+status: implemented
 version: "1.0"
 workflow: fix-2009-nowcast-8min-nachmessung
 tags: [alarm, radar, nowcast, alarmlog, entdopplung, issue-2009]
@@ -13,7 +13,7 @@ tags: [alarm, radar, nowcast, alarmlog, entdopplung, issue-2009]
 
 ## Approval
 
-- [ ] Approved
+- [x] Approved
 
 ## Purpose
 
@@ -105,14 +105,14 @@ AC-1 bis AC-8 sind durch die benannten Wächter (Trip- und Ortsvergleichs-Pfad, 
 
 Alle Wächter fahren über den echten `check_radar_alerts()` bzw. den Ortsvergleichs-Pfad (`check_all_compare_presets`) mit `AlarmPruefstrecke` und `frame_source`-DI am echten `RadarNowcastService`. Kein `Mock()`/`patch()`. Zeitfest über `tests/helpers/wanduhr_matrix.py`.
 
-- [ ] Wächter 1: GIVEN Trip, laufendes und nächstes Frame nass, Lauf im 5-Min-Takt, WHEN der Alarm gesendet wird, THEN Log-Vorlauf 0 und Beginn = Lauf-Zeitpunkt (nicht nächster Viertelstundenpunkt).
-- [ ] Wächter 2: Dasselbe im Ortsvergleich.
-- [ ] Wächter 3: GIVEN laufender Regen über vier Stunden, Läufe alle 5 Minuten, THEN höchstens ein Alarm je 3 Stunden, nicht mehr Alarme als heute (genau ein Alarm: #2851).
-- [ ] Wächter 4: GIVEN Alarm "kommt in 8", WHEN der Regen beginnt und der nächste Lauf "läuft" sieht, THEN kein zweiter Alarm.
-- [ ] Wächter 5 (Gegenprobe): GIVEN Frame davor trocken, Regen in 8, THEN Vorlauf bleibt 8.
-- [ ] Wächter 6: GIVEN INCA und Takt `3-58/5`, THEN Vorlauf nur 2/7/12 mod 15, nicht überall 8.
-- [ ] Wächter 7: GIVEN laufender Regen, THEN alle vier Kanäle zeigen "läuft bereits", nie "in 0 Min".
-- [ ] Angepasste Bestandstests (`test_alarm_szenario_laufendes_ereignis`, `test_radar_onset_threshold_variance`) laufen grün.
+- [x] Wächter 1: GIVEN Trip, laufendes und nächstes Frame nass, Lauf im 5-Min-Takt, WHEN der Alarm gesendet wird, THEN Log-Vorlauf 0 und Beginn = Lauf-Zeitpunkt (nicht nächster Viertelstundenpunkt).
+- [x] Wächter 2: Dasselbe im Ortsvergleich.
+- [x] Wächter 3: GIVEN laufender Regen über vier Stunden, Läufe alle 5 Minuten, THEN höchstens ein Alarm je 3 Stunden, nicht mehr Alarme als heute (genau ein Alarm: #2851).
+- [x] Wächter 4: GIVEN Alarm "kommt in 8", WHEN der Regen beginnt und der nächste Lauf "läuft" sieht, THEN kein zweiter Alarm.
+- [x] Wächter 5 (Gegenprobe): GIVEN Frame davor trocken, Regen in 8, THEN Vorlauf bleibt 8.
+- [x] Wächter 6: GIVEN INCA und Takt `3-58/5`, THEN Vorlauf nur 2/7/12 mod 15, nicht überall 8.
+- [x] Wächter 7: GIVEN laufender Regen, THEN alle vier Kanäle zeigen "läuft bereits", nie "in 0 Min".
+- [x] Angepasste Bestandstests (`test_alarm_szenario_laufendes_ereignis`, `test_radar_onset_threshold_variance`) laufen grün.
 
 Mutations-Gegenprobe (Pflicht, `implementation-validator`): Ersetzt man die Ableitung wieder durch `onset_minutes`, muss mindestens ein Wächter rot werden, und zwar in beiden Pfaden einzeln.
 
@@ -149,6 +149,8 @@ Mutations-Gegenprobe (Pflicht, `implementation-validator`): Ersetzt man die Able
 - Die Mess-Deutung der Alarmlog-Einträge vom 25.08. ("8", Ende gleich Horizontende) ist ein Indiz für das Artefakt, kein Beweis. Den Mechanismus belegt der Wächter 1.
 - Mitschnitte der Eingangsdaten (`alert_input`) werden nur 24 Stunden aufbewahrt, eine rückwirkende Reproduktion am echten Regenereignis ist deshalb nicht möglich.
 - Das "jetzt" als Entdopplungsanker trägt nicht über 3 Stunden hinaus (in RED gemessen: 4 h Regen ergeben Alarme um 10:03 und 13:08, heute 10:03 und 13:18). Ein Alarm über die ganze Dauer kommt in Folgeticket #2851 (stabiler, fortgeschriebener Anker), nicht in diese Spec.
+- Wächter 7 prüft „läuft bereits" im Ortsvergleich nur für die E-Mail; Telegram, SMS und Premium-SMS sind nur im Trip-Pfad gerendert geprüft. Die Kanal-Darstellung wurde durch diesen Fix nicht geändert.
+- Zusätzlich angepasster Bestandstest `tests/tdd/test_alert_log_ereignisgroessen.py` (erwartete `lead_time_minutes` bei `already_running` None → 0); in Affected Files nicht gelistet.
 
 ## Architektur-Entscheidung (ADR)
 
@@ -157,5 +159,6 @@ Mutations-Gegenprobe (Pflicht, `implementation-validator`): Ersetzt man die Able
 
 ## Changelog
 
+- 2026-11-08: Implementiert und validiert (Phase 7), Status implemented (65 passed)
 - 2026-11-08: AC-3 per PO-Entscheidung eingegrenzt auf „höchstens ein Alarm innerhalb von 3 Stunden“, Rest in #2851 (Befund aus TDD RED)
 - 2026-11-08: Initial spec created (Nachmessung #2009, Variante B gewählt, A verworfen, C als mögliches Folgeticket)
