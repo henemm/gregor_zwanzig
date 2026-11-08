@@ -51,7 +51,11 @@ const ORTE = [
 	{ id: 'loc-c', name: 'Cortina', lat: 46.5, lon: 12.1 }
 ];
 
-const MOBIL_ANKER = 'data-testid="cm-mobile-head"';
+// #2837 S2: Pfad folgt dem Rahmen — der Mobil-Kopf kann in den geteilten AnlegeRahmen wandern
+// (Spec Implementation Details Schritt 2, „Handy: PageHeader back"), der Mobil-ZWEIG des Editors
+// bleibt. Anker ist deshalb die Hülle des Mobil-Zweigs (`<div class="cm-mobile" …>`, im SSR-Output
+// `class="cm-mobile svelte-…"`), nicht mehr das Kopf-Testid. Die Zusicherungen bleiben wörtlich.
+const MOBIL_ANKER = 'class="cm-mobile';
 
 async function renderMobilOrte(pickedIds: string[]): Promise<{ desktop: string; mobil: string }> {
 	const Editor = await lade('compare-new/CompareNewEditor.svelte');
@@ -60,7 +64,7 @@ async function renderMobilOrte(pickedIds: string[]): Promise<{ desktop: string; 
 		stateOverride: { activeTab: 'orte', isMobileViewport: true, name: 'Dolomiten', pickedIds }
 	});
 	const ab = html.indexOf(MOBIL_ANKER);
-	assert.ok(ab > 0, 'Messaufbau: Mobil-Rahmen (cm-mobile-head) fehlt im gerenderten Editor');
+	assert.ok(ab > 0, 'Messaufbau: Mobil-Zweig (.cm-mobile) fehlt im gerenderten Editor');
 	return { desktop: html.slice(0, ab), mobil: html.slice(ab) };
 }
 
@@ -105,7 +109,7 @@ async function mobilerSchritt(pickedIds: string[]) {
 	return orteSchrittAmMount('mobil', pickedIds);
 }
 
-/** Editor + ECHTES Step2Orte-Skript am gewählten Mount (`mobil` = nach `cm-mobile-head`,
+/** Editor + ECHTES Step2Orte-Skript am gewählten Mount (`mobil` = nach der Hülle `.cm-mobile`,
  *  `desktop` = davor), die Bindung aus dem BindDirective-Knoten dieses Mounts. Liefert die echten
  *  Handler des jeweiligen Zweigs: ✕-Abwählen und (Desktop) Bibliotheks-Kachel = `togglePick`. */
 async function orteSchrittAmMount(mount: 'mobil' | 'desktop', pickedIds: string[]) {
@@ -117,7 +121,7 @@ async function orteSchrittAmMount(mount: 'mobil' | 'desktop', pickedIds: string[
 		locations: ORTE
 	});
 	const anker = e.quelle.indexOf(MOBIL_ANKER);
-	assert.ok(anker > 0, 'Messaufbau: cm-mobile-head fehlt im Editor-Quelltext');
+	assert.ok(anker > 0, 'Messaufbau: Mobil-Zweig (.cm-mobile) fehlt im Editor-Quelltext');
 	const mounts = findeKomponenten(e.ast, 'Step2Orte').filter((k) => (mount === 'mobil' ? k.start > anker : k.start < anker));
 	assert.equal(mounts.length, 1, `Messaufbau: erwartet genau einen ${mount}-Step2Orte, gefunden ${mounts.length}`);
 	const mobil = mounts;
@@ -237,7 +241,7 @@ describe('AC-6 mobil (F002): dense-Variante und Bibliotheks-Knopf', () => {
 		});
 		// Mobiler Mount = die Step2Orte-Einbettung NACH dem Mobil-Kopf (Position, nicht Attribute).
 		const anker = e.quelle.indexOf(MOBIL_ANKER);
-		assert.ok(anker > 0, 'Messaufbau: cm-mobile-head fehlt im Editor-Quelltext');
+		assert.ok(anker > 0, 'Messaufbau: Mobil-Zweig (.cm-mobile) fehlt im Editor-Quelltext');
 		const mobil = findeKomponenten(e.ast, 'Step2Orte').filter((k) => k.start > anker);
 		assert.equal(mobil.length, 1, `Messaufbau: erwartet genau einen mobilen Step2Orte, gefunden ${mobil.length}`);
 

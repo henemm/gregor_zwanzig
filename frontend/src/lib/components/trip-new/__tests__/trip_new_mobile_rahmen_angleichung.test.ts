@@ -15,12 +15,18 @@
 // Breadcrumb/App-Leiste, keine Fade-Maske auf tn-mobile-tabbar, kein
 // aria-label am Zurück-Pfeil. AC-9 ist ein Strukturwächter und schon heute grün.
 //
+// #2837 S2 (docs/specs/modules/rework_2837_s2_anlege_rahmen.md, Tabelle „Divergenz-
+// verankernde Tests"): UMGEDREHT, nicht gelöscht — Desktop-Zurück wird Breadcrumb des
+// AnlegeRahmen (AC-1), Desktop-Fuß mit Abbrechen links / Btn primary rechts (AC-5/AC-8),
+// mobiler Abschluss „Trip speichern" (AC-12), Aria-Wächter folgt dem Rahmen. Mobil-Zurück,
+// Footer-Mounts, Sperre, Fade-Maske und Strukturwächter AC-9 bleiben wörtlich.
+//
 // Ausführen:
 //   cd frontend && npm test -- src/lib/components/trip-new/__tests__/trip_new_mobile_rahmen_angleichung.test.ts
 
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
-import { renderTripNew, countTestid, outerHtml } from './tripNewSsr.ts';
+import { renderTripNew, countTestid, outerHtml, visibleText } from './tripNewSsr.ts';
 
 const DESKTOP = { activeTab: 'route', isMobileViewport: false };
 const MOBIL = { activeTab: 'route', isMobileViewport: true };
@@ -86,16 +92,23 @@ function hatKlasse(tag: string, klasse: string): boolean {
 	return cls.split(/\s+/).includes(klasse);
 }
 
-describe('AC-3: Zurück in /trips/new über PageHeader/BackLink im Button-Modus', () => {
-	test('Desktop: tn-desktop-breadcrumb enthält GENAU EINEN <button data-testid="back-link"> ohne href, kein <a>', () => {
+// #2837 S2 (rework_2837_s2_anlege_rahmen.md, Entscheidung 1 / AC-1, AC-2) — UMGEDREHT: der
+// Desktop-Kopf ist kein Zurück-Knopf mehr, sondern der Breadcrumb des geteilten AnlegeRahmen
+// „Trips / Neuer Trip". Der Elternteil ist EIN Link mit href="/trips" (Adresse bleibt) und
+// Katalogtext; sein Klick ruft onCancel (kein Autosave) — die Klickwirkung prüft die E2E
+// anlege-rahmen-paritaet (AR-2), denn SSR führt keine Ereignisse aus. Weiterhin verboten:
+// ein <a data-testid="back-link"> (Zurück per reinem href am intentionalCancel vorbei).
+// Mobil bleibt der Zurück-Pfeil ein Button (Entscheidung 2).
+describe('AC-3: Zurück in /trips/new — Desktop Breadcrumb (#2837 S2), mobil BackLink im Button-Modus', () => {
+	test('Desktop: tn-desktop-breadcrumb = „Trips / Neuer Trip", Elternteil GENAU EIN <a href="/trips"> mit Katalogtext, Kind kein Link, kein Zurück-Knopf', () => {
 		const wrapper = outerHtml(renderTripNew(DESKTOP), 'tn-desktop-breadcrumb');
-		const buttons = treffer(wrapper, BUTTON_BACKLINK);
-		assert.equal(
-			buttons.length,
-			1,
-			`AC-3 FAIL: erwartet genau 1 <button data-testid="back-link"> im Desktop-Breadcrumb, gefunden ${buttons.length}.`
-		);
-		assert.ok(!/\bhref=/.test(buttons[0]), `AC-3 FAIL: Zurück-Button trägt href: ${buttons[0]}`);
+		const links = treffer(wrapper, /<a\b[^>]*>[\s\S]*?<\/a>/g);
+		assert.equal(links.length, 1, `#2837 S2 AC-1 FAIL: erwartet genau 1 Link im Desktop-Breadcrumb, gefunden ${links.length}.`);
+		assert.match(links[0], /^<a\b[^>]*\shref="\/trips"/, `#2837 S2 AC-1 FAIL: Elternteil verlinkt nicht auf /trips: ${links[0]}`);
+		assert.equal(visibleText(links[0]), 'Trips', '#2837 S2 AC-1 FAIL: Elternteil-Text ist nicht der Katalogtext „Trips".');
+		assert.ok(visibleText(wrapper).includes('Neuer Trip'), `#2837 S2 AC-1 FAIL: Kind „Neuer Trip" fehlt: „${visibleText(wrapper)}"`);
+		assert.ok(!visibleText(links[0]).includes('Neuer Trip'), '#2837 S2 AC-1 FAIL: das Kind ist Teil des Links.');
+		assert.equal(treffer(wrapper, BUTTON_BACKLINK).length, 0, '#2837 S2 AC-1 FAIL: im Desktop-Breadcrumb steht noch der Zurück-Knopf.');
 		assert.equal(
 			treffer(wrapper, ANCHOR_BACKLINK).length,
 			0,
@@ -118,6 +131,8 @@ describe('AC-3: Zurück in /trips/new über PageHeader/BackLink im Button-Modus'
 			0,
 			'AC-3 FAIL: App-Leiste enthält ein <a data-testid="back-link"> — Zurück navigiert per href.'
 		);
+		// #2837 S2 Entscheidung 2: Beschriftung = Elternteil aus dem Katalog.
+		assert.equal(visibleText(outerHtml(wrapper, 'back-link')), 'Trips', '#2837 S2 AC-3 FAIL: Zurück-Pfeil trägt nicht den Katalogtext „Trips".');
 	});
 });
 
@@ -154,6 +169,20 @@ describe('AC-4: Speichern wandert in je einen EditorStickyFooter (context="route
 			!hatKlasse(footer.tag, 'has-nav'),
 			`AC-4 FAIL: Mobil-Footer reserviert Platz für die BottomNav (navClearance nicht false): ${footer.tag}`
 		);
+	});
+
+	// #2837 S2 (Entscheidungen 4/5, AC-5/AC-8): der Desktop-Fuß ist der Fuß des AnlegeRahmen —
+	// „Abbrechen" (Btn ghost) links, Hauptaktion trip-new-save-btn (Btn primary) rechts.
+	test('#2837 S2: Desktop-Fuß tn-desktop-footer — Abbrechen (Btn ghost) VOR trip-new-save-btn (Btn primary)', () => {
+		const footer = outerHtml(renderTripNew(DESKTOP), 'tn-desktop-footer');
+		const save = /<button\b[^>]*data-testid="trip-new-save-btn"[^>]*>/.exec(footer);
+		assert.ok(save, '#2837 S2 FAIL: trip-new-save-btn steht nicht im tn-desktop-footer.');
+		assert.match(save[0], /\sdata-slot="btn"/, `#2837 S2 AC-8 FAIL: Trip speichern ist kein Btn: ${save[0]}`);
+		assert.match(save[0], /\sdata-variant="primary"/, `#2837 S2 AC-8 FAIL: Trip speichern ist nicht Btn primary: ${save[0]}`);
+		const ab = [...footer.matchAll(/<(button|a)\b[^>]*data-slot="btn"[^>]*>([\s\S]*?)<\/\1>/g)].filter((m) => visibleText(m[2]) === 'Abbrechen');
+		assert.equal(ab.length, 1, `#2837 S2 AC-5 FAIL: erwartet genau 1 „Abbrechen" im Desktop-Fuß, gefunden ${ab.length}.`);
+		assert.match(ab[0][0], /\sdata-variant="ghost"/, '#2837 S2 AC-5 FAIL: Abbrechen ist nicht Btn ghost.');
+		assert.ok(ab[0].index! < save.index, '#2837 S2 AC-5 FAIL: Abbrechen steht nicht links von „Trip speichern".');
 	});
 
 	test('zwei getrennte Footer-Mounts (einer je Viewport-Zweig)', () => {
@@ -242,7 +271,18 @@ describe('AC-9: Strukturwächter — vertragliche Testids je Render genau einmal
 	}
 });
 
-describe('AC-10: Vorlesetext „Zurück: Trips" am Zurück-Pfeil in beiden Viewport-Zweigen', () => {
+// #2837 S2 AC-12: der mobile Abschluss heißt wie der Desktop-Abschluss „Trip speichern"
+// (Katalog trip.anlegen.speichern), nicht mehr „Speichern" (aktionen.speichern).
+describe('#2837 S2 AC-12: mobiler Abschluss „Trip speichern"', () => {
+	test('tn-mobile-save (Schritt Alarme) trägt den Text „Trip speichern"', () => {
+		assert.equal(visibleText(outerHtml(renderTripNew(MOBIL_ALARME), 'tn-mobile-save')), 'Trip speichern');
+	});
+});
+
+// #2837 S2 — Aria-Wächter folgt dem Rahmen: mobil bleibt der Zurück-Pfeil mit „Zurück: Trips";
+// Desktop ist ein Breadcrumb-Link, dessen zugänglicher Name der sichtbare Katalogtext „Trips" ist
+// (kein Zurück-Knopf mehr, also auch kein „Zurück: Trips" dort).
+describe('AC-10: Vorlesetext am Zurück-Pfeil (mobil) bzw. Breadcrumb-Link (Desktop)', () => {
 	test('Mobil: tn-mobile-appbar enthält aria-label="Zurück: Trips" genau einmal', () => {
 		const wrapper = outerHtml(renderTripNew(MOBIL), 'tn-mobile-appbar');
 		assert.equal(
@@ -252,12 +292,13 @@ describe('AC-10: Vorlesetext „Zurück: Trips" am Zurück-Pfeil in beiden Viewp
 		);
 	});
 
-	test('Desktop: tn-desktop-breadcrumb enthält aria-label="Zurück: Trips" genau einmal', () => {
+	test('Desktop: Breadcrumb-Link heißt „Trips" (aria-label, falls gesetzt, nennt ebenfalls „Trips"), kein „Zurück: Trips"-Knopf', () => {
 		const wrapper = outerHtml(renderTripNew(DESKTOP), 'tn-desktop-breadcrumb');
-		assert.equal(
-			treffer(wrapper, /aria-label="Zurück: Trips"/g).length,
-			1,
-			'AC-10 FAIL: der Zurück-Link des Desktop-Breadcrumbs trägt nicht genau einmal aria-label="Zurück: Trips".'
-		);
+		const link = /<a\b[^>]*\shref="\/trips"[^>]*>([\s\S]*?)<\/a>/.exec(wrapper);
+		assert.ok(link, '#2837 S2 AC-10 FAIL: kein Breadcrumb-Link auf /trips.');
+		assert.equal(visibleText(link[1]), 'Trips', '#2837 S2 AC-10 FAIL: zugänglicher Name des Links ist nicht „Trips".');
+		const aria = /\saria-label="([^"]*)"/.exec(link[0].slice(0, link[0].indexOf('>') + 1));
+		if (aria) assert.ok(aria[1].includes('Trips'), `#2837 S2 AC-10 FAIL: aria-label „${aria[1]}" verdeckt den Katalogtext.`);
+		assert.equal(treffer(wrapper, /<button\b[^>]*aria-label="Zurück: Trips"/g).length, 0, '#2837 S2 AC-10 FAIL: Desktop trägt noch den Zurück-Knopf.');
 	});
 });

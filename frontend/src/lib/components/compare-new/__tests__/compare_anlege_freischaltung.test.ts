@@ -268,7 +268,7 @@ describe('canActivate — "Briefing aktivieren" nach Alarme-Besuch', () => {
 });
 
 // ── #1743 AC-19 an der Wirkstelle: ECHTES SSR-Rendering von CompareNewEditor ──
-// Reiterleiste, Fortschrittszaehler und „Briefing aktivieren" (Desktop-Kopfzeile und
+// Reiterleiste, Fortschrittszaehler und „Briefing aktivieren" (Desktop-Fuß cm-desktop-footer, #2837 S2, und
 // mobiler Sticky-Footer im Schritt Alarme) — Muster compare_new_lock_engine_wirkstelle.
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
@@ -290,6 +290,21 @@ function knopfGesperrt(html: string, testid: string): boolean {
 	assert.ok(m, `Knopf ${testid} nicht gerendert`);
 	return /\sdisabled(=|\s|>)/.test(m![0]);
 }
+/** Äußeres HTML des Desktop-Fußes cm-desktop-footer (#2837 S2); fehlt er, scheitert der Test hier. */
+function imDesktopFuss(html: string): string {
+	const i = html.indexOf('data-testid="cm-desktop-footer"');
+	assert.notEqual(i, -1, '#2837 S2 FAIL: Desktop-Fuß cm-desktop-footer fehlt — „Briefing aktivieren" steht nicht unten');
+	const start = html.lastIndexOf('<', i);
+	const re = /<div\b[^>]*>|<\/div>/g;
+	re.lastIndex = start;
+	let tiefe = 0;
+	let m: RegExpExecArray | null;
+	while ((m = re.exec(html))) {
+		tiefe += m[0].startsWith('</') ? -1 : 1;
+		if (tiefe === 0) return html.slice(start, m.index + m[0].length);
+	}
+	return html.slice(start);
+}
 const BIS_WERTEBEREICHE = { metrikenVisited: true, idealsVisited: true };
 const BIS_ALARME = { metrikenVisited: true, idealsVisited: true, alarmeVisited: true };
 
@@ -305,9 +320,11 @@ describe('#1743 AC-19 Wirkstelle /compare/new: kein Versand-Schritt, Aktivieren 
 		assert.match(html, /5 \/ 5 Abschnitte eingerichtet/);
 	});
 
-	test('Desktop: „Briefing aktivieren" gesperrt bis Wertebereiche, frei nach Alarme', () => {
-		assert.equal(knopfGesperrt(editorHtml('wertebereiche', false, BIS_WERTEBEREICHE), 'compare-editor-activate'), true);
-		assert.equal(knopfGesperrt(editorHtml('alarme', false, BIS_ALARME), 'compare-editor-activate'), false,
+	// #2837 S2 (AC-8) UMGEDREHT: „Briefing aktivieren" sitzt nicht mehr in der Kopfleiste, sondern
+	// im Desktop-Fuß cm-desktop-footer des AnlegeRahmen; die Freischaltung bleibt wörtlich gleich.
+	test('Desktop: „Briefing aktivieren" im Fuß cm-desktop-footer — gesperrt bis Wertebereiche, frei nach Alarme', () => {
+		assert.equal(knopfGesperrt(imDesktopFuss(editorHtml('wertebereiche', false, BIS_WERTEBEREICHE)), 'compare-editor-activate'), true);
+		assert.equal(knopfGesperrt(imDesktopFuss(editorHtml('alarme', false, BIS_ALARME)), 'compare-editor-activate'), false,
 			'#1743 AC-19 FAIL: „Briefing aktivieren" ist nach dem Alarme-Besuch noch gesperrt.');
 	});
 

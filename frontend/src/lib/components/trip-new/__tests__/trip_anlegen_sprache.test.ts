@@ -52,9 +52,13 @@ const alle = (fall: string) => P.ANLEGE_FAELLE[fall].map(P.anlegenRendern).join(
 describe('AC-3: /trips/new englisch (Desktop und mobil)', () => {
 	test('Route-Schritt: Kopf, Reiter, Felder, Platzhalter, Pflicht-Hinweise, Aktivitaeten', () => {
 		const { de, en } = deDannEn(() => alle('anlegen_route'));
-		hat(sichtbar(de), 'Neue Trip anlegen');
+		// #2837 S2 AC-4 (UMGEDREHT): Eyebrow „Neuer Trip" / „New trip" statt „Neue Trip anlegen" / „Create new trip".
+		hat(sichtbar(de), 'Neuer Trip');
+		hatNicht(sichtbar(de), 'Neue Trip ');
+		hatNicht(sichtbar(de), 'Neue Trip anlegen');
 		const s = sichtbar(en);
-		for (const t of ['Create new trip', 'No name yet', 'Nothing set up yet', 'Route', 'Stages & GPX', 'Check waypoints', 'Weather metrics', 'Target ranges', 'Alerts', 'optional', 'Trip basics', 'Trip name', 'Region', 'optional · max 50', 'Start date', 'Stage 1 starts on 1 Jul — each following stage +1 day.', 'Activity type', 'Hiking (default)', 'Alpine trekking', 'Hiking', 'Ski touring trips', 'Mountaineering', 'Via ferrata', 'Bike (20 km/h)', 'You upload GPX files in the next step — one file per stage.', '⊘ Trip name missing', '⊘ Start date missing', 'Create stages →', 'Set up alerts to save', 'Save trip', 'Enter trip name', 'New trip', 'Trips'])
+		hatNicht(s, 'Create new trip');
+		for (const t of ['New trip', 'No name yet', 'Nothing set up yet', 'Route', 'Stages & GPX', 'Check waypoints', 'Weather metrics', 'Target ranges', 'Alerts', 'optional', 'Trip basics', 'Trip name', 'Region', 'optional · max 50', 'Start date', 'Stage 1 starts on 1 Jul — each following stage +1 day.', 'Activity type', 'Hiking (default)', 'Alpine trekking', 'Hiking', 'Ski touring trips', 'Mountaineering', 'Via ferrata', 'Bike (20 km/h)', 'You upload GPX files in the next step — one file per stage.', '⊘ Trip name missing', '⊘ Start date missing', 'Create stages →', 'Set up alerts to save', 'Save trip', 'Enter trip name', 'New trip', 'Trips'])
 			hat(s, t);
 		for (const t of ['title="Locked — trip name + start date first"', 'placeholder="e.g. Karnischer Höhenweg 2026"', 'placeholder="e.g. Karnische Alpen"']) hat(en, t);
 		assert.deepEqual(deutscheReste(s), []);
@@ -154,7 +158,7 @@ describe('AC-3: eingegebene Namen unveraendert gespeichert, Nutzlast sprachunabh
 		assert.equal(en.name, 'Karnischer Höhenweg 2026');
 		assert.deepEqual(en.stages.map((s: { name: string }) => s.name), ['Sillian → Obstanser See', 'Etappe Zwei']);
 		assert.deepEqual(en.stages.map((s: { date: string }) => s.date), ['2026-07-01', '2026-07-02']);
-		for (const w of ['Stage name', 'Trip name', 'New trip', 'Neue Trip', 'Etappe 1', 'Rest day']) hatNicht(JSON.stringify(en), w);
+		for (const w of ['Stage name', 'Trip name', 'New trip', 'Neue Trip', 'Neuer Trip', 'Etappe 1', 'Rest day']) hatNicht(JSON.stringify(en), w);
 	});
 	test('stageDate: de `01.07.` unveraendert, en `1 Jul`', () => {
 		assert.equal(P.neuLogik.stageDate('2026-07-01', 0), '01.07.');

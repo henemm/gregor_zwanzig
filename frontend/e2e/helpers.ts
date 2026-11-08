@@ -831,7 +831,19 @@ export const ANLEGE_SEL: Record<
 		abschlussLabel: string;
 		abschlussHinweis: string;
 		mobilFooter: (page: Page) => Locator;
-		/** Desktop-Abbruch: Trip „Zurück: Trips" (onCancel, kein Autosave), Vergleich „Abbrechen". */
+		/**
+		 * Desktop-Fuß des geteilten AnlegeRahmen (#2837 S2, AC-16): Trip `tn-desktop-footer`,
+		 * Vergleich `cm-desktop-footer` (neu). Trägt Abbrechen (links), Standardwerte, Hinweis
+		 * und Hauptaktion (rechts).
+		 */
+		desktopFuss: (page: Page) => Locator;
+		/** Standardwerte-Knopf am Desktop (im Fuß, #2837 S2 AC-10). */
+		standardwerte: (page: Page) => Locator;
+		/**
+		 * Desktop-Abbruch (#2837 S2, AC-5): bei BEIDEN Arten „Abbrechen" (`Btn ghost`) unten links im
+		 * Desktop-Fuß. Trip: onCancel (kein Autosave), Vergleich: Link auf /compare. Vorher Trip
+		 * „Zurück: Trips" im Kopf, Vergleich „Abbrechen" oben rechts in der Kopfleiste.
+		 */
 		abbrechen: (page: Page) => Locator;
 		/** Inhalt der drei geteilten Schwanz-Schritte (Desktop). */
 		inhalt: Record<'wetter-metriken' | 'wertebereiche' | 'alarme', (page: Page) => Locator>;
@@ -878,10 +890,14 @@ export const ANLEGE_SEL: Record<
 		name: (page, mobil = false) => page.getByTestId(`trip-new-name-input-${mobil ? 'mobile' : 'desktop'}`),
 		weiterErsterSchritt: (page) => page.getByTestId('trip-new-continue-etappen'),
 		abschluss: (page, mobil = false) => page.getByTestId(mobil ? 'tn-mobile-save' : 'trip-new-save-btn'),
-		abschlussLabel: 'Speichern',
+		// #2837 S2 AC-12: Desktop UND mobil „Trip speichern" (vorher mobil „Speichern").
+		abschlussLabel: 'Trip speichern',
 		abschlussHinweis: 'Alarme einrichten zum Speichern',
 		mobilFooter: (page) => page.getByTestId('tn-mobile-footer'),
-		abbrechen: (page) => page.getByTestId('tn-desktop-breadcrumb').getByRole('button', { name: /^Zurück/ }),
+		desktopFuss: (page) => page.getByTestId('tn-desktop-footer'),
+		standardwerte: (page) => page.getByTestId('trip-new-standardwerte-btn'),
+		abbrechen: (page) =>
+			page.getByTestId('tn-desktop-footer').locator('[data-slot="btn"]').filter({ hasText: /^\s*Abbrechen\s*$/ }),
 		inhalt: {
 			'wetter-metriken': (page) => page.locator('.tn-desktop [data-testid="weather-metrics-tab"]'),
 			wertebereiche: (page) => page.locator('.tn-desktop [data-testid="corridor-editor-route"]'),
@@ -917,7 +933,10 @@ export const ANLEGE_SEL: Record<
 		abschlussLabel: 'Briefing aktivieren',
 		abschlussHinweis: 'Alarme einrichten zum Aktivieren',
 		mobilFooter: (page) => page.getByTestId('cm-mobile-cta'),
-		abbrechen: (page) => page.locator('.cm-desktop').getByRole('link', { name: 'Abbrechen', exact: true }),
+		desktopFuss: (page) => page.getByTestId('cm-desktop-footer'),
+		standardwerte: (page) => page.getByTestId('compare-editor-standardwerte'),
+		abbrechen: (page) =>
+			page.getByTestId('cm-desktop-footer').locator('[data-slot="btn"]').filter({ hasText: /^\s*Abbrechen\s*$/ }),
 		inhalt: {
 			'wetter-metriken': (page) => page.locator('.cm-desktop [data-testid="weather-metrics-tab-vergleich"]'),
 			wertebereiche: (page) => page.locator('.cm-desktop [data-testid="corridor-editor-vergleich"]'),
