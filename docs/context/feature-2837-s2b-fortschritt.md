@@ -81,3 +81,8 @@ Siehe „Analyse und Entscheidung“ oben, die Entscheidungen bleiben:
 
 ### Open Questions
 - keine. Die Farbregel ist eine Tech-Lead-Entscheidung, gestützt auf das Kontrast-Leitprinzip und 3 von 4 bestehenden Balken. Die Reiterleiste auf dem Handy bleibt außerhalb des Umfangs, eine Notiz kommt ins Issue.
+
+## Phase 5 (RED) — Vertrag und Hinweise für /50-implement
+- RED-Tests legen den Vertrag fest (Kopfkommentar `shared/anlege-rahmen/__tests__/anlege_fortschritt.test.ts`): `steps: readonly string[]`, `done: number` (Ergebnis von `progressCount`), `aktiv?` ohne Optik, `variante`, `testidPrefix`; Segment i erledigt ⇔ i < done; Farbe als Inline-Stil `background: var(--g-accent)` / `var(--g-rule)`; Breite `width: 24px` (desktop) bzw. `flex: 1` (mobil); Zähler `<span class="mono">` letztes Kind.
+- Randfall: Mit `done` als Zahl färbt der Balken die ersten n Segmente, auch wenn ein späterer Schritt vor einem früheren erledigt ist. So zeichnen die heutigen Balken auch; bewusst beibehalten.
+- Im Worktree fehlte `frontend/node_modules`; Symlink auf das Hauptrepo angelegt (git-ignoriert).
