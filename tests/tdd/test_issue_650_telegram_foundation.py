@@ -216,12 +216,22 @@ def test_send_with_reply_markup_unreachable_raises_outputerror(monkeypatch):
     WHEN: send(..., reply_markup=...) aufgerufen wird
     THEN: ein OutputError(channel="telegram") (KEIN TypeError) wird geworfen.
     """
-    # Port 1 ist nicht bindbar → echte ConnectError (kein Mock).
-    monkeypatch.setattr(telegram_mod, "TELEGRAM_API_BASE", "http://127.0.0.1:1")
-    output = profil_ausgang(_LOCAL_SETTINGS, "nutzer-650", "12345")
+    # Eigener Port, gebunden ohne listen() → Connection refused → echte
+    # ConnectError (kein Mock). Nicht Port 1: der Offline-Lauf #1755 erlaubt
+    # Loopback nur zu Ports, die der Testprozess selbst gebunden hat.
+    import socket
 
-    with pytest.raises(OutputError) as exc_info:
-        output.send("Test #650", "Body", reply_markup=_INLINE_KEYBOARD)
+    abgewiesen = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    try:
+        abgewiesen.bind(("127.0.0.1", 0))
+        port = abgewiesen.getsockname()[1]
+        monkeypatch.setattr(telegram_mod, "TELEGRAM_API_BASE", f"http://127.0.0.1:{port}")
+        output = profil_ausgang(_LOCAL_SETTINGS, "nutzer-650", "12345")
+
+        with pytest.raises(OutputError) as exc_info:
+            output.send("Test #650", "Body", reply_markup=_INLINE_KEYBOARD)
+    finally:
+        abgewiesen.close()
 
     assert exc_info.value.channel == "telegram"
     assert str(exc_info.value).startswith("[telegram]")

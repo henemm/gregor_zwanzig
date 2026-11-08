@@ -37,6 +37,10 @@ import pytest
 
 import hashlib
 
+# Issue #1755: spricht die Go-API auf localhost:8090 an (= Prod auf diesem
+# Rechner) -- gehoert nicht in den Kern-Lauf.
+pytestmark = pytest.mark.staging
+
 REPO_ROOT = Path(__file__).resolve().parents[2]
 GO_BASE = os.environ.get("GZ_API_BASE", "http://localhost:8090")
 
