@@ -133,7 +133,8 @@ const K = {
 		['let groupsForAdd = $state<Group[]>([]);', 'let groupsForAdd = $state<Group[]>(globalThis.__f10Gruppen ?? []);']
 	]),
 	HubUebersichtMobil: await variante(path.join(KOMP, 'shared/hub-uebersicht/HubUebersicht.svelte'), [['let isMobileViewport = $state(false);', 'let isMobileViewport = $state(true);']]),
-	CompareStatusPill: await komp(cmp('CompareStatusPill.svelte')),
+	// #2837 S1b: CompareStatusPill ist im geteilten StatusSchild aufgegangen.
+	StatusSchild: await komp(path.join(KOMP, 'shared/status-schild/StatusSchild.svelte')),
 	AddReportCard: await komp(cmp('AddReportCard.svelte')),
 	LocationPreviewMap: await komp(cmp('LocationPreviewMap.svelte')),
 	CompareHourly: await komp(cmp('CompareHourlyLayoutControls.svelte')),
@@ -238,7 +239,7 @@ export function stundenverlaufRendern(): string {
 /** Kleinbausteine: Status-Pille, Neuer Auto-Report, Kartenvorschau. */
 export function bausteineRendern(): string {
 	return [
-		...(['active', 'paused', 'draft'] as const).map((status) => html(K.CompareStatusPill, { status })),
+		...(['active', 'paused', 'draft'] as const).map((status) => html(K.StatusSchild, { status })),
 		html(K.AddReportCard, { onclick: () => {} }),
 		html(K.LocationPreviewMap, { lat: 47.0789, lon: 11.6856 })
 	].join('\n');

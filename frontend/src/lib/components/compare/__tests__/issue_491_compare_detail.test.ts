@@ -51,14 +51,13 @@ describe('AC-Exist: Neue Dateien erstellt', () => {
 // ── AC-1: Preset-Daten werden angezeigt ──────────────────────────────────────
 
 describe('AC-1: Preset-Name, Status, Schedule, Empfänger angezeigt', () => {
-	test('+page.svelte importiert CompareStatusPill', () => {
+	// Umgehängt durch #2837 S1b (AC-9): EIN Status-Schild für Trip und Vergleich
+	// (shared/status-schild/StatusSchild.svelte); CompareStatusPill entfällt.
+	test('+page.svelte bindet das geteilte StatusSchild ein (nicht mehr CompareStatusPill)', () => {
 		assert.ok(existsSync(PAGE_SVELTE), '+page.svelte fehlt');
 		const src = readFileSync(PAGE_SVELTE, 'utf-8');
-		assert.match(
-			src,
-			/CompareStatusPill/,
-			'CompareStatusPill wird in +page.svelte nicht importiert oder verwendet'
-		);
+		assert.match(src, /StatusSchild/, 'StatusSchild wird in +page.svelte nicht importiert oder verwendet');
+		assert.doesNotMatch(src, /CompareStatusPill/, 'CompareStatusPill wird in +page.svelte noch verwendet');
 	});
 
 	// Issue #2278: das Aktionsmenue ist das geteilte SubscriptionKebab (loest CompareKebab ab).

@@ -68,9 +68,9 @@ const ueberschrift = (w: Knoten): Knoten => {
 	assert.equal(t.length, 1, `genau eine Überschrift auf der Seite erwartet, gefunden ${t.length}`);
 	return t[0];
 };
-/** Das Status-Badge der Art: Trip = TripStatusBadge, Vergleich = CompareStatusPill (data-status). */
-const statusBadge = (w: Knoten, art: Art): Knoten[] =>
-	art === 'route' ? mitTestid(w, 'trip-detail-status-badge') : alle(w, (n) => n.tag === 'span' && n.attrs['data-status'] !== undefined);
+/** Das Status-Schild: umgehängt durch #2837 S1b (AC-8) — EIN Baustein `StatusSchild`, bei beiden
+ *  Arten mit Testid `trip-detail-status-badge` (vormals Vergleich = CompareStatusPill über data-status). */
+const statusBadge = (w: Knoten, _art: Art): Knoten[] => mitTestid(w, 'trip-detail-status-badge');
 
 for (const art of ARTEN) {
 	describe(`#2837 S1 Seite ${art} — Hub-Kopf über den geteilten Baustein`, () => {
@@ -309,4 +309,89 @@ describe('#2837 S1 Parität — die Unterkante des Kopfs trägt nur der HubKopf 
 			assert.deepEqual(verstoesse, []);
 		});
 	}
+});
+
+// ── #2837 Nachbesserung S1b (Spec docs/specs/modules/rework_2837_s1b_status_profil.md) ─────────
+// EIN Status-Schild (shared/status-schild/StatusSchild.svelte) und das Profil in der Titel-
+// Unterzeile bei beiden Arten. Beide Seiten echt gerendert (Prüfstände f9/f10).
+// Pflicht-Mutationen, hier gefangen:
+//   Vergleich wieder eigenes/gefülltes Schild   → „AC-1/AC-8 … gleiche Attribute" rot
+//   profileLabel im Trip weglassen              → „AC-6 … Trekking" rot
+// RED HEUTE: Der Vergleich rendert CompareStatusPill (keine Testid, kein data-slot=pill, Text
+// „pausiert"/„draft" aus listen.status.*), der Trip trägt kein data-status und kein Profil.
+// Wächter (heute schon grün, bewusst): AC-7 (kein Zusatz ohne Aktivität), AC-10 (Laufzeit-Hinweis).
+
+describe('#2837 S1b — Trip und Vergleich zeigen im selben Zustand dasselbe Status-Schild', () => {
+	const PAARE = [
+		{ zustand: 'active', trip: () => T.tripLaufend(), vergleich: () => C.vergleichAktiv() },
+		{ zustand: 'paused', trip: () => T.tripPausiert(), vergleich: () => C.vergleichPausiert() },
+		{ zustand: 'draft', trip: () => T.tripEntwurf(), vergleich: () => C.vergleichEntwurf() }
+	] as const;
+	const schild = (w: Knoten, art: Art): Knoten => {
+		const s = statusBadge(w, art);
+		assert.equal(s.length, 1, `${art}: [data-testid=trip-detail-status-badge] ${s.length}× statt genau 1× (AC-8)`);
+		return s[0];
+	};
+	for (const lang of ['de', 'en'] as const) {
+		for (const p of PAARE) {
+			test(`AC-1/AC-8/AC-11 (${lang}, ${p.zustand}): gleicher Text, gleiche Attribute (Pill, Tone, umrandet, data-status), kein Inline-Stil`, () => {
+				locale.set(lang);
+				const a = schild(seite('route', p.trip()), 'route');
+				const b = schild(seite('vergleich', p.vergleich()), 'vergleich');
+				assert.equal(a.attrs['data-status'], p.zustand, `Trip: data-status „${a.attrs['data-status']}" (AC-8)`);
+				assert.equal(b.attrs['data-status'], p.zustand, `Vergleich: data-status „${b.attrs['data-status']}"`);
+				assert.equal(b.attrs['data-slot'], 'pill', 'Vergleich: Schild ist nicht das Pill-Atom (eigener Baustein?)');
+				assert.ok('data-outlined' in b.attrs, 'Vergleich: Schild nicht umrandet (gefüllt?) — AC-5');
+				assert.equal(text(a), trFor(lang, `trip.status.${p.zustand}`), `Trip-Text nicht aus trip.status.${p.zustand}`);
+				assert.equal(text(b), text(a), `Vergleich zeigt „${text(b)}", Trip „${text(a)}"`);
+				assert.deepEqual(Object.entries(b.attrs).sort(), Object.entries(a.attrs).sort(), 'Schild-Markup verschieden');
+				assert.ok(!('style' in b.attrs), 'Vergleich: Inline-Stil am Schild');
+			});
+		}
+	}
+	test('AC-3: Vergleich im Entwurf (de) — Schild „Entwurf", im Kopf nirgends „draft"', () => {
+		locale.set('de');
+		const w = seite('vergleich', C.vergleichEntwurf());
+		assert.equal(text(schild(w, 'vergleich')), trFor('de', 'trip.status.draft'));
+		const kopf = vorfahren(einzig(w, 'hub-kopf-leiste')).find((n) => n.attrs['data-kind'] === 'vergleich')!;
+		assert.ok(!/\bdraft\b/i.test(text(kopf)), `„draft" im Kopf: ${text(kopf).slice(0, 300)}`);
+	});
+	test('AC-10 (Wächter): Laufzeit-Hinweis steht weiterhin neben dem Schild in hub-kopf-status', () => {
+		const w = seite('vergleich', C.vergleichPausiert()); // paused_at + end_date 2026-10-25 (vergangen)
+		const huelle = einzig(w, 'hub-kopf-status');
+		const hinweis = mitTestid(w, 'runtime-exceeded-hint');
+		assert.equal(hinweis.length, 1, 'Laufzeit-Hinweis fehlt (Messaufbau: pausiert, end_date vergangen)');
+		assert.ok(liegtIn(hinweis[0], huelle), 'Laufzeit-Hinweis steht nicht in hub-kopf-status');
+	});
+});
+
+describe('#2837 S1b — Profil in der Zeile unter dem Titel bei beiden Arten (AC-6, AC-7)', () => {
+	const PRAEFIX: Record<Art, string> = { route: 'trip', vergleich: 'compare-hub' };
+	/** Das Element direkt hinter dem Region-Stift in der Region-Zeile (Profil-Zusatz oder meta). */
+	const hinterStift = (w: Knoten, art: Art): Knoten | undefined => {
+		const stift = einzig(w, `${PRAEFIX[art]}-region-edit-toggle`);
+		const zeile = stift.eltern!;
+		return zeile.kinder[zeile.kinder.indexOf(stift) + 1];
+	};
+	test('AC-6: Trip mit Aktivität trekking zeigt „· Trekking" direkt hinter dem Region-Stift (wie der Vergleich sein Profil)', () => {
+		locale.set('de');
+		const trip = hinterStift(seite('route'), 'route');
+		const vergleich = hinterStift(seite('vergleich'), 'vergleich');
+		assert.equal(vergleich && text(vergleich), `· ${C.helfer.presetProfileLabel('wintersport')}`, 'Messaufbau: Vergleich ohne Profil-Zusatz');
+		assert.ok(trip, 'Trip: hinter dem Region-Stift steht nichts — profileLabel fehlt');
+		assert.equal(text(trip), `· ${trFor('de', 'trip.aktivitaet.trekking')}`, 'Trip: Profil-Zusatz falsch oder fehlt');
+		assert.equal(trip.tag, vergleich!.tag, 'Profil-Zusatz bei Trip und Vergleich verschieden gebaut');
+	});
+	test('AC-6/AC-11: Profil-Zusatz des Trips folgt der Nutzersprache (en)', () => {
+		locale.set('en');
+		const trip = hinterStift(seite('route'), 'route');
+		assert.equal(trip && text(trip), `· ${trFor('en', 'trip.aktivitaet.trekking')}`);
+	});
+	test('AC-7 (Wächter): Trip ohne Aktivität und Vergleich ohne Profil — kein Profil-Zusatz hinter dem Stift', () => {
+		const trip = hinterStift(seite('route', T.tripLaufend({ activity: undefined })), 'route');
+		assert.ok(!trip || !text(trip).startsWith('·'), `Trip ohne Aktivität: Zusatz „${trip && text(trip)}"`);
+		const v = hinterStift(seite('vergleich', C.vergleichAktiv({ profil: undefined })), 'vergleich');
+		// Der Vergleich hängt danach die Orte-Anzahl (meta, Whitelist) an; ein Profil darf dort nicht stehen.
+		assert.ok(!v || !text(v).startsWith(`· ${C.helfer.presetProfileLabel('wintersport')}`), `Vergleich ohne Profil: Zusatz „${v && text(v)}"`);
+	});
 });

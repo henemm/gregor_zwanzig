@@ -24,7 +24,6 @@ export { default as ConfirmDialog } from './ConfirmDialog.svelte';
 // Cross-Verzeichnis-Re-Export, damit alle Downstream-Issues (#485-B/C/D)
 // die Molecule-API einheitlich aus `$lib/components/molecules` importieren.
 // (CompareTile/CompareKebab entfallen mit #2278: SubscriptionCard/SubscriptionKebab.)
-export { default as CompareStatusPill } from '../compare/CompareStatusPill.svelte';
 export { default as CompareLocationRow } from './CompareLocationRow.svelte';
 
 // Issue #568 — Startseite-Cockpit-Molecules (Spec: docs/specs/modules/issue_568_home_redesign.md).

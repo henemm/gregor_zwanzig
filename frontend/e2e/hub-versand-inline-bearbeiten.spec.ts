@@ -130,7 +130,8 @@ const abschnitt = (page: Page) => page.locator('[data-testid="versand-abschnitt"
 const morgenUhrzeit = (page: Page) => abschnitt(page).locator('[data-testid="report-morning-time"]:visible');
 const karte = (page: Page) => page.locator('[data-testid="compare-hub-activation-card"]:visible');
 const cta = (page: Page) => page.locator('[data-testid="compare-hub-activation-cta"]:visible');
-const statusPille = (page: Page) => page.locator('[data-status]:visible').first();
+// #2837 S1b: das geteilte StatusSchild trägt bei beiden Arten Testid und `data-status`.
+const statusPille = (page: Page) => page.locator('[data-testid="trip-detail-status-badge"]:visible').first();
 
 async function oeffneVersand(page: Page, kind: HubKind, id: string): Promise<void> {
 	await openHub(page, kind, id, { tab: 'wetter-metriken', hash: 'versand' });
@@ -278,8 +279,8 @@ for (const kind of HUB_KINDS) {
 			const hub = await seedHub(page.request, kind);
 			try {
 				await oeffneVersand(page, kind, hub.id);
-				// Status-Pille mit `data-status` nur im Vergleichs-Kopf
-				// (CompareStatusPill); der Trip-Kopf hat das Attribut nicht und prüft
+				// Status-Schild (#2837 S1b: geteiltes StatusSchild, `data-status` bei beiden
+				// Arten); geprüft wird es hier wie bisher am Vergleich, der Trip prüft
 				// Menüpunkt und Server-Stand (Spec „Kind-Kontraste", Zeile Pausieren).
 				if (kind === 'vergleich') await expect(statusPille(page)).toHaveAttribute('data-status', 'active', { timeout: 10_000 });
 				const vorher = page.url();

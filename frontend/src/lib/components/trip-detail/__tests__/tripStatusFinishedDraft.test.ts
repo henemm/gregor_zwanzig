@@ -23,10 +23,17 @@ import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
 const here = dirname(fileURLToPath(import.meta.url));
-const BADGE = join(here, '../TripStatusBadge.svelte');
+// Umgehängt durch #2837 S1b: TONE_MAP/LABEL_MAP leben im geteilten StatusSchild.
+const BADGE = join(here, '../../shared/status-schild/StatusSchild.svelte');
 const HEADER = join(here, '../TripHeader.svelte');
 
-const badgeSource = quelleMitKatalogUndTabellen(readFileSync(BADGE, 'utf8'));
+// Lesefehler (Datei fehlt) als klare Meldung je Test statt Absturz der ganzen Datei.
+let badgeSource = '';
+try {
+	badgeSource = quelleMitKatalogUndTabellen(readFileSync(BADGE, 'utf8'));
+} catch (e) {
+	badgeSource = `/* ${BADGE} nicht lesbar: ${(e as Error).message} */`;
+}
 const headerSource = readFileSync(HEADER, 'utf8');
 
 // ---------------------------------------------------------------------------

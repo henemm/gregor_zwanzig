@@ -71,10 +71,11 @@ test.describe('Issue #153 — Trip-Detail Header (Breadcrumb + Status + Aktionen
 		const badge = page.getByTestId('trip-detail-status-badge');
 		await expect(badge).toBeVisible();
 		await expect(badge).toContainText(/Aktiv|Geplant/); // 'Aktiv' wenn heute innerhalb, sonst 'Geplant'
-		// Pill-Tone laut TripStatusBadge.svelte TONE_MAP: active -> 'accent',
-		// planned -> 'info'. 'accent' ist gewollt und eigens in app.css
-		// gestylt (Regel [data-slot="pill"][data-outlined][data-tone="accent"],
-		// bewacht von TripStatusBadge.atomic.test.ts AC-4) — die frühere
+		// Pill-Tone laut shared/status-schild/StatusSchild.svelte TONE_MAP (#2837 S1b,
+		// vormals TripStatusBadge): active -> 'accent', planned -> 'info'. 'accent' ist
+		// gewollt und eigens in app.css gestylt (Regel
+		// [data-slot="pill"][data-outlined][data-tone="accent"], bewacht von
+		// StatusSchild.atomic.test.ts AC-4) — die frühere
 		// Erwartung 'success' stammt aus der Zeit vor diesem Mapping.
 		const tone = await badge.getAttribute('data-tone');
 		expect(['accent', 'info']).toContain(tone);

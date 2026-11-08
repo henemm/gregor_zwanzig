@@ -60,7 +60,7 @@
 //   formatLastSent / channelNamesLabel / presetBriefingTimesLabel (compare/subscriptionHelpers.ts),
 //   formatNextBriefing (shared/versand-tab/nextBriefingText.ts), deriveTripStatus
 //   (utils/tripStatus.ts), reportSlotAktiv (utils/reportSlotAktiv.ts), Status-Wortlaut
-//   des Trip-Kopfs = TripStatusBadge.svelte (per SSR gerendert, nicht abgeschrieben).
+//   des Trip-Kopfs = shared/status-schild/StatusSchild.svelte (#2837 S1b; per SSR gerendert, nicht abgeschrieben).
 //
 // Pfadregel #1409: alles relativ zu DIESER Datei.
 //
@@ -462,12 +462,12 @@ describe('AC-5: Trip-Status wortgleich zum Status-Badge im Trip-Kopf', () => {
 	};
 
 	for (const [erwartet, extra] of Object.entries(FAELLE)) {
-		test(`${erwartet}: Kennzahl-Text = gerenderter TripStatusBadge-Text, Kurz = Lang`, async () => {
+		test(`${erwartet}: Kennzahl-Text = gerenderter StatusSchild-Text, Kurz = Lang`, async () => {
 			const t = trip({}, extra);
 			const status = deriveTripStatus(t, JETZT);
 			assert.equal(status, erwartet, 'Messaufbau: deriveTripStatus');
-			const Badge = (await import(pathToFileURL(join(COMPONENTS, 'trip-detail', 'TripStatusBadge.svelte')).href)).default;
-			const badgeText = render(Badge, { props: { trip: t, now: JETZT } })
+			const Badge = (await import(pathToFileURL(join(COMPONENTS, 'shared', 'status-schild', 'StatusSchild.svelte')).href)).default;
+			const badgeText = render(Badge, { props: { status } })
 				.body.replace(/<!--[\s\S]*?-->/g, '')
 				.replace(/<[^>]*>/g, ' ')
 				.replace(/\s+/g, ' ')

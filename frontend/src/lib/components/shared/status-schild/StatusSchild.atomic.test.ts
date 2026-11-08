@@ -10,9 +10,14 @@
 // Test-Pattern: Source-Inspection wie TripHeader.spacing.test.ts —
 // liest .svelte/.css als String, assertiert auf Markup/CSS-Struktur.
 //
+// Umgehängt durch #2837 S1b (Spec rework_2837_s1b_status_profil.md): vormals
+// trip-detail/TripStatusBadge.atomic.test.ts; TripStatusBadge ist im geteilten StatusSchild
+// aufgegangen. Zusicherungen unverändert; die gerenderte Fassung samt Kontrast steht in
+// __tests__/status_schild.test.ts.
+//
 // Ausfuehrung:
 //   cd frontend && node --experimental-strip-types --test \
-//     src/lib/components/trip-detail/TripStatusBadge.atomic.test.ts
+//     src/lib/components/shared/status-schild/StatusSchild.atomic.test.ts
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
@@ -21,10 +26,16 @@ import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
 const here = dirname(fileURLToPath(import.meta.url));
-const BADGE = join(here, 'TripStatusBadge.svelte');
-const CSS = join(here, '../../../app.css');
+const BADGE = join(here, 'StatusSchild.svelte');
+const CSS = join(here, '../../../../app.css');
 
-const badgeSource = readFileSync(BADGE, 'utf8');
+// Lesefehler (Datei fehlt) als klare Meldung je Test statt Absturz der ganzen Datei.
+let badgeSource = '';
+try {
+	badgeSource = readFileSync(BADGE, 'utf8');
+} catch (e) {
+	badgeSource = `/* ${BADGE} nicht lesbar: ${(e as Error).message} */`;
+}
 const cssSource = readFileSync(CSS, 'utf8');
 
 // AC-1: active-Status muss auf 'accent' gemappt sein, nicht auf 'success'
@@ -32,7 +43,7 @@ test('AC-1: TONE_MAP mappt active auf accent (nicht success)', () => {
 	const hasAccentForActive = /active\s*:\s*['"]accent['"]/.test(badgeSource);
 	assert.ok(
 		hasAccentForActive,
-		'TripStatusBadge.svelte: active-Status soll tone "accent" haben, nicht "success"'
+		'StatusSchild.svelte: active-Status soll tone "accent" haben, nicht "success"'
 	);
 });
 
@@ -40,7 +51,7 @@ test('AC-1: TONE_MAP enthält keinen success-Wert mehr für active', () => {
 	const hasLegacySuccessForActive = /active\s*:\s*['"]success['"]/.test(badgeSource);
 	assert.ok(
 		!hasLegacySuccessForActive,
-		'TripStatusBadge.svelte: active: "success" darf nicht mehr vorkommen (Regression-Guard)'
+		'StatusSchild.svelte: active: "success" darf nicht mehr vorkommen (Regression-Guard)'
 	);
 });
 
@@ -49,24 +60,24 @@ test('AC-2: <Pill> hat data-outlined Attribut', () => {
 	const hasDataOutlined = /\<Pill[^>]*data-outlined/.test(badgeSource);
 	assert.ok(
 		hasDataOutlined,
-		'TripStatusBadge.svelte: <Pill> muss data-outlined Attribut enthalten'
+		'StatusSchild.svelte: <Pill> muss data-outlined Attribut enthalten'
 	);
 });
 
 // AC-3: Tone-Zuordnungen für planned/paused/archived unverändert
 test('AC-3: planned bleibt auf info gemappt', () => {
 	const hasInfoForPlanned = /planned\s*:\s*['"]info['"]/.test(badgeSource);
-	assert.ok(hasInfoForPlanned, 'TripStatusBadge.svelte: planned muss tone "info" haben');
+	assert.ok(hasInfoForPlanned, 'StatusSchild.svelte: planned muss tone "info" haben');
 });
 
 test('AC-3: paused bleibt auf warning gemappt', () => {
 	const hasWarningForPaused = /paused\s*:\s*['"]warning['"]/.test(badgeSource);
-	assert.ok(hasWarningForPaused, 'TripStatusBadge.svelte: paused muss tone "warning" haben');
+	assert.ok(hasWarningForPaused, 'StatusSchild.svelte: paused muss tone "warning" haben');
 });
 
 test('AC-3: archived bleibt auf default gemappt', () => {
 	const hasDefaultForArchived = /archived\s*:\s*['"]default['"]/.test(badgeSource);
-	assert.ok(hasDefaultForArchived, 'TripStatusBadge.svelte: archived muss tone "default" haben');
+	assert.ok(hasDefaultForArchived, 'StatusSchild.svelte: archived muss tone "default" haben');
 });
 
 // AC-4: app.css muss neue outlined-Rule für accent-Tone enthalten

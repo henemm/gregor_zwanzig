@@ -46,6 +46,7 @@ export const { locale, tr, trFor, trnFor } = await imp(path.join(FRONTEND, 'src/
 export const aktionen = await imp(path.join(KOMP, 'shared/subscriptionActions.ts'));
 export const reiter = await imp(path.join(KOMP, 'shared/subscriptionTabs.ts'));
 export const neuLogik = await imp(path.join(KOMP, 'trip-new/tripNewLogic.ts'));
+const { deriveTripStatus } = await imp(path.join(FRONTEND, 'src/lib/utils/tripStatus.ts'));
 
 const g = globalThis as unknown as Record<string, unknown>;
 const nix = () => {};
@@ -112,7 +113,8 @@ export const COL_LABELS = ['Temp', 'Wind', 'Gust', 'Cloud'];
 
 const K = {
 	TripHeader: await komp(td('TripHeader.svelte')),
-	TripStatusBadge: await komp(td('TripStatusBadge.svelte')),
+	// #2837 S1b: TripStatusBadge ist im geteilten StatusSchild aufgegangen (Prop status statt trip).
+	StatusSchild: await komp(path.join(KOMP, 'shared', 'status-schild', 'StatusSchild.svelte')),
 	HubOverview: await komp(td('HubOverview.svelte')),
 	ReportLine: await komp(td('ReportLine.svelte')),
 	StageList: await komp(td('StageList.svelte')),
@@ -185,7 +187,7 @@ export function kopfRendern(): string {
 		html(K.TripHeader, { trip, now: JETZT })
 	);
 	const status = [tripLaufend(), tripPausiert(), tripEntwurf(), tripLaufend({ archived_at: '2026-07-01T00:00:00Z' }), tripLaufend({ stages: ETAPPEN.map((s) => ({ ...s, date: '2026-05-01' })) }), tripLaufend({ stages: ETAPPEN.map((s) => ({ ...s, date: '2026-12-01' })) })].map((trip) =>
-		html(K.TripStatusBadge, { trip, now: JETZT })
+		html(K.StatusSchild, { status: deriveTripStatus(trip, JETZT), testid: 'trip-detail-status-badge' })
 	);
 	const kopf = html(K.SubscriptionHeaderOffen, { kind: 'trip', name: 'GR20 Nord 2026', region: 'Korsika', profile: 'trekking', profileOptions: [{ value: 'trekking', label: 'Trekking' }], testidPrefix: 'trip', onSaveField: async () => {} });
 	return [...teile, ...status, kopf].join('\n');
