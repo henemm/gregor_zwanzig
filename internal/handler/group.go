@@ -2,6 +2,7 @@ package handler
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
@@ -156,7 +157,11 @@ func DeleteGroupHandler(s *store.Store) http.HandlerFunc {
 		// #2158: Gruppen-Sperre ueber das ganze Loeschen inkl. Orts-Aufraeumen;
 		// Orte werden darunter einzeln gesperrt (Reihenfolge Gruppe -> Ort).
 		defer s.LockGroups()()
-		if err := s.DeleteGroupLocked(id); err != nil {
+		// #2815: unbekannte Gruppe -> trotzdem verwaiste group_id-Verweise
+		// aufraeumen (Heilpfad nach Absturz), danach 404.
+		delErr := s.DeleteGroupLocked(id)
+		notFound := errors.Is(delErr, store.ErrNotFound)
+		if delErr != nil && !notFound {
 			WriteError(w, r, 500, "store_error", nil)
 			return
 		}
@@ -185,6 +190,10 @@ func DeleteGroupHandler(s *store.Store) http.HandlerFunc {
 			}
 		}
 
+		if notFound {
+			WriteError(w, r, 404, "not_found", nil)
+			return
+		}
 		w.WriteHeader(204)
 	}
 }

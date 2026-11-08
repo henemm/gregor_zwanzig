@@ -53,6 +53,10 @@ var ValidEntityIDRe = regexp.MustCompile(`^[^./\\\x00][^/\\\x00]*$`)
 // Fehler und kein stilles "nicht gefunden".
 var ErrInvalidEntityID = errors.New("invalid entity id")
 
+// ErrNotFound meldet, dass unter der Kennung im Bestand des Nutzers nichts
+// zu loeschen war (Issue #2815): der Handler antwortet dann 404 not_found.
+var ErrNotFound = errors.New("not found")
+
 // ValidEntityID prueft, ob eine Entitaets-Kennung ein sicheres Pfadsegment ist.
 func ValidEntityID(id string) bool {
 	return ValidEntityIDRe.MatchString(id)

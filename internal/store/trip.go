@@ -350,13 +350,13 @@ func (s *Store) DeleteTrip(id string) error {
 			Kind string `json:"kind"`
 		}
 		if json.Unmarshal(data, &probe) == nil && probe.Kind == "vergleich" {
-			return nil
+			return ErrNotFound // #2815: kein Trip unter dieser ID, Preset bleibt
 		}
 	}
 
 	err := os.Remove(path)
 	if os.IsNotExist(err) {
-		return nil
+		return ErrNotFound // #2815
 	}
 	return err
 }

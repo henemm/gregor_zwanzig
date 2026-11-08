@@ -247,6 +247,10 @@ func (s *Store) DeleteGroupLocked(id string) error {
 			filtered = append(filtered, g)
 		}
 	}
+	// #2815: nichts entfernt -> ErrNotFound, groups.json bleibt unberuehrt.
+	if len(filtered) == len(groups) {
+		return ErrNotFound
+	}
 	if filtered == nil {
 		filtered = []model.Group{}
 	}
