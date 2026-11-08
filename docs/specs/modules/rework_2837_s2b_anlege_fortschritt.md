@@ -155,6 +155,9 @@ Test-Politik: kein Mock-Theater, keine Dateiinhalt-Checks als Verhaltensnachweis
 
 - Die Handy-Reiterleiste ist weiterhin je Editor eigens gebaut (außerhalb dieser Scheibe, Notiz im Issue).
 - Der aktive Schritt wird im Balken bewusst nicht hervorgehoben; er zeigt sich allein in der Reiterleiste.
+- AC-6 Wortlaut (festgestellt in /60-validate): „n von 5 Abschnitten“ ist eine Umschreibung. Bindend ist der Katalogschlüssel `trip.anlegen.abschnitte` (Implementation Details Nr. 1), dessen Bestandstext „{n} / {gesamt} Abschnitte eingerichtet“ unverändert bleibt; der Computer-Zähler zeigt für den Nutzer denselben Text wie vor S2b. Neu ist nur `trip.anlegen.abschnitte_kurz` („{n}/{gesamt}“) für das Handy.
+- AC-12 (festgestellt in /60-validate): Z. 51 der S2-Spec liegt im freigegebenen, eingefrorenen Teil (Spec-Freeze #439) und kann ohne neue Freigabe nicht umgeschrieben werden. Die Richtigstellung steht deshalb in den Known Limitations und im Changelog der S2-Spec, mit Verweis auf diese Spec.
+- Die Spec-Dateiliste nennt die 14 Golden-Dateien unter `tests/golden/f9_trip_flaechen` und `f10_vergleich_flaechen`, den Test-Helfer `f9KatalogAnker.ts` und `fortschritt_in_beiden_editoren_gleich.test.ts` nicht; alle hängen allein am Fortschrittsbalken (Markup `data-done`, `aria-current`, Handy-Wrapper).
 
 ## Risiken
 
