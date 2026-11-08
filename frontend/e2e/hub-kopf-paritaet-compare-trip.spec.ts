@@ -416,15 +416,17 @@ const SCHILD = 'trip-detail-status-badge';
 const SCHILD_RGB = { pausiert: 'rgb(138, 98, 16)', aktiv: 'rgb(140, 62, 26)' } as const; // --g-warn-deep, --g-accent-deep
 const DATA_STATUS: Record<Zustand, string> = { aktiv: 'active', pausiert: 'paused', entwurf: 'draft' };
 
-/** Heute (lokal) als YYYY-MM-DD: der Trip ist nur mit einer Etappe von heute „aktiv" (sonst „geplant"). */
-const heute = () => {
+/** Lokales Datum (YYYY-MM-DD) mit Tagesversatz: der Trip ist nur „aktiv", wenn heute in seine Etappen fällt. */
+const tag = (versatz: number) => {
 	const d = new Date();
+	d.setDate(d.getDate() + versatz);
 	return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 };
-/** Seed im gewünschten Zustand; Trip-Aktiv bekommt eine Etappe von heute (Kind-Zweig nur im Seed). */
+/** Seed im gewünschten Zustand; Trip-Aktiv bekommt Etappen gestern/heute/morgen, damit ein
+ *  Zeitzonen-Versatz zwischen Testprozess und Browser (±1 Tag, vgl. #2847) den Zustand nicht kippt. */
 const seedZustand = (request: APIRequestContext, kind: HubKind, zustand: Zustand, extra: Record<string, unknown> = {}) =>
 	seed(request, kind, zustand, kind === 'route' && zustand === 'aktiv'
-		? { stages: [{ id: 's1', name: 'Tag 1', date: heute(), waypoints: [{ id: 'a', name: 'a', lat: 42, lon: 9, elevation_m: 800 }] }], ...extra }
+		? { stages: [-1, 0, 1].map((v, i) => ({ id: `s${i + 1}`, name: `Tag ${i + 1}`, date: tag(v), waypoints: [{ id: `a${i}`, name: `a${i}`, lat: 42 + i * 0.02, lon: 9, elevation_m: 800 }] })), ...extra }
 		: extra);
 
 async function schildMessen(page: Page) {

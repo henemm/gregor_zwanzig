@@ -128,6 +128,7 @@ Folgerung: Weder die heutige Trip- noch die Vergleichs-Optik ist überall AA-fes
 | `src/lib/components/shared/status-schild/StatusSchild.atomic.test.ts` (per `git mv` aus `trip-detail/TripStatusBadge.atomic.test.ts`) | #389-Zusicherungen | rot (Datei fehlt) |
 | `trip-detail/__tests__/tripStatusFinishedDraft.test.ts`, `compare/compare_detail.test.ts`, `compare/__tests__/issue_491_compare_detail.test.ts`, `shared/hub-uebersicht/__tests__/hub_uebersicht_modell.test.ts` | umgehängt | rot |
 | `frontend/e2e/hub-kopf-paritaet-compare-trip.spec.ts` (Block „HS S1b", HS-1 … HS-7) | AC-1 … AC-8, AC-11 | geschrieben, **nicht ausgeführt** (`--list` ok); Lauf in /e2e-verify |
+| `src/lib/i18n/__tests__/paritaet_de_en.test.ts` (bestehend) | AC-11 Katalog: alle `trip.status.*` in de und en | Wächter, grün; muss grün bleiben |
 
 ### Vertrag, den RED festlegt
 - `StatusSchild.svelte` Props: `status: TripStatus`, `testid?: string` (Standard nicht festgelegt; beide Seiten übergeben `trip-detail-status-badge`). Rendert genau ein `Pill` mit `data-outlined`, `data-status={status}`, `data-testid={testid}`, **kein `style`-Attribut**, Text `$t('trip.status.<status>')`. TONE_MAP/LABEL_MAP im Quelltext beibehalten (Source-Inspection-Tests `StatusSchild.atomic.test.ts`, `tripStatusFinishedDraft.test.ts`).
