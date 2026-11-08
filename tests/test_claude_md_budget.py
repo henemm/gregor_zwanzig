@@ -122,6 +122,8 @@ PO_VORGABEN = [
     ('context="route"', "Trip/Ortsvergleich-Teilung: geteilter Baustein mit Kontext-Parameter"),
     ("confidence_pct", "Confidence nicht wählbar"),
     ("Read-Modify-Write", "Datenerhalt bei Schema-Änderungen"),
+    ("Git ist allein Claudes Sache", "Rollen: Git/PR/Merge/Deploy ohne Rückfrage an den PO (#2858)"),
+    ("Den PO fragen nur zu Produktentscheidungen", "Rollen: PO-Fragen nur fachlich (#2858)"),
 ]
 
 
