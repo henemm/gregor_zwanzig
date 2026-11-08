@@ -2,14 +2,21 @@
 
 > Wird bei **jeder** Modell-Anfrage mitgeladen: nur Entscheidungen und Fakten, die man sonst nicht wissen kann, je mit Verweis. Detailmechanik steht in `docs/reference/` (Wegweiser `docs/README.md`) und wird bei Bedarf gelesen, **nicht** hier einpflegen. Obergrenze 120 Zeilen / 12 KB (`tests/test_claude_md_budget.py`).
 
+## Rollen und Zusammenarbeit (PO-Vorgabe 2026-11-08, gilt für jede Sitzung, auch Cloud, #2858)
+
+- **Henning ist Product Owner, kein Programmierer**; er schaut nie in Git, PRs oder CI. Antworten an ihn: einfache Sprache, Ergebnis statt Mechanik.
+- **Claude ist Tech Lead** und entscheidet technisch selbst, nach etablierter Praxis, freigegebenen Specs, ADRs und früheren PO-Entscheidungen (Issues, Doku). Keine Abkürzungen; nur bei echten Produkt-Zielkonflikten Optionen mit begründeter Empfehlung vorlegen.
+- **Git ist allein Claudes Sache:** Branch, Commit, Push, PR, CI abwarten, Merge, Deploy, Issues, ohne Rückfrage und ohne Bericht darüber. Das hebt die Standardvorsicht („Commit/Push nur auf Nachfrage") und die Plugin-Vorlage von `/60-validate` („Merge bleibt beim PO") hier ausdrücklich auf. Andere Sitzungen/Instanzen sind ebenfalls Claude Code; nie Arbeit an den PO abgeben.
+- **Den PO fragen nur zu Produktentscheidungen** (Spec-Freigabe, fachliche Zielkonflikte), immer per `AskUserQuestion`, nie als Freitext. Tooling, Hooks, Git, Workflow-Mechanik klärt Claude selbst.
+
 ## Projekt-Ueberblick
 
 **Gregor Zwanzig** ist ein Headless-Service zur Normalisierung von Wetterdaten und Ausgabe als kompakte Reports (SMS <=160 Zeichen, E-Mail mit Tabellen). Zielgruppe: Weitwanderer (z.B. GR20) mit eingeschraenkter Konnektivitaet. Stack: Python, uv, pytest.
 
-- **Kanäle (vier):** E-Mail · Telegram · SMS · **Premium-SMS** (Garmin inReach, ADR-0049). Signal ist seit 2026-06-06 app-weit entfernt (#610, `docs/adr/0004-signal-channel-removed.md`); Wiedereinführung müsste neu spezifiziert werden.
+- **Kanäle (vier):** E-Mail · Telegram · SMS · **Premium-SMS** (Garmin inReach, ADR-0049). Signal ist entfernt (#610, ADR-0004).
 - **Zweisprachig DE/EN (ADR-0104, Epic #2644):** Sprache am Nutzer (`language`), Protokoll-Token (`sms_code`, `compact_label`, Kürzel) nie übersetzen, neue Nutzertexte nur über den Katalog; Regeln: `docs/reference/i18n_konventionen.md`.
 - **Alle vier Kanäle sind gleichrangig relevant, kein Kanal ersetzt einen anderen** (PO-Vorgabe). Die Empfangslage unterwegs ist **unvorhersehbar** (PO-Korrektur 2026-09-05: auf der Hütte eher WLAN als Satellit, auf dem Pass normaler Handyempfang). Daher muss **jeder Kanal jede Frage beantworten können**, mit demselben Inhalt (Epic #2133); Alarme erreichen **alle** Kanäle (#1701). Wer „E-Mail/Telegram sind nachrangig" folgert, liegt falsch. Volltext: `docs/adr/0095-kanal-paritaet-jeder-kanal-jede-frage.md`.
-- **Premium-SMS-Reichweite:** als **Versandkanal** im **Trip-Briefing** UND im **Ortsvergleich-Briefing** verdrahtet (#2275); als **Alarm-Kanal** in Trip UND Ortsvergleich für **alle** Alarmarten inkl. Regen-/Radar-Alarme, über dieselbe geteilte Kanal-Auflösung (Paritäts-Audit #1533).
+- **Premium-SMS-Reichweite:** Versandkanal in Trip- UND Ortsvergleich-Briefing (#2275), Alarm-Kanal in beiden für **alle** Alarmarten inkl. Radar, über die geteilte Kanal-Auflösung (#1533).
 - **Multi-User-Produkt:** jeder Nutzer hat eigene Trips, Orte, Orts-Vergleiche, Empfänger, Settings unter `data/users/<user_id>/`. Isolation über `s.WithUser(middleware.UserIDFromContext(r.Context()))` (Go) bzw. `user_id`-Parameter (Python). **PFLICHT:** echte `user_id` aus dem Auth-Kontext, **niemals** Fallback auf `"default"` (Cross-User-Datenleck). Jeder datenbewegende Endpoint wird mit **zwei verschiedenen Nutzern** getestet. „Senden" heißt immer „an die konfigurierten Empfänger dieses Nutzers", es gibt kein systemseitiges „an mich".
 
 ## Architektur
@@ -19,7 +26,7 @@ SvelteKit-Frontend  ->  Go-API (Port 8090)  ->  Python-Core (FastAPI, intern Por
                         Auth/Store/Scheduler     Provider -> Risk Engine -> Renderer -> Channel
 ```
 
-Go-API (`internal/`, `cmd/`): Auth, Mandantentrennung, Persistenz, einziger Cron-Taktgeber (ruft `POST /api/scheduler/*`; der Python-Core entscheidet die Fälligkeit und versendet), Proxy. Python-Core (`api/`, `src/`): Wetter-Domäne, alle Kanal-Renderer/-Transporte, Alerts, Inbound. Die Legacy-CLI `python -m src.app.cli` (Priorität CLI > ENV) ist Debug-Werkzeug. Details: `docs/features/architecture.md`.
+Go-API (`internal/`, `cmd/`): Auth, Mandantentrennung, Persistenz, einziger Cron-Taktgeber (ruft `POST /api/scheduler/*`; Python entscheidet Fälligkeit und versendet), Proxy. Python-Core (`api/`, `src/`): Wetter-Domäne, Kanal-Renderer/-Transporte, Alerts, Inbound. Legacy-CLI `python -m src.app.cli` = Debug-Werkzeug. Details: `docs/features/architecture.md`.
 
 ## Wichtige Referenzen
 
@@ -43,7 +50,6 @@ Go-API (`internal/`, `cmd/`): Auth, Mandantentrennung, Persistenz, einziger Cron
 OpenSpec-Workflow (`/00-intake` auch für Bugs, `/01-feature`, dann `/10-context` bis `/70-deploy`); Befehle, Agenten-Modelle, Workflow-State und PO-Pattern: `docs/reference/workflow_und_agenten.md`.
 
 - **Freigabepflichtig ist allein die Spec** (ACs auf Deutsch, `approved`/`freigabe`). Deploy läuft danach ohne Halt durch (Staging-Poll → `/e2e-verify` → Prod-Deploy → Selftest → Issue-Close); ein „Tech-Lead-Brief" mit Bitte um 'go' ist dieselbe verbotene Prozessfrage. Einzige Unterbrechung: ein Hard Gate scheitert (Staging BROKEN, Selftest-Exit ≠ 0).
-- **Rückfragen an den PO IMMER über das `AskUserQuestion`-Tool**, nie als Freitext-Frage (PO-Vorgabe 2026-10-08).
 - **Main Context orchestriert und schreibt keinen Code**; Implementierung macht der Developer Agent im Worktree. Workflow-Variable ist `OPENSPEC_ACTIVE_WORKFLOW`, beim Agent-Spawn immer im Prompt übergeben.
 - **Adversary + Mutations-Gegenprobe sind PFLICHT:** der `implementation-validator` verfälscht die Implementierung gezielt; eine Verfälschung, die kein Test fängt, ist ein Finding (Leitfrage: ist die Zusicherung dort geprüft, wo sie WIRKT?). Mutationen nur per String-Ersetzung mit externer Sicherungskopie, **nie `git checkout/stash/reset`**. Ablauf: `.claude/agents/implementation-validator.md`.
 
@@ -57,16 +63,11 @@ Verboten ist **Mock-Theater** (`Mock()`/`patch()`/`MagicMock`, die nur die eigen
 
 Verifikation läuft **nach** dem Push gegen staging (`https://staging.gregor20.henemm.com`), **nie** durch lokalen Neustart des Live-Servers (= Produktion, #339). Prod-Deploy ist Hard Gate: braucht frischen Nachweis `.claude/e2e_verified/<sha>.json`; Issue-Close nur bei Selftest-Exit 0.
 
-**Liefer-Workflow:** `main` ändert sich nur per Pull Request mit allen 6 CI-Checks grün (`test` · `lint` · `go-test` · `svelte-check` · `frontend-test` · `e2e`), Direkt-Push ist abgeschafft. PR, Merge (`gh pr merge --merge --delete-branch`) und Deploy (`deploy-gregor-prod.sh` + `prod_selftest.py`) macht Claude selbst, nie der PO (überstimmt bewusst die Vorlage von `/60-validate`). Merge-Regel, Schritte, Doku-Ausnahme und Verbote: `docs/reference/operations_playbook.md`.
+**Liefer-Workflow:** `main` ändert sich nur per Pull Request mit allen 6 CI-Checks grün (`test` · `lint` · `go-test` · `svelte-check` · `frontend-test` · `e2e`), Direkt-Push ist abgeschafft. Merge `gh pr merge --merge --delete-branch`, Deploy `deploy-gregor-prod.sh` + `prod_selftest.py` (Claude, siehe Rollen). Merge-Regel, Schritte, Doku-Ausnahme und Verbote: `docs/reference/operations_playbook.md`.
 
 ## Mail-Validatoren & Renderer-Gate
 
-Je Mail-Pfad ein eigener Validator, gegen **echt zugestellte Staging-Mail** im Stalwart-Test-Postfach (kein Mock, kein Gmail). Falscher Validator auf einem Pfad ist strukturell nie bestehbar.
-
-- **Orts-Vergleich** (Vergleichstabelle, ≥3 Orte, `X-GZ-Mail-Type: compare`): `uv run python3 .claude/hooks/email_spec_validator.py`; „E2E bestanden" für den Orts-Vergleich nur bei Exit 0.
-- **Trip-Briefing** (`full`/`compact`): eigener `briefing_mail_validator.py`; amtliche Warnung: `official_alert_mail_validator.py`; Radar-/Regen-Alarm: `radar_alert_mail_validator.py`.
-
-Ein Renderer-Commit-Gate blockt Commits an Mail-Inhalts-Dateien bis Modus-Matrix-Test und Validator frisch grün sind. Details: `docs/reference/mail_validators.md`, `docs/reference/gates_und_ratschen.md`.
+Je Mail-Pfad ein eigener Validator gegen **echt zugestellte Staging-Mail** im Stalwart-Test-Postfach (kein Mock, kein Gmail): Orts-Vergleich `email_spec_validator.py` (Exit 0 = „E2E bestanden"), Trip-Briefing `briefing_mail_validator.py`, amtliche Warnung `official_alert_mail_validator.py`, Radar-/Regen-Alarm `radar_alert_mail_validator.py` (alle in `.claude/hooks/`). Renderer-Commit-Gate blockt Mail-Inhalts-Commits bis Modus-Matrix-Test und Validator frisch grün. Details: `docs/reference/mail_validators.md`, `docs/reference/gates_und_ratschen.md`.
 
 ## Design-Leitprinzip
 
@@ -74,11 +75,11 @@ Ein Renderer-Commit-Gate blockt Commits an Mail-Inhalts-Dateien bis Modus-Matrix
 
 ## Trip/Ortsvergleich-Code-Teilung (PO-Vorgabe, mehrfach bekräftigt)
 
-Möglichst viel Code zwischen Trip und Ortsvergleich teilen; der Compare-Editor funktioniert wie der Trip-Editor. Geteilt (EIN Code, Parameter `context="route"|"vergleich"`): Editor-Rahmen, Tab-Organismen Wertebereiche/Layout/Versand (`frontend/src/lib/components/shared/`), Muster Liste → Detail-Hub → Anlegen, Datenmodell (Epic #2345). Anlegen folgt dem Trip-Muster (`/trips/new` = `TripNewEditor`, #622; `/compare/new` gleich gebaut) — **keine offene Designfrage, nicht erneut vorlegen.** Compare-eigen dürfen NUR sein: Orte-Tab, transponierte Übersicht, Compare-Mail-Template. Eine neue Compare-Komponente mit Trip-Pendant (oder umgekehrt) ist ein Verstoß (Anti-Pattern #1170); Pendant-Sperre und Volltext: `docs/reference/gates_und_ratschen.md`.
+Compare-Editor funktioniert wie der Trip-Editor; EIN Code mit `context="route"|"vergleich"` für Editor-Rahmen, Tabs Wertebereiche/Layout/Versand (`frontend/src/lib/components/shared/`), Liste → Detail-Hub → Anlegen, Datenmodell (Epic #2345). Anlegen nach Trip-Muster (#622), **nicht erneut vorlegen.** Compare-eigen NUR: Orte-Tab, transponierte Übersicht, Compare-Mail-Template; jede neue Komponente mit Pendant ist Verstoß (#1170). Volltext: `docs/reference/gates_und_ratschen.md`.
 
 ## Confidence — NICHT wählbar als Metrik (Issue #710, Final)
 
-`confidence_pct` ist KEINE pro-Etappe wählbare Metrik, sondern eine Meta-Aussage über Ensemble-Divergenz: nur als Verlässlichkeits-Hinweis im E-Mail-Textblock oder intern, kein SMS-Token (#2233), **NIEMALS** in Trip-Editor, Wizard, Metrik-Auswahl oder als Etappen-Spalte. Umsetzung: `MetricDefinition.selectable=false`, GET `/api/metrics` filtert; alte Trips mit `confidence` laden still, Render-Pfade ignorieren es.
+`confidence_pct` ist Meta-Aussage über Ensemble-Divergenz: nur Verlässlichkeits-Hinweis im E-Mail-Text oder intern, kein SMS-Token (#2233), **NIEMALS** in Editor, Wizard, Metrik-Auswahl, Etappen-Spalte (`MetricDefinition.selectable=false`; alte Trips laden still).
 
 ## Daten-Schema-Reworks (PFLICHT!)
 

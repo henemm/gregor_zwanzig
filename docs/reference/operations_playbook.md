@@ -277,7 +277,7 @@ Die 6 GitHub-Actions-Checks (`test` · `lint` · `go-test` · `svelte-check` · 
 
 - **Merge-Regel (PFLICHT):** Ein PR wird nur gemerged, wenn alle 6 Checks auf seinem letzten Stand grün sind. Fremde Rote auf der Basis: erst die Basis grün ziehen oder den Befund belegt (Commit-/Log-Nachweis) einer anderen Session zuordnen und in #1196 buchen — nie stillschweigend „auf Rot obendrauf" mergen.
 - **Wird `main` trotzdem rot:** Drive-to-green hat Vorrang vor neuer Feature-Arbeit.
-- **Branch-Protection ist beschlossen:** der dokumentierte Weg auf `main` ist ausschließlich der PR-Liefer-Workflow. Den mechanischen Schalter setzt der PO; bis dahin gilt die Regel organisatorisch und ein Direkt-Push ist ein Regelverstoß, kein Versehen.
+- **Branch-Protection ist aktiv (seit 2026-11-08, #2858):** `main` verlangt die 6 Checks (`test` · `lint` · `go-test` · `svelte-check` · `frontend-test` · `e2e`), gilt auch für Admins, kein Force-Push, kein Löschen; keine Reviews (Ein-Personen-Projekt). Ein Direkt-Push wird von GitHub abgewiesen. Den Schalter verwaltet Claude (`gh api repos/henemm/gregor_zwanzig/branches/main/protection`), nie der PO.
 
 Ratschen-Pflege (`ci_tdd_excludes.txt`, `ci_e2e_specs.txt`, Aufnahmefilter): `docs/reference/gates_und_ratschen.md`.
 

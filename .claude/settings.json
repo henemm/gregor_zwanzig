@@ -2,6 +2,19 @@
   "env": {
     "CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS": "1"
   },
+  "enabledPlugins": {
+    "agent-os-openspec@henemm-private": true
+  },
+  "extraKnownMarketplaces": {
+    "henemm-private": {
+      "source": {
+        "source": "github",
+        "repo": "henemm/agent-os-openspec",
+        "ref": "main"
+      },
+      "autoUpdate": true
+    }
+  },
   "permissions": {
     "allow": [
       "Bash",
