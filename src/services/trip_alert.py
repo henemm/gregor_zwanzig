@@ -440,7 +440,7 @@ def _radar_e1_fields(
     try:
         ende_dt = alert_log.nowcast_event_end_at(result, now_utc)
         felder = {
-            "lead_time_minutes": result.onset_minutes,
+            "lead_time_minutes": alert_log.nowcast_lead_time_minutes(result),
             "event_at": onset_dt.isoformat(),
             "event_end_at": ende_dt.isoformat() if ende_dt else None,
             "measurement_point": {
@@ -2557,7 +2557,8 @@ class TripAlertService:
                 # minutes=None)` ein Absturz. Bezugszeitpunkt ist dann JETZT --
                 # dieser Wert traegt die Ereignis-Identitaet (Entdopplung) und den
                 # Briefing-Vergleich, beide brauchen einen Zeitpunkt (Bruchstelle 3).
-                _onset_dt = now_utc + timedelta(minutes=result.onset_minutes or 0)
+                # Issue #2009: geteilte Ableitung -- laufend => JETZT.
+                _onset_dt = alert_log.nowcast_onset_at(result, now_utc)
 
 
                 # Briefing-Vergleich (Issue #818 AC-1/AC-2/AC-3)

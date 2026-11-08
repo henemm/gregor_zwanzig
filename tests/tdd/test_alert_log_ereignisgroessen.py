@@ -531,7 +531,10 @@ def test_ac8_radar_alarm_mit_unbestimmbaren_groessen_wird_trotzdem_zugestellt_un
 
     - **laufendes Ereignis ohne kuenftigen Beginn** (S2b-Fall,
       `onset_minutes=None`, `already_running=True`) -> `lead_time_minutes`
-      bleibt `None` (= `result.onset_minutes`, direkt uebernommen).
+      ist 0 (laufendes Ereignis = Vorlauf 0, geteilte Ableitung
+      `alert_log.nowcast_lead_time_minutes`, Spec
+      `fix_2009_laufender_regen_vorlauf`, #2009) -- also BESTIMMT, nicht
+      unbestimmbar.
     - **kein Ende bestimmbar** (`event_end_minutes=None`) -> `event_end_at`
       bleibt `None`.
     - **kein Briefing-Snapshot fuer den Tag** (keiner geschrieben) ->
@@ -539,23 +542,24 @@ def test_ac8_radar_alarm_mit_unbestimmbaren_groessen_wird_trotzdem_zugestellt_un
       bleibt `None` ("None falls kein Snapshot fuer den Tag existiert",
       Spec-Tabelle Radar-Zeile).
 
-    Das sind damit DREI der sechs Groessen -- NICHT alle sechs: `event_at`
-    ist am Radar-Zweig laut Spec-Tabelle "immer gesetzt"
-    (`_onset_dt = now_utc + timedelta(minutes=result.onset_minutes or 0)`,
-    `trip_alert.py`, Kommentar "Bezugszeitpunkt ist dann JETZT" -- S2b-
-    Bruchstelle 3), `measurement_point` (`active.segment_id`/`km_from`/
-    `km_to`) und `source` (der rohe `result.source`) sind am
-    Radar-Zweig strukturell IMMER aus dem laufenden Trip/Request ableitbar.
-    Diese drei koennen an dieser Aufrufstelle nicht auf unbestimmbar gebracht
-    werden -- das ist keine Testschwaeche, sondern folgt aus der
-    Aufrufstellen-Tabelle der Spec selbst.
+    Unbestimmbar sind damit ZWEI der sechs Groessen (`event_end_at`,
+    `reference_at`) -- NICHT alle sechs: `event_at` ist am Radar-Zweig laut
+    Spec-Tabelle "immer gesetzt" (`_onset_dt =
+    alert_log.nowcast_onset_at(result, now_utc)`, `trip_alert.py`; bei
+    laufendem Ereignis ist der Beginn JETZT, #2009), `lead_time_minutes` ist
+    bei laufendem Ereignis 0 (siehe oben), `measurement_point`
+    (`active.segment_id`/`km_from`/`km_to`) und `source` (der rohe
+    `result.source`) sind am Radar-Zweig strukturell IMMER aus dem laufenden
+    Trip/Request ableitbar. Diese vier koennen an dieser Aufrufstelle nicht
+    auf unbestimmbar gebracht werden -- das ist keine Testschwaeche, sondern
+    folgt aus der Aufrufstellen-Tabelle der Spec selbst.
 
     BEWUSST von Anfang an GRUEN (gemessen 2026-08-22): `triggered_count==1`
     und `channels_sent` sind bereits VOR dieser Scheibe unveraendertes
     Verhalten (Zustellung haengt nicht von den sechs neuen Feldern ab), und
-    die drei Absenz-Zusicherungen sind vor GREEN trivial erfuellt, weil noch
-    KEIN Aufrufer irgendeinen der sechs kwargs uebergibt -- nicht nur fuer
-    diese drei. Die Positivkontrolle, dass die Absenz-Pruefung ueberhaupt
+    die Absenz-Zusicherungen waren vor GREEN trivial erfuellt, weil noch
+    KEIN Aufrufer irgendeinen der sechs kwargs uebergab -- nicht nur fuer
+    diese. Die Positivkontrolle, dass die Absenz-Pruefung ueberhaupt
     etwas MISST (statt eines durchgehend leeren Pfads), liefern die drei
     Nachbar-Tests in DERSELBEN Datei: `test_ac1_...` zeigt `lead_time_minutes`
     PRAESENT bei bestimmbarem Onset, `test_ac2_...` zeigt `event_end_at`
@@ -583,7 +587,11 @@ def test_ac8_radar_alarm_mit_unbestimmbaren_groessen_wird_trotzdem_zugestellt_un
             f"AC-8: der Alarm muss trotzdem VOLLSTAENDIG protokolliert und "
             f"zugestellt werden (mind. ein Kanal in channels_sent): {entry!r}"
         )
-        for schluessel in ("lead_time_minutes", "event_end_at", "reference_at"):
+        assert entry.get("lead_time_minutes") == 0, (
+            f"#2009: laufendes Ereignis ohne kuenftigen Beginn muss Vorlauf 0 "
+            f"protokollieren: {entry!r}"
+        )
+        for schluessel in ("event_end_at", "reference_at"):
             assert schluessel not in entry, (
                 f"AC-8: {schluessel!r} ist an dieser Aufrufstelle unbestimmbar "
                 f"und darf NICHT im Eintrag stehen: {entry!r}"

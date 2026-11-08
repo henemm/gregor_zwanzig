@@ -738,6 +738,12 @@ Scheibe 3 (#1170). Scheduler: `POST /api/scheduler/compare-alert-checks`, Go-Cro
      (`src/services/alert_input_capture.py`), zusätzlich zum bestehenden
      Entscheidungs-Log `alert_log.py` (#1459) — reines Beobachtungs-Feature, kein
      Versand-/Format-Verhalten geändert.
+   - **Laufender Regen im Entscheidungs-Log (#2009):** Bei bereits laufendem Regen schreibt
+     `alert_log.py` Vorlauf `lead_time_minutes = 0` und Beginn = Zeitpunkt des Laufs
+     (`nowcast_onset_at` zieht `already_running` vor; kein Pseudo-Vorlauf, kein wandernder
+     Viertelstunden-Anker). Trip (`trip_alert.py`) und Ortsvergleich (`compare_radar_alert.py`)
+     nutzen dieselbe Ableitung. Erwartete Vorläufe im 5-Min-Takt `3-58/5` gegen 15-Min-INCA-Frames:
+     2/7/12 mod 15. Nutzertext unverändert („läuft bereits").
    - Drei Mount-Punkte: Zweig a (Δ-Alarm, vor `_send_alert` in `trip_alert.py`,
      nutzerskopiert) · Zweig b (amtliche Warnung, `official_alerts/warn_egress.py::cached_fetch`,
      System-Ablage) · Zweig c (Radar-Nowcast, vor `_derive_result` in

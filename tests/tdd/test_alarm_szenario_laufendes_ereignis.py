@@ -7,9 +7,9 @@ Zusaetzlich AC-11b: Gegenrichtung zu AC-11 (Befund der Parallelsession #2065,
 Laeuft ein Ereignis zum Zeitpunkt des Alarmlaufs BEREITS, meldet Gregor es
 heute als bevorstehend ("Regen in 8 Min"): `_derive_result` filtert
 `f.timestamp >= now` und verwirft damit das Frame der laufenden Viertelstunde
-(Frames tragen den Slot-Start im Raster :00/:15/:30/:45, der Cron laeuft
-:07/:22/:37/:52 -- "in 8 Min" ist deshalb nicht der gemessene, sondern der
-einzig moegliche Wert).
+(Frames tragen den Slot-Start im Raster :00/:15/:30/:45; der Radar-Cron
+laeuft seit #2261 A-2 S2 im 5-Min-Takt `3-58/5` -- "in 2/7/12 Min" ist
+deshalb nicht der gemessene, sondern der einzig moegliche Wert, #2009).
 
 Alle Kanal-Waechter fahren ueber die `AlarmPruefstrecke` (S1) gegen die ECHTE
 Ausloeseentscheidung (`check_radar_alerts()`) -- kein Mock()/patch()/
@@ -70,9 +70,10 @@ from tests.tdd.test_alarm_pruefstrecke_selbstschutz import (
 
 # `_AT` (10:00 UTC) taugt als Laufzeitpunkt NICHT: dort faellt `now` genau auf
 # den Slot-Start, `f.timestamp >= now` behielte das Frame und der Defekt waere
-# unsichtbar. Der Versatz +7 Min bildet den echten Cron-Takt ab.
+# unsichtbar. Der Versatz +8 Min ist eine Taktminute des echten Radar-Crons
+# `3-58/5` (#2009 Nachmessung; vorher :07 aus dem abgeloesten 15-Min-Takt).
 _SLOT = _AT                              # 10:00 UTC -- Beginn des laufenden Slots
-_AT_LAUF = _AT + timedelta(minutes=7)    # 10:07 UTC = 12:07 Ortszeit
+_AT_LAUF = _AT + timedelta(minutes=8)    # 10:08 UTC = 12:08 Ortszeit
 
 # Ortszeit der Etappe: Korsika (42.20/9.10) -> Europe/Paris, am 2026-04-05
 # Sommerzeit (UTC+2). LITERALE -- bewusst nicht aus derselben Zonenaufloesung
@@ -88,11 +89,11 @@ HORIZONT_LOKAL = "14:45"   # Lage B: Deckungsende des letzten Frames (Slot +150 
 BEGINN_LOKAL = "12:45"     # Lage E: kuenftiger Beginn (Slot +45)
 # Lage C endet IN der laufenden Viertelstunde. Genannt wird die Deckungsgrenze
 # des laufenden Frames (Slot +15), NICHT sein Zeitstempel (Slot +0) -- der
-# laege VOR dem Pruefzeitpunkt 12:07 und waere eine Aussage ueber die
+# laege VOR dem Pruefzeitpunkt 12:08 und waere eine Aussage ueber die
 # Vergangenheit im Gewand einer Auskunft ueber die Zukunft.
 LAGE_C_ENDE_LOKAL = "12:15"
 LAGE_C_FRAME_LOKAL = "12:00"
-PRUEFZEIT_MIN = 12 * 60 + 7   # 12:07 Ortszeit, in Minuten seit Mitternacht
+PRUEFZEIT_MIN = 12 * 60 + 8   # 12:08 Ortszeit, in Minuten seit Mitternacht
 
 LAEUFT = "läuft bereits"                             # S2b-Freigabe
 # Ende-Wortlaut aus #2051 S1 (PO-Entscheid 2026-08-22), Lage A = bekanntes
@@ -183,10 +184,10 @@ def _erst_spaeter():
 
 
 # Lage F (AC-11b): zweite, eigenstaendige Lage 75 Min spaeter -- eigener
-# Rasterslot, jetzt trocken, Beginn erst +23 Min und mit 12 mm/h deutlich
+# Rasterslot, jetzt trocken, Beginn erst +22 Min und mit 12 mm/h deutlich
 # staerker als die 2 mm/h der ersten Lage.
 _SLOT2 = _SLOT + timedelta(minutes=75)        # 11:15 UTC
-_AT_LAUF2 = _SLOT2 + timedelta(minutes=7)     # 11:22 UTC, derselbe Cron-Versatz
+_AT_LAUF2 = _SLOT2 + timedelta(minutes=8)     # 11:23 UTC, derselbe Takt-Versatz
 
 
 def _neue_lage_spaeter():
@@ -345,7 +346,7 @@ def test_ac4b_ende_in_der_laufenden_viertelstunde_liegt_nach_dem_pruefzeitpunkt(
     NICHT dessen Zeitstempel (12:00).
 
     Die eigentliche Zusicherung ist nicht die Zahl, sondern ihre Lage: die
-    genannte Zeit muss NACH dem Pruefzeitpunkt (12:07) liegen. Sonst liest
+    genannte Zeit muss NACH dem Pruefzeitpunkt (12:08) liegen. Sonst liest
     der Wanderer, waehrend er im Regen steht, dass der Regen vorbei sei --
     eine Aussage ueber die Vergangenheit im Gewand einer Auskunft ueber die
     Zukunft. Die Konvention ist nicht neu: der Untergrenzen-Zweig aus
@@ -373,7 +374,7 @@ def test_ac4b_ende_in_der_laufenden_viertelstunde_liegt_nach_dem_pruefzeitpunkt(
     genannt = int(treffer.group(1)) * 60 + int(treffer.group(2))
     assert genannt > PRUEFZEIT_MIN, (
         f"AC-4b: das genannte Ende ({treffer.group(0)!r}) liegt VOR dem "
-        f"Pruefzeitpunkt 12:07 -- ein Ende in der Vergangenheit ist keine "
+        f"Pruefzeitpunkt 12:08 -- ein Ende in der Vergangenheit ist keine "
         f"Auskunft ueber ein laufendes Ereignis.\n{text}"
     )
 
@@ -482,7 +483,7 @@ def test_ac10_ereignis_endet_in_der_laufenden_viertelstunde_loest_trotzdem_aus()
     daran `False` und der Alarm faellt ERSATZLOS aus (Bruchstelle 1).
 
     Vorgeschaltet die Konstruktions-Gegenprobe: DIESELBEN Frames, einmal zur
-    Cron-Laufzeit 10:07 und einmal exakt auf dem Slot-Start 10:00 gemessen.
+    Cron-Laufzeit 10:08 und einmal exakt auf dem Slot-Start 10:00 gemessen.
     Ohne sie waere "kein kuenftiger Beginn" nicht von "gar kein Regen"
     unterscheidbar -- und der Waechter beruehrte den Laufend-Zweig nie."""
     uid = _uid("ac10")
@@ -596,7 +597,7 @@ def test_ac11b_neues_ereignis_nach_laufendem_wird_nicht_als_wiederholung_unterdr
         f"Beginn sehen (onset={lage1.onset_minutes}, am Slot-Start "
         f"{lage1_am_slotstart.onset_minutes})."
     )
-    assert lage2.onset_minutes == 23 and not getattr(lage2, "already_running", False), (
+    assert lage2.onset_minutes == 22 and not getattr(lage2, "already_running", False), (
         f"AC-11b Konstruktion: Lauf 2 muss eine NEUE Lage mit kuenftigem "
         f"Beginn sehen, nicht dieselbe laufende (onset={lage2.onset_minutes})."
     )
@@ -716,14 +717,14 @@ def test_ac12_ortsvergleich_buendel_traegt_den_laufenden_ort_mit():
         onset_minutes=None, intensity_label="Starker Regen", source="radar",
     )
     laufend.already_running = True
-    laufend.event_end_minutes = 23   # Feldname aus #2051 S1 (gemergt)
+    laufend.event_end_minutes = 22   # Feldname aus #2051 S1 (gemergt)
     kuenftig = NowcastResult(
         onset_minutes=25, intensity_label="Leichter Regen", source="radar",
     )
     with freeze_time(_AT_LAUF):
         msg = to_multi_location_onset_alert_message(
             [("Laufend-Ort", laufend), ("Zukunft-Ort", kuenftig)],
-            tz=TZ_ORT, stand_at="12:07", ampel=resolve_ampel(None),
+            tz=TZ_ORT, stand_at="12:08", ampel=resolve_ampel(None),
         )
         _html, plain = render_email(msg)
         text = f"{plain}\n{render_telegram(msg)}"
@@ -814,7 +815,7 @@ def test_ac14_jetzt_antwort_meldet_das_laufende_ereignis_als_laufend():
     # der Untergrenzen-Waechter `event_ongoing_beyond_horizon`. S2b legt nur
     # `already_running` daneben -- kein zweites Ende-Feld.
     result.already_running = True
-    result.event_end_minutes = 23   # 10:07 + 23 Min = 10:30 UTC = 12:30 Ortszeit
+    result.event_end_minutes = 22   # 10:08 + 22 Min = 10:30 UTC = 12:30 Ortszeit
     with freeze_time(_AT_LAUF):
         text = RadarNowcastService().format_now_text(
             result, tz=TZ_ORT, include_source=False,
@@ -891,7 +892,7 @@ def test_ac15_briefing_kurzfristzeile_weist_das_ereignis_als_laufend_aus():
         try:
             text = format_starkregen_hint(
                 "Starker Regen", None, tz=TZ_ORT,
-                already_running=True, event_end_minutes=23,
+                already_running=True, event_end_minutes=22,
             )
         except TypeError as e:
             text = f"<TypeError: {e}>"
