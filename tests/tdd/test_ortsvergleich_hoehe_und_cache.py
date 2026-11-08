@@ -173,6 +173,7 @@ def test_ac6_alarmlauf_ueber_compare_alert_service_traegt_hoehe(monkeypatch, tmp
     _prepare_availability(monkeypatch, tmp_path)
     from services.compare_alert import CompareAlertService
     from services.point_weather import AlertEvaluationConfig
+    from tests.helpers.ampel_allgemein import AMPEL_ALLGEMEIN
 
     uid = "tdd-1991-f005-alarm"
     _clean_user(uid)
@@ -196,7 +197,7 @@ def test_ac6_alarmlauf_ueber_compare_alert_service_traegt_hoehe(monkeypatch, tmp
 
         service = CompareAlertService(user_id=uid)
         service._evaluate_one_location(
-            "cp-f005-alarm", loc.id, loc, AlertEvaluationConfig(), (4, 19),
+            "cp-f005-alarm", loc.id, loc, AlertEvaluationConfig(ampel=AMPEL_ALLGEMEIN), (4, 19),  # #2793 S2b: Ampel Pflicht
         )
 
         main = [r for r in seen if r.url.host == "api.open-meteo.com"]

@@ -56,6 +56,8 @@ ADR-0049 (eigener Kanal), ADR-0095 (Kanal-Parität, Alarm-Kanal in Trip und Orts
 
 **Radar-Verschärfung (#2848):** Ein Trip-Radar-Alarm, der per Mengen-Durchbruch (#2065) gegen einen Radar-Alarm desselben Ereignisses durchkommt, trägt nach dem Ortskopf und vor dem Radar-Token das Token `UP <Y>><X> ` (zuletzt gemeldete > jetzt gemessene Menge in mm, z. B. `UP 3.1>7.3`; ASCII/GSM-7, nie übersetzt). Der Platz ist vom Limit reserviert, Zonen-Kürzel weichen zuerst; die Premium-SMS-Grenze (153) bleibt eingehalten. Vertrag in `sms_format.md` §3.4g.
 
+**Farbpaar (#2793 S2b):** Der Änderungs-Alarm trägt am Ereignis-Token das Farbpaar `:{X}>{Y}` (G/Y/O/R, z. B. `G40->55:Y>O`, Entwarnung `G55->35:O>Y`), vor `@HH-HH`, nie übersetzt, GSM-7; Gewitter (`TH:M->H`) und D4-Metriken ohne Suffix. Die Premium-SMS-Grenze (153) bleibt eingehalten. Vertrag in `sms_format.md` §3.4h.
+
 ## 4. Befehlseingang (Rückkanal)
 
 - **Weg:** Garmin-Gerät schreibt an die Dienstnummer → seven.io-Journal. `premium_sms_poll`

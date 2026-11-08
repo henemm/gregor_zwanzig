@@ -86,9 +86,16 @@ def _trip(trip_id: str, *, template: str = "allgemein", alarm_ab: dict[str, str]
 
 
 def _trip_lauf(uid: str, trip: Trip, alt: dict, neu: dict) -> list[tuple[str, str]]:
-    """Ein Alarm-Lauf; liefert die zugestellten Mails ``(Betreff, Text)``."""
+    """Ein Alarm-Lauf; liefert die zugestellten Mails ``(Betreff, Text)``.
+
+    Tarif premium: ohne ihn greift beim zweiten Alarm des Tages das
+    Tageslimit -- gemessen wird hier die Ausloesung, nicht der Tarif."""
     from services.trip_alert import TripAlertService
 
+    profil = get_data_dir(uid) / "user.json"
+    if not profil.exists():
+        profil.parent.mkdir(parents=True, exist_ok=True)
+        profil.write_text(json.dumps({"tier": "premium"}))
     mails: list[tuple[str, str]] = []
     TripAlertService(
         settings=settings_email_only(), user_id=uid, throttle_hours=0,

@@ -483,11 +483,12 @@ def test_k1_bundled_two_location_sms_carries_only_the_values_no_head():
             f"Kurznachricht: {text!r}"
         )
 
-        # Gemessener Goldstring des vollstaendigen Textes. Die Zahlen laufen
-        # ABSTEIGEND (2 vor 1), weil Wien den groesseren Messwert hat und
-        # dadurch vorne einsortiert wird -- die Positionszahl folgt also dem
-        # ORT, nicht der Token-Reihenfolge.
-        assert text == "2:+R45 1:+R30", (
+        # #2793 S2b (Spec §4, sms_format §3.4h): jedes Token traegt das
+        # Farbpaar `:{X}>{Y}` (2 mm gelb -> 30/45 mm rot = `:Y>R`). Beide Orte
+        # sind rot, die Dringlichkeit ist gleich (D3) -- die Tokens stehen
+        # deshalb in Ortsreihenfolge; die Paarung Ort <-> Zahl pruefen die
+        # Einzel-Zusicherungen oben weiter.
+        assert text == "1:+R30:Y>R 2:+R45:Y>R", (
             "K-1: vollstaendiger Goldstring der Kurznachricht -- nur die "
             "Werte mit ihrer Ortsnummer, kein Kopf. Heute steht hier "
             f"'Graz, Wien: 2:+R45 1:+R30'. Gemessen: {text!r}"
@@ -604,7 +605,8 @@ def test_k2_single_location_sms_carries_no_location_name():
             "K-2: der Ortsname darf auch im Ein-Ort-Fall nicht mehr in der "
             f"Kurznachricht stehen, gemessen: {text!r}"
         )
-        assert text == "+R30", (
+        # #2793 S2b: Farbpaar am Token (gelb -> rot).
+        assert text == "+R30:Y>R", (
             "K-2: Goldstring der Ein-Ort-Kurznachricht -- nur der Wert. Heute "
             f"steht hier 'Graz Graz: +R30'. Gemessen: {text!r}"
         )
@@ -743,7 +745,9 @@ def test_k3_position_numbers_come_from_configured_list_not_from_hit_order():
             "Position 2 (Zell) hat nicht ausgeloest -- es darf keine "
             f"Positionszahl 2 vergeben werden: {text!r}"
         )
-        assert "0:" not in text, (
+        # #2793 S2b: `R30:Y>R` enthaelt „0:" als Farbpaar-Grenze -- gemeint ist
+        # eine Ortsposition 0 am Token-Anfang.
+        assert not re.search(r"(^| )0:", text), (
             "Die Positionen sind 1-basiert -- eine 0 darf nie auftauchen: "
             f"{text!r}"
         )
@@ -757,7 +761,8 @@ def test_k3_position_numbers_come_from_configured_list_not_from_hit_order():
         # Trefferreihenfolge noch die Token-Reihenfolge noch die
         # alphabetische Ordnung koennen dieses Muster erzeugen. Der Kopf
         # 'Bruck, Melk: ' faellt mit K-1 weg (heute steht er noch da).
-        assert text == "3:+R45 1:+R30", (
+        # #2793 S2b: Farbpaar am Token; gleiche Farbe -> Ortsreihenfolge.
+        assert text == "1:+R30:Y>R 3:+R45:Y>R", (
             "Vollstaendiger Goldstring der Kurznachricht (ohne Kopf, K-1), "
             f"gemessen {text!r}"
         )
@@ -865,7 +870,8 @@ def test_k4_deleted_location_lets_the_following_positions_move_up():
         )
         # Goldstring: identisch zu einem Vergleich, der von Anfang an nur
         # Bruck und Melk enthalten haette -- genau das ist die Zusicherung.
-        assert text == "2:+R45 1:+R30", (
+        # #2793 S2b: Farbpaar am Token; gleiche Farbe -> Ortsreihenfolge.
+        assert text == "1:+R30:Y>R 2:+R45:Y>R", (
             "K-4: Goldstring nach dem Aufruecken. Heute steht hier "
             f"'Bruck, Melk: 3:+R45 1:+R30'. Gemessen: {text!r}"
         )

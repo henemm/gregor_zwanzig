@@ -41,7 +41,11 @@ _URSPRUNGSWERT = 10.0
 # die Schwelle. Kein Schritt-ueber-Schritt-Delta wird geprueft (irrelevant --
 # die Engine vergleicht immer gegen den AKTUELLEN Anker, nie gegen den
 # vorherigen Messwert).
-_SCHRITTE = [12.0, 15.0, 18.0, 22.0, 27.0, 42.0]
+#
+# #2793 S2b: seit dem Umschalten alarmiert die Ampelfarbe (allgemein: Boeen
+# gelb ab 30, orange ab 45, Alarm ab Orange). Die ersten fuenf Schritte
+# bleiben gruen, der letzte (50) erreicht orange -- vorher 42 (Δ 32 > 20).
+_SCHRITTE = [12.0, 15.0, 18.0, 22.0, 27.0, 50.0]
 
 
 def _wetter(gust_kmh: float, fetched_at: datetime):

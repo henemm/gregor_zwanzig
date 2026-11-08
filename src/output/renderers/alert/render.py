@@ -220,6 +220,50 @@ def _deviation_label(e: AlertEvent, lang: Lang = "de") -> str:
     return _label(e, lang)
 
 
+# Issue #2793 S2b: Farbwoerter (Katalog) und Farbbuchstaben der Kurzform
+# (Protokoll-Token, GSM-7, nie uebersetzt).
+_FARBWORT = {
+    "green": "alarm.ampel.farbe.green", "yellow": "alarm.ampel.farbe.yellow",
+    "orange": "alarm.ampel.farbe.orange", "red": "alarm.ampel.farbe.red",
+}
+_FARBBUCHSTABE = {"green": "G", "yellow": "Y", "orange": "O", "red": "R"}
+_AMPEL_SEITEN_LABEL = {
+    "temperature": "alarm.ampel.label.temp_max",
+    "temperature_cold": "alarm.ampel.label.temp_min",
+}
+
+
+def _farbwort(farbe: str | None, lang: Lang = "de") -> str:
+    return t(_FARBWORT[farbe], lang) if farbe in _FARBWORT else "-"
+
+
+def _ampel_label(e: AlertEvent, lang: Lang = "de") -> str:
+    """Bei Temperatur nennt das Label die Seite (Tageshoechst/Tagestief)."""
+    key = _AMPEL_SEITEN_LABEL.get(e.metric_id)
+    return t(key, lang) if key else _deviation_label(e, lang)
+
+
+def _ampel_satz(e: AlertEvent, lang: Lang = "de") -> str:
+    """Kopfzeile eines Ampel-Ereignisses (Spec §4): gestiegen/Sprung/Entwarnung."""
+    werte = {"label": _ampel_label(e, lang), "von": _val(e, e.value_from, lang),
+             "bis": _val(e, e.value_to, lang)}
+    if e.art == "sprung":
+        return t("alarm.ampel.sprung", lang, farbe=_farbwort(e.stufe_bis, lang), **werte)
+    key = "alarm.ampel.entwarnung" if e.art == "entwarnung" else "alarm.ampel.gestiegen"
+    return t(key, lang, farbe_von=_farbwort(e.stufe_von, lang),
+             farbe_bis=_farbwort(e.stufe_bis, lang), **werte)
+
+
+def _farbpaar(e: AlertEvent, lang: Lang = "de") -> str:
+    return f"{_farbwort(e.stufe_von, lang)} → {_farbwort(e.stufe_bis, lang)}"
+
+
+def _ueber_schwelle_d4(e: AlertEvent) -> bool:
+    """Δ-Ereignis ueber seiner Schwelle -- nur diese zaehlen fuer „N über
+    Schwelle"; Ampel-Ereignisse haben keine Alarm-Schwelle mehr (Spec §4)."""
+    return e.art is None and over_thr(e)
+
+
 def _location_of(events, location_label: str | None = None, *, lang: Lang = "de") -> str:
     """Ortsangabe einer Ereignismenge (Issue #1744 A1) — Betreff, Mailkoerper
     und Telegram-Langform holen sie ALLE hier, damit eine Mail nicht zwei
@@ -1255,7 +1299,7 @@ def render_subject(msg: AlertMessage, *, lang: Lang = "de") -> str:
         )
     # Issue #981: Zähler UND Top-3-Auswahl nur aus über-Schwelle-Events; ohne
     # solche wechselt die Formulierung auf "N Änderungen seit dem Briefing".
-    over_evs = [e for e in evs if over_thr(e)]
+    over_evs = [e for e in evs if _ueber_schwelle_d4(e)]
     if not over_evs:
         return f"[{msg.trip_short}] {km} · {t('alarm.abweichung.aenderungen', lang, n=len(evs))}"
     n = len(over_evs)
@@ -1282,10 +1326,14 @@ def _h1(msg: AlertMessage, lang: Lang = "de") -> str:
         e = evs[0]
         return t("alarm.abweichung.h1", lang, label=_deviation_label(e, lang),
                  von=_val(e, e.value_from, lang), bis=_val(e, e.value_to, lang))
+    if any(e.art is not None for e in evs):  # Issue #2793 S2b
+        return t("alarm.abweichung.aenderungen", lang, n=len(evs))
     return t("alarm.abweichung.h1_mehrere", lang, n=len(evs))
 
 
 def _email_line(e: AlertEvent, lang: Lang = "de") -> str:
+    if e.art is not None:  # Issue #2793 S2b: Farbsatz statt Schwellen-Urteil
+        return f"{_ampel_satz(e, lang)}{_hail_note_suffix(e, lang)}"
     schwelle = t("alarm.abweichung.schwelle", lang, wert=_val_delta(e, e.threshold, lang))
     return (
         f"{_deviation_label(e, lang)} · {schwelle} · "
@@ -1298,7 +1346,12 @@ def _email_line(e: AlertEvent, lang: Lang = "de") -> str:
 def _verdict_single(e: AlertEvent, lang: Lang = "de") -> str:
     """Issue #1948 S6 (AC-8): keine berechnete Prozent-Änderung mehr im
     Badge -- nur noch Richtung, Über/Unter-Schwelle-Aussage und der
-    tatsaechliche Schwellenwert (Abstand, daher `_val_delta`)."""
+    tatsaechliche Schwellenwert (Abstand, daher `_val_delta`).
+
+    Issue #2793 S2b: fuer Ampel-Ereignisse entfaellt das Schwellen-Urteil, es
+    steht der Farbsatz (Spec §4)."""
+    if e.art is not None:
+        return _ampel_satz(e, lang)
     return t("alarm.abweichung.urteil", lang, pfeil=arrow(e), seite=side_label(e, lang),
              schwelle=_val_delta(e, e.threshold, lang))
 
@@ -1325,6 +1378,12 @@ def _datablock_single(
         f"{_hail_note_suffix(e, lang)}",  # Issue #2205
     )
     mark ="✓" if not over_thr(e) else "✗"
+    if e.art is not None:  # Issue #2793 S2b: Farbpaar statt Schwellen-Zeile
+        aenderung = _val_delta(e, abs(e.value_to - e.value_from), lang)
+        row2 = (t("alarm.abweichung.aenderung", lang, wert=aenderung), _farbpaar(e, lang))
+        row3 = (t("alarm.mail.wo_wann", lang), _where_when(e, location_label, lang=lang))
+        rows = [row1, row2, row3]
+        return rows if e.remaining_mm is None else [*rows, *_precip_rows(e, lang)]
     row2 = (
         t("alarm.abweichung.aenderung", lang, wert=_val_delta(e, abs(e.value_to - e.value_from), lang)),
         t("alarm.abweichung.seite_schwelle", lang, seite=side_label(e, lang),
@@ -1474,7 +1533,7 @@ def render_email(msg: AlertMessage, *, lang: Lang = "de") -> tuple[str, str]:
     else:
         # Issue #981: Zähler zählt nur über-Schwelle-Events; sind es null,
         # wechselt die Formulierung auf "N Änderungen seit dem Briefing".
-        over_count = len([e for e in evs if over_thr(e)])
+        over_count = len([e for e in evs if _ueber_schwelle_d4(e)])
         verdict_text = _verdict_multi(msg, evs, over_count, lang)
         if over_count:
             verdict_text = f"{arrow(evs[0])} {verdict_text}"
@@ -1495,7 +1554,12 @@ def render_email(msg: AlertMessage, *, lang: Lang = "de") -> tuple[str, str]:
             # Prefix, AC-7-Invariante).
             loc_prefix = f"{e.location_label} · " if e.location_label else ""
             where_when = f" · {_where_when(e, lang=lang)}" if with_where_when else ""
-            if over_thr(e):
+            if e.art is not None:  # Issue #2793 S2b: Farbsatz je Ereignis
+                data_rows.append((
+                    f"{loc_prefix}{_ampel_satz(e, lang)}{where_when}",
+                    f"{_farbpaar(e, lang)}{_hail_note_suffix(e, lang)}",
+                ))
+            elif over_thr(e):
                 # Issue #1935/#1779 (E2): dieselbe Ambiguitaet wie E1, nur im
                 # gebuendelten Fall -- Label nennt zusaetzlich zur Schwelle
                 # den tatsaechlichen Aenderungsbetrag (zwei unterscheidbare
@@ -1528,7 +1592,7 @@ def render_email(msg: AlertMessage, *, lang: Lang = "de") -> tuple[str, str]:
                     f"{_hail_note_suffix(e, lang)}",
                 ))
         footer = f"{_stand_footer(msg, lang)} · {_km_str(msg, lang)}"
-        any_over = over_count > 0
+        any_over = any(over_thr(e) for e in evs)
         plain_data = []
         for e, (k, v) in zip(evs, data_rows):
             plain_data.append(f"{k}: {v}")
@@ -1596,7 +1660,7 @@ def render_telegram(msg: AlertMessage, *, lang: Lang = "de") -> str:
         lines += [_esc(ln) for ln in _hour_lines(e, msg.format_modes.get("telegram"), lang, ampel=msg.ampel)]  # Issue #1737
     else:
         # Issue #981: Kopfzeilen-Zähler nur über-Schwelle; null → Änderungs-Text.
-        over_count = len([e for e in evs if over_thr(e)])
+        over_count = len([e for e in evs if _ueber_schwelle_d4(e)])
         verdict = f"{msg.trip_short} · {km} · {_verdict_multi(msg, evs, over_count, lang)}"
         # Issue #978 (PO-Nachtrag): kein "Schwelle"-Text pro Zeile (steht
         # bereits in der fetten Kopfzeile), keine Einheiten ausser "%";
@@ -1607,6 +1671,9 @@ def render_telegram(msg: AlertMessage, *, lang: Lang = "de") -> str:
         with_where_when = _per_event_where_when(evs)
         # Issue #1935/#1779 (E5): Einheit immer anhaengen (AC-11).
         metric_line = " · ".join(
+            f"{_ampel_satz(e, lang)}{f' {_where_when(e, lang=lang)}' if with_where_when else ''}"
+            f"{_hail_note_suffix(e, lang)}"
+            if e.art is not None else  # Issue #2793 S2b
             f"{_deviation_label(e, lang)}{f' {_where_when(e, lang=lang)}' if with_where_when else ''} "
             f"{_num(e, e.value_from, lang)}→{_num(e, e.value_to, lang)}"
             f"{_unit_suffix(e)}{_hail_note_suffix(e, lang)}"
@@ -1663,6 +1730,7 @@ def _sms_token(
     else:
         sign = "+" if e.value_to >= e.value_from else "-"
         tok = f"{sign}{_code(e)}{int(round(e.value_to))}"
+    tok += _sms_farbpaar(e)  # Issue #2793 S2b: vor `@HH`, Teil des Tokens
     tok += _sms_hail_suffix(e)  # Issue #2205: vor `@HH`, Muster tokens.builder
     span = ""
     if e.hours_range:
@@ -1686,6 +1754,15 @@ def _sms_token(
             tok += f" {span}"
     pos = (location_positions or {}).get(e.location_label or "")
     return f"{pos}:{tok}" if pos else tok
+
+
+def _sms_farbpaar(e: AlertEvent) -> str:
+    """Issue #2793 S2b (Spec §4, sms_format §3.4h): Farbpaar `:{X}>{Y}` mit
+    G/Y/O/R am Ereignis-Token. Gewitter behaelt sein Stufen-Token `TH:M->H`
+    ohne Farbpaar; Δ-Ereignisse (D4) tragen keins."""
+    if e.art is None or _is_level_metric(e.metric_id):
+        return ""
+    return f":{_FARBBUCHSTABE.get(e.stufe_von, '-')}>{_FARBBUCHSTABE.get(e.stufe_bis, '-')}"
 
 
 def _sms_day_prefix(day_offset: int, weekday: str | None) -> str:

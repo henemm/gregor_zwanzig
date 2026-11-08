@@ -81,5 +81,14 @@
   "alarm.verschaerfung": "Same event, now stronger: {menge} instead of {basis} mm",
   "alarm.kontext.akut": "already announced — now acute",
   "alarm.kontext.angekuendigt": "already announced",
-  "alarm.kontext.nicht_angekuendigt": "not announced"
+  "alarm.kontext.nicht_angekuendigt": "not announced",
+  "alarm.ampel.gestiegen": "{label} rose from {farbe_von} to {farbe_bis}: {von} → {bis}",
+  "alarm.ampel.sprung": "{label} still {farbe}, large jump: {von} → {bis}",
+  "alarm.ampel.entwarnung": "All clear {label}: back from {farbe_von} to {farbe_bis} ({von} → {bis})",
+  "alarm.ampel.farbe.green": "green",
+  "alarm.ampel.farbe.yellow": "yellow",
+  "alarm.ampel.farbe.orange": "orange",
+  "alarm.ampel.farbe.red": "red",
+  "alarm.ampel.label.temp_max": "Daily high",
+  "alarm.ampel.label.temp_min": "Daily low"
 }

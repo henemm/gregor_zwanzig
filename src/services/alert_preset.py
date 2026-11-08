@@ -149,6 +149,29 @@ ONSET_METRICS: Final[frozenset[str]] = frozenset({
 })
 
 
+def explicitly_disabled_fields(display_config: "UnifiedWeatherDisplayConfig | None") -> set[str]:
+    """Bug #1191 (Adversary F002): Summary-Felder, die eine SYNTHETISCHE,
+    richtungs-spezifische Katalog-Metrik (``selectable=False``, heute nur
+    ``temperature_cold``) mit EXPLIZITEM ``enabled=False`` verbindlich abwaehlt.
+    Geteilt vom Δ-Pfad (unten) und der Ampel-Ausloesung (#2793 S2b)."""
+    if display_config is None:
+        return set()
+    from app.metric_catalog import get_metric as _get_metric
+
+    fields: set[str] = set()
+    for mc in getattr(display_config, "metrics", None) or []:
+        if mc.enabled:
+            continue
+        try:
+            _md = _get_metric(mc.metric_id)
+        except KeyError:
+            continue
+        if getattr(_md, "selectable", True):
+            continue  # nur synthetische Richtungs-IDs opten Felder verbindlich aus
+        fields.update(_md.summary_fields.values())
+    return fields
+
+
 def expand_per_metric_levels(
     levels: dict[str, str],
     display_config: "UnifiedWeatherDisplayConfig | None" = None,
@@ -260,28 +283,16 @@ def expand_per_metric_levels(
     # „temperature"-Toggle armt Min UND Max wie bisher. Der Go-Handler
     # PutTripWeatherConfigHandler validiert die Metrik-IDs beim Schreiben NICHT;
     # eine backendseitige Erzwingung wird separat als Nebenbefund (#1199) verfolgt.
-    explicitly_disabled_fields: set[str] = set()
-    if display_config is not None:
-        from app.metric_catalog import get_metric as _get_metric
-        for mc in getattr(display_config, "metrics", None) or []:
-            if mc.enabled:
-                continue
-            try:
-                _md = _get_metric(mc.metric_id)
-            except KeyError:
-                continue
-            if getattr(_md, "selectable", True):
-                continue  # nur synthetische Richtungs-IDs opten Felder verbindlich aus
-            explicitly_disabled_fields.update(_md.summary_fields.values())
+    explicitly_disabled = explicitly_disabled_fields(display_config)
 
     def _apply_field_optout(rule: "AlertRule", metric_str: str) -> "AlertRule | None":
         """Unterdrückt explizit ab-gewählte Direction-Felder in `rule`. Gibt None
         zurück, wenn dadurch KEIN scharfes Feld übrig bleibt (Regel komplett fallen
         lassen). No-op, wenn nichts ab-gewählt ist (Trip-Pfad)."""
-        if not explicitly_disabled_fields:
+        if not explicitly_disabled:
             return rule
         rfields = _fields_for(metric_str)
-        colliding = rfields & explicitly_disabled_fields
+        colliding = rfields & explicitly_disabled
         if rfields and colliding == rfields:
             return None  # jedes Feld ab-gewählt → Regel entfällt
         if colliding:
@@ -355,7 +366,7 @@ def expand_per_metric_levels(
             metric_fields = _fields_for(metric_str)
             # Bug #1191 F002: explizit ab-gewählte Direction-Felder wirken wie
             # belegte Felder — sie werden ebenfalls unterdrückt.
-            blocked = claimed_fields | explicitly_disabled_fields
+            blocked = claimed_fields | explicitly_disabled
             colliding = metric_fields & blocked
             remaining = metric_fields - blocked
             if metric_fields and not remaining:

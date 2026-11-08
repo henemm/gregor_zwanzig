@@ -402,6 +402,24 @@ Bricht ein Trip-Radar-Alarm per Mengen-Durchbruch (#2065) gegen einen bereits zu
 
 Spec: `docs/specs/modules/fix_2848_radar_verschaerfung_kennzeichnen.md`.
 
+### 3.4h Farbpaar am Abweichungs-Alarm-Token (Issue #2793 S2b)
+
+Seit S2b folgt der Abweichungs-Alarm der Profil-Ampel (ADR-0106 P4). Am bestehenden Ereignis-Token hängt das Farbpaar „von > nach" als `:{X}>{Y}` mit den Buchstaben `G` (grün), `Y` (gelb), `O` (orange), `R` (rot). Gilt für SMS, Premium-SMS und Telegram-Kurzform (ein Text aus `alert/render.py::render_sms`).
+
+| Art | Beispiel |
+|---|---|
+| Verschärfung (Farbe steigt auf/über „Alarm ab") | `G40->55:Y>O` |
+| Sprung (gleiche Farbe, Änderung ≥ Sprung-Schwelle) | `G65->95:R>R` |
+| Entwarnung (Farbe fällt unter „Alarm ab") | `G55->35:O>Y` |
+
+- **Position:** direkt am Token, vor dem Hagel-Zusatz und vor der Zeitspanne `@HH-HH` (§3.4f), z. B. `G40->55:Y>O@14-16`. Das Suffix gehört zum Token und fällt nie vor dem Token weg.
+- **Ortsvergleich-Pfad** (`{sign}{code}{bis}`): dasselbe Suffix, z. B. `1:+G55:Y>O`.
+- **Gewitter** behält sein Stufen-Token `TH:M->H` ohne Farbpaar.
+- **Nullgradgrenze und Beginn-Verschiebung** (D4, bis S7 auf der Δ-Logik) tragen kein Farbpaar; ihr Token ist byte-gleich zu vorher.
+- **Nie übersetzt** (ADR-0104), ASCII/GSM-7. Länge ≤ Limit (Alarm 140, Premium-SMS 153, absolut 160).
+
+Spec: `docs/specs/modules/feat_2793_s2_alarm_stufenwechsel.md` §4.
+
 ### 3.4b Confidence-Symbol `C` — entfallen (v2.34, Issue #2233)
 
 Das in v2.1 (Issue #121) spezifizierte Token `C+`/`C~`/`C?` wurde nie im Builder erzeugt und ist per PO-Entscheid 2026-09-08 aus dem Vertrag gestrichen: `confidence_pct` ist keine wählbare Metrik (#710), und das SMS-Zeichenbudget ist knapp. Die Vorhersage-Verlässlichkeit erscheint nur im E-Mail-Textblock.

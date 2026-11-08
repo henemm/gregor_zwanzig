@@ -66,6 +66,15 @@ ARTEN = ("abweichung", "radar", "amtlich")
 #: (Massstab wie ``test_compare_alert_channel_threshold.py``).
 ANKER_MM = 2.0
 LIVE_MM = {"LOW": 14.0, "HIGH": 30.0}  # nur diese beiden Stufen sind beim Abweichungsalarm kalibriert
+#: #2793 S2b (D3): die Dringlichkeit kommt aus der Ampelfarbe. Dieselbe eigene
+#: Niederschlags-Ampel wie in ``test_compare_alert_channel_threshold.py``
+#: bildet die Stufen ab: 2 mm gruen, 14 mm gelb (LOW), 30 mm rot (HIGH).
+AMPEL_GERING_HOCH = {
+    "template": "allgemein",
+    "metrics": {"precipitation": {
+        "upper": {"yellow": 10, "orange": 20, "red": 29}, "alarm_ab": "yellow",
+    }},
+}
 #: amtliche Warnstufe -> Dringlichkeit (2 = LOW, 3 = MODERATE, 4 = HIGH)
 AMTLICH_STUFE = {"LOW": 2, "MODERATE": 3, "HIGH": 4}
 
@@ -184,6 +193,11 @@ def _nutzer(vorlage: dict, tier: str = "premium", *, anker: bool = True, **aende
             p.pop(k, None)
         else:
             p[k] = v
+    if isinstance(p.get("display_config"), dict):
+        p["display_config"] = {**p["display_config"]}
+        p["display_config"].setdefault("ampel", AMPEL_GERING_HOCH)
+    elif "display_config" not in p:
+        p["display_config"] = {"ampel": AMPEL_GERING_HOCH}
     pfad = preset_ablegen(uid, p)
     if anker:
         snaps = CompareWeatherSnapshotService(user_id=uid)

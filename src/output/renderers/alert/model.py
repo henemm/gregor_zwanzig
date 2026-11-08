@@ -102,6 +102,12 @@ class AlertEvent:
     hours: tuple[AlertHourRow, ...] = ()
     hours_range: tuple[str, str] | None = None
     hours_capped: bool = False
+    # Issue #2793 S2b: Ampel-Ereignis -- Farbpaar (green|yellow|orange|red) und
+    # Art (verschaerfung|sprung|entwarnung), Protokoll-Token. `None` = Δ-Ereignis
+    # (D4-Metriken) -> Renderer byte-identisch zum Bestand.
+    stufe_von: str | None = None
+    stufe_bis: str | None = None
+    art: str | None = None
 
 
 @dataclass(frozen=True)
@@ -331,6 +337,10 @@ def delta_pct(e: AlertEvent) -> int | None:
 
 
 def over_thr(e: AlertEvent) -> bool:
+    # Issue #2793 S2b: ein Ampel-Ereignis alarmiert (Verschaerfung/Sprung) oder
+    # entwarnt -- die Δ-Schwelle ist dort nur Sprung-Schwelle (ADR-0013 Nachtrag).
+    if e.art is not None:
+        return e.art != "entwarnung"
     # Issue #958: `threshold` ist IMMER die Δ-Auslöseschwelle (nie ein
     # Absolutwert-Referenzwert). Ein Event liegt „über Schwelle", wenn der
     # BETRAG der Änderung die Schwelle erreicht — unabhängig von `cmp` und
@@ -353,6 +363,11 @@ def severity(e: AlertEvent) -> float:
     durch die Werte-Magnitude normiert, damit ein 0-Schwellen-Ereignis ein echtes
     Über-Schwelle-Ereignis nicht künstlich überholt.
     """
+    # Issue #2793 S2b: Ampel-Ereignisse ordnen nach Farbrang (D3).
+    if e.art is not None:
+        rang = {"green": 0, "yellow": 1, "orange": 2, "red": 3}
+        farbe = e.stufe_von if e.art == "entwarnung" else e.stufe_bis
+        return float(rang.get(farbe or "", 0))
     if e.threshold == 0:
         scale = max(abs(e.value_to), abs(e.value_from), 1.0)
         dist = (e.threshold - e.value_to) if e.cmp == "unter" else (e.value_to - e.threshold)

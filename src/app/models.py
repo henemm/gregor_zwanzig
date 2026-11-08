@@ -612,6 +612,12 @@ class WeatherChange:
     # Umrechnung in ORTSZEIT + Formatierung erst in der Projektionsschicht
     # (`output/renderers/alert/project.py`), wo die Koordinaten bekannt sind.
     occurred_at: datetime | None = None
+    # Issue #2793 S2b: Ampel-Ereignis (Protokoll-Token, nie uebersetzt).
+    # `stufe_von`/`stufe_bis` in green|yellow|orange|red, `art` in
+    # verschaerfung|sprung|entwarnung; `None` = Δ-Ereignis (D4-Metriken).
+    stufe_von: str | None = None
+    stufe_bis: str | None = None
+    art: str | None = None
 
 
 # --- Trip Weather Config DTOs (Feature 2.6) ---

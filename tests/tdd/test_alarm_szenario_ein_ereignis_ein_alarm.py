@@ -22,7 +22,8 @@ Eskalations-Ausnahme. Gemessen: Regen-Δ -> Radar geht ungebremst raus
 
 MESSGRUNDLAGE (Sonde 2026-08-23 gegen die ECHTE Engine, nicht angenommen):
 
-* `precip_sum_mm` 2->18 mm = MODERATE, 2->45 mm = HIGH; `gust_max_kmh`
+* `precip_sum_mm` 2->8 mm = MODERATE (gelb -> orange), 2->45 mm = HIGH (gelb -> rot;
+  seit #2793 S2b Dringlichkeit aus der Ampelfarbe, vorher 2->18 = MODERATE); `gust_max_kmh`
   10->90 km/h = HIGH; `thunder_level` auf Stufe „sensibel" NONE->MED =
   MODERATE (auf „standard" loest MED gar nicht aus).
 * `alert_urgency.urgency_from_official_level`: Stufe 3 = MODERATE, Stufe 4 =
@@ -48,6 +49,8 @@ vier Kanaele ueber die Prüfstrecke (`tests/helpers/alarm_pruefstrecke.py`,
 kein Netz.
 """
 from __future__ import annotations
+
+from app.ampel import resolve_ampel
 
 import uuid
 from datetime import date as date_type, datetime, timedelta, timezone
@@ -262,6 +265,7 @@ def _dringlichkeit(uid: str, trip: Trip, cached: list, fresh: list, at: datetime
             if trip.display_config else None
         ),
         display_config=trip.display_config, zone=anchor_tz(trip, at),
+        ampel=resolve_ampel(trip),  # #2793 S2b: wie TripAlertService
     )
     with freeze_time(at):
         ergebnis = DeviationAlertEngine().evaluate(
@@ -311,7 +315,7 @@ def test_ac1_amtlicher_alarm_entdoppelt_den_nachfolgenden_abweichungsalarm():
         eintrag = _amtlicher_vorlauf(strecke, uid, trip, level=3)
 
         at2 = _AT + timedelta(minutes=20)
-        cached, fresh = _regen(2.0, 18.0)
+        cached, fresh = _regen(2.0, 8.0)
         stufe = _dringlichkeit(uid, trip, cached, fresh, at2)
         assert not alert_urgency.exceeds(stufe, eintrag["severity"]), (
             f"Testkonstruktion: der Δ-Lauf ({stufe!r}) darf den Registereintrag "
@@ -375,7 +379,7 @@ def test_ac3_radar_nach_registriertem_abweichungsalarm_wird_keine_zweite_vollnac
     try:
         strecke = _strecke(uid)
         trip = _trip_delta_und_radar(uid, "trip-s4c-ac3")
-        cached, fresh = _regen(2.0, 18.0)
+        cached, fresh = _regen(2.0, 8.0)
         delta = strecke.lauf(
             at=_AT, zweig="deviation", trip=trip,
             cached_weather=cached, fresh_weather=fresh,
@@ -462,7 +466,7 @@ def test_ac4_echte_verschaerfung_bricht_durch_die_ereignis_identitaet():
         ktrip = _trip_delta("trip-s4c-ac4")
         kstrecke = _strecke(ctrl)
         keintrag = _amtlicher_vorlauf(kstrecke, ctrl, ktrip, level=3)
-        kcached, kfresh = _regen(2.0, 18.0)
+        kcached, kfresh = _regen(2.0, 8.0)
         kstufe = _dringlichkeit(ctrl, ktrip, kcached, kfresh, at2)
         assert not alert_urgency.exceeds(kstufe, keintrag["severity"]), (
             f"Testkonstruktion der Positivkontrolle: {kstufe!r} darf "
@@ -588,7 +592,7 @@ def test_ac9_ohne_bildbares_zeitfenster_entsteht_kein_match():
         ktrip = _trip_delta("trip-s4c-ac9")
         kstrecke = _strecke(ctrl)
         _amtlicher_vorlauf(kstrecke, ctrl, ktrip, level=3)
-        kcached, kfresh = _regen(2.0, 18.0)
+        kcached, kfresh = _regen(2.0, 8.0)
         kontrolle = kstrecke.lauf(
             at=at2, zweig="deviation", trip=ktrip,
             cached_weather=kcached, fresh_weather=kfresh,
@@ -623,7 +627,8 @@ def test_ac10_wesentlich_weiter_reichendes_segmentfenster_kommt_durch():
         # Registereintrag, der nur bis _AT + 10 min abdeckt.
         weit_start, weit_ende = _AT - timedelta(hours=2), _AT + timedelta(hours=10)
         cached = [_wd(1, start=weit_start, end=weit_ende, precip_sum_mm=2.0)]
-        fresh = [_wd(1, start=weit_start, end=weit_ende, precip_sum_mm=18.0)]
+        # #2793 S2b: MODERATE = gelb -> orange (vorher 2 -> 18 mm).
+        fresh = [_wd(1, start=weit_start, end=weit_ende, precip_sum_mm=8.0)]
 
         trip = _trip_delta("trip-s4c-ac10")
         strecke = _strecke(uid)
@@ -702,7 +707,7 @@ def test_ac13_radar_nachtrag_nennt_die_wetterabweichung_statt_einer_amtlichen_wa
     try:
         strecke = _strecke(uid)
         trip = _trip_delta_und_radar(uid, "trip-s4c-ac13")
-        cached, fresh = _regen(2.0, 18.0)
+        cached, fresh = _regen(2.0, 8.0)
         delta = strecke.lauf(
             at=_AT, zweig="deviation", trip=trip,
             cached_weather=cached, fresh_weather=fresh,
@@ -847,7 +852,7 @@ def test_ac18_registereintrag_von_nutzer_a_wirkt_nicht_auf_nutzer_b():
     try:
         trip_a = _trip_delta("trip-s4c-ac18")
         strecke_a = _strecke(a)
-        cached, fresh = _regen(2.0, 18.0)
+        cached, fresh = _regen(2.0, 8.0)
         # VOR dem Lauf gemessen: danach steht der gemeldete Wert im
         # deltabasierten Melde-Gedaechtnis und dieselbe Lage ergaebe eine
         # andere Stufe.
@@ -879,7 +884,10 @@ def test_ac18_registereintrag_von_nutzer_a_wirkt_nicht_auf_nutzer_b():
         # Positivkontrolle: A's eigener Folgelauf derselben Stufe (weit genug
         # vom zuletzt gemeldeten Wert entfernt, damit nicht schon das
         # deltabasierte Melde-Gedaechtnis greift) bleibt still.
-        a_cached, a_fresh = _regen(30.0, 47.0)
+        # #2793 S2b: nach gemeldetem Orange (8 mm) ist eine Meldung derselben
+        # Stufe die Entwarnung auf gelb (verlassene Farbe orange = MODERATE);
+        # vorher 30 -> 47 mm (Δ 17 = MODERATE).
+        a_cached, a_fresh = _regen(2.0, 3.0)
         a_stufe = _dringlichkeit(a, trip_a, a_cached, a_fresh, at2)
         assert a_stufe == erst_stufe, (
             f"Testkonstruktion: A's Folgelage muss dieselbe Stufe tragen wie "

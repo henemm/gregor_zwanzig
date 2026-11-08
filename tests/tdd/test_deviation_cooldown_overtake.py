@@ -57,6 +57,8 @@ ECHTEN Modulfunktion (AC-13) folgt dem Muster aus
 """
 from __future__ import annotations
 
+from app.ampel import resolve_ampel
+
 import inspect
 import json
 import uuid
@@ -94,10 +96,16 @@ from tests.tdd.test_issue_1070_daily_alert_limit import _deviation_trip, _weathe
 COOLDOWN_MIN = 120
 
 # Gemessene Leiter (s. Moduldoku): (cached_mm, fresh_mm) -> Rang.
-LAGE_LOW = (2.0, 15.0)          # Delta 13 -> LOW
-LAGE_MODERATE = (2.0, 18.0)     # Delta 16 -> MODERATE
-LAGE_MODERATE_FERN = (30.0, 47.0)  # Delta 17 -> MODERATE, 29 mm weg von 18,0
-LAGE_HIGH = (2.0, 45.0)         # Delta 43 -> HIGH
+# #2793 S2b (D3): der Rang kommt aus der Ampelfarbe (allgemein: Niederschlag
+# gelb ab 1, orange ab 5, rot ab 10; Alarm ab Orange) statt aus Δ/Schwelle.
+LAGE_LOW = (2.0, 15.0)          # unbenutzt; mit Alarm ab Orange gibt es kein LOW
+LAGE_MODERATE = (2.0, 8.0)      # gelb -> orange -> MODERATE (vorher 2 -> 18)
+# Gleichrangige ZWEITE Meldung desselben Felds: nach gemeldetem Orange (8 mm)
+# faellt der Wert auf gelb -> Entwarnung mit der verlassenen Farbe orange =
+# MODERATE (vorher 30 -> 47, Δ 17). Ein zweiter Orange-Wert waere seit S2b
+# dieselbe gemeldete Farbe und damit kein neues Ereignis (Spec §2 Dedup).
+LAGE_MODERATE_FERN = (2.0, 3.0)
+LAGE_HIGH = (2.0, 45.0)         # gelb -> rot -> HIGH
 
 
 def _uid(tag: str) -> str:
@@ -144,6 +152,7 @@ def _dringlichkeit_des_laufs(uid: str, trip, paar: tuple[float, float], at: date
         ),
         display_config=trip.display_config,
         zone=anchor_tz(trip, at),
+        ampel=resolve_ampel(trip),  # #2793 S2b: wie TripAlertService
     )
     with freeze_time(at):
         ergebnis = DeviationAlertEngine().evaluate(
@@ -497,8 +506,13 @@ def test_ac3_abgeschwaechte_lage_ueberholt_die_sperrzeit_nicht():
             f"AC-3: eine abgeschwaechte Lage darf die Sperrzeit nicht "
             f"ueberholen (war {lauf2.triggered_count})."
         )
-        assert alert_log.REASON_COOLDOWN in _gruende(uid, trip, at2), (
-            f"AC-3: der Protokollgrund muss {alert_log.REASON_COOLDOWN!r} sein. "
+        # #2793 S2b (Spec §2, D2) -- GEAENDERT: nach gemeldetem Rot ist der
+        # Rueckgang auf Orange bei „Alarm ab Orange" gar kein Ereignis mehr
+        # (Rueckgang im Alarmbereich bleibt stumm). Die Stille kommt damit
+        # VOR der Sperrzeit zustande, ein Protokollgrund `cooldown` entsteht
+        # nicht mehr (vorher: Ereignis MODERATE, von der Sperrzeit gestoppt).
+        assert alert_log.REASON_COOLDOWN not in _gruende(uid, trip, at2), (
+            f"AC-3 (#2793 S2b, D2): kein Ereignis, also kein Sperrzeit-Grund. "
             f"Gefunden: {_gruende(uid, trip, at2)!r}"
         )
         assert _sperrzeit(uid, trip) == gebucht1, (
@@ -1347,6 +1361,7 @@ def test_ac14_die_geteilte_engine_bleibt_in_signatur_und_verhalten_unveraendert(
             metric_alert_levels=trip.display_config.metric_alert_levels,
             display_config=trip.display_config,
             zone=anchor_tz(trip, _AT),
+            ampel=resolve_ampel(trip),  # #2793 S2b: wie TripAlertService
         )
 
         def _auswerten() -> tuple:
