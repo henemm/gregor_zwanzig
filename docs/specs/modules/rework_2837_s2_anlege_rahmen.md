@@ -228,3 +228,10 @@ Per testid-Treffer zusätzlich zu prüfen (Umhängung im Commit benannt, nichts 
 ## Changelog
 
 - 2026-11-08: Initial spec created (Issue #2837, Epic #2345, Scheibe S2 Anlege-Rahmen)
+- 2026-11-08 (TDD RED, Commit bf73e4676): Festlegungen aus den RED-Tests, verbindlich für /50:
+  - Zusätzliche Props des Rahmens: `name` (füllt h1 und Eyebrow-Kontext) und `abschlussTestid` (`trip-new-save-btn` bzw. `compare-editor-activate`, nicht aus dem Präfix ableitbar). `testidPrefix` ist `'tn'` (Trip) bzw. `'cm'` (Vergleich); der Fuß heißt `${testidPrefix}-desktop-footer`.
+  - AC-11 gilt auch auf dem Handy: der mobile Weiter-Knopf (heute `MBtn primary`, schwarz) wird orange (`accent`). Entscheidung 10 betrifft nur Lage und Abstand.
+  - AC-17 Trip: `/trips/new?from=` füllt bewusst nichts vor (feat_2277_s2c); AR-17 erwartet beim Trip ein leeres Namensfeld, beim Vergleich „… (Kopie)“.
+  - Trip-Breadcrumb auf dem Computer ist ein `<a href="/trips">` mit `onclick={onCancel}` (E2E `issue-661` Desktop-Zweig sucht `a[href="/trips"]` im `tn-desktop-breadcrumb`).
+  - Der Rahmen-Unit-Test prüft den mobilen Kopf nicht; den decken Trip-Editor-Test und E2E AR-3/AR-4 ab.
+  - E2E lokal nicht im Browser gelaufen (Vite-Proxy zeigt auf Staging); `playwright --list` meldet 36 Fälle für `anlege-rahmen-paritaet.spec.ts`.
