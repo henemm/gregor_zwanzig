@@ -5,8 +5,12 @@ SPEC: docs/specs/modules/fix_2009_nowcast_vorlauf.md (AC-1, AC-2, AC-3)
 Angepasst #2261 Teil A, A-1 (SPEC: docs/specs/modules/feat_2261_a1_radar_vorlauf.md):
 die Schwelle ist jetzt die Reichweite der Quelle (`NOWCAST_HORIZON_MIN`,
 180). Der Drift-Schutz (AC-1, Modulreferenz) bleibt gueltig; die
-Raster-Erwartungen (AC-2/AC-3) zeigen auf das neue Verhalten: 68/83/173
-loesen aus, ein Beginn jenseits der Reichweite (188) nicht.
+Raster-Erwartungen (AC-2/AC-3) zeigen auf das neue Verhalten: 67/82/172
+loesen aus, ein Beginn jenseits der Reichweite (187) nicht.
+
+Angepasst #2009 Nachmessung (SPEC: docs/specs/modules/
+fix_2009_laufender_regen_vorlauf.md, AC-6): Rasterwerte von 8 mod 15 (alter
+Takt `7,22,37,52`) auf 2/7/12 mod 15 (Takt `3-58/5`).
 
 Heutiger Stand: `trip_alert.py:1270` ruft `radar_alert_due(result,
 threshold_min=20)` mit einem hartkodierten Literal auf,
@@ -113,16 +117,16 @@ def test_ac1_shared_threshold_drives_both_paths(monkeypatch):
     einen Fremdwert (30) gesetzt: nur wenn BEIDE Pfade (Trip UND
     Ortsvergleich) diesen Wert tatsaechlich referenzieren — statt eine
     eigene, beim Import gebundene Kopie zu pflegen — aendert sich ihr
-    Ausloeseverhalten fuer denselben Onset (38 Min, ein erreichbarer
-    Rasterwert). Eine wieder eingeschlichene lokale Kopie faellt durch:
+    Ausloeseverhalten fuer denselben Onset (37 Min, ein im Takt `3-58/5`
+    erreichbarer Rasterwert, #2009). Eine wieder eingeschlichene lokale Kopie faellt durch:
     sie bliebe beim Monkeypatch der geteilten Konstante unberuehrt und
     wuerde weiterhin bei der Default-Schwelle (#2261: 180) pruefen.
     """
     from services import radar_service
 
-    onset = 38  # < Default (#2261: 180) und >= 30 (Fremdwert) -- trennscharf fuer beide Schwellen
+    onset = 37  # < Default (#2261: 180) und >= 30 (Fremdwert) -- trennscharf fuer beide Schwellen
 
-    # ---- Baseline: unveraenderte Default-Schwelle -> Onset 38 loest in
+    # ---- Baseline: unveraenderte Default-Schwelle -> Onset 37 loest in
     #      BEIDEN Pfaden aus.
     uid_trip_base, uid_cmp_base = fresh_uid("ac1-trip-base"), fresh_uid("ac1-cmp-base")
     clean_uid(uid_trip_base)
@@ -143,7 +147,7 @@ def test_ac1_shared_threshold_drives_both_paths(monkeypatch):
         clean_uid(uid_cmp_base)
 
     # ---- Fremdwert 30 (Laufzeit-Monkeypatch der geteilten Konstante):
-    #      BEIDE Pfade duerfen Onset 38 danach NICHT mehr ausloesen.
+    #      BEIDE Pfade duerfen Onset 37 danach NICHT mehr ausloesen.
     uid_trip_patched = fresh_uid("ac1-trip-patched")
     uid_cmp_patched = fresh_uid("ac1-cmp-patched")
     clean_uid(uid_trip_patched)
@@ -170,18 +174,18 @@ def test_ac1_shared_threshold_drives_both_paths(monkeypatch):
 
 # ═══════════════════════════ AC-2 / AC-3 ══════════════════════════════════
 
-# Am Cron-Takt `7,22,37,52` + 15-Min-Datenraster erreichbare Onset-Werte
-# (Historie: seit #2261 A-2 S2 laufen die Radar-Jobs im 5-Min-Takt `3-58/5`;
-# die Werte unten sind reine Variations-Stuetzstellen, keine Cron-Abbildung.)
-# (docs/context/fix-2009-nowcast-vorlauf.md, Root-Cause-Tabelle). #2261 A-1:
-# Schwelle = Reichweite der Quelle (180) -> 8/23/38/53/68/83/173 loesen aus
-# (der Nutzer ist auf der Ganztags-Etappe von `make_trip()` dann noch am
-# ersten Messpunkt). 188 liegt jenseits der Reichweite: der einzige Frame
-# faellt aus dem Horizont, kein Beginn, kein Alarm — haelt die Variation
-# trennscharf (sonst bestuende das Raster auch mit einer Konstanten).
+# Am Radar-Takt `3-58/5` (seit #2261 A-2 S2) + 15-Min-Datenraster erreichbare
+# Onset-Werte: 2, 7 oder 12 (mod 15) -- #2009 Nachmessung, Spec
+# fix_2009_laufender_regen_vorlauf.md AC-6. Das fruehere Raster 8 mod 15 bildete
+# den abgeloesten Takt `7,22,37,52` ab und naehrte den Verdacht "alles ist 8".
+# #2261 A-1: Schwelle = Reichweite der Quelle (180) -> 2..172 loesen aus (der
+# Nutzer ist auf der Ganztags-Etappe von `make_trip()` dann noch am ersten
+# Messpunkt). 187 liegt jenseits der Reichweite: der einzige Frame faellt aus
+# dem Horizont, kein Beginn, kein Alarm — haelt die Variation trennscharf
+# (sonst bestuende das Raster auch mit einer Konstanten).
 _GRID = [
-    (8, True), (23, True), (38, True), (53, True),
-    (68, True), (83, True), (173, True), (188, False),
+    (2, True), (7, True), (12, True), (22, True), (37, True), (52, True),
+    (67, True), (82, True), (172, True), (187, False),
 ]
 
 
@@ -190,8 +194,8 @@ _GRID = [
     ids=[f"{m}min-{'alarm' if e else 'still'}" for m, e in _GRID],
 )
 def test_ac2_trip_variance_over_grid_values(onset_minutes, expect_alert):
-    """AC-2: Trip-Pfad ueber die erreichbaren Rasterwerte -- 8..173 loesen
-    (#2261: Schwelle 180) genau EINEN Alarm aus, 188 (jenseits der
+    """AC-2: Trip-Pfad ueber die erreichbaren Rasterwerte -- 2..172 loesen
+    (#2261: Schwelle 180) genau EINEN Alarm aus, 187 (jenseits der
     Reichweite) keinen. Schliesst
     die Blindstelle: heute prueft kein Test, dass `onset_minutes`
     ueberhaupt variieren kann (`CountingFrameSource`-Default ist 8)."""
