@@ -4,7 +4,7 @@ type: module
 created: 2026-11-08
 updated: 2026-11-08
 status: approved
-version: "1.0"
+version: "1.1"
 tags: [alarm, ampel, abweichung, migration, dringlichkeit, sms, telegram, mail, i18n, epic-2791]
 ---
 
@@ -116,11 +116,11 @@ Rangfolge der Farben: grün 0 < gelb 1 < orange 2 < rot 3; `alarm_ab` als Rang: 
 
 - **Erfasst:** `data/users/<uid>/briefings/*.json` (Trips und Orts-Vergleiche) mit `display_config.metric_alert_levels`. Altschlüssel werden zuerst wie im Loader normalisiert (`_ALT_ALERT_LEVEL_KEYS`, `loader.py:780-819`).
 - **Abbildung je Altschlüssel → Katalog-ID:** `wind_gust`→`gust`; `precipitation_sum`, `precipitation_change`→`precipitation`; `temperature_min`, `temperature_max`, `temperature_change`→`temperature`; `wind_change`→`wind`; `thunder_level`→`thunder`; `visibility`→`visibility`; `fresh_snow`→`fresh_snow`.
-- **Regel P3, relativ zur Vorgabe `V` der aufgelösten Vorlage** (`resolve_ampel`, Vorlagen-Rückfall wie S1): `off` → `never` · `standard` → `V` · `sensibel` → eine Stufe empfindlicher als `V` (orange → yellow, red → orange, never → red), höchstens `yellow`, bei Gewitter höchstens `orange` · `entspannt` → `red`.
+- **Regel P3, relativ zur Vorgabe `V` der Vorlage selbst** (Vorgabe `alarm_ab` der Vorlage in `ampel_templates`; die Vorlagen-ID ergibt sich aus der Rückfallkette von S1: `ampel.template` → `preset_name` → Vergleichs-`profil` → „allgemein“). Ein im Abo bereits stehendes `alarm_ab` ist **nicht** `V` (es stammt nur aus Vorlagen-Kopien); es wird ersetzt und im Bericht genannt: `off` → `never` · `standard` → `V` · `sensibel` → eine Stufe empfindlicher als `V` (orange → yellow, red → orange, never → red), höchstens `yellow`, bei Gewitter höchstens `orange` · `entspannt` → `red`.
 - **Mehrere Altschlüssel auf dieselbe Katalog-ID** (z. B. `temperature_min: sensibel`, `temperature_max: entspannt`): Es gilt der empfindlichste Wert; der Bericht nennt den Konflikt.
 - **Geschrieben** wird nur `display_config.ampel.metrics.<id>.alarm_ab`, per Read-Modify-Write mit Merge: Fehlt `ampel` oder die Metrik-Zeile, wird sie aus der Vorlage angelegt und nur `alarm_ab` abweichend gesetzt. Grenzen, `enabled`, `template`, alle übrigen Felder und **`metric_alert_levels` selbst bleiben unverändert** (wird von D4-Metriken weiter gelesen).
 - **Nicht abgebildet, nur berichtet:** `cape` (P1), D4-Schlüssel (`freezing_level`, `snow_line`, `thunder_onset`, `precipitation_heavy_onset`: bleiben wirksam), Vorboten, unbekannte Schlüssel oder Werte (z. B. `robust`).
-- **Wiederholbar:** Merker `display_config.alarm_ab_migration: "2793"` (außerhalb von `ampel`, damit die Ampel-Prüfung unberührt bleibt); Dateien mit Merker werden übersprungen. Zweiter Lauf: „Nichts zu tun“.
+- **Wiederholbar:** Merker `display_config.alarm_ab_migration: "2793"` (außerhalb von `ampel`, damit die Ampel-Prüfung unberührt bleibt); Dateien mit Merker werden übersprungen. Zweiter Lauf: „Nichts zu tun“. Dateien mit Altstufen, deren vorhandene Ampel ungültig ist, werden nicht migriert, sondern gezählt: Schlusszeile „N Dateien mit ungültiger Ampel nicht migriert: manuell prüfen“, kein „Nichts zu tun“, Exit-Code 2 (Exit 1 bleibt „offene Dateien, erneut laufen lassen“). Ungültige Ampel ohne Altstufen bleibt neutral.
 - **Abos ohne `metric_alert_levels`:** unverändert; sie bekommen `alarm_ab` aus der Vorlage (entspricht P3 „standard → Vorgabe“ und dem heutigen impliziten „standard“).
 
 ### 6. Frontend bis S3a (S2b)
@@ -216,3 +216,4 @@ Die alte Tabelle „Alarm-Empfindlichkeit“ (`AlertMetricLevelTable`/`AlertMetr
 
 - 2026-11-08: v1.0 Entwurf mit PO-Entscheidungen D1–D4 (Rückfrage in der Sitzung)
 - 2026-11-08: v1.0 vom PO freigegeben
+- 2026-11-08: v1.1 Präzisierung nach Adversary S2a: V = reine Vorlage (F1), Exit 2 bei ungültiger Ampel mit Altstufen (F2)
