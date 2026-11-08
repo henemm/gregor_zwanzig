@@ -2,8 +2,8 @@
 entity_id: fix_2815_delete_fremd_404
 type: module
 created: 2026-11-07
-updated: 2026-11-07
-status: draft
+updated: 2026-11-08
+status: implemented
 version: "1.0"
 tags: [trips, locations, groups, delete, 404, mandantentrennung, bug, epic-2138, go-live-pflicht]
 ---
@@ -12,7 +12,7 @@ tags: [trips, locations, groups, delete, 404, mandantentrennung, bug, epic-2138,
 
 ## Approval
 
-- [ ] Approved
+- [x] Approved
 
 ## Purpose
 
