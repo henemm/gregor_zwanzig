@@ -473,8 +473,10 @@ def test_ac4_option_ueber_projekt_conftest_geladen():
 def test_ac6_prod_ansprechende_datei_ist_im_kern_deselektiert(rel):
     env = dict(os.environ)
     env.pop("PYTEST_ADDOPTS", None)
+    # Ohne eigenes "-q": addopts bringt schon "-q" mit, "-qq" unterdrueckt die
+    # Zeile "no tests collected (N deselected)" vollstaendig.
     proc = subprocess.run(
-        [sys.executable, "-m", "pytest", "--collect-only", "-q", "-p", "no:cacheprovider", rel],
+        [sys.executable, "-m", "pytest", "--collect-only", "-p", "no:cacheprovider", rel],
         cwd=str(ROOT), env=env, capture_output=True, text=True, timeout=180,
     )
     text = _out(proc)

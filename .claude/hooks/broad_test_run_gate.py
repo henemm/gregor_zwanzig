@@ -32,10 +32,21 @@ Erlaubt ist ein pytest-Aufruf, wenn mindestens eines zutrifft:
    (Node-IDs mit ``::`` sind eingeschlossen). Der Normalfall.
 2. **Nichts wird ausgefuehrt** — ``--collect-only`` / ``--co`` / ``--version`` /
    ``--help``.
-3. **Netz ist gesperrt** — ``--disable-socket`` (pytest-socket). Dann ist auch
-   ein voller Lauf ungefaehrlich; das ist zugleich die Richtung, in die das
-   Projekt ohnehin soll (#1337 will genau so einen zentralen Ausgangs-Waechter
-   selbst bauen, obwohl es ihn als fertiges Plugin gibt).
+3. **Sicherer Offline-Volllauf** (Issue #1755) — genau diese Form::
+
+       uv run pytest --disable-socket --allow-unix-socket \\
+           --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports --ignore=tests/red/
+
+   ``--disable-socket`` allein ist NICHT mehr frei: es sperrt auch lokale
+   Test-Doubles (Lauf unbenutzbar), und die naheliegende Reparatur
+   ``--allow-hosts=127.0.0.1`` liesse jeden Test Prod/Staging auf Loopback
+   erreichen. ``--loopback-own-ports`` (``tests/_loopback_port_guard.py``)
+   erlaubt Loopback nur zu selbst gebundenen Ports. Freigegeben wird per
+   Positivliste (``_offline_form_is_safe``): ``--disable-socket``,
+   ``--loopback-own-ports``, genau ein ``--allow-hosts=`` nur mit Loopback,
+   optional ``--allow-unix-socket`` und ``--ignore=``/Ausgabe-Flags.
+   Alles andere (``-p no:…``, ``-o``, ``-c``, ``--override-ini``,
+   ``--force-enable-socket``, CIDR, ``PYTEST_ADDOPTS`` im Kommando) blockt.
 4. **Menschliche Freigabe** — gueltiges Einmal-Token aus ``override``. Das kann
    der Agent NICHT selbst erzeugen: ``user_override_token.json`` steht auf der
    Schutzliste des ``bash_gate``, und angelegt wird es nur, wenn der User das
@@ -45,7 +56,8 @@ Verzeichnisse (``pytest tests/``, ``pytest tests/unit/``) gelten NICHT als
 konkrete Auswahl — genau so faengt man sich einen ungemarkerten Live-Test ein.
 
 Obfuskations-Fallback wie in ``prod_send_gate.py``: bei ``sh -c``/``eval`` oder
-kaputten Quotes wird auf einen Roh-Scan des kompletten Kommandos zurueckgefallen.
+kaputten Quotes wird auf einen Roh-Scan des kompletten Kommandos zurueckgefallen;
+die Offline-Form wird dort mit derselben Positivliste geprueft.
 
 Exit-Codes: 0 = erlaubt, 2 = blockiert.
 """
@@ -63,12 +75,31 @@ import hook_utils  # noqa: E402
 
 _OVERRIDE_TTL = timedelta(hours=1)
 
-# Tokens, die "es wird nichts ausgefuehrt" oder "Netz ist zu" bedeuten.
+# Tokens, die "es wird nichts ausgefuehrt" bedeuten. ``--disable-socket``
+# allein ist seit #1755 keine Freigabe mehr (siehe _offline_form_is_safe).
 _SAFE_FLAGS = {
     "--collect-only", "--co", "--version", "--help", "-h",
-    "--disable-socket",
     "--fixtures", "--markers",
 }
+
+# Sicherer Offline-Volllauf (#1755).
+OFFLINE_CALL = (
+    "uv run pytest --disable-socket --allow-unix-socket "
+    "--allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports --ignore=tests/red/"
+)
+_LOOPBACK_HOSTS = {"127.0.0.1", "::1", "localhost"}
+# Positivliste: exakte Flags ohne Wert ...
+_OFFLINE_PLAIN_FLAGS = {
+    "--disable-socket", "--loopback-own-ports", "--allow-unix-socket",
+    "-q", "-qq", "-v", "-vv", "-x", "-rA", "-ra", "--exitfirst",
+}
+# ... und Flags mit '='-Wert, deren Wert die Sperre nicht beruehrt.
+_OFFLINE_VALUE_FLAGS = {"--ignore", "--tb", "--maxfail", "--durations"}
+# Jedes Argument der Offline-Form (Flag, Wert, Positionsargument) nur aus
+# diesen Zeichen -- Shell-Metazeichen (; & | ` $ ( ) < > Leerraum ...) ohne
+# Leerraum davor ergaeben sonst EIN shlex-Token, nach dem die Shell ein
+# nacktes pytest startet (Fix-Loop 1, F001).
+_OFFLINE_ARG_RE = re.compile(r"[\w./:=,@+-]+")
 
 # Eine konkrete Testdatei: endet auf .py, optional mit ::node-id.
 _TEST_FILE_RE = re.compile(r"[^\s]+\.py(?:::[^\s]*)?$")
@@ -243,6 +274,54 @@ def _has_safe_flag(args: list[str]) -> bool:
     return False
 
 
+def _offline_form_is_safe(args: list[str], command: str) -> bool:
+    """Positivpruefung der sicheren Offline-Form (#1755).
+
+    Frei nur: ``--disable-socket`` + ``--loopback-own-ports`` + genau ein
+    ``--allow-hosts=`` mit ausschliesslich Loopback-Eintraegen, dazu optional
+    ``--allow-unix-socket`` und die Flags der Positivliste. Jedes andere Flag
+    (``-p``, ``-o``, ``-c``, ``--override-ini``, ``--force-enable-socket``,
+    ``-m``/``-k`` ...) und ``PYTEST_ADDOPTS``/``PYTEST_PLUGINS`` irgendwo im
+    Kommando -> nicht frei. Positionsargumente ohne fuehrendes '-'
+    (Verzeichnisse) sind erlaubt: der Port-Waechter wirkt auf jede Auswahl.
+    Jedes Argument muss ``_OFFLINE_ARG_RE`` erfuellen; Backtick oder ``$(``
+    irgendwo im Kommando -> nicht frei (Fix-Loop 1, F001)."""
+    if "PYTEST_ADDOPTS" in command or "PYTEST_PLUGINS" in command:
+        return False
+    if "`" in command or "$(" in command:
+        return False
+    hosts_seen = 0
+    for a in args:
+        if not _OFFLINE_ARG_RE.fullmatch(a):
+            return False
+        if not a.startswith("-") or a in _OFFLINE_PLAIN_FLAGS:
+            continue
+        name, sep, value = a.partition("=")
+        if name == "--allow-hosts" and sep:
+            if any(e.strip() not in _LOOPBACK_HOSTS for e in value.split(",")):
+                return False
+            hosts_seen += 1
+            continue
+        if name in _OFFLINE_VALUE_FLAGS and sep:
+            continue
+        return False
+    return (
+        hosts_seen == 1
+        and "--disable-socket" in args
+        and "--loopback-own-ports" in args
+    )
+
+
+def _raw_offline_form_is_safe(command: str) -> bool:
+    """Roh-Fallback (``sh -c`` / kaputte Quotes): Quotes entfernen, an
+    Leerraum zerlegen, jeden pytest-Aufruf mit derselben Regel pruefen."""
+    flat = re.sub(r"[\"'\\]", " ", command).split()
+    starts = [i for i, t in enumerate(flat) if t == "pytest" or t.endswith("/pytest")]
+    if not starts:
+        return False
+    return all(_offline_form_is_safe(_args_after(flat, s), command) for s in starts)
+
+
 def _block(detail: str) -> None:
     print("=" * 70, file=sys.stderr)
     print("BLOCKED — Breiter Testlauf (Vorfall 2026-08-03)", file=sys.stderr)
@@ -260,7 +339,9 @@ def _block(detail: str) -> None:
     print("Erlaubte Wege:", file=sys.stderr)
     print("  1. Dateien benennen:  uv run pytest tests/tdd/x.py tests/unit/y.py", file=sys.stderr)
     print("  2. Nur sammeln:       uv run pytest --collect-only ...", file=sys.stderr)
-    print("  3. Netz sperren:      uv run pytest --disable-socket ...  (pytest-socket)", file=sys.stderr)
+    print("  3. Sicherer Offline-Volllauf (genau diese Form, #1755):", file=sys.stderr)
+    print(f"       {OFFLINE_CALL}", file=sys.stderr)
+    print("     (--disable-socket allein reicht NICHT mehr.)", file=sys.stderr)
     print("  4. Freigabe des Users: er tippt woertlich 'override' im Chat.", file=sys.stderr)
     print("", file=sys.stderr)
     print(
@@ -270,6 +351,23 @@ def _block(detail: str) -> None:
     )
     print("=" * 70, file=sys.stderr)
     sys.exit(2)
+
+
+def _check_raw(command: str) -> None:
+    """Verschachtelte Shell / kaputte Quotes: konservativ auf dem Rohstring
+    pruefen. Kein Tokenizing moeglich -> nur die eindeutigen Freigaben."""
+    if re.search(r"--collect-only|--co\b|--version|--help", command):
+        sys.exit(0)
+    if re.search(r"[^\s]+\.py(::[^\s]*)?(\s|$)", command):
+        sys.exit(0)
+    if _raw_offline_form_is_safe(command):
+        sys.exit(0)
+    if _has_valid_override(_active_workflow_name()):
+        sys.exit(0)
+    _block(
+        "Kommando nicht verlaesslich zerlegbar (verschachtelte Shell oder "
+        "Quotes) und es sind keine konkreten Testdateien erkennbar."
+    )
 
 
 def main() -> None:
@@ -282,20 +380,8 @@ def main() -> None:
         sys.exit(0)
 
     tokens = _tokens(command)
-
     if tokens is None:
-        # Verschachtelte Shell / kaputte Quotes: konservativ auf dem Rohstring
-        # pruefen. Kein Tokenizing moeglich -> nur die eindeutigen Freigaben.
-        if re.search(r"--collect-only|--co\b|--version|--help|--disable-socket", command):
-            sys.exit(0)
-        if re.search(r"[^\s]+\.py(::[^\s]*)?(\s|$)", command):
-            sys.exit(0)
-        if _has_valid_override(_active_workflow_name()):
-            sys.exit(0)
-        _block(
-            "Kommando nicht verlaesslich zerlegbar (verschachtelte Shell oder "
-            "Quotes) und es sind keine konkreten Testdateien erkennbar."
-        )
+        _check_raw(command)
 
     starts = _pytest_invocations(tokens)
     if not starts:
@@ -306,6 +392,8 @@ def main() -> None:
         if _has_safe_flag(args):
             continue
         if _names_concrete_test_files(args):
+            continue
+        if _offline_form_is_safe(args, command):
             continue
         if _has_valid_override(_active_workflow_name()):
             continue

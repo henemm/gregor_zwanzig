@@ -124,6 +124,7 @@ Gegenproben (Mutation, Phase 5/6): Wächter für `connect_ex` entfernen ⇒ AC-2
 
 ## Known Limitations
 
+- **UDP `sendto`/`sendmsg` ist nicht abgedichtet:** verbindungslose Sendungen laufen wie bei pytest-socket selbst (das nur `connect` sperrt) am Wächter vorbei. Bewusst nicht Teil dieses Fixes (Adversary-Befund F002, LOW).
 - **Kindprozess-Ausgang ist nicht abgedeckt:** `curl`, Go-Binaries und Playwright-Browser aus Tests heraus unterliegen weder pytest-socket noch dem neuen Wächter. Das war schon vorher so (keine Verschlechterung); deshalb zusätzlich der Marker-Schritt für die drei Dateien. „Sicher“ gilt nur mit diesem Vorbehalt und nur für Verbindungen aus dem Testprozess.
 - **Laufzeit ca. 42 min** bleibt; der Fix macht den Lauf nutzbar, nicht schneller.
 - **Nicht-Socket-Rote sind außerhalb des Scopes** (z. B. `test_inbound_golden.py`, `test_issue_511_weekly_scheduler.py`, `test_secret_output_gate_werkzeugname.py`); sie gehen in die Nebenbefund-Triage #1199.
@@ -138,3 +139,5 @@ Gegenproben (Mutation, Phase 5/6): Wächter für `connect_ex` entfernen ⇒ AC-2
 ## Changelog
 
 - 2026-11-08: Initial spec created (Issue #1755, Variante A: Port-Tracking)
+- 2026-11-08 (Phase 6, Umsetzungs-Nachtrag zu Implementation Details 1): Statt `connect`/`connect_ex` je Test per `trylast`-Hook zu umhüllen, ersetzt das Plugin ab `pytest_configure` dauerhaft `pytest_socket._true_connect` (die Funktion, die pytest-socket nach seiner Host-Prüfung aufruft und beim Aufräumen zurücksetzt) durch die Port-Prüfung; `connect_ex` wird einmal auf Klassenebene umhüllt und lehnt Nicht-Loopback selbst ab. Grund: pytest baut Fixtures innerhalb seines eigenen `pytest_runtest_setup` auf, ein `trylast`-Hook griffe erst danach, Verbindungen aus dem Fixture-Setup kämen zum fremden Port durch (AC-2-Test prüft genau das).
+- 2026-11-08 (Fix-Loop 1): Gate prüft jedes Argument der Offline-Form per Positivliste `[\w./:=,@+-]+` und lehnt Backtick/`$(` im Kommando ab (F001: `--ignore=x;pytest` startete ein nacktes pytest). UDP `sendto`/`sendmsg` als bekannte Grenze dokumentiert (F002).

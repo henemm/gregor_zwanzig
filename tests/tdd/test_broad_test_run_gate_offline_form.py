@@ -121,6 +121,22 @@ def test_ac5_bisherige_freigaben_bleiben(command):
         f"PYTEST_ADDOPTS=--force-enable-socket uv run pytest {NEW_FORM}",
         f"env PYTEST_ADDOPTS=--force-enable-socket uv run pytest {NEW_FORM}",
         f"export PYTEST_ADDOPTS=-pno:socket && uv run pytest {NEW_FORM}",
+        # Fix-Loop 1 (F001): Shell-Metazeichen ohne Leerraum im Wert bzw.
+        # Positionsargument -- shlex liefert EIN Token, die Shell startet
+        # danach nacktes pytest.
+        "python3 -m pytest --disable-socket --allow-hosts=127.0.0.1 --loopback-own-ports --ignore=x;pytest",
+        f"uv run pytest {NEW_FORM} tests/;pytest",
+        f"uv run pytest {NEW_FORM} --tb=short&&pytest",
+        f"uv run pytest {NEW_FORM} --maxfail=1|pytest",
+        f"uv run pytest {NEW_FORM} --ignore=$(pytest)",
+        f"uv run pytest {NEW_FORM} --ignore=`pytest`",
+        "sh -c \"python3 -m pytest --disable-socket --allow-hosts=127.0.0.1 --loopback-own-ports --ignore=x;pytest\"",
+        f"sh -c \"uv run pytest {NEW_FORM} tests/;pytest\"",
+        # F004: Substitution im Umleitungsziel -- die Argumente vor '>' sind
+        # sauber, nur die Pruefung des Gesamtkommandos faengt das.
+        f"uv run pytest {NEW_FORM} > $(pytest -q)",
+        f"uv run pytest {NEW_FORM} > `pytest -q`",
+        f"sh -c \"uv run pytest {NEW_FORM} > $(pytest -q)\"",
     ],
     ids=[
         "disable-socket-allein",
@@ -147,6 +163,17 @@ def test_ac5_bisherige_freigaben_bleiben(command):
         "pytest-addopts-praefix",
         "env-pytest-addopts",
         "export-pytest-addopts",
+        "semikolon-im-ignore-wert",
+        "semikolon-im-positionsargument",
+        "und-und-im-tb-wert",
+        "pipe-im-maxfail-wert",
+        "kommandosubstitution-im-wert",
+        "backtick-im-wert",
+        "roh-semikolon-im-ignore-wert",
+        "roh-semikolon-im-positionsargument",
+        "umleitungsziel-kommandosubstitution",
+        "umleitungsziel-backtick",
+        "roh-umleitungsziel-kommandosubstitution",
     ],
 )
 def test_ac5_unsichere_form_ist_blockiert(command):
