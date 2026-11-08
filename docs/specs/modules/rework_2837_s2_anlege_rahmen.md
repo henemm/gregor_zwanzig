@@ -210,6 +210,7 @@ Per testid-Treffer zusätzlich zu prüfen (Umhängung im Commit benannt, nichts 
 - Die zwei Lock-Engines bleiben getrennt (DoD-1).
 - Profil-Auswahl (#2792) und Reiterleiste Desktop (#2845) sind nicht Teil dieser Scheibe.
 - Etappen-Tab-Buttons (`TripNewEditor.svelte:850-910`, rohe Buttons ohne testid) sind Schritt-Inhalt; sie werden geprüft, aber nur angefasst, wenn der Umbau es erzwingt.
+- Handy-Eyebrow (AC-4): Sobald ein Name eingegeben ist, zeigt das Handy über dem Reiter-Titel den Namen statt „Neuer Trip“/„Neuer Vergleich“ (Bestandsverhalten, bei beiden Arten gleich). Auf dem Handy ist das die einzige Stelle, an der der Name beim Anlegen sichtbar ist; AC-4 gilt für den Zustand ohne Namen (geprüft in E2E AR-4). Festgestellt in /60-validate.
 - Nebenbefund: PR #2846 (S1-Erstversuch `HubStatusBadge`, durch #2854 überholt) ist ohne Merge zu schließen; nicht Teil dieser Lieferung.
 
 ## Risiken
