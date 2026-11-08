@@ -85,7 +85,7 @@ const KANAL_NAMEN: Record<Kanal, string> = {
 	premium_sms: 'Premium-SMS'
 };
 
-/** Wortgleich zum Status-Badge im Trip-Kopf (TripStatusBadge.svelte, Entscheidung 2);
+/** Wortgleich zum Status-Schild im Kopf (shared/status-schild/StatusSchild.svelte, Entscheidung 2);
  *  bewacht durch den Render-Vergleich in hub_uebersicht_modell.test.ts (AC-5). */
 const TRIP_STATUS_TEXT: Record<TripStatus, MessageKey> = {
 	draft: 'trip.status.draft',

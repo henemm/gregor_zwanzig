@@ -8,7 +8,7 @@
 	// im Idealwerte-Tab) passiert INNERHALB von CompareTabs (matchMedia).
 	import { ConfirmDialog } from '$lib/components/molecules';
 	import CompareDetail from '$lib/components/compare/CompareDetail.svelte';
-	import CompareStatusPill from '$lib/components/compare/CompareStatusPill.svelte';
+	import StatusSchild from '$lib/components/shared/status-schild/StatusSchild.svelte';
 	import SendConfirmDialog from '$lib/components/molecules/SendConfirmDialog.svelte';
 	import SubscriptionActionSheet from '$lib/components/mobile/SubscriptionActionSheet.svelte';
 	import { subscriptionActions } from '$lib/components/shared/subscriptionActions.js';
@@ -355,7 +355,7 @@
 <!-- Status-Snippet ausserhalb des HubKopf-Tags: ein gleichnamiges Kind-Snippet `status` verdeckte dort
      die Seiten-Variable `status` (auch in den Attributen). -->
 {#snippet statusBadge()}
-	<span class="flex-shrink-0"><CompareStatusPill {status} /></span>
+	<span class="flex-shrink-0"><StatusSchild {status} testid="trip-detail-status-badge" /></span>
 	{#if runtimeExceeded}
 		<span data-testid="runtime-exceeded-hint" class="flex-shrink-0 text-[11px] desktop:text-xs" style="font-weight: 600; color: var(--g-bad)">{$t('vergleich.hub.laufzeit_ueberschritten')}</span>
 	{/if}

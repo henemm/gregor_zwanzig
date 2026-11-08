@@ -1,6 +1,5 @@
 export { default as TripTabs } from './TripTabs.svelte';
 export { default as WaypointsPanel } from './WaypointsPanel.svelte';
-export { default as TripStatusBadge } from './TripStatusBadge.svelte';
 export { default as FullProfile } from './FullProfile.svelte';
 export { default as StageList } from './StageList.svelte';
 export { default as StageDetailRow } from './StageDetailRow.svelte';

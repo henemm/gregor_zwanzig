@@ -121,7 +121,7 @@ describe('AC-1: Ortsvergleich-Hub englisch, Namen unveraendert, Aktionen wie im 
 		// kein Krümel „Hub“, keine Mobil-Eyebrow „Orts-Vergleich · Hub“.
 		for (const alt of ['ORTS-VERGLEICHE', 'Orts-Vergleich · Hub']) hatNicht(sichtbar(de), alt);
 		const s = sichtbar(e);
-		for (const t of ['Runs automatically', 'Runs auto.', 'Draft · not active', 'Next delivery', 'Last sent', 'Channels', 'Email · Telegram', 'Morning 07:00 · Evening 18:00', '3 candidates', '1 candidate', 'Edit →', 'Delivery', 'Not scheduled yet', '2 metrics with a target range', '2 metrics · highlighted, no score', 'Location comparisons', 'End date passed', 'Finish setup', 'Send', 'Sending…', 'Status change failed. Please try again.', '3 locations', '1 location', 'Winter sports', '27 Oct 2026', 'No delivery yet', 'active', 'paused'])
+		for (const t of ['Runs automatically', 'Runs auto.', 'Draft · not active', 'Next delivery', 'Last sent', 'Channels', 'Email · Telegram', 'Morning 07:00 · Evening 18:00', '3 candidates', '1 candidate', 'Edit →', 'Delivery', 'Not scheduled yet', '2 metrics with a target range', '2 metrics · highlighted, no score', 'Location comparisons', 'End date passed', 'Finish setup', 'Send', 'Sending…', 'Status change failed. Please try again.', '3 locations', '1 location', 'Winter sports', '27 Oct 2026', 'No delivery yet', 'Active', 'Paused'])
 			hat(s, t);
 		for (const t of ['aria-label="More actions"', 'aria-label="Back to overview"']) hat(e, t);
 		// #2837 S1: kein „Hub“-Krümel, keine Versalien im Markup, keine Mobil-Eyebrow.
@@ -207,8 +207,9 @@ describe('AC-2: Compare-Helfer in Deutsch und Englisch (Eingabe -> Ausgabe)', ()
 	}
 	test('Status-Pille und Aktivierungs-Karte je Sprache', () => {
 		const { de, en: e } = deDannEn(() => sichtbar(P.bausteineRendern()) + ' ' + JSON.stringify(['active', 'paused', 'draft'].map((s) => P.persistenz.hubActivationBanner(s))));
-		for (const s of ['aktiv', 'pausiert', 'Neuer Auto-Report', 'Aktivieren', 'Pausieren']) hat(de, s);
-		for (const s of ['active', 'paused', 'draft', 'New auto report', 'Activate', '"Pause"', 'Runs automatically — with no end date until you pause it.']) hat(e, s);
+		// #2837 S1b: die Status-Pille ist das geteilte StatusSchild (Texte aus trip.status.*, vormals listen.status.*).
+		for (const s of ['Aktiv', 'Pausiert', 'Entwurf', 'Neuer Auto-Report', 'Aktivieren', 'Pausieren']) hat(de, s);
+		for (const s of ['Active', 'Paused', 'Draft', 'New auto report', 'Activate', '"Pause"', 'Runs automatically — with no end date until you pause it.']) hat(e, s);
 		for (const s of ['aktiv"', 'pausiert', 'Aktivieren', 'Pausieren']) hatNicht(e, s);
 	});
 });

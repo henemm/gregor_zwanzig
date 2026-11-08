@@ -59,7 +59,9 @@ register(pathToFileURL(path.join(FRONTEND, 'src/lib/components/shared/__tests__/
 const { render } = await import('svelte/server');
 const HubOverview = (await import(pathToFileURL(path.join(COMPONENTS, 'trip-detail/HubOverview.svelte')).href)).default;
 const ChannelDot = (await import(pathToFileURL(path.join(COMPONENTS, 'trip-detail/ChannelDot.svelte')).href)).default;
-const TripStatusBadge = (await import(pathToFileURL(path.join(COMPONENTS, 'trip-detail/TripStatusBadge.svelte')).href)).default;
+// #2837 S1b: TripStatusBadge ist im geteilten StatusSchild aufgegangen (Prop status statt trip).
+const StatusSchild = (await import(pathToFileURL(path.join(COMPONENTS, 'shared/status-schild/StatusSchild.svelte')).href)).default;
+const { deriveTripStatus } = await import(pathToFileURL(path.join(FRONTEND, 'src/lib/utils/tripStatus.ts')).href);
 const BAUSTEIN = path.join(COMPONENTS, 'shared/hub-uebersicht/HubUebersicht.svelte');
 
 // ── Fixtures ────────────────────────────────────────────────────────────────
@@ -318,7 +320,7 @@ describe('AC-1/AC-5/AC-8/AC-9: Trip-Uebersicht ueber den geteilten Baustein', ()
 	] as const) {
 		test(`AC-5: Status-Kennzahl (${fall}) = Text des Status-Badges im Trip-Kopf`, async () => {
 			const t = trip({}, { stages });
-			const badge = reinerText(ohneMarker(render(TripStatusBadge, { props: { trip: t } }).body));
+			const badge = reinerText(ohneMarker(render(StatusSchild, { props: { status: deriveTripStatus(t, new Date()) } }).body));
 			assert.ok(badge.length > 0, 'Messaufbau: Badge leer');
 			const text = reinerText(await uebersichtRoute(t));
 			assert.ok(
