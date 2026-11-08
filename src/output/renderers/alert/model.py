@@ -296,6 +296,10 @@ class AlertMessage:
     # und Voll-Telegram; der SMS-Renderer liest nur die Praesenz (nicht den
     # Inhalt) fuer sein Kompakt-Token -- der Satz passt nicht ins SMS-Budget.
     addendum_reference: str | None = None
+    # Issue #2848: additiv, optional. Wertepaar ``(basis_mm, menge_mm)`` eines
+    # Mengen-Durchbruchs (#2065) gegen einen Radar-Alarm DESSELBEN Ereignisses.
+    # Gesetzt nur vom Trip-Radar-Pfad; ``None`` -> byte-identisch (AC-3/AC-8).
+    verschaerfung: tuple[float, float] | None = None
     # Issue #1737: additiv, Default leer. Kanal ("email"|"telegram"|"sms") ->
     # {col_key: format_mode}, Form von `email.helpers.build_format_modes`. Leer/
     # fehlend = "raw". Gelesen NUR von den Stundenzeilen.

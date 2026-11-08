@@ -391,6 +391,17 @@ Der Abweichungs-Alarm (Trip und Ortsvergleich; `alert/render.py::render_sms`) tr
 
 Spec: `docs/specs/modules/feat_1737_alarm_stundenzeilen.md`.
 
+### 3.4g Verschärfungs-Token `UP <Y>><X>` am Radar-Alarm (Issue #2848)
+
+Bricht ein Trip-Radar-Alarm per Mengen-Durchbruch (#2065) gegen einen bereits zugestellten Radar-Alarm **desselben Ereignisses** durch, trägt die Kurzform (SMS, Premium-SMS, Telegram-Kurzform: ein Text aus `alert/render.py::render_sms`) direkt nach dem Ortskopf und vor dem Radar-Token das Token `UP <Y>><X> ` — `Y` die zuletzt gemeldete Menge, `X` die jetzt gemessene (mm im 60-Min-Vergleichsfenster, eine Nachkommastelle, Punkt), z. B. `S3 Ziel: UP 3.1>7.3 R2.5@6:25`.
+
+- **Nie übersetzt** (ADR-0104), ASCII/GSM-7. E-Mail und Telegram-Langform tragen stattdessen den Satz „Dasselbe Ereignis, jetzt stärker: 7,3 statt 3,1 mm" (Katalog `alarm.verschaerfung`).
+- **Länge:** das Token steht vor der Zonenauswahl und ist damit vom Budget reserviert; bei Platzmangel weichen zuerst Zonen-Kürzel und Lücken-Marker, nie Kopf, Token oder Radar-Token. ≤ Limit (Alarm 140, Premium-SMS 153, absolut 160).
+- **Nur echte Verschärfung:** kein Token beim Erstalarm, ohne Radar-Vorgänger im Ereignis-Register, bei Nachträgen (`Erg `) und im Ortsvergleich (dort wirkt #2065 nicht). Ohne Kennzeichen ist der Text byte-gleich zu vorher.
+- `X`/`Y` können vom `R<mm>`-Wert (Stunde ab Beginn) abweichen — gewollt, nur diese beiden Zahlen erklären den Durchbruch.
+
+Spec: `docs/specs/modules/fix_2848_radar_verschaerfung_kennzeichnen.md`.
+
 ### 3.4b Confidence-Symbol `C` — entfallen (v2.34, Issue #2233)
 
 Das in v2.1 (Issue #121) spezifizierte Token `C+`/`C~`/`C?` wurde nie im Builder erzeugt und ist per PO-Entscheid 2026-09-08 aus dem Vertrag gestrichen: `confidence_pct` ist keine wählbare Metrik (#710), und das SMS-Zeichenbudget ist knapp. Die Vorhersage-Verlässlichkeit erscheint nur im E-Mail-Textblock.

@@ -277,6 +277,10 @@ class RadarAlertRequest:
     # eingestuft hat. `send_radar_alert()` reicht sie unveraendert auf die
     # `AlertMessage` durch; ohne sie bleibt der Versand byte-identisch.
     addendum_reference: str | None = None
+    # Issue #2848: additiv, optional. Wertepaar `(basis_mm, menge_mm)` eines
+    # Mengen-Durchbruchs gegen einen Radar-Alarm desselben Ereignisses;
+    # unveraendert auf `AlertMessage.verschaerfung` durchgereicht.
+    verschaerfung: tuple[float, float] | None = None
     # Issue #2046: additiv, optional. Erwartete Niederschlagsmenge (mm) der
     # Stunde AB DEM BEGINN (`NowcastResult.onset_precip_mm`) -- die Zahl, die
     # die Onset-Kurznachricht nennt. Ohne sie bleibt der Versand
@@ -1964,6 +1968,7 @@ class NotificationService:
             source=source,
             cooldown_display=cooldown_display,
             addendum_reference=request.addendum_reference,  # Issue #2018
+            verschaerfung=request.verschaerfung,  # Issue #2848
             ampel=resolve_ampel(trip),  # Issue #2792 S1c-4b: Ampel des Trips
         )
         return self._dispatch_alert_message(

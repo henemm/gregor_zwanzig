@@ -428,6 +428,8 @@ def append_entry(
     source: Optional[str] = None,
     measurement_gaps: Optional[dict] = None,
     trigger_point_km: Optional[float] = None,
+    escalation_from_mm: Optional[float] = None,
+    escalation_to_mm: Optional[float] = None,
 ) -> None:
     """Haengt GENAU EINEN Eintrag an das Alarm-Protokoll des Nutzers an.
 
@@ -516,6 +518,11 @@ def append_entry(
     if is_addendum:  # additiv (#2018): Nachtrag statt zweitem Voll-Alarm
         entry["is_addendum"] = True
         entry["addendum_reported_at"] = addendum_reported_at
+    # Issue #2848: additiv, nur beim Verschaerfungs-Alarm (Muster `is_addendum`):
+    # die beiden Vergleichsmengen des Mengen-Durchbruchs.
+    if escalation_from_mm is not None and escalation_to_mm is not None:
+        entry["escalation_from_mm"] = escalation_from_mm
+        entry["escalation_to_mm"] = escalation_to_mm
     # Issue #2050 S6 (E-1): gemeldete Vorwarnzeit, Ereigniszeit, Messpunkt,
     # Vergleichsbasis, Quelle -- additiv, defensiv, nie werfend (AC-15).
     # Issue #2050 S4b: `measurement_gaps` derselbe Weg -- aus wie vielen

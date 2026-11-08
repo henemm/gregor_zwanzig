@@ -2887,6 +2887,18 @@ class TripAlertService:
                             zeit=local_fmt(_identity_gate.addendum_reported_at, tz),
                         )
                     _radar_request = replace(_radar_request, addendum_reference=_bezug)
+                # Issue #2848: Mengen-Durchbruch gegen einen Radar-Alarm
+                # DESSELBEN Ereignisses -- Wertepaar (Basis Y, Menge X) fuer den
+                # Hinweis. Fail-soft: nur mit beiden Zahlen und X > Y; die
+                # Senden-Entscheidung ist davon unberuehrt.
+                if (
+                    _identity_gate.ist_mengen_verschaerfung and _mengen_ueberholt
+                    and _basis_mm is not None and _menge_mm is not None
+                    and _menge_mm > _basis_mm
+                ):
+                    _radar_request = replace(
+                        _radar_request, verschaerfung=(_basis_mm, _menge_mm),
+                    )
 
                 # Best-Effort-Zustellung über NotificationService (Issue #1023)
                 result = self._notification_service.send_radar_alert(
@@ -2930,6 +2942,15 @@ class TripAlertService:
                     addendum_reported_at=(
                         _identity_gate.addendum_reported_at.isoformat()
                         if _identity_gate.addendum_reported_at is not None else None
+                    ),
+                    # Issue #2848: additiv, nur beim Verschaerfungs-Alarm.
+                    escalation_from_mm=(
+                        _radar_request.verschaerfung[0]
+                        if _radar_request.verschaerfung is not None else None
+                    ),
+                    escalation_to_mm=(
+                        _radar_request.verschaerfung[1]
+                        if _radar_request.verschaerfung is not None else None
                     ),
                     **_e1,
                 )
