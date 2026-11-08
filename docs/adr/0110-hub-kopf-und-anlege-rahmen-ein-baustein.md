@@ -34,3 +34,11 @@ Kontrast, gemessen: Weiß auf `--g-accent #c45a2a` erreicht 4,34:1 und verfehlt 
 
 - **Positiv:** Trip und Ortsvergleich teilen den Kopf (ADR-0097); Lesbarkeit nach WCAG-AA; eine Zeile weniger beim Trip.
 - **Negativ:** Viele Tests und E2E verankerten die Divergenz und wurden umgedreht (nicht gelöscht). Wer später wieder Orange für die Hauptaktion will, braucht ein neues ADR.
+
+## Nachtrag 2026-11-08: S2 umgesetzt
+
+Scheibe S2 (Spec `docs/specs/modules/rework_2837_s2_anlege_rahmen.md`) ist umgesetzt: `shared/anlege-rahmen/AnlegeRahmen.svelte` mit `context="route"|"vergleich"` trägt bei `/trips/new` und `/compare/new` den Desktop-Rahmen (Pfad „Trips / Neuer Trip“ bzw. „Orts-Vergleiche / Neuer Vergleich“ mit Elternteil als Link, Eyebrow, Titel, Fortschritt, Fuß mit „Abbrechen“ links und Hauptaktion `Btn primary` rechts). „Weiter“ ist bei beiden `Btn accent`, gesperrt nur über `disabled`. Erlaubte Abweichungen stehen allein in der Whitelist der Spec (Schritt-Inhalte, Abschluss-Text mit Hinweis, Autosave-Semantik beim Verlassen, Lock-Engines, Texte/Datenmarke/Testid-Präfix). `HubKopf` wurde dafür nicht erweitert; ein neues ADR war nicht nötig.
+
+## Nachtrag 2026-11-08: S2b Fortschritt gehört zum Anlege-Rahmen
+
+Scheibe S2b (Spec `docs/specs/modules/rework_2837_s2b_anlege_fortschritt.md`) macht den Fortschrittsbalken zum Teil des Anlege-Rahmens: ein Baustein `shared/anlege-rahmen/AnlegeFortschritt.svelte` zeichnet Segmente und Zähler für `/trips/new` und `/compare/new`, auf dem Computer (`variante="desktop"`, vom `AnlegeRahmen` selbst eingebunden, der Snippet-Slot `fortschritt` entfällt) und auf dem Handy (`variante="mobil"`, an der Handy-Stelle der Editoren). Farbregel für beide: erledigt `--g-accent`, sonst `--g-rule`; der aktive Schritt wird nicht getönt (er zeigt sich in der Reiterleiste). Die Annahme der S2-Spec, der Fortschritt sei schon gleich gewesen, war falsch: er war vierfach gebaut, und auf dem Handy tönte nur der Ortsvergleich den aktiven Schritt (Rückfallwert `#bcd`). Ein neues ADR war nicht nötig.

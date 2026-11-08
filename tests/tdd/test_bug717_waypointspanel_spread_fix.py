@@ -35,6 +35,10 @@ from pathlib import Path
 import httpx
 import pytest
 
+# Issue #1755: spricht die Go-API auf localhost:8090 an (= Prod auf diesem
+# Rechner) -- gehoert nicht in den Kern-Lauf.
+pytestmark = pytest.mark.staging
+
 # ---------------------------------------------------------------------------
 # Pfade
 # ---------------------------------------------------------------------------

@@ -12,6 +12,13 @@ src = root / "src"
 if str(src) not in sys.path:
     sys.path.insert(0, str(src))
 
+# Issue #1755: Option --loopback-own-ports fuer den sicheren Offline-Volllauf
+# (Loopback nur zu selbst gebundenen Ports), siehe tests/_loopback_port_guard.py.
+_tests_dir = str(Path(__file__).resolve().parent)
+if _tests_dir not in sys.path:
+    sys.path.insert(0, _tests_dir)
+pytest_plugins = ["_loopback_port_guard"]
+
 # ---------------------------------------------------------------------------
 # Issue #1196 Klasse B: geteilte .env-Fixture statt Modul-weitem load_dotenv()
 # ---------------------------------------------------------------------------

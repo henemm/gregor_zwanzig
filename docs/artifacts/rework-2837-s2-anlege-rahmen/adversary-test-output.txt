@@ -1,0 +1,15 @@
+# Gekürzt in /60-validate (2026-11-08): vollständiges TAP-Protokoll der gesamten Frontend-Suite (59.518 Zeilen, 2,1 MB) entfernt; erhalten sind Kopf und Endsummen. Basislauf siehe adversary-dialog.md.
+
+> frontend@0.0.1 test
+> node --import ./test-lib-loader.mjs --experimental-strip-types --experimental-test-module-mocks --test
+
+[...]
+# tests 8093
+# suites 1541
+# pass 8088
+# fail 0
+# cancelled 0
+# skipped 5
+# todo 0
+# duration_ms 326460.67394
+.............................                                            [100%]

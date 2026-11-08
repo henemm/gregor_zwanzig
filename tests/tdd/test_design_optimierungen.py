@@ -14,6 +14,10 @@ import subprocess
 import pytest
 from playwright.sync_api import sync_playwright
 
+# Issue #1755: curl und Playwright gegen laufende Dienste (Port 3000/8090)
+# -- gehoert nicht in den Kern-Lauf.
+pytestmark = pytest.mark.live
+
 
 FRONTEND_URL = "http://127.0.0.1:3000"
 

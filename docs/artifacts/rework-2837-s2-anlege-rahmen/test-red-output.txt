@@ -1,0 +1,332 @@
+# TDD RED — Issue #2837 S2 Anlege-Rahmen (Workflow rework-2837-s2-anlege-rahmen)
+# Branch rework-2837-s2-red, Basis 496153486, erzeugt 2026-11-08T13:57:59Z
+# Aufruf je Datei: cd frontend && npm test -- <datei>  (node --test, kein Vitest)
+
+=================== src/lib/components/shared/anlege-rahmen/__tests__/anlege_rahmen.test.ts
+    not ok 1 - Entscheidung 1/AC-14 (route): data-kind="route" über Fuß UND Überschrift
+      error: "Cannot find module 'frontend/src/lib/components/shared/anlege-rahmen/AnlegeRahmen.svelte' imported from frontend/src/lib/components/shared/anlege-rahmen/__tests__/anlege_rahmen.test.ts"
+    not ok 2 - AC-1 (route): Breadcrumb — Elternteil „Trips" ist Link auf /trips, Kind „Neuer Trip" kein Link, steht vor der Überschrift
+      error: "Cannot find module 'frontend/src/lib/components/shared/anlege-rahmen/AnlegeRahmen.svelte' imported from frontend/src/lib/components/shared/anlege-rahmen/__tests__/anlege_rahmen.test.ts"
+    not ok 3 - AC-4 (route): genau ein Desktop-Eyebrow „Neuer Trip" zwischen Breadcrumb und Überschrift, nie „Neue Trip"
+      error: "Cannot find module 'frontend/src/lib/components/shared/anlege-rahmen/AnlegeRahmen.svelte' imported from frontend/src/lib/components/shared/anlege-rahmen/__tests__/anlege_rahmen.test.ts"
+    not ok 4 - Titel (route): h1 = Name, ohne Namen der Katalogtext „kein Name"
+      error: "Cannot find module 'frontend/src/lib/components/shared/anlege-rahmen/AnlegeRahmen.svelte' imported from frontend/src/lib/components/shared/anlege-rahmen/__tests__/anlege_rahmen.test.ts"
+    not ok 5 - Aufbau (route): Überschrift → Fortschritt → Inhalt → Fuß, jedes Snippet genau einmal
+      error: "Cannot find module 'frontend/src/lib/components/shared/anlege-rahmen/AnlegeRahmen.svelte' imported from frontend/src/lib/components/shared/anlege-rahmen/__tests__/anlege_rahmen.test.ts"
+not ok 1 - \#2837 S2 AnlegeRahmen (route) — Kopf, Eyebrow, Titel
+  error: '5 subtests failed'
+    not ok 1 - AC-16 (route): Fuß tn-desktop-footer ist der geteilte EditorStickyFooter (data-context, ohne Tabbar-Abstand)
+      error: "Cannot find module 'frontend/src/lib/components/shared/anlege-rahmen/AnlegeRahmen.svelte' imported from frontend/src/lib/components/shared/anlege-rahmen/__tests__/anlege_rahmen.test.ts"
+    not ok 2 - AC-5 (route): „Abbrechen" ist Btn ghost im Fuß, VOR allen Aktionen rechts (Standardwerte, Hinweis, Hauptaktion)
+      error: "Cannot find module 'frontend/src/lib/components/shared/anlege-rahmen/AnlegeRahmen.svelte' imported from frontend/src/lib/components/shared/anlege-rahmen/__tests__/anlege_rahmen.test.ts"
+    not ok 3 - Entscheidung 4 (route): Abbrechen ist ein Knopf (onCancel, kein href-Sprung am Autosave vorbei)
+      error: "Cannot find module 'frontend/src/lib/components/shared/anlege-rahmen/AnlegeRahmen.svelte' imported from frontend/src/lib/components/shared/anlege-rahmen/__tests__/anlege_rahmen.test.ts"
+    not ok 4 - AC-10 (route): Standardwerte und Hinweis stehen im Fuß, nicht im Kopf
+      error: "Cannot find module 'frontend/src/lib/components/shared/anlege-rahmen/AnlegeRahmen.svelte' imported from frontend/src/lib/components/shared/anlege-rahmen/__tests__/anlege_rahmen.test.ts"
+    not ok 5 - AC-8 (route): Hauptaktion trip-new-save-btn ist Btn primary im Fuß, nach Standardwerten und Hinweis, Text = abschlussLabel
+      error: "Cannot find module 'frontend/src/lib/components/shared/anlege-rahmen/AnlegeRahmen.svelte' imported from frontend/src/lib/components/shared/anlege-rahmen/__tests__/anlege_rahmen.test.ts"
+    not ok 6 - AC-9 (route): ohne canFinish gesperrt (disabled), Variante bleibt primary, Platz bleibt gleich
+      error: "Cannot find module 'frontend/src/lib/components/shared/anlege-rahmen/AnlegeRahmen.svelte' imported from frontend/src/lib/components/shared/anlege-rahmen/__tests__/anlege_rahmen.test.ts"
+not ok 2 - \#2837 S2 AnlegeRahmen (route) — Fuß
+  error: '6 subtests failed'
+    not ok 1 - Entscheidung 1/AC-14 (vergleich): data-kind="vergleich" über Fuß UND Überschrift
+      error: "Cannot find module 'frontend/src/lib/components/shared/anlege-rahmen/AnlegeRahmen.svelte' imported from frontend/src/lib/components/shared/anlege-rahmen/__tests__/anlege_rahmen.test.ts"
+    not ok 2 - AC-1 (vergleich): Breadcrumb — Elternteil „Orts-Vergleiche" ist Link auf /compare, Kind „Neuer Vergleich" kein Link, steht vor der Überschrift
+      error: "Cannot find module 'frontend/src/lib/components/shared/anlege-rahmen/AnlegeRahmen.svelte' imported from frontend/src/lib/components/shared/anlege-rahmen/__tests__/anlege_rahmen.test.ts"
+    not ok 3 - AC-4 (vergleich): genau ein Desktop-Eyebrow „Neuer Vergleich" zwischen Breadcrumb und Überschrift, nie „Neue Trip"
+      error: "Cannot find module 'frontend/src/lib/components/shared/anlege-rahmen/AnlegeRahmen.svelte' imported from frontend/src/lib/components/shared/anlege-rahmen/__tests__/anlege_rahmen.test.ts"
+    not ok 4 - Titel (vergleich): h1 = Name, ohne Namen der Katalogtext „kein Name"
+      error: "Cannot find module 'frontend/src/lib/components/shared/anlege-rahmen/AnlegeRahmen.svelte' imported from frontend/src/lib/components/shared/anlege-rahmen/__tests__/anlege_rahmen.test.ts"
+    not ok 5 - Aufbau (vergleich): Überschrift → Fortschritt → Inhalt → Fuß, jedes Snippet genau einmal
+      error: "Cannot find module 'frontend/src/lib/components/shared/anlege-rahmen/AnlegeRahmen.svelte' imported from frontend/src/lib/components/shared/anlege-rahmen/__tests__/anlege_rahmen.test.ts"
+not ok 3 - \#2837 S2 AnlegeRahmen (vergleich) — Kopf, Eyebrow, Titel
+  error: '5 subtests failed'
+    not ok 1 - AC-16 (vergleich): Fuß cm-desktop-footer ist der geteilte EditorStickyFooter (data-context, ohne Tabbar-Abstand)
+      error: "Cannot find module 'frontend/src/lib/components/shared/anlege-rahmen/AnlegeRahmen.svelte' imported from frontend/src/lib/components/shared/anlege-rahmen/__tests__/anlege_rahmen.test.ts"
+    not ok 2 - AC-5 (vergleich): „Abbrechen" ist Btn ghost im Fuß, VOR allen Aktionen rechts (Standardwerte, Hinweis, Hauptaktion)
+      error: "Cannot find module 'frontend/src/lib/components/shared/anlege-rahmen/AnlegeRahmen.svelte' imported from frontend/src/lib/components/shared/anlege-rahmen/__tests__/anlege_rahmen.test.ts"
+    not ok 3 - Entscheidung 4 (vergleich): Abbrechen führt auf /compare
+      error: "Cannot find module 'frontend/src/lib/components/shared/anlege-rahmen/AnlegeRahmen.svelte' imported from frontend/src/lib/components/shared/anlege-rahmen/__tests__/anlege_rahmen.test.ts"
+    not ok 4 - AC-10 (vergleich): Standardwerte und Hinweis stehen im Fuß, nicht im Kopf
+      error: "Cannot find module 'frontend/src/lib/components/shared/anlege-rahmen/AnlegeRahmen.svelte' imported from frontend/src/lib/components/shared/anlege-rahmen/__tests__/anlege_rahmen.test.ts"
+    not ok 5 - AC-8 (vergleich): Hauptaktion compare-editor-activate ist Btn primary im Fuß, nach Standardwerten und Hinweis, Text = abschlussLabel
+      error: "Cannot find module 'frontend/src/lib/components/shared/anlege-rahmen/AnlegeRahmen.svelte' imported from frontend/src/lib/components/shared/anlege-rahmen/__tests__/anlege_rahmen.test.ts"
+    not ok 6 - AC-9 (vergleich): ohne canFinish gesperrt (disabled), Variante bleibt primary, Platz bleibt gleich
+      error: "Cannot find module 'frontend/src/lib/components/shared/anlege-rahmen/AnlegeRahmen.svelte' imported from frontend/src/lib/components/shared/anlege-rahmen/__tests__/anlege_rahmen.test.ts"
+not ok 4 - \#2837 S2 AnlegeRahmen (vergleich) — Fuß
+  error: '6 subtests failed'
+    not ok 1 - route und vergleich rendern dasselbe Gerüst (canFinish=false)
+      error: "Cannot find module 'frontend/src/lib/components/shared/anlege-rahmen/AnlegeRahmen.svelte' imported from frontend/src/lib/components/shared/anlege-rahmen/__tests__/anlege_rahmen.test.ts"
+    not ok 2 - route und vergleich rendern dasselbe Gerüst (canFinish=true)
+      error: "Cannot find module 'frontend/src/lib/components/shared/anlege-rahmen/AnlegeRahmen.svelte' imported from frontend/src/lib/components/shared/anlege-rahmen/__tests__/anlege_rahmen.test.ts"
+    not ok 3 - kompiliertes CSS des Rahmens: kein Selektor nach data-kind oder nach Art benannten Klassen
+      error: "Cannot find module 'frontend/src/lib/components/shared/anlege-rahmen/AnlegeRahmen.svelte' imported from frontend/src/lib/components/shared/anlege-rahmen/__tests__/anlege_rahmen.test.ts"
+not ok 5 - \#2837 S2 AC-14 — ein Markup, context wählt nur Texte, Elternteil-Link, data-kind und Testids
+  error: '3 subtests failed'
+    not ok 1 - route: Elternteil, Kind/Eyebrow und Abbrechen folgen der Nutzersprache
+      error: "Cannot find module 'frontend/src/lib/components/shared/anlege-rahmen/AnlegeRahmen.svelte' imported from frontend/src/lib/components/shared/anlege-rahmen/__tests__/anlege_rahmen.test.ts"
+    not ok 2 - vergleich: Elternteil, Kind/Eyebrow und Abbrechen folgen der Nutzersprache
+      error: "Cannot find module 'frontend/src/lib/components/shared/anlege-rahmen/AnlegeRahmen.svelte' imported from frontend/src/lib/components/shared/anlege-rahmen/__tests__/anlege_rahmen.test.ts"
+not ok 6 - \#2837 S2 AC-4/AC-15 — Texte des Rahmens aus dem Katalog (de und en)
+  error: '2 subtests failed'
+    not ok 1 - Trip, Route ohne Namen: trip-new-continue-etappen ist Btn accent, disabled, ohne Inline-Deckkraft/-Farbe
+      error: |-
+        trip-new-continue-etappen ist kein Btn (roher <button>)
+    not ok 2 - Vergleich, Eckdaten ohne Namen: compare-editor-continue-orte ist Btn accent, disabled, ohne Inline-Deckkraft/-Farbe
+      error: |-
+        compare-editor-continue-orte hat variant „quiet" (erwartet accent auch gesperrt)
+    not ok 3 - Vergleich, Orte mit 1 Ort: compare-editor-continue-wetter-metriken ist Btn accent, disabled, ohne Inline-Deckkraft/-Farbe
+      error: |-
+        compare-editor-continue-wetter-metriken hat variant „quiet" (erwartet accent auch gesperrt)
+not ok 7 - \#2837 S2 AC-11 — Weiter-Knöpfe beider Editoren (gesperrter Zustand)
+  error: '3 subtests failed'
+ok 8 - Messaufbau: TripNewEditor und CompareNewEditor laden
+# tests 31
+# pass 1
+# fail 30
+=================== src/lib/components/trip-new/__tests__/trip_new_mobile_rahmen_angleichung.test.ts
+    not ok 1 - Desktop: tn-desktop-breadcrumb = „Trips / Neuer Trip", Elternteil GENAU EIN <a href="/trips"> mit Katalogtext, Kind kein Link, kein Zurück-Knopf
+      error: |-
+        #2837 S2 AC-1 FAIL: erwartet genau 1 Link im Desktop-Breadcrumb, gefunden 0.
+    ok 2 - Mobil: tn-mobile-appbar enthält GENAU EINEN <button data-testid="back-link"> ohne href, kein <a>
+not ok 1 - AC-3: Zurück in /trips/new — Desktop Breadcrumb (\#2837 S2), mobil BackLink im Button-Modus
+  error: '1 subtest failed'
+    ok 1 - Zählungen: trip-new-save-btn = 1, tn-mobile-appbar = 1 (Desktop), tn-mobile-save = 1 (Mobil)
+    ok 2 - Desktop: trip-new-save-btn sitzt NICHT mehr im Breadcrumb, sondern in einem route-Footer ohne has-nav
+    ok 3 - Mobil: tn-mobile-save sitzt NICHT mehr in der App-Leiste, sondern in einem route-Footer ohne has-nav
+    not ok 4 - \#2837 S2: Desktop-Fuß tn-desktop-footer — Abbrechen (Btn ghost) VOR trip-new-save-btn (Btn primary)
+      error: '#2837 S2 AC-8 FAIL: Trip speichern ist kein Btn: <button type="button" disabled="" data-testid="trip-new-save-btn" style="padding: 6px 12px; border-radius: var(--g-r-2); border: none; background: var(--g-ink); color: var(--g-paper); font-size: 13px; font-weight: 500; cursor: not-allowed; opacity: 0.4;">'
+    ok 5 - zwei getrennte Footer-Mounts (einer je Viewport-Zweig)
+not ok 2 - AC-4: Speichern wandert in je einen EditorStickyFooter (context="route", navClearance={false})
+  error: '1 subtest failed'
+    ok 1 - trip-new-save-btn trägt im Anfangszustand das Attribut disabled
+    ok 2 - tn-mobile-save trägt im Anfangszustand das Attribut disabled
+ok 3 - AC-4: Speichern ist gesperrt, solange der Trip nicht speicherbereit ist
+    ok 1 - Standard-Deklaration mask-image (nicht nur als Teil von -webkit-mask-image)
+    ok 2 - -webkit-mask-image-Variante
+ok 4 - AC-8: Fade-Maske auf tn-mobile-tabbar (wörtlich wie cm-mobile-tabbar)
+    ok 1 - Desktop: tn-mobile-appbar genau 1× (nie 0, nie 2)
+    ok 2 - Desktop: tn-mobile-save genau 1× (nie 0, nie 2)
+    ok 3 - Desktop: tn-desktop-breadcrumb genau 1× (nie 0, nie 2)
+    ok 4 - Desktop: tn-mobile-tabbar genau 1× (nie 0, nie 2)
+    ok 5 - Desktop: tn-mobile-save fehlt vor dem Schritt Alarme (AN-9)
+    ok 6 - Mobil: tn-mobile-appbar genau 1× (nie 0, nie 2)
+    ok 7 - Mobil: tn-mobile-save genau 1× (nie 0, nie 2)
+    ok 8 - Mobil: tn-desktop-breadcrumb genau 1× (nie 0, nie 2)
+    ok 9 - Mobil: tn-mobile-tabbar genau 1× (nie 0, nie 2)
+    ok 10 - Mobil: tn-mobile-save fehlt vor dem Schritt Alarme (AN-9)
+ok 5 - AC-9: Strukturwächter — vertragliche Testids je Render genau einmal
+    not ok 1 - tn-mobile-save (Schritt Alarme) trägt den Text „Trip speichern"
+      error: |-
+not ok 6 - \#2837 S2 AC-12: mobiler Abschluss „Trip speichern"
+  error: '1 subtest failed'
+    ok 1 - Mobil: tn-mobile-appbar enthält aria-label="Zurück: Trips" genau einmal
+    not ok 2 - Desktop: Breadcrumb-Link heißt „Trips" (aria-label, falls gesetzt, nennt ebenfalls „Trips"), kein „Zurück: Trips"-Knopf
+      error: '#2837 S2 AC-10 FAIL: kein Breadcrumb-Link auf /trips.'
+not ok 7 - AC-10: Vorlesetext am Zurück-Pfeil (mobil) bzw. Breadcrumb-Link (Desktop)
+  error: '1 subtest failed'
+# tests 24
+# pass 20
+# fail 4
+=================== src/lib/components/trip-new/__tests__/trip_anlegen_sprache.test.ts
+    not ok 1 - Route-Schritt: Kopf, Reiter, Felder, Platzhalter, Pflicht-Hinweise, Aktivitaeten
+      error: |-
+        fehlt: „Neuer Trip"
+        in: Trips Trips Neue Trip Route Neue Trip anlegen Noch kein Name Noch nichts eingerichtet 0/5 Route Etappen & GPX ⊘ Wegpunkte prüfen ⊘ Wetter-Metriken ⊘ Wertebereiche ⊘ Alarme ⊘ Route Etappen & GPX ⊘ Wegpunkte prüfen ⊘ Wetter-Metriken ⊘ Wertebereiche ⊘ Alarme ⊘ Trip-Grunddaten Trip-Name * Region optional · max 50 Startdatum * Aktivitätstyp optional Wandern (Standard) Alpen-Trekking Wandern Skitouren Hochtour Klettersteig MTB Fahrrad (15 km/h) Fahrrad (20 km/h) Fahrrad (25 km/h) GPX-Dateien lädst du im nächsten Schritt hoch — eine Datei pro Etappe. ⊘ Trip-Name fehlt Etappen anlegen → Kannst du überspringen — Standard: die vom System vorgewählten Wetter-Metriken. Lade Metriken… Kannst du überspringen — Standard: E-Mail, Morgen-Briefing um 07:00 Uhr und Abend-Briefing um 18:00 Uhr. Geplantes Briefing · Kanäle Das Trip-Briefing ist eine Etappen-Tabelle — E-Mail trägt alle Spalten, Telegram die ersten 7, SMS kein Raster, Fließtext. E-Mail nicht verbunden Layout · volle Tabelle E-Mail-Adresse fehlt — im Account einrichten Telegram nicht verbunden Layout · 7 Spalten Telegram-Chat-ID fehlt — im Account einrichten Telegram im SMS-Kurzstil Erst aktiv, wenn Telegram als Kanal an ist. SMS nicht verbunden Layout · kein Raster, 160 Zeichen Handynummer fehlt — im Account einrichten Premium-SMS (Garmin inReach) nicht verfügbar Premium-SMS ab Level Premium verfügbar Briefing-Zeitplan Morgen-Briefing Gleicher Tag — alles für die heutige Etappe Aktiv Uhrzeit 00:00 01:00 02:00 03:00 04:00 05:00 06:00 07:00 08:00 09:00 10:00 11:00 12:00 13:00 14:00 15:00 16:00 17:00 18:00 19:00 20:00 21:00 22:00 23:00 Morgens 07:00 Abends 18:00 Abend-Briefing Nächster Tag — Ausblick auf morgen Aktiv Uhrzeit 00:00 01:00 02:00 03:00 04:00 05:00 06:00 07:00 08:00 09:00 10:00 11:00 12:00 13:00 14:00 15:00 16:00 17:00 18:00 19:00 20:00 21:00 22:00 23:00 Morgens 07:00 Abends 18:00 Mehrtages-Trend Sonntags · 3–7-Tage-Ausblick (optional) im Morgen-Briefing im Abend-Briefing Nächstes Briefing — Laufzeit Läuft mit der Trip · endet — Das Enddatum ergibt sich aus den Etappen — es wird dort gepflegt, nicht hier. Etappen öffnen → E-Mail-Inhalt Format Ausführlich (HTML) Kompakt (Nur-Text) Ausblick Großwetterlage-Kopf, nächste Etappen und Vorhersage-Sicherheit am Mail-Ende. Etappen-Kennzahlen Distanz, Auf-/Abstieg und maximale Höhe der Etappe als Zahlenraster. Vortag-Vergleich Vergleich des heutigen Wetters mit dem Vortag als Kurzzeile im Briefing. Wertebereiche festlegen → Kannst du überspringen — Standard: kein
+    ok 2 - Etappen-Schritt: Spaltenkoepfe, Datum `1 Jul`, Plural ohne GPX, Knoepfe; Etappen-Name unveraendert
+    ok 3 - Wegpunkte- und Alarme-Schritt: Hinweise und Weiter-Knoepfe englisch
+    ok 4 - Anlege-Fehler: Rueckfall-Meldung wird beim Rendern aufgeloest (nicht eingefroren)
+not ok 1 - AC-3: /trips/new englisch (Desktop und mobil)
+  error: '1 subtest failed'
+    ok 1 - derselbe Zustand zeigt nach dem Sprachwechsel den englischen Sperr-Hinweis
+ok 2 - AC-3: gesperrter Schritt (mobil) — Toast-Hinweis beim Rendern aufgeloest
+    ok 1 - Desktop: Kopf, Datum/Startzeit, Karte, Profil, Wegpunkte, Speichern; Wochentag Wed (de Mi)
+    ok 2 - Kaskaden-Rueckfrage und -Bestaetigung: Plural exakt, Datum englisch
+    ok 3 - Mobil: Hinweis, Liste, Wahl Etappe/Pausentag englisch
+    ok 4 - Datumsfeld: Wochentag je Sprache, Trip-Start und Startzeit englisch
+ok 3 - AC-3: Etappen-Editor englisch, Wochentag ueber fmtWeekday
+    ok 1 - buildCreateTripPayload in de und en gleich; Namen byte-gleich zur Eingabe; keine Anzeige-Texte
+    ok 2 - stageDate: de `01.07.` unveraendert, en `1 Jul`
+ok 4 - AC-3: eingegebene Namen unveraendert gespeichert, Nutzlast sprachunabhaengig
+# tests 11
+# pass 10
+# fail 1
+=================== src/lib/components/shared/__tests__/standardwerte_knopf_geteilt.test.ts
+    ok 1 - Beschriftung kommt aus dem Textkatalog (standardwerte.knopf) und ist nicht leer
+    ok 2 - enabled=true: Knopf mit testid, nicht gesperrt
+    ok 3 - enabled=false: gesperrt
+    ok 4 - saving=true: gesperrt (kein Doppelklick waehrend des Speicherns)
+ok 1 - AC-13: der Baustein StandardwerteSpeichernKnopf
+    ok 1 - TripNewEditor: <StandardwerteSpeichernKnopf> mindestens zweimal (Desktop + mobil), importiert aus shared/
+    ok 2 - CompareNewEditor: <StandardwerteSpeichernKnopf> mindestens zweimal (Desktop + mobil), importiert aus shared/
+ok 2 - AC-13: beide Editoren binden DENSELBEN Baustein ein (keine compare-eigene Kopie)
+    ok 1 - Desktop: Knopf im Footer neben „Trip speichern", solange der Bestandsknopf gesperrt ist
+    ok 2 - mobil (375 px): Knopf in der unteren Leiste
+    ok 3 - AC-5: alle Reiter besucht (Bestandsknopf frei) => Standardwerte-Knopf nicht mehr da
+ok 3 - AC-12/AC-5: Platzierung Trip (/trips/new)
+    not ok 1 - Desktop: Knopf im Fuß cm-desktop-footer neben „Briefing aktivieren" (nicht in der Kopfzeile)
+      error: 'Testid "cm-desktop-footer" (Nr. 0) fehlt im gerenderten Dokument.'
+    ok 2 - mobil, Reiter „vergleich": Knopf in der unteren Leiste (nicht nur auf dem letzten Reiter)
+    ok 3 - mobil, Reiter „orte": Knopf in der unteren Leiste (nicht nur auf dem letzten Reiter)
+    ok 4 - mobil, Reiter „wetter-metriken": Knopf in der unteren Leiste (nicht nur auf dem letzten Reiter)
+    ok 5 - mobil, Reiter „wertebereiche": Knopf in der unteren Leiste (nicht nur auf dem letzten Reiter)
+    ok 6 - AC-5: alle Reiter besucht (Aktivieren frei) => Standardwerte-Knopf nicht mehr da
+not ok 4 - AC-12/AC-5: Platzierung Ortsvergleich (/compare/new)
+  error: '1 subtest failed'
+    ok 1 - Trip und Ortsvergleich zeigen denselben Katalog-Text; beide gesperrt, solange Standardwerte nicht bereit
+ok 5 - AC-13: identische Beschriftung und Sperre in beiden Editoren (SSR: Katalog nie geladen)
+# tests 16
+# pass 15
+# fail 1
+=================== src/lib/components/compare-new/__tests__/compare_anlege_freischaltung.test.ts
+    ok 1 - Leerzustand: nur "vergleich" offen, 4 Tabs gesperrt
+    ok 2 - AC-3: Name gesetzt → "orte" schaltet frei, "metriken" bleibt gesperrt
+    ok 3 - Nur Whitespace als Name schaltet "orte" NICHT frei
+    ok 4 - AC-4: genau 1 Ort schaltet "metriken" NICHT frei
+    ok 5 - AC-4: 2 Orte schalten "metriken" frei, "idealwerte" bleibt gesperrt
+    ok 6 - AC-5: metrikenVisited → "idealwerte" frei, "alarme" bleibt gesperrt
+    ok 7 - AC-7: idealsVisited → "alarme" frei; \#1743: alarmeVisited schaltet keinen "versand" frei
+    ok 8 - Kaskade übersprungen: idealsVisited ohne Vorstufen schaltet "alarme" NICHT frei
+    ok 9 - Vollständige Kette: alle 5 Tabs offen (\#1360: ohne Layout-Reiter, \#1743: ohne Versand)
+ok 1 - AC-2: unlockedTabs — progressive Freischaltung
+    ok 1 - Name → vergleich done; ≥2 Orte → orte done
+    ok 2 - 1 Ort → orte NICHT done
+    ok 3 - visited-Flags markieren die jeweiligen Tabs als done
+ok 2 - doneTabs — Done-Zustand nach Spec-Tabelle
+    ok 1 - Leerzustand = 0
+    ok 2 - vollständige Kette = 5 (ohne Versand-Schritt)
+    ok 3 - deckelt bei 5, auch wenn ein Fremd-Set größer wäre
+ok 3 - progressCount — Fortschrittszähler
+    ok 1 - Alarme nicht besucht → false (Aktivieren-Button deaktiviert)
+    ok 2 - Alarme besucht (kein Versand-Schritt) → true (Aktivieren freigegeben)
+    ok 3 - Leerzustand → false
+ok 4 - canActivate — "Briefing aktivieren" nach Alarme-Besuch
+    ok 1 - Reiterleiste: vergleich · orte · wetter-metriken · wertebereiche · alarme
+    ok 2 - Fortschritt: fünf Segmente; nach Alarme „5 / 5 Abschnitte eingerichtet"
+    not ok 3 - Desktop: „Briefing aktivieren" im Fuß cm-desktop-footer — gesperrt bis Wertebereiche, frei nach Alarme
+      error: '#2837 S2 FAIL: Desktop-Fuß cm-desktop-footer fehlt — „Briefing aktivieren" steht nicht unten'
+    ok 4 - Mobil: im Schritt Alarme steht der freie Aktivieren-Knopf im Sticky-Footer
+not ok 5 - \#1743 AC-19 Wirkstelle /compare/new: kein Versand-Schritt, Aktivieren nach Alarme
+  error: '1 subtest failed'
+# tests 22
+# pass 21
+# fail 1
+=================== src/lib/components/shared/__tests__/anlege_reiterleiste_trip_vergleich_paritaet.test.ts
+    ok 1 - Desktop: Route · Etappen & GPX · Wegpunkte prüfen · Wetter-Metriken · Wertebereiche · Alarme (kein Versand)
+    ok 2 - Mobil (390 px-Zweig): dieselbe Folge
+    ok 3 - „Briefing-Zeitplan" und „Alerts" kommen als Reiter nicht mehr vor (Desktop + Mobil)
+ok 1 - AC-1: /trips/new — vollständige Reiterleiste
+    ok 1 - Alarme: „erst Wertebereiche öffnen"; kein Reiter „Versand"
+ok 2 - AC-2: Lock-Hinweis des Trip-Reiters Alarme; Versand ist kein Reiter mehr (\#1743)
+    ok 1 - Compare-Referenz: Wetter-Metriken · Wertebereiche · Alarme (AC-9, \#1743 ohne Versand)
+    ok 2 - Beschriftung und Reihenfolge identisch
+    ok 3 - Lock-Hinweise identisch — AUSSER Wetter-Metriken (kind-eigen, begründet)
+ok 3 - AC-3/AC-9: Parität Trip ↔ Ortsvergleich ab Wetter-Metriken
+    ok 1 - Desktop-Fußzeile fordert im Leerzustand weder den Zeitplan noch einen Versand-Schritt (\#1743)
+    ok 2 - Mobil-Fortschritt startet bei „0/N"
+ok 4 - AC-4: Fußzeilen-Hinweis und Fortschritt auf /trips/new
+    not ok 1 - Trip-Fuß und Ortsvergleich-Fuß tragen den Knopf mit identischer Beschriftung
+      error: '#2837 S2 FAIL: Desktop-Fuß cm-desktop-footer fehlt.'
+not ok 5 - AC-12 (\#2521 S3): Standardwerte-Knopf in beiden Anlege-Leisten
+  error: '1 subtest failed'
+# tests 10
+# pass 9
+# fail 1
+=================== src/lib/components/compare-new/__tests__/compare_new_lock_engine_wirkstelle.test.ts
+    ok 1 - leerer Name: Orte gesperrt
+    ok 2 - Name, 1 Ort: Orte frei, Metriken gesperrt
+    ok 3 - Name, 2 Orte: Metriken frei
+ok 1 - AC-6: Vorderteil an der Reiterleiste
+    ok 1 - nichts besucht: Wertebereiche, Alarme gesperrt
+    ok 2 - Metriken besucht: nur Wertebereiche frei
+    ok 3 - Wertebereiche besucht: Alarme frei
+    ok 4 - \#1743: kein Reiter versand im Dokument
+ok 2 - AC-1/AC-7: Schwanz-Kette an der Reiterleiste (Besuchs-Flags über stateOverride)
+    not ok 1 - vor Alarme-Besuch deaktiviert
+      error: '#2837 S2: Desktop-Fuß cm-desktop-footer fehlt — Wirkstelle nicht im Rahmen-Fuß'
+    not ok 2 - nach Alarme-Besuch aktiv (\#1743)
+      error: '#2837 S2: Desktop-Fuß cm-desktop-footer fehlt — Wirkstelle nicht im Rahmen-Fuß'
+    not ok 3 - ein Versand-Flag allein schaltet nichts frei
+      error: '#2837 S2: Desktop-Fuß cm-desktop-footer fehlt — Wirkstelle nicht im Rahmen-Fuß'
+not ok 3 - AC-3: Aktivieren-Knopf
+  error: '3 subtests failed'
+    ok 1 - nichts eingerichtet: "Noch nichts eingerichtet", mobil 0/5
+    ok 2 - Name + 2 Orte: 2 / 5 (Vergleich + Orte)
+    ok 3 - alle Flags gesetzt: genau 5 / 5 (Deckel 5, Versand-Flag zaehlt nicht)
+    ok 4 - bis Alarme besucht: Zaehler voll (5 / 5) — voll genau dann, wenn Aktivieren frei
+    ok 5 - Wertebereiche-Besuch allein erhoeht den Zaehler (4 / 5 ohne Alarme)
+ok 4 - Zaehler am Editor (F002): Deckel und Schrittliste
+    ok 1 - Ideal-Flag ohne Metriken-Flag: Wertebereiche und Alarme bleiben gesperrt
+    ok 2 - Alarme-Flag ohne Ideal-Flag: Alarme gesperrt
+ok 5 - F003: konjunktive Kette bei uebersprungenem Flag (Compare-Semantik wie vor S4)
+# tests 17
+# pass 14
+# fail 3
+=================== src/lib/components/trip-new/__tests__/trip_new_reiterleiste_besuchs_flags.test.ts
+    ok 1 - nichts besucht: ab Wegpunkte alles gesperrt
+    ok 2 - nur Metriken-Flag: Wertebereiche frei, Alarme gesperrt
+    ok 3 - F001: Flags wt+wb+al gesetzt, etDone false => nur Metriken und Wegpunkte gesperrt (wie HEAD)
+    ok 4 - Kette: wb-Flag oeffnet Alarme (jede Stufe haengt nur am Vorgaenger-Flag)
+ok 1 - AC-2: Trip-Reiterleiste reicht die Besuchs-Flags durch (etDone = false)
+    ok 1 - trip-new-save-btn: Wertebereiche besucht, Alarme NICHT besucht => disabled
+    ok 2 - trip-new-save-btn: Alarme besucht (ohne Versand) => nicht disabled
+    ok 3 - tn-mobile-save: Wertebereiche besucht, Alarme NICHT besucht => disabled
+    ok 4 - tn-mobile-save: Alarme besucht (ohne Versand) => nicht disabled
+ok 2 - AC-3 / \#1743 AC-19: Speichern-Knopf vor und nach Alarme-Besuch (TripNewEditor)
+# tests 8
+# pass 8
+# fail 0
+=================== src/lib/components/shared/__tests__/compare_new_editor_mobil_orte_schritt.test.ts
+    ok 1 - gewählte Orte erscheinen im MOBILEN Schritt nummeriert, in Auswahl-Reihenfolge
+    ok 2 - mobiler Zähler und Weiter-Knopf folgen der Auswahl (1 Ort ⇒ gesperrt, 2 Orte ⇒ frei)
+ok 1 - AC-6 mobil (F001): Auswahl des Editors erreicht den mobilen Orte-Schritt
+    ok 1 - ✕ an einem Ort ⇒ wiz.pickedIds ohne ihn, Weiter bleibt frei, POST ohne den Ort
+    ok 2 - ✕ an zwei von drei Orten ⇒ Editor hält 1 Ort, Weiter gesperrt
+ok 2 - AC-6 mobil (F001): Abwählen im mobilen Orte-Schritt wirkt im Editor-Zustand
+    ok 1 - Bibliotheks-Kachel wählt einen Ort aus ⇒ wiz.pickedIds, Weiter frei, POST mit beiden Orten
+    ok 2 - ✕ an einem Ort ⇒ wiz.pickedIds ohne ihn, POST ohne den Ort
+ok 3 - AC-6 Desktop: Aus-/Abwählen im Desktop-Orte-Schritt wirkt im Editor-Zustand und im POST
+    ok 1 - mobil rendert der Schritt dicht: Bibliotheks-Knopf da, Smart-Import-Raster des Desktops nicht
+    ok 2 - der Bibliotheks-Knopf im mobilen Schritt öffnet das Bibliotheks-Sheet des Editors
+ok 4 - AC-6 mobil (F002): dense-Variante und Bibliotheks-Knopf
+# tests 8
+# pass 8
+# fail 0
+=================== src/lib/components/compare-new/__tests__/compare_new_footer_nav_clearance.test.ts
+ok 1 - AC-7: der EditorStickyFooter-Mount (testid="cm-mobile-cta") trägt navClearance={false}
+# tests 1
+# pass 1
+# fail 0
+
+=================== ZUSAMMENFASSUNG Unit (node --test)
+anlege_rahmen.test.ts (NEU)                        30 rot / 1 grün  — AnlegeRahmen.svelte fehlt (27×), Weiter-Knöpfe roher <button> bzw. variant quiet (3× AC-11); grün = Messaufbau-Gegenprobe
+trip_new_mobile_rahmen_angleichung.test.ts         4 rot / 20 grün — kein Breadcrumb-Link (AC-1, AC-10), Speichern kein Btn primary/kein Abbrechen im Fuß (AC-5/AC-8), mobil „Speichern" statt „Trip speichern" (AC-12)
+trip_anlegen_sprache.test.ts                       1 rot / 10 grün — Eyebrow noch „Neue Trip anlegen" statt „Neuer Trip" (AC-4)
+standardwerte_knopf_geteilt.test.ts                1 rot / 15 grün — cm-desktop-footer fehlt, Standardwerte noch in der Kopfzeile (AC-10)
+compare_anlege_freischaltung.test.ts               1 rot / 21 grün — cm-desktop-footer fehlt, „Briefing aktivieren" noch oben (AC-8)
+anlege_reiterleiste_trip_vergleich_paritaet.test.ts 1 rot / 9 grün — cm-desktop-footer fehlt (AC-10)
+compare_new_lock_engine_wirkstelle.test.ts         3 rot / 14 grün — Aktivieren nicht im cm-desktop-footer (Pfad folgt dem Rahmen; Lock-Engine-Zusicherungen wörtlich)
+trip_new_reiterleiste_besuchs_flags.test.ts        0 rot / 8 grün  — Pfad auf tn-desktop-footer/tn-mobile-footer eingegrenzt; beide existieren schon
+compare_new_editor_mobil_orte_schritt.test.ts      0 rot / 8 grün  — Anker auf Mobil-Zweig `.cm-mobile` umgestellt (robust gegen Kopf-Umzug in den Rahmen)
+compare_new_footer_nav_clearance.test.ts           0 rot / 1 grün  — UNVERÄNDERT, bleibt grün (AC-13)
+
+=================== Python-Wächter
+uv run pytest --tb=line -q tests/unit/test_e2e_compare_paritaet_waechter.py
+  mit frontend/e2e/anlege-rahmen-paritaet.spec.ts: 29 passed (grün, weil die neue Datei in diesem RED-Commit angelegt ist)
+  Gegenprobe ohne die Datei (externe Sicherung, danach byte-gleich zurück): 2 failed —
+    test_2837_s2_anlege_rahmen_spec_prueft_beide_arten_per_hub_kinds_schleife, test_2837_s2_anlege_rahmen_spec_deckt_beide_breiten_und_sprachen_ab
+    („E2E-Spec fehlt: frontend/e2e/anlege-rahmen-paritaet.spec.ts")
+
+=================== E2E (Playwright) — lokal NICHT ausgeführt
+Grund: lokaler Vite-Proxy zeigt auf Staging; Lauf in /e2e-verify bzw. CI-`e2e`.
+npx playwright test --list e2e/anlege-rahmen-paritaet.spec.ts  → Total: 36 tests in 2 files (35 AR-Fälle + global setup), kompiliert
+npx playwright test --list (anlege-rahmen-paritaet, hub-anlegen-ablauf, issue-661-trip-new-mobile,
+  standardwerte-und-hilfe, compare-editor-fidelity-s8d) → Total: 91 tests in 6 files, kompiliert
+tsc --ignoreConfig --strict auf denselben E2E-Dateien: keine Fehler in den geänderten Dateien
+  (einziger Treffer helpers.ts(3,32) TS5097 `.ts`-Importendung — vorbestehend, nur ohne Projekt-tsconfig sichtbar)
+
+=================== svelte-check
+npx svelte-kit sync && npx svelte-check: 27 Fehler, ALLE vorbestehend in nicht berührten Dateien
+(compareEditor*.test.ts forecast_hours, PresetRow.test.ts, AlertsCard.svelte, …); 0 Fehler in den
+neuen/umgedrehten Testdateien. Der fehlende AnlegeRahmen-Import erzeugt keinen Typfehler, weil er
+erst zur Laufzeit in `lade()` dynamisch geladen wird (Muster S1).

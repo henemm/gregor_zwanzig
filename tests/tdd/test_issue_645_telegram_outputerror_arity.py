@@ -85,19 +85,29 @@ def test_http_error_path_raises_clean_outputerror(monkeypatch):
     WHEN: send() den Telegram-Endpoint kontaktiert
     THEN: ein OutputError (KEIN TypeError) mit channel="telegram" wird geworfen.
 
-    MOCK-FREI: Die API-Basis wird auf eine garantiert nicht erreichbare Adresse
-    (127.0.0.1:1 → Connection refused) umgelenkt. httpx führt einen ECHTEN
+    MOCK-FREI: Die API-Basis wird auf einen EIGENEN, garantiert abgewiesenen
+    Port umgelenkt: gebunden, aber ohne listen() → Connection refused. (Nicht
+    mehr Port 1: der Offline-Lauf #1755 erlaubt Loopback nur zu Ports, die der
+    Testprozess selbst gebunden hat.) httpx führt einen ECHTEN
     Verbindungsversuch durch und wirft eine reale httpx.ConnectError (Subklasse
     von httpx.HTTPError) — kein Mock, kein patch der Sende-Logik. Deckt den
     dritten raise-Pfad (Z. 60) ab (AC-2/AC-3).
     """
+    import socket
+
     import output.channels.telegram as telegram_mod
 
-    monkeypatch.setattr(telegram_mod, "TELEGRAM_API_BASE", "http://127.0.0.1:1")
-    output = antwort_im_update(_INVALID, _INVALID.telegram_chat_id)
+    abgewiesen = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    try:
+        abgewiesen.bind(("127.0.0.1", 0))  # kein listen() → ECONNREFUSED
+        port = abgewiesen.getsockname()[1]
+        monkeypatch.setattr(telegram_mod, "TELEGRAM_API_BASE", f"http://127.0.0.1:{port}")
+        output = antwort_im_update(_INVALID, _INVALID.telegram_chat_id)
 
-    with pytest.raises(OutputError) as exc_info:
-        output.send("Test #645", "Body")
+        with pytest.raises(OutputError) as exc_info:
+            output.send("Test #645", "Body")
+    finally:
+        abgewiesen.close()
 
     assert exc_info.value.channel == "telegram"
     assert str(exc_info.value).startswith("[telegram]")

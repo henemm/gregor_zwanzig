@@ -12,6 +12,8 @@
 	import { api } from '$lib/api.js';
 	import { Eyebrow, Btn, Input, TopoBg, PageHeader } from '$lib/components/atoms';
 	import EditorStickyFooter from '$lib/components/shared/EditorStickyFooter.svelte';
+	import AnlegeRahmen from '$lib/components/shared/anlege-rahmen/AnlegeRahmen.svelte';
+	import AnlegeFortschritt from '$lib/components/shared/anlege-rahmen/AnlegeFortschritt.svelte';
 	import WetterMetrikenVersandPanel from '$lib/components/shared/WetterMetrikenVersandPanel.svelte';
 	import { anlegeKette } from '$lib/components/shared/subscriptionTabs';
 	import MailInhaltCard from '$lib/components/shared/MailInhaltCard.svelte';
@@ -552,52 +554,35 @@
 	<main style="flex: 1; min-width: 0; position: relative; overflow-x: clip; display: flex; flex-direction: column;">
 		<TopoBg opacity={0.12} />
 
-		<!-- Kopfleiste Desktop: Zurück über den geteilten PageHeader (onCancel ⇒ kein Autosave) -->
-		<div class="tn-desktop" data-testid="tn-desktop-breadcrumb" style="position: relative; padding: 0 40px;">
-			<PageHeader back={{ href: '/trips', label: 'Trips', onclick: onCancel }} compact />
-		</div>
-
-		<!-- Kopfleiste Mobile (Issue #661): gleiche Bauart wie /compare/new -->
-		<div class="tn-mobile" data-testid="tn-mobile-appbar" style="position: relative; padding: 0 16px; background: var(--g-paper); flex-shrink: 0; z-index: 10;">
-			<PageHeader
-				back={{ href: '/trips', label: $t('listen.trips.titel'), onclick: onCancel }}
-				eyebrow={name.trim() || $t('trip.anlegen.neuer_trip')}
-				title={TAB_DEFS.find(d => d.id === activeTab)?.label ?? $t('trip.anlegen.reiter_route')}
-				compact
-			/>
-		</div>
-
-		<!-- Hero (Desktop only) -->
-		<div class="tn-desktop" style="position: relative; padding: 20px 40px 14px;">
-			<Eyebrow>{$t('trip.anlegen.titel')}</Eyebrow>
-			<h1 style="font-size: 32px; font-weight: 600; letter-spacing: -0.02em; margin: 4px 0 0; line-height: 1.1; color: {name.trim() ? 'var(--g-ink)' : 'var(--g-ink-4)'};">
-				{name.trim() || $t('trip.anlegen.kein_name')}
-			</h1>
-			<!-- Fortschrittsbalken (TN_Progress); Kennungen wie compare-editor-progress (#2347 S4, AN-2) -->
-			<div data-testid="trip-new-progress" style="display: flex; align-items: center; gap: 10px; margin-top: 7px;">
-				<div style="display: flex; gap: 3px;">
-					{#each PROGRESS_STEPS as step}
-						<div data-testid="trip-new-progress-segment" style="width: 24px; height: 3px; border-radius: 2px; background: {done.has(step) ? 'var(--g-accent)' : 'var(--g-rule)'}; transition: background 350ms;"></div>
-					{/each}
-				</div>
-				<span class="mono" style="font-size: 11px; color: var(--g-ink-4); letter-spacing: 0.04em;">
-					{progressN === 0 ? $t('trip.anlegen.nichts_eingerichtet') : $t('trip.anlegen.abschnitte', { n: progressN, gesamt: PROGRESS_STEPS.length })}
-				</span>
-			</div>
-		</div>
-
-		<!-- Mobile Fortschrittsbalken (TNM_Progress, Issue #661) -->
-		<div class="tn-mobile tn-mobile-flex" style="align-items: center; gap: 8px; padding: 8px 16px 0;">
-			<div style="display: flex; gap: 3px; flex: 1;">
-				{#each PROGRESS_STEPS as step}
-					<div style="flex: 1; height: 3px; border-radius: 2px; background: {done.has(step) ? 'var(--g-accent)' : 'var(--g-rule)'}; transition: background 350ms;"></div>
-				{/each}
-			</div>
-			<span class="mono" style="font-size: 11px; color: var(--g-ink-4); flex-shrink: 0;">{progressN}/{PROGRESS_STEPS.length}</span>
-		</div>
+		<!-- Desktop: geteilter Anlege-Rahmen (#2837 S2) — Breadcrumb, Eyebrow, Titel, Fortschritt,
+		     Inhalt, Fuß. Pfad-Link und Abbrechen rufen onCancel (kein Autosave). -->
+		<div class="tn-desktop" style="position: relative; flex: 1 0 auto; display: flex; flex-direction: column;">
+		<AnlegeRahmen
+			context="route"
+			{name}
+			{onCancel}
+			cancelHref="/trips"
+			abschlussLabel={saving ? $t('trip.anlegen.speichere') : savedTripId ? $t('trip.anlegen.gespeichert') : $t('trip.anlegen.speichern')}
+			abschlussTestid="trip-new-save-btn"
+			canFinish={ready && !saving}
+			onFinish={onSave}
+			testidPrefix="tn"
+			navClearance={false}
+			steps={PROGRESS_STEPS}
+			done={progressN}
+			erledigt={done}
+			aktiv={activeTab}
+		>
+			{#snippet hinweis()}
+				<!-- #2347 S4 (AN-5): Hinweis am gesperrten Abschluss, wie „Alarme einrichten zum Aktivieren" im Vergleich -->
+				{#if !ready}<span class="mono" style="font-size: 11px; color: var(--g-ink-4);">{$t('trip.anlegen.alarme_zum_speichern')}</span>{/if}
+			{/snippet}
+			{#snippet standardwerte()}
+				{#if !ready}<StandardwerteSpeichernKnopf enabled={standardwerteFrei} {saving} onclick={onStandardwerte} testid="trip-new-standardwerte-btn" />{/if}
+			{/snippet}
 
 		<!-- Tab-Bar (Desktop only, TN_TabBar) -->
-		<div class="tn-desktop" style="border-bottom: 1px solid var(--g-rule); padding: 0 40px; display: flex; gap: 0; overflow-x: auto;">
+		<div style="border-bottom: 1px solid var(--g-rule); padding: 0 40px; display: flex; gap: 0; overflow-x: auto;">
 			{#each TAB_DEFS as tab}
 				{@const isActive = tab.id === activeTab}
 				{@const isOpen = unlocked.has(tab.id)}
@@ -624,30 +609,7 @@
 			{/each}
 		</div>
 
-		<!-- Mobile Tab-Bar (TNM_TabBar, Issue #661) -->
-		<div class="tn-mobile tn-mobile-flex" data-testid="tn-mobile-tabbar" style="gap: 0; overflow-x: auto; border-bottom: 1px solid var(--g-rule-soft); -webkit-overflow-scrolling: touch; scrollbar-width: none; flex-shrink: 0; mask-image: linear-gradient(to right, transparent, black 16px, black calc(100% - 16px), transparent); -webkit-mask-image: linear-gradient(to right, transparent, black 16px, black calc(100% - 16px), transparent);">
-			{#each TAB_DEFS as tab}
-				{@const isActive = tab.id === activeTab}
-				{@const isOpen = unlocked.has(tab.id)}
-				{@const isDone = done.has(tab.id) && !isActive}
-				<button
-					type="button"
-					role="tab"
-					aria-selected={isActive}
-					onclick={makeMobileTabHandler(tab.id)}
-					style="display: inline-flex; align-items: center; gap: 5px; padding: 13px 13px; min-height: 44px; flex-shrink: 0; background: transparent; border: none; border-bottom: {isActive ? '2px solid var(--g-accent)' : '2px solid transparent'}; margin-bottom: -1px; cursor: {isOpen ? 'pointer' : 'default'}; font-size: 14px; font-weight: {isActive ? 600 : 500}; color: {isActive ? 'var(--g-ink)' : isOpen ? 'var(--g-ink-3)' : 'var(--g-ink-4)'}; white-space: nowrap; font-family: var(--g-font-sans); opacity: {isOpen ? 1 : 0.35};">
-					{tab.label}
-					{#if tab.optional && isOpen}
-						<span class="mono" style="font-size: 11px; font-weight: 700; padding: 1px 5px; border-radius: 3px; background: rgba(196,90,42,0.12); color: var(--g-accent-deep); letter-spacing: 0.06em; text-transform: uppercase;">{$t('trip.anlegen.opt')}</span>
-					{/if}
-					{#if !isOpen}
-						<span class="mono" style="font-size: 11px; opacity: 0.8;">⊘</span>
-					{/if}
-				</button>
-			{/each}
-		</div>
-
-		<!-- Fehler-Banner -->
+		<!-- Fehler-Banner (Desktop) -->
 		{#if saveError !== null}
 			<div style="padding: 10px 40px; background: rgba(180,30,30,0.08); border-bottom: 1px solid rgba(180,30,30,0.2);">
 				<span class="mono" style="font-size: 11px; color: var(--g-bad);">⚠ {saveError || $t('trip.fehler_speichern')}</span>
@@ -657,8 +619,6 @@
 		<!-- ══════════════════════════════════════════════════════
 		     Desktop Tab-Inhalt (Issue #622, Slice 1)
 		     ══════════════════════════════════════════════════════ -->
-		<div class="tn-desktop" style="flex: 1 0 auto; display: flex; flex-direction: column;">
-		<div style="flex: 1 0 auto;">
 		{#if activeTab === 'route'}
 			<!-- Route-Tab (TN_RouteTab) -->
 			<div style="position: relative; padding: 28px 40px 60px;">
@@ -730,13 +690,13 @@
 						{:else if !startDate}
 							<span class="mono" style="font-size: 11px; color: var(--g-ink-4);">{$t('trip.anlegen.datum_fehlt')}</span>
 						{/if}
-						<button type="button"
+						<!-- #2837 S2 (AC-11): Weiter = Btn accent, gesperrt allein über disabled -->
+						<Btn variant="accent" size="md"
 							disabled={!name.trim() || !startDate}
 							onclick={makeContinueToEtappenHandler()}
-							data-testid="trip-new-continue-etappen"
-							style="padding: 8px 16px; border-radius: var(--g-r-2); border: none; background: {name.trim() && startDate ? 'var(--g-accent)' : 'var(--g-ink-4)'}; color: #fff; font-size: 13px; font-weight: 600; cursor: {name.trim() && startDate ? 'pointer' : 'not-allowed'}; opacity: {name.trim() && startDate ? 1 : 0.45};">
+							data-testid="trip-new-continue-etappen">
 							{$t('trip.anlegen.etappen_anlegen')}
-						</button>
+						</Btn>
 					</div>
 				</div>
 			</div>
@@ -979,24 +939,54 @@
 			</div>
 		</div>
 		{/if}
+		</AnlegeRahmen>
+		</div><!-- /.tn-desktop -->
+
+		<!-- Kopfleiste Mobile (Issue #661): gleiche Bauart wie /compare/new -->
+		<div class="tn-mobile" data-testid="tn-mobile-appbar" style="position: relative; padding: 0 16px; background: var(--g-paper); flex-shrink: 0; z-index: 10;">
+			<PageHeader
+				back={{ href: '/trips', label: $t('listen.trips.titel'), onclick: onCancel }}
+				eyebrow={name.trim() || $t('trip.anlegen.neuer_trip')}
+				title={TAB_DEFS.find(d => d.id === activeTab)?.label ?? $t('trip.anlegen.reiter_route')}
+				compact
+			/>
 		</div>
 
-		<!-- Speichern (geteilter Sticky-Footer; BottomNav ist auf Anlege-Seiten ausgeblendet) -->
-		<EditorStickyFooter context="route" navClearance={false} testid="tn-desktop-footer">
-			<div style="display: flex; gap: 8px; align-items: center; justify-content: flex-end;">
-				{#if !ready}
-					<!-- #2347 S4 (AN-5): Hinweis am gesperrten Abschluss, wie „Alarme einrichten zum Aktivieren" im Vergleich -->
-					<span class="mono" style="font-size: 11px; color: var(--g-ink-4);">{$t('trip.anlegen.alarme_zum_speichern')}</span>
-					<StandardwerteSpeichernKnopf enabled={standardwerteFrei} {saving} onclick={onStandardwerte} testid="trip-new-standardwerte-btn" />
-				{/if}
-				<button type="button" onclick={onSave} disabled={!ready || saving}
-					data-testid="trip-new-save-btn"
-					style="padding: 6px 12px; border-radius: var(--g-r-2); border: none; background: var(--g-ink); color: var(--g-paper); font-size: 13px; font-weight: 500; cursor: {ready && !saving ? 'pointer' : 'not-allowed'}; opacity: {ready && !saving ? 1 : 0.4};">
-					{saving ? $t('trip.anlegen.speichere') : savedTripId ? $t('trip.anlegen.gespeichert') : $t('trip.anlegen.speichern')}
+		<!-- Mobile Fortschrittsbalken (TNM_Progress, Issue #661) -->
+		<!-- #2837 S2b: geteilter Baustein AnlegeFortschritt (wie /compare/new) -->
+		<div class="tn-mobile tn-mobile-flex" style="align-items: center; padding: 8px 16px 0;">
+			<AnlegeFortschritt steps={PROGRESS_STEPS} done={progressN} erledigt={done} aktiv={activeTab} variante="mobil" testidPrefix="tn-mobile-progress" />
+		</div>
+
+		<!-- Mobile Tab-Bar (TNM_TabBar, Issue #661) -->
+		<div class="tn-mobile tn-mobile-flex" data-testid="tn-mobile-tabbar" style="gap: 0; overflow-x: auto; border-bottom: 1px solid var(--g-rule-soft); -webkit-overflow-scrolling: touch; scrollbar-width: none; flex-shrink: 0; mask-image: linear-gradient(to right, transparent, black 16px, black calc(100% - 16px), transparent); -webkit-mask-image: linear-gradient(to right, transparent, black 16px, black calc(100% - 16px), transparent);">
+			{#each TAB_DEFS as tab}
+				{@const isActive = tab.id === activeTab}
+				{@const isOpen = unlocked.has(tab.id)}
+				{@const isDone = done.has(tab.id) && !isActive}
+				<button
+					type="button"
+					role="tab"
+					aria-selected={isActive}
+					onclick={makeMobileTabHandler(tab.id)}
+					style="display: inline-flex; align-items: center; gap: 5px; padding: 13px 13px; min-height: 44px; flex-shrink: 0; background: transparent; border: none; border-bottom: {isActive ? '2px solid var(--g-accent)' : '2px solid transparent'}; margin-bottom: -1px; cursor: {isOpen ? 'pointer' : 'default'}; font-size: 14px; font-weight: {isActive ? 600 : 500}; color: {isActive ? 'var(--g-ink)' : isOpen ? 'var(--g-ink-3)' : 'var(--g-ink-4)'}; white-space: nowrap; font-family: var(--g-font-sans); opacity: {isOpen ? 1 : 0.35};">
+					{tab.label}
+					{#if tab.optional && isOpen}
+						<span class="mono" style="font-size: 11px; font-weight: 700; padding: 1px 5px; border-radius: 3px; background: rgba(196,90,42,0.12); color: var(--g-accent-deep); letter-spacing: 0.06em; text-transform: uppercase;">{$t('trip.anlegen.opt')}</span>
+					{/if}
+					{#if !isOpen}
+						<span class="mono" style="font-size: 11px; opacity: 0.8;">⊘</span>
+					{/if}
 				</button>
+			{/each}
+		</div>
+
+		<!-- Fehler-Banner (mobil; Desktop-Pendant im Rahmen-Inhalt) -->
+		{#if saveError !== null}
+			<div class="tn-mobile" style="padding: 10px 16px; background: rgba(180,30,30,0.08); border-bottom: 1px solid rgba(180,30,30,0.2);">
+				<span class="mono" style="font-size: 11px; color: var(--g-bad);">⚠ {saveError || $t('trip.fehler_speichern')}</span>
 			</div>
-		</EditorStickyFooter>
-		</div><!-- /.tn-desktop -->
+		{/if}
 
 		<!-- ══════════════════════════════════════════════════════
 		     Mobile Tab-Inhalt (Issue #661, AC-9)
@@ -1239,12 +1229,12 @@
 				{/if}
 				{#if activeTab === 'alarme'}
 					<MBtn block variant={ready ? 'primary' : 'quiet'} size="xl" disabled={!ready || saving} onclick={onSave} testid="tn-mobile-save">
-						{saving ? $t('trip.anlegen.speichere') : savedTripId ? $t('trip.anlegen.gespeichert') : $t('aktionen.speichern')}
+						{saving ? $t('trip.anlegen.speichere') : savedTripId ? $t('trip.anlegen.gespeichert') : $t('trip.anlegen.speichern')}
 					</MBtn>
 				{:else if activeTab === 'route'}
 					<div data-testid="tn-mobile-route-cta">
 						<!-- #2347 S4 (AC-20): gesperrt wie cm-mobile-cta im Vergleich — gleiche Bedingung wie der Handler. -->
-						<MBtn block variant={name.trim() && startDate ? 'primary' : 'quiet'} size="xl"
+						<MBtn block variant={name.trim() && startDate ? 'accent' : 'quiet'} size="xl"
 							disabled={!(name.trim() && startDate)}
 							onclick={makeMobileRouteContinueHandler()}>
 							{name.trim() && startDate ? $t('trip.anlegen.etappen_anlegen') : (!name.trim() ? $t('trip.anlegen.name_eingeben') : $t('trip.anlegen.datum_waehlen'))}
@@ -1253,7 +1243,7 @@
 				{:else if activeTab === 'etappen'}
 					{#if etDone}
 						<div style="display: flex; flex-direction: column; gap: 8px;">
-							<MBtn block variant="primary" size="xl" onclick={makeEtappenContinueHandler('wegpunkte')}>{$t('trip.anlegen.wegpunkte_pruefen')}</MBtn>
+							<MBtn block variant="accent" size="xl" onclick={makeEtappenContinueHandler('wegpunkte')}>{$t('trip.anlegen.wegpunkte_pruefen')}</MBtn>
 							<MBtn block variant="ghost" size="lg" onclick={makeEtappenContinueHandler('wetter-metriken')}>{$t('trip.anlegen.direkt_wetter')}</MBtn>
 						</div>
 					{:else}
@@ -1262,13 +1252,13 @@
 					{/if}
 				{:else if activeTab === 'wegpunkte'}
 					<div style="display: flex; flex-direction: column; gap: 8px;">
-						<MBtn block variant="primary" size="xl" onclick={makeMobileWegpunkteContinueHandler()}>{$t('trip.anlegen.wegpunkte_uebernehmen')}</MBtn>
+						<MBtn block variant="accent" size="xl" onclick={makeMobileWegpunkteContinueHandler()}>{$t('trip.anlegen.wegpunkte_uebernehmen')}</MBtn>
 						<MBtn block variant="ghost" size="lg" onclick={makeMobileWegpunkteContinueHandler()}>{$t('trip.anlegen.ueberspringen')}</MBtn>
 					</div>
 				{:else if activeTab === 'wetter-metriken'}
-					<MBtn block variant="primary" size="xl" onclick={makeEtappenContinueHandler('wertebereiche')}>{$t('trip.anlegen.wertebereiche_festlegen')}</MBtn>
+					<MBtn block variant="accent" size="xl" onclick={makeEtappenContinueHandler('wertebereiche')}>{$t('trip.anlegen.wertebereiche_festlegen')}</MBtn>
 				{:else if activeTab === 'wertebereiche'}
-					<MBtn block variant="primary" size="xl" onclick={makeEtappenContinueHandler('alarme')}>{$t('trip.anlegen.alarme_einrichten')}</MBtn>
+					<MBtn block variant="accent" size="xl" onclick={makeEtappenContinueHandler('alarme')}>{$t('trip.anlegen.alarme_einrichten')}</MBtn>
 				{/if}
 			</EditorStickyFooter>
 		</div><!-- /.tn-mobile -->

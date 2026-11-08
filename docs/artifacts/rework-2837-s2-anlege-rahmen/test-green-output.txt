@@ -1,0 +1,834 @@
+# TDD GREEN — Issue #2837 S2 Anlege-Rahmen (Workflow rework-2837-s2-anlege-rahmen)
+# Branch rework-2837-s2-red, Basis bf73e4676 (RED), erzeugt 2026-11-08T15:41:09Z
+# Aufruf je Datei: cd frontend && npm test -- <datei>  (node --test, kein Vitest)
+
+=================== src/lib/components/shared/anlege-rahmen/__tests__/anlege_rahmen.test.ts
+    ok 1 - Entscheidung 1/AC-14 (route): data-kind="route" über Fuß UND Überschrift
+    ok 2 - AC-1 (route): Breadcrumb — Elternteil „Trips" ist Link auf /trips, Kind „Neuer Trip" kein Link, steht vor der Überschrift
+    ok 3 - AC-4 (route): genau ein Desktop-Eyebrow „Neuer Trip" zwischen Breadcrumb und Überschrift, nie „Neue Trip"
+    ok 4 - Titel (route): h1 = Name, ohne Namen der Katalogtext „kein Name"
+    ok 5 - Aufbau (route): Überschrift → Fortschritt → Inhalt → Fuß, jedes Snippet genau einmal
+ok 1 - \#2837 S2 AnlegeRahmen (route) — Kopf, Eyebrow, Titel
+    ok 1 - AC-16 (route): Fuß tn-desktop-footer ist der geteilte EditorStickyFooter (data-context, ohne Tabbar-Abstand)
+    ok 2 - AC-5 (route): „Abbrechen" ist Btn ghost im Fuß, VOR allen Aktionen rechts (Standardwerte, Hinweis, Hauptaktion)
+    ok 3 - Entscheidung 4 (route): Abbrechen ist ein Knopf (onCancel, kein href-Sprung am Autosave vorbei)
+    ok 4 - AC-10 (route): Standardwerte und Hinweis stehen im Fuß, nicht im Kopf
+    ok 5 - AC-8 (route): Hauptaktion trip-new-save-btn ist Btn primary im Fuß, nach Standardwerten und Hinweis, Text = abschlussLabel
+    ok 6 - AC-9 (route): ohne canFinish gesperrt (disabled), Variante bleibt primary, Platz bleibt gleich
+ok 2 - \#2837 S2 AnlegeRahmen (route) — Fuß
+    ok 1 - Entscheidung 1/AC-14 (vergleich): data-kind="vergleich" über Fuß UND Überschrift
+    ok 2 - AC-1 (vergleich): Breadcrumb — Elternteil „Orts-Vergleiche" ist Link auf /compare, Kind „Neuer Vergleich" kein Link, steht vor der Überschrift
+    ok 3 - AC-4 (vergleich): genau ein Desktop-Eyebrow „Neuer Vergleich" zwischen Breadcrumb und Überschrift, nie „Neue Trip"
+    ok 4 - Titel (vergleich): h1 = Name, ohne Namen der Katalogtext „kein Name"
+    ok 5 - Aufbau (vergleich): Überschrift → Fortschritt → Inhalt → Fuß, jedes Snippet genau einmal
+ok 3 - \#2837 S2 AnlegeRahmen (vergleich) — Kopf, Eyebrow, Titel
+    ok 1 - AC-16 (vergleich): Fuß cm-desktop-footer ist der geteilte EditorStickyFooter (data-context, ohne Tabbar-Abstand)
+    ok 2 - AC-5 (vergleich): „Abbrechen" ist Btn ghost im Fuß, VOR allen Aktionen rechts (Standardwerte, Hinweis, Hauptaktion)
+    ok 3 - Entscheidung 4 (vergleich): Abbrechen führt auf /compare
+    ok 4 - AC-10 (vergleich): Standardwerte und Hinweis stehen im Fuß, nicht im Kopf
+    ok 5 - AC-8 (vergleich): Hauptaktion compare-editor-activate ist Btn primary im Fuß, nach Standardwerten und Hinweis, Text = abschlussLabel
+    ok 6 - AC-9 (vergleich): ohne canFinish gesperrt (disabled), Variante bleibt primary, Platz bleibt gleich
+ok 4 - \#2837 S2 AnlegeRahmen (vergleich) — Fuß
+    ok 1 - route und vergleich rendern dasselbe Gerüst (canFinish=false)
+    ok 2 - route und vergleich rendern dasselbe Gerüst (canFinish=true)
+    ok 3 - kompiliertes CSS des Rahmens: kein Selektor nach data-kind oder nach Art benannten Klassen
+ok 5 - \#2837 S2 AC-14 — ein Markup, context wählt nur Texte, Elternteil-Link, data-kind und Testids
+    ok 1 - route: Elternteil, Kind/Eyebrow und Abbrechen folgen der Nutzersprache
+    ok 2 - vergleich: Elternteil, Kind/Eyebrow und Abbrechen folgen der Nutzersprache
+ok 6 - \#2837 S2 AC-4/AC-15 — Texte des Rahmens aus dem Katalog (de und en)
+    ok 1 - Trip, Route ohne Namen: trip-new-continue-etappen ist Btn accent, disabled, ohne Inline-Deckkraft/-Farbe
+    ok 2 - Vergleich, Eckdaten ohne Namen: compare-editor-continue-orte ist Btn accent, disabled, ohne Inline-Deckkraft/-Farbe
+    ok 3 - Vergleich, Orte mit 1 Ort: compare-editor-continue-wetter-metriken ist Btn accent, disabled, ohne Inline-Deckkraft/-Farbe
+ok 7 - \#2837 S2 AC-11 — Weiter-Knöpfe beider Editoren (gesperrter Zustand)
+ok 8 - Messaufbau: TripNewEditor und CompareNewEditor laden
+# tests 31
+# pass 31
+# fail 0
+=================== src/lib/components/trip-new/__tests__/trip_new_mobile_rahmen_angleichung.test.ts
+    ok 1 - Desktop: tn-desktop-breadcrumb = „Trips / Neuer Trip", Elternteil GENAU EIN <a href="/trips"> mit Katalogtext, Kind kein Link, kein Zurück-Knopf
+    ok 2 - Mobil: tn-mobile-appbar enthält GENAU EINEN <button data-testid="back-link"> ohne href, kein <a>
+ok 1 - AC-3: Zurück in /trips/new — Desktop Breadcrumb (\#2837 S2), mobil BackLink im Button-Modus
+    ok 1 - Zählungen: trip-new-save-btn = 1, tn-mobile-appbar = 1 (Desktop), tn-mobile-save = 1 (Mobil)
+    ok 2 - Desktop: trip-new-save-btn sitzt NICHT mehr im Breadcrumb, sondern in einem route-Footer ohne has-nav
+    ok 3 - Mobil: tn-mobile-save sitzt NICHT mehr in der App-Leiste, sondern in einem route-Footer ohne has-nav
+    ok 4 - \#2837 S2: Desktop-Fuß tn-desktop-footer — Abbrechen (Btn ghost) VOR trip-new-save-btn (Btn primary)
+    ok 5 - zwei getrennte Footer-Mounts (einer je Viewport-Zweig)
+ok 2 - AC-4: Speichern wandert in je einen EditorStickyFooter (context="route", navClearance={false})
+    ok 1 - trip-new-save-btn trägt im Anfangszustand das Attribut disabled
+    ok 2 - tn-mobile-save trägt im Anfangszustand das Attribut disabled
+ok 3 - AC-4: Speichern ist gesperrt, solange der Trip nicht speicherbereit ist
+    ok 1 - Standard-Deklaration mask-image (nicht nur als Teil von -webkit-mask-image)
+    ok 2 - -webkit-mask-image-Variante
+ok 4 - AC-8: Fade-Maske auf tn-mobile-tabbar (wörtlich wie cm-mobile-tabbar)
+    ok 1 - Desktop: tn-mobile-appbar genau 1× (nie 0, nie 2)
+    ok 2 - Desktop: tn-mobile-save genau 1× (nie 0, nie 2)
+    ok 3 - Desktop: tn-desktop-breadcrumb genau 1× (nie 0, nie 2)
+    ok 4 - Desktop: tn-mobile-tabbar genau 1× (nie 0, nie 2)
+    ok 5 - Desktop: tn-mobile-save fehlt vor dem Schritt Alarme (AN-9)
+    ok 6 - Mobil: tn-mobile-appbar genau 1× (nie 0, nie 2)
+    ok 7 - Mobil: tn-mobile-save genau 1× (nie 0, nie 2)
+    ok 8 - Mobil: tn-desktop-breadcrumb genau 1× (nie 0, nie 2)
+    ok 9 - Mobil: tn-mobile-tabbar genau 1× (nie 0, nie 2)
+    ok 10 - Mobil: tn-mobile-save fehlt vor dem Schritt Alarme (AN-9)
+ok 5 - AC-9: Strukturwächter — vertragliche Testids je Render genau einmal
+    ok 1 - tn-mobile-save (Schritt Alarme) trägt den Text „Trip speichern"
+ok 6 - \#2837 S2 AC-12: mobiler Abschluss „Trip speichern"
+    ok 1 - Mobil: tn-mobile-appbar enthält aria-label="Zurück: Trips" genau einmal
+    ok 2 - Desktop: Breadcrumb-Link heißt „Trips" (aria-label, falls gesetzt, nennt ebenfalls „Trips"), kein „Zurück: Trips"-Knopf
+ok 7 - AC-10: Vorlesetext am Zurück-Pfeil (mobil) bzw. Breadcrumb-Link (Desktop)
+# tests 24
+# pass 24
+# fail 0
+=================== src/lib/components/trip-new/__tests__/trip_anlegen_sprache.test.ts
+    ok 1 - Route-Schritt: Kopf, Reiter, Felder, Platzhalter, Pflicht-Hinweise, Aktivitaeten
+    ok 2 - Etappen-Schritt: Spaltenkoepfe, Datum `1 Jul`, Plural ohne GPX, Knoepfe; Etappen-Name unveraendert
+    ok 3 - Wegpunkte- und Alarme-Schritt: Hinweise und Weiter-Knoepfe englisch
+    ok 4 - Anlege-Fehler: Rueckfall-Meldung wird beim Rendern aufgeloest (nicht eingefroren)
+ok 1 - AC-3: /trips/new englisch (Desktop und mobil)
+    ok 1 - derselbe Zustand zeigt nach dem Sprachwechsel den englischen Sperr-Hinweis
+ok 2 - AC-3: gesperrter Schritt (mobil) — Toast-Hinweis beim Rendern aufgeloest
+    ok 1 - Desktop: Kopf, Datum/Startzeit, Karte, Profil, Wegpunkte, Speichern; Wochentag Wed (de Mi)
+    ok 2 - Kaskaden-Rueckfrage und -Bestaetigung: Plural exakt, Datum englisch
+    ok 3 - Mobil: Hinweis, Liste, Wahl Etappe/Pausentag englisch
+    ok 4 - Datumsfeld: Wochentag je Sprache, Trip-Start und Startzeit englisch
+ok 3 - AC-3: Etappen-Editor englisch, Wochentag ueber fmtWeekday
+    ok 1 - buildCreateTripPayload in de und en gleich; Namen byte-gleich zur Eingabe; keine Anzeige-Texte
+    ok 2 - stageDate: de `01.07.` unveraendert, en `1 Jul`
+ok 4 - AC-3: eingegebene Namen unveraendert gespeichert, Nutzlast sprachunabhaengig
+# tests 11
+# pass 11
+# fail 0
+=================== src/lib/components/shared/__tests__/standardwerte_knopf_geteilt.test.ts
+    ok 1 - Beschriftung kommt aus dem Textkatalog (standardwerte.knopf) und ist nicht leer
+    ok 2 - enabled=true: Knopf mit testid, nicht gesperrt
+    ok 3 - enabled=false: gesperrt
+    ok 4 - saving=true: gesperrt (kein Doppelklick waehrend des Speicherns)
+ok 1 - AC-13: der Baustein StandardwerteSpeichernKnopf
+    ok 1 - TripNewEditor: <StandardwerteSpeichernKnopf> mindestens zweimal (Desktop + mobil), importiert aus shared/
+    ok 2 - CompareNewEditor: <StandardwerteSpeichernKnopf> mindestens zweimal (Desktop + mobil), importiert aus shared/
+ok 2 - AC-13: beide Editoren binden DENSELBEN Baustein ein (keine compare-eigene Kopie)
+    ok 1 - Desktop: Knopf im Footer neben „Trip speichern", solange der Bestandsknopf gesperrt ist
+    ok 2 - mobil (375 px): Knopf in der unteren Leiste
+    ok 3 - AC-5: alle Reiter besucht (Bestandsknopf frei) => Standardwerte-Knopf nicht mehr da
+ok 3 - AC-12/AC-5: Platzierung Trip (/trips/new)
+    ok 1 - Desktop: Knopf im Fuß cm-desktop-footer neben „Briefing aktivieren" (nicht in der Kopfzeile)
+    ok 2 - mobil, Reiter „vergleich": Knopf in der unteren Leiste (nicht nur auf dem letzten Reiter)
+    ok 3 - mobil, Reiter „orte": Knopf in der unteren Leiste (nicht nur auf dem letzten Reiter)
+    ok 4 - mobil, Reiter „wetter-metriken": Knopf in der unteren Leiste (nicht nur auf dem letzten Reiter)
+    ok 5 - mobil, Reiter „wertebereiche": Knopf in der unteren Leiste (nicht nur auf dem letzten Reiter)
+    ok 6 - AC-5: alle Reiter besucht (Aktivieren frei) => Standardwerte-Knopf nicht mehr da
+ok 4 - AC-12/AC-5: Platzierung Ortsvergleich (/compare/new)
+    ok 1 - Trip und Ortsvergleich zeigen denselben Katalog-Text; beide gesperrt, solange Standardwerte nicht bereit
+ok 5 - AC-13: identische Beschriftung und Sperre in beiden Editoren (SSR: Katalog nie geladen)
+# tests 16
+# pass 16
+# fail 0
+=================== src/lib/components/compare-new/__tests__/compare_anlege_freischaltung.test.ts
+    ok 1 - Leerzustand: nur "vergleich" offen, 4 Tabs gesperrt
+    ok 2 - AC-3: Name gesetzt → "orte" schaltet frei, "metriken" bleibt gesperrt
+    ok 3 - Nur Whitespace als Name schaltet "orte" NICHT frei
+    ok 4 - AC-4: genau 1 Ort schaltet "metriken" NICHT frei
+    ok 5 - AC-4: 2 Orte schalten "metriken" frei, "idealwerte" bleibt gesperrt
+    ok 6 - AC-5: metrikenVisited → "idealwerte" frei, "alarme" bleibt gesperrt
+    ok 7 - AC-7: idealsVisited → "alarme" frei; \#1743: alarmeVisited schaltet keinen "versand" frei
+    ok 8 - Kaskade übersprungen: idealsVisited ohne Vorstufen schaltet "alarme" NICHT frei
+    ok 9 - Vollständige Kette: alle 5 Tabs offen (\#1360: ohne Layout-Reiter, \#1743: ohne Versand)
+ok 1 - AC-2: unlockedTabs — progressive Freischaltung
+    ok 1 - Name → vergleich done; ≥2 Orte → orte done
+    ok 2 - 1 Ort → orte NICHT done
+    ok 3 - visited-Flags markieren die jeweiligen Tabs als done
+ok 2 - doneTabs — Done-Zustand nach Spec-Tabelle
+    ok 1 - Leerzustand = 0
+    ok 2 - vollständige Kette = 5 (ohne Versand-Schritt)
+    ok 3 - deckelt bei 5, auch wenn ein Fremd-Set größer wäre
+ok 3 - progressCount — Fortschrittszähler
+    ok 1 - Alarme nicht besucht → false (Aktivieren-Button deaktiviert)
+    ok 2 - Alarme besucht (kein Versand-Schritt) → true (Aktivieren freigegeben)
+    ok 3 - Leerzustand → false
+ok 4 - canActivate — "Briefing aktivieren" nach Alarme-Besuch
+    ok 1 - Reiterleiste: vergleich · orte · wetter-metriken · wertebereiche · alarme
+    ok 2 - Fortschritt: fünf Segmente; nach Alarme „5 / 5 Abschnitte eingerichtet"
+    ok 3 - Desktop: „Briefing aktivieren" im Fuß cm-desktop-footer — gesperrt bis Wertebereiche, frei nach Alarme
+    ok 4 - Mobil: im Schritt Alarme steht der freie Aktivieren-Knopf im Sticky-Footer
+ok 5 - \#1743 AC-19 Wirkstelle /compare/new: kein Versand-Schritt, Aktivieren nach Alarme
+# tests 22
+# pass 22
+# fail 0
+=================== src/lib/components/shared/__tests__/anlege_reiterleiste_trip_vergleich_paritaet.test.ts
+    ok 1 - Desktop: Route · Etappen & GPX · Wegpunkte prüfen · Wetter-Metriken · Wertebereiche · Alarme (kein Versand)
+    ok 2 - Mobil (390 px-Zweig): dieselbe Folge
+    ok 3 - „Briefing-Zeitplan" und „Alerts" kommen als Reiter nicht mehr vor (Desktop + Mobil)
+ok 1 - AC-1: /trips/new — vollständige Reiterleiste
+    ok 1 - Alarme: „erst Wertebereiche öffnen"; kein Reiter „Versand"
+ok 2 - AC-2: Lock-Hinweis des Trip-Reiters Alarme; Versand ist kein Reiter mehr (\#1743)
+    ok 1 - Compare-Referenz: Wetter-Metriken · Wertebereiche · Alarme (AC-9, \#1743 ohne Versand)
+    ok 2 - Beschriftung und Reihenfolge identisch
+    ok 3 - Lock-Hinweise identisch — AUSSER Wetter-Metriken (kind-eigen, begründet)
+ok 3 - AC-3/AC-9: Parität Trip ↔ Ortsvergleich ab Wetter-Metriken
+    ok 1 - Desktop-Fußzeile fordert im Leerzustand weder den Zeitplan noch einen Versand-Schritt (\#1743)
+    ok 2 - Mobil-Fortschritt startet bei „0/N"
+ok 4 - AC-4: Fußzeilen-Hinweis und Fortschritt auf /trips/new
+    ok 1 - Trip-Fuß und Ortsvergleich-Fuß tragen den Knopf mit identischer Beschriftung
+ok 5 - AC-12 (\#2521 S3): Standardwerte-Knopf in beiden Anlege-Leisten
+# tests 10
+# pass 10
+# fail 0
+=================== src/lib/components/compare-new/__tests__/compare_new_lock_engine_wirkstelle.test.ts
+    ok 1 - leerer Name: Orte gesperrt
+    ok 2 - Name, 1 Ort: Orte frei, Metriken gesperrt
+    ok 3 - Name, 2 Orte: Metriken frei
+ok 1 - AC-6: Vorderteil an der Reiterleiste
+    ok 1 - nichts besucht: Wertebereiche, Alarme gesperrt
+    ok 2 - Metriken besucht: nur Wertebereiche frei
+    ok 3 - Wertebereiche besucht: Alarme frei
+    ok 4 - \#1743: kein Reiter versand im Dokument
+ok 2 - AC-1/AC-7: Schwanz-Kette an der Reiterleiste (Besuchs-Flags über stateOverride)
+    ok 1 - vor Alarme-Besuch deaktiviert
+    ok 2 - nach Alarme-Besuch aktiv (\#1743)
+    ok 3 - ein Versand-Flag allein schaltet nichts frei
+ok 3 - AC-3: Aktivieren-Knopf
+    ok 1 - nichts eingerichtet: "Noch nichts eingerichtet", mobil 0/5
+    ok 2 - Name + 2 Orte: 2 / 5 (Vergleich + Orte)
+    ok 3 - alle Flags gesetzt: genau 5 / 5 (Deckel 5, Versand-Flag zaehlt nicht)
+    ok 4 - bis Alarme besucht: Zaehler voll (5 / 5) — voll genau dann, wenn Aktivieren frei
+    ok 5 - Wertebereiche-Besuch allein erhoeht den Zaehler (4 / 5 ohne Alarme)
+ok 4 - Zaehler am Editor (F002): Deckel und Schrittliste
+    ok 1 - Ideal-Flag ohne Metriken-Flag: Wertebereiche und Alarme bleiben gesperrt
+    ok 2 - Alarme-Flag ohne Ideal-Flag: Alarme gesperrt
+ok 5 - F003: konjunktive Kette bei uebersprungenem Flag (Compare-Semantik wie vor S4)
+# tests 17
+# pass 17
+# fail 0
+=================== src/lib/components/trip-new/__tests__/trip_new_reiterleiste_besuchs_flags.test.ts
+    ok 1 - nichts besucht: ab Wegpunkte alles gesperrt
+    ok 2 - nur Metriken-Flag: Wertebereiche frei, Alarme gesperrt
+    ok 3 - F001: Flags wt+wb+al gesetzt, etDone false => nur Metriken und Wegpunkte gesperrt (wie HEAD)
+    ok 4 - Kette: wb-Flag oeffnet Alarme (jede Stufe haengt nur am Vorgaenger-Flag)
+ok 1 - AC-2: Trip-Reiterleiste reicht die Besuchs-Flags durch (etDone = false)
+    ok 1 - trip-new-save-btn: Wertebereiche besucht, Alarme NICHT besucht => disabled
+    ok 2 - trip-new-save-btn: Alarme besucht (ohne Versand) => nicht disabled
+    ok 3 - tn-mobile-save: Wertebereiche besucht, Alarme NICHT besucht => disabled
+    ok 4 - tn-mobile-save: Alarme besucht (ohne Versand) => nicht disabled
+ok 2 - AC-3 / \#1743 AC-19: Speichern-Knopf vor und nach Alarme-Besuch (TripNewEditor)
+# tests 8
+# pass 8
+# fail 0
+=================== src/lib/components/shared/__tests__/compare_new_editor_mobil_orte_schritt.test.ts
+    ok 1 - gewählte Orte erscheinen im MOBILEN Schritt nummeriert, in Auswahl-Reihenfolge
+    ok 2 - mobiler Zähler und Weiter-Knopf folgen der Auswahl (1 Ort ⇒ gesperrt, 2 Orte ⇒ frei)
+ok 1 - AC-6 mobil (F001): Auswahl des Editors erreicht den mobilen Orte-Schritt
+    ok 1 - ✕ an einem Ort ⇒ wiz.pickedIds ohne ihn, Weiter bleibt frei, POST ohne den Ort
+    ok 2 - ✕ an zwei von drei Orten ⇒ Editor hält 1 Ort, Weiter gesperrt
+ok 2 - AC-6 mobil (F001): Abwählen im mobilen Orte-Schritt wirkt im Editor-Zustand
+    ok 1 - Bibliotheks-Kachel wählt einen Ort aus ⇒ wiz.pickedIds, Weiter frei, POST mit beiden Orten
+    ok 2 - ✕ an einem Ort ⇒ wiz.pickedIds ohne ihn, POST ohne den Ort
+ok 3 - AC-6 Desktop: Aus-/Abwählen im Desktop-Orte-Schritt wirkt im Editor-Zustand und im POST
+    ok 1 - mobil rendert der Schritt dicht: Bibliotheks-Knopf da, Smart-Import-Raster des Desktops nicht
+    ok 2 - der Bibliotheks-Knopf im mobilen Schritt öffnet das Bibliotheks-Sheet des Editors
+ok 4 - AC-6 mobil (F002): dense-Variante und Bibliotheks-Knopf
+# tests 8
+# pass 8
+# fail 0
+=================== src/lib/components/compare-new/__tests__/compare_new_footer_nav_clearance.test.ts
+ok 1 - AC-7: der EditorStickyFooter-Mount (testid="cm-mobile-cta") trägt navClearance={false}
+# tests 1
+# pass 1
+# fail 0
+=================== src/lib/components/trip-detail/__tests__/trip_hub_sprache.test.ts
+    ok 1 - kopf_status.de.html
+    ok 2 - uebersicht.de.html
+    ok 3 - etappen.de.html
+    ok 4 - layout_bausteine.de.html
+    ok 5 - wegpunkte.de.html
+    ok 6 - edit_felder.de.html
+    ok 7 - historie.de.html
+    ok 8 - etappen_editor_desktop.de.html
+    ok 9 - etappen_editor_kaskade.de.html
+    ok 10 - etappen_editor_mobil.de.html
+    ok 11 - hub_seite.de.html
+    ok 12 - hub_reiter.de.html
+    ok 13 - anlegen_route.de.html
+    ok 14 - anlegen_etappen.de.html
+    ok 15 - anlegen_weiter.de.html
+    ok 16 - funktionen.de.txt: Aktionsliste, Reiter, Anlege-Kette, Etappen-Datum unveraendert (byte-gleich)
+    ok 17 - Messaufbau: Golden enthaelt die deutschen Texte der Bausteine
+ok 1 - AC-6: Deutsch byte-gleich zum Ist-Stand vor der Umstellung (Golden golden-de)
+    ok 1 - Reiterleiste und Seite: Reiter, Aktionen, Kopf, Erfolg/Fehler englisch (erst de, dann ohne Neuladen en)
+    ok 2 - Kopf: Tag/ETAPPE/START IN, Zahlenformat en-GB, Aktivitaeten englisch
+    ok 3 - Etappen: Datum `Wed 1 Jul` (de unveraendert `01.07.`), Kennzahlen und Risiko englisch, Etappen-Namen gleich
+    ok 4 - Uebersicht: Karten, Spruenge, Plural der unbekannten Groessen exakt
+    ok 5 - Wegpunkt-Editor-Bausteine englisch (Streifen, Karten, Pausentag, Profil)
+    ok 6 - Geteilte Bausteine: Versand-Historie (Morgen/Abend, von Hand, Leer/Laden/Fehler) und Vorschau-Rahmen
+    ok 7 - Fehler ohne Server-Text: Flag/Schluessel wird beim Rendern aufgeloest (nicht eingefroren)
+    ok 8 - Aktionsfehler der Seite: 5xx/4xx ohne Detail/Netz → Schluessel, 4xx mit Detail → Server-Text (echte Funktion)
+ok 2 - AC-1: Trip-Hub englisch, Namen unveraendert
+    ok 1 - en: jede Aktion traegt trFor(en, aktionen.*), Trip und Vergleich gleich, IDs und danger unveraendert
+    ok 2 - Reiter und Anlege-Kette englisch, Kennungen unveraendert; Sperr-Hinweise englisch
+ok 3 - AC-2: Aktionsliste Trip == Ortsvergleich, Texte aus aktionen.*
+    ok 1 - Ausgabe-Layout-Bausteine und Tabellen-Vorschau: label_en bzw. deutsch ohne label_en
+    ok 2 - Uebersicht: Namensliste englisch, col_label der Fixture steht nirgends verfaelscht
+ok 4 - AC-4: Metrik-Namen ueber metricLabel, col_label unveraendert
+    ok 1 - de unveraendert, en Draft/Planned/Active/Paused/Finished/Archived
+ok 5 - AC-7: Trip-Status je Sprache
+    ok 1 - A englisch, B deutsch; jeder nur eigener Trip (fremder 404 in eigener Sprache); Nutzlast ohne Anzeigetexte
+ok 6 - AC-5: zwei Nutzer, zwei Sprachen, eigener Trip, sprachunabhaengige Nutzlast
+    ok 1 - Status 500: A (en) „Error loading the trip", B (de) „Fehler beim Laden des Trips"
+ok 7 - AC-5 (Adversary F002): Trip-Loader-Fehler (nicht 404) in der Sprache des Nutzers
+    ok 1 - aktionen.pause
+    ok 2 - aktionen.resume
+    ok 3 - aktionen.alarms
+    ok 4 - aktionen.weather
+    ok 5 - aktionen.edit
+    ok 6 - aktionen.archive
+    ok 7 - aktionen.unarchive
+    ok 8 - aktionen.delete
+    ok 9 - aktionen.continue_setup
+    ok 10 - aktionen.speichern
+    ok 11 - aktionen.speichern_fehlgeschlagen
+    ok 12 - aktionen.umbenennen
+    ok 13 - aktionen.wird_gesendet
+    ok 14 - aktionen.zurueck_uebersicht
+    ok 15 - aktionen.reiter.uebersicht
+    ok 16 - aktionen.reiter.etappen_wegpunkte
+    ok 17 - aktionen.reiter.orte
+    ok 18 - aktionen.reiter.wertebereiche
+    ok 19 - aktionen.sperre.oeffnen
+    ok 20 - aktionen.kopf.ok
+    ok 21 - aktionen.kopf.name_bearbeiten
+    ok 22 - aktionen.kopf.region_bearbeiten
+    ok 23 - aktionen.kopf.aktivitaet_waehlen
+    ok 24 - aktionen.historie.titel
+    ok 25 - aktionen.historie.laedt
+    ok 26 - aktionen.historie.fehler
+    ok 27 - aktionen.historie.leer
+    ok 28 - aktionen.historie.morgen
+    ok 29 - aktionen.historie.abend
+    ok 30 - aktionen.historie.von_hand
+    ok 31 - aktionen.fehler.server
+    ok 32 - aktionen.fehler.allgemein
+    ok 33 - aktionen.fehler.verbindung
+    ok 34 - aktionen.fehler.senden
+    ok 35 - vergleich.anlegen.reiter
+    ok 36 - vergleich.anlegen.sperre_orte
+    ok 37 - vergleich.anlegen.sperre_wetter
+    ok 38 - trip.status.draft
+    ok 39 - trip.status.planned
+    ok 40 - trip.status.active
+    ok 41 - trip.status.paused
+    ok 42 - trip.status.finished
+    ok 43 - trip.status.archived
+    ok 44 - trip.kopf.etappe
+    ok 45 - trip.kopf.briefing
+    ok 46 - trip.kopf.start_in
+    ok 47 - trip.kopf.tag_label
+    ok 48 - trip.kopf.status
+    ok 49 - trip.kopf.tage_bis
+    ok 50 - trip.kopf.tag
+    ok 51 - trip.aktivitaet.trekking
+    ok 52 - trip.aktivitaet.skitour
+    ok 53 - trip.aktivitaet.hochtour
+    ok 54 - trip.aktivitaet.klettersteig
+    ok 55 - trip.aktivitaet.mtb
+    ok 56 - trip.aktivitaet.fahrrad_15
+    ok 57 - trip.aktivitaet.fahrrad_20
+    ok 58 - trip.aktivitaet.fahrrad_25
+    ok 59 - trip.aktivitaet.standard
+    ok 60 - trip.aktivitaet.alpen_trekking
+    ok 61 - trip.aktivitaet.wandern
+    ok 62 - trip.aktivitaet.skitouren
+    ok 63 - trip.hub.briefing_gesendet
+    ok 64 - trip.hub.loeschen_titel
+    ok 65 - trip.hub.loeschen_text
+    ok 66 - trip.hub.reaktivieren_titel
+    ok 67 - trip.hub.archivieren_titel
+    ok 68 - trip.hub.reaktivieren_text
+    ok 69 - trip.hub.archivieren_text
+    ok 70 - trip.hub.nicht_gefunden
+    ok 71 - trip.hub.laden_fehler
+    ok 72 - trip.hub.keine_etappen
+    ok 73 - trip.hub.tabs_aria
+    ok 74 - trip.hub.platzhalter_uebersicht
+    ok 75 - trip.hub.platzhalter_etappen
+    ok 76 - trip.etappen
+    ok 77 - trip.uebersicht.reihenfolge_profil
+    ok 78 - trip.uebersicht.im_editor
+    ok 79 - trip.uebersicht.metriken_fehler
+    ok 80 - trip.uebersicht.metriken_altbestand
+    ok 81 - trip.uebersicht.metriken_leer
+    ok 82 - trip.uebersicht.unbekannt.one
+    ok 83 - trip.uebersicht.unbekannt.other
+    ok 84 - trip.uebersicht.metriken_bearbeiten
+    ok 85 - trip.uebersicht.briefings_laufen
+    ok 86 - trip.uebersicht.bei_delta
+    ok 87 - trip.uebersicht.zeitplan_bearbeiten
+    ok 88 - trip.uebersicht.alert_trigger
+    ok 89 - trip.briefing.morgen
+    ok 90 - trip.briefing.abend
+    ok 91 - trip.profil.aria
+    ok 92 - trip.profil.etappe_waehlen
+    ok 93 - trip.etappe.distanz
+    ok 94 - trip.etappe.aufstieg
+    ok 95 - trip.etappe.abstieg
+    ok 96 - trip.etappe.max_hoehe
+    ok 97 - trip.etappe.segmente
+    ok 98 - trip.etappe.hm
+    ok 99 - trip.etappe.wind
+    ok 100 - trip.etappe.pause_ort
+    ok 101 - trip.risiko.gering
+    ok 102 - trip.risiko.mittel
+    ok 103 - trip.risiko.hoch
+    ok 104 - trip.wegpunkte
+    ok 105 - trip.keine_wegpunkte
+    ok 106 - trip.speichert
+    ok 107 - trip.speichern_laeuft
+    ok 108 - trip.fehler_speichern
+    ok 109 - trip.gespeichert_punkt
+    ok 110 - trip.zeitplan_speichern
+    ok 111 - trip.neuer_name
+    ok 112 - trip.layout.leer
+    ok 113 - trip.layout.telegram_vor
+    ok 114 - trip.layout.telegram_nach
+    ok 115 - trip.layout.reihenfolge_aria
+    ok 116 - trip.layout.nicht_im_briefing
+    ok 117 - trip.layout.weitere_metriken.one
+    ok 118 - trip.layout.weitere_metriken.other
+    ok 119 - trip.layout.nicht_ausgegeben
+    ok 120 - trip.layout.einklappen
+    ok 121 - trip.layout.aufklappen
+    ok 122 - trip.layout.plus_spalte
+    ok 123 - trip.layout.plus_detail
+    ok 124 - trip.layout.kuerzel
+    ok 125 - trip.layout.roh_oder_einfach
+    ok 126 - trip.layout.nur_rohwert
+    ok 127 - trip.layout.zu_detail
+    ok 128 - trip.layout.zu_spalte
+    ok 129 - trip.layout.limit
+    ok 130 - trip.layout.kanal_max_spalten
+    ok 131 - trip.layout.preset_metriken.one
+    ok 132 - trip.layout.preset_metriken.other
+    ok 133 - trip.layout.standard
+    ok 134 - trip.layout.indikator
+    ok 135 - trip.vorschau.titel
+    ok 136 - trip.vorschau.hinweis
+    ok 137 - trip.vorschau.heute
+    ok 138 - trip.vorschau.morgen
+    ok 139 - trip.vorschau.uebermorgen
+    ok 140 - trip.vorschau.metriken.one
+    ok 141 - trip.vorschau.metriken.other
+    ok 142 - trip.vorschau.keine
+    ok 143 - trip.vorschau.zeit
+    ok 144 - trip.vorschau.einfach
+    ok 145 - trip.kanaele.alle_spalten
+    ok 146 - trip.kanaele.max_spalten
+    ok 147 - trip.kanaele.kein_raster
+    ok 148 - trip.kanaele.aktivieren
+    ok 149 - trip.kanaele.nicht_konfiguriert
+    ok 150 - trip.kanaele.einrichten
+    ok 151 - trip.kanaele.tages_max
+    ok 152 - trip.kanaele.passen_nicht.one
+    ok 153 - trip.kanaele.passen_nicht.other
+    ok 154 - trip.kanaele.fuss_vor
+    ok 155 - trip.kanaele.fuss_zeitplan
+    ok 156 - trip.kanaele.fuss_mitte
+    ok 157 - trip.kanaele.fuss_alerts
+    ok 158 - trip.about.eyebrow
+    ok 159 - trip.about.titel
+    ok 160 - trip.about.intro_vor
+    ok 161 - trip.about.intro_stark
+    ok 162 - trip.about.intro_nach
+    ok 163 - trip.about.spalte
+    ok 164 - trip.about.spalte_text
+    ok 165 - trip.about.detail
+    ok 166 - trip.about.detail_text
+    ok 167 - trip.about.aus_text
+    ok 168 - trip.about.constraints
+    ok 169 - trip.about.kanal
+    ok 170 - trip.about.max_spalten
+    ok 171 - trip.about.verhalten
+    ok 172 - trip.about.email
+    ok 173 - trip.about.telegram
+    ok 174 - trip.about.sms
+    ok 175 - trip.about.hinweis
+    ok 176 - trip.about.verstanden
+    ok 177 - trip.wegpunkt.plus_pause
+    ok 178 - trip.wegpunkt.strip_eyebrow
+    ok 179 - trip.wegpunkt.strip_zaehler.one
+    ok 180 - trip.wegpunkt.strip_zaehler.other
+    ok 181 - trip.wegpunkt.etappen_sortieren
+    ok 182 - trip.plus_etappe
+    ok 183 - trip.etappe_entfernen
+    ok 184 - trip.wegpunkt.typ.start
+    ok 185 - trip.wegpunkt.typ.end
+    ok 186 - trip.wegpunkt.typ.summit
+    ok 187 - trip.wegpunkt.typ.pass
+    ok 188 - trip.wegpunkt.typ.valley
+    ok 189 - trip.wegpunkt.typ.hut
+    ok 190 - trip.wegpunkt.typ.andere
+    ok 191 - trip.wegpunkt.umbenennen
+    ok 192 - trip.wegpunkt.verschieben_aria
+    ok 193 - trip.wegpunkt.verschieben
+    ok 194 - trip.wegpunkt.entfernen
+    ok 195 - trip.wegpunkt.profil_aria.one
+    ok 196 - trip.wegpunkt.profil_aria.other
+    ok 197 - trip.wegpunkt.standort
+    ok 198 - trip.wegpunkt.weiter_nach
+    ok 199 - trip.wegpunkt.kein_standort
+    ok 200 - trip.wegpunkt.karte_attribution
+    ok 201 - trip.datum
+    ok 202 - trip.trip_start
+    ok 203 - trip.startzeit
+    ok 204 - trip.startdatum
+    ok 205 - trip.wetter.eigene_auswahl
+    ok 206 - trip.wetter.profil
+    ok 207 - trip.wetter.zaehler
+    ok 208 - trip.wetter.bearbeiten
+    ok 209 - trip.wetter.nur_lesen
+    ok 210 - trip.wetter.hinweis
+    ok 211 - trip.route.startdatum_waehlen
+    ok 212 - trip.route.lade_dateien
+    ok 213 - trip.route.fehler
+    ok 214 - trip.route.anlegen.one
+    ok 215 - trip.route.anlegen.other
+    ok 216 - trip.route.trip_name
+    ok 217 - trip.route.name_platzhalter
+    ok 218 - trip.route.ziehen
+    ok 219 - trip.route.klicken
+    ok 220 - trip.route.dateien_anzahl
+    ok 221 - trip.route.geladen
+    ok 222 - trip.route.oder
+    ok 223 - trip.route.manuell
+    ok 224 - trip.kaskade.liegt_am
+    ok 225 - trip.kaskade.frage.one
+    ok 226 - trip.kaskade.frage.other
+    ok 227 - trip.kaskade.wird_angepasst
+    ok 228 - trip.kaskade.anschliessen
+    ok 229 - trip.kaskade.nur_diese
+    ok 230 - trip.kaskade.erledigt
+    ok 231 - trip.kaskade.erledigt_text.one
+    ok 232 - trip.kaskade.erledigt_text.other
+    ok 233 - trip.kaskade.schliessen
+    ok 234 - trip.etappen_editor.desktop_stark
+    ok 235 - trip.etappen_editor.desktop_text
+    ok 236 - trip.etappen_editor.liste.one
+    ok 237 - trip.etappen_editor.liste.other
+    ok 238 - trip.etappe
+    ok 239 - trip.etappen_editor.reihenfolge_aria
+    ok 240 - trip.etappen_editor.eyebrow
+    ok 241 - trip.etappen_editor.umbenennen
+    ok 242 - trip.etappen_editor.wetterscheiden_vor
+    ok 243 - trip.etappen_editor.wetterscheiden
+    ok 244 - trip.etappen_editor.wetterscheiden_nach.one
+    ok 245 - trip.etappen_editor.wetterscheiden_nach.other
+    ok 246 - trip.etappen_editor.karte
+    ok 247 - trip.etappen_editor.topo
+    ok 248 - trip.etappen_editor.einfuegen_hinweis
+    ok 249 - trip.etappen_editor.hinweis_schliessen
+    ok 250 - trip.etappen_editor.profil
+    ok 251 - trip.etappen_editor.insgesamt
+    ok 252 - trip.etappen_editor.auf_route
+    ok 253 - trip.etappen_editor.speichern
+    ok 254 - trip.etappen_editor.gespeichert
+    ok 255 - trip.etappen_editor.zeitueberschreitung
+    ok 256 - trip.etappen_editor.etappenname_prompt
+    ok 257 - trip.etappe_loeschen
+    ok 258 - trip.etappen_editor.loeschen_frage
+    ok 259 - trip.anlegen.reiter_route
+    ok 260 - trip.anlegen.reiter_etappen
+    ok 261 - trip.anlegen.reiter_wegpunkte
+    ok 262 - trip.anlegen.sperre_etappen
+    ok 263 - trip.anlegen.sperre_gpx
+    ok 264 - trip.anlegen.schritt_gesperrt
+    ok 265 - trip.anlegen.gesperrt
+    ok 266 - trip.anlegen.neuer_trip
+    ok 267 - trip.anlegen.kein_name
+    ok 268 - trip.anlegen.nichts_eingerichtet
+    ok 269 - trip.anlegen.abschnitte
+    ok 270 - trip.anlegen.optional
+    ok 271 - trip.anlegen.opt
+    ok 272 - trip.anlegen.grunddaten
+    ok 273 - trip.anlegen.trip_name
+    ok 274 - trip.anlegen.name_beispiel
+    ok 275 - trip.anlegen.region
+    ok 276 - trip.anlegen.optional_max
+    ok 277 - trip.anlegen.optional_max_zeichen
+    ok 278 - trip.anlegen.region_beispiel
+    ok 279 - trip.anlegen.start_hinweis
+    ok 280 - trip.anlegen.start_hinweis_kurz
+    ok 281 - trip.anlegen.aktivitaetstyp
+    ok 282 - trip.anlegen.gpx_hinweis
+    ok 283 - trip.anlegen.name_fehlt
+    ok 284 - trip.anlegen.datum_fehlt
+    ok 285 - trip.anlegen.etappen_anlegen
+    ok 286 - trip.anlegen.etappen_titel
+    ok 287 - trip.anlegen.gpx_geladen
+    ok 288 - trip.anlegen.start
+    ok 289 - trip.anlegen.etappenname
+    ok 290 - trip.anlegen.gpx_datei
+    ok 291 - trip.anlegen.etappe_benennen
+    ok 292 - trip.anlegen.gpx_entfernen
+    ok 293 - trip.anlegen.gpx_hochladen
+    ok 294 - trip.anlegen.etappe_hinzufuegen
+    ok 295 - trip.anlegen.ohne_gpx.one
+    ok 296 - trip.anlegen.ohne_gpx.other
+    ok 297 - trip.anlegen.alle_gpx
+    ok 298 - trip.anlegen.noch_gpx
+    ok 299 - trip.anlegen.alle_gpx_kurz
+    ok 300 - trip.anlegen.wetter_direkt
+    ok 301 - trip.anlegen.wegpunkte_pruefen
+    ok 302 - trip.anlegen.wegpunkte_berechnet
+    ok 303 - trip.anlegen.wegpunkte_text
+    ok 304 - trip.anlegen.ueberspringen_pfeil
+    ok 305 - trip.anlegen.ueberspringen
+    ok 306 - trip.anlegen.wegpunkte_uebernehmen
+    ok 307 - trip.anlegen.wertebereiche_festlegen
+    ok 308 - trip.anlegen.alarme_einrichten
+    ok 309 - trip.anlegen.alarme_zum_speichern
+    ok 310 - trip.anlegen.speichere
+    ok 311 - trip.anlegen.gespeichert
+    ok 312 - trip.anlegen.speichern
+    ok 313 - trip.anlegen.etappen_anzahl.one
+    ok 314 - trip.anlegen.etappen_anzahl.other
+    ok 315 - trip.anlegen.uebernehmen
+    ok 316 - trip.anlegen.etappe_beispiel
+    ok 317 - trip.anlegen.wegpunkte_auto
+    ok 318 - trip.anlegen.name_eingeben
+    ok 319 - trip.anlegen.datum_waehlen
+    ok 320 - trip.anlegen.direkt_wetter
+    ok 321 - trip.anlegen.etappe_hinzufuegen_kurz
+    ok 322 - trip.anlegen.gpx_noetig
+    ok 323 - trip.anlegen.loeschen_frage
+    ok 324 - statischer Gegencheck: Anker == Schluessel von trip.json; aktionen.json = Bestand (S2/F3) + F9-Anker; vergleich.anlegen.* verankert
+    ok 325 - ein Text steht in aktionen.* nie unter zwei Schluesseln (de)
+    ok 326 - Plural exakt: unbekannte Groessen, weitere Metriken, Kaskade
+ok 8 - Anker: jeder F9-Katalogwert ist als festes de/en-Literal verankert
+# tests 358
+# pass 358
+# fail 0
+=================== src/lib/components/compare/__tests__/vergleich_hub_sprache.test.ts
+    ok 1 - hub_uebersicht.de.html
+    ok 2 - hub_orte.de.html
+    ok 3 - hub_seite.de.html
+    ok 4 - stundenverlauf.de.html
+    ok 5 - bausteine.de.html
+    ok 6 - ort_neu.de.html
+    ok 7 - orte_schritt.de.html
+    ok 8 - anlegen_vergleich.de.html
+    ok 9 - anlegen_orte.de.html
+    ok 10 - anlegen_weiter.de.html
+    ok 11 - anlegen_toast.de.html
+    ok 12 - funktionen.de.txt: Helfer, Aktivierungs-Karte, Uebersicht-Modell unveraendert (byte-gleich)
+    ok 13 - Messaufbau: Golden enthaelt die deutschen Texte der Flaechen
+    ok 14 - Messaufbau: jeder deutsche Anker-Text (Festteile) steht im Golden oder in der Funktionstabelle
+ok 1 - AC-6: Deutsch byte-gleich zum Ist-Stand vor der Umstellung (Golden golden-de)
+    ok 1 - Uebersicht und Seite: Kennzahlen, Karten, Kopf englisch (erst de, dann ohne Neuladen en)
+    ok 2 - Reiterleiste: Kennungen gleich, Namen englisch wie im Trip-Hub (aktionen.reiter.*)
+    ok 3 - Edit/Delete/Pause tragen im Vergleich denselben Text wie im Trip (gleicher Schluessel)
+    ok 4 - Fehler ohne Server-Text: Seite haelt nur Schluessel/Flag, Text entsteht beim Rendern
+    ok 5 - Meldungen ohne Server-Text: Schluessel wird beim Rendern aufgeloest (Seite, Orte-Schritt, Neuer Ort)
+    ok 6 - Anlegen-Toast (mobil): Sperr-Hinweis aus der Anlege-Kette, beim Rendern aufgeloest
+ok 2 - AC-1: Ortsvergleich-Hub englisch, Namen unveraendert, Aktionen wie im Trip-Hub
+    ok 1 - presetScheduleLabel daily 7–9
+    ok 2 - presetScheduleLabel weekly
+    ok 3 - presetScheduleLabel manual
+    ok 4 - presetTileScheduleLabel daily
+    ok 5 - presetTileScheduleLabel weekly Mo
+    ok 6 - presetTileScheduleLabel weekly So
+    ok 7 - presetTileScheduleLabel manual
+    ok 8 - presetLocationsLabel 3
+    ok 9 - presetLocationsLabel 1
+    ok 10 - relativeLastSent heute
+    ok 11 - relativeLastSent gestern
+    ok 12 - relativeLastSent Montag
+    ok 13 - relativeLastSent 1 Woche
+    ok 14 - relativeLastSent 2 Wochen
+    ok 15 - formatLastSent leer
+    ok 16 - formatLastSent Datum
+    ok 17 - formatNextSend null
+    ok 18 - formatNextSend Datum
+    ok 19 - presetProfileLabel wintersport
+    ok 20 - presetBriefingTimesLabel
+    ok 21 - Status-Pille und Aktivierungs-Karte je Sprache
+ok 3 - AC-2: Compare-Helfer in Deutsch und Englisch (Eingabe -> Ausgabe)
+    ok 1 - Orte-Reiter: Kopf, Hinweis, Leerfall, Hinzufuegen-Panel englisch; Reihenfolge der Orte gleich
+    ok 2 - Orte-Schritt und Neuer Ort: Hinweise, Platzhalter, Schaltflaechen englisch; Koordinaten gleich
+    ok 3 - Hinzufuegen, Entfernen, Sortieren: PUT-Nutzlast nur `location_ids`, in en und de identisch
+ok 4 - AC-3: Orte-Reiter, Orte-Schritt, Neuer Ort englisch; Nutzlast nur Ort-IDs
+    ok 1 - mitRegisterNamen + registerAusKatalog: unalertable Groessen englisch, ohne label_en deutsch
+    ok 2 - Vorlage (?from=): Vorschlagsname in der Sprache des Nutzers
+ok 5 - AC-7: Groessennamen im Alarme-Reiter des Vergleichs (Register-Ergaenzung)
+    ok 1 - mit Register: label_en englisch, ohne label_en deutsch; Kurzform bleibt
+    ok 2 - ohne Register (nicht geladen): die Namen der Vergleichs-Antwort bleiben, keine Leerstellen
+    ok 3 - Anlegen: Profil-Metriknamen und Profile englisch (metricLabel/Katalog)
+    ok 4 - Anlegen Orte/weiter: Reiter, Fortschritt, Schaltflaechen englisch; Plural exakt
+ok 6 - AC-7: Stundenverlauf (transponierte Uebersicht): Name aus dem Register, col_label unveraendert
+    ok 1 - A englisch, B deutsch; jeder nur eigener Vergleich (fremder 404 in eigener Sprache); Nutzlast ohne Anzeigetexte
+ok 7 - AC-4: zwei Nutzer, zwei Sprachen, eigener Vergleich, sprachunabhaengige Nutzlast
+    ok 1 - aktionen.uebersicht.status
+    ok 2 - aktionen.uebersicht.briefings
+    ok 3 - aktionen.uebersicht.zuletzt_raus
+    ok 4 - aktionen.uebersicht.noch_nicht_geplant
+    ok 5 - aktionen.uebersicht.nicht_geplant
+    ok 6 - aktionen.uebersicht.uhrzeiten_festlegen
+    ok 7 - aktionen.uebersicht.aktivierung_offen
+    ok 8 - aktionen.uebersicht.briefings_zeiten
+    ok 9 - aktionen.uebersicht.briefings_naechster
+    ok 10 - vergleich.zeitplan.taeglich
+    ok 11 - vergleich.zeitplan.woechentlich
+    ok 12 - vergleich.zeitplan.manuell
+    ok 13 - vergleich.zeitplan.kachel_taeglich
+    ok 14 - vergleich.zeitplan.kachel_taeglich_kurz
+    ok 15 - vergleich.zeitplan.kachel_woechentlich
+    ok 16 - vergleich.relativ.gestern
+    ok 17 - vergleich.relativ.diese_woche
+    ok 18 - vergleich.relativ.wochen.one
+    ok 19 - vergleich.relativ.wochen.other
+    ok 20 - vergleich.relativ.noch_kein_versand
+    ok 21 - vergleich.aktivierung.aktiv_text
+    ok 22 - vergleich.aktivierung.pausiert_text
+    ok 23 - vergleich.aktivierung.entwurf_text
+    ok 24 - vergleich.aktivierung.aktivieren
+    ok 25 - vergleich.hub.laeuft_autom
+    ok 26 - vergleich.hub.laeuft_automatisch
+    ok 27 - vergleich.hub.entwurf
+    ok 28 - vergleich.hub.kandidaten.one
+    ok 29 - vergleich.hub.kandidaten.other
+    ok 30 - vergleich.hub.weitere
+    ok 31 - vergleich.hub.wertebereiche_kurz.one
+    ok 32 - vergleich.hub.wertebereiche_kurz.other
+    ok 33 - vergleich.hub.wertebereiche_lang.one
+    ok 34 - vergleich.hub.wertebereiche_lang.other
+    ok 35 - vergleich.hub.tabs_aria
+    ok 36 - vergleich.hub.verglichene_orte
+    ok 37 - vergleich.hub.ziehen_sortieren
+    ok 38 - vergleich.hub.reihenfolge_hinweis
+    ok 39 - vergleich.hub.keine_orte
+    ok 40 - vergleich.hub.keine_weiteren
+    ok 41 - vergleich.hub.laufzeit_ueberschritten
+    ok 42 - vergleich.hub.setup_abschliessen
+    ok 43 - vergleich.hub.test_gesendet
+    ok 44 - vergleich.hub.archivieren_fehler
+    ok 45 - vergleich.hub.reaktivieren_fehler
+    ok 46 - vergleich.hub.delete_fehler
+    ok 47 - vergleich.hub.delete_titel
+    ok 48 - vergleich.hub.nicht_gefunden
+    ok 49 - vergleich.stundenverlauf.titel
+    ok 50 - vergleich.orte.weitere
+    ok 51 - vergleich.orte.min_erforderlich
+    ok 52 - vergleich.orte.passt
+    ok 53 - vergleich.orte.viel
+    ok 54 - vergleich.orte.min_kurz
+    ok 55 - vergleich.orte.viel_kurz
+    ok 56 - vergleich.orte.format_unbekannt
+    ok 57 - vergleich.orte.fehler_hinzufuegen
+    ok 58 - vergleich.orte.neuen_ort
+    ok 59 - vergleich.orte.smart_import
+    ok 60 - vergleich.orte.import_platzhalter
+    ok 61 - vergleich.orte.aufloesen
+    ok 62 - vergleich.orte.manuell
+    ok 63 - vergleich.orte.breitengrad
+    ok 64 - vergleich.orte.laengengrad
+    ok 65 - vergleich.orte.wird_hinzugefuegt
+    ok 66 - vergleich.orte.hinzufuegen
+    ok 67 - vergleich.orte.erkannt
+    ok 68 - vergleich.orte.name_platzhalter
+    ok 69 - vergleich.orte.zum_vergleich
+    ok 70 - vergleich.orte.im_vergleich
+    ok 71 - vergleich.orte.noch_keine
+    ok 72 - vergleich.orte.links_oder_unten
+    ok 73 - vergleich.orte.aus_gespeicherten
+    ok 74 - vergleich.orte.keine_gespeichert
+    ok 75 - vergleich.orte.keine_gewaehlt
+    ok 76 - vergleich.orte.aus_bibliothek
+    ok 77 - vergleich.ort.modul
+    ok 78 - vergleich.ort.import_hinweis
+    ok 79 - vergleich.ort.verortung
+    ok 80 - vergleich.ort.import_platzhalter
+    ok 81 - vergleich.ort.erkannt_quelle
+    ok 82 - vergleich.ort.format_komoot
+    ok 83 - vergleich.ort.format_dms
+    ok 84 - vergleich.ort.format_dezimal
+    ok 85 - vergleich.ort.format_gpx
+    ok 86 - vergleich.ort.format_gpx_beispiel
+    ok 87 - vergleich.ort.erkannt_vorschau
+    ok 88 - vergleich.ort.quelle
+    ok 89 - vergleich.ort.hoehe_dem
+    ok 90 - vergleich.ort.hoehe_wert
+    ok 91 - vergleich.ort.zeitzone
+    ok 92 - vergleich.ort.land_region
+    ok 93 - vergleich.ort.benennung
+    ok 94 - vergleich.ort.eindeutiger_name
+    ok 95 - vergleich.ort.name_beispiel
+    ok 96 - vergleich.ort.gruppe_optional
+    ok 97 - vergleich.ort.neue_gruppe_tippen
+    ok 98 - vergleich.ort.brille
+    ok 99 - vergleich.ort.brille_frage
+    ok 100 - vergleich.ort.kandidat_vormerken
+    ok 101 - vergleich.ort.speichern
+    ok 102 - vergleich.ort.kartenvorschau
+    ok 103 - vergleich.gruppe.neu
+    ok 104 - vergleich.gruppe.beispiel
+    ok 105 - vergleich.gruppe.standard_profil
+    ok 106 - vergleich.gruppe.kein_profil
+    ok 107 - vergleich.gruppe.legt_an
+    ok 108 - vergleich.gruppe.fehler
+    ok 109 - vergleich.neu.auto_report
+    ok 110 - vergleich.neu.neuer_vergleich
+    ok 111 - vergleich.neu.bereit_titel
+    ok 112 - vergleich.neu.bereit_zeile.one
+    ok 113 - vergleich.neu.bereit_zeile.other
+    ok 114 - vergleich.neu.bereit_text
+    ok 115 - vergleich.neu.alarme_zum_aktivieren_punkt
+    ok 116 - vergleich.neu.alarme_zum_aktivieren
+    ok 117 - vergleich.neu.aktivieren
+    ok 118 - vergleich.neu.eckdaten
+    ok 119 - vergleich.neu.name
+    ok 120 - vergleich.neu.name_hinweis
+    ok 121 - vergleich.neu.name_beispiel
+    ok 122 - vergleich.neu.optional_max
+    ok 123 - vergleich.neu.region_beispiel
+    ok 124 - vergleich.neu.aktivitaetsprofil
+    ok 125 - vergleich.neu.profil_hinweis
+    ok 126 - vergleich.neu.name_fehlt
+    ok 127 - vergleich.neu.orte_hinzufuegen
+    ok 128 - vergleich.neu.min_orte
+    ok 129 - vergleich.neu.wetter_metriken
+    ok 130 - vergleich.neu.tab_gesperrt
+    ok 131 - vergleich.neu.name_eingeben
+    ok 132 - vergleich.neu.noch_orte.one
+    ok 133 - vergleich.neu.noch_orte.other
+    ok 134 - vergleich.neu.ort_waehlen
+    ok 135 - vergleich.neu.kopie
+    ok 136 - statischer Gegencheck: vergleich.json = vergleich.anlegen.* (F9) + F10-Anker; aktionen.uebersicht.* verankert
+    ok 137 - Plural exakt: Kandidaten, Wochen, fehlende Orte, Bereit-Zeile
+ok 8 - Anker: jeder F10-Katalogwert ist als festes de/en-Literal verankert
+# tests 188
+# pass 188
+# fail 0
+=================== src/lib/i18n/__tests__/katalog_schluessel_haben_verwender.test.ts
+    ok 1 - alle vier Verwenderarten zaehlen, unbenutzte Schluessel werden genannt
+    ok 2 - ohne Quelltexte ist jeder Schluessel verwaist
+    ok 3 - Literal eines fremden Schluessels zaehlt nicht fuer einen Praefix-Nachbarn
+ok 1 - verwenderSchluessel (AC-5)
+    ok 1 - jeder Schluessel der vereinigten de-Karte hat einen Verwender in frontend/src
+ok 2 - Bestand (AC-5)
+# tests 4
+# pass 4
+# fail 0
+
+=================== Python-Wächter
+uv run pytest tests/unit/test_e2e_compare_paritaet_waechter.py tests/test_adr_index_drift.py
+32 passed in 0.53s
+
+=================== Gesamte Frontend-Unit-Suite (wie CI frontend-test: cd frontend && npm test)
+# tests 8093
+# pass 8088
+# fail 0
+
+=================== svelte-check
+npx svelte-check: 27 Fehler, alle vorbestehend in nicht berührten Dateien (gleiche Zahl wie in RED); 0 Fehler/0 neue Warnungen in AnlegeRahmen.svelte, TripNewEditor.svelte, CompareNewEditor.svelte
+
+=================== E2E (Playwright) — lokal NICHT ausgeführt (Vite-Proxy zeigt auf Staging; Lauf in /e2e-verify bzw. CI-e2e)
+tsc (e2e/tsconfig.check.json erweitert um anlege-rahmen-paritaet, hub-anlegen-ablauf, issue-661-trip-new-mobile, standardwerte-und-hilfe, compare-editor-fidelity-s8d): keine Fehler
+
+=================== Goldens
+f9_trip_flaechen anlegen_{route,etappen,weiter}.{de,en}.html und f10_vergleich_flaechen anlegen_{vergleich,orte,weiter,toast}.{de,en}.html neu erzeugt (GZ_GOLDEN_SCHREIBEN, Muster S1/ADR-0110); übrige Goldens byte-gleich zu HEAD

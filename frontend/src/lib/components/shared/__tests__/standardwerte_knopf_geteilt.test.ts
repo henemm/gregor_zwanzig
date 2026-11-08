@@ -13,7 +13,8 @@
 // Vertraege (Test-Kennungen), die dieser Test festlegt:
 //   Trip    Desktop  data-testid="trip-new-standardwerte-btn"  im Footer tn-desktop-footer
 //   Trip    mobil    data-testid="tn-mobile-standardwerte"     im Footer tn-mobile-footer
-//   Vergl.  Desktop  data-testid="compare-editor-standardwerte" (Kopfzeile)
+//   Vergl.  Desktop  data-testid="compare-editor-standardwerte" im Footer cm-desktop-footer
+//                    (#2837 S2 umgedreht, vorher Kopfzeile)
 //   Vergl.  mobil    data-testid="cm-mobile-standardwerte"     im Footer cm-mobile-cta
 //   Baustein-Props: enabled, saving, onclick, testid (Spec); Beschriftung aus
 //   de.json-Schluessel `standardwerte.knopf`.
@@ -114,9 +115,19 @@ describe('AC-12/AC-5: Platzierung Trip (/trips/new)', () => {
 });
 
 describe('AC-12/AC-5: Platzierung Ortsvergleich (/compare/new)', () => {
-	test('Desktop: Knopf in der Kopfzeile', async () => {
+	// #2837 S2 (Entscheidung 6, AC-10) UMGEDREHT: nicht mehr in der Kopfzeile, sondern im
+	// Desktop-Fuß cm-desktop-footer neben der Hauptaktion „Briefing aktivieren" — wie beim Trip.
+	test('Desktop: Knopf im Fuß cm-desktop-footer neben „Briefing aktivieren" (nicht in der Kopfzeile)', async () => {
 		const html = await renderVergleichNeu({ activeTab: 'vergleich', isMobileViewport: false });
 		assert.ok(knopfTag(html, 'compare-editor-standardwerte'), 'compare-editor-standardwerte fehlt');
+		const footer = innen(html, 'cm-desktop-footer');
+		assert.ok(knopfTag(footer, 'compare-editor-standardwerte'), 'compare-editor-standardwerte fehlt im Desktop-Fuß cm-desktop-footer');
+		assert.ok(footer.includes('data-testid="compare-editor-activate"'), '„Briefing aktivieren" steht nicht im selben Fuß');
+		assert.ok(
+			footer.indexOf('data-testid="compare-editor-standardwerte"') < footer.indexOf('data-testid="compare-editor-activate"'),
+			'Standardwerte steht nicht links neben der Hauptaktion'
+		);
+		assert.ok(html.indexOf('data-testid="compare-editor-standardwerte"') > html.indexOf('data-testid="compare-editor-progress"'), 'Standardwerte steht noch im Kopf (vor dem Fortschritt)');
 	});
 	const reiterVorVersand: Array<[string, Record<string, boolean>]> = [
 		['vergleich', {}],
