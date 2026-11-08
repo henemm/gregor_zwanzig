@@ -23,7 +23,7 @@ from __future__ import annotations
 
 import logging
 import time
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 from typing import Optional
 
 from app.config import Settings
@@ -81,11 +81,12 @@ def _identity_inputs(nowcast, now_utc: datetime) -> tuple:
     # JETZT der Bezugszeitpunkt. Bliebe `onset_at` hier `None`, faende
     # `_times_overlap` (`alert_gate.py`) nie einen Kandidaten und die
     # Entdopplung waere ein stiller No-Op -- funktionsfaehig aussehend, aber
-    # ohne Wirkung (Bruchstelle 2).
+    # ohne Wirkung (Bruchstelle 2). Issue #2009: geteilte Ableitung wie im
+    # Trip -- laufend => JETZT, nicht der naechste Frame-Zeitpunkt.
     onset_at = (
-        now_utc + timedelta(minutes=nowcast.onset_minutes)
-        if nowcast.onset_minutes is not None
-        else (now_utc if getattr(nowcast, "already_running", False) else None)
+        alert_log.nowcast_onset_at(nowcast, now_utc)
+        if nowcast.onset_minutes is not None or getattr(nowcast, "already_running", False)
+        else None
     )
     return (
         resolve_hazard_class(is_convective=nowcast.is_convective),
@@ -342,7 +343,7 @@ class CompareRadarAlertService:
                     reason=alert_log.REASON_NOWCAST,
                     gate_reason=identity_gate.reason,
                     effective_channels=effective_channels,
-                    lead_time_minutes=nowcast.onset_minutes,
+                    lead_time_minutes=alert_log.nowcast_lead_time_minutes(nowcast),
                     event_at=_onset_at(nowcast, now_utc).isoformat(),
                     event_end_at=_event_end_dt.isoformat() if _event_end_dt else None,
                     measurement_point={"location_id": loc.id},
@@ -409,11 +410,15 @@ class CompareRadarAlertService:
         )
         # Issue #1405 S1 (ADR-0086): Fehlversuchs-Backoff je Ereignis (Ort +
         # Klasse + absoluter Beginn) -- geteilter Baustein wie im Trip-Radar.
+        # Issue #2009: laufend => kein wandernder Zeitpunkt im Schluessel
+        # (wie Trip-Radar `None if already_running`).
         retry_store = ThrottleStore(self._user_id)
         retry_keys = [
             alert_retry_backoff.nowcast_key(
                 f"{preset_id}/{loc.id}", nowcast.is_convective,
-                _onset_at(nowcast, now_utc) if nowcast.onset_minutes is not None else None,
+                None
+                if getattr(nowcast, "already_running", False) or nowcast.onset_minutes is None
+                else _onset_at(nowcast, now_utc),
             )
             for _name, loc, nowcast in triggered
         ]
@@ -434,7 +439,8 @@ class CompareRadarAlertService:
         # (dieser Zweig kennt keine "bereits im Briefing angekuendigt"-Pruefung,
         # anders als der Trip-Pfad).
         _e1_lead_time = alert_log.unique_or_none(
-            nowcast.onset_minutes for _name, _loc, nowcast in triggered
+            alert_log.nowcast_lead_time_minutes(nowcast)
+            for _name, _loc, nowcast in triggered
         )
         _e1_event_at_dt = alert_log.unique_or_none(
             _onset_at(nowcast, now_utc) for _name, _loc, nowcast in triggered

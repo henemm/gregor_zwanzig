@@ -301,10 +301,25 @@ def nowcast_onset_at(nowcast, now_utc: datetime) -> datetime:
     """Ereignisbeginn eines Nowcast-Ergebnisses (Issue #2050 S6, E-1).
 
     EINE Ableitung fuer BEIDE Flaechen (Trip-Radar und Ortsvergleich-Radar,
-    ADR-0021). Ohne kuenftigen Beginn (laufendes Ereignis, `onset_minutes is
-    None`, S2b) ist der Bezugszeitpunkt JETZT -- der Beginn ist an diesem
-    Zweig damit IMMER bestimmbar."""
+    ADR-0021). Laeuft das Ereignis schon (`already_running`), ist der Beginn
+    der Zeitpunkt des Laufs (`now_utc`) -- unabhaengig von `onset_minutes`,
+    das bei laufendem Regen auf den naechsten Frame-Zeitpunkt zeigt und
+    sonst je Lauf wandert (Issue #2009, Nachmessung). Sonst gilt
+    `now_utc + onset_minutes`; ohne Beginn (`None`) ebenfalls JETZT -- der
+    Beginn ist an diesem Zweig damit IMMER bestimmbar."""
+    if getattr(nowcast, "already_running", False):
+        return now_utc
     return now_utc + timedelta(minutes=getattr(nowcast, "onset_minutes", None) or 0)
+
+
+def nowcast_lead_time_minutes(nowcast) -> "int | None":
+    """Vorlauf eines Nowcast-Ergebnisses fuers Alarmprotokoll (Issue #2009).
+
+    EINE Ableitung fuer Trip und Ortsvergleich (ADR-0021), passend zu
+    `nowcast_onset_at`: laufendes Ereignis => 0, sonst `onset_minutes`."""
+    if getattr(nowcast, "already_running", False):
+        return 0
+    return getattr(nowcast, "onset_minutes", None)
 
 
 def nowcast_event_end_at(nowcast, now_utc: datetime) -> "datetime | None":
