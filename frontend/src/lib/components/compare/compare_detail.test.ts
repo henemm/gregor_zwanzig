@@ -61,12 +61,14 @@ test('#491 AC-1: +page.svelte hat StatusPill-Stub', () => {
 	assert.ok(has(pagePath), 'frontend/src/routes/compare/[id]/+page.svelte fehlt');
 	const src = read(pagePath);
 	// Issue #1256 Scheibe 8: `statusInfo` gehörte zum entfernten mobilen
-	// Bespoke-Block; die Status-Herleitung selbst (deriveStatusWithScheduleOverride)
-	// samt CompareStatusPill-Render bleibt unverändert bestehen.
+	// Bespoke-Block; die Status-Herleitung selbst (deriveStatusWithScheduleOverride) bleibt.
+	// Umgehängt durch #2837 S1b (AC-9): das Schild ist das geteilte StatusSchild, nicht mehr
+	// CompareStatusPill (Import-Auflösung: shared/status-schild/__tests__/status_schild_pendant_sperre.test.ts).
 	assert.ok(
-		src.includes('deriveStatusWithScheduleOverride') || src.includes('CompareStatusPill'),
-		'+page.svelte hat keinen StatusPill-Stub (deriveStatusWithScheduleOverride/CompareStatusPill fehlt)'
+		src.includes('deriveStatusWithScheduleOverride') && src.includes('StatusSchild'),
+		'+page.svelte hat keinen Status-Stub (deriveStatusWithScheduleOverride/StatusSchild fehlt)'
 	);
+	assert.ok(!src.includes('CompareStatusPill'), '+page.svelte bindet noch CompareStatusPill ein (#2837 S1b)');
 });
 
 test('#491 AC-1: +page.svelte hat Sub-Zeile mit Profil und N Orte', () => {

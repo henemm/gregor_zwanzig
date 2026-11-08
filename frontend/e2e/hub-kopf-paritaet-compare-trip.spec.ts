@@ -403,3 +403,157 @@ for (const kind of HUB_KINDS) {
 		}
 	});
 }
+
+// ─── #2837 Nachbesserung S1b: EIN Status-Schild, Profil in der Unterzeile (HS-1 … HS-6) ────────
+// Spec: docs/specs/modules/rework_2837_s1b_status_profil.md — AC-1 … AC-8, AC-11 (Browser-Anteil).
+// Gemessen per getComputedStyle; der Schild-Grund ist transparent, deshalb gilt der Kontrast
+// gegen den ersten nicht-transparenten Vorfahren (Papier bzw. Karte).
+// Pflicht-Mutationen: Vergleich wieder gefüllt/eigenes Schild ⇒ HS-1/HS-4 rot; Pausiert wieder
+// --g-warning ⇒ HS-3 rot; profileLabel im Trip weg ⇒ HS-5 rot.
+// Status: in RED geschrieben, NICHT ausgeführt (Lauf in /e2e-verify bzw. CI-`e2e`).
+
+const SCHILD = 'trip-detail-status-badge';
+const SCHILD_RGB = { pausiert: 'rgb(138, 98, 16)', aktiv: 'rgb(140, 62, 26)' } as const; // --g-warn-deep, --g-accent-deep
+const DATA_STATUS: Record<Zustand, string> = { aktiv: 'active', pausiert: 'paused', entwurf: 'draft' };
+
+/** Heute (lokal) als YYYY-MM-DD: der Trip ist nur mit einer Etappe von heute „aktiv" (sonst „geplant"). */
+const heute = () => {
+	const d = new Date();
+	return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+};
+/** Seed im gewünschten Zustand; Trip-Aktiv bekommt eine Etappe von heute (Kind-Zweig nur im Seed). */
+const seedZustand = (request: APIRequestContext, kind: HubKind, zustand: Zustand, extra: Record<string, unknown> = {}) =>
+	seed(request, kind, zustand, kind === 'route' && zustand === 'aktiv'
+		? { stages: [{ id: 's1', name: 'Tag 1', date: heute(), waypoints: [{ id: 'a', name: 'a', lat: 42, lon: 9, elevation_m: 800 }] }], ...extra }
+		: extra);
+
+async function schildMessen(page: Page) {
+	const s = page.locator(`[data-testid="${SCHILD}"]:visible`);
+	await expect(s, `[data-testid=${SCHILD}] nicht genau einmal sichtbar (AC-8)`).toHaveCount(1);
+	return s.evaluate((el) => {
+		const st = getComputedStyle(el);
+		let grund = 'rgba(0, 0, 0, 0)';
+		for (let n: Element | null = el.parentElement; n; n = n.parentElement) {
+			const g = getComputedStyle(n).backgroundColor;
+			if (!/rgba\(.*,\s*0\)$/.test(g) && g !== 'transparent') { grund = g; break; }
+		}
+		return {
+			text: (el as HTMLElement).innerText.trim(),
+			status: el.getAttribute('data-status'),
+			slot: el.getAttribute('data-slot'),
+			umrandet: el.hasAttribute('data-outlined'),
+			schrift: st.color,
+			rand: st.borderTopColor,
+			randBreite: st.borderTopWidth,
+			eigenerGrund: st.backgroundColor,
+			grund,
+			umformung: st.textTransform
+		};
+	});
+}
+
+test.describe('HS S1b — Trip und Vergleich zeigen im selben Zustand dasselbe Status-Schild', () => {
+	for (const vp of BREITEN) {
+		for (const zustand of ['aktiv', 'pausiert', 'entwurf'] as const) {
+			test(`HS-1/HS-2/HS-4 (${vp.width} px, ${zustand}): gleicher Text, gleiche Schrift- und Randfarbe, umrandet, Kontrast ≥ 4,5`, async ({ page }) => {
+				await page.setViewportSize(vp);
+				const m: Partial<Record<HubKind, Awaited<ReturnType<typeof schildMessen>>>> = {};
+				for (const kind of HUB_KINDS) {
+					const hub = await seedZustand(page.request, kind, zustand);
+					try {
+						await openHub(page, kind, hub.id);
+						m[kind] = await schildMessen(page);
+					} finally {
+						await hub.aufraeumen();
+					}
+				}
+				const { route, vergleich } = m as Record<HubKind, Awaited<ReturnType<typeof schildMessen>>>;
+				for (const [kind, x] of [['route', route], ['vergleich', vergleich]] as const) {
+					expect(x.status, `${kind}: data-status (AC-8)`).toBe(DATA_STATUS[zustand]);
+					expect(x.slot, `${kind}: Schild ist nicht das Pill-Atom`).toBe('pill');
+					expect(x.umrandet, `${kind}: Schild nicht umrandet`).toBe(true);
+					expect(x.eigenerGrund, `${kind}: Schild gefüllt (--g-accent) statt umrandet — AC-5`).not.toBe(TOKEN_RGB.accent);
+					expect(x.eigenerGrund, `${kind}: Schild hat eigenen Hintergrund`).toMatch(/rgba\(.*,\s*0\)$|transparent/);
+					expect(x.randBreite, `${kind}: kein Rand`).not.toBe('0px');
+					expect(kontrastVerhaeltnis(x.schrift, x.grund), `${kind}: Kontrast Schild-Schrift zu ${x.grund}`).toBeGreaterThanOrEqual(4.5);
+				}
+				expect(vergleich.text, 'AC-1: Text (inkl. Großschreibung) verschieden').toBe(route.text);
+				expect(vergleich.umformung, 'AC-1: Schreibung (text-transform) verschieden').toBe(route.umformung);
+				expect(vergleich.schrift, 'AC-1: Schriftfarbe verschieden').toBe(route.schrift);
+				expect(vergleich.rand, 'AC-1: Randfarbe verschieden').toBe(route.rand);
+				if (zustand === 'pausiert') expect(route.schrift, 'AC-4: Pausiert nicht --g-warn-deep').toBe(SCHILD_RGB.pausiert);
+				if (zustand === 'aktiv') expect(vergleich.schrift, 'AC-5: Aktiv nicht --g-accent-deep').toBe(SCHILD_RGB.aktiv);
+				if (zustand === 'entwurf') {
+					expect(vergleich.text.toLowerCase(), 'AC-3: Vergleich-Entwurf zeigt „draft"').not.toContain('draft');
+					expect(vergleich.text.toLowerCase()).toBe('entwurf');
+				}
+			});
+		}
+	}
+});
+
+test.describe('HS S1b — Profil in der Zeile unter dem Titel bei beiden Arten', () => {
+	const hinterStift = (page: Page, kind: HubKind) =>
+		page.getByTestId(`${HUB_SEL[kind].kopf}-region-edit-toggle`).filter({ visible: true }).first().locator('xpath=following-sibling::*[1]');
+	const PROFIL: Record<HubKind, { extra: Record<string, unknown>; label: string }> = {
+		route: { extra: { activity: 'trekking' }, label: 'Trekking' },
+		vergleich: { extra: { profil: 'wandern' }, label: 'Wandern' }
+	};
+	for (const vp of BREITEN) {
+		for (const kind of HUB_KINDS) {
+			test(`HS-5 (${kind}, ${vp.width} px): „— ✎ · ${PROFIL[kind].label}" — Profil direkt hinter dem Region-Stift`, async ({ page }) => {
+				await page.setViewportSize(vp);
+				const ohneRegion = kind === 'route' ? { region: '' } : { display_config: { region: '' } };
+				const hub = await seed(page.request, kind, 'aktiv', { ...ohneRegion, ...PROFIL[kind].extra });
+				try {
+					await openHub(page, kind, hub.id);
+					const stift = page.getByTestId(`${HUB_SEL[kind].kopf}-region-edit-toggle`).filter({ visible: true }).first();
+					await expect(stift.locator('xpath=preceding-sibling::span[1]'), 'Region-Platzhalter').toHaveText('—');
+					await expect(hinterStift(page, kind), `AC-6: Profil fehlt hinter dem Stift (${kind})`).toHaveText(`· ${PROFIL[kind].label}`);
+				} finally {
+					await hub.aufraeumen();
+				}
+			});
+		}
+		test(`HS-6 (route, ${vp.width} px): Trip ohne Aktivität — kein Zusatz hinter „— ✎" (AC-7)`, async ({ page }) => {
+			await page.setViewportSize(vp);
+			const hub = await seed(page.request, 'route', 'aktiv', { region: '' });
+			try {
+				await openHub(page, 'route', hub.id);
+				const n = hinterStift(page, 'route');
+				if (await n.count()) expect((await n.innerText()).trim().startsWith('·'), 'AC-7: Zusatz ohne Aktivität').toBe(false);
+			} finally {
+				await hub.aufraeumen();
+			}
+		});
+	}
+});
+
+// AC-11: Status-Text und Profil folgen der Nutzersprache (Zweitnutzer, Muster HP-13).
+for (const kind of HUB_KINDS) {
+	testMitZustellbaremZiel(`HS-7 (${kind}): Status-Schild „Pausiert"/„Paused" und Profil folgen der Nutzersprache (de → en)`, async ({ page }) => {
+		const orte =
+			kind === 'vergleich'
+				? [await createTestLocation(page.request, { name: 'HS7-A' }), await createTestLocation(page.request, { name: 'HS7-B' })]
+				: [];
+		const extra = { ...(orte.length ? { location_ids: orte.map((o) => o.id) } : {}), ...(kind === 'route' ? { activity: 'trekking' } : { profil: 'wandern' }) };
+		const hub = await seedZustand(page.request, kind, 'pausiert', extra);
+		const ERWARTET = { de: { status: 'pausiert', profil: kind === 'route' ? 'Trekking' : 'Wandern' }, en: { status: 'paused', profil: kind === 'route' ? 'Trekking' : 'Hiking' } } as const;
+		try {
+			for (const lang of ['de', 'en'] as const) {
+				const res = await page.request.put('/api/auth/profile', { data: { language: lang } });
+				expect(res.ok(), `Sprache ${lang} setzen: HTTP ${res.status()}`).toBeTruthy();
+				await page.setViewportSize(DESKTOP);
+				await openHub(page, kind, hub.id);
+				const s = await schildMessen(page);
+				expect(s.text.toLowerCase(), `${lang}: Status-Text`).toBe(ERWARTET[lang].status);
+				const zusatz = page.getByTestId(`${HUB_SEL[kind].kopf}-region-edit-toggle`).filter({ visible: true }).first().locator('xpath=following-sibling::*[1]');
+				await expect(zusatz, `${lang}: Profil-Zusatz`).toHaveText(`· ${ERWARTET[lang].profil}`);
+			}
+		} finally {
+			await page.request.put('/api/auth/profile', { data: { language: 'de' } }).catch(() => {});
+			await hub.aufraeumen();
+			for (const o of orte) await page.request.delete(`/api/locations/${o.id}`).catch(() => {});
+		}
+	});
+}
