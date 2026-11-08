@@ -83,6 +83,7 @@
 	import Sheet from '$lib/components/mobile/Sheet.svelte';
 	import EditorStickyFooter from '$lib/components/shared/EditorStickyFooter.svelte';
 	import AnlegeRahmen from '$lib/components/shared/anlege-rahmen/AnlegeRahmen.svelte';
+	import AnlegeFortschritt from '$lib/components/shared/anlege-rahmen/AnlegeFortschritt.svelte';
 	import { PageHeader } from '$lib/components/atoms';
 
 	// Issue #1743: kein Schritt „Versand" mehr — der Versand-Abschnitt steht unten im
@@ -462,19 +463,11 @@
 		onFinish={handleActivate}
 		testidPrefix="cm"
 		navClearance={false}
+		steps={PROGRESS_STEPS}
+		done={doneCount}
+		erledigt={done}
+		aktiv={activeTab}
 	>
-		{#snippet fortschritt()}
-			<div data-testid="compare-editor-progress" style:display="flex" style:align-items="center" style:gap="10px" style:margin-top="7px">
-				<div style:display="flex" style:gap="3px">
-					{#each TAB_DEFS as r (r.id)}
-						<div data-testid="compare-editor-progress-segment" style:width="24px" style:height="3px" style:border-radius="2px" style:background={done.has(r.id) ? 'var(--g-accent)' : 'var(--g-rule)'} style:transition="background 350ms"></div>
-					{/each}
-				</div>
-				<span class="mono" style:font-size="11px" style:color="var(--g-ink-4)" style:letter-spacing="0.04em">
-					{doneCount === 0 ? $t('trip.anlegen.nichts_eingerichtet') : $t('trip.anlegen.abschnitte', { n: doneCount, gesamt: TAB_DEFS.length })}
-				</span>
-			</div>
-		{/snippet}
 		{#snippet hinweis()}
 			{#if !canActivateNow}<span class="mono" style:font-size="11px" style:color="var(--g-ink-4)">{$t('vergleich.neu.alarme_zum_aktivieren')}</span>{/if}
 		{/snippet}
@@ -597,14 +590,9 @@
 		<PageHeader back={{ href: '/compare', label: $t('listen.vergleiche.titel') }} eyebrow={mobileEyebrow} title={mobileTitel} compact />
 	</div>
 
-	<!-- Fortschrittsbalken -->
-	<div class="cm-mobile-flex" data-testid="cm-mobile-progress" style="align-items: center; gap: 8px; padding: 8px 16px 0; flex-shrink: 0;">
-		<div style="display: flex; gap: 3px; flex: 1;">
-			{#each TAB_DEFS as r (r.id)}
-				<div style="flex: 1; height: 3px; border-radius: 2px; background: {done.has(r.id) ? 'var(--g-accent)' : (r.id === activeTab ? 'var(--g-accent-soft,#bcd)' : 'var(--g-rule)')}; transition: background 350ms;"></div>
-			{/each}
-		</div>
-		<span class="mono" style="font-size: 11px; color: var(--g-ink-4); flex-shrink: 0;">{doneCount}/{TAB_DEFS.length}</span>
+	<!-- Fortschrittsbalken: geteilter Baustein (#2837 S2b), ohne Tönung des aktiven Schritts -->
+	<div class="cm-mobile-flex" style="align-items: center; padding: 8px 16px 0; flex-shrink: 0;">
+		<AnlegeFortschritt steps={PROGRESS_STEPS} done={doneCount} erledigt={done} aktiv={activeTab} variante="mobil" testidPrefix="cm-mobile-progress" />
 	</div>
 
 	<!-- Scrollbare Tab-Bar -->

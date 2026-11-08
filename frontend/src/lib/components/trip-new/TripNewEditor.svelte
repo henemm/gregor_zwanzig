@@ -13,6 +13,7 @@
 	import { Eyebrow, Btn, Input, TopoBg, PageHeader } from '$lib/components/atoms';
 	import EditorStickyFooter from '$lib/components/shared/EditorStickyFooter.svelte';
 	import AnlegeRahmen from '$lib/components/shared/anlege-rahmen/AnlegeRahmen.svelte';
+	import AnlegeFortschritt from '$lib/components/shared/anlege-rahmen/AnlegeFortschritt.svelte';
 	import WetterMetrikenVersandPanel from '$lib/components/shared/WetterMetrikenVersandPanel.svelte';
 	import { anlegeKette } from '$lib/components/shared/subscriptionTabs';
 	import MailInhaltCard from '$lib/components/shared/MailInhaltCard.svelte';
@@ -567,20 +568,11 @@
 			onFinish={onSave}
 			testidPrefix="tn"
 			navClearance={false}
+			steps={PROGRESS_STEPS}
+			done={progressN}
+			erledigt={done}
+			aktiv={activeTab}
 		>
-			{#snippet fortschritt()}
-				<!-- Fortschrittsbalken (TN_Progress); Kennungen wie compare-editor-progress (#2347 S4, AN-2) -->
-				<div data-testid="trip-new-progress" style="display: flex; align-items: center; gap: 10px; margin-top: 7px;">
-					<div style="display: flex; gap: 3px;">
-						{#each PROGRESS_STEPS as step}
-							<div data-testid="trip-new-progress-segment" style="width: 24px; height: 3px; border-radius: 2px; background: {done.has(step) ? 'var(--g-accent)' : 'var(--g-rule)'}; transition: background 350ms;"></div>
-						{/each}
-					</div>
-					<span class="mono" style="font-size: 11px; color: var(--g-ink-4); letter-spacing: 0.04em;">
-						{progressN === 0 ? $t('trip.anlegen.nichts_eingerichtet') : $t('trip.anlegen.abschnitte', { n: progressN, gesamt: PROGRESS_STEPS.length })}
-					</span>
-				</div>
-			{/snippet}
 			{#snippet hinweis()}
 				<!-- #2347 S4 (AN-5): Hinweis am gesperrten Abschluss, wie „Alarme einrichten zum Aktivieren" im Vergleich -->
 				{#if !ready}<span class="mono" style="font-size: 11px; color: var(--g-ink-4);">{$t('trip.anlegen.alarme_zum_speichern')}</span>{/if}
@@ -961,13 +953,9 @@
 		</div>
 
 		<!-- Mobile Fortschrittsbalken (TNM_Progress, Issue #661) -->
-		<div class="tn-mobile tn-mobile-flex" style="align-items: center; gap: 8px; padding: 8px 16px 0;">
-			<div style="display: flex; gap: 3px; flex: 1;">
-				{#each PROGRESS_STEPS as step}
-					<div style="flex: 1; height: 3px; border-radius: 2px; background: {done.has(step) ? 'var(--g-accent)' : 'var(--g-rule)'}; transition: background 350ms;"></div>
-				{/each}
-			</div>
-			<span class="mono" style="font-size: 11px; color: var(--g-ink-4); flex-shrink: 0;">{progressN}/{PROGRESS_STEPS.length}</span>
+		<!-- #2837 S2b: geteilter Baustein AnlegeFortschritt (wie /compare/new) -->
+		<div class="tn-mobile tn-mobile-flex" style="align-items: center; padding: 8px 16px 0;">
+			<AnlegeFortschritt steps={PROGRESS_STEPS} done={progressN} erledigt={done} aktiv={activeTab} variante="mobil" testidPrefix="tn-mobile-progress" />
 		</div>
 
 		<!-- Mobile Tab-Bar (TNM_TabBar, Issue #661) -->

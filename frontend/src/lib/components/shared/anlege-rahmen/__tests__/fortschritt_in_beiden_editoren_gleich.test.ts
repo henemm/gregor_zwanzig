@@ -19,10 +19,15 @@
 //   cd frontend && node --import ./test-lib-loader.mjs --experimental-strip-types \
 //     --experimental-test-module-mocks --test src/lib/components/shared/anlege-rahmen/__tests__/fortschritt_in_beiden_editoren_gleich.test.ts
 
-import { test, describe } from 'node:test';
+import { test, describe, afterEach } from 'node:test';
 import assert from 'node:assert/strict';
-import { renderTrip, renderVergleichNeu } from '../../__tests__/infoboxSsr.ts';
-import { baum, alle, einzig, liegtIn, mitTestid, type Knoten } from '../../hub-kopf/__tests__/htmlBaum.ts';
+import path from 'node:path';
+import { pathToFileURL } from 'node:url';
+import { renderTrip, renderVergleichNeu, FRONTEND } from '../../__tests__/infoboxSsr.ts';
+import { baum, alle, einzig, liegtIn, mitTestid, text, klassen, type Knoten } from '../../hub-kopf/__tests__/htmlBaum.ts';
+
+const { locale, trFor } = await import(pathToFileURL(path.join(FRONTEND, 'src/lib/i18n/index.ts')).href);
+afterEach(() => locale.set('de'));
 
 type Art = 'route' | 'vergleich';
 type Geraet = 'desktop' | 'mobil';
@@ -115,6 +120,102 @@ describe('#2837 S2b AC-4 — Parität: gleicher Zustand ⇒ gleiche data-done-Fo
 					[0, 1, 2, 3, 4].map((i) => String(i < n)),
 					`Vorbedingung: ${n} erledigte Schritte`
 				);
+			});
+		}
+	}
+});
+
+// Fix-Loop 2 (Adversary F001/F004): die Variante und der aktive Schritt werden an der Wirkstelle
+// geprüft — im gerenderten Editor, nicht nur am Baustein. Mutationen: „Trip-Handy variante=desktop"
+// ⇒ Zählertext wird Katalog-Langtext statt „n/5" ⇒ rot; „aktiv am Trip-Handy weggelassen" ⇒ kein
+// aria-current ⇒ rot.
+
+/** Zähler = letztes Kind des Testid-Containers, ein <span class="mono">. */
+function zaehlerText(container: Knoten): string {
+	const letztes = container.kinder[container.kinder.length - 1];
+	assert.ok(letztes, 'Container hat keine Kinder');
+	assert.equal(letztes.tag, 'span', `letztes Kind ist <${letztes.tag}>, erwartet <span class="mono">`);
+	assert.deepEqual(klassen(letztes), ['mono'], `Zähler hat class="${letztes.attrs.class}"`);
+	return text(letztes);
+}
+
+describe('#2837 S2b AC-6/AC-7 — Zählertext je Gerät in beiden Editoren (de/en)', () => {
+	for (const lang of ['de', 'en'] as const) {
+		for (const zustand of ['leer', 'eins'] as const) {
+			const n = zustand === 'leer' ? 0 : 1;
+			for (const geraet of ['desktop', 'mobil'] as const) {
+				const soll = () =>
+					geraet === 'mobil'
+						? `${n}/5`
+						: n === 0
+							? trFor(lang, 'trip.anlegen.nichts_eingerichtet')
+							: trFor(lang, 'trip.anlegen.abschnitte', { n, gesamt: 5 });
+				test(`${lang}, ${zustand}, ${geraet}: Trip und Vergleich zeigen denselben Zählertext`, async () => {
+					locale.set(lang);
+					const texte: Record<Art, string> = { route: '', vergleich: '' };
+					for (const art of ['route', 'vergleich'] as const) {
+						texte[art] = zaehlerText(balken(await ZUSTAND[zustand][art](), art, geraet).container);
+					}
+					if (geraet === 'mobil') assert.equal(texte.route, `${n}/5`, `Trip-Handy zeigt „${texte.route}" (erwartet exakt „${n}/5")`);
+					assert.equal(texte.route, soll(), `Trip ${geraet}: „${texte.route}"`);
+					assert.equal(texte.vergleich, soll(), `Vergleich ${geraet}: „${texte.vergleich}"`);
+					assert.equal(texte.vergleich, texte.route, `${geraet}: Trip und Vergleich unterscheiden sich`);
+				});
+			}
+		}
+	}
+});
+
+describe('#2837 S2b AC-2/AC-4 — Handy: genau das Segment des aktiven Reiters trägt aria-current="step"', () => {
+	for (const zustand of ['leer', 'eins'] as const) {
+		test(`${zustand}: Trip-Handy und Vergleichs-Handy markieren gleich (aktiver Reiter = Segment 0)`, async () => {
+			const markierung = async (art: Art) =>
+				balken(await ZUSTAND[zustand][art](), art, 'mobil').segmente.map((s) => s.attrs['aria-current'] ?? '');
+			const trip = await markierung('route');
+			const vergleich = await markierung('vergleich');
+			assert.deepEqual(trip, ['step', '', '', '', ''], `Trip-Handy aria-current: ${JSON.stringify(trip)}`);
+			assert.deepEqual(vergleich, trip, `Vergleichs-Handy aria-current: ${JSON.stringify(vergleich)}`);
+		});
+	}
+});
+
+// Fix-Loop 1 (Adversary F003): der Balken färbt je Schritt (erledigt.has(step)), nicht nach
+// Position — so zeichneten die Bestandsbalken (done.has(step)). Zustände, in denen ein späterer
+// Schritt erledigt ist, ein früherer aber nicht. Mutationen: „Rahmen ohne erledigt-Prop" ⇒
+// Desktop färbt Segment 0 ⇒ rot; „Handy ohne erledigt-Prop" ⇒ Handy färbt Segment 0 ⇒ rot.
+
+const LUECKE: { name: string; art: Art; render: () => Promise<string>; soll: boolean[] }[] = [
+	{
+		name: 'Trip mit Startdatum ohne Namen, Metriken besucht (nur wetter-metriken erledigt)',
+		art: 'route',
+		render: () => renderTrip({ activeTab: 'route', isMobileViewport: false, name: '', startDate: '2026-12-01', wtVisited: true }),
+		soll: [false, false, true, false, false]
+	},
+	{
+		name: 'Vergleich ohne Namen, Metriken besucht (nur metriken erledigt)',
+		art: 'vergleich',
+		render: () => renderVergleichNeu({ activeTab: 'vergleich', isMobileViewport: false, name: '', pickedIds: [], metrikenVisited: true }),
+		soll: [false, false, true, false, false]
+	},
+	{
+		name: 'Vergleich ohne Namen, zwei Orte (nur orte erledigt)',
+		art: 'vergleich',
+		render: () => renderVergleichNeu({ activeTab: 'vergleich', isMobileViewport: false, name: '', pickedIds: ['loc-a', 'loc-b'] }),
+		soll: [false, true, false, false, false]
+	}
+];
+
+describe('#2837 S2b F003 — Segment erledigt je Schritt, nicht nach Position (beide Geräte)', () => {
+	for (const fall of LUECKE) {
+		for (const geraet of ['desktop', 'mobil'] as const) {
+			test(`${fall.name}, ${geraet}`, async () => {
+				const { container, segmente } = balken(await fall.render(), fall.art, geraet);
+				assert.equal(segmente.length, 5);
+				const ist = segmente.map((s) => `${s.attrs['data-done']}|${hintergrund(s)}`);
+				const soll = fall.soll.map((d) => `${d}|${d ? 'var(--g-accent)' : 'var(--g-rule)'}`);
+				assert.deepEqual(ist, soll, `${geraet}: Segmentfolge ${JSON.stringify(ist)}`);
+				// Der Zähler bleibt die Anzahl erledigter Schritte.
+				if (geraet === 'mobil') assert.equal(zaehlerText(container), '1/5');
 			});
 		}
 	}
