@@ -4,7 +4,7 @@ type: module
 created: 2026-11-08
 updated: 2026-11-08
 status: approved
-version: "1.1"
+version: "1.2"
 tags: [alarm, ampel, abweichung, migration, dringlichkeit, sms, telegram, mail, i18n, epic-2791]
 ---
 
@@ -39,6 +39,22 @@ Entscheidungsgrundlage: ADR-0106 (Akzeptiert, P1 CAPE, P2 Gewitter „leicht“,
 **Schnitt (zwei PRs, Reihenfolge verbindlich):**
 - **S2a — Migration und Prüfung, ohne Wirkung:** Migrationsskript, Gewitter-Prüfung `alarm_ab` in Python und Go. Nach dem Merge: Probelauf, `--execute`, Kontroll-Lauf „Nichts zu tun“ auf Staging und Prod. `alarm_ab` wird noch nicht gelesen, also ändert sich für Nutzer nichts.
 - **S2b — Umschalten:** Engine, Dringlichkeit, Texte aller vier Kanäle, Frontend nur lesbar, Doku. **Gate:** Prod-Deploy von S2b erst, wenn der Kontroll-Lauf der Migration auf Prod „Nichts zu tun“ meldet (unmittelbar vor dem Deploy erneut prüfen).
+
+## Scope
+
+- **Drin:** Auslösung von Abweichungs-Alarm und Entwarnung über `ampel.metrics.<id>.alarm_ab` (Implementation Details 1–4), Dringlichkeit aus der Farbe (D3), Texte aller vier Kanäle DE/EN, einmalige Migration der Altstufen (Abschnitt 5), Gewitter-Prüfung in Python und Go, alte Tabelle nur lesbar (Abschnitt 6). Gilt für Trip und Orts-Vergleich gleichermaßen.
+- **Nicht drin:** siehe „Nicht Teil von S2“ unter Purpose (S3a, S7, S8, S9, Rückbau `alert_rules`).
+
+## Definition of Done
+
+- S2a und S2b gemergt (je 6 CI-Checks grün), AC-1 bis AC-20 durch Tests belegt.
+- Migration auf Staging und Prod ausgeführt; Kontroll-Lauf meldet auf beiden Exit 0 und „Nichts zu tun“, unmittelbar vor dem S2b-Prod-Deploy erneut geprüft (Gate aus „Schnitt“).
+- Staging-Verifikation DE und EN bestanden (siehe Test Plan), Prod-Deploy mit `prod_selftest.py` Exit 0, Ergebnis-Kommentar in #2793 (Migrations-Tabelle je Umgebung, Sicherungspfade).
+
+## Test Plan
+
+- **Kern-Schicht (ohne Netz):** je AC ein Verhaltenstest, wie unter dem jeweiligen AC als „Test:“ vermerkt; Migration mit zwei Nutzern (AC-17), Wiederholbarkeit und Sicherung (AC-16), Byte-Gleichheit übriger Felder (AC-15).
+- **Staging (nach Merge S2b, DE und EN):** echt zugestellte Abweichungs-Alarme für Trip und Orts-Vergleich über die Validator-Render-Route; Mail/Telegram mit Farbpaar, Werten und Briefing-Bezug, SMS/Premium-SMS/Telegram-Kurzform mit Token-Suffix (`:Y>O`) unter 160 Zeichen (AC-18); Briefing-, Orts-Vergleichs-, Radar- und Amtliche-Warnung-Validatoren Exit 0; Reiter Alarm-Empfindlichkeit Desktop/Mobil nur lesbar, Speichern lässt Altstufen, Ampel und Merker unverändert (AC-19), geprüft durch `staging-validator` und `fresh-eyes-inspector`.
 
 ## Dependencies
 
@@ -217,3 +233,4 @@ Die alte Tabelle „Alarm-Empfindlichkeit“ (`AlertMetricLevelTable`/`AlertMetr
 - 2026-11-08: v1.0 Entwurf mit PO-Entscheidungen D1–D4 (Rückfrage in der Sitzung)
 - 2026-11-08: v1.0 vom PO freigegeben
 - 2026-11-08: v1.1 Präzisierung nach Adversary S2a: V = reine Vorlage (F1), Exit 2 bei ungültiger Ampel mit Altstufen (F2)
+- 2026-11-08: v1.2 Abschnitte Scope, Definition of Done, Test Plan ergänzt (Pflicht des Spec-Gates); nur Zusammenfassung bestehender Festlegungen aus Spec und #2860, keine neue Anforderung
