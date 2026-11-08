@@ -34,3 +34,7 @@ Kontrast, gemessen: Weiß auf `--g-accent #c45a2a` erreicht 4,34:1 und verfehlt 
 
 - **Positiv:** Trip und Ortsvergleich teilen den Kopf (ADR-0097); Lesbarkeit nach WCAG-AA; eine Zeile weniger beim Trip.
 - **Negativ:** Viele Tests und E2E verankerten die Divergenz und wurden umgedreht (nicht gelöscht). Wer später wieder Orange für die Hauptaktion will, braucht ein neues ADR.
+
+## Nachtrag 2026-11-08: S2 umgesetzt
+
+Scheibe S2 (Spec `docs/specs/modules/rework_2837_s2_anlege_rahmen.md`) ist umgesetzt: `shared/anlege-rahmen/AnlegeRahmen.svelte` mit `context="route"|"vergleich"` trägt bei `/trips/new` und `/compare/new` den Desktop-Rahmen (Pfad „Trips / Neuer Trip“ bzw. „Orts-Vergleiche / Neuer Vergleich“ mit Elternteil als Link, Eyebrow, Titel, Fortschritt, Fuß mit „Abbrechen“ links und Hauptaktion `Btn primary` rechts). „Weiter“ ist bei beiden `Btn accent`, gesperrt nur über `disabled`. Erlaubte Abweichungen stehen allein in der Whitelist der Spec (Schritt-Inhalte, Abschluss-Text mit Hinweis, Autosave-Semantik beim Verlassen, Lock-Engines, Texte/Datenmarke/Testid-Präfix). `HubKopf` wurde dafür nicht erweitert; ein neues ADR war nicht nötig.

@@ -228,7 +228,6 @@
 	"trip.anlegen.schritt_gesperrt": "Step still locked",
 	"trip.anlegen.gesperrt": "Locked — {hinweis}",
 	"trip.anlegen.neuer_trip": "New trip",
-	"trip.anlegen.titel": "Create new trip",
 	"trip.anlegen.kein_name": "No name yet",
 	"trip.anlegen.nichts_eingerichtet": "Nothing set up yet",
 	"trip.anlegen.abschnitte": "{n} / {gesamt} sections set up",
