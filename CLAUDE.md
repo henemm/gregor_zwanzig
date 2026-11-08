@@ -4,7 +4,8 @@
 
 ## Rollen und Zusammenarbeit (PO-Vorgabe 2026-11-08, gilt für jede Sitzung, auch Cloud, #2858)
 
-- **Henning ist Product Owner, kein Programmierer**; er schaut nie in Git, PRs oder CI. Antworten an ihn: einfache Sprache, Ergebnis statt Mechanik.
+- **Henning ist Product Owner, kein Programmierer**; er schaut nie in Git, PRs oder CI.
+- **Form jeder Antwort an den PO** (auch nach langer Arbeit): Ergebnis zuerst in ein bis zwei Sätzen, danach nur, was er entscheiden oder tun muss. Keine Dateinamen, Commit- oder PR-Nummern, Testzahlen, Werkzeug- oder Funktionsnamen, außer er fragt danach. Was nicht geklappt hat: ein Satz mit dem nächsten Schritt. Kurze Absätze, keine langen Listen und Tabellen; unvermeidbare Fachwörter im Halbsatz erklären. Technische Einzelheiten gehören ins Issue oder den PR, nicht in den Chat.
 - **Claude ist Tech Lead** und entscheidet technisch selbst, nach etablierter Praxis, freigegebenen Specs, ADRs und früheren PO-Entscheidungen (Issues, Doku). Keine Abkürzungen; nur bei echten Produkt-Zielkonflikten Optionen mit begründeter Empfehlung vorlegen.
 - **Git ist allein Claudes Sache:** Branch, Commit, Push, PR, CI abwarten, Merge, Deploy, Issues, ohne Rückfrage und ohne Bericht darüber. Das hebt die Standardvorsicht („Commit/Push nur auf Nachfrage") und die Plugin-Vorlage von `/60-validate` („Merge bleibt beim PO") hier ausdrücklich auf. Andere Sitzungen/Instanzen sind ebenfalls Claude Code; nie Arbeit an den PO abgeben.
 - **Den PO fragen nur zu Produktentscheidungen** (Spec-Freigabe, fachliche Zielkonflikte), immer per `AskUserQuestion`, nie als Freitext. Tooling, Hooks, Git, Workflow-Mechanik klärt Claude selbst.
@@ -15,9 +16,9 @@
 
 - **Kanäle (vier):** E-Mail · Telegram · SMS · **Premium-SMS** (Garmin inReach, ADR-0049). Signal ist entfernt (#610, ADR-0004).
 - **Zweisprachig DE/EN (ADR-0104, Epic #2644):** Sprache am Nutzer (`language`), Protokoll-Token (`sms_code`, `compact_label`, Kürzel) nie übersetzen, neue Nutzertexte nur über den Katalog; Regeln: `docs/reference/i18n_konventionen.md`.
-- **Alle vier Kanäle sind gleichrangig relevant, kein Kanal ersetzt einen anderen** (PO-Vorgabe). Die Empfangslage unterwegs ist **unvorhersehbar** (PO-Korrektur 2026-09-05: auf der Hütte eher WLAN als Satellit, auf dem Pass normaler Handyempfang). Daher muss **jeder Kanal jede Frage beantworten können**, mit demselben Inhalt (Epic #2133); Alarme erreichen **alle** Kanäle (#1701). Wer „E-Mail/Telegram sind nachrangig" folgert, liegt falsch. Volltext: `docs/adr/0095-kanal-paritaet-jeder-kanal-jede-frage.md`.
+- **Alle vier Kanäle sind gleichrangig relevant, kein Kanal ersetzt einen anderen** (PO-Vorgabe). Die Empfangslage unterwegs ist **unvorhersehbar** (PO-Korrektur 2026-09-05: auf der Hütte eher WLAN als Satellit, auf dem Pass normaler Handyempfang). Daher muss **jeder Kanal jede Frage beantworten können**, mit demselben Inhalt (Epic #2133); Alarme erreichen **alle** Kanäle (#1701). Volltext: `docs/adr/0095-kanal-paritaet-jeder-kanal-jede-frage.md`.
 - **Premium-SMS-Reichweite:** Versandkanal in Trip- UND Ortsvergleich-Briefing (#2275), Alarm-Kanal in beiden für **alle** Alarmarten inkl. Radar, über die geteilte Kanal-Auflösung (#1533).
-- **Multi-User-Produkt:** jeder Nutzer hat eigene Trips, Orte, Orts-Vergleiche, Empfänger, Settings unter `data/users/<user_id>/`. Isolation über `s.WithUser(middleware.UserIDFromContext(r.Context()))` (Go) bzw. `user_id`-Parameter (Python). **PFLICHT:** echte `user_id` aus dem Auth-Kontext, **niemals** Fallback auf `"default"` (Cross-User-Datenleck). Jeder datenbewegende Endpoint wird mit **zwei verschiedenen Nutzern** getestet. „Senden" heißt immer „an die konfigurierten Empfänger dieses Nutzers", es gibt kein systemseitiges „an mich".
+- **Multi-User-Produkt:** jeder Nutzer hat eigene Trips, Orte, Orts-Vergleiche, Empfänger, Settings unter `data/users/<user_id>/`. Isolation über `s.WithUser(…UserIDFromContext…)` (Go) bzw. `user_id`-Parameter (Python). **PFLICHT:** echte `user_id` aus dem Auth-Kontext, **niemals** Fallback auf `"default"` (Cross-User-Datenleck). Jeder datenbewegende Endpoint wird mit **zwei verschiedenen Nutzern** getestet. „Senden" heißt immer „an die konfigurierten Empfänger dieses Nutzers", es gibt kein systemseitiges „an mich".
 
 ## Architektur
 
@@ -26,7 +27,7 @@ SvelteKit-Frontend  ->  Go-API (Port 8090)  ->  Python-Core (FastAPI, intern Por
                         Auth/Store/Scheduler     Provider -> Risk Engine -> Renderer -> Channel
 ```
 
-Go-API (`internal/`, `cmd/`): Auth, Mandantentrennung, Persistenz, einziger Cron-Taktgeber (ruft `POST /api/scheduler/*`; Python entscheidet Fälligkeit und versendet), Proxy. Python-Core (`api/`, `src/`): Wetter-Domäne, Renderer/Transporte, Alerts, Inbound. Legacy-CLI `python -m src.app.cli` = Debug-Werkzeug. Details: `docs/features/architecture.md`.
+Go-API (`internal/`, `cmd/`): Auth, Mandantentrennung, Persistenz, einziger Cron-Taktgeber (ruft `POST /api/scheduler/*`; Python entscheidet Fälligkeit und versendet), Proxy. Python-Core (`api/`, `src/`): Wetter-Domäne, Renderer/Transporte, Alerts, Inbound. Details: `docs/features/architecture.md`.
 
 ## Wichtige Referenzen
 
@@ -57,7 +58,7 @@ OpenSpec-Workflow (`/00-intake` auch für Bugs, `/01-feature`, dann `/10-context
 
 ## Test-Politik: Zwei Schichten
 
-Verboten ist **Mock-Theater** (`Mock()`/`patch()`/`MagicMock`, die nur die eigene Annahme spiegeln) und Dateiinhalt-Checks als Verhaltensnachweis (Ausnahme `# doc-compliance-test`). Die Kern-Schicht (deterministisch, ohne Netz) muss immer 100 % grün sein, die Live-E2E-Schicht läuft nur in `/e2e-verify`/Deploy; ein Bug wird erst aus Nutzersicht rot nachgewiesen. **`uv run pytest` ohne benannte Testdateien ist gesperrt** (#1477); Testdateien nach Verhalten benennen, Prüfling relativ zur Testdatei auflösen. Tabelle und Ausnahmen: `docs/reference/gates_und_ratschen.md`.
+Verboten ist **Mock-Theater** (`Mock()`/`patch()`/`MagicMock`, die nur die eigene Annahme spiegeln) und Dateiinhalt-Checks als Verhaltensnachweis (Ausnahme `# doc-compliance-test`). Die Kern-Schicht (deterministisch, ohne Netz) muss immer 100 % grün sein, die Live-E2E-Schicht läuft nur in `/e2e-verify`/Deploy; ein Bug wird erst aus Nutzersicht rot nachgewiesen. **`uv run pytest` ohne benannte Testdateien ist gesperrt** (#1477); Tabelle und Ausnahmen: `docs/reference/gates_und_ratschen.md`.
 
 ## E2E-Verifikation & Deploy
 
@@ -67,7 +68,7 @@ Verifikation läuft **nach** dem Push gegen staging (`https://staging.gregor20.h
 
 ## Mail-Validatoren & Renderer-Gate
 
-Je Mail-Pfad ein eigener Validator gegen **echt zugestellte Staging-Mail** im Stalwart-Test-Postfach (kein Mock, kein Gmail): Orts-Vergleich (Vergleichstabelle) `email_spec_validator.py` (Exit 0 = „E2E bestanden"), Trip-Briefing `briefing_mail_validator.py`, amtliche Warnung `official_alert_mail_validator.py`, Radar-Alarm `radar_alert_mail_validator.py` (`.claude/hooks/`). Renderer-Commit-Gate blockt Mail-Inhalts-Commits bis Modus-Matrix-Test und Validator frisch grün. Details: `docs/reference/mail_validators.md`, `docs/reference/gates_und_ratschen.md`.
+Je Mail-Pfad ein eigener Validator (`.claude/hooks/`) gegen **echt zugestellte Staging-Mail** im Stalwart-Test-Postfach (kein Mock, kein Gmail), u. a. Orts-Vergleich (Vergleichstabelle) `email_spec_validator.py` (Exit 0 = „E2E bestanden"), Trip-Briefing `briefing_mail_validator.py`. Renderer-Commit-Gate blockt Mail-Inhalts-Commits bis Modus-Matrix-Test und Validator frisch grün. Alle Validatoren: `docs/reference/mail_validators.md`, Gate: `docs/reference/gates_und_ratschen.md`.
 
 ## Design-Leitprinzip
 
@@ -79,7 +80,7 @@ Compare-Editor funktioniert wie der Trip-Editor; EIN Code mit `context="route"|"
 
 ## Confidence — NICHT wählbar als Metrik (Issue #710, Final)
 
-`confidence_pct` ist Meta-Aussage über Ensemble-Divergenz: nur Verlässlichkeits-Hinweis im E-Mail-Text oder intern, kein SMS-Token (#2233), **NIEMALS** in Editor, Wizard, Metrik-Auswahl, Etappen-Spalte (`MetricDefinition.selectable=false`; alte Trips laden still).
+`confidence_pct` ist Meta-Aussage über Ensemble-Divergenz: nur Verlässlichkeits-Hinweis im E-Mail-Text oder intern, kein SMS-Token (#2233), **NIEMALS** in Editor, Wizard, Metrik-Auswahl, Etappen-Spalte.
 
 ## Daten-Schema-Reworks (PFLICHT!)
 
@@ -98,13 +99,13 @@ Monitoring-Pflicht (`last_run`), Pre-Test-Validierung (`python3 .claude/validate
 
 ## Parallele Sessions & Token-Budget
 
-Ein Projektordner trägt höchstens eine Claude-Session; eine zweite arbeitet per `EnterWorktree` bzw. `.claude/tools/gz-workspace` isoliert und liefert unabhängig über `origin/main` aus. Kontext ist die teuerste Ressource (nach jedem Ticket `/clear`); Details: `docs/reference/operations_playbook.md`.
+Ein Projektordner trägt höchstens eine Claude-Session; eine zweite arbeitet per `EnterWorktree` bzw. `.claude/tools/gz-workspace` isoliert und liefert unabhängig über `origin/main` aus. Nach jedem Ticket `/clear`; Details: `docs/reference/operations_playbook.md`.
 
 Diese Instanz heißt `gregor`. **VERBOTEN: MQ-Nachrichten `gregor` → `gregor`**; Sitzungen im selben Projekt nutzen `SendMessage`, MQ nur instanzübergreifend (`docs/reference/workflow_und_agenten.md`).
 
 # Compact instructions
 
-Wird von `/compact` als Zusammenfassungs-Anleitung gelesen; nie einen langen `/compact <Text>` tippen, einfaches `/compact` genügt. Bei aktivem Workflow (`OPENSPEC_ACTIVE_WORKFLOW` gesetzt) IMMER bewahren:
+Wird von `/compact` als Zusammenfassungs-Anleitung gelesen; einfaches `/compact` genügt (kein langer Text). Bei aktivem Workflow (`OPENSPEC_ACTIVE_WORKFLOW` gesetzt) IMMER bewahren:
 
 - **Workflow-Identität:** Issue-Nummer, Workflow-Name, aktuelle Phase
 - **Spec & Akzeptanz:** freigegebene ACs, Designentscheidungen aus der Analyse
@@ -112,4 +113,4 @@ Wird von `/compact` als Zusammenfassungs-Anleitung gelesen; nie einen langen `/c
 - **Implementierung & QA:** geänderte Dateien, Adversary-Verdict, offene Fix-Loop-Punkte
 - **Deploy-relevant:** Scope (frontend-only vs. full-stack), `verified_commit`-Status, Staging-Verdict
 
-Verwerfen: rohe Tool-Output-Dumps, Hin-und-Her, Implementierungs-Detail-Diskussionen, die schon in `.claude/workflows/<name>.json`, `.claude/e2e_verified/<sha>.json` oder `docs/artifacts/` stehen.
+Verwerfen: rohe Tool-Output-Dumps, Hin-und-Her, Details, die schon in `.claude/workflows/<name>.json`, `.claude/e2e_verified/<sha>.json` oder `docs/artifacts/` stehen.
