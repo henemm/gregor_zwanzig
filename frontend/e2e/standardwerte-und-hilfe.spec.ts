@@ -14,7 +14,7 @@
 //
 // Test-Kennungen (Vertrag aus den Kern-Tests):
 //   trip-new-standardwerte-btn · tn-mobile-standardwerte ·
-//   compare-editor-standardwerte · cm-mobile-standardwerte ·
+//   compare-editor-standardwerte (im Fuß cm-desktop-footer, #2837 S2) · cm-mobile-standardwerte ·
 //   hilfe-briefing · hilfe-alarme · hilfe-kanaele · hilfe-befehle
 //
 // Testdaten tragen das Praefix E2E-GZ- und werden in afterEach geraeumt.
@@ -182,7 +182,9 @@ async function vergleichPflicht(page: Page, name: string, orte?: [Ort, Ort]): Pr
 
 async function vergleichMitStandardwerten(page: Page, name: string, orte?: [Ort, Ort]): Promise<string> {
 	await vergleichPflicht(page, name, orte);
-	const knopf = page.getByTestId('compare-editor-standardwerte');
+	// #2837 S2 (AC-10) UMGEDREHT: Standardwerte sitzt im Desktop-Fuß cm-desktop-footer neben der
+	// Hauptaktion, nicht mehr in der Kopfzeile.
+	const knopf = page.getByTestId('cm-desktop-footer').getByTestId('compare-editor-standardwerte');
 	await expect(knopf).toBeEnabled({ timeout: 15_000 });
 	const id = await postId(page, '/api/compare/presets', () => knopf.click());
 	registerForCleanup('preset', id);
@@ -192,7 +194,8 @@ async function vergleichMitStandardwerten(page: Page, name: string, orte?: [Ort,
 async function vergleichDurchgeklickt(page: Page, name: string, orte?: [Ort, Ort]): Promise<string> {
 	await vergleichPflicht(page, name, orte);
 	for (const reiter of VERGLEICH_KETTE) await vergleichTab(page, false, reiter).click();
-	const knopf = page.getByTestId('compare-editor-activate');
+	// #2837 S2 (AC-8): „Briefing aktivieren" im Desktop-Fuß cm-desktop-footer.
+	const knopf = page.getByTestId('cm-desktop-footer').getByTestId('compare-editor-activate');
 	await expect(knopf).toBeEnabled({ timeout: 15_000 });
 	const id = await postId(page, '/api/compare/presets', () => knopf.click());
 	registerForCleanup('preset', id);

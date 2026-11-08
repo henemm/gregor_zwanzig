@@ -9,6 +9,8 @@
 // HL-1..HL-5, AC-15 → hub-anlegen-ablauf AN-9 (je kind); AC-8..AC-12 teilweise →
 // AN-14 (Wortlaut je Pflichtschritt, gesperrte CTA ohne Namen, Punkte-Gate),
 // AC-17/AC-18 → AN-15; Rest bleibt hier (Kopfzeile).
+// #2837 S2: AC-16 (Desktop-CTA-Fuß Orte) folgt dem neuen Rahmen — Weiter `Btn accent` ohne
+// Inline-Deckkraft, Desktop-Fuß cm-desktop-footer mit „Briefing aktivieren" im Fenster.
 //
 // Ausführen (gegen Staging, aus frontend/, NACH Push+Staging-Deploy):
 //   set -a; source /home/hem/gregor_zwanzig/.claude/validator.env; set +a
@@ -237,6 +239,13 @@ test.describe('Issue #1256 S8d (AC-16): Desktop-CTA-Fuß Orte', () => {
 		const continueBtn = page.getByTestId('compare-editor-continue-wetter-metriken');
 		await expect(page.getByText('⊘ min. 2 Orte auswählen')).toBeVisible();
 		await expect(continueBtn).toBeDisabled();
+		// #2837 S2 (AC-11): gesperrt bleibt der Knopf `Btn accent`, abgeblendet NUR über das globale
+		// disabled-Aussehen — keine Inline-Deckkraft mehr am Knopf.
+		await expect(continueBtn).toHaveAttribute('data-variant', 'accent');
+		expect(await continueBtn.evaluate((el) => (el as HTMLElement).style.opacity), 'AC-16/#2837: Inline-Deckkraft am gesperrten Weiter').toBe('');
+		// #2837 S2 (AC-18): der neue Desktop-Fuß mit „Briefing aktivieren" steht auch im Orte-Schritt im Fenster.
+		await expect(page.getByTestId('cm-desktop-footer')).toBeInViewport();
+		await expect(page.getByTestId('cm-desktop-footer').getByTestId('compare-editor-activate')).toHaveCount(1);
 
 		await page.getByText(`E2E S8d D-Ort-B ${suffix}`).click();
 		await expect(page.getByText('⊘ min. 2 Orte auswählen')).toHaveCount(0);

@@ -192,7 +192,9 @@ describe('AC-4: Fußzeilen-Hinweis und Fortschritt auf /trips/new', () => {
 // Ortsvergleich wird mit Wizard-Kontext gerendert wie in
 // compare-new/__tests__/compare_new_lock_engine_wirkstelle.test.ts.
 describe('AC-12 (#2521 S3): Standardwerte-Knopf in beiden Anlege-Leisten', () => {
-	test('Trip-Footer und Ortsvergleich-Kopfzeile tragen den Knopf mit identischer Beschriftung', async () => {
+	// #2837 S2 (Entscheidung 6, AC-10) UMGEDREHT: beide tragen den Knopf im Desktop-FUSS
+	// (Trip tn-desktop-footer, Ortsvergleich cm-desktop-footer), der Vergleich nicht mehr in der Kopfzeile.
+	test('Trip-Fuß und Ortsvergleich-Fuß tragen den Knopf mit identischer Beschriftung', async () => {
 		const Vergleich = VergleichEditor;
 		// Issue #2727 (AC-9): kein Context-Stub mehr — Name und Orte reisen ueber stateOverride.
 		const vergleich = render(Vergleich, {
@@ -203,10 +205,16 @@ describe('AC-12 (#2521 S3): Standardwerte-Knopf in beiden Anlege-Leisten', () =>
 			const m = new RegExp(`<button\\b[^>]*data-testid="${testid}"[^>]*>([\\s\\S]*?)</button>`).exec(html);
 			return m ? visibleText(m[1]) : null;
 		};
-		const t = beschriftung(trip, 'trip-new-standardwerte-btn');
-		const v = beschriftung(vergleich, 'compare-editor-standardwerte');
-		assert.ok(t, 'AC-12 FAIL: Trip-Footer ohne Standardwerte-Knopf (trip-new-standardwerte-btn).');
-		assert.ok(v, 'AC-12 FAIL: Ortsvergleich-Kopfzeile ohne Standardwerte-Knopf (compare-editor-standardwerte).');
+		/** Ab dem Fuß-Wrapper (der Fuß ist das letzte Element des Desktop-Zweigs). */
+		const abFuss = (html: string, fuss: string): string => {
+			const i = html.indexOf(`data-testid="${fuss}"`);
+			assert.notEqual(i, -1, `#2837 S2 FAIL: Desktop-Fuß ${fuss} fehlt.`);
+			return html.slice(i);
+		};
+		const t = beschriftung(abFuss(trip, 'tn-desktop-footer'), 'trip-new-standardwerte-btn');
+		const v = beschriftung(abFuss(vergleich, 'cm-desktop-footer'), 'compare-editor-standardwerte');
+		assert.ok(t, 'AC-12 FAIL: Trip-Fuß ohne Standardwerte-Knopf (trip-new-standardwerte-btn).');
+		assert.ok(v, '#2837 S2 AC-10 FAIL: Ortsvergleich-Fuß ohne Standardwerte-Knopf (compare-editor-standardwerte).');
 		assert.equal(t, v, 'AC-12 FAIL: Beschriftung des Standardwerte-Knopfs weicht zwischen Trip und Ortsvergleich ab.');
 	});
 });

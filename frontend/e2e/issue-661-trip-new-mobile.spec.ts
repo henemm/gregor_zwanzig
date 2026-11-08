@@ -9,8 +9,11 @@
 //
 // TestID-Inventar (in TripNewEditor.svelte zu implementieren):
 //   tn-mobile-appbar        — obere App-Leiste (nur ≤899px)
-//   tn-mobile-save          — "Speichern"-Aktion in der App-Leiste
-//   tn-desktop-breadcrumb   — Desktop-Breadcrumb-Zeile (nur ≥900px sichtbar)
+//   tn-mobile-save          — Abschluss „Trip speichern" im mobilen Sticky-Fuß tn-mobile-footer,
+//                             erst im Schritt Alarme (#2347 S4 AN-9; Text #2837 S2 AC-12) —
+//                             nicht mehr in der App-Leiste
+//   tn-desktop-breadcrumb   — Desktop-Breadcrumb „Trips / Neuer Trip" des geteilten
+//                             AnlegeRahmen (nur ≥900px sichtbar, #2837 S2)
 //   tn-lock-toast           — Toast-Hinweis bei Tap auf gesperrten Tab (mobil)
 //   tn-mobile-route-cta      — Floating-CTA im Route-Tab (mobil)
 //   tn-mobile-stage-card     — Etappen-Karte (mobil, vertikal gestapelt)
@@ -213,9 +216,15 @@ test.describe('Issue #661 — /trips/new Mobile-Parität', () => {
 			await bisSpeicherbereit(page, z, `S2b Zurück ohne Autosave ${z.name}`);
 			const schreibend = schreibendeTripRequests(page);
 
-			const zurueck = page.getByTestId(z.kopf).getByTestId('back-link');
+			// #2837 S2 (Entscheidung 1): Desktop-Zurück ist der Elternteil-Link „Trips" des Breadcrumbs
+			// im geteilten AnlegeRahmen (href="/trips" bleibt, Klick ruft onCancel); mobil bleibt der
+			// Zurück-Pfeil ein Button. Die Zusicherung „kein Autosave-Request" bleibt wörtlich.
+			const zurueck =
+				z.name === 'mobil'
+					? page.getByTestId(z.kopf).getByTestId('back-link')
+					: page.getByTestId(z.kopf).locator('a[href="/trips"]');
 			await expect(zurueck).toBeVisible();
-			expect(await zurueck.evaluate((el) => el.tagName)).toBe('BUTTON');
+			expect(await zurueck.evaluate((el) => el.tagName)).toBe(z.name === 'mobil' ? 'BUTTON' : 'A');
 			await zurueck.click();
 
 			await expect(page).toHaveURL(/\/trips$/);
