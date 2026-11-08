@@ -133,10 +133,12 @@ def _ohne_uhrzeit(text: str) -> str:
     return _UHRZEIT.sub("HH:MM", text)
 
 
-def _mail_lauf(uid: str, trip: Trip, alt: dict, neu: dict) -> tuple[str, str]:
+def _mail_lauf(uid: str, trip: Trip, alt: dict, neu: dict,
+               roh: list | None = None) -> tuple[str, str]:
+    """``(Betreff, Text)`` mit ``HH:MM``; ``roh`` erhaelt die ungekuerzte Mail."""
     from services.trip_alert import TripAlertService
 
-    mails: list = []
+    mails: list = roh if roh is not None else []
     TripAlertService(
         settings=settings_email_only(), user_id=uid, throttle_hours=0,
         mail_sink=lambda subject, body, **_kw: mails.append((subject, body)),
@@ -160,23 +162,47 @@ def test_ac12_nullgradgrenze_standard_faellt_450_m_wie_vor_s2():
     assert _letzter_alarm(uid)["severity"] == "LOW"
 
 
+#: Feste Uhr fuer den Beginn-Fall (F301, Fix-Loop 4): 06:00 UTC = 08:00 Ortszeit
+#: am Trip-Ort (47 N / 11 O, Europe/Vienna, Sommerzeit). Anker 12:00 UTC und
+#: neuer Beginn 10:00 UTC liegen damit beide am Versandtag (14:00 und 12:00
+#: Ortszeit; Anker +6 h, neu +4 h wie im Vorher-Lauf) und in der Zukunft -- genau der Fall, den der Vorher-Stand
+#: (85c3024) aufgenommen hat: Tageswort entfaellt, kein „seit". Mit der
+#: Wanduhr lag der Anker ab 18:00 UTC am Folgetag („morgen HH:MM") und der
+#: Test war rot, ohne dass der Pruefling falsch war.
+_BEGINN_UHR = datetime(2026, 8, 11, 6, 0, tzinfo=timezone.utc)
+
+
 def test_ac12_gewitter_beginnt_zwei_stunden_frueher_wie_vor_s2():
     """AC-12 GIVEN aktiver Gewitterbeginn-Alarm („standard": ab 1 h frueher) /
     WHEN das Gewitter 2 h frueher beginnt / THEN derselbe Alarm wie vor S2.
 
-    Die Gewitter-Ampel ist hier „Nie", damit allein der Beginn zaehlt."""
-    uid = _uid("ac12b")
-    trip = _trip("trip-ac12b", alarm_ab={"thunder": "never"}, metrics=("thunder",),
-                 levels={"thunder_onset": "standard", "thunder_level": "off"})
-    t0 = datetime.now(timezone.utc).replace(minute=0, second=0, microsecond=0)
-    subject, body = _mail_lauf(
-        uid, trip,
-        {"thunder_onset_utc": t0 + timedelta(hours=6)},
-        {"thunder_onset_utc": t0 + timedelta(hours=4)},
-    )
+    Die Gewitter-Ampel ist hier „Nie", damit allein der Beginn zaehlt. Die Uhr
+    steht fest (``_BEGINN_UHR``), damit der Test rund um die Uhr denselben
+    Fall prueft; zusaetzlich zum Vorher-Stand mit ``HH:MM`` werden die
+    Ortszeiten selbst geprueft (12:00 neu, 14:00 Anker -- Sommerzeit +2 h)."""
+    from freezegun import freeze_time
+
+    with freeze_time(_BEGINN_UHR):
+        uid = _uid("ac12b")
+        trip = _trip("trip-ac12b", alarm_ab={"thunder": "never"}, metrics=("thunder",),
+                     levels={"thunder_onset": "standard", "thunder_level": "off"})
+        t0 = datetime.now(timezone.utc)
+        assert t0 == _BEGINN_UHR, "Voraussetzung: die feste Uhr greift im Pruefling."
+        roh: list = []
+        subject, body = _mail_lauf(
+            uid, trip,
+            {"thunder_onset_utc": t0 + timedelta(hours=6)},
+            {"thunder_onset_utc": t0 + timedelta(hours=4)},
+            roh=roh,
+        )
+        dringlichkeit = _letzter_alarm(uid)["severity"]
     assert subject == VORHER_BEGINN_BETREFF, subject
     assert body.splitlines() == VORHER_BEGINN_TEXT, body
-    assert _letzter_alarm(uid)["severity"] == VORHER_BEGINN_DRINGLICHKEIT
+    assert dringlichkeit == VORHER_BEGINN_DRINGLICHKEIT
+    roh_betreff, roh_text = roh[-1]
+    assert "Gewitter-Beginn 12:00 (2 h früher)" in roh_betreff, roh_betreff
+    assert "Gewitter-Beginn: 14:00 → 12:00 (2 h früher · Segment 1)" in roh_text, roh_text
+    assert "Stand: heute 08:00" in roh_text, roh_text
 
 
 # Vorher-Stand, gemessen auf 85c3024 (vor S2b) mit genau diesen Laeufen
