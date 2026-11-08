@@ -2,8 +2,8 @@
 entity_id: fix_2237_staging_testdaten
 type: bugfix
 created: 2026-11-03
-updated: 2026-11-03
-status: draft
+updated: 2026-11-08
+status: implemented
 version: "1.0"
 workflow: fix-2237-staging-testdaten
 tags: [staging, sweep, testdaten, mandantentrennung, infra]
@@ -187,3 +187,4 @@ Test-Politik laut CLAUDE.md: echtes Dateisystem, kein Mock-Theater, keine Dateii
 - 2026-11-03 (Umsetzung): AC-12 Ladetest mit Go-Store: `e2e-cockpit-test.json` lädt (kind=route, 3 Etappen) = gültiges Testobjekt, nicht reproduzierbar, fällt dem 12-h-Sweep anheim; `e2e-mutation-check.json` lädt (Name "x", 0 Etappen), wird ebenfalls vom Sweep abgeräumt.
 - 2026-11-03 (Umsetzung): Konto `gregor_zwanzig_staging` existiert im echten Baum nicht; B1-50/B1-54 entfallen, AC-11 entsprechend präzisiert. Backup `cleanup-2237-<heute>` ohne `*.json.lock` (für `claude-gregor` unlesbar). Gelöscht wurden 6 e2e-Konten mit doppelter mail_to/telegram_chat_id (Liste im Issue #2237). Infra-Teil: henemm/henemm-infra#377.
 - 2026-11-03 (Validierungs-Fix): Sperrdatei-Entfernung aus `DeleteTrip`/`DeleteComparePreset` herausgenommen (verkürzte die Haltedauer, `TestSchreibsperre_HaltedauerJeStelle_BisZurAntwortBelegt` rot) und als `Store.RemoveBriefingLockFile` nach dem Freigeben der Sperre in die beiden Delete-Handler verlegt (betrifft zusätzlich `internal/handler/trip.go`, `internal/handler/compare_preset.go`, `internal/store/briefing_lock.go`, neu `internal/handler/delete_lock_cleanup_test.go`, Registereintrag in `internal/store/user_scope_guard_test.go`; `internal/store/trip.go` ist damit gegenüber dem Stand vor #2237 unverändert). Python `delete()` liefert jetzt `(removed, failed)` statt `int` (Wächter `partial_success_blind`).
+- 2026-11-08 (Abnahme Betrieb): Nacht-Sweep meldet seit 5.11. jede Nacht `OK` mit 123 Nutzerordnern; `nightly-sweep-20261108-043001.tar.gz` enthält alle 123 Ordner = Live-Baum (AC-1). Keine doppelte `mail_to`/`telegram_chat_id`, Schutz-Konten vorhanden (AC-11), kein `E2E-1613-WC-Test` mehr im Baum (AC-10). AC-9: Preset samt zwei `.bak-*` liegt unter `validator-issue110` und überstand vier scharfe Läufe; der geforderte Trockenlauf war aus der Claude-Sitzung nicht ausführbar (Sitzungssperre gegen `sudo … bash`), die scharfen Läufe belegen dieselbe Aussage. Befund: Am 6.11. und 7.11. legten Sitzungen das Preset erneut unter `default` an (Ursache: veraltete Sitzungs-Notiz verortete es dort, korrigiert); der Sweep räumte es jeweils nach 12 h ab, die Kopie unter `validator-issue110` blieb unberührt.
