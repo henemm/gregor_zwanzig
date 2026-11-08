@@ -3,7 +3,7 @@ entity_id: rework_2837_s1b_status_profil
 type: feature
 created: 2026-11-08
 updated: 2026-11-08
-status: draft
+status: implemented
 version: "1.0"
 workflow: rework-2837-s1b-status-profil
 tags: [epic-2345, trip-compare-teilung, hub-kopf, status-schild, profil, shared, paritaet, frontend-only, dod-2]
@@ -198,6 +198,7 @@ Regeln: keine Mocks, die nur die eigene Annahme spiegeln; Quelltext-Greps gelten
 - **Nebenbefund für #1199:** `listen.status.draft` lautet im deutschen Katalog „draft" (englisch). Das betrifft die Listen-Punkte, nicht den Kopf, und wird dort als Nebenbefund erfasst, nicht hier behoben.
 - **Globale `app.css`-Änderung:** wirkt auch auf die Demo-Seite `routes/_design`, sonst gibt es keine weitere produktive `data-outlined`-Nutzung.
 - Die App hat keine Dunkel-Tokens; die Kontrastangaben gelten für das helle Design.
+- **Umsetzungs-Nachträge (Phase 7, 2026-11-08):** Die 8 Golden-Snapshots unter `tests/golden/f9_trip_flaechen/` und `tests/golden/f10_vergleich_flaechen/` (`hub_seite`, `kopf_status`, `bausteine`, je de/en) wurden als Folge des neuen Schild-Markups neu geschrieben (fehlten im Test-Plan-Inventar). `compare/__tests__/vergleich_hub_sprache.test.ts` wurde auf die neue Schreibung „Aktiv/Pausiert/Entwurf" bzw. „Active/Paused/Draft" umgehängt, die Negativprüfung (kein Deutsch im englischen Kopf) bleibt. `hub_kopf_baustein.test.ts` und `issue_577_atoms_design_fidelity.test.ts` brauchten keinen Nachzug (keine Verweise auf die alten Bausteine).
 
 ## Architektur-Entscheidung (ADR)
 
@@ -207,3 +208,4 @@ Regeln: keine Mocks, die nur die eigene Annahme spiegeln; Quelltext-Greps gelten
 ## Changelog
 
 - 2026-11-08: Initial spec created (Issue #2837, Epic #2345, Nachbesserung S1b nach gescheiterter Staging-Abnahme AC-15 vom 2026-11-07; korrigiert S1-Entscheidung 5)
+- 2026-11-08: implementiert (`shared/status-schild/StatusSchild.svelte` ersetzt `TripStatusBadge` und `CompareStatusPill`; Profil in der Trip-Unterzeile; Pausiert-Schrift `--g-warn-deep`). Validierung Phase 7: 8054 Frontend-Tests grün, AC-1 bis AC-12 im Code erfüllt, AC-13 nach Deploy.
