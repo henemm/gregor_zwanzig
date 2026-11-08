@@ -30,7 +30,7 @@ Ausfuehrung:
 from __future__ import annotations
 
 import uuid
-from datetime import date, datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 
 import pytest
 
@@ -92,14 +92,25 @@ class Aufbau:
 
         self.monkeypatch.setattr(quelle_mod, "datetime", _Folge)
 
-    def uhr_dispatch(self, moment: datetime) -> None:
-        """Uhr des Schreibpfads (``_datetime`` in ``scheduler_dispatch_service``)."""
+    def uhr_dispatch(self, moment: datetime,
+                     schritt: timedelta | None = None) -> None:
+        """Uhr des Schreibpfads (``_datetime`` in ``scheduler_dispatch_service``).
+
+        Ohne ``schritt`` steht die Uhr fest auf ``moment``. Mit ``schritt``
+        laeuft sie fort: der erste ``now()``-Aufruf liefert ``moment``, jeder
+        weitere den vorigen Moment + ``schritt`` (#2847, F001) -- sonst faellt
+        nicht auf, wenn der Schreibpfad die Uhr je Ort neu abfragt."""
         import services.scheduler_dispatch_service as dispatch_mod
+
+        stand = [moment]
 
         class _Fest(datetime):
             @classmethod
             def now(cls, tz=None):
-                return moment.replace(tzinfo=None) if tz is None else moment.astimezone(tz)
+                aktuell = stand[0]
+                if schritt is not None:
+                    stand[0] = aktuell + schritt
+                return aktuell.replace(tzinfo=None) if tz is None else aktuell.astimezone(tz)
 
         self.monkeypatch.setattr(dispatch_mod, "_datetime", _Fest)
 
@@ -263,7 +274,12 @@ def test_ac5_ein_fehlschlagender_ort_verhindert_die_anderen_anker_nicht(
                 raise RuntimeError("Provider-Ausfall fuer genau diesen Ort")
             return super().fetch_forecast(location, *a, **k)
 
-    Aufbau(monkeypatch, tmp_path, wien_lage(), provider_klasse=Giftprovider)
+    b = Aufbau(monkeypatch, tmp_path, wien_lage(), provider_klasse=Giftprovider)
+    # Beide Uhren fest auf Mittag Ortszeit am Testtag (#2847): sonst rechnet
+    # der Test mit der echten Uhr und liegt ausserhalb der Wetter-Testdaten.
+    mittag = ortszeit(tz_for_coords(ALPEN_LAT, ALPEN_LON), TAG, 12)
+    b.uhr_quelle([mittag])
+    b.uhr_dispatch(mittag)
     user_id, preset_id = neuer_nutzer(), f"cp-1695-{uuid.uuid4().hex[:6]}"
 
     schreibe(preset_id, [ort("a", ALPEN_LAT, ALPEN_LON),
@@ -281,7 +297,12 @@ def test_ac6_anker_liegen_nur_im_bereich_des_eigenen_nutzers(monkeypatch, tmp_pa
     """AC-6 (Regressionswaechter, heute gruen): zwei Nutzer mit GLEICHEM Preset-
     und Ort-Schluessel, aber verschiedenen Koordinaten. Jeder sieht nur den
     eigenen Anker; ein dritter, unbeteiligter Nutzer sieht keinen."""
-    Aufbau(monkeypatch, tmp_path, wien_lage())
+    b = Aufbau(monkeypatch, tmp_path, wien_lage())
+    # Beide Uhren fest auf Mittag Ortszeit am Testtag (#2847): sonst rechnet
+    # der Test mit der echten Uhr und liegt ausserhalb der Wetter-Testdaten.
+    mittag = ortszeit(tz_for_coords(ALPEN_LAT, ALPEN_LON), TAG, 12)
+    b.uhr_quelle([mittag])
+    b.uhr_dispatch(mittag)
     nutzer_a, nutzer_b, fremder = neuer_nutzer(), neuer_nutzer(), neuer_nutzer()
     preset_id = f"cp-1695-{uuid.uuid4().hex[:6]}"
 
@@ -312,7 +333,15 @@ def test_ac8_schreibpfad_reicht_ein_und_dasselbe_now_an_alle_orte(
     """
     import services.compare_location_weather_source as quelle_mod
 
-    Aufbau(monkeypatch, tmp_path, wien_lage())
+    b = Aufbau(monkeypatch, tmp_path, wien_lage())
+    # Beide Uhren fest auf Mittag Ortszeit am Testtag (#2847): sonst rechnet
+    # der Test mit der echten Uhr und liegt ausserhalb der Wetter-Testdaten.
+    mittag = ortszeit(tz_for_coords(ALPEN_LAT, ALPEN_LON), TAG, 12)
+    b.uhr_quelle([mittag])
+    # Dispatch-Uhr laeuft fort (je Abfrage +1 Minute, bleibt am Testtag):
+    # fragte der Schreibpfad die Uhr je Ort neu ab, erhielten die Orte
+    # verschiedene Zeitpunkte und die Gleichheits-Zusicherung wuerde rot.
+    b.uhr_dispatch(mittag, schritt=timedelta(minutes=1))
     aufgezeichnet: list[object] = []
     echte_quelle = quelle_mod.CompareLocationWeatherSource
 
