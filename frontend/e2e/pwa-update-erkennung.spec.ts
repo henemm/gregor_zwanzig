@@ -385,28 +385,32 @@ for (const anlegeSeite of ['/trips/new', '/compare/new'] as const) {
 // e2e/speicherung-ueberlebt-neuladen.spec.ts. Trip-Metrik `gust`, Alarmwert `wind_gust`.
 // ===========================================================================
 
-const START_STUFE = 'standard';
-const ZIEL_STUFE = 'sensibel';
+// #2793 S2b (Spec §6): die Alarm-Empfindlichkeit ist bis S3a NUR LESBAR --
+// Ausloeser ist jetzt die Sperrzeit (`alert_cooldown_minutes`, Reiter Alarme,
+// derselbe Trip-Speicherweg); START/ZIEL stehen als Minuten.
+const START_STUFE = '60';
+const ZIEL_STUFE = '30';
 
 /** Trip: alarmfaehige Metrik-Auswahl (Boeen) + feste Ausgangsstufe. */
 const TRIP_ALARM_SEED = {
 	display_config: {
 		metrics: [{ metric_id: 'gust', enabled: true, bucket: 'primary', order: 0 }],
-		metric_alert_levels: { wind_gust: START_STUFE }
-	}
+		metric_alert_levels: { wind_gust: 'standard' }
+	},
+	alert_cooldown_minutes: Number(START_STUFE)
 };
 
 /** Stufen-Knopf der Boeen-Zeile in der Alarm-Empfindlichkeits-Tabelle. */
-function stufenKnopf(page: Page, stufe: string) {
-	return page.locator(`[data-testid="alert-level-wind_gust-${stufe}"]:visible`);
+function stufenKnopf(page: Page, _stufe: string) {
+	return page.locator('[data-testid="alert-cooldown-input"]:visible');
 }
 
 /** Server-Stand der Boeen-Stufe (am Browser vorbei, eigene API-Anfrage). */
 async function windGustStufe(page: Page, tripId: string): Promise<string | null> {
 	const r = await page.request.get(`/api/trips/${tripId}`);
 	expect(r.ok(), `GET /api/trips/${tripId} HTTP ${r.status()}`).toBeTruthy();
-	const trip = (await r.json()) as { display_config?: { metric_alert_levels?: Record<string, string> } };
-	return trip.display_config?.metric_alert_levels?.wind_gust ?? null;
+	const trip = (await r.json()) as { alert_cooldown_minutes?: number | null };
+	return trip.alert_cooldown_minutes == null ? null : String(trip.alert_cooldown_minutes);
 }
 
 test('AC-10: Aenderung auf /trips/[id], sofort „Aktualisieren" → nach dem Neuladen gespeichert', async ({
@@ -444,8 +448,8 @@ test('AC-10: Aenderung auf /trips/[id], sofort „Aktualisieren" → nach dem Ne
 		await expect(
 			stufenKnopf(page, START_STUFE),
 			`Vorbedingung: die angelegte Boeen-Stufe ${START_STUFE} ist ausgewaehlt`
-		).toHaveAttribute('aria-pressed', 'true', { timeout: 10_000 });
-		await stufenKnopf(page, ZIEL_STUFE).click();
+		).toHaveValue(START_STUFE, { timeout: 10_000 });
+		await stufenKnopf(page, ZIEL_STUFE).fill(ZIEL_STUFE);
 		await aktualisieren(page).click();
 
 		await expect.poll(() => fassungsKennung(page).catch(() => alteFassung), { timeout: 30_000 }).not.toBe(
@@ -578,13 +582,13 @@ test('#2317 AC-6: ausstehende Eingabe + „Aktualisieren" → PUT regulaer abges
 		await expect(
 			stufenKnopf(page, START_STUFE),
 			`Vorbedingung: die angelegte Boeen-Stufe ${START_STUFE} ist ausgewaehlt`
-		).toHaveAttribute('aria-pressed', 'true', { timeout: 10_000 });
+		).toHaveValue(START_STUFE, { timeout: 10_000 });
 		// Marke: nur was AB der Eingabe protokolliert wird, zaehlt (ein etwaiges
 		// SKIP_WAITING der Erst-Aktivierung bleibt davor).
 		const marke = (await protokoll()).length;
 
 		// Eingabe liegt im 700-ms-Fenster — und sofort „Aktualisieren".
-		await stufenKnopf(page, ZIEL_STUFE).click();
+		await stufenKnopf(page, ZIEL_STUFE).fill(ZIEL_STUFE);
 		await aktualisieren(page).click();
 
 		await expect.poll(() => fassungsKennung(page).catch(() => alteFassung), { timeout: 30_000 }).not.toBe(
@@ -623,7 +627,7 @@ test('#2317 AC-6: ausstehende Eingabe + „Aktualisieren" → PUT regulaer abges
 		await expect(
 			stufenKnopf(page, ZIEL_STUFE),
 			`#2317 AC-6: nach dem Fassungswechsel muss die gewaehlte Stufe (${ZIEL_STUFE}) sichtbar sein`
-		).toHaveAttribute('aria-pressed', 'true', { timeout: 10_000 });
+		).toHaveValue(ZIEL_STUFE, { timeout: 10_000 });
 		expect(await windGustStufe(page, tripId), '#2317 AC-6: Server-Stand').toBe(ZIEL_STUFE);
 	});
 });

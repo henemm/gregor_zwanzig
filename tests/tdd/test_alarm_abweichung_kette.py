@@ -156,7 +156,8 @@ def test_kanalmatrix_und_schwelle_konsistent_bis_zum_versand():
         )
         strecke = _strecke(uid)
         cached = [_wd(1, precip_sum_mm=2.0)]
-        fresh = [_wd(1, precip_sum_mm=18.0)]
+        # #2793 S2b (D3): mittel = gelb -> orange (vorher 2 -> 18 mm, Faktor 1,6).
+        fresh = [_wd(1, precip_sum_mm=8.0)]
 
         lauf = strecke.lauf(
             at=_AT, zweig="deviation", trip=trip,
@@ -227,10 +228,13 @@ def test_cooldown_und_quiet_hours_unterdruecken_den_alarm(sperre):
         else:  # cooldown
             trip.alert_cooldown_minutes = 120
 
+            # #2793 S2b (D3): erster Alarm mittel (gelb -> orange), damit der
+            # spaetere rote Lauf als echte Verschaerfung durch die
+            # Ereignis-Identitaet kommt (vorher 2 -> 18 mm = MODERATE).
             erster = strecke.lauf(
                 at=_AT, zweig="deviation", trip=trip,
                 cached_weather=[_wd(1, precip_sum_mm=2.0)],
-                fresh_weather=[_wd(1, precip_sum_mm=18.0)],
+                fresh_weather=[_wd(1, precip_sum_mm=8.0)],
             )
             assert erster.triggered_count == 1, (
                 f"AC-6 (cooldown) Vorbedingung: der erste Alarm muss "
@@ -240,7 +244,7 @@ def test_cooldown_und_quiet_hours_unterdruecken_den_alarm(sperre):
             innerhalb = strecke.lauf(
                 at=_AT + timedelta(minutes=30), zweig="deviation", trip=trip,
                 cached_weather=[_wd(1, precip_sum_mm=2.0)],
-                fresh_weather=[_wd(1, precip_sum_mm=20.0)],
+                fresh_weather=[_wd(1, precip_sum_mm=9.0)],
             )
             assert innerhalb.triggered_count == 0, (
                 f"AC-6 (cooldown): innerhalb des Cooldown-Fensters darf "

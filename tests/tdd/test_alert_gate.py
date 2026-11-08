@@ -2323,7 +2323,7 @@ def test_s4c_ac8_kaputter_registereintrag_unterdrueckt_nichts():
         dienst.save(trip.id, zustand)
 
         at2 = _AT + timedelta(minutes=20)
-        cached, fresh = s4c._regen(2.0, 18.0)
+        cached, fresh = s4c._regen(2.0, 8.0)
         lauf = strecke.lauf(
             at=at2, zweig="deviation", trip=trip,
             cached_weather=cached, fresh_weather=fresh,
@@ -2371,7 +2371,7 @@ def test_s4c_ac11_registereintrag_traegt_deviation_statt_der_alten_ableitung():
     uid = s4c._uid("gate-ac11")
     try:
         trip = s4c._trip_delta("trip-s4c-ac11")
-        cached, fresh = s4c._regen(2.0, 18.0)
+        cached, fresh = s4c._regen(2.0, 8.0)
         lauf = s4c._strecke(uid).lauf(
             at=_AT, zweig="deviation", trip=trip,
             cached_weather=cached, fresh_weather=fresh,
@@ -2479,7 +2479,7 @@ def test_s4c_ac17_ohne_zustellbaren_kanal_entsteht_kein_registereintrag():
     uid, ctrl = s4c._uid("gate-ac17"), s4c._uid("gate-ac17-ctrl")
     try:
         trip = s4c._trip_delta("trip-s4c-ac17", kanaele=False)
-        cached, fresh = s4c._regen(2.0, 18.0)
+        cached, fresh = s4c._regen(2.0, 8.0)
         strecke = s4c._strecke(uid)
         vorher = s4c._register(uid, trip.id)
         lauf = strecke.lauf(

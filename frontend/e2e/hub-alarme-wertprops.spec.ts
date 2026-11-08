@@ -355,7 +355,7 @@ for (const kind of HUB_KINDS) {
 		});
 
 		// AW-4 — Alt AC-2 „Empfindlichkeit, Cooldown, Stille Stunden".
-		test(`AW-4 (${kind}): Empfindlichkeit, Cooldown und Stille Stunden wirken (je Einzelgeste genau ein PUT) und überstehen das Neuladen`, async ({
+		test(`AW-4 (${kind}): Empfindlichkeit nur lesbar, Cooldown und Stille Stunden wirken (je Einzelgeste genau ein PUT) und überstehen das Neuladen`, async ({
 			page
 		}) => {
 			const hub = await seedHub(page.request, kind, { extra: aw.seed });
@@ -363,21 +363,12 @@ for (const kind of HUB_KINDS) {
 				const puts = zaehlePuts(page, hubApiPath(kind, hub.id));
 				await oeffneAlarme(page, kind, hub.id);
 
-				// Stufen off/entspannt/standard/sensibel — „sensibel" weicht vom Startwert ab.
-				await page.locator('[data-testid="alert-quickset-sensibel"]').first().click();
-				await warteAufGespeichert(page);
-				await expect
-					.poll(
-						async () =>
-							Object.values((dc(await stand(page, kind, hub.id)).metric_alert_levels as Record<string, string>) ?? {}),
-						{
-							timeout: 15_000,
-							message:
-								'AW-4 FAIL: die Alarm-Empfindlichkeit wurde nicht gespeichert — fehlt `onMetricLevelChange` am Mount, verpufft die Geste.'
-						}
-					)
-					.toContain('sensibel');
-				await bleibtBei(() => puts.length, 1, 1_200, 'AW-4 FAIL: die Empfindlichkeits-Geste darf nur EINEN PUT auslösen');
+				// #2793 S2b (Spec §6, AC-19) -- GEAENDERT: die Empfindlichkeit ist bis S3a
+				// nur lesbar (kein Regler, keine Schnellwahl, Hinweis oben). Vorher wurde
+				// hier „sensibel" gewaehlt und als erster PUT gezaehlt.
+				await expect(page.locator('[data-testid="alert-metric-umbau-hinweis"]:visible').first()).toBeVisible();
+				await expect(page.locator('[data-testid^="alert-quickset-"]')).toHaveCount(0);
+				await expect(page.locator('[data-testid^="alert-level-"]')).toHaveCount(0);
 
 				const cooldown = page.locator('[data-testid="alert-cooldown-input"]').first();
 				await expect(cooldown, 'Vorbedingung: Cooldown startet nicht auf dem Zielwert').not.toHaveValue('45');
@@ -390,7 +381,7 @@ for (const kind of HUB_KINDS) {
 						message: 'AW-4 FAIL: der Cooldown wurde nicht gespeichert (Funktions-Bindung defekt?).'
 					})
 					.toBe(45);
-				await bleibtBei(() => puts.length, 2, 1_200, 'AW-4 FAIL: die Cooldown-Geste darf nur EINEN PUT auslösen');
+				await bleibtBei(() => puts.length, 1, 1_200, 'AW-4 FAIL: die Cooldown-Geste darf nur EINEN PUT auslösen');
 
 				// AlertQuietHoursCard spreizt die Testid auf das <input type="checkbox"> selbst.
 				// Mehrschrittige Bedienfolge (Schalter + Von + Bis) — hier keine PUT-Zählung,

@@ -279,6 +279,9 @@ def test_ac6_schwellengefilterter_kanal_bekommt_keinen_frischen_merker():
     user_id, trip_id = _nutzer("ac6"), "trip-1987-ac6"
     trip = gust_alert_trip(trip_id, alert_channels={"email": True, "telegram": True})
     trip.alert_channel_thresholds = {"telegram": "MODERATE"}
+    # #2793 S2b (D3): „geringe" Dringlichkeit heisst jetzt gelb -- mit
+    # „Alarm ab Gelb" ist 10 -> 35 km/h gruen -> gelb = LOW (vorher Faktor 1,25).
+    trip.display_config.ampel = {"template": "allgemein", "metrics": {"gust": {"alarm_ab": "yellow"}}}
     heute = _ortstag(trip)
     staende = _altstaende_anlegen(user_id, trip_id, heute)
 

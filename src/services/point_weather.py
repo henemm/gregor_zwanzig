@@ -79,6 +79,9 @@ class AlertEvaluationConfig:
     # `anchor_tz`, Vergleich: `first_resolvable_tz`). `None` = der Erbauer
     # kennt keine; die Engine rechnet dann in Weltzeit statt zu raten.
     zone: Optional[ZoneInfo] = None
+    # Issue #2793 S2b: aufgeloeste Abo-Ampel (``resolve_ampel``) -- Trip aus dem
+    # Trip, Vergleich aus dem Preset. `None` = aus `display_config` aufloesen.
+    ampel: Optional[dict] = None
 
 
 class LocationWeatherSource(Protocol):

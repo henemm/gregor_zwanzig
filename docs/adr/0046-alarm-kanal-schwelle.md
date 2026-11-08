@@ -49,7 +49,10 @@ ausgelöste Meldung erreicht einen Kanal nur, wenn ihre Dringlichkeit die dort
 eingestellte Schwelle erreicht oder übertrifft
 (`services.alert_channel_threshold.split_by_threshold()`, Rangvergleich über
 `services.alert_urgency.meets_or_exceeds()` — dieselbe Rangordnung wie
-ADR-0043/S3a, keine zweite Skala).
+ADR-0043/S3a, keine zweite Skala). Seit #2793 S2b kommt die Dringlichkeit
+eines Abweichungs-Alarms aus der Ampelfarbe (gelb gering, orange mittel,
+rot hoch; Entwarnung: verlassene Farbe; ADR-0106 P4 D3), die Kanal-Schwelle
+liest sie unverändert.
 
 **Die rote Linie #638 wird strukturell verhindert, nicht durch Disziplin:**
 das an das Protokoll übergebene Kanal-Set bleibt das **rohe**, unveränderte

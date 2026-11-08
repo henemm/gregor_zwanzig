@@ -257,7 +257,9 @@ def test_ac2_empfindlichkeitsstufe_feuert_weiterhin_neben_dem_wertebereich():
     try:
         trip = _corridor_plus_level_trip("trip-1460-ac2")
         cached = [_data(1, gust_max_kmh=10.0)]
-        fresh = [_data(1, gust_max_kmh=35.0)]  # Δ = 25 > 20
+        # #2793 S2b: Alarm nach Ampelfarbe (allgemein: Boeen orange ab 45,
+        # Alarm ab Orange) -- 10 -> 50 ist gruen -> orange.
+        fresh = [_data(1, gust_max_kmh=50.0)]
         _save_cached(user_id, trip.id, cached)
 
         mail_calls: list = []

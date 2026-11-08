@@ -217,6 +217,18 @@ Die Abweichungs-Alarm-Mail (Trip und Ortsvergleich; `src/output/renderers/alert/
 
 Spec: `docs/specs/modules/feat_1737_alarm_stundenzeilen.md`.
 
+## Abweichungs-Alarm: Farbsatz der Ampel (seit Issue #2793 S2b)
+
+Der Abweichungs-Alarm folgt der Profil-Ampel des Abos (ADR-0106 P4). Für die Ampel-Metriken (Temperatur, Wind, Böen, Niederschlag, Neuschnee, Sicht, UV, Gewitter) steht statt des Urteils „Änderung über/unter deiner Alarm-Schwelle ({schwelle})" ein Farbsatz aus dem Katalog (`alarm.ampel.*`, DE/EN):
+
+- Verschärfung: „{label} von {farbe_von} auf {farbe_bis} gestiegen: {von} → {bis}" (EN „{label} rose from {farbe_von} to {farbe_bis}: {von} → {bis}")
+- Sprung: „{label} weiter {farbe}, großer Sprung: {von} → {bis}" (EN „{label} still {farbe}, large jump: …")
+- Entwarnung: „Entwarnung {label}: von {farbe_von} auf {farbe_bis} zurückgegangen ({von} → {bis})" (EN „All clear {label}: back from … to … (…)")
+
+Einzelereignis: der Satz steht im Urteils-Badge, die zweite Datenzeile zeigt „Änderung {Δ}: {farbe_von} → {farbe_bis}". Mehrere Ereignisse: je Ereignis eine Zeile mit dem Satz, Zähler „{n} Änderungen seit dem Briefing". Bei Temperatur nennt `{label}` die Seite („Tageshöchst"/„Tagestief", EN „Daily high"/„Daily low"). Der Bezug aufs Briefing bleibt in der Fußzeile („verglichen mit {Zeit}", ADR-0056). Nullgradgrenze und Beginn-Verschiebung (D4) behalten bis S7 Text und Urteil von vorher. Stundenzeilen unverändert.
+
+Spec: `docs/specs/modules/feat_2793_s2_alarm_stufenwechsel.md` §4.
+
 ---
 
 ## Marker Headers and Validation Routing (seit Issue #733)

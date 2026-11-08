@@ -21,7 +21,7 @@
 
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
-import { ALERTABLE_METRICS, thresholdTitle } from '../../alerts-tab/alertMetricTable.ts';
+import { ALERTABLE_METRICS } from '../../alerts-tab/alertMetricTable.ts';
 import {
 	attribut,
 	entschluesselt,
@@ -125,18 +125,19 @@ describe('AC-9: Alarme — sichtbares Label „Dringlichkeits-Schwelle“ mit �
 // ─────────────────────────────────────────────────────────────────────────────
 // AC-10
 // ─────────────────────────────────────────────────────────────────────────────
-describe('AC-10: Alarm-Tabelle — ⓘ nur an der CAPE-Zeile, title der Schwellwert-Zelle unveraendert', () => {
+// #2793 S2b (Spec §6): die Δ-Schwellwert-Spalte entfaellt mit der nur lesbaren
+// Tabelle „Alarm ab" — die title-Zusicherung an der Schwellwert-Zelle wird zur
+// Zusicherung, dass es diese Zelle nicht mehr gibt; das ⓘ an CAPE bleibt.
+describe('AC-10: Alarm-Tabelle — ⓘ nur an der CAPE-Zeile, keine Schwellwert-Zelle mehr', () => {
 	async function zeile(metric: string, label: string): Promise<string> {
 		const Row = await lade('alerts-tab/AlertMetricLevelRow.svelte');
-		return renderKomponente(Row, { metric, label, level: 'standard', onChange: () => {} });
+		return renderKomponente(Row, { metric, label, zeile: { art: 'ampel', stufe: 'never' } });
 	}
-	function schwellenZelle(html: string, metric: string): string {
-		const m = new RegExp(`<td[^>]*data-testid="alert-threshold-${metric}"[^>]*>`).exec(html);
-		assert.ok(m, `Schwellwert-Zelle ${metric} fehlt`);
-		return m![0];
+	function keineSchwellenZelle(html: string, metric: string): void {
+		assert.equal(html.includes(`data-testid="alert-threshold-${metric}"`), false, `${metric}: Schwellwert-Zelle steht noch`);
 	}
 
-	test('CAPE-Zeile: ⓘ im Zeilen-Label UND title an der Schwellwert-Zelle = thresholdTitle("cape") (nicht leer)', async () => {
+	test('CAPE-Zeile: ⓘ im Zeilen-Label, keine Schwellwert-Zelle (#2793 S2b)', async () => {
 		const html = await zeile('cape', 'Gewitterenergie (CAPE)');
 		const tags = ii(html, 'cape');
 		assert.equal(tags.length, 1, 'ⓘ „cape“ fehlt an der CAPE-Zeile');
@@ -144,9 +145,7 @@ describe('AC-10: Alarm-Tabelle — ⓘ nur an der CAPE-Zeile, title der Schwellw
 		assert.ok(label, 'Label-Zelle nicht gefunden');
 		assert.ok(label![1].includes('begriff-erklaerung-cape'), 'ⓘ steht nicht IM Zeilen-Label');
 		assert.match(sichtbarerText(label![1]), /Gewitterenergie \(CAPE\)/);
-		const erwartet = thresholdTitle('cape' as never);
-		assert.ok(erwartet && erwartet.length > 0, 'Messaufbau: thresholdTitle("cape") ist leer');
-		assert.equal(attribut(schwellenZelle(html, 'cape'), 'title'), erwartet);
+		keineSchwellenZelle(html, 'cape');
 	});
 
 	test('jede andere alarmierbare Metrik: KEIN ⓘ und KEIN title (Invariante: nur CAPE hat einen title)', async () => {
@@ -155,7 +154,7 @@ describe('AC-10: Alarm-Tabelle — ⓘ nur an der CAPE-Zeile, title der Schwellw
 		for (const metric of andere) {
 			const html = await zeile(metric, `Label ${metric}`);
 			assert.equal(tagsMitTestid(html, 'begriff-erklaerung-').length, 0, `${metric}: ⓘ an der falschen Zeile`);
-			assert.equal(attribut(schwellenZelle(html, metric), 'title'), null, `${metric}: title an der Schwellwert-Zelle`);
+			keineSchwellenZelle(html, metric);
 		}
 		// Gegenprobe zur Vakuum-Falle: die CAPE-Zeile dieser Rendermethode traegt tatsaechlich ein ⓘ
 		// (sonst waere „kein ⓘ bei den anderen" auch bei kaputtem Messaufbau gruen).

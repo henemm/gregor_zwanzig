@@ -338,12 +338,18 @@ describe('#1544/#1545 AC-6 Ebene 3: die Kette bis zur gesendeten Nutzlast, zur L
 				existingChannels: { email: true, telegram: false, sms: false }
 			}
 		}).body;
-		assert.match(
-			html,
-			/data-testid="alert-metric-row-wind_gust"[^>]*data-level="sensibel"/,
-			'Der echte AlarmeTab uebernimmt die durchgereichte Stufe nicht in seinen ' +
-				'`routeMetricLevels`-Zustand -- damit ginge sie im konsolidierten Save verloren.'
-		);
+		// #2793 S2b (Spec §6, AC-19) -- GEAENDERT: die Tabelle ist nur lesbar. Statt
+		// `data-level` traegt die Zeile die lesbare Stufe „Alarm ab", und es gibt
+		// keinen Stufen-Regler mehr, der die Altstufe aendern koennte; gesendet wird
+		// unveraendert der geladene Bestand (Fuge 3 unten).
+		assert.match(html, /data-testid="alert-metric-row-wind_gust"[^>]*data-alarm-ab=/);
+		assert.doesNotMatch(html, /data-testid="alert-level-wind_gust-/);
+		const ohneStufen = buildAlarmeDeliveryPayload({
+			officialWarningsEnabled: false,
+			channels: { email: true, telegram: false, sms: false, premium_sms: false },
+			metricLevels: undefined
+		}) as { display_config?: unknown };
+		assert.equal(ohneStufen.display_config, undefined, 'AC-19: ohne Stufen kein display_config im PUT');
 
 		// Fuge 3: dieselben Werte durch die ECHTE Payload-Funktion.
 		const payload = buildAlarmeDeliveryPayload({

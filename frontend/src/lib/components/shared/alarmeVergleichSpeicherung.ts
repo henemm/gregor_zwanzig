@@ -127,6 +127,8 @@ const ALARM_TOP = [
 	'radar_alert_enabled',
 	'alert_metric_channels' // Issue #1895 S3b1 (nur Diff, s. buildComparePresetSavePayload)
 ] as const;
+// #2793 S2b (AC-19): metric_alert_levels ist bis S3a nur lesbar; gesendet wird
+// der geladene Bestand (kein Regler aendert ihn), Ampel und Merker nie.
 const ALARM_DISPLAY = ['metric_alert_levels', 'telegram_style'] as const;
 
 /**

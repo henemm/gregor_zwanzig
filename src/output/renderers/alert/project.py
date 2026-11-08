@@ -143,6 +143,23 @@ def _resolve_metric_id(field: str, direction: str) -> str:
     )
 
 
+def _metric_id_of(ch) -> str:
+    """Katalog-ID eines Ereignisses. Issue #2793 S2b: ein Ampel-Ereignis auf
+    `temp_min_c` meint immer die Kaelteseite (auch die Entwarnung, deren Wert
+    steigt) -- sonst nennte der Text die Hitzeseite."""
+    if getattr(ch, "art", None) is not None and ch.metric == "temp_min_c":
+        return _resolve_metric_id(ch.metric, "decrease")
+    return _resolve_metric_id(ch.metric, ch.direction)
+
+
+def _ampel_fields(ch) -> dict:
+    """Farbpaar und Art eines Ampel-Ereignisses (Issue #2793 S2b); leer fuer
+    Δ-Ereignisse -> `AlertEvent` byte-identisch zum Bestand."""
+    if getattr(ch, "art", None) is None:
+        return {}
+    return {"stufe_von": ch.stufe_von, "stufe_bis": ch.stufe_bis, "art": ch.art}
+
+
 def _trip_segment(entry):
     """`SegmentWeatherData` ODER blankes `TripSegment` -> `TripSegment`
     (Issue #2036). Beide Bauformen kommen an: der Aenderungspfad reicht
@@ -402,7 +419,7 @@ def to_alert_message(
                 stage_number=stage_number,
             ))
             continue
-        metric_id = _resolve_metric_id(ch.metric, ch.direction)
+        metric_id = _metric_id_of(ch)
         cmp = get_cmp(metric_id)
         if not cmp:
             raise ValueError(f"Leeres cmp für metric_id={metric_id!r}")
@@ -426,6 +443,7 @@ def to_alert_message(
             km_measured=km_measured,  # Issue #2036
             stage_number=stage_number,  # Issue #2122
             hail_flag=_hail_flag_for(metric_id, eintrag),  # Issue #2205
+            **_ampel_fields(ch),  # Issue #2793 S2b
             **_hour_fields(
                 metric_id, ch, getattr(eintrag, "timeseries", None),
                 getattr(_anchor_entry(anchor_segments, match.segment_id), "timeseries", None),
@@ -483,7 +501,7 @@ def to_multi_point_alert_message(
                     location_label=location_name if multi else None,
                 ))
                 continue
-            metric_id = _resolve_metric_id(ch.metric, ch.direction)
+            metric_id = _metric_id_of(ch)
             cmp = get_cmp(metric_id)
             if not cmp:
                 raise ValueError(f"Leeres cmp für metric_id={metric_id!r}")
@@ -493,6 +511,7 @@ def to_multi_point_alert_message(
                 occurred_at=_fmt_occurred_at(ch.occurred_at, point_tz),
                 km_from=0.0, km_to=0.0,
                 location_label=location_name if multi else None,
+                **_ampel_fields(ch),  # Issue #2793 S2b
                 **_hour_fields(
                     metric_id, ch, getattr(point, "timeseries", None),
                     getattr((anchor_points or {}).get(location_name), "timeseries", None),

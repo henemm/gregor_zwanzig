@@ -15,6 +15,7 @@ from datetime import date, datetime, timedelta, timezone
 from typing import TYPE_CHECKING, Iterable, List, Optional
 
 from app.config import Settings
+from app.ampel import resolve_ampel
 from i18n import Lang, resolve_user_lang, t
 from app.models import SegmentWeatherData, WeatherChange
 from services import alert_channel_threshold, alert_daily_limit, alert_input_capture, alert_log
@@ -802,6 +803,8 @@ class TripAlertService:
             channels=self._effective_alert_channels(trip),
             display_config=trip.display_config,
             zone=anchor_tz(trip, now_utc),
+            # Issue #2793 S2b: Abo-Ampel des Trips (Vorlagen-Rueckfall wie S1).
+            ampel=resolve_ampel(trip),
         )
         engine = DeviationAlertEngine()
         eval_result = engine.evaluate(

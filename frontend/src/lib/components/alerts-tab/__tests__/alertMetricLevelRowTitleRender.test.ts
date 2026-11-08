@@ -1,21 +1,18 @@
-// #1592 Scheibe C3, Adversary-Runde 2 Finding F001 (HIGH): das `title`-
-// Attribut der CAPE-Schwellenzelle (`AlertMetricLevelRow.svelte`) wurde von
-// KEINEM Test bewacht — `thresholdTitle()` war nur an der FUNKTION geprüft,
-// nicht an der Stelle, wo sie tatsächlich wirkt (Prüfort ≠ Wirkort). Dieser
-// Test rendert die echte Svelte-Komponente serverseitig (svelte/server
-// `render()`, Hooks: frontend/test-svelte-ssr-hooks.mjs — Vorbild:
-// shared/versand-tab/__tests__/channel_checkbox_dedupe_render.test.ts) und
-// prüft am erzeugten HTML.
+// #2793 S2b (Spec feat_2793_s2_alarm_stufenwechsel.md §6, AC-19): die Tabelle
+// „Alarm-Empfindlichkeit" ist bis S3a NUR LESBAR. Diese Datei rendert die
+// echten Svelte-Komponenten serverseitig (svelte/server `render()`, Hooks:
+// frontend/test-svelte-ssr-hooks.mjs) und prueft am erzeugten HTML.
 //
-// Spec: docs/specs/modules/fix_1592_c3_cape_delta_alarme.md (AC-9)
+// Vorher (#1592 C3 F001) bewachte sie das `title`-Attribut der CAPE-
+// Schwellwert-Zelle. Diese Δ-Spalte entfaellt mit S2b (die Alarme folgen der
+// Ampel); die Zusicherungen „CAPE-title" / „wind_gust ohne title" werden zu
+// „keine Schwellwert-Zelle mehr" (unten, F001-Nachfolge).
 //
 // Pfadregel #1409: alle Pfade relativ zu DIESER Datei.
 //
-// Ausführung:
-//   cd frontend && node --experimental-strip-types --test \
-//     src/lib/components/alerts-tab/__tests__/alertMetricLevelRowTitleRender.test.ts
+//   cd frontend && npm test -- src/lib/components/alerts-tab/__tests__/alertMetricLevelRowTitleRender.test.ts
 
-import { test } from 'node:test';
+import { test, afterEach } from 'node:test';
 import assert from 'node:assert/strict';
 import { register } from 'node:module';
 import { fileURLToPath, pathToFileURL } from 'node:url';
@@ -31,72 +28,77 @@ register(
 );
 
 const { render } = await import('svelte/server');
-const AlertMetricLevelRow = (
-	await import(
-		pathToFileURL(path.join(FRONTEND, 'src/lib/components/alerts-tab/AlertMetricLevelRow.svelte')).href
-	)
-).default;
+const { locale } = await import(pathToFileURL(path.join(FRONTEND, 'src/lib/i18n/index.ts')).href);
+const komp = async (rel: string) =>
+	(await import(pathToFileURL(path.join(FRONTEND, 'src/lib/components/alerts-tab', rel)).href)).default;
+const AlertMetricLevelTable = await komp('AlertMetricLevelTable.svelte');
+const { alarmAbZeile, vorlageIdFuer } = await import(
+	pathToFileURL(path.join(FRONTEND, 'src/lib/components/alerts-tab/alarmAbAnzeige.ts')).href
+);
 
-function renderRow(metric: string, label: string, level: string): string {
-	return render(AlertMetricLevelRow, {
-		props: { metric, label, level, onChange: () => {} }
-	}).body;
+afterEach(() => locale.set('de'));
+
+const VORLAGEN = {
+	allgemein: { template: 'allgemein', metrics: { gust: { alarm_ab: 'orange' }, temperature: { alarm_ab: 'orange' } } },
+	skitouren: { template: 'skitouren', metrics: { gust: { alarm_ab: 'red' }, temperature: { alarm_ab: 'yellow' } } }
+};
+
+function tabelle(props: Record<string, unknown>): string {
+	return render(AlertMetricLevelTable, { props }).body;
 }
+const zelle = (html: string, metric: string): string => {
+	const m = new RegExp(`data-testid="alert-alarm-ab-${metric}"[^>]*>([^<]*)<`).exec(html);
+	assert.ok(m, `Zelle „Alarm ab" fuer ${metric} fehlt`);
+	return m![1].trim();
+};
 
-/** Öffnendes `<td ...>`-Tag UND sichtbarer Zellentext der Schwellenzelle
- * dieser Metrik — robust gegen Attributreihenfolge/umgebendes Markup. */
-function thresholdCell(html: string, metric: string): { openTag: string; text: string } {
-	const marker = `data-testid="alert-threshold-${metric}"`;
-	const markerIdx = html.indexOf(marker);
-	assert.notEqual(markerIdx, -1, `Testid "alert-threshold-${metric}" nicht im gerenderten HTML gefunden.`);
-	const tagStart = html.lastIndexOf('<td', markerIdx);
-	assert.notEqual(tagStart, -1, `Kein <td> vor dem Testid "alert-threshold-${metric}" gefunden.`);
-	const tagEnd = html.indexOf('>', markerIdx);
-	const openTag = html.slice(tagStart, tagEnd + 1);
-	const cellEnd = html.indexOf('</td>', tagEnd);
-	assert.notEqual(cellEnd, -1, `Kein schliessendes </td> fuer "alert-threshold-${metric}" gefunden.`);
-	const text = html
-		.slice(tagEnd + 1, cellEnd)
-		.replace(/<!--[\s\S]*?-->/g, '')
-		.trim();
-	return { openTag, text };
-}
-
-// ─────────────────────────────────────────────────────────────────────────
-// F001: CAPE-Zeile trägt das `title`-Attribut mit der Umrechnungs-Erklärung,
-// UND der Zellentext behält das führende "Δ ≥" (das war der Fehler der
-// vorigen Fassung, s. capeRichtwertAnzeige.test.ts).
-// ─────────────────────────────────────────────────────────────────────────
-
-test('CAPE-Schwellenzelle traegt title="Richtwert — wird je Wettermodell und Gebiet umgerechnet" (F001)', () => {
-	const html = renderRow('cape', 'CAPE', 'standard');
-	const { openTag, text } = thresholdCell(html, 'cape');
-
-	assert.match(
-		openTag,
-		/title="Richtwert — wird je Wettermodell und Gebiet umgerechnet"/,
-		`CAPE-Zelle muss das erklärende title-Attribut tragen — gerendertes Tag: ${openTag}`
-	);
-	assert.equal(
-		text,
-		'Δ ≥ ~600 J/kg',
-		'CAPE-Zellentext muss weiterhin mit "Δ ≥" beginnen (Änderungsschwelle, kein absoluter Grenzwert).'
+test('Trip und Vergleich: je Zeile „Alarm ab" aus der Abo-Ampel, sonst aus der Vorlage (DE)', () => {
+	const html = tabelle({
+		activeMetrics: ['wind_gust', 'temperature_min', 'humidity', 'freezing_level', 'cape'],
+		levels: { wind_gust: 'sensibel', freezing_level: 'entspannt' },
+		aboAmpel: { template: 'allgemein', metrics: { gust: { alarm_ab: 'yellow' } } },
+		vorlage: VORLAGEN.allgemein
+	});
+	assert.equal(zelle(html, 'wind_gust'), 'Alarm ab: Gelb', 'Abo-Wert geht vor (nicht die Altstufe „sensibel")');
+	assert.equal(zelle(html, 'temperature_min'), 'Alarm ab: Orange', 'Vorgabe der Vorlage');
+	assert.equal(zelle(html, 'humidity'), 'kein Alarm (Vorbote)');
+	assert.equal(zelle(html, 'freezing_level'), 'Entspannt', 'D4 zeigt die heutige Stufe');
+	assert.equal(zelle(html, 'cape'), 'Alarm ab: Nie', 'CAPE alarmiert nicht mehr eigenstaendig (P1)');
+	assert.ok(
+		html.includes('Wird gerade umgebaut: Alarme folgen jetzt der Ampel. Einstellbar wird ‚Alarm ab‘ mit dem neuen Reiter Wetter.'),
+		'Hinweis oben fehlt'
 	);
 });
 
-// ─────────────────────────────────────────────────────────────────────────
-// Gegenprobe: eine andere Metrik bekommt KEIN title-Attribut — auch kein
-// leeres title="".
-// ─────────────────────────────────────────────────────────────────────────
+test('nur lesbar: keine Stufen-Knoepfe, keine Schnellwahl, keine Δ-Schwellwert-Zelle', () => {
+	const html = tabelle({ activeMetrics: ['wind_gust', 'cape'], levels: {}, vorlage: VORLAGEN.allgemein });
+	// Einziger Knopf bleibt das ⓘ an der CAPE-Zeile (BegriffErklaerung).
+	assert.equal((html.match(/<button/g) ?? []).length, 1, 'nur das ⓘ darf ein Knopf sein');
+	for (const verboten of ['data-testid="alert-quickset', 'data-testid="alert-level-', 'data-testid="alert-threshold-'])
+		assert.equal(html.includes(verboten), false, `steht noch: ${verboten}`);
+});
 
-test('wind_gust-Schwellenzelle traegt KEIN title-Attribut (Gegenprobe F001)', () => {
-	const html = renderRow('wind_gust', 'Windböen', 'standard');
-	const { openTag, text } = thresholdCell(html, 'wind_gust');
+test('EN: Hinweis und Stufen aus dem Katalog, Protokoll-Kennung bleibt gleich', () => {
+	locale.set('en');
+	const html = tabelle({ activeMetrics: ['wind_gust', 'humidity'], levels: {}, vorlage: VORLAGEN.allgemein });
+	assert.equal(zelle(html, 'wind_gust'), 'Alert from: Orange');
+	assert.equal(zelle(html, 'humidity'), 'no alert (precursor)');
+	assert.ok(html.includes('Being rebuilt: alerts now follow the traffic light.'), html);
+	assert.ok(html.includes('data-alarm-ab="orange"'), 'Kennung ist Protokoll-Token, sprachunabhaengig');
+});
 
-	assert.doesNotMatch(
-		openTag,
-		/\btitle=/,
-		`wind_gust-Zelle darf kein title-Attribut tragen (auch kein title="") — gerendertes Tag: ${openTag}`
-	);
-	assert.equal(text, 'Δ ≥ 20 km/h', 'wind_gust-Zellentext muss unverändert bleiben.');
+test('Vorlage noch nicht geladen: kein geratenes „Nie", sondern „—"', () => {
+	const html = tabelle({ activeMetrics: ['wind_gust'], levels: {}, aboAmpel: null, vorlage: null });
+	assert.equal(zelle(html, 'wind_gust'), 'Alarm ab: —');
+});
+
+test('Vorlagen-Rueckfall wie Python: ampel.template -> preset_name -> profil -> allgemein (zwei Abos, zwei Ergebnisse)', () => {
+	assert.equal(vorlageIdFuer({ template: 'skitouren' }, 'wandern', null, VORLAGEN), 'skitouren');
+	assert.equal(vorlageIdFuer(null, 'skitouren', null, VORLAGEN), 'skitouren');
+	assert.equal(vorlageIdFuer(null, null, 'SKITOUREN', VORLAGEN), 'skitouren');
+	assert.equal(vorlageIdFuer(null, null, null, VORLAGEN), 'allgemein');
+	assert.equal(vorlageIdFuer({ template: 'gibtsnicht' }, null, null, VORLAGEN), 'allgemein');
+	const a = alarmAbZeile('wind_gust', null, VORLAGEN.allgemein, {});
+	const b = alarmAbZeile('wind_gust', null, VORLAGEN.skitouren, {});
+	assert.deepEqual([a, b], [{ art: 'ampel', stufe: 'orange' }, { art: 'ampel', stufe: 'red' }]);
 });

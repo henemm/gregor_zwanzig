@@ -136,7 +136,7 @@ describe('AC-6: Deutsch byte-gleich zum Ist-Stand vor der Umstellung (Golden gol
 	});
 	test('Messaufbau: Golden enthaelt die deutschen Texte aller Bausteine', () => {
 		const alle = Object.keys(FAELLE).map((f) => readFileSync(path.join(GOLDEN_DIR, `${f}.de.html`), 'utf-8')).join('');
-		for (const s of ['Amtliche &amp; Radar-Warnungen', 'Radar-Alarm', 'Alert-Kanäle', 'Premium-SMS ab Level Premium verfügbar', 'Tarif wird geprüft', 'kein Kanal — Alerts gehen nirgends hin', 'sofortiger Push', '(Ortszeit des ersten Orts)', '(Ortszeit der Trip)', 'Stille Stunden über Mitternacht (22:00 bis 07:00 des nächsten Tages).', 'Für diese Größen gibt es keinen Alarm', 'Keine der gewählten Größen', 'Wähle im Tab „Wetter-Metriken"', 'title="Richtwert — wird je Wettermodell und Gebiet umgerechnet"', 'Lade…', 'title="Alert-Vorschau E-Mail"', '1 von 2 · gemischt', 'Noch keine Orte konfiguriert'])
+		for (const s of ['Amtliche &amp; Radar-Warnungen', 'Radar-Alarm', 'Alert-Kanäle', 'Premium-SMS ab Level Premium verfügbar', 'Tarif wird geprüft', 'kein Kanal — Alerts gehen nirgends hin', 'sofortiger Push', '(Ortszeit des ersten Orts)', '(Ortszeit der Trip)', 'Stille Stunden über Mitternacht (22:00 bis 07:00 des nächsten Tages).', 'Für diese Größen gibt es keinen Alarm', 'Keine der gewählten Größen', 'Wähle im Tab „Wetter-Metriken"', 'Wird gerade umgebaut: Alarme folgen jetzt der Ampel.', 'Alarm ab: Orange', 'Alarm ab: Nie', 'Lade…', 'title="Alert-Vorschau E-Mail"', 'Noch keine Orte konfiguriert'])
 			assert.ok(alle.includes(s), s);
 	});
 });
@@ -149,19 +149,18 @@ describe('AC-1: Alarme-Reiter englisch in Trip und Ortsvergleich, Zahlen und Sym
 		for (const s of [
 			'Official warnings',
 			'Official warnings trigger an alert',
-			'Set all metrics to:',
-			'3 of 4 · mixed',
+			// #2793 S2b (Spec §6): Regler und Schnellwahl entfallen, die Tabelle
+			// zeigt „Alarm ab" nur lesbar; D4 (Beginn) zeigt seine Stufe („Off").
+			'Being rebuilt: alerts now follow the traffic light.',
 			'Metric',
-			'Sensitivity',
-			'Threshold',
+			'Alert from',
+			'Alert from: Orange',
+			'Alert from: Never',
 			'Wind gusts',
 			'Temperature (minimum)',
 			'Thunderstorm energy (CAPE)',
 			'Thunderstorm (onset)',
 			'Off',
-			'Relaxed',
-			'Relax.',
-			'Sensitive',
 			'Alert channels',
 			'Urgency threshold',
 			'2 active',
@@ -181,14 +180,15 @@ describe('AC-1: Alarme-Reiter englisch in Trip und Ortsvergleich, Zahlen und Sym
 			'Load preview'
 		])
 			hat(text, s);
-		hat(en, 'title="Guide value — converted per weather model and area"');
+		// #2793 S2b: die Δ-Schwellwert-Spalte (samt CAPE-Richtwert-title) entfaellt.
+		hatNicht(en, 'title="Guide value — converted per weather model and area"');
 		hat(en, 'aria-label="Urgency threshold Telegram"');
 		hat(en, 'aria-label="Toggle Premium-SMS (Garmin inReach)"');
 		// Kanalnamen sind Eigennamen: in beiden Sprachen gleich.
 		for (const s of ['Telegram', 'SMS', 'Premium-SMS (Garmin inReach)', 'Email']) hat(text, s);
 		assert.deepEqual(deutscheReste(text), []);
 		assert.deepEqual(zahlenUndEinheiten(en), zahlenUndEinheiten(de));
-		assert.ok(zahlenUndEinheiten(de).includes('Δ ≥ ~1200 J/kg'), 'Messaufbau: Schwellen fehlen');
+		assert.ok(!zahlenUndEinheiten(de).includes('Δ ≥ ~1200 J/kg'), '#2793 S2b: Δ-Schwellen-Spalte entfallen');
 	});
 	test('Ortsvergleich: erst de, dann ohne Neuladen en (Radar, Gruppe, Ortszeit-Bezug)', () => {
 		const { de, en } = deDannEn(() => alarmeVergleich());
@@ -197,7 +197,7 @@ describe('AC-1: Alarme-Reiter englisch in Trip und Ortsvergleich, Zahlen und Sym
 			'Official & radar warnings',
 			'Official warnings trigger an alert',
 			'Rain alert (radar)',
-			'2 of 3 · mixed',
+			'Alert from: Orange', // #2793 S2b statt Zaehler „2 of 3 · mixed"
 			'Wind gusts',
 			'There is no alert for these metrics: Luftfeuchtigkeit, Gefühlte Temperatur (Minimum), Gefühlte Temperatur (Maximum). They still appear in the briefing but do not trigger a warning.',
 			'Checking your level — the channel cannot be switched for a moment.',
@@ -237,9 +237,10 @@ describe('AC-1: Alarme-Reiter englisch in Trip und Ortsvergleich, Zahlen und Sym
 		const { de, en } = deDannEn(() => bausteineRendern());
 		const text = sichtbar(en);
 		for (const s of [
-			'1 of 2 · mixed',
+			// #2793 S2b: nur lesbar — Abo-Wert (Nie) vor Vorlage (Orange), kein Regler.
+			'Alert from: Never',
+			'Alert from: Orange',
 			'No alertable metrics active. Select metrics in the Weather metrics tab.',
-			'Off Relaxed Standard Sensitive',
 			'Loading…',
 			'Load preview'
 		])

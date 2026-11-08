@@ -907,6 +907,12 @@ DIENST_EINSTIEGE = {
     # S1c-4b (Koordinator-Freigabe): zustandslose SMS-Editor-Vorschau, Body nur
     # metric_ids, kein Trip/keine dc -- bewusst Vorlage „allgemein".
     ("validator_render_service.py", "render_sms_fidelity_preview"): 1,
+    # #2793 S2b (Spec §2): die Alarm-Ausloesung liest die Abo-Ampel -- die
+    # beiden Adapter der geteilten DeviationAlertEngine loesen sie je Abo auf
+    # und reichen sie per AlertEvaluationConfig.ampel durch (Engine selbst loest
+    # nicht auf, fehlt sie, scheitert sie laut).
+    ("trip_alert.py", "check_and_send_alerts"): 1,
+    ("compare_alert.py", "_build_eval_config"): 1,
 }
 
 

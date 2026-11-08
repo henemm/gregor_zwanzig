@@ -1,77 +1,61 @@
 <script lang="ts">
-	// Issue #864/#859 — Eine Metrik-Zeile im Alerts-Tab: Segmented-Control (4 Stufen)
-	// + Schwellwert-Anzeige. Spec: docs/specs/modules/feat_864_859_alert_presets.md
-	import type { AlertMetric, SensLevel } from '$lib/types';
-	import { levelToThreshold, thresholdTitle } from './alertMetricTable.ts';
+	// Issue #864/#859 — Eine Metrik-Zeile im Alerts-Tab.
+	// Issue #2793 S2b (Spec feat_2793_s2_alarm_stufenwechsel.md §6): bis S3a NUR
+	// LESBAR — statt des Reglers steht die wirksame Stufe „Alarm ab" der Ampel
+	// (Vorboten: „kein Alarm (Vorbote)", D4-Metriken: ihre heutige Stufe).
+	import type { AlertMetric } from '$lib/types';
+	import type { AlarmAbZeile } from './alarmAbAnzeige.ts';
 	import BegriffErklaerung from '$lib/components/molecules/BegriffErklaerung.svelte';
 	import { METRIK_BEGRIFF } from '$lib/components/shared/infoboxKeys';
-	import { t, locale } from '$lib/i18n';
+	import { t } from '$lib/i18n';
 	import type { MessageKey } from '$lib/i18n';
 
 	interface Props {
 		metric: AlertMetric;
 		label: string;
-		level: SensLevel;
-		onChange: (metric: AlertMetric, level: SensLevel) => void;
+		zeile: AlarmAbZeile;
 	}
 
-	let { metric, label, level, onChange }: Props = $props();
+	let { metric, label, zeile }: Props = $props();
 
-	const LEVELS: SensLevel[] = ['off', 'entspannt', 'standard', 'sensibel'];
-	const LABELS_DESKTOP: Record<SensLevel, MessageKey> = {
+	const STUFE: Record<string, MessageKey> = {
+		never: 'alarme.alarm_ab.stufe.never',
+		yellow: 'alarme.alarm_ab.stufe.yellow',
+		orange: 'alarme.alarm_ab.stufe.orange',
+		red: 'alarme.alarm_ab.stufe.red'
+	};
+	const D4_STUFE: Record<string, MessageKey> = {
 		off: 'alarme.empfindlichkeit.aus',
 		entspannt: 'alarme.preset.entspannt',
 		standard: 'alarme.preset.standard',
 		sensibel: 'alarme.preset.sensibel'
 	};
-	const LABELS_MOBILE: Record<SensLevel, MessageKey> = {
-		off: 'alarme.empfindlichkeit.aus',
-		entspannt: 'alarme.empfindlichkeit.kurz.entspannt',
-		standard: 'alarme.empfindlichkeit.kurz.standard',
-		sensibel: 'alarme.empfindlichkeit.kurz.sensibel'
-	};
 
-	const threshold = $derived(levelToThreshold(metric, level));
-	// Issue #1592 Scheibe C3 (AC-9): Erklärung fuer den Richtwert-Hinweis
-	// (aktuell nur CAPE) -- sitzt im `title`, nicht im knappen Zellentext.
-	const title = $derived.by(() => (void $locale, thresholdTitle(metric)));
-	const isDimmed = $derived(level === 'off');
+	const wert = $derived(
+		zeile.art === 'vorbote'
+			? $t('alarme.alarm_ab.vorbote')
+			: zeile.art === 'd4'
+				? $t(D4_STUFE[zeile.level] ?? 'alarme.preset.standard')
+				: $t('alarme.alarm_ab.wert', { stufe: zeile.stufe ? $t(STUFE[zeile.stufe]) : '—' })
+	);
+	const kennung = $derived(
+		zeile.art === 'ampel' ? (zeile.stufe ?? 'offen') : zeile.art === 'd4' ? `d4-${zeile.level}` : 'vorbote'
+	);
+	const isDimmed = $derived(
+		zeile.art === 'vorbote' || (zeile.art === 'ampel' && zeile.stufe === 'never') || (zeile.art === 'd4' && zeile.level === 'off')
+	);
 	const begriff = $derived(METRIK_BEGRIFF[metric]);
 </script>
 
-<tr
-	class:dimmed={isDimmed}
-	data-testid="alert-metric-row-{metric}"
-	data-metric={metric}
-	data-level={level}
->
+<tr class:dimmed={isDimmed} data-testid="alert-metric-row-{metric}" data-metric={metric} data-alarm-ab={kennung}>
 	<td class="metric-label">
 		{label}
-		<!-- Issue #2521 S1 (AC-10): ⓘ nur fuer Metriken aus der Map (heute nur CAPE);
-		     der `title` an der Schwellwert-Zelle bleibt unveraendert. -->
 		{#if begriff}<BegriffErklaerung {begriff} suffix="alarm-{metric}" />{/if}
 	</td>
-	<td class="segmented-control" data-testid="alert-metric-segmented-{metric}">
-		{#each LEVELS as l (l)}
-			<button
-				type="button"
-				class:active={level === l}
-				onclick={() => onChange(metric, l)}
-				aria-pressed={level === l}
-				data-testid="alert-level-{metric}-{l}"
-			>
-				<span class="label-desktop">{$t(LABELS_DESKTOP[l])}</span>
-				<span class="label-mobile">{$t(LABELS_MOBILE[l])}</span>
-			</button>
-		{/each}
-	</td>
-	<td class="threshold" data-testid="alert-threshold-{metric}" title={title}>{threshold ?? '—'}</td>
+	<td class="alarm-ab" data-testid="alert-alarm-ab-{metric}">{wert}</td>
 </tr>
 
 <style>
-	tr {
-		transition: opacity 0.2s;
-	}
 	tr.dimmed {
 		opacity: 0.6;
 	}
@@ -82,48 +66,14 @@
 		color: var(--g-ink);
 	}
 
-	.threshold {
+	.alarm-ab {
 		padding: 8px;
-		font-family: var(--g-font-mono, monospace);
-		font-size: 13px;
-		color: var(--g-ink-2, #555);
+		font-size: 14px;
+		color: var(--g-ink);
 		white-space: nowrap;
 	}
 
-	.segmented-control {
-		display: flex;
-		gap: 2px;
-		padding: 8px;
-	}
-
-	.segmented-control button {
-		min-height: 44px;
-		padding: 8px 10px;
-		border: 1px solid var(--g-rule, #ddd);
-		background: transparent;
-		color: var(--g-ink);
-		cursor: pointer;
-		font-size: 14px;
-	}
-
-	.segmented-control button.active {
-		background: var(--g-accent, #2563eb);
-		color: white;
-		border-color: var(--g-accent, #2563eb);
-	}
-
-	.label-mobile {
-		display: none;
-	}
-
 	@media (max-width: 899px) {
-		.label-desktop {
-			display: none;
-		}
-		.label-mobile {
-			display: inline;
-		}
-
 		tr {
 			display: block;
 			margin-bottom: 12px;
@@ -136,23 +86,7 @@
 		}
 
 		.metric-label {
-			display: inline-block;
 			font-weight: 600;
-		}
-
-		.threshold {
-			display: inline-block;
-			margin-left: 8px;
-		}
-
-		.segmented-control {
-			width: 100%;
-			padding: 8px 0 0;
-		}
-
-		.segmented-control button {
-			flex: 1;
-			font-size: 16px; /* verhindert iOS-Zoom */
 		}
 	}
 </style>

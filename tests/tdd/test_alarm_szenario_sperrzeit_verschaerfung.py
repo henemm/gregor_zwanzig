@@ -121,7 +121,7 @@ def test_ac2_verschaerfung_innerhalb_der_sperrzeit_ueberholt_seit_s3c():
         lauf1 = strecke.lauf(
             at=_AT, zweig="deviation", trip=trip,
             cached_weather=[_weather_data(precip_sum_mm=2.0)],
-            fresh_weather=[_weather_data(precip_sum_mm=18.0)],
+            fresh_weather=[_weather_data(precip_sum_mm=8.0)],  # #2793 S2b: MODERATE = gelb -> orange
         )
         assert lauf1.triggered_count == 1, (
             f"AC-2 Vorbedingung: Lauf 1 muss ausloesen und die Sperrzeit "
