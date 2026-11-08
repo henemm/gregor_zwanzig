@@ -62,8 +62,8 @@ def _baum(root: Path) -> None:
                 "visibility": "sensibel", "snow_line": "sensibel", "thunder_onset": "standard",
                 "precipitation_heavy_onset": "off", "humidity": "sensibel", "wind_chill": "sensibel"}),
             "trip-gleich": _trip("trip-gleich", {"fresh_snow": "standard", "wind_gust": "sensibel"}, "wintersport"),
-            "trip-kaputt": _trip("trip-kaputt", {"wind_gust": "off"},
-                                 ampel={"metrics": {"gust": {"upper": {"yellow": 50, "orange": 45}}}}),
+            # ungueltige Ampel OHNE Altstufen: nichts zu migrieren, neutral (F2)
+            "trip-kaputt-leer": _trip("trip-kaputt-leer", ampel="kaputt"),
         },
     }
     for uid, objs in dateien.items():
@@ -170,11 +170,80 @@ def test_vergleich_delta_metriken_d4_und_vorboten(root):
     assert resolve_ampel(preset)["metrics"]["thunder"]["alarm_ab"] == "red"
 
 
-def test_ungueltige_ampel_wird_nicht_angefasst(root):
-    vorher = (root / "bob" / "briefings" / "trip-kaputt.json").read_bytes()
-    out = _abschnitt(_lauf(root, "--execute"), "bob")
-    assert (root / "bob" / "briefings" / "trip-kaputt.json").read_bytes() == vorher
-    assert "Ampel ungültig" in out
+@pytest.mark.parametrize("kaputt", [
+    "kaputt", {"metrics": {"gust": {"upper": {"yellow": 50, "orange": 45}}}},
+    {"metrics": {"thunder": {"alarm_ab": "yellow"}}}])
+def test_f2_ungueltige_ampel_mit_altstufen_exit_2_statt_nichts_zu_tun(root, kaputt):
+    pfad = root / "bob" / "briefings" / "trip-kaputt.json"
+    pfad.write_text(json.dumps(_trip("trip-kaputt", {"wind_gust": "off"}, ampel=kaputt)), encoding="utf-8")
+    vorher = pfad.read_bytes()
+    for args in (("--execute",), ("--execute",), ()):  # erster Lauf, Kontroll-Lauf, Probelauf
+        out = _lauf(root, *args, code=2)
+        assert pfad.read_bytes() == vorher
+        assert "Ampel ungültig" in _abschnitt(out, "bob")
+        assert "1 Dateien mit ungültiger Ampel nicht migriert: manuell prüfen" in out
+        assert "Nichts zu tun" not in out
+    assert _alarm_ab(root, "alice", "trip-gleich") == {"fresh_snow": "orange", "gust": "yellow"}
+
+
+def test_f2_ungueltige_ampel_ohne_altstufen_bleibt_neutral(root):
+    vorher = (root / "bob" / "briefings" / "trip-kaputt-leer.json").read_bytes()
+    _lauf(root, "--execute")
+    out = _lauf(root, "--execute")
+    assert "Nichts zu tun" in out and "ungültiger Ampel" not in out
+    assert (root / "bob" / "briefings" / "trip-kaputt-leer.json").read_bytes() == vorher
+
+
+def test_f1_vorgabe_ist_die_reine_vorlage_nicht_das_abo_alarm_ab(tmp_path):
+    r = tmp_path / "users"
+    (r / "carla" / "briefings").mkdir(parents=True)
+    ampel = {"template": "allgemein", "metrics": {"gust": {"alarm_ab": "red"}, "fresh_snow": {"alarm_ab": "red"}}}
+    (r / "carla" / "briefings" / "x.json").write_text(json.dumps(
+        _trip("x", {"wind_gust": "sensibel", "fresh_snow": "standard"}, ampel=ampel)), encoding="utf-8")
+    out = _lauf(r, "--execute")
+    assert _alarm_ab(r, "carla", "x") == {"gust": "yellow", "fresh_snow": "orange"}
+    assert "gust: eigenes alarm_ab red ersetzt durch yellow" in out
+    assert "fresh_snow: eigenes alarm_ab red ersetzt durch orange" in out
+
+
+@pytest.mark.parametrize("vorgabe, erwartet", [
+    ("never", "red"), ("red", "orange"), ("orange", "yellow"), ("yellow", "yellow")])
+def test_f3_sensibel_ist_eine_stufe_empfindlicher_hoechstens_gelb(vorgabe, erwartet):
+    mig = _modul()
+    assert mig._stufe("sensibel", vorgabe, "gust") == erwartet
+    assert mig._abbilden({"wind_gust": "sensibel"}, {"gust": vorgabe}, []) == {"gust": erwartet}
+
+
+@pytest.mark.parametrize("vorgabe, erwartet", [
+    ("never", "red"), ("red", "orange"), ("orange", "orange")])
+def test_f3_gewitter_sensibel_hoechstens_orange(vorgabe, erwartet):
+    mig = _modul()
+    assert mig._abbilden({"thunder_level": "sensibel"}, {"thunder": vorgabe}, []) == {"thunder": erwartet}
+
+
+@pytest.mark.parametrize("alt, erwartet", [("off", "never"), ("standard", "red"), ("entspannt", "red")])
+def test_f3_uebrige_stufen_relativ_zur_vorgabe_rot(alt, erwartet):
+    assert _modul()._stufe(alt, "red", "gust") == erwartet
+
+
+def test_f4_metrik_ohne_vorlagenzeile_hat_vorgabe_nie():
+    mig = _modul()
+    bericht: list = []
+    assert mig._abbilden({"fresh_snow": "sensibel", "wind_gust": "standard"}, {}, bericht) == \
+        {"fresh_snow": "red", "gust": "never"}
+    assert any("Vorgabe never" in z for z in bericht)
+
+
+def test_f4_ordner_mit_punkt_oder_unterstrich_sind_keine_nutzer(root):
+    for name in (".backups", "_papierkorb"):
+        (root / name / "briefings").mkdir(parents=True)
+        (root / name / "briefings" / "x.json").write_text(json.dumps(_trip("x", {"wind_gust": "off"})))
+    vorher = _summen(root.parent / "users")
+    out = _lauf(root, "--execute")
+    assert "== Nutzer .backups ==" not in out and "== Nutzer _papierkorb ==" not in out
+    for name in (".backups", "_papierkorb"):
+        rel = f"{name}/briefings/x.json"
+        assert _summen(root)[rel] == vorher[rel]
 
 
 def test_abo_ohne_altstufen_bleibt_byte_gleich(root):
@@ -217,7 +286,7 @@ def test_ac17_zwei_nutzer_je_eigene_vorlage(root):
 def test_ac16_waehrend_des_laufs_geaenderte_datei_wird_uebersprungen(root):
     mig = _modul()
     pfad = root / "alice" / "briefings" / "trip-ac15.json"
-    plaene, _ = mig.planen(root)
+    plaene, _, _ = mig.planen(root)
     fremd = json.dumps({**_lies(root, "alice", "trip-ac15"), "name": "parallel gespeichert"})
     pfad.write_text(fremd, encoding="utf-8")
     offen = mig.schreiben(plaene)
