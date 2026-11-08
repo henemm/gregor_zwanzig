@@ -3,7 +3,7 @@ entity_id: fix_1755_offline_volllauf
 type: module
 created: 2026-11-08
 updated: 2026-11-08
-status: draft
+status: implemented
 version: "1.0"
 tags: [testing, gate, pytest-socket, sicherheit, issue-1755]
 ---
@@ -12,7 +12,7 @@ tags: [testing, gate, pytest-socket, sicherheit, issue-1755]
 
 ## Approval
 
-- [ ] Approved
+- [x] Approved
 
 ## Purpose
 
@@ -151,3 +151,4 @@ Gegenproben (Mutation, Phase 5/6): Wächter für `connect_ex` entfernen ⇒ AC-2
 - 2026-11-08 (Plan Fix-Loop 6, nach 5× BROKEN — das Zerlegen von Shell-Syntax konvergiert nicht; Runde 5 fand Zeilenfortsetzung `\<NL>`): **Umbau der Offline-Freigabe auf exakten Vergleich.** `_offline_form_is_safe`/Roh-Variante geben nur frei, wenn `command.strip()` exakt einem von zwei festen Strings entspricht (AC-5-Aufruf; Doku-Aufruf mit ` --ignore=tests/red/`), optional gefolgt von genau ` > <pfad> 2>&1` mit Pfad `[A-Za-z0-9_./-]+`, nicht mit `-` beginnend. Alles andere (Zeilenumbruch, Backslash, Präfix, `; echo`, `| tee`, `nohup`, zusätzliche Flags) fällt ins normale Gate und wird geblockt (fail-closed). Positivliste `_OFFLINE_ARG_RE`/`_OFFLINE_PLAIN_FLAGS`/Host-Prüfung/`_sets_pytest_env` entfallen, soweit nur dafür benutzt. Tokenizer-/Umleitungsarbeit aus Loop 2–5 bleibt (strenger als `origin/main`). Doku (Hook-Docstring, Hinweistext, `gates_und_ratschen.md`): „genau diese Zeile, einzeilig“. Nachweis: Probe-Korpus aller Runden alt gegen neu, nirgends neu=0 bei alt=2.
 - 2026-11-08 (Fix-Loop 6, umgesetzt): exakter Rohstring-Vergleich vor jeder Zerlegung, Positivliste/Host-/Umgebungsprüfung entfernt. Mutationen X1–X6 je rot. Korpus 278 Kommandos (`korpus-alt-neu.txt`): AC-5-Blockliste 35/35 Exit 2, beide festen Zeilen Exit 0, 231 Fälle bewusst strenger; einziger Fall neu=0/alt=2 ist `uv run pytest tests/tdd/x.py; echo ok` (benannte Datei, alter Fehlalarm durch am Wort klebendes `;`).
 - 2026-11-08 (Adversary nach Fix-Loop 6: BROKEN, Dialog `adversary-dialog-fixloop6.md`): Der exakte Vergleich hält. Neu gefunden, aber auch auf `origin/main` vorhanden: ein Wort mit führendem `#` ist für die Shell ein Kommentar, das Gate zählt `#x.py` jedoch als benannte Datei bzw. `# --co` als Sammellauf, z. B. `uv run pytest tests/ #x.py` → frei. **Plan Fix-Loop 7 (eng):** (F001) jedes Token mit führendem `#` beendet die Argumente eines pytest-Aufrufs (Token- und Roh-Pfad), RED mit den 5 Repros aus dem Dialog; (F002) Positivfall `uv run pytest > o.txt tests/tdd/x.py` → Exit 0, damit die Umleitungslogik bewacht ist; (F003) in `_offline_form_is_safe` nur ASCII-Leerzeichen/Zeilenumbruch strippen (`strip(" \n")`), Test mit NBSP-Präfix → Exit 2. Danach eine Prüfrunde.
+- 2026-11-08 (Phase 7, Validierung): AC-1 bis AC-7 belegt; Feature-Tests grün (benannt, ohne parallele Last), keine Regression. Umfang über der Schätzung: ohne docs/ 10 Dateien, +1578/-41, davon Tests +1239 (Gate-Härtung über Fix-Loops 1–8 mit je eigenen RED-Tests und Mutationsnachweisen); Nicht-Test-Code +339/-29. Beobachtung: der data/users-Wächter in tests/conftest.py schlägt fehl, wenn zwei pytest-Läufe gleichzeitig im selben Checkout laufen (vorbestehend, #1199).

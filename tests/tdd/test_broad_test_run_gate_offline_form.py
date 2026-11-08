@@ -1,4 +1,4 @@
-"""TDD RED -- Issue #1755 AC-5: Breitlauf-Gate gibt nur die sichere
+"""Waechter fuer #1755 (AC-5):Breitlauf-Gate gibt nur die sichere
 Offline-Form frei.
 
 SPEC: docs/specs/modules/fix_1755_offline_volllauf.md (AC-5)

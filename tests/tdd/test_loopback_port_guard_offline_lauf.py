@@ -1,4 +1,4 @@
-"""TDD RED -- Issue #1755: sicherer Offline-Volllauf.
+"""Waechter fuer #1755: sicherer Offline-Volllauf.
 
 SPEC: docs/specs/modules/fix_1755_offline_volllauf.md (AC-1 bis AC-4, AC-6)
 
