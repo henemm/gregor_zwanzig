@@ -122,7 +122,7 @@ func (s *Store) DeleteLocation(id string) error {
 	path := filepath.Join(s.LocationsDir(), id+".json")
 	err := os.Remove(path)
 	if os.IsNotExist(err) {
-		return nil
+		return ErrNotFound // #2815
 	}
 	return err
 }

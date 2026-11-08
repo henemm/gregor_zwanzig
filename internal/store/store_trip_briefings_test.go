@@ -2,6 +2,7 @@ package store
 
 import (
 	"encoding/json"
+	"errors"
 	"os"
 	"path/filepath"
 	"testing"
@@ -180,8 +181,9 @@ func TestDeleteTrip_DoesNotRemoveVergleichKindFile(t *testing.T) {
 		t.Fatalf("write fixture: %v", err)
 	}
 
-	if err := s.DeleteTrip("shared-id"); err != nil {
-		t.Fatalf("DeleteTrip: %v", err)
+	// #2815: Preset unter der Trip-ID -> ErrNotFound, Datei bleibt.
+	if err := s.DeleteTrip("shared-id"); !errors.Is(err, ErrNotFound) {
+		t.Fatalf("DeleteTrip: erwartet ErrNotFound, bekommen %v", err)
 	}
 
 	after, err := os.ReadFile(presetPath)

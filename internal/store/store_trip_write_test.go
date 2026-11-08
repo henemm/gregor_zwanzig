@@ -1,6 +1,7 @@
 package store
 
 import (
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
@@ -122,9 +123,10 @@ func TestDeleteTripNotFound(t *testing.T) {
 	os.MkdirAll(tripDir, 0755)
 
 	s := New(tmpDir, "test")
+	// #2815: unbekannte ID -> ErrNotFound (Handler mappt auf 404).
 	err := s.DeleteTrip("nonexistent")
-	if err != nil {
-		t.Errorf("expected no error for nonexistent trip, got %v", err)
+	if !errors.Is(err, ErrNotFound) {
+		t.Errorf("expected ErrNotFound for nonexistent trip, got %v", err)
 	}
 }
 

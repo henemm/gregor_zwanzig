@@ -1307,6 +1307,20 @@ Trips und Ortsvergleiche teilen einen Kennungsraum (`briefings/<id>.json`, ADR-0
 |--------|------|----------|
 | 409 | `{"error":"id_conflict","detail":"Ein Ortsvergleich trägt bereits diese Kennung — bitte anderen Namen wählen."}` | Kennung gehört einem Ortsvergleich desselben Nutzers (auch bei Rennen zwischen Prüfung und Schreiben, Store-Sentinel `ErrKindConflict`) |
 
+### DELETE /api/trips/{id} und DELETE /api/groups/{id} — fremde oder unbekannte ID (Issue #2815, seit 2026-11-08)
+
+Gilt für `DELETE /api/trips/{id}`, `DELETE /api/briefings/{id}?kind=route` (delegiert an denselben Handler) und `DELETE /api/groups/{id}`. Fremde und unbekannte IDs antworten identisch wie nicht vorhandene Objekte (einheitlich mit Compare-/Metrik-Presets); die Existenz fremder IDs wird nicht preisgegeben (Store-Sentinel `store.ErrNotFound`).
+
+| Status | Bedeutung |
+|--------|-----------|
+| 204 | eigener Eintrag gelöscht (auch eine kaputte, nicht als JSON lesbare Trip-Datei) |
+| 400 | ungültige ID (`validation_error`, unverändert) |
+| **404** | `not_found` — ID gehört einem anderen Nutzer, existiert nicht oder trägt beim Trip-Pfad einen Ortsvergleich (`kind=vergleich`, Datei bleibt unangetastet); es wird nichts gelöscht (#2815) |
+| 500 | `store_error` — Speicherfehler |
+
+- **Trip:** auch bei 404 wird die vom Löschpfad angelegte Sperrdatei `<id>.json.lock` wieder entfernt (#2237); es bleibt keine verwaiste Sperrdatei zurück.
+- **Gruppe:** auch bei 404 werden verwaiste `group_id`-Verweise an Orten des Nutzers auf diese Gruppen-ID genullt (Heilpfad nach Absturz mitten im Löschen), `groups.json` wird nicht umgeschrieben.
+
 ## 11) Weather Config Endpoints (M5c)
 
 Convenience-Layer ueber die bestehenden CRUD-Handler. Erlaubt gezieltes Lesen und Schreiben des `display_config`-Subfelds auf Trip- und Location-Entitaeten ohne Uebertragung des gesamten Objekts. Alle Config-schreibenden Endpoints (Trip, Location, ComparePreset) mergen feldweise ueber den gemeinsamen `mergeConfigMap`-Helfer (`internal/handler/config_merge.go`, #1159) — Teil-Updates loeschen keine anderen `display_config`-Keys mehr. Der fruehere Subscription-Endpoint wurde mit #1250 Scheibe 0 entfernt.
@@ -1348,8 +1362,11 @@ Ein Ort, der in `LocationIDs` eines Ortsvergleichs **desselben Nutzers** steht, 
 | Status | Bedeutung |
 |--------|-----------|
 | 204 | Ort geloescht (in keinem Ortsvergleich des Nutzers verwendet) |
+| **404** | `not_found` — Ort gehoert einem anderen Nutzer oder existiert nicht; geprueft VOR der Nutzungspruefung, d.h. ein veralteter Verweis eines Ortsvergleichs auf eine nicht vorhandene ID ergibt 404 statt 409 (#2815) |
 | **409** | `location_in_use` — Ort bleibt bestehen |
 | 500 | `store_error` — Nutzungspruefung fehlgeschlagen, nichts geloescht |
+
+Eine kaputte, nicht lesbare Ortsdatei bleibt loeschbar (204, #2815).
 
 409-Body:
 

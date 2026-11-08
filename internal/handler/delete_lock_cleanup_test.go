@@ -103,14 +103,14 @@ func TestDeleteComparePresetHandler_404LaesstSperrdateiStehen(t *testing.T) {
 }
 
 // AC-8 (zweiter Teil): ein Ortsvergleich-Preset ueber den TRIP-Loeschpfad
-// angefragt -> Datei UND Sperrdatei bleiben bestehen.
+// angefragt -> Datei UND Sperrdatei bleiben bestehen. #2815 AC-9: Antwort 404.
 func TestDeleteTripHandler_VergleichBleibtSamtSperrdatei(t *testing.T) {
 	s := store.New(t.TempDir(), "u-a")
 	if err := s.WithUser("u-a").SaveComparePreset(comparePresetPutBodyStruct("cp1", "u-a")); err != nil {
 		t.Fatal(err)
 	}
 	w := p2158Do(DeleteTripHandler(s), "DELETE", "/api/trips/{id}", "/api/trips/cp1", "", "u-a")
-	if w.Code != 204 {
+	if w.Code != 404 {
 		t.Fatalf("DELETE: %d (%s)", w.Code, w.Body.String())
 	}
 	dirA := s.WithUser("u-a").BriefingsDir()

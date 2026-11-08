@@ -688,20 +688,28 @@ func DeleteTripHandler(s *store.Store) http.HandlerFunc {
 		// Issue #2237: verwaiste Sperrdatei erst NACH der Freigabe entfernen
 		// (Reihenfolge fest in EINER Closure: erst unlock, dann entfernen),
 		// damit die Sperre bis zur Antwort belegt bleibt (ADR-0083).
-		deleted := false
+		// #2815: auch bei 404 aufraeumen, sonst bliebe pro fremder/unbekannter
+		// ID eine verwaiste Sperrdatei zurueck.
+		cleanup := false
 		defer func() {
 			unlockB()
-			if deleted {
+			if cleanup {
 				// gz-store-scope-call: Closure nutzt den oben per WithUser gebundenen Store s dieses Handlers
 				s.RemoveBriefingLockFile(id)
 			}
 		}()
 
-		if err := s.DeleteTrip(id); err != nil {
+		err := s.DeleteTrip(id)
+		if errors.Is(err, store.ErrNotFound) {
+			cleanup = true
+			WriteError(w, r, 404, "not_found", nil)
+			return
+		}
+		if err != nil {
 			WriteError(w, r, 500, "store_error", nil)
 			return
 		}
-		deleted = true
+		cleanup = true
 
 		w.WriteHeader(204)
 	}

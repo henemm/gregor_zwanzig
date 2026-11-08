@@ -1,6 +1,7 @@
 package store
 
 import (
+	"errors"
 	"os"
 	"path/filepath"
 	"testing"
@@ -57,9 +58,10 @@ func TestDeleteLocationNotFound(t *testing.T) {
 	os.MkdirAll(locDir, 0755)
 
 	s := New(tmpDir, "test")
+	// #2815: unbekannte ID -> ErrNotFound (Handler mappt auf 404).
 	err := s.DeleteLocation("nonexistent")
-	if err != nil {
-		t.Errorf("expected no error for nonexistent location, got %v", err)
+	if !errors.Is(err, ErrNotFound) {
+		t.Errorf("expected ErrNotFound for nonexistent location, got %v", err)
 	}
 }
 

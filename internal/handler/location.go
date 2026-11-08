@@ -2,6 +2,7 @@ package handler
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net/http"
 	"regexp"
@@ -239,6 +240,13 @@ func DeleteLocationHandler(s *store.Store) http.HandlerFunc {
 
 		defer s.LockLocation(id)() // #2158
 
+		// #2815: Existenz-Check VOR der Nutzungspruefung (unbekannt -> 404,
+		// nicht 409). Ein Ladefehler (kaputte Datei) faellt durch: loeschbar.
+		if loc, lerr := s.LoadLocation(id); lerr == nil && loc == nil {
+			WriteError(w, r, 404, "not_found", nil)
+			return
+		}
+
 		// #2216: Ort in einem Ortsvergleich -> nicht loeschen, Namen melden.
 		used, err := s.ComparePresetsUsingLocation(id)
 		if err != nil {
@@ -258,7 +266,10 @@ func DeleteLocationHandler(s *store.Store) http.HandlerFunc {
 			return
 		}
 
-		if err := s.DeleteLocation(id); err != nil {
+		if err := s.DeleteLocation(id); errors.Is(err, store.ErrNotFound) {
+			WriteError(w, r, 404, "not_found", nil)
+			return
+		} else if err != nil {
 			WriteError(w, r, 500, "store_error", nil)
 			return
 		}
