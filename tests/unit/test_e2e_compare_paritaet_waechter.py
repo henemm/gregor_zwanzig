@@ -286,3 +286,38 @@ def test_2682_hub_kinds_schleifen_regel_selbsttest():
     # Gegenprobe der Erkennung: Import allein ist keine Schleife.
     assert _HUB_KINDS_SCHLEIFE_RE.search("for (const kind of HUB_KINDS) {}")
     assert not _HUB_KINDS_SCHLEIFE_RE.search("import { HUB_KINDS } from './helpers';")
+
+
+# ─── #2837 S2 (Test Plan): Anlege-Rahmen-Paritaet laeuft fuer beide Arten ──────
+# Spec docs/specs/modules/rework_2837_s2_anlege_rahmen.md: der Anlege-Rahmen ist EIN
+# Baustein (shared/anlege-rahmen/). Die Paritaets-E2E muss deshalb per HUB_KINDS-SCHLEIFE
+# beide Arten pruefen (kein Import allein, kein `gz-eigenstaendig:`-Kopf), die Selektoren
+# aus ANLEGE_SEL (helpers.ts) beziehen, die Faelle je kind benennen und beide Breiten
+# (1440/390) sowie beide Sprachen (de/en) abdecken. Mutation: Schleife entfernen, Kopf
+# eintragen, eigene Selektoren statt ANLEGE_SEL oder eine Breite/Sprache weglassen => rot.
+
+ANLEGE_RAHMEN = "anlege-rahmen-paritaet.spec.ts"
+
+
+def test_2837_s2_anlege_rahmen_spec_prueft_beide_arten_per_hub_kinds_schleife():
+    text = _e2e(ANLEGE_RAHMEN)
+    assert _kopf_begruendung(text) is None, (
+        f"{ANLEGE_RAHMEN} traegt einen `{MARKER}`-Kopf -- der Rahmen ist geteilt, "
+        f"die Faelle muessen fuer Trip UND Ortsvergleich laufen")
+    assert _HUB_KINDS_SCHLEIFE_RE.search(text), (
+        f"{ANLEGE_RAHMEN} hat keine `for (const kind of HUB_KINDS)`-Schleife")
+    kopf = text.split("from './helpers'")[0]
+    assert "from './helpers'" in text and "HUB_KINDS" in kopf and "ANLEGE_SEL" in kopf, (
+        f"{ANLEGE_RAHMEN} importiert HUB_KINDS und ANLEGE_SEL nicht aus ./helpers")
+    assert re.search(r"test\(\s*`AR-\d+ \(\$\{\w+\}", text), (
+        f"{ANLEGE_RAHMEN}: Faelle sind nicht je kind benannt (`AR-n (${{kind}} …)`)")
+
+
+def test_2837_s2_anlege_rahmen_spec_deckt_beide_breiten_und_sprachen_ab():
+    text = _e2e(ANLEGE_RAHMEN)
+    for breite in ("width: 1440", "width: 390"):
+        assert breite in text, f"{ANLEGE_RAHMEN}: Breite `{breite}` fehlt (AC: 1440 und 390 px)"
+    assert re.search(r"\[\s*'de'\s*,\s*'en'\s*\]", text), (
+        f"{ANLEGE_RAHMEN}: keine Sprachschleife ueber ['de', 'en'] (AC-4/AC-15)")
+    assert "cm-desktop-footer" in text, (
+        f"{ANLEGE_RAHMEN}: der neue Fuss-Wrapper `cm-desktop-footer` (AC-16) wird nicht geprueft")

@@ -70,7 +70,11 @@ function saveDisabled(over: TripNewStateOverride, mobile: boolean, testid: strin
 		isMobileViewport: mobile, activeTab: testid === 'tn-mobile-save' ? 'alarme' : 'route',
 		name: 'X', startDate: '2026-07-01', stageNames: ['E1'], ...over,
 	});
-	const m = html.match(new RegExp(`<button[^>]*data-testid="${testid}"[^>]*>`));
+	// #2837 S2: Pfad folgt dem Rahmen — Desktop-Speichern wird im Fuß tn-desktop-footer des
+	// AnlegeRahmen gesucht, mobil im Fuß tn-mobile-footer. Die Zusicherung selbst bleibt wörtlich.
+	const fuss = html.indexOf(`data-testid="${mobile ? 'tn-mobile-footer' : 'tn-desktop-footer'}"`);
+	assert.notEqual(fuss, -1, `Fuß des Rahmens fehlt (${mobile ? 'tn-mobile-footer' : 'tn-desktop-footer'})`);
+	const m = html.slice(fuss).match(new RegExp(`<button[^>]*data-testid="${testid}"[^>]*>`));
 	assert.ok(m, `Knopf ${testid} nicht gerendert — Wirkstelle nicht erreicht`);
 	return /\sdisabled(=|\s|>)/.test(m![0]);
 }

@@ -51,7 +51,7 @@ eigener Issue.
 | `--g-ink-muted` | `#5c5a52` | Sekundärtext, Body |
 | `--g-ink-faint` | `#9c9a90` | Tertiär, Labels, Placeholder, Borders |
 
-**Hauptaktion = Ink (`Btn primary`, `--g-ink`)** — z. B. „Senden“ im Hub-Kopf. Weiß auf `--g-accent` erreicht nur 4,34:1 und verfehlt WCAG-AA (4,5:1 für kleinen Text); Ink auf Papier etwa 15:1 (Leitprinzip oben, ADR-0110, #2837).
+**Hauptaktion = Ink (`Btn primary`, `--g-ink`)** — z. B. „Senden“ im Hub-Kopf, „Trip speichern“/„Briefing aktivieren“ unten rechts im Fuß des geteilten Anlege-Rahmens (`shared/anlege-rahmen/AnlegeRahmen.svelte`, „Abbrechen“ als `Btn ghost` unten links, „Weiter“ als `Btn accent`). Weiß auf `--g-accent` erreicht nur 4,34:1 und verfehlt WCAG-AA (4,5:1 für kleinen Text); Ink auf Papier etwa 15:1 (Leitprinzip oben, ADR-0110, #2837).
 
 **Design-Vision (nicht implementiert):** vierte Stufe (`--g-ink-4`) für Hint/Placeholder
 — `--g-ink-faint` deckt beide ab.

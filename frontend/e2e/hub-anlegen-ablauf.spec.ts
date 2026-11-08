@@ -16,6 +16,13 @@
 // (CTA ohne Namen nicht `disabled`, fehlende Desktop-Weiter-Knöpfe) sind mit Teil E
 // im Trip geschlossen (TripNewEditor.svelte, dem Vergleich angeglichen).
 //
+// #2837 S2 (rework_2837_s2_anlege_rahmen.md, „Divergenz-verankernde Tests"): Lage gedreht,
+// Zeilen bleiben — Abbrechen unten links im Desktop-Fuß (AN-8/AN-13 über ANLEGE_SEL.abbrechen,
+// AN-8 zusätzlich Lage zur Hauptaktion), Hauptaktion `Btn primary` im Fuß und Weiter `Btn accent`
+// (AN-15), mobiler Trip-Abschluss „Trip speichern" (AN-9/AN-14 über ANLEGE_SEL.abschlussLabel).
+// Die mobile CTA-Kette (CTA_KETTE, AN-14) bleibt wörtlich: der Mobil-Fuß ist unverändert
+// (Spec Entscheidung 10).
+//
 // Kind-Unterschiede stehen als Selektor-/Textdaten in ANLEGE_SEL (helpers.ts) bzw.
 // in AN_SEL unten; jeder kind-Zweig trägt seinen Begründungskommentar (Spec
 // „Kind-Kontraste"). AN-12 ist echtes Compare-Eigen (Stundenverlauf steht in
@@ -468,6 +475,14 @@ test.describe('Anlege-Ablauf (Desktop 1280)', () => {
 				// Fertiger Zustand: der Trip speichert beim Verlassen sonst selbst (beforeNavigate).
 				await bisAlarme(page, kind);
 				await expect(sel.abschluss(page)).toBeEnabled({ timeout: 15_000 });
+				// #2837 S2 (AC-5/AC-8): Lage dreht — Abbrechen unten links im Desktop-Fuß, Hauptaktion
+				// rechts daneben in derselben Zeile, beide im Fuß (sel.abbrechen ist auf den Fuß gescopt).
+				await expect(sel.abbrechen(page), 'AN-8: Abbrechen steht nicht im Desktop-Fuß').toHaveCount(1);
+				await expect(sel.desktopFuss(page).filter({ has: sel.abschluss(page) }), 'AN-8: Abschluss nicht im Desktop-Fuß').toHaveCount(1);
+				const ab = (await sel.abbrechen(page).boundingBox())!;
+				const hb = (await sel.abschluss(page).boundingBox())!;
+				expect(ab.x + ab.width, 'AN-8: Abbrechen steht nicht links der Hauptaktion').toBeLessThan(hb.x);
+				expect(Math.abs(ab.y + ab.height / 2 - (hb.y + hb.height / 2)), 'AN-8: Abbrechen und Hauptaktion nicht in einer Zeile').toBeLessThanOrEqual(8);
 				await sel.abbrechen(page).click();
 				await expect.poll(() => new URL(page.url()).pathname, { message: 'AN-8: Abbrechen führt nicht zur Liste' }).toBe(
 					LISTE_SEL[kind].url
@@ -526,6 +541,8 @@ test.describe('Anlege-Ablauf (Desktop 1280)', () => {
 				const zuWertebereichen = sel.weiterNach.wertebereiche(page);
 				await expect(zuWertebereichen, 'AN-15: Weiter-Fuß „Wertebereiche festlegen →" fehlt').toBeVisible({ timeout: 15_000 });
 				await expect(zuWertebereichen).toHaveText(/Wertebereiche festlegen →/);
+				// #2837 S2 (AC-11): Weiter ist bei beiden Arten `Btn accent`.
+				await expect(zuWertebereichen, 'AN-15: Weiter ist kein Btn accent').toHaveAttribute('data-variant', 'accent');
 				await expect(sel.weiterNach.alarme(page), 'AN-15: Alarme-Fuß schon im Schritt Wetter-Metriken').toBeHidden();
 				await zuWertebereichen.click();
 				await erwarteZustand(page, kind, 'wertebereiche', { aktiv: true }, 'AN-15: Weiter-Fuß führt nicht nach Wertebereiche');
@@ -533,6 +550,7 @@ test.describe('Anlege-Ablauf (Desktop 1280)', () => {
 				const zuAlarmen = sel.weiterNach.alarme(page);
 				await expect(zuAlarmen, 'AN-15: Weiter-Fuß „Alarme einrichten →" fehlt').toBeVisible({ timeout: 15_000 });
 				await expect(zuAlarmen).toHaveText(/Alarme einrichten →/);
+				await expect(zuAlarmen, 'AN-15: Weiter ist kein Btn accent').toHaveAttribute('data-variant', 'accent');
 				await expect(sel.weiterNach.wertebereiche(page), 'AN-15: Wertebereiche-Fuß bleibt im Schritt Wertebereiche stehen').toBeHidden();
 				await zuAlarmen.click();
 				await erwarteZustand(page, kind, 'alarme', { aktiv: true }, 'AN-15: Weiter-Fuß führt nicht nach Alarme');
@@ -544,6 +562,9 @@ test.describe('Anlege-Ablauf (Desktop 1280)', () => {
 				await expect(sel.abschluss(page), 'AN-15: Abschluss nach dem Weg über die Weiter-Füße gesperrt').toBeEnabled({
 					timeout: 10_000
 				});
+				// #2837 S2 (AC-8): Hauptaktion unten im Desktop-Fuß als `Btn primary`.
+				await expect(sel.desktopFuss(page).filter({ has: sel.abschluss(page) }), 'AN-15: Abschluss nicht im Desktop-Fuß').toHaveCount(1);
+				await expect(sel.abschluss(page), 'AN-15: Abschluss ist kein Btn primary').toHaveAttribute('data-variant', 'primary');
 				await bleibtBei(() => post.rumpfe.length, 0, 1_500, 'AN-15: der Weg über die Weiter-Füße darf nichts anlegen');
 			} finally {
 				await aufraeumen(page.request, kind, name, post.ids);

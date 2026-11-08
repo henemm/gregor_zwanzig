@@ -617,7 +617,7 @@ The shell is orchestrated in `frontend/src/routes/+layout.svelte`:
 **Responsive Breakpoint:** 900px (custom `@custom-variant` in `app.css`)
 - **< 900px:** BottomNav + Konto-Kreis visible, kein Balken oben, Sidebar hidden
 - **>= 900px:** BottomNav hidden, Sidebar full sidebar (unchanged)
-- **Anlege-Seiten `/trips/new` + `/compare/new`:** BottomNav mobil ausgeblendet (`istAnlegeSeite` in `+layout.svelte`); Speichern/Abbrechen im `EditorStickyFooter`, `<main>` mit `mobile-scroll-pad--ohne-nav` (#2277 S2b)
+- **Anlege-Seiten `/trips/new` + `/compare/new`:** BottomNav mobil ausgeblendet (`istAnlegeSeite` in `+layout.svelte`); Speichern/Abbrechen im Fuß des geteilten Rahmens `shared/anlege-rahmen/AnlegeRahmen.svelte` (Pfad oben mit Link zur Liste, Eyebrow „Neuer Trip“/„Neuer Vergleich“, Fuß-Testid `cm-desktop-footer`; ADR-0110, #2837 S2), `<main>` mit `mobile-scroll-pad--ohne-nav` (#2277 S2b)
 
 **CSS Utilities:**
 - `--g-nav-*` — Geometrie und Glas der schwebenden Leiste (`docs/design-system/TOKENS.md`)

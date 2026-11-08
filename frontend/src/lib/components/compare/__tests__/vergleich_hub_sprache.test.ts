@@ -304,7 +304,10 @@ describe('AC-7: Stundenverlauf (transponierte Uebersicht): Name aus dem Register
 	});
 	test('Anlegen: Profil-Metriknamen und Profile englisch (metricLabel/Katalog)', () => {
 		const { en: e } = deDannEn(() => sichtbar(P.ANLEGE_FAELLE.anlegen_vergleich.map(P.anlegenRendern).join('\n')));
-		for (const s of ['General', 'Winter sports', 'Hiking', 'Summer trekking', 'Basics', 'Comparison name', 'Activity profile', 'Add locations →', '⊘ Name missing', 'Location comparisons', 'New comparison', 'Comparisons', 'Enter name', 'Cancel', 'Activate briefing', 'Region (optional)', 'No name yet', 'Nothing set up yet']) hat(e, s);
+		for (const s of ['General', 'Winter sports', 'Hiking', 'Summer trekking', 'Basics', 'Comparison name', 'Activity profile', 'Add locations →', '⊘ Name missing', 'Location comparisons', 'New comparison', 'Enter name', 'Cancel', 'Activate briefing', 'Region (optional)', 'No name yet', 'Nothing set up yet']) hat(e, s);
+		// #2837 S2 (AC-3): der mobile Zurück-Pfeil trägt den Elternteil „Location comparisons"
+		// (vorher „Comparisons") — je Render Desktop-Pfad UND mobiler Zurück-Pfeil.
+		assert.ok((e.match(/Location comparisons/g) ?? []).length >= 2 * P.ANLEGE_FAELLE.anlegen_vergleich.length, 'mobiler Zurück-Pfeil ohne Elternteil „Location comparisons"');
 		assert.deepEqual(deutscheReste(e), []);
 	});
 	test('Anlegen Orte/weiter: Reiter, Fortschritt, Schaltflaechen englisch; Plural exakt', () => {

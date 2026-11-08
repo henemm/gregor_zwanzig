@@ -50,8 +50,13 @@ function locked(h: string, tab: string): boolean {
 	assert.ok(m, `Reiter ${tab} nicht im Dokument — Wirkstelle nicht erreicht`);
 	return m![1] === 'true';
 }
+// #2837 S2 (AC-8): Pfad folgt dem Rahmen — „Briefing aktivieren" wird im Desktop-Fuß
+// cm-desktop-footer gesucht (vorher irgendwo im Dokument, faktisch in der Kopfleiste).
+// Die Lock-Engine-Zusicherungen unten bleiben wörtlich.
 function activateDisabled(h: string): boolean {
-	const m = h.match(/<button[^>]*data-testid="compare-editor-activate"[^>]*>/);
+	const fuss = h.indexOf('data-testid="cm-desktop-footer"');
+	assert.notEqual(fuss, -1, '#2837 S2: Desktop-Fuß cm-desktop-footer fehlt — Wirkstelle nicht im Rahmen-Fuß');
+	const m = h.slice(fuss).match(/<button[^>]*data-testid="compare-editor-activate"[^>]*>/);
 	assert.ok(m, 'Aktivieren-Knopf nicht im Dokument — Wirkstelle nicht erreicht');
 	return /\sdisabled(=|\s|>)/.test(m![0]);
 }

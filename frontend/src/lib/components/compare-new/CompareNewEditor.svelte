@@ -82,6 +82,7 @@
 	import MBtn from '$lib/components/mobile/MBtn.svelte';
 	import Sheet from '$lib/components/mobile/Sheet.svelte';
 	import EditorStickyFooter from '$lib/components/shared/EditorStickyFooter.svelte';
+	import AnlegeRahmen from '$lib/components/shared/anlege-rahmen/AnlegeRahmen.svelte';
 	import { PageHeader } from '$lib/components/atoms';
 
 	// Issue #1743: kein Schritt „Versand" mehr — der Versand-Abschnitt steht unten im
@@ -448,38 +449,21 @@
 
 <div data-testid="compare-editor" style:position="relative" style:min-height="100%" style:background="var(--g-paper)">
 <!-- ══════════════════ Desktop ══════════════════ -->
-<div class="cm-desktop">
-	<TopoBg opacity={0.12}>
-		<!-- Breadcrumb + Aktionen -->
-		<div style:position="relative" style:padding="14px 40px" style:border-bottom="1px solid var(--g-rule-soft)" style:display="flex" style:justify-content="space-between" style:align-items="center">
-			<div class="mono" style:font-size="11px" style:color="var(--g-ink-3)" style:letter-spacing="0.06em">
-				<span style:opacity="0.6">{$t('listen.vergleiche.titel')}</span>
-				<span style:margin="0 8px">/</span>
-				<span style:color="var(--g-ink)">{$t('vergleich.neu.neuer_vergleich')}</span>
-			</div>
-			<div style:display="flex" style:gap="8px" style:align-items="center">
-				{#if !canActivateNow}
-					<span class="mono" style:font-size="11px" style:color="var(--g-ink-4)">{$t('vergleich.neu.alarme_zum_aktivieren')}</span>
-					<StandardwerteSpeichernKnopf enabled={standardwerteFrei} saving={activating} onclick={onStandardwerte} testid="compare-editor-standardwerte" />
-				{/if}
-				<Btn variant="ghost" size="sm" href="/compare">{$t('aktionen.abbrechen')}</Btn>
-				<Btn
-					data-testid="compare-editor-activate"
-					variant={canActivateNow && !activating ? 'primary' : 'quiet'}
-					size="sm"
-					disabled={!canActivateNow || activating}
-					onclick={handleActivate}
-					style={canActivateNow && !activating ? '' : 'opacity:0.4; cursor:not-allowed'}
-				>{activating ? $t('trip.anlegen.speichere') : $t('vergleich.neu.aktivieren')}</Btn>
-			</div>
-		</div>
-
-		<!-- Hero + Fortschrittsbalken (7 Segmente) -->
-		<div style:position="relative" style:padding="20px 40px 14px">
-			<Eyebrow>{$t('home.planung.neuer_orts_vergleich')}</Eyebrow>
-			<h1 style:font-size="32px" style:font-weight="600" style:letter-spacing="-0.02em" style:margin="4px 0 0" style:line-height="1.1" style:color={wiz.name.trim() ? 'var(--g-ink)' : 'var(--g-ink-4)'}>
-				{wiz.name.trim() || $t('trip.anlegen.kein_name')}
-			</h1>
+<div class="cm-desktop" style="position: relative; min-height: 100%; display: flex; flex-direction: column;">
+	<!-- Geteilter Anlege-Rahmen (#2837 S2): Breadcrumb, Eyebrow, Titel, Fortschritt (5 Segmente),
+	     Inhalt, Fuß cm-desktop-footer mit Abbrechen (Link /compare) und „Briefing aktivieren". -->
+	<AnlegeRahmen
+		context="vergleich"
+		name={wiz.name}
+		cancelHref="/compare"
+		abschlussLabel={activating ? $t('trip.anlegen.speichere') : $t('vergleich.neu.aktivieren')}
+		abschlussTestid="compare-editor-activate"
+		canFinish={canActivateNow && !activating}
+		onFinish={handleActivate}
+		testidPrefix="cm"
+		navClearance={false}
+	>
+		{#snippet fortschritt()}
 			<div data-testid="compare-editor-progress" style:display="flex" style:align-items="center" style:gap="10px" style:margin-top="7px">
 				<div style:display="flex" style:gap="3px">
 					{#each TAB_DEFS as r (r.id)}
@@ -490,7 +474,13 @@
 					{doneCount === 0 ? $t('trip.anlegen.nichts_eingerichtet') : $t('trip.anlegen.abschnitte', { n: doneCount, gesamt: TAB_DEFS.length })}
 				</span>
 			</div>
-		</div>
+		{/snippet}
+		{#snippet hinweis()}
+			{#if !canActivateNow}<span class="mono" style:font-size="11px" style:color="var(--g-ink-4)">{$t('vergleich.neu.alarme_zum_aktivieren')}</span>{/if}
+		{/snippet}
+		{#snippet standardwerte()}
+			{#if !canActivateNow}<StandardwerteSpeichernKnopf enabled={standardwerteFrei} saving={activating} onclick={onStandardwerte} testid="compare-editor-standardwerte" />{/if}
+		{/snippet}
 
 		<!-- Tab-Bar -->
 		<div style:border-bottom="1px solid var(--g-rule)" style:padding="0 40px" style:display="flex" style:gap="0" style:overflow-x="auto">
@@ -523,7 +513,6 @@
 				</button>
 			{/each}
 		</div>
-	</TopoBg>
 
 	<!-- Tab-Panel -->
 	{#if activeTab === 'vergleich'}
@@ -556,7 +545,7 @@
 					</div>
 					<div style:margin-top="28px" style:padding-top="20px" style:border-top="1px solid var(--g-rule)" style:display="flex" style:justify-content="flex-end" style:align-items="center" style:gap="12px">
 						{#if !canContinue}<span class="mono" style:font-size="11px" style:color="var(--g-ink-4)">{$t('vergleich.neu.name_fehlt')}</span>{/if}
-						<Btn data-testid="compare-editor-continue-orte" variant={canContinue ? 'accent' : 'quiet'} size="md" disabled={!canContinue} onclick={() => canContinue && switchTab('orte')}>{$t('vergleich.neu.orte_hinzufuegen')}</Btn>
+						<Btn data-testid="compare-editor-continue-orte" variant="accent" size="md" disabled={!canContinue} onclick={() => canContinue && switchTab('orte')}>{$t('vergleich.neu.orte_hinzufuegen')}</Btn>
 					</div>
 				</div>
 			</TopoBg>
@@ -566,7 +555,7 @@
 		<div class="ce-cta-foot" style:max-width="980px">
 			<div class="ce-cta-row">
 				{#if !orteContinueReady}<span class="mono ce-cta-hint">{$t('vergleich.neu.min_orte')}</span>{/if}
-				<Btn data-testid="compare-editor-continue-wetter-metriken" variant={orteContinueReady ? 'accent' : 'quiet'} size="md" disabled={!orteContinueReady} onclick={() => orteContinueReady && switchTab('wetter-metriken')} style={orteContinueReady ? '' : 'opacity:0.45; cursor:not-allowed'}>{$t('vergleich.neu.wetter_metriken')}</Btn>
+				<Btn data-testid="compare-editor-continue-wetter-metriken" variant="accent" size="md" disabled={!orteContinueReady} onclick={() => orteContinueReady && switchTab('wetter-metriken')}>{$t('vergleich.neu.wetter_metriken')}</Btn>
 			</div>
 		</div>
 	{:else if activeTab === 'wetter-metriken'}
@@ -595,6 +584,7 @@
 			<AlarmeTab context="vergleich" {...alarmePropsAus(wiz)} catalog={alarmeCatalogMitNamen} showInfobox={true} />
 		{/if}
 	{/if}
+	</AnlegeRahmen>
 </div><!-- /.cm-desktop -->
 
 <!-- ══════════════════ Mobile ══════════════════ -->
@@ -604,7 +594,7 @@
 	{/if}
 
 	<div data-testid="cm-mobile-head" style="padding: 0 16px; flex-shrink: 0;">
-		<PageHeader back={{ href: '/compare', label: $t('listen.archiv.vergleiche') }} eyebrow={mobileEyebrow} title={mobileTitel} compact />
+		<PageHeader back={{ href: '/compare', label: $t('listen.vergleiche.titel') }} eyebrow={mobileEyebrow} title={mobileTitel} compact />
 	</div>
 
 	<!-- Fortschrittsbalken -->
@@ -692,14 +682,14 @@
 			{#if activeTab === 'alarme'}
 				<MBtn block variant={canActivateNow ? 'primary' : 'quiet'} size="xl" disabled={!canActivateNow || activating} onclick={handleActivate} testid="cm-mobile-activate">{activating ? $t('trip.anlegen.speichere') : canActivateNow ? $t('vergleich.neu.aktivieren') : $t('vergleich.neu.alarme_zum_aktivieren')}</MBtn>
 			{:else if activeTab === 'vergleich'}
-				<MBtn block variant={canContinue ? 'primary' : 'quiet'} size="xl" disabled={!canContinue} onclick={handleMobileNext}>{canContinue ? $t('vergleich.neu.orte_hinzufuegen') : $t('vergleich.neu.name_eingeben')}</MBtn>
+				<MBtn block variant={canContinue ? 'accent' : 'quiet'} size="xl" disabled={!canContinue} onclick={handleMobileNext}>{canContinue ? $t('vergleich.neu.orte_hinzufuegen') : $t('vergleich.neu.name_eingeben')}</MBtn>
 			{:else if activeTab === 'orte'}
 				{@const restOrte = 2 - wiz.pickedIds.length}
-				<MBtn block variant={orteContinueReady ? 'primary' : 'quiet'} size="xl" disabled={!orteContinueReady} onclick={handleMobileNext}>{orteContinueReady ? $t('vergleich.neu.wetter_metriken') : $tn('vergleich.neu.noch_orte', restOrte)}</MBtn>
+				<MBtn block variant={orteContinueReady ? 'accent' : 'quiet'} size="xl" disabled={!orteContinueReady} onclick={handleMobileNext}>{orteContinueReady ? $t('vergleich.neu.wetter_metriken') : $tn('vergleich.neu.noch_orte', restOrte)}</MBtn>
 			{:else if activeTab === 'wetter-metriken'}
-				<MBtn block variant="primary" size="xl" onclick={handleMobileNext}>{$t('trip.anlegen.wertebereiche_festlegen')}</MBtn>
+				<MBtn block variant="accent" size="xl" onclick={handleMobileNext}>{$t('trip.anlegen.wertebereiche_festlegen')}</MBtn>
 			{:else if activeTab === 'wertebereiche'}
-				<MBtn block variant="primary" size="xl" onclick={handleMobileNext}>{$t('trip.anlegen.alarme_einrichten')}</MBtn>
+				<MBtn block variant="accent" size="xl" onclick={handleMobileNext}>{$t('trip.anlegen.alarme_einrichten')}</MBtn>
 			{/if}
 	</EditorStickyFooter>
 </div><!-- /.cm-mobile -->
