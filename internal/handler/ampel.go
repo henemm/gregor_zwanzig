@@ -5,7 +5,8 @@ package handler
 // wie Python app.ampel.validate_ampel: unten rot < orange < gelb, oben
 // gelb < orange < rot (jeweils ueber die gesetzten Werte), untere Grenzen nie
 // ueber den oberen, alarm_ab aus der Menge, Gewitter "hoch" nie gelb und nie
-// schwaecher als "mittel". Abgelehnt wird mit Code "ampel_ungueltig".
+// schwaecher als "mittel", Gewitter-alarm_ab nie gelb (#2793). Abgelehnt wird
+// mit Code "ampel_ungueltig".
 
 import "encoding/json"
 
@@ -13,6 +14,10 @@ var ampelUnten = []string{"red", "orange", "yellow"}
 var ampelOben = []string{"yellow", "orange", "red"}
 var ampelRang = map[string]int{"yellow": 1, "orange": 2, "red": 3}
 var ampelAlarmAb = map[string]bool{"never": true, "yellow": true, "orange": true, "red": true}
+
+// Issue #2793 S2a (ADR-0106 P2): Gewitter-alarm_ab nie "yellow" — „leicht" ist
+// fest gelb und alarmiert nie. Gleiche Regel wie Python ALARM_AB_GEWITTER.
+var ampelAlarmAbGewitter = map[string]bool{"never": true, "orange": true, "red": true}
 
 // ampelSeite liefert die gesetzten Werte einer Seite in Schluessel-Reihenfolge;
 // ok=false bei falschem Typ oder nicht streng aufsteigender Reihenfolge.
@@ -42,9 +47,12 @@ func ampelSeite(v interface{}, keys []string) ([]float64, bool) {
 	return gesetzt, true
 }
 
-func ampelMetrikGueltig(v interface{}) bool {
+func ampelMetrikGueltig(mid string, v interface{}) bool {
 	e, ok := v.(map[string]interface{})
 	if !ok {
+		return false
+	}
+	if a, da := e["alarm_ab"].(string); da && mid == "thunder" && !ampelAlarmAbGewitter[a] {
 		return false
 	}
 	unten, okU := ampelSeite(e["lower"], ampelUnten)
@@ -100,8 +108,8 @@ func validateAmpel(v interface{}) bool {
 		if !ok {
 			return false
 		}
-		for _, e := range metrics {
-			if !ampelMetrikGueltig(e) {
+		for mid, e := range metrics {
+			if !ampelMetrikGueltig(mid, e) {
 				return false
 			}
 		}

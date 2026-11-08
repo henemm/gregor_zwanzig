@@ -26,6 +26,8 @@ logger = logging.getLogger(__name__)
 _LOWER = ("red", "orange", "yellow")  # aufsteigend: rot < orange < gelb
 _UPPER = ("yellow", "orange", "red")  # aufsteigend: gelb < orange < rot
 ALARM_AB = frozenset({"never", "yellow", "orange", "red"})
+# Issue #2793 S2a (ADR-0106 P2): Gewitter „leicht" ist fest gelb und alarmiert nie.
+ALARM_AB_GEWITTER = frozenset({"never", "orange", "red"})
 _RANG = {"yellow": 1, "orange": 2, "red": 3}
 _THUNDER_HOCH = frozenset({"orange", "red"})
 _PROFIL_ZU_VORLAGE = {"summer_trekking": "alpen-trekking"}
@@ -68,6 +70,8 @@ def _pruefe_metrik(mid: str, e: Any, fehler: list[str]) -> None:
         fehler.append(f"{mid}: untere Grenze ueber der oberen")
     if e.get("alarm_ab") is not None and e.get("alarm_ab") not in ALARM_AB:
         fehler.append(f"{mid}.alarm_ab: unbekannt")
+    elif mid == "thunder" and e.get("alarm_ab") not in (None, *ALARM_AB_GEWITTER):
+        fehler.append("thunder.alarm_ab: nie gelb")
     if e.get("enabled") is not None and not isinstance(e.get("enabled"), bool):
         fehler.append(f"{mid}.enabled: kein Wahrheitswert")
 

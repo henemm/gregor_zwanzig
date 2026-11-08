@@ -36,7 +36,8 @@ def _trip(tid, levels=None, preset=None, ampel=None):
     if ampel is not None:
         dc["ampel"] = ampel
     return {"id": tid, "name": tid, "kind": "route", "stages": [], "zukunft_top": "bleibt",
-            "alert_rules": [{"id": "r1", "metric": "wind_gust", "enabled": True}], "display_config": dc}
+            "alert_rules": [{"id": "r1", "kind": "delta", "metric": "wind_gust", "threshold": 5,
+                             "enabled": True, "channels": ["email"]}], "display_config": dc}
 
 
 def _cmp(cid, profil, levels):
@@ -134,7 +135,8 @@ def test_ac15_alle_uebrigen_felder_bleiben_gleich(root):
     assert {k: v for k, v in nachher.items() if k != "display_config"} == \
         {k: v for k, v in vorher.items() if k != "display_config"}
     dc_alt, dc_neu = vorher["display_config"], nachher["display_config"]
-    assert {k: v for k, v in dc_neu.items() if k not in ("ampel", "alarm_ab_migration")} == dc_alt
+    assert {k: v for k, v in dc_neu.items() if k not in ("ampel", "alarm_ab_migration")} == \
+        {k: v for k, v in dc_alt.items() if k != "ampel"}
     assert json.dumps(dc_neu["metric_alert_levels"]) == json.dumps(dc_alt["metric_alert_levels"])
     assert dc_neu["alarm_ab_migration"] == "2793"
     assert dc_neu["ampel"]["template"] == "allgemein"
@@ -153,6 +155,7 @@ def test_ac16_vorgabe_nie_sensibel_wird_rot_off_wird_nie(root):
     out = _lauf(root, "--execute")
     assert _alarm_ab(root, "alice", "cmp-winter") == {"fresh_snow": "red", "gust": "never"}
     assert "unbekannter Wert: precipitation_change=robust" in _abschnitt(out, "alice")
+    assert "Altschlüssel gust_max_kmh -> wind_gust (wie Loader)" in _abschnitt(out, "alice")
     assert _alarm_ab(root, "bob", "trip-ski")["fresh_snow"] == "never"
 
 
@@ -197,7 +200,7 @@ def test_ac16_ac17_sicherung_je_nutzer_vor_dem_schreiben_nur_eigene_dateien(root
     for archiv, uid in zip(archive, ("alice", "bob")):
         with tarfile.open(archiv) as tar:
             namen = [n for n in tar.getnames() if n.endswith(".json")]
-            assert namen and all(n.startswith(f"{uid}/briefings/") for n in tar.getnames())
+            assert namen and all(n.split("/")[:2] == [uid, "briefings"] for n in tar.getnames())
             for n in namen:
                 assert tar.extractfile(n).read() == original[uid][Path(n).name]
 
