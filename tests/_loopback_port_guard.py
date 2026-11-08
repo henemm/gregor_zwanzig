@@ -3,10 +3,10 @@
 SPEC: docs/specs/modules/fix_1755_offline_volllauf.md
 
 Aktiv nur mit ``--loopback-own-ports``. Gedacht fuer den sicheren
-Offline-Volllauf::
+Offline-Volllauf (einzeilig, woertlich; optional dahinter `` > datei 2>&1``,
+jede andere Abweichung blockt das Breitlauf-Gate)::
 
-    uv run pytest --disable-socket --allow-unix-socket \\
-        --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports --ignore=tests/red/
+    uv run pytest --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports --ignore=tests/red/
 
 pytest-socket filtert nur nach Host. Auf diesem Rechner lauschen Prod und
 Staging auf Loopback -- ``--allow-hosts=127.0.0.1`` allein liesse jeden Test

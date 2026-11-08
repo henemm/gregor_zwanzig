@@ -483,3 +483,140 @@ def test_ac6_prod_ansprechende_datei_ist_im_kern_deselektiert(rel):
     # Exit 5 = keine Tests ausgewaehlt; alle durch addopts-Marker deselektiert.
     assert proc.returncode == 5, text
     assert "deselected" in text, text
+
+
+# ---------------------------------------------------------------------------
+# Fix-Loop 8 (Adversary F002): Verbindung beim IMPORT des Testmoduls, also
+# waehrend der Sammlung -- pytest-socket sperrt erst ab pytest_runtest_setup,
+# davor ist das eingehaengte ``socket.connect`` des Waechters die einzige
+# Sperre.
+# ---------------------------------------------------------------------------
+
+_IMPORT_TIME_SOURCE = '''
+import os
+import socket
+
+from pytest_socket import SocketConnectBlockedError
+
+PORT = int(os.environ["GZ_FOREIGN_PORT"])
+
+
+def _versuch(call):
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    s.settimeout(2)
+    try:
+        getattr(s, call)(("127.0.0.1", PORT))
+        return "verbunden"
+    except SocketConnectBlockedError:
+        return "gesperrt"
+    except OSError as exc:
+        return f"oserror:{exc}"
+    finally:
+        s.close()
+
+
+# Modulebene: laeuft beim Sammeln, vor jedem runtest_setup.
+IMPORT_CONNECT = _versuch("connect")
+IMPORT_CONNECT_EX = _versuch("connect_ex")
+
+
+def test_import_connect_war_gesperrt():
+    assert IMPORT_CONNECT == "gesperrt"
+
+
+def test_import_connect_ex_war_gesperrt():
+    assert IMPORT_CONNECT_EX == "gesperrt"
+'''
+
+
+def test_fixloop8_verbindung_beim_import_zum_fremden_port_ist_gesperrt(tmp_path, foreign_listener):
+    """F002: Testmodul verbindet auf Modulebene (Sammelzeit) zum fremden
+    Listener -- abgelehnt mit SocketConnectBlockedError, Listener sieht 0."""
+    proc = _run_inner(
+        tmp_path, _IMPORT_TIME_SOURCE, OFFLINE_FORM,
+        extra_env={"GZ_FOREIGN_PORT": str(foreign_listener.port)},
+    )
+    _assert_plugin_loaded(proc)
+    text = _out(proc)
+    seen = foreign_listener.drain()
+    assert proc.returncode == 0, text
+    assert "2 passed" in text, text
+    assert seen == 0, f"Fremder Listener hat {seen} Verbindung(en) beim Import gesehen"
+
+
+# ---------------------------------------------------------------------------
+# Fix-Loop 8 (Adversary F003): Unix-Sockets unter --allow-unix-socket
+# funktionieren weiter und landen NICHT im Bind-Set der Loopback-Ports.
+# ---------------------------------------------------------------------------
+
+_UNIX_SOURCE = '''
+import os
+import socket
+import threading
+
+import _loopback_port_guard as guard
+
+
+def _snapshot():
+    with guard._lock:
+        return set(guard._bound_ports)
+
+
+def _echo_roundtrip(server, address):
+    server.listen(1)
+
+    def _serve():
+        conn, _ = server.accept()
+        conn.sendall(conn.recv(64))
+        conn.close()
+
+    t = threading.Thread(target=_serve, daemon=True)
+    t.start()
+    client = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+    client.settimeout(5)
+    client.connect(address)
+    client.sendall(b"unix-1755")
+    data = client.recv(64)
+    client.close()
+    t.join(5)
+    return data
+
+
+def test_unix_socket_mit_pfad(tmp_path):
+    vorher = _snapshot()
+    path = str(tmp_path / "s.sock")
+    server = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+    try:
+        server.bind(path)
+        assert _snapshot() == vorher
+        assert _echo_roundtrip(server, path) == b"unix-1755"
+    finally:
+        server.close()
+
+
+def test_unix_socket_abstrakter_name():
+    # Linux-Abstract-Namespace: getsockname() liefert bytes -- ein Index [1]
+    # waere ein int und saehe aus wie ein Port.
+    vorher = _snapshot()
+    name = b"\\0gz1755-" + str(os.getpid()).encode()
+    server = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+    try:
+        server.bind(name)
+        assert _snapshot() == vorher
+        assert _echo_roundtrip(server, name) == b"unix-1755"
+    finally:
+        server.close()
+'''
+
+
+@pytest.mark.skipif(not hasattr(socket, "AF_UNIX"), reason="kein AF_UNIX")
+def test_fixloop8_unix_socket_bind_bleibt_nutzbar_und_zaehlt_nicht_als_port(tmp_path):
+    """F003: Unix-Socket-Bind (Pfad und Abstract-Namespace) unter
+    ``--allow-unix-socket`` funktioniert (Echo-Roundtrip) und fuegt dem
+    Bind-Set der Loopback-Ports nichts hinzu (``tracking_bind``/``_is_inet``)."""
+    proc = _run_inner(tmp_path, _UNIX_SOURCE, OFFLINE_FORM)
+    _assert_plugin_loaded(proc)
+    text = _out(proc)
+    assert proc.returncode == 0, text
+    assert "2 passed" in text, text
+    assert "SocketBlockedError" not in text

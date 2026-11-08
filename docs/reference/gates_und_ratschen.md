@@ -227,7 +227,8 @@ Verzeichnis-Lauf. Grund: eine ungemarkerte Testdatei genügt, um echten Versand 
 **Erlaubt:** Dateien benennen · `--collect-only` · sicherer Offline-Volllauf · Einmal-Freigabe,
 die **nur der User** durch Tippen von `override` erzeugt. Prüfdatum 2026-11-01.
 
-**Sicherer Offline-Volllauf (#1755)**, genau diese Form:
+**Sicherer Offline-Volllauf (#1755)**, genau diese Zeile, einzeilig und wörtlich (`--ignore=tests/red/`
+darf fehlen; optional dahinter genau ` > datei 2>&1`):
 
 ```bash
 uv run pytest --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,localhost --loopback-own-ports --ignore=tests/red/
@@ -236,9 +237,10 @@ uv run pytest --disable-socket --allow-unix-socket --allow-hosts=127.0.0.1,::1,l
 `--disable-socket` allein ist **keine** Freigabe mehr: es sperrt auch lokale Test-Doubles, und
 `--allow-hosts=127.0.0.1` allein ließe jeden Test Prod/Staging auf Loopback erreichen (pytest-socket
 filtert nur nach Host). `--loopback-own-ports` (`tests/_loopback_port_guard.py`) erlaubt Loopback nur zu
-Ports, die der Testprozess selbst gebunden hat, und sperrt auch `connect_ex`. Das Gate prüft per
-Positivliste; `-p no:…`, `-o`, `-c`, `--override-ini`, `--force-enable-socket`, CIDR/fremde Hosts und
-`PYTEST_ADDOPTS` im Kommando blocken. Grenze: Ausgang aus Kindprozessen (curl, Go, Playwright) ist nicht
+Ports, die der Testprozess selbst gebunden hat, und sperrt auch `connect_ex`. Das Gate vergleicht den
+Rohstring exakt, vor jeder Shell-Zerlegung (Fix-Loop 6: fünf Runden Zerlegung fanden je eine neue
+Umgehung). Jede Abweichung blockt: Zusatz-Flags, Präfix (`nohup`, `timeout`, `PYTEST_ADDOPTS=…`),
+`| tee`, `; echo`, Mehrzeilenform mit `\`, anderer Leerraum. Grenze: Ausgang aus Kindprozessen (curl, Go, Playwright) ist nicht
 erfasst. Läuft ca. 42 min.
 
 ## CI-Ratschen
