@@ -54,6 +54,8 @@ ADR-0049 (eigener Kanal), ADR-0095 (Kanal-Parität, Alarm-Kanal in Trip und Orts
 
 **Änderungs-Alarm (#1737):** Der SMS-Alarmtext trägt am Ereignis-Token die Zeitspanne der betroffenen Stunden als `HH-HH` (ASCII-Bindestrich, GSM-7; Stufen-Tokens unverändert, ≤ 160 Zeichen). Stundenzeilen gibt es hier nicht; Vertrag in `sms_format.md` §3.4f.
 
+**Radar-Verschärfung (#2848):** Ein Trip-Radar-Alarm, der per Mengen-Durchbruch (#2065) gegen einen Radar-Alarm desselben Ereignisses durchkommt, trägt nach dem Ortskopf und vor dem Radar-Token das Token `UP <Y>><X> ` (zuletzt gemeldete > jetzt gemessene Menge in mm, z. B. `UP 3.1>7.3`; ASCII/GSM-7, nie übersetzt). Der Platz ist vom Limit reserviert, Zonen-Kürzel weichen zuerst; die Premium-SMS-Grenze (153) bleibt eingehalten. Vertrag in `sms_format.md` §3.4g.
+
 ## 4. Befehlseingang (Rückkanal)
 
 - **Weg:** Garmin-Gerät schreibt an die Dienstnummer → seven.io-Journal. `premium_sms_poll`

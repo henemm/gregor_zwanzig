@@ -799,6 +799,31 @@ def _cooldown_text(msg: AlertMessage, lang: Lang = "de") -> str:
              praefix=t("alarm.radar.cooldown_praefix", lang))
 
 
+def _verschaerfung_text(msg: AlertMessage, lang: Lang = "de") -> str:
+    """Issue #2848: „Dasselbe Ereignis, jetzt staerker: X statt Y mm" oder
+    LEER ohne Kennzeichen. Immer eine Nachkommastelle in der Zahlenform der
+    Nutzersprache (DE Komma, EN Punkt) -- auch `1,0`, die beiden Zahlen sind
+    genau die Vergleichsmengen des Durchbruchs."""
+    if msg.verschaerfung is None:
+        return ""
+    basis, menge = msg.verschaerfung
+
+    def _zahl(v: float) -> str:
+        s = f"{v:.1f}"
+        return s if lang == "en" else s.replace(".", ",")
+
+    return t("alarm.verschaerfung", lang, menge=_zahl(menge), basis=_zahl(basis))
+
+
+def _sms_verschaerfung_token(msg: AlertMessage) -> str:
+    """Issue #2848: Kurzform `UP <Y>><X> ` (ASCII/GSM-7, nie uebersetzt) oder
+    leer ohne Kennzeichen."""
+    if msg.verschaerfung is None:
+        return ""
+    basis, menge = msg.verschaerfung
+    return f"UP {basis:.1f}>{menge:.1f} "
+
+
 def _box_html(text: str) -> str:
     return (
         f"<div style=\"border-left:4px solid {G_ACCENT};padding:8px 12px;margin-top:12px;"
@@ -819,6 +844,9 @@ def _onset_mail(msg: AlertMessage, h1: str, data_rows, footer: str, lang: Lang) 
     # unveraendert, ohne Leerzeile.
     if msg.addendum_reference:
         plain_parts.append(msg.addendum_reference)
+    verschaerfung = _verschaerfung_text(msg, lang)  # Issue #2848, additiv
+    if verschaerfung:
+        plain_parts.append(verschaerfung)
     rows = [
         _datarow_html(label_, value, G_INK, i == 0)
         for i, (label_, value) in enumerate(data_rows)
@@ -835,6 +863,8 @@ def _onset_mail(msg: AlertMessage, h1: str, data_rows, footer: str, lang: Lang) 
         html += _box_html(cooldown)
     if msg.addendum_reference:  # Issue #2018 (AC-B2), additiv
         html += _box_html(msg.addendum_reference)
+    if verschaerfung:  # Issue #2848, additiv
+        html += _box_html(verschaerfung)
     html += (
         f"<p style=\"color:{G_INK_MUTED};margin-top:16px;font-family:{FONT_UI};\">{_esc(footer)}</p>"
         "</body></html>"
@@ -924,6 +954,9 @@ def _render_telegram_onset(msg: AlertMessage, lang: Lang = "de") -> str:
     # und Detailtext -- bei `None` bleibt der Text unveraendert.
     if msg.addendum_reference:
         return "\n".join([first, msg.addendum_reference, second])
+    # Issue #2848: Verschaerfungs-Hinweis an derselben Stelle (eigene Zeile).
+    if msg.verschaerfung is not None:
+        return "\n".join([first, _esc(_verschaerfung_text(msg, lang)), second])
     return "\n".join([first, second])
 
 
@@ -1171,7 +1204,11 @@ def _render_sms_onset(msg: AlertMessage, limit: int = 140) -> str:
     else:
         loc = _ascii_alert_location(_location_of((e,), None))[:24]
     head = f"{prefix}{loc}"
-    body = f"{head}: {token}"
+    # Issue #2848: Verschaerfungs-Token direkt nach dem Ortskopf, vor dem
+    # Radar-Token. Es steht VOR der Zonenauswahl im `body`, deren Budget
+    # (`limit - len(body)`) ist damit um seine Laenge reserviert: Zonen und
+    # Marker weichen zuerst, nie Kopf, Hinweis oder Radar-Token.
+    body = f"{head}: {_sms_verschaerfung_token(msg)}{token}"
     # Issue #2051 S2b: das Zonen-Kuerzel ist das ZULETZT angefuegte Element --
     # dieselbe Sichtbarkeitsregel wie `_onset_extent_suffix` in der Langform
     # (nur vermessene Etappe, nur nicht-leere Zonen), und nur so viel, wie

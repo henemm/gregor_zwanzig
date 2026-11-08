@@ -109,6 +109,10 @@ class GateResult(NamedTuple):
     is_addendum: bool = False
     addendum_source: Optional[str] = None       # "official" | "deviation" erreichbar (Issue #2050 S4c)
     addendum_reported_at: Optional[datetime] = None
+    # Issue #2848: additiv, reine Zusatzinformation -- die Meldung ist ein
+    # Mengen-Durchbruch (#2065) gegen einen Radar-Alarm DESSELBEN Ereignisses.
+    # `allowed` bleibt davon unberuehrt.
+    ist_mengen_verschaerfung: bool = False
 
 
 _ALLOWED = GateResult(True, None)
@@ -845,6 +849,10 @@ def check_event_identity_gate(
                 addendum_source=match["source"],
                 addendum_reported_at=match["reported_at"],
             )
+        # Issue #2848: nur mit gefundenem RADAR-Vorgaenger ist „dasselbe
+        # Ereignis, jetzt staerker" wahr; die Entscheidung bleibt `_ALLOWED`.
+        if quantitative_escalation and match["source"] == "nowcast":
+            return GateResult(True, None, ist_mengen_verschaerfung=True)
         return _ALLOWED
 
     if _covers_materially_more(match["covered_until"], point_at, window_end):
