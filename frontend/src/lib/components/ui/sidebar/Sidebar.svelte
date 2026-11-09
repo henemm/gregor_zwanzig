@@ -177,7 +177,7 @@
 			<div class="absolute bottom-full left-2 right-2 z-[80] mb-1 rounded-md border bg-popover p-1 text-popover-foreground shadow-md">
 				<a
 					href="/account"
-					class="flex items-center gap-2 rounded-sm px-2 py-1.5 text-sm hover:bg-accent hover:text-accent-foreground transition-colors"
+					class="flex items-center gap-2 rounded-sm px-2 py-1.5 text-sm hover:bg-[var(--g-accent-deep)] hover:text-[var(--g-on-accent)] transition-colors"
 					onclick={() => { closeUserMenu(); }}
 				>
 					<UserIcon class="size-4 opacity-70" />
@@ -185,7 +185,7 @@
 				</a>
 				<a
 					href="/account#system-status"
-					class="flex items-center gap-2 rounded-sm px-2 py-1.5 text-sm hover:bg-accent hover:text-accent-foreground transition-colors"
+					class="flex items-center gap-2 rounded-sm px-2 py-1.5 text-sm hover:bg-[var(--g-accent-deep)] hover:text-[var(--g-on-accent)] transition-colors"
 					onclick={() => { closeUserMenu(); }}
 				>
 					<MonitorIcon class="size-4 opacity-70" />
@@ -193,7 +193,7 @@
 				</a>
 				<button
 					onclick={() => { ontoggleDark(); closeUserMenu(); }}
-					class="flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-sm hover:bg-accent hover:text-accent-foreground transition-colors"
+					class="flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-sm hover:bg-[var(--g-accent-deep)] hover:text-[var(--g-on-accent)] transition-colors"
 				>
 					{#if darkMode}
 						<SunIcon class="size-4 opacity-70" />

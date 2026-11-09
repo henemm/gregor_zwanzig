@@ -177,7 +177,7 @@
 		line-height: 1.45;
 	}
 	.ch-hint a {
-		color: var(--g-accent);
+		color: var(--g-accent-text);
 		text-decoration: underline;
 		text-underline-offset: 2px;
 	}

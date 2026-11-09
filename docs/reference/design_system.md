@@ -80,6 +80,46 @@ ist auf Trip- und Vergleichsseiten durch diese Tokens ersetzt (#2881).
 
 **Status (2026-06-02):** Alte Namen `--g-good`/`--g-warn`/`--g-bad` wurden vollständig durch Tailwind-konforme Namen ersetzt (Issue #541, #543, #544). Alle Komponenten und `app.css` verwenden die kanonischen Token.
 
+### Akzent-Rollen und Status-Paare (#2400)
+| Token | Hell | Dunkel | Rolle |
+|---|---|---|---|
+| `--g-accent-text` | `var(--g-accent)` | `#e07a4a` | Akzent als Textfarbe (aktive Reiter-Beschriftung, Preset-Link) |
+| `--g-on-accent` | `#ffffff` | `#141412` | Schrift auf einer Akzentfläche (`--g-accent-deep`) |
+| `--g-ok-bg` / `--g-ok-fg` | `#f0fdf4` / `#166534` | `#16281a` / `#6fbf6a` | Erfolgs-Box (Grund / Schrift und Rand) |
+| `--g-warn-bg` / `--g-warn-fg` | `#fffbeb` / `#92400e` | `#2b2312` / `#e0a83a` | Hinweis-Box |
+| `--g-danger-bg` / `--g-danger-fg` | `#fef2f2` / `#991b1b` | `#2e1a1a` / `#ee7a7a` | Fehler-Box |
+
+Statusboxen tragen Grund, Schrift und Rand aus dem Paar (`border border-[var(--g-ok-fg)] bg-[var(--g-ok-bg)] text-[var(--g-ok-fg)]`); Tailwind-Palettenfarben (`bg-green-50`, `text-red-700` …) sind im Quelltext gesperrt (Ratsche `frontend/src/lib/__tests__/harte_farben_waechter.test.ts`, Ausnahmeliste darf nur sinken).
+
+### Dunkles Design (#2400)
+
+**Mechanik (eine Quelle):** Alle Dark-Werte stehen im Block `:root[data-theme="dark"]` in `frontend/src/app.css`, direkt hinter dem hellen `:root` (Kontrasttests lesen per Regex den ersten, hellen Treffer). `--color-*` folgen über `@theme` → `var(--g-*)` automatisch. Geschaltet wird allein über das Attribut `<html data-theme="dark">`:
+
+- **Vor dem ersten Paint** setzt ein Inline-Skript im `<head>` von `frontend/src/app.html` (und `frontend/static/offline.html`) aus `localStorage gz-dark` das Attribut, `color-scheme` und `<meta name="theme-color">` (dunkel `#141412`, hell `#f6f4ee`). Kein Hell-Blitz beim Neuladen.
+- **Zur Laufzeit** schaltet `applyDarkMode()` in `frontend/src/routes/+layout.svelte` dieselben drei Dinge (Umschalter „Dunkles Design" in Sidebar und Konto-Blatt).
+- Ohne gespeicherte Wahl startet die App hell; `prefers-color-scheme` wird bewusst nicht ausgewertet.
+- `@custom-variant dark` bindet `dark:`-Klassen an das Attribut, nicht an das Betriebssystem.
+- Kommt später eine CSP, braucht das Kopf-Skript einen Hash/Nonce (`kit.csp`).
+
+**Palette (Text ≥ 4,5:1 auf jeder Fläche, Linien ≥ 3:1, WCAG 1.4.11):**
+
+| Rolle | Token | Dunkel |
+|---|---|---|
+| Seitengrund | `--g-paper`, `--g-surface-0` | `#141412` |
+| Karte | `--g-card`, `--g-surface-1` | `#1d1d1a` |
+| Karte alt / erhöht | `--g-card-alt` / `--g-surface-raised` | `#252522` / `#222220` |
+| Fläche 2 | `--g-surface-2`, `--g-paper-deep` | `#2a2a26` |
+| Linien | `--g-rule` / `--g-rule-soft` | `#3a3a35` / `#2c2c28` |
+| Text | `--g-ink` / `--g-ink-2` / `--g-ink-3`, `--g-ink-muted` | `#f1efe8` / `#d2cfc4` / `#aaa699` |
+| nur Placeholder/Disabled (ADR-0008) | `--g-ink-4` | `#6f6c63` |
+| Bedien-Linien (`--color-border/-input`) | `--g-ink-faint` | `#7a776d` (Startwert `#6f6c63` angehoben: 3,22:1 auf `--g-surface-2`) |
+| Akzent | `--g-accent`, `--g-accent-deep`, `--g-accent-text` | `#e07a4a` |
+| Status | `--g-success`/`--g-good`, `--g-warn`/`--g-warning`/`--g-warn-deep`, `--g-danger`/`--g-bad`, `--g-info` | `#6fbf6a`, `#e0a83a`, `#ee7a7a`, `#7aa9dc` |
+
+**Akzent im Dunklen:** `--g-accent-deep` ist im Bestand zugleich Fläche (Knöpfe, Avatar) und Textfarbe (aktive Labels, Kennzahlen, Links). Ein dunkles `#8c3e1a` wäre als Text auf dunklem Grund unlesbar (≈ 1,7:1), darum wird es im Dunklen hell (`#e07a4a`) und die Schrift darauf dunkel (`--g-on-accent` = `#141412`, 6,19:1). Im Hellen bleibt Weiß auf `#8c3e1a` (7,45:1). Schrift auf Akzentflächen deshalb immer `var(--g-on-accent)`, nie `#fff`. Der Hover einer Akzentfläche hellt im Dunklen auf statt abzudunkeln.
+
+Bewusst fest bleiben Wetter-/Risikofarben, Scrims, Leaflet-Kacheln und Mails. Kontrast-Tabellen hell und dunkel: `python3 scripts/contrast_audit.py`, Anzeige auf `/_design`. Prüftests: `dark_palette_kontrast.test.ts`, `dark_mechanik.test.ts`, `offline_dark_konsistenz.test.ts`, Staging-Durchlauf `frontend/e2e/dark-mode-alle-routen.staging.spec.ts`.
+
 ### Wetter (aus echten Email-Reports abgeleitet)
 | Token | Hex | Bedeutung |
 |---|---|---|

@@ -13,14 +13,14 @@
 		<h1 class="text-xl font-bold">{$t('auth.bestaetigen.titel')}</h1>
 
 		{#if form?.success}
-			<div class="rounded-md bg-green-50 p-3 text-sm text-green-800">
+			<div class="rounded-md border border-[var(--g-ok-fg)] bg-[var(--g-ok-bg)] p-3 text-sm text-[var(--g-ok-fg)]">
 				{$t('auth.bestaetigen.erfolg')}
 			</div>
-			<a href="/" class="block text-sm text-blue-600 hover:underline">{$t('auth.bestaetigen.zur_app')}</a>
+			<a href="/" class="block text-sm text-[var(--g-info)] hover:underline">{$t('auth.bestaetigen.zur_app')}</a>
 		{:else if (form?.user ?? data.user) && (form?.token ?? data.token)}
 			<form method="POST" use:enhance class="space-y-3">
 				{#if form?.error}
-					<div class="rounded-md bg-red-50 p-3 text-sm text-red-800">{form.error}</div>
+					<div class="rounded-md border border-[var(--g-danger-fg)] bg-[var(--g-danger-bg)] p-3 text-sm text-[var(--g-danger-fg)]">{form.error}</div>
 				{/if}
 				<input name="user" type="hidden" value={form?.user ?? data.user} />
 				<input name="token" type="hidden" value={form?.token ?? data.token} />
@@ -29,7 +29,7 @@
 				</button>
 			</form>
 		{:else}
-			<div class="rounded-md bg-red-50 p-3 text-sm text-red-800">
+			<div class="rounded-md border border-[var(--g-danger-fg)] bg-[var(--g-danger-bg)] p-3 text-sm text-[var(--g-danger-fg)]">
 				{$t('auth.bestaetigen.unvollstaendig')}
 			</div>
 		{/if}

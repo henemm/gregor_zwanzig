@@ -65,7 +65,7 @@
 					style:padding="1px 6px"
 					style:border-radius="3px"
 					style:background={it.accent ? 'var(--g-accent-deep)' : 'var(--g-paper-deep)'}
-					style:color={it.accent ? '#fff' : 'var(--g-ink-3)'}
+					style:color={it.accent ? 'var(--g-on-accent)' : 'var(--g-ink-3)'}
 				>{it.badge}</span>
 			{/if}
 		</button>

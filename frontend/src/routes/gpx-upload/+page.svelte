@@ -214,12 +214,12 @@
 
 		<!-- Success Message -->
 		{#if savedTripId}
-			<Card.Root class="border-green-200 bg-green-50">
+			<Card.Root class="border-[var(--g-ok-fg)] bg-[var(--g-ok-bg)]">
 				<Card.Content class="pt-6">
-					<p class="text-sm font-medium text-green-800">
+					<p class="text-sm font-medium text-[var(--g-ok-fg)]">
 						{$t('layout.gpx.gespeichert')}
 					</p>
-					<a href="/trips" class="mt-2 inline-block text-sm text-green-700 underline hover:text-green-900">
+					<a href="/trips" class="mt-2 inline-block text-sm text-[var(--g-ok-fg)] underline hover:text-[var(--g-ok-fg)]">
 						{$t('layout.gpx.zu_den_trips')}
 					</a>
 				</Card.Content>

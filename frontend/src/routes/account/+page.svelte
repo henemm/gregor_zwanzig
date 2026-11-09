@@ -610,7 +610,7 @@
 	<h1 class="text-2xl font-bold">{$t('konto.titel')}</h1>
 
 	{#if successMsg}
-		<div class="rounded-md border border-green-300 bg-green-50 p-3 text-sm text-green-800">
+		<div class="rounded-md border border-[var(--g-ok-fg)] bg-[var(--g-ok-bg)] p-3 text-sm text-[var(--g-ok-fg)]">
 			{successMsg}
 		</div>
 	{/if}
@@ -673,22 +673,22 @@
 						<button
 							onclick={() => sendTest('email')}
 							disabled={testStatus.email === 'loading'}
-							class="shrink-0 inline-flex items-center min-h-[44px] text-sm text-blue-600 hover:underline disabled:opacity-50"
+							class="shrink-0 inline-flex items-center min-h-[44px] text-sm text-[var(--g-info)] hover:underline disabled:opacity-50"
 						>
 							{testStatus.email === 'loading' ? '...' : $t('konto.aktion.test_senden')}
 						</button>
 					{/if}
 				</div>
 				{#if testStatus.email === 'ok'}
-					<span class="text-sm text-green-600">{$t('konto.aktion.gesendet')}</span>
+					<span class="text-sm text-[var(--g-ok-fg)]">{$t('konto.aktion.gesendet')}</span>
 				{/if}
 				{#if testStatus.email === 'error'}
-					<span class="text-sm text-red-600">{testError.email}</span>
+					<span class="text-sm text-[var(--g-danger-fg)]">{testError.email}</span>
 				{/if}
 				{#if data.profile?.pending_contact_address}
 					<div
 						data-testid="pending-address-notice"
-						class="space-y-2 rounded-md border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900"
+						class="space-y-2 rounded-md border border-[var(--g-warn-fg)] bg-[var(--g-warn-bg)] p-3 text-sm text-[var(--g-warn-fg)]"
 					>
 						<p>
 								{#each textTeile($t('konto.adresse.ausstehend')) as teil}{#if teil.platzhalter === 'neu'}<strong>{data.profile.pending_contact_address}</strong>{:else if teil.platzhalter === 'alt'}<strong>{data.profile.mail_to || data.profile.email}</strong>{:else}{teil.text}{/if}{/each}
@@ -697,15 +697,15 @@
 							type="button"
 							onclick={resendVerification}
 							disabled={resendStatus === 'loading'}
-							class="inline-flex items-center min-h-[44px] text-sm font-medium text-blue-700 hover:underline disabled:opacity-50"
+							class="inline-flex items-center min-h-[44px] text-sm font-medium text-[var(--g-info)] hover:underline disabled:opacity-50"
 						>
 							{$t('konto.adresse.mail_erneut')}
 						</button>
 						{#if resendStatus === 'ok'}
-							<span class="text-sm text-green-700">{$t('konto.adresse.mail_verschickt')}</span>
+							<span class="text-sm text-[var(--g-ok-fg)]">{$t('konto.adresse.mail_verschickt')}</span>
 						{/if}
 						{#if resendStatus === 'error'}
-							<span class="text-sm text-red-700">{$t('konto.aktion.senden_fehlgeschlagen')}</span>
+							<span class="text-sm text-[var(--g-danger-fg)]">{$t('konto.aktion.senden_fehlgeschlagen')}</span>
 						{/if}
 					</div>
 				{/if}
@@ -721,14 +721,14 @@
 					placeholder={SMS_BEISPIEL}
 					class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
 				/>
-				<p class="mt-1 text-xs text-gray-500">{$t('konto.sms.format_hinweis')}</p>
+				<p class="mt-1 text-xs text-[var(--g-ink-3)]">{$t('konto.sms.format_hinweis')}</p>
 				<!-- Issue #2406 (AC-13): solange die Nummer nicht per Code bewiesen ist,
 				     geht an sie keine SMS raus (Sperre in config.py). Der Hinweis macht
 				     das sichtbar und traegt den einzigen Weg heraus. -->
 				{#if smsZuBestaetigen}
 					<div
 						data-testid="sms-pending-notice"
-						class="space-y-2 rounded-md border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900"
+						class="space-y-2 rounded-md border border-[var(--g-warn-fg)] bg-[var(--g-warn-bg)] p-3 text-sm text-[var(--g-warn-fg)]"
 					>
 						<p>
 								{#each textTeile($t('konto.sms.ausstehend')) as teil}{#if teil.platzhalter === 'nummer'}<strong>{smsZuBestaetigen}</strong>{:else}{teil.text}{/if}{/each}
@@ -747,7 +747,7 @@
 								type="button"
 								onclick={verifySmsCode}
 								disabled={smsVerifyStatus === 'loading'}
-								class="inline-flex items-center min-h-[44px] text-sm font-medium text-blue-700 hover:underline disabled:opacity-50"
+								class="inline-flex items-center min-h-[44px] text-sm font-medium text-[var(--g-info)] hover:underline disabled:opacity-50"
 							>
 								{$t('konto.sms.code_bestaetigen')}
 							</button>
@@ -755,16 +755,16 @@
 								type="button"
 								onclick={resendSmsCode}
 								disabled={smsResendStatus === 'loading'}
-								class="inline-flex items-center min-h-[44px] text-sm font-medium text-blue-700 hover:underline disabled:opacity-50"
+								class="inline-flex items-center min-h-[44px] text-sm font-medium text-[var(--g-info)] hover:underline disabled:opacity-50"
 							>
 								{$t('konto.sms.code_erneut')}
 							</button>
 						</div>
 						{#if smsResendStatus === 'ok'}
-							<span class="text-sm text-green-700">{$t('konto.sms.code_verschickt')}</span>
+							<span class="text-sm text-[var(--g-ok-fg)]">{$t('konto.sms.code_verschickt')}</span>
 						{/if}
 						{#if smsVerifyError}
-							<span class="text-sm text-red-700">{smsVerifyError}</span>
+							<span class="text-sm text-[var(--g-danger-fg)]">{smsVerifyError}</span>
 						{/if}
 					</div>
 				{/if}
@@ -774,11 +774,11 @@
 				<label class="text-sm font-medium">{KANAL.telegram}</label>
 				{#if telegramConnected}
 					<div class="flex items-center gap-3">
-						<span class="text-sm text-green-700">{$t('konto.telegram.verbunden', { suffix: telegramChatIdSuffix })}</span>
+						<span class="text-sm text-[var(--g-ok-fg)]">{$t('konto.telegram.verbunden', { suffix: telegramChatIdSuffix })}</span>
 						<button
 							onclick={() => sendTest('telegram')}
 							disabled={testStatus.telegram === 'loading'}
-							class="shrink-0 inline-flex items-center min-h-[44px] text-sm text-blue-600 hover:underline disabled:opacity-50"
+							class="shrink-0 inline-flex items-center min-h-[44px] text-sm text-[var(--g-info)] hover:underline disabled:opacity-50"
 						>
 							{testStatus.telegram === 'loading' ? '...' : $t('konto.aktion.test_senden')}
 						</button>
@@ -795,17 +795,17 @@
 						<button
 							onclick={connectTelegram}
 							disabled={telegramConnecting}
-							class="shrink-0 inline-flex items-center min-h-[44px] text-sm text-blue-600 hover:underline disabled:opacity-50"
+							class="shrink-0 inline-flex items-center min-h-[44px] text-sm text-[var(--g-info)] hover:underline disabled:opacity-50"
 						>
 							{telegramConnecting ? $t('konto.telegram.warte') : $t('konto.telegram.verbinden')}
 						</button>
 					</div>
 				{/if}
 				{#if testStatus.telegram === 'ok'}
-					<span class="text-sm text-green-600">{$t('konto.aktion.gesendet')}</span>
+					<span class="text-sm text-[var(--g-ok-fg)]">{$t('konto.aktion.gesendet')}</span>
 				{/if}
 				{#if testStatus.telegram === 'error'}
-					<span class="text-sm text-red-600">{testError.telegram}</span>
+					<span class="text-sm text-[var(--g-danger-fg)]">{testError.telegram}</span>
 				{/if}
 			</div>
 
@@ -840,7 +840,7 @@
 		</Card.Header>
 		<Card.Content class="space-y-4">
 			{#if passkeySuccessMsg}
-				<div class="rounded-md border border-green-300 bg-green-50 p-3 text-sm text-green-800">
+				<div class="rounded-md border border-[var(--g-ok-fg)] bg-[var(--g-ok-bg)] p-3 text-sm text-[var(--g-ok-fg)]">
 					{passkeySuccessMsg}
 				</div>
 			{/if}
@@ -938,7 +938,7 @@
 			</div>
 
 			{#if pwSuccessMsg}
-				<div class="rounded-md border border-green-300 bg-green-50 p-3 text-sm text-green-800">
+				<div class="rounded-md border border-[var(--g-ok-fg)] bg-[var(--g-ok-bg)] p-3 text-sm text-[var(--g-ok-fg)]">
 					{pwSuccessMsg}
 				</div>
 			{/if}
@@ -984,14 +984,14 @@
 									<button
 										onclick={() => saveRename(p.id)}
 										aria-label={$t('konto.aktion.speichern')}
-										class="inline-flex h-9 w-9 items-center justify-center rounded-md hover:bg-accent"
+										class="inline-flex h-9 w-9 items-center justify-center rounded-md hover:bg-[var(--g-accent-deep)] hover:text-[var(--g-on-accent)]"
 									>
 										<CheckIcon class="h-4 w-4" />
 									</button>
 									<button
 										onclick={cancelEdit}
 										aria-label={$t('aktionen.abbrechen')}
-										class="inline-flex h-9 w-9 items-center justify-center rounded-md hover:bg-accent"
+										class="inline-flex h-9 w-9 items-center justify-center rounded-md hover:bg-[var(--g-accent-deep)] hover:text-[var(--g-on-accent)]"
 									>
 										<XIcon class="h-4 w-4" />
 									</button>
@@ -1007,7 +1007,7 @@
 										data-testid="wetter-profile-edit-{p.id}"
 										onclick={() => startEdit(p)}
 										aria-label={$t('konto.wetter_profile.umbenennen')}
-										class="inline-flex h-9 w-9 items-center justify-center rounded-md hover:bg-accent"
+										class="inline-flex h-9 w-9 items-center justify-center rounded-md hover:bg-[var(--g-accent-deep)] hover:text-[var(--g-on-accent)]"
 									>
 										<PencilIcon class="h-4 w-4" />
 									</button>
@@ -1047,12 +1047,16 @@
 							{@const dot = lastRunDot(job.last_run)}
 							<div class="flex items-center justify-between">
 								<div class="flex items-center gap-2">
-									<span class="inline-block size-2 rounded-full"
+									<!-- #2400: Punktfarben aus Tokens (folgen dem Dunklen Design). -->
+									<span
+										class="inline-block size-2 rounded-full {dot === 'ok'
+											? 'bg-[var(--g-success)]'
+											: dot === 'error'
+												? 'bg-[var(--g-danger)]'
+												: dot === 'neutral'
+													? 'bg-[var(--g-ink-3)]'
+													: 'bg-[var(--g-ink-faint)]'}"
 										data-last-run-dot={dot}
-										class:bg-green-500={dot === 'ok'}
-										class:bg-red-500={dot === 'error'}
-										class:bg-slate-500={dot === 'neutral'}
-										class:bg-gray-300={dot === 'none'}
 									></span>
 									<span class="font-medium">{$t(userJobs[job.id])}</span>
 								</div>
@@ -1122,7 +1126,7 @@
 						</Btn>
 					</div>
 					{#if tierChangeStatus === 'ok' && tierChangeNotified}
-						<p class="text-sm text-green-600 mt-2">{$t('konto.level.antrag_gesendet')}</p>
+						<p class="text-sm text-[var(--g-ok-fg)] mt-2">{$t('konto.level.antrag_gesendet')}</p>
 					{/if}
 					{#if tierChangeStatus === 'error' && tierChangeError}
 						<p class="text-sm text-destructive mt-2">{tierChangeError}</p>
@@ -1226,16 +1230,16 @@
 			<Card.Content>
 				<div class="flex items-center gap-2">
 					{#if data.health === null}
-						<span class="inline-block size-3 rounded-full bg-red-500"></span>
+						<span class="inline-block size-3 rounded-full bg-[var(--g-danger)]"></span>
 						<span class="font-medium">{$t('konto.status.nicht_erreichbar')}</span>
 					{:else if data.health.status === 'ok'}
-						<span class="inline-block size-3 rounded-full bg-green-500"></span>
+						<span class="inline-block size-3 rounded-full bg-[var(--g-success)]"></span>
 						<span class="font-medium">{$t('konto.status.laeuft')}</span>
 					{:else if data.health.status === 'degraded'}
-						<span class="inline-block size-3 rounded-full bg-yellow-500"></span>
+						<span class="inline-block size-3 rounded-full bg-[var(--g-warn)]"></span>
 						<span class="font-medium">{$t('konto.status.eingeschraenkt')}</span>
 					{:else}
-						<span class="inline-block size-3 rounded-full bg-red-500"></span>
+						<span class="inline-block size-3 rounded-full bg-[var(--g-danger)]"></span>
 						<span class="font-medium">{$t('konto.status.nicht_erreichbar')}</span>
 					{/if}
 				</div>
@@ -1282,7 +1286,7 @@
 			</p>
 			<Btn variant="outline" onclick={logoutAllDevices}>{$t('konto.anmeldungen.alle_abmelden')}</Btn>
 			{#if logoutAllErrorMsg}
-				<p class="mt-2 text-sm text-red-600">{logoutAllErrorMsg}</p>
+				<p class="mt-2 text-sm text-[var(--g-danger-fg)]">{logoutAllErrorMsg}</p>
 			{/if}
 		</Card.Content>
 	</Card.Root>
@@ -1308,14 +1312,14 @@
 				{exportBusy ? $t('konto.daten.wird_erstellt') : $t('konto.daten.herunterladen')}
 			</Btn>
 			{#if exportErrorMsg}
-				<p class="mt-2 text-sm text-red-600" data-testid="data-export-error">{exportErrorMsg}</p>
+				<p class="mt-2 text-sm text-[var(--g-danger-fg)]" data-testid="data-export-error">{exportErrorMsg}</p>
 			{/if}
 		</Card.Content>
 	</Card.Root>
 
-	<Card.Root class="border-red-200" data-testid="danger-zone-card">
+	<Card.Root class="border-[var(--g-danger-fg)]" data-testid="danger-zone-card">
 		<Card.Header>
-			<Card.Title class="text-red-700">{$t('konto.loeschen.zone_titel')}</Card.Title>
+			<Card.Title class="text-[var(--g-danger-fg)]">{$t('konto.loeschen.zone_titel')}</Card.Title>
 		</Card.Header>
 		<Card.Content>
 			<p class="mb-4 text-sm text-muted-foreground">
@@ -1323,7 +1327,7 @@
 			</p>
 			<button
 				onclick={deleteAccount}
-				class="inline-flex h-10 items-center justify-center rounded-md bg-red-600 px-4 py-2 text-sm font-medium text-white ring-offset-background hover:bg-red-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500"
+				class="inline-flex h-10 items-center justify-center rounded-md bg-[var(--g-danger)] px-4 py-2 text-sm font-medium text-[var(--g-paper)] ring-offset-background hover:opacity-90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--g-danger)]"
 			>
 				{$t('konto.loeschen.titel')}
 			</button>
@@ -1500,7 +1504,7 @@
 					/>
 				</div>
 				{#if deleteDialogMsg}
-					<p class="text-sm text-red-700" data-testid="delete-account-error">{deleteDialogMsg}</p>
+					<p class="text-sm text-[var(--g-danger-fg)]" data-testid="delete-account-error">{deleteDialogMsg}</p>
 				{/if}
 			</div>
 			<Dialog.Footer>

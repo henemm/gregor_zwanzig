@@ -9,6 +9,27 @@
 		     Aufruf an Google mehr, damit sie auch ohne Netz aus dem Geraetespeicher
 		     kommen und unterwegs keine Fremdanfrage noetig ist. -->
 		<meta name="theme-color" content="#f6f4ee">
+		<!-- Issue #2400 — Dunkles Design VOR dem ersten Paint (kein Hell-Blitz):
+		     liest die Geraete-Wahl `gz-dark` und setzt data-theme, color-scheme und
+		     theme-color. Ohne gespeicherte Wahl bleibt es hell (kein
+		     prefers-color-scheme). #141412 = --g-paper im Dark-Block von app.css.
+		     Zur Laufzeit schaltet applyDarkMode() in +layout.svelte dieselben drei. -->
+		<script>
+			(function () {
+				var dunkel = false;
+				try {
+					dunkel = localStorage.getItem('gz-dark') === '1';
+				} catch (e) {
+					dunkel = false;
+				}
+				if (!dunkel) return;
+				var root = document.documentElement;
+				root.setAttribute('data-theme', 'dark');
+				root.style.colorScheme = 'dark';
+				var meta = document.querySelector('meta[name="theme-color"]');
+				if (meta) meta.setAttribute('content', '#141412');
+			})();
+		</script>
 		<meta name="apple-mobile-web-app-capable" content="yes">
 		<meta name="apple-mobile-web-app-status-bar-style" content="default">
 		<link rel="icon" href="/favicon.ico" sizes="32x32">

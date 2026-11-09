@@ -12,10 +12,10 @@
 		</div>
 
 		{#if form?.sent}
-			<div class="rounded-md border border-green-300 bg-green-50 p-4 text-sm text-green-800">
+			<div class="rounded-md border border-[var(--g-ok-fg)] bg-[var(--g-ok-bg)] p-4 text-sm text-[var(--g-ok-fg)]">
 				{$t('auth.magic.gesendet')}
 			</div>
-			<div class="rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800">
+			<div class="rounded-md border border-[var(--g-warn-fg)] bg-[var(--g-warn-bg)] p-3 text-sm text-[var(--g-warn-fg)]">
 				{$t('auth.magic.profil_hinweis')}
 			</div>
 			<a

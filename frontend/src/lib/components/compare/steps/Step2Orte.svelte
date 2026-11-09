@@ -284,7 +284,7 @@
 							type="button"
 							disabled={adding || !fallbackLat || !fallbackLon}
 							onclick={addLocationFromFallback}
-							style="padding:5px 12px; font-size:12px; border-radius:var(--g-r-2); background:var(--g-accent-deep); color:var(--g-paper); border:none; cursor:pointer; opacity:{adding || !fallbackLat || !fallbackLon ? '0.4' : '1'};"
+							style="padding:5px 12px; font-size:12px; border-radius:var(--g-r-2); background:var(--g-accent-deep); color:var(--g-on-accent); border:none; cursor:pointer; opacity:{adding || !fallbackLat || !fallbackLon ? '0.4' : '1'};"
 						>{adding ? $t('vergleich.orte.wird_hinzugefuegt') : $t('vergleich.orte.hinzufuegen')}</button>
 					</div>
 				{/if}
@@ -309,7 +309,7 @@
 						type="button"
 						disabled={adding}
 						onclick={addLocation}
-						style="width:100%; padding:8px; font-size:13px; border-radius:var(--g-r-2); background:var(--g-accent-deep); color:var(--g-paper); border:none; cursor:pointer; font-family:var(--g-font-sans); opacity:{adding ? '0.4' : '1'};"
+						style="width:100%; padding:8px; font-size:13px; border-radius:var(--g-r-2); background:var(--g-accent-deep); color:var(--g-on-accent); border:none; cursor:pointer; font-family:var(--g-font-sans); opacity:{adding ? '0.4' : '1'};"
 					>{adding ? $t('vergleich.orte.wird_hinzugefuegt') : $t('vergleich.orte.zum_vergleich')}</button>
 				{/if}
 			</div>
@@ -383,7 +383,7 @@
 								>
 									<span style="width:14px; height:14px; border-radius:3px; border:1.5px solid {on ? 'var(--g-accent)' : 'var(--g-rule)'}; background:{on ? 'var(--g-accent)' : 'transparent'}; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
 										{#if on}
-											<svg width="9" height="9" viewBox="0 0 12 12" fill="none" stroke="var(--g-paper)" stroke-width="2.5"><path d="M2 6l3 3 5-6"/></svg>
+											<svg width="9" height="9" viewBox="0 0 12 12" fill="none" style="stroke: var(--g-on-accent)" stroke-width="2.5"><path d="M2 6l3 3 5-6"/></svg>
 										{/if}
 									</span>
 									<span style="flex:1; font-size:12.5px; color:var(--g-ink); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">{loc.name}</span>

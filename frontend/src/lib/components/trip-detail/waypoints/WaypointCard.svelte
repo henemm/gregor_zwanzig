@@ -157,7 +157,7 @@
 		height: 22px;
 		border-radius: 50%;
 		border: 2px solid var(--g-accent);
-		background: white;
+		background: var(--g-card);
 		color: var(--g-accent-deep, var(--g-accent));
 		font-family: var(--g-font-data);
 		font-size: 10px;
@@ -169,8 +169,8 @@
 		line-height: 1;
 	}
 	.waypoint-pin--active {
-		background: var(--g-accent);
-		color: white;
+		background: var(--g-accent-deep);
+		color: var(--g-on-accent);
 	}
 	.waypoint-body {
 		flex: 1;

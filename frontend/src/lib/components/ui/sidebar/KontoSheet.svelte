@@ -118,7 +118,7 @@
 		border-radius: 22px;
 		/* #2879: Accent unter Text = accent-deep (Weiß 7,45:1 statt 4,34:1). */
 		background: var(--g-accent-deep);
-		color: #ffffff;
+		color: var(--g-on-accent);
 		display: flex;
 		align-items: center;
 		justify-content: center;

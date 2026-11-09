@@ -90,7 +90,7 @@
 	}
 
 	.save-indicator--idle {
-		color: var(--g-good, #2e7d32);
+		color: var(--g-good);
 		background: rgba(46, 125, 50, 0.08);
 		/* Issue #880: Idle-Dimming nach 3s Inaktivität — Opacity sinkt auf 0.5,
 		   nie display:none/visibility:hidden (Barrierefreiheit). */
@@ -100,21 +100,21 @@
 		to { opacity: 0.5; }
 	}
 	.save-time {
-		color: var(--g-ink-3, #6b6b68);
+		color: var(--g-ink-3);
 		font-weight: 400;
 		opacity: 0.85;
 	}
 	.save-indicator--dirty {
-		color: var(--g-warn, #b87800);
+		color: var(--g-warn);
 		background: rgba(200, 140, 0, 0.1);
 	}
 	.save-indicator--saving {
-		color: var(--g-ink-3, #6b6b68);
-		background: var(--g-surface-2, #f0ede8);
+		color: var(--g-ink-3);
+		background: var(--g-surface-2);
 	}
 	/* Fehler-Zustand: keine Animation, opacity bleibt dauerhaft 1 (AC-4). */
 	.save-indicator--error {
-		color: var(--g-danger, #b34a2a);
+		color: var(--g-danger);
 		background: rgba(179, 74, 42, 0.09);
 		animation: none;
 		opacity: 1;
@@ -122,7 +122,7 @@
 
 	/* Konflikt-Zustand: gleiche Signalfarbe wie der Fehler, dauerhaft sichtbar. */
 	.save-indicator[data-state='conflict'] {
-		color: var(--g-danger, #b34a2a);
+		color: var(--g-danger);
 		background: rgba(179, 74, 42, 0.09);
 		animation: none;
 		opacity: 1;
@@ -148,8 +148,8 @@
 		display: inline-block;
 		width: 10px;
 		height: 10px;
-		border: 1.5px solid var(--g-ink-4, #b0afa8);
-		border-top-color: var(--g-ink-3, #6b6b68);
+		border: 1.5px solid var(--g-ink-4);
+		border-top-color: var(--g-ink-3);
 		border-radius: 50%;
 		animation: gz-spin 600ms linear infinite;
 		flex-shrink: 0;

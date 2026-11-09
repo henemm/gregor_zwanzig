@@ -127,7 +127,7 @@
 					<span style:width="15px" style:height="15px" style:border-radius="50%"
 						style:background="var(--g-good)" style:display="inline-flex"
 						style:align-items="center" style:justify-content="center" style:flex-shrink="0">
-						<svg width="9" height="9" viewBox="0 0 12 12" fill="none" stroke="#fff" stroke-width="2.4">
+						<svg width="9" height="9" viewBox="0 0 12 12" fill="none" style="stroke: var(--g-on-accent)" stroke-width="2.4">
 							<path d="M2 6l3 3 5-6"/>
 						</svg>
 					</span>

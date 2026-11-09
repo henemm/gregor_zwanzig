@@ -122,7 +122,7 @@
 			data-testid="waypoints-save-btn"
 			onclick={handleSave}
 			disabled={saving}
-			class="rounded bg-[var(--g-accent)] px-3 py-1.5 text-sm font-medium text-white disabled:opacity-50"
+			class="rounded bg-[var(--g-accent-deep)] px-3 py-1.5 text-sm font-medium text-[var(--g-on-accent)] disabled:opacity-50"
 		>
 			{saving ? $t('trip.speichert') : $t('aktionen.speichern')}
 		</button>

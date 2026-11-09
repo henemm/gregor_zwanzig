@@ -146,7 +146,7 @@
 		border-radius: 0.375rem;
 		border: 1px solid var(--g-ink);
 		background: var(--g-ink);
-		color: #fff;
+		color: var(--g-paper);
 		font-size: 0.875rem;
 		cursor: pointer;
 	}

@@ -212,7 +212,7 @@
 		font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
 	}
 	:global(.stage-code-pill[data-tone='accent']) {
-		background: var(--g-accent);
-		color: white;
+		background: var(--g-accent-deep);
+		color: var(--g-on-accent);
 	}
 </style>

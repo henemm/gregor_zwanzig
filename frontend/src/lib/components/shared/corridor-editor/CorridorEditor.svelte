@@ -600,7 +600,7 @@
 	.ce-swatch { width: 22px; height: 8px; border-radius: 4px; display: inline-block; }
 	.ce-swatch.mark { background: var(--g-good); opacity: 0.85; }
 	.ce-good { color: var(--g-good); }
-	.ce-error { color: #8a6210; background: rgba(192, 138, 26, 0.12); border: 1px solid rgba(192, 138, 26, 0.35); border-radius: var(--g-r-2, 6px); padding: 8px 12px; font-size: 13px; margin-bottom: 12px; }
+	.ce-error { color: var(--g-warn-fg); background: var(--g-warn-bg); border: 1px solid rgba(192, 138, 26, 0.35); border-radius: var(--g-r-2, 6px); padding: 8px 12px; font-size: 13px; margin-bottom: 12px; }
 	.ce-gesperrt { color: var(--g-ink); background: var(--g-card-alt); border: 1px solid var(--g-rule); border-radius: var(--g-r-2, 6px); padding: 8px 12px; font-size: 13px; margin-bottom: 16px; }
 	.ce-table button:disabled, .ce-table input:disabled { cursor: not-allowed; }
 	.ce-table { background: var(--g-card); border: 1px solid var(--g-rule-soft); border-radius: var(--g-r-3, 10px); overflow: hidden; }
@@ -613,7 +613,7 @@
 	.ce-band-track { position: relative; height: 10px; margin: 8px 0; border-radius: 5px; background: var(--g-rule-soft); }
 	.ce-band-fill { position: absolute; top: 0; bottom: 0; border-radius: 5px; background: var(--g-ink-3); opacity: 0.4; }
 	.ce-band-fill.mark { background: var(--g-good); opacity: 0.85; }
-	.ce-handle { position: absolute; top: 50%; width: 16px; height: 16px; margin-left: -8px; margin-top: -8px; border-radius: 50%; background: #fff; border: 2px solid var(--g-accent); cursor: ew-resize; touch-action: none; z-index: 3; }
+	.ce-handle { position: absolute; top: 50%; width: 16px; height: 16px; margin-left: -8px; margin-top: -8px; border-radius: 50%; background: var(--g-card); border: 2px solid var(--g-accent); cursor: ew-resize; touch-action: none; z-index: 3; }
 	.ce-handle.mark { border-color: var(--g-good); }
 	.ce-open { position: absolute; top: -18px; font-size: 9px; color: var(--g-ink-3); letter-spacing: 0.04em; }
 	.ce-open-left { left: 2px; }

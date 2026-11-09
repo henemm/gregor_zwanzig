@@ -101,7 +101,7 @@
 		{/if}
 
 		{#if errorMsg !== null}
-			<p data-testid="premium-sms-link-error" class="text-sm text-red-600">{errorMsg}</p>
+			<p data-testid="premium-sms-link-error" class="text-sm text-[var(--g-danger-fg)]">{errorMsg}</p>
 		{/if}
 	</Card.Content>
 </Card.Root>
