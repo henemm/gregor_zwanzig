@@ -85,11 +85,39 @@ async function box(loc: Locator, was: string) {
 const mitteY = (b: { y: number; height: number }) => b.y + b.height / 2;
 const mitteX = (b: { x: number; width: number }) => b.x + b.width / 2;
 
+/**
+ * Berechnete Stile des Elements, gelesen erst, wenn sie RUHEN (#2881 Adversary F001): alle
+ * Stylesheets geladen, keine laufende CSS-Transition/Animation am Element und zwei Lesungen in
+ * Folge gleich. Der Btn blendet Farben über (`transition: background-color 120ms`); ein Lesen
+ * mitten in der Überblendung (z. B. rgba(26, 26, 24, 0.165)) ist kein Befund über das Ziel.
+ * Die Zusicherungen selbst bleiben unverändert streng (Festwerte).
+ */
 async function stil(loc: Locator) {
-	return loc.evaluate((el) => {
-		const s = getComputedStyle(el);
-		return { grund: s.backgroundColor, schrift: s.color, deckkraft: Number(s.opacity), inline: (el as HTMLElement).style.opacity };
-	});
+	type Wert = { grund: string; schrift: string; deckkraft: number; inline: string };
+	let wert: Wert | undefined;
+	let vorher = '';
+	await expect
+		.poll(
+			async () => {
+				const r = await loc.evaluate((el) => {
+					const s = getComputedStyle(el);
+					const laedt = Array.from(document.querySelectorAll<HTMLLinkElement>('link[rel="stylesheet"]')).some((l) => !l.sheet);
+					const laeuft = el.getAnimations().some((a) => a.playState === 'running');
+					return {
+						wert: { grund: s.backgroundColor, schrift: s.color, deckkraft: Number(s.opacity), inline: (el as HTMLElement).style.opacity },
+						ruhig: !laedt && !laeuft
+					};
+				});
+				const jetzt = JSON.stringify(r.wert);
+				const stabil = r.ruhig && jetzt === vorher;
+				vorher = jetzt;
+				wert = r.wert;
+				return stabil;
+			},
+			{ message: 'stil(): Stile kommen nicht zur Ruhe (Transition läuft weiter)', timeout: 10_000 }
+		)
+		.toBe(true);
+	return wert!;
 }
 
 const titel = (page: Page) => page.getByRole('heading', { level: 1 }).filter({ visible: true }).first();
@@ -498,24 +526,35 @@ async function sollFarben(page: Page): Promise<{ erledigt: string; offen: string
 }
 
 /**
- * Liest data-done und berechnete Farbe aller sichtbaren Segmente. Wartet, bis jede Farbe eine
- * der beiden Token-Farben ist (der Balken blendet 350 ms über — kein fester Schlaf).
+ * Liest data-done und berechnete Farbe aller sichtbaren Segmente, erst wenn der Balken RUHT
+ * (#2881 Adversary F001): keine laufende CSS-Transition an einem Segment (der Balken blendet
+ * 350 ms über), zwei Lesungen in Folge gleich und jede Farbe eine der beiden Ziel-Signaturen.
+ * Vorher akzeptierte die Schleife jede Ziel-Signatur schon beim ersten Lesen — auch die des
+ * offenen Zustands an einem Segment mit data-done="true", bevor die Überblendung begann.
+ * Ob die Signatur zum data-done-Zustand PASST, prüft danach `pruefeRegel` (unverändert streng);
+ * ein dauerhaft falsch gefärbtes Segment kommt hier zur Ruhe und fällt dort sofort rot.
  */
 async function lies(page: Page, kind: HubKind, g: Geraet): Promise<Segment[]> {
 	const { erledigt, offen } = await sollFarben(page);
 	let gelesen: Segment[] = [];
+	let vorher = '';
 	await expect
 		.poll(
 			async () => {
-				gelesen = await segmente(page, kind, g).evaluateAll((els) =>
-					els.map((e) => {
+				const r = await segmente(page, kind, g).evaluateAll((els) => ({
+					folge: els.map((e) => {
 						const s = getComputedStyle(e);
 						return { done: e.getAttribute('data-done'), farbe: `${s.backgroundColor}|${s.borderTopColor}` };
-					})
-				);
-				return gelesen.length === 5 && gelesen.every((s) => s.farbe === erledigt || s.farbe === offen);
+					}),
+					laeuft: els.some((e) => e.getAnimations().some((a) => a.playState === 'running'))
+				}));
+				gelesen = r.folge;
+				const jetzt = JSON.stringify(gelesen);
+				const stabil = !r.laeuft && jetzt === vorher;
+				vorher = jetzt;
+				return stabil && gelesen.length === 5 && gelesen.every((s) => s.farbe === erledigt || s.farbe === offen);
 			},
-			{ message: `${BALKEN[kind][g]}: 5 Segmente in Token-Farben (erledigt --g-accent, offen Kontur --g-ink-3) erwartet`, timeout: 10_000 }
+			{ message: `${BALKEN[kind][g]}: 5 ruhende Segmente in Token-Farben (erledigt --g-accent, offen Kontur --g-ink-3) erwartet`, timeout: 10_000 }
 		)
 		.toBe(true);
 	return gelesen;
