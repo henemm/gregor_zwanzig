@@ -15,15 +15,15 @@
 	//   aktive Tab tabindex=0), ←/→ aktiviert den Folge-Tab inkl. Fokus.
 	// - Mobile (<900px): horizontales Band + 16px-Fade + Scroll-Snap,
 	//   Trigger min-height 44px, Pill-Optik, Badges neutral.
-	// - Desktop (>=900px): Underline-Optik 1:1 wie bisheriger TripTabs-Stand
-	//   (padding 0.5rem/1rem, 0.875rem, Accent-Unterstrich); Zähler-Badges neutral
-	//   in jeder Breite (#2837 S1, ADR-0110). Eine Optik für Trip und Vergleich,
-	//   ohne Varianten-Prop (#2845, Spec rework_2845_hub_reiterleiste).
-	// - data-slot-Vertrag (segmented-item/segmented-badge) bleibt bestehen —
-	//   bestehende Test-IDs greifen weiter. Issue #2794 S3a (§7, AC-3): die Wurzel
-	//   traegt KEIN data-slot="segmented" mehr — die Segmented-Box aus app.css
-	//   (Rahmen, Rundung) gilt damit nicht fuer die Reiterleiste; der Block bleibt
-	//   fuer das Segmented-Atom (WeatherConfigDialog) bestehen.
+	// - Desktop (>=900px): ADR-0111 Punkt 1 (= ADR-0109 Punkt 7, Mockup Fassung 3):
+	//   kein Kasten, EINE Grundlinie 1px --g-rule, Reiter 13px/500 --g-ink, aktiv 600
+	//   mit 2px-Unterstrich --g-accent, Zähler Mono 10px neutral, Radius 3px. Eine
+	//   Optik für Trip und Vergleich, ohne Varianten-Prop (#2845).
+	// - Kein Kasten durch Struktur (#2794 S3a, §7 AC-3): die Wurzel trägt KEIN
+	//   data-slot="segmented", die Segmented-Box aus app.css (Rahmen, Rundung) greift
+	//   also nicht; der Block bleibt für das Segmented-Atom (WeatherConfigDialog).
+	//   Nur die Trennstriche an segmented-item hält `border: none` fern. Der
+	//   data-slot-Vertrag segmented-item/segmented-badge (Test-IDs) bleibt bestehen.
 	import { tick } from 'svelte';
 
 	export interface MTabBarItem {
@@ -105,15 +105,16 @@
 </div>
 
 <style>
-	/* Desktop (>=900px): Underline-Optik — 1:1 der bisherigen TripTabs-Regeln. */
+	/* Desktop (>=900px): ADR-0111 Punkt 1 — kein Kasten (Wurzel ohne data-slot="segmented",
+	   #2794 S3a), nur die eine Grundlinie --g-rule. */
 	.mtabbar {
 		display: flex;
-		border-bottom: 1px solid var(--g-ink-faint);
+		border-bottom: 1px solid var(--g-rule);
 	}
 	.mtabbar :global([data-slot='segmented-item']) {
 		position: relative;
 		padding: 0.5rem 1rem;
-		font-size: 0.875rem;
+		font-size: 0.8125rem;
 		font-weight: 500;
 		/* #2794 S3a: keine senkrechten Segmented-Trenner aus app.css (`:not(:last-child)`). */
 		border: none;
@@ -139,7 +140,7 @@
 		display: inline-block;
 		margin-left: 0.375rem;
 		padding: 0.125rem 0.375rem;
-		border-radius: 9999px;
+		border-radius: 3px;
 		/* #2837 S1 (ADR-0110, AC-10): Zähler neutral für Trip UND Vergleich (ink-3 auf
 		   paper-deep ≈ 4,7:1, WCAG-AA) — Standard, ohne Variante (#2845).
 		   Accent bleibt allein der Unterstrich des aktiven Reiters. */
@@ -201,6 +202,8 @@
 			font-size: 10px;
 			font-weight: 600;
 			margin-left: 0;
+			/* Handy-Pillen unverändert (ADR-0111 Punkt 1 gilt nur am Computer). */
+			border-radius: 9999px;
 		}
 		.mtabbar :global([data-slot='segmented-item']:focus-visible) {
 			outline: 2px solid var(--g-accent);

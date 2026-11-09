@@ -26,16 +26,18 @@ test.describe('Epic #133 Step 7 — Marken-CTAs auf accent', () => {
 		await expect(cta).toHaveAttribute('data-variant', 'accent');
 	});
 
-	test('AC-2: Trips-Liste "Neuer Trip"-Button hat variant="accent"', async ({ page }) => {
+	// #2881 (R4, ADR-0111 Punkt 6 / ADR-0110 „Hauptaktion = Ink"): die Anlege-Aktion ist seither
+	// auf Listen und Startseite `primary` (Ink), nicht mehr accent — Zusicherung umgedreht.
+	test('AC-2: Trips-Liste "Neuer Trip"-Button hat variant="primary" (seit #2881)', async ({ page }) => {
 		/**
 		 * GIVEN: User ist auf /trips
 		 * WHEN:  getByRole('button', { name: 'Neuer Trip' })
-		 * THEN:  data-variant="accent"
+		 * THEN:  data-variant="primary"
 		 */
 		await page.goto('/trips');
 		const cta = page.getByRole('button', { name: 'Neuer Trip' });
 		await expect(cta).toBeVisible();
-		await expect(cta).toHaveAttribute('data-variant', 'accent');
+		await expect(cta).toHaveAttribute('data-variant', 'primary');
 	});
 
 	test('AC-3: Compare "Vergleichen"-Button hat variant="accent"', async ({ page }) => {

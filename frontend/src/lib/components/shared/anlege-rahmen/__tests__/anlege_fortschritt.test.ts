@@ -16,7 +16,8 @@
 //   Segment i ist erledigt ⇔ i < done (Spec AC-1 „die ersten erledigten in Akzentfarbe").
 //   Markup: Container `<div data-testid={testidPrefix}>`; darin je Schritt ein Segment
 //   `data-testid="${testidPrefix}-segment"` mit `data-done="true|false"`; Farbe als INLINE-Stil
-//   `background: var(--g-accent)` (erledigt) bzw. `background: var(--g-rule)` (offen); Breite
+//   `background: var(--g-accent)` (erledigt) bzw. `background: transparent` + `border: 1px solid
+//   var(--g-ink-3)` (offen, seit #2881/ADR-0111 Punkt 4; vorher `var(--g-rule)`); Breite
 //   Computer `width: 24px`, Handy `flex: 1`. Zähler `<span class="mono">` ist LETZTES Kind des
 //   Containers (Regex-Auslese in compare_new_lock_engine_wirkstelle.test.ts).
 //   `aktiv` ändert kein Attribut außer optional `aria-current` (keine Klasse, kein Stil).
@@ -106,11 +107,14 @@ for (const variante of ['desktop', 'mobil'] as const) {
 				);
 			});
 
-			test(`${variante}, done=${done}: erledigt ⇒ background var(--g-accent), offen ⇒ var(--g-rule)`, async () => {
+			// #2881 (ADR-0111 Punkt 4): offen = keine Füllung, 1-px-Kontur --g-ink-3 (vorher Fläche --g-rule, 1,4:1).
+			test(`${variante}, done=${done}: erledigt ⇒ background var(--g-accent), offen ⇒ transparent mit Kontur var(--g-ink-3)`, async () => {
 				const { segmente } = await render_({ done, variante, aktiv: STEPS[Math.min(done, STEPS.length - 1)] });
 				segmente.forEach((s, i) => {
-					const soll = i < done ? 'var(--g-accent)' : 'var(--g-rule)';
+					const soll = i < done ? 'var(--g-accent)' : 'transparent';
 					assert.equal(stil(s).background, soll, `Segment ${i}: background „${stil(s).background}" (erwartet ${soll})`);
+					const kontur = i < done ? '1px solid var(--g-accent)' : '1px solid var(--g-ink-3)';
+					assert.equal(stil(s).border, kontur, `Segment ${i}: border „${stil(s).border}" (erwartet ${kontur})`);
 				});
 			});
 		}

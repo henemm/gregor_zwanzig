@@ -594,7 +594,7 @@
 							</div>
 							{#if sel}
 								<span style="width: 20px; height: 20px; border-radius: 50%; background: var(--g-accent); display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
-									<svg width="11" height="11" viewBox="0 0 12 12" fill="none" stroke="#fff" stroke-width="2.5"><path d="M2 6l3 3 5-6"/></svg>
+									<svg width="11" height="11" viewBox="0 0 12 12" fill="none" stroke="var(--g-paper)" stroke-width="2.5"><path d="M2 6l3 3 5-6"/></svg>
 								</span>
 							{/if}
 						</button>
@@ -650,7 +650,7 @@
 					onclick={() => { if (on) { wiz.pickedIds = wiz.pickedIds.filter((x) => x !== loc.id); } else { wiz.pickedIds = [...wiz.pickedIds, loc.id]; } }}
 					style="display: flex; align-items: center; gap: 14px; width: 100%; padding: 12px 0; min-height: 52px; background: {on ? 'var(--g-accent-tint)' : 'transparent'}; border: none; border-bottom: 1px solid var(--g-rule-soft); cursor: pointer; text-align: left; font-family: var(--g-font-sans);">
 					<span style="width: 22px; height: 22px; border-radius: 4px; border: 1.5px solid {on ? 'var(--g-accent)' : 'var(--g-rule)'}; background: {on ? 'var(--g-accent)' : 'transparent'}; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
-						{#if on}<svg width="11" height="11" viewBox="0 0 12 12" fill="none" stroke="#fff" stroke-width="2.5"><path d="M2 6l3 3 5-6"/></svg>{/if}
+						{#if on}<svg width="11" height="11" viewBox="0 0 12 12" fill="none" stroke="var(--g-paper)" stroke-width="2.5"><path d="M2 6l3 3 5-6"/></svg>{/if}
 					</span>
 					<div style="flex: 1; min-width: 0;">
 						<div style="font-size: 14px; font-weight: {on ? 600 : 500}; color: {on ? 'var(--g-accent-deep)' : 'var(--g-ink)'}; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{loc.name}</div>

@@ -1,4 +1,4 @@
-import { test as base, expect, type APIRequestContext, type BrowserContext, type Locator, type Page } from '@playwright/test';
+import { test as base, expect, type APIRequestContext, type APIResponse, type BrowserContext, type Locator, type Page } from '@playwright/test';
 import * as path from 'node:path';
 import { resolveE2EUser } from './testUser.ts';
 
@@ -261,6 +261,31 @@ export async function registriereBestaetigtenZweitnutzer(
 type Sitzung = Awaited<ReturnType<BrowserContext['storageState']>>;
 
 /**
+ * Seed-Trip `e2e-cockpit-test` des zustellbaren Zweitnutzers (testMitZustellbaremZiel).
+ * Herausgehoben (#2881), damit eine Spec, die den Leerzustand braucht, ihn danach
+ * unverändert wiederherstellen kann. Keine Assertions; liefert die POST-Antwort.
+ */
+export async function seedeZweitnutzerTrip(request: APIRequestContext): Promise<APIResponse> {
+	const heute = new Date().toISOString().slice(0, 10);
+	const morgen = new Date(Date.now() + 86400000).toISOString().slice(0, 10);
+	return request.post('/api/trips', {
+		data: {
+			id: 'e2e-cockpit-test',
+			name: 'E2E Cockpit Test Trip',
+			region: 'Korsika',
+			stages: [
+				{ id: 'e2e-stage-2', name: 'Heute', date: heute, waypoints: [
+					{ id: 'e2e-wp-2', name: 'Mitte', lat: 42.2, lon: 9.1, elevation_m: 1200 },
+					{ id: 'e2e-wp-3', name: 'Ziel', lat: 42.3, lon: 9.2, elevation_m: 600 }
+				] },
+				{ id: 'e2e-stage-3', name: 'Morgen', date: morgen, waypoints: [] }
+			],
+			report_config: { enabled: true, morning_time: '06:00:00', evening_time: '18:00:00' }
+		}
+	});
+}
+
+/**
  * Issue #2278 AC-10: Spec-Basis fuer Versand-Specs, deren Nutzer ein ZUSTELLBARES Ziel braucht.
  *
  * Der Sende-Dialog sperrt "Senden" ohne `mail_to` (sendTargetLabel.ts). Der Env-Admin des
@@ -290,23 +315,7 @@ export const testMitZustellbaremZiel = base.extend<object, { zustellbareSitzung:
 			}
 			const profil = await (await gastCtx.request.get('/api/auth/profile')).json();
 			expect(profil?.mail_to, 'Vorbedingung: Zweitnutzer hat ein zustellbares mail_to').toBeTruthy();
-			const heute = new Date().toISOString().slice(0, 10);
-			const morgen = new Date(Date.now() + 86400000).toISOString().slice(0, 10);
-			const trip = await gastCtx.request.post('/api/trips', {
-				data: {
-					id: 'e2e-cockpit-test',
-					name: 'E2E Cockpit Test Trip',
-					region: 'Korsika',
-					stages: [
-						{ id: 'e2e-stage-2', name: 'Heute', date: heute, waypoints: [
-							{ id: 'e2e-wp-2', name: 'Mitte', lat: 42.2, lon: 9.1, elevation_m: 1200 },
-							{ id: 'e2e-wp-3', name: 'Ziel', lat: 42.3, lon: 9.2, elevation_m: 600 }
-						] },
-						{ id: 'e2e-stage-3', name: 'Morgen', date: morgen, waypoints: [] }
-					],
-					report_config: { enabled: true, morning_time: '06:00:00', evening_time: '18:00:00' }
-				}
-			});
+			const trip = await seedeZweitnutzerTrip(gastCtx.request);
 			expect(trip.ok(), `Seed-Trip des Zweitnutzers: ${trip.status()}`).toBeTruthy();
 			await use(await gastCtx.storageState());
 			await gastCtx.request.post('/api/auth/account/delete', { data: { password: kennwort } }).catch(() => {});

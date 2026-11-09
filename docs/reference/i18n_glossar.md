@@ -4,7 +4,9 @@
 
 > Stand: 2026-11-02 (Abschluss Epic #2644, Paket A1 #2680; Erstfassung 2026-10-30 mit #2645). Regel: **ein** Begriff je Zeile,
 > neue Fachwörter zuerst hier, dann in den Katalog. Einfaches Englisch, Fachbegriffe wo sie
-> der Klarheit dienen. **Verboten:** „Tour"/*tour* (Produktbegriff ist Trip).
+> der Klarheit dienen. **Verboten:** „Tour"/*tour* (Produktbegriff ist Trip); im deutschen UI
+> außerdem „Drafts", „Alert-Trigger" und „Alerts justieren" (ADR-0111, #2881: „Entwürfe",
+> „Alarm-Auslöser", „Alarme einstellen").
 
 ## Produktbegriffe
 
@@ -15,6 +17,9 @@
 | Ortsvergleich | location comparison | Kurz in Reitern: *comparison* |
 | Briefing | briefing | bleibt |
 | Alarm | alert | Abweichungs-Alarm = *deviation alert*, Regen-/Radar-Alarm = *rain alert (radar)* |
+| Alarm-Auslöser | alert trigger | Zeile der Übersicht; nie „Alert-Trigger" im deutschen UI (#2881) |
+| Alarme einstellen | adjust alerts | nie „Alerts justieren" (#2881) |
+| Entwürfe | drafts | Listen-Zähler; nie „Drafts" im deutschen UI (#2881) |
 | amtliche Warnung | official warning | Quelle unverändert (DWD, MeteoAlarm, Météo-France, GeoSphere, SLF) |
 | Wertebereiche | target ranges | Reiter-Name |
 | Versand | delivery | Reiter-Name; „Versandkanal" = *delivery channel* |
