@@ -116,7 +116,7 @@
 		width: 44px;
 		height: 44px;
 		border-radius: 22px;
-		background: var(--g-accent);
+		background: var(--g-accent-deep);
 		color: #ffffff;
 		display: flex;
 		align-items: center;

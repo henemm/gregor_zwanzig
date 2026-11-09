@@ -162,7 +162,7 @@
 		width: 36px;
 		height: 36px;
 		border-radius: 18px;
-		background: var(--g-accent);
+		background: var(--g-accent-deep);
 		color: #ffffff;
 		display: flex;
 		align-items: center;
