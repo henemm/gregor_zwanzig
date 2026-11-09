@@ -8,7 +8,7 @@
 // AC-22 der entfernten mobilen Compare-Sammelspec; Zuordnung alt → neu:
 // Spec-Tabelle Zeilen 1-5, 36-38, 44-49.
 //
-// Kind-eigene Zweige NUR dort, wo die Spec sie ausweist: HT-8 (Größe je Art; die Zähler-Farbe ist
+// Kind-eigene Zweige NUR dort, wo die Spec sie ausweist: HT-8 (Größe je Art entfällt seit #2845; die Zähler-Farbe ist
 // seit #2837 S1 für beide Arten GLEICH und neutral, ADR-0110).
 // HT-10 (Kennzahlen-Raster der Übersicht) läuft seit Issue #2682 für BEIDE Arten —
 // die Übersicht ist ein geteilter Baustein (shared/hub-uebersicht/, Spec
@@ -228,15 +228,10 @@ for (const kind of HUB_KINDS) {
 						await reiter(page, kind, 'uebersicht').evaluate((el) => getComputedStyle(el).borderBottomColor),
 						'aktiver Reiter nicht Accent-unterstrichen'
 					).toBe('rgb(196, 90, 42)');
-					if (kind === 'vergleich') {
-						// Altfall Zuordnung Zeile 5 — 13-px-Trigger (Größe bleibt eine eigene Achse).
-						expect(await reiter(page, kind, 'uebersicht').evaluate((el) => getComputedStyle(el).fontSize)).toBe('13px');
-					} else {
-						// Altfall Zuordnung Zeile 49 — Unterline-Optik: aktiver Reiter transparent.
-						expect(
-							await reiter(page, kind, 'uebersicht').evaluate((el) => getComputedStyle(el).backgroundColor)
-						).toBe('rgba(0, 0, 0, 0)');
-					}
+					// Altfall Zuordnung Zeile 49 — Unterline-Optik: aktiver Reiter transparent (beide Arten, #2845).
+					expect(await reiter(page, kind, 'uebersicht').evaluate((el) => getComputedStyle(el).backgroundColor)).toBe(
+						'rgba(0, 0, 0, 0)'
+					);
 				}
 			} finally {
 				await hub.aufraeumen();
@@ -400,3 +395,99 @@ for (const kind of HUB_KINDS) {
 		}
 	});
 }
+
+// ─── HT-14 (#2845, Spec rework_2845_hub_reiterleiste.md AC-1/2/3/5/7/8) ──────────
+// Eine Optik: Trip gegen Vergleich gemessen (nicht gegen Festwerte), bei 1440 und 390 px.
+const GROSS = { width: 1440, height: 900 };
+
+interface LeistenMass {
+	klasse: string;
+	leisteHoehe: number;
+	reiterHoehe: number;
+	inaktiv: { fontSize: string; color: string; paddingTop: string; paddingLeft: string };
+	aktiv: { fontWeight: string; borderBottomColor: string; backgroundColor: string };
+	leiste: { borderBottomWidth: string; borderBottomColor: string };
+	seitenGrund: string;
+	inaktivAccent: string;
+}
+
+async function messeLeiste(page: Page, kind: HubKind): Promise<LeistenMass> {
+	const leiste = page.getByTestId(HUB_SEL[kind].reiterListe).locator('.mtabbar');
+	const box = await leiste.boundingBox();
+	const box0 = await alleReiter(page, kind).first().boundingBox();
+	return leiste.evaluate(
+		(el, [h, rh]) => {
+			const cs = (e: Element) => getComputedStyle(e);
+			const aktiv = el.querySelector('[data-slot="segmented-item"][data-state="active"]')!;
+			const inakt = el.querySelector('[data-slot="segmented-item"][data-state="inactive"]')!;
+			const seg = el.matches('[data-slot="segmented"]') ? el : (el.querySelector('[data-slot="segmented"]') ?? el);
+			return {
+				klasse: el.className,
+				leisteHoehe: h as number,
+				reiterHoehe: rh as number,
+				inaktiv: {
+					fontSize: cs(inakt).fontSize,
+					color: cs(inakt).color,
+					paddingTop: cs(inakt).paddingTop,
+					paddingLeft: cs(inakt).paddingLeft
+				},
+				aktiv: {
+					fontWeight: cs(aktiv).fontWeight,
+					borderBottomColor: cs(aktiv).borderBottomColor,
+					backgroundColor: cs(aktiv).backgroundColor
+				},
+				leiste: { borderBottomWidth: cs(seg).borderBottomWidth, borderBottomColor: cs(seg).borderBottomColor },
+				seitenGrund: cs(document.body).backgroundColor,
+				inaktivAccent: cs(inakt).borderBottomColor
+			};
+		},
+		[box!.height, box0!.height]
+	);
+}
+
+test.describe('HT-14: Trip und Ortsvergleich tragen dieselbe Reiterleiste', () => {
+	for (const breite of [GROSS, MOBIL]) {
+		test(`HT-14 (${breite.width} px): Trip gegen Vergleich gemessen — gleiche Optik, Höhe, Klassen`, async ({ page }) => {
+			await page.setViewportSize(breite);
+			const mass = {} as Record<HubKind, LeistenMass>;
+			for (const kind of HUB_KINDS) {
+				const hub = await seedDrei(page.request, kind);
+				try {
+					await oeffneDirekt(page, kind, hub.id, 'uebersicht');
+					await expect(alleReiter(page, kind)).toHaveCount(5);
+					mass[kind] = await messeLeiste(page, kind);
+				} finally {
+					await hub.aufraeumen();
+				}
+			}
+			const t = mass.route;
+			const v = mass.vergleich;
+			// AC-1 / AC-3: Schrift, Farbe, Polsterung gleich
+			expect(v.inaktiv, 'inaktive Reiter: Trip ≠ Vergleich').toEqual(t.inaktiv);
+			// AC-2 / AC-3: Höhe 0 px Differenz
+			expect(v.reiterHoehe, 'Reiterhöhe Trip ≠ Vergleich').toBe(t.reiterHoehe);
+			expect(v.leisteHoehe, 'Leistenhöhe Trip ≠ Vergleich').toBe(t.leisteHoehe);
+			// AC-7: dieselbe Klassenliste ohne Variante
+			expect(v.klasse, 'Klassenliste der Leiste Trip ≠ Vergleich').toBe(t.klasse);
+			if (breite === GROSS) {
+				// AC-1: Einheitsoptik des Trips: 14 px, --g-ink, 1 px Linie
+				for (const m of [t, v]) {
+					expect(m.inaktiv.fontSize).toBe('14px');
+					expect(m.inaktiv.color).toBe('rgb(26, 26, 24)');
+					expect(m.leiste.borderBottomWidth).toBe('1px');
+				}
+				expect(v.leiste, 'Linie unter der Leiste Trip ≠ Vergleich').toEqual(t.leiste);
+				// AC-5: aktiver Reiter Accent-Unterstrich, transparent, gleiche Stärke; inaktiv ohne Accent
+				for (const m of [t, v]) {
+					expect(m.aktiv.borderBottomColor).toBe('rgb(196, 90, 42)');
+					expect(m.aktiv.backgroundColor).toBe('rgba(0, 0, 0, 0)');
+					expect(m.inaktivAccent).not.toBe('rgb(196, 90, 42)');
+				}
+				expect(v.aktiv.fontWeight).toBe(t.aktiv.fontWeight);
+				// AC-8: Kontrast inaktiv ≥ 4,5:1
+				for (const m of [t, v])
+					expect(kontrast(m.inaktiv.color, m.seitenGrund), 'Kontrast inaktiver Reiter').toBeGreaterThanOrEqual(4.5);
+			}
+		});
+	}
+});

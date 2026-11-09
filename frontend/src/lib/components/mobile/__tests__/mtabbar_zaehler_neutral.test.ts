@@ -78,16 +78,14 @@ const kopfKlassen = (sel: string): string[] => {
 const spezifitaet = (sel: string): number =>
 	(sel.replace(/:global\(([^)]*)\)/g, '$1').match(/\.[a-zA-Z]/g) ?? []).length + (sel.match(/\[/g) ?? []).length;
 
-/** Kaskade für ein Badge in einem NICHT aktiven Reiter: Eigenschaft → Wert. */
-function badgeStil(size: 'md' | 'sm', mobil: boolean): Record<string, string> {
+/** Kaskade für ein Badge in einem NICHT aktiven Reiter: Eigenschaft → Wert (#2845: keine Variantenachse mehr). */
+function badgeStil(mobil: boolean): Record<string, string> {
 	const treffer: Array<{ spez: number; ordnung: number; decls: Array<[string, string]> }> = [];
 	for (const r of REGELN) {
 		if (r.media !== null && !(mobil && /max-width:\s*899px/.test(r.media))) continue;
 		for (const sel of r.selektoren) {
 			if (!istBadge(sel) || nurAktiv(sel)) continue;
-			const k = kopfKlassen(sel);
-			if (k.some((c) => c !== 'sm')) continue; // fremde Varianten-Klasse: eigener Test unten
-			if (k.includes('sm') && size !== 'sm') continue;
+			if (kopfKlassen(sel).length > 0) continue; // Varianten-Klasse: eigener Wächter-Test unten
 			treffer.push({ spez: spezifitaet(sel), ordnung: r.ordnung, decls: r.decls });
 		}
 	}
@@ -97,22 +95,13 @@ function badgeStil(size: 'md' | 'sm', mobil: boolean): Record<string, string> {
 	return stil;
 }
 
-describe('#2837 S1 AC-10 — Reiter-Zähler neutral, unabhängig von size', () => {
+describe('#2837 S1 AC-10 — Reiter-Zähler neutral (#2845: eine Optik, keine Variantenachse)', () => {
 	for (const mobil of [false, true]) {
 		const breite = mobil ? 'Mobil (≤899 px)' : 'Desktop';
-		for (const size of ['md', 'sm'] as const) {
-			const art = size === 'md' ? 'Trip (TripTabs, ohne size)' : 'Vergleich (CompareTabs, size="sm")';
-			test(`${breite}, ${art}: Badge-Grund --g-paper-deep, Schrift --g-ink-3`, () => {
-				const s = badgeStil(size, mobil);
-				assert.equal(s.background, 'var(--g-paper-deep)', `Badge-Grund ist „${s.background}" — Zähler müssen neutral sein (Mutation b)`);
-				assert.equal(s.color, 'var(--g-ink-3)', `Badge-Schrift ist „${s.color}"`);
-			});
-		}
-		test(`${breite}: Trip- und Vergleichs-Badge sehen gleich aus (Farbe, Schrift)`, () => {
-			const a = badgeStil('md', mobil);
-			const b = badgeStil('sm', mobil);
-			for (const p of ['background', 'color', 'font-family', 'font-size', 'font-weight'])
-				assert.equal(a[p], b[p], `${breite}: ${p} Trip „${a[p]}" ≠ Vergleich „${b[p]}"`);
+		test(`${breite}: Badge-Grund --g-paper-deep, Schrift --g-ink-3`, () => {
+			const s = badgeStil(mobil);
+			assert.equal(s.background, 'var(--g-paper-deep)', `Badge-Grund ist „${s.background}" — Zähler müssen neutral sein (Mutation b)`);
+			assert.equal(s.color, 'var(--g-ink-3)', `Badge-Schrift ist „${s.color}"`);
 		});
 	}
 
@@ -134,5 +123,31 @@ describe('#2837 S1 AC-10 — Reiter-Zähler neutral, unabhängig von size', () =
 			r.selektoren.some((s) => /data-state='active'/.test(s) && !istBadge(s)) && r.decls.some(([p, v]) => p === 'border-bottom-color' && v === 'var(--g-accent)')
 		);
 		assert.ok(unterstrich, 'der aktive Reiter ist nicht mehr Accent-unterstrichen');
+	});
+});
+
+describe('#2845 AC-7 — MTabBar hat keinen Schalter für die Desktop-Optik', () => {
+	test('kein Selektor der <style>-Regeln trägt eine Varianten-Klasse am .mtabbar-Kopf', () => {
+		const verstoesse: string[] = [];
+		for (const r of REGELN) for (const sel of r.selektoren) if (kopfKlassen(sel).length > 0) verstoesse.push(sel);
+		assert.deepEqual(verstoesse, [], 'Varianten-Klasse am .mtabbar-Kopf (z. B. .mtabbar.sm) — Rückfall ins Pendant');
+	});
+	test('Props deklariert kein Feld `size` (AST der Typdeklaration)', () => {
+		const felder: string[] = [];
+		// eslint-disable-next-line @typescript-eslint/no-explicit-any
+		const lauf = (n: any) => {
+			if (!n || typeof n !== 'object') return;
+			if (n.type === 'TSInterfaceDeclaration' && n.id?.name === 'Props')
+				// eslint-disable-next-line @typescript-eslint/no-explicit-any
+				for (const m of n.body.body) if (m.key?.name) felder.push(m.key.name);
+			for (const k of Object.keys(n)) {
+				const v = n[k];
+				if (Array.isArray(v)) v.forEach(lauf);
+				else if (v && typeof v === 'object') lauf(v);
+			}
+		};
+		lauf(AST.instance);
+		assert.ok(felder.includes('items'), `Props nicht gefunden (Felder: ${felder.join(',')})`);
+		assert.ok(!felder.includes('size'), 'Props deklariert noch `size`');
 	});
 });
