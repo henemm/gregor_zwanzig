@@ -19,10 +19,17 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Iterator, List, Optional, Tuple
 
+from utils.journal_rotation import rotate_if_needed
+
 # Test-Override (Path) oder None. Issue #1633: der Pfad wird bei JEDEM Zugriff
 # über `diagnostics_path()` aufgelöst, nie beim Import — eine Modul-Konstante mit
 # Initialisierer bindet vor jeder Testfixture und ignoriert `GZ_DATA_DIR`.
 DIAGNOSTICS_PATH: Optional[Path] = None
+
+# Issue #2883: groessenbasierte Rotation mit genau EINER Vorgaenger-Generation
+# (``<journal>.1``, Muster #2224). Zur Aufrufzeit gelesen, in Tests per
+# ``monkeypatch`` ueberschreibbar.
+OPENMETEO_JOURNAL_MAX_BYTES = 8 * 1024 * 1024
 
 
 def diagnostics_path() -> Path:
@@ -116,6 +123,7 @@ def log_api_call(
     try:
         path = diagnostics_path()
         path.parent.mkdir(parents=True, exist_ok=True)
+        rotate_if_needed(path, OPENMETEO_JOURNAL_MAX_BYTES)
         line = json.dumps({
             "ts": datetime.now(timezone.utc).isoformat(),
             "endpoint": endpoint,

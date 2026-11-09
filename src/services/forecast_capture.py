@@ -163,8 +163,8 @@ def _anhaengen(zeile: str, jetzt: datetime) -> None:
 
 def _melde(outcome: str, jetzt: datetime) -> None:
     """Ausfall-Sichtbarkeit nach ADR-0018, gedrosselt auf hoechstens eine
-    Meldung je 15 Minuten — `enrichment_calls.jsonl` bleibt unrotiert und wird
-    bei JEDEM Status-Abruf komplett gescannt."""
+    Meldung je 15 Minuten — `enrichment_calls.jsonl` (rotiert ab 8 MiB nach
+    `.1`, #2883) wird samt `.1` bei JEDEM Status-Abruf komplett gescannt."""
     global _letzte_health
     with _lock:
         if _letzte_health is not None and (
