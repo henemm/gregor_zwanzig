@@ -338,3 +338,4 @@ Je AC steht die konkrete Prüfung in der `Test:`-Zeile oben. Die Schichten:
 ## Changelog
 
 - 2026-11-08: v1.0 Entwurf (Phase 3), Grundlage Analyse `docs/context/feature-2794-s3a-reiter-wetter.md` und PO-Entscheidungen P1 bis P3
+- 2026-11-09: Teil-PR 2 detailliert in `feat_2794_s3a_teil2_leiste.md`; AC-36-Prämisse „heute 20 px“ per Staging-Messung korrigiert (Desktop-Hub bereits 38 px, Akzeptanz unverändert).
