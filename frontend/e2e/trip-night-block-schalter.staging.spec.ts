@@ -12,8 +12,10 @@ import { createTestComparePreset, createTestLocation, createTestTrip } from './h
 const SCHALTER = 'wm-night-block-toggle';
 
 async function oeffneWetterMetriken(page: Page, tripId: string) {
-	await page.goto(`/trips/${tripId}?tab=wetter-metriken`);
-	const tabBtn = page.getByTestId('trip-detail-tab-wetter-metriken');
+	// #2794 S3a (Spec feat_2794_s3a_teil2_leiste.md): Abschnitt nachtblock und die
+	// Kürzel-Legende der Kanal-Karte stehen im Reiter Zustellung.
+	await page.goto(`/trips/${tripId}?tab=zustellung`);
+	const tabBtn = page.getByTestId('trip-detail-tab-zustellung');
 	await expect(tabBtn).toBeVisible({ timeout: 15000 });
 	await tabBtn.click();
 	const tab = page.getByTestId('weather-metrics-tab');
@@ -42,11 +44,11 @@ test.describe('Nacht-Stundentabelle-Schalter (#1721, Staging)', () => {
 
 		const loc = await createTestLocation(request, { name: '1721-ac1-ort' });
 		const preset = await createTestComparePreset(request, { name: '1721-ac1-vergleich', locationIds: [loc.id] });
-		await page.goto(`/compare/${preset.id}?tab=wetter-metriken`);
-		await page.getByTestId('compare-detail-tab-wetter-metriken').click();
-		const panel = page.getByTestId('compare-detail-panel-wetter-metriken');
+		await page.goto(`/compare/${preset.id}?tab=zustellung`);
+		await page.getByTestId('compare-detail-tab-zustellung').click();
+		const panel = page.getByTestId('compare-detail-panel-zustellung');
 		await expect(panel).toBeVisible({ timeout: 15000 });
-		await expect(panel.getByTestId('weather-metrics-tab')).toBeVisible({ timeout: 15000 });
+		await expect(panel.getByTestId('weather-metrics-tab-vergleich')).toBeVisible({ timeout: 15000 });
 		await expect(
 			panel.getByTestId(SCHALTER),
 			'AC-1: der Schalter darf im Ortsvergleich nicht gerendert werden'

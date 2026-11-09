@@ -317,7 +317,7 @@ export function anlegenFehlerRendern(): string {
 
 export type AnlegeFall = { tab: string; mobil: boolean; name?: string; startDate?: string; stageNames?: string[]; besucht?: boolean };
 export function anlegenRendern(f: AnlegeFall): string {
-	const stateOverride = { activeTab: f.tab, isMobileViewport: f.mobil, name: f.name, startDate: f.startDate, stageNames: f.stageNames, wtVisited: f.besucht, wbVisited: f.besucht, alVisited: f.besucht };
+	const stateOverride = { activeTab: f.tab, isMobileViewport: f.mobil, name: f.name, startDate: f.startDate, stageNames: f.stageNames, wtVisited: f.besucht, zuVisited: f.besucht };
 	return html(TripNewEditor, { stateOverride });
 }
 export const ANLEGE_FAELLE: Record<string, AnlegeFall[]> = {
@@ -336,8 +336,8 @@ export const ANLEGE_FAELLE: Record<string, AnlegeFall[]> = {
 	anlegen_weiter: [
 		{ tab: 'wegpunkte', mobil: false, name: 'GR20 Nord 2026', startDate: '2026-07-01', stageNames: ['Calenzana'] },
 		{ tab: 'wegpunkte', mobil: true, name: 'GR20 Nord 2026', startDate: '2026-07-01', stageNames: ['Calenzana'] },
-		{ tab: 'alarme', mobil: false, name: 'GR20 Nord 2026', startDate: '2026-07-01', stageNames: ['Calenzana'], besucht: true },
-		{ tab: 'alarme', mobil: true, name: 'GR20 Nord 2026', startDate: '2026-07-01', stageNames: ['Calenzana'] }
+		{ tab: 'zustellung', mobil: false, name: 'GR20 Nord 2026', startDate: '2026-07-01', stageNames: ['Calenzana'], besucht: true },
+		{ tab: 'zustellung', mobil: true, name: 'GR20 Nord 2026', startDate: '2026-07-01', stageNames: ['Calenzana'] }
 	]
 };
 

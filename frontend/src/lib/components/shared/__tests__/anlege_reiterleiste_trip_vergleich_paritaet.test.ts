@@ -69,8 +69,8 @@ function compareReiter(): ReiterDef[] {
 		eintraege.push({ label, lockHint: title?.startsWith('Gesperrt — ') ? title.slice('Gesperrt — '.length) : null });
 	}
 	assert.ok(
-		eintraege.length >= 5,
-		`Messaufbau kaputt: erwartet mind. 5 Compare-Reiter (Vergleich, Orte, Wetter-Metriken, Wertebereiche, Alarme), gelesen ${eintraege.length}.`
+		eintraege.length >= 4,
+		`Messaufbau kaputt: erwartet mind. 4 Compare-Reiter (Vergleich, Orte, Wetter, Zustellung), gelesen ${eintraege.length}.`
 	);
 	return eintraege;
 }
@@ -79,26 +79,28 @@ function compareReiter(): ReiterDef[] {
 function tripReiter(): ReiterDef[] {
 	const html = renderTripNew({ activeTab: 'route', isMobileViewport: false });
 	const tabs = desktopTabs(html);
-	assert.ok(tabs.length >= 6, `Messaufbau kaputt: nur ${tabs.length} Desktop-Reiter gelesen.`);
+	assert.ok(tabs.length >= 5, `Messaufbau kaputt: nur ${tabs.length} Desktop-Reiter gelesen.`);
 	return tabs.map((t) => ({
 		label: t.label,
 		lockHint: t.title?.startsWith('Gesperrt — ') ? t.title.slice('Gesperrt — '.length) : null
 	}));
 }
 
-/** Alles ab (einschliesslich) „Wetter-Metriken". */
+// Issue #2794 S3a (Spec feat_2794_s3a_teil2_leiste.md AC-6): die gemeinsame Folge ab „Wetter"
+// lautet Wetter · Zustellung (Wertebereiche gehen in Wetter auf, Alarme in Zustellung).
+/** Alles ab (einschliesslich) „Wetter". */
 function abWetterMetriken(reiter: ReiterDef[]): ReiterDef[] {
-	const i = reiter.findIndex((r) => r.label === 'Wetter-Metriken');
-	assert.notEqual(i, -1, `Messaufbau kaputt: kein Reiter „Wetter-Metriken" in ${reiter.map((r) => r.label).join(' · ')}`);
+	const i = reiter.findIndex((r) => r.label === 'Wetter');
+	assert.notEqual(i, -1, `Messaufbau kaputt: kein Reiter „Wetter" in ${reiter.map((r) => r.label).join(' · ')}`);
 	return reiter.slice(i);
 }
 
-const GEMEINSAME_FOLGE = ['Wetter-Metriken', 'Wertebereiche', 'Alarme'];
+const GEMEINSAME_FOLGE = ['Wetter', 'Zustellung'];
 
 describe('AC-1: /trips/new — vollständige Reiterleiste', () => {
 	const ZIEL = ['Route', 'Etappen & GPX', 'Wegpunkte prüfen', ...GEMEINSAME_FOLGE];
 
-	test('Desktop: Route · Etappen & GPX · Wegpunkte prüfen · Wetter-Metriken · Wertebereiche · Alarme (kein Versand)', () => {
+	test('Desktop: Route · Etappen & GPX · Wegpunkte prüfen · Wetter · Zustellung (kein Versand)', () => {
 		assert.deepEqual(
 			tripReiter().map((r) => r.label),
 			ZIEL,
@@ -108,31 +110,31 @@ describe('AC-1: /trips/new — vollständige Reiterleiste', () => {
 
 	test('Mobil (390 px-Zweig): dieselbe Folge', () => {
 		const html = renderTripNew({ activeTab: 'route', isMobileViewport: true });
-		assert.deepEqual(mobilTabLabels(html).slice(0, ZIEL.length + 1), ZIEL, 'AC-1/AC-10 FAIL: Mobil-Reiterfolge stimmt nicht (#1743: kein Reiter nach Alarme).');
+		assert.deepEqual(mobilTabLabels(html).slice(0, ZIEL.length + 1), ZIEL, 'AC-1/AC-10 FAIL: Mobil-Reiterfolge stimmt nicht (kein Reiter nach Zustellung).');
 	});
 
-	test('„Briefing-Zeitplan" und „Alerts" kommen als Reiter nicht mehr vor (Desktop + Mobil)', () => {
+	test('„Briefing-Zeitplan", „Alerts" und die entfallenen Schritte kommen als Reiter nicht mehr vor (Desktop + Mobil)', () => {
 		const desktop = tripReiter().map((r) => r.label);
 		const mobil = mobilTabLabels(renderTripNew({ activeTab: 'route', isMobileViewport: true }));
-		for (const alt of ['Briefing-Zeitplan', 'Zeitplan', 'Alerts', 'Versand']) {
+		for (const alt of ['Briefing-Zeitplan', 'Zeitplan', 'Alerts', 'Versand', 'Wetter-Metriken', 'Wertebereiche', 'Alarme']) {
 			assert.ok(!desktop.includes(alt), `AC-1 FAIL: Desktop-Reiter „${alt}" existiert noch.`);
 			assert.ok(!mobil.includes(alt), `AC-1 FAIL: Mobil-Reiter „${alt}" existiert noch.`);
 		}
 	});
 });
 
-describe('AC-2: Lock-Hinweis des Trip-Reiters Alarme; Versand ist kein Reiter mehr (#1743)', () => {
-	test('Alarme: „erst Wertebereiche öffnen"; kein Reiter „Versand"', () => {
+describe('AC-2: Lock-Hinweis des Trip-Reiters Zustellung; Versand ist kein Reiter mehr (#1743)', () => {
+	test('Zustellung: „erst Wetter öffnen"; kein Reiter „Versand"', () => {
 		const reiter = tripReiter();
-		const alarme = reiter.find((r) => r.label === 'Alarme');
-		assert.ok(alarme, 'AC-2 FAIL: kein Trip-Reiter „Alarme".');
-		assert.equal(alarme!.lockHint, 'erst Wertebereiche öffnen', 'AC-2 FAIL: falscher Lock-Hinweis am Reiter Alarme.');
+		const zustellung = reiter.find((r) => r.label === 'Zustellung');
+		assert.ok(zustellung, 'AC-2 FAIL: kein Trip-Reiter „Zustellung".');
+		assert.equal(zustellung!.lockHint, 'erst Wetter öffnen', 'AC-2 FAIL: falscher Lock-Hinweis am Reiter Zustellung.');
 		assert.ok(!reiter.some((r) => r.label === 'Versand'), '#1743 AC-19 FAIL: Trip-Reiter „Versand" existiert noch.');
 	});
 });
 
 describe('AC-3/AC-9: Parität Trip ↔ Ortsvergleich ab Wetter-Metriken', () => {
-	test('Compare-Referenz: Wetter-Metriken · Wertebereiche · Alarme (AC-9, #1743 ohne Versand)', () => {
+	test('Compare-Referenz: Wetter · Zustellung (AC-9, #2794)', () => {
 		assert.deepEqual(
 			abWetterMetriken(compareReiter()).map((r) => r.label),
 			GEMEINSAME_FOLGE,
@@ -160,7 +162,7 @@ describe('AC-3/AC-9: Parität Trip ↔ Ortsvergleich ab Wetter-Metriken', () => 
 		assert.deepEqual(
 			trip.slice(1).map((r) => [r.label, r.lockHint]),
 			vergleich.slice(1).map((r) => [r.label, r.lockHint]),
-			'AC-3 FAIL: Lock-Hinweise von Wertebereiche/Alarme weichen zwischen Trip und Ortsvergleich ab.'
+			'AC-3 FAIL: Lock-Hinweis von Zustellung weicht zwischen Trip und Ortsvergleich ab.'
 		);
 	});
 });

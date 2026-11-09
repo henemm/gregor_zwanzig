@@ -157,8 +157,8 @@ describe('F016 Trip-Liste: Pausieren/Fortsetzen/Senden/Loeschen wirken', () => {
 		const { gotos, aktion } = await tripsSeite();
 		for (const id of ['alarms', 'weather', 'edit']) aktion(id);
 		assert.deepEqual(gotos, [
-			'/trips/t1?tab=alarme',
-			'/trips/t1?tab=wetter-metriken',
+			'/trips/t1?tab=zustellung', // #2794 S3a
+			'/trips/t1?tab=wetter',
 			'/trips/t1'
 		]);
 	});

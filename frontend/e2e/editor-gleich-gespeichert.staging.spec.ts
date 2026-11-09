@@ -176,11 +176,13 @@ test.describe('Issue #2422 S2a: Editor-Anzeige = gespeicherter Stand (Golden C, 
 			'erwartung_golden_c.json',
 		);
 
-		await page.goto(`/trips/${TRIP_ID}?tab=wetter-metriken`);
-		await page.getByTestId('trip-detail-tab-wetter-metriken').click();
+		await page.goto(`/trips/${TRIP_ID}?tab=zustellung`);
+		await page.getByTestId('trip-detail-tab-zustellung').click();
 		const tab = page.getByTestId('weather-metrics-tab');
 		await expect(tab).toBeVisible({ timeout: 10_000 });
-		await expect(tab.getByTestId('wm2-grundauswahl').locator('.toggle-btn').first()).toBeVisible({
+		// #2794 S3a: die Kanal-Karte steht im Reiter Zustellung — Katalog-Ende an ihren
+		// Zeilen abwarten (die Grundauswahl liegt im Reiter Wetter).
+		await expect(tab.locator('[data-testid="wm2-reihenfolge-row"]').first()).toBeVisible({
 			timeout: 10_000,
 		});
 
@@ -198,8 +200,8 @@ test.describe('Issue #2422 S2a: Editor-Anzeige = gespeicherter Stand (Golden C, 
 		request,
 	}) => {
 		await createGoldenCTrip(request, TRIP_ID);
-		await page.goto(`/trips/${TRIP_ID}?tab=wetter-metriken`);
-		await page.getByTestId('trip-detail-tab-wetter-metriken').click();
+		await page.goto(`/trips/${TRIP_ID}?tab=zustellung`);
+		await page.getByTestId('trip-detail-tab-zustellung').click();
 		const tab = page.getByTestId('weather-metrics-tab');
 		await expect(tab).toBeVisible({ timeout: 10_000 });
 
@@ -253,8 +255,8 @@ test.describe('Issue #2422 S2a: Editor-Anzeige = gespeicherter Stand (Golden C, 
 		request,
 	}) => {
 		await createGoldenCTrip(request, TRIP_ID);
-		await page.goto(`/trips/${TRIP_ID}?tab=wetter-metriken`);
-		await page.getByTestId('trip-detail-tab-wetter-metriken').click();
+		await page.goto(`/trips/${TRIP_ID}?tab=zustellung`);
+		await page.getByTestId('trip-detail-tab-zustellung').click();
 		const tab = page.getByTestId('weather-metrics-tab');
 		await expect(tab).toBeVisible({ timeout: 10_000 });
 

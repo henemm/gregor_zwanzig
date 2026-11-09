@@ -481,12 +481,13 @@ describe('AC-5: Trip-Status wortgleich zum Status-Badge im Trip-Kopf', () => {
 
 // ── Versand-Karte (AC-8) ────────────────────────────────────────────────────
 
-describe('AC-8: Versand-Karte mit Sprung in Wetter-Metriken › Versand', () => {
+// #2794 S3a (Spec feat_2794_s3a_teil2_leiste.md AC-1/AC-2): der Versand-Abschnitt liegt im Reiter Zustellung.
+describe('AC-8: Versand-Karte mit Sprung in Zustellung › Versand', () => {
 	test('route Entwurf ⇒ „Noch nicht geplant"; testid hub-uebersicht-versand-edit', async () => {
 		const m = await route(trip({}, { stages: [{ id: 's1', name: 'E1', waypoints: [] }] }), 'draft');
 		assert.equal(m.versandKarte?.titelLang, 'Noch nicht geplant');
 		assert.equal(m.versandKarte.testid, 'hub-uebersicht-versand-edit');
-		assert.deepEqual(m.versandKarte.sprungziel, { tab: 'wetter-metriken', anchor: 'versand' });
+		assert.deepEqual(m.versandKarte.sprungziel, { tab: 'zustellung', anchor: 'versand' });
 	});
 
 	test('route geplant ⇒ Karte nennt die Briefing-Zeiten, nicht „Noch nicht geplant"', async () => {
@@ -500,7 +501,7 @@ describe('AC-8: Versand-Karte mit Sprung in Wetter-Metriken › Versand', () => 
 		assert.equal(m.versandKarte.titelLang, 'Noch nicht geplant');
 		assert.equal(m.versandKarte.titelKurz, 'Nicht geplant');
 		assert.equal(m.versandKarte.testid, 'compare-hub-versand-edit');
-		assert.deepEqual(m.versandKarte.sprungziel, { tab: 'wetter-metriken', anchor: 'versand' });
+		assert.deepEqual(m.versandKarte.sprungziel, { tab: 'zustellung', anchor: 'versand' });
 	});
 
 	test('vergleich aktiv ⇒ Titel = presetBriefingTimesLabel', async () => {

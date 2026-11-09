@@ -106,8 +106,8 @@
 		if (key === 'pause') void togglePause(t, true);
 		else if (key === 'resume') void togglePause(t, false);
 		else if (key === 'send') sendTarget = t;
-		else if (key === 'alarms') goto(`/trips/${t.id}?tab=alarme`);
-		else if (key === 'weather') goto(`/trips/${t.id}?tab=wetter-metriken`);
+		else if (key === 'alarms') goto(`/trips/${t.id}?tab=zustellung`);
+		else if (key === 'weather') goto(`/trips/${t.id}?tab=wetter`);
 		else if (key === 'edit') goto(`/trips/${t.id}`);
 		else if (key === 'continue-setup') goto(`/trips/${t.id}`);
 		else if (key === 'delete') deleteTarget = t;

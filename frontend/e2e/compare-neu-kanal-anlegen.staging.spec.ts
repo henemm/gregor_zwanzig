@@ -77,26 +77,39 @@ async function oeffneAnlegeUebersicht(
 	// bedienbar. Ohne diese Zusicherung bliebe ein Klick auf den gesperrten
 	// Knopf wirkungslos und der Fehlschlag traefe erst spaeter eine
 	// Metrik-Zusicherung — mit falscher Ursache.
-	const weiter = page.getByTestId('compare-editor-continue-wetter-metriken');
+	// #2794 S3a (Spec feat_2794_s3a_teil2_leiste.md): Orte -> Wetter (Grundauswahl) ->
+	// Zustellung (Kanal-Karte). Beide Schritte werden ueber ihre Weiter-Knoepfe besucht.
+	const weiter = page.getByTestId('compare-editor-continue-wetter');
 	await expect(
-		weiter, 'Freischaltung: "Wetter-Metriken" bleibt trotz zwei gewaehlter Orte gesperrt'
+		weiter, 'Freischaltung: "Wetter" bleibt trotz zwei gewaehlter Orte gesperrt'
 	).toBeEnabled({ timeout: 15_000 });
 	await weiter.click();
-	await expect(page.getByTestId('compare-editor-tab-wetter-metriken')).toHaveAttribute('data-active', 'true');
+	await expect(page.getByTestId('compare-editor-tab-wetter')).toHaveAttribute('data-active', 'true');
+	const wetterPanel = page.locator('[data-testid="weather-metrics-tab-vergleich"]:visible').first();
+	await expect(wetterPanel).toBeVisible({ timeout: 20_000 });
+	await wetterPanel.getByTestId('weather-metrics-vergleich-list').waitFor({ state: 'attached', timeout: 25_000 });
+
+	await page.getByTestId('compare-editor-continue-zustellung').click();
+	await expect(page.getByTestId('compare-editor-tab-zustellung')).toHaveAttribute('data-active', 'true');
 
 	const panel = page.locator('[data-testid="weather-metrics-tab-vergleich"]:visible').first();
 	await expect(panel).toBeVisible({ timeout: 20_000 });
-	const grundauswahl = panel.getByTestId('weather-metrics-vergleich-list');
-	await grundauswahl.waitFor({ state: 'attached', timeout: 25_000 });
 	const layout = panel.locator('[data-testid="layout-tab"][data-context="vergleich"]');
 	await layout.waitFor({ state: 'attached', timeout: 25_000 });
 	const reihenfolge = layout.getByTestId('weather-metrics-vergleich-reihenfolge');
 	await reihenfolge.waitFor({ state: 'attached', timeout: 25_000 });
-	return { page, panel, layout, reihenfolge, grundauswahl };
+	const grundauswahl = page
+		.locator('[data-testid="weather-metrics-tab-vergleich"]:visible')
+		.getByTestId('weather-metrics-vergleich-list');
+	const reiter = async (ziel: 'wetter' | 'zustellung') => {
+		await page.getByTestId(`compare-editor-tab-${ziel}`).click();
+		await expect(page.getByTestId(`compare-editor-tab-${ziel}`)).toHaveAttribute('data-active', 'true');
+	};
+	return { page, panel, layout, reihenfolge, grundauswahl, reiter };
 }
 
 /**
- * Rest der Kette (Wertebereiche -> Alarme) und „Briefing aktivieren". Einen
+ * „Briefing aktivieren" (seit #2794 S3a ist Zustellung der letzte, bereits besuchte Schritt). Einen
  * eigenen Versand-Reiter gibt es seit #1743 nicht mehr (Versand steckt im
  * WetterMetrikenVersandPanel des Reiters Wetter-Metriken). Jeder Reiterbesuch
  * schaltet den naechsten frei (*Visited-Flags, anlegeLockEngine.ts
@@ -105,12 +118,10 @@ async function oeffneAnlegeUebersicht(
  * des angelegten Vergleichs und traegt ihn zur Bereinigung ein.
  */
 async function briefingAktivieren(page: Page): Promise<string> {
-	await page.getByTestId('compare-editor-continue-wertebereiche').click();
-	await page.getByTestId('compare-editor-continue-alarme').click();
-
+	// #2794 S3a: der letzte Schritt Zustellung ist bereits besucht (oeffneAnlegeUebersicht).
 	const aktivieren = page.getByTestId('compare-editor-activate');
 	await expect(
-		aktivieren, 'Freischaltung: "Briefing aktivieren" bleibt nach dem Alarme-Besuch gesperrt'
+		aktivieren, 'Freischaltung: "Briefing aktivieren" bleibt nach dem Zustellung-Besuch gesperrt'
 	).toBeEnabled({ timeout: 20_000 });
 
 	const antwort = page.waitForResponse(

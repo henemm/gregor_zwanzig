@@ -91,11 +91,13 @@ describe('AC-1: Desktop-Trip-Liste — Zeilenmenue aus der EINEN Aktionsquelle',
 });
 
 describe('AC-8: "Alarme" und "Wetter-Metriken" navigieren auf den Hub-Reiter; Alert-Konfiguration existiert nicht', () => {
-	test('Dispatch fuehrt auf ?tab=alarme und ?tab=wetter-metriken', () => {
+	// #2794 S3a (Spec feat_2794_s3a_teil2_leiste.md AC-1): Alarme liegen im Reiter Zustellung,
+	// Wetter-Metriken im Reiter Wetter.
+	test('Dispatch fuehrt auf ?tab=zustellung und ?tab=wetter', () => {
 		const r = erreichbar(ast, wert(attribut(listenTabelle(), 'onAction')));
 		assert.ok(r.literale.has('alarms') && r.literale.has('weather'));
-		assert.ok(hatLiteral(r.literale, /tab=alarme/), 'kein Sprung auf ?tab=alarme');
-		assert.ok(hatLiteral(r.literale, /tab=wetter-metriken/), 'kein Sprung auf ?tab=wetter-metriken');
+		assert.ok(hatLiteral(r.literale, /tab=zustellung\b/), 'kein Sprung auf ?tab=zustellung');
+		assert.ok(hatLiteral(r.literale, /tab=wetter\b(?!-)/), 'kein Sprung auf ?tab=wetter');
 	});
 	test('kein Alert-Konfigurations-Dialog mehr (openReportConfig / saveReportConfig / ReportConfigDialog)', () => {
 		const alle = ids(ast.instance);

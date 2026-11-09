@@ -111,8 +111,8 @@ test.describe('Issue #1719 S3 AC-6: Ortsvergleich nennt überall die echte SMS-Z
 	}) => {
 		const id = await createComparePreset(page, Date.now());
 		await openCompareDetail(page, id);
-		// Issue #1743: Versand-Inhalt steht im Reiter Wetter-Metriken (Abschnitt #versand).
-		await page.getByTestId('compare-detail-tab-wetter-metriken').click();
+		// Issue #1743 / #2794 S3a: Versand-Inhalt steht im Reiter Zustellung (Abschnitt #versand).
+		await page.getByTestId('compare-detail-tab-zustellung').click();
 		const panel = page.getByTestId('versand-abschnitt');
 		await expect(panel).toBeVisible({ timeout: 10_000 });
 
@@ -157,8 +157,9 @@ test.describe('Issue #1719 S3 AC-6: Ortsvergleich nennt überall die echte SMS-Z
 	}) => {
 		const id = await createComparePreset(page, Date.now() + 1);
 		await openCompareDetail(page, id);
-		await page.getByTestId('compare-detail-tab-alarme').click();
-		const panel = page.getByTestId('compare-detail-panel-alarme');
+		// #2794 S3a: die Alarme stehen im Reiter Zustellung.
+		await page.getByTestId('compare-detail-tab-zustellung').click();
+		const panel = page.getByTestId('compare-detail-panel-zustellung');
 		await expect(panel).toBeVisible({ timeout: 10_000 });
 
 		const smsRow = panel.getByTestId('alert-channel-row-sms');
@@ -190,7 +191,7 @@ test.describe('Issue #2438 AC-2: Ortsvergleich zeigt den Abwahl-Hinweis je Kanal
 			await page.setViewportSize({ width: 1280, height: 900 });
 			const id = await createComparePreset(page, Date.now());
 			await openCompareDetail(page, id);
-			await page.getByTestId('compare-detail-tab-wetter-metriken').click();
+			await page.getByTestId('compare-detail-tab-zustellung').click(); // #2794 S3a: Kanal-Karte
 			await page.getByTestId(`channel-tab-${kanal}`).click();
 			const hinweis = page
 				.getByTestId('weather-metrics-vergleich-reihenfolge')

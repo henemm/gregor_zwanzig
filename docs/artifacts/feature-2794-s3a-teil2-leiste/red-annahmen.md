@@ -1,0 +1,59 @@
+# TDD RED — feature-2794-s3a-teil2-leiste (#2794 S3a, Teil-PR 2 „Leiste und Umleitung")
+
+Stand: 2026-11-09, gemessen gegen den Worktree nach Rebase auf `origin/main` mit PR #2871 (Hub-Reiterleiste) und PR #2872 (S2b AlarmeTab). Spec: `docs/specs/modules/feat_2794_s3a_teil2_leiste.md`.
+
+Lauf: `cd frontend && npm test -- <sechs Dateien unten>` → Ausgabe `test-red-output.txt` (140 Tests, 36 grün, 104 rot). Keine rote Meldung stammt aus Syntax-, Import- oder Laufzeitfehlern im Test (Suche nach `ERR_MODULE_NOT_FOUND|SyntaxError|ReferenceError|TypeError|Cannot find`: 0 Treffer). Jede rote Meldung nennt eine fehlende Kennung, Funktion, Datei oder einen falschen Wert.
+
+Hinweis Worktree: `frontend/node_modules` fehlte; angelegt als Symlink auf `/home/hem/gregor_zwanzig/frontend/node_modules` (wie in anderen Worktrees, gitignored).
+
+## Neue Testdateien
+
+| Datei | AC | grün | rot | Grund rot |
+|---|---|---|---|---|
+| `frontend/src/lib/components/shared/__tests__/s3a2794_reiter_definition.test.ts` | AC-1, AC-2, AC-6, i18n | 1 | 14 | Definition führt noch `wetter-metriken · wertebereiche · alarme`; Schlüssel `aktionen.reiter.wetter/zustellung` fehlen in DE/EN |
+| `frontend/src/lib/components/shared/__tests__/s3a2794_umleitung_alt_kennungen.test.ts` | AC-5 | 16 | 46 | `LEGACY` zeigt auf Alt-Ziele; `wetter`/`zustellung` unbekannt (→ Übersicht); Anker `#versand` landet nicht in `zustellung` |
+| `frontend/src/lib/components/shared/weather-metrics-tab/__tests__/s3a2794_bereich_filter.test.ts` | §2 (AC-7/AC-2.T2) | 2 | 8 | zweiter Parameter `bereich` wird ignoriert; `layout_kanal`/`nachtblock` fehlen |
+| `frontend/src/lib/components/shared/__tests__/s3a2794_flush_hydration_kette.test.ts` | AC-2.T3, AC-6 (Logik) | 4 | 13 | Hubs öffnen `wetter`/`zustellung` nicht (Vorbedingung rot), Liste ohne neue Kennungen, `canFinish`-Standard `alarme`, `PROGRESS_STEPS` alt, `infoboxKey` ohne neue Kennungen |
+| `frontend/src/lib/components/shared/__tests__/s3a2794_speicher_owner_waechter.test.ts` | AC-2.T1 | 9 | 0 | **Regressionswächter**, heute grün und muss grün bleiben |
+| `frontend/src/lib/components/shared/__tests__/s3a2794_eine_wmt_instanz.test.ts` | AC-2.T2, AC-2.T4, §3, §4, §5 | 4 | 23 | kein `ZustellungTab`, WMT-Träger hängen an `wetter-metriken`, kein Prop `bereich`, Versand-Abschnitt ohne bereich-Weiche, CorridorEditor/WMT-Hülle zeigen nicht im Schritt `wetter` |
+| Helfer (kein Test): `frontend/src/lib/components/shared/__tests__/s3a2794Ast.ts` | | | | AST-Weichen-Analyse (Einbettung → IfBlock-Zweige, Exklusivität, Attribute, `style:display`) |
+| E2E: `frontend/e2e/s3a2794-hub-reiter-wetter-zustellung.spec.ts` | AC-1, AC-2, AC-3, AC-36, AC-4, AC-5, AC-6 | | | siehe unten |
+
+## Heute grüne Tests (bewusst)
+
+- **Regressionswächter AC-2.T1** (9): Owner `'wetter-metriken'`, `'wetter-metriken-report-config'` (WeatherMetricsTab, weatherMetricsCompareSave), `'versand'` (BriefingScheduleTab, versandVergleichSpeicherung), `'alarme'` (AlarmeTab, Stand nach #2872 geprüft), `'wertebereiche'` (CorridorEditor, CorridorEditorMobile) am Speicher-Aufruf; Gegenprobe: kein Owner `wetter`/`zustellung`.
+- **Regressionswächter AC-2.T4** (1): `defaultsBereit` in TripNewEditor wird gegen Belegungen ausgewertet (gesperrt solange `wertebereicheVorbelegt=false`).
+- **Unveränderte Umleitungen** (16): `overview/preview/vorschau → uebersicht`, `stages → Punkte-Reiter`, je Kern und echter Hub, Trip und Vergleich.
+- **Gegenproben/Positivkontrollen** (8): Wechsel aus Übersicht flusht nicht (2); Liste `SELBST_SPEICHERNDE_VERGLEICH_REITER` führt nur bestehende Reiter (heute konsistent, nach Umbau weiter Pflicht); Prüfstand misst Hydration (`?tab=alarme` hydriert Alarme heute und nach der Umleitung); Hub-WMT-Träger paarweise exklusiv (2) und TripNewEditor zwei dauerhafte WMT-Träger Desktop XOR Mobil (heute schon so, Struktur muss bleiben); `aktionen.weather/alarms` bleiben im Katalog; ohne `bereich` = alles (2).
+
+## Annahmen (bitte in /50 beachten)
+
+1. **`alerts` und `idealwerte` → `wetter`** (heute → `wertebereiche`, das nach `wetter` umgeleitet wird). `weather → wetter`, `briefings → zustellung#versand`.
+2. **Anker gewinnt:** gemessen am echten Hub mit `window.location.hash = '#versand'` und `?tab=wetter-metriken` → `activeTab = 'zustellung'`, letzte Adresszeilen-Schreibung `?tab=zustellung#versand`. Die Signatur ist frei (z. B. drittes Argument `hash` an `resolveTab` oder Auswertung im Hub); der Kern-Test prüft nur `resolveTab(kind,'versand'|'briefings')` mit Anker. Die Bereinigung muss weiter in einem `$effect` stehen, der `initialTab` nennt (Prüfstand-Grenze wie `hub_reiter_gemeinsame_aufloesung.test.ts`).
+3. **`bereich`-Mengen:** `reihenfolge` wird zu `layout_kanal` umbenannt (exakte Mengen; `reihenfolge` darf in keinem Bereich mehr vorkommen). Route: wetter = grundauswahl, tagesfenster, sms_schwellen, official_alerts; zustellung = layout_kanal, ausblick, report_config, nachtblock. Vergleich: wetter = grundauswahl, tagesfenster, official_alerts; zustellung = layout_kanal, stundenverlauf, ausblick. Ohne zweiten Parameter = alles.
+4. **Hydration Vergleich:** Reiter `wetter` hydriert Metrik-Auswahl, Layout UND Wertebereiche (nur lesende Ansicht darunter); Reiter `zustellung` hydriert Versand, Alarme, Metrik-Auswahl und Layout (WMT bereich=zustellung). Flags `wetterMetrikenHydrated`, `layoutHydrated`, `idealwerteHydrated`, `versandHydrated`, `alarmeHydrated` behalten ihre Namen (Prüfstand liest sie).
+5. **Hubs** betten `ZustellungTab` genau einmal unter `activeTab/tab.value === 'zustellung'` mit `context="route"|"vergleich"` (Literal) ein; der Wetter-Träger trägt `bereich="wetter"` als Literal; `CorridorEditor`/`CorridorEditorMobile` stehen nur unter `wetter`.
+6. **ZustellungTab** (`shared/zustellung-tab/ZustellungTab.svelte`): Prop `context` per `$props()`-Destrukturierung; WMT-Träger (Panel oder WMT) mit Literal `bereich="zustellung"`; `<section id="versand">` entweder selbst oder über das Panel mit `bereich="zustellung"`; `AlarmeTab` oder Hülle `AlarmeScheduleTab`.
+7. **Panel:** `<section id="versand">` steht unter einer Weiche, die `bereich` nennt; WMT bekommt `bereich` als explizites Attribut. **WeatherMetricsTab:** Prop `bereich`, Aufruf `weatherMetricsTabSections(context, bereich)`.
+8. **TripNewEditor:** genau zwei WMT-Träger (Desktop `!isMobileViewport`, Mobil `isMobileViewport`), keiner unter einer `activeTab`-Weiche; `bereich={…}` ist ein Ausdruck, der im Schritt `wetter` → `'wetter'`, `zustellung` → `'zustellung'` ergibt; `style:display`-Hülle sichtbar in `wetter` und `zustellung`, sonst `'none'`. CorridorEditor (createMode) zweimal, dauerhaft, `onVorbelegungFertig`, sichtbar nur in `wetter`. Ausgewertet gegen das echte Instanz-Skript mit `stateOverride.activeTab` — eine Zwischenvariable (`$derived`) ist erlaubt.
+9. **CompareNewEditor:** WMT-Träger nur unter `wetter`/`zustellung`, paarweise exklusiv, Literal-`bereich` je Schritt; Alarme im Schritt `zustellung` (direkt `AlarmeTab` oder über `ZustellungTab`).
+10. **Anlege-Logik:** `canFinish` Standard-`letzterId='zustellung'`; Trip `PROGRESS_STEPS = [route, etappen, wetter, zustellung]`; `canSave` frei genau mit `zustellung`; `infoboxKey(ctx, 'wetter'|'zustellung')` liefert je Kontext einen Schlüssel.
+11. **Sperr-Hinweise:** Schritt `wetter` behält den kind-eigenen Hinweis (`ANLEGE_SCHWANZ_HINWEIS` umgeschlüsselt), `zustellung` nennt „Wetter".
+12. **Label Etappen-Reiter** bleibt „Etappen & Wegpunkte" (Spec ändert ihn nicht); getestet werden nur Kennungen sowie die Labels Wetter/Zustellung.
+
+## E2E-Spec (Playwright)
+
+`frontend/e2e/s3a2794-hub-reiter-wetter-zustellung.spec.ts`: AC-1/AC-2 DE (Leiste, Badge 3) und EN (Zweitnutzer über `testMitZustellbaremZiel`, Sprache per `PUT /api/auth/profile`, zurück auf `de` im finally), AC-3 (eine sichtbare Unterlinie in der Reiterliste ohne Panels, aktiv 600/2px/Akzent, Badge-Grund `--g-paper-deep`, Mono, 10 px, kein `data-slot="segmented"`), AC-36 (h1 30–38 px bei 1024 und 1280 px, beide Kontexte, Regressionswächter), AC-4 (Mobil 390 px, vier Reiter antippbar, ≥ 44 px, Panel wechselt), AC-5 (fünf Alt-Kennungen plus `?tab=wetter-metriken#versand` je Trip und Vergleich, Adresszeile neu, Anker erhalten), AC-6 (Schrittnamen `/trips/new`, `/compare/new`). Vergleichs-Seeds legen eigene Orte an (staging-tauglich). Badge-Form (Kreis ja/nein) ist bewusst nicht festgeschrieben, nur Farbe/Schrift; Form → Fresh-Eyes gegen `current/soll/*.png`.
+
+**Staging-Lauf (nur AC-1 DE und AC-5)** gegen https://staging.gregor20.henemm.com mit Zugangsdaten aus `/home/hem/gregor_zwanzig_staging/.env`: Setup grün, 4 Tests rot aus dem richtigen Grund (`e2e-staging-red-ac1-ac5.txt`): AC-1 Trip/Vergleich empfangen `[…, wetter-metriken, wertebereiche, alarme]` statt `[…, wetter, zustellung]`; AC-5 Trip/Vergleich `?tab=wetter-metriken`: Reiter `wetter` nicht vorhanden. Die Playwright-Konfiguration lag dafür nur im Scratchpad (eine neue Config-Datei im Repo blockt das Edit-Gate in Phase 5). Für /e2e-verify wird eine Repo-Config `playwright.2794-s3a2.staging.config.ts` (Setup `fix-1895-modus-rueckbau.staging.setup.ts`, testMatch auf die Spec) gebraucht — in /50 anlegen. EN-, AC-3-, AC-36-, AC-4-, AC-6-Fälle sind geschrieben, aber nicht gelaufen.
+
+## Bestehende Tests, die die Implementierung umstellen muss (Auswahl, Spec §9)
+
+- Kern: `shared/__tests__/reiterfolge_eine_quelle.test.ts` (5 Reiter, Schwanz ab `wetter-metriken`), `subscription_tabs_resolve.test.ts`, `hub_reiter_gemeinsame_aufloesung.test.ts` (Alt-Tabelle, Fünf-Reiter-Liste, Flush-Fälle, Panel-Weichen-doc-compliance), `vergleich_flush_guard_neue_kennungen.test.ts` (exakte Liste), `versand_sprung_auf_wetter_metriken.test.ts`, `wetter_metriken_versand_panel_*.test.ts`, `anlege_lock_engine*.test.ts`, `anlege_reiter_kennungen_gleich.test.ts`, `anlege_reiterleiste_trip_vergleich_paritaet.test.ts`, `anlege_weiter_knopf_zielt_auf_existierenden_reiter.test.ts`, `infobox_nur_beim_anlegen.test.ts`, `reiter_sprunglinks_nur_neue_kennungen.test.ts`, `weatherMetricsTabSharing.test.ts` und `compare/__tests__/compare_layout_tab_dissolution.test.ts` (Abschnittsname `reihenfolge` → `layout_kanal`), `compare/__tests__/compare_wetter_metriken_wertprops.test.ts` (Mount-Zahlen je Datei, Wertprops-Bündel muss auch an `ZustellungTab`/neuen Mounts gelten), `trip-new/__tests__/tripNewLogic.test.ts`, `trip_new_alarme_reiter.test.ts`, `trip_new_wertebereiche_reiter.test.ts` (Schritt entfällt → löschen statt umbiegen), `trip_new_mail_inhalt_karte_genau_eine_instanz.test.ts` (Schritt `wetter-metriken`), `trip_new_reiterleiste_besuchs_flags.test.ts`, `compare-new/__tests__/compare_anlege_freischaltung.test.ts`, `molecules/begriff_erklaerung_infobox_bausteine.test.ts`. Insgesamt 56 Kern-Testdateien nennen `'wetter-metriken'|'wertebereiche'|'alarme'` (darunter reine Owner-Nutzungen, die unberührt bleiben).
+- Goldens f9/f10/f3/f7, `tests/unit/test_e2e_compare_paritaet_waechter.py`.
+- E2E: `hub-tab-bar.spec.ts` (5 Reiter, `[data-slot="segmented-badge"]`, `messeLeiste` über `segmented-item`), `hub-reiter-alt-kennungen-umleitung.spec.ts` (Alt-Kennungen bleiben Eingabe, Ziele neu), `hub-kopf-paritaet-compare-trip.spec.ts`, `anlege-rahmen-paritaet.spec.ts`, `aktionsmodell-durchklick.spec.ts`, `hub-list-menu.spec.ts`, `etappen-strip-sortieren.spec.ts` u. a. (laut Analyse 82 E2E-Dateien).
+
+## Übergabe an /50-implement
+- Playwright-Staging-Config im Repo anlegen: `frontend/playwright.2794-s3a2.staging.config.ts` (Setup `fix-1895-modus-rueckbau.staging.setup.ts`, testMatch auf `e2e/s3a2794-hub-reiter-wetter-zustellung.spec.ts`). Vorlage: `docs/artifacts/feature-2794-s3a-teil2-leiste/playwright.s3a2794.config.vorlage.ts` (Phase-5-Edit-Gate blockte neue Config-Datei).
+- E2E-Fälle EN, AC-3, AC-36, AC-4, AC-6 geschrieben, noch nicht gelaufen.
+- Beide Vorarbeiten (#2871, #2872) sind gemergt, der Worktree ist darauf rebased.

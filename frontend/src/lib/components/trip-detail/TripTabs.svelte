@@ -7,9 +7,10 @@
 	import HubUebersicht from '$lib/components/shared/hub-uebersicht/HubUebersicht.svelte';
 	// Issue #2880: EINE Reiterfläche (Rand 28/40/60) für Übersicht und Etappen, wie im Ortsvergleich.
 	import HubReiterflaeche from '$lib/components/shared/hub-reiterflaeche/HubReiterflaeche.svelte';
-	import AlarmeScheduleTab from './AlarmeScheduleTab.svelte';
 	// Issue #1743: Wetter-Metriken und Versand in EINEM geteilten Baustein (Anker #versand).
 	import WetterMetrikenVersandPanel from '$lib/components/shared/WetterMetrikenVersandPanel.svelte';
+	// Issue #2794 S3a: Uebergangsreiter Zustellung (Versand, Alarme, Zustellungs-Bloecke).
+	import ZustellungTab from '$lib/components/shared/zustellung-tab/ZustellungTab.svelte';
 	// Issue #1231: CorridorEditor(Mobile) ersetzt AlertsTab auf Desktop + Mobile.
 	// Import von AlertsTab entfernt (Slice 5) — Datei bleibt vorerst bestehen
 	// (Aufraeumen inkl. AlertMetricLevelTable/-Row ist Slice-6-Thema, s. Spec).
@@ -23,12 +24,12 @@
 	import { t, locale, type MessageKey } from '$lib/i18n';
 
 	// Issue #2287: Badge-Schluessel = Reiter-Kennungen (gemeinsame Tabelle).
+	// Issue #2794 S3a: Badge Wertebereiche entfaellt; Etappen-Badge bleibt.
 	interface Badges {
 		uebersicht?: number;
 		etappen?: number;
-		'wetter-metriken'?: number;
-		wertebereiche?: number;
-		alarme?: number;
+		wetter?: number;
+		zustellung?: number;
 	}
 
 	interface Props {
@@ -57,14 +58,13 @@
 	// Issue #2284 S2: die Aktivität wird im Hub-Kopf geändert — hier reaktiv lesen.
 	const activityType = $derived(trip?.activity);
 
-	// Issue #302 — Auto-Badges aus Trip ableiten (Etappenanzahl + enabled Alerts).
+	// Issue #302 — Auto-Badges aus Trip ableiten (Etappenanzahl).
 	// Explizite Werte in der `badges` Prop ueberschreiben die Auto-Ableitung.
 	const badges = $derived<Badges>({
 		etappen: badgesProp.etappen ?? trip?.stages?.length ?? 0,
-		wertebereiche: badgesProp.wertebereiche ?? (trip?.alert_rules ?? []).filter((r) => r.enabled).length,
 		uebersicht: badgesProp.uebersicht,
-		'wetter-metriken': badgesProp['wetter-metriken'],
-		alarme: badgesProp.alarme
+		wetter: badgesProp.wetter,
+		zustellung: badgesProp.zustellung
 	});
 
 	// Issue #529 — Kanonische Tab-Namen aus nav-map.jsx (Single Source of Truth):
@@ -107,14 +107,20 @@
 	// einem direkten Link mit `#versand` (beim Laden gelesen). Jeder Reiterwechsel ohne
 	// Anker setzt ihn auf 0 — ein spaeterer Remount des Bausteins scrollt nicht.
 	// svelte-ignore state_referenced_locally -- bewusst nur der Startwert.
-	let versandSprung = $state(versandSprungStart(resolveTab('trip', initialTab)));
+	let versandSprung = $state(versandSprungStart(resolveTab('trip', initialTab, ankerDerAdresse())));
+
+	/** #2794 S3a: Anker der geladenen Adresse (`#versand` gewinnt gegen die Reiterkennung). */
+	function ankerDerAdresse(): string | null {
+		return typeof window === 'undefined' ? null : (window.location?.hash ?? null);
+	}
 
 	// Issue #2287 (E4): Alt-/kind-fremde Kennung → Adresszeile EINMAL per replaceState
 	// auf die neue Kennung; unbekannte Kennung → Parameter `tab` entfernt. Danach ist
 	// die Kennung neu → kein erneutes Umschreiben (keine Schleife).
-	// Issue #1743: `versand`/`briefings` → `?tab=wetter-metriken#versand`.
+	// Issue #1743/#2794: `versand`/`briefings` (und jede Kennung mit `#versand`) →
+	// `?tab=zustellung#versand`.
 	$effect(() => {
-		const r = resolveTab('trip', initialTab);
+		const r = resolveTab('trip', initialTab, ankerDerAdresse());
 		activeTab = r.tab;
 		if (typeof window === 'undefined') return;
 		const ziel = bereinigteTabAdresse(window.location.href, r);
@@ -162,8 +168,10 @@
 		// Issue #1743: kein eigener Reiter `versand` mehr — der Versand-Abschnitt gehoert
 		// zu `wetter-metriken`; ein Fremd-Besitzer-Slot wurde schon beim schedule()
 		// gesendet, der Flush hier sendet den verbliebenen (beide Besitzer).
+		// Issue #2794 S3a: Reiter `wetter` (Metrik-Auswahl + Wertebereiche) und `zustellung`
+		// (Versand, Alarme, Zustellungs-Bloecke) ersetzen wetter-metriken/wertebereiche/alarme.
 		if (
-			(activeTab === 'wertebereiche' || activeTab === 'wetter-metriken' || activeTab === 'alarme' || activeTab === 'etappen') &&
+			(activeTab === 'wetter' || activeTab === 'zustellung' || activeTab === 'etappen') &&
 			value !== activeTab &&
 			saveController?.hasPending
 		) {
@@ -205,16 +213,17 @@
 					{#if trip}
 						<EditStagesSection bind:stages={localStages} tripId={trip.id} showSave={true} {onTripUpdate} {saveController} activityType={activityType} />
 					{/if}
-				{:else if tab.value === 'wetter-metriken' && trip}
-					<WetterMetrikenVersandPanel context="route" {trip} {onTripUpdate} {saveController} onJump={handleValueChange} {versandSprung} />
-				{:else if tab.value === 'wertebereiche' && trip}
+				{:else if tab.value === 'wetter' && trip}
+					<!-- Issue #2794 S3a §4: Metrik-Oberflaeche ohne Zustellungs-Bloecke, darunter
+					     die Wertebereiche-Ansicht (bis Teil-PR 3). -->
+					<WetterMetrikenVersandPanel context="route" bereich="wetter" {trip} {onTripUpdate} {saveController} onJump={handleValueChange} />
 					{#if isMobileViewport}
 						<CorridorEditorMobile context="route" {trip} {onTripUpdate} {saveController} />
 					{:else}
 						<CorridorEditor {trip} {onTripUpdate} {saveController} />
 					{/if}
-				{:else if tab.value === 'alarme' && trip}
-					<AlarmeScheduleTab {trip} {onTripUpdate} {saveController} {metricsCatalog} />
+				{:else if tab.value === 'zustellung' && trip}
+					<ZustellungTab context="route" {trip} {onTripUpdate} {saveController} onJump={handleValueChange} {versandSprung} {metricsCatalog} />
 				{:else}
 					<p class="p-4 text-sm">{PLACEHOLDERS[tab.value] ? $t(PLACEHOLDERS[tab.value]) : ''}</p>
 				{/if}

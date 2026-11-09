@@ -1,0 +1,3531 @@
+
+> frontend@0.0.1 test
+> node --import ./test-lib-loader.mjs --experimental-strip-types --experimental-test-module-mocks --test src/lib/components/shared/__tests__/s3a2794_reiter_definition.test.ts src/lib/components/shared/__tests__/s3a2794_umleitung_alt_kennungen.test.ts src/lib/components/shared/weather-metrics-tab/__tests__/s3a2794_bereich_filter.test.ts src/lib/components/shared/__tests__/s3a2794_flush_hydration_kette.test.ts src/lib/components/shared/__tests__/s3a2794_speicher_owner_waechter.test.ts src/lib/components/shared/__tests__/s3a2794_eine_wmt_instanz.test.ts
+
+TAP version 13
+# Subtest: AC-2.T2 Hub trip: je Reiter höchstens eine WMT-Instanz
+    # Subtest: s3a2794_t2_hub_trip_wmt_traeger_nur_unter_wetter_oder_zustellung
+    not ok 1 - s3a2794_t2_hub_trip_wmt_traeger_nur_unter_wetter_oder_zustellung
+      ---
+      duration_ms: 47.6644
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/shimmering-doodling-ritchie/frontend/src/lib/components/shared/__tests__/s3a2794_eine_wmt_instanz.test.ts:101:3'
+      failureType: 'testCodeFailure'
+      error: `AC-2.T2: WetterMetrikenVersandPanel@207 [dann:activeTab === tab.value > sonst:tab.value === 'uebersicht' && trip > sonst:tab.value === 'etappen' > dann:tab.value === 'wetter-metriken' && trip] hängt nicht (nur) am Reiter wetter/zustellung (Reiter: ["wetter-metriken"])`
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: true
+      actual: false
+      operator: '=='
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/shimmering-doodling-ritchie/frontend/src/lib/components/shared/__tests__/s3a2794_eine_wmt_instanz.test.ts:106:12)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Test.start (node:internal/test_runner/test:944:17)
+        node:internal/test_runner/test:1440:71
+        node:internal/per_context/primordials:466:82
+        new Promise (<anonymous>)
+        new SafePromise (node:internal/per_context/primordials:435:3)
+        node:internal/per_context/primordials:466:9
+        Array.map (<anonymous>)
+      ...
+    # Subtest: s3a2794_t2_hub_trip_wmt_traeger_paarweise_exklusiv
+    ok 2 - s3a2794_t2_hub_trip_wmt_traeger_paarweise_exklusiv
+      ---
+      duration_ms: 26.866374
+      type: 'test'
+      ...
+    # Subtest: s3a2794_t2_hub_trip_reiter_wetter_zeigt_wmt_mit_bereich_wetter
+    not ok 3 - s3a2794_t2_hub_trip_reiter_wetter_zeigt_wmt_mit_bereich_wetter
+      ---
+      duration_ms: 20.189935
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/shimmering-doodling-ritchie/frontend/src/lib/components/shared/__tests__/s3a2794_eine_wmt_instanz.test.ts:118:3'
+      failureType: 'testCodeFailure'
+      error: 'Reiter wetter ohne Metrik-Oberfläche'
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: true
+      actual: false
+      operator: '=='
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/shimmering-doodling-ritchie/frontend/src/lib/components/shared/__tests__/s3a2794_eine_wmt_instanz.test.ts:121:11)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: s3a2794_t2_hub_trip_reiter_zustellung_bettet_zustellungtab_mit_context_route
+    not ok 4 - s3a2794_t2_hub_trip_reiter_zustellung_bettet_zustellungtab_mit_context_route
+      ---
+      duration_ms: 22.142546
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/shimmering-doodling-ritchie/frontend/src/lib/components/shared/__tests__/s3a2794_eine_wmt_instanz.test.ts:125:3'
+      failureType: 'testCodeFailure'
+      error: |-
+        erwartet genau eine ZustellungTab-Einbettung, gefunden 0
+        
+        0 !== 1
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 1
+      actual: 0
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/shimmering-doodling-ritchie/frontend/src/lib/components/shared/__tests__/s3a2794_eine_wmt_instanz.test.ts:128:11)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: s3a2794_t2_hub_trip_reiter_wetter_zeigt_wertebereiche_lesend_darunter
+    not ok 5 - s3a2794_t2_hub_trip_reiter_wetter_zeigt_wertebereiche_lesend_darunter
+      ---
+      duration_ms: 24.092851
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/shimmering-doodling-ritchie/frontend/src/lib/components/shared/__tests__/s3a2794_eine_wmt_instanz.test.ts:133:3'
+      failureType: 'testCodeFailure'
+      error: |-
+        CorridorEditorMobile@210 [dann:activeTab === tab.value > sonst:tab.value === 'uebersicht' && trip > sonst:tab.value === 'etappen' > sonst:tab.value === 'wetter-metriken' && trip > dann:tab.value === 'wertebereiche' && trip > dann:isMobileViewport]: Wertebereiche-Ansicht nicht unter dem Reiter wetter
+        + actual - expected
+        
+          [
+        +   'wertebereiche'
+        -   'wetter'
+          ]
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected:
+        0: 'wetter'
+      actual:
+        0: 'wertebereiche'
+      operator: 'deepStrictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/shimmering-doodling-ritchie/frontend/src/lib/components/shared/__tests__/s3a2794_eine_wmt_instanz.test.ts:138:12)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    1..5
+not ok 1 - AC-2.T2 Hub trip: je Reiter höchstens eine WMT-Instanz
+  ---
+  duration_ms: 141.970398
+  type: 'suite'
+  location: '/home/hem/gregor_zwanzig/.claude/worktrees/shimmering-doodling-ritchie/frontend/src/lib/components/shared/__tests__/s3a2794_eine_wmt_instanz.test.ts:100:2'
+  failureType: 'subtestsFailed'
+  error: '4 subtests failed'
+  code: 'ERR_TEST_FAILURE'
+  ...
+# Subtest: AC-2.T2 Hub vergleich: je Reiter höchstens eine WMT-Instanz
+    # Subtest: s3a2794_t2_hub_vergleich_wmt_traeger_nur_unter_wetter_oder_zustellung
+    not ok 1 - s3a2794_t2_hub_vergleich_wmt_traeger_nur_unter_wetter_oder_zustellung
+      ---
+      duration_ms: 60.285947
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/shimmering-doodling-ritchie/frontend/src/lib/components/shared/__tests__/s3a2794_eine_wmt_instanz.test.ts:101:3'
+      failureType: 'testCodeFailure'
+      error: `AC-2.T2: WetterMetrikenVersandPanel@788 [dann:activeTab === 'wetter-metriken' > dann:wetterMetrikenLayoutHydrationBereit && versandHydrated] hängt nicht (nur) am Reiter wetter/zustellung (Reiter: ["wetter-metriken"])`
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: true
+      actual: false
+      operator: '=='
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/shimmering-doodling-ritchie/frontend/src/lib/components/shared/__tests__/s3a2794_eine_wmt_instanz.test.ts:106:12)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Test.start (node:internal/test_runner/test:944:17)
+        node:internal/test_runner/test:1440:71
+        node:internal/per_context/primordials:466:82
+        new Promise (<anonymous>)
+        new SafePromise (node:internal/per_context/primordials:435:3)
+        node:internal/per_context/primordials:466:9
+        Array.map (<anonymous>)
+      ...
+    # Subtest: s3a2794_t2_hub_vergleich_wmt_traeger_paarweise_exklusiv
+    ok 2 - s3a2794_t2_hub_vergleich_wmt_traeger_paarweise_exklusiv
+      ---
+      duration_ms: 69.965068
+      type: 'test'
+      ...
+    # Subtest: s3a2794_t2_hub_vergleich_reiter_wetter_zeigt_wmt_mit_bereich_wetter
+    not ok 3 - s3a2794_t2_hub_vergleich_reiter_wetter_zeigt_wmt_mit_bereich_wetter
+      ---
+      duration_ms: 58.264752
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/shimmering-doodling-ritchie/frontend/src/lib/components/shared/__tests__/s3a2794_eine_wmt_instanz.test.ts:118:3'
+      failureType: 'testCodeFailure'
+      error: 'Reiter wetter ohne Metrik-Oberfläche'
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: true
+      actual: false
+      operator: '=='
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/shimmering-doodling-ritchie/frontend/src/lib/components/shared/__tests__/s3a2794_eine_wmt_instanz.test.ts:121:11)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: s3a2794_t2_hub_vergleich_reiter_zustellung_bettet_zustellungtab_mit_context_vergleich
+    not ok 4 - s3a2794_t2_hub_vergleich_reiter_zustellung_bettet_zustellungtab_mit_context_vergleich
+      ---
+      duration_ms: 40.694301
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/shimmering-doodling-ritchie/frontend/src/lib/components/shared/__tests__/s3a2794_eine_wmt_instanz.test.ts:125:3'
+      failureType: 'testCodeFailure'
+      error: |-
+        erwartet genau eine ZustellungTab-Einbettung, gefunden 0
+        
+        0 !== 1
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 1
+      actual: 0
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/shimmering-doodling-ritchie/frontend/src/lib/components/shared/__tests__/s3a2794_eine_wmt_instanz.test.ts:128:11)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: s3a2794_t2_hub_vergleich_reiter_wetter_zeigt_wertebereiche_lesend_darunter
+    not ok 5 - s3a2794_t2_hub_vergleich_reiter_wetter_zeigt_wertebereiche_lesend_darunter
+      ---
+      duration_ms: 39.60898
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/shimmering-doodling-ritchie/frontend/src/lib/components/shared/__tests__/s3a2794_eine_wmt_instanz.test.ts:133:3'
+      failureType: 'testCodeFailure'
+      error: |-
+        CorridorEditorMobile@812 [dann:activeTab === 'wertebereiche' > dann:idealwerteHydrated > dann:isMobileViewport]: Wertebereiche-Ansicht nicht unter dem Reiter wetter
+        + actual - expected
+        
+          [
+        +   'wertebereiche'
+        -   'wetter'
+          ]
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected:
+        0: 'wetter'
+      actual:
+        0: 'wertebereiche'
+      operator: 'deepStrictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/shimmering-doodling-ritchie/frontend/src/lib/components/shared/__tests__/s3a2794_eine_wmt_instanz.test.ts:138:12)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    1..5
+not ok 2 - AC-2.T2 Hub vergleich: je Reiter höchstens eine WMT-Instanz
+  ---
+  duration_ms: 269.303327
+  type: 'suite'
+  location: '/home/hem/gregor_zwanzig/.claude/worktrees/shimmering-doodling-ritchie/frontend/src/lib/components/shared/__tests__/s3a2794_eine_wmt_instanz.test.ts:100:2'
+  failureType: 'subtestsFailed'
+  error: '4 subtests failed'
+  code: 'ERR_TEST_FAILURE'
+  ...
+# Subtest: §3: shared/zustellung-tab/ZustellungTab.svelte — Übergangsreiter
+    # Subtest: s3a2794_zustellung_baustein_existiert_mit_context_prop
+    not ok 1 - s3a2794_zustellung_baustein_existiert_mit_context_prop
+      ---
+      duration_ms: 0.370541
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/shimmering-doodling-ritchie/frontend/src/lib/components/shared/__tests__/s3a2794_eine_wmt_instanz.test.ts:147:2'
+      failureType: 'testCodeFailure'
+      error: 'shared/zustellung-tab/ZustellungTab.svelte fehlt'
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: true
+      actual: false
+      operator: '=='
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/shimmering-doodling-ritchie/frontend/src/lib/components/shared/__tests__/s3a2794_eine_wmt_instanz.test.ts:148:10)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Test.start (node:internal/test_runner/test:944:17)
+        node:internal/test_runner/test:1440:71
+        node:internal/per_context/primordials:466:82
+        new Promise (<anonymous>)
+        new SafePromise (node:internal/per_context/primordials:435:3)
+        node:internal/per_context/primordials:466:9
+        Array.map (<anonymous>)
+      ...
+    # Subtest: s3a2794_zustellung_genau_ein_wmt_traeger_mit_bereich_zustellung
+    not ok 2 - s3a2794_zustellung_genau_ein_wmt_traeger_mit_bereich_zustellung
+      ---
+      duration_ms: 0.1831
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/shimmering-doodling-ritchie/frontend/src/lib/components/shared/__tests__/s3a2794_eine_wmt_instanz.test.ts:153:2'
+      failureType: 'testCodeFailure'
+      error: 'ZustellungTab.svelte fehlt'
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: true
+      actual: false
+      operator: '=='
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/shimmering-doodling-ritchie/frontend/src/lib/components/shared/__tests__/s3a2794_eine_wmt_instanz.test.ts:154:10)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Promise.all (index 0)
+        async Suite.run (node:internal/test_runner/test:1442:7)
+        async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: s3a2794_zustellung_enthaelt_section_versand
+    not ok 3 - s3a2794_zustellung_enthaelt_section_versand
+      ---
+      duration_ms: 0.148451
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/shimmering-doodling-ritchie/frontend/src/lib/components/shared/__tests__/s3a2794_eine_wmt_instanz.test.ts:161:2'
+      failureType: 'testCodeFailure'
+      error: 'ZustellungTab.svelte fehlt'
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: true
+      actual: false
+      operator: '=='
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/shimmering-doodling-ritchie/frontend/src/lib/components/shared/__tests__/s3a2794_eine_wmt_instanz.test.ts:162:10)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: s3a2794_zustellung_enthaelt_alarmetab_vollstaendig
+    not ok 4 - s3a2794_zustellung_enthaelt_alarmetab_vollstaendig
+      ---
+      duration_ms: 0.131611
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/shimmering-doodling-ritchie/frontend/src/lib/components/shared/__tests__/s3a2794_eine_wmt_instanz.test.ts:176:2'
+      failureType: 'testCodeFailure'
+      error: 'ZustellungTab.svelte fehlt'
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: true
+      actual: false
+      operator: '=='
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/shimmering-doodling-ritchie/frontend/src/lib/components/shared/__tests__/s3a2794_eine_wmt_instanz.test.ts:177:10)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    1..4
+not ok 3 - §3: shared/zustellung-tab/ZustellungTab.svelte — Übergangsreiter
+  ---
+  duration_ms: 1.012901
+  type: 'suite'
+  location: '/home/hem/gregor_zwanzig/.claude/worktrees/shimmering-doodling-ritchie/frontend/src/lib/components/shared/__tests__/s3a2794_eine_wmt_instanz.test.ts:146:1'
+  failureType: 'subtestsFailed'
+  error: '4 subtests failed'
+  code: 'ERR_TEST_FAILURE'
+  ...
+# Subtest: §2: Panel und WeatherMetricsTab tragen den bereich-Filter
+    # Subtest: s3a2794_panel_versand_abschnitt_nur_bei_bereich_zustellung
+    not ok 1 - s3a2794_panel_versand_abschnitt_nur_bei_bereich_zustellung
+      ---
+      duration_ms: 2.391753
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/shimmering-doodling-ritchie/frontend/src/lib/components/shared/__tests__/s3a2794_eine_wmt_instanz.test.ts:185:2'
+      failureType: 'testCodeFailure'
+      error: 'Panel: <section id="versand"> steht nicht unter einer bereich-Weiche — Versand erschiene auch im Reiter wetter'
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: true
+      actual: false
+      operator: '=='
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/shimmering-doodling-ritchie/frontend/src/lib/components/shared/__tests__/s3a2794_eine_wmt_instanz.test.ts:189:11)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Test.start (node:internal/test_runner/test:944:17)
+        node:internal/test_runner/test:1440:71
+        node:internal/per_context/primordials:466:82
+        new Promise (<anonymous>)
+        new SafePromise (node:internal/per_context/primordials:435:3)
+        node:internal/per_context/primordials:466:9
+        Array.map (<anonymous>)
+      ...
+    # Subtest: s3a2794_panel_reicht_bereich_an_wmt_durch
+    not ok 2 - s3a2794_panel_reicht_bereich_an_wmt_durch
+      ---
+      duration_ms: 1.808512
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/shimmering-doodling-ritchie/frontend/src/lib/components/shared/__tests__/s3a2794_eine_wmt_instanz.test.ts:196:2'
+      failureType: 'testCodeFailure'
+      error: 'Panel: WeatherMetricsTab bekommt kein bereich-Attribut (Streuung ohne eigenes bereich: true)'
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: true
+      actual: false
+      operator: '=='
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/shimmering-doodling-ritchie/frontend/src/lib/components/shared/__tests__/s3a2794_eine_wmt_instanz.test.ts:203:10)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Promise.all (index 0)
+        async Suite.run (node:internal/test_runner/test:1442:7)
+        async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: s3a2794_wmt_leitet_abschnitte_aus_context_und_bereich_ab
+    not ok 3 - s3a2794_wmt_leitet_abschnitte_aus_context_und_bereich_ab
+      ---
+      duration_ms: 129.706933
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/shimmering-doodling-ritchie/frontend/src/lib/components/shared/__tests__/s3a2794_eine_wmt_instanz.test.ts:206:2'
+      failureType: 'testCodeFailure'
+      error: 'WeatherMetricsTab: keine Prop bereich'
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: true
+      actual: false
+      operator: '=='
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/shimmering-doodling-ritchie/frontend/src/lib/components/shared/__tests__/s3a2794_eine_wmt_instanz.test.ts:208:10)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    1..3
+not ok 4 - §2: Panel und WeatherMetricsTab tragen den bereich-Filter
+  ---
+  duration_ms: 134.047598
+  type: 'suite'
+  location: '/home/hem/gregor_zwanzig/.claude/worktrees/shimmering-doodling-ritchie/frontend/src/lib/components/shared/__tests__/s3a2794_eine_wmt_instanz.test.ts:184:1'
+  failureType: 'subtestsFailed'
+  error: '3 subtests failed'
+  code: 'ERR_TEST_FAILURE'
+  ...
+# Subtest: AC-2.T2 Trip-Anlegen (TripNewEditor): eine dauerhafte WMT-Instanz je Viewport-Zweig
+    # Subtest: s3a2794_t2_trip_neu_genau_zwei_wmt_traeger_desktop_xor_mobil_dauerhaft
+    ok 1 - s3a2794_t2_trip_neu_genau_zwei_wmt_traeger_desktop_xor_mobil_dauerhaft
+      ---
+      duration_ms: 132.872047
+      type: 'test'
+      ...
+    # Subtest: s3a2794_t2_trip_neu_bereich_folgt_dem_schritt_wetter
+    not ok 2 - s3a2794_t2_trip_neu_bereich_folgt_dem_schritt_wetter
+      ---
+      duration_ms: 114.625654
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/shimmering-doodling-ritchie/frontend/src/lib/components/shared/__tests__/s3a2794_eine_wmt_instanz.test.ts:247:3'
+      failureType: 'testCodeFailure'
+      error: 'WetterMetrikenVersandPanel@894 [dann:!isMobileViewport]: bereich fehlt oder ist fest (null) — muss dem Schritt folgen'
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: true
+      operator: '=='
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/shimmering-doodling-ritchie/frontend/src/lib/components/shared/__tests__/s3a2794_eine_wmt_instanz.test.ts:252:12)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Promise.all (index 0)
+        async Suite.run (node:internal/test_runner/test:1442:7)
+        async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: s3a2794_t2_trip_neu_bereich_folgt_dem_schritt_zustellung
+    not ok 3 - s3a2794_t2_trip_neu_bereich_folgt_dem_schritt_zustellung
+      ---
+      duration_ms: 102.98879
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/shimmering-doodling-ritchie/frontend/src/lib/components/shared/__tests__/s3a2794_eine_wmt_instanz.test.ts:247:3'
+      failureType: 'testCodeFailure'
+      error: 'WetterMetrikenVersandPanel@894 [dann:!isMobileViewport]: bereich fehlt oder ist fest (null) — muss dem Schritt folgen'
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: true
+      operator: '=='
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/shimmering-doodling-ritchie/frontend/src/lib/components/shared/__tests__/s3a2794_eine_wmt_instanz.test.ts:252:12)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: s3a2794_t2_trip_neu_wmt_sichtbar_nur_in_wetter_und_zustellung
+    not ok 4 - s3a2794_t2_trip_neu_wmt_sichtbar_nur_in_wetter_und_zustellung
+      ---
+      duration_ms: 506.280114
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/shimmering-doodling-ritchie/frontend/src/lib/components/shared/__tests__/s3a2794_eine_wmt_instanz.test.ts:258:2'
+      failureType: 'testCodeFailure'
+      error: |-
+        sichtbar im Schritt wetter
+        
+        'none' !== ''
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: ''
+      actual: 'none'
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/shimmering-doodling-ritchie/frontend/src/lib/components/shared/__tests__/s3a2794_eine_wmt_instanz.test.ts:264:53)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: s3a2794_t4_trip_neu_corridor_editor_dauerhaft_im_schritt_wetter
+    not ok 5 - s3a2794_t4_trip_neu_corridor_editor_dauerhaft_im_schritt_wetter
+      ---
+      duration_ms: 246.346138
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/shimmering-doodling-ritchie/frontend/src/lib/components/shared/__tests__/s3a2794_eine_wmt_instanz.test.ts:269:2'
+      failureType: 'testCodeFailure'
+      error: |-
+        Wertebereiche-Vorbelegung im Schritt wetter nicht sichtbar
+        
+        'none' !== ''
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: ''
+      actual: 'none'
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/shimmering-doodling-ritchie/frontend/src/lib/components/shared/__tests__/s3a2794_eine_wmt_instanz.test.ts:278:11)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    1..5
+not ok 5 - AC-2.T2 Trip-Anlegen (TripNewEditor): eine dauerhafte WMT-Instanz je Viewport-Zweig
+  ---
+  duration_ms: 1103.636133
+  type: 'suite'
+  location: '/home/hem/gregor_zwanzig/.claude/worktrees/shimmering-doodling-ritchie/frontend/src/lib/components/shared/__tests__/s3a2794_eine_wmt_instanz.test.ts:235:1'
+  failureType: 'subtestsFailed'
+  error: '4 subtests failed'
+  code: 'ERR_TEST_FAILURE'
+  ...
+# Subtest: AC-2.T4 (Regressionswächter): „Mit Standardwerten speichern" wartet auf wertebereicheVorbelegt
+    # Subtest: s3a2794_t4_standardwerte_gesperrt_bis_vorbelegung_fertig
+    ok 1 - s3a2794_t4_standardwerte_gesperrt_bis_vorbelegung_fertig
+      ---
+      duration_ms: 62.714849
+      type: 'test'
+      ...
+    1..1
+ok 6 - AC-2.T4 (Regressionswächter): „Mit Standardwerten speichern" wartet auf wertebereicheVorbelegt
+  ---
+  duration_ms: 62.821658
+  type: 'suite'
+  ...
+# Subtest: AC-2.T2 Vergleich-Anlegen (CompareNewEditor): Schritte wetter/zustellung, nie zwei Instanzen
+    # Subtest: s3a2794_t2_vergleich_neu_wmt_traeger_nur_in_wetter_oder_zustellung_und_exklusiv
+    not ok 1 - s3a2794_t2_vergleich_neu_wmt_traeger_nur_in_wetter_oder_zustellung_und_exklusiv
+      ---
+      duration_ms: 36.798456
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/shimmering-doodling-ritchie/frontend/src/lib/components/shared/__tests__/s3a2794_eine_wmt_instanz.test.ts:314:2'
+      failureType: 'testCodeFailure'
+      error: `WetterMetrikenVersandPanel@559 [sonst:activeTab === 'vergleich' > sonst:activeTab === 'orte' > dann:activeTab === 'wetter-metriken' > dann:!isMobileViewport]: Schritt ["wetter-metriken"]`
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: true
+      actual: false
+      operator: '=='
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/shimmering-doodling-ritchie/frontend/src/lib/components/shared/__tests__/s3a2794_eine_wmt_instanz.test.ts:319:11)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Test.start (node:internal/test_runner/test:944:17)
+        node:internal/test_runner/test:1440:71
+        node:internal/per_context/primordials:466:82
+        new Promise (<anonymous>)
+        new SafePromise (node:internal/per_context/primordials:435:3)
+        node:internal/per_context/primordials:466:9
+        Array.map (<anonymous>)
+      ...
+    # Subtest: s3a2794_t2_vergleich_neu_schritt_wetter_zeigt_bereich_wetter
+    not ok 2 - s3a2794_t2_vergleich_neu_schritt_wetter_zeigt_bereich_wetter
+      ---
+      duration_ms: 34.605623
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/shimmering-doodling-ritchie/frontend/src/lib/components/shared/__tests__/s3a2794_eine_wmt_instanz.test.ts:325:3'
+      failureType: 'testCodeFailure'
+      error: 'Schritt wetter ohne Metrik-Oberfläche'
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: true
+      actual: false
+      operator: '=='
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/shimmering-doodling-ritchie/frontend/src/lib/components/shared/__tests__/s3a2794_eine_wmt_instanz.test.ts:328:11)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Promise.all (index 0)
+        async Suite.run (node:internal/test_runner/test:1442:7)
+        async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: s3a2794_t2_vergleich_neu_schritt_zustellung_zeigt_bereich_zustellung
+    not ok 3 - s3a2794_t2_vergleich_neu_schritt_zustellung_zeigt_bereich_zustellung
+      ---
+      duration_ms: 29.676886
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/shimmering-doodling-ritchie/frontend/src/lib/components/shared/__tests__/s3a2794_eine_wmt_instanz.test.ts:325:3'
+      failureType: 'testCodeFailure'
+      error: 'Schritt zustellung ohne Metrik-Oberfläche'
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: true
+      actual: false
+      operator: '=='
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/shimmering-doodling-ritchie/frontend/src/lib/components/shared/__tests__/s3a2794_eine_wmt_instanz.test.ts:328:11)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: s3a2794_t2_vergleich_neu_alarme_im_schritt_zustellung
+    not ok 4 - s3a2794_t2_vergleich_neu_alarme_im_schritt_zustellung
+      ---
+      duration_ms: 30.896409
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/shimmering-doodling-ritchie/frontend/src/lib/components/shared/__tests__/s3a2794_eine_wmt_instanz.test.ts:333:2'
+      failureType: 'testCodeFailure'
+      error: 'Alarm-Einstellungen im Schritt zustellung fehlen'
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: true
+      actual: false
+      operator: '=='
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/shimmering-doodling-ritchie/frontend/src/lib/components/shared/__tests__/s3a2794_eine_wmt_instanz.test.ts:337:10)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    1..4
+not ok 7 - AC-2.T2 Vergleich-Anlegen (CompareNewEditor): Schritte wetter/zustellung, nie zwei Instanzen
+  ---
+  duration_ms: 132.186766
+  type: 'suite'
+  location: '/home/hem/gregor_zwanzig/.claude/worktrees/shimmering-doodling-ritchie/frontend/src/lib/components/shared/__tests__/s3a2794_eine_wmt_instanz.test.ts:313:1'
+  failureType: 'subtestsFailed'
+  error: '4 subtests failed'
+  code: 'ERR_TEST_FAILURE'
+  ...
+# Subtest: AC-2.T3 (TripTabs): Wechsel weg von wetter/zustellung sichert ausstehende Änderungen
+    # Subtest: s3a2794_t3_trip_wechsel_aus_wetter_flusht_vor_dem_wechsel
+    not ok 1 - s3a2794_t3_trip_wechsel_aus_wetter_flusht_vor_dem_wechsel
+      ---
+      duration_ms: 61.759717
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/shimmering-doodling-ritchie/frontend/src/lib/components/shared/__tests__/s3a2794_flush_hydration_kette.test.ts:101:4'
+      failureType: 'testCodeFailure'
+      error: |-
+        Vorbedingung: TripTabs steht im Reiter 'wetter' (aktiv: uebersicht); []
+        + actual - expected
+        
+        + 'uebersicht'
+        - 'wetter'
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 'wetter'
+      actual: 'uebersicht'
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/shimmering-doodling-ritchie/frontend/src/lib/components/shared/__tests__/s3a2794_flush_hydration_kette.test.ts:104:12)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Promise.all (index 0)
+        async Suite.run (node:internal/test_runner/test:1442:7)
+        async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+      ...
+    # Subtest: s3a2794_t3_trip_wechsel_aus_zustellung_flusht_vor_dem_wechsel
+    not ok 2 - s3a2794_t3_trip_wechsel_aus_zustellung_flusht_vor_dem_wechsel
+      ---
+      duration_ms: 30.281108
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/shimmering-doodling-ritchie/frontend/src/lib/components/shared/__tests__/s3a2794_flush_hydration_kette.test.ts:101:4'
+      failureType: 'testCodeFailure'
+      error: |-
+        Vorbedingung: TripTabs steht im Reiter 'zustellung' (aktiv: uebersicht); []
+        + actual - expected
+        
+        + 'uebersicht'
+        - 'zustellung'
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 'zustellung'
+      actual: 'uebersicht'
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/shimmering-doodling-ritchie/frontend/src/lib/components/shared/__tests__/s3a2794_flush_hydration_kette.test.ts:104:12)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: s3a2794_t3_trip_wechsel_aus_uebersicht_flusht_nicht
+    ok 3 - s3a2794_t3_trip_wechsel_aus_uebersicht_flusht_nicht
+      ---
+      duration_ms: 27.919256
+      type: 'test'
+      ...
+    1..3
+not ok 8 - AC-2.T3 (TripTabs): Wechsel weg von wetter/zustellung sichert ausstehende Änderungen
+  ---
+  duration_ms: 121.728892
+  type: 'suite'
+  location: '/home/hem/gregor_zwanzig/.claude/worktrees/shimmering-doodling-ritchie/frontend/src/lib/components/shared/__tests__/s3a2794_flush_hydration_kette.test.ts:99:2'
+  failureType: 'subtestsFailed'
+  error: '2 subtests failed'
+  code: 'ERR_TEST_FAILURE'
+  ...
+# Subtest: AC-2.T3 (CompareTabs): Wechsel weg von wetter/zustellung sichert ausstehende Änderungen
+    # Subtest: s3a2794_t3_vergleich_wechsel_aus_wetter_flusht_vor_dem_wechsel
+    not ok 1 - s3a2794_t3_vergleich_wechsel_aus_wetter_flusht_vor_dem_wechsel
+      ---
+      duration_ms: 232.480431
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/shimmering-doodling-ritchie/frontend/src/lib/components/shared/__tests__/s3a2794_flush_hydration_kette.test.ts:101:4'
+      failureType: 'testCodeFailure'
+      error: |-
+        Vorbedingung: CompareTabs steht im Reiter 'wetter' (aktiv: uebersicht); []
+        + actual - expected
+        
+        + 'uebersicht'
+        - 'wetter'
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 'wetter'
+      actual: 'uebersicht'
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/shimmering-doodling-ritchie/frontend/src/lib/components/shared/__tests__/s3a2794_flush_hydration_kette.test.ts:104:12)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Promise.all (index 0)
+        async Suite.run (node:internal/test_runner/test:1442:7)
+        async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: s3a2794_t3_vergleich_wechsel_aus_zustellung_flusht_vor_dem_wechsel
+    not ok 2 - s3a2794_t3_vergleich_wechsel_aus_zustellung_flusht_vor_dem_wechsel
+      ---
+      duration_ms: 141.159477
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/shimmering-doodling-ritchie/frontend/src/lib/components/shared/__tests__/s3a2794_flush_hydration_kette.test.ts:101:4'
+      failureType: 'testCodeFailure'
+      error: |-
+        Vorbedingung: CompareTabs steht im Reiter 'zustellung' (aktiv: uebersicht); []
+        + actual - expected
+        
+        + 'uebersicht'
+        - 'zustellung'
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 'zustellung'
+      actual: 'uebersicht'
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/shimmering-doodling-ritchie/frontend/src/lib/components/shared/__tests__/s3a2794_flush_hydration_kette.test.ts:104:12)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: s3a2794_t3_vergleich_wechsel_aus_uebersicht_flusht_nicht
+    ok 3 - s3a2794_t3_vergleich_wechsel_aus_uebersicht_flusht_nicht
+      ---
+      duration_ms: 125.256717
+      type: 'test'
+      ...
+    1..3
+not ok 9 - AC-2.T3 (CompareTabs): Wechsel weg von wetter/zustellung sichert ausstehende Änderungen
+  ---
+  duration_ms: 499.355794
+  type: 'suite'
+  location: '/home/hem/gregor_zwanzig/.claude/worktrees/shimmering-doodling-ritchie/frontend/src/lib/components/shared/__tests__/s3a2794_flush_hydration_kette.test.ts:99:2'
+  failureType: 'subtestsFailed'
+  error: '2 subtests failed'
+  code: 'ERR_TEST_FAILURE'
+  ...
+# Subtest: AC-2.T3: SELBST_SPEICHERNDE_VERGLEICH_REITER auf die neuen Kennungen
+    # Subtest: s3a2794_t3_liste_enthaelt_wetter_und_zustellung
+    not ok 1 - s3a2794_t3_liste_enthaelt_wetter_und_zustellung
+      ---
+      duration_ms: 0.392631
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/shimmering-doodling-ritchie/frontend/src/lib/components/shared/__tests__/s3a2794_flush_hydration_kette.test.ts:123:2'
+      failureType: 'testCodeFailure'
+      error: 'wetter fehlt: ["alarme","wertebereiche","wetter-metriken"]'
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: true
+      actual: false
+      operator: '=='
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/shimmering-doodling-ritchie/frontend/src/lib/components/shared/__tests__/s3a2794_flush_hydration_kette.test.ts:125:10)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Test.start (node:internal/test_runner/test:944:17)
+        node:internal/test_runner/test:1440:71
+        node:internal/per_context/primordials:466:82
+        new Promise (<anonymous>)
+        new SafePromise (node:internal/per_context/primordials:435:3)
+        node:internal/per_context/primordials:466:9
+        Array.map (<anonymous>)
+      ...
+    # Subtest: s3a2794_t3_liste_fuehrt_nur_bestehende_hub_reiter
+    ok 2 - s3a2794_t3_liste_fuehrt_nur_bestehende_hub_reiter
+      ---
+      duration_ms: 0.575961
+      type: 'test'
+      ...
+    # Subtest: s3a2794_t3_generischer_guard_flusht_aus_wetter
+    not ok 3 - s3a2794_t3_generischer_guard_flusht_aus_wetter
+      ---
+      duration_ms: 0.2883
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/shimmering-doodling-ritchie/frontend/src/lib/components/shared/__tests__/s3a2794_flush_hydration_kette.test.ts:136:3'
+      failureType: 'testCodeFailure'
+      error: |-
+        Wechsel aus 'wetter' flusht nicht
+        
+        0 !== 1
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 1
+      actual: 0
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/shimmering-doodling-ritchie/frontend/src/lib/components/shared/__tests__/s3a2794_flush_hydration_kette.test.ts:139:11)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: s3a2794_t3_generischer_guard_flusht_aus_zustellung
+    not ok 4 - s3a2794_t3_generischer_guard_flusht_aus_zustellung
+      ---
+      duration_ms: 0.23028
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/shimmering-doodling-ritchie/frontend/src/lib/components/shared/__tests__/s3a2794_flush_hydration_kette.test.ts:136:3'
+      failureType: 'testCodeFailure'
+      error: |-
+        Wechsel aus 'zustellung' flusht nicht
+        
+        0 !== 1
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 1
+      actual: 0
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/shimmering-doodling-ritchie/frontend/src/lib/components/shared/__tests__/s3a2794_flush_hydration_kette.test.ts:139:11)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    1..4
+not ok 10 - AC-2.T3: SELBST_SPEICHERNDE_VERGLEICH_REITER auf die neuen Kennungen
+  ---
+  duration_ms: 1.710002
+  type: 'suite'
+  location: '/home/hem/gregor_zwanzig/.claude/worktrees/shimmering-doodling-ritchie/frontend/src/lib/components/shared/__tests__/s3a2794_flush_hydration_kette.test.ts:122:1'
+  failureType: 'subtestsFailed'
+  error: '3 subtests failed'
+  code: 'ERR_TEST_FAILURE'
+  ...
+# Subtest: AC-2.T3: CompareTabs hydriert die Bausteine des geöffneten Reiters
+    # Subtest: s3a2794_t3_positivkontrolle_pruefstand_misst_hydration_alt_link_alarme
+    ok 1 - s3a2794_t3_positivkontrolle_pruefstand_misst_hydration_alt_link_alarme
+      ---
+      duration_ms: 178.149793
+      type: 'test'
+      ...
+    # Subtest: s3a2794_t3_hydration_wetter_metriken_layout_und_wertebereiche
+    not ok 2 - s3a2794_t3_hydration_wetter_metriken_layout_und_wertebereiche
+      ---
+      duration_ms: 120.99167
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/shimmering-doodling-ritchie/frontend/src/lib/components/shared/__tests__/s3a2794_flush_hydration_kette.test.ts:169:2'
+      failureType: 'testCodeFailure'
+      error: |-
+        Vorbedingung: Reiter wetter offen (aktiv: uebersicht)
+        + actual - expected
+        
+        + 'uebersicht'
+        - 'wetter'
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 'wetter'
+      actual: 'uebersicht'
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/shimmering-doodling-ritchie/frontend/src/lib/components/shared/__tests__/s3a2794_flush_hydration_kette.test.ts:171:10)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: s3a2794_t3_hydration_zustellung_versand_alarme_und_wmt
+    not ok 3 - s3a2794_t3_hydration_zustellung_versand_alarme_und_wmt
+      ---
+      duration_ms: 98.609074
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/shimmering-doodling-ritchie/frontend/src/lib/components/shared/__tests__/s3a2794_flush_hydration_kette.test.ts:177:2'
+      failureType: 'testCodeFailure'
+      error: |-
+        Vorbedingung: Reiter zustellung offen (aktiv: uebersicht)
+        + actual - expected
+        
+        + 'uebersicht'
+        - 'zustellung'
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 'zustellung'
+      actual: 'uebersicht'
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/shimmering-doodling-ritchie/frontend/src/lib/components/shared/__tests__/s3a2794_flush_hydration_kette.test.ts:179:10)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    1..3
+not ok 11 - AC-2.T3: CompareTabs hydriert die Bausteine des geöffneten Reiters
+  ---
+  duration_ms: 398.161318
+  type: 'suite'
+  location: '/home/hem/gregor_zwanzig/.claude/worktrees/shimmering-doodling-ritchie/frontend/src/lib/components/shared/__tests__/s3a2794_flush_hydration_kette.test.ts:160:1'
+  failureType: 'subtestsFailed'
+  error: '2 subtests failed'
+  code: 'ERR_TEST_FAILURE'
+  ...
+# Subtest: AC-6: Anlegen endet mit dem Schritt zustellung
+    # Subtest: s3a2794_ac6_lock_engine_letzter_schritt_ist_zustellung
+    not ok 1 - s3a2794_ac6_lock_engine_letzter_schritt_ist_zustellung
+      ---
+      duration_ms: 0.308561
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/shimmering-doodling-ritchie/frontend/src/lib/components/shared/__tests__/s3a2794_flush_hydration_kette.test.ts:190:2'
+      failureType: 'testCodeFailure'
+      error: |-
+        canFinish: Besuch von zustellung schaltet Speichern nicht frei
+        
+        false !== true
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: true
+      actual: false
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/shimmering-doodling-ritchie/frontend/src/lib/components/shared/__tests__/s3a2794_flush_hydration_kette.test.ts:191:10)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Test.start (node:internal/test_runner/test:944:17)
+        node:internal/test_runner/test:1440:71
+        node:internal/per_context/primordials:466:82
+        new Promise (<anonymous>)
+        new SafePromise (node:internal/per_context/primordials:435:3)
+        node:internal/per_context/primordials:466:9
+        Array.map (<anonymous>)
+      ...
+    # Subtest: s3a2794_ac6_trip_progress_steps_ohne_entfallene_schritte
+    not ok 2 - s3a2794_ac6_trip_progress_steps_ohne_entfallene_schritte
+      ---
+      duration_ms: 0.526261
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/shimmering-doodling-ritchie/frontend/src/lib/components/shared/__tests__/s3a2794_flush_hydration_kette.test.ts:195:2'
+      failureType: 'testCodeFailure'
+      error: |-
+        Expected values to be strictly deep-equal:
+        + actual - expected
+        
+          [
+            'route',
+            'etappen',
+        +   'wetter-metriken',
+        +   'wertebereiche',
+        +   'alarme'
+        -   'wetter',
+        -   'zustellung'
+          ]
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected:
+        0: 'route'
+        1: 'etappen'
+        2: 'wetter'
+        3: 'zustellung'
+      actual:
+        0: 'route'
+        1: 'etappen'
+        2: 'wetter-metriken'
+        3: 'wertebereiche'
+        4: 'alarme'
+      operator: 'deepStrictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/shimmering-doodling-ritchie/frontend/src/lib/components/shared/__tests__/s3a2794_flush_hydration_kette.test.ts:196:10)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Promise.all (index 0)
+        async Suite.run (node:internal/test_runner/test:1442:7)
+        async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: s3a2794_ac6_trip_speichern_frei_nach_zustellung
+    not ok 3 - s3a2794_ac6_trip_speichern_frei_nach_zustellung
+      ---
+      duration_ms: 0.172961
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/shimmering-doodling-ritchie/frontend/src/lib/components/shared/__tests__/s3a2794_flush_hydration_kette.test.ts:199:2'
+      failureType: 'testCodeFailure'
+      error: |-
+        Expected values to be strictly equal:
+        
+        false !== true
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: true
+      actual: false
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/shimmering-doodling-ritchie/frontend/src/lib/components/shared/__tests__/s3a2794_flush_hydration_kette.test.ts:200:10)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: s3a2794_ac6_infobox_schluessel_fuer_neue_kennungen
+    not ok 4 - s3a2794_ac6_infobox_schluessel_fuer_neue_kennungen
+      ---
+      duration_ms: 0.1711
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/shimmering-doodling-ritchie/frontend/src/lib/components/shared/__tests__/s3a2794_flush_hydration_kette.test.ts:204:2'
+      failureType: 'testCodeFailure'
+      error: 'infoboxKey(route, wetter) fehlt — Anlege-Schritt ohne Infobox'
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: true
+      operator: '=='
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/shimmering-doodling-ritchie/frontend/src/lib/components/shared/__tests__/s3a2794_flush_hydration_kette.test.ts:207:12)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    1..4
+not ok 12 - AC-6: Anlegen endet mit dem Schritt zustellung
+  ---
+  duration_ms: 1.283811
+  type: 'suite'
+  location: '/home/hem/gregor_zwanzig/.claude/worktrees/shimmering-doodling-ritchie/frontend/src/lib/components/shared/__tests__/s3a2794_flush_hydration_kette.test.ts:189:1'
+  failureType: 'subtestsFailed'
+  error: '4 subtests failed'
+  code: 'ERR_TEST_FAILURE'
+  ...
+# Subtest: AC-1: Trip-Hub — Übersicht · Etappen · Wetter · Zustellung
+    # Subtest: s3a2794_ac1_trip_hub_kennungen_genau_vier
+    not ok 1 - s3a2794_ac1_trip_hub_kennungen_genau_vier
+      ---
+      duration_ms: 2.232542
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/shimmering-doodling-ritchie/frontend/src/lib/components/shared/__tests__/s3a2794_reiter_definition.test.ts:34:2'
+      failureType: 'testCodeFailure'
+      error: |-
+        Expected values to be strictly deep-equal:
+        + actual - expected
+        
+          [
+            'uebersicht',
+            'etappen',
+        +   'wetter-metriken',
+        +   'wertebereiche',
+        +   'alarme'
+        -   'wetter',
+        -   'zustellung'
+          ]
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected:
+        0: 'uebersicht'
+        1: 'etappen'
+        2: 'wetter'
+        3: 'zustellung'
+      actual:
+        0: 'uebersicht'
+        1: 'etappen'
+        2: 'wetter-metriken'
+        3: 'wertebereiche'
+        4: 'alarme'
+      operator: 'deepStrictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/shimmering-doodling-ritchie/frontend/src/lib/components/shared/__tests__/s3a2794_reiter_definition.test.ts:35:10)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Test.start (node:internal/test_runner/test:944:17)
+        node:internal/test_runner/test:1440:71
+        node:internal/per_context/primordials:466:82
+        new Promise (<anonymous>)
+        new SafePromise (node:internal/per_context/primordials:435:3)
+        node:internal/per_context/primordials:466:9
+        Array.map (<anonymous>)
+      ...
+    # Subtest: s3a2794_ac1_trip_hub_kein_entfallener_reiter
+    not ok 2 - s3a2794_ac1_trip_hub_kein_entfallener_reiter
+      ---
+      duration_ms: 2.790533
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/shimmering-doodling-ritchie/frontend/src/lib/components/shared/__tests__/s3a2794_reiter_definition.test.ts:38:2'
+      failureType: 'testCodeFailure'
+      error: "AC-1: Trip-Hub führt noch den Reiter 'wertebereiche'"
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: true
+      actual: false
+      operator: '=='
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/shimmering-doodling-ritchie/frontend/src/lib/components/shared/__tests__/s3a2794_reiter_definition.test.ts:40:11)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Promise.all (index 0)
+        async Suite.run (node:internal/test_runner/test:1442:7)
+        async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+      ...
+    1..2
+not ok 13 - AC-1: Trip-Hub — Übersicht · Etappen · Wetter · Zustellung
+  ---
+  duration_ms: 8.861991
+  type: 'suite'
+  location: '/home/hem/gregor_zwanzig/.claude/worktrees/shimmering-doodling-ritchie/frontend/src/lib/components/shared/__tests__/s3a2794_reiter_definition.test.ts:33:1'
+  failureType: 'subtestsFailed'
+  error: '2 subtests failed'
+  code: 'ERR_TEST_FAILURE'
+  ...
+# Subtest: AC-2: Vergleichs-Hub — Übersicht · Orte · Wetter · Zustellung
+    # Subtest: s3a2794_ac2_vergleich_hub_kennungen_genau_vier
+    not ok 1 - s3a2794_ac2_vergleich_hub_kennungen_genau_vier
+      ---
+      duration_ms: 0.553842
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/shimmering-doodling-ritchie/frontend/src/lib/components/shared/__tests__/s3a2794_reiter_definition.test.ts:46:2'
+      failureType: 'testCodeFailure'
+      error: |-
+        Expected values to be strictly deep-equal:
+        + actual - expected
+        
+          [
+            'uebersicht',
+            'orte',
+        +   'wetter-metriken',
+        +   'wertebereiche',
+        +   'alarme'
+        -   'wetter',
+        -   'zustellung'
+          ]
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected:
+        0: 'uebersicht'
+        1: 'orte'
+        2: 'wetter'
+        3: 'zustellung'
+      actual:
+        0: 'uebersicht'
+        1: 'orte'
+        2: 'wetter-metriken'
+        3: 'wertebereiche'
+        4: 'alarme'
+      operator: 'deepStrictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/shimmering-doodling-ritchie/frontend/src/lib/components/shared/__tests__/s3a2794_reiter_definition.test.ts:47:10)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Test.start (node:internal/test_runner/test:944:17)
+        node:internal/test_runner/test:1440:71
+        node:internal/per_context/primordials:466:82
+        new Promise (<anonymous>)
+        new SafePromise (node:internal/per_context/primordials:435:3)
+        node:internal/per_context/primordials:466:9
+        Array.map (<anonymous>)
+      ...
+    # Subtest: s3a2794_ac2_vergleich_hub_kein_entfallener_reiter
+    not ok 2 - s3a2794_ac2_vergleich_hub_kein_entfallener_reiter
+      ---
+      duration_ms: 0.31392
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/shimmering-doodling-ritchie/frontend/src/lib/components/shared/__tests__/s3a2794_reiter_definition.test.ts:50:2'
+      failureType: 'testCodeFailure'
+      error: "AC-2: Vergleichs-Hub führt noch den Reiter 'wertebereiche'"
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: true
+      actual: false
+      operator: '=='
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/shimmering-doodling-ritchie/frontend/src/lib/components/shared/__tests__/s3a2794_reiter_definition.test.ts:52:11)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Promise.all (index 0)
+        async Suite.run (node:internal/test_runner/test:1442:7)
+        async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    1..2
+not ok 14 - AC-2: Vergleichs-Hub — Übersicht · Orte · Wetter · Zustellung
+  ---
+  duration_ms: 1.039462
+  type: 'suite'
+  location: '/home/hem/gregor_zwanzig/.claude/worktrees/shimmering-doodling-ritchie/frontend/src/lib/components/shared/__tests__/s3a2794_reiter_definition.test.ts:45:1'
+  failureType: 'subtestsFailed'
+  error: '2 subtests failed'
+  code: 'ERR_TEST_FAILURE'
+  ...
+# Subtest: AC-6: Anlege-Ketten folgen derselben Definition
+    # Subtest: s3a2794_ac6_trip_anlegen_route_etappen_wegpunkte_wetter_zustellung
+    not ok 1 - s3a2794_ac6_trip_anlegen_route_etappen_wegpunkte_wetter_zustellung
+      ---
+      duration_ms: 0.708372
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/shimmering-doodling-ritchie/frontend/src/lib/components/shared/__tests__/s3a2794_reiter_definition.test.ts:58:2'
+      failureType: 'testCodeFailure'
+      error: |-
+        Expected values to be strictly deep-equal:
+        + actual - expected
+        
+          [
+            'route',
+            'etappen',
+            'wegpunkte',
+        +   'wetter-metriken',
+        +   'wertebereiche',
+        +   'alarme'
+        -   'wetter',
+        -   'zustellung'
+          ]
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected:
+        0: 'route'
+        1: 'etappen'
+        2: 'wegpunkte'
+        3: 'wetter'
+        4: 'zustellung'
+      actual:
+        0: 'route'
+        1: 'etappen'
+        2: 'wegpunkte'
+        3: 'wetter-metriken'
+        4: 'wertebereiche'
+        5: 'alarme'
+      operator: 'deepStrictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/shimmering-doodling-ritchie/frontend/src/lib/components/shared/__tests__/s3a2794_reiter_definition.test.ts:59:10)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Test.start (node:internal/test_runner/test:944:17)
+        node:internal/test_runner/test:1440:71
+        node:internal/per_context/primordials:466:82
+        new Promise (<anonymous>)
+        new SafePromise (node:internal/per_context/primordials:435:3)
+        node:internal/per_context/primordials:466:9
+        Array.map (<anonymous>)
+      ...
+    # Subtest: s3a2794_ac6_vergleich_anlegen_vergleich_orte_wetter_zustellung
+    not ok 2 - s3a2794_ac6_vergleich_anlegen_vergleich_orte_wetter_zustellung
+      ---
+      duration_ms: 3.298024
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/shimmering-doodling-ritchie/frontend/src/lib/components/shared/__tests__/s3a2794_reiter_definition.test.ts:62:2'
+      failureType: 'testCodeFailure'
+      error: |-
+        Expected values to be strictly deep-equal:
+        + actual - expected
+        
+          [
+            'vergleich',
+            'orte',
+        +   'wetter-metriken',
+        +   'wertebereiche',
+        +   'alarme'
+        -   'wetter',
+        -   'zustellung'
+          ]
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected:
+        0: 'vergleich'
+        1: 'orte'
+        2: 'wetter'
+        3: 'zustellung'
+      actual:
+        0: 'vergleich'
+        1: 'orte'
+        2: 'wetter-metriken'
+        3: 'wertebereiche'
+        4: 'alarme'
+      operator: 'deepStrictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/shimmering-doodling-ritchie/frontend/src/lib/components/shared/__tests__/s3a2794_reiter_definition.test.ts:63:10)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Promise.all (index 0)
+        async Suite.run (node:internal/test_runner/test:1442:7)
+        async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: s3a2794_ac6_kein_anlege_schritt_auf_entfallenen_reiter
+    not ok 3 - s3a2794_ac6_kein_anlege_schritt_auf_entfallenen_reiter
+      ---
+      duration_ms: 0.419251
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/shimmering-doodling-ritchie/frontend/src/lib/components/shared/__tests__/s3a2794_reiter_definition.test.ts:66:2'
+      failureType: 'testCodeFailure'
+      error: "AC-6: Anlege-Kette trip führt noch 'wertebereiche'"
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: true
+      actual: false
+      operator: '=='
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/shimmering-doodling-ritchie/frontend/src/lib/components/shared/__tests__/s3a2794_reiter_definition.test.ts:69:12)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: s3a2794_ac6_erster_schwanz_schritt_wetter_hat_kind_eigenen_sperr_hinweis
+    not ok 4 - s3a2794_ac6_erster_schwanz_schritt_wetter_hat_kind_eigenen_sperr_hinweis
+      ---
+      duration_ms: 0.37833
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/shimmering-doodling-ritchie/frontend/src/lib/components/shared/__tests__/s3a2794_reiter_definition.test.ts:74:2'
+      failureType: 'testCodeFailure'
+      error: 'Trip-Anlegen: kein Schritt wetter'
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: true
+      operator: '=='
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/shimmering-doodling-ritchie/frontend/src/lib/components/shared/__tests__/s3a2794_reiter_definition.test.ts:79:10)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    1..4
+not ok 15 - AC-6: Anlege-Ketten folgen derselben Definition
+  ---
+  duration_ms: 5.147625
+  type: 'suite'
+  location: '/home/hem/gregor_zwanzig/.claude/worktrees/shimmering-doodling-ritchie/frontend/src/lib/components/shared/__tests__/s3a2794_reiter_definition.test.ts:57:1'
+  failureType: 'subtestsFailed'
+  error: '4 subtests failed'
+  code: 'ERR_TEST_FAILURE'
+  ...
+# Subtest: AC-1/AC-2: Reiter-Namen über neue Katalog-Schlüssel, DE und EN
+    # Subtest: s3a2794_ac1_definition_nutzt_schluessel_aktionen_reiter_wetter_und_zustellung
+    not ok 1 - s3a2794_ac1_definition_nutzt_schluessel_aktionen_reiter_wetter_und_zustellung
+      ---
+      duration_ms: 3.194005
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/shimmering-doodling-ritchie/frontend/src/lib/components/shared/__tests__/s3a2794_reiter_definition.test.ts:92:2'
+      failureType: 'testCodeFailure'
+      error: |-
+        Expected values to be strictly deep-equal:
+        + actual - expected
+        
+          [
+            [
+        +     'wetter-metriken',
+        +     'aktionen.weather'
+        -     'wetter',
+        -     'aktionen.reiter.wetter'
+            ],
+            [
+        +     'wertebereiche',
+        +     'aktionen.reiter.wertebereiche'
+        -     'zustellung',
+        -     'aktionen.reiter.zustellung'
+            ],
+        +   [
+        +     'alarme',
+        +     'aktionen.alarms'
+        +   ]
+          ]
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected:
+        0:
+          0: 'wetter'
+          1: 'aktionen.reiter.wetter'
+        1:
+          0: 'zustellung'
+          1: 'aktionen.reiter.zustellung'
+      actual:
+        0:
+          0: 'wetter-metriken'
+          1: 'aktionen.weather'
+        1:
+          0: 'wertebereiche'
+          1: 'aktionen.reiter.wertebereiche'
+        2:
+          0: 'alarme'
+          1: 'aktionen.alarms'
+      operator: 'deepStrictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/shimmering-doodling-ritchie/frontend/src/lib/components/shared/__tests__/s3a2794_reiter_definition.test.ts:94:10)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Test.start (node:internal/test_runner/test:944:17)
+        node:internal/test_runner/test:1440:71
+        node:internal/per_context/primordials:466:82
+        new Promise (<anonymous>)
+        new SafePromise (node:internal/per_context/primordials:435:3)
+        node:internal/per_context/primordials:466:9
+        Array.map (<anonymous>)
+      ...
+    # Subtest: s3a2794_ac1_katalog_paritaet_de_en_neue_schluessel
+    not ok 2 - s3a2794_ac1_katalog_paritaet_de_en_neue_schluessel
+      ---
+      duration_ms: 0.706041
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/shimmering-doodling-ritchie/frontend/src/lib/components/shared/__tests__/s3a2794_reiter_definition.test.ts:100:2'
+      failureType: 'testCodeFailure'
+      error: |-
+        Expected values to be strictly equal:
+        + actual - expected
+        
+        + undefined
+        - 'Wetter'
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 'Wetter'
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/shimmering-doodling-ritchie/frontend/src/lib/components/shared/__tests__/s3a2794_reiter_definition.test.ts:103:10)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Promise.all (index 0)
+        async Suite.run (node:internal/test_runner/test:1442:7)
+        async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: s3a2794_ac1_bestehende_aktionsmenue_schluessel_bleiben
+    ok 3 - s3a2794_ac1_bestehende_aktionsmenue_schluessel_bleiben
+      ---
+      duration_ms: 0.38072
+      type: 'test'
+      ...
+    # Subtest: s3a2794_ac1_ac2_hub_labels_de
+    not ok 4 - s3a2794_ac1_ac2_hub_labels_de
+      ---
+      duration_ms: 0.28735
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/shimmering-doodling-ritchie/frontend/src/lib/components/shared/__tests__/s3a2794_reiter_definition.test.ts:122:3'
+      failureType: 'testCodeFailure'
+      error: |-
+        trip/de: Reiter-Namen ["Übersicht","Etappen & Wegpunkte","Wetter-Metriken","Wertebereiche","Alarme"]
+        + actual - expected
+        
+        + []
+        - [
+        -   'Wetter',
+        -   'Zustellung'
+        - ]
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected:
+        0: 'Wetter'
+        1: 'Zustellung'
+      actual:
+      operator: 'deepStrictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/shimmering-doodling-ritchie/frontend/src/lib/components/shared/__tests__/s3a2794_reiter_definition.test.ts:126:12)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: s3a2794_ac6_anlege_labels_de
+    not ok 5 - s3a2794_ac6_anlege_labels_de
+      ---
+      duration_ms: 3.144833
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/shimmering-doodling-ritchie/frontend/src/lib/components/shared/__tests__/s3a2794_reiter_definition.test.ts:134:3'
+      failureType: 'testCodeFailure'
+      error: |-
+        trip/de: Schritt wetter
+        + actual - expected
+        
+        + undefined
+        - 'Wetter'
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 'Wetter'
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/shimmering-doodling-ritchie/frontend/src/lib/components/shared/__tests__/s3a2794_reiter_definition.test.ts:138:12)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: s3a2794_ac1_ac2_hub_labels_en
+    not ok 6 - s3a2794_ac1_ac2_hub_labels_en
+      ---
+      duration_ms: 0.28711
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/shimmering-doodling-ritchie/frontend/src/lib/components/shared/__tests__/s3a2794_reiter_definition.test.ts:122:3'
+      failureType: 'testCodeFailure'
+      error: |-
+        trip/en: Reiter-Namen ["Overview","Stages & waypoints","Weather metrics","Target ranges","Alerts"]
+        + actual - expected
+        
+        + []
+        - [
+        -   'Weather',
+        -   'Delivery'
+        - ]
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected:
+        0: 'Weather'
+        1: 'Delivery'
+      actual:
+      operator: 'deepStrictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/shimmering-doodling-ritchie/frontend/src/lib/components/shared/__tests__/s3a2794_reiter_definition.test.ts:126:12)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: s3a2794_ac6_anlege_labels_en
+    not ok 7 - s3a2794_ac6_anlege_labels_en
+      ---
+      duration_ms: 0.18931
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/shimmering-doodling-ritchie/frontend/src/lib/components/shared/__tests__/s3a2794_reiter_definition.test.ts:134:3'
+      failureType: 'testCodeFailure'
+      error: |-
+        trip/en: Schritt wetter
+        + actual - expected
+        
+        + undefined
+        - 'Weather'
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 'Weather'
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/shimmering-doodling-ritchie/frontend/src/lib/components/shared/__tests__/s3a2794_reiter_definition.test.ts:138:12)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    1..7
+not ok 16 - AC-1/AC-2: Reiter-Namen über neue Katalog-Schlüssel, DE und EN
+  ---
+  duration_ms: 8.505731
+  type: 'suite'
+  location: '/home/hem/gregor_zwanzig/.claude/worktrees/shimmering-doodling-ritchie/frontend/src/lib/components/shared/__tests__/s3a2794_reiter_definition.test.ts:91:1'
+  failureType: 'subtestsFailed'
+  error: '6 subtests failed'
+  code: 'ERR_TEST_FAILURE'
+  ...
+# Subtest: AC-2.T1 (Regressionswächter): Speicher-Owner-Strings stehen unverändert an ihren Speicher-Aufrufen
+    # Subtest: s3a2794_t1_owner_wetter-metriken_in_shared_WeatherMetricsTab_svelte
+    ok 1 - s3a2794_t1_owner_wetter-metriken_in_shared_WeatherMetricsTab_svelte
+      ---
+      duration_ms: 255.34877
+      type: 'test'
+      ...
+    # Subtest: s3a2794_t1_owner_wetter-metriken-report-config_in_shared_WeatherMetricsTab_svelte
+    ok 2 - s3a2794_t1_owner_wetter-metriken-report-config_in_shared_WeatherMetricsTab_svelte
+      ---
+      duration_ms: 152.875181
+      type: 'test'
+      ...
+    # Subtest: s3a2794_t1_owner_wetter-metriken_in_shared_weather_metrics_tab_weatherMetricsCompareSave_ts
+    ok 3 - s3a2794_t1_owner_wetter-metriken_in_shared_weather_metrics_tab_weatherMetricsCompareSave_ts
+      ---
+      duration_ms: 11.987924
+      type: 'test'
+      ...
+    # Subtest: s3a2794_t1_owner_versand_in_trip_detail_BriefingScheduleTab_svelte
+    ok 4 - s3a2794_t1_owner_versand_in_trip_detail_BriefingScheduleTab_svelte
+      ---
+      duration_ms: 3.470024
+      type: 'test'
+      ...
+    # Subtest: s3a2794_t1_owner_versand_in_shared_versandVergleichSpeicherung_ts
+    ok 5 - s3a2794_t1_owner_versand_in_shared_versandVergleichSpeicherung_ts
+      ---
+      duration_ms: 8.37408
+      type: 'test'
+      ...
+    # Subtest: s3a2794_t1_owner_alarme_in_shared_AlarmeTab_svelte
+    ok 6 - s3a2794_t1_owner_alarme_in_shared_AlarmeTab_svelte
+      ---
+      duration_ms: 25.228301
+      type: 'test'
+      ...
+    # Subtest: s3a2794_t1_owner_wertebereiche_in_shared_corridor_editor_CorridorEditor_svelte
+    ok 7 - s3a2794_t1_owner_wertebereiche_in_shared_corridor_editor_CorridorEditor_svelte
+      ---
+      duration_ms: 37.498837
+      type: 'test'
+      ...
+    # Subtest: s3a2794_t1_owner_wertebereiche_in_shared_corridor_editor_CorridorEditorMobile_svelte
+    ok 8 - s3a2794_t1_owner_wertebereiche_in_shared_corridor_editor_CorridorEditorMobile_svelte
+      ---
+      duration_ms: 28.609926
+      type: 'test'
+      ...
+    # Subtest: s3a2794_t1_kein_owner_auf_neue_reiterkennung_umbenannt
+    ok 9 - s3a2794_t1_kein_owner_auf_neue_reiterkennung_umbenannt
+      ---
+      duration_ms: 263.299259
+      type: 'test'
+      ...
+    1..9
+ok 17 - AC-2.T1 (Regressionswächter): Speicher-Owner-Strings stehen unverändert an ihren Speicher-Aufrufen
+  ---
+  duration_ms: 788.006687
+  type: 'suite'
+  ...
+# Subtest: AC-5 (trip): resolveTab + bereinigteTabAdresse leiten jede Alt-Kennung um
+    # Subtest: s3a2794_ac5_trip_wetter-metriken_wird_wetter
+    not ok 1 - s3a2794_ac5_trip_wetter-metriken_wird_wetter
+      ---
+      duration_ms: 1.774462
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/shimmering-doodling-ritchie/frontend/src/lib/components/shared/__tests__/s3a2794_umleitung_alt_kennungen.test.ts:66:4'
+      failureType: 'testCodeFailure'
+      error: |-
+        ?tab=wetter-metriken → wetter-metriken
+        + actual - expected
+        
+        + 'wetter-metriken'
+        - 'wetter'
+                 ^
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 'wetter'
+      actual: 'wetter-metriken'
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/shimmering-doodling-ritchie/frontend/src/lib/components/shared/__tests__/s3a2794_umleitung_alt_kennungen.test.ts:68:12)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Test.start (node:internal/test_runner/test:944:17)
+        node:internal/test_runner/test:1440:71
+        node:internal/per_context/primordials:466:82
+        new Promise (<anonymous>)
+        new SafePromise (node:internal/per_context/primordials:435:3)
+        node:internal/per_context/primordials:466:9
+        Array.map (<anonymous>)
+      ...
+    # Subtest: s3a2794_ac5_trip_wertebereiche_wird_wetter
+    not ok 2 - s3a2794_ac5_trip_wertebereiche_wird_wetter
+      ---
+      duration_ms: 0.413881
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/shimmering-doodling-ritchie/frontend/src/lib/components/shared/__tests__/s3a2794_umleitung_alt_kennungen.test.ts:66:4'
+      failureType: 'testCodeFailure'
+      error: |-
+        ?tab=wertebereiche → wertebereiche
+        + actual - expected
+        
+        + 'wertebereiche'
+        - 'wetter'
+             ^
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 'wetter'
+      actual: 'wertebereiche'
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/shimmering-doodling-ritchie/frontend/src/lib/components/shared/__tests__/s3a2794_umleitung_alt_kennungen.test.ts:68:12)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Promise.all (index 0)
+        async Suite.run (node:internal/test_runner/test:1442:7)
+        async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+      ...
+    # Subtest: s3a2794_ac5_trip_layout_wird_wetter
+    not ok 3 - s3a2794_ac5_trip_layout_wird_wetter
+      ---
+      duration_ms: 0.2734
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/shimmering-doodling-ritchie/frontend/src/lib/components/shared/__tests__/s3a2794_umleitung_alt_kennungen.test.ts:66:4'
+      failureType: 'testCodeFailure'
+      error: |-
+        ?tab=layout → wetter-metriken
+        + actual - expected
+        
+        + 'wetter-metriken'
+        - 'wetter'
+                 ^
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 'wetter'
+      actual: 'wetter-metriken'
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/shimmering-doodling-ritchie/frontend/src/lib/components/shared/__tests__/s3a2794_umleitung_alt_kennungen.test.ts:68:12)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: s3a2794_ac5_trip_alarme_wird_zustellung
+    not ok 4 - s3a2794_ac5_trip_alarme_wird_zustellung
+      ---
+      duration_ms: 0.287541
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/shimmering-doodling-ritchie/frontend/src/lib/components/shared/__tests__/s3a2794_umleitung_alt_kennungen.test.ts:66:4'
+      failureType: 'testCodeFailure'
+      error: |-
+        ?tab=alarme → alarme
+        + actual - expected
+        
+        + 'alarme'
+        - 'zustellung'
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 'zustellung'
+      actual: 'alarme'
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/shimmering-doodling-ritchie/frontend/src/lib/components/shared/__tests__/s3a2794_umleitung_alt_kennungen.test.ts:68:12)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: s3a2794_ac5_trip_versand_wird_zustellung_mit_anker
+    not ok 5 - s3a2794_ac5_trip_versand_wird_zustellung_mit_anker
+      ---
+      duration_ms: 0.516921
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/shimmering-doodling-ritchie/frontend/src/lib/components/shared/__tests__/s3a2794_umleitung_alt_kennungen.test.ts:66:4'
+      failureType: 'testCodeFailure'
+      error: |-
+        ?tab=versand → wetter-metriken
+        + actual - expected
+        
+        + 'wetter-metriken'
+        - 'zustellung'
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 'zustellung'
+      actual: 'wetter-metriken'
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/shimmering-doodling-ritchie/frontend/src/lib/components/shared/__tests__/s3a2794_umleitung_alt_kennungen.test.ts:68:12)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: s3a2794_ac5_trip_briefings_wird_zustellung_mit_anker
+    not ok 6 - s3a2794_ac5_trip_briefings_wird_zustellung_mit_anker
+      ---
+      duration_ms: 0.39523
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/shimmering-doodling-ritchie/frontend/src/lib/components/shared/__tests__/s3a2794_umleitung_alt_kennungen.test.ts:66:4'
+      failureType: 'testCodeFailure'
+      error: |-
+        ?tab=briefings → wetter-metriken
+        + actual - expected
+        
+        + 'wetter-metriken'
+        - 'zustellung'
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 'zustellung'
+      actual: 'wetter-metriken'
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/shimmering-doodling-ritchie/frontend/src/lib/components/shared/__tests__/s3a2794_umleitung_alt_kennungen.test.ts:68:12)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: s3a2794_ac5_trip_weather_wird_wetter
+    not ok 7 - s3a2794_ac5_trip_weather_wird_wetter
+      ---
+      duration_ms: 0.304261
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/shimmering-doodling-ritchie/frontend/src/lib/components/shared/__tests__/s3a2794_umleitung_alt_kennungen.test.ts:66:4'
+      failureType: 'testCodeFailure'
+      error: |-
+        ?tab=weather → wetter-metriken
+        + actual - expected
+        
+        + 'wetter-metriken'
+        - 'wetter'
+                 ^
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 'wetter'
+      actual: 'wetter-metriken'
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/shimmering-doodling-ritchie/frontend/src/lib/components/shared/__tests__/s3a2794_umleitung_alt_kennungen.test.ts:68:12)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: s3a2794_ac5_trip_alerts_wird_wetter
+    not ok 8 - s3a2794_ac5_trip_alerts_wird_wetter
+      ---
+      duration_ms: 0.23307
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/shimmering-doodling-ritchie/frontend/src/lib/components/shared/__tests__/s3a2794_umleitung_alt_kennungen.test.ts:66:4'
+      failureType: 'testCodeFailure'
+      error: |-
+        ?tab=alerts → wertebereiche
+        + actual - expected
+        
+        + 'wertebereiche'
+        - 'wetter'
+             ^
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 'wetter'
+      actual: 'wertebereiche'
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/shimmering-doodling-ritchie/frontend/src/lib/components/shared/__tests__/s3a2794_umleitung_alt_kennungen.test.ts:68:12)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: s3a2794_ac5_trip_idealwerte_wird_wetter
+    not ok 9 - s3a2794_ac5_trip_idealwerte_wird_wetter
+      ---
+      duration_ms: 0.50932
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/shimmering-doodling-ritchie/frontend/src/lib/components/shared/__tests__/s3a2794_umleitung_alt_kennungen.test.ts:66:4'
+      failureType: 'testCodeFailure'
+      error: |-
+        ?tab=idealwerte → wertebereiche
+        + actual - expected
+        
+        + 'wertebereiche'
+        - 'wetter'
+             ^
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 'wetter'
+      actual: 'wertebereiche'
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/shimmering-doodling-ritchie/frontend/src/lib/components/shared/__tests__/s3a2794_umleitung_alt_kennungen.test.ts:68:12)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: s3a2794_ac5_trip_overview_wird_uebersicht
+    ok 10 - s3a2794_ac5_trip_overview_wird_uebersicht
+      ---
+      duration_ms: 0.586801
+      type: 'test'
+      ...
+    # Subtest: s3a2794_ac5_trip_preview_wird_uebersicht
+    ok 11 - s3a2794_ac5_trip_preview_wird_uebersicht
+      ---
+      duration_ms: 0.2571
+      type: 'test'
+      ...
+    # Subtest: s3a2794_ac5_trip_vorschau_wird_uebersicht
+    ok 12 - s3a2794_ac5_trip_vorschau_wird_uebersicht
+      ---
+      duration_ms: 0.251701
+      type: 'test'
+      ...
+    # Subtest: s3a2794_ac5_trip_stages_wird_punkte
+    ok 13 - s3a2794_ac5_trip_stages_wird_punkte
+      ---
+      duration_ms: 0.25509
+      type: 'test'
+      ...
+    # Subtest: s3a2794_ac5_trip_neue_kennung_wetter_bleibt_unveraendert
+    not ok 14 - s3a2794_ac5_trip_neue_kennung_wetter_bleibt_unveraendert
+      ---
+      duration_ms: 1.233861
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/shimmering-doodling-ritchie/frontend/src/lib/components/shared/__tests__/s3a2794_umleitung_alt_kennungen.test.ts:86:4'
+      failureType: 'testCodeFailure'
+      error: |-
+        Expected values to be strictly deep-equal:
+        + actual - expected
+        
+          {
+        +   known: false,
+        -   known: true,
+            legacy: false,
+        +   tab: 'uebersicht'
+        -   tab: 'wetter'
+          }
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected:
+        tab: 'wetter'
+        legacy: false
+        known: true
+      actual:
+        tab: 'uebersicht'
+        legacy: false
+        known: false
+      operator: 'deepStrictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/shimmering-doodling-ritchie/frontend/src/lib/components/shared/__tests__/s3a2794_umleitung_alt_kennungen.test.ts:88:12)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: s3a2794_ac5_trip_neue_kennung_zustellung_bleibt_unveraendert
+    not ok 15 - s3a2794_ac5_trip_neue_kennung_zustellung_bleibt_unveraendert
+      ---
+      duration_ms: 0.474931
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/shimmering-doodling-ritchie/frontend/src/lib/components/shared/__tests__/s3a2794_umleitung_alt_kennungen.test.ts:86:4'
+      failureType: 'testCodeFailure'
+      error: |-
+        Expected values to be strictly deep-equal:
+        + actual - expected
+        
+          {
+        +   known: false,
+        -   known: true,
+            legacy: false,
+        +   tab: 'uebersicht'
+        -   tab: 'zustellung'
+          }
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected:
+        tab: 'zustellung'
+        legacy: false
+        known: true
+      actual:
+        tab: 'uebersicht'
+        legacy: false
+        known: false
+      operator: 'deepStrictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/shimmering-doodling-ritchie/frontend/src/lib/components/shared/__tests__/s3a2794_umleitung_alt_kennungen.test.ts:88:12)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    1..15
+not ok 18 - AC-5 (trip): resolveTab + bereinigteTabAdresse leiten jede Alt-Kennung um
+  ---
+  duration_ms: 9.199291
+  type: 'suite'
+  location: '/home/hem/gregor_zwanzig/.claude/worktrees/shimmering-doodling-ritchie/frontend/src/lib/components/shared/__tests__/s3a2794_umleitung_alt_kennungen.test.ts:64:2'
+  failureType: 'subtestsFailed'
+  error: '11 subtests failed'
+  code: 'ERR_TEST_FAILURE'
+  ...
+# Subtest: AC-5 (vergleich): resolveTab + bereinigteTabAdresse leiten jede Alt-Kennung um
+    # Subtest: s3a2794_ac5_vergleich_wetter-metriken_wird_wetter
+    not ok 1 - s3a2794_ac5_vergleich_wetter-metriken_wird_wetter
+      ---
+      duration_ms: 0.37209
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/shimmering-doodling-ritchie/frontend/src/lib/components/shared/__tests__/s3a2794_umleitung_alt_kennungen.test.ts:66:4'
+      failureType: 'testCodeFailure'
+      error: |-
+        ?tab=wetter-metriken → wetter-metriken
+        + actual - expected
+        
+        + 'wetter-metriken'
+        - 'wetter'
+                 ^
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 'wetter'
+      actual: 'wetter-metriken'
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/shimmering-doodling-ritchie/frontend/src/lib/components/shared/__tests__/s3a2794_umleitung_alt_kennungen.test.ts:68:12)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Test.start (node:internal/test_runner/test:944:17)
+        node:internal/test_runner/test:1440:71
+        node:internal/per_context/primordials:466:82
+        new Promise (<anonymous>)
+        new SafePromise (node:internal/per_context/primordials:435:3)
+        node:internal/per_context/primordials:466:9
+        Array.map (<anonymous>)
+      ...
+    # Subtest: s3a2794_ac5_vergleich_wertebereiche_wird_wetter
+    not ok 2 - s3a2794_ac5_vergleich_wertebereiche_wird_wetter
+      ---
+      duration_ms: 0.22842
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/shimmering-doodling-ritchie/frontend/src/lib/components/shared/__tests__/s3a2794_umleitung_alt_kennungen.test.ts:66:4'
+      failureType: 'testCodeFailure'
+      error: |-
+        ?tab=wertebereiche → wertebereiche
+        + actual - expected
+        
+        + 'wertebereiche'
+        - 'wetter'
+             ^
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 'wetter'
+      actual: 'wertebereiche'
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/shimmering-doodling-ritchie/frontend/src/lib/components/shared/__tests__/s3a2794_umleitung_alt_kennungen.test.ts:68:12)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Promise.all (index 0)
+        async Suite.run (node:internal/test_runner/test:1442:7)
+        async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: s3a2794_ac5_vergleich_layout_wird_wetter
+    not ok 3 - s3a2794_ac5_vergleich_layout_wird_wetter
+      ---
+      duration_ms: 0.277471
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/shimmering-doodling-ritchie/frontend/src/lib/components/shared/__tests__/s3a2794_umleitung_alt_kennungen.test.ts:66:4'
+      failureType: 'testCodeFailure'
+      error: |-
+        ?tab=layout → wetter-metriken
+        + actual - expected
+        
+        + 'wetter-metriken'
+        - 'wetter'
+                 ^
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 'wetter'
+      actual: 'wetter-metriken'
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/shimmering-doodling-ritchie/frontend/src/lib/components/shared/__tests__/s3a2794_umleitung_alt_kennungen.test.ts:68:12)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: s3a2794_ac5_vergleich_alarme_wird_zustellung
+    not ok 4 - s3a2794_ac5_vergleich_alarme_wird_zustellung
+      ---
+      duration_ms: 0.290981
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/shimmering-doodling-ritchie/frontend/src/lib/components/shared/__tests__/s3a2794_umleitung_alt_kennungen.test.ts:66:4'
+      failureType: 'testCodeFailure'
+      error: |-
+        ?tab=alarme → alarme
+        + actual - expected
+        
+        + 'alarme'
+        - 'zustellung'
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 'zustellung'
+      actual: 'alarme'
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/shimmering-doodling-ritchie/frontend/src/lib/components/shared/__tests__/s3a2794_umleitung_alt_kennungen.test.ts:68:12)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: s3a2794_ac5_vergleich_versand_wird_zustellung_mit_anker
+    not ok 5 - s3a2794_ac5_vergleich_versand_wird_zustellung_mit_anker
+      ---
+      duration_ms: 0.338991
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/shimmering-doodling-ritchie/frontend/src/lib/components/shared/__tests__/s3a2794_umleitung_alt_kennungen.test.ts:66:4'
+      failureType: 'testCodeFailure'
+      error: |-
+        ?tab=versand → wetter-metriken
+        + actual - expected
+        
+        + 'wetter-metriken'
+        - 'zustellung'
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 'zustellung'
+      actual: 'wetter-metriken'
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/shimmering-doodling-ritchie/frontend/src/lib/components/shared/__tests__/s3a2794_umleitung_alt_kennungen.test.ts:68:12)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: s3a2794_ac5_vergleich_briefings_wird_zustellung_mit_anker
+    not ok 6 - s3a2794_ac5_vergleich_briefings_wird_zustellung_mit_anker
+      ---
+      duration_ms: 0.27352
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/shimmering-doodling-ritchie/frontend/src/lib/components/shared/__tests__/s3a2794_umleitung_alt_kennungen.test.ts:66:4'
+      failureType: 'testCodeFailure'
+      error: |-
+        ?tab=briefings → wetter-metriken
+        + actual - expected
+        
+        + 'wetter-metriken'
+        - 'zustellung'
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 'zustellung'
+      actual: 'wetter-metriken'
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/shimmering-doodling-ritchie/frontend/src/lib/components/shared/__tests__/s3a2794_umleitung_alt_kennungen.test.ts:68:12)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: s3a2794_ac5_vergleich_weather_wird_wetter
+    not ok 7 - s3a2794_ac5_vergleich_weather_wird_wetter
+      ---
+      duration_ms: 0.27297
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/shimmering-doodling-ritchie/frontend/src/lib/components/shared/__tests__/s3a2794_umleitung_alt_kennungen.test.ts:66:4'
+      failureType: 'testCodeFailure'
+      error: |-
+        ?tab=weather → wetter-metriken
+        + actual - expected
+        
+        + 'wetter-metriken'
+        - 'wetter'
+                 ^
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 'wetter'
+      actual: 'wetter-metriken'
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/shimmering-doodling-ritchie/frontend/src/lib/components/shared/__tests__/s3a2794_umleitung_alt_kennungen.test.ts:68:12)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: s3a2794_ac5_vergleich_alerts_wird_wetter
+    not ok 8 - s3a2794_ac5_vergleich_alerts_wird_wetter
+      ---
+      duration_ms: 0.250319
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/shimmering-doodling-ritchie/frontend/src/lib/components/shared/__tests__/s3a2794_umleitung_alt_kennungen.test.ts:66:4'
+      failureType: 'testCodeFailure'
+      error: |-
+        ?tab=alerts → wertebereiche
+        + actual - expected
+        
+        + 'wertebereiche'
+        - 'wetter'
+             ^
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 'wetter'
+      actual: 'wertebereiche'
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/shimmering-doodling-ritchie/frontend/src/lib/components/shared/__tests__/s3a2794_umleitung_alt_kennungen.test.ts:68:12)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: s3a2794_ac5_vergleich_idealwerte_wird_wetter
+    not ok 9 - s3a2794_ac5_vergleich_idealwerte_wird_wetter
+      ---
+      duration_ms: 0.207641
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/shimmering-doodling-ritchie/frontend/src/lib/components/shared/__tests__/s3a2794_umleitung_alt_kennungen.test.ts:66:4'
+      failureType: 'testCodeFailure'
+      error: |-
+        ?tab=idealwerte → wertebereiche
+        + actual - expected
+        
+        + 'wertebereiche'
+        - 'wetter'
+             ^
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 'wetter'
+      actual: 'wertebereiche'
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/shimmering-doodling-ritchie/frontend/src/lib/components/shared/__tests__/s3a2794_umleitung_alt_kennungen.test.ts:68:12)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: s3a2794_ac5_vergleich_overview_wird_uebersicht
+    ok 10 - s3a2794_ac5_vergleich_overview_wird_uebersicht
+      ---
+      duration_ms: 0.298501
+      type: 'test'
+      ...
+    # Subtest: s3a2794_ac5_vergleich_preview_wird_uebersicht
+    ok 11 - s3a2794_ac5_vergleich_preview_wird_uebersicht
+      ---
+      duration_ms: 0.195889
+      type: 'test'
+      ...
+    # Subtest: s3a2794_ac5_vergleich_vorschau_wird_uebersicht
+    ok 12 - s3a2794_ac5_vergleich_vorschau_wird_uebersicht
+      ---
+      duration_ms: 0.15383
+      type: 'test'
+      ...
+    # Subtest: s3a2794_ac5_vergleich_stages_wird_punkte
+    ok 13 - s3a2794_ac5_vergleich_stages_wird_punkte
+      ---
+      duration_ms: 0.12844
+      type: 'test'
+      ...
+    # Subtest: s3a2794_ac5_vergleich_neue_kennung_wetter_bleibt_unveraendert
+    not ok 14 - s3a2794_ac5_vergleich_neue_kennung_wetter_bleibt_unveraendert
+      ---
+      duration_ms: 0.320471
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/shimmering-doodling-ritchie/frontend/src/lib/components/shared/__tests__/s3a2794_umleitung_alt_kennungen.test.ts:86:4'
+      failureType: 'testCodeFailure'
+      error: |-
+        Expected values to be strictly deep-equal:
+        + actual - expected
+        
+          {
+        +   known: false,
+        -   known: true,
+            legacy: false,
+        +   tab: 'uebersicht'
+        -   tab: 'wetter'
+          }
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected:
+        tab: 'wetter'
+        legacy: false
+        known: true
+      actual:
+        tab: 'uebersicht'
+        legacy: false
+        known: false
+      operator: 'deepStrictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/shimmering-doodling-ritchie/frontend/src/lib/components/shared/__tests__/s3a2794_umleitung_alt_kennungen.test.ts:88:12)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: s3a2794_ac5_vergleich_neue_kennung_zustellung_bleibt_unveraendert
+    not ok 15 - s3a2794_ac5_vergleich_neue_kennung_zustellung_bleibt_unveraendert
+      ---
+      duration_ms: 0.4202
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/shimmering-doodling-ritchie/frontend/src/lib/components/shared/__tests__/s3a2794_umleitung_alt_kennungen.test.ts:86:4'
+      failureType: 'testCodeFailure'
+      error: |-
+        Expected values to be strictly deep-equal:
+        + actual - expected
+        
+          {
+        +   known: false,
+        -   known: true,
+            legacy: false,
+        +   tab: 'uebersicht'
+        -   tab: 'zustellung'
+          }
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected:
+        tab: 'zustellung'
+        legacy: false
+        known: true
+      actual:
+        tab: 'uebersicht'
+        legacy: false
+        known: false
+      operator: 'deepStrictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/shimmering-doodling-ritchie/frontend/src/lib/components/shared/__tests__/s3a2794_umleitung_alt_kennungen.test.ts:88:12)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    1..15
+not ok 19 - AC-5 (vergleich): resolveTab + bereinigteTabAdresse leiten jede Alt-Kennung um
+  ---
+  duration_ms: 4.559105
+  type: 'suite'
+  location: '/home/hem/gregor_zwanzig/.claude/worktrees/shimmering-doodling-ritchie/frontend/src/lib/components/shared/__tests__/s3a2794_umleitung_alt_kennungen.test.ts:64:2'
+  failureType: 'subtestsFailed'
+  error: '11 subtests failed'
+  code: 'ERR_TEST_FAILURE'
+  ...
+# Subtest: AC-5 (TripTabs): der echte Hub öffnet den neuen Reiter und bereinigt die Adresszeile einmal
+    # Subtest: s3a2794_ac5_hub_trip_wetter-metriken_oeffnet_wetter
+    not ok 1 - s3a2794_ac5_hub_trip_wetter-metriken_oeffnet_wetter
+      ---
+      duration_ms: 113.939653
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/shimmering-doodling-ritchie/frontend/src/lib/components/shared/__tests__/s3a2794_umleitung_alt_kennungen.test.ts:152:4'
+      failureType: 'testCodeFailure'
+      error: |-
+        TripTabs: ?tab=wetter-metriken öffnet 'wetter-metriken'; Effekt-Fehler []
+        + actual - expected
+        
+        + 'wetter-metriken'
+        - 'wetter'
+                 ^
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 'wetter'
+      actual: 'wetter-metriken'
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/shimmering-doodling-ritchie/frontend/src/lib/components/shared/__tests__/s3a2794_umleitung_alt_kennungen.test.ts:154:12)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Promise.all (index 0)
+        async Suite.run (node:internal/test_runner/test:1442:7)
+        async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: s3a2794_ac5_hub_trip_wertebereiche_oeffnet_wetter
+    not ok 2 - s3a2794_ac5_hub_trip_wertebereiche_oeffnet_wetter
+      ---
+      duration_ms: 25.880363
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/shimmering-doodling-ritchie/frontend/src/lib/components/shared/__tests__/s3a2794_umleitung_alt_kennungen.test.ts:152:4'
+      failureType: 'testCodeFailure'
+      error: |-
+        TripTabs: ?tab=wertebereiche öffnet 'wertebereiche'; Effekt-Fehler []
+        + actual - expected
+        
+        + 'wertebereiche'
+        - 'wetter'
+             ^
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 'wetter'
+      actual: 'wertebereiche'
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/shimmering-doodling-ritchie/frontend/src/lib/components/shared/__tests__/s3a2794_umleitung_alt_kennungen.test.ts:154:12)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: s3a2794_ac5_hub_trip_layout_oeffnet_wetter
+    not ok 3 - s3a2794_ac5_hub_trip_layout_oeffnet_wetter
+      ---
+      duration_ms: 16.731851
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/shimmering-doodling-ritchie/frontend/src/lib/components/shared/__tests__/s3a2794_umleitung_alt_kennungen.test.ts:152:4'
+      failureType: 'testCodeFailure'
+      error: |-
+        TripTabs: ?tab=layout öffnet 'wetter-metriken'; Effekt-Fehler []
+        + actual - expected
+        
+        + 'wetter-metriken'
+        - 'wetter'
+                 ^
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 'wetter'
+      actual: 'wetter-metriken'
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/shimmering-doodling-ritchie/frontend/src/lib/components/shared/__tests__/s3a2794_umleitung_alt_kennungen.test.ts:154:12)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: s3a2794_ac5_hub_trip_alarme_oeffnet_zustellung
+    not ok 4 - s3a2794_ac5_hub_trip_alarme_oeffnet_zustellung
+      ---
+      duration_ms: 22.123288
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/shimmering-doodling-ritchie/frontend/src/lib/components/shared/__tests__/s3a2794_umleitung_alt_kennungen.test.ts:152:4'
+      failureType: 'testCodeFailure'
+      error: |-
+        TripTabs: ?tab=alarme öffnet 'alarme'; Effekt-Fehler []
+        + actual - expected
+        
+        + 'alarme'
+        - 'zustellung'
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 'zustellung'
+      actual: 'alarme'
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/shimmering-doodling-ritchie/frontend/src/lib/components/shared/__tests__/s3a2794_umleitung_alt_kennungen.test.ts:154:12)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: s3a2794_ac5_hub_trip_versand_oeffnet_zustellung
+    not ok 5 - s3a2794_ac5_hub_trip_versand_oeffnet_zustellung
+      ---
+      duration_ms: 12.387975
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/shimmering-doodling-ritchie/frontend/src/lib/components/shared/__tests__/s3a2794_umleitung_alt_kennungen.test.ts:152:4'
+      failureType: 'testCodeFailure'
+      error: |-
+        TripTabs: ?tab=versand öffnet 'wetter-metriken'; Effekt-Fehler []
+        + actual - expected
+        
+        + 'wetter-metriken'
+        - 'zustellung'
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 'zustellung'
+      actual: 'wetter-metriken'
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/shimmering-doodling-ritchie/frontend/src/lib/components/shared/__tests__/s3a2794_umleitung_alt_kennungen.test.ts:154:12)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: s3a2794_ac5_hub_trip_briefings_oeffnet_zustellung
+    not ok 6 - s3a2794_ac5_hub_trip_briefings_oeffnet_zustellung
+      ---
+      duration_ms: 11.733624
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/shimmering-doodling-ritchie/frontend/src/lib/components/shared/__tests__/s3a2794_umleitung_alt_kennungen.test.ts:152:4'
+      failureType: 'testCodeFailure'
+      error: |-
+        TripTabs: ?tab=briefings öffnet 'wetter-metriken'; Effekt-Fehler []
+        + actual - expected
+        
+        + 'wetter-metriken'
+        - 'zustellung'
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 'zustellung'
+      actual: 'wetter-metriken'
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/shimmering-doodling-ritchie/frontend/src/lib/components/shared/__tests__/s3a2794_umleitung_alt_kennungen.test.ts:154:12)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: s3a2794_ac5_hub_trip_weather_oeffnet_wetter
+    not ok 7 - s3a2794_ac5_hub_trip_weather_oeffnet_wetter
+      ---
+      duration_ms: 10.066153
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/shimmering-doodling-ritchie/frontend/src/lib/components/shared/__tests__/s3a2794_umleitung_alt_kennungen.test.ts:152:4'
+      failureType: 'testCodeFailure'
+      error: |-
+        TripTabs: ?tab=weather öffnet 'wetter-metriken'; Effekt-Fehler []
+        + actual - expected
+        
+        + 'wetter-metriken'
+        - 'wetter'
+                 ^
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 'wetter'
+      actual: 'wetter-metriken'
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/shimmering-doodling-ritchie/frontend/src/lib/components/shared/__tests__/s3a2794_umleitung_alt_kennungen.test.ts:154:12)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: s3a2794_ac5_hub_trip_alerts_oeffnet_wetter
+    not ok 8 - s3a2794_ac5_hub_trip_alerts_oeffnet_wetter
+      ---
+      duration_ms: 11.772725
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/shimmering-doodling-ritchie/frontend/src/lib/components/shared/__tests__/s3a2794_umleitung_alt_kennungen.test.ts:152:4'
+      failureType: 'testCodeFailure'
+      error: |-
+        TripTabs: ?tab=alerts öffnet 'wertebereiche'; Effekt-Fehler []
+        + actual - expected
+        
+        + 'wertebereiche'
+        - 'wetter'
+             ^
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 'wetter'
+      actual: 'wertebereiche'
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/shimmering-doodling-ritchie/frontend/src/lib/components/shared/__tests__/s3a2794_umleitung_alt_kennungen.test.ts:154:12)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: s3a2794_ac5_hub_trip_idealwerte_oeffnet_wetter
+    not ok 9 - s3a2794_ac5_hub_trip_idealwerte_oeffnet_wetter
+      ---
+      duration_ms: 8.783841
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/shimmering-doodling-ritchie/frontend/src/lib/components/shared/__tests__/s3a2794_umleitung_alt_kennungen.test.ts:152:4'
+      failureType: 'testCodeFailure'
+      error: |-
+        TripTabs: ?tab=idealwerte öffnet 'wertebereiche'; Effekt-Fehler []
+        + actual - expected
+        
+        + 'wertebereiche'
+        - 'wetter'
+             ^
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 'wetter'
+      actual: 'wertebereiche'
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/shimmering-doodling-ritchie/frontend/src/lib/components/shared/__tests__/s3a2794_umleitung_alt_kennungen.test.ts:154:12)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: s3a2794_ac5_hub_trip_overview_oeffnet_uebersicht
+    ok 10 - s3a2794_ac5_hub_trip_overview_oeffnet_uebersicht
+      ---
+      duration_ms: 6.448838
+      type: 'test'
+      ...
+    # Subtest: s3a2794_ac5_hub_trip_preview_oeffnet_uebersicht
+    ok 11 - s3a2794_ac5_hub_trip_preview_oeffnet_uebersicht
+      ---
+      duration_ms: 6.400948
+      type: 'test'
+      ...
+    # Subtest: s3a2794_ac5_hub_trip_vorschau_oeffnet_uebersicht
+    ok 12 - s3a2794_ac5_hub_trip_vorschau_oeffnet_uebersicht
+      ---
+      duration_ms: 14.347327
+      type: 'test'
+      ...
+    # Subtest: s3a2794_ac5_hub_trip_stages_oeffnet_punkte
+    ok 13 - s3a2794_ac5_hub_trip_stages_oeffnet_punkte
+      ---
+      duration_ms: 7.322349
+      type: 'test'
+      ...
+    # Subtest: s3a2794_ac5_hub_trip_anker_versand_gewinnt_gegen_wetter_metriken
+    not ok 14 - s3a2794_ac5_hub_trip_anker_versand_gewinnt_gegen_wetter_metriken
+      ---
+      duration_ms: 7.37625
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/shimmering-doodling-ritchie/frontend/src/lib/components/shared/__tests__/s3a2794_umleitung_alt_kennungen.test.ts:162:3'
+      failureType: 'testCodeFailure'
+      error: |-
+        TripTabs: ?tab=wetter-metriken#versand öffnet 'wetter-metriken' (Anker muss gewinnen); []
+        + actual - expected
+        
+        + 'wetter-metriken'
+        - 'zustellung'
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 'zustellung'
+      actual: 'wetter-metriken'
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/shimmering-doodling-ritchie/frontend/src/lib/components/shared/__tests__/s3a2794_umleitung_alt_kennungen.test.ts:165:11)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: s3a2794_ac5_hub_trip_neue_kennung_wetter_ohne_umschreibung
+    not ok 15 - s3a2794_ac5_hub_trip_neue_kennung_wetter_ohne_umschreibung
+      ---
+      duration_ms: 9.196731
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/shimmering-doodling-ritchie/frontend/src/lib/components/shared/__tests__/s3a2794_umleitung_alt_kennungen.test.ts:174:4'
+      failureType: 'testCodeFailure'
+      error: |-
+        Expected values to be strictly equal:
+        + actual - expected
+        
+        + 'uebersicht'
+        - 'wetter'
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 'wetter'
+      actual: 'uebersicht'
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/shimmering-doodling-ritchie/frontend/src/lib/components/shared/__tests__/s3a2794_umleitung_alt_kennungen.test.ts:176:12)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: s3a2794_ac5_hub_trip_neue_kennung_zustellung_ohne_umschreibung
+    not ok 16 - s3a2794_ac5_hub_trip_neue_kennung_zustellung_ohne_umschreibung
+      ---
+      duration_ms: 10.200063
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/shimmering-doodling-ritchie/frontend/src/lib/components/shared/__tests__/s3a2794_umleitung_alt_kennungen.test.ts:174:4'
+      failureType: 'testCodeFailure'
+      error: |-
+        Expected values to be strictly equal:
+        + actual - expected
+        
+        + 'uebersicht'
+        - 'zustellung'
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 'zustellung'
+      actual: 'uebersicht'
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/shimmering-doodling-ritchie/frontend/src/lib/components/shared/__tests__/s3a2794_umleitung_alt_kennungen.test.ts:176:12)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    1..16
+not ok 20 - AC-5 (TripTabs): der echte Hub öffnet den neuen Reiter und bereinigt die Adresszeile einmal
+  ---
+  duration_ms: 295.756931
+  type: 'suite'
+  location: '/home/hem/gregor_zwanzig/.claude/worktrees/shimmering-doodling-ritchie/frontend/src/lib/components/shared/__tests__/s3a2794_umleitung_alt_kennungen.test.ts:150:2'
+  failureType: 'subtestsFailed'
+  error: '12 subtests failed'
+  code: 'ERR_TEST_FAILURE'
+  ...
+# Subtest: AC-5 (CompareTabs): der echte Hub öffnet den neuen Reiter und bereinigt die Adresszeile einmal
+    # Subtest: s3a2794_ac5_hub_vergleich_wetter-metriken_oeffnet_wetter
+    not ok 1 - s3a2794_ac5_hub_vergleich_wetter-metriken_oeffnet_wetter
+      ---
+      duration_ms: 211.766126
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/shimmering-doodling-ritchie/frontend/src/lib/components/shared/__tests__/s3a2794_umleitung_alt_kennungen.test.ts:152:4'
+      failureType: 'testCodeFailure'
+      error: |-
+        CompareTabs: ?tab=wetter-metriken öffnet 'wetter-metriken'; Effekt-Fehler []
+        + actual - expected
+        
+        + 'wetter-metriken'
+        - 'wetter'
+                 ^
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 'wetter'
+      actual: 'wetter-metriken'
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/shimmering-doodling-ritchie/frontend/src/lib/components/shared/__tests__/s3a2794_umleitung_alt_kennungen.test.ts:154:12)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Promise.all (index 0)
+        async Suite.run (node:internal/test_runner/test:1442:7)
+        async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: s3a2794_ac5_hub_vergleich_wertebereiche_oeffnet_wetter
+    not ok 2 - s3a2794_ac5_hub_vergleich_wertebereiche_oeffnet_wetter
+      ---
+      duration_ms: 65.738472
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/shimmering-doodling-ritchie/frontend/src/lib/components/shared/__tests__/s3a2794_umleitung_alt_kennungen.test.ts:152:4'
+      failureType: 'testCodeFailure'
+      error: |-
+        CompareTabs: ?tab=wertebereiche öffnet 'wertebereiche'; Effekt-Fehler []
+        + actual - expected
+        
+        + 'wertebereiche'
+        - 'wetter'
+             ^
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 'wetter'
+      actual: 'wertebereiche'
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/shimmering-doodling-ritchie/frontend/src/lib/components/shared/__tests__/s3a2794_umleitung_alt_kennungen.test.ts:154:12)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: s3a2794_ac5_hub_vergleich_layout_oeffnet_wetter
+    not ok 3 - s3a2794_ac5_hub_vergleich_layout_oeffnet_wetter
+      ---
+      duration_ms: 59.278364
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/shimmering-doodling-ritchie/frontend/src/lib/components/shared/__tests__/s3a2794_umleitung_alt_kennungen.test.ts:152:4'
+      failureType: 'testCodeFailure'
+      error: |-
+        CompareTabs: ?tab=layout öffnet 'wetter-metriken'; Effekt-Fehler []
+        + actual - expected
+        
+        + 'wetter-metriken'
+        - 'wetter'
+                 ^
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 'wetter'
+      actual: 'wetter-metriken'
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/shimmering-doodling-ritchie/frontend/src/lib/components/shared/__tests__/s3a2794_umleitung_alt_kennungen.test.ts:154:12)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: s3a2794_ac5_hub_vergleich_alarme_oeffnet_zustellung
+    not ok 4 - s3a2794_ac5_hub_vergleich_alarme_oeffnet_zustellung
+      ---
+      duration_ms: 56.423952
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/shimmering-doodling-ritchie/frontend/src/lib/components/shared/__tests__/s3a2794_umleitung_alt_kennungen.test.ts:152:4'
+      failureType: 'testCodeFailure'
+      error: |-
+        CompareTabs: ?tab=alarme öffnet 'alarme'; Effekt-Fehler []
+        + actual - expected
+        
+        + 'alarme'
+        - 'zustellung'
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 'zustellung'
+      actual: 'alarme'
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/shimmering-doodling-ritchie/frontend/src/lib/components/shared/__tests__/s3a2794_umleitung_alt_kennungen.test.ts:154:12)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: s3a2794_ac5_hub_vergleich_versand_oeffnet_zustellung
+    not ok 5 - s3a2794_ac5_hub_vergleich_versand_oeffnet_zustellung
+      ---
+      duration_ms: 60.832756
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/shimmering-doodling-ritchie/frontend/src/lib/components/shared/__tests__/s3a2794_umleitung_alt_kennungen.test.ts:152:4'
+      failureType: 'testCodeFailure'
+      error: |-
+        CompareTabs: ?tab=versand öffnet 'wetter-metriken'; Effekt-Fehler []
+        + actual - expected
+        
+        + 'wetter-metriken'
+        - 'zustellung'
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 'zustellung'
+      actual: 'wetter-metriken'
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/shimmering-doodling-ritchie/frontend/src/lib/components/shared/__tests__/s3a2794_umleitung_alt_kennungen.test.ts:154:12)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: s3a2794_ac5_hub_vergleich_briefings_oeffnet_zustellung
+    not ok 6 - s3a2794_ac5_hub_vergleich_briefings_oeffnet_zustellung
+      ---
+      duration_ms: 56.48202
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/shimmering-doodling-ritchie/frontend/src/lib/components/shared/__tests__/s3a2794_umleitung_alt_kennungen.test.ts:152:4'
+      failureType: 'testCodeFailure'
+      error: |-
+        CompareTabs: ?tab=briefings öffnet 'wetter-metriken'; Effekt-Fehler []
+        + actual - expected
+        
+        + 'wetter-metriken'
+        - 'zustellung'
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 'zustellung'
+      actual: 'wetter-metriken'
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/shimmering-doodling-ritchie/frontend/src/lib/components/shared/__tests__/s3a2794_umleitung_alt_kennungen.test.ts:154:12)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: s3a2794_ac5_hub_vergleich_weather_oeffnet_wetter
+    not ok 7 - s3a2794_ac5_hub_vergleich_weather_oeffnet_wetter
+      ---
+      duration_ms: 59.654484
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/shimmering-doodling-ritchie/frontend/src/lib/components/shared/__tests__/s3a2794_umleitung_alt_kennungen.test.ts:152:4'
+      failureType: 'testCodeFailure'
+      error: |-
+        CompareTabs: ?tab=weather öffnet 'wetter-metriken'; Effekt-Fehler []
+        + actual - expected
+        
+        + 'wetter-metriken'
+        - 'wetter'
+                 ^
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 'wetter'
+      actual: 'wetter-metriken'
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/shimmering-doodling-ritchie/frontend/src/lib/components/shared/__tests__/s3a2794_umleitung_alt_kennungen.test.ts:154:12)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: s3a2794_ac5_hub_vergleich_alerts_oeffnet_wetter
+    not ok 8 - s3a2794_ac5_hub_vergleich_alerts_oeffnet_wetter
+      ---
+      duration_ms: 56.070749
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/shimmering-doodling-ritchie/frontend/src/lib/components/shared/__tests__/s3a2794_umleitung_alt_kennungen.test.ts:152:4'
+      failureType: 'testCodeFailure'
+      error: |-
+        CompareTabs: ?tab=alerts öffnet 'wertebereiche'; Effekt-Fehler []
+        + actual - expected
+        
+        + 'wertebereiche'
+        - 'wetter'
+             ^
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 'wetter'
+      actual: 'wertebereiche'
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/shimmering-doodling-ritchie/frontend/src/lib/components/shared/__tests__/s3a2794_umleitung_alt_kennungen.test.ts:154:12)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: s3a2794_ac5_hub_vergleich_idealwerte_oeffnet_wetter
+    not ok 9 - s3a2794_ac5_hub_vergleich_idealwerte_oeffnet_wetter
+      ---
+      duration_ms: 57.526562
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/shimmering-doodling-ritchie/frontend/src/lib/components/shared/__tests__/s3a2794_umleitung_alt_kennungen.test.ts:152:4'
+      failureType: 'testCodeFailure'
+      error: |-
+        CompareTabs: ?tab=idealwerte öffnet 'wertebereiche'; Effekt-Fehler []
+        + actual - expected
+        
+        + 'wertebereiche'
+        - 'wetter'
+             ^
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 'wetter'
+      actual: 'wertebereiche'
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/shimmering-doodling-ritchie/frontend/src/lib/components/shared/__tests__/s3a2794_umleitung_alt_kennungen.test.ts:154:12)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: s3a2794_ac5_hub_vergleich_overview_oeffnet_uebersicht
+    ok 10 - s3a2794_ac5_hub_vergleich_overview_oeffnet_uebersicht
+      ---
+      duration_ms: 61.090557
+      type: 'test'
+      ...
+    # Subtest: s3a2794_ac5_hub_vergleich_preview_oeffnet_uebersicht
+    ok 11 - s3a2794_ac5_hub_vergleich_preview_oeffnet_uebersicht
+      ---
+      duration_ms: 58.770864
+      type: 'test'
+      ...
+    # Subtest: s3a2794_ac5_hub_vergleich_vorschau_oeffnet_uebersicht
+    ok 12 - s3a2794_ac5_hub_vergleich_vorschau_oeffnet_uebersicht
+      ---
+      duration_ms: 65.311122
+      type: 'test'
+      ...
+    # Subtest: s3a2794_ac5_hub_vergleich_stages_oeffnet_punkte
+    ok 13 - s3a2794_ac5_hub_vergleich_stages_oeffnet_punkte
+      ---
+      duration_ms: 58.411733
+      type: 'test'
+      ...
+    # Subtest: s3a2794_ac5_hub_vergleich_anker_versand_gewinnt_gegen_wetter_metriken
+    not ok 14 - s3a2794_ac5_hub_vergleich_anker_versand_gewinnt_gegen_wetter_metriken
+      ---
+      duration_ms: 51.790526
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/shimmering-doodling-ritchie/frontend/src/lib/components/shared/__tests__/s3a2794_umleitung_alt_kennungen.test.ts:162:3'
+      failureType: 'testCodeFailure'
+      error: |-
+        CompareTabs: ?tab=wetter-metriken#versand öffnet 'wetter-metriken' (Anker muss gewinnen); []
+        + actual - expected
+        
+        + 'wetter-metriken'
+        - 'zustellung'
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 'zustellung'
+      actual: 'wetter-metriken'
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/shimmering-doodling-ritchie/frontend/src/lib/components/shared/__tests__/s3a2794_umleitung_alt_kennungen.test.ts:165:11)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: s3a2794_ac5_hub_vergleich_neue_kennung_wetter_ohne_umschreibung
+    not ok 15 - s3a2794_ac5_hub_vergleich_neue_kennung_wetter_ohne_umschreibung
+      ---
+      duration_ms: 55.85995
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/shimmering-doodling-ritchie/frontend/src/lib/components/shared/__tests__/s3a2794_umleitung_alt_kennungen.test.ts:174:4'
+      failureType: 'testCodeFailure'
+      error: |-
+        Expected values to be strictly equal:
+        + actual - expected
+        
+        + 'uebersicht'
+        - 'wetter'
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 'wetter'
+      actual: 'uebersicht'
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/shimmering-doodling-ritchie/frontend/src/lib/components/shared/__tests__/s3a2794_umleitung_alt_kennungen.test.ts:176:12)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: s3a2794_ac5_hub_vergleich_neue_kennung_zustellung_ohne_umschreibung
+    not ok 16 - s3a2794_ac5_hub_vergleich_neue_kennung_zustellung_ohne_umschreibung
+      ---
+      duration_ms: 56.036579
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/shimmering-doodling-ritchie/frontend/src/lib/components/shared/__tests__/s3a2794_umleitung_alt_kennungen.test.ts:174:4'
+      failureType: 'testCodeFailure'
+      error: |-
+        Expected values to be strictly equal:
+        + actual - expected
+        
+        + 'uebersicht'
+        - 'zustellung'
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 'zustellung'
+      actual: 'uebersicht'
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/shimmering-doodling-ritchie/frontend/src/lib/components/shared/__tests__/s3a2794_umleitung_alt_kennungen.test.ts:176:12)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    1..16
+not ok 21 - AC-5 (CompareTabs): der echte Hub öffnet den neuen Reiter und bereinigt die Adresszeile einmal
+  ---
+  duration_ms: 1092.386138
+  type: 'suite'
+  location: '/home/hem/gregor_zwanzig/.claude/worktrees/shimmering-doodling-ritchie/frontend/src/lib/components/shared/__tests__/s3a2794_umleitung_alt_kennungen.test.ts:150:2'
+  failureType: 'subtestsFailed'
+  error: '12 subtests failed'
+  code: 'ERR_TEST_FAILURE'
+  ...
+# Subtest: bereich-Filter (route)
+    # Subtest: s3a2794_bereich_route_wetter_genau_die_wetter_abschnitte
+    not ok 1 - s3a2794_bereich_route_wetter_genau_die_wetter_abschnitte
+      ---
+      duration_ms: 1.957452
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/shimmering-doodling-ritchie/frontend/src/lib/components/shared/weather-metrics-tab/__tests__/s3a2794_bereich_filter.test.ts:44:3'
+      failureType: 'testCodeFailure'
+      error: |-
+        Expected values to be strictly deep-equal:
+        + actual - expected
+        
+          [
+        +   'ausblick',
+            'grundauswahl',
+            'official_alerts',
+        +   'reihenfolge',
+        +   'report_config',
+            'sms_schwellen',
+            'tagesfenster'
+          ]
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected:
+        0: 'grundauswahl'
+        1: 'official_alerts'
+        2: 'sms_schwellen'
+        3: 'tagesfenster'
+      actual:
+        0: 'ausblick'
+        1: 'grundauswahl'
+        2: 'official_alerts'
+        3: 'reihenfolge'
+        4: 'report_config'
+        5: 'sms_schwellen'
+        6: 'tagesfenster'
+      operator: 'deepStrictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/shimmering-doodling-ritchie/frontend/src/lib/components/shared/weather-metrics-tab/__tests__/s3a2794_bereich_filter.test.ts:45:11)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Test.start (node:internal/test_runner/test:944:17)
+        node:internal/test_runner/test:1440:71
+        node:internal/per_context/primordials:466:82
+        new Promise (<anonymous>)
+        new SafePromise (node:internal/per_context/primordials:435:3)
+        node:internal/per_context/primordials:466:9
+        Array.map (<anonymous>)
+      ...
+    # Subtest: s3a2794_bereich_route_zustellung_genau_die_zustellungs_abschnitte
+    not ok 2 - s3a2794_bereich_route_zustellung_genau_die_zustellungs_abschnitte
+      ---
+      duration_ms: 0.398099
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/shimmering-doodling-ritchie/frontend/src/lib/components/shared/weather-metrics-tab/__tests__/s3a2794_bereich_filter.test.ts:48:3'
+      failureType: 'testCodeFailure'
+      error: |-
+        Expected values to be strictly deep-equal:
+        + actual - expected
+        
+          [
+            'ausblick',
+        +   'grundauswahl',
+        +   'official_alerts',
+        +   'reihenfolge',
+        -   'layout_kanal',
+        -   'nachtblock',
+            'report_config',
+        +   'sms_schwellen',
+        +   'tagesfenster'
+          ]
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected:
+        0: 'ausblick'
+        1: 'layout_kanal'
+        2: 'nachtblock'
+        3: 'report_config'
+      actual:
+        0: 'ausblick'
+        1: 'grundauswahl'
+        2: 'official_alerts'
+        3: 'reihenfolge'
+        4: 'report_config'
+        5: 'sms_schwellen'
+        6: 'tagesfenster'
+      operator: 'deepStrictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/shimmering-doodling-ritchie/frontend/src/lib/components/shared/weather-metrics-tab/__tests__/s3a2794_bereich_filter.test.ts:49:11)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Promise.all (index 0)
+        async Suite.run (node:internal/test_runner/test:1442:7)
+        async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+      ...
+    # Subtest: s3a2794_bereich_route_wetter_und_zustellung_disjunkt
+    not ok 3 - s3a2794_bereich_route_wetter_und_zustellung_disjunkt
+      ---
+      duration_ms: 0.293951
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/shimmering-doodling-ritchie/frontend/src/lib/components/shared/weather-metrics-tab/__tests__/s3a2794_bereich_filter.test.ts:52:3'
+      failureType: 'testCodeFailure'
+      error: |-
+        Abschnitte in beiden Bereichen (zwei Instanzen zeigten dasselbe): grundauswahl, reihenfolge, tagesfenster, sms_schwellen, report_config, ausblick, official_alerts
+        + actual - expected
+        
+        + [
+        +   'grundauswahl',
+        +   'reihenfolge',
+        +   'tagesfenster',
+        +   'sms_schwellen',
+        +   'report_config',
+        +   'ausblick',
+        +   'official_alerts'
+        + ]
+        - []
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected:
+      actual:
+        0: 'grundauswahl'
+        1: 'reihenfolge'
+        2: 'tagesfenster'
+        3: 'sms_schwellen'
+        4: 'report_config'
+        5: 'ausblick'
+        6: 'official_alerts'
+      operator: 'deepStrictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/shimmering-doodling-ritchie/frontend/src/lib/components/shared/weather-metrics-tab/__tests__/s3a2794_bereich_filter.test.ts:56:11)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: s3a2794_bereich_route_vereinigung_ist_alles
+    not ok 4 - s3a2794_bereich_route_vereinigung_ist_alles
+      ---
+      duration_ms: 1.506092
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/shimmering-doodling-ritchie/frontend/src/lib/components/shared/weather-metrics-tab/__tests__/s3a2794_bereich_filter.test.ts:59:3'
+      failureType: 'testCodeFailure'
+      error: |-
+        wetter ∪ zustellung ≠ alles (ein Element wäre in keinem Reiter sichtbar)
+        + actual - expected
+        
+          [
+            'ausblick',
+        +   'ausblick',
+            'grundauswahl',
+        +   'grundauswahl',
+            'official_alerts',
+        +   'official_alerts',
+            'reihenfolge',
+        +   'reihenfolge',
+            'report_config',
+        +   'report_config',
+            'sms_schwellen',
+        +   'sms_schwellen',
+            'tagesfenster',
+        +   'tagesfenster'
+          ]
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected:
+        0: 'ausblick'
+        1: 'grundauswahl'
+        2: 'official_alerts'
+        3: 'reihenfolge'
+        4: 'report_config'
+        5: 'sms_schwellen'
+        6: 'tagesfenster'
+      actual:
+        0: 'ausblick'
+        1: 'ausblick'
+        2: 'grundauswahl'
+        3: 'grundauswahl'
+        4: 'official_alerts'
+        5: 'official_alerts'
+        6: 'reihenfolge'
+        7: 'reihenfolge'
+        8: 'report_config'
+        9: 'report_config'
+        10: 'sms_schwellen'
+        11: 'sms_schwellen'
+        12: 'tagesfenster'
+        13: 'tagesfenster'
+      operator: 'deepStrictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/shimmering-doodling-ritchie/frontend/src/lib/components/shared/weather-metrics-tab/__tests__/s3a2794_bereich_filter.test.ts:61:11)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: s3a2794_bereich_route_ohne_bereich_wie_alles
+    ok 5 - s3a2794_bereich_route_ohne_bereich_wie_alles
+      ---
+      duration_ms: 0.24722
+      type: 'test'
+      ...
+    1..5
+not ok 22 - bereich-Filter (route)
+  ---
+  duration_ms: 5.231407
+  type: 'suite'
+  location: '/home/hem/gregor_zwanzig/.claude/worktrees/shimmering-doodling-ritchie/frontend/src/lib/components/shared/weather-metrics-tab/__tests__/s3a2794_bereich_filter.test.ts:43:2'
+  failureType: 'subtestsFailed'
+  error: '4 subtests failed'
+  code: 'ERR_TEST_FAILURE'
+  ...
+# Subtest: bereich-Filter (vergleich)
+    # Subtest: s3a2794_bereich_vergleich_wetter_genau_die_wetter_abschnitte
+    not ok 1 - s3a2794_bereich_vergleich_wetter_genau_die_wetter_abschnitte
+      ---
+      duration_ms: 0.41392
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/shimmering-doodling-ritchie/frontend/src/lib/components/shared/weather-metrics-tab/__tests__/s3a2794_bereich_filter.test.ts:44:3'
+      failureType: 'testCodeFailure'
+      error: |-
+        Expected values to be strictly deep-equal:
+        + actual - expected
+        
+          [
+        +   'ausblick',
+            'grundauswahl',
+            'official_alerts',
+        +   'reihenfolge',
+        +   'stundenverlauf',
+            'tagesfenster'
+          ]
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected:
+        0: 'grundauswahl'
+        1: 'official_alerts'
+        2: 'tagesfenster'
+      actual:
+        0: 'ausblick'
+        1: 'grundauswahl'
+        2: 'official_alerts'
+        3: 'reihenfolge'
+        4: 'stundenverlauf'
+        5: 'tagesfenster'
+      operator: 'deepStrictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/shimmering-doodling-ritchie/frontend/src/lib/components/shared/weather-metrics-tab/__tests__/s3a2794_bereich_filter.test.ts:45:11)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Test.start (node:internal/test_runner/test:944:17)
+        node:internal/test_runner/test:1440:71
+        node:internal/per_context/primordials:466:82
+        new Promise (<anonymous>)
+        new SafePromise (node:internal/per_context/primordials:435:3)
+        node:internal/per_context/primordials:466:9
+        Array.map (<anonymous>)
+      ...
+    # Subtest: s3a2794_bereich_vergleich_zustellung_genau_die_zustellungs_abschnitte
+    not ok 2 - s3a2794_bereich_vergleich_zustellung_genau_die_zustellungs_abschnitte
+      ---
+      duration_ms: 0.23781
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/shimmering-doodling-ritchie/frontend/src/lib/components/shared/weather-metrics-tab/__tests__/s3a2794_bereich_filter.test.ts:48:3'
+      failureType: 'testCodeFailure'
+      error: |-
+        Expected values to be strictly deep-equal:
+        + actual - expected
+        
+          [
+            'ausblick',
+        +   'grundauswahl',
+        +   'official_alerts',
+        +   'reihenfolge',
+        -   'layout_kanal',
+            'stundenverlauf',
+        +   'tagesfenster'
+          ]
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected:
+        0: 'ausblick'
+        1: 'layout_kanal'
+        2: 'stundenverlauf'
+      actual:
+        0: 'ausblick'
+        1: 'grundauswahl'
+        2: 'official_alerts'
+        3: 'reihenfolge'
+        4: 'stundenverlauf'
+        5: 'tagesfenster'
+      operator: 'deepStrictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/shimmering-doodling-ritchie/frontend/src/lib/components/shared/weather-metrics-tab/__tests__/s3a2794_bereich_filter.test.ts:49:11)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Promise.all (index 0)
+        async Suite.run (node:internal/test_runner/test:1442:7)
+        async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: s3a2794_bereich_vergleich_wetter_und_zustellung_disjunkt
+    not ok 3 - s3a2794_bereich_vergleich_wetter_und_zustellung_disjunkt
+      ---
+      duration_ms: 0.29202
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/shimmering-doodling-ritchie/frontend/src/lib/components/shared/weather-metrics-tab/__tests__/s3a2794_bereich_filter.test.ts:52:3'
+      failureType: 'testCodeFailure'
+      error: |-
+        Abschnitte in beiden Bereichen (zwei Instanzen zeigten dasselbe): grundauswahl, reihenfolge, tagesfenster, stundenverlauf, ausblick, official_alerts
+        + actual - expected
+        
+        + [
+        +   'grundauswahl',
+        +   'reihenfolge',
+        +   'tagesfenster',
+        +   'stundenverlauf',
+        +   'ausblick',
+        +   'official_alerts'
+        + ]
+        - []
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected:
+      actual:
+        0: 'grundauswahl'
+        1: 'reihenfolge'
+        2: 'tagesfenster'
+        3: 'stundenverlauf'
+        4: 'ausblick'
+        5: 'official_alerts'
+      operator: 'deepStrictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/shimmering-doodling-ritchie/frontend/src/lib/components/shared/weather-metrics-tab/__tests__/s3a2794_bereich_filter.test.ts:56:11)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: s3a2794_bereich_vergleich_vereinigung_ist_alles
+    not ok 4 - s3a2794_bereich_vergleich_vereinigung_ist_alles
+      ---
+      duration_ms: 0.280371
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/shimmering-doodling-ritchie/frontend/src/lib/components/shared/weather-metrics-tab/__tests__/s3a2794_bereich_filter.test.ts:59:3'
+      failureType: 'testCodeFailure'
+      error: |-
+        wetter ∪ zustellung ≠ alles (ein Element wäre in keinem Reiter sichtbar)
+        + actual - expected
+        
+          [
+            'ausblick',
+        +   'ausblick',
+            'grundauswahl',
+        +   'grundauswahl',
+            'official_alerts',
+        +   'official_alerts',
+            'reihenfolge',
+        +   'reihenfolge',
+            'stundenverlauf',
+        +   'stundenverlauf',
+            'tagesfenster',
+        +   'tagesfenster'
+          ]
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected:
+        0: 'ausblick'
+        1: 'grundauswahl'
+        2: 'official_alerts'
+        3: 'reihenfolge'
+        4: 'stundenverlauf'
+        5: 'tagesfenster'
+      actual:
+        0: 'ausblick'
+        1: 'ausblick'
+        2: 'grundauswahl'
+        3: 'grundauswahl'
+        4: 'official_alerts'
+        5: 'official_alerts'
+        6: 'reihenfolge'
+        7: 'reihenfolge'
+        8: 'stundenverlauf'
+        9: 'stundenverlauf'
+        10: 'tagesfenster'
+        11: 'tagesfenster'
+      operator: 'deepStrictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/shimmering-doodling-ritchie/frontend/src/lib/components/shared/weather-metrics-tab/__tests__/s3a2794_bereich_filter.test.ts:61:11)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: s3a2794_bereich_vergleich_ohne_bereich_wie_alles
+    ok 5 - s3a2794_bereich_vergleich_ohne_bereich_wie_alles
+      ---
+      duration_ms: 0.242771
+      type: 'test'
+      ...
+    1..5
+not ok 23 - bereich-Filter (vergleich)
+  ---
+  duration_ms: 1.784142
+  type: 'suite'
+  location: '/home/hem/gregor_zwanzig/.claude/worktrees/shimmering-doodling-ritchie/frontend/src/lib/components/shared/weather-metrics-tab/__tests__/s3a2794_bereich_filter.test.ts:43:2'
+  failureType: 'subtestsFailed'
+  error: '4 subtests failed'
+  code: 'ERR_TEST_FAILURE'
+  ...
+1..23
+# tests 140
+# suites 23
+# pass 36
+# fail 104
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 61600.061477

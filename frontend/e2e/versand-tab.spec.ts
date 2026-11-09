@@ -76,26 +76,28 @@ async function openTripOverview(page: Page, id: string): Promise<void> {
 }
 
 // Issue #1743: kein eigener Reiter „Versand" mehr — der Versand-Inhalt steht
-// im Reiter „Wetter-Metriken" im Abschnitt `#versand` (versand-abschnitt).
+// im Abschnitt `#versand` (versand-abschnitt). Seit #2794 S3a (Spec
+// feat_2794_s3a_teil2_leiste.md) im Reiter „Zustellung".
 async function clickVersandTab(page: Page): Promise<void> {
-	await page.getByTestId('trip-detail-tab-wetter-metriken').first().click();
+	await page.getByTestId('trip-detail-tab-zustellung').first().click();
 	await expect(versandPanel(page)).toBeVisible();
 }
 
 function versandPanel(page: Page) {
-	return page.getByTestId('trip-detail-panel-wetter-metriken').getByTestId('versand-abschnitt');
+	return page.getByTestId('trip-detail-panel-zustellung').getByTestId('versand-abschnitt');
 }
 
+// #2794 S3a: die Wertebereiche stehen im Reiter „Wetter".
 async function clickAlertsTab(page: Page): Promise<void> {
-	await page.getByTestId('trip-detail-tab-wertebereiche').first().click();
-	await expect(page.getByTestId('trip-detail-panel-wertebereiche')).toBeVisible();
+	await page.getByTestId('trip-detail-tab-wetter').first().click();
+	await expect(page.getByTestId('trip-detail-panel-wetter')).toBeVisible();
 }
 
-// Issue #1258 Scheibe S3 (D5): neuer Tab „Alarme" — Ziel-Panel der
-// Alert-Zustellungs-Sektion nach dem atomaren Umzug.
+// Issue #1258 Scheibe S3 (D5): Alert-Zustellungs-Sektion im Alarme-Inhalt; seit
+// #2794 S3a steht er im Reiter „Zustellung".
 async function clickAlarmeTab(page: Page): Promise<void> {
-	await page.getByTestId('trip-detail-tab-alarme').first().click();
-	await expect(page.getByTestId('trip-detail-panel-alarme')).toBeVisible();
+	await page.getByTestId('trip-detail-tab-zustellung').first().click();
+	await expect(page.getByTestId('trip-detail-panel-zustellung')).toBeVisible();
 }
 
 test.describe('Issue #1232 Scheibe 1 — VersandTab (context=route)', () => {
@@ -116,8 +118,8 @@ test.describe('Issue #1232 Scheibe 1 — VersandTab (context=route)', () => {
 		await openTripOverview(page, tripId('main'));
 		await clickAlarmeTab(page);
 
-		const panel = page.getByTestId('trip-detail-panel-alarme');
-		await expect(panel.getByTestId('alarme-tab')).toBeVisible();
+		const panel = page.getByTestId('trip-detail-panel-zustellung').getByTestId('alarme-tab');
+		await expect(panel).toBeVisible();
 		await expect(panel.getByTestId('alert-cooldown-card')).toBeVisible();
 		await expect(panel.getByTestId('alert-quiet-hours-card')).toBeVisible();
 		await expect(panel.getByTestId('alert-preview-card')).toBeVisible();
@@ -150,7 +152,7 @@ test.describe('Issue #1232 Scheibe 1 — VersandTab (context=route)', () => {
 		await openTripOverview(page, tripId('main'));
 		await clickAlertsTab(page);
 
-		const panel = page.getByTestId('trip-detail-panel-wertebereiche');
+		const panel = page.getByTestId('trip-detail-panel-wetter');
 		await expect(panel).toBeVisible();
 		await expect(panel.getByTestId('alert-cooldown-card')).toHaveCount(0);
 		await expect(panel.getByTestId('alert-preview-card')).toHaveCount(0);

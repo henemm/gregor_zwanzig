@@ -1,0 +1,124 @@
+
+Running 5 tests using 1 worker
+
+[1/5] [setup] › e2e/fix-1895-modus-rueckbau.staging.setup.ts:10:1 › authenticate via API (staging) — 1895_modus_rueckbau
+[2/5] [tests] › e2e/s3a2794-hub-reiter-wetter-zustellung.spec.ts:91:2 › AC-1/AC-2 (route): Hub-Leiste genau uebersicht · etappen · wetter · zustellung (DE), Punkte-Badge 3
+  1) [tests] › e2e/s3a2794-hub-reiter-wetter-zustellung.spec.ts:91:2 › AC-1/AC-2 (route): Hub-Leiste genau uebersicht · etappen · wetter · zustellung (DE), Punkte-Badge 3 
+
+    Error: expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 2
+    + Received  + 3
+
+      Array [
+        "uebersicht",
+        "etappen",
+    -   "wetter",
+    -   "zustellung",
+    +   "wetter-metriken",
+    +   "wertebereiche",
+    +   "alarme",
+      ]
+
+      94 | 		try {
+      95 | 			await oeffne(page, kind, hub.id);
+    > 96 | 			expect(await reiterIds(page, kind)).toEqual(SOLL_IDS[kind]);
+         | 			                                    ^
+      97 | 			await expect(reiter(page, kind, 'wetter')).toContainText(SOLL_LABEL.de[0]);
+      98 | 			await expect(reiter(page, kind, 'zustellung')).toContainText(SOLL_LABEL.de[1]);
+      99 | 			for (const alt of ['wetter-metriken', 'wertebereiche', 'alarme']) {
+
+    Error Context: test-results/s3a2794-hub-reiter-wetter--d6332-ustellung-DE-Punkte-Badge-3-tests/error-context.md
+
+
+[3/5] [tests] › e2e/s3a2794-hub-reiter-wetter-zustellung.spec.ts:91:2 › AC-1/AC-2 (vergleich): Hub-Leiste genau uebersicht · orte · wetter · zustellung (DE), Punkte-Badge 3
+  2) [tests] › e2e/s3a2794-hub-reiter-wetter-zustellung.spec.ts:91:2 › AC-1/AC-2 (vergleich): Hub-Leiste genau uebersicht · orte · wetter · zustellung (DE), Punkte-Badge 3 
+
+    Error: expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 2
+    + Received  + 3
+
+      Array [
+        "uebersicht",
+        "orte",
+    -   "wetter",
+    -   "zustellung",
+    +   "wetter-metriken",
+    +   "wertebereiche",
+    +   "alarme",
+      ]
+
+      94 | 		try {
+      95 | 			await oeffne(page, kind, hub.id);
+    > 96 | 			expect(await reiterIds(page, kind)).toEqual(SOLL_IDS[kind]);
+         | 			                                    ^
+      97 | 			await expect(reiter(page, kind, 'wetter')).toContainText(SOLL_LABEL.de[0]);
+      98 | 			await expect(reiter(page, kind, 'zustellung')).toContainText(SOLL_LABEL.de[1]);
+      99 | 			for (const alt of ['wetter-metriken', 'wertebereiche', 'alarme']) {
+
+    Error Context: test-results/s3a2794-hub-reiter-wetter--42727-ustellung-DE-Punkte-Badge-3-tests/error-context.md
+
+
+[4/5] [tests] › e2e/s3a2794-hub-reiter-wetter-zustellung.spec.ts:236:2 › AC-5 (route): alte Adressen landen in Wetter bzw. Zustellung, Adresszeile zeigt die neue Kennung
+  3) [tests] › e2e/s3a2794-hub-reiter-wetter-zustellung.spec.ts:236:2 › AC-5 (route): alte Adressen landen in Wetter bzw. Zustellung, Adresszeile zeigt die neue Kennung 
+
+    Error: ?tab=wetter-metriken: Reiter wetter nicht aktiv
+
+    expect(locator).toHaveAttribute(expected) failed
+
+    Locator: locator('[data-testid="trip-detail-tab-wetter"]:visible').first()
+    Expected: "true"
+    Timeout: 15000ms
+    Error: element(s) not found
+
+    Call log:
+      - ?tab=wetter-metriken: Reiter wetter nicht aktiv with timeout 15000ms
+      - waiting for locator('[data-testid="trip-detail-tab-wetter"]:visible').first()
+
+
+      245 | 			for (const [alt, neu, anker] of faelle) {
+      246 | 				await oeffne(page, kind, hub.id, `?tab=${alt}`);
+    > 247 | 				await expect(reiter(page, kind, neu), `?tab=${alt}: Reiter ${neu} nicht aktiv`).toHaveAttribute('aria-selected', 'true', { timeout: 15_000 });
+          | 				                                                                                ^
+      248 | 				await expect(panel(page, kind, neu)).toBeVisible({ timeout: 15_000 });
+      249 | 				await expect.poll(() => new URL(page.url()).searchParams.get('tab'), { message: `?tab=${alt}: Adresszeile` }).toBe(neu);
+      250 | 				if (anker) await expect.poll(() => new URL(page.url()).hash).toBe('#versand');
+
+    Error Context: test-results/s3a2794-hub-reiter-wetter--23966-eile-zeigt-die-neue-Kennung-tests/error-context.md
+
+
+[5/5] [tests] › e2e/s3a2794-hub-reiter-wetter-zustellung.spec.ts:236:2 › AC-5 (vergleich): alte Adressen landen in Wetter bzw. Zustellung, Adresszeile zeigt die neue Kennung
+  4) [tests] › e2e/s3a2794-hub-reiter-wetter-zustellung.spec.ts:236:2 › AC-5 (vergleich): alte Adressen landen in Wetter bzw. Zustellung, Adresszeile zeigt die neue Kennung 
+
+    Error: ?tab=wetter-metriken: Reiter wetter nicht aktiv
+
+    expect(locator).toHaveAttribute(expected) failed
+
+    Locator: locator('[data-testid="compare-detail-tab-wetter"]:visible').first()
+    Expected: "true"
+    Timeout: 15000ms
+    Error: element(s) not found
+
+    Call log:
+      - ?tab=wetter-metriken: Reiter wetter nicht aktiv with timeout 15000ms
+      - waiting for locator('[data-testid="compare-detail-tab-wetter"]:visible').first()
+
+
+      245 | 			for (const [alt, neu, anker] of faelle) {
+      246 | 				await oeffne(page, kind, hub.id, `?tab=${alt}`);
+    > 247 | 				await expect(reiter(page, kind, neu), `?tab=${alt}: Reiter ${neu} nicht aktiv`).toHaveAttribute('aria-selected', 'true', { timeout: 15_000 });
+          | 				                                                                                ^
+      248 | 				await expect(panel(page, kind, neu)).toBeVisible({ timeout: 15_000 });
+      249 | 				await expect.poll(() => new URL(page.url()).searchParams.get('tab'), { message: `?tab=${alt}: Adresszeile` }).toBe(neu);
+      250 | 				if (anker) await expect.poll(() => new URL(page.url()).hash).toBe('#versand');
+
+    Error Context: test-results/s3a2794-hub-reiter-wetter--f8248-eile-zeigt-die-neue-Kennung-tests/error-context.md
+
+
+  4 failed
+    [tests] › e2e/s3a2794-hub-reiter-wetter-zustellung.spec.ts:91:2 › AC-1/AC-2 (route): Hub-Leiste genau uebersicht · etappen · wetter · zustellung (DE), Punkte-Badge 3 
+    [tests] › e2e/s3a2794-hub-reiter-wetter-zustellung.spec.ts:91:2 › AC-1/AC-2 (vergleich): Hub-Leiste genau uebersicht · orte · wetter · zustellung (DE), Punkte-Badge 3 
+    [tests] › e2e/s3a2794-hub-reiter-wetter-zustellung.spec.ts:236:2 › AC-5 (route): alte Adressen landen in Wetter bzw. Zustellung, Adresszeile zeigt die neue Kennung 
+    [tests] › e2e/s3a2794-hub-reiter-wetter-zustellung.spec.ts:236:2 › AC-5 (vergleich): alte Adressen landen in Wetter bzw. Zustellung, Adresszeile zeigt die neue Kennung 
+  1 passed (36.3s)

@@ -63,12 +63,16 @@ export const REITER_MIT_INFOBOX: Record<Kontext, string[]> = {
 /** Issue #1743 (AC-19/AC-22): der Reiter, in dem der Infobox-Schluessel beim Anlegen offen ist.
  *  Der Typ `InfoboxAbschnitt` (nach der Umbenennung) wird hier bewusst referenziert — svelte-check
  *  bewacht damit die Umbenennung (AC-22). */
+// Issue #2794 S3a (Spec feat_2794_s3a_teil2_leiste.md AC-6): die Infobox-Schluessel bleiben, die
+// Anlege-Schritte heissen jetzt Wetter (Metriken, Wertebereiche) und Zustellung (Versand, Alarme).
 export const REITER_DES_ABSCHNITTS: Record<InfoboxAbschnitt, string> = {
-	'wetter-metriken': 'wetter-metriken',
-	wertebereiche: 'wertebereiche',
-	alarme: 'alarme',
-	versand: 'wetter-metriken',
-	wegpunkte: 'wegpunkte'
+	'wetter-metriken': 'wetter',
+	wertebereiche: 'wetter',
+	alarme: 'zustellung',
+	versand: 'zustellung',
+	wegpunkte: 'wegpunkte',
+	wetter: 'wetter',
+	zustellung: 'zustellung'
 };
 
 export const PFLICHTREITER: Record<Kontext, string[]> = {

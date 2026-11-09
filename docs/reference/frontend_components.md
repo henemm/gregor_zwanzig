@@ -652,10 +652,10 @@ lokal im Editor-State und lösen genau EINEN `POST /api/trips` bzw.
 liefert 404).
 
 `/trips/new` hat seit Issue #2277 Scheibe S2a einen eigenen Reiter
-**„Wertebereiche"**; seit S3 gleicht die Reiterleiste ab „Wetter-Metriken" der von
-`/compare/new` (… Wertebereiche → Alarme → Versand; IDs `alarme`/`versand`),
-Sperrkette Wertebereiche → Alarme → Versand, Anlegen erst nach Besuch von
-„Versand", Fortschritt `/4`. Gemountet wird darin
+**„Wertebereiche"** (seit S3a Teil-PR 2, Epic #2791, im Reiter **„Wetter"** gebündelt;
+Anlege-Ketten Route · Etappen · Wegpunkte · Wetter · Zustellung bzw. Vergleich · Orte ·
+Wetter · Zustellung, Anlegen erst nach Besuch von „Zustellung", einem Übergangsreiter bis
+S3b, ADR-0109; Kennungen/Umleitung: `navigation.md`). Gemountet wird darin
 derselbe geteilte `shared/corridor-editor/CorridorEditor.svelte`, den Trip-Hub
 und Ortsvergleich bereits nutzen — mit neuem Prop `createMode` (Default
 `false`), der den Selbst-Speicher-PUT abschaltet; Änderungen fließen stattdessen
@@ -663,6 +663,11 @@ und Ortsvergleich bereits nutzen — mit neuem Prop `createMode` (Default
 einen `POST /api/trips` in den neuen Trip. Gleiches `createMode`-Muster nutzen
 dort bereits `WeatherMetricsTab` und `AlarmeTab` (S1, #2426). Details:
 `docs/specs/modules/fix_2277_s2a_wertebereiche_trip_anlegen.md`.
+
+Reiter „Zustellung" (Teil-PR 2): `shared/zustellung-tab/ZustellungTab.svelte` bindet
+`shared/WetterMetrikenVersandPanel.svelte` (mit `bereich="zustellung"`) und
+`trip-detail/AlarmeScheduleTab.svelte` ein; „Wetter" rendert `WeatherMetricsTab` mit
+`bereich="wetter"`. `bereich` ist nur ein Darstellungsfilter, kein neuer Speicherweg.
 
 ---
 

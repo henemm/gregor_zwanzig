@@ -73,13 +73,15 @@ async function mobileReiter(page: Page, prefix: string): Promise<string[]> {
 }
 
 test.describe('Trip-Hub: Alt-Kennungen werden umgeleitet und die URL bereinigt', () => {
-	test('AC-3/AC-12: ?tab=alerts öffnet Wertebereiche, URL wird ?tab=wertebereiche', async ({ page }) => {
+	// #2794 S3a (Spec feat_2794_s3a_teil2_leiste.md AC-5): Alt-Kennungen führen in die Reiter
+	// Wetter bzw. Zustellung (Wertebereiche stehen im Reiter Wetter).
+	test('AC-3/AC-12: ?tab=alerts öffnet Wetter (Wertebereiche), URL wird ?tab=wetter', async ({ page }) => {
 		const { id } = await neuerTrip(page);
 		await page.goto(`/trips/${id}?tab=alerts`);
 
-		await expect(page.getByTestId('trip-detail-panel-wertebereiche')).toBeVisible({ timeout: 15_000 });
-		await expect(page.getByTestId('trip-detail-tab-wertebereiche')).toHaveAttribute('aria-selected', 'true');
-		await expect.poll(() => tabParam(page)).toBe('wertebereiche');
+		await expect(page.getByTestId('trip-detail-panel-wetter')).toBeVisible({ timeout: 15_000 });
+		await expect(page.getByTestId('trip-detail-tab-wetter')).toHaveAttribute('aria-selected', 'true');
+		await expect.poll(() => tabParam(page)).toBe('wetter');
 		await expect(page.getByTestId('trip-detail-panel-uebersicht')).toHaveCount(0);
 	});
 
@@ -91,15 +93,15 @@ test.describe('Trip-Hub: Alt-Kennungen werden umgeleitet und die URL bereinigt',
 
 		// Referenz: Direktaufruf mit der NEUEN Kennung in einem frischen Tab.
 		const direkt = await context.newPage();
-		await direkt.goto(`/trips/${id}?tab=wertebereiche`);
-		await expect(direkt.getByTestId('trip-detail-panel-wertebereiche')).toBeVisible({ timeout: 15_000 });
+		await direkt.goto(`/trips/${id}?tab=wetter`);
+		await expect(direkt.getByTestId('trip-detail-panel-wetter')).toBeVisible({ timeout: 15_000 });
 		const laengeDirekt = await direkt.evaluate(() => history.length);
 		await direkt.close();
 
 		const alt = await context.newPage();
 		await alt.goto(`/trips/${id}?tab=alerts`);
-		await expect(alt.getByTestId('trip-detail-panel-wertebereiche')).toBeVisible({ timeout: 15_000 });
-		await expect.poll(() => tabParam(alt)).toBe('wertebereiche');
+		await expect(alt.getByTestId('trip-detail-panel-wetter')).toBeVisible({ timeout: 15_000 });
+		await expect.poll(() => tabParam(alt)).toBe('wetter');
 		expect(await alt.evaluate(() => history.length), 'replaceState statt pushState').toBe(laengeDirekt);
 
 		await alt.goBack().catch(() => null);
@@ -125,14 +127,14 @@ test.describe('Trip-Hub: Alt-Kennungen werden umgeleitet und die URL bereinigt',
 });
 
 test.describe('Vergleich-Hub: Alt-Kennungen werden umgeleitet und die URL bereinigt', () => {
-	test('AC-3/AC-12: ?tab=idealwerte öffnet Wertebereiche, URL wird ?tab=wertebereiche', async ({ page }) => {
+	test('AC-3/AC-12: ?tab=idealwerte öffnet Wetter (Wertebereiche), URL wird ?tab=wetter', async ({ page }) => {
 		const id = await neuerVergleich(page);
 		await page.goto(`/compare/${id}?tab=idealwerte`);
 
 		await expect(
-			page.locator('[data-testid="compare-detail-panel-wertebereiche"]:visible').first()
+			page.locator('[data-testid="compare-detail-panel-wetter"]:visible').first()
 		).toBeVisible({ timeout: 15_000 });
-		await expect.poll(() => tabParam(page)).toBe('wertebereiche');
+		await expect.poll(() => tabParam(page)).toBe('wetter');
 		await expect(page.locator('[data-testid="compare-detail-panel-uebersicht"]')).toHaveCount(0);
 	});
 
@@ -159,7 +161,7 @@ test.describe('Vergleich-Hub: Alt-Kennungen werden umgeleitet und die URL berein
 
 // Issue #1743 (docs/specs/modules/feat_1743_reiter_aufraeumen.md): die Reiter
 // „Versand" und „Vorschau" sind aufgeloest. Alt-Links fuehren an den neuen Ort:
-// ?tab=versand|briefings → ?tab=wetter-metriken#versand (Abschnitt im Blick),
+// ?tab=versand|briefings → ?tab=zustellung#versand (seit #2794 S3a; Abschnitt im Blick),
 // ?tab=vorschau|preview → ?tab=uebersicht.
 const HUBS = [
 	{
@@ -219,7 +221,7 @@ for (const hub of HUBS) {
 	test.describe(`#1743 ${hub.art}-Hub: Alt-Links auf Versand/Vorschau`, () => {
 		for (const vp of [{ width: 1280, height: 900 }, HANDY])
 		for (const alt of ['versand', 'briefings']) {
-			test(`?tab=${alt} → ?tab=wetter-metriken#versand, Versand-Abschnitt bleibt im Blick (${vp.width}x${vp.height})`, async ({ page }) => {
+			test(`?tab=${alt} → ?tab=zustellung#versand, Versand-Abschnitt bleibt im Blick (${vp.width}x${vp.height})`, async ({ page }) => {
 				await page.setViewportSize(vp);
 				const pfad = await hub.pfad(page);
 				await katalogVerzoegern(page);
@@ -227,17 +229,17 @@ for (const hub of HUBS) {
 				await page.goto(`${pfad}?tab=${alt}`);
 
 				await expect(
-					page.locator(`[data-testid="${hub.prefix}-panel-wetter-metriken"]:visible`).first()
+					page.locator(`[data-testid="${hub.prefix}-panel-zustellung"]:visible`).first()
 				).toBeVisible({ timeout: 15_000 });
 				await expect(
-					page.locator(`[data-testid="${hub.prefix}-tab-wetter-metriken"]:visible`).first()
+					page.locator(`[data-testid="${hub.prefix}-tab-zustellung"]:visible`).first()
 				).toHaveAttribute('aria-selected', 'true');
 				await expect
 					.poll(() => {
 						const u = new URL(page.url());
 						return `${u.searchParams.get('tab')}${u.hash}`;
 					})
-					.toBe('wetter-metriken#versand');
+					.toBe('zustellung#versand');
 				const abschnitt = page.locator('[data-testid="versand-abschnitt"]:visible').first();
 				await expect(abschnitt).toBeVisible({ timeout: 15_000 });
 				await geladen;
@@ -261,8 +263,8 @@ for (const hub of HUBS) {
 
 		// #2347 S4 (feat_2347_s4_paritaets_e2e.md AC-5): Alt compare-flow-navigation
 		// Z. 675-700 und compare-layout-tab-dissolution AC-3 — der aufgelöste Reiter
-		// „Layout" (LEGACY.layout in subscriptionTabs.ts) führt in Wetter-Metriken.
-		test('?tab=layout → ?tab=wetter-metriken, URL bereinigt, kein Layout-Panel', async ({ page }) => {
+		// „Layout" (LEGACY.layout in subscriptionTabs.ts) führt seit #2794 S3a in den Reiter Wetter.
+		test('?tab=layout → ?tab=wetter, URL bereinigt, kein Layout-Panel', async ({ page }) => {
 			const pfad = await hub.pfad(page);
 			// Rumpf-Abgleich compare-layout-tab-dissolution AC-3: Umleitung ohne Fehlermeldung.
 			const seitenfehler: string[] = [];
@@ -270,12 +272,12 @@ for (const hub of HUBS) {
 			await page.goto(`${pfad}?tab=layout`);
 
 			await expect(
-				page.locator(`[data-testid="${hub.prefix}-panel-wetter-metriken"]:visible`).first()
+				page.locator(`[data-testid="${hub.prefix}-panel-wetter"]:visible`).first()
 			).toBeVisible({ timeout: 15_000 });
 			await expect(
-				page.locator(`[data-testid="${hub.prefix}-tab-wetter-metriken"]:visible`).first()
+				page.locator(`[data-testid="${hub.prefix}-tab-wetter"]:visible`).first()
 			).toHaveAttribute('aria-selected', 'true');
-			await expect.poll(() => tabParam(page)).toBe('wetter-metriken');
+			await expect.poll(() => tabParam(page)).toBe('wetter');
 			await expect(page.locator(`[data-testid="${hub.prefix}-panel-layout"]`)).toHaveCount(0);
 			await expect(page.locator(`[data-testid="${hub.prefix}-panel-uebersicht"]`)).toHaveCount(0);
 			expect(seitenfehler, '?tab=layout: Umleitung mit pageerror').toEqual([]);
@@ -284,7 +286,7 @@ for (const hub of HUBS) {
 }
 
 test.describe('AC-10: Bestandsfehler der Schnellaktionen', () => {
-	test('Trip-Liste (Handy): „Wetter-Metriken" öffnet den Reiter Wetter-Metriken', async ({ page }) => {
+	test('Trip-Liste (Handy): „Wetter-Metriken" öffnet den Reiter Wetter', async ({ page }) => {
 		// Datierte Etappe Pflicht: ein Trip ohne Etappen ist seit #2278 ein Entwurf, dessen
 		// Menü nur „Setup fortsetzen"/„Löschen" anbietet (subscriptionActions.ts, draft).
 		const heute = new Date().toISOString().slice(0, 10);
@@ -307,8 +309,8 @@ test.describe('AC-10: Bestandsfehler der Schnellaktionen', () => {
 		await page.getByTestId(`subscription-card-menu-${id}`).click();
 		await page.getByTestId('subscription-action-weather').click();
 
-		await expect(page).toHaveURL(new RegExp(`/trips/${id}\\?tab=wetter-metriken$`), { timeout: 15_000 });
-		await expect(page.getByTestId('trip-detail-panel-wetter-metriken')).toBeVisible({ timeout: 15_000 });
+		await expect(page).toHaveURL(new RegExp(`/trips/${id}\\?tab=wetter$`), { timeout: 15_000 });
+		await expect(page.getByTestId('trip-detail-panel-wetter')).toBeVisible({ timeout: 15_000 });
 	});
 
 	// Issue #1743: die Schnellaktion „Vorschau prüfen" ist entfallen (kein Reiter
@@ -357,11 +359,11 @@ test.describe('AC-10: Bestandsfehler der Schnellaktionen', () => {
 			const geladen = katalogGeladen(gast);
 			await gast.locator('a:visible', { hasText: 'Briefing-Zeitplan' }).first().click();
 
-			await expect(gast).toHaveURL(new RegExp(`/compare/${presetId}\\?tab=wetter-metriken#versand$`), {
+			await expect(gast).toHaveURL(new RegExp(`/compare/${presetId}\\?tab=zustellung#versand$`), {
 				timeout: 15_000
 			});
 			await expect(
-				gast.locator('[data-testid="compare-detail-panel-wetter-metriken"]:visible').first()
+				gast.locator('[data-testid="compare-detail-panel-zustellung"]:visible').first()
 			).toBeVisible({ timeout: 15_000 });
 			const abschnitt = gast.locator('[data-testid="versand-abschnitt"]:visible').first();
 			await expect(abschnitt).toBeVisible({ timeout: 15_000 });
@@ -379,10 +381,10 @@ test.describe('AC-10: Bestandsfehler der Schnellaktionen', () => {
 });
 
 test.describe('AC-14: Handy-Reiterleiste in beiden Hubs gleich', () => {
-	// Issue #1743: fuenf Reiter — kein `versand`/`vorschau` mehr.
-	const SCHWANZ = ['wetter-metriken', 'wertebereiche', 'alarme'];
+	// Issue #1743: kein `versand`/`vorschau` mehr; #2794 S3a: vier Reiter.
+	const SCHWANZ = ['wetter', 'zustellung'];
 
-	test('Trip: Reihenfolge uebersicht · etappen · … · alarme, Antippen öffnet Wertebereiche', async ({
+	test('Trip: Reihenfolge uebersicht · etappen · wetter · zustellung, Antippen öffnet Wetter', async ({
 		page
 	}) => {
 		const { id } = await neuerTrip(page);
@@ -394,12 +396,12 @@ test.describe('AC-14: Handy-Reiterleiste in beiden Hubs gleich', () => {
 
 		// dispatchEvent statt click: Scroll-Snap + Fade-Maske des Bands stören
 		// Playwrights Actionability-Scroll (Muster der früheren Trip-Reiterleisten-Spec, heute hub-tab-bar.spec.ts).
-		await page.getByTestId('trip-detail-tab-wertebereiche').dispatchEvent('click');
-		await expect(page.getByTestId('trip-detail-panel-wertebereiche')).toBeVisible();
-		await expect.poll(() => tabParam(page)).toBe('wertebereiche');
+		await page.getByTestId('trip-detail-tab-wetter').dispatchEvent('click');
+		await expect(page.getByTestId('trip-detail-panel-wetter')).toBeVisible();
+		await expect.poll(() => tabParam(page)).toBe('wetter');
 	});
 
-	test('Vergleich: Reihenfolge uebersicht · orte · … · alarme, Antippen öffnet Wertebereiche', async ({
+	test('Vergleich: Reihenfolge uebersicht · orte · wetter · zustellung, Antippen öffnet Wetter', async ({
 		page
 	}) => {
 		const id = await neuerVergleich(page);
@@ -409,10 +411,10 @@ test.describe('AC-14: Handy-Reiterleiste in beiden Hubs gleich', () => {
 
 		expect(await mobileReiter(page, 'compare-detail-tab-')).toEqual(['uebersicht', 'orte', ...SCHWANZ]);
 
-		await page.getByTestId('compare-detail-tab-wertebereiche').dispatchEvent('click');
+		await page.getByTestId('compare-detail-tab-wetter').dispatchEvent('click');
 		await expect(
-			page.locator('[data-testid="compare-detail-panel-wertebereiche"]:visible').first()
+			page.locator('[data-testid="compare-detail-panel-wetter"]:visible').first()
 		).toBeVisible();
-		await expect.poll(() => tabParam(page)).toBe('wertebereiche');
+		await expect.poll(() => tabParam(page)).toBe('wetter');
 	});
 });

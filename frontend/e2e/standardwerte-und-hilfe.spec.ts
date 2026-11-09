@@ -33,9 +33,9 @@ import {
 
 const DESKTOP = { width: 1280, height: 900 };
 const MOBILE = { width: 375, height: 812 };
-// Issue #1743: kein Anlege-Schritt Versand mehr (Abschnitt im Schritt Wetter-Metriken).
-const TRIP_KETTE = [/Wetter/, /Wertebereiche/, /Alarme/];
-const VERGLEICH_KETTE = ['wetter-metriken', 'wertebereiche', 'alarme'] as const;
+// Issue #1743: kein Anlege-Schritt Versand mehr. #2794 S3a: Schritte Wetter und Zustellung.
+const TRIP_KETTE = [/Wetter/, /Zustellung/];
+const VERGLEICH_KETTE = ['wetter', 'zustellung'] as const;
 
 test.beforeEach(async ({ page }) => {
 	await login(page);
@@ -234,7 +234,7 @@ test.describe('Teil A: Ortsvergleich /compare/new', () => {
 	test('AC-12: mobil 375 px — Knopf auf jedem Reiter vor Versand in der unteren Leiste', async ({ page }) => {
 		await vergleichPflicht(page, `E2E-GZ-Std-Vgl-Mobil ${Date.now()}`);
 		await page.setViewportSize(MOBILE);
-		for (const reiter of ['orte', 'wetter-metriken', 'wertebereiche', 'alarme']) {
+		for (const reiter of ['orte', 'wetter', 'zustellung']) {
 			await vergleichTab(page, true, reiter).click({ force: true });
 			await expect(page.locator('[data-testid="cm-mobile-cta"] [data-testid="cm-mobile-standardwerte"]:visible'), reiter).toBeVisible();
 		}

@@ -219,7 +219,7 @@ async function unterkante(page: Page) {
 	});
 	const padding = await titelBlock.evaluate((el) => getComputedStyle(el).paddingBottom);
 	const k = await box(wurzel, 'HubKopf-Wurzel');
-	const r = await box(page.locator('[data-slot="segmented"][role="tablist"]').first(), 'Reiterleiste');
+	const r = await box(page.locator('.mtabbar[role="tablist"]').first(), 'Reiterleiste');
 	return { ...w, padding, abstand: r.y - (k.y + k.height) };
 }
 
@@ -291,7 +291,8 @@ test.describe('HP Parität — beide Arten nebeneinander gemessen', () => {
 				expect(Math.abs(l.x + l.width - (s.x + s.width) - tripLage!.rechts), 'nicht auf dem Senden-Platz (rechts)').toBeLessThanOrEqual(4);
 				expect(Math.abs(mitteY(s) - l.y - tripLage!.mitte), 'nicht auf dem Senden-Platz (Höhe)').toBeLessThanOrEqual(4);
 				await setup.click();
-				await expect.poll(() => new URL(page.url()).searchParams.get('tab')).toBe('wetter-metriken');
+				// #2794 S3a: „Setup abschließen" springt auf den Versand-Abschnitt im Reiter Zustellung.
+				await expect.poll(() => new URL(page.url()).searchParams.get('tab')).toBe('zustellung');
 			} finally {
 				await v.aufraeumen();
 			}

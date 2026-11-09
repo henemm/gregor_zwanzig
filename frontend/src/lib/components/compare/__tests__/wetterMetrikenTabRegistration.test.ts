@@ -4,9 +4,9 @@
 // Spec: docs/specs/modules/compare_weather_metrics_tab.md § AC-1, Dependencies
 //   (subscriptionTabs.ts)
 //
-// RED-Erwartung (vor Implementation): COMPARE_TABS enthaelt heute 7 Tabs ohne
-// 'wetter-metriken' — jede Assertion hier schlaegt fehl, bis der Tab
-// registriert ist.
+// Issue #2794 S3a (Spec feat_2794_s3a_teil2_leiste.md AC-2/AC-5): Wetter-Metriken und Wertebereiche
+// gehen im Reiter „Wetter" (Kennung `wetter`) auf, Alarme im Reiter „Zustellung". Die Alt-Kennung
+// `wetter-metriken` bleibt als Eingabe gueltig und fuehrt in den Reiter Wetter.
 //
 // Ausfuehrung:
 //   cd frontend && node --import ./test-lib-loader.mjs --experimental-strip-types \
@@ -23,60 +23,50 @@ const COMPARE_TABS = subscriptionTabs('vergleich').map((t) => ({ value: t.id, la
 const COMPARE_TAB_VALUES: readonly string[] = COMPARE_TABS.map((t) => t.value);
 const resolveCompareTab = (v: string): string => resolveTab('vergleich', v).tab;
 
-describe('AC-1: COMPARE_TABS registriert den neuen Tab "Wetter-Metriken"', () => {
-	test('enthaelt einen Eintrag mit value="wetter-metriken"', () => {
-		const entry = COMPARE_TABS.find((t) => t.value === 'wetter-metriken');
-		assert.ok(
-			entry,
-			'AC-1 FAIL: COMPARE_TABS hat keinen Eintrag "wetter-metriken" — der neue Tab ist noch nicht registriert'
-		);
+describe('AC-1: COMPARE_TABS registriert den Reiter "Wetter"', () => {
+	test('enthaelt einen Eintrag mit value="wetter"', () => {
+		const entry = COMPARE_TABS.find((t) => t.value === 'wetter');
+		assert.ok(entry, 'AC-1 FAIL: COMPARE_TABS hat keinen Eintrag "wetter"');
 	});
 
-	test('Label lautet "Wetter-Metriken"', () => {
-		const entry = COMPARE_TABS.find((t) => t.value === 'wetter-metriken');
-		assert.equal(
-			entry?.label,
-			'Wetter-Metriken',
-			'AC-1 FAIL: falsches oder fehlendes Label fuer den neuen Tab'
-		);
+	test('Label lautet "Wetter"', () => {
+		const entry = COMPARE_TABS.find((t) => t.value === 'wetter');
+		assert.equal(entry?.label, 'Wetter', 'AC-1 FAIL: falsches oder fehlendes Label fuer den Reiter');
 	});
 
-	test('liegt zwischen "orte" und "wertebereiche" (Dependencies: subscriptionTabs.ts)', () => {
+	test('liegt zwischen "orte" und "zustellung" (Dependencies: subscriptionTabs.ts)', () => {
 		const values = COMPARE_TABS.map((t) => t.value);
 		const orteIdx = values.indexOf('orte');
-		const wertebereicheIdx = values.indexOf('wertebereiche');
-		const wetterIdx = values.indexOf('wetter-metriken');
+		const zustellungIdx = values.indexOf('zustellung');
+		const wetterIdx = values.indexOf('wetter');
 		assert.notEqual(orteIdx, -1, 'Vorbedingung verletzt: "orte" fehlt in COMPARE_TABS');
-		assert.notEqual(wertebereicheIdx, -1, 'Vorbedingung verletzt: "wertebereiche" fehlt in COMPARE_TABS');
+		assert.notEqual(zustellungIdx, -1, 'Vorbedingung verletzt: "zustellung" fehlt in COMPARE_TABS');
 		assert.ok(
-			wetterIdx > orteIdx && wetterIdx < wertebereicheIdx,
-			`AC-1 FAIL: "wetter-metriken" (Index ${wetterIdx}) liegt nicht zwischen "orte" (${orteIdx}) ` +
-				`und "wertebereiche" (${wertebereicheIdx})`
+			wetterIdx > orteIdx && wetterIdx < zustellungIdx,
+			`AC-1 FAIL: "wetter" (Index ${wetterIdx}) liegt nicht zwischen "orte" (${orteIdx}) ` +
+				`und "zustellung" (${zustellungIdx})`
 		);
 	});
 
-	test('COMPARE_TAB_VALUES enthaelt "wetter-metriken" (resolveCompareTab akzeptiert ihn)', () => {
-		assert.ok(
-			COMPARE_TAB_VALUES.includes('wetter-metriken'),
-			'AC-1 FAIL: COMPARE_TAB_VALUES kennt "wetter-metriken" nicht'
-		);
+	test('COMPARE_TAB_VALUES enthaelt "wetter"; die Alt-Kennung "wetter-metriken" fuehrt dorthin', () => {
+		assert.ok(COMPARE_TAB_VALUES.includes('wetter'), 'AC-1 FAIL: COMPARE_TAB_VALUES kennt "wetter" nicht');
+		assert.equal(resolveCompareTab('wetter'), 'wetter');
+		assert.ok(!COMPARE_TAB_VALUES.includes('wetter-metriken'), '"wetter-metriken" ist kein Reiter mehr');
 		assert.equal(
 			resolveCompareTab('wetter-metriken'),
-			'wetter-metriken',
-			'AC-1 FAIL: resolveCompareTab faellt fuer "wetter-metriken" auf "uebersicht" zurueck (Tab nicht registriert)'
+			'wetter',
+			'AC-5 FAIL: die Alt-Kennung "wetter-metriken" faellt nicht in den Reiter Wetter'
 		);
 	});
 
-	// Regressions-Anker: die Bestands-Tabs (inkl. Reihenfolge relativ zueinander)
-	// bleiben unangetastet — nur EIN neuer Eintrag wird eingefuegt.
-	// Issue #1360: 'layout' ist aus dem Anker entfernt, der Reiter ist aufgeloest
-	// (Spec compare_layout_tab_dissolution, AC-1).
-	// #1743 (AC-2): Versand und Vorschau sind keine Reiter mehr — fuenf Reiter.
-	test('Regressions-Anker: genau die 5 Reiter Uebersicht · Orte · Wetter-Metriken · Wertebereiche · Alarme', () => {
+	// Regressions-Anker: die Bestands-Tabs (inkl. Reihenfolge relativ zueinander).
+	// Issue #1360: 'layout' ist aufgeloest. #1743 (AC-2): Versand und Vorschau sind keine Reiter mehr.
+	// #2794 S3a: vier Reiter.
+	test('Regressions-Anker: genau die 4 Reiter Uebersicht · Orte · Wetter · Zustellung', () => {
 		const values = COMPARE_TABS.map((t) => t.value);
-		assert.deepEqual(values, ['uebersicht', 'orte', 'wetter-metriken', 'wertebereiche', 'alarme']);
-		for (const v of ['versand', 'vorschau']) {
-			assert.ok(!values.includes(v), `#1743: "${v}" darf kein Reiter mehr sein`);
+		assert.deepEqual(values, ['uebersicht', 'orte', 'wetter', 'zustellung']);
+		for (const v of ['versand', 'vorschau', 'wertebereiche', 'alarme']) {
+			assert.ok(!values.includes(v), `"${v}" darf kein Reiter mehr sein`);
 		}
 	});
 });
