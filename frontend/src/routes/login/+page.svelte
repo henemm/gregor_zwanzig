@@ -158,7 +158,7 @@
 			     an" schickte den Nutzer in einen Weg, der garantiert scheitert. -->
 			<div
 				data-testid="login-registered-hint"
-				class="rounded-md border border-green-300 bg-green-50 p-3 text-sm text-green-800"
+				class="rounded-md border border-[var(--g-ok-fg)] bg-[var(--g-ok-bg)] p-3 text-sm text-[var(--g-ok-fg)]"
 			>
 				{$t('auth.login.registriert_hinweis')}
 			</div>
@@ -185,7 +185,7 @@
 			     Hinweis, der weiterhin erklaert, warum die Mail gebraucht wird. -->
 			<div
 				data-testid="login-resend-confirmed"
-				class="rounded-md border border-green-300 bg-green-50 p-3 text-sm text-green-800"
+				class="rounded-md border border-[var(--g-ok-fg)] bg-[var(--g-ok-bg)] p-3 text-sm text-[var(--g-ok-fg)]"
 			>
 				{$t('auth.login.erneut_gesendet')}
 			</div>
@@ -210,7 +210,7 @@
 					<button
 						type="submit"
 						data-testid="login-resend-submit"
-						class="inline-flex h-10 w-full items-center justify-center rounded-md border border-input bg-background px-4 py-2 text-sm font-medium text-foreground ring-offset-background hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+						class="inline-flex h-10 w-full items-center justify-center rounded-md border border-input bg-background px-4 py-2 text-sm font-medium text-foreground ring-offset-background hover:bg-[var(--g-accent-deep)] hover:text-[var(--g-on-accent)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
 					>
 						{$t('auth.login.erneut_senden')}
 					</button>
@@ -241,7 +241,7 @@
 						type="button"
 						data-testid="login-passkey-btn"
 						onclick={mitPasskeyAnmelden}
-						class="inline-flex h-10 w-full items-center justify-center rounded-md border border-input bg-background px-4 py-2 text-sm font-medium text-foreground ring-offset-background hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+						class="inline-flex h-10 w-full items-center justify-center rounded-md border border-input bg-background px-4 py-2 text-sm font-medium text-foreground ring-offset-background hover:bg-[var(--g-accent-deep)] hover:text-[var(--g-on-accent)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
 					>
 						{$t('auth.login.passkey_anmelden')}
 					</button>
@@ -307,7 +307,7 @@
 			</div>
 			<a
 				href="/api/auth/google/init"
-				class="desktop:order-2 inline-flex h-10 w-full items-center justify-center rounded-md border border-input bg-background px-4 py-2 text-sm font-medium text-foreground ring-offset-background hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+				class="desktop:order-2 inline-flex h-10 w-full items-center justify-center rounded-md border border-input bg-background px-4 py-2 text-sm font-medium text-foreground ring-offset-background hover:bg-[var(--g-accent-deep)] hover:text-[var(--g-on-accent)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
 			>
 				{$t('auth.login.google_knopf')}
 			</a>

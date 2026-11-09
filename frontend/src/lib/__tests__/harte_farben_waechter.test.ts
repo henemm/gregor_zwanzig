@@ -31,7 +31,12 @@ const TREFFER: RegExp[] = [
 	/background(?:-color)?\s*:\s*#fff(?:fff)?\b/gi,
 	/\bbg-white\b/g,
 	new RegExp(`\\b(?:bg|text|border)-(?:${FARBEN})-\\d{2,3}\\b`, 'g'),
-	/rgba\(\s*26\s*,\s*26\s*,\s*24\b/g
+	/rgba\(\s*26\s*,\s*26\s*,\s*24\b/g,
+	// Fix-Loop 1 (F002): weisse Flaeche als rgba und weisse Schrift — beide folgen dem Dunklen nicht.
+	/background(?:-color)?\s*:\s*rgba\(\s*255\s*,\s*255\s*,\s*255\b/gi,
+	/(?<![-\w])color\s*:\s*(?:#fff(?:fff)?|white)\b/gi,
+	/style:(?:color|background)=["'](?:#fff(?:fff)?|white)["']/gi,
+	/\bfg\s*:\s*['"](?:#fff(?:fff)?|white)['"]/gi
 ];
 /** Hex-Farbe in einer Farb-Eigenschaft (auch `var(--g-x, #abc)`-Fallback) — nur für Scope-Dateien. */
 const HEX_IN_FARBE = /(?:^|[\s;"'{])(?:color|background(?:-color)?|border(?:-[a-z]+)*|outline(?:-color)?|fill|stroke)\s*:\s*[^;"]*#[0-9a-fA-F]{3,8}\b/g;
@@ -63,7 +68,10 @@ const AUSNAHMEN: Record<string, { n: number; grund: string }> = {
 	'lib/components/ui/popover/popover-content.svelte': { n: 1, grund: 'Schatten' },
 	'lib/brand/BrandSidebar.svelte': { n: 1, grund: 'Tint 5 % hinter Kürzel-Chip' },
 	'routes/+layout.svelte': { n: 3, grund: 'Schatten-Fallback in var(--g-elev-3, …)' },
-	'routes/email-preview-dev/+page.svelte': { n: 3, grund: 'Entwickler-Vorschau, nicht ausgeliefert' }
+	'routes/email-preview-dev/+page.svelte': { n: 3, grund: 'Entwickler-Vorschau, nicht ausgeliefert' },
+	// Fix-Loop 1 (F002): weisser Schalter-Knopf — gewollte Festfarbe laut Spec (Out of Scope „Switch-Knöpfe").
+	'lib/components/atoms/Switch.svelte': { n: 1, grund: 'Switch-Knopf weiss (gewollt fix, Spec Out of Scope)' },
+	'lib/components/mobile/MSwitch.svelte': { n: 1, grund: 'Switch-Knopf weiss (gewollt fix, Spec Out of Scope)' }
 };
 
 function ohneAusgenommen(text: string): string[] {
@@ -142,6 +150,15 @@ describe('Gegenproben der Zählregel', () => {
 	});
 	test('background:#fff und rgba(26,26,24,…) werden gezählt', () => {
 		assert.equal(zaehleHarteFarben('style="background:#fff; box-shadow:0 1px 2px rgba(26, 26, 24, 0.1)"'), 2);
+	});
+	test('F002: weisse rgba-Flaeche und weisse Schrift werden gezählt', () => {
+		assert.equal(zaehleHarteFarben('style="background: rgba(255,255,255,0.4)"'), 1);
+		assert.equal(zaehleHarteFarben('.x { color: #fff; } .y { color: white; }'), 2);
+		assert.equal(zaehleHarteFarben('<span style:color="#fff" style:background="white">'), 2);
+		assert.equal(zaehleHarteFarben("success: { bg: 'var(--g-success)', fg: '#fff' }"), 1);
+	});
+	test('F002: border-color/background-color weiss als Schrift nicht doppelt, Token-Schrift zählt nicht', () => {
+		assert.equal(zaehleHarteFarben('border-color: white; color: var(--g-on-accent);'), 0);
 	});
 	test('Token-Nutzung zählt nicht', () => {
 		assert.equal(zaehleHarteFarben('style="background: var(--g-card); color: var(--g-ink)"'), 0);

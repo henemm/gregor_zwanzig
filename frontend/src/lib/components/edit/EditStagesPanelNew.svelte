@@ -1136,7 +1136,7 @@
 	}
 	.mobile-add-btn:hover {
 		border-color: var(--g-accent);
-		color: var(--g-accent);
+		color: var(--g-accent-text);
 	}
 	/* F3 — Wahl Etappe/Pausentag als eigene Zeile im Fluss (nicht überlappend). */
 	.mobile-add-choice {
@@ -1158,7 +1158,7 @@
 	}
 	.mobile-add-choice button:hover {
 		border-color: var(--g-accent);
-		color: var(--g-accent);
+		color: var(--g-accent-text);
 	}
 	.stage-cardm-row {
 		display: flex;

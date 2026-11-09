@@ -37,6 +37,36 @@ BACKGROUNDS: dict[str, str] = {
 }
 
 
+# Dunkles Design (Issue #2400): Werte aus dem Block `:root[data-theme="dark"]`
+# in frontend/src/app.css gespiegelt. Den Gleichstand mit app.css und die
+# 4,5:1-Schwelle aller Text-Tokens sichert
+# frontend/src/lib/__tests__/dark_palette_kontrast.test.ts (liest app.css direkt).
+DARK_TOKENS: dict[str, str] = {
+    "--g-ink": "#f1efe8",
+    "--g-ink-2": "#d2cfc4",
+    "--g-ink-3": "#aaa699",
+    "--g-ink-muted": "#aaa699",
+    "--g-ink-4": "#6f6c63",
+    "--g-ink-faint": "#7a776d",
+    "--g-accent": "#e07a4a",
+    "--g-accent-deep": "#e07a4a",
+    "--g-accent-text": "#e07a4a",
+    "--g-good": "#6fbf6a",
+    "--g-warn": "#e0a83a",
+    "--g-danger": "#ee7a7a",
+    "--g-info": "#7aa9dc",
+    "--g-success": "#6fbf6a",
+}
+
+# Dunkle Hintergruende: paper / card / card-alt / surface-2.
+DARK_BACKGROUNDS: dict[str, str] = {
+    "paper #141412": "#141412",
+    "card #1d1d1a": "#1d1d1a",
+    "card-alt #252522": "#252522",
+    "surface-2 #2a2a26": "#2a2a26",
+}
+
+
 def _linearize(c: float) -> float:
     """sRGB-Kanal -> linear (WCAG 2.1 Anhang)."""
     return c / 12.92 if c <= 0.03928 else ((c + 0.055) / 1.055) ** 2.4
@@ -66,19 +96,30 @@ def classify(ratio: float) -> str:
     return "FAIL"
 
 
-def main() -> None:
-    """Druckt eine Markdown-Tabelle aller Tokens x Hintergruende."""
-    bg_names = list(BACKGROUNDS)
+def _tabelle(tokens: dict[str, str], backgrounds: dict[str, str]) -> None:
+    """Druckt eine Markdown-Tabelle Tokens x Hintergruende."""
+    bg_names = list(backgrounds)
     header = "| Token | Wert | " + " | ".join(bg_names) + " |"
     sep = "|" + "---|" * (2 + len(bg_names))
     print(header)
     print(sep)
-    for token, hex_val in TOKENS.items():
+    for token, hex_val in tokens.items():
         cells = []
-        for bg_hex in BACKGROUNDS.values():
+        for bg_hex in backgrounds.values():
             ratio = contrast_ratio(hex_val, bg_hex)
             cells.append(f"{ratio:.2f} ({classify(ratio)})")
         print(f"| `{token}` | {hex_val} | " + " | ".join(cells) + " |")
+
+
+def main() -> None:
+    """Druckt die Tabellen Hell und Dunkel (Issue #2400)."""
+    print("## Hell")
+    print()
+    _tabelle(TOKENS, BACKGROUNDS)
+    print()
+    print("## Dunkel")
+    print()
+    _tabelle(DARK_TOKENS, DARK_BACKGROUNDS)
 
 
 if __name__ == "__main__":

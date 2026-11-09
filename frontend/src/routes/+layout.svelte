@@ -19,6 +19,7 @@
 	// Issue #2131 — Offline-Ansicht mit Stand-Kennzeichnung.
 	import { afterNavigate } from '$app/navigation';
 	import { initOfflineStand, standAnwenden } from '$lib/pwa/offlineStand';
+	import { applyDarkMode } from '$lib/darkMode';
 	import OfflineSperre from '$lib/components/shared/OfflineSperre.svelte';
 	// Issue #2268 — app-weiter Footer mit „Impressum" und „Datenschutz".
 	import AppFooter from '$lib/components/shared/AppFooter.svelte';
@@ -108,27 +109,6 @@
 		}
 	}
 
-	const darkVars: Record<string, string> = {
-		'--color-background': 'oklch(0.145 0 0)',
-		'--color-foreground': 'oklch(0.95 0 0)',
-		'--color-popover': 'oklch(0.18 0 0)',
-		'--color-popover-foreground': 'oklch(0.95 0 0)',
-		'--color-card': 'oklch(0.18 0 0)',
-		'--color-card-foreground': 'oklch(0.95 0 0)',
-		'--color-muted': 'oklch(0.22 0 0)',
-		'--color-muted-foreground': 'oklch(0.60 0 0)',
-		'--color-border': 'oklch(0.28 0 0)',
-		'--color-input': 'oklch(0.28 0 0)',
-		'--color-ring': 'oklch(0.55 0 0)',
-		'--color-primary': 'oklch(0.92 0 0)',
-		'--color-primary-foreground': 'oklch(0.15 0 0)',
-		'--color-accent': 'oklch(0.22 0 0)',
-		'--color-accent-foreground': 'oklch(0.92 0 0)',
-		'--color-sidebar': 'oklch(0.12 0 0)',
-		'--color-sidebar-foreground': 'oklch(0.90 0 0)',
-		'--color-sidebar-accent': 'oklch(0.20 0 0)',
-	};
-
 	let darkMode = $state(false);
 	// Mobile-Shell S2 — Konto-Sheet; schliesst bei jeder Navigation.
 	let kontoOpen = $state(false);
@@ -139,18 +119,6 @@
 	// Eine Stelle fuer alle drei Hinweise statt drei Einzelregeln.
 	const hinweiseErlaubt = $derived(!kontoOpen);
 
-	function applyDarkMode(dark: boolean) {
-		const el = document.documentElement;
-		if (dark) {
-			for (const [key, value] of Object.entries(darkVars)) {
-				el.style.setProperty(key, value);
-			}
-		} else {
-			for (const key of Object.keys(darkVars)) {
-				el.style.removeProperty(key);
-			}
-		}
-	}
 
 	// Issue #2131: die Stand-Zeile des DOKUMENTS steht schon im ausgelieferten
 	// Bytestrom (der Worker schreibt sie beim Ablegen ein). Hier wird sie nur
@@ -164,7 +132,7 @@
 
 	if (browser) {
 		darkMode = localStorage.getItem('gz-dark') === '1';
-		if (darkMode) applyDarkMode(true);
+		if (darkMode) applyDarkMode(document, true);
 
 		iosHinweisSichtbar = iosHinweisFaellig();
 
@@ -218,7 +186,7 @@
 
 	function toggleDark() {
 		darkMode = !darkMode;
-		applyDarkMode(darkMode);
+		applyDarkMode(document, darkMode);
 		localStorage.setItem('gz-dark', darkMode ? '1' : '0');
 	}
 

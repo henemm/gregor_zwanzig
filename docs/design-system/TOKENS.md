@@ -185,6 +185,41 @@ Aktiviert `font-variant-numeric: tabular-nums` ohne Font-Wechsel — für gemisc
 
 ---
 
+## 12a. Dunkles Design (#2400)
+
+Alle Dark-Werte stehen als `:root[data-theme="dark"]` in `frontend/src/app.css` (direkt hinter dem hellen `:root`). Geschaltet über `<html data-theme="dark">`: Kopf-Skript in `app.html` vor dem ersten Paint (aus `localStorage gz-dark`), zur Laufzeit `applyDarkMode()` im Root-Layout. Mechanik und Begründung: `docs/reference/design_system.md`, Abschnitt „Dunkles Design".
+
+| Token | Hell | Dunkel |
+|---|---|---|
+| `--g-paper` / `--g-surface-0` | `#f6f4ee` | `#141412` |
+| `--g-card` / `--g-surface-1` | `#ffffff` | `#1d1d1a` |
+| `--g-card-alt` | `#faf8f1` | `#252522` |
+| `--g-surface-raised` | `#faf8f1` | `#222220` |
+| `--g-surface-2` / `--g-paper-deep` | `#ecead9` | `#2a2a26` |
+| `--g-rule` / `--g-rule-soft` | `#d8d3c2` / `#e7e2d3` | `#3a3a35` / `#2c2c28` |
+| `--g-ink` | `#1a1a18` | `#f1efe8` |
+| `--g-ink-2` | `#45433d` | `#d2cfc4` |
+| `--g-ink-3` / `--g-ink-muted` | `#6b675c` / `#5c5a52` | `#aaa699` |
+| `--g-ink-4` (nur Placeholder/Disabled) | `#9a958a` | `#6f6c63` |
+| `--g-ink-faint` (Linien) | `#9c9a90` | `#7a776d` |
+| `--g-accent` / `--g-accent-deep` | `#c45a2a` / `#8c3e1a` | `#e07a4a` |
+| `--g-accent-text` | `var(--g-accent)` | `#e07a4a` |
+| `--g-on-accent` | `#ffffff` | `#141412` |
+| `--g-accent-soft` / `--g-accent-tint` | `#f3d9c8` / `rgba(196,90,42,0.08)` | `#4a2c1e` / `rgba(224,122,74,0.14)` |
+| `--g-success` / `--g-good` | `#3d6b3a` | `#6fbf6a` |
+| `--g-warn` / `--g-warning` / `--g-warn-deep` | `#c08a1a` / `#c08a1a` / `#8a6210` | `#e0a83a` |
+| `--g-danger` / `--g-bad` | `#a83232` | `#ee7a7a` |
+| `--g-info` / `--g-info-deep` | `#2c5a8c` / `#1a4a7a` | `#7aa9dc` / `#9cc0e6` |
+| `--g-ok-bg` / `--g-ok-fg` | `#f0fdf4` / `#166534` | `#16281a` / `#6fbf6a` |
+| `--g-warn-bg` / `--g-warn-fg` | `#fffbeb` / `#92400e` | `#2b2312` / `#e0a83a` |
+| `--g-danger-bg` / `--g-danger-fg` | `#fef2f2` / `#991b1b` | `#2e1a1a` / `#ee7a7a` |
+| `--g-nav-glass` | `rgba(246,244,238,0.86)` | `rgba(20,20,18,0.86)` |
+| `--g-nav-hairline` / `--g-nav-highlight` | `rgba(26,26,24,0.10)` / `rgba(255,255,255,0.65)` | `rgba(246,244,238,0.12)` / `rgba(255,255,255,0.06)` |
+| `--g-nav-active` | `rgba(196,90,42,0.12)` | `rgba(224,122,74,0.18)` |
+| `--g-elev-*`, `--g-shadow-*` | Ink-Schatten 4–16 % | Schwarz 35–50 % |
+
+---
+
 ## 13. Anti-Pattern in `tokens.css` selbst
 
 Im Token-File selbst gelten:

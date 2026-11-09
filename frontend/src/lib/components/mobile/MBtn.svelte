@@ -51,7 +51,7 @@
 	const variants = {
 		primary: { bg: 'var(--g-ink)', fg: 'var(--g-paper)', border: '1px solid var(--g-ink)' },
 		// #2879: Accent unter Text = --g-accent-deep (Weiss darauf 7,45:1, WCAG-AA)
-		accent: { bg: 'var(--g-accent-deep)', fg: '#fff', border: '1px solid var(--g-accent-deep)' },
+		accent: { bg: 'var(--g-accent-deep)', fg: 'var(--g-on-accent)', border: '1px solid var(--g-accent-deep)' },
 		ghost: { bg: 'transparent', fg: 'var(--g-ink)', border: '1px solid var(--g-rule)' },
 		quiet: { bg: 'transparent', fg: 'var(--g-ink-2)', border: '1px solid transparent' },
 		danger: { bg: 'transparent', fg: 'var(--g-danger)', border: '1px solid var(--g-rule)' }

@@ -92,7 +92,7 @@
 					onclick={makePauseInsertHandler(i)}
 				>
 					{#if hoverGap === i}
-						<span style="padding:3px 8px; font-size: 11px; font-weight:600; background:var(--g-accent-deep); color:#fff; border-radius:10px; letter-spacing:0.06em; text-transform:uppercase; font-family:var(--g-font-mono);">{$t('trip.wegpunkt.plus_pause')}</span>
+						<span style="padding:3px 8px; font-size: 11px; font-weight:600; background:var(--g-accent-deep); color:var(--g-on-accent); border-radius:10px; letter-spacing:0.06em; text-transform:uppercase; font-family:var(--g-font-mono);">{$t('trip.wegpunkt.plus_pause')}</span>
 					{:else}
 						<span style="width:1px; height:24px; background:var(--g-rule); display:block;"></span>
 					{/if}
@@ -106,7 +106,7 @@
 	data-testid="etappen-strip-wrapper"
 	data-locked={locked ? 'true' : undefined}
 	aria-busy={locked}
-	style="{locked ? 'opacity:0.5; pointer-events:none; ' : ''}padding: 14px 40px 16px; border-bottom: 1px solid var(--g-rule-soft); background: rgba(255,255,255,0.4); backdrop-filter: blur(2px); -webkit-backdrop-filter: blur(2px);"
+	style="{locked ? 'opacity:0.5; pointer-events:none; ' : ''}padding: 14px 40px 16px; border-bottom: 1px solid var(--g-rule-soft); background: color-mix(in srgb, var(--g-card) 40%, transparent); backdrop-filter: blur(2px); -webkit-backdrop-filter: blur(2px);"
 >
 	<!-- Eyebrow-Header mit Zähler -->
 	<div style="display:flex; justify-content:space-between; align-items:baseline; margin-bottom:10px;">
@@ -168,6 +168,6 @@
 	}
 	.add-stage-btn:hover {
 		border-color: var(--g-accent) !important;
-		color: var(--g-accent) !important;
+		color: var(--g-accent-text) !important;
 	}
 </style>

@@ -27,7 +27,7 @@
     />
     {#if checked}
       <svg class="gz-checkbox__check" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-        <path d="M3.5 8.5l3 3 6-7" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M3.5 8.5l3 3 6-7" style="stroke: var(--g-on-accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
       </svg>
     {/if}
   </span>

@@ -14,7 +14,7 @@
 </script>
 
 <div
-	class="relative overflow-hidden rounded border border-[var(--g-ink-faint)]/20"
+	class="relative overflow-hidden rounded border g-karten-rahmen"
 	style="width:240px; height:150px;"
 >
 	<TopoBg opacity={0.4} />

@@ -101,7 +101,7 @@
 		color: var(--g-ink-3);
 	}
 	.save-link {
-		color: var(--g-accent);
+		color: var(--g-accent-text);
 		background: none;
 		border: none;
 		cursor: pointer;

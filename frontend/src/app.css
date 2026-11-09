@@ -88,6 +88,8 @@
 	--radius-lg: 0.75rem;
 }
 
+/* #2400: dark:-Klassen folgen dem Schalter (data-theme), nicht dem Betriebssystem. */
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
 @custom-variant mobile { @media (max-width: 899px) { @slot; } }
 @custom-variant desktop { @media (min-width: 900px) { @slot; } }
 
@@ -235,6 +237,95 @@
     --g-shadow-1: 0 1px 0 rgba(26, 26, 24, 0.04), 0 1px 2px rgba(26, 26, 24, 0.04);
     --g-shadow-2: 0 1px 0 rgba(26, 26, 24, 0.04), 0 4px 14px rgba(26, 26, 24, 0.06);
     --g-shadow-3: 0 2px 0 rgba(26, 26, 24, 0.04), 0 12px 32px rgba(26, 26, 24, 0.08);
+
+    /* #2400: Akzent-Rollen getrennt. --g-accent-text = Akzent als Textfarbe,
+       --g-on-accent = Schrift auf einer Akzentflaeche (--g-accent-deep). */
+    --g-accent-text: var(--g-accent);
+    --g-on-accent:   #ffffff;
+
+    /* #2400: Status-Paare (Box-Grund / Schrift, Schrift auch als Rand) —
+       ersetzen die Tailwind-Statusboxen (bg-green-50, text-red-800 ...). */
+    --g-ok-bg:       #f0fdf4;
+    --g-ok-fg:       #166534;
+    --g-warn-bg:     #fffbeb;
+    --g-warn-fg:     #92400e;
+    --g-danger-bg:   #fef2f2;
+    --g-danger-fg:   #991b1b;
+  }
+
+  /* === #2400: Dunkles Design — einzige Quelle der Dark-Werte.
+     Steht bewusst DIREKT HINTER dem hellen :root: Kontrasttests lesen per Regex
+     den ersten (hellen) Treffer. Geschaltet ueber <html data-theme="dark">
+     (Kopf-Skript in app.html vor dem ersten Paint, applyDarkMode im Layout).
+     --color-* folgen ueber @theme → var(--g-*) automatisch.
+     Werte und Kontraste: docs/reference/design_system.md (Dunkles Design). === */
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+
+    /* Flaechen */
+    --g-paper:          #141412;
+    --g-surface-0:      #141412;
+    --g-card:           #1d1d1a;
+    --g-surface-1:      #1d1d1a;
+    --g-card-alt:       #252522;
+    --g-surface-raised: #222220;
+    --g-surface-2:      #2a2a26;
+    --g-paper-deep:     #2a2a26;
+    --g-rule:           #3a3a35;
+    --g-rule-soft:      #2c2c28;
+
+    /* Ink (Text auf jeder Flaeche >= 4,5:1; ink-4 nur Placeholder/Disabled, ADR-0008) */
+    --g-ink:            #f1efe8;
+    --g-ink-2:          #d2cfc4;
+    --g-ink-3:          #aaa699;
+    --g-ink-muted:      #aaa699;
+    --g-ink-4:          #6f6c63;
+    /* Bedien-Linien (Eingabe-Rand, --color-border/-input): >= 3:1 auch auf surface-2 (WCAG 1.4.11) */
+    --g-ink-faint:      #7a776d;
+    --color-border:     var(--g-ink-faint);
+    --color-input:      var(--g-ink-faint);
+
+    /* Akzent: im Dunklen hell; --g-accent-deep traegt als Flaeche dunkle Schrift
+       (--g-on-accent) und ist als Textfarbe auf dunklem Grund lesbar. */
+    --g-accent:         #e07a4a;
+    --g-accent-deep:    #e07a4a;
+    --g-accent-text:    #e07a4a;
+    --g-on-accent:      #141412;
+    --g-accent-soft:    #4a2c1e;
+    --g-accent-tint:    rgba(224, 122, 74, 0.14);
+
+    /* Semantik */
+    --g-success:        #6fbf6a;
+    --g-good:           #6fbf6a;
+    --g-warn:           #e0a83a;
+    --g-warning:        #e0a83a;
+    --g-warn-deep:      #e0a83a;
+    --g-danger:         #ee7a7a;
+    --g-bad:            #ee7a7a;
+    --g-info:           #7aa9dc;
+    --g-info-deep:      #9cc0e6;
+
+    /* Status-Paare */
+    --g-ok-bg:          #16281a;
+    --g-ok-fg:          #6fbf6a;
+    --g-warn-bg:        #2b2312;
+    --g-warn-fg:        #e0a83a;
+    --g-danger-bg:      #2e1a1a;
+    --g-danger-fg:      #ee7a7a;
+
+    /* Schwebende Tabbar */
+    --g-nav-glass:      rgba(20, 20, 18, 0.86);
+    --g-nav-hairline:   rgba(246, 244, 238, 0.12);
+    --g-nav-highlight:  rgba(255, 255, 255, 0.06);
+    --g-nav-active:     rgba(224, 122, 74, 0.18);
+
+    /* Schatten: schwarz mit hoeherer Deckung */
+    --g-elev-1:   0 1px 3px rgba(0, 0, 0, 0.35);
+    --g-elev-2:   0 4px 12px rgba(0, 0, 0, 0.4);
+    --g-elev-3:   0 8px 24px rgba(0, 0, 0, 0.5);
+    --g-shadow-1: 0 1px 0 rgba(0, 0, 0, 0.35), 0 1px 2px rgba(0, 0, 0, 0.35);
+    --g-shadow-2: 0 1px 0 rgba(0, 0, 0, 0.35), 0 4px 14px rgba(0, 0, 0, 0.4);
+    --g-shadow-3: 0 2px 0 rgba(0, 0, 0, 0.35), 0 12px 32px rgba(0, 0, 0, 0.5);
   }
 
   body {
@@ -365,11 +456,15 @@
      (Papier darauf 6,77:1, WCAG-AA); Hover dunkler. --g-accent bleibt fuer Nicht-Text. */
   [data-slot="btn"][data-variant="accent"] {
     background-color: var(--g-accent-deep);
-    color: var(--g-paper);
+    color: var(--g-on-accent);
     border-color: var(--g-accent-deep);
   }
   [data-slot="btn"][data-variant="accent"]:hover {
     background-color: color-mix(in oklab, var(--g-accent-deep) 85%, black);
+  }
+  /* #2400: im Dunklen traegt die Akzentflaeche dunkle Schrift — Hover hellt auf statt abzudunkeln. */
+  :root[data-theme="dark"] [data-slot="btn"][data-variant="accent"]:hover {
+    background-color: color-mix(in oklab, var(--g-accent-deep) 85%, white);
   }
 
   [data-slot="btn"][data-variant="outline"] {
@@ -484,6 +579,11 @@
   [data-slot="pill"][data-tone="warning"]  { background: var(--g-warning);     color: var(--g-ink); }
   [data-slot="pill"][data-tone="danger"]   { background: var(--g-danger);      color: #fff; }
   [data-slot="pill"][data-tone="info"]     { background: var(--g-info);        color: #fff; }
+  /* #2400: im Dunklen sind Status-Flaechen hell — Schrift dunkel (--g-paper), hell bleibt #fff bzw. --g-ink. */
+  :root[data-theme="dark"] [data-slot="pill"]:not([data-outlined])[data-tone="success"],
+  :root[data-theme="dark"] [data-slot="pill"]:not([data-outlined])[data-tone="warning"],
+  :root[data-theme="dark"] [data-slot="pill"]:not([data-outlined])[data-tone="danger"],
+  :root[data-theme="dark"] [data-slot="pill"]:not([data-outlined])[data-tone="info"] { color: var(--g-paper); }
   /* atoms.jsx-Tones (neu, #577) */
   [data-slot="pill"][data-tone="neutral"]  { background: rgba(26,26,24,0.06);          color: var(--g-ink-2); }
   [data-slot="pill"][data-tone="accent"]   { background: var(--g-accent-tint);         color: var(--g-accent-deep); }
@@ -679,3 +779,31 @@
 @media (max-height: 500px) {
   [data-testid="ios-install-hint"] { display: none !important; }
 }
+
+/* #2400 (AC-14) — Karten im Dunklen. Die Kacheln bleiben hell (externe Kacheln), aber Rahmen und
+   Bedienelemente folgen den Tokens.
+   Rahmen: EIN Muster fuer Trip-Karte (MapCanvas) und Ortsvergleich-Vorschau (LocationPreviewMap, #1170).
+   Hell wie bisher (--g-ink-faint zu 20 %), dunkel volle --g-ink-faint (>= 3:1 gegen den Grund). */
+@layer components {
+  .g-karten-rahmen { border-color: color-mix(in oklab, var(--g-ink-faint) 20%, transparent); }
+  :root[data-theme="dark"] .g-karten-rahmen { border-color: var(--g-ink-faint); }
+}
+/* Leaflet-Bedienelemente: leaflet.css ist ungeschichtet und wird spaeter geladen — darum hier
+   bewusst OHNE @layer und mit hoeherer Spezifitaet (:root[data-theme="dark"] davor). */
+:root[data-theme="dark"] .leaflet-bar a,
+:root[data-theme="dark"] .leaflet-bar a:hover,
+:root[data-theme="dark"] .leaflet-bar a:focus {
+  background-color: var(--g-card);
+  color: var(--g-ink);
+  border-bottom-color: var(--g-ink-faint);
+}
+:root[data-theme="dark"] .leaflet-bar a.leaflet-disabled {
+  background-color: var(--g-surface-2);
+  color: var(--g-ink-4); /* gesperrt: --g-ink-4 nur Disabled (ADR-0008) */
+}
+:root[data-theme="dark"] .leaflet-touch .leaflet-bar { border-color: var(--g-ink-faint); }
+:root[data-theme="dark"] .leaflet-container .leaflet-control-attribution {
+  background: var(--g-card);
+  color: var(--g-ink-2);
+}
+:root[data-theme="dark"] .leaflet-container .leaflet-control-attribution a { color: var(--g-info); }

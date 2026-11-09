@@ -35,7 +35,7 @@
 			style:height="{size}px"
 			style:border-radius="50%"
 			style:background={u.color || `hsl(${(i * 70) % 360} 30% 65%)`}
-			style:color="#fff"
+			style:color="var(--g-on-accent)"
 			style:font-size="{size * 0.42}px"
 			style:font-weight="600"
 			style:font-family="var(--g-font-sans)"

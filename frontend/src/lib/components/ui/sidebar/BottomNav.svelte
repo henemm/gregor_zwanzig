@@ -142,7 +142,7 @@
 		font-weight: 600;
 	}
 	.bottom-nav__item.is-active .bottom-nav__icon {
-		color: var(--g-accent);
+		color: var(--g-accent-text);
 	}
 
 	/* Konto-Kreis: Glas-Scheibe in Leistenhoehe, Avatar-Badge 36 px in Akzent —
@@ -164,7 +164,7 @@
 		border-radius: 18px;
 		/* #2879: Accent unter Text = accent-deep (Weiß 7,45:1 statt 4,34:1). */
 		background: var(--g-accent-deep);
-		color: #ffffff;
+		color: var(--g-on-accent);
 		display: flex;
 		align-items: center;
 		justify-content: center;

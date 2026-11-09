@@ -440,12 +440,12 @@
 	<div
 		data-testid="compare-step5-activation-banner"
 		data-ready={canActivateNow ? 'true' : 'false'}
-		class="rounded-md p-4 text-white text-sm"
+		class="rounded-md p-4 text-[var(--g-paper)] text-sm"
 		style:background={canActivateNow ? 'var(--g-good)' : 'var(--g-ink)'}
 	>
-		<div class="mono" style:font-size="11px" style:letter-spacing="0.12em" style:text-transform="uppercase" style:color="rgba(255,255,255,0.55)" style:margin-bottom="4px">{$t('vergleich.neu.bereit_titel')}</div>
+		<div class="mono" style:font-size="11px" style:letter-spacing="0.12em" style:text-transform="uppercase" style:color="color-mix(in srgb, var(--g-paper) 70%, transparent)" style:margin-bottom="4px">{$t('vergleich.neu.bereit_titel')}</div>
 		<div style:font-size="15px" style:font-weight="600">{$tn('vergleich.neu.bereit_zeile', wiz.pickedIds?.length ?? 0, { name: wiz.name || $t('vergleich.neu.neuer_vergleich') })}</div>
-		<div style:font-size="12.5px" style:color="rgba(255,255,255,0.75)" style:margin-top="4px" style:line-height="1.5">
+		<div style:font-size="12.5px" style:color="color-mix(in srgb, var(--g-paper) 85%, transparent)" style:margin-top="4px" style:line-height="1.5">
 			{#if canActivateNow}{$t('vergleich.neu.bereit_text')}{:else}{$t('vergleich.neu.alarme_zum_aktivieren_punkt')}{/if}
 		</div>
 	</div>
@@ -594,7 +594,7 @@
 							</div>
 							{#if sel}
 								<span style="width: 20px; height: 20px; border-radius: 50%; background: var(--g-accent); display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
-									<svg width="11" height="11" viewBox="0 0 12 12" fill="none" stroke="#fff" stroke-width="2.5"><path d="M2 6l3 3 5-6"/></svg>
+									<svg width="11" height="11" viewBox="0 0 12 12" fill="none" style="stroke: var(--g-on-accent)" stroke-width="2.5"><path d="M2 6l3 3 5-6"/></svg>
 								</span>
 							{/if}
 						</button>
@@ -650,7 +650,7 @@
 					onclick={() => { if (on) { wiz.pickedIds = wiz.pickedIds.filter((x) => x !== loc.id); } else { wiz.pickedIds = [...wiz.pickedIds, loc.id]; } }}
 					style="display: flex; align-items: center; gap: 14px; width: 100%; padding: 12px 0; min-height: 52px; background: {on ? 'var(--g-accent-tint)' : 'transparent'}; border: none; border-bottom: 1px solid var(--g-rule-soft); cursor: pointer; text-align: left; font-family: var(--g-font-sans);">
 					<span style="width: 22px; height: 22px; border-radius: 4px; border: 1.5px solid {on ? 'var(--g-accent)' : 'var(--g-rule)'}; background: {on ? 'var(--g-accent)' : 'transparent'}; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
-						{#if on}<svg width="11" height="11" viewBox="0 0 12 12" fill="none" stroke="#fff" stroke-width="2.5"><path d="M2 6l3 3 5-6"/></svg>{/if}
+						{#if on}<svg width="11" height="11" viewBox="0 0 12 12" fill="none" style="stroke: var(--g-on-accent)" stroke-width="2.5"><path d="M2 6l3 3 5-6"/></svg>{/if}
 					</span>
 					<div style="flex: 1; min-width: 0;">
 						<div style="font-size: 14px; font-weight: {on ? 600 : 500}; color: {on ? 'var(--g-accent-deep)' : 'var(--g-ink)'}; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{loc.name}</div>

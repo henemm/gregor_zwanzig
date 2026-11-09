@@ -263,8 +263,8 @@
 		cursor: pointer;
 	}
 	.acp-threshold-btn.active {
-		background: var(--g-accent, #2563eb);
-		border-color: var(--g-accent, #2563eb);
-		color: #ffffff;
+		background: var(--g-accent-deep);
+		border-color: var(--g-accent-deep);
+		color: var(--g-on-accent);
 	}
 </style>

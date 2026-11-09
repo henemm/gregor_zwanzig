@@ -106,9 +106,11 @@ describe('#2837 S1b StatusSchild — Baustein (AC-2, AC-8, AC-11)', () => {
 
 const CSS = readFileSync(path.join(FRONTEND, 'src/app.css'), 'utf-8').replace(/\/\*[\s\S]*?\*\//g, '');
 
-/** Letzte Definition jedes --g-Tokens in :root (Hex-Werte). */
+/** Letzte Definition jedes --g-Tokens in :root (Hex-Werte). Gemessen wird der Hellmodus:
+ *  der Dark-Block `:root[data-theme="dark"]` (#2400) zählt hier nicht mit. */
+const HELL_CSS = CSS.replace(/:root\[data-theme=(["'])dark\1\]\s*\{[^{}]*\}/g, '');
 const TOKENS: Record<string, string> = {};
-for (const m of CSS.matchAll(/(--g-[a-z0-9-]+)\s*:\s*([^;]+);/g)) TOKENS[m[1]] = m[2].trim();
+for (const m of HELL_CSS.matchAll(/(--g-[a-z0-9-]+)\s*:\s*([^;]+);/g)) TOKENS[m[1]] = m[2].trim();
 
 type Regel = { attrs: Array<[string, string | null]>; spez: number; nr: number; decl: Record<string, string> };
 const REGELN: Regel[] = [];

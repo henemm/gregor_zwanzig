@@ -168,9 +168,9 @@
 		line-height: 0;
 	}
 	.metric-checkbox.checked {
-		background: var(--g-accent);
-		border-color: var(--g-accent);
-		color: var(--g-paper);
+		background: var(--g-accent-deep);
+		border-color: var(--g-accent-deep);
+		color: var(--g-on-accent);
 	}
 	.metric-checkbox:focus-visible {
 		outline: 2px solid var(--g-accent);
@@ -202,9 +202,9 @@
 		user-select: none;
 	}
 	.format-toggle :global(.pill-toggle.active) {
-		background: var(--g-accent);
-		color: var(--g-paper);
-		border-color: var(--g-accent);
+		background: var(--g-accent-deep);
+		color: var(--g-on-accent);
+		border-color: var(--g-accent-deep);
 	}
 	.format-toggle :global(.pill-toggle:focus-visible) {
 		outline: 2px solid var(--g-accent);
