@@ -387,3 +387,241 @@ func TestWarnServiceHealthFlagsUnreadableJournalDistinctFromMissing(t *testing.T
 		t.Errorf("journal_read_error: want true when path is a directory, got %v", got)
 	}
 }
+
+// TDD RED: Issue #2224 — Rotation des Warn-Dienst-Journals, Lese-Seite.
+//
+// Spec: docs/specs/modules/fix_2224_warn_journal_rotation.md
+//
+// KEINE Mocks: echte Dateien in t.TempDir(); die Vorgaenger-Generation
+// warn_service_calls.jsonl.1 wird so angelegt, wie die Python-Rotation
+// (os.replace) sie hinterlaesst.
+
+// writeWarnServiceCallsPrev writes the predecessor generation
+// data/diagnostics/warn_service_calls.jsonl.1.
+func writeWarnServiceCallsPrev(t *testing.T, tmpDir, contents string) {
+	t.Helper()
+	dir := filepath.Join(tmpDir, "diagnostics")
+	if err := os.MkdirAll(dir, 0755); err != nil {
+		t.Fatalf("mkdir diagnostics: %v", err)
+	}
+	path := filepath.Join(dir, "warn_service_calls.jsonl.1")
+	if err := os.WriteFile(path, []byte(contents), 0644); err != nil {
+		t.Fatalf("write warn_service_calls.jsonl.1: %v", err)
+	}
+}
+
+// AC-6: last success only in .1, current file holds only later failures ->
+// last_success_at from .1, newer last_attempt_at from the current file.
+func TestWarnServiceHealth_LetzterErfolgNurInEins(t *testing.T) {
+	tmpDir := t.TempDir()
+	sched := newWarnServiceHealthTestScheduler(t, tmpDir)
+
+	writeWarnServiceCallsPrev(t, tmpDir,
+		callLine("dwd:x", false, "2026-11-01T08:00:00Z")+"\n"+
+			callLine("dwd:x", true, "2026-11-01T09:00:00Z")+"\n")
+	writeWarnServiceCallsJournal(t, tmpDir,
+		callLine("dwd:x", false, "2026-11-01T10:00:00Z")+"\n"+
+			callLine("dwd:x", false, "2026-11-01T11:00:00Z")+"\n")
+
+	health := sched.WarnServiceHealth()
+	dwd := serviceEntry(t, health, "dwd")
+	if got := dwd["last_success_at"]; got != "2026-11-01T09:00:00Z" {
+		t.Errorf("last_success_at: want success from .1, got %v", got)
+	}
+	if got := dwd["last_attempt_at"]; got != "2026-11-01T11:00:00Z" {
+		t.Errorf("last_attempt_at: want newest attempt from current file, got %v", got)
+	}
+	if _, exists := health["journal_read_error"]; exists {
+		t.Errorf("journal_read_error must not be set, got %v", health["journal_read_error"])
+	}
+}
+
+// AC-6/AC-8: current file missing (rotation just happened, nothing written
+// yet), only .1 present -> data from .1, no error.
+func TestWarnServiceHealth_NurEinsOhneAktuelle(t *testing.T) {
+	tmpDir := t.TempDir()
+	sched := newWarnServiceHealthTestScheduler(t, tmpDir)
+
+	writeWarnServiceCallsPrev(t, tmpDir, callLine("dwd:x", true, "2026-11-01T09:00:00Z")+"\n")
+
+	health := sched.WarnServiceHealth()
+	dwd := serviceEntry(t, health, "dwd")
+	if got := dwd["last_success_at"]; got != "2026-11-01T09:00:00Z" {
+		t.Errorf("last_success_at: want value from .1, got %v", got)
+	}
+	if _, exists := health["journal_read_error"]; exists {
+		t.Errorf("missing current file must not be an error, got %v", health["journal_read_error"])
+	}
+}
+
+// AC-8: no .1 at all -> identical to the pre-rotation behaviour, no error.
+// Regressionsschutz: bereits heute gruen, muss es nach der Umstellung bleiben.
+func TestWarnServiceHealth_KeineEins(t *testing.T) {
+	tmpDir := t.TempDir()
+	sched := newWarnServiceHealthTestScheduler(t, tmpDir)
+
+	writeWarnServiceCallsJournal(t, tmpDir,
+		callLine("dwd:x", true, "2026-11-01T09:00:00Z")+"\n"+
+			callLine("dwd:x", false, "2026-11-01T10:00:00Z")+"\n"+
+			driftLine("dpc", "IT-1", true, "unmapped", "2026-11-01T10:30:00Z")+"\n")
+
+	health := sched.WarnServiceHealth()
+	if _, exists := health["journal_read_error"]; exists {
+		t.Errorf("missing .1 must not be an error, got %v", health["journal_read_error"])
+	}
+	dwd := serviceEntry(t, health, "dwd")
+	if dwd["last_success_at"] != "2026-11-01T09:00:00Z" || dwd["last_attempt_at"] != "2026-11-01T10:00:00Z" {
+		t.Errorf("aggregate changed without .1: %v", dwd)
+	}
+	if got := driftBlock(t, health, "dpc")["unmapped_with_warning"]; got != 1 {
+		t.Errorf("unmapped_with_warning: want 1, got %v", got)
+	}
+}
+
+// AC-9: .1 exists but is unreadable (a directory) -> journal_read_error,
+// while the readable current file is still delivered.
+func TestWarnServiceHealth_LesefehlerInEins(t *testing.T) {
+	tmpDir := t.TempDir()
+	sched := newWarnServiceHealthTestScheduler(t, tmpDir)
+
+	writeWarnServiceCallsJournal(t, tmpDir, callLine("dwd:x", true, "2026-11-01T09:00:00Z")+"\n")
+	prevAsDir := filepath.Join(tmpDir, "diagnostics", "warn_service_calls.jsonl.1")
+	if err := os.MkdirAll(prevAsDir, 0755); err != nil {
+		t.Fatalf("mkdir .1-as-dir: %v", err)
+	}
+
+	health := sched.WarnServiceHealth()
+	if got := health["journal_read_error"]; got != true {
+		t.Errorf("journal_read_error: want true when .1 is unreadable, got %v", got)
+	}
+	dwd := serviceEntry(t, health, "dwd")
+	if got := dwd["last_success_at"]; got != "2026-11-01T09:00:00Z" {
+		t.Errorf("readable current file must still be delivered, got %v", got)
+	}
+}
+
+// AC-7: .1 is the very same file as the already opened current one (rotation
+// between the two opens, reproduced via hardlink) -> nothing counted twice.
+// Waechter fuer die SameFile-Pruefung: heute gruen (Go liest .1 noch nicht),
+// wird ohne SameFile nach der Umstellung rot.
+func TestWarnServiceHealth_HardlinkEinsGleichAktuell(t *testing.T) {
+	tmpDir := t.TempDir()
+	sched := newWarnServiceHealthTestScheduler(t, tmpDir)
+
+	writeWarnServiceCallsJournal(t, tmpDir,
+		callLine("dwd:x", true, "2026-11-01T09:00:00Z")+"\n"+
+			driftLine("dpc", "IT-1", true, "unmapped", "2026-11-01T10:00:00Z")+"\n"+
+			driftLine("dpc", "IT-2", false, "unmapped", "2026-11-01T10:05:00Z")+"\n")
+	cur := filepath.Join(tmpDir, "diagnostics", "warn_service_calls.jsonl")
+	if err := os.Link(cur, cur+".1"); err != nil {
+		t.Fatalf("hardlink .1: %v", err)
+	}
+
+	health := sched.WarnServiceHealth()
+	drift := driftBlock(t, health, "dpc")
+	if got := drift["unmapped_with_warning"]; got != 1 {
+		t.Errorf("unmapped_with_warning: want 1 (single read), got %v", got)
+	}
+	if got := drift["unmapped_without_warning"]; got != 1 {
+		t.Errorf("unmapped_without_warning: want 1 (single read), got %v", got)
+	}
+	if _, exists := health["journal_read_error"]; exists {
+		t.Errorf("journal_read_error must not be set, got %v", health["journal_read_error"])
+	}
+}
+
+// AC-9 (Fix-Loop F002): .1 exists but cannot be OPENED (permission denied)
+// -> journal_read_error, while the readable current file is still delivered.
+func TestWarnServiceHealth_EinsNichtOeffenbar(t *testing.T) {
+	if os.Geteuid() == 0 {
+		t.Skip("root ignores file permissions")
+	}
+	tmpDir := t.TempDir()
+	sched := newWarnServiceHealthTestScheduler(t, tmpDir)
+
+	writeWarnServiceCallsJournal(t, tmpDir, callLine("dwd:x", true, "2026-11-01T09:00:00Z")+"\n")
+	writeWarnServiceCallsPrev(t, tmpDir, callLine("dwd:x", true, "2026-11-01T12:00:00Z")+"\n")
+	prev := filepath.Join(tmpDir, "diagnostics", "warn_service_calls.jsonl.1")
+	if err := os.Chmod(prev, 0o000); err != nil {
+		t.Fatalf("chmod .1: %v", err)
+	}
+	t.Cleanup(func() { _ = os.Chmod(prev, 0o644) })
+
+	health := sched.WarnServiceHealth()
+	if got := health["journal_read_error"]; got != true {
+		t.Errorf("journal_read_error: want true when .1 cannot be opened, got %v", got)
+	}
+	dwd := serviceEntry(t, health, "dwd")
+	if got := dwd["last_success_at"]; got != "2026-11-01T09:00:00Z" {
+		t.Errorf("readable current file must still be delivered, got %v", got)
+	}
+}
+
+// AC-6/AC-7 (Fix-Loop F003): a real rotation happens between the two opens.
+// Opening the current file FIRST keeps its data (it becomes .1, detected via
+// SameFile and read once); opening .1 first would lose the renamed file.
+func TestWarnServiceHealth_RotationZwischenDenOeffnungen(t *testing.T) {
+	tmpDir := t.TempDir()
+	sched := newWarnServiceHealthTestScheduler(t, tmpDir)
+
+	writeWarnServiceCallsJournal(t, tmpDir,
+		callLine("dwd:x", true, "2026-11-01T09:00:00Z")+"\n"+
+			driftLine("dpc", "IT-1", true, "unmapped", "2026-11-01T09:30:00Z")+"\n")
+	cur := filepath.Join(tmpDir, "diagnostics", "warn_service_calls.jsonl")
+
+	rotated := false
+	warnJournalBetweenOpens = func() {
+		rotated = true
+		if err := os.Rename(cur, cur+".1"); err != nil {
+			t.Errorf("rotate: %v", err)
+			return
+		}
+		if err := os.WriteFile(cur, []byte(callLine("dwd:x", false, "2026-11-01T10:00:00Z")+"\n"), 0644); err != nil {
+			t.Errorf("write new current: %v", err)
+		}
+	}
+	t.Cleanup(func() { warnJournalBetweenOpens = nil })
+
+	health := sched.WarnServiceHealth()
+	if !rotated {
+		t.Fatalf("test seam was not called between the opens")
+	}
+	if _, exists := health["journal_read_error"]; exists {
+		t.Errorf("journal_read_error must not be set, got %v", health["journal_read_error"])
+	}
+	dwd := serviceEntry(t, health, "dwd")
+	if got := dwd["last_success_at"]; got != "2026-11-01T09:00:00Z" {
+		t.Errorf("last_success_at: want success from the file opened first, got %v", got)
+	}
+	if got := driftBlock(t, health, "dpc")["unmapped_with_warning"]; got != 1 {
+		t.Errorf("unmapped_with_warning: want 1 (read once), got %v", got)
+	}
+}
+
+// AC-11: drift lines spread over .1 and the current file -> counters cover
+// both files, timestamps are the newest per category across both.
+func TestWarnServiceHealth_DriftUeberBeideDateien(t *testing.T) {
+	tmpDir := t.TempDir()
+	sched := newWarnServiceHealthTestScheduler(t, tmpDir)
+
+	writeWarnServiceCallsPrev(t, tmpDir,
+		driftLine("dpc", "IT-1", true, "unmapped", "2026-11-01T08:00:00Z")+"\n"+
+			driftLine("dpc", "IT-2", false, "unmapped", "2026-11-01T12:00:00Z")+"\n")
+	writeWarnServiceCallsJournal(t, tmpDir,
+		driftLine("dpc", "IT-3", true, "unmapped", "2026-11-02T08:00:00Z")+"\n"+
+			driftLine("dpc", "IT-4", false, "unmapped", "2026-11-01T11:00:00Z")+"\n")
+
+	drift := driftBlock(t, sched.WarnServiceHealth(), "dpc")
+	if got := drift["unmapped_with_warning"]; got != 2 {
+		t.Errorf("unmapped_with_warning: want 2 (both files), got %v", got)
+	}
+	if got := drift["unmapped_without_warning"]; got != 2 {
+		t.Errorf("unmapped_without_warning: want 2 (both files), got %v", got)
+	}
+	if got := drift["last_with_warning_at"]; got != "2026-11-02T08:00:00Z" {
+		t.Errorf("last_with_warning_at: want newest from current file, got %v", got)
+	}
+	if got := drift["last_without_warning_at"]; got != "2026-11-01T12:00:00Z" {
+		t.Errorf("last_without_warning_at: want newest from .1, got %v", got)
+	}
+}

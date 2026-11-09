@@ -9,8 +9,11 @@ wird ueber ``monkeypatch.setattr`` auf die Modulkonstante
 """
 from __future__ import annotations
 
+import fcntl
 import json
+import os
 import threading
+import time
 from pathlib import Path
 
 import pytest
@@ -185,6 +188,61 @@ def test_log_zone_drift_rotiert_ebenfalls(journal):
     assert _vorgaenger(journal).read_bytes() == alt
     neue = _zeilen(journal)
     assert len(neue) == 1 and neue[0]["zone_code"] == "IT-XYZ"
+
+
+# AC-4 (Fix-Loop F001): deterministisch ueber die ECHTE Sperre. Der Schreiber
+# sah die volle Datei (schneller Pfad), blockiert an der Sperre; waehrenddessen
+# rotiert ein "Konkurrent" und legt eine kleine neue aktuelle Datei an. Nach
+# Freigabe darf der Schreiber NICHT erneut umbenennen (Re-Check unter Sperre).
+def test_recheck_unter_sperre_verhindert_zweite_umbenennung(journal):
+    journal.parent.mkdir(parents=True)
+    inhalt_a = _bestand(SCHWELLE, "a")
+    journal.write_bytes(inhalt_a)
+    inhalt_b = (json.dumps({"ts": "2026-11-01T00:00:00+00:00", "service": "b:0",
+                            "cache_hit": True, "ok": True}) + "\n").encode()
+    assert len(inhalt_b) < SCHWELLE
+
+    lock_path = journal.with_name(journal.name + ".lock")
+    lock_fh = open(lock_path, "a")  # eigene open file description
+    fcntl.flock(lock_fh, fcntl.LOCK_EX)
+    try:
+        schreiber = threading.Thread(target=_log, args=("neu:1",))
+        schreiber.start()
+        time.sleep(0.3)  # Schreiber passiert den schnellen Pfad, blockiert an der Sperre
+        assert schreiber.is_alive(), "Schreiber muss an der Sperre warten"
+        assert not _vorgaenger(journal).exists(), "unter gehaltener Sperre darf niemand rotieren"
+
+        # konkurrierende Rotation unter der gehaltenen Sperre
+        os.replace(journal, _vorgaenger(journal))
+        journal.write_bytes(inhalt_b)
+    finally:
+        fcntl.flock(lock_fh, fcntl.LOCK_UN)
+        lock_fh.close()
+    schreiber.join(timeout=10)
+    assert not schreiber.is_alive()
+
+    assert _vorgaenger(journal).read_bytes() == inhalt_a, \
+        ".1 muss byte-gleich A bleiben (keine zweite Umbenennung)"
+    assert [z["service"] for z in _zeilen(journal)] == ["b:0", "neu:1"], \
+        "aktuelle Datei muss B plus die neue Zeile enthalten"
+
+
+# AC-1 Randwert (Fix-Loop F004): Groesse GENAU gleich Schwelle -> Rotation
+def test_rotation_bei_groesse_genau_gleich_schwelle(journal):
+    journal.parent.mkdir(parents=True)
+    alt = _bestand(SCHWELLE, "alt")
+    assert len(alt) >= SCHWELLE
+    # exakt SCHWELLE Bytes; die Rotation parst nicht, der Inhalt muss nur
+    # byte-gleich in .1 wiederzufinden sein.
+    genau = alt[:SCHWELLE]
+    journal.write_bytes(genau)
+    assert journal.stat().st_size == SCHWELLE
+
+    _log("neu:1")
+
+    assert _vorgaenger(journal).read_bytes() == genau, \
+        "Datei mit Groesse == Schwelle muss rotiert werden (erreicht oder ueberschritten)"
+    assert [z["service"] for z in _zeilen(journal)] == ["neu:1"]
 
 
 # AC-10: Bestand weit ueber der Schwelle (Prod: 65 MB) wird beim ersten Schreiben rotiert
