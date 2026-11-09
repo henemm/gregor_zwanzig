@@ -16,15 +16,34 @@
 //         Trip-Übersicht (de) nicht; dort stehen „Entwürfe", „Alarm-Auslöser", „Alarme einstellen".
 //   (AC-11 ist der Kern-Test tests/test_adr_index_drift.py.)
 //
+// Lieferung B (R2 native Felder → Bausteine, R3 ✓/⊘ → Dot + Text, R5 Tippflächen):
+//   DS-1  Startdatum beim Trip-Anlegen über molecules/DatumFeld (bits-ui DatePicker): Kalender
+//         öffnen, 19.11.2026 anklicken ⇒ Feld „19.11.2026" (en „19/11/2026", Tag zuerst wie im
+//         übrigen UI), Kalender beginnt Montag, gespeichert `2026-11-19` (API), Anzeige im Hub
+//         nach Neuladen; Handy: Kalender + Anzeige.
+//   DS-2  Etappen-Reiter: Datum und Startzeit über DatumFeld/UhrzeitFeld (Segmente per Tastatur)
+//         ⇒ API `2026-11-20`/`07:30`, nach Neuladen „20.11.2026"/„07:30" ohne AM/PM; 1280 und 390.
+//   DS-3  Trip-/Vergleichsliste, beide Hubs (Übersicht, Etappen/Orte, Zustellung = Versand-
+//         Abschnitt + Mail-Inhalt + Speicher-Chip) und beide Anlege-Abläufe (erster Schritt,
+//         Punkte-Schritt, Zustellung), 1280/390, de/en: kein input[type=date|time|radio] im DOM,
+//         kein sichtbares natives <select>, kein „✓"/„⊘" im innerText.
+//   DS-4  Aktivität beim Trip-Anlegen = listbox (Maus, Enter/Pfeil/Enter, Fokus sichtbar) und
+//         Mail-Format im Trip-Hub = radiogroup (Maus, Pfeil links) ⇒ Wert nach Neuladen gespeichert.
+//   DS-6  390 × 844: Zurück-Link (Hub, Anlegen), „Mit Standardwerten speichern", jedes ⓘ,
+//         jeder Schnellwahl-Chip der Zustellung ≥ 44 × 44 (boundingBox), kein waagerechtes Überlaufen.
+//
 // Pflicht-Mutationen (Spec Implementation Details 4, Lieferung A): (a) MTabBar-Rahmen-Reset
 // entfernt ⇒ DS-8 rot; (b) `.mono`-Regel gelöscht ⇒ DS-7 rot; (c) „+ Neuer Trip" im Leerzustand
-// zurück auf accent ⇒ DS-5 rot.
+// zurück auf accent ⇒ DS-5 rot. Lieferung B: (d) BackLink-Höhe am Handy zurück auf 36 px ⇒ DS-6
+// rot; (e) DatumFeld gibt `MM/DD/YYYY` nach außen ⇒ DS-1 rot (gespeicherter Wert/Anzeige nach
+// Neuladen); (f) ein ✓ in SaveIndicator zurück ⇒ DS-3 rot (Speicher-Chip im Hub, innerText).
 //
 // Leerzustände (DS-5) brauchen ein Konto ohne Trips und Vergleiche: dafür der zustellbare
 // Zweitnutzer je Worker (testMitZustellbaremZiel, keine zusätzliche Registrierung). Sein Seed-Trip
 // `e2e-cockpit-test` wird für die Messung entfernt und im finally unverändert neu angelegt
 // (seedeZweitnutzerTrip), damit nachfolgende Specs desselben Workers ihn wieder vorfinden.
 // Kein fester Schlaf, kein networkidle: gewartet wird auf sichtbare Elemente.
+// Sprachwechsel über PUT /api/auth/profile, im finally zurück auf de (Muster kontrast-trip-vergleich).
 
 import { test, expect, type Locator, type Page } from '@playwright/test';
 import {
@@ -36,9 +55,11 @@ import {
 	cleanupTracked,
 	kontrastVerhaeltnis,
 	openHub,
+	registerForCleanup,
 	seedHub,
 	seedeZweitnutzerTrip,
 	testMitZustellbaremZiel,
+	tripGpxHochladen,
 	type HubKind
 } from './helpers';
 
@@ -392,4 +413,394 @@ test('DS-10: Trip-Liste und Trip-Übersicht (de) ohne „Drafts", „Alert-Trigg
 	} finally {
 		await hub.aufraeumen();
 	}
+});
+
+// ═══ Lieferung B (R2 native Felder, R3 Symbole, R5 Tippflächen) ════════════════
+
+/** Vertrag der neuen Bausteine molecules/DatumFeld und molecules/UhrzeitFeld (data-slot). */
+const DATUM = {
+	eingabe: '[data-slot="datum-feld-eingabe"]',
+	knopf: '[data-slot="datum-feld-kalender-knopf"]',
+	kalender: '[data-slot="datum-feld-kalender"]',
+	wochentag: '[data-slot="datum-feld-wochentag"]',
+	zurueck: '[data-slot="datum-feld-zurueck"]',
+	weiter: '[data-slot="datum-feld-weiter"]'
+} as const;
+const UHRZEIT_EINGABE = '[data-slot="uhrzeit-feld-eingabe"]';
+
+/** Startdatum der Trip-Anlege-Seite (Computer/Handy). */
+const tripDatumFeld = (page: Page, mobil: boolean): Locator =>
+	page.getByTestId(mobil ? 'trip-new-date-input' : 'trip-new-date-input-desktop');
+
+async function setzeSprache(page: Page, lang: 'de' | 'en'): Promise<void> {
+	const r = await page.request.put('/api/auth/profile', { data: { language: lang } });
+	expect(r.ok(), `Sprache ${lang} setzen: ${r.status()}`).toBeTruthy();
+}
+
+/** Kalender des Datumsfelds öffnen, zum Monat blättern, Tag anklicken; liefert die Wochentags-Köpfe. */
+async function waehleImKalender(page: Page, feld: Locator, iso: string): Promise<string[]> {
+	await feld.locator(DATUM.knopf).click({ timeout: 10_000 });
+	const kalender = page.locator(`${DATUM.kalender}:visible`);
+	await expect(kalender, 'Kalender-Popover öffnet nicht').toBeVisible();
+	const koepfe = (await kalender.locator(DATUM.wochentag).allInnerTexts()).map((s) => s.trim());
+	const ziel = kalender.locator(`[data-value="${iso}"]:not([data-outside-month])`);
+	const ersterTag = kalender.locator('[data-value]:not([data-outside-month])').first();
+	for (let i = 0; i < 36 && (await ziel.count()) === 0; i++) {
+		const erster = (await ersterTag.getAttribute('data-value')) ?? '';
+		await kalender.locator(erster > iso ? DATUM.zurueck : DATUM.weiter).click();
+		await expect(ersterTag).not.toHaveAttribute('data-value', erster);
+	}
+	await ziel.getByRole('button').click();
+	await expect(kalender, 'Kalender schließt nach der Wahl nicht').toBeHidden();
+	return koepfe;
+}
+
+/** Segment-Feld (Datum/Uhrzeit) per Tastatur: erstes Segment anklicken, Ziffern tippen. */
+async function tippeSegmente(page: Page, feld: Locator, segment: 'day' | 'hour', ziffern: string): Promise<void> {
+	await feld.locator(`[data-segment="${segment}"]`).click({ timeout: 10_000 });
+	await page.keyboard.type(ziffern);
+}
+
+async function postId(page: Page, pfad: string, ausloesen: () => Promise<void>): Promise<string> {
+	const antwort = page.waitForResponse((r) => r.request().method() === 'POST' && new URL(r.url()).pathname === pfad, {
+		timeout: 30_000
+	});
+	await ausloesen();
+	const res = await antwort;
+	expect(res.ok(), `POST ${pfad}: ${res.status()}`).toBeTruthy();
+	const id = ((await res.json()) as { id: string }).id;
+	registerForCleanup(pfad === '/api/trips' ? 'trip' : 'preset', id);
+	return id;
+}
+
+async function tripStand(page: Page, id: string): Promise<Record<string, unknown>> {
+	const res = await page.request.get(`/api/trips/${id}`);
+	expect(res.ok(), `GET /api/trips/${id}: ${res.status()}`).toBeTruthy();
+	return (await res.json()) as Record<string, unknown>;
+}
+
+// ─── DS-1 (AC-1) ────────────────────────────────────────────────────────────
+
+for (const [lang, anzeige, montag] of [
+	['de', '19.11.2026', /^Mo/],
+	['en', '19/11/2026', /^Mon/]
+] as const) {
+	test(`DS-1 (${lang}): Startdatum per Kalender 19.11.2026, Wochenbeginn Montag, gespeichert als 2026-11-19, Anzeige nach Neuladen`, async ({
+		page
+	}) => {
+		await page.setViewportSize(DESKTOP);
+		await setzeSprache(page, lang);
+		try {
+			await page.goto(ANLEGE_SEL.route.url);
+			const feld = tripDatumFeld(page, false);
+			await expect(feld).toBeVisible({ timeout: 15_000 });
+			await ANLEGE_SEL.route.name(page).fill(`E2E-GZ-DS1-${lang}-${Date.now()}`);
+			const koepfe = await waehleImKalender(page, feld, '2026-11-19');
+			expect(koepfe[0], `Kalender beginnt nicht mit Montag: ${koepfe.join(' ')}`).toMatch(montag);
+			await expect(feld.locator(DATUM.eingabe), 'Anzeige im Feld').toHaveText(anzeige);
+			await page.getByTestId('trip-new-tab-etappen').click();
+			await tripGpxHochladen(page);
+			const knopf = ANLEGE_SEL.route.standardwerte(page);
+			await expect(knopf).toBeEnabled({ timeout: 15_000 });
+			const id = await postId(page, '/api/trips', () => knopf.click());
+			const stages = (await tripStand(page, id)).stages as { date: string }[];
+			expect(stages[0]?.date, 'gespeichertes Startdatum').toBe('2026-11-19');
+			// Neuladen: das Etappen-Datum im Hub zeigt dasselbe Datum im Format der Sprache.
+			await openHub(page, 'route', id, { tab: 'etappen' });
+			const etappe = page.locator('[data-testid="stage-date-field"]:visible').first();
+			await expect(etappe.locator(DATUM.eingabe), 'Anzeige nach Neuladen').toHaveText(anzeige, { timeout: 15_000 });
+		} finally {
+			await setzeSprache(page, 'de');
+			await cleanupTracked(page.request);
+		}
+	});
+}
+
+test('DS-1 (390 px): Startdatum am Handy per Kalender, Anzeige 19.11.2026, Wochenbeginn Montag', async ({ page }) => {
+	await page.setViewportSize(MOBIL);
+	await setzeSprache(page, 'de');
+	await page.goto(ANLEGE_SEL.route.url);
+	const feld = tripDatumFeld(page, true);
+	await expect(feld).toBeVisible({ timeout: 15_000 });
+	await ANLEGE_SEL.route.name(page, true).fill(`E2E-GZ-DS1-mobil-${Date.now()}`);
+	const koepfe = await waehleImKalender(page, feld, '2026-11-19');
+	expect(koepfe[0], `Kalender beginnt nicht mit Montag: ${koepfe.join(' ')}`).toMatch(/^Mo/);
+	await expect(feld.locator(DATUM.eingabe)).toHaveText('19.11.2026');
+	// Name + Datum erfüllt ⇒ der Weiter-Knopf des ersten Schritts ist frei.
+	await expect(page.getByTestId('tn-mobile-route-cta').getByRole('button')).toBeEnabled();
+});
+
+// ─── DS-2 (AC-2) ────────────────────────────────────────────────────────────
+
+for (const breite of BREITEN) {
+	test(`DS-2 (${breite.width} px): Etappe — Datum 20.11.2026 und Startzeit 07:30 über die neuen Felder, nach Neuladen gespeichert (24 h)`, async ({
+		page
+	}) => {
+		await page.setViewportSize(breite);
+		await setzeSprache(page, 'de');
+		const hub = await seedHub(page.request, 'route');
+		try {
+			await openHub(page, 'route', hub.id, { tab: 'etappen' });
+			const datum = page.locator('[data-testid="stage-date-field"]:visible').first();
+			const zeit = page.locator('[data-testid="stage-start-time-field"]:visible').first();
+			await tippeSegmente(page, datum, 'day', '20112026');
+			await tippeSegmente(page, zeit, 'hour', '0730');
+			await expect
+				.poll(
+					async () => {
+						const s = ((await tripStand(page, hub.id)).stages as { date: string; start_time?: string }[])[0];
+						return `${s?.date} ${s?.start_time}`;
+					},
+					{ message: 'Datum/Startzeit nicht gespeichert', timeout: 15_000 }
+				)
+				.toBe('2026-11-20 07:30');
+			await openHub(page, 'route', hub.id, { tab: 'etappen' });
+			const datumNeu = page.locator('[data-testid="stage-date-field"]:visible').first();
+			const zeitNeu = page.locator('[data-testid="stage-start-time-field"]:visible').first();
+			await expect(datumNeu.locator(DATUM.eingabe)).toHaveText('20.11.2026', { timeout: 15_000 });
+			await expect(zeitNeu.locator(UHRZEIT_EINGABE)).toHaveText('07:30');
+			await expect(zeitNeu.locator('[data-segment="dayPeriod"]'), '24 h: kein AM/PM-Segment').toHaveCount(0);
+		} finally {
+			await hub.aufraeumen();
+		}
+	});
+}
+
+// ─── DS-3 (AC-3) ────────────────────────────────────────────────────────────
+
+/** Zustellung im Hub/Anlegen: Versand-Abschnitt, Mail-Inhalt-Karte, Speicher-Chip. */
+const ZUSTELLUNG =
+	'[data-testid="versand-abschnitt"], [data-testid="report-mail-content"], [data-testid="save-indicator"]';
+
+/** Native Datums-/Uhrzeit-/Radio-Felder (im DOM), sichtbare native <select>, ✓/⊘ im sichtbaren Text. */
+async function pruefeSeite(page: Page, seite: string, fehler: string[], bereich: string | null = null): Promise<void> {
+	const r = await page.evaluate((bereich) => {
+		const wurzeln = bereich ? Array.from(document.querySelectorAll<HTMLElement>(bereich)) : [document.body];
+		const sichtbar = (el: Element) => el.getClientRects().length > 0 && getComputedStyle(el).visibility !== 'hidden';
+		const nativ: string[] = [];
+		const symbole: string[] = [];
+		for (const w of wurzeln) {
+			for (const el of w.querySelectorAll('input[type="date"], input[type="time"], input[type="radio"]')) {
+				nativ.push(`input[type=${el.getAttribute('type')}] ${el.getAttribute('data-testid') ?? el.getAttribute('name') ?? ''}`);
+			}
+			for (const el of w.querySelectorAll('select')) if (sichtbar(el)) nativ.push(`select ${el.getAttribute('data-testid') ?? ''}`);
+			const text = w.innerText;
+			for (const z of ['✓', '⊘']) {
+				for (let i = text.indexOf(z); i >= 0; i = text.indexOf(z, i + 1)) {
+					symbole.push(`${z} in „${text.slice(Math.max(0, i - 25), i + 25).replace(/\s+/g, ' ')}"`);
+				}
+			}
+		}
+		return { anzahl: wurzeln.length, nativ, symbole };
+	}, bereich);
+	if (r.anzahl === 0) fehler.push(`${seite}: Prüfbereich ${bereich} fehlt`);
+	for (const n of r.nativ) fehler.push(`${seite}: natives Feld ${n}`);
+	for (const s of r.symbole) fehler.push(`${seite}: Symbol ${s}`);
+}
+
+const ANLEGE_REITER = (kind: HubKind, id: string, mobil: boolean): string =>
+	kind === 'route' ? `${mobil ? 'tn-mobile-tab' : 'trip-new-tab'}-${id}` : `${mobil ? 'cm-mobile-tab' : 'compare-editor-tab'}-${id}`;
+
+for (const breite of BREITEN) {
+	for (const lang of ['de', 'en'] as const) {
+		test(`DS-3 (${breite.width} px, ${lang}): Listen, Hubs (Übersicht, Etappen/Orte, Zustellung) und Anlegen ohne native Datum/Uhrzeit/Radio/Select, ohne ✓/⊘`, async ({
+			page
+		}) => {
+			test.setTimeout(180_000);
+			const mobil = breite === MOBIL;
+			await page.setViewportSize(breite);
+			await setzeSprache(page, lang);
+			const hubs = { route: await seedHub(page.request, 'route'), vergleich: await seedHub(page.request, 'vergleich') };
+			const fehler: string[] = [];
+			try {
+				for (const kind of HUB_KINDS) {
+					await page.goto(HUB_SEL[kind].liste.url);
+					await expect(page.getByTestId(HUB_SEL[kind].liste.zeile(hubs[kind].id)).first()).toBeAttached({ timeout: 15_000 });
+					await pruefeSeite(page, `${kind}-Liste`, fehler);
+				}
+				for (const kind of HUB_KINDS) {
+					for (const tab of ['uebersicht', HUB_SEL[kind].punkteReiter]) {
+						await openHub(page, kind, hubs[kind].id, { tab });
+						await expect(page.locator(`[data-testid="${HUB_SEL[kind].panel}-${tab}"]:visible`).first()).toBeVisible({
+							timeout: 15_000
+						});
+						await expect(page.getByTestId('save-indicator')).toBeVisible();
+						await pruefeSeite(page, `${kind}-Hub ${tab}`, fehler);
+					}
+					await openHub(page, kind, hubs[kind].id, { tab: 'wetter-metriken' });
+					await expect(page.locator('[data-testid="versand-abschnitt"]:visible').first()).toBeVisible({ timeout: 15_000 });
+					await pruefeSeite(page, `${kind}-Hub Zustellung`, fehler, ZUSTELLUNG);
+				}
+				for (const kind of HUB_KINDS) {
+					await page.goto(ANLEGE_SEL[kind].url);
+					await expect(page.getByTestId(ANLEGE_REITER(kind, ANLEGE_SEL[kind].ersterSchritt, mobil))).toBeVisible({
+						timeout: 15_000
+					});
+					await pruefeSeite(page, `${kind}-Anlegen erster Schritt`, fehler);
+					// Der Pflichtangaben-Helfer klickt am Handy deutsche Beschriftungen ⇒ Folge-Schritte am Handy nur de.
+					if (mobil && lang === 'en') continue;
+					await anlegenPflicht(page, kind, { name: `E2E-GZ-DS3-${kind}-${Date.now()}`, mobil });
+					await pruefeSeite(page, `${kind}-Anlegen ${ANLEGE_SEL[kind].punkteSchritt}`, fehler);
+					await page.getByTestId(ANLEGE_REITER(kind, 'wetter-metriken', mobil)).click();
+					await expect(page.locator('[data-testid="versand-abschnitt"]:visible').first()).toBeVisible({ timeout: 15_000 });
+					await pruefeSeite(page, `${kind}-Anlegen Zustellung`, fehler, ZUSTELLUNG);
+				}
+			} finally {
+				await setzeSprache(page, 'de');
+				for (const h of Object.values(hubs)) await h.aufraeumen();
+				await cleanupTracked(page.request);
+			}
+			expect(fehler, fehler.join('\n')).toEqual([]);
+		});
+	}
+}
+
+// ─── DS-4 (AC-4) ────────────────────────────────────────────────────────────
+
+test('DS-4 Aktivität: Auswahl beim Trip-Anlegen ist eine listbox, per Maus und Tastatur bedienbar, Fokus sichtbar, gespeichert', async ({
+	page
+}) => {
+	await page.setViewportSize(DESKTOP);
+	await setzeSprache(page, 'de');
+	try {
+		await anlegenPflicht(page, 'route', { name: `E2E-GZ-DS4-${Date.now()}` });
+		await page.getByTestId('trip-new-tab-route').click();
+		const ausloeser = page.getByTestId('activity-dropdown');
+		await expect(ausloeser).toBeVisible({ timeout: 10_000 });
+		const liste = page.getByRole('listbox');
+		// Maus
+		await ausloeser.click();
+		await expect(liste, 'Auswahl öffnet keine listbox').toBeVisible({ timeout: 5_000 });
+		await liste.getByRole('option', { name: 'Hochtour' }).click();
+		await expect(liste).toBeHidden();
+		await expect(ausloeser).toContainText('Hochtour');
+		// Tastatur: Enter öffnet, Pfeil runter, Enter wählt
+		await ausloeser.focus();
+		await page.keyboard.press('Enter');
+		await expect(liste).toBeVisible();
+		await page.keyboard.press('ArrowDown');
+		await page.keyboard.press('Enter');
+		await expect(liste).toBeHidden();
+		await expect(ausloeser).toContainText('Klettersteig');
+		await expect(ausloeser).toBeFocused();
+		const fokus = await ausloeser.evaluate((el) => {
+			const s = getComputedStyle(el);
+			return { sichtbar: el.matches(':focus-visible'), stil: s.outlineStyle, breite: s.outlineWidth };
+		});
+		expect(fokus.sichtbar && fokus.stil !== 'none' && fokus.breite !== '0px', `Fokus nicht sichtbar: ${JSON.stringify(fokus)}`).toBe(true);
+		const knopf = ANLEGE_SEL.route.standardwerte(page);
+		await expect(knopf).toBeEnabled({ timeout: 15_000 });
+		const id = await postId(page, '/api/trips', () => knopf.click());
+		expect((await tripStand(page, id)).activity, 'gespeicherte Aktivität').toBe('klettersteig');
+	} finally {
+		await cleanupTracked(page.request);
+	}
+});
+
+test('DS-4 Mail-Format: Zustellung im Trip-Hub ist eine radiogroup, per Maus und Pfeiltaste bedienbar, Fokus sichtbar, gespeichert', async ({
+	page
+}) => {
+	await page.setViewportSize(DESKTOP);
+	await setzeSprache(page, 'de');
+	const hub = await seedHub(page.request, 'route');
+	const format = async () =>
+		((await tripStand(page, hub.id)).report_config as { email_format?: string } | undefined)?.email_format ?? 'full';
+	const gruppe = page.getByTestId('report-email-format-switcher');
+	const voll = gruppe.getByRole('radio', { name: /Ausführlich/ });
+	const kompakt = gruppe.getByRole('radio', { name: /Kompakt/ });
+	try {
+		await openHub(page, 'route', hub.id, { tab: 'wetter-metriken' });
+		await expect(gruppe).toBeVisible({ timeout: 15_000 });
+		await expect(gruppe, 'Mail-Format ist keine radiogroup').toHaveAttribute('role', 'radiogroup');
+		await expect(voll).toBeChecked();
+		// Maus
+		await kompakt.click();
+		await expect(kompakt).toBeChecked();
+		await expect.poll(format, { message: 'Kompakt nicht gespeichert', timeout: 15_000 }).toBe('compact');
+		await openHub(page, 'route', hub.id, { tab: 'wetter-metriken' });
+		await expect(kompakt).toBeChecked({ timeout: 15_000 });
+		// Tastatur: Pfeil links wählt das vorherige Format
+		await kompakt.focus();
+		await page.keyboard.press('ArrowLeft');
+		await expect(voll).toBeFocused();
+		await expect(voll).toBeChecked();
+		const fokus = await voll.evaluate((el) => {
+			const s = getComputedStyle(el);
+			return { sichtbar: el.matches(':focus-visible'), stil: s.outlineStyle, breite: s.outlineWidth };
+		});
+		expect(fokus.sichtbar && fokus.stil !== 'none' && fokus.breite !== '0px', `Fokus nicht sichtbar: ${JSON.stringify(fokus)}`).toBe(true);
+		await expect.poll(format, { message: 'Ausführlich nicht gespeichert', timeout: 15_000 }).toBe('full');
+		await openHub(page, 'route', hub.id, { tab: 'wetter-metriken' });
+		await expect(voll).toBeChecked({ timeout: 15_000 });
+	} finally {
+		await hub.aufraeumen();
+	}
+});
+
+// ─── DS-6 (AC-6) ────────────────────────────────────────────────────────────
+
+async function messeTippflaechen(ziel: Locator, seite: string, mindestens: number, fehler: string[]): Promise<void> {
+	const n = await ziel.count();
+	if (n < mindestens) fehler.push(`${seite}: ${n} statt mindestens ${mindestens} Tippflächen gefunden`);
+	for (let i = 0; i < n; i++) {
+		const el = ziel.nth(i);
+		const bb = await el.boundingBox();
+		const name = (await el.getAttribute('data-testid')) ?? `#${i}`;
+		if (!bb || bb.width + 0.01 < 44 || bb.height + 0.01 < 44) {
+			fehler.push(`${seite} ${name}: ${bb ? `${bb.width.toFixed(1)} × ${bb.height.toFixed(1)}` : 'keine Box'} px (< 44 × 44)`);
+		}
+	}
+}
+
+async function pruefeUeberlauf(page: Page, seite: string, fehler: string[]): Promise<void> {
+	const zuviel = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+	if (zuviel > 0) fehler.push(`${seite}: läuft waagerecht ${zuviel} px über`);
+}
+
+test('DS-6: Tippflächen am Handy (390 × 844) mindestens 44 × 44 — Zurück, Standardwerte, ⓘ, Schnellwahl — kein waagerechtes Überlaufen', async ({
+	page
+}) => {
+	test.setTimeout(120_000);
+	await page.setViewportSize(MOBIL);
+	await setzeSprache(page, 'de');
+	const fehler: string[] = [];
+	const hubs = { route: await seedHub(page.request, 'route'), vergleich: await seedHub(page.request, 'vergleich') };
+	try {
+		for (const kind of HUB_KINDS) {
+			const id = hubs[kind].id;
+			await openHub(page, kind, id, { tab: 'uebersicht' });
+			const zurueck = page.locator('[data-testid="back-link"]:visible');
+			await expect(zurueck.first()).toBeVisible({ timeout: 15_000 });
+			await messeTippflaechen(zurueck, `${kind}-Hub Zurück`, 1, fehler);
+			await pruefeUeberlauf(page, `${kind}-Hub Übersicht`, fehler);
+
+			await openHub(page, kind, id, { tab: 'wetter-metriken' });
+			const chips = page.locator(
+				'[data-testid^="report-morning-quickpick-"]:visible, [data-testid^="report-evening-quickpick-"]:visible'
+			);
+			await expect(chips.first()).toBeVisible({ timeout: 15_000 });
+			await messeTippflaechen(chips, `${kind}-Hub Schnellwahl`, 4, fehler);
+			await pruefeUeberlauf(page, `${kind}-Hub Zustellung`, fehler);
+
+			await openHub(page, kind, id, { tab: 'wertebereiche' });
+			const ii = page.locator('[data-testid^="begriff-erklaerung-"]:visible');
+			await expect(ii.first()).toBeVisible({ timeout: 15_000 });
+			await messeTippflaechen(ii, `${kind}-Hub ⓘ`, 1, fehler);
+			await pruefeUeberlauf(page, `${kind}-Hub Wertebereiche`, fehler);
+		}
+		for (const kind of HUB_KINDS) {
+			await page.goto(ANLEGE_SEL[kind].url);
+			const zurueck = page.locator('[data-testid="back-link"]:visible');
+			await expect(zurueck.first()).toBeVisible({ timeout: 15_000 });
+			await messeTippflaechen(zurueck, `${kind}-Anlegen Zurück`, 1, fehler);
+			const standard = page.locator(
+				`[data-testid="${kind === 'route' ? 'tn-mobile-standardwerte' : 'cm-mobile-standardwerte'}"]:visible`
+			);
+			await messeTippflaechen(standard, `${kind}-Anlegen Standardwerte`, 1, fehler);
+			await pruefeUeberlauf(page, `${kind}-Anlegen`, fehler);
+		}
+	} finally {
+		for (const h of Object.values(hubs)) await h.aufraeumen();
+	}
+	expect(fehler, fehler.join('\n')).toEqual([]);
 });

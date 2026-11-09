@@ -1221,6 +1221,23 @@ export const LISTE_SEL: Record<
 
 const ANLEGE_GPX = path.resolve('./e2e/fixtures/test-trip.gpx');
 
+/**
+ * Trip-Anlegen, Schritt Etappen (bereits geöffnet): je Etappe eine GPX hochladen und auf
+ * `/api/gpx/parse` warten (herausgehoben aus anlegenPflicht, #2881 Lieferung B).
+ */
+export async function tripGpxHochladen(page: Page, mobil = false): Promise<void> {
+	const eingaben = page.locator(`${mobil ? '.tn-mobile' : '.tn-desktop'} input[type="file"][accept=".gpx"]`);
+	await expect(eingaben.first()).toBeAttached();
+	let rest = await eingaben.count();
+	while (rest > 0) {
+		const geparst = page.waitForResponse((r) => r.url().includes('/api/gpx/parse'), { timeout: 30_000 });
+		await eingaben.first().setInputFiles(ANLEGE_GPX);
+		await geparst;
+		rest -= 1;
+		await expect(eingaben).toHaveCount(rest);
+	}
+}
+
 export interface AnlegenPflichtOpts {
 	name: string;
 	/** Trip-Pflichtfeld Startdatum (YYYY-MM-DD); Standard: in 7 Tagen. */
@@ -1260,8 +1277,8 @@ export async function anlegenPflicht(page: Page, kind: HubKind, opts: AnlegenPfl
 	await page.goto(ANLEGE_SEL[kind].url);
 	if (kind === 'route') {
 		const datum = opts.datum ?? new Date(Date.now() + 7 * 86_400_000).toISOString().slice(0, 10);
-		const leiste = mobil ? page.getByTestId('tn-mobile-tabbar') : page.locator('.tn-desktop');
-		const etappen = leiste.getByRole('tab', { name: /Etappen/ });
+		// Reiter über die Kennung (sprachunabhängig, #2881 Lieferung B; vorher Beschriftung /Etappen/).
+		const etappen = page.getByTestId(mobil ? 'tn-mobile-tab-etappen' : 'trip-new-tab-etappen');
 		await expect(async () => {
 			await ANLEGE_SEL.route.name(page, mobil).fill(opts.name);
 			await (mobil ? page.getByTestId('trip-new-date-input') : page.locator('.tn-desktop input[type="date"]')).fill(datum);
@@ -1269,16 +1286,7 @@ export async function anlegenPflicht(page: Page, kind: HubKind, opts: AnlegenPfl
 		}).toPass({ timeout: 10_000 });
 		if (opts.nurKopf) return;
 		await etappen.click({ force: mobil });
-		const eingaben = page.locator(`${mobil ? '.tn-mobile' : '.tn-desktop'} input[type="file"][accept=".gpx"]`);
-		await expect(eingaben.first()).toBeAttached();
-		let rest = await eingaben.count();
-		while (rest > 0) {
-			const geparst = page.waitForResponse((r) => r.url().includes('/api/gpx/parse'), { timeout: 30_000 });
-			await eingaben.first().setInputFiles(ANLEGE_GPX);
-			await geparst;
-			rest -= 1;
-			await expect(eingaben).toHaveCount(rest);
-		}
+		await tripGpxHochladen(page, mobil);
 		return;
 	}
 	await expect(page.getByTestId('compare-editor')).toBeVisible({ timeout: 15_000 });
