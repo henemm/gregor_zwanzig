@@ -1270,9 +1270,14 @@ class NotificationService:
         cooldown_display: Optional[str] = None,
         telegram_style: str = "rich",
         preset: Optional[dict],
+        location_positions: Optional[dict[str, int]] = None,
     ) -> NotificationResult:
         """Gebündelter Onset-Alert-Versand für MEHRERE gleichzeitig auslösende
         Vergleichs-Orte EINES Compare-Presets (Issue #1041 Slice 1a).
+
+        Issue #1767: `location_positions` (Ortsname -> 1-basierte Position im
+        Preset) fuehrt in der Mehrort-Kurzform (SMS, Premium-SMS, Telegram-
+        Kurzstil) die Ortsnummer vor jedem Token; ohne ihn steht der Ortsname.
 
         Baut über `to_multi_location_onset_alert_message()` EINE `AlertMessage`
         für alle übergebenen Orte und delegiert unverändert an
@@ -1329,6 +1334,7 @@ class NotificationService:
             radar_mode=True,
             alert_tz=alert_tz,
             telegram_style=telegram_style,
+            sms_location_positions=location_positions,
         )
 
     def send_official_alert(

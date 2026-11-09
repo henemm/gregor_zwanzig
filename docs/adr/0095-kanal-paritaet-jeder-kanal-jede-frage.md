@@ -101,3 +101,11 @@ Keines der beiden ADRs wurde fortgeschrieben (Doku-Audit 2026-10, Punkte 1c/1d).
   - Eine harte Dreier-Kanalliste ist ein Defekt.
   - Neue Inhalte, die nur ein Kanal trägt, brauchen eine Begründung in der Spec, warum die
     anderen Kanäle dieselbe Frage anders beantworten.
+
+## Nachtrag #1767, 2026-11-09
+
+Radar-Onset im Ortsvergleich nennt bei mehreren auslösenden Orten in allen Kurzformen (SMS,
+Premium-SMS, Telegram-Kurzstil) alle Orte (`1:R@14:05 3:R@14:40`, Ortsnummer wie beim
+Änderungsalarm, ` +k` nur bei Platzmangel); die Telegram-Langform führt eine Zeile je Ort. Das
+löst Entscheid 3b aus #1948 S4 („nur der führende Ort, Verschweigen gewollt") als Anwendung
+dieses ADR ab (PO 2026-11-09). Status unverändert.

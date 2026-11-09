@@ -335,10 +335,15 @@ def test_f001_compare_kurznachricht_traegt_das_tages_suffix():
         f"Kurznachricht ueberschreitet die 160-Zeichen-Grenze: "
         f"{len(wien_fuehrt)} — {wien_fuehrt!r}"
     )
+    # FORTGESCHRIEBEN (Issue #1767): die Mehrort-Kurzform nennt JEDEN Ort mit
+    # eigenem Token (`Reykjavik:R@22:23 Wien:R@Mi0:23`) -- die Zusicherung
+    # gilt daher je Orts-Token: Reykjavik ohne, Wien mit Tagesbezug.
+    rvk_token = next(tok for tok in rvk_fuehrt.split(" ") if tok.startswith("Reykjavik:"))
+    assert "Wien:R@Mi0:23" in rvk_fuehrt, rvk_fuehrt
     assert (
-        "R@22:23" in rvk_fuehrt
+        rvk_token == "Reykjavik:R@22:23"
         and "+1" not in rvk_fuehrt
-        and not re.search(r"@(Mo|Di|Mi|Do|Fr|Sa|So)", rvk_fuehrt)
+        and not re.search(r"@(Mo|Di|Mi|Do|Fr|Sa|So)", rvk_token)
     ), (
         f"Reykjavik bleibt am selben Tag (22:23) — kein Tagesbezug erlaubt "
         f"(weder Suffix noch Kuerzel), und die Zone muss je Ort aufgeloest "

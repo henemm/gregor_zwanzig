@@ -478,19 +478,27 @@ def test_reply_to_older_than_ttl_blocks_send(stub) -> None:
 
 
 def test_reply_to_just_within_ttl_still_sends(stub) -> None:
-    """AC-5: Given Zeitstempel exakt eine Sekunde UNTER der 30-Tage-Frist /
+    """AC-5: Given Zeitstempel fuenf Minuten UNTER der 30-Tage-Frist /
     When das Briefing versendet wird / Then geht die Premium-SMS regulaer
-    hinaus — die Frist blockiert nicht vorsorglich frueher."""
+    hinaus — die Frist blockiert nicht vorsorglich frueher.
+
+    Issue #2898: vorher eine Sekunde unter der Frist. Der echte Versandlauf
+    zwischen `_write_profile` und der Fristpruefung
+    (`premium_sms.py`, `age > PREMIUM_SMS_REPLY_TTL`) dauert einige Sekunden
+    (gemessen ~3,25 s) — die Adresse war beim Pruefen schon ueber 30 Tage
+    alt und der Test rot. Fuenf Minuten Abstand ueberstehen jede realistische
+    Laufzeit und bleiben grenznah: eine Frist, die auch nur eine Stunde zu
+    frueh greift, macht den Test rot."""
     user_id = "tdd-1676-fresh-edge"
     _write_profile(
         user_id, tier="premium", reply_to=LEARNED_REPLY_TO,
-        reply_age=REPLY_TTL - timedelta(seconds=1),
+        reply_age=REPLY_TTL - timedelta(minutes=5),
     )
 
     _, result, _ = _dispatch(user_id, stub, send_sms=False, send_premium_sms=True)
 
     assert len(stub.received) == 1, (
-        "Rueckadresse ist 30 Tage - 1 Sekunde alt und damit noch gueltig — genau "
+        "Rueckadresse ist 30 Tage - 5 Minuten alt und damit noch gueltig — genau "
         f"EIN POST erwartet, bekommen: {stub.received!r} "
         f"(blocked: {getattr(result, 'blocked_channels', None)!r})"
     )

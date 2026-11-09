@@ -286,6 +286,9 @@ Preview-Abhängigkeit vom Onset-Pfad.
   3b. Bei mehreren gleichzeitig auslösenden Orten verschweigt die Nachricht die übrigen; das
   ist gewollt (ein Zähler würde Vollständigkeit versprechen, die er nicht einlöst), gehört aber
   als bekannte Grenze dokumentiert.
+  - **Abgelöst durch #1767 (PO 2026-11-09, ADR-0095):** die Mehrort-Kurzform nennt jeden
+    auslösenden Ort mit eigenem Token und Ortsnummer (`1:R@14:05 3:R@14:40`); `+k` nur bei
+    Platzmangel. Spec `docs/specs/modules/fix_1767_nowcast_mehrort_kurzform.md`.
 - **AC-10 ist in der Umsetzung geschlossen** — der ursprünglich erwartete Lückenbefund
   („kein eigener dedizierter Test") ist überholt. `tests/tdd/test_alert_sms_onset_zeitpunkt.py`
   enthält jetzt zwei dedizierte AC-10-Tests: `test_ac10_email_telegram_betreff_bleiben_am_countdown_format`
