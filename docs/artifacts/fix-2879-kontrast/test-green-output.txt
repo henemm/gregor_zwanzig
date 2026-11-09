@@ -1,0 +1,100 @@
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Running 12 tests using 1 worker
+
+[1/12] [setup] › e2e/global.setup.ts:23:1 › authenticate and seed test data
+[2/12] [tests] › e2e/kontrast-trip-vergleich.spec.ts:168:3 › KO-1 (1280 × 900, de): Listen und Hubs — jeder sichtbare Text hält WCAG-AA
+[3/12] [tests] › e2e/kontrast-trip-vergleich.spec.ts:168:3 › KO-1 (1280 × 900, en): Listen und Hubs — jeder sichtbare Text hält WCAG-AA
+[4/12] [tests] › e2e/kontrast-trip-vergleich.spec.ts:168:3 › KO-2 (390 × 844, de): Listen und Hubs — jeder sichtbare Text hält WCAG-AA
+[5/12] [tests] › e2e/kontrast-trip-vergleich.spec.ts:168:3 › KO-2 (390 × 844, en): Listen und Hubs — jeder sichtbare Text hält WCAG-AA
+[6/12] [tests] › e2e/kontrast-trip-vergleich.spec.ts:269:3 › KO-3 (1280 × 900, de): Anlegen von Trip und Vergleich — jeder Schritt ohne und mit Namen hält WCAG-AA
+[7/12] [tests] › e2e/kontrast-trip-vergleich.spec.ts:269:3 › KO-3 (1280 × 900, en): Anlegen von Trip und Vergleich — jeder Schritt ohne und mit Namen hält WCAG-AA
+[8/12] [tests] › e2e/kontrast-trip-vergleich.spec.ts:269:3 › KO-3 (390 × 844, de): Anlegen von Trip und Vergleich — jeder Schritt ohne und mit Namen hält WCAG-AA
+[9/12] [tests] › e2e/kontrast-trip-vergleich.spec.ts:269:3 › KO-3 (390 × 844, en): Anlegen von Trip und Vergleich — jeder Schritt ohne und mit Namen hält WCAG-AA
+[10/12] [tests] › e2e/kontrast-trip-vergleich.spec.ts:288:1 › KO-4: Listen — Status „· aktiv" und Zähler „x von y" ≥ 4,5:1, --g-ink-4 nur an gesperrten Elementen
+[11/12] [tests] › e2e/kontrast-trip-vergleich.spec.ts:356:1 › KO-5: aktiver „Weiter"-Knopf — Fläche --g-accent-deep, im Hover dunkler, beide ≥ 4,5:1; Hub-Unterstrich bleibt --g-accent
+[12/12] [tests] › e2e/kontrast-trip-vergleich.spec.ts:395:1 › KO-6: Messhelfer — meldet genau die bekannten Verstöße einer Testseite, Ausnahmen nicht
+  12 passed (1.2m)
