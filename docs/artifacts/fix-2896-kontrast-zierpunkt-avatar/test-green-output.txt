@@ -1,0 +1,3913 @@
+===== src/lib/brand/__tests__/zierpunkt_avatar_kontrast.test.ts
+TAP version 13
+# Subtest: AC-4: Wortmarke dunkel — Punkt mindestens 4,5:1 gegen --g-ink
+    # Subtest: icon=left: gemischter Punkt gegen --g-ink
+    ok 1 - icon=left: gemischter Punkt gegen --g-ink
+      ---
+      duration_ms: 259.088731
+      type: 'test'
+      ...
+    # Subtest: icon=none: gemischter Punkt gegen --g-ink
+    ok 2 - icon=none: gemischter Punkt gegen --g-ink
+      ---
+      duration_ms: 9.419474
+      type: 'test'
+      ...
+    # Subtest: Gegenprobe: Alpha 0,45 (Ist-Stand vor \#2896) fällt durch
+    ok 3 - Gegenprobe: Alpha 0,45 (Ist-Stand vor \#2896) fällt durch
+      ---
+      duration_ms: 0.205231
+      type: 'test'
+      ...
+    1..3
+ok 1 - AC-4: Wortmarke dunkel — Punkt mindestens 4,5:1 gegen --g-ink
+  ---
+  duration_ms: 269.607165
+  type: 'suite'
+  ...
+# Subtest: AC-5: Wortmarke hell — Punkt mindestens 4,5:1 auf --g-paper-deep und --g-paper
+    # Subtest: icon=left: Punkt gegen --g-paper-deep
+    ok 1 - icon=left: Punkt gegen --g-paper-deep
+      ---
+      duration_ms: 2.593283
+      type: 'test'
+      ...
+    # Subtest: icon=left: Punkt gegen --g-paper
+    ok 2 - icon=left: Punkt gegen --g-paper
+      ---
+      duration_ms: 5.142976
+      type: 'test'
+      ...
+    # Subtest: icon=none: Punkt gegen --g-paper-deep
+    ok 3 - icon=none: Punkt gegen --g-paper-deep
+      ---
+      duration_ms: 3.802075
+      type: 'test'
+      ...
+    # Subtest: icon=none: Punkt gegen --g-paper
+    ok 4 - icon=none: Punkt gegen --g-paper
+      ---
+      duration_ms: 4.953587
+      type: 'test'
+      ...
+    # Subtest: Gegenprobe: --g-ink-4 auf --g-paper-deep fällt durch
+    ok 5 - Gegenprobe: --g-ink-4 auf --g-paper-deep fällt durch
+      ---
+      duration_ms: 0.362322
+      type: 'test'
+      ...
+    1..5
+ok 2 - AC-5: Wortmarke hell — Punkt mindestens 4,5:1 auf --g-paper-deep und --g-paper
+  ---
+  duration_ms: 17.214433
+  type: 'suite'
+  ...
+# Subtest: AC-5: BrandUserBadge accent=true — Initialen mindestens 4,5:1
+    # Subtest: gerenderte Initialen-Farbe gegen gerenderten Avatar-Grund
+    ok 1 - gerenderte Initialen-Farbe gegen gerenderten Avatar-Grund
+      ---
+      duration_ms: 34.378076
+      type: 'test'
+      ...
+    1..1
+ok 3 - AC-5: BrandUserBadge accent=true — Initialen mindestens 4,5:1
+  ---
+  duration_ms: 34.665065
+  type: 'suite'
+  ...
+# Subtest: AC-5/AC-3: Avatar-Initialen in BottomNav und KontoSheet mindestens 4,5:1, ein Muster
+    # Subtest: .konto-kreis__avatar: Initialen gegen Avatar-Grund
+    ok 1 - .konto-kreis__avatar: Initialen gegen Avatar-Grund
+      ---
+      duration_ms: 151.383411
+      type: 'test'
+      ...
+    # Subtest: .konto__avatar: Initialen gegen Avatar-Grund
+    ok 2 - .konto__avatar: Initialen gegen Avatar-Grund
+      ---
+      duration_ms: 71.010763
+      type: 'test'
+      ...
+    # Subtest: Konto-Kreis und Konto-Blatt nutzen denselben Avatar-Grund
+    ok 3 - Konto-Kreis und Konto-Blatt nutzen denselben Avatar-Grund
+      ---
+      duration_ms: 40.036152
+      type: 'test'
+      ...
+    1..3
+ok 4 - AC-5/AC-3: Avatar-Initialen in BottomNav und KontoSheet mindestens 4,5:1, ein Muster
+  ---
+  duration_ms: 262.602356
+  type: 'suite'
+  ...
+1..4
+# tests 12
+# suites 4
+# pass 12
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 2314.975277
+exit=0
+===== src/lib/__tests__/ink4_waechter.test.ts
+TAP version 13
+# Subtest: AC-4: Scanner meldet Fließtext, lässt Platzhalter-Regeln, disabled und audit:exempt durch
+ok 1 - AC-4: Scanner meldet Fließtext, lässt Platzhalter-Regeln, disabled und audit:exempt durch
+  ---
+  duration_ms: 3.655905
+  type: 'test'
+  ...
+# Subtest: AC-4: Scanner meldet auch die Svelte-Direktive style:color, aber nicht background/border/stroke
+ok 2 - AC-4: Scanner meldet auch die Svelte-Direktive style:color, aber nicht background/border/stroke
+  ---
+  duration_ms: 0.151391
+  type: 'test'
+  ...
+# Subtest: AC-4: Scanner meldet Interpolation color:{…} im style-Attribut, nicht background/border
+ok 3 - AC-4: Scanner meldet Interpolation color:{…} im style-Attribut, nicht background/border
+  ---
+  duration_ms: 0.1129
+  type: 'test'
+  ...
+# Subtest: AC-6: Scope-Dateien (Anlege-Editoren, Rahmen, Archiv, Organismen) haben 0 Treffer
+ok 4 - AC-6: Scope-Dateien (Anlege-Editoren, Rahmen, Archiv, Organismen) haben 0 Treffer
+  ---
+  duration_ms: 57.122155
+  type: 'test'
+  ...
+# Subtest: AC-6: kein Treffer über dem Zähler, keine nicht gelistete Datei mit Treffern
+ok 5 - AC-6: kein Treffer über dem Zähler, keine nicht gelistete Datei mit Treffern
+  ---
+  duration_ms: 48.745294
+  type: 'test'
+  ...
+# Subtest: AC-6: Zähler größer als Ist → rot („Zähler senken", Ratsche darf nur sinken)
+ok 6 - AC-6: Zähler größer als Ist → rot („Zähler senken", Ratsche darf nur sinken)
+  ---
+  duration_ms: 53.780721
+  type: 'test'
+  ...
+# Subtest: AC-6: Scope-Dateien stehen nicht in der Ausnahmeliste
+ok 7 - AC-6: Scope-Dateien stehen nicht in der Ausnahmeliste
+  ---
+  duration_ms: 0.24647
+  type: 'test'
+  ...
+1..7
+# tests 7
+# suites 0
+# pass 7
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 505.655487
+exit=0
+===== src/routes/__tests__/auth_seiten_zweisprachig.test.ts
+TAP version 13
+# Subtest: \#2650 AC-3 — Auth-Seiten in Sprache en: kein deutsches Restwort
+    # Subtest: AC-3_forgot-password_leer_englisch_ohne_restwort
+    ok 1 - AC-3_forgot-password_leer_englisch_ohne_restwort
+      ---
+      duration_ms: 459.195976
+      type: 'test'
+      ...
+    # Subtest: AC-3_forgot-password_fehler_englisch_ohne_restwort
+    ok 2 - AC-3_forgot-password_fehler_englisch_ohne_restwort
+      ---
+      duration_ms: 197.356281
+      type: 'test'
+      ...
+    # Subtest: AC-3_forgot-password_erfolg_englisch_ohne_restwort
+    ok 3 - AC-3_forgot-password_erfolg_englisch_ohne_restwort
+      ---
+      duration_ms: 16.212582
+      type: 'test'
+      ...
+    # Subtest: AC-3_reset-password_leer_englisch_ohne_restwort
+    ok 4 - AC-3_reset-password_leer_englisch_ohne_restwort
+      ---
+      duration_ms: 47.370783
+      type: 'test'
+      ...
+    # Subtest: AC-3_reset-password_mit_token_englisch_ohne_restwort
+    ok 5 - AC-3_reset-password_mit_token_englisch_ohne_restwort
+      ---
+      duration_ms: 6.176338
+      type: 'test'
+      ...
+    # Subtest: AC-3_reset-password_fehler_englisch_ohne_restwort
+    ok 6 - AC-3_reset-password_fehler_englisch_ohne_restwort
+      ---
+      duration_ms: 23.798191
+      type: 'test'
+      ...
+    # Subtest: AC-3_reset-password_erfolg_englisch_ohne_restwort
+    ok 7 - AC-3_reset-password_erfolg_englisch_ohne_restwort
+      ---
+      duration_ms: 1.439781
+      type: 'test'
+      ...
+    # Subtest: AC-3_magic-link_leer_englisch_ohne_restwort
+    ok 8 - AC-3_magic-link_leer_englisch_ohne_restwort
+      ---
+      duration_ms: 32.292062
+      type: 'test'
+      ...
+    # Subtest: AC-3_magic-link_gesendet_englisch_ohne_restwort
+    ok 9 - AC-3_magic-link_gesendet_englisch_ohne_restwort
+      ---
+      duration_ms: 6.183649
+      type: 'test'
+      ...
+    # Subtest: AC-3_magic-link_fehler_englisch_ohne_restwort
+    ok 10 - AC-3_magic-link_fehler_englisch_ohne_restwort
+      ---
+      duration_ms: 17.798553
+      type: 'test'
+      ...
+    # Subtest: AC-3_magic-link-verify_leer_englisch_ohne_restwort
+    ok 11 - AC-3_magic-link-verify_leer_englisch_ohne_restwort
+      ---
+      duration_ms: 36.660858
+      type: 'test'
+      ...
+    # Subtest: AC-3_magic-link-verify_fehler_englisch_ohne_restwort
+    ok 12 - AC-3_magic-link-verify_fehler_englisch_ohne_restwort
+      ---
+      duration_ms: 45.007839
+      type: 'test'
+      ...
+    # Subtest: AC-3_verify-email_unvollstaendig_englisch_ohne_restwort
+    ok 13 - AC-3_verify-email_unvollstaendig_englisch_ohne_restwort
+      ---
+      duration_ms: 21.278178
+      type: 'test'
+      ...
+    # Subtest: AC-3_verify-email_formular_englisch_ohne_restwort
+    ok 14 - AC-3_verify-email_formular_englisch_ohne_restwort
+      ---
+      duration_ms: 4.956577
+      type: 'test'
+      ...
+    # Subtest: AC-3_verify-email_erfolg_englisch_ohne_restwort
+    ok 15 - AC-3_verify-email_erfolg_englisch_ohne_restwort
+      ---
+      duration_ms: 13.399907
+      type: 'test'
+      ...
+    # Subtest: AC-3_verify-email_fehler_englisch_ohne_restwort
+    ok 16 - AC-3_verify-email_fehler_englisch_ohne_restwort
+      ---
+      duration_ms: 48.876525
+      type: 'test'
+      ...
+    # Subtest: AC-3_forgot_password_titel_englisch
+    ok 17 - AC-3_forgot_password_titel_englisch
+      ---
+      duration_ms: 0.714911
+      type: 'test'
+      ...
+    1..17
+ok 1 - \#2650 AC-3 — Auth-Seiten in Sprache en: kein deutsches Restwort
+  ---
+  duration_ms: 989.711907
+  type: 'suite'
+  ...
+# Subtest: \#2650 AC-3 — Actions der Auth-Routen: Deutsch unverändert, Englisch aus dem Katalog
+    # Subtest: AC-3_action_forgot_benutzername_fehlt
+    ok 1 - AC-3_action_forgot_benutzername_fehlt
+      ---
+      duration_ms: 5.382057
+      type: 'test'
+      ...
+    # Subtest: AC-3_action_reset_felder_fehlen
+    ok 2 - AC-3_action_reset_felder_fehlen
+      ---
+      duration_ms: 17.448573
+      type: 'test'
+      ...
+    # Subtest: AC-3_action_reset_passwort_kurz
+    ok 3 - AC-3_action_reset_passwort_kurz
+      ---
+      duration_ms: 12.399285
+      type: 'test'
+      ...
+    # Subtest: AC-3_action_reset_token_abgelaufen
+    ok 4 - AC-3_action_reset_token_abgelaufen
+      ---
+      duration_ms: 10.081863
+      type: 'test'
+      ...
+    # Subtest: AC-3_action_reset_token_ungueltig
+    ok 5 - AC-3_action_reset_token_ungueltig
+      ---
+      duration_ms: 6.111598
+      type: 'test'
+      ...
+    # Subtest: AC-3_action_magic_email_fehlt
+    ok 6 - AC-3_action_magic_email_fehlt
+      ---
+      duration_ms: 1.828843
+      type: 'test'
+      ...
+    # Subtest: AC-3_action_code_felder_fehlen
+    ok 7 - AC-3_action_code_felder_fehlen
+      ---
+      duration_ms: 3.305604
+      type: 'test'
+      ...
+    # Subtest: AC-3_action_code_zu_viele_versuche
+    ok 8 - AC-3_action_code_zu_viele_versuche
+      ---
+      duration_ms: 2.722344
+      type: 'test'
+      ...
+    # Subtest: AC-3_action_code_ungueltig
+    ok 9 - AC-3_action_code_ungueltig
+      ---
+      duration_ms: 3.796895
+      type: 'test'
+      ...
+    # Subtest: AC-3_action_bestaetigen_link_unvollstaendig
+    ok 10 - AC-3_action_bestaetigen_link_unvollstaendig
+      ---
+      duration_ms: 3.008624
+      type: 'test'
+      ...
+    # Subtest: AC-3_action_bestaetigen_adresse_vergeben
+    ok 11 - AC-3_action_bestaetigen_adresse_vergeben
+      ---
+      duration_ms: 2.445442
+      type: 'test'
+      ...
+    # Subtest: AC-3_action_bestaetigen_link_abgelaufen
+    ok 12 - AC-3_action_bestaetigen_link_abgelaufen
+      ---
+      duration_ms: 14.112249
+      type: 'test'
+      ...
+    # Subtest: AC-3_action_bestaetigen_link_ungueltig
+    ok 13 - AC-3_action_bestaetigen_link_ungueltig
+      ---
+      duration_ms: 4.279786
+      type: 'test'
+      ...
+    1..13
+ok 2 - \#2650 AC-3 — Actions der Auth-Routen: Deutsch unverändert, Englisch aus dem Katalog
+  ---
+  duration_ms: 87.567075
+  type: 'suite'
+  ...
+# Subtest: \#2650 AC-2 — Auth-Seiten in Sprache de: byte-gleich (normalisiert) zur Ausgabe vor der Umstellung
+    # Subtest: AC-2_forgot-password_alle_golden_zustaende_sind_gleich
+    ok 1 - AC-2_forgot-password_alle_golden_zustaende_sind_gleich
+      ---
+      duration_ms: 6.024218
+      type: 'test'
+      ...
+    # Subtest: AC-2_reset-password_alle_golden_zustaende_sind_gleich
+    ok 2 - AC-2_reset-password_alle_golden_zustaende_sind_gleich
+      ---
+      duration_ms: 1.761023
+      type: 'test'
+      ...
+    # Subtest: AC-2_magic-link_alle_golden_zustaende_sind_gleich
+    ok 3 - AC-2_magic-link_alle_golden_zustaende_sind_gleich
+      ---
+      duration_ms: 1.115992
+      type: 'test'
+      ...
+    # Subtest: AC-2_magic-link-verify_alle_golden_zustaende_sind_gleich
+    ok 4 - AC-2_magic-link-verify_alle_golden_zustaende_sind_gleich
+      ---
+      duration_ms: 2.956514
+      type: 'test'
+      ...
+    # Subtest: AC-2_verify-email_alle_golden_zustaende_sind_gleich
+    ok 5 - AC-2_verify-email_alle_golden_zustaende_sind_gleich
+      ---
+      duration_ms: 1.794522
+      type: 'test'
+      ...
+    1..5
+ok 3 - \#2650 AC-2 — Auth-Seiten in Sprache de: byte-gleich (normalisiert) zur Ausgabe vor der Umstellung
+  ---
+  duration_ms: 13.865809
+  type: 'suite'
+  ...
+1..3
+# tests 35
+# suites 3
+# pass 35
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 2303.092541
+exit=0
+===== src/routes/__tests__/listen_sprache_je_nutzer.test.ts
+TAP version 13
+# Subtest: AC-4: Deutsch byte-gleich zum Ist-Stand vor der Umstellung (Golden golden-de)
+    # Subtest: cockpit_trip.de.html
+    ok 1 - cockpit_trip.de.html
+      ---
+      duration_ms: 36.400808
+      type: 'test'
+      ...
+    # Subtest: cockpit_vergleich.de.html
+    ok 2 - cockpit_vergleich.de.html
+      ---
+      duration_ms: 8.686852
+      type: 'test'
+      ...
+    # Subtest: cockpit_planung.de.html
+    ok 3 - cockpit_planung.de.html
+      ---
+      duration_ms: 11.452635
+      type: 'test'
+      ...
+    # Subtest: trip_liste.de.html
+    ok 4 - trip_liste.de.html
+      ---
+      duration_ms: 11.902075
+      type: 'test'
+      ...
+    # Subtest: compare_liste_leer.de.html
+    ok 5 - compare_liste_leer.de.html
+      ---
+      duration_ms: 2.663723
+      type: 'test'
+      ...
+    # Subtest: orte_liste.de.html
+    ok 6 - orte_liste.de.html
+      ---
+      duration_ms: 7.750779
+      type: 'test'
+      ...
+    # Subtest: archiv.de.html
+    ok 7 - archiv.de.html
+      ---
+      duration_ms: 7.348091
+      type: 'test'
+      ...
+    # Subtest: Messaufbau: Golden enthaelt die deutschen Fliesstexte und Zaehler
+    ok 8 - Messaufbau: Golden enthaelt die deutschen Fliesstexte und Zaehler
+      ---
+      duration_ms: 0.913171
+      type: 'test'
+      ...
+    1..8
+ok 1 - AC-4: Deutsch byte-gleich zum Ist-Stand vor der Umstellung (Golden golden-de)
+  ---
+  duration_ms: 89.358469
+  type: 'suite'
+  ...
+# Subtest: AC-3: Listen auf Englisch
+    # Subtest: Trip-Liste: Ueberschrift, Stats, Spaltenkoepfe, Zaehler, Plural der Etappen
+    ok 1 - Trip-Liste: Ueberschrift, Stats, Spaltenkoepfe, Zaehler, Plural der Etappen
+      ---
+      duration_ms: 50.931897
+      type: 'test'
+      ...
+    # Subtest: Zaehler „0 of 3 trips" und Such-Hinweis mit unveraendertem Suchbegriff
+    ok 2 - Zaehler „0 of 3 trips" und Such-Hinweis mit unveraendertem Suchbegriff
+      ---
+      duration_ms: 0.230101
+      type: 'test'
+      ...
+    # Subtest: Trip-Liste leer: Leerzustand englisch
+    ok 3 - Trip-Liste leer: Leerzustand englisch
+      ---
+      duration_ms: 19.947737
+      type: 'test'
+      ...
+    # Subtest: Compare-Liste leer, Orte-Liste: englisch
+    ok 4 - Compare-Liste leer, Orte-Liste: englisch
+      ---
+      duration_ms: 43.046298
+      type: 'test'
+      ...
+    # Subtest: Compare-Liste mit Vergleich: Spalten, Status, Zeitplan-Zeile
+    ok 5 - Compare-Liste mit Vergleich: Spalten, Status, Zeitplan-Zeile
+      ---
+      duration_ms: 11.703855
+      type: 'test'
+      ...
+    1..5
+ok 2 - AC-3: Listen auf Englisch
+  ---
+  duration_ms: 126.126306
+  type: 'suite'
+  ...
+# Subtest: AC-5: Sprache und Daten je Nutzer, keine Wanderung
+    # Subtest: A (en) und B (de) laden nacheinander /trips und /archiv
+    ok 1 - A (en) und B (de) laden nacheinander /trips und /archiv
+      ---
+      duration_ms: 26.437716
+      type: 'test'
+      ...
+    # Subtest: Archiv-Loader liefert count je Eintrag, detail bleibt (Bestand)
+    ok 2 - Archiv-Loader liefert count je Eintrag, detail bleibt (Bestand)
+      ---
+      duration_ms: 1.181102
+      type: 'test'
+      ...
+    1..2
+ok 3 - AC-5: Sprache und Daten je Nutzer, keine Wanderung
+  ---
+  duration_ms: 27.766577
+  type: 'suite'
+  ...
+1..3
+# tests 15
+# suites 3
+# pass 15
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 7271.789882
+exit=0
+===== src/routes/account/__tests__/konto_sprache_je_nutzer.test.ts
+TAP version 13
+# (node:1052336) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# Subtest: AC-6: Deutsch byte-gleich zum Ist-Stand vor der Umstellung (Golden golden-de)
+    # Subtest: konto.de.html
+    ok 1 - konto.de.html
+      ---
+      duration_ms: 39.443901
+      type: 'test'
+      ...
+    # Subtest: admin.de.html
+    ok 2 - admin.de.html
+      ---
+      duration_ms: 8.19088
+      type: 'test'
+      ...
+    # Subtest: navigation.de.html
+    ok 3 - navigation.de.html
+      ---
+      duration_ms: 10.294474
+      type: 'test'
+      ...
+    # Subtest: Messaufbau: Golden enthaelt die deutschen Texte und Zaehler
+    ok 4 - Messaufbau: Golden enthaelt die deutschen Texte und Zaehler
+      ---
+      duration_ms: 2.740833
+      type: 'test'
+      ...
+    1..4
+ok 1 - AC-6: Deutsch byte-gleich zum Ist-Stand vor der Umstellung (Golden golden-de)
+  ---
+  duration_ms: 61.372881
+  type: 'suite'
+  ...
+# Subtest: Konto-Seite auf Englisch (de -> en ohne Neuladen)
+    # Subtest: kein deutscher Katalogtext (konto.*, nav.*) im sichtbaren Text oder in Attributen
+    ok 1 - kein deutscher Katalogtext (konto.*, nav.*) im sichtbaren Text oder in Attributen
+      ---
+      duration_ms: 34.089694
+      type: 'test'
+      ...
+    # Subtest: feste englische Anker (exakte Literale)
+    ok 2 - feste englische Anker (exakte Literale)
+      ---
+      duration_ms: 12.252876
+      type: 'test'
+      ...
+    # Subtest: Attribute: Platzhalter und aria-label englisch
+    ok 3 - Attribute: Platzhalter und aria-label englisch
+      ---
+      duration_ms: 13.357097
+      type: 'test'
+      ...
+    # Subtest: Plural der Antworten exakt: genau eine Antwort -> „(+1 reply)"
+    ok 4 - Plural der Antworten exakt: genau eine Antwort -> „(+1 reply)"
+      ---
+      duration_ms: 9.101623
+      type: 'test'
+      ...
+    # Subtest: Leerzustaende englisch: keine Passkeys, keine Profile, keine Orte, kein Zeitplan
+    ok 5 - Leerzustaende englisch: keine Passkeys, keine Profile, keine Orte, kein Zeitplan
+      ---
+      duration_ms: 8.621641
+      type: 'test'
+      ...
+    1..5
+ok 2 - Konto-Seite auf Englisch (de -> en ohne Neuladen)
+  ---
+  duration_ms: 77.897074
+  type: 'suite'
+  ...
+# Subtest: AC-3: „Zuletzt" der Scheduler-Karte (timeAgo) in beiden Sprachen
+    # Subtest: 0 Minuten: „Zuletzt: gerade eben" | „Last: just now"
+    ok 1 - 0 Minuten: „Zuletzt: gerade eben" | „Last: just now"
+      ---
+      duration_ms: 4.971056
+      type: 'test'
+      ...
+    # Subtest: 3 Minuten: „Zuletzt: vor 3 Min" | „Last: 3 min ago"
+    ok 2 - 3 Minuten: „Zuletzt: vor 3 Min" | „Last: 3 min ago"
+      ---
+      duration_ms: 3.151134
+      type: 'test'
+      ...
+    # Subtest: 60 Minuten: „Zuletzt: vor 1 Std" | „Last: 1 h ago"
+    ok 3 - 60 Minuten: „Zuletzt: vor 1 Std" | „Last: 1 h ago"
+      ---
+      duration_ms: 9.760873
+      type: 'test'
+      ...
+    # Subtest: 120 Minuten: „Zuletzt: vor 2 Std" | „Last: 2 h ago"
+    ok 4 - 120 Minuten: „Zuletzt: vor 2 Std" | „Last: 2 h ago"
+      ---
+      duration_ms: 4.771236
+      type: 'test'
+      ...
+    # Subtest: 1440 Minuten: „Zuletzt: vor 1 Tag" | „Last: 1 day ago"
+    ok 5 - 1440 Minuten: „Zuletzt: vor 1 Tag" | „Last: 1 day ago"
+      ---
+      duration_ms: 11.630094
+      type: 'test'
+      ...
+    # Subtest: 2880 Minuten: „Zuletzt: vor 2 Tagen" | „Last: 2 days ago"
+    ok 6 - 2880 Minuten: „Zuletzt: vor 2 Tagen" | „Last: 2 days ago"
+      ---
+      duration_ms: 7.990681
+      type: 'test'
+      ...
+    1..6
+ok 3 - AC-3: „Zuletzt" der Scheduler-Karte (timeAgo) in beiden Sprachen
+  ---
+  duration_ms: 42.551906
+  type: 'suite'
+  ...
+# Subtest: AC-2: Fehlertexte in der Nutzersprache, unbekannte Codes zeigen den Server-Text
+    # Subtest: Loeschen: wrong_password
+    ok 1 - Loeschen: wrong_password
+      ---
+      duration_ms: 0.262671
+      type: 'test'
+      ...
+    # Subtest: Loeschen: invalid_code und rate_limit_exceeded haben eigene Saetze (nicht die des Profils)
+    ok 2 - Loeschen: invalid_code und rate_limit_exceeded haben eigene Saetze (nicht die des Profils)
+      ---
+      duration_ms: 0.1749
+      type: 'test'
+      ...
+    # Subtest: Loeschen: unbekannter Code -> Server-Text (detail, dann error, dann Ersatz)
+    ok 3 - Loeschen: unbekannter Code -> Server-Text (detail, dann error, dann Ersatz)
+      ---
+      duration_ms: 0.124061
+      type: 'test'
+      ...
+    # Subtest: Profil: email_taken (409)
+    ok 4 - Profil: email_taken (409)
+      ---
+      duration_ms: 0.14128
+      type: 'test'
+      ...
+    # Subtest: Code anfordern: code_expired
+    ok 5 - Code anfordern: code_expired
+      ---
+      duration_ms: 0.11301
+      type: 'test'
+      ...
+    # Subtest: Profil: unbekannter Code -> Server-Text, ohne alles -> Ersatztext der Sprache
+    ok 6 - Profil: unbekannter Code -> Server-Text, ohne alles -> Ersatztext der Sprache
+      ---
+      duration_ms: 0.116701
+      type: 'test'
+      ...
+    # Subtest: Passwort aendern: wrong_password und Ersatz
+    ok 7 - Passwort aendern: wrong_password und Ersatz
+      ---
+      duration_ms: 0.13423
+      type: 'test'
+      ...
+    1..7
+ok 4 - AC-2: Fehlertexte in der Nutzersprache, unbekannte Codes zeigen den Server-Text
+  ---
+  duration_ms: 1.224841
+  type: 'suite'
+  ...
+# Subtest: AC-1: zwei Nutzer, zwei Sprachen, gleiche Zahlen, getrennte Daten
+    # Subtest: A englisch, B deutsch; Kontingent-/Zaehlerwerte identisch; keine fremden Daten
+    ok 1 - A englisch, B deutsch; Kontingent-/Zaehlerwerte identisch; keine fremden Daten
+      ---
+      duration_ms: 31.773121
+      type: 'test'
+      ...
+    1..1
+ok 5 - AC-1: zwei Nutzer, zwei Sprachen, gleiche Zahlen, getrennte Daten
+  ---
+  duration_ms: 31.852742
+  type: 'suite'
+  ...
+# Subtest: F001: jeder F4-Katalogwert ist als festes de/en-Literal verankert
+    # Subtest: konto.sprache.titel
+    ok 1 - konto.sprache.titel
+      ---
+      duration_ms: 4.962396
+      type: 'test'
+      ...
+    # Subtest: konto.sprache.option_de
+    ok 2 - konto.sprache.option_de
+      ---
+      duration_ms: 0.162029
+      type: 'test'
+      ...
+    # Subtest: konto.sprache.option_en
+    ok 3 - konto.sprache.option_en
+      ---
+      duration_ms: 0.094301
+      type: 'test'
+      ...
+    # Subtest: konto.sprache.gespeichert
+    ok 4 - konto.sprache.gespeichert
+      ---
+      duration_ms: 0.080539
+      type: 'test'
+      ...
+    # Subtest: konto.sprache.fehler
+    ok 5 - konto.sprache.fehler
+      ---
+      duration_ms: 0.08111
+      type: 'test'
+      ...
+    # Subtest: konto.sprache.umschalter_label
+    ok 6 - konto.sprache.umschalter_label
+      ---
+      duration_ms: 0.061731
+      type: 'test'
+      ...
+    # Subtest: konto.titel
+    ok 7 - konto.titel
+      ---
+      duration_ms: 0.06927
+      type: 'test'
+      ...
+    # Subtest: konto.aktion.speichern
+    ok 8 - konto.aktion.speichern
+      ---
+      duration_ms: 0.171801
+      type: 'test'
+      ...
+    # Subtest: konto.aktion.loeschen
+    ok 9 - konto.aktion.loeschen
+      ---
+      duration_ms: 3.280054
+      type: 'test'
+      ...
+    # Subtest: konto.aktion.loeschen_fehlgeschlagen
+    ok 10 - konto.aktion.loeschen_fehlgeschlagen
+      ---
+      duration_ms: 0.09747
+      type: 'test'
+      ...
+    # Subtest: konto.aktion.test_senden
+    ok 11 - konto.aktion.test_senden
+      ---
+      duration_ms: 0.0682
+      type: 'test'
+      ...
+    # Subtest: konto.aktion.gesendet
+    ok 12 - konto.aktion.gesendet
+      ---
+      duration_ms: 0.060349
+      type: 'test'
+      ...
+    # Subtest: konto.aktion.senden_fehlgeschlagen
+    ok 13 - konto.aktion.senden_fehlgeschlagen
+      ---
+      duration_ms: 0.052889
+      type: 'test'
+      ...
+    # Subtest: konto.profil.titel
+    ok 14 - konto.profil.titel
+      ---
+      duration_ms: 0.054091
+      type: 'test'
+      ...
+    # Subtest: konto.profil.benutzername
+    ok 15 - konto.profil.benutzername
+      ---
+      duration_ms: 0.04983
+      type: 'test'
+      ...
+    # Subtest: konto.profil.anzeigename
+    ok 16 - konto.profil.anzeigename
+      ---
+      duration_ms: 0.065611
+      type: 'test'
+      ...
+    # Subtest: konto.profil.mitglied_seit
+    ok 17 - konto.profil.mitglied_seit
+      ---
+      duration_ms: 0.054711
+      type: 'test'
+      ...
+    # Subtest: konto.profil.gespeichert
+    ok 18 - konto.profil.gespeichert
+      ---
+      duration_ms: 0.053078
+      type: 'test'
+      ...
+    # Subtest: konto.kanaele.titel
+    ok 19 - konto.kanaele.titel
+      ---
+      duration_ms: 0.049721
+      type: 'test'
+      ...
+    # Subtest: konto.kanaele.beschreibung
+    ok 20 - konto.kanaele.beschreibung
+      ---
+      duration_ms: 0.050589
+      type: 'test'
+      ...
+    # Subtest: konto.kanaele.mail_label
+    ok 21 - konto.kanaele.mail_label
+      ---
+      duration_ms: 0.056839
+      type: 'test'
+      ...
+    # Subtest: konto.kanaele.mail_platzhalter
+    ok 22 - konto.kanaele.mail_platzhalter
+      ---
+      duration_ms: 0.05262
+      type: 'test'
+      ...
+    # Subtest: konto.adresse.ausstehend
+    ok 23 - konto.adresse.ausstehend
+      ---
+      duration_ms: 0.2179
+      type: 'test'
+      ...
+    # Subtest: konto.adresse.mail_erneut
+    ok 24 - konto.adresse.mail_erneut
+      ---
+      duration_ms: 0.05842
+      type: 'test'
+      ...
+    # Subtest: konto.adresse.mail_verschickt
+    ok 25 - konto.adresse.mail_verschickt
+      ---
+      duration_ms: 0.047669
+      type: 'test'
+      ...
+    # Subtest: konto.sms.label
+    ok 26 - konto.sms.label
+      ---
+      duration_ms: 0.050971
+      type: 'test'
+      ...
+    # Subtest: konto.sms.format_hinweis
+    ok 27 - konto.sms.format_hinweis
+      ---
+      duration_ms: 0.048259
+      type: 'test'
+      ...
+    # Subtest: konto.sms.ausstehend
+    ok 28 - konto.sms.ausstehend
+      ---
+      duration_ms: 0.06065
+      type: 'test'
+      ...
+    # Subtest: konto.sms.code_platzhalter
+    ok 29 - konto.sms.code_platzhalter
+      ---
+      duration_ms: 0.10172
+      type: 'test'
+      ...
+    # Subtest: konto.sms.code_bestaetigen
+    ok 30 - konto.sms.code_bestaetigen
+      ---
+      duration_ms: 0.058551
+      type: 'test'
+      ...
+    # Subtest: konto.sms.code_erneut
+    ok 31 - konto.sms.code_erneut
+      ---
+      duration_ms: 0.07408
+      type: 'test'
+      ...
+    # Subtest: konto.sms.code_verschickt
+    ok 32 - konto.sms.code_verschickt
+      ---
+      duration_ms: 0.06713
+      type: 'test'
+      ...
+    # Subtest: konto.telegram.verbunden
+    ok 33 - konto.telegram.verbunden
+      ---
+      duration_ms: 0.0911
+      type: 'test'
+      ...
+    # Subtest: konto.telegram.trennen
+    ok 34 - konto.telegram.trennen
+      ---
+      duration_ms: 0.07209
+      type: 'test'
+      ...
+    # Subtest: konto.telegram.nicht_verbunden
+    ok 35 - konto.telegram.nicht_verbunden
+      ---
+      duration_ms: 0.16488
+      type: 'test'
+      ...
+    # Subtest: konto.telegram.warte
+    ok 36 - konto.telegram.warte
+      ---
+      duration_ms: 0.13045
+      type: 'test'
+      ...
+    # Subtest: konto.telegram.verbinden
+    ok 37 - konto.telegram.verbinden
+      ---
+      duration_ms: 0.07364
+      type: 'test'
+      ...
+    # Subtest: konto.kopplung.titel
+    ok 38 - konto.kopplung.titel
+      ---
+      duration_ms: 0.0637
+      type: 'test'
+      ...
+    # Subtest: konto.kopplung.beschreibung
+    ok 39 - konto.kopplung.beschreibung
+      ---
+      duration_ms: 0.055741
+      type: 'test'
+      ...
+    # Subtest: konto.kopplung.erzeugen
+    ok 40 - konto.kopplung.erzeugen
+      ---
+      duration_ms: 0.05228
+      type: 'test'
+      ...
+    # Subtest: konto.kopplung.erneuern
+    ok 41 - konto.kopplung.erneuern
+      ---
+      duration_ms: 0.04846
+      type: 'test'
+      ...
+    # Subtest: konto.kopplung.einmalig
+    ok 42 - konto.kopplung.einmalig
+      ---
+      duration_ms: 0.055761
+      type: 'test'
+      ...
+    # Subtest: konto.kopplung.erneuern_frage
+    ok 43 - konto.kopplung.erneuern_frage
+      ---
+      duration_ms: 0.047019
+      type: 'test'
+      ...
+    # Subtest: konto.kopplung.bestaetigen
+    ok 44 - konto.kopplung.bestaetigen
+      ---
+      duration_ms: 0.0881
+      type: 'test'
+      ...
+    # Subtest: konto.kopplung.fehlgeschlagen
+    ok 45 - konto.kopplung.fehlgeschlagen
+      ---
+      duration_ms: 0.05212
+      type: 'test'
+      ...
+    # Subtest: konto.passkey.titel
+    ok 46 - konto.passkey.titel
+      ---
+      duration_ms: 0.04823
+      type: 'test'
+      ...
+    # Subtest: konto.passkey.leer
+    ok 47 - konto.passkey.leer
+      ---
+      duration_ms: 0.0438
+      type: 'test'
+      ...
+    # Subtest: konto.passkey.angelegt_am
+    ok 48 - konto.passkey.angelegt_am
+      ---
+      duration_ms: 0.081011
+      type: 'test'
+      ...
+    # Subtest: konto.passkey.zuletzt_verwendet
+    ok 49 - konto.passkey.zuletzt_verwendet
+      ---
+      duration_ms: 0.05081
+      type: 'test'
+      ...
+    # Subtest: konto.passkey.hinzufuegen
+    ok 50 - konto.passkey.hinzufuegen
+      ---
+      duration_ms: 0.058509
+      type: 'test'
+      ...
+    # Subtest: konto.passkey.nicht_unterstuetzt
+    ok 51 - konto.passkey.nicht_unterstuetzt
+      ---
+      duration_ms: 0.04666
+      type: 'test'
+      ...
+    # Subtest: konto.passkey.unbenannt
+    ok 52 - konto.passkey.unbenannt
+      ---
+      duration_ms: 0.049669
+      type: 'test'
+      ...
+    # Subtest: konto.passkey.abgebrochen
+    ok 53 - konto.passkey.abgebrochen
+      ---
+      duration_ms: 0.05024
+      type: 'test'
+      ...
+    # Subtest: konto.passkey.angelegt
+    ok 54 - konto.passkey.angelegt
+      ---
+      duration_ms: 0.044959
+      type: 'test'
+      ...
+    # Subtest: konto.passkey.anlegen_fehler
+    ok 55 - konto.passkey.anlegen_fehler
+      ---
+      duration_ms: 0.042462
+      type: 'test'
+      ...
+    # Subtest: konto.passkey.entfernt
+    ok 56 - konto.passkey.entfernt
+      ---
+      duration_ms: 0.04196
+      type: 'test'
+      ...
+    # Subtest: konto.passkey.entfernen_fehler
+    ok 57 - konto.passkey.entfernen_fehler
+      ---
+      duration_ms: 0.050361
+      type: 'test'
+      ...
+    # Subtest: konto.passkey.loeschen_titel
+    ok 58 - konto.passkey.loeschen_titel
+      ---
+      duration_ms: 0.069601
+      type: 'test'
+      ...
+    # Subtest: konto.passkey.loeschen_frage
+    ok 59 - konto.passkey.loeschen_frage
+      ---
+      duration_ms: 0.07622
+      type: 'test'
+      ...
+    # Subtest: konto.passkey.dialog_text
+    ok 60 - konto.passkey.dialog_text
+      ---
+      duration_ms: 0.046409
+      type: 'test'
+      ...
+    # Subtest: konto.passkey.bezeichnung
+    ok 61 - konto.passkey.bezeichnung
+      ---
+      duration_ms: 0.11853
+      type: 'test'
+      ...
+    # Subtest: konto.passkey.warte
+    ok 62 - konto.passkey.warte
+      ---
+      duration_ms: 0.053619
+      type: 'test'
+      ...
+    # Subtest: konto.passkey.anlegen
+    ok 63 - konto.passkey.anlegen
+      ---
+      duration_ms: 0.051221
+      type: 'test'
+      ...
+    # Subtest: konto.passwort.titel
+    ok 64 - konto.passwort.titel
+      ---
+      duration_ms: 0.062599
+      type: 'test'
+      ...
+    # Subtest: konto.passwort.aktuell
+    ok 65 - konto.passwort.aktuell
+      ---
+      duration_ms: 0.06859
+      type: 'test'
+      ...
+    # Subtest: konto.passwort.neu
+    ok 66 - konto.passwort.neu
+      ---
+      duration_ms: 0.088341
+      type: 'test'
+      ...
+    # Subtest: konto.passwort.neu_bestaetigen
+    ok 67 - konto.passwort.neu_bestaetigen
+      ---
+      duration_ms: 0.046591
+      type: 'test'
+      ...
+    # Subtest: konto.passwort.ungleich
+    ok 68 - konto.passwort.ungleich
+      ---
+      duration_ms: 0.04543
+      type: 'test'
+      ...
+    # Subtest: konto.passwort.geaendert
+    ok 69 - konto.passwort.geaendert
+      ---
+      duration_ms: 0.04291
+      type: 'test'
+      ...
+    # Subtest: konto.passwort.falsch
+    ok 70 - konto.passwort.falsch
+      ---
+      duration_ms: 0.04392
+      type: 'test'
+      ...
+    # Subtest: konto.passwort.fehlgeschlagen
+    ok 71 - konto.passwort.fehlgeschlagen
+      ---
+      duration_ms: 0.046331
+      type: 'test'
+      ...
+    # Subtest: konto.wetter_profile.titel
+    ok 72 - konto.wetter_profile.titel
+      ---
+      duration_ms: 0.053189
+      type: 'test'
+      ...
+    # Subtest: konto.wetter_profile.beschreibung
+    ok 73 - konto.wetter_profile.beschreibung
+      ---
+      duration_ms: 2.675233
+      type: 'test'
+      ...
+    # Subtest: konto.wetter_profile.leer
+    ok 74 - konto.wetter_profile.leer
+      ---
+      duration_ms: 0.05897
+      type: 'test'
+      ...
+    # Subtest: konto.wetter_profile.standard
+    ok 75 - konto.wetter_profile.standard
+      ---
+      duration_ms: 0.05423
+      type: 'test'
+      ...
+    # Subtest: konto.wetter_profile.umbenennen
+    ok 76 - konto.wetter_profile.umbenennen
+      ---
+      duration_ms: 0.04596
+      type: 'test'
+      ...
+    # Subtest: konto.wetter_profile.umbenennen_fehler
+    ok 77 - konto.wetter_profile.umbenennen_fehler
+      ---
+      duration_ms: 0.053161
+      type: 'test'
+      ...
+    # Subtest: konto.wetter_profile.loeschen_titel
+    ok 78 - konto.wetter_profile.loeschen_titel
+      ---
+      duration_ms: 1.415252
+      type: 'test'
+      ...
+    # Subtest: konto.wetter_profile.loeschen_frage
+    ok 79 - konto.wetter_profile.loeschen_frage
+      ---
+      duration_ms: 0.098011
+      type: 'test'
+      ...
+    # Subtest: konto.metriken.one
+    ok 80 - konto.metriken.one
+      ---
+      duration_ms: 0.066759
+      type: 'test'
+      ...
+    # Subtest: konto.metriken.other
+    ok 81 - konto.metriken.other
+      ---
+      duration_ms: 0.05072
+      type: 'test'
+      ...
+    # Subtest: konto.reports.titel
+    ok 82 - konto.reports.titel
+      ---
+      duration_ms: 0.042789
+      type: 'test'
+      ...
+    # Subtest: konto.reports.nicht_verfuegbar
+    ok 83 - konto.reports.nicht_verfuegbar
+      ---
+      duration_ms: 0.04119
+      type: 'test'
+      ...
+    # Subtest: konto.reports.naechste_pruefung
+    ok 84 - konto.reports.naechste_pruefung
+      ---
+      duration_ms: 0.048569
+      type: 'test'
+      ...
+    # Subtest: konto.reports.zuletzt
+    ok 85 - konto.reports.zuletzt
+      ---
+      duration_ms: 0.04161
+      type: 'test'
+      ...
+    # Subtest: konto.reports.lauf_fehlgeschlagen
+    ok 86 - konto.reports.lauf_fehlgeschlagen
+      ---
+      duration_ms: 0.03944
+      type: 'test'
+      ...
+    # Subtest: konto.reports.lauf_fehlgeschlagen_mit
+    ok 87 - konto.reports.lauf_fehlgeschlagen_mit
+      ---
+      duration_ms: 0.04272
+      type: 'test'
+      ...
+    # Subtest: konto.reports.keine
+    ok 88 - konto.reports.keine
+      ---
+      duration_ms: 0.05753
+      type: 'test'
+      ...
+    # Subtest: konto.job.trip_checks
+    ok 89 - konto.job.trip_checks
+      ---
+      duration_ms: 0.045618
+      type: 'test'
+      ...
+    # Subtest: konto.zeit.vor_stunden.one
+    ok 90 - konto.zeit.vor_stunden.one
+      ---
+      duration_ms: 0.04751
+      type: 'test'
+      ...
+    # Subtest: konto.zeit.vor_stunden.other
+    ok 91 - konto.zeit.vor_stunden.other
+      ---
+      duration_ms: 0.04326
+      type: 'test'
+      ...
+    # Subtest: konto.zeit.vor_tagen.one
+    ok 92 - konto.zeit.vor_tagen.one
+      ---
+      duration_ms: 0.03903
+      type: 'test'
+      ...
+    # Subtest: konto.zeit.vor_tagen.other
+    ok 93 - konto.zeit.vor_tagen.other
+      ---
+      duration_ms: 0.04419
+      type: 'test'
+      ...
+    # Subtest: konto.account.titel
+    ok 94 - konto.account.titel
+      ---
+      duration_ms: 0.037419
+      type: 'test'
+      ...
+    # Subtest: konto.level.titel
+    ok 95 - konto.level.titel
+      ---
+      duration_ms: 0.03631
+      type: 'test'
+      ...
+    # Subtest: konto.level.wechsel_titel
+    ok 96 - konto.level.wechsel_titel
+      ---
+      duration_ms: 0.052371
+      type: 'test'
+      ...
+    # Subtest: konto.level.ausstehend
+    ok 97 - konto.level.ausstehend
+      ---
+      duration_ms: 0.05231
+      type: 'test'
+      ...
+    # Subtest: konto.level.nicht_benachrichtigt
+    ok 98 - konto.level.nicht_benachrichtigt
+      ---
+      duration_ms: 0.038731
+      type: 'test'
+      ...
+    # Subtest: konto.level.wird_gesendet
+    ok 99 - konto.level.wird_gesendet
+      ---
+      duration_ms: 0.041649
+      type: 'test'
+      ...
+    # Subtest: konto.level.antrag_stellen
+    ok 100 - konto.level.antrag_stellen
+      ---
+      duration_ms: 0.03665
+      type: 'test'
+      ...
+    # Subtest: konto.level.antrag_gesendet
+    ok 101 - konto.level.antrag_gesendet
+      ---
+      duration_ms: 0.03589
+      type: 'test'
+      ...
+    # Subtest: konto.level.bereits_aktiv
+    ok 102 - konto.level.bereits_aktiv
+      ---
+      duration_ms: 0.03643
+      type: 'test'
+      ...
+    # Subtest: konto.level.ungueltig
+    ok 103 - konto.level.ungueltig
+      ---
+      duration_ms: 0.036191
+      type: 'test'
+      ...
+    # Subtest: konto.level.antrag_fehlgeschlagen
+    ok 104 - konto.level.antrag_fehlgeschlagen
+      ---
+      duration_ms: 0.04299
+      type: 'test'
+      ...
+    # Subtest: konto.menge.aktive_trips
+    ok 105 - konto.menge.aktive_trips
+      ---
+      duration_ms: 0.303119
+      type: 'test'
+      ...
+    # Subtest: konto.menge.aktive_vergleiche
+    ok 106 - konto.menge.aktive_vergleiche
+      ---
+      duration_ms: 0.065759
+      type: 'test'
+      ...
+    # Subtest: konto.menge.locations
+    ok 107 - konto.menge.locations
+      ---
+      duration_ms: 0.043401
+      type: 'test'
+      ...
+    # Subtest: konto.menge.von
+    ok 108 - konto.menge.von
+      ---
+      duration_ms: 0.26128
+      type: 'test'
+      ...
+    # Subtest: konto.kontingent.titel
+    ok 109 - konto.kontingent.titel
+      ---
+      duration_ms: 0.08673
+      type: 'test'
+      ...
+    # Subtest: konto.kontingent.antworten.one
+    ok 110 - konto.kontingent.antworten.one
+      ---
+      duration_ms: 0.064289
+      type: 'test'
+      ...
+    # Subtest: konto.kontingent.antworten.other
+    ok 111 - konto.kontingent.antworten.other
+      ---
+      duration_ms: 0.051761
+      type: 'test'
+      ...
+    # Subtest: konto.kontingent.davon
+    ok 112 - konto.kontingent.davon
+      ---
+      duration_ms: 0.06242
+      type: 'test'
+      ...
+    # Subtest: konto.benachrichtigung.titel
+    ok 113 - konto.benachrichtigung.titel
+      ---
+      duration_ms: 0.04326
+      type: 'test'
+      ...
+    # Subtest: konto.benachrichtigung.keine
+    ok 114 - konto.benachrichtigung.keine
+      ---
+      duration_ms: 0.084641
+      type: 'test'
+      ...
+    # Subtest: konto.benachrichtigung.einrichten
+    ok 115 - konto.benachrichtigung.einrichten
+      ---
+      duration_ms: 0.046491
+      type: 'test'
+      ...
+    # Subtest: konto.modelle.titel
+    ok 116 - konto.modelle.titel
+      ---
+      duration_ms: 0.03639
+      type: 'test'
+      ...
+    # Subtest: konto.modelle.keine
+    ok 117 - konto.modelle.keine
+      ---
+      duration_ms: 0.088391
+      type: 'test'
+      ...
+    # Subtest: konto.modelle.anlegen
+    ok 118 - konto.modelle.anlegen
+      ---
+      duration_ms: 0.047351
+      type: 'test'
+      ...
+    # Subtest: konto.status.titel
+    ok 119 - konto.status.titel
+      ---
+      duration_ms: 1.519171
+      type: 'test'
+      ...
+    # Subtest: konto.status.nicht_erreichbar
+    ok 120 - konto.status.nicht_erreichbar
+      ---
+      duration_ms: 0.057411
+      type: 'test'
+      ...
+    # Subtest: konto.status.laeuft
+    ok 121 - konto.status.laeuft
+      ---
+      duration_ms: 0.071621
+      type: 'test'
+      ...
+    # Subtest: konto.status.eingeschraenkt
+    ok 122 - konto.status.eingeschraenkt
+      ---
+      duration_ms: 3.095345
+      type: 'test'
+      ...
+    # Subtest: konto.templates.titel
+    ok 123 - konto.templates.titel
+      ---
+      duration_ms: 0.075049
+      type: 'test'
+      ...
+    # Subtest: konto.templates.beschreibung
+    ok 124 - konto.templates.beschreibung
+      ---
+      duration_ms: 0.04762
+      type: 'test'
+      ...
+    # Subtest: konto.templates.keine
+    ok 125 - konto.templates.keine
+      ---
+      duration_ms: 0.04403
+      type: 'test'
+      ...
+    # Subtest: konto.anmeldungen.titel
+    ok 126 - konto.anmeldungen.titel
+      ---
+      duration_ms: 0.043271
+      type: 'test'
+      ...
+    # Subtest: konto.anmeldungen.text
+    ok 127 - konto.anmeldungen.text
+      ---
+      duration_ms: 0.04517
+      type: 'test'
+      ...
+    # Subtest: konto.anmeldungen.alle_abmelden
+    ok 128 - konto.anmeldungen.alle_abmelden
+      ---
+      duration_ms: 0.044749
+      type: 'test'
+      ...
+    # Subtest: konto.anmeldungen.dialog_text
+    ok 129 - konto.anmeldungen.dialog_text
+      ---
+      duration_ms: 0.04139
+      type: 'test'
+      ...
+    # Subtest: konto.anmeldungen.fehlgeschlagen
+    ok 130 - konto.anmeldungen.fehlgeschlagen
+      ---
+      duration_ms: 0.04768
+      type: 'test'
+      ...
+    # Subtest: konto.daten.titel
+    ok 131 - konto.daten.titel
+      ---
+      duration_ms: 0.03995
+      type: 'test'
+      ...
+    # Subtest: konto.daten.text
+    ok 132 - konto.daten.text
+      ---
+      duration_ms: 7.066889
+      type: 'test'
+      ...
+    # Subtest: konto.daten.wird_erstellt
+    ok 133 - konto.daten.wird_erstellt
+      ---
+      duration_ms: 0.06085
+      type: 'test'
+      ...
+    # Subtest: konto.daten.herunterladen
+    ok 134 - konto.daten.herunterladen
+      ---
+      duration_ms: 0.040941
+      type: 'test'
+      ...
+    # Subtest: konto.daten.fehlgeschlagen
+    ok 135 - konto.daten.fehlgeschlagen
+      ---
+      duration_ms: 0.03635
+      type: 'test'
+      ...
+    # Subtest: konto.loeschen.zone_titel
+    ok 136 - konto.loeschen.zone_titel
+      ---
+      duration_ms: 0.07185
+      type: 'test'
+      ...
+    # Subtest: konto.loeschen.zone_text
+    ok 137 - konto.loeschen.zone_text
+      ---
+      duration_ms: 3.782704
+      type: 'test'
+      ...
+    # Subtest: konto.loeschen.titel
+    ok 138 - konto.loeschen.titel
+      ---
+      duration_ms: 0.05926
+      type: 'test'
+      ...
+    # Subtest: konto.loeschen.frage_mit_passwort
+    ok 139 - konto.loeschen.frage_mit_passwort
+      ---
+      duration_ms: 0.04616
+      type: 'test'
+      ...
+    # Subtest: konto.loeschen.frage_ohne_passwort
+    ok 140 - konto.loeschen.frage_ohne_passwort
+      ---
+      duration_ms: 0.04942
+      type: 'test'
+      ...
+    # Subtest: konto.loeschen.passwort
+    ok 141 - konto.loeschen.passwort
+      ---
+      duration_ms: 0.081831
+      type: 'test'
+      ...
+    # Subtest: konto.loeschen.code_senden
+    ok 142 - konto.loeschen.code_senden
+      ---
+      duration_ms: 0.05693
+      type: 'test'
+      ...
+    # Subtest: konto.loeschen.code_verschickt
+    ok 143 - konto.loeschen.code_verschickt
+      ---
+      duration_ms: 0.035559
+      type: 'test'
+      ...
+    # Subtest: konto.loeschen.code
+    ok 144 - konto.loeschen.code
+      ---
+      duration_ms: 0.035701
+      type: 'test'
+      ...
+    # Subtest: konto.loeschen.code_versand_fehlgeschlagen
+    ok 145 - konto.loeschen.code_versand_fehlgeschlagen
+      ---
+      duration_ms: 0.03216
+      type: 'test'
+      ...
+    # Subtest: konto.fehler.reauth_required
+    ok 146 - konto.fehler.reauth_required
+      ---
+      duration_ms: 0.033521
+      type: 'test'
+      ...
+    # Subtest: konto.fehler.wrong_password
+    ok 147 - konto.fehler.wrong_password
+      ---
+      duration_ms: 0.041831
+      type: 'test'
+      ...
+    # Subtest: konto.fehler.loeschcode_ungueltig
+    ok 148 - konto.fehler.loeschcode_ungueltig
+      ---
+      duration_ms: 0.03447
+      type: 'test'
+      ...
+    # Subtest: konto.fehler.zu_viele_versuche
+    ok 149 - konto.fehler.zu_viele_versuche
+      ---
+      duration_ms: 0.04109
+      type: 'test'
+      ...
+    # Subtest: konto.fehler.mail_failed
+    ok 150 - konto.fehler.mail_failed
+      ---
+      duration_ms: 0.032499
+      type: 'test'
+      ...
+    # Subtest: konto.fehler.email_taken
+    ok 151 - konto.fehler.email_taken
+      ---
+      duration_ms: 0.03172
+      type: 'test'
+      ...
+    # Subtest: konto.fehler.invalid_sms_number
+    ok 152 - konto.fehler.invalid_sms_number
+      ---
+      duration_ms: 0.033619
+      type: 'test'
+      ...
+    # Subtest: konto.fehler.invalid_code
+    ok 153 - konto.fehler.invalid_code
+      ---
+      duration_ms: 0.03481
+      type: 'test'
+      ...
+    # Subtest: konto.fehler.code_expired
+    ok 154 - konto.fehler.code_expired
+      ---
+      duration_ms: 0.035031
+      type: 'test'
+      ...
+    # Subtest: konto.fehler.sms_not_allowed
+    ok 155 - konto.fehler.sms_not_allowed
+      ---
+      duration_ms: 0.039881
+      type: 'test'
+      ...
+    # Subtest: konto.fehler.no_number
+    ok 156 - konto.fehler.no_number
+      ---
+      duration_ms: 0.039211
+      type: 'test'
+      ...
+    # Subtest: konto.fehler.rate_limit_exceeded
+    ok 157 - konto.fehler.rate_limit_exceeded
+      ---
+      duration_ms: 0.032739
+      type: 'test'
+      ...
+    # Subtest: konto.fehler.speichern_fehlgeschlagen
+    ok 158 - konto.fehler.speichern_fehlgeschlagen
+      ---
+      duration_ms: 0.03202
+      type: 'test'
+      ...
+    # Subtest: admin.kopf.eyebrow
+    ok 159 - admin.kopf.eyebrow
+      ---
+      duration_ms: 0.055799
+      type: 'test'
+      ...
+    # Subtest: admin.kopf.sub
+    ok 160 - admin.kopf.sub
+      ---
+      duration_ms: 0.03749
+      type: 'test'
+      ...
+    # Subtest: admin.einladung.titel
+    ok 161 - admin.einladung.titel
+      ---
+      duration_ms: 0.033129
+      type: 'test'
+      ...
+    # Subtest: admin.einladung.notiz
+    ok 162 - admin.einladung.notiz
+      ---
+      duration_ms: 0.03068
+      type: 'test'
+      ...
+    # Subtest: admin.einladung.erstellen
+    ok 163 - admin.einladung.erstellen
+      ---
+      duration_ms: 0.033879
+      type: 'test'
+      ...
+    # Subtest: admin.einladung.kopiert
+    ok 164 - admin.einladung.kopiert
+      ---
+      duration_ms: 0.031971
+      type: 'test'
+      ...
+    # Subtest: admin.einladung.link_kopieren
+    ok 165 - admin.einladung.link_kopieren
+      ---
+      duration_ms: 0.03788
+      type: 'test'
+      ...
+    # Subtest: admin.einladung.nur_jetzt
+    ok 166 - admin.einladung.nur_jetzt
+      ---
+      duration_ms: 0.03203
+      type: 'test'
+      ...
+    # Subtest: admin.einladung.ohne_notiz
+    ok 167 - admin.einladung.ohne_notiz
+      ---
+      duration_ms: 0.03209
+      type: 'test'
+      ...
+    # Subtest: admin.einladung.erstellt
+    ok 168 - admin.einladung.erstellt
+      ---
+      duration_ms: 0.056799
+      type: 'test'
+      ...
+    # Subtest: admin.einladung.widerrufen
+    ok 169 - admin.einladung.widerrufen
+      ---
+      duration_ms: 0.03679
+      type: 'test'
+      ...
+    # Subtest: admin.einladung.status_offen
+    ok 170 - admin.einladung.status_offen
+      ---
+      duration_ms: 0.03131
+      type: 'test'
+      ...
+    # Subtest: admin.einladung.status_benutzt
+    ok 171 - admin.einladung.status_benutzt
+      ---
+      duration_ms: 0.044291
+      type: 'test'
+      ...
+    # Subtest: admin.einladung.status_widerrufen
+    ok 172 - admin.einladung.status_widerrufen
+      ---
+      duration_ms: 0.037009
+      type: 'test'
+      ...
+    # Subtest: admin.einladung.widerrufen_titel
+    ok 173 - admin.einladung.widerrufen_titel
+      ---
+      duration_ms: 0.0323
+      type: 'test'
+      ...
+    # Subtest: admin.einladung.widerrufen_text
+    ok 174 - admin.einladung.widerrufen_text
+      ---
+      duration_ms: 0.05705
+      type: 'test'
+      ...
+    # Subtest: admin.nutzer.testnutzer
+    ok 175 - admin.nutzer.testnutzer
+      ---
+      duration_ms: 0.0336
+      type: 'test'
+      ...
+    # Subtest: admin.nutzer.gesperrt
+    ok 176 - admin.nutzer.gesperrt
+      ---
+      duration_ms: 0.032749
+      type: 'test'
+      ...
+    # Subtest: admin.nutzer.tier
+    ok 177 - admin.nutzer.tier
+      ---
+      duration_ms: 0.03004
+      type: 'test'
+      ...
+    # Subtest: admin.nutzer.offener_antrag
+    ok 178 - admin.nutzer.offener_antrag
+      ---
+      duration_ms: 0.03735
+      type: 'test'
+      ...
+    # Subtest: admin.nutzer.seit
+    ok 179 - admin.nutzer.seit
+      ---
+      duration_ms: 0.03534
+      type: 'test'
+      ...
+    # Subtest: admin.nutzer.letzter_report
+    ok 180 - admin.nutzer.letzter_report
+      ---
+      duration_ms: 0.045729
+      type: 'test'
+      ...
+    # Subtest: admin.nutzer.kein_lauf
+    ok 181 - admin.nutzer.kein_lauf
+      ---
+      duration_ms: 0.03204
+      type: 'test'
+      ...
+    # Subtest: admin.nutzer.verbrauch
+    ok 182 - admin.nutzer.verbrauch
+      ---
+      duration_ms: 0.032491
+      type: 'test'
+      ...
+    # Subtest: admin.nutzer.tier_von
+    ok 183 - admin.nutzer.tier_von
+      ---
+      duration_ms: 0.0548
+      type: 'test'
+      ...
+    # Subtest: admin.nutzer.entsperren
+    ok 184 - admin.nutzer.entsperren
+      ---
+      duration_ms: 0.03613
+      type: 'test'
+      ...
+    # Subtest: admin.nutzer.sperren
+    ok 185 - admin.nutzer.sperren
+      ---
+      duration_ms: 0.03318
+      type: 'test'
+      ...
+    # Subtest: admin.nutzer.sperren_titel
+    ok 186 - admin.nutzer.sperren_titel
+      ---
+      duration_ms: 0.0299
+      type: 'test'
+      ...
+    # Subtest: admin.nutzer.sperren_text
+    ok 187 - admin.nutzer.sperren_text
+      ---
+      duration_ms: 0.034509
+      type: 'test'
+      ...
+    # Subtest: admin.fehler.keine_berechtigung
+    ok 188 - admin.fehler.keine_berechtigung
+      ---
+      duration_ms: 0.041171
+      type: 'test'
+      ...
+    # Subtest: admin.fehler.nutzer_nicht_gefunden
+    ok 189 - admin.fehler.nutzer_nicht_gefunden
+      ---
+      duration_ms: 0.030669
+      type: 'test'
+      ...
+    # Subtest: admin.fehler.selbst_sperren
+    ok 190 - admin.fehler.selbst_sperren
+      ---
+      duration_ms: 0.03016
+      type: 'test'
+      ...
+    # Subtest: admin.fehler.ungueltig
+    ok 191 - admin.fehler.ungueltig
+      ---
+      duration_ms: 0.10443
+      type: 'test'
+      ...
+    # Subtest: admin.fehler.fehlgeschlagen
+    ok 192 - admin.fehler.fehlgeschlagen
+      ---
+      duration_ms: 0.067661
+      type: 'test'
+      ...
+    # Subtest: admin.fehler.einladung_nicht_gefunden
+    ok 193 - admin.fehler.einladung_nicht_gefunden
+      ---
+      duration_ms: 0.041249
+      type: 'test'
+      ...
+    # Subtest: admin.fehler.einladung_benutzt
+    ok 194 - admin.fehler.einladung_benutzt
+      ---
+      duration_ms: 0.03291
+      type: 'test'
+      ...
+    # Subtest: admin.fehler.einladung_ungueltig
+    ok 195 - admin.fehler.einladung_ungueltig
+      ---
+      duration_ms: 0.035841
+      type: 'test'
+      ...
+    # Subtest: nav.hilfe
+    ok 196 - nav.hilfe
+      ---
+      duration_ms: 0.03064
+      type: 'test'
+      ...
+    # Subtest: nav.hauptmenue.startseite
+    ok 197 - nav.hauptmenue.startseite
+      ---
+      duration_ms: 0.03296
+      type: 'test'
+      ...
+    # Subtest: nav.hauptmenue.meine_trips
+    ok 198 - nav.hauptmenue.meine_trips
+      ---
+      duration_ms: 0.748201
+      type: 'test'
+      ...
+    # Subtest: nav.hauptmenue.vergleich
+    ok 199 - nav.hauptmenue.vergleich
+      ---
+      duration_ms: 0.058479
+      type: 'test'
+      ...
+    # Subtest: nav.hauptmenue.archiv
+    ok 200 - nav.hauptmenue.archiv
+      ---
+      duration_ms: 0.0412
+      type: 'test'
+      ...
+    # Subtest: nav.admin
+    ok 201 - nav.admin
+      ---
+      duration_ms: 0.030899
+      type: 'test'
+      ...
+    # Subtest: nav.konto
+    ok 202 - nav.konto
+      ---
+      duration_ms: 0.032771
+      type: 'test'
+      ...
+    # Subtest: nav.system_status
+    ok 203 - nav.system_status
+      ---
+      duration_ms: 0.032359
+      type: 'test'
+      ...
+    # Subtest: nav.hell
+    ok 204 - nav.hell
+      ---
+      duration_ms: 0.036301
+      type: 'test'
+      ...
+    # Subtest: nav.dunkel
+    ok 205 - nav.dunkel
+      ---
+      duration_ms: 0.029319
+      type: 'test'
+      ...
+    # Subtest: nav.abmelden
+    ok 206 - nav.abmelden
+      ---
+      duration_ms: 0.02758
+      type: 'test'
+      ...
+    # Subtest: nav.unten.uebersicht
+    ok 207 - nav.unten.uebersicht
+      ---
+      duration_ms: 0.029621
+      type: 'test'
+      ...
+    # Subtest: nav.unten.vergleich
+    ok 208 - nav.unten.vergleich
+      ---
+      duration_ms: 0.03578
+      type: 'test'
+      ...
+    # Subtest: nav.konto_sheet.kanaele_empfaenger
+    ok 209 - nav.konto_sheet.kanaele_empfaenger
+      ---
+      duration_ms: 0.032271
+      type: 'test'
+      ...
+    # Subtest: nav.konto_sheet.einstellungen
+    ok 210 - nav.konto_sheet.einstellungen
+      ---
+      duration_ms: 0.028841
+      type: 'test'
+      ...
+    # Subtest: nav.konto_sheet.dunkles_design
+    ok 211 - nav.konto_sheet.dunkles_design
+      ---
+      duration_ms: 0.028351
+      type: 'test'
+      ...
+    # Subtest: nav.konto_sheet.datenexport
+    ok 212 - nav.konto_sheet.datenexport
+      ---
+      duration_ms: 0.03037
+      type: 'test'
+      ...
+    # Subtest: nav.konto_sheet.schliessen
+    ok 213 - nav.konto_sheet.schliessen
+      ---
+      duration_ms: 0.03031
+      type: 'test'
+      ...
+    # Subtest: nav.konto_sheet.version
+    ok 214 - nav.konto_sheet.version
+      ---
+      duration_ms: 0.03306
+      type: 'test'
+      ...
+    # Subtest: nav.gespeichert
+    ok 215 - nav.gespeichert
+      ---
+      duration_ms: 0.03001
+      type: 'test'
+      ...
+    # Subtest: nav.nicht_gespeichert
+    ok 216 - nav.nicht_gespeichert
+      ---
+      duration_ms: 0.03025
+      type: 'test'
+      ...
+    # Subtest: nav.speichere
+    ok 217 - nav.speichere
+      ---
+      duration_ms: 0.0291
+      type: 'test'
+      ...
+    # Subtest: nav.nochmal_speichern
+    ok 218 - nav.nochmal_speichern
+      ---
+      duration_ms: 0.030069
+      type: 'test'
+      ...
+    # Subtest: nav.konflikt
+    ok 219 - nav.konflikt
+      ---
+      duration_ms: 0.033142
+      type: 'test'
+      ...
+    # Subtest: nav.speicherfehler
+    ok 220 - nav.speicherfehler
+      ---
+      duration_ms: 0.03217
+      type: 'test'
+      ...
+    # Subtest: nav.speicherfehler_mit
+    ok 221 - nav.speicherfehler_mit
+      ---
+      duration_ms: 0.04064
+      type: 'test'
+      ...
+    # Subtest: statischer Gegencheck: Anker-Tabelle == Schluessel von konto/admin/nav (de und en)
+    ok 222 - statischer Gegencheck: Anker-Tabelle == Schluessel von konto/admin/nav (de und en)
+      ---
+      duration_ms: 1.128761
+      type: 'test'
+      ...
+    # Subtest: F002: Plural exakt — „vor 1 Std" | „1 h ago", „vor 1 Tag" | „1 day ago"
+    ok 223 - F002: Plural exakt — „vor 1 Std" | „1 h ago", „vor 1 Tag" | „1 day ago"
+      ---
+      duration_ms: 0.12625
+      type: 'test'
+      ...
+    1..223
+ok 6 - F001: jeder F4-Katalogwert ist als festes de/en-Literal verankert
+  ---
+  duration_ms: 61.307631
+  type: 'suite'
+  ...
+1..6
+# tests 246
+# suites 6
+# pass 246
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 8722.483558
+exit=0
+===== src/lib/components/__tests__/f12_reste_sprache.test.ts
+TAP version 13
+# Subtest: F12: Reste der Allowlist (AC-1)
+    # Subtest: de: jeder Render ist byte-gleich zum Stand vor der Umstellung
+    ok 1 - de: jeder Render ist byte-gleich zum Stand vor der Umstellung
+      ---
+      duration_ms: 4706.859176
+      type: 'test'
+      ...
+    # Subtest: en: englische Texte stehen im Render, kein deutsches Signalwort
+    ok 2 - en: englische Texte stehen im Render, kein deutsches Signalwort
+      ---
+      duration_ms: 4.347416
+      type: 'test'
+      ...
+    # Subtest: Anker: Katalog liefert de wortgleich zum Bestand und en wie verankert
+    ok 3 - Anker: Katalog liefert de wortgleich zum Bestand und en wie verankert
+      ---
+      duration_ms: 0.365921
+      type: 'test'
+      ...
+    1..3
+ok 1 - F12: Reste der Allowlist (AC-1)
+  ---
+  duration_ms: 4712.337232
+  type: 'suite'
+  ...
+1..1
+# tests 3
+# suites 1
+# pass 3
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 5634.789981
+exit=0
+===== src/routes/_home/__tests__/cockpit_sprache.test.ts
+TAP version 13
+# Subtest: AC-1: Cockpit mit aktivem Trip auf Englisch
+    # Subtest: Hero, Schnellaktionen, Versand- und Alert-Karte, Archiv-Abschnitt
+    ok 1 - Hero, Schnellaktionen, Versand- und Alert-Karte, Archiv-Abschnitt
+      ---
+      duration_ms: 41.839475
+      type: 'test'
+      ...
+    # Subtest: Trip-, Orts- und Kanalnamen bleiben unveraendert
+    ok 2 - Trip-, Orts- und Kanalnamen bleiben unveraendert
+      ---
+      duration_ms: 9.225912
+      type: 'test'
+      ...
+    # Subtest: Monatskuerzel der Archiv-Karte englisch (Sep 2026), deutsch bleibt Sep 2026 / Mär
+    ok 3 - Monatskuerzel der Archiv-Karte englisch (Sep 2026), deutsch bleibt Sep 2026 / Mär
+      ---
+      duration_ms: 0.24208
+      type: 'test'
+      ...
+    1..3
+ok 1 - AC-1: Cockpit mit aktivem Trip auf Englisch
+  ---
+  duration_ms: 53.934801
+  type: 'suite'
+  ...
+# Subtest: AC-1: Trip-Hero ohne geplante Briefings
+    # Subtest: Hinweis „keine Briefings geplant" englisch
+    ok 1 - Hinweis „keine Briefings geplant" englisch
+      ---
+      duration_ms: 4.592736
+      type: 'test'
+      ...
+    1..1
+ok 2 - AC-1: Trip-Hero ohne geplante Briefings
+  ---
+  duration_ms: 4.760106
+  type: 'suite'
+  ...
+# Subtest: AC-1: Cockpit mit Ortsvergleich und Planungsmodus auf Englisch
+    # Subtest: Vergleichs-Hero: Pille, Zeitplan, Oeffnen-Link, Timeline, Alerts leer
+    ok 1 - Vergleichs-Hero: Pille, Zeitplan, Oeffnen-Link, Timeline, Alerts leer
+      ---
+      duration_ms: 9.786592
+      type: 'test'
+      ...
+    # Subtest: Planungsmodus: Hinweis-Banner, Weiter einrichten, Schnell anlegen
+    ok 2 - Planungsmodus: Hinweis-Banner, Weiter einrichten, Schnell anlegen
+      ---
+      duration_ms: 7.534749
+      type: 'test'
+      ...
+    1..2
+ok 3 - AC-1: Cockpit mit Ortsvergleich und Planungsmodus auf Englisch
+  ---
+  duration_ms: 17.556703
+  type: 'suite'
+  ...
+# Subtest: AC-1: Bausteine und Helfer des Cockpits (de -> en ohne Neuladen)
+    # Subtest: HomeHero: Oeffnen-Link je kind und Beschriftungen reagieren auf den Sprachwechsel
+    ok 1 - HomeHero: Oeffnen-Link je kind und Beschriftungen reagieren auf den Sprachwechsel
+      ---
+      duration_ms: 3.807125
+      type: 'test'
+      ...
+    # Subtest: Kachel-Aktion, Hero-Untertitel (Plural), Timeline, Briefing-Zeilen
+    ok 2 - Kachel-Aktion, Hero-Untertitel (Plural), Timeline, Briefing-Zeilen
+      ---
+      duration_ms: 0.482261
+      type: 'test'
+      ...
+    1..2
+ok 4 - AC-1: Bausteine und Helfer des Cockpits (de -> en ohne Neuladen)
+  ---
+  duration_ms: 4.435125
+  type: 'suite'
+  ...
+# Subtest: Englische Anker (feste Literale aus Spec und Glossar)
+    # Subtest: Cockpit Trip: Next delivery, Overview, Open trip, Plural changes/change, multi-day trip
+    ok 1 - Cockpit Trip: Next delivery, Overview, Open trip, Plural changes/change, multi-day trip
+      ---
+      duration_ms: 6.523909
+      type: 'test'
+      ...
+    # Subtest: Cockpit Vergleich/Planung: Open comparison, 3 locations compared, 1 completed trip, Archive
+    ok 2 - Cockpit Vergleich/Planung: Open comparison, 3 locations compared, 1 completed trip, Archive
+      ---
+      duration_ms: 8.124752
+      type: 'test'
+      ...
+    # Subtest: Helfer: Edit, 1 location compared, Tagesangaben in day/days
+    ok 3 - Helfer: Edit, 1 location compared, Tagesangaben in day/days
+      ---
+      duration_ms: 18.377664
+      type: 'test'
+      ...
+    # Subtest: Listen: No trips yet, Archive, 1 stage / 1 location exakt
+    ok 4 - Listen: No trips yet, Archive, 1 stage / 1 location exakt
+      ---
+      duration_ms: 32.533453
+      type: 'test'
+      ...
+    1..4
+ok 5 - Englische Anker (feste Literale aus Spec und Glossar)
+  ---
+  duration_ms: 65.809827
+  type: 'suite'
+  ...
+1..5
+# tests 12
+# suites 5
+# pass 12
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 7292.40194
+exit=0
+===== src/lib/components/ui/__tests__/navigation_und_speicheranzeige_sprache.test.ts
+TAP version 13
+# (node:1056269) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# Subtest: AC-5: Navigation ueber das echte Layout (data.lang)
+    # Subtest: Layout setzt die Sprache aus data.lang
+    ok 1 - Layout setzt die Sprache aus data.lang
+      ---
+      duration_ms: 9.253293
+      type: 'test'
+      ...
+    # Subtest: Sidebar: Hauptmenue englisch, exakte Labels
+    ok 2 - Sidebar: Hauptmenue englisch, exakte Labels
+      ---
+      duration_ms: 2.150924
+      type: 'test'
+      ...
+    # Subtest: untere Leiste: Labels exakt, Konto-Kreis aria-label „Account"
+    ok 3 - untere Leiste: Labels exakt, Konto-Kreis aria-label „Account"
+      ---
+      duration_ms: 1.466173
+      type: 'test'
+      ...
+    # Subtest: Konto-Blatt: Menuepunkte, Schalter, Schliessen, Abmelden englisch
+    ok 4 - Konto-Blatt: Menuepunkte, Schalter, Schliessen, Abmelden englisch
+      ---
+      duration_ms: 2.525343
+      type: 'test'
+      ...
+    # Subtest: Sidebar-Benutzermenue (geoeffnet): Konto, System-Status, Hell/Dunkel, Abmelden
+    ok 5 - Sidebar-Benutzermenue (geoeffnet): Konto, System-Status, Hell/Dunkel, Abmelden
+      ---
+      duration_ms: 6.732699
+      type: 'test'
+      ...
+    # Subtest: kein deutscher nav.*-Text im englischen Layout (Text und Attribute)
+    ok 6 - kein deutscher nav.*-Text im englischen Layout (Text und Attribute)
+      ---
+      duration_ms: 7.76986
+      type: 'test'
+      ...
+    # Subtest: Deutsch bleibt: Startseite, Übersicht, Kanäle & Empfänger, aria-label „Konto"
+    ok 7 - Deutsch bleibt: Startseite, Übersicht, Kanäle & Empfänger, aria-label „Konto"
+      ---
+      duration_ms: 5.111687
+      type: 'test'
+      ...
+    1..7
+ok 1 - AC-5: Navigation ueber das echte Layout (data.lang)
+  ---
+  duration_ms: 36.983218
+  type: 'suite'
+  ...
+# Subtest: AC-5: Speicher-Anzeige je Zustand
+    # Subtest: gespeichert: „Saved", Uhrzeit weiter im eigenen .save-time
+    ok 1 - gespeichert: „Saved", Uhrzeit weiter im eigenen .save-time
+      ---
+      duration_ms: 5.718687
+      type: 'test'
+      ...
+    # Subtest: ungespeichert / speichernd: „Not saved", „Saving …"
+    ok 2 - ungespeichert / speichernd: „Not saved", „Saving …"
+      ---
+      duration_ms: 0.48011
+      type: 'test'
+      ...
+    # Subtest: Konflikt: Ersatztext und Knopf „Save again"; Server-Text bleibt unveraendert
+    ok 3 - Konflikt: Ersatztext und Knopf „Save again"; Server-Text bleibt unveraendert
+      ---
+      duration_ms: 0.514331
+      type: 'test'
+      ...
+    # Subtest: Fehler: „Error while saving" und mit Meldung „Error while saving: …"
+    ok 4 - Fehler: „Error while saving" und mit Meldung „Error while saving: …"
+      ---
+      duration_ms: 1.965552
+      type: 'test'
+      ...
+    1..4
+ok 2 - AC-5: Speicher-Anzeige je Zustand
+  ---
+  duration_ms: 8.973541
+  type: 'suite'
+  ...
+1..2
+# tests 11
+# suites 2
+# pass 11
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 7287.442583
+exit=0
+===== src/routes/admin/__tests__/admin_sprache.test.ts
+TAP version 13
+# (node:1057290) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# Subtest: AC-4: Zeilenfehler (adminErrorText) je Status
+    # Subtest: 403: „Keine Berechtigung" | „No permission"
+    ok 1 - 403: „Keine Berechtigung" | „No permission"
+      ---
+      duration_ms: 1.157432
+      type: 'test'
+      ...
+    # Subtest: 404: „Nutzer nicht gefunden" | „User not found"
+    ok 2 - 404: „Nutzer nicht gefunden" | „User not found"
+      ---
+      duration_ms: 0.16887
+      type: 'test'
+      ...
+    # Subtest: 409 cannot_disable_self: „Das eigene Konto kann nicht gesperrt werden" | „You cannot lock your own account"
+    ok 3 - 409 cannot_disable_self: „Das eigene Konto kann nicht gesperrt werden" | „You cannot lock your own account"
+      ---
+      duration_ms: 0.19042
+      type: 'test'
+      ...
+    # Subtest: 400: „Ungültige Eingabe" | „Invalid input"
+    ok 4 - 400: „Ungültige Eingabe" | „Invalid input"
+      ---
+      duration_ms: 0.17003
+      type: 'test'
+      ...
+    # Subtest: 500: „Aktion fehlgeschlagen. Bitte erneut versuchen." | „Action failed. Please try again."
+    ok 5 - 500: „Aktion fehlgeschlagen. Bitte erneut versuchen." | „Action failed. Please try again."
+      ---
+      duration_ms: 0.31996
+      type: 'test'
+      ...
+    # Subtest: Verdrahtung: sendAdminUpdate liefert bei 409 cannot_disable_self den englischen Zeilenfehler
+    ok 6 - Verdrahtung: sendAdminUpdate liefert bei 409 cannot_disable_self den englischen Zeilenfehler
+      ---
+      duration_ms: 32.368253
+      type: 'test'
+      ...
+    # Subtest: Verdrahtung: createInvite liefert Einladungsfehler in der Sprache (409 invite_used, 403)
+    ok 7 - Verdrahtung: createInvite liefert Einladungsfehler in der Sprache (409 invite_used, 403)
+      ---
+      duration_ms: 1.230452
+      type: 'test'
+      ...
+    1..7
+ok 1 - AC-4: Zeilenfehler (adminErrorText) je Status
+  ---
+  duration_ms: 42.396266
+  type: 'suite'
+  ...
+# Subtest: AC-4: Einladungsstatus (inviteStatusText)
+    # Subtest: benutzt: „Benutzt von karl am 7.10.2026" | „Used by karl on 07/10/2026"
+    ok 1 - benutzt: „Benutzt von karl am 7.10.2026" | „Used by karl on 07/10/2026"
+      ---
+      duration_ms: 1.423932
+      type: 'test'
+      ...
+    # Subtest: widerrufen und offen
+    ok 2 - widerrufen und offen
+      ---
+      duration_ms: 0.493581
+      type: 'test'
+      ...
+    1..2
+ok 2 - AC-4: Einladungsstatus (inviteStatusText)
+  ---
+  duration_ms: 2.149282
+  type: 'suite'
+  ...
+# Subtest: AC-4: Admin-Seite (SSR) auf Englisch
+    # Subtest: kein deutscher Katalogtext (admin.*, konto.*, nav.*) im Text oder in Attributen
+    ok 1 - kein deutscher Katalogtext (admin.*, konto.*, nav.*) im Text oder in Attributen
+      ---
+      duration_ms: 26.243134
+      type: 'test'
+      ...
+    # Subtest: feste englische Anker; Namen, Adressen, Tier-Namen und Zahlen unveraendert
+    ok 2 - feste englische Anker; Namen, Adressen, Tier-Namen und Zahlen unveraendert
+      ---
+      duration_ms: 2.622713
+      type: 'test'
+      ...
+    # Subtest: aria-label der Tier-Auswahl englisch, Name unveraendert
+    ok 3 - aria-label der Tier-Auswahl englisch, Name unveraendert
+      ---
+      duration_ms: 2.884333
+      type: 'test'
+      ...
+    # Subtest: Deutsch unveraendert neben Englisch im selben Prozess
+    ok 4 - Deutsch unveraendert neben Englisch im selben Prozess
+      ---
+      duration_ms: 2.398253
+      type: 'test'
+      ...
+    1..4
+ok 3 - AC-4: Admin-Seite (SSR) auf Englisch
+  ---
+  duration_ms: 34.316386
+  type: 'suite'
+  ...
+1..3
+# tests 13
+# suites 3
+# pass 13
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 7298.100467
+exit=0
+===== src/routes/compare/__tests__/compare_list_mobile_chrome.test.ts
+TAP version 13
+# Subtest: PageHeader-Fähigkeiten — Grundlage für AC-1/AC-15 ohne Kopfleiste
+    # Subtest: back-Prop rendert einen Rücksprung-Link über dem Eyebrow
+    ok 1 - back-Prop rendert einen Rücksprung-Link über dem Eyebrow
+      ---
+      duration_ms: 0.810761
+      type: 'test'
+      ...
+    # Subtest: kein Kopfleisten-Store und keine TopAppBar-Komponente mehr im Repo
+    ok 2 - kein Kopfleisten-Store und keine TopAppBar-Komponente mehr im Repo
+      ---
+      duration_ms: 0.225281
+      type: 'test'
+      ...
+    1..2
+ok 1 - PageHeader-Fähigkeiten — Grundlage für AC-1/AC-15 ohne Kopfleiste
+  ---
+  duration_ms: 1.972302
+  type: 'suite'
+  ...
+# Subtest: AC-1: Mobiler Kopf steht im <PageHeader> der Seite (JSX-M Z.22)
+    # Subtest: eyebrow zeigt „Workspace · N" mit dynamischer Vergleichs-Anzahl
+    ok 1 - eyebrow zeigt „Workspace · N" mit dynamischer Vergleichs-Anzahl
+      ---
+      duration_ms: 12.302786
+      type: 'test'
+      ...
+    # Subtest: „Neuer Vergleich" führt auch mobil (Rechts-Slot) nach /compare/new
+    ok 2 - „Neuer Vergleich" führt auch mobil (Rechts-Slot) nach /compare/new
+      ---
+      duration_ms: 0.222699
+      type: 'test'
+      ...
+    1..2
+ok 2 - AC-1: Mobiler Kopf steht im <PageHeader> der Seite (JSX-M Z.22)
+  ---
+  duration_ms: 12.661547
+  type: 'suite'
+  ...
+# Subtest: AC-2: kurzer mobiler Intro-Text (JSX-M Z.27-30)
+    # Subtest: kurzer Intro-Satz „…läuft, bis du stoppst." ist im Markup vorhanden
+    ok 1 - kurzer Intro-Satz „…läuft, bis du stoppst." ist im Markup vorhanden
+      ---
+      duration_ms: 1.544033
+      type: 'test'
+      ...
+    1..1
+ok 3 - AC-2: kurzer mobiler Intro-Text (JSX-M Z.27-30)
+  ---
+  duration_ms: 1.623471
+  type: 'suite'
+  ...
+# Subtest: AC-3: Suchfeld mobil entfernt, Desktop unverändert (Handoff-5-P3)
+    # Subtest: Suchfeld ist in einen Desktop-only-Wrapper gefasst
+    ok 1 - Suchfeld ist in einen Desktop-only-Wrapper gefasst
+      ---
+      duration_ms: 1.150562
+      type: 'test'
+      ...
+    1..1
+ok 4 - AC-3: Suchfeld mobil entfernt, Desktop unverändert (Handoff-5-P3)
+  ---
+  duration_ms: 1.345662
+  type: 'suite'
+  ...
+# Subtest: AC-4: Stats-Zeile mobil size="sm" (JSX-M Z.42-44)
+    # Subtest: mindestens eine Stat-Verwendung mit size="sm"
+    ok 1 - mindestens eine Stat-Verwendung mit size="sm"
+      ---
+      duration_ms: 0.183601
+      type: 'test'
+      ...
+    1..1
+ok 5 - AC-4: Stats-Zeile mobil size="sm" (JSX-M Z.42-44)
+  ---
+  duration_ms: 0.356899
+  type: 'suite'
+  ...
+# Subtest: AC-5: kompaktes mobiles Content-Padding (JSX-M Z.24)
+    # Subtest: Padding „12px 16px 24px" ist im Markup vorhanden
+    ok 1 - Padding „12px 16px 24px" ist im Markup vorhanden
+      ---
+      duration_ms: 0.1547
+      type: 'test'
+      ...
+    1..1
+ok 6 - AC-5: kompaktes mobiles Content-Padding (JSX-M Z.24)
+  ---
+  duration_ms: 0.239141
+  type: 'suite'
+  ...
+1..6
+# tests 8
+# suites 6
+# pass 8
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 7927.788769
+exit=0
+===== src/routes/account/__tests__/konto_kennung_beschriftung.test.ts
+TAP version 13
+# (node:1060008) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# Subtest: \#2194 — Konto-Seite beschriftet die Kennung als Konto-Kennung
+    # Subtest: konto_de_kennung_sichtbar_mit_beschriftung_Konto-Kennung
+    ok 1 - konto_de_kennung_sichtbar_mit_beschriftung_Konto-Kennung
+      ---
+      duration_ms: 40.163583
+      type: 'test'
+      ...
+    # Subtest: konto_en_kennung_sichtbar_mit_beschriftung_Account ID
+    ok 2 - konto_en_kennung_sichtbar_mit_beschriftung_Account ID
+      ---
+      duration_ms: 5.367306
+      type: 'test'
+      ...
+    1..2
+ok 1 - \#2194 — Konto-Seite beschriftet die Kennung als Konto-Kennung
+  ---
+  duration_ms: 46.43241
+  type: 'suite'
+  ...
+1..1
+# tests 2
+# suites 1
+# pass 2
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 5596.18586
+exit=0
+===== src/routes/compare/__tests__/issue_582_compare_design_fidelity.test.ts
+TAP version 13
+# Subtest: AC-1: Compare-Liste — Eyebrow + Stat-Molecule + immer sichtbare Suche
+    # Subtest: AC-1a: Eyebrow-Text ist "Workspace · Orts-Vergleiche" (Mixed Case, nicht CAPS)
+    ok 1 - AC-1a: Eyebrow-Text ist "Workspace · Orts-Vergleiche" (Mixed Case, nicht CAPS)
+      ---
+      duration_ms: 14.262509
+      type: 'test'
+      ...
+    # Subtest: AC-1b: Stats-Zeile nutzt <Stat Molecule (nicht rohes HTML)
+    ok 2 - AC-1b: Stats-Zeile nutzt <Stat Molecule (nicht rohes HTML)
+      ---
+      duration_ms: 0.269121
+      type: 'test'
+      ...
+    # Subtest: AC-1c: Stat-Molecule hat tone="accent" für Aktiv-Wert
+    ok 3 - AC-1c: Stat-Molecule hat tone="accent" für Aktiv-Wert
+      ---
+      duration_ms: 0.198481
+      type: 'test'
+      ...
+    # Subtest: AC-1d: Suche ist IMMER sichtbar (kein showSearch-Guard)
+    ok 4 - AC-1d: Suche ist IMMER sichtbar (kein showSearch-Guard)
+      ---
+      duration_ms: 0.20781
+      type: 'test'
+      ...
+    1..4
+ok 1 - AC-1: Compare-Liste — Eyebrow + Stat-Molecule + immer sichtbare Suche
+  ---
+  duration_ms: 16.265932
+  type: 'suite'
+  ...
+# Subtest: AC-2: Compare-Liste — Leerzustand als Card-Molecule
+    # Subtest: AC-2: Leerzustand nutzt <Card padding={40} mit zentriertem Text
+    ok 1 - AC-2: Leerzustand nutzt <Card padding={40} mit zentriertem Text
+      ---
+      duration_ms: 0.191641
+      type: 'test'
+      ...
+    1..1
+ok 2 - AC-2: Compare-Liste — Leerzustand als Card-Molecule
+  ---
+  duration_ms: 0.27528
+  type: 'suite'
+  ...
+# Subtest: AC-3: Compare-Liste — Footer-Zähler
+    # Subtest: AC-3: Footer zeigt "N von M Vergleichen" in mono/ink-4
+    ok 1 - AC-3: Footer zeigt "N von M Vergleichen" in mono/ink-4
+      ---
+      duration_ms: 1.631343
+      type: 'test'
+      ...
+    # Subtest: AC-3: Footer-Zähler nutzt var(--g-font-mono)
+    ok 2 - AC-3: Footer-Zähler nutzt var(--g-font-mono)
+      ---
+      duration_ms: 0.298641
+      type: 'test'
+      ...
+    1..2
+ok 3 - AC-3: Compare-Liste — Footer-Zähler
+  ---
+  duration_ms: 2.141434
+  type: 'suite'
+  ...
+# Subtest: AC-4: Compare-Hub — Full-width Header ohne max-w Container
+    # Subtest: AC-4a: Desktop-Header hat KEIN max-w-5xl (Tailwind-Container entfernt)
+    ok 1 - AC-4a: Desktop-Header hat KEIN max-w-5xl (Tailwind-Container entfernt)
+      ---
+      duration_ms: 0.20147
+      type: 'test'
+      ...
+    # Subtest: AC-4b: Desktop-Header hat border-bottom mit var(--g-rule) (im geteilten HubKopf)
+    ok 2 - AC-4b: Desktop-Header hat border-bottom mit var(--g-rule) (im geteilten HubKopf)
+      ---
+      duration_ms: 62.943174
+      type: 'test'
+      ...
+    # Subtest: AC-4c: Breadcrumb-Links nutzen font-family var(--g-font-mono) (im geteilten HubKopf, \#2837 S1)
+    ok 3 - AC-4c: Breadcrumb-Links nutzen font-family var(--g-font-mono) (im geteilten HubKopf, \#2837 S1)
+      ---
+      duration_ms: 0.35694
+      type: 'test'
+      ...
+    1..3
+ok 4 - AC-4: Compare-Hub — Full-width Header ohne max-w Container
+  ---
+  duration_ms: 63.672904
+  type: 'suite'
+  ...
+# Subtest: AC-5: Compare-Hub — Tab-Buttons mit Underline statt Segmented
+    # Subtest: AC-5a: CompareTabs nutzt KEINE <Segmented-Komponente für Tab-Leiste
+    ok 1 - AC-5a: CompareTabs nutzt KEINE <Segmented-Komponente für Tab-Leiste
+      ---
+      duration_ms: 0.69375
+      type: 'test'
+      ...
+    # Subtest: AC-5b: CompareTabs hat Tab-Buttons mit border-bottom accent als Aktiv-Indikator
+    ok 2 - AC-5b: CompareTabs hat Tab-Buttons mit border-bottom accent als Aktiv-Indikator
+      ---
+      duration_ms: 1.517331
+      type: 'test'
+      ...
+    # Subtest: AC-5c: Tab-Inhalt steht in der geteilten Reiterfläche mit padding 28px 40px (\#2880)
+    ok 3 - AC-5c: Tab-Inhalt steht in der geteilten Reiterfläche mit padding 28px 40px (\#2880)
+      ---
+      duration_ms: 0.762532
+      type: 'test'
+      ...
+    1..3
+ok 5 - AC-5: Compare-Hub — Tab-Buttons mit Underline statt Segmented
+  ---
+  duration_ms: 3.221695
+  type: 'suite'
+  ...
+# Subtest: AC-6: Übersicht-Tab — Monitoring-Streifen + SummaryCard-Grid
+    # Subtest: AC-6a (\#1743): kein Verifikations-Hinweis mit Vorschau-Sprung mehr (CompareTabs)
+    ok 1 - AC-6a (\#1743): kein Verifikations-Hinweis mit Vorschau-Sprung mehr (CompareTabs)
+      ---
+      duration_ms: 0.48314
+      type: 'test'
+      ...
+    # Subtest: AC-6a (\#1743): kein Verifikations-Hinweis mit Vorschau-Sprung mehr (HubUebersicht)
+    ok 2 - AC-6a (\#1743): kein Verifikations-Hinweis mit Vorschau-Sprung mehr (HubUebersicht)
+      ---
+      duration_ms: 0.1284
+      type: 'test'
+      ...
+    # Subtest: AC-6b: Übersicht-Tab hat SummaryCard mit "Bearbeiten →" Link
+    ok 3 - AC-6b: Übersicht-Tab hat SummaryCard mit "Bearbeiten →" Link
+      ---
+      duration_ms: 0.40018
+      type: 'test'
+      ...
+    # Subtest: AC-6c: Monitoring-Streifen hat 4 Stat-Felder (gap: 40px)
+    ok 4 - AC-6c: Monitoring-Streifen hat 4 Stat-Felder (gap: 40px)
+      ---
+      duration_ms: 0.18592
+      type: 'test'
+      ...
+    1..4
+ok 6 - AC-6: Übersicht-Tab — Monitoring-Streifen + SummaryCard-Grid
+  ---
+  duration_ms: 1.346063
+  type: 'suite'
+  ...
+1..6
+# tests 17
+# suites 6
+# pass 17
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 5727.590034
+exit=0
+===== src/lib/i18n/__tests__/keine_hartkodierten_nutzertexte.test.ts
+TAP version 13
+# Subtest: Scanner an Fixtures (AC-1, AC-2)
+    # Subtest: AC-1: <button>Speichern</button> ist ein Textknoten-Treffer mit korrekter Zeile
+    ok 1 - AC-1: <button>Speichern</button> ist ein Textknoten-Treffer mit korrekter Zeile
+      ---
+      duration_ms: 1.894643
+      type: 'test'
+      ...
+    # Subtest: AC-1: neue Komponente ausserhalb der Allowlist wird mit Datei:Zeile gemeldet
+    ok 2 - AC-1: neue Komponente ausserhalb der Allowlist wird mit Datei:Zeile gemeldet
+      ---
+      duration_ms: 0.45941
+      type: 'test'
+      ...
+    # Subtest: AC-2: Katalog-Ausdruecke, Entities, Symbole und Kommentare sind keine Treffer
+    ok 3 - AC-2: Katalog-Ausdruecke, Entities, Symbole und Kommentare sind keine Treffer
+      ---
+      duration_ms: 1.083052
+      type: 'test'
+      ...
+    # Subtest: AC-2: statische placeholder/aria-label sind Attribut-Treffer, gemischte Werte nicht
+    ok 4 - AC-2: statische placeholder/aria-label sind Attribut-Treffer, gemischte Werte nicht
+      ---
+      duration_ms: 0.68828
+      type: 'test'
+      ...
+    # Subtest: Zeilen bleiben bei mehrzeiligen Ausdruecken und Kommentaren erhalten
+    ok 5 - Zeilen bleiben bei mehrzeiligen Ausdruecken und Kommentaren erhalten
+      ---
+      duration_ms: 0.276149
+      type: 'test'
+      ...
+    1..5
+ok 1 - Scanner an Fixtures (AC-1, AC-2)
+  ---
+  duration_ms: 5.164816
+  type: 'suite'
+  ...
+# Subtest: Ausdrucks-Literale im Markup (F12)
+    # Subtest: Ternary im Textknoten und in aria-label ist ein Treffer mit Zeile
+    ok 1 - Ternary im Textknoten und in aria-label ist ein Treffer mit Zeile
+      ---
+      duration_ms: 0.371311
+      type: 'test'
+      ...
+    # Subtest: AUSDRUCK_OFFEN hat keinen toten Eintrag und deckt BriefingTimelineRow nicht
+    ok 2 - AUSDRUCK_OFFEN hat keinen toten Eintrag und deckt BriefingTimelineRow nicht
+      ---
+      duration_ms: 1147.374264
+      type: 'test'
+      ...
+    # Subtest: AUSDRUCK_OFFEN ist leer
+    ok 3 - AUSDRUCK_OFFEN ist leer
+      ---
+      duration_ms: 0.31311
+      type: 'test'
+      ...
+    # Subtest: Marker i18n-neutral mit Begruendung nimmt das Literal aus; ohne Begruendung oder mit Umlaut nicht
+    ok 4 - Marker i18n-neutral mit Begruendung nimmt das Literal aus; ohne Begruendung oder mit Umlaut nicht
+      ---
+      duration_ms: 0.2582
+      type: 'test'
+      ...
+    # Subtest: Vergleiche, Bloecke, Schluessel, class/style/data-* und Kommentare sind keine Treffer
+    ok 5 - Vergleiche, Bloecke, Schluessel, class/style/data-* und Kommentare sind keine Treffer
+      ---
+      duration_ms: 0.300291
+      type: 'test'
+      ...
+    1..5
+ok 2 - Ausdrucks-Literale im Markup (F12)
+  ---
+  duration_ms: 1148.929397
+  type: 'suite'
+  ...
+# Subtest: Pfadauswahl (AC-6)
+    # Subtest: __tests__/, routes/_design* und routes/email-preview-dev werden nicht gescannt
+    ok 1 - __tests__/, routes/_design* und routes/email-preview-dev werden nicht gescannt
+      ---
+      duration_ms: 0.189371
+      type: 'test'
+      ...
+    # Subtest: alle uebrigen Svelte-Pfade (auch lib/components/ui/ und routes/) werden gescannt
+    ok 2 - alle uebrigen Svelte-Pfade (auch lib/components/ui/ und routes/) werden gescannt
+      ---
+      duration_ms: 0.107579
+      type: 'test'
+      ...
+    1..2
+ok 3 - Pfadauswahl (AC-6)
+  ---
+  duration_ms: 0.3922
+  type: 'suite'
+  ...
+# Subtest: Allowlist-Pruefung (AC-3)
+    # Subtest: Verzeichnis-Eintrag mit / ist Praefix, Datei-Eintrag muss exakt passen
+    ok 1 - Verzeichnis-Eintrag mit / ist Praefix, Datei-Eintrag muss exakt passen
+      ---
+      duration_ms: 0.19732
+      type: 'test'
+      ...
+    # Subtest: Allowlist-Eintrag ohne Treffer ist rot und wird genannt
+    ok 2 - Allowlist-Eintrag ohne Treffer ist rot und wird genannt
+      ---
+      duration_ms: 397.047203
+      type: 'test'
+      ...
+    # Subtest: Allowlist ist sortiert und eindeutig
+    ok 3 - Allowlist ist sortiert und eindeutig
+      ---
+      duration_ms: 0.109891
+      type: 'test'
+      ...
+    # Subtest: echter Lauf ueber frontend/src: jeder Treffer liegt unter einem Eintrag, jeder Eintrag hat Treffer
+    ok 4 - echter Lauf ueber frontend/src: jeder Treffer liegt unter einem Eintrag, jeder Eintrag hat Treffer
+      ---
+      duration_ms: 552.580209
+      type: 'test'
+      ...
+    1..4
+ok 4 - Allowlist-Pruefung (AC-3)
+  ---
+  duration_ms: 950.096685
+  type: 'suite'
+  ...
+# Subtest: Messaufbau (AC-4)
+    # Subtest: weniger als 150 Dateien: leeres Verzeichnis bricht ab
+    ok 1 - weniger als 150 Dateien: leeres Verzeichnis bricht ab
+      ---
+      duration_ms: 0.885482
+      type: 'test'
+      ...
+    # Subtest: falsches Wurzelverzeichnis (nicht vorhanden bzw. zu klein) bricht ab
+    ok 2 - falsches Wurzelverzeichnis (nicht vorhanden bzw. zu klein) bricht ab
+      ---
+      duration_ms: 0.856242
+      type: 'test'
+      ...
+    # Subtest: Mindestzahl ist nicht abgesenkt
+    ok 3 - Mindestzahl ist nicht abgesenkt
+      ---
+      duration_ms: 0.069271
+      type: 'test'
+      ...
+    1..3
+ok 5 - Messaufbau (AC-4)
+  ---
+  duration_ms: 1.932661
+  type: 'suite'
+  ...
+# Subtest: TypeScript-Ratsche (F11, AC-6)
+    # Subtest: Selbsttest an einer temporaeren Beispiel-Datei: Treffer mit Datei:Zeile, i18n-log und Kommentare ausgenommen
+    ok 1 - Selbsttest an einer temporaeren Beispiel-Datei: Treffer mit Datei:Zeile, i18n-log und Kommentare ausgenommen
+      ---
+      duration_ms: 1.10514
+      type: 'test'
+      ...
+    # Subtest: mit // i18n-log am Zeilenende bleibt die Zeile gruen
+    ok 2 - mit // i18n-log am Zeilenende bleibt die Zeile gruen
+      ---
+      duration_ms: 0.10217
+      type: 'test'
+      ...
+    # Subtest: Pfadauswahl: utils, stores (auch .svelte.ts) und api.ts; keine Tests, keine .d.ts
+    ok 3 - Pfadauswahl: utils, stores (auch .svelte.ts) und api.ts; keine Tests, keine .d.ts
+      ---
+      duration_ms: 0.10604
+      type: 'test'
+      ...
+    # Subtest: echter Quellbaum: TS-Dateien werden tatsaechlich gescannt (Messaufbau nicht leer)
+    ok 4 - echter Quellbaum: TS-Dateien werden tatsaechlich gescannt (Messaufbau nicht leer)
+      ---
+      duration_ms: 689.196139
+      type: 'test'
+      ...
+    # Subtest: F3: kein Allowlist-Eintrag deckt Cockpit, Listen, ListTable oder tripHero
+    ok 5 - F3: kein Allowlist-Eintrag deckt Cockpit, Listen, ListTable oder tripHero
+      ---
+      duration_ms: 0.25211
+      type: 'test'
+      ...
+    # Subtest: F4: kein Allowlist-Eintrag deckt Konto, Admin, Sidebar/BottomNav/KontoSheet oder SaveIndicator
+    ok 6 - F4: kein Allowlist-Eintrag deckt Konto, Admin, Sidebar/BottomNav/KontoSheet oder SaveIndicator
+      ---
+      duration_ms: 629.090391
+      type: 'test'
+      ...
+    # Subtest: F6: kein Allowlist-Eintrag deckt den Versand-Reiter oder den Kurzstil-Schalter
+    ok 7 - F6: kein Allowlist-Eintrag deckt den Versand-Reiter oder den Kurzstil-Schalter
+      ---
+      duration_ms: 1066.844099
+      type: 'test'
+      ...
+    # Subtest: F6: .ts-Module unter shared/versand-tab/ werden gescannt und sind ohne Treffer
+    ok 8 - F6: .ts-Module unter shared/versand-tab/ werden gescannt und sind ohne Treffer
+      ---
+      duration_ms: 1025.672105
+      type: 'test'
+      ...
+    # Subtest: F5: kein Allowlist-Eintrag deckt den Wertebereiche-Reiter; Svelte- und .ts-Dateien ohne Treffer
+    ok 9 - F5: kein Allowlist-Eintrag deckt den Wertebereiche-Reiter; Svelte- und .ts-Dateien ohne Treffer
+      ---
+      duration_ms: 526.816426
+      type: 'test'
+      ...
+    # Subtest: F8: kein Allowlist-Eintrag deckt Layout-Reiter, Korridor-Editor, Ausgabe-Layout, Mail-Inhalt oder GPX-Seite
+    ok 10 - F8: kein Allowlist-Eintrag deckt Layout-Reiter, Korridor-Editor, Ausgabe-Layout, Mail-Inhalt oder GPX-Seite
+      ---
+      duration_ms: 747.037817
+      type: 'test'
+      ...
+    # Subtest: F8: .ts-Helfer von Layout-Reiter, Korridor-Editor und Mail-Inhalt werden gescannt und sind ohne Treffer
+    ok 11 - F8: .ts-Helfer von Layout-Reiter, Korridor-Editor und Mail-Inhalt werden gescannt und sind ohne Treffer
+      ---
+      duration_ms: 576.144162
+      type: 'test'
+      ...
+    # Subtest: F9: kein Allowlist-Eintrag deckt Trip-Hub, Anlegen, Etappen-Editor, Vorschau-Rahmen, SubscriptionHeader, BriefingHistory
+    ok 12 - F9: kein Allowlist-Eintrag deckt Trip-Hub, Anlegen, Etappen-Editor, Vorschau-Rahmen, SubscriptionHeader, BriefingHistory
+      ---
+      duration_ms: 719.372961
+      type: 'test'
+      ...
+    # Subtest: F7: kein Allowlist-Eintrag deckt Alarme-Reiter, Alarm-Kanal-Picker oder alerts-tab/
+    ok 13 - F7: kein Allowlist-Eintrag deckt Alarme-Reiter, Alarm-Kanal-Picker oder alerts-tab/
+      ---
+      duration_ms: 564.768766
+      type: 'test'
+      ...
+    # Subtest: F7: .ts-Helfer von Alarme-Reiter und alerts-tab/ sowie alertMetricLabels.ts werden gescannt und sind ohne Treffer
+    ok 14 - F7: .ts-Helfer von Alarme-Reiter und alerts-tab/ sowie alertMetricLabels.ts werden gescannt und sind ohne Treffer
+      ---
+      duration_ms: 631.003523
+      type: 'test'
+      ...
+    # Subtest: Allowlist enthaelt die acht F11-Praefixe nicht mehr
+    ok 15 - Allowlist enthaelt die acht F11-Praefixe nicht mehr
+      ---
+      duration_ms: 0.11338
+      type: 'test'
+      ...
+    1..15
+ok 6 - TypeScript-Ratsche (F11, AC-6)
+  ---
+  duration_ms: 7178.201099
+  type: 'suite'
+  ...
+1..6
+# tests 34
+# suites 6
+# pass 34
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 9865.105627
+exit=0
+===== src/lib/components/trip-new/__tests__/trip_new_mobile_rahmen_angleichung.test.ts
+TAP version 13
+# (node:1067375) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# Subtest: AC-3: Zurück in /trips/new — Desktop Breadcrumb (\#2837 S2), mobil BackLink im Button-Modus
+    # Subtest: Desktop: tn-desktop-breadcrumb = „Trips / Neuer Trip", Elternteil GENAU EIN <a href="/trips"> mit Katalogtext, Kind kein Link, kein Zurück-Knopf
+    ok 1 - Desktop: tn-desktop-breadcrumb = „Trips / Neuer Trip", Elternteil GENAU EIN <a href="/trips"> mit Katalogtext, Kind kein Link, kein Zurück-Knopf
+      ---
+      duration_ms: 26.704356
+      type: 'test'
+      ...
+    # Subtest: Mobil: tn-mobile-appbar enthält GENAU EINEN <button data-testid="back-link"> ohne href, kein <a>
+    ok 2 - Mobil: tn-mobile-appbar enthält GENAU EINEN <button data-testid="back-link"> ohne href, kein <a>
+      ---
+      duration_ms: 3.456755
+      type: 'test'
+      ...
+    1..2
+ok 1 - AC-3: Zurück in /trips/new — Desktop Breadcrumb (\#2837 S2), mobil BackLink im Button-Modus
+  ---
+  duration_ms: 30.90361
+  type: 'suite'
+  ...
+# Subtest: AC-4: Speichern wandert in je einen EditorStickyFooter (context="route", navClearance={false})
+    # Subtest: Zählungen: trip-new-save-btn = 1, tn-mobile-appbar = 1 (Desktop), tn-mobile-save = 1 (Mobil)
+    ok 1 - Zählungen: trip-new-save-btn = 1, tn-mobile-appbar = 1 (Desktop), tn-mobile-save = 1 (Mobil)
+      ---
+      duration_ms: 5.914209
+      type: 'test'
+      ...
+    # Subtest: Desktop: trip-new-save-btn sitzt NICHT mehr im Breadcrumb, sondern in einem route-Footer ohne has-nav
+    ok 2 - Desktop: trip-new-save-btn sitzt NICHT mehr im Breadcrumb, sondern in einem route-Footer ohne has-nav
+      ---
+      duration_ms: 3.864755
+      type: 'test'
+      ...
+    # Subtest: Mobil: tn-mobile-save sitzt NICHT mehr in der App-Leiste, sondern in einem route-Footer ohne has-nav
+    ok 3 - Mobil: tn-mobile-save sitzt NICHT mehr in der App-Leiste, sondern in einem route-Footer ohne has-nav
+      ---
+      duration_ms: 3.063454
+      type: 'test'
+      ...
+    # Subtest: \#2837 S2: Desktop-Fuß tn-desktop-footer — Abbrechen (Btn ghost) VOR trip-new-save-btn (Btn primary)
+    ok 4 - \#2837 S2: Desktop-Fuß tn-desktop-footer — Abbrechen (Btn ghost) VOR trip-new-save-btn (Btn primary)
+      ---
+      duration_ms: 8.656931
+      type: 'test'
+      ...
+    # Subtest: zwei getrennte Footer-Mounts (einer je Viewport-Zweig)
+    ok 5 - zwei getrennte Footer-Mounts (einer je Viewport-Zweig)
+      ---
+      duration_ms: 3.407635
+      type: 'test'
+      ...
+    1..5
+ok 2 - AC-4: Speichern wandert in je einen EditorStickyFooter (context="route", navClearance={false})
+  ---
+  duration_ms: 25.517144
+  type: 'suite'
+  ...
+# Subtest: AC-4: Speichern ist gesperrt, solange der Trip nicht speicherbereit ist
+    # Subtest: trip-new-save-btn trägt im Anfangszustand das Attribut disabled
+    ok 1 - trip-new-save-btn trägt im Anfangszustand das Attribut disabled
+      ---
+      duration_ms: 6.320388
+      type: 'test'
+      ...
+    # Subtest: tn-mobile-save trägt im Anfangszustand das Attribut disabled
+    ok 2 - tn-mobile-save trägt im Anfangszustand das Attribut disabled
+      ---
+      duration_ms: 2.630153
+      type: 'test'
+      ...
+    1..2
+ok 3 - AC-4: Speichern ist gesperrt, solange der Trip nicht speicherbereit ist
+  ---
+  duration_ms: 9.255172
+  type: 'suite'
+  ...
+# Subtest: AC-8: Fade-Maske auf tn-mobile-tabbar (wörtlich wie cm-mobile-tabbar)
+    # Subtest: Standard-Deklaration mask-image (nicht nur als Teil von -webkit-mask-image)
+    ok 1 - Standard-Deklaration mask-image (nicht nur als Teil von -webkit-mask-image)
+      ---
+      duration_ms: 2.028512
+      type: 'test'
+      ...
+    # Subtest: -webkit-mask-image-Variante
+    ok 2 - -webkit-mask-image-Variante
+      ---
+      duration_ms: 1.705623
+      type: 'test'
+      ...
+    1..2
+ok 4 - AC-8: Fade-Maske auf tn-mobile-tabbar (wörtlich wie cm-mobile-tabbar)
+  ---
+  duration_ms: 3.825664
+  type: 'suite'
+  ...
+# Subtest: AC-9: Strukturwächter — vertragliche Testids je Render genau einmal
+    # Subtest: Desktop: tn-mobile-appbar genau 1× (nie 0, nie 2)
+    ok 1 - Desktop: tn-mobile-appbar genau 1× (nie 0, nie 2)
+      ---
+      duration_ms: 3.830005
+      type: 'test'
+      ...
+    # Subtest: Desktop: tn-mobile-save genau 1× (nie 0, nie 2)
+    ok 2 - Desktop: tn-mobile-save genau 1× (nie 0, nie 2)
+      ---
+      duration_ms: 3.323074
+      type: 'test'
+      ...
+    # Subtest: Desktop: tn-desktop-breadcrumb genau 1× (nie 0, nie 2)
+    ok 3 - Desktop: tn-desktop-breadcrumb genau 1× (nie 0, nie 2)
+      ---
+      duration_ms: 2.039514
+      type: 'test'
+      ...
+    # Subtest: Desktop: tn-mobile-tabbar genau 1× (nie 0, nie 2)
+    ok 4 - Desktop: tn-mobile-tabbar genau 1× (nie 0, nie 2)
+      ---
+      duration_ms: 2.188453
+      type: 'test'
+      ...
+    # Subtest: Desktop: tn-mobile-save fehlt vor dem Schritt Alarme (AN-9)
+    ok 5 - Desktop: tn-mobile-save fehlt vor dem Schritt Alarme (AN-9)
+      ---
+      duration_ms: 1.574892
+      type: 'test'
+      ...
+    # Subtest: Mobil: tn-mobile-appbar genau 1× (nie 0, nie 2)
+    ok 6 - Mobil: tn-mobile-appbar genau 1× (nie 0, nie 2)
+      ---
+      duration_ms: 4.356056
+      type: 'test'
+      ...
+    # Subtest: Mobil: tn-mobile-save genau 1× (nie 0, nie 2)
+    ok 7 - Mobil: tn-mobile-save genau 1× (nie 0, nie 2)
+      ---
+      duration_ms: 8.421132
+      type: 'test'
+      ...
+    # Subtest: Mobil: tn-desktop-breadcrumb genau 1× (nie 0, nie 2)
+    ok 8 - Mobil: tn-desktop-breadcrumb genau 1× (nie 0, nie 2)
+      ---
+      duration_ms: 1.933273
+      type: 'test'
+      ...
+    # Subtest: Mobil: tn-mobile-tabbar genau 1× (nie 0, nie 2)
+    ok 9 - Mobil: tn-mobile-tabbar genau 1× (nie 0, nie 2)
+      ---
+      duration_ms: 2.280483
+      type: 'test'
+      ...
+    # Subtest: Mobil: tn-mobile-save fehlt vor dem Schritt Alarme (AN-9)
+    ok 10 - Mobil: tn-mobile-save fehlt vor dem Schritt Alarme (AN-9)
+      ---
+      duration_ms: 2.740633
+      type: 'test'
+      ...
+    1..10
+ok 5 - AC-9: Strukturwächter — vertragliche Testids je Render genau einmal
+  ---
+  duration_ms: 33.099484
+  type: 'suite'
+  ...
+# Subtest: \#2837 S2 AC-12: mobiler Abschluss „Trip speichern"
+    # Subtest: tn-mobile-save (Schritt Alarme) trägt den Text „Trip speichern"
+    ok 1 - tn-mobile-save (Schritt Alarme) trägt den Text „Trip speichern"
+      ---
+      duration_ms: 1.958003
+      type: 'test'
+      ...
+    1..1
+ok 6 - \#2837 S2 AC-12: mobiler Abschluss „Trip speichern"
+  ---
+  duration_ms: 2.040203
+  type: 'suite'
+  ...
+# Subtest: AC-10: Vorlesetext am Zurück-Pfeil (mobil) bzw. Breadcrumb-Link (Desktop)
+    # Subtest: Mobil: tn-mobile-appbar enthält aria-label="Zurück: Trips" genau einmal
+    ok 1 - Mobil: tn-mobile-appbar enthält aria-label="Zurück: Trips" genau einmal
+      ---
+      duration_ms: 1.669883
+      type: 'test'
+      ...
+    # Subtest: Desktop: Breadcrumb-Link heißt „Trips" (aria-label, falls gesetzt, nennt ebenfalls „Trips"), kein „Zurück: Trips"-Knopf
+    ok 2 - Desktop: Breadcrumb-Link heißt „Trips" (aria-label, falls gesetzt, nennt ebenfalls „Trips"), kein „Zurück: Trips"-Knopf
+      ---
+      duration_ms: 4.045615
+      type: 'test'
+      ...
+    1..2
+ok 7 - AC-10: Vorlesetext am Zurück-Pfeil (mobil) bzw. Breadcrumb-Link (Desktop)
+  ---
+  duration_ms: 5.826137
+  type: 'suite'
+  ...
+1..7
+# tests 24
+# suites 7
+# pass 24
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 6613.446735
+exit=0
+===== src/routes/_home/__tests__/onboarding_kontrast_und_katalogtreue.test.ts
+TAP version 13
+# Subtest: AC-17: gerenderte Texte stammen vollstaendig aus dem Katalog
+    # Subtest: nach Abzug aller onboarding.*-Katalogtexte und Datumswerte bleibt kein Wort uebrig
+    ok 1 - nach Abzug aller onboarding.*-Katalogtexte und Datumswerte bleibt kein Wort uebrig
+      ---
+      duration_ms: 13.400228
+      type: 'test'
+      ...
+    # Subtest: Gegenprobe: ein hart codierter Text wird erkannt
+    ok 2 - Gegenprobe: ein hart codierter Text wird erkannt
+      ---
+      duration_ms: 0.717141
+      type: 'test'
+      ...
+    1..2
+ok 1 - AC-17: gerenderte Texte stammen vollstaendig aus dem Katalog
+  ---
+  duration_ms: 14.910779
+  type: 'suite'
+  ...
+# Subtest: AC-17: Kontrast mindestens 4.5:1, nie --g-ink-4
+    # Subtest: StartklarCheckliste deklariert Textfarbe und Hintergrund als var(--g-…)
+    ok 1 - StartklarCheckliste deklariert Textfarbe und Hintergrund als var(--g-…)
+      ---
+      duration_ms: 49.920716
+      type: 'test'
+      ...
+    # Subtest: jede deklarierte Textfarbe in Willkommen/Checkliste hat >= 4.5:1 auf ihrem Hintergrund
+    ok 2 - jede deklarierte Textfarbe in Willkommen/Checkliste hat >= 4.5:1 auf ihrem Hintergrund
+      ---
+      duration_ms: 40.488673
+      type: 'test'
+      ...
+    # Subtest: kein --g-ink-4 in Willkommen, Checkliste oder deren Komponenten-CSS
+    ok 3 - kein --g-ink-4 in Willkommen, Checkliste oder deren Komponenten-CSS
+      ---
+      duration_ms: 16.010171
+      type: 'test'
+      ...
+    # Subtest: Gegenprobe Messaufbau: --g-ink-4 auf Weiss faellt unter 4.5:1, --g-ink-2 nicht
+    ok 4 - Gegenprobe Messaufbau: --g-ink-4 auf Weiss faellt unter 4.5:1, --g-ink-2 nicht
+      ---
+      duration_ms: 0.390061
+      type: 'test'
+      ...
+    1..4
+ok 2 - AC-17: Kontrast mindestens 4.5:1, nie --g-ink-4
+  ---
+  duration_ms: 107.071812
+  type: 'suite'
+  ...
+1..2
+# tests 6
+# suites 2
+# pass 6
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 4084.799574
+exit=0
+===== src/lib/components/mobile/mobile.test.ts
+TAP version 13
+# Subtest: \#373 AC-1: alle 11 Primitive-Dateien existieren in mobile/
+ok 1 - \#373 AC-1: alle 11 Primitive-Dateien existieren in mobile/
+  ---
+  duration_ms: 0.986131
+  type: 'test'
+  ...
+# Subtest: \#373 AC-1: index.ts re-exportiert alle 11 Primitive, TopAppBar nicht mehr
+ok 2 - \#373 AC-1: index.ts re-exportiert alle 11 Primitive, TopAppBar nicht mehr
+  ---
+  duration_ms: 0.35549
+  type: 'test'
+  ...
+# Subtest: \#373 AC-2: MSwitch role/aria/data-testid + 44px Hit-Area
+ok 3 - \#373 AC-2: MSwitch role/aria/data-testid + 44px Hit-Area
+  ---
+  duration_ms: 0.511382
+  type: 'test'
+  ...
+# Subtest: \#373 AC-2: MBtn lg/xl mit Touch-Mindestmaß (44px)
+ok 4 - \#373 AC-2: MBtn lg/xl mit Touch-Mindestmaß (44px)
+  ---
+  duration_ms: 0.19735
+  type: 'test'
+  ...
+# Subtest: \#373 AC-3: MInput ≥16px (kein iOS-Zoom) + data-testid
+ok 5 - \#373 AC-3: MInput ≥16px (kein iOS-Zoom) + data-testid
+  ---
+  duration_ms: 2.434504
+  type: 'test'
+  ...
+# Subtest: \#373 AC-4: Overlay-Primitive SSR-fest (kein window/document ohne Guard)
+ok 6 - \#373 AC-4: Overlay-Primitive SSR-fest (kein window/document ohne Guard)
+  ---
+  duration_ms: 1.693613
+  type: 'test'
+  ...
+# Subtest: \#373 AC-6: Token-Disziplin + Varianten (Sheet snap, Toast kind)
+ok 7 - \#373 AC-6: Token-Disziplin + Varianten (Sheet snap, Toast kind)
+  ---
+  duration_ms: 0.826671
+  type: 'test'
+  ...
+# Subtest: Mobile-Shell S2: MobileShell mountet keinen Top-Balken mehr
+ok 8 - Mobile-Shell S2: MobileShell mountet keinen Top-Balken mehr
+  ---
+  duration_ms: 0.157631
+  type: 'test'
+  ...
+1..8
+# tests 8
+# suites 0
+# pass 8
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 161.738253
+exit=0
+===== src/routes/_design-system/showcase.test.ts
+TAP version 13
+# Subtest: \#374 AC-1: Route +page.svelte existiert + importiert alle 4 Schichten
+ok 1 - \#374 AC-1: Route +page.svelte existiert + importiert alle 4 Schichten
+  ---
+  duration_ms: 0.832111
+  type: 'test'
+  ...
+# Subtest: \#374 AC-2: 6 Sektionen Brand/Typografie/Farben/Bausteine/Molecules/Voice
+ok 2 - \#374 AC-2: 6 Sektionen Brand/Typografie/Farben/Bausteine/Molecules/Voice
+  ---
+  duration_ms: 0.40329
+  type: 'test'
+  ...
+# Subtest: \#374 AC-2: gezeigte Pflicht-Varianten (Switch-Tones, Btn quiet, Pill ghost, Stat, AlertRow)
+ok 3 - \#374 AC-2: gezeigte Pflicht-Varianten (Switch-Tones, Btn quiet, Pill ghost, Stat, AlertRow)
+  ---
+  duration_ms: 1.42233
+  type: 'test'
+  ...
+# Subtest: \#374 AC-3: Mobile-Demo nutzt MobileShell + Mobile-Primitive
+ok 4 - \#374 AC-3: Mobile-Demo nutzt MobileShell + Mobile-Primitive
+  ---
+  duration_ms: 0.2421
+  type: 'test'
+  ...
+# Subtest: \#374 AC-4: Token-basiert (kein nackter Hex außer in Farben-Swatch-Labels)
+ok 5 - \#374 AC-4: Token-basiert (kein nackter Hex außer in Farben-Swatch-Labels)
+  ---
+  duration_ms: 0.23022
+  type: 'test'
+  ...
+# Subtest: \#374 AC-5: Frontend-Doku "Atomic-Design-Disziplin"
+ok 6 - \#374 AC-5: Frontend-Doku "Atomic-Design-Disziplin"
+  ---
+  duration_ms: 0.20386
+  type: 'test'
+  ...
+1..6
+# tests 6
+# suites 0
+# pass 6
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 204.713081
+exit=0
+===== src/routes/__tests__/admin_nav_konto_sheet_durchreichung.test.ts
+TAP version 13
+# (node:1069612) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# Subtest: +layout.svelte reicht isAdmin an das (geoeffnete) Konto-Sheet durch
+    # Subtest: Admin: genau ein Admin-Eintrag im Konto-Sheet
+    ok 1 - Admin: genau ein Admin-Eintrag im Konto-Sheet
+      ---
+      duration_ms: 6.692798
+      type: 'test'
+      ...
+    # Subtest: Nicht-Admin: kein Admin-Eintrag im Konto-Sheet
+    ok 2 - Nicht-Admin: kein Admin-Eintrag im Konto-Sheet
+      ---
+      duration_ms: 0.910321
+      type: 'test'
+      ...
+    # Subtest: isAdmin fehlt in data: kein Admin-Eintrag im Konto-Sheet
+    ok 3 - isAdmin fehlt in data: kein Admin-Eintrag im Konto-Sheet
+      ---
+      duration_ms: 0.91489
+      type: 'test'
+      ...
+    # Subtest: isAdmin als truthy Nicht-Boolean ("true") => kein Admin-Eintrag (strikt === true)
+    ok 4 - isAdmin als truthy Nicht-Boolean ("true") => kein Admin-Eintrag (strikt === true)
+      ---
+      duration_ms: 0.699691
+      type: 'test'
+      ...
+    1..4
+ok 1 - +layout.svelte reicht isAdmin an das (geoeffnete) Konto-Sheet durch
+  ---
+  duration_ms: 9.982872
+  type: 'suite'
+  ...
+1..1
+# tests 4
+# suites 1
+# pass 4
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 1047.355512
+exit=0
+===== src/routes/__tests__/app_footer_je_route.test.ts
+TAP version 13
+# (node:1070041) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# Subtest: AC-1: App-Route (/trips) — Footer mit genau zwei Links, innerhalb <main> als letztes Kind
+    # Subtest: genau zwei Links: Impressum und Datenschutz mit wörtlichen Zielen
+    ok 1 - genau zwei Links: Impressum und Datenschutz mit wörtlichen Zielen
+      ---
+      duration_ms: 1.370911
+      type: 'test'
+      ...
+    # Subtest: der Footer steht INNERHALB <main> und ist dessen letztes Kind
+    ok 2 - der Footer steht INNERHALB <main> und ist dessen letztes Kind
+      ---
+      duration_ms: 0.282771
+      type: 'test'
+      ...
+    # Subtest: es gibt genau EINEN Footer (kein zweiter neben <main>)
+    ok 3 - es gibt genau EINEN Footer (kein zweiter neben <main>)
+      ---
+      duration_ms: 0.120901
+      type: 'test'
+      ...
+    1..3
+ok 1 - AC-1: App-Route (/trips) — Footer mit genau zwei Links, innerhalb <main> als letztes Kind
+  ---
+  duration_ms: 2.470983
+  type: 'suite'
+  ...
+# Subtest: AC-2: öffentlicher Zweig (/login, /register) — Footer ohne Sidebar und BottomNav
+    # Subtest: /login: derselbe Footer mit den zwei Links, kein App-Chrome
+    ok 1 - /login: derselbe Footer mit den zwei Links, kein App-Chrome
+      ---
+      duration_ms: 0.491901
+      type: 'test'
+      ...
+    # Subtest: /register: derselbe Footer mit den zwei Links, kein App-Chrome
+    ok 2 - /register: derselbe Footer mit den zwei Links, kein App-Chrome
+      ---
+      duration_ms: 0.37576
+      type: 'test'
+      ...
+    1..2
+ok 2 - AC-2: öffentlicher Zweig (/login, /register) — Footer ohne Sidebar und BottomNav
+  ---
+  duration_ms: 0.999352
+  type: 'suite'
+  ...
+# Subtest: AC-3: Showcase /_design — bewusst KEIN Footer
+    # Subtest: weder <footer> noch einer der beiden Links im Ergebnis
+    ok 1 - weder <footer> noch einer der beiden Links im Ergebnis
+      ---
+      duration_ms: 0.22079
+      type: 'test'
+      ...
+    1..1
+ok 3 - AC-3: Showcase /_design — bewusst KEIN Footer
+  ---
+  duration_ms: 0.43089
+  type: 'suite'
+  ...
+# Subtest: AC-4: /trips/new (App-Zweig ohne BottomNav) — Footer unterhalb des Editors
+    # Subtest: Footer als letztes Kind von <main>, mit beiden Links
+    ok 1 - Footer als letztes Kind von <main>, mit beiden Links
+      ---
+      duration_ms: 0.211801
+      type: 'test'
+      ...
+    # Subtest: keine BottomNav, und der Footer ist kein festes/klebendes Element
+    ok 2 - keine BottomNav, und der Footer ist kein festes/klebendes Element
+      ---
+      duration_ms: 0.17576
+      type: 'test'
+      ...
+    1..2
+ok 4 - AC-4: /trips/new (App-Zweig ohne BottomNav) — Footer unterhalb des Editors
+  ---
+  duration_ms: 0.551901
+  type: 'suite'
+  ...
+# Subtest: AC-5: /compare/new (Editor mit klebendem Fuß) — Footer erreichbar hinter dem Editor
+    # Subtest: Footer steht im <main> NACH dem Editorinhalt, nicht als Geschwister neben <main>
+    ok 1 - Footer steht im <main> NACH dem Editorinhalt, nicht als Geschwister neben <main>
+      ---
+      duration_ms: 0.54043
+      type: 'test'
+      ...
+    1..1
+ok 5 - AC-5: /compare/new (Editor mit klebendem Fuß) — Footer erreichbar hinter dem Editor
+  ---
+  duration_ms: 0.686501
+  type: 'suite'
+  ...
+# Subtest: AC-6: Mobil — Footer scrollt mit und erbt die BottomNav-Freihaltung
+    # Subtest: der Footer steht innerhalb des Elements mit Klasse mobile-scroll-pad
+    ok 1 - der Footer steht innerhalb des Elements mit Klasse mobile-scroll-pad
+      ---
+      duration_ms: 0.66922
+      type: 'test'
+      ...
+    # Subtest: der Footer ist kein position:fixed-Element
+    ok 2 - der Footer ist kein position:fixed-Element
+      ---
+      duration_ms: 0.775641
+      type: 'test'
+      ...
+    1..2
+ok 6 - AC-6: Mobil — Footer scrollt mit und erbt die BottomNav-Freihaltung
+  ---
+  duration_ms: 1.534102
+  type: 'suite'
+  ...
+# Subtest: AC-7: Links öffnen in neuem Tab, ohne Rückverweis
+    # Subtest: /trips: target=_blank und rel enthält noopener und noreferrer
+    ok 1 - /trips: target=_blank und rel enthält noopener und noreferrer
+      ---
+      duration_ms: 1.078722
+      type: 'test'
+      ...
+    # Subtest: /login: target=_blank und rel enthält noopener und noreferrer
+    ok 2 - /login: target=_blank und rel enthält noopener und noreferrer
+      ---
+      duration_ms: 0.36557
+      type: 'test'
+      ...
+    1..2
+ok 7 - AC-7: Links öffnen in neuem Tab, ohne Rückverweis
+  ---
+  duration_ms: 1.545862
+  type: 'suite'
+  ...
+1..7
+# tests 13
+# suites 7
+# pass 13
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 1001.924722
+exit=0
+===== src/routes/__tests__/bug_595_597_auth_weather.test.ts
+TAP version 13
+# Subtest: AC-1: /reset-password bindet Wordmark-Komponente ein
+ok 1 - AC-1: /reset-password bindet Wordmark-Komponente ein
+  ---
+  duration_ms: 1.862832
+  type: 'test'
+  ...
+# Subtest: AC-2: Token-Feld ist hidden wenn data.token gesetzt (URL-Parameter)
+ok 2 - AC-2: Token-Feld ist hidden wenn data.token gesetzt (URL-Parameter)
+  ---
+  duration_ms: 0.18498
+  type: 'test'
+  ...
+# Subtest: AC-3: Token-Feld bleibt type="text" für manuelle Eingabe ohne URL-Token
+ok 3 - AC-3: Token-Feld bleibt type="text" für manuelle Eingabe ohne URL-Token
+  ---
+  duration_ms: 0.164972
+  type: 'test'
+  ...
+# Subtest: AC-4: /forgot-password bindet Wordmark-Komponente ein
+ok 4 - AC-4: /forgot-password bindet Wordmark-Komponente ein
+  ---
+  duration_ms: 0.159391
+  type: 'test'
+  ...
+# Subtest: AC-5: /weather/+page.svelte existiert nicht mehr
+ok 5 - AC-5: /weather/+page.svelte existiert nicht mehr
+  ---
+  duration_ms: 0.12374
+  type: 'test'
+  ...
+# Subtest: AC-5b: /weather/+page.server.ts existiert nicht mehr
+ok 6 - AC-5b: /weather/+page.server.ts existiert nicht mehr
+  ---
+  duration_ms: 0.208931
+  type: 'test'
+  ...
+1..6
+# tests 6
+# suites 0
+# pass 6
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 206.136243
+exit=0
+===== src/lib/components/compare-new/__tests__/compare_new_footer_nav_clearance.test.ts
+TAP version 13
+# Subtest: AC-7: der EditorStickyFooter-Mount (testid="cm-mobile-cta") trägt navClearance={false}
+ok 1 - AC-7: der EditorStickyFooter-Mount (testid="cm-mobile-cta") trägt navClearance={false}
+  ---
+  duration_ms: 1.0616
+  type: 'test'
+  ...
+1..1
+# tests 1
+# suites 0
+# pass 1
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 158.300819
+exit=0
+===== src/routes/__tests__/layout_istanlegeseite_bottomnav.test.ts
+TAP version 13
+# (node:1070668) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# Subtest: AC-6: BottomNav auf beiden Anlege-Seiten ausgeblendet, sonst sichtbar
+    # Subtest: /compare/new: KEINE BottomNav
+    ok 1 - /compare/new: KEINE BottomNav
+      ---
+      duration_ms: 9.356953
+      type: 'test'
+      ...
+    # Subtest: /trips/new: weiterhin KEINE BottomNav
+    ok 2 - /trips/new: weiterhin KEINE BottomNav
+      ---
+      duration_ms: 0.6564
+      type: 'test'
+      ...
+    # Subtest: /trips/new: <main> hebt die BottomNav-Reservierung auf, behält mobile-scroll-pad (padding-top)
+    ok 3 - /trips/new: <main> hebt die BottomNav-Reservierung auf, behält mobile-scroll-pad (padding-top)
+      ---
+      duration_ms: 0.605591
+      type: 'test'
+      ...
+    # Subtest: /compare/new: <main> hebt die BottomNav-Reservierung auf, behält mobile-scroll-pad (padding-top)
+    ok 4 - /compare/new: <main> hebt die BottomNav-Reservierung auf, behält mobile-scroll-pad (padding-top)
+      ---
+      duration_ms: 0.425811
+      type: 'test'
+      ...
+    # Subtest: /trips: <main> behält die BottomNav-Reservierung
+    ok 5 - /trips: <main> behält die BottomNav-Reservierung
+      ---
+      duration_ms: 1.615653
+      type: 'test'
+      ...
+    # Subtest: /trips (Kontrollroute): weiterhin EINE BottomNav
+    ok 6 - /trips (Kontrollroute): weiterhin EINE BottomNav
+      ---
+      duration_ms: 0.49417
+      type: 'test'
+      ...
+    1..6
+ok 1 - AC-6: BottomNav auf beiden Anlege-Seiten ausgeblendet, sonst sichtbar
+  ---
+  duration_ms: 14.102168
+  type: 'suite'
+  ...
+1..1
+# tests 6
+# suites 1
+# pass 6
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 1255.155327
+exit=0
+===== src/routes/__tests__/admin_nav_nur_fuer_admin.test.ts
+TAP version 13
+# (node:1070928) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# Subtest: layout.server load: isAdmin folgt der Rolle (fail-closed)
+    # Subtest: Admin-Profil => isAdmin true
+    ok 1 - Admin-Profil => isAdmin true
+      ---
+      duration_ms: 0.822561
+      type: 'test'
+      ...
+    # Subtest: Nutzer-Profil => isAdmin false
+    ok 2 - Nutzer-Profil => isAdmin false
+      ---
+      duration_ms: 0.12922
+      type: 'test'
+      ...
+    # Subtest: Profil ohne role-Feld => isAdmin false
+    ok 3 - Profil ohne role-Feld => isAdmin false
+      ---
+      duration_ms: 0.19177
+      type: 'test'
+      ...
+    # Subtest: Profil-Abruf scheitert (401) => isAdmin false
+    ok 4 - Profil-Abruf scheitert (401) => isAdmin false
+      ---
+      duration_ms: 0.113051
+      type: 'test'
+      ...
+    # Subtest: nicht angemeldet => isAdmin false, kein Abruf noetig
+    ok 5 - nicht angemeldet => isAdmin false, kein Abruf noetig
+      ---
+      duration_ms: 0.084689
+      type: 'test'
+      ...
+    1..5
+ok 1 - layout.server load: isAdmin folgt der Rolle (fail-closed)
+  ---
+  duration_ms: 1.821511
+  type: 'suite'
+  ...
+# Subtest: +layout.svelte reicht isAdmin an Sidebar/KontoSheet durch
+    # Subtest: Nicht-Admin: kein Admin-Link irgendwo im Layout
+    ok 1 - Nicht-Admin: kein Admin-Link irgendwo im Layout
+      ---
+      duration_ms: 22.787281
+      type: 'test'
+      ...
+    # Subtest: isAdmin fehlt in data => kein Admin-Link
+    ok 2 - isAdmin fehlt in data => kein Admin-Link
+      ---
+      duration_ms: 1.761263
+      type: 'test'
+      ...
+    # Subtest: Admin: Admin-Link in der Sidebar vorhanden
+    ok 3 - Admin: Admin-Link in der Sidebar vorhanden
+      ---
+      duration_ms: 1.941912
+      type: 'test'
+      ...
+    1..3
+ok 2 - +layout.svelte reicht isAdmin an Sidebar/KontoSheet durch
+  ---
+  duration_ms: 27.198896
+  type: 'suite'
+  ...
+# Subtest: Sidebar: Admin-Eintrag nur bei isAdmin
+    # Subtest: Nicht-Admin: kein nav-admin, keine Admin-Beschriftung
+    ok 1 - Nicht-Admin: kein nav-admin, keine Admin-Beschriftung
+      ---
+      duration_ms: 1.123091
+      type: 'test'
+      ...
+    # Subtest: Default (Prop fehlt): kein Admin-Eintrag
+    ok 2 - Default (Prop fehlt): kein Admin-Eintrag
+      ---
+      duration_ms: 0.292791
+      type: 'test'
+      ...
+    # Subtest: Admin: genau ein Eintrag nav-admin -> /admin, Basis-Eintraege bleiben
+    ok 3 - Admin: genau ein Eintrag nav-admin -> /admin, Basis-Eintraege bleiben
+      ---
+      duration_ms: 0.54986
+      type: 'test'
+      ...
+    1..3
+ok 3 - Sidebar: Admin-Eintrag nur bei isAdmin
+  ---
+  duration_ms: 2.132893
+  type: 'suite'
+  ...
+# Subtest: KontoSheet: Admin-Zeile nur bei isAdmin
+    # Subtest: Nicht-Admin: keine Zeile konto-sheet-admin
+    ok 1 - Nicht-Admin: keine Zeile konto-sheet-admin
+      ---
+      duration_ms: 1.279381
+      type: 'test'
+      ...
+    # Subtest: Default (Prop fehlt): keine Admin-Zeile
+    ok 2 - Default (Prop fehlt): keine Admin-Zeile
+      ---
+      duration_ms: 0.36078
+      type: 'test'
+      ...
+    # Subtest: Admin: Zeile konto-sheet-admin -> /admin vorhanden
+    ok 3 - Admin: Zeile konto-sheet-admin -> /admin vorhanden
+      ---
+      duration_ms: 0.580701
+      type: 'test'
+      ...
+    1..3
+ok 4 - KontoSheet: Admin-Zeile nur bei isAdmin
+  ---
+  duration_ms: 2.337342
+  type: 'suite'
+  ...
+1..4
+# tests 14
+# suites 4
+# pass 14
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 1781.964403
+exit=0
+===== src/routes/__tests__/hilfe_seite_inhalt.test.ts
+TAP version 13
+# Subtest: AC-15: /hilfe zeigt Briefing-Zeiten, Alarme, Kanaele und zuletzt die Antwort-Befehle
+    # Subtest: vier Abschnitte in genau dieser Reihenfolge, Antwort-Befehle zuletzt
+    ok 1 - vier Abschnitte in genau dieser Reihenfolge, Antwort-Befehle zuletzt
+      ---
+      duration_ms: 43.344478
+      type: 'test'
+      ...
+    # Subtest: Titel der Seite und der Abschnitte stammen aus dem Katalog
+    ok 2 - Titel der Seite und der Abschnitte stammen aus dem Katalog
+      ---
+      duration_ms: 4.162926
+      type: 'test'
+      ...
+    # Subtest: Briefing-Zeiten: morgens und abends
+    ok 3 - Briefing-Zeiten: morgens und abends
+      ---
+      duration_ms: 24.546253
+      type: 'test'
+      ...
+    # Subtest: Alarme: Erklaertext aus dem Katalog
+    ok 4 - Alarme: Erklaertext aus dem Katalog
+      ---
+      duration_ms: 11.774756
+      type: 'test'
+      ...
+    # Subtest: Antwort-Befehle: jeder Katalog-Befehl erscheint mit Beschreibung
+    ok 5 - Antwort-Befehle: jeder Katalog-Befehl erscheint mit Beschreibung
+      ---
+      duration_ms: 5.311096
+      type: 'test'
+      ...
+    1..5
+ok 1 - AC-15: /hilfe zeigt Briefing-Zeiten, Alarme, Kanaele und zuletzt die Antwort-Befehle
+  ---
+  duration_ms: 90.96121
+  type: 'suite'
+  ...
+# Subtest: AC-16: Kanaele gleichrangig nebeneinander
+    # Subtest: E-Mail, Telegram, SMS und Premium-SMS stehen im Abschnitt Kanaele
+    ok 1 - E-Mail, Telegram, SMS und Premium-SMS stehen im Abschnitt Kanaele
+      ---
+      duration_ms: 7.76111
+      type: 'test'
+      ...
+    # Subtest: kein Text auf der Seite nennt einen Hauptkanal oder Signal
+    ok 2 - kein Text auf der Seite nennt einen Hauptkanal oder Signal
+      ---
+      duration_ms: 11.044844
+      type: 'test'
+      ...
+    1..2
+ok 2 - AC-16: Kanaele gleichrangig nebeneinander
+  ---
+  duration_ms: 19.199276
+  type: 'suite'
+  ...
+# Subtest: AC-21 (Render): Lesbarkeit
+    # Subtest: die Seite nutzt nie --g-ink-4 (nur Platzhalter/Disabled erlaubt)
+    ok 1 - die Seite nutzt nie --g-ink-4 (nur Platzhalter/Disabled erlaubt)
+      ---
+      duration_ms: 25.167764
+      type: 'test'
+      ...
+    # Subtest: kein „Tour" im gerenderten Text
+    ok 2 - kein „Tour" im gerenderten Text
+      ---
+      duration_ms: 10.866794
+      type: 'test'
+      ...
+    1..2
+ok 3 - AC-21 (Render): Lesbarkeit
+  ---
+  duration_ms: 37.912169
+  type: 'suite'
+  ...
+# Subtest: AC-18: Hilfelink in der Startklar-Checkliste
+    # Subtest: Link auf /hilfe mit Katalog-Text onboarding.checkliste.hilfe
+    ok 1 - Link auf /hilfe mit Katalog-Text onboarding.checkliste.hilfe
+      ---
+      duration_ms: 11.295734
+      type: 'test'
+      ...
+    1..1
+ok 4 - AC-18: Hilfelink in der Startklar-Checkliste
+  ---
+  duration_ms: 11.462734
+  type: 'suite'
+  ...
+# Subtest: AC-19: Link „Hilfe" in Seitenleiste (Desktop) und Konto-Menue (Handy)
+    # Subtest: Sidebar: nav-hilfe -> /hilfe, Text nav.hilfe
+    ok 1 - Sidebar: nav-hilfe -> /hilfe, Text nav.hilfe
+      ---
+      duration_ms: 3.770415
+      type: 'test'
+      ...
+    # Subtest: KontoSheet (offen): konto-sheet-hilfe -> /hilfe, Text nav.hilfe
+    ok 2 - KontoSheet (offen): konto-sheet-hilfe -> /hilfe, Text nav.hilfe
+      ---
+      duration_ms: 1.814802
+      type: 'test'
+      ...
+    # Subtest: Gegenprobe (bewusst gruen): BottomNav bleibt unveraendert — vier Ziele, kein /hilfe
+    ok 3 - Gegenprobe (bewusst gruen): BottomNav bleibt unveraendert — vier Ziele, kein /hilfe
+      ---
+      duration_ms: 0.86733
+      type: 'test'
+      ...
+    1..3
+ok 5 - AC-19: Link „Hilfe" in Seitenleiste (Desktop) und Konto-Menue (Handy)
+  ---
+  duration_ms: 6.689928
+  type: 'suite'
+  ...
+1..5
+# tests 13
+# suites 5
+# pass 13
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 6544.280352
+exit=0

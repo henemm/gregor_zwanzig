@@ -142,3 +142,43 @@ test('AC-5: Trip- und Vergleichs-Editor haben dieselbe Textfarbe und Tab-Behandl
 	expect(vergleich.farbe).toBe(INK3);
 	expect(vergleich).toEqual(trip);
 });
+
+// ── Issue #2896 (Folge aus #2371) — Logo-Punkt der Wortmarke und Avatar-Initialen ──────────────
+// Spec: docs/specs/modules/fix_2896_kontrast_zierpunkt_avatar.md — AC-1, AC-2, AC-3 (AC-6 = Bestand oben).
+
+/** Punkt-Span der Sidebar-Wortmarke: Kind-Span mit Text genau "." in der Wortmarke. */
+const LOGO_PUNKT = '[data-testid="desktop-sidebar"] [data-testid="brand-wordmark"] span:text-is(".")';
+
+test.describe('#2896 AC-1: Logo-Punkt der Desktop-Sidebar (1280x800)', () => {
+	test.use({ viewport: { width: 1280, height: 800 } });
+	for (const pfad of SEITEN) {
+		test(`${pfad}: Wortmarken-Punkt >= 4,5:1 und nicht #9a958a`, async ({ page }) => {
+			await page.goto(pfad);
+			await page.waitForLoadState('networkidle');
+			const punkt = page.locator(LOGO_PUNKT).first();
+			await expect(punkt, 'Wortmarken-Punkt in der Desktop-Sidebar').toBeVisible();
+			const k = await messeKontrast(page, LOGO_PUNKT);
+			expect(k.farbe).not.toBe(INK4);
+			expect(k.ratio, `Punkt ${k.farbe}`).toBeGreaterThanOrEqual(4.5);
+		});
+	}
+});
+
+test('#2896 AC-2 + AC-3: Avatar-Initialen in Konto-Kreis und Konto-Blatt >= 4,5:1, ein Muster', async ({ page }) => {
+	await page.goto('/archiv');
+	await page.waitForLoadState('networkidle');
+	const kreis = page.locator('[data-testid="konto-kreis"] .konto-kreis__avatar');
+	await expect(kreis).toBeVisible();
+	const kKreis = await messeKontrast(page, '[data-testid="konto-kreis"] .konto-kreis__avatar');
+	expect(kKreis.ratio, `Konto-Kreis ${kKreis.farbe}`).toBeGreaterThanOrEqual(4.5);
+	const bgKreis = await kreis.evaluate((el) => getComputedStyle(el).backgroundColor);
+
+	await page.locator('[data-testid="konto-kreis"]').click();
+	const blattAvatar = page.locator('[data-testid="konto-sheet"] .konto__avatar');
+	await expect(blattAvatar).toBeVisible();
+	const kBlatt = await messeKontrast(page, '[data-testid="konto-sheet"] .konto__avatar');
+	expect(kBlatt.ratio, `Konto-Blatt ${kBlatt.farbe}`).toBeGreaterThanOrEqual(4.5);
+	const bgBlatt = await blattAvatar.evaluate((el) => getComputedStyle(el).backgroundColor);
+	expect(bgBlatt, 'gleicher Avatar-Grund in Kreis und Blatt').toBe(bgKreis);
+	expect(kBlatt.farbe).toBe(kKreis.farbe);
+});

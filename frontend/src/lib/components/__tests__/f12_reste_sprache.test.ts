@@ -69,8 +69,8 @@ async function renders(): Promise<Record<string, string>> {
 /** de-Render VOR der Umstellung (normalisiertes HTML, SHA-256, 16 Hex). Nie neu schreiben. */
 const GOLDEN_DE: Record<string, string> = {
 	brandIcon: 'fea18731f8c3e391',
-	wordmarkLeft: 'bb167dc8e61913c6',
-	wordmarkNone: 'c2fdcab548829168',
+	wordmarkLeft: '1f7d593ed264942b', // #2896: Logo-Punkt --g-ink-4 → --g-ink-3
+	wordmarkNone: 'a4629a8d8e332251', // #2896: Logo-Punkt --g-ink-4 → --g-ink-3
 	footer: '9c85c44385fe29e2',
 	locationForm: 'c09344f5e4f45680',
 	weatherDialog: 'e00ab9e6247728a3',

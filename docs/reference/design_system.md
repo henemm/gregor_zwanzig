@@ -238,6 +238,7 @@ Top-Level-Hintergrund der App: `#f0eee9` (etwas wärmer als `--g-paper`, dient a
 
 Wortmarke: „Gregor" (Ink) + „Zwanzig" (Accent) · `font-weight: 600` · `letter-spacing: -0.022em` · `line-height: 0.95`.
 Bildmarke: SVG-Bergkamm in Ink (Stroke 2.6 px, `linejoin: miter`, `miterlimit: 8`) + Blitz-Glyph in Accent. Untertitel-Lockup mono 8 px Ink-3, `letter-spacing: 0.18em`, uppercase: „Wetter-Briefings · Headless".
+Kontrast (#2896): Der Punkt der Wortmarke steht in `--g-ink-3` (dunkle Variante `rgba(246,244,238,0.55)`), nie in `--g-ink-4`; Avatar-Initialen (Konto-Kreis, Konto-Blatt, `BrandUserBadge accent`) liegen auf `--g-accent-deep`, damit beide mindestens 4,5:1 erreichen.
 
 ---
 
