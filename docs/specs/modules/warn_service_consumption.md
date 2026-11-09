@@ -133,6 +133,9 @@ Kein Downgrade auf DEBUG, kein Verschlucken.
 hängt (fail-soft, analog `call_log.log_api_call`) eine JSONL-Zeile an
 `data/diagnostics/warn_service_calls.jsonl` (bereits via `data/diagnostics/`
 gitignored) mit Feldern `ts, service, host, status, cache_hit, retry_after`.
+Das Journal rotiert beim Schreiben ab 8 MB in genau eine Vorgänger-Generation
+`warn_service_calls.jsonl.1` (seit 2026-11-09, #2224; Details
+`fix_2224_warn_journal_rotation.md`).
 Wird bei JEDEM `cached_fetch()`-Durchlauf aufgerufen — sowohl bei Cache-Hit
 (`status=None, cache_hit=True`, kein echter Call) als auch bei echtem Call
 (Erfolg/Fehler/429, `cache_hit=False`).
@@ -318,4 +321,5 @@ echtes Warten.
 
 ## Changelog
 
+- 2026-11-09: Egress-Journal rotiert ab 8 MB in `warn_service_calls.jsonl.1` (append-only gilt je Generation) — Issue #2224
 - 2026-07-22: Initial spec erstellt — Issue #1348, Scheibe 2a von #1337
