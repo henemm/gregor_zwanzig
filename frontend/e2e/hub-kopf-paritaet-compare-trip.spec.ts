@@ -219,7 +219,7 @@ async function unterkante(page: Page) {
 	});
 	const padding = await titelBlock.evaluate((el) => getComputedStyle(el).paddingBottom);
 	const k = await box(wurzel, 'HubKopf-Wurzel');
-	const r = await box(page.locator('[data-slot="segmented"][role="tablist"]').first(), 'Reiterleiste');
+	const r = await box(page.locator('.mtabbar[role="tablist"]').first(), 'Reiterleiste');
 	return { ...w, padding, abstand: r.y - (k.y + k.height) };
 }
 

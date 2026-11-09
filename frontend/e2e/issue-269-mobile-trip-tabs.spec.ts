@@ -44,7 +44,8 @@ test.describe('Issue #269: Mobile Trip-Detail-Tabs Pill-Scroller', () => {
 		const list = page.getByTestId('trip-detail-tab-list');
 		await expect(list).toBeVisible();
 
-		const band = list.locator('[data-slot="segmented"]').first();
+		// #2794 S3a: die Leiste traegt kein data-slot="segmented" mehr; Wirkort ist das Tablist-Band.
+		const band = list.locator('[role="tablist"]').first();
 		await expect(band).toBeVisible();
 
 		const overflowX = await band.evaluate((el) => getComputedStyle(el).overflowX);

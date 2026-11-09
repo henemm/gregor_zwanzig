@@ -154,10 +154,11 @@ async function fetchTrip(request: APIRequestContext, id: string) {
 	return res.json();
 }
 
-async function openWeatherTab(page: Page, id: string): Promise<void> {
+async function openWeatherTab(page: Page, id: string, reiter: 'wetter' | 'zustellung' = 'wetter'): Promise<void> {
 	await page.goto(`/trips/${id}`);
 	await expect(page.getByTestId('trip-detail-tab-list')).toBeVisible();
-	await page.getByTestId('trip-detail-tab-wetter').first().click(); // #2794 S3a: Metrik-Auswahl im Reiter Wetter
+	// #2794 S3a: Metrik-Auswahl im Reiter Wetter, Layout je Kanal (Kanal-Reiter) im Reiter Zustellung
+	await page.getByTestId(`trip-detail-tab-${reiter}`).first().click();
 	await expect(page.getByTestId('weather-metrics-tab')).toBeVisible();
 }
 
@@ -313,7 +314,7 @@ test.describe('Bug #2454 Fix-Loop 2: WeatherMetricsTab-Wirkort (Findings F001/F0
 		});
 		expect([200, 201]).toContain(res.status());
 		try {
-			await openWeatherTab(page, id);
+			await openWeatherTab(page, id, 'zustellung');
 			await page.getByTestId('channel-tab-sms').click();
 
 			// Scoping auf die Kanal-Reihenfolge-Karte (#2049): die "3-Tages-
@@ -389,7 +390,7 @@ test.describe('Bug #2454 Fix-Loop 2: WeatherMetricsTab-Wirkort (Findings F001/F0
 		});
 		expect([200, 201]).toContain(res.status());
 		try {
-			await openWeatherTab(page, id);
+			await openWeatherTab(page, id, 'zustellung');
 			await page.getByTestId('channel-tab-sms').click();
 
 			// Scoping auf die Kanal-Reihenfolge-Karte (#2049, s. Szenario 3): die

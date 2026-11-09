@@ -283,6 +283,87 @@ Confirmation:
   Evidence: `border: none` hält die Segmented-Trenner fern; Test `frontend/src/lib/components/mobile/__tests__/s3a2794_mtabbar_leiste_soll.test.ts` rot bei Entfernung.
   Status: CONFIRMED
 
+### Runde 5
+**Adversary:**
+Anlass: CI-E2E-Regression nach Runde 4 (zwei PUTs je Cooldown-Geste, Cooldown nach sofortigem Neuladen verloren). Ursache: im Ortsvergleich sind `VersandTab` und `AlarmeTab` im Reiter `zustellung` gleichzeitig gemountet; `versandSnapshotAus` las `alertCooldownMinutes`/`alertQuietFrom`/`alertQuietTo` mit, der Versand-Speicherer feuerte bei jeder Cooldown-Geste mit (Owner-Verdrängung im Controller). Runden 1 bis 4 hatten dieses Muster (zwei Owner auf einem Feld durch Zusammenlegen der Reiter) nicht geprüft; der Kern-Wächter `s3a2794_speicher_owner_waechter.test.ts` prüft Owner-Strings, nicht die Felder-Überschneidung. Das war eine Lücke dieses Dialogs.
+
+Testlauf: Kern-Gesamtlauf `npm test -- "src/**/*.test.ts"`, Ausgabe `docs/artifacts/feature-2794-s3a-teil2-leiste/adversary-test-output.txt`. Der neue Test `frontend/src/lib/components/shared/__tests__/s3a2794_zustellung_vergleich_ein_speicherer.test.ts` ist kein Mock-Theater: beide echten Speicherer (Versand und Alarme), echter Controller, echte Hub-Queue, Transport über echtes `api` gegen den Go-Merge-Prüfserver, gemeinsamer Feldsatz; er zählt die PUTs am Server.
+
+Mutationsgegenprobe am Fix (String-Ersetzung, Sicherung im Scratchpad `r5/`, danach `cmp` identisch):
+- M1 alle drei alert-Felder wieder in `versandSnapshotAus`: ROT (3 von 4 Tests). Gefangen dort, wo es wirkt (zwei echte Speicherer, PUT-Zählung am Server).
+- M2 nur `alertQuietTo` wieder im Snapshot: ROT (1 Test, Stille-Stunden-Test), jedes einzelne Feld ist bewacht.
+- M3 Rollback-Liste plus `alertCooldownMinutes`: im neuen Test grün, in den übrigen Versand-Tests ROT (1). M4 Rollback ohne `endDate`: ROT (1). M5 ohne `eveningTime` und `endDate`: ROT (2). M6 ohne `sendTelegram`: ROT (1). Die Rollback-Liste ist durch die Altsuite bewacht, nicht durch den neuen Test; ausreichend.
+- Frage 3 (Nebenwirkung Rollback ohne alert-Felder): Den Rollback der Zustellungsfelder übernimmt der Alarme-Speicherer, dessen Rollback-Liste die drei Felder führt. Mutation A1 (die drei aus `rollbackAlarmSnapshot` gestrichen): ROT (`F205` in den Alarme-/Retry-Tests, 47 pass, 1 fail). Die Verantwortung ist eindeutig und bewacht; der Versand-Fehlerpfad fasst die Felder nicht mehr an (zuvor war er ein zweiter, unnötiger Schreiber).
+
+Suche nach derselben Fehlerklasse (zwei Owner auf einem Feld bei gemeinsam gemounteten Speicherern):
+- Reiter `zustellung` (Vergleich): Wetter-Panel (Owner `wetter-metriken`, `bereich="zustellung"`), `VersandTab`, `AlarmeTab`. Versand-Snapshot {sendTelegram, sendSms, sendPremiumSms, morning*, evening*, endDate}; Alarme {officialAlerts*, radar, metricAlertLevels, cooldown, quiet*, telegramStyle, channelThresholds, channels, alertMetricChannels}; Wetter {activeMetricKeys, channelActiveMetricKeys, officialAlertsEnabled, dayWindow*, hourly*, outlook*}. Einzige verbleibende Überschneidung: `officialAlertsEnabled` (Wetter und Alarme). Der Schalter liegt im Wetter-Abschnittsfilter, nicht in `ZUSTELLUNGS_SECTIONS` (`frontend/src/lib/components/shared/weather-metrics-tab/weatherMetricsTabSections.ts:86`), und der Alarme-Teil mutiert das Feld nicht (nur Anzeige `amtlicheWarnungenImBericht`). Keine gleichzeitige Gesten-Quelle, kein Finding.
+- Reiter `wetter` (Vergleich): Wetter-Panel und `CorridorEditor`; Überschneidung `activeMetricKeys` und `metricAlertLevels`. `CorridorEditor` ist seit #2792 S1c-3 `gesperrt = true` (patch/add/remove sind No-op, `frontend/src/lib/components/shared/corridor-editor/CorridorEditor.svelte:287`), meldet also nie. `hub-wertebereiche-speichert-selbst.spec.ts` erwartet KEINEN PUT. Kein Finding.
+- Trip-Hub (`TripTabs.svelte`): Wetter-Panel, `BriefingScheduleTab` (Owner `versand`) und `AlarmeScheduleTab` speichern über `saveController.schedule(..., owner)` mit Eigenfeld-Nutzlasten (`pickEigenfelder`, `buildAlarmeDeliveryPayload`); die Felder sind disjunkt. Kein Finding.
+- Anlege-Ketten (`TripNewEditor`, `CompareNewEditor`): Create-Modus ohne Controller/Preset, `versandVergleichSpeicherungAktiv` ist falsch, `scheduleAutoSave` bricht bei `createMode` ab. Kein Speicherer aktiv, die Fehlerklasse ist strukturell ausgeschlossen.
+
+E2E-Specs (23 umgestellt, Stichprobe per Diff gegen die Basis): `hub-versand-aufbau.spec.ts` VA-1: die seitenweite Prüfung wurde auf den Abschnitt begrenzt und um `alert-metric-level-table` ergänzt (strenger, nicht schwächer; fachlich korrekt, weil Versand und Alarme jetzt im selben Reiter stehen). `design-compliance-group-a.spec.ts` AC-1a/1c: Reiternamen auf den Soll `Wetter`/`Zustellung` (`exact: true`), `Wertebereiche` neu mit `toHaveCount(0)`. Kein `skip`, keine verlängerten Timeouts, keine entfernten `expect`. Keine Abschwächung gefunden.
+
+Confirmation:
+  AC: AC-8
+  Code reference: frontend/src/lib/components/shared/versandVergleichSpeicherung.ts:107
+  Evidence: `versandSnapshotAus` liest nur die Versandfelder; die Cooldown-Geste erzeugt genau einen PUT über den Alarme-Owner, der Wert steht am Server (`server.stand(ID).alert_cooldown_minutes`); M1/M2 rot.
+  Status: CONFIRMED
+
+Confirmation:
+  AC: AC-2.T1
+  Code reference: frontend/src/lib/components/shared/versandVergleichSpeicherung.ts:213
+  Evidence: Rollback des Versands fasst die alert-Felder nicht mehr an, Nutzlast unverändert Eigenfelder (`VERSAND_TOP`); Alarme-Rollback führt die drei Felder (`frontend/src/lib/components/shared/alarmeVergleichSpeicherung.ts:265`, A1 rot). Owner-Strings unverändert.
+  Status: CONFIRMED
+
+Confirmation:
+  AC: AC-2.T3
+  Code reference: frontend/src/lib/components/shared/corridor-editor/wertebereicheVergleichSpeicherung.ts:152
+  Evidence: Wertebereiche-Speicherer im Reiter `wetter` ohne Gesten-Quelle (Korridor gesperrt), keine Überschneidung mit `zustellung`; Hydration und Flush-Liste unverändert (`frontend/src/lib/components/shared/subscriptionTabs.ts:126`).
+  Status: CONFIRMED
+
+### Runde 6
+**Adversary:**
+Zweite Runde, bewusst skeptisch gegen Runde 5.
+
+Finding:
+  ID: F011
+  Severity: LOW
+  Category: anti_pattern
+  Code reference: frontend/src/lib/components/shared/versandVergleichSpeicherung.ts:36
+  Description: Der Typ `VersandSnapshot` führt `alertCooldownMinutes`/`alertQuietFrom`/`alertQuietTo` weiter als optionale Felder, obwohl `versandSnapshotAus` sie nie mehr füllt; ein künftiger Aufrufer könnte sie wieder einschleusen (das Diff-Gate würde sie mitvergleichen). Die Rückkehr ist durch den Kern-Test bewacht (M1/M2 rot), nicht durch den Typ.
+  Spec requirement: AC-2.T1 — gleicher Request, Feld-Besitz je Owner.
+  Conflict: Kein aktueller Fehler; das Typ-Signal ist irreführend.
+  Remediation: Felder aus `VersandSnapshot` entfernen, sobald Hydration und Snapshot-Typ getrennt sind (Folgeschritt, kein Blocker).
+
+Weitere Versuche, den Fix zu brechen (ohne Befund):
+- Fehlerpfad: `rollbackVersandSnapshot` läuft nur bei Nicht-412 (`frontend/src/lib/components/shared/versandVergleichSpeicherung.ts:304`). Scheitert ein Alarme-PUT mit 500, setzt der Alarme-Rollback den Cooldown zurück (A1 rot). Scheitert ein Versand-PUT, bleibt ein ungespeicherter Cooldown stehen, was richtig ist (er gehört dem Alarme-Owner).
+- Bestands-Preset mit Cooldown plus Versand-Änderung: die Nutzlast sendet die alert-Felder nicht (`VERSAND_TOP`); der Test bewacht das am Server (`'alert_cooldown_minutes' in puts()[0]` ist false). Ampel, Etappen und Orte bleiben unverändert, weil der Go-Merge-Prüfserver Teilfeld-Nutzlasten mergt.
+- Hydration: `hydrateVersandFieldsFromPreset` (`frontend/src/lib/components/shared/versandVergleichSpeicherung.ts:84`) füllt die Cooldown-Wertprops weiter; die Anzeige im Alarme-Teil kommt aus `frontend/src/lib/components/compare/alarmePropsAus.ts:134`, unverändert.
+- Browserhälfte (Neuladen, PUT-Zählung der drei CI-Specs) ist nur auf Staging prüfbar und gehört in /e2e-verify, kein Finding.
+
+Dateien der Pflichtliste, je mit Fundstelle:
+- Code reference: frontend/playwright.2794-s3a2.staging.config.ts:28 (Staging-Specs, nur /e2e-verify)
+- Code reference: frontend/src/lib/components/shared/anlegeLockEngine.ts:32 (`tailUnlocked`, Kette Wetter dann Zustellung)
+- Code reference: frontend/src/lib/components/shared/corridor-editor/wertebereicheVergleichSpeicherung.ts:152 (Wertebereiche-Speicherer)
+- Code reference: frontend/src/lib/components/shared/hub-uebersicht/hubUebersichtModell.ts:99 (`VERSAND_ZIEL` Reiter Zustellung)
+- Code reference: frontend/src/lib/components/shared/infoboxKeys.ts:24 (Infobox `zustellung`)
+- Code reference: frontend/src/lib/components/shared/subscriptionTabs.ts:126 (Umleitung `briefings` auf `zustellung`)
+- Code reference: frontend/src/lib/components/shared/versandVergleichSpeicherung.ts:107 (Fix: Snapshot ohne alert-Felder)
+- Code reference: frontend/src/lib/components/shared/weather-metrics-tab/weatherMetricsTabSections.ts:86 (`ZUSTELLUNGS_SECTIONS`)
+- Code reference: frontend/src/lib/components/trip-new/tripNewLogic.ts:35 (`TAIL` Wetter und Zustellung)
+
+Confirmation:
+  AC: AC-7
+  Code reference: frontend/src/lib/components/shared/weather-metrics-tab/weatherMetricsTabSections.ts:86
+  Evidence: Vereinigung der Abschnitts-Bereiche ist alles; der Fix ändert die Darstellung nicht.
+  Status: CONFIRMED
+
+Confirmation:
+  AC: AC-6
+  Code reference: frontend/src/lib/components/trip-new/tripNewLogic.ts:35
+  Evidence: Anlege-Ketten im Create-Modus ohne Speicherer, Fehlerklasse ausgeschlossen.
+  Status: CONFIRMED
+
 ## Herkunft der Vorbedingungen
 
 kein Sprachprofil konfiguriert (`precondition_origins.default_lang`)
@@ -290,10 +371,10 @@ kein Sprachprofil konfiguriert (`precondition_origins.default_lang`)
 ## Verdict
 **VERIFIED**
 
-Fix-Loop 2 schließt F007, F008, F009, F010 (Mutationen jeweils rot; neue Tests messen Verhalten bzw. echtes Render/Instanz-Skript, kein Mock-Theater). Keine offenen Findings.
-Tests: 8337 gelaufen, 8332 passed, 0 failed, 5 skipped (Alt-Skips).
-Mutationen: F007 (Desktop+Mobil), F008, F009 (3 Varianten), F010 plus N1 bis N6 wiederholt/neu, alle rot (N3 nur im Komponenten-Gesamtlauf, dort rot); Wiederherstellung per cmp identisch.
-Checklist: alle ACs belegt. Staging-Lauf in /e2e-verify Pflicht für AC-3, AC-4, AC-36 (Browserhälfte), AC-7, AC-8 (beide Staging-Specs noch nicht gelaufen).
+Die CI-Regression (Versand-Snapshot las die Alarm-Zustellungsfelder, zwei Owner auf einem Feld im gemeinsam gemounteten Reiter Zustellung) ist behoben und am Wirkort bewacht: Mutation M1/M2 (Felder zurück in den Snapshot) rot im neuen Test mit zwei echten Speicherern und PUT-Zählung am Server; Rollback-Mutationen M3 bis M6 und A1 durch die Altsuite rot. Systematische Suche in Vergleich-Reitern wetter/zustellung, Trip-Hub und Anlege-Ketten: keine weitere Überschneidung, die gleichzeitig meldet. Die umgestellten E2E-Specs wurden nicht abgeschwächt. Offen: F011 (LOW, Typ führt tote Felder), kein Blocker.
+Tests: 8346 gelaufen, 8341 passed, 0 failed, 5 skipped (Alt-Skips).
+Mutationen: M1 bis M6, A1 rot; Wiederherstellung per cmp identisch.
+Checklist: alle ACs belegt. Staging-Lauf in /e2e-verify Pflicht (Browserhälfte AC-3/4/7/8/36 und die drei CI-Specs mit PUT-Zählung).
 
 ## Geprüfte Dateien
 
@@ -301,29 +382,35 @@ Checklist: alle ACs belegt. Staging-Lauf in /e2e-verify Pflicht für AC-3, AC-4,
 - sha256:1d47dbb9f788ecd54cb856d1ed92a7441dd3509288fae3f0cbe82e203c1a9d0e  frontend/src/lib/components/compare/CompareTabs.svelte
 - sha256:bd7688d6ede27a176238fff146cfea9654061b9c49444151e264d1eb46f771f6  frontend/src/lib/components/mobile/MTabBar.svelte
 - sha256:178d1dc1259b4d77cca02c7394db6ef45cd70b7d420779a9b5536a5cddb6b0cc  frontend/src/lib/components/shared/__tests__/s3a2794Ast.ts
+- sha256:8d044031675ac177bace2ae4792df7238e207b54eaef3fbc38de68298a89c2f5  frontend/src/lib/components/shared/anlegeLockEngine.ts
 - sha256:76576f7305e7d4c5b6c85227da7f9bb4e3e8092c2024175a7696f7f3a78c950b  frontend/src/lib/components/shared/corridor-editor/wertebereicheVergleichSpeicherung.ts
 - sha256:868fe1fa658733d8fd0f717ef87bc267e910b05f6a9f767d20750bbbf7a30afb  frontend/src/lib/components/shared/hub-uebersicht/hubUebersichtModell.ts
 - sha256:282fb7b279ce1c3c6fa210ad5dfbad3583523579330e027e919570da88f08eaa  frontend/src/lib/components/shared/infoboxKeys.ts
 - sha256:bce62d1fb18c247eda6fbdc863b0bb6d2d5c73a7dfa09c5da66ba217ef269daf  frontend/src/lib/components/shared/subscriptionTabs.ts
+- sha256:a1dd5f7c24c8d8c3cabee7d31f938bdc28d94416a097c9c892e778970ec0b34b  frontend/src/lib/components/shared/versandVergleichSpeicherung.ts
+- sha256:5db767f42779d23556a4e9658e28f58b4bedf32d24714d45fcdcd35871573994  frontend/src/lib/components/shared/weather-metrics-tab/weatherMetricsTabSections.ts
 - sha256:a6bfa6551df1c1ed71f2d36f4d00c4c489130c937410e76c0fa8d43f22ac5f94  frontend/src/lib/components/shared/zustellung-tab/ZustellungTab.svelte
 - sha256:a1655a06a5b1502ab931e886dbb085dd925e7ac8df585ae672a8d1bcadb7ad21  frontend/src/lib/components/trip-detail/TripTabs.svelte
-- sha256:47ee99c660d5f5c7d78deaaecdca4baec3895aae801c690d37139ec58fe563c7  frontend/src/lib/components/trip-new/TripNewEditor.svelte
+- sha256:96842ea96031d5a0ecd82677f99b45b020b34f5c636314db543bed2b8fcb7f7a  frontend/src/lib/components/trip-new/TripNewEditor.svelte
 - sha256:00ef7997c0bffe85408e3b07470b186e055cedb436b021e5594e9898a9f453c3  frontend/src/lib/components/trip-new/tripNewLogic.ts
 
 ## Prüfbasis
 
-- base: c5af91376e2c5b370315c49c9f34ac5d5d3ab290
+- base: 62f82ed049fbe6dd6aae2baaed97ac43830fbd3a
 - blob:471411928f4486a9e08e868866d5e08a3030e333  frontend/playwright.2794-s3a2.staging.config.ts
 - blob:bafc7e3036311c02cb08e43ecf0ccffb7c35452b  frontend/src/lib/components/compare/CompareTabs.svelte
 - blob:ec8d311ffa40baba07db3304572729b8c680b563  frontend/src/lib/components/mobile/MTabBar.svelte
 - blob:4c7bd19ead17e938fcb21dcbe9e7262f45fa3f74  frontend/src/lib/components/shared/__tests__/s3a2794Ast.ts
+- blob:83978d969ee6aededb6793c5d8c89261bc28ab2e  frontend/src/lib/components/shared/anlegeLockEngine.ts
 - blob:0d940debc060efcfb12fbe2a1bbf4066f218b5c2  frontend/src/lib/components/shared/corridor-editor/wertebereicheVergleichSpeicherung.ts
 - blob:bd7d033554ffc068e7cc979b48e2d1e0cfc76cf5  frontend/src/lib/components/shared/hub-uebersicht/hubUebersichtModell.ts
 - blob:2b203ead7f7b8115e37f58defe9dcc1d0af68f56  frontend/src/lib/components/shared/infoboxKeys.ts
 - blob:b204e3d5f93c3a8afa8d5cbcd6838c0c30f43d17  frontend/src/lib/components/shared/subscriptionTabs.ts
+- blob:9bb7efeef0222a316a4e98fa2ec1809532c79096  frontend/src/lib/components/shared/versandVergleichSpeicherung.ts
+- blob:ce21f922eb742985086b882619c1120c5f87d5bf  frontend/src/lib/components/shared/weather-metrics-tab/weatherMetricsTabSections.ts
 - blob:deea933481ef4eb66cc4c297aae5f4b829e9aa3b  frontend/src/lib/components/shared/zustellung-tab/ZustellungTab.svelte
 - blob:d528144752b42f86c63168a0d499f9aff64aebe6  frontend/src/lib/components/trip-detail/TripTabs.svelte
-- blob:3cfdcac2e5418f21d920154dd03dab1c46641d84  frontend/src/lib/components/trip-new/TripNewEditor.svelte
+- blob:673d4941c85ca949018bc2fdd274d6ed1a769240  frontend/src/lib/components/trip-new/TripNewEditor.svelte
 - blob:39e7c396b5711cf5cb726bfb924a6c31758609ca  frontend/src/lib/components/trip-new/tripNewLogic.ts
 
 ## Geprüfte Dateien
@@ -337,15 +424,16 @@ Checklist: alle ACs belegt. Staging-Lauf in /e2e-verify Pflicht für AC-3, AC-4,
 - sha256:868fe1fa658733d8fd0f717ef87bc267e910b05f6a9f767d20750bbbf7a30afb  frontend/src/lib/components/shared/hub-uebersicht/hubUebersichtModell.ts
 - sha256:282fb7b279ce1c3c6fa210ad5dfbad3583523579330e027e919570da88f08eaa  frontend/src/lib/components/shared/infoboxKeys.ts
 - sha256:bce62d1fb18c247eda6fbdc863b0bb6d2d5c73a7dfa09c5da66ba217ef269daf  frontend/src/lib/components/shared/subscriptionTabs.ts
+- sha256:a1dd5f7c24c8d8c3cabee7d31f938bdc28d94416a097c9c892e778970ec0b34b  frontend/src/lib/components/shared/versandVergleichSpeicherung.ts
 - sha256:5db767f42779d23556a4e9658e28f58b4bedf32d24714d45fcdcd35871573994  frontend/src/lib/components/shared/weather-metrics-tab/weatherMetricsTabSections.ts
 - sha256:a6bfa6551df1c1ed71f2d36f4d00c4c489130c937410e76c0fa8d43f22ac5f94  frontend/src/lib/components/shared/zustellung-tab/ZustellungTab.svelte
 - sha256:a1655a06a5b1502ab931e886dbb085dd925e7ac8df585ae672a8d1bcadb7ad21  frontend/src/lib/components/trip-detail/TripTabs.svelte
-- sha256:47ee99c660d5f5c7d78deaaecdca4baec3895aae801c690d37139ec58fe563c7  frontend/src/lib/components/trip-new/TripNewEditor.svelte
+- sha256:96842ea96031d5a0ecd82677f99b45b020b34f5c636314db543bed2b8fcb7f7a  frontend/src/lib/components/trip-new/TripNewEditor.svelte
 - sha256:00ef7997c0bffe85408e3b07470b186e055cedb436b021e5594e9898a9f453c3  frontend/src/lib/components/trip-new/tripNewLogic.ts
 
 ## Prüfbasis
 
-- base: 08e0d9f1a72513161abbec98c81baf8f5c128945
+- base: 62f82ed049fbe6dd6aae2baaed97ac43830fbd3a
 - blob:471411928f4486a9e08e868866d5e08a3030e333  frontend/playwright.2794-s3a2.staging.config.ts
 - blob:bafc7e3036311c02cb08e43ecf0ccffb7c35452b  frontend/src/lib/components/compare/CompareTabs.svelte
 - blob:ec8d311ffa40baba07db3304572729b8c680b563  frontend/src/lib/components/mobile/MTabBar.svelte
@@ -355,8 +443,9 @@ Checklist: alle ACs belegt. Staging-Lauf in /e2e-verify Pflicht für AC-3, AC-4,
 - blob:bd7d033554ffc068e7cc979b48e2d1e0cfc76cf5  frontend/src/lib/components/shared/hub-uebersicht/hubUebersichtModell.ts
 - blob:2b203ead7f7b8115e37f58defe9dcc1d0af68f56  frontend/src/lib/components/shared/infoboxKeys.ts
 - blob:b204e3d5f93c3a8afa8d5cbcd6838c0c30f43d17  frontend/src/lib/components/shared/subscriptionTabs.ts
+- blob:9bb7efeef0222a316a4e98fa2ec1809532c79096  frontend/src/lib/components/shared/versandVergleichSpeicherung.ts
 - blob:ce21f922eb742985086b882619c1120c5f87d5bf  frontend/src/lib/components/shared/weather-metrics-tab/weatherMetricsTabSections.ts
 - blob:deea933481ef4eb66cc4c297aae5f4b829e9aa3b  frontend/src/lib/components/shared/zustellung-tab/ZustellungTab.svelte
 - blob:d528144752b42f86c63168a0d499f9aff64aebe6  frontend/src/lib/components/trip-detail/TripTabs.svelte
-- blob:3cfdcac2e5418f21d920154dd03dab1c46641d84  frontend/src/lib/components/trip-new/TripNewEditor.svelte
+- blob:673d4941c85ca949018bc2fdd274d6ed1a769240  frontend/src/lib/components/trip-new/TripNewEditor.svelte
 - blob:39e7c396b5711cf5cb726bfb924a6c31758609ca  frontend/src/lib/components/trip-new/tripNewLogic.ts

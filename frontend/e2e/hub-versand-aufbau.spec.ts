@@ -80,8 +80,11 @@ for (const kind of HUB_KINDS) {
 				await expect(kanal).toBeVisible({ timeout: 10_000 });
 				await expect(zeitplan).toBeVisible();
 				await expect(laufzeit).toBeVisible();
-				await expect(page.locator('[data-testid="alert-cooldown-card"]:visible')).toHaveCount(0);
+				// #2794 S3a: Versand-Abschnitt und Alarme stehen jetzt im selben Reiter Zustellung
+				// (Übergangsreiter) — „keine Alert-Zustellung" gilt daher für den ABSCHNITT, nicht mehr
+				// seitenweit. Der Abschnitt wird auf Cooldown-Karte UND Level-Tabelle geprüft.
 				await expect(abschnitt(page).locator('[data-testid="alert-cooldown-card"]')).toHaveCount(0);
+				await expect(abschnitt(page).locator('[data-testid="alert-metric-level-table"]')).toHaveCount(0);
 
 				// Reihenfolge im Dokument: Kanäle vor Zeitplan vor Laufzeit.
 				const vorher = async (a: typeof kanal, b: typeof kanal) =>

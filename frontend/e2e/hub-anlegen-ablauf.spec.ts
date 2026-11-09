@@ -752,6 +752,8 @@ test('AN-12 (vergleich): Stundenverlauf-Schalter da, keine Layout-Attrappe, Temp
 	await anlegenPflicht(page, kind, { name: einName('AN12') });
 	// #2794 S3a: der Stundenverlauf steht im Schritt Zustellung; Temperatur Max/Min (Metrik-Auswahl)
 	// im Schritt Wetter — beide Blöcke werden unten je im eigenen Schritt geprüft.
+	// Die Kette ist gesperrt: Zustellung öffnet erst nach dem Besuch von Wetter.
+	await schrittOeffnen(page, kind, 'wetter');
 	await schrittOeffnen(page, kind, 'zustellung');
 
 	await expect(page.locator('[data-testid="compare-layout-hourly-enabled-toggle"]:visible').first()).toBeVisible({
