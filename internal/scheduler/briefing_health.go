@@ -565,29 +565,14 @@ const providerErrorStreakGapThreshold = 2 * time.Hour
 // Fail-soft: missing/corrupt file yields ("", 0), never a panic. Privacy
 // (#252): only timestamps and counts are read — never user_id/trip_id.
 func analyzeBriefingProviderErrors(dataDir string, now time.Time) (string, int) {
-	path := filepath.Join(dataDir, "diagnostics", "openmeteo_calls.jsonl")
-	f, err := os.Open(path)
-	if err != nil {
-		return "", 0
-	}
-	defer f.Close()
-
 	var errorTimes []time.Time
-	scanner := bufio.NewScanner(f)
-	for scanner.Scan() {
-		var entry diagnosticsCallEntry
-		if err := json.Unmarshal(scanner.Bytes(), &entry); err != nil {
-			continue // skip corrupt line, keep scanning
-		}
-		if !entry.isBriefingProviderError() {
-			continue
-		}
+	scanBriefingProviderErrors(dataDir, func(entry diagnosticsCallEntry) {
 		ts, err := time.Parse(time.RFC3339, entry.Ts)
 		if err != nil {
-			continue
+			return
 		}
 		errorTimes = append(errorTimes, ts)
-	}
+	})
 	if len(errorTimes) == 0 {
 		return "", 0
 	}
@@ -631,26 +616,34 @@ func analyzeBriefingProviderErrors(dataDir string, now time.Time) (string, int) 
 // Fail-soft: missing file or unparseable lines yield "" (no error found),
 // never a panic or process abort.
 func findLastBriefingProviderError(dataDir string) string {
-	path := filepath.Join(dataDir, "diagnostics", "openmeteo_calls.jsonl")
-	f, err := os.Open(path)
-	if err != nil {
-		return ""
-	}
-	defer f.Close()
-
 	latest := ""
-	scanner := bufio.NewScanner(f)
-	for scanner.Scan() {
-		var entry diagnosticsCallEntry
-		if err := json.Unmarshal(scanner.Bytes(), &entry); err != nil {
-			continue // skip corrupt line, keep scanning
-		}
-		if !entry.isBriefingProviderError() {
-			continue
-		}
+	scanBriefingProviderErrors(dataDir, func(entry diagnosticsCallEntry) {
 		if entry.Ts > latest {
 			latest = entry.Ts
 		}
-	}
+	})
 	return latest
+}
+
+// scanBriefingProviderErrors feeds every briefing provider error line of
+// data/diagnostics/openmeteo_calls.jsonl AND its predecessor generation ".1"
+// (Issue #2883, opened via openJournalGenerations: current first, os.SameFile
+// dedupe) into fn. Fail-soft by design: open/scan errors and corrupt lines
+// are skipped silently, no error flag (briefing_health fields stay unchanged).
+func scanBriefingProviderErrors(dataDir string, fn func(diagnosticsCallEntry)) {
+	path := filepath.Join(dataDir, "diagnostics", "openmeteo_calls.jsonl")
+	files, _ := openJournalGenerations(path)
+	defer closeJournalFiles(files)
+	for _, f := range files {
+		scanner := bufio.NewScanner(f)
+		for scanner.Scan() {
+			var entry diagnosticsCallEntry
+			if err := json.Unmarshal(scanner.Bytes(), &entry); err != nil {
+				continue // skip corrupt line, keep scanning
+			}
+			if entry.isBriefingProviderError() {
+				fn(entry)
+			}
+		}
+	}
 }

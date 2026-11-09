@@ -94,15 +94,29 @@ func (a *enrichmentAgg) failedUnits() []string {
 // "self_throttled": the call was skipped by our own budget gate, but the path
 // was live and asked for — that is what makes a growing distance between
 // last_attempt_at and last_success_at readable from outside.
+//
+// Issue #2883: the journal rotates into ONE predecessor generation
+// (path + ".1"); both are read via openJournalGenerations (current first,
+// os.SameFile dedupe). A missing file of either generation is the legitimate
+// empty state; any other open error or a scan error sets the error flag while
+// the aggregates of the readable file are kept. Aggregation takes per-path
+// maxima, so the read order does not change the result.
 func aggregateEnrichmentCalls(path string) (map[string]*enrichmentAgg, bool) {
 	aggs := map[string]*enrichmentAgg{}
 
-	f, err := os.Open(path)
-	if err != nil {
-		return aggs, false // missing file: legitimate empty state, no error flag
+	files, readErr := openJournalGenerations(path)
+	defer closeJournalFiles(files)
+	for _, f := range files {
+		if scanEnrichmentCalls(f, aggs) != nil {
+			readErr = true
+		}
 	}
-	defer f.Close()
+	return aggs, readErr
+}
 
+// scanEnrichmentCalls feeds every line of f into aggs. Fail-soft on
+// individual corrupt lines; returns the scanner error, if any.
+func scanEnrichmentCalls(f *os.File, aggs map[string]*enrichmentAgg) error {
 	scanner := bufio.NewScanner(f)
 	for scanner.Scan() {
 		var entry enrichmentCallEntry
@@ -118,49 +132,50 @@ func aggregateEnrichmentCalls(path string) (map[string]*enrichmentAgg, bool) {
 		if entry.Path == "" || strings.TrimSpace(entry.Ts) == "" {
 			continue
 		}
-
-		agg, ok := aggs[entry.Path]
-		if !ok {
-			agg = &enrichmentAgg{}
-			aggs[entry.Path] = agg
-		}
-
-		if entry.Ts > agg.lastAttemptAt {
-			agg.lastAttemptAt = entry.Ts
-		}
-		if entry.Unit != "" {
-			if agg.unitLatest == nil {
-				agg.unitLatest = map[string]unitState{}
-			}
-			if cur, seen := agg.unitLatest[entry.Unit]; !seen || entry.Ts >= cur.ts {
-				agg.unitLatest[entry.Unit] = unitState{entry.Ts, entry.Outcome}
-			}
-		}
-		switch entry.Outcome {
-		case enrichmentOutcomeOK:
-			if entry.Ts > agg.lastSuccessAt {
-				agg.lastSuccessAt = entry.Ts
-			}
-		case enrichmentOutcomeFallback:
-			if entry.Ts > agg.lastFallbackAt {
-				agg.lastFallbackAt = entry.Ts
-				// The youngest fallback wins including its own detail, even
-				// when empty — no falling back to the last seen non-empty
-				// detail (Issue #1647, AC-1). Coupled to lastFallbackAt so
-				// the two can never drift apart.
-				agg.lastFallbackDetail = entry.Detail
-			}
-		case enrichmentOutcomeSelfThrottled:
-			agg.selfThrottled = true
-		}
+		applyEnrichmentEntry(aggs, entry)
 	}
 	// A path pointing at a directory opens fine but fails on the first Read
 	// (Linux: EISDIR) — that surfaces here as a Scan error, distinct from the
-	// os.Open failure above.
-	if scanner.Err() != nil {
-		return aggs, true
+	// os.Open failure.
+	return scanner.Err()
+}
+
+// applyEnrichmentEntry folds one valid journal line into aggs.
+func applyEnrichmentEntry(aggs map[string]*enrichmentAgg, entry enrichmentCallEntry) {
+	agg, ok := aggs[entry.Path]
+	if !ok {
+		agg = &enrichmentAgg{}
+		aggs[entry.Path] = agg
 	}
-	return aggs, false
+
+	if entry.Ts > agg.lastAttemptAt {
+		agg.lastAttemptAt = entry.Ts
+	}
+	if entry.Unit != "" {
+		if agg.unitLatest == nil {
+			agg.unitLatest = map[string]unitState{}
+		}
+		if cur, seen := agg.unitLatest[entry.Unit]; !seen || entry.Ts >= cur.ts {
+			agg.unitLatest[entry.Unit] = unitState{entry.Ts, entry.Outcome}
+		}
+	}
+	switch entry.Outcome {
+	case enrichmentOutcomeOK:
+		if entry.Ts > agg.lastSuccessAt {
+			agg.lastSuccessAt = entry.Ts
+		}
+	case enrichmentOutcomeFallback:
+		if entry.Ts > agg.lastFallbackAt {
+			agg.lastFallbackAt = entry.Ts
+			// The youngest fallback wins including its own detail, even
+			// when empty — no falling back to the last seen non-empty
+			// detail (Issue #1647, AC-1). Coupled to lastFallbackAt so
+			// the two can never drift apart.
+			agg.lastFallbackDetail = entry.Detail
+		}
+	case enrichmentOutcomeSelfThrottled:
+		agg.selfThrottled = true
+	}
 }
 
 // EnrichmentHealth aggregates raw call outcomes per enrichment path (Issue

@@ -67,10 +67,6 @@ type warnServiceAgg struct {
 	haveDrift            bool
 }
 
-// warnJournalBetweenOpens is nil in production. Nur Test-Naht, #2224: lets a
-// test perform a real rotation between opening the current file and ".1".
-var warnJournalBetweenOpens func()
-
 // aggregateWarnServiceCalls scans path (data/diagnostics/warn_service_calls.jsonl)
 // and returns one warnServiceAgg per canonical service name, plus whether the
 // file exists but could not be read (Issue #1422 AC-7: a genuine read error —
@@ -97,51 +93,15 @@ var warnJournalBetweenOpens func()
 // error flag while the aggregates of the readable file are kept.
 func aggregateWarnServiceCalls(path string) (map[string]*warnServiceAgg, bool) {
 	aggs := map[string]*warnServiceAgg{}
-	readErr := false
 
-	cur, curErr := openWarnJournal(path, &readErr)
-	if cur != nil {
-		defer cur.Close()
-	}
-	if warnJournalBetweenOpens != nil {
-		warnJournalBetweenOpens()
-	}
-	prev, _ := openWarnJournal(path+".1", &readErr)
-	if prev != nil {
-		defer prev.Close()
-	}
-	if curErr == nil && prev != nil && sameOpenFile(cur, prev) {
-		prev = nil // rotation between the opens (or hardlink): read once
-	}
-
-	for _, f := range []*os.File{cur, prev} {
-		if f != nil && scanWarnServiceCalls(f, aggs) != nil {
+	files, readErr := openJournalGenerations(path)
+	defer closeJournalFiles(files)
+	for _, f := range files {
+		if scanWarnServiceCalls(f, aggs) != nil {
 			readErr = true
 		}
 	}
 	return aggs, readErr
-}
-
-// openWarnJournal opens one journal generation. A missing file is the
-// legitimate empty state (fresh deploy, never rotated) and returns nil
-// without flagging; any other open error sets *readErr.
-func openWarnJournal(path string, readErr *bool) (*os.File, error) {
-	f, err := os.Open(path)
-	if err != nil {
-		if !os.IsNotExist(err) {
-			*readErr = true
-		}
-		return nil, err
-	}
-	return f, nil
-}
-
-// sameOpenFile reports whether two open descriptors refer to the same file.
-// If either cannot be stat'ed, they are treated as distinct.
-func sameOpenFile(a, b *os.File) bool {
-	ai, errA := a.Stat()
-	bi, errB := b.Stat()
-	return errA == nil && errB == nil && os.SameFile(ai, bi)
 }
 
 // scanWarnServiceCalls feeds every line of f into aggs. Fail-soft on
