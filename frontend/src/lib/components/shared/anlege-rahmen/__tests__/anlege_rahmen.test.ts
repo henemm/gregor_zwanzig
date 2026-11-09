@@ -337,7 +337,7 @@ describe('#2837 S2 AC-11 — Weiter-Knöpfe beider Editoren (gesperrter Zustand)
 	const faelle: Array<[string, () => Promise<string>, string]> = [
 		['Trip, Route ohne Namen', () => renderTrip({ activeTab: 'route', isMobileViewport: false }), 'trip-new-continue-etappen'],
 		['Vergleich, Eckdaten ohne Namen', () => renderVergleichNeu({ activeTab: 'vergleich', isMobileViewport: false, name: '' }), 'compare-editor-continue-orte'],
-		['Vergleich, Orte mit 1 Ort', () => renderVergleichNeu({ activeTab: 'orte', isMobileViewport: false, pickedIds: ['loc-a'] }), 'compare-editor-continue-wetter-metriken']
+		['Vergleich, Orte mit 1 Ort', () => renderVergleichNeu({ activeTab: 'orte', isMobileViewport: false, pickedIds: ['loc-a'] }), 'compare-editor-continue-wetter'] // #2794 S3a
 	];
 	for (const [fall, renderer, testid] of faelle) {
 		test(`${fall}: ${testid} ist Btn accent, disabled, ohne Inline-Deckkraft/-Farbe`, async () => {

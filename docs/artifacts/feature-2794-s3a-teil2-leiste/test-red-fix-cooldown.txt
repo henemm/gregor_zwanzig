@@ -1,0 +1,100 @@
+
+> frontend@0.0.1 test
+> node --import ./test-lib-loader.mjs --experimental-strip-types --experimental-test-module-mocks --test src/lib/components/shared/__tests__/s3a2794_zustellung_vergleich_ein_speicherer.test.ts
+
+TAP version 13
+# Subtest: S3a \#2794 Fix: eine Cooldown-/Stille-Stunden-Geste im Vergleich = genau EIN Speichervorgang über den Alarme-Owner
+    # Subtest: Cooldown-Änderung: genau ein PUT, er trägt den Cooldown, der Server hat ihn
+    not ok 1 - Cooldown-Änderung: genau ein PUT, er trägt den Cooldown, der Server hat ihn
+      ---
+      duration_ms: 35.848578
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/shimmering-doodling-ritchie/frontend/src/lib/components/shared/__tests__/s3a2794_zustellung_vergleich_ein_speicherer.test.ts:91:2'
+      failureType: 'testCodeFailure'
+      error: |-
+        genau EIN PUT je Geste erwartet, gesehen: [{"alert_channels":{"email":true,"telegram":true,"sms":false,"premium_sms":false},"alert_channel_thresholds":{"email":"gering","telegram":"hoch","sms":"gering"},"alert_cooldown_minutes":30,"alert_quiet_from":"22:00","alert_quiet_to":"07:00","official_warnings":{"enabled":true},"radar_alert_enabled":false,"display_config":{"metric_alert_levels":{"wind_max_kmh":"standard","snow_depth_cm":"sensibel"},"telegram_style":"rich"}},{"send_telegram":true,"send_sms":false,"send_premium_sms":false,"morning_enabled":true,"morning_time":"06:30:00","evening_enabled":false,"evening_time":"18:00:00","end_date":"2026-12-01"}]
+        
+        2 !== 1
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 1
+      actual: 2
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/shimmering-doodling-ritchie/frontend/src/lib/components/shared/__tests__/s3a2794_zustellung_vergleich_ein_speicherer.test.ts:96:10)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Promise.all (index 0)
+        async Suite.run (node:internal/test_runner/test:1442:7)
+        async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+      ...
+    # Subtest: Stille Stunden: genau ein PUT, beide Zeiten im Payload
+    not ok 2 - Stille Stunden: genau ein PUT, beide Zeiten im Payload
+      ---
+      duration_ms: 2.048732
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/shimmering-doodling-ritchie/frontend/src/lib/components/shared/__tests__/s3a2794_zustellung_vergleich_ein_speicherer.test.ts:101:2'
+      failureType: 'testCodeFailure'
+      error: |-
+        genau EIN PUT erwartet, gesehen: [{"alert_channels":{"email":true,"telegram":true,"sms":false,"premium_sms":false},"alert_channel_thresholds":{"email":"gering","telegram":"hoch","sms":"gering"},"alert_cooldown_minutes":45,"alert_quiet_from":"21:00","alert_quiet_to":"06:00","official_warnings":{"enabled":true},"radar_alert_enabled":false,"display_config":{"metric_alert_levels":{"wind_max_kmh":"standard","snow_depth_cm":"sensibel"},"telegram_style":"rich"}},{"send_telegram":true,"send_sms":false,"send_premium_sms":false,"morning_enabled":true,"morning_time":"06:30:00","evening_enabled":false,"evening_time":"18:00:00","end_date":"2026-12-01"}]
+        
+        2 !== 1
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 1
+      actual: 2
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/shimmering-doodling-ritchie/frontend/src/lib/components/shared/__tests__/s3a2794_zustellung_vergleich_ein_speicherer.test.ts:107:10)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: der Versand-Speicherer allein meldet bei einer Alarm-Zustellungsänderung NICHTS an
+    not ok 3 - der Versand-Speicherer allein meldet bei einer Alarm-Zustellungsänderung NICHTS an
+      ---
+      duration_ms: 0.865032
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/shimmering-doodling-ritchie/frontend/src/lib/components/shared/__tests__/s3a2794_zustellung_vergleich_ein_speicherer.test.ts:112:2'
+      failureType: 'testCodeFailure'
+      error: |-
+        Versand darf für alert_*-Felder keinen Vorgang einplanen (Feld-Besitz: Alarme)
+        
+        true !== false
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: false
+      actual: true
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/shimmering-doodling-ritchie/frontend/src/lib/components/shared/__tests__/s3a2794_zustellung_vergleich_ein_speicherer.test.ts:117:10)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: Versand-Änderung speichert weiterhin über den Versand-Speicherer (Kontrolle)
+    ok 4 - Versand-Änderung speichert weiterhin über den Versand-Speicherer (Kontrolle)
+      ---
+      duration_ms: 1.679811
+      type: 'test'
+      ...
+    1..4
+not ok 1 - S3a \#2794 Fix: eine Cooldown-/Stille-Stunden-Geste im Vergleich = genau EIN Speichervorgang über den Alarme-Owner
+  ---
+  duration_ms: 41.342586
+  type: 'suite'
+  location: '/home/hem/gregor_zwanzig/.claude/worktrees/shimmering-doodling-ritchie/frontend/src/lib/components/shared/__tests__/s3a2794_zustellung_vergleich_ein_speicherer.test.ts:90:1'
+  failureType: 'subtestsFailed'
+  error: '3 subtests failed'
+  code: 'ERR_TEST_FAILURE'
+  ...
+1..1
+# tests 4
+# suites 1
+# pass 1
+# fail 3
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 1101.703166

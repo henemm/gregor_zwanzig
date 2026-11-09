@@ -206,7 +206,8 @@ const amtlich = (tab: Locator) => tab.locator('[data-testid="report-show-officia
 
 async function oeffneWetterMetriken(page: Page, kind: HubKind, id: string): Promise<Locator> {
 	const ms = MS_SEL[kind];
-	await openHub(page, kind, id, { tab: 'wetter-metriken' });
+	// #2794 S3a (Spec feat_2794_s3a_teil2_leiste.md): Metrik-Auswahl und amtliche Warnungen im Reiter Wetter.
+	await openHub(page, kind, id, { tab: 'wetter' });
 	const tab = page.locator(`[data-testid="${ms.tab}"]:visible`);
 	await expect(tab).toBeVisible({ timeout: 10_000 });
 	await expect(ms.metrik(tab)).toBeVisible({ timeout: 10_000 });
@@ -248,10 +249,14 @@ for (const kind of HUB_KINDS) {
 
 		// MS-2 (Alt AC-2) — nur vergleich (compare-eigen): der Stundenverlauf-Schalter
 		// `compare-layout-hourly-enabled-toggle` ist eine Layout-Option des
-		// Vergleichs-Mailtemplates (WeatherMetricsTab.svelte:1580, nur im
+		// Vergleichs-Mailtemplates (WeatherMetricsTab.svelte, nur im
 		// Vergleichs-Zweig); der Trip-Reiter hat keine zweite Datendomäne dieser Art.
+		// #2794 S3a: die Metrikauswahl steht im Reiter Wetter, der Stundenverlauf im
+		// Reiter Zustellung. Beide Domänen teilen weiter EINEN Speicherplatz; der
+		// Reiterwechsel flusht die Metrik-Änderung (ein PUT), der Schalter schreibt den
+		// zweiten. Zusicherung unverändert: keine Domäne überschreibt die andere.
 		if (kind === 'vergleich') {
-			test(`MS-2 (${kind}): Metrikauswahl UND Stundenverlauf-Schalter im selben Entprell-Fenster → EIN PUT trägt BEIDE Änderungen`, async ({
+			test(`MS-2 (${kind}): Metrikauswahl (Wetter), sofort Stundenverlauf-Schalter (Zustellung) → BEIDE Änderungen gespeichert, je ein PUT`, async ({
 				page
 			}) => {
 				const hub = await seedHub(page.request, kind, { extra: ms.seed });
@@ -261,16 +266,17 @@ for (const kind of HUB_KINDS) {
 
 					// Domäne A: Metrikauswahl
 					await ms.metrik(tab).click();
-					// Domäne B: Stundenverlauf-Schalter — im selben Entprell-Fenster
-					await tab.locator('[data-testid="compare-layout-hourly-enabled-toggle"]').click();
+					// Domäne B: Stundenverlauf-Schalter — sofort, innerhalb des Entprell-Fensters, im Reiter Zustellung
+					await page.locator(`[data-testid="${sel.reiter}-zustellung"]:visible`).click();
+					await page.locator('[data-testid="compare-layout-hourly-enabled-toggle"]:visible').first().click();
 
-					await expect.poll(() => beantwortet.length, { timeout: 10_000 }).toBeGreaterThanOrEqual(1);
+					await expect.poll(() => beantwortet.length, { timeout: 10_000 }).toBeGreaterThanOrEqual(2);
 					await expect(anzeige(page)).toHaveAttribute('data-state', 'idle', { timeout: 10_000 });
-					await bleibtBei(() => puts.length, 1, 1_200, 'eine Geste im gemeinsamen Reiter darf nur EINEN PUT auslösen');
+					await bleibtBei(() => puts.length, 2, 1_200, 'Reiterwechsel-Flush + Schalter: genau zwei PUTs, kein Doppel-Commit');
 
 					const s = await stand(page, kind, hub.id);
 					expect(ms.gewaehlt(s), 'die Metrikauswahl-Änderung darf vom Layout-Bubble nicht überschrieben werden').toBe(false);
-					expect(s.hourly_enabled, 'die Stundenverlauf-Schalter-Änderung muss im selben PUT stehen').toBe(false);
+					expect(s.hourly_enabled, 'die Stundenverlauf-Schalter-Änderung muss gespeichert sein').toBe(false);
 				} finally {
 					await hub.aufraeumen();
 				}
@@ -304,7 +310,7 @@ for (const kind of HUB_KINDS) {
 
 		// MS-4 (Alt AC-6) — fängt: 'wetter-metriken' fehlt im Flush-Guard ⇒ der
 		// Alarm-Vorgang verdrängt die Wetter-Metriken-Änderung.
-		test(`MS-4 (${kind}): Wetter-Metriken ändern, sofort zu „Alarme", dort Alarm ändern → BEIDE Änderungen gespeichert`, async ({
+		test(`MS-4 (${kind}): Wetter-Metriken ändern, sofort zu „Zustellung", dort Alarm ändern → BEIDE Änderungen gespeichert`, async ({
 			page
 		}) => {
 			const hub = await seedHub(page.request, kind, { extra: ms.seed });
@@ -314,7 +320,8 @@ for (const kind of HUB_KINDS) {
 
 				await ms.metrik(tab).click();
 				// sofort, innerhalb des Entprell-Fensters, den Reiter wechseln
-				await page.locator(`[data-testid="${sel.reiter}-alarme"]:visible`).click();
+				// #2794 S3a: die Alarme stehen im Reiter Zustellung.
+				await page.locator(`[data-testid="${sel.reiter}-zustellung"]:visible`).click();
 				await expect(page.locator('[data-testid="alarme-tab"]').first()).toBeVisible({ timeout: 10_000 });
 				expect(beantwortet.length, 'die Wetter-Metriken-Änderung war beim Reiterwechsel noch nicht gesendet').toBeGreaterThanOrEqual(1);
 

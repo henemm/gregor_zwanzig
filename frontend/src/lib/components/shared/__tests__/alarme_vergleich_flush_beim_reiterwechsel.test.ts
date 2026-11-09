@@ -110,16 +110,18 @@ function aufbau() {
 	return { wiz, ctl, speicherung };
 }
 
-describe('AC-6: Reiterwechsel weg von „alarme" sendet die ausstehende Alarm-Änderung vorher', () => {
-	// #1743: Ziel „versand" ist kein Reiter mehr → „wetter-metriken"
-	test('Änderung im Debounce-Fenster, Wechsel zu „wetter-metriken" → PUT abgeschlossen, bevor der Wechsel freigegeben wird', async () => {
+// #2794 S3a (Spec feat_2794_s3a_teil2_leiste.md AC-2): die Alarme liegen im Reiter „zustellung",
+// die Wetter-Metriken im Reiter „wetter".
+describe('AC-6: Reiterwechsel weg von „zustellung" (Alarme) sendet die ausstehende Alarm-Änderung vorher', () => {
+	// #1743: Ziel „versand" ist kein Reiter mehr → #2794: „wetter"
+	test('Änderung im Debounce-Fenster, Wechsel zu „wetter" → PUT abgeschlossen, bevor der Wechsel freigegeben wird', async () => {
 		const { wiz, ctl, speicherung } = aufbau();
 		wiz.radarAlertEnabled = true;
 		speicherung.aenderungMelden();
 		assert.equal(ctl.hasPending, true, 'Vorbedingung: Änderung wartet im Debounce-Fenster');
 		assert.equal(puts().length, 0, 'Vorbedingung: noch nichts gesendet');
 
-		await sichereSelbstSpeichererVorReiterwechsel('alarme', 'wetter-metriken', ctl);
+		await sichereSelbstSpeichererVorReiterwechsel('zustellung', 'wetter', ctl);
 
 		assert.equal(puts().length, 1, 'die Alarm-Änderung muss vor dem Reiterwechsel gesendet werden');
 		assert.equal(puts()[0].status, 200, 'der PUT muss abgeschlossen sein, bevor der Wechsel weiterläuft');
@@ -137,7 +139,7 @@ describe('AC-6: Reiterwechsel weg von „alarme" sendet die ausstehende Alarm-Ä
 		wiz.radarAlertEnabled = true;
 		speicherung.aenderungMelden();
 
-		await sichereSelbstSpeichererVorReiterwechsel('alarme', 'alarme', ctl);
+		await sichereSelbstSpeichererVorReiterwechsel('zustellung', 'zustellung', ctl);
 
 		assert.equal(puts().length, 0, 'ohne echten Wechsel bleibt der Debounce unangetastet');
 		assert.equal(ctl.hasPending, true);
@@ -145,7 +147,7 @@ describe('AC-6: Reiterwechsel weg von „alarme" sendet die ausstehende Alarm-Ä
 	});
 
 	test('ohne Controller (Anlege-Seite) → kein Fehler, kein PUT', async () => {
-		await sichereSelbstSpeichererVorReiterwechsel('alarme', 'wetter-metriken', undefined);
+		await sichereSelbstSpeichererVorReiterwechsel('zustellung', 'wetter', undefined);
 		assert.equal(puts().length, 0);
 	});
 });

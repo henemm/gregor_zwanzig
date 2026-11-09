@@ -77,9 +77,10 @@ describe('Kern: canFinishMitStandardwerten — Wahrheitstabelle (AC-1..AC-5)', (
 	});
 	// #1743 AC-19: der Schritt „Versand" entfaellt — Fertig/Anlegen wird mit dem Besuch von
 	// „Alarme" (letzter Schritt) frei, nicht frueher.
-	test('Bestandsgate canFinish: nur der Alarme-Besuch zaehlt (#1743, vormals Versand)', () => {
-		assert.equal(engine.canFinish(new Set(['wetter-metriken', 'wertebereiche'])), false);
-		assert.equal(engine.canFinish(new Set(['alarme'])), true);
+	// #2794 S3a (Spec feat_2794_s3a_teil2_leiste.md AC-6): letzter Schritt ist „Zustellung".
+	test('Bestandsgate canFinish: nur der Zustellungs-Besuch zaehlt (#2794, vormals Alarme)', () => {
+		assert.equal(engine.canFinish(new Set(['wetter'])), false);
+		assert.equal(engine.canFinish(new Set(['zustellung'])), true);
 	});
 });
 
@@ -104,10 +105,9 @@ async function tripUmgebung(s: TripSaat): Promise<EditorUmgebung> {
 		startDate: s.startDate ?? '2026-07-01',
 		stages: etappen(s.gpx ?? [true, true]),
 		catalogLoaded: s.catalogLoaded ?? true,
+		// #2794 S3a: Besuchs-Flags Wetter/Zustellung.
 		wtVisited: besucht,
-		wbVisited: besucht,
-		alVisited: besucht,
-		vsVisited: besucht,
+		zuVisited: besucht,
 		api: { post: async () => ({ id: 'neu-1' }), get: async () => ({}) }
 	});
 }
@@ -203,10 +203,9 @@ async function compareUmgebung(s: { name?: string; orte?: number; versand?: bool
 			pickedIds: Array.from({ length: s.orte ?? 2 }, (_, i) => `loc${i}`),
 			activeTab: 'vergleich',
 			isMobileViewport: false,
+			// #2794 S3a: Besuchs-Flags Wetter/Zustellung.
 			metrikenVisited: alle,
-			idealsVisited: alle,
-			alarmeVisited: alle,
-			versandVisited: alle
+			zustellungVisited: alle
 		},
 		window: { matchMedia: () => ({ matches: false, addEventListener() {}, removeEventListener() {} }) }
 	});

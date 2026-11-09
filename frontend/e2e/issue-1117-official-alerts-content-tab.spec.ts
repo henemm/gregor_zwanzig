@@ -74,9 +74,11 @@ async function deleteTrip(request: APIRequestContext, id: string): Promise<void>
 }
 
 async function openInhalt(page: Page, id: string): Promise<void> {
-	await page.goto(`/trips/${id}?tab=wetter-metriken`);
+	// #2794 S3a (Spec feat_2794_s3a_teil2_leiste.md): der Abschnitt „Amtliche Warnungen"
+	// steht im Reiter Wetter (die Mail-Inhalt-Karte im Reiter Zustellung).
+	await page.goto(`/trips/${id}?tab=wetter`);
 	await page.locator('[data-testid="weather-metrics-tab"]').waitFor({ state: 'visible' });
-	await page.locator('[data-testid="report-mail-content"]').waitFor({ state: 'visible' });
+	await page.locator('[data-testid="report-show-official-alerts"]').waitFor({ state: 'visible' });
 }
 
 // Exakter Pfad-Match (nicht `.includes()`) — sonst matcht auch die
@@ -128,8 +130,9 @@ test.describe('Issue #1117: Amtliche Warnungen im Inhalt-Tab', () => {
 		await createTrip(request, id, true);
 		try {
 			await page.goto(`/trips/${id}`);
-			await page.locator('[data-testid="trip-detail-tab-alarme"]:visible').first().click();
-			await page.locator('[data-testid="trip-detail-panel-alarme"]').waitFor({ state: 'visible' });
+			// #2794 S3a: die Alarme stehen im Reiter Zustellung.
+			await page.locator('[data-testid="trip-detail-tab-zustellung"]:visible').first().click();
+			await page.locator('[data-testid="trip-detail-panel-zustellung"]').waitFor({ state: 'visible' });
 
 			await expect(page.locator('[data-testid="alerts-tab-official-alerts-toggle"]')).toHaveCount(0);
 			await expect(

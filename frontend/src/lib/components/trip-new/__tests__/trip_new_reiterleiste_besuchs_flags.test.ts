@@ -2,11 +2,13 @@
 // reicht die Besuchs-Flags an die geteilte Lock-Engine durch; gelesen wird die
 // gerenderte Reiterleiste (⊘ = gesperrt, ✓ = erledigt), nicht die Logik-Funktion.
 // Wichtig ist der Fall "Besuchs-Flags gesetzt, Etappen ohne GPX (etDone false)":
-// Verhalten wie vor dem Refactoring — Wertebereiche/Alarme haengen NUR an
-// den Besuchs-Flags, Wetter-Metriken und Wegpunkte nur an etDone.
+// Verhalten wie vor dem Refactoring — der Schwanz-Schritt nach Wetter haengt NUR an
+// den Besuchs-Flags, Wetter und Wegpunkte nur an etDone.
 //
-// Issue #1743 (feat_1743_reiter_aufraeumen, AC-19): der Reiter „Versand" entfaellt; die Leiste hat
-// sechs Reiter, „Speichern" ist frei, sobald Alarme besucht ist (nicht frueher).
+// Issue #1743 (feat_1743_reiter_aufraeumen, AC-19): der Reiter „Versand" entfaellt.
+// Issue #2794 S3a (Spec feat_2794_s3a_teil2_leiste.md AC-6): die Leiste hat fuenf Reiter
+// (Route · Etappen & GPX · Wegpunkte prüfen · Wetter · Zustellung); „Speichern" ist frei,
+// sobald Zustellung besucht ist (nicht frueher).
 //
 // Ausfuehren (aus frontend/):
 //   node --import ./test-lib-loader.mjs --experimental-strip-types \
@@ -18,7 +20,7 @@ import { renderTripNew, type TripNewStateOverride } from './tripNewSsr.ts';
 
 const LABELS: Record<string, string> = {
 	route: 'Route', etappen: 'Etappen &amp; GPX', wegpunkte: 'Wegpunkte prüfen',
-	metriken: 'Wetter-Metriken', wertebereiche: 'Wertebereiche', alarme: 'Alarme',
+	wetter: 'Wetter', zustellung: 'Zustellung',
 };
 
 /** Desktop-Reiterleiste: je Reiter { locked, done }. */
@@ -31,12 +33,13 @@ function bar(over: TripNewStateOverride) {
 	// alles vor der Mobil-Leiste tn-mobile-tabbar (Muster desktopTabs in tripNewSsr.ts).
 	const desktop = html.slice(0, html.indexOf('data-testid="tn-mobile-tabbar"'));
 	const tabs = [...desktop.matchAll(/<(?:div|button)[^>]*role="tab"[^>]*>([\s\S]*?)<\/(?:div|button)>/g)].map((m) => m[1]);
-	assert.ok(tabs.length >= 6, 'Desktop-Reiterleiste nicht gefunden — Wirkstelle nicht erreicht');
+	assert.ok(tabs.length >= 5, 'Desktop-Reiterleiste nicht gefunden — Wirkstelle nicht erreicht');
 	assert.ok(!tabs.some((t) => t.includes('Versand')), '#1743 AC-19 FAIL: Reiter „Versand" existiert noch.');
-	assert.equal(tabs.length, 6, 'Desktop-Reiterleiste soll genau 6 Reiter haben (#1743: ohne Versand)');
+	assert.equal(tabs.length, 5, 'Desktop-Reiterleiste soll genau 5 Reiter haben (#2794)');
 	const out: Record<string, { locked: boolean; done: boolean }> = {};
 	for (const [id, label] of Object.entries(LABELS)) {
-		const inner = tabs.find((t) => t.includes(label));
+		// Bezeichnung als ganzes Wort (sonst trifft „Wetter" auch „Wetter-Metriken").
+		const inner = tabs.find((t) => new RegExp(`(^|[^\\w-])${label}($|[^\\w-])`).test(t));
 		assert.ok(inner, `Reiter ${id} fehlt`);
 		out[id] = { locked: inner!.includes('⊘'), done: inner!.includes('✓') };
 	}
@@ -46,31 +49,30 @@ const lockedIds = (b: ReturnType<typeof bar>) => Object.keys(b).filter((k) => b[
 
 describe('AC-2: Trip-Reiterleiste reicht die Besuchs-Flags durch (etDone = false)', () => {
 	test('nichts besucht: ab Wegpunkte alles gesperrt', () => {
-		assert.deepEqual(lockedIds(bar({})), ['alarme', 'metriken', 'wegpunkte', 'wertebereiche']);
+		assert.deepEqual(lockedIds(bar({})), ['wegpunkte', 'wetter', 'zustellung']);
 	});
-	test('nur Metriken-Flag: Wertebereiche frei, Alarme gesperrt', () => {
-		assert.deepEqual(lockedIds(bar({ wtVisited: true })), ['alarme', 'metriken', 'wegpunkte']);
+	test('nur Wetter-Flag: Zustellung frei', () => {
+		assert.deepEqual(lockedIds(bar({ wtVisited: true })), ['wegpunkte', 'wetter']);
 	});
-	test('F001: Flags wt+wb+al gesetzt, etDone false => nur Metriken und Wegpunkte gesperrt (wie HEAD)', () => {
-		const b = bar({ wtVisited: true, wbVisited: true, alVisited: true });
-		assert.deepEqual(lockedIds(b), ['metriken', 'wegpunkte']);
-		assert.equal(b.wertebereiche.done, true);
-		assert.equal(b.alarme.done, true);
-		assert.equal(b.metriken.done, true);
+	test('F001: Flags wt+zu gesetzt, etDone false => nur Wetter und Wegpunkte gesperrt (wie HEAD)', () => {
+		const b = bar({ wtVisited: true, zuVisited: true });
+		assert.deepEqual(lockedIds(b), ['wegpunkte', 'wetter']);
+		assert.equal(b.zustellung.done, true);
+		assert.equal(b.wetter.done, true);
 	});
-	test('Kette: wb-Flag oeffnet Alarme (jede Stufe haengt nur am Vorgaenger-Flag)', () => {
-		assert.deepEqual(lockedIds(bar({ wbVisited: true })), ['metriken', 'wegpunkte', 'wertebereiche']);
+	test('Kette: zu-Flag allein oeffnet nichts (jede Stufe haengt nur am Vorgaenger-Flag)', () => {
+		assert.deepEqual(lockedIds(bar({ zuVisited: true })), ['wegpunkte', 'wetter', 'zustellung']);
 	});
 });
 
-// AC-3 / #1743 AC-19: Speichern-Knopf (Desktop trip-new-save-btn, Mobil tn-mobile-save) haengt am
-// Alarme-Besuch — vor und nach dem Alarme-Besuch.
+// AC-3 / #2794 AC-6: Speichern-Knopf (Desktop trip-new-save-btn, Mobil tn-mobile-save) haengt am
+// Zustellungs-Besuch — vor und nach dem Zustellungs-Besuch.
 function saveDisabled(over: TripNewStateOverride, mobile: boolean, testid: string): boolean {
-	// #2347 S4 (AN-9): tn-mobile-save steht erst im Schritt Alarme im Footer. Die
-	// Vorbelegung von activeTab ruft switchTab nicht auf ⇒ alVisited kommt allein
-	// aus `over`, die Zusicherung „haengt am Alarme-Besuch" bleibt unveraendert.
+	// #2347 S4 (AN-9): tn-mobile-save steht erst im letzten Schritt im Footer. Die
+	// Vorbelegung von activeTab ruft switchTab nicht auf ⇒ zuVisited kommt allein
+	// aus `over`, die Zusicherung „haengt am letzten Besuch" bleibt unveraendert.
 	const html = renderTripNew({
-		isMobileViewport: mobile, activeTab: testid === 'tn-mobile-save' ? 'alarme' : 'route',
+		isMobileViewport: mobile, activeTab: testid === 'tn-mobile-save' ? 'zustellung' : 'route',
 		name: 'X', startDate: '2026-07-01', stageNames: ['E1'], ...over,
 	});
 	// #2837 S2: Pfad folgt dem Rahmen — Desktop-Speichern wird im Fuß tn-desktop-footer des
@@ -82,13 +84,13 @@ function saveDisabled(over: TripNewStateOverride, mobile: boolean, testid: strin
 	return /\sdisabled(=|\s|>)/.test(m![0]);
 }
 
-describe('AC-3 / #1743 AC-19: Speichern-Knopf vor und nach Alarme-Besuch (TripNewEditor)', () => {
+describe('AC-3 / #2794 AC-6: Speichern-Knopf vor und nach Zustellungs-Besuch (TripNewEditor)', () => {
 	for (const [mobile, testid] of [[false, 'trip-new-save-btn'], [true, 'tn-mobile-save']] as const) {
-		test(`${testid}: Wertebereiche besucht, Alarme NICHT besucht => disabled`, () => {
-			assert.equal(saveDisabled({ wtVisited: true, wbVisited: true }, mobile, testid), true);
+		test(`${testid}: Wetter besucht, Zustellung NICHT besucht => disabled`, () => {
+			assert.equal(saveDisabled({ wtVisited: true }, mobile, testid), true);
 		});
-		test(`${testid}: Alarme besucht (ohne Versand) => nicht disabled`, () => {
-			assert.equal(saveDisabled({ wtVisited: true, wbVisited: true, alVisited: true }, mobile, testid), false);
+		test(`${testid}: Zustellung besucht => nicht disabled`, () => {
+			assert.equal(saveDisabled({ wtVisited: true, zuVisited: true }, mobile, testid), false);
 		});
 	}
 });

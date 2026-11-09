@@ -396,7 +396,9 @@ function einbettungen(datei: string): { quelle: string; treffer: Knoten[] } {
 	const quelle = readFileSync(datei, 'utf-8');
 	const ast: Knoten = parse(quelle, { modern: true });
 	// #1743: Hub und Anlege-Seite mounten den geteilten Baustein (streut an WeatherMetricsTab).
-	return { quelle, treffer: findeKomponenten(ast, 'WetterMetrikenVersandPanel') };
+	// #2794 S3a: dazu der geteilte ZustellungTab (reicht das Buendel an den Baustein mit
+	// bereich="zustellung") — jede Einbettung muss dasselbe Buendel tragen.
+	return { quelle, treffer: [...findeKomponenten(ast, 'WetterMetrikenVersandPanel'), ...findeKomponenten(ast, 'ZustellungTab')] };
 }
 
 /** Eine vollstaendig besetzte, unterscheidbare Quelle (alle zehn Felder). */
@@ -415,9 +417,11 @@ function quellStand(): Knoten {
 	};
 }
 
+// #2794 S3a: Hub = Reiter wetter (Baustein) + Reiter zustellung (ZustellungTab); Anlegen = je Geraet
+// ein Baustein im Schritt Wetter und einer im Schritt Zustellung.
 const MOUNTS: [string, string, number][] = [
-	['Hub /compare/[id] (Mount B)', HUB, 1],
-	['Anlege-Seite /compare/new, Desktop + Mobil (Mounts C und D)', ANLEGE, 2]
+	['Hub /compare/[id] (Mount B)', HUB, 2],
+	['Anlege-Seite /compare/new, Desktop + Mobil (Mounts C und D)', ANLEGE, 4]
 ];
 
 describe('AC-2: alle drei Vergleichs-Mounts speisen dasselbe Buendel ein', () => {

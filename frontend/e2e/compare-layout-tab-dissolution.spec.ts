@@ -99,8 +99,9 @@ async function openHub(page: Page, id: string, query = ''): Promise<void> {
 
 async function openHubMetricsTab(page: Page, id: string): Promise<Locator> {
 	await openHub(page, id);
-	await page.locator('[data-testid="compare-detail-tab-wetter-metriken"]:visible').first().click();
-	const panel = page.locator('[data-testid="compare-detail-panel-wetter-metriken"]:visible').first();
+	// #2794 S3a (Spec feat_2794_s3a_teil2_leiste.md): Stundenverlauf/Layout im Reiter Zustellung.
+	await page.locator('[data-testid="compare-detail-tab-zustellung"]:visible').first().click();
+	const panel = page.locator('[data-testid="compare-detail-panel-zustellung"]:visible').first();
 	await expect(panel).toBeVisible({ timeout: 10_000 });
 	return panel;
 }
@@ -134,7 +135,7 @@ test.describe('Issue #1360: Layout-Reiter aufgelöst, Stundenverlauf bei den Wet
 
 		const collected: string[] = [];
 		// Issue #1743: der Versand-Inhalt steht im Panel wetter-metriken (#versand).
-		for (const tab of ['uebersicht', 'orte', 'wetter-metriken', 'wertebereiche', 'alarme']) {
+		for (const tab of ['uebersicht', 'orte', 'wetter', 'zustellung']) {
 			await page.locator(`[data-testid="compare-detail-tab-${tab}"]:visible`).first().click();
 			const panel = page.locator(`[data-testid="compare-detail-panel-${tab}"]:visible`).first();
 			await expect(panel).toBeVisible({ timeout: 10_000 });

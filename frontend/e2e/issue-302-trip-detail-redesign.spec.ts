@@ -79,10 +79,11 @@ test.describe('Issue #302 — Trip-Detail-Seite Redesign', () => {
 	});
 
 	// Issue #529 — Kanonische Tab-Namen (nav-map.jsx Drift aufgelöst).
-	test('AC-3b: Tab "weather" heißt "Wetter-Metriken" (nicht "Wetter-Briefing")', async ({ page }) => {
+	// #2794 S3a (Spec feat_2794_s3a_teil2_leiste.md): der Reiter heißt „Wetter".
+	test('AC-3b: Tab "wetter" heißt "Wetter" (nicht "Wetter-Briefing")', async ({ page }) => {
 		await page.goto(`/trips/${TRIP_ID}`);
-		const weatherTab = page.getByTestId('trip-detail-tab-wetter-metriken');
-		await expect(weatherTab).toContainText('Wetter-Metriken');
+		const weatherTab = page.getByTestId('trip-detail-tab-wetter');
+		await expect(weatherTab).toHaveText(/^\s*Wetter\s*$/);
 		await expect(weatherTab).not.toContainText('Wetter-Briefing');
 	});
 
@@ -90,21 +91,25 @@ test.describe('Issue #302 — Trip-Detail-Seite Redesign', () => {
 	// "Briefing-Zeitplan" — das war der Zwischenstand vor #736).
 	// Issue #1743: kein eigener Reiter "Versand" mehr — der Versand-Abschnitt steht im
 	// Reiter Wetter-Metriken (Sprungziel #versand).
-	test('AC-3c: Versand steht als Abschnitt im Reiter Wetter-Metriken, kein eigener Reiter', async ({ page }) => {
+	// #2794 S3a: seit Teil-PR 2 im Reiter Zustellung.
+	test('AC-3c: Versand steht als Abschnitt im Reiter Zustellung, kein eigener Reiter', async ({ page }) => {
 		await page.goto(`/trips/${TRIP_ID}`);
 		await expect(page.getByTestId('trip-detail-tab-versand')).toHaveCount(0);
-		await page.getByTestId('trip-detail-tab-wetter-metriken').click();
-		const abschnitt = page.getByTestId('trip-detail-panel-wetter-metriken').getByTestId('versand-abschnitt');
+		await page.getByTestId('trip-detail-tab-zustellung').click();
+		const abschnitt = page.getByTestId('trip-detail-panel-zustellung').getByTestId('versand-abschnitt');
 		await expect(abschnitt).toBeVisible();
 		await expect(abschnitt).not.toContainText('Reports & Kanäle');
 	});
 
 	// Issue #1231 Slice 6: alerts-Label erneut umbenannt ("Alerts" -> "Wertebereiche").
-	test('AC-3d: Tab "alerts" heißt "Wertebereiche" (nicht "Alarmregeln")', async ({ page }) => {
+	// #2794 S3a: kein eigener Reiter „Wertebereiche" mehr — sie stehen im Reiter Wetter;
+	// der letzte Reiter heißt „Zustellung" (nicht „Alarmregeln").
+	test('AC-3d: kein Reiter "Wertebereiche"/"Alarmregeln", letzter Reiter heißt "Zustellung"', async ({ page }) => {
 		await page.goto(`/trips/${TRIP_ID}`);
-		const alertsTab = page.getByTestId('trip-detail-tab-wertebereiche');
-		await expect(alertsTab).toContainText('Wertebereiche');
-		await expect(alertsTab).not.toContainText('Alarmregeln');
+		await expect(page.getByTestId('trip-detail-tab-wertebereiche')).toHaveCount(0);
+		const zustellung = page.getByTestId('trip-detail-tab-zustellung');
+		await expect(zustellung).toContainText('Zustellung');
+		await expect(zustellung).not.toContainText('Alarmregeln');
 	});
 
 	test('AC-3e: Etappen-Tab hat Badge mit Etappenanzahl', async ({ page }) => {

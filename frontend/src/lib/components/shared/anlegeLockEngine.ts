@@ -3,25 +3,25 @@
 // Spec: docs/specs/modules/feat_2277_s4_anlege_lockengine.md
 //
 // DOM-frei, keine Svelte-Imports, rein. Der Kern kennt nur die gemeinsame
-// Schwanz-Kette Wetter-Metriken -> Wertebereiche -> Alarme (#1743: kein
-// Versand-Schritt mehr — Versand steht unten im Schritt Wetter-Metriken). Das
-// Vorderteil (Trip: Name/Startdatum/Etappen; Ortsvergleich: Name/Orte) bleibt
-// kind-eigen und wird als Wahrheitswert `metrikenFrei` uebergeben. Die Besuchs-
-// Flags werden vom Editor beim Reiterwechsel gesetzt und nie zurueckgesetzt.
+// Schwanz-Kette Wetter -> Zustellung (#2794 S3a Teil-PR 2; vorher Wetter-Metriken
+// -> Wertebereiche -> Alarme). Das Vorderteil (Trip: Name/Startdatum/Etappen;
+// Ortsvergleich: Name/Orte) bleibt kind-eigen und wird als Wahrheitswert
+// `metrikenFrei` uebergeben. Die Besuchs-Flags werden vom Editor beim
+// Reiterwechsel gesetzt und nie zurueckgesetzt.
 
 /** Tab-IDs der Schwanz-Kette. */
 export interface TailIds<T extends string = string> {
+	/** Erster Schwanz-Schritt (Wetter). */
 	metriken: T;
-	wertebereiche: T;
-	alarme: T;
+	/** Letzter Schritt (Zustellung) — sein Besuch schaltet Speichern/Aktivieren frei. */
+	zustellung: T;
 }
 
 export interface TailProgress {
-	/** Vorderteil erfuellt => Wetter-Metriken anklickbar. */
+	/** Vorderteil erfuellt => Wetter anklickbar. */
 	metrikenFrei: boolean;
 	metrikenVisited: boolean;
-	wertebereicheVisited: boolean;
-	alarmeVisited: boolean;
+	zustellungVisited: boolean;
 }
 
 /**
@@ -33,8 +33,7 @@ export function tailUnlocked<T extends string>(ids: TailIds<T>, p: TailProgress)
 	const s = new Set<string>() as Set<T> & Set<string>;
 	if (!p.metrikenFrei) return s; // Vorderteil nicht erfuellt: gesamter Schwanz gesperrt
 	s.add(ids.metriken);
-	if (p.metrikenVisited) s.add(ids.wertebereiche);
-	if (p.wertebereicheVisited) s.add(ids.alarme);
+	if (p.metrikenVisited) s.add(ids.zustellung);
 	return s;
 }
 
@@ -42,13 +41,12 @@ export function tailUnlocked<T extends string>(ids: TailIds<T>, p: TailProgress)
 export function tailDone<T extends string>(ids: TailIds<T>, p: TailProgress): Set<T> & Set<string> {
 	const s = new Set<string>() as Set<T> & Set<string>;
 	if (p.metrikenVisited) s.add(ids.metriken);
-	if (p.wertebereicheVisited) s.add(ids.wertebereiche);
-	if (p.alarmeVisited) s.add(ids.alarme);
+	if (p.zustellungVisited) s.add(ids.zustellung);
 	return s;
 }
 
-/** Anlegen/Aktivieren erst nach Besuch von Alarme (#1743, letzter Schritt der Kette). */
-export function canFinish(done: Set<string>, letzterId: string = 'alarme'): boolean {
+/** Anlegen/Aktivieren erst nach Besuch von Zustellung (#2794 S3a, letzter Schritt der Kette). */
+export function canFinish(done: Set<string>, letzterId: string = 'zustellung'): boolean {
 	return done.has(letzterId);
 }
 

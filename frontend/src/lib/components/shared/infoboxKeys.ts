@@ -8,22 +8,28 @@
 import type { MessageKey } from '$lib/i18n';
 
 export type InfoboxKontext = 'route' | 'vergleich';
-export type InfoboxAbschnitt = 'wetter-metriken' | 'wertebereiche' | 'alarme' | 'versand' | 'wegpunkte';
+export type InfoboxAbschnitt = 'wetter-metriken' | 'wertebereiche' | 'alarme' | 'versand' | 'wegpunkte' | 'wetter' | 'zustellung';
 export type Begriff = 'wertebereiche' | 'kanal_schwelle' | 'cape' | 'cooldown';
 
+// Issue #2794 S3a: die Anlege-Schritte `wetter`/`zustellung` zeigen bis Teil-PR 3/S3b
+// die Texte ihrer bisherigen Bausteine (Metrik-Auswahl bzw. Versand) — kein neuer Text.
 const INFOBOX_KEYS: Record<InfoboxKontext, Partial<Record<InfoboxAbschnitt, MessageKey>>> = {
 	route: {
 		'wetter-metriken': 'info.wetter-metriken.route',
 		wertebereiche: 'info.wertebereiche.route',
 		alarme: 'info.alarme.route',
 		versand: 'info.versand.route',
-		wegpunkte: 'info.wegpunkte.route'
+		wegpunkte: 'info.wegpunkte.route',
+		wetter: 'info.wetter-metriken.route',
+		zustellung: 'info.versand.route'
 	},
 	vergleich: {
 		'wetter-metriken': 'info.wetter-metriken.vergleich',
 		wertebereiche: 'info.wertebereiche.vergleich',
 		alarme: 'info.alarme.vergleich',
-		versand: 'info.versand.vergleich'
+		versand: 'info.versand.vergleich',
+		wetter: 'info.wetter-metriken.vergleich',
+		zustellung: 'info.versand.vergleich'
 	}
 };
 

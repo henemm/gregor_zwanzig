@@ -71,10 +71,9 @@ async function openNewTripAlerts(page: Page) {
 	}
 
 	await tabbar.getByRole('tab', { name: /Wetter/ }).click({ force: true });
-	// Issue #2277 S3: Alarme ist direkt nach Besuch von „Wertebereiche"
-	// freigeschaltet (Sperrkette Wetter-Metriken → Wertebereiche → Alarme → Versand).
-	await tabbar.getByRole('tab', { name: /Wertebereiche/ }).click({ force: true });
-	await tabbar.getByRole('tab', { name: /Alarme/ }).click({ force: true });
+	// Issue #2794 S3a (Teil-PR 2): der AlarmeTab steht im Schritt „Zustellung", der nach
+	// Besuch von „Wetter" freigeschaltet ist (Kette ... → Wetter → Zustellung).
+	await tabbar.getByRole('tab', { name: /Zustellung/ }).click({ force: true });
 
 	// Harter Surface-Check: ohne ihn waere jedes spaetere `toHaveCount(0)`
 	// bedeutungslos (leerer DOM zaehlt auch 0). Scope auf den mobilen Baum.
@@ -185,7 +184,7 @@ test.describe('#2277 S1: AlarmeTab im Alarme-Reiter von /trips/new', () => {
 		const tabbar = page.getByTestId('tn-mobile-tabbar');
 		await tabbar.getByRole('tab', { name: /Route/ }).click({ force: true });
 		await expect(scope).toBeHidden();
-		await tabbar.getByRole('tab', { name: /Alarme/ }).click({ force: true });
+		await tabbar.getByRole('tab', { name: /Zustellung/ }).click({ force: true });
 		await expect(scope).toBeVisible();
 
 		await expect.soft(kanalSchalter(scope, 'sms')).toHaveAttribute('aria-checked', 'true');

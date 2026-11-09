@@ -47,8 +47,9 @@ async function deleteTrip(request: APIRequestContext, id: string): Promise<void>
 async function openAlarmeTab(page: Page, id: string): Promise<void> {
 	await page.goto(`/trips/${id}`);
 	await expect(page.getByTestId('trip-detail-tab-list')).toBeVisible();
-	await page.getByTestId('trip-detail-tab-alarme').first().click();
-	await expect(page.getByTestId('trip-detail-panel-alarme')).toBeVisible();
+	// #2794 S3a: die Alarme stehen im Reiter Zustellung.
+	await page.getByTestId('trip-detail-tab-zustellung').first().click();
+	await expect(page.getByTestId('trip-detail-panel-zustellung')).toBeVisible();
 }
 
 test.describe('Bug #1436: Alarm-Tabelle auf schmalen Bildschirmen', () => {

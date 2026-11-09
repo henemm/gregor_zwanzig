@@ -82,9 +82,10 @@ describe('AC-1/AC-8: WeatherMetricsTab existiert unter shared/ (Verschiebung aus
 		{ skip: !sharedExists() },
 		() => {
 			const code = readFileSync(SHARED_FILE, 'utf-8');
+			// #2794 S3a: zweites Argument `bereich` (reiner Darstellungsfilter Wetter/Zustellung).
 			assert.match(
 				code,
-				/weatherMetricsTabSections\(\s*context\s*\)/,
+				/weatherMetricsTabSections\(\s*context\s*(,\s*bereich\s*)?\)/,
 				'AC-1 FAIL: Komponente ruft weatherMetricsTabSections(context) nicht auf — Reihenfolge muesste aus der reinen Funktion kommen'
 			);
 		}
@@ -95,7 +96,8 @@ describe('AC-1/AC-8: WeatherMetricsTab existiert unter shared/ (Verschiebung aus
 		{ skip: !sharedExists() },
 		() => {
 			const code = readFileSync(SHARED_FILE, 'utf-8');
-			for (const section of ['reihenfolge', 'sms_schwellen', 'report_config']) {
+			// #2794 S3a: 'reihenfolge' heisst jetzt 'layout_kanal'.
+			for (const section of ['layout_kanal', 'sms_schwellen', 'report_config']) {
 				assert.match(
 					code,
 					new RegExp(`sections\\.includes\\(\\s*['"]${section}['"]\\s*\\)`),
@@ -141,7 +143,7 @@ describe('AC-1/AC-8: weatherMetricsTabSections(context) — reine Funktion (Vorb
 		}
 		const sections = mod.weatherMetricsTabSections('route');
 		assert.ok(sections.includes('grundauswahl'), 'AC-1 FAIL: "grundauswahl" fehlt im route-Kontext');
-		for (const s of ['reihenfolge', 'sms_schwellen', 'report_config']) {
+		for (const s of ['layout_kanal', 'sms_schwellen', 'report_config']) {
 			assert.ok(sections.includes(s), `AC-6 FAIL: route-only Section "${s}" fehlt (Regressionsschutz)`);
 		}
 	});
@@ -186,7 +188,7 @@ describe('AC-1/AC-8: weatherMetricsTabSections(context) — reine Funktion (Vorb
 				sections,
 				[
 					'grundauswahl',
-					'reihenfolge',
+					'layout_kanal', // #2794 S3a: vormals 'reihenfolge'
 					'tagesfenster',
 					'stundenverlauf',
 					'ausblick',

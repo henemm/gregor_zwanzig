@@ -140,7 +140,8 @@
 	const setupStepsCompare = $derived.by(() => (void $locale, firstIncomplete ? setupStepCompare(firstIncomplete) : []));
 
 	// Issue #1743: der Versand steht unten im Reiter Wetter-Metriken (Anker #versand).
-	const TRIP_TAB_MAP = ['etappen', 'etappen', 'wetter-metriken', 'wetter-metriken#versand', 'wetter-metriken#versand'];
+	// Issue #2794 S3a: Metriken im Reiter Wetter, Versand im Reiter Zustellung.
+	const TRIP_TAB_MAP = ['etappen', 'etappen', 'wetter', 'zustellung#versand', 'zustellung#versand'];
 
 	function buildTripCtaHref(): string {
 		if (!nextPlanned) return '/trips/new';
@@ -295,13 +296,13 @@
 							glyph="metrics"
 							label={$t('home.aktion.metriken')}
 							sub={$t('home.aktion.metriken_ziel')}
-							href="/trips/{hero.id}?tab=wetter-metriken"
+							href="/trips/{hero.id}?tab=wetter"
 						/>
 						<QuickAction
 							glyph="clock"
 							label={$t('home.aktion.zeitplan')}
 							sub={$t('home.aktion.zeitplan_ziel')}
-							href="/trips/{hero.id}?tab=wetter-metriken#versand"
+							href="/trips/{hero.id}?tab=zustellung#versand"
 						/>
 						<QuickAction
 							glyph="send"
@@ -364,7 +365,7 @@
 								</div>
 							</div>
 							<a
-								href="/trips/{hero.id}?tab=wertebereiche"
+								href="/trips/{hero.id}?tab=wetter"
 								class="g-link-tap"
 								style:font-size="12px"
 								style:color="var(--g-ink-3)"
@@ -467,13 +468,13 @@
 							glyph="metrics"
 							label={$t('home.aktion.ideal_werte')}
 							sub={$t('home.aktion.ideal_ziel')}
-							href="/compare/{compareHero.id}?tab=wertebereiche"
+							href="/compare/{compareHero.id}?tab=wetter"
 						/>
 						<QuickAction
 							glyph="clock"
 							label={$t('home.aktion.zeitplan')}
 							sub={$t('home.aktion.zeitplan_kanaele_ziel')}
-							href="/compare/{compareHero.id}?tab=wetter-metriken#versand"
+							href="/compare/{compareHero.id}?tab=zustellung#versand"
 						/>
 						<QuickAction
 							glyph="send"

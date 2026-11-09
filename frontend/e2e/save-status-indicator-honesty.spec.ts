@@ -74,7 +74,7 @@ test.describe('Issue #1269: Speicher-Status-Anzeige lügt', () => {
 		await createTrip(request, id);
 		try {
 			await page.goto(`/trips/${id}`);
-			await page.getByTestId('trip-detail-tab-wetter-metriken').click();
+			await page.getByTestId('trip-detail-tab-wetter').click();
 			await expect(page.getByTestId('weather-metrics-tab')).toBeVisible();
 
 			// > 700ms Debounce (saveStatusStore.svelte.ts schedule()).
@@ -100,8 +100,8 @@ test.describe('Issue #1269: Speicher-Status-Anzeige lügt', () => {
 		const puts = collectTripPuts(page, id);
 		try {
 			await page.goto(`/trips/${id}`);
-			// Issue #1743: Versand-Abschnitt lebt im Reiter Wetter-Metriken.
-			await page.getByTestId('trip-detail-tab-wetter-metriken').click();
+			// Issue #1743: Versand-Abschnitt; seit #2794 S3a im Reiter Zustellung.
+			await page.getByTestId('trip-detail-tab-zustellung').click();
 			await expect(page.getByTestId('versand-abschnitt').getByTestId('versand-tab')).toBeVisible();
 
 			await page.waitForTimeout(3_000);
@@ -167,9 +167,9 @@ test.describe('Issue #1269: Speicher-Status-Anzeige lügt', () => {
 			await page.goto(`/compare/${presetId}`);
 			await expect(page.getByTestId('compare-detail-tab-list')).toBeVisible({ timeout: 10_000 });
 
-			await page.locator('[data-testid="compare-detail-tab-wetter-metriken"]:visible').first().click();
+			await page.locator('[data-testid="compare-detail-tab-zustellung"]:visible').first().click();
 			await expect(
-				page.locator('[data-testid="compare-detail-panel-wetter-metriken"]:visible').first()
+				page.locator('[data-testid="compare-detail-panel-zustellung"]:visible').first()
 			).toBeVisible({ timeout: 10_000 });
 			await page.waitForTimeout(2_000);
 			await expect(
@@ -180,7 +180,7 @@ test.describe('Issue #1269: Speicher-Status-Anzeige lügt', () => {
 			// Issue #1743: Versand-Abschnitt im selben Reiter — Reiter verlassen und
 			// erneut öffnen, dann den Versand-Abschnitt prüfen (Remount ohne Eingabe).
 			await page.locator('[data-testid="compare-detail-tab-uebersicht"]:visible').first().click();
-			await page.locator('[data-testid="compare-detail-tab-wetter-metriken"]:visible').first().click();
+			await page.locator('[data-testid="compare-detail-tab-zustellung"]:visible').first().click();
 			await expect(
 				page.locator('[data-testid="versand-abschnitt"] [data-testid="report-morning-time"]:visible').first()
 			).toBeVisible({ timeout: 10_000 });

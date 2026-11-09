@@ -54,8 +54,8 @@ async function openIdealwerte(page: Page): Promise<void> {
 	// Epic #1301 F2a (AC-4/AC-5): neue Freischalt-Kette — Wertebereiche ist erst
 	// nach Besuch des NEUEN Wetter-Metriken-Tabs frei (Orte → Wetter-Metriken →
 	// Wertebereiche). Echter Klick auf den Metriken-Tab, kein goto.
-	await page.locator('[data-testid="compare-editor-tab-wetter-metriken"]:visible').first().click();
-	await page.locator('[data-testid="compare-editor-tab-wertebereiche"]:visible').first().click();
+	// #2794 S3a: Metrik-Auswahl und Wertebereiche stehen gemeinsam im Schritt Wetter.
+	await page.locator('[data-testid="compare-editor-tab-wetter"]:visible').first().click();
 	await expect(
 		page.locator('[data-testid="corridor-editor-vergleich"]:visible').first()
 	).toBeVisible({ timeout: 8_000 });
@@ -201,7 +201,8 @@ test.describe('Issue #680: Compare-Editor Slice 3 — Orte + Idealwerte', () => 
 		// Issue #1360 (Epic #1372 S1a): der Reiter `layout` ist aufgeloest.
 		// Issue #1743: der Schritt `versand` ist aufgeloest (Versand steht unten im
 		// Schritt wetter-metriken) — Anlegen wird nach dem Besuch von `alarme` frei.
-		await page.locator('[data-testid="compare-editor-tab-alarme"]:visible').first().click();
+		// #2794 S3a: letzter Schritt ist `zustellung`.
+		await page.locator('[data-testid="compare-editor-tab-zustellung"]:visible').first().click();
 
 		const [request] = await Promise.all([
 			page.waitForRequest(
@@ -237,10 +238,9 @@ test.describe('Issue #680: Compare-Editor Slice 3 — Orte + Idealwerte', () => 
 		await d.locator('[data-testid="compare-step2-library"]').getByText(locA.name, { exact: true }).click();
 		await d.locator('[data-testid="compare-step2-library"]').getByText(locB.name, { exact: true }).click();
 		// Epic #1301 F2a: Wetter-Metriken-Tab besuchen schaltet Wertebereiche frei (echter Klick).
-		await d.locator('[data-testid="compare-editor-tab-wetter-metriken"]').click();
-		await d.locator('[data-testid="compare-editor-tab-wertebereiche"]').click();
-		// Issue #1743: Alarme ist der letzte Schritt (Versand steht im Schritt Wetter-Metriken).
-		await d.locator('[data-testid="compare-editor-tab-alarme"]').click();
+		// #2794 S3a: Schritte Wetter (Metriken + Wertebereiche) und Zustellung (Versand + Alarme).
+		await d.locator('[data-testid="compare-editor-tab-wetter"]').click();
+		await d.locator('[data-testid="compare-editor-tab-zustellung"]').click();
 
 		const [antwort] = await Promise.all([
 			page.waitForResponse(

@@ -58,18 +58,24 @@ function konsolenFehler(page: Page): string[] {
 	return fehler;
 }
 
-// Issue #1743: kein Anlege-Schritt `versand` mehr — der Versand-Abschnitt (samt
-// Infobox `versand`) steht unten im Schritt `wetter-metriken`.
-type TripReiter = 'route' | 'etappen' | 'wegpunkte' | 'wetter-metriken' | 'wertebereiche' | 'alarme';
+// Issue #2794 S3a (Spec feat_2794_s3a_teil2_leiste.md): die Anlege-Schritte heißen
+// `wetter` (Metrik-Auswahl + Wertebereiche) und `zustellung` (Layout/Kanal, Versand,
+// Alarme). Die Infoboxen bleiben je Abschnitt benannt (`infobox-<abschnitt>-<kontext>`).
+type TripReiter = 'route' | 'etappen' | 'wegpunkte' | 'wetter' | 'zustellung';
 const TRIP_TAB_NAME: Record<TripReiter, RegExp> = {
 	route: /Route/,
 	etappen: /Etappen/,
 	wegpunkte: /Wegpunkte/,
-	'wetter-metriken': /Wetter/,
-	wertebereiche: /Wertebereiche/,
-	alarme: /Alarme/
+	wetter: /Wetter/,
+	zustellung: /Zustellung/
 };
-const TRIP_KETTE: TripReiter[] = ['wetter-metriken', 'wertebereiche', 'alarme'];
+const TRIP_KETTE: TripReiter[] = ['wetter', 'zustellung'];
+
+/** Welche Abschnitts-Infoboxen ein Schwanz-Schritt mindestens trägt (#2794 S3a). */
+const INFOBOXEN_JE_REITER: Record<'wetter' | 'zustellung', string[]> = {
+	wetter: ['wetter-metriken', 'wertebereiche'],
+	zustellung: ['versand', 'alarme']
+};
 
 function tripTab(page: Page, mobil: boolean, reiter: TripReiter): Locator {
 	const leiste = mobil ? page.getByTestId('tn-mobile-tabbar') : page.locator('.tn-desktop');
@@ -123,8 +129,8 @@ async function tripBis(page: Page, mobil: boolean, ziel: TripReiter): Promise<vo
 	}
 }
 
-type VergleichReiter = 'vergleich' | 'orte' | 'wetter-metriken' | 'wertebereiche' | 'alarme';
-const VERGLEICH_KETTE: VergleichReiter[] = ['wetter-metriken', 'wertebereiche', 'alarme'];
+type VergleichReiter = 'vergleich' | 'orte' | 'wetter' | 'zustellung';
+const VERGLEICH_KETTE: VergleichReiter[] = ['wetter', 'zustellung'];
 
 function vergleichTab(page: Page, mobil: boolean, reiter: VergleichReiter): Locator {
 	const id = mobil ? `cm-mobile-tab-${reiter}` : `compare-editor-tab-${reiter}`;
@@ -236,7 +242,7 @@ for (const mobil of [false, true]) {
 	const ansicht = mobil ? 'Mobil' : 'Desktop';
 
 	test.describe(`/trips/new (${ansicht}): Infobox je Reiter`, () => {
-		test('Pflichtreiter Route/Etappen ohne Infobox; Wegpunkte, Wetter-Metriken, Wertebereiche, Alarme, Versand mit Infobox', async ({ page }) => {
+		test('Pflichtreiter Route/Etappen ohne Infobox; Wegpunkte, Wetter (Metriken, Wertebereiche), Zustellung (Versand, Alarme) mit Infobox', async ({ page }) => {
 			await tripBis(page, mobil, 'route');
 			await expect(infoboxen(page), 'Route-Reiter trägt eine Infobox').toHaveCount(0);
 
@@ -248,10 +254,12 @@ for (const mobil of [false, true]) {
 
 			for (const reiter of TRIP_KETTE) {
 				await wechsleTripReiter(page, mobil, reiter);
-				await pruefeInfobox(page, reiter, 'route');
+				for (const abschnitt of INFOBOXEN_JE_REITER[reiter as 'wetter' | 'zustellung']) {
+					await pruefeInfobox(page, abschnitt, 'route');
+				}
 			}
-			// Versand (#1743: Abschnitt im Schritt Wetter-Metriken): beim Trip BEIDE Zeiten.
-			await wechsleTripReiter(page, mobil, 'wetter-metriken');
+			// Versand (#2794 S3a: Abschnitt im Schritt Zustellung): beim Trip BEIDE Zeiten.
+			await wechsleTripReiter(page, mobil, 'zustellung');
 			await pruefeInfobox(page, 'versand', 'route');
 			await expect(infobox(page, 'versand', 'route')).toContainText('07:00');
 			await expect(infobox(page, 'versand', 'route')).toContainText('18:00');
@@ -263,7 +271,7 @@ for (const mobil of [false, true]) {
 // AC-2, AC-3, AC-5 — /compare/new
 // ─────────────────────────────────────────────────────────────────────────────
 test.describe('/compare/new (Desktop): Infobox je Reiter', () => {
-	test('Pflichtreiter Vergleich/Orte ohne Infobox; Wetter-Metriken, Wertebereiche, Alarme, Versand mit Vergleichs-Text', async ({ page }) => {
+	test('Pflichtreiter Vergleich/Orte ohne Infobox; Wetter (Metriken, Wertebereiche), Zustellung (Versand, Alarme) mit Vergleichs-Text', async ({ page }) => {
 		await vergleichBis(page, false, 'vergleich');
 		await expect(infoboxen(page), 'Vergleich-Reiter trägt eine Infobox').toHaveCount(0);
 		await vergleichBis(page, false, 'orte');
@@ -271,13 +279,16 @@ test.describe('/compare/new (Desktop): Infobox je Reiter', () => {
 
 		for (const reiter of VERGLEICH_KETTE) {
 			await vergleichTab(page, false, reiter).click();
-			await pruefeInfobox(page, reiter, 'vergleich');
+			for (const abschnitt of INFOBOXEN_JE_REITER[reiter as 'wetter' | 'zustellung']) {
+				await pruefeInfobox(page, abschnitt, 'vergleich');
+			}
 		}
-		// Ortsvergleich-Versand (#1743: Abschnitt im Schritt Wetter-Metriken): nur Morgen 07:00, kein Abend-Slot.
-		await vergleichTab(page, false, 'wetter-metriken').click();
+		// Ortsvergleich-Versand (#2794 S3a: Abschnitt im Schritt Zustellung): nur Morgen 07:00, kein Abend-Slot.
+		await vergleichTab(page, false, 'zustellung').click();
 		await pruefeInfobox(page, 'versand', 'vergleich');
 		await expect(infobox(page, 'versand', 'vergleich')).toContainText('07:00');
 		await expect(infobox(page, 'versand', 'vergleich')).not.toContainText('18:00');
+		await vergleichTab(page, false, 'wetter').click();
 		await expect(infobox(page, 'wetter-metriken', 'vergleich')).toContainText('3-Tages-Ausblick');
 	});
 });
@@ -296,14 +307,13 @@ test.describe('AC-7: die Infobox ist zustandslos', () => {
 		const speicherSchluessel = async () =>
 			page.evaluate(() => [...Object.keys(localStorage), ...Object.keys(sessionStorage)]);
 
-		await tripBis(page, false, 'wetter-metriken');
+		await tripBis(page, false, 'wetter');
 		await pruefeInfobox(page, 'wetter-metriken', 'route');
 		const vorher = veraendernde.length;
 
-		await wechsleTripReiter(page, false, 'wertebereiche');
-		await wechsleTripReiter(page, false, 'alarme');
+		await wechsleTripReiter(page, false, 'zustellung');
 		await pruefeInfobox(page, 'alarme', 'route');
-		await wechsleTripReiter(page, false, 'wetter-metriken');
+		await wechsleTripReiter(page, false, 'wetter');
 		await pruefeInfobox(page, 'wetter-metriken', 'route');
 		expect(veraendernde.slice(vorher), 'Reiterwechsel/Infobox löst eine Schreib-Anfrage aus').toEqual([]);
 		expect(
@@ -312,7 +322,7 @@ test.describe('AC-7: die Infobox ist zustandslos', () => {
 		).toEqual([]);
 
 		await page.reload();
-		await tripBis(page, false, 'wetter-metriken');
+		await tripBis(page, false, 'wetter');
 		await pruefeInfobox(page, 'wetter-metriken', 'route');
 	});
 });
@@ -324,12 +334,12 @@ for (const mobil of [false, true]) {
 	const ansicht = mobil ? 'Mobil' : 'Desktop';
 
 	test(`AC-8/12/13 Trip (${ansicht}): ⓘ Wertebereiche — Klick, Enter, Leertaste, Esc, Klick daneben, Fokus`, async ({ page }) => {
-		await tripBis(page, mobil, 'wertebereiche');
+		await tripBis(page, mobil, 'wetter');
 		await pruefePopover(page, 'wertebereiche', infobox(page, 'wertebereiche', 'route'));
 	});
 
 	test(`AC-8/12/13 Ortsvergleich (${ansicht}): ⓘ Wertebereiche — ${mobil ? 'CorridorEditorMobile' : 'CorridorEditor'}`, async ({ page }) => {
-		await vergleichBis(page, mobil, 'wertebereiche');
+		await vergleichBis(page, mobil, 'wetter');
 		await pruefePopover(page, 'wertebereiche', infobox(page, 'wertebereiche', 'vergleich'));
 	});
 }
@@ -341,14 +351,14 @@ for (const mobil of [false, true]) {
 	const ansicht = mobil ? 'Mobil' : 'Desktop';
 
 	test(`AC-9 Trip (${ansicht}): sichtbares Label „Dringlichkeits-Schwelle“ + ⓘ, Erklärung öffnet`, async ({ page }) => {
-		await tripBis(page, mobil, 'alarme');
+		await tripBis(page, mobil, 'zustellung');
 		const kanalBlock = page.getByTestId('alert-channel-picker');
 		await expect(kanalBlock.getByText(/^Dringlichkeits-Schwelle$/)).toBeVisible();
 		await pruefePopover(page, 'kanal_schwelle', infobox(page, 'alarme', 'route'));
 	});
 
 	test(`AC-11 Trip (${ansicht}): ⓘ Cooldown öffnet die Erklärung, Hinweistext bleibt`, async ({ page }) => {
-		await tripBis(page, mobil, 'alarme');
+		await tripBis(page, mobil, 'zustellung');
 		await pruefePopover(page, 'cooldown', infobox(page, 'alarme', 'route'));
 		await expect(
 			page.getByText('Mindestabstand zwischen zwei Alerts derselben Metrik — verhindert Spam bei zappelnden Werten.')
@@ -364,7 +374,7 @@ for (const mobil of [false, true]) {
 
 test.describe('/compare/new (Desktop): Alarme', () => {
 	test('AC-9: ⓘ Dringlichkeits-Schwelle; AC-11: ⓘ Cooldown samt unverändertem Hinweistext', async ({ page }) => {
-		await vergleichBis(page, false, 'alarme');
+		await vergleichBis(page, false, 'zustellung');
 		// CompareNewEditor mountet den Alarme-Reiter in .cm-desktop UND .cm-mobile (nicht per
 		// Viewport gegatet) — ohne Scope waeren Kanal-Block und Hinweistext je doppelt (strict mode).
 		const desktop = page.locator('.cm-desktop');
@@ -408,7 +418,7 @@ for (const mobil of [false, true]) {
 	test(`AC-16 /compare/new (${ansicht}): alle Reiter, Sprechblasen öffnen und schließen — keine Konsolenfehler`, async ({ page }) => {
 		const fehler = konsolenFehler(page);
 		let geoeffnet = 0;
-		await vergleichBis(page, false, 'alarme');
+		await vergleichBis(page, false, 'zustellung');
 		if (mobil) await page.setViewportSize(MOBILE);
 		for (const reiter of VERGLEICH_KETTE) {
 			await vergleichTab(page, mobil, reiter).click();
@@ -433,7 +443,7 @@ for (const mobil of [false, true]) {
 // ─────────────────────────────────────────────────────────────────────────────
 for (const mobil of [false, true]) {
 	test(`AC-14 (${mobil ? 'Mobil' : 'Desktop'}): das ⓘ ist mindestens 24 × 24 px groß`, async ({ page }) => {
-		await tripBis(page, mobil, 'alarme');
+		await tripBis(page, mobil, 'zustellung');
 		const box = await iiKnopf(page, 'cooldown').boundingBox();
 		expect(box, 'ⓘ Cooldown nicht sichtbar').not.toBeNull();
 		expect(box!.width).toBeGreaterThanOrEqual(24);

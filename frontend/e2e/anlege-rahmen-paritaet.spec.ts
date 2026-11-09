@@ -162,10 +162,10 @@ async function bleibtBei(lies: () => number, soll: number, ms: number, message: 
 		.toBe('stabil');
 }
 
-/** Pflichtangaben + Besuch der drei Schwanz-Schritte ⇒ Abschluss frei (Trip: `ready`, Autosave scharf). */
+/** Pflichtangaben + Besuch der zwei Schwanz-Schritte (#2794 S3a) ⇒ Abschluss frei (Trip: `ready`, Autosave scharf). */
 async function bereit(page: Page, kind: HubKind, name: string, mobil = false): Promise<void> {
 	await anlegenPflicht(page, kind, { name, mobil });
-	for (const id of ['wetter-metriken', 'wertebereiche', 'alarme']) await ANLEGE_SEL[kind].reiter(page, id, mobil).click({ force: mobil });
+	for (const id of ['wetter', 'zustellung']) await ANLEGE_SEL[kind].reiter(page, id, mobil).click({ force: mobil });
 	await expect(ANLEGE_SEL[kind].abschluss(page, mobil), 'Vorbedingung: Abschluss frei').toBeEnabled({ timeout: 15_000 });
 }
 
@@ -381,7 +381,7 @@ for (const kind of HUB_KINDS) {
 		test(`AR-18 (${kind}, 1440×700): Fuß mit Abbrechen und Hauptaktion bleibt am unteren Rand sichtbar, auch bei langem Inhalt`, async ({ page }, testInfo) => {
 			await page.setViewportSize(NIEDRIG);
 			await anlegenPflicht(page, kind, { name: einName('AR18') });
-			for (const id of ['wetter-metriken', 'wertebereiche', 'alarme']) {
+			for (const id of ['wetter', 'zustellung']) {
 				await ANLEGE_SEL[kind].reiter(page, id).click();
 				await page.mouse.wheel(0, 4000);
 				const f = await box(sel.desktopFuss(page), `Fuß (${id})`);

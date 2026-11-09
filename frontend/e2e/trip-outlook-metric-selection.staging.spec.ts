@@ -39,11 +39,12 @@ function sammleKonsolenfehler(page: Page): string[] {
 	return fehler;
 }
 
-/** Oeffnet den Trip und wechselt in den Wetter-Metriken-Reiter. */
+/** Oeffnet den Trip und wechselt in den Reiter Zustellung — dort stehen seit
+ *  #2794 S3a (Spec feat_2794_s3a_teil2_leiste.md) Ausblick und Mail-Inhalt-Karte. */
 async function oeffneMetrikenReiter(page: Page, tripId: string): Promise<Locator> {
-	await page.goto(`/trips/${tripId}?tab=wetter-metriken`);
+	await page.goto(`/trips/${tripId}?tab=zustellung`);
 	await expect(page.getByTestId('trip-detail-tab-list')).toBeVisible({ timeout: 15000 });
-	await page.getByTestId('trip-detail-tab-wetter-metriken').first().click();
+	await page.getByTestId('trip-detail-tab-zustellung').first().click();
 	const reiter = page.getByTestId('weather-metrics-tab');
 	await expect(reiter).toBeVisible({ timeout: 15000 });
 	return reiter;

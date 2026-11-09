@@ -59,9 +59,10 @@ function attrText(k: Knoten, quelle: string, name: string): string | null {
 	return null;
 }
 
-// AC-17: die Anlege-Ketten je kind.
-const VERGLEICH_KETTE = ['vergleich', 'orte', 'wetter-metriken', 'wertebereiche', 'alarme'];
-const TRIP_KETTE = ['route', 'etappen', 'wegpunkte', 'wetter-metriken', 'wertebereiche', 'alarme'];
+// AC-17: die Anlege-Ketten je kind. #2794 S3a (Spec feat_2794_s3a_teil2_leiste.md AC-6):
+// Wetter · Zustellung statt Wetter-Metriken · Wertebereiche · Alarme.
+const VERGLEICH_KETTE = ['vergleich', 'orte', 'wetter', 'zustellung'];
+const TRIP_KETTE = ['route', 'etappen', 'wegpunkte', 'wetter', 'zustellung'];
 
 // ── Ortsvergleich-Anlegen ───────────────────────────────────────────────────────
 
@@ -76,8 +77,7 @@ async function vergleichEditor() {
 				pickedIds: ['a', 'b', 'c'],
 				activeTab: 'vergleich',
 				metrikenVisited: true,
-				idealsVisited: true,
-				alarmeVisited: true
+				zustellungVisited: true
 			}
 		},
 		{ jsAlsTs: true }
@@ -91,13 +91,13 @@ describe('F002 Ortsvergleich-Anlegen: jeder Weiter-Knopf schaltet auf den Reiter
 		assert.ok(!(u.unlocked as Set<string>).has('versand'), '#1743: versand ist kein Anlege-Schritt mehr');
 	});
 
-	test('compare-editor-continue-<id>: Klick → activeTab === <id> ∈ Anlege-Kette (insb. wertebereiche)', async () => {
+	test('compare-editor-continue-<id>: Klick → activeTab === <id> ∈ Anlege-Kette (insb. zustellung)', async () => {
 		const { u, ast, quelle } = await vergleichEditor();
 		const knoepfe = klickKnoten(ast)
 			.map((k) => ({ testid: attrText(k, quelle, 'data-testid'), onclick: attrText(k, quelle, 'onclick') }))
 			.filter((k) => k.testid?.startsWith('compare-editor-continue-'));
 		const ziele = knoepfe.map((k) => k.testid!.slice('compare-editor-continue-'.length));
-		assert.deepEqual(ziele, ['orte', 'wetter-metriken', 'wertebereiche', 'alarme'], 'Weiter-Knoepfe (#1743: keiner auf versand)');
+		assert.deepEqual(ziele, ['orte', 'wetter', 'zustellung'], 'Weiter-Knoepfe (#2794: keiner auf einen entfallenen Schritt)');
 		for (const { testid, onclick } of knoepfe) {
 			const ziel = testid!.slice('compare-editor-continue-'.length);
 			assert.ok(VERGLEICH_KETTE.includes(ziel), `testid ${testid} nennt keinen Reiter der Anlege-Kette`);

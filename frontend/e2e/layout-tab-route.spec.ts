@@ -87,13 +87,15 @@ async function createTrip(
 	});
 }
 
-async function openMetricsTab(page: Page, id: string) {
-	await page.goto(`/trips/${id}?tab=wetter-metriken`);
+// #2794 S3a (Spec feat_2794_s3a_teil2_leiste.md): der LayoutTab (Abschnitt layout_kanal)
+// steht im Reiter Zustellung, Grundauswahl/SMS-Schwellen/amtliche Warnungen im Reiter Wetter.
+async function openMetricsTab(page: Page, id: string, reiter: 'wetter' | 'zustellung' = 'zustellung') {
+	await page.goto(`/trips/${id}?tab=${reiter}`);
 	// SvelteKit liefert die Tab-Leiste server-gerendert VOR der Hydration aus —
 	// ein Klick, der vor dem Attachen der Event-Listener ankommt, geht spurlos
 	// verloren (#1771; Muster aus compare-hub-inline-edit.spec.ts).
 	await page.waitForLoadState('networkidle');
-	const weatherTabBtn = page.getByTestId('trip-detail-tab-wetter-metriken');
+	const weatherTabBtn = page.getByTestId(`trip-detail-tab-${reiter}`);
 	await expect(weatherTabBtn).toBeVisible({ timeout: 10_000 });
 	await weatherTabBtn.click();
 	const tab = page.getByTestId('weather-metrics-tab');
@@ -101,9 +103,9 @@ async function openMetricsTab(page: Page, id: string) {
 	// Katalog-Fetch abwarten (initiales Render zeigt kurz einen leeren Zustand,
 	// bevor `load()` den Katalog befüllt) — erst danach interagieren, sonst
 	// überschreibt ein verfrühter Auto-Save-Trigger die Metriken mit [].
-	await expect(tab.getByTestId('wm2-grundauswahl').locator('.toggle-btn').first()).toBeVisible({
-		timeout: 10_000
-	});
+	const bereit =
+		reiter === 'wetter' ? tab.getByTestId('wm2-grundauswahl').locator('.toggle-btn').first() : tab.getByTestId('wm2-reihenfolge').first();
+	await expect(bereit).toBeVisible({ timeout: 10_000 });
 	return tab;
 }
 
@@ -186,7 +188,7 @@ test.describe('Issue #1232 Scheibe 3b: LayoutTab (context="route")', () => {
 			});
 
 			await page.reload();
-			await page.getByTestId('trip-detail-tab-wetter-metriken').click();
+			await page.getByTestId('trip-detail-tab-zustellung').click();
 			const reloadedRows = page
 				.getByTestId('weather-metrics-tab')
 				.locator('[data-testid="wm2-reihenfolge-row"]');
@@ -272,10 +274,12 @@ test.describe('Issue #1232 Scheibe 3b: LayoutTab (context="route")', () => {
 		test('AC-8: SMS-Schwellwerte, Mail-Inhalt-Karte und Amtliche-Warnungen bleiben unverändert bedienbar', async ({
 			page
 		}) => {
-			const tab = await openMetricsTab(page, TRIP_ID);
+			// #2794 S3a: SMS-Schwellen und amtliche Warnungen im Reiter Wetter, Mail-Inhalt im Reiter Zustellung.
+			const tab = await openMetricsTab(page, TRIP_ID, 'wetter');
 			await expect(tab.getByTestId('sms-thresholds')).toBeVisible();
-			await expect(page.getByTestId('report-mail-content')).toBeVisible();
 			await expect(page.getByTestId('report-show-official-alerts')).toBeVisible();
+			await openMetricsTab(page, TRIP_ID, 'zustellung');
+			await expect(page.getByTestId('report-mail-content')).toBeVisible();
 		});
 	});
 
@@ -316,11 +320,14 @@ test.describe('Issue #1232 Scheibe 3b: LayoutTab (context="route")', () => {
 		test('AC-4/AC-3: >7 aktive Metriken zeigen Cut-Line im Kanal Telegram + Overflow-Chip am Picker', async ({
 			page
 		}) => {
-			const tab = await openMetricsTab(page, OVERFLOW_TRIP_ID);
+			// #2794 S3a: Vorlage im Reiter Wetter wählen, Reihenfolge/Kanal im Reiter Zustellung prüfen.
+			const wetter = await openMetricsTab(page, OVERFLOW_TRIP_ID, 'wetter');
 			// "Wandern"-Preset hat 9 Metriken (> Telegram-Budget 7).
-			await tab.getByTestId('weather-preset-pill-wandern').click();
+			await wetter.getByTestId('weather-preset-pill-wandern').click();
 			const confirmOk = page.getByTestId('preset-confirm-ok');
 			if (await confirmOk.isVisible()) await confirmOk.click();
+			await expect(page.getByTestId('save-indicator')).toHaveAttribute('data-state', 'idle', { timeout: 10_000 });
+			const tab = await openMetricsTab(page, OVERFLOW_TRIP_ID, 'zustellung');
 
 			const rows = tab.locator('[data-testid="wm2-reihenfolge-row"]');
 			const totalMetrics = await rows.count();
@@ -442,7 +449,7 @@ test.describe('Issue #1575 Scheibe 3: kanal-eigene Metrik-Auswahl (context="rout
 
 		// AC-4/AC-5-Vorstufe: nach dem Reload zeigt jeder Reiter seinen Stand.
 		await page.reload();
-		await page.getByTestId('trip-detail-tab-wetter-metriken').click();
+		await page.getByTestId('trip-detail-tab-zustellung').click();
 		const reloaded = page.getByTestId('weather-metrics-tab');
 		await reloaded.getByTestId('channel-tab-email').click();
 		await expect(reloaded.locator('[data-testid="wm2-reihenfolge-row"]')).toHaveCount(2);

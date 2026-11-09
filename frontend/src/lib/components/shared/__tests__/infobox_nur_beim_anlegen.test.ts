@@ -61,9 +61,11 @@ import { findeKomponenten, type Knoten } from './svelteInstanzPruefstand.ts';
 import { neuerFeldsatz } from './compareFeldsatzPruefstand.ts';
 import { INFO_TEXTE, PFLICHTREITER, REITER_DES_ABSCHNITTS, REITER_MIT_INFOBOX, type Kontext } from './infoboxTexte.ts';
 
-const ALLE_FLAGS = { wtVisited: true, wbVisited: true, alVisited: true };
+// Issue #2794 S3a (Spec feat_2794_s3a_teil2_leiste.md AC-6): Anlege-Schritte Wetter (Metriken,
+// Wertebereiche) und Zustellung (Versand, Alarme); die Infobox-Schluessel selbst bleiben.
+const ALLE_FLAGS = { wtVisited: true, zuVisited: true };
 const TRIP_BASIS = { name: 'Infobox-Trip', startDate: '2026-07-01', stageNames: ['E1'], ...ALLE_FLAGS };
-const VERGLEICH_FLAGS = { metrikenVisited: true, idealsVisited: true, alarmeVisited: true };
+const VERGLEICH_FLAGS = { metrikenVisited: true, zustellungVisited: true };
 
 function infoboxIds(html: string): string[] {
 	return testids(html, 'infobox-');
@@ -114,7 +116,7 @@ describe('AC-1/AC-3/AC-4: /trips/new zeigt die Infobox in jedem überspringbaren
 			});
 		}
 		test(`${ansicht}: Versand-Infobox des Trips nennt BEIDE Zeiten (07:00 und 18:00)`, async () => {
-			const html = await renderTrip({ ...TRIP_BASIS, activeTab: 'wetter-metriken', isMobileViewport: mobil });
+			const html = await renderTrip({ ...TRIP_BASIS, activeTab: 'zustellung', isMobileViewport: mobil });
 			const text = infoboxText(html, 'versand', 'route');
 			assert.match(text, /07:00/);
 			assert.match(text, /18:00/);
@@ -166,7 +168,7 @@ describe('AC-2/AC-3: /compare/new zeigt die Infobox (Wertebereiche, Versand), De
 	for (const mobil of [false, true]) {
 		const ansicht = mobil ? 'Mobil' : 'Desktop';
 		test(`${ansicht}: Wertebereiche — genau eine Infobox mit dem freigegebenen Text`, async () => {
-			const html = await renderVergleichNeu({ ...VERGLEICH_FLAGS, activeTab: 'wertebereiche', isMobileViewport: mobil });
+			const html = await renderVergleichNeu({ ...VERGLEICH_FLAGS, activeTab: 'wetter', isMobileViewport: mobil });
 			assert.equal(
 				tagsMitTestid(html, 'infobox-wertebereiche-vergleich').length,
 				1,
@@ -176,12 +178,12 @@ describe('AC-2/AC-3: /compare/new zeigt die Infobox (Wertebereiche, Versand), De
 			assert.equal(infoboxText(html, 'wertebereiche', 'vergleich'), erwartet('wertebereiche', 'vergleich'));
 		});
 
-		test(`${ansicht}: Versand-Abschnitt im Schritt Wetter-Metriken — Infobox je Abschnitt mit Vergleichs-Text (nur 07:00, kein 18:00)`, async () => {
-			const html = await renderVergleichNeu({ ...VERGLEICH_FLAGS, activeTab: 'wetter-metriken', isMobileViewport: mobil });
+		test(`${ansicht}: Versand-Abschnitt im Schritt Zustellung — Infobox je Abschnitt mit Vergleichs-Text (nur 07:00, kein 18:00)`, async () => {
+			const html = await renderVergleichNeu({ ...VERGLEICH_FLAGS, activeTab: 'zustellung', isMobileViewport: mobil });
 			const anzahl = tagsMitTestid(html, 'infobox-versand-vergleich').length;
 			// Je gerendertem Versand-Abschnitt genau eine Infobox.
 			assert.equal(anzahl, tagsMitTestid(html, 'versand-abschnitt').length, 'nicht jeder Versand-Abschnitt trägt eine Infobox');
-			assert.ok(anzahl >= 1, 'Versand-Abschnitt im Schritt Wetter-Metriken ohne Infobox');
+			assert.ok(anzahl >= 1, 'Versand-Abschnitt im Schritt Zustellung ohne Infobox');
 			for (let nr = 0; nr < anzahl; nr++) {
 				const text = infoboxText(html, 'versand', 'vergleich', nr);
 				assert.equal(text, erwartet('versand', 'vergleich'));
@@ -192,7 +194,7 @@ describe('AC-2/AC-3: /compare/new zeigt die Infobox (Wertebereiche, Versand), De
 	}
 
 	test('Wetter-Metriken (Desktop): Infobox mit Vergleichs-Text, nicht dem Trip-Text', async () => {
-		const html = await renderVergleichNeu({ ...VERGLEICH_FLAGS, activeTab: 'wetter-metriken', isMobileViewport: false });
+		const html = await renderVergleichNeu({ ...VERGLEICH_FLAGS, activeTab: 'wetter', isMobileViewport: false });
 		assert.ok(tagsMitTestid(html, 'infobox-wetter-metriken-vergleich').length >= 1, `gefunden: ${JSON.stringify(infoboxIds(html))}`);
 		const text = infoboxText(html, 'wetter-metriken', 'vergleich');
 		assert.equal(text, erwartet('wetter-metriken', 'vergleich'));
@@ -212,11 +214,11 @@ describe('AC-5: Ortsvergleich-Pflichtreiter Vergleich und Orte tragen keine Info
 				assert.deepEqual(infoboxIds(html), [], 'Pflichtreiter trägt eine Infobox');
 				assert.equal((html.match(/<aside\b/g) ?? []).length, 0, 'Pflichtreiter enthält ein <aside>');
 				// Positivkontrolle (macht den Fall ohne Implementierung rot): derselbe Editor MIT
-				// geoeffnetem Wetter-Metriken-Schritt zeigt die Versand-Infobox — sonst waere „keine“ vakuum.
-				const versand = await renderVergleichNeu({ ...VERGLEICH_FLAGS, activeTab: 'wetter-metriken', isMobileViewport: mobil });
+				// geoeffnetem Zustellungs-Schritt zeigt die Versand-Infobox — sonst waere „keine“ vakuum.
+				const versand = await renderVergleichNeu({ ...VERGLEICH_FLAGS, activeTab: 'zustellung', isMobileViewport: mobil });
 				assert.ok(
 					tagsMitTestid(versand, 'infobox-versand-vergleich').length >= 1,
-					'Positivkontrolle: Wetter-Metriken-Schritt zeigt keine Versand-Infobox — Verdrahtung fehlt'
+					'Positivkontrolle: Zustellungs-Schritt zeigt keine Versand-Infobox — Verdrahtung fehlt'
 				);
 			});
 		}
@@ -244,10 +246,10 @@ describe('#1743 AC-22: Anlegen — Versand-Infobox steht im Schritt Wetter-Metri
 	for (const mobil of [false, true]) {
 		const ansicht = mobil ? 'Mobil' : 'Desktop';
 		test(`${ansicht}: /trips/new`, async () => {
-			reihenfolge(await renderTrip({ ...TRIP_BASIS, activeTab: 'wetter-metriken', isMobileViewport: mobil }), 'route');
+			reihenfolge(await renderTrip({ ...TRIP_BASIS, activeTab: 'zustellung', isMobileViewport: mobil }), 'route');
 		});
 		test(`${ansicht}: /compare/new`, async () => {
-			reihenfolge(await renderVergleichNeu({ ...VERGLEICH_FLAGS, activeTab: 'wetter-metriken', isMobileViewport: mobil }), 'vergleich');
+			reihenfolge(await renderVergleichNeu({ ...VERGLEICH_FLAGS, activeTab: 'zustellung', isMobileViewport: mobil }), 'vergleich');
 		});
 	}
 });
@@ -442,7 +444,8 @@ describe('Verdrahtung: jeder Anlege-Mount setzt showInfobox explizit auf true', 
 		[
 			'CompareNewEditor',
 			join(COMPONENTS, 'compare-new/CompareNewEditor.svelte'),
-			{ WeatherMetricsTab: 0, CorridorEditor: 1, CorridorEditorMobile: 1, AlarmeTab: 2, VersandTab: 0, WetterMetrikenVersandPanel: 2 }
+			// #2794 S3a: je Gerät ein Panel im Schritt Wetter und eines im Schritt Zustellung.
+			{ WeatherMetricsTab: 0, CorridorEditor: 1, CorridorEditorMobile: 1, AlarmeTab: 2, VersandTab: 0, WetterMetrikenVersandPanel: 4 }
 		]
 	];
 	for (const [name, datei, erwartetAnzahl] of EDITOREN) {

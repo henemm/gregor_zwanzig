@@ -94,11 +94,14 @@ test.describe('Issue #1719 S2 AC-10 Test B: Grundauswahl-Abwahl schneidet SMS-Ka
 		request
 	}) => {
 		await createTrip(request);
-		await page.goto(`/trips/${TRIP_ID}?tab=wetter-metriken`);
-		await page.getByTestId('trip-detail-tab-wetter-metriken').click();
+		// #2794 S3a (Spec feat_2794_s3a_teil2_leiste.md): Kanal-Karte im Reiter Zustellung,
+		// Grundauswahl im Reiter Wetter — Wechsel per Klick, kein Reload; die SMS-Geste ist
+		// gespeichert (save-indicator idle), bevor der Reiter wechselt.
+		await page.goto(`/trips/${TRIP_ID}?tab=zustellung`);
+		await page.getByTestId('trip-detail-tab-zustellung').click();
 		const tab = page.getByTestId('weather-metrics-tab');
 		await expect(tab).toBeVisible({ timeout: 10_000 });
-		await expect(tab.getByTestId('wm2-grundauswahl').locator('.toggle-btn').first()).toBeVisible({
+		await expect(tab.locator('[data-testid="wm2-reihenfolge-row"]').first()).toBeVisible({
 			timeout: 10_000
 		});
 
@@ -115,7 +118,12 @@ test.describe('Issue #1719 S2 AC-10 Test B: Grundauswahl-Abwahl schneidet SMS-Ka
 
 		// Zurück zur Grundauswahl (kanalunabhängig immer sichtbar) -> Ziel-Metrik
 		// dort abwählen ("[title]" statt Text: "Böen" wäre sonst kein Substring-
-		// Kollisionsrisiko, aber title ist der robustere, geprüfte Anker).
+		// Kollisionsrisiko, aber title ist der robustere, geprüfte Anker). Seit #2794 S3a
+		// steht die Grundauswahl im Reiter Wetter.
+		await page.getByTestId('trip-detail-tab-wetter').click();
+		await expect(tab.getByTestId('wm2-grundauswahl').locator('.toggle-btn').first()).toBeVisible({
+			timeout: 10_000
+		});
 		const gustToggle = tab.locator('[data-testid="wm2-grundauswahl"] .toggle-btn[title="Böen"]');
 		await expect(gustToggle).toHaveClass(/\bon\b/);
 		await gustToggle.click();

@@ -58,8 +58,9 @@ async function openHubMetricsTab(page: Page, id: string) {
 	await page.goto(`/compare/${id}`);
 	await expect(page.getByTestId('compare-detail-tab-list')).toBeVisible({ timeout: 15_000 });
 	await page.waitForLoadState('networkidle');
-	await page.locator('[data-testid="compare-detail-tab-wetter-metriken"]:visible').first().click();
-	const panel = page.locator('[data-testid="compare-detail-panel-wetter-metriken"]:visible').first();
+	// #2794 S3a: das Tagesfenster steht im Reiter Wetter.
+	await page.locator('[data-testid="compare-detail-tab-wetter"]:visible').first().click();
+	const panel = page.locator('[data-testid="compare-detail-panel-wetter"]:visible').first();
 	await expect(panel).toBeVisible({ timeout: 10_000 });
 	return panel;
 }
@@ -91,7 +92,7 @@ test.describe('Issue #1361/#1372 S1b (AC-4): Tagesfenster-Control — geteilt, b
 			await login(page);
 			await page.goto(`/trips/${id}`);
 			await expect(page.getByTestId('trip-detail-tab-list')).toBeVisible();
-			await page.getByTestId('trip-detail-tab-wetter-metriken').first().click();
+			await page.getByTestId('trip-detail-tab-wetter').first().click();
 			await expect(page.getByTestId('weather-metrics-tab')).toBeVisible();
 
 			await expect(page.locator('[data-testid="day-window-control"]:visible').first()).toBeVisible({

@@ -55,8 +55,9 @@ describe('F006: Dispatch der Listen — Aktion -> Zweig -> Wirkung', () => {
 			resume: `void ${toggle}(${v}, false)`,
 			send: `sendTarget = ${v}`,
 			// #1743 AC-27: die Aktion „Vorschau" entfaellt (kein Zweig 'preview' mehr)
-			alarms: ende('alarme'),
-			weather: ende('wetter-metriken'),
+			// #2794 S3a: Alarme im Reiter Zustellung, Wetter-Metriken im Reiter Wetter
+			alarms: ende('zustellung'),
+			weather: ende('wetter'),
 			edit: basis,
 			'continue-setup': basis,
 			delete: `deleteTarget = ${v}`
@@ -305,8 +306,8 @@ describe('F019/F015/F018: die Bindung steht UNTER DER ERWARTETEN Bedingung (kein
 		assert.deepEqual(unter(hk, mitAttribut(hk, 'data-testid', 'subscription-hub-send')[0]), ['!(sendMode === "setup")']);
 		assert.ok([undefined, '"senden"'].includes(attrKurz(kopfEinbettung(TRIP_HUB, 'Trip-Hub'), 'sendMode')));
 		assert.equal(attrKurz(kopfEinbettung(CMP_HUB, 'Compare-Hub'), 'sendMode'), 'status === "draft" ? "setup" : "senden"');
-		// „Setup abschließen" führt wie bisher zum Versand-Abschnitt der Wetter-Metriken.
-		assert.equal(attrKurz(kopfEinbettung(CMP_HUB, 'Compare-Hub'), 'onSetup'), '() => { window.location.href = `?tab=wetter-metriken#versand` }');
+		// „Setup abschließen" führt zum Versand-Abschnitt — #2794 S3a: im Reiter Zustellung.
+		assert.equal(attrKurz(kopfEinbettung(CMP_HUB, 'Compare-Hub'), 'onSetup'), '() => { window.location.href = `?tab=zustellung#versand` }');
 	});
 	test('Schreib-/Sendeaufrufe der Handler stehen unbedingt (kein if (false), kein toter Zweig)', () => {
 		for (const [ast, fn, ziel] of [

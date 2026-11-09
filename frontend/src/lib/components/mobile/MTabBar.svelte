@@ -17,12 +17,13 @@
 	//   Trigger min-height 44px, Pill-Optik, Badges neutral.
 	// - Desktop (>=900px): ADR-0111 Punkt 1 (= ADR-0109 Punkt 7, Mockup Fassung 3):
 	//   kein Kasten, EINE Grundlinie 1px --g-rule, Reiter 13px/500 --g-ink, aktiv 600
-	//   mit 2px-Unterstrich --g-accent, Zähler Mono 10px neutral, Radius 3px. Die
-	//   globale Regel [data-slot="segmented"] (app.css) wird hier ausdrücklich
-	//   zurückgesetzt (Rahmen, Radius, Trennstriche). Eine Optik für Trip und
-	//   Vergleich, ohne Varianten-Prop (#2845).
-	// - data-slot-Vertrag (segmented/segmented-item/segmented-badge) bleibt
-	//   bestehen — bestehende Test-IDs und der app.css-Fallback greifen weiter.
+	//   mit 2px-Unterstrich --g-accent, Zähler Mono 10px neutral, Radius 3px. Eine
+	//   Optik für Trip und Vergleich, ohne Varianten-Prop (#2845).
+	// - Kein Kasten durch Struktur (#2794 S3a, §7 AC-3): die Wurzel trägt KEIN
+	//   data-slot="segmented", die Segmented-Box aus app.css (Rahmen, Rundung) greift
+	//   also nicht; der Block bleibt für das Segmented-Atom (WeatherConfigDialog).
+	//   Nur die Trennstriche an segmented-item hält `border: none` fern. Der
+	//   data-slot-Vertrag segmented-item/segmented-badge (Test-IDs) bleibt bestehen.
 	import { tick } from 'svelte';
 
 	export interface MTabBarItem {
@@ -79,7 +80,6 @@
 	class="mtabbar"
 	role="tablist"
 	aria-label={ariaLabel}
-	data-slot="segmented"
 >
 	{#each items as item, i (item.value)}
 		{@const isActive = item.value === active}
@@ -105,13 +105,10 @@
 </div>
 
 <style>
-	/* Desktop (>=900px): ADR-0111 Punkt 1 — kein Kasten: Rahmen, Radius und Überlauf der
-	   globalen Segmented-Regel (app.css) zurückgesetzt, nur die Grundlinie --g-rule bleibt. */
+	/* Desktop (>=900px): ADR-0111 Punkt 1 — kein Kasten (Wurzel ohne data-slot="segmented",
+	   #2794 S3a), nur die eine Grundlinie --g-rule. */
 	.mtabbar {
 		display: flex;
-		border: 0;
-		border-radius: 0;
-		overflow: visible;
 		border-bottom: 1px solid var(--g-rule);
 	}
 	.mtabbar :global([data-slot='segmented-item']) {
@@ -119,8 +116,8 @@
 		padding: 0.5rem 1rem;
 		font-size: 0.8125rem;
 		font-weight: 500;
-		/* auch die Trennstriche der globalen Regel (:not(:last-child)) entfallen */
-		border: 0;
+		/* #2794 S3a: keine senkrechten Segmented-Trenner aus app.css (`:not(:last-child)`). */
+		border: none;
 		border-bottom: 2px solid transparent;
 		background: transparent;
 		color: var(--g-ink);
@@ -136,6 +133,7 @@
 	}
 	.mtabbar :global([data-slot='segmented-item'][data-state='active']) {
 		border-bottom-color: var(--g-accent);
+		/* #2794 S3a (AC-3): aktiver Reiter 600 stark. */
 		font-weight: 600;
 	}
 	.mtabbar :global([data-slot='segmented-badge']) {
@@ -149,6 +147,7 @@
 		background: var(--g-paper-deep);
 		color: var(--g-ink-3);
 		font-family: var(--g-font-mono);
+		/* #2794 S3a (AC-3): Badge Mono 10 px. */
 		font-size: 10px;
 		font-weight: 600;
 	}
@@ -200,7 +199,7 @@
 			background: var(--g-paper-deep);
 			color: var(--g-ink-3);
 			font-family: var(--g-font-mono);
-			font-size: var(--g-text-xs);
+			font-size: 10px;
 			font-weight: 600;
 			margin-left: 0;
 			/* Handy-Pillen unverändert (ADR-0111 Punkt 1 gilt nur am Computer). */
