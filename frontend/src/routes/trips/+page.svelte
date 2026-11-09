@@ -163,7 +163,7 @@
 </script>
 
 {#snippet neuerTripMobil()}
-	<Btn href="/trips/new" variant="ghost" size="sm" data-testid="trip-list-new-mobile">{$t('onboarding.willkommen.neuer_trip')}</Btn>
+	<Btn href="/trips/new" variant="primary" size="sm" data-testid="trip-list-new-mobile">{$t('onboarding.willkommen.neuer_trip')}</Btn>
 {/snippet}
 
 <div class="space-y-4">
@@ -176,7 +176,7 @@
 			<h1 style="font-size: 32px; font-weight: 600; letter-spacing: -0.025em; margin-top: 4px;">{$t('listen.trips.titel')}</h1>
 			<p class="text-sm text-muted-foreground mt-1">{$t('listen.trips.intro')}</p>
 		</div>
-		<Btn variant="accent" onclick={() => goto('/trips/new')}>{$t('onboarding.willkommen.neuer_trip')}</Btn>
+		<Btn variant="primary" onclick={() => goto('/trips/new')}>{$t('onboarding.willkommen.neuer_trip')}</Btn>
 	</div>
 
 	<!-- Mobiler Seitenkopf (#2347 S4, HL-1/HL-2/HL-4): gleich gebaut wie die

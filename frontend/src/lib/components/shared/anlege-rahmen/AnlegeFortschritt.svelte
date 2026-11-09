@@ -5,7 +5,9 @@
 	// Spec: docs/specs/modules/rework_2837_s2b_anlege_fortschritt.md
 	//
 	// EIN Markup: `variante` wählt nur Segmentbreite (24px fest / flex: 1) und Zählertext
-	// („n von 5 Abschnitten" / „n/5"). Farbregel: erledigt ⇒ var(--g-accent), sonst var(--g-rule).
+	// („n von 5 Abschnitten" / „n/5"). Farbregel (ADR-0111 Punkt 4, #2881): erledigt ⇒ gefüllt
+	// var(--g-accent) (3,94:1), offen ⇒ ohne Füllung mit 1-px-Kontur var(--g-ink-3) (5,13:1), damit
+	// der Unterschied nicht allein an der Farbe hängt (vorher Fläche var(--g-rule), 1,4:1).
 	// Der aktive Schritt wird bewusst NICHT getönt (Entscheidung 2); `aktiv` setzt nur
 	// `aria-current`. Der Zähler ist letztes Kind des Testid-Containers (Regex-Auslese in
 	// compare_new_lock_engine_wirkstelle.test.ts). Kein <style>-Block: Klassen bleiben genau "mono".
@@ -41,7 +43,7 @@
 
 <div
 	data-testid={testidPrefix}
-	style="display: flex; align-items: center; gap: {mobil ? '8px' : '10px'};{mobil ? ' flex: 1;' : ' margin-top: 7px;'}"
+	style="display: flex; align-items: center; gap: {mobil ? '8px' : '12px'};{mobil ? ' flex: 1;' : ' margin-top: 8px;'}"
 >
 	<div style="display: flex; gap: 3px;{mobil ? ' flex: 1;' : ''}">
 		{#each steps as step, i (step)}
@@ -49,7 +51,7 @@
 				data-testid={`${testidPrefix}-segment`}
 				data-done={istErledigt(step, i) ? 'true' : 'false'}
 				aria-current={step === aktiv ? 'step' : undefined}
-				style="{mobil ? 'flex: 1' : 'width: 24px'}; height: 3px; border-radius: 2px; background: {istErledigt(step, i) ? 'var(--g-accent)' : 'var(--g-rule)'}; transition: background 350ms;"
+				style="{mobil ? 'flex: 1' : 'width: 24px'}; height: 4px; box-sizing: border-box; border-radius: 2px; background: {istErledigt(step, i) ? 'var(--g-accent)' : 'transparent'}; border: 1px solid {istErledigt(step, i) ? 'var(--g-accent)' : 'var(--g-ink-3)'}; transition: background 350ms, border-color 350ms;"
 			></div>
 		{/each}
 	</div>

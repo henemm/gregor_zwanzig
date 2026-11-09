@@ -15,10 +15,12 @@
 	//   aktive Tab tabindex=0), ←/→ aktiviert den Folge-Tab inkl. Fokus.
 	// - Mobile (<900px): horizontales Band + 16px-Fade + Scroll-Snap,
 	//   Trigger min-height 44px, Pill-Optik, Badges neutral.
-	// - Desktop (>=900px): Underline-Optik 1:1 wie bisheriger TripTabs-Stand
-	//   (padding 0.5rem/1rem, 0.875rem, Accent-Unterstrich); Zähler-Badges neutral
-	//   in jeder Breite (#2837 S1, ADR-0110). Eine Optik für Trip und Vergleich,
-	//   ohne Varianten-Prop (#2845, Spec rework_2845_hub_reiterleiste).
+	// - Desktop (>=900px): ADR-0111 Punkt 1 (= ADR-0109 Punkt 7, Mockup Fassung 3):
+	//   kein Kasten, EINE Grundlinie 1px --g-rule, Reiter 13px/500 --g-ink, aktiv 600
+	//   mit 2px-Unterstrich --g-accent, Zähler Mono 10px neutral, Radius 3px. Die
+	//   globale Regel [data-slot="segmented"] (app.css) wird hier ausdrücklich
+	//   zurückgesetzt (Rahmen, Radius, Trennstriche). Eine Optik für Trip und
+	//   Vergleich, ohne Varianten-Prop (#2845).
 	// - data-slot-Vertrag (segmented/segmented-item/segmented-badge) bleibt
 	//   bestehen — bestehende Test-IDs und der app.css-Fallback greifen weiter.
 	import { tick } from 'svelte';
@@ -103,16 +105,22 @@
 </div>
 
 <style>
-	/* Desktop (>=900px): Underline-Optik — 1:1 der bisherigen TripTabs-Regeln. */
+	/* Desktop (>=900px): ADR-0111 Punkt 1 — kein Kasten: Rahmen, Radius und Überlauf der
+	   globalen Segmented-Regel (app.css) zurückgesetzt, nur die Grundlinie --g-rule bleibt. */
 	.mtabbar {
 		display: flex;
-		border-bottom: 1px solid var(--g-ink-faint);
+		border: 0;
+		border-radius: 0;
+		overflow: visible;
+		border-bottom: 1px solid var(--g-rule);
 	}
 	.mtabbar :global([data-slot='segmented-item']) {
 		position: relative;
 		padding: 0.5rem 1rem;
-		font-size: 0.875rem;
+		font-size: 0.8125rem;
 		font-weight: 500;
+		/* auch die Trennstriche der globalen Regel (:not(:last-child)) entfallen */
+		border: 0;
 		border-bottom: 2px solid transparent;
 		background: transparent;
 		color: var(--g-ink);
@@ -128,19 +136,20 @@
 	}
 	.mtabbar :global([data-slot='segmented-item'][data-state='active']) {
 		border-bottom-color: var(--g-accent);
+		font-weight: 600;
 	}
 	.mtabbar :global([data-slot='segmented-badge']) {
 		display: inline-block;
 		margin-left: 0.375rem;
 		padding: 0.125rem 0.375rem;
-		border-radius: 9999px;
+		border-radius: 3px;
 		/* #2837 S1 (ADR-0110, AC-10): Zähler neutral für Trip UND Vergleich (ink-3 auf
 		   paper-deep ≈ 4,7:1, WCAG-AA) — Standard, ohne Variante (#2845).
 		   Accent bleibt allein der Unterstrich des aktiven Reiters. */
 		background: var(--g-paper-deep);
 		color: var(--g-ink-3);
 		font-family: var(--g-font-mono);
-		font-size: var(--g-text-xs);
+		font-size: 10px;
 		font-weight: 600;
 	}
 
@@ -194,6 +203,8 @@
 			font-size: var(--g-text-xs);
 			font-weight: 600;
 			margin-left: 0;
+			/* Handy-Pillen unverändert (ADR-0111 Punkt 1 gilt nur am Computer). */
+			border-radius: 9999px;
 		}
 		.mtabbar :global([data-slot='segmented-item']:focus-visible) {
 			outline: 2px solid var(--g-accent);

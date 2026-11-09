@@ -135,13 +135,21 @@ describe('#2845 AC-7 — MTabBar hat keinen Schalter für die Desktop-Optik', ()
 		for (const r of REGELN) for (const sel of r.selektoren) if (kopfVarianten(sel).length > 0) verstoesse.push(sel);
 		assert.deepEqual(verstoesse, [], 'Variante am .mtabbar-Kopf (z. B. .mtabbar.sm, .mtabbar[data-dense]) — Rückfall ins Pendant');
 	});
-	test('AC-1: die Basisregel .mtabbar (Desktop) deklariert selbst die Linie border-bottom: 1px solid var(--g-ink-faint)', () => {
+	// #2881 (ADR-0111 Punkt 1): Linie jetzt --g-rule statt --g-ink-faint (Desktop-Werte aus #2845
+	// abgelöst); dazu setzt die Basisregel Rahmen und Radius der globalen Segmented-Regel zurück.
+	test('AC-1: die Basisregel .mtabbar (Desktop) deklariert selbst die Linie border-bottom: 1px solid var(--g-rule) und setzt den Kasten zurück', () => {
 		const basis = REGELN.filter((r) => r.media === null && r.selektoren.includes('.mtabbar'));
 		assert.ok(basis.length >= 1, 'keine Desktop-Basisregel `.mtabbar` gefunden');
-		const linie = basis.flatMap((r) => r.decls).filter(([p]) => p === 'border-bottom').map(([, v]) => v.replace(/\s+/g, ' '));
+		const decls = basis.flatMap((r) => r.decls);
+		assert.deepEqual(
+			decls.filter(([p]) => p === 'border' || p === 'border-radius').map(([p, v]) => `${p}: ${v}`),
+			['border: 0', 'border-radius: 0'],
+			'`.mtabbar` setzt Rahmen/Radius der app.css-Regel [data-slot="segmented"] nicht zurück — der Kasten kehrt zurück'
+		);
+		const linie = decls.filter(([p]) => p === 'border-bottom').map(([, v]) => v.replace(/\s+/g, ' '));
 		assert.deepEqual(
 			linie,
-			['1px solid var(--g-ink-faint)'],
+			['1px solid var(--g-rule)'],
 			'`.mtabbar` deklariert die Linie unter der Leiste nicht selbst (der app.css-Fallback verdeckt das im Browser — Mutation c)'
 		);
 	});

@@ -135,3 +135,4 @@ Nur die Desktop-Optik der Hub-Reiterleiste (Frontend). Der Zeitzonen-Nebenbefund
 ## Changelog
 
 - 2026-11-09: Initial spec created (Issue #2845, Teil A; Teil B Zeitzone ausgegliedert).
+- 2026-11-09: **Desktop-Werte abgelöst durch ADR-0111** (Issue #2881, Punkt 1): am Computer gilt ADR-0109 Punkt 7 — kein Kasten, Grundlinie 1 px `--g-rule` (statt `--g-ink-faint`), Reiter 13 px (statt 14 px)/500, aktiv 600 (statt 500), Zähler Mono 10 px neutral, Radius 3 px. Inaktiv `--g-ink` und die Gleichheit Trip/Vergleich aus dieser Spec bleiben; `hub-tab-bar.spec.ts` HT-14 ist umgestellt.

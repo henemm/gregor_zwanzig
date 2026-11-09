@@ -397,7 +397,9 @@ for (const kind of HUB_KINDS) {
 }
 
 // ─── HT-14 (#2845, Spec rework_2845_hub_reiterleiste.md AC-1/2/3/5/7/8) ──────────
-// Eine Optik: Trip gegen Vergleich gemessen (nicht gegen Festwerte), bei 1440 und 390 px.
+// Eine Optik: Trip gegen Vergleich gemessen, bei 1440 und 390 px. Die Desktop-Festwerte folgen
+// seit #2881 ADR-0111 Punkt 1 (Festwerte samt „kein Kasten" zusätzlich in
+// design-system-trip-vergleich.spec.ts DS-8).
 const GROSS = { width: 1440, height: 900 };
 
 interface LeistenMass {
@@ -470,17 +472,21 @@ test.describe('HT-14: Trip und Ortsvergleich tragen dieselbe Reiterleiste', () =
 			// AC-7: dieselbe Klassenliste ohne Variante
 			expect(v.klasse, 'Klassenliste der Leiste Trip ≠ Vergleich').toBe(t.klasse);
 			if (breite === GROSS) {
-				// AC-1: Einheitsoptik des Trips: 14 px, --g-ink, 1 px Linie
+				// AC-1 — Desktop-Werte seit #2881 nach ADR-0111 Punkt 1 (lösen 14 px / --g-ink-faint /
+				// aktiv 500 aus #2845 ab): 13 px, --g-ink, 1-px-Grundlinie --g-rule. Die Gleichheit
+				// Trip = Vergleich aus #2845 bleibt (oben und unten).
 				for (const m of [t, v]) {
-					expect(m.inaktiv.fontSize).toBe('14px');
+					expect(m.inaktiv.fontSize).toBe('13px');
 					expect(m.inaktiv.color).toBe('rgb(26, 26, 24)');
 					expect(m.leiste.borderBottomWidth).toBe('1px');
+					expect(m.leiste.borderBottomColor, 'Grundlinie nicht --g-rule').toBe('rgb(216, 211, 194)');
 				}
 				expect(v.leiste, 'Linie unter der Leiste Trip ≠ Vergleich').toEqual(t.leiste);
-				// AC-5: aktiver Reiter Accent-Unterstrich, transparent, gleiche Stärke; inaktiv ohne Accent
+				// AC-5: aktiver Reiter Accent-Unterstrich, transparent, Stärke 600 (ADR-0111); inaktiv ohne Accent
 				for (const m of [t, v]) {
 					expect(m.aktiv.borderBottomColor).toBe('rgb(196, 90, 42)');
 					expect(m.aktiv.backgroundColor).toBe('rgba(0, 0, 0, 0)');
+					expect(m.aktiv.fontWeight).toBe('600');
 					expect(m.inaktivAccent).not.toBe('rgb(196, 90, 42)');
 				}
 				expect(v.aktiv.fontWeight).toBe(t.aktiv.fontWeight);

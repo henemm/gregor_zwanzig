@@ -92,7 +92,7 @@
 					onclick={makePauseInsertHandler(i)}
 				>
 					{#if hoverGap === i}
-						<span style="padding:3px 8px; font-size: 11px; font-weight:600; background:var(--g-accent-deep); color:#fff; border-radius:10px; letter-spacing:0.06em; text-transform:uppercase; font-family:var(--g-font-mono);">{$t('trip.wegpunkt.plus_pause')}</span>
+						<span style="padding:3px 8px; font-size: 11px; font-weight:600; background:var(--g-accent-deep); color:var(--g-paper); border-radius:10px; letter-spacing:0.06em; text-transform:uppercase; font-family:var(--g-font-mono);">{$t('trip.wegpunkt.plus_pause')}</span>
 					{:else}
 						<span style="width:1px; height:24px; background:var(--g-rule); display:block;"></span>
 					{/if}

@@ -127,6 +127,8 @@ testMitZustellbaremZiel.describe('DS-5: Leerzustände (Konto ohne Trips und Verg
 			const presets = ((await (await req.get('/api/compare/presets')).json()) as { id: string }[]) ?? [];
 			for (const p of presets) await req.delete(`/api/compare/presets/${p.id}`);
 			const fehler: string[] = [];
+			const profil = (await (await req.get('/api/auth/profile')).json()) as { onboarding_dismissed?: boolean };
+			const warAusgeblendet = profil?.onboarding_dismissed === true;
 			try {
 				// Trip-Liste leer: Kopf-Knopf + Leerzustands-Knopf.
 				await page.goto('/trips');
@@ -136,10 +138,19 @@ testMitZustellbaremZiel.describe('DS-5: Leerzustände (Konto ohne Trips und Verg
 				await page.goto('/compare');
 				await expect(page.getByText('Noch keine Vergleiche angelegt.').first()).toBeAttached({ timeout: 15_000 });
 				pruefeInk(await messeAnlegeKnoepfe(page, `Vergleichsliste leer ${breite.width}`, 1), `Vergleichsliste leer ${breite.width}`, fehler);
-				// Startseite leer: „+ Neuer Trip" und „+ Neuer Vergleich".
-				await page.goto('/');
-				pruefeInk(await messeAnlegeKnoepfe(page, `Startseite leer ${breite.width}`, 2), `Startseite leer ${breite.width}`, fehler);
+				// Startseite leer, BEIDE Zweige der EmptyKachel: Willkommen (neues Konto) und normaler
+				// Leerzustand (Willkommen ausgeblendet) — je Kopfleiste (2) + Kachel (2) Anlege-Knöpfe.
+				for (const ausblenden of [false, true]) {
+					const r = await req.put('/api/auth/profile', { data: { onboarding_dismissed: ausblenden } });
+					expect(r.ok(), `onboarding_dismissed=${ausblenden} setzen: ${r.status()}`).toBeTruthy();
+					await page.goto('/');
+					const willkommen = page.getByTestId('onboarding-willkommen');
+					if (ausblenden) await expect(willkommen, 'Leerzustand ohne Willkommen erwartet').toHaveCount(0, { timeout: 15_000 });
+					const seite = `Startseite leer (${ausblenden ? 'Leerzustand' : 'Willkommen'}) ${breite.width}`;
+					pruefeInk(await messeAnlegeKnoepfe(page, seite, 4), seite, fehler);
+				}
 			} finally {
+				await req.put('/api/auth/profile', { data: { onboarding_dismissed: warAusgeblendet } });
 				const neu = await seedeZweitnutzerTrip(req);
 				expect(neu.ok(), `Seed-Trip des Zweitnutzers wiederherstellen: ${neu.status()}`).toBeTruthy();
 			}
@@ -360,23 +371,24 @@ test('DS-10: Trip-Liste und Trip-Übersicht (de) ohne „Drafts", „Alert-Trigg
 	try {
 		await page.goto('/trips');
 		await expect(page.getByTestId(HUB_SEL.route.liste.zeile(hub.id)).first()).toBeAttached({ timeout: 15_000 });
-		const liste = await page.locator('body').innerText();
+		// innerText folgt text-transform (Stat-Beschriftungen in Großbuchstaben) — Vergleich ohne Groß/Klein.
+		const liste = (await page.locator('body').innerText()).toLowerCase();
 		await openHub(page, 'route', hub.id, { tab: 'uebersicht' });
 		const panel = page.locator(`[data-testid="${HUB_SEL.route.panel}-uebersicht"]:visible`).first();
 		await expect(panel).toBeVisible({ timeout: 10_000 });
 		await expect(panel).toContainText('Morgen-Briefing');
-		const uebersicht = await page.locator('body').innerText();
+		const uebersicht = (await page.locator('body').innerText()).toLowerCase();
 		for (const [seite, text] of [
 			['Trip-Liste', liste],
 			['Trip-Übersicht', uebersicht]
 		] as const) {
 			for (const tabu of ['Drafts', 'Alert-Trigger', 'Alerts justieren']) {
-				expect(text.includes(tabu), `${seite} zeigt „${tabu}"`).toBe(false);
+				expect(text.includes(tabu.toLowerCase()), `${seite} zeigt „${tabu}"`).toBe(false);
 			}
 		}
-		expect(liste, 'Trip-Liste: Zähler „Entwürfe"').toContain('Entwürfe');
-		expect(liste, 'Trip-Liste: Einleitung „Alarme einstellen"').toContain('Alarme einstellen');
-		expect(uebersicht, 'Trip-Übersicht: Zeile „Alarm-Auslöser"').toContain('Alarm-Auslöser');
+		expect(liste, 'Trip-Liste: Zähler „Entwürfe"').toContain('entwürfe');
+		expect(liste, 'Trip-Liste: Einleitung „Alarme einstellen"').toContain('alarme einstellen');
+		expect(uebersicht, 'Trip-Übersicht: Zeile „Alarm-Auslöser"').toContain('alarm-auslöser');
 	} finally {
 		await hub.aufraeumen();
 	}

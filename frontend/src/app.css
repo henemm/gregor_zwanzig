@@ -306,6 +306,18 @@
     pointer-events: none;
   }
 
+  /* === Issue #2881 (R6, TOKENS.md §12): Hilfsklassen fuer Zahlen und Kuerzel ===
+     .mono  = Mono-Schrift mit tabellarischen Ziffern und Null mit Schraegstrich.
+     .tnum  = tabellarische Ziffern ohne Schriftwechsel (gemischte Zahlen-Zellen).
+     Im components-Layer: Utilities (z. B. font-sans) und Komponenten-Stile gehen vor. */
+  .mono {
+    font-family: var(--g-font-mono);
+    font-feature-settings: "tnum", "zero";
+  }
+  .tnum {
+    font-variant-numeric: tabular-nums;
+  }
+
   /* === Issue #214: Btn — Feature-Paritaet (7 Variants x 8 Sizes + States) === */
 
   /* Base */

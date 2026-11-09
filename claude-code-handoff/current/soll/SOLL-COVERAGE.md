@@ -1,5 +1,13 @@
 # SOLL-Coverage — Epic #575 (1:1-Frontend-Reimplementierung)
 
+> **HISTORISCH seit ADR-0111 Punkt 5 (2026-11-09, #2881).** Die Soll-Bilder in diesem Ordner und die
+> JSX-Vorlagen bilden den Stand von Epic #575 (Juni 2026) ab (u. a. entfernter Signal-Kanal, alter
+> Schritt-Wizard, „Meine Touren"). Sie sind **nicht mehr bindend**. Maßstab sind
+> `docs/reference/design_system.md`, das Mockup Fassung 3
+> (`docs/context/einstellungen_neu/seiten/mockup-hub-fassung3.html`) und die Playwright-Paritäts- und
+> Kontrasttests. `design_fidelity_diff.py` und das Design-Gate `pre_issue_close_design_gate.py` sind
+> außer Dienst. Der Text unten bleibt als Archiv unverändert.
+
 **Stand:** 2026-06-04 · **Quelle der Wahrheit:** `current/jsx/` (JSX = bindend) + `current/soll/` (Screenshot = visuell bindend).
 **Render-Host für JSX:** `../../_soll-render.html?s=<key>` (Projekt-Root) bzw. die Artboards in `../../Gregor 20 - Desktop.html`.
 

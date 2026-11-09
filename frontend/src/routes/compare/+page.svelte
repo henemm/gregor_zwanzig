@@ -205,7 +205,7 @@
 </script>
 
 {#snippet neuerVergleichMobil()}
-	<Btn href="/compare/new" variant="ghost" size="sm" data-testid="compare-list-new-mobile">{$t('onboarding.willkommen.neuer_vergleich')}</Btn>
+	<Btn href="/compare/new" variant="primary" size="sm" data-testid="compare-list-new-mobile">{$t('onboarding.willkommen.neuer_vergleich')}</Btn>
 {/snippet}
 
 <div style="background: var(--g-paper)">

@@ -284,7 +284,7 @@
 							type="button"
 							disabled={adding || !fallbackLat || !fallbackLon}
 							onclick={addLocationFromFallback}
-							style="padding:5px 12px; font-size:12px; border-radius:var(--g-r-2); background:var(--g-accent-deep); color:#fff; border:none; cursor:pointer; opacity:{adding || !fallbackLat || !fallbackLon ? '0.4' : '1'};"
+							style="padding:5px 12px; font-size:12px; border-radius:var(--g-r-2); background:var(--g-accent-deep); color:var(--g-paper); border:none; cursor:pointer; opacity:{adding || !fallbackLat || !fallbackLon ? '0.4' : '1'};"
 						>{adding ? $t('vergleich.orte.wird_hinzugefuegt') : $t('vergleich.orte.hinzufuegen')}</button>
 					</div>
 				{/if}
@@ -309,7 +309,7 @@
 						type="button"
 						disabled={adding}
 						onclick={addLocation}
-						style="width:100%; padding:8px; font-size:13px; border-radius:var(--g-r-2); background:var(--g-accent-deep); color:#fff; border:none; cursor:pointer; font-family:var(--g-font-sans); opacity:{adding ? '0.4' : '1'};"
+						style="width:100%; padding:8px; font-size:13px; border-radius:var(--g-r-2); background:var(--g-accent-deep); color:var(--g-paper); border:none; cursor:pointer; font-family:var(--g-font-sans); opacity:{adding ? '0.4' : '1'};"
 					>{adding ? $t('vergleich.orte.wird_hinzugefuegt') : $t('vergleich.orte.zum_vergleich')}</button>
 				{/if}
 			</div>
@@ -338,7 +338,7 @@
 								data-testid={`compare-step2-picked-item-${loc.id}`}
 								style="display:flex; align-items:center; gap:10px; padding:10px 12px; background:var(--g-card); border:1px solid var(--g-rule); border-radius:var(--g-r-2);"
 							>
-								<span style="width:22px; height:22px; border-radius:4px; background:var(--g-ink); color:#fff; display:inline-flex; align-items:center; justify-content:center; font-size:10px; font-weight:700; flex-shrink:0; font-family:var(--g-font-mono);">{i + 1}</span>
+								<span style="width:22px; height:22px; border-radius:4px; background:var(--g-ink); color:var(--g-paper); display:inline-flex; align-items:center; justify-content:center; font-size:10px; font-weight:700; flex-shrink:0; font-family:var(--g-font-mono);">{i + 1}</span>
 								<div style="flex:1; min-width:0;">
 									<div style="font-size:13px; font-weight:600; color:var(--g-ink); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">{loc.name}</div>
 									<div style="font-family:var(--g-font-mono); font-size:10.5px; color:var(--g-ink-3); margin-top:1px;">{groupNameById.get(loc.group_id ?? '') ?? '—'} · {loc.elevation_m ?? '–'} m</div>
@@ -383,7 +383,7 @@
 								>
 									<span style="width:14px; height:14px; border-radius:3px; border:1.5px solid {on ? 'var(--g-accent)' : 'var(--g-rule)'}; background:{on ? 'var(--g-accent)' : 'transparent'}; display:flex; align-items:center; justify-content:center; flex-shrink:0;">
 										{#if on}
-											<svg width="9" height="9" viewBox="0 0 12 12" fill="none" stroke="#fff" stroke-width="2.5"><path d="M2 6l3 3 5-6"/></svg>
+											<svg width="9" height="9" viewBox="0 0 12 12" fill="none" stroke="var(--g-paper)" stroke-width="2.5"><path d="M2 6l3 3 5-6"/></svg>
 										{/if}
 									</span>
 									<span style="flex:1; font-size:12.5px; color:var(--g-ink); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">{loc.name}</span>
@@ -420,7 +420,7 @@
 					data-testid={`compare-step2-picked-item-${loc.id}`}
 					style="display:flex; align-items:center; gap:10px; padding:11px 14px; background:var(--g-card); border:1px solid var(--g-rule); border-radius:var(--g-r-3); min-height:52px;"
 				>
-					<span style="width:24px; height:24px; border-radius:4px; background:var(--g-ink); color:#fff; display:inline-flex; align-items:center; justify-content:center; font-size:10px; font-weight:700; flex-shrink:0; font-family:var(--g-font-mono);">{i + 1}</span>
+					<span style="width:24px; height:24px; border-radius:4px; background:var(--g-ink); color:var(--g-paper); display:inline-flex; align-items:center; justify-content:center; font-size:10px; font-weight:700; flex-shrink:0; font-family:var(--g-font-mono);">{i + 1}</span>
 					<div style="flex:1; min-width:0;">
 						<div style="font-size:14px; font-weight:600; color:var(--g-ink); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">{loc.name}</div>
 						<div style="font-family:var(--g-font-mono); font-size:10.5px; color:var(--g-ink-3); margin-top:1px;">{groupNameById.get(loc.group_id ?? '') ?? '—'} · {loc.elevation_m ?? '–'} m</div>

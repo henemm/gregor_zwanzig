@@ -218,7 +218,7 @@
 		line-height: 1.55;
 	}
 	.vt-empty-strong {
-		color: #8a6210;
+		color: var(--g-warn-deep);
 	}
 	.vt-vergleich-intro {
 		font-size: 12.5px;
