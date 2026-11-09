@@ -440,10 +440,14 @@
   [data-slot="btn"][data-size="icon"] > svg      { width: 1rem;     height: 1rem;     }
   [data-slot="btn"][data-size="icon-lg"] > svg   { width: 1.125rem; height: 1.125rem; }
 
-  /* Disabled-State */
+  /* Disabled-State — #2371 (AC-3): ohne Opacity-Verdünnung; Text --g-ink-3
+     (>= 4,5:1 auf Papier und Weiß) auf transparentem Grund mit --g-rule-Rahmen,
+     unabhängig von der Variante (wie MBtn). Sperre über cursor/Rahmen. */
   [data-slot="btn"][disabled],
   [data-slot="btn"][aria-disabled="true"] {
-    opacity: 0.5;
+    background-color: transparent;
+    color: var(--g-ink-3);
+    border-color: var(--g-rule);
     pointer-events: none;
     cursor: not-allowed;
   }
