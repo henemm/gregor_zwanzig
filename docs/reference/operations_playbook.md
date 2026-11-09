@@ -811,6 +811,21 @@ Wert (JSON-Semantik gleich). Regeln (Klemm-Regel, Metrik-Zuordnung): Spec
 
 ---
 
+## Vorlagen-Zeithorizonte entfernen (#2794 S3a)
+
+Entfernt aus jedem Metrik-Eintrag jeder eigenen Vorlage (`<root>/<uid>/metric_presets.json`) den Schlüssel `horizons` (fehlend = alle Tage); alle anderen Felder bleiben unverändert. **Nur bei gestoppter `gregor-api` ausführen** (Prod und Staging je Dienst), erst Probelauf lesen, dann `--execute`:
+
+```bash
+uv run python3 scripts/migrate_2794_preset_horizons.py --root /var/lib/gregor-staging/users            # Staging, Probelauf
+uv run python3 scripts/migrate_2794_preset_horizons.py --root /var/lib/gregor-staging/users --execute  # Staging, Sicherung + Schreiben
+uv run python3 scripts/migrate_2794_preset_horizons.py --root /var/lib/gregor/users                    # Prod, Probelauf
+uv run python3 scripts/migrate_2794_preset_horizons.py --root /var/lib/gregor/users --execute          # Prod, Sicherung + Schreiben
+```
+
+Sicherung als `tar.gz` je Nutzer; Sperre und atomares Schreiben wie `migrate_2792_profil_ampel.py`; wiederholbar (idempotent). Exit 1 = offene Dateien, Lauf wiederholen.
+
+---
+
 ## E-Mail-Bestätigung rückwirkend nachtragen (#2304, S1 aus #2271/#2146)
 
 Einmaliger Nachtrag-Lauf, der Bestandskonten ohne `email_verified_at` (angelegt, bevor der

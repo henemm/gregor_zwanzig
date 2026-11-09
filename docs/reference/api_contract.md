@@ -2223,6 +2223,11 @@ der Code nie gesendet hat.
 | metrics[].aggregations[].label_en | string | **Neu #2662.** Englische Beschriftung der Auswertung (`aggregation_label(id, "en")`: Minimum/Maximum/Average/Total) |
 | metrics[].aggregations[].alert_metric | string \| null | **Neu #1435 E1a.** Die absolute Alarm-Identität DIESER Auswertung (`MetricDefinition.alert_metrics.get(aggregation_id)`), `null` wenn diese Auswertung keinen eigenen Alarm auslöst. Bewusst **ohne** den `change_alert_metric`-Rückfall aus `alert_metric_for()` — der gehört zur Größe als Ganzes, nicht zu einer einzelnen Auswertung, und steht als eigenes Feld (`metrics[].change_alert_metric`) daneben. Beispiel (Staging verifiziert): `gust.aggregations` → `{id: "max", alert_metric: "wind_gust"}`; `wind.aggregations` → `{id: "max", alert_metric: null}` (Wind selbst hat keinen absoluten Alarm, nur den Änderungs-Alarm über `change_alert_metric`) |
 | metrics[].change_alert_metric | string \| null | **Neu #1435 E1a.** Der Änderungsraten-Alarm der Größe (`MetricDefinition.change_alert_metric`), `null` wenn die Größe keinen kennt. Orthogonal zu `aggregations[].alert_metric` — Änderungsraten sind keine Auswertung, sondern an die Größe als Ganzes gekoppelt (analog `default_change_threshold`). Beispiele (Staging verifiziert): `temperature.change_alert_metric = "temperature_change"`, `wind.change_alert_metric = "wind_change"`, `humidity.change_alert_metric = null` (Luftfeuchtigkeit ist bewusst nicht alarmfähig, Issue #889/ADR-0010 — die Auswertungskette `weather_change_detection.py::_ALERT_METRIC_TO_CATALOG_ID` kennt `AlertMetric.HUMIDITY` nicht) |
+| metrics[].group | string | **Neu #2794 S3a (AC-27).** UI-Gruppe des Reiters Wetter: `temperature` · `wind` · `precip_thunder` · `sky_visibility` · `snow_height` (`metric_catalog.WETTER_GRUPPEN`). Quelle: `reiter_wetter_eigenschaften()` (`_REITER_WETTER`), keine Frontend-Kopie |
+| metrics[].alertable | boolean | **Neu #2794 S3a.** Metrik darf „Alarm ab“ tragen; `false` bei Vorläufern (`is_precursor`) und reiner Anzeige |
+| metrics[].is_precursor | boolean | **Neu #2794 S3a.** Vorläufer-Metrik (unverändert aus `MetricDefinition.is_precursor`) |
+| metrics[].allowed_sides | string \| null | **Neu #2794 S3a.** Erlaubte Ampel-Seiten: `both` · `upper` · `lower` · `level`; `null` nur bei reiner Anzeige (keine Ampel) |
+| metrics[].display_only | boolean | **Neu #2794 S3a.** Reine Anzeige ohne Vorlagen-Zeile in `ampel_templates` (Tages-/Nacht-Varianten, Luftdruck, Niederschlagsart, mittlere/hohe Wolken); keine Ampel, kein Alarm |
 | metrics[].cmp | string | Comparison direction: `"über"` or `"unter"`. Single source for the direction/arrow used by deviation and absolute alert detection (Issue #914 Slice 1) — replaces the former hand-coded `_ALERT_METRIC_COMPARISON` dict. **Not** a threshold comparator for the deviation-alert (live) path: per ADR-0013, an event triggers there when `abs(value_to − value_from) ≥ threshold` regardless of `cmp`; `cmp` remains a literal exceeds/falls-below comparator only for `ABSOLUTE`-kind rules (`_detect_absolute_changes()`), which is unused in the send path (`include_absolute=False`) |
 
 **Format Mode Reference:**
@@ -2383,7 +2388,7 @@ darf nur schrumpfen — ein eigener Test erzwingt das, und er hat gehalten.
 
 ## 15.5) MetricPreset CRUD Endpoints (Issue #690)
 
-Manages persisted custom weather metric profiles (user's own presets for metric selection, format modes, and horizons).
+Manages persisted custom weather metric profiles (user's own presets for metric selection, format modes and Ampel). Seit #2794 S3a gibt es zwei Arten (`kind`: `route` = Trip, `vergleich` = Ortsvergleich); Zeithorizonte gehören nicht mehr zur Vorlage.
 
 **Handler:** `internal/handler/metric_preset.go` | **Storage:** `data/users/{userID}/metric_presets.json` | **Routing:** `internal/router/router.go`
 
@@ -2392,10 +2397,11 @@ Manages persisted custom weather metric profiles (user's own presets for metric 
 ```go
 type MetricPreset struct {
     ID          string           `json:"id"`                      // "p-{hex}", auto-generated
-    Name        string           `json:"name"`                    // User-chosen name, unique per user (case-insensitive, trimmed)
+    Name        string           `json:"name"`                    // User-chosen name, unique per Art (case-insensitive, trimmed); Systemvorlagen-Namen gesperrt (#2794 S3a)
+    Kind        string           `json:"kind"`                    // #2794 S3a: "route" | "vergleich"; fehlt beim Lesen/POST = "route"
     Description string           `json:"description,omitempty"`   // Optional user notes
-    IsDefault   bool             `json:"is_default"`              // Exactly one per user is marked as default
-    Metrics     []DisplayMetric  `json:"metrics"`                 // List of selected metrics with horizons + format modes
+    IsDefault   bool             `json:"is_default"`              // Standardvorlage „für neue“: höchstens eine je Art (kind) und Nutzer
+    Metrics     []DisplayMetric  `json:"metrics"`                 // List of selected metrics with format modes (keine horizons mehr)
     CreatedAt   time.Time        `json:"created_at"`              // Server-managed creation timestamp (UTC)
     Ampel       map[string]interface{} `json:"ampel,omitempty"`  // #2792 S1a: Profil-Ampel samt alarm_ab (Struktur §11 „Profil-Ampel"); fehlt = Vorlage allgemein
 }
@@ -2410,15 +2416,16 @@ type DisplayMetric struct {
     MetricID          string   `json:"metric_id"`            // e.g., "temperature", "wind_direction"
     Enabled           bool     `json:"enabled"`              // Include in preset
     UseFriendlyFormat bool     `json:"use_friendly_format"`  // Applies friendly format mode if available
-    Horizons          Horizons `json:"horizons"`             // Which forecast days to show
-}
-
-type Horizons struct {
-    Today     bool `json:"today"`
-    Tomorrow  bool `json:"tomorrow"`
-    DayAfter  bool `json:"day_after"`
 }
 ```
+
+**Horizons (#2794 S3a):** `horizons` wird nicht mehr serialisiert; fehlend heißt beim Lesen „alle Tage“. Bestandsdateien bereinigt `scripts/migrate_2794_preset_horizons.py` (siehe `operations_playbook.md`).
+
+**Art (`kind`, #2794 S3a):** `route` | `vergleich`. Fehlt es beim Lesen oder im POST, gilt `route`; ein anderer Wert im POST/PATCH → 400 `bad_request`.
+
+**Namen (#2794 S3a):** Der Name ist je Art eindeutig (case-insensitiv, getrimmt). Die sieben Systemvorlagen-Namen (Alpen-Trekking, Wandern, Skitouren, Wintersport, Radtour, Wassersport, Allgemein) sind für beide Arten gesperrt. Verstoß → 409 `name_exists` (Meldung aus dem fach-Katalog, DE/EN, Variante `vorlage`). Gilt auch bei PATCH-Umbenennung und PATCH-Art-Wechsel.
+
+**Standardvorlage:** `is_default=true` nimmt das Flag allen anderen Vorlagen **derselben Art** des Nutzers (POST wie PATCH, auch bei Art-Wechsel). Neuanlage ohne `display_config` übernimmt die Standardvorlage der Art: `POST /api/trips` → Metrik-Auswahl + Ampel; `POST /api/compare/presets` → nur Ampel (die Vergleichs-Auswahl liegt in `active_metrics`, `ampel.metrics.<id>.enabled` trägt sie). Ohne Standardvorlage bleibt das Verhalten unverändert (Vorbelegung aus dem Profil).
 
 ### GET /api/metric-presets
 
@@ -2433,19 +2440,18 @@ Returns all metric presets for the authenticated user.
       "id": "p-a1b2c3d4",
       "name": "Bergtour",
       "description": "Alpine with wind focus",
+      "kind": "route",
       "is_default": false,
       "metrics": [
         {
           "metric_id": "temperature",
           "enabled": true,
-          "use_friendly_format": false,
-          "horizons": {"today": true, "tomorrow": true, "day_after": false}
+          "use_friendly_format": false
         },
         {
           "metric_id": "wind_direction",
           "enabled": true,
-          "use_friendly_format": true,
-          "horizons": {"today": true, "tomorrow": true, "day_after": true}
+          "use_friendly_format": true
         }
       ],
       "created_at": "2026-06-10T14:32:45Z"
@@ -2468,19 +2474,18 @@ Creates a new custom metric preset for the authenticated user.
 {
   "name": "Bergtour",
   "description": "Alpine with wind focus",
+  "kind": "route",
   "is_default": false,
   "metrics": [
     {
       "metric_id": "temperature",
       "enabled": true,
-      "use_friendly_format": false,
-      "horizons": {"today": true, "tomorrow": true, "day_after": false}
+      "use_friendly_format": false
     },
     {
       "metric_id": "wind_direction",
       "enabled": true,
-      "use_friendly_format": true,
-      "horizons": {"today": true, "tomorrow": true, "day_after": true}
+      "use_friendly_format": true
     }
   ],
   "friendly_ids": []
@@ -2491,10 +2496,12 @@ Creates a new custom metric preset for the authenticated user.
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| name | string | Yes | Preset name; must be unique per user (case-insensitive match, leading/trailing whitespace trimmed); max 100 chars |
+| name | string | Yes | Preset name; unique per Art (case-insensitive, trimmed); Systemvorlagen-Namen gesperrt; max 100 chars |
+| kind | string | No | `route` (Default) \| `vergleich`; ungültig → 400 `bad_request` |
 | description | string | No | Optional user notes |
-| is_default | boolean | Yes | If `true`, all other presets for this user are set to `is_default=false` (exactly one default per user) |
-| metrics | array | Yes | List of metric configurations with horizons |
+| is_default | boolean | Yes | If `true`, all other presets **derselben Art** of this user are set to `is_default=false` (höchstens eine Standardvorlage je Art) |
+| metrics | array | Yes | List of metric configurations (ohne horizons) |
+| ampel | object | No | Profil-Ampel samt `alarm_ab`; ungültig → 400 `ampel_ungueltig` |
 | friendly_ids | array | No | Legacy field (deprecated); ignored if `metrics` is properly structured |
 
 **Response 201 (Created):**
@@ -2515,15 +2522,16 @@ Creates a new custom metric preset for the authenticated user.
 | Status | Body | Scenario |
 |--------|------|----------|
 | 400 | `{"error":"name_required"}` | `name` is empty or contains only whitespace |
-| 400 | `{"error":"bad_request"}` | Request body is malformed JSON |
-| 409 | `{"error":"name_exists"}` | A preset with this name (case-insensitive) already exists for this user |
+| 400 | `{"error":"bad_request"}` | Request body is malformed JSON, or `kind` ungültig |
+| 400 | `{"error":"ampel_ungueltig"}` | `ampel` ungültig |
+| 409 | `{"error":"name_exists"}` | Name (case-insensitive, getrimmt) existiert in derselben Art oder ist ein Systemvorlagen-Name |
 | 500 | `{"error":"store_error"}` | Internal storage error |
 
 **Notes:**
 - User ID is extracted from Auth-Context; no `user_id` field is accepted in the request
 - Name is trimmed and case-insensitive for uniqueness comparison (Issue #690)
 - Newly created preset becomes immediately active on the trip if workflow so directs (frontend responsibility)
-- If `is_default=true` and multiple presets exist, server atomically ensures exactly one default
+- If `is_default=true`, the server ensures exactly one default **per Art** (nicht mehr je Nutzer)
 
 ### DELETE /api/metric-presets/{id}
 
@@ -2540,7 +2548,7 @@ Deletes a metric preset (must belong to authenticated user).
 
 ### PATCH /api/metric-presets/{id}
 
-Updates selected fields of a metric preset (name, description, metrics, is_default).
+Updates selected fields of a metric preset (name, description, metrics, is_default, ampel, kind). `kind` ändern (Art-Wechsel) prüft die Namens-Eindeutigkeit in der Zielart; ein Standard-Flag wird in der Zielart exklusiv.
 
 **Request Body (partial update):**
 
@@ -2568,7 +2576,9 @@ Updates selected fields of a metric preset (name, description, metrics, is_defau
 |--------|------|----------|
 | 400 | `{"error":"name_required"}` | Attempted to set name to empty/whitespace only |
 | 404 | `{"error":"not_found"}` | Preset does not exist or belongs to a different user |
-| 409 | `{"error":"name_exists"}` | New name already exists for this user (case-insensitive) |
+| 400 | `{"error":"bad_request"}` | `kind` ungültig |
+| 400 | `{"error":"ampel_ungueltig"}` | `ampel` ungültig |
+| 409 | `{"error":"name_exists"}` | Neuer Name/Art kollidiert in der (Ziel-)Art oder mit einem Systemvorlagen-Namen |
 | 500 | `{"error":"store_error"}` | Internal storage error |
 
 ---
@@ -5018,6 +5028,7 @@ Sprache ist Eigenschaft des Nutzers (ADR-0104); Werte `de`/`en`, Standard `de`. 
 
 ## Changelog
 
+- 2026-11-09: Issue #2794 S3a Teil-PR 1 (Backend) — `MetricPreset.kind` (`route`|`vergleich`, Default `route`), `is_default` exklusiv je Art, Name eindeutig je Art und Systemvorlagen-Namen gesperrt (409 `name_exists`, auch PATCH), `horizons` entfällt (Migration `scripts/migrate_2794_preset_horizons.py`); `POST /api/trips` / `POST /api/compare/presets` ohne `display_config` übernehmen die Standardvorlage der Art (§15.5); `GET /api/metrics` mit `group`, `alertable`, `is_precursor`, `allowed_sides`, `display_only` (§15); Python `app.ampel.deviation_count` (Abweichungszähler, Fixtures `tests/fixtures/ampel_deviation_cases.json`).
 - 2026-11-06: Issue #2792 S1c-4b — Ampel als einzige Bewertung (ADR-0106): `sms_threshold` und `corridors[].mark` ohne Wirkung (Werte bleiben gespeichert); §11 „Profil-Ampel“ beschreibt die Umschaltung; SMS/Premium-SMS/Telegram-Hervorhebung nach Ampel (s. `sms_format.md` v2.38).
 - 2026-11-04: Issue #2792 S1a — Profil-Ampel `display_config.ampel` (Trip, ComparePreset, Weather Config; §11 „Profil-Ampel"), `MetricPreset.ampel` (§15.5), `GET /api/templates` mit `ampel` je Vorlage, Fehlercode `ampel_ungueltig`.
 - 2026-10-30: Issue #2645 (S0, Doku) — Abschnitt 26 „Nutzerprofil und Sprache“: `language`, `invalid_language`, Cookie `gz_lang`.

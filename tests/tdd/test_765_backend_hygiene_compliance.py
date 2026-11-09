@@ -149,6 +149,14 @@ _SELF_EXEMPT = {
     # Pruefdatum 2027-01-28 (gates_und_ratschen.md, Regel-Budget).
     # Spec: docs/specs/modules/i18n_p11_api_meldungen_ratsche_2674.md
     "test_i18n_keine_hartkodierten_nutzertexte_python.py",
+    # #2794 S3a AC-23: Drift-Waechter Python <-> Go fuer die Namen der 7
+    # Systemvorlagen. Liest internal/handler/metric_preset.go als DATEN (Liste
+    # systemVorlagenNamen) und vergleicht sie mit WEATHER_TEMPLATES aus dem
+    # echten Import; das Duplikat-Verhalten selbst pruefen die Go-Handler-Tests.
+    # Gleiche Werkzeug-Klasse wie test_premium_sms_ttl_drift.py; # doc-compliance-test.
+    # Berechtigung endet mit der Doppelung (Go-Liste aus Python abgeleitet).
+    # Spec: docs/specs/modules/feat_2794_s3a_reiter_wetter.md
+    "test_systemvorlagen_namen_drift.py",
 }
 # #1408 F005 / #1469: `test_validator_log_unique_filenames.py` stand hier als
 # ausdruecklicher FEHLALARM-Eintrag, weil `_collect_listed_product_paths()`

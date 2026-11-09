@@ -55,7 +55,7 @@ import ast
 import io
 import re
 import tokenize
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Callable, Iterable, Iterator, Mapping, Optional
 
@@ -466,6 +466,13 @@ REGISTERED_LISTS["compare_hourly_metric_ids.HOURLY_EXCLUSION_REASON"] = (
 REGISTERED_LISTS["metric_catalog.SMS_MULTI_SYMBOLS_BY_METRIC"] = RegisteredList(
     ist=lambda: set(SMS_MULTI_SYMBOLS_BY_METRIC),
     ort="src/app/metric_catalog.py:778",
+)
+
+# Issue #2794 S3a (AC-27): Eigenschaften des Reiters Wetter je Groesse. Jede
+# waehlbare Groesse muss drinstehen (/api/metrics liest sie fuer alle).
+REGISTERED_LISTS["metric_catalog._REITER_WETTER"] = replace(
+    _registriere("src/app/metric_catalog.py", "_REITER_WETTER", "schluessel"),
+    soll_vollstaendig=lambda: {m.id for m in get_all_metrics()},
 )
 
 # Issue #2662 (ADR-0104): englische Anzeigenamen je Groesse. Teil des Registers

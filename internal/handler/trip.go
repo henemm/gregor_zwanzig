@@ -235,6 +235,16 @@ func CreateTripHandler(s *store.Store) http.HandlerFunc {
 		if (vorhanden == nil || reaktiviert) && !quotaAllows(w, r, s, quotaTrips) {
 			return
 		}
+		// Issue #2794 S3a (AC-25): Neuanlage ohne mitgeschickte display_config
+		// bekommt die Trip-Standardvorlage DIESES Nutzers.
+		if vorhanden == nil && trip.DisplayConfig == nil {
+			std, err := standardVorlage(s, model.PresetKindRoute)
+			if err != nil {
+				WriteError(w, r, http.StatusInternalServerError, "store_error", nil)
+				return
+			}
+			trip.DisplayConfig = displayConfigAusVorlage(std, true)
+		}
 
 		unlockB, okB := lockBriefingOr503(w, r, s, trip.ID)
 		if !okB {

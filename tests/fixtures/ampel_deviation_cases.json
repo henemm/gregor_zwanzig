@@ -1,0 +1,28 @@
+{
+  "_issue": "#2794 S3a AC-28: gemeinsame Faelle fuer den Abweichungszaehler. Gelesen von pytest (tests/tdd/test_2794_ac28_abweichungszaehler.py, Python-Referenz app.ampel.deviation_count) und spaeter von node --test (Frontend-Spiegel). Format: ampel = Abo-Ampel (display_config.ampel, nur Abweichungen, Vorlage ueber ampel.template, Werte aus src/app/ampel_templates.py), expected = Anzahl Abweichungen. Zaehlung je betroffener Metrik hoechstens einmal (mehrere Aenderungsarten an derselben Metrik = 1), Gewitterfarbe einmal.",
+  "cases": [
+    {"name": "keine_abo_ampel", "ampel": null, "expected": 0},
+    {"name": "nur_vorlage", "ampel": {"template": "wandern"}, "expected": 0},
+    {"name": "grenze_geaendert", "ampel": {"template": "wandern", "metrics": {"gust": {"upper": {"yellow": 45, "orange": 60, "red": 75}}}}, "expected": 1},
+    {"name": "enabled_geaendert_aus", "ampel": {"template": "wandern", "metrics": {"gust": {"enabled": false}}}, "expected": 1},
+    {"name": "alarm_ab_geaendert", "ampel": {"template": "wandern", "metrics": {"gust": {"alarm_ab": "red"}}}, "expected": 1},
+    {"name": "metrik_hinzugefuegt_in_vorlage_aus", "ampel": {"template": "wandern", "metrics": {"dewpoint": {"enabled": true}}}, "expected": 1},
+    {"name": "metrik_hinzugefuegt_ohne_vorlagenzeile", "ampel": {"template": "wandern", "metrics": {"pressure": {"enabled": true}}}, "expected": 1},
+    {"name": "metrik_entfernt", "ampel": {"template": "wandern", "metrics": {"wind": {"enabled": false}}}, "expected": 1},
+    {"name": "gewitterfarbe_geaendert", "ampel": {"template": "wandern", "thunder": {"mittel": "red"}}, "expected": 1},
+    {"name": "gewitter_beide_farben_geaendert_zaehlt_einmal", "ampel": {"template": "wandern", "thunder": {"mittel": "yellow", "hoch": "orange"}}, "expected": 1},
+    {"name": "zurueck_auf_vorlagenwert", "ampel": {"template": "wandern", "metrics": {"gust": {"enabled": true, "upper": {"yellow": 40, "orange": 60, "red": 75}, "alarm_ab": "orange"}}, "thunder": {"mittel": "orange", "hoch": "red"}}, "expected": 0},
+    {"name": "alarm_ab_zurueck_auf_vorlagenwert", "ampel": {"template": "wandern", "metrics": {"wind": {"alarm_ab": "orange"}}}, "expected": 0},
+    {"name": "enabled_zurueck_auf_vorlagenwert", "ampel": {"template": "wandern", "metrics": {"dewpoint": {"enabled": false}, "wind": {"enabled": true}}}, "expected": 0},
+    {"name": "ausgeschaltet_ohne_vorlagenzeile_keine_abweichung", "ampel": {"template": "wandern", "metrics": {"pressure": {"enabled": false}}}, "expected": 0},
+    {"name": "ohne_vorlagenzeile_aus_und_alarm_nie_keine_abweichung", "ampel": {"template": "wandern", "metrics": {"pressure": {"enabled": false, "alarm_ab": "never"}}}, "expected": 0},
+    {"name": "mehrere_arten_an_einer_metrik_zaehlt_einmal", "ampel": {"template": "wandern", "metrics": {"gust": {"upper": {"yellow": 45, "orange": 60, "red": 75}, "alarm_ab": "red"}}}, "expected": 1},
+    {"name": "kombination", "ampel": {"template": "wandern", "metrics": {
+      "gust": {"upper": {"yellow": 45, "orange": 60, "red": 75}},
+      "wind": {"alarm_ab": "red"},
+      "precipitation": {"enabled": false},
+      "dewpoint": {"enabled": true},
+      "temperature": {"alarm_ab": "orange"}
+    }, "thunder": {"hoch": "orange"}}, "expected": 5}
+  ]
+}
