@@ -11,6 +11,9 @@
 // (Uebersicht/Stundenverlauf/Ausblick) mit denselben `wm2-*`-Testids — alles
 // hier haengt am Block `[data-testid="layout-tab"][data-context="vergleich"]`.
 //
+// #2794 S3a: Grundauswahl (Reiter Wetter) und Kanal-Karte (Reiter Zustellung) liegen in
+// getrennten Reitern — siehe `KanalFlaeche.reiter`, `zuGrundauswahl`, `zuKanalKarte`.
+//
 // Alle Buendel ausfuehren (aus frontend/, NACH Merge + Staging-Deploy) —
 // die Config nimmt Hub- UND Anlege-Pfad auf:
 //   set -a; source /home/hem/gregor_zwanzig/.claude/validator.env; set +a
@@ -56,25 +59,64 @@ export async function createUebersichtPreset(
 	return body.id as string;
 }
 
+/** #2794 S3a (Spec feat_2794_s3a_teil2_leiste.md): die Grundauswahl steht im Reiter
+ *  `wetter`, die Kanal-Karte (Layout/Reihenfolge) im Reiter `zustellung`. Im Hub ist
+ *  jeweils nur EIN Reiter-Inhalt gemountet — die Flaeche kennt daher zwei Reiter und
+ *  wechselt per echtem Klick. Die Locatoren sind seitenweit und loesen erst beim
+ *  Zugriff auf, gelten also nach jedem Reiterwechsel neu.
+ *  Achtung: ein Reiterwechsel flusht eine ausstehende Aenderung (eigener PUT) — wo
+ *  Grundauswahl- und Kanal-Geste frueher im selben Entprell-Fenster lagen, entstehen
+ *  jetzt zwei PUTs (Begruendung wie MS-2 in hub-wetter-metriken-speichert-selbst). */
+export type KanalReiter = 'wetter' | 'zustellung';
+
 export interface KanalFlaeche {
-	page: Page; panel: Locator; layout: Locator; reihenfolge: Locator; grundauswahl: Locator;
+	page: Page;
+	/** Panel des Reiters Zustellung (Kanal-Karte). */
+	panel: Locator;
+	layout: Locator;
+	reihenfolge: Locator;
+	/** Grundauswahl im Reiter Wetter — vorher `zuGrundauswahl(f)` aufrufen. */
+	grundauswahl: Locator;
+	/** Wechselt per Klick in den Reiter und wartet dessen Inhalt ab. */
+	reiter: (ziel: KanalReiter) => Promise<void>;
 }
 
-/** Oeffnet "Wetter-Metriken" und wartet das Katalog-Laden ab (s. Kopf). */
+/** Reiterwechsel im Vergleichs-Hub und Bereitschaft des Ziel-Inhalts. */
+async function hubReiter(page: Page, ziel: KanalReiter): Promise<void> {
+	await page.getByTestId(`compare-detail-tab-${ziel}`).click();
+	const panel = page.getByTestId(`compare-detail-panel-${ziel}`);
+	await expect(panel).toBeVisible({ timeout: 15_000 });
+	if (ziel === 'wetter') {
+		await panel.getByTestId('weather-metrics-vergleich-list').waitFor({ state: 'attached', timeout: 25_000 });
+	} else {
+		await panel
+			.locator('[data-testid="layout-tab"][data-context="vergleich"]')
+			.getByTestId('weather-metrics-vergleich-reihenfolge')
+			.waitFor({ state: 'attached', timeout: 25_000 });
+	}
+}
+
+/** Oeffnet die Kanal-Karte (Reiter Zustellung) und wartet das Katalog-Laden ab (s. Kopf). */
 export async function oeffneUebersicht(page: Page, presetId: string): Promise<KanalFlaeche> {
 	await page.setViewportSize({ width: 1440, height: 900 });
-	await page.goto(`/compare/${presetId}?tab=wetter-metriken`);
+	await page.goto(`/compare/${presetId}?tab=zustellung`);
 	await expect(page.getByTestId('compare-detail-tab-list')).toBeVisible({ timeout: 20_000 });
-	await page.getByTestId('compare-detail-tab-wetter-metriken').click();
-	const panel = page.getByTestId('compare-detail-panel-wetter-metriken');
-	await expect(panel).toBeVisible({ timeout: 15_000 });
-	const grundauswahl = panel.getByTestId('weather-metrics-vergleich-list');
-	await grundauswahl.waitFor({ state: 'attached', timeout: 25_000 });
+	await hubReiter(page, 'zustellung');
+	const panel = page.getByTestId('compare-detail-panel-zustellung');
 	const layout = panel.locator('[data-testid="layout-tab"][data-context="vergleich"]');
-	await layout.waitFor({ state: 'attached', timeout: 25_000 });
 	const reihenfolge = layout.getByTestId('weather-metrics-vergleich-reihenfolge');
-	await reihenfolge.waitFor({ state: 'attached', timeout: 25_000 });
-	return { page, panel, layout, reihenfolge, grundauswahl };
+	const grundauswahl = page.getByTestId('compare-detail-panel-wetter').getByTestId('weather-metrics-vergleich-list');
+	return { page, panel, layout, reihenfolge, grundauswahl, reiter: (ziel) => hubReiter(page, ziel) };
+}
+
+/** In den Reiter Wetter (Grundauswahl). */
+export async function zuGrundauswahl(f: KanalFlaeche): Promise<void> {
+	await f.reiter('wetter');
+}
+
+/** Zurueck in den Reiter Zustellung (Kanal-Karte). */
+export async function zuKanalKarte(f: KanalFlaeche): Promise<void> {
+	await f.reiter('zustellung');
 }
 
 /** Aktive, sortierbare Liste des offenen Kanal-Reiters. */

@@ -73,7 +73,7 @@ test.describe('issue_953 — Wertebereiche-Einstellung überlebt Tab-Klick', () 
 	// Regression; Issue #1371: Auslöser von "Warnen" auf "Markieren" umgestellt,
 	// da "Warnen" entfernt ist — derselbe Autosave-Pfad, derselbe Button-Typ).
 	test('KERN: Markieren-Toggle überlebt Tab-Wechsel in der Anzeige', async ({ page }) => {
-		await page.goto(`/trips/${TRIP_ID}?tab=wertebereiche`);
+		await page.goto(`/trips/${TRIP_ID}?tab=wetter`);
 		await expect(page.getByTestId('corridor-editor-route')).toBeVisible();
 
 		// Ausgangszustand: Markieren inaktiv (aus dem Seed-Corridor).
@@ -86,8 +86,9 @@ test.describe('issue_953 — Wertebereiche-Einstellung überlebt Tab-Klick', () 
 		// Echter Nutzer-Pfad: Tab-BUTTON klicken (nicht goto/Reload — der Bug tritt
 		// nur beim Klick-Pfad auf).
 		// Issue #1743: Reiter `vorschau` entfaellt — Wechsel auf `alarme`.
-		await page.getByTestId('trip-detail-tab-alarme').click();
-		await page.getByTestId('trip-detail-tab-wertebereiche').click();
+		// #2794 S3a: Alarme im Reiter Zustellung, Wertebereiche im Reiter Wetter.
+		await page.getByTestId('trip-detail-tab-zustellung').click();
+		await page.getByTestId('trip-detail-tab-wetter').click();
 
 		// HAUPT-ASSERTION: Der Toggle zeigt weiterhin "an".
 		await expect(markToggle(page)).toHaveAttribute('aria-pressed', 'true');
@@ -107,7 +108,7 @@ test.describe('issue_953 — Wertebereiche-Einstellung überlebt Tab-Klick', () 
 	// existiert kein "Warnen"-Bedienelement mehr — nur Markieren + "✕ entfernen"
 	// bleiben. Ortsvergleich-Pendant: hub-wertebereiche-speichert-selbst.spec.ts WS-8.
 	test('AC-1 (Trip): kein "Warnen"-Bedienelement mehr in der Wertebereiche-Zeile', async ({ page }) => {
-		await page.goto(`/trips/${TRIP_ID}?tab=wertebereiche`);
+		await page.goto(`/trips/${TRIP_ID}?tab=wetter`);
 		await expect(page.getByTestId('corridor-editor-route')).toBeVisible();
 
 		await expect(thunderRow(page).getByRole('button', { name: 'Warnen' })).toHaveCount(0);

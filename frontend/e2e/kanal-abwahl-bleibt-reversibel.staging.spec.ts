@@ -83,16 +83,27 @@ async function createTrip(request: APIRequestContext, id: string) {
 	});
 }
 
-async function openMetricsTab(page: Page, id: string) {
-	await page.goto(`/trips/${id}?tab=wetter-metriken`);
-	const weatherTabBtn = page.getByTestId('trip-detail-tab-wetter-metriken');
-	await expect(weatherTabBtn).toBeVisible({ timeout: 10_000 });
-	await weatherTabBtn.click();
+// #2794 S3a (Spec feat_2794_s3a_teil2_leiste.md): die Kanal-Karte (Reihenfolge,
+// Aus-Gruppe) steht im Reiter Zustellung, die Grundauswahl im Reiter Wetter. Der
+// Wechsel ist ein Klick ohne Reload; jede Geste wird an ihrem gespeicherten Zustand
+// (save-indicator idle) abgewartet, bevor der Reiter wechselt.
+async function zuReiter(page: Page, ziel: 'wetter' | 'zustellung') {
+	await page.getByTestId(`trip-detail-tab-${ziel}`).click();
 	const tab = page.getByTestId('weather-metrics-tab');
+	const bereit =
+		ziel === 'wetter'
+			? tab.getByTestId('wm2-grundauswahl').locator('.toggle-btn').first()
+			: tab.locator('[data-testid="wm2-reihenfolge-row"]').first();
+	await expect(bereit).toBeVisible({ timeout: 10_000 });
+	return tab;
+}
+
+async function openMetricsTab(page: Page, id: string) {
+	await page.goto(`/trips/${id}?tab=zustellung`);
+	const zustellungBtn = page.getByTestId('trip-detail-tab-zustellung');
+	await expect(zustellungBtn).toBeVisible({ timeout: 10_000 });
+	const tab = await zuReiter(page, 'zustellung');
 	await expect(tab).toBeVisible({ timeout: 10_000 });
-	await expect(tab.getByTestId('wm2-grundauswahl').locator('.toggle-btn').first()).toBeVisible({
-		timeout: 10_000
-	});
 	return tab;
 }
 
@@ -139,8 +150,7 @@ test.describe('Issue #1719 S3 Block C: "Aus" ist ein Zustand', () => {
 
 		// Persistiert über Reload.
 		await page.reload();
-		await page.getByTestId('trip-detail-tab-wetter-metriken').click();
-		const reloaded = page.getByTestId('weather-metrics-tab');
+		const reloaded = await zuReiter(page, 'zustellung');
 		await reloaded.getByTestId('channel-tab-sms').click();
 		const reloadedAusRow = reloaded
 			.getByTestId('wm2-aus-gruppe')
@@ -191,13 +201,16 @@ test.describe('Issue #1719 S3 Block C: "Aus" ist ein Zustand', () => {
 			tab.locator('[data-testid="wm2-reihenfolge-row"][data-metric-id="precipitation"]')
 		).toBeVisible();
 
-		// Grundauswahl: "precipitation" global abwählen (kein Reload).
+		// Grundauswahl: "precipitation" global abwählen (kein Reload) — im Reiter Wetter.
+		await zuReiter(page, 'wetter');
 		const precipToggle = tab.locator('[data-testid="wm2-grundauswahl"] .toggle-btn[title="Niederschlag"]');
 		await expect(precipToggle).toHaveClass(/\bon\b/);
 		await precipToggle.click();
 
 		// Zurück in den bereits geöffneten SMS-Reiter: "precipitation" ist SOFORT weg
-		// (weder aktiv noch in der Aus-Gruppe — ADR-0050 Regel 1/2/3, AC-8).
+		// (weder aktiv noch in der Aus-Gruppe — ADR-0050 Regel 1/2/3, AC-8). Reiterwechsel
+		// per Klick, kein Reload: die Zusicherung "ohne Reload" bleibt erhalten.
+		await zuReiter(page, 'zustellung');
 		await tab.getByTestId('channel-tab-sms').click();
 		await expect(
 			tab.locator('[data-testid="wm2-reihenfolge-row"][data-metric-id="precipitation"]'),
@@ -229,7 +242,9 @@ test.describe('Issue #1719 S3 Block C: "Aus" ist ein Zustand', () => {
 			timeout: 10_000
 		});
 
-		// Grundauswahl: "temperature" aus- und wieder einschalten (bleibt global aktiv).
+		// Grundauswahl: "temperature" aus- und wieder einschalten (bleibt global aktiv) —
+		// im Reiter Wetter.
+		await zuReiter(page, 'wetter');
 		const tempToggle = tab.locator('[data-testid="wm2-grundauswahl"] .toggle-btn[title="Temperatur"]');
 		await expect(tempToggle).toHaveClass(/\bon\b/);
 		await tempToggle.click();
@@ -243,6 +258,7 @@ test.describe('Issue #1719 S3 Block C: "Aus" ist ein Zustand', () => {
 
 		// SMS-Reiter: "temperature" bleibt abgewählt — die Anwahl in der Grundauswahl
 		// schreibt NICHT in den Kanal-Override durch (Spec Abschnitt 4, "keine Bevormundung").
+		await zuReiter(page, 'zustellung');
 		await tab.getByTestId('channel-tab-sms').click();
 		await expect(
 			tab.locator('[data-testid="wm2-reihenfolge-row"][data-metric-id="temperature"]'),

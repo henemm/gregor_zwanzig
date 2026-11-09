@@ -253,7 +253,8 @@ const EINGEFROREN: readonly string[] = [
 	// (Ampel-Zustand, Anwenden, Nutzlast im Script-Teil); Bedingungen
 	// unveraendert, nachgemessen, Inhalt unten gefesselt.
 	'WeatherMetricsTab.svelte:1467',
-	'WeatherMetricsTab.svelte:2052',
+	// #2794 S3a: Schalter Nacht-Stundentabelle +4 verschoben, Text unveraendert.
+	'WeatherMetricsTab.svelte:2056',
 	// #2655 (F6): beide nur verschoben (Katalog-Import, Satz je Kontext aus
 	// dem Katalog statt Konkatenation); Bedingungen unveraendert, nachgemessen.
 	'versand-tab/vtBriefingChannelsText.ts:22',
@@ -531,7 +532,7 @@ const BLEIBT_MIT_INHALT: readonly { eintrag: string; zeile: string; folgt: strin
 		folgt: 'Issue #1311 (C1): Vergleich-Grundauswahl'
 	},
 	{
-		eintrag: 'WeatherMetricsTab.svelte:2052', // #2792 S1a: +10, Text unveraendert
+		eintrag: 'WeatherMetricsTab.svelte:2056', // #2792 S1a: +10, #2794 S3a: +4, Text unveraendert
 		zeile: "{#if !createMode && context === 'route'}",
 		folgt: 'Issue #1721: Nacht-Stundentabelle der Trip-Mail'
 	}

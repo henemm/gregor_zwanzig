@@ -141,8 +141,9 @@ async function openMetricsTab(page: Page, id: string): Promise<Locator> {
 	// ein zu früher Klick geht spurlos verloren (Muster aus
 	// compare-hourly-metric-order.spec.ts).
 	await page.waitForLoadState('networkidle');
-	await page.getByTestId('compare-detail-tab-wetter-metriken').click();
-	const panel = page.getByTestId('compare-detail-panel-wetter-metriken');
+	// #2794 S3a (Spec feat_2794_s3a_teil2_leiste.md): die Grundauswahl steht im Reiter Wetter.
+	await page.getByTestId('compare-detail-tab-wetter').click();
+	const panel = page.getByTestId('compare-detail-panel-wetter');
 	await expect(panel).toBeVisible({ timeout: 10_000 });
 	await expect(panel.getByTestId('weather-metrics-vergleich-list')).toBeVisible({ timeout: 15_000 });
 	return panel;
@@ -338,20 +339,20 @@ test.describe('Issue #1373 S2 Scheibe B: umgestellte Metrik-Auswahl im Hub', () 
 
 		await page.goto(`/compare/${id}`);
 		await expect(page.getByTestId('compare-detail-tab-list')).toBeVisible({ timeout: 20_000 });
-		await page.getByTestId('compare-detail-tab-wetter-metriken').click();
+		await page.getByTestId('compare-detail-tab-wetter').click();
 
-		// Im Wartefenster hin- und herwechseln (Idealwerte braucht denselben
-		// Katalog) — es darf nichts geschrieben werden.
-		await page.getByTestId('compare-detail-tab-wertebereiche').click();
-		await page.getByTestId('compare-detail-tab-wetter-metriken').click();
+		// Im Wartefenster hin- und herwechseln (#2794 S3a: der Reiter Zustellung braucht
+		// denselben Katalog) — es darf nichts geschrieben werden.
+		await page.getByTestId('compare-detail-tab-zustellung').click();
+		await page.getByTestId('compare-detail-tab-wetter').click();
 		expect(puts.length, 'im Wartefenster darf kein Speichervorgang laufen').toBe(0);
 
 		// Nach Ankunft der Antwort ist die Auswahl vollständig angehakt.
 		await expect(
-			page.getByTestId('compare-detail-panel-wetter-metriken').getByTestId('weather-metrics-vergleich-list')
+			page.getByTestId('compare-detail-panel-wetter').getByTestId('weather-metrics-vergleich-list')
 		).toBeVisible({ timeout: 20_000 });
 		await expect
-			.poll(async () => (await checkedMetrics(page.getByTestId('compare-detail-panel-wetter-metriken'))).sort(), {
+			.poll(async () => (await checkedMetrics(page.getByTestId('compare-detail-panel-wetter'))).sort(), {
 				message: 'auch bei spaeter Katalogantwort muss die Auswahl angehakt erscheinen',
 				timeout: 15_000
 			})

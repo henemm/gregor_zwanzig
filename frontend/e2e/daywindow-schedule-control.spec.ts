@@ -56,7 +56,7 @@ async function openTripOverview(page: Page, id: string): Promise<void> {
 }
 
 async function clickWeatherTab(page: Page): Promise<void> {
-	await page.getByTestId('trip-detail-tab-wetter-metriken').first().click();
+	await page.getByTestId('trip-detail-tab-wetter').first().click(); // #2794 S3a: Tagesfenster im Reiter Wetter
 	await expect(page.getByTestId('weather-metrics-tab')).toBeVisible();
 }
 

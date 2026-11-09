@@ -54,7 +54,7 @@ const VA_SEL: Record<
 const abschnitt = (page: Page) => page.locator('[data-testid="versand-abschnitt"]:visible');
 
 async function oeffneVersand(page: Page, kind: HubKind, id: string): Promise<void> {
-	await openHub(page, kind, id, { tab: 'wetter-metriken', hash: 'versand' });
+	await openHub(page, kind, id, { tab: 'zustellung', hash: 'versand' });
 	await expect(abschnitt(page)).toBeVisible({ timeout: 10_000 });
 }
 
@@ -107,9 +107,10 @@ for (const kind of HUB_KINDS) {
 			const hub = await seedHub(page.request, kind, { extra: va.metrikSeed });
 			try {
 				await openHub(page, kind, hub.id);
-				await page.locator(`[data-testid="${sel.reiter}-wetter-metriken"]:visible`).first().click();
+				// #2794 S3a: Metrik-Auswahl im Reiter Wetter; Versand-Abschnitt und Alarme im Reiter Zustellung.
+				await page.locator(`[data-testid="${sel.reiter}-wetter"]:visible`).first().click();
+				await page.locator(`[data-testid="${sel.reiter}-zustellung"]:visible`).first().click();
 				await expect(abschnitt(page)).toBeVisible({ timeout: 10_000 });
-				await page.locator(`[data-testid="${sel.reiter}-alarme"]:visible`).first().click();
 				await expect(page.locator('[data-testid="alarme-tab"]:visible').first()).toBeVisible({ timeout: 10_000 });
 
 				const tabelle = page.locator('[data-testid="alert-metric-level-table"]:visible');
@@ -118,10 +119,14 @@ for (const kind of HUB_KINDS) {
 					.toBeGreaterThanOrEqual(1);
 				await expect(page.locator('[data-testid="alert-cooldown-card"]:visible').first()).toBeVisible();
 
-				await page.locator(`[data-testid="${sel.reiter}-wetter-metriken"]:visible`).first().click();
+				// Der Versand-Abschnitt selbst trägt weder Cooldown-Karte noch Level-Tabelle (sie
+				// stehen im Alarme-Teil desselben Reiters Zustellung, nicht im Abschnitt #versand).
 				await expect(abschnitt(page)).toBeVisible({ timeout: 10_000 });
 				await expect(abschnitt(page).locator('[data-testid="alert-cooldown-card"]')).toHaveCount(0);
 				await expect(abschnitt(page).locator('[data-testid="alert-metric-level-table"]')).toHaveCount(0);
+				// Der Reiter Wetter trägt keine Cooldown-Karte.
+				await page.locator(`[data-testid="${sel.reiter}-wetter"]:visible`).first().click();
+				await expect(page.locator(`[data-testid="${sel.panel}-wetter"]:visible`).first()).toBeVisible({ timeout: 10_000 });
 				await expect(page.locator('[data-testid="alert-cooldown-card"]:visible')).toHaveCount(0);
 			} finally {
 				await hub.aufraeumen();

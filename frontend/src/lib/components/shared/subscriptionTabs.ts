@@ -8,6 +8,9 @@
 // Reiter Wetter-Metriken, Anker `#versand`). Hub-Leiste UND Anlege-Kette
 // (/trips/new, /compare/new) werden aus EINER Definition (`REITER_DEFINITION`)
 // abgeleitet — eine zweite Liste gibt es nicht.
+//
+// Issue #2794 S3a (Teil-PR 2): vier Reiter Übersicht · Etappen|Orte · Wetter ·
+// Zustellung; Versand-Abschnitt (`#versand`) steht im Reiter Zustellung.
 
 import { tr, type MessageKey } from '../../i18n/index.ts';
 
@@ -43,10 +46,11 @@ export const REITER_DEFINITION: ReiterDefinition = {
 		trip: { id: 'etappen', label: 'aktionen.reiter.etappen_wegpunkte' },
 		vergleich: { id: 'orte', label: 'aktionen.reiter.orte' }
 	},
+	// Issue #2794 S3a (Teil-PR 2): Wetter · Zustellung ersetzen Wetter-Metriken ·
+	// Wertebereiche · Alarme (Alt-Kennungen werden ueber LEGACY umgeleitet).
 	schwanz: [
-		{ id: 'wetter-metriken', label: 'aktionen.weather' },
-		{ id: 'wertebereiche', label: 'aktionen.reiter.wertebereiche' },
-		{ id: 'alarme', label: 'aktionen.alarms' }
+		{ id: 'wetter', label: 'aktionen.reiter.wetter' },
+		{ id: 'zustellung', label: 'aktionen.reiter.zustellung' }
 	],
 	anlegeKopf: {
 		trip: [
@@ -65,8 +69,8 @@ export const REITER_DEFINITION: ReiterDefinition = {
  *  Der Hinweis eines Schritts nennt den Vorgaenger; der erste Schwanz-Schritt haengt am
  *  Kopf und ist daher kind-eigen. */
 const ANLEGE_SCHWANZ_HINWEIS: Record<SubscriptionKind, Record<string, string>> = {
-	trip: { 'wetter-metriken': 'trip.anlegen.sperre_gpx' },
-	vergleich: { 'wetter-metriken': 'vergleich.anlegen.sperre_wetter' }
+	trip: { wetter: 'trip.anlegen.sperre_gpx' },
+	vergleich: { wetter: 'vergleich.anlegen.sperre_wetter' }
 };
 
 /** Schluessel (oder freier Text einer ersetzten Definition) in der aktuellen Sprache. */
@@ -106,7 +110,7 @@ export interface ResolvedTab {
 	legacy: boolean;
 	/** false = unbekannte Kennung (Rest-Fallback Uebersicht, tab-Parameter entfernen). */
 	known: boolean;
-	/** #1743: Sprungziel im Reiter (Versand-Abschnitt unter Wetter-Metriken). Fehlt sonst ganz. */
+	/** #1743: Sprungziel im Reiter (Versand-Abschnitt, seit #2794 im Reiter Zustellung). Fehlt sonst ganz. */
 	anchor?: 'versand';
 }
 
@@ -117,24 +121,42 @@ export interface ResolvedTab {
 const LEGACY: Record<string, string> = {
 	overview: 'uebersicht',
 	stages: 'punkte',
-	weather: 'wetter-metriken',
-	alerts: 'wertebereiche',
-	briefings: 'wetter-metriken',
-	versand: 'wetter-metriken',
+	weather: 'wetter',
+	alerts: 'wetter',
+	briefings: 'zustellung',
+	versand: 'zustellung',
 	preview: 'uebersicht',
 	vorschau: 'uebersicht',
-	idealwerte: 'wertebereiche',
-	layout: 'wetter-metriken'
+	idealwerte: 'wetter',
+	layout: 'wetter',
+	// Issue #2794 S3a: die Reiter von #1743 bis Teil-PR 1
+	'wetter-metriken': 'wetter',
+	wertebereiche: 'wetter',
+	alarme: 'zustellung'
 };
 
-/** #1743: Alt-Kennungen, die auf den Versand-Abschnitt springen. */
+/** #1743: Alt-Kennungen, die auf den Versand-Abschnitt springen (seit #2794 im Reiter Zustellung). */
 const LEGACY_ANKER: Record<string, 'versand'> = { briefings: 'versand', versand: 'versand' };
 
 const FALLBACK: ResolvedTab = { tab: 'uebersicht', legacy: false, known: false };
 
 const hat = (o: object, k: string): boolean => Object.prototype.hasOwnProperty.call(o, k);
 
-export function resolveTab(kind: SubscriptionKind, raw: string | null | undefined): ResolvedTab {
+/** Reiter, in dem der Versand-Abschnitt (`#versand`) steht (#2794 S3a). */
+const VERSAND_REITER = 'zustellung';
+
+/**
+ * Kennung → Reiter. `hash` = Anker der geladenen Adresse (`#versand`): der Anker
+ * gewinnt gegen die Reiterkennung (#2794 S3a §1) — eine bekannte Kennung mit
+ * `#versand` landet im Reiter Zustellung mit Anker `versand`.
+ */
+export function resolveTab(kind: SubscriptionKind, raw: string | null | undefined, hash?: string | null): ResolvedTab {
+	const r = resolveKennung(kind, raw);
+	if (!r.known || r.tab === VERSAND_REITER || (hash !== '#versand' && hash !== 'versand')) return r;
+	return { tab: VERSAND_REITER, legacy: true, known: true, anchor: 'versand' };
+}
+
+function resolveKennung(kind: SubscriptionKind, raw: string | null | undefined): ResolvedTab {
 	if (typeof raw !== 'string') return { ...FALLBACK };
 	// i18n F9: nur Kennungen vergleichen (kein Text) — die Aufloesung bleibt sprachunabhaengig.
 	const def = REITER_DEFINITION;

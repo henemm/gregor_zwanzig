@@ -25,6 +25,8 @@
 	"aktionen.reiter.etappen_wegpunkte": "Stages & waypoints",
 	"aktionen.reiter.orte": "Locations",
 	"aktionen.reiter.wertebereiche": "Target ranges",
+	"aktionen.reiter.wetter": "Weather",
+	"aktionen.reiter.zustellung": "Delivery",
 	"aktionen.sperre.oeffnen": "open {reiter} first",
 	"aktionen.kopf.ok": "OK",
 	"aktionen.kopf.name_bearbeiten": "Edit name",

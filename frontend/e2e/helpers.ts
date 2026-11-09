@@ -803,9 +803,9 @@ const TRIP_ANLEGE_LABEL: Record<string, string> = {
 	route: 'Route',
 	etappen: 'Etappen & GPX',
 	wegpunkte: 'Wegpunkte prüfen',
-	'wetter-metriken': 'Wetter-Metriken',
-	wertebereiche: 'Wertebereiche',
-	alarme: 'Alarme'
+	// #2794 S3a (Spec feat_2794_s3a_teil2_leiste.md AC-6): Schritte Wetter und Zustellung.
+	wetter: 'Wetter',
+	zustellung: 'Zustellung'
 };
 
 export const ANLEGE_SEL: Record<
@@ -814,11 +814,11 @@ export const ANLEGE_SEL: Record<
 		url: string;
 		/** Sammel-Endpunkt des Anlege-POST. */
 		postPfad: string;
-		/** Die fünf Pflicht-Schritte in Reihenfolge (Trip ohne den optionalen Schritt „Wegpunkte prüfen"). */
+		/** Die vier Pflicht-Schritte in Reihenfolge (Trip ohne den optionalen Schritt „Wegpunkte prüfen", #2794 S3a). */
 		schritte: readonly string[];
 		ersterSchritt: string;
 		punkteSchritt: 'etappen' | 'orte';
-		/** Spec AN-2: „Fortschritt hat genau 5 Segmente" — fester Wert, nicht aus dem Produkt. */
+		/** Spec AN-2 / #2794 S3a: „Fortschritt hat genau 4 Segmente" — fester Wert, nicht aus dem Produkt. */
 		fortschrittSegmente: number;
 		reiter: (page: Page, id: string, mobil?: boolean) => Locator;
 		alleReiterMobil: (page: Page) => Locator;
@@ -845,15 +845,16 @@ export const ANLEGE_SEL: Record<
 		 * „Zurück: Trips" im Kopf, Vergleich „Abbrechen" oben rechts in der Kopfleiste.
 		 */
 		abbrechen: (page: Page) => Locator;
-		/** Inhalt der drei geteilten Schwanz-Schritte (Desktop). */
+		/**
+		 * Inhalt der geteilten Schwanz-Schritte (Desktop), benannt nach dem INHALT: Metrik-Oberfläche
+		 * und Wertebereiche im Schritt Wetter, Alarme im Schritt Zustellung (#2794 S3a).
+		 */
 		inhalt: Record<'wetter-metriken' | 'wertebereiche' | 'alarme', (page: Page) => Locator>;
 		/**
 		 * Desktop-Weiter-Fuß der Schwanz-Schritte, benannt nach dem ZIEL (AN-15, Alt s8d
-		 * AC-17/AC-18): im Schritt Wetter-Metriken „Wertebereiche festlegen →", im Schritt
-		 * Wertebereiche „Alarme einrichten →". Trip-Kennungen im Zuge von AC-20 nachgetragen
-		 * (TripNewEditor.svelte, Spec „Nachträge Teil E").
+		 * AC-17/AC-18). #2794 S3a: nur noch im Schritt Wetter „Zustellung einrichten →" Richtung Zustellung.
 		 */
-		weiterNach: Record<'wertebereiche' | 'alarme', (page: Page) => Locator>;
+		weiterNach: Record<'zustellung', (page: Page) => Locator>;
 		/** Kennungs-Präfix aller Desktop-Weiter-Füße der Art (AN-15: im letzten Schritt keiner sichtbar). */
 		weiterPraefix: string;
 		/** Profil/Aktivität: gültiger Zielwert, verschieden vom Startwert. */
@@ -863,10 +864,10 @@ export const ANLEGE_SEL: Record<
 	route: {
 		url: '/trips/new',
 		postPfad: '/api/trips',
-		schritte: ['route', 'etappen', 'wetter-metriken', 'wertebereiche', 'alarme'],
+		schritte: ['route', 'etappen', 'wetter', 'zustellung'],
 		ersterSchritt: 'route',
 		punkteSchritt: 'etappen',
-		fortschrittSegmente: 5,
+		fortschrittSegmente: 4,
 		// Trip-Reiter: <div role="tab">/<button role="tab"> ohne Kennung (Kind-Kontraste
 		// „AN Reiter-Zustand") — Auswahl über die Beschriftung.
 		reiter: (page, id, mobil = false) =>
@@ -904,8 +905,7 @@ export const ANLEGE_SEL: Record<
 			alarme: (page) => page.locator('.tn-desktop [data-testid="alarme-tab"]')
 		},
 		weiterNach: {
-			wertebereiche: (page) => page.locator('.tn-desktop [data-testid="trip-new-continue-wertebereiche"]'),
-			alarme: (page) => page.locator('.tn-desktop [data-testid="trip-new-continue-alarme"]')
+			zustellung: (page) => page.locator('.tn-desktop [data-testid="trip-new-continue-zustellung"]')
 		},
 		weiterPraefix: 'trip-new-continue-',
 		profilWert: 'hochtour'
@@ -913,10 +913,10 @@ export const ANLEGE_SEL: Record<
 	vergleich: {
 		url: '/compare/new',
 		postPfad: '/api/compare/presets',
-		schritte: ['vergleich', 'orte', 'wetter-metriken', 'wertebereiche', 'alarme'],
+		schritte: ['vergleich', 'orte', 'wetter', 'zustellung'],
 		ersterSchritt: 'vergleich',
 		punkteSchritt: 'orte',
-		fortschrittSegmente: 5,
+		fortschrittSegmente: 4,
 		reiter: (page, id, mobil = false) =>
 			page.getByTestId(mobil ? `cm-mobile-tab-${id}` : `compare-editor-tab-${id}`),
 		alleReiterMobil: (page) => page.locator('[data-testid^="cm-mobile-tab-"]'),
@@ -943,8 +943,7 @@ export const ANLEGE_SEL: Record<
 			alarme: (page) => page.locator('.cm-desktop [data-testid="alarme-tab"]')
 		},
 		weiterNach: {
-			wertebereiche: (page) => page.locator('.cm-desktop [data-testid="compare-editor-continue-wertebereiche"]'),
-			alarme: (page) => page.locator('.cm-desktop [data-testid="compare-editor-continue-alarme"]')
+			zustellung: (page) => page.locator('.cm-desktop [data-testid="compare-editor-continue-zustellung"]')
 		},
 		weiterPraefix: 'compare-editor-continue-',
 		profilWert: 'wintersport'

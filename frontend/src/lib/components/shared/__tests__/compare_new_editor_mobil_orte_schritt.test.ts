@@ -115,7 +115,7 @@ async function mobilerSchritt(pickedIds: string[]) {
 async function orteSchrittAmMount(mount: 'mobil' | 'desktop', pickedIds: string[]) {
 	const e = await vergleichEditor({
 		stateOverride: {
-			activeTab: 'orte', isMobileViewport: mount === 'mobil', metrikenVisited: true, idealsVisited: true, alarmeVisited: true,
+			activeTab: 'orte', isMobileViewport: mount === 'mobil', metrikenVisited: true, zustellungVisited: true, // #2794 S3a
 			name: 'Dolomiten', pickedIds
 		},
 		locations: ORTE

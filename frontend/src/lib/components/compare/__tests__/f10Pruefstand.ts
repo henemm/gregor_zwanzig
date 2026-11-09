@@ -269,7 +269,7 @@ export function orteSchrittRendern(): string {
 export type AnlegeFall = { tab: string; mobil: boolean; name?: string; picked?: string[]; profil?: string; besucht?: boolean };
 export function anlegenRendern(f: AnlegeFall): string {
 	const stateOverride = {
-		activeTab: f.tab, isMobileViewport: f.mobil, metrikenVisited: f.besucht, idealsVisited: f.besucht, alarmeVisited: f.besucht,
+		activeTab: f.tab, isMobileViewport: f.mobil, metrikenVisited: f.besucht, zustellungVisited: f.besucht,
 		name: f.name ?? '', region: '', pickedIds: f.picked ?? [], ...(f.profil ? { activityProfile: f.profil } : {})
 	};
 	return html(K.CompareNewEditor, { locations: ORTE, groups: GRUPPEN, stateOverride });
@@ -289,11 +289,12 @@ export const ANLEGE_FAELLE: Record<string, AnlegeFall[]> = {
 		{ tab: 'orte', mobil: true, name: 'Skitouren Tirol', picked: ['l-hx', 'l-ka'] }
 	],
 	anlegen_weiter: [
-		{ tab: 'wertebereiche', mobil: true, name: 'Skitouren Tirol', picked: ['l-hx', 'l-ka'] },
-		{ tab: 'wetter-metriken', mobil: true, name: 'Skitouren Tirol', picked: ['l-hx', 'l-ka'], besucht: false },
-		{ tab: 'alarme', mobil: false, name: 'Skitouren Tirol', picked: ['l-hx', 'l-ka'], besucht: true },
-		{ tab: 'alarme', mobil: true, name: 'Skitouren Tirol', picked: ['l-hx', 'l-ka'], besucht: true },
-		{ tab: 'alarme', mobil: true, name: 'Skitouren Tirol', picked: ['l-hx', 'l-ka'] }
+		// #2794 S3a: Schritte Wetter und Zustellung.
+		{ tab: 'wetter', mobil: true, name: 'Skitouren Tirol', picked: ['l-hx', 'l-ka'] },
+		{ tab: 'wetter', mobil: false, name: 'Skitouren Tirol', picked: ['l-hx', 'l-ka'], besucht: false },
+		{ tab: 'zustellung', mobil: false, name: 'Skitouren Tirol', picked: ['l-hx', 'l-ka'], besucht: true },
+		{ tab: 'zustellung', mobil: true, name: 'Skitouren Tirol', picked: ['l-hx', 'l-ka'], besucht: true },
+		{ tab: 'zustellung', mobil: true, name: 'Skitouren Tirol', picked: ['l-hx', 'l-ka'] }
 	]
 };
 

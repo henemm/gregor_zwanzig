@@ -12,7 +12,7 @@ import { test, expect } from '@playwright/test';
 import { cleanupTracked } from './helpers';
 import {
 	EINFACHE_METRIKEN, aktiveMetriken, ausMetriken, ausSchalten, createUebersichtPreset,
-	einSchalten, klickUndSpeichere, oeffneUebersicht, waehleKanal
+	einSchalten, klickUndSpeichere, oeffneUebersicht, waehleKanal, zuGrundauswahl, zuKanalKarte
 } from './compare-uebersicht-kanal.helpers';
 
 test.describe('#1703 S8: Kanal-Reiter der Vergleichs-Uebersicht — Bedienung und Kappungs-Aussage', () => {
@@ -84,7 +84,13 @@ test.describe('#1703 S8: Kanal-Reiter der Vergleichs-Uebersicht — Bedienung un
 		// AC-S8-3: Abwahl in der Grundauswahl, SMS-Reiter bleibt offen, KEIN Reload.
 		// Zusicherung POSITIV auf die ganze Liste — ein blosses `not.toContain` waere
 		// auch dann gruen, wenn gar nichts gerendert haette.
+		// #2794 S3a: die Grundauswahl steht im Reiter Wetter, die Kanal-Karte im Reiter
+		// Zustellung — Reiterwechsel per Klick (kein Reload), danach den SMS-Kanal erneut
+		// waehlen, weil die Kanal-Karte beim Reiterwechsel neu gemountet wird.
+		await zuGrundauswahl(f);
 		await klickUndSpeichere(f, f.grundauswahl.locator('input[data-metric-key="sunny_hours_h"]'));
+		await zuKanalKarte(f);
+		await waehleKanal(f, 'sms');
 		await expect.poll(() => aktiveMetriken(f), {
 			message: 'AC-S8-3/AC-S8-5 FAIL: der SMS-Reiter muss "sunny_hours_h" SOFORT verlieren (global abgewaehlt) ' +
 				'und "pop_max_pct" am Ende wieder fuehren (wieder eingeschaltet)',

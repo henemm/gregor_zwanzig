@@ -88,10 +88,9 @@
 
 	// Issue #1743: kein Schritt „Versand" mehr — der Versand-Abschnitt steht unten im
 	// Schritt Wetter-Metriken (geteilter Baustein WetterMetrikenVersandPanel).
-	type CompareNewTabId = 'vergleich' | 'orte' | 'wetter-metriken' | 'wertebereiche' | 'alarme';
-	const TAIL: TailIds<CompareNewTabId> = {
-		metriken: 'wetter-metriken', wertebereiche: 'wertebereiche', alarme: 'alarme'
-	};
+	// Issue #2794 S3a: Kette vergleich · orte · wetter · zustellung.
+	type CompareNewTabId = 'vergleich' | 'orte' | 'wetter' | 'zustellung';
+	const TAIL: TailIds<CompareNewTabId> = { metriken: 'wetter', zustellung: 'zustellung' };
 
 	// Test-Seam (#2277 S4, Muster TripNewEditor `stateOverride`): Startwerte fuer
 	// Reiter/Viewport/Besuchs-Flags und (#2727) die Stammdaten-Startwerte.
@@ -100,8 +99,7 @@
 		activeTab?: CompareNewTabId;
 		isMobileViewport?: boolean;
 		metrikenVisited?: boolean;
-		idealsVisited?: boolean;
-		alarmeVisited?: boolean;
+		zustellungVisited?: boolean;
 		name?: string;
 		region?: string;
 		activityProfile?: ActivityProfile | null;
@@ -171,7 +169,7 @@
 
 	// ── Tab-Definitionen — Issue #1743: aus der EINEN Reiter-Definition
 	// (`subscriptionTabs.anlegeKette`), keine Zweitliste. Fortschritt zaehlt
-	// dieselben Schritte (5 Segmente).
+	// dieselben Schritte (#2794 S3a: 4 Segmente).
 	const TAB_DEFS: { id: CompareNewTabId; label: string; lockHint: string | null }[] = $derived(
 		(void $locale, anlegeKette('vergleich')).map((r) => ({
 			id: r.id as CompareNewTabId,
@@ -183,8 +181,7 @@
 
 	// ── Visited-Flags (Tab-Besuch → nächster Tab frei; nie zurückgesetzt) ──────
 	let metrikenVisited = $state(seed.metrikenVisited ?? false);
-	let idealsVisited = $state(seed.idealsVisited ?? false);
-	let alarmeVisited = $state(seed.alarmeVisited ?? false);
+	let zustellungVisited = $state(seed.zustellungVisited ?? false);
 
 	let activeTab = $state<CompareNewTabId>(seed.activeTab ?? 'vergleich');
 
@@ -207,19 +204,12 @@
 	const tailP = $derived({
 		metrikenFrei: nameOk && orteOk,
 		metrikenVisited,
-		wertebereicheVisited: idealsVisited,
-		alarmeVisited
+		zustellungVisited
 	});
-	// ... und kumulativ (fuer "freigeschaltet"): Ortsvergleich-Semantik ist eine
-	// konjunktive Kette (Wertebereiche braucht Metriken-Besuch, alarme zusaetzlich
-	// Ideal-Besuch usw.), der Kern prueft je Stufe nur das direkte Vorgaenger-Flag.
-	const tailPChain = $derived({
-		...tailP,
-		wertebereicheVisited: metrikenVisited && idealsVisited,
-		alarmeVisited: metrikenVisited && idealsVisited && alarmeVisited
-	});
+	// #2794 S3a: zwei Schwanz-Schritte — Zustellung braucht den Wetter-Besuch, mehr
+	// Kettenglieder gibt es nicht (vorher kumulative Kette ueber Wertebereiche/Alarme).
 	const unlocked = $derived.by(() => {
-		const s = tailUnlocked(TAIL, tailPChain);
+		const s = tailUnlocked(TAIL, tailP);
 		s.add('vergleich');
 		if (nameOk) s.add('orte');
 		return s;
@@ -230,7 +220,7 @@
 		if (orteOk) s.add('orte');
 		return s;
 	});
-	// Zaehler gedeckelt bei der Schrittzahl (#1743: 5 Schritte).
+	// Zaehler gedeckelt bei der Schrittzahl (#2794 S3a: 4 Schritte).
 	const doneCount = $derived(Math.min(progressCount(done, PROGRESS_STEPS), PROGRESS_STEPS.length));
 	const canActivateNow = $derived(canFinish(done));
 	const standardwerteFrei = $derived(canFinishMitStandardwerten({
@@ -271,9 +261,8 @@
 	function switchTab(id: CompareNewTabId) {
 		if (!unlocked.has(id)) return;
 		activeTab = id;
-		if (id === 'wetter-metriken') metrikenVisited = true;
-		if (id === 'wertebereiche') idealsVisited = true;
-		if (id === 'alarme') alarmeVisited = true;
+		if (id === 'wetter') metrikenVisited = true;
+		if (id === 'zustellung') zustellungVisited = true;
 	}
 	function makeTabHandler(id: CompareNewTabId) {
 		return () => switchTab(id);
@@ -385,7 +374,8 @@
 			if (!standardwerteFrei || activating || !standardwerteKatalog) return;
 			activating = true;
 			try {
-				if (!idealsVisited) belegeWertebereicheVor(standardwerteKatalog);
+				// #2794 S3a: die Wertebereiche stehen im Schritt Wetter (vorher eigener Reiter).
+				if (!metrikenVisited) belegeWertebereicheVor(standardwerteKatalog);
 				await speichereNeuenVergleich();
 			} finally {
 				activating = false;
@@ -418,7 +408,7 @@
 	}
 	function handleMobileNext() {
 		const idx = TAB_DEFS.findIndex((t) => t.id === activeTab);
-		if (activeTab === 'alarme') {
+		if (activeTab === 'zustellung') {
 			handleActivate();
 		} else if (idx >= 0 && idx < TAB_DEFS.length - 1) {
 			switchTab(TAB_DEFS[idx + 1].id);
@@ -451,7 +441,7 @@
 <div data-testid="compare-editor" style:position="relative" style:min-height="100%" style:background="var(--g-paper)">
 <!-- ══════════════════ Desktop ══════════════════ -->
 <div class="cm-desktop" style="position: relative; min-height: 100%; display: flex; flex-direction: column;">
-	<!-- Geteilter Anlege-Rahmen (#2837 S2): Breadcrumb, Eyebrow, Titel, Fortschritt (5 Segmente),
+	<!-- Geteilter Anlege-Rahmen (#2837 S2): Breadcrumb, Eyebrow, Titel, Fortschritt (4 Segmente),
 	     Inhalt, Fuß cm-desktop-footer mit Abbrechen (Link /compare) und „Briefing aktivieren". -->
 	<AnlegeRahmen
 		context="vergleich"
@@ -550,31 +540,28 @@
 		<div class="ce-cta-foot" style:max-width="980px">
 			<div class="ce-cta-row">
 				{#if !orteContinueReady}<span class="mono ce-cta-hint">{$t('vergleich.neu.min_orte')}</span>{/if}
-				<Btn data-testid="compare-editor-continue-wetter-metriken" variant="accent" size="md" disabled={!orteContinueReady} onclick={() => orteContinueReady && switchTab('wetter-metriken')}>{$t('vergleich.neu.wetter_metriken')}</Btn>
+				<Btn data-testid="compare-editor-continue-wetter" variant="accent" size="md" disabled={!orteContinueReady} onclick={() => orteContinueReady && switchTab('wetter')}>{$t('vergleich.neu.wetter_metriken')}</Btn>
 			</div>
 		</div>
-	{:else if activeTab === 'wetter-metriken'}
+	{:else if activeTab === 'wetter'}
 		{#if !isMobileViewport}
 			<!-- Issue #1743: geteilter Baustein „Wetter-Metriken + Versand"; ohne
 			     preset/saveController/enqueueHubWrite — gespeichert wird erst per
-			     „Briefing aktivieren" (ein POST). -->
-			<WetterMetrikenVersandPanel context="vergleich" {...wetterMetrikenPropsAus(wiz)} versand={versandPropsAus(wiz)} vergleichTelegramStyle={wiz.telegramStyle ?? 'rich'} activation={versandActivationBanner} showInfobox={true} />
-		{/if}
-		<div class="ce-cta-foot" style:max-width="1040px">
-			<div class="ce-cta-row">
-				<Btn data-testid="compare-editor-continue-wertebereiche" variant="accent" size="md" onclick={makeContinueHandler('wertebereiche')}>{$t('trip.anlegen.wertebereiche_festlegen')}</Btn>
-			</div>
-		</div>
-	{:else if activeTab === 'wertebereiche'}
-		{#if !isMobileViewport}
+			     „Briefing aktivieren" (ein POST). Issue #2794 S3a: Schritt Wetter =
+			     Metrik-Auswahl (bereich "wetter") plus Wertebereiche darunter. -->
+			<WetterMetrikenVersandPanel context="vergleich" bereich="wetter" {...wetterMetrikenPropsAus(wiz)} showInfobox={true} />
 			<CorridorEditor context="vergleich" {...corridorPropsAus(wiz)} showInfobox={true} />
 		{/if}
 		<div class="ce-cta-foot" style:max-width="1100px">
 			<div class="ce-cta-row">
-				<Btn data-testid="compare-editor-continue-alarme" variant="accent" size="md" onclick={makeContinueHandler('alarme')}>{$t('trip.anlegen.alarme_einrichten')}</Btn>
+				<Btn data-testid="compare-editor-continue-zustellung" variant="accent" size="md" onclick={makeContinueHandler('zustellung')}>{$t('trip.anlegen.zustellung_einrichten')}</Btn>
 			</div>
 		</div>
-	{:else if activeTab === 'alarme'}
+	{:else if activeTab === 'zustellung'}
+		<!-- Issue #2794 S3a: Schritt Zustellung = Zustellungs-Bloecke + Versand + Alarme. -->
+		{#if !isMobileViewport}
+			<WetterMetrikenVersandPanel context="vergleich" bereich="zustellung" {...wetterMetrikenPropsAus(wiz)} versand={versandPropsAus(wiz)} vergleichTelegramStyle={wiz.telegramStyle ?? 'rich'} activation={versandActivationBanner} showInfobox={true} />
+		{/if}
 		{#if alarmeHydrated}
 			<AlarmeTab context="vergleich" {...alarmePropsAus(wiz)} catalog={alarmeCatalogMitNamen} showInfobox={true} />
 		{/if}
@@ -646,15 +633,15 @@
 			</div>
 		{:else if activeTab === 'orte'}
 			<Step2Orte bind:pickedIds={wiz.pickedIds} {locations} groups={ceGroups} dense onOpenLibrary={() => { mobileLibraryOpen = true; }} />
-		{:else if activeTab === 'wetter-metriken'}
+		{:else if activeTab === 'wetter'}
 			{#if isMobileViewport}
-				<WetterMetrikenVersandPanel context="vergleich" {...wetterMetrikenPropsAus(wiz)} versand={versandPropsAus(wiz)} vergleichTelegramStyle={wiz.telegramStyle ?? 'rich'} activation={versandActivationBanner} showInfobox={true} />
-			{/if}
-		{:else if activeTab === 'wertebereiche'}
-			{#if isMobileViewport}
+				<WetterMetrikenVersandPanel context="vergleich" bereich="wetter" {...wetterMetrikenPropsAus(wiz)} showInfobox={true} />
 				<CorridorEditorMobile context="vergleich" {...corridorPropsAus(wiz)} showInfobox={true} />
 			{/if}
-		{:else if activeTab === 'alarme'}
+		{:else if activeTab === 'zustellung'}
+			{#if isMobileViewport}
+				<WetterMetrikenVersandPanel context="vergleich" bereich="zustellung" {...wetterMetrikenPropsAus(wiz)} versand={versandPropsAus(wiz)} vergleichTelegramStyle={wiz.telegramStyle ?? 'rich'} activation={versandActivationBanner} showInfobox={true} />
+			{/if}
 			{#if alarmeHydrated}
 				<AlarmeTab context="vergleich" {...alarmePropsAus(wiz)} catalog={alarmeCatalogMitNamen} showInfobox={true} />
 			{/if}
@@ -669,17 +656,15 @@
 					<StandardwerteSpeichernKnopf enabled={standardwerteFrei} saving={activating} onclick={onStandardwerte} testid="cm-mobile-standardwerte" />
 				</div>
 			{/if}
-			{#if activeTab === 'alarme'}
+			{#if activeTab === 'zustellung'}
 				<MBtn block variant={canActivateNow ? 'primary' : 'quiet'} size="xl" disabled={!canActivateNow || activating} onclick={handleActivate} testid="cm-mobile-activate">{activating ? $t('trip.anlegen.speichere') : canActivateNow ? $t('vergleich.neu.aktivieren') : $t('vergleich.neu.alarme_zum_aktivieren')}</MBtn>
 			{:else if activeTab === 'vergleich'}
 				<MBtn block variant={canContinue ? 'accent' : 'quiet'} size="xl" disabled={!canContinue} onclick={handleMobileNext}>{canContinue ? $t('vergleich.neu.orte_hinzufuegen') : $t('vergleich.neu.name_eingeben')}</MBtn>
 			{:else if activeTab === 'orte'}
 				{@const restOrte = 2 - wiz.pickedIds.length}
 				<MBtn block variant={orteContinueReady ? 'accent' : 'quiet'} size="xl" disabled={!orteContinueReady} onclick={handleMobileNext}>{orteContinueReady ? $t('vergleich.neu.wetter_metriken') : $tn('vergleich.neu.noch_orte', restOrte)}</MBtn>
-			{:else if activeTab === 'wetter-metriken'}
-				<MBtn block variant="accent" size="xl" onclick={handleMobileNext}>{$t('trip.anlegen.wertebereiche_festlegen')}</MBtn>
-			{:else if activeTab === 'wertebereiche'}
-				<MBtn block variant="accent" size="xl" onclick={handleMobileNext}>{$t('trip.anlegen.alarme_einrichten')}</MBtn>
+			{:else if activeTab === 'wetter'}
+				<MBtn block variant="accent" size="xl" onclick={handleMobileNext}>{$t('trip.anlegen.zustellung_einrichten')}</MBtn>
 			{/if}
 	</EditorStickyFooter>
 </div><!-- /.cm-mobile -->

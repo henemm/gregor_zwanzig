@@ -48,26 +48,27 @@ function vierKetten(d?: Def): Record<string, Reiter[]> {
 	};
 }
 
-/** Ab (einschliesslich) `wetter-metriken`, nur Kennung + Label. */
+// Issue #2794 S3a (Spec feat_2794_s3a_teil2_leiste.md AC-1/AC-6): der Schwanz lautet jetzt
+// wetter · zustellung; die Eine-Quelle-Zusicherungen (AC-16..AC-18) bleiben unveraendert.
+/** Ab (einschliesslich) `wetter`, nur Kennung + Label. */
 function schwanz(kette: Reiter[]): { id: string; label: string }[] {
-	const i = kette.findIndex((r) => r.id === 'wetter-metriken');
-	assert.notEqual(i, -1, `kein Reiter wetter-metriken in ${kette.map((r) => r.id).join(' · ')}`);
+	const i = kette.findIndex((r) => r.id === 'wetter');
+	assert.notEqual(i, -1, `kein Reiter wetter in ${kette.map((r) => r.id).join(' · ')}`);
 	return kette.slice(i).map((r) => ({ id: r.id, label: r.label }));
 }
 
 const SCHWANZ = [
-	{ id: 'wetter-metriken', label: 'Wetter-Metriken' },
-	{ id: 'wertebereiche', label: 'Wertebereiche' },
-	{ id: 'alarme', label: 'Alarme' }
+	{ id: 'wetter', label: 'Wetter' },
+	{ id: 'zustellung', label: 'Zustellung' }
 ];
 
-describe('AC-16: Reiter ab wetter-metriken sind in allen vier Ketten identisch', () => {
-	test('Hub-Leiste je kind: fünf Reiter, ohne versand/vorschau', () => {
-		assert.deepEqual(quelle.subscriptionTabs('trip').map((r) => r.id), ['uebersicht', 'etappen', 'wetter-metriken', 'wertebereiche', 'alarme']);
-		assert.deepEqual(quelle.subscriptionTabs('vergleich').map((r) => r.id), ['uebersicht', 'orte', 'wetter-metriken', 'wertebereiche', 'alarme']);
+describe('AC-16: Reiter ab wetter sind in allen vier Ketten identisch', () => {
+	test('Hub-Leiste je kind: vier Reiter, ohne versand/vorschau', () => {
+		assert.deepEqual(quelle.subscriptionTabs('trip').map((r) => r.id), ['uebersicht', 'etappen', 'wetter', 'zustellung']);
+		assert.deepEqual(quelle.subscriptionTabs('vergleich').map((r) => r.id), ['uebersicht', 'orte', 'wetter', 'zustellung']);
 	});
 
-	test('Kennung, Label und Reihenfolge ab wetter-metriken gleich (Trip-Hub = Vergleichs-Hub = Trip-Anlegen = Vergleich-Anlegen)', () => {
+	test('Kennung, Label und Reihenfolge ab wetter gleich (Trip-Hub = Vergleichs-Hub = Trip-Anlegen = Vergleich-Anlegen)', () => {
 		const ketten = vierKetten();
 		for (const [name, kette] of Object.entries(ketten)) {
 			assert.deepEqual(schwanz(kette), SCHWANZ, `${name}: Schwanz weicht ab`);
@@ -76,12 +77,12 @@ describe('AC-16: Reiter ab wetter-metriken sind in allen vier Ketten identisch',
 });
 
 describe('AC-17: Anlege-Kette je kind', () => {
-	test('Trip: route · etappen · wegpunkte · wetter-metriken · wertebereiche · alarme', () => {
-		assert.deepEqual(anlege('trip').map((r) => r.id), ['route', 'etappen', 'wegpunkte', 'wetter-metriken', 'wertebereiche', 'alarme']);
+	test('Trip: route · etappen · wegpunkte · wetter · zustellung', () => {
+		assert.deepEqual(anlege('trip').map((r) => r.id), ['route', 'etappen', 'wegpunkte', 'wetter', 'zustellung']);
 	});
 
-	test('Vergleich: vergleich · orte · wetter-metriken · wertebereiche · alarme', () => {
-		assert.deepEqual(anlege('vergleich').map((r) => r.id), ['vergleich', 'orte', 'wetter-metriken', 'wertebereiche', 'alarme']);
+	test('Vergleich: vergleich · orte · wetter · zustellung', () => {
+		assert.deepEqual(anlege('vergleich').map((r) => r.id), ['vergleich', 'orte', 'wetter', 'zustellung']);
 	});
 
 	test('anlege-eigen sind nur Kopf-Schritte, lockHint und optional — keine weiteren Felder', () => {
@@ -103,26 +104,26 @@ describe('AC-17: Anlege-Kette je kind', () => {
 });
 
 describe('AC-18: eine ersetzte Kopie der Definition wirkt auf alle vier Ketten', () => {
-	test('Positivkontrolle: mit der Originaldefinition steht wertebereiche in allen vier Ketten', () => {
+	test('Positivkontrolle: mit der Originaldefinition steht wetter in allen vier Ketten', () => {
 		for (const [name, kette] of Object.entries(vierKetten(def()))) {
-			assert.ok(kette.some((r) => r.id === 'wertebereiche'), `${name}: wertebereiche fehlt schon im Original`);
+			assert.ok(kette.some((r) => r.id === 'wetter'), `${name}: wetter fehlt schon im Original`);
 		}
 	});
 
-	test('wertebereiche aus dem Schwanz der Kopie entfernt → fehlt in allen vier Ketten', () => {
+	test('wetter aus dem Schwanz der Kopie entfernt → fehlt in allen vier Ketten', () => {
 		const kopie = structuredClone(def()) as { schwanz: Reiter[] };
-		kopie.schwanz = kopie.schwanz.filter((r) => r.id !== 'wertebereiche');
+		kopie.schwanz = kopie.schwanz.filter((r) => r.id !== 'wetter');
 		for (const [name, kette] of Object.entries(vierKetten(kopie as unknown as Def))) {
-			assert.ok(!kette.some((r) => r.id === 'wertebereiche'), `${name}: wertebereiche noch vorhanden — zweite Liste?`);
-			assert.ok(kette.some((r) => r.id === 'alarme'), `${name}: alarme fehlt — Ableitung kaputt`);
+			assert.ok(!kette.some((r) => r.id === 'wetter'), `${name}: wetter noch vorhanden — zweite Liste?`);
+			assert.ok(kette.some((r) => r.id === 'zustellung'), `${name}: zustellung fehlt — Ableitung kaputt`);
 		}
 	});
 
 	test('Label in der Kopie umbenannt → kommt in allen vier Ketten an (Label nicht aus Zweitliste)', () => {
 		const kopie = structuredClone(def()) as { schwanz: Reiter[] };
-		kopie.schwanz = kopie.schwanz.map((r) => (r.id === 'alarme' ? { ...r, label: 'Alarme X' } : r));
+		kopie.schwanz = kopie.schwanz.map((r) => (r.id === 'zustellung' ? { ...r, label: 'Zustellung X' } : r));
 		for (const [name, kette] of Object.entries(vierKetten(kopie as unknown as Def))) {
-			assert.equal(kette.find((r) => r.id === 'alarme')?.label, 'Alarme X', `${name}: Label nicht aus der Definition`);
+			assert.equal(kette.find((r) => r.id === 'zustellung')?.label, 'Zustellung X', `${name}: Label nicht aus der Definition`);
 		}
 	});
 
@@ -131,6 +132,6 @@ describe('AC-18: eine ersetzte Kopie der Definition wirkt auf alle vier Ketten',
 		vierKetten(structuredClone(def()));
 		vierKetten();
 		assert.deepEqual(def(), vorher);
-		assert.ok(quelle.subscriptionTabs('trip').some((r) => r.id === 'wertebereiche'));
+		assert.ok(quelle.subscriptionTabs('trip').some((r) => r.id === 'wetter'));
 	});
 });

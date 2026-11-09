@@ -91,11 +91,12 @@ const zeilen = (karte: Locator) => karte.locator('[data-testid="wm2-reihenfolge-
 const zeilenIds = (karte: Locator) => zeilen(karte).evaluateAll((els) => els.map((el) => el.getAttribute('data-metric-id')));
 
 async function oeffneKarte(page: Page, kind: HubKind, id: string): Promise<Locator> {
-	await openHub(page, kind, id, { tab: 'wetter-metriken' });
+	// #2794 S3a (Spec feat_2794_s3a_teil2_leiste.md): Abschnitt Layout/Kanal im Reiter Zustellung.
+	await openHub(page, kind, id, { tab: 'zustellung' });
 	const panel = page.locator(`[data-testid="${RO_SEL[kind].panel}"]:visible`);
 	await expect(panel).toBeVisible({ timeout: 10_000 });
 	const karte = panel.locator(`[data-testid="${RO_SEL[kind].karte}"]`);
-	await expect(karte, 'Die Reihenfolge-Karte muss im Reiter Wetter-Metriken stehen').toBeVisible({ timeout: 10_000 });
+	await expect(karte, 'Die Reihenfolge-Karte muss im Reiter Zustellung stehen').toBeVisible({ timeout: 10_000 });
 	return karte;
 }
 

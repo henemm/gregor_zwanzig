@@ -60,17 +60,16 @@ type CompareNewProgress = {
 	name: string;
 	pickedCount: number;
 	metrikenVisited: boolean;
-	idealsVisited: boolean;
-	alarmeVisited: boolean;
+	zustellungVisited: boolean;
 };
-// #1743: kein Schritt „Versand" mehr (Versand-Abschnitt unten im Schritt Wetter-Metriken).
-const COMPARE_TAIL: TailIds = { metriken: 'wetter-metriken', wertebereiche: 'wertebereiche', alarme: 'alarme' };
-const COMPARE_STEPS = ['vergleich', 'orte', 'wetter-metriken', 'wertebereiche', 'alarme'];
+// #1743: kein Schritt „Versand" mehr. #2794 S3a (Spec feat_2794_s3a_teil2_leiste.md AC-6):
+// Kette Wetter → Zustellung.
+const COMPARE_TAIL: TailIds = { metriken: 'wetter', zustellung: 'zustellung' };
+const COMPARE_STEPS = ['vergleich', 'orte', 'wetter', 'zustellung'];
 const tailOf = (p: CompareNewProgress) => ({
 	metrikenFrei: !!p.name.trim() && p.pickedCount >= 2,
 	metrikenVisited: p.metrikenVisited,
-	wertebereicheVisited: p.idealsVisited,
-	alarmeVisited: p.alarmeVisited
+	zustellungVisited: p.zustellungVisited
 });
 const unlockedTabs = (p: CompareNewProgress) => tailUnlocked(COMPARE_TAIL, tailOf(p));
 const doneTabs = (p: CompareNewProgress) => tailDone(COMPARE_TAIL, tailOf(p));
@@ -83,6 +82,7 @@ const NEW_EDITOR = join(here, '..', '..', 'compare-new', 'CompareNewEditor.svelt
 const METRICS_TAB = join(here, '..', '..', 'shared', 'WeatherMetricsTab.svelte');
 
 const PANEL = join(here, '..', '..', 'shared', 'WetterMetrikenVersandPanel.svelte');
+const ZUSTELLUNG_TAB = join(here, '..', '..', 'shared', 'zustellung-tab', 'ZustellungTab.svelte');
 function ast(file: string): unknown {
 	return parse(readFileSync(file, 'utf-8'), { modern: true });
 }
@@ -191,14 +191,14 @@ function renderedTexts(subtree: unknown): string[] {
 // ── AC-1: sieben Reiter, kein „Layout" ──────────────────────────────────────
 
 describe('AC-1: Reiterleiste des Ortsvergleichs', () => {
-	test('genau fünf Reiter (#1743), keiner heißt „Layout"', async () => {
+	test('genau vier Reiter (#2794), keiner heißt „Layout"', async () => {
 		const { COMPARE_TABS, COMPARE_TAB_VALUES } = await geteilt();
 		assert.deepEqual(
 			COMPARE_TABS.map((t) => t.label),
-			['Übersicht', 'Orte', 'Wetter-Metriken', 'Wertebereiche', 'Alarme'],
-			'Soll aus Spec § Expected Behavior (#1743: Versand/Vorschau entfallen)'
+			['Übersicht', 'Orte', 'Wetter', 'Zustellung'],
+			'Soll aus Spec feat_2794_s3a_teil2_leiste.md AC-1'
 		);
-		assert.equal(COMPARE_TABS.length, 5);
+		assert.equal(COMPARE_TABS.length, 4);
 		assert.ok(!COMPARE_TAB_VALUES.includes('layout'), "'layout' darf kein gültiger Reiter mehr sein");
 	});
 
@@ -215,11 +215,12 @@ describe('AC-1: Reiterleiste des Ortsvergleichs', () => {
 // ── AC-3: alter Deep-Link landet in Wetter-Metriken ─────────────────────────
 
 describe('AC-3: Umleitung des alten Layout-Deep-Links', () => {
-	test("resolveCompareTab('layout') → 'wetter-metriken'", async () => {
+	// #2794 S3a AC-5: ?tab=layout landet im Reiter Wetter.
+	test("resolveCompareTab('layout') → 'wetter'", async () => {
 		const { resolveCompareTab } = await geteilt();
 		assert.equal(
 			resolveCompareTab('layout'),
-			'wetter-metriken',
+			'wetter',
 			'Ein Lesezeichen auf ?tab=layout muss dort landen, wo die Einstellung jetzt ' +
 				"liegt — nicht im generischen Fallback 'uebersicht'"
 		);
@@ -238,11 +239,13 @@ describe('AC-3: Umleitung des alten Layout-Deep-Links', () => {
 // ── AC-2-Fundament: neue Heimat samt Speicherweg ────────────────────────────
 
 describe('Stundenverlauf-Steuerung: neue Heimat + Speicherweg', () => {
-	test("der Abschnitt 'stundenverlauf' liegt im Vergleich zwischen Reihenfolge und Amtlichen Warnungen", () => {
+	// #2794 S3a: der Abschnitt „Reihenfolge" heisst jetzt `layout_kanal` (Layout je Kanal).
+	test("der Abschnitt 'stundenverlauf' liegt im Vergleich zwischen Layout je Kanal und Amtlichen Warnungen", () => {
 		const sections = weatherMetricsTabSections('vergleich');
 		assert.ok(sections.includes('stundenverlauf'), `Abschnitt fehlt: ${sections.join(', ')}`);
+		assert.ok(sections.includes('layout_kanal'), `Abschnitt layout_kanal fehlt: ${sections.join(', ')}`);
 		assert.ok(
-			sections.indexOf('reihenfolge') < sections.indexOf('stundenverlauf'),
+			sections.indexOf('layout_kanal') < sections.indexOf('stundenverlauf'),
 			'erst welche Tageswerte und in welcher Folge, dann der Stundenverlauf'
 		);
 		assert.ok(
@@ -268,7 +271,10 @@ describe('Stundenverlauf-Steuerung: neue Heimat + Speicherweg', () => {
 		);
 	});
 
-	test('im Hub liegt die Steuerung im Wetter-Metriken-Panel — WeatherMetricsTab speichert seit #2276 S4 selbst', () => {
+	// #2794 S3a (Spec feat_2794_s3a_teil2_leiste.md §3): der Stundenverlauf ist ein Zustellungs-Block —
+	// im Hub liegt die Steuerung im Panel `zustellung`, das den geteilten ZustellungTab mountet; dieser
+	// mountet genau einen WetterMetrikenVersandPanel (bereich="zustellung").
+	test('im Hub liegt die Steuerung im Zustellungs-Panel — WeatherMetricsTab speichert seit #2276 S4 selbst', () => {
 		// Issue #2276 S4: der Bubble-Wrapper `.hub-layout-hourly-wrap` ist
 		// entfallen — WeatherMetricsTab erzeugt seine kombinierte Wetter-
 		// Metriken/Layout-Speicherung selbst (analog AlarmeTab/CorridorEditor,
@@ -277,8 +283,8 @@ describe('Stundenverlauf-Steuerung: neue Heimat + Speicherweg', () => {
 		// → `buildComparePresetSavePayload`, Round-Trip-Spread) haengt nicht
 		// mehr an diesem Markup-Wrapper, sondern ist Kern-getestet in
 		// wetter_metriken_*.test.ts.
-		const panel = findTabPanelFragment(ast(HUB), 'wetter-metriken');
-		assert.notEqual(panel, null, "Panel `activeTab === 'wetter-metriken'` nicht gefunden");
+		const panel = findTabPanelFragment(ast(HUB), 'zustellung');
+		assert.notEqual(panel, null, "Panel `activeTab === 'zustellung'` nicht gefunden");
 
 		assert.equal(
 			findElementsWithClass(panel, 'hub-layout-hourly-wrap').length,
@@ -295,9 +301,14 @@ describe('Stundenverlauf-Steuerung: neue Heimat + Speicherweg', () => {
 		// werden — #1743: über den geteilten Baustein WetterMetrikenVersandPanel, der
 		// genau einen WeatherMetricsTab mountet.
 		assert.equal(
-			findComponents(panel, 'WetterMetrikenVersandPanel').length,
+			findComponents(panel, 'ZustellungTab').length,
 			1,
-			'Das Panel mountet den geteilten Baustein WetterMetrikenVersandPanel (context="vergleich")'
+			'Das Panel mountet den geteilten Baustein ZustellungTab (context="vergleich")'
+		);
+		assert.equal(
+			findComponents(ast(ZUSTELLUNG_TAB), 'WetterMetrikenVersandPanel').length,
+			1,
+			'ZustellungTab mountet genau einen geteilten WetterMetrikenVersandPanel'
 		);
 		assert.equal(
 			findComponents(ast(PANEL), 'WeatherMetricsTab').length,
@@ -355,33 +366,32 @@ describe('AC-6: Anlege-Seite (/compare/new)', () => {
 		);
 	});
 
-	test('fünf Schritte (#1743) — und der Alarme-Reiter ist erreichbar', () => {
+	test('vier Schritte (#2794) — und der Zustellungs-Reiter ist erreichbar', () => {
 		// Die eigentliche Gefahr: die Lock-Kette verlangte den Besuch des
-		// Layout-Reiters, den es nicht mehr gibt → Alarme (und damit Versand und
-		// „Briefing aktivieren") wären unerreichbar.
+		// Layout-Reiters, den es nicht mehr gibt → Zustellung (und damit
+		// „Briefing aktivieren") wäre unerreichbar.
 		const progress: CompareNewProgress = {
 			name: 'Testvergleich',
 			pickedCount: 2,
 			metrikenVisited: true,
-			idealsVisited: true,
-			alarmeVisited: false
+			zustellungVisited: false
 		};
 		const unlocked = unlockedTabs(progress);
 		assert.ok(
-			unlocked.has('alarme'),
-			'Nach Name + 2 Orten + Wetter-Metriken + Wertebereiche MUSS Alarme offen sein — ' +
+			unlocked.has('zustellung'),
+			'Nach Name + 2 Orten + Wetter MUSS Zustellung offen sein — ' +
 				`offen: ${[...unlocked].join(', ')}`
 		);
 		assert.ok(!unlocked.has('layout' as never), "'layout' darf kein Reiter mehr sein");
 
 		const allVisited: CompareNewProgress = {
 			...progress,
-			alarmeVisited: true
+			zustellungVisited: true
 		};
 		const done = doneTabs(allVisited);
-		assert.ok(done.has('alarme'), 'Alarme (letzter Schritt) muss erreichbar und abschließbar sein');
+		assert.ok(done.has('zustellung'), 'Zustellung (letzter Schritt) muss erreichbar und abschließbar sein');
 		assert.ok(!(done as Set<string>).has('versand'), '#1743: Versand ist kein Schritt mehr');
-		assert.equal(progressCount(new Set([...done, 'vergleich', 'orte']), COMPARE_STEPS), 5, 'Fortschrittszähler jetzt 5 (#1743)');
+		assert.equal(progressCount(new Set([...done, 'vergleich', 'orte']), COMPARE_STEPS), 4, 'Fortschrittszähler jetzt 4 (#2794)');
 	});
 
 	test('kein Lock-Hinweis verweist mehr auf den Layout-Reiter', () => {

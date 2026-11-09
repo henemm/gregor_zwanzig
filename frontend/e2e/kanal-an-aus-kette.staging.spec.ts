@@ -56,9 +56,9 @@
 //
 // ---------------------------------------------------------------------------
 // Selektoren-Strategie (Scoping): alles im Abschnitt `versand-abschnitt` des
-// Panels `trip-detail-panel-wetter-metriken` (#1743), darin
+// Panels `trip-detail-panel-zustellung` (#1743, seit #2794 S3a Reiter Zustellung), darin
 // `evening-master-switch` -> native Checkbox.
-// Klickpfad ueber `trip-detail-tab-wetter-metriken` (kein goto mit ?tab=...).
+// Klickpfad ueber `trip-detail-tab-zustellung` (kein goto mit ?tab=...).
 // Speichern ist Autosave (BriefingScheduleTab, saveController): gewartet wird
 // auf den echten `PUT /api/trips/{id}`, nicht auf eine Pause.
 //
@@ -388,9 +388,9 @@ test.describe('Issue #2422 S3 AC-26: Abend aus im Editor => kein Abend-Briefing 
 		await page.setViewportSize({ width: 1440, height: 900 });
 		await page.goto(`/trips/${tripId}`);
 		await expect(page.getByTestId('trip-detail-tab-list')).toBeVisible({ timeout: 15_000 });
-		// Issue #1743: Versand-Abschnitt im Reiter Wetter-Metriken.
-		await page.getByTestId('trip-detail-tab-wetter-metriken').first().click();
-		const panel = page.getByTestId('trip-detail-panel-wetter-metriken').getByTestId('versand-abschnitt');
+		// Issue #1743 / #2794 S3a: Versand-Abschnitt im Reiter Zustellung.
+		await page.getByTestId('trip-detail-tab-zustellung').first().click();
+		const panel = page.getByTestId('trip-detail-panel-zustellung').getByTestId('versand-abschnitt');
 		await expect(panel).toBeVisible();
 
 		const morgenSchalter = panel.getByTestId('morning-master-switch').locator('input[type="checkbox"]');

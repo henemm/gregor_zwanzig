@@ -151,8 +151,9 @@ async function openHubMetricsTab(page: Page, id: string): Promise<Locator> {
 	// SvelteKit-Hydration-Race (#1359): die Tab-Leiste ist server-gerendert VOR
 	// der Hydration — ein zu früher Klick geht spurlos verloren.
 	await page.waitForLoadState('networkidle');
-	await page.getByTestId('compare-detail-tab-wetter-metriken').click();
-	const panel = page.getByTestId('compare-detail-panel-wetter-metriken');
+	// #2794 S3a (Spec feat_2794_s3a_teil2_leiste.md): Stundenverlauf im Reiter Zustellung.
+	await page.getByTestId('compare-detail-tab-zustellung').click();
+	const panel = page.getByTestId('compare-detail-panel-zustellung');
 	await expect(panel).toBeVisible({ timeout: 10_000 });
 	// #2347 S3d (Entscheidung 7): die frühere Vorbedingung „keine wm2-aus-gruppe im
 	// Ortsvergleich" ist entfallen — seit #1703 S8 gilt „Aus ist ein Zustand" auch in
@@ -368,7 +369,9 @@ test.describe('Issue #1361 Befund 4/5: Reihenfolge des Stundenverlaufs im Ortsve
 		// Wrapper, sie rendert WeatherMetricsTab direkt im `metriken`-Tab-
 		// Zweig. Analog hub-anlegen-ablauf.spec.ts AN-12: direkt
 		// auf der Seite scopen, nicht über einen nicht existierenden Panel-Testid.
-		await page.locator('[data-testid="compare-editor-tab-wetter-metriken"]:visible').first().click();
+		// #2794 S3a: Wetter besuchen schaltet Zustellung frei; der Stundenverlauf steht im Schritt Zustellung.
+		await page.locator('[data-testid="compare-editor-tab-wetter"]:visible').first().click();
+		await page.locator('[data-testid="compare-editor-tab-zustellung"]:visible').first().click();
 		const hourly = page.locator('[data-testid="weather-metrics-stundenverlauf"]:visible').first();
 		await expect(hourly).toBeVisible({ timeout: 10_000 });
 
@@ -406,9 +409,9 @@ test.describe('Issue #1361 Befund 4/5: Reihenfolge des Stundenverlaufs im Ortsve
 		// flipDurationMs schafft hier Verlässlichkeit; 7/7 Läufe seither grün.
 		await page.waitForTimeout(400);
 
-		await page.locator('[data-testid="compare-editor-tab-wertebereiche"]:visible').first().click();
-		// Issue #1743: Alarme ist der letzte Schritt (kein Versand-Schritt mehr).
-		await page.locator('[data-testid="compare-editor-tab-alarme"]:visible').first().click();
+		// #2794 S3a: Reiterwechsel Wetter → Zustellung (letzter Schritt) vor dem Aktivieren.
+		await page.locator('[data-testid="compare-editor-tab-wetter"]:visible').first().click();
+		await page.locator('[data-testid="compare-editor-tab-zustellung"]:visible').first().click();
 
 		const [response] = await Promise.all([
 			page.waitForResponse(

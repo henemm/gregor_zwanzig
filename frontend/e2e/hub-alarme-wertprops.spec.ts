@@ -141,7 +141,7 @@ async function bleibtBei(lies: () => number, soll: number, ms: number, message: 
 }
 
 async function oeffneAlarme(page: Page, kind: HubKind, id: string): Promise<Locator> {
-	await openHub(page, kind, id, { tab: 'alarme' });
+	await openHub(page, kind, id, { tab: 'zustellung' }); // #2794 S3a: Alarme im Reiter Zustellung
 	const reiter = page.locator('[data-testid="alarme-tab"]').first();
 	await expect(reiter, 'Der Alarme-Reiter muss erscheinen').toBeVisible({ timeout: 10_000 });
 	return reiter;

@@ -256,8 +256,8 @@ test('AC-9: die ohne Netz gezeigte Trip-Ansicht sperrt ihre Bearbeitungsflaechen
 		).toBeDisabled();
 
 		// Alarm-Tab: dort schreibt JEDES Eingabefeld in die Trip-Konfiguration.
-		await page.getByTestId('trip-detail-tab-alarme').first().click();
-		const panel = page.getByTestId('trip-detail-panel-alarme');
+		await page.getByTestId('trip-detail-tab-zustellung').first().click();
+		const panel = page.getByTestId('trip-detail-panel-zustellung');
 		await expect(panel).toBeVisible();
 		const bedienbar = panel.locator(
 			'input:not([disabled]), select:not([disabled]), textarea:not([disabled])'
@@ -328,8 +328,8 @@ async function sperrbild(page: Page, auswahl: string): Promise<Sperrbild> {
 /** Oeffnet den Alarm-Reiter der Trip-Ansicht. */
 async function alarmReiterOeffnen(page: Page): Promise<void> {
 	await expect(page.getByTestId('trip-detail-tab-list')).toBeVisible({ timeout: 15_000 });
-	await page.getByTestId('trip-detail-tab-alarme').first().click();
-	await expect(page.getByTestId('trip-detail-panel-alarme')).toBeVisible();
+	await page.getByTestId('trip-detail-tab-zustellung').first().click();
+	await expect(page.getByTestId('trip-detail-panel-zustellung')).toBeVisible();
 	await expect(page.locator('[data-testid="alert-cooldown-input"]').first()).toBeVisible();
 }
 

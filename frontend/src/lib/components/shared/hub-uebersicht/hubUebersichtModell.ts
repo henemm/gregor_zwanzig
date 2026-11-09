@@ -48,7 +48,7 @@ export interface VersandKarte {
 	beschreibungKurz: string;
 	beschreibungLang: string;
 	testid: string;
-	sprungziel: { tab: 'wetter-metriken'; anchor: 'versand' };
+	sprungziel: { tab: 'zustellung'; anchor: 'versand' };
 }
 
 /** Zusammenfassungs-Karte der Vergleichs-Hauptfläche (Orte, Wertebereiche). */
@@ -95,7 +95,8 @@ const TRIP_STATUS_TEXT: Record<TripStatus, MessageKey> = {
 	finished: 'trip.status.finished',
 	archived: 'trip.status.archived'
 };
-const VERSAND_ZIEL = { tab: 'wetter-metriken', anchor: 'versand' } as const;
+// #2794 S3a: Versand-Abschnitt im Reiter Zustellung, Wertebereiche im Reiter Wetter.
+const VERSAND_ZIEL = { tab: 'zustellung', anchor: 'versand' } as const;
 
 /** EINE Regel für „Zuletzt raus" (Entscheidung 3): neuester Eintrag mit on_demand !== true. */
 export function neuesterPlanmaessigerEintrag(eintraege: BriefingHistoryEntry[]): BriefingHistoryEntry | null {
@@ -256,7 +257,7 @@ function wertebereicheKarte(preset: ComparePreset): Karte {
 		titel: presetProfileLabel(preset.profil) || String(preset.profil ?? ''),
 		beschreibungKurz: trn('vergleich.hub.wertebereiche_kurz', anzahl),
 		beschreibungLang: trn('vergleich.hub.wertebereiche_lang', anzahl),
-		sprungziel: { tab: 'wertebereiche' }
+		sprungziel: { tab: 'wetter' }
 	};
 }
 

@@ -84,17 +84,19 @@ describe('AC-3: Schnellaktionen nutzen ?tab= statt Hash-Anker', () => {
 		assert.ok(!src.includes('#schedule'), 'Hash-Anker #schedule muss durch ?tab=wetter-metriken#versand ersetzt sein');
 	});
 
-	test('?tab=wertebereiche und ?tab=wetter-metriken#versand sind vorhanden (neue Kennungen, Feature #2287, #1743)', () => {
+	// #2794 S3a (Spec feat_2794_s3a_teil2_leiste.md AC-1/AC-5): Wertebereiche im Reiter Wetter, der
+	// Zeitplan (#versand) im Reiter Zustellung.
+	test('?tab=wetter und ?tab=zustellung#versand sind vorhanden (neue Kennungen, Feature #2287, #1743, #2794)', () => {
 		const src = read(HOME);
 		assert.ok(
-			src.includes('?tab=wertebereiche'),
-			'Schnellaktion "Ideal-Werte ändern" muss auf /compare/{id}?tab=wertebereiche zeigen'
+			/\/compare\/[^"'`\s]*\?tab=wetter(?![-\w])/.test(src),
+			'Schnellaktion "Ideal-Werte ändern" muss auf /compare/{id}?tab=wetter zeigen'
 		);
 		assert.ok(!src.includes('?tab=idealwerte'), 'Alt-Kennung ?tab=idealwerte darf nicht mehr erzeugt werden');
-		// #1743 AC-23: der Reiter Versand entfaellt — der Zeitplan liegt unter Wetter-Metriken (#versand)
+		assert.ok(!src.includes('?tab=wertebereiche'), 'Alt-Kennung ?tab=wertebereiche darf nicht mehr erzeugt werden');
 		assert.ok(
-			src.includes('?tab=wetter-metriken#versand'),
-			'Schnellaktion "Briefing-Zeitplan" muss auf /compare/{id}?tab=wetter-metriken#versand zeigen'
+			src.includes('?tab=zustellung#versand'),
+			'Schnellaktion "Briefing-Zeitplan" muss auf /compare/{id}?tab=zustellung#versand zeigen'
 		);
 	});
 
@@ -106,26 +108,28 @@ describe('AC-3: Schnellaktionen nutzen ?tab= statt Hash-Anker', () => {
 	// dass die Links so AUSSEHEN). `resolveCompareTab` ist dieselbe Funktion,
 	// die CompareTabs.svelte für `initialTab` verwendet (compareTabsResolve.ts,
 	// Single Source of Truth) — kein Duplikat der Logik, echter Aufruf.
-	test('Feature #2287/#1743: "idealwerte" → "wertebereiche", "versand" → "wetter-metriken" (Anker), "wetter-metriken" ist neu, nie "uebersicht"', async () => {
+	test('Feature #2287/#1743/#2794: "idealwerte" → "wetter", "versand" → "zustellung" (Anker), nie "uebersicht"', async () => {
 		const { resolveTab } = await import('../../shared/subscriptionTabs.ts');
 		const resolveCompareTab = (v: string): string => resolveTab('vergleich', v).tab;
 		assert.equal(
 			resolveCompareTab('idealwerte'),
-			'wertebereiche',
-			'CompareTabs muss ?tab=idealwerte (Alt-Link) auf wertebereiche umleiten, nicht auf uebersicht zurückfallen'
+			'wetter',
+			'CompareTabs muss ?tab=idealwerte (Alt-Link) auf wetter umleiten, nicht auf uebersicht zurückfallen'
 		);
-		// #1743 AC-3: ?tab=versand ist Alt-Link → Wetter-Metriken mit Anker #versand
+		// #1743 AC-3 / #2794 AC-5: ?tab=versand ist Alt-Link → Zustellung mit Anker #versand
 		assert.deepEqual(resolveTab('vergleich', 'versand'), {
-			tab: 'wetter-metriken',
+			tab: 'zustellung',
 			legacy: true,
 			known: true,
 			anchor: 'versand'
 		});
-		assert.deepEqual(
-			resolveTab('vergleich', 'wetter-metriken'),
-			{ tab: 'wetter-metriken', legacy: false, known: true },
-			'das Schnellaktions-Ziel muss ohne Legacy-Umweg aufloesen (AC-23)'
-		);
+		for (const ziel of ['wetter', 'zustellung']) {
+			assert.deepEqual(
+				resolveTab('vergleich', ziel),
+				{ tab: ziel, legacy: false, known: true },
+				'das Schnellaktions-Ziel muss ohne Legacy-Umweg aufloesen (AC-23)'
+			);
+		}
 		// Gegenprobe: ein ungültiger Wert faellt weiterhin auf uebersicht zurueck
 		// (Regressionsschutz — kein zu freizuegiges resolve()).
 		assert.equal(resolveCompareTab('nicht-existent'), 'uebersicht');

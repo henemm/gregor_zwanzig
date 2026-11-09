@@ -251,10 +251,11 @@ export function corridorZustandsBruecke(
  *  Wertebereiche heisst jetzt in beiden Hubs `wertebereiche` (vormals `idealwerte`).
  *  Issue #1743: `versand` ist kein Reiter mehr — der Versand-Abschnitt gehoert zum
  *  Reiter `wetter-metriken` (beide Besitzer werden beim Verlassen gesendet). */
+// Issue #2794 S3a: Reiter `wetter` (Metrik-Auswahl + Wertebereiche) und `zustellung`
+// (Versand, Alarme, Zustellungs-Bloecke) ersetzen alarme/wertebereiche/wetter-metriken.
 export const SELBST_SPEICHERNDE_VERGLEICH_REITER: readonly string[] = [
-	'alarme',
-	'wertebereiche',
-	'wetter-metriken'
+	'wetter',
+	'zustellung'
 ];
 
 /**

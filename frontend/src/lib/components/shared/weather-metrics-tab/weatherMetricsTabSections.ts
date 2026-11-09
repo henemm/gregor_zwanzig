@@ -36,7 +36,7 @@ export type WeatherMetricsContext = 'route' | 'vergleich';
 // (Issue #1357/#1411): 'auswertungen' war route-exklusiv, weil der Vergleich
 // `display_config.metrics[].aggregations` nicht liest; diese Unterscheidung
 // ist mit dem Wegfall des Abschnitts hinfaellig.
-const ROUTE_ONLY_SECTIONS = ['sms_schwellen', 'report_config'] as const;
+const ROUTE_ONLY_SECTIONS = ['sms_schwellen', 'report_config', 'nachtblock'] as const;
 
 // Issue #1360 (Scheibe S1a von Epic #1372): 'stundenverlauf' ist die neue
 // Heimat der Stundenverlauf-Steuerung — der Reiter "Layout" des Ortsvergleichs
@@ -67,10 +67,20 @@ const SHARED_TRAILING_SECTIONS = ['ausblick', 'official_alerts'] as const;
 // Position). Beim Trip zieht die Steuerung damit aus dem Versand-Reiter hierher
 // (PO-Entscheidung: "Welche Stunden bewertet werden, ist eine Inhalts- und
 // keine Versandfrage").
-export function weatherMetricsTabSections(context: WeatherMetricsContext): string[] {
-	const sections: string[] = ['grundauswahl', 'reihenfolge', 'tagesfenster'];
+export function weatherMetricsTabSections(context: WeatherMetricsContext, bereich: WeatherMetricsBereich = 'alles'): string[] {
+	const sections: string[] = ['grundauswahl', 'layout_kanal', 'tagesfenster'];
 	if (context === 'route') sections.push(...ROUTE_ONLY_SECTIONS);
 	if (context === 'vergleich') sections.push(...COMPARE_ONLY_SECTIONS);
 	sections.push(...SHARED_TRAILING_SECTIONS);
-	return sections;
+	if (bereich === 'alles') return sections;
+	return sections.filter((s) => ZUSTELLUNGS_SECTIONS.includes(s) === (bereich === 'zustellung'));
 }
+
+// Issue #2794 S3a (Teil-PR 2): `bereich` ist ein reiner Darstellungsfilter. Der Reiter
+// Wetter zeigt die Wetter-Abschnitte, der Reiter Zustellung die Zustellungs-Abschnitte;
+// beide disjunkt, Vereinigung = alles (kein Element verschwindet). Ohne `bereich` = alles.
+// 'reihenfolge' heisst seitdem 'layout_kanal' (Layout je Kanal); 'nachtblock' ist der
+// Nacht-Block der Trip-Mail (#1721, nur route, daher in ROUTE_ONLY_SECTIONS).
+export type WeatherMetricsBereich = 'wetter' | 'zustellung' | 'alles';
+
+const ZUSTELLUNGS_SECTIONS: readonly string[] = ['layout_kanal', 'stundenverlauf', 'ausblick', 'report_config', 'nachtblock'];

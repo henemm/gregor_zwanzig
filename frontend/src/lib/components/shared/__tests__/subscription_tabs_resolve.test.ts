@@ -10,6 +10,11 @@
 // `vorschau` entfallen. Alt-Kennungen `versand`/`briefings` → `wetter-metriken` mit Anker
 // `versand`; `vorschau`/`preview` → `uebersicht`. Uebrige Alt-Kennungen unveraendert (AC-5).
 //
+// #2794 S3a Teil-PR 2 (Spec feat_2794_s3a_teil2_leiste.md AC-1/AC-2/AC-5): vier Reiter
+// Übersicht · Punkte · Wetter · Zustellung. `wetter-metriken`/`wertebereiche`/`layout`/
+// `weather`/`alerts`/`idealwerte` → `wetter`; `alarme` → `zustellung`; `versand`/`briefings`
+// → `zustellung` mit Anker `versand`.
+//
 // Ausfuehren:
 //   cd frontend && npm test -- src/lib/components/shared/__tests__/subscription_tabs_resolve.test.ts
 
@@ -25,18 +30,18 @@ const KINDS: Kind[] = ['trip', 'vergleich'];
 const PUNKTE: Record<Kind, string> = { trip: 'etappen', vergleich: 'orte' };
 
 function neueKennungen(kind: Kind): string[] {
-	return ['uebersicht', PUNKTE[kind], 'wetter-metriken', 'wertebereiche', 'alarme'];
+	return ['uebersicht', PUNKTE[kind], 'wetter', 'zustellung'];
 }
 
-describe('subscriptionTabs(kind): Reihenfolge, Kennungen, Beschriftung (#1743: fuenf Reiter)', () => {
-	test('Trip: fuenf Reiter in der Reihenfolge der Reiterleiste (AC-1)', () => {
+describe('subscriptionTabs(kind): Reihenfolge, Kennungen, Beschriftung (#2794: vier Reiter)', () => {
+	test('Trip: vier Reiter in der Reihenfolge der Reiterleiste (AC-1)', () => {
 		assert.deepEqual(
 			subscriptionTabs('trip').map((t) => t.id),
 			neueKennungen('trip')
 		);
 	});
 
-	test('Vergleich: fuenf Reiter in der Reihenfolge der Reiterleiste (AC-2)', () => {
+	test('Vergleich: vier Reiter in der Reihenfolge der Reiterleiste (AC-2)', () => {
 		assert.deepEqual(
 			subscriptionTabs('vergleich').map((t) => t.id),
 			neueKennungen('vergleich')
@@ -46,11 +51,11 @@ describe('subscriptionTabs(kind): Reihenfolge, Kennungen, Beschriftung (#1743: f
 	test('Beschriftung unveraendert (Trip „Etappen & Wegpunkte", Vergleich „Orte")', () => {
 		assert.deepEqual(
 			subscriptionTabs('trip').map((t) => t.label),
-			['Übersicht', 'Etappen & Wegpunkte', 'Wetter-Metriken', 'Wertebereiche', 'Alarme']
+			['Übersicht', 'Etappen & Wegpunkte', 'Wetter', 'Zustellung']
 		);
 		assert.deepEqual(
 			subscriptionTabs('vergleich').map((t) => t.label),
-			['Übersicht', 'Orte', 'Wetter-Metriken', 'Wertebereiche', 'Alarme']
+			['Übersicht', 'Orte', 'Wetter', 'Zustellung']
 		);
 	});
 
@@ -76,14 +81,18 @@ describe('AC-4: neue Kennungen × beide kinds — unveraendert, kein Umschreiben
 const ALT: Array<[string, (k: Kind) => string]> = [
 	['overview', () => 'uebersicht'],
 	['stages', (k) => PUNKTE[k]],
-	['weather', () => 'wetter-metriken'],
-	['alerts', () => 'wertebereiche'],
-	['briefings', () => 'wetter-metriken'],
-	['versand', () => 'wetter-metriken'],
+	['weather', () => 'wetter'],
+	['alerts', () => 'wetter'],
+	['briefings', () => 'zustellung'],
+	['versand', () => 'zustellung'],
 	['preview', () => 'uebersicht'],
 	['vorschau', () => 'uebersicht'],
-	['idealwerte', () => 'wertebereiche'],
-	['layout', () => 'wetter-metriken']
+	['idealwerte', () => 'wetter'],
+	['layout', () => 'wetter'],
+	// #2794 S3a: die Reiter von #1743 sind selbst Alt-Kennungen
+	['wetter-metriken', () => 'wetter'],
+	['wertebereiche', () => 'wetter'],
+	['alarme', () => 'zustellung']
 ];
 
 describe('AC-1 / AC-2: Alt-Kennungen werden in BEIDEN Hubs auf den neuen Reiter umgeleitet', () => {
@@ -98,9 +107,9 @@ describe('AC-1 / AC-2: Alt-Kennungen werden in BEIDEN Hubs auf den neuen Reiter 
 		}
 	}
 
-	test('Beispiele der Spec: /trips/{id}?tab=alerts und /compare/{id}?tab=alerts → Wertebereiche', () => {
-		assert.equal(resolveTab('trip', 'alerts').tab, 'wertebereiche');
-		assert.equal(resolveTab('vergleich', 'alerts').tab, 'wertebereiche');
+	test('Beispiele der Spec: /trips/{id}?tab=alerts und /compare/{id}?tab=alerts → Wetter (#2794: Wertebereiche dort)', () => {
+		assert.equal(resolveTab('trip', 'alerts').tab, 'wetter');
+		assert.equal(resolveTab('vergleich', 'alerts').tab, 'wetter');
 	});
 });
 
@@ -116,10 +125,10 @@ describe('#1743 AC-3/AC-4: Versand-Alt-Kennungen tragen den Anker `versand`, all
 				assert.equal(r.anchor, ANKER[alt]);
 			});
 		}
-		test(`${kind}: 'versand' und 'briefings' → exakt { wetter-metriken, legacy, known, anchor: versand }`, () => {
+		test(`${kind}: 'versand' und 'briefings' → exakt { zustellung, legacy, known, anchor: versand }`, () => {
 			for (const alt of ['versand', 'briefings']) {
 				assert.deepEqual(resolveTab(kind, alt), {
-					tab: 'wetter-metriken',
+					tab: 'zustellung',
 					legacy: true,
 					known: true,
 					anchor: 'versand'
@@ -175,9 +184,9 @@ describe('#1743 AC-3/AC-4: bereinigteTabAdresse schreibt Alt-Kennungen genau ein
 	const PFAD: Record<Kind, string> = { trip: '/trips/t-1', vergleich: '/compare/c-1' };
 	for (const kind of KINDS) {
 		for (const alt of ['versand', 'briefings']) {
-			test(`${kind}: ?tab=${alt} → ${PFAD[kind]}?tab=wetter-metriken#versand`, () => {
+			test(`${kind}: ?tab=${alt} → ${PFAD[kind]}?tab=zustellung#versand`, () => {
 				const href = `http://localhost${PFAD[kind]}?tab=${alt}`;
-				assert.equal(bereinigteTabAdresse(href, resolveTab(kind, alt)), `${PFAD[kind]}?tab=wetter-metriken#versand`);
+				assert.equal(bereinigteTabAdresse(href, resolveTab(kind, alt)), `${PFAD[kind]}?tab=zustellung#versand`);
 			});
 		}
 		for (const alt of ['vorschau', 'preview']) {
@@ -186,9 +195,10 @@ describe('#1743 AC-3/AC-4: bereinigteTabAdresse schreibt Alt-Kennungen genau ein
 				assert.equal(bereinigteTabAdresse(href, resolveTab(kind, alt)), `${PFAD[kind]}?tab=uebersicht`);
 			});
 		}
-		test(`${kind}: nach dem Umschreiben ist ?tab=wetter-metriken#versand neu — keine zweite Schreibung (keine Schleife)`, () => {
-			const href = `http://localhost${PFAD[kind]}?tab=wetter-metriken#versand`;
-			assert.equal(bereinigteTabAdresse(href, resolveTab(kind, 'wetter-metriken')), null);
+		test(`${kind}: nach dem Umschreiben ist ?tab=zustellung#versand neu — keine zweite Schreibung (keine Schleife)`, () => {
+			const href = `http://localhost${PFAD[kind]}?tab=zustellung#versand`;
+			assert.equal(bereinigteTabAdresse(href, resolveTab(kind, 'zustellung', '#versand')), null);
+			assert.equal(bereinigteTabAdresse(href, resolveTab(kind, 'zustellung')), null);
 		});
 	}
 });

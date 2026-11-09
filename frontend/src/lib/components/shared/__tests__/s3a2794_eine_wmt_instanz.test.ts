@@ -308,6 +308,60 @@ describe('AC-2.T4 (Regressionswächter): „Mit Standardwerten speichern" wartet
 	});
 });
 
+// Fix-Loop 1 (Adversary F005, Mutation M6): die Vorbelegung muss im Anlege-PAYLOAD ankommen —
+// gemessen am POST, den der ECHTE Editor nach der Meldung des CorridorEditors im Schritt wetter
+// abschickt (Muster standardwerte_wartet_auf_wertebereiche_vorbelegung.test.ts), fuer
+// „Speichern" UND „Mit Standardwerten speichern".
+describe('AC-2.T4 (F005): das neue Abo enthält die Wertebereiche-Vorbelegung (corridors) im Anlege-Payload', () => {
+	const VORBELEGUNG = [{ metric: 'wind_gust', range: [null, 70], notify: true, mark: false }];
+
+	async function editorMitVorbelegung(): Promise<{ e: Knoten; posts: Array<{ url: string; body: Knoten }> }> {
+		const { editorUmgebung: eu, derivedNeu, TRIP_EDITOR } = await import('./standardwerteEditorPruefstand.ts');
+		const posts: Array<{ url: string; body: Knoten }> = [];
+		const e = await eu(TRIP_EDITOR, {
+			stateOverride: { activeTab: 'wetter', isMobileViewport: false },
+			name: 'Trip X',
+			startDate: '2026-07-01',
+			stages: [1, 2].map((id) => ({ id, name: `E${id}`, gpx: { file: 'a.gpx', km: 10, asc: 500 }, waypoints: [] })),
+			catalogLoaded: true,
+			weatherMetrics: [{ metric_id: 'gust', enabled: true }],
+			api: { post: async (url: string, body: Knoten) => (posts.push({ url, body }), { id: 'neu-1' }), get: async () => ({}) }
+		});
+		// Der CorridorEditor, der im Schritt wetter sichtbar ist (Desktop-Zweig), meldet seine Vorbelegung.
+		const { ast, quelle } = svelteAst(DATEI.tripNeu);
+		const c = einbettungenMitWeichen(ast, quelle, ['CorridorEditor']).find((x) => viewportVon(x) !== 'mobil');
+		assert.ok(c, 'Messaufbau: kein Desktop-CorridorEditor im Trip-Anlegen');
+		const d = displayAusdruck(c!, quelle);
+		assert.equal(d ? werte(d, e.u) : '', '', 'Messaufbau: der CorridorEditor ist im Schritt wetter nicht sichtbar');
+		for (const name of ['onCorridorsChange', 'onVorbelegungFertig']) {
+			const a = attribut(c!.knoten, quelle, name);
+			assert.ok(a?.ausdruck, `F005: CorridorEditor ohne ${name}`);
+			const fn = werte(a!.ausdruck!, e.u) as (...x: unknown[]) => unknown;
+			if (name === 'onCorridorsChange') fn(VORBELEGUNG);
+			else fn();
+		}
+		derivedNeu(e);
+		return { e, posts };
+	}
+
+	test('s3a2794_t4_speichern_traegt_corridors_im_payload', async () => {
+		const { e, posts } = await editorMitVorbelegung();
+		e.u.ready = true; // alle Pflichtschritte erfuellt — Gegenstand ist allein der Payload
+		await (e.u.buildAndSave as (m?: boolean) => Promise<unknown>)(false);
+		assert.equal(posts.length, 1, 'Messaufbau: „Speichern" hat nicht genau einmal gepostet');
+		assert.equal(posts[0].url, '/api/trips');
+		assert.deepEqual(posts[0].body.corridors, VORBELEGUNG, 'AC-2.T4 FAIL: der Anlege-POST traegt die Wertebereiche-Vorbelegung (corridors) nicht');
+	});
+
+	test('s3a2794_t4_mit_standardwerten_traegt_corridors_im_payload', async () => {
+		const { e, posts } = await editorMitVorbelegung();
+		assert.equal(e.u.standardwerteFrei, true, 'Messaufbau: „Mit Standardwerten speichern" nach der Vorbelegung nicht frei');
+		await (e.u.buildAndSave as (m?: boolean) => Promise<unknown>)(true);
+		assert.equal(posts.length, 1, 'Messaufbau: „Mit Standardwerten speichern" hat nicht genau einmal gepostet');
+		assert.deepEqual(posts[0].body.corridors, VORBELEGUNG, 'AC-2.T4 FAIL: der Standardwerte-POST traegt die Vorbelegung (corridors) nicht');
+	});
+});
+
 // ── Vergleich-Anlegen: if-Kette, je Schritt höchstens eine Instanz ────────────
 
 describe('AC-2.T2 Vergleich-Anlegen (CompareNewEditor): Schritte wetter/zustellung, nie zwei Instanzen', () => {

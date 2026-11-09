@@ -105,16 +105,20 @@ function hubFeldsatz(ast: Knoten, u: Knoten): Knoten {
 	return f as Knoten;
 }
 
-describe('#1743 AC-9: Versand-Hydration haengt am Reiter wetter-metriken', () => {
-	for (const tab of ['wetter-metriken', 'versand']) {
+// Issue #2794 S3a (Spec feat_2794_s3a_teil2_leiste.md AC-2/AC-5): der Versand-Abschnitt liegt im
+// Reiter `zustellung`; die Versand-Hydration haengt dort. Alt-Links `?tab=versand`, `?tab=alarme`
+// fuehren dorthin. Die Zusicherungen (gespeicherte Werte statt Platzhalter, Nutzerwert bleibt,
+// Mount erst nach der Hydration) bleiben.
+describe('#1743 AC-9 / #2794: Versand-Hydration haengt am Reiter zustellung', () => {
+	for (const tab of ['zustellung', 'versand', 'alarme']) {
 		test(`?tab=${tab}: der Versand-Hydrations-Effekt fuellt die gespeicherten Werte (kein Platzhalter)`, async () => {
 			const { u, ast, quelle } = await hubOeffnen(tab);
-			assert.equal(u.activeTab, 'wetter-metriken', `Vorbedingung: ?tab=${tab} oeffnet Wetter-Metriken`);
+			assert.equal(u.activeTab, 'zustellung', `Vorbedingung: ?tab=${tab} oeffnet Zustellung`);
 			const feldsatz = hubFeldsatz(ast, u);
 			const effekte = effekteVon(ast, quelle, u, 'hydrateVersandFieldsFromPreset');
 			assert.ok(effekte.length >= 1, 'Messaufbau: kein Versand-Hydrations-Effekt gefunden');
 			for (const e of effekte) e();
-			assert.equal(u.versandHydrated, true, 'die Versand-Hydration laeuft im Reiter wetter-metriken nicht');
+			assert.equal(u.versandHydrated, true, 'die Versand-Hydration laeuft im Reiter zustellung nicht');
 			const soll = hydrateVersandFieldsFromPreset(u.currentPreset);
 			for (const feld of ['morningEnabled', 'morningTime', 'eveningEnabled', 'eveningTime', 'sendEmail', 'sendTelegram', 'sendSms']) {
 				assert.deepEqual(feldsatz[feld], (soll as Knoten)[feld], `Feldsatz.${feld} traegt nicht den gespeicherten Wert`);
@@ -123,7 +127,7 @@ describe('#1743 AC-9: Versand-Hydration haengt am Reiter wetter-metriken', () =>
 	}
 
 	test('#2727 AC-15 „Daten kommen spaet": vor der Hydration Standardwerte, danach Preset-Werte; Nutzerwert bleibt', async () => {
-		const { u, ast, quelle } = await hubOeffnen('wetter-metriken');
+		const { u, ast, quelle } = await hubOeffnen('zustellung');
 		const feldsatz = hubFeldsatz(ast, u);
 		// Vor der Hydration: der Reiter ist nicht leer, er zeigt die Anlege-Standardwerte.
 		const vorher = versandPropsAus(feldsatz);
@@ -147,6 +151,12 @@ describe('#1743 AC-9: Versand-Hydration haengt am Reiter wetter-metriken', () =>
 		for (const e of effekteVon(ast, quelle, u, 'hydrateVersandFieldsFromPreset')) e();
 		assert.equal(u.versandHydrated, false);
 	});
+
+	test('Gegenprobe: im Reiter Wetter (ohne Versand-Abschnitt) wird der Versand nicht hydriert', async () => {
+		const { u, ast, quelle } = await hubOeffnen('wetter');
+		for (const e of effekteVon(ast, quelle, u, 'hydrateVersandFieldsFromPreset')) e();
+		assert.equal(u.versandHydrated, false);
+	});
 });
 
 // ── Template-AST: der Baustein mountet erst nach der Versand-Hydration ─────────
@@ -165,11 +175,12 @@ function mitVorfahren(knoten: unknown, name: string): Array<{ k: Knoten; vorfahr
 	return treffer;
 }
 
-describe('#1743 AC-9 (Template): der Baustein im Panel wetter-metriken haengt an versandHydrated', () => {
-	test('WetterMetrikenVersandPanel steht unter einer Bedingung mit versandHydrated oder erhaelt das Flag als Prop', async () => {
-		const { ast, quelle } = await hubOeffnen('wetter-metriken');
-		const treffer = mitVorfahren(ast.fragment, 'WetterMetrikenVersandPanel');
-		assert.equal(treffer.length, 1, 'genau ein WetterMetrikenVersandPanel im Vergleichs-Hub erwartet');
+// #2794 S3a: der Versand-Abschnitt kommt im Hub ueber den geteilten ZustellungTab (Panel `zustellung`).
+describe('#1743 AC-9 (Template): der Zustellungs-Baustein haengt an versandHydrated', () => {
+	test('ZustellungTab steht unter einer Bedingung mit versandHydrated oder erhaelt das Flag als Prop', async () => {
+		const { ast, quelle } = await hubOeffnen('zustellung');
+		const treffer = mitVorfahren(ast.fragment, 'ZustellungTab');
+		assert.equal(treffer.length, 1, 'genau ein ZustellungTab im Vergleichs-Hub erwartet');
 		const { k, vorfahren } = treffer[0];
 		const imBlock = vorfahren.some(
 			(v) => v.type === 'IfBlock' && /\bversandHydrated\b/.test(quelle.slice(v.test.start, v.test.end))
