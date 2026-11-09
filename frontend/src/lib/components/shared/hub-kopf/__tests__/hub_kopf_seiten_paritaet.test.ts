@@ -68,6 +68,10 @@ const ueberschrift = (w: Knoten): Knoten => {
 	assert.equal(t.length, 1, `genau eine Überschrift auf der Seite erwartet, gefunden ${t.length}`);
 	return t[0];
 };
+/** Die Titelzeile: #2878 legt Überschrift und Stift in eine innere Gruppe (der Stift springt beim
+ *  Umbruch nie allein weg) — die Titelzeile ist daher das Elternelement dieser Gruppe, nicht mehr
+ *  das der Überschrift. Status und „Tag x von y" stehen weiterhin in dieser Zeile. */
+const titelzeile = (w: Knoten): Knoten => ueberschrift(w).eltern!.eltern!;
 /** Das Status-Schild: umgehängt durch #2837 S1b (AC-8) — EIN Baustein `StatusSchild`, bei beiden
  *  Arten mit Testid `trip-detail-status-badge` (vormals Vergleich = CompareStatusPill über data-status). */
 const statusBadge = (w: Knoten, _art: Art): Knoten[] => mitTestid(w, 'trip-detail-status-badge');
@@ -91,7 +95,7 @@ for (const art of ARTEN) {
 			const w = seite(art);
 			const senden = einzig(w, 'subscription-hub-send');
 			assert.equal(senden.attrs['data-variant'], 'primary', `„Senden" hat variant „${senden.attrs['data-variant']}" — erwartet primary (schwarz)`);
-			assert.ok(!liegtIn(senden, ueberschrift(w).eltern!.eltern!), '„Senden" steht neben der Überschrift (im Titelblock)');
+			assert.ok(!liegtIn(senden, titelzeile(w).eltern!), '„Senden" steht neben der Überschrift (im Titelblock)');
 			assert.ok(liegtIn(senden, einzig(w, 'hub-kopf-leiste')), '„Senden" steht nicht in der Leiste ganz oben');
 		});
 
@@ -109,7 +113,7 @@ for (const art of ARTEN) {
 		test(`AC-4 (${art}): im Kopf steht nirgends das Wort „Hub"`, () => {
 			const w = seite(art);
 			const leiste = einzig(w, 'hub-kopf-leiste');
-			const zeile = ueberschrift(w).eltern!;
+			const zeile = titelzeile(w);
 			const block = (zeile.eltern ?? zeile);
 			for (const k of [leiste, block]) {
 				const t = text(k);
@@ -121,7 +125,7 @@ for (const art of ARTEN) {
 			const w = seite(art);
 			const badges = statusBadge(w, art);
 			assert.equal(badges.length, 1, `Status-Badge ${badges.length}× auf der Seite (erwartet genau 1)`);
-			const zeile = ueberschrift(w).eltern!;
+			const zeile = titelzeile(w);
 			assert.ok(liegtIn(badges[0], zeile), 'das Status-Badge steht nicht in der Titelzeile (eigene Statuszeile unter dem Kopf?)');
 			const huelle = einzig(w, 'hub-kopf-status');
 			assert.equal(huelle.eltern, zeile, 'hub-kopf-status steht nicht in der Titelzeile');
@@ -232,7 +236,7 @@ describe('#2837 S1 AC-5 — Trip ohne Kürzel: Breadcrumb zeigt den Namen', () =
 describe('#2837 S1 AC-6 — Trip: „Tag x von y" steht in der Titelzeile, die Region darunter (vormals .status-line)', () => {
 	test('Zusatz trip-detail-status-supplement genau einmal, in der Titelzeile; keine eigene Statuszeile', () => {
 		const w = seite('route');
-		const zeile = ueberschrift(w).eltern!;
+		const zeile = titelzeile(w);
 		const zusatz = einzig(w, 'trip-detail-status-supplement');
 		assert.ok(liegtIn(zusatz, zeile), 'der Zusatz „Tag x von y" steht nicht in der Titelzeile');
 		assert.equal(alle(w, (n) => klassen(n).includes('status-line')).length, 0, 'es gibt noch eine eigene Statuszeile (.status-line)');
