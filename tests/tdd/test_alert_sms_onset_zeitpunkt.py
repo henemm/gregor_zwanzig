@@ -407,8 +407,12 @@ def test_ac9_nur_das_compare_ergebnis_traegt_den_ortsnamen():
         _onset_event(is_convective=False, onset_time="14:35", km_from=0.0,
                      km_to=0.0, intensity_label="leichter Regen"),
     ))
+    # FORTGESCHRIEBEN (Issue #1767): der Ortsnamen-KOPF lebt nur noch im
+    # Ein-Ort-Ortsvergleich; das Mehrort-Buendel nennt jeden Ort mit eigenem
+    # Token ohne Kopf (`test_ac5_compare_buendel_kopf_nennt_nur_den_ortsnamen`,
+    # `test_fix_1767_nowcast_mehrort_kurzform.py`).
     compare_sms = render_sms(to_multi_location_onset_alert_message(
-        [("Zermatt", _nowcast()), ("Chamonix", _nowcast())],
+        [("Zermatt", _nowcast())],
         tz=timezone.utc, stand_at="10:00", ampel=resolve_ampel(None),
     ))
 

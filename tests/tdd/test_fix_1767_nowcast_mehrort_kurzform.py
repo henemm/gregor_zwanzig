@@ -548,7 +548,10 @@ def test_ac5_zwanzig_orte_budget_und_ueberlaufzaehler(data_root, wire):
     RED heute: `Alpenort 01: R@14:38@14:48` — ein Ort (Preset-Erster statt
     Fruehester), kein `+k`."""
     uid = _uid("ac5")
-    minuten = {o.name: 40 - 2 * i for i, o in enumerate(ZWANZIG_ORTE, start=1)}
+    # Ort i beginnt bei +(41 - 2i) Minuten: Ort 20 = +1 (14:01), Ort 1 = +39
+    # (14:39), wie im Docstring. (`40 - 2i` setzte Ort 20 auf +0 = laufend,
+    # `R now@…` -- ein anderes Token als das hier gepruefte.)
+    minuten = {o.name: 41 - 2 * i for i, o in enumerate(ZWANZIG_ORTE, start=1)}
     _ortsvergleich_lauf(wire, uid, ZWANZIG_ORTE, minuten)
 
     sms, premium, tg = wire.sms(), wire.premium(), wire.telegram_texts()
@@ -823,3 +826,157 @@ def test_ac10_zwei_nutzer_vorschau_traegt_eigene_ortsnummern(data_root):
     assert sms_b == "3:R@14:05 1:R@14:40", f"Nutzer B: {sms_b!r}"
     with pytest.raises(LookupError):
         _vorschau("default", "cp-1767-ac10", onsets)
+
+
+# ---------------------------------------------------------------------------
+# Fix-Loop 1 (Adversary F001-F004): Zusicherungen dort, wo sie wirken
+# ---------------------------------------------------------------------------
+
+
+def _buendel(orte_minuten: list[tuple[SavedLocation, int | None]]):
+    """Echte Projektion `to_multi_location_onset_alert_message` (derselbe
+    Konstruktor wie der Versand). `None` als Minute = Regen laeuft bereits."""
+    from app.ampel import resolve_ampel
+    from output.renderers.alert.project import to_multi_location_onset_alert_message
+    from services.radar_service import NowcastResult
+    from zoneinfo import ZoneInfo
+
+    groups = [
+        (o.name, o, NowcastResult(
+            onset_minutes=m, intensity_label="leichter Regen", source="radar",
+            already_running=m is None,
+        ))
+        for o, m in orte_minuten
+    ]
+    return to_multi_location_onset_alert_message(
+        groups, tz=ZoneInfo("Europe/Zurich"), stand_at="14:00", ampel=resolve_ampel(None),
+    )
+
+
+def _positionen(orte: list[SavedLocation]) -> dict[str, int]:
+    from services.compare_alert import CompareAlertService
+
+    return CompareAlertService._location_positions([o.id for o in orte], {o.id: o for o in orte})
+
+
+@freeze_time(GEFRORENE_UHR)
+def test_f001_mehrort_sms_mit_verschaerfung_token_vorn_und_budget_exakt():
+    """F001 GIVEN 20 ausloesende Orte (Ort 20 beginnt zuerst) und eine
+    gekennzeichnete Verschaerfung (3.1 -> 7.3 mm)
+    WHEN die Kurzform mit den Ortsnummern des Presets gerendert wird
+    THEN beginnt sie GENAU EINMAL mit `UP 3.1>7.3 `, bleibt <= 140 Zeichen
+    (das Token zaehlt gegen das Budget), nennt nur ganze Tokens, frueheste
+    zuerst, und ` +k` zaehlt exakt die nicht genannten Orte."""
+    from dataclasses import replace
+
+    from output.renderers.alert.render import render_sms
+
+    msg = replace(
+        _buendel([(o, 41 - 2 * i) for i, o in enumerate(ZWANZIG_ORTE, start=1)]),
+        verschaerfung=(3.1, 7.3),
+    )
+    text = render_sms(msg, limit=140, location_positions=_positionen(ZWANZIG_ORTE))
+
+    assert text.startswith("UP 3.1>7.3 "), f"Verschaerfungs-Token fehlt vorn: {text!r}"
+    assert text.count("UP ") == 1, f"Verschaerfungs-Token nicht genau einmal: {text!r}"
+    assert len(text) <= 140, f"{len(text)} Zeichen > 140: {text!r}"
+    m = re.search(r" \+(\d+)$", text)
+    assert m, f"Text endet nicht auf ' +k': {text!r}"
+    tokens = text[len("UP 3.1>7.3 "): m.start()].split(" ")
+    for tok in tokens:
+        assert re.fullmatch(r"\d+:R@\d{1,2}:\d{2}", tok), f"kein ganzes Token {tok!r}: {text!r}"
+    positionen = [int(tok.split(":", 1)[0]) for tok in tokens]
+    assert len(positionen) + int(m.group(1)) == 20, text
+    assert positionen == list(range(20, 20 - len(positionen), -1)), positionen
+    # Das Token frisst Platz: ohne Kennzeichen passt mindestens ein Ort mehr.
+    ohne = render_sms(replace(msg, verschaerfung=None), limit=140,
+                      location_positions=_positionen(ZWANZIG_ORTE))
+    assert ohne.count(":R@") > len(tokens), (ohne, text)
+
+
+@freeze_time(GEFRORENE_UHR)
+def test_f002_telegram_langform_mehrort_traegt_verschaerfungszeile():
+    """F002a GIVEN ein Mehrort-Buendel (Zermatt 14:05, Verbier 14:40) mit
+    gekennzeichneter Verschaerfung WHEN die Telegram-Langform gerendert wird
+    THEN steht direkt unter dem Kopf die Zeile „Dasselbe Ereignis, jetzt
+    staerker: 7,3 statt 3,1 mm" (Katalog, wie im Einzelzweig)."""
+    from dataclasses import replace
+
+    from output.renderers.alert.render import render_telegram
+
+    msg = replace(_buendel([(ZERMATT, 5), (VERBIER, 40)]), verschaerfung=(3.1, 7.3))
+    zeilen = render_telegram(msg, lang="de").splitlines()
+    erwartet = t("alarm.verschaerfung", "de", menge="7,3", basis="3,1")
+    assert zeilen[0] == f"<b>{t('alarm.regen.buendel', 'de', n=2)}</b>", zeilen
+    assert zeilen[1] == erwartet, f"Verschaerfungszeile fehlt: {zeilen!r}"
+    assert sum(z == erwartet for z in zeilen) == 1, zeilen
+
+
+@freeze_time(GEFRORENE_UHR)
+def test_f002_telegram_langform_mehrort_traegt_bezugszeile():
+    """F002b GIVEN ein Mehrort-Buendel als Nachtrag zu einer amtlichen
+    Warnung WHEN die Telegram-Langform gerendert wird THEN steht die
+    Bezugszeile als eigene Zeile direkt unter dem Kopf (wie im Einzelzweig,
+    #2018 AC-B3), beide Orte folgen darunter."""
+    from dataclasses import replace
+
+    from output.renderers.alert.render import render_telegram
+
+    bezug = t("alarm.nachtrag.amtlich", "de")
+    msg = replace(_buendel([(ZERMATT, 5), (VERBIER, 40)]), addendum_reference=bezug)
+    zeilen = render_telegram(msg, lang="de").splitlines()
+    assert zeilen[1] == bezug, f"Bezugszeile fehlt: {zeilen!r}"
+    assert "Zermatt" in zeilen[2] and "Verbier" in zeilen[3], zeilen
+
+
+@freeze_time(GEFRORENE_UHR)
+def test_f003_ort_ohne_nummer_traegt_auf_12_zeichen_gekappten_ascii_namen():
+    """F003 GIVEN ein Mehrort-Buendel ohne Ortsnummern-Zuordnung, ein Ort mit
+    langem Namen samt Umlaut („Göschenen-Andermatt") WHEN die Kurzform
+    gerendert wird THEN steht davor exakt der auf 12 Zeichen gekappte
+    ASCII-Name (`Goeschenen-A:`), der kurze Name ungekuerzt."""
+    from output.renderers.alert.render import render_sms
+
+    goeschenen = SavedLocation(id="loc-goe", name="Göschenen-Andermatt",
+                               lat=46.6676, lon=8.5876, elevation_m=1106)
+    text = render_sms(_buendel([(goeschenen, 5), (ZERMATT, 40)]), limit=140)
+    assert text == "Goeschenen-A:R@14:05 Zermatt:R@14:40", text
+
+
+@freeze_time(GEFRORENE_UHR)
+def test_f004_laufender_ort_steht_in_allen_kanaelen_vorn(data_root, wire):
+    """F004 GIVEN Zermatt (Pos 1, Beginn 14:30), Chamonix (Pos 2, Regen
+    laeuft bereits), Verbier (Pos 3, Beginn 14:10) — der laufende Ort steht
+    im Preset NACH einem Ort mit spaeterem Beginn
+    WHEN der Alarm ueber `send_multi_location_radar_alert` per SMS,
+    Telegram-Langform und E-Mail versendet wird
+    THEN steht der laufende Ort ueberall zuerst: SMS `2:R now 3:R@14:10
+    1:R@14:30`, Telegram- und Mail-Zeilen Chamonix, Verbier, Zermatt."""
+    from services.notification_service import NotificationService
+    from services.radar_service import NowcastResult
+
+    uid = _uid("f004")
+    settings = wire.settings(mit_mail=True)
+    mit_profil_kanaele(nutzer_mit_tier(uid, "premium"), settings)
+    entities = [
+        (o.name, o, NowcastResult(onset_minutes=m, intensity_label="leichter Regen",
+                                  source="radar", already_running=m is None))
+        for o, m in ((ZERMATT, 30), (CHAMONIX, None), (VERBIER, 10))
+    ]
+    mails: list[tuple[str, str]] = []
+    NotificationService(settings, uid).send_multi_location_radar_alert(
+        entities, {"sms", "telegram", "email"},
+        mail_sink=lambda subject, body: mails.append((subject, body)),
+        telegram_style="rich", preset=None, location_positions=_positionen(DREI_ORTE),
+    )
+
+    assert wire.sms() == ["2:R now 3:R@14:10 1:R@14:30"], wire.sms()
+    namen = ["Zermatt", "Chamonix", "Verbier"]
+    erwartet = ["Chamonix", "Verbier", "Zermatt"]
+    tg = wire.telegram_texts()
+    assert len(tg) == 1, tg
+    tg_zeilen = [z for z in tg[0].splitlines()[1:] if any(n in z for n in namen)]
+    assert [next(n for n in namen if n in z) for z in tg_zeilen] == erwartet, tg[0]
+    assert len(mails) == 1, mails
+    mail_zeilen = [z for z in mails[0][1].splitlines() if any(n in z for n in namen)]
+    assert [next(n for n in namen if n in z) for z in mail_zeilen] == erwartet, mails[0][1]
