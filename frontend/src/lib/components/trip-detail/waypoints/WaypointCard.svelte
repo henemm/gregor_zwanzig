@@ -192,8 +192,9 @@
 		gap: 4px;
 		align-items: center;
 	}
+	/* #2879: Trenner ohne Opacity-Verdünnung (vorher 0.6 ⇒ 2,5:1) — Farbe --g-ink-3 der Meta-Zeile. */
 	.waypoint-meta-sep {
-		opacity: 0.6;
+		color: inherit;
 	}
 	.waypoint-actions {
 		display: flex;

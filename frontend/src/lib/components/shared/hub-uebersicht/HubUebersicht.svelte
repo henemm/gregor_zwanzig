@@ -113,7 +113,7 @@
 			<div style="padding: 18px 24px; display: flex; align-items: center; gap: 40px; flex-wrap: wrap">
 				{#each modell.kennzahlen as k (k.id)}
 					<div>
-						<div style="font-size: 11px; color: var(--g-ink-4); letter-spacing: 0.16em; text-transform: uppercase; margin-bottom: 5px; font-family: var(--g-font-mono)">{k.label}</div>
+						<div style="font-size: 11px; color: var(--g-ink-3); letter-spacing: 0.16em; text-transform: uppercase; margin-bottom: 5px; font-family: var(--g-font-mono)">{k.label}</div>
 						<div data-testid={k.testid} style="font-size: 14px; color: var(--g-ink); font-weight: 500">
 							{#if k.punkt}
 								<span style="display: inline-flex; align-items: center; gap: 7px"><Dot tone={k.punkt} size={7}/> {k.lang}</span>
@@ -196,7 +196,7 @@
 	}
 	.hub-mobile-stat-label {
 		font-size: 11px;
-		color: var(--g-ink-4);
+		color: var(--g-ink-3);
 		letter-spacing: 0.16em;
 		text-transform: uppercase;
 		margin-bottom: 5px;
@@ -244,7 +244,7 @@
 		display: block;
 		font-family: var(--g-font-mono);
 		font-size: 11px;
-		color: var(--g-ink-4);
+		color: var(--g-ink-3);
 		letter-spacing: 0.12em;
 		text-transform: uppercase;
 		margin-bottom: 3px;

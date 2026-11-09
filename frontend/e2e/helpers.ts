@@ -760,6 +760,8 @@ export const HUB_KOPF_SEL = {
 export const TOKEN_RGB = {
 	ink: 'rgb(26, 26, 24)',
 	accent: 'rgb(196, 90, 42)',
+	/** #2879: Accent unter/als Text (Weiter-Knopf, aktiver Handy-Reiter, Kürzel). */
+	accentDeep: 'rgb(140, 62, 26)',
 	paperDeep: 'rgb(236, 234, 217)',
 	ink3: 'rgb(107, 103, 92)'
 } as const;
@@ -780,6 +782,219 @@ export function kontrastVerhaeltnis(vorne: string, hinten: string): number {
 	};
 	const [a, b] = [lum(vorne), lum(hinten)].sort((x, y) => y - x);
 	return (a + 0.05) / (b + 0.05);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Issue #2879 (WCAG-AA auf Trip-/Vergleichsseiten): Kontrast-Messhelfer, herausgehoben aus
+// kuerzel-legende-lesbar.staging.spec.ts und um die Mischung transparenter Schichten erweitert.
+// Spec: docs/specs/modules/fix_2879_kontrast_wcag_aa.md (Implementation Details 1, AC-6,
+// Known Limitations „Messumfang").
+//
+// Gemessen wird jeder sichtbare Text: Textknoten, Werte von `input`/`textarea` (nicht der
+// Platzhalter) und `::before`/`::after`-Inhalte mit Buchstaben oder Ziffern. Schriftfarbe (SVG:
+// fill) gegen den EFFEKTIVEN Hintergrund — alle Hintergrundschichten der Vorfahrenkette von außen
+// nach innen übereinandergelegt (Start Weiß), transluzente Schichten gemischt, Schrift-Alpha ×
+// Opacity-Kette auf diesen Grund gemischt. Liegt von innen gesehen ein `background-image` vor dem
+// ersten deckenden Grund, ist der Grund nicht berechenbar — das ist ein eigener Verstoß.
+// Schwelle 4,5:1, großer Text (≥ 24 px oder ≥ 18,66 px bei Gewicht ≥ 700) 3:1.
+// Ausnahmen werden mitgemeldet, nicht verschwiegen:
+//   gesperrt     `[disabled]`, `aria-disabled="true"` (WCAG 1.4.3 „inactive UI component");
+//   aria-hidden  nur Zeichen OHNE Buchstabe/Ziffer (·, ›, ×, ⓘ): aria-hidden macht sichtbaren
+//                Text nicht unsichtbar, also keine Ausnahme für lesbaren Text;
+//   logo         nur der Schriftzug (`.typo-row`) einer Wortmarke `[data-testid="brand-wordmark"]`
+//                (WCAG 1.4.3 „Logotypes") — nicht die Unterzeile, nicht beliebige Träger der testid.
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface KontrastBefund {
+	text: string;
+	/** Tag des Elternelements (z. B. `code`, `span`; bei Eingaben `input`/`textarea`). */
+	tag: string;
+	/** Herkunft des Textes. */
+	quelle: 'text' | 'eingabe' | '::before' | '::after';
+	/** Berechnete Schriftfarbe, roh aus getComputedStyle. */
+	farbeRoh: string;
+	/** Schriftfarbe nach Alpha/Opacity-Mischung. */
+	farbe: string;
+	hintergrund: string;
+	verhaeltnis: number;
+	schwelle: number;
+	schrift: string;
+	pfad: string;
+	/** false: von innen gesehen liegt ein `background-image` vor dem ersten deckenden Grund. */
+	berechenbar: boolean;
+	ausnahme: 'gesperrt' | 'aria-hidden' | 'logo' | null;
+	/** Nur bei `logo`: Index der Wortmarke unter allen `[data-testid="brand-wordmark"]` der Seite. */
+	logoInstanz: number | null;
+}
+
+/** Läuft im Browser (selbstständig, keine Closures): misst allen sichtbaren Text unter `wurzel`. */
+function messeTextknotenImBrowser(wurzel: Element): KontrastBefund[] {
+	type Rgba = [number, number, number, number];
+	const parse = (c: string): Rgba | null => {
+		const srgb = /color\(srgb\s+([\d.]+)\s+([\d.]+)\s+([\d.]+)(?:\s*\/\s*([\d.]+))?\)/.exec(c);
+		if (srgb) return [+srgb[1] * 255, +srgb[2] * 255, +srgb[3] * 255, srgb[4] ? +srgb[4] : 1];
+		const m = /rgba?\(([^)]+)\)/.exec(c);
+		if (m) {
+			const t = m[1].split(/[\s,/]+/).filter(Boolean).map(parseFloat);
+			return [t[0], t[1], t[2], t.length > 3 ? t[3] : 1];
+		}
+		// Andere Farbräume (color-mix() ⇒ oklab(…), oklch(…)): über eine 1×1-Leinwand nach sRGB.
+		if (!/^(oklab|oklch|lab|lch|hsla?|hwb|color)\(/.test(c)) return null;
+		leinwand.clearRect(0, 0, 1, 1);
+		leinwand.fillStyle = c;
+		leinwand.fillRect(0, 0, 1, 1);
+		const [r, g, b, a] = leinwand.getImageData(0, 0, 1, 1).data;
+		return [r, g, b, a / 255];
+	};
+	const leinwand = document.createElement('canvas').getContext('2d', { willReadFrequently: true })!;
+	const lin = (v: number) => {
+		const s = v / 255;
+		return s <= 0.03928 ? s / 12.92 : Math.pow((s + 0.055) / 1.055, 2.4);
+	};
+	const lum = (c: number[]) => 0.2126 * lin(c[0]) + 0.7152 * lin(c[1]) + 0.0722 * lin(c[2]);
+	const mische = (vorn: number[], a: number, hinten: number[]) => [0, 1, 2].map((i) => vorn[i] * a + hinten[i] * (1 - a));
+	const rgb = (c: number[]) => `rgb(${c.slice(0, 3).map(Math.round).join(', ')})`;
+	const hatZeichen = (t: string) => /[\p{L}\p{N}]/u.test(t);
+	const pfadVon = (el: Element): string => {
+		const teile: string[] = [];
+		for (let e: Element | null = el; e && e !== document.body && teile.length < 5; e = e.parentElement) {
+			const id = e.getAttribute('data-testid');
+			const klasse = typeof e.className === 'string' ? e.className.trim().split(/\s+/)[0] : '';
+			teile.unshift(`${e.tagName.toLowerCase()}${id ? `[data-testid="${id}"]` : klasse ? `.${klasse}` : ''}`);
+		}
+		return teile.join(' > ');
+	};
+	/** Rechteck `r` (Text bzw. Element) erreichbar: nicht winzig, nicht weggeschoben, nicht weggeschnitten. */
+	const erreichbar = (el: Element, r: DOMRect): boolean => {
+		if (r.width <= 1 || r.height <= 1) return false;
+		// Außerhalb des scrollbaren Dokuments (z. B. left:-9999px) ist nicht erreichbar.
+		if (r.right + scrollX <= 0 || r.bottom + scrollY <= 0) return false;
+		// Von einem nicht scrollbaren Vorfahren (overflow hidden/clip) vollständig weggeschnitten?
+		for (let e = el.parentElement; e; e = e.parentElement) {
+			const cs = getComputedStyle(e);
+			if (!/hidden|clip/.test(`${cs.overflowX} ${cs.overflowY}`)) continue;
+			const b = e.getBoundingClientRect();
+			if (r.right <= b.left || r.left >= b.right || r.bottom <= b.top || r.top >= b.bottom) return false;
+		}
+		return true;
+	};
+	const sichtbar = (el: Element) => el.checkVisibility({ opacityProperty: true, visibilityProperty: true });
+	/** Grund aus allen Schichten (außen → innen, Start Weiß), optional mit der Pseudo-Schicht obenauf. */
+	const grundVon = (el: Element, pseudo: CSSStyleDeclaration | null) => {
+		const kette: CSSStyleDeclaration[] = [];
+		for (let e: Element | null = el; e; e = e.parentElement) kette.unshift(getComputedStyle(e));
+		if (pseudo) kette.push(pseudo);
+		let grund = [255, 255, 255];
+		let opazitaet = 1;
+		for (const cs of kette) {
+			const b = parse(cs.backgroundColor);
+			if (b && b[3] > 0) grund = mische(b, b[3], grund);
+			opazitaet *= parseFloat(cs.opacity);
+		}
+		// Von innen nach außen: Bild/Verlauf vor dem ersten deckenden Grund ⇒ nicht berechenbar.
+		let berechenbar = true;
+		for (let i = kette.length - 1; i >= 0; i--) {
+			if (kette[i].backgroundImage !== 'none') {
+				berechenbar = false;
+				break;
+			}
+			if ((parse(kette[i].backgroundColor)?.[3] ?? 0) >= 1) break;
+		}
+		return { grund, opazitaet, berechenbar };
+	};
+	const marken = Array.from(document.querySelectorAll('[data-testid="brand-wordmark"]'));
+	const ausnahmeVon = (el: Element, text: string): Pick<KontrastBefund, 'ausnahme' | 'logoInstanz'> => {
+		if (el.closest('[disabled], [aria-disabled="true"]')) return { ausnahme: 'gesperrt', logoInstanz: null };
+		if (el.closest('[aria-hidden="true"]') && !hatZeichen(text)) return { ausnahme: 'aria-hidden', logoInstanz: null };
+		const marke = el.closest('.typo-row')?.parentElement?.closest('[data-testid="brand-wordmark"]');
+		if (marke) return { ausnahme: 'logo', logoInstanz: marken.indexOf(marke) };
+		return { ausnahme: null, logoInstanz: null };
+	};
+	const befunde: KontrastBefund[] = [];
+	/** `cs` liefert Schriftfarbe/-größe (Element oder Pseudoelement), `pseudo` die eigene Schicht. */
+	const miss = (el: Element, text: string, quelle: KontrastBefund['quelle'], cs: CSSStyleDeclaration, pseudo: CSSStyleDeclaration | null) => {
+		const { grund, opazitaet, berechenbar } = grundVon(el, pseudo);
+		const farbeRoh = !pseudo && el instanceof SVGElement ? cs.fill : cs.color;
+		const vorn = parse(farbeRoh);
+		const farbe = vorn ? mische(vorn, vorn[3] * opazitaet, grund) : null;
+		const l1 = farbe ? lum(farbe) : NaN;
+		const l2 = lum(grund);
+		const groesse = parseFloat(cs.fontSize);
+		const gewicht = parseInt(cs.fontWeight, 10);
+		const gross = groesse >= 24 || (groesse >= 18.66 && gewicht >= 700);
+		befunde.push({
+			text: text.slice(0, 60),
+			tag: el.tagName.toLowerCase(),
+			quelle,
+			farbeRoh,
+			farbe: farbe ? rgb(farbe) : farbeRoh,
+			hintergrund: rgb(grund),
+			verhaeltnis: Math.round(((Math.max(l1, l2) + 0.05) / (Math.min(l1, l2) + 0.05)) * 100) / 100,
+			schwelle: gross ? 3 : 4.5,
+			schrift: `${cs.fontSize}/${cs.fontWeight}`,
+			pfad: pfadVon(el) + (quelle === 'text' || quelle === 'eingabe' ? '' : quelle),
+			berechenbar,
+			...ausnahmeVon(el, text)
+		});
+	};
+	// 1. Textknoten.
+	const gang = document.createTreeWalker(wurzel, NodeFilter.SHOW_TEXT);
+	for (let n = gang.nextNode() as Text | null; n; n = gang.nextNode() as Text | null) {
+		const text = (n.textContent ?? '').replace(/\s+/g, ' ').trim();
+		const el = n.parentElement;
+		if (!text || !el || /^(SCRIPT|STYLE|NOSCRIPT|TEMPLATE|OPTION|TITLE|TEXTAREA)$/.test(el.tagName)) continue;
+		if (!sichtbar(el)) continue;
+		const bereich = document.createRange();
+		bereich.selectNodeContents(n);
+		if (erreichbar(el, bereich.getBoundingClientRect())) miss(el, text, 'text', getComputedStyle(el), null);
+	}
+	// 2. Eingabewerte (nicht der Platzhalter: leerer Wert ⇒ nichts zu messen) und Pseudo-Inhalte.
+	const ohneWerttext = /^(hidden|checkbox|radio|file|range|color|image)$/;
+	const inhaltVon = (c: string, el: Element): string => {
+		if (c === 'none' || c === 'normal') return '';
+		let t = '';
+		for (const m of c.matchAll(/"((?:[^"\\]|\\.)*)"|attr\(\s*([\w-]+)\s*\)|counters?\(/g)) {
+			t += m[1] !== undefined ? m[1].replace(/\\(.)/g, '$1') : m[2] ? (el.getAttribute(m[2]) ?? '') : '0';
+		}
+		return t.replace(/\s+/g, ' ').trim();
+	};
+	for (const el of [wurzel, ...Array.from(wurzel.querySelectorAll('*'))]) {
+		if (!sichtbar(el)) continue;
+		const r = el.getBoundingClientRect();
+		const eingabe = el instanceof HTMLTextAreaElement || (el instanceof HTMLInputElement && !ohneWerttext.test(el.type));
+		const wert = eingabe ? (el as HTMLInputElement).value.replace(/\s+/g, ' ').trim() : '';
+		if (wert && erreichbar(el, r)) miss(el, wert, 'eingabe', getComputedStyle(el), null);
+		for (const art of ['::before', '::after'] as const) {
+			const ps = getComputedStyle(el, art);
+			if (ps.display === 'none' || ps.visibility !== 'visible') continue;
+			const text = inhaltVon(ps.content, el);
+			if (hatZeichen(text) && erreichbar(el, r)) miss(el, text, art, ps, ps);
+		}
+	}
+	return befunde;
+}
+
+/** Misst allen sichtbaren Text der Seite (`Page`) bzw. unter einem Element (`Locator`). */
+export async function messeKontrast(ziel: Page | Locator): Promise<KontrastBefund[]> {
+	const wurzel = 'goto' in ziel ? ziel.locator('body') : ziel;
+	return wurzel.evaluate(messeTextknotenImBrowser);
+}
+
+/** Verstöße: unter der Schwelle, Farbe nicht lesbar oder Grund nicht berechenbar — und keine Ausnahme. */
+export function kontrastVerstoesse(befunde: KontrastBefund[]): KontrastBefund[] {
+	return befunde.filter((b) => b.ausnahme === null && (!b.berechenbar || !(b.verhaeltnis >= b.schwelle)));
+}
+
+/** Eine Zeile je Verstoß: Seite, Text, Farben, Verhältnis, CSS-Pfad (doppelte zusammengefasst). */
+export function kontrastBericht(seite: string, verstoesse: KontrastBefund[]): string[] {
+	const zeilen = verstoesse.map((v) =>
+		v.berechenbar
+			? `${seite} · ${JSON.stringify(v.text)}: ${v.verhaeltnis}:1 < ${v.schwelle} ` +
+				`(${v.farbe} auf ${v.hintergrund}, ${v.schrift}) @ ${v.pfad}`
+			: `${seite} · ${JSON.stringify(v.text)}: nicht berechenbar (background-image unter dem Text, ` +
+				`${v.farbe}, ${v.schrift}) @ ${v.pfad}`
+	);
+	return [...new Set(zeilen)];
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

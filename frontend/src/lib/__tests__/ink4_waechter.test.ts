@@ -48,8 +48,8 @@ const SCOPE = [
 
 /** Bestand außerhalb des Scopes: Obergrenze je Datei, darf nur sinken. */
 const AUSNAHMEN: Record<string, number> = {
-	'lib/components/organisms/ListNameCell.svelte': 1,
-	'lib/components/organisms/ListTableRow.svelte': 3,
+	// #2879: Lesetext der Listen, Uebersicht und Etappen auf --g-ink-3 — Rest sind Chevron-Icons.
+	'lib/components/organisms/ListTableRow.svelte': 1,
 	'lib/components/compare/LocationNewModal.svelte': 7,
 	'lib/components/shared/AlertChannelPicker.svelte': 1,
 	'lib/components/shared/layout-tab/LTCapNote.svelte': 1,
@@ -57,25 +57,17 @@ const AUSNAHMEN: Record<string, number> = {
 	'lib/components/shared/layout-tab/LayoutTab.svelte': 1,
 	'lib/components/shared/dnd/DragHandle.svelte': 1,
 	'lib/components/shared/versand-tab/VTSchedulePlan.svelte': 1,
-	'lib/components/shared/hub-uebersicht/HubUebersicht.svelte': 4,
+	'lib/components/shared/hub-uebersicht/HubUebersicht.svelte': 1,
 	'lib/components/shared/weather-metrics-tab/DayWindowCard.svelte': 1,
 	'lib/components/shared/weather-metrics-tab/WeatherV2Grundauswahl.svelte': 1,
 	'lib/components/shared/weather-metrics-tab/WeatherV2Reihenfolge.svelte': 4,
-	'lib/components/mobile/StageCardM.svelte': 2,
+	'lib/components/mobile/StageCardM.svelte': 1,
 	'lib/components/trip-detail/WeatherV2Kanaele.svelte': 2,
-	'lib/components/trip-detail/waypoints/EtappenStrip.svelte': 2,
-	// 1× CSS + 1× Interpolation `color:{active ? … : 'var(--g-ink-4)'}` (ab #2371 mitgezaehlt)
-	'lib/components/trip-detail/waypoints/StageCard.svelte': 2,
-	'routes/compare/+page.svelte': 1,
-	'routes/trips/+page.svelte': 1,
-	// Svelte-Direktive `style:color` (ab Waechter-Erweiterung #2371 mitgezaehlt)
-	'lib/components/atoms/Stat.svelte': 3,
 	'lib/components/mobile/DrawerGroup.svelte': 1,
 	'lib/components/mobile/Sheet.svelte': 1,
 	'lib/components/molecules/BriefingTimelineRow.svelte': 1,
 	'lib/components/organisms/MetricOffShelf.svelte': 2,
-	'lib/components/organisms/PresetRail.svelte': 1,
-	'lib/components/organisms/SubscriptionCard.svelte': 2
+	'lib/components/organisms/PresetRail.svelte': 1
 };
 
 /** Zählt gemeldete Zeilen eines Quelltexts (reine Funktion, auch für die Gegenproben). */

@@ -789,7 +789,7 @@
 							disabled={!etDone}
 							aria-disabled={etDone ? undefined : 'true'}
 							onclick={makeEtappenContinueHandler('wegpunkte')}
-							style="padding: 8px 16px; border-radius: var(--g-r-2); border: none; background: {etDone ? 'var(--g-accent)' : 'var(--g-ink-3)'}; color: #fff; font-size: 13px; font-weight: 600; cursor: {etDone ? 'pointer' : 'not-allowed'};">
+							style="padding: 8px 16px; border-radius: var(--g-r-2); border: none; background: {etDone ? 'var(--g-accent-deep)' : 'var(--g-ink-3)'}; color: #fff; font-size: 13px; font-weight: 600; cursor: {etDone ? 'pointer' : 'not-allowed'};">
 							{$t('trip.anlegen.wegpunkte_pruefen')}
 						</button>
 					</div>
@@ -817,7 +817,7 @@
 							{$t('trip.anlegen.ueberspringen_pfeil')}
 						</button>
 						<button type="button" onclick={makeEtappenContinueHandler('wetter-metriken')}
-							style="padding: 6px 12px; border-radius: var(--g-r-2); border: none; background: var(--g-accent); color: #fff; font-size: 13px; font-weight: 600; cursor: pointer;">
+							style="padding: 6px 12px; border-radius: var(--g-r-2); border: none; background: var(--g-accent-deep); color: #fff; font-size: 13px; font-weight: 600; cursor: pointer;">
 							{$t('trip.anlegen.wegpunkte_uebernehmen')}
 						</button>
 					</div>
@@ -834,7 +834,7 @@
 						{$t('trip.anlegen.ueberspringen')}
 					</button>
 					<button type="button" onclick={makeEtappenContinueHandler('wetter-metriken')}
-						style="padding: 8px 16px; border-radius: var(--g-r-2); border: none; background: var(--g-accent); color: #fff; font-size: 13px; font-weight: 600; cursor: pointer;">
+						style="padding: 8px 16px; border-radius: var(--g-r-2); border: none; background: var(--g-accent-deep); color: #fff; font-size: 13px; font-weight: 600; cursor: pointer;">
 						{$t('trip.anlegen.wegpunkte_uebernehmen')}
 					</button>
 				</div>
