@@ -220,6 +220,7 @@
 		optional: d.optional,
 		hinweis: d.lockHint,
 		zustand: !unlocked.has(d.id) ? 'gesperrt' : done.has(d.id) ? 'erledigt' : 'offen',
+		erledigt: done.has(d.id),
 	})));
 
 	// ── Mobile-only State (Issue #661) ────────────────────────────────────────

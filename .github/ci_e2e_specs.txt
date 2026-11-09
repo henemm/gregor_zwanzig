@@ -636,3 +636,15 @@ e2e/hub-kopf-paritaet-compare-trip.spec.ts
 # (3x gruen im Zielverbund) misst der CI-Hauptlauf des PR. Filter C: kein
 # Screenshot-Schreibziel. Fallzahl: 5 (+ global.setup).
 e2e/trip-hub-etappenliste-titel.spec.ts
+#
+# hub-anlegen-paritaet-flaechen.spec.ts -- #2880 (Epic #2345): Hub-Reiterflaeche und
+# Anlege-Felder Trip gegen Vergleich, 1440 und 390 px. PF-1/PF-2 erstes sichtbares
+# Kind jedes Hub-Reiters an gleicher Stelle (x und Abstand zur Leiste, +-1 px), Handy
+# ohne Ueberbreite; PF-3 Reiterflaeche 28/40/60 bzw. 20/16/48 px direkt an der Leiste;
+# PF-4/PF-5 Feldbeschriftung Name/Region (Optik, Sternchen aria-hidden, Hinweis rechts
+# in der Beschriftungszeile, aria-required) de/en ueber den Zweitnutzer (finally
+# zurueck auf de); PF-6 Schritt-Reiter je Zustand gleich, aria-disabled, Optional-Pille,
+# Handy >= 44 px. Filter A: kein waitForTimeout/skip/fixme, kein .staging.spec. In RED
+# aufgenommen; Filter B (3x gruen im Zielverbund) misst der CI-Hauptlauf des PR.
+# Filter C: kein Screenshot-Schreibziel. Fallzahl: 20 (+ global.setup).
+e2e/hub-anlegen-paritaet-flaechen.spec.ts

@@ -243,7 +243,8 @@
 		label: r.label,
 		optional: r.optional,
 		hinweis: r.lockHint,
-		zustand: !unlocked.has(r.id) ? 'gesperrt' : done.has(r.id) ? 'erledigt' : 'offen'
+		zustand: !unlocked.has(r.id) ? 'gesperrt' : done.has(r.id) ? 'erledigt' : 'offen',
+		erledigt: done.has(r.id)
 	})));
 	const standardwerteFrei = $derived(canFinishMitStandardwerten({
 		pflichtErfuellt: nameOk && orteOk,

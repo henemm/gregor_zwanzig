@@ -5,6 +5,9 @@
 		label: string;
 		zustand: AnlegeReiterZustand;
 		optional?: boolean;
+		/** Schritt schon erledigt, obwohl (wieder) gesperrt — ✓ und ⊘ zugleich (Bestandsverhalten
+		 *  beider Editoren, z. B. Trip: Wetter-Metriken besucht, aber GPX fehlt). */
+		erledigt?: boolean;
 		/** Sperr-Hinweis (Tooltip am gesperrten Reiter). */
 		hinweis?: string | null;
 	}
@@ -30,6 +33,10 @@
 
 	let { schritte, aktiv, onWahl, variante = 'desktop', testidPrefix }: Props = $props();
 
+	// Fade-Maske am Rand der waagerecht scrollenden Handy-Leiste (wörtlich wie bisher, inline).
+	const VERLAUF = 'linear-gradient(to right, transparent, black 16px, black calc(100% - 16px), transparent)';
+	const MASKE = `mask-image: ${VERLAUF}; -webkit-mask-image: ${VERLAUF};`;
+
 	// Kurzes Wackeln am gesperrten Reiter (Computer), vorher nur beim Trip.
 	let wackelt = $state<string | null>(null);
 	function waehle(s: AnlegeReiterSchritt): void {
@@ -43,10 +50,17 @@
 	}
 </script>
 
-<div class="anlege-reiter" class:mobil={variante === 'mobil'} role="tablist" data-testid="{testidPrefix}bar">
+<div
+	class="anlege-reiter"
+	class:mobil={variante === 'mobil'}
+	role="tablist"
+	data-testid="{testidPrefix}bar"
+	style={variante === 'mobil' ? MASKE : undefined}
+>
 	{#each schritte as s (s.id)}
 		{@const an = s.id === aktiv}
 		{@const zu = s.zustand === 'gesperrt'}
+		{@const fertig = s.zustand === 'erledigt' || s.erledigt === true}
 		<button
 			type="button"
 			role="tab"
@@ -57,7 +71,7 @@
 			data-testid="{testidPrefix}-{s.id}"
 			data-active={an ? 'true' : 'false'}
 			data-locked={zu ? 'true' : 'false'}
-			data-done={s.zustand === 'erledigt' ? 'true' : 'false'}
+			data-done={fertig ? 'true' : 'false'}
 			aria-selected={an}
 			aria-disabled={zu ? 'true' : undefined}
 			tabindex={zu ? -1 : 0}
@@ -68,7 +82,7 @@
 			{#if s.optional}
 				<span class="pille" data-slot="anlege-reiter-optional">{$t(variante === 'mobil' ? 'trip.anlegen.opt' : 'trip.anlegen.optional')}</span>
 			{/if}
-			{#if s.zustand === 'erledigt' && !an}
+			{#if fertig && !an}
 				<span class="marker erledigt">✓</span>
 			{/if}
 			{#if zu}
@@ -92,8 +106,6 @@
 		border-bottom-color: var(--g-rule-soft);
 		-webkit-overflow-scrolling: touch;
 		scrollbar-width: none;
-		mask-image: linear-gradient(to right, transparent, black 16px, black calc(100% - 16px), transparent);
-		-webkit-mask-image: linear-gradient(to right, transparent, black 16px, black calc(100% - 16px), transparent);
 	}
 	.reiter {
 		display: flex;

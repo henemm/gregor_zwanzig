@@ -28,6 +28,7 @@ const ETAPPEN_STRIP = join(WAYPOINTS_DIR, 'EtappenStrip.svelte');
 const STAGE_CARD    = join(WAYPOINTS_DIR, 'StageCard.svelte');
 const WAYPOINT_CARD = join(WAYPOINTS_DIR, 'WaypointCard.svelte');
 const EDIT_PANEL    = join(HERE, 'EditStagesPanelNew.svelte');
+const HUB_REITERFLAECHE = join(HERE, '..', 'shared', 'hub-reiterflaeche', 'HubReiterflaeche.svelte');
 
 // ── AC-1: EtappenStrip — Eyebrow-Header + GPX/Pause-Zähler ──────────────────
 
@@ -226,20 +227,15 @@ describe('AC-8: EditStagesPanelNew — Header mit Wetterscheiden-Text', () => {
 // ── AC-9: EditStagesPanelNew — Padding 20/40/60 + maxWidth 1480 ──────────────
 
 describe('AC-9: EditStagesPanelNew — Inhaltsbereich Padding + maxWidth', () => {
-	test('AC-9a: padding "20px 40px 60px" im Inhaltsbereich', () => {
-		const src = read(EDIT_PANEL);
-		assert.ok(
-			src.includes('20px 40px 60px') || (src.includes('20px') && src.includes('60px') && src.includes('40px')),
-			'EditStagesPanelNew.svelte muss padding: 20px 40px 60px im Stage-Inhaltsbereich haben'
-		);
+	// #2880: der Inhaltsbereich steht in der geteilten Reiterfläche (28/40/60, max. 1480 px) —
+	// vorher eigener Rand 20/40/60. Gemessen im Browser: e2e/hub-anlegen-paritaet-flaechen.spec.ts PF-3.
+	test('AC-9a: Inhaltsbereich in der geteilten Reiterfläche (padding 28px 40px 60px, #2880)', () => {
+		assert.match(read(EDIT_PANEL), /<HubReiterflaeche[\s>]/, 'EditStagesPanelNew.svelte rendert die Reiterfläche nicht');
+		assert.ok(read(HUB_REITERFLAECHE).includes('28px 40px 60px'), 'HubReiterflaeche braucht padding: 28px 40px 60px');
 	});
 
 	test('AC-9b: maxWidth 1480px im Inhaltsbereich', () => {
-		const src = read(EDIT_PANEL);
-		assert.ok(
-			src.includes('1480') || src.includes('max-width: 1480'),
-			'EditStagesPanelNew.svelte muss maxWidth: 1480px im Stage-Inhaltsbereich haben'
-		);
+		assert.ok(read(HUB_REITERFLAECHE).includes('max-width: 1480px'), 'HubReiterflaeche braucht max-width: 1480px');
 	});
 });
 

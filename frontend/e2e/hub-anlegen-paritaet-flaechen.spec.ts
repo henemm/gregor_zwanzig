@@ -261,18 +261,23 @@ for (const [ac, vp] of [
 		testMitZustellbaremZiel(`${ac} (${vp.width} px, ${lang}): Feldbeschriftungen Name und Region beim Anlegen gleich, Name mit Sternchen und aria-required, Hinweis rechts in der Beschriftungszeile`, async ({ page }) => {
 			test.setTimeout(90_000);
 			await page.setViewportSize(vp);
-			await sprache(page, lang);
 			const mobil = vp === MOBIL;
 			const m = {} as Record<HubKind, { name: FeldMessung; region: FeldMessung; required: string | null }>;
-			for (const kind of HUB_KINDS) {
-				await page.goto(ANLEGE_SEL[kind].url);
-				const eingabe = ANLEGE_SEL[kind].name(page, mobil);
-				await expect(eingabe).toBeVisible({ timeout: 15_000 });
-				m[kind] = {
-					name: await messeFeld(page, NAME_LABEL[kind][lang]),
-					region: await messeFeld(page, REGION_LABEL[lang]),
-					required: await eingabe.getAttribute('aria-required')
-				};
+			try {
+				await sprache(page, lang);
+				for (const kind of HUB_KINDS) {
+					await page.goto(ANLEGE_SEL[kind].url);
+					const eingabe = ANLEGE_SEL[kind].name(page, mobil);
+					await expect(eingabe).toBeVisible({ timeout: 15_000 });
+					m[kind] = {
+						name: await messeFeld(page, NAME_LABEL[kind][lang]),
+						region: await messeFeld(page, REGION_LABEL[lang]),
+						required: await eingabe.getAttribute('aria-required')
+					};
+				}
+			} finally {
+				// Zweitnutzer gilt für den ganzen Worker — Sprache für Folgedateien zurück auf de.
+				await page.request.put('/api/auth/profile', { data: { language: 'de' } }).catch(() => {});
 			}
 			const [t, v] = [m.route, m.vergleich];
 			expect(v.name.stil, 'Beschriftung Name: Schrift/Größe/Stärke/Versalien/Laufweite/Farbe').toEqual(t.name.stil);
