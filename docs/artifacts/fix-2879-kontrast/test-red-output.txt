@@ -1,0 +1,1000 @@
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Running 12 tests using 1 worker
+
+[1/12] [setup] › e2e/global.setup.ts:23:1 › authenticate and seed test data
+[2/12] [tests] › e2e/kontrast-trip-vergleich.spec.ts:169:3 › KO-1 (1280 × 900, de): Listen und Hubs — jeder sichtbare Text hält WCAG-AA
+  1) [tests] › e2e/kontrast-trip-vergleich.spec.ts:169:3 › KO-1 (1280 × 900, de): Listen und Hubs — jeder sichtbare Text hält WCAG-AA 
+
+    Error: KO-1 WCAG-AA-Verstöße:
+      1280px de Trip-Liste · "+ Neuer Trip": 4.34:1 < 4.5 (rgb(255, 255, 255) auf rgb(196, 90, 42), 13px/500) @ div.flex > main.mobile-scroll-pad > div.space-y-4 > div.hidden > button
+      1280px de Trip-Liste · "19": 3.94:1 < 4.5 (rgb(196, 90, 42) auf rgb(246, 244, 238), 22px/600) @ main.mobile-scroll-pad > div.space-y-4 > div.hidden > div > span
+      1280px de Trip-Liste · "· aktiv": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 11px/400) @ div > div[data-testid="trip-row-e2e-708-stage-confirm"] > div > div > span.status-caption
+      1280px de Trip-Liste · "· aktiv": 2.46:1 < 4.5 (rgb(154, 149, 138) auf rgb(236, 234, 217), 11px/400) @ div > div[data-testid="trip-row-e2e-cockpit-test"] > div > div > span.status-caption
+      1280px de Trip-Liste · "· geplant": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 11px/400) @ div > div[data-testid="trip-row-7c81b094"] > div > div > span.status-caption
+      1280px de Trip-Liste · "· geplant": 2.46:1 < 4.5 (rgb(154, 149, 138) auf rgb(236, 234, 217), 11px/400) @ div > div[data-testid="trip-row-45a6c948"] > div > div > span.status-caption
+      1280px de Trip-Liste · "· aktiv": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 11px/400) @ div > div[data-testid="trip-row-e2e-gz-2879-1794240597837-726349"] > div > div > span.status-caption
+      1280px de Trip-Liste · "· aktiv": 2.46:1 < 4.5 (rgb(154, 149, 138) auf rgb(236, 234, 217), 11px/400) @ div > div[data-testid="trip-row-5bd706cf"] > div > div > span.status-caption
+      1280px de Trip-Liste · "· aktiv": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 11px/400) @ div > div[data-testid="trip-row-e2203fbf"] > div > div > span.status-caption
+      1280px de Trip-Liste · "· aktiv": 2.46:1 < 4.5 (rgb(154, 149, 138) auf rgb(236, 234, 217), 11px/400) @ div > div[data-testid="trip-row-698bca6b"] > div > div > span.status-caption
+      1280px de Trip-Liste · "· aktiv": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 11px/400) @ div > div[data-testid="trip-row-7110c9a9"] > div > div > span.status-caption
+      1280px de Trip-Liste · "· aktiv": 2.46:1 < 4.5 (rgb(154, 149, 138) auf rgb(236, 234, 217), 11px/400) @ div > div[data-testid="trip-row-fd58297e"] > div > div > span.status-caption
+      1280px de Trip-Liste · "· aktiv": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 11px/400) @ div > div[data-testid="trip-row-9c845b7e"] > div > div > span.status-caption
+      1280px de Trip-Liste · "· aktiv": 2.46:1 < 4.5 (rgb(154, 149, 138) auf rgb(236, 234, 217), 11px/400) @ div > div[data-testid="trip-row-ebc7b7c1"] > div > div > span.status-caption
+      1280px de Trip-Liste · "· aktiv": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 11px/400) @ div > div[data-testid="trip-row-461e4e2c"] > div > div > span.status-caption
+      1280px de Trip-Liste · "· aktiv": 2.46:1 < 4.5 (rgb(154, 149, 138) auf rgb(236, 234, 217), 11px/400) @ div > div[data-testid="trip-row-05815a6d"] > div > div > span.status-caption
+      1280px de Trip-Liste · "· aktiv": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 11px/400) @ div > div[data-testid="trip-row-ca4d7aa8"] > div > div > span.status-caption
+      1280px de Trip-Liste · "· aktiv": 2.46:1 < 4.5 (rgb(154, 149, 138) auf rgb(236, 234, 217), 11px/400) @ div > div[data-testid="trip-row-c2056b5b"] > div > div > span.status-caption
+      1280px de Trip-Liste · "· aktiv": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 11px/400) @ div > div[data-testid="trip-row-2d063f01"] > div > div > span.status-caption
+      1280px de Trip-Liste · "· aktiv": 2.46:1 < 4.5 (rgb(154, 149, 138) auf rgb(236, 234, 217), 11px/400) @ div > div[data-testid="trip-row-0fd8694c"] > div > div > span.status-caption
+      1280px de Trip-Liste · "· aktiv": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 11px/400) @ div > div[data-testid="trip-row-c10b670f"] > div > div > span.status-caption
+      1280px de Trip-Liste · "· aktiv": 2.46:1 < 4.5 (rgb(154, 149, 138) auf rgb(236, 234, 217), 11px/400) @ div > div[data-testid="trip-row-f157cec9"] > div > div > span.status-caption
+      1280px de Trip-Liste · "· aktiv": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 11px/400) @ div > div[data-testid="trip-row-5d6a63a5"] > div > div > span.status-caption
+      1280px de Trip-Liste · "21 von 21 Trips": 2.71:1 < 4.5 (rgb(154, 149, 138) auf rgb(246, 244, 238), 11px/400) @ div.flex > main.mobile-scroll-pad > div.space-y-4 > div.hidden > div
+      1280px de Vergleichsliste · "3": 3.94:1 < 4.5 (rgb(196, 90, 42) auf rgb(246, 244, 238), 22px/600) @ main > div.hidden > div > div > span
+      1280px de Vergleichsliste · "· aktiv": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 11px/400) @ div > div[data-testid="compare-tile-cp-849e2e4ee8b88cce"] > div > div > span[data-testid="compare-status-pill"]
+      1280px de Vergleichsliste · "· aktiv": 2.46:1 < 4.5 (rgb(154, 149, 138) auf rgb(236, 234, 217), 11px/400) @ div > div[data-testid="compare-tile-cp-9015cbfaa55fd101"] > div > div > span[data-testid="compare-status-pill"]
+      1280px de Vergleichsliste · "· aktiv": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 11px/400) @ div > div[data-testid="compare-tile-cp-a44697d61ac0212d"] > div > div > span[data-testid="compare-status-pill"]
+      1280px de Vergleichsliste · "3 von 3 Vergleichen": 2.71:1 < 4.5 (rgb(154, 149, 138) auf rgb(246, 244, 238), 11px/400) @ main.mobile-scroll-pad > div > main > div.hidden > div
+      1280px de Trip-Hub uebersicht · "Status": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 11px/400) @ div > div > div > div > div
+      1280px de Trip-Hub uebersicht · "Nächster Versand": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 11px/400) @ div > div > div > div > div
+      1280px de Trip-Hub uebersicht · "Briefings": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 11px/400) @ div > div > div > div > div
+      1280px de Trip-Hub uebersicht · "Zuletzt raus": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 11px/400) @ div > div > div > div > div
+      1280px de Trip-Hub uebersicht · "Kanäle": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 11px/400) @ div > div > div > div > div
+      1280px de Trip-Hub etappen · "ETAPPEN · DRAG ZUM SORTIEREN · + PAUSE ZWISCHEN": 2.82:1 < 4.5 (rgb(154, 149, 138) auf rgb(250, 248, 245), 11px/600) @ div[data-testid="trip-detail-panel-etappen"] > div[data-testid="edit-stages-panel"] > div[data-testid="etappen-strip-wrapper"] > div > span
+      1280px de Trip-Hub etappen · "3 GPX · 0 Pause": 2.82:1 < 4.5 (rgb(154, 149, 138) auf rgb(250, 248, 245), 11px/400) @ div[data-testid="trip-detail-panel-etappen"] > div[data-testid="edit-stages-panel"] > div[data-testid="etappen-strip-wrapper"] > div > span
+      1280px de Trip-Hub etappen · "×": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 12px/400) @ div.sortable-item > div > div[data-testid="stage-card-0"] > div > button
+      1280px de Trip-Hub etappen · "⋮⋮ T02 ·": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 9px/600) @ div.sortable-item > div > div[data-testid="stage-card-1"] > div > span
+      1280px de Trip-Hub etappen · "×": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 12px/400) @ div.sortable-item > div > div[data-testid="stage-card-1"] > div > button
+      1280px de Trip-Hub etappen · "⋮⋮ T03 ·": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 9px/600) @ div.sortable-item > div > div[data-testid="stage-card-2"] > div > span
+      1280px de Trip-Hub etappen · "×": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 12px/400) @ div.sortable-item > div > div[data-testid="stage-card-2"] > div > button
+      1280px de Trip-Hub etappen · "·": 2.5:1 < 4.5 (rgb(166, 164, 157) auf rgb(255, 255, 255), 10px/400) @ div[data-testid="waypoint-card-0"] > div.waypoint-card-row > div.waypoint-body > div.waypoint-meta > span.waypoint-meta-sep
+      1280px de Trip-Hub etappen · "·": 2.5:1 < 4.5 (rgb(166, 164, 157) auf rgb(255, 255, 255), 10px/400) @ div[data-testid="waypoint-card-1"] > div.waypoint-card-row > div.waypoint-body > div.waypoint-meta > span.waypoint-meta-sep
+      1280px de Vergleich-Hub uebersicht · "Status": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 11px/400) @ div > div > div > div > div
+      1280px de Vergleich-Hub uebersicht · "Nächster Versand": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 11px/400) @ div > div > div > div > div
+      1280px de Vergleich-Hub uebersicht · "Briefings": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 11px/400) @ div > div > div > div > div
+      1280px de Vergleich-Hub uebersicht · "Zuletzt raus": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 11px/400) @ div > div > div > div > div
+      1280px de Vergleich-Hub uebersicht · "Kanäle": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 11px/400) @ div > div > div > div > div
+      1280px de Vergleich-Hub orte · "01": 4.34:1 < 4.5 (rgb(196, 90, 42) auf rgb(255, 255, 255), 13px/600) @ div.sortable-item > div[data-testid="hub-orte-row"] > div.hub-orte-row-body > div > span
+      1280px de Vergleich-Hub orte · "02": 3.58:1 < 4.5 (rgb(196, 90, 42) auf rgb(236, 234, 217), 13px/600) @ div.sortable-item > div[data-testid="hub-orte-row"] > div.hub-orte-row-body > div > span
+      1280px de Vergleich-Hub orte · "03": 4.34:1 < 4.5 (rgb(196, 90, 42) auf rgb(255, 255, 255), 13px/600) @ div.sortable-item > div[data-testid="hub-orte-row"] > div.hub-orte-row-body > div > span
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  -  1
+    + Received  + 53
+
+    - Array []
+    + Array [
+    +   "1280px de Trip-Liste · \"+ Neuer Trip\": 4.34:1 < 4.5 (rgb(255, 255, 255) auf rgb(196, 90, 42), 13px/500) @ div.flex > main.mobile-scroll-pad > div.space-y-4 > div.hidden > button",
+    +   "1280px de Trip-Liste · \"19\": 3.94:1 < 4.5 (rgb(196, 90, 42) auf rgb(246, 244, 238), 22px/600) @ main.mobile-scroll-pad > div.space-y-4 > div.hidden > div > span",
+    +   "1280px de Trip-Liste · \"· aktiv\": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 11px/400) @ div > div[data-testid=\"trip-row-e2e-708-stage-confirm\"] > div > div > span.status-caption",
+    +   "1280px de Trip-Liste · \"· aktiv\": 2.46:1 < 4.5 (rgb(154, 149, 138) auf rgb(236, 234, 217), 11px/400) @ div > div[data-testid=\"trip-row-e2e-cockpit-test\"] > div > div > span.status-caption",
+    +   "1280px de Trip-Liste · \"· geplant\": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 11px/400) @ div > div[data-testid=\"trip-row-7c81b094\"] > div > div > span.status-caption",
+    +   "1280px de Trip-Liste · \"· geplant\": 2.46:1 < 4.5 (rgb(154, 149, 138) auf rgb(236, 234, 217), 11px/400) @ div > div[data-testid=\"trip-row-45a6c948\"] > div > div > span.status-caption",
+    +   "1280px de Trip-Liste · \"· aktiv\": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 11px/400) @ div > div[data-testid=\"trip-row-e2e-gz-2879-1794240597837-726349\"] > div > div > span.status-caption",
+    +   "1280px de Trip-Liste · \"· aktiv\": 2.46:1 < 4.5 (rgb(154, 149, 138) auf rgb(236, 234, 217), 11px/400) @ div > div[data-testid=\"trip-row-5bd706cf\"] > div > div > span.status-caption",
+    +   "1280px de Trip-Liste · \"· aktiv\": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 11px/400) @ div > div[data-testid=\"trip-row-e2203fbf\"] > div > div > span.status-caption",
+    +   "1280px de Trip-Liste · \"· aktiv\": 2.46:1 < 4.5 (rgb(154, 149, 138) auf rgb(236, 234, 217), 11px/400) @ div > div[data-testid=\"trip-row-698bca6b\"] > div > div > span.status-caption",
+    +   "1280px de Trip-Liste · \"· aktiv\": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 11px/400) @ div > div[data-testid=\"trip-row-7110c9a9\"] > div > div > span.status-caption",
+    +   "1280px de Trip-Liste · \"· aktiv\": 2.46:1 < 4.5 (rgb(154, 149, 138) auf rgb(236, 234, 217), 11px/400) @ div > div[data-testid=\"trip-row-fd58297e\"] > div > div > span.status-caption",
+    +   "1280px de Trip-Liste · \"· aktiv\": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 11px/400) @ div > div[data-testid=\"trip-row-9c845b7e\"] > div > div > span.status-caption",
+    +   "1280px de Trip-Liste · \"· aktiv\": 2.46:1 < 4.5 (rgb(154, 149, 138) auf rgb(236, 234, 217), 11px/400) @ div > div[data-testid=\"trip-row-ebc7b7c1\"] > div > div > span.status-caption",
+    +   "1280px de Trip-Liste · \"· aktiv\": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 11px/400) @ div > div[data-testid=\"trip-row-461e4e2c\"] > div > div > span.status-caption",
+    +   "1280px de Trip-Liste · \"· aktiv\": 2.46:1 < 4.5 (rgb(154, 149, 138) auf rgb(236, 234, 217), 11px/400) @ div > div[data-testid=\"trip-row-05815a6d\"] > div > div > span.status-caption",
+    +   "1280px de Trip-Liste · \"· aktiv\": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 11px/400) @ div > div[data-testid=\"trip-row-ca4d7aa8\"] > div > div > span.status-caption",
+    +   "1280px de Trip-Liste · \"· aktiv\": 2.46:1 < 4.5 (rgb(154, 149, 138) auf rgb(236, 234, 217), 11px/400) @ div > div[data-testid=\"trip-row-c2056b5b\"] > div > div > span.status-caption",
+    +   "1280px de Trip-Liste · \"· aktiv\": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 11px/400) @ div > div[data-testid=\"trip-row-2d063f01\"] > div > div > span.status-caption",
+    +   "1280px de Trip-Liste · \"· aktiv\": 2.46:1 < 4.5 (rgb(154, 149, 138) auf rgb(236, 234, 217), 11px/400) @ div > div[data-testid=\"trip-row-0fd8694c\"] > div > div > span.status-caption",
+    +   "1280px de Trip-Liste · \"· aktiv\": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 11px/400) @ div > div[data-testid=\"trip-row-c10b670f\"] > div > div > span.status-caption",
+    +   "1280px de Trip-Liste · \"· aktiv\": 2.46:1 < 4.5 (rgb(154, 149, 138) auf rgb(236, 234, 217), 11px/400) @ div > div[data-testid=\"trip-row-f157cec9\"] > div > div > span.status-caption",
+    +   "1280px de Trip-Liste · \"· aktiv\": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 11px/400) @ div > div[data-testid=\"trip-row-5d6a63a5\"] > div > div > span.status-caption",
+    +   "1280px de Trip-Liste · \"21 von 21 Trips\": 2.71:1 < 4.5 (rgb(154, 149, 138) auf rgb(246, 244, 238), 11px/400) @ div.flex > main.mobile-scroll-pad > div.space-y-4 > div.hidden > div",
+    +   "1280px de Vergleichsliste · \"3\": 3.94:1 < 4.5 (rgb(196, 90, 42) auf rgb(246, 244, 238), 22px/600) @ main > div.hidden > div > div > span",
+    +   "1280px de Vergleichsliste · \"· aktiv\": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 11px/400) @ div > div[data-testid=\"compare-tile-cp-849e2e4ee8b88cce\"] > div > div > span[data-testid=\"compare-status-pill\"]",
+    +   "1280px de Vergleichsliste · \"· aktiv\": 2.46:1 < 4.5 (rgb(154, 149, 138) auf rgb(236, 234, 217), 11px/400) @ div > div[data-testid=\"compare-tile-cp-9015cbfaa55fd101\"] > div > div > span[data-testid=\"compare-status-pill\"]",
+    +   "1280px de Vergleichsliste · \"· aktiv\": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 11px/400) @ div > div[data-testid=\"compare-tile-cp-a44697d61ac0212d\"] > div > div > span[data-testid=\"compare-status-pill\"]",
+    +   "1280px de Vergleichsliste · \"3 von 3 Vergleichen\": 2.71:1 < 4.5 (rgb(154, 149, 138) auf rgb(246, 244, 238), 11px/400) @ main.mobile-scroll-pad > div > main > div.hidden > div",
+    +   "1280px de Trip-Hub uebersicht · \"Status\": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 11px/400) @ div > div > div > div > div",
+    +   "1280px de Trip-Hub uebersicht · \"Nächster Versand\": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 11px/400) @ div > div > div > div > div",
+    +   "1280px de Trip-Hub uebersicht · \"Briefings\": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 11px/400) @ div > div > div > div > div",
+    +   "1280px de Trip-Hub uebersicht · \"Zuletzt raus\": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 11px/400) @ div > div > div > div > div",
+    +   "1280px de Trip-Hub uebersicht · \"Kanäle\": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 11px/400) @ div > div > div > div > div",
+    +   "1280px de Trip-Hub etappen · \"ETAPPEN · DRAG ZUM SORTIEREN · + PAUSE ZWISCHEN\": 2.82:1 < 4.5 (rgb(154, 149, 138) auf rgb(250, 248, 245), 11px/600) @ div[data-testid=\"trip-detail-panel-etappen\"] > div[data-testid=\"edit-stages-panel\"] > div[data-testid=\"etappen-strip-wrapper\"] > div > span",
+    +   "1280px de Trip-Hub etappen · \"3 GPX · 0 Pause\": 2.82:1 < 4.5 (rgb(154, 149, 138) auf rgb(250, 248, 245), 11px/400) @ div[data-testid=\"trip-detail-panel-etappen\"] > div[data-testid=\"edit-stages-panel\"] > div[data-testid=\"etappen-strip-wrapper\"] > div > span",
+    +   "1280px de Trip-Hub etappen · \"×\": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 12px/400) @ div.sortable-item > div > div[data-testid=\"stage-card-0\"] > div > button",
+    +   "1280px de Trip-Hub etappen · \"⋮⋮ T02 ·\": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 9px/600) @ div.sortable-item > div > div[data-testid=\"stage-card-1\"] > div > span",
+    +   "1280px de Trip-Hub etappen · \"×\": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 12px/400) @ div.sortable-item > div > div[data-testid=\"stage-card-1\"] > div > button",
+    +   "1280px de Trip-Hub etappen · \"⋮⋮ T03 ·\": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 9px/600) @ div.sortable-item > div > div[data-testid=\"stage-card-2\"] > div > span",
+    +   "1280px de Trip-Hub etappen · \"×\": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 12px/400) @ div.sortable-item > div > div[data-testid=\"stage-card-2\"] > div > button",
+    +   "1280px de Trip-Hub etappen · \"·\": 2.5:1 < 4.5 (rgb(166, 164, 157) auf rgb(255, 255, 255), 10px/400) @ div[data-testid=\"waypoint-card-0\"] > div.waypoint-card-row > div.waypoint-body > div.waypoint-meta > span.waypoint-meta-sep",
+    +   "1280px de Trip-Hub etappen · \"·\": 2.5:1 < 4.5 (rgb(166, 164, 157) auf rgb(255, 255, 255), 10px/400) @ div[data-testid=\"waypoint-card-1\"] > div.waypoint-card-row > div.waypoint-body > div.waypoint-meta > span.waypoint-meta-sep",
+    +   "1280px de Vergleich-Hub uebersicht · \"Status\": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 11px/400) @ div > div > div > div > div",
+    +   "1280px de Vergleich-Hub uebersicht · \"Nächster Versand\": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 11px/400) @ div > div > div > div > div",
+    +   "1280px de Vergleich-Hub uebersicht · \"Briefings\": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 11px/400) @ div > div > div > div > div",
+    +   "1280px de Vergleich-Hub uebersicht · \"Zuletzt raus\": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 11px/400) @ div > div > div > div > div",
+    +   "1280px de Vergleich-Hub uebersicht · \"Kanäle\": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 11px/400) @ div > div > div > div > div",
+    +   "1280px de Vergleich-Hub orte · \"01\": 4.34:1 < 4.5 (rgb(196, 90, 42) auf rgb(255, 255, 255), 13px/600) @ div.sortable-item > div[data-testid=\"hub-orte-row\"] > div.hub-orte-row-body > div > span",
+    +   "1280px de Vergleich-Hub orte · \"02\": 3.58:1 < 4.5 (rgb(196, 90, 42) auf rgb(236, 234, 217), 13px/600) @ div.sortable-item > div[data-testid=\"hub-orte-row\"] > div.hub-orte-row-body > div > span",
+    +   "1280px de Vergleich-Hub orte · \"03\": 4.34:1 < 4.5 (rgb(196, 90, 42) auf rgb(255, 255, 255), 13px/600) @ div.sortable-item > div[data-testid=\"hub-orte-row\"] > div.hub-orte-row-body > div > span",
+    + ]
+
+      202 | 				await cleanupTracked(page.request);
+      203 | 			}
+    > 204 | 			expect(verstoesse, `${ko} WCAG-AA-Verstöße:\n  ${verstoesse.join('\n  ')}`).toEqual([]);
+          | 			                                                                            ^
+      205 | 		});
+      206 | 	}
+      207 | }
+        at /home/user/gregor_zwanzig/.claude/worktrees/agent-a05dbea935b931947/frontend/e2e/kontrast-trip-vergleich.spec.ts:204:80
+
+    Error Context: test-results/kontrast-trip-vergleich-KO-fa4f3-sichtbare-Text-hält-WCAG-AA-tests/error-context.md
+
+
+[3/12] [tests] › e2e/kontrast-trip-vergleich.spec.ts:169:3 › KO-1 (1280 × 900, en): Listen und Hubs — jeder sichtbare Text hält WCAG-AA
+  2) [tests] › e2e/kontrast-trip-vergleich.spec.ts:169:3 › KO-1 (1280 × 900, en): Listen und Hubs — jeder sichtbare Text hält WCAG-AA 
+
+    Error: KO-1 WCAG-AA-Verstöße:
+      1280px en Trip-Liste · "+ New trip": 4.34:1 < 4.5 (rgb(255, 255, 255) auf rgb(196, 90, 42), 13px/500) @ div.flex > main.mobile-scroll-pad > div.space-y-4 > div.hidden > button
+      1280px en Trip-Liste · "19": 3.94:1 < 4.5 (rgb(196, 90, 42) auf rgb(246, 244, 238), 22px/600) @ main.mobile-scroll-pad > div.space-y-4 > div.hidden > div > span
+      1280px en Trip-Liste · "· active": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 11px/400) @ div > div[data-testid="trip-row-e2e-708-stage-confirm"] > div > div > span.status-caption
+      1280px en Trip-Liste · "· active": 2.46:1 < 4.5 (rgb(154, 149, 138) auf rgb(236, 234, 217), 11px/400) @ div > div[data-testid="trip-row-e2e-cockpit-test"] > div > div > span.status-caption
+      1280px en Trip-Liste · "· planned": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 11px/400) @ div > div[data-testid="trip-row-7c81b094"] > div > div > span.status-caption
+      1280px en Trip-Liste · "· planned": 2.46:1 < 4.5 (rgb(154, 149, 138) auf rgb(236, 234, 217), 11px/400) @ div > div[data-testid="trip-row-45a6c948"] > div > div > span.status-caption
+      1280px en Trip-Liste · "· active": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 11px/400) @ div > div[data-testid="trip-row-e2e-gz-2879-1794240603193-77710"] > div > div > span.status-caption
+      1280px en Trip-Liste · "· active": 2.46:1 < 4.5 (rgb(154, 149, 138) auf rgb(236, 234, 217), 11px/400) @ div > div[data-testid="trip-row-5bd706cf"] > div > div > span.status-caption
+      1280px en Trip-Liste · "· active": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 11px/400) @ div > div[data-testid="trip-row-e2203fbf"] > div > div > span.status-caption
+      1280px en Trip-Liste · "· active": 2.46:1 < 4.5 (rgb(154, 149, 138) auf rgb(236, 234, 217), 11px/400) @ div > div[data-testid="trip-row-698bca6b"] > div > div > span.status-caption
+      1280px en Trip-Liste · "· active": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 11px/400) @ div > div[data-testid="trip-row-7110c9a9"] > div > div > span.status-caption
+      1280px en Trip-Liste · "· active": 2.46:1 < 4.5 (rgb(154, 149, 138) auf rgb(236, 234, 217), 11px/400) @ div > div[data-testid="trip-row-fd58297e"] > div > div > span.status-caption
+      1280px en Trip-Liste · "· active": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 11px/400) @ div > div[data-testid="trip-row-9c845b7e"] > div > div > span.status-caption
+      1280px en Trip-Liste · "· active": 2.46:1 < 4.5 (rgb(154, 149, 138) auf rgb(236, 234, 217), 11px/400) @ div > div[data-testid="trip-row-ebc7b7c1"] > div > div > span.status-caption
+      1280px en Trip-Liste · "· active": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 11px/400) @ div > div[data-testid="trip-row-461e4e2c"] > div > div > span.status-caption
+      1280px en Trip-Liste · "· active": 2.46:1 < 4.5 (rgb(154, 149, 138) auf rgb(236, 234, 217), 11px/400) @ div > div[data-testid="trip-row-05815a6d"] > div > div > span.status-caption
+      1280px en Trip-Liste · "· active": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 11px/400) @ div > div[data-testid="trip-row-ca4d7aa8"] > div > div > span.status-caption
+      1280px en Trip-Liste · "· active": 2.46:1 < 4.5 (rgb(154, 149, 138) auf rgb(236, 234, 217), 11px/400) @ div > div[data-testid="trip-row-c2056b5b"] > div > div > span.status-caption
+      1280px en Trip-Liste · "· active": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 11px/400) @ div > div[data-testid="trip-row-2d063f01"] > div > div > span.status-caption
+      1280px en Trip-Liste · "· active": 2.46:1 < 4.5 (rgb(154, 149, 138) auf rgb(236, 234, 217), 11px/400) @ div > div[data-testid="trip-row-0fd8694c"] > div > div > span.status-caption
+      1280px en Trip-Liste · "· active": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 11px/400) @ div > div[data-testid="trip-row-c10b670f"] > div > div > span.status-caption
+      1280px en Trip-Liste · "· active": 2.46:1 < 4.5 (rgb(154, 149, 138) auf rgb(236, 234, 217), 11px/400) @ div > div[data-testid="trip-row-f157cec9"] > div > div > span.status-caption
+      1280px en Trip-Liste · "· active": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 11px/400) @ div > div[data-testid="trip-row-5d6a63a5"] > div > div > span.status-caption
+      1280px en Trip-Liste · "21 of 21 trips": 2.71:1 < 4.5 (rgb(154, 149, 138) auf rgb(246, 244, 238), 11px/400) @ div.flex > main.mobile-scroll-pad > div.space-y-4 > div.hidden > div
+      1280px en Vergleichsliste · "3": 3.94:1 < 4.5 (rgb(196, 90, 42) auf rgb(246, 244, 238), 22px/600) @ main > div.hidden > div > div > span
+      1280px en Vergleichsliste · "· active": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 11px/400) @ div > div[data-testid="compare-tile-cp-849e2e4ee8b88cce"] > div > div > span[data-testid="compare-status-pill"]
+      1280px en Vergleichsliste · "· active": 2.46:1 < 4.5 (rgb(154, 149, 138) auf rgb(236, 234, 217), 11px/400) @ div > div[data-testid="compare-tile-cp-9015cbfaa55fd101"] > div > div > span[data-testid="compare-status-pill"]
+      1280px en Vergleichsliste · "· active": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 11px/400) @ div > div[data-testid="compare-tile-cp-99c41eb55281ef33"] > div > div > span[data-testid="compare-status-pill"]
+      1280px en Vergleichsliste · "3 of 3 comparisons": 2.71:1 < 4.5 (rgb(154, 149, 138) auf rgb(246, 244, 238), 11px/400) @ main.mobile-scroll-pad > div > main > div.hidden > div
+      1280px en Trip-Hub uebersicht · "Status": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 11px/400) @ div > div > div > div > div
+      1280px en Trip-Hub uebersicht · "Next delivery": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 11px/400) @ div > div > div > div > div
+      1280px en Trip-Hub uebersicht · "Briefings": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 11px/400) @ div > div > div > div > div
+      1280px en Trip-Hub uebersicht · "Last sent": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 11px/400) @ div > div > div > div > div
+      1280px en Trip-Hub uebersicht · "Channels": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 11px/400) @ div > div > div > div > div
+      1280px en Trip-Hub etappen · "STAGES · DRAG TO SORT · + REST DAY BETWEEN": 2.82:1 < 4.5 (rgb(154, 149, 138) auf rgb(250, 248, 245), 11px/600) @ div[data-testid="trip-detail-panel-etappen"] > div[data-testid="edit-stages-panel"] > div[data-testid="etappen-strip-wrapper"] > div > span
+      1280px en Trip-Hub etappen · "3 GPX · 0 rest days": 2.82:1 < 4.5 (rgb(154, 149, 138) auf rgb(250, 248, 245), 11px/400) @ div[data-testid="trip-detail-panel-etappen"] > div[data-testid="edit-stages-panel"] > div[data-testid="etappen-strip-wrapper"] > div > span
+      1280px en Trip-Hub etappen · "×": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 12px/400) @ div.sortable-item > div > div[data-testid="stage-card-0"] > div > button
+      1280px en Trip-Hub etappen · "⋮⋮ T02 ·": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 9px/600) @ div.sortable-item > div > div[data-testid="stage-card-1"] > div > span
+      1280px en Trip-Hub etappen · "×": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 12px/400) @ div.sortable-item > div > div[data-testid="stage-card-1"] > div > button
+      1280px en Trip-Hub etappen · "⋮⋮ T03 ·": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 9px/600) @ div.sortable-item > div > div[data-testid="stage-card-2"] > div > span
+      1280px en Trip-Hub etappen · "×": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 12px/400) @ div.sortable-item > div > div[data-testid="stage-card-2"] > div > button
+      1280px en Trip-Hub etappen · "·": 2.5:1 < 4.5 (rgb(166, 164, 157) auf rgb(255, 255, 255), 10px/400) @ div[data-testid="waypoint-card-0"] > div.waypoint-card-row > div.waypoint-body > div.waypoint-meta > span.waypoint-meta-sep
+      1280px en Trip-Hub etappen · "·": 2.5:1 < 4.5 (rgb(166, 164, 157) auf rgb(255, 255, 255), 10px/400) @ div[data-testid="waypoint-card-1"] > div.waypoint-card-row > div.waypoint-body > div.waypoint-meta > span.waypoint-meta-sep
+      1280px en Vergleich-Hub uebersicht · "Status": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 11px/400) @ div > div > div > div > div
+      1280px en Vergleich-Hub uebersicht · "Next delivery": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 11px/400) @ div > div > div > div > div
+      1280px en Vergleich-Hub uebersicht · "Briefings": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 11px/400) @ div > div > div > div > div
+      1280px en Vergleich-Hub uebersicht · "Last sent": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 11px/400) @ div > div > div > div > div
+      1280px en Vergleich-Hub uebersicht · "Channels": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 11px/400) @ div > div > div > div > div
+      1280px en Vergleich-Hub orte · "01": 4.34:1 < 4.5 (rgb(196, 90, 42) auf rgb(255, 255, 255), 13px/600) @ div.sortable-item > div[data-testid="hub-orte-row"] > div.hub-orte-row-body > div > span
+      1280px en Vergleich-Hub orte · "02": 3.58:1 < 4.5 (rgb(196, 90, 42) auf rgb(236, 234, 217), 13px/600) @ div.sortable-item > div[data-testid="hub-orte-row"] > div.hub-orte-row-body > div > span
+      1280px en Vergleich-Hub orte · "03": 4.34:1 < 4.5 (rgb(196, 90, 42) auf rgb(255, 255, 255), 13px/600) @ div.sortable-item > div[data-testid="hub-orte-row"] > div.hub-orte-row-body > div > span
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  -  1
+    + Received  + 53
+
+    - Array []
+    + Array [
+    +   "1280px en Trip-Liste · \"+ New trip\": 4.34:1 < 4.5 (rgb(255, 255, 255) auf rgb(196, 90, 42), 13px/500) @ div.flex > main.mobile-scroll-pad > div.space-y-4 > div.hidden > button",
+    +   "1280px en Trip-Liste · \"19\": 3.94:1 < 4.5 (rgb(196, 90, 42) auf rgb(246, 244, 238), 22px/600) @ main.mobile-scroll-pad > div.space-y-4 > div.hidden > div > span",
+    +   "1280px en Trip-Liste · \"· active\": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 11px/400) @ div > div[data-testid=\"trip-row-e2e-708-stage-confirm\"] > div > div > span.status-caption",
+    +   "1280px en Trip-Liste · \"· active\": 2.46:1 < 4.5 (rgb(154, 149, 138) auf rgb(236, 234, 217), 11px/400) @ div > div[data-testid=\"trip-row-e2e-cockpit-test\"] > div > div > span.status-caption",
+    +   "1280px en Trip-Liste · \"· planned\": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 11px/400) @ div > div[data-testid=\"trip-row-7c81b094\"] > div > div > span.status-caption",
+    +   "1280px en Trip-Liste · \"· planned\": 2.46:1 < 4.5 (rgb(154, 149, 138) auf rgb(236, 234, 217), 11px/400) @ div > div[data-testid=\"trip-row-45a6c948\"] > div > div > span.status-caption",
+    +   "1280px en Trip-Liste · \"· active\": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 11px/400) @ div > div[data-testid=\"trip-row-e2e-gz-2879-1794240603193-77710\"] > div > div > span.status-caption",
+    +   "1280px en Trip-Liste · \"· active\": 2.46:1 < 4.5 (rgb(154, 149, 138) auf rgb(236, 234, 217), 11px/400) @ div > div[data-testid=\"trip-row-5bd706cf\"] > div > div > span.status-caption",
+    +   "1280px en Trip-Liste · \"· active\": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 11px/400) @ div > div[data-testid=\"trip-row-e2203fbf\"] > div > div > span.status-caption",
+    +   "1280px en Trip-Liste · \"· active\": 2.46:1 < 4.5 (rgb(154, 149, 138) auf rgb(236, 234, 217), 11px/400) @ div > div[data-testid=\"trip-row-698bca6b\"] > div > div > span.status-caption",
+    +   "1280px en Trip-Liste · \"· active\": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 11px/400) @ div > div[data-testid=\"trip-row-7110c9a9\"] > div > div > span.status-caption",
+    +   "1280px en Trip-Liste · \"· active\": 2.46:1 < 4.5 (rgb(154, 149, 138) auf rgb(236, 234, 217), 11px/400) @ div > div[data-testid=\"trip-row-fd58297e\"] > div > div > span.status-caption",
+    +   "1280px en Trip-Liste · \"· active\": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 11px/400) @ div > div[data-testid=\"trip-row-9c845b7e\"] > div > div > span.status-caption",
+    +   "1280px en Trip-Liste · \"· active\": 2.46:1 < 4.5 (rgb(154, 149, 138) auf rgb(236, 234, 217), 11px/400) @ div > div[data-testid=\"trip-row-ebc7b7c1\"] > div > div > span.status-caption",
+    +   "1280px en Trip-Liste · \"· active\": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 11px/400) @ div > div[data-testid=\"trip-row-461e4e2c\"] > div > div > span.status-caption",
+    +   "1280px en Trip-Liste · \"· active\": 2.46:1 < 4.5 (rgb(154, 149, 138) auf rgb(236, 234, 217), 11px/400) @ div > div[data-testid=\"trip-row-05815a6d\"] > div > div > span.status-caption",
+    +   "1280px en Trip-Liste · \"· active\": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 11px/400) @ div > div[data-testid=\"trip-row-ca4d7aa8\"] > div > div > span.status-caption",
+    +   "1280px en Trip-Liste · \"· active\": 2.46:1 < 4.5 (rgb(154, 149, 138) auf rgb(236, 234, 217), 11px/400) @ div > div[data-testid=\"trip-row-c2056b5b\"] > div > div > span.status-caption",
+    +   "1280px en Trip-Liste · \"· active\": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 11px/400) @ div > div[data-testid=\"trip-row-2d063f01\"] > div > div > span.status-caption",
+    +   "1280px en Trip-Liste · \"· active\": 2.46:1 < 4.5 (rgb(154, 149, 138) auf rgb(236, 234, 217), 11px/400) @ div > div[data-testid=\"trip-row-0fd8694c\"] > div > div > span.status-caption",
+    +   "1280px en Trip-Liste · \"· active\": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 11px/400) @ div > div[data-testid=\"trip-row-c10b670f\"] > div > div > span.status-caption",
+    +   "1280px en Trip-Liste · \"· active\": 2.46:1 < 4.5 (rgb(154, 149, 138) auf rgb(236, 234, 217), 11px/400) @ div > div[data-testid=\"trip-row-f157cec9\"] > div > div > span.status-caption",
+    +   "1280px en Trip-Liste · \"· active\": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 11px/400) @ div > div[data-testid=\"trip-row-5d6a63a5\"] > div > div > span.status-caption",
+    +   "1280px en Trip-Liste · \"21 of 21 trips\": 2.71:1 < 4.5 (rgb(154, 149, 138) auf rgb(246, 244, 238), 11px/400) @ div.flex > main.mobile-scroll-pad > div.space-y-4 > div.hidden > div",
+    +   "1280px en Vergleichsliste · \"3\": 3.94:1 < 4.5 (rgb(196, 90, 42) auf rgb(246, 244, 238), 22px/600) @ main > div.hidden > div > div > span",
+    +   "1280px en Vergleichsliste · \"· active\": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 11px/400) @ div > div[data-testid=\"compare-tile-cp-849e2e4ee8b88cce\"] > div > div > span[data-testid=\"compare-status-pill\"]",
+    +   "1280px en Vergleichsliste · \"· active\": 2.46:1 < 4.5 (rgb(154, 149, 138) auf rgb(236, 234, 217), 11px/400) @ div > div[data-testid=\"compare-tile-cp-9015cbfaa55fd101\"] > div > div > span[data-testid=\"compare-status-pill\"]",
+    +   "1280px en Vergleichsliste · \"· active\": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 11px/400) @ div > div[data-testid=\"compare-tile-cp-99c41eb55281ef33\"] > div > div > span[data-testid=\"compare-status-pill\"]",
+    +   "1280px en Vergleichsliste · \"3 of 3 comparisons\": 2.71:1 < 4.5 (rgb(154, 149, 138) auf rgb(246, 244, 238), 11px/400) @ main.mobile-scroll-pad > div > main > div.hidden > div",
+    +   "1280px en Trip-Hub uebersicht · \"Status\": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 11px/400) @ div > div > div > div > div",
+    +   "1280px en Trip-Hub uebersicht · \"Next delivery\": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 11px/400) @ div > div > div > div > div",
+    +   "1280px en Trip-Hub uebersicht · \"Briefings\": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 11px/400) @ div > div > div > div > div",
+    +   "1280px en Trip-Hub uebersicht · \"Last sent\": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 11px/400) @ div > div > div > div > div",
+    +   "1280px en Trip-Hub uebersicht · \"Channels\": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 11px/400) @ div > div > div > div > div",
+    +   "1280px en Trip-Hub etappen · \"STAGES · DRAG TO SORT · + REST DAY BETWEEN\": 2.82:1 < 4.5 (rgb(154, 149, 138) auf rgb(250, 248, 245), 11px/600) @ div[data-testid=\"trip-detail-panel-etappen\"] > div[data-testid=\"edit-stages-panel\"] > div[data-testid=\"etappen-strip-wrapper\"] > div > span",
+    +   "1280px en Trip-Hub etappen · \"3 GPX · 0 rest days\": 2.82:1 < 4.5 (rgb(154, 149, 138) auf rgb(250, 248, 245), 11px/400) @ div[data-testid=\"trip-detail-panel-etappen\"] > div[data-testid=\"edit-stages-panel\"] > div[data-testid=\"etappen-strip-wrapper\"] > div > span",
+    +   "1280px en Trip-Hub etappen · \"×\": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 12px/400) @ div.sortable-item > div > div[data-testid=\"stage-card-0\"] > div > button",
+    +   "1280px en Trip-Hub etappen · \"⋮⋮ T02 ·\": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 9px/600) @ div.sortable-item > div > div[data-testid=\"stage-card-1\"] > div > span",
+    +   "1280px en Trip-Hub etappen · \"×\": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 12px/400) @ div.sortable-item > div > div[data-testid=\"stage-card-1\"] > div > button",
+    +   "1280px en Trip-Hub etappen · \"⋮⋮ T03 ·\": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 9px/600) @ div.sortable-item > div > div[data-testid=\"stage-card-2\"] > div > span",
+    +   "1280px en Trip-Hub etappen · \"×\": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 12px/400) @ div.sortable-item > div > div[data-testid=\"stage-card-2\"] > div > button",
+    +   "1280px en Trip-Hub etappen · \"·\": 2.5:1 < 4.5 (rgb(166, 164, 157) auf rgb(255, 255, 255), 10px/400) @ div[data-testid=\"waypoint-card-0\"] > div.waypoint-card-row > div.waypoint-body > div.waypoint-meta > span.waypoint-meta-sep",
+    +   "1280px en Trip-Hub etappen · \"·\": 2.5:1 < 4.5 (rgb(166, 164, 157) auf rgb(255, 255, 255), 10px/400) @ div[data-testid=\"waypoint-card-1\"] > div.waypoint-card-row > div.waypoint-body > div.waypoint-meta > span.waypoint-meta-sep",
+    +   "1280px en Vergleich-Hub uebersicht · \"Status\": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 11px/400) @ div > div > div > div > div",
+    +   "1280px en Vergleich-Hub uebersicht · \"Next delivery\": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 11px/400) @ div > div > div > div > div",
+    +   "1280px en Vergleich-Hub uebersicht · \"Briefings\": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 11px/400) @ div > div > div > div > div",
+    +   "1280px en Vergleich-Hub uebersicht · \"Last sent\": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 11px/400) @ div > div > div > div > div",
+    +   "1280px en Vergleich-Hub uebersicht · \"Channels\": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 11px/400) @ div > div > div > div > div",
+    +   "1280px en Vergleich-Hub orte · \"01\": 4.34:1 < 4.5 (rgb(196, 90, 42) auf rgb(255, 255, 255), 13px/600) @ div.sortable-item > div[data-testid=\"hub-orte-row\"] > div.hub-orte-row-body > div > span",
+    +   "1280px en Vergleich-Hub orte · \"02\": 3.58:1 < 4.5 (rgb(196, 90, 42) auf rgb(236, 234, 217), 13px/600) @ div.sortable-item > div[data-testid=\"hub-orte-row\"] > div.hub-orte-row-body > div > span",
+    +   "1280px en Vergleich-Hub orte · \"03\": 4.34:1 < 4.5 (rgb(196, 90, 42) auf rgb(255, 255, 255), 13px/600) @ div.sortable-item > div[data-testid=\"hub-orte-row\"] > div.hub-orte-row-body > div > span",
+    + ]
+
+      202 | 				await cleanupTracked(page.request);
+      203 | 			}
+    > 204 | 			expect(verstoesse, `${ko} WCAG-AA-Verstöße:\n  ${verstoesse.join('\n  ')}`).toEqual([]);
+          | 			                                                                            ^
+      205 | 		});
+      206 | 	}
+      207 | }
+        at /home/user/gregor_zwanzig/.claude/worktrees/agent-a05dbea935b931947/frontend/e2e/kontrast-trip-vergleich.spec.ts:204:80
+
+    Error Context: test-results/kontrast-trip-vergleich-KO-61fdf-sichtbare-Text-hält-WCAG-AA-tests/error-context.md
+
+
+[4/12] [tests] › e2e/kontrast-trip-vergleich.spec.ts:169:3 › KO-2 (390 × 844, de): Listen und Hubs — jeder sichtbare Text hält WCAG-AA
+  3) [tests] › e2e/kontrast-trip-vergleich.spec.ts:169:3 › KO-2 (390 × 844, de): Listen und Hubs — jeder sichtbare Text hält WCAG-AA 
+
+    Error: KO-2 WCAG-AA-Verstöße:
+      390px de Trip-Liste · "19": 3.94:1 < 4.5 (rgb(196, 90, 42) auf rgb(246, 244, 238), 22px/600) @ main.mobile-scroll-pad > div.space-y-4 > div.flex > div > span
+      390px de Trip-Liste · "aktiv": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 11px/400) @ div[data-testid="subscription-card-e2e-708-stage-confirm"] > div > div > div > span
+      390px de Trip-Liste · "aktiv": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 11px/400) @ div[data-testid="subscription-card-e2e-cockpit-test"] > div > div > div > span
+      390px de Trip-Liste · "geplant": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 11px/400) @ div[data-testid="subscription-card-7c81b094"] > div > div > div > span
+      390px de Trip-Liste · "geplant": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 11px/400) @ div[data-testid="subscription-card-45a6c948"] > div > div > div > span
+      390px de Trip-Liste · "aktiv": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 11px/400) @ div[data-testid="subscription-card-e2e-gz-2879-1794240608089-470933"] > div > div > div > span
+      390px de Trip-Liste · "aktiv": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 11px/400) @ div[data-testid="subscription-card-5bd706cf"] > div > div > div > span
+      390px de Trip-Liste · "aktiv": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 11px/400) @ div[data-testid="subscription-card-e2203fbf"] > div > div > div > span
+      390px de Trip-Liste · "aktiv": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 11px/400) @ div[data-testid="subscription-card-698bca6b"] > div > div > div > span
+      390px de Trip-Liste · "aktiv": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 11px/400) @ div[data-testid="subscription-card-7110c9a9"] > div > div > div > span
+      390px de Trip-Liste · "aktiv": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 11px/400) @ div[data-testid="subscription-card-fd58297e"] > div > div > div > span
+      390px de Trip-Liste · "aktiv": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 11px/400) @ div[data-testid="subscription-card-9c845b7e"] > div > div > div > span
+      390px de Trip-Liste · "aktiv": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 11px/400) @ div[data-testid="subscription-card-ebc7b7c1"] > div > div > div > span
+      390px de Trip-Liste · "aktiv": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 11px/400) @ div[data-testid="subscription-card-461e4e2c"] > div > div > div > span
+      390px de Trip-Liste · "aktiv": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 11px/400) @ div[data-testid="subscription-card-05815a6d"] > div > div > div > span
+      390px de Trip-Liste · "aktiv": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 11px/400) @ div[data-testid="subscription-card-ca4d7aa8"] > div > div > div > span
+      390px de Trip-Liste · "aktiv": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 11px/400) @ div[data-testid="subscription-card-c2056b5b"] > div > div > div > span
+      390px de Trip-Liste · "aktiv": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 11px/400) @ div[data-testid="subscription-card-2d063f01"] > div > div > div > span
+      390px de Trip-Liste · "aktiv": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 11px/400) @ div[data-testid="subscription-card-0fd8694c"] > div > div > div > span
+      390px de Trip-Liste · "aktiv": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 11px/400) @ div[data-testid="subscription-card-c10b670f"] > div > div > div > span
+      390px de Trip-Liste · "aktiv": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 11px/400) @ div[data-testid="subscription-card-f157cec9"] > div > div > div > span
+      390px de Trip-Liste · "aktiv": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 11px/400) @ div[data-testid="subscription-card-5d6a63a5"] > div > div > div > span
+      390px de Vergleichsliste · "3": 3.94:1 < 4.5 (rgb(196, 90, 42) auf rgb(246, 244, 238), 22px/600) @ main > div.desktop:hidden > div > div > span
+      390px de Vergleichsliste · "aktiv": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 11px/400) @ div[data-testid="subscription-card-cp-849e2e4ee8b88cce"] > div > div > div > span
+      390px de Vergleichsliste · "aktiv": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 11px/400) @ div[data-testid="subscription-card-cp-9015cbfaa55fd101"] > div > div > div > span
+      390px de Vergleichsliste · "aktiv": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 11px/400) @ div[data-testid="subscription-card-cp-ff32a2226944d48b"] > div > div > div > span
+      390px de Trip-Hub uebersicht · "GR20N": 3.94:1 < 4.5 (rgb(196, 90, 42) auf rgb(246, 244, 238), 20px/600) @ div.min-w-0 > div.flex > div.flex > h1[data-testid="trip-detail-h1"] > span.h1-shortcode
+      390px de Trip-Hub uebersicht · "Übersicht": 3.94:1 < 4.5 (rgb(246, 244, 238) auf rgb(196, 90, 42), 13px/600) @ main.mobile-scroll-pad > main > div[data-testid="trip-detail-tab-list"] > div.mtabbar > button[data-testid="trip-detail-tab-uebersicht"]
+      390px de Trip-Hub uebersicht · "Status": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 11px/400) @ div[data-testid="trip-detail-uebersicht-reiterflaeche"] > div > div[data-testid="hub-uebersicht-monitoring-mobile"] > div > div.hub-mobile-stat-label
+      390px de Trip-Hub uebersicht · "Nächster Versand": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 11px/400) @ div[data-testid="trip-detail-uebersicht-reiterflaeche"] > div > div[data-testid="hub-uebersicht-monitoring-mobile"] > div > div.hub-mobile-stat-label
+      390px de Trip-Hub uebersicht · "Zuletzt raus": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 11px/400) @ div[data-testid="trip-detail-uebersicht-reiterflaeche"] > div > div[data-testid="hub-uebersicht-monitoring-mobile"] > div > div.hub-mobile-stat-label
+      390px de Trip-Hub uebersicht · "Kanäle": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 11px/400) @ div[data-testid="trip-detail-uebersicht-reiterflaeche"] > div > div[data-testid="hub-uebersicht-monitoring-mobile"] > div > div.hub-mobile-stat-label
+      390px de Trip-Hub uebersicht · "Versand": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 11px/400) @ div > div[data-testid="hub-uebersicht-summary-mobile"] > button[data-testid="hub-summary-row-mobile"] > span.hub-summary-row-body > span.hub-summary-row-eyebrow
+      390px de Trip-Hub etappen · "GR20N": 3.94:1 < 4.5 (rgb(196, 90, 42) auf rgb(246, 244, 238), 20px/600) @ div.min-w-0 > div.flex > div.flex > h1[data-testid="trip-detail-h1"] > span.h1-shortcode
+      390px de Trip-Hub etappen · "Etappen & Wegpunkte": 3.94:1 < 4.5 (rgb(246, 244, 238) auf rgb(196, 90, 42), 13px/600) @ main.mobile-scroll-pad > main > div[data-testid="trip-detail-tab-list"] > div.mtabbar > button[data-testid="trip-detail-tab-etappen"]
+      390px de Trip-Hub etappen · "3": 2.79:1 < 4.5 (rgb(246, 244, 238) auf rgb(209, 126, 89), 11px/600) @ main > div[data-testid="trip-detail-tab-list"] > div.mtabbar > button[data-testid="trip-detail-tab-etappen"] > span[data-testid="trip-detail-tab-badge-etappen"]
+      390px de Vergleich-Hub uebersicht · "Übersicht": 3.94:1 < 4.5 (rgb(246, 244, 238) auf rgb(196, 90, 42), 13px/600) @ div.flex > main.mobile-scroll-pad > div[data-testid="compare-detail-tab-list"] > div.mtabbar > button[data-testid="compare-detail-tab-uebersicht"]
+      390px de Vergleich-Hub uebersicht · "Status": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 11px/400) @ div[data-testid="compare-detail-uebersicht-reiterflaeche"] > div > div[data-testid="compare-detail-monitoring-mobile"] > div > div.hub-mobile-stat-label
+      390px de Vergleich-Hub uebersicht · "Nächster Versand": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 11px/400) @ div[data-testid="compare-detail-uebersicht-reiterflaeche"] > div > div[data-testid="compare-detail-monitoring-mobile"] > div > div.hub-mobile-stat-label
+      390px de Vergleich-Hub uebersicht · "Zuletzt raus": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 11px/400) @ div[data-testid="compare-detail-uebersicht-reiterflaeche"] > div > div[data-testid="compare-detail-monitoring-mobile"] > div > div.hub-mobile-stat-label
+      390px de Vergleich-Hub uebersicht · "Kanäle": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 11px/400) @ div[data-testid="compare-detail-uebersicht-reiterflaeche"] > div > div[data-testid="compare-detail-monitoring-mobile"] > div > div.hub-mobile-stat-label
+      390px de Vergleich-Hub uebersicht · "Orte": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 11px/400) @ div > div[data-testid="compare-detail-summary-mobile"] > button[data-testid="hub-summary-row-mobile"] > span.hub-summary-row-body > span.hub-summary-row-eyebrow
+      390px de Vergleich-Hub uebersicht · "Wertebereiche": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 11px/400) @ div > div[data-testid="compare-detail-summary-mobile"] > button[data-testid="hub-summary-row-mobile"] > span.hub-summary-row-body > span.hub-summary-row-eyebrow
+      390px de Vergleich-Hub uebersicht · "Versand": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 11px/400) @ div > div[data-testid="compare-detail-summary-mobile"] > button[data-testid="hub-summary-row-mobile"] > span.hub-summary-row-body > span.hub-summary-row-eyebrow
+      390px de Vergleich-Hub orte · "Orte": 3.94:1 < 4.5 (rgb(246, 244, 238) auf rgb(196, 90, 42), 13px/600) @ div.flex > main.mobile-scroll-pad > div[data-testid="compare-detail-tab-list"] > div.mtabbar > button[data-testid="compare-detail-tab-orte"]
+      390px de Vergleich-Hub orte · "3": 2.79:1 < 4.5 (rgb(246, 244, 238) auf rgb(209, 126, 89), 11px/600) @ main.mobile-scroll-pad > div[data-testid="compare-detail-tab-list"] > div.mtabbar > button[data-testid="compare-detail-tab-orte"] > span
+      390px de Vergleich-Hub orte · "01": 4.34:1 < 4.5 (rgb(196, 90, 42) auf rgb(255, 255, 255), 13px/600) @ div.sortable-item > div[data-testid="hub-orte-row"] > div.hub-orte-row-body > div > span
+      390px de Vergleich-Hub orte · "02": 3.58:1 < 4.5 (rgb(196, 90, 42) auf rgb(236, 234, 217), 13px/600) @ div.sortable-item > div[data-testid="hub-orte-row"] > div.hub-orte-row-body > div > span
+      390px de Vergleich-Hub orte · "03": 4.34:1 < 4.5 (rgb(196, 90, 42) auf rgb(255, 255, 255), 13px/600) @ div.sortable-item > div[data-testid="hub-orte-row"] > div.hub-orte-row-body > div > span
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  -  1
+    + Received  + 51
+
+    - Array []
+    + Array [
+    +   "390px de Trip-Liste · \"19\": 3.94:1 < 4.5 (rgb(196, 90, 42) auf rgb(246, 244, 238), 22px/600) @ main.mobile-scroll-pad > div.space-y-4 > div.flex > div > span",
+    +   "390px de Trip-Liste · \"aktiv\": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 11px/400) @ div[data-testid=\"subscription-card-e2e-708-stage-confirm\"] > div > div > div > span",
+    +   "390px de Trip-Liste · \"aktiv\": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 11px/400) @ div[data-testid=\"subscription-card-e2e-cockpit-test\"] > div > div > div > span",
+    +   "390px de Trip-Liste · \"geplant\": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 11px/400) @ div[data-testid=\"subscription-card-7c81b094\"] > div > div > div > span",
+    +   "390px de Trip-Liste · \"geplant\": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 11px/400) @ div[data-testid=\"subscription-card-45a6c948\"] > div > div > div > span",
+    +   "390px de Trip-Liste · \"aktiv\": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 11px/400) @ div[data-testid=\"subscription-card-e2e-gz-2879-1794240608089-470933\"] > div > div > div > span",
+    +   "390px de Trip-Liste · \"aktiv\": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 11px/400) @ div[data-testid=\"subscription-card-5bd706cf\"] > div > div > div > span",
+    +   "390px de Trip-Liste · \"aktiv\": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 11px/400) @ div[data-testid=\"subscription-card-e2203fbf\"] > div > div > div > span",
+    +   "390px de Trip-Liste · \"aktiv\": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 11px/400) @ div[data-testid=\"subscription-card-698bca6b\"] > div > div > div > span",
+    +   "390px de Trip-Liste · \"aktiv\": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 11px/400) @ div[data-testid=\"subscription-card-7110c9a9\"] > div > div > div > span",
+    +   "390px de Trip-Liste · \"aktiv\": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 11px/400) @ div[data-testid=\"subscription-card-fd58297e\"] > div > div > div > span",
+    +   "390px de Trip-Liste · \"aktiv\": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 11px/400) @ div[data-testid=\"subscription-card-9c845b7e\"] > div > div > div > span",
+    +   "390px de Trip-Liste · \"aktiv\": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 11px/400) @ div[data-testid=\"subscription-card-ebc7b7c1\"] > div > div > div > span",
+    +   "390px de Trip-Liste · \"aktiv\": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 11px/400) @ div[data-testid=\"subscription-card-461e4e2c\"] > div > div > div > span",
+    +   "390px de Trip-Liste · \"aktiv\": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 11px/400) @ div[data-testid=\"subscription-card-05815a6d\"] > div > div > div > span",
+    +   "390px de Trip-Liste · \"aktiv\": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 11px/400) @ div[data-testid=\"subscription-card-ca4d7aa8\"] > div > div > div > span",
+    +   "390px de Trip-Liste · \"aktiv\": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 11px/400) @ div[data-testid=\"subscription-card-c2056b5b\"] > div > div > div > span",
+    +   "390px de Trip-Liste · \"aktiv\": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 11px/400) @ div[data-testid=\"subscription-card-2d063f01\"] > div > div > div > span",
+    +   "390px de Trip-Liste · \"aktiv\": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 11px/400) @ div[data-testid=\"subscription-card-0fd8694c\"] > div > div > div > span",
+    +   "390px de Trip-Liste · \"aktiv\": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 11px/400) @ div[data-testid=\"subscription-card-c10b670f\"] > div > div > div > span",
+    +   "390px de Trip-Liste · \"aktiv\": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 11px/400) @ div[data-testid=\"subscription-card-f157cec9\"] > div > div > div > span",
+    +   "390px de Trip-Liste · \"aktiv\": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 11px/400) @ div[data-testid=\"subscription-card-5d6a63a5\"] > div > div > div > span",
+    +   "390px de Vergleichsliste · \"3\": 3.94:1 < 4.5 (rgb(196, 90, 42) auf rgb(246, 244, 238), 22px/600) @ main > div.desktop:hidden > div > div > span",
+    +   "390px de Vergleichsliste · \"aktiv\": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 11px/400) @ div[data-testid=\"subscription-card-cp-849e2e4ee8b88cce\"] > div > div > div > span",
+    +   "390px de Vergleichsliste · \"aktiv\": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 11px/400) @ div[data-testid=\"subscription-card-cp-9015cbfaa55fd101\"] > div > div > div > span",
+    +   "390px de Vergleichsliste · \"aktiv\": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 11px/400) @ div[data-testid=\"subscription-card-cp-ff32a2226944d48b\"] > div > div > div > span",
+    +   "390px de Trip-Hub uebersicht · \"GR20N\": 3.94:1 < 4.5 (rgb(196, 90, 42) auf rgb(246, 244, 238), 20px/600) @ div.min-w-0 > div.flex > div.flex > h1[data-testid=\"trip-detail-h1\"] > span.h1-shortcode",
+    +   "390px de Trip-Hub uebersicht · \"Übersicht\": 3.94:1 < 4.5 (rgb(246, 244, 238) auf rgb(196, 90, 42), 13px/600) @ main.mobile-scroll-pad > main > div[data-testid=\"trip-detail-tab-list\"] > div.mtabbar > button[data-testid=\"trip-detail-tab-uebersicht\"]",
+    +   "390px de Trip-Hub uebersicht · \"Status\": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 11px/400) @ div[data-testid=\"trip-detail-uebersicht-reiterflaeche\"] > div > div[data-testid=\"hub-uebersicht-monitoring-mobile\"] > div > div.hub-mobile-stat-label",
+    +   "390px de Trip-Hub uebersicht · \"Nächster Versand\": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 11px/400) @ div[data-testid=\"trip-detail-uebersicht-reiterflaeche\"] > div > div[data-testid=\"hub-uebersicht-monitoring-mobile\"] > div > div.hub-mobile-stat-label",
+    +   "390px de Trip-Hub uebersicht · \"Zuletzt raus\": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 11px/400) @ div[data-testid=\"trip-detail-uebersicht-reiterflaeche\"] > div > div[data-testid=\"hub-uebersicht-monitoring-mobile\"] > div > div.hub-mobile-stat-label",
+    +   "390px de Trip-Hub uebersicht · \"Kanäle\": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 11px/400) @ div[data-testid=\"trip-detail-uebersicht-reiterflaeche\"] > div > div[data-testid=\"hub-uebersicht-monitoring-mobile\"] > div > div.hub-mobile-stat-label",
+    +   "390px de Trip-Hub uebersicht · \"Versand\": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 11px/400) @ div > div[data-testid=\"hub-uebersicht-summary-mobile\"] > button[data-testid=\"hub-summary-row-mobile\"] > span.hub-summary-row-body > span.hub-summary-row-eyebrow",
+    +   "390px de Trip-Hub etappen · \"GR20N\": 3.94:1 < 4.5 (rgb(196, 90, 42) auf rgb(246, 244, 238), 20px/600) @ div.min-w-0 > div.flex > div.flex > h1[data-testid=\"trip-detail-h1\"] > span.h1-shortcode",
+    +   "390px de Trip-Hub etappen · \"Etappen & Wegpunkte\": 3.94:1 < 4.5 (rgb(246, 244, 238) auf rgb(196, 90, 42), 13px/600) @ main.mobile-scroll-pad > main > div[data-testid=\"trip-detail-tab-list\"] > div.mtabbar > button[data-testid=\"trip-detail-tab-etappen\"]",
+    +   "390px de Trip-Hub etappen · \"3\": 2.79:1 < 4.5 (rgb(246, 244, 238) auf rgb(209, 126, 89), 11px/600) @ main > div[data-testid=\"trip-detail-tab-list\"] > div.mtabbar > button[data-testid=\"trip-detail-tab-etappen\"] > span[data-testid=\"trip-detail-tab-badge-etappen\"]",
+    +   "390px de Vergleich-Hub uebersicht · \"Übersicht\": 3.94:1 < 4.5 (rgb(246, 244, 238) auf rgb(196, 90, 42), 13px/600) @ div.flex > main.mobile-scroll-pad > div[data-testid=\"compare-detail-tab-list\"] > div.mtabbar > button[data-testid=\"compare-detail-tab-uebersicht\"]",
+    +   "390px de Vergleich-Hub uebersicht · \"Status\": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 11px/400) @ div[data-testid=\"compare-detail-uebersicht-reiterflaeche\"] > div > div[data-testid=\"compare-detail-monitoring-mobile\"] > div > div.hub-mobile-stat-label",
+    +   "390px de Vergleich-Hub uebersicht · \"Nächster Versand\": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 11px/400) @ div[data-testid=\"compare-detail-uebersicht-reiterflaeche\"] > div > div[data-testid=\"compare-detail-monitoring-mobile\"] > div > div.hub-mobile-stat-label",
+    +   "390px de Vergleich-Hub uebersicht · \"Zuletzt raus\": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 11px/400) @ div[data-testid=\"compare-detail-uebersicht-reiterflaeche\"] > div > div[data-testid=\"compare-detail-monitoring-mobile\"] > div > div.hub-mobile-stat-label",
+    +   "390px de Vergleich-Hub uebersicht · \"Kanäle\": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 11px/400) @ div[data-testid=\"compare-detail-uebersicht-reiterflaeche\"] > div > div[data-testid=\"compare-detail-monitoring-mobile\"] > div > div.hub-mobile-stat-label",
+    +   "390px de Vergleich-Hub uebersicht · \"Orte\": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 11px/400) @ div > div[data-testid=\"compare-detail-summary-mobile\"] > button[data-testid=\"hub-summary-row-mobile\"] > span.hub-summary-row-body > span.hub-summary-row-eyebrow",
+    +   "390px de Vergleich-Hub uebersicht · \"Wertebereiche\": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 11px/400) @ div > div[data-testid=\"compare-detail-summary-mobile\"] > button[data-testid=\"hub-summary-row-mobile\"] > span.hub-summary-row-body > span.hub-summary-row-eyebrow",
+    +   "390px de Vergleich-Hub uebersicht · \"Versand\": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 11px/400) @ div > div[data-testid=\"compare-detail-summary-mobile\"] > button[data-testid=\"hub-summary-row-mobile\"] > span.hub-summary-row-body > span.hub-summary-row-eyebrow",
+    +   "390px de Vergleich-Hub orte · \"Orte\": 3.94:1 < 4.5 (rgb(246, 244, 238) auf rgb(196, 90, 42), 13px/600) @ div.flex > main.mobile-scroll-pad > div[data-testid=\"compare-detail-tab-list\"] > div.mtabbar > button[data-testid=\"compare-detail-tab-orte\"]",
+    +   "390px de Vergleich-Hub orte · \"3\": 2.79:1 < 4.5 (rgb(246, 244, 238) auf rgb(209, 126, 89), 11px/600) @ main.mobile-scroll-pad > div[data-testid=\"compare-detail-tab-list\"] > div.mtabbar > button[data-testid=\"compare-detail-tab-orte\"] > span",
+    +   "390px de Vergleich-Hub orte · \"01\": 4.34:1 < 4.5 (rgb(196, 90, 42) auf rgb(255, 255, 255), 13px/600) @ div.sortable-item > div[data-testid=\"hub-orte-row\"] > div.hub-orte-row-body > div > span",
+    +   "390px de Vergleich-Hub orte · \"02\": 3.58:1 < 4.5 (rgb(196, 90, 42) auf rgb(236, 234, 217), 13px/600) @ div.sortable-item > div[data-testid=\"hub-orte-row\"] > div.hub-orte-row-body > div > span",
+    +   "390px de Vergleich-Hub orte · \"03\": 4.34:1 < 4.5 (rgb(196, 90, 42) auf rgb(255, 255, 255), 13px/600) @ div.sortable-item > div[data-testid=\"hub-orte-row\"] > div.hub-orte-row-body > div > span",
+    + ]
+
+      202 | 				await cleanupTracked(page.request);
+      203 | 			}
+    > 204 | 			expect(verstoesse, `${ko} WCAG-AA-Verstöße:\n  ${verstoesse.join('\n  ')}`).toEqual([]);
+          | 			                                                                            ^
+      205 | 		});
+      206 | 	}
+      207 | }
+        at /home/user/gregor_zwanzig/.claude/worktrees/agent-a05dbea935b931947/frontend/e2e/kontrast-trip-vergleich.spec.ts:204:80
+
+    Error Context: test-results/kontrast-trip-vergleich-KO-0e10b-sichtbare-Text-hält-WCAG-AA-tests/error-context.md
+
+
+[5/12] [tests] › e2e/kontrast-trip-vergleich.spec.ts:169:3 › KO-2 (390 × 844, en): Listen und Hubs — jeder sichtbare Text hält WCAG-AA
+  4) [tests] › e2e/kontrast-trip-vergleich.spec.ts:169:3 › KO-2 (390 × 844, en): Listen und Hubs — jeder sichtbare Text hält WCAG-AA 
+
+    Error: KO-2 WCAG-AA-Verstöße:
+      390px en Trip-Liste · "19": 3.94:1 < 4.5 (rgb(196, 90, 42) auf rgb(246, 244, 238), 22px/600) @ main.mobile-scroll-pad > div.space-y-4 > div.flex > div > span
+      390px en Trip-Liste · "aktiv": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 11px/400) @ div[data-testid="subscription-card-e2e-708-stage-confirm"] > div > div > div > span
+      390px en Trip-Liste · "aktiv": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 11px/400) @ div[data-testid="subscription-card-e2e-cockpit-test"] > div > div > div > span
+      390px en Trip-Liste · "geplant": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 11px/400) @ div[data-testid="subscription-card-7c81b094"] > div > div > div > span
+      390px en Trip-Liste · "geplant": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 11px/400) @ div[data-testid="subscription-card-45a6c948"] > div > div > div > span
+      390px en Trip-Liste · "aktiv": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 11px/400) @ div[data-testid="subscription-card-e2e-gz-2879-1794240614602-656106"] > div > div > div > span
+      390px en Trip-Liste · "aktiv": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 11px/400) @ div[data-testid="subscription-card-5bd706cf"] > div > div > div > span
+      390px en Trip-Liste · "aktiv": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 11px/400) @ div[data-testid="subscription-card-e2203fbf"] > div > div > div > span
+      390px en Trip-Liste · "aktiv": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 11px/400) @ div[data-testid="subscription-card-698bca6b"] > div > div > div > span
+      390px en Trip-Liste · "aktiv": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 11px/400) @ div[data-testid="subscription-card-7110c9a9"] > div > div > div > span
+      390px en Trip-Liste · "aktiv": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 11px/400) @ div[data-testid="subscription-card-fd58297e"] > div > div > div > span
+      390px en Trip-Liste · "aktiv": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 11px/400) @ div[data-testid="subscription-card-9c845b7e"] > div > div > div > span
+      390px en Trip-Liste · "aktiv": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 11px/400) @ div[data-testid="subscription-card-ebc7b7c1"] > div > div > div > span
+      390px en Trip-Liste · "aktiv": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 11px/400) @ div[data-testid="subscription-card-461e4e2c"] > div > div > div > span
+      390px en Trip-Liste · "aktiv": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 11px/400) @ div[data-testid="subscription-card-05815a6d"] > div > div > div > span
+      390px en Trip-Liste · "aktiv": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 11px/400) @ div[data-testid="subscription-card-ca4d7aa8"] > div > div > div > span
+      390px en Trip-Liste · "aktiv": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 11px/400) @ div[data-testid="subscription-card-c2056b5b"] > div > div > div > span
+      390px en Trip-Liste · "aktiv": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 11px/400) @ div[data-testid="subscription-card-2d063f01"] > div > div > div > span
+      390px en Trip-Liste · "aktiv": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 11px/400) @ div[data-testid="subscription-card-0fd8694c"] > div > div > div > span
+      390px en Trip-Liste · "aktiv": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 11px/400) @ div[data-testid="subscription-card-c10b670f"] > div > div > div > span
+      390px en Trip-Liste · "aktiv": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 11px/400) @ div[data-testid="subscription-card-f157cec9"] > div > div > div > span
+      390px en Trip-Liste · "aktiv": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 11px/400) @ div[data-testid="subscription-card-5d6a63a5"] > div > div > div > span
+      390px en Vergleichsliste · "3": 3.94:1 < 4.5 (rgb(196, 90, 42) auf rgb(246, 244, 238), 22px/600) @ main > div.desktop:hidden > div > div > span
+      390px en Vergleichsliste · "aktiv": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 11px/400) @ div[data-testid="subscription-card-cp-849e2e4ee8b88cce"] > div > div > div > span
+      390px en Vergleichsliste · "aktiv": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 11px/400) @ div[data-testid="subscription-card-cp-8de7b7b021662f40"] > div > div > div > span
+      390px en Vergleichsliste · "aktiv": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 11px/400) @ div[data-testid="subscription-card-cp-9015cbfaa55fd101"] > div > div > div > span
+      390px en Trip-Hub uebersicht · "GR20N": 3.94:1 < 4.5 (rgb(196, 90, 42) auf rgb(246, 244, 238), 20px/600) @ div.min-w-0 > div.flex > div.flex > h1[data-testid="trip-detail-h1"] > span.h1-shortcode
+      390px en Trip-Hub uebersicht · "Overview": 3.94:1 < 4.5 (rgb(246, 244, 238) auf rgb(196, 90, 42), 13px/600) @ main.mobile-scroll-pad > main > div[data-testid="trip-detail-tab-list"] > div.mtabbar > button[data-testid="trip-detail-tab-uebersicht"]
+      390px en Trip-Hub uebersicht · "Status": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 11px/400) @ div[data-testid="trip-detail-uebersicht-reiterflaeche"] > div > div[data-testid="hub-uebersicht-monitoring-mobile"] > div > div.hub-mobile-stat-label
+      390px en Trip-Hub uebersicht · "Next delivery": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 11px/400) @ div[data-testid="trip-detail-uebersicht-reiterflaeche"] > div > div[data-testid="hub-uebersicht-monitoring-mobile"] > div > div.hub-mobile-stat-label
+      390px en Trip-Hub uebersicht · "Last sent": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 11px/400) @ div[data-testid="trip-detail-uebersicht-reiterflaeche"] > div > div[data-testid="hub-uebersicht-monitoring-mobile"] > div > div.hub-mobile-stat-label
+      390px en Trip-Hub uebersicht · "Channels": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 11px/400) @ div[data-testid="trip-detail-uebersicht-reiterflaeche"] > div > div[data-testid="hub-uebersicht-monitoring-mobile"] > div > div.hub-mobile-stat-label
+      390px en Trip-Hub uebersicht · "Delivery": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 11px/400) @ div > div[data-testid="hub-uebersicht-summary-mobile"] > button[data-testid="hub-summary-row-mobile"] > span.hub-summary-row-body > span.hub-summary-row-eyebrow
+      390px en Trip-Hub etappen · "GR20N": 3.94:1 < 4.5 (rgb(196, 90, 42) auf rgb(246, 244, 238), 20px/600) @ div.min-w-0 > div.flex > div.flex > h1[data-testid="trip-detail-h1"] > span.h1-shortcode
+      390px en Trip-Hub etappen · "Stages & waypoints": 3.94:1 < 4.5 (rgb(246, 244, 238) auf rgb(196, 90, 42), 13px/600) @ main.mobile-scroll-pad > main > div[data-testid="trip-detail-tab-list"] > div.mtabbar > button[data-testid="trip-detail-tab-etappen"]
+      390px en Trip-Hub etappen · "3": 2.79:1 < 4.5 (rgb(246, 244, 238) auf rgb(209, 126, 89), 11px/600) @ main > div[data-testid="trip-detail-tab-list"] > div.mtabbar > button[data-testid="trip-detail-tab-etappen"] > span[data-testid="trip-detail-tab-badge-etappen"]
+      390px en Vergleich-Hub uebersicht · "Overview": 3.94:1 < 4.5 (rgb(246, 244, 238) auf rgb(196, 90, 42), 13px/600) @ div.flex > main.mobile-scroll-pad > div[data-testid="compare-detail-tab-list"] > div.mtabbar > button[data-testid="compare-detail-tab-uebersicht"]
+      390px en Vergleich-Hub uebersicht · "Status": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 11px/400) @ div[data-testid="compare-detail-uebersicht-reiterflaeche"] > div > div[data-testid="compare-detail-monitoring-mobile"] > div > div.hub-mobile-stat-label
+      390px en Vergleich-Hub uebersicht · "Next delivery": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 11px/400) @ div[data-testid="compare-detail-uebersicht-reiterflaeche"] > div > div[data-testid="compare-detail-monitoring-mobile"] > div > div.hub-mobile-stat-label
+      390px en Vergleich-Hub uebersicht · "Last sent": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 11px/400) @ div[data-testid="compare-detail-uebersicht-reiterflaeche"] > div > div[data-testid="compare-detail-monitoring-mobile"] > div > div.hub-mobile-stat-label
+      390px en Vergleich-Hub uebersicht · "Channels": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 11px/400) @ div[data-testid="compare-detail-uebersicht-reiterflaeche"] > div > div[data-testid="compare-detail-monitoring-mobile"] > div > div.hub-mobile-stat-label
+      390px en Vergleich-Hub uebersicht · "Locations": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 11px/400) @ div > div[data-testid="compare-detail-summary-mobile"] > button[data-testid="hub-summary-row-mobile"] > span.hub-summary-row-body > span.hub-summary-row-eyebrow
+      390px en Vergleich-Hub uebersicht · "Target ranges": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 11px/400) @ div > div[data-testid="compare-detail-summary-mobile"] > button[data-testid="hub-summary-row-mobile"] > span.hub-summary-row-body > span.hub-summary-row-eyebrow
+      390px en Vergleich-Hub uebersicht · "Delivery": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 11px/400) @ div > div[data-testid="compare-detail-summary-mobile"] > button[data-testid="hub-summary-row-mobile"] > span.hub-summary-row-body > span.hub-summary-row-eyebrow
+      390px en Vergleich-Hub orte · "Locations": 3.94:1 < 4.5 (rgb(246, 244, 238) auf rgb(196, 90, 42), 13px/600) @ div.flex > main.mobile-scroll-pad > div[data-testid="compare-detail-tab-list"] > div.mtabbar > button[data-testid="compare-detail-tab-orte"]
+      390px en Vergleich-Hub orte · "3": 2.79:1 < 4.5 (rgb(246, 244, 238) auf rgb(209, 126, 89), 11px/600) @ main.mobile-scroll-pad > div[data-testid="compare-detail-tab-list"] > div.mtabbar > button[data-testid="compare-detail-tab-orte"] > span
+      390px en Vergleich-Hub orte · "01": 4.34:1 < 4.5 (rgb(196, 90, 42) auf rgb(255, 255, 255), 13px/600) @ div.sortable-item > div[data-testid="hub-orte-row"] > div.hub-orte-row-body > div > span
+      390px en Vergleich-Hub orte · "02": 3.58:1 < 4.5 (rgb(196, 90, 42) auf rgb(236, 234, 217), 13px/600) @ div.sortable-item > div[data-testid="hub-orte-row"] > div.hub-orte-row-body > div > span
+      390px en Vergleich-Hub orte · "03": 4.34:1 < 4.5 (rgb(196, 90, 42) auf rgb(255, 255, 255), 13px/600) @ div.sortable-item > div[data-testid="hub-orte-row"] > div.hub-orte-row-body > div > span
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  -  1
+    + Received  + 51
+
+    - Array []
+    + Array [
+    +   "390px en Trip-Liste · \"19\": 3.94:1 < 4.5 (rgb(196, 90, 42) auf rgb(246, 244, 238), 22px/600) @ main.mobile-scroll-pad > div.space-y-4 > div.flex > div > span",
+    +   "390px en Trip-Liste · \"aktiv\": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 11px/400) @ div[data-testid=\"subscription-card-e2e-708-stage-confirm\"] > div > div > div > span",
+    +   "390px en Trip-Liste · \"aktiv\": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 11px/400) @ div[data-testid=\"subscription-card-e2e-cockpit-test\"] > div > div > div > span",
+    +   "390px en Trip-Liste · \"geplant\": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 11px/400) @ div[data-testid=\"subscription-card-7c81b094\"] > div > div > div > span",
+    +   "390px en Trip-Liste · \"geplant\": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 11px/400) @ div[data-testid=\"subscription-card-45a6c948\"] > div > div > div > span",
+    +   "390px en Trip-Liste · \"aktiv\": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 11px/400) @ div[data-testid=\"subscription-card-e2e-gz-2879-1794240614602-656106\"] > div > div > div > span",
+    +   "390px en Trip-Liste · \"aktiv\": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 11px/400) @ div[data-testid=\"subscription-card-5bd706cf\"] > div > div > div > span",
+    +   "390px en Trip-Liste · \"aktiv\": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 11px/400) @ div[data-testid=\"subscription-card-e2203fbf\"] > div > div > div > span",
+    +   "390px en Trip-Liste · \"aktiv\": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 11px/400) @ div[data-testid=\"subscription-card-698bca6b\"] > div > div > div > span",
+    +   "390px en Trip-Liste · \"aktiv\": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 11px/400) @ div[data-testid=\"subscription-card-7110c9a9\"] > div > div > div > span",
+    +   "390px en Trip-Liste · \"aktiv\": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 11px/400) @ div[data-testid=\"subscription-card-fd58297e\"] > div > div > div > span",
+    +   "390px en Trip-Liste · \"aktiv\": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 11px/400) @ div[data-testid=\"subscription-card-9c845b7e\"] > div > div > div > span",
+    +   "390px en Trip-Liste · \"aktiv\": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 11px/400) @ div[data-testid=\"subscription-card-ebc7b7c1\"] > div > div > div > span",
+    +   "390px en Trip-Liste · \"aktiv\": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 11px/400) @ div[data-testid=\"subscription-card-461e4e2c\"] > div > div > div > span",
+    +   "390px en Trip-Liste · \"aktiv\": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 11px/400) @ div[data-testid=\"subscription-card-05815a6d\"] > div > div > div > span",
+    +   "390px en Trip-Liste · \"aktiv\": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 11px/400) @ div[data-testid=\"subscription-card-ca4d7aa8\"] > div > div > div > span",
+    +   "390px en Trip-Liste · \"aktiv\": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 11px/400) @ div[data-testid=\"subscription-card-c2056b5b\"] > div > div > div > span",
+    +   "390px en Trip-Liste · \"aktiv\": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 11px/400) @ div[data-testid=\"subscription-card-2d063f01\"] > div > div > div > span",
+    +   "390px en Trip-Liste · \"aktiv\": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 11px/400) @ div[data-testid=\"subscription-card-0fd8694c\"] > div > div > div > span",
+    +   "390px en Trip-Liste · \"aktiv\": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 11px/400) @ div[data-testid=\"subscription-card-c10b670f\"] > div > div > div > span",
+    +   "390px en Trip-Liste · \"aktiv\": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 11px/400) @ div[data-testid=\"subscription-card-f157cec9\"] > div > div > div > span",
+    +   "390px en Trip-Liste · \"aktiv\": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 11px/400) @ div[data-testid=\"subscription-card-5d6a63a5\"] > div > div > div > span",
+    +   "390px en Vergleichsliste · \"3\": 3.94:1 < 4.5 (rgb(196, 90, 42) auf rgb(246, 244, 238), 22px/600) @ main > div.desktop:hidden > div > div > span",
+    +   "390px en Vergleichsliste · \"aktiv\": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 11px/400) @ div[data-testid=\"subscription-card-cp-849e2e4ee8b88cce\"] > div > div > div > span",
+    +   "390px en Vergleichsliste · \"aktiv\": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 11px/400) @ div[data-testid=\"subscription-card-cp-8de7b7b021662f40\"] > div > div > div > span",
+    +   "390px en Vergleichsliste · \"aktiv\": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 11px/400) @ div[data-testid=\"subscription-card-cp-9015cbfaa55fd101\"] > div > div > div > span",
+    +   "390px en Trip-Hub uebersicht · \"GR20N\": 3.94:1 < 4.5 (rgb(196, 90, 42) auf rgb(246, 244, 238), 20px/600) @ div.min-w-0 > div.flex > div.flex > h1[data-testid=\"trip-detail-h1\"] > span.h1-shortcode",
+    +   "390px en Trip-Hub uebersicht · \"Overview\": 3.94:1 < 4.5 (rgb(246, 244, 238) auf rgb(196, 90, 42), 13px/600) @ main.mobile-scroll-pad > main > div[data-testid=\"trip-detail-tab-list\"] > div.mtabbar > button[data-testid=\"trip-detail-tab-uebersicht\"]",
+    +   "390px en Trip-Hub uebersicht · \"Status\": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 11px/400) @ div[data-testid=\"trip-detail-uebersicht-reiterflaeche\"] > div > div[data-testid=\"hub-uebersicht-monitoring-mobile\"] > div > div.hub-mobile-stat-label",
+    +   "390px en Trip-Hub uebersicht · \"Next delivery\": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 11px/400) @ div[data-testid=\"trip-detail-uebersicht-reiterflaeche\"] > div > div[data-testid=\"hub-uebersicht-monitoring-mobile\"] > div > div.hub-mobile-stat-label",
+    +   "390px en Trip-Hub uebersicht · \"Last sent\": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 11px/400) @ div[data-testid=\"trip-detail-uebersicht-reiterflaeche\"] > div > div[data-testid=\"hub-uebersicht-monitoring-mobile\"] > div > div.hub-mobile-stat-label",
+    +   "390px en Trip-Hub uebersicht · \"Channels\": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 11px/400) @ div[data-testid=\"trip-detail-uebersicht-reiterflaeche\"] > div > div[data-testid=\"hub-uebersicht-monitoring-mobile\"] > div > div.hub-mobile-stat-label",
+    +   "390px en Trip-Hub uebersicht · \"Delivery\": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 11px/400) @ div > div[data-testid=\"hub-uebersicht-summary-mobile\"] > button[data-testid=\"hub-summary-row-mobile\"] > span.hub-summary-row-body > span.hub-summary-row-eyebrow",
+    +   "390px en Trip-Hub etappen · \"GR20N\": 3.94:1 < 4.5 (rgb(196, 90, 42) auf rgb(246, 244, 238), 20px/600) @ div.min-w-0 > div.flex > div.flex > h1[data-testid=\"trip-detail-h1\"] > span.h1-shortcode",
+    +   "390px en Trip-Hub etappen · \"Stages & waypoints\": 3.94:1 < 4.5 (rgb(246, 244, 238) auf rgb(196, 90, 42), 13px/600) @ main.mobile-scroll-pad > main > div[data-testid=\"trip-detail-tab-list\"] > div.mtabbar > button[data-testid=\"trip-detail-tab-etappen\"]",
+    +   "390px en Trip-Hub etappen · \"3\": 2.79:1 < 4.5 (rgb(246, 244, 238) auf rgb(209, 126, 89), 11px/600) @ main > div[data-testid=\"trip-detail-tab-list\"] > div.mtabbar > button[data-testid=\"trip-detail-tab-etappen\"] > span[data-testid=\"trip-detail-tab-badge-etappen\"]",
+    +   "390px en Vergleich-Hub uebersicht · \"Overview\": 3.94:1 < 4.5 (rgb(246, 244, 238) auf rgb(196, 90, 42), 13px/600) @ div.flex > main.mobile-scroll-pad > div[data-testid=\"compare-detail-tab-list\"] > div.mtabbar > button[data-testid=\"compare-detail-tab-uebersicht\"]",
+    +   "390px en Vergleich-Hub uebersicht · \"Status\": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 11px/400) @ div[data-testid=\"compare-detail-uebersicht-reiterflaeche\"] > div > div[data-testid=\"compare-detail-monitoring-mobile\"] > div > div.hub-mobile-stat-label",
+    +   "390px en Vergleich-Hub uebersicht · \"Next delivery\": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 11px/400) @ div[data-testid=\"compare-detail-uebersicht-reiterflaeche\"] > div > div[data-testid=\"compare-detail-monitoring-mobile\"] > div > div.hub-mobile-stat-label",
+    +   "390px en Vergleich-Hub uebersicht · \"Last sent\": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 11px/400) @ div[data-testid=\"compare-detail-uebersicht-reiterflaeche\"] > div > div[data-testid=\"compare-detail-monitoring-mobile\"] > div > div.hub-mobile-stat-label",
+    +   "390px en Vergleich-Hub uebersicht · \"Channels\": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 11px/400) @ div[data-testid=\"compare-detail-uebersicht-reiterflaeche\"] > div > div[data-testid=\"compare-detail-monitoring-mobile\"] > div > div.hub-mobile-stat-label",
+    +   "390px en Vergleich-Hub uebersicht · \"Locations\": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 11px/400) @ div > div[data-testid=\"compare-detail-summary-mobile\"] > button[data-testid=\"hub-summary-row-mobile\"] > span.hub-summary-row-body > span.hub-summary-row-eyebrow",
+    +   "390px en Vergleich-Hub uebersicht · \"Target ranges\": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 11px/400) @ div > div[data-testid=\"compare-detail-summary-mobile\"] > button[data-testid=\"hub-summary-row-mobile\"] > span.hub-summary-row-body > span.hub-summary-row-eyebrow",
+    +   "390px en Vergleich-Hub uebersicht · \"Delivery\": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 11px/400) @ div > div[data-testid=\"compare-detail-summary-mobile\"] > button[data-testid=\"hub-summary-row-mobile\"] > span.hub-summary-row-body > span.hub-summary-row-eyebrow",
+    +   "390px en Vergleich-Hub orte · \"Locations\": 3.94:1 < 4.5 (rgb(246, 244, 238) auf rgb(196, 90, 42), 13px/600) @ div.flex > main.mobile-scroll-pad > div[data-testid=\"compare-detail-tab-list\"] > div.mtabbar > button[data-testid=\"compare-detail-tab-orte\"]",
+    +   "390px en Vergleich-Hub orte · \"3\": 2.79:1 < 4.5 (rgb(246, 244, 238) auf rgb(209, 126, 89), 11px/600) @ main.mobile-scroll-pad > div[data-testid=\"compare-detail-tab-list\"] > div.mtabbar > button[data-testid=\"compare-detail-tab-orte\"] > span",
+    +   "390px en Vergleich-Hub orte · \"01\": 4.34:1 < 4.5 (rgb(196, 90, 42) auf rgb(255, 255, 255), 13px/600) @ div.sortable-item > div[data-testid=\"hub-orte-row\"] > div.hub-orte-row-body > div > span",
+    +   "390px en Vergleich-Hub orte · \"02\": 3.58:1 < 4.5 (rgb(196, 90, 42) auf rgb(236, 234, 217), 13px/600) @ div.sortable-item > div[data-testid=\"hub-orte-row\"] > div.hub-orte-row-body > div > span",
+    +   "390px en Vergleich-Hub orte · \"03\": 4.34:1 < 4.5 (rgb(196, 90, 42) auf rgb(255, 255, 255), 13px/600) @ div.sortable-item > div[data-testid=\"hub-orte-row\"] > div.hub-orte-row-body > div > span",
+    + ]
+
+      202 | 				await cleanupTracked(page.request);
+      203 | 			}
+    > 204 | 			expect(verstoesse, `${ko} WCAG-AA-Verstöße:\n  ${verstoesse.join('\n  ')}`).toEqual([]);
+          | 			                                                                            ^
+      205 | 		});
+      206 | 	}
+      207 | }
+        at /home/user/gregor_zwanzig/.claude/worktrees/agent-a05dbea935b931947/frontend/e2e/kontrast-trip-vergleich.spec.ts:204:80
+
+    Error Context: test-results/kontrast-trip-vergleich-KO-df44f-sichtbare-Text-hält-WCAG-AA-tests/error-context.md
+
+
+[6/12] [tests] › e2e/kontrast-trip-vergleich.spec.ts:270:3 › KO-3 (1280 × 900, de): Anlegen von Trip und Vergleich — jeder Schritt ohne und mit Namen hält WCAG-AA
+  5) [tests] › e2e/kontrast-trip-vergleich.spec.ts:270:3 › KO-3 (1280 × 900, de): Anlegen von Trip und Vergleich — jeder Schritt ohne und mit Namen hält WCAG-AA 
+
+    Error: KO-3 WCAG-AA-Verstöße:
+      1280px de Trip anlegen Route mit Namen · "Etappen anlegen →": 4.34:1 < 4.5 (rgb(255, 255, 255) auf rgb(196, 90, 42), 13px/500) @ div.ar-inhalt > div > div > div > button[data-testid="trip-new-continue-etappen"]
+      1280px de Trip anlegen Etappen mit GPX · "Wegpunkte prüfen →": 4.34:1 < 4.5 (rgb(255, 255, 255) auf rgb(196, 90, 42), 13px/600) @ div.ar-inhalt > div > div > div > button
+      1280px de Trip anlegen Wegpunkte prüfen · "Wegpunkte übernehmen →": 4.34:1 < 4.5 (rgb(255, 255, 255) auf rgb(196, 90, 42), 13px/600) @ div.ar-inhalt > div > div > div > button
+      1280px de Trip anlegen Wegpunkte prüfen · "ETAPPEN · DRAG ZUM SORTIEREN · + PAUSE ZWISCHEN": 2.82:1 < 4.5 (rgb(154, 149, 138) auf rgb(250, 248, 245), 11px/600) @ div > div[data-testid="edit-stages-panel"] > div[data-testid="etappen-strip-wrapper"] > div > span
+      1280px de Trip anlegen Wegpunkte prüfen · "2 GPX · 0 Pause": 2.82:1 < 4.5 (rgb(154, 149, 138) auf rgb(250, 248, 245), 11px/400) @ div > div[data-testid="edit-stages-panel"] > div[data-testid="etappen-strip-wrapper"] > div > span
+      1280px de Trip anlegen Wegpunkte prüfen · "×": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 12px/400) @ div.sortable-item > div > div[data-testid="stage-card-0"] > div > button
+      1280px de Trip anlegen Wegpunkte prüfen · "⋮⋮ T02 ·": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 9px/600) @ div.sortable-item > div > div[data-testid="stage-card-1"] > div > span
+      1280px de Trip anlegen Wegpunkte prüfen · "×": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 12px/400) @ div.sortable-item > div > div[data-testid="stage-card-1"] > div > button
+      1280px de Trip anlegen Wegpunkte prüfen · "·": 2.5:1 < 4.5 (rgb(166, 164, 157) auf rgb(255, 255, 255), 10px/400) @ div[data-testid="waypoint-card-0"] > div.waypoint-card-row > div.waypoint-body > div.waypoint-meta > span.waypoint-meta-sep
+      1280px de Trip anlegen Wegpunkte prüfen · "·": 2.5:1 < 4.5 (rgb(166, 164, 157) auf rgb(255, 255, 255), 10px/400) @ div[data-testid="waypoint-card-1"] > div.waypoint-card-row > div.waypoint-body > div.waypoint-meta > span.waypoint-meta-sep
+      1280px de Trip anlegen Wegpunkte prüfen · "Wegpunkte übernehmen →": 4.34:1 < 4.5 (rgb(255, 255, 255) auf rgb(196, 90, 42), 13px/600) @ div.anlege-rahmen > div.ar-inhalt > div > div > button
+      1280px de Vergleich anlegen mit Namen · "Orte hinzufügen →": 4.34:1 < 4.5 (rgb(255, 255, 255) auf rgb(196, 90, 42), 13px/500) @ div.relative > div.relative > div > div > button[data-testid="compare-editor-continue-orte"]
+      1280px de Vergleich anlegen Orte leer · "min. 2 erforderlich": 2.77:1 < 4.5 (rgb(192, 138, 26) auf rgb(246, 244, 238), 10.5px/400) @ div[data-testid="compare-wizard-step-2"] > div > div > div > span[data-testid="compare-step2-counter"]
+      1280px de Vergleich anlegen Orte gewählt · "Wetter-Metriken →": 4.34:1 < 4.5 (rgb(255, 255, 255) auf rgb(196, 90, 42), 13px/500) @ div.anlege-rahmen > div.ar-inhalt > div.ce-cta-foot > div.ce-cta-row > button[data-testid="compare-editor-continue-wetter-metriken"]
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  -  1
+    + Received  + 16
+
+    - Array []
+    + Array [
+    +   "1280px de Trip anlegen Route mit Namen · \"Etappen anlegen →\": 4.34:1 < 4.5 (rgb(255, 255, 255) auf rgb(196, 90, 42), 13px/500) @ div.ar-inhalt > div > div > div > button[data-testid=\"trip-new-continue-etappen\"]",
+    +   "1280px de Trip anlegen Etappen mit GPX · \"Wegpunkte prüfen →\": 4.34:1 < 4.5 (rgb(255, 255, 255) auf rgb(196, 90, 42), 13px/600) @ div.ar-inhalt > div > div > div > button",
+    +   "1280px de Trip anlegen Wegpunkte prüfen · \"Wegpunkte übernehmen →\": 4.34:1 < 4.5 (rgb(255, 255, 255) auf rgb(196, 90, 42), 13px/600) @ div.ar-inhalt > div > div > div > button",
+    +   "1280px de Trip anlegen Wegpunkte prüfen · \"ETAPPEN · DRAG ZUM SORTIEREN · + PAUSE ZWISCHEN\": 2.82:1 < 4.5 (rgb(154, 149, 138) auf rgb(250, 248, 245), 11px/600) @ div > div[data-testid=\"edit-stages-panel\"] > div[data-testid=\"etappen-strip-wrapper\"] > div > span",
+    +   "1280px de Trip anlegen Wegpunkte prüfen · \"2 GPX · 0 Pause\": 2.82:1 < 4.5 (rgb(154, 149, 138) auf rgb(250, 248, 245), 11px/400) @ div > div[data-testid=\"edit-stages-panel\"] > div[data-testid=\"etappen-strip-wrapper\"] > div > span",
+    +   "1280px de Trip anlegen Wegpunkte prüfen · \"×\": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 12px/400) @ div.sortable-item > div > div[data-testid=\"stage-card-0\"] > div > button",
+    +   "1280px de Trip anlegen Wegpunkte prüfen · \"⋮⋮ T02 ·\": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 9px/600) @ div.sortable-item > div > div[data-testid=\"stage-card-1\"] > div > span",
+    +   "1280px de Trip anlegen Wegpunkte prüfen · \"×\": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 12px/400) @ div.sortable-item > div > div[data-testid=\"stage-card-1\"] > div > button",
+    +   "1280px de Trip anlegen Wegpunkte prüfen · \"·\": 2.5:1 < 4.5 (rgb(166, 164, 157) auf rgb(255, 255, 255), 10px/400) @ div[data-testid=\"waypoint-card-0\"] > div.waypoint-card-row > div.waypoint-body > div.waypoint-meta > span.waypoint-meta-sep",
+    +   "1280px de Trip anlegen Wegpunkte prüfen · \"·\": 2.5:1 < 4.5 (rgb(166, 164, 157) auf rgb(255, 255, 255), 10px/400) @ div[data-testid=\"waypoint-card-1\"] > div.waypoint-card-row > div.waypoint-body > div.waypoint-meta > span.waypoint-meta-sep",
+    +   "1280px de Trip anlegen Wegpunkte prüfen · \"Wegpunkte übernehmen →\": 4.34:1 < 4.5 (rgb(255, 255, 255) auf rgb(196, 90, 42), 13px/600) @ div.anlege-rahmen > div.ar-inhalt > div > div > button",
+    +   "1280px de Vergleich anlegen mit Namen · \"Orte hinzufügen →\": 4.34:1 < 4.5 (rgb(255, 255, 255) auf rgb(196, 90, 42), 13px/500) @ div.relative > div.relative > div > div > button[data-testid=\"compare-editor-continue-orte\"]",
+    +   "1280px de Vergleich anlegen Orte leer · \"min. 2 erforderlich\": 2.77:1 < 4.5 (rgb(192, 138, 26) auf rgb(246, 244, 238), 10.5px/400) @ div[data-testid=\"compare-wizard-step-2\"] > div > div > div > span[data-testid=\"compare-step2-counter\"]",
+    +   "1280px de Vergleich anlegen Orte gewählt · \"Wetter-Metriken →\": 4.34:1 < 4.5 (rgb(255, 255, 255) auf rgb(196, 90, 42), 13px/500) @ div.anlege-rahmen > div.ar-inhalt > div.ce-cta-foot > div.ce-cta-row > button[data-testid=\"compare-editor-continue-wetter-metriken\"]",
+    + ]
+
+      282 | 				await cleanupTracked(page.request);
+      283 | 			}
+    > 284 | 			expect(verstoesse, `KO-3 WCAG-AA-Verstöße:\n  ${verstoesse.join('\n  ')}`).toEqual([]);
+          | 			                                                                           ^
+      285 | 		});
+      286 | 	}
+      287 | }
+        at /home/user/gregor_zwanzig/.claude/worktrees/agent-a05dbea935b931947/frontend/e2e/kontrast-trip-vergleich.spec.ts:284:79
+
+    Error Context: test-results/kontrast-trip-vergleich-KO-6108e--und-mit-Namen-hält-WCAG-AA-tests/error-context.md
+
+
+[7/12] [tests] › e2e/kontrast-trip-vergleich.spec.ts:270:3 › KO-3 (1280 × 900, en): Anlegen von Trip und Vergleich — jeder Schritt ohne und mit Namen hält WCAG-AA
+  6) [tests] › e2e/kontrast-trip-vergleich.spec.ts:270:3 › KO-3 (1280 × 900, en): Anlegen von Trip und Vergleich — jeder Schritt ohne und mit Namen hält WCAG-AA 
+
+    Error: KO-3 WCAG-AA-Verstöße:
+      1280px en Trip anlegen Route mit Namen · "Create stages →": 4.34:1 < 4.5 (rgb(255, 255, 255) auf rgb(196, 90, 42), 13px/500) @ div.ar-inhalt > div > div > div > button[data-testid="trip-new-continue-etappen"]
+      1280px en Trip anlegen Etappen mit GPX · "Check waypoints →": 4.34:1 < 4.5 (rgb(255, 255, 255) auf rgb(196, 90, 42), 13px/600) @ div.ar-inhalt > div > div > div > button
+      1280px en Trip anlegen Wegpunkte prüfen · "Accept waypoints →": 4.34:1 < 4.5 (rgb(255, 255, 255) auf rgb(196, 90, 42), 13px/600) @ div.ar-inhalt > div > div > div > button
+      1280px en Trip anlegen Wegpunkte prüfen · "STAGES · DRAG TO SORT · + REST DAY BETWEEN": 2.82:1 < 4.5 (rgb(154, 149, 138) auf rgb(250, 248, 245), 11px/600) @ div > div[data-testid="edit-stages-panel"] > div[data-testid="etappen-strip-wrapper"] > div > span
+      1280px en Trip anlegen Wegpunkte prüfen · "2 GPX · 0 rest days": 2.82:1 < 4.5 (rgb(154, 149, 138) auf rgb(250, 248, 245), 11px/400) @ div > div[data-testid="edit-stages-panel"] > div[data-testid="etappen-strip-wrapper"] > div > span
+      1280px en Trip anlegen Wegpunkte prüfen · "×": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 12px/400) @ div.sortable-item > div > div[data-testid="stage-card-0"] > div > button
+      1280px en Trip anlegen Wegpunkte prüfen · "⋮⋮ T02 ·": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 9px/600) @ div.sortable-item > div > div[data-testid="stage-card-1"] > div > span
+      1280px en Trip anlegen Wegpunkte prüfen · "×": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 12px/400) @ div.sortable-item > div > div[data-testid="stage-card-1"] > div > button
+      1280px en Trip anlegen Wegpunkte prüfen · "·": 2.5:1 < 4.5 (rgb(166, 164, 157) auf rgb(255, 255, 255), 10px/400) @ div[data-testid="waypoint-card-0"] > div.waypoint-card-row > div.waypoint-body > div.waypoint-meta > span.waypoint-meta-sep
+      1280px en Trip anlegen Wegpunkte prüfen · "·": 2.5:1 < 4.5 (rgb(166, 164, 157) auf rgb(255, 255, 255), 10px/400) @ div[data-testid="waypoint-card-1"] > div.waypoint-card-row > div.waypoint-body > div.waypoint-meta > span.waypoint-meta-sep
+      1280px en Trip anlegen Wegpunkte prüfen · "Accept waypoints →": 4.34:1 < 4.5 (rgb(255, 255, 255) auf rgb(196, 90, 42), 13px/600) @ div.anlege-rahmen > div.ar-inhalt > div > div > button
+      1280px en Vergleich anlegen mit Namen · "Add locations →": 4.34:1 < 4.5 (rgb(255, 255, 255) auf rgb(196, 90, 42), 13px/500) @ div.relative > div.relative > div > div > button[data-testid="compare-editor-continue-orte"]
+      1280px en Vergleich anlegen Orte leer · "min. 2 required": 2.77:1 < 4.5 (rgb(192, 138, 26) auf rgb(246, 244, 238), 10.5px/400) @ div[data-testid="compare-wizard-step-2"] > div > div > div > span[data-testid="compare-step2-counter"]
+      1280px en Vergleich anlegen Orte gewählt · "Weather metrics →": 4.34:1 < 4.5 (rgb(255, 255, 255) auf rgb(196, 90, 42), 13px/500) @ div.anlege-rahmen > div.ar-inhalt > div.ce-cta-foot > div.ce-cta-row > button[data-testid="compare-editor-continue-wetter-metriken"]
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  -  1
+    + Received  + 16
+
+    - Array []
+    + Array [
+    +   "1280px en Trip anlegen Route mit Namen · \"Create stages →\": 4.34:1 < 4.5 (rgb(255, 255, 255) auf rgb(196, 90, 42), 13px/500) @ div.ar-inhalt > div > div > div > button[data-testid=\"trip-new-continue-etappen\"]",
+    +   "1280px en Trip anlegen Etappen mit GPX · \"Check waypoints →\": 4.34:1 < 4.5 (rgb(255, 255, 255) auf rgb(196, 90, 42), 13px/600) @ div.ar-inhalt > div > div > div > button",
+    +   "1280px en Trip anlegen Wegpunkte prüfen · \"Accept waypoints →\": 4.34:1 < 4.5 (rgb(255, 255, 255) auf rgb(196, 90, 42), 13px/600) @ div.ar-inhalt > div > div > div > button",
+    +   "1280px en Trip anlegen Wegpunkte prüfen · \"STAGES · DRAG TO SORT · + REST DAY BETWEEN\": 2.82:1 < 4.5 (rgb(154, 149, 138) auf rgb(250, 248, 245), 11px/600) @ div > div[data-testid=\"edit-stages-panel\"] > div[data-testid=\"etappen-strip-wrapper\"] > div > span",
+    +   "1280px en Trip anlegen Wegpunkte prüfen · \"2 GPX · 0 rest days\": 2.82:1 < 4.5 (rgb(154, 149, 138) auf rgb(250, 248, 245), 11px/400) @ div > div[data-testid=\"edit-stages-panel\"] > div[data-testid=\"etappen-strip-wrapper\"] > div > span",
+    +   "1280px en Trip anlegen Wegpunkte prüfen · \"×\": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 12px/400) @ div.sortable-item > div > div[data-testid=\"stage-card-0\"] > div > button",
+    +   "1280px en Trip anlegen Wegpunkte prüfen · \"⋮⋮ T02 ·\": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 9px/600) @ div.sortable-item > div > div[data-testid=\"stage-card-1\"] > div > span",
+    +   "1280px en Trip anlegen Wegpunkte prüfen · \"×\": 2.98:1 < 4.5 (rgb(154, 149, 138) auf rgb(255, 255, 255), 12px/400) @ div.sortable-item > div > div[data-testid=\"stage-card-1\"] > div > button",
+    +   "1280px en Trip anlegen Wegpunkte prüfen · \"·\": 2.5:1 < 4.5 (rgb(166, 164, 157) auf rgb(255, 255, 255), 10px/400) @ div[data-testid=\"waypoint-card-0\"] > div.waypoint-card-row > div.waypoint-body > div.waypoint-meta > span.waypoint-meta-sep",
+    +   "1280px en Trip anlegen Wegpunkte prüfen · \"·\": 2.5:1 < 4.5 (rgb(166, 164, 157) auf rgb(255, 255, 255), 10px/400) @ div[data-testid=\"waypoint-card-1\"] > div.waypoint-card-row > div.waypoint-body > div.waypoint-meta > span.waypoint-meta-sep",
+    +   "1280px en Trip anlegen Wegpunkte prüfen · \"Accept waypoints →\": 4.34:1 < 4.5 (rgb(255, 255, 255) auf rgb(196, 90, 42), 13px/600) @ div.anlege-rahmen > div.ar-inhalt > div > div > button",
+    +   "1280px en Vergleich anlegen mit Namen · \"Add locations →\": 4.34:1 < 4.5 (rgb(255, 255, 255) auf rgb(196, 90, 42), 13px/500) @ div.relative > div.relative > div > div > button[data-testid=\"compare-editor-continue-orte\"]",
+    +   "1280px en Vergleich anlegen Orte leer · \"min. 2 required\": 2.77:1 < 4.5 (rgb(192, 138, 26) auf rgb(246, 244, 238), 10.5px/400) @ div[data-testid=\"compare-wizard-step-2\"] > div > div > div > span[data-testid=\"compare-step2-counter\"]",
+    +   "1280px en Vergleich anlegen Orte gewählt · \"Weather metrics →\": 4.34:1 < 4.5 (rgb(255, 255, 255) auf rgb(196, 90, 42), 13px/500) @ div.anlege-rahmen > div.ar-inhalt > div.ce-cta-foot > div.ce-cta-row > button[data-testid=\"compare-editor-continue-wetter-metriken\"]",
+    + ]
+
+      282 | 				await cleanupTracked(page.request);
+      283 | 			}
+    > 284 | 			expect(verstoesse, `KO-3 WCAG-AA-Verstöße:\n  ${verstoesse.join('\n  ')}`).toEqual([]);
+          | 			                                                                           ^
+      285 | 		});
+      286 | 	}
+      287 | }
+        at /home/user/gregor_zwanzig/.claude/worktrees/agent-a05dbea935b931947/frontend/e2e/kontrast-trip-vergleich.spec.ts:284:79
+
+    Error Context: test-results/kontrast-trip-vergleich-KO-3ee28--und-mit-Namen-hält-WCAG-AA-tests/error-context.md
+
+
+[8/12] [tests] › e2e/kontrast-trip-vergleich.spec.ts:270:3 › KO-3 (390 × 844, de): Anlegen von Trip und Vergleich — jeder Schritt ohne und mit Namen hält WCAG-AA
+  7) [tests] › e2e/kontrast-trip-vergleich.spec.ts:270:3 › KO-3 (390 × 844, de): Anlegen von Trip und Vergleich — jeder Schritt ohne und mit Namen hält WCAG-AA 
+
+    Error: KO-3 WCAG-AA-Verstöße:
+      390px de Trip anlegen Route mit Namen · "Etappen anlegen →": 4.34:1 < 4.5 (rgb(255, 255, 255) auf rgb(196, 90, 42), 16px/600) @ main > div.tn-mobile > div[data-testid="tn-mobile-footer"] > div[data-testid="tn-mobile-route-cta"] > button
+      390px de Trip anlegen Etappen mit GPX · "Wegpunkte prüfen →": 4.34:1 < 4.5 (rgb(255, 255, 255) auf rgb(196, 90, 42), 16px/600) @ main > div.tn-mobile > div[data-testid="tn-mobile-footer"] > div > button
+      390px de Trip anlegen Wegpunkte prüfen · "Wegpunkte übernehmen →": 4.34:1 < 4.5 (rgb(255, 255, 255) auf rgb(196, 90, 42), 16px/600) @ main > div.tn-mobile > div[data-testid="tn-mobile-footer"] > div > button
+      390px de Vergleich anlegen mit Namen · "Orte hinzufügen →": 4.34:1 < 4.5 (rgb(255, 255, 255) auf rgb(196, 90, 42), 16px/600) @ main.mobile-scroll-pad > div[data-testid="compare-editor"] > div.cm-mobile > div[data-testid="cm-mobile-cta"] > button
+      390px de Vergleich anlegen Orte leer · "min. 2": 2.77:1 < 4.5 (rgb(192, 138, 26) auf rgb(246, 244, 238), 10.5px/400) @ div.cm-mobile > div > div[data-testid="compare-wizard-step-2"] > div > span[data-testid="compare-step2-counter"]
+      390px de Vergleich anlegen Orte-Bibliothek · "Wetter-Metriken →": 4.34:1 < 4.5 (rgb(255, 255, 255) auf rgb(196, 90, 42), 16px/600) @ main.mobile-scroll-pad > div[data-testid="compare-editor"] > div.cm-mobile > div[data-testid="cm-mobile-cta"] > button
+      390px de Vergleich anlegen Orte gewählt · "Wetter-Metriken →": 4.34:1 < 4.5 (rgb(255, 255, 255) auf rgb(196, 90, 42), 16px/600) @ main.mobile-scroll-pad > div[data-testid="compare-editor"] > div.cm-mobile > div[data-testid="cm-mobile-cta"] > button
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 1
+    + Received  + 9
+
+    - Array []
+    + Array [
+    +   "390px de Trip anlegen Route mit Namen · \"Etappen anlegen →\": 4.34:1 < 4.5 (rgb(255, 255, 255) auf rgb(196, 90, 42), 16px/600) @ main > div.tn-mobile > div[data-testid=\"tn-mobile-footer\"] > div[data-testid=\"tn-mobile-route-cta\"] > button",
+    +   "390px de Trip anlegen Etappen mit GPX · \"Wegpunkte prüfen →\": 4.34:1 < 4.5 (rgb(255, 255, 255) auf rgb(196, 90, 42), 16px/600) @ main > div.tn-mobile > div[data-testid=\"tn-mobile-footer\"] > div > button",
+    +   "390px de Trip anlegen Wegpunkte prüfen · \"Wegpunkte übernehmen →\": 4.34:1 < 4.5 (rgb(255, 255, 255) auf rgb(196, 90, 42), 16px/600) @ main > div.tn-mobile > div[data-testid=\"tn-mobile-footer\"] > div > button",
+    +   "390px de Vergleich anlegen mit Namen · \"Orte hinzufügen →\": 4.34:1 < 4.5 (rgb(255, 255, 255) auf rgb(196, 90, 42), 16px/600) @ main.mobile-scroll-pad > div[data-testid=\"compare-editor\"] > div.cm-mobile > div[data-testid=\"cm-mobile-cta\"] > button",
+    +   "390px de Vergleich anlegen Orte leer · \"min. 2\": 2.77:1 < 4.5 (rgb(192, 138, 26) auf rgb(246, 244, 238), 10.5px/400) @ div.cm-mobile > div > div[data-testid=\"compare-wizard-step-2\"] > div > span[data-testid=\"compare-step2-counter\"]",
+    +   "390px de Vergleich anlegen Orte-Bibliothek · \"Wetter-Metriken →\": 4.34:1 < 4.5 (rgb(255, 255, 255) auf rgb(196, 90, 42), 16px/600) @ main.mobile-scroll-pad > div[data-testid=\"compare-editor\"] > div.cm-mobile > div[data-testid=\"cm-mobile-cta\"] > button",
+    +   "390px de Vergleich anlegen Orte gewählt · \"Wetter-Metriken →\": 4.34:1 < 4.5 (rgb(255, 255, 255) auf rgb(196, 90, 42), 16px/600) @ main.mobile-scroll-pad > div[data-testid=\"compare-editor\"] > div.cm-mobile > div[data-testid=\"cm-mobile-cta\"] > button",
+    + ]
+
+      282 | 				await cleanupTracked(page.request);
+      283 | 			}
+    > 284 | 			expect(verstoesse, `KO-3 WCAG-AA-Verstöße:\n  ${verstoesse.join('\n  ')}`).toEqual([]);
+          | 			                                                                           ^
+      285 | 		});
+      286 | 	}
+      287 | }
+        at /home/user/gregor_zwanzig/.claude/worktrees/agent-a05dbea935b931947/frontend/e2e/kontrast-trip-vergleich.spec.ts:284:79
+
+    Error Context: test-results/kontrast-trip-vergleich-KO-57d8a--und-mit-Namen-hält-WCAG-AA-tests/error-context.md
+
+
+[9/12] [tests] › e2e/kontrast-trip-vergleich.spec.ts:270:3 › KO-3 (390 × 844, en): Anlegen von Trip und Vergleich — jeder Schritt ohne und mit Namen hält WCAG-AA
+  8) [tests] › e2e/kontrast-trip-vergleich.spec.ts:270:3 › KO-3 (390 × 844, en): Anlegen von Trip und Vergleich — jeder Schritt ohne und mit Namen hält WCAG-AA 
+
+    Error: KO-3 WCAG-AA-Verstöße:
+      390px en Trip anlegen Route mit Namen · "Create stages →": 4.34:1 < 4.5 (rgb(255, 255, 255) auf rgb(196, 90, 42), 16px/600) @ main > div.tn-mobile > div[data-testid="tn-mobile-footer"] > div[data-testid="tn-mobile-route-cta"] > button
+      390px en Trip anlegen Etappen mit GPX · "Check waypoints →": 4.34:1 < 4.5 (rgb(255, 255, 255) auf rgb(196, 90, 42), 16px/600) @ main > div.tn-mobile > div[data-testid="tn-mobile-footer"] > div > button
+      390px en Trip anlegen Wegpunkte prüfen · "Accept waypoints →": 4.34:1 < 4.5 (rgb(255, 255, 255) auf rgb(196, 90, 42), 16px/600) @ main > div.tn-mobile > div[data-testid="tn-mobile-footer"] > div > button
+      390px en Vergleich anlegen mit Namen · "Add locations →": 4.34:1 < 4.5 (rgb(255, 255, 255) auf rgb(196, 90, 42), 16px/600) @ main.mobile-scroll-pad > div[data-testid="compare-editor"] > div.cm-mobile > div[data-testid="cm-mobile-cta"] > button
+      390px en Vergleich anlegen Orte leer · "min. 2": 2.77:1 < 4.5 (rgb(192, 138, 26) auf rgb(246, 244, 238), 10.5px/400) @ div.cm-mobile > div > div[data-testid="compare-wizard-step-2"] > div > span[data-testid="compare-step2-counter"]
+      390px en Vergleich anlegen Orte-Bibliothek · "Weather metrics →": 4.34:1 < 4.5 (rgb(255, 255, 255) auf rgb(196, 90, 42), 16px/600) @ main.mobile-scroll-pad > div[data-testid="compare-editor"] > div.cm-mobile > div[data-testid="cm-mobile-cta"] > button
+      390px en Vergleich anlegen Orte gewählt · "Weather metrics →": 4.34:1 < 4.5 (rgb(255, 255, 255) auf rgb(196, 90, 42), 16px/600) @ main.mobile-scroll-pad > div[data-testid="compare-editor"] > div.cm-mobile > div[data-testid="cm-mobile-cta"] > button
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 1
+    + Received  + 9
+
+    - Array []
+    + Array [
+    +   "390px en Trip anlegen Route mit Namen · \"Create stages →\": 4.34:1 < 4.5 (rgb(255, 255, 255) auf rgb(196, 90, 42), 16px/600) @ main > div.tn-mobile > div[data-testid=\"tn-mobile-footer\"] > div[data-testid=\"tn-mobile-route-cta\"] > button",
+    +   "390px en Trip anlegen Etappen mit GPX · \"Check waypoints →\": 4.34:1 < 4.5 (rgb(255, 255, 255) auf rgb(196, 90, 42), 16px/600) @ main > div.tn-mobile > div[data-testid=\"tn-mobile-footer\"] > div > button",
+    +   "390px en Trip anlegen Wegpunkte prüfen · \"Accept waypoints →\": 4.34:1 < 4.5 (rgb(255, 255, 255) auf rgb(196, 90, 42), 16px/600) @ main > div.tn-mobile > div[data-testid=\"tn-mobile-footer\"] > div > button",
+    +   "390px en Vergleich anlegen mit Namen · \"Add locations →\": 4.34:1 < 4.5 (rgb(255, 255, 255) auf rgb(196, 90, 42), 16px/600) @ main.mobile-scroll-pad > div[data-testid=\"compare-editor\"] > div.cm-mobile > div[data-testid=\"cm-mobile-cta\"] > button",
+    +   "390px en Vergleich anlegen Orte leer · \"min. 2\": 2.77:1 < 4.5 (rgb(192, 138, 26) auf rgb(246, 244, 238), 10.5px/400) @ div.cm-mobile > div > div[data-testid=\"compare-wizard-step-2\"] > div > span[data-testid=\"compare-step2-counter\"]",
+    +   "390px en Vergleich anlegen Orte-Bibliothek · \"Weather metrics →\": 4.34:1 < 4.5 (rgb(255, 255, 255) auf rgb(196, 90, 42), 16px/600) @ main.mobile-scroll-pad > div[data-testid=\"compare-editor\"] > div.cm-mobile > div[data-testid=\"cm-mobile-cta\"] > button",
+    +   "390px en Vergleich anlegen Orte gewählt · \"Weather metrics →\": 4.34:1 < 4.5 (rgb(255, 255, 255) auf rgb(196, 90, 42), 16px/600) @ main.mobile-scroll-pad > div[data-testid=\"compare-editor\"] > div.cm-mobile > div[data-testid=\"cm-mobile-cta\"] > button",
+    + ]
+
+      282 | 				await cleanupTracked(page.request);
+      283 | 			}
+    > 284 | 			expect(verstoesse, `KO-3 WCAG-AA-Verstöße:\n  ${verstoesse.join('\n  ')}`).toEqual([]);
+          | 			                                                                           ^
+      285 | 		});
+      286 | 	}
+      287 | }
+        at /home/user/gregor_zwanzig/.claude/worktrees/agent-a05dbea935b931947/frontend/e2e/kontrast-trip-vergleich.spec.ts:284:79
+
+    Error Context: test-results/kontrast-trip-vergleich-KO-46857--und-mit-Namen-hält-WCAG-AA-tests/error-context.md
+
+
+[10/12] [tests] › e2e/kontrast-trip-vergleich.spec.ts:289:1 › KO-4: Listen — Status „· aktiv" und Zähler „x von y" ≥ 4,5:1, --g-ink-4 nur an gesperrten Elementen
+  9) [tests] › e2e/kontrast-trip-vergleich.spec.ts:289:1 › KO-4: Listen — Status „· aktiv" und Zähler „x von y" ≥ 4,5:1, --g-ink-4 nur an gesperrten Elementen 
+
+    Error: KO-4:
+      1280px /trips status "· aktiv": 2.98:1 (rgb(154, 149, 138) auf rgb(255, 255, 255)) @ div > div[data-testid="trip-row-e2e-708-stage-confirm"] > div > div > span.status-caption
+      1280px /trips --g-ink-4 als Lesetext "· aktiv" @ div > div[data-testid="trip-row-e2e-708-stage-confirm"] > div > div > span.status-caption
+      1280px /trips status "· aktiv": 2.46:1 (rgb(154, 149, 138) auf rgb(236, 234, 217)) @ div > div[data-testid="trip-row-e2e-cockpit-test"] > div > div > span.status-caption
+      1280px /trips --g-ink-4 als Lesetext "· aktiv" @ div > div[data-testid="trip-row-e2e-cockpit-test"] > div > div > span.status-caption
+      1280px /trips status "· geplant": 2.98:1 (rgb(154, 149, 138) auf rgb(255, 255, 255)) @ div > div[data-testid="trip-row-7c81b094"] > div > div > span.status-caption
+      1280px /trips --g-ink-4 als Lesetext "· geplant" @ div > div[data-testid="trip-row-7c81b094"] > div > div > span.status-caption
+      1280px /trips status "· geplant": 2.46:1 (rgb(154, 149, 138) auf rgb(236, 234, 217)) @ div > div[data-testid="trip-row-45a6c948"] > div > div > span.status-caption
+      1280px /trips --g-ink-4 als Lesetext "· geplant" @ div > div[data-testid="trip-row-45a6c948"] > div > div > span.status-caption
+      1280px /trips status "· aktiv": 2.98:1 (rgb(154, 149, 138) auf rgb(255, 255, 255)) @ div > div[data-testid="trip-row-e2e-gz-2879-1794240646720-582774"] > div > div > span.status-caption
+      1280px /trips --g-ink-4 als Lesetext "· aktiv" @ div > div[data-testid="trip-row-e2e-gz-2879-1794240646720-582774"] > div > div > span.status-caption
+      1280px /trips status "· aktiv": 2.46:1 (rgb(154, 149, 138) auf rgb(236, 234, 217)) @ div > div[data-testid="trip-row-5bd706cf"] > div > div > span.status-caption
+      1280px /trips --g-ink-4 als Lesetext "· aktiv" @ div > div[data-testid="trip-row-5bd706cf"] > div > div > span.status-caption
+      1280px /trips status "· aktiv": 2.98:1 (rgb(154, 149, 138) auf rgb(255, 255, 255)) @ div > div[data-testid="trip-row-e2203fbf"] > div > div > span.status-caption
+      1280px /trips --g-ink-4 als Lesetext "· aktiv" @ div > div[data-testid="trip-row-e2203fbf"] > div > div > span.status-caption
+      1280px /trips status "· aktiv": 2.46:1 (rgb(154, 149, 138) auf rgb(236, 234, 217)) @ div > div[data-testid="trip-row-698bca6b"] > div > div > span.status-caption
+      1280px /trips --g-ink-4 als Lesetext "· aktiv" @ div > div[data-testid="trip-row-698bca6b"] > div > div > span.status-caption
+      1280px /trips status "· aktiv": 2.98:1 (rgb(154, 149, 138) auf rgb(255, 255, 255)) @ div > div[data-testid="trip-row-7110c9a9"] > div > div > span.status-caption
+      1280px /trips --g-ink-4 als Lesetext "· aktiv" @ div > div[data-testid="trip-row-7110c9a9"] > div > div > span.status-caption
+      1280px /trips status "· aktiv": 2.46:1 (rgb(154, 149, 138) auf rgb(236, 234, 217)) @ div > div[data-testid="trip-row-fd58297e"] > div > div > span.status-caption
+      1280px /trips --g-ink-4 als Lesetext "· aktiv" @ div > div[data-testid="trip-row-fd58297e"] > div > div > span.status-caption
+      1280px /trips status "· aktiv": 2.98:1 (rgb(154, 149, 138) auf rgb(255, 255, 255)) @ div > div[data-testid="trip-row-9c845b7e"] > div > div > span.status-caption
+      1280px /trips --g-ink-4 als Lesetext "· aktiv" @ div > div[data-testid="trip-row-9c845b7e"] > div > div > span.status-caption
+      1280px /trips status "· aktiv": 2.46:1 (rgb(154, 149, 138) auf rgb(236, 234, 217)) @ div > div[data-testid="trip-row-ebc7b7c1"] > div > div > span.status-caption
+      1280px /trips --g-ink-4 als Lesetext "· aktiv" @ div > div[data-testid="trip-row-ebc7b7c1"] > div > div > span.status-caption
+      1280px /trips status "· aktiv": 2.98:1 (rgb(154, 149, 138) auf rgb(255, 255, 255)) @ div > div[data-testid="trip-row-461e4e2c"] > div > div > span.status-caption
+      1280px /trips --g-ink-4 als Lesetext "· aktiv" @ div > div[data-testid="trip-row-461e4e2c"] > div > div > span.status-caption
+      1280px /trips status "· aktiv": 2.46:1 (rgb(154, 149, 138) auf rgb(236, 234, 217)) @ div > div[data-testid="trip-row-05815a6d"] > div > div > span.status-caption
+      1280px /trips --g-ink-4 als Lesetext "· aktiv" @ div > div[data-testid="trip-row-05815a6d"] > div > div > span.status-caption
+      1280px /trips status "· aktiv": 2.98:1 (rgb(154, 149, 138) auf rgb(255, 255, 255)) @ div > div[data-testid="trip-row-ca4d7aa8"] > div > div > span.status-caption
+      1280px /trips --g-ink-4 als Lesetext "· aktiv" @ div > div[data-testid="trip-row-ca4d7aa8"] > div > div > span.status-caption
+      1280px /trips status "· aktiv": 2.46:1 (rgb(154, 149, 138) auf rgb(236, 234, 217)) @ div > div[data-testid="trip-row-c2056b5b"] > div > div > span.status-caption
+      1280px /trips --g-ink-4 als Lesetext "· aktiv" @ div > div[data-testid="trip-row-c2056b5b"] > div > div > span.status-caption
+      1280px /trips status "· aktiv": 2.98:1 (rgb(154, 149, 138) auf rgb(255, 255, 255)) @ div > div[data-testid="trip-row-2d063f01"] > div > div > span.status-caption
+      1280px /trips --g-ink-4 als Lesetext "· aktiv" @ div > div[data-testid="trip-row-2d063f01"] > div > div > span.status-caption
+      1280px /trips status "· aktiv": 2.46:1 (rgb(154, 149, 138) auf rgb(236, 234, 217)) @ div > div[data-testid="trip-row-0fd8694c"] > div > div > span.status-caption
+      1280px /trips --g-ink-4 als Lesetext "· aktiv" @ div > div[data-testid="trip-row-0fd8694c"] > div > div > span.status-caption
+      1280px /trips status "· aktiv": 2.98:1 (rgb(154, 149, 138) auf rgb(255, 255, 255)) @ div > div[data-testid="trip-row-c10b670f"] > div > div > span.status-caption
+      1280px /trips --g-ink-4 als Lesetext "· aktiv" @ div > div[data-testid="trip-row-c10b670f"] > div > div > span.status-caption
+      1280px /trips status "· aktiv": 2.46:1 (rgb(154, 149, 138) auf rgb(236, 234, 217)) @ div > div[data-testid="trip-row-f157cec9"] > div > div > span.status-caption
+      1280px /trips --g-ink-4 als Lesetext "· aktiv" @ div > div[data-testid="trip-row-f157cec9"] > div > div > span.status-caption
+      1280px /trips status "· aktiv": 2.98:1 (rgb(154, 149, 138) auf rgb(255, 255, 255)) @ div > div[data-testid="trip-row-5d6a63a5"] > div > div > span.status-caption
+      1280px /trips --g-ink-4 als Lesetext "· aktiv" @ div > div[data-testid="trip-row-5d6a63a5"] > div > div > span.status-caption
+      1280px /trips zaehler "21 von 21 Trips": 2.71:1 (rgb(154, 149, 138) auf rgb(246, 244, 238)) @ div.flex > main.mobile-scroll-pad > div.space-y-4 > div.hidden > div
+      1280px /trips --g-ink-4 als Lesetext "21 von 21 Trips" @ div.flex > main.mobile-scroll-pad > div.space-y-4 > div.hidden > div
+      1280px /compare status "· aktiv": 2.98:1 (rgb(154, 149, 138) auf rgb(255, 255, 255)) @ div > div[data-testid="compare-tile-cp-849e2e4ee8b88cce"] > div > div > span[data-testid="compare-status-pill"]
+      1280px /compare --g-ink-4 als Lesetext "· aktiv" @ div > div[data-testid="compare-tile-cp-849e2e4ee8b88cce"] > div > div > span[data-testid="compare-status-pill"]
+      1280px /compare status "· aktiv": 2.46:1 (rgb(154, 149, 138) auf rgb(236, 234, 217)) @ div > div[data-testid="compare-tile-cp-9015cbfaa55fd101"] > div > div > span[data-testid="compare-status-pill"]
+      1280px /compare --g-ink-4 als Lesetext "· aktiv" @ div > div[data-testid="compare-tile-cp-9015cbfaa55fd101"] > div > div > span[data-testid="compare-status-pill"]
+      1280px /compare status "· aktiv": 2.98:1 (rgb(154, 149, 138) auf rgb(255, 255, 255)) @ div > div[data-testid="compare-tile-cp-e02e409cd6d58222"] > div > div > span[data-testid="compare-status-pill"]
+      1280px /compare --g-ink-4 als Lesetext "· aktiv" @ div > div[data-testid="compare-tile-cp-e02e409cd6d58222"] > div > div > span[data-testid="compare-status-pill"]
+      1280px /compare zaehler "3 von 3 Vergleichen": 2.71:1 (rgb(154, 149, 138) auf rgb(246, 244, 238)) @ main.mobile-scroll-pad > div > main > div.hidden > div
+      1280px /compare --g-ink-4 als Lesetext "3 von 3 Vergleichen" @ main.mobile-scroll-pad > div > main > div.hidden > div
+      390px /trips --g-ink-4 als Lesetext "aktiv" @ div[data-testid="subscription-card-e2e-708-stage-confirm"] > div > div > div > span
+      390px /trips --g-ink-4 als Lesetext "aktiv" @ div[data-testid="subscription-card-e2e-cockpit-test"] > div > div > div > span
+      390px /trips --g-ink-4 als Lesetext "geplant" @ div[data-testid="subscription-card-7c81b094"] > div > div > div > span
+      390px /trips --g-ink-4 als Lesetext "geplant" @ div[data-testid="subscription-card-45a6c948"] > div > div > div > span
+      390px /trips --g-ink-4 als Lesetext "aktiv" @ div[data-testid="subscription-card-e2e-gz-2879-1794240646720-582774"] > div > div > div > span
+      390px /trips --g-ink-4 als Lesetext "aktiv" @ div[data-testid="subscription-card-5bd706cf"] > div > div > div > span
+      390px /trips --g-ink-4 als Lesetext "aktiv" @ div[data-testid="subscription-card-e2203fbf"] > div > div > div > span
+      390px /trips --g-ink-4 als Lesetext "aktiv" @ div[data-testid="subscription-card-698bca6b"] > div > div > div > span
+      390px /trips --g-ink-4 als Lesetext "aktiv" @ div[data-testid="subscription-card-7110c9a9"] > div > div > div > span
+      390px /trips --g-ink-4 als Lesetext "aktiv" @ div[data-testid="subscription-card-fd58297e"] > div > div > div > span
+      390px /trips --g-ink-4 als Lesetext "aktiv" @ div[data-testid="subscription-card-9c845b7e"] > div > div > div > span
+      390px /trips --g-ink-4 als Lesetext "aktiv" @ div[data-testid="subscription-card-ebc7b7c1"] > div > div > div > span
+      390px /trips --g-ink-4 als Lesetext "aktiv" @ div[data-testid="subscription-card-461e4e2c"] > div > div > div > span
+      390px /trips --g-ink-4 als Lesetext "aktiv" @ div[data-testid="subscription-card-05815a6d"] > div > div > div > span
+      390px /trips --g-ink-4 als Lesetext "aktiv" @ div[data-testid="subscription-card-ca4d7aa8"] > div > div > div > span
+      390px /trips --g-ink-4 als Lesetext "aktiv" @ div[data-testid="subscription-card-c2056b5b"] > div > div > div > span
+      390px /trips --g-ink-4 als Lesetext "aktiv" @ div[data-testid="subscription-card-2d063f01"] > div > div > div > span
+      390px /trips --g-ink-4 als Lesetext "aktiv" @ div[data-testid="subscription-card-0fd8694c"] > div > div > div > span
+      390px /trips --g-ink-4 als Lesetext "aktiv" @ div[data-testid="subscription-card-c10b670f"] > div > div > div > span
+      390px /trips --g-ink-4 als Lesetext "aktiv" @ div[data-testid="subscription-card-f157cec9"] > div > div > div > span
+      390px /trips --g-ink-4 als Lesetext "aktiv" @ div[data-testid="subscription-card-5d6a63a5"] > div > div > div > span
+      390px /compare --g-ink-4 als Lesetext "aktiv" @ div[data-testid="subscription-card-cp-849e2e4ee8b88cce"] > div > div > div > span
+      390px /compare --g-ink-4 als Lesetext "aktiv" @ div[data-testid="subscription-card-cp-9015cbfaa55fd101"] > div > div > div > span
+      390px /compare --g-ink-4 als Lesetext "aktiv" @ div[data-testid="subscription-card-cp-e02e409cd6d58222"] > div > div > div > span
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  -  1
+    + Received  + 78
+
+    - Array []
+    + Array [
+    +   "1280px /trips status \"· aktiv\": 2.98:1 (rgb(154, 149, 138) auf rgb(255, 255, 255)) @ div > div[data-testid=\"trip-row-e2e-708-stage-confirm\"] > div > div > span.status-caption",
+    +   "1280px /trips --g-ink-4 als Lesetext \"· aktiv\" @ div > div[data-testid=\"trip-row-e2e-708-stage-confirm\"] > div > div > span.status-caption",
+    +   "1280px /trips status \"· aktiv\": 2.46:1 (rgb(154, 149, 138) auf rgb(236, 234, 217)) @ div > div[data-testid=\"trip-row-e2e-cockpit-test\"] > div > div > span.status-caption",
+    +   "1280px /trips --g-ink-4 als Lesetext \"· aktiv\" @ div > div[data-testid=\"trip-row-e2e-cockpit-test\"] > div > div > span.status-caption",
+    +   "1280px /trips status \"· geplant\": 2.98:1 (rgb(154, 149, 138) auf rgb(255, 255, 255)) @ div > div[data-testid=\"trip-row-7c81b094\"] > div > div > span.status-caption",
+    +   "1280px /trips --g-ink-4 als Lesetext \"· geplant\" @ div > div[data-testid=\"trip-row-7c81b094\"] > div > div > span.status-caption",
+    +   "1280px /trips status \"· geplant\": 2.46:1 (rgb(154, 149, 138) auf rgb(236, 234, 217)) @ div > div[data-testid=\"trip-row-45a6c948\"] > div > div > span.status-caption",
+    +   "1280px /trips --g-ink-4 als Lesetext \"· geplant\" @ div > div[data-testid=\"trip-row-45a6c948\"] > div > div > span.status-caption",
+    +   "1280px /trips status \"· aktiv\": 2.98:1 (rgb(154, 149, 138) auf rgb(255, 255, 255)) @ div > div[data-testid=\"trip-row-e2e-gz-2879-1794240646720-582774\"] > div > div > span.status-caption",
+    +   "1280px /trips --g-ink-4 als Lesetext \"· aktiv\" @ div > div[data-testid=\"trip-row-e2e-gz-2879-1794240646720-582774\"] > div > div > span.status-caption",
+    +   "1280px /trips status \"· aktiv\": 2.46:1 (rgb(154, 149, 138) auf rgb(236, 234, 217)) @ div > div[data-testid=\"trip-row-5bd706cf\"] > div > div > span.status-caption",
+    +   "1280px /trips --g-ink-4 als Lesetext \"· aktiv\" @ div > div[data-testid=\"trip-row-5bd706cf\"] > div > div > span.status-caption",
+    +   "1280px /trips status \"· aktiv\": 2.98:1 (rgb(154, 149, 138) auf rgb(255, 255, 255)) @ div > div[data-testid=\"trip-row-e2203fbf\"] > div > div > span.status-caption",
+    +   "1280px /trips --g-ink-4 als Lesetext \"· aktiv\" @ div > div[data-testid=\"trip-row-e2203fbf\"] > div > div > span.status-caption",
+    +   "1280px /trips status \"· aktiv\": 2.46:1 (rgb(154, 149, 138) auf rgb(236, 234, 217)) @ div > div[data-testid=\"trip-row-698bca6b\"] > div > div > span.status-caption",
+    +   "1280px /trips --g-ink-4 als Lesetext \"· aktiv\" @ div > div[data-testid=\"trip-row-698bca6b\"] > div > div > span.status-caption",
+    +   "1280px /trips status \"· aktiv\": 2.98:1 (rgb(154, 149, 138) auf rgb(255, 255, 255)) @ div > div[data-testid=\"trip-row-7110c9a9\"] > div > div > span.status-caption",
+    +   "1280px /trips --g-ink-4 als Lesetext \"· aktiv\" @ div > div[data-testid=\"trip-row-7110c9a9\"] > div > div > span.status-caption",
+    +   "1280px /trips status \"· aktiv\": 2.46:1 (rgb(154, 149, 138) auf rgb(236, 234, 217)) @ div > div[data-testid=\"trip-row-fd58297e\"] > div > div > span.status-caption",
+    +   "1280px /trips --g-ink-4 als Lesetext \"· aktiv\" @ div > div[data-testid=\"trip-row-fd58297e\"] > div > div > span.status-caption",
+    +   "1280px /trips status \"· aktiv\": 2.98:1 (rgb(154, 149, 138) auf rgb(255, 255, 255)) @ div > div[data-testid=\"trip-row-9c845b7e\"] > div > div > span.status-caption",
+    +   "1280px /trips --g-ink-4 als Lesetext \"· aktiv\" @ div > div[data-testid=\"trip-row-9c845b7e\"] > div > div > span.status-caption",
+    +   "1280px /trips status \"· aktiv\": 2.46:1 (rgb(154, 149, 138) auf rgb(236, 234, 217)) @ div > div[data-testid=\"trip-row-ebc7b7c1\"] > div > div > span.status-caption",
+    +   "1280px /trips --g-ink-4 als Lesetext \"· aktiv\" @ div > div[data-testid=\"trip-row-ebc7b7c1\"] > div > div > span.status-caption",
+    +   "1280px /trips status \"· aktiv\": 2.98:1 (rgb(154, 149, 138) auf rgb(255, 255, 255)) @ div > div[data-testid=\"trip-row-461e4e2c\"] > div > div > span.status-caption",
+    +   "1280px /trips --g-ink-4 als Lesetext \"· aktiv\" @ div > div[data-testid=\"trip-row-461e4e2c\"] > div > div > span.status-caption",
+    +   "1280px /trips status \"· aktiv\": 2.46:1 (rgb(154, 149, 138) auf rgb(236, 234, 217)) @ div > div[data-testid=\"trip-row-05815a6d\"] > div > div > span.status-caption",
+    +   "1280px /trips --g-ink-4 als Lesetext \"· aktiv\" @ div > div[data-testid=\"trip-row-05815a6d\"] > div > div > span.status-caption",
+    +   "1280px /trips status \"· aktiv\": 2.98:1 (rgb(154, 149, 138) auf rgb(255, 255, 255)) @ div > div[data-testid=\"trip-row-ca4d7aa8\"] > div > div > span.status-caption",
+    +   "1280px /trips --g-ink-4 als Lesetext \"· aktiv\" @ div > div[data-testid=\"trip-row-ca4d7aa8\"] > div > div > span.status-caption",
+    +   "1280px /trips status \"· aktiv\": 2.46:1 (rgb(154, 149, 138) auf rgb(236, 234, 217)) @ div > div[data-testid=\"trip-row-c2056b5b\"] > div > div > span.status-caption",
+    +   "1280px /trips --g-ink-4 als Lesetext \"· aktiv\" @ div > div[data-testid=\"trip-row-c2056b5b\"] > div > div > span.status-caption",
+    +   "1280px /trips status \"· aktiv\": 2.98:1 (rgb(154, 149, 138) auf rgb(255, 255, 255)) @ div > div[data-testid=\"trip-row-2d063f01\"] > div > div > span.status-caption",
+    +   "1280px /trips --g-ink-4 als Lesetext \"· aktiv\" @ div > div[data-testid=\"trip-row-2d063f01\"] > div > div > span.status-caption",
+    +   "1280px /trips status \"· aktiv\": 2.46:1 (rgb(154, 149, 138) auf rgb(236, 234, 217)) @ div > div[data-testid=\"trip-row-0fd8694c\"] > div > div > span.status-caption",
+    +   "1280px /trips --g-ink-4 als Lesetext \"· aktiv\" @ div > div[data-testid=\"trip-row-0fd8694c\"] > div > div > span.status-caption",
+    +   "1280px /trips status \"· aktiv\": 2.98:1 (rgb(154, 149, 138) auf rgb(255, 255, 255)) @ div > div[data-testid=\"trip-row-c10b670f\"] > div > div > span.status-caption",
+    +   "1280px /trips --g-ink-4 als Lesetext \"· aktiv\" @ div > div[data-testid=\"trip-row-c10b670f\"] > div > div > span.status-caption",
+    +   "1280px /trips status \"· aktiv\": 2.46:1 (rgb(154, 149, 138) auf rgb(236, 234, 217)) @ div > div[data-testid=\"trip-row-f157cec9\"] > div > div > span.status-caption",
+    +   "1280px /trips --g-ink-4 als Lesetext \"· aktiv\" @ div > div[data-testid=\"trip-row-f157cec9\"] > div > div > span.status-caption",
+    +   "1280px /trips status \"· aktiv\": 2.98:1 (rgb(154, 149, 138) auf rgb(255, 255, 255)) @ div > div[data-testid=\"trip-row-5d6a63a5\"] > div > div > span.status-caption",
+    +   "1280px /trips --g-ink-4 als Lesetext \"· aktiv\" @ div > div[data-testid=\"trip-row-5d6a63a5\"] > div > div > span.status-caption",
+    +   "1280px /trips zaehler \"21 von 21 Trips\": 2.71:1 (rgb(154, 149, 138) auf rgb(246, 244, 238)) @ div.flex > main.mobile-scroll-pad > div.space-y-4 > div.hidden > div",
+    +   "1280px /trips --g-ink-4 als Lesetext \"21 von 21 Trips\" @ div.flex > main.mobile-scroll-pad > div.space-y-4 > div.hidden > div",
+    +   "1280px /compare status \"· aktiv\": 2.98:1 (rgb(154, 149, 138) auf rgb(255, 255, 255)) @ div > div[data-testid=\"compare-tile-cp-849e2e4ee8b88cce\"] > div > div > span[data-testid=\"compare-status-pill\"]",
+    +   "1280px /compare --g-ink-4 als Lesetext \"· aktiv\" @ div > div[data-testid=\"compare-tile-cp-849e2e4ee8b88cce\"] > div > div > span[data-testid=\"compare-status-pill\"]",
+    +   "1280px /compare status \"· aktiv\": 2.46:1 (rgb(154, 149, 138) auf rgb(236, 234, 217)) @ div > div[data-testid=\"compare-tile-cp-9015cbfaa55fd101\"] > div > div > span[data-testid=\"compare-status-pill\"]",
+    +   "1280px /compare --g-ink-4 als Lesetext \"· aktiv\" @ div > div[data-testid=\"compare-tile-cp-9015cbfaa55fd101\"] > div > div > span[data-testid=\"compare-status-pill\"]",
+    +   "1280px /compare status \"· aktiv\": 2.98:1 (rgb(154, 149, 138) auf rgb(255, 255, 255)) @ div > div[data-testid=\"compare-tile-cp-e02e409cd6d58222\"] > div > div > span[data-testid=\"compare-status-pill\"]",
+    +   "1280px /compare --g-ink-4 als Lesetext \"· aktiv\" @ div > div[data-testid=\"compare-tile-cp-e02e409cd6d58222\"] > div > div > span[data-testid=\"compare-status-pill\"]",
+    +   "1280px /compare zaehler \"3 von 3 Vergleichen\": 2.71:1 (rgb(154, 149, 138) auf rgb(246, 244, 238)) @ main.mobile-scroll-pad > div > main > div.hidden > div",
+    +   "1280px /compare --g-ink-4 als Lesetext \"3 von 3 Vergleichen\" @ main.mobile-scroll-pad > div > main > div.hidden > div",
+    +   "390px /trips --g-ink-4 als Lesetext \"aktiv\" @ div[data-testid=\"subscription-card-e2e-708-stage-confirm\"] > div > div > div > span",
+    +   "390px /trips --g-ink-4 als Lesetext \"aktiv\" @ div[data-testid=\"subscription-card-e2e-cockpit-test\"] > div > div > div > span",
+    +   "390px /trips --g-ink-4 als Lesetext \"geplant\" @ div[data-testid=\"subscription-card-7c81b094\"] > div > div > div > span",
+    +   "390px /trips --g-ink-4 als Lesetext \"geplant\" @ div[data-testid=\"subscription-card-45a6c948\"] > div > div > div > span",
+    +   "390px /trips --g-ink-4 als Lesetext \"aktiv\" @ div[data-testid=\"subscription-card-e2e-gz-2879-1794240646720-582774\"] > div > div > div > span",
+    +   "390px /trips --g-ink-4 als Lesetext \"aktiv\" @ div[data-testid=\"subscription-card-5bd706cf\"] > div > div > div > span",
+    +   "390px /trips --g-ink-4 als Lesetext \"aktiv\" @ div[data-testid=\"subscription-card-e2203fbf\"] > div > div > div > span",
+    +   "390px /trips --g-ink-4 als Lesetext \"aktiv\" @ div[data-testid=\"subscription-card-698bca6b\"] > div > div > div > span",
+    +   "390px /trips --g-ink-4 als Lesetext \"aktiv\" @ div[data-testid=\"subscription-card-7110c9a9\"] > div > div > div > span",
+    +   "390px /trips --g-ink-4 als Lesetext \"aktiv\" @ div[data-testid=\"subscription-card-fd58297e\"] > div > div > div > span",
+    +   "390px /trips --g-ink-4 als Lesetext \"aktiv\" @ div[data-testid=\"subscription-card-9c845b7e\"] > div > div > div > span",
+    +   "390px /trips --g-ink-4 als Lesetext \"aktiv\" @ div[data-testid=\"subscription-card-ebc7b7c1\"] > div > div > div > span",
+    +   "390px /trips --g-ink-4 als Lesetext \"aktiv\" @ div[data-testid=\"subscription-card-461e4e2c\"] > div > div > div > span",
+    +   "390px /trips --g-ink-4 als Lesetext \"aktiv\" @ div[data-testid=\"subscription-card-05815a6d\"] > div > div > div > span",
+    +   "390px /trips --g-ink-4 als Lesetext \"aktiv\" @ div[data-testid=\"subscription-card-ca4d7aa8\"] > div > div > div > span",
+    +   "390px /trips --g-ink-4 als Lesetext \"aktiv\" @ div[data-testid=\"subscription-card-c2056b5b\"] > div > div > div > span",
+    +   "390px /trips --g-ink-4 als Lesetext \"aktiv\" @ div[data-testid=\"subscription-card-2d063f01\"] > div > div > div > span",
+    +   "390px /trips --g-ink-4 als Lesetext \"aktiv\" @ div[data-testid=\"subscription-card-0fd8694c\"] > div > div > div > span",
+    +   "390px /trips --g-ink-4 als Lesetext \"aktiv\" @ div[data-testid=\"subscription-card-c10b670f\"] > div > div > div > span",
+    +   "390px /trips --g-ink-4 als Lesetext \"aktiv\" @ div[data-testid=\"subscription-card-f157cec9\"] > div > div > div > span",
+    +   "390px /trips --g-ink-4 als Lesetext \"aktiv\" @ div[data-testid=\"subscription-card-5d6a63a5\"] > div > div > div > span",
+    +   "390px /compare --g-ink-4 als Lesetext \"aktiv\" @ div[data-testid=\"subscription-card-cp-849e2e4ee8b88cce\"] > div > div > div > span",
+    +   "390px /compare --g-ink-4 als Lesetext \"aktiv\" @ div[data-testid=\"subscription-card-cp-9015cbfaa55fd101\"] > div > div > div > span",
+    +   "390px /compare --g-ink-4 als Lesetext \"aktiv\" @ div[data-testid=\"subscription-card-cp-e02e409cd6d58222\"] > div > div > div > span",
+    + ]
+
+      324 | 		await cleanupTracked(page.request);
+      325 | 	}
+    > 326 | 	expect(befunde, `KO-4:\n  ${[...new Set(befunde)].join('\n  ')}`).toEqual([]);
+          | 	                                                                  ^
+      327 | });
+      328 |
+      329 | /** Hintergrund und Schrift eines Knopfs, gepollt bis die Übergangs-Animation steht. */
+        at /home/user/gregor_zwanzig/.claude/worktrees/agent-a05dbea935b931947/frontend/e2e/kontrast-trip-vergleich.spec.ts:326:68
+
+    Error Context: test-results/kontrast-trip-vergleich-KO-85a5b-nur-an-gesperrten-Elementen-tests/error-context.md
+
+
+[11/12] [tests] › e2e/kontrast-trip-vergleich.spec.ts:347:1 › KO-5: aktiver „Weiter"-Knopf — Fläche --g-accent-deep, im Hover dunkler, beide ≥ 4,5:1; Hub-Unterstrich bleibt --g-accent
+  10) [tests] › e2e/kontrast-trip-vergleich.spec.ts:347:1 › KO-5: aktiver „Weiter"-Knopf — Fläche --g-accent-deep, im Hover dunkler, beide ≥ 4,5:1; Hub-Unterstrich bleibt --g-accent 
+
+    Error: route: Weiter-Fläche = --g-accent-deep
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: "rgb(140, 62, 26)"
+    Received: "rgb(196, 90, 42)"
+
+      366 | 			await page.mouse.move(0, 0);
+      367 | 			const ruhe = await knopfFarben(weiter);
+    > 368 | 			expect(ruhe.grund, `${kind}: Weiter-Fläche = --g-accent-deep`).toBe(ACCENT_DEEP);
+          | 			                                                               ^
+      369 | 			expect(kontrastVerhaeltnis(ruhe.schrift, ruhe.grund), `${kind}: Weiter ${ruhe.schrift} auf ${ruhe.grund}`).toBeGreaterThanOrEqual(4.5);
+      370 | 			expect(helligkeit(ruhe.schrift), `${kind}: Weiter-Schrift hell`).toBeGreaterThan(15);
+      371 | 			await weiter.hover();
+        at /home/user/gregor_zwanzig/.claude/worktrees/agent-a05dbea935b931947/frontend/e2e/kontrast-trip-vergleich.spec.ts:368:67
+
+    Error Context: test-results/kontrast-trip-vergleich-KO-0fe68-terstrich-bleibt---g-accent-tests/error-context.md
+
+
+[12/12] [tests] › e2e/kontrast-trip-vergleich.spec.ts:386:1 › KO-6: Messhelfer — meldet genau die bekannten Verstöße einer Testseite, Ausnahmen nicht
+  10 failed
+    [tests] › e2e/kontrast-trip-vergleich.spec.ts:169:3 › KO-1 (1280 × 900, de): Listen und Hubs — jeder sichtbare Text hält WCAG-AA 
+    [tests] › e2e/kontrast-trip-vergleich.spec.ts:169:3 › KO-1 (1280 × 900, en): Listen und Hubs — jeder sichtbare Text hält WCAG-AA 
+    [tests] › e2e/kontrast-trip-vergleich.spec.ts:169:3 › KO-2 (390 × 844, de): Listen und Hubs — jeder sichtbare Text hält WCAG-AA 
+    [tests] › e2e/kontrast-trip-vergleich.spec.ts:169:3 › KO-2 (390 × 844, en): Listen und Hubs — jeder sichtbare Text hält WCAG-AA 
+    [tests] › e2e/kontrast-trip-vergleich.spec.ts:270:3 › KO-3 (1280 × 900, de): Anlegen von Trip und Vergleich — jeder Schritt ohne und mit Namen hält WCAG-AA 
+    [tests] › e2e/kontrast-trip-vergleich.spec.ts:270:3 › KO-3 (1280 × 900, en): Anlegen von Trip und Vergleich — jeder Schritt ohne und mit Namen hält WCAG-AA 
+    [tests] › e2e/kontrast-trip-vergleich.spec.ts:270:3 › KO-3 (390 × 844, de): Anlegen von Trip und Vergleich — jeder Schritt ohne und mit Namen hält WCAG-AA 
+    [tests] › e2e/kontrast-trip-vergleich.spec.ts:270:3 › KO-3 (390 × 844, en): Anlegen von Trip und Vergleich — jeder Schritt ohne und mit Namen hält WCAG-AA 
+    [tests] › e2e/kontrast-trip-vergleich.spec.ts:289:1 › KO-4: Listen — Status „· aktiv" und Zähler „x von y" ≥ 4,5:1, --g-ink-4 nur an gesperrten Elementen 
+    [tests] › e2e/kontrast-trip-vergleich.spec.ts:347:1 › KO-5: aktiver „Weiter"-Knopf — Fläche --g-accent-deep, im Hover dunkler, beide ≥ 4,5:1; Hub-Unterstrich bleibt --g-accent 
+  2 passed (1.3m)

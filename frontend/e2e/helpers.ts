@@ -783,6 +783,149 @@ export function kontrastVerhaeltnis(vorne: string, hinten: string): number {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
+// Issue #2879 (WCAG-AA auf Trip-/Vergleichsseiten): Kontrast-Messhelfer, herausgehoben aus
+// kuerzel-legende-lesbar.staging.spec.ts und um die Mischung transparenter Schichten erweitert.
+// Spec: docs/specs/modules/fix_2879_kontrast_wcag_aa.md (Implementation Details 1, AC-6).
+//
+// Je sichtbarem Textknoten: Schriftfarbe (SVG: fill) gegen den EFFEKTIVEN Hintergrund — alle
+// Hintergrundschichten der Vorfahrenkette von außen nach innen übereinandergelegt (Start Weiß),
+// transluzente Schichten gemischt, Schrift-Alpha × Opacity-Kette auf diesen Grund gemischt.
+// Schwelle 4,5:1, großer Text (≥ 24 px oder ≥ 18,66 px bei Gewicht ≥ 700) 3:1. Ausnahmen werden
+// mitgemeldet, nicht verschwiegen: gesperrt (`[disabled]`, `aria-disabled="true"`), `aria-hidden`,
+// Logo (`[data-testid="brand-wordmark"]` — WCAG 1.4.3 nimmt Logotypen ausdrücklich aus).
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface KontrastBefund {
+	text: string;
+	/** Tag des Elternelements (z. B. `code`, `span`). */
+	tag: string;
+	/** Berechnete Schriftfarbe, roh aus getComputedStyle. */
+	farbeRoh: string;
+	/** Schriftfarbe nach Alpha/Opacity-Mischung. */
+	farbe: string;
+	hintergrund: string;
+	verhaeltnis: number;
+	schwelle: number;
+	schrift: string;
+	pfad: string;
+	ausnahme: 'gesperrt' | 'aria-hidden' | 'logo' | null;
+}
+
+/** Läuft im Browser (selbstständig, keine Closures): misst alle sichtbaren Textknoten unter `wurzel`. */
+function messeTextknotenImBrowser(wurzel: Element): KontrastBefund[] {
+	type Rgba = [number, number, number, number];
+	const parse = (c: string): Rgba | null => {
+		const srgb = /color\(srgb\s+([\d.]+)\s+([\d.]+)\s+([\d.]+)(?:\s*\/\s*([\d.]+))?\)/.exec(c);
+		if (srgb) return [+srgb[1] * 255, +srgb[2] * 255, +srgb[3] * 255, srgb[4] ? +srgb[4] : 1];
+		const m = /rgba?\(([^)]+)\)/.exec(c);
+		if (!m) return null;
+		const t = m[1].split(/[\s,/]+/).filter(Boolean).map(parseFloat);
+		return [t[0], t[1], t[2], t.length > 3 ? t[3] : 1];
+	};
+	const lin = (v: number) => {
+		const s = v / 255;
+		return s <= 0.03928 ? s / 12.92 : Math.pow((s + 0.055) / 1.055, 2.4);
+	};
+	const lum = (c: number[]) => 0.2126 * lin(c[0]) + 0.7152 * lin(c[1]) + 0.0722 * lin(c[2]);
+	const mische = (vorn: number[], a: number, hinten: number[]) => [0, 1, 2].map((i) => vorn[i] * a + hinten[i] * (1 - a));
+	const rgb = (c: number[]) => `rgb(${c.slice(0, 3).map(Math.round).join(', ')})`;
+	const pfadVon = (el: Element): string => {
+		const teile: string[] = [];
+		for (let e: Element | null = el; e && e !== document.body && teile.length < 5; e = e.parentElement) {
+			const id = e.getAttribute('data-testid');
+			const klasse = typeof e.className === 'string' ? e.className.trim().split(/\s+/)[0] : '';
+			teile.unshift(`${e.tagName.toLowerCase()}${id ? `[data-testid="${id}"]` : klasse ? `.${klasse}` : ''}`);
+		}
+		return teile.join(' > ');
+	};
+	const sichtbar = (el: Element, knoten: Text): boolean => {
+		if (!el.checkVisibility({ opacityProperty: true, visibilityProperty: true })) return false;
+		const bereich = document.createRange();
+		bereich.selectNodeContents(knoten);
+		const r = bereich.getBoundingClientRect();
+		if (r.width <= 1 || r.height <= 1) return false;
+		// Außerhalb des scrollbaren Dokuments (z. B. left:-9999px) ist nicht erreichbar.
+		if (r.right + scrollX <= 0 || r.bottom + scrollY <= 0) return false;
+		// Von einem nicht scrollbaren Vorfahren (overflow hidden/clip) vollständig weggeschnitten?
+		for (let e = el.parentElement; e; e = e.parentElement) {
+			const cs = getComputedStyle(e);
+			if (!/hidden|clip/.test(`${cs.overflowX} ${cs.overflowY}`)) continue;
+			const b = e.getBoundingClientRect();
+			if (r.right <= b.left || r.left >= b.right || r.bottom <= b.top || r.top >= b.bottom) return false;
+		}
+		return true;
+	};
+	const befunde: KontrastBefund[] = [];
+	const gang = document.createTreeWalker(wurzel, NodeFilter.SHOW_TEXT);
+	for (let n = gang.nextNode() as Text | null; n; n = gang.nextNode() as Text | null) {
+		const text = (n.textContent ?? '').replace(/\s+/g, ' ').trim();
+		const el = n.parentElement;
+		if (!text || !el || /^(SCRIPT|STYLE|NOSCRIPT|TEMPLATE|OPTION|TITLE)$/.test(el.tagName)) continue;
+		if (!sichtbar(el, n)) continue;
+		// Hintergrund: Schichten der Vorfahrenkette von außen nach innen, Start Weiß.
+		const kette: Element[] = [];
+		for (let e: Element | null = el; e; e = e.parentElement) kette.unshift(e);
+		let grund = [255, 255, 255];
+		let opazitaet = 1;
+		for (const e of kette) {
+			const cs = getComputedStyle(e);
+			const b = parse(cs.backgroundColor);
+			if (b && b[3] > 0) grund = mische(b, b[3], grund);
+			opazitaet *= parseFloat(cs.opacity);
+		}
+		const cs = getComputedStyle(el);
+		const farbeRoh = el instanceof SVGElement ? cs.fill : cs.color;
+		const vorn = parse(farbeRoh);
+		const farbe = vorn ? mische(vorn, vorn[3] * opazitaet, grund) : null;
+		const l1 = farbe ? lum(farbe) : NaN;
+		const l2 = lum(grund);
+		const groesse = parseFloat(cs.fontSize);
+		const gewicht = parseInt(cs.fontWeight, 10);
+		const gross = groesse >= 24 || (groesse >= 18.66 && gewicht >= 700);
+		befunde.push({
+			text: text.slice(0, 60),
+			tag: el.tagName.toLowerCase(),
+			farbeRoh,
+			farbe: farbe ? rgb(farbe) : farbeRoh,
+			hintergrund: rgb(grund),
+			verhaeltnis: Math.round(((Math.max(l1, l2) + 0.05) / (Math.min(l1, l2) + 0.05)) * 100) / 100,
+			schwelle: gross ? 3 : 4.5,
+			schrift: `${cs.fontSize}/${cs.fontWeight}`,
+			pfad: pfadVon(el),
+			ausnahme: el.closest('[disabled], [aria-disabled="true"]')
+				? 'gesperrt'
+				: el.closest('[aria-hidden="true"]')
+					? 'aria-hidden'
+					: el.closest('[data-testid="brand-wordmark"]')
+						? 'logo'
+						: null
+		});
+	}
+	return befunde;
+}
+
+/** Misst alle sichtbaren Textknoten der Seite (`Page`) bzw. unter einem Element (`Locator`). */
+export async function messeKontrast(ziel: Page | Locator): Promise<KontrastBefund[]> {
+	const wurzel = 'goto' in ziel ? ziel.locator('body') : ziel;
+	return wurzel.evaluate(messeTextknotenImBrowser);
+}
+
+/** Verstöße: unter der Schwelle (oder Farbe nicht lesbar) und keine Ausnahme. */
+export function kontrastVerstoesse(befunde: KontrastBefund[]): KontrastBefund[] {
+	return befunde.filter((b) => b.ausnahme === null && !(b.verhaeltnis >= b.schwelle));
+}
+
+/** Eine Zeile je Verstoß: Seite, Text, Farben, Verhältnis, CSS-Pfad (doppelte zusammengefasst). */
+export function kontrastBericht(seite: string, verstoesse: KontrastBefund[]): string[] {
+	const zeilen = verstoesse.map(
+		(v) =>
+			`${seite} · ${JSON.stringify(v.text)}: ${v.verhaeltnis}:1 < ${v.schwelle} ` +
+			`(${v.farbe} auf ${v.hintergrund}, ${v.schrift}) @ ${v.pfad}`
+	);
+	return [...new Set(zeilen)];
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 // Issue #2347 S4 (Epic #2345, Etappe P6): Anlege-Seite und Listenseite je kind.
 // Spec: docs/specs/modules/feat_2347_s4_paritaets_e2e.md § „Kind-Kontraste".
 //
