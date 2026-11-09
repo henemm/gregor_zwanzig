@@ -58,6 +58,8 @@ ADR-0049 (eigener Kanal), ADR-0095 (Kanal-Parität, Alarm-Kanal in Trip und Orts
 
 **Farbpaar (#2793 S2b):** Der Änderungs-Alarm trägt am Ereignis-Token das Farbpaar `:{X}>{Y}` (G/Y/O/R, z. B. `G40->55:Y>O`, Entwarnung `G55->35:O>Y`), vor `@HH-HH`, nie übersetzt, GSM-7; Gewitter (`TH:M->H`) und D4-Metriken ohne Suffix. Die Premium-SMS-Grenze (153) bleibt eingehalten. Vertrag in `sms_format.md` §3.4h.
 
+**Radar-Alarm im Ortsvergleich mit mehreren Orten (#1767):** Lösen mehrere Orte gleichzeitig aus, nennt der Alarmtext jeden Ort mit Ortsnummer, sortiert nach Beginn (`1:R@14:05 3:R@14:40`), ohne Namenskopf; bei Platzmangel ` +k` am Ende (k = nicht genannte Orte). Derselbe Text wie SMS und Telegram-Kurzform, gerendert mit 140 Zeichen. Ein auslösender Ort unverändert (`Zermatt: R@14:05`). Vertrag in `sms_format.md` §3.4i.
+
 ## 4. Befehlseingang (Rückkanal)
 
 - **Weg:** Garmin-Gerät schreibt an die Dienstnummer → seven.io-Journal. `premium_sms_poll`

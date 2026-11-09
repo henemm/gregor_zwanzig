@@ -17,6 +17,8 @@
 		hint?: string; // zarter Hilfstext unter dem Feld
 		error?: string; // Error-String — ueberschreibt hint visuell
 		side?: string; // z. B. "Passwort vergessen?" rechts neben dem Label
+		/** #2880: Pflichtfeld — Sternchen (aria-hidden) nach dem Label; aria-required setzt der Aufrufer am Eingabefeld. */
+		pflicht?: boolean;
 		dense?: boolean;
 		children?: Snippet;
 		class?: string;
@@ -27,6 +29,7 @@
 		hint,
 		error,
 		side,
+		pflicht = false,
 		dense = true,
 		children,
 		class: className = ''
@@ -49,7 +52,7 @@
 					style:text-transform="uppercase"
 					style:color="var(--g-ink-3)"
 					style:font-weight="500"
-				>{label}</span>
+				>{label}{#if pflicht}<span class="field-pflicht" aria-hidden="true">*</span>{/if}</span>
 			{/if}
 			{#if side}
 				<span style:font-size="11px" style:color="var(--g-ink-3)">{side}</span>
@@ -66,3 +69,10 @@
 		>{error || hint}</div>
 	{/if}
 </div>
+
+<style>
+	.field-pflicht {
+		margin-left: 3px;
+		color: var(--g-bad);
+	}
+</style>

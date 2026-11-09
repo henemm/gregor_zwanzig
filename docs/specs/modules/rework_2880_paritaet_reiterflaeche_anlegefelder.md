@@ -100,15 +100,18 @@ Trip und Ortsvergleich sollen gleich aussehen, weil sie denselben Code teilen (A
 - **AC-7:** Given das Anlegen von Trip und Vergleich / When ein Nutzer einen Namen eingibt, auf „Weiter“ klickt, einen erledigten Schritt-Reiter erneut anklickt und das Anlegen abschließt / Then verhält sich der Ablauf wie bisher (Schrittwechsel, Sperren, Abschluss legt das Abo an), und die bestehenden Abläufe `hub-anlegen-ablauf.spec.ts` und `anlege-rahmen-paritaet.spec.ts` laufen unverändert grün.
   - Test: bestehende Playwright-Dateien, unverändert in ihren Zusicherungen (nur Selektoren dürfen nachgezogen werden, wenn sich `data-testid` ändern müsste; Ziel: keine Änderung).
 
+- **AC-8:** (Tech-Lead-Ergänzung aus Adversary F003, 2026-11-09) Given das Anlegen von Trip und Vergleich ohne eingegebenen Namen, bei 1440 × 900 und 390 × 844 / When ein Nutzer den aktiven Schritt-Reiter mit der Tastatur fokussiert, mit Pfeil rechts zum gesperrten Schritt (Etappen bzw. Orte) geht und dort Enter oder Leertaste drückt / Then erreicht der Fokus den gesperrten Reiter (er trägt `aria-disabled="true"`, damit Screenreader die Sperre und ihren Grund hören), und der Schritt wechselt nicht; der erste Schritt bleibt aktiv. Tastaturmuster nach WAI-ARIA-Tablist: nur der aktive Reiter liegt in der Tab-Reihenfolge, Pfeil links/rechts sowie Pos1/Ende bewegen den Fokus über alle Reiter, auch gesperrte.
+  - Test: Playwright PF-7 (Trip und Vergleich, 1440 und 390 px).
+
 ## Test Plan
 
-- Playwright PF-1 bis PF-6 neu, am isolierten Stack, Trip gegen Vergleich, Computer und Handy, DE und EN (AC-4/5).
+- Playwright PF-1 bis PF-7 neu, am isolierten Stack, Trip gegen Vergleich, Computer und Handy (PF-3 zusätzlich 1920 px), DE und EN (AC-4/5).
 - Bestehende Paritäts- und Ablauftests als Regressionsschutz (AC-7).
 - RED-Nachweis: PF-1/PF-2 (Vergleich 40 bzw. 16 px eingerückt), PF-4 (Trip Sans/Vergleich Mono) und PF-6 (Optional-Pille nur Trip) schlagen auf `origin/main` fehl.
 
 ## Definition of Done
 
-- AC-1 bis AC-7 grün, Adversary VERIFIED mit den vier Pflicht-Mutationen gefangen.
+- AC-1 bis AC-8 grün, Adversary VERIFIED mit den vier Pflicht-Mutationen gefangen.
 - PR mit allen 6 CI-Checks grün gemergt; Staging-Prüfung und Prod-Deploy über die Server-Sitzung.
 
 ## Known Limitations
@@ -124,3 +127,4 @@ Trip und Ortsvergleich sollen gleich aussehen, weil sie denselben Code teilen (A
 
 - 2026-11-09: Initial spec (Issue #2880).
 - 2026-11-09: Vom PO freigegeben.
+- 2026-11-09: Fix-Loop Adversary (Tech Lead): AC-8 ergänzt (F003, gesperrte Schritt-Reiter per Tastatur erreichbar, roving tabindex). Tests geschärft ohne Änderung der übrigen ACs: PF-1/PF-2 messen zusätzlich das erste Inhaltselement in der Reiterfläche (F001), PF-6 die Mindesthöhe am Handy (F002), PF-3 auch bei 1920 px mit Breitendeckel 1480 px (F004).

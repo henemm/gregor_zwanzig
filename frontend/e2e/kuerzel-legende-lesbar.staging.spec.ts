@@ -31,7 +31,7 @@ import {
 	type Locator,
 	type Page
 } from '@playwright/test';
-import { createTestLocation } from './helpers';
+import { createTestLocation, messeKontrast as messeTextKontrast } from './helpers';
 
 const TRIP_ID = 'e2e-1888-kuerzel-legende';
 
@@ -305,90 +305,27 @@ type Kontrastwert = {
 	istInk4: boolean;
 };
 
-/** Holt Vorder- und Hintergrundfarbe je Legenden-Bestandteil und rechnet den
- *  WCAG-Kontrast aus. Der Hintergrund wird die Elternkette entlang aufgeloest —
- *  meldet das Element selbst `transparent`, misst man sonst gegen nichts. */
+/** Vorder- und Hintergrundfarbe je Legenden-Bestandteil samt WCAG-Kontrast. Seit #2879 über den
+ *  geteilten Messhelfer (helpers.ts `messeKontrast`): Hintergrund aus allen Schichten der
+ *  Elternkette gemischt — meldet das Element selbst `transparent`, misst man sonst gegen nichts. */
 async function messeKontrast(legende: Locator): Promise<Kontrastwert[]> {
-	return legende.evaluate((wurzel) => {
-		function parse(farbe: string): [number, number, number, number] | null {
-			const m = farbe.match(/rgba?\(([^)]+)\)/);
-			if (!m) return null;
-			const t = m[1].split(',').map((s) => parseFloat(s.trim()));
-			return [t[0], t[1], t[2], t.length > 3 ? t[3] : 1];
-		}
-		function ueberlagern(
-			vorn: [number, number, number, number],
-			hinten: [number, number, number, number]
-		): [number, number, number, number] {
-			const a = vorn[3];
-			return [
-				vorn[0] * a + hinten[0] * (1 - a),
-				vorn[1] * a + hinten[1] * (1 - a),
-				vorn[2] * a + hinten[2] * (1 - a),
-				1
-			];
-		}
-		function leuchtdichte([r, g, b]: [number, number, number, number]): number {
-			const k = [r, g, b].map((v) => {
-				const s = v / 255;
-				return s <= 0.03928 ? s / 12.92 : Math.pow((s + 0.055) / 1.055, 2.4);
-			});
-			return 0.2126 * k[0] + 0.7152 * k[1] + 0.0722 * k[2];
-		}
-		/** Erste nicht durchsichtige Hintergrundfarbe der Elternkette. */
-		function hintergrundVon(el: HTMLElement): [number, number, number, number] {
-			let n: HTMLElement | null = el;
-			while (n) {
-				const c = parse(getComputedStyle(n).backgroundColor);
-				if (c && c[3] > 0) return [c[0], c[1], c[2], 1];
-				n = n.parentElement;
-			}
-			return [255, 255, 255, 1]; // Seitenhintergrund als letzte Instanz
-		}
-
-		const ink4 = parse(
-			getComputedStyle(document.documentElement).getPropertyValue('--g-ink-4').trim()
-		);
-		const werte: Kontrastwert[] = [];
-
-		for (const zeile of Array.from(wurzel.querySelectorAll('li')) as HTMLElement[]) {
-			const teile: [string, HTMLElement][] = [];
-			const kuerzel = zeile.querySelector('code') as HTMLElement | null;
-			const bedeutung = zeile.querySelector('span') as HTMLElement | null;
-			if (kuerzel) teile.push(['Kuerzel', kuerzel]);
-			// Die Auswertung („(Maximum)") steht im selben Textknoten wie der
-			// Groessenname — sie traegt also dieselbe Farbe; gemessen wird sie
-			// trotzdem eigens ausgewiesen, damit die Zahl im Bericht steht.
-			if (bedeutung) {
-				teile.push(['Bedeutung', bedeutung]);
-				if (/\(.+\)/.test(bedeutung.textContent ?? '')) {
-					teile.push(['Auswertung', bedeutung]);
-				}
-			}
-			if (teile.length === 0) teile.push(['Zeile', zeile]);
-
-			for (const [rolle, el] of teile) {
-				const vorn = parse(getComputedStyle(el).color);
-				if (!vorn) continue;
-				const hinten = hintergrundVon(el);
-				const effektiv = vorn[3] < 1 ? ueberlagern(vorn, hinten) : vorn;
-				const l1 = leuchtdichte(effektiv);
-				const l2 = leuchtdichte(hinten);
-				const verhaeltnis =
-					(Math.max(l1, l2) + 0.05) / (Math.min(l1, l2) + 0.05);
-				werte.push({
-					rolle,
-					text: (el.textContent ?? '').replace(/\s+/g, ' ').trim().slice(0, 40),
-					farbe: `rgb(${effektiv.slice(0, 3).map(Math.round).join(', ')})`,
-					hintergrund: `rgb(${hinten.slice(0, 3).map(Math.round).join(', ')})`,
-					verhaeltnis: Math.round(verhaeltnis * 100) / 100,
-					istInk4: !!ink4 && Math.abs(vorn[0] - ink4[0]) < 2
-						&& Math.abs(vorn[1] - ink4[1]) < 2 && Math.abs(vorn[2] - ink4[2]) < 2
-				});
-			}
-		}
-		return werte;
-	});
+	const werte: Kontrastwert[] = [];
+	for (const b of await messeTextKontrast(legende.locator('ul'))) {
+		const rolle = b.tag === 'code' ? 'Kuerzel' : b.tag === 'span' ? 'Bedeutung' : 'Zeile';
+		const wert = {
+			rolle,
+			text: b.text.slice(0, 40),
+			farbe: b.farbe,
+			hintergrund: b.hintergrund,
+			verhaeltnis: b.verhaeltnis,
+			istInk4: b.farbeRoh === 'rgb(154, 149, 138)'
+		};
+		werte.push(wert);
+		// Die Auswertung („(Maximum)") steht im selben Textknoten wie der Groessenname — sie
+		// traegt also dieselbe Farbe; eigens ausgewiesen, damit die Zahl im Bericht steht.
+		if (rolle === 'Bedeutung' && /\(.+\)/.test(b.text)) werte.push({ ...wert, rolle: 'Auswertung' });
+	}
+	return werte;
 }
 
 /** Bericht der gemessenen Kontraste — echte Zahlen, auch im Erfolgsfall. */

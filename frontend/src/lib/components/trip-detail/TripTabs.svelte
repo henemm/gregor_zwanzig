@@ -5,6 +5,8 @@
 	import HubOverview from './HubOverview.svelte';
 	// Issue #2682: Übersicht = geteilter Baustein; HubOverview ist die Trip-Hauptfläche darin.
 	import HubUebersicht from '$lib/components/shared/hub-uebersicht/HubUebersicht.svelte';
+	// Issue #2880: EINE Reiterfläche (Rand 28/40/60) für Übersicht und Etappen, wie im Ortsvergleich.
+	import HubReiterflaeche from '$lib/components/shared/hub-reiterflaeche/HubReiterflaeche.svelte';
 	// Issue #1743: Wetter-Metriken und Versand in EINEM geteilten Baustein (Anker #versand).
 	import WetterMetrikenVersandPanel from '$lib/components/shared/WetterMetrikenVersandPanel.svelte';
 	// Issue #2794 S3a: Uebergangsreiter Zustellung (Versand, Alarme, Zustellungs-Bloecke).
@@ -200,13 +202,13 @@
 		{#if activeTab === tab.value}
 			<div data-testid="trip-detail-panel-{tab.value}">
 				{#if tab.value === 'uebersicht' && trip}
-					<div class="trip-uebersicht">
+					<HubReiterflaeche testid="trip-detail-uebersicht-reiterflaeche">
 						<HubUebersicht context="route" {trip} onJump={handleValueChange}>
 							{#snippet children(naechstesBriefing)}
 								<HubOverview {trip} onJump={handleValueChange} {metricsCatalog} nextBriefing={naechstesBriefing} />
 							{/snippet}
 						</HubUebersicht>
-					</div>
+					</HubReiterflaeche>
 				{:else if tab.value === 'etappen'}
 					{#if trip}
 						<EditStagesSection bind:stages={localStages} tripId={trip.id} showSave={true} {onTripUpdate} {saveController} activityType={activityType} />
@@ -230,16 +232,3 @@
 	{/each}
 </div>
 
-<style>
-	/* Issue #2682: Rand der Trip-Übersicht (vorher am HubOverview-Raster). */
-	.trip-uebersicht {
-		position: relative;
-		padding: 32px 40px 60px;
-		max-width: 1480px;
-	}
-	@media (max-width: 899px) {
-		.trip-uebersicht {
-			padding: 20px 16px 48px;
-		}
-	}
-</style>

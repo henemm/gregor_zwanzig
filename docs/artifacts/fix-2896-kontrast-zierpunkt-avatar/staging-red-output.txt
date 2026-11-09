@@ -1,0 +1,89 @@
+
+Running 5 tests using 1 worker
+
+[1A[2K[1/5] [setup] › e2e/kuerzel-legende-lesbar.staging.setup.ts:14:1 › authenticate via API (staging) — issue_1888_kuerzel_legende
+[1A[2K[2/5] [tests] › e2e/ink4-kontrast.staging.spec.ts:155:3 › #2896 AC-1: Logo-Punkt der Desktop-Sidebar (1280x800) › /compare/new: Wortmarken-Punkt >= 4,5:1 und nicht #9a958a
+[1A[2K  1) [tests] › e2e/ink4-kontrast.staging.spec.ts:155:3 › #2896 AC-1: Logo-Punkt der Desktop-Sidebar (1280x800) › /compare/new: Wortmarken-Punkt >= 4,5:1 und nicht #9a958a 
+
+    Error: [2mexpect([22m[31mreceived[39m[2m).[22mnot[2m.[22mtoBe[2m([22m[32mexpected[39m[2m) // Object.is equality[22m
+
+    Expected: not [32m"rgb(154, 149, 138)"[39m
+
+      159 | 			await expect(punkt, 'Wortmarken-Punkt in der Desktop-Sidebar').toBeVisible();
+      160 | 			const k = await messeKontrast(page, LOGO_PUNKT);
+    > 161 | 			expect(k.farbe).not.toBe(INK4);
+          | 			                    ^
+      162 | 			expect(k.ratio, `Punkt ${k.farbe}`).toBeGreaterThanOrEqual(4.5);
+      163 | 		});
+      164 | 	}
+        at /home/hem/gregor_zwanzig/.claude/worktrees/snappy-riding-backus/frontend/e2e/ink4-kontrast.staging.spec.ts:161:24
+
+    Error Context: test-results/ink4-kontrast.staging--289-a21e4-unkt-4-5-1-und-nicht-9a958a-tests/error-context.md
+
+
+[1A[2K[3/5] [tests] › e2e/ink4-kontrast.staging.spec.ts:155:3 › #2896 AC-1: Logo-Punkt der Desktop-Sidebar (1280x800) › /trips/new: Wortmarken-Punkt >= 4,5:1 und nicht #9a958a
+[1A[2K  2) [tests] › e2e/ink4-kontrast.staging.spec.ts:155:3 › #2896 AC-1: Logo-Punkt der Desktop-Sidebar (1280x800) › /trips/new: Wortmarken-Punkt >= 4,5:1 und nicht #9a958a 
+
+    Error: [2mexpect([22m[31mreceived[39m[2m).[22mnot[2m.[22mtoBe[2m([22m[32mexpected[39m[2m) // Object.is equality[22m
+
+    Expected: not [32m"rgb(154, 149, 138)"[39m
+
+      159 | 			await expect(punkt, 'Wortmarken-Punkt in der Desktop-Sidebar').toBeVisible();
+      160 | 			const k = await messeKontrast(page, LOGO_PUNKT);
+    > 161 | 			expect(k.farbe).not.toBe(INK4);
+          | 			                    ^
+      162 | 			expect(k.ratio, `Punkt ${k.farbe}`).toBeGreaterThanOrEqual(4.5);
+      163 | 		});
+      164 | 	}
+        at /home/hem/gregor_zwanzig/.claude/worktrees/snappy-riding-backus/frontend/e2e/ink4-kontrast.staging.spec.ts:161:24
+
+    Error Context: test-results/ink4-kontrast.staging--289-31100-unkt-4-5-1-und-nicht-9a958a-tests/error-context.md
+
+
+[1A[2K[4/5] [tests] › e2e/ink4-kontrast.staging.spec.ts:155:3 › #2896 AC-1: Logo-Punkt der Desktop-Sidebar (1280x800) › /archiv: Wortmarken-Punkt >= 4,5:1 und nicht #9a958a
+[1A[2K  3) [tests] › e2e/ink4-kontrast.staging.spec.ts:155:3 › #2896 AC-1: Logo-Punkt der Desktop-Sidebar (1280x800) › /archiv: Wortmarken-Punkt >= 4,5:1 und nicht #9a958a 
+
+    Error: [2mexpect([22m[31mreceived[39m[2m).[22mnot[2m.[22mtoBe[2m([22m[32mexpected[39m[2m) // Object.is equality[22m
+
+    Expected: not [32m"rgb(154, 149, 138)"[39m
+
+      159 | 			await expect(punkt, 'Wortmarken-Punkt in der Desktop-Sidebar').toBeVisible();
+      160 | 			const k = await messeKontrast(page, LOGO_PUNKT);
+    > 161 | 			expect(k.farbe).not.toBe(INK4);
+          | 			                    ^
+      162 | 			expect(k.ratio, `Punkt ${k.farbe}`).toBeGreaterThanOrEqual(4.5);
+      163 | 		});
+      164 | 	}
+        at /home/hem/gregor_zwanzig/.claude/worktrees/snappy-riding-backus/frontend/e2e/ink4-kontrast.staging.spec.ts:161:24
+
+    Error Context: test-results/ink4-kontrast.staging--289-46646-unkt-4-5-1-und-nicht-9a958a-tests/error-context.md
+
+
+[1A[2K[5/5] [tests] › e2e/ink4-kontrast.staging.spec.ts:167:1 › #2896 AC-2 + AC-3: Avatar-Initialen in Konto-Kreis und Konto-Blatt >= 4,5:1, ein Muster
+[1A[2K  4) [tests] › e2e/ink4-kontrast.staging.spec.ts:167:1 › #2896 AC-2 + AC-3: Avatar-Initialen in Konto-Kreis und Konto-Blatt >= 4,5:1, ein Muster 
+
+    Error: Konto-Kreis rgb(255, 255, 255)
+
+    [2mexpect([22m[31mreceived[39m[2m).[22mtoBeGreaterThanOrEqual[2m([22m[32mexpected[39m[2m)[22m
+
+    Expected: >= [32m4.5[39m
+    Received:    [31m4.336108995698667[39m
+
+      171 | 	await expect(kreis).toBeVisible();
+      172 | 	const kKreis = await messeKontrast(page, '[data-testid="konto-kreis"] .konto-kreis__avatar');
+    > 173 | 	expect(kKreis.ratio, `Konto-Kreis ${kKreis.farbe}`).toBeGreaterThanOrEqual(4.5);
+          | 	                                                    ^
+      174 | 	const bgKreis = await kreis.evaluate((el) => getComputedStyle(el).backgroundColor);
+      175 |
+      176 | 	await page.locator('[data-testid="konto-kreis"]').click();
+        at /home/hem/gregor_zwanzig/.claude/worktrees/snappy-riding-backus/frontend/e2e/ink4-kontrast.staging.spec.ts:173:54
+
+    Error Context: test-results/ink4-kontrast.staging--289-752fd-onto-Blatt-4-5-1-ein-Muster-tests/error-context.md
+
+
+[1A[2K  4 failed
+    [tests] › e2e/ink4-kontrast.staging.spec.ts:155:3 › #2896 AC-1: Logo-Punkt der Desktop-Sidebar (1280x800) › /compare/new: Wortmarken-Punkt >= 4,5:1 und nicht #9a958a 
+    [tests] › e2e/ink4-kontrast.staging.spec.ts:155:3 › #2896 AC-1: Logo-Punkt der Desktop-Sidebar (1280x800) › /trips/new: Wortmarken-Punkt >= 4,5:1 und nicht #9a958a 
+    [tests] › e2e/ink4-kontrast.staging.spec.ts:155:3 › #2896 AC-1: Logo-Punkt der Desktop-Sidebar (1280x800) › /archiv: Wortmarken-Punkt >= 4,5:1 und nicht #9a958a 
+    [tests] › e2e/ink4-kontrast.staging.spec.ts:167:1 › #2896 AC-2 + AC-3: Avatar-Initialen in Konto-Kreis und Konto-Blatt >= 4,5:1, ein Muster 
+  1 passed (11.4s)

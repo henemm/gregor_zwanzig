@@ -29,7 +29,10 @@ function bar(over: TripNewStateOverride) {
 		isMobileViewport: false, activeTab: 'route',
 		name: 'X', startDate: '2026-07-01', stageNames: ['E1'], ...over,
 	});
-	const tabs = [...html.matchAll(/<div[^>]*role="tab"[^>]*>([\s\S]*?)<\/div>/g)].map((m) => m[1]);
+	// #2880: Reiter sind `button role="tab"` des geteilten AnlegeReiter (vorher `div`); Desktop =
+	// alles vor der Mobil-Leiste tn-mobile-tabbar (Muster desktopTabs in tripNewSsr.ts).
+	const desktop = html.slice(0, html.indexOf('data-testid="tn-mobile-tabbar"'));
+	const tabs = [...desktop.matchAll(/<(?:div|button)[^>]*role="tab"[^>]*>([\s\S]*?)<\/(?:div|button)>/g)].map((m) => m[1]);
 	assert.ok(tabs.length >= 5, 'Desktop-Reiterleiste nicht gefunden — Wirkstelle nicht erreicht');
 	assert.ok(!tabs.some((t) => t.includes('Versand')), '#1743 AC-19 FAIL: Reiter „Versand" existiert noch.');
 	assert.equal(tabs.length, 5, 'Desktop-Reiterleiste soll genau 5 Reiter haben (#2794)');

@@ -249,7 +249,7 @@
 				<p class="text-sm text-destructive" style="margin-bottom: 12px">{error}</p>
 			{/if}
 			{#if sendInfo}
-				<p class="text-sm" style="color: var(--g-accent); margin-bottom: 12px">{sendInfo}</p>
+				<p class="text-sm" style="color: var(--g-accent-deep); margin-bottom: 12px">{sendInfo}</p>
 			{/if}
 			<ListTable
 				columns={compareColumns}
@@ -273,7 +273,7 @@
 			/>
 
 			<!-- Footer-Zähler (Issue #582) -->
-			<div style="margin-top: 16px; font-size: 11px; color: var(--g-ink-4); font-family: var(--g-font-mono); letter-spacing: 0.06em">
+			<div style="margin-top: 16px; font-size: 11px; color: var(--g-ink-3); font-family: var(--g-font-mono); letter-spacing: 0.06em">
 				{$t('listen.zaehler.vergleiche', { gefiltert: filteredPresets.length, gesamt: presets.length })}
 			</div>
 		</div>

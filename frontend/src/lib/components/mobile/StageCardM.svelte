@@ -173,7 +173,7 @@
 	.date {
 		font-family: var(--g-font-mono);
 		font-size: var(--g-text-xs);
-		color: var(--g-ink-4);
+		color: var(--g-ink-3);
 	}
 	.date-edit {
 		min-width: 0;

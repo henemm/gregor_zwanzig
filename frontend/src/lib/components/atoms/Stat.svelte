@@ -28,7 +28,7 @@
 
 	const SIZES = { sm: { value: 18, label: 11 }, md: { value: 22, label: 11 }, lg: { value: 28, label: 11 } }; // #2601: Label-Minimum 11px
 	const s = $derived(SIZES[size] ?? SIZES.md);
-	const valueColor = $derived(tone === 'accent' ? 'var(--g-accent)' : 'var(--g-ink)');
+	const valueColor = $derived(tone === 'accent' ? 'var(--g-accent-deep)' : 'var(--g-ink)');
 	const valueFontSize = $derived(layout === 'inline' ? Math.max(s.value, 22) : s.value);
 </script>
 
@@ -45,7 +45,7 @@
 			style:display="inline-flex"
 			style:align-items="baseline"
 			style:gap="4px"
-		>{value}{#if unit}<span style:font-size="12px" style:color="var(--g-ink-4)" style:font-weight="500">{unit}</span>{/if}</span>
+		>{value}{#if unit}<span style:font-size="12px" style:color="var(--g-ink-3)" style:font-weight="500">{unit}</span>{/if}</span>
 		<span
 			class="mono"
 			style:font-size="{s.label}px"
@@ -78,9 +78,9 @@
 			style:display="inline-flex"
 			style:align-items="baseline"
 			style:gap="4px"
-		>{value}{#if unit}<span style:font-size="12px" style:color="var(--g-ink-4)" style:font-weight="500">{unit}</span>{/if}</span>
+		>{value}{#if unit}<span style:font-size="12px" style:color="var(--g-ink-3)" style:font-weight="500">{unit}</span>{/if}</span>
 		{#if sub}
-			<div style:font-size="11px" style:color="var(--g-ink-4)" style:margin-top="4px">{sub}</div>
+			<div style:font-size="11px" style:color="var(--g-ink-3)" style:margin-top="4px">{sub}</div>
 		{/if}
 	</div>
 {/if}

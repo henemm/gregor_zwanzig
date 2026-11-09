@@ -361,13 +361,15 @@
     background-color: color-mix(in oklab, var(--g-ink) 88%, var(--g-paper));
   }
 
+  /* #2879 (ADR-0110-Nachtrag): Accent als Flaeche unter Text = --g-accent-deep
+     (Papier darauf 6,77:1, WCAG-AA); Hover dunkler. --g-accent bleibt fuer Nicht-Text. */
   [data-slot="btn"][data-variant="accent"] {
-    background-color: var(--g-accent);
-    color: #fff;
-    border-color: var(--g-accent);
+    background-color: var(--g-accent-deep);
+    color: var(--g-paper);
+    border-color: var(--g-accent-deep);
   }
   [data-slot="btn"][data-variant="accent"]:hover {
-    background-color: color-mix(in oklab, var(--g-accent) 90%, black);
+    background-color: color-mix(in oklab, var(--g-accent-deep) 85%, black);
   }
 
   [data-slot="btn"][data-variant="outline"] {
@@ -438,10 +440,14 @@
   [data-slot="btn"][data-size="icon"] > svg      { width: 1rem;     height: 1rem;     }
   [data-slot="btn"][data-size="icon-lg"] > svg   { width: 1.125rem; height: 1.125rem; }
 
-  /* Disabled-State */
+  /* Disabled-State — #2371 (AC-3): ohne Opacity-Verdünnung; Text --g-ink-3
+     (>= 4,5:1 auf Papier und Weiß) auf transparentem Grund mit --g-rule-Rahmen,
+     unabhängig von der Variante (wie MBtn). Sperre über cursor/Rahmen. */
   [data-slot="btn"][disabled],
   [data-slot="btn"][aria-disabled="true"] {
-    opacity: 0.5;
+    background-color: transparent;
+    color: var(--g-ink-3);
+    border-color: var(--g-rule);
     pointer-events: none;
     cursor: not-allowed;
   }

@@ -183,15 +183,17 @@
 			color: var(--g-ink-2);
 			font-size: var(--g-text-sm);
 		}
+		/* #2879: aktiver Reiter --g-accent-deep (Papier darauf 6,77:1, WCAG-AA). */
 		.mtabbar :global([data-slot='segmented-item'][data-state='active']) {
-			background: var(--g-accent);
-			border-color: var(--g-accent);
+			background: var(--g-accent-deep);
+			border-color: var(--g-accent-deep);
 			color: var(--g-paper);
 			font-weight: 600;
-			border-bottom-color: var(--g-accent);
+			border-bottom-color: var(--g-accent-deep);
 		}
 		/* Badge neutral statt Accent-Fill (Design-Doc Paket 2, offener #585-Punkt
-		   als Vorschlag umgesetzt): inaktiv paper-deep/ink-3, aktiv transluzent. */
+		   als Vorschlag umgesetzt): paper-deep/ink-3 — seit #2879 auch im aktiven
+		   Reiter (vorher transluzent, 2,79:1; ADR-0110 „Zähler neutral"). */
 		.mtabbar :global([data-slot='segmented-badge']) {
 			background: var(--g-paper-deep);
 			color: var(--g-ink-3);
@@ -199,10 +201,6 @@
 			font-size: 10px;
 			font-weight: 600;
 			margin-left: 0;
-		}
-		.mtabbar :global([data-slot='segmented-item'][data-state='active'] [data-slot='segmented-badge']) {
-			background: rgba(255, 255, 255, 0.22);
-			color: var(--g-paper);
 		}
 		.mtabbar :global([data-slot='segmented-item']:focus-visible) {
 			outline: 2px solid var(--g-accent);

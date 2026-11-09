@@ -90,12 +90,20 @@ def _onset_reference_wie_versand(preset: dict, body: dict, user_id: str, wire) -
         ))
         for lid in preset["location_ids"] if lid in by_loc
     ]
+    # Issue #1767: wie `compare_radar_alert.py` reicht der Versand die
+    # Ortsnummern des Presets bis in die Mehrort-Kurzform.
+    from services.compare_alert import CompareAlertService
+
+    positions = CompareAlertService._location_positions(
+        preset["location_ids"], {lid: _loc(lid) for lid in preset["location_ids"]},
+    )
     service = NotificationService(wire.settings(user_id), user_id)
     lang = resolve_user_lang(user_id)
     return wire.capture(lambda mail_sink: service.send_multi_location_radar_alert(
         entities, _CHANNELS, mail_sink=mail_sink,
         cooldown_display=_format_cooldown_display(COOLDOWN_MIN, lang=lang),
         telegram_style=effective_compare_telegram_style(preset), preset=preset,
+        location_positions=positions,
     ))
 
 

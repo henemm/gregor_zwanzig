@@ -183,7 +183,7 @@
 					data-field="status"
 					style:font-family="var(--g-font-mono)"
 					style:font-size="11px"
-					style:color="var(--g-ink-4)"
+					style:color="var(--g-ink-3)"
 					style:text-transform="uppercase"
 					style:letter-spacing="0.14em"
 				>{statusText}</span>
@@ -251,7 +251,7 @@
 			style:min-height={dense ? '18px' : '20px'}
 		>
 			{#if channels.length === 0}
-				<span style:font-family="var(--g-font-mono)" style:font-size={dense ? '10px' : '11px'} style:color="var(--g-ink-4)"
+				<span style:font-family="var(--g-font-mono)" style:font-size={dense ? '10px' : '11px'} style:color="var(--g-ink-3)"
 					>{$t('bausteine.abo.keine_kanaele')}</span
 				>
 			{:else}

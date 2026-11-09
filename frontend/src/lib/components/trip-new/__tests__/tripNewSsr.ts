@@ -148,7 +148,8 @@ export function desktopTabs(html: string): { label: string; title: string | null
 	assert.notEqual(ende, -1, 'Messaufbau kaputt: Mobil-Tab-Leiste nicht gefunden.');
 	const bereich = html.slice(0, ende);
 	const tabs: { label: string; title: string | null }[] = [];
-	const re = /<div([^>]*\brole="tab"[^>]*)>([\s\S]*?)<\/div>/g;
+	// #2880: die Reiter sind jetzt `button role="tab"` des geteilten AnlegeReiter (vorher `div`).
+	const re = /<(?:div|button)([^>]*\brole="tab"[^>]*)>([\s\S]*?)<\/(?:div|button)>/g;
 	let m: RegExpExecArray | null;
 	while ((m = re.exec(bereich))) {
 		const title = /\btitle="([^"]*)"/.exec(m[1])?.[1] ?? null;

@@ -160,6 +160,7 @@ def _onset(
 ) -> dict:
     from output.renderers.alert.project import to_multi_location_onset_alert_message
     from output.renderers.alert.render import render_sms, render_telegram
+    from services.compare_alert import CompareAlertService
     from services.compare_radar_alert import _DEFAULT_COOLDOWN_MINUTES, _format_cooldown_display
     from services.radar_service import NowcastResult
     from utils.timezone import local_fmt, resolve_location_tz
@@ -183,7 +184,11 @@ def _onset(
         cooldown_display=_format_cooldown_display(cooldown, lang=lang),
         ampel=resolve_ampel(preset),  # Issue #2792 S1c-4b: Ampel des Presets
     )
-    sms = render_sms(msg, limit=_SMS_LIMIT, location_positions=None)
+    # Issue #1767: dieselben Ortsnummern wie der Versand (Vorschau = Versand).
+    positions = CompareAlertService._location_positions(
+        list(preset.get("location_ids") or []), all_locations,
+    )
+    sms = render_sms(msg, limit=_SMS_LIMIT, location_positions=positions)
     bubbles = [sms] if style == "kurzform" else [render_telegram(msg, lang=lang)]
     return _channels(msg, sms=sms, bubbles=bubbles, lang=lang)
 

@@ -251,14 +251,17 @@ def test_ac4_ohne_segment_kennung_bleibt_der_km_rueckfall():
 
 
 def test_ac5_compare_buendel_kopf_nennt_nur_den_ortsnamen():
-    """AC-5: Given ein Ortsvergleich-Buendel-Onset mit ZWEI Orten (das
-    fuehrende Event traegt `location_label="Zermatt"`) / When die SMS
-    gerendert wird / Then beginnt der Kopf mit `Zermatt: `, ohne `+N`-Suffix
-    und ohne `km0-0`-Spanne.
+    """AC-5, FORTGESCHRIEBEN durch Issue #1767 (PO 2026-11-09, loest
+    Entscheid 3b ab): Given ein Ortsvergleich-Buendel-Onset mit ZWEI Orten /
+    When die SMS OHNE Ortsnummern-Zuordnung gerendert wird / Then nennt sie
+    JEDEN Ort mit eigenem Token, statt der Ortsnummer der ASCII-Ortsname
+    (`Zermatt:R@… Chamonix:R@…`), ohne Namenskopf, ohne `+N`-Suffix (alles
+    passt ins Budget) und ohne `km0-0`-Spanne. Gleicher Beginn -> Preset-
+    Reihenfolge bleibt (stabile Sortierung).
 
     Wanduhrfest: `to_multi_location_onset_alert_message` leitet `onset_time`
-    aus `datetime.now()` ab -> Strukturpruefung des Tokens, exakter Vergleich
-    nur am Kopf."""
+    aus `datetime.now()` ab -> Strukturpruefung des Tokens (inklusive eines
+    moeglichen Wochentagskuerzels bei Mitternachtsueberlauf)."""
     from output.renderers.alert.project import to_multi_location_onset_alert_message
 
     msg = to_multi_location_onset_alert_message(
@@ -267,10 +270,12 @@ def test_ac5_compare_buendel_kopf_nennt_nur_den_ortsnamen():
     )
     sms = render_sms(msg)
 
-    assert sms.startswith("Zermatt: "), (
-        f"Buendel-Kopf muss der Ortsname des fuehrenden Events sein, "
-        f"bekam {sms!r}"
+    zeit = r"(?:[A-Z][a-z])?\d{1,2}:\d{2}"
+    assert re.fullmatch(rf"Zermatt:R@{zeit} Chamonix:R@{zeit}", sms), (
+        f"Buendel-SMS muss beide Orte mit eigenem Token nennen "
+        f"('Zermatt:R@H:MM Chamonix:R@H:MM'), bekam {sms!r}"
     )
+    assert ": " not in sms, f"Kurznachricht traegt noch einen Namenskopf: {sms!r}"
     assert "+" not in sms, f"Kurznachricht traegt einen '+N'-Zaehler: {sms!r}"
     assert "km0" not in sms and "km 0" not in sms, (
         f"Kurznachricht traegt noch die sinnlose km0-Spanne: {sms!r}"
@@ -402,8 +407,12 @@ def test_ac9_nur_das_compare_ergebnis_traegt_den_ortsnamen():
         _onset_event(is_convective=False, onset_time="14:35", km_from=0.0,
                      km_to=0.0, intensity_label="leichter Regen"),
     ))
+    # FORTGESCHRIEBEN (Issue #1767): der Ortsnamen-KOPF lebt nur noch im
+    # Ein-Ort-Ortsvergleich; das Mehrort-Buendel nennt jeden Ort mit eigenem
+    # Token ohne Kopf (`test_ac5_compare_buendel_kopf_nennt_nur_den_ortsnamen`,
+    # `test_fix_1767_nowcast_mehrort_kurzform.py`).
     compare_sms = render_sms(to_multi_location_onset_alert_message(
-        [("Zermatt", _nowcast()), ("Chamonix", _nowcast())],
+        [("Zermatt", _nowcast())],
         tz=timezone.utc, stand_at="10:00", ampel=resolve_ampel(None),
     ))
 

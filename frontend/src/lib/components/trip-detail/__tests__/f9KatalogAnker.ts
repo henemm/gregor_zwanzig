@@ -314,7 +314,6 @@ export const F9_ANKER: [schluessel: string, de: string, en: string][] = [
 	['trip.anlegen.name_beispiel', 'z.B. Karnischer Höhenweg 2026', 'e.g. Karnischer Höhenweg 2026'],
 	['trip.anlegen.region', 'Region', 'Region'],
 	['trip.anlegen.optional_max', 'optional · max 50', 'optional · max 50'],
-	['trip.anlegen.optional_max_zeichen', 'optional · max 50 Zeichen', 'optional · max 50 characters'],
 	['trip.anlegen.region_beispiel', 'z.B. Karnische Alpen', 'e.g. Karnische Alpen'],
 	['trip.anlegen.start_hinweis', 'Etappe 1 startet am <datum> — jede folgende Etappe +1 Tag.', 'Stage 1 starts on <datum> — each following stage +1 day.'],
 	['trip.anlegen.start_hinweis_kurz', 'Etappe 1 startet am <datum> — jede folgende +1 Tag', 'Stage 1 starts on <datum> — each following one +1 day'],

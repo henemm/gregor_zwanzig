@@ -239,7 +239,6 @@
 	"trip.anlegen.name_beispiel": "z.B. Karnischer Höhenweg 2026",
 	"trip.anlegen.region": "Region",
 	"trip.anlegen.optional_max": "optional · max 50",
-	"trip.anlegen.optional_max_zeichen": "optional · max 50 Zeichen",
 	"trip.anlegen.region_beispiel": "z.B. Karnische Alpen",
 	"trip.anlegen.start_hinweis": "Etappe 1 startet am {datum} — jede folgende Etappe +1 Tag.",
 	"trip.anlegen.start_hinweis_kurz": "Etappe 1 startet am {datum} — jede folgende +1 Tag",

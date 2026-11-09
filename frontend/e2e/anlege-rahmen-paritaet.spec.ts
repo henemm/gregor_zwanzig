@@ -286,7 +286,8 @@ for (const kind of HUB_KINDS) {
 			await expect(w).toBeDisabled({ timeout: 15_000 });
 			await expect(w).toHaveAttribute('data-variant', 'accent');
 			const zu = await stil(w);
-			expect(zu.grund, 'AR-11: gesperrtes Weiter ist nicht orange (--g-accent)').toBe(TOKEN_RGB.accent);
+			// #2879 (ADR-0110-Nachtrag): Fläche der Accent-Variante ist --g-accent-deep (WCAG-AA).
+			expect(zu.grund, 'AR-11: gesperrtes Weiter ist nicht --g-accent-deep').toBe(TOKEN_RGB.accentDeep);
 			expect(zu.inline, 'AR-11: Inline-Deckkraft am gesperrten Weiter').toBe('');
 			expect(zu.deckkraft, 'AR-11: gesperrtes Weiter nicht abgeblendet').toBeLessThan(1);
 			const hinweis = w.locator('xpath=..').locator('.mono').first();
@@ -294,16 +295,16 @@ for (const kind of HUB_KINDS) {
 			await anlegenPflicht(page, kind, { name: einName('AR11'), nurKopf: true });
 			await expect(w).toBeEnabled();
 			const frei = await stil(w);
-			expect(frei.grund, 'AR-11: freies Weiter ist nicht orange').toBe(TOKEN_RGB.accent);
+			expect(frei.grund, 'AR-11: freies Weiter ist nicht --g-accent-deep').toBe(TOKEN_RGB.accentDeep);
 			expect(frei.deckkraft).toBe(1);
 		});
 
-		test(`AR-11 (${kind}, 390 px): Weiter im mobilen Fuß ist orange (--g-accent), sobald frei`, async ({ page }) => {
+		test(`AR-11 (${kind}, 390 px): Weiter im mobilen Fuß ist Accent (--g-accent-deep, #2879), sobald frei`, async ({ page }) => {
 			await page.setViewportSize(MOBIL);
 			await anlegenPflicht(page, kind, { name: einName('AR11m'), mobil: true, nurKopf: true });
 			const cta = sel.mobilFooter(page).getByRole('button').filter({ visible: true }).last();
 			await expect(cta).toBeEnabled({ timeout: 10_000 });
-			expect((await stil(cta)).grund, 'AR-11: mobiles Weiter ist nicht orange').toBe(TOKEN_RGB.accent);
+			expect((await stil(cta)).grund, 'AR-11: mobiles Weiter ist nicht --g-accent-deep').toBe(TOKEN_RGB.accentDeep);
 		});
 
 		// ── AR-13: mobiler Fuß über der Navigation, nicht verdeckt ──────────────

@@ -115,11 +115,12 @@ test.describe('Issue #269: Mobile Trip-Detail-Tabs Pill-Scroller', () => {
 	});
 
 	// ─── AC-3: Aktiver Tab als Pill dargestellt ──────────────────────────────
-	test('AC-3: Aktiver Tab hat auf Mobile Pill-Hintergrund (--g-accent)', async ({ page }) => {
+	test('AC-3: Aktiver Tab hat auf Mobile Pill-Hintergrund (--g-accent-deep)', async ({ page }) => {
 		/**
 		 * GIVEN: Viewport ist 375×667 px (Mobile)
 		 * WHEN:  Trip-Detail-Seite geladen, "Übersicht" ist aktiv
-		 * THEN:  Aktiver Tab-Trigger hat background-color: rgb(196, 90, 42) (#c45a2a)
+		 * THEN:  Aktiver Tab-Trigger hat background-color: rgb(140, 62, 26) (#8c3e1a) —
+		 *        seit #2879 --g-accent-deep (Papier auf --g-accent nur 3,94:1, WCAG-AA verfehlt)
 		 */
 		await page.setViewportSize(MOBILE_VIEWPORT);
 		await page.goto(`/trips/${TRIP_ID}`);
@@ -128,9 +129,9 @@ test.describe('Issue #269: Mobile Trip-Detail-Tabs Pill-Scroller', () => {
 		await expect(activeTab).toHaveAttribute('data-state', 'active');
 
 		const bgColor = await activeTab.evaluate((el) => getComputedStyle(el).backgroundColor);
-		// --g-accent: #c45a2a = rgb(196, 90, 42)
-		expect(bgColor, `Aktiver Tab hat Hintergrund "${bgColor}" statt rgb(196, 90, 42)`).toMatch(
-			/rgb\(196,\s*90,\s*42\)/
+		// --g-accent-deep: #8c3e1a = rgb(140, 62, 26)
+		expect(bgColor, `Aktiver Tab hat Hintergrund "${bgColor}" statt rgb(140, 62, 26)`).toMatch(
+			/rgb\(140,\s*62,\s*26\)/
 		);
 	});
 

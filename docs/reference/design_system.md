@@ -51,7 +51,7 @@ eigener Issue.
 | `--g-ink-muted` | `#5c5a52` | Sekundärtext, Body |
 | `--g-ink-faint` | `#9c9a90` | Tertiär, Labels, Placeholder, Borders |
 
-**Hauptaktion = Ink (`Btn primary`, `--g-ink`)** — z. B. „Senden“ im Hub-Kopf, „Trip speichern“/„Briefing aktivieren“ unten rechts im Fuß des geteilten Anlege-Rahmens (`shared/anlege-rahmen/AnlegeRahmen.svelte`, „Abbrechen“ als `Btn ghost` unten links, „Weiter“ als `Btn accent`). Weiß auf `--g-accent` erreicht nur 4,34:1 und verfehlt WCAG-AA (4,5:1 für kleinen Text); Ink auf Papier etwa 15:1 (Leitprinzip oben, ADR-0110, #2837).
+**Hauptaktion = Ink (`Btn primary`, `--g-ink`)** — z. B. „Senden“ im Hub-Kopf, „Trip speichern“/„Briefing aktivieren“ unten rechts im Fuß des geteilten Anlege-Rahmens (`shared/anlege-rahmen/AnlegeRahmen.svelte`, „Abbrechen“ als `Btn ghost` unten links, „Weiter“ als `Btn accent`). Ink auf Papier etwa 15:1 (Leitprinzip oben, ADR-0110, #2837). Die Fläche von `Btn accent` ist seit #2879 `--g-accent-deep` (siehe Accent).
 
 **Design-Vision (nicht implementiert):** vierte Stufe (`--g-ink-4`) für Hint/Placeholder
 — `--g-ink-faint` deckt beide ab.
@@ -63,11 +63,11 @@ eigener Issue.
 ### Accent — Burnt Orange (alpin, markant)
 | Token | Hex | Verwendung |
 |---|---|---|
-| `--g-accent` | `#c45a2a` | Akzent für Weiter / Aktiv-Zustand (Unterstrich des aktiven Reiters), KI-Vorschlag, Logo-Blitz |
+| `--g-accent` | `#c45a2a` | Akzent für „Weiter“ und Aktiv-Zustände (ADR-0110). Direkt nur ohne Text: Unterstrich des aktiven Reiters, Fortschritts-Segmente, Rahmen, Punkte, Logo-Blitz (Nicht-Text-Schwelle 3:1; auf Papier 3,94:1). Unter oder als Text immer `--g-accent-deep` |
+| `--g-accent-deep` | `#8c3e1a` | Accent **unter oder als Text**: Fläche von `Btn accent`/`MBtn accent` („Weiter“), aktiver Handy-Reiter, Accent-Text (Kürzel, Rangnummern, Kennzahl „Aktiv“), Text auf `--g-accent-tint` |
+| `--g-accent-tint` | `rgba(196,90,42,0.08)` | subtiler Fond hinter Accent-Text |
 
-**Design-Vision (nicht implementiert):** `--g-accent-deep` (Akzent-Text auf Tint),
-`--g-accent-soft` (Hintergrund-Badge), `--g-accent-tint` (subtiler Fond) —
-wenn benötigt, eigener Issue.
+**Regel (#2879, ADR-0110-Nachtrag): Accent unter Text = `--g-accent-deep`.** Weiß bzw. Papier auf `--g-accent` erreicht nur 4,34:1 bzw. 3,94:1 und verfehlt WCAG-AA (4,5:1 für Text unter 24 px bzw. 18,66 px fett); auf `--g-accent-deep` sind es 7,45:1 bzw. 6,77:1. Hover dunkler: 85 % `--g-accent-deep` mit Schwarz. Dasselbe gilt sinngemäß für Warnfarbe als Text (`--g-warn-deep` statt `--g-warn`). `--g-ink-4` bleibt Platzhaltern und gesperrten Elementen vorbehalten; jeder Lesetext nutzt mindestens `--g-ink-3`. Prüftest: `frontend/e2e/kontrast-trip-vergleich.spec.ts`.
 
 ### Semantic
 | Token | Hex | Bedeutung |
@@ -238,6 +238,7 @@ Top-Level-Hintergrund der App: `#f0eee9` (etwas wärmer als `--g-paper`, dient a
 
 Wortmarke: „Gregor" (Ink) + „Zwanzig" (Accent) · `font-weight: 600` · `letter-spacing: -0.022em` · `line-height: 0.95`.
 Bildmarke: SVG-Bergkamm in Ink (Stroke 2.6 px, `linejoin: miter`, `miterlimit: 8`) + Blitz-Glyph in Accent. Untertitel-Lockup mono 8 px Ink-3, `letter-spacing: 0.18em`, uppercase: „Wetter-Briefings · Headless".
+Kontrast (#2896): Der Punkt der Wortmarke steht in `--g-ink-3` (dunkle Variante `rgba(246,244,238,0.55)`), nie in `--g-ink-4`; Avatar-Initialen (Konto-Kreis, Konto-Blatt, `BrandUserBadge accent`) liegen auf `--g-accent-deep`, damit beide mindestens 4,5:1 erreichen.
 
 ---
 
@@ -295,7 +296,7 @@ abgeschlossen — Naming und Werte sind hier konsolidiert.
 **Bewusst nicht implementierte Anthropic-Design-Vision-Tokens:**
 - `--g-paper-deep`, `--g-card`, `--g-card-alt`, `--g-rule`, `--g-rule-soft`
 - `--g-ink-4` (vierte Ink-Stufe)
-- `--g-accent-deep`, `--g-accent-soft`, `--g-accent-tint`
+- `--g-accent-soft` (`--g-accent-deep` und `--g-accent-tint` sind vorhanden, siehe Accent, #2879)
 - `--g-shadow-*` mit zweiteiliger Struktur (Hairline + Drop)
 - Btn-Variant `quiet`
 

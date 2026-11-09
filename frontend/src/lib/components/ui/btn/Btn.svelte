@@ -71,6 +71,7 @@
 		class={cn(className)}
 		{type}
 		{disabled}
+		aria-disabled={disabled ? 'true' : undefined}
 		{...restProps}
 	>
 		{@render children?.()}

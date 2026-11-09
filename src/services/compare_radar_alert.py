@@ -43,6 +43,7 @@ from services.alert_gate import (
 from utils.timezone import first_resolvable_tz
 from services.alert_state import AlertStateService
 from services.alert_channels import effective_alert_channels
+from services.compare_alert import CompareAlertService
 from services.compare_alert_channels import effective_compare_telegram_style
 from services.compare_alert_guard import is_silenced
 from services.compare_preset_access import (
@@ -433,6 +434,11 @@ class CompareRadarAlertService:
             cooldown_display=_format_cooldown_display(cooldown_minutes, lang=self._lang),
             telegram_style=effective_compare_telegram_style(preset),
             preset=preset,  # Issue #2792 S1c-4b: Ampel des Presets
+            # Issue #1767: Ortsnummern des Presets fuer die Mehrort-Kurzform --
+            # dieselbe Positionsfunktion wie Aenderungsalarm und Vorschau.
+            location_positions=CompareAlertService._location_positions(
+                location_ids, all_locations,
+            ),
         )
         # Issue #2050 S6 (E-1): nur, wenn ALLE getriggerten Orte uebereinstimmen
         # (`unique_or_none`) -- `reference_at` bleibt strukturell `None`

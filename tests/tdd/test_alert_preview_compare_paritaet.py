@@ -392,11 +392,19 @@ def _onset_reference(preset: dict, body: dict, user_id: str, wire: "_Wire") -> d
         ))
         for lid in ordered
     ]
+    # Issue #1767: der Versand reicht die Ortsnummern des Presets bis in die
+    # Kurzform -- dieselbe Positionsfunktion wie der Aenderungsalarm (AG3b).
+    from services.compare_alert import CompareAlertService
+
+    positions = CompareAlertService._location_positions(
+        preset["location_ids"], {loc.id: loc for loc in LOCATIONS},
+    )
     service = NotificationService(wire.settings(user_id), user_id)
     return wire.capture(lambda mail_sink: service.send_multi_location_radar_alert(
         entities, _CHANNELS, mail_sink=mail_sink,
         cooldown_display=_format_cooldown_display(COOLDOWN_MIN),
         telegram_style=effective_compare_telegram_style(preset), preset=preset,
+        location_positions=positions,
     ))
 
 

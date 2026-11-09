@@ -210,7 +210,7 @@
 	{/if}
 
 	{#if sendInfo}
-		<p class="text-sm" style="color: var(--g-accent)" data-testid="trips-send-info">{sendInfo}</p>
+		<p class="text-sm" style="color: var(--g-accent-deep)" data-testid="trips-send-info">{sendInfo}</p>
 	{/if}
 
 	{#if error}
@@ -279,7 +279,7 @@
 				rowTestid={(row) => `trip-row-${(row as Trip).id}`}
 				menuTestid={() => 'trip-row-menu-btn'}
 			/>
-			<div style="margin-top: 14px; font-size: 11px; color: var(--g-ink-4); font-family: var(--g-font-mono); letter-spacing: 0.06em;">
+			<div style="margin-top: 14px; font-size: 11px; color: var(--g-ink-3); font-family: var(--g-font-mono); letter-spacing: 0.06em;">
 				{$t('listen.zaehler.trips', { gefiltert: filteredTrips.length, gesamt: trips.length })}
 			</div>
 		</div>

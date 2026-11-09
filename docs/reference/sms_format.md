@@ -1,10 +1,10 @@
 ---
 entity_id: sms_format
 type: reference
-version: "2.38"
+version: "2.39"
 status: active
 created: 2025-12-27
-updated: 2026-11-06
+updated: 2026-11-09
 tags: [sms, compact, tokens, single-source-of-truth]
 ---
 
@@ -419,6 +419,19 @@ Seit S2b folgt der Abweichungs-Alarm der Profil-Ampel (ADR-0106 P4). Am bestehen
 - **Nie übersetzt** (ADR-0104), ASCII/GSM-7. Länge ≤ Limit (Alarm 140, Premium-SMS 153, absolut 160).
 
 Spec: `docs/specs/modules/feat_2793_s2_alarm_stufenwechsel.md` §4.
+
+### 3.4i Radar-Alarm im Ortsvergleich mit mehreren Orten (Issue #1767)
+
+Lösen im Ortsvergleich mehrere Orte gleichzeitig einen Regen-/Gewitter-Anmarsch aus, nennt die Kurzform (SMS, Premium-SMS, Telegram-Kurzform: ein Text aus `alert/render.py::render_sms`) **jeden** Ort mit eigenem Token, davor die Ortsnummer (1-basierte Position im Ortsvergleich, Regel wie beim Änderungsalarm), ohne Namenskopf und ohne `km0-0`: `1:R@14:05 3:R@14:40`.
+
+- **Token je Ort** wie im Einzelfall: `R@14:05`, `R2.5@14:05`, `TH@14:05 R2.5`, `R now`, inklusive Ende-, Güte- und Prüfmarker (`1:R@14:05@14:15`).
+- **Reihenfolge:** früherer Beginn zuerst (laufend vor kommend), Gleichstand nach Ortsnummer — dieselbe Reihenfolge wie E-Mail und Telegram.
+- **Überlauf:** ganze Tokens oder keins; passen nicht alle, steht am Ende ` +k` (k = nicht genannte Orte). Der erste Ort bleibt immer. ≤ Limit (Alarm 140).
+- Fehlt dem Aufrufer die Ortsnummer, steht der ASCII-Ortsname (höchstens 12 Zeichen) davor: `Zermatt:R@14:05`.
+- **Ein auslösender Ort und Trip unverändert:** `Zermatt: R@14:05` bzw. `km 5-18: R@14:35`.
+- Löst Entscheid 3b aus #1948 S4 ab (PO 2026-11-09, ADR-0095 Nachtrag).
+
+Spec: `docs/specs/modules/fix_1767_nowcast_mehrort_kurzform.md`.
 
 ### 3.4b Confidence-Symbol `C` — entfallen (v2.34, Issue #2233)
 
@@ -837,6 +850,7 @@ Implementationen, die SMS-Text und E-Mail-Subject getrennt erzeugen, sind als **
 | 2.36 | 2026-10-21 | Neuer §3.4f: Abweichungs-Alarm-Token trägt die Zeitspanne `HH-HH` der betroffenen Stunden (ASCII-Bindestrich, GSM-7), Stufen-Tokens unverändert (Issue #1737). |
 | 2.37 | 2026-10-27 | Neuer §5b: Ortsvergleich-SMS trägt im Ortsteil den Zähler `?N` für gewählte, aber fehlende bzw. nicht darstellbare Größen (nach den Wertzellen, vor `!`); Normalfall unverändert (Issue #1405 S3, Spec `feat_1405_s3_mengenerhalt.md`). |
 | 2.38 | 2026-11-06 | **Profil-Ampel als einzige Bewertung (Issue #2792 S1c-4b, ADR-0106).** Die Hervorhebung `@{h}` (Spitzenwert bei `R`/`PR`/`W`/`G`/`TH:`/`TH+:`) folgt der Ampel des Abos: erste Stunde gelb oder schlechter, beidseitig; Gewitter ab „leicht“. `sms_threshold` und `DEFAULTS` wirken nicht mehr (Werte bleiben gespeichert). Temperatur-Token `L`/`D`/`FL`/`FD` tragen `@{h}` nur ab gelb, Bereichs-Token je Hälfte einzeln (`D-2/9@14`). `HU` erwähnt ab fest 90 %; `VS` ohne Schwellen-Gate über `sms_threshold`. Betrifft §3.2, §3.2a, §4. Gilt identisch für Premium-SMS (gleicher Text) und Telegram-Kurzform. Spec: `docs/specs/modules/feat_2792_s1_profil_ampel.md` §5 (v1.5). |
+| 2.39 | 2026-11-09 | Neuer §3.4i: Radar-Alarm im Ortsvergleich mit mehreren Orten nennt jeden Ort mit Ortsnummer (`1:R@14:05 3:R@14:40`), sortiert nach Beginn, Überlauf ` +k`; Ein-Ort und Trip unverändert (Issue #1767, löst #1948-S4-Entscheid 3b ab). |
 
 **Quellen für v2.0:**
 - Vorgänger-Repo `henemm/weather_email_autobot`:

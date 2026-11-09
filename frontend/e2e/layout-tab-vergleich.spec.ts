@@ -124,7 +124,9 @@ test.describe('F2a: Layout-Tab (/compare/new) = Stundenverlauf-Steuerung', () =>
 
 		const layoutTab = page.locator('[data-testid="compare-editor-tab-zustellung"]:visible').first();
 		await expect(layoutTab).toHaveAttribute('data-locked', 'true', { timeout: 8_000 });
-		await layoutTab.click();
+		// #2880: gesperrte Reiter tragen aria-disabled="true" — Playwright klickt sie nur mit force
+		// (der Nutzer kann sie weiterhin antippen; der Klick wechselt nicht).
+		await layoutTab.click({ force: true });
 		await expect(
 			page.locator('[data-testid="compare-layout-hourly-enabled-toggle"]:visible')
 		).toHaveCount(0);
