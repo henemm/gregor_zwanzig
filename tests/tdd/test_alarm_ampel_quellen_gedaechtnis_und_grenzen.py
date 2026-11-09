@@ -22,19 +22,18 @@ Baubloecke (Trip, Lauf, Quelle) teilt diese Datei mit
 from __future__ import annotations
 
 import email as email_mod
-import json
 import re
 import uuid
 from datetime import datetime, timedelta, timezone
 
 import pytest
 
-from app.loader import get_data_dir, save_location
+from app.loader import save_location
 from app.models import ThunderLevel
 from app.user import SavedLocation
 
 from tests.helpers.alert_log_fixtures import (
-    LAT, LON, clean_compare_user, compare_data_root, read_log, reason_for_channel,
+    LAT, LON, clean_compare_user, compare_data_root, reason_for_channel,
     settings_email_only,
 )
 from tests.helpers.compare_briefings import write_compare_briefings
