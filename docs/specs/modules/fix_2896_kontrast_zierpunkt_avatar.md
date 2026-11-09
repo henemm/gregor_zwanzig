@@ -171,3 +171,4 @@ Siehe `## Geplante Tests`: Kern-Test (AC-4, AC-5) zuerst rot schreiben, dann Imp
 ## Changelog
 
 - 2026-11-09: Initial spec created (Issue #2896, Folge aus #2371, Epic #2508)
+- 2026-11-09: Validierung (Phase 7): zusätzlich mechanisch geändert `frontend/src/lib/components/__tests__/f12_reste_sprache.test.ts` (zwei Golden-Hashes `wordmarkLeft`/`wordmarkNone`, gebildet über das gerenderte Wortmarken-HTML, in dem die Punktfarbe steht). Der wirkungslose Marker `audit:exempt: Markenname/Logo` an der Wortmarke ist mit entfallen (`contrast_audit.py` wertet ihn nicht aus).
