@@ -87,8 +87,13 @@ test.describe('Mobile-Shell S2: Konto-Kreis → Konto-Sheet', () => {
 		await expect
 			.poll(() => page.evaluate(() => localStorage.getItem('gz-dark') === '1'))
 			.toBe(!vorher);
-		const dunkel = await page.evaluate(() => document.documentElement.style.getPropertyValue('--color-background') !== '');
-		expect(dunkel).toBe(!vorher);
+		// #2400: Modus haengt am Attribut data-theme (nicht mehr am Inline-Style) und wirkt auf die Gregor-Palette.
+		const z = await page.evaluate(() => ({
+			theme: document.documentElement.getAttribute('data-theme'),
+			paper: getComputedStyle(document.documentElement).getPropertyValue('--g-paper').trim().toLowerCase()
+		}));
+		expect(z.theme === 'dark').toBe(!vorher);
+		expect(z.paper !== '#f6f4ee').toBe(!vorher);
 		// Zuruecksetzen, damit Folge-Tests nicht im Dunkelmodus starten
 		await schalter.click();
 		await expect
