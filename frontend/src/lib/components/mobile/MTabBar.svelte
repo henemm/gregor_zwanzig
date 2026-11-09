@@ -17,7 +17,8 @@
 	//   Trigger min-height 44px, Pill-Optik, Badges neutral.
 	// - Desktop (>=900px): Underline-Optik 1:1 wie bisheriger TripTabs-Stand
 	//   (padding 0.5rem/1rem, 0.875rem, Accent-Unterstrich); Zähler-Badges neutral
-	//   in jeder Breite und Größe (#2837 S1, ADR-0110).
+	//   in jeder Breite (#2837 S1, ADR-0110). Eine Optik für Trip und Vergleich,
+	//   ohne Varianten-Prop (#2845, Spec rework_2845_hub_reiterleiste).
 	// - data-slot-Vertrag (segmented/segmented-item/segmented-badge) bleibt
 	//   bestehen — bestehende Test-IDs und der app.css-Fallback greifen weiter.
 	import { tick } from 'svelte';
@@ -36,12 +37,9 @@
 		onChange: (value: string) => void;
 		/** Beschriftung der Leiste für Screenreader. */
 		ariaLabel: string;
-		/** Desktop-Optik: 'md' = Trip-Unterline (default), 'sm' = Compare-Reihe
-		 *  (13px, 12/16px, inaktiv --g-ink-3). Die Badge-Farbe hängt NICHT an size. */
-		size?: 'md' | 'sm';
 	}
 
-	let { items, active, onChange, ariaLabel, size = 'md' }: Props = $props();
+	let { items, active, onChange, ariaLabel }: Props = $props();
 
 	let bandEl = $state<HTMLDivElement | null>(null);
 
@@ -77,7 +75,6 @@
 <div
 	bind:this={bandEl}
 	class="mtabbar"
-	class:sm={size === 'sm'}
 	role="tablist"
 	aria-label={ariaLabel}
 	data-slot="segmented"
@@ -138,7 +135,7 @@
 		padding: 0.125rem 0.375rem;
 		border-radius: 9999px;
 		/* #2837 S1 (ADR-0110, AC-10): Zähler neutral für Trip UND Vergleich (ink-3 auf
-		   paper-deep ≈ 4,7:1, WCAG-AA) — Standard, nicht über `size` gesteuert.
+		   paper-deep ≈ 4,7:1, WCAG-AA) — Standard, ohne Variante (#2845).
 		   Accent bleibt allein der Unterstrich des aktiven Reiters. */
 		background: var(--g-paper-deep);
 		color: var(--g-ink-3);
@@ -147,20 +144,6 @@
 		font-weight: 600;
 	}
 
-	/* size="sm" (Compare): 1:1 der bisherigen Compare-Leiste — 13px, 12/16px,
-	   inaktiv --g-ink-3, aktiv fett, Container ohne Unterstrich-Linie. */
-	.mtabbar.sm {
-		border-bottom: none;
-	}
-	.mtabbar.sm :global([data-slot='segmented-item']) {
-		padding: 12px 16px;
-		font-size: 13px;
-		color: var(--g-ink-3);
-	}
-	.mtabbar.sm :global([data-slot='segmented-item'][data-state='active']) {
-		font-weight: 600;
-		color: var(--g-ink);
-	}
 	/* Mobile (<900px): horizontales Band + Fade (#1231) + Pill-Trigger. */
 	@media (max-width: 899px) {
 		.mtabbar {

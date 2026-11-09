@@ -1,23 +1,26 @@
 // TDD RED — Issue #2837 Scheibe S1 (Epic #2345), Entscheidung 7 / AC-10: die Zähler an
 // den Reitern (Badge `[data-slot="segmented-badge"]` in `MTabBar`) sind bei Trip UND
 // Ortsvergleich neutral (Grund `--g-paper-deep`, Schrift `--g-ink-3`, nachgerechnet
-// ≈ 4,7:1), nie mehr Accent-gefüllt; die Farbe hängt NICHT an `size` (Größe und Farbe
-// sind verschiedene Achsen). Spec: docs/specs/modules/rework_2837_s1_hub_kopf.md
+// ≈ 4,7:1), nie mehr Accent-gefüllt. Spec: docs/specs/modules/rework_2837_s1_hub_kopf.md
+// Seit #2845 (Spec rework_2845_hub_reiterleiste) hat MTabBar KEINE Variantenachse mehr
+// (früher `size` 'md' = Trip / 'sm' = Vergleich): Trip und Vergleich teilen eine Optik.
 //
 // Warum am CSS-AST: Das Badge trägt keine Klasse — seine Farbe kommt allein aus den
 // komponenten-eigenen (scoped) Regeln von MTabBar.svelte; im SSR-Markup sind Trip- und
-// Vergleichs-Badge bereits heute identisch (`<span data-slot="segmented-badge">`). Die
-// Wirkung sitzt also in der Kaskade dieser Regeln. Der Test liest sie mit dem ECHTEN
-// Svelte-Compiler (parse, modern) und rechnet die Kaskade für ein Badge in einem
-// NICHT aktiven Reiter nach — je Breite (Desktop / `max-width: 899px`) und je `size`
-// ('md' = Trip, 'sm' = Vergleich, CompareTabs.svelte). Im echten Browser bewacht
-// dieselbe Zusicherung die E2E `hub-tab-bar.spec.ts` HT-8 (getComputedStyle, Kontrast).
+// Vergleichs-Badge identisch (`<span data-slot="segmented-badge">`). Die Wirkung sitzt
+// also in der Kaskade dieser Regeln. Der Test liest sie mit dem ECHTEN Svelte-Compiler
+// (parse, modern) und rechnet die Kaskade für ein Badge in einem NICHT aktiven Reiter
+// nach — je Breite (Desktop / `max-width: 899px`). Im echten Browser bewacht dieselbe
+// Zusicherung die E2E `hub-tab-bar.spec.ts` HT-8 (getComputedStyle, Kontrast).
 //
 // Pflicht-Mutation (b) „Zähler wieder accent-gefüllt" ⇒ rot: an der Basisregel
 // (`background: var(--g-accent)`) ebenso wie an einer neuen Varianten-Klasse.
 //
-// RED HEUTE: `.mtabbar :global([data-slot='segmented-badge'])` füllt mit `--g-accent`
-// und `#fff` (Trip-Desktop) — neutral ist nur `size="sm"`.
+// #2845 AC-1/AC-7 (Adversary F001/F002): die Linie unter der Leiste muss die Basisregel
+// `.mtabbar` SELBST deklarieren (im Browser verdeckt der app.css-Fallback
+// `[data-slot="segmented"] { border: … }` ein Entfernen — Mutation (c)); und es gibt
+// keinen Schalter: Props genau items/active/onChange/ariaLabel, kein Klassen- oder
+// Attribut-Selektor als Variante am `.mtabbar`-Kopf (Mutation a/a2).
 //
 // Pfadregel #1409: Prüfling relativ zu DIESER Datei.
 //   cd frontend && node --import ./test-lib-loader.mjs --experimental-strip-types \
@@ -70,10 +73,10 @@ const REGELN = regeln();
 const istBadge = (sel: string) => /segmented-badge/.test(sel);
 /** Aktiv-Zustand des REITERS (transluzentes Badge im aktiven Pill) — nicht Gegenstand. */
 const nurAktiv = (sel: string) => /data-state='active'|data-state="active"|data-active='true'|data-active="true"/.test(sel);
-/** Klassen am .mtabbar-Kopf des Selektors (z. B. ['sm']). */
-const kopfKlassen = (sel: string): string[] => {
-	const m = /^\.mtabbar((?:\.[a-zA-Z0-9_-]+)*)/.exec(sel);
-	return m ? m[1].split('.').filter(Boolean) : [];
+/** Varianten am .mtabbar-Kopf: Klassen (`.sm`) UND Attribute (`[data-dense]`), auch gemischt. */
+const kopfVarianten = (sel: string): string[] => {
+	const m = /^\.mtabbar((?:\.[a-zA-Z0-9_-]+|\[[^\]]*\])*)/.exec(sel);
+	return m ? (m[1].match(/\.[a-zA-Z0-9_-]+|\[[^\]]*\]/g) ?? []) : [];
 };
 const spezifitaet = (sel: string): number =>
 	(sel.replace(/:global\(([^)]*)\)/g, '$1').match(/\.[a-zA-Z]/g) ?? []).length + (sel.match(/\[/g) ?? []).length;
@@ -85,7 +88,7 @@ function badgeStil(mobil: boolean): Record<string, string> {
 		if (r.media !== null && !(mobil && /max-width:\s*899px/.test(r.media))) continue;
 		for (const sel of r.selektoren) {
 			if (!istBadge(sel) || nurAktiv(sel)) continue;
-			if (kopfKlassen(sel).length > 0) continue; // Varianten-Klasse: eigener Wächter-Test unten
+			if (kopfVarianten(sel).length > 0) continue; // Variante am Kopf: eigener Wächter-Test unten
 			treffer.push({ spez: spezifitaet(sel), ordnung: r.ordnung, decls: r.decls });
 		}
 	}
@@ -127,12 +130,22 @@ describe('#2837 S1 AC-10 — Reiter-Zähler neutral (#2845: eine Optik, keine Va
 });
 
 describe('#2845 AC-7 — MTabBar hat keinen Schalter für die Desktop-Optik', () => {
-	test('kein Selektor der <style>-Regeln trägt eine Varianten-Klasse am .mtabbar-Kopf', () => {
+	test('kein Selektor der <style>-Regeln trägt eine Varianten-Klasse oder ein Varianten-Attribut am .mtabbar-Kopf', () => {
 		const verstoesse: string[] = [];
-		for (const r of REGELN) for (const sel of r.selektoren) if (kopfKlassen(sel).length > 0) verstoesse.push(sel);
-		assert.deepEqual(verstoesse, [], 'Varianten-Klasse am .mtabbar-Kopf (z. B. .mtabbar.sm) — Rückfall ins Pendant');
+		for (const r of REGELN) for (const sel of r.selektoren) if (kopfVarianten(sel).length > 0) verstoesse.push(sel);
+		assert.deepEqual(verstoesse, [], 'Variante am .mtabbar-Kopf (z. B. .mtabbar.sm, .mtabbar[data-dense]) — Rückfall ins Pendant');
 	});
-	test('Props deklariert kein Feld `size` (AST der Typdeklaration)', () => {
+	test('AC-1: die Basisregel .mtabbar (Desktop) deklariert selbst die Linie border-bottom: 1px solid var(--g-ink-faint)', () => {
+		const basis = REGELN.filter((r) => r.media === null && r.selektoren.includes('.mtabbar'));
+		assert.ok(basis.length >= 1, 'keine Desktop-Basisregel `.mtabbar` gefunden');
+		const linie = basis.flatMap((r) => r.decls).filter(([p]) => p === 'border-bottom').map(([, v]) => v.replace(/\s+/g, ' '));
+		assert.deepEqual(
+			linie,
+			['1px solid var(--g-ink-faint)'],
+			'`.mtabbar` deklariert die Linie unter der Leiste nicht selbst (der app.css-Fallback verdeckt das im Browser — Mutation c)'
+		);
+	});
+	test('Props deklariert genau items, active, onChange, ariaLabel — kein Schalter (AST der Typdeklaration)', () => {
 		const felder: string[] = [];
 		// eslint-disable-next-line @typescript-eslint/no-explicit-any
 		const lauf = (n: any) => {
@@ -148,6 +161,10 @@ describe('#2845 AC-7 — MTabBar hat keinen Schalter für die Desktop-Optik', ()
 		};
 		lauf(AST.instance);
 		assert.ok(felder.includes('items'), `Props nicht gefunden (Felder: ${felder.join(',')})`);
-		assert.ok(!felder.includes('size'), 'Props deklariert noch `size`');
+		assert.deepEqual(
+			[...felder].sort(),
+			['active', 'ariaLabel', 'items', 'onChange'],
+			`Props hat zusätzliche Felder (${felder.join(',')}) — ein Varianten-Schalter (size, dense …) ist nach AC-7 verboten`
+		);
 	});
 });

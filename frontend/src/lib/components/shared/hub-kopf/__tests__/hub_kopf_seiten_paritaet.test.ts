@@ -173,7 +173,7 @@ describe('#2837 S1 Parität — beide Seiten bauen die Leiste gleich', () => {
 describe('#2837 S1 AC-10 — Reiter-Zähler: Trip und Vergleich rendern dasselbe Badge (Mutation b, Seiten-Anteil)', () => {
 	// Die Farbe selbst kommt aus den MTabBar-Regeln (mobile/__tests__/mtabbar_zaehler_neutral.test.ts);
 	// hier wird gesichert, dass keine Seite sie am Badge vorbei umfärbt (Inline-Stil, eigene
-	// Varianten-Attribute/Klassen) und die Leisten sich nur in der Größe `sm` unterscheiden.
+	// Varianten-Attribute/Klassen) und beide Leisten dieselbe Optik ohne Variante tragen (#2845).
 	const badge = (w: Knoten): Knoten => {
 		const b = alle(w, (n) => n.attrs['data-slot'] === 'segmented-badge');
 		assert.ok(b.length >= 1, 'kein Reiter-Zähler gerendert');
