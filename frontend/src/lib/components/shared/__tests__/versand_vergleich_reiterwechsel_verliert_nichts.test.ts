@@ -89,18 +89,21 @@ function hub() {
 	};
 }
 
-describe('AC-4 (#1743): Reiterwechsel weg von „wetter-metriken" sendet die ausstehende Versand-Änderung vorher', () => {
-	test('#1743 AC-26: „wetter-metriken" steht in der Liste, „versand"/„vorschau" nicht mehr', () => {
+// Issue #2794 S3a (Spec feat_2794_s3a_teil2_leiste.md AC-2): der Versand-Abschnitt liegt im Reiter
+// „zustellung" (zusammen mit den Alarmen). Der Guard flusht beim Verlassen von „zustellung"; die
+// Alarm-Aenderung danach kommt ebenfalls an (zwei unabhaengige Aenderungen, zwei PUTs).
+describe('AC-4 (#1743/#2794): Reiterwechsel weg von „zustellung" sendet die ausstehende Versand-Änderung vorher', () => {
+	test('#1743 AC-26 / #2794: „zustellung" steht in der Liste, „versand"/„vorschau"/„wetter-metriken" nicht mehr', () => {
 		assert.ok(
-			SELBST_SPEICHERNDE_VERGLEICH_REITER.includes('wetter-metriken'),
+			SELBST_SPEICHERNDE_VERGLEICH_REITER.includes('zustellung'),
 			'ohne den Eintrag flusht der Reiterwechsel-Guard den Versand-Abschnitt nicht — Datenverlust-Pfad'
 		);
-		for (const alt of ['versand', 'vorschau']) {
+		for (const alt of ['versand', 'vorschau', 'wetter-metriken']) {
 			assert.ok(!SELBST_SPEICHERNDE_VERGLEICH_REITER.includes(alt), `'${alt}' ist kein Reiter mehr`);
 		}
 	});
 
-	test('Versand-Änderung im Entprell-Fenster, Wechsel zu „alarme" mit sofortiger Radar-Änderung → BEIDE gespeichert', async () => {
+	test('Versand-Änderung im Entprell-Fenster, Wechsel zu „wetter", danach sofortige Radar-Änderung → BEIDE gespeichert', async () => {
 		const { wiz, ctl, versand, alarme, bedienung } = hub();
 
 		bedienung.setMorgenZeit('07:15');
@@ -108,12 +111,12 @@ describe('AC-4 (#1743): Reiterwechsel weg von „wetter-metriken" sendet die aus
 		assert.equal(ctl.hasPending, true, 'Vorbedingung: die Versand-Änderung wartet');
 		assert.equal(puts().length, 0, 'Vorbedingung: noch nichts gesendet');
 
-		await sichereSelbstSpeichererVorReiterwechsel('wetter-metriken', 'alarme', ctl);
+		await sichereSelbstSpeichererVorReiterwechsel('zustellung', 'wetter', ctl);
 
 		assert.equal(puts().length, 1, 'die Versand-Änderung muss vor dem Reiterwechsel gesendet werden');
 		assert.equal(puts()[0].status, 200, 'der PUT muss abgeschlossen sein, bevor der Wechsel weiterläuft');
 
-		// Im Alarme-Reiter sofort Radar anschalten
+		// Danach sofort Radar anschalten (Alarm-Besitzer)
 		wiz.radarAlertEnabled = true;
 		alarme.aenderungMelden();
 		await ctl.flush();
@@ -130,7 +133,7 @@ describe('AC-4 (#1743): Reiterwechsel weg von „wetter-metriken" sendet die aus
 		bedienung.setMorgenZeit('07:15');
 		versand.aenderungMelden();
 
-		await sichereSelbstSpeichererVorReiterwechsel('wetter-metriken', 'wetter-metriken', ctl);
+		await sichereSelbstSpeichererVorReiterwechsel('zustellung', 'zustellung', ctl);
 
 		assert.equal(puts().length, 0, 'ohne echten Wechsel bleibt die Entprellung unangetastet');
 		assert.equal(ctl.hasPending, true);

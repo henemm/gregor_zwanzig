@@ -36,7 +36,7 @@
 	}
 
 	let {
-		context,
+		context, bereich = 'alles', // #2794 S3a: Darstellungsfilter (Reiter Wetter | Zustellung)
 		onJump,
 		activation,
 		versand = {},
@@ -60,8 +60,8 @@
 	});
 </script>
 
-<WeatherMetricsTab {context} {...wetter} />
-
+<WeatherMetricsTab {context} {...wetter} {bereich} />
+{#if bereich !== 'wetter'}<!-- #2794 S3a: Versand-Abschnitt nur im Reiter Zustellung, nicht unter Wetter. -->
 <section id="versand" data-testid="versand-abschnitt" class="wmv-versand" bind:this={abschnitt}>
 	{#if context === 'route' && !wetter.createMode}
 		{#if wetter.trip}
@@ -89,6 +89,7 @@
 		/>
 	{/if}
 </section>
+{/if}
 
 <style>
 	.wmv-versand {

@@ -280,7 +280,7 @@ test.describe('Issue #2316 Scheibe A: ausstehende Änderung überlebt das Neulad
 		const pfad = `/api/trips/${tripId}`;
 		const ziel = '30';
 
-		await oeffneAlarmStufen(page, `/trips/${tripId}?tab=alarme`);
+		await oeffneAlarmStufen(page, `/trips/${tripId}?tab=zustellung`);
 
 		const dialogs = collectLeaveDialogs(page);
 
@@ -318,7 +318,7 @@ test.describe('Issue #2316 Scheibe A: ausstehende Änderung überlebt das Neulad
 		const pfad = `/api/compare/presets/${presetId}`;
 		const ziel = '30';
 
-		await oeffneAlarmStufen(page, `/compare/${presetId}?tab=alarme`);
+		await oeffneAlarmStufen(page, `/compare/${presetId}?tab=zustellung`);
 
 		const dialogs = collectLeaveDialogs(page);
 
@@ -370,7 +370,7 @@ test.describe('Issue #2316 Scheibe A: ausstehende Änderung überlebt das Neulad
 		const pfad = `/api/compare/presets/${presetId}`;
 		const ziel = '90';
 
-		await oeffneAlarmStufen(page, `/compare/${presetId}?tab=alarme`);
+		await oeffneAlarmStufen(page, `/compare/${presetId}?tab=zustellung`);
 
 		const dialogs = collectLeaveDialogs(page);
 
@@ -401,7 +401,7 @@ test.describe('Issue #2317: jede Trip-Speicherung überlebt das Neuladen und wir
 		const pfad = `/api/trips/${tripId}`;
 		const ziel = '90';
 
-		await oeffneAlarmStufen(page, `/trips/${tripId}?tab=alarme`);
+		await oeffneAlarmStufen(page, `/trips/${tripId}?tab=zustellung`);
 
 		const dialogs = collectLeaveDialogs(page);
 
@@ -443,9 +443,9 @@ test.describe('Issue #2317: jede Trip-Speicherung überlebt das Neuladen und wir
 		});
 		const ziel = 'HIGH';
 
-		await page.goto(`/trips/${tripId}?tab=alarme`);
+		await page.goto(`/trips/${tripId}?tab=zustellung`);
 		await page.waitForLoadState('networkidle');
-		await expect(page.getByTestId('trip-detail-panel-alarme')).toBeVisible({ timeout: 15_000 });
+		await expect(page.getByTestId('trip-detail-panel-zustellung')).toBeVisible({ timeout: 15_000 });
 		await expect(page.getByTestId('alert-channel-threshold-telegram')).toBeVisible({ timeout: 10_000 });
 		await expect(
 			page.getByTestId('alert-channel-threshold-telegram-LOW'),
@@ -459,7 +459,7 @@ test.describe('Issue #2317: jede Trip-Speicherung überlebt das Neuladen und wir
 		await page.reload();
 		halt.aktiv = false;
 
-		await expect(page.getByTestId('trip-detail-panel-alarme')).toBeVisible({ timeout: 15_000 });
+		await expect(page.getByTestId('trip-detail-panel-zustellung')).toBeVisible({ timeout: 15_000 });
 		const zielKnopf = page.getByTestId(`alert-channel-threshold-telegram-${ziel}`);
 		await expect(zielKnopf).toBeVisible({ timeout: 10_000 });
 		await expect(
@@ -504,7 +504,8 @@ test.describe('Issue #2317: jede Trip-Speicherung überlebt das Neuladen und wir
 			}
 		});
 
-		await page.goto(`/trips/${tripId}?tab=wetter-metriken`);
+		// #2794 S3a: Grundauswahl und Tagesfenster stehen im Reiter Wetter.
+		await page.goto(`/trips/${tripId}?tab=wetter`);
 		const tab = page.getByTestId('weather-metrics-tab');
 		await expect(tab).toBeVisible({ timeout: 15_000 });
 		const boeen = tab.locator('[data-testid="wm2-grundauswahl"] .toggle-btn[title="Böen"]');
@@ -570,7 +571,7 @@ test.describe('Issue #2317: jede Trip-Speicherung überlebt das Neuladen und wir
 		const tripId = await legeTripAn(page, 'ac11-konflikt', TRIP_ALARM_SEED);
 		const pfad = `/api/trips/${tripId}`;
 
-		await oeffneAlarmStufen(page, `/trips/${tripId}?tab=alarme`);
+		await oeffneAlarmStufen(page, `/trips/${tripId}?tab=zustellung`);
 
 		const dialogs = collectLeaveDialogs(page);
 

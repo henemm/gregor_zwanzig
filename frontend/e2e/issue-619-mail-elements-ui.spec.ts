@@ -63,7 +63,8 @@ async function deleteTrip(
 
 async function openReportsSection(page: import('@playwright/test').Page, id: string) {
 	// Fix #1047: Reiter "Wetter-Metriken" (?tab=wetter-metriken), nicht mehr "Briefing-Zeitplan".
-	await page.goto(`/trips/${id}?tab=wetter-metriken`);
+	// #2794 S3a: die Mail-Inhalt-Karte (Abschnitt report_config) steht im Reiter Zustellung.
+	await page.goto(`/trips/${id}?tab=zustellung`);
 	await page.locator('[data-testid="weather-metrics-tab"]').waitFor({ state: 'visible' });
 	await page.locator('[data-testid="report-mail-content"]').waitFor({ state: 'visible' });
 }
@@ -147,7 +148,7 @@ test.describe('Issue #619: E-Mail-Elemente konfigurierbar', () => {
 		const id = tripId('fix1047-ac3');
 		await createTrip(request, id);
 		try {
-			await page.goto(`/trips/${id}?tab=wetter-metriken#versand`);
+			await page.goto(`/trips/${id}?tab=zustellung#versand`);
 			const abschnitt = page.getByTestId('versand-abschnitt');
 			// Kanal-Checkbox ist im Versand-Abschnitt unconditional gerendert (Ready-Marker,
 			// da die Live-Route immer per Auto-Save läuft — kein Save-Button vorhanden).

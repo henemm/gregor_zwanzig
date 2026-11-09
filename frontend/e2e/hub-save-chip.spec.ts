@@ -140,10 +140,11 @@ for (const kind of HUB_KINDS) {
 			).toEqual(expect.arrayContaining(['email', 'telegram', 'sms']));
 
 			const puts = zaehlePuts(page, hubApiPath(kind, hub.id));
-			await openHub(page, kind, hub.id, { tab: 'wetter-metriken' });
+			// #2794 S3a: der Abschnitt Layout/Kanal steht im Reiter Zustellung.
+			await openHub(page, kind, hub.id, { tab: 'zustellung' });
 			await expect(
 				page.locator('[data-testid="layout-tab"]:visible').first(),
-				'SC-1b: der geteilte LayoutTab (Kanal-Umschalter) im Reiter Wetter-Metriken fehlt'
+				'SC-1b: der geteilte LayoutTab (Kanal-Umschalter) im Reiter Zustellung fehlt'
 			).toBeVisible({ timeout: 15_000 });
 			await expect(chip(page)).toBeVisible({ timeout: 10_000 });
 
@@ -223,8 +224,9 @@ for (const kind of HUB_KINDS) {
 		const hub = await seedHub(page.request, kind);
 		try {
 			const pfad = hubApiPath(kind, hub.id);
-			await openHub(page, kind, hub.id, { tab: 'alarme' });
-			await expect(page.locator(`[data-testid="${sel.panel}-alarme"]:visible`)).toBeVisible({ timeout: 10_000 });
+			// #2794 S3a: die Alarme stehen im Reiter Zustellung.
+			await openHub(page, kind, hub.id, { tab: 'zustellung' });
+			await expect(page.locator(`[data-testid="${sel.panel}-zustellung"]:visible`)).toBeVisible({ timeout: 10_000 });
 			const feld = page.locator('[data-testid="alert-cooldown-input"]:visible').first();
 			await expect(feld).toBeVisible({ timeout: 10_000 });
 			await expect(feld, 'Vorbedingung: das Cooldown-Feld ist bearbeitbar').toBeEnabled();

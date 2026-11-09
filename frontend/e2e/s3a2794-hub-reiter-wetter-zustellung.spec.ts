@@ -11,7 +11,8 @@
 //   AC-5      — Tabelle Alt-Kennungen je Trip und Vergleich: richtiger Reiter aktiv, Adresszeile danach
 //               mit der neuen Kennung (#versand-Anker bleibt erhalten).
 //   AC-6      — Anlege-Schritte /trips/new und /compare/new.
-// Nicht hier: AC-7/AC-8, AC-2.T1/T3/T4 (Speicherweg-/Inventar-Läufe mit Datei-/API-Vergleich, /e2e-verify).
+// Nicht hier: AC-7/AC-8 (Inventar und Speicherweg) stehen in s3a2794-zustellung-inventar-speicherweg.spec.ts
+// (gleiche Config); AC-2.T1/T3/T4 Request-Vergleich in /e2e-verify.
 //
 // Daten: nur Wegwerf-Trips/-Vergleiche/-Orte (Präfix E2E-GZ-), Aufräumen im finally.
 // Kein fester Schlaf, kein networkidle. NIE gegen Produktion (prodUrlGuard im Setup-Projekt).

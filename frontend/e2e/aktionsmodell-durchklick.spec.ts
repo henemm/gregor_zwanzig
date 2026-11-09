@@ -166,8 +166,9 @@ for (const kind of ['trip', 'vergleich'] as const) {
 			test('Liste: Alarme / Wetter-Metriken / Bearbeiten fuehren auf den Hub-Reiter, keine Vorschau-Aktion (AC-8, AC-16, #1743)', async ({ page }) => {
 				const o = await legeAn(page, kind);
 				const ZIELE: Array<[string, string, string]> = [
-					['alarms', 'Alarme', `${o.pfad}?tab=alarme`],
-					['weather', 'Wetter-Metriken', `${o.pfad}?tab=wetter-metriken`]
+					// #2794 S3a: Alarme im Reiter Zustellung, Wetter-Metriken im Reiter Wetter.
+					['alarms', 'Alarme', `${o.pfad}?tab=zustellung`],
+					['weather', 'Wetter-Metriken', `${o.pfad}?tab=wetter`]
 				];
 				// Issue #1743: Aktion „Vorschau" entfaellt im Listen-Menue.
 				await listenMenueOeffnen(page, kind, o, viewport);

@@ -15,6 +15,9 @@
 // Issue #2727 (AC-8): der Ortsvergleich-Editor bekommt Name/Orte über `stateOverride` statt über
 // einen Context — Vergleichsfälle heute rot (VERTRAG FEHLT), Trip-Fälle unverändert grün.
 // Ein Versand-Besuchs-Flag wird nicht gesät — genau das ist „Versand nie berührt".
+// Issue #2794 S3a (Spec feat_2794_s3a_teil2_leiste.md AC-6): letzter Schritt ist „Zustellung"
+// (Flags wtVisited/zuVisited bzw. metrikenVisited/zustellungVisited); „Versand nie berührt" heisst
+// weiter: am Versand-Abschnitt wurde nichts geaendert, der POST traegt die Standardwerte.
 //
 // Ausführen (aus frontend/):
 //   node --import ./test-lib-loader.mjs --experimental-strip-types --test \
@@ -33,7 +36,7 @@ const ETAPPE_MIT_GPX = { id: 1, name: 'Toblach → Helmhotel', gpx: { file: 'e1.
 async function tripAnlegen(flags: Record<string, boolean>): Promise<{ ready: unknown; gepostet: Knoten[] }> {
 	const gepostet: Knoten[] = [];
 	const e = await editorUmgebung(TRIP_EDITOR, {
-		stateOverride: { activeTab: 'alarme', isMobileViewport: false, name: 'Karnischer Höhenweg', startDate: '2026-07-01', ...flags },
+		stateOverride: { activeTab: 'zustellung', isMobileViewport: false, name: 'Karnischer Höhenweg', startDate: '2026-07-01', ...flags },
 		stages: [ETAPPE_MIT_GPX],
 		api: {
 			post: async (url: string, body: unknown) => {
@@ -50,21 +53,21 @@ async function tripAnlegen(flags: Record<string, boolean>): Promise<{ ready: unk
 	return { ready: e.u.ready, gepostet };
 }
 
-describe('AC-19/AC-21: /trips/new — Anlegen nach Alarme, ohne den Versand-Abschnitt zu berühren', () => {
-	test('Positivkontrolle Messaufbau: mit allen Flags inkl. Versand wird genau ein POST gesendet', async () => {
-		const { gepostet } = await tripAnlegen({ wtVisited: true, wbVisited: true, alVisited: true, vsVisited: true });
-		assert.equal(gepostet.length, 1, 'Messaufbau kaputt: auch mit Versand-Besuch kein POST /api/trips');
+describe('AC-19/AC-21: /trips/new — Anlegen nach Zustellung, ohne den Versand-Abschnitt zu berühren', () => {
+	test('Positivkontrolle Messaufbau: mit allen Flags wird genau ein POST gesendet', async () => {
+		const { gepostet } = await tripAnlegen({ wtVisited: true, zuVisited: true });
+		assert.equal(gepostet.length, 1, 'Messaufbau kaputt: auch mit allen Besuchen kein POST /api/trips');
 	});
 
-	test('Wertebereiche besucht, Alarme nicht → kein POST (nicht früher frei)', async () => {
-		const { ready, gepostet } = await tripAnlegen({ wtVisited: true, wbVisited: true });
-		assert.equal(ready, false, 'Anlegen ist schon vor dem Alarme-Besuch frei');
+	test('Wetter besucht, Zustellung nicht → kein POST (nicht früher frei)', async () => {
+		const { ready, gepostet } = await tripAnlegen({ wtVisited: true });
+		assert.equal(ready, false, 'Anlegen ist schon vor dem Zustellungs-Besuch frei');
 		assert.equal(gepostet.length, 0);
 	});
 
-	test('Alarme besucht, Versand nie berührt → POST mit den Standard-Versandzeiten', async () => {
-		const { ready, gepostet } = await tripAnlegen({ wtVisited: true, wbVisited: true, alVisited: true });
-		assert.equal(ready, true, '#1743 AC-19 FAIL: „Trip speichern" ist nach dem Alarme-Besuch noch gesperrt.');
+	test('Zustellung besucht, Versand nie berührt → POST mit den Standard-Versandzeiten', async () => {
+		const { ready, gepostet } = await tripAnlegen({ wtVisited: true, zuVisited: true });
+		assert.equal(ready, true, '#2794 AC-6 FAIL: „Trip speichern" ist nach dem Zustellungs-Besuch noch gesperrt.');
 		assert.equal(gepostet.length, 1, '#1743 AC-21 FAIL: kein POST /api/trips');
 		const rc = gepostet[0].report_config as Knoten | undefined;
 		assert.ok(rc, `#1743 AC-21 FAIL: POST ohne report_config — die Standard-Versandzeiten fehlen. Körper: ${JSON.stringify(gepostet[0]).slice(0, 300)}`);
@@ -101,7 +104,7 @@ async function vergleichAnlegen(flags: Record<string, boolean>): Promise<{ frei:
 	// Issue #2727 (AC-8): kein Context mehr — Name und Orte reisen ueber stateOverride.
 	const e = await editorUmgebung(COMPARE_EDITOR, {
 		stateOverride: {
-			activeTab: 'alarme',
+			activeTab: 'zustellung',
 			isMobileViewport: false,
 			name: 'Sardinien-Woche',
 			pickedIds: ['loc-a', 'loc-b', 'loc-c'],
@@ -120,21 +123,21 @@ async function vergleichAnlegen(flags: Record<string, boolean>): Promise<{ frei:
 	return { frei: e.u.canActivateNow, gepostet: [...presetPosts] };
 }
 
-describe('AC-19/AC-20: /compare/new — Aktivieren nach Alarme, ohne den Versand-Abschnitt zu berühren', () => {
-	test('Positivkontrolle Messaufbau: mit allen Flags inkl. Versand wird genau ein POST gesendet', async () => {
-		const { gepostet } = await vergleichAnlegen({ metrikenVisited: true, idealsVisited: true, alarmeVisited: true, versandVisited: true });
-		assert.equal(gepostet.length, 1, 'Messaufbau kaputt: auch mit Versand-Besuch kein POST /api/compare/presets');
+describe('AC-19/AC-20: /compare/new — Aktivieren nach Zustellung, ohne den Versand-Abschnitt zu berühren', () => {
+	test('Positivkontrolle Messaufbau: mit allen Flags wird genau ein POST gesendet', async () => {
+		const { gepostet } = await vergleichAnlegen({ metrikenVisited: true, zustellungVisited: true });
+		assert.equal(gepostet.length, 1, 'Messaufbau kaputt: auch mit allen Besuchen kein POST /api/compare/presets');
 	});
 
-	test('Wertebereiche besucht, Alarme nicht → kein POST (nicht früher frei)', async () => {
-		const { frei, gepostet } = await vergleichAnlegen({ metrikenVisited: true, idealsVisited: true });
-		assert.equal(frei, false, '„Briefing aktivieren" ist schon vor dem Alarme-Besuch frei');
+	test('Wetter besucht, Zustellung nicht → kein POST (nicht früher frei)', async () => {
+		const { frei, gepostet } = await vergleichAnlegen({ metrikenVisited: true });
+		assert.equal(frei, false, '„Briefing aktivieren" ist schon vor dem Zustellungs-Besuch frei');
 		assert.equal(gepostet.length, 0);
 	});
 
-	test('Alarme besucht, Versand nie berührt → POST mit gültigem Standard-schedule', async () => {
-		const { frei, gepostet } = await vergleichAnlegen({ metrikenVisited: true, idealsVisited: true, alarmeVisited: true });
-		assert.equal(frei, true, '#1743 AC-19 FAIL: „Briefing aktivieren" ist nach dem Alarme-Besuch noch gesperrt.');
+	test('Zustellung besucht, Versand nie berührt → POST mit gültigem Standard-schedule', async () => {
+		const { frei, gepostet } = await vergleichAnlegen({ metrikenVisited: true, zustellungVisited: true });
+		assert.equal(frei, true, '#2794 AC-6 FAIL: „Briefing aktivieren" ist nach dem Zustellungs-Besuch noch gesperrt.');
 		assert.equal(gepostet.length, 1, '#1743 AC-20 FAIL: kein POST /api/compare/presets');
 		// Gueltig ist, was der Go-Handler annimmt (internal/handler/compare_preset.go:
 		// "daily"|"weekly"|"manual"); der Wizard-Standard 'daily_morning' reist als 'daily'

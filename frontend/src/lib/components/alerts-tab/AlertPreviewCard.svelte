@@ -68,7 +68,7 @@
 		<!-- Issue #809: Kein alert_rules nach Self-Heal = keine alert-fähigen Metriken -->
 		<!-- Issue #850: Link direkt auf Inhalt-Tab -->
 		<p class="empty" data-testid="alert-preview-no-metrics">
-			{#each textTeile($t('alarme.vorschau.keine_metriken')) as teil}{#if teil.platzhalter === 'link'}<a href="?tab=wetter-metriken" data-testid="alert-preview-no-metrics-link"><strong>{$t('alarme.vorschau.reiter_wetter_metriken')}</strong></a>{:else}{teil.text}{/if}{/each}
+			{#each textTeile($t('alarme.vorschau.keine_metriken')) as teil}{#if teil.platzhalter === 'link'}<a href="?tab=wetter" data-testid="alert-preview-no-metrics-link"><strong>{$t('alarme.vorschau.reiter_wetter_metriken')}</strong></a>{:else}{teil.text}{/if}{/each}
 		</p>
 	{:else if id === ''}
 		<!-- Issue #2283 S5: Anlege-Seite — es gibt noch keinen gespeicherten Eintrag. -->

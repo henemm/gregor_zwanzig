@@ -317,14 +317,16 @@ async function pruefeTextgleichheit(
 // ═══════════════════════════════════════════════════════════════════════════
 
 async function oeffneTripEditor(page: Page): Promise<Locator> {
-	await page.goto(`/trips/${TRIP_ID}?tab=wetter-metriken`);
-	const reiter = page.getByTestId('trip-detail-tab-wetter-metriken');
+	// #2794 S3a (Spec feat_2794_s3a_teil2_leiste.md): die Kanal-Karte mit den Kürzel-
+	// Marken steht im Reiter Zustellung; Katalog-Ende an ihren Zeilen abwarten.
+	await page.goto(`/trips/${TRIP_ID}?tab=zustellung`);
+	const reiter = page.getByTestId('trip-detail-tab-zustellung');
 	await expect(reiter).toBeVisible({ timeout: 15_000 });
 	await page.waitForLoadState('networkidle');
 	await reiter.click();
 	const tab = page.getByTestId('weather-metrics-tab');
 	await expect(tab).toBeVisible({ timeout: 15_000 });
-	await expect(tab.getByTestId('wm2-grundauswahl').locator('.toggle-btn').first()).toBeVisible({
+	await expect(tab.locator('[data-testid="wm2-reihenfolge-row"]').first()).toBeVisible({
 		timeout: 15_000
 	});
 	return tab;
@@ -334,8 +336,8 @@ async function oeffneVergleichsEditor(page: Page, presetId: string): Promise<Loc
 	await page.goto(`/compare/${presetId}`);
 	await expect(page.getByTestId('compare-detail-tab-list')).toBeVisible({ timeout: 15_000 });
 	await page.waitForLoadState('networkidle');
-	await page.getByTestId('compare-detail-tab-wetter-metriken').click();
-	const panel = page.getByTestId('compare-detail-panel-wetter-metriken');
+	await page.getByTestId('compare-detail-tab-zustellung').click();
+	const panel = page.getByTestId('compare-detail-panel-zustellung');
 	await expect(panel).toBeVisible({ timeout: 15_000 });
 	return panel;
 }
@@ -718,7 +720,7 @@ test.describe('Issue #1719 S4: die Kuerzel-Marken sind lesbar, in jeder Fensterb
 			// Ohne Neuladen waere das nur eine DOM-Bewegung: der lokale
 			// `consider`-Zwischenstand sieht im selben Tab identisch aus.
 			await page.reload();
-			await page.getByTestId('trip-detail-tab-wetter-metriken').click();
+			await page.getByTestId('trip-detail-tab-zustellung').click();
 			const neu = page
 				.getByTestId('weather-metrics-tab')
 				.locator('[data-testid="wm2-reihenfolge"]')

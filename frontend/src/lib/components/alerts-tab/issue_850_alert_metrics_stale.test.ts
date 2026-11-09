@@ -65,8 +65,9 @@ test('AC-2: AlertPreviewCard Hinweistext enthält Link data-testid="alert-previe
 		src.includes('data-testid="alert-preview-no-metrics-link"'),
 		'AlertPreviewCard.svelte muss Link mit data-testid="alert-preview-no-metrics-link" enthalten (Issue #850 AC-2)'
 	);
+	// #2794 S3a: die Metrik-Auswahl liegt im Reiter Wetter.
 	assert.ok(
-		src.includes('href="?tab=wetter-metriken"'),
-		'AlertPreviewCard.svelte Link muss auf ?tab=wetter-metriken verlinken (Issue #850 AC-2)'
+		src.includes('href="?tab=wetter"'),
+		'AlertPreviewCard.svelte Link muss auf ?tab=wetter verlinken (Issue #850 AC-2, #2794)'
 	);
 });

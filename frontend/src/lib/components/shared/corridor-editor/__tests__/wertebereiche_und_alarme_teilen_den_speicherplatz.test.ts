@@ -104,14 +104,14 @@ function alarmStufe(ws: Record<string, unknown>, metric: string, stufe: string):
 }
 
 describe('AC-4: Reiterwechsel Wertebereiche → Alarme im Entprell-Fenster verliert nichts', () => {
-	test('Wertebereich ändern, sofort zu „alarme", dort Radar an → BEIDE Änderungen gespeichert, in der richtigen Reihenfolge', async () => {
+	test('Wertebereich ändern (Reiter Wetter), sofort zu „zustellung", dort Radar an → BEIDE Änderungen gespeichert, in der richtigen Reihenfolge', async () => {
 		const { ws, ctl, wertebereiche, alarme, bedienung } = hub();
 
 		bedienung.patch('wind_max_kmh', { max: 55 });
 		wertebereiche.aenderungMelden();
 		assert.equal(ctl.hasPending, true, 'Vorbedingung: Wertebereich-Änderung wartet im Entprell-Fenster');
 
-		await sichereSelbstSpeichererVorReiterwechsel('wertebereiche', 'alarme', ctl);
+		await sichereSelbstSpeichererVorReiterwechsel('wetter', 'zustellung', ctl);
 
 		assert.equal(puts().length, 1, 'die Wertebereich-Änderung muss VOR dem Reiterwechsel gesendet sein');
 		assert.equal(puts()[0].status, 200, 'der PUT muss abgeschlossen sein, bevor der Wechsel weiterläuft');
@@ -150,17 +150,19 @@ describe('AC-4: Reiterwechsel Wertebereiche → Alarme im Entprell-Fenster verli
 		);
 	});
 
-	test('die Liste der Selbst-Speicherer enthält „alarme" UND „wertebereiche"', () => {
-		assert.ok(SELBST_SPEICHERNDE_VERGLEICH_REITER.includes('wertebereiche'), '„wertebereiche" fehlt im Flush-Guard');
-		assert.ok(SELBST_SPEICHERNDE_VERGLEICH_REITER.includes('alarme'), '„alarme" fehlt im Flush-Guard (S2-Verhalten)');
+	// #2794 S3a (Spec feat_2794_s3a_teil2_leiste.md AC-2): Wertebereiche liegen im Reiter `wetter`,
+	// Alarme im Reiter `zustellung`.
+	test('die Liste der Selbst-Speicherer enthält „zustellung" UND „wetter"', () => {
+		assert.ok(SELBST_SPEICHERNDE_VERGLEICH_REITER.includes('wetter'), '„wetter" fehlt im Flush-Guard');
+		assert.ok(SELBST_SPEICHERNDE_VERGLEICH_REITER.includes('zustellung'), '„zustellung" fehlt im Flush-Guard (S2-Verhalten)');
 	});
 
-	test('Richtung Alarme → Wertebereiche: der Guard flusht auch beim Verlassen von „alarme" (S2-Verhalten bleibt)', async () => {
+	test('Richtung Zustellung → Wetter: der Guard flusht auch beim Verlassen von „zustellung" (S2-Verhalten bleibt)', async () => {
 		const { ws, ctl, alarme } = hub();
 
 		ws.radarAlertEnabled = true;
 		alarme.aenderungMelden();
-		await sichereSelbstSpeichererVorReiterwechsel('alarme', 'wertebereiche', ctl);
+		await sichereSelbstSpeichererVorReiterwechsel('zustellung', 'wetter', ctl);
 
 		assert.equal(puts().length, 1);
 		assert.equal(puts()[0].status, 200);
@@ -172,7 +174,7 @@ describe('AC-4: Reiterwechsel Wertebereiche → Alarme im Entprell-Fenster verli
 		bedienung.patch('wind_max_kmh', { max: 55 });
 		wertebereiche.aenderungMelden();
 
-		await sichereSelbstSpeichererVorReiterwechsel('wertebereiche', 'wertebereiche', ctl);
+		await sichereSelbstSpeichererVorReiterwechsel('wetter', 'wetter', ctl);
 
 		assert.equal(puts().length, 0, 'ohne echten Wechsel bleibt der Debounce unangetastet');
 		assert.equal(ctl.hasPending, true);
@@ -180,7 +182,7 @@ describe('AC-4: Reiterwechsel Wertebereiche → Alarme im Entprell-Fenster verli
 	});
 
 	test('ohne Controller (Anlege-Seite) → kein Fehler, kein PUT', async () => {
-		await sichereSelbstSpeichererVorReiterwechsel('wertebereiche', 'alarme', undefined);
+		await sichereSelbstSpeichererVorReiterwechsel('wetter', 'zustellung', undefined);
 		assert.equal(puts().length, 0);
 	});
 });
@@ -191,7 +193,7 @@ describe('AC-3: Metrik entfernen (Wertebereiche) + Alarm-Stufe ändern (Alarme) 
 
 		alarmStufe(ws, 'wind_max_kmh', 'sensibel');
 		alarme.aenderungMelden();
-		await sichereSelbstSpeichererVorReiterwechsel('alarme', 'wertebereiche', ctl);
+		await sichereSelbstSpeichererVorReiterwechsel('zustellung', 'wetter', ctl);
 		assert.equal(puts().length, 1, 'Vorbedingung: Alarm-Stufe gespeichert');
 
 		bedienung.remove('snow_depth_cm');
@@ -222,7 +224,7 @@ describe('AC-3: Metrik entfernen (Wertebereiche) + Alarm-Stufe ändern (Alarme) 
 
 		bedienung.remove('snow_depth_cm');
 		wertebereiche.aenderungMelden();
-		await sichereSelbstSpeichererVorReiterwechsel('wertebereiche', 'alarme', ctl);
+		await sichereSelbstSpeichererVorReiterwechsel('wetter', 'zustellung', ctl);
 		assert.equal(puts().length, 1, 'Vorbedingung: Entfernen gespeichert');
 
 		alarmStufe(ws, 'wind_max_kmh', 'sensibel');

@@ -230,7 +230,8 @@ describe('AC-1: Alarme-Reiter englisch in Trip und Ortsvergleich, Zahlen und Sym
 			'Do not send alerts in this period (local time of the trip)'
 		])
 			hat(text, s);
-		hat(en, '<a href="?tab=wetter-metriken" data-testid="alert-preview-no-metrics-link"><strong>Weather metrics</strong></a>');
+		// #2794 S3a: Sprung in den Reiter Wetter.
+		hat(en, '<a href="?tab=wetter" data-testid="alert-preview-no-metrics-link"><strong>Weather metrics</strong></a>');
 		assert.deepEqual(deutscheReste(text, OHNE_LABEL_EN), []);
 	});
 	test('Bausteine unter alerts-tab/ englisch (Stufen-Tabelle, Vorschau)', () => {

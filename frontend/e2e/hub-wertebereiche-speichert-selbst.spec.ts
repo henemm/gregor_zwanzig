@@ -163,14 +163,15 @@ const zeilen = (editor: Locator) => editor.locator('[data-testid^="corridor-row-
 
 /** Öffnet den Reiter und prüft den Sperr-Hinweis (AC-22) samt sichtbarer Seed-Zeile. */
 async function oeffneWertebereiche(page: Page, kind: HubKind, id: string): Promise<Locator> {
-	await openHub(page, kind, id, { tab: 'wertebereiche' });
+	// #2794 S3a (Spec feat_2794_s3a_teil2_leiste.md): Wertebereiche stehen im Reiter Wetter.
+	await openHub(page, kind, id, { tab: 'wetter' });
 	// HubKind == context-Parameter des geteilten Korridor-Editors.
 	const editor = page.locator(`[data-testid="corridor-editor-${kind}"]:visible`);
 	await expect(editor).toBeVisible({ timeout: 10_000 });
 	await expect(editor.locator(`[data-testid="corridor-row-${WS_SEL[kind].zeile}"]`)).toBeVisible({ timeout: 10_000 });
 	await expect(
 		editor.locator('[data-testid="corridor-editor-gesperrt"]'),
-		'AC-22: der Sperr-Hinweis steht oben im Reiter Wertebereiche'
+		'AC-22: der Sperr-Hinweis steht oben im Abschnitt Wertebereiche'
 	).toHaveText(HINWEIS_DE);
 	return editor;
 }
@@ -231,6 +232,8 @@ for (const kind of HUB_KINDS) {
 				const vonFeld = row.locator('input[type="number"]').first();
 				await expect(vonFeld).toHaveValue(ws.von);
 				await expect(vonFeld, 'AC-22: das Zahlenfeld ist gesperrt').toBeDisabled();
+				// #2794 S3a: der Editor steht unter der Metrik-Auswahl im Reiter Wetter — erst ins Bild holen.
+				await row.scrollIntoViewIfNeeded();
 				const handle = await row.locator('.ce-handle').first().boundingBox();
 				const kopf = await page.locator(`[data-testid="${sel.reiter}-uebersicht"]:visible`).boundingBox();
 				expect(handle, 'Vorbedingung: der Von-Griff ist sichtbar').not.toBeNull();
@@ -267,7 +270,8 @@ for (const kind of HUB_KINDS) {
 				const editor = await oeffneWertebereiche(page, kind, hub.id);
 
 				await (await gesperrterPoolEintrag(editor, ws.pool[0])).click({ force: true });
-				await page.locator(`[data-testid="${sel.reiter}-alarme"]:visible`).click();
+				// #2794 S3a: die Alarme stehen im Reiter Zustellung.
+				await page.locator(`[data-testid="${sel.reiter}-zustellung"]:visible`).click();
 				await expect(page.locator('[data-testid="alarme-tab"]').first()).toBeVisible({ timeout: 10_000 });
 				expect(puts.length, 'WS-3: der Reiterwechsel darf aus dem gesperrten Reiter nichts senden').toBe(0);
 
@@ -458,7 +462,7 @@ for (const kind of HUB_KINDS) {
 				const s = await stand(page, kind, hub.id);
 				expect(ws.altfelder(s), 'AC-24: Wertebereiche auf dem Server unverändert (nie geleert)').toEqual(vorher);
 
-				await openHub(page, kind, hub.id, { tab: 'wertebereiche' });
+				await openHub(page, kind, hub.id, { tab: 'wetter' });
 				const neu = page.locator(`[data-testid="corridor-editor-${kind}"]:visible`);
 				await expect(neu).toBeVisible({ timeout: 10_000 });
 				await expect(neu.locator(`[data-testid="corridor-row-${ws.zeile}"]`), 'nach Neuladen steht die Zeile noch').toBeVisible({

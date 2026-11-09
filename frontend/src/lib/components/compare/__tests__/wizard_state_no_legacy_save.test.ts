@@ -35,11 +35,10 @@ describe('#1250 AC-3 (am neuen Ort, #2727): kein Legacy-Save gegen /api/subscrip
 		try {
 			const e = await vergleichEditor({
 				stateOverride: {
-					activeTab: 'alarme',
+					activeTab: 'zustellung', // #2794 S3a: letzter Schritt
 					isMobileViewport: false,
 					metrikenVisited: true,
-					idealsVisited: true,
-					alarmeVisited: true,
+					zustellungVisited: true,
 					name: 'Legacy-Gegenprobe',
 					pickedIds: ['loc-a', 'loc-b']
 				}

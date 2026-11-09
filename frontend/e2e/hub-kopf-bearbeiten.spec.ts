@@ -303,8 +303,9 @@ for (const kind of HUB_KINDS) {
 			// 2) Im SELBEN Seitenaufenthalt (kein Reload/goto — ein Reload lüde den
 			//    Namen ohnehin frisch vom Server, Adversary-Fund F001 aus #1273 S2) per
 			//    In-Page-Klick in den Reiter Alarme, die Böen-Empfindlichkeit umstellen.
-			await page.locator(`[data-testid="${HUB_SEL[kind].reiter}-alarme"]:visible`).first().click();
-			const panel = page.locator(`[data-testid="${HUB_SEL[kind].panel}-alarme"]:visible`).first();
+			//    #2794 S3a: die Alarme stehen im Reiter Zustellung.
+			await page.locator(`[data-testid="${HUB_SEL[kind].reiter}-zustellung"]:visible`).first().click();
+			const panel = page.locator(`[data-testid="${HUB_SEL[kind].panel}-zustellung"]:visible`).first();
 			await expect(panel).toBeVisible({ timeout: 10_000 });
 			// #2793 S2b (Spec §6): die Empfindlichkeit ist nur lesbar -- bearbeitbare
 			// Alarm-Einstellung ist die Sperrzeit (`alert_cooldown_minutes`).

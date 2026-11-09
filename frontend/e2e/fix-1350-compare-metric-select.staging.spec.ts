@@ -79,7 +79,7 @@ test.describe('Issue #1350 Teil 2 AC-1: Compare-Auswahlliste aus GET /api/compar
 			const catalog = (await metricsRes.json()) as { metrics: CatalogEntry[] };
 			const groups = groupByMetricId(catalog.metrics);
 
-			await page.goto(`/compare/${preset.id}?tab=wetter-metriken`);
+			await page.goto(`/compare/${preset.id}?tab=wetter`);
 			const list = page.locator('[data-testid="weather-metrics-vergleich-list"]');
 			await list.waitFor({ state: 'visible', timeout: 15000 });
 
@@ -125,7 +125,7 @@ test.describe('Issue #1350 Teil 2 AC-1: Compare-Auswahlliste aus GET /api/compar
 		});
 
 		try {
-			await page.goto(`/compare/${preset.id}?tab=wetter-metriken`);
+			await page.goto(`/compare/${preset.id}?tab=wetter`);
 			await page
 				.locator('[data-testid="weather-metrics-vergleich-list"]')
 				.waitFor({ state: 'visible', timeout: 15000 });
@@ -176,7 +176,7 @@ test.describe('Issue #1350 Teil 2 AC-1: Compare-Auswahlliste aus GET /api/compar
 			}
 
 			// Bestehendes Preset laedt nach Reload mit unveraendert der neuen Auswahl.
-			await page.goto(`/compare/${preset.id}?tab=wetter-metriken`);
+			await page.goto(`/compare/${preset.id}?tab=wetter`);
 			await page
 				.locator('[data-testid="weather-metrics-vergleich-list"]')
 				.waitFor({ state: 'visible', timeout: 15000 });
@@ -220,7 +220,7 @@ test.describe('Issue #1350 Teil 2 AC-1: Compare-Auswahlliste aus GET /api/compar
 
 		try {
 			const puts = collectPutRequests(page, '/api/compare/');
-			await page.goto(`/compare/${preset.id}?tab=wetter-metriken`);
+			await page.goto(`/compare/${preset.id}?tab=wetter`);
 			await page
 				.locator('[data-testid="weather-metrics-vergleich-list"]')
 				.waitFor({ state: 'visible', timeout: 15000 });
@@ -261,7 +261,7 @@ test.describe('Issue #1350 Teil 2 AC-1: Compare-Auswahlliste aus GET /api/compar
 				route.fulfill({ status: 500, contentType: 'application/json', body: '{}' })
 			);
 
-			await page.goto(`/compare/${preset.id}?tab=wetter-metriken`);
+			await page.goto(`/compare/${preset.id}?tab=wetter`);
 
 			const errorShell = page.locator('[data-testid="weather-metrics-vergleich-load-error"]');
 			await expect(errorShell).toBeVisible({ timeout: 15000 });

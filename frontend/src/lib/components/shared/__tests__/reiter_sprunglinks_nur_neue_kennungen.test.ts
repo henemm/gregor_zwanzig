@@ -45,9 +45,10 @@ register(
 // #2682: das Übersichts-Modell wird echt geladen (endungslose Importe der Helfer).
 register(pathToFileURL(join(FRONTEND, 'test-svelte-ssr-hooks.mjs')).href, pathToFileURL(FRONTEND + '/').href);
 
-// #1743: fuenf Reiter je Hub — fest eingesetzt.
-const TRIP_IDS = ['uebersicht', 'etappen', 'wetter-metriken', 'wertebereiche', 'alarme'];
-const VERGLEICH_IDS = ['uebersicht', 'orte', 'wetter-metriken', 'wertebereiche', 'alarme'];
+// #2794 S3a (Spec feat_2794_s3a_teil2_leiste.md AC-1/AC-5): vier Reiter je Hub — fest eingesetzt.
+// Wetter-Metriken und Wertebereiche gehen im Reiter `wetter` auf, Alarme und Versand in `zustellung`.
+const TRIP_IDS = ['uebersicht', 'etappen', 'wetter', 'zustellung'];
+const VERGLEICH_IDS = ['uebersicht', 'orte', 'wetter', 'zustellung'];
 
 const datei = (rel: string) => join(SRC, rel);
 const tabAus = (url: string): string | null => new URL(url, 'http://localhost/x').searchParams.get('tab');
@@ -69,13 +70,14 @@ function gotoRekorder(): { ziele: string[]; goto: (u: string) => Promise<void> }
 describe('AC-10 (Verhalten): Home-Schnellaktion „Trip einrichten" fuehrt in neue Kennungen', () => {
 	const schritte = (offen: number) => [0, 1, 2, 3, 4].map((i) => ({ label: `s${i}`, done: i !== offen }));
 
-	// #1743 AC-23: Layout (3) und Reports (4) liegen unter Wetter-Metriken; der Versand-Schritt
-	// (Reports) springt per Anker zum Versand-Abschnitt.
+	// #1743 AC-23: der Versand-Schritt (Reports) springt per Anker zum Versand-Abschnitt.
+	// #2794 S3a: Wetter (2) → Reiter wetter; Layout je Kanal (3) und Reports (4) liegen im
+	// Reiter Zustellung.
 	for (const [offen, erwartet, anker] of [
 		[1, 'etappen', ''],
-		[2, 'wetter-metriken', ''],
-		[3, 'wetter-metriken', null],
-		[4, 'wetter-metriken', '#versand']
+		[2, 'wetter', ''],
+		[3, 'zustellung', null],
+		[4, 'zustellung', '#versand']
 	] as Array<[number, string, string | null]>) {
 		test(`erster offener Schritt ${offen} → ?tab=${erwartet}${anker ?? ''} (loest ohne Legacy auf)`, async () => {
 			const { u } = await umgebungFuer(datei('routes/+page.svelte'), {
@@ -109,7 +111,7 @@ describe('AC-10 (Verhalten): Trip-Liste — „Wetter" (Bestandsfehler #weather)
 	});
 
 	for (const [key, erwartet] of [
-		['weather', 'wetter-metriken']
+		['weather', 'wetter']
 	] as Array<[string, string]>) {
 		test(`onTripAction('${key}') → /trips/<id>?tab=${erwartet}, kein Hash`, async () => {
 			const rek = gotoRekorder();
@@ -123,8 +125,8 @@ describe('AC-10 (Verhalten): Trip-Liste — „Wetter" (Bestandsfehler #weather)
 	}
 });
 
-describe('AC-10 (Verhalten): WeatherSummaryCard „Wetter" oeffnet den Reiter Wetter-Metriken', () => {
-	test('Klick-Handler → /trips/<id>?tab=wetter-metriken (kein #weather)', async () => {
+describe('AC-10 (Verhalten): WeatherSummaryCard „Wetter" oeffnet den Reiter Wetter', () => {
+	test('Klick-Handler → /trips/<id>?tab=wetter (kein #weather)', async () => {
 		const rek = gotoRekorder();
 		const { u } = await umgebungFuer(datei('lib/components/edit/WeatherSummaryCard.svelte'), {
 			goto: rek.goto,
@@ -135,7 +137,7 @@ describe('AC-10 (Verhalten): WeatherSummaryCard „Wetter" oeffnet den Reiter We
 		assert.equal(rek.ziele.length, 1, JSON.stringify(rek.ziele));
 		assert.equal(rek.ziele[0].includes('#'), false);
 		assert.equal(rek.ziele[0].startsWith('/trips/khw?tab='), true, rek.ziele[0]);
-		assert.equal(tabAus(rek.ziele[0]), 'wetter-metriken');
+		assert.equal(tabAus(rek.ziele[0]), 'wetter');
 	});
 });
 
@@ -176,12 +178,13 @@ function erzeugteKennungen(rel: string): string[] {
 }
 
 // #1743: 'versand' und 'vorschau' sind seither ebenfalls Alt-Kennungen.
-const ALT = ['overview', 'stages', 'weather', 'alerts', 'briefings', 'preview', 'idealwerte', 'layout', 'versand', 'vorschau'];
+// #2794 S3a: 'wetter-metriken', 'wertebereiche' und 'alarme' ebenso.
+const ALT = ['overview', 'stages', 'weather', 'alerts', 'briefings', 'preview', 'idealwerte', 'layout', 'versand', 'vorschau', 'wetter-metriken', 'wertebereiche', 'alarme'];
 
 // doc-compliance-test: hartkodierte href-/Handler-Literale haben keinen Funktionsaufruf.
 describe('AC-9 / AC-10 (Quelltext-Scan, doc-compliance-test): Trip-Sprunglinks nur mit neuen Trip-Kennungen', () => {
 	const ERWARTET: Record<string, string[]> = {
-		'lib/components/alerts-tab/AlertPreviewCard.svelte': ['wetter-metriken']
+		'lib/components/alerts-tab/AlertPreviewCard.svelte': ['wetter']
 	};
 	for (const [rel, erwartet] of Object.entries(ERWARTET)) {
 		test(`${rel.split('/').pop()}: erzeugt genau ${JSON.stringify(erwartet)}`, () => {
@@ -195,10 +198,10 @@ describe('AC-9 / AC-10 (Quelltext-Scan, doc-compliance-test): Trip-Sprunglinks n
 	// wird als Verhalten in versand_sprung_auf_wetter_metriken.test.ts gemessen.
 	// #2682 (Entscheidung 4/AC-11): der Knopf „Alle Alerts →" (Sprungziel 'wertebereiche') entfaellt
 	// mit der Alerts-Attrappe bewusst; die uebrigen Sprungziele bleiben Pflicht.
-	test('HubOverview: Sprungkarten nur mit neuen Trip-Kennungen (Etappen, Wetter-Metriken) — keine Versand/Vorschau, kein „Alle Alerts →"', () => {
+	test('HubOverview: Sprungkarten nur mit neuen Trip-Kennungen (Etappen, Wetter) — keine Versand/Vorschau, kein „Alle Alerts →"', () => {
 		const k = erzeugteKennungen('lib/components/trip-detail/HubOverview.svelte');
 		for (const id of k) assert.ok(TRIP_IDS.includes(id), `Kennung '${id}' ist keine neue Trip-Kennung`);
-		for (const pflicht of ['etappen', 'wetter-metriken']) {
+		for (const pflicht of ['etappen', 'wetter']) {
 			assert.ok(k.includes(pflicht), `HubOverview springt nicht mehr auf '${pflicht}'`);
 		}
 		assert.ok(!k.includes('wertebereiche'), 'HubOverview springt noch auf wertebereiche („Alle Alerts →", AC-11)');
@@ -228,9 +231,9 @@ describe('AC-9 / AC-10 (Verhalten, #2682): Sprungziele der geteilten Übersicht'
 	const ziele = (m: Knoten) =>
 		[m.orteKarte, m.wertebereicheKarte, m.versandKarte].filter(Boolean).map((k: Knoten) => k.sprungziel);
 
-	test('Vergleich: Orte, Wertebereiche, Versand (#versand) — jede Kennung ist ein Vergleich-Reiter', async () => {
+	test('Vergleich: Orte, Wertebereiche (Reiter Wetter), Versand (Reiter Zustellung #versand) — jede Kennung ist ein Vergleich-Reiter', async () => {
 		const z = ziele((await modelle()).vergleich);
-		assert.deepEqual(z.map((x) => x.tab), ['orte', 'wertebereiche', 'wetter-metriken']);
+		assert.deepEqual(z.map((x) => x.tab), ['orte', 'wetter', 'zustellung']);
 		assert.equal(z[2].anchor, 'versand');
 		for (const { tab } of z) {
 			assert.ok(VERGLEICH_IDS.includes(tab), `'${tab}' ist keine neue Vergleich-Kennung`);
@@ -238,13 +241,13 @@ describe('AC-9 / AC-10 (Verhalten, #2682): Sprungziele der geteilten Übersicht'
 		}
 	});
 
-	test('Vergleich: „Bearbeiten →" der Wertebereiche-Karte nutzt die Kennung wertebereiche (nie idealwerte)', async () => {
-		assert.equal((await modelle()).vergleich.wertebereicheKarte?.sprungziel.tab, 'wertebereiche');
+	test('Vergleich: „Bearbeiten →" der Wertebereiche-Karte nutzt die Kennung wetter (nie idealwerte)', async () => {
+		assert.equal((await modelle()).vergleich.wertebereicheKarte?.sprungziel.tab, 'wetter');
 	});
 
-	test('Trip: nur die Versand-Karte (wetter-metriken#versand) — neue Trip-Kennung', async () => {
+	test('Trip: nur die Versand-Karte (zustellung#versand) — neue Trip-Kennung', async () => {
 		const z = ziele((await modelle()).route);
-		assert.deepEqual(z, [{ tab: 'wetter-metriken', anchor: 'versand' }]);
+		assert.deepEqual(z, [{ tab: 'zustellung', anchor: 'versand' }]);
 		assert.equal(resolveTab('trip', z[0].tab).legacy, false);
 	});
 
@@ -275,12 +278,13 @@ describe('AC-9 / AC-10 (Quelltext-Scan, doc-compliance-test): Vergleich-Sprungli
 	// Issue #2278 AC-12: das Hub-Menue ist reiner Lebenszyklus; "Setup abschliessen" bleibt im Hub.
 	// #1743 AC-24/AC-27: "Setup abschliessen" zielt auf wetter-metriken (#versand, Verhalten in
 	// versand_sprung_auf_wetter_metriken.test.ts); die Liste kennt keine Vorschau mehr.
-	test('Vergleich-Detailseite: Setup abschliessen → wetter-metriken; Liste springt Alarme/Wetter-Metriken an, keine Vorschau', () => {
+	// #2794 S3a: Setup abschliessen → zustellung (#versand); die Liste springt Zustellung (Alarme) und Wetter an.
+	test('Vergleich-Detailseite: Setup abschliessen → zustellung; Liste springt Zustellung/Wetter an, keine Vorschau', () => {
 		const hub = erzeugteKennungen('routes/compare/[id]/+page.svelte');
-		assert.ok(hub.includes('wetter-metriken'), JSON.stringify(hub));
+		assert.ok(hub.includes('zustellung'), JSON.stringify(hub));
 		assert.ok(!hub.includes('versand'), JSON.stringify(hub));
 		const liste = erzeugteKennungen('routes/compare/+page.svelte');
-		for (const id of ['alarme', 'wetter-metriken'])
+		for (const id of ['zustellung', 'wetter'])
 			assert.ok(liste.includes(id), `Vergleich-Liste springt nicht auf '${id}': ${JSON.stringify(liste)}`);
 		assert.ok(!liste.includes('vorschau'), `Vergleich-Liste springt noch auf 'vorschau': ${JSON.stringify(liste)}`);
 	});
@@ -355,7 +359,11 @@ describe('AC-11: wertebereicheTabId entfaellt — eine Kennung fuer beide kinds'
 		assert.ok(!readFileSync(datei('lib/components/shared/alarme-tab/alarmeTabSections.ts'), 'utf-8').includes('wertebereicheTabId'));
 	});
 
-	test("die gemeinsame Tabelle kennt 'wertebereiche' in beiden kinds", () => {
-		assert.ok(TRIP_IDS.includes('wertebereiche') && VERGLEICH_IDS.includes('wertebereiche'));
+	// #2794 S3a: die Wertebereiche liegen in beiden kinds im selben Reiter `wetter`; die Alt-Kennung
+	// 'wertebereiche' loest in beiden kinds gleich dorthin auf.
+	test("die gemeinsame Tabelle fuehrt 'wertebereiche' in beiden kinds auf denselben Reiter wetter", () => {
+		assert.ok(TRIP_IDS.includes('wetter') && VERGLEICH_IDS.includes('wetter'));
+		assert.equal(resolveTab('trip', 'wertebereiche').tab, 'wetter');
+		assert.equal(resolveTab('vergleich', 'wertebereiche').tab, 'wetter');
 	});
 });

@@ -59,9 +59,9 @@ test.describe('Issue #1350 Teil 3 AC-1: Schwellen-Editor-Pool aus GET /api/compa
 			const catalog = (await metricsRes.json()) as { metrics: Array<{ key: string; label: string }> };
 
 			// TODO GREEN: Deep-Link-Query bestätigen (CompareTabs.svelte nutzt
-			// heute ?tab=wertebereiche für den Hub-Detail-Idealwerte-Tab, s.
+			// seit #2794 S3a ?tab=wetter für die Wertebereiche im Hub, s.
 			// CorridorEditor context="vergleich"-Einbettung).
-			await page.goto(`/compare/${preset.id}?tab=wertebereiche`);
+			await page.goto(`/compare/${preset.id}?tab=wetter`);
 
 			// GREEN bestätigt: CorridorEditor.svelte setzt data-testid="corridor-editor-vergleich"
 			// auf den Wurzel-Container (unveraendert seit RED).
@@ -112,7 +112,7 @@ test.describe('Issue #1350 Teil 3 AC-1: Schwellen-Editor-Pool aus GET /api/compa
 		try {
 			const puts = collectPutRequests(page, `/api/compare/presets/${preset.id}`);
 
-			await page.goto(`/compare/${preset.id}?tab=wertebereiche`);
+			await page.goto(`/compare/${preset.id}?tab=wetter`);
 			const editor = page.locator('[data-testid="corridor-editor-vergleich"]');
 			await editor.waitFor({ state: 'visible', timeout: 15000 });
 
@@ -153,7 +153,7 @@ test.describe('Issue #1350 Teil 3 AC-1: Schwellen-Editor-Pool aus GET /api/compa
 				route.fulfill({ status: 500, contentType: 'application/json', body: '{}' })
 			);
 
-			await page.goto(`/compare/${preset.id}?tab=wertebereiche`);
+			await page.goto(`/compare/${preset.id}?tab=wetter`);
 
 			// GREEN bestätigt: testid wie in Spec Punkt 6 vorgeschlagen umgesetzt.
 			const errorShell = page.locator('[data-testid="corridor-editor-vergleich-load-error"]');

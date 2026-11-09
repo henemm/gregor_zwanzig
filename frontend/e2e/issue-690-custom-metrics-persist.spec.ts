@@ -63,7 +63,7 @@ async function clearTestPresets(request: APIRequestContext) {
 }
 
 async function openWeatherTab(page: Page, tripId: string) {
-	await page.goto(`/trips/${tripId}?tab=wetter-metriken`);
+	await page.goto(`/trips/${tripId}?tab=wetter`); // #2794 S3a: Metrik-Auswahl im Reiter Wetter
 	await page.waitForSelector('[data-testid="weather-metrics-tab"]', { timeout: 15_000 });
 }
 

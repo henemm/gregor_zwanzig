@@ -87,7 +87,9 @@ describe('AC-4: activeMetricKeys live gelesen — Wetter-Metriken-Änderung + We
 		wetterMetriken.aenderungMelden();
 		assert.equal(ctl.hasPending, true, 'Vorbedingung: Wetter-Metriken-Änderung wartet im Entprell-Fenster');
 
-		await sichereSelbstSpeichererVorReiterwechsel('wetter-metriken', 'wertebereiche', ctl);
+		// #2794 S3a: Wetter-Metriken und Wertebereiche liegen beide im Reiter „wetter"; gesendet wird
+		// hier beim Verlassen des Reiters (Flush-Guard), danach folgt die Wertebereiche-Änderung.
+		await sichereSelbstSpeichererVorReiterwechsel('wetter', 'zustellung', ctl);
 		assert.equal(puts().length, 1, 'die Wetter-Metriken-Änderung muss VOR dem Reiterwechsel gesendet sein');
 		assert.ok((dc(gespeichert()).active_metrics as string[]).includes('gust_max_kmh'));
 

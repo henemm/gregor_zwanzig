@@ -45,8 +45,9 @@ const VERBOTEN = ['saveController', 'onTripUpdate', 'preset', 'enqueueHubWrite',
 describe('#1743: Anlege-Seiten ohne Autosave', () => {
 	for (const mobil of [false, true]) {
 		test(`/trips/new ${mobil ? 'mobil' : 'Desktop'}: Versand-Inhalt ohne Speicherknopf des Trip-Hubs`, () => {
-			const html = renderTripNew({ activeTab: 'wetter-metriken', isMobileViewport: mobil, name: 'X', startDate: '2026-07-01' });
-			assert.equal(countTestid(html, 'versand-tab'), 1, 'Messaufbau: Versand-Inhalt fehlt im Schritt Wetter-Metriken');
+			// #2794 S3a: der Versand-Inhalt steht im Schritt Zustellung.
+			const html = renderTripNew({ activeTab: 'zustellung', isMobileViewport: mobil, name: 'X', startDate: '2026-07-01' });
+			assert.equal(countTestid(html, 'versand-tab'), 1, 'Messaufbau: Versand-Inhalt fehlt im Schritt Zustellung');
 			assert.equal(countTestid(html, 'briefings-save'), 0, 'Anlege-Seite zeigt den Speicherknopf des Trip-Hubs (PUT auf trip.id)');
 		});
 	}
@@ -54,7 +55,10 @@ describe('#1743: Anlege-Seiten ohne Autosave', () => {
 	for (const [name, datei] of [['/trips/new', TRIP_NEW], ['/compare/new', COMPARE_NEW]] as const) {
 		test(`${name}: Baustein-Mounts tragen keine Speicher-Verdrahtung`, () => {
 			const mounts = panelMounts(datei);
-			assert.equal(mounts.length, 2, `${name}: erwartet 2 Baustein-Mounts (Desktop + Mobil)`);
+			// #2794 S3a: der Trip haelt je Geraet einen Mount (Darstellungsfilter je Schritt), der Vergleich
+			// je Geraet einen Mount im Schritt Wetter und einen im Schritt Zustellung.
+			const soll = datei === TRIP_NEW ? 2 : 4;
+			assert.equal(mounts.length, soll, `${name}: erwartet ${soll} Baustein-Mounts`);
 			for (const m of mounts) {
 				const props = propNamen(m);
 				for (const v of VERBOTEN) assert.ok(!props.includes(v), `${name}: Prop „${v}" verdrahtet einen Speicherweg (Autosave)`);

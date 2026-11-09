@@ -74,7 +74,7 @@ test.describe('Fix Alert Bundle #958ff — Nullgradgrenze-Konsolidierung + Alert
 			metric_alert_levels: { freezing_level: 'standard', snow_line: 'standard' }
 		});
 		try {
-			await page.goto(`/trips/${id}?tab=wertebereiche`);
+			await page.goto(`/trips/${id}?tab=wetter`);
 			await expect(page.getByTestId('alerts-tab')).toBeVisible();
 
 			// Keine eigene "snow_line"-Zeile mehr im DOM.
@@ -98,7 +98,7 @@ test.describe('Fix Alert Bundle #958ff — Nullgradgrenze-Konsolidierung + Alert
 			metric_alert_levels: {}
 		});
 		try {
-			await page.goto(`/trips/${id}?tab=wertebereiche`);
+			await page.goto(`/trips/${id}?tab=wetter`);
 			await expect(page.getByTestId('alerts-tab')).toBeVisible();
 
 			await expect(page.locator('[data-testid="alert-metric-level-table"] tbody tr')).toHaveCount(
@@ -123,7 +123,7 @@ test.describe('Fix Alert Bundle #958ff — Nullgradgrenze-Konsolidierung + Alert
 			metric_alert_levels: {}
 		});
 		try {
-			await page.goto(`/trips/${id}?tab=wertebereiche`);
+			await page.goto(`/trips/${id}?tab=wetter`);
 			await expect(page.getByTestId('alerts-tab')).toBeVisible();
 
 			const rows = page.locator('[data-testid="alert-metric-level-table"] tbody tr');

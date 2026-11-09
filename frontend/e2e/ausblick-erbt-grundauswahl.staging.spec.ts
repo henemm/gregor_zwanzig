@@ -27,16 +27,29 @@ import { createTestLocation, createTestTrip } from './helpers';
 
 // ─── Trip ────────────────────────────────────────────────────────────────
 
+// #2794 S3a (Spec feat_2794_s3a_teil2_leiste.md): der 3-Tages-Ausblick steht im Reiter
+// Zustellung, die Grundauswahl im Reiter Wetter. Die Faelle wechseln per echtem Klick
+// zwischen beiden Reitern (kein Reload); jede Geste wird wie bisher an IHREM PUT
+// abgewartet, bevor der Reiter wechselt — der Reiterwechsel erzeugt daher keinen
+// zusaetzlichen PUT. Die Locatoren sind seitenweit und loesen nach jedem Wechsel neu auf.
+async function zuTripReiter(page: Page, ziel: 'wetter' | 'zustellung'): Promise<void> {
+	await page.getByTestId(`trip-detail-tab-${ziel}`).click();
+	await expect(page.getByTestId(`trip-detail-panel-${ziel}`)).toBeVisible({ timeout: 15000 });
+	const tab = page.getByTestId('weather-metrics-tab');
+	if (ziel === 'wetter') {
+		await expect(tab.getByTestId('wm2-grundauswahl').locator('.toggle-btn').first()).toBeVisible({ timeout: 10000 });
+	} else {
+		await expect(tab.getByTestId('weather-metrics-ausblick')).toBeVisible({ timeout: 10000 });
+	}
+}
+
 async function oeffneTripAusblick(page: Page, tripId: string): Promise<Locator> {
-	await page.goto(`/trips/${tripId}?tab=wetter-metriken`);
-	const tabBtn = page.getByTestId('trip-detail-tab-wetter-metriken');
+	await page.goto(`/trips/${tripId}?tab=zustellung`);
+	const tabBtn = page.getByTestId('trip-detail-tab-zustellung');
 	await expect(tabBtn).toBeVisible({ timeout: 15000 });
 	await tabBtn.click();
 	const tab = page.getByTestId('weather-metrics-tab');
 	await expect(tab).toBeVisible({ timeout: 15000 });
-	await expect(tab.getByTestId('wm2-grundauswahl').locator('.toggle-btn').first()).toBeVisible({
-		timeout: 10000
-	});
 	const ausblick = tab.getByTestId('weather-metrics-ausblick');
 	await expect(
 		ausblick,
@@ -112,11 +125,13 @@ test.describe('Trip: 3-Tages-Vorschau erbt die Grundauswahl (#1848 A3, Staging)'
 			'Vorbedingung: "Niederschlag" ist zunaechst aktiv im Ausblick'
 		).toBeVisible();
 
+		await zuTripReiter(page, 'wetter');
 		const precipToggle = tab.locator('[data-testid="wm2-grundauswahl"] .toggle-btn[title="Niederschlag"]');
 		await expect(precipToggle).toHaveClass(/\bon\b/);
 		const gespeichertePut = wartetAufTripAutosave(page, trip.id);
 		await precipToggle.click();
 		await gespeichertePut;
+		await zuTripReiter(page, 'zustellung');
 
 		await expect(
 			ausblick.locator('[data-testid="wm2-reihenfolge-row"][data-metric-id="precipitation"]'),
@@ -145,6 +160,7 @@ test.describe('Trip: 3-Tages-Vorschau erbt die Grundauswahl (#1848 A3, Staging)'
 			ausblick.getByTestId('wm2-aus-gruppe').locator('[data-testid="wm2-aus-row"][data-metric-id="temperature"]')
 		).toBeVisible();
 
+		await zuTripReiter(page, 'wetter');
 		const tempToggle = tab.locator('[data-testid="wm2-grundauswahl"] .toggle-btn[title="Temperatur"]');
 		await expect(tempToggle).toHaveClass(/\bon\b/);
 		const putAus = wartetAufTripAutosave(page, trip.id);
@@ -153,6 +169,7 @@ test.describe('Trip: 3-Tages-Vorschau erbt die Grundauswahl (#1848 A3, Staging)'
 		const putEin = wartetAufTripAutosave(page, trip.id);
 		await tempToggle.click();
 		await putEin;
+		await zuTripReiter(page, 'zustellung');
 
 		await expect(
 			ausblick.locator('[data-testid="wm2-reihenfolge-row"][data-metric-id="temperature"]'),
@@ -178,14 +195,17 @@ test.describe('Trip: 3-Tages-Vorschau erbt die Grundauswahl (#1848 A3, Staging)'
 		await gustRow.getByRole('button', { name: 'Aus' }).click();
 		await putAbwahl;
 
+		await zuTripReiter(page, 'wetter');
 		const gustToggleVorher = tab.locator('[data-testid="wm2-grundauswahl"] .toggle-btn[title="Böen"]');
 		await expect(gustToggleVorher, 'Vorbedingung: Grundauswahl "Böen" bleibt aktiv').toHaveClass(/\bon\b/);
+		await zuTripReiter(page, 'zustellung');
 
 		const ausGruppe = ausblick.getByTestId('wm2-aus-gruppe');
 		const putZurueckholen = wartetAufTripAutosave(page, trip.id);
 		await ausGruppe.locator('[data-testid="wm2-aus-row"][data-metric-id="gust"]').getByRole('button', { name: 'Ein' }).click();
 		await putZurueckholen;
 
+		await zuTripReiter(page, 'wetter');
 		await expect(
 			tab.locator('[data-testid="wm2-grundauswahl"] .toggle-btn[title="Böen"]'),
 			'AC-9 FAIL: das Zurueckholen im Ausblick hat die Grundauswahl veraendert'
@@ -226,8 +246,8 @@ async function createComparePreset(request: APIRequestContext, locationId: strin
 async function oeffneCompareAusblick(page: Page, presetId: string): Promise<Locator> {
 	await page.goto(`/compare/${presetId}`);
 	await expect(page.getByTestId('compare-detail-tab-list')).toBeVisible({ timeout: 15000 });
-	await page.getByTestId('compare-detail-tab-wetter-metriken').click();
-	const panel = page.getByTestId('compare-detail-panel-wetter-metriken');
+	await page.getByTestId('compare-detail-tab-zustellung').click(); // #2794 S3a: Ausblick im Reiter Zustellung
+	const panel = page.getByTestId('compare-detail-panel-zustellung');
 	await expect(panel).toBeVisible({ timeout: 10000 });
 	const ausblick = panel.getByTestId('weather-metrics-ausblick');
 	await expect(
@@ -266,7 +286,7 @@ test.describe('Ortsvergleich: 3-Tages-Ausblick erbt die Grundauswahl (#1848 A3, 
 		).toBeVisible();
 
 		await page.reload();
-		const panelNachReload = page.getByTestId('compare-detail-panel-wetter-metriken');
+		const panelNachReload = page.getByTestId('compare-detail-panel-zustellung');
 		await expect(panelNachReload).toBeVisible({ timeout: 15000 });
 		const ausblickNachReload = panelNachReload.getByTestId('weather-metrics-ausblick');
 		const ausRowNachReload = ausblickNachReload

@@ -140,12 +140,16 @@ for (const kind of ['trip', 'vergleich'] as Kind[]) {
 
 	describe(`AC-12 / AC-1 / AC-2 / AC-3: ${hub} benutzt die gemeinsame Aufloesung samt URL-Umschreibung`, () => {
 		const altFaelle: Array<[string, string]> = [
-			['alerts', 'wertebereiche'],
-			['idealwerte', 'wertebereiche'],
-			['weather', 'wetter-metriken'],
-			['layout', 'wetter-metriken'],
-			['briefings', 'wetter-metriken'],
-			['versand', 'wetter-metriken'],
+			// #2794 S3a: Ziele Wetter / Zustellung; die Reiter von #1743 sind selbst Alt-Kennungen.
+			['alerts', 'wetter'],
+			['idealwerte', 'wetter'],
+			['weather', 'wetter'],
+			['layout', 'wetter'],
+			['briefings', 'zustellung'],
+			['versand', 'zustellung'],
+			['wetter-metriken', 'wetter'],
+			['wertebereiche', 'wetter'],
+			['alarme', 'zustellung'],
 			['preview', 'uebersicht'],
 			['vorschau', 'uebersicht'],
 			['overview', 'uebersicht'],
@@ -211,7 +215,7 @@ for (const kind of ['trip', 'vergleich'] as Kind[]) {
 	});
 
 	describe(`AC-14: ${hub} reicht die Reiterleisten-Items (MTabBar, Handy wie Desktop) aus subscriptionTabs('${kind}')`, () => {
-		test('#1743 AC-1/AC-2: genau fuenf Reiter in fester Reihenfolge — ohne Versand und Vorschau', async () => {
+		test('#2794 AC-1/AC-2: genau vier Reiter in fester Reihenfolge — ohne Wetter-Metriken, Wertebereiche, Alarme', async () => {
 			const { u } = await hubOeffnen(kind, null);
 			const praefix = kind === 'trip' ? 'trip-detail-tab-' : 'compare-detail-tab-';
 			const items = Object.values(u).find(
@@ -224,11 +228,11 @@ for (const kind of ['trip', 'vergleich'] as Kind[]) {
 			// fest eingesetzt (nicht aus subscriptionTabs abgeleitet) — sonst wanderte die Erwartung mit
 			assert.deepEqual(
 				items.map((i) => i.label),
-				['Übersicht', kind === 'trip' ? 'Etappen & Wegpunkte' : 'Orte', 'Wetter-Metriken', 'Wertebereiche', 'Alarme']
+				['Übersicht', kind === 'trip' ? 'Etappen & Wegpunkte' : 'Orte', 'Wetter', 'Zustellung']
 			);
 			assert.deepEqual(
 				items.map((i) => i.value),
-				['uebersicht', kind === 'trip' ? 'etappen' : 'orte', 'wetter-metriken', 'wertebereiche', 'alarme']
+				['uebersicht', kind === 'trip' ? 'etappen' : 'orte', 'wetter', 'zustellung']
 			);
 		});
 
@@ -270,7 +274,7 @@ function ausstehend(): { ctl: ReturnType<typeof createController>; laeufe: () =>
 }
 
 describe('AC-7: Trip-Hub — Reiterwechsel aus einem selbst speichernden Reiter flusht (neue Kennungen)', () => {
-	for (const reiter of ['wertebereiche', 'wetter-metriken', 'alarme', 'etappen']) {
+	for (const reiter of ['wetter', 'zustellung', 'etappen']) {
 		test(`Wechsel aus '${reiter}' mit hasPending → Speicherung laeuft VOR dem Wechsel`, async () => {
 			const { ctl, laeufe } = ausstehend();
 			const { u } = await hubOeffnen('trip', reiter, { saveController: ctl });
@@ -286,7 +290,7 @@ describe('AC-7: Trip-Hub — Reiterwechsel aus einem selbst speichernden Reiter 
 	test("Wechsel aus der Uebersicht flusht NICHT (Gegenprobe: Guard ist nicht auf alles offen)", async () => {
 		const { ctl, laeufe } = ausstehend();
 		const { u } = await hubOeffnen('trip', 'uebersicht', { saveController: ctl });
-		await (u.handleValueChange as (v: string) => Promise<void>)('wetter-metriken');
+		await (u.handleValueChange as (v: string) => Promise<void>)('wetter');
 		assert.equal(laeufe(), 0);
 		ctl.cancel?.();
 	});
@@ -294,14 +298,14 @@ describe('AC-7: Trip-Hub — Reiterwechsel aus einem selbst speichernden Reiter 
 	test('der Wechsel schreibt die NEUE Kennung in die Adresszeile (nie eine alte)', async () => {
 		const { u } = await hubOeffnen('trip', 'uebersicht');
 		schreibungen = [];
-		await (u.handleValueChange as (v: string) => Promise<void>)('wertebereiche');
+		await (u.handleValueChange as (v: string) => Promise<void>)('wetter');
 		assert.equal(schreibungen.length, 1);
-		assert.equal(tabAusUrl(schreibungen[0].url), 'wertebereiche');
+		assert.equal(tabAusUrl(schreibungen[0].url), 'wetter');
 	});
 });
 
 describe('AC-8: Vergleich-Hub — Flush-Guard mit wertebereiche (nicht mehr idealwerte)', () => {
-	for (const reiter of ['wertebereiche', 'wetter-metriken', 'alarme']) {
+	for (const reiter of ['wetter', 'zustellung']) {
 		test(`Wechsel aus '${reiter}' mit ausstehender Speicherung → Flush`, async () => {
 			const { ctl, laeufe } = ausstehend();
 			const { u } = await hubOeffnen('vergleich', reiter, { saveController: ctl });
@@ -315,9 +319,9 @@ describe('AC-8: Vergleich-Hub — Flush-Guard mit wertebereiche (nicht mehr idea
 	test('der Wechsel schreibt die NEUE Kennung in die Adresszeile', async () => {
 		const { u } = await hubOeffnen('vergleich', 'uebersicht');
 		schreibungen = [];
-		await (u.handleValueChange as (v: string) => Promise<void>)('wertebereiche');
+		await (u.handleValueChange as (v: string) => Promise<void>)('wetter');
 		assert.equal(schreibungen.length, 1);
-		assert.equal(tabAusUrl(schreibungen[0].url), 'wertebereiche');
+		assert.equal(tabAusUrl(schreibungen[0].url), 'wetter');
 	});
 });
 
@@ -332,7 +336,8 @@ describe('AC-8: Vergleich-Hub — Flush-Guard mit wertebereiche (nicht mehr idea
 
 for (const kind of ['trip', 'vergleich'] as Kind[]) {
 	const hub = kind === 'trip' ? 'TripTabs' : 'CompareTabs';
-	describe(`#1743 AC-26: ${hub} — Wechsel weg von wetter-metriken sendet beide Besitzer`, () => {
+	// #2794 S3a: beide Besitzer stehen jetzt im Reiter Zustellung (WMT bereich=zustellung + Versand).
+	describe(`#1743 AC-26: ${hub} — Wechsel weg von zustellung sendet beide Besitzer`, () => {
 		test('Wetter-Metrik und Versandzeit im Entprellfenster, dann Reiterwechsel → beide Speicherlaeufe vor dem Wechsel', async () => {
 			const ctl = createController('hub-zwei-besitzer');
 			const gelaufen: Array<{ owner: string; reiter: unknown }> = [];
@@ -346,9 +351,9 @@ for (const kind of ['trip', 'vergleich'] as Kind[]) {
 			plane(async () => {
 				gelaufen.push({ owner: 'versand', reiter: hubU?.activeTab });
 			}, 60_000, 'versand');
-			const { u } = await hubOeffnen(kind, 'wetter-metriken', { saveController: ctl });
+			const { u } = await hubOeffnen(kind, 'zustellung', { saveController: ctl });
 			hubU = u;
-			assert.equal(u.activeTab, 'wetter-metriken', 'Vorbedingung: Hub steht im Reiter wetter-metriken');
+			assert.equal(u.activeTab, 'zustellung', 'Vorbedingung: Hub steht im Reiter zustellung');
 			await (u.handleValueChange as (v: string) => Promise<void>)('uebersicht');
 			assert.deepEqual(
 				gelaufen.map((g) => g.owner).sort(),
@@ -370,10 +375,11 @@ for (const kind of ['trip', 'vergleich'] as Kind[]) {
 // nur belegt, dass die Panel-Weichen die neue Kennung verwenden (die echte
 // Messung des gerenderten testid `…-panel-wertebereiche` ist Playwright, AC-12/AC-15).
 describe('Panel-Weichen nutzen die neuen Kennungen (doc-compliance-test)', () => {
-	test("TripTabs: Panel-Weiche kennt 'wertebereiche'/'etappen'/'wetter-metriken'/'uebersicht' — kein 'alerts'/'briefings'/'stages'/'weather'/'overview'/'preview'", () => {
+	test("TripTabs: Panel-Weiche kennt 'wetter'/'zustellung'/'etappen'/'uebersicht' — kein 'alerts'/'briefings'/'stages'/'weather'/'overview'/'preview'", () => {
 		const q = readFileSync(TRIP_HUB, 'utf-8');
 		// #1743: 'versand'/'vorschau' sind keine Reiter mehr (nur Pflichtliste gekuerzt, keine neuen Quelltext-Verbote).
-		for (const neu of ['wertebereiche', 'etappen', 'wetter-metriken', 'uebersicht']) {
+		// #2794 S3a: Pflichtliste auf die vier Reiter umgestellt.
+		for (const neu of ['wetter', 'zustellung', 'etappen', 'uebersicht']) {
 			assert.ok(q.includes(`tab.value === '${neu}'`), `Panel-Weiche fuer '${neu}' fehlt`);
 		}
 		for (const alt of ['alerts', 'briefings', 'stages', 'weather', 'overview', 'preview']) {
@@ -386,7 +392,8 @@ describe('Panel-Weichen nutzen die neuen Kennungen (doc-compliance-test)', () =>
 		const q = readFileSync(VERGLEICH_HUB, 'utf-8');
 		assert.ok(!/idealwerte/.test(q.replace(/\/\/[^\n]*|\/\*[\s\S]*?\*\//g, '').replace(/idealwerteHydrat(ed|ing)/g, "")),
 			"Alt-Kennung 'idealwerte' kommt im Hub noch in Code/testid vor (Kommentare und `idealwerteHydrated/-Hydrating` ausgenommen)");
-		assert.ok(q.includes("activeTab === 'wertebereiche'"), "Panel-Weiche fuer 'wertebereiche' fehlt");
+		assert.ok(q.includes("activeTab === 'wetter'"), "Panel-Weiche fuer 'wetter' fehlt");
+		assert.ok(q.includes("activeTab === 'zustellung'"), "Panel-Weiche fuer 'zustellung' fehlt");
 	});
 });
 
@@ -440,7 +447,8 @@ describe('#2727 AC-15: CompareTabs — verzoegerte Alarm-Hydration fuellt den Re
 		const { versandPropsAus } = await import('../../compare/versandPropsAus.ts');
 		const feldsatz = hubFeldsatzAus(ast, u, 'alarmePropsAus');
 		for (const e of effekteVon(ast, quelle, u, 'initialTab')) e();
-		assert.equal(u.activeTab, 'alarme', 'Vorbedingung: Deep-Link oeffnet den Alarme-Reiter');
+		// #2794 S3a: der Alt-Link ?tab=alarme oeffnet den Reiter Zustellung (dort steht der AlarmeTab).
+		assert.equal(u.activeTab, 'zustellung', 'Vorbedingung: Deep-Link oeffnet den Reiter mit dem Alarm-Baustein');
 		assert.equal(alarmePropsAus(feldsatz).cooldownMinutes, undefined, 'vor der Hydration: Standard „nicht gesetzt"');
 		versandPropsAus(feldsatz).onSendSmsChange(true);
 		for (const e of effekteVon(ast, quelle, u, 'hydrateAlarmeTab')) e();

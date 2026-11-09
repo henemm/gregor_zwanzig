@@ -164,7 +164,7 @@ const abschnitt = (page: Page) => page.locator('[data-testid="versand-abschnitt"
 const morgenUhrzeit = (page: Page) => abschnitt(page).locator('[data-testid="report-morning-time"]:visible');
 
 async function oeffneVersand(page: Page, kind: HubKind, id: string): Promise<void> {
-	await openHub(page, kind, id, { tab: 'wetter-metriken', hash: 'versand' });
+	await openHub(page, kind, id, { tab: 'zustellung', hash: 'versand' });
 	await expect(abschnitt(page)).toBeVisible({ timeout: 10_000 });
 	await expect(morgenUhrzeit(page)).toBeVisible({ timeout: 10_000 });
 }
@@ -187,7 +187,7 @@ for (const kind of HUB_KINDS) {
 
 		// VS-1 (Alt AC-4) — fängt: Flush beim Reiterwechsel fehlt ⇒ der Alarm-Vorgang
 		// verdrängt die Versand-Änderung vom einen Speicher-Platz.
-		test(`VS-1 (${kind}): Uhrzeit ändern, sofort zu „Alarme", dort Alarm ändern → BEIDE Änderungen gespeichert`, async ({
+		test(`VS-1 (${kind}): Uhrzeit ändern, sofort Reiter wechseln, dann Alarm ändern → BEIDE Änderungen gespeichert`, async ({
 			page
 		}) => {
 			const hub = await seedHub(page.request, kind, { extra: vs.alarmSeed });
@@ -203,8 +203,10 @@ for (const kind of HUB_KINDS) {
 				await page.clock.pauseAt(Date.now() + 5_000);
 
 				await morgenUhrzeit(page).selectOption('09:00');
-				await page.locator(`[data-testid="${sel.reiter}-alarme"]:visible`).click();
-				await expect(page.locator('[data-testid="alarme-tab"]').first()).toBeVisible({ timeout: 10_000 });
+				// #2794 S3a: Versand und Alarme teilen den Reiter Zustellung — der Reiterwechsel
+				// (Flush) führt deshalb erst in den Reiter Wetter, danach zurück zu den Alarmen.
+				await page.locator(`[data-testid="${sel.reiter}-wetter"]:visible`).click();
+				await expect(page.locator(`[data-testid="${sel.panel}-wetter"]:visible`).first()).toBeVisible({ timeout: 10_000 });
 				await expect
 					.poll(() => beantwortet.length, {
 						message: 'die Versand-Änderung wurde beim Reiterwechsel nicht gesendet (Entprell-Uhr steht still)',
@@ -212,6 +214,9 @@ for (const kind of HUB_KINDS) {
 					})
 					.toBeGreaterThanOrEqual(1);
 				expect(puts.length, 'genau EIN Speicher-Aufruf durch den Flush, kein zweiter vom Timer').toBe(1);
+				await page.locator(`[data-testid="${sel.reiter}-zustellung"]:visible`).click();
+				await expect(page.locator('[data-testid="alarme-tab"]:visible').first()).toBeVisible({ timeout: 10_000 });
+				expect(puts.length, 'die Rückkehr in den Reiter Zustellung speichert nichts').toBe(1);
 				await page.clock.resume();
 				expect(String(vs.morgen(beantwortet[0].postDataJSON() as Stand)), 'der erste PUT trägt die Versand-Änderung').toMatch(
 					/^09:00/

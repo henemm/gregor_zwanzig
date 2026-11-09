@@ -136,8 +136,9 @@ test.describe('#2361 Langlaeufer-Budgets wirken an der Aufrufstelle', () => {
 			sms: 'Alarm'
 		});
 		await page.goto(`/trips/${tripId}`);
-		await page.getByTestId('trip-detail-tab-alarme').first().click();
-		const panel = page.getByTestId('trip-detail-panel-alarme');
+		// #2794 S3a: die Alarme stehen im Reiter Zustellung.
+		await page.getByTestId('trip-detail-tab-zustellung').first().click();
+		const panel = page.getByTestId('trip-detail-panel-zustellung');
 		await expect(panel).toBeVisible();
 		const knopf = panel.getByTestId('alert-preview-load-btn');
 		await knopf.click();

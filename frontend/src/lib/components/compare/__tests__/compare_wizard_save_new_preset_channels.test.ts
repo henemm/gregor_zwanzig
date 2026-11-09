@@ -51,13 +51,13 @@ async function anlegen(
 	sendPremiumSms: boolean,
 	channelActiveMetricKeys?: CompareChannelActiveMetrics
 ): Promise<Record<string, unknown>> {
+	// #2794 S3a: letzter Schritt „Zustellung" (Flags metrikenVisited/zustellungVisited).
 	const e = await vergleichEditor({
 		stateOverride: {
-			activeTab: 'alarme',
+			activeTab: 'zustellung',
 			isMobileViewport: false,
 			metrikenVisited: true,
-			idealsVisited: true,
-			alarmeVisited: true,
+			zustellungVisited: true,
 			name: 'Testvergleich',
 			pickedIds: ['loc-1', 'loc-2']
 		}
@@ -124,14 +124,13 @@ test('Anlegen: sendPremiumSms=false landet als send_premium_sms:false im tatsaec
 	);
 });
 
-test('Anlegen: Alarm-Kanal-Geste im Alarme-Reiter landet als alert_channels im POST-Body', async () => {
+test('Anlegen: Alarm-Kanal-Geste im Alarme-Bereich (Schritt Zustellung) landet als alert_channels im POST-Body', async () => {
 	const e = await vergleichEditor({
 		stateOverride: {
-			activeTab: 'alarme',
+			activeTab: 'zustellung',
 			isMobileViewport: false,
 			metrikenVisited: true,
-			idealsVisited: true,
-			alarmeVisited: true,
+			zustellungVisited: true,
 			name: 'Testvergleich',
 			pickedIds: ['loc-1', 'loc-2']
 		}
