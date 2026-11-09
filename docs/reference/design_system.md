@@ -63,7 +63,7 @@ eigener Issue.
 ### Accent — Burnt Orange (alpin, markant)
 | Token | Hex | Verwendung |
 |---|---|---|
-| `--g-accent` | `#c45a2a` | Akzent ohne Text: Unterstrich des aktiven Reiters, Fortschritts-Segmente, Rahmen, Punkte, Logo-Blitz (Nicht-Text-Schwelle 3:1; auf Papier 3,94:1) |
+| `--g-accent` | `#c45a2a` | Akzent für „Weiter“ und Aktiv-Zustände (ADR-0110). Direkt nur ohne Text: Unterstrich des aktiven Reiters, Fortschritts-Segmente, Rahmen, Punkte, Logo-Blitz (Nicht-Text-Schwelle 3:1; auf Papier 3,94:1). Unter oder als Text immer `--g-accent-deep` |
 | `--g-accent-deep` | `#8c3e1a` | Accent **unter oder als Text**: Fläche von `Btn accent`/`MBtn accent` („Weiter“), aktiver Handy-Reiter, Accent-Text (Kürzel, Rangnummern, Kennzahl „Aktiv“), Text auf `--g-accent-tint` |
 | `--g-accent-tint` | `rgba(196,90,42,0.08)` | subtiler Fond hinter Accent-Text |
 
