@@ -1,0 +1,86 @@
+# RED Issue #2878, Basis 319c48c40, Komponenten unveraendert (2026-11-09T12:47:13Z)
+# cd frontend && npx playwright test e2e/trip-hub-etappenliste-titel.spec.ts --trace off --reporter=line
+Running 6 tests using 1 worker
+[1/6] [setup] › e2e/global.setup.ts:23:1 › authenticate and seed test data
+[2/6] [tests] › e2e/trip-hub-etappenliste-titel.spec.ts:137:1 › EL-1 (1280 px, de/en): jede Etappenzeile zeigt den Namen, das Datum steht in einer Zeile
+  1) [tests] › e2e/trip-hub-etappenliste-titel.spec.ts:137:1 › EL-1 (1280 px, de/en): jede Etappenzeile zeigt den Namen, das Datum steht in einer Zeile 
+    Error: de: Name „Calenzana nach Ortu Piobbu" nur 0 px breit (unsichtbar)
+    expect(received).toBeGreaterThan(expected)
+    Expected: > 80
+    Received:   0
+      148 | 				const name = row.getByText(etappe.name, { exact: true });
+      149 | 				const nb = await box(name, `${lang}: Name Etappe ${i}`);
+    > 150 | 				expect(nb.width, `${lang}: Name „${etappe.name}" nur ${nb.width} px breit (unsichtbar)`).toBeGreaterThan(80);
+          | 				                                                                                         ^
+      151 | 				expect((await name.innerText()).trim(), `${lang}: Name Etappe ${i} leer`).not.toBe('');
+      152 |
+      153 | 				const datum = row.getByText(etappe.date);
+        at /home/user/gregor_zwanzig/.claude/worktrees/agent-a22fb1cbd59b0e4ed/frontend/e2e/trip-hub-etappenliste-titel.spec.ts:150:94
+    Error Context: test-results/trip-hub-etappenliste-tite-b6b86--Datum-steht-in-einer-Zeile-tests/error-context.md
+[3/6] [tests] › e2e/trip-hub-etappenliste-titel.spec.ts:170:1 › EL-2 (1280/1440 px): keine Etappenzeile läuft über, Zusammenfassung sichtbar ab 640 px Behälter
+  2) [tests] › e2e/trip-hub-etappenliste-titel.spec.ts:170:1 › EL-2 (1280/1440 px): keine Etappenzeile läuft über, Zusammenfassung sichtbar ab 640 px Behälter 
+    Error: 1280 px: Behälter 520 px — Zusammenfassung sichtbar=true
+    expect(received).toBe(expected) // Object.is equality
+    Expected: false
+    Received: true
+      188 | 				expect(m.scrollWidth, `${vp.width} px: Zeile ${i} läuft über (${m.scrollWidth} > ${m.clientWidth})`).toBeLessThanOrEqual(m.clientWidth);
+      189 | 				const sichtbar = m.summaryDisplay !== 'none' && m.summaryDisplay !== 'fehlt' && m.summaryBreite > 0;
+    > 190 | 				expect(sichtbar, `${vp.width} px: Behälter ${breite} px — Zusammenfassung sichtbar=${sichtbar}`).toBe(breite >= 640);
+          | 				                                                                                                 ^
+      191 | 			}
+      192 | 		}
+      193 | 	} finally {
+        at /home/user/gregor_zwanzig/.claude/worktrees/agent-a22fb1cbd59b0e4ed/frontend/e2e/trip-hub-etappenliste-titel.spec.ts:190:102
+    Error Context: test-results/trip-hub-etappenliste-tite-1f7ba-sichtbar-ab-640-px-Behälter-tests/error-context.md
+[4/6] [tests] › e2e/trip-hub-etappenliste-titel.spec.ts:199:1 › EL-3 (390 px, de/en): Trip-Titel „Korsika Nordteil" vollständig sichtbar, kein Auslassungszeichen
+  3) [tests] › e2e/trip-hub-etappenliste-titel.spec.ts:199:1 › EL-3 (390 px, de/en): Trip-Titel „Korsika Nordteil" vollständig sichtbar, kein Auslassungszeichen 
+    Error: EL-3 (de): Titel wird mit Auslassungszeichen gekürzt
+    expect(received).not.toBe(expected) // Object.is equality
+    Expected: not "ellipsis"
+      105 | 	const m = await titelMessung(h1);
+      106 | 	expect(m.text, `${was}: sichtbarer Text enthält nicht den ganzen Namen`).toContain(name);
+    > 107 | 	expect(m.textOverflow, `${was}: Titel wird mit Auslassungszeichen gekürzt`).not.toBe('ellipsis');
+          | 	                                                                                ^
+      108 | 	expect(m.scrollWidth, `${was}: Titel läuft über (scrollWidth ${m.scrollWidth} > clientWidth ${m.clientWidth})`).toBeLessThanOrEqual(m.clientWidth);
+      109 | 	const b = await box(h1, `${was}: Titel`);
+      110 | 	expect(b.x + b.width, `${was}: Titel ragt rechts aus dem Fenster`).toBeLessThanOrEqual(MOBIL.width + 0.5);
+        at titelVollstaendig (/home/user/gregor_zwanzig/.claude/worktrees/agent-a22fb1cbd59b0e4ed/frontend/e2e/trip-hub-etappenliste-titel.spec.ts:107:82)
+        at /home/user/gregor_zwanzig/.claude/worktrees/agent-a22fb1cbd59b0e4ed/frontend/e2e/trip-hub-etappenliste-titel.spec.ts:207:4
+    Error Context: test-results/trip-hub-etappenliste-tite-831d1-bar-kein-Auslassungszeichen-tests/error-context.md
+[5/6] [tests] › e2e/trip-hub-etappenliste-titel.spec.ts:216:1 › EL-4 (390 px): 60-Zeichen-Name mehrzeilig, kein waagerechtes Scrollen, Stift am Titel mit 44×44 px
+  4) [tests] › e2e/trip-hub-etappenliste-titel.spec.ts:216:1 › EL-4 (390 px): 60-Zeichen-Name mehrzeilig, kein waagerechtes Scrollen, Stift am Titel mit 44×44 px 
+    Error: EL-4: Titel wird mit Auslassungszeichen gekürzt
+    expect(received).not.toBe(expected) // Object.is equality
+    Expected: not "ellipsis"
+      105 | 	const m = await titelMessung(h1);
+      106 | 	expect(m.text, `${was}: sichtbarer Text enthält nicht den ganzen Namen`).toContain(name);
+    > 107 | 	expect(m.textOverflow, `${was}: Titel wird mit Auslassungszeichen gekürzt`).not.toBe('ellipsis');
+          | 	                                                                                ^
+      108 | 	expect(m.scrollWidth, `${was}: Titel läuft über (scrollWidth ${m.scrollWidth} > clientWidth ${m.clientWidth})`).toBeLessThanOrEqual(m.clientWidth);
+      109 | 	const b = await box(h1, `${was}: Titel`);
+      110 | 	expect(b.x + b.width, `${was}: Titel ragt rechts aus dem Fenster`).toBeLessThanOrEqual(MOBIL.width + 0.5);
+        at titelVollstaendig (/home/user/gregor_zwanzig/.claude/worktrees/agent-a22fb1cbd59b0e4ed/frontend/e2e/trip-hub-etappenliste-titel.spec.ts:107:82)
+        at /home/user/gregor_zwanzig/.claude/worktrees/agent-a22fb1cbd59b0e4ed/frontend/e2e/trip-hub-etappenliste-titel.spec.ts:222:3
+    Error Context: test-results/trip-hub-etappenliste-tite-bbdf3-Stift-am-Titel-mit-44×44-px-tests/error-context.md
+[6/6] [tests] › e2e/trip-hub-etappenliste-titel.spec.ts:248:1 › EL-5 (390 px): Trip- und Vergleichs-Titel gleich langen Namens vollständig, gleiche Umbruch-Stile
+  5) [tests] › e2e/trip-hub-etappenliste-titel.spec.ts:248:1 › EL-5 (390 px): Trip- und Vergleichs-Titel gleich langen Namens vollständig, gleiche Umbruch-Stile 
+    Error: EL-5 (route): Titel wird mit Auslassungszeichen gekürzt
+    expect(received).not.toBe(expected) // Object.is equality
+    Expected: not "ellipsis"
+      105 | 	const m = await titelMessung(h1);
+      106 | 	expect(m.text, `${was}: sichtbarer Text enthält nicht den ganzen Namen`).toContain(name);
+    > 107 | 	expect(m.textOverflow, `${was}: Titel wird mit Auslassungszeichen gekürzt`).not.toBe('ellipsis');
+          | 	                                                                                ^
+      108 | 	expect(m.scrollWidth, `${was}: Titel läuft über (scrollWidth ${m.scrollWidth} > clientWidth ${m.clientWidth})`).toBeLessThanOrEqual(m.clientWidth);
+      109 | 	const b = await box(h1, `${was}: Titel`);
+      110 | 	expect(b.x + b.width, `${was}: Titel ragt rechts aus dem Fenster`).toBeLessThanOrEqual(MOBIL.width + 0.5);
+        at titelVollstaendig (/home/user/gregor_zwanzig/.claude/worktrees/agent-a22fb1cbd59b0e4ed/frontend/e2e/trip-hub-etappenliste-titel.spec.ts:107:82)
+        at /home/user/gregor_zwanzig/.claude/worktrees/agent-a22fb1cbd59b0e4ed/frontend/e2e/trip-hub-etappenliste-titel.spec.ts:256:4
+    Error Context: test-results/trip-hub-etappenliste-tite-e07a5-ändig-gleiche-Umbruch-Stile-tests/error-context.md
+  5 failed
+    [tests] › e2e/trip-hub-etappenliste-titel.spec.ts:137:1 › EL-1 (1280 px, de/en): jede Etappenzeile zeigt den Namen, das Datum steht in einer Zeile 
+    [tests] › e2e/trip-hub-etappenliste-titel.spec.ts:170:1 › EL-2 (1280/1440 px): keine Etappenzeile läuft über, Zusammenfassung sichtbar ab 640 px Behälter 
+    [tests] › e2e/trip-hub-etappenliste-titel.spec.ts:199:1 › EL-3 (390 px, de/en): Trip-Titel „Korsika Nordteil" vollständig sichtbar, kein Auslassungszeichen 
+    [tests] › e2e/trip-hub-etappenliste-titel.spec.ts:216:1 › EL-4 (390 px): 60-Zeichen-Name mehrzeilig, kein waagerechtes Scrollen, Stift am Titel mit 44×44 px 
+    [tests] › e2e/trip-hub-etappenliste-titel.spec.ts:248:1 › EL-5 (390 px): Trip- und Vergleichs-Titel gleich langen Namens vollständig, gleiche Umbruch-Stile 
+  1 passed (27.2s)

@@ -1,0 +1,144 @@
+# GREEN Issue #2878 - neue Spec plus Regressions-Specs hub-kopf-aufbau, hub-kopf-bearbeiten, hub-kopf-paritaet-compare-trip, trip-hub-kopf-region-aktivitaet (--workers=1) (2026-11-09T12:57:32Z)
+# cd frontend && npx playwright test e2e/trip-hub-etappenliste-titel.spec.ts --trace off --reporter=line
+Running 120 tests using 1 worker
+[1/120] [setup] › e2e/global.setup.ts:23:1 › authenticate and seed test data
+[2/120] [tests] › e2e/hub-kopf-aufbau.spec.ts:135:2 › KA-1 (route): Desktop — jede Kopf-testid genau einmal im DOM und sichtbar
+[3/120] [tests] › e2e/hub-kopf-aufbau.spec.ts:135:2 › KA-1 (vergleich): Desktop — jede Kopf-testid genau einmal im DOM und sichtbar
+[4/120] [tests] › e2e/hub-kopf-aufbau.spec.ts:158:2 › KA-2 (route): Mobil 375 — jede Kopf-testid genau einmal im DOM, Knopf + Auswahl statt Kacheln
+[5/120] [tests] › e2e/hub-kopf-aufbau.spec.ts:158:2 › KA-2 (vergleich): Mobil 375 — jede Kopf-testid genau einmal im DOM, Knopf + Auswahl statt Kacheln
+[6/120] [tests] › e2e/hub-kopf-aufbau.spec.ts:200:3 › KA-3 (route, Desktop 1280): Region höchstens 60 Zeichen, Unterzeile während der Bearbeitung weg
+[7/120] [tests] › e2e/hub-kopf-aufbau.spec.ts:200:3 › KA-3 (route, Mobil 375): Region höchstens 60 Zeichen, Unterzeile während der Bearbeitung weg
+[8/120] [tests] › e2e/hub-kopf-aufbau.spec.ts:200:3 › KA-3 (vergleich, Desktop 1280): Region höchstens 60 Zeichen, Unterzeile während der Bearbeitung weg
+[9/120] [tests] › e2e/hub-kopf-aufbau.spec.ts:200:3 › KA-3 (vergleich, Mobil 375): Region höchstens 60 Zeichen, Unterzeile während der Bearbeitung weg
+[10/120] [tests] › e2e/hub-kopf-aufbau.spec.ts:234:2 › KA-4 (route): Desktop-Bedienung — Vorbelegung, Kacheln gesperrt während Speichern, Fallback-Texte, Abbrechen verwirft Fehler
+[11/120] [tests] › e2e/hub-kopf-aufbau.spec.ts:234:2 › KA-4 (vergleich): Desktop-Bedienung — Vorbelegung, Kacheln gesperrt während Speichern, Fallback-Texte, Abbrechen verwirft Fehler
+[12/120] [tests] › e2e/hub-kopf-aufbau.spec.ts:455:2 › KA-10 (route): Desktop — Breadcrumb-Klick führt zur Liste
+[13/120] [tests] › e2e/hub-kopf-aufbau.spec.ts:471:2 › KA-11 (route): Mobil — Zurück-Pfeil führt zur Liste
+[14/120] [tests] › e2e/hub-kopf-aufbau.spec.ts:455:2 › KA-10 (vergleich): Desktop — Breadcrumb-Klick führt zur Liste
+[15/120] [tests] › e2e/hub-kopf-aufbau.spec.ts:471:2 › KA-11 (vergleich): Mobil — Zurück-Pfeil führt zur Liste
+[16/120] [tests] › e2e/hub-kopf-aufbau.spec.ts:497:2 › KA-6..KA-9 (vergleich, compare-eigen) › KA-6 (vergleich): Mobil — keine Eyebrow „Orts-Vergleich · Hub“, Unterzeile „Wandern · 2 Orte“, kein „· ·“
+[17/120] [tests] › e2e/hub-kopf-aufbau.spec.ts:515:2 › KA-6..KA-9 (vergleich, compare-eigen) › KA-7 (vergleich): Desktop — keine Eyebrow, Breadcrumb „Orts-Vergleiche / <Name>“, Unterzeile mit Profil
+[18/120] [tests] › e2e/hub-kopf-aufbau.spec.ts:542:2 › KA-6..KA-9 (vergleich, compare-eigen) › KA-8 (vergleich): Orte-Anzahl — Desktop zählt gespeicherte IDs, Mobil aufgelöste Orte (Singular)
+[19/120] [tests] › e2e/hub-kopf-aufbau.spec.ts:579:2 › KA-6..KA-9 (vergleich, compare-eigen) › KA-9 (vergleich): Orte-Anzahl Desktop-Singular — Vergleich mit 1 Ort zeigt „· 1 Ort“
+[20/120] [tests] › e2e/hub-kopf-bearbeiten.spec.ts:99:2 › KB-1 (route): Name ändern ⇒ Überschrift sofort neu, nach Reload persistent
+[21/120] [tests] › e2e/hub-kopf-bearbeiten.spec.ts:99:2 › KB-1 (vergleich): Name ändern ⇒ Überschrift sofort neu, nach Reload persistent
+[22/120] [tests] › e2e/hub-kopf-bearbeiten.spec.ts:126:2 › KB-2 (route): Region ändern ⇒ sichtbar, persistent am Feldpfad des kind
+[23/120] [tests] › e2e/hub-kopf-bearbeiten.spec.ts:126:2 › KB-2 (vergleich): Region ändern ⇒ sichtbar, persistent am Feldpfad des kind
+[24/120] [tests] › e2e/hub-kopf-bearbeiten.spec.ts:156:2 › KB-3 (route): Profil/Aktivität wählen ⇒ Kachel markiert, persistent
+[25/120] [tests] › e2e/hub-kopf-bearbeiten.spec.ts:156:2 › KB-3 (vergleich): Profil/Aktivität wählen ⇒ Kachel markiert, persistent
+[26/120] [tests] › e2e/hub-kopf-bearbeiten.spec.ts:188:2 › KB-4 (route): jeder Kopf-PUT trägt genau das eine geänderte Feld, alles andere bleibt
+[27/120] [tests] › e2e/hub-kopf-bearbeiten.spec.ts:188:2 › KB-4 (vergleich): jeder Kopf-PUT trägt genau das eine geänderte Feld, alles andere bleibt
+[28/120] [tests] › e2e/hub-kopf-bearbeiten.spec.ts:272:2 › KB-5 (route): Name ändern, dann Alarm-Empfindlichkeit-Commit im selben Seitenaufenthalt ⇒ Name bleibt
+[29/120] [tests] › e2e/hub-kopf-bearbeiten.spec.ts:272:2 › KB-5 (vergleich): Name ändern, dann Alarm-Empfindlichkeit-Commit im selben Seitenaufenthalt ⇒ Name bleibt
+[30/120] [tests] › e2e/hub-kopf-bearbeiten.spec.ts:356:2 › KB-6 (route): Mobil 375 — Name, Region, Profil (Knopf + Auswahl) ändern ⇒ nach Reload persistent
+[31/120] [tests] › e2e/hub-kopf-bearbeiten.spec.ts:356:2 › KB-6 (vergleich): Mobil 375 — Name, Region, Profil (Knopf + Auswahl) ändern ⇒ nach Reload persistent
+[32/120] [tests] › e2e/hub-kopf-bearbeiten.spec.ts:415:2 › KB-7 (route): Name-PUT 500 ⇒ Fehlermeldung role=alert, Eingabe offen mit Versuchswert, Server + Überschrift unverändert
+[33/120] [tests] › e2e/hub-kopf-bearbeiten.spec.ts:415:2 › KB-7 (vergleich): Name-PUT 500 ⇒ Fehlermeldung role=alert, Eingabe offen mit Versuchswert, Server + Überschrift unverändert
+[34/120] [tests] › e2e/hub-kopf-bearbeiten.spec.ts:458:2 › KB-8 (route): Profil-PUT 500 ⇒ Fehler unter den Kacheln, bisherige Kachel bleibt einzige Auswahl
+[35/120] [tests] › e2e/hub-kopf-bearbeiten.spec.ts:458:2 › KB-8 (vergleich): Profil-PUT 500 ⇒ Fehler unter den Kacheln, bisherige Kachel bleibt einzige Auswahl
+[36/120] [tests] › e2e/hub-kopf-bearbeiten.spec.ts:491:2 › KB-9 (route): Name-PUT 2xx ⇒ Feld schließt, Name aktuell, keine Fehlermeldung
+[37/120] [tests] › e2e/hub-kopf-bearbeiten.spec.ts:491:2 › KB-9 (vergleich): Name-PUT 2xx ⇒ Feld schließt, Name aktuell, keine Fehlermeldung
+[38/120] [tests] › e2e/hub-kopf-bearbeiten.spec.ts:519:2 › KB-10 (route): Fehlermeldung verschwindet bei „Abbrechen“ und erneutem Öffnen
+[39/120] [tests] › e2e/hub-kopf-bearbeiten.spec.ts:519:2 › KB-10 (vergleich): Fehlermeldung verschwindet bei „Abbrechen“ und erneutem Öffnen
+[40/120] [tests] › e2e/hub-kopf-bearbeiten.spec.ts:592:2 › KB-11 (route): zwei Umbenennungen im Kopf lassen alle Bestandsfelder bitgleich
+[41/120] [tests] › e2e/hub-kopf-bearbeiten.spec.ts:592:2 › KB-11 (vergleich): zwei Umbenennungen im Kopf lassen alle Bestandsfelder bitgleich
+[42/120] [tests] › e2e/hub-kopf-paritaet-compare-trip.spec.ts:107:3 › HP-1/HP-2 (route, 1440 px): „Senden" in der Leiste, schwarz mit heller Schrift, gleiche Zeile wie Pfad/Zurück
+[43/120] [tests] › e2e/hub-kopf-paritaet-compare-trip.spec.ts:135:3 › HP-6 (route, 1440 px): Status als Badge in der Titelzeile (aktiv, pausiert, Entwurf), keine Statuszeile
+[44/120] [tests] › e2e/hub-kopf-paritaet-compare-trip.spec.ts:162:3 › HP-9/HP-10 (route, 1440 px): Titelblock gleich aufgebaut — Region „—", h1 38 px (Desktop), Zähler neutral
+[45/120] [tests] › e2e/hub-kopf-paritaet-compare-trip.spec.ts:107:3 › HP-1/HP-2 (route, 390 px): „Senden" in der Leiste, schwarz mit heller Schrift, gleiche Zeile wie Pfad/Zurück
+[46/120] [tests] › e2e/hub-kopf-paritaet-compare-trip.spec.ts:135:3 › HP-6 (route, 390 px): Status als Badge in der Titelzeile (aktiv, pausiert, Entwurf), keine Statuszeile
+[47/120] [tests] › e2e/hub-kopf-paritaet-compare-trip.spec.ts:162:3 › HP-9/HP-10 (route, 390 px): Titelblock gleich aufgebaut — Region „—", h1 38 px (Desktop), Zähler neutral
+[48/120] [tests] › e2e/hub-kopf-paritaet-compare-trip.spec.ts:186:2 › HP-4 (route, 1440 px): Breadcrumb „Trips / …" — Elternteil Link (Klick → Liste), Kind kein Link, kein „Hub"
+[49/120] [tests] › e2e/hub-kopf-paritaet-compare-trip.spec.ts:107:3 › HP-1/HP-2 (vergleich, 1440 px): „Senden" in der Leiste, schwarz mit heller Schrift, gleiche Zeile wie Pfad/Zurück
+[50/120] [tests] › e2e/hub-kopf-paritaet-compare-trip.spec.ts:135:3 › HP-6 (vergleich, 1440 px): Status als Badge in der Titelzeile (aktiv, pausiert, Entwurf), keine Statuszeile
+[51/120] [tests] › e2e/hub-kopf-paritaet-compare-trip.spec.ts:162:3 › HP-9/HP-10 (vergleich, 1440 px): Titelblock gleich aufgebaut — Region „—", h1 38 px (Desktop), Zähler neutral
+[52/120] [tests] › e2e/hub-kopf-paritaet-compare-trip.spec.ts:107:3 › HP-1/HP-2 (vergleich, 390 px): „Senden" in der Leiste, schwarz mit heller Schrift, gleiche Zeile wie Pfad/Zurück
+[53/120] [tests] › e2e/hub-kopf-paritaet-compare-trip.spec.ts:135:3 › HP-6 (vergleich, 390 px): Status als Badge in der Titelzeile (aktiv, pausiert, Entwurf), keine Statuszeile
+[54/120] [tests] › e2e/hub-kopf-paritaet-compare-trip.spec.ts:162:3 › HP-9/HP-10 (vergleich, 390 px): Titelblock gleich aufgebaut — Region „—", h1 38 px (Desktop), Zähler neutral
+[55/120] [tests] › e2e/hub-kopf-paritaet-compare-trip.spec.ts:186:2 › HP-4 (vergleich, 1440 px): Breadcrumb „Orts-Vergleiche / …" — Elternteil Link (Klick → Liste), Kind kein Link, kein „Hub"
+[56/120] [tests] › e2e/hub-kopf-paritaet-compare-trip.spec.ts:228:3 › HP Parität — beide Arten nebeneinander gemessen › HP-14 (1440 px): Unterkante des Kopfs gleich — Linie, Abstand unter dem Titelblock, Abstand zur Reiterleiste
+[57/120] [tests] › e2e/hub-kopf-paritaet-compare-trip.spec.ts:253:3 › HP Parität — beide Arten nebeneinander gemessen › HP-1/HP-2 (1440 px): „Senden" sitzt bei Trip und Vergleich an derselben Stelle der Leiste
+[58/120] [tests] › e2e/hub-kopf-paritaet-compare-trip.spec.ts:270:3 › HP Parität — beide Arten nebeneinander gemessen › HP-3 (1440 px): Entwurf — Vergleich „Setup abschließen" auf dem Platz von Senden, Trip-Senden gesperrt
+[59/120] [tests] › e2e/hub-kopf-paritaet-compare-trip.spec.ts:228:3 › HP Parität — beide Arten nebeneinander gemessen › HP-14 (390 px): Unterkante des Kopfs gleich — Linie, Abstand unter dem Titelblock, Abstand zur Reiterleiste
+[60/120] [tests] › e2e/hub-kopf-paritaet-compare-trip.spec.ts:253:3 › HP Parität — beide Arten nebeneinander gemessen › HP-1/HP-2 (390 px): „Senden" sitzt bei Trip und Vergleich an derselben Stelle der Leiste
+[61/120] [tests] › e2e/hub-kopf-paritaet-compare-trip.spec.ts:270:3 › HP Parität — beide Arten nebeneinander gemessen › HP-3 (390 px): Entwurf — Vergleich „Setup abschließen" auf dem Platz von Senden, Trip-Senden gesperrt
+[62/120] [tests] › e2e/hub-kopf-paritaet-compare-trip.spec.ts:301:2 › HP Parität — beide Arten nebeneinander gemessen › HP-7 (390 px): Kebab bei beiden vertikal, Tippen öffnet dasselbe Aktionsblatt
+[63/120] [tests] › e2e/hub-kopf-paritaet-compare-trip.spec.ts:327:2 › HP Parität — beide Arten nebeneinander gemessen › HP-5 (1440 px): Trip ohne Kürzel — Pfad zeigt den Namen
+[64/120] [tests] › e2e/hub-kopf-paritaet-compare-trip.spec.ts:344:3 › HP Parität — beide Arten nebeneinander gemessen › HP-5/HP-8 (route, 390 px): sehr langer Name — Leiste einzeilig und oben, „Senden" sichtbar, Badge lesbar, kein waagerechtes Scrollen
+[65/120] [tests] › e2e/hub-kopf-paritaet-compare-trip.spec.ts:344:3 › HP Parität — beide Arten nebeneinander gemessen › HP-5/HP-8 (vergleich, 390 px): sehr langer Name — Leiste einzeilig und oben, „Senden" sichtbar, Badge lesbar, kein waagerechtes Scrollen
+[66/120] [tests] › e2e/hub-kopf-paritaet-compare-trip.spec.ts:460:4 › HS S1b — Trip und Vergleich zeigen im selben Zustand dasselbe Status-Schild › HS-1/HS-2/HS-4 (1440 px, aktiv): gleicher Text, gleiche Schrift- und Randfarbe, umrandet, Kontrast ≥ 4,5
+[67/120] [tests] › e2e/hub-kopf-paritaet-compare-trip.spec.ts:460:4 › HS S1b — Trip und Vergleich zeigen im selben Zustand dasselbe Status-Schild › HS-1/HS-2/HS-4 (1440 px, pausiert): gleicher Text, gleiche Schrift- und Randfarbe, umrandet, Kontrast ≥ 4,5
+[68/120] [tests] › e2e/hub-kopf-paritaet-compare-trip.spec.ts:460:4 › HS S1b — Trip und Vergleich zeigen im selben Zustand dasselbe Status-Schild › HS-1/HS-2/HS-4 (1440 px, entwurf): gleicher Text, gleiche Schrift- und Randfarbe, umrandet, Kontrast ≥ 4,5
+[69/120] [tests] › e2e/hub-kopf-paritaet-compare-trip.spec.ts:460:4 › HS S1b — Trip und Vergleich zeigen im selben Zustand dasselbe Status-Schild › HS-1/HS-2/HS-4 (390 px, aktiv): gleicher Text, gleiche Schrift- und Randfarbe, umrandet, Kontrast ≥ 4,5
+[70/120] [tests] › e2e/hub-kopf-paritaet-compare-trip.spec.ts:460:4 › HS S1b — Trip und Vergleich zeigen im selben Zustand dasselbe Status-Schild › HS-1/HS-2/HS-4 (390 px, pausiert): gleicher Text, gleiche Schrift- und Randfarbe, umrandet, Kontrast ≥ 4,5
+[71/120] [tests] › e2e/hub-kopf-paritaet-compare-trip.spec.ts:460:4 › HS S1b — Trip und Vergleich zeigen im selben Zustand dasselbe Status-Schild › HS-1/HS-2/HS-4 (390 px, entwurf): gleicher Text, gleiche Schrift- und Randfarbe, umrandet, Kontrast ≥ 4,5
+[72/120] [tests] › e2e/hub-kopf-paritaet-compare-trip.spec.ts:506:4 › HS S1b — Profil in der Zeile unter dem Titel bei beiden Arten › HS-5 (route, 1440 px): „— ✎ · Trekking" — Profil direkt hinter dem Region-Stift
+[73/120] [tests] › e2e/hub-kopf-paritaet-compare-trip.spec.ts:506:4 › HS S1b — Profil in der Zeile unter dem Titel bei beiden Arten › HS-5 (vergleich, 1440 px): „— ✎ · Wandern" — Profil direkt hinter dem Region-Stift
+[74/120] [tests] › e2e/hub-kopf-paritaet-compare-trip.spec.ts:520:3 › HS S1b — Profil in der Zeile unter dem Titel bei beiden Arten › HS-6 (route, 1440 px): Trip ohne Aktivität — kein Zusatz hinter „— ✎" (AC-7)
+[75/120] [tests] › e2e/hub-kopf-paritaet-compare-trip.spec.ts:506:4 › HS S1b — Profil in der Zeile unter dem Titel bei beiden Arten › HS-5 (route, 390 px): „— ✎ · Trekking" — Profil direkt hinter dem Region-Stift
+[76/120] [tests] › e2e/hub-kopf-paritaet-compare-trip.spec.ts:506:4 › HS S1b — Profil in der Zeile unter dem Titel bei beiden Arten › HS-5 (vergleich, 390 px): „— ✎ · Wandern" — Profil direkt hinter dem Region-Stift
+[77/120] [tests] › e2e/hub-kopf-paritaet-compare-trip.spec.ts:520:3 › HS S1b — Profil in der Zeile unter dem Titel bei beiden Arten › HS-6 (route, 390 px): Trip ohne Aktivität — kein Zusatz hinter „— ✎" (AC-7)
+[78/120] [tests] › e2e/trip-hub-etappenliste-titel.spec.ts:137:1 › EL-1 (1280 px, de/en): jede Etappenzeile zeigt den Namen, das Datum steht in einer Zeile
+[79/120] [tests] › e2e/trip-hub-etappenliste-titel.spec.ts:170:1 › EL-2 (1280/1440 px): keine Etappenzeile läuft über, Zusammenfassung sichtbar ab 640 px Behälter
+[80/120] [tests] › e2e/trip-hub-etappenliste-titel.spec.ts:203:1 › EL-3 (390 px, de/en): Trip-Titel „Korsika Nordteil" vollständig sichtbar, kein Auslassungszeichen
+[81/120] [tests] › e2e/trip-hub-etappenliste-titel.spec.ts:220:1 › EL-4 (390 px): 60-Zeichen-Name mehrzeilig, kein waagerechtes Scrollen, Stift am Titel mit 44×44 px
+[82/120] [tests] › e2e/trip-hub-etappenliste-titel.spec.ts:252:1 › EL-5 (390 px): Trip- und Vergleichs-Titel gleich langen Namens vollständig, gleiche Umbruch-Stile
+[83/120] [tests] › e2e/trip-hub-kopf-region-aktivitaet.spec.ts:248:2 › Issue #2284 S2 — Trip-Hub-Kopf: Name, Region, Aktivitaet im geteilten Baustein › AC-1: Name im Kopf aendern → sofort in trip-detail-h1 (Praefix bleibt) + nach Reload persistent
+[84/120] [tests] › e2e/trip-hub-kopf-region-aktivitaet.spec.ts:282:2 › Issue #2284 S2 — Trip-Hub-Kopf: Name, Region, Aktivitaet im geteilten Baustein › AC-2: Region per Stift aendern → eigene Zeile unter dem Namen, persistent, Eyebrow nur Datum
+[85/120] [tests] › e2e/trip-hub-kopf-region-aktivitaet.spec.ts:326:2 › Issue #2284 S2 — Trip-Hub-Kopf: Name, Region, Aktivitaet im geteilten Baustein › AC-3 (Trip): Region leeren → „—" im Kopf, nach Reload „—", Trip-Liste blendet Region aus, Feld leer
+[86/120] [tests] › e2e/trip-hub-kopf-region-aktivitaet.spec.ts:386:2 › Issue #2284 S2 — Trip-Hub-Kopf: Name, Region, Aktivitaet im geteilten Baustein › AC-3 (Vergleich): Region leeren → derselbe Platzhalter „—" im Vergleich-Kopf, Feld leer
+[87/120] [tests] › e2e/trip-hub-kopf-region-aktivitaet.spec.ts:419:2 › Issue #2284 S2 — Trip-Hub-Kopf: Name, Region, Aktivitaet im geteilten Baustein › AC-4: 8 Aktivitaets-Kacheln im Kopf, Trekking gewaehlt, kein edit-activity-dropdown; Skitour persistent
+[88/120] [tests] › e2e/trip-hub-kopf-region-aktivitaet.spec.ts:458:2 › Issue #2284 S2 — Trip-Hub-Kopf: Name, Region, Aktivitaet im geteilten Baustein › AC-4: Trip ohne gespeicherte Aktivitaet zeigt alle 8 Kacheln ungewaehlt
+[89/120] [tests] › e2e/trip-hub-kopf-region-aktivitaet.spec.ts:472:2 › Issue #2284 S2 — Trip-Hub-Kopf: Name, Region, Aktivitaet im geteilten Baustein › AC-4 (Trip, Handy 375): genau ein Knopf „Trekking", keine sichtbare Kachel; Auswahl → Skitour sofort + persistent
+[90/120] [tests] › e2e/trip-hub-kopf-region-aktivitaet.spec.ts:521:2 › Issue #2284 S2 — Trip-Hub-Kopf: Name, Region, Aktivitaet im geteilten Baustein › AC-4 (Trip, Handy 375): ohne gespeicherte Aktivitaet zeigt der Knopf „Aktivität wählen"
+[91/120] [tests] › e2e/trip-hub-kopf-region-aktivitaet.spec.ts:536:2 › Issue #2284 S2 — Trip-Hub-Kopf: Name, Region, Aktivitaet im geteilten Baustein › AC-4 (Vergleich, Handy 375): Knopf mit gewaehltem Profil, keine sichtbare Kachel; Auswahl → Wandern persistent
+[92/120] [tests] › e2e/trip-hub-kopf-region-aktivitaet.spec.ts:579:2 › Issue #2284 S2 — Trip-Hub-Kopf: Name, Region, Aktivitaet im geteilten Baustein › AC-4 (Vergleich, Desktop 1280): 4 Kacheln sichtbar, Knopf im Markup aber unsichtbar
+[93/120] [tests] › e2e/trip-hub-kopf-region-aktivitaet.spec.ts:595:2 › Issue #2284 S2 — Trip-Hub-Kopf: Name, Region, Aktivitaet im geteilten Baustein › AC-5: Aktivitaet im Kopf wechseln → Ankunftszeiten im Etappen-Reiter aendern sich ohne Neuladen/Reiterwechsel
+[94/120] [tests] › e2e/trip-hub-kopf-region-aktivitaet.spec.ts:632:2 › Issue #2284 S2 — Trip-Hub-Kopf: Name, Region, Aktivitaet im geteilten Baustein › AC-6: jeder Kopf-PUT traegt genau EINEN Schluessel; alle uebrigen Felder bleiben unveraendert
+[95/120] [tests] › e2e/trip-hub-kopf-region-aktivitaet.spec.ts:699:2 › Issue #2284 S2 — Trip-Hub-Kopf: Name, Region, Aktivitaet im geteilten Baustein › AC-8 (Name): PUT 500 → Fehlermeldung role=alert, Eingabe bleibt offen mit Wert, Server unveraendert
+[96/120] [tests] › e2e/trip-hub-kopf-region-aktivitaet.spec.ts:724:2 › Issue #2284 S2 — Trip-Hub-Kopf: Name, Region, Aktivitaet im geteilten Baustein › AC-8 (Region): PUT 500 → Fehlermeldung role=alert, Eingabe bleibt offen mit Wert, Server unveraendert
+[97/120] [tests] › e2e/trip-hub-kopf-region-aktivitaet.spec.ts:748:2 › Issue #2284 S2 — Trip-Hub-Kopf: Name, Region, Aktivitaet im geteilten Baustein › AC-8 (Aktivitaet): PUT 500 → Fehlermeldung role=alert, bisherige Kachel bleibt einzige Auswahl
+[98/120] [tests] › e2e/trip-hub-kopf-region-aktivitaet.spec.ts:771:2 › Issue #2284 S2 — Trip-Hub-Kopf: Name, Region, Aktivitaet im geteilten Baustein › AC-8 (Aktivitaet, Handy 375): Knopf-Wahl mit PUT 500 → Fehlermeldung role=alert, Knopftext unveraendert
+[99/120] [tests] › e2e/trip-hub-kopf-region-aktivitaet.spec.ts:803:2 › Issue #2284 S2 — Trip-Hub-Kopf: Name, Region, Aktivitaet im geteilten Baustein › AC-9: 412 bei Name/Region/Aktivitaet → je ein Konflikt-Eintrag, „Nochmal speichern" sendet je nur das Eigenfeld, Reiter bleiben
+[100/120] [tests] › e2e/trip-hub-kopf-region-aktivitaet.spec.ts:916:4 › Issue #2284 S2 — Trip-Hub-Kopf: Name, Region, Aktivitaet im geteilten Baustein › AC-10 (Trip, Desktop 1280): genau ein save-indicator im DOM, position fixed, unten rechts
+[101/120] [tests] › e2e/trip-hub-kopf-region-aktivitaet.spec.ts:916:4 › Issue #2284 S2 — Trip-Hub-Kopf: Name, Region, Aktivitaet im geteilten Baustein › AC-10 (Vergleich, Desktop 1280): genau ein save-indicator im DOM, position fixed, unten rechts
+[102/120] [tests] › e2e/trip-hub-kopf-region-aktivitaet.spec.ts:916:4 › Issue #2284 S2 — Trip-Hub-Kopf: Name, Region, Aktivitaet im geteilten Baustein › AC-10 (Trip, Mobil 375): genau ein save-indicator im DOM, position fixed, unten rechts
+[103/120] [tests] › e2e/trip-hub-kopf-region-aktivitaet.spec.ts:916:4 › Issue #2284 S2 — Trip-Hub-Kopf: Name, Region, Aktivitaet im geteilten Baustein › AC-10 (Vergleich, Mobil 375): genau ein save-indicator im DOM, position fixed, unten rechts
+[104/120] [tests] › e2e/trip-hub-kopf-region-aktivitaet.spec.ts:971:2 › Issue #2284 S2 — Trip-Hub-Kopf: Name, Region, Aktivitaet im geteilten Baustein › AC-12: offline sind Region-Stift und alle Aktivitaets-Kacheln gesperrt
+[105/120] [tests] › e2e/trip-hub-kopf-region-aktivitaet.spec.ts:1003:2 › Issue #2284 S2 — Trip-Hub-Kopf: Name, Region, Aktivitaet im geteilten Baustein › AC-12 (Handy 375): offline ist der Aktivitaets-Knopf gesperrt, Tippen oeffnet die Auswahl nicht
+[106/120] [tests] › e2e/trip-hub-kopf-region-aktivitaet.spec.ts:1082:3 › Issue #2284 S2 — Trip-Hub-Kopf: Name, Region, Aktivitaet im geteilten Baustein › AC-13 (375x667 langer Name): Oberkante der Etappen-Liste ≤ 474 px (vor S2 472), Liste ueber der Navigation, Kopf ohne Querscrollen, Tippflaechen ≥ 44 px
+[tests] › e2e/trip-hub-kopf-region-aktivitaet.spec.ts:1082:3 › Issue #2284 S2 — Trip-Hub-Kopf: Name, Region, Aktivitaet im geteilten Baustein › AC-13 (375x667 langer Name): Oberkante der Etappen-Liste ≤ 474 px (vor S2 472), Liste ueber der Navigation, Kopf ohne Querscrollen, Tippflaechen ≥ 44 px
+[AC-13 Messung 375x667 langer Name] Liste oben=398.5px (Basis vor S2 472px, Grenze 474px) · Navigation oben=597px · Kopf(header.trip-header)=341.5px · scrollY=0
+[AC-13 Tippflaechen (vorab) 375x667 langer Name] trip-profil-knopf=96x44 · trip-region-edit-toggle=44x44 · trip-name-edit-toggle=44x44 · subscription-kebab=44x44 · subscription-hub-send=63x44
+[AC-13 Tippflaechen 375x667 langer Name] trip-profil-knopf=96x44 · trip-region-edit-toggle=44x44 · trip-name-edit-toggle=44x44 · subscription-kebab=44x44 · subscription-hub-send=63x44
+[107/120] [tests] › e2e/trip-hub-kopf-region-aktivitaet.spec.ts:1082:3 › Issue #2284 S2 — Trip-Hub-Kopf: Name, Region, Aktivitaet im geteilten Baustein › AC-13 (390x700 E2E Kurz): Oberkante der Etappen-Liste ≤ 474 px (vor S2 472), Liste ueber der Navigation, Kopf ohne Querscrollen, Tippflaechen ≥ 44 px
+[tests] › e2e/trip-hub-kopf-region-aktivitaet.spec.ts:1082:3 › Issue #2284 S2 — Trip-Hub-Kopf: Name, Region, Aktivitaet im geteilten Baustein › AC-13 (390x700 E2E Kurz): Oberkante der Etappen-Liste ≤ 474 px (vor S2 472), Liste ueber der Navigation, Kopf ohne Querscrollen, Tippflaechen ≥ 44 px
+[AC-13 Messung 390x700 E2E Kurz] Liste oben=398.5px (Basis vor S2 472px, Grenze 474px) · Navigation oben=630px · Kopf(header.trip-header)=341.5px · scrollY=0
+[AC-13 Tippflaechen (vorab) 390x700 E2E Kurz] trip-profil-knopf=141x44 · trip-region-edit-toggle=44x44 · trip-name-edit-toggle=44x44 · subscription-kebab=44x44 · subscription-hub-send=63x44
+[AC-13 Tippflaechen 390x700 E2E Kurz] trip-profil-knopf=141x44 · trip-region-edit-toggle=44x44 · trip-name-edit-toggle=44x44 · subscription-kebab=44x44 · subscription-hub-send=63x44
+[108/120] [tests] › e2e/trip-hub-kopf-region-aktivitaet.spec.ts:1082:3 › Issue #2284 S2 — Trip-Hub-Kopf: Name, Region, Aktivitaet im geteilten Baustein › AC-13 (390x844 GR20): Oberkante der Etappen-Liste ≤ 474 px (vor S2 472), Liste ueber der Navigation, Kopf ohne Querscrollen, Tippflaechen ≥ 44 px
+[tests] › e2e/trip-hub-kopf-region-aktivitaet.spec.ts:1082:3 › Issue #2284 S2 — Trip-Hub-Kopf: Name, Region, Aktivitaet im geteilten Baustein › AC-13 (390x844 GR20): Oberkante der Etappen-Liste ≤ 474 px (vor S2 472), Liste ueber der Navigation, Kopf ohne Querscrollen, Tippflaechen ≥ 44 px
+[AC-13 Messung 390x844 GR20] Liste oben=414.5px (Basis vor S2 472px, Grenze 474px) · Navigation oben=774px · Kopf(header.trip-header)=357.5px · scrollY=0
+[AC-13 Tippflaechen (vorab) 390x844 GR20] trip-profil-knopf=141x44 · trip-region-edit-toggle=44x44 · trip-name-edit-toggle=44x44 · subscription-kebab=44x44 · subscription-hub-send=63x44
+[AC-13 Tippflaechen 390x844 GR20] trip-profil-knopf=141x44 · trip-region-edit-toggle=44x44 · trip-name-edit-toggle=44x44 · subscription-kebab=44x44 · subscription-hub-send=63x44
+[109/120] [tests] › e2e/trip-hub-kopf-region-aktivitaet.spec.ts:1240:2 › Issue #2284 S2 — Trip-Hub-Kopf: Name, Region, Aktivitaet im geteilten Baustein › AC-18 (Trip, Handy 375x667): Titel 20 px, bricht um statt Ellipsis (#2878), kein Seitenueberlauf
+[tests] › e2e/trip-hub-kopf-region-aktivitaet.spec.ts:1240:2 › Issue #2284 S2 — Trip-Hub-Kopf: Name, Region, Aktivitaet im geteilten Baustein › AC-18 (Trip, Handy 375x667): Titel 20 px, bricht um statt Ellipsis (#2878), kein Seitenueberlauf
+[AC-18 Trip mobil] font-size=20px · Hoehe=180px · text-overflow=clip · white-space=normal · Titel scrollWidth=259/clientWidth=259 · Seite scrollWidth=375/innerWidth=375
+[110/120] [tests] › e2e/trip-hub-kopf-region-aktivitaet.spec.ts:1255:2 › Issue #2284 S2 — Trip-Hub-Kopf: Name, Region, Aktivitaet im geteilten Baustein › AC-18 (Vergleich, Handy 375x667): Titel 20 px, bricht um statt Ellipsis (#2878), kein Seitenueberlauf
+[tests] › e2e/trip-hub-kopf-region-aktivitaet.spec.ts:1255:2 › Issue #2284 S2 — Trip-Hub-Kopf: Name, Region, Aktivitaet im geteilten Baustein › AC-18 (Vergleich, Handy 375x667): Titel 20 px, bricht um statt Ellipsis (#2878), kein Seitenueberlauf
+[AC-18 Vergleich mobil] font-size=20px · Hoehe=150px · text-overflow=clip · white-space=normal · Titel scrollWidth=259/clientWidth=259 · Seite scrollWidth=375/innerWidth=375
+[111/120] [tests] › e2e/trip-hub-kopf-region-aktivitaet.spec.ts:1275:2 › Issue #2284 S2 — Trip-Hub-Kopf: Name, Region, Aktivitaet im geteilten Baustein › AC-18 (Trip, Desktop 1280x900): Titelgroesse unveraendert gegenueber vor S2
+[tests] › e2e/trip-hub-kopf-region-aktivitaet.spec.ts:1275:2 › Issue #2284 S2 — Trip-Hub-Kopf: Name, Region, Aktivitaet im geteilten Baustein › AC-18 (Trip, Desktop 1280x900): Titelgroesse unveraendert gegenueber vor S2
+[AC-18 Trip Desktop] font-size=38px · Hoehe=41.8px · text-overflow=clip · white-space=normal · Titel scrollWidth=447/clientWidth=447 · Seite scrollWidth=1280/innerWidth=1280 · Basis vor S2 38px
+[112/120] [tests] › e2e/trip-hub-kopf-region-aktivitaet.spec.ts:1288:2 › Issue #2284 S2 — Trip-Hub-Kopf: Name, Region, Aktivitaet im geteilten Baustein › AC-18 (Vergleich, Desktop 1280x900): Titelgroesse unveraendert gegenueber vor S2
+[tests] › e2e/trip-hub-kopf-region-aktivitaet.spec.ts:1288:2 › Issue #2284 S2 — Trip-Hub-Kopf: Name, Region, Aktivitaet im geteilten Baustein › AC-18 (Vergleich, Desktop 1280x900): Titelgroesse unveraendert gegenueber vor S2
+[AC-18 Vergleich Desktop] font-size=38px · Hoehe=41.8px · text-overflow=clip · white-space=normal · Titel scrollWidth=491/clientWidth=491 · Seite scrollWidth=1280/innerWidth=1280 · Basis vor S2 38px
+[113/120] [tests] › e2e/hub-kopf-aufbau.spec.ts:320:2 › KA-5 (route): Mobil — Versand-Abschnitt ohne Test-Senden, Hub-Kopf-„Senden“ öffnet den Dialog und löst genau EINEN Sende-Abruf aus
+[114/120] [tests] › e2e/hub-kopf-aufbau.spec.ts:320:2 › KA-5 (vergleich): Mobil — Versand-Abschnitt ohne Test-Senden, Hub-Kopf-„Senden“ öffnet den Dialog und löst genau EINEN Sende-Abruf aus
+[115/120] [tests] › e2e/hub-kopf-aufbau.spec.ts:387:2 › KA-5b (route): Desktop — Hub-Kopf-„Senden“ löst genau EINEN Sende-Abruf an diesen route aus, ohne Empfänger im Körper
+[116/120] [tests] › e2e/hub-kopf-aufbau.spec.ts:387:2 › KA-5b (vergleich): Desktop — Hub-Kopf-„Senden“ löst genau EINEN Sende-Abruf an diesen vergleich aus, ohne Empfänger im Körper
+[117/120] [tests] › e2e/hub-kopf-paritaet-compare-trip.spec.ts:380:2 › HP-13 (route): Breadcrumb-Elternteil und Aria-Texte folgen der Nutzersprache (de → en)
+[118/120] [tests] › e2e/hub-kopf-paritaet-compare-trip.spec.ts:380:2 › HP-13 (vergleich): Breadcrumb-Elternteil und Aria-Texte folgen der Nutzersprache (de → en)
+[119/120] [tests] › e2e/hub-kopf-paritaet-compare-trip.spec.ts:536:2 › HS-7 (route): Status-Schild „Pausiert"/„Paused" und Profil folgen der Nutzersprache (de → en)
+[120/120] [tests] › e2e/hub-kopf-paritaet-compare-trip.spec.ts:536:2 › HS-7 (vergleich): Status-Schild „Pausiert"/„Paused" und Profil folgen der Nutzersprache (de → en)
+  120 passed (1.7m)

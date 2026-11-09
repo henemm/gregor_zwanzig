@@ -37,8 +37,9 @@
 //
 // Spec v1.3 (nach F5/PR #2495, Karte entfaellt mobil): AC-13 misst die Oberkante
 // der Etappen-Liste `mobile-stages-list` (≤ 474 px, Basis 472 px am Stand
-// 461c696a2). AC-18 = Titel mobil 20 px/einzeilig/Ellipsis in Trip- UND
-// Vergleich-Hub, Desktop unveraendert. AC-19 = Chip genau einmal mit sichtbarer
+// 461c696a2). AC-18 = Titel mobil 20 px in Trip- UND Vergleich-Hub, seit #2878
+// umbrechend statt einzeilig/Ellipsis (Spec fix_2878_etappenliste_und_titel.md
+// AC-3/AC-4), Desktop unveraendert. AC-19 = Chip genau einmal mit sichtbarer
 // MTabBar (im Fall AC-10 mobil). Die v1.2-Faelle Pillen-Topmost, /trips/new und
 // Kartenhoehe 126 px sowie der alte AC-13-Kartenfall entfallen.
 //
@@ -1185,9 +1186,10 @@ test.describe('Issue #2284 S2 — Trip-Hub-Kopf: Name, Region, Aktivitaet im get
 	}
 
 	// ─── AC-18 (Spec v1.3, Entscheidung 16: F1 im Baustein) ──────────────────
-	// Mobil (375x667) hat der Titel in BEIDEN Hubs 20 px, bleibt einzeilig und
-	// endet mit Ellipsis (echte Kuerzung: scrollWidth > clientWidth), die Seite
-	// scrollt nicht horizontal. Desktop (1280x900): Titelgroesse == Groesse VOR S2.
+	// Mobil (375x667) hat der Titel in BEIDEN Hubs 20 px, die Seite scrollt nicht
+	// horizontal. #2878 (Spec fix_2878_etappenliste_und_titel.md AC-3/AC-4, PO-
+	// freigegeben) loest „einzeilig mit Ellipsis" ab: der Titel bricht um, wird
+	// nie gekuerzt (kein Ellipsis, scrollWidth ≤ clientWidth), der Name bleibt ganz. Desktop (1280x900): Titelgroesse == Groesse VOR S2.
 	// Vor-S2-Werte (Stand 461c696a2) aus Quelltext/Token abgeleitet, NICHT aus dem
 	// WIP gemessen — Wert + Quelle: docs/artifacts/feat-2284-s2-trip-kopf/ac18-desktop-basis.json.
 	const AC18_LANGER_NAME =
@@ -1224,18 +1226,18 @@ test.describe('Issue #2284 S2 — Trip-Hub-Kopf: Name, Region, Aktivitaet im get
 
 	function pruefeTitelMobil(m: TitelMass, hub: string) {
 		expect(m.fontSize, `AC-18 (${hub}): Titel mobil ist nicht 20 px gross (F1 im Baustein)`).toBe('20px');
-		expect(m.hoehe, `AC-18 (${hub}): Titel ist mehrzeilig (${m.hoehe} px hoch bei ${m.fontSize})`).toBeLessThan(
+		expect(m.hoehe, `AC-18/#2878 (${hub}): langer Titel bricht nicht um (${m.hoehe} px hoch bei ${m.fontSize})`).toBeGreaterThan(
 			2 * parseFloat(m.fontSize)
 		);
-		expect(m.textOverflow, `AC-18 (${hub}): text-overflow ist nicht ellipsis`).toBe('ellipsis');
+		expect(m.textOverflow, `AC-18/#2878 (${hub}): Titel wird mit Ellipsis gekuerzt`).not.toBe('ellipsis');
 		expect(
 			m.scrollWidth,
-			`AC-18 (${hub}): der Titel wird nicht gekuerzt (scrollWidth ${m.scrollWidth} ≤ clientWidth ${m.clientWidth})`
-		).toBeGreaterThan(m.clientWidth);
+			`AC-18/#2878 (${hub}): der Titel laeuft ueber (scrollWidth ${m.scrollWidth} > clientWidth ${m.clientWidth})`
+		).toBeLessThanOrEqual(m.clientWidth);
 		expect(m.docScrollWidth, `AC-18 (${hub}): die Seite scrollt horizontal`).toBeLessThanOrEqual(m.innerWidth);
 	}
 
-	test('AC-18 (Trip, Handy 375x667): Titel 20 px, einzeilig, Ellipsis, kein Seitenueberlauf', async ({ page }, testInfo) => {
+	test('AC-18 (Trip, Handy 375x667): Titel 20 px, bricht um statt Ellipsis (#2878), kein Seitenueberlauf', async ({ page }, testInfo) => {
 		await page.setViewportSize({ width: 375, height: 667 });
 		const id = await seedTrip(page, 'ac18-m', { name: AC18_LANGER_NAME });
 		try {
@@ -1250,7 +1252,7 @@ test.describe('Issue #2284 S2 — Trip-Hub-Kopf: Name, Region, Aktivitaet im get
 		}
 	});
 
-	test('AC-18 (Vergleich, Handy 375x667): Titel 20 px, einzeilig, Ellipsis, kein Seitenueberlauf', async ({
+	test('AC-18 (Vergleich, Handy 375x667): Titel 20 px, bricht um statt Ellipsis (#2878), kein Seitenueberlauf', async ({
 		page
 	}, testInfo) => {
 		await page.setViewportSize({ width: 375, height: 667 });

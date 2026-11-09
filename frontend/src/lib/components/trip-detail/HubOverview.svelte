@@ -88,8 +88,8 @@
 </script>
 
 <div data-testid="hub-overview" class="hub-overview">
-	<!-- Left column -->
-	<div>
+	<!-- Left column — #2878: Bezug der Container-Query in TripStageRow (Breite der Spalte, nicht des Fensters). -->
+	<div class="hub-overview-etappen">
 		<SectionH eyebrow={$t('trip.etappen')} title={$t('trip.uebersicht.reihenfolge_profil')}>
 			{#snippet right()}
 				<Btn variant="ghost" size="sm" onclick={makeJumpHandler('etappen')}>{$t('trip.uebersicht.im_editor')}</Btn>
@@ -169,6 +169,10 @@
 	}
 	.hub-overview > :global(*) {
 		min-width: 0;
+	}
+	.hub-overview-etappen {
+		container-type: inline-size;
+		container-name: etappenliste;
 	}
 	/* Feature #1435 Etappe E3a (AC-12, Fehlerklasse #1446): die Namensliste
 	   bricht um, statt am Handy abgeschnitten zu werden — bewusst KEIN
