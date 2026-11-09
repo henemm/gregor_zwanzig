@@ -150,3 +150,4 @@ Das Audit vom 9.11.2026 fand zwei Arten von Problemen:
 
 - 2026-11-09: Initial spec (Issue #2881).
 - 2026-11-09: Vom PO freigegeben.
+- 2026-11-09: Lieferung B umgesetzt (R2, R3, R5; AC-1/2/3/4/6, DS-1/2/3/4/6, Pflicht-Mutationen d–f). Englisches Datumsformat im DatumFeld: Segmente Tag zuerst (`19/11/2026`, en-GB) wie die Tag-zuerst-Reihenfolge im übrigen UI (`19 Nov 2026`); die Segmentfelder sind numerisch. Uhrzeit immer 24 h. Native Felder bleiben nur in den ausgenommenen Reitern (DayWindowCard, Alarme) und in Konto/Admin/GPX-Upload (#1199).

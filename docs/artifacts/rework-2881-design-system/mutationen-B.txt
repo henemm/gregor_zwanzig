@@ -1,0 +1,31 @@
+# #2881 Lieferung B — Selbst-Gegenprobe der Pflicht-Mutationen d, e, f (Spec Implementation Details 4)
+# Verfahren: String-Ersetzung mit externer Sicherungskopie (Skript ausserhalb des Repos, Kopie im
+# Sitzungs-Scratchpad), danach Original aus der Kopie zurueck — nie git checkout/stash/reset.
+# Lauf: cd frontend && CI=1 npx playwright test --trace off e2e/design-system-trip-vergleich.spec.ts -g <Fall>
+# Stack: bash frontend/e2e/ci-stack.sh start (isoliert, 8091/8000). Jede Mutation einzeln, frischer Build.
+# (Die „N passed" je Lauf sind global.setup und die nicht betroffenen Varianten.)
+
+(d) atoms/BackLink.svelte, Handy-Regel `height: 44px` -> `height: 36px`
+    Lauf -g "DS-6": 1 failed (DS-6) — ROT
+      route-Hub Zurück back-link: 44.0 × 36.0 px (< 44 × 44)
+      vergleich-Hub Zurück back-link: 44.0 × 36.0 px (< 44 × 44)
+      route-Anlegen Zurück back-link: 73.3 × 36.0 px (< 44 × 44)
+      vergleich-Anlegen Zurück back-link: 156.8 × 36.0 px (< 44 × 44)
+    Original zurück: `height: 44px` wieder genau 1x vorhanden.
+
+(e) molecules/DatumFeld.svelte, Meldung nach außen `neu.toString().slice(0, 10)` (YYYY-MM-DD)
+    -> `${MM}/${DD}/${YYYY}`
+    Lauf -g "DS-1": 2 failed (DS-1 de, DS-1 en) — ROT; DS-1 (390 px) prüft nur Anzeige/Weiter und bleibt grün.
+      Der Anlege-Ablauf zerbricht am falschen Startdatum, bevor gespeichert wird: die Etappen werden aus
+      „11/19/2026" nicht mehr korrekt gebildet (tripGpxHochladen: `.tn-desktop input[type=file]`
+      erwartet 1, erhalten 2) — der Trip mit Startdatum 2026-11-19 entsteht nicht.
+    Original zurück: Zeile `const iso = neu.toString().slice(0, 10);` wieder genau 1x vorhanden.
+
+(f) ui/SaveIndicator.svelte, `<Dot tone="good" size="xs" />` -> `<span … aria-hidden="true">✓</span>`
+    Lauf -g "DS-3": 4 failed (DS-3 1280/390 × de/en) — ROT
+      route-Hub uebersicht: Symbol ✓ in „… ✓ Gespeichert 4.5 km …" (de) bzw. „… ✓ Saved …" (en),
+      ebenso in allen weiteren Hub-Ansichten und im Prüfbereich Zustellung (Speicher-Chip).
+    Original zurück: Speicher-Chip zeigt wieder Dot + „Gespeichert".
+
+Ergebnis: alle drei Pflicht-Mutationen werden von einem Test der Lieferung B rot gemacht, jeweils am
+Wirkort (gerendertes UI bzw. Anlege-Ablauf mit gespeichertem Wert), nicht am Quelltext.

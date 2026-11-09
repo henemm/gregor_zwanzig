@@ -227,6 +227,17 @@ Untertitel-Block: Eyebrow oben, Title 22 px / `font-weight: 600` / `letter-spaci
   offen ohne Füllung mit 1-px-Kontur `--g-ink-3` (5,13:1); der Zähler „n / 5" nennt den Stand als Text.
 - **Hilfsklassen** (TOKENS.md §12, `app.css`): `.mono` = `--g-font-mono` mit `"tnum", "zero"`;
   `.tnum` = tabellarische Ziffern ohne Schriftwechsel.
+- **Eingabefelder (Lieferung B):** keine nativen Datums-, Uhrzeit-, Auswahl- oder Radio-Felder auf Trip-
+  und Vergleichsseiten. Datum `molecules/DatumFeld.svelte` (bits-ui DatePicker, Segmente Tag/Monat/Jahr,
+  Kalender im Popover, Wochenbeginn Montag; de `19.11.2026`, en Tag zuerst `19/11/2026`), Uhrzeit
+  `molecules/UhrzeitFeld.svelte` (bits-ui TimeField, immer 24 h); Werte nach außen weiter `YYYY-MM-DD`
+  bzw. `HH:MM`. Auswahl `ui/select/Select.svelte` (bits-ui Select, Rolle listbox, `options: {value,label}[]`,
+  `onValueChange`). Zwei bis drei feste Möglichkeiten (Mail-Format, Berichtsart im Sende-Dialog):
+  `Segmented` mit `rolle="radio"` (radiogroup, Pfeiltasten).
+- **Zustände ohne ✓/⊘** (ADR-0111 Punkt 7): `Dot` plus Text — erledigt `--g-good`, gesperrt
+  `aria-disabled` und Punkt `--g-ink-4` (Speicher-Chip, Anlege-Reiter, Anlege-Hinweise, Startklar-Liste).
+- **Tippflächen am Handy (< 900 px) mindestens 44 × 44:** Zurück-Link, „Mit Standardwerten speichern",
+  Schnellwahl-Chips der Zustellung, ⓘ (unsichtbar vergrößert, negative Ränder halten die Zeile).
 - Maßstab sind diese Regeln, das Mockup Fassung 3 und die Playwright-Paritäts-/Kontrasttests
   (`hub-tab-bar`, `kontrast-trip-vergleich`, `design-system-trip-vergleich`); die Soll-Bilder unter
   `claude-code-handoff/current/soll/` sind historisch.
