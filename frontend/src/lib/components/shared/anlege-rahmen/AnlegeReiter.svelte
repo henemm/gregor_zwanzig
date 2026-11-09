@@ -17,8 +17,8 @@
 	// Issue #2880 (Epic #2345, ADR-0097/ADR-0111): EINE Schritt-Reiterleiste für das Anlegen von
 	// Trip und Ortsvergleich, Computer und Handy. Ersetzt die vier handgebauten Leisten.
 	// Jeder Reiter ist ein `button role="tab"`, gesperrt `aria-disabled="true"` (klickbar, damit der
-	// Aufrufer Hinweis/Toast zeigen kann). Die Zustandsmarker (✓ erledigt, ⊘ gesperrt) stehen NUR
-	// hier — #2881 ersetzt sie an dieser einen Stelle.
+	// Aufrufer Hinweis/Toast zeigen kann). Die Zustandsmarker (✓ erledigt — wie bisher nur am
+	// Computer —, ⊘ gesperrt) stehen NUR hier — #2881 ersetzt sie an dieser einen Stelle.
 	// Spec: docs/specs/modules/rework_2880_paritaet_reiterflaeche_anlegefelder.md
 	import { t } from '$lib/i18n';
 
@@ -82,7 +82,8 @@
 			{#if s.optional}
 				<span class="pille" data-slot="anlege-reiter-optional">{$t(variante === 'mobil' ? 'trip.anlegen.opt' : 'trip.anlegen.optional')}</span>
 			{/if}
-			{#if fertig && !an}
+			{#if fertig && !an && variante === 'desktop'}
+				<!-- ✓ wie bisher nur am Computer (am Handy zeigten beide Seiten keinen; Platz) -->
 				<span class="marker erledigt">✓</span>
 			{/if}
 			{#if zu}
