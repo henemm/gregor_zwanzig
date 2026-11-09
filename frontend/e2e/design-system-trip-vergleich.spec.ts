@@ -206,7 +206,8 @@ interface ReiterMass {
 
 async function messeReiterleiste(page: Page, kind: HubKind): Promise<ReiterMass> {
 	const leiste = page.getByTestId(HUB_SEL[kind].reiterListe).locator('.mtabbar');
-	await expect(leiste.getByRole('tab')).toHaveCount(5);
+	// #2794 S3a: vier Hub-Reiter (Übersicht, Etappen/Orte, Wetter, Zustellung).
+	await expect(leiste.getByRole('tab')).toHaveCount(4);
 	await expect(leiste.locator('[data-slot="segmented-badge"]').first()).toBeVisible();
 	await page.mouse.move(1, 1);
 	return leiste.evaluate((el) => {
@@ -273,7 +274,7 @@ test('DS-8: Hub-Reiterleiste am Computer ohne Kasten, Grundlinie --g-rule, 13 px
 			borderBottomColor: RULE,
 			borderRadius: '0px 0px 0px 0px'
 		});
-		expect(m.inaktiv.length, `${kind}: inaktive Reiter`).toBe(4);
+		expect(m.inaktiv.length, `${kind}: inaktive Reiter`).toBe(3);
 		for (const r of m.inaktiv) {
 			expect(r, `${kind}: inaktiver Reiter`).toMatchObject({
 				fontSize: '13px',
@@ -319,7 +320,8 @@ for (const kind of HUB_KINDS) {
 			const segmente = ANLEGE_SEL[kind].fortschrittSegment(page);
 			await expect(segmente).toHaveCount(ANLEGE_SEL[kind].fortschrittSegmente);
 			const fortschritt = ANLEGE_SEL[kind].fortschritt(page);
-			await expect(fortschritt).toContainText('2 / 5 Abschnitte eingerichtet', { timeout: 10_000 });
+			// #2794 S3a: Anlege-Kette mit vier Pflicht-Abschnitten.
+			await expect(fortschritt).toContainText(`2 / ${ANLEGE_SEL[kind].fortschrittSegmente} Abschnitte eingerichtet`, { timeout: 10_000 });
 			await expect(segmente.and(page.locator('[data-done="true"]'))).toHaveCount(2);
 			// Farbwechsel laufen mit `transition: 350ms` — erst messen, wenn keine Animation mehr läuft.
 			await page.evaluate(() =>
