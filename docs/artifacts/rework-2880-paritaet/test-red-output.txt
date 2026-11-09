@@ -1,0 +1,655 @@
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Running 21 tests using 1 worker
+
+[1/21] [setup] › e2e/global.setup.ts:23:1 › authenticate and seed test data
+[2/21] [tests] › e2e/hub-anlegen-paritaet-flaechen.spec.ts:146:3 › PF-1 (1440 px): Reiter Übersicht — erstes Inhaltselement bei Trip und Vergleich an derselben Stelle
+  1) [tests] › e2e/hub-anlegen-paritaet-flaechen.spec.ts:146:3 › PF-1 (1440 px): Reiter Übersicht — erstes Inhaltselement bei Trip und Vergleich an derselben Stelle 
+
+    Error: linker Rand des ersten Kindes (Trip DIV.trip-uebersicht, Vergleich DIV.): ist 284, soll 244 (±1)
+
+    expect(received).toBeLessThanOrEqual(expected)
+
+    Expected: <= 1
+    Received:    40
+
+      74 |
+      75 | function nah(ist: number, soll: number, was: string): void {
+    > 76 | 	expect(Math.abs(ist - soll), `${was}: ist ${ist}, soll ${soll} (±${TOL})`).toBeLessThanOrEqual(TOL);
+         | 	                                                                           ^
+      77 | }
+      78 |
+      79 | // ─────────────────────────────────────────────────────────────────────────────
+        at nah (/home/user/gregor_zwanzig/.claude/worktrees/agent-a8fca7cc746233f5c/frontend/e2e/hub-anlegen-paritaet-flaechen.spec.ts:76:77)
+        at /home/user/gregor_zwanzig/.claude/worktrees/agent-a8fca7cc746233f5c/frontend/e2e/hub-anlegen-paritaet-flaechen.spec.ts:156:5
+        at mitBeidenHubs (/home/user/gregor_zwanzig/.claude/worktrees/agent-a8fca7cc746233f5c/frontend/e2e/hub-anlegen-paritaet-flaechen.spec.ts:135:3)
+        at /home/user/gregor_zwanzig/.claude/worktrees/agent-a8fca7cc746233f5c/frontend/e2e/hub-anlegen-paritaet-flaechen.spec.ts:149:4
+
+    Error Context: test-results/hub-anlegen-paritaet-flaec-4bbfa-rgleich-an-derselben-Stelle-tests/error-context.md
+
+
+[3/21] [tests] › e2e/hub-anlegen-paritaet-flaechen.spec.ts:146:3 › PF-1 (1440 px): Reiter Etappen ↔ Orte — erstes Inhaltselement bei Trip und Vergleich an derselben Stelle
+  2) [tests] › e2e/hub-anlegen-paritaet-flaechen.spec.ts:146:3 › PF-1 (1440 px): Reiter Etappen ↔ Orte — erstes Inhaltselement bei Trip und Vergleich an derselben Stelle 
+
+    Error: linker Rand des ersten Kindes (Trip DIV.flex, Vergleich DIV.): ist 284, soll 244 (±1)
+
+    expect(received).toBeLessThanOrEqual(expected)
+
+    Expected: <= 1
+    Received:    40
+
+      74 |
+      75 | function nah(ist: number, soll: number, was: string): void {
+    > 76 | 	expect(Math.abs(ist - soll), `${was}: ist ${ist}, soll ${soll} (±${TOL})`).toBeLessThanOrEqual(TOL);
+         | 	                                                                           ^
+      77 | }
+      78 |
+      79 | // ─────────────────────────────────────────────────────────────────────────────
+        at nah (/home/user/gregor_zwanzig/.claude/worktrees/agent-a8fca7cc746233f5c/frontend/e2e/hub-anlegen-paritaet-flaechen.spec.ts:76:77)
+        at /home/user/gregor_zwanzig/.claude/worktrees/agent-a8fca7cc746233f5c/frontend/e2e/hub-anlegen-paritaet-flaechen.spec.ts:156:5
+        at mitBeidenHubs (/home/user/gregor_zwanzig/.claude/worktrees/agent-a8fca7cc746233f5c/frontend/e2e/hub-anlegen-paritaet-flaechen.spec.ts:135:3)
+        at /home/user/gregor_zwanzig/.claude/worktrees/agent-a8fca7cc746233f5c/frontend/e2e/hub-anlegen-paritaet-flaechen.spec.ts:149:4
+
+    Error Context: test-results/hub-anlegen-paritaet-flaec-02238-rgleich-an-derselben-Stelle-tests/error-context.md
+
+
+[4/21] [tests] › e2e/hub-anlegen-paritaet-flaechen.spec.ts:146:3 › PF-1 (1440 px): Reiter Wetter-Metriken — erstes Inhaltselement bei Trip und Vergleich an derselben Stelle
+  3) [tests] › e2e/hub-anlegen-paritaet-flaechen.spec.ts:146:3 › PF-1 (1440 px): Reiter Wetter-Metriken — erstes Inhaltselement bei Trip und Vergleich an derselben Stelle 
+
+    Error: linker Rand des ersten Kindes (Trip DIV.metrics-tab, Vergleich DIV.metrics-tab): ist 284, soll 244 (±1)
+
+    expect(received).toBeLessThanOrEqual(expected)
+
+    Expected: <= 1
+    Received:    40
+
+      74 |
+      75 | function nah(ist: number, soll: number, was: string): void {
+    > 76 | 	expect(Math.abs(ist - soll), `${was}: ist ${ist}, soll ${soll} (±${TOL})`).toBeLessThanOrEqual(TOL);
+         | 	                                                                           ^
+      77 | }
+      78 |
+      79 | // ─────────────────────────────────────────────────────────────────────────────
+        at nah (/home/user/gregor_zwanzig/.claude/worktrees/agent-a8fca7cc746233f5c/frontend/e2e/hub-anlegen-paritaet-flaechen.spec.ts:76:77)
+        at /home/user/gregor_zwanzig/.claude/worktrees/agent-a8fca7cc746233f5c/frontend/e2e/hub-anlegen-paritaet-flaechen.spec.ts:156:5
+        at mitBeidenHubs (/home/user/gregor_zwanzig/.claude/worktrees/agent-a8fca7cc746233f5c/frontend/e2e/hub-anlegen-paritaet-flaechen.spec.ts:135:3)
+        at /home/user/gregor_zwanzig/.claude/worktrees/agent-a8fca7cc746233f5c/frontend/e2e/hub-anlegen-paritaet-flaechen.spec.ts:149:4
+
+    Error Context: test-results/hub-anlegen-paritaet-flaec-ced20-rgleich-an-derselben-Stelle-tests/error-context.md
+
+
+[5/21] [tests] › e2e/hub-anlegen-paritaet-flaechen.spec.ts:146:3 › PF-1 (1440 px): Reiter Wertebereiche — erstes Inhaltselement bei Trip und Vergleich an derselben Stelle
+  4) [tests] › e2e/hub-anlegen-paritaet-flaechen.spec.ts:146:3 › PF-1 (1440 px): Reiter Wertebereiche — erstes Inhaltselement bei Trip und Vergleich an derselben Stelle 
+
+    Error: linker Rand des ersten Kindes (Trip DIV.corridor-editor, Vergleich DIV.corridor-editor): ist 284, soll 244 (±1)
+
+    expect(received).toBeLessThanOrEqual(expected)
+
+    Expected: <= 1
+    Received:    40
+
+      74 |
+      75 | function nah(ist: number, soll: number, was: string): void {
+    > 76 | 	expect(Math.abs(ist - soll), `${was}: ist ${ist}, soll ${soll} (±${TOL})`).toBeLessThanOrEqual(TOL);
+         | 	                                                                           ^
+      77 | }
+      78 |
+      79 | // ─────────────────────────────────────────────────────────────────────────────
+        at nah (/home/user/gregor_zwanzig/.claude/worktrees/agent-a8fca7cc746233f5c/frontend/e2e/hub-anlegen-paritaet-flaechen.spec.ts:76:77)
+        at /home/user/gregor_zwanzig/.claude/worktrees/agent-a8fca7cc746233f5c/frontend/e2e/hub-anlegen-paritaet-flaechen.spec.ts:156:5
+        at mitBeidenHubs (/home/user/gregor_zwanzig/.claude/worktrees/agent-a8fca7cc746233f5c/frontend/e2e/hub-anlegen-paritaet-flaechen.spec.ts:135:3)
+        at /home/user/gregor_zwanzig/.claude/worktrees/agent-a8fca7cc746233f5c/frontend/e2e/hub-anlegen-paritaet-flaechen.spec.ts:149:4
+
+    Error Context: test-results/hub-anlegen-paritaet-flaec-0e4e1-rgleich-an-derselben-Stelle-tests/error-context.md
+
+
+[6/21] [tests] › e2e/hub-anlegen-paritaet-flaechen.spec.ts:146:3 › PF-1 (1440 px): Reiter Alarme — erstes Inhaltselement bei Trip und Vergleich an derselben Stelle
+  5) [tests] › e2e/hub-anlegen-paritaet-flaechen.spec.ts:146:3 › PF-1 (1440 px): Reiter Alarme — erstes Inhaltselement bei Trip und Vergleich an derselben Stelle 
+
+    Error: linker Rand des ersten Kindes (Trip DIV.alarme-schedule-tab, Vergleich DIV.alarme-tab): ist 284, soll 244 (±1)
+
+    expect(received).toBeLessThanOrEqual(expected)
+
+    Expected: <= 1
+    Received:    40
+
+      74 |
+      75 | function nah(ist: number, soll: number, was: string): void {
+    > 76 | 	expect(Math.abs(ist - soll), `${was}: ist ${ist}, soll ${soll} (±${TOL})`).toBeLessThanOrEqual(TOL);
+         | 	                                                                           ^
+      77 | }
+      78 |
+      79 | // ─────────────────────────────────────────────────────────────────────────────
+        at nah (/home/user/gregor_zwanzig/.claude/worktrees/agent-a8fca7cc746233f5c/frontend/e2e/hub-anlegen-paritaet-flaechen.spec.ts:76:77)
+        at /home/user/gregor_zwanzig/.claude/worktrees/agent-a8fca7cc746233f5c/frontend/e2e/hub-anlegen-paritaet-flaechen.spec.ts:156:5
+        at mitBeidenHubs (/home/user/gregor_zwanzig/.claude/worktrees/agent-a8fca7cc746233f5c/frontend/e2e/hub-anlegen-paritaet-flaechen.spec.ts:135:3)
+        at /home/user/gregor_zwanzig/.claude/worktrees/agent-a8fca7cc746233f5c/frontend/e2e/hub-anlegen-paritaet-flaechen.spec.ts:149:4
+
+    Error Context: test-results/hub-anlegen-paritaet-flaec-6e0ab-rgleich-an-derselben-Stelle-tests/error-context.md
+
+
+[7/21] [tests] › e2e/hub-anlegen-paritaet-flaechen.spec.ts:146:3 › PF-2 (390 px): Reiter Übersicht — erstes Inhaltselement bei Trip und Vergleich an derselben Stelle, kein Überlauf
+  6) [tests] › e2e/hub-anlegen-paritaet-flaechen.spec.ts:146:3 › PF-2 (390 px): Reiter Übersicht — erstes Inhaltselement bei Trip und Vergleich an derselben Stelle, kein Überlauf 
+
+    Error: linker Rand des ersten Kindes (Trip DIV.trip-uebersicht, Vergleich DIV.): ist 32, soll 16 (±1)
+
+    expect(received).toBeLessThanOrEqual(expected)
+
+    Expected: <= 1
+    Received:    16
+
+      74 |
+      75 | function nah(ist: number, soll: number, was: string): void {
+    > 76 | 	expect(Math.abs(ist - soll), `${was}: ist ${ist}, soll ${soll} (±${TOL})`).toBeLessThanOrEqual(TOL);
+         | 	                                                                           ^
+      77 | }
+      78 |
+      79 | // ─────────────────────────────────────────────────────────────────────────────
+        at nah (/home/user/gregor_zwanzig/.claude/worktrees/agent-a8fca7cc746233f5c/frontend/e2e/hub-anlegen-paritaet-flaechen.spec.ts:76:77)
+        at /home/user/gregor_zwanzig/.claude/worktrees/agent-a8fca7cc746233f5c/frontend/e2e/hub-anlegen-paritaet-flaechen.spec.ts:156:5
+        at mitBeidenHubs (/home/user/gregor_zwanzig/.claude/worktrees/agent-a8fca7cc746233f5c/frontend/e2e/hub-anlegen-paritaet-flaechen.spec.ts:135:3)
+        at /home/user/gregor_zwanzig/.claude/worktrees/agent-a8fca7cc746233f5c/frontend/e2e/hub-anlegen-paritaet-flaechen.spec.ts:149:4
+
+    Error Context: test-results/hub-anlegen-paritaet-flaec-ee721-selben-Stelle-kein-Überlauf-tests/error-context.md
+
+
+[8/21] [tests] › e2e/hub-anlegen-paritaet-flaechen.spec.ts:146:3 › PF-2 (390 px): Reiter Etappen ↔ Orte — erstes Inhaltselement bei Trip und Vergleich an derselben Stelle, kein Überlauf
+  7) [tests] › e2e/hub-anlegen-paritaet-flaechen.spec.ts:146:3 › PF-2 (390 px): Reiter Etappen ↔ Orte — erstes Inhaltselement bei Trip und Vergleich an derselben Stelle, kein Überlauf 
+
+    Error: linker Rand des ersten Kindes (Trip DIV.flex, Vergleich DIV.): ist 32, soll 16 (±1)
+
+    expect(received).toBeLessThanOrEqual(expected)
+
+    Expected: <= 1
+    Received:    16
+
+      74 |
+      75 | function nah(ist: number, soll: number, was: string): void {
+    > 76 | 	expect(Math.abs(ist - soll), `${was}: ist ${ist}, soll ${soll} (±${TOL})`).toBeLessThanOrEqual(TOL);
+         | 	                                                                           ^
+      77 | }
+      78 |
+      79 | // ─────────────────────────────────────────────────────────────────────────────
+        at nah (/home/user/gregor_zwanzig/.claude/worktrees/agent-a8fca7cc746233f5c/frontend/e2e/hub-anlegen-paritaet-flaechen.spec.ts:76:77)
+        at /home/user/gregor_zwanzig/.claude/worktrees/agent-a8fca7cc746233f5c/frontend/e2e/hub-anlegen-paritaet-flaechen.spec.ts:156:5
+        at mitBeidenHubs (/home/user/gregor_zwanzig/.claude/worktrees/agent-a8fca7cc746233f5c/frontend/e2e/hub-anlegen-paritaet-flaechen.spec.ts:135:3)
+        at /home/user/gregor_zwanzig/.claude/worktrees/agent-a8fca7cc746233f5c/frontend/e2e/hub-anlegen-paritaet-flaechen.spec.ts:149:4
+
+    Error Context: test-results/hub-anlegen-paritaet-flaec-f52db-selben-Stelle-kein-Überlauf-tests/error-context.md
+
+
+[9/21] [tests] › e2e/hub-anlegen-paritaet-flaechen.spec.ts:146:3 › PF-2 (390 px): Reiter Wetter-Metriken — erstes Inhaltselement bei Trip und Vergleich an derselben Stelle, kein Überlauf
+  8) [tests] › e2e/hub-anlegen-paritaet-flaechen.spec.ts:146:3 › PF-2 (390 px): Reiter Wetter-Metriken — erstes Inhaltselement bei Trip und Vergleich an derselben Stelle, kein Überlauf 
+
+    Error: linker Rand des ersten Kindes (Trip DIV.metrics-tab, Vergleich DIV.metrics-tab): ist 32, soll 16 (±1)
+
+    expect(received).toBeLessThanOrEqual(expected)
+
+    Expected: <= 1
+    Received:    16
+
+      74 |
+      75 | function nah(ist: number, soll: number, was: string): void {
+    > 76 | 	expect(Math.abs(ist - soll), `${was}: ist ${ist}, soll ${soll} (±${TOL})`).toBeLessThanOrEqual(TOL);
+         | 	                                                                           ^
+      77 | }
+      78 |
+      79 | // ─────────────────────────────────────────────────────────────────────────────
+        at nah (/home/user/gregor_zwanzig/.claude/worktrees/agent-a8fca7cc746233f5c/frontend/e2e/hub-anlegen-paritaet-flaechen.spec.ts:76:77)
+        at /home/user/gregor_zwanzig/.claude/worktrees/agent-a8fca7cc746233f5c/frontend/e2e/hub-anlegen-paritaet-flaechen.spec.ts:156:5
+        at mitBeidenHubs (/home/user/gregor_zwanzig/.claude/worktrees/agent-a8fca7cc746233f5c/frontend/e2e/hub-anlegen-paritaet-flaechen.spec.ts:135:3)
+        at /home/user/gregor_zwanzig/.claude/worktrees/agent-a8fca7cc746233f5c/frontend/e2e/hub-anlegen-paritaet-flaechen.spec.ts:149:4
+
+    Error Context: test-results/hub-anlegen-paritaet-flaec-ad641-selben-Stelle-kein-Überlauf-tests/error-context.md
+
+
+[10/21] [tests] › e2e/hub-anlegen-paritaet-flaechen.spec.ts:146:3 › PF-2 (390 px): Reiter Wertebereiche — erstes Inhaltselement bei Trip und Vergleich an derselben Stelle, kein Überlauf
+  9) [tests] › e2e/hub-anlegen-paritaet-flaechen.spec.ts:146:3 › PF-2 (390 px): Reiter Wertebereiche — erstes Inhaltselement bei Trip und Vergleich an derselben Stelle, kein Überlauf 
+
+    Error: linker Rand des ersten Kindes (Trip DIV., Vergleich DIV.): ist 32, soll 16 (±1)
+
+    expect(received).toBeLessThanOrEqual(expected)
+
+    Expected: <= 1
+    Received:    16
+
+      74 |
+      75 | function nah(ist: number, soll: number, was: string): void {
+    > 76 | 	expect(Math.abs(ist - soll), `${was}: ist ${ist}, soll ${soll} (±${TOL})`).toBeLessThanOrEqual(TOL);
+         | 	                                                                           ^
+      77 | }
+      78 |
+      79 | // ─────────────────────────────────────────────────────────────────────────────
+        at nah (/home/user/gregor_zwanzig/.claude/worktrees/agent-a8fca7cc746233f5c/frontend/e2e/hub-anlegen-paritaet-flaechen.spec.ts:76:77)
+        at /home/user/gregor_zwanzig/.claude/worktrees/agent-a8fca7cc746233f5c/frontend/e2e/hub-anlegen-paritaet-flaechen.spec.ts:156:5
+        at mitBeidenHubs (/home/user/gregor_zwanzig/.claude/worktrees/agent-a8fca7cc746233f5c/frontend/e2e/hub-anlegen-paritaet-flaechen.spec.ts:135:3)
+        at /home/user/gregor_zwanzig/.claude/worktrees/agent-a8fca7cc746233f5c/frontend/e2e/hub-anlegen-paritaet-flaechen.spec.ts:149:4
+
+    Error Context: test-results/hub-anlegen-paritaet-flaec-37704-selben-Stelle-kein-Überlauf-tests/error-context.md
+
+
+[11/21] [tests] › e2e/hub-anlegen-paritaet-flaechen.spec.ts:146:3 › PF-2 (390 px): Reiter Alarme — erstes Inhaltselement bei Trip und Vergleich an derselben Stelle, kein Überlauf
+  10) [tests] › e2e/hub-anlegen-paritaet-flaechen.spec.ts:146:3 › PF-2 (390 px): Reiter Alarme — erstes Inhaltselement bei Trip und Vergleich an derselben Stelle, kein Überlauf 
+
+    Error: linker Rand des ersten Kindes (Trip DIV.alarme-schedule-tab, Vergleich DIV.alarme-tab): ist 32, soll 16 (±1)
+
+    expect(received).toBeLessThanOrEqual(expected)
+
+    Expected: <= 1
+    Received:    16
+
+      74 |
+      75 | function nah(ist: number, soll: number, was: string): void {
+    > 76 | 	expect(Math.abs(ist - soll), `${was}: ist ${ist}, soll ${soll} (±${TOL})`).toBeLessThanOrEqual(TOL);
+         | 	                                                                           ^
+      77 | }
+      78 |
+      79 | // ─────────────────────────────────────────────────────────────────────────────
+        at nah (/home/user/gregor_zwanzig/.claude/worktrees/agent-a8fca7cc746233f5c/frontend/e2e/hub-anlegen-paritaet-flaechen.spec.ts:76:77)
+        at /home/user/gregor_zwanzig/.claude/worktrees/agent-a8fca7cc746233f5c/frontend/e2e/hub-anlegen-paritaet-flaechen.spec.ts:156:5
+        at mitBeidenHubs (/home/user/gregor_zwanzig/.claude/worktrees/agent-a8fca7cc746233f5c/frontend/e2e/hub-anlegen-paritaet-flaechen.spec.ts:135:3)
+        at /home/user/gregor_zwanzig/.claude/worktrees/agent-a8fca7cc746233f5c/frontend/e2e/hub-anlegen-paritaet-flaechen.spec.ts:149:4
+
+    Error Context: test-results/hub-anlegen-paritaet-flaec-d12ef-selben-Stelle-kein-Überlauf-tests/error-context.md
+
+
+[12/21] [tests] › e2e/hub-anlegen-paritaet-flaechen.spec.ts:171:3 › PF-3 (1440 px): Reiter Übersicht — Reiterfläche mit Innenrand 28/40/60 px, direkt an Leiste und Panelrand
+  11) [tests] › e2e/hub-anlegen-paritaet-flaechen.spec.ts:171:3 › PF-3 (1440 px): Reiter Übersicht — Reiterfläche mit Innenrand 28/40/60 px, direkt an Leiste und Panelrand 
+
+    Error: route/uebersicht: keine Reiterfläche [data-testid$="-reiterflaeche"]
+
+    expect(received).not.toBeNull()
+
+    Received: null
+
+      176 | 					await openHub(page, kind, ids[kind], { tab: r.id[kind] });
+      177 | 					const m = await messeHub(page, kind, r.id[kind]);
+    > 178 | 					expect(m.flaeche, `${kind}/${r.id[kind]}: keine Reiterfläche [data-testid$="-reiterflaeche"]`).not.toBeNull();
+          | 					                                                                                                   ^
+      179 | 					const f = m.flaeche!;
+      180 | 					expect(f.pad, `${kind}/${r.id[kind]}: Innenrand oben/rechts/unten/links`).toEqual([...pad]);
+      181 | 					// Etappen: die Reiterfläche steht unter dem Etappen-Band (Desktop) — dort zählt
+        at /home/user/gregor_zwanzig/.claude/worktrees/agent-a8fca7cc746233f5c/frontend/e2e/hub-anlegen-paritaet-flaechen.spec.ts:178:105
+        at mitBeidenHubs (/home/user/gregor_zwanzig/.claude/worktrees/agent-a8fca7cc746233f5c/frontend/e2e/hub-anlegen-paritaet-flaechen.spec.ts:135:3)
+        at /home/user/gregor_zwanzig/.claude/worktrees/agent-a8fca7cc746233f5c/frontend/e2e/hub-anlegen-paritaet-flaechen.spec.ts:174:4
+
+    Error Context: test-results/hub-anlegen-paritaet-flaec-dffdc-ekt-an-Leiste-und-Panelrand-tests/error-context.md
+
+
+[13/21] [tests] › e2e/hub-anlegen-paritaet-flaechen.spec.ts:171:3 › PF-3 (1440 px): Reiter Etappen ↔ Orte — Reiterfläche mit Innenrand 28/40/60 px, direkt an Leiste und Panelrand
+  12) [tests] › e2e/hub-anlegen-paritaet-flaechen.spec.ts:171:3 › PF-3 (1440 px): Reiter Etappen ↔ Orte — Reiterfläche mit Innenrand 28/40/60 px, direkt an Leiste und Panelrand 
+
+    Error: route/etappen: keine Reiterfläche [data-testid$="-reiterflaeche"]
+
+    expect(received).not.toBeNull()
+
+    Received: null
+
+      176 | 					await openHub(page, kind, ids[kind], { tab: r.id[kind] });
+      177 | 					const m = await messeHub(page, kind, r.id[kind]);
+    > 178 | 					expect(m.flaeche, `${kind}/${r.id[kind]}: keine Reiterfläche [data-testid$="-reiterflaeche"]`).not.toBeNull();
+          | 					                                                                                                   ^
+      179 | 					const f = m.flaeche!;
+      180 | 					expect(f.pad, `${kind}/${r.id[kind]}: Innenrand oben/rechts/unten/links`).toEqual([...pad]);
+      181 | 					// Etappen: die Reiterfläche steht unter dem Etappen-Band (Desktop) — dort zählt
+        at /home/user/gregor_zwanzig/.claude/worktrees/agent-a8fca7cc746233f5c/frontend/e2e/hub-anlegen-paritaet-flaechen.spec.ts:178:105
+        at mitBeidenHubs (/home/user/gregor_zwanzig/.claude/worktrees/agent-a8fca7cc746233f5c/frontend/e2e/hub-anlegen-paritaet-flaechen.spec.ts:135:3)
+        at /home/user/gregor_zwanzig/.claude/worktrees/agent-a8fca7cc746233f5c/frontend/e2e/hub-anlegen-paritaet-flaechen.spec.ts:174:4
+
+    Error Context: test-results/hub-anlegen-paritaet-flaec-6a400-ekt-an-Leiste-und-Panelrand-tests/error-context.md
+
+
+[14/21] [tests] › e2e/hub-anlegen-paritaet-flaechen.spec.ts:171:3 › PF-3 (390 px): Reiter Übersicht — Reiterfläche mit Innenrand 20/16/48 px, direkt an Leiste und Panelrand
+  13) [tests] › e2e/hub-anlegen-paritaet-flaechen.spec.ts:171:3 › PF-3 (390 px): Reiter Übersicht — Reiterfläche mit Innenrand 20/16/48 px, direkt an Leiste und Panelrand 
+
+    Error: route/uebersicht: keine Reiterfläche [data-testid$="-reiterflaeche"]
+
+    expect(received).not.toBeNull()
+
+    Received: null
+
+      176 | 					await openHub(page, kind, ids[kind], { tab: r.id[kind] });
+      177 | 					const m = await messeHub(page, kind, r.id[kind]);
+    > 178 | 					expect(m.flaeche, `${kind}/${r.id[kind]}: keine Reiterfläche [data-testid$="-reiterflaeche"]`).not.toBeNull();
+          | 					                                                                                                   ^
+      179 | 					const f = m.flaeche!;
+      180 | 					expect(f.pad, `${kind}/${r.id[kind]}: Innenrand oben/rechts/unten/links`).toEqual([...pad]);
+      181 | 					// Etappen: die Reiterfläche steht unter dem Etappen-Band (Desktop) — dort zählt
+        at /home/user/gregor_zwanzig/.claude/worktrees/agent-a8fca7cc746233f5c/frontend/e2e/hub-anlegen-paritaet-flaechen.spec.ts:178:105
+        at mitBeidenHubs (/home/user/gregor_zwanzig/.claude/worktrees/agent-a8fca7cc746233f5c/frontend/e2e/hub-anlegen-paritaet-flaechen.spec.ts:135:3)
+        at /home/user/gregor_zwanzig/.claude/worktrees/agent-a8fca7cc746233f5c/frontend/e2e/hub-anlegen-paritaet-flaechen.spec.ts:174:4
+
+    Error Context: test-results/hub-anlegen-paritaet-flaec-4aec7-ekt-an-Leiste-und-Panelrand-tests/error-context.md
+
+
+[15/21] [tests] › e2e/hub-anlegen-paritaet-flaechen.spec.ts:171:3 › PF-3 (390 px): Reiter Etappen ↔ Orte — Reiterfläche mit Innenrand 20/16/48 px, direkt an Leiste und Panelrand
+  14) [tests] › e2e/hub-anlegen-paritaet-flaechen.spec.ts:171:3 › PF-3 (390 px): Reiter Etappen ↔ Orte — Reiterfläche mit Innenrand 20/16/48 px, direkt an Leiste und Panelrand 
+
+    Error: route/etappen: keine Reiterfläche [data-testid$="-reiterflaeche"]
+
+    expect(received).not.toBeNull()
+
+    Received: null
+
+      176 | 					await openHub(page, kind, ids[kind], { tab: r.id[kind] });
+      177 | 					const m = await messeHub(page, kind, r.id[kind]);
+    > 178 | 					expect(m.flaeche, `${kind}/${r.id[kind]}: keine Reiterfläche [data-testid$="-reiterflaeche"]`).not.toBeNull();
+          | 					                                                                                                   ^
+      179 | 					const f = m.flaeche!;
+      180 | 					expect(f.pad, `${kind}/${r.id[kind]}: Innenrand oben/rechts/unten/links`).toEqual([...pad]);
+      181 | 					// Etappen: die Reiterfläche steht unter dem Etappen-Band (Desktop) — dort zählt
+        at /home/user/gregor_zwanzig/.claude/worktrees/agent-a8fca7cc746233f5c/frontend/e2e/hub-anlegen-paritaet-flaechen.spec.ts:178:105
+        at mitBeidenHubs (/home/user/gregor_zwanzig/.claude/worktrees/agent-a8fca7cc746233f5c/frontend/e2e/hub-anlegen-paritaet-flaechen.spec.ts:135:3)
+        at /home/user/gregor_zwanzig/.claude/worktrees/agent-a8fca7cc746233f5c/frontend/e2e/hub-anlegen-paritaet-flaechen.spec.ts:174:4
+
+    Error Context: test-results/hub-anlegen-paritaet-flaec-54623-ekt-an-Leiste-und-Panelrand-tests/error-context.md
+
+
+[16/21] [tests] › e2e/hub-anlegen-paritaet-flaechen.spec.ts:330:2 › PF-6 (1440 px): Schritt-Reiter beim Anlegen — gleiche Optik je Zustand, gesperrt aria-disabled mit gleichem Marker, Optional-Pille
+  15) [tests] › e2e/hub-anlegen-paritaet-flaechen.spec.ts:330:2 › PF-6 (1440 px): Schritt-Reiter beim Anlegen — gleiche Optik je Zustand, gesperrt aria-disabled mit gleichem Marker, Optional-Pille 
+
+    Error: route/wegpunkte: Optional-Pille
+
+    expect(locator).toHaveCount(expected) failed
+
+    Locator:  locator('.tn-desktop [role="tab"]').filter({ hasText: /^\s*Wegpunkte prüfen/ }).locator('span').filter({ hasText: /^\s*opt(ional)?\s*$/i })
+    Expected: 1
+    Received: 0
+    Timeout:  5000ms
+
+    Call log:
+      - route/wegpunkte: Optional-Pille with timeout 5000ms
+      - waiting for locator('.tn-desktop [role="tab"]').filter({ hasText: /^\s*Wegpunkte prüfen/ }).locator('span').filter({ hasText: /^\s*opt(ional)?\s*$/i })
+        9 × locator resolved to 0 elements
+          - unexpected value "0"
+
+
+      351 | 				const r = sel.reiter(page, id, mobil);
+      352 | 				await expect(r, `${kind}/${id}: Reiter vorhanden`).toHaveCount(1);
+    > 353 | 				await expect(pille(r), `${kind}/${id}: Optional-Pille`).toHaveCount(OPTIONALE_SCHRITTE[kind].includes(id) ? 1 : 0);
+          | 				                                                        ^
+      354 | 				if (mobil) {
+      355 | 					const b = await r.boundingBox();
+      356 | 					expect(b?.height ?? 0, `${kind}/${id}: Reiter am Handy ≥ 44 px`).toBeGreaterThanOrEqual(44);
+        at /home/user/gregor_zwanzig/.claude/worktrees/agent-a8fca7cc746233f5c/frontend/e2e/hub-anlegen-paritaet-flaechen.spec.ts:353:61
+
+    Error Context: test-results/hub-anlegen-paritaet-flaec-28c83-ichem-Marker-Optional-Pille-tests/error-context.md
+
+
+[17/21] [tests] › e2e/hub-anlegen-paritaet-flaechen.spec.ts:330:2 › PF-6 (390 px): Schritt-Reiter beim Anlegen — gleiche Optik je Zustand, gesperrt aria-disabled mit gleichem Marker, Optional-Pille, ≥ 44 px
+  16) [tests] › e2e/hub-anlegen-paritaet-flaechen.spec.ts:330:2 › PF-6 (390 px): Schritt-Reiter beim Anlegen — gleiche Optik je Zustand, gesperrt aria-disabled mit gleichem Marker, Optional-Pille, ≥ 44 px 
+
+    Error: route/wegpunkte: Optional-Pille
+
+    expect(locator).toHaveCount(expected) failed
+
+    Locator:  locator('[data-testid="tn-mobile-tabbar"] [role="tab"]').filter({ hasText: /^\s*Wegpunkte prüfen/ }).locator('span').filter({ hasText: /^\s*opt(ional)?\s*$/i })
+    Expected: 1
+    Received: 0
+    Timeout:  5000ms
+
+    Call log:
+      - route/wegpunkte: Optional-Pille with timeout 5000ms
+      - waiting for locator('[data-testid="tn-mobile-tabbar"] [role="tab"]').filter({ hasText: /^\s*Wegpunkte prüfen/ }).locator('span').filter({ hasText: /^\s*opt(ional)?\s*$/i })
+        9 × locator resolved to 0 elements
+          - unexpected value "0"
+
+
+      351 | 				const r = sel.reiter(page, id, mobil);
+      352 | 				await expect(r, `${kind}/${id}: Reiter vorhanden`).toHaveCount(1);
+    > 353 | 				await expect(pille(r), `${kind}/${id}: Optional-Pille`).toHaveCount(OPTIONALE_SCHRITTE[kind].includes(id) ? 1 : 0);
+          | 				                                                        ^
+      354 | 				if (mobil) {
+      355 | 					const b = await r.boundingBox();
+      356 | 					expect(b?.height ?? 0, `${kind}/${id}: Reiter am Handy ≥ 44 px`).toBeGreaterThanOrEqual(44);
+        at /home/user/gregor_zwanzig/.claude/worktrees/agent-a8fca7cc746233f5c/frontend/e2e/hub-anlegen-paritaet-flaechen.spec.ts:353:61
+
+    Error Context: test-results/hub-anlegen-paritaet-flaec-e1c05-rker-Optional-Pille-≥-44-px-tests/error-context.md
+
+
+[18/21] [tests] › e2e/hub-anlegen-paritaet-flaechen.spec.ts:261:3 › PF-4 (1440 px, de): Feldbeschriftungen Name und Region beim Anlegen gleich, Name mit Sternchen und aria-required, Hinweis rechts in der Beschriftungszeile
+  17) [tests] › e2e/hub-anlegen-paritaet-flaechen.spec.ts:261:3 › PF-4 (1440 px, de): Feldbeschriftungen Name und Region beim Anlegen gleich, Name mit Sternchen und aria-required, Hinweis rechts in der Beschriftungszeile 
+
+    Error: Beschriftung Name: Schrift/Größe/Stärke/Versalien/Laufweite/Farbe
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 4
+    + Received  + 4
+
+      Object {
+        "color": "rgb(107, 103, 92)",
+    -   "fontFamily": "\"Inter Tight\", system-ui, sans-serif",
+    -   "fontSize": "12px",
+    -   "fontWeight": "600",
+    -   "letterSpacing": "0.72px",
+    +   "fontFamily": "\"JetBrains Mono\", ui-monospace, monospace",
+    +   "fontSize": "10px",
+    +   "fontWeight": "500",
+    +   "letterSpacing": "0.8px",
+        "textTransform": "uppercase",
+      }
+
+      276 | 			}
+      277 | 			const [t, v] = [m.route, m.vergleich];
+    > 278 | 			expect(v.name.stil, 'Beschriftung Name: Schrift/Größe/Stärke/Versalien/Laufweite/Farbe').toEqual(t.name.stil);
+          | 			                                                                                         ^
+      279 | 			expect(v.region.stil, 'Beschriftung Region: Schrift/Größe/Stärke/Versalien/Laufweite/Farbe').toEqual(t.region.stil);
+      280 | 			expect(t.name.stil, 'Name und Region tragen dieselbe Beschriftungsoptik').toEqual(t.region.stil);
+      281 | 			for (const kind of HUB_KINDS) {
+        at /home/user/gregor_zwanzig/.claude/worktrees/agent-a8fca7cc746233f5c/frontend/e2e/hub-anlegen-paritaet-flaechen.spec.ts:278:93
+
+    Error Context: test-results/hub-anlegen-paritaet-flaec-e5c8d-s-in-der-Beschriftungszeile-tests/error-context.md
+
+
+[19/21] [tests] › e2e/hub-anlegen-paritaet-flaechen.spec.ts:261:3 › PF-4 (1440 px, en): Feldbeschriftungen Name und Region beim Anlegen gleich, Name mit Sternchen und aria-required, Hinweis rechts in der Beschriftungszeile
+  18) [tests] › e2e/hub-anlegen-paritaet-flaechen.spec.ts:261:3 › PF-4 (1440 px, en): Feldbeschriftungen Name und Region beim Anlegen gleich, Name mit Sternchen und aria-required, Hinweis rechts in der Beschriftungszeile 
+
+    Error: Beschriftung Name: Schrift/Größe/Stärke/Versalien/Laufweite/Farbe
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 4
+    + Received  + 4
+
+      Object {
+        "color": "rgb(107, 103, 92)",
+    -   "fontFamily": "\"Inter Tight\", system-ui, sans-serif",
+    -   "fontSize": "12px",
+    -   "fontWeight": "600",
+    -   "letterSpacing": "0.72px",
+    +   "fontFamily": "\"JetBrains Mono\", ui-monospace, monospace",
+    +   "fontSize": "10px",
+    +   "fontWeight": "500",
+    +   "letterSpacing": "0.8px",
+        "textTransform": "uppercase",
+      }
+
+      276 | 			}
+      277 | 			const [t, v] = [m.route, m.vergleich];
+    > 278 | 			expect(v.name.stil, 'Beschriftung Name: Schrift/Größe/Stärke/Versalien/Laufweite/Farbe').toEqual(t.name.stil);
+          | 			                                                                                         ^
+      279 | 			expect(v.region.stil, 'Beschriftung Region: Schrift/Größe/Stärke/Versalien/Laufweite/Farbe').toEqual(t.region.stil);
+      280 | 			expect(t.name.stil, 'Name und Region tragen dieselbe Beschriftungsoptik').toEqual(t.region.stil);
+      281 | 			for (const kind of HUB_KINDS) {
+        at /home/user/gregor_zwanzig/.claude/worktrees/agent-a8fca7cc746233f5c/frontend/e2e/hub-anlegen-paritaet-flaechen.spec.ts:278:93
+
+    Error Context: test-results/hub-anlegen-paritaet-flaec-300b5-s-in-der-Beschriftungszeile-tests/error-context.md
+
+
+[20/21] [tests] › e2e/hub-anlegen-paritaet-flaechen.spec.ts:261:3 › PF-5 (390 px, de): Feldbeschriftungen Name und Region beim Anlegen gleich, Name mit Sternchen und aria-required, Hinweis rechts in der Beschriftungszeile
+  19) [tests] › e2e/hub-anlegen-paritaet-flaechen.spec.ts:261:3 › PF-5 (390 px, de): Feldbeschriftungen Name und Region beim Anlegen gleich, Name mit Sternchen und aria-required, Hinweis rechts in der Beschriftungszeile 
+
+    Error: Beschriftung Name: Schrift/Größe/Stärke/Versalien/Laufweite/Farbe
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 2
+    + Received  + 2
+
+      Object {
+    -   "color": "rgb(107, 103, 92)",
+    +   "color": "rgb(154, 149, 138)",
+        "fontFamily": "\"Inter Tight\", system-ui, sans-serif",
+        "fontSize": "11px",
+        "fontWeight": "400",
+    -   "letterSpacing": "0.88px",
+    +   "letterSpacing": "1.1px",
+        "textTransform": "uppercase",
+      }
+
+      276 | 			}
+      277 | 			const [t, v] = [m.route, m.vergleich];
+    > 278 | 			expect(v.name.stil, 'Beschriftung Name: Schrift/Größe/Stärke/Versalien/Laufweite/Farbe').toEqual(t.name.stil);
+          | 			                                                                                         ^
+      279 | 			expect(v.region.stil, 'Beschriftung Region: Schrift/Größe/Stärke/Versalien/Laufweite/Farbe').toEqual(t.region.stil);
+      280 | 			expect(t.name.stil, 'Name und Region tragen dieselbe Beschriftungsoptik').toEqual(t.region.stil);
+      281 | 			for (const kind of HUB_KINDS) {
+        at /home/user/gregor_zwanzig/.claude/worktrees/agent-a8fca7cc746233f5c/frontend/e2e/hub-anlegen-paritaet-flaechen.spec.ts:278:93
+
+    Error Context: test-results/hub-anlegen-paritaet-flaec-4a30c-s-in-der-Beschriftungszeile-tests/error-context.md
+
+
+[21/21] [tests] › e2e/hub-anlegen-paritaet-flaechen.spec.ts:261:3 › PF-5 (390 px, en): Feldbeschriftungen Name und Region beim Anlegen gleich, Name mit Sternchen und aria-required, Hinweis rechts in der Beschriftungszeile
+  20) [tests] › e2e/hub-anlegen-paritaet-flaechen.spec.ts:261:3 › PF-5 (390 px, en): Feldbeschriftungen Name und Region beim Anlegen gleich, Name mit Sternchen und aria-required, Hinweis rechts in der Beschriftungszeile 
+
+    Error: Beschriftung Name: Schrift/Größe/Stärke/Versalien/Laufweite/Farbe
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 2
+    + Received  + 2
+
+      Object {
+    -   "color": "rgb(107, 103, 92)",
+    +   "color": "rgb(154, 149, 138)",
+        "fontFamily": "\"Inter Tight\", system-ui, sans-serif",
+        "fontSize": "11px",
+        "fontWeight": "400",
+    -   "letterSpacing": "0.88px",
+    +   "letterSpacing": "1.1px",
+        "textTransform": "uppercase",
+      }
+
+      276 | 			}
+      277 | 			const [t, v] = [m.route, m.vergleich];
+    > 278 | 			expect(v.name.stil, 'Beschriftung Name: Schrift/Größe/Stärke/Versalien/Laufweite/Farbe').toEqual(t.name.stil);
+          | 			                                                                                         ^
+      279 | 			expect(v.region.stil, 'Beschriftung Region: Schrift/Größe/Stärke/Versalien/Laufweite/Farbe').toEqual(t.region.stil);
+      280 | 			expect(t.name.stil, 'Name und Region tragen dieselbe Beschriftungsoptik').toEqual(t.region.stil);
+      281 | 			for (const kind of HUB_KINDS) {
+        at /home/user/gregor_zwanzig/.claude/worktrees/agent-a8fca7cc746233f5c/frontend/e2e/hub-anlegen-paritaet-flaechen.spec.ts:278:93
+
+    Error Context: test-results/hub-anlegen-paritaet-flaec-fc4b3-s-in-der-Beschriftungszeile-tests/error-context.md
+
+
+  20 failed
+    [tests] › e2e/hub-anlegen-paritaet-flaechen.spec.ts:146:3 › PF-1 (1440 px): Reiter Übersicht — erstes Inhaltselement bei Trip und Vergleich an derselben Stelle 
+    [tests] › e2e/hub-anlegen-paritaet-flaechen.spec.ts:146:3 › PF-1 (1440 px): Reiter Etappen ↔ Orte — erstes Inhaltselement bei Trip und Vergleich an derselben Stelle 
+    [tests] › e2e/hub-anlegen-paritaet-flaechen.spec.ts:146:3 › PF-1 (1440 px): Reiter Wetter-Metriken — erstes Inhaltselement bei Trip und Vergleich an derselben Stelle 
+    [tests] › e2e/hub-anlegen-paritaet-flaechen.spec.ts:146:3 › PF-1 (1440 px): Reiter Wertebereiche — erstes Inhaltselement bei Trip und Vergleich an derselben Stelle 
+    [tests] › e2e/hub-anlegen-paritaet-flaechen.spec.ts:146:3 › PF-1 (1440 px): Reiter Alarme — erstes Inhaltselement bei Trip und Vergleich an derselben Stelle 
+    [tests] › e2e/hub-anlegen-paritaet-flaechen.spec.ts:146:3 › PF-2 (390 px): Reiter Übersicht — erstes Inhaltselement bei Trip und Vergleich an derselben Stelle, kein Überlauf 
+    [tests] › e2e/hub-anlegen-paritaet-flaechen.spec.ts:146:3 › PF-2 (390 px): Reiter Etappen ↔ Orte — erstes Inhaltselement bei Trip und Vergleich an derselben Stelle, kein Überlauf 
+    [tests] › e2e/hub-anlegen-paritaet-flaechen.spec.ts:146:3 › PF-2 (390 px): Reiter Wetter-Metriken — erstes Inhaltselement bei Trip und Vergleich an derselben Stelle, kein Überlauf 
+    [tests] › e2e/hub-anlegen-paritaet-flaechen.spec.ts:146:3 › PF-2 (390 px): Reiter Wertebereiche — erstes Inhaltselement bei Trip und Vergleich an derselben Stelle, kein Überlauf 
+    [tests] › e2e/hub-anlegen-paritaet-flaechen.spec.ts:146:3 › PF-2 (390 px): Reiter Alarme — erstes Inhaltselement bei Trip und Vergleich an derselben Stelle, kein Überlauf 
+    [tests] › e2e/hub-anlegen-paritaet-flaechen.spec.ts:171:3 › PF-3 (1440 px): Reiter Übersicht — Reiterfläche mit Innenrand 28/40/60 px, direkt an Leiste und Panelrand 
+    [tests] › e2e/hub-anlegen-paritaet-flaechen.spec.ts:171:3 › PF-3 (1440 px): Reiter Etappen ↔ Orte — Reiterfläche mit Innenrand 28/40/60 px, direkt an Leiste und Panelrand 
+    [tests] › e2e/hub-anlegen-paritaet-flaechen.spec.ts:171:3 › PF-3 (390 px): Reiter Übersicht — Reiterfläche mit Innenrand 20/16/48 px, direkt an Leiste und Panelrand 
+    [tests] › e2e/hub-anlegen-paritaet-flaechen.spec.ts:171:3 › PF-3 (390 px): Reiter Etappen ↔ Orte — Reiterfläche mit Innenrand 20/16/48 px, direkt an Leiste und Panelrand 
+    [tests] › e2e/hub-anlegen-paritaet-flaechen.spec.ts:261:3 › PF-4 (1440 px, de): Feldbeschriftungen Name und Region beim Anlegen gleich, Name mit Sternchen und aria-required, Hinweis rechts in der Beschriftungszeile 
+    [tests] › e2e/hub-anlegen-paritaet-flaechen.spec.ts:261:3 › PF-4 (1440 px, en): Feldbeschriftungen Name und Region beim Anlegen gleich, Name mit Sternchen und aria-required, Hinweis rechts in der Beschriftungszeile 
+    [tests] › e2e/hub-anlegen-paritaet-flaechen.spec.ts:261:3 › PF-5 (390 px, de): Feldbeschriftungen Name und Region beim Anlegen gleich, Name mit Sternchen und aria-required, Hinweis rechts in der Beschriftungszeile 
+    [tests] › e2e/hub-anlegen-paritaet-flaechen.spec.ts:261:3 › PF-5 (390 px, en): Feldbeschriftungen Name und Region beim Anlegen gleich, Name mit Sternchen und aria-required, Hinweis rechts in der Beschriftungszeile 
+    [tests] › e2e/hub-anlegen-paritaet-flaechen.spec.ts:330:2 › PF-6 (1440 px): Schritt-Reiter beim Anlegen — gleiche Optik je Zustand, gesperrt aria-disabled mit gleichem Marker, Optional-Pille 
+    [tests] › e2e/hub-anlegen-paritaet-flaechen.spec.ts:330:2 › PF-6 (390 px): Schritt-Reiter beim Anlegen — gleiche Optik je Zustand, gesperrt aria-disabled mit gleichem Marker, Optional-Pille, ≥ 44 px 
+  1 passed (1.3m)
