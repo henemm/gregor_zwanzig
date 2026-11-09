@@ -57,16 +57,17 @@
 
 	<!-- Col 2: Title + meta -->
 	<div style="align-self: center; min-width: 0;">
-		<div style="font-size: 14px; font-weight: 500; color: var(--g-ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+		<div class="stage-name" style="font-size: 14px; font-weight: 500; color: var(--g-ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
 			{stage.name}
 		</div>
-		<div style="font-family: var(--g-font-mono, ui-monospace, monospace); font-size: 11px; color: var(--g-ink-3); margin-top: 3px;">
-			{stage.date ?? ''}
-			{#if kmVal}{` · ${kmVal.toFixed(1)} km`}{/if}
-			{#if ascentVal}{` · ↑${ascentVal} m`}{/if}
-			{#if descentVal}{` · ↓${descentVal} m`}{/if}
-			{#if elevVal}{` · ${elevVal} m`}{/if}
-			{#if wpCount}{` · ${wpCount} WP`}{/if}
+		<!-- #2878: Meta-Zeile = Reihe unteilbarer Teile; Umbruch nur zwischen den Teilen, der Trenner hängt am Teil. -->
+		<div class="stage-meta" style="font-family: var(--g-font-mono, ui-monospace, monospace); font-size: 11px; color: var(--g-ink-3); margin-top: 3px;">
+			{#if stage.date}<span class="stage-meta-part">{stage.date}</span>{/if}
+			{#if kmVal}<span class="stage-meta-part">{`· ${kmVal.toFixed(1)} km`}</span>{/if}
+			{#if ascentVal}<span class="stage-meta-part">{`· ↑${ascentVal} m`}</span>{/if}
+			{#if descentVal}<span class="stage-meta-part">{`· ↓${descentVal} m`}</span>{/if}
+			{#if elevVal}<span class="stage-meta-part">{`· ${elevVal} m`}</span>{/if}
+			{#if wpCount}<span class="stage-meta-part">{`· ${wpCount} WP`}</span>{/if}
 		</div>
 	</div>
 
@@ -102,8 +103,28 @@
 		border-bottom: 1px solid var(--g-rule-soft);
 		cursor: pointer;
 	}
+	.stage-meta {
+		display: flex;
+		flex-wrap: wrap;
+		column-gap: 1ch;
+	}
+	.stage-meta-part {
+		white-space: nowrap;
+	}
 	/* Mobile: Summary-Spalte entfällt, Pill rückt ans Zeilenende. */
 	@media (max-width: 899px) {
+		.stage-row {
+			grid-template-columns: 40px minmax(0, 1fr) auto;
+			gap: 10px;
+			padding: 12px 14px;
+		}
+		.stage-row .stage-row-summary {
+			display: none !important;
+		}
+	}
+	/* #2878: dieselbe Regel nach der Breite der Etappenliste (HubOverview `etappenliste`) — am
+	   Computer ist die linke Spalte schmaler als 640 px, das starre Raster liesse dem Namen 0 px. */
+	@container etappenliste (max-width: 639px) {
 		.stage-row {
 			grid-template-columns: 40px minmax(0, 1fr) auto;
 			gap: 10px;

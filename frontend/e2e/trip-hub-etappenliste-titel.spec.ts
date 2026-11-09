@@ -169,12 +169,14 @@ test('EL-1 (1280 px, de/en): jede Etappenzeile zeigt den Namen, das Datum steht 
 // ─── EL-2 (AC-2): keine Überbreite, Zusammenfassung je nach gemessener Behälterbreite ──────────
 test('EL-2 (1280/1440 px): keine Etappenzeile läuft über, Zusammenfassung sichtbar ab 640 px Behälter', async ({ page }) => {
 	const hub = await seedTrip(page.request, `${E2E_TEST_PREFIX}Etappenliste-Breite`);
+	const breiten: number[] = [];
 	try {
 		for (const vp of [DESKTOP, BREIT]) {
 			await page.setViewportSize(vp);
 			await openHub(page, 'route', hub.id);
 			await expect(zeile(page, 0)).toBeVisible({ timeout: 15_000 });
 			const breite = (await box(behaelter(page), `${vp.width} px: Behälter der Etappenliste`)).width;
+			breiten.push(breite);
 			for (let i = 0; i < ETAPPEN.length; i++) {
 				const m = await zeile(page, i).evaluate((el) => {
 					const s = el.querySelector<HTMLElement>('.stage-row-summary');
@@ -190,6 +192,8 @@ test('EL-2 (1280/1440 px): keine Etappenzeile läuft über, Zusammenfassung sich
 				expect(sichtbar, `${vp.width} px: Behälter ${breite} px — Zusammenfassung sichtbar=${sichtbar}`).toBe(breite >= 640);
 			}
 		}
+		// Beide Zweige gemessen: ein schmaler (< 640 px) und ein breiter Behälter (≥ 640 px).
+		expect(breiten.some((b) => b < 640) && breiten.some((b) => b >= 640), `EL-2: Behälterbreiten ${breiten.join('/')} decken nicht beide Fälle ab`).toBe(true);
 	} finally {
 		await hub.aufraeumen();
 	}

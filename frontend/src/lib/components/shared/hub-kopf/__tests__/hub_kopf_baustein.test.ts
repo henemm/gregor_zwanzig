@@ -197,7 +197,9 @@ for (const context of ['route', 'vergleich'] as const) {
 			const huelle = einzig(wurzel, 'hub-kopf-status');
 			assert.equal(mitTestid(wurzel, 'probe-status-badge').length, 1, 'Status nicht genau einmal');
 			assert.ok(liegtIn(einzig(wurzel, 'probe-status-badge'), huelle), 'Status steht nicht in hub-kopf-status');
-			assert.equal(huelle.eltern, titel.eltern, 'hub-kopf-status steht nicht in derselben Zeile wie die Überschrift');
+			// #2878: Überschrift und Stift bilden eine innere Gruppe in der Titelzeile (Stift springt beim
+			// Umbruch nie allein weg) — die Titelzeile ist daher das Elternelement dieser Gruppe.
+			assert.equal(huelle.eltern, titel.eltern?.eltern, 'hub-kopf-status steht nicht in derselben Zeile wie die Überschrift');
 		});
 
 		test(`AC-9 (${context}): titleSize 38 wird an die Überschrift durchgereicht`, async () => {

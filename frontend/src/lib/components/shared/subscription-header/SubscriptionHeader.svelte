@@ -115,13 +115,18 @@
 
 <div data-kind={kind} class="min-w-0 flex-1 flex flex-col gap-2 desktop:block">
 	{#if eyebrow}{@render eyebrow()}{/if}
-	<div class="flex items-center gap-2 desktop:gap-3 min-h-[44px] desktop:min-h-0">
+	<!-- #2878: Titelzeile bricht um — reicht der Platz nicht, rutschen Status und Tageszahl unter den
+	     Titel; der Titel selbst bricht um statt gekürzt zu werden (Handy wie Computer). -->
+	<div class="flex flex-wrap items-center gap-2 desktop:gap-3 min-h-[44px] desktop:min-h-0">
 		{#if open.name}
 			<input type="text" data-testid={`${p}-name-edit`} bind:value={draft.name} aria-label={$t('aktionen.kopf.name_bearbeiten')} class="min-w-0 flex-1 desktop:flex-none font-semibold px-2 py-1 rounded-md desktop:text-2xl" style="border: 1px solid var(--g-rule); background: var(--g-card)" />
 			{@render editButtons('name', $t('aktionen.umbenennen'))}
 		{:else}
-			<h1 data-testid={titleTestid} class="{titleSize === 38 ? 'desktop:text-[38px]' : 'desktop:text-[30px]'} m-0 min-w-0 truncate desktop:whitespace-normal font-semibold text-[length:var(--g-text-xl)] desktop:leading-[1.1] desktop:tracking-[-0.025em]">{#if namePrefix}{@render namePrefix()}{/if}{name}</h1>
-			<button type="button" data-testid={`${p}-name-edit-toggle`} aria-label={$t('aktionen.kopf.name_bearbeiten')} onclick={() => start('name')} class="flex-shrink-0 inline-flex items-center justify-center min-h-[44px] min-w-[44px] desktop:min-h-0 desktop:min-w-0 desktop:p-1 cursor-pointer" style="color: var(--g-ink-3)"><PencilIcon size={15} /></button>
+			<!-- #2878: Titel und Stift als Gruppe — der Stift springt beim Umbruch nie allein in eine neue Zeile. -->
+			<div class="flex items-center gap-2 desktop:gap-3 min-w-0 flex-[0_1_auto]">
+				<h1 data-testid={titleTestid} class="{titleSize === 38 ? 'desktop:text-[38px]' : 'desktop:text-[30px]'} m-0 min-w-0 [overflow-wrap:anywhere] font-semibold text-[length:var(--g-text-xl)] desktop:leading-[1.1] desktop:tracking-[-0.025em]">{#if namePrefix}{@render namePrefix()}{/if}{name}</h1>
+				<button type="button" data-testid={`${p}-name-edit-toggle`} aria-label={$t('aktionen.kopf.name_bearbeiten')} onclick={() => start('name')} class="flex-shrink-0 inline-flex items-center justify-center min-h-[44px] min-w-[44px] desktop:min-h-0 desktop:min-w-0 desktop:p-1 cursor-pointer" style="color: var(--g-ink-3)"><PencilIcon size={15} /></button>
+			</div>
 		{/if}
 		{#if badges}{@render badges()}{/if}
 		{#if actions}{@render actions()}{/if}
