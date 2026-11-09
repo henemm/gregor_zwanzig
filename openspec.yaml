@@ -277,3 +277,15 @@ hooks:
 herdr:
   auto_clear:
     enabled: true
+
+# Deploy-Ablauf (#2873): beschreibt das projekteigene /70-deploy
+# (.claude/commands/70-deploy.md) fuer das Plugin. Ohne diesen Block zeigt die
+# Herdr-Seitenleiste "Deploy (nicht eingerichtet)" neben "Naechster: /70-deploy".
+# `autonomous: true` entspricht CLAUDE.md ("Deploy laeuft ohne Halt durch").
+# Den Fortschritt (laeuft/fertig/fehlgeschlagen) meldet 70-deploy.md per
+# `workflow.py deploy-status`.
+deploy:
+  command: "bash /home/hem/henemm-infra/scripts/deploy-gregor-prod.sh"
+  verify: "python3 .claude/hooks/prod_selftest.py"
+  rollback: "siehe docs/reference/operations_playbook.md (Rollback)"
+  autonomous: true
