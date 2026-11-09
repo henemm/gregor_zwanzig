@@ -760,6 +760,8 @@ export const HUB_KOPF_SEL = {
 export const TOKEN_RGB = {
 	ink: 'rgb(26, 26, 24)',
 	accent: 'rgb(196, 90, 42)',
+	/** #2879: Accent unter/als Text (Weiter-Knopf, aktiver Handy-Reiter, Kürzel). */
+	accentDeep: 'rgb(140, 62, 26)',
 	paperDeep: 'rgb(236, 234, 217)',
 	ink3: 'rgb(107, 103, 92)'
 } as const;

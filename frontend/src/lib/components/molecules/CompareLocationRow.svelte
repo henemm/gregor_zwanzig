@@ -30,7 +30,7 @@
 >
 	<span
 		style:font-family="var(--g-font-mono)"
-		style:color="var(--g-accent)"
+		style:color="var(--g-accent-deep)"
 		style:width="2.5rem"
 		style:flex-shrink="0"
 		style:font-size="13px"

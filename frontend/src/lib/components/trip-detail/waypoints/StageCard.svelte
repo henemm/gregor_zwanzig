@@ -81,14 +81,14 @@
 >
 	<!-- Header row: drag handle + code + remove button -->
 	<div style="display:flex; justify-content:space-between; align-items:center;">
-		<span style="font-size:9px; font-family:var(--g-font-mono); font-weight:600; color:{active ? 'var(--g-accent-deep)' : 'var(--g-ink-4)'}; letter-spacing:0.04em;">
+		<span style="font-size:9px; font-family:var(--g-font-mono); font-weight:600; color:{active ? 'var(--g-accent-deep)' : 'var(--g-ink-3)'}; letter-spacing:0.04em;">
 			⋮⋮ {stageLabel} · {stage.code ?? ''}
 		</span>
 		{#if onRemove}
 			<button
 				type="button"
 				onclick={makeRemoveClick()}
-				style="font-size:12px; color:var(--g-ink-4); background:none; border:none; cursor:pointer; padding:0; line-height:1;"
+				style="font-size:12px; color:var(--g-ink-3); background:none; border:none; cursor:pointer; padding:0; line-height:1;"
 				aria-label={$t('trip.etappe_entfernen')}
 			>×</button>
 		{/if}

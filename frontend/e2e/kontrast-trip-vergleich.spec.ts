@@ -53,7 +53,6 @@ const SPRACHEN = ['de', 'en'] as const;
 type Sprache = (typeof SPRACHEN)[number];
 
 const INK4 = 'rgb(154, 149, 138)';
-const ACCENT_DEEP = 'rgb(140, 62, 26)';
 const GPX = path.resolve('./e2e/fixtures/test-trip.gpx');
 
 interface Daten {
@@ -326,13 +325,23 @@ test('KO-4: Listen — Status „· aktiv" und Zähler „x von y" ≥ 4,5:1, --
 	expect(befunde, `KO-4:\n  ${[...new Set(befunde)].join('\n  ')}`).toEqual([]);
 });
 
-/** Hintergrund und Schrift eines Knopfs, gepollt bis die Übergangs-Animation steht. */
+/** Hintergrund und Schrift eines Knopfs (als rgb), gepollt bis die Übergangs-Animation steht. */
 async function knopfFarben(knopf: Locator): Promise<{ grund: string; schrift: string }> {
 	let vorher = '';
 	let wert = { grund: '', schrift: '' };
 	await expect
 		.poll(async () => {
-			wert = await knopf.evaluate((el) => ({ grund: getComputedStyle(el).backgroundColor, schrift: getComputedStyle(el).color }));
+			wert = await knopf.evaluate((el) => {
+				// color-mix() liefert z. B. oklab(…) — über eine 1×1-Leinwand nach rgb() übersetzen.
+				const alsRgb = (farbe: string): string => {
+					const ctx = document.createElement('canvas').getContext('2d')!;
+					ctx.fillStyle = farbe;
+					ctx.fillRect(0, 0, 1, 1);
+					const [r, g, b] = ctx.getImageData(0, 0, 1, 1).data;
+					return `rgb(${r}, ${g}, ${b})`;
+				};
+				return { grund: alsRgb(getComputedStyle(el).backgroundColor), schrift: alsRgb(getComputedStyle(el).color) };
+			});
 			const s = JSON.stringify(wert);
 			const gleich = s === vorher;
 			vorher = s;
@@ -365,7 +374,7 @@ test('KO-5: aktiver „Weiter"-Knopf — Fläche --g-accent-deep, im Hover dunkl
 			await expect(weiter).toBeEnabled();
 			await page.mouse.move(0, 0);
 			const ruhe = await knopfFarben(weiter);
-			expect(ruhe.grund, `${kind}: Weiter-Fläche = --g-accent-deep`).toBe(ACCENT_DEEP);
+			expect(ruhe.grund, `${kind}: Weiter-Fläche = --g-accent-deep`).toBe(TOKEN_RGB.accentDeep);
 			expect(kontrastVerhaeltnis(ruhe.schrift, ruhe.grund), `${kind}: Weiter ${ruhe.schrift} auf ${ruhe.grund}`).toBeGreaterThanOrEqual(4.5);
 			expect(helligkeit(ruhe.schrift), `${kind}: Weiter-Schrift hell`).toBeGreaterThan(15);
 			await weiter.hover();

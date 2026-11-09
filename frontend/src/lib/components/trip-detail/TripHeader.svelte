@@ -200,7 +200,7 @@
 	   legt keinen eigenen Rand, Abstand oder Linie um ihn (Parität zum Ortsvergleich). */
 	.h1-shortcode {
 		font-family: var(--g-font-mono, ui-monospace, monospace);
-		color: var(--g-accent); /* audit:exempt — Large-Text in <h1> (≥18pt → WCAG AA-large) */
+		color: var(--g-accent-deep); /* #2879: Accent als Text = accent-deep (20 px ist kein großer Text, 6,77:1) */
 	}
 	.status-supplement {
 		font-size: var(--g-text-sm);

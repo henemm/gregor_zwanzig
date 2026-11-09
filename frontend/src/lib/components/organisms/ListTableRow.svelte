@@ -112,7 +112,7 @@
 			{:else if isPills(cell)}
 				<div style="display: flex; flex-wrap: wrap; gap: 5px;">
 					{#if cell.pills.length === 0}
-						<span style="font-family: var(--g-font-mono); font-size: 11px; color: var(--g-ink-4);"
+						<span style="font-family: var(--g-font-mono); font-size: 11px; color: var(--g-ink-3);"
 							>—</span
 						>
 					{:else}
@@ -128,7 +128,7 @@
 				<div style="display: flex; flex-direction: column; gap: 2px;">
 					<span>{cell.lines[0]}</span>
 					{#if cell.lines[1]}
-						<span style="font-size: 11px; color: var(--g-ink-4); font-family: var(--g-font-mono);"
+						<span style="font-size: 11px; color: var(--g-ink-3); font-family: var(--g-font-mono);"
 							>{cell.lines[1]}</span
 						>
 					{/if}
