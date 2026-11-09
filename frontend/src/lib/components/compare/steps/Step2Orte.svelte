@@ -93,7 +93,7 @@
 	});
 
 	const counterColor = $derived(
-		pickedIds.length < 2 ? 'var(--g-warn)' : 'var(--g-ink-3)'
+		pickedIds.length < 2 ? 'var(--g-warn-deep)' : 'var(--g-ink-3)'
 	);
 
 	// Issue #1256 Scheibe 8d (AC-6) — dense-Badge-Kurzform (JSX-M Z.234), Desktop
@@ -284,7 +284,7 @@
 							type="button"
 							disabled={adding || !fallbackLat || !fallbackLon}
 							onclick={addLocationFromFallback}
-							style="padding:5px 12px; font-size:12px; border-radius:var(--g-r-2); background:var(--g-accent); color:#fff; border:none; cursor:pointer; opacity:{adding || !fallbackLat || !fallbackLon ? '0.4' : '1'};"
+							style="padding:5px 12px; font-size:12px; border-radius:var(--g-r-2); background:var(--g-accent-deep); color:#fff; border:none; cursor:pointer; opacity:{adding || !fallbackLat || !fallbackLon ? '0.4' : '1'};"
 						>{adding ? $t('vergleich.orte.wird_hinzugefuegt') : $t('vergleich.orte.hinzufuegen')}</button>
 					</div>
 				{/if}
@@ -309,7 +309,7 @@
 						type="button"
 						disabled={adding}
 						onclick={addLocation}
-						style="width:100%; padding:8px; font-size:13px; border-radius:var(--g-r-2); background:var(--g-accent); color:#fff; border:none; cursor:pointer; font-family:var(--g-font-sans); opacity:{adding ? '0.4' : '1'};"
+						style="width:100%; padding:8px; font-size:13px; border-radius:var(--g-r-2); background:var(--g-accent-deep); color:#fff; border:none; cursor:pointer; font-family:var(--g-font-sans); opacity:{adding ? '0.4' : '1'};"
 					>{adding ? $t('vergleich.orte.wird_hinzugefuegt') : $t('vergleich.orte.zum_vergleich')}</button>
 				{/if}
 			</div>
