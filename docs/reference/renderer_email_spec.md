@@ -203,6 +203,18 @@ Im E-Mail-Body wird ein Klartext-Hinweis ausgegeben, wenn an mindestens einer St
 
 ---
 
+## Ortsvergleich-Alarm: Ortsname einmal, kein „km 0–0" (seit Issue #2598)
+
+Im Ortsvergleich (Änderungs- und Radar-Alarm) steht der Ortsname im Betreff nur im `[Name]`-Präfix; ein Kilometer- oder Etappenteil entfällt (Kennzeichen: `AlertMessage.location_label` gesetzt, Trip setzt es nie und bleibt unverändert). Ereigniszeilen nennen den Ort statt `km 0–0`.
+
+- Änderung, 1 Ort: Betreff `[Ort Eins] ↑ Böen: 30 km/h→60 km/h`, Mail `Wo & wann: Ort Eins · stärkste Stunde 14:00`
+- Bündel, 2 Orte: Betreff `[Ort Eins, Ort Zwei] ↑ 2 über Schwelle: …`
+- Beginn-Verschiebung, 1 Ort: Betreff `[Ort Eins] Gewitter-Beginn 10:00 (2 h früher)`, Zeile `Gewitter-Beginn: 12:00 → 10:00 (2 h früher · Ort Eins)`
+- Radar, 1 Ort: Betreff `[Ort Eins] Regen in 30 Min`, Mail `Wo & wann: Ort Eins · ab 14:30`
+- Trip unverändert: `[GR20] Segment 3 · ↑ Böen: …`
+
+Spec: `docs/specs/modules/fix_2598_ortsvergleich_alarm_kopfzeile.md`.
+
 ## Abweichungs-Alarm: Stundenzeilen (seit Issue #1737)
 
 Die Abweichungs-Alarm-Mail (Trip und Ortsvergleich; `src/output/renderers/alert/render.py::render_email`) zeigt unter der Kopfzeile **jedes Ereignisses** einen eigenen Block mit einer Tabellenzeile je betroffener Stunde: `HH:MM | alt → neu` (Ortszeit, `local_fmt`). Keine gemeinsame Tabelle über mehrere Ereignisse.

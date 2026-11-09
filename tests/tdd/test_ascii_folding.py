@@ -225,23 +225,29 @@ def test_radar_alert_trip_short_survives_double_truncation():
     Kopf des Aenderungs-Alarms mit nachrichtenweitem `location_label` (Ein-Ort-
     Ortsvergleich, `_render_sms_body`, Zweig `elif msg.location_label`) weiter.
     Dorthin verlegt dieser Test die Fixture — wieder ohne den Pruefling zu
-    aendern."""
+    aendern.
+
+    (4) Issue #2598: genau dieser Kopf nannte den Ort doppelt
+    (`trip_short` UND `location_label`, `'Graz Graz: '`); er traegt jetzt nur
+    noch den Ortsnamen, gefaltet und DANACH auf 24 Zeichen gekuerzt
+    (`_ascii(msg.location_label)[:24]`). Die Fixture folgt der echten
+    Projektion (`trip_short == location_label`, Ein-Ort-Ortsvergleich)."""
     from output.renderers.alert.model import AlertEvent, AlertMessage
     from output.renderers.alert.render import render_sms
     from utils.ascii_fold import fold_ascii
 
-    trip_short = "Wandergruppe München"
+    name = "Wandergruppe München Süd"
     event = AlertEvent(
         metric_id="temperature", value_from=20.0, value_to=31.0, threshold=5.0,
         cmp="über", occurred_at="14:00", km_from=0.0, km_to=5.0,
     )
     msg = AlertMessage(
-        trip_short=trip_short, stand_at="14:00", events=(event,), source=None,
-        location_label="Ort", ampel=resolve_ampel(None),
+        trip_short=name, stand_at="14:00", events=(event,), source=None,
+        location_label=name, ampel=resolve_ampel(None),
     )
 
     sms = render_sms(msg)
-    expected_prefix = fold_ascii(trip_short)[:16].rstrip(" (-_")
+    expected_prefix = f"{fold_ascii(name)[:24]}: "
 
     assert sms.startswith(expected_prefix), (
         f"Doppelkuerzung verstuemmelt den Ortsnamen mitten im Wort: "

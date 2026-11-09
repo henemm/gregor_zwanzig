@@ -123,6 +123,14 @@ FAELLE = {
     "2 Orte, nur Beginn": lambda: _aenderung([
         (EINS, [_gewitter_beginn_frueher()]), (ZWEI, [_gewitter_beginn_frueher()]),
     ]),
+    # Adversary F001: Bündel OHNE über-Schwelle-Ereignis -> eigener
+    # Betreff-/Kopf-Zweig "N Änderungen seit dem Briefing".
+    "2 Orte unter Schwelle": lambda: _aenderung([
+        (EINS, [_boeen(30.0, 35.0)]), (ZWEI, [_boeen(30.0, 36.0)]),
+    ]),
+    "1 Ort, 2 unter Schwelle": lambda: _aenderung([
+        (EINS, [_boeen(30.0, 35.0), _boeen(30.0, 36.0)]),
+    ]),
     "Radar 1 Ort": lambda: _radar([EINS]),
     "Radar 2 Orte": lambda: _radar([EINS, ZWEI]),
 }
@@ -249,6 +257,28 @@ def test_ac3_zwei_orte_nennen_die_namensliste_einmal(lang, betreff_anfang, kopf)
     assert _kopf(k["Telegram"]) == kopf
 
 
+@pytest.mark.parametrize("fall,namen", [
+    ("2 Orte unter Schwelle", "Ort Eins, Ort Zwei"),
+    ("1 Ort, 2 unter Schwelle", "Ort Eins"),
+])
+@pytest.mark.parametrize("lang,kern", [
+    ("de", "2 Änderungen seit dem Briefing"),
+    ("en", "2 changes since the briefing"),
+])
+def test_ac3_buendel_unter_schwelle_nennt_die_namen_einmal(fall, namen, lang, kern):
+    """AC-3 (Adversary F001): Given ein Bündel ohne über-Schwelle-Ereignis
+    (Zweig "N Änderungen seit dem Briefing") / When Betreff und Telegram
+    gerendert werden / Then steht die Namensliste genau einmal, kein `km 0–0`.
+
+    Vor dem Fix: `[Ort Eins, Ort Zwei] Ort Eins, Ort Zwei · 2 Änderungen …`."""
+    k = _kanaele(FAELLE[fall](), lang)
+
+    assert k["Betreff"] == f"[{namen}] {kern}"
+    assert _kopf(k["Telegram"]) == f"<b>{namen} · {kern}</b>"
+    for kanal in ("Betreff", "Telegram"):
+        assert KM_NULL not in k[kanal], k[kanal]
+
+
 # ---------------------------------------------------------------------------
 # AC-4 — 1 Ort, Beginn-Verschiebung
 # ---------------------------------------------------------------------------
@@ -293,6 +323,28 @@ def test_ac4_beginn_verschiebung_neben_aenderung_nennt_den_ort(lang, beginn_zeil
     assert ereignis_zeile in zeilen, k["Telegram"]
     assert beginn_zeile in zeilen, k["Telegram"]
     assert beginn_zeile in k["Mail (Text)"].splitlines(), k["Mail (Text)"]
+
+
+@pytest.mark.parametrize("lang,label,frueher", [
+    ("de", "Gewitter-Beginn", "2 h früher"),
+    ("en", "Thunder onset", "2 h earlier"),
+])
+def test_ac4_zwei_orte_beginn_zeile_nennt_den_eigenen_ort(lang, label, frueher):
+    """AC-4 (Adversary F002): Given zwei Orte mit Beginn-Verschiebung / When
+    Telegram und Mail (Text und HTML) gerendert werden / Then nennt jede
+    Beginn-Zeile ihren EIGENEN Ort -- das per-Ereignis-Label geht dem
+    nachrichtenweiten Sammelnamen vor, der in keiner Ereigniszeile steht."""
+    k = _kanaele(FAELLE["2 Orte, nur Beginn"](), lang)
+    erwartet = [f"{label}: 12:00 → 10:00 ({frueher} · {name})" for name in (EINS, ZWEI)]
+
+    for kanal in ("Telegram", "Mail (Text)"):
+        zeilen = [z for z in k[kanal].splitlines() if z.startswith(f"{label}:")]
+        assert zeilen == erwartet, k[kanal]
+    html_zeilen = [z for z in k["Mail (HTML)"].splitlines() if z.startswith(label)]
+    assert html_zeilen == [f"{label} · {EINS}", f"{label} · {ZWEI}"], k["Mail (HTML)"]
+    for kanal in ("Telegram", "Mail (Text)", "Mail (HTML)"):
+        ereignis = [z for z in k[kanal].splitlines() if z.startswith(label)]
+        assert all("Ort Eins, Ort Zwei" not in z for z in ereignis), k[kanal]
 
 
 # ---------------------------------------------------------------------------

@@ -290,6 +290,14 @@ def _km_str(msg: AlertMessage, lang: Lang = "de") -> str:
     return _location_of(msg.events, msg.location_label, lang=lang)
 
 
+def _kopf_ort(msg: AlertMessage, ort: str) -> str:
+    """Issue #2598: Ortsteil einer Kopfzeile samt Trenner. Im Punkt-Kontext
+    (Ortsvergleich, `msg.location_label` gesetzt) steht der Ortsname schon im
+    `trip_short`-Slot -- ein zweites Mal waere Doppelung bzw. "km 0–0".
+    Trip setzt `location_label` nie, dort bleibt der Kopf unveraendert."""
+    return "" if msg.location_label else f"{ort} · "
+
+
 def _stage_prefix(events) -> str:
     """Issue #2122: die EINE Stelle, an der das Etappen-Praefix der
     Alarm-Kurzform entsteht -- alle vier Kopf-Zweige stellen ihr Ergebnis
@@ -438,12 +446,13 @@ def _per_event_where_when(evs) -> bool:
     return bool(_renderable_segment_ids([e.segment_id for e in evs]))
 
 
-def _km_str_onset(e: OnsetEvent, lang: Lang = "de") -> str:
-    # Bewusst OHNE `location_label`: `_render_telegram_onset` liest auch im
-    # gebuendelten Mehr-Orte-Fall nur `events[0]` (Nebenbefund im Kontext-
-    # Dokument) — mit Ortsnamen stuende dort statt "km 0–0" der Name des
-    # ERSTEN Ortes, und der Ortsvergleich soll unveraendert bleiben (AC-4).
-    return _location_of((e,), lang=lang)
+def _km_str_onset(
+    e: OnsetEvent, location_label: str | None = None, lang: Lang = "de",
+) -> str:
+    # Bewusst NUR das nachrichtenweite `location_label` (Issue #2598): es ist
+    # allein beim Ortsvergleich-Radar mit GENAU einem Ort gesetzt; der
+    # Mehr-Orte-Fall hat eigene Zweige (#1767), Trip setzt es nie.
+    return _location_of((e,), location_label, lang=lang)
 
 
 # --- Hagel-Zusaetze (Issue #2205) -------------------------------------------
@@ -467,9 +476,13 @@ def _sms_hail_suffix(e) -> str:
 # --- Beginn-Verschiebung (Issue #1468, ADR-0013: eigener Render-Vertrag --
 # NIE durch _val()/_num(), sonst stuende "15 h" statt "15:00" im Text) -------
 
-def _onset_shift_where(oe: OnsetShiftEvent, lang: Lang = "de") -> str:
+def _onset_shift_where(
+    oe: OnsetShiftEvent, lang: Lang = "de", location_label: str | None = None,
+) -> str:
+    # Issue #2598: Fallback auf das nachrichtenweite Label (Ortsvergleich mit
+    # einem Ort) -- sonst stuende dort "km 0–0". Trip uebergibt nie eins.
     return format_alert_location(
-        oe.location_label, [oe.segment_id], oe.km_from, oe.km_to,
+        oe.location_label or location_label, [oe.segment_id], oe.km_from, oe.km_to,
         km_measured=getattr(oe, "km_measured", False),  # Issue #2036
         lang=lang,
     )
@@ -497,18 +510,23 @@ def _onset_shift_label(oe: OnsetShiftEvent, lang: Lang = "de") -> str:
     return t("alarm.beginn.label", lang, label=_label(oe, lang))
 
 
-def _onset_shift_line(oe: OnsetShiftEvent, lang: Lang = "de") -> str:
+def _onset_shift_line(
+    oe: OnsetShiftEvent, lang: Lang = "de", location_label: str | None = None,
+) -> str:
     """Eine Zeile Klartext: Groesse, alte und neue Uhrzeit, Richtungswort."""
     return (
         f"{_onset_shift_label(oe, lang)}: {oe.from_time} → {_onset_shift_to(oe, lang)} "
-        f"({_shift_text(oe, lang)} · {_onset_shift_where(oe, lang)})"
+        f"({_shift_text(oe, lang)} · {_onset_shift_where(oe, lang, location_label)})"
     )
 
 
-def _onset_shift_row(oe: OnsetShiftEvent, first: bool, lang: Lang = "de") -> str:
+def _onset_shift_row(
+    oe: OnsetShiftEvent, first: bool, lang: Lang = "de",
+    location_label: str | None = None,
+) -> str:
     """HTML-Zeile einer Beginn-Verschiebung (eine Bauform fuer beide Mails)."""
     return _datarow_html(
-        f"{_onset_shift_label(oe, lang)} · {_onset_shift_where(oe, lang)}",
+        f"{_onset_shift_label(oe, lang)} · {_onset_shift_where(oe, lang, location_label)}",
         f"{oe.from_time} → {_onset_shift_to(oe, lang)} ({_shift_text(oe, lang)})",
         G_DANGER, first,
     )
@@ -550,10 +568,11 @@ def _render_email_onset_shift_only(msg: AlertMessage, lang: Lang = "de") -> tupl
     h1 = _onset_shift_h1(msg, lang)
     footer = t("alarm.mail.stand", lang, stand=msg.stand_at)
     plain = "\n".join(
-        [h1, "", *[_onset_shift_line(oe, lang) for oe in msg.onset_shift_events], "", footer]
+        [h1, "", *[_onset_shift_line(oe, lang, msg.location_label)
+                   for oe in msg.onset_shift_events], "", footer]
     )
     rows = [
-        _onset_shift_row(oe, i == 0, lang)
+        _onset_shift_row(oe, i == 0, lang, msg.location_label)
         for i, oe in enumerate(msg.onset_shift_events)
     ]
     html = (
@@ -606,7 +625,7 @@ def _render_subject_onset(msg: AlertMessage, lang: Lang = "de") -> str:
         return f"[{msg.trip_short}] {t('alarm.regen.buendel', lang, n=len(msg.events))}"
     e = msg.events[0]
     label = _onset_kind(e, lang)
-    km = _km_str_onset(e, lang)
+    kopf = _kopf_ort(msg, _km_str_onset(e, msg.location_label, lang))  # Issue #2598
     # Issue #2051 S1: das Ende additiv HINTER der Beginn-Angabe -- ohne
     # behauptbares Ende bleibt der Betreff byte-identisch (AC-19).
     # Issue #2051 S2b: die Ausdehnung als LETZTES Element derselben Kette --
@@ -615,7 +634,7 @@ def _render_subject_onset(msg: AlertMessage, lang: Lang = "de") -> str:
     # Issue #2050 S4b-2: die beiden Kennzeichnungen als LETZTE Glieder
     # derselben Kette -- ohne Ausfall bzw. ohne Messluecke bleibt der
     # Betreff byte-identisch (AC-5/AC-13).
-    return f"[{msg.trip_short}] {km} · {label} {_onset_wann_kopf(e, lang)}{_onset_suffixes(e, lang)}"
+    return f"[{msg.trip_short}] {kopf}{label} {_onset_wann_kopf(e, lang)}{_onset_suffixes(e, lang)}"
 
 
 def _distinct_source_labels(msg: AlertMessage) -> str:
@@ -966,7 +985,7 @@ def _render_email_onset(msg: AlertMessage, lang: Lang = "de") -> tuple[str, str]
         return _render_email_onset_multi(msg, lang)
     e = msg.events[0]
     h1 = f"{_onset_kind(e, lang)} {_onset_wann_kopf(e, lang)}"
-    km = _km_str_onset(e, lang)
+    km = _km_str_onset(e, msg.location_label, lang)  # Issue #2598
     data_rows = [
         # Issue #2051 S1: Beginn und Ende gehoeren in DIESELBE "Wo & wann"-
         # Zeile -- eine eigene Datenzeile nur fuer das Ende waere im
@@ -1003,8 +1022,8 @@ def _render_telegram_onset(msg: AlertMessage, lang: Lang = "de") -> str:
         return _render_telegram_onset_multi(msg, lang)
     e = msg.events[0]
     label = _onset_kind(e, lang)
-    km = _km_str_onset(e, lang)
-    first = f"<b>{_esc(f'{msg.trip_short} · {km} · {label} {_onset_wann_kopf(e, lang)}')}</b>"
+    kopf = _kopf_ort(msg, _km_str_onset(e, msg.location_label, lang))  # Issue #2598
+    first = f"<b>{_esc(f'{msg.trip_short} · {kopf}{label} {_onset_wann_kopf(e, lang)}')}</b>"
     # Issue #2051 S1: das Ende additiv HINTER der Beginn-Zeit, vor Intensitaet
     # und Quelle -- ohne behauptbares Ende byte-identisch wie bisher (AC-19).
     # Issue #2051 S2b: die Ausdehnung als LETZTES Suffix der Detailzeile, vor
@@ -1346,22 +1365,22 @@ def render_subject(msg: AlertMessage, *, lang: Lang = "de") -> str:
         mehr = (f" +{len(msg.onset_shift_events) - 1}"
                 if len(msg.onset_shift_events) > 1 else "")
         return (
-            f"[{msg.trip_short}] {_onset_shift_where(oe, lang)} · {_onset_shift_label(oe, lang)} "
-            f"{oe.to_time} ({_shift_text(oe, lang)}){mehr}"
+            f"[{msg.trip_short}] {_kopf_ort(msg, _onset_shift_where(oe, lang))}"
+            f"{_onset_shift_label(oe, lang)} {oe.to_time} ({_shift_text(oe, lang)}){mehr}"
         )
     evs = _sorted(msg)
-    km = _km_str(msg, lang)
+    km = _kopf_ort(msg, _km_str(msg, lang))  # Issue #2598: Ortsteil samt Trenner
     if len(evs) == 1:
         e = evs[0]
         return (
-            f"[{msg.trip_short}] {km} · {arrow(e)} {_deviation_label(e, lang)}: "
+            f"[{msg.trip_short}] {km}{arrow(e)} {_deviation_label(e, lang)}: "
             f"{_val(e, e.value_from, lang)}→{_val(e, e.value_to, lang)}"
         )
     # Issue #981: Zähler UND Top-3-Auswahl nur aus über-Schwelle-Events; ohne
     # solche wechselt die Formulierung auf "N Änderungen seit dem Briefing".
     over_evs = [e for e in evs if _ueber_schwelle_d4(e)]
     if not over_evs:
-        return f"[{msg.trip_short}] {km} · {t('alarm.abweichung.aenderungen', lang, n=len(evs))}"
+        return f"[{msg.trip_short}] {km}{t('alarm.abweichung.aenderungen', lang, n=len(evs))}"
     n = len(over_evs)
     # Issue #978 (PO-Nachtrag): Top-3-Auswahl UND Anzeige-Reihenfolge sind
     # severity-absteigend (kritischster zuerst), kanal-konsistent mit
@@ -1373,7 +1392,7 @@ def render_subject(msg: AlertMessage, *, lang: Lang = "de") -> str:
         for e in over_evs[:3]
     )
     ueber = t("alarm.abweichung.ueber_schwelle", lang, n=n)
-    return f"[{msg.trip_short}] {km} · {arrow(over_evs[0])} {ueber}: {top3}"
+    return f"[{msg.trip_short}] {km}{arrow(over_evs[0])} {ueber}: {top3}"
 
 
 def _h1(msg: AlertMessage, lang: Lang = "de") -> str:
@@ -1661,7 +1680,7 @@ def render_email(msg: AlertMessage, *, lang: Lang = "de") -> tuple[str, str]:
     verdict_bg = G_DANGER if any_over else G_SUCCESS
     # Issue #1468 (PO-Entscheid): Beginn- UND Stufenaenderung werden beide
     # gemeldet, aber im Text DERSELBEN Nachricht zusammengefasst.
-    onset_lines = [_onset_shift_line(oe, lang) for oe in msg.onset_shift_events]
+    onset_lines = [_onset_shift_line(oe, lang, msg.location_label) for oe in msg.onset_shift_events]
     plain_parts = [h1, "", verdict_text, ""] + plain_data
     if onset_lines:
         plain_parts += ["", *onset_lines]
@@ -1681,7 +1700,7 @@ def render_email(msg: AlertMessage, *, lang: Lang = "de") -> tuple[str, str]:
             rows.append(_datarow_html(label, value, value_color, not rows))
             rows.append(_hours_html(e, msg.format_modes.get("email"), msg.indicator_keys.get("email", frozenset()), lang, ampel=msg.ampel))  # Issue #1737
     for oe in msg.onset_shift_events:
-        rows.append(_onset_shift_row(oe, not rows, lang))
+        rows.append(_onset_shift_row(oe, not rows, lang, msg.location_label))
 
     html = (
         "<html><body style=\"font-family:" + FONT_UI + ";color:" + G_INK + ";\">"
@@ -1704,24 +1723,26 @@ def render_telegram(msg: AlertMessage, *, lang: Lang = "de") -> str:
     if not msg.events and msg.onset_shift_events:
         # Issue #1468: reine Beginn-Verschiebung.
         lines = [f"<b>{_esc(f'{msg.trip_short} · {_onset_shift_h1(msg, lang)}')}</b>"]
-        lines += [_onset_shift_line(oe, lang) for oe in msg.onset_shift_events]
+        lines += [_onset_shift_line(oe, lang, msg.location_label) for oe in msg.onset_shift_events]
         return "\n".join(lines)
     evs = _sorted(msg)
-    km = _km_str(msg, lang)
+    km = _kopf_ort(msg, _km_str(msg, lang))  # Issue #2598: Ortsteil samt Trenner
     if len(evs) == 1:
         e = evs[0]
-        verdict = f"{msg.trip_short} · {km} · {arrow(e)} {_deviation_label(e, lang)}"
+        verdict = f"{msg.trip_short} · {km}{arrow(e)} {_deviation_label(e, lang)}"
         # Issue #2020 Scheibe 2: Telegram traegt DIESELBEN Saetze wie die
         # E-Mail (Kanal-Paritaet) -- vorher fehlte hier jede Zeitangabe, der
         # Kanal konnte den Tagesbezug also gar nicht nennen.
-        lines = [f"<b>{_esc(verdict)}</b>", _email_line(e, lang), _where_when(e, lang=lang)]
+        # Issue #2598: Ort wie in der Mail (`e.location_label or msg.location_label`).
+        where = _where_when(e, e.location_label or msg.location_label, lang=lang)
+        lines = [f"<b>{_esc(verdict)}</b>", _email_line(e, lang), where]
         if e.remaining_mm is not None:
             lines += [f"{k}: {v}" for k, v in _precip_rows(e, lang)]
         lines += [_esc(ln) for ln in _hour_lines(e, msg.format_modes.get("telegram"), lang, ampel=msg.ampel)]  # Issue #1737
     else:
         # Issue #981: Kopfzeilen-Zähler nur über-Schwelle; null → Änderungs-Text.
         over_count = len([e for e in evs if _ueber_schwelle_d4(e)])
-        verdict = f"{msg.trip_short} · {km} · {_verdict_multi(msg, evs, over_count, lang)}"
+        verdict = f"{msg.trip_short} · {km}{_verdict_multi(msg, evs, over_count, lang)}"
         # Issue #978 (PO-Nachtrag): kein "Schwelle"-Text pro Zeile (steht
         # bereits in der fetten Kopfzeile), keine Einheiten ausser "%";
         # severity-absteigende Reihenfolge, kanal-konsistent mit Betreff/
@@ -1747,7 +1768,7 @@ def render_telegram(msg: AlertMessage, *, lang: Lang = "de") -> str:
                 lines += [_esc(_deviation_label(e, lang)), *[_esc(ln) for ln in block]]
     # Issue #1468: Beginn-Verschiebungen desselben Laufs anhaengen -- eine
     # Nachricht, nicht zwei.
-    lines += [_onset_shift_line(oe, lang) for oe in msg.onset_shift_events]
+    lines += [_onset_shift_line(oe, lang, msg.location_label) for oe in msg.onset_shift_events]
     # Issue #1948 S6 (AC-11): dieselbe Stand-/Vergleichszeile wie die E-Mail
     # -- AUSSCHLIESSLICH hier, niemals in render_sms (AC-12, der Telegram-
     # Kurzstil sendet render_sms()s Text unveraendert weiter).
@@ -1917,7 +1938,6 @@ def _render_sms_body(
     if not msg.events and msg.onset_shift_events:
         return _render_sms_onset_shift_only(msg, limit)
     evs = _sorted(msg)
-    trip = _ascii(msg.trip_short)[:16].rstrip(" (-_")
     # Nur der gebuendelte Mehr-Orte-Fall traegt per-Event-`location_label`
     # (`project.py:215`) — er und der Ein-Ort-Fall sind zwei VERSCHIEDENE
     # Kopf-Zweige; der Wegfall des Kopfes muss beide treffen (K-2).
@@ -1931,7 +1951,9 @@ def _render_sms_body(
     elif multi_location:
         head = f"{_ascii(msg.location_label or msg.trip_short)[:24]}: "
     elif msg.location_label:
-        head = f"{trip} {_ascii(msg.location_label)[:24]}: "
+        # Issue #2598: Ortsname einmal (vorher `'Graz Graz: '`, trip_short
+        # und location_label tragen denselben Namen).
+        head = f"{_ascii(msg.location_label)[:24]}: "
     else:
         # Issue #1935/#1779 (E3/E4): Trip-Δ-Pfad -- dieselbe Ortsaufloesung
         # wie Betreff/E-Mail/Telegram (`_km_str`), Emoji ENTFERNT statt

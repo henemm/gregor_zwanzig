@@ -462,7 +462,9 @@ def test_ortsname_schlaegt_die_segment_kennung():
     Erweiterung zu ueberlassen.
     """
     from output.renderers.alert.model import AlertEvent, AlertMessage
-    from output.renderers.alert.render import render_email, render_subject
+    from output.renderers.alert.render import (
+        render_email, render_subject, render_telegram,
+    )
 
     event = AlertEvent(
         metric_id="gust", value_from=50.0, value_to=80.0, threshold=20.0,
@@ -474,9 +476,15 @@ def test_ortsname_schlaegt_die_segment_kennung():
         location_label="Toulon", ampel=resolve_ampel(None),
     )
 
-    assert _location_slot(render_subject(msg)) == "Toulon", (
+    # Issue #2598: im Punkt-Kontext traegt der Betreff den Ort nur noch im
+    # `[Name]`-Slot (vorher `[Toulon] Toulon · …`); die Segment-Kennung darf
+    # dort trotzdem nicht auftauchen.
+    assert render_subject(msg) == "[Toulon] ↑ Böen: 50 km/h→80 km/h", (
         "Segment-Kennung verdraengt den Ortsnamen im Betreff — Stufe 1 der "
         "Aufloesungsreihenfolge greift nicht"
+    )
+    assert "Toulon · stärkste Stunde 16:00" in render_telegram(msg).splitlines(), (
+        "Segment-Kennung verdraengt den Ortsnamen in der Telegram-Ereigniszeile"
     )
     assert _wo_ort(render_email(msg)[1]) == "Toulon", (
         "Segment-Kennung verdraengt den Ortsnamen im Mailkoerper"

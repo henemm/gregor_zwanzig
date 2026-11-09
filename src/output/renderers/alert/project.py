@@ -572,8 +572,11 @@ def to_multi_location_onset_alert_message(
     nicht über einen Ort; es bleibt in der Zeitzone des ersten Ortes. Das ist
     kein Bug (Issue #1385, bewusste Entscheidung).
 
-    INVARIANTE: bei GENAU einer Gruppe bleibt `location_label=None` — fällt
-    damit auf den unveränderten Single-Onset-Renderpfad zurück (AC-5).
+    INVARIANTE: bei GENAU einer Gruppe bleibt das per-Event-`location_label`
+    `None` — fällt damit auf den Single-Onset-Renderpfad zurück (AC-5).
+    Issue #2598: das nachrichtenweite `AlertMessage.location_label` trägt
+    dann den Ortsnamen (Kennzeichen Punkt-Kontext: Kopfzeilen nennen den Ort
+    einmal, „Wo & wann" nennt ihn statt „km 0–0").
     `source` trägt den Marker `COMPARE_RADAR_SOURCE`, damit die Renderer
     weiterhin über den Onset-Zweig (`msg.source is not None`) routen — und
     damit `_render_sms_onset` den Ein-Ort-Fall an genau dieser Konstante
@@ -697,6 +700,7 @@ def to_multi_location_onset_alert_message(
     return AlertMessage(
         trip_short=trip_short, stand_at=stand_at, events=tuple(events),
         source=COMPARE_RADAR_SOURCE, cooldown_display=cooldown_display, ampel=ampel,
+        location_label=None if multi else trip_short,  # Issue #2598
     )
 
 
