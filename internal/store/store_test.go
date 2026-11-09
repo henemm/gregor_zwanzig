@@ -286,6 +286,9 @@ func TestLoadMetricPresets_RoundtripStability(t *testing.T) {
 		t.Fatalf("second load: %v", err)
 	}
 
+	// Issue #2794 S3a (W5b, AC-22/AC-26): Zeithorizonte werden nicht mehr
+	// gespeichert; nach dem Speichern gilt fuer p2 „alle Tage".
+	first[1].Metrics[0].Horizons = model.Horizons{Today: true, Tomorrow: true, DayAfter: true}
 	if !reflect.DeepEqual(first, second) {
 		// Helpful diff: marshal both and print side-by-side.
 		a, _ := json.MarshalIndent(first, "", "  ")

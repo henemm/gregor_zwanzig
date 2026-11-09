@@ -66,6 +66,11 @@ func migrateMetricPreset(rp map[string]interface{}) model.MetricPreset {
 	if v, ok := rp["description"].(string); ok {
 		p.Description = v
 	}
+	// Issue #2794 S3a (AC-24): Bestand ohne kind gehoert zu Trip.
+	p.Kind = model.PresetKindRoute
+	if v, ok := rp["kind"].(string); ok && model.ValidPresetKind(v) {
+		p.Kind = v
+	}
 	if v, ok := rp["is_default"].(bool); ok {
 		p.IsDefault = v
 	}

@@ -15,6 +15,7 @@
   "fach.fehler.upstream_unreachable": "Der Dienst ist nicht erreichbar.",
   "fach.fehler.name_required": "Der Name fehlt.",
   "fach.fehler.name_exists": "Dieser Name ist bereits vergeben.",
+  "fach.fehler.name_exists_vorlage": "Eine Vorlage ‚{name}‘ gibt es schon. Wähle einen anderen Namen.",
   "fach.fehler.invalid_params": "Die Parameter sind ungültig.",
   "fach.fehler.budget_exceeded": "Das Tageskontingent für Wetterabfragen ist aufgebraucht.",
   "fach.fehler.provider_error": "Der Wetteranbieter ist nicht erreichbar.",
