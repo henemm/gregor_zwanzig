@@ -36,6 +36,8 @@
 	// PO-Entscheid F5 (2026-09-22, Variante B) — Karte + Höhenprofil entfallen
 	// auf Mobile ersatzlos. Der Mobile-Zweig rendert Desktop-Hinweis + Liste.
 	import SortableList from '$lib/components/shared/dnd/SortableList.svelte';
+	// Issue #2880: Rand des Etappen-Inhalts = geteilte Reiterfläche (wie Übersicht/Orte im Hub).
+	import HubReiterflaeche from '$lib/components/shared/hub-reiterflaeche/HubReiterflaeche.svelte';
 	import DragHandle from '$lib/components/shared/dnd/DragHandle.svelte';
 	import { t, tn, tr, locale, type Lang } from '$lib/i18n';
 	import { fmtDate } from '$lib/i18n/format';
@@ -703,6 +705,7 @@
 		     Karte/Profil/Sheet entfallen ersatzlos; Hinweis + vertikale Liste.
 		     F2: Kaskaden-Banner rendert als normale Zeile über der Liste —
 		     kein position:fixed mehr (Karten-Viewport existiert nicht mehr). -->
+		<HubReiterflaeche testid="etappen-mobil-reiterflaeche">
 		<div class="mobile-stages" data-testid="mobile-stages-list">
 			<div class="desktop-hint" data-testid="desktop-hint">
 				<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 8v5M12 16h.01"/></svg>
@@ -770,6 +773,7 @@
 				{/snippet}
 			</SortableList>
 		</div>
+		</HubReiterflaeche>
 	{:else}
 	<!-- EtappenStrip (volle Breite, eigene Navigations-Achse) -->
 	<EtappenStrip
@@ -794,8 +798,9 @@
 				onDateChange={(newDate) => handleDateChange(activeStage!.id, newDate)}
 			/>
 		{:else}
-			<!-- Issue #585: Inhaltsbereich mit Padding 20/40/60 + maxWidth 1480 -->
-			<div style="position:relative; padding:20px 40px 60px; max-width:1480px;">
+			<!-- Issue #2880: Inhaltsbereich in der geteilten Reiterfläche (28/40/60, max. 1480 px);
+			     das Etappen-Band darüber bleibt volle Breite. Vorher eigener Rand 20/40/60 (#585). -->
+			<HubReiterflaeche testid="etappen-reiterflaeche">
 			<!-- Etappen-Header mit editierbarem Datum (Issue #498) -->
 			<div class="flex items-start justify-between gap-8">
 				<div class="min-w-0 flex-1">
@@ -897,7 +902,7 @@
 					</div>
 				</div>
 			</div>
-			</div><!-- /Issue #585 content wrapper -->
+			</HubReiterflaeche>
 		{/if}
 	{/if}
 
@@ -1084,7 +1089,6 @@
 		display: flex;
 		flex-direction: column;
 		gap: var(--g-s-3);
-		padding: var(--g-s-3) var(--g-s-4) var(--g-s-4);
 	}
 	.desktop-hint {
 		display: flex;

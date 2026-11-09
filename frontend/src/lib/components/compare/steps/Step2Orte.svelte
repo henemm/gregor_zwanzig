@@ -13,6 +13,8 @@
 	import { api, ZEITLIMIT_ORT_AUFLOESEN_MS } from '$lib/api';
 	import type { Location, Group } from '$lib/types';
 	import { groupLocations } from '../locationHelpers';
+	// Issue #2880: Feldbeschriftungen über den Design-System-Baustein (wie /trips/new).
+	import { Field } from '$lib/components/molecules';
 	// Issue #2659 (i18n F10): Texte aus dem Katalog. Fehler ohne Server-Text halten nur
 	// den Schluessel (`resolveErrorKey`) — die Meldung entsteht beim Rendern.
 	import { t, type MessageKey } from '$lib/i18n';
@@ -234,8 +236,7 @@
 		<div>
 			<div style="font-family:var(--g-font-mono); font-size:10px; letter-spacing:0.10em; text-transform:uppercase; color:var(--g-ink-3); font-weight:600; margin-bottom:14px;">{$t('vergleich.orte.neuen_ort')}</div>
 			<div style="padding:16px 16px 14px; background:var(--g-card); border:1px solid var(--g-rule); border-radius:var(--g-r-3);">
-				<div style="margin-bottom:10px;">
-					<div style="font-size:11px; color:var(--g-ink-3); margin-bottom:6px;">{$t('vergleich.orte.smart_import')}</div>
+				<Field label={$t('vergleich.orte.smart_import')}>
 					<div style="display:flex; align-items:center; gap:10px;">
 						<input
 							data-testid="compare-step2-smart-import-input"
@@ -252,14 +253,14 @@
 							style="padding:8px 14px; font-size:13px; border:1px solid var(--g-rule); border-radius:var(--g-r-2); background:transparent; cursor:pointer; font-family:var(--g-font-sans); color:var(--g-ink); opacity:{resolving || !importInput.trim() ? '0.4' : '1'};"
 						>{resolving ? '…' : $t('vergleich.orte.aufloesen')}</button>
 					</div>
-				</div>
+				</Field>
 
 				{#if resolveError || resolveErrorKey}
 					<p style="font-size:12px; color:var(--g-danger); margin:4px 0;">{resolveErrorKey ? $t(resolveErrorKey) : resolveError}</p>
 					<!-- Fallback: manuelle Koordinaten -->
 					<div style="margin-top:10px;">
-						<div style="font-size:11px; color:var(--g-ink-3); margin-bottom:6px;">{$t('vergleich.orte.manuell')}</div>
-						<div style="display:flex; gap:8px; margin-bottom:6px;">
+						<Field label={$t('vergleich.orte.manuell')}>
+						<div style="display:flex; gap:8px;">
 							<input
 								data-testid="compare-step2-fallback-lat"
 								type="number"
@@ -277,6 +278,7 @@
 								style="flex:1; padding:6px 8px; font-size:12px; border:1px solid var(--g-rule); border-radius:var(--g-r-2); background:var(--g-paper); font-family:var(--g-font-sans);"
 							/>
 						</div>
+						</Field>
 						<button
 							data-testid="compare-step2-fallback-add-btn"
 							type="button"
@@ -291,15 +293,17 @@
 					<div style="padding:10px 12px; background:var(--g-paper-deep); border-radius:var(--g-r-2); margin-bottom:10px; margin-top:8px;">
 						<div style="font-family:var(--g-font-mono); font-size:10px; color:var(--g-ink-3); letter-spacing:0.06em; text-transform:uppercase; margin-bottom:4px;">{$t('vergleich.orte.erkannt')}</div>
 						<div style="font-family:var(--g-font-mono); font-size:11px; color:var(--g-ink-3); margin-top:2px; margin-bottom:8px;">{preview.lat.toFixed(4)}, {preview.lon.toFixed(4)}{preview.elevation_m !== undefined ? ` · ${preview.elevation_m} m` : ''}</div>
-						<label style="display:block; font-size:11px; color:var(--g-ink-3); margin-bottom:4px;" for="compare-step2-name-input">{$t('listen.spalte.name')}</label>
+						<Field label={$t('listen.spalte.name')}>
 						<input
 							id="compare-step2-name-input"
 							data-testid="compare-step2-name-input"
+							aria-label={$t('listen.spalte.name')}
 							type="text"
 							placeholder={$t('vergleich.orte.name_platzhalter')}
 							bind:value={nameDraft}
 							style="width:100%; padding:7px 9px; font-size:13px; font-weight:600; border:1px solid var(--g-rule); border-radius:var(--g-r-2); background:var(--g-paper); font-family:var(--g-font-sans); color:var(--g-ink); box-sizing:border-box;"
 						/>
+						</Field>
 					</div>
 					<button
 						type="button"

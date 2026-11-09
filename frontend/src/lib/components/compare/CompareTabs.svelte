@@ -17,6 +17,8 @@
 	import WetterMetrikenVersandPanel from '$lib/components/shared/WetterMetrikenVersandPanel.svelte';
 	// Issue #2682: die Übersicht ist der geteilte Baustein (context="vergleich").
 	import HubUebersicht from '$lib/components/shared/hub-uebersicht/HubUebersicht.svelte';
+	// Issue #2880: EINE Reiterfläche (Rand 28/40/60) für Übersicht und Orte, wie im Trip.
+	import HubReiterflaeche from '$lib/components/shared/hub-reiterflaeche/HubReiterflaeche.svelte';
 	// SaveStatus-Typ/Helper (der Chip selbst kommt seit #2284 S2 vom SubscriptionHeader).
 	import type { SaveFn, SaveStatus } from '$lib/stores/saveStatusStore.svelte';
 	import { extractMessage } from '$lib/stores/saveStatusStore.svelte';
@@ -681,27 +683,32 @@
 		ariaLabel={$t('vergleich.hub.tabs_aria')}
 	/>
 
-	<!-- Tab-Inhalte — Wrapper mit Padding nach JSX-Vorlage (Issue #582) -->
-	<div class="compare-tabs-content" style="position: relative; max-width: 1320px">
+	<!-- Tab-Inhalte — Issue #2880: kein eigener Rand mehr (vorher 28/40/80 nach #582 plus
+	     `.tab-panel` 24 px = doppelte Einrückung). Übersicht und Orte stehen in der geteilten
+	     Reiterfläche, die übrigen Reiter tragen ihren Rand selbst — wie im Trip. -->
+	<div class="compare-tabs-content" style="position: relative">
 
 	{#if activeTab === 'uebersicht'}
 		<div data-testid="compare-detail-panel-uebersicht">
 			<!-- Issue #2682: geteilter Baustein (Kennzahlen, Orte-/Wertebereiche-/Versand-Karten bzw.
 			     mobile Pfeil-Zeilen, Versand-Historie). `status` traegt das lokale Pausieren/
 			     Aktivieren, `orte` die aufgeloesten Orte dieser Sitzung. -->
-			<HubUebersicht
-				context="vergleich"
-				preset={currentPreset}
-				{status}
-				orte={resolvedLocations}
-				{saveController}
-				onJump={handleValueChange}
-			/>
+			<HubReiterflaeche testid="compare-detail-uebersicht-reiterflaeche">
+				<HubUebersicht
+					context="vergleich"
+					preset={currentPreset}
+					{status}
+					orte={resolvedLocations}
+					{saveController}
+					onJump={handleValueChange}
+				/>
+			</HubReiterflaeche>
 		</div>
 	{/if}
 
 	{#if activeTab === 'orte'}
-		<div class="tab-panel" data-testid="compare-detail-panel-orte">
+		<div data-testid="compare-detail-panel-orte">
+			<HubReiterflaeche testid="compare-detail-orte-reiterflaeche">
 			<!-- Issue #1256 S8c (AC-9): Section-Rahmen ueber SectionH-Atom + Card
 			     um Liste UND Footer (Soll Desktop: jsx:197-216; Soll Mobil: CDM:110).
 			     Fix-Loop 1 (F002): mobil ueber `eyebrow` statt `title` — kompakter
@@ -769,11 +776,12 @@
 					{/if}
 				</div>
 			{/if}
+			</HubReiterflaeche>
 		</div>
 	{/if}
 
 	{#if activeTab === 'wetter-metriken'}
-		<div class="tab-panel" data-testid="compare-detail-panel-wetter-metriken">
+		<div data-testid="compare-detail-panel-wetter-metriken">
 			{#if wetterMetrikenLayoutHydrationBereit && versandHydrated}
 				<!-- Issue #2276 S4: der Reiter speichert selbst (saveController,
 				     Hub-Queue, Basis-Rueckmeldung, EINE kombinierte Wetter-Metriken/
@@ -802,7 +810,7 @@
 	{/if}
 
 	{#if activeTab === 'wertebereiche'}
-		<div class="tab-panel" data-testid="compare-detail-panel-wertebereiche">
+		<div data-testid="compare-detail-panel-wertebereiche">
 			{#if idealwerteHydrated}
 				<!-- Issue #1256 Scheibe 8 (AC-22): mobile Spiegelung, Muster TripTabs.svelte.
 				     Issue #2276 S3: der Reiter speichert selbst (saveController, Hub-Queue,
@@ -827,7 +835,7 @@
 	     war bedienlose Attrappe mit sachlich falscher Kappungs-Aussage. -->
 
 	{#if activeTab === 'alarme'}
-		<div class="tab-panel" data-testid="compare-detail-panel-alarme">
+		<div data-testid="compare-detail-panel-alarme">
 			{#if alarmeHydrated}
 				<!-- Issue #2276 S2: der Reiter speichert selbst (saveController,
 				     Hub-Queue, Basis-Rueckmeldung) — kein Wrapper mehr. -->
@@ -875,11 +883,6 @@
 <style>
 	/* Tab-Leiste: Segmented entfernt — custom buttons in Template (Issue #582) */
 
-	.tab-panel {
-		padding: 1.5rem 0;
-	}
-
-
 	.empty-state {
 		font-size: 0.875rem;
 		color: var(--g-ink-3);
@@ -887,22 +890,11 @@
 	}
 
 
-	.compare-tabs-content {
-		padding: 28px 40px 80px;
-	}
-
 	@media (max-width: 899px) {
 		/* Tab-Band-Regeln (Fade/Snap) leben im MTabBar-Baustein — das frueher
 		   1:1 aus TripTabs.svelte kopierte Mobil-CSS der compare-tabs-bar ist
 		   mit der Umstellung (Spec mobile_tab_leisten_mtabbar, Iteration 2)
 		   ersatzlos entfernt (AP-006). */
-
-		/* Issue #1256 Scheibe 8 (AC-22): CompareTabs wird jetzt ueber die
-		   Ein-Mount-Strategie auch mobil gerendert — schmaleres Padding statt
-		   des Desktop-Werts (Ist-Befund Analyse). */
-		.compare-tabs-content {
-			padding: 16px 16px 60px;
-		}
 	}
 
 	@media (max-width: 899px) {
