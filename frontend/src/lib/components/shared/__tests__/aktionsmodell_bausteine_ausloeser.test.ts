@@ -1,6 +1,6 @@
 // Fix-Loop 1 — Issue #2278, F003/F005/F010/F012 (AC-3, AC-4, AC-15, AC-16).
 // Die Ausloeser, ueber die jede Aktion den Nutzer erreicht (Kebab-Auswahl, Blatt-Zeile, Filter-Pille,
-// Karten-Menueknopf) und der Weg Radiowahl -> onConfirm -> Request. Ein totes Ausloeseereignis legt
+// Karten-Menueknopf) und der Weg Radiowahl (seit #2881 Segmented als radiogroup) -> onConfirm -> Request. Ein totes Ausloeseereignis legt
 // jede Aktion lahm, ohne dass ein Modelltest rot wird. bits-ui rendert unter svelte/server nichts und
 // die Kernsuite hat kein DOM: geprueft wird die BINDUNG am AST (exakter Ausdruck), siehe aktionsmodellAst.ts.
 //
@@ -55,13 +55,16 @@ describe('F003/F010: Radiowahl -> onConfirm -> Request', () => {
 		const rt = collect(lade('lib/components/molecules/ConfirmDialog.svelte').fragment, (n) => n.type === 'RenderTag');
 		assert.deepEqual(rt.map(kurz), ['children?.()']);
 	});
-	test('die Radios stehen IM ConfirmDialog, iterieren die Wahl des Modells und setzen `auswahl`', () => {
-		const eachs = collect(dialog.fragment, (n) => n.type === 'EachBlock').map((n) => kurz(n.expression));
-		assert.deepEqual(eachs, ['modell.berichtsartWahl']);
+	// #2881 Lieferung B (R2): statt nativer Radio-Knoepfe der Baustein Segmented als radiogroup.
+	test('die Berichtsart-Wahl (Segmented, rolle radio) steht IM ConfirmDialog, nimmt die Wahl des Modells und setzt `auswahl`', () => {
+		const wahl = collect(dialog.fragment, (n) => n.type === 'Component' && n.name === 'Segmented');
+		assert.equal(wahl.length, 1);
+		assert.equal(attrKurz(wahl[0], 'rolle'), '"radio"');
+		assert.match(attrKurz(wahl[0], 'options') ?? '', /^modell\.berichtsartWahl\.map\(/);
+		assert.equal(attrKurz(wahl[0], 'value'), 'auswahl');
+		assert.equal(attrKurz(wahl[0], 'onChange'), '(v) => auswahl = v');
 		const inputs = collect(dialog.fragment, (n) => n.type === 'RegularElement' && n.name === 'input');
-		assert.deepEqual(inputs.map((i) => [attrKurz(i, 'type'), attrKurz(i, 'checked'), attrKurz(i, 'onchange')]), [
-			['"radio"', 'auswahl === w.value', '() => auswahl = w.value']
-		]);
+		assert.deepEqual(inputs, [], 'kein natives <input> mehr im Sende-Dialog');
 	});
 	test('das Modell bekommt kind UND die Wahl; die Bestaetigung gibt die Berichtsart des Modells weiter', () => {
 		assert.equal(kurz(initialisierer(ast, 'modell')), '$derived(sendConfirmModel(kind, profile, subscription, auswahl))');

@@ -31,7 +31,7 @@
 
 import { test, expect, type Locator, type Page } from '@playwright/test';
 import * as path from 'node:path';
-import { cleanupTracked, createTestLocation } from './helpers';
+import { cleanupTracked, createTestLocation, tippeDatum } from './helpers';
 import {
 	ARIA_WORT,
 	INFO_TEXTE,
@@ -88,8 +88,9 @@ async function tripBis(page: Page, mobil: boolean, ziel: TripReiter): Promise<vo
 	// bleibt gesperrt „⊘“). Deshalb Eingabe wiederholen, bis Etappen freigeschaltet ist.
 	await expect(async () => {
 		await page.getByTestId(`trip-new-name-input-${mobil ? 'mobile' : 'desktop'}`).fill('E2E-GZ-Infobox-Trip');
-		await (mobil ? page.getByTestId('trip-new-date-input') : page.locator('.tn-desktop input[type="date"]')).fill(new Date().toISOString().slice(0, 10));
-		await expect(tripTab(page, mobil, 'etappen')).not.toHaveAccessibleName(/⊘/, { timeout: 500 });
+		// #2881 Lieferung B: Baustein DatumFeld; gesperrt = aria-disabled (Punkt statt ⊘).
+		await tippeDatum(page, page.getByTestId(mobil ? 'trip-new-date-input' : 'trip-new-date-input-desktop'), new Date().toISOString().slice(0, 10));
+		await expect(tripTab(page, mobil, 'etappen')).not.toHaveAttribute('aria-disabled', 'true', { timeout: 500 });
 	}).toPass({ timeout: 10_000 });
 	if (ziel === 'route') return;
 

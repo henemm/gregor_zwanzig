@@ -11,6 +11,7 @@
 // Auth via storageState (global.setup.ts) — kein per-Test-Login.
 
 import { test, expect } from '@playwright/test';
+import { tippeDatum } from './helpers';
 
 const TRIP_ID = 'e2e-708-stage-confirm';
 const TRIP_NAME = 'E2E #708 Etappe-Confirm-Test';
@@ -135,12 +136,8 @@ test('AC-4: /trips/new × klicken öffnet Bestätigungs-Dialog', async ({ page }
 	const nameInput = page.getByTestId('trip-new-name-input-desktop');
 	await nameInput.fill('Test-Trip 708');
 
-	// Startdatum: Desktop-Input hat kein testid → via type="date" im Desktop-Bereich
-	const dateInputs = page.locator('input[type="date"]');
-	// Ersten sichtbaren date-Input verwenden
-	const visibleDate = dateInputs.first();
-	await visibleDate.fill(today);
-	await visibleDate.dispatchEvent('change');
+	// Startdatum: #2881 Lieferung B — Baustein DatumFeld (Segmente) statt <input type="date">.
+	await tippeDatum(page, page.getByTestId('trip-new-date-input-desktop'), today);
 
 	// "Weiter"-Button klicken zum etappen-Tab navigieren
 	await page.getByTestId('trip-new-continue-etappen').click();

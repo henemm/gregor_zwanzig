@@ -29,7 +29,18 @@
 // storageState aus global.setup.ts. Wegwerf-Objekte E2E-GZ-, Aufräumen im finally.
 
 import { test, expect, type Locator, type Page, type Request } from '@playwright/test';
-import { HUB_KINDS, HUB_SEL, hubApiPath, openHub, seedHub, type HubKind } from './helpers';
+import {
+	HUB_KINDS,
+	HUB_SEL,
+	datumAnzeige,
+	feldEingabe,
+	hubApiPath,
+	openHub,
+	seedHub,
+	tippeDatum,
+	waehleOption,
+	type HubKind
+} from './helpers';
 
 type Stand = Record<string, unknown>;
 const rc = (s: Stand) => (s.report_config as Stand | undefined) ?? {};
@@ -202,7 +213,7 @@ for (const kind of HUB_KINDS) {
 				await oeffneVersand(page, kind, hub.id);
 				await page.clock.pauseAt(Date.now() + 5_000);
 
-				await morgenUhrzeit(page).selectOption('09:00');
+				await waehleOption(page, morgenUhrzeit(page), '09:00');
 				await page.locator(`[data-testid="${sel.reiter}-alarme"]:visible`).click();
 				await expect(page.locator('[data-testid="alarme-tab"]').first()).toBeVisible({ timeout: 10_000 });
 				await expect
@@ -247,7 +258,7 @@ for (const kind of HUB_KINDS) {
 				await oeffneVersand(page, kind, hub.id);
 
 				// GIVEN: eigene erste Änderung gespeichert
-				await morgenUhrzeit(page).selectOption('08:00');
+				await waehleOption(page, morgenUhrzeit(page), '08:00');
 				await expect.poll(() => beantwortet.length, { timeout: 10_000 }).toBe(1);
 				await expect(anzeige(page)).toHaveAttribute('data-state', 'idle', { timeout: 10_000 });
 
@@ -258,13 +269,13 @@ for (const kind of HUB_KINDS) {
 				expect(fremd.status(), 'fremder Schreibvorgang ohne If-Match wird angenommen').toBe(200);
 
 				// WHEN: zweite Versand-Änderung auf dem jetzt veralteten Stand
-				await morgenUhrzeit(page).selectOption('09:00');
+				await waehleOption(page, morgenUhrzeit(page), '09:00');
 
 				// THEN: echter 412 → „Nochmal speichern", keine Rücknahme in der Oberfläche
 				await expect(anzeige(page)).toHaveAttribute('data-state', 'conflict', { timeout: 10_000 });
 				expect(puts.length, 'Vorbedingung: der zweite PUT wurde gesendet').toBe(2);
 				expect((await puts[1].response())?.status(), 'der Server muss den veralteten Stand ablehnen').toBe(412);
-				await expect(morgenUhrzeit(page), 'bei 412 darf die Oberfläche nicht zurückspringen').toHaveValue('09:00');
+				await expect(morgenUhrzeit(page), 'bei 412 darf die Oberfläche nicht zurückspringen').toHaveText('09:00');
 				const nochmal = anzeige(page).getByRole('button', { name: 'Nochmal speichern' });
 				await expect(nochmal).toBeVisible();
 
@@ -274,7 +285,7 @@ for (const kind of HUB_KINDS) {
 				await expect(anzeige(page)).toContainText('Gespeichert');
 				await expect.poll(() => puts.length, { timeout: 10_000, message: 'der Wiederholungs-PUT wurde gesendet' }).toBe(3);
 				expect((await puts[2].response())?.status(), 'der Wiederholungs-PUT muss durchgehen').toBe(200);
-				await expect(morgenUhrzeit(page)).toHaveValue('09:00');
+				await expect(morgenUhrzeit(page)).toHaveText('09:00');
 
 				const s = await stand(page, kind, hub.id);
 				expect(String(vs.morgen(s)), 'der Wiederholungs-PUT muss die Änderung tragen').toMatch(/^09:00/);
@@ -297,7 +308,7 @@ for (const kind of HUB_KINDS) {
 
 				// Kein Warten zwischen den beiden Aktionen — die Änderung steht noch im
 				// Entprell-Fenster, wenn der Status-Schreibvorgang losgeht.
-				await morgenUhrzeit(page).selectOption('10:00');
+				await waehleOption(page, morgenUhrzeit(page), '10:00');
 				await kebabWaehle(page, 'Pausieren');
 
 				await expect.poll(() => fertig.length, { timeout: 10_000 }).toBe(2);
@@ -338,7 +349,7 @@ for (const kind of HUB_KINDS) {
 					const cta = page.locator('[data-testid="compare-hub-activation-cta"]:visible');
 					await expect(cta).toHaveText('Pausieren');
 
-					await morgenUhrzeit(page).selectOption('10:00');
+					await waehleOption(page, morgenUhrzeit(page), '10:00');
 					await cta.click();
 
 					await expect(cta).toHaveText('Aktivieren', { timeout: 10_000 });
@@ -405,7 +416,7 @@ for (const kind of HUB_KINDS) {
 				const { beantwortet } = zaehlePuts(page, hubApiPath(kind, hub.id));
 				await oeffneVersand(page, kind, hub.id);
 
-				await morgenUhrzeit(page).selectOption('08:00');
+				await waehleOption(page, morgenUhrzeit(page), '08:00');
 				await expect.poll(() => beantwortet.length, { timeout: 10_000 }).toBeGreaterThanOrEqual(1);
 				await expect(anzeige(page)).toHaveAttribute('data-state', 'idle', { timeout: 10_000 });
 
@@ -459,7 +470,7 @@ for (const kind of HUB_KINDS) {
 				}
 
 				await oeffneVersand(page, kind, hub.id);
-				await expect(morgenUhrzeit(page), 'die Uhrzeit überlebt das Neuladen').toHaveValue('08:00');
+				await expect(morgenUhrzeit(page), 'die Uhrzeit überlebt das Neuladen').toHaveText('08:00');
 			} finally {
 				await hub.aufraeumen();
 			}
@@ -478,7 +489,7 @@ for (const kind of HUB_KINDS) {
 				expect(puts.length, 'Vorbedingung: das Öffnen des Abschnitts speichert nichts').toBe(0);
 
 				// Aktion 1: Morgen-Uhrzeit
-				await morgenUhrzeit(page).selectOption('05:00');
+				await waehleOption(page, morgenUhrzeit(page), '05:00');
 				await expect.poll(() => beantwortet.length, { timeout: 10_000 }).toBe(1);
 				await expect(anzeige(page)).toHaveAttribute('data-state', 'idle', { timeout: 10_000 });
 
@@ -548,7 +559,7 @@ for (const kind of HUB_KINDS) {
 					await oeffneVersand(page, kind, hub.id);
 					const bisDatum = abschnitt(page).locator('[data-testid="compare-versand-enddate-date"]');
 					await expect(bisDatum, 'Vorbedingung: „Bis Datum" ist gewählt').toHaveAttribute('aria-selected', 'true');
-					await expect(abschnitt(page).locator('[data-testid="compare-versand-enddate-input"]')).toHaveValue(enddatum);
+					await expect(feldEingabe(abschnitt(page).locator('[data-testid="compare-versand-enddate-input"]'))).toHaveText(datumAnzeige(enddatum));
 
 					await abschnitt(page).locator('[data-testid="compare-versand-enddate-open"]').click();
 
@@ -584,7 +595,7 @@ for (const kind of HUB_KINDS) {
 					);
 
 					await abschnitt(page).locator('[data-testid="compare-versand-enddate-date"]').click();
-					await abschnitt(page).locator('[data-testid="compare-versand-enddate-input"]').fill(ziel);
+					await tippeDatum(page, abschnitt(page).locator('[data-testid="compare-versand-enddate-input"]'), ziel);
 
 					await expect.poll(() => beantwortet.length, { timeout: 10_000 }).toBeGreaterThanOrEqual(1);
 					await expect(anzeige(page)).toHaveAttribute('data-state', 'idle', { timeout: 10_000 });
@@ -596,7 +607,7 @@ for (const kind of HUB_KINDS) {
 						'true',
 						{ timeout: 10_000 }
 					);
-					await expect(abschnitt(page).locator('[data-testid="compare-versand-enddate-input"]')).toHaveValue(ziel);
+					await expect(feldEingabe(abschnitt(page).locator('[data-testid="compare-versand-enddate-input"]'))).toHaveText(datumAnzeige(ziel));
 				} finally {
 					await hub.aufraeumen();
 				}

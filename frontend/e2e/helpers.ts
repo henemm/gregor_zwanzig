@@ -1098,15 +1098,13 @@ export const ANLEGE_SEL: Record<
 				.locator(mobil ? '[data-testid="tn-mobile-tabbar"] [role="tab"]' : '.tn-desktop [role="tab"]')
 				.filter({ hasText: new RegExp(`^\\s*${regexEscape(TRIP_ANLEGE_LABEL[id] ?? id)}`) }),
 		alleReiterMobil: (page) => page.locator('[data-testid="tn-mobile-tabbar"] [role="tab"]'),
-		// ARIA: gesperrt ⇔ ⊘ im Namen, aktiv ⇔ aria-selected, erledigt ⇔ ✓ im Namen.
-		zustand: async (reiter) => {
-			const text = (await reiter.textContent()) ?? '';
-			return {
-				gesperrt: text.includes('⊘'),
-				aktiv: (await reiter.getAttribute('aria-selected')) === 'true',
-				erledigt: text.includes('✓')
-			};
-		},
+		// Geteilter Baustein AnlegeReiter (#2880): seit #2881 Lieferung B Punkte statt ✓/⊘ — Zustand
+		// über aria-disabled (gesperrt), aria-selected (aktiv) und data-done (erledigt).
+		zustand: async (reiter) => ({
+			gesperrt: (await reiter.getAttribute('aria-disabled')) === 'true',
+			aktiv: (await reiter.getAttribute('aria-selected')) === 'true',
+			erledigt: (await reiter.getAttribute('data-done')) === 'true'
+		}),
 		// Rein attributive Kennungen, im Zuge von AC-20 nachgetragen (TripNewEditor.svelte,
 		// Fortschrittsbalken `trip-new-progress`/`trip-new-progress-segment`, Spec „AC-20-Nachträge").
 		fortschritt: (page) => page.locator('[data-testid="trip-new-progress"]:visible'),
@@ -1222,6 +1220,45 @@ export const LISTE_SEL: Record<
 const ANLEGE_GPX = path.resolve('./e2e/fixtures/test-trip.gpx');
 
 /**
+ * Datum in den Baustein molecules/DatumFeld tippen (#2881 Lieferung B, ersetzt `fill()` auf
+ * `input[type="date"]`): Tag-Segment anklicken, dann TTMMJJJJ — de und en zeigen beide den Tag
+ * zuerst. `feld` ist der Baustein (data-slot="datum-feld") oder ein Behälter mit genau einem.
+ */
+export async function tippeDatum(page: Page, feld: Locator, iso: string): Promise<void> {
+	const [jahr, monat, tag] = iso.split('-');
+	await feld.locator('[data-segment="day"]').click();
+	await page.keyboard.type(`${tag}${monat}${jahr}`);
+}
+
+/** Anzeige des Bausteins DatumFeld (de) für ein ISO-Datum: `2026-11-19` → `19.11.2026`. */
+export const datumAnzeige = (iso: string): string => iso.split('-').reverse().join('.');
+
+/** Eingabebereich (Segmente) eines DatumFeld/UhrzeitFeld — für toHaveText statt toHaveValue. */
+export const feldEingabe = (feld: Locator): Locator =>
+	feld.locator('[data-slot="datum-feld-eingabe"], [data-slot="uhrzeit-feld-eingabe"]');
+
+/** Uhrzeit `HH:MM` in den Baustein molecules/UhrzeitFeld tippen (#2881 Lieferung B). */
+export async function tippeUhrzeit(page: Page, feld: Locator, hhmm: string): Promise<void> {
+	await feld.locator('[data-segment="hour"]').click();
+	await page.keyboard.type(hhmm.replace(':', ''));
+}
+
+/**
+ * Wert im Auswahl-Baustein ui/select (bits-ui Select, #2881 Lieferung B) wählen — ersetzt
+ * `selectOption()` auf dem früheren nativen <select>. `ausloeser` ist der Knopf (aria-haspopup="listbox").
+ */
+export async function waehleOption(page: Page, ausloeser: Locator, beschriftung: string | RegExp): Promise<void> {
+	await ausloeser.click();
+	const liste = page.getByRole('listbox');
+	await expect(liste).toBeVisible();
+	await liste.getByRole('option', { name: beschriftung, exact: typeof beschriftung === 'string' }).click();
+	// Geschlossen = keine offene Liste mehr. Nicht toBeHidden: bei angehaltener Seiten-Uhr
+	// (page.clock, z. B. VS-1) bleibt die Liste im Ausblend-Zustand (data-state="closed") stehen.
+	await expect(page.locator('[role="listbox"][data-state="open"]')).toHaveCount(0);
+	await expect(ausloeser).toHaveAttribute('data-state', 'closed');
+}
+
+/**
  * Trip-Anlegen, Schritt Etappen (bereits geöffnet): je Etappe eine GPX hochladen und auf
  * `/api/gpx/parse` warten (herausgehoben aus anlegenPflicht, #2881 Lieferung B).
  */
@@ -1281,8 +1318,8 @@ export async function anlegenPflicht(page: Page, kind: HubKind, opts: AnlegenPfl
 		const etappen = page.getByTestId(mobil ? 'tn-mobile-tab-etappen' : 'trip-new-tab-etappen');
 		await expect(async () => {
 			await ANLEGE_SEL.route.name(page, mobil).fill(opts.name);
-			await (mobil ? page.getByTestId('trip-new-date-input') : page.locator('.tn-desktop input[type="date"]')).fill(datum);
-			await expect(etappen).not.toHaveAccessibleName(/⊘/, { timeout: 500 });
+			await tippeDatum(page, page.getByTestId(mobil ? 'trip-new-date-input' : 'trip-new-date-input-desktop'), datum);
+			await expect(etappen).not.toHaveAttribute('aria-disabled', 'true', { timeout: 500 });
 		}).toPass({ timeout: 10_000 });
 		if (opts.nurKopf) return;
 		await etappen.click({ force: mobil });

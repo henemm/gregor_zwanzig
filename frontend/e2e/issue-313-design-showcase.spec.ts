@@ -96,8 +96,10 @@ test.describe('Issue #313 — /_design Showcase', () => {
 		// Label + Input
 		await expect(section.locator('label[for="demo-input"]')).toBeVisible();
 		await expect(section.locator('#demo-input')).toBeVisible();
-		// Select: mind. 2 selects (default + disabled)
-		await expect(section.locator('select')).toHaveCount(2);
+		// Select: 2 Auswahl-Bausteine (default + disabled) — seit #2881 Lieferung B bits-ui Select
+		// (Auslöser = Knopf mit aria-haspopup="listbox") statt nativem <select>.
+		await expect(section.locator('button[aria-haspopup="listbox"]')).toHaveCount(2);
+		await expect(section.locator('select')).toHaveCount(0);
 	});
 
 	test('AC-8: Card mit Header (Title+Description), Content, Footer', async ({ page }) => {

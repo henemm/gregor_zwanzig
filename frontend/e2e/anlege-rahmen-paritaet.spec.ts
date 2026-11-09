@@ -41,7 +41,8 @@ import {
 	seedHub,
 	testMitZustellbaremZiel,
 	TOKEN_RGB,
-	type HubKind
+	type HubKind,
+	tippeDatum
 } from './helpers';
 
 const DESKTOP = { width: 1440, height: 900 };
@@ -573,7 +574,7 @@ async function kopfAusfuellen(page: Page, kind: HubKind, mobil: boolean, name: s
 	await ANLEGE_SEL[kind].name(page, mobil).fill(name);
 	if (kind === 'route') {
 		const datum = new Date(Date.now() + 7 * 86_400_000).toISOString().slice(0, 10);
-		await (mobil ? page.getByTestId('trip-new-date-input') : page.locator('.tn-desktop input[type="date"]')).fill(datum);
+		await tippeDatum(page, page.getByTestId(mobil ? 'trip-new-date-input' : 'trip-new-date-input-desktop'), datum);
 	}
 }
 

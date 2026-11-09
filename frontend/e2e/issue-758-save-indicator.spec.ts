@@ -17,7 +17,7 @@
 //     npx playwright test e2e/issue-758-save-indicator.spec.ts
 
 import { test, expect, type Page } from '@playwright/test';
-import { createTestLocation } from './helpers';
+import { createTestLocation, feldEingabe, tippeDatum, waehleOption } from './helpers';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Trip-Seed (analog issue-498)
@@ -60,7 +60,7 @@ async function openStagesEditor(page: Page) {
 }
 
 function activeDateInput(page: Page) {
-	return page.getByTestId('stage-date-field').first().locator('input[type="date"]');
+	return page.getByTestId('stage-date-field').first();
 }
 
 async function fetchStageDates(page: Page): Promise<Record<string, string>> {
@@ -85,15 +85,14 @@ test.describe('Issue #758 — Trip-Editor Speicher-Status', () => {
 
 	// AC-1: Etappen-Änderung speichert automatisch; Indikator zeigt saving → idle,
 	// OHNE dass der Nutzer einen Speichern-Button klickt.
-	test('AC-1: Auto-Save bei Etappen-Änderung zeigt „Speichere…" → „Gespeichert ✓"', async ({
+	test('AC-1: Auto-Save bei Etappen-Änderung zeigt „Speichere…" → „Gespeichert"', async ({
 		page
 	}) => {
 		await openStagesEditor(page);
 		await page.getByText('Tag 2', { exact: false }).first().click();
-		await expect(activeDateInput(page)).toHaveValue('2026-08-02');
+		await expect(feldEingabe(activeDateInput(page))).toHaveText('02.08.2026');
 
-		await activeDateInput(page).fill('2026-08-20');
-		await activeDateInput(page).blur();
+		await tippeDatum(page, activeDateInput(page), '2026-08-20');
 
 		// Der Indikator muss existieren und am Ende „Gespeichert" (idle) zeigen.
 		await expect(saveIndicator(page)).toHaveAttribute('data-state', 'idle', { timeout: 5000 });
@@ -104,8 +103,8 @@ test.describe('Issue #758 — Trip-Editor Speicher-Status', () => {
 		expect(dates['s2']).toBe('2026-08-20');
 	});
 
-	// AC-2: Ruhezustand zeigt sofort „Gespeichert ✓" (idle, kein Spinner).
-	test('AC-2: Ruhezustand zeigt „Gespeichert ✓"', async ({ page }) => {
+	// AC-2: Ruhezustand zeigt sofort „Gespeichert" (idle, kein Spinner).
+	test('AC-2: Ruhezustand zeigt „Gespeichert"', async ({ page }) => {
 		await openStagesEditor(page);
 		await expect(saveIndicator(page)).toBeVisible();
 		await expect(saveIndicator(page)).toHaveAttribute('data-state', 'idle');
@@ -124,8 +123,7 @@ test.describe('Issue #758 — Trip-Editor Speicher-Status', () => {
 		});
 
 		await page.getByText('Tag 2', { exact: false }).first().click();
-		await activeDateInput(page).fill('2026-08-22');
-		await activeDateInput(page).blur();
+		await tippeDatum(page, activeDateInput(page), '2026-08-22');
 
 		await expect(saveIndicator(page)).toHaveAttribute('data-state', 'error', { timeout: 5000 });
 		await expect(saveIndicator(page)).toContainText(/Fehler/i);
@@ -141,13 +139,12 @@ test.describe('Issue #758 — Trip-Editor Speicher-Status', () => {
 		await page.goto(`/trips/${TRIP_ID}?tab=wetter-metriken#versand`);
 		const timeInput = page.getByTestId('versand-abschnitt').getByTestId('report-morning-time');
 		await expect(timeInput).toBeVisible();
-		await expect(timeInput).toHaveValue('07:00');
+		await expect(timeInput).toHaveText('07:00');
 
 		// Issue #1379: Stunden-Auswahlliste statt Uhrzeit-Eingabe — 05:00 statt
 		// des frueheren 05:30 (Minuten sind gar nicht mehr waehlbar). Die Aussage
 		// des Tests bleibt: 05:00 != Seed-Wert 07:00.
-		await timeInput.selectOption('05:00');
-		await timeInput.blur();
+		await waehleOption(page, timeInput, '05:00');
 
 		// Sofort weg-navigieren — KEIN „Briefing-Zeitplan speichern"-Klick.
 		await page.goto('/trips');
@@ -208,9 +205,9 @@ test.describe('Issue #758 — Ortsvergleich Speicher-Status', () => {
 		return preset.id;
 	}
 
-	// AC-3: Eine Änderung im Hub speichert automatisch → idle „Gespeichert ✓".
+	// AC-3: Eine Änderung im Hub speichert automatisch → idle „Gespeichert".
 	// Epic #1273 S4c: kein manueller Speichern-Button mehr (Autosave-Modell).
-	test('AC-3: Compare-Änderung speichert automatisch → „Gespeichert ✓"', async ({ page }) => {
+	test('AC-3: Compare-Änderung speichert automatisch → „Gespeichert"', async ({ page }) => {
 		const presetId = await createPreset(page);
 		await page.goto(`/compare/${presetId}`);
 		await expect(page.getByTestId('compare-detail-tab-list')).toBeVisible();
@@ -227,8 +224,7 @@ test.describe('Issue #758 — Ortsvergleich Speicher-Status', () => {
 			.locator('[data-testid="versand-abschnitt"] [data-testid="report-morning-time"]:visible')
 			.first();
 		await expect(morningTime).toBeVisible({ timeout: 10_000 });
-		await morningTime.selectOption('05:00');
-		await morningTime.blur();
+		await waehleOption(page, morningTime, '05:00');
 
 		// Autosave abgeschlossen → idle „Gespeichert", kein Fehler.
 		await expect(saveIndicator(page)).toHaveAttribute('data-state', 'idle', { timeout: 10_000 });

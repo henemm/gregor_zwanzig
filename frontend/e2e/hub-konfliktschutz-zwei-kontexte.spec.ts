@@ -30,7 +30,7 @@
 // Aufräumen im finally, Zweit-Kontexte im afterEach.
 
 import { test, expect, type Browser, type BrowserContext, type Page, type Request } from '@playwright/test';
-import { E2E_TEST_PREFIX, HUB_KINDS, HUB_SEL, hubApiPath, openHub, seedHub, type HubKind } from './helpers';
+import { E2E_TEST_PREFIX, HUB_KINDS, HUB_SEL, hubApiPath, openHub, seedHub, waehleOption, type HubKind } from './helpers';
 
 type Stand = Record<string, unknown>;
 
@@ -169,7 +169,7 @@ const KS_REITER: Record<HubKind, ReiterFall[]> = {
 				});
 			},
 			aendern: async (p) => {
-				await p.locator('[data-testid="versand-abschnitt"]:visible [data-testid="report-morning-time"]:visible').selectOption('08:00');
+				await waehleOption(p, p.locator('[data-testid="versand-abschnitt"]:visible [data-testid="report-morning-time"]:visible'), '08:00');
 			},
 			// Trip führt die Uhrzeit in report_config.
 			pruefe: (s) => expect(String(rc(s).morning_time), 'Versand-Änderung von B fehlt auf dem Server').toMatch(/^08:00/)
@@ -253,7 +253,7 @@ const KS_REITER: Record<HubKind, ReiterFall[]> = {
 				});
 			},
 			aendern: async (p) => {
-				await p.locator('[data-testid="versand-abschnitt"]:visible [data-testid="report-morning-time"]:visible').selectOption('08:00');
+				await waehleOption(p, p.locator('[data-testid="versand-abschnitt"]:visible [data-testid="report-morning-time"]:visible'), '08:00');
 			},
 			// Vergleich führt die Uhrzeit als Flachfeld.
 			pruefe: (s) => expect(s.morning_time, 'Versand-Änderung von B fehlt auf dem Server').toBe('08:00:00')

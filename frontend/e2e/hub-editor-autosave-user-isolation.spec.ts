@@ -23,10 +23,13 @@ import {
 	HUB_KINDS,
 	HUB_SEL,
 	createTestLocation,
+	datumAnzeige,
+	feldEingabe,
 	hubApiPath,
 	openHub,
 	registriereBestaetigtenZweitnutzer,
 	seedHub,
+	tippeDatum,
 	type HubKind,
 	type SeededHub
 } from './helpers';
@@ -85,10 +88,10 @@ async function autosaveGeste(page: Page, kind: HubKind, id: string): Promise<voi
 	} else {
 		// Trip-Gegenstück: Etappen-Datum ändern + blur (Eigen-Seed: genau eine Etappe).
 		await expect(page.getByTestId('stage-date-field')).toHaveCount(1, { timeout: 10_000 });
-		const datum = page.getByTestId('stage-date-field').locator('input[type="date"]');
-		await expect(datum, 'Vorbedingung: Seed-Datum').toHaveValue(SEED_DATUM);
-		await datum.fill('2027-08-20');
-		await datum.blur();
+		// #2881 Lieferung B: Baustein DatumFeld (Segmente) statt <input type="date">.
+		const datum = page.getByTestId('stage-date-field');
+		await expect(feldEingabe(datum), 'Vorbedingung: Seed-Datum').toHaveText(datumAnzeige(SEED_DATUM));
+		await tippeDatum(page, datum, '2027-08-20');
 	}
 }
 

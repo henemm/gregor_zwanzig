@@ -50,6 +50,7 @@
 //   e2e/trip-hub-kopf-region-aktivitaet.spec.ts --project=tests
 
 import { test, expect, type Page, type Request, type TestInfo } from '@playwright/test';
+import { feldEingabe } from './helpers';
 
 const DESKTOP = { width: 1280, height: 900 };
 const MOBILE = { width: 375, height: 667 };
@@ -812,8 +813,9 @@ test.describe('Issue #2284 S2 — Trip-Hub-Kopf: Name, Region, Aktivitaet im get
 
 			// Geoeffneter Zustand im Etappen-Reiter: zweite Etappe aktiv.
 			await page.getByText('Tag 2', { exact: false }).first().click();
-			const datum = page.getByTestId('stage-date-field').first().locator('input[type="date"]');
-			await expect(datum).toHaveValue('2027-08-02', { timeout: 8_000 });
+			// #2881 Lieferung B: Baustein DatumFeld (Segmente) statt <input type="date">.
+			const datum = feldEingabe(page.getByTestId('stage-date-field').first());
+			await expect(datum).toHaveText('02.08.2027', { timeout: 8_000 });
 
 			const muster = `**/api/trips/${id}`;
 			await failPuts(page, muster, 412, {
@@ -869,7 +871,7 @@ test.describe('Issue #2284 S2 — Trip-Hub-Kopf: Name, Region, Aktivitaet im get
 			await expect(
 				datum,
 				'AC-9: der Etappen-Reiter wurde schon waehrend des Retry neu aufgebaut (aktive Etappe verloren)'
-			).toHaveValue('2027-08-02');
+			).toHaveText('02.08.2027');
 			await expect(page.getByTestId('trip-detail-panel-etappen')).toBeVisible();
 			freigeben();
 

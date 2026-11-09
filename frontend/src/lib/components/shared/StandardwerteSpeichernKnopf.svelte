@@ -25,9 +25,22 @@
 
 <button
 	type="button"
+	class="standardwerte-knopf"
 	data-testid={testid}
 	disabled={!aktiv}
 	aria-disabled={aktiv ? undefined : 'true'}
 	{onclick}
-	style="padding: 6px 12px; min-height: 36px; border-radius: var(--g-r-2); border: 1px solid {aktiv ? 'var(--g-ink)' : 'var(--g-rule)'}; background: {aktiv ? 'var(--g-card)' : 'transparent'}; color: {aktiv ? 'var(--g-ink)' : 'var(--g-ink-3)'}; font-size: 13px; font-weight: 500; cursor: {aktiv ? 'pointer' : 'not-allowed'};"
+	style="padding: 6px 12px; border-radius: var(--g-r-2); border: 1px solid {aktiv ? 'var(--g-ink)' : 'var(--g-rule)'}; background: {aktiv ? 'var(--g-card)' : 'transparent'}; color: {aktiv ? 'var(--g-ink)' : 'var(--g-ink-3)'}; font-size: 13px; font-weight: 500; cursor: {aktiv ? 'pointer' : 'not-allowed'};"
 >{$t('standardwerte.knopf')}</button>
+
+<style>
+	.standardwerte-knopf {
+		min-height: 36px;
+	}
+	/* #2881 R5: am Handy mindestens 44 px hoch (Tippfläche). */
+	@media (max-width: 899px) {
+		.standardwerte-knopf {
+			min-height: 44px;
+		}
+	}
+</style>

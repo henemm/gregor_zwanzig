@@ -1,16 +1,17 @@
 <script lang="ts">
 	import { t } from '$lib/i18n';
+	import UhrzeitFeld from '$lib/components/molecules/UhrzeitFeld.svelte';
 	// Issue #675 — Startzeit je Etappe editieren.
 	//
-	// Duenner Wrapper um native <input type="time"> mit:
+	// Duenner Wrapper um den Baustein molecules/UhrzeitFeld (#2881 Lieferung B, vorher
+	// natives <input type="time">) mit:
 	//   - kleinem "STARTZEIT"-Label (uppercase, muted, mono)
 	//   - Anzeige-Default 08:00 wenn kein Wert gesetzt
 	//
 	// Svelte-5: $props, $derived. Analoger Aufbau zu StageDateField.
 	//
-	// onchange-Callback gibt den neuen HH:MM-String direkt zurueck (oder ""
-	// wenn der Nutzer das Feld leert) — der Parent entscheidet, ob das als
-	// "kein Override" behandelt wird.
+	// onchange-Callback gibt den neuen HH:MM-String direkt zurueck — der Parent
+	// entscheidet, ob ein leerer Wert als "kein Override" behandelt wird.
 
 	interface Props {
 		value?: string;
@@ -25,22 +26,21 @@
 	// solange der Nutzer nichts aendert (AC-4: alt-treu).
 	const displayValue = $derived(value ?? '08:00');
 
-	function handleChange(e: Event): void {
-		const newVal = (e.target as HTMLInputElement).value;
+	function handleChange(newVal: string): void {
 		onchange?.(newVal);
 	}
 </script>
 
 {#if variant === 'inline'}
-	<label class="box inline" data-testid="stage-start-time-field">
-		<input type="time" value={displayValue} onchange={handleChange} />
-	</label>
+	<div class="box inline" data-testid="stage-start-time-field">
+		<UhrzeitFeld value={displayValue} onchange={handleChange} groesse="kompakt" leerMelden ariaLabel={$t('trip.startzeit')} />
+	</div>
 {:else}
 	<div class="stage-time" data-testid="stage-start-time-field">
 		<span class="label">{$t('trip.startzeit')}</span>
-		<label class="box">
-			<input type="time" value={displayValue} onchange={handleChange} />
-		</label>
+		<div class="box">
+			<UhrzeitFeld value={displayValue} onchange={handleChange} groesse="kompakt" leerMelden ariaLabel={$t('trip.startzeit')} />
+		</div>
 	</div>
 {/if}
 
@@ -69,32 +69,16 @@
 		background: var(--g-card, #ffffff);
 		border: 1px solid var(--g-rule);
 		border-radius: 4px;
-		cursor: pointer;
-	}
-
-	.box input[type='time'] {
-		background: transparent;
-		border: none;
-		outline: none;
-		font-family: var(--g-font-data);
-		font-size: 13px;
-		color: var(--g-ink);
-		font-variant-numeric: tabular-nums;
-		padding: 0;
-		min-width: 70px;
 	}
 
 	.box.inline {
 		min-width: 0;
 	}
 
-	/* #2601: Touch — kein iOS-Auto-Zoom (16px), Trefferhöhe >= 36px */
+	/* #2601: Touch — Trefferhöhe >= 36px (16 px gegen iOS-Auto-Zoom setzt UhrzeitFeld selbst). */
 	@media (max-width: 899px), (pointer: coarse) {
 		.box {
 			min-height: 36px;
-		}
-		.box input[type='time'] {
-			font-size: 16px;
 		}
 	}
 </style>

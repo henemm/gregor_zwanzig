@@ -20,7 +20,17 @@
 // Anmeldung über den storageState aus global.setup.ts (Admin-Sitzung).
 
 import { test, expect, type Page, type Request } from '@playwright/test';
-import { HUB_KINDS, HUB_SEL, hubApiPath, openHub, seedHub, type HubKind } from './helpers';
+import {
+	HUB_KINDS,
+	HUB_SEL,
+	datumAnzeige,
+	feldEingabe,
+	hubApiPath,
+	openHub,
+	seedHub,
+	tippeDatum,
+	type HubKind
+} from './helpers';
 
 const DESKTOP = { width: 1280, height: 900 };
 const VERZOEGERUNG_MS = 800;
@@ -61,8 +71,8 @@ async function stand(page: Page, kind: HubKind, id: string): Promise<Record<stri
 	return (await res.json()) as Record<string, unknown>;
 }
 
-const etappenDatum = (page: Page) =>
-	page.getByTestId('stage-date-field').first().locator('input[type="date"]');
+// #2881 Lieferung B: Baustein DatumFeld (Segmente) statt <input type="date">.
+const etappenDatum = (page: Page) => page.getByTestId('stage-date-field').first();
 
 /** Öffnet den Punkte-Reiter und prüft die Ausgangslage des kind-eigenen Auslösers. */
 async function oeffneAusloeser(page: Page, kind: HubKind, id: string): Promise<void> {
@@ -74,7 +84,7 @@ async function oeffneAusloeser(page: Page, kind: HubKind, id: string): Promise<v
 		await expect(page.getByTestId('hub-orte-row')).toHaveCount(2);
 	} else {
 		await expect(page.getByTestId('edit-stages-panel')).toBeVisible({ timeout: 10_000 });
-		await expect(etappenDatum(page)).toHaveValue(SEED_DATUM);
+		await expect(feldEingabe(etappenDatum(page))).toHaveText(datumAnzeige(SEED_DATUM));
 	}
 	await expect(chip(page)).toBeVisible({ timeout: 10_000 });
 }
@@ -84,8 +94,7 @@ async function loeseAenderungAus(page: Page, kind: HubKind, neuesDatum: string):
 	if (kind === 'vergleich') {
 		await page.getByTestId('hub-orte-remove').first().click();
 	} else {
-		await etappenDatum(page).fill(neuesDatum);
-		await etappenDatum(page).blur();
+		await tippeDatum(page, etappenDatum(page), neuesDatum);
 	}
 }
 
@@ -205,7 +214,7 @@ for (const kind of HUB_KINDS) {
 				timeout: 10_000
 			});
 			if (kind === 'vergleich') await expect(page.getByTestId('hub-orte-row')).toHaveCount(1);
-			else await expect(etappenDatum(page)).toHaveValue('2027-08-20');
+			else await expect(feldEingabe(etappenDatum(page))).toHaveText(datumAnzeige('2027-08-20'));
 		} finally {
 			await hub.aufraeumen();
 		}
@@ -285,7 +294,7 @@ for (const kind of HUB_KINDS) {
 				await expect(page.getByTestId('hub-orte-row')).toHaveCount(2);
 				expect(ortAnzahl(gespeichert), 'Server: beide Orte unverändert').toBe(2);
 			} else {
-				await expect(etappenDatum(page)).toHaveValue(SEED_DATUM);
+				await expect(feldEingabe(etappenDatum(page))).toHaveText(datumAnzeige(SEED_DATUM));
 				expect(etappenDaten(gespeichert)[0], 'Server: Etappen-Datum unverändert').toBe(SEED_DATUM);
 			}
 		} finally {

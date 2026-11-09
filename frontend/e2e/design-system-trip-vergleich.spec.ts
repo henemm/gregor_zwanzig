@@ -59,6 +59,8 @@ import {
 	seedHub,
 	seedeZweitnutzerTrip,
 	testMitZustellbaremZiel,
+	tippeDatum,
+	tippeUhrzeit,
 	tripGpxHochladen,
 	type HubKind
 } from './helpers';
@@ -455,12 +457,6 @@ async function waehleImKalender(page: Page, feld: Locator, iso: string): Promise
 	return koepfe;
 }
 
-/** Segment-Feld (Datum/Uhrzeit) per Tastatur: erstes Segment anklicken, Ziffern tippen. */
-async function tippeSegmente(page: Page, feld: Locator, segment: 'day' | 'hour', ziffern: string): Promise<void> {
-	await feld.locator(`[data-segment="${segment}"]`).click({ timeout: 10_000 });
-	await page.keyboard.type(ziffern);
-}
-
 async function postId(page: Page, pfad: string, ausloesen: () => Promise<void>): Promise<string> {
 	const antwort = page.waitForResponse((r) => r.request().method() === 'POST' && new URL(r.url()).pathname === pfad, {
 		timeout: 30_000
@@ -543,8 +539,8 @@ for (const breite of BREITEN) {
 			await openHub(page, 'route', hub.id, { tab: 'etappen' });
 			const datum = page.locator('[data-testid="stage-date-field"]:visible').first();
 			const zeit = page.locator('[data-testid="stage-start-time-field"]:visible').first();
-			await tippeSegmente(page, datum, 'day', '20112026');
-			await tippeSegmente(page, zeit, 'hour', '0730');
+			await tippeDatum(page, datum, '2026-11-20');
+			await tippeUhrzeit(page, zeit, '07:30');
 			await expect
 				.poll(
 					async () => {

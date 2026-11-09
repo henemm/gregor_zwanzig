@@ -10,6 +10,7 @@
 //   cd frontend && npx playwright test mobile-stage-date-edit.spec.ts --workers=1
 
 import { test, expect, type Page } from '@playwright/test';
+import { feldEingabe, tippeDatum, tippeUhrzeit } from './helpers';
 
 const TRIP_ID = 'e2e-mobile-datum';
 const TRIP_NAME = 'E2E Mobile Datum editieren';
@@ -31,7 +32,8 @@ async function openStagesTabMobile(page: Page) {
 }
 
 function dateInputOf(card: ReturnType<Page['getByTestId']>) {
-	return card.getByTestId('stage-date-field').locator('input[type="date"]');
+	// #2881 Lieferung B: Baustein DatumFeld (Segmente) statt <input type="date">.
+	return card.getByTestId('stage-date-field').locator('[data-slot="datum-feld"]');
 }
 
 async function fetchStageDates(page: Page): Promise<Record<string, string>> {
@@ -74,10 +76,10 @@ test('Mobile: jede Etappen-Karte hat ein inline-Datumsfeld mit Trip-Start-Marker
 
 	const first = cards.first();
 	await expect(first).toContainText('Trip-Start');
-	await expect(dateInputOf(first)).toHaveValue('2026-08-01');
+	await expect(feldEingabe(dateInputOf(first))).toHaveText('01.08.2026');
 	const second = cards.nth(1);
 	await expect(second).not.toContainText('Trip-Start');
-	await expect(dateInputOf(second)).toHaveValue('2026-08-02');
+	await expect(feldEingabe(dateInputOf(second))).toHaveText('02.08.2026');
 });
 
 // AC-1/Tap-Konflikt: Der Fokus-Klick ins Eingabefeld darf den Karten-Toggle
@@ -90,9 +92,8 @@ test('Mobile: Datum ändern öffnet die Karte nicht — Kaskaden-Frage erscheint
 	const row = page.getByTestId('stage-cardm-row').first();
 	await expect(row).toHaveAttribute('aria-expanded', 'false');
 
-	// fill() klickt ins Feld — ohne Propagation-Stop würde der Zeilen-Toggle feuern.
-	await dateInputOf(page.getByTestId('stage-cardm').first()).fill('2026-08-10');
-	await dateInputOf(page.getByTestId('stage-cardm').first()).blur();
+	// Das Tippen klickt ins Feld — ohne Propagation-Stop würde der Zeilen-Toggle feuern.
+	await tippeDatum(page, dateInputOf(page.getByTestId('stage-cardm').first()), '2026-08-10');
 
 	// Die Karte ist NICHT aufgeklappt …
 	await expect(row).toHaveAttribute('aria-expanded', 'false');
@@ -114,8 +115,7 @@ test('Mobile: „Lückenlos anschließen" datiert Folge-Etappen lückenlos und p
 	test.setTimeout(60_000);
 	await openStagesTabMobile(page);
 
-	await dateInputOf(page.getByTestId('stage-cardm').first()).fill('2026-08-10');
-	await dateInputOf(page.getByTestId('stage-cardm').first()).blur();
+	await tippeDatum(page, dateInputOf(page.getByTestId('stage-cardm').first()), '2026-08-10');
 	await expect(page.getByTestId('cascade-strip')).toBeVisible({ timeout: 10_000 });
 
 	await page.getByRole('button', { name: /Lückenlos anschließen/ }).click();
@@ -136,8 +136,7 @@ test('Mobile: „Nur diese Etappe" lässt die Folge-Etappen unverändert', async
 	test.setTimeout(60_000);
 	await openStagesTabMobile(page);
 
-	await dateInputOf(page.getByTestId('stage-cardm').first()).fill('2026-08-10');
-	await dateInputOf(page.getByTestId('stage-cardm').first()).blur();
+	await tippeDatum(page, dateInputOf(page.getByTestId('stage-cardm').first()), '2026-08-10');
 	await expect(page.getByTestId('cascade-strip')).toBeVisible({ timeout: 10_000 });
 
 	await page.getByRole('button', { name: /Nur diese Etappe/ }).click();
@@ -170,7 +169,8 @@ test('Desktop: kein Date-Input in Etappen-Karten — Editor unverändert', async
 // =============================================================================
 
 function timeInputOf(card: ReturnType<Page['getByTestId']>) {
-	return card.getByTestId('stage-start-time-field').locator('input[type="time"]');
+	// #2881 Lieferung B: Baustein UhrzeitFeld (Segmente, 24 h) statt <input type="time">.
+	return card.getByTestId('stage-start-time-field').locator('[data-slot="uhrzeit-feld"]');
 }
 
 // AC-5/F4: Jede Karte trägt neben dem Datum ein kompaktes Zeitfeld (08:00-
@@ -184,14 +184,13 @@ test('Mobile: Startzeit in der Karte ändern — ETA rechnet mit und persistiert
 
 	const cards = page.getByTestId('stage-cardm');
 	for (let i = 0; i < 3; i++) {
-		await expect(timeInputOf(cards.nth(i)), `Karte ${i + 1}: Zeitfeld`).toHaveValue('08:00');
+		await expect(feldEingabe(timeInputOf(cards.nth(i))), `Karte ${i + 1}: Zeitfeld`).toHaveText('08:00');
 	}
 
 	// Zeit ändern → Karte darf dabei nicht aufklappen (Tap-Konflikt, vgl. Datum).
 	const row = page.getByTestId('stage-cardm-row').first();
 	await expect(row).toHaveAttribute('aria-expanded', 'false');
-	await timeInputOf(cards.first()).fill('10:00');
-	await timeInputOf(cards.first()).blur();
+	await tippeUhrzeit(page, timeInputOf(cards.first()), '10:00');
 	await expect(row).toHaveAttribute('aria-expanded', 'false');
 
 	// Erst jetzt bewusst aufklappen: ETA des ersten Wegpunkts = neue Startzeit.
@@ -212,7 +211,7 @@ test('Mobile: Startzeit in der Karte ändern — ETA rechnet mit und persistiert
 		.toBe('10:00');
 	await page.reload();
 	await expect(page.getByTestId('stage-cardm')).toHaveCount(3);
-	await expect(timeInputOf(page.getByTestId('stage-cardm').first())).toHaveValue('10:00');
+	await expect(feldEingabe(timeInputOf(page.getByTestId('stage-cardm').first()))).toHaveText('10:00');
 });
 
 // AC-6/F3a: „+ Etappe → Pausentag" erzeugt eine Karte mit sichtbarem Titel
@@ -232,8 +231,7 @@ test('Mobile: Pausentag-Anlage persistiert den Namen und bleibt Pause', async ({
 	await expect(dateInput).toHaveCount(1);
 
 	// Datum auf der Pausen-Karte editierbar und persistierbar.
-	await dateInput.fill('2026-08-10');
-	await dateInput.blur();
+	await tippeDatum(page, dateInput, '2026-08-10');
 
 	// Der Name muss in der API als 'Pausentag' stehen — sonst verliert die
 	// Karte nach Reload ihre Pause-Erkennung (#559-Synonym aus F3).

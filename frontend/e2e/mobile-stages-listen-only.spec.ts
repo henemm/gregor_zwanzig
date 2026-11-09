@@ -13,6 +13,7 @@
 //   cd frontend && npx playwright test mobile-stages-listen-only.spec.ts
 
 import { test, expect } from '@playwright/test';
+import { tippeDatum } from './helpers';
 
 // Seed-Trip aus global.setup.ts (3 Etappen, 2 mit Wegpunkten)
 const TRIP_ID = 'e2e-cockpit-test';
@@ -114,10 +115,11 @@ test('Mobile: Cascade-Banner steht inline vor der Liste, nicht fixiert', async (
 	// Kaskade nur über das Datumsfeld auslösbar (Desktop-Zweig) — Zustand
 	// überlebt den Wechsel in den Mobile-Zweig und muss dort INLINE stehen.
 	await openStagesTab(page, 1280, 900);
-	const dateInput = page.getByTestId('stage-date-field').first().locator('input[type="date"]');
+	// #2881 Lieferung B: Baustein DatumFeld (Segmente) statt <input type="date">.
+	const dateInput = page.getByTestId('stage-date-field').first();
 	await expect(dateInput).toBeVisible({ timeout: 10_000 });
 	const nextWeek = new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10);
-	await dateInput.fill(nextWeek);
+	await tippeDatum(page, dateInput, nextWeek);
 	await expect(page.getByTestId('cascade-strip')).toBeVisible({ timeout: 10_000 });
 
 	await page.setViewportSize({ width: 390, height: 844 });

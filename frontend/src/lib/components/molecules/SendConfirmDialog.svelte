@@ -4,6 +4,7 @@
 	// Ziel + Sperre kommen aus sendConfirmModel (sendTargetLabel); Morgen/Abend nur beim Trip.
 
 	import ConfirmDialog from './ConfirmDialog.svelte';
+	import { Segmented } from '$lib/components/atoms';
 	import { sendConfirmModel, type Berichtsart } from './sendConfirmModel.js';
 	import type { ConnectionProfile } from '$lib/components/shared/versand-tab/channelConnectionStatus.js';
 	import type { SendTargetChannels } from '$lib/components/shared/versand-tab/sendTargetLabel.js';
@@ -48,20 +49,14 @@
 	}}
 >
 	{#if modell.berichtsartWahl}
-		<div class="flex gap-4" role="radiogroup" aria-label={$t('bausteine.senden_dialog.berichtsart')}>
-			{#each modell.berichtsartWahl as w (w.value)}
-				<label class="inline-flex items-center gap-2 min-h-[44px] text-sm cursor-pointer">
-					<input
-						type="radio"
-						name="berichtsart"
-						value={w.value}
-						data-testid="send-confirm-berichtsart-{w.value}"
-						checked={auswahl === w.value}
-						onchange={() => (auswahl = w.value)}
-					/>
-					{w.label}
-				</label>
-			{/each}
-		</div>
+		<!-- #2881 Lieferung B (R2): Segmented als radiogroup statt nativer Radio-Knöpfe. -->
+		<Segmented
+			rolle="radio"
+			size="md"
+			ariaLabel={$t('bausteine.senden_dialog.berichtsart')}
+			options={modell.berichtsartWahl.map((w) => ({ value: w.value, label: w.label, testid: `send-confirm-berichtsart-${w.value}` }))}
+			value={auswahl}
+			onChange={(v: string) => (auswahl = v as Berichtsart)}
+		/>
 	{/if}
 </ConfirmDialog>

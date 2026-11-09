@@ -37,6 +37,7 @@
 // tariffreien Kanal E-Mail, damit sie in jeder Umgebung begehbar sind.
 
 import { test, expect } from '@playwright/test';
+import { tippeDatum } from './helpers';
 import type { Locator, Page } from '@playwright/test';
 import * as path from 'node:path';
 
@@ -51,7 +52,7 @@ async function openNewTripAlerts(page: Page) {
 	await page.setViewportSize(MOBILE);
 	await page.goto('/trips/new');
 	await page.getByTestId('trip-new-name-input-mobile').fill('#2277 Alarme-Reiter');
-	await page.getByTestId('trip-new-date-input').fill(new Date().toISOString().slice(0, 10));
+	await tippeDatum(page, page.getByTestId('trip-new-date-input'), new Date().toISOString().slice(0, 10));
 
 	const tabbar = page.getByTestId('tn-mobile-tabbar');
 	await tabbar.getByRole('tab', { name: /Etappen/ }).click({ force: true });

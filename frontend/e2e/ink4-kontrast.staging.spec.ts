@@ -86,21 +86,21 @@ const TAB_SELEKTOR = '[role="tab"][aria-selected="false"]';
 async function gesperrterTab(page: Page, pfad: string) {
 	await page.goto(pfad);
 	await page.waitForLoadState('networkidle');
-	// gesperrt = trägt das Symbol ⊘ (bleibt auch ohne Opacity erkennbar)
-	return page.locator(`${TAB_SELEKTOR}:visible`, { hasText: '⊘' }).first();
+	// gesperrt = aria-disabled + Punkt in --g-ink-4 (seit #2881 Lieferung B statt ⊘, ADR-0111 Punkt 7)
+	return page.locator(`${TAB_SELEKTOR}[aria-disabled="true"]:visible`).first();
 }
 
 for (const pfad of ['/trips/new', '/compare/new']) {
 	test(`AC-2: gesperrter Tab in ${pfad} hat >= 4,5:1 inkl. Opacity`, async ({ page }) => {
 		const tab = await gesperrterTab(page, pfad);
-		await expect(tab, 'es muss einen gesperrten Tab geben (Symbol ⊘)').toBeVisible();
+		await expect(tab, 'es muss einen gesperrten Tab geben (aria-disabled)').toBeVisible();
 		const m = await tab.evaluate((el) => {
 			let o = 1;
 			for (let e: Element | null = el; e; e = e.parentElement) o *= parseFloat(getComputedStyle(e).opacity);
 			return o;
 		});
 		expect(m, 'keine Zusatz-Opacity auf gesperrten Tabs').toBe(1);
-		const k = await messeKontrast(page, `${TAB_SELEKTOR}:visible:has-text("⊘")`);
+		const k = await messeKontrast(page, `${TAB_SELEKTOR}[aria-disabled="true"]:visible`);
 		expect(k.ratio).toBeGreaterThanOrEqual(4.5);
 	});
 }

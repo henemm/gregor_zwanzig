@@ -671,4 +671,10 @@ e2e/kontrast-trip-vergleich.spec.ts
 # waitForTimeout/skip/fixme, kein .staging.spec. In RED aufgenommen; Filter B (3x gruen
 # im Zielverbund) misst der CI-Hauptlauf des PR. Filter C: kein Screenshot-Schreibziel.
 # Fallzahl: 9 (+ global.setup).
+# Lieferung B (#2881, gleiche Datei): DS-1 Startdatum per Kalender (de/en, Handy), gespeichert
+# 2026-11-19; DS-2 Etappen-Datum/-Startzeit (Segmente, 24 h) 1280/390; DS-3 keine nativen
+# Datum/Uhrzeit/Radio/Select-Felder, kein ✓/⊘ auf Listen, Hubs, Zustellung und Anlegen
+# (1280/390, de/en); DS-4 Aktivität (listbox) und Mail-Format (radiogroup) per Maus und Tastatur;
+# DS-6 Tippflächen >= 44 x 44 am Handy. Filter A: kein waitForTimeout/skip/fixme. Fallzahl
+# jetzt 21 (+ global.setup).
 e2e/design-system-trip-vergleich.spec.ts

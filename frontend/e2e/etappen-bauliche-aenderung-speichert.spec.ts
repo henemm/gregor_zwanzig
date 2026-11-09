@@ -5,6 +5,7 @@
 // und den Befund verdecken). Vorlage: mobile-etappen-sortieren-speichert.spec.ts.
 
 import { test, expect, type Page } from '@playwright/test';
+import { tippeDatum } from './helpers';
 
 const TRIP_ID = 'e2e-2213-bauliche';
 const wp = (id: string, lat: number) => ({ id, name: id, lat, lon: 9.0, elevation_m: Math.round(800 + lat * 10) });
@@ -70,7 +71,7 @@ test('AC-2: mobil „+ Etappe" → Etappe speichert sofort, nach Neuladen vorhan
 test('AC-8: Datum der letzten Etappe aendern, sofort andere Etappe loeschen ⇒ gespeichert ohne Seitenwechsel', async ({ page }) => {
 	await oeffnen(page);
 	await page.getByTestId('stage-card-2').click();
-	await page.getByTestId('stage-date-field').first().locator('input[type="date"]').fill('2026-08-20');
+	await tippeDatum(page, page.getByTestId('stage-date-field').first(), '2026-08-20');
 	await page.getByTestId('stage-card-0').getByRole('button', { name: 'Etappe entfernen' }).click();
 	await page.getByTestId('confirm-delete-stage').click();
 	await expect
@@ -92,7 +93,7 @@ test('AC-9: waehrend die Kaskade geschrieben wird, sind Hoehenprofil und Wegpunk
 		await route.continue();
 	});
 
-	await page.getByTestId('stage-date-field').first().locator('input[type="date"]').fill('2026-08-05');
+	await tippeDatum(page, page.getByTestId('stage-date-field').first(), '2026-08-05');
 	await expect(page.getByTestId('cascade-strip')).toBeVisible();
 	await page.getByTestId('cascade-strip').getByRole('button', { name: 'Lückenlos anschließen' }).click();
 	await expect(page.getByTestId('cascade-strip').getByRole('button', { name: 'Wird angepasst …' })).toBeVisible();

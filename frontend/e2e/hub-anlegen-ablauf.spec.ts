@@ -46,6 +46,7 @@ import {
 	hubApiPath,
 	LISTE_SEL,
 	openHub,
+	waehleOption,
 	type AnlegeReiterZustand,
 	type HubKind
 } from './helpers';
@@ -101,11 +102,13 @@ const AN_SEL: Record<
 			(((r.display_config as Rumpf | undefined)?.metrics as Array<{ metric_id?: string; enabled?: boolean }> | undefined) ?? []).some(
 				(m) => m.metric_id === 'snow_depth' && m.enabled === true
 			),
+		// #2881 Lieferung B: Aktivität ist der Auswahl-Baustein (bits-ui Select) — gewählt wird über die
+		// Beschriftung von ANLEGE_SEL.route.profilWert (hochtour = „Hochtour"), geprüft am Auslöser.
 		profilWaehlen: async (page) => {
-			await page.locator('.tn-desktop').getByTestId('activity-dropdown').selectOption(ANLEGE_SEL.route.profilWert);
+			await waehleOption(page, page.locator('.tn-desktop').getByTestId('activity-dropdown'), 'Hochtour');
 		},
 		erwarteProfil: async (page) => {
-			await expect(page.locator('.tn-desktop').getByTestId('activity-dropdown')).toHaveValue(ANLEGE_SEL.route.profilWert);
+			await expect(page.locator('.tn-desktop').getByTestId('activity-dropdown')).toHaveText('Hochtour');
 		}
 	},
 	vergleich: {

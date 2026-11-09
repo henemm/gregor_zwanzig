@@ -305,7 +305,7 @@ describe('AC-7: Stundenverlauf (transponierte Uebersicht): Name aus dem Register
 	// #2880: mobil MField mit Hinweis rechts (vorher handgeschriebenes „Region (optional)")
 	test('Anlegen: Profil-Metriknamen und Profile englisch (metricLabel/Katalog)', () => {
 		const { en: e } = deDannEn(() => sichtbar(P.ANLEGE_FAELLE.anlegen_vergleich.map(P.anlegenRendern).join('\n')));
-		for (const s of ['General', 'Winter sports', 'Hiking', 'Summer trekking', 'Basics', 'Comparison name', 'Activity profile', 'Add locations →', '⊘ Name missing', 'Location comparisons', 'New comparison', 'Enter name', 'Cancel', 'Activate briefing', 'Region optional · max 60', 'No name yet', 'Nothing set up yet']) hat(e, s);
+		for (const s of ['General', 'Winter sports', 'Hiking', 'Summer trekking', 'Basics', 'Comparison name', 'Activity profile', 'Add locations →', 'Name missing', 'Location comparisons', 'New comparison', 'Enter name', 'Cancel', 'Activate briefing', 'Region optional · max 60', 'No name yet', 'Nothing set up yet']) hat(e, s);
 		// #2837 S2 (AC-3): der mobile Zurück-Pfeil trägt den Elternteil „Location comparisons"
 		// (vorher „Comparisons") — je Render Desktop-Pfad UND mobiler Zurück-Pfeil.
 		assert.ok((e.match(/Location comparisons/g) ?? []).length >= 2 * P.ANLEGE_FAELLE.anlegen_vergleich.length, 'mobiler Zurück-Pfeil ohne Elternteil „Location comparisons"');
@@ -313,7 +313,7 @@ describe('AC-7: Stundenverlauf (transponierte Uebersicht): Name aus dem Register
 	});
 	test('Anlegen Orte/weiter: Reiter, Fortschritt, Schaltflaechen englisch; Plural exakt', () => {
 		const { en: e } = deDannEn(() => sichtbar([...P.ANLEGE_FAELLE.anlegen_orte, ...P.ANLEGE_FAELLE.anlegen_weiter].map(P.anlegenRendern).join('\n')));
-		for (const s of ['1 more location needed', '2 more locations needed', '⊘ select at least 2 locations', 'Weather metrics →', 'Set target ranges →', 'Set up alerts →', '1 / 5 sections set up', 'Set up alerts to activate']) hat(e, s);
+		for (const s of ['1 more location needed', '2 more locations needed', 'select at least 2 locations', 'Weather metrics →', 'Set target ranges →', 'Set up alerts →', '1 / 5 sections set up', 'Set up alerts to activate']) hat(e, s);
 		assert.deepEqual(deutscheReste(e), []);
 	});
 });

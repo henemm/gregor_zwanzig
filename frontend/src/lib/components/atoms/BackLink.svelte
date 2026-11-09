@@ -1,7 +1,7 @@
 <script lang="ts">
 	// Mobile-Shell S2 — Rücksprung-Link im Inhalt (ersetzt `leftIcon: back` der
 	// abgeschafften TopAppBar). Soll: Design-Canvas „Gregor Mobile Shell",
-	// Artboard „Unterseite": Mono-Caps 12 px, 36 px Touch-Höhe, Chevron links,
+	// Artboard „Unterseite": Mono-Caps 12 px, 36 px Höhe (am Handy 44 × 44, #2881 R5), Chevron links,
 	// um 8 px nach links ausgerückt, damit der Text bündig mit dem Eyebrow steht.
 	// Konzept: docs/design-requests/mobile_shell_ohne_topbar.md §2/§3.
 	import { t } from '$lib/i18n';
@@ -70,5 +70,12 @@
 	.back-link:focus-visible {
 		background: var(--g-accent-tint);
 		color: var(--g-ink);
+	}
+	/* #2881 R5: am Handy mindestens 44 × 44 Tippfläche (auch ohne Beschriftung, Hub-Kopf). */
+	@media (max-width: 899px) {
+		.back-link {
+			height: 44px;
+			min-width: 44px;
+		}
 	}
 </style>

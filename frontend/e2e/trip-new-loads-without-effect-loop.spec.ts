@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { tippeDatum } from './helpers';
 import type { Page } from '@playwright/test';
 import * as path from 'node:path';
 
@@ -59,9 +60,9 @@ test('Staging-Befund #1552 Fix-Loop 2: /trips/new lädt ohne Konsolenfehler, Rea
 	// Bei toter Reaktivität ändert sich der DOM des Inputs zwar (Browser-
 	// Default-Verhalten), der Svelte-State kommt aber nie an -- der Hinweis
 	// bleibt stehen und der Weiter-Button bleibt für immer deaktiviert.
-	await expect(page.getByText('⊘ Trip-Name fehlt')).toBeVisible();
+	await expect(page.getByText('Trip-Name fehlt')).toBeVisible();
 	await page.getByTestId('trip-new-name-input-desktop').fill('E2E Fix-Loop-2 Regressionstest');
-	await expect(page.getByText('⊘ Trip-Name fehlt')).not.toBeVisible();
+	await expect(page.getByText('Trip-Name fehlt')).not.toBeVisible();
 });
 
 // ═══════════════════════════════════════════════════════════════════════
@@ -91,7 +92,7 @@ async function openNewTripWetterTab(page: Page, name: string): Promise<void> {
 	await page.setViewportSize(MOBILE);
 	await page.goto('/trips/new');
 	await page.getByTestId('trip-new-name-input-mobile').fill(name);
-	await page.getByTestId('trip-new-date-input').fill(new Date().toISOString().slice(0, 10));
+	await tippeDatum(page, page.getByTestId('trip-new-date-input'), new Date().toISOString().slice(0, 10));
 
 	const tabbar = page.getByTestId('tn-mobile-tabbar');
 	await tabbar.getByRole('tab', { name: /Etappen/ }).click({ force: true });

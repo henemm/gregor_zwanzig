@@ -5,7 +5,7 @@
 		label: string;
 		zustand: AnlegeReiterZustand;
 		optional?: boolean;
-		/** Schritt schon erledigt, obwohl (wieder) gesperrt — ✓ und ⊘ zugleich (Bestandsverhalten
+		/** Schritt schon erledigt, obwohl (wieder) gesperrt — beide Punkte zugleich (Bestandsverhalten
 		 *  beider Editoren, z. B. Trip: Wetter-Metriken besucht, aber GPX fehlt). */
 		erledigt?: boolean;
 		/** Sperr-Hinweis (Tooltip am gesperrten Reiter). */
@@ -22,10 +22,12 @@
 	// Pos1/Ende bewegen den Fokus über ALLE Reiter, auch gesperrte (Screenreader hören so, dass und
 	// warum ein Schritt gesperrt ist); Enter/Leertaste lösen wie ein Klick `onWahl` aus — der
 	// Aufrufer wechselt bei gesperrten Schritten nicht, sondern zeigt seinen Hinweis. Gesperrt ohne Opacity und in --g-ink-3 (#2371, ADR-0008:
-	// >= 4,5:1); die Sperre zeigen ⊘ und der Mauszeiger. Die Zustandsmarker (✓ erledigt — wie bisher nur am
-	// Computer —, ⊘ gesperrt) stehen NUR hier — #2881 ersetzt sie an dieser einen Stelle.
+	// >= 4,5:1); die Sperre zeigen aria-disabled, der Punkt in --g-ink-4 und der Mauszeiger. Die
+	// Zustandsmarker (Punkt erledigt --g-good — wie bisher nur am Computer —, Punkt gesperrt
+	// --g-ink-4) stehen NUR hier (#2881 Lieferung B, ADR-0111 Punkt 7: Dot statt ✓/⊘).
 	// Spec: docs/specs/modules/rework_2880_paritaet_reiterflaeche_anlegefelder.md
 	import { t } from '$lib/i18n';
+	import { Dot } from '$lib/components/atoms';
 
 	interface Props {
 		schritte: AnlegeReiterSchritt[];
@@ -101,12 +103,13 @@
 			{#if s.optional}
 				<span class="pille" data-slot="anlege-reiter-optional">{$t(variante === 'mobil' ? 'trip.anlegen.opt' : 'trip.anlegen.optional')}</span>
 			{/if}
+			<!-- #2881 R3 (ADR-0111 Punkt 7): Dot statt ✓/⊘ — erledigt --g-good (wie bisher nur am
+			     Computer, am Handy fehlt der Platz), gesperrt --g-ink-4 neben aria-disabled. -->
 			{#if fertig && !an && variante === 'desktop'}
-				<!-- ✓ wie bisher nur am Computer (am Handy zeigten beide Seiten keinen; Platz) -->
-				<span class="marker erledigt">✓</span>
+				<Dot tone="good" size="xs" data-zustand="erledigt" />
 			{/if}
 			{#if zu}
-				<span class="marker gesperrt">⊘</span>
+				<Dot tone="neutral" size="xs" data-zustand="gesperrt" style="background: var(--g-ink-4);" />
 			{/if}
 		</button>
 	{/each}
@@ -173,19 +176,5 @@
 		border-radius: 3px;
 		background: rgba(196, 90, 42, 0.1);
 		color: var(--g-accent-deep);
-	}
-	.marker {
-		font-family: var(--g-font-mono);
-		font-size: 11px;
-	}
-	.marker.erledigt {
-		font-weight: 700;
-		padding: 2px 5px;
-		border-radius: 3px;
-		background: rgba(61, 107, 58, 0.12);
-		color: var(--g-good);
-	}
-	.marker.gesperrt {
-		color: var(--g-ink-3);
 	}
 </style>

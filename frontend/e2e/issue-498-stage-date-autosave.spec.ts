@@ -14,7 +14,7 @@
 // Auth via storageState (playwright.config 'tests'-Projekt → admin.json).
 
 import { test, expect, type Page } from '@playwright/test';
-import { dragDndZoneItem } from './helpers';
+import { dragDndZoneItem, feldEingabe, tippeDatum } from './helpers';
 
 const TRIP_ID = 'e2e-498-autosave';
 const TRIP_NAME = 'E2E #498 Datum-Autosave';
@@ -38,7 +38,7 @@ async function openStagesEditor(page: Page) {
 }
 
 function activeDateInput(page: Page) {
-	return page.getByTestId('stage-date-field').first().locator('input[type="date"]');
+	return page.getByTestId('stage-date-field').first();
 }
 
 async function fetchStages(page: Page): Promise<Array<{ id: string; date: string }>> {
@@ -101,10 +101,9 @@ test('AC-1: Datum-Änderung persistiert sofort ohne Save-Klick', async ({ page }
 	// hier BEWUSST unbeantwortet — die Änderung an DIESER Etappe muss trotzdem
 	// erhalten bleiben (der zurückgestellte Speichervorgang greift beim Verlassen).
 	await page.getByText('Tag 2', { exact: false }).first().click();
-	await expect(activeDateInput(page)).toHaveValue('2026-08-02');
+	await expect(feldEingabe(activeDateInput(page))).toHaveText('02.08.2026');
 
-	await activeDateInput(page).fill('2026-08-20');
-	await activeDateInput(page).blur();
+	await tippeDatum(page, activeDateInput(page), '2026-08-20');
 
 	// BEWUSST KEIN Klick auf „Etappen speichern".
 	await page.reload();
@@ -119,11 +118,10 @@ test('AC-1: Datum-Änderung persistiert sofort ohne Save-Klick', async ({ page }
 test('AC-2: bestätigte Kaskade persistiert alle Etappen sofort', async ({ page }) => {
 	await openStagesEditor(page);
 	await page.getByText('Tag 1', { exact: false }).first().click();
-	await expect(activeDateInput(page)).toHaveValue('2026-08-01');
+	await expect(feldEingabe(activeDateInput(page))).toHaveText('01.08.2026');
 
 	// 08-01 → 07-22 (−10 Tage).
-	await activeDateInput(page).fill('2026-07-22');
-	await activeDateInput(page).blur();
+	await tippeDatum(page, activeDateInput(page), '2026-07-22');
 
 	await expect(page.getByTestId('cascade-strip')).toBeVisible();
 	await page.getByRole('button', { name: /Lückenlos anschließen/ }).click();
@@ -147,8 +145,7 @@ test('AC-3: Trip-Header-Datum aktualisiert sofort ohne Reload', async ({ page })
 	await expect(page.getByText(/AUGUST 2026/i).first()).toBeVisible();
 
 	await page.getByText('Tag 1', { exact: false }).first().click();
-	await activeDateInput(page).fill('2026-09-15');
-	await activeDateInput(page).blur();
+	await tippeDatum(page, activeDateInput(page), '2026-09-15');
 	// Kaskade ablehnen — nur diese Etappe (Header-Range deckt dann Sep–Aug ab).
 	await expect(page.getByTestId('cascade-strip')).toBeVisible();
 	await page.getByRole('button', { name: /Nur diese Etappe/ }).click();
@@ -162,8 +159,7 @@ test('AC-3: Trip-Header-Datum aktualisiert sofort ohne Reload', async ({ page })
 test('AC-4: Kaskaden-Done-State + API-Persistenz im Erfolgsfall', async ({ page }) => {
 	await openStagesEditor(page);
 	await page.getByText('Tag 1', { exact: false }).first().click();
-	await activeDateInput(page).fill('2026-08-06');
-	await activeDateInput(page).blur();
+	await tippeDatum(page, activeDateInput(page), '2026-08-06');
 	await expect(page.getByTestId('cascade-strip')).toBeVisible();
 	await page.getByRole('button', { name: /Lückenlos anschließen/ }).click();
 	await expect(page.getByTestId('cascade-done')).toBeVisible();
@@ -186,11 +182,10 @@ test('AC-5: Pausentag-Datum persistiert sofort', async ({ page }) => {
 	await page.getByText('Pausentag', { exact: false }).first().click();
 	const pauseView = page.getByTestId('pause-stage-view');
 	await expect(pauseView).toBeVisible();
-	const pauseInput = pauseView.getByTestId('stage-date-field').locator('input[type="date"]');
-	await expect(pauseInput).toHaveValue('2026-08-04');
+	const pauseInput = pauseView.getByTestId('stage-date-field');
+	await expect(feldEingabe(pauseInput)).toHaveText('04.08.2026');
 
-	await pauseInput.fill('2026-08-09');
-	await pauseInput.blur();
+	await tippeDatum(page, pauseInput, '2026-08-09');
 
 	// KEIN Save-Klick.
 	await page.reload();
@@ -254,11 +249,10 @@ test('AC-6 (#1389): veralteter Auto-Speichervorgang überholt die Kaskade nicht'
 
 	await openStagesEditor(page);
 	await page.getByText('Tag 1', { exact: false }).first().click();
-	await expect(activeDateInput(page)).toHaveValue('2026-08-01');
+	await expect(feldEingabe(activeDateInput(page))).toHaveText('01.08.2026');
 
 	// 08-01 → 07-22 (−10 Tage).
-	await activeDateInput(page).fill('2026-07-22');
-	await activeDateInput(page).blur();
+	await tippeDatum(page, activeDateInput(page), '2026-07-22');
 	await expect(page.getByTestId('cascade-strip')).toBeVisible();
 
 	// Realistische Lesepause — deutlich länger als das 700ms-Debounce-Fenster.
@@ -289,10 +283,9 @@ test('AC-7 (#1389): Etappe-1-Änderung überlebt einen Reload bei OFFENER Rückf
 	test.setTimeout(60_000);
 	await openStagesEditor(page);
 	await page.getByText('Tag 1', { exact: false }).first().click();
-	await expect(activeDateInput(page)).toHaveValue('2026-08-01');
+	await expect(feldEingabe(activeDateInput(page))).toHaveText('01.08.2026');
 
-	await activeDateInput(page).fill('2026-07-22');
-	await activeDateInput(page).blur();
+	await tippeDatum(page, activeDateInput(page), '2026-07-22');
 	await expect(page.getByTestId('cascade-strip')).toBeVisible();
 
 	// Rückfrage BEWUSST unbeantwortet lassen und die Seite neu laden.
@@ -313,8 +306,7 @@ test('AC-8 (#1389): „Nur diese Etappe" persistiert die Etappe-1-Änderung', as
 	test.setTimeout(60_000);
 	await openStagesEditor(page);
 	await page.getByText('Tag 1', { exact: false }).first().click();
-	await activeDateInput(page).fill('2026-07-22');
-	await activeDateInput(page).blur();
+	await tippeDatum(page, activeDateInput(page), '2026-07-22');
 	await expect(page.getByTestId('cascade-strip')).toBeVisible();
 
 	await page.waitForTimeout(1500);
@@ -364,11 +356,10 @@ test('AC-9 (#1389 F004): Doppeltipp auf „Lückenlos anschließen" datiert die 
 
 	await openStagesEditor(page);
 	await page.getByText('Tag 1', { exact: false }).first().click();
-	await expect(activeDateInput(page)).toHaveValue('2026-08-01');
+	await expect(feldEingabe(activeDateInput(page))).toHaveText('01.08.2026');
 
 	// 08-01 → 08-22 (+21 Tage). Doppelt angewandt ergäbe s2 = 2026-09-13.
-	await activeDateInput(page).fill('2026-08-22');
-	await activeDateInput(page).blur();
+	await tippeDatum(page, activeDateInput(page), '2026-08-22');
 	await expect(page.getByTestId('cascade-strip')).toBeVisible();
 
 	await doubleTap(page, /Lückenlos anschließen/);
@@ -392,8 +383,7 @@ test('AC-10 (#1389 F004): Doppeltipp auf „Nur diese Etappe" schreibt genau ein
 
 	await openStagesEditor(page);
 	await page.getByText('Tag 1', { exact: false }).first().click();
-	await activeDateInput(page).fill('2026-08-22');
-	await activeDateInput(page).blur();
+	await tippeDatum(page, activeDateInput(page), '2026-08-22');
 	await expect(page.getByTestId('cascade-strip')).toBeVisible();
 
 	await doubleTap(page, /Nur diese Etappe/);
@@ -446,10 +436,9 @@ async function failFirstPuts(page: Page, n: number): Promise<{ puts: number }> {
 async function openCascadePlus21(page: Page): Promise<void> {
 	await openStagesEditor(page);
 	await page.getByText('Tag 1', { exact: false }).first().click();
-	await expect(activeDateInput(page)).toHaveValue('2026-08-01');
+	await expect(feldEingabe(activeDateInput(page))).toHaveText('01.08.2026');
 	// 08-01 → 08-22 (+21 Tage). Zweimal angewandt ergäbe s2 = 2026-09-13.
-	await activeDateInput(page).fill('2026-08-22');
-	await activeDateInput(page).blur();
+	await tippeDatum(page, activeDateInput(page), '2026-08-22');
 	await expect(page.getByTestId('cascade-strip')).toBeVisible();
 }
 
@@ -512,15 +501,13 @@ test('AC-13 (#1389 F005 / Nebenbefund #1199): zweimal umdatieren vor der Antwort
 	test.setTimeout(60_000);
 	await openStagesEditor(page);
 	await page.getByText('Tag 1', { exact: false }).first().click();
-	await expect(activeDateInput(page)).toHaveValue('2026-08-01');
+	await expect(feldEingabe(activeDateInput(page))).toHaveText('01.08.2026');
 
-	await activeDateInput(page).fill('2026-08-11');
-	await activeDateInput(page).blur();
+	await tippeDatum(page, activeDateInput(page), '2026-08-11');
 	await expect(page.getByTestId('cascade-strip')).toBeVisible();
 
 	// Zweite Korrektur, OHNE die Rückfrage zu beantworten.
-	await activeDateInput(page).fill('2026-08-21');
-	await activeDateInput(page).blur();
+	await tippeDatum(page, activeDateInput(page), '2026-08-21');
 	await expect(page.getByTestId('cascade-strip')).toContainText('21.08.2026');
 	await expect(page.getByTestId('cascade-strip')).toContainText('ab 22.08.2026');
 
@@ -769,9 +756,8 @@ test('AC-20 (#1390 F001/F002): zweites Umdatieren NACH dem Umsortieren rechnet m
 
 	// Zweite Korrektur an DERSELBEN Etappe: 2026-08-22 → 2026-09-01. Ab dieser
 	// Wahl wird durchdatiert, nicht mehr ab der ersten.
-	await expect(activeDateInput(page)).toHaveValue('2026-08-22');
-	await activeDateInput(page).fill('2026-09-01');
-	await activeDateInput(page).blur();
+	await expect(feldEingabe(activeDateInput(page))).toHaveText('22.08.2026');
+	await tippeDatum(page, activeDateInput(page), '2026-09-01');
 	await expect(page.getByTestId('cascade-strip')).toContainText('01.09.2026');
 
 	await page.getByRole('button', { name: /Lückenlos anschließen/ }).click();
@@ -826,9 +812,8 @@ test('AC-21 (#1393): mittlere Etappe umdatieren — Rückfrage, lückenlos dahin
 	await openStagesEditor(page);
 
 	await page.getByText('Tag 3', { exact: false }).first().click();
-	await expect(activeDateInput(page)).toHaveValue('2026-08-03');
-	await activeDateInput(page).fill('2026-08-20');
-	await activeDateInput(page).blur();
+	await expect(feldEingabe(activeDateInput(page))).toHaveText('03.08.2026');
+	await tippeDatum(page, activeDateInput(page), '2026-08-20');
 
 	// Vorher: gar keine Rückfrage, weil die Etappe nicht auf Platz 1 stand.
 	await expect(page.getByTestId('cascade-strip')).toBeVisible();
@@ -855,8 +840,7 @@ test('AC-22 (#1393): letzte Etappe umdatieren — keine Rückfrage, aber gespeic
 	await openStagesEditor(page);
 
 	await page.getByText('Tag 3', { exact: false }).first().click();
-	await activeDateInput(page).fill('2026-08-20');
-	await activeDateInput(page).blur();
+	await tippeDatum(page, activeDateInput(page), '2026-08-20');
 
 	await expect(page.getByTestId('cascade-strip')).toHaveCount(0);
 	await expect
@@ -880,8 +864,7 @@ test('AC-23 (#1393): ungleiche Abstände werden lückenlos eingeebnet', async ({
 	await openStagesEditor(page);
 
 	await page.getByText('Tag 1', { exact: false }).first().click();
-	await activeDateInput(page).fill('2026-08-03');
-	await activeDateInput(page).blur();
+	await tippeDatum(page, activeDateInput(page), '2026-08-03');
 
 	await expect(page.getByTestId('cascade-strip')).toBeVisible();
 	await expect(page.getByTestId('cascade-strip')).toContainText('die 3 folgenden Etappen');
@@ -907,8 +890,7 @@ test('AC-24 (#1393): ein Pausentag dazwischen belegt einen Tag und rückt mit', 
 	await openStagesEditor(page);
 
 	await page.getByText('Tag 1', { exact: false }).first().click();
-	await activeDateInput(page).fill('2026-08-10');
-	await activeDateInput(page).blur();
+	await tippeDatum(page, activeDateInput(page), '2026-08-10');
 
 	await expect(page.getByTestId('cascade-strip')).toBeVisible();
 	await page.getByRole('button', { name: APPLY }).click();
@@ -935,8 +917,7 @@ test('AC-25 (#1393): eine Etappe ohne Datum bleibt ohne Datum und verbraucht kei
 	await openStagesEditor(page);
 
 	await page.getByText('Tag 1', { exact: false }).first().click();
-	await activeDateInput(page).fill('2026-08-10');
-	await activeDateInput(page).blur();
+	await tippeDatum(page, activeDateInput(page), '2026-08-10');
 
 	await expect(page.getByTestId('cascade-strip')).toBeVisible();
 	// Die Etappe ohne Datum zählt nicht mit — genannt werden nur die betroffenen.
@@ -962,8 +943,7 @@ test('AC-26 (#1393): die Rückfrage nennt die tatsächlich betroffene Anzahl', a
 
 	// Etappe 2 von 5 → drei dahinter, nicht vier (das wäre „alle anderen").
 	await page.getByText('Tag 2', { exact: false }).first().click();
-	await activeDateInput(page).fill('2026-08-20');
-	await activeDateInput(page).blur();
+	await tippeDatum(page, activeDateInput(page), '2026-08-20');
 
 	const strip = page.getByTestId('cascade-strip');
 	await expect(strip).toBeVisible();
@@ -991,8 +971,7 @@ test('AC-27 (#1393 F001): eine Folge-Etappe löschen — Rückfrage zählt neu, 
 	await openStagesEditor(page);
 
 	await page.getByText('Tag 2', { exact: false }).first().click();
-	await activeDateInput(page).fill('2026-08-20');
-	await activeDateInput(page).blur();
+	await tippeDatum(page, activeDateInput(page), '2026-08-20');
 	const strip = page.getByTestId('cascade-strip');
 	await expect(strip).toContainText('die 3 folgenden Etappen');
 
@@ -1027,8 +1006,7 @@ test('AC-28 (#1393 F002): eine Folge-Etappe vor die bearbeitete ziehen — sie b
 	await openStagesEditor(page);
 
 	await page.getByText('Tag 3', { exact: false }).first().click();
-	await activeDateInput(page).fill('2026-08-20');
-	await activeDateInput(page).blur();
+	await tippeDatum(page, activeDateInput(page), '2026-08-20');
 	const strip = page.getByTestId('cascade-strip');
 	await expect(strip).toContainText('die 2 folgenden Etappen');
 
@@ -1104,16 +1082,14 @@ test('AC-30 (#1393 R2-F001): „Nur diese Etappe" fasst eine fremde, bewusst ge�
 
 	// Rückfrage zu „Tag 1" öffnen und BEWUSST offen lassen.
 	await page.getByText('Tag 1', { exact: false }).first().click();
-	await activeDateInput(page).fill('2026-08-22');
-	await activeDateInput(page).blur();
+	await tippeDatum(page, activeDateInput(page), '2026-08-22');
 	await expect(page.getByTestId('cascade-strip')).toBeVisible();
 
 	// Der Nutzer datiert unabhängig davon die LETZTE Etappe um. Dort gibt es keine
 	// eigene Rückfrage (nichts dahinter), es wird sofort gespeichert.
 	await page.getByText('Tag 5', { exact: false }).first().click();
-	await expect(activeDateInput(page)).toHaveValue('2026-08-05');
-	await activeDateInput(page).fill('2026-09-09');
-	await activeDateInput(page).blur();
+	await expect(feldEingabe(activeDateInput(page))).toHaveText('05.08.2026');
+	await tippeDatum(page, activeDateInput(page), '2026-09-09');
 	await expect
 		.poll(async () => (await fetchStageDates(page))['s5'], { timeout: 15_000 })
 		.toBe('2026-09-09');
@@ -1274,14 +1250,13 @@ test('AC-32 (#1393 R4-F001): nach Fehlschlägen bleibt die eigene Eingabe an ein
 	// Nichts darf lokal schon verschoben sein — der Schreibvorgang ist gescheitert.
 	await page.getByText('Tag 3', { exact: false }).first().click();
 	await expect(
-		activeDateInput(page),
+		feldEingabe(activeDateInput(page)),
 		'ohne bestätigten Schreibvorgang darf die Folge-Etappe ihr altes Datum tragen'
-	).toHaveValue('2026-08-03');
+	).toHaveText('03.08.2026');
 
 	// Der Nutzer trägt hier bewusst ein eigenes Datum ein — das gelingt und wird
 	// gespeichert.
-	await activeDateInput(page).fill('2026-08-26');
-	await activeDateInput(page).blur();
+	await tippeDatum(page, activeDateInput(page), '2026-08-26');
 	await expect
 		.poll(async () => (await fetchStageDates(page))['s3'], { timeout: 15_000 })
 		.toBe('2026-08-26');
@@ -1319,15 +1294,13 @@ test('AC-33 (#1393 R4-F002): eine offene Rückfrage verfällt nicht, wenn eine z
 	await openStagesEditor(page);
 
 	await page.getByText('Tag 1', { exact: false }).first().click();
-	await activeDateInput(page).fill('2026-08-22');
-	await activeDateInput(page).blur();
+	await tippeDatum(page, activeDateInput(page), '2026-08-22');
 	await expect(page.getByTestId('cascade-strip')).toContainText('die 4 folgenden Etappen');
 
 	// Ohne zu antworten: „Tag 3" umdatieren — dahinter liegen s4 und s5, es kommt
 	// also eine zweite Rückfrage.
 	await page.getByText('Tag 3', { exact: false }).first().click();
-	await activeDateInput(page).fill('2026-09-10');
-	await activeDateInput(page).blur();
+	await tippeDatum(page, activeDateInput(page), '2026-09-10');
 	await expect(page.getByTestId('cascade-strip')).toContainText('die 2 folgenden Etappen');
 
 	// Die erste Entscheidung muss beantwortet UND geschrieben sein — nicht liegen
@@ -1513,8 +1486,7 @@ test('AC-36 (#1393 R6-F001): ein zurückgestellter Vorgang dreht die bestätigte
 	// Während der Schreibvorgang läuft, korrigiert der Nutzer das Datum der
 	// bearbeiteten Etappe erneut. Dabei wird ein Vorgang zurückgestellt.
 	await expect(page.getByTestId('etappen-strip-wrapper')).toHaveAttribute('data-locked', 'true');
-	await activeDateInput(page).fill('2026-08-29');
-	await activeDateInput(page).blur();
+	await tippeDatum(page, activeDateInput(page), '2026-08-29');
 
 	await expect(page.getByTestId('cascade-done')).toBeVisible({ timeout: 20_000 });
 

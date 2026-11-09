@@ -6,7 +6,7 @@
 //   --config=playwright.880.staging.config.ts --reporter=list
 
 import { test, expect, type Page } from '@playwright/test';
-import { createTestLocation } from './helpers';
+import { createTestLocation, feldEingabe, tippeDatum } from './helpers';
 
 const TRIP_ID = 'e2e-880-overlay';
 const TRIP_NAME = 'E2E #880 Overlay';
@@ -41,7 +41,7 @@ async function openStagesEditor(page: Page) {
 }
 
 function firstDateInput(page: Page) {
-	return page.getByTestId('stage-date-field').first().locator('input[type="date"]');
+	return page.getByTestId('stage-date-field').first();
 }
 
 // Computed CSS-Property des Overlays im Browser auslesen (keine Style-Attribut-Analyse).
@@ -66,9 +66,8 @@ async function overlayStyle(page: Page, prop: string): Promise<string> {
 async function changeStageDate(page: Page, value: string) {
 	await page.getByText('Tag 2', { exact: false }).first().click();
 	const input = firstDateInput(page);
-	await expect(input).toHaveValue('2026-08-02');
-	await input.fill(value);
-	await input.blur();
+	await expect(feldEingabe(input)).toHaveText('02.08.2026');
+	await tippeDatum(page, input, value);
 }
 
 test.describe('feat_880 — Trip-Editor Autospeicher-Overlay', () => {
@@ -238,9 +237,8 @@ test.describe('feat_880 — Compare-Editor & Cross-Tab-Isolation', () => {
 			// Im Trip-Editor speichern → dessen Timestamp erscheint.
 			await pageTrip.goto(`/trips/${TRIP_ID}?tab=etappen`);
 			await expect(pageTrip.getByTestId('edit-stages-panel')).toBeVisible();
-			const input = pageTrip.getByTestId('stage-date-field').first().locator('input[type="date"]');
-			await input.fill('2026-08-23');
-			await input.blur();
+			const input = pageTrip.getByTestId('stage-date-field').first();
+			await tippeDatum(pageTrip, input, '2026-08-23');
 			await expect(saveIndicator(pageTrip)).toHaveAttribute('data-state', 'idle', {
 				timeout: 10_000
 			});

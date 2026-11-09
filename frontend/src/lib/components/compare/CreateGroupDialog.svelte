@@ -86,12 +86,17 @@
 
 			<label class="field">
 				<span class="field-label">{$t('vergleich.gruppe.standard_profil')}</span>
-				<Select data-testid="create-group-profile" bind:value={profile} class="w-full">
-					<option value="">{$t('vergleich.gruppe.kein_profil')}</option>
-					{#each ACTIVITY_PROFILE_OPTIONS as opt}
-						<option value={opt.value}>{$t(`bausteine.profil.${opt.value}` as MessageKey)}</option>
-					{/each}
-				</Select>
+				<Select
+					data-testid="create-group-profile"
+					aria-label={$t('vergleich.gruppe.standard_profil')}
+					options={[
+						{ value: '', label: $t('vergleich.gruppe.kein_profil') },
+						...ACTIVITY_PROFILE_OPTIONS.map((opt) => ({ value: opt.value, label: $t(`bausteine.profil.${opt.value}` as MessageKey) }))
+					]}
+					value={profile}
+					onValueChange={(v) => (profile = v as ActivityProfile | '')}
+					class="w-full"
+				/>
 			</label>
 
 			{#if error !== null}

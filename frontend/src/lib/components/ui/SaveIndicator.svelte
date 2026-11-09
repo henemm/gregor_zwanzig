@@ -6,6 +6,7 @@
 	// Issue #2653 (i18n F4): Zustandstexte aus dem Katalog (nav.*); die Uhrzeit
 	// bleibt ein eigenes <span class="save-time"> (Spec A1).
 	import { t } from '$lib/i18n';
+	import Dot from '$lib/components/ui/dot/Dot.svelte';
 
 	interface Props {
 		controller: SaveStatus;
@@ -30,7 +31,8 @@
 	class:save-indicator--error={controller.state === 'error'}
 >
 	{#if controller.state === 'idle'}
-		<span class="save-indicator__icon" aria-hidden="true">✓</span>
+		<!-- #2881 R3 (ADR-0111 Punkt 7): Dot + Text statt ✓ -->
+		<Dot tone="good" size="xs" />
 		<span>{$t('nav.gespeichert')}</span>
 		{#if controller.savedAt}
 			<span class="save-time">{formatTime(controller.savedAt)}</span>

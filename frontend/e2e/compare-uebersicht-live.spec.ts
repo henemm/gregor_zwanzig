@@ -19,7 +19,7 @@
 // nur waitForResponse / expect-Polling, kein fester Schlaf.
 
 import { test, expect, type Locator, type Page } from '@playwright/test';
-import { createTestLocation, hubApiPath, openHub, seedHub } from './helpers';
+import { createTestLocation, hubApiPath, openHub, seedHub, waehleOption } from './helpers';
 
 const DESKTOP = { width: 1280, height: 900 };
 
@@ -80,7 +80,7 @@ test.describe('#2828: Compare-Übersicht zeigt den lebenden Stand ohne Neuladen'
 			const morgen = page.locator('[data-testid="versand-abschnitt"]:visible [data-testid="report-morning-time"]:visible');
 			await expect(morgen).toBeVisible({ timeout: 10_000 });
 			const put = putAntwort(page, hub.id);
-			await morgen.selectOption('10:00');
+			await waehleOption(page, morgen, '10:00');
 			const res = await put;
 			expect(res.ok(), 'PUT nach Uhrzeit-Änderung fehlgeschlagen: ' + res.status()).toBeTruthy();
 

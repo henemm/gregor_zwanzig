@@ -17,7 +17,7 @@
 // Anmeldung über den storageState aus global.setup.ts (Admin-Sitzung).
 
 import { test, expect, type Page, type Request } from '@playwright/test';
-import { HUB_KINDS, hubApiPath, openHub, seedHub, type HubKind } from './helpers';
+import { HUB_KINDS, hubApiPath, openHub, seedHub, waehleOption, type HubKind } from './helpers';
 
 // Selektor-/Feldpfad-Unterschiede je kind — bewusst im Spec, nicht im Helfer.
 const HUB_SEL: Record<HubKind, { morningTime: (stand: Record<string, unknown>) => unknown }> = {
@@ -56,10 +56,10 @@ for (const kind of HUB_KINDS) {
 			await expect(page.locator('[data-testid="versand-abschnitt"]:visible')).toBeVisible({ timeout: 10_000 });
 			const uhrzeit = morgenUhrzeit(page);
 			await expect(uhrzeit).toBeVisible({ timeout: 10_000 });
-			await expect(uhrzeit, 'Vorbedingung: geseedet mit 06:00').toHaveValue('06:00');
+			await expect(uhrzeit, 'Vorbedingung: geseedet mit 06:00').toHaveText('06:00');
 			expect(puts.length, 'Vorbedingung: das Öffnen des Abschnitts speichert nichts').toBe(0);
 
-			await uhrzeit.selectOption('08:00');
+			await waehleOption(page, uhrzeit, '08:00');
 
 			await expect.poll(() => beantwortet.length, { timeout: 10_000 }).toBeGreaterThanOrEqual(1);
 			const chip = page.locator('[data-testid="save-indicator"]');
@@ -92,7 +92,7 @@ for (const kind of HUB_KINDS) {
 
 			await page.reload();
 			await expect(uhrzeit).toBeVisible({ timeout: 10_000 });
-			await expect(uhrzeit, 'Wert überlebt das Neuladen').toHaveValue('08:00');
+			await expect(uhrzeit, 'Wert überlebt das Neuladen').toHaveText('08:00');
 			expect(puts.length, 'das Neuladen löst keinen weiteren PUT aus').toBe(1);
 		} finally {
 			await hub.aufraeumen();

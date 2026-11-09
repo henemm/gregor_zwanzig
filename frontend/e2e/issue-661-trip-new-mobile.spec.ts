@@ -26,7 +26,7 @@
 
 import { test, expect, type Page } from '@playwright/test';
 import * as path from 'node:path';
-import { E2E_TEST_PREFIX } from './helpers';
+import { E2E_TEST_PREFIX, tippeDatum } from './helpers';
 
 const MOBILE = { width: 375, height: 667 };
 const DESKTOP = { width: 1280, height: 900 };
@@ -37,7 +37,8 @@ const DESKTOP = { width: 1280, height: 900 };
 // Pflicht-Eingaben Route-Tab, um Etappen freizuschalten.
 async function fillRoute(page: Page, name = 'Mobile Test-Trip', date = '2026-07-01') {
 	await page.getByTestId('trip-new-name-input-mobile').fill(name);
-	await page.getByTestId('trip-new-date-input').fill(date);
+	// #2881 Lieferung B: Baustein DatumFeld (Segmente) statt <input type="date">.
+	await tippeDatum(page, page.getByTestId('trip-new-date-input'), date);
 }
 
 test.describe('Issue #661 — /trips/new Mobile-Parität', () => {
@@ -169,7 +170,7 @@ test.describe('Issue #661 — /trips/new Mobile-Parität', () => {
 			kopf: 'tn-desktop-breadcrumb',
 			speichern: 'trip-new-save-btn',
 			nameInput: (page: Page) => page.getByTestId('trip-new-name-input-desktop'),
-			datumInput: (page: Page) => page.locator('.tn-desktop input[type="date"]'),
+			datumInput: (page: Page) => page.getByTestId('trip-new-date-input-desktop'),
 		},
 	] as const;
 
@@ -177,7 +178,8 @@ test.describe('Issue #661 — /trips/new Mobile-Parität', () => {
 		await page.setViewportSize(z.viewport);
 		await page.goto('/trips/new');
 		await z.nameInput(page).fill(name);
-		await z.datumInput(page).fill(new Date().toISOString().slice(0, 10));
+		// #2881 Lieferung B: Baustein DatumFeld (Segmente) statt <input type="date">.
+		await tippeDatum(page, z.datumInput(page), new Date().toISOString().slice(0, 10));
 
 		// getByRole blendet den unsichtbaren Zweig aus — es trifft die sichtbare Tab-Leiste.
 		await page.getByRole('tab', { name: /Etappen/ }).click({ force: true });

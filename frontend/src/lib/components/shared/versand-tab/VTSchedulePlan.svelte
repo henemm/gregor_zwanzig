@@ -63,12 +63,12 @@
 	const morningHourOption = $derived(toHourOption(morning_time, '07:00'));
 	const eveningHourOption = $derived(toHourOption(evening_time, '18:00'));
 
-	// Issue #1286: Quick-Pick-Chips — feuern denselben Callback wie die
-	// Zeit-Auswahl, mit einem synthetischen Event (Factory-Pattern, Safari-
-	// Closure-Schutz, CLAUDE.md).
-	function makeQuickPickHandler(cb: (e: Event) => void, value: string) {
-		return function doQuickPick() {
-			cb({ target: { value } } as unknown as Event);
+	// Issue #1286: Quick-Pick-Chips (fester Wert) und Stunden-Auswahl (#2881, bits-ui Select liefert
+	// den gewaehlten Wert) feuern denselben Callback mit synthetischem Event (Factory-Pattern, Safari-
+	// Closure-Schutz, CLAUDE.md). Zeilenzahl bewusst gleich (HERKUNFT-Ratsche, Zeilenvertrag).
+	function makeQuickPickHandler(cb: (e: Event) => void, value: string | undefined = undefined) {
+		return function doQuickPick(gewaehlt: unknown = undefined) {
+			cb({ target: { value: value ?? gewaehlt } } as unknown as Event);
 		};
 	}
 </script>
@@ -98,19 +98,17 @@
 					</span>
 				</div>
 				<div class="vt-card-body">
-					<label class="vt-time-label vt-time-choice">
+					<div class="vt-time-label vt-time-choice">
 						<span class="vt-time-caption">{$t('versand.zeitplan.uhrzeit')}</span>
 						<Select
 							data-testid="report-morning-time"
+							aria-label={$t('versand.zeitplan.uhrzeit')}
 							value={morningHourOption}
 							disabled={!morning_enabled}
-							onchange={onMorningTime}
-						>
-							{#each HOUR_OPTIONS as h (h)}
-								<option value={h}>{h}</option>
-							{/each}
-						</Select>
-					</label>
+							options={HOUR_OPTIONS.map((h) => ({ value: h, label: h }))}
+							onValueChange={makeQuickPickHandler(onMorningTime)}
+						/>
+					</div>
 					<div class="vt-quickpick-row">
 						<button
 							type="button"
@@ -145,19 +143,17 @@
 					</span>
 				</div>
 				<div class="vt-card-body">
-					<label class="vt-time-label vt-time-choice">
+					<div class="vt-time-label vt-time-choice">
 						<span class="vt-time-caption">{$t('versand.zeitplan.uhrzeit')}</span>
 						<Select
 							data-testid="report-evening-time"
+							aria-label={$t('versand.zeitplan.uhrzeit')}
 							value={eveningHourOption}
 							disabled={!evening_enabled}
-							onchange={onEveningTime}
-						>
-							{#each HOUR_OPTIONS as h (h)}
-								<option value={h}>{h}</option>
-							{/each}
-						</Select>
-					</label>
+							options={HOUR_OPTIONS.map((h) => ({ value: h, label: h }))}
+							onValueChange={makeQuickPickHandler(onEveningTime)}
+						/>
+					</div>
 					<div class="vt-quickpick-row">
 						<button
 							type="button"
@@ -276,7 +272,7 @@
 	   Mono-Ziffern-Anmutung angleichen. Die frueheren .vt-time-input-Regeln sind
 	   mit dem Uhrzeit-Eingabefeld (#1379) und dem Tagesfenster-Block (#1361)
 	   nutzerlos geworden und entfallen. */
-	.vt-time-choice :global(select) {
+	.vt-time-choice :global(.gz-select) {
 		font-family: var(--g-font-mono);
 		font-size: 13px;
 		font-weight: 600;
@@ -314,13 +310,15 @@
 		.vt-time-choice :global(.gz-select) {
 			flex: 1;
 		}
-		.vt-time-choice :global(select) {
+		.vt-time-choice :global(.gz-select) {
 			min-height: 44px;
 			font-size: 16px;
-			box-sizing: border-box;
 		}
+		/* #2881 R5: Schnellwahl-Chips als 44er-Tippfläche am Handy. */
 		.vt-quick-chip {
-			min-height: 36px;
+			min-height: 44px;
+			min-width: 44px;
+			padding: 6px 12px;
 			font-size: 12px;
 		}
 	}

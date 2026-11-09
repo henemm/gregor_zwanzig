@@ -17,7 +17,7 @@
 
 	import { onMount, untrack } from 'svelte';
 	import { goto } from '$app/navigation';
-	import { Btn, Eyebrow, TopoBg } from '$lib/components/atoms';
+	import { Btn, Eyebrow, TopoBg, Dot } from '$lib/components/atoms';
 	import { Field } from '$lib/components/molecules';
 	import {
 		ACTIVITY_PROFILE_OPTIONS,
@@ -521,7 +521,7 @@
 						{/each}
 					</div>
 					<div style:margin-top="28px" style:padding-top="20px" style:border-top="1px solid var(--g-rule)" style:display="flex" style:justify-content="flex-end" style:align-items="center" style:gap="12px">
-						{#if !canContinue}<span class="mono" style:font-size="11px" style:color="var(--g-ink-3)">{$t('vergleich.neu.name_fehlt')}</span>{/if}
+						{#if !canContinue}<span class="mono" style:display="inline-flex" style:align-items="center" style:gap="6px" style:font-size="11px" style:color="var(--g-ink-3)"><Dot tone="neutral" size="xs" style="background: var(--g-ink-4);" />{$t('vergleich.neu.name_fehlt')}</span>{/if}
 						<Btn data-testid="compare-editor-continue-orte" variant="accent" size="md" disabled={!canContinue} onclick={() => canContinue && switchTab('orte')}>{$t('vergleich.neu.orte_hinzufuegen')}</Btn>
 					</div>
 				</div>
@@ -531,7 +531,7 @@
 		<Step2Orte bind:pickedIds={wiz.pickedIds} {locations} groups={ceGroups} />
 		<div class="ce-cta-foot" style:max-width="980px">
 			<div class="ce-cta-row">
-				{#if !orteContinueReady}<span class="mono ce-cta-hint">{$t('vergleich.neu.min_orte')}</span>{/if}
+				{#if !orteContinueReady}<span class="mono ce-cta-hint" style:display="inline-flex" style:align-items="center" style:gap="6px"><Dot tone="neutral" size="xs" style="background: var(--g-ink-4);" />{$t('vergleich.neu.min_orte')}</span>{/if}
 				<Btn data-testid="compare-editor-continue-wetter-metriken" variant="accent" size="md" disabled={!orteContinueReady} onclick={() => orteContinueReady && switchTab('wetter-metriken')}>{$t('vergleich.neu.wetter_metriken')}</Btn>
 			</div>
 		</div>

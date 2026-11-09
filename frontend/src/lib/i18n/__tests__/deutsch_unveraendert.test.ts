@@ -443,6 +443,10 @@ const NEU_IN_FOLGEPAKETEN = [
 	// #2651 (F2) Leerzustand des Cockpits (Bestandskonten): home.json
 	'onboarding.leer.titel',
 	'onboarding.leer.beschreibung',
+	// #2881 Lieferung B: Baustein molecules/DatumFeld (Kalender-Knopf, Monat blättern): bausteine.json
+	'bausteine.datum.kalender_oeffnen',
+	'bausteine.datum.voriger_monat',
+	'bausteine.datum.naechster_monat',
 ];
 
 test('AC-5: das Golden enthaelt die 112 Bestandsschluessel', () => {

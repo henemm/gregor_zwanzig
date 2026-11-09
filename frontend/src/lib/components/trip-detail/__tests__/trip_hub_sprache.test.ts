@@ -100,7 +100,7 @@ describe('AC-6: Deutsch byte-gleich zum Ist-Stand vor der Umstellung (Golden gol
 	});
 	test('Messaufbau: Golden enthaelt die deutschen Texte der Bausteine', () => {
 		const alle = Object.keys(FAELLE).map((f) => readFileSync(path.join(P.GOLDEN_DIR, `${f}.de.html`), 'utf-8')).join('');
-		for (const s of ['Tag 2', 'START IN', 'Briefing gesendet!', 'Weitere Aktionen', '1 Größe unbekannt', '2 Größen unbekannt', 'Lückenlos neu datiert', 'Neuer Trip','Gesperrt — erst Trip-Name + Startdatum', 'Fertig', 'Archiviert', 'Versand-Historie', 'von Hand', '✂ ab hier bei', '▾ Aufklappen', 'Speichern fehlgeschlagen', 'Gespeichert ✓', 'Karte &amp; Höhenprofil', 'Fehler beim Senden', 'Name bearbeiten', 'Tour-Detail', 'Trip-Start', '01.07.'])
+		for (const s of ['Tag 2', 'START IN', 'Briefing gesendet!', 'Weitere Aktionen', '1 Größe unbekannt', '2 Größen unbekannt', 'Lückenlos neu datiert', 'Neuer Trip','Gesperrt — erst Trip-Name + Startdatum', 'Fertig', 'Archiviert', 'Versand-Historie', 'von Hand', '✂ ab hier bei', '▾ Aufklappen', 'Speichern fehlgeschlagen', 'Gespeichert', 'Karte &amp; Höhenprofil', 'Fehler beim Senden', 'Name bearbeiten', 'Tour-Detail', 'Trip-Start', '01.07.'])
 			assert.ok(alle.includes(s), s);
 	});
 });
@@ -253,7 +253,8 @@ describe('AC-4: Metrik-Namen ueber metricLabel, col_label unveraendert', () => {
 		// Voller Name englisch; die Kurzform (Fallback `label.slice(0, 5)`) bleibt wie jede Kurzform (ADR-0042).
 		assert.ok(!/class="(label|off-name|col-name|metric-name)[^"]*">Böen</.test(en), 'voller Name noch deutsch');
 		// Fixture: Preset „Wandern" (Name = Daten), Zeitplan-Speicherstand mit Server-Text „Gespeichert.".
-		assert.deepEqual(deutscheReste(sEn, [...DATEN, 'trip.aktivitaet.wandern', 'trip.gespeichert_punkt']), []);
+		// #2881: „Gespeichert" (Etappen-Editor, ohne ✓) ist wortgleich der Anfang dieses Server-Texts.
+		assert.deepEqual(deutscheReste(sEn, [...DATEN, 'trip.aktivitaet.wandern', 'trip.gespeichert_punkt', 'trip.etappen_editor.gespeichert']), []);
 	});
 	test('Uebersicht: Namensliste englisch, col_label der Fixture steht nirgends verfaelscht', () => {
 		const { en } = deDannEn(() => sichtbar(P.uebersichtRendern()));

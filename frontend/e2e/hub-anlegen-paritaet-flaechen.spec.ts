@@ -360,9 +360,16 @@ async function reiterStil(loc: Locator) {
 	});
 }
 
-/** Text des Reiters ohne Buchstaben, Leerraum und „&" = Zustandsmarker (z. B. ⊘). */
+/**
+ * Zustandsmarker des Reiters: seit #2881 Lieferung B (ADR-0111 Punkt 7) ein Punkt (`Dot`) mit
+ * data-zustand und Farbe statt eines Zeichens (vorher ⊘) — gelesen als „Zustand Ton Hintergrund".
+ */
 async function marker(loc: Locator): Promise<string> {
-	return ((await loc.textContent()) ?? '').replace(/[\p{L}\s&-]/gu, '');
+	return loc.evaluate((el) =>
+		Array.from(el.querySelectorAll<HTMLElement>('[data-slot="dot"]'))
+			.map((d) => `${d.dataset.zustand ?? ''} ${d.dataset.tone ?? ''} ${getComputedStyle(d).backgroundColor}`)
+			.join(' | ')
+	);
 }
 
 const pille = (reiter: Locator) => reiter.locator('span').filter({ hasText: /^\s*opt(ional)?\s*$/i });

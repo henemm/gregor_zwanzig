@@ -48,6 +48,7 @@ import {
 	openHub,
 	seedHub,
 	testMitZustellbaremZiel,
+	waehleOption,
 	type HubKind
 } from './helpers';
 
@@ -255,7 +256,7 @@ for (const kind of HUB_KINDS) {
 				const put = page.waitForResponse(
 					(r) => r.request().method() === 'PUT' && new URL(r.url()).pathname === hubApiPath(kind, hub.id)
 				);
-				await morgenUhrzeit(page).selectOption('09:00');
+				await waehleOption(page, morgenUhrzeit(page), '09:00');
 				const antwort = await put;
 				expect(antwort.ok(), `PUT nach Uhrzeit-Änderung HTTP ${antwort.status()}`).toBeTruthy();
 				expect(String(vi.morgen(antwort.request().postDataJSON() as Stand)).slice(0, 5)).toBe('09:00');
@@ -265,7 +266,7 @@ for (const kind of HUB_KINDS) {
 				expect(page.url()).not.toMatch(/\/edit/);
 
 				await oeffneVersand(page, kind, hub.id);
-				await expect(morgenUhrzeit(page)).toHaveValue('09:00', { timeout: 10_000 });
+				await expect(morgenUhrzeit(page)).toHaveText('09:00', { timeout: 10_000 });
 			} finally {
 				await hub.aufraeumen();
 			}
@@ -357,7 +358,7 @@ for (const kind of HUB_KINDS) {
 					await oeffneVersand(page, kind, hub.id);
 					await expect(cta(page)).toHaveText('Pausieren');
 
-					await morgenUhrzeit(page).selectOption('10:00');
+					await waehleOption(page, morgenUhrzeit(page), '10:00');
 					await cta(page).click();
 
 					await expect(cta(page)).toHaveText('Aktivieren', { timeout: 10_000 });
@@ -366,7 +367,7 @@ for (const kind of HUB_KINDS) {
 					pruefeFeldVorStatus(fertig, kind, /^10:00/);
 
 					await oeffneVersand(page, kind, hub.id);
-					await expect(morgenUhrzeit(page)).toHaveValue('10:00', { timeout: 10_000 });
+					await expect(morgenUhrzeit(page)).toHaveText('10:00', { timeout: 10_000 });
 					await expect(cta(page)).toHaveText('Aktivieren', { timeout: 10_000 });
 					const s = await stand(page, kind, hub.id);
 					expect(String(vi.morgen(s))).toMatch(/^10:00/);
@@ -386,7 +387,7 @@ for (const kind of HUB_KINDS) {
 				const { fertig } = protokolliereSchreiber(page, hubApiPath(kind, hub.id));
 				await oeffneVersand(page, kind, hub.id);
 
-				await morgenUhrzeit(page).selectOption('10:00');
+				await waehleOption(page, morgenUhrzeit(page), '10:00');
 				await kebabWaehle(page, 'Pausieren');
 
 				await expect.poll(() => fertig.length, { timeout: 10_000 }).toBe(2);
@@ -394,7 +395,7 @@ for (const kind of HUB_KINDS) {
 				pruefeFeldVorStatus(fertig, kind, /^10:00/);
 
 				await oeffneVersand(page, kind, hub.id);
-				await expect(morgenUhrzeit(page), 'die Uhrzeit überlebt Pausieren und Neuladen').toHaveValue('10:00', { timeout: 10_000 });
+				await expect(morgenUhrzeit(page), 'die Uhrzeit überlebt Pausieren und Neuladen').toHaveText('10:00', { timeout: 10_000 });
 				await kebabZeigt(page, 'Fortsetzen', 'nach dem Neuladen ist der Hub pausiert');
 				const s = await stand(page, kind, hub.id);
 				expect(String(vi.morgen(s))).toMatch(/^10:00/);
@@ -418,7 +419,7 @@ for (const kind of HUB_KINDS) {
 
 				// Feld-Änderung, PUT abwarten (eigener Commit-Pfad).
 				const feldPut = page.waitForResponse((r) => r.request().method() === 'PUT' && new URL(r.url()).pathname === pfad);
-				await morgenUhrzeit(page).selectOption('11:00');
+				await waehleOption(page, morgenUhrzeit(page), '11:00');
 				const feldAntwort = await feldPut;
 				expect(feldAntwort.ok(), `PUT nach Uhrzeit-Änderung HTTP ${feldAntwort.status()}`).toBeTruthy();
 				await expect(anzeige(page)).toHaveAttribute('data-state', 'idle', { timeout: 10_000 });
@@ -442,7 +443,7 @@ for (const kind of HUB_KINDS) {
 				await test.info().attach('vi6-status-rumpf', { body: JSON.stringify(statusRumpf), contentType: 'application/json' });
 
 				await oeffneVersand(page, kind, hub.id);
-				await expect(morgenUhrzeit(page)).toHaveValue('11:00', { timeout: 10_000 });
+				await expect(morgenUhrzeit(page)).toHaveText('11:00', { timeout: 10_000 });
 				await kebabZeigt(page, 'Fortsetzen', 'nach dem Neuladen ist der Hub pausiert');
 				const s = await stand(page, kind, hub.id);
 				expect(String(vi.morgen(s)), 'das Pausieren hat die gespeicherte Uhrzeit überschrieben').toMatch(/^11:00/);

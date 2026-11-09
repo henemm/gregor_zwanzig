@@ -106,8 +106,7 @@
 		}
 	}
 
-	function applyTemplate(event: Event) {
-		const templateId = (event.target as HTMLSelectElement).value;
+	function applyTemplate(templateId: string) {
 		if (!templateId) return;
 		const tpl = templates.find((v) => v.id === templateId);
 		if (!tpl) return;
@@ -166,13 +165,9 @@
 					<Select
 						id="template-select"
 						class="w-full"
-						onchange={applyTemplate}
-					>
-						<option value="">{$t('listen.orte.metriken.kein_template')}</option>
-						{#each templates as vorlage}
-							<option value={vorlage.id}>{vorlage.label}</option>
-						{/each}
-					</Select>
+						options={[{ value: '', label: $t('listen.orte.metriken.kein_template') }, ...templates.map((v) => ({ value: v.id, label: v.label }))]}
+						onValueChange={applyTemplate}
+					/>
 				</div>
 			{/if}
 			<div class="space-y-5 py-2">

@@ -6,6 +6,7 @@
 	import { onMount, untrack } from 'svelte';
 	import type { ReportConfig } from '$lib/types';
 	import { Checkbox } from '$lib/components/ui/checkbox';
+	import { Segmented } from '$lib/components/atoms';
 	import * as Card from '$lib/components/ui/card/index.js';
 	import { baueReportConfigPayload } from './versand-tab/reportConfigPayload.ts';
 	import { mailInhaltBausteine } from './mailInhaltKonstanten.ts';
@@ -102,30 +103,19 @@
 	<!-- Issue #722: Format-Schalter (full/compact) -->
 	<div class="space-y-1">
 		<p class="text-xs text-muted-foreground font-medium">{$t('layout.mail_inhalt.format')}</p>
-		<div class="flex gap-2" data-testid="report-email-format-switcher">
-			<label class="flex items-center gap-1.5 text-sm cursor-pointer">
-				<input
-					type="radio"
-					data-testid="report-email-format-full"
-					name="email_format"
-					value="full"
-					checked={email_format === 'full'}
-					onchange={() => { email_format = 'full'; }}
-				/>
-				{$t('layout.mail_inhalt.ausfuehrlich')}
-			</label>
-			<label class="flex items-center gap-1.5 text-sm cursor-pointer">
-				<input
-					type="radio"
-					data-testid="report-email-format-compact"
-					name="email_format"
-					value="compact"
-					checked={email_format === 'compact'}
-					onchange={() => { email_format = 'compact'; }}
-				/>
-				{$t('layout.mail_inhalt.kompakt')}
-			</label>
-		</div>
+		<!-- #2881 Lieferung B (R2): Segmented als radiogroup statt nativer Radio-Knöpfe. -->
+		<Segmented
+			rolle="radio"
+			size="md"
+			testid="report-email-format-switcher"
+			ariaLabel={$t('layout.mail_inhalt.format')}
+			options={[
+				{ value: 'full', label: $t('layout.mail_inhalt.ausfuehrlich'), testid: 'report-email-format-full' },
+				{ value: 'compact', label: $t('layout.mail_inhalt.kompakt'), testid: 'report-email-format-compact' }
+			]}
+			value={email_format}
+			onChange={(v: string) => { email_format = v === 'compact' ? 'compact' : 'full'; }}
+		/>
 		{#if email_format === 'compact'}
 			<p class="text-xs text-muted-foreground" data-testid="report-compact-hint">
 				{$t('layout.mail_inhalt.kompakt_hinweis')}
