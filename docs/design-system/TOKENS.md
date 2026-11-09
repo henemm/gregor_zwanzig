@@ -187,7 +187,7 @@ Aktiviert `font-variant-numeric: tabular-nums` ohne Font-Wechsel — für gemisc
 
 ## 12a. Dunkles Design (#2400)
 
-Alle Dark-Werte stehen als `:root[data-theme="dark"]` in `frontend/src/app.css` (direkt hinter dem hellen `:root`). Geschaltet über `<html data-theme="dark">`: Kopf-Skript in `app.html` vor dem ersten Paint (aus `localStorage gz-dark`), zur Laufzeit `applyDarkMode()` im Root-Layout. Mechanik und Begründung: `docs/reference/design_system.md`, Abschnitt „Dunkles Design".
+Alle Dark-Werte stehen als `:root[data-theme="dark"]` in `frontend/src/app.css` (direkt hinter dem hellen `:root`). Geschaltet über `<html data-theme="dark">`: Kopf-Skript in `app.html` vor dem ersten Paint (aus `localStorage gz-dark`), zur Laufzeit `applyDarkMode()` in `frontend/src/lib/darkMode.ts`. Mechanik und Begründung: `docs/reference/design_system.md`, Abschnitt „Dunkles Design".
 
 | Token | Hell | Dunkel |
 |---|---|---|
