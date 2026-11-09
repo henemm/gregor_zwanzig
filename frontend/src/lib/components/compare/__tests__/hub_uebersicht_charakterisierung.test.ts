@@ -36,6 +36,11 @@
 // Fixtures ALLE location_ids aufloesbar (Zahl gleich unter alter und neuer Regel).
 // AC-4 selbst prueft shared/hub-uebersicht/__tests__/hub_uebersicht_modell.test.ts.
 //
+// Issue #2880 (Spec rework_2880_paritaet_reiterflaeche_anlegefelder, Entscheidung 1): die
+// Uebersicht steht jetzt in der geteilten Reiterflaeche — im Golden ist allein dieser eine
+// Huell-Knoten <div class="hub-reiterflaeche" data-testid="compare-detail-uebersicht-reiterflaeche">
+// um den unveraenderten Inhalt ergaenzt (gezielt eingefuegt, nicht neu aufgenommen).
+//
 // MOBIL: `isMobileViewport` setzt CompareTabs erst im Browser per matchMedia
 // (onMount). Im SSR (svelte/server) laeuft kein onMount — gerendert wird nur der
 // Desktop-Zweig. Bewusst KEINE Produktaenderung, um Mobil zu erzwingen. Der

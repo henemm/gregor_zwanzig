@@ -39,6 +39,7 @@ const HUB_PAGE     = join(ROUTES_COMPARE, 'compare', '[id]', '+page.svelte');
 const COMPARE_TABS = join(COMPARE_DIR, 'CompareTabs.svelte');
 const MTABBAR      = join(COMPARE_DIR, '..', 'mobile', 'MTabBar.svelte');
 const HUB_UEBERSICHT = join(COMPARE_DIR, '..', 'shared', 'hub-uebersicht', 'HubUebersicht.svelte');
+const HUB_REITERFLAECHE = join(COMPARE_DIR, '..', 'shared', 'hub-reiterflaeche', 'HubReiterflaeche.svelte');
 // #2837 S1 (ADR-0110): der Breadcrumb des Hubs liegt im geteilten HubKopf (Trip und Vergleich).
 const HUB_KOPF = join(COMPARE_DIR, '..', 'shared', 'hub-kopf', 'HubKopf.svelte');
 
@@ -179,13 +180,14 @@ describe('AC-5: Compare-Hub — Tab-Buttons mit Underline statt Segmented', () =
 		);
 	});
 
-	test('AC-5c: Tab-Inhalt-Wrapper hat padding 28px 40px', () => {
-		const src = readFileSync(COMPARE_TABS, 'utf-8');
-		assert.match(
-			src,
-			/28px.*40px|padding.*28px/,
-			'Tab-Inhalt-Wrapper braucht padding: 28px 40px 80px — IST: Tailwind-Klassen'
-		);
+	test('AC-5c: Tab-Inhalt steht in der geteilten Reiterfläche mit padding 28px 40px (#2880)', () => {
+		// #2880: der Rand lebt im geteilten Baustein HubReiterflaeche (28/40/60, wie im Trip);
+		// der eigene Rand 28/40/80 von `.compare-tabs-content` ist entfallen (doppelte Einrückung).
+		// Gemessen im Browser: e2e/hub-anlegen-paritaet-flaechen.spec.ts PF-1 … PF-3.
+		const tabsSrc = readFileSync(COMPARE_TABS, 'utf-8');
+		assert.match(tabsSrc, /<HubReiterflaeche[\s>]/, 'CompareTabs.svelte rendert die geteilte Reiterfläche nicht');
+		const src = readFileSync(HUB_REITERFLAECHE, 'utf-8');
+		assert.match(src, /padding:\s*28px 40px/, 'HubReiterflaeche braucht padding: 28px 40px 60px');
 	});
 });
 
