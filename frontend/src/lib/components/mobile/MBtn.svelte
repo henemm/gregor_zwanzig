@@ -50,8 +50,8 @@
 
 	const variants = {
 		primary: { bg: 'var(--g-ink)', fg: 'var(--g-paper)', border: '1px solid var(--g-ink)' },
-		// audit:exempt — --g-accent ist hier Button-Hintergrund (bg), der Text ist #fff (keine Textfarbe)
-		accent: { bg: 'var(--g-accent)', fg: '#fff', border: '1px solid var(--g-accent)' },
+		// #2879: Accent unter Text = --g-accent-deep (Weiss darauf 7,45:1, WCAG-AA)
+		accent: { bg: 'var(--g-accent-deep)', fg: '#fff', border: '1px solid var(--g-accent-deep)' },
 		ghost: { bg: 'transparent', fg: 'var(--g-ink)', border: '1px solid var(--g-rule)' },
 		quiet: { bg: 'transparent', fg: 'var(--g-ink-2)', border: '1px solid transparent' },
 		danger: { bg: 'transparent', fg: 'var(--g-danger)', border: '1px solid var(--g-rule)' }

@@ -97,7 +97,7 @@ test.describe('Issue #214 — Btn Feature-Paritaet', () => {
 		expect(Math.round(box!.height)).toBe(28);
 	});
 
-	test('AC-14 + AC-15 + AC-16: Variant-Tokens (primary=ink+paper, destructive=danger+danger, accent=accent)', async ({
+	test('AC-14 + AC-15 + AC-16: Variant-Tokens (primary=ink+paper, destructive=danger+danger, accent=accent-deep)', async ({
 		page
 	}) => {
 		// Erwartete Token-Werte aus app.css (Light-Mode-Default, gelesen am 2026-05-13):
@@ -106,7 +106,8 @@ test.describe('Issue #214 — Btn Feature-Paritaet', () => {
 		// genannten Beispiel-Tokens (Spec war veraltet, app.css ist Quelle der Wahrheit).
 		const inkRgb = 'rgb(26, 26, 24)';
 		const paperRgb = 'rgb(246, 244, 238)';
-		const accentRgb = 'rgb(196, 90, 42)';
+		// #2879 (ADR-0110-Nachtrag): Fläche der Accent-Variante ist --g-accent-deep #8c3e1a.
+		const accentRgb = 'rgb(140, 62, 26)';
 		const dangerRgb = 'rgb(179, 58, 42)';
 
 		const primary = page.getByTestId('btn-showcase-variant-primary');

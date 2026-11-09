@@ -361,13 +361,15 @@
     background-color: color-mix(in oklab, var(--g-ink) 88%, var(--g-paper));
   }
 
+  /* #2879 (ADR-0110-Nachtrag): Accent als Flaeche unter Text = --g-accent-deep
+     (Papier darauf 6,77:1, WCAG-AA); Hover dunkler. --g-accent bleibt fuer Nicht-Text. */
   [data-slot="btn"][data-variant="accent"] {
-    background-color: var(--g-accent);
-    color: #fff;
-    border-color: var(--g-accent);
+    background-color: var(--g-accent-deep);
+    color: var(--g-paper);
+    border-color: var(--g-accent-deep);
   }
   [data-slot="btn"][data-variant="accent"]:hover {
-    background-color: color-mix(in oklab, var(--g-accent) 90%, black);
+    background-color: color-mix(in oklab, var(--g-accent-deep) 85%, black);
   }
 
   [data-slot="btn"][data-variant="outline"] {
