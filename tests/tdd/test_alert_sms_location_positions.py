@@ -1026,10 +1026,16 @@ def test_regression_trip_radar_alert_sms_text_unchanged(monkeypatch, tmp_path):
 
 
 def test_regression_compare_radar_alert_sms_text_unchanged(monkeypatch, tmp_path):
-    """Ortsvergleich-Radar-Alarm (`send_multi_location_radar_alert`) — SMS
-    byte-identisch, obwohl MEHRERE Orte beteiligt sind. Die Positions-
-    Kodierung aus AG3b gilt ausdruecklich nur fuer den Aenderungs-Pfad
-    (Spec "Known Limitations": Radar-Onset bleibt S3-Scope)."""
+    """Ortsvergleich-Radar-Alarm (`send_multi_location_radar_alert`) OHNE
+    Ortsnummern-Zuordnung — SMS-Goldstring.
+
+    FORTGESCHRIEBEN (Issue #1767, PO 2026-11-09, loest Entscheid 3b aus
+    #1948 S4 ab): die Mehrort-Kurzform nennt JEDEN ausloesenden Ort mit
+    eigenem Token. Fehlt dem Aufrufer die Ortsnummer (dieser Test uebergibt
+    keine `location_positions`), steht statt der Zahl der ASCII-Ortsname
+    (`Zermatt:R@13:08`) — nie eine geratene Zahl, nie ein Namenskopf, nie
+    `km0-0`. Die Positionsform selbst pruefen
+    `test_fix_1767_nowcast_mehrort_kurzform.py` (AC-1/AC-2)."""
     stub = _SMSStub()
     try:
         svc = NotificationService(
@@ -1052,18 +1058,19 @@ def test_regression_compare_radar_alert_sms_text_unchanged(monkeypatch, tmp_path
             svc.send_multi_location_radar_alert(
                 [("Zermatt", loc_a, nc_a), ("Chamonix", loc_b, nc_b)], {"sms"}, preset=None,
             )
-        # FORTGESCHRIEBEN (Issue #1948 S4): der Buendel-Kopf nennt den Ortsnamen
-        # des fuehrenden Events statt des gekuerzten Sammelnamens mit km0-0.
-        # `onset_time` leitet der Konstruktor aus `datetime.now()` ab -> Struktur
-        # statt Goldstring (Wanduhr-Ratsche #1940).
+        # FORTGESCHRIEBEN (Issue #1767): JEDER Ort mit eigenem Token, ohne
+        # Ortsnummer (nicht uebergeben) mit dem ASCII-Ortsnamen davor.
+        # Uhr gestellt: 12:00 UTC = 13:00 MEZ -> Zermatt +8 = 13:08,
+        # Chamonix +15 = 13:15; Reihenfolge nach Beginn (#1767 Entscheidung 1).
         texte = stub.texts()
         assert len(texte) == 1, f"Erwartet genau eine SMS, bekam: {texte!r}"
-        assert re.fullmatch(r"Zermatt: R@\d{1,2}:\d{2}", texte[0]), (
-            "Regression: der SMS-Text des Ortsvergleich-Radar-Alarms muss dem "
-            f"S4-Zielbild 'Zermatt: R@HH:MM' folgen, gemessen: {texte!r}"
+        assert texte[0] == "Zermatt:R@13:08 Chamonix:R@13:15", (
+            "Der SMS-Text des Ortsvergleich-Radar-Alarms ohne Ortsnummern muss "
+            "jeden Ort mit Namen-Token nennen ('Zermatt:R@13:08 "
+            f"Chamonix:R@13:15'), gemessen: {texte!r}"
         )
-        assert "km0" not in texte[0] and "Chamoni" not in texte[0], (
-            f"Buendel-SMS traegt noch km0-0 bzw. den Sammelnamen: {texte!r}"
+        assert "km0" not in texte[0] and ": " not in texte[0], (
+            f"Buendel-SMS traegt noch km0-0 bzw. einen Namenskopf: {texte!r}"
         )
     finally:
         stub.stop()
