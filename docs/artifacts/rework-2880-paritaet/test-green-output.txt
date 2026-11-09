@@ -84,25 +84,6 @@
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 Running 21 tests using 1 worker
 
 [1/21] [setup] › e2e/global.setup.ts:23:1 › authenticate and seed test data
@@ -120,10 +101,10 @@ Running 21 tests using 1 worker
 [13/21] [tests] › e2e/hub-anlegen-paritaet-flaechen.spec.ts:171:3 › PF-3 (1440 px): Reiter Etappen ↔ Orte — Reiterfläche mit Innenrand 28/40/60 px, direkt an Leiste und Panelrand
 [14/21] [tests] › e2e/hub-anlegen-paritaet-flaechen.spec.ts:171:3 › PF-3 (390 px): Reiter Übersicht — Reiterfläche mit Innenrand 20/16/48 px, direkt an Leiste und Panelrand
 [15/21] [tests] › e2e/hub-anlegen-paritaet-flaechen.spec.ts:171:3 › PF-3 (390 px): Reiter Etappen ↔ Orte — Reiterfläche mit Innenrand 20/16/48 px, direkt an Leiste und Panelrand
-[16/21] [tests] › e2e/hub-anlegen-paritaet-flaechen.spec.ts:330:2 › PF-6 (1440 px): Schritt-Reiter beim Anlegen — gleiche Optik je Zustand, gesperrt aria-disabled mit gleichem Marker, Optional-Pille
-[17/21] [tests] › e2e/hub-anlegen-paritaet-flaechen.spec.ts:330:2 › PF-6 (390 px): Schritt-Reiter beim Anlegen — gleiche Optik je Zustand, gesperrt aria-disabled mit gleichem Marker, Optional-Pille, ≥ 44 px
+[16/21] [tests] › e2e/hub-anlegen-paritaet-flaechen.spec.ts:335:2 › PF-6 (1440 px): Schritt-Reiter beim Anlegen — gleiche Optik je Zustand, gesperrt aria-disabled mit gleichem Marker, Optional-Pille
+[17/21] [tests] › e2e/hub-anlegen-paritaet-flaechen.spec.ts:335:2 › PF-6 (390 px): Schritt-Reiter beim Anlegen — gleiche Optik je Zustand, gesperrt aria-disabled mit gleichem Marker, Optional-Pille, ≥ 44 px
 [18/21] [tests] › e2e/hub-anlegen-paritaet-flaechen.spec.ts:261:3 › PF-4 (1440 px, de): Feldbeschriftungen Name und Region beim Anlegen gleich, Name mit Sternchen und aria-required, Hinweis rechts in der Beschriftungszeile
 [19/21] [tests] › e2e/hub-anlegen-paritaet-flaechen.spec.ts:261:3 › PF-4 (1440 px, en): Feldbeschriftungen Name und Region beim Anlegen gleich, Name mit Sternchen und aria-required, Hinweis rechts in der Beschriftungszeile
 [20/21] [tests] › e2e/hub-anlegen-paritaet-flaechen.spec.ts:261:3 › PF-5 (390 px, de): Feldbeschriftungen Name und Region beim Anlegen gleich, Name mit Sternchen und aria-required, Hinweis rechts in der Beschriftungszeile
 [21/21] [tests] › e2e/hub-anlegen-paritaet-flaechen.spec.ts:261:3 › PF-5 (390 px, en): Feldbeschriftungen Name und Region beim Anlegen gleich, Name mit Sternchen und aria-required, Hinweis rechts in der Beschriftungszeile
-  21 passed (52.7s)
+  21 passed (51.8s)
