@@ -3,6 +3,7 @@
 - **Status:** Akzeptiert (PO 2026-11-08, Analyse #2794)
 - **Datum:** 2026-11-03
 - **Bezug:** Epic #2791, Scheiben S3a #2794, S3b #2795, S5 #2797, Kontext `docs/context/einstellungen_neu.md` §2, §5, §7; Mockup `docs/context/einstellungen_neu/seiten/mockup-hub-fassung3.html` (vom PO angenommen 2026-11-03); präzisiert ADR-0097 Punkt 1 (die geteilten Tab-Organismen heißen künftig Wetter und Zustellung statt Wertebereiche/Layout/Versand); bestätigt ADR-0032 (progressive Reiter mit Auto-Save), ADR-0050 (Grundauswahl ist das Maximum), ADR-0059 (Ausblick verhält sich wie ein Kanal), ADR-0035 (ein Tagesfenster); hängt an ADR-0106. Bisher gab es kein Design-ADR zur Reiterstruktur (`docs/specs/modules/feat_1743_reiter_aufraeumen.md:486`).
+- **Ergänzt durch:** ADR-0111 (Design-Vorgaben bereinigt, Issue #2881)
 
 ## Kontext
 

@@ -3,6 +3,7 @@
 - **Status:** Akzeptiert
 - **Datum:** 2026-11-06
 - **Bezug:** Issue #2837 (Scheibe S1 Hub-Kopf, Scheibe S2 Anlege-Rahmen), Epic #2345 (DoD-2 Oberfläche); Spec `docs/specs/modules/rework_2837_s1_hub_kopf.md`; schreibt ADR-0097 (Trip und Ortsvergleich teilen ihren Code) fort; Leitprinzip „Hoher Kontrast = Lesbarkeit“ (`docs/reference/design_system.md`).
+- **Ergänzt durch:** ADR-0111 (Design-Vorgaben bereinigt, Issue #2881)
 
 ## Kontext
 
