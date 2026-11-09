@@ -682,8 +682,16 @@ def to_multi_location_onset_alert_message(
             # Ausdehnung (`km_from=km_to=0.0`, nie `rain_zones`).
             convective_checked=getattr(nc, "convective_checked", True),
         ))
+    # Issue #1767 (Entscheidung 1): EINE Reihenfolge fuer alle Kanaele --
+    # frueherer Beginn zuerst (laufend = Minute 0), Gleichstand in der
+    # Eingangsreihenfolge (= `preset["location_ids"]`, stabile Sortierung).
+    order = sorted(
+        range(len(events)),
+        key=lambda i: 0 if events[i].already_running else events[i].onset_minutes,
+    )
+    events = [events[i] for i in order]
     trip_short = (
-        ", ".join(name for name, _loc, _nc in valid_groups)
+        ", ".join(valid_groups[i][0] for i in order)
         if multi else valid_groups[0][0]
     )
     return AlertMessage(

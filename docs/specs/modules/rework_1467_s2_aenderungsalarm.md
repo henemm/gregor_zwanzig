@@ -378,6 +378,9 @@ Bedingung, andere Aussage.
   `internal/scheduler/scheduler.go` (zwei `*/15`-Jobs) bleiben unangetastet.
 - Radar-Onset- und amtliche Telegram-Nachrichten bleiben gebündelt (bewusst NICHT auf
   „eine je Ort" umgestellt — das wäre S3/S4-Scope).
+  - **Vermerk #1767 (2026-11-09):** gilt weiter — der Radar-Onset bleibt EINE gebündelte
+    Nachricht; nur ihr Inhalt ist vollständig: eine Zeile je Ort (Telegram-Langform) bzw. ein
+    `pos:token` je Ort (SMS, Premium-SMS, Telegram-Kurzstil), Positionen wie hier (AG3b).
 - **Der Handversand prüft den Stilllegungs-Riegel NICHT — PO-Entscheidung 2026-08-04, Anlass
   Adversary-Fund F002 (Runde 1).** `src/services/scheduler_dispatch_service.py:425-458`
   (`send_compare_preset`, Endpunkt `POST /api/scheduler/compare-presets/{id}/send`) ruft
