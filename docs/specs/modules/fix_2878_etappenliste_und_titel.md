@@ -102,6 +102,8 @@ Zwei Darstellungsfehler aus dem Design-Audit vom 9.11.2026 (Stand `origin/main` 
 - Der Vergleich hat in der Übersicht keine Ortsliste; ein Gleichstand für D1 ist daher nicht messbar.
 - Die Übersicht wird mit #2794 nicht umgebaut; die Lösung bleibt danach gültig.
 
+- **Löst eine ältere Festlegung ab:** `trip-hub-kopf-region-aktivitaet.spec.ts` AC-18 (#2284 S2) verlangte am Handy einen einzeiligen Titel mit Auslassungspunkten. Diese Spec ersetzt das durch den umbrechenden Titel (AC-3/AC-4); der Test wurde umgestellt, Schriftgröße 20 px und „kein waagerechtes Scrollen“ bleiben geprüft. Ebenso prüft `hub_kopf_baustein.test.ts` AC-6 (#2837 S1) jetzt, dass Status und Titelgruppe in derselben Titelzeile stehen.
+
 ## Architektur-Entscheidung (ADR)
 
 - **ADR-Nr.:** keine. Reiner Darstellungsfehler; wendet ADR-0097 (geteilter Baustein) an.
