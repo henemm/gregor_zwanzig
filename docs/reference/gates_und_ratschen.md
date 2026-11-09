@@ -637,7 +637,9 @@ Skripten/Skills aufgerufen: `staging_gate.py`, `prod_selftest.py`, `briefing_mai
 **Außer Dienst seit ADR-0111 (#2881, 2026-11-09):** das Design-Gate `pre_issue_close_design_gate.py`
 (blockte `gh issue close` bei Label `design-compliance` ohne Design-Diff-Artefakt, #603) und sein
 Messwerkzeug `design_fidelity_diff.py`. Der Hook-Eintrag in `.claude/settings.json` entfällt, die
-Skripte bleiben mit Vermerk liegen. Grund: die Soll-Bilder `claude-code-handoff/current/soll/*.png`
+Skripte bleiben mit Vermerk liegen. **Stand 2026-11-09:** Austragung und Vermerk stehen noch aus und
+folgen aus der Server-Sitzung (die Cloud-Sitzung darf ihre eigene Hook-Konfiguration nicht ändern,
+PO-Entscheidung); bis dahin greift das Gate weiter bei `gh issue close` mit Label `design-compliance`. Grund: die Soll-Bilder `claude-code-handoff/current/soll/*.png`
 sind historisch (Juni 2026, zeigen u. a. den entfernten Signal-Kanal), und die Pixel-Differenz ließ auf
 großen Papierflächen völlig andere Layouts bestehen. **Ersatz (Regel-Budget):** die Playwright-
 Kontrast- und Paritätstests `kontrast-trip-vergleich.spec.ts` (#2879), `hub-anlegen-paritaet-flaechen.spec.ts`
