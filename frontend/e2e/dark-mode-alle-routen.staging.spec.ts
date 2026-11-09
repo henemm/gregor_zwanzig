@@ -278,3 +278,222 @@ for (const [os, dunkel] of [
 		await ctx.close();
 	});
 }
+
+// ─── Gemeinsame Messung: Statusboxen und Flächen ──────────────────────────────
+
+/** Statusbox-Muster der Auth-/Konto-Seiten (Erfolg/Warnung/Fehler): `rounded-md border p-3 text-sm`. */
+const STATUSBOX = '.rounded-md.border.p-3.text-sm';
+
+interface BoxMessung {
+	text: string;
+	rand: string;
+	boxGrund: string;
+	seitenGrund: string;
+}
+
+/** Misst je sichtbarer Statusbox: Rand, effektiven Boxen-Grund (transparente Schichten gemischt), Seitengrund. */
+async function boxMessungen(page: Page): Promise<BoxMessung[]> {
+	return page.evaluate((sel) => {
+		type RGBA = [number, number, number, number];
+		const parse = (c: string): RGBA => {
+			const m = /rgba?\(([^)]+)\)/.exec(c);
+			if (!m) return [0, 0, 0, 0];
+			const [r, g, b, a = 1] = m[1].split(/[\s,/]+/).filter(Boolean).map(parseFloat);
+			return [r, g, b, a];
+		};
+		const over = (oben: RGBA, unten: [number, number, number]): [number, number, number] => [
+			oben[0] * oben[3] + unten[0] * (1 - oben[3]),
+			oben[1] * oben[3] + unten[1] * (1 - oben[3]),
+			oben[2] * oben[3] + unten[2] * (1 - oben[3])
+		];
+		const grundBis = (el: Element | null, einschliesslich: boolean): [number, number, number] => {
+			const kette: Element[] = [];
+			for (let e = el; e; e = e.parentElement) kette.unshift(e);
+			if (!einschliesslich) kette.pop();
+			let g: [number, number, number] = [255, 255, 255];
+			for (const e of kette) g = over(parse(getComputedStyle(e).backgroundColor), g);
+			return g;
+		};
+		const rgb = (c: number[]) => `rgb(${c.map((v) => Math.round(v)).join(', ')})`;
+		return Array.from(document.querySelectorAll(sel))
+			.filter((el) => el.checkVisibility({ opacityProperty: true, visibilityProperty: true }))
+			.map((el) => {
+				const cs = getComputedStyle(el);
+				const seiten = grundBis(el, false);
+				const randRoh = parse(cs.borderTopColor);
+				return {
+					text: (el.textContent ?? '').trim().slice(0, 60),
+					rand: rgb(over(randRoh, seiten)),
+					boxGrund: rgb(grundBis(el, true)),
+					seitenGrund: rgb(seiten)
+				};
+			});
+	}, STATUSBOX);
+}
+
+/** AC-9: Schrift in jeder Box ≥ 4,5:1 (Wert gegen Boxen-Grund), Rand ODER Tönung ≥ 3:1 gegen den Seitengrund. */
+async function pruefeStatusboxen(page: Page, label: string, mindestens = 1) {
+	const boxen = await boxMessungen(page);
+	expect(boxen.length, `${label}: keine Statusbox erzeugt`).toBeGreaterThanOrEqual(mindestens);
+	const probleme: string[] = [];
+	for (let i = 0; i < boxen.length; i++) {
+		const b = boxen[i];
+		const text = kontrastBericht(`${label} box#${i}`, kontrastVerstoesse(await messeKontrast(page.locator(STATUSBOX).nth(i))));
+		probleme.push(...text);
+		const rand = kontrastVerhaeltnis(b.rand, b.seitenGrund);
+		const toenung = kontrastVerhaeltnis(b.boxGrund, b.seitenGrund);
+		if (Math.max(rand, toenung) < 3) {
+			probleme.push(`${label} box#${i} ${JSON.stringify(b.text)}: Rand ${rand.toFixed(2)}:1, Tönung ${toenung.toFixed(2)}:1 < 3:1 gegen Seitengrund`);
+		}
+	}
+	expect(probleme, `${label}: Statusboxen`).toEqual([]);
+}
+
+// ─── AC-9: Statusboxen (Erfolg/Fehler) in Hell und Dunkel ─────────────────────
+// Ausgelöst ohne Seiteneffekte: Hinweis-Parameter der Login-Seite, falsche Anmeldung für eine
+// nicht existierende Adresse, Fantasie-Adresse bei „Passwort vergessen" (Seite zeigt immer
+// dieselbe neutrale Erfolgsmeldung, Backend sendet an unbekannte Adresse nichts), ungültige
+// Bestätigung/Zurücksetzung mit erfundenem Token (Server lehnt ab, nichts wird verändert).
+
+test.describe('AC-9 Statusboxen', () => {
+	test.use({ storageState: { cookies: [], origins: [] } });
+	const FANTASIE = `dark-mode-pruefung-${Date.now()}@example.invalid`;
+	for (const dunkel of [false, true]) {
+		const modus = dunkel ? 'dunkel' : 'hell';
+
+		test(`AC-9 ${modus} /login: Erfolgs-, Abgelaufen- und Fehlerbox (falsches Passwort)`, async ({ page }) => {
+			await setzeDunkel(page, dunkel);
+			await page.goto('/login?registered=1&expired=1');
+			await page.waitForLoadState('networkidle');
+			await pruefeStatusboxen(page, `${modus} /login Hinweise`, 2);
+			await page.goto('/login');
+			await page.waitForLoadState('networkidle');
+			await page.fill('input[name="username"]', FANTASIE);
+			await page.fill('input[name="password"]', 'falsches-passwort-xyz');
+			await page.click('form[action="?/login"] button[type="submit"]');
+			await expect(page.locator(STATUSBOX).first()).toBeVisible();
+			await pruefeStatusboxen(page, `${modus} /login Fehler`);
+		});
+
+		test(`AC-9 ${modus} /forgot-password: neutrale Erfolgsbox für Fantasie-Adresse`, async ({ page }) => {
+			await setzeDunkel(page, dunkel);
+			await page.goto('/forgot-password');
+			await page.waitForLoadState('networkidle');
+			await page.fill('input[name="username"]', FANTASIE);
+			await page.click('form button[type="submit"]');
+			await expect(page.locator(STATUSBOX).first()).toBeVisible();
+			await pruefeStatusboxen(page, `${modus} /forgot-password Erfolg`);
+		});
+
+		test(`AC-9 ${modus} /verify-email: Fehlerbox (unvollständig) und abgelehnter Fantasie-Token`, async ({ page }) => {
+			await setzeDunkel(page, dunkel);
+			await page.goto('/verify-email');
+			await page.waitForLoadState('networkidle');
+			await pruefeStatusboxen(page, `${modus} /verify-email unvollständig`);
+			await page.goto('/verify-email?user=u-00000000&token=erfundener-token-0000');
+			await page.waitForLoadState('networkidle');
+			await page.click('form button[type="submit"]');
+			await expect(page.locator(STATUSBOX).first()).toBeVisible();
+			await pruefeStatusboxen(page, `${modus} /verify-email abgelehnt`);
+		});
+
+		test(`AC-9 ${modus} /reset-password: Fehlerbox bei erfundenem Token`, async ({ page }) => {
+			await setzeDunkel(page, dunkel);
+			await page.goto('/reset-password?user=u-00000000&token=erfundener-token-0000');
+			await page.waitForLoadState('networkidle');
+			await page.fill('input[name="new_password"]', 'Pruefung-Dark-12345');
+			await page.click('form button[type="submit"]');
+			await expect(page.locator(STATUSBOX).first()).toBeVisible();
+			await pruefeStatusboxen(page, `${modus} /reset-password Fehler`);
+		});
+	}
+});
+
+test.describe('AC-9 Statusboxen eingeloggt (account, gpx-upload)', () => {
+	for (const dunkel of [false, true]) {
+		test(`AC-9 ${dunkel ? 'dunkel' : 'hell'}: vorhandene Boxen auf /account und /gpx-upload`, async ({ page }) => {
+			await setzeDunkel(page, dunkel);
+			for (const pfad of ['/account', '/gpx-upload']) {
+				await page.goto(pfad);
+				await page.waitForLoadState('networkidle');
+				// Keine Aktion ausgelöst (würde Daten verändern): gemessen wird, was die Seite von sich aus zeigt.
+				await pruefeStatusboxen(page, `${dunkel ? 'dunkel' : 'hell'} ${pfad}`, 0);
+			}
+		});
+	}
+});
+
+// ─── AC-13: Trip und Ortsvergleich als ausdrückliches Paar ────────────────────
+
+for (const vp of VIEWPORTS) {
+	test(`AC-13 ${vp.name}: Editor-Flächen in /trips/<id>/edit und /compare/<id>/edit verhalten sich gleich`, async ({ page }) => {
+		test.setTimeout(180_000);
+		await page.setViewportSize(vp);
+		await setzeDunkel(page, true);
+		const tripId = await ersteId(page, '/trips');
+		const compareId = await ersteId(page, '/compare');
+		expect(tripId, 'Staging-Nutzer ohne Trip').not.toBeNull();
+		expect(compareId, 'Staging-Nutzer ohne Ortsvergleich').not.toBeNull();
+		const messung = async (pfad: string) => {
+			await page.goto(pfad);
+			await page.waitForLoadState('networkidle');
+			await page.screenshot({ path: test.info().outputPath(`dark-paar-${vp.name}${pfad.replace(/\//g, '_')}.png`), fullPage: true });
+			const vorhanden = async (testid: string) => (await page.getByTestId(testid).count()) > 0;
+			return {
+				pfad,
+				text: kontrastBericht(`${vp.name} ${pfad}`, kontrastVerstoesse(await messeKontrast(page))),
+				hell: await helleFlaechen(page),
+				saveIndicator: await vorhanden('save-indicator'),
+				korridorEditor: (await page.locator('[data-testid^="corridor-editor-"]').count()) > 0,
+				offlineHinweis: await vorhanden('offline-sperre-hinweis')
+			};
+		};
+		const trip = await messung(`/trips/${tripId}/edit`);
+		const vergleich = await messung(`/compare/${compareId}/edit`);
+		for (const m of [trip, vergleich]) {
+			expect(m.text, `${m.pfad}: Text < 4,5:1`).toEqual([]);
+			expect(m.hell, `${m.pfad}: helle Flächen auf dunklem Grund`).toEqual([]);
+		}
+		// Gleiche Behandlung: dieselben Editor-Bausteine sind in beiden Editoren da (oder in keinem).
+		expect(
+			{ saveIndicator: vergleich.saveIndicator, korridorEditor: vergleich.korridorEditor, offlineHinweis: vergleich.offlineHinweis },
+			'Trip- und Vergleich-Editor zeigen nicht dieselben Editor-Flächen'
+		).toEqual({ saveIndicator: trip.saveIndicator, korridorEditor: trip.korridorEditor, offlineHinweis: trip.offlineHinweis });
+	});
+}
+
+// ─── AC-14: Ortsvergleich-Karte (LocationPreviewMap / Leaflet) ────────────────
+
+test('AC-14: Ortsvergleich-Karte hat Rand ≥ 3:1 und lesbare Beschriftung/Zoom-Knöpfe (≥ 4,5:1) im Dunkelmodus', async ({ page }) => {
+	await setzeDunkel(page, true);
+	const compareId = await ersteId(page, '/compare');
+	expect(compareId, 'Staging-Nutzer ohne Ortsvergleich').not.toBeNull();
+	const probleme: string[] = [];
+	let gesehen = 0;
+	for (const pfad of [`/compare/${compareId}`, `/compare/${compareId}/edit`]) {
+		await page.goto(pfad);
+		await page.waitForLoadState('networkidle');
+		const rahmen = page.locator('.g-karten-rahmen, .leaflet-container');
+		const n = await rahmen.count();
+		for (let i = 0; i < n; i++) {
+			const karte = rahmen.nth(i);
+			if (!(await karte.isVisible())) continue;
+			gesehen++;
+			const z = await karte.evaluate((el) => {
+				const cs = getComputedStyle(el);
+				const eltern = el.parentElement ? getComputedStyle(el.parentElement) : cs;
+				const rand = parseFloat(cs.borderTopWidth) > 0 ? cs.borderTopColor : eltern.borderTopColor;
+				return { rand, grund: getComputedStyle(document.body).backgroundColor };
+			});
+			const verh = kontrastVerhaeltnis(z.rand, z.grund);
+			if (verh < 3) probleme.push(`${pfad} Karte#${i}: Rand ${verh.toFixed(2)}:1 < 3:1`);
+			// Beschriftung der Vorschau (Koordinaten) bzw. Zoom-Knöpfe/Attribution von Leaflet.
+			const ziele = karte.locator('p, .leaflet-control-zoom a, .leaflet-control-attribution');
+			for (let j = 0; j < (await ziele.count()); j++) {
+				probleme.push(...kontrastBericht(`${pfad} Karte#${i}`, kontrastVerstoesse(await messeKontrast(ziele.nth(j)))));
+			}
+		}
+	}
+	test.skip(gesehen === 0, 'keine Ortsvergleich-Karte (.g-karten-rahmen/.leaflet-container) auf Detail- und Editor-Seite sichtbar');
+	expect(probleme, 'Ortsvergleich-Karte im Dark').toEqual([]);
+});

@@ -95,7 +95,7 @@ Statusboxen tragen Grund, Schrift und Rand aus dem Paar (`border border-[var(--g
 **Mechanik (eine Quelle):** Alle Dark-Werte stehen im Block `:root[data-theme="dark"]` in `frontend/src/app.css`, direkt hinter dem hellen `:root` (Kontrasttests lesen per Regex den ersten, hellen Treffer). `--color-*` folgen über `@theme` → `var(--g-*)` automatisch. Geschaltet wird allein über das Attribut `<html data-theme="dark">`:
 
 - **Vor dem ersten Paint** setzt ein Inline-Skript im `<head>` von `frontend/src/app.html` (und `frontend/static/offline.html`) aus `localStorage gz-dark` das Attribut, `color-scheme` und `<meta name="theme-color">` (dunkel `#141412`, hell `#f6f4ee`). Kein Hell-Blitz beim Neuladen.
-- **Zur Laufzeit** schaltet `applyDarkMode()` in `frontend/src/routes/+layout.svelte` dieselben drei Dinge (Umschalter „Dunkles Design" in Sidebar und Konto-Blatt).
+- **Zur Laufzeit** schaltet `applyDarkMode()` in `frontend/src/lib/darkMode.ts` (kein Inline-Style mehr in `+layout.svelte`) dieselben drei Dinge (Umschalter „Dunkles Design" in Sidebar und Konto-Blatt).
 - Ohne gespeicherte Wahl startet die App hell; `prefers-color-scheme` wird bewusst nicht ausgewertet.
 - `@custom-variant dark` bindet `dark:`-Klassen an das Attribut, nicht an das Betriebssystem.
 - Kommt später eine CSP, braucht das Kopf-Skript einen Hash/Nonce (`kit.csp`).
@@ -117,7 +117,7 @@ Statusboxen tragen Grund, Schrift und Rand aus dem Paar (`border border-[var(--g
 
 **Akzent im Dunklen:** `--g-accent-deep` ist im Bestand zugleich Fläche (Knöpfe, Avatar) und Textfarbe (aktive Labels, Kennzahlen, Links). Ein dunkles `#8c3e1a` wäre als Text auf dunklem Grund unlesbar (≈ 1,7:1), darum wird es im Dunklen hell (`#e07a4a`) und die Schrift darauf dunkel (`--g-on-accent` = `#141412`, 6,19:1). Im Hellen bleibt Weiß auf `#8c3e1a` (7,45:1). Schrift auf Akzentflächen deshalb immer `var(--g-on-accent)`, nie `#fff`. Der Hover einer Akzentfläche hellt im Dunklen auf statt abzudunkeln.
 
-Bewusst fest bleiben Wetter-/Risikofarben, Scrims, Leaflet-Kacheln und Mails. Kontrast-Tabellen hell und dunkel: `python3 scripts/contrast_audit.py`, Anzeige auf `/_design`. Prüftests: `dark_palette_kontrast.test.ts`, `dark_mechanik.test.ts`, `offline_dark_konsistenz.test.ts`, Staging-Durchlauf `frontend/e2e/dark-mode-alle-routen.staging.spec.ts`.
+Bewusst fest bleiben Wetter-/Risikofarben, Scrims, Leaflet-Kacheln, Mails und die weißen Knöpfe der Schalter (`atoms/Switch.svelte`, `mobile/MSwitch.svelte`; in der Ausnahmeliste der Ratsche mit je 1). Kontrast-Tabellen hell und dunkel: `python3 scripts/contrast_audit.py`, Anzeige auf `/_design`. Prüftests: `dark_palette_kontrast.test.ts`, `dark_mechanik.test.ts`, `offline_dark_konsistenz.test.ts`, Staging-Durchlauf `frontend/e2e/dark-mode-alle-routen.staging.spec.ts`.
 
 ### Wetter (aus echten Email-Reports abgeleitet)
 | Token | Hex | Bedeutung |
