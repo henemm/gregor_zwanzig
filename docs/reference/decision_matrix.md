@@ -286,7 +286,7 @@ einen bereits vorhandenen Grundvorhersage-Fallback (#1115) **nicht**
 Der Radar-Pfad dominiert den API-Verbrauch (#1329): geteilter Forecast-Cache +
 Budget-/Prioritätssteuerung sind aktiv. Bei Änderungen an Abruf-Pfaden immer
 den Kontingent-Effekt mitdenken; Verbrauchslog: `openmeteo_calls.jsonl`
-(erfasst den Radar-Pfad NICHT).
+(erfasst den Radar-Pfad NICHT; rotiert ab 8 MiB nach `.1`, Auswertung liest beide Generationen, #2883).
 
 **Gemessene Lastspitze zu `:00`/`:30` (#1628, 9-Tage-Fenster 2026-08-01 bis
 08-09):** Radar-Fehlschläge kommen ausschließlich als HTTP 503 mit

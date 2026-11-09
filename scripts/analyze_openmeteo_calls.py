@@ -39,8 +39,17 @@ def _default_path() -> Path:
 
 
 def _load(path: Path) -> list[dict]:
-    if not path.exists():
+    """Issue #2883: liest zuerst die Vorgaenger-Generation ``<pfad>.1`` (falls
+    vorhanden), dann die aktuelle Datei. Fehlende Dateien sind kein Fehler."""
+    prev = path.with_name(path.name + ".1")
+    if not path.exists() and not prev.exists():
         print(f"Keine Logdatei gefunden: {path}")
+        return []
+    return _read_rows(prev) + _read_rows(path)
+
+
+def _read_rows(path: Path) -> list[dict]:
+    if not path.exists():
         return []
     rows: list[dict] = []
     for line in path.read_text().splitlines():

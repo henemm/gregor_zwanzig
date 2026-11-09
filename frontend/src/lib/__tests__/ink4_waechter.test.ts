@@ -23,8 +23,14 @@ import { fileURLToPath } from 'node:url';
 
 const FRONTEND_SRC = join(fileURLToPath(new URL('.', import.meta.url)), '..', '..');
 
-/** Nur `color:` — nicht `background-color`/`border-color`/`text-decoration-color`. */
-const TREFFER = /(?<![-\w])color\s*:\s*var\(--g-ink-4\)/;
+/**
+ * Nur Textfarbe — nicht `background-color`/`border-color`/`text-decoration-color`/`stroke`.
+ * Drei Schreibweisen: CSS `color: var(--g-ink-4)`, Interpolation im style-Attribut
+ * `color:{… 'var(--g-ink-4)' …}` und Svelte-Direktive `style:color="var(--g-ink-4)"`
+ * bzw. `style:color={… 'var(--g-ink-4)' …}` (Ternär).
+ */
+const TREFFER =
+	/(?<![-\w])color\s*:\s*(?:var\(--g-ink-4\)|\{[^}]*['"]var\(--g-ink-4\)['"])|(?<![-\w])style:color=(?:"var\(--g-ink-4\)"|\{[^}]*['"]var\(--g-ink-4\)['"])/;
 
 /** Scope aus der Spec: hier muss der Zähler 0 sein. */
 const SCOPE = [
@@ -35,7 +41,9 @@ const SCOPE = [
 	'routes/archiv/+page.svelte',
 	'lib/components/compare/steps/Step2Orte.svelte',
 	'lib/components/shared/corridor-editor/CorridorEditor.svelte',
-	'lib/components/shared/corridor-editor/CorridorEditorMobile.svelte'
+	'lib/components/shared/corridor-editor/CorridorEditorMobile.svelte',
+	// Hinweistext unter Feldern in /compare/new (CompareNewEditor rendert <Field hint=…>)
+	'lib/components/molecules/Field.svelte'
 ];
 
 /** Bestand außerhalb des Scopes: Obergrenze je Datei, darf nur sinken. */
@@ -56,9 +64,18 @@ const AUSNAHMEN: Record<string, number> = {
 	'lib/components/mobile/StageCardM.svelte': 2,
 	'lib/components/trip-detail/WeatherV2Kanaele.svelte': 2,
 	'lib/components/trip-detail/waypoints/EtappenStrip.svelte': 2,
-	'lib/components/trip-detail/waypoints/StageCard.svelte': 1,
+	// 1× CSS + 1× Interpolation `color:{active ? … : 'var(--g-ink-4)'}` (ab #2371 mitgezaehlt)
+	'lib/components/trip-detail/waypoints/StageCard.svelte': 2,
 	'routes/compare/+page.svelte': 1,
-	'routes/trips/+page.svelte': 1
+	'routes/trips/+page.svelte': 1,
+	// Svelte-Direktive `style:color` (ab Waechter-Erweiterung #2371 mitgezaehlt)
+	'lib/components/atoms/Stat.svelte': 3,
+	'lib/components/mobile/DrawerGroup.svelte': 1,
+	'lib/components/mobile/Sheet.svelte': 1,
+	'lib/components/molecules/BriefingTimelineRow.svelte': 1,
+	'lib/components/organisms/MetricOffShelf.svelte': 2,
+	'lib/components/organisms/PresetRail.svelte': 1,
+	'lib/components/organisms/SubscriptionCard.svelte': 2
 };
 
 /** Zählt gemeldete Zeilen eines Quelltexts (reine Funktion, auch für die Gegenproben). */
@@ -104,6 +121,26 @@ test('AC-4: Scanner meldet Fließtext, lässt Platzhalter-Regeln, disabled und a
 	assert.equal(zaehleVerstoesse('<svg style="color: var(--g-ink-4)"/> <!-- audit:exempt: Symbol -->'), 0);
 	assert.equal(zaehleVerstoesse('<!-- audit:exempt: Symbol -->\n<svg style="color: var(--g-ink-4)"/>'), 0);
 	assert.equal(zaehleVerstoesse('<div style="background-color: var(--g-ink-4)"></div>'), 0);
+});
+
+test('AC-4: Scanner meldet auch die Svelte-Direktive style:color, aber nicht background/border/stroke', () => {
+	assert.equal(zaehleVerstoesse('<div\n\tstyle:font-size="12px"\n\tstyle:color="var(--g-ink-4)"\n>x</div>'), 1);
+	assert.equal(zaehleVerstoesse(`<span style:color={on ? 'var(--g-ink)' : 'var(--g-ink-4)'}>x</span>`), 1);
+	assert.equal(zaehleVerstoesse('<span style:color="var(--g-ink-4)"></span> <!-- audit:exempt: Symbol -->'), 0);
+	assert.equal(zaehleVerstoesse('<!-- audit:exempt: Symbol -->\n<svg style:color="var(--g-ink-4)"/>'), 0);
+	assert.equal(zaehleVerstoesse('<div style:background-color="var(--g-ink-4)"></div>'), 0);
+	assert.equal(zaehleVerstoesse('<div style:border-color="var(--g-ink-4)"></div>'), 0);
+	assert.equal(zaehleVerstoesse('<path style:stroke="var(--g-ink-4)"/>'), 0);
+	assert.equal(zaehleVerstoesse('<span style:color="var(--g-ink-3)">x</span>'), 0);
+});
+
+test('AC-4: Scanner meldet Interpolation color:{…} im style-Attribut, nicht background/border', () => {
+	assert.equal(zaehleVerstoesse(`<span style="font-size:9px; color:{active ? 'var(--g-accent-deep)' : 'var(--g-ink-4)'};">x</span>`), 1);
+	assert.equal(zaehleVerstoesse(`<span style="color: {on ? "var(--g-ink-4)" : 'var(--g-ink)'}">x</span>`), 1);
+	assert.equal(zaehleVerstoesse(`<span style="background:{on ? 'var(--g-ink)' : 'var(--g-ink-4)'}">x</span>`), 0);
+	assert.equal(zaehleVerstoesse(`<span style="border-color:{on ? 'var(--g-ink)' : 'var(--g-ink-4)'}">x</span>`), 0);
+	assert.equal(zaehleVerstoesse(`<span style="color:{on ? 'var(--g-ink)' : 'var(--g-ink-3)'}">x</span>`), 0);
+	assert.equal(zaehleVerstoesse(`<!-- audit:exempt: Symbol -->\n<svg style="color:{on ? 'a' : 'var(--g-ink-4)'}"/>`), 0);
 });
 
 test('AC-6: Scope-Dateien (Anlege-Editoren, Rahmen, Archiv, Organismen) haben 0 Treffer', () => {

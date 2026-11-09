@@ -24,10 +24,8 @@ SPEC: docs/specs/modules/warn_service_consumption.md
 from __future__ import annotations
 
 import contextvars
-import fcntl
 import json
 import logging
-import os
 import time
 from contextlib import contextmanager
 from datetime import datetime, timezone
@@ -36,6 +34,7 @@ from typing import Any, Callable, Iterator, Optional
 
 from services import alert_input_capture
 from services.single_flight import SingleFlight
+from utils.journal_rotation import rotate_if_needed
 
 logger = logging.getLogger("warn_egress")
 
@@ -224,22 +223,12 @@ def _rotate_if_needed(path: Path) -> None:
     ``<path>.lock`` und erneute Groessenpruefung UNTER der Sperre: ein zweiter
     Thread, der ebenfalls die volle Datei sah, darf die gerade erzeugte ``.1``
     nicht mit der frischen, kleinen aktuellen Datei ueberschreiben (Spec
-    fix_2224, AC-4). Jeder Fehler wird geschluckt (AC-5)."""
-    try:
-        try:
-            if path.stat().st_size < WARN_JOURNAL_MAX_BYTES:
-                return
-        except FileNotFoundError:
-            return
-        with open(path.with_name(path.name + ".lock"), "a") as lock_fh:
-            fcntl.flock(lock_fh, fcntl.LOCK_EX)
-            try:
-                if path.stat().st_size >= WARN_JOURNAL_MAX_BYTES:
-                    os.replace(path, path.with_name(path.name + ".1"))
-            finally:
-                fcntl.flock(lock_fh, fcntl.LOCK_UN)
-    except Exception:
-        pass  # Rotation darf den Abruf NIE beeintraechtigen
+    fix_2224, AC-4). Jeder Fehler wird geschluckt (AC-5).
+
+    Issue #2883: die Logik liegt im gemeinsamen Helfer
+    ``utils.journal_rotation.rotate_if_needed``; die Schwelle wird hier zur
+    AUFRUFZEIT gelesen (monkeypatch-Naht der #2224-Tests)."""
+    rotate_if_needed(path, WARN_JOURNAL_MAX_BYTES)
 
 
 def _parse_retry_after(headers: Any) -> Optional[float]:

@@ -31,7 +31,7 @@
 	{#if sub}
 		<div
 			style:font-size="12px"
-			style:color="var(--g-ink-4)"
+			style:color="var(--g-ink-3)"
 			style:margin-top="6px"
 			style:line-height="1.4"
 		>{sub}</div>

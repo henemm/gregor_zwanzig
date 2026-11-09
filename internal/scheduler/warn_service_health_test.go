@@ -570,7 +570,7 @@ func TestWarnServiceHealth_RotationZwischenDenOeffnungen(t *testing.T) {
 	cur := filepath.Join(tmpDir, "diagnostics", "warn_service_calls.jsonl")
 
 	rotated := false
-	warnJournalBetweenOpens = func() {
+	journalBetweenOpens = func() {
 		rotated = true
 		if err := os.Rename(cur, cur+".1"); err != nil {
 			t.Errorf("rotate: %v", err)
@@ -580,7 +580,7 @@ func TestWarnServiceHealth_RotationZwischenDenOeffnungen(t *testing.T) {
 			t.Errorf("write new current: %v", err)
 		}
 	}
-	t.Cleanup(func() { warnJournalBetweenOpens = nil })
+	t.Cleanup(func() { journalBetweenOpens = nil })
 
 	health := sched.WarnServiceHealth()
 	if !rotated {

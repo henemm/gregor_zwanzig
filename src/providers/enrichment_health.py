@@ -19,6 +19,8 @@ import json
 from datetime import datetime, timezone
 from typing import Optional
 
+from utils.journal_rotation import rotate_if_needed
+
 # Pfad-Vokabular: die degradierbaren Anreicherungs-Pfade. Der Go-Aggregator
 # gruppiert bereits generisch nach `path` als freiem String -- ein neuer Wert
 # hier erscheint automatisch als eigener Schluessel, ohne Aenderung an
@@ -54,6 +56,11 @@ OUTCOME_SELF_THROTTLED = "self_throttled"
 
 _JOURNAL_UNTERPFAD = ("diagnostics", "enrichment_calls.jsonl")
 
+# Issue #2883: groessenbasierte Rotation mit genau EINER Vorgaenger-Generation
+# (``<journal>.1``, Muster #2224). Zur Aufrufzeit gelesen, in Tests per
+# ``monkeypatch`` ueberschreibbar.
+ENRICHMENT_JOURNAL_MAX_BYTES = 8 * 1024 * 1024
+
 
 def log_enrichment_call(
     path: str, outcome: str, detail: Optional[str] = None,
@@ -82,6 +89,7 @@ def log_enrichment_call(
 
         jpath = get_data_root().joinpath(*_JOURNAL_UNTERPFAD)
         jpath.parent.mkdir(parents=True, exist_ok=True)
+        rotate_if_needed(jpath, ENRICHMENT_JOURNAL_MAX_BYTES)
         record = {
             "ts": datetime.now(timezone.utc).isoformat(),
             "path": path,

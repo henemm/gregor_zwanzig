@@ -943,6 +943,17 @@ Diese drei Bausteine zusammen liefern denselben Erkenntnisgewinn wie ein
 synthetischer Testversand — ohne dessen Risiko (Kunst-User im Scheduler,
 Test-Postfach über Resend, Kontingent-Verbrauch).
 
+## Diagnose-Journale: Rotation (#2224, #2883)
+
+Die drei Diagnose-Journale in `<Datenwurzel>/diagnostics/` (`openmeteo_calls.jsonl`,
+`enrichment_calls.jsonl`, `warn_service_calls.jsonl`) rotieren ab **8 MiB** nach `<Name>.1`
+(genau eine Vorgänger-Generation, unter `flock`, fail-soft). Gemeinsame Helfer:
+`src/utils/journal_rotation.py` (Python) und `internal/scheduler/journal_rotation.go` (Go, liest
+beide Generationen, dedupliziert per `os.SameFile`). Auswertungen (`briefing_health`,
+`enrichment_health`, `scripts/analyze_openmeteo_calls.py`) lesen `.1` plus aktuelle Datei;
+ein unlesbares `.1` meldet `enrichment_health` als `journal_read_error`, `briefing_health`
+bleibt fail-soft. Eigene Auswertungen müssen ebenfalls beide Generationen lesen.
+
 ## Vorhersage-Mitschnitt auslesen und abschalten (#2030)
 
 Seit #2030 schreibt der Python-Kern an der Verbrauchsstelle jedes Segment-Aggregats
@@ -955,7 +966,7 @@ Auswerte-Skript und keine UI dazu.
 `/var/lib/gregor`, Staging `/var/lib/gregor-staging`. Eine Datei je Kalendertag, JSONL,
 angehängt. Aufbewahrung **30 Tage**; ältere Tagesdateien räumt der Writer selbst weg, ausgelöst
 beim ersten Schreibvorgang nach einem Datumswechsel. Nachbardateien im selben Ordner
-(`openmeteo_calls.jsonl`, `enrichment_calls.jsonl`) sind davon nicht betroffen.
+(`openmeteo_calls.jsonl`, `enrichment_calls.jsonl`) sind davon nicht betroffen (sie rotieren separat ab 8 MiB, siehe „Diagnose-Journale: Rotation“).
 
 **Volumen:** rund 1 MB/Tag. Geschrieben wird nur, wenn sich ein alarmrelevanter Wert gegenüber
 dem letzten Stand desselben Orts und Zeitfensters geändert hat (`grund: "aenderung"`) oder der
