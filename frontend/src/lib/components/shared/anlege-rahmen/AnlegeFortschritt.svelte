@@ -53,5 +53,5 @@
 			></div>
 		{/each}
 	</div>
-	<span class="mono" style="font-size: 11px; color: var(--g-ink-4); flex-shrink: 0;{mobil ? '' : ' letter-spacing: 0.04em;'}">{zaehler}</span>
+	<span class="mono" style="font-size: 11px; color: var(--g-ink-3); flex-shrink: 0;{mobil ? '' : ' letter-spacing: 0.04em;'}">{zaehler}</span>
 </div>

@@ -527,11 +527,11 @@
 	.cem-card { background: var(--g-card); border: 1px solid var(--g-rule); border-radius: var(--g-r-3, 10px); padding: 14px 14px 12px; margin-bottom: 10px; }
 	.cem-head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
 	.cem-label { font-size: 15px; font-weight: 600; color: var(--g-ink); }
-	.cem-unit { font-size: 11px; color: var(--g-ink-4); margin-left: 6px; }
+	.cem-unit { font-size: 11px; color: var(--g-ink-3); margin-left: 6px; }
 	/* Issue #1401: Auswertung als eigenes Element neben dem Namen. */
 	.cem-aggregation { font-size: 11px; color: var(--g-ink-3); background: var(--g-paper); border: 1px solid var(--g-rule-soft); border-radius: 3px; padding: 0 5px; margin-left: 6px; white-space: nowrap; }
 	.cem-range { font-size: 13px; font-weight: 600; color: var(--g-ink); white-space: nowrap; }
-	.cem-note { font-size: 11.5px; color: var(--g-ink-4); margin-top: 2px; font-style: italic; }
+	.cem-note { font-size: 11.5px; color: var(--g-ink-3); margin-top: 2px; font-style: italic; }
 	.cem-band-track { position: relative; height: 14px; margin-top: 22px; margin-bottom: 8px; border-radius: 7px; background: var(--g-rule-soft); }
 	.cem-band-fill { position: absolute; top: 0; bottom: 0; border-radius: 7px; background: var(--g-ink-3); opacity: 0.4; }
 	.cem-band-fill.mark { background: var(--g-good); opacity: 0.85; }
@@ -541,40 +541,40 @@
 	   fuer den Handle selbst — AC-14-Test erfasst nur Stepper/Toggle-Buttons):
 	   unsichtbare 44x44-Trefffläche um den 24px-Punkt, Optik bleibt JSX-treu. */
 	.cem-handle::before { content: ''; position: absolute; top: 50%; left: 50%; width: 44px; height: 44px; transform: translate(-50%, -50%); }
-	.cem-open { position: absolute; top: -18px; font-size: 11px; color: var(--g-ink-4); }
+	.cem-open { position: absolute; top: -18px; font-size: 11px; color: var(--g-ink-3); }
 	.cem-open-left { left: 2px; }
 	.cem-open-right { right: 2px; }
-	.cem-band-scale { display: flex; justify-content: space-between; font-size: 11px; color: var(--g-ink-4); }
+	.cem-band-scale { display: flex; justify-content: space-between; font-size: 11px; color: var(--g-ink-3); }
 	.cem-bounds { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 12px; }
 	.cem-bound { flex: 1 1 0; min-width: 0; }
 	/* Staging-Fund F001: Ordinal-Bound erzwingt eine eigene volle Zeile (flex-wrap
 	   auf .cem-bounds bricht davor/danach um), damit .cem-ordinal-btn real 44px
 	   Breite bekommt statt sich eine ~175px-Von/Bis-Spalte zu teilen. */
 	.cem-bound-full { flex: 1 1 100%; }
-	.cem-bound-label { font-size: 11px; color: var(--g-ink-4); letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 5px; }
-	.cem-open-btn { width: 100%; min-height: 44px; border: 1px dashed var(--g-rule); background: transparent; border-radius: var(--g-r-2, 6px); cursor: pointer; color: var(--g-ink-4); font-size: 12px; }
+	.cem-bound-label { font-size: 11px; color: var(--g-ink-3); letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 5px; }
+	.cem-open-btn { width: 100%; min-height: 44px; border: 1px dashed var(--g-rule); background: transparent; border-radius: var(--g-r-2, 6px); cursor: pointer; color: var(--g-ink-3); font-size: 12px; }
 	.cem-stepper, .cem-ordinal-group { display: flex; align-items: center; gap: 6px; }
 	/* AC-14 Hit-Area-Technik: Trefffläche 44x44 (Playwright-messbar), Glyph-Optik bleibt 40px wie im JSX. */
 	.cem-step-btn { width: 44px; height: 44px; flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center; border: none; background: transparent; padding: 0; cursor: pointer; }
 	.cem-step-btn-glyph { display: inline-flex; align-items: center; justify-content: center; width: 40px; height: 40px; border: 1px solid var(--g-rule); background: var(--g-card); border-radius: var(--g-r-2, 6px); color: var(--g-ink); font-size: 20px; line-height: 1; }
 	.cem-step-value { flex: 1; min-width: 0; text-align: center; padding: 0 2px; }
 	.cem-step-num { font-size: 16px; font-weight: 600; color: var(--g-ink); font-variant-numeric: tabular-nums; line-height: 1.1; }
-	.cem-step-unit { font-size: 11px; color: var(--g-ink-4); }
+	.cem-step-unit { font-size: 11px; color: var(--g-ink-3); }
 	.cem-ordinal-btn { flex: 1; min-width: 44px; min-height: 44px; padding: 4px 6px; font-size: 11.5px; border-radius: var(--g-r-2, 6px); border: 1px solid var(--g-rule); background: transparent; color: var(--g-ink-3); cursor: pointer; }
 	.cem-ordinal-btn.on { border-color: var(--g-accent); color: var(--g-accent-deep); background: var(--g-accent-tint); }
-	.cem-clear-btn { width: 30px; height: 40px; flex-shrink: 0; border: none; background: transparent; cursor: pointer; color: var(--g-ink-4); font-size: 15px; }
+	.cem-clear-btn { width: 30px; height: 40px; flex-shrink: 0; border: none; background: transparent; cursor: pointer; color: var(--g-ink-3); font-size: 15px; }
 	.cem-effects { display: flex; gap: 8px; margin-top: 12px; }
-	.cem-effect { flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; padding: 0 12px; border-radius: var(--g-r-3, 10px); cursor: pointer; font-size: 14px; font-weight: 600; background: transparent; color: var(--g-ink-4); border: 1px solid var(--g-rule); }
+	.cem-effect { flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; padding: 0 12px; border-radius: var(--g-r-3, 10px); cursor: pointer; font-size: 14px; font-weight: 600; background: transparent; color: var(--g-ink-3); border: 1px solid var(--g-rule); }
 	.cem-effect.notify.on { color: var(--g-warn, #8a6210); border-color: var(--g-warn, #8a6210); background: rgba(192, 138, 26, 0.12); }
 	.cem-effect.mark.on { color: var(--g-good); border-color: var(--g-good); background: rgba(61, 107, 58, 0.12); }
 	.cem-effect.disabled { opacity: 0.4; cursor: not-allowed; }
 	.cem-remove-row { display: flex; justify-content: flex-end; margin-top: 8px; }
-	.cem-remove { background: transparent; border: none; padding: 6px 2px; color: var(--g-ink-4); cursor: pointer; font-size: 11.5px; }
+	.cem-remove { background: transparent; border: none; padding: 6px 2px; color: var(--g-ink-3); cursor: pointer; font-size: 11.5px; }
 	.cem-pool { display: flex; flex-direction: column; gap: 8px; margin: 4px 0 6px; }
-	.cem-pool-label { font-size: 11px; color: var(--g-ink-4); letter-spacing: 0.08em; text-transform: uppercase; }
+	.cem-pool-label { font-size: 11px; color: var(--g-ink-3); letter-spacing: 0.08em; text-transform: uppercase; }
 	.cem-summary { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; margin-top: 10px; font-size: 12.5px; color: var(--g-ink-2); }
 	.cem-summary-item { display: inline-flex; align-items: center; gap: 7px; }
 	/* #2521 S1: Ueberschrift + ⓘ in einer Zeile (Eyebrow ist display:block). */
 	.cem-eyebrow-row { display: flex; align-items: center; gap: 4px; }
-	.cem-neutral { font-size: 11px; color: var(--g-ink-4); margin-top: 8px; letter-spacing: 0.02em; line-height: 1.5; }
+	.cem-neutral { font-size: 11px; color: var(--g-ink-3); margin-top: 8px; letter-spacing: 0.02em; line-height: 1.5; }
 </style>

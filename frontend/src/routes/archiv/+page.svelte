@@ -195,7 +195,7 @@
 
 	<!-- Footer-Zähler -->
 	<div
-		style="margin-top:14px;font-size:11px;color:var(--g-ink-4);font-family:var(--g-font-mono);letter-spacing:0.06em"
+		style="margin-top:14px;font-size:11px;color:var(--g-ink-3);font-family:var(--g-font-mono);letter-spacing:0.06em"
 	>
 		{$t('listen.zaehler.archiv', { gefiltert: filtered.length, gesamt: entries.length })}
 	</div>
