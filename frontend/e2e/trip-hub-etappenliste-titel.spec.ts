@@ -12,12 +12,20 @@
 //     sichtbar (kein Ellipsis, keine Überbreite, ganzer Name im Text).
 //   - EL-4 (390 px): 60-Zeichen-Name bricht mehrzeilig um, kein waagerechtes Scrollen, Stift
 //     direkt am Titelende, Tippfläche ≥ 44 × 44 px.
+//   - EL-4b (390 px): 60 Zeichen OHNE Leerzeichen — Titel bricht im Wort um (overflow-wrap), h1 nie
+//     breiter als die Titelzeile, Status-Schild rutscht unter den Titel (flex-wrap der Titelzeile),
+//     Stift und h1 stehen in EINER echten Gruppe (eigene Box, kein display: contents) und der Stift
+//     steht rechts neben dem Titel, nicht allein in einer neuen Zeile.
 //   - EL-5 (390 px): Trip und Ortsvergleich mit gleich langem Namen — beide vollständig sichtbar,
 //     gleiche Umbruch-Stile am h1 (white-space, overflow-wrap, text-overflow).
 //
 // Pflicht-Mutationen (Spec Implementation Details 4): (a) `truncate` wieder am h1 ⇒ EL-3/EL-4/EL-5
 // rot; (b) Container-Query entfernen ⇒ EL-1/EL-2 rot (Name 0 px); (c) `white-space: nowrap` der
 // Meta-Teile entfernen ⇒ EL-1 rot (Stresstest: Datum bricht an den Bindestrichen um).
+// Fix-Loop (Adversary F001/F002): (M4) Titelgruppe `display: contents` ⇒ EL-4b rot (Gruppe ohne Box,
+// Stift springt allein unter den Titel); (M7) `overflow-wrap: anywhere` am h1 entfernt ⇒ EL-4b rot
+// (Titel läuft über); (M8) `flex-wrap` der Titelzeile entfernt ⇒ EL-4b rot (Status bleibt neben dem
+// Titel); (M9) `flex-wrap` der Meta-Zeile entfernt ⇒ EL-1 rot (Teile bleiben in einer Reihe).
 //
 // Name und Datum werden per Text gefunden (nicht per Klasse), damit der RED-Lauf auf dem alten
 // Markup am eigentlichen Fehler scheitert (Name 0 px breit) und nicht an einem fehlenden Selektor.
@@ -36,6 +44,8 @@ const SPRACHEN = ['de', 'en'] as const;
 
 const TITEL_15 = 'Korsika Nordteil';
 const TITEL_60 = 'Korsika Nordteil von Calenzana ueber Asco bis nach Vizzavona';
+/** 60 Zeichen ohne Leerzeichen: bricht nur mit `overflow-wrap: anywhere` um. */
+const TITEL_60_AM_STUECK = 'KorsikaNordteilVonCalenzanaUeberAscoBisVizzavonaUndRetourGR2';
 const KUERZEL = 'GR20N';
 
 /** ISO-Datum heute + n Tage (Trip „geplant" ⇒ Status-Schild und „in n Tagen" in der Titelzeile). */
@@ -117,10 +127,12 @@ async function titelVollstaendig(page: Page, kind: HubKind, name: string, was: s
 async function metaTeileBeiEngstemBehaelter(row: Locator) {
 	return row.evaluate((el) => {
 		const meta = el.querySelector<HTMLElement>('.stage-meta');
-		if (!meta) return { teile: 0, mehrzeilig: ['(keine .stage-meta)'] };
+		if (!meta) return { teile: 0, reihen: 0, mehrzeilig: ['(keine .stage-meta)'] };
 		const alt = meta.style.width;
 		meta.style.width = '1px';
 		const teile = Array.from(meta.querySelectorAll<HTMLElement>('.stage-meta-part'));
+		// Reihen = verschiedene Oberkanten: bei 1 px Breite steht jedes Teil in einer eigenen Reihe.
+		const reihen = new Set(teile.map((t) => Math.round(t.getBoundingClientRect().top))).size;
 		const mehrzeilig = teile
 			.filter((t) => {
 				const cs = getComputedStyle(t);
@@ -129,7 +141,7 @@ async function metaTeileBeiEngstemBehaelter(row: Locator) {
 			})
 			.map((t) => t.textContent ?? '');
 		meta.style.width = alt;
-		return { teile: teile.length, mehrzeilig };
+		return { teile: teile.length, reihen, mehrzeilig };
 	});
 }
 
@@ -158,6 +170,7 @@ test('EL-1 (1280 px, de/en): jede Etappenzeile zeigt den Namen, das Datum steht 
 				const stress = await metaTeileBeiEngstemBehaelter(row);
 				expect(stress.teile, `${lang}: Meta-Zeile ohne eigene Teile (Datum, WP …)`).toBeGreaterThanOrEqual(2);
 				expect(stress.mehrzeilig, `${lang}: Meta-Teile brechen in sich um`).toEqual([]);
+				expect(stress.reihen, `${lang}: Meta-Teile brechen im engen Behälter nicht zwischen den Teilen um (${stress.reihen} Reihe(n) für ${stress.teile} Teile)`).toBe(stress.teile);
 			}
 		}
 	} finally {
@@ -243,6 +256,61 @@ test('EL-4 (390 px): 60-Zeichen-Name mehrzeilig, kein waagerechtes Scrollen, Sti
 		const daneben = sb.x >= titelRechts - 1 && sb.x - titelRechts <= 16 && sb.y < titelUnten && sb.y + sb.height > hb.y;
 		const darunter = sb.y >= titelUnten - 1 && sb.y - titelUnten <= 16;
 		expect(daneben || darunter, `EL-4: Stift nicht direkt am Titel (Titel ${JSON.stringify(hb)}, Stift ${JSON.stringify(sb)})`).toBe(true);
+	} finally {
+		await hub.aufraeumen();
+	}
+});
+
+// ─── EL-4b (AC-4, Fix-Loop F001): 60 Zeichen am Stück — Umbruch im Wort, Status darunter, Stift in der Gruppe ─
+test('EL-4b (390 px): 60 Zeichen ohne Leerzeichen — kein Überlauf, Status unter dem Titel, Stift in der Titelgruppe', async ({ page }) => {
+	expect(TITEL_60_AM_STUECK.length, 'Vorbedingung: Name hat 60 Zeichen').toBe(60);
+	expect(TITEL_60_AM_STUECK, 'Vorbedingung: Name ohne Leerzeichen').not.toMatch(/\s/);
+	const hub = await seedTrip(page.request, TITEL_60_AM_STUECK);
+	try {
+		await page.setViewportSize(MOBIL);
+		await openHub(page, 'route', hub.id);
+		const badge = page.getByTestId('trip-detail-status-badge').filter({ visible: true }).first();
+		await expect(badge, 'EL-4b: Status-Schild fehlt (Vorbedingung)').toBeVisible({ timeout: 15_000 });
+		await titelVollstaendig(page, 'route', TITEL_60_AM_STUECK, 'EL-4b');
+
+		const seite = await page.evaluate(() => document.documentElement.scrollWidth);
+		expect(seite, 'EL-4b: Seite läuft waagerecht über').toBeLessThanOrEqual(MOBIL.width);
+
+		const h1 = titel(page, 'route');
+		const m = await h1.evaluate((el) => {
+			const r = (e: Element | null) => (e ? (({ x, y, width, height }) => ({ x, y, width, height }))(e.getBoundingClientRect()) : null);
+			const gruppe = el.parentElement!;
+			const stift = gruppe.querySelector<HTMLElement>('[data-testid="trip-name-edit-toggle"]');
+			return {
+				h1: r(el),
+				gruppe: r(gruppe),
+				gruppeDisplay: getComputedStyle(gruppe).display,
+				zeile: r(gruppe.parentElement),
+				stift: r(stift),
+				stiftGleicherEltern: !!stift && stift.parentElement === el.parentElement
+			};
+		});
+		const hb = m.h1!;
+		const zb = m.zeile!;
+		expect(hb.x + hb.width, `EL-4b: Titel breiter als die Titelzeile (Titel ${JSON.stringify(hb)}, Zeile ${JSON.stringify(zb)})`).toBeLessThanOrEqual(zb.x + zb.width + 0.5);
+		expect(hb.height, 'EL-4b: Titel bricht nicht auf mehrere Zeilen um').toBeGreaterThan((await zeilenhoehe(h1)) * 1.5);
+
+		// Status rutscht unter den Titel, wenn der Platz nicht reicht (Titelzeile flex-wrap).
+		const bb = await box(badge, 'Status-Schild');
+		expect(bb.y, `EL-4b: Status-Schild steht neben statt unter dem Titel (Titel ${JSON.stringify(hb)}, Status ${JSON.stringify(bb)})`).toBeGreaterThanOrEqual(hb.y + hb.height - 1);
+
+		// Stift und Titel in EINER Gruppe mit eigener Box; der Stift steht rechts neben dem Titel.
+		expect(m.stiftGleicherEltern, 'EL-4b: Stift und h1 haben nicht dasselbe Elternelement').toBe(true);
+		expect(m.gruppeDisplay, 'EL-4b: Titelgruppe ohne eigene Box (display: contents)').not.toBe('contents');
+		const gb = m.gruppe!;
+		const sb = m.stift!;
+		for (const [was, b] of [['Titel', hb], ['Stift', sb]] as const) {
+			const drin = b.x >= gb.x - 0.5 && b.x + b.width <= gb.x + gb.width + 0.5 && b.y >= gb.y - 0.5 && b.y + b.height <= gb.y + gb.height + 0.5;
+			expect(drin, `EL-4b: ${was} liegt nicht in der Box der Titelgruppe (Gruppe ${JSON.stringify(gb)}, ${was} ${JSON.stringify(b)})`).toBe(true);
+		}
+		expect(sb.x, `EL-4b: Stift steht nicht rechts vom Titel (Titel ${JSON.stringify(hb)}, Stift ${JSON.stringify(sb)})`).toBeGreaterThanOrEqual(hb.x + hb.width - 1);
+		expect(sb.y < hb.y + hb.height && sb.y + sb.height > hb.y, `EL-4b: Stift springt allein in eine neue Zeile (Titel ${JSON.stringify(hb)}, Stift ${JSON.stringify(sb)})`).toBe(true);
+		expect(sb.x + sb.width, 'EL-4b: Stift rechts abgeschnitten').toBeLessThanOrEqual(MOBIL.width + 0.5);
 	} finally {
 		await hub.aufraeumen();
 	}
