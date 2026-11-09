@@ -192,9 +192,10 @@ describe('Bestand: Sprachwechsel ohne Neuladen erreicht jede Anzeige', () => {
 		assert.equal(gezaehlt, 12);
 	});
 
-	test('Messaufbau F7: ohne die $locale-Lesung waeren drei Ableitungen/Ausdruecke gemeldet', () => {
-		// AlarmeTab: Premium-SMS-Sperre (derived) und Gruppen-Ueberschrift (markup);
-		// AlertMetricLevelRow: Richtwert-Hinweis (derived).
+	test('Messaufbau F7: ohne die $locale-Lesung waeren zwei Ableitungen/Ausdruecke gemeldet', () => {
+		// AlarmeTab: Premium-SMS-Sperre (derived) und Gruppen-Ueberschrift (markup).
+		// #2793 S2b: der Richtwert-Hinweis der AlertMetricLevelRow (CAPE-title an
+		// der Δ-Schwellwert-Zelle) entfaellt mit der nur lesbaren Tabelle (3 -> 2).
 		const { dateien } = scanneEintraege(SRC, BEREICHE['F7 #2656 Alarme-Reiter, Alarm-Kanal-Picker, alerts-tab']);
 		// #1895 S4: die fuenf toten alerts-tab-Bausteine (AlertsTab, AlertCard,
 		// AlertMetricTable/-Row, AlertPresetSelector) sind entfernt (13 -> 8 Dateien).
@@ -204,7 +205,7 @@ describe('Bestand: Sprachwechsel ohne Neuladen erreicht jede Anzeige', () => {
 			const q = (readFileSync(join(SRC, rel), 'utf8') as string).replace(/\(void \$locale, /g, '(');
 			gezaehlt += scanneKomponente(q, join(SRC, rel), SRC, rel).length;
 		}
-		assert.equal(gezaehlt, 3);
+		assert.equal(gezaehlt, 2);
 	});
 
 	test('jede Ausnahme trifft noch einen Fund (keine toten Eintraege)', () => {

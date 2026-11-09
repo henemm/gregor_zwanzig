@@ -41,6 +41,11 @@ Der PO nennt die Oberfläche dazu „eine Katastrophe“. Nutzer denken in „ge
   - `entspannt` → **Rot**.
   - Vorboten (ADR-0010) bekommen unabhängig vom Altwert keinen Alarm. Der Altwert wird protokolliert; die Abbildung ist eine Annäherung, weil die alten Stufen eine Δ-Größe, die neuen eine erreichte Farbe meinen.
   - Verworfen: feste Zuordnung ohne Vorlage (weicht bei Gewitter und bei Vorgabe „Nie“ von neuen Trips ab) und „alles auf Vorlage“ (bewusst gesetzte Wahl ginge verloren).
+- **P4 · Parameter des Umschaltens** (PO, 2026-11-08, Spec `feat_2793_s2_alarm_stufenwechsel.md`, umgesetzt in S2b #2793):
+  - **D1 Sprung-Schwelle** = heutige Spalte „standard“ der Δ-Tabelle (`alert_preset._PRESET_TABLE`): Temperatur oben 6 °C, unten 5 °C, Wind 25 km/h, Böen 20 km/h, Niederschlag 10 mm, Neuschnee 8 cm; Sicht, UV und Gewitter ohne Sprung-Zweig. Innerhalb einer Farbe ab „Alarm ab“ meldet eine Änderung zum Schlechteren ab dieser Größe („weiter rot, großer Sprung“).
+  - **D2 Entwarnung** nur beim Fallen unter „Alarm ab“. Ein Rückgang innerhalb des Alarmbereichs (z. B. rot → orange bei „Alarm ab Orange“) bleibt stumm.
+  - **D3 Dringlichkeit aus der Farbe:** gelb gering, orange mittel, rot hoch; bei der Entwarnung die verlassene Farbe. Mehrere Ereignisse: die höchste. Ersetzt „Δ/Schwelle“ und „Entwarnung immer hoch“ für die Ampel-Metriken.
+  - **D4 Nullgradgrenze und Beginn-Verschiebung** (Gewitter, Starkregen) laufen bis S7 auf der heutigen Δ-Logik weiter (`metric_alert_levels`, heutige Dringlichkeit, heutiger Text). CAPE und die `*_change`-Delta-Metriken lösen nicht mehr eigenständig aus.
 
 ## Verworfene Alternativen
 

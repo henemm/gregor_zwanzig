@@ -2,9 +2,9 @@
 entity_id: feat_2793_s2_alarm_stufenwechsel
 type: module
 created: 2026-11-08
-updated: 2026-11-08
+updated: 2026-11-09
 status: approved
-version: "1.1"
+version: "1.3"
 tags: [alarm, ampel, abweichung, migration, dringlichkeit, sms, telegram, mail, i18n, epic-2791]
 ---
 
@@ -39,6 +39,23 @@ Entscheidungsgrundlage: ADR-0106 (Akzeptiert, P1 CAPE, P2 Gewitter „leicht“,
 **Schnitt (zwei PRs, Reihenfolge verbindlich):**
 - **S2a — Migration und Prüfung, ohne Wirkung:** Migrationsskript, Gewitter-Prüfung `alarm_ab` in Python und Go. Nach dem Merge: Probelauf, `--execute`, Kontroll-Lauf „Nichts zu tun“ auf Staging und Prod. `alarm_ab` wird noch nicht gelesen, also ändert sich für Nutzer nichts.
 - **S2b — Umschalten:** Engine, Dringlichkeit, Texte aller vier Kanäle, Frontend nur lesbar, Doku. **Gate:** Prod-Deploy von S2b erst, wenn der Kontroll-Lauf der Migration auf Prod „Nichts zu tun“ meldet (unmittelbar vor dem Deploy erneut prüfen).
+
+## Scope
+
+- **Drin:** Auslösung von Abweichungs-Alarm und Entwarnung über `ampel.metrics.<id>.alarm_ab` (Implementation Details 1–4), Dringlichkeit aus der Farbe (D3), Texte aller vier Kanäle DE/EN, einmalige Migration der Altstufen (Abschnitt 5), Gewitter-Prüfung in Python und Go, alte Tabelle nur lesbar (Abschnitt 6). Gilt für Trip und Orts-Vergleich gleichermaßen.
+- **Nicht drin:** siehe „Nicht Teil von S2“ unter Purpose (S3a, S7, S8, S9, Rückbau `alert_rules`).
+
+## Definition of Done
+
+- S2a und S2b gemergt (je 6 CI-Checks grün), AC-1 bis AC-20 durch Tests belegt.
+- Migration auf Staging und Prod ausgeführt; Kontroll-Lauf meldet auf beiden Exit 0 und „Nichts zu tun“, unmittelbar vor dem S2b-Prod-Deploy erneut geprüft (Gate aus „Schnitt“).
+- Staging-Verifikation DE und EN bestanden (siehe Test Plan), Prod-Deploy mit `prod_selftest.py` Exit 0, Ergebnis-Kommentar in #2793 (Migrations-Tabelle je Umgebung, Sicherungspfade).
+
+## Test Plan
+
+- **Kern-Schicht (ohne Netz):** je AC ein Verhaltenstest, wie unter dem jeweiligen AC als „Test:“ vermerkt; Migration mit zwei Nutzern (AC-17), Wiederholbarkeit und Sicherung (AC-16), Byte-Gleichheit übriger Felder (AC-15).
+- **Register-Ratsche:** `tests/helpers/metrik_listen_scan.py` deckt auch `alert/render.py _AMPEL_SEITEN_LABEL` ab (2026-11-09).
+- **Staging (nach Merge S2b, DE und EN):** echt zugestellte Abweichungs-Alarme für Trip und Orts-Vergleich über die Validator-Render-Route; Mail/Telegram mit Farbpaar, Werten und Briefing-Bezug, SMS/Premium-SMS/Telegram-Kurzform mit Token-Suffix (`:Y>O`) unter 160 Zeichen (AC-18); Briefing-, Orts-Vergleichs-, Radar- und Amtliche-Warnung-Validatoren Exit 0; Reiter Alarm-Empfindlichkeit Desktop/Mobil nur lesbar, Speichern lässt Altstufen, Ampel und Merker unverändert (AC-19), geprüft durch `staging-validator` und `fresh-eyes-inspector`.
 
 ## Dependencies
 
@@ -130,6 +147,20 @@ Die alte Tabelle „Alarm-Empfindlichkeit“ (`AlertMetricLevelTable`/`AlertMetr
 - Einmal oben ein Hinweis (Katalog, DE/EN): DE „Wird gerade umgebaut: Alarme folgen jetzt der Ampel. Einstellbar wird ‚Alarm ab‘ mit dem neuen Reiter Wetter.“ · EN „Being rebuilt: alerts now follow the traffic light. ‘Alert from’ becomes adjustable with the new Weather tab.“
 - Speichern anderer Einstellungen lässt `metric_alert_levels`, `ampel` und den Merker unverändert (nie leeren, nie überschreiben).
 
+### 7. Ist-Stand S2b (2026-11-09, gegen den Code geprüft)
+
+- **Zusätzlich zur Source-Liste geänderte Produktivdateien:**
+  - `src/services/ampel_alarm.py` (neu): Entscheidungslogik aus Abschnitt 1 bis 3.
+  - `frontend/src/lib/components/alerts-tab/alarmAbAnzeige.ts` (neu): nur lesbare Anzeige „Alarm ab“ (Abschnitt 6).
+  - `src/app/models.py`: `stufe_von`, `stufe_bis` und `art` liegen im Ist-Stand auf `WeatherChange` (Erkennungsschicht) **und** werden auf `AlertEvent` (`src/output/renderers/alert/model.py`) übernommen; die Aussage „`AlertEvent` trägt zusätzlich …“ in Abschnitt 2 gilt für beide Klassen.
+  - `src/services/point_weather.py`: `AlertEvaluationConfig.ampel`.
+  - `frontend/src/lib/components/shared/alarmeVergleichSpeicherung.ts`: nur Kommentar.
+  - `frontend/src/lib/i18n/messages/{de,en}/alarme.json`: Hinweistext.
+  - Doku `docs/reference/api_contract.md`: Feld `notify`.
+- **Migration (AC-15), Abweichung in der Form:** Das Skript legt eine fehlende Metrik-Zeile nur mit `alarm_ab` an; die Vorlage kommt beim Lesen über `app/ampel.py` (`_verschmelzen`) dazu. Das Ergebnis ist gleich, die Form in der Datei weicht vom Wortlaut in Abschnitt 5 („aus der Vorlage angelegt“) ab.
+- **Telegram-Kurzform (AC-18):** sendet den SMS-Text (`notification_service`, `telegram_style == "kurzform"`) und ist deshalb über den SMS-Test mitgeprüft; der Staging-Nachweis folgt in `/e2e-verify`.
+- **Register-Ratsche:** `tests/helpers/metrik_listen_scan.py` führt zusätzlich `alert/render.py _AMPEL_SEITEN_LABEL`.
+
 ## Expected Behavior
 
 - **Input:** Anker- und Neuwerte je Segment/Ort, Abo-Ampel mit `alarm_ab` je Metrik, Kanal-Schwellen des Abos.
@@ -205,6 +236,9 @@ Die alte Tabelle „Alarm-Empfindlichkeit“ (`AlertMetricLevelTable`/`AlertMetr
 - **Rückgänge innerhalb des Alarmbereichs bleiben stumm** (D2), z. B. rot → orange bei „Alarm ab Orange“. Gewollt.
 - **`temperature_night`, `snow_depth`, `snowfall_limit`** tragen `alarm_ab`, alarmieren über die Ampel aber erst mit S7; die Nullgradgrenze läuft bis S7 auf Δ (D4).
 - **Kein Validator für Abweichungs-Alarm-Mails:** `briefing_mail_validator.py` überspringt `deviation-alert` ausdrücklich (No-Op, kein Pass). Der Staging-Nachweis läuft über echt zugestellte Alarme aus der Validator-Render-Route (`api/routers/validator.py`) und Renderer-Tests; ein eigener Validator ist Nebenbefund (#1199).
+- **Umfang S2b über der Schätzung:** ca. 19 Produktivdateien, +629/−281 Zeilen; zusammen mit S2a über den ~650 Code-Zeilen der Schätzung.
+- **Migration legt Metrik-Zeilen schlanker an als Abschnitt 5 schreibt** (nur `alarm_ab`, Vorlage beim Lesen über `_verschmelzen`); Ergebnis gleich, siehe Abschnitt 7.
+- **Telegram-Kurzform ohne eigenen Test:** läuft über den SMS-Text, Staging-Nachweis in `/e2e-verify` (AC-18).
 - **`alert_rules`-Gate und Kanal-Union bleiben** (Übergabe #1895, Gate-Fälle 1–4). Rückbau erst, nachdem die Regel-`channels` frisch auf Prod gemessen sind; nicht Teil von S2.
 
 ## Architektur-Entscheidung (ADR)
@@ -217,3 +251,5 @@ Die alte Tabelle „Alarm-Empfindlichkeit“ (`AlertMetricLevelTable`/`AlertMetr
 - 2026-11-08: v1.0 Entwurf mit PO-Entscheidungen D1–D4 (Rückfrage in der Sitzung)
 - 2026-11-08: v1.0 vom PO freigegeben
 - 2026-11-08: v1.1 Präzisierung nach Adversary S2a: V = reine Vorlage (F1), Exit 2 bei ungültiger Ampel mit Altstufen (F2)
+- 2026-11-08: v1.2 Abschnitte Scope, Definition of Done, Test Plan ergänzt (Pflicht des Spec-Gates); nur Zusammenfassung bestehender Festlegungen aus Spec und #2860, keine neue Anforderung
+- 2026-11-09: v1.3 Ist-Stand S2b (#2860) ergänzt: Implementation Details 7, Known Limitations, Test Plan; freigegebener Teil unverändert

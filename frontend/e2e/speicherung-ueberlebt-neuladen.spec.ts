@@ -119,28 +119,34 @@ async function tripStand(page: Page, tripId: string): Promise<TripStand> {
 }
 
 // #2792 S1c-3: Auslöser ist die Alarm-Empfindlichkeit der Böen (`wind_gust`).
-const START_STUFE = 'standard';
+// #2793 S2b (Spec §6): die Alarm-Empfindlichkeit ist bis S3a NUR LESBAR. Die
+// bearbeitbare Alarm-Einstellung dieser Pruefung ist deshalb die Sperrzeit
+// (`alert_cooldown_minutes`, Reiter Alarme, derselbe Speicherweg); die
+// frueheren Stufen standard/sensibel/entspannt stehen als 60/30/90 Minuten.
+const START_STUFE = '60';
 /** Trip: alarmfähige Metrik-Auswahl (Böen) + feste Ausgangsstufe. */
 const TRIP_ALARM_SEED = {
 	display_config: {
 		metrics: [{ metric_id: 'gust', enabled: true, bucket: 'primary', order: 0 }],
-		metric_alert_levels: { wind_gust: START_STUFE }
-	}
+		metric_alert_levels: { wind_gust: 'standard' }
+	},
+	alert_cooldown_minutes: Number(START_STUFE)
 };
 /** Vergleich: dieselbe Größe im Vergleichs-Katalog (`gust_max_kmh` → `wind_gust`). */
 const VERGLEICH_ALARM_DC = {
 	active_metrics: ['gust_max_kmh'],
-	metric_alert_levels: { wind_gust: START_STUFE }
+	metric_alert_levels: { wind_gust: 'standard' }
 };
 
 /** Stufen-Knopf der Böen-Zeile in der Alarm-Empfindlichkeits-Tabelle. */
-const stufenKnopf = (page: Page, stufe: string) => page.locator(`[data-testid="alert-level-wind_gust-${stufe}"]:visible`);
+const stufenKnopf = (page: Page, _stufe: string) => page.locator('[data-testid="alert-cooldown-input"]:visible');
 
 async function windGustStufe(page: Page, pfad: string): Promise<string | null> {
 	const r = await page.request.get(pfad);
 	expect(r.ok(), `GET ${pfad} HTTP ${r.status()}`).toBeTruthy();
 	const body = (await r.json()) as TripStand;
-	return body.display_config?.metric_alert_levels?.wind_gust ?? null;
+	const minuten = (body as { alert_cooldown_minutes?: number | null }).alert_cooldown_minutes;
+	return minuten == null ? null : String(minuten);
 }
 
 /** Legt einen Ortsvergleich mit Böen-Alarm (Ausgangsstufe `standard`) an. */
@@ -155,7 +161,8 @@ async function legeVergleichAn(page: Page, kennung: string): Promise<string> {
 			hour_from: 7,
 			hour_to: 16,
 			empfaenger: ['urlauber@example.com'],
-			display_config: VERGLEICH_ALARM_DC
+			display_config: VERGLEICH_ALARM_DC,
+			alert_cooldown_minutes: Number(START_STUFE)
 		}
 	});
 	expect(presetRes.ok(), `Preset-Anlage HTTP ${presetRes.status()}`).toBeTruthy();
@@ -169,9 +176,7 @@ async function oeffneAlarmStufen(page: Page, url: string): Promise<void> {
 	await page.goto(url);
 	await page.waitForLoadState('networkidle');
 	await expect(page.locator('[data-testid="alarme-tab"]:visible').first()).toBeVisible({ timeout: 15_000 });
-	await expect(stufenKnopf(page, START_STUFE), `Vorbedingung: die angelegte Böen-Stufe ${START_STUFE} ist ausgewählt`).toHaveAttribute(
-		'aria-pressed',
-		'true',
+	await expect(stufenKnopf(page, START_STUFE), `Vorbedingung: die angelegte Böen-Stufe ${START_STUFE} ist ausgewählt`).toHaveValue(START_STUFE,
 		{ timeout: 10_000 }
 	);
 }
@@ -273,7 +278,7 @@ test.describe('Issue #2316 Scheibe A: ausstehende Änderung überlebt das Neulad
 	}) => {
 		const tripId = await legeTripAn(page, 'ac10-alarm-stufe', TRIP_ALARM_SEED);
 		const pfad = `/api/trips/${tripId}`;
-		const ziel = 'sensibel';
+		const ziel = '30';
 
 		await oeffneAlarmStufen(page, `/trips/${tripId}?tab=alarme`);
 
@@ -283,7 +288,7 @@ test.describe('Issue #2316 Scheibe A: ausstehende Änderung überlebt das Neulad
 
 		// Änderung — und SOFORT neu laden: kein Warten, der 700-ms-Speichertakt
 		// ist noch nicht abgelaufen.
-		await stufenKnopf(page, ziel).click();
+		await stufenKnopf(page, ziel).fill(ziel);
 		await page.reload();
 		halt.aktiv = false;
 
@@ -293,7 +298,7 @@ test.describe('Issue #2316 Scheibe A: ausstehende Änderung überlebt das Neulad
 		await expect(
 			stufenKnopf(page, ziel),
 			`#2317 AC-1: nach dem Neuladen muss binnen 3 s die gewählte Stufe (${ziel}) angezeigt werden, nicht der alte Stand`
-		).toHaveAttribute('aria-pressed', 'true', { timeout: 3_000 });
+		).toHaveValue(ziel, { timeout: 3_000 });
 		await pruefeGehalten(halt, '#2317 AC-1');
 
 		await expect
@@ -311,7 +316,7 @@ test.describe('Issue #2316 Scheibe A: ausstehende Änderung überlebt das Neulad
 	}) => {
 		const presetId = await legeVergleichAn(page, 'ac9');
 		const pfad = `/api/compare/presets/${presetId}`;
-		const ziel = 'sensibel';
+		const ziel = '30';
 
 		await oeffneAlarmStufen(page, `/compare/${presetId}?tab=alarme`);
 
@@ -319,7 +324,7 @@ test.describe('Issue #2316 Scheibe A: ausstehende Änderung überlebt das Neulad
 
 		// Dieselbe Geste wie im Trip: Änderung — und SOFORT neu laden.
 		const halt = await haltePutBisNeuemDokument(page, pfad);
-		await stufenKnopf(page, ziel).click();
+		await stufenKnopf(page, ziel).fill(ziel);
 		await page.reload();
 		halt.aktiv = false;
 
@@ -329,7 +334,7 @@ test.describe('Issue #2316 Scheibe A: ausstehende Änderung überlebt das Neulad
 		await expect(
 			stufenKnopf(page, ziel),
 			`#2317 AC-5: nach dem Neuladen muss binnen 3 s die gewählte Stufe (${ziel}) angezeigt werden, nicht der alte Stand`
-		).toHaveAttribute('aria-pressed', 'true', { timeout: 3_000 });
+		).toHaveValue(ziel, { timeout: 3_000 });
 		await pruefeGehalten(halt, '#2317 AC-5');
 
 		await expect
@@ -363,14 +368,14 @@ test.describe('Issue #2316 Scheibe A: ausstehende Änderung überlebt das Neulad
 
 		const presetId = await legeVergleichAn(page, 'ac9-mobil');
 		const pfad = `/api/compare/presets/${presetId}`;
-		const ziel = 'entspannt';
+		const ziel = '90';
 
 		await oeffneAlarmStufen(page, `/compare/${presetId}?tab=alarme`);
 
 		const dialogs = collectLeaveDialogs(page);
 
 		// Tipp — und SOFORT neu laden, bevor der Speicher-Takt abläuft.
-		await stufenKnopf(page, ziel).click();
+		await stufenKnopf(page, ziel).fill(ziel);
 		await page.reload();
 
 		await expect
@@ -394,7 +399,7 @@ test.describe('Issue #2317: jede Trip-Speicherung überlebt das Neuladen und wir
 		await page.setViewportSize({ width: 390, height: 844 });
 		const tripId = await legeTripAn(page, 'ac2-mobil', TRIP_ALARM_SEED);
 		const pfad = `/api/trips/${tripId}`;
-		const ziel = 'entspannt';
+		const ziel = '90';
 
 		await oeffneAlarmStufen(page, `/trips/${tripId}?tab=alarme`);
 
@@ -403,7 +408,7 @@ test.describe('Issue #2317: jede Trip-Speicherung überlebt das Neuladen und wir
 		const halt = await haltePutBisNeuemDokument(page, pfad);
 
 		// Tipp — und sofort neu laden, bevor der Speicher-Takt abläuft.
-		await stufenKnopf(page, ziel).click();
+		await stufenKnopf(page, ziel).fill(ziel);
 		await page.reload();
 		halt.aktiv = false;
 
@@ -412,7 +417,7 @@ test.describe('Issue #2317: jede Trip-Speicherung überlebt das Neuladen und wir
 		await expect(
 			stufenKnopf(page, ziel),
 			`#2317 AC-2: nach dem Neuladen muss binnen 3 s die gewählte Stufe (${ziel}) angezeigt werden, nicht ${START_STUFE}`
-		).toHaveAttribute('aria-pressed', 'true', { timeout: 3_000 });
+		).toHaveValue(ziel, { timeout: 3_000 });
 		await pruefeGehalten(halt, '#2317 AC-2');
 
 		await expect
@@ -570,16 +575,16 @@ test.describe('Issue #2317: jede Trip-Speicherung überlebt das Neuladen und wir
 		const dialogs = collectLeaveDialogs(page);
 
 		const halt = await haltePutBisNeuemDokument(page, pfad);
-		await stufenKnopf(page, 'sensibel').click();
+		await stufenKnopf(page, '30').fill('30');
 		await page.reload();
 		halt.aktiv = false;
 
 		await expect(page.locator('[data-testid="alarme-tab"]:visible').first()).toBeVisible({ timeout: 15_000 });
-		await expect(stufenKnopf(page, 'sensibel')).toBeVisible({ timeout: 10_000 });
+		await expect(stufenKnopf(page, '30')).toBeVisible({ timeout: 10_000 });
 		await expect(
-			stufenKnopf(page, 'sensibel'),
+			stufenKnopf(page, '30'),
 			'#2317 AC-11 (Vorbedingung): nach dem Neuladen muss binnen 3 s der gespeicherte Stand (sensibel) angezeigt werden'
-		).toHaveAttribute('aria-pressed', 'true', { timeout: 3_000 });
+		).toHaveValue('30', { timeout: 3_000 });
 		await pruefeGehalten(halt, '#2317 AC-11');
 
 		const konflikte: string[] = [];
@@ -589,14 +594,14 @@ test.describe('Issue #2317: jede Trip-Speicherung überlebt das Neuladen und wir
 			}
 		});
 
-		await stufenKnopf(page, 'entspannt').click();
+		await stufenKnopf(page, '90').fill('90');
 
 		await expect
 			.poll(() => windGustStufe(page, pfad), {
 				message: '#2317 AC-11: die Änderung nach dem Neuladen muss gespeichert werden, nicht an einem Konflikt scheitern',
 				timeout: 8_000
 			})
-			.toBe('entspannt');
+			.toBe('90');
 		await expect(
 			page.getByTestId('save-indicator'),
 			'#2317 AC-11: nach dem Speichern darf kein Konflikt-/Fehlerzustand angezeigt werden'

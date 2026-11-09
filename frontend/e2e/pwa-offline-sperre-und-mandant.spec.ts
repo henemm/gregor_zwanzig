@@ -330,7 +330,7 @@ async function alarmReiterOeffnen(page: Page): Promise<void> {
 	await expect(page.getByTestId('trip-detail-tab-list')).toBeVisible({ timeout: 15_000 });
 	await page.getByTestId('trip-detail-tab-alarme').first().click();
 	await expect(page.getByTestId('trip-detail-panel-alarme')).toBeVisible();
-	await expect(page.locator('[data-testid^="alert-level-"]').first()).toBeVisible();
+	await expect(page.locator('[data-testid="alert-cooldown-input"]').first()).toBeVisible();
 }
 
 /**
@@ -340,9 +340,10 @@ async function alarmReiterOeffnen(page: Page): Promise<void> {
  */
 const HUB_SCHREIBENDE_KNOEPFE = ['subscription-hub-send', 'subscription-kebab'];
 
+// #2793 S2b (Spec §6): Empfindlichkeits-Knoepfe und Schnellwahl entfallen (nur
+// lesbar) -- bearbeitbares Alarm-Element ist das Sperrzeit-Feld.
 const SPERR_PROBEN = [
-	'[data-testid^="alert-level-"]',
-	'[data-testid^="alert-quickset-"]',
+	'[data-testid="alert-cooldown-input"]',
 	'[data-testid="subscription-hub-send"]' // Issue #2278: Primaerknopf "Senden" ersetzt test-briefing-menu-toggle
 ];
 

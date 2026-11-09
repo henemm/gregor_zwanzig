@@ -226,8 +226,10 @@ def test_ac2_active_temperature_metric_still_fires():
     sent, captured = _run_scenario(
         "tdd-1191-ac2-temp-on", "cp-1191-ac2",
         active_metrics=["temp_max_c"],
+        # #2793 S2b: Alarm nach Ampelfarbe (Vorlage allgemein, oben orange ab
+        # 31) -- 10 -> 32 ist gruen -> orange; 30 waere nur gelb (unter Alarm ab).
         cached_summary={"temp_max_c": 10.0},
-        fresh_summary={"temp_max_c": 30.0},
+        fresh_summary={"temp_max_c": 32.0},
     )
     assert sent == 1, (
         f"Aktive Temperatur-Metrik hätte feuern müssen — erwartet 1 Alarm bei "
@@ -476,8 +478,10 @@ def test_f002_guard_temp_max_active_max_temp_delta_still_fires():
     sent, captured = _run_scenario(
         "tdd-1191-f002-max-on", "cp-1191-f002-guard-max",
         active_metrics=["temp_max_c"],
+        # #2793 S2b: Alarm nach Ampelfarbe (Vorlage allgemein, oben orange ab
+        # 31) -- 10 -> 32 ist gruen -> orange; 30 waere nur gelb (unter Alarm ab).
         cached_summary={"temp_max_c": 10.0},
-        fresh_summary={"temp_max_c": 30.0},
+        fresh_summary={"temp_max_c": 32.0},
     )
     assert sent == 1, (
         f"Aktive Max-Temp hätte feuern müssen — erwartet 1 Alarm bei "

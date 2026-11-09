@@ -104,6 +104,7 @@ class _ScriptedWeatherSource:
 def _preset_with_alert_levels(
     preset_id: str, location_ids: list[str], empfaenger: list[str],
     metric_alert_levels: dict[str, str], cooldown_minutes: int | None = None,
+    alarm_ab: dict[str, str] | None = None,
 ) -> dict:
     """Compare-Preset-Dict mit Trip-benannter Alarm-Konfiguration unter
     `display_config.metric_alert_levels` (analog `UnifiedWeatherDisplayConfig`
@@ -131,6 +132,12 @@ def _preset_with_alert_levels(
         "created_at": "2026-07-09T00:00:00Z",
         "display_config": {"metric_alert_levels": dict(metric_alert_levels)},
     }
+    if alarm_ab is not None:
+        # #2793 S2b: so, wie die Migration (ADR-0106 P3) die Altstufe abbildet.
+        preset["display_config"]["ampel"] = {
+            "template": "allgemein",
+            "metrics": {m: {"alarm_ab": ab} for m, ab in alarm_ab.items()},
+        }
     if cooldown_minutes is not None:
         preset["cooldown_minutes"] = cooldown_minutes
     return preset
@@ -202,16 +209,20 @@ def test_ac5_stored_sensibel_level_makes_alert_more_sensitive():
             _preset_with_alert_levels(
                 preset_id, ["loc-s"], ["gregor-test@henemm.com"],
                 metric_alert_levels={"precipitation_sum": "sensibel"},
+                # #2793 S2b: seit dem Umschalten wirkt die migrierte Stufe
+                # (P3: sensibel = eine Stufe empfindlicher als Orange = Gelb).
+                alarm_ab={"precipitation": "yellow"},
             )
         ])
 
         CompareWeatherSnapshotService(user_id=uid).save(
-            preset_id, "loc-s", _point("loc-s", loc.name, loc.lat, loc.lon, precip_sum_mm=2.0)
+            preset_id, "loc-s", _point("loc-s", loc.name, loc.lat, loc.lon, precip_sum_mm=0.5)
         )
 
         settings = _settings_email_capable_dummy()
         sent_subjects: list[str] = []
-        ws = _ScriptedWeatherSource({"loc-s": 9.0})  # Δ=7: >= sensibel(5), < standard(10)
+        # gruen -> gelb: alarmiert mit „Alarm ab Gelb", nicht mit der Vorgabe Orange.
+        ws = _ScriptedWeatherSource({"loc-s": 2.0})
 
         service = CompareAlertService(
             settings=settings, user_id=uid, weather_source=ws,
@@ -220,9 +231,8 @@ def test_ac5_stored_sensibel_level_makes_alert_more_sensitive():
         sent = service.check_all_compare_presets()
 
         assert sent == 1, (
-            f"Gespeicherte Empfindlichkeit 'sensibel' (Schwelle 5) wurde ignoriert — "
-            f"erwartet 1 Alarm bei Δ=7, erhalten: {sent}. Der Service liest die "
-            "Alarm-Konfiguration offenbar nicht aus display_config.metric_alert_levels."
+            f"Gespeichertes Alarm ab Gelb (migriert aus 'sensibel') wurde ignoriert — "
+            f"erwartet 1 Alarm bei gruen -> gelb, erhalten: {sent}."
         )
         assert len(sent_subjects) == 1
     finally:
@@ -260,6 +270,8 @@ def test_ac5_stored_entspannt_level_makes_alert_less_sensitive():
             _preset_with_alert_levels(
                 preset_id, ["loc-e"], ["gregor-test@henemm.com"],
                 metric_alert_levels={"precipitation_sum": "entspannt"},
+                # #2793 S2b: migrierte Stufe (P3: entspannt = Rot).
+                alarm_ab={"precipitation": "red"},
             )
         ])
 
@@ -269,7 +281,8 @@ def test_ac5_stored_entspannt_level_makes_alert_less_sensitive():
 
         settings = _settings_email_capable_dummy()
         sent_subjects: list[str] = []
-        ws = _ScriptedWeatherSource({"loc-e": 16.0})  # Δ=14: < entspannt(20), >= standard(10)
+        # gelb -> orange: die Vorgabe Orange wuerde alarmieren, „Alarm ab Rot" nicht.
+        ws = _ScriptedWeatherSource({"loc-e": 8.0})
 
         service = CompareAlertService(
             settings=settings, user_id=uid, weather_source=ws,
@@ -278,9 +291,8 @@ def test_ac5_stored_entspannt_level_makes_alert_less_sensitive():
         sent = service.check_all_compare_presets()
 
         assert sent == 0, (
-            f"Gespeicherte Empfindlichkeit 'entspannt' (Schwelle 20) wurde ignoriert — "
-            f"erwartet 0 Alarme bei Δ=14, erhalten: {sent}. Der Service liest die "
-            "Alarm-Konfiguration offenbar nicht aus display_config.metric_alert_levels."
+            f"Gespeichertes Alarm ab Rot (migriert aus 'entspannt') wurde ignoriert — "
+            f"erwartet 0 Alarme bei gelb -> orange, erhalten: {sent}."
         )
         assert sent_subjects == []
     finally:

@@ -29,6 +29,11 @@ from utils.timezone import UTC, local_dt
 
 logger = logging.getLogger(__name__)
 
+# Issue #2793 S2b (D4): Alarm-Metriken, die bis S7 auf der Δ-Logik bleiben.
+D4_ALERT_METRICS: frozenset[str] = frozenset({
+    "freezing_level", "snow_line", "thunder_onset", "precipitation_heavy_onset",
+})
+
 
 @dataclass
 class EvaluationResult:
@@ -172,14 +177,10 @@ class DeviationAlertEngine:
         )
 
     @staticmethod
-    def _select_detector(
-        config: AlertEvaluationConfig,
-    ) -> WeatherChangeDetectionService:
-        """Detektor-Wahl inkl. #961-„Aktivieren-Lücke"-Backfill — jetzt
-        location-generisch in der Engine (Issue #1168 F001-Fix), gespeist aus
-        `config.metric_alert_levels` + `config.display_config`-Auszug statt
-        über einen `detector=`-Override-Parameter. 1:1 aus
-        `TripAlertService._select_change_detector()` übernommen; ohne
+    def _expanded_rules(config: AlertEvaluationConfig) -> list:
+        """Regelmenge der Δ-Logik inkl. #961-„Aktivieren-Lücke"-Backfill —
+        location-generisch, gespeist aus `config.metric_alert_levels` +
+        `config.display_config`-Auszug (Issue #1168 F001-Fix). Ohne
         `display_config` (None, z. B. reiner Compare-Aufruf ohne Weather-Tab)
         bleibt das alte, levels-only Verhalten erhalten (Abwärtskompatibilität)."""
         from services.alert_preset import expand_per_metric_levels
@@ -190,18 +191,50 @@ class DeviationAlertEngine:
                 config.metric_alert_levels
                 or DeviationAlertEngine._has_active_alert_metric(display_config)
             ):
-                return WeatherChangeDetectionService.from_alert_rules([])
-            rules = expand_per_metric_levels(
+                return []
+            return expand_per_metric_levels(
                 config.metric_alert_levels or {}, display_config=display_config
             )
-            return WeatherChangeDetectionService.from_alert_rules(rules)
-
-        rules = expand_per_metric_levels(
+        return expand_per_metric_levels(
             config.metric_alert_levels or {},
             display_config=None,
             supplement_missing_levels=config.supplement_missing_levels,
         )
+
+    @staticmethod
+    def _select_detector(
+        config: AlertEvaluationConfig,
+    ) -> WeatherChangeDetectionService:
+        """Δ-Detektor über ALLE Regeln (1:1 aus
+        `TripAlertService._select_change_detector()`). Seit #2793 S2b löst
+        `evaluate()` nur noch die D4-Teilmenge davon aus (`_select_d4_detector`)."""
+        return WeatherChangeDetectionService.from_alert_rules(
+            DeviationAlertEngine._expanded_rules(config)
+        )
+
+    @staticmethod
+    def _select_d4_detector(
+        config: AlertEvaluationConfig,
+    ) -> WeatherChangeDetectionService:
+        """Issue #2793 S2b (D4): Nullgradgrenze und Beginn-Verschiebung laufen
+        bis S7 auf der heutigen Δ-Logik. Dieselbe Regelmenge wie bisher, nur
+        auf diese Metriken beschränkt; ihre Summary-Felder teilt keine andere
+        Regel, die Schwellen sind daher byte-gleich (AC-12)."""
+        rules = [
+            r for r in DeviationAlertEngine._expanded_rules(config)
+            if str(getattr(r.metric, "value", r.metric)) in D4_ALERT_METRICS
+        ]
         return WeatherChangeDetectionService.from_alert_rules(rules)
+
+    @staticmethod
+    def _ampel(config: AlertEvaluationConfig) -> dict:
+        """Aufgelöste Abo-Ampel, gesetzt vom Adapter (Trip: `resolve_ampel(trip)`,
+        Vergleich: `resolve_ampel(preset)`). Fehlt sie, ist das ein
+        Programmierfehler und scheitert laut -- kein stilles „allgemein" an
+        einer Zwischenstelle (S1c-4b, AC-25/AC-27)."""
+        if config.ampel is None:
+            raise ValueError("Abo-Ampel fehlt: AlertEvaluationConfig.ampel setzen")  # i18n-log
+        return config.ampel
 
     @staticmethod
     def _detect_all_changes(
@@ -291,15 +324,20 @@ class DeviationAlertEngine:
         ):
             return EvaluationResult(triggered=False, suppressed_reason="quiet_hours")
 
-        active_detector = self._select_detector(config)
-        all_changes = self._detect_all_changes(active_detector, cached, fresh)
-        significant = self._filter_significant_changes(all_changes)
-        if not significant:
-            return EvaluationResult(triggered=False, suppressed_reason="no_significant_changes")
+        # Issue #2793 S2b: Ampel-Metriken nach Farbe (Bezug: zuletzt gemeldet,
+        # sonst Anker), D4-Metriken auf der heutigen Δ-Logik mit Dedup.
+        from services.ampel_alarm import ampel_changes
 
-        to_report = self._filter_against_alert_state(significant, alert_state)
+        ampel = self._ampel(config)
+        ampel_report = ampel_changes(cached, fresh, config, alert_state, ampel)
+        d4_changes = self._detect_all_changes(self._select_d4_detector(config), cached, fresh)
+        to_report = ampel_report + self._filter_against_alert_state(d4_changes, alert_state)
         if not to_report:
-            return EvaluationResult(triggered=False, suppressed_reason="alert_state_dedup")
+            # Grund wie bisher: gab es gegen den Anker etwas, hat das
+            # Melde-Gedaechtnis es unterdrueckt.
+            gegen_anker = d4_changes or ampel_changes(cached, fresh, config, {}, ampel)
+            reason = "alert_state_dedup" if gegen_anker else "no_significant_changes"
+            return EvaluationResult(triggered=False, suppressed_reason=reason)
 
         severity = self._highest_severity(to_report)
         return EvaluationResult(

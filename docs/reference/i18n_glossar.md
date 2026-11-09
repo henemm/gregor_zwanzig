@@ -172,3 +172,9 @@ Hier nur Beispiele der Konvention; **Kurzform (`col_label`) und Kürzel bleiben*
 | Radar-Nowcast | radar nowcast | Badge der Regen-Alarm-Mail |
 | Beginn (Regen-/Gewitter-Beginn) | onset | „Niedersch-Beginn“ = *Precip onset* |
 | Cooldown | cooldown | „höchstens einmal in“ = *at most once in* |
+| grün / gelb / orange / rot (Ampelfarbe im Abweichungs-Alarm) | green / yellow / orange / red | Kleingeschrieben im Satz (`alarm.ampel.farbe.*`, #2793); Kurzform-Buchstaben `G/Y/O/R` nie übersetzt |
+| gestiegen (von … auf …) | rose (from … to …) | Verschärfung der Ampelfarbe |
+| großer Sprung | large jump | „weiter rot, großer Sprung“ = *still red, large jump* |
+| Entwarnung (Abweichungs-Alarm) | all clear | „von orange auf gelb zurückgegangen“ = *back from orange to yellow* |
+| Tageshöchst / Tagestief | daily high / daily low | Seite der Temperatur im Ampel-Satz |
+| Alarm ab | alert from | Schwelle der Ampel je Metrik (`alarm_ab`) |

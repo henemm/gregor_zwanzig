@@ -37,6 +37,7 @@ from services.alert_channels import effective_alert_channels
 from services.compare_alert_channels import effective_compare_telegram_style
 from services.compare_alert_guard import is_silenced
 from services.compare_location_weather_source import CompareLocationWeatherSource
+from app.ampel import resolve_ampel
 from services.compare_preset_access import (
     load_compare_alert_presets,
     notification_service_for_preset,
@@ -882,6 +883,8 @@ class CompareAlertService:
                 (all_locations.get(lid) for lid in preset.get("location_ids") or []),
                 context_label=preset.get("id", ""),
             ),
+            # Issue #2793 S2b: Abo-Ampel des Presets (ampel.template -> profil).
+            ampel=resolve_ampel(preset),
         )
 
     def _display_config_from_active_metrics(self, preset: dict):

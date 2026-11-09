@@ -35,6 +35,7 @@
 	import AlertQuietHoursCard from '$lib/components/alerts-tab/AlertQuietHoursCard.svelte';
 	import AlertPreviewCard from '$lib/components/alerts-tab/AlertPreviewCard.svelte';
 	import AlertMetricLevelTable from '$lib/components/alerts-tab/AlertMetricLevelTable.svelte';
+	import { ladeVorlagenAmpeln, vorlageIdFuer, type VorlagenAmpeln } from '../alerts-tab/alarmAbAnzeige.ts';
 	import AlertMetricChannelsBlock from '$lib/components/alerts-tab/AlertMetricChannelsBlock.svelte';
 	import { baueDiff, type KanalEintrag, type KanalMap } from './alarme-tab/alertMetricChannels.ts';
 	import { vergleichAlarmRegeln } from '$lib/components/alerts-tab/alertPreviewHelpers'; // #2283 S5: echte Alarm-Vorschau statt VTAlertSample
@@ -112,14 +113,7 @@
 		onQuietHoursChange?: (von: string | undefined, bis: string | undefined) => void;
 		radarAlertEnabled?: boolean;
 		onRadarAlertChange?: (an: boolean) => void;
-		// Issue #2659 (i18n F10): die Prop `zonenBezug` (deutscher Bezugstext aus
-		// compare/alarmePropsAus.ts) ist zurueckgebaut — den Bezug der Stillen
-		// Stunden zeigt dieser Reiter je `context` aus dem Katalog
-		// (alarme.stille_stunden.bezug_route|_vergleich, F7 #2656).
-		// Dieser Kommentarblock haelt die Zeilenzahl VOR den gefesselten
-		// HERKUNFT-Zweigen (context_herkunft_zweige_eingefroren.test.ts,
-		// Spec-Endbilanz) unveraendert.
-		//
+		// #2659 (F10): Prop `zonenBezug` zurueckgebaut; Block mit #2793 S2b gekuerzt (gefesselte HERKUNFT-Zeilen bleiben).
 		/** Rollback-Senke des UNVERAENDERTEN Vergleichs-Speicherwegs:
 		 *  `rollbackAlarmSnapshot` setzt nach einem gescheiterten PUT feldweise
 		 *  zurueck; einziges Bedienelement darueber: Kanaele je Wettergroesse (#1895). */
@@ -152,6 +146,7 @@
 		// explizit `null`) wird der Fetch uebersprungen — SSR-Tests koennen den
 		// Tarif-Zustand so steuern, ohne dass `onMount` je laeuft (#1717).
 		profileOverride?: { premium_sms_allowed?: boolean } | null; /** #2521 S1: Infobox nur beim Anlegen (Default aus). */ showInfobox?: boolean;
+		/** #2793 S2b: Testhaken Vorlagen-Ampeln (Muster profileOverride). */ templatesOverride?: VorlagenAmpeln;
 	}
 	let {
 		context = 'route',
@@ -186,8 +181,13 @@
 		onChannelToggle,
 		existingChannelThresholds,
 		existingAlertMetricChannels = undefined, onAlertMetricChannelChange = undefined, alertMetricChannels = undefined,
-		profileOverride, showInfobox = false
+		profileOverride, showInfobox = false, templatesOverride
 	}: Props = $props();
+
+	let vorlagenAmpeln = $state<VorlagenAmpeln>(untrack(() => templatesOverride ?? {})); // #2793 S2b: „Alarm ab" nur lesbar, EIN Code fuer beide Kontexte
+	onMount(() => { if (templatesOverride === undefined) ladeVorlagenAmpeln(fetch).then((v) => (vorlagenAmpeln = v)); });
+	const aboAmpel = $derived(((trip?.display_config as { ampel?: unknown } | undefined)?.ampel ?? (preset?.display_config as { ampel?: unknown } | undefined)?.ampel ?? null) as VorlagenAmpeln[string]);
+	const vorlageAmpel = $derived(vorlagenAmpeln[vorlageIdFuer(aboAmpel, trip?.display_config?.preset_name, preset?.profil, vorlagenAmpeln)] ?? null);
 
 	// ── Tarif-Zustand fuer das Premium-SMS-Gate (AC-5/AC-13) ───────────────────
 	// EIN Fetch-Ort fuer alle vier Mount-Punkte (Trip-Alarme-Reiter,
@@ -285,10 +285,8 @@
 	const effectiveMetricLevels = $derived(
 		(metricAlertLevels as Record<AlertMetric, SensLevel> | undefined) ?? routeMetricLevels
 	);
-	function handleMetricLevelChange(metric: AlertMetric, level: SensLevel) {
-		if (metricAlertLevels === undefined) {
-			routeMetricLevels = { ...routeMetricLevels, [metric]: level };
-		}
+	function handleMetricLevelChange(metric: AlertMetric, level: SensLevel) { // #2793 S2b: bis S3a ohne Bedienelement (Tabelle nur lesbar)
+		if (metricAlertLevels === undefined) routeMetricLevels = { ...routeMetricLevels, [metric]: level };
 		onMetricLevelChange?.(metric, level);
 	}
 
@@ -412,6 +410,7 @@
 			quietTo: routeQuietTo,
 			channels: routeChannelState,
 			channelThresholds: routeChannelThresholds,
+			// #2793 S2b (AC-19): ohne Regler stets der geladene Bestand -> Altstufen bleiben gleich.
 			metricLevels: routeMetricLevels,
 			// #1895 S3b1: nur der Diff gegen den zuletzt geladenen Stand (Live-Prop), nie die Vollmap.
 			metricChannelsDiff: baueDiff(existingAlertMetricChannels, routeAlertMetricChannels)
@@ -538,7 +537,8 @@
 					<AlertMetricLevelTable
 						activeMetrics={effectiveActiveMetrics}
 						levels={effectiveMetricLevels}
-						onLevelChange={handleMetricLevelChange}
+						{aboAmpel}
+						vorlage={vorlageAmpel}
 					/>
 					<!-- #1895 S3b1: Kanäle je Wettergröße — rendert erst mit geladenen Schlüsseln. -->
 					<AlertMetricChannelsBlock

@@ -2,6 +2,13 @@
 
 SPEC: docs/specs/modules/fix_1503_delta_dringlichkeit.md (AC-1..AC-12)
 
+Issue #2793 S2b (Spec feat_2793_s2_alarm_stufenwechsel.md §3, D3): die
+Abstufung bleibt, ihre QUELLE wechselt -- statt Faktor Δ/Schwelle bestimmt die
+Ampelfarbe (gelb gering, orange mittel, rot hoch; Entwarnung: verlassene
+Farbe). Die Tests AC-1..AC-8 und AC-12 sind darauf umgestellt; je Test steht
+der Grund im Docstring. AC-9..AC-11 behalten ihre Zusicherung (die Werte
+ergeben unter der Ampel dieselbe Dringlichkeit).
+
 Kernaussage: Der Δ-Detektor berechnet in ``_classify_severity()`` bereits eine
 abgestufte Dringlichkeit aus dem Ueberschreitungsfaktor, erreicht diese
 Berechnung aber nie -- ``from_alert_rules()`` schreibt fuer JEDE Δ-Regel einen
@@ -69,10 +76,13 @@ from tests.helpers.briefing_zeiten import briefing_zeiten_fuer_trip
 from tests.helpers.compare_briefings import write_compare_briefings
 
 # Schwellen der Empfindlichkeitsstufe "standard" aus `alert_preset._PRESET_TABLE`.
-# Bewusst als benannte Konstanten, damit die Faktoren in den Tests ablesbar sind.
+# Seit #2793 S2b nur noch Sprung-Schwellen (D1); AC-9..AC-11 nennen sie weiter.
 GUST_STANDARD = 20.0        # wind_gust        -> gust_max_kmh
-PRECIP_STANDARD = 10.0      # precipitation_sum-> precip_sum_mm
-TEMP_MAX_STANDARD = 6.0     # temperature_max  -> temp_max_c
+
+# #2793 S2b: Vorlage „allgemein" -- Boeen gelb 30 / orange 45 / rot 60,
+# Niederschlag gelb 1 / orange 5 / rot 10, Temperatur oben gelb 28 / orange 31 / rot 34.
+GELB_AB = {"gust": "yellow", "precipitation": "yellow", "temperature": "yellow",
+           "thunder": "orange"}
 
 
 def _user(prefix: str) -> str:
@@ -92,17 +102,22 @@ def _point(**summary):
     )
 
 
-def _evaluate(levels: dict[str, str], alt: dict, neu: dict):
-    """Voller Engine-Lauf ueber die echte Kette
-    ``metric_alert_levels`` -> ``expand_per_metric_levels`` ->
-    ``from_alert_rules`` -> ``detect_changes`` -> ``_highest_severity``.
-    Kein Direktaufruf von ``_classify_severity()`` -- geprueft wird dort, wo
-    die Zusicherung WIRKT."""
+def _evaluate(alarm_ab: dict[str, str], alt: dict, neu: dict, template: str = "allgemein"):
+    """Voller Engine-Lauf ueber die echte Kette (seit #2793 S2b: Abo-Ampel ->
+    Farbe von Anker und Neuwert -> ``_highest_severity``). Kein Direktaufruf
+    eines Bausteins -- geprueft wird dort, wo die Zusicherung WIRKT."""
+    from app.ampel import resolve_ampel
     from services.deviation_alert_engine import DeviationAlertEngine
     from services.point_weather import AlertEvaluationConfig
 
+    dc = UnifiedWeatherDisplayConfig(
+        trip_id="t-1503", metrics=[],
+        ampel={"template": template,
+               "metrics": {m: {"alarm_ab": ab} for m, ab in alarm_ab.items()}},
+    )
     config = AlertEvaluationConfig(
-        cooldown_minutes=0, metric_alert_levels=levels, channels={"email"},
+        cooldown_minutes=0, channels={"email"}, display_config=dc,
+        ampel=resolve_ampel(dc),
     )
     return DeviationAlertEngine().evaluate(
         cached=[_point(**alt)], fresh=[_point(**neu)], config=config, alert_state={},
@@ -112,7 +127,7 @@ def _evaluate(levels: dict[str, str], alt: dict, neu: dict):
 # ───────────────────────── echte Pipeline: voller Trip-Lauf ─────────────────
 
 def _trip(trip_id: str, levels: dict[str, str], catalog_ids: list[str],
-          alert_rules: list | None = None) -> Trip:
+          alert_rules: list | None = None, alarm_ab: dict | None = None) -> Trip:
     """Trip, deren Alarmquelle ausschliesslich ``metric_alert_levels`` ist
     (der Zustand seit #946). ``catalog_ids`` sind die auf dem Wetter-Tab
     aktiven Katalog-Metriken -- ohne sie greift der #961-Deaktivieren-Filter
@@ -129,6 +144,9 @@ def _trip(trip_id: str, levels: dict[str, str], catalog_ids: list[str],
             trip_id=trip_id,
             metrics=[MetricConfig(metric_id=cid, enabled=True) for cid in catalog_ids],
             metric_alert_levels=levels,
+            # #2793 S2b: ohne Angabe Vorgabe der Vorlage „allgemein" (Orange).
+            ampel={"template": "allgemein",
+                   "metrics": {m: {"alarm_ab": ab} for m, ab in (alarm_ab or {}).items()}},
         ),
     )
     # Issue #1594: Briefing-Zeiten ausserhalb des Vorlauf-Fensters — sonst
@@ -165,195 +183,120 @@ def _latest_entry(user_id: str) -> dict:
 # ═════════════════════ AC-1..AC-3 — die Abstufung selbst ════════════════════
 
 def test_ac1_boeen_knapp_ueber_schwelle_ist_gering():
-    """AC-1 GIVEN Empfindlichkeit "standard" fuer Windboeen (Schwelle 20 km/h)
-    WHEN sich die Boeen-Vorhersage zwischen zwei Staenden um 25 km/h aendert
-    (Faktor 1,25)
-    THEN traegt das Ergebnis von ``DeviationAlertEngine.evaluate()`` die
-    Dringlichkeit ``"LOW"``.
+    """AC-1 (#2793 S2b, D3 umgestellt) GIVEN Boeen „Alarm ab Gelb"
+    WHEN die Boeen von gruen (20) auf gelb (35) steigen
+    THEN traegt das Ergebnis die Dringlichkeit ``"LOW"`` (gelb = gering).
 
-    RED heute: der Vorrang-Eintrag aus ``from_alert_rules()`` liefert
-    ``ChangeSeverity.MODERATE`` -> ``"MODERATE"``."""
-    ergebnis = _evaluate(
-        {"wind_gust": "standard"},
-        {"gust_max_kmh": 30.0}, {"gust_max_kmh": 55.0},
-    )
-    assert ergebnis.triggered, "Voraussetzung: 25 km/h > Schwelle 20 muss ausloesen."
-    assert ergebnis.severity == "LOW", (
-        f"Faktor {25.0 / GUST_STANDARD:.2f} muss 'LOW' ergeben, "
-        f"erhalten: {ergebnis.severity!r}"
-    )
+    Vorher: Faktor Δ/Schwelle 1,25 -> LOW. Grund der Umstellung: Spec D3,
+    die Dringlichkeit kommt aus der erreichten Farbe."""
+    ergebnis = _evaluate(GELB_AB, {"gust_max_kmh": 20.0}, {"gust_max_kmh": 35.0})
+    assert ergebnis.triggered, "Voraussetzung: gruen -> gelb bei Alarm ab Gelb muss ausloesen."
+    assert ergebnis.severity == "LOW", f"gelb muss 'LOW' ergeben, erhalten: {ergebnis.severity!r}"
 
 
 def test_ac2_boeen_mittlere_aenderung_bleibt_mittel():
-    """AC-2 (INVARIANTE, heute schon GRUEN — kein RED-Beleg) GIVEN derselbe
-    Aufbau WHEN die Aenderung 35 km/h betraegt (Faktor 1,75) THEN ist die
-    Dringlichkeit ``"MODERATE"``.
-
-    Dieser Test faellt zufaellig mit dem heutigen Konstantwert zusammen: der
-    Vorrang liefert ``MODERATE``, und die Rechnung liefert fuer Faktor 1,75
-    ebenfalls ``MODERATE``. Er beweist fuer sich genommen NICHTS ueber den
-    Bug -- sein Zweck ist, dass die Mitte nach dem Fix nicht wegrutscht (die
-    Abstufung entsteht sonst nur an den Raendern)."""
-    ergebnis = _evaluate(
-        {"wind_gust": "standard"},
-        {"gust_max_kmh": 30.0}, {"gust_max_kmh": 65.0},
-    )
-    assert ergebnis.triggered, "Voraussetzung: 35 km/h > Schwelle 20 muss ausloesen."
-    assert ergebnis.severity == "MODERATE", (
-        f"Faktor {35.0 / GUST_STANDARD:.2f} muss 'MODERATE' ergeben, "
-        f"erhalten: {ergebnis.severity!r}"
-    )
+    """AC-2 (#2793 S2b, D3 umgestellt) GIVEN derselbe Aufbau WHEN die Boeen
+    auf orange (50) steigen THEN ist die Dringlichkeit ``"MODERATE"``."""
+    ergebnis = _evaluate(GELB_AB, {"gust_max_kmh": 20.0}, {"gust_max_kmh": 50.0})
+    assert ergebnis.triggered, "Voraussetzung: gruen -> orange muss ausloesen."
+    assert ergebnis.severity == "MODERATE", f"orange muss 'MODERATE' ergeben, erhalten: {ergebnis.severity!r}"
 
 
 def test_ac3_boeen_starke_aenderung_ist_hoch():
-    """AC-3 GIVEN derselbe Aufbau WHEN die Aenderung 45 km/h betraegt
-    (Faktor 2,25) THEN ist die Dringlichkeit ``"HIGH"``.
-
-    RED heute: der Vorrang liefert ``"MODERATE"``. Zusammen mit AC-1 belegt
-    dieser Test, dass heute ein 25-km/h-Sprung und ein 45-km/h-Sprung im
-    Protokoll nicht unterscheidbar sind."""
-    ergebnis = _evaluate(
-        {"wind_gust": "standard"},
-        {"gust_max_kmh": 30.0}, {"gust_max_kmh": 75.0},
-    )
-    assert ergebnis.triggered, "Voraussetzung: 45 km/h > Schwelle 20 muss ausloesen."
-    assert ergebnis.severity == "HIGH", (
-        f"Faktor {45.0 / GUST_STANDARD:.2f} muss 'HIGH' ergeben, "
-        f"erhalten: {ergebnis.severity!r}"
-    )
+    """AC-3 (#2793 S2b, D3 umgestellt) GIVEN derselbe Aufbau WHEN die Boeen
+    auf rot (65) steigen THEN ist die Dringlichkeit ``"HIGH"``."""
+    ergebnis = _evaluate(GELB_AB, {"gust_max_kmh": 20.0}, {"gust_max_kmh": 65.0})
+    assert ergebnis.triggered, "Voraussetzung: gruen -> rot muss ausloesen."
+    assert ergebnis.severity == "HIGH", f"rot muss 'HIGH' ergeben, erhalten: {ergebnis.severity!r}"
 
 
 def test_ac1_bis_ac3_liefern_heute_denselben_wert_fuer_alle_drei_staerken():
-    """Bug-Reproduktion aus Nutzersicht (Klammer um AC-1/2/3): drei
-    unterschiedlich starke Boeen-Aenderungen (Faktor 1,25 / 1,75 / 2,25)
-    duerfen NICHT dieselbe Dringlichkeit tragen -- sonst ist im Protokoll ein
-    2-Grad-Sprung von einem 20-Grad-Sprung nicht zu unterscheiden (#1503).
-
-    RED heute: alle drei liefern ``"MODERATE"``."""
+    """Klammer um AC-1/2/3: drei verschiedene erreichte Farben duerfen NICHT
+    dieselbe Dringlichkeit tragen (#1503; seit #2793 S2b ueber die Farbe)."""
     stufen = [
-        _evaluate({"wind_gust": "standard"},
-                  {"gust_max_kmh": 30.0}, {"gust_max_kmh": neu}).severity
-        for neu in (55.0, 65.0, 75.0)
+        _evaluate(GELB_AB, {"gust_max_kmh": 20.0}, {"gust_max_kmh": neu}).severity
+        for neu in (35.0, 50.0, 65.0)
     ]
-    assert len(set(stufen)) == 3, (
-        "Drei verschieden starke Aenderungen muessen drei verschiedene "
-        f"Dringlichkeiten ergeben, erhalten: {stufen!r}"
-    )
+    assert stufen == ["LOW", "MODERATE", "HIGH"], stufen
 
 
 # ═════════════════ AC-4 — die staerkste Aenderung bestimmt ══════════════════
 
 def test_ac4_staerkste_aenderung_bestimmt_den_protokolleintrag():
-    """AC-4 GIVEN zwei Metriken aendern sich im selben Lauf, eine knapp ueber
-    Schwelle (Boeen, Faktor 1,2) und eine deutlich darueber
-    (Hoechsttemperatur, Faktor 2,5) WHEN der Lauf ausgewertet wird THEN
-    traegt der Protokolleintrag ``"HIGH"``.
-
-    RED heute: beide Aenderungen tragen ``MODERATE`` -> Eintrag ``"MODERATE"``."""
+    """AC-4 (#2793 S2b, D3 umgestellt) GIVEN zwei Metriken aendern sich im
+    selben Lauf, Boeen gruen -> gelb (gering) und Hoechsttemperatur gruen ->
+    rot (hoch) WHEN der Lauf ausgewertet wird THEN traegt der
+    Protokolleintrag ``"HIGH"`` (die hoechste Farbe)."""
     uid = _user("ac4")
     trip = _trip(
         "trip-ac4",
         {"wind_gust": "standard", "temperature_max": "standard"},
-        ["gust", "temperature"],
+        ["gust", "temperature"], alarm_ab=GELB_AB,
     )
 
     sent, mails = _run_trip_alert(
         uid, trip,
-        {"gust_max_kmh": 30.0, "temp_max_c": 10.0},
-        {"gust_max_kmh": 54.0, "temp_max_c": 25.0},
+        {"gust_max_kmh": 20.0, "temp_max_c": 20.0},
+        {"gust_max_kmh": 35.0, "temp_max_c": 35.0},
     )
 
     assert sent is True and mails, "Voraussetzung: der Alarm muss versendet werden."
     entry = _latest_entry(uid)
     assert entry.get("changes_count") == 2, (
-        "Voraussetzung: beide Metriken muessen ausloesen (Boeen Faktor 1,2 und "
-        f"Temperatur Faktor 2,5), erhalten: {entry.get('changes_count')!r}"
+        "Voraussetzung: beide Metriken muessen ausloesen (Boeen gelb, "
+        f"Temperatur rot), erhalten: {entry.get('changes_count')!r}"
     )
     assert entry.get("severity") == "HIGH", (
-        f"Die staerkste Aenderung (Faktor {15.0 / TEMP_MAX_STANDARD:.1f}) muss den "
-        f"Eintrag bestimmen, erhalten: {entry.get('severity')!r}"
+        f"Die hoechste Farbe (rot) muss den Eintrag bestimmen, erhalten: {entry.get('severity')!r}"
     )
 
 
 # ═══════════ AC-5/AC-6 — Gefahrenstufen entscheiden ueber das Niveau ════════
 
 def test_ac5_gewitterstufe_mittel_auf_hoch_ist_hoch():
-    """AC-5 GIVEN Empfindlichkeit "sensibel" fuer Gewitter WHEN die
-    Gewitterstufe von "mittel" (MED) auf "hoch" (HIGH) steigt -- ein Sprung um
-    genau eine Stufe -- THEN ist die Dringlichkeit ``"HIGH"``.
-
-    RED heute: der Vorrang liefert ``"MODERATE"``. Faellt der Vorrang ersatzlos
-    weg, wird es sogar ``"LOW"``: ``abs(delta)/threshold`` = 1/1 = 1,0 ->
-    ``MINOR``. Genau diesen Zweitfehler verhindert diese AC — das Erreichen der
-    hoechsten Gewitterstufe darf nie "gering" heissen."""
+    """AC-5 (#2793 S2b, D3 umgestellt) GIVEN Gewitter „Alarm ab Orange",
+    Vorlage „allgemein" (mittel orange, hoch rot) WHEN die Stufe von „mittel"
+    auf „hoch" steigt THEN ist die Dringlichkeit ``"HIGH"`` (erreichte Farbe
+    rot). Vorher: hoeheres Niveau HIGH -- gleiches Ergebnis, neue Quelle."""
     ergebnis = _evaluate(
-        {"thunder_level": "sensibel"},
-        {"thunder_level_max": ThunderLevel.MED},
-        {"thunder_level_max": ThunderLevel.HIGH},
+        GELB_AB, {"thunder_level_max": ThunderLevel.MED}, {"thunder_level_max": ThunderLevel.HIGH},
     )
-    assert ergebnis.triggered, (
-        "Voraussetzung: 'sensibel' meldet laut #1460 jeden Stufenwechsel."
-    )
-    assert ergebnis.severity == "HIGH", (
-        "Das Erreichen der hoechsten Gewitterstufe muss 'HIGH' sein, "
-        f"erhalten: {ergebnis.severity!r}"
-    )
+    assert ergebnis.triggered, "Voraussetzung: orange -> rot muss ausloesen."
+    assert ergebnis.severity == "HIGH", ergebnis.severity
 
 
 def test_ac6_entwarnung_von_hoechster_gewitterstufe_ist_ebenfalls_hoch():
-    """AC-6 GIVEN derselbe Aufbau WHEN die Gewitterstufe von "hoch" (HIGH) auf
-    "kein Gewitter" (NONE) faellt THEN ist die Dringlichkeit ebenfalls
-    ``"HIGH"``.
-
-    RED heute: der Vorrang liefert ``"MODERATE"``. Belegt die Symmetrie -- die
-    Entwarnung von der Hoechststufe wird nicht dadurch abgewertet, dass der
-    neue Wert harmlos ist (#1460 loest bereits symmetrisch aus)."""
+    """AC-6 (#2793 S2b, D3) GIVEN derselbe Aufbau WHEN die Gewitterstufe von
+    „hoch" (rot) auf „keins" (gruen) faellt THEN Entwarnung mit der
+    Dringlichkeit der VERLASSENEN Farbe: ``"HIGH"``."""
     ergebnis = _evaluate(
-        {"thunder_level": "sensibel"},
-        {"thunder_level_max": ThunderLevel.HIGH},
-        {"thunder_level_max": ThunderLevel.NONE},
+        GELB_AB, {"thunder_level_max": ThunderLevel.HIGH}, {"thunder_level_max": ThunderLevel.NONE},
     )
-    assert ergebnis.triggered, (
-        "Voraussetzung: 'sensibel' meldet laut #1460 auch die Entwarnung."
-    )
-    assert ergebnis.severity == "HIGH", (
-        "Die Entwarnung von der hoechsten Gewitterstufe muss 'HIGH' sein, "
-        f"erhalten: {ergebnis.severity!r}"
-    )
+    assert ergebnis.triggered, "Voraussetzung: rot -> gruen ist eine Entwarnung."
+    assert ergebnis.severity == "HIGH", ergebnis.severity
+
+
+def test_ac6_entwarnung_traegt_die_verlassene_farbe_nicht_immer_hoch():
+    """AC-6 umgekehrt (#2793 S2b, Spec §3 D3): die fruehere Regel „Entwarnung
+    so dringlich wie das gefaehrlichere Niveau" bzw. „Entwarnung immer hoch"
+    gilt nicht mehr -- eine Entwarnung von ORANGE (Boeen 50 -> 35 bei „Alarm
+    ab Orange") traegt ``"MODERATE"``, nicht ``"HIGH"``."""
+    ergebnis = _evaluate({"gust": "orange"}, {"gust_max_kmh": 50.0}, {"gust_max_kmh": 35.0})
+    assert ergebnis.triggered, "Voraussetzung: orange -> gelb unter Alarm ab Orange entwarnt."
+    assert [c.art for c in ergebnis.changes] == ["entwarnung"]
+    assert ergebnis.severity == "MODERATE", ergebnis.severity
 
 
 def test_ac5_ac6_mittlere_gewitterstufe_als_hoechstes_niveau_ist_mittel():
-    """AC-5/AC-6 (Luecken-Absicherung) GIVEN Empfindlichkeit "sensibel" fuer
-    Gewitter WHEN die Gewitterstufe von "kein Gewitter" (NONE) auf "mittel"
-    (MED) steigt -- das gefaehrlichere der beiden beteiligten Niveaus ist damit
-    MED -- THEN ist die Dringlichkeit ``"MODERATE"``, also ausdruecklich weder
-    ``"LOW"`` noch ``"HIGH"``.
-
-    Herkunft: Adversary-Finding F001 zu #1503 (MEDIUM). Die Mutations-
-    Gegenprobe „MED → MODERATE aus ``_ordinal_severity()`` entfernt" (MED fiel
-    damit auf ``MINOR`` = ``"LOW"`` zurueck) blieb UNGEFANGEN -- 31 von 31 Tests
-    der beiden #1503-Dateien plus 76 Tests des verwandten Alarm-Korpus blieben
-    gruen. Grund: AC-5 prueft MED→HIGH und AC-6 prueft HIGH→NONE, bei beiden ist
-    ``max(alt, neu)`` gleich HIGH -- der MED-Zweig wurde nie beruehrt. Die
-    #1460-Tests pruefen nur, OB ausgeloest wird, nie mit welcher Dringlichkeit.
-
-    Damit ist die mittlere Gewitterstufe erstmals an der Wirkstelle bewacht:
-    ueber den echten ``DeviationAlertEngine.evaluate()``-Lauf wie AC-5/AC-6,
-    nicht per Direktaufruf von ``_ordinal_severity()``."""
+    """AC-5/AC-6 (Luecken-Absicherung, #1503 F001; #2793 S2b ueber die Farbe)
+    GIVEN Gewitter „Alarm ab Orange" WHEN die Stufe von „keins" auf „mittel"
+    (orange) steigt THEN ist die Dringlichkeit ``"MODERATE"`` -- weder LOW
+    noch HIGH."""
     ergebnis = _evaluate(
-        {"thunder_level": "sensibel"},
-        {"thunder_level_max": ThunderLevel.NONE},
-        {"thunder_level_max": ThunderLevel.MED},
+        GELB_AB, {"thunder_level_max": ThunderLevel.NONE}, {"thunder_level_max": ThunderLevel.MED},
     )
-    assert ergebnis.triggered, (
-        "Voraussetzung: 'sensibel' meldet laut #1460 jeden Stufenwechsel ab "
-        "'mittel' — NONE -> MED muss ausloesen."
-    )
-    assert ergebnis.severity == "MODERATE", (
-        "Die mittlere Gewitterstufe als hoechstes beteiligtes Niveau muss "
-        f"'MODERATE' ergeben (weder 'LOW' noch 'HIGH'), erhalten: "
-        f"{ergebnis.severity!r}"
-    )
+    assert ergebnis.triggered, "Voraussetzung: gruen -> orange muss ausloesen."
+    assert ergebnis.severity == "MODERATE", ergebnis.severity
 
 
 # ═════════ AC-7 — Invariante #638: Einstufung filtert nichts weg ════════════
@@ -370,10 +313,11 @@ def test_ac7_geringer_alarm_wird_trotzdem_gesendet_und_protokolliert():
     die Einstufung ist Etikett, nie Filterkriterium. Der Test gilt heute und
     MUSS nach dem Fix weiter gelten; er ist kein fehlgeschlagener RED-Test."""
     uid = _user("ac7")
-    trip = _trip("trip-ac7", {"wind_gust": "standard"}, ["gust"])
+    # #2793 S2b: „geringe" Dringlichkeit heisst jetzt gelb (Boeen 20 -> 35).
+    trip = _trip("trip-ac7", {"wind_gust": "standard"}, ["gust"], alarm_ab=GELB_AB)
 
     sent, mails = _run_trip_alert(
-        uid, trip, {"gust_max_kmh": 30.0}, {"gust_max_kmh": 54.0},
+        uid, trip, {"gust_max_kmh": 20.0}, {"gust_max_kmh": 35.0},
     )
 
     assert sent is True, (
@@ -401,13 +345,14 @@ def test_ac8_alarm_sms_nennt_die_staerkste_aenderung_zuerst():
     from app.metric_catalog import get_compact_label_for_field
     from output.renderers.sms_trip import SMSTripFormatter
 
-    # Reihenfolge der Schluessel bestimmt die Detektor-Reihenfolge: die
-    # schwaechste Aenderung steht bewusst zuerst.
+    # #2793 S2b (D3): Staerke = erreichte Farbe -- Boeen gelb (gering),
+    # Niederschlag orange (mittel), Temperatur rot (hoch). Die Engine liefert
+    # die Ereignisse in der Reihenfolge Temperatur, Boeen, Niederschlag --
+    # also NICHT schon nach Staerke sortiert.
     ergebnis = _evaluate(
-        {"wind_gust": "standard", "precipitation_sum": "standard",
-         "temperature_max": "standard"},
-        {"gust_max_kmh": 30.0, "precip_sum_mm": 5.0, "temp_max_c": 10.0},
-        {"gust_max_kmh": 54.0, "precip_sum_mm": 23.0, "temp_max_c": 25.0},
+        GELB_AB,
+        {"gust_max_kmh": 20.0, "precip_sum_mm": 0.0, "temp_max_c": 20.0},
+        {"gust_max_kmh": 44.0, "precip_sum_mm": 6.0, "temp_max_c": 35.0},
     )
     assert ergebnis.triggered and len(ergebnis.changes) == 3, (
         "Voraussetzung: alle drei Metriken muessen ausloesen, erhalten: "
@@ -421,7 +366,7 @@ def test_ac8_alarm_sms_nennt_die_staerkste_aenderung_zuerst():
         return f"{label}{delta:+.0f}{einheit}"
 
     schwach = _teil("gust_max_kmh", 24.0)
-    mittel = _teil("precip_sum_mm", 18.0)
+    mittel = _teil("precip_sum_mm", 6.0)
     stark = _teil("temp_max_c", 15.0)
     assert len({schwach, mittel, stark}) == 3, (
         f"Voraussetzung: die drei Kuerzel muessen unterscheidbar sein: "
@@ -610,13 +555,14 @@ def test_ac12_zwei_nutzer_tragen_je_ihre_eigene_dringlichkeit():
     ``"HIGH"``) -- kein Rueckfall auf ``"default"``, keine Kreuz-Kontamination.
 
     RED heute: beide tragen ``"MODERATE"``."""
+    # #2793 S2b (D3): leise = gruen -> gelb (35, LOW), laut = gruen -> rot (80, HIGH).
     leise, laut = _user("leise"), _user("laut")
-    erwartet = {leise: ("trip-leise", 54.0, "LOW"), laut: ("trip-laut", 80.0, "HIGH")}
+    erwartet = {leise: ("trip-leise", 35.0, "LOW"), laut: ("trip-laut", 80.0, "HIGH")}
 
     for uid, (trip_id, neuer_wert, _) in erwartet.items():
         sent, mails = _run_trip_alert(
-            uid, _trip(trip_id, {"wind_gust": "standard"}, ["gust"]),
-            {"gust_max_kmh": 30.0}, {"gust_max_kmh": neuer_wert},
+            uid, _trip(trip_id, {"wind_gust": "standard"}, ["gust"], alarm_ab=GELB_AB),
+            {"gust_max_kmh": 20.0}, {"gust_max_kmh": neuer_wert},
         )
         assert sent is True and mails, f"Voraussetzung: Alarm fuer {uid} muss rausgehen."
 

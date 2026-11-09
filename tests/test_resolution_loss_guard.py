@@ -724,8 +724,8 @@ KNOWN_VIOLATIONS: dict[str, str] = {
         "Ampel-Aktivierung entfällt."
     ),
     # --- A10–A13: Alarm- und Amtliche-Warnungen-Pfad ---
-    "src/services/alert_preset.py::expand_per_metric_levels::0": (
-        "A10 (#1405, vormals :198) — expand_per_metric_levels (Spec-Tabelle: "
+    "src/services/alert_preset.py::explicitly_disabled_fields::0": (
+        "A10 (#1405, vormals :198; #2793 S2b aus expand_per_metric_levels in den geteilten Helfer verschoben) — explicitly_disabled_fields (Spec-Tabelle: "
         "'resolve_alert_rules'): Direction-Feld-Optout verschwindet."
     ),
     "src/services/compare_official_alert.py::_check_one_preset::0": (
@@ -863,7 +863,7 @@ SPEC_LISTED_FINDINGS: dict[str, int] = {
     # A10 — Direction-Feld-Optout (Spec-Tabelle nennt "resolve_alert_rules" —
     # existiert nicht; die Funktion an alert_preset.py:198 heißt
     # "expand_per_metric_levels")
-    "src/services/alert_preset.py::expand_per_metric_levels": 1,
+    "src/services/alert_preset.py::explicitly_disabled_fields": 1,
     # A11 — Ort aus der Alarm-Prüfung (Comprehension-Filter)
     "src/services/compare_official_alert.py::_check_one_preset": 1,
     # A12 + A13 — bis #1445 ZWEI Abbruchpfade in DERSELBEN Funktion

@@ -81,5 +81,14 @@
   "alarm.verschaerfung": "Dasselbe Ereignis, jetzt stärker: {menge} statt {basis} mm",
   "alarm.kontext.akut": "bereits angekündigt — jetzt akut",
   "alarm.kontext.angekuendigt": "bereits angekündigt",
-  "alarm.kontext.nicht_angekuendigt": "nicht angekündigt"
+  "alarm.kontext.nicht_angekuendigt": "nicht angekündigt",
+  "alarm.ampel.gestiegen": "{label} von {farbe_von} auf {farbe_bis} gestiegen: {von} → {bis}",
+  "alarm.ampel.sprung": "{label} weiter {farbe}, großer Sprung: {von} → {bis}",
+  "alarm.ampel.entwarnung": "Entwarnung {label}: von {farbe_von} auf {farbe_bis} zurückgegangen ({von} → {bis})",
+  "alarm.ampel.farbe.green": "grün",
+  "alarm.ampel.farbe.yellow": "gelb",
+  "alarm.ampel.farbe.orange": "orange",
+  "alarm.ampel.farbe.red": "rot",
+  "alarm.ampel.label.temp_max": "Tageshöchst",
+  "alarm.ampel.label.temp_min": "Tagestief"
 }

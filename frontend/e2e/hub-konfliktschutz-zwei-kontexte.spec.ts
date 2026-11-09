@@ -105,24 +105,20 @@ interface ReiterFall {
 const rc = (s: Stand) => (s.report_config as Stand | undefined) ?? {};
 const dc = (s: Stand) => (s.display_config as Stand | undefined) ?? {};
 
-// #2792 S1c-3: Alarm-Empfindlichkeit der Böen (`wind_gust`) — für beide kinds
-// dieselbe Zeile des geteilten AlarmeTab, Seed-Ausgangsstufe `standard`.
-const stufenKnopf = (p: Page, stufe: string) => p.locator(`[data-testid="alert-level-wind_gust-${stufe}"]:visible`);
+// #2793 S2b (Spec §6): die Alarm-Empfindlichkeit ist nur lesbar -- bearbeitbare
+// Alarm-Einstellung fuer beide kinds ist die Sperrzeit (`alert_cooldown_minutes`,
+// Seed 60 Minuten). Die Funktionsnamen bleiben, damit die Tabelle unten gleich bleibt.
+const sperrzeitFeld = (p: Page) => p.locator('[data-testid="alert-cooldown-input"]:visible');
 async function stufeBereit(p: Page): Promise<void> {
 	await expect(p.locator('[data-testid="alarme-tab"]').first()).toBeVisible({ timeout: 10_000 });
-	await expect(stufenKnopf(p, 'standard'), 'Vorbedingung: Ausgangsstufe standard').toHaveAttribute('aria-pressed', 'true', {
-		timeout: 10_000
-	});
+	await expect(sperrzeitFeld(p), 'Vorbedingung: Ausgangs-Sperrzeit 60').toHaveValue('60', { timeout: 10_000 });
 }
 async function stufeAendern(p: Page): Promise<void> {
-	await stufenKnopf(p, 'sensibel').click();
-	await expect(stufenKnopf(p, 'sensibel')).toHaveAttribute('aria-pressed', 'true');
+	await sperrzeitFeld(p).fill('30');
+	await expect(sperrzeitFeld(p)).toHaveValue('30');
 }
 function stufePruefe(s: Stand): void {
-	expect(
-		(dc(s).metric_alert_levels as Record<string, string> | undefined)?.wind_gust,
-		'Alarm-Empfindlichkeits-Änderung von B fehlt auf dem Server'
-	).toBe('sensibel');
+	expect(s.alert_cooldown_minutes, 'Sperrzeit-Änderung von B fehlt auf dem Server').toBe(30);
 }
 
 // Auslöser je Reiter und kind: derselbe geteilte Reiter-Baustein, aber kind-eigene
@@ -154,7 +150,8 @@ const KS_REITER: Record<HubKind, ReiterFall[]> = {
 				display_config: {
 					metrics: [{ metric_id: 'gust', enabled: true, bucket: 'primary', order: 0 }],
 					metric_alert_levels: { wind_gust: 'standard' }
-				}
+				},
+				alert_cooldown_minutes: 60 // #2793 S2b: Ausgangs-Sperrzeit
 			},
 			bereit: stufeBereit,
 			aendern: stufeAendern,
@@ -238,7 +235,8 @@ const KS_REITER: Record<HubKind, ReiterFall[]> = {
 					active_metrics: ['gust_max_kmh'],
 					metric_alert_levels: { wind_gust: 'standard' },
 					telegram_style: 'kurzform'
-				}
+				},
+				alert_cooldown_minutes: 60 // #2793 S2b: Ausgangs-Sperrzeit
 			},
 			bereit: stufeBereit,
 			aendern: stufeAendern,

@@ -94,8 +94,8 @@ from tests.tdd.test_compare_alert_channel_delivery import (
     _clean_user,
     _compare_preset as _dev_preset,
     _run_compare_alerts,
-    _setup_single_location_preset,
-    _setup_two_location_preset,
+    _setup_single_location_preset as _setup_single_basis,
+    _setup_two_location_preset as _setup_two_basis,
     _settings_all_channels as _settings_sms_capable,
     _write_tier,
 )
@@ -229,6 +229,34 @@ def _pin_transport_stubs(monkeypatch, telegram_stub: "_TelegramStub") -> None:
 
 def _uid(prefix: str) -> str:
     return f"tdd-1461-s3b2b-{prefix}-{uuid.uuid4().hex[:6]}"
+
+
+# #2793 S2b (Spec §3, D3): die Dringlichkeit kommt aus der Ampelfarbe. Diese
+# Datei misst die Kanal-Schwelle mit einer „geringen" (14 mm) und einer
+# „hohen" (30/45 mm) Meldung gegen den Anker 2 mm -- vorher ueber den Faktor
+# Δ/Schwelle (1,2 bzw. 2,8). Eine eigene Niederschlags-Ampel des Presets
+# bildet genau das ab: 2 mm gruen, 14 mm gelb (gering), ab 29 mm rot (hoch),
+# „Alarm ab Gelb".
+_AMPEL_GERING_HOCH = {
+    "template": "allgemein",
+    "metrics": {"precipitation": {
+        "upper": {"yellow": 10, "orange": 20, "red": 29}, "alarm_ab": "yellow",
+    }},
+}
+
+
+def _mit_ampel(extra: dict) -> dict:
+    dc = dict(extra.pop("display_config", None) or {})
+    dc.setdefault("ampel", _AMPEL_GERING_HOCH)
+    return {**extra, "display_config": dc}
+
+
+def _setup_single_location_preset(user_id, preset_id, location_name, **extra):
+    _setup_single_basis(user_id, preset_id, location_name, **_mit_ampel(extra))
+
+
+def _setup_two_location_preset(user_id, preset_id, **extra):
+    _setup_two_basis(user_id, preset_id, **_mit_ampel(extra))
 
 
 def _settings_email_and_telegram() -> Settings:

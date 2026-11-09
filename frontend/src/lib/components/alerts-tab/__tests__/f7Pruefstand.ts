@@ -123,6 +123,20 @@ export function wizard(over: Record<string, unknown> = {}): Record<string, unkno
 
 // ── Renderer ────────────────────────────────────────────────────────────────
 
+/** #2793 S2b: Antwort von GET /api/templates (Auszug Vorlage „allgemein",
+ *  `alarm_ab` wie `src/app/ampel_templates.py`) — Testhaken `templatesOverride`. */
+export const VORLAGEN_ALLGEMEIN = {
+	allgemein: {
+		template: 'allgemein',
+		metrics: Object.fromEntries(
+			['temperature', 'wind', 'gust', 'precipitation', 'thunder', 'visibility', 'fresh_snow'].map((m) => [
+				m,
+				{ alarm_ab: 'orange' }
+			])
+		)
+	}
+};
+
 export function alarmeRoute(over: Record<string, unknown> = {}): string {
 	return html(AlarmeTab, {
 		context: 'route',
@@ -132,6 +146,7 @@ export function alarmeRoute(over: Record<string, unknown> = {}): string {
 		existingChannels: { email: true, telegram: true, sms: false, premium_sms: false },
 		existingChannelThresholds: { telegram: 'MODERATE', sms: 'HIGH' },
 		profileOverride: { premium_sms_allowed: false },
+		templatesOverride: VORLAGEN_ALLGEMEIN,
 		...over
 	});
 }
@@ -143,6 +158,7 @@ export function alarmeVergleich(wiz: Record<string, unknown> = wizard(), over: R
 		catalog: VERGLEICH_KATALOG,
 		preset: { id: 'golden-de-vergleich', name: 'Korsika', location_ids: ['l1', 'l2', 'l3'] },
 		profileOverride: null,
+		templatesOverride: VORLAGEN_ALLGEMEIN,
 		...over
 	});
 }
@@ -179,10 +195,13 @@ function vorschauRendern(zustand: Record<string, unknown>): string {
  * Golden-Abschnitte bleiben byte-gleich). */
 export function bausteineRendern(): string {
 	const leveled = { wind_gust: 'standard', temperature_min: 'standard', cape: 'standard' };
+	// #2793 S2b: die Tabelle ist nur lesbar („Alarm ab" aus Abo-Ampel bzw. Vorlage).
+	const vorlage = VORLAGEN_ALLGEMEIN.allgemein;
+	const abo = { metrics: { gust: { alarm_ab: 'never' } } };
 	return [
-		html(AlertMetricLevelTable, { activeMetrics: ['wind_gust', 'temperature_min', 'cape'], levels: leveled, onLevelChange: nix }),
-		html(AlertMetricLevelTable, { activeMetrics: ['wind_gust', 'temperature_min'], levels: { wind_gust: 'off', temperature_min: 'sensibel' }, onLevelChange: nix }),
-		html(AlertMetricLevelTable, { activeMetrics: [], levels: {}, onLevelChange: nix }),
+		html(AlertMetricLevelTable, { activeMetrics: ['wind_gust', 'temperature_min', 'cape'], levels: leveled, vorlage }),
+		html(AlertMetricLevelTable, { activeMetrics: ['wind_gust', 'temperature_min'], levels: { wind_gust: 'off', temperature_min: 'sensibel' }, aboAmpel: abo, vorlage }),
+		html(AlertMetricLevelTable, { activeMetrics: [], levels: {} }),
 		vorschauRendern({ loading: true }),
 		vorschauRendern({ subject: '[GR20] Böen 75 km/h', emailHtml: '<p>Mail</p>', telegram: 'GR20 Böen 75', sms: 'GR20 G75' }),
 		vorschauRendern({ error: 'HTTP 503' })

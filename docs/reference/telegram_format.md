@@ -50,6 +50,8 @@ Der Stil wird je Trip/Vergleich über `report_config.telegram_style` gewählt: `
 
 **Stundenzeilen im Änderungs-Alarm (`rich`, #1737):** Unter der Kopfzeile jedes Ereignisses steht je betroffener Stunde eine Zeile `HH:MM | alt → neu` (Ortszeit), dieselben Stunden wie in der E-Mail. Trip: Zellformat (ROH oder EINFACH) des Telegram-Briefings desselben Trips; Ortsvergleich: Werte roh, nur unter betroffenen Orten. Höchstens 6 stärkste Stunden in Zeitfolge plus Hinweiszeile „betroffen HH:MM–HH:MM"; Summen-Metriken tragen die Summe in der Kopfzeile. Ohne Anker nur der neue Wert, ohne Stundenreihe unverändert. Nur Daten, keine Empfehlung. Die Kurzform (`kurzform`) sendet den SMS-Alarmtext mit der Zeitspanne `HH-HH` (`sms_format.md` §3.4f).
 
+**Farbsatz im Änderungs-Alarm (#2793 S2b):** Für Ampel-Metriken trägt `rich` dieselben Farbsätze wie die E-Mail (Katalog `alarm.ampel.*`, z. B. „Böen von gelb auf orange gestiegen: 40 km/h → 55 km/h", Entwarnung „Entwarnung Böen: von orange auf gelb zurückgegangen (…)"), statt der Schwellen-Zeile; die Stand-/Vergleichszeile bleibt. `kurzform` sendet den SMS-Alarmtext mit dem Farbpaar `:{X}>{Y}` (`sms_format.md` §3.4h). Nullgradgrenze und Beginn-Verschiebung (D4) unverändert.
+
 ## 3. Befehlseingang (Inbound)
 
 Telegram **hat** einen Befehlseingang — push-basiert, kein Poll-Job (`inbound_telegram_poll`

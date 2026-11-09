@@ -191,7 +191,7 @@ class _ScriptedSource:
 
 def _run_deviation_alert(uid: str, presets: list[dict], settings: Settings):
     """Fuehrt `CompareAlertService.check_all_compare_presets()` mit verankertem
-    Δ-Anker (temp_max_c 10 → 30, Δ=20 > Standardschwelle 10) aus."""
+    Δ-Anker (temp_max_c 10 → 32: gruen -> orange, seit #2793 S2b) aus."""
     import services.compare_alert as ca_mod
     from services.compare_alert import CompareAlertService
     from services.compare_weather_snapshot import CompareWeatherSnapshotService
@@ -208,7 +208,9 @@ def _run_deviation_alert(uid: str, presets: list[dict], settings: Settings):
     with _recorded_settings(ca_mod) as recorded:
         sent = CompareAlertService(
             settings=settings, user_id=uid,
-            weather_source=_ScriptedSource({"loc-x": {"temp_max_c": 30.0}}),
+            # #2793 S2b: Alarm nach Ampelfarbe (allgemein, oben orange ab 31,
+            # Alarm ab Orange) -- 10 -> 32 ist gruen -> orange; 30 waere gelb.
+            weather_source=_ScriptedSource({"loc-x": {"temp_max_c": 32.0}}),
             mail_sink=lambda subject, body: mails.append(subject),
         ).check_all_compare_presets()
     return sent, recorded, mails

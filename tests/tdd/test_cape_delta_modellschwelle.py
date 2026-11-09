@@ -409,9 +409,12 @@ def test_ac7_compare_path_via_deviation_alert_engine_inherits_conversion():
         aggregated=SegmentWeatherSummary(cape_max_jkg=750.0, cape_model_id="meteofrance_arome"),
         fetched_at=fetched_at, provider="test-scripted",
     )
+    from tests.helpers.ampel_allgemein import AMPEL_ALLGEMEIN
+
     config = AlertEvaluationConfig(
         cooldown_minutes=0, quiet_from=None, quiet_to=None,
         metric_alert_levels={"cape": "standard"}, channels={"email"},
+        ampel=AMPEL_ALLGEMEIN,  # #2793 S2b: Abo-Ampel ist Pflicht
     )
     engine = DeviationAlertEngine()
     result = engine.evaluate(
@@ -419,15 +422,16 @@ def test_ac7_compare_path_via_deviation_alert_engine_inherits_conversion():
         now=datetime(2026, 8, 8, 10, 0, tzinfo=timezone.utc),
     )
 
-    assert result.triggered is True, (
-        f"AC-7: der Ortsvergleichs-Auswertungskern muss bei 250 J/kg Sprung "
-        f"gegen FR/meteofrance_arome auslösen (umgerechnete Schwelle 180) — "
-        f"war triggered={result.triggered!r} suppressed_reason="
-        f"{result.suppressed_reason!r}."
+    # #2793 S2b (Spec §1, ADR-0106 P1, AC-13) -- UMGEKEHRT: CAPE ist kein
+    # eigener Ausloeser mehr, es geht nur ueber die Gewitterstufe ein. Der
+    # Ortsvergleichs-Kern meldet den CAPE-Sprung deshalb NICHT mehr (vorher:
+    # triggered=True mit Schwelle 180). Die Umrechnung selbst bewachen weiter
+    # die detect_changes-Tests oben.
+    assert result.triggered is False, (
+        f"AC-7 (#2793 S2b): CAPE allein darf im Compare-Pfad nicht mehr "
+        f"ausloesen -- war triggered={result.triggered!r}."
     )
-    cape_changes = _cape_changes(result.changes)
-    assert cape_changes, "AC-7: erwartetes cape_max_jkg-Ereignis fehlt im Compare-Pfad."
-    assert cape_changes[0].threshold == 180.0
+    assert _cape_changes(result.changes) == []
 
 
 # ─────────────────────────────────────────────────────────────────────────
@@ -668,9 +672,12 @@ def test_engine_modellwechsel_ergibt_kein_ausgeloestes_ergebnis():
         old_cape=500.0, new_cape=1500.0,
         old_model_id="meteofrance_arome", new_model_id="icon_d2",
     )
+    from tests.helpers.ampel_allgemein import AMPEL_ALLGEMEIN
+
     config = AlertEvaluationConfig(
         cooldown_minutes=0, quiet_from=None, quiet_to=None,
         metric_alert_levels={"cape": "standard"}, channels={"email"},
+        ampel=AMPEL_ALLGEMEIN,  # #2793 S2b: Abo-Ampel ist Pflicht
     )
     engine = DeviationAlertEngine()
     result = engine.evaluate(
@@ -707,9 +714,12 @@ def test_engine_gleiches_modell_loest_weiterhin_aus():
         old_cape=500.0, new_cape=750.0,
         old_model_id="icon_d2", new_model_id="icon_d2",
     )
+    from tests.helpers.ampel_allgemein import AMPEL_ALLGEMEIN
+
     config = AlertEvaluationConfig(
         cooldown_minutes=0, quiet_from=None, quiet_to=None,
         metric_alert_levels={"cape": "standard"}, channels={"email"},
+        ampel=AMPEL_ALLGEMEIN,  # #2793 S2b: Abo-Ampel ist Pflicht
     )
     engine = DeviationAlertEngine()
     result = engine.evaluate(
@@ -717,11 +727,10 @@ def test_engine_gleiches_modell_loest_weiterhin_aus():
         now=datetime(2026, 8, 8, 10, 0, tzinfo=timezone.utc),
     )
 
-    assert result.triggered is True, (
-        f"AC-5 Gegenprobe: bei identischer Herkunft muss die Engine weiter "
-        f"auslösen — war triggered={result.triggered!r} suppressed_reason="
-        f"{result.suppressed_reason!r}."
+    # #2793 S2b (Spec §1, ADR-0106 P1, AC-13) -- UMGEKEHRT: auch bei gleicher
+    # Herkunft loest CAPE ueber die Engine nicht mehr aus (vorher: True).
+    assert result.triggered is False, (
+        f"AC-5 Gegenprobe (#2793 S2b): CAPE allein darf ueber die Engine nicht "
+        f"mehr ausloesen -- war triggered={result.triggered!r}."
     )
-    cape_changes = _cape_changes(result.changes)
-    assert cape_changes, "AC-5 Gegenprobe: cape_max_jkg-Ereignis fehlt im Engine-Pfad."
-    assert cape_changes[0].threshold == 180.0
+    assert _cape_changes(result.changes) == []

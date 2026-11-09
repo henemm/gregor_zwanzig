@@ -241,9 +241,10 @@ def test_ac1_trip_alarm_fires_identically_after_extraction(telegram_sink, clean_
     last_entry = log["entries"][-1]
     assert last_entry["entity_id"] == trip.id
     assert last_entry["changes_count"] == 1
-    assert last_entry["severity"] == "MODERATE", (
-        f"erwartete Severity MODERATE (Δ=16 ist 60% über Schwelle 10, "
-        f"1.5x-2.0x-Band), war: {last_entry['severity']}"
+    # #2793 S2b (Spec §3, D3): Dringlichkeit aus der Farbe -- 2 mm (gelb) ->
+    # 18 mm (rot, Vorlage „allgemein" rot ab 10) = HIGH. Vorher: Faktor 1,6 = MODERATE.
+    assert last_entry["severity"] == "HIGH", (
+        f"erwartete Severity HIGH (gelb -> rot), war: {last_entry['severity']}"
     )
 
     payload = telegram_sink.requests[-1]["payload"]
@@ -265,12 +266,14 @@ def test_ac1_trip_alarm_stays_silent_identically_after_extraction(telegram_sink,
 
     cached = [_data(precip_sum_mm=2.0)]
     _save_briefing_snapshot(user_id, trip.id, cached)
-    fresh = [_data(precip_sum_mm=5.0)]  # Δ=3 < Schwelle 10 → kein Alarm
+    # #2793 S2b: Alarm nach Ampelfarbe -- 2 -> 4 mm bleibt gelb, unter
+    # „Alarm ab Orange" (vorher 2 -> 5 mm: Δ 3 < 10; 5 mm waere jetzt orange).
+    fresh = [_data(precip_sum_mm=4.0)]
 
     service = TripAlertService(settings=_settings_telegram_only(), user_id=mit_profil_chat(user_id, _settings_telegram_only()))
     sent = service.check_and_send_alerts(trip, cached, fresh_weather=fresh)
 
-    assert sent is False, "Δ=3 < Schwelle 10 darf keinen Alarm auslösen"
+    assert sent is False, "gelb -> gelb unter Alarm ab Orange darf keinen Alarm auslösen"
     assert telegram_sink.send_count() == 0, "kein Telegram-Versand erwartet"
 
 
@@ -457,12 +460,21 @@ def test_ac3_engine_evaluates_generic_point_data_without_trip():
         provider="openmeteo",
     )
 
+    # #2793 S2b: die Engine liest die Abo-Ampel (Pflicht) und die Aktivierung
+    # aus dem Wetter-Reiter; `metric_alert_levels` traegt nur noch D4.
+    from app.models import MetricConfig, UnifiedWeatherDisplayConfig
+    from tests.helpers.ampel_allgemein import AMPEL_ALLGEMEIN
+
     config = AlertEvaluationConfig(
         cooldown_minutes=0,
         quiet_from=None,
         quiet_to=None,
         metric_alert_levels={"precipitation_sum": "standard"},
         channels={"telegram"},
+        display_config=UnifiedWeatherDisplayConfig(
+            trip_id="", metrics=[MetricConfig(metric_id="precipitation", enabled=True)],
+        ),
+        ampel=AMPEL_ALLGEMEIN,
     )
 
     engine = DeviationAlertEngine()
@@ -496,6 +508,7 @@ def test_ac3_engine_evaluates_generic_activation_gap_without_explicit_levels():
     from app.models import MetricConfig, UnifiedWeatherDisplayConfig
     from services.deviation_alert_engine import DeviationAlertEngine
     from services.point_weather import AlertEvaluationConfig, PointWeatherData
+    from tests.helpers.ampel_allgemein import AMPEL_ALLGEMEIN
 
     cached_point = PointWeatherData(
         id="p1", name="Refuge de Ciottulu", lat=42.3, lon=8.9,
@@ -521,6 +534,7 @@ def test_ac3_engine_evaluates_generic_activation_gap_without_explicit_levels():
         metric_alert_levels=None,  # KEIN expliziter Level-Eintrag
         channels={"telegram"},
         display_config=display_config,
+        ampel=AMPEL_ALLGEMEIN,  # #2793 S2b: Abo-Ampel ist Pflicht
     )
 
     engine = DeviationAlertEngine()

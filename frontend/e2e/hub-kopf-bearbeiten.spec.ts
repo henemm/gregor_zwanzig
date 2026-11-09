@@ -306,10 +306,12 @@ for (const kind of HUB_KINDS) {
 			await page.locator(`[data-testid="${HUB_SEL[kind].reiter}-alarme"]:visible`).first().click();
 			const panel = page.locator(`[data-testid="${HUB_SEL[kind].panel}-alarme"]:visible`).first();
 			await expect(panel).toBeVisible({ timeout: 10_000 });
-			const stufe = panel.locator('[data-testid="alert-level-wind_gust-sensibel"]:visible');
-			await expect(stufe).toBeVisible({ timeout: 10_000 });
-			await stufe.click();
-			await expect(stufe).toHaveAttribute('aria-pressed', 'true');
+			// #2793 S2b (Spec §6): die Empfindlichkeit ist nur lesbar -- bearbeitbare
+			// Alarm-Einstellung ist die Sperrzeit (`alert_cooldown_minutes`).
+			const sperrzeit = panel.locator('[data-testid="alert-cooldown-input"]:visible');
+			await expect(sperrzeit).toBeVisible({ timeout: 10_000 });
+			await sperrzeit.fill('45');
+			await expect(sperrzeit).toHaveValue('45');
 
 			// Der Reiter-Commit hat wirklich geschrieben (sonst hielte „Name bleibt“ trivial).
 			await expect
@@ -318,12 +320,11 @@ for (const kind of HUB_KINDS) {
 			await expect
 				.poll(
 					async () =>
-						((await holeStand(page, kind, hub.id)).display_config as Stand | undefined)?.metric_alert_levels as
-							| Record<string, string>
-							| undefined,
-					{ message: 'KB-5: die Alarm-Empfindlichkeit steht nicht auf dem Server', timeout: 10_000 }
+						((await holeStand(page, kind, hub.id)) as { alert_cooldown_minutes?: number | null })
+							.alert_cooldown_minutes,
+					{ message: 'KB-5: die Sperrzeit steht nicht auf dem Server', timeout: 10_000 }
 				)
-				.toMatchObject({ wind_gust: 'sensibel' });
+				.toBe(45);
 			expect(
 				bodies.slice(1).every((b) => !('name' in b) || b.name === neu),
 				'KB-5: ein Reiter-PUT schreibt einen alten Namen zurück'

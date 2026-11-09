@@ -174,13 +174,15 @@ describe('#1401b AC-6: AlarmeTab bindet die Alarm-Tabelle EINMAL fuer beide Kont
 		);
 	});
 
-	test('Beide Kontexte speisen dieselben Bindungspfade (activeMetrics/levels/onLevelChange)', () => {
+	// #2793 S2b (Spec §6): die Tabelle ist nur lesbar — statt `onLevelChange`
+	// bekommt sie Abo-Ampel und Vorlage; weiterhin EINE Einbindung fuer beide Kontexte.
+	test('Beide Kontexte speisen dieselben Bindungspfade (activeMetrics/levels/aboAmpel/vorlage)', () => {
 		const usages = componentUsages(parseAlarmeTab().fragment, 'AlertMetricLevelTable');
 		const attrs = (usages[0].node.attributes ?? [])
 			.filter((a: any) => a.type === 'Attribute')
 			.map((a: any) => a.name)
 			.sort();
-		assert.deepEqual(attrs, ['activeMetrics', 'levels', 'onLevelChange']);
+		assert.deepEqual(attrs, ['aboAmpel', 'activeMetrics', 'levels', 'vorlage']);
 
 		// Die Kontext-Unterscheidung passiert ausschliesslich VOR der Komponente,
 		// in den abgeleiteten Werten — nicht in einer zweiten Einbindung.
