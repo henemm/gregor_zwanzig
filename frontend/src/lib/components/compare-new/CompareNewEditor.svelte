@@ -84,6 +84,9 @@
 	import EditorStickyFooter from '$lib/components/shared/EditorStickyFooter.svelte';
 	import AnlegeRahmen from '$lib/components/shared/anlege-rahmen/AnlegeRahmen.svelte';
 	import AnlegeFortschritt from '$lib/components/shared/anlege-rahmen/AnlegeFortschritt.svelte';
+	// Issue #2880: geteilte Schritt-Reiter und Handy-Feld-Baustein (wie /trips/new).
+	import AnlegeReiter, { type AnlegeReiterSchritt } from '$lib/components/shared/anlege-rahmen/AnlegeReiter.svelte';
+	import MField from '$lib/components/mobile/MField.svelte';
 	import { PageHeader } from '$lib/components/atoms';
 
 	// Issue #1743: kein Schritt „Versand" mehr — der Versand-Abschnitt steht unten im
@@ -172,11 +175,12 @@
 	// ── Tab-Definitionen — Issue #1743: aus der EINEN Reiter-Definition
 	// (`subscriptionTabs.anlegeKette`), keine Zweitliste. Fortschritt zaehlt
 	// dieselben Schritte (5 Segmente).
-	const TAB_DEFS: { id: CompareNewTabId; label: string; lockHint: string | null }[] = $derived(
+	const TAB_DEFS: { id: CompareNewTabId; label: string; lockHint: string | null; optional: boolean }[] = $derived(
 		(void $locale, anlegeKette('vergleich')).map((r) => ({
 			id: r.id as CompareNewTabId,
 			label: r.label,
-			lockHint: r.lockHint ?? null
+			lockHint: r.lockHint ?? null,
+			optional: r.optional ?? false
 		}))
 	);
 	const PROGRESS_STEPS: CompareNewTabId[] = $derived(TAB_DEFS.map((r) => r.id));
@@ -233,6 +237,14 @@
 	// Zaehler gedeckelt bei der Schrittzahl (#1743: 5 Schritte).
 	const doneCount = $derived(Math.min(progressCount(done, PROGRESS_STEPS), PROGRESS_STEPS.length));
 	const canActivateNow = $derived(canFinish(done));
+	// Issue #2880: Schritte für die geteilte Reiterleiste (Computer und Handy).
+	const REITER_SCHRITTE = $derived<AnlegeReiterSchritt[]>(TAB_DEFS.map((r) => ({
+		id: r.id,
+		label: r.label,
+		optional: r.optional,
+		hinweis: r.lockHint,
+		zustand: !unlocked.has(r.id) ? 'gesperrt' : done.has(r.id) ? 'erledigt' : 'offen'
+	})));
 	const standardwerteFrei = $derived(canFinishMitStandardwerten({
 		pflichtErfuellt: nameOk && orteOk,
 		defaultsBereit: standardwerteKatalog !== null,
@@ -475,37 +487,8 @@
 			{#if !canActivateNow}<StandardwerteSpeichernKnopf enabled={standardwerteFrei} saving={activating} onclick={onStandardwerte} testid="compare-editor-standardwerte" />{/if}
 		{/snippet}
 
-		<!-- Tab-Bar -->
-		<div style:border-bottom="1px solid var(--g-rule)" style:padding="0 40px" style:display="flex" style:gap="0" style:overflow-x="auto">
-			{#each TAB_DEFS as r (r.id)}
-				{@const on = r.id === activeTab}
-				{@const open = unlocked.has(r.id)}
-				{@const isDone = done.has(r.id) && !on}
-				<button
-					data-testid={`compare-editor-tab-${r.id}`}
-					data-active={on ? 'true' : 'false'}
-					data-locked={open ? 'false' : 'true'}
-					data-done={done.has(r.id) ? 'true' : 'false'}
-					type="button"
-					onclick={makeTabHandler(r.id)}
-					title={!open && r.lockHint ? $t('trip.anlegen.gesperrt', { hinweis: r.lockHint }) : undefined}
-					style:padding="12px 16px" style:cursor={open ? 'pointer' : 'not-allowed'} style:background="none" style:border="none"
-					style:border-bottom={on ? '2px solid var(--g-accent)' : '2px solid transparent'} style:margin-bottom="-1px"
-					style:font-family="var(--g-font-sans)" style:font-size="13px" style:font-weight={on ? 600 : 500}
-					style:color={on ? 'var(--g-ink)' : open ? 'var(--g-ink-3)' : 'var(--g-ink-4)'}
-					style:display="flex" style:align-items="center" style:gap="5px" style:white-space="nowrap"
-					style:opacity={open ? 1 : 0.34} style:transition="opacity 250ms, color 200ms" style:user-select="none"
-				>
-					{r.label}
-					{#if isDone}
-						<span class="mono" style:font-size="11px" style:font-weight="700" style:padding="2px 5px" style:border-radius="3px" style:background="rgba(61,107,58,0.12)" style:color="var(--g-good)">✓</span>
-					{/if}
-					{#if !open}
-						<span class="mono" style:font-size="11px" style:color="var(--g-ink-4)" style:opacity="0.7">⊘</span>
-					{/if}
-				</button>
-			{/each}
-		</div>
+		<!-- Tab-Bar — Issue #2880: geteilter Baustein AnlegeReiter (testids compare-editor-tab-*) -->
+		<AnlegeReiter schritte={REITER_SCHRITTE} aktiv={activeTab} onWahl={(id) => makeTabHandler(id as CompareNewTabId)()} testidPrefix="compare-editor-tab" />
 
 	<!-- Tab-Panel -->
 	{#if activeTab === 'vergleich'}
@@ -513,8 +496,8 @@
 			<TopoBg opacity={0.1}>
 				<div style:position="relative" style:max-width="640px">
 					<Eyebrow style="margin-bottom: 14px">{$t('vergleich.neu.eckdaten')}</Eyebrow>
-					<Field label={$t('vergleich.neu.name')} hint={$t('vergleich.neu.name_hinweis')}>
-						<input data-testid="compare-editor-name" type="text" maxlength="80" placeholder={$t('vergleich.neu.name_beispiel')} bind:value={wiz.name} class="w-full border rounded px-3 py-2 text-base bg-[var(--g-card)] border-[var(--g-rule)]" />
+					<Field label={$t('vergleich.neu.name')} hint={$t('vergleich.neu.name_hinweis')} pflicht>
+						<input data-testid="compare-editor-name" aria-required="true" type="text" maxlength="80" placeholder={$t('vergleich.neu.name_beispiel')} bind:value={wiz.name} class="w-full border rounded px-3 py-2 text-base bg-[var(--g-card)] border-[var(--g-rule)]" />
 					</Field>
 					<Field label={$t('trip.anlegen.region')} side={$t('vergleich.neu.optional_max')}>
 						<input data-testid="compare-editor-region" type="text" maxlength="60" placeholder={$t('vergleich.neu.region_beispiel')} bind:value={wiz.region} class="w-full border rounded px-3 py-2 text-base bg-[var(--g-card)] border-[var(--g-rule)]" />
@@ -595,34 +578,22 @@
 		<AnlegeFortschritt steps={PROGRESS_STEPS} done={doneCount} erledigt={done} aktiv={activeTab} variante="mobil" testidPrefix="cm-mobile-progress" />
 	</div>
 
-	<!-- Scrollbare Tab-Bar -->
-	<div class="cm-mobile-flex" data-testid="cm-mobile-tabbar" style="gap: 0; overflow-x: auto; border-bottom: 1px solid var(--g-rule-soft); -webkit-overflow-scrolling: touch; scrollbar-width: none; flex-shrink: 0; mask-image: linear-gradient(to right, transparent, black 16px, black calc(100% - 16px), transparent); -webkit-mask-image: linear-gradient(to right, transparent, black 16px, black calc(100% - 16px), transparent);">
-		{#each TAB_DEFS as r (r.id)}
-			{@const on = r.id === activeTab}
-			{@const open = unlocked.has(r.id)}
-			<button type="button" data-testid="cm-mobile-tab-{r.id}" data-active={on ? 'true' : 'false'} data-locked={open ? 'false' : 'true'} onclick={() => handleMobileTabClick(r.id)}
-				style="display: inline-flex; align-items: center; gap: 5px; padding: 13px 13px; min-height: 44px; flex-shrink: 0; background: transparent; border: none; border-bottom: {on ? '2px solid var(--g-accent)' : '2px solid transparent'}; margin-bottom: -1px; cursor: {open ? 'pointer' : 'default'}; font-size: 14px; font-weight: {on ? 600 : 500}; color: {on ? 'var(--g-ink)' : open ? 'var(--g-ink-3)' : 'var(--g-ink-4)'}; white-space: nowrap; font-family: var(--g-font-sans); opacity: {open ? 1 : 0.35};">
-				{r.label}
-				{#if !open}<span class="mono" style="font-size: 11px; opacity: 0.8;">⊘</span>{/if}
-			</button>
-		{/each}
-	</div>
+	<!-- Scrollbare Tab-Bar — Issue #2880: geteilter Baustein AnlegeReiter (testid cm-mobile-tabbar) -->
+	<AnlegeReiter schritte={REITER_SCHRITTE} aktiv={activeTab} onWahl={(id) => handleMobileTabClick(id as CompareNewTabId)} variante="mobil" testidPrefix="cm-mobile-tab" />
 
 	<!-- Tab-Inhalt -->
 	<div style="flex: 1; overflow-y: auto; padding: 16px;">
 		{#if activeTab === 'vergleich'}
-			<div style="margin-bottom: 14px;">
-				<div class="mono" style="font-size: 11px; color: var(--g-ink-4); letter-spacing: 0.10em; text-transform: uppercase; margin-bottom: 8px;">{$t('vergleich.neu.name')}</div>
-				<input data-testid="compare-editor-name-mobile" type="text" maxlength="80" placeholder={$t('vergleich.neu.name_beispiel')} bind:value={wiz.name}
+			<!-- Issue #2880: Felder über mobile/MField (wie /trips/new). -->
+			<MField label={$t('vergleich.neu.name')} pflicht>
+				<input data-testid="compare-editor-name-mobile" aria-required="true" type="text" maxlength="80" placeholder={$t('vergleich.neu.name_beispiel')} bind:value={wiz.name}
 					style="width: 100%; box-sizing: border-box; padding: 12px 14px; font-size: 16px; border: 1px solid var(--g-rule); border-radius: var(--g-r-3); background: var(--g-card); font-family: var(--g-font-sans); color: var(--g-ink); outline: none; min-height: 48px;" />
-			</div>
-			<div style="margin-bottom: 14px;">
-				<div class="mono" style="font-size: 11px; color: var(--g-ink-4); letter-spacing: 0.10em; text-transform: uppercase; margin-bottom: 8px;">{$t('trip.anlegen.region')} <span style="font-weight:400; text-transform:none;">({$t('trip.anlegen.optional')})</span></div>
+			</MField>
+			<MField label={$t('trip.anlegen.region')} side={$t('vergleich.neu.optional_max')}>
 				<input type="text" maxlength="60" placeholder={$t('vergleich.neu.region_beispiel')} bind:value={wiz.region}
 					style="width: 100%; box-sizing: border-box; padding: 12px 14px; font-size: 16px; border: 1px solid var(--g-rule); border-radius: var(--g-r-3); background: var(--g-card); font-family: var(--g-font-sans); color: var(--g-ink); outline: none; min-height: 48px;" />
-			</div>
-			<div>
-				<div class="mono" style="font-size: 11px; color: var(--g-ink-4); letter-spacing: 0.10em; text-transform: uppercase; margin-bottom: 10px;">{$t('vergleich.neu.aktivitaetsprofil')}</div>
+			</MField>
+			<MField label={$t('vergleich.neu.aktivitaetsprofil')}>
 				<div style="display: flex; flex-direction: column; gap: 8px;">
 					{#each ACTIVITY_PROFILE_OPTIONS as opt (opt.value)}
 						{@const sel = wiz.activityProfile === opt.value}
@@ -641,7 +612,7 @@
 						</button>
 					{/each}
 				</div>
-			</div>
+			</MField>
 		{:else if activeTab === 'orte'}
 			<Step2Orte bind:pickedIds={wiz.pickedIds} {locations} groups={ceGroups} dense onOpenLibrary={() => { mobileLibraryOpen = true; }} />
 		{:else if activeTab === 'wetter-metriken'}

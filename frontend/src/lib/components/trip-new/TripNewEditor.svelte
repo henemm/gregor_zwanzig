@@ -14,6 +14,9 @@
 	import EditorStickyFooter from '$lib/components/shared/EditorStickyFooter.svelte';
 	import AnlegeRahmen from '$lib/components/shared/anlege-rahmen/AnlegeRahmen.svelte';
 	import AnlegeFortschritt from '$lib/components/shared/anlege-rahmen/AnlegeFortschritt.svelte';
+	// Issue #2880: geteilte Schritt-Reiter und Feld-Bausteine (wie /compare/new).
+	import AnlegeReiter, { type AnlegeReiterSchritt } from '$lib/components/shared/anlege-rahmen/AnlegeReiter.svelte';
+	import Field from '$lib/components/molecules/Field.svelte';
 	import WetterMetrikenVersandPanel from '$lib/components/shared/WetterMetrikenVersandPanel.svelte';
 	import { anlegeKette } from '$lib/components/shared/subscriptionTabs';
 	import MailInhaltCard from '$lib/components/shared/MailInhaltCard.svelte';
@@ -210,8 +213,14 @@
 	const gpxCount = $derived(stages.filter(s => s.gpx !== null).length);
 	const progressN = $derived(progressCount(done));
 
-	// Flash-State für gesperrte Tabs
-	let flashTab = $state<TabId | null>(null);
+	// Issue #2880: Schritte für die geteilte Reiterleiste (Wackeln am gesperrten Reiter lebt dort).
+	const REITER_SCHRITTE = $derived<AnlegeReiterSchritt[]>(TAB_DEFS.map((d) => ({
+		id: d.id,
+		label: d.label,
+		optional: d.optional,
+		hinweis: d.lockHint,
+		zustand: !unlocked.has(d.id) ? 'gesperrt' : done.has(d.id) ? 'erledigt' : 'offen',
+	})));
 
 	// ── Mobile-only State (Issue #661) ────────────────────────────────────────
 	// Lock-Toast (2s bei Tap auf gesperrten Tab)
@@ -227,12 +236,7 @@
 	// ── Tab-Wechsel (Factory-Pattern) ─────────────────────────────────────────
 	function makeTabHandler(id: TabId) {
 		return function doSwitch() {
-			if (unlocked.has(id)) {
-				switchTab(id);
-			} else {
-				flashTab = id;
-				setTimeout(() => { flashTab = null; }, 500);
-			}
+			if (unlocked.has(id)) switchTab(id);
 		};
 	}
 
@@ -581,33 +585,8 @@
 				{#if !ready}<StandardwerteSpeichernKnopf enabled={standardwerteFrei} {saving} onclick={onStandardwerte} testid="trip-new-standardwerte-btn" />{/if}
 			{/snippet}
 
-		<!-- Tab-Bar (Desktop only, TN_TabBar) -->
-		<div style="border-bottom: 1px solid var(--g-rule); padding: 0 40px; display: flex; gap: 0; overflow-x: auto;">
-			{#each TAB_DEFS as tab}
-				{@const isActive = tab.id === activeTab}
-				{@const isOpen = unlocked.has(tab.id)}
-				{@const isDone = done.has(tab.id) && !isActive}
-				<div
-					role="tab"
-					tabindex={isOpen ? 0 : -1}
-					aria-selected={isActive}
-					onclick={makeTabHandler(tab.id)}
-					onkeydown={(e) => { if (e.key === 'Enter' || e.key === ' ') makeTabHandler(tab.id)(); }}
-					title={!isOpen && tab.lockHint ? $t('trip.anlegen.gesperrt', { hinweis: tab.lockHint }) : undefined}
-					style="padding: 12px 16px; cursor: {isOpen ? 'pointer' : 'not-allowed'}; font-size: 13px; font-weight: {isActive ? 600 : 500}; color: {isActive ? 'var(--g-ink)' : isOpen ? 'var(--g-ink-3)' : 'var(--g-ink-4)'}; border-bottom: {isActive ? '2px solid var(--g-accent)' : '2px solid transparent'}; margin-bottom: -1px; display: flex; align-items: center; gap: 5px; white-space: nowrap; opacity: {isOpen ? 1 : 0.34}; transition: opacity 250ms, color 200ms; transform: {flashTab === tab.id ? 'translateX(2px)' : 'none'}; user-select: none;">
-					{tab.label}
-					{#if tab.optional && isOpen}
-						<span class="mono" style="font-size: 11px; font-weight: 600; letter-spacing: 0.06em; padding: 1px 5px; border-radius: 3px; background: rgba(196,90,42,0.10); color: var(--g-accent-deep); text-transform: uppercase;">{$t('trip.anlegen.optional')}</span>
-					{/if}
-					{#if isDone}
-						<span style="font-size: 11px; font-weight: 700; padding: 2px 5px; border-radius: 3px; background: rgba(61,107,58,0.12); color: var(--g-good); font-family: var(--g-font-mono);">✓</span>
-					{/if}
-					{#if !isOpen}
-						<span style="font-size: 11px; color: var(--g-ink-4); font-family: var(--g-font-mono); opacity: 0.7;">⊘</span>
-					{/if}
-				</div>
-			{/each}
-		</div>
+		<!-- Tab-Bar (Desktop only) — Issue #2880: geteilter Baustein AnlegeReiter -->
+		<AnlegeReiter schritte={REITER_SCHRITTE} aktiv={activeTab} onWahl={(id) => makeTabHandler(id as TabId)()} testidPrefix="trip-new-tab" />
 
 		<!-- Fehler-Banner (Desktop) -->
 		{#if saveError !== null}
@@ -626,56 +605,45 @@
 				<div style="position: relative; max-width: 640px;">
 					<Eyebrow style="margin-bottom: 14px;">{$t('trip.anlegen.grunddaten')}</Eyebrow>
 
-					<div style="margin-bottom: 18px;">
-						<label style="display: block; font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--g-ink-3); margin-bottom: 6px;">
-							{$t('trip.anlegen.trip_name')} <span style="color: var(--g-bad);">*</span>
-						</label>
+					<!-- Issue #2880: Felder über molecules/Field (wie /compare/new). -->
+					<Field label={$t('trip.anlegen.trip_name')} pflicht>
 						<input type="text" value={name} oninput={makeNameHandler()}
 							placeholder={$t('trip.anlegen.name_beispiel')}
 							autofocus
+							aria-required="true"
 							data-testid="trip-new-name-input-desktop"
 							style="width: 100%; box-sizing: border-box; padding: 9px 12px; font-size: 14px; font-family: var(--g-font-sans); border: 1.5px solid var(--g-rule); border-radius: var(--g-r-2); background: var(--g-card); color: var(--g-ink); outline: none;" />
-					</div>
+					</Field>
 
-					<div style="margin-bottom: 18px;">
-						<label style="display: block; font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--g-ink-3); margin-bottom: 6px;">
-							{$t('trip.anlegen.region')}
-							<span class="mono" style="font-size: 11px; color: var(--g-ink-4); text-transform: none; letter-spacing: normal; font-weight: 400; margin-left: 6px;">{$t('trip.anlegen.optional_max')}</span>
-						</label>
+					<Field label={$t('trip.anlegen.region')} side={$t('trip.anlegen.optional_max')}>
 						<input type="text" value={region} oninput={makeRegionHandler()}
 							placeholder={$t('trip.anlegen.region_beispiel')}
 							maxlength="50"
 							style="width: 100%; box-sizing: border-box; padding: 9px 12px; font-size: 14px; font-family: var(--g-font-sans); border: 1.5px solid var(--g-rule); border-radius: var(--g-r-2); background: var(--g-card); color: var(--g-ink); outline: none;" />
-					</div>
+					</Field>
 
-					<div style="margin-bottom: 18px;">
-						<label style="display: block; font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--g-ink-3); margin-bottom: 6px;">
-							{$t('trip.startdatum')} <span style="color: var(--g-bad);">*</span>
-						</label>
+					<Field label={$t('trip.startdatum')} pflicht>
 						<input type="date" value={startDate} onchange={makeDateHandler()}
+							aria-required="true"
 							style="width: 100%; box-sizing: border-box; padding: 9px 12px; font-size: 14px; font-family: var(--g-font-mono); border: 1.5px solid var(--g-rule); border-radius: var(--g-r-2); background: var(--g-card); color: var(--g-ink); outline: none; appearance: none; -webkit-appearance: none;" />
 						{#if startDate}
 							<div class="mono" style="font-size: 11px; color: var(--g-ink-3); margin-top: 6px;">
 								{$t('trip.anlegen.start_hinweis', { datum: stageDate(startDate, 0, $locale)?.replace(/\.$/, '') ?? '' })}
 							</div>
 						{/if}
-					</div>
+					</Field>
 
 					<!-- Issue #932 — Aktivitätstyp (verschoben aus Metriken-Tab). -->
 					<!-- Nur auf Desktop-Viewport rendern, damit das Dropdown nur einmal im DOM existiert. -->
 					{#if !isMobileViewport}
-					<div style="margin-bottom: 18px;">
-						<label style="display: block; font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--g-ink-3); margin-bottom: 6px;">
-							{$t('trip.anlegen.aktivitaetstyp')}
-							<span class="mono" style="font-size: 11px; color: var(--g-ink-4); text-transform: none; letter-spacing: normal; font-weight: 400; margin-left: 6px;">{$t('trip.anlegen.optional')}</span>
-						</label>
+					<Field label={$t('trip.anlegen.aktivitaetstyp')} side={$t('trip.anlegen.optional')}>
 						<Select data-testid="activity-dropdown"
 							value={selectedActivity ?? ''}
 							onchange={(e) => { selectedActivity = (e.target as HTMLSelectElement).value as ActivityType || undefined; }}
 							style="width: 100%; max-width: 320px;">
 							{#each AKTIVITAETEN as a, i (a.value)}{#if i > 0}{' '}{/if}<option value={a.value}>{$t(a.key)}</option>{/each}
 						</Select>
-					</div>
+					</Field>
 					{/if}
 
 					<div style="margin-top: 12px; padding: 12px 16px; border-radius: var(--g-r-2); background: var(--g-accent-tint); border: 1px solid var(--g-accent-rule);">
@@ -958,27 +926,9 @@
 			<AnlegeFortschritt steps={PROGRESS_STEPS} done={progressN} erledigt={done} aktiv={activeTab} variante="mobil" testidPrefix="tn-mobile-progress" />
 		</div>
 
-		<!-- Mobile Tab-Bar (TNM_TabBar, Issue #661) -->
-		<div class="tn-mobile tn-mobile-flex" data-testid="tn-mobile-tabbar" style="gap: 0; overflow-x: auto; border-bottom: 1px solid var(--g-rule-soft); -webkit-overflow-scrolling: touch; scrollbar-width: none; flex-shrink: 0; mask-image: linear-gradient(to right, transparent, black 16px, black calc(100% - 16px), transparent); -webkit-mask-image: linear-gradient(to right, transparent, black 16px, black calc(100% - 16px), transparent);">
-			{#each TAB_DEFS as tab}
-				{@const isActive = tab.id === activeTab}
-				{@const isOpen = unlocked.has(tab.id)}
-				{@const isDone = done.has(tab.id) && !isActive}
-				<button
-					type="button"
-					role="tab"
-					aria-selected={isActive}
-					onclick={makeMobileTabHandler(tab.id)}
-					style="display: inline-flex; align-items: center; gap: 5px; padding: 13px 13px; min-height: 44px; flex-shrink: 0; background: transparent; border: none; border-bottom: {isActive ? '2px solid var(--g-accent)' : '2px solid transparent'}; margin-bottom: -1px; cursor: {isOpen ? 'pointer' : 'default'}; font-size: 14px; font-weight: {isActive ? 600 : 500}; color: {isActive ? 'var(--g-ink)' : isOpen ? 'var(--g-ink-3)' : 'var(--g-ink-4)'}; white-space: nowrap; font-family: var(--g-font-sans); opacity: {isOpen ? 1 : 0.35};">
-					{tab.label}
-					{#if tab.optional && isOpen}
-						<span class="mono" style="font-size: 11px; font-weight: 700; padding: 1px 5px; border-radius: 3px; background: rgba(196,90,42,0.12); color: var(--g-accent-deep); letter-spacing: 0.06em; text-transform: uppercase;">{$t('trip.anlegen.opt')}</span>
-					{/if}
-					{#if !isOpen}
-						<span class="mono" style="font-size: 11px; opacity: 0.8;">⊘</span>
-					{/if}
-				</button>
-			{/each}
+		<!-- Mobile Tab-Bar (Issue #661) — Issue #2880: geteilter Baustein AnlegeReiter (testid tn-mobile-tabbar) -->
+		<div class="tn-mobile" style="flex-shrink: 0;">
+			<AnlegeReiter schritte={REITER_SCHRITTE} aktiv={activeTab} onWahl={(id) => makeMobileTabHandler(id as TabId)()} variante="mobil" testidPrefix="tn-mobile-tab" />
 		</div>
 
 		<!-- Fehler-Banner (mobil; Desktop-Pendant im Rahmen-Inhalt) -->
@@ -998,23 +948,25 @@
 			{#if activeTab === 'route'}
 				<!-- Mobile Route-Tab (TNM_RouteTab) -->
 				<div style="position: relative; padding: 16px 16px 88px;">
-					<MField label={$t('trip.anlegen.trip_name')}>
+					<MField label={$t('trip.anlegen.trip_name')} pflicht>
 						<!-- data-testid geteilt: Desktop-Input im .tn-desktop ist display:none auf ≤899px,
 						     dieser hier ist sichtbar → Playwright findet genau diesen einen sichtbaren. -->
 						<div style="display: flex; align-items: center; gap: 10px; background: var(--g-card); border: 1px solid var(--g-rule); border-radius: var(--g-r-3); padding: 0 14px; min-height: 48px;">
 							<input type="text" value={name} oninput={makeNameHandler()}
 								placeholder={$t('trip.anlegen.name_beispiel')}
+								aria-required="true"
 								data-testid="trip-new-name-input-mobile"
 								style="flex: 1; border: none; outline: none; background: transparent; font-size: 16px; font-family: var(--g-font-sans); color: var(--g-ink); min-height: 44px; padding: 0;" />
 						</div>
 					</MField>
 
-					<MField label={$t('trip.anlegen.region')} sub={$t('trip.anlegen.optional_max_zeichen')}>
+					<MField label={$t('trip.anlegen.region')} side={$t('trip.anlegen.optional_max')}>
 						<MInput bind:value={region} oninput={makeRegionHandler()} placeholder={$t('trip.anlegen.region_beispiel')} />
 					</MField>
 
-					<MField label={$t('trip.startdatum')} sub={startDate ? $t('trip.anlegen.start_hinweis_kurz', { datum: stageDate(startDate, 0, $locale)?.replace(/\.$/, '') ?? '' }) : undefined}>
+					<MField label={$t('trip.startdatum')} pflicht sub={startDate ? $t('trip.anlegen.start_hinweis_kurz', { datum: stageDate(startDate, 0, $locale)?.replace(/\.$/, '') ?? '' }) : undefined}>
 						<input type="date" value={startDate} onchange={makeDateHandler()}
+							aria-required="true"
 							data-testid="trip-new-date-input"
 							style="display: block; width: 100%; box-sizing: border-box; background: var(--g-card); border: 1px solid var(--g-rule); border-radius: var(--g-r-3); padding: 12px 14px; font-size: 16px; font-family: var(--g-font-mono); color: var(--g-ink); outline: none; min-height: 48px; appearance: none; -webkit-appearance: none;" />
 					</MField>
@@ -1022,7 +974,7 @@
 					<!-- Issue #932 — Aktivitätstyp (verschoben aus Metriken-Tab). -->
 					<!-- Nur auf Mobile-Viewport rendern, damit das Dropdown nur einmal im DOM existiert. -->
 					{#if isMobileViewport}
-					<MField label={$t('trip.anlegen.aktivitaetstyp')} sub={$t('trip.anlegen.optional')}>
+					<MField label={$t('trip.anlegen.aktivitaetstyp')} side={$t('trip.anlegen.optional')}>
 						<Select data-testid="activity-dropdown"
 							value={selectedActivity ?? ''}
 							onchange={(e) => { selectedActivity = (e.target as HTMLSelectElement).value as ActivityType || undefined; }}
