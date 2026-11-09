@@ -193,13 +193,18 @@ inaktiv: --g-paper-deep / --g-ink-3, mono --g-text-xs; aktiv: transluzent auf Ac
   jede Band-Verbesserung (wie diese) müsste sonst doppelt landen. Der
   geteilte `MTabBar`-Kern (Scroll-Band, Fade, Positionierung, A11y) wird
   einmal gebaut und von beiden Konsumenten mit Varianten-Prop (`underline` /
-  `buttons`) genutzt; Desktop-Optiken bleiben berührt. Option (a) des
+  `buttons`) genutzt; Desktop-Optiken bleiben berührt. (Nachtrag: die Desktop-Variante
+  `size="sm"` aus Iteration 2 ist durch #2845 zurückgenommen, siehe
+  `docs/specs/modules/rework_2845_hub_reiterleiste.md`.) Option (a) des
   Design-Docs (Band bleibt + aktiver Tab sichtbar + A11y) gegenüber Wrap und
   „Mehr"-Dropdown — Begründung und Verwerfungs-Gründe:
   `docs/design-requests/mobile_usability_tab_leisten_soll.md` §2/§3.
 
 ## Changelog
 
+- 2026-11-09: Iteration 2 (`size="sm"`) zurückgenommen durch #2845: `MTabBar` hat keinen
+  `size`-Prop mehr, Trip und Vergleich tragen dieselbe Desktop-Optik (bisherige Trip-Optik).
+  Spec: `docs/specs/modules/rework_2845_hub_reiterleiste.md`.
 - 2026-10-22: AC-1-Beispiel `?tab=vorschau` durch #1743 abgelöst (Reiter entfällt, Kennung löst auf `uebersicht` auf).
 - 2026-10-03: Umsetzung abgeschlossen und validiert. Iteration 1 (5a94e9fc):
   MTabBar-Baustein + Katalog v1.5 (Band + Fade, scrollIntoView Mount/Wechsel,
