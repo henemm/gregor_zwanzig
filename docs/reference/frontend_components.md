@@ -664,6 +664,11 @@ einen `POST /api/trips` in den neuen Trip. Gleiches `createMode`-Muster nutzen
 dort bereits `WeatherMetricsTab` und `AlarmeTab` (S1, #2426). Details:
 `docs/specs/modules/fix_2277_s2a_wertebereiche_trip_anlegen.md`.
 
+Reiter „Zustellung" (Teil-PR 2): `shared/zustellung-tab/ZustellungTab.svelte` bindet
+`shared/WetterMetrikenVersandPanel.svelte` (mit `bereich="zustellung"`) und
+`trip-detail/AlarmeScheduleTab.svelte` ein; „Wetter" rendert `WeatherMetricsTab` mit
+`bereich="wetter"`. `bereich` ist nur ein Darstellungsfilter, kein neuer Speicherweg.
+
 ---
 
 ## Trip-Detail Wegpunkt-Editor (`trip-detail/waypoints/`)
