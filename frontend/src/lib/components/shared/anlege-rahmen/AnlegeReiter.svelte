@@ -17,7 +17,11 @@
 	// Issue #2880 (Epic #2345, ADR-0097/ADR-0111): EINE Schritt-Reiterleiste für das Anlegen von
 	// Trip und Ortsvergleich, Computer und Handy. Ersetzt die vier handgebauten Leisten.
 	// Jeder Reiter ist ein `button role="tab"`, gesperrt `aria-disabled="true"` (klickbar, damit der
-	// Aufrufer Hinweis/Toast zeigen kann). Gesperrt ohne Opacity und in --g-ink-3 (#2371, ADR-0008:
+	// Aufrufer Hinweis/Toast zeigen kann). Tastatur nach WAI-ARIA-Tablist (AC-8, Adversary F003):
+	// nur der aktive Reiter liegt in der Tab-Reihenfolge (roving tabindex), Pfeil links/rechts,
+	// Pos1/Ende bewegen den Fokus über ALLE Reiter, auch gesperrte (Screenreader hören so, dass und
+	// warum ein Schritt gesperrt ist); Enter/Leertaste lösen wie ein Klick `onWahl` aus — der
+	// Aufrufer wechselt bei gesperrten Schritten nicht, sondern zeigt seinen Hinweis. Gesperrt ohne Opacity und in --g-ink-3 (#2371, ADR-0008:
 	// >= 4,5:1); die Sperre zeigen ⊘ und der Mauszeiger. Die Zustandsmarker (✓ erledigt — wie bisher nur am
 	// Computer —, ⊘ gesperrt) stehen NUR hier — #2881 ersetzt sie an dieser einen Stelle.
 	// Spec: docs/specs/modules/rework_2880_paritaet_reiterflaeche_anlegefelder.md
@@ -38,6 +42,18 @@
 	const VERLAUF = 'linear-gradient(to right, transparent, black 16px, black calc(100% - 16px), transparent)';
 	const MASKE = `mask-image: ${VERLAUF}; -webkit-mask-image: ${VERLAUF};`;
 
+	// Roving tabindex: der aktive Reiter (sonst der erste) ist per Tab erreichbar, die übrigen per Pfeil.
+	const fokusId = $derived(schritte.some((s) => s.id === aktiv) ? aktiv : schritte[0]?.id);
+	let leiste = $state<HTMLDivElement | undefined>();
+	function taste(e: KeyboardEvent, i: number): void {
+		const n = schritte.length;
+		const ziele: Record<string, number> = { ArrowRight: (i + 1) % n, ArrowLeft: (i - 1 + n) % n, Home: 0, End: n - 1 };
+		const ziel = ziele[e.key];
+		if (ziel === undefined) return;
+		e.preventDefault();
+		leiste?.querySelectorAll<HTMLElement>('[role="tab"]')[ziel]?.focus();
+	}
+
 	// Kurzes Wackeln am gesperrten Reiter (Computer), vorher nur beim Trip.
 	let wackelt = $state<string | null>(null);
 	function waehle(s: AnlegeReiterSchritt): void {
@@ -55,10 +71,11 @@
 	class="anlege-reiter"
 	class:mobil={variante === 'mobil'}
 	role="tablist"
+	bind:this={leiste}
 	data-testid="{testidPrefix}bar"
 	style={variante === 'mobil' ? MASKE : undefined}
 >
-	{#each schritte as s (s.id)}
+	{#each schritte as s, i (s.id)}
 		{@const an = s.id === aktiv}
 		{@const zu = s.zustand === 'gesperrt'}
 		{@const fertig = s.zustand === 'erledigt' || s.erledigt === true}
@@ -75,9 +92,10 @@
 			data-done={fertig ? 'true' : 'false'}
 			aria-selected={an}
 			aria-disabled={zu ? 'true' : undefined}
-			tabindex={zu ? -1 : 0}
+			tabindex={s.id === fokusId ? 0 : -1}
 			title={zu && s.hinweis ? $t('trip.anlegen.gesperrt', { hinweis: s.hinweis }) : undefined}
 			onclick={() => waehle(s)}
+			onkeydown={(e) => taste(e, i)}
 		>
 			{s.label}
 			{#if s.optional}

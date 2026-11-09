@@ -1,20 +1,27 @@
 // E2E — Issue #2880 (Epic #2345, ADR-0097/ADR-0110): Parität Trip/Vergleich bei der Reiterfläche
 // im Hub (P1) und bei Feld-Bausteinen und Schritt-Reitern beim Anlegen (P3).
 //
-// Spec: docs/specs/modules/rework_2880_paritaet_reiterflaeche_anlegefelder.md — AC-1 … AC-6
-// (PF-1 … PF-6, Nummer = AC). Gemessen im echten Browser (boundingBox, getComputedStyle),
+// Spec: docs/specs/modules/rework_2880_paritaet_reiterflaeche_anlegefelder.md — AC-1 … AC-6, AC-8
+// (PF-1 … PF-7, Nummer = AC; AC-7 sind die bestehenden Ablauf-Dateien). Gemessen im echten Browser (boundingBox, getComputedStyle),
 // Trip gegen Vergleich, Computer 1440 × 900 und Handy 390 × 844; AC-4/AC-5 auf de und en.
 //
 //   PF-1/PF-2 erstes sichtbares Kind jedes Hub-Reiters: gleicher linker Rand und gleicher Abstand
-//             zur Unterkante der Reiterleiste (±1 px); Handy ohne waagerechten Überlauf.
+//             zur Unterkante der Reiterleiste (±1 px); Handy ohne waagerechten Überlauf. Wo der
+//             Reiter eine Reiterfläche hat, zusätzlich ihr erstes sichtbares INHALTSELEMENT (Kind mit
+//             Text oder Bild/Eingabe; leere Abstandhalter zählen nicht): gleicher linker Rand und
+//             gleicher Abstand zur Oberkante der Reiterfläche (Adversary F001).
 //   PF-3      Reiterfläche (Übersicht, Etappen/Orte): Innenrand 28/40/60 bzw. 20/16/48 px, und sie
-//             beginnt direkt an der Leiste und am linken Panelrand (kein Zusatzrand drumherum).
+//             beginnt direkt an der Leiste und am linken Panelrand (kein Zusatzrand drumherum);
+//             bei 1920 px höchstens 1480 px breit, Trip und Vergleich gleich breit (Adversary F004).
 //   PF-4/PF-5 Feldbeschriftung „Name"/„Region" beim Anlegen: gleiche Optik, Pflicht-Sternchen
 //             (aria-hidden) an Name, Hinweis „optional · max …" rechts in der Beschriftungszeile
 //             (gleicher Abstand zur Feldkante), Name-Eingabe aria-required.
 //   PF-6      Schritt-Reiter beim Anlegen: gleiche Höhe/Schrift/Farbe je Zustand (aktiv, gesperrt),
 //             gesperrt aria-disabled und gleicher Marker, Optional-Pille an optionalen Schritten
-//             (auch gesperrt), Handy jeder Reiter ≥ 44 px.
+//             (auch gesperrt), Handy jeder Reiter ≥ 44 px hoch UND mit min-height ≥ 44 px (die
+//             natürliche Höhe allein reicht schon an 44 heran — Adversary F002).
+//   PF-7      Tastatur (AC-8, Adversary F003): Pfeil rechts vom aktiven Reiter erreicht den gesperrten
+//             Schritt (aria-disabled), Enter und Leertaste wechseln den Schritt nicht.
 //
 // Pflicht-Mutationen (Spec Implementation Details 6): `.tab-panel { padding: 1.5rem 0 }` zurück ⇒
 // PF-1/PF-2 rot; Trip-Reiterfläche 32 px oben ⇒ PF-3 rot; Trip-Feld mit handgeschriebener
@@ -28,6 +35,7 @@ import { ANLEGE_SEL, HUB_KINDS, HUB_SEL, openHub, seedHub, testMitZustellbaremZi
 
 const DESKTOP = { width: 1440, height: 900 };
 const MOBIL = { width: 390, height: 844 };
+const BREIT = { width: 1920, height: 1080 };
 const TOL = 1;
 
 /** Reiterpaare Trip ↔ Vergleich (gleiche Stelle in der Leiste). */
@@ -85,6 +93,8 @@ interface HubMessung {
 	panel: Box;
 	kind: Box & { tag: string };
 	flaeche: (Box & { pad: [number, number, number, number] }) | null;
+	/** Erstes sichtbares Kind der Reiterfläche mit Inhalt (Text, Bild, Eingabe) — null ohne Fläche. */
+	inhalt: (Box & { tag: string }) | null;
 	ueberlauf: number;
 }
 
@@ -110,12 +120,20 @@ async function messeHub(page: Page, kind: HubKind, reiter: string): Promise<HubM
 					const kind = [...panel.children].find(sichtbar);
 					if (!kind) return null;
 					const fl = [...panel.querySelectorAll('[data-testid$="-reiterflaeche"]')].find(sichtbar);
+					// Inhalt = Text oder Medium/Eingabe; ein leerer Abstandhalter ist kein Inhaltselement.
+					const MEDIEN = 'img, svg, canvas, video, iframe, input, select, textarea';
+					const inhaltlich = (e: Element) =>
+						(e.textContent ?? '').trim() !== '' || e.matches(MEDIEN) || e.querySelector(MEDIEN) !== null;
+					const inhalt = fl ? [...fl.children].find((e) => sichtbar(e) && inhaltlich(e)) : undefined;
+					if (fl && !inhalt) return null;
+					const tag = (e: Element) => `${e.tagName}.${String(e.className).split(' ')[0]}`;
 					const px = (v: string) => Math.round(parseFloat(v) * 10) / 10;
 					const s = fl ? getComputedStyle(fl) : null;
 					return {
 						leisteUnten: Math.round(leiste.getBoundingClientRect().bottom * 10) / 10,
 						panel: box(panel),
-						kind: { ...box(kind), tag: `${kind.tagName}.${String(kind.className).split(' ')[0]}` },
+						kind: { ...box(kind), tag: tag(kind) },
+						inhalt: inhalt ? { ...box(inhalt), tag: tag(inhalt) } : null,
 						flaeche:
 							fl && s
 								? { ...box(fl), pad: [px(s.paddingTop), px(s.paddingRight), px(s.paddingBottom), px(s.paddingLeft)] as [number, number, number, number] }
@@ -155,6 +173,16 @@ for (const [ac, vp] of [
 				const [t, v] = [m.route, m.vergleich];
 				nah(v.kind.x, t.kind.x, `linker Rand des ersten Kindes (Trip ${t.kind.tag}, Vergleich ${v.kind.tag})`);
 				nah(v.kind.y - v.leisteUnten, t.kind.y - t.leisteUnten, `Abstand zur Leiste (Trip ${t.kind.tag}, Vergleich ${v.kind.tag})`);
+				// F001: das erste echte Inhaltselement IN der Reiterfläche (ein Abstandhalter oder Rand
+				// innerhalb der Fläche verschiebt es, nicht die Fläche selbst). Bezug ist die Oberkante
+				// der Fläche, weil sie beim Trip am Computer unter dem Etappen-Band steht (PF-3 sichert
+				// ihre Lage zur Leiste ab).
+				expect(v.inhalt === null, `Reiterfläche nur auf einer Seite (Trip ${t.flaeche !== null}, Vergleich ${v.flaeche !== null})`).toBe(t.inhalt === null);
+				if (t.inhalt && v.inhalt && t.flaeche && v.flaeche) {
+					const was = `erstes Inhaltselement der Reiterfläche (Trip ${t.inhalt.tag}, Vergleich ${v.inhalt.tag})`;
+					nah(v.inhalt.x, t.inhalt.x, `linker Rand: ${was}`);
+					nah(v.inhalt.y - v.flaeche.y, t.inhalt.y - t.flaeche.y, `Abstand zur Oberkante der Fläche: ${was}`);
+				}
 				if (vp === MOBIL) {
 					for (const kind of HUB_KINDS) expect(m[kind].ueberlauf, `${kind}: waagerechter Überlauf`).toBeLessThanOrEqual(0);
 				}
@@ -165,13 +193,15 @@ for (const [ac, vp] of [
 
 for (const [vp, pad] of [
 	[DESKTOP, [28, 40, 60, 40]],
-	[MOBIL, [20, 16, 48, 16]]
+	[MOBIL, [20, 16, 48, 16]],
+	[BREIT, [28, 40, 60, 40]]
 ] as const) {
 	for (const r of REITER.slice(0, 2)) {
-		test(`PF-3 (${vp.width} px): Reiter ${r.name} — Reiterfläche mit Innenrand ${pad[0]}/${pad[1]}/${pad[2]} px, direkt an Leiste und Panelrand`, async ({ page }) => {
+		test(`PF-3 (${vp.width} px): Reiter ${r.name} — Reiterfläche mit Innenrand ${pad[0]}/${pad[1]}/${pad[2]} px, direkt an Leiste und Panelrand${vp === BREIT ? ', höchstens 1480 px breit' : ''}`, async ({ page }) => {
 			test.setTimeout(90_000);
 			await page.setViewportSize(vp);
 			await mitBeidenHubs(page, async (ids) => {
+				const breite = {} as Record<HubKind, number>;
 				for (const kind of HUB_KINDS) {
 					await openHub(page, kind, ids[kind], { tab: r.id[kind] });
 					const m = await messeHub(page, kind, r.id[kind]);
@@ -180,10 +210,16 @@ for (const [vp, pad] of [
 					expect(f.pad, `${kind}/${r.id[kind]}: Innenrand oben/rechts/unten/links`).toEqual([...pad]);
 					// Etappen: die Reiterfläche steht unter dem Etappen-Band (Desktop) — dort zählt
 					// nur der Innenrand; sonst beginnt sie direkt an Leiste und Panelrand.
-					if (!(kind === 'route' && r.id.route === 'etappen' && vp === DESKTOP)) {
+					if (!(kind === 'route' && r.id.route === 'etappen' && vp !== MOBIL)) {
 						nah(f.y, m.leisteUnten, `${kind}/${r.id[kind]}: Oberkante der Reiterfläche an der Leiste`);
 					}
 					nah(f.x, m.panel.x, `${kind}/${r.id[kind]}: linke Kante der Reiterfläche am Panelrand`);
+					breite[kind] = f.width;
+				}
+				// F004: Breitbild — die Fläche ist gedeckelt (max-width 1480 px), auf beiden Seiten gleich.
+				if (vp === BREIT) {
+					for (const kind of HUB_KINDS) expect(breite[kind], `${kind}: Reiterfläche höchstens 1480 px breit`).toBeLessThanOrEqual(1480);
+					nah(breite.vergleich, breite.route, 'Breite der Reiterfläche');
 				}
 			});
 		});
@@ -359,6 +395,9 @@ for (const vp of [DESKTOP, MOBIL]) {
 				if (mobil) {
 					const b = await r.boundingBox();
 					expect(b?.height ?? 0, `${kind}/${id}: Reiter am Handy ≥ 44 px`).toBeGreaterThanOrEqual(44);
+					// F002: die Zusage selbst (Mindesthöhe), nicht nur die zufällig ausreichende Inhaltshöhe.
+					const minH = await r.evaluate((el) => parseFloat(getComputedStyle(el).minHeight) || 0);
+					expect(minH, `${kind}/${id}: min-height am Handy ≥ 44 px`).toBeGreaterThanOrEqual(44);
 				}
 			}
 		}
@@ -368,5 +407,36 @@ for (const vp of [DESKTOP, MOBIL]) {
 		for (const kind of HUB_KINDS) expect(m[kind].ariaDisabled, `${kind}: gesperrter Reiter aria-disabled`).toBe('true');
 		expect(v.marker, 'Zustandsmarker gesperrt').toBe(t.marker);
 		expect(t.marker, 'gesperrt trägt einen Marker').not.toBe('');
+	});
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Anlegen: Schritt-Reiter per Tastatur (AC-8, Adversary F003)
+// ─────────────────────────────────────────────────────────────────────────────
+
+for (const vp of [DESKTOP, MOBIL]) {
+	test(`PF-7 (${vp.width} px): gesperrter Schritt-Reiter per Tastatur erreichbar, aria-disabled, Enter und Leertaste wechseln nicht`, async ({ page }) => {
+		test.setTimeout(90_000);
+		await page.setViewportSize(vp);
+		const mobil = vp === MOBIL;
+		for (const kind of HUB_KINDS) {
+			const sel = ANLEGE_SEL[kind];
+			await page.goto(sel.url);
+			await expect(sel.name(page, mobil)).toBeVisible({ timeout: 15_000 });
+			const aktiv = sel.reiter(page, sel.ersterSchritt, mobil);
+			const gesperrt = sel.reiter(page, sel.punkteSchritt, mobil);
+			await expect(gesperrt, `${kind}: Schritt ${sel.punkteSchritt} ohne Namen gesperrt`).toHaveAttribute('aria-disabled', 'true');
+			await expect(aktiv).toHaveAttribute('aria-selected', 'true');
+			await aktiv.focus();
+			await expect(aktiv, `${kind}: aktiver Reiter fokussierbar`).toBeFocused();
+			await page.keyboard.press('ArrowRight');
+			await expect(gesperrt, `${kind}: Pfeil rechts erreicht den gesperrten Reiter`).toBeFocused();
+			for (const taste of ['Enter', 'Space'] as const) {
+				await page.keyboard.press(taste);
+				await expect(gesperrt, `${kind}: ${taste} wechselt nicht auf den gesperrten Schritt`).toHaveAttribute('aria-selected', 'false');
+				await expect(aktiv, `${kind}: erster Schritt bleibt aktiv`).toHaveAttribute('aria-selected', 'true');
+				await expect(sel.name(page, mobil), `${kind}: Namensfeld bleibt sichtbar`).toBeVisible();
+			}
+		}
 	});
 }
