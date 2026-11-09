@@ -366,6 +366,9 @@ _BESTAND: tuple[tuple[str, str, str], ...] = (
     ("src/output/tokens/builder.py", "AMPEL_METRIK_JE_KUERZEL", "wert"),
     # Nachtrag VS: Invers-Min-Kuerzel (VS/TF) -> Ampel-Metrik.
     ("src/output/tokens/builder.py", "INVERS_MIN_AMPEL_METRIK", "wert"),
+    # Issue #2793 S2b: Ampel-Seite (Tageshoch/Tagestief) je Temperatur-Kennung
+    # -> Katalog-Label des Farbpaar-Satzes im Alarmtext.
+    (_R + "alert/render.py", "_AMPEL_SEITEN_LABEL", "schluessel"),
     (_R + "email/helpers.py", "_AGGREGATION_PILL_METRICS", "schluessel"),
     (_R + "email/helpers.py", "_DAY_WINDOW_PILL_IDS", "element"),
     (_R + "email/html.py", "_COL_KEY_TO_METRIC_ID", "wert"),
