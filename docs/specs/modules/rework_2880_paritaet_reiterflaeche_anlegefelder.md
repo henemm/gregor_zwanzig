@@ -3,7 +3,7 @@ entity_id: rework_2880_paritaet_reiterflaeche_anlegefelder
 type: feature
 created: 2026-11-09
 updated: 2026-11-09
-status: draft
+status: approved
 version: "1.0"
 workflow: rework-2880-paritaet
 tags: [epic-2345, trip-compare-teilung, frontend-only, shared, paritaet, design-audit-2026-11-09]
@@ -13,7 +13,7 @@ tags: [epic-2345, trip-compare-teilung, frontend-only, shared, paritaet, design-
 
 ## Approval
 
-- [ ] Approved
+- [x] Approved (PO Henning, 2026-11-09, Freigabe per AskUserQuestion)
 
 ## Purpose
 
@@ -123,3 +123,4 @@ Trip und Ortsvergleich sollen gleich aussehen, weil sie denselben Code teilen (A
 ## Changelog
 
 - 2026-11-09: Initial spec (Issue #2880).
+- 2026-11-09: Vom PO freigegeben.

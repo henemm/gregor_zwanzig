@@ -3,7 +3,7 @@ entity_id: rework_2881_design_system_bereinigung
 type: feature
 created: 2026-11-09
 updated: 2026-11-09
-status: draft
+status: approved
 version: "1.0"
 workflow: rework-2881-design-system
 tags: [frontend-only, design-system, adr, doku, trip-compare-teilung, design-audit-2026-11-09]
@@ -13,7 +13,7 @@ tags: [frontend-only, design-system, adr, doku, trip-compare-teilung, design-aud
 
 ## Approval
 
-- [ ] Approved
+- [x] Approved (PO Henning, 2026-11-09, Freigabe per AskUserQuestion)
 
 ## Purpose
 
@@ -149,3 +149,4 @@ Das Audit vom 9.11.2026 fand zwei Arten von Problemen:
 ## Changelog
 
 - 2026-11-09: Initial spec (Issue #2881).
+- 2026-11-09: Vom PO freigegeben.

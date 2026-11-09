@@ -3,7 +3,7 @@ entity_id: fix_2878_etappenliste_und_titel
 type: bugfix
 created: 2026-11-09
 updated: 2026-11-09
-status: draft
+status: approved
 version: "1.0"
 workflow: fix-2878-etappenliste-titel
 tags: [frontend-only, trip-hub, subscription-header, paritaet, design-audit-2026-11-09]
@@ -13,7 +13,7 @@ tags: [frontend-only, trip-hub, subscription-header, paritaet, design-audit-2026
 
 ## Approval
 
-- [ ] Approved
+- [x] Approved (PO Henning, 2026-11-09, Freigabe per AskUserQuestion)
 
 ## Purpose
 
@@ -109,3 +109,4 @@ Zwei Darstellungsfehler aus dem Design-Audit vom 9.11.2026 (Stand `origin/main` 
 ## Changelog
 
 - 2026-11-09: Initial spec (Issue #2878).
+- 2026-11-09: Vom PO freigegeben.

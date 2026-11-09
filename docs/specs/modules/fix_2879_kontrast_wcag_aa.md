@@ -3,7 +3,7 @@ entity_id: fix_2879_kontrast_wcag_aa
 type: bugfix
 created: 2026-11-09
 updated: 2026-11-09
-status: draft
+status: approved
 version: "1.0"
 workflow: fix-2879-kontrast
 tags: [frontend-only, kontrast, wcag-aa, design-system, trip-compare-teilung, design-audit-2026-11-09]
@@ -13,7 +13,7 @@ tags: [frontend-only, kontrast, wcag-aa, design-system, trip-compare-teilung, de
 
 ## Approval
 
-- [ ] Approved
+- [x] Approved (PO Henning, 2026-11-09, Freigabe per AskUserQuestion)
 
 ## Purpose
 
@@ -130,3 +130,4 @@ Gemessene Fälle (WCAG-Formel, Token-Werte aus `frontend/src/app.css`):
 ## Changelog
 
 - 2026-11-09: Initial spec (Issue #2879).
+- 2026-11-09: Vom PO freigegeben.
