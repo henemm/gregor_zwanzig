@@ -99,15 +99,39 @@ async function createPreset(
 	return body.id as string;
 }
 
-/** Oeffnet den Vergleich am Hub und wechselt per Klick auf den Metriken-Tab. */
-async function openMetricsTab(page: Page, id: string): Promise<Locator> {
+/** Oeffnet den Vergleich am Hub und wechselt per Klick auf einen Reiter. Seit
+ *  #2794 S3a (Spec feat_2794_s3a_teil2_leiste.md) steht der Ausblick im Reiter
+ *  Zustellung, die Uebersicht (Grundauswahl) im Reiter Wetter. */
+async function openMetricsTab(
+	page: Page,
+	id: string,
+	ziel: 'wetter' | 'zustellung' = 'zustellung'
+): Promise<Locator> {
 	await page.goto(`/compare/${id}`);
 	await expect(page.getByTestId('compare-detail-tab-list')).toBeVisible({ timeout: 15000 });
 	await page.waitForLoadState('networkidle');
-	await page.getByTestId('compare-detail-tab-wetter-metriken').click();
-	const panel = page.getByTestId('compare-detail-panel-wetter-metriken');
+	return zuReiter(page, ziel);
+}
+
+/** Reiterwechsel per Klick, ohne Reload. */
+async function zuReiter(page: Page, ziel: 'wetter' | 'zustellung'): Promise<Locator> {
+	await page.getByTestId(`compare-detail-tab-${ziel}`).click();
+	const panel = page.getByTestId(`compare-detail-panel-${ziel}`);
 	await expect(panel).toBeVisible({ timeout: 10000 });
 	return panel;
+}
+
+/** Doppelte data-testid-Werte innerhalb eines Panels (AC-8). */
+async function doppelteTestids(page: Page, panel: Locator): Promise<Array<[string, number]>> {
+	const panelHandle = await panel.elementHandle();
+	return page.evaluate((root) => {
+		const counts = new Map<string, number>();
+		root!.querySelectorAll('[data-testid]').forEach((el) => {
+			const t = el.getAttribute('data-testid')!;
+			counts.set(t, (counts.get(t) ?? 0) + 1);
+		});
+		return Array.from(counts.entries()).filter(([, n]) => n > 1);
+	}, panelHandle);
 }
 
 /** Scope fuer alles Ausblick-Bezogene — GRENZT explizit gegen die
@@ -160,24 +184,22 @@ test.describe('Ortsvergleich-Ausblick: gruppierte Metrik-Auswahl (#1406 A, Stagi
 		// #1848 A3: die Zeilen-/Kaestchen-Schleife ist entfallen (s. Kopf des
 		// Tests). Was der Ausblick zeigt, entscheidet jetzt die Grundauswahl —
 		// geprueft in ausblick-erbt-grundauswahl.staging.spec.ts::AC-5.
+		//
+		// Scope: NUR die Panels (Uebersicht + Ausblick), nicht die ganze Seite —
+		// Kopfzeile/Navi (brand-wordmark, drag-handle etc.) tragen bekannte,
+		// dokumentierte Mobil-/Desktop-Doppel-Testids ausserhalb dieses Scopes
+		// (irrelevant fuer AC-8). Seit #2794 S3a liegen Ausblick (Zustellung) und
+		// Uebersicht (Wetter) in zwei Reitern; der Hub mountet je nur einen, also
+		// wird jedes Panel fuer sich geprueft (Ausblick hier, Uebersicht nach dem
+		// Reiterwechsel).
+		const dupCount = await doppelteTestids(page, panel);
+
+		const wetterPanel = await zuReiter(page, 'wetter');
 		await expect(
-			panel.getByTestId('weather-metrics-vergleich-row-temperature'),
+			wetterPanel.getByTestId('weather-metrics-vergleich-row-temperature'),
 			'Uebersicht zeigt weiterhin eine Temperatur-Zeile'
 		).toHaveCount(1);
-
-		// Scope: NUR der Wetter-Metriken-Panel (Uebersicht + Ausblick), nicht die
-		// ganze Seite — Kopfzeile/Navi (brand-wordmark, drag-handle etc.) tragen
-		// bekannte, dokumentierte Mobil-/Desktop-Doppel-Testids ausserhalb dieses
-		// Scopes (irrelevant fuer AC-8).
-		const panelHandle = await panel.elementHandle();
-		const dupCount = await page.evaluate((root) => {
-			const counts = new Map<string, number>();
-			root!.querySelectorAll('[data-testid]').forEach((el) => {
-				const t = el.getAttribute('data-testid')!;
-				counts.set(t, (counts.get(t) ?? 0) + 1);
-			});
-			return Array.from(counts.entries()).filter(([, n]) => n > 1);
-		}, panelHandle);
+		dupCount.push(...(await doppelteTestids(page, wetterPanel)));
 		// Bekannte, dokumentierte Ausnahme (Nicht-Umfang dieser Spec): der
 		// geteilte Reihenfolge-Block (wm2-*, inkl. drag-handle) traegt BEIDE
 		// Male (Uebersicht + Ausblick) dieselben Testids — Bestandsverhalten,

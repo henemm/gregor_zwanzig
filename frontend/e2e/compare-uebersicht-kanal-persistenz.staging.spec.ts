@@ -19,7 +19,7 @@ import { test, expect } from '@playwright/test';
 import { cleanupTracked } from './helpers';
 import {
 	aktiveMetriken, ausMetriken, ausSchalten, createUebersichtPreset, einSchalten,
-	gespeicherteKanalAuswahl, klickUndSpeichere, oeffneUebersicht, waehleKanal
+	gespeicherteKanalAuswahl, klickUndSpeichere, oeffneUebersicht, waehleKanal, zuGrundauswahl
 } from './compare-uebersicht-kanal.helpers';
 
 /** Vier Groessen mit je einer Auswertung — klein genug, um einen Kanal in vier
@@ -66,7 +66,9 @@ test.describe('#1703 S8: Kanal-eigene Uebersichts-Auswahl ueberlebt Speichern un
 		// AC-S8-4: der Nutzer steht im E-MAIL-Reiter und waehlt GLOBAL ab. Die
 		// Anzeige verriete nichts (sie filtert ohnehin gegen die Grundauswahl) —
 		// nur der GESPEICHERTE SMS-Stand zeigt, ob die Durchschreibung lief (M3).
+		// #2794 S3a: die Grundauswahl steht im Reiter Wetter (Reiterwechsel per Klick).
 		await waehleKanal(g, 'email');
+		await zuGrundauswahl(g);
 		await klickUndSpeichere(g, g.grundauswahl.locator('input[data-metric-key="uv_index_max"]'));
 		expect(
 			await gespeicherteKanalAuswahl(request, presetId, 'sms'),

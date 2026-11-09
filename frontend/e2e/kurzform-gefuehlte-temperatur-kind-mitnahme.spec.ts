@@ -157,7 +157,7 @@ async function fetchTrip(request: APIRequestContext, id: string) {
 async function openWeatherTab(page: Page, id: string): Promise<void> {
 	await page.goto(`/trips/${id}`);
 	await expect(page.getByTestId('trip-detail-tab-list')).toBeVisible();
-	await page.getByTestId('trip-detail-tab-wetter-metriken').first().click();
+	await page.getByTestId('trip-detail-tab-wetter').first().click(); // #2794 S3a: Metrik-Auswahl im Reiter Wetter
 	await expect(page.getByTestId('weather-metrics-tab')).toBeVisible();
 }
 

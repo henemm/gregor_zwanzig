@@ -19,8 +19,11 @@
 	//   (padding 0.5rem/1rem, 0.875rem, Accent-Unterstrich); Zähler-Badges neutral
 	//   in jeder Breite (#2837 S1, ADR-0110). Eine Optik für Trip und Vergleich,
 	//   ohne Varianten-Prop (#2845, Spec rework_2845_hub_reiterleiste).
-	// - data-slot-Vertrag (segmented/segmented-item/segmented-badge) bleibt
-	//   bestehen — bestehende Test-IDs und der app.css-Fallback greifen weiter.
+	// - data-slot-Vertrag (segmented-item/segmented-badge) bleibt bestehen —
+	//   bestehende Test-IDs greifen weiter. Issue #2794 S3a (§7, AC-3): die Wurzel
+	//   traegt KEIN data-slot="segmented" mehr — die Segmented-Box aus app.css
+	//   (Rahmen, Rundung) gilt damit nicht fuer die Reiterleiste; der Block bleibt
+	//   fuer das Segmented-Atom (WeatherConfigDialog) bestehen.
 	import { tick } from 'svelte';
 
 	export interface MTabBarItem {
@@ -77,7 +80,6 @@
 	class="mtabbar"
 	role="tablist"
 	aria-label={ariaLabel}
-	data-slot="segmented"
 >
 	{#each items as item, i (item.value)}
 		{@const isActive = item.value === active}
@@ -113,6 +115,8 @@
 		padding: 0.5rem 1rem;
 		font-size: 0.875rem;
 		font-weight: 500;
+		/* #2794 S3a: keine senkrechten Segmented-Trenner aus app.css (`:not(:last-child)`). */
+		border: none;
 		border-bottom: 2px solid transparent;
 		background: transparent;
 		color: var(--g-ink);
@@ -128,6 +132,8 @@
 	}
 	.mtabbar :global([data-slot='segmented-item'][data-state='active']) {
 		border-bottom-color: var(--g-accent);
+		/* #2794 S3a (AC-3): aktiver Reiter 600 stark. */
+		font-weight: 600;
 	}
 	.mtabbar :global([data-slot='segmented-badge']) {
 		display: inline-block;
@@ -140,7 +146,8 @@
 		background: var(--g-paper-deep);
 		color: var(--g-ink-3);
 		font-family: var(--g-font-mono);
-		font-size: var(--g-text-xs);
+		/* #2794 S3a (AC-3): Badge Mono 10 px. */
+		font-size: 10px;
 		font-weight: 600;
 	}
 
@@ -189,7 +196,7 @@
 			background: var(--g-paper-deep);
 			color: var(--g-ink-3);
 			font-family: var(--g-font-mono);
-			font-size: var(--g-text-xs);
+			font-size: 10px;
 			font-weight: 600;
 			margin-left: 0;
 		}

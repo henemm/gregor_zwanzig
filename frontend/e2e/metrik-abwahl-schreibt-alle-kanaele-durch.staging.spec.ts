@@ -106,11 +106,14 @@ test.describe('Issue #1719 S3 AC-10: globale Abwahl im E-Mail-Reiter schreibt au
 		request
 	}) => {
 		await createTrip(request);
-		await page.goto(`/trips/${TRIP_ID}?tab=wetter-metriken`);
-		await page.getByTestId('trip-detail-tab-wetter-metriken').click();
+		// #2794 S3a (Spec feat_2794_s3a_teil2_leiste.md): Kanal-Karte im Reiter Zustellung,
+		// Grundauswahl im Reiter Wetter — Wechsel per Klick, kein Reload. Jede Geste wird an
+		// ihrem gespeicherten Zustand abgewartet, bevor der Reiter wechselt.
+		await page.goto(`/trips/${TRIP_ID}?tab=zustellung`);
+		await page.getByTestId('trip-detail-tab-zustellung').click();
 		const tab = page.getByTestId('weather-metrics-tab');
 		await expect(tab).toBeVisible({ timeout: 10_000 });
-		await expect(tab.getByTestId('wm2-grundauswahl').locator('.toggle-btn').first()).toBeVisible({
+		await expect(tab.locator('[data-testid="wm2-reihenfolge-row"]').first()).toBeVisible({
 			timeout: 10_000
 		});
 
@@ -132,7 +135,11 @@ test.describe('Issue #1719 S3 AC-10: globale Abwahl im E-Mail-Reiter schreibt au
 		// activeChannel ist "email", NICHT "sms").
 		await tab.getByTestId('channel-tab-email').click();
 
-		// Grundauswahl: "gust" (Böen) global abwählen.
+		// Grundauswahl: "gust" (Böen) global abwählen — im Reiter Wetter (#2794 S3a).
+		await page.getByTestId('trip-detail-tab-wetter').click();
+		await expect(tab.getByTestId('wm2-grundauswahl').locator('.toggle-btn').first()).toBeVisible({
+			timeout: 10_000
+		});
 		const gustToggle = tab.locator('[data-testid="wm2-grundauswahl"] .toggle-btn[title="Böen"]');
 		await expect(gustToggle).toHaveClass(/\bon\b/);
 		await gustToggle.click();
@@ -169,9 +176,9 @@ test.describe('Issue #1719 S3 AC-10: globale Abwahl im E-Mail-Reiter schreibt au
 		// "gust" weder aktiv noch in der Aus-Gruppe (AC-8: global abgewählt heisst
 		// nirgends mehr erreichbar).
 		await page.reload();
-		await page.getByTestId('trip-detail-tab-wetter-metriken').click();
+		await page.getByTestId('trip-detail-tab-zustellung').click();
 		const reloaded = page.getByTestId('weather-metrics-tab');
-		await expect(reloaded.getByTestId('wm2-grundauswahl').locator('.toggle-btn').first()).toBeVisible({
+		await expect(reloaded.locator('[data-testid="wm2-reihenfolge-row"]').first()).toBeVisible({
 			timeout: 10_000
 		});
 		await reloaded.getByTestId('channel-tab-sms').click();

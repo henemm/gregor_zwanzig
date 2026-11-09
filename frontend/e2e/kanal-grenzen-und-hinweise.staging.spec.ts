@@ -98,13 +98,15 @@ async function createTrip(request: APIRequestContext) {
 }
 
 async function openMetricsTab(page: Page) {
-	await page.goto(`/trips/${TRIP_ID}?tab=wetter-metriken`);
-	const weatherTabBtn = page.getByTestId('trip-detail-tab-wetter-metriken');
-	await expect(weatherTabBtn).toBeVisible({ timeout: 10_000 });
-	await weatherTabBtn.click();
+	// #2794 S3a (Spec feat_2794_s3a_teil2_leiste.md): die Kanal-Karte steht im Reiter
+	// Zustellung; dieser Test braucht die Grundauswahl (Reiter Wetter) nicht.
+	await page.goto(`/trips/${TRIP_ID}?tab=zustellung`);
+	const zustellungBtn = page.getByTestId('trip-detail-tab-zustellung');
+	await expect(zustellungBtn).toBeVisible({ timeout: 10_000 });
+	await zustellungBtn.click();
 	const tab = page.getByTestId('weather-metrics-tab');
 	await expect(tab).toBeVisible({ timeout: 10_000 });
-	await expect(tab.getByTestId('wm2-grundauswahl').locator('.toggle-btn').first()).toBeVisible({
+	await expect(tab.locator('[data-testid="wm2-reihenfolge-row"]').first()).toBeVisible({
 		timeout: 10_000
 	});
 	return tab;

@@ -74,10 +74,9 @@ test.describe('S2c — /compare/new?from=<id>', () => {
 			const postAbfang = page.waitForRequest(
 				(r) => r.url().endsWith('/api/compare/presets') && r.method() === 'POST'
 			);
-			await page.getByTestId('compare-editor-tab-wetter-metriken').click();
-			await page.getByTestId('compare-editor-tab-wertebereiche').click();
-			// Issue #1743: Alarme ist der letzte Schritt (kein Versand-Schritt mehr).
-			await page.getByTestId('compare-editor-tab-alarme').click();
+			// #2794 S3a: Schritte Wetter und Zustellung (letzter Schritt).
+			await page.getByTestId('compare-editor-tab-wetter').click();
+			await page.getByTestId('compare-editor-tab-zustellung').click();
 			await page.getByRole('button', { name: 'Briefing aktivieren' }).click();
 			const post = await postAbfang;
 			const body = post.postDataJSON() as Record<string, unknown>;

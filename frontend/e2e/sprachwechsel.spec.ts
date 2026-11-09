@@ -172,13 +172,14 @@ test.describe.serial('Sprachwechsel de <-> en (#2661)', () => {
 				const page = seite[lang] as Page;
 				await hubOeffnen(page, kind, (hub[lang] as Record<HubKind, string>)[kind]);
 				await pruefeSprache(page, lang, `Hub ${kind}`);
-				const reiter = page.locator(`[data-testid="${HUB_SEL[kind].reiter}-wertebereiche"]:visible`).first();
-				await expect(reiter).toHaveText(lang === 'en' ? /Target ranges/i : /Wertebereiche/i);
-				// Seit #1743 ist Versand kein Reiter mehr, sondern der Abschnitt #versand im Reiter Wetter-Metriken.
-				await openHub(page, kind, (hub[lang] as Record<HubKind, string>)[kind], { tab: 'wetter-metriken', hash: 'versand' });
-				const wm = page.locator(`[data-testid="${HUB_SEL[kind].reiter}-wetter-metriken"]:visible`).first();
-				await expect(wm).toHaveText(new RegExp(lang === 'en' ? enTextZu('Wetter-Metriken') : 'Wetter-Metriken', 'i'));
-				await pruefeSprache(page, lang, `Hub ${kind} Wetter-Metriken/Versand`);
+				// #2794 S3a (Spec feat_2794_s3a_teil2_leiste.md): Reiter Wetter / Zustellung (Weather / Delivery).
+				const reiter = page.locator(`[data-testid="${HUB_SEL[kind].reiter}-wetter"]:visible`).first();
+				await expect(reiter).toHaveText(lang === 'en' ? /Weather/i : /Wetter/i);
+				// Seit #1743 ist Versand kein Reiter mehr, sondern der Abschnitt #versand (seit #2794 im Reiter Zustellung).
+				await openHub(page, kind, (hub[lang] as Record<HubKind, string>)[kind], { tab: 'zustellung', hash: 'versand' });
+				const zu = page.locator(`[data-testid="${HUB_SEL[kind].reiter}-zustellung"]:visible`).first();
+				await expect(zu).toHaveText(lang === 'en' ? /Delivery/i : /Zustellung/i);
+				await pruefeSprache(page, lang, `Hub ${kind} Zustellung/Versand`);
 			}
 		});
 	}

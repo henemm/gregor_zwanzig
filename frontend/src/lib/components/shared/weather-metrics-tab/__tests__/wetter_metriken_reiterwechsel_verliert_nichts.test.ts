@@ -52,11 +52,13 @@ afterEach(() => server.restore());
 const puts = () =>
 	server.mitschnitt.filter((e) => e.method === 'PUT').map((e) => ({ status: e.status, body: e.anfrage }));
 
-describe('die Liste der Selbst-Speicherer enthält „wetter-metriken"', () => {
-	test('SELBST_SPEICHERNDE_VERGLEICH_REITER.includes("wetter-metriken")', () => {
+// Issue #2794 S3a (Spec feat_2794_s3a_teil2_leiste.md AC-2): die Wetter-Metriken liegen im Reiter
+// `wetter`, die Alarme im Reiter `zustellung`; die Zusicherungen gelten fuer diese Kennungen.
+describe('die Liste der Selbst-Speicherer enthält „wetter"', () => {
+	test('SELBST_SPEICHERNDE_VERGLEICH_REITER.includes("wetter")', () => {
 		assert.ok(
-			SELBST_SPEICHERNDE_VERGLEICH_REITER.includes('wetter-metriken'),
-			'„wetter-metriken" fehlt im Flush-Guard — ein Reiterwechsel verliert dann eine ausstehende Wetter-Metriken-Änderung'
+			SELBST_SPEICHERNDE_VERGLEICH_REITER.includes('wetter'),
+			'„wetter" fehlt im Flush-Guard — ein Reiterwechsel verliert dann eine ausstehende Wetter-Metriken-Änderung'
 		);
 	});
 });
@@ -84,15 +86,15 @@ function hub() {
 	return { ws, ctl, wetterMetriken, alarme, bedienung: wetterMetrikenBedienung(ws) };
 }
 
-describe('AC-6: Reiterwechsel „wetter-metriken" → „alarme" im Entprell-Fenster verliert nichts', () => {
-	test('Wetter-Metriken ändern, sofort zu „alarme", dort Radar an → BEIDE Änderungen gespeichert', async () => {
+describe('AC-6: Reiterwechsel „wetter" → „zustellung" im Entprell-Fenster verliert nichts', () => {
+	test('Wetter-Metriken ändern, sofort zu „zustellung", dort Radar an → BEIDE Änderungen gespeichert', async () => {
 		const { ws, ctl, wetterMetriken, alarme, bedienung } = hub();
 
 		bedienung.toggleMetric('gust_max_kmh');
 		wetterMetriken.aenderungMelden();
 		assert.equal(ctl.hasPending, true, 'Vorbedingung: Wetter-Metriken-Änderung wartet im Entprell-Fenster');
 
-		await sichereSelbstSpeichererVorReiterwechsel('wetter-metriken', 'alarme', ctl);
+		await sichereSelbstSpeichererVorReiterwechsel('wetter', 'zustellung', ctl);
 
 		assert.equal(puts().length, 1, 'die Wetter-Metriken-Änderung muss VOR dem Reiterwechsel gesendet sein');
 		assert.equal(puts()[0].status, 200);
@@ -142,7 +144,7 @@ describe('AC-6: Reiterwechsel „wetter-metriken" → „alarme" im Entprell-Fen
 		bedienung.toggleMetric('gust_max_kmh');
 		wetterMetriken.aenderungMelden();
 
-		await sichereSelbstSpeichererVorReiterwechsel('wetter-metriken', 'wetter-metriken', ctl);
+		await sichereSelbstSpeichererVorReiterwechsel('wetter', 'wetter', ctl);
 
 		assert.equal(puts().length, 0);
 		assert.equal(ctl.hasPending, true);

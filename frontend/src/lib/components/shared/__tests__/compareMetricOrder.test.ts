@@ -13,11 +13,12 @@ import { COMPARE_METRIC_KEYS } from '../corridor-editor/corridorEditorState.ts';
 import type { ComparePreset } from '../../../types.ts';
 
 describe('Issue #1359 Scheibe 1: Reihenfolge-Abschnitt im Vergleich', () => {
-	test('AC-1: vergleich zeigt den geteilten Reihenfolge-Abschnitt', () => {
+	// #2794 S3a (Spec feat_2794_s3a_teil2_leiste.md §3): der Abschnitt heisst jetzt 'layout_kanal'.
+	test('AC-1: vergleich zeigt den geteilten Reihenfolge-Abschnitt (layout_kanal)', () => {
 		const sections = weatherMetricsTabSections('vergleich');
 		assert.ok(
-			sections.includes('reihenfolge'),
-			`AC-1 FAIL: "reihenfolge" fehlt im vergleich-Kontext — Ist: ${JSON.stringify(sections)}`
+			sections.includes('layout_kanal'),
+			`AC-1 FAIL: "layout_kanal" fehlt im vergleich-Kontext — Ist: ${JSON.stringify(sections)}`
 		);
 	});
 
@@ -35,13 +36,16 @@ describe('Issue #1359 Scheibe 1: Reihenfolge-Abschnitt im Vergleich', () => {
 		const sections = weatherMetricsTabSections('route');
 		assert.deepEqual(sections, [
 			'grundauswahl',
-			'reihenfolge',
+			'layout_kanal', // #2794 S3a: vormals 'reihenfolge'
 			'tagesfenster',
 			'sms_schwellen',
 			// Issue #1728 Scheibe 2 (2026-08-15): 'auswertungen' ist ENTFERNT,
 			// nicht mehr Teil der Liste — der Bedienabschnitt "05 — Auswertungen"
 			// entfaellt ersatzlos (Spec § DEC-9/AC-8).
 			'report_config',
+			// #2794 S3a: der Nacht-Block (#1721) ist ein eigener Abschnitt, damit ihn der
+			// Darstellungsfilter dem Reiter Zustellung zuordnen kann.
+			'nachtblock',
 			// Issue #1720 S1: 'ausblick' kommt DAZU — der Trip bekommt die
 			// Spaltenauswahl der 3-Tages-Vorschau (dasselbe geteilte Bauteil wie
 			// der Ortsvergleich). Diese Erwartung fror das Fehlen des Abschnitts

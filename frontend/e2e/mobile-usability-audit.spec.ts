@@ -241,11 +241,11 @@ test('mobile-usability audit aller Kern-Routen', async ({ page, playwright }, te
 	// Tab-Interaktionspläne pro Detailroute (Tab-Testids im Seiten-Code verankert).
 	const tabsFor = (route: string): string[] => {
 		if (/^\/trips\/[^/]+$/.test(route)) {
-			// Issue #1743: Reiter versand/vorschau entfallen.
-			return ['etappen', 'wetter-metriken', 'wertebereiche', 'alarme'];
+			// Issue #1743: Reiter versand/vorschau entfallen. #2794 S3a: Wetter, Zustellung.
+			return ['etappen', 'wetter', 'zustellung'];
 		}
 		if (/^\/compare\/[^/]+$/.test(route)) {
-			return ['orte', 'wetter-metriken', 'wertebereiche', 'alarme'];
+			return ['orte', 'wetter', 'zustellung'];
 		}
 		return [];
 	};

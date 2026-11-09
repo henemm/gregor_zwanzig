@@ -6,7 +6,7 @@
 	//
 	// Zeigt Profilname + Mono-Zähler (Spalten · Detail · aktiv) und verlinkt in
 	// den einzigen Bearbeitungs-Ort: Trip-Detail → Tab „Wetter-Briefing"
-	// (/trips/{id}?tab=wetter-metriken, #2287). KEINE bearbeitbaren Toggles (AP-013).
+	// (/trips/{id}?tab=wetter, #2287/#2794). KEINE bearbeitbaren Toggles (AP-013).
 	import { goto } from '$app/navigation';
 	import { Btn, Eyebrow } from '$lib/components/atoms';
 	import { summarizeTripWeather, type DisplayConfigLike } from './weatherSummary.js';
@@ -26,7 +26,7 @@
 	// Factory Pattern für den Navigations-Handler (Safari-Closure-Schutz, CLAUDE.md).
 	function makeOpenWeatherTab() {
 		return function openWeatherTab() {
-			goto(`/trips/${tripId}?tab=wetter-metriken`);
+			goto(`/trips/${tripId}?tab=wetter`);
 		};
 	}
 	const onOpenWeatherTab = makeOpenWeatherTab();

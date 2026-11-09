@@ -78,15 +78,17 @@ export function einbettungenMitWeichen(ast: Knoten, quelle: string, namen: strin
 	return out;
 }
 
-const TAB_LITERAL = /(?:activeTab|tab\.value)\s*===\s*'([^']+)'/;
+// global: ALLE Literale einer Bedingung (Adversary F002, Mutation M8) — eine ODER-Weiche
+// `activeTab === 'wetter' || activeTab === 'zustellung'` haengt an BEIDEN Reitern.
+const TAB_LITERAL = /(?:activeTab|tab\.value)\s*===\s*'([^']+)'/g;
 
-/** Reiter-Kennungen, unter deren positiver Weiche (`activeTab === 'x'` bzw. `tab.value === 'x'`) die Einbettung steht. */
+/** Reiter-Kennungen, unter deren positiver Weiche (`activeTab === 'x'` bzw. `tab.value === 'x'`) die Einbettung steht
+ *  — je Weiche ALLE genannten Literale (auch `a === 'x' || a === 'y'`). */
 export function reiterVon(e: Einbettung): string[] {
 	const out: string[] = [];
 	for (const w of e.weichen) {
 		if (w.zweig !== 'dann') continue;
-		const m = TAB_LITERAL.exec(w.test);
-		if (m) out.push(m[1]);
+		for (const m of w.test.matchAll(TAB_LITERAL)) if (!out.includes(m[1])) out.push(m[1]);
 	}
 	return out;
 }

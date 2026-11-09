@@ -128,7 +128,7 @@ const KS_REITER: Record<HubKind, ReiterFall[]> = {
 	route: [
 		{
 			reiter: 'Alarme',
-			tab: 'alarme',
+			tab: 'zustellung',
 			seed: { official_warnings: { enabled: true } },
 			bereit: async (p) => {
 				await expect(p.locator('[data-testid="alarme-tab"]').first()).toBeVisible({ timeout: 10_000 });
@@ -145,7 +145,7 @@ const KS_REITER: Record<HubKind, ReiterFall[]> = {
 			// Schreibweg des Reiters Alarme: die Alarm-Empfindlichkeit
 			// (`display_config.metric_alert_levels`), die bis S2 bearbeitbar bleibt.
 			reiter: 'Alarm-Empfindlichkeit',
-			tab: 'alarme',
+			tab: 'zustellung',
 			seed: {
 				display_config: {
 					metrics: [{ metric_id: 'gust', enabled: true, bucket: 'primary', order: 0 }],
@@ -158,9 +158,10 @@ const KS_REITER: Record<HubKind, ReiterFall[]> = {
 			pruefe: stufePruefe
 		},
 		{
-			// #1743: kein eigener Reiter — Versand ist der Abschnitt `#versand` im Reiter Wetter-Metriken.
+			// #1743: kein eigener Reiter — Versand ist der Abschnitt `#versand`, seit #2794 S3a im Reiter Zustellung
+			// (Alarme ebenfalls Zustellung, Metrik-Auswahl und amtliche Warnungen im Reiter Wetter).
 			reiter: 'Versand',
-			tab: 'wetter-metriken',
+			tab: 'zustellung',
 			hash: 'versand',
 			seed: {},
 			bereit: async (p) => {
@@ -176,7 +177,7 @@ const KS_REITER: Record<HubKind, ReiterFall[]> = {
 		},
 		{
 			reiter: 'Wetter-Metriken',
-			tab: 'wetter-metriken',
+			tab: 'wetter',
 			nebenPfad: true,
 			seed: {
 				official_alerts_enabled: true,
@@ -212,7 +213,7 @@ const KS_REITER: Record<HubKind, ReiterFall[]> = {
 	vergleich: [
 		{
 			reiter: 'Alarme',
-			tab: 'alarme',
+			tab: 'zustellung',
 			seed: { radar_alert_enabled: false, display_config: { active_metrics: ['wind_max_kmh'] } },
 			bereit: async (p) => {
 				await expect(p.locator('[data-testid="alarme-tab"]').first()).toBeVisible({ timeout: 10_000 });
@@ -229,7 +230,7 @@ const KS_REITER: Record<HubKind, ReiterFall[]> = {
 			// Reiters Wertebereiche. `gust_max_kmh` ist im Vergleichs-Katalog alarmfähig
 			// (→ `wind_gust`), dieselbe Zeile wie im Trip.
 			reiter: 'Alarm-Empfindlichkeit',
-			tab: 'alarme',
+			tab: 'zustellung',
 			seed: {
 				display_config: {
 					active_metrics: ['gust_max_kmh'],
@@ -244,7 +245,7 @@ const KS_REITER: Record<HubKind, ReiterFall[]> = {
 		},
 		{
 			reiter: 'Versand',
-			tab: 'wetter-metriken',
+			tab: 'zustellung',
 			hash: 'versand',
 			seed: {},
 			bereit: async (p) => {
@@ -260,7 +261,7 @@ const KS_REITER: Record<HubKind, ReiterFall[]> = {
 		},
 		{
 			reiter: 'Wetter-Metriken',
-			tab: 'wetter-metriken',
+			tab: 'wetter',
 			seed: {
 				official_alerts_enabled: true,
 				display_config: { active_metrics: ['snow_depth_cm'], telegram_style: 'kurzform' }

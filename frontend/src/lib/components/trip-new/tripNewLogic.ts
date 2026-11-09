@@ -24,23 +24,22 @@ import { ladeMailZustand } from '../shared/mailInhaltZustand.ts';
 
 // ── TabId ────────────────────────────────────────────────────────────────────
 
-export type TabId = 'route' | 'etappen' | 'wegpunkte' | 'wetter-metriken' | 'wertebereiche' | 'alarme';
+export type TabId = 'route' | 'etappen' | 'wegpunkte' | 'wetter' | 'zustellung';
 
 // ── Freischalt-Logik (TN_unlocked) ──────────────────────────────────────────
-// Issue #2277 S2a: Parameter `wbVisited` (Wertebereiche besucht) an Position 5 —
-// die Kette laeuft ueber Wetter-Metriken -> Wertebereiche -> Alarme (geteilter
-// Kern `shared/anlegeLockEngine.ts`, #2277 S4). #1743: kein Versand-Schritt mehr
-// (Versand steht unten im Schritt Wetter-Metriken), daher 6 Parameter.
+// Geteilter Kern `shared/anlegeLockEngine.ts` (#2277 S4). Issue #2794 S3a: die Kette
+// laeuft ueber Wetter -> Zustellung (Wertebereiche haengen im Schritt Wetter,
+// Alarme und Versand im Schritt Zustellung), daher 5 Parameter:
+// `wtVisited` = Wetter besucht, `zuVisited` = Zustellung besucht.
 
-const TAIL: TailIds<TabId> = { metriken: 'wetter-metriken', wertebereiche: 'wertebereiche', alarme: 'alarme' };
+const TAIL: TailIds<TabId> = { metriken: 'wetter', zustellung: 'zustellung' };
 
 export function unlockedTabs(
 	name: string,
 	startDate: string,
 	etDone: boolean,
 	wtVisited: boolean,
-	wbVisited: boolean,
-	alVisited: boolean
+	zuVisited: boolean
 ): Set<TabId> {
 	const s = new Set<TabId>(['route']);
 	if (name.trim() && startDate) s.add('etappen');
@@ -50,9 +49,9 @@ export function unlockedTabs(
 	// den ganzen Schwanz — daher mit metrikenFrei=true aufrufen und `metriken` hier
 	// selbst an etDone binden.
 	const tail = tailUnlocked(TAIL, {
-		metrikenFrei: true, metrikenVisited: wtVisited, wertebereicheVisited: wbVisited, alarmeVisited: alVisited,
+		metrikenFrei: true, metrikenVisited: wtVisited, zustellungVisited: zuVisited,
 	});
-	if (!etDone) tail.delete('wetter-metriken');
+	if (!etDone) tail.delete('wetter');
 	for (const t of tail) s.add(t);
 	return s;
 }
@@ -64,14 +63,13 @@ export function doneTabs(
 	startDate: string,
 	etDone: boolean,
 	wtVisited: boolean,
-	wbVisited: boolean,
-	alVisited: boolean
+	zuVisited: boolean
 ): Set<TabId> {
 	const s = new Set<TabId>();
 	if (name.trim() && startDate) s.add('route');
 	if (etDone) s.add('etappen');
 	for (const t of tailDone(TAIL, {
-		metrikenFrei: etDone, metrikenVisited: wtVisited, wertebereicheVisited: wbVisited, alarmeVisited: alVisited,
+		metrikenFrei: etDone, metrikenVisited: wtVisited, zustellungVisited: zuVisited,
 	})) s.add(t);
 	return s;
 }
@@ -94,10 +92,10 @@ export function stageDate(startDate: string, offset: number, lang: Lang = 'de'):
 // ── Fortschrittsbalken (TN_Progress) ────────────────────────────────────────
 
 // #1743: Meilensteine ohne Versand — voll genau dann, wenn Speichern frei wird
-// (Alarme besucht). Die Fortschrittsbalken des Editors lesen DIESE Liste.
+// (Zustellung besucht). Die Fortschrittsbalken des Editors lesen DIESE Liste.
 // #2347 S4 (AN-2, AC-20): aus der EINEN Anlege-Kette abgeleitet wie beim
 // Vergleich — die Pflicht-Schritte (ohne den optionalen „Wegpunkte prüfen"),
-// also fünf Segmente inkl. Wertebereiche.
+// seit #2794 S3a also vier Segmente (route, etappen, wetter, zustellung).
 export const PROGRESS_STEPS: readonly TabId[] = anlegeKette('trip')
 	.filter((t) => !t.optional)
 	.map((t) => t.id as TabId);

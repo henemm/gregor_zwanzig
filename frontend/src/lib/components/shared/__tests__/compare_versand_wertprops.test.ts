@@ -481,7 +481,16 @@ function einbettungen(datei: string): { quelle: string; treffer: Knoten[] } {
 	const quelle = readFileSync(datei, 'utf-8');
 	const ast: Knoten = parse(quelle, { modern: true });
 	// #1743: Hub und Anlege-Seite mounten den geteilten Baustein statt VersandTab direkt.
-	return { quelle, treffer: findeKomponenten(ast, 'WetterMetrikenVersandPanel') };
+	// #2794 S3a: der Versand-Abschnitt steht nur noch im Schritt/Reiter Zustellung — gezaehlt werden
+	// die Einbettungen (Panel oder ZustellungTab), die ein `versand`-Buendel tragen; die Panels im
+	// Schritt Wetter (bereich="wetter") haben keinen Versand-Abschnitt und tragen keins.
+	const kandidaten = [...findeKomponenten(ast, 'WetterMetrikenVersandPanel'), ...findeKomponenten(ast, 'ZustellungTab')];
+	const mitVersand = kandidaten.filter((k) =>
+		((k.attributes ?? []) as Knoten[]).some(
+			(a) => (a.type === 'Attribute' && a.name === 'versand') || (a.type === 'SpreadAttribute' && /versandPropsAus\s*\(/.test(quelle.slice(a.start, a.end)))
+		)
+	);
+	return { quelle, treffer: mitVersand };
 }
 
 /** Ein vollstaendig besetzter Wizard-Zustand (alle elf Versandfelder). */

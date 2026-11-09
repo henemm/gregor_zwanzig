@@ -30,39 +30,42 @@ function ausstehend(): { ctl: ReturnType<typeof createController>; laeufe: () =>
 	return { ctl, laeufe: () => n };
 }
 
+// Issue #2794 S3a (Spec feat_2794_s3a_teil2_leiste.md AC-2): Wertebereiche und Wetter-Metriken liegen
+// im Reiter `wetter`, Alarme und Versand in `zustellung` — die Liste fuehrt genau diese beiden.
 describe('AC-8: SELBST_SPEICHERNDE_VERGLEICH_REITER mit den neuen Kennungen', () => {
-	// #1743: kein Reiter `versand` mehr — der Versand-Abschnitt gehoert zu `wetter-metriken`.
-	test('enthaelt genau wertebereiche, alarme, wetter-metriken (#1743: ohne versand)', () => {
-		assert.deepEqual([...SELBST_SPEICHERNDE_VERGLEICH_REITER].sort(), [
-			'alarme',
-			'wertebereiche',
-			'wetter-metriken'
-		]);
+	test('enthaelt genau wetter, zustellung (#2794)', () => {
+		assert.deepEqual([...SELBST_SPEICHERNDE_VERGLEICH_REITER].sort(), ['wetter', 'zustellung']);
 	});
 
-	test("kein 'idealwerte' mehr in der Liste", () => {
-		assert.equal(SELBST_SPEICHERNDE_VERGLEICH_REITER.includes('idealwerte'), false);
+	test("keine Alt-Kennung mehr in der Liste (idealwerte, wertebereiche, alarme, wetter-metriken)", () => {
+		for (const alt of ['idealwerte', 'wertebereiche', 'alarme', 'wetter-metriken']) {
+			assert.equal(SELBST_SPEICHERNDE_VERGLEICH_REITER.includes(alt), false, alt);
+		}
 	});
 });
 
 describe('AC-8: Flush-Verhalten des generischen Guards', () => {
-	test('Wechsel aus wertebereiche mit hasPending → Speicherung laeuft VOR dem Wechsel', async () => {
-		const { ctl, laeufe } = ausstehend();
-		assert.equal(ctl.hasPending, true);
-		await sichereSelbstSpeichererVorReiterwechsel('wertebereiche', 'uebersicht', ctl);
-		assert.equal(laeufe(), 1);
-	});
+	for (const reiter of ['wetter', 'zustellung']) {
+		test(`Wechsel aus ${reiter} mit hasPending → Speicherung laeuft VOR dem Wechsel`, async () => {
+			const { ctl, laeufe } = ausstehend();
+			assert.equal(ctl.hasPending, true);
+			await sichereSelbstSpeichererVorReiterwechsel(reiter, 'uebersicht', ctl);
+			assert.equal(laeufe(), 1);
+		});
+	}
 
-	test('Wechsel aus der Alt-Kennung idealwerte flusht NICHT (Alt-Kennung ist kein Reiter mehr)', async () => {
-		const { ctl, laeufe } = ausstehend();
-		await sichereSelbstSpeichererVorReiterwechsel('idealwerte', 'uebersicht', ctl);
-		assert.equal(laeufe(), 0);
-		ctl.cancel?.();
+	test('Wechsel aus den Alt-Kennungen idealwerte/wertebereiche flusht NICHT (Alt-Kennung ist kein Reiter mehr)', async () => {
+		for (const alt of ['idealwerte', 'wertebereiche']) {
+			const { ctl, laeufe } = ausstehend();
+			await sichereSelbstSpeichererVorReiterwechsel(alt, 'uebersicht', ctl);
+			assert.equal(laeufe(), 0, alt);
+			ctl.cancel?.();
+		}
 	});
 
 	test('Wechsel aus der Uebersicht flusht nicht', async () => {
 		const { ctl, laeufe } = ausstehend();
-		await sichereSelbstSpeichererVorReiterwechsel('uebersicht', 'wertebereiche', ctl);
+		await sichereSelbstSpeichererVorReiterwechsel('uebersicht', 'wetter', ctl);
 		assert.equal(laeufe(), 0);
 		ctl.cancel?.();
 	});

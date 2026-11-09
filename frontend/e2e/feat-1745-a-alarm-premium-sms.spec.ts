@@ -97,9 +97,9 @@ test.describe('Issue #1745 Scheibe A: Premium-SMS in der Alarm-Kanal-Auswahl', (
 			locationIds: [locA.id, locB.id]
 		});
 
-		await page.goto(`/compare/${preset.id}?tab=alarme`);
+		await page.goto(`/compare/${preset.id}?tab=zustellung`);
 		await page.waitForLoadState('networkidle');
-		await expect(page.getByTestId('compare-detail-panel-alarme')).toBeVisible({ timeout: 15_000 });
+		await expect(page.getByTestId('compare-detail-panel-zustellung')).toBeVisible({ timeout: 15_000 });
 		await expect(page.getByTestId('alert-channel-picker')).toBeVisible({ timeout: 10_000 });
 		await assertPremiumTarifVorhanden(page);
 
@@ -132,7 +132,7 @@ test.describe('Issue #1745 Scheibe A: Premium-SMS in der Alarm-Kanal-Auswahl', (
 		// ── Der eigentliche Beweis: neu laden ────────────────────────────────
 		await page.reload();
 		await page.waitForLoadState('networkidle');
-		await expect(page.getByTestId('compare-detail-panel-alarme')).toBeVisible({ timeout: 15_000 });
+		await expect(page.getByTestId('compare-detail-panel-zustellung')).toBeVisible({ timeout: 15_000 });
 		await expect(thresholdBtn(page, 'HIGH')).toHaveAttribute('aria-pressed', 'true', { timeout: 10_000 });
 		await page.screenshot({
 			path: '../docs/artifacts/fix-1745-alarm-kanaele-premium-sms/ac-8-hub-schwelle-nach-reload-PASS.png',
@@ -160,9 +160,9 @@ test.describe('Issue #1745 Scheibe A: Premium-SMS in der Alarm-Kanal-Auswahl', (
 			locationIds: [locA.id, locB.id]
 		});
 
-		await page.goto(`/compare/${preset.id}?tab=alarme`);
+		await page.goto(`/compare/${preset.id}?tab=zustellung`);
 		await page.waitForLoadState('networkidle');
-		await expect(page.getByTestId('compare-detail-panel-alarme')).toBeVisible({ timeout: 15_000 });
+		await expect(page.getByTestId('compare-detail-panel-zustellung')).toBeVisible({ timeout: 15_000 });
 		await expect(page.getByTestId('alert-channel-picker')).toBeVisible({ timeout: 10_000 });
 		await assertPremiumTarifVorhanden(page);
 
@@ -202,7 +202,7 @@ test.describe('Issue #1745 Scheibe A: Premium-SMS in der Alarm-Kanal-Auswahl', (
 		// ── Der eigentliche Beweis: neu laden ────────────────────────────────
 		await page.reload();
 		await page.waitForLoadState('networkidle');
-		await expect(page.getByTestId('compare-detail-panel-alarme')).toBeVisible({ timeout: 15_000 });
+		await expect(page.getByTestId('compare-detail-panel-zustellung')).toBeVisible({ timeout: 15_000 });
 		await expect(premiumSwitch(page)).toHaveAttribute('aria-checked', 'true', { timeout: 10_000 });
 		await page.screenshot({
 			path: '../docs/artifacts/fix-1745-alarm-kanaele-premium-sms/ac-10-hub-haken-nach-reload-PASS.png',
@@ -250,9 +250,9 @@ test.describe('Issue #1745 Scheibe A: Premium-SMS in der Alarm-Kanal-Auswahl', (
 			]
 		});
 
-		await page.goto(`/trips/${trip.id}?tab=alarme`);
+		await page.goto(`/trips/${trip.id}?tab=zustellung`);
 		await page.waitForLoadState('networkidle');
-		await expect(page.getByTestId('trip-detail-panel-alarme')).toBeVisible({ timeout: 15_000 });
+		await expect(page.getByTestId('trip-detail-panel-zustellung')).toBeVisible({ timeout: 15_000 });
 		await expect(page.getByTestId('alert-channel-picker')).toBeVisible({ timeout: 10_000 });
 		await assertPremiumTarifVorhanden(page);
 
@@ -288,7 +288,7 @@ test.describe('Issue #1745 Scheibe A: Premium-SMS in der Alarm-Kanal-Auswahl', (
 		// ── Der eigentliche Beweis: neu laden ────────────────────────────────
 		await page.reload();
 		await page.waitForLoadState('networkidle');
-		await expect(page.getByTestId('trip-detail-panel-alarme')).toBeVisible({ timeout: 15_000 });
+		await expect(page.getByTestId('trip-detail-panel-zustellung')).toBeVisible({ timeout: 15_000 });
 		await expect(premiumSwitch(page)).toHaveAttribute('aria-checked', 'true', { timeout: 10_000 });
 		await page.screenshot({
 			path: '../docs/artifacts/fix-1745-alarm-kanaele-premium-sms/ac-14-trip-haken-nach-reload-PASS.png',

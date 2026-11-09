@@ -71,35 +71,36 @@ for (const kind of HUB_KINDS) {
 	// Zur Sammelzeit gelesen: ohne HUB_SEL in helpers.ts bricht schon die Liste ab.
 	const sel = HUB_SEL[kind];
 
-	test(`HT-1 (${kind}): Mobil — Deep-Link ?tab=alarme positioniert den aktiven Reiter sichtbar`, async ({ page }) => {
+	// #2794 S3a (Spec feat_2794_s3a_teil2_leiste.md): vier Reiter, letzter ist „Zustellung".
+	test(`HT-1 (${kind}): Mobil — Deep-Link ?tab=zustellung positioniert den aktiven Reiter sichtbar`, async ({ page }) => {
 		await page.setViewportSize(MOBIL);
 		const hub = await seedDrei(page.request, kind);
 		try {
-			await oeffneDirekt(page, kind, hub.id, 'alarme');
-			await expect(reiter(page, kind, 'alarme')).toHaveAttribute('aria-selected', 'true');
+			await oeffneDirekt(page, kind, hub.id, 'zustellung');
+			await expect(reiter(page, kind, 'zustellung')).toHaveAttribute('aria-selected', 'true');
 			await erwarteAktivenReiterSichtbar(page);
 		} finally {
 			await hub.aufraeumen();
 		}
 	});
 
-	test(`HT-2 (${kind}): Mobil — Alt-Link ?tab=versand landet aktiv und sichtbar auf Wetter-Metriken`, async ({
+	test(`HT-2 (${kind}): Mobil — Alt-Link ?tab=versand landet aktiv und sichtbar auf Zustellung`, async ({
 		page
 	}) => {
 		await page.setViewportSize(MOBIL);
 		const hub = await seedDrei(page.request, kind);
 		try {
 			await oeffneDirekt(page, kind, hub.id, 'versand');
-			await expect(reiter(page, kind, 'wetter-metriken')).toHaveAttribute('aria-selected', 'true');
+			await expect(reiter(page, kind, 'zustellung')).toHaveAttribute('aria-selected', 'true');
 			await expect(page).toHaveURL(sel.hubUrl(hub.id));
-			await expect(page).toHaveURL(/[?&]tab=wetter-metriken#versand$/);
+			await expect(page).toHaveURL(/[?&]tab=zustellung#versand$/);
 			await erwarteAktivenReiterSichtbar(page);
 		} finally {
 			await hub.aufraeumen();
 		}
 	});
 
-	test(`HT-3 (${kind}): Mobil — letzter Reiter „Alarme" per Wisch + echtem Klick erreichbar, Panel wechselt`, async ({
+	test(`HT-3 (${kind}): Mobil — letzter Reiter „Zustellung" per Wisch + echtem Klick erreichbar, Panel wechselt`, async ({
 		page
 	}) => {
 		await page.setViewportSize(MOBIL);
@@ -108,7 +109,7 @@ for (const kind of HUB_KINDS) {
 			await oeffneDirekt(page, kind, hub.id, 'uebersicht');
 			await expect(page.locator(`[data-testid="${sel.panel}-uebersicht"]`)).toBeVisible({ timeout: 10_000 });
 
-			const letzter = reiter(page, kind, 'alarme');
+			const letzter = reiter(page, kind, 'zustellung');
 			// scrollIntoViewIfNeeded = Playwright-Äquivalent zum horizontalen Nutzer-Wisch.
 			await letzter.scrollIntoViewIfNeeded();
 			await expect(letzter).toBeInViewport({ timeout: 5_000 });
@@ -116,14 +117,14 @@ for (const kind of HUB_KINDS) {
 
 			await expect(letzter).toHaveAttribute('aria-selected', 'true');
 			await erwarteAktivenReiterSichtbar(page);
-			await expect(page.locator(`[data-testid="${sel.panel}-alarme"]:visible`)).toBeVisible({ timeout: 10_000 });
+			await expect(page.locator(`[data-testid="${sel.panel}-zustellung"]:visible`)).toBeVisible({ timeout: 10_000 });
 			await expect(page.locator(`[data-testid="${sel.reiter}-vorschau"]`)).toHaveCount(0);
 		} finally {
 			await hub.aufraeumen();
 		}
 	});
 
-	test(`HT-4 (${kind}): Mobil — A11y: tablist/tab, genau 5 Reiter, aria-selected, roving tabindex, Pfeiltaste`, async ({
+	test(`HT-4 (${kind}): Mobil — A11y: tablist/tab, genau 4 Reiter, aria-selected, roving tabindex, Pfeiltaste`, async ({
 		page
 	}) => {
 		await page.setViewportSize(MOBIL);
@@ -135,7 +136,7 @@ for (const kind of HUB_KINDS) {
 			const tablist = page.getByTestId(sel.reiterListe).locator('.mtabbar');
 			await expect(tablist).toBeVisible();
 			await expect(tablist).toHaveAttribute('role', 'tablist');
-			await expect(tablist.getByRole('tab')).toHaveCount(5);
+			await expect(tablist.getByRole('tab')).toHaveCount(4);
 
 			const uebersicht = reiter(page, kind, 'uebersicht');
 			const punkte = reiter(page, kind, sel.punkteReiter);
@@ -153,14 +154,14 @@ for (const kind of HUB_KINDS) {
 		}
 	});
 
-	test(`HT-5 (${kind}): Mobil — alle 5 Reiter-Trigger sind mindestens 44 px hoch`, async ({ page }) => {
+	test(`HT-5 (${kind}): Mobil — alle 4 Reiter-Trigger sind mindestens 44 px hoch`, async ({ page }) => {
 		await page.setViewportSize(MOBIL);
 		const hub = await seedDrei(page.request, kind);
 		try {
 			await oeffneDirekt(page, kind, hub.id, 'uebersicht');
 			const tabs = alleReiter(page, kind);
-			await expect(tabs).toHaveCount(5);
-			for (let i = 0; i < 5; i++) {
+			await expect(tabs).toHaveCount(4);
+			for (let i = 0; i < 4; i++) {
 				const box = await tabs.nth(i).boundingBox();
 				expect(box, `Reiter ${i} hat eine Box`).not.toBeNull();
 				expect(box!.height, `Reiter ${i} Tippfläche`).toBeGreaterThanOrEqual(44);
@@ -183,14 +184,14 @@ for (const kind of HUB_KINDS) {
 		}
 	});
 
-	test(`HT-7 (${kind}): Desktop — alle 5 Reiter liegen ohne Band-Scroll im Fenster`, async ({ page }) => {
+	test(`HT-7 (${kind}): Desktop — alle 4 Reiter liegen ohne Band-Scroll im Fenster`, async ({ page }) => {
 		await page.setViewportSize(DESKTOP);
 		const hub = await seedDrei(page.request, kind);
 		try {
 			await oeffneDirekt(page, kind, hub.id, 'uebersicht');
 			const tabs = alleReiter(page, kind);
-			await expect(tabs).toHaveCount(5);
-			for (let i = 0; i < 5; i++) {
+			await expect(tabs).toHaveCount(4);
+			for (let i = 0; i < 4; i++) {
 				const box = await tabs.nth(i).boundingBox();
 				expect(box, `Reiter ${i} hat eine Box`).not.toBeNull();
 				expect(box!.x + box!.width, `Reiter ${i} rechte Kante`).toBeLessThanOrEqual(1280);
@@ -292,8 +293,8 @@ for (const kind of HUB_KINDS) {
 			await expect(panelA).toBeVisible({ timeout: 10_000 });
 			await expect(panelA).toContainText(PUNKTE_TEXT[kind]);
 
-			await reiter(page, kind, 'wetter-metriken').first().click();
-			await expect(page.locator(`[data-testid="${sel.panel}-wetter-metriken"]:visible`).first()).toBeVisible({
+			await reiter(page, kind, 'wetter').first().click();
+			await expect(page.locator(`[data-testid="${sel.panel}-wetter"]:visible`).first()).toBeVisible({
 				timeout: 10_000
 			});
 			await expect(page.locator(`[data-testid="${sel.panel}-${sel.punkteReiter}"]:visible`)).toHaveCount(0);
@@ -373,7 +374,7 @@ for (const kind of HUB_KINDS) {
 
 	// HT-13 (#2682 AC-11): die Alerts-Attrappe („Alerts (letzte 7 Tage)", Festtext,
 	// Knopf „Alle Alerts →") ist entfernt; die Alarme bleiben über den Reiter erreichbar.
-	test(`HT-13 (${kind}): Desktop — Übersicht ohne „Alle Alerts →", Reiter Alarme öffnet sich per Klick`, async ({
+	test(`HT-13 (${kind}): Desktop — Übersicht ohne „Alle Alerts →", Reiter Zustellung (mit den Alarmen) öffnet sich per Klick`, async ({
 		page
 	}) => {
 		await page.setViewportSize(DESKTOP);
@@ -386,10 +387,10 @@ for (const kind of HUB_KINDS) {
 			await expect(uebersicht.getByText('Keine aktuellen Alerts.')).toHaveCount(0);
 			await expect(uebersicht.getByText('Alerts (letzte 7 Tage)')).toHaveCount(0);
 
-			await reiter(page, kind, 'alarme').first().click();
-			await expect(page.locator(`[data-testid="${HUB_SEL[kind].panel}-alarme"]:visible`).first()).toBeVisible({
-				timeout: 10_000
-			});
+			await reiter(page, kind, 'zustellung').first().click();
+			const zustellung = page.locator(`[data-testid="${HUB_SEL[kind].panel}-zustellung"]:visible`).first();
+			await expect(zustellung).toBeVisible({ timeout: 10_000 });
+			await expect(zustellung.locator('[data-testid="alarme-tab"]:visible').first()).toBeVisible({ timeout: 10_000 });
 		} finally {
 			await hub.aufraeumen();
 		}
@@ -454,7 +455,7 @@ test.describe('HT-14: Trip und Ortsvergleich tragen dieselbe Reiterleiste', () =
 				const hub = await seedDrei(page.request, kind);
 				try {
 					await oeffneDirekt(page, kind, hub.id, 'uebersicht');
-					await expect(alleReiter(page, kind)).toHaveCount(5);
+					await expect(alleReiter(page, kind)).toHaveCount(4);
 					mass[kind] = await messeLeiste(page, kind);
 				} finally {
 					await hub.aufraeumen();

@@ -2,13 +2,13 @@
 //
 // Vormals compareNewLogic.test.ts (Datei gelöscht, #2277 S4). Die Schwanz-Kette
 // kommt jetzt aus dem geteilten Kern shared/anlegeLockEngine.ts; das Compare-
-// Vorderteil (Name, ≥2 Orte) und der Zähler-Deckel 6 wohnen in CompareNewEditor.svelte.
+// Vorderteil (Name, ≥2 Orte) und der Zähler-Deckel wohnen in CompareNewEditor.svelte.
 // Die Hilfsfunktionen unten bilden genau diese Komposition ab (Kern + Vorderteil);
 // die Wirkstelle selbst (echte Reiterleiste) prüft compare_new_lock_engine_wirkstelle.test.ts.
-// Freischalt-Kette: Name → Orte≥2 → metriken → wertebereiche(idealwerte) → alarme,
-// mit Besuchs-Kaskade (einmal besucht bleibt besucht). Kein Mock.
-// Issue #1743 (AC-17/AC-19): kein Schritt „Versand" mehr — die Kette endet bei Alarme,
-// „Briefing aktivieren" ist frei, sobald Alarme besucht ist; Zaehler-Deckel 5.
+// Issue #1743 (AC-17/AC-19): kein Schritt „Versand".
+// Issue #2794 S3a (Spec feat_2794_s3a_teil2_leiste.md AC-6): Freischalt-Kette
+// Name → Orte≥2 → wetter → zustellung, mit Besuchs-Kaskade (einmal besucht bleibt besucht);
+// „Briefing aktivieren" ist frei, sobald Zustellung besucht ist; Zaehler-Deckel 4. Kein Mock.
 //
 // Ausführung:
 //   cd frontend && node --import ./test-lib-loader.mjs --experimental-strip-types --test \
@@ -27,23 +27,21 @@ import {
 	type TailIds,
 } from '../../shared/anlegeLockEngine.ts';
 
-type CompareNewTabId = 'vergleich' | 'orte' | 'wetter-metriken' | 'wertebereiche' | 'alarme';
+type CompareNewTabId = 'vergleich' | 'orte' | 'wetter' | 'zustellung';
 interface CompareNewProgress {
 	name: string;
 	pickedCount: number;
 	metrikenVisited: boolean;
-	idealsVisited: boolean;
-	alarmeVisited: boolean;
+	zustellungVisited: boolean;
 }
-const TAIL: TailIds<CompareNewTabId> = { metriken: 'wetter-metriken', wertebereiche: 'wertebereiche', alarme: 'alarme' };
-const STEPS: CompareNewTabId[] = ['vergleich', 'orte', 'wetter-metriken', 'wertebereiche', 'alarme'];
+const TAIL: TailIds<CompareNewTabId> = { metriken: 'wetter', zustellung: 'zustellung' };
+const STEPS: CompareNewTabId[] = ['vergleich', 'orte', 'wetter', 'zustellung'];
 
 function tailP(p: CompareNewProgress) {
 	return {
 		metrikenFrei: !!p.name.trim() && p.pickedCount >= 2,
 		metrikenVisited: p.metrikenVisited,
-		wertebereicheVisited: p.idealsVisited,
-		alarmeVisited: p.alarmeVisited,
+		zustellungVisited: p.zustellungVisited,
 	};
 }
 function unlockedTabs(p: CompareNewProgress): Set<CompareNewTabId> {
@@ -59,7 +57,7 @@ function doneTabs(p: CompareNewProgress): Set<CompareNewTabId> {
 	return s;
 }
 function progressCount(done: Set<CompareNewTabId>): number {
-	return Math.min(kernProgressCount(done, STEPS), 5);
+	return Math.min(kernProgressCount(done, STEPS), 4);
 }
 const canActivate = (done: Set<CompareNewTabId>) => canFinish(done);
 
@@ -70,8 +68,7 @@ function progress(over: Partial<CompareNewProgress> = {}): CompareNewProgress {
 		name: '',
 		pickedCount: 0,
 		metrikenVisited: false,
-		idealsVisited: false,
-		alarmeVisited: false,
+		zustellungVisited: false,
 		...over,
 	};
 }
@@ -79,15 +76,15 @@ function progress(over: Partial<CompareNewProgress> = {}): CompareNewProgress {
 // ── AC-2: Leerzustand — nur "vergleich" offen ────────────────────────────────
 
 describe('AC-2: unlockedTabs — progressive Freischaltung', () => {
-	test('Leerzustand: nur "vergleich" offen, 4 Tabs gesperrt', () => {
+	test('Leerzustand: nur "vergleich" offen, 3 Tabs gesperrt', () => {
 		const u = unlockedTabs(progress());
 		assert.deepEqual([...u].sort(), ['vergleich']);
 	});
 
-	test('AC-3: Name gesetzt → "orte" schaltet frei, "metriken" bleibt gesperrt', () => {
+	test('AC-3: Name gesetzt → "orte" schaltet frei, "wetter" bleibt gesperrt', () => {
 		const u = unlockedTabs(progress({ name: 'Sardinien-Woche' }));
 		assert.ok(u.has('orte'), 'orte muss frei sein');
-		assert.ok(!u.has('wetter-metriken'), 'metriken noch gesperrt (Orte fehlen)');
+		assert.ok(!u.has('wetter'), 'wetter noch gesperrt (Orte fehlen)');
 	});
 
 	test('Nur Whitespace als Name schaltet "orte" NICHT frei', () => {
@@ -96,73 +93,35 @@ describe('AC-2: unlockedTabs — progressive Freischaltung', () => {
 		assert.deepEqual([...u].sort(), ['vergleich']);
 	});
 
-	test('AC-4: genau 1 Ort schaltet "metriken" NICHT frei', () => {
+	test('AC-4: genau 1 Ort schaltet "wetter" NICHT frei', () => {
 		const u = unlockedTabs(progress({ name: 'X', pickedCount: 1 }));
-		assert.ok(!u.has('wetter-metriken'), '1 Ort reicht nicht (Minimum 2)');
+		assert.ok(!u.has('wetter'), '1 Ort reicht nicht (Minimum 2)');
 	});
 
-	test('AC-4: 2 Orte schalten "metriken" frei, "idealwerte" bleibt gesperrt', () => {
+	test('AC-4: 2 Orte schalten "wetter" frei, "zustellung" bleibt gesperrt', () => {
 		const u = unlockedTabs(progress({ name: 'X', pickedCount: 2 }));
-		assert.ok(u.has('wetter-metriken'), 'metriken frei ab 2 Orten');
-		assert.ok(!u.has('wertebereiche'), 'idealwerte noch gesperrt (Metriken nicht besucht)');
+		assert.ok(u.has('wetter'), 'wetter frei ab 2 Orten');
+		assert.ok(!u.has('zustellung'), 'zustellung noch gesperrt (Wetter nicht besucht)');
 	});
 
-	test('AC-5: metrikenVisited → "idealwerte" frei, "alarme" bleibt gesperrt', () => {
-		const u1 = unlockedTabs(progress({ name: 'X', pickedCount: 2, metrikenVisited: true }));
-		assert.ok(u1.has('wertebereiche'), 'idealwerte frei nach Metriken-Besuch');
-		// Issue #1360: hier stand vormals der Layout-Reiter — er ist aufgeloest,
-		// naechste Stufe ist direkt 'alarme'.
-		assert.ok(!u1.has('alarme'), 'alarme noch gesperrt (Wertebereiche nicht besucht)');
+	test('metrikenVisited → "zustellung" frei; kein entfallener Schritt wird frei', () => {
+		const u1 = unlockedTabs(progress({ name: 'X', pickedCount: 2, metrikenVisited: true })) as Set<string>;
+		assert.ok(u1.has('zustellung'), 'zustellung frei nach Wetter-Besuch');
+		const u2 = unlockedTabs(progress({ name: 'X', pickedCount: 2, metrikenVisited: true, zustellungVisited: true })) as Set<string>;
+		for (const alt of ['versand', 'wertebereiche', 'alarme', 'wetter-metriken']) {
+			assert.ok(!u2.has(alt), `es gibt keinen Schritt ${alt} mehr: ${[...u2].sort().join(',')}`);
+		}
 	});
 
-	test('AC-7: idealsVisited → "alarme" frei; #1743: alarmeVisited schaltet keinen "versand" frei', () => {
-		const u1 = unlockedTabs(
-			progress({
-				name: 'X',
-				pickedCount: 2,
-				metrikenVisited: true,
-				idealsVisited: true,
-			})
-		);
-		assert.ok(u1.has('alarme'), 'alarme frei nach Wertebereiche-Besuch (#1360: Layout-Reiter aufgeloest)');
-		const u2 = unlockedTabs(
-			progress({
-				name: 'X',
-				pickedCount: 2,
-				metrikenVisited: true,
-				idealsVisited: true,
-				alarmeVisited: true,
-			})
-		) as Set<string>;
-		assert.ok(!u2.has('versand'), `#1743: es gibt keinen Schritt versand mehr: ${[...u2].sort().join(',')}`);
-	});
-
-	test('Kaskade übersprungen: idealsVisited ohne Vorstufen schaltet "alarme" NICHT frei', () => {
-		// Nur idealsVisited=true, aber ohne Name/Orte/metriken — der Tab selbst
-		// darf ohne die kompletten Vorbedingungen nicht erreichbar sein.
-		// Issue #1360: vormals layoutVisited (Reiter aufgeloest).
-		const u = unlockedTabs(progress({ idealsVisited: true }));
-		assert.ok(!u.has('alarme'), 'ohne Name/Orte/metriken kein alarme-Zugang');
+	test('Kaskade übersprungen: zustellungVisited ohne Vorstufen schaltet "zustellung" NICHT frei', () => {
+		const u = unlockedTabs(progress({ zustellungVisited: true }));
+		assert.ok(!u.has('zustellung'), 'ohne Name/Orte/Wetter kein zustellung-Zugang');
 		assert.deepEqual([...u].sort(), ['vergleich']);
 	});
 
-	test('Vollständige Kette: alle 5 Tabs offen (#1360: ohne Layout-Reiter, #1743: ohne Versand)', () => {
-		const u = unlockedTabs(
-			progress({
-				name: 'X',
-				pickedCount: 3,
-				metrikenVisited: true,
-				idealsVisited: true,
-				alarmeVisited: true,
-			})
-		);
-		const expected: CompareNewTabId[] = [
-			'alarme',
-			'orte',
-			'vergleich',
-			'wertebereiche',
-			'wetter-metriken',
-		];
+	test('Vollständige Kette: alle 4 Tabs offen', () => {
+		const u = unlockedTabs(progress({ name: 'X', pickedCount: 3, metrikenVisited: true, zustellungVisited: true }));
+		const expected: CompareNewTabId[] = ['orte', 'vergleich', 'wetter', 'zustellung'];
 		assert.deepEqual([...u].sort(), expected);
 	});
 });
@@ -174,7 +133,7 @@ describe('doneTabs — Done-Zustand nach Spec-Tabelle', () => {
 		const d = doneTabs(progress({ name: 'X', pickedCount: 2 }));
 		assert.ok(d.has('vergleich'));
 		assert.ok(d.has('orte'));
-		assert.ok(!d.has('wetter-metriken'), 'metriken erst nach Besuch done');
+		assert.ok(!d.has('wetter'), 'wetter erst nach Besuch done');
 	});
 
 	test('1 Ort → orte NICHT done', () => {
@@ -184,81 +143,48 @@ describe('doneTabs — Done-Zustand nach Spec-Tabelle', () => {
 	});
 
 	test('visited-Flags markieren die jeweiligen Tabs als done', () => {
-		const d = doneTabs(
-			progress({
-				name: 'X',
-				pickedCount: 2,
-				metrikenVisited: true,
-				idealsVisited: true,
-				alarmeVisited: true,
-			})
-		);
-		for (const id of ['wetter-metriken', 'wertebereiche', 'alarme'] as CompareNewTabId[]) {
+		const d = doneTabs(progress({ name: 'X', pickedCount: 2, metrikenVisited: true, zustellungVisited: true }));
+		for (const id of ['wetter', 'zustellung'] as CompareNewTabId[]) {
 			assert.ok(d.has(id), `${id} muss done sein`);
 		}
 	});
 });
 
-// ── progressCount (max 5 — Issue #1360, #1743 ohne Versand) ──────────────────
+// ── progressCount (max 4 — #2794) ─────────────────────────────────────────────
 
 describe('progressCount — Fortschrittszähler', () => {
 	test('Leerzustand = 0', () => {
 		assert.equal(progressCount(doneTabs(progress())), 0);
 	});
 
-	test('vollständige Kette = 5 (ohne Versand-Schritt)', () => {
-		const d = doneTabs(
-			progress({
-				name: 'X',
-				pickedCount: 2,
-				metrikenVisited: true,
-				idealsVisited: true,
-				alarmeVisited: true,
-			})
-		);
-		assert.equal(progressCount(d), 5);
+	test('vollständige Kette = 4', () => {
+		const d = doneTabs(progress({ name: 'X', pickedCount: 2, metrikenVisited: true, zustellungVisited: true }));
+		assert.equal(progressCount(d), 4);
 	});
 
-	test('deckelt bei 5, auch wenn ein Fremd-Set größer wäre', () => {
+	test('deckelt bei 4, auch wenn ein Fremd-Set größer wäre', () => {
 		const bloated = new Set<CompareNewTabId>([
 			'vergleich',
 			'orte',
-			'wetter-metriken',
-			'wertebereiche',
-			'alarme',
+			'wetter',
+			'zustellung',
 			'versand' as CompareNewTabId,
 			'nochwas' as CompareNewTabId,
 		]);
-		assert.equal(progressCount(bloated), 5);
+		assert.equal(progressCount(bloated), 4);
 	});
 });
 
-// ── canActivate (#1743 AC-19: frei, sobald Alarme besucht ist — nicht früher) ─
+// ── canActivate (#2794: frei, sobald Zustellung besucht ist — nicht früher) ───
 
-describe('canActivate — "Briefing aktivieren" nach Alarme-Besuch', () => {
-	test('Alarme nicht besucht → false (Aktivieren-Button deaktiviert)', () => {
-		const d = doneTabs(
-			progress({
-				name: 'X',
-				pickedCount: 2,
-				metrikenVisited: true,
-				idealsVisited: true,
-				alarmeVisited: false,
-			})
-		);
+describe('canActivate — "Briefing aktivieren" nach Zustellungs-Besuch', () => {
+	test('Zustellung nicht besucht → false (Aktivieren-Button deaktiviert)', () => {
+		const d = doneTabs(progress({ name: 'X', pickedCount: 2, metrikenVisited: true, zustellungVisited: false }));
 		assert.equal(canActivate(d), false);
 	});
 
-	test('Alarme besucht (kein Versand-Schritt) → true (Aktivieren freigegeben)', () => {
-		const d = doneTabs(
-			progress({
-				name: 'X',
-				pickedCount: 2,
-				metrikenVisited: true,
-				idealsVisited: true,
-				alarmeVisited: true,
-			})
-		);
+	test('Zustellung besucht → true (Aktivieren freigegeben)', () => {
+		const d = doneTabs(progress({ name: 'X', pickedCount: 2, metrikenVisited: true, zustellungVisited: true }));
 		assert.equal(canActivate(d), true);
 	});
 
@@ -267,9 +193,9 @@ describe('canActivate — "Briefing aktivieren" nach Alarme-Besuch', () => {
 	});
 });
 
-// ── #1743 AC-19 an der Wirkstelle: ECHTES SSR-Rendering von CompareNewEditor ──
+// ── #1743 AC-19 / #2794 AC-6 an der Wirkstelle: ECHTES SSR-Rendering von CompareNewEditor ──
 // Reiterleiste, Fortschrittszaehler und „Briefing aktivieren" (Desktop-Fuß cm-desktop-footer, #2837 S2, und
-// mobiler Sticky-Footer im Schritt Alarme) — Muster compare_new_lock_engine_wirkstelle.
+// mobiler Sticky-Footer im Schritt Zustellung) — Muster compare_new_lock_engine_wirkstelle.
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const FRONTEND = path.resolve(HERE, '../../../../..');
@@ -279,8 +205,7 @@ const { render } = await import('svelte/server');
 const Editor = (await import(pathToFileURL(path.join(HERE, '../CompareNewEditor.svelte')).href)).default;
 
 function editorHtml(activeTab: string, isMobileViewport: boolean, flags: Record<string, boolean>): string {
-	// Issue #2727 (AC-9): kein Context-Stub mehr — Name und Orte reisen ueber stateOverride
-	// (heute rot: der Editor kennt diese Startwerte noch nicht und braucht den Context).
+	// Issue #2727 (AC-9): kein Context-Stub mehr — Name und Orte reisen ueber stateOverride.
 	return render(Editor, {
 		props: { stateOverride: { activeTab, isMobileViewport, name: 'X', pickedIds: ['a', 'b', 'c'], ...flags } }
 	}).body;
@@ -305,31 +230,30 @@ function imDesktopFuss(html: string): string {
 	}
 	return html.slice(start);
 }
-const BIS_WERTEBEREICHE = { metrikenVisited: true, idealsVisited: true };
-const BIS_ALARME = { metrikenVisited: true, idealsVisited: true, alarmeVisited: true };
+const BIS_WETTER = { metrikenVisited: true };
+const BIS_ZUSTELLUNG = { metrikenVisited: true, zustellungVisited: true };
 
-describe('#1743 AC-19 Wirkstelle /compare/new: kein Versand-Schritt, Aktivieren nach Alarme', () => {
-	test('Reiterleiste: vergleich · orte · wetter-metriken · wertebereiche · alarme', () => {
-		const ids = [...editorHtml('vergleich', false, BIS_ALARME).matchAll(/data-testid="compare-editor-tab-([a-z-]+)"/g)].map((m) => m[1]);
-		assert.deepEqual(ids, ['vergleich', 'orte', 'wetter-metriken', 'wertebereiche', 'alarme']);
+describe('#1743 AC-19 / #2794 AC-6 Wirkstelle /compare/new: Aktivieren nach Zustellung', () => {
+	test('Reiterleiste: vergleich · orte · wetter · zustellung', () => {
+		const ids = [...editorHtml('vergleich', false, BIS_ZUSTELLUNG).matchAll(/data-testid="compare-editor-tab-([a-z-]+)"/g)].map((m) => m[1]);
+		assert.deepEqual(ids, ['vergleich', 'orte', 'wetter', 'zustellung']);
 	});
 
-	test('Fortschritt: fünf Segmente; nach Alarme „5 / 5 Abschnitte eingerichtet"', () => {
-		const html = editorHtml('alarme', false, BIS_ALARME);
-		assert.equal((html.match(/data-testid="compare-editor-progress-segment"/g) ?? []).length, 5, 'Segmentzahl ≠ 5');
-		assert.match(html, /5 \/ 5 Abschnitte eingerichtet/);
+	test('Fortschritt: vier Segmente; nach Zustellung „4 / 4 Abschnitte eingerichtet"', () => {
+		const html = editorHtml('zustellung', false, BIS_ZUSTELLUNG);
+		assert.equal((html.match(/data-testid="compare-editor-progress-segment"/g) ?? []).length, 4, 'Segmentzahl ≠ 4');
+		assert.match(html, /4 \/ 4 Abschnitte eingerichtet/);
 	});
 
-	// #2837 S2 (AC-8) UMGEDREHT: „Briefing aktivieren" sitzt nicht mehr in der Kopfleiste, sondern
-	// im Desktop-Fuß cm-desktop-footer des AnlegeRahmen; die Freischaltung bleibt wörtlich gleich.
-	test('Desktop: „Briefing aktivieren" im Fuß cm-desktop-footer — gesperrt bis Wertebereiche, frei nach Alarme', () => {
-		assert.equal(knopfGesperrt(imDesktopFuss(editorHtml('wertebereiche', false, BIS_WERTEBEREICHE)), 'compare-editor-activate'), true);
-		assert.equal(knopfGesperrt(imDesktopFuss(editorHtml('alarme', false, BIS_ALARME)), 'compare-editor-activate'), false,
-			'#1743 AC-19 FAIL: „Briefing aktivieren" ist nach dem Alarme-Besuch noch gesperrt.');
+	// #2837 S2 (AC-8): „Briefing aktivieren" sitzt im Desktop-Fuß cm-desktop-footer des AnlegeRahmen.
+	test('Desktop: „Briefing aktivieren" im Fuß cm-desktop-footer — gesperrt bis Wetter, frei nach Zustellung', () => {
+		assert.equal(knopfGesperrt(imDesktopFuss(editorHtml('wetter', false, BIS_WETTER)), 'compare-editor-activate'), true);
+		assert.equal(knopfGesperrt(imDesktopFuss(editorHtml('zustellung', false, BIS_ZUSTELLUNG)), 'compare-editor-activate'), false,
+			'#2794 AC-6 FAIL: „Briefing aktivieren" ist nach dem Zustellungs-Besuch noch gesperrt.');
 	});
 
-	test('Mobil: im Schritt Alarme steht der freie Aktivieren-Knopf im Sticky-Footer', () => {
-		assert.equal(knopfGesperrt(editorHtml('alarme', true, BIS_ALARME), 'cm-mobile-activate'), false,
-			'#1743 AC-19 FAIL: mobil fehlt im Schritt Alarme der freie Knopf „Briefing aktivieren".');
+	test('Mobil: im Schritt Zustellung steht der freie Aktivieren-Knopf im Sticky-Footer', () => {
+		assert.equal(knopfGesperrt(editorHtml('zustellung', true, BIS_ZUSTELLUNG), 'cm-mobile-activate'), false,
+			'#2794 AC-6 FAIL: mobil fehlt im Schritt Zustellung der freie Knopf „Briefing aktivieren".');
 	});
 });

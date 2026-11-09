@@ -339,7 +339,7 @@ for (const kind of HUB_KINDS) {
 			// Trip hängt `&report_type=…` an (sendOutcome.briefingSendUrl), der Vergleich nicht.
 			const erwartet = new RegExp(`/api/briefings/${hub.id}/send\\?kind=${kind}(&report_type=(morning|evening))?$`);
 
-			await openHub(page, kind, hub.id, { tab: 'wetter-metriken' });
+			await openHub(page, kind, hub.id, { tab: 'zustellung' }); // #2794 S3a: Versand-Abschnitt im Reiter Zustellung
 			const panel = page.locator('[data-testid="versand-abschnitt"]:visible');
 			await expect(panel).toBeVisible({ timeout: 10_000 });
 			await expect(panel.locator('[data-testid$="-activation-testsend"]')).toHaveCount(0);
@@ -403,7 +403,7 @@ for (const kind of HUB_KINDS) {
 			});
 			const erwartet = new RegExp(`/api/briefings/${hub.id}/send\\?kind=${kind}(&report_type=(morning|evening))?$`);
 
-			await openHub(page, kind, hub.id, { tab: 'wetter-metriken' });
+			await openHub(page, kind, hub.id, { tab: 'zustellung' }); // #2794 S3a: Versand-Abschnitt im Reiter Zustellung
 			const panel = page.locator('[data-testid="versand-abschnitt"]:visible');
 			await expect(panel).toBeVisible({ timeout: 10_000 });
 			await expect(panel.getByRole('button', { name: /Test-Briefing/ })).toHaveCount(0);
