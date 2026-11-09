@@ -223,6 +223,7 @@ ACs AC-1 bis AC-8 und AC-36 sind wörtlich aus der freigegebenen Gesamt-Spec üb
 - **Kein Mail-Validator-Lauf nötig:** Mail-Inhalt und Renderer ändern sich nicht.
 - **Segmented-Block in `app.css` bleibt (Umsetzungsstand 2026-11-09):** Der globale Segmented-Block in `frontend/src/app.css` (ca. Z. 501–535, 657) bleibt bestehen, weil das Segmented-Atom (`ui/segmented/Segmented.svelte`, `WeatherConfigDialog`) ihn nutzt. Die Reiterleiste trägt kein `data-slot="segmented"` mehr, daher gilt die Box dort nicht (AC-3 erfüllt).
 - **`AlarmeScheduleTab` unverändert:** `trip-detail/AlarmeScheduleTab.svelte` blieb unverändert und wird von `ZustellungTab` eingebunden.
+- **AC-7, Lesart des 16-Punkte-Inventars (Validierung 2026-11-09):** Das Inventar ist die Vereinigung beider Kontexte. Je Kontext gilt der Stand vor dem Umbau (Test Plan: „abgeleitet aus dem Stand vor dem Umbau“): Trip 14 Elemente (Aktivieren und Stundenverlauf gab es im Trip-Hub auf `origin/main` nicht, Stundenverlauf ist laut `weatherMetricsTabSections.ts` vergleichs-exklusiv), Orts-Briefing 13 Elemente (ohne die trip-exklusiven Mehrtages-Trend, Mail-Inhalt, Nacht-Block). Kein Element ist verschwunden; die Staging-Spec `s3a2794-zustellung-inventar-speicherweg.spec.ts` prüft genau diese 14/13.
 - **i18n `trip.json`:** Schlüssel `trip.anlegen.wertebereiche_festlegen` und `trip.anlegen.alarme_einrichten` entfernt, `trip.anlegen.zustellung_einrichten` neu (Folge der Anlege-Kette).
 
 ## Architektur-Entscheidung (ADR)
