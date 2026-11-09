@@ -81,9 +81,10 @@ test.describe('Bug #1436: Alarm-Tabelle auf schmalen Bildschirmen', () => {
 			expect(box!.height).toBeGreaterThan(0);
 			expect(box!.width).toBeGreaterThan(0);
 
-			// Segmented-Control und Schwellwert der Zeile muessen ebenfalls
-			// tatsaechlich sichtbar sein (nicht nur DOM-Praesenz).
-			await expect(page.locator('[data-testid="alert-metric-segmented-wind_gust"]')).toBeVisible();
+			// #2793 S2b: statt des Segmented-Controls zeigt die Zeile „Alarm ab …“
+			// nur lesbar; dieser Wert muss tatsaechlich sichtbar sein (nicht nur
+			// DOM-Praesenz).
+			await expect(page.locator('[data-testid="alert-alarm-ab-wind_gust"]')).toBeVisible();
 			await expect(row).toBeVisible();
 		} finally {
 			await deleteTrip(request, id);
