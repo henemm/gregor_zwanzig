@@ -22,7 +22,7 @@
 		icon?: MIconKind | string;
 		onclick?: () => void;
 		// Issue #1256 Scheibe 8d — additiv: deaktivierter Zustand (kein
-		// Klick-Effekt, reduzierte Deckkraft). Default false, kein
+		// Klick-Effekt, seit #2371 ink-3-Text mit Rahmen statt Deckkraft). Default false, kein
 		// Verhaltensunterschied für bestehende Aufrufer.
 		disabled?: boolean;
 		// Mobile-Shell S2 — optionaler Test-Anker (z. B. cm-mobile-activate).
@@ -57,14 +57,19 @@
 		danger: { bg: 'transparent', fg: 'var(--g-danger)', border: '1px solid var(--g-rule)' }
 	} as const;
 
+	// Issue #2371 (ADR-0008): deaktiviert ohne Opacity-Verdünnung — Text --g-ink-3 (>= 4,5:1)
+	// auf transparentem Grund mit --g-rule-Rahmen, unabhängig von der Variante.
+	const disabledLook = { bg: 'transparent', fg: 'var(--g-ink-3)', border: '1px solid var(--g-rule)' } as const;
+
 	const s = $derived(sizes[size] ?? sizes.lg);
-	const v = $derived(variants[variant] ?? variants.primary);
+	const v = $derived(disabled ? disabledLook : (variants[variant] ?? variants.primary));
 </script>
 
 <button
 	type="button"
 	onclick={disabled ? undefined : onclick}
 	{disabled}
+	aria-disabled={disabled ? 'true' : undefined}
 	data-testid={testid}
 	data-variant={variant}
 	data-size={size}
@@ -83,7 +88,6 @@
 	style:color={v.fg}
 	style:border={v.border}
 	style:border-radius="var(--g-r-3)"
-	style:opacity={disabled ? '0.4' : '1'}
 	style:cursor={disabled ? 'not-allowed' : 'pointer'}
 >
 	{#if icon}

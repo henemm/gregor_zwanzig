@@ -51,17 +51,25 @@ type warnServiceAgg struct {
 	// deliberately kept apart from the outage fields above: a drift line is
 	// neither an attempt nor a success.
 	//
-	// One timestamp PER category, never a shared maximum (F001): the counters
-	// are cumulative and the journal never rotates, so check-gregor20.sh can
-	// only escape a permanently hot ERROR threshold via a freshness check —
-	// and a shared maximum would make a long-fixed occurrence with warning
-	// look fresh as soon as a harmless one without warning arrives.
+	// The counters are occurrences within the retention window (current
+	// journal plus ONE predecessor generation warn_service_calls.jsonl.1,
+	// Issue #2224), not cumulative since the first write.
+	//
+	// One timestamp PER category, never a shared maximum (F001): a counter
+	// stays hot for the whole retention window, so check-gregor20.sh can only
+	// escape a permanently hot ERROR threshold via a freshness check — and a
+	// shared maximum would make a long-fixed occurrence with warning look
+	// fresh as soon as a harmless one without warning arrives.
 	driftWithWarning     int
 	driftWithoutWarning  int
 	lastWithWarningAt    string
 	lastWithoutWarningAt string
 	haveDrift            bool
 }
+
+// warnJournalBetweenOpens is nil in production. Nur Test-Naht, #2224: lets a
+// test perform a real rotation between opening the current file and ".1".
+var warnJournalBetweenOpens func()
 
 // aggregateWarnServiceCalls scans path (data/diagnostics/warn_service_calls.jsonl)
 // and returns one warnServiceAgg per canonical service name, plus whether the
@@ -77,84 +85,144 @@ type warnServiceAgg struct {
 // The same single scan also picks up the zone-drift event lines of Issue #1434
 // S1 (no "ok", but a "drift" direction) into separate counters; they never
 // touch the outage fields (s. AC-7).
+//
+// Issue #2224: the journal rotates into ONE predecessor generation
+// (path + ".1"). The current file is opened FIRST (descriptor held), the
+// predecessor SECOND: a rotation between the two opens then makes ".1" the
+// very file already open, which os.SameFile detects so it is not counted
+// twice — the reverse order would lose the freshly renamed file. Both files
+// run through the same line scanner; aggregation takes per-service maxima,
+// so the read order does not change the result. A missing file of either
+// generation is legitimate; any other open or scan error of either sets the
+// error flag while the aggregates of the readable file are kept.
 func aggregateWarnServiceCalls(path string) (map[string]*warnServiceAgg, bool) {
 	aggs := map[string]*warnServiceAgg{}
+	readErr := false
 
+	cur, curErr := openWarnJournal(path, &readErr)
+	if cur != nil {
+		defer cur.Close()
+	}
+	if warnJournalBetweenOpens != nil {
+		warnJournalBetweenOpens()
+	}
+	prev, _ := openWarnJournal(path+".1", &readErr)
+	if prev != nil {
+		defer prev.Close()
+	}
+	if curErr == nil && prev != nil && sameOpenFile(cur, prev) {
+		prev = nil // rotation between the opens (or hardlink): read once
+	}
+
+	for _, f := range []*os.File{cur, prev} {
+		if f != nil && scanWarnServiceCalls(f, aggs) != nil {
+			readErr = true
+		}
+	}
+	return aggs, readErr
+}
+
+// openWarnJournal opens one journal generation. A missing file is the
+// legitimate empty state (fresh deploy, never rotated) and returns nil
+// without flagging; any other open error sets *readErr.
+func openWarnJournal(path string, readErr *bool) (*os.File, error) {
 	f, err := os.Open(path)
 	if err != nil {
-		return aggs, false // missing file: legitimate empty state, no error flag
-	}
-	defer f.Close()
-
-	aggFor := func(service string) *warnServiceAgg {
-		name := canonicalWarnServiceName(service)
-		agg, ok := aggs[name]
-		if !ok {
-			agg = &warnServiceAgg{}
-			aggs[name] = agg
+		if !os.IsNotExist(err) {
+			*readErr = true
 		}
-		return agg
+		return nil, err
 	}
+	return f, nil
+}
 
+// sameOpenFile reports whether two open descriptors refer to the same file.
+// If either cannot be stat'ed, they are treated as distinct.
+func sameOpenFile(a, b *os.File) bool {
+	ai, errA := a.Stat()
+	bi, errB := b.Stat()
+	return errA == nil && errB == nil && os.SameFile(ai, bi)
+}
+
+// scanWarnServiceCalls feeds every line of f into aggs. Fail-soft on
+// individual corrupt lines; returns the scanner error, if any. A path
+// pointing at a directory opens fine but fails on the first Read (Linux:
+// EISDIR) — that surfaces here, distinct from os.IsNotExist on open.
+func scanWarnServiceCalls(f *os.File, aggs map[string]*warnServiceAgg) error {
 	scanner := bufio.NewScanner(f)
 	for scanner.Scan() {
 		var entry warnServiceCallEntry
 		if err := json.Unmarshal(scanner.Bytes(), &entry); err != nil {
 			continue // skip corrupt line, keep scanning
 		}
-		// Zone-drift event line (Issue #1434 S2): no "ok" AND a "drift"
-		// direction. Counted separately and never as attempt/success — a
-		// pre-#1422-S1 line (no "ok", no "drift") still falls through to
-		// the skip below.
-		if entry.Ok == nil && entry.Drift != "" {
-			// No usable ts — missing, empty or whitespace only — drops the
-			// line like a corrupt one (F004/F005). It is not producible via
-			// log_zone_drift() at all (ts is mandatory there), so this only
-			// happens on journal corruption — and of the two possible states,
-			// "no finding" is the honest one: a count without a point in time
-			// is a call to action a freshness filter cannot act on, so the
-			// finding would vanish silently. Whitespace would even sort as
-			// "ancient" in the lexicographic comparisons below.
-			if strings.TrimSpace(entry.Ts) == "" {
-				continue
-			}
-			agg := aggFor(entry.Service)
-			if entry.HasWarning {
-				agg.driftWithWarning++
-				if entry.Ts > agg.lastWithWarningAt {
-					agg.lastWithWarningAt = entry.Ts
-				}
-			} else {
-				agg.driftWithoutWarning++
-				if entry.Ts > agg.lastWithoutWarningAt {
-					agg.lastWithoutWarningAt = entry.Ts
-				}
-			}
-			agg.haveDrift = true
-			continue
-		}
-		if entry.CacheHit || entry.Ok == nil {
-			continue
-		}
+		applyWarnServiceEntry(aggs, entry)
+	}
+	return scanner.Err()
+}
 
-		agg := aggFor(entry.Service)
-		if !agg.haveAttempt || entry.Ts > agg.lastAttemptAt {
-			agg.lastAttemptAt = entry.Ts
-			agg.haveAttempt = true
-			agg.selfThrottled = entry.SelfThrottled
+// warnAggFor returns (creating if needed) the aggregate of the canonical
+// service name.
+func warnAggFor(aggs map[string]*warnServiceAgg, service string) *warnServiceAgg {
+	name := canonicalWarnServiceName(service)
+	agg, ok := aggs[name]
+	if !ok {
+		agg = &warnServiceAgg{}
+		aggs[name] = agg
+	}
+	return agg
+}
+
+// applyWarnServiceEntry folds one decoded journal line into aggs.
+func applyWarnServiceEntry(aggs map[string]*warnServiceAgg, entry warnServiceCallEntry) {
+	// Zone-drift event line (Issue #1434 S2): no "ok" AND a "drift"
+	// direction. Counted separately and never as attempt/success — a
+	// pre-#1422-S1 line (no "ok", no "drift") still falls through to
+	// the skip below.
+	if entry.Ok == nil && entry.Drift != "" {
+		applyZoneDriftEntry(aggs, entry)
+		return
+	}
+	if entry.CacheHit || entry.Ok == nil {
+		return
+	}
+
+	agg := warnAggFor(aggs, entry.Service)
+	if !agg.haveAttempt || entry.Ts > agg.lastAttemptAt {
+		agg.lastAttemptAt = entry.Ts
+		agg.haveAttempt = true
+		agg.selfThrottled = entry.SelfThrottled
+	}
+	if *entry.Ok && (!agg.haveSuccess || entry.Ts > agg.lastSuccessAt) {
+		agg.lastSuccessAt = entry.Ts
+		agg.haveSuccess = true
+	}
+}
+
+// applyZoneDriftEntry counts one zone-drift event line (Issue #1434 S2).
+func applyZoneDriftEntry(aggs map[string]*warnServiceAgg, entry warnServiceCallEntry) {
+	// No usable ts — missing, empty or whitespace only — drops the line like
+	// a corrupt one (F004/F005). It is not producible via log_zone_drift() at
+	// all (ts is mandatory there), so this only happens on journal corruption
+	// — and of the two possible states, "no finding" is the honest one: a
+	// count without a point in time is a call to action a freshness filter
+	// cannot act on, so the finding would vanish silently. Whitespace would
+	// even sort as "ancient" in the lexicographic comparisons below.
+	if strings.TrimSpace(entry.Ts) == "" {
+		return
+	}
+	agg := warnAggFor(aggs, entry.Service)
+	if entry.HasWarning {
+		agg.driftWithWarning++
+		if entry.Ts > agg.lastWithWarningAt {
+			agg.lastWithWarningAt = entry.Ts
 		}
-		if *entry.Ok && (!agg.haveSuccess || entry.Ts > agg.lastSuccessAt) {
-			agg.lastSuccessAt = entry.Ts
-			agg.haveSuccess = true
+	} else {
+		agg.driftWithoutWarning++
+		if entry.Ts > agg.lastWithoutWarningAt {
+			agg.lastWithoutWarningAt = entry.Ts
 		}
 	}
-	// A path pointing at a directory opens fine but fails on the first Read
-	// (Linux: EISDIR) — that surfaces here as a Scan error, distinct from
-	// os.IsNotExist above.
-	if scanner.Err() != nil {
-		return aggs, true
-	}
-	return aggs, false
+	agg.haveDrift = true
 }
 
 // nilIfEmpty renders an unset timestamp as JSON null instead of "", which
@@ -189,7 +257,8 @@ func nilIfEmpty(ts string) any {
 // last_with_warning_at, last_without_warning_at} — raw counters again, the
 // ERROR/WARN threshold stays in henemm-infra's check-gregor20.sh. The
 // timestamps are per category so that side can tell a stale finding from a
-// fresh one (F001).
+// fresh one (F001). Since Issue #2224 the counters are occurrences within the
+// retention window (current journal plus one predecessor generation ".1").
 func (s *Scheduler) WarnServiceHealth() map[string]any {
 	result := map[string]any{}
 

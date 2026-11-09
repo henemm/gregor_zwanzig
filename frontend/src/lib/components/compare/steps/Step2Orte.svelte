@@ -91,7 +91,7 @@
 	});
 
 	const counterColor = $derived(
-		pickedIds.length < 2 ? 'var(--g-warn)' : 'var(--g-ink-4)'
+		pickedIds.length < 2 ? 'var(--g-warn)' : 'var(--g-ink-3)'
 	);
 
 	// Issue #1256 Scheibe 8d (AC-6) — dense-Badge-Kurzform (JSX-M Z.234), Desktop
@@ -235,7 +235,7 @@
 			<div style="font-family:var(--g-font-mono); font-size:10px; letter-spacing:0.10em; text-transform:uppercase; color:var(--g-ink-3); font-weight:600; margin-bottom:14px;">{$t('vergleich.orte.neuen_ort')}</div>
 			<div style="padding:16px 16px 14px; background:var(--g-card); border:1px solid var(--g-rule); border-radius:var(--g-r-3);">
 				<div style="margin-bottom:10px;">
-					<div style="font-size:11px; color:var(--g-ink-4); margin-bottom:6px;">{$t('vergleich.orte.smart_import')}</div>
+					<div style="font-size:11px; color:var(--g-ink-3); margin-bottom:6px;">{$t('vergleich.orte.smart_import')}</div>
 					<div style="display:flex; align-items:center; gap:10px;">
 						<input
 							data-testid="compare-step2-smart-import-input"
@@ -258,7 +258,7 @@
 					<p style="font-size:12px; color:var(--g-danger); margin:4px 0;">{resolveErrorKey ? $t(resolveErrorKey) : resolveError}</p>
 					<!-- Fallback: manuelle Koordinaten -->
 					<div style="margin-top:10px;">
-						<div style="font-size:11px; color:var(--g-ink-4); margin-bottom:6px;">{$t('vergleich.orte.manuell')}</div>
+						<div style="font-size:11px; color:var(--g-ink-3); margin-bottom:6px;">{$t('vergleich.orte.manuell')}</div>
 						<div style="display:flex; gap:8px; margin-bottom:6px;">
 							<input
 								data-testid="compare-step2-fallback-lat"
@@ -289,9 +289,9 @@
 
 				{#if preview}
 					<div style="padding:10px 12px; background:var(--g-paper-deep); border-radius:var(--g-r-2); margin-bottom:10px; margin-top:8px;">
-						<div style="font-family:var(--g-font-mono); font-size:10px; color:var(--g-ink-4); letter-spacing:0.06em; text-transform:uppercase; margin-bottom:4px;">{$t('vergleich.orte.erkannt')}</div>
+						<div style="font-family:var(--g-font-mono); font-size:10px; color:var(--g-ink-3); letter-spacing:0.06em; text-transform:uppercase; margin-bottom:4px;">{$t('vergleich.orte.erkannt')}</div>
 						<div style="font-family:var(--g-font-mono); font-size:11px; color:var(--g-ink-3); margin-top:2px; margin-bottom:8px;">{preview.lat.toFixed(4)}, {preview.lon.toFixed(4)}{preview.elevation_m !== undefined ? ` · ${preview.elevation_m} m` : ''}</div>
-						<label style="display:block; font-size:11px; color:var(--g-ink-4); margin-bottom:4px;" for="compare-step2-name-input">{$t('listen.spalte.name')}</label>
+						<label style="display:block; font-size:11px; color:var(--g-ink-3); margin-bottom:4px;" for="compare-step2-name-input">{$t('listen.spalte.name')}</label>
 						<input
 							id="compare-step2-name-input"
 							data-testid="compare-step2-name-input"
@@ -325,7 +325,7 @@
 				{#if pickedLocations.length === 0}
 					<div style="padding:28px 18px; border:1px dashed var(--g-rule); border-radius:var(--g-r-2); text-align:center; color:var(--g-ink-3); font-size:13px; line-height:1.6;">
 						{$t('vergleich.orte.noch_keine')}<br/>
-						<span style="font-family:var(--g-font-mono); font-size:11px; color:var(--g-ink-4);">{$t('vergleich.orte.links_oder_unten')}</span>
+						<span style="font-family:var(--g-font-mono); font-size:11px; color:var(--g-ink-3);">{$t('vergleich.orte.links_oder_unten')}</span>
 					</div>
 				{:else}
 					<div style="display:flex; flex-direction:column; gap:6px;">
@@ -337,13 +337,13 @@
 								<span style="width:22px; height:22px; border-radius:4px; background:var(--g-ink); color:#fff; display:inline-flex; align-items:center; justify-content:center; font-size:10px; font-weight:700; flex-shrink:0; font-family:var(--g-font-mono);">{i + 1}</span>
 								<div style="flex:1; min-width:0;">
 									<div style="font-size:13px; font-weight:600; color:var(--g-ink); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">{loc.name}</div>
-									<div style="font-family:var(--g-font-mono); font-size:10.5px; color:var(--g-ink-4); margin-top:1px;">{groupNameById.get(loc.group_id ?? '') ?? '—'} · {loc.elevation_m ?? '–'} m</div>
+									<div style="font-family:var(--g-font-mono); font-size:10.5px; color:var(--g-ink-3); margin-top:1px;">{groupNameById.get(loc.group_id ?? '') ?? '—'} · {loc.elevation_m ?? '–'} m</div>
 								</div>
 								<button
 									data-testid={`compare-step2-picked-remove-${loc.id}`}
 									type="button"
 									onclick={() => { pickedIds = pickedIds.filter((x) => x !== loc.id); }}
-									style="background:transparent; border:none; padding:6px; color:var(--g-ink-4); cursor:pointer; font-size:12px;"
+									style="background:transparent; border:none; padding:6px; color:var(--g-ink-3); cursor:pointer; font-size:12px;"
 								>✕</button>
 							</div>
 						{/each}
@@ -358,7 +358,7 @@
 	<div style="font-family:var(--g-font-mono); font-size:10px; letter-spacing:0.10em; text-transform:uppercase; color:var(--g-ink-3); font-weight:600; margin-bottom:12px;">{$t('vergleich.orte.aus_gespeicherten')}</div>
 
 	{#if allLocations.length === 0}
-		<p style="font-size:13px; color:var(--g-ink-4);">{$t('vergleich.orte.keine_gespeichert')}</p>
+		<p style="font-size:13px; color:var(--g-ink-3);">{$t('vergleich.orte.keine_gespeichert')}</p>
 	{:else}
 		<div
 			style="background:var(--g-card); border:1px solid var(--g-rule); border-radius:var(--g-r-3); padding:14px 18px;"
@@ -419,13 +419,13 @@
 					<span style="width:24px; height:24px; border-radius:4px; background:var(--g-ink); color:#fff; display:inline-flex; align-items:center; justify-content:center; font-size:10px; font-weight:700; flex-shrink:0; font-family:var(--g-font-mono);">{i + 1}</span>
 					<div style="flex:1; min-width:0;">
 						<div style="font-size:14px; font-weight:600; color:var(--g-ink); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">{loc.name}</div>
-						<div style="font-family:var(--g-font-mono); font-size:10.5px; color:var(--g-ink-4); margin-top:1px;">{groupNameById.get(loc.group_id ?? '') ?? '—'} · {loc.elevation_m ?? '–'} m</div>
+						<div style="font-family:var(--g-font-mono); font-size:10.5px; color:var(--g-ink-3); margin-top:1px;">{groupNameById.get(loc.group_id ?? '') ?? '—'} · {loc.elevation_m ?? '–'} m</div>
 					</div>
 					<button
 						data-testid={`compare-step2-picked-remove-${loc.id}`}
 						type="button"
 						onclick={() => { pickedIds = pickedIds.filter((x) => x !== loc.id); }}
-						style="background:transparent; border:none; padding:8px; color:var(--g-ink-4); cursor:pointer; font-size:16px; min-height:44px; flex-shrink:0;"
+						style="background:transparent; border:none; padding:8px; color:var(--g-ink-3); cursor:pointer; font-size:16px; min-height:44px; flex-shrink:0;"
 					>✕</button>
 				</div>
 			{/each}
