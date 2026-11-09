@@ -96,7 +96,7 @@ function istStand(): Record<string, number> {
 	return ergebnis;
 }
 
-test('AC-4: Scanner meldet Fließtext, lässt Placeholder, disabled und audit:exempt durch', () => {
+test('AC-4: Scanner meldet Fließtext, lässt Platzhalter-Regeln, disabled und audit:exempt durch', () => {
 	assert.equal(zaehleVerstoesse('<span style="font-size: 11px; color: var(--g-ink-4);">x</span>'), 1);
 	assert.equal(zaehleVerstoesse('<span style="color:var(--g-ink-4)">x</span>'), 1);
 	assert.equal(zaehleVerstoesse('input::placeholder { color: var(--g-ink-4); }'), 0);

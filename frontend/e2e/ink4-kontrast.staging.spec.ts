@@ -108,10 +108,10 @@ for (const pfad of ['/trips/new', '/compare/new']) {
 test('AC-3: deaktiviertes Speichern in /trips/new — >= 4,5:1, aria-disabled, Klick ohne Wirkung', async ({ page }) => {
 	await page.goto('/trips/new');
 	await page.waitForLoadState('networkidle');
-	const speichern = page.getByTestId('tn-mobile-save');
+	const speichern = page.locator('[data-testid="tn-mobile-route-cta"] button');
 	await expect(speichern).toBeAttached();
 	await expect(speichern).toHaveAttribute('aria-disabled', 'true');
-	const k = await messeKontrast(page, '[data-testid="tn-mobile-save"]');
+	const k = await messeKontrast(page, '[data-testid="tn-mobile-route-cta"] button');
 	expect(k.ratio).toBeGreaterThanOrEqual(4.5);
 	const anfragen: string[] = [];
 	page.on('request', (r) => {

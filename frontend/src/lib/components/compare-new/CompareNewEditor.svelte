@@ -469,7 +469,7 @@
 		aktiv={activeTab}
 	>
 		{#snippet hinweis()}
-			{#if !canActivateNow}<span class="mono" style:font-size="11px" style:color="var(--g-ink-4)">{$t('vergleich.neu.alarme_zum_aktivieren')}</span>{/if}
+			{#if !canActivateNow}<span class="mono" style:font-size="11px" style:color="var(--g-ink-3)">{$t('vergleich.neu.alarme_zum_aktivieren')}</span>{/if}
 		{/snippet}
 		{#snippet standardwerte()}
 			{#if !canActivateNow}<StandardwerteSpeichernKnopf enabled={standardwerteFrei} saving={activating} onclick={onStandardwerte} testid="compare-editor-standardwerte" />{/if}
@@ -483,6 +483,8 @@
 				{@const isDone = done.has(r.id) && !on}
 				<button
 					data-testid={`compare-editor-tab-${r.id}`}
+					role="tab"
+					aria-selected={on}
 					data-active={on ? 'true' : 'false'}
 					data-locked={open ? 'false' : 'true'}
 					data-done={done.has(r.id) ? 'true' : 'false'}
@@ -492,16 +494,16 @@
 					style:padding="12px 16px" style:cursor={open ? 'pointer' : 'not-allowed'} style:background="none" style:border="none"
 					style:border-bottom={on ? '2px solid var(--g-accent)' : '2px solid transparent'} style:margin-bottom="-1px"
 					style:font-family="var(--g-font-sans)" style:font-size="13px" style:font-weight={on ? 600 : 500}
-					style:color={on ? 'var(--g-ink)' : open ? 'var(--g-ink-3)' : 'var(--g-ink-4)'}
+					style:color={on ? 'var(--g-ink)' : 'var(--g-ink-3)'}
 					style:display="flex" style:align-items="center" style:gap="5px" style:white-space="nowrap"
-					style:opacity={open ? 1 : 0.34} style:transition="opacity 250ms, color 200ms" style:user-select="none"
+					style:transition="color 200ms" style:user-select="none"
 				>
 					{r.label}
 					{#if isDone}
 						<span class="mono" style:font-size="11px" style:font-weight="700" style:padding="2px 5px" style:border-radius="3px" style:background="rgba(61,107,58,0.12)" style:color="var(--g-good)">✓</span>
 					{/if}
 					{#if !open}
-						<span class="mono" style:font-size="11px" style:color="var(--g-ink-4)" style:opacity="0.7">⊘</span>
+						<span class="mono" style:font-size="11px" style:color="var(--g-ink-3)">⊘</span>
 					{/if}
 				</button>
 			{/each}
@@ -537,7 +539,7 @@
 						{/each}
 					</div>
 					<div style:margin-top="28px" style:padding-top="20px" style:border-top="1px solid var(--g-rule)" style:display="flex" style:justify-content="flex-end" style:align-items="center" style:gap="12px">
-						{#if !canContinue}<span class="mono" style:font-size="11px" style:color="var(--g-ink-4)">{$t('vergleich.neu.name_fehlt')}</span>{/if}
+						{#if !canContinue}<span class="mono" style:font-size="11px" style:color="var(--g-ink-3)">{$t('vergleich.neu.name_fehlt')}</span>{/if}
 						<Btn data-testid="compare-editor-continue-orte" variant="accent" size="md" disabled={!canContinue} onclick={() => canContinue && switchTab('orte')}>{$t('vergleich.neu.orte_hinzufuegen')}</Btn>
 					</div>
 				</div>
@@ -600,10 +602,10 @@
 		{#each TAB_DEFS as r (r.id)}
 			{@const on = r.id === activeTab}
 			{@const open = unlocked.has(r.id)}
-			<button type="button" data-testid="cm-mobile-tab-{r.id}" data-active={on ? 'true' : 'false'} data-locked={open ? 'false' : 'true'} onclick={() => handleMobileTabClick(r.id)}
-				style="display: inline-flex; align-items: center; gap: 5px; padding: 13px 13px; min-height: 44px; flex-shrink: 0; background: transparent; border: none; border-bottom: {on ? '2px solid var(--g-accent)' : '2px solid transparent'}; margin-bottom: -1px; cursor: {open ? 'pointer' : 'default'}; font-size: 14px; font-weight: {on ? 600 : 500}; color: {on ? 'var(--g-ink)' : open ? 'var(--g-ink-3)' : 'var(--g-ink-4)'}; white-space: nowrap; font-family: var(--g-font-sans); opacity: {open ? 1 : 0.35};">
+			<button type="button" role="tab" aria-selected={on} data-testid="cm-mobile-tab-{r.id}" data-active={on ? 'true' : 'false'} data-locked={open ? 'false' : 'true'} onclick={() => handleMobileTabClick(r.id)}
+				style="display: inline-flex; align-items: center; gap: 5px; padding: 13px 13px; min-height: 44px; flex-shrink: 0; background: transparent; border: none; border-bottom: {on ? '2px solid var(--g-accent)' : '2px solid transparent'}; margin-bottom: -1px; cursor: {open ? 'pointer' : 'not-allowed'}; font-size: 14px; font-weight: {on ? 600 : 500}; color: {on ? 'var(--g-ink)' : 'var(--g-ink-3)'}; white-space: nowrap; font-family: var(--g-font-sans);">
 				{r.label}
-				{#if !open}<span class="mono" style="font-size: 11px; opacity: 0.8;">⊘</span>{/if}
+				{#if !open}<span class="mono" style="font-size: 11px;">⊘</span>{/if}
 			</button>
 		{/each}
 	</div>
@@ -612,17 +614,17 @@
 	<div style="flex: 1; overflow-y: auto; padding: 16px;">
 		{#if activeTab === 'vergleich'}
 			<div style="margin-bottom: 14px;">
-				<div class="mono" style="font-size: 11px; color: var(--g-ink-4); letter-spacing: 0.10em; text-transform: uppercase; margin-bottom: 8px;">{$t('vergleich.neu.name')}</div>
+				<div class="mono" style="font-size: 11px; color: var(--g-ink-3); letter-spacing: 0.10em; text-transform: uppercase; margin-bottom: 8px;">{$t('vergleich.neu.name')}</div>
 				<input data-testid="compare-editor-name-mobile" type="text" maxlength="80" placeholder={$t('vergleich.neu.name_beispiel')} bind:value={wiz.name}
 					style="width: 100%; box-sizing: border-box; padding: 12px 14px; font-size: 16px; border: 1px solid var(--g-rule); border-radius: var(--g-r-3); background: var(--g-card); font-family: var(--g-font-sans); color: var(--g-ink); outline: none; min-height: 48px;" />
 			</div>
 			<div style="margin-bottom: 14px;">
-				<div class="mono" style="font-size: 11px; color: var(--g-ink-4); letter-spacing: 0.10em; text-transform: uppercase; margin-bottom: 8px;">{$t('trip.anlegen.region')} <span style="font-weight:400; text-transform:none;">({$t('trip.anlegen.optional')})</span></div>
+				<div class="mono" style="font-size: 11px; color: var(--g-ink-3); letter-spacing: 0.10em; text-transform: uppercase; margin-bottom: 8px;">{$t('trip.anlegen.region')} <span style="font-weight:400; text-transform:none;">({$t('trip.anlegen.optional')})</span></div>
 				<input type="text" maxlength="60" placeholder={$t('vergleich.neu.region_beispiel')} bind:value={wiz.region}
 					style="width: 100%; box-sizing: border-box; padding: 12px 14px; font-size: 16px; border: 1px solid var(--g-rule); border-radius: var(--g-r-3); background: var(--g-card); font-family: var(--g-font-sans); color: var(--g-ink); outline: none; min-height: 48px;" />
 			</div>
 			<div>
-				<div class="mono" style="font-size: 11px; color: var(--g-ink-4); letter-spacing: 0.10em; text-transform: uppercase; margin-bottom: 10px;">{$t('vergleich.neu.aktivitaetsprofil')}</div>
+				<div class="mono" style="font-size: 11px; color: var(--g-ink-3); letter-spacing: 0.10em; text-transform: uppercase; margin-bottom: 10px;">{$t('vergleich.neu.aktivitaetsprofil')}</div>
 				<div style="display: flex; flex-direction: column; gap: 8px;">
 					{#each ACTIVITY_PROFILE_OPTIONS as opt (opt.value)}
 						{@const sel = wiz.activityProfile === opt.value}
@@ -686,7 +688,7 @@
 <Sheet open={mobileLibraryOpen} snap="full" title={$t('vergleich.neu.ort_waehlen')} onClose={() => { mobileLibraryOpen = false; }}>
 	{#each mobileLibraryGroups as [groupName, groupLocs] (groupName)}
 		<div style="margin-bottom: 8px;">
-			<div class="mono" style="font-size: 11px; color: var(--g-ink-4); letter-spacing: 0.10em; text-transform: uppercase; padding: 8px 0 4px; font-weight: 600;">{groupName} · {groupLocs.length}</div>
+			<div class="mono" style="font-size: 11px; color: var(--g-ink-3); letter-spacing: 0.10em; text-transform: uppercase; padding: 8px 0 4px; font-weight: 600;">{groupName} · {groupLocs.length}</div>
 			{#each groupLocs as loc (loc.id)}
 				{@const on = wiz.pickedIds.includes(loc.id)}
 				<button type="button" data-testid="compare-step2-mobile-lib-check-{loc.id}"
@@ -739,6 +741,6 @@
 	}
 	.ce-cta-hint {
 		font-size: 11px;
-		color: var(--g-ink-4);
+		color: var(--g-ink-3);
 	}
 </style>

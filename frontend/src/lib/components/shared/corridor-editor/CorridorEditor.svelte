@@ -594,7 +594,7 @@
 	.ce-h2 { font-size: 26px; font-weight: 600; letter-spacing: -0.01em; margin: 6px 0 8px; color: var(--g-ink); }
 	.ce-lead { font-size: 13.5px; color: var(--g-ink-2); line-height: 1.55; max-width: 680px; margin-bottom: 20px; }
 	.ce-legend { display: flex; flex-wrap: wrap; gap: 18px; align-items: center; padding: 12px 16px; margin-bottom: 20px; background: var(--g-card-alt); border: 1px solid var(--g-rule-soft); border-radius: var(--g-r-3, 10px); font-size: 12.5px; color: var(--g-ink-2); }
-	.ce-legend-title { font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--g-ink-4); }
+	.ce-legend-title { font-size: 10px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--g-ink-3); }
 	/* Issue #1425 (Scheibe C): .ce-legend-note, .ce-swatch.warn und .ce-warn sind
 	   mit der Warn-Zeile der Legende entfallen (kein Verwender mehr). */
 	.ce-swatch { width: 22px; height: 8px; border-radius: 4px; display: inline-block; }
@@ -606,34 +606,34 @@
 	.ce-table { background: var(--g-card); border: 1px solid var(--g-rule-soft); border-radius: var(--g-r-3, 10px); overflow: hidden; }
 	.ce-row { display: grid; grid-template-columns: 190px 1fr 224px; gap: 22px; padding: 18px 20px; border-bottom: 1px solid var(--g-rule-soft); align-items: start; }
 	.ce-label { font-size: 14px; font-weight: 600; color: var(--g-ink); }
-	.ce-unit { font-size: 10px; color: var(--g-ink-4); margin-left: 6px; }
+	.ce-unit { font-size: 10px; color: var(--g-ink-3); margin-left: 6px; }
 	/* Issue #1401: Auswertung als eigenes Element neben dem Namen. */
 	.ce-aggregation { font-size: 10.5px; color: var(--g-ink-3); background: var(--g-paper); border: 1px solid var(--g-rule-soft); border-radius: 3px; padding: 0 5px; margin-left: 6px; white-space: nowrap; }
-	.ce-note { font-size: 11px; color: var(--g-ink-4); font-style: italic; margin-top: 2px; }
+	.ce-note { font-size: 11px; color: var(--g-ink-3); font-style: italic; margin-top: 2px; }
 	.ce-band-track { position: relative; height: 10px; margin: 8px 0; border-radius: 5px; background: var(--g-rule-soft); }
 	.ce-band-fill { position: absolute; top: 0; bottom: 0; border-radius: 5px; background: var(--g-ink-3); opacity: 0.4; }
 	.ce-band-fill.mark { background: var(--g-good); opacity: 0.85; }
 	.ce-handle { position: absolute; top: 50%; width: 16px; height: 16px; margin-left: -8px; margin-top: -8px; border-radius: 50%; background: #fff; border: 2px solid var(--g-accent); cursor: ew-resize; touch-action: none; z-index: 3; }
 	.ce-handle.mark { border-color: var(--g-good); }
-	.ce-open { position: absolute; top: -18px; font-size: 9px; color: var(--g-ink-4); letter-spacing: 0.04em; }
+	.ce-open { position: absolute; top: -18px; font-size: 9px; color: var(--g-ink-3); letter-spacing: 0.04em; }
 	.ce-open-left { left: 2px; }
 	.ce-open-right { right: 2px; }
 	.ce-bounds { display: flex; gap: 16px; flex-wrap: wrap; margin-top: 12px; }
-	.ce-bound { display: flex; align-items: center; gap: 6px; font-size: 9.5px; color: var(--g-ink-4); text-transform: uppercase; }
+	.ce-bound { display: flex; align-items: center; gap: 6px; font-size: 9.5px; color: var(--g-ink-3); text-transform: uppercase; }
 	.ce-bound input { width: 58px; padding: 4px 6px; text-align: right; border: 1px solid var(--g-rule); border-radius: var(--g-r-2, 4px); }
-	.ce-open-btn, .ce-clear-btn { border: 1px dashed var(--g-rule); background: transparent; border-radius: var(--g-r-2, 4px); cursor: pointer; color: var(--g-ink-4); font-size: 11.5px; padding: 4px 8px; }
+	.ce-open-btn, .ce-clear-btn { border: 1px dashed var(--g-rule); background: transparent; border-radius: var(--g-r-2, 4px); cursor: pointer; color: var(--g-ink-3); font-size: 11.5px; padding: 4px 8px; }
 	.ce-clear-btn { border: none; font-size: 13px; padding: 2px; }
 	.ce-effects { display: flex; flex-direction: column; gap: 8px; align-items: flex-start; }
-	.ce-effect { padding: 5px 10px; border-radius: 999px; font-size: 12px; font-weight: 600; background: transparent; color: var(--g-ink-4); border: 1px solid var(--g-rule); cursor: pointer; }
+	.ce-effect { padding: 5px 10px; border-radius: 999px; font-size: 12px; font-weight: 600; background: transparent; color: var(--g-ink-3); border: 1px solid var(--g-rule); cursor: pointer; }
 	.ce-effect.notify.on { color: var(--g-warn); border-color: var(--g-warn); background: rgba(192, 138, 26, 0.12); }
 	.ce-effect.mark.on { color: var(--g-good); border-color: var(--g-good); background: rgba(61, 107, 58, 0.12); }
 	.ce-effect.disabled { opacity: 0.4; cursor: not-allowed; }
-	.ce-remove { background: transparent; border: none; color: var(--g-ink-4); font-size: 11px; cursor: pointer; padding: 0; }
+	.ce-remove { background: transparent; border: none; color: var(--g-ink-3); font-size: 11px; cursor: pointer; padding: 0; }
 	.ce-pool { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; padding: 14px 20px; border-top: 1px dashed var(--g-rule-soft); }
-	.ce-pool-label { font-size: 10.5px; color: var(--g-ink-4); }
+	.ce-pool-label { font-size: 10.5px; color: var(--g-ink-3); }
 	.ce-pool-btn { border: 1px solid var(--g-rule); background: transparent; border-radius: 999px; padding: 4px 10px; cursor: pointer; font-size: 12px; }
 	.ce-summary { display: flex; gap: 16px; flex-wrap: wrap; margin-top: 16px; font-size: 12.5px; color: var(--g-ink-2); }
-	.ce-neutral { font-family: var(--g-font-mono, monospace); font-size: 10.5px; color: var(--g-ink-4); letter-spacing: 0.03em; }
+	.ce-neutral { font-family: var(--g-font-mono, monospace); font-size: 10.5px; color: var(--g-ink-3); letter-spacing: 0.03em; }
 	.ce-ordinal-group { display: inline-flex; gap: 4px; }
 	.ce-ordinal-btn { padding: 3px 8px; font-size: 11px; border-radius: var(--g-r-2, 4px); border: 1px solid var(--g-rule); background: transparent; color: var(--g-ink-3); cursor: pointer; }
 	.ce-ordinal-btn.on { border-color: var(--g-accent); color: var(--g-accent-deep); background: var(--g-accent-tint); }

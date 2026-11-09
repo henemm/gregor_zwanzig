@@ -575,7 +575,7 @@
 		>
 			{#snippet hinweis()}
 				<!-- #2347 S4 (AN-5): Hinweis am gesperrten Abschluss, wie „Alarme einrichten zum Aktivieren" im Vergleich -->
-				{#if !ready}<span class="mono" style="font-size: 11px; color: var(--g-ink-4);">{$t('trip.anlegen.alarme_zum_speichern')}</span>{/if}
+				{#if !ready}<span class="mono" style="font-size: 11px; color: var(--g-ink-3);">{$t('trip.anlegen.alarme_zum_speichern')}</span>{/if}
 			{/snippet}
 			{#snippet standardwerte()}
 				{#if !ready}<StandardwerteSpeichernKnopf enabled={standardwerteFrei} {saving} onclick={onStandardwerte} testid="trip-new-standardwerte-btn" />{/if}
@@ -594,7 +594,7 @@
 					onclick={makeTabHandler(tab.id)}
 					onkeydown={(e) => { if (e.key === 'Enter' || e.key === ' ') makeTabHandler(tab.id)(); }}
 					title={!isOpen && tab.lockHint ? $t('trip.anlegen.gesperrt', { hinweis: tab.lockHint }) : undefined}
-					style="padding: 12px 16px; cursor: {isOpen ? 'pointer' : 'not-allowed'}; font-size: 13px; font-weight: {isActive ? 600 : 500}; color: {isActive ? 'var(--g-ink)' : isOpen ? 'var(--g-ink-3)' : 'var(--g-ink-4)'}; border-bottom: {isActive ? '2px solid var(--g-accent)' : '2px solid transparent'}; margin-bottom: -1px; display: flex; align-items: center; gap: 5px; white-space: nowrap; opacity: {isOpen ? 1 : 0.34}; transition: opacity 250ms, color 200ms; transform: {flashTab === tab.id ? 'translateX(2px)' : 'none'}; user-select: none;">
+					style="padding: 12px 16px; cursor: {isOpen ? 'pointer' : 'not-allowed'}; font-size: 13px; font-weight: {isActive ? 600 : 500}; color: {isActive ? 'var(--g-ink)' : 'var(--g-ink-3)'}; border-bottom: {isActive ? '2px solid var(--g-accent)' : '2px solid transparent'}; margin-bottom: -1px; display: flex; align-items: center; gap: 5px; white-space: nowrap; transition: color 200ms; transform: {flashTab === tab.id ? 'translateX(2px)' : 'none'}; user-select: none;">
 					{tab.label}
 					{#if tab.optional && isOpen}
 						<span class="mono" style="font-size: 11px; font-weight: 600; letter-spacing: 0.06em; padding: 1px 5px; border-radius: 3px; background: rgba(196,90,42,0.10); color: var(--g-accent-deep); text-transform: uppercase;">{$t('trip.anlegen.optional')}</span>
@@ -603,7 +603,7 @@
 						<span style="font-size: 11px; font-weight: 700; padding: 2px 5px; border-radius: 3px; background: rgba(61,107,58,0.12); color: var(--g-good); font-family: var(--g-font-mono);">✓</span>
 					{/if}
 					{#if !isOpen}
-						<span style="font-size: 11px; color: var(--g-ink-4); font-family: var(--g-font-mono); opacity: 0.7;">⊘</span>
+						<span style="font-size: 11px; color: var(--g-ink-3); font-family: var(--g-font-mono);">⊘</span>
 					{/if}
 				</div>
 			{/each}
@@ -640,7 +640,7 @@
 					<div style="margin-bottom: 18px;">
 						<label style="display: block; font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--g-ink-3); margin-bottom: 6px;">
 							{$t('trip.anlegen.region')}
-							<span class="mono" style="font-size: 11px; color: var(--g-ink-4); text-transform: none; letter-spacing: normal; font-weight: 400; margin-left: 6px;">{$t('trip.anlegen.optional_max')}</span>
+							<span class="mono" style="font-size: 11px; color: var(--g-ink-3); text-transform: none; letter-spacing: normal; font-weight: 400; margin-left: 6px;">{$t('trip.anlegen.optional_max')}</span>
 						</label>
 						<input type="text" value={region} oninput={makeRegionHandler()}
 							placeholder={$t('trip.anlegen.region_beispiel')}
@@ -667,7 +667,7 @@
 					<div style="margin-bottom: 18px;">
 						<label style="display: block; font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--g-ink-3); margin-bottom: 6px;">
 							{$t('trip.anlegen.aktivitaetstyp')}
-							<span class="mono" style="font-size: 11px; color: var(--g-ink-4); text-transform: none; letter-spacing: normal; font-weight: 400; margin-left: 6px;">{$t('trip.anlegen.optional')}</span>
+							<span class="mono" style="font-size: 11px; color: var(--g-ink-3); text-transform: none; letter-spacing: normal; font-weight: 400; margin-left: 6px;">{$t('trip.anlegen.optional')}</span>
 						</label>
 						<Select data-testid="activity-dropdown"
 							value={selectedActivity ?? ''}
@@ -686,9 +686,9 @@
 
 					<div style="margin-top: 28px; padding-top: 20px; border-top: 1px solid var(--g-rule); display: flex; justify-content: flex-end; align-items: center; gap: 12px;">
 						{#if !name.trim()}
-							<span class="mono" style="font-size: 11px; color: var(--g-ink-4);">{$t('trip.anlegen.name_fehlt')}</span>
+							<span class="mono" style="font-size: 11px; color: var(--g-ink-3);">{$t('trip.anlegen.name_fehlt')}</span>
 						{:else if !startDate}
-							<span class="mono" style="font-size: 11px; color: var(--g-ink-4);">{$t('trip.anlegen.datum_fehlt')}</span>
+							<span class="mono" style="font-size: 11px; color: var(--g-ink-3);">{$t('trip.anlegen.datum_fehlt')}</span>
 						{/if}
 						<!-- #2837 S2 (AC-11): Weiter = Btn accent, gesperrt allein über disabled -->
 						<Btn variant="accent" size="md"
@@ -714,11 +714,11 @@
 							</h2>
 						</div>
 						<div style="display: flex; flex-direction: column; align-items: flex-end; gap: 3px;">
-							<span class="mono" style="font-size: 11px; color: {etDone && stages.length > 0 ? 'var(--g-good)' : 'var(--g-ink-4)'};">
+							<span class="mono" style="font-size: 11px; color: {etDone && stages.length > 0 ? 'var(--g-good)' : 'var(--g-ink-3)'};">
 								{$t('trip.anlegen.gpx_geladen', { n: gpxCount, gesamt: stages.length })}
 							</span>
 							{#if startDate}
-								<span class="mono" style="font-size: 11px; color: var(--g-ink-4);">
+								<span class="mono" style="font-size: 11px; color: var(--g-ink-3);">
 									{$t('trip.anlegen.start', { datum: stageDate(startDate, 0, $locale)?.replace(/\.$/, '') ?? '' })}
 								</span>
 							{/if}
@@ -728,7 +728,7 @@
 					<!-- Spaltenheader -->
 					<div style="display: grid; grid-template-columns: 36px 1fr 60px minmax(170px, 200px) 28px; gap: 10px; padding: 0 14px 5px;">
 						{#each ['', $t('trip.anlegen.etappenname'), $t('trip.datum'), $t('trip.anlegen.gpx_datei'), ''] as h}
-							<span class="mono" style="font-size: 11px; color: var(--g-ink-4); letter-spacing: 0.06em; text-transform: uppercase;">{h}</span>
+							<span class="mono" style="font-size: 11px; color: var(--g-ink-3); letter-spacing: 0.06em; text-transform: uppercase;">{h}</span>
 						{/each}
 					</div>
 
@@ -745,10 +745,10 @@
 								<!-- Inline-Name -->
 								<input type="text" value={s.name} oninput={makeStageNameHandler(s.id)}
 									placeholder={$t('trip.anlegen.etappe_benennen', { nr: idx + 1 })}
-									style="width: 100%; box-sizing: border-box; background: transparent; border: 1.5px solid transparent; border-radius: var(--g-r-1); padding: 4px 2px; font-size: 13.5px; font-weight: {s.name ? 500 : 400}; font-family: var(--g-font-sans); color: {s.name ? 'var(--g-ink)' : 'var(--g-ink-4)'}; outline: none;" />
+									style="width: 100%; box-sizing: border-box; background: transparent; border: 1.5px solid transparent; border-radius: var(--g-r-1); padding: 4px 2px; font-size: 13.5px; font-weight: {s.name ? 500 : 400}; font-family: var(--g-font-sans); color: {s.name ? 'var(--g-ink)' : 'var(--g-ink-3)'}; outline: none;" />
 
 								<!-- Auto-Datum -->
-								<span class="mono" style="font-size: 11px; color: {dateStr ? 'var(--g-ink-3)' : 'var(--g-ink-4)'}; white-space: nowrap;">
+								<span class="mono" style="font-size: 11px; color: {dateStr ? 'var(--g-ink-3)' : 'var(--g-ink-3)'}; white-space: nowrap;">
 									{dateStr || '–'}
 								</span>
 
@@ -763,14 +763,14 @@
 											<div class="mono" style="font-size: 11px; color: var(--g-ink-3);">{`${s.gpx.km} km · ↑${s.gpx.asc} m`}</div>
 										</div>
 										<button type="button" onclick={makeGpxRemoveHandler(s.id)} title={$t('trip.anlegen.gpx_entfernen')}
-											style="background: transparent; border: none; cursor: pointer; color: var(--g-ink-4); font-size: 13px; padding: 1px 3px; line-height: 1; flex-shrink: 0;">×</button>
+											style="background: transparent; border: none; cursor: pointer; color: var(--g-ink-3); font-size: 13px; padding: 1px 3px; line-height: 1; flex-shrink: 0;">×</button>
 									</div>
 								{:else}
 									<label style="padding: 6px 11px; border-radius: var(--g-r-2); border: 1.5px dashed var(--g-rule); background: transparent; cursor: pointer; display: flex; align-items: center; gap: 6px;">
 										<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="var(--g-ink-4)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
 											<path d="M12 16V4M7 9l5-5 5 5"/><path d="M4 16v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"/>
 										</svg>
-										<span class="mono" style="font-size: 11px; font-weight: 600; letter-spacing: 0.02em; color: var(--g-ink-4); white-space: nowrap;">{$t('trip.anlegen.gpx_hochladen')}</span>
+										<span class="mono" style="font-size: 11px; font-weight: 600; letter-spacing: 0.02em; color: var(--g-ink-3); white-space: nowrap;">{$t('trip.anlegen.gpx_hochladen')}</span>
 										<input type="file" accept=".gpx" style="display: none;" onchange={makeGpxUploadHandler(idx, s.id)} />
 									</label>
 								{/if}
@@ -779,7 +779,7 @@
 								<button type="button" onclick={makeRemoveStageHandler(s.id)}
 									aria-label={$t('trip.etappe_entfernen')}
 									data-testid={`tn-stage-remove-${idx}`}
-									style="background: transparent; border: none; cursor: pointer; color: var(--g-ink-4); font-size: 15px; padding: 2px 4px; line-height: 1; text-align: center;">×</button>
+									style="background: transparent; border: none; cursor: pointer; color: var(--g-ink-3); font-size: 15px; padding: 2px 4px; line-height: 1; text-align: center;">×</button>
 							</div>
 						{/each}
 					</div>
@@ -818,8 +818,9 @@
 						{/if}
 						<button type="button"
 							disabled={!etDone}
+							aria-disabled={etDone ? undefined : 'true'}
 							onclick={makeEtappenContinueHandler('wegpunkte')}
-							style="padding: 8px 16px; border-radius: var(--g-r-2); border: none; background: {etDone ? 'var(--g-accent)' : 'var(--g-ink-4)'}; color: #fff; font-size: 13px; font-weight: 600; cursor: {etDone ? 'pointer' : 'not-allowed'}; opacity: {etDone ? 1 : 0.45};">
+							style="padding: 8px 16px; border-radius: var(--g-r-2); border: none; background: {etDone ? 'var(--g-accent)' : 'var(--g-ink-3)'}; color: #fff; font-size: 13px; font-weight: 600; cursor: {etDone ? 'pointer' : 'not-allowed'};">
 							{$t('trip.anlegen.wegpunkte_pruefen')}
 						</button>
 					</div>
@@ -969,13 +970,13 @@
 					role="tab"
 					aria-selected={isActive}
 					onclick={makeMobileTabHandler(tab.id)}
-					style="display: inline-flex; align-items: center; gap: 5px; padding: 13px 13px; min-height: 44px; flex-shrink: 0; background: transparent; border: none; border-bottom: {isActive ? '2px solid var(--g-accent)' : '2px solid transparent'}; margin-bottom: -1px; cursor: {isOpen ? 'pointer' : 'default'}; font-size: 14px; font-weight: {isActive ? 600 : 500}; color: {isActive ? 'var(--g-ink)' : isOpen ? 'var(--g-ink-3)' : 'var(--g-ink-4)'}; white-space: nowrap; font-family: var(--g-font-sans); opacity: {isOpen ? 1 : 0.35};">
+					style="display: inline-flex; align-items: center; gap: 5px; padding: 13px 13px; min-height: 44px; flex-shrink: 0; background: transparent; border: none; border-bottom: {isActive ? '2px solid var(--g-accent)' : '2px solid transparent'}; margin-bottom: -1px; cursor: {isOpen ? 'pointer' : 'not-allowed'}; font-size: 14px; font-weight: {isActive ? 600 : 500}; color: {isActive ? 'var(--g-ink)' : 'var(--g-ink-3)'}; white-space: nowrap; font-family: var(--g-font-sans);">
 					{tab.label}
 					{#if tab.optional && isOpen}
 						<span class="mono" style="font-size: 11px; font-weight: 700; padding: 1px 5px; border-radius: 3px; background: rgba(196,90,42,0.12); color: var(--g-accent-deep); letter-spacing: 0.06em; text-transform: uppercase;">{$t('trip.anlegen.opt')}</span>
 					{/if}
 					{#if !isOpen}
-						<span class="mono" style="font-size: 11px; opacity: 0.8;">⊘</span>
+						<span class="mono" style="font-size: 11px;">⊘</span>
 					{/if}
 				</button>
 			{/each}
@@ -1046,7 +1047,7 @@
 					<!-- Counter -->
 					<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
 						<div class="mono" style="font-size: 11px; color: var(--g-ink-3); font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase;">{$tn('trip.anlegen.etappen_anzahl', stages.length)}</div>
-						<span class="mono" style="font-size: 11px; color: {etDone ? 'var(--g-good)' : 'var(--g-ink-4)'};">{/* i18n-neutral: Dateiformat-Name */ `${gpxCount}/${stages.length} GPX`}</span>
+						<span class="mono" style="font-size: 11px; color: {etDone ? 'var(--g-good)' : 'var(--g-ink-3)'};">{/* i18n-neutral: Dateiformat-Name */ `${gpxCount}/${stages.length} GPX`}</span>
 					</div>
 
 					<!-- Etappen-Karten -->
@@ -1063,7 +1064,7 @@
 									<button type="button" data-testid="tn-mobile-stage-name"
 										onclick={makeMobileOpenSheetHandler(s.id, s.name)}
 										style="flex: 1; text-align: left; background: transparent; border: none; cursor: pointer; min-height: 36px; padding: 0;">
-										<div style="font-size: 14.5px; font-weight: {hasName ? 500 : 400}; color: {hasName ? 'var(--g-ink)' : 'var(--g-ink-4)'};">
+										<div style="font-size: 14.5px; font-weight: {hasName ? 500 : 400}; color: {hasName ? 'var(--g-ink)' : 'var(--g-ink-3)'};">
 											{hasName ? s.name : $t('trip.anlegen.etappe_benennen', { nr: idx + 1 })}
 										</div>
 									</button>
@@ -1075,7 +1076,7 @@
 										data-testid="tn-mobile-stage-remove-{idx}"
 										aria-label={$t('trip.etappe_entfernen')}
 										onclick={makeRemoveStageHandler(s.id)}
-										style="background: transparent; border: none; cursor: pointer; color: var(--g-ink-4); font-size: 18px; padding: 0; min-width: 44px; min-height: 44px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; line-height: 1;">×</button>
+										style="background: transparent; border: none; cursor: pointer; color: var(--g-ink-3); font-size: 18px; padding: 0; min-width: 44px; min-height: 44px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; line-height: 1;">×</button>
 								</div>
 								<!-- GPX-Slot (volle Zeile) -->
 								<div style="padding: 0 12px 12px;">
@@ -1089,7 +1090,7 @@
 												<div class="mono" style="font-size: 11px; color: var(--g-ink-3); margin-top: 1px;">{`${s.gpx.km} km · ↑${s.gpx.asc} m`}</div>
 											</div>
 											<button type="button" onclick={makeGpxRemoveHandler(s.id)}
-												style="background: transparent; border: none; cursor: pointer; color: var(--g-ink-4); font-size: 18px; padding: 4px 6px; line-height: 1; min-height: 44px; flex-shrink: 0;">×</button>
+												style="background: transparent; border: none; cursor: pointer; color: var(--g-ink-3); font-size: 18px; padding: 4px 6px; line-height: 1; min-height: 44px; flex-shrink: 0;">×</button>
 										</div>
 									{:else}
 										<label style="display: flex; align-items: center; gap: 12px; width: 100%; padding: 12px 14px; min-height: 52px; background: var(--g-card); border: 1.5px dashed var(--g-rule); border-radius: var(--g-r-2); cursor: pointer; box-sizing: border-box;">

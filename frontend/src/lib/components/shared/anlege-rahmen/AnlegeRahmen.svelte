@@ -147,7 +147,7 @@
 		color: var(--g-ink);
 	}
 	.ar-titel-leer {
-		color: var(--g-ink-4);
+		color: var(--g-ink-3);
 	}
 	.ar-inhalt {
 		flex: 1 0 auto;
