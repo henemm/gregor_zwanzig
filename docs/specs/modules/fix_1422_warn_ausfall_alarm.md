@@ -264,12 +264,11 @@ mit festen Zeitstempeln genügen für deterministische Assertions.
   Fehlschlag) — bis genügend neue Zeilen nachgeschrieben sind (typischerweise
   binnen einer Stunde bei stündlicher Auffrischung), ist die Datenlage
   vorübergehend dünner als danach.
-- **Unbegrenztes Wachstum des Journals:** `warn_service_calls.jsonl` hat
-  keine Rotation/Retention (ererbtes Verhalten aus Issue #1348, nicht neu
-  durch diese Spec) — `WarnServiceHealth()` scannt die komplette Datei bei
-  jedem Aufruf, analog zu `BriefingHealth()`s Umgang mit
-  `openmeteo_calls.jsonl`. Wird das zu einem Performance-Thema, ist eine
-  eigene Housekeeping-Scheibe fällig.
+- **Journal-Wachstum (behoben seit 2026-11-09, #2224):** `warn_service_calls.jsonl`
+  rotiert beim Schreiben ab 8 MB in genau eine Vorgänger-Generation
+  `warn_service_calls.jsonl.1`; `WarnServiceHealth()` liest die aktuelle Datei
+  und `.1` (siehe `fix_2224_warn_journal_rotation.md`). Zuvor (Issue #1348)
+  gab es weder Rotation noch Retention.
 - **„Nicht zuständig" wird nur über Abwesenheit erkannt:** Es gibt keinen
   aktiven Zuständigkeits-Katalog. Sollte ein Dienst aus einem eigenen Bug
   einfach nie aufgerufen werden (statt weil aktuell kein passender Ort
@@ -374,4 +373,5 @@ beauftragt. Erwartete Schnittstelle, ohne Rückfragen umsetzbar:
 ## Changelog
 
 - 2026-07-30 (S2 live, `21bb90d5`): `WarnServiceHealth()` geliefert und in Prod verifiziert (AC-4 bis AC-8 gegen echte Daten, kein Mock). Ein vorangegangener Issue-Kommentar hatte S2 zwischenzeitlich für unnötig erklärt (direkter Cron-Journal-Read statt Go-Endpunkt) — diese Spec-Datei wurde dabei nicht entsprechend gekürzt. Nach Rücksprache mit `infra` (die den vereinfachten Weg bewusst abgelehnt hatten) wurde S2 wie ursprünglich hier beschrieben gebaut. Die "Schnittstelle für Teil B" war zusätzlich fehlerhaft (`meteoalarm_budget` als eigenes Geschwister-Feld statt verschachtelt in `warn_service_health`) — korrigiert, Commit `21dc3a21`. Teil B (henemm-infra#150) ist seither live, Issue #1422 geschlossen.
+- 2026-11-09: Known Limitation „Unbegrenztes Wachstum des Journals" ersetzt durch Verweis auf die Rotation (8 MB, eine Generation `.1`, Go liest beide Dateien) — Issue #2224
 - 2026-07-30: Initial spec erstellt — Issue #1422

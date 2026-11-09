@@ -24,8 +24,10 @@ SPEC: docs/specs/modules/warn_service_consumption.md
 from __future__ import annotations
 
 import contextvars
+import fcntl
 import json
 import logging
+import os
 import time
 from contextlib import contextmanager
 from datetime import datetime, timezone
@@ -210,6 +212,36 @@ def warn_calls_path() -> Path:
     return Path(get_data_root()) / "diagnostics" / "warn_service_calls.jsonl"
 
 
+# Issue #2224: groessenbasierte Rotation mit genau EINER Vorgaenger-Generation
+# (``<journal>.1``). In Tests per ``monkeypatch`` ueberschreibbar.
+WARN_JOURNAL_MAX_BYTES = 8 * 1024 * 1024
+
+
+def _rotate_if_needed(path: Path) -> None:
+    """Benennt das Journal in ``<path>.1`` um, sobald es die Schwelle erreicht.
+
+    Schneller Pfad ohne Sperre unter der Schwelle. Sonst exklusive Sperre auf
+    ``<path>.lock`` und erneute Groessenpruefung UNTER der Sperre: ein zweiter
+    Thread, der ebenfalls die volle Datei sah, darf die gerade erzeugte ``.1``
+    nicht mit der frischen, kleinen aktuellen Datei ueberschreiben (Spec
+    fix_2224, AC-4). Jeder Fehler wird geschluckt (AC-5)."""
+    try:
+        try:
+            if path.stat().st_size < WARN_JOURNAL_MAX_BYTES:
+                return
+        except FileNotFoundError:
+            return
+        with open(path.with_name(path.name + ".lock"), "a") as lock_fh:
+            fcntl.flock(lock_fh, fcntl.LOCK_EX)
+            try:
+                if path.stat().st_size >= WARN_JOURNAL_MAX_BYTES:
+                    os.replace(path, path.with_name(path.name + ".1"))
+            finally:
+                fcntl.flock(lock_fh, fcntl.LOCK_UN)
+    except Exception:
+        pass  # Rotation darf den Abruf NIE beeintraechtigen
+
+
 def _parse_retry_after(headers: Any) -> Optional[float]:
     """``Retry-After`` als numerische Sekunden auswerten.
 
@@ -258,6 +290,7 @@ def log_warn_service_call(
     try:
         path = warn_calls_path()
         path.parent.mkdir(parents=True, exist_ok=True)
+        _rotate_if_needed(path)
         line = json.dumps({
             "ts": datetime.now(timezone.utc).isoformat(),
             "service": service,
@@ -289,6 +322,7 @@ def log_zone_drift(service: str, zone_code: str, has_warning: bool, drift: str) 
     try:
         path = warn_calls_path()
         path.parent.mkdir(parents=True, exist_ok=True)
+        _rotate_if_needed(path)
         line = json.dumps({
             "ts": datetime.now(timezone.utc).isoformat(),
             "service": service,
