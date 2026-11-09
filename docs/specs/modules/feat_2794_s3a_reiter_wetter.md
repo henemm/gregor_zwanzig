@@ -322,6 +322,12 @@ Je AC steht die konkrete Prüfung in der `Test:`-Zeile oben. Die Schichten:
 - **Gate-Reihenfolge:** Die „Alarm ab“-Bedienung (Teil-PR 3) wird erst nach Merge von PR #2862 ausgeliefert. Wird PR #2862 vorher geändert, sind Gate-Zeilen und Katalogschlüssel `alarm.ampel.*` neu abzugleichen.
 - **Testumzug:** ca. 150 Test-Dateien nennen alte Kennungen; sie werden auf die neuen Kennungen und Reiter umgestellt (Teil-PR 2 und 4). Tests, die ausschließlich entfallene Oberflächen prüfen, werden gelöscht statt umgebogen.
 - **Vorlagen-Migration `kind`:** Bestandsvorlagen bekommen `kind` per Lese-Default `route`; ein Schreiben der Datei setzt das Feld dauerhaft.
+- **Teil-PR 1, Befunde aus /60-validate (2026-11-09):**
+  - **AC-29** (Alarmquellen-Gate in `trip_alert.py`/`compare_alert.py`) ist in Teil-PR 1 nicht umgesetzt und geht nach Teil-PR 3 („Alarmquellen-Gate falls in 1 noch offen“).
+  - **Orts-Standardvorlage (AC-25):** Beim Anlegen eines Orts-Briefings übernimmt der Standard nur die `ampel` (Auswahl über `ampel.metrics.<id>.enabled`), nicht `active_metrics`. Mit AC-13 in Teil-PR 3 abgleichen.
+  - **Standard greift nur ohne mitgeschickte `display_config`:** Sendet die Anlege-Kette ein (auch leeres) `display_config`, bleibt der Standard aus. Das wird in Teil-PR 2/3 per E2E geprüft.
+  - **Migration `horizons`:** Das Skript sperrt über `services/file_lock`, die Go-API nur innerhalb ihres Prozesses. Deshalb läuft es nur bei gestoppter `gregor-api` bzw. `gregor-api-staging` (stoppen, migrieren, starten).
+  - **„Gib der Vorlage einen Namen.“** (AC-23, leerer Name) ist Dialogtext und kommt mit Teil-PR 3. Die API meldet bis dahin `name_required`.
 - **Kein Mail-Validator-Lauf nötig:** der Mail-Inhalt ändert sich in S3a nicht (nur Auswahl und Auslöser); Renderer-Gate wird nicht berührt.
 
 ## Architektur-Entscheidung (ADR)
