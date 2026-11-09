@@ -660,3 +660,15 @@ e2e/hub-anlegen-paritaet-flaechen.spec.ts
 # RED aufgenommen; Filter B (3x gruen im Zielverbund) misst der CI-Hauptlauf des PR.
 # Filter C: kein Screenshot-Schreibziel. Fallzahl: 11 (+ global.setup).
 e2e/kontrast-trip-vergleich.spec.ts
+#
+# design-system-trip-vergleich.spec.ts -- #2881 Lieferung A (ADR-0111): DS-5 Anlege-
+# Aktion „Neuer Trip"/„Neuer Vergleich" auf Listen (gefuellt/leer) und Startseite (leer)
+# ueberall Btn primary (Ink), 1280 und 390 px -- Leerzustaende ueber den zustellbaren
+# Zweitnutzer (Seed-Trip im finally per seedeZweitnutzerTrip wiederhergestellt, keine
+# zusaetzliche Registrierung); DS-7 .mono/.tnum; DS-8 Hub-Reiterleiste am Computer ohne
+# Kasten, Grundlinie --g-rule, 13 px/500, aktiv 600, Trip = Vergleich; DS-9 Fortschritt
+# offen als 1-px-Kontur --g-ink-3; DS-10 Tabu-Begriffe (de). Filter A: kein
+# waitForTimeout/skip/fixme, kein .staging.spec. In RED aufgenommen; Filter B (3x gruen
+# im Zielverbund) misst der CI-Hauptlauf des PR. Filter C: kein Screenshot-Schreibziel.
+# Fallzahl: 9 (+ global.setup).
+e2e/design-system-trip-vergleich.spec.ts
