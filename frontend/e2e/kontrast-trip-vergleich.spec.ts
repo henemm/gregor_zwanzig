@@ -9,13 +9,16 @@
 //        Wetter-Metriken/Wertebereiche/Alarme (#2794), ohne und mit Namen, beide Größen, de/en.
 //   KO-4 Liste: Status „· aktiv" und Zähler „x von y" ≥ 4,5:1; --g-ink-4 nur an Ausnahmen.
 //   KO-5 aktiver „Weiter"-Knopf: Fläche --g-accent-deep, im Hover dunkler, beide ≥ 4,5:1;
-//        Unterstrich des aktiven Hub-Reiters am Computer bleibt --g-accent.
+//        Unterstrich des aktiven Hub-Reiters am Computer bleibt --g-accent. Dazu je Größe: JEDER
+//        sichtbare Accent-Knopf (Baustein und Handy-MBtn) jedes Anlege-Zustands im Hover ≥ 4,5:1.
 //   KO-6 Selbsttest des Messhelfers über page.setContent mit bekannten Farben.
 //
-// Gemessen wird im echten Browser über ALLE sichtbaren Textknoten (helpers.ts `messeKontrast`):
-// Schriftfarbe gegen den effektiven Hintergrund (Schichten der Vorfahrenkette gemischt).
-// Ausnahmen nach WCAG/Spec: gesperrt (`disabled`, `aria-disabled="true"`), `aria-hidden`; dazu das
-// Logo (Wortmarke, WCAG 1.4.3 „Logotypes": keine Mindestanforderung).
+// Gemessen wird im echten Browser über ALLEN sichtbaren Text (helpers.ts `messeKontrast`):
+// Textknoten, Eingabewerte, ::before/::after-Inhalte mit Buchstaben/Ziffern; Schriftfarbe gegen den
+// effektiven Hintergrund (Schichten der Vorfahrenkette gemischt; Bild/Verlauf darunter = Verstoß
+// „nicht berechenbar"). Ausnahmen nach WCAG/Spec: gesperrt (`disabled`, `aria-disabled="true"`),
+// `aria-hidden` NUR für Zeichen ohne Buchstabe/Ziffer, der Schriftzug der Wortmarke (WCAG 1.4.3
+// „Logotypes") — je Seite höchstens eine Wortmarke, nur ihre Schriftzug-Knoten.
 // Jeder Verstoß nennt Seite, Text, Farben, Verhältnis und CSS-Pfad.
 //
 // Pflicht-Mutationen (Spec Implementation Details 3): app.css Accent-Knopf zurück auf --g-accent,
@@ -130,8 +133,18 @@ async function pruefe(page: Page, seite: string, sammel: string[]): Promise<Kont
 	const befunde = await stabileMessung(page);
 	expect(befunde.length, `${seite}: keine messbaren Textknoten`).toBeGreaterThan(5);
 	sammel.push(...kontrastBericht(seite, kontrastVerstoesse(befunde)));
+	// Logo-Ausnahme (WCAG 1.4.3 „Logotypes") nur am Schriftzug EINER Wortmarke: nicht an der
+	// Unterzeile, nicht an einem zweiten Element, das die testid trägt.
+	const logo = befunde.filter((b) => b.ausnahme === 'logo');
+	const instanzen = [...new Set(logo.map((b) => b.logoInstanz))];
+	expect(instanzen.length, `${seite}: Logo-Ausnahme an mehreren Wortmarken ${JSON.stringify(instanzen)}`).toBeLessThanOrEqual(1);
+	const fremd = logo.filter((b) => !MARKE.has(b.text)).map((b) => `${b.text} @ ${b.pfad}`);
+	expect(fremd, `${seite}: Logo-Ausnahme an Text außerhalb des Schriftzugs`).toEqual([]);
 	return befunde;
 }
+
+/** Textknoten des Schriftzugs „gregor.zwanzig" (bausteine.marke.*, in beiden Sprachen gleich). */
+const MARKE = new Set(['gregor', '.', 'zwanzig']);
 
 const sichtbar = (l: Locator): Locator => l.filter({ visible: true }).first();
 
@@ -209,21 +222,24 @@ for (const [ko, vp] of [
 const tripReiter = (page: Page, mobil: boolean, nr: number): Locator =>
 	page.locator(mobil ? '[data-testid="tn-mobile-tabbar"] [role="tab"]' : '.tn-desktop [role="tab"]').nth(nr);
 
-async function pruefeTripAnlegen(page: Page, mobil: boolean, wo: string, sammel: string[]): Promise<void> {
+/** Messung je erreichtem Anlege-Zustand: KO-3 misst allen Text, KO-5 überfährt die Accent-Knöpfe. */
+type Messe = (seite: string) => Promise<void>;
+
+async function pruefeTripAnlegen(page: Page, mobil: boolean, wo: string, messe: Messe): Promise<void> {
 	await page.goto(ANLEGE_SEL.route.url);
 	await expect(ANLEGE_SEL.route.name(page, mobil)).toBeVisible({ timeout: 15_000 });
-	await pruefe(page, `${wo} Trip anlegen Route ohne Namen`, sammel);
+	await messe(`${wo} Trip anlegen Route ohne Namen`);
 	const etappen = tripReiter(page, mobil, 1);
 	await expect(async () => {
 		await ANLEGE_SEL.route.name(page, mobil).fill(`${E2E_TEST_PREFIX}Kontrast-Anlegen`);
 		await (mobil ? page.getByTestId('trip-new-date-input') : page.locator('.tn-desktop input[type="date"]')).fill(tag(7));
 		await expect(etappen).not.toHaveAccessibleName(/⊘/, { timeout: 500 });
 	}).toPass({ timeout: 10_000 });
-	await pruefe(page, `${wo} Trip anlegen Route mit Namen`, sammel);
+	await messe(`${wo} Trip anlegen Route mit Namen`);
 	await etappen.click({ force: mobil });
 	const eingaben = page.locator(`${mobil ? '.tn-mobile' : '.tn-desktop'} input[type="file"][accept=".gpx"]`);
 	await expect(eingaben.first()).toBeAttached();
-	await pruefe(page, `${wo} Trip anlegen Etappen leer`, sammel);
+	await messe(`${wo} Trip anlegen Etappen leer`);
 	let rest = await eingaben.count();
 	while (rest > 0) {
 		const geparst = page.waitForResponse((r) => r.url().includes('/api/gpx/parse'), { timeout: 30_000 });
@@ -232,28 +248,28 @@ async function pruefeTripAnlegen(page: Page, mobil: boolean, wo: string, sammel:
 		rest -= 1;
 		await expect(eingaben).toHaveCount(rest);
 	}
-	await pruefe(page, `${wo} Trip anlegen Etappen mit GPX`, sammel);
+	await messe(`${wo} Trip anlegen Etappen mit GPX`);
 	const wegpunkte = tripReiter(page, mobil, 2);
 	await expect(wegpunkte).not.toHaveAccessibleName(/⊘/);
 	await wegpunkte.click({ force: mobil });
 	await expect(wegpunkte).toHaveAttribute('aria-selected', 'true');
-	await pruefe(page, `${wo} Trip anlegen Wegpunkte prüfen`, sammel);
+	await messe(`${wo} Trip anlegen Wegpunkte prüfen`);
 }
 
-async function pruefeVergleichAnlegen(page: Page, d: Daten, mobil: boolean, wo: string, sammel: string[]): Promise<void> {
+async function pruefeVergleichAnlegen(page: Page, d: Daten, mobil: boolean, wo: string, messe: Messe): Promise<void> {
 	await page.goto(ANLEGE_SEL.vergleich.url);
 	await expect(ANLEGE_SEL.vergleich.name(page, mobil)).toBeVisible({ timeout: 15_000 });
-	await pruefe(page, `${wo} Vergleich anlegen ohne Namen`, sammel);
+	await messe(`${wo} Vergleich anlegen ohne Namen`);
 	await ANLEGE_SEL.vergleich.name(page, mobil).fill(`${E2E_TEST_PREFIX}Kontrast-Anlegen`);
 	const orte = ANLEGE_SEL.vergleich.reiter(page, 'orte', mobil);
 	await expect(orte).not.toHaveAttribute('data-locked', 'true');
-	await pruefe(page, `${wo} Vergleich anlegen mit Namen`, sammel);
+	await messe(`${wo} Vergleich anlegen mit Namen`);
 	await orte.click();
-	await pruefe(page, `${wo} Vergleich anlegen Orte leer`, sammel);
+	await messe(`${wo} Vergleich anlegen Orte leer`);
 	if (mobil) {
 		await page.getByTestId('compare-step2-mobile-library-btn').click();
 		for (const ort of d.orte) await page.getByTestId(`compare-step2-mobile-lib-check-${ort.id}`).click();
-		await pruefe(page, `${wo} Vergleich anlegen Orte-Bibliothek`, sammel);
+		await messe(`${wo} Vergleich anlegen Orte-Bibliothek`);
 		await sichtbar(page.locator('button[aria-label="Schliessen"], button[aria-label="Close"]')).click();
 		await expect(page.getByTestId(`compare-step2-mobile-lib-check-${d.orte[0].id}`)).toBeHidden();
 	} else {
@@ -261,7 +277,7 @@ async function pruefeVergleichAnlegen(page: Page, d: Daten, mobil: boolean, wo: 
 		await expect(bibliothek).toBeVisible({ timeout: 10_000 });
 		for (const ort of d.orte) await bibliothek.getByText(ort.name, { exact: true }).click();
 	}
-	await pruefe(page, `${wo} Vergleich anlegen Orte gewählt`, sammel);
+	await messe(`${wo} Vergleich anlegen Orte gewählt`);
 }
 
 for (const vp of [DESKTOP, MOBIL]) {
@@ -274,8 +290,9 @@ for (const vp of [DESKTOP, MOBIL]) {
 			try {
 				const d = await seed(page);
 				await sprache(page, lang);
-				await pruefeTripAnlegen(page, mobil, `${vp.width}px ${lang}`, verstoesse);
-				await pruefeVergleichAnlegen(page, d, mobil, `${vp.width}px ${lang}`, verstoesse);
+				const messe: Messe = async (seite) => void (await pruefe(page, seite, verstoesse));
+				await pruefeTripAnlegen(page, mobil, `${vp.width}px ${lang}`, messe);
+				await pruefeVergleichAnlegen(page, d, mobil, `${vp.width}px ${lang}`, messe);
 			} finally {
 				await page.request.put('/api/auth/profile', { data: { language: 'de' } }).catch(() => {});
 				await cleanupTracked(page.request);
@@ -392,34 +409,158 @@ test('KO-5: aktiver „Weiter"-Knopf — Fläche --g-accent-deep, im Hover dunkl
 	}
 });
 
+/** Accent-Knöpfe: Bausteinknopf (`[data-slot="btn"]`) und Handy-Knopf MBtn (`data-size`). */
+const ACCENT_KNOPF = '[data-slot="btn"][data-variant="accent"], button[data-variant="accent"][data-size]';
+
+/**
+ * Überfährt jeden sichtbaren, nicht gesperrten Accent-Knopf und misst seinen Text im Hover-Zustand
+ * (Verstöße nach `sammel`). Verdeckte Knöpfe (z. B. hinter einem offenen Blatt) sind nicht
+ * überfahrbar und werden übersprungen. Liefert die Zahl je Knopfart.
+ */
+async function pruefeAccentHover(page: Page, seite: string, sammel: string[]): Promise<{ btn: number; mbtn: number }> {
+	const zahl = { btn: 0, mbtn: 0 };
+	for (const knopf of await page.locator(ACCENT_KNOPF).all()) {
+		if (!(await knopf.isVisible()) || !(await knopf.isEnabled())) continue;
+		await knopf.scrollIntoViewIfNeeded();
+		const oben = await knopf.evaluate((el) => {
+			const r = el.getBoundingClientRect();
+			const treffer = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+			return !!treffer && el.contains(treffer);
+		});
+		if (!oben) continue;
+		await knopf.hover();
+		let vorher = '';
+		let befunde: KontrastBefund[] = [];
+		await expect
+			.poll(
+				async () => {
+					befunde = await messeKontrast(knopf);
+					const jetzt = JSON.stringify(befunde.map((b) => [b.text, b.farbe, b.hintergrund]));
+					const gleich = jetzt === vorher;
+					vorher = jetzt;
+					return gleich;
+				},
+				{ message: `${seite}: Hover-Messung wird nicht stabil`, timeout: 10_000, intervals: [250] }
+			)
+			.toBe(true);
+		const name = ((await knopf.textContent()) ?? '').trim();
+		expect(befunde.length, `${seite}: Accent-Knopf „${name}" ohne messbaren Text`).toBeGreaterThan(0);
+		sammel.push(...kontrastBericht(`${seite} Hover`, kontrastVerstoesse(befunde)));
+		zahl[(await knopf.getAttribute('data-slot')) === 'btn' ? 'btn' : 'mbtn'] += 1;
+	}
+	await page.mouse.move(0, 0);
+	return zahl;
+}
+
+for (const vp of [DESKTOP, MOBIL]) {
+	test(`KO-5 (${vp.width} × ${vp.height}): jeder sichtbare Accent-Knopf der Anlege-Seiten hält auch im Hover WCAG-AA`, async ({ page }) => {
+		test.setTimeout(150_000);
+		await page.setViewportSize(vp);
+		const mobil = vp === MOBIL;
+		const verstoesse: string[] = [];
+		const gesamt = { btn: 0, mbtn: 0 };
+		try {
+			const d = await seed(page);
+			const messe: Messe = async (seite) => {
+				const zahl = await pruefeAccentHover(page, seite, verstoesse);
+				gesamt.btn += zahl.btn;
+				gesamt.mbtn += zahl.mbtn;
+			};
+			await pruefeTripAnlegen(page, mobil, `${vp.width}px`, messe);
+			await pruefeVergleichAnlegen(page, d, mobil, `${vp.width}px`, messe);
+		} finally {
+			await cleanupTracked(page.request);
+		}
+		// Ohne überfahrene Knöpfe wäre der Test leer grün: am Computer die Bausteinknöpfe
+		// (Weiter je Schritt), am Handy mindestens der MBtn unten („Orte hinzufügen").
+		if (mobil) expect(gesamt.mbtn, 'Handy: kein Accent-MBtn überfahren').toBeGreaterThan(0);
+		else expect(gesamt.btn, 'Computer: zu wenige Accent-Knöpfe überfahren').toBeGreaterThanOrEqual(2);
+		expect(verstoesse, `KO-5 Hover-Verstöße:\n  ${verstoesse.join('\n  ')}`).toEqual([]);
+	});
+}
+
 test('KO-6: Messhelfer — meldet genau die bekannten Verstöße einer Testseite, Ausnahmen nicht', async ({ page }) => {
-	await page.setContent(`<!doctype html><html><body style="margin:0;background:#f6f4ee;font:13px sans-serif">
+	await page.setContent(`<!doctype html><html><head><style>
+		.nach::after { content: "nachher-schwach"; color: #9a958a; }
+		.vor::before { content: "\\203A"; color: #9a958a; }
+	</style></head><body style="margin:0;background:#f6f4ee;font:13px sans-serif">
 		<p id="ok" style="color:#1a1a18">deckend-gut</p>
 		<p style="color:#9a958a">deckend-schwach</p>
 		<div style="background:#c45a2a;padding:4px"><span style="background:rgba(255,255,255,0.22);color:#f6f4ee">transluzent-zaehler</span></div>
 		<div style="background:#1a1a18;padding:4px"><span style="background:rgba(255,255,255,0.9);color:#1a1a18">transluzent-hell</span></div>
 		<div style="background:#ffffff;padding:4px"><span style="background:rgba(0,0,0,0.5);color:#ffffff">transluzent-dunkel</span></div>
+		<div style="opacity:.5"><span style="color:#1a1a18">opazitaet-kette</span></div>
 		<p style="color:#c45a2a;font-size:24px">gross-ok</p>
+		<p style="color:#c45a2a;font-size:23px">fast-gross</p>
+		<p style="color:#c45a2a;font-size:18.66px;font-weight:700">fett-gross-ok</p>
+		<p style="color:#c45a2a;font-size:18.65px;font-weight:700">fett-fast-gross</p>
+		<svg width="240" height="30"><text x="0" y="20" fill="#9a958a" style="color:#1a1a18">svg-fuellung-schwach</text></svg>
+		<input value="eingabe-schwach" style="color:#9a958a;background:#f6f4ee">
+		<input placeholder="platzhalter-leer" style="color:#9a958a;background:#f6f4ee">
+		<input disabled value="eingabe-gesperrt" style="color:#9a958a;background:#f6f4ee">
+		<p class="nach" style="color:#1a1a18">vorher-gut</p>
+		<p class="vor" style="color:#1a1a18">glyph-davor</p>
+		<p style="background:color-mix(in oklab, #1a1a18 60%, #000);color:#1a1a18">mischfarbe-grund</p>
+		<div style="background-image:linear-gradient(#1a1a18,#1a1a18)"><span style="color:#1a1a18">bild-grund</span></div>
+		<div style="background-image:linear-gradient(#1a1a18,#1a1a18)"><span style="background:#f6f4ee;color:#1a1a18">bild-ueberdeckt</span></div>
 		<button disabled style="color:#9a958a;background:#f6f4ee">gesperrt-knopf</button>
 		<div aria-disabled="true"><span style="color:#9a958a">gesperrt-aria</span></div>
-		<span aria-hidden="true" style="color:#9a958a">versteckt-aria</span>
-		<span data-testid="brand-wordmark"><span style="color:#9a958a">logo-wortmarke</span></span>
+		<span aria-hidden="true" style="color:#9a958a">versteckt-buchstaben</span>
+		<p><span aria-hidden="true" style="color:#9a958a">· › ×</span></p>
+		<span data-testid="brand-wordmark"><span class="typo-row" style="color:#9a958a"><span>logo-wortmarke</span></span><span class="caption" style="color:#9a958a">logo-unterzeile</span></span>
+		<p data-testid="brand-wordmark" style="color:#9a958a">fremd-testid</p>
 		<span style="display:none;color:#9a958a">unsichtbar</span>
 	</body></html>`);
 	const befunde = await messeKontrast(page);
 	const je = Object.fromEntries(befunde.map((b) => [b.text, b]));
 	const verstoesse = kontrastVerstoesse(befunde).map((b) => b.text).sort();
-	expect(verstoesse, 'genau die bekannten Verstöße').toEqual(['deckend-schwach', 'transluzent-dunkel', 'transluzent-zaehler']);
+	expect(verstoesse, 'genau die bekannten Verstöße').toEqual(
+		[
+			'bild-grund',
+			'deckend-schwach',
+			'eingabe-schwach',
+			'fast-gross',
+			'fett-fast-gross',
+			'fremd-testid',
+			'logo-unterzeile',
+			'mischfarbe-grund',
+			'nachher-schwach',
+			'opazitaet-kette',
+			'svg-fuellung-schwach',
+			'transluzent-dunkel',
+			'transluzent-zaehler',
+			'versteckt-buchstaben'
+		].sort()
+	);
 	// Papier auf rgba(255,255,255,0.22) über Accent = 2,79:1 (Spec K2) — nur mit Mischung.
 	expect(je['transluzent-zaehler'].verhaeltnis).toBeCloseTo(2.79, 1);
 	expect(je['transluzent-zaehler'].hintergrund).toBe('rgb(209, 126, 89)');
 	expect(je['transluzent-hell'].verhaeltnis).toBeGreaterThan(10);
 	expect(je['transluzent-dunkel'].verhaeltnis).toBeLessThan(4.5);
-	expect(je['gross-ok'].schwelle).toBe(3);
+	// Opacity der Vorfahren dünnt die Schrift aus: Ink mit 50 % auf Papier < 4,5:1.
+	expect(je['opazitaet-kette'].farbe).not.toBe('rgb(26, 26, 24)');
+	// Großer Text: Grenzen genau 24 px bzw. 18,66 px bei Gewicht 700.
+	expect([je['gross-ok'].schwelle, je['fast-gross'].schwelle]).toEqual([3, 4.5]);
+	expect([je['fett-gross-ok'].schwelle, je['fett-fast-gross'].schwelle]).toEqual([3, 4.5]);
+	// SVG-Text zählt mit fill, nicht mit color.
+	expect(je['svg-fuellung-schwach'].farbeRoh).toBe('rgb(154, 149, 138)');
+	expect(je['eingabe-schwach'].quelle).toBe('eingabe');
+	expect(je['platzhalter-leer'], 'Platzhalter wird nicht gemessen').toBeUndefined();
+	expect(je['eingabe-gesperrt'].ausnahme).toBe('gesperrt');
+	expect(je['nachher-schwach'].quelle).toBe('::after');
+	expect(je['›'], 'Pseudo-Glyphe ohne Buchstabe/Ziffer wird nicht gemessen').toBeUndefined();
+	// color-mix() liefert oklab(…) — der Grund muss trotzdem zählen (sonst Papier statt Ink).
+	expect(kontrastVerhaeltnis(je['mischfarbe-grund'].hintergrund, 'rgb(0, 0, 0)')).toBeLessThan(2);
+	expect(je['bild-grund'].berechenbar).toBe(false);
+	expect(je['bild-ueberdeckt'].berechenbar).toBe(true);
 	expect(je['gesperrt-knopf'].ausnahme).toBe('gesperrt');
 	expect(je['gesperrt-aria'].ausnahme).toBe('gesperrt');
-	expect(je['versteckt-aria'].ausnahme).toBe('aria-hidden');
+	expect(je['versteckt-buchstaben'].ausnahme, 'aria-hidden ist keine Ausnahme für Lesetext').toBeNull();
+	expect(je['· › ×'].ausnahme).toBe('aria-hidden');
 	expect(je['logo-wortmarke'].ausnahme).toBe('logo');
+	expect(je['logo-wortmarke'].logoInstanz).toBe(0);
+	expect(je['logo-unterzeile'].ausnahme, 'Unterzeile ist kein Logotyp').toBeNull();
+	expect(je['fremd-testid'].ausnahme, 'testid allein ist kein Logotyp').toBeNull();
 	expect(je.unsichtbar, 'display:none wird nicht gemessen').toBeUndefined();
 	expect(je['deckend-gut'].pfad).toContain('p');
 });
