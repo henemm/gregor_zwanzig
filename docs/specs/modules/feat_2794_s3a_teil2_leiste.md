@@ -221,6 +221,9 @@ ACs AC-1 bis AC-8 und AC-36 sind wörtlich aus der freigegebenen Gesamt-Spec üb
 - **Übersicht und Listen-Texte erst Teil-PR 4:** Inhalte U3/U4/K17/X1 werden nicht in diesem PR angefasst, es ändern sich nur Sprung-Kennungen.
 - **Reihenfolge der PRs:** Die Implementierung beginnt erst, wenn PR #2871 und PR #2872 gemergt sind; danach Rebase auf `origin/main`.
 - **Kein Mail-Validator-Lauf nötig:** Mail-Inhalt und Renderer ändern sich nicht.
+- **Segmented-Block in `app.css` bleibt (Umsetzungsstand 2026-11-09):** Der globale Segmented-Block in `frontend/src/app.css` (ca. Z. 501–535, 657) bleibt bestehen, weil das Segmented-Atom (`ui/segmented/Segmented.svelte`, `WeatherConfigDialog`) ihn nutzt. Die Reiterleiste trägt kein `data-slot="segmented"` mehr, daher gilt die Box dort nicht (AC-3 erfüllt).
+- **`AlarmeScheduleTab` unverändert:** `trip-detail/AlarmeScheduleTab.svelte` blieb unverändert und wird von `ZustellungTab` eingebunden.
+- **i18n `trip.json`:** Schlüssel `trip.anlegen.wertebereiche_festlegen` und `trip.anlegen.alarme_einrichten` entfernt, `trip.anlegen.zustellung_einrichten` neu (Folge der Anlege-Kette).
 
 ## Architektur-Entscheidung (ADR)
 
