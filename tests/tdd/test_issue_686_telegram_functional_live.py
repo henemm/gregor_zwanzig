@@ -292,9 +292,15 @@ def test_ac4_live_delivery_and_cleanup():
     Limit) — die Summe der Wartezeiten sprengt 30s, bleibt aber im Rahmen
     "ein paar Minuten" für einen Test, der nur beim Deploy läuft.
     """
-    from tests.tdd._telegram_live_fixture import deliver_and_cleanup
+    from tests.tdd._telegram_live_fixture import (
+        deliver_and_cleanup,
+        ensure_test_user_with_active_trip,
+    )
 
     chat_id = os.environ["GZ_TELEGRAM_TEST_CHAT_ID"]
+    # Issue #2876: eigener Trip mit Etappen relativ zu heute, statt sich auf den
+    # vom Reset (#2813) wiederhergestellten, datierten Altstand zu verlassen.
+    ensure_test_user_with_active_trip(chat_id=chat_id)
     failures = []
     for cmd in SEVEN_COMMANDS:
         message_id, deleted = deliver_and_cleanup(command=cmd, chat_id=chat_id)
