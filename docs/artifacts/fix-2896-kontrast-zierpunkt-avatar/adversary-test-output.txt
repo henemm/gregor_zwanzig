@@ -1,0 +1,2039 @@
+TAP version 13
+# Subtest: AC-4: Scanner meldet Fließtext, lässt Platzhalter-Regeln, disabled und audit:exempt durch
+ok 1 - AC-4: Scanner meldet Fließtext, lässt Platzhalter-Regeln, disabled und audit:exempt durch
+  ---
+  duration_ms: 0.974154
+  type: 'test'
+  ...
+# Subtest: AC-4: Scanner meldet auch die Svelte-Direktive style:color, aber nicht background/border/stroke
+ok 2 - AC-4: Scanner meldet auch die Svelte-Direktive style:color, aber nicht background/border/stroke
+  ---
+  duration_ms: 0.16938
+  type: 'test'
+  ...
+# Subtest: AC-4: Scanner meldet Interpolation color:{…} im style-Attribut, nicht background/border
+ok 3 - AC-4: Scanner meldet Interpolation color:{…} im style-Attribut, nicht background/border
+  ---
+  duration_ms: 0.303971
+  type: 'test'
+  ...
+# Subtest: AC-6: Scope-Dateien (Anlege-Editoren, Rahmen, Archiv, Organismen) haben 0 Treffer
+ok 4 - AC-6: Scope-Dateien (Anlege-Editoren, Rahmen, Archiv, Organismen) haben 0 Treffer
+  ---
+  duration_ms: 52.297018
+  type: 'test'
+  ...
+# Subtest: AC-6: kein Treffer über dem Zähler, keine nicht gelistete Datei mit Treffern
+ok 5 - AC-6: kein Treffer über dem Zähler, keine nicht gelistete Datei mit Treffern
+  ---
+  duration_ms: 53.786802
+  type: 'test'
+  ...
+# Subtest: AC-6: Zähler größer als Ist → rot („Zähler senken", Ratsche darf nur sinken)
+ok 6 - AC-6: Zähler größer als Ist → rot („Zähler senken", Ratsche darf nur sinken)
+  ---
+  duration_ms: 38.914103
+  type: 'test'
+  ...
+# Subtest: AC-6: Scope-Dateien stehen nicht in der Ausnahmeliste
+ok 7 - AC-6: Scope-Dateien stehen nicht in der Ausnahmeliste
+  ---
+  duration_ms: 0.199751
+  type: 'test'
+  ...
+# Subtest: AC-4: Wortmarke dunkel — Punkt mindestens 4,5:1 gegen --g-ink
+    # Subtest: icon=left: gemischter Punkt gegen --g-ink
+    ok 1 - icon=left: gemischter Punkt gegen --g-ink
+      ---
+      duration_ms: 163.967297
+      type: 'test'
+      ...
+    # Subtest: icon=none: gemischter Punkt gegen --g-ink
+    ok 2 - icon=none: gemischter Punkt gegen --g-ink
+      ---
+      duration_ms: 0.899503
+      type: 'test'
+      ...
+    # Subtest: Gegenprobe: Alpha 0,45 (Ist-Stand vor \#2896) fällt durch
+    ok 3 - Gegenprobe: Alpha 0,45 (Ist-Stand vor \#2896) fällt durch
+      ---
+      duration_ms: 0.156621
+      type: 'test'
+      ...
+    1..3
+ok 8 - AC-4: Wortmarke dunkel — Punkt mindestens 4,5:1 gegen --g-ink
+  ---
+  duration_ms: 165.883083
+  type: 'suite'
+  ...
+# Subtest: AC-5: Wortmarke hell — Punkt mindestens 4,5:1 auf --g-paper-deep und --g-paper
+    # Subtest: icon=left: Punkt gegen --g-paper-deep
+    ok 1 - icon=left: Punkt gegen --g-paper-deep
+      ---
+      duration_ms: 6.166311
+      type: 'test'
+      ...
+    # Subtest: icon=left: Punkt gegen --g-paper
+    ok 2 - icon=left: Punkt gegen --g-paper
+      ---
+      duration_ms: 1.475495
+      type: 'test'
+      ...
+    # Subtest: icon=none: Punkt gegen --g-paper-deep
+    ok 3 - icon=none: Punkt gegen --g-paper-deep
+      ---
+      duration_ms: 3.856113
+      type: 'test'
+      ...
+    # Subtest: icon=none: Punkt gegen --g-paper
+    ok 4 - icon=none: Punkt gegen --g-paper
+      ---
+      duration_ms: 1.995177
+      type: 'test'
+      ...
+    # Subtest: Gegenprobe: --g-ink-4 auf --g-paper-deep fällt durch
+    ok 5 - Gegenprobe: --g-ink-4 auf --g-paper-deep fällt durch
+      ---
+      duration_ms: 0.356471
+      type: 'test'
+      ...
+    1..5
+ok 9 - AC-5: Wortmarke hell — Punkt mindestens 4,5:1 auf --g-paper-deep und --g-paper
+  ---
+  duration_ms: 14.219908
+  type: 'suite'
+  ...
+# Subtest: AC-5: BrandUserBadge accent=true — Initialen mindestens 4,5:1
+    # Subtest: gerenderte Initialen-Farbe gegen gerenderten Avatar-Grund
+    ok 1 - gerenderte Initialen-Farbe gegen gerenderten Avatar-Grund
+      ---
+      duration_ms: 36.118672
+      type: 'test'
+      ...
+    1..1
+ok 10 - AC-5: BrandUserBadge accent=true — Initialen mindestens 4,5:1
+  ---
+  duration_ms: 36.452684
+  type: 'suite'
+  ...
+# Subtest: AC-5/AC-3: Avatar-Initialen in BottomNav und KontoSheet mindestens 4,5:1, ein Muster
+    # Subtest: .konto-kreis__avatar: Initialen gegen Avatar-Grund
+    ok 1 - .konto-kreis__avatar: Initialen gegen Avatar-Grund
+      ---
+      duration_ms: 174.153491
+      type: 'test'
+      ...
+    # Subtest: .konto__avatar: Initialen gegen Avatar-Grund
+    ok 2 - .konto__avatar: Initialen gegen Avatar-Grund
+      ---
+      duration_ms: 68.844903
+      type: 'test'
+      ...
+    # Subtest: Konto-Kreis und Konto-Blatt nutzen denselben Avatar-Grund
+    ok 3 - Konto-Kreis und Konto-Blatt nutzen denselben Avatar-Grund
+      ---
+      duration_ms: 70.75562
+      type: 'test'
+      ...
+    1..3
+ok 11 - AC-5/AC-3: Avatar-Initialen in BottomNav und KontoSheet mindestens 4,5:1, ein Muster
+  ---
+  duration_ms: 313.974414
+  type: 'suite'
+  ...
+# Subtest: F12: Reste der Allowlist (AC-1)
+    # Subtest: de: jeder Render ist byte-gleich zum Stand vor der Umstellung
+    ok 1 - de: jeder Render ist byte-gleich zum Stand vor der Umstellung
+      ---
+      duration_ms: 7284.011726
+      type: 'test'
+      ...
+    # Subtest: en: englische Texte stehen im Render, kein deutsches Signalwort
+    ok 2 - en: englische Texte stehen im Render, kein deutsches Signalwort
+      ---
+      duration_ms: 51.085892
+      type: 'test'
+      ...
+    # Subtest: Anker: Katalog liefert de wortgleich zum Bestand und en wie verankert
+    ok 3 - Anker: Katalog liefert de wortgleich zum Bestand und en wie verankert
+      ---
+      duration_ms: 0.403331
+      type: 'test'
+      ...
+    1..3
+ok 12 - F12: Reste der Allowlist (AC-1)
+  ---
+  duration_ms: 7336.464772
+  type: 'suite'
+  ...
+# Subtest: \#2650 AC-3 — Auth-Seiten in Sprache en: kein deutsches Restwort
+    # Subtest: AC-3_forgot-password_leer_englisch_ohne_restwort
+    ok 1 - AC-3_forgot-password_leer_englisch_ohne_restwort
+      ---
+      duration_ms: 120.292889
+      type: 'test'
+      ...
+    # Subtest: AC-3_forgot-password_fehler_englisch_ohne_restwort
+    ok 2 - AC-3_forgot-password_fehler_englisch_ohne_restwort
+      ---
+      duration_ms: 35.978272
+      type: 'test'
+      ...
+    # Subtest: AC-3_forgot-password_erfolg_englisch_ohne_restwort
+    ok 3 - AC-3_forgot-password_erfolg_englisch_ohne_restwort
+      ---
+      duration_ms: 5.91074
+      type: 'test'
+      ...
+    # Subtest: AC-3_reset-password_leer_englisch_ohne_restwort
+    ok 4 - AC-3_reset-password_leer_englisch_ohne_restwort
+      ---
+      duration_ms: 23.074148
+      type: 'test'
+      ...
+    # Subtest: AC-3_reset-password_mit_token_englisch_ohne_restwort
+    ok 5 - AC-3_reset-password_mit_token_englisch_ohne_restwort
+      ---
+      duration_ms: 1.361904
+      type: 'test'
+      ...
+    # Subtest: AC-3_reset-password_fehler_englisch_ohne_restwort
+    ok 6 - AC-3_reset-password_fehler_englisch_ohne_restwort
+      ---
+      duration_ms: 19.667087
+      type: 'test'
+      ...
+    # Subtest: AC-3_reset-password_erfolg_englisch_ohne_restwort
+    ok 7 - AC-3_reset-password_erfolg_englisch_ohne_restwort
+      ---
+      duration_ms: 8.365609
+      type: 'test'
+      ...
+    # Subtest: AC-3_magic-link_leer_englisch_ohne_restwort
+    ok 8 - AC-3_magic-link_leer_englisch_ohne_restwort
+      ---
+      duration_ms: 25.597527
+      type: 'test'
+      ...
+    # Subtest: AC-3_magic-link_gesendet_englisch_ohne_restwort
+    ok 9 - AC-3_magic-link_gesendet_englisch_ohne_restwort
+      ---
+      duration_ms: 8.434059
+      type: 'test'
+      ...
+    # Subtest: AC-3_magic-link_fehler_englisch_ohne_restwort
+    ok 10 - AC-3_magic-link_fehler_englisch_ohne_restwort
+      ---
+      duration_ms: 11.156798
+      type: 'test'
+      ...
+    # Subtest: AC-3_magic-link-verify_leer_englisch_ohne_restwort
+    ok 11 - AC-3_magic-link-verify_leer_englisch_ohne_restwort
+      ---
+      duration_ms: 33.657473
+      type: 'test'
+      ...
+    # Subtest: AC-3_magic-link-verify_fehler_englisch_ohne_restwort
+    ok 12 - AC-3_magic-link-verify_fehler_englisch_ohne_restwort
+      ---
+      duration_ms: 15.885444
+      type: 'test'
+      ...
+    # Subtest: AC-3_verify-email_unvollstaendig_englisch_ohne_restwort
+    ok 13 - AC-3_verify-email_unvollstaendig_englisch_ohne_restwort
+      ---
+      duration_ms: 13.324935
+      type: 'test'
+      ...
+    # Subtest: AC-3_verify-email_formular_englisch_ohne_restwort
+    ok 14 - AC-3_verify-email_formular_englisch_ohne_restwort
+      ---
+      duration_ms: 1.441874
+      type: 'test'
+      ...
+    # Subtest: AC-3_verify-email_erfolg_englisch_ohne_restwort
+    ok 15 - AC-3_verify-email_erfolg_englisch_ohne_restwort
+      ---
+      duration_ms: 2.177698
+      type: 'test'
+      ...
+    # Subtest: AC-3_verify-email_fehler_englisch_ohne_restwort
+    ok 16 - AC-3_verify-email_fehler_englisch_ohne_restwort
+      ---
+      duration_ms: 10.945497
+      type: 'test'
+      ...
+    # Subtest: AC-3_forgot_password_titel_englisch
+    ok 17 - AC-3_forgot_password_titel_englisch
+      ---
+      duration_ms: 2.94405
+      type: 'test'
+      ...
+    1..17
+ok 13 - \#2650 AC-3 — Auth-Seiten in Sprache en: kein deutsches Restwort
+  ---
+  duration_ms: 341.922539
+  type: 'suite'
+  ...
+# Subtest: \#2650 AC-3 — Actions der Auth-Routen: Deutsch unverändert, Englisch aus dem Katalog
+    # Subtest: AC-3_action_forgot_benutzername_fehlt
+    ok 1 - AC-3_action_forgot_benutzername_fehlt
+      ---
+      duration_ms: 8.739379
+      type: 'test'
+      ...
+    # Subtest: AC-3_action_reset_felder_fehlen
+    ok 2 - AC-3_action_reset_felder_fehlen
+      ---
+      duration_ms: 7.095814
+      type: 'test'
+      ...
+    # Subtest: AC-3_action_reset_passwort_kurz
+    ok 3 - AC-3_action_reset_passwort_kurz
+      ---
+      duration_ms: 6.401053
+      type: 'test'
+      ...
+    # Subtest: AC-3_action_reset_token_abgelaufen
+    ok 4 - AC-3_action_reset_token_abgelaufen
+      ---
+      duration_ms: 6.956724
+      type: 'test'
+      ...
+    # Subtest: AC-3_action_reset_token_ungueltig
+    ok 5 - AC-3_action_reset_token_ungueltig
+      ---
+      duration_ms: 5.933851
+      type: 'test'
+      ...
+    # Subtest: AC-3_action_magic_email_fehlt
+    ok 6 - AC-3_action_magic_email_fehlt
+      ---
+      duration_ms: 7.064824
+      type: 'test'
+      ...
+    # Subtest: AC-3_action_code_felder_fehlen
+    ok 7 - AC-3_action_code_felder_fehlen
+      ---
+      duration_ms: 4.961698
+      type: 'test'
+      ...
+    # Subtest: AC-3_action_code_zu_viele_versuche
+    ok 8 - AC-3_action_code_zu_viele_versuche
+      ---
+      duration_ms: 4.521415
+      type: 'test'
+      ...
+    # Subtest: AC-3_action_code_ungueltig
+    ok 9 - AC-3_action_code_ungueltig
+      ---
+      duration_ms: 8.94793
+      type: 'test'
+      ...
+    # Subtest: AC-3_action_bestaetigen_link_unvollstaendig
+    ok 10 - AC-3_action_bestaetigen_link_unvollstaendig
+      ---
+      duration_ms: 2.062046
+      type: 'test'
+      ...
+    # Subtest: AC-3_action_bestaetigen_adresse_vergeben
+    ok 11 - AC-3_action_bestaetigen_adresse_vergeben
+      ---
+      duration_ms: 6.618234
+      type: 'test'
+      ...
+    # Subtest: AC-3_action_bestaetigen_link_abgelaufen
+    ok 12 - AC-3_action_bestaetigen_link_abgelaufen
+      ---
+      duration_ms: 8.435909
+      type: 'test'
+      ...
+    # Subtest: AC-3_action_bestaetigen_link_ungueltig
+    ok 13 - AC-3_action_bestaetigen_link_ungueltig
+      ---
+      duration_ms: 4.001926
+      type: 'test'
+      ...
+    1..13
+ok 14 - \#2650 AC-3 — Actions der Auth-Routen: Deutsch unverändert, Englisch aus dem Katalog
+  ---
+  duration_ms: 85.022459
+  type: 'suite'
+  ...
+# Subtest: \#2650 AC-2 — Auth-Seiten in Sprache de: byte-gleich (normalisiert) zur Ausgabe vor der Umstellung
+    # Subtest: AC-2_forgot-password_alle_golden_zustaende_sind_gleich
+    ok 1 - AC-2_forgot-password_alle_golden_zustaende_sind_gleich
+      ---
+      duration_ms: 4.376485
+      type: 'test'
+      ...
+    # Subtest: AC-2_reset-password_alle_golden_zustaende_sind_gleich
+    ok 2 - AC-2_reset-password_alle_golden_zustaende_sind_gleich
+      ---
+      duration_ms: 2.87996
+      type: 'test'
+      ...
+    # Subtest: AC-2_magic-link_alle_golden_zustaende_sind_gleich
+    ok 3 - AC-2_magic-link_alle_golden_zustaende_sind_gleich
+      ---
+      duration_ms: 2.553709
+      type: 'test'
+      ...
+    # Subtest: AC-2_magic-link-verify_alle_golden_zustaende_sind_gleich
+    ok 4 - AC-2_magic-link-verify_alle_golden_zustaende_sind_gleich
+      ---
+      duration_ms: 2.76078
+      type: 'test'
+      ...
+    # Subtest: AC-2_verify-email_alle_golden_zustaende_sind_gleich
+    ok 5 - AC-2_verify-email_alle_golden_zustaende_sind_gleich
+      ---
+      duration_ms: 3.281641
+      type: 'test'
+      ...
+    1..5
+ok 15 - \#2650 AC-2 — Auth-Seiten in Sprache de: byte-gleich (normalisiert) zur Ausgabe vor der Umstellung
+  ---
+  duration_ms: 16.117245
+  type: 'suite'
+  ...
+# Subtest: AC-4: Deutsch byte-gleich zum Ist-Stand vor der Umstellung (Golden golden-de)
+    # Subtest: cockpit_trip.de.html
+    ok 1 - cockpit_trip.de.html
+      ---
+      duration_ms: 84.738074
+      type: 'test'
+      ...
+    # Subtest: cockpit_vergleich.de.html
+    ok 2 - cockpit_vergleich.de.html
+      ---
+      duration_ms: 11.120676
+      type: 'test'
+      ...
+    # Subtest: cockpit_planung.de.html
+    ok 3 - cockpit_planung.de.html
+      ---
+      duration_ms: 15.482582
+      type: 'test'
+      ...
+    # Subtest: trip_liste.de.html
+    ok 4 - trip_liste.de.html
+      ---
+      duration_ms: 30.741192
+      type: 'test'
+      ...
+    # Subtest: compare_liste_leer.de.html
+    ok 5 - compare_liste_leer.de.html
+      ---
+      duration_ms: 12.041389
+      type: 'test'
+      ...
+    # Subtest: orte_liste.de.html
+    ok 6 - orte_liste.de.html
+      ---
+      duration_ms: 23.93592
+      type: 'test'
+      ...
+    # Subtest: archiv.de.html
+    ok 7 - archiv.de.html
+      ---
+      duration_ms: 1.939567
+      type: 'test'
+      ...
+    # Subtest: Messaufbau: Golden enthaelt die deutschen Fliesstexte und Zaehler
+    ok 8 - Messaufbau: Golden enthaelt die deutschen Fliesstexte und Zaehler
+      ---
+      duration_ms: 3.467692
+      type: 'test'
+      ...
+    1..8
+ok 16 - AC-4: Deutsch byte-gleich zum Ist-Stand vor der Umstellung (Golden golden-de)
+  ---
+  duration_ms: 194.879233
+  type: 'suite'
+  ...
+# Subtest: AC-3: Listen auf Englisch
+    # Subtest: Trip-Liste: Ueberschrift, Stats, Spaltenkoepfe, Zaehler, Plural der Etappen
+    ok 1 - Trip-Liste: Ueberschrift, Stats, Spaltenkoepfe, Zaehler, Plural der Etappen
+      ---
+      duration_ms: 50.287019
+      type: 'test'
+      ...
+    # Subtest: Zaehler „0 of 3 trips" und Such-Hinweis mit unveraendertem Suchbegriff
+    ok 2 - Zaehler „0 of 3 trips" und Such-Hinweis mit unveraendertem Suchbegriff
+      ---
+      duration_ms: 0.24224
+      type: 'test'
+      ...
+    # Subtest: Trip-Liste leer: Leerzustand englisch
+    ok 3 - Trip-Liste leer: Leerzustand englisch
+      ---
+      duration_ms: 21.563742
+      type: 'test'
+      ...
+    # Subtest: Compare-Liste leer, Orte-Liste: englisch
+    ok 4 - Compare-Liste leer, Orte-Liste: englisch
+      ---
+      duration_ms: 39.824623
+      type: 'test'
+      ...
+    # Subtest: Compare-Liste mit Vergleich: Spalten, Status, Zeitplan-Zeile
+    ok 5 - Compare-Liste mit Vergleich: Spalten, Status, Zeitplan-Zeile
+      ---
+      duration_ms: 11.114986
+      type: 'test'
+      ...
+    1..5
+ok 17 - AC-3: Listen auf Englisch
+  ---
+  duration_ms: 130.180057
+  type: 'suite'
+  ...
+# Subtest: AC-5: Sprache und Daten je Nutzer, keine Wanderung
+    # Subtest: A (en) und B (de) laden nacheinander /trips und /archiv
+    ok 1 - A (en) und B (de) laden nacheinander /trips und /archiv
+      ---
+      duration_ms: 25.498286
+      type: 'test'
+      ...
+    # Subtest: Archiv-Loader liefert count je Eintrag, detail bleibt (Bestand)
+    ok 2 - Archiv-Loader liefert count je Eintrag, detail bleibt (Bestand)
+      ---
+      duration_ms: 1.339504
+      type: 'test'
+      ...
+    1..2
+ok 18 - AC-5: Sprache und Daten je Nutzer, keine Wanderung
+  ---
+  duration_ms: 27.11964
+  type: 'suite'
+  ...
+# (node:1116839) ExperimentalWarning: stripTypeScriptTypes is an experimental feature and might change at any time
+# (Use `node --trace-warnings ...` to show where the warning was created)
+# Subtest: AC-6: Deutsch byte-gleich zum Ist-Stand vor der Umstellung (Golden golden-de)
+    # Subtest: konto.de.html
+    ok 1 - konto.de.html
+      ---
+      duration_ms: 127.907199
+      type: 'test'
+      ...
+    # Subtest: admin.de.html
+    ok 2 - admin.de.html
+      ---
+      duration_ms: 27.172882
+      type: 'test'
+      ...
+    # Subtest: navigation.de.html
+    ok 3 - navigation.de.html
+      ---
+      duration_ms: 22.533316
+      type: 'test'
+      ...
+    # Subtest: Messaufbau: Golden enthaelt die deutschen Texte und Zaehler
+    ok 4 - Messaufbau: Golden enthaelt die deutschen Texte und Zaehler
+      ---
+      duration_ms: 6.643303
+      type: 'test'
+      ...
+    1..4
+ok 19 - AC-6: Deutsch byte-gleich zum Ist-Stand vor der Umstellung (Golden golden-de)
+  ---
+  duration_ms: 185.032391
+  type: 'suite'
+  ...
+# Subtest: Konto-Seite auf Englisch (de -> en ohne Neuladen)
+    # Subtest: kein deutscher Katalogtext (konto.*, nav.*) im sichtbaren Text oder in Attributen
+    ok 1 - kein deutscher Katalogtext (konto.*, nav.*) im sichtbaren Text oder in Attributen
+      ---
+      duration_ms: 60.749103
+      type: 'test'
+      ...
+    # Subtest: feste englische Anker (exakte Literale)
+    ok 2 - feste englische Anker (exakte Literale)
+      ---
+      duration_ms: 18.874663
+      type: 'test'
+      ...
+    # Subtest: Attribute: Platzhalter und aria-label englisch
+    ok 3 - Attribute: Platzhalter und aria-label englisch
+      ---
+      duration_ms: 18.103822
+      type: 'test'
+      ...
+    # Subtest: Plural der Antworten exakt: genau eine Antwort -> „(+1 reply)"
+    ok 4 - Plural der Antworten exakt: genau eine Antwort -> „(+1 reply)"
+      ---
+      duration_ms: 21.151002
+      type: 'test'
+      ...
+    # Subtest: Leerzustaende englisch: keine Passkeys, keine Profile, keine Orte, kein Zeitplan
+    ok 5 - Leerzustaende englisch: keine Passkeys, keine Profile, keine Orte, kein Zeitplan
+      ---
+      duration_ms: 53.031249
+      type: 'test'
+      ...
+    1..5
+ok 20 - Konto-Seite auf Englisch (de -> en ohne Neuladen)
+  ---
+  duration_ms: 172.436209
+  type: 'suite'
+  ...
+# Subtest: AC-3: „Zuletzt" der Scheduler-Karte (timeAgo) in beiden Sprachen
+    # Subtest: 0 Minuten: „Zuletzt: gerade eben" | „Last: just now"
+    ok 1 - 0 Minuten: „Zuletzt: gerade eben" | „Last: just now"
+      ---
+      duration_ms: 19.009574
+      type: 'test'
+      ...
+    # Subtest: 3 Minuten: „Zuletzt: vor 3 Min" | „Last: 3 min ago"
+    ok 2 - 3 Minuten: „Zuletzt: vor 3 Min" | „Last: 3 min ago"
+      ---
+      duration_ms: 13.263985
+      type: 'test'
+      ...
+    # Subtest: 60 Minuten: „Zuletzt: vor 1 Std" | „Last: 1 h ago"
+    ok 3 - 60 Minuten: „Zuletzt: vor 1 Std" | „Last: 1 h ago"
+      ---
+      duration_ms: 14.495088
+      type: 'test'
+      ...
+    # Subtest: 120 Minuten: „Zuletzt: vor 2 Std" | „Last: 2 h ago"
+    ok 4 - 120 Minuten: „Zuletzt: vor 2 Std" | „Last: 2 h ago"
+      ---
+      duration_ms: 13.472785
+      type: 'test'
+      ...
+    # Subtest: 1440 Minuten: „Zuletzt: vor 1 Tag" | „Last: 1 day ago"
+    ok 5 - 1440 Minuten: „Zuletzt: vor 1 Tag" | „Last: 1 day ago"
+      ---
+      duration_ms: 7.348135
+      type: 'test'
+      ...
+    # Subtest: 2880 Minuten: „Zuletzt: vor 2 Tagen" | „Last: 2 days ago"
+    ok 6 - 2880 Minuten: „Zuletzt: vor 2 Tagen" | „Last: 2 days ago"
+      ---
+      duration_ms: 28.514846
+      type: 'test'
+      ...
+    1..6
+ok 21 - AC-3: „Zuletzt" der Scheduler-Karte (timeAgo) in beiden Sprachen
+  ---
+  duration_ms: 96.409494
+  type: 'suite'
+  ...
+# Subtest: AC-2: Fehlertexte in der Nutzersprache, unbekannte Codes zeigen den Server-Text
+    # Subtest: Loeschen: wrong_password
+    ok 1 - Loeschen: wrong_password
+      ---
+      duration_ms: 0.282101
+      type: 'test'
+      ...
+    # Subtest: Loeschen: invalid_code und rate_limit_exceeded haben eigene Saetze (nicht die des Profils)
+    ok 2 - Loeschen: invalid_code und rate_limit_exceeded haben eigene Saetze (nicht die des Profils)
+      ---
+      duration_ms: 0.13519
+      type: 'test'
+      ...
+    # Subtest: Loeschen: unbekannter Code -> Server-Text (detail, dann error, dann Ersatz)
+    ok 3 - Loeschen: unbekannter Code -> Server-Text (detail, dann error, dann Ersatz)
+      ---
+      duration_ms: 0.125021
+      type: 'test'
+      ...
+    # Subtest: Profil: email_taken (409)
+    ok 4 - Profil: email_taken (409)
+      ---
+      duration_ms: 0.16295
+      type: 'test'
+      ...
+    # Subtest: Code anfordern: code_expired
+    ok 5 - Code anfordern: code_expired
+      ---
+      duration_ms: 0.109641
+      type: 'test'
+      ...
+    # Subtest: Profil: unbekannter Code -> Server-Text, ohne alles -> Ersatztext der Sprache
+    ok 6 - Profil: unbekannter Code -> Server-Text, ohne alles -> Ersatztext der Sprache
+      ---
+      duration_ms: 0.1639
+      type: 'test'
+      ...
+    # Subtest: Passwort aendern: wrong_password und Ersatz
+    ok 7 - Passwort aendern: wrong_password und Ersatz
+      ---
+      duration_ms: 0.14156
+      type: 'test'
+      ...
+    1..7
+ok 22 - AC-2: Fehlertexte in der Nutzersprache, unbekannte Codes zeigen den Server-Text
+  ---
+  duration_ms: 1.282634
+  type: 'suite'
+  ...
+# Subtest: AC-1: zwei Nutzer, zwei Sprachen, gleiche Zahlen, getrennte Daten
+    # Subtest: A englisch, B deutsch; Kontingent-/Zaehlerwerte identisch; keine fremden Daten
+    ok 1 - A englisch, B deutsch; Kontingent-/Zaehlerwerte identisch; keine fremden Daten
+      ---
+      duration_ms: 89.543
+      type: 'test'
+      ...
+    1..1
+ok 23 - AC-1: zwei Nutzer, zwei Sprachen, gleiche Zahlen, getrennte Daten
+  ---
+  duration_ms: 89.630051
+  type: 'suite'
+  ...
+# Subtest: F001: jeder F4-Katalogwert ist als festes de/en-Literal verankert
+    # Subtest: konto.sprache.titel
+    ok 1 - konto.sprache.titel
+      ---
+      duration_ms: 7.525935
+      type: 'test'
+      ...
+    # Subtest: konto.sprache.option_de
+    ok 2 - konto.sprache.option_de
+      ---
+      duration_ms: 3.23204
+      type: 'test'
+      ...
+    # Subtest: konto.sprache.option_en
+    ok 3 - konto.sprache.option_en
+      ---
+      duration_ms: 0.1124
+      type: 'test'
+      ...
+    # Subtest: konto.sprache.gespeichert
+    ok 4 - konto.sprache.gespeichert
+      ---
+      duration_ms: 0.09596
+      type: 'test'
+      ...
+    # Subtest: konto.sprache.fehler
+    ok 5 - konto.sprache.fehler
+      ---
+      duration_ms: 0.10072
+      type: 'test'
+      ...
+    # Subtest: konto.sprache.umschalter_label
+    ok 6 - konto.sprache.umschalter_label
+      ---
+      duration_ms: 0.084891
+      type: 'test'
+      ...
+    # Subtest: konto.titel
+    ok 7 - konto.titel
+      ---
+      duration_ms: 0.07534
+      type: 'test'
+      ...
+    # Subtest: konto.aktion.speichern
+    ok 8 - konto.aktion.speichern
+      ---
+      duration_ms: 0.061269
+      type: 'test'
+      ...
+    # Subtest: konto.aktion.loeschen
+    ok 9 - konto.aktion.loeschen
+      ---
+      duration_ms: 0.355661
+      type: 'test'
+      ...
+    # Subtest: konto.aktion.loeschen_fehlgeschlagen
+    ok 10 - konto.aktion.loeschen_fehlgeschlagen
+      ---
+      duration_ms: 0.071451
+      type: 'test'
+      ...
+    # Subtest: konto.aktion.test_senden
+    ok 11 - konto.aktion.test_senden
+      ---
+      duration_ms: 0.07391
+      type: 'test'
+      ...
+    # Subtest: konto.aktion.gesendet
+    ok 12 - konto.aktion.gesendet
+      ---
+      duration_ms: 0.05101
+      type: 'test'
+      ...
+    # Subtest: konto.aktion.senden_fehlgeschlagen
+    ok 13 - konto.aktion.senden_fehlgeschlagen
+      ---
+      duration_ms: 0.067041
+      type: 'test'
+      ...
+    # Subtest: konto.profil.titel
+    ok 14 - konto.profil.titel
+      ---
+      duration_ms: 0.050221
+      type: 'test'
+      ...
+    # Subtest: konto.profil.benutzername
+    ok 15 - konto.profil.benutzername
+      ---
+      duration_ms: 0.05684
+      type: 'test'
+      ...
+    # Subtest: konto.profil.anzeigename
+    ok 16 - konto.profil.anzeigename
+      ---
+      duration_ms: 0.067169
+      type: 'test'
+      ...
+    # Subtest: konto.profil.mitglied_seit
+    ok 17 - konto.profil.mitglied_seit
+      ---
+      duration_ms: 0.058751
+      type: 'test'
+      ...
+    # Subtest: konto.profil.gespeichert
+    ok 18 - konto.profil.gespeichert
+      ---
+      duration_ms: 0.063139
+      type: 'test'
+      ...
+    # Subtest: konto.kanaele.titel
+    ok 19 - konto.kanaele.titel
+      ---
+      duration_ms: 0.050571
+      type: 'test'
+      ...
+    # Subtest: konto.kanaele.beschreibung
+    ok 20 - konto.kanaele.beschreibung
+      ---
+      duration_ms: 0.044719
+      type: 'test'
+      ...
+    # Subtest: konto.kanaele.mail_label
+    ok 21 - konto.kanaele.mail_label
+      ---
+      duration_ms: 0.052031
+      type: 'test'
+      ...
+    # Subtest: konto.kanaele.mail_platzhalter
+    ok 22 - konto.kanaele.mail_platzhalter
+      ---
+      duration_ms: 0.06945
+      type: 'test'
+      ...
+    # Subtest: konto.adresse.ausstehend
+    ok 23 - konto.adresse.ausstehend
+      ---
+      duration_ms: 0.187021
+      type: 'test'
+      ...
+    # Subtest: konto.adresse.mail_erneut
+    ok 24 - konto.adresse.mail_erneut
+      ---
+      duration_ms: 0.05497
+      type: 'test'
+      ...
+    # Subtest: konto.adresse.mail_verschickt
+    ok 25 - konto.adresse.mail_verschickt
+      ---
+      duration_ms: 0.047231
+      type: 'test'
+      ...
+    # Subtest: konto.sms.label
+    ok 26 - konto.sms.label
+      ---
+      duration_ms: 0.04622
+      type: 'test'
+      ...
+    # Subtest: konto.sms.format_hinweis
+    ok 27 - konto.sms.format_hinweis
+      ---
+      duration_ms: 0.043821
+      type: 'test'
+      ...
+    # Subtest: konto.sms.ausstehend
+    ok 28 - konto.sms.ausstehend
+      ---
+      duration_ms: 0.07418
+      type: 'test'
+      ...
+    # Subtest: konto.sms.code_platzhalter
+    ok 29 - konto.sms.code_platzhalter
+      ---
+      duration_ms: 0.084301
+      type: 'test'
+      ...
+    # Subtest: konto.sms.code_bestaetigen
+    ok 30 - konto.sms.code_bestaetigen
+      ---
+      duration_ms: 0.066469
+      type: 'test'
+      ...
+    # Subtest: konto.sms.code_erneut
+    ok 31 - konto.sms.code_erneut
+      ---
+      duration_ms: 0.22485
+      type: 'test'
+      ...
+    # Subtest: konto.sms.code_verschickt
+    ok 32 - konto.sms.code_verschickt
+      ---
+      duration_ms: 0.10899
+      type: 'test'
+      ...
+    # Subtest: konto.telegram.verbunden
+    ok 33 - konto.telegram.verbunden
+      ---
+      duration_ms: 0.122381
+      type: 'test'
+      ...
+    # Subtest: konto.telegram.trennen
+    ok 34 - konto.telegram.trennen
+      ---
+      duration_ms: 0.0834
+      type: 'test'
+      ...
+    # Subtest: konto.telegram.nicht_verbunden
+    ok 35 - konto.telegram.nicht_verbunden
+      ---
+      duration_ms: 0.079751
+      type: 'test'
+      ...
+    # Subtest: konto.telegram.warte
+    ok 36 - konto.telegram.warte
+      ---
+      duration_ms: 0.146821
+      type: 'test'
+      ...
+    # Subtest: konto.telegram.verbinden
+    ok 37 - konto.telegram.verbinden
+      ---
+      duration_ms: 0.08008
+      type: 'test'
+      ...
+    # Subtest: konto.kopplung.titel
+    ok 38 - konto.kopplung.titel
+      ---
+      duration_ms: 0.1403
+      type: 'test'
+      ...
+    # Subtest: konto.kopplung.beschreibung
+    ok 39 - konto.kopplung.beschreibung
+      ---
+      duration_ms: 0.08072
+      type: 'test'
+      ...
+    # Subtest: konto.kopplung.erzeugen
+    ok 40 - konto.kopplung.erzeugen
+      ---
+      duration_ms: 0.071251
+      type: 'test'
+      ...
+    # Subtest: konto.kopplung.erneuern
+    ok 41 - konto.kopplung.erneuern
+      ---
+      duration_ms: 0.07387
+      type: 'test'
+      ...
+    # Subtest: konto.kopplung.einmalig
+    ok 42 - konto.kopplung.einmalig
+      ---
+      duration_ms: 0.073481
+      type: 'test'
+      ...
+    # Subtest: konto.kopplung.erneuern_frage
+    ok 43 - konto.kopplung.erneuern_frage
+      ---
+      duration_ms: 0.0718
+      type: 'test'
+      ...
+    # Subtest: konto.kopplung.bestaetigen
+    ok 44 - konto.kopplung.bestaetigen
+      ---
+      duration_ms: 0.07495
+      type: 'test'
+      ...
+    # Subtest: konto.kopplung.fehlgeschlagen
+    ok 45 - konto.kopplung.fehlgeschlagen
+      ---
+      duration_ms: 0.07299
+      type: 'test'
+      ...
+    # Subtest: konto.passkey.titel
+    ok 46 - konto.passkey.titel
+      ---
+      duration_ms: 0.08033
+      type: 'test'
+      ...
+    # Subtest: konto.passkey.leer
+    ok 47 - konto.passkey.leer
+      ---
+      duration_ms: 0.07029
+      type: 'test'
+      ...
+    # Subtest: konto.passkey.angelegt_am
+    ok 48 - konto.passkey.angelegt_am
+      ---
+      duration_ms: 0.101209
+      type: 'test'
+      ...
+    # Subtest: konto.passkey.zuletzt_verwendet
+    ok 49 - konto.passkey.zuletzt_verwendet
+      ---
+      duration_ms: 0.126161
+      type: 'test'
+      ...
+    # Subtest: konto.passkey.hinzufuegen
+    ok 50 - konto.passkey.hinzufuegen
+      ---
+      duration_ms: 0.0606
+      type: 'test'
+      ...
+    # Subtest: konto.passkey.nicht_unterstuetzt
+    ok 51 - konto.passkey.nicht_unterstuetzt
+      ---
+      duration_ms: 0.054941
+      type: 'test'
+      ...
+    # Subtest: konto.passkey.unbenannt
+    ok 52 - konto.passkey.unbenannt
+      ---
+      duration_ms: 0.051651
+      type: 'test'
+      ...
+    # Subtest: konto.passkey.abgebrochen
+    ok 53 - konto.passkey.abgebrochen
+      ---
+      duration_ms: 0.041101
+      type: 'test'
+      ...
+    # Subtest: konto.passkey.angelegt
+    ok 54 - konto.passkey.angelegt
+      ---
+      duration_ms: 0.04032
+      type: 'test'
+      ...
+    # Subtest: konto.passkey.anlegen_fehler
+    ok 55 - konto.passkey.anlegen_fehler
+      ---
+      duration_ms: 0.049371
+      type: 'test'
+      ...
+    # Subtest: konto.passkey.entfernt
+    ok 56 - konto.passkey.entfernt
+      ---
+      duration_ms: 0.048249
+      type: 'test'
+      ...
+    # Subtest: konto.passkey.entfernen_fehler
+    ok 57 - konto.passkey.entfernen_fehler
+      ---
+      duration_ms: 0.04466
+      type: 'test'
+      ...
+    # Subtest: konto.passkey.loeschen_titel
+    ok 58 - konto.passkey.loeschen_titel
+      ---
+      duration_ms: 0.05068
+      type: 'test'
+      ...
+    # Subtest: konto.passkey.loeschen_frage
+    ok 59 - konto.passkey.loeschen_frage
+      ---
+      duration_ms: 0.056711
+      type: 'test'
+      ...
+    # Subtest: konto.passkey.dialog_text
+    ok 60 - konto.passkey.dialog_text
+      ---
+      duration_ms: 0.05097
+      type: 'test'
+      ...
+    # Subtest: konto.passkey.bezeichnung
+    ok 61 - konto.passkey.bezeichnung
+      ---
+      duration_ms: 0.03854
+      type: 'test'
+      ...
+    # Subtest: konto.passkey.warte
+    ok 62 - konto.passkey.warte
+      ---
+      duration_ms: 0.098611
+      type: 'test'
+      ...
+    # Subtest: konto.passkey.anlegen
+    ok 63 - konto.passkey.anlegen
+      ---
+      duration_ms: 0.086362
+      type: 'test'
+      ...
+    # Subtest: konto.passwort.titel
+    ok 64 - konto.passwort.titel
+      ---
+      duration_ms: 0.04795
+      type: 'test'
+      ...
+    # Subtest: konto.passwort.aktuell
+    ok 65 - konto.passwort.aktuell
+      ---
+      duration_ms: 0.041681
+      type: 'test'
+      ...
+    # Subtest: konto.passwort.neu
+    ok 66 - konto.passwort.neu
+      ---
+      duration_ms: 0.039879
+      type: 'test'
+      ...
+    # Subtest: konto.passwort.neu_bestaetigen
+    ok 67 - konto.passwort.neu_bestaetigen
+      ---
+      duration_ms: 0.037731
+      type: 'test'
+      ...
+    # Subtest: konto.passwort.ungleich
+    ok 68 - konto.passwort.ungleich
+      ---
+      duration_ms: 0.043801
+      type: 'test'
+      ...
+    # Subtest: konto.passwort.geaendert
+    ok 69 - konto.passwort.geaendert
+      ---
+      duration_ms: 0.038419
+      type: 'test'
+      ...
+    # Subtest: konto.passwort.falsch
+    ok 70 - konto.passwort.falsch
+      ---
+      duration_ms: 0.048871
+      type: 'test'
+      ...
+    # Subtest: konto.passwort.fehlgeschlagen
+    ok 71 - konto.passwort.fehlgeschlagen
+      ---
+      duration_ms: 0.04834
+      type: 'test'
+      ...
+    # Subtest: konto.wetter_profile.titel
+    ok 72 - konto.wetter_profile.titel
+      ---
+      duration_ms: 0.039691
+      type: 'test'
+      ...
+    # Subtest: konto.wetter_profile.beschreibung
+    ok 73 - konto.wetter_profile.beschreibung
+      ---
+      duration_ms: 0.041329
+      type: 'test'
+      ...
+    # Subtest: konto.wetter_profile.leer
+    ok 74 - konto.wetter_profile.leer
+      ---
+      duration_ms: 0.05069
+      type: 'test'
+      ...
+    # Subtest: konto.wetter_profile.standard
+    ok 75 - konto.wetter_profile.standard
+      ---
+      duration_ms: 0.042901
+      type: 'test'
+      ...
+    # Subtest: konto.wetter_profile.umbenennen
+    ok 76 - konto.wetter_profile.umbenennen
+      ---
+      duration_ms: 0.04761
+      type: 'test'
+      ...
+    # Subtest: konto.wetter_profile.umbenennen_fehler
+    ok 77 - konto.wetter_profile.umbenennen_fehler
+      ---
+      duration_ms: 0.039371
+      type: 'test'
+      ...
+    # Subtest: konto.wetter_profile.loeschen_titel
+    ok 78 - konto.wetter_profile.loeschen_titel
+      ---
+      duration_ms: 0.05983
+      type: 'test'
+      ...
+    # Subtest: konto.wetter_profile.loeschen_frage
+    ok 79 - konto.wetter_profile.loeschen_frage
+      ---
+      duration_ms: 0.235231
+      type: 'test'
+      ...
+    # Subtest: konto.metriken.one
+    ok 80 - konto.metriken.one
+      ---
+      duration_ms: 0.06238
+      type: 'test'
+      ...
+    # Subtest: konto.metriken.other
+    ok 81 - konto.metriken.other
+      ---
+      duration_ms: 0.04063
+      type: 'test'
+      ...
+    # Subtest: konto.reports.titel
+    ok 82 - konto.reports.titel
+      ---
+      duration_ms: 0.03927
+      type: 'test'
+      ...
+    # Subtest: konto.reports.nicht_verfuegbar
+    ok 83 - konto.reports.nicht_verfuegbar
+      ---
+      duration_ms: 0.040931
+      type: 'test'
+      ...
+    # Subtest: konto.reports.naechste_pruefung
+    ok 84 - konto.reports.naechste_pruefung
+      ---
+      duration_ms: 0.046949
+      type: 'test'
+      ...
+    # Subtest: konto.reports.zuletzt
+    ok 85 - konto.reports.zuletzt
+      ---
+      duration_ms: 0.04144
+      type: 'test'
+      ...
+    # Subtest: konto.reports.lauf_fehlgeschlagen
+    ok 86 - konto.reports.lauf_fehlgeschlagen
+      ---
+      duration_ms: 0.03747
+      type: 'test'
+      ...
+    # Subtest: konto.reports.lauf_fehlgeschlagen_mit
+    ok 87 - konto.reports.lauf_fehlgeschlagen_mit
+      ---
+      duration_ms: 0.04137
+      type: 'test'
+      ...
+    # Subtest: konto.reports.keine
+    ok 88 - konto.reports.keine
+      ---
+      duration_ms: 0.039299
+      type: 'test'
+      ...
+    # Subtest: konto.job.trip_checks
+    ok 89 - konto.job.trip_checks
+      ---
+      duration_ms: 0.043189
+      type: 'test'
+      ...
+    # Subtest: konto.zeit.vor_stunden.one
+    ok 90 - konto.zeit.vor_stunden.one
+      ---
+      duration_ms: 0.04286
+      type: 'test'
+      ...
+    # Subtest: konto.zeit.vor_stunden.other
+    ok 91 - konto.zeit.vor_stunden.other
+      ---
+      duration_ms: 0.03989
+      type: 'test'
+      ...
+    # Subtest: konto.zeit.vor_tagen.one
+    ok 92 - konto.zeit.vor_tagen.one
+      ---
+      duration_ms: 0.04156
+      type: 'test'
+      ...
+    # Subtest: konto.zeit.vor_tagen.other
+    ok 93 - konto.zeit.vor_tagen.other
+      ---
+      duration_ms: 6.134011
+      type: 'test'
+      ...
+    # Subtest: konto.account.titel
+    ok 94 - konto.account.titel
+      ---
+      duration_ms: 0.06496
+      type: 'test'
+      ...
+    # Subtest: konto.level.titel
+    ok 95 - konto.level.titel
+      ---
+      duration_ms: 0.05261
+      type: 'test'
+      ...
+    # Subtest: konto.level.wechsel_titel
+    ok 96 - konto.level.wechsel_titel
+      ---
+      duration_ms: 0.043189
+      type: 'test'
+      ...
+    # Subtest: konto.level.ausstehend
+    ok 97 - konto.level.ausstehend
+      ---
+      duration_ms: 0.06147
+      type: 'test'
+      ...
+    # Subtest: konto.level.nicht_benachrichtigt
+    ok 98 - konto.level.nicht_benachrichtigt
+      ---
+      duration_ms: 0.052219
+      type: 'test'
+      ...
+    # Subtest: konto.level.wird_gesendet
+    ok 99 - konto.level.wird_gesendet
+      ---
+      duration_ms: 0.066051
+      type: 'test'
+      ...
+    # Subtest: konto.level.antrag_stellen
+    ok 100 - konto.level.antrag_stellen
+      ---
+      duration_ms: 0.059789
+      type: 'test'
+      ...
+    # Subtest: konto.level.antrag_gesendet
+    ok 101 - konto.level.antrag_gesendet
+      ---
+      duration_ms: 0.04239
+      type: 'test'
+      ...
+    # Subtest: konto.level.bereits_aktiv
+    ok 102 - konto.level.bereits_aktiv
+      ---
+      duration_ms: 0.0373
+      type: 'test'
+      ...
+    # Subtest: konto.level.ungueltig
+    ok 103 - konto.level.ungueltig
+      ---
+      duration_ms: 0.05117
+      type: 'test'
+      ...
+    # Subtest: konto.level.antrag_fehlgeschlagen
+    ok 104 - konto.level.antrag_fehlgeschlagen
+      ---
+      duration_ms: 0.06182
+      type: 'test'
+      ...
+    # Subtest: konto.menge.aktive_trips
+    ok 105 - konto.menge.aktive_trips
+      ---
+      duration_ms: 0.560292
+      type: 'test'
+      ...
+    # Subtest: konto.menge.aktive_vergleiche
+    ok 106 - konto.menge.aktive_vergleiche
+      ---
+      duration_ms: 0.06104
+      type: 'test'
+      ...
+    # Subtest: konto.menge.locations
+    ok 107 - konto.menge.locations
+      ---
+      duration_ms: 0.042761
+      type: 'test'
+      ...
+    # Subtest: konto.menge.von
+    ok 108 - konto.menge.von
+      ---
+      duration_ms: 0.072209
+      type: 'test'
+      ...
+    # Subtest: konto.kontingent.titel
+    ok 109 - konto.kontingent.titel
+      ---
+      duration_ms: 0.04181
+      type: 'test'
+      ...
+    # Subtest: konto.kontingent.antworten.one
+    ok 110 - konto.kontingent.antworten.one
+      ---
+      duration_ms: 0.05703
+      type: 'test'
+      ...
+    # Subtest: konto.kontingent.antworten.other
+    ok 111 - konto.kontingent.antworten.other
+      ---
+      duration_ms: 0.04677
+      type: 'test'
+      ...
+    # Subtest: konto.kontingent.davon
+    ok 112 - konto.kontingent.davon
+      ---
+      duration_ms: 0.04955
+      type: 'test'
+      ...
+    # Subtest: konto.benachrichtigung.titel
+    ok 113 - konto.benachrichtigung.titel
+      ---
+      duration_ms: 0.038549
+      type: 'test'
+      ...
+    # Subtest: konto.benachrichtigung.keine
+    ok 114 - konto.benachrichtigung.keine
+      ---
+      duration_ms: 0.0684
+      type: 'test'
+      ...
+    # Subtest: konto.benachrichtigung.einrichten
+    ok 115 - konto.benachrichtigung.einrichten
+      ---
+      duration_ms: 0.04453
+      type: 'test'
+      ...
+    # Subtest: konto.modelle.titel
+    ok 116 - konto.modelle.titel
+      ---
+      duration_ms: 0.04004
+      type: 'test'
+      ...
+    # Subtest: konto.modelle.keine
+    ok 117 - konto.modelle.keine
+      ---
+      duration_ms: 0.042141
+      type: 'test'
+      ...
+    # Subtest: konto.modelle.anlegen
+    ok 118 - konto.modelle.anlegen
+      ---
+      duration_ms: 0.03793
+      type: 'test'
+      ...
+    # Subtest: konto.status.titel
+    ok 119 - konto.status.titel
+      ---
+      duration_ms: 2.97569
+      type: 'test'
+      ...
+    # Subtest: konto.status.nicht_erreichbar
+    ok 120 - konto.status.nicht_erreichbar
+      ---
+      duration_ms: 0.080619
+      type: 'test'
+      ...
+    # Subtest: konto.status.laeuft
+    ok 121 - konto.status.laeuft
+      ---
+      duration_ms: 0.065339
+      type: 'test'
+      ...
+    # Subtest: konto.status.eingeschraenkt
+    ok 122 - konto.status.eingeschraenkt
+      ---
+      duration_ms: 1.790015
+      type: 'test'
+      ...
+    # Subtest: konto.templates.titel
+    ok 123 - konto.templates.titel
+      ---
+      duration_ms: 0.09984
+      type: 'test'
+      ...
+    # Subtest: konto.templates.beschreibung
+    ok 124 - konto.templates.beschreibung
+      ---
+      duration_ms: 0.04409
+      type: 'test'
+      ...
+    # Subtest: konto.templates.keine
+    ok 125 - konto.templates.keine
+      ---
+      duration_ms: 0.03946
+      type: 'test'
+      ...
+    # Subtest: konto.anmeldungen.titel
+    ok 126 - konto.anmeldungen.titel
+      ---
+      duration_ms: 0.03672
+      type: 'test'
+      ...
+    # Subtest: konto.anmeldungen.text
+    ok 127 - konto.anmeldungen.text
+      ---
+      duration_ms: 0.041419
+      type: 'test'
+      ...
+    # Subtest: konto.anmeldungen.alle_abmelden
+    ok 128 - konto.anmeldungen.alle_abmelden
+      ---
+      duration_ms: 0.054321
+      type: 'test'
+      ...
+    # Subtest: konto.anmeldungen.dialog_text
+    ok 129 - konto.anmeldungen.dialog_text
+      ---
+      duration_ms: 0.03771
+      type: 'test'
+      ...
+    # Subtest: konto.anmeldungen.fehlgeschlagen
+    ok 130 - konto.anmeldungen.fehlgeschlagen
+      ---
+      duration_ms: 0.03052
+      type: 'test'
+      ...
+    # Subtest: konto.daten.titel
+    ok 131 - konto.daten.titel
+      ---
+      duration_ms: 0.048371
+      type: 'test'
+      ...
+    # Subtest: konto.daten.text
+    ok 132 - konto.daten.text
+      ---
+      duration_ms: 0.034739
+      type: 'test'
+      ...
+    # Subtest: konto.daten.wird_erstellt
+    ok 133 - konto.daten.wird_erstellt
+      ---
+      duration_ms: 0.032219
+      type: 'test'
+      ...
+    # Subtest: konto.daten.herunterladen
+    ok 134 - konto.daten.herunterladen
+      ---
+      duration_ms: 0.03893
+      type: 'test'
+      ...
+    # Subtest: konto.daten.fehlgeschlagen
+    ok 135 - konto.daten.fehlgeschlagen
+      ---
+      duration_ms: 0.033339
+      type: 'test'
+      ...
+    # Subtest: konto.loeschen.zone_titel
+    ok 136 - konto.loeschen.zone_titel
+      ---
+      duration_ms: 0.052501
+      type: 'test'
+      ...
+    # Subtest: konto.loeschen.zone_text
+    ok 137 - konto.loeschen.zone_text
+      ---
+      duration_ms: 2.059736
+      type: 'test'
+      ...
+    # Subtest: konto.loeschen.titel
+    ok 138 - konto.loeschen.titel
+      ---
+      duration_ms: 0.056921
+      type: 'test'
+      ...
+    # Subtest: konto.loeschen.frage_mit_passwort
+    ok 139 - konto.loeschen.frage_mit_passwort
+      ---
+      duration_ms: 0.040949
+      type: 'test'
+      ...
+    # Subtest: konto.loeschen.frage_ohne_passwort
+    ok 140 - konto.loeschen.frage_ohne_passwort
+      ---
+      duration_ms: 0.039411
+      type: 'test'
+      ...
+    # Subtest: konto.loeschen.passwort
+    ok 141 - konto.loeschen.passwort
+      ---
+      duration_ms: 0.07579
+      type: 'test'
+      ...
+    # Subtest: konto.loeschen.code_senden
+    ok 142 - konto.loeschen.code_senden
+      ---
+      duration_ms: 0.069481
+      type: 'test'
+      ...
+    # Subtest: konto.loeschen.code_verschickt
+    ok 143 - konto.loeschen.code_verschickt
+      ---
+      duration_ms: 0.04287
+      type: 'test'
+      ...
+    # Subtest: konto.loeschen.code
+    ok 144 - konto.loeschen.code
+      ---
+      duration_ms: 0.048911
+      type: 'test'
+      ...
+    # Subtest: konto.loeschen.code_versand_fehlgeschlagen
+    ok 145 - konto.loeschen.code_versand_fehlgeschlagen
+      ---
+      duration_ms: 0.03942
+      type: 'test'
+      ...
+    # Subtest: konto.fehler.reauth_required
+    ok 146 - konto.fehler.reauth_required
+      ---
+      duration_ms: 0.05597
+      type: 'test'
+      ...
+    # Subtest: konto.fehler.wrong_password
+    ok 147 - konto.fehler.wrong_password
+      ---
+      duration_ms: 0.042369
+      type: 'test'
+      ...
+    # Subtest: konto.fehler.loeschcode_ungueltig
+    ok 148 - konto.fehler.loeschcode_ungueltig
+      ---
+      duration_ms: 0.060491
+      type: 'test'
+      ...
+    # Subtest: konto.fehler.zu_viele_versuche
+    ok 149 - konto.fehler.zu_viele_versuche
+      ---
+      duration_ms: 0.05432
+      type: 'test'
+      ...
+    # Subtest: konto.fehler.mail_failed
+    ok 150 - konto.fehler.mail_failed
+      ---
+      duration_ms: 0.03619
+      type: 'test'
+      ...
+    # Subtest: konto.fehler.email_taken
+    ok 151 - konto.fehler.email_taken
+      ---
+      duration_ms: 0.035221
+      type: 'test'
+      ...
+    # Subtest: konto.fehler.invalid_sms_number
+    ok 152 - konto.fehler.invalid_sms_number
+      ---
+      duration_ms: 0.076201
+      type: 'test'
+      ...
+    # Subtest: konto.fehler.invalid_code
+    ok 153 - konto.fehler.invalid_code
+      ---
+      duration_ms: 0.048381
+      type: 'test'
+      ...
+    # Subtest: konto.fehler.code_expired
+    ok 154 - konto.fehler.code_expired
+      ---
+      duration_ms: 0.041711
+      type: 'test'
+      ...
+    # Subtest: konto.fehler.sms_not_allowed
+    ok 155 - konto.fehler.sms_not_allowed
+      ---
+      duration_ms: 0.03408
+      type: 'test'
+      ...
+    # Subtest: konto.fehler.no_number
+    ok 156 - konto.fehler.no_number
+      ---
+      duration_ms: 0.03586
+      type: 'test'
+      ...
+    # Subtest: konto.fehler.rate_limit_exceeded
+    ok 157 - konto.fehler.rate_limit_exceeded
+      ---
+      duration_ms: 0.03181
+      type: 'test'
+      ...
+    # Subtest: konto.fehler.speichern_fehlgeschlagen
+    ok 158 - konto.fehler.speichern_fehlgeschlagen
+      ---
+      duration_ms: 0.03084
+      type: 'test'
+      ...
+    # Subtest: admin.kopf.eyebrow
+    ok 159 - admin.kopf.eyebrow
+      ---
+      duration_ms: 0.03561
+      type: 'test'
+      ...
+    # Subtest: admin.kopf.sub
+    ok 160 - admin.kopf.sub
+      ---
+      duration_ms: 0.03886
+      type: 'test'
+      ...
+    # Subtest: admin.einladung.titel
+    ok 161 - admin.einladung.titel
+      ---
+      duration_ms: 0.035941
+      type: 'test'
+      ...
+    # Subtest: admin.einladung.notiz
+    ok 162 - admin.einladung.notiz
+      ---
+      duration_ms: 0.0454
+      type: 'test'
+      ...
+    # Subtest: admin.einladung.erstellen
+    ok 163 - admin.einladung.erstellen
+      ---
+      duration_ms: 0.0378
+      type: 'test'
+      ...
+    # Subtest: admin.einladung.kopiert
+    ok 164 - admin.einladung.kopiert
+      ---
+      duration_ms: 0.03654
+      type: 'test'
+      ...
+    # Subtest: admin.einladung.link_kopieren
+    ok 165 - admin.einladung.link_kopieren
+      ---
+      duration_ms: 0.0995
+      type: 'test'
+      ...
+    # Subtest: admin.einladung.nur_jetzt
+    ok 166 - admin.einladung.nur_jetzt
+      ---
+      duration_ms: 0.039199
+      type: 'test'
+      ...
+    # Subtest: admin.einladung.ohne_notiz
+    ok 167 - admin.einladung.ohne_notiz
+      ---
+      duration_ms: 0.03279
+      type: 'test'
+      ...
+    # Subtest: admin.einladung.erstellt
+    ok 168 - admin.einladung.erstellt
+      ---
+      duration_ms: 0.042531
+      type: 'test'
+      ...
+    # Subtest: admin.einladung.widerrufen
+    ok 169 - admin.einladung.widerrufen
+      ---
+      duration_ms: 0.03118
+      type: 'test'
+      ...
+    # Subtest: admin.einladung.status_offen
+    ok 170 - admin.einladung.status_offen
+      ---
+      duration_ms: 0.03328
+      type: 'test'
+      ...
+    # Subtest: admin.einladung.status_benutzt
+    ok 171 - admin.einladung.status_benutzt
+      ---
+      duration_ms: 0.05187
+      type: 'test'
+      ...
+    # Subtest: admin.einladung.status_widerrufen
+    ok 172 - admin.einladung.status_widerrufen
+      ---
+      duration_ms: 0.03744
+      type: 'test'
+      ...
+    # Subtest: admin.einladung.widerrufen_titel
+    ok 173 - admin.einladung.widerrufen_titel
+      ---
+      duration_ms: 0.03102
+      type: 'test'
+      ...
+    # Subtest: admin.einladung.widerrufen_text
+    ok 174 - admin.einladung.widerrufen_text
+      ---
+      duration_ms: 0.03076
+      type: 'test'
+      ...
+    # Subtest: admin.nutzer.testnutzer
+    ok 175 - admin.nutzer.testnutzer
+      ---
+      duration_ms: 0.03202
+      type: 'test'
+      ...
+    # Subtest: admin.nutzer.gesperrt
+    ok 176 - admin.nutzer.gesperrt
+      ---
+      duration_ms: 0.03144
+      type: 'test'
+      ...
+    # Subtest: admin.nutzer.tier
+    ok 177 - admin.nutzer.tier
+      ---
+      duration_ms: 0.031339
+      type: 'test'
+      ...
+    # Subtest: admin.nutzer.offener_antrag
+    ok 178 - admin.nutzer.offener_antrag
+      ---
+      duration_ms: 0.043991
+      type: 'test'
+      ...
+    # Subtest: admin.nutzer.seit
+    ok 179 - admin.nutzer.seit
+      ---
+      duration_ms: 0.03898
+      type: 'test'
+      ...
+    # Subtest: admin.nutzer.letzter_report
+    ok 180 - admin.nutzer.letzter_report
+      ---
+      duration_ms: 0.047459
+      type: 'test'
+      ...
+    # Subtest: admin.nutzer.kein_lauf
+    ok 181 - admin.nutzer.kein_lauf
+      ---
+      duration_ms: 0.03446
+      type: 'test'
+      ...
+    # Subtest: admin.nutzer.verbrauch
+    ok 182 - admin.nutzer.verbrauch
+      ---
+      duration_ms: 0.052959
+      type: 'test'
+      ...
+    # Subtest: admin.nutzer.tier_von
+    ok 183 - admin.nutzer.tier_von
+      ---
+      duration_ms: 0.1181
+      type: 'test'
+      ...
+    # Subtest: admin.nutzer.entsperren
+    ok 184 - admin.nutzer.entsperren
+      ---
+      duration_ms: 0.052411
+      type: 'test'
+      ...
+    # Subtest: admin.nutzer.sperren
+    ok 185 - admin.nutzer.sperren
+      ---
+      duration_ms: 0.043871
+      type: 'test'
+      ...
+    # Subtest: admin.nutzer.sperren_titel
+    ok 186 - admin.nutzer.sperren_titel
+      ---
+      duration_ms: 0.03613
+      type: 'test'
+      ...
+    # Subtest: admin.nutzer.sperren_text
+    ok 187 - admin.nutzer.sperren_text
+      ---
+      duration_ms: 0.051561
+      type: 'test'
+      ...
+    # Subtest: admin.fehler.keine_berechtigung
+    ok 188 - admin.fehler.keine_berechtigung
+      ---
+      duration_ms: 6.343621
+      type: 'test'
+      ...
+    # Subtest: admin.fehler.nutzer_nicht_gefunden
+    ok 189 - admin.fehler.nutzer_nicht_gefunden
+      ---
+      duration_ms: 0.05675
+      type: 'test'
+      ...
+    # Subtest: admin.fehler.selbst_sperren
+    ok 190 - admin.fehler.selbst_sperren
+      ---
+      duration_ms: 0.042551
+      type: 'test'
+      ...
+    # Subtest: admin.fehler.ungueltig
+    ok 191 - admin.fehler.ungueltig
+      ---
+      duration_ms: 0.049061
+      type: 'test'
+      ...
+    # Subtest: admin.fehler.fehlgeschlagen
+    ok 192 - admin.fehler.fehlgeschlagen
+      ---
+      duration_ms: 0.04722
+      type: 'test'
+      ...
+    # Subtest: admin.fehler.einladung_nicht_gefunden
+    ok 193 - admin.fehler.einladung_nicht_gefunden
+      ---
+      duration_ms: 0.03759
+      type: 'test'
+      ...
+    # Subtest: admin.fehler.einladung_benutzt
+    ok 194 - admin.fehler.einladung_benutzt
+      ---
+      duration_ms: 0.03309
+      type: 'test'
+      ...
+    # Subtest: admin.fehler.einladung_ungueltig
+    ok 195 - admin.fehler.einladung_ungueltig
+      ---
+      duration_ms: 0.03761
+      type: 'test'
+      ...
+    # Subtest: nav.hilfe
+    ok 196 - nav.hilfe
+      ---
+      duration_ms: 0.041371
+      type: 'test'
+      ...
+    # Subtest: nav.hauptmenue.startseite
+    ok 197 - nav.hauptmenue.startseite
+      ---
+      duration_ms: 0.034659
+      type: 'test'
+      ...
+    # Subtest: nav.hauptmenue.meine_trips
+    ok 198 - nav.hauptmenue.meine_trips
+      ---
+      duration_ms: 0.029591
+      type: 'test'
+      ...
+    # Subtest: nav.hauptmenue.vergleich
+    ok 199 - nav.hauptmenue.vergleich
+      ---
+      duration_ms: 0.036271
+      type: 'test'
+      ...
+    # Subtest: nav.hauptmenue.archiv
+    ok 200 - nav.hauptmenue.archiv
+      ---
+      duration_ms: 0.032939
+      type: 'test'
+      ...
+    # Subtest: nav.admin
+    ok 201 - nav.admin
+      ---
+      duration_ms: 0.028371
+      type: 'test'
+      ...
+    # Subtest: nav.konto
+    ok 202 - nav.konto
+      ---
+      duration_ms: 0.03697
+      type: 'test'
+      ...
+    # Subtest: nav.system_status
+    ok 203 - nav.system_status
+      ---
+      duration_ms: 0.032179
+      type: 'test'
+      ...
+    # Subtest: nav.hell
+    ok 204 - nav.hell
+      ---
+      duration_ms: 0.0289
+      type: 'test'
+      ...
+    # Subtest: nav.dunkel
+    ok 205 - nav.dunkel
+      ---
+      duration_ms: 0.03095
+      type: 'test'
+      ...
+    # Subtest: nav.abmelden
+    ok 206 - nav.abmelden
+      ---
+      duration_ms: 0.03717
+      type: 'test'
+      ...
+    # Subtest: nav.unten.uebersicht
+    ok 207 - nav.unten.uebersicht
+      ---
+      duration_ms: 0.02759
+      type: 'test'
+      ...
+    # Subtest: nav.unten.vergleich
+    ok 208 - nav.unten.vergleich
+      ---
+      duration_ms: 0.033661
+      type: 'test'
+      ...
+    # Subtest: nav.konto_sheet.kanaele_empfaenger
+    ok 209 - nav.konto_sheet.kanaele_empfaenger
+      ---
+      duration_ms: 0.030139
+      type: 'test'
+      ...
+    # Subtest: nav.konto_sheet.einstellungen
+    ok 210 - nav.konto_sheet.einstellungen
+      ---
+      duration_ms: 0.030191
+      type: 'test'
+      ...
+    # Subtest: nav.konto_sheet.dunkles_design
+    ok 211 - nav.konto_sheet.dunkles_design
+      ---
+      duration_ms: 0.02878
+      type: 'test'
+      ...
+    # Subtest: nav.konto_sheet.datenexport
+    ok 212 - nav.konto_sheet.datenexport
+      ---
+      duration_ms: 0.382541
+      type: 'test'
+      ...
+    # Subtest: nav.konto_sheet.schliessen
+    ok 213 - nav.konto_sheet.schliessen
+      ---
+      duration_ms: 0.038598
+      type: 'test'
+      ...
+    # Subtest: nav.konto_sheet.version
+    ok 214 - nav.konto_sheet.version
+      ---
+      duration_ms: 0.02845
+      type: 'test'
+      ...
+    # Subtest: nav.gespeichert
+    ok 215 - nav.gespeichert
+      ---
+      duration_ms: 0.02675
+      type: 'test'
+      ...
+    # Subtest: nav.nicht_gespeichert
+    ok 216 - nav.nicht_gespeichert
+      ---
+      duration_ms: 0.03306
+      type: 'test'
+      ...
+    # Subtest: nav.speichere
+    ok 217 - nav.speichere
+      ---
+      duration_ms: 3.1134
+      type: 'test'
+      ...
+    # Subtest: nav.nochmal_speichern
+    ok 218 - nav.nochmal_speichern
+      ---
+      duration_ms: 0.05123
+      type: 'test'
+      ...
+    # Subtest: nav.konflikt
+    ok 219 - nav.konflikt
+      ---
+      duration_ms: 0.0364
+      type: 'test'
+      ...
+    # Subtest: nav.speicherfehler
+    ok 220 - nav.speicherfehler
+      ---
+      duration_ms: 0.032299
+      type: 'test'
+      ...
+    # Subtest: nav.speicherfehler_mit
+    ok 221 - nav.speicherfehler_mit
+      ---
+      duration_ms: 0.04283
+      type: 'test'
+      ...
+    # Subtest: statischer Gegencheck: Anker-Tabelle == Schluessel von konto/admin/nav (de und en)
+    ok 222 - statischer Gegencheck: Anker-Tabelle == Schluessel von konto/admin/nav (de und en)
+      ---
+      duration_ms: 11.390509
+      type: 'test'
+      ...
+    # Subtest: F002: Plural exakt — „vor 1 Std" | „1 h ago", „vor 1 Tag" | „1 day ago"
+    ok 223 - F002: Plural exakt — „vor 1 Std" | „1 h ago", „vor 1 Tag" | „1 day ago"
+      ---
+      duration_ms: 0.119501
+      type: 'test'
+      ...
+    1..223
+ok 24 - F001: jeder F4-Katalogwert ist als festes de/en-Literal verankert
+  ---
+  duration_ms: 79.525388
+  type: 'suite'
+  ...
+1..24
+# tests 318
+# suites 17
+# pass 318
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 12247.660707

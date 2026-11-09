@@ -31,7 +31,7 @@
 	const mode = $derived(icon === 'only' || icon === 'none' ? icon : 'left');
 
 	const inkPrimary = $derived(dark ? 'var(--g-paper)' : 'var(--g-ink)');
-	const inkDot = $derived(dark ? 'rgba(246,244,238,0.45)' : 'var(--g-ink-4)'); // audit:exempt — Wordmark/Logo-Glyph, kein Lesetext (WCAG §1.4.3)
+	const inkDot = $derived(dark ? 'rgba(246,244,238,0.55)' : 'var(--g-ink-3)');
 	const inkCaption = $derived(dark ? 'rgba(246,244,238,0.55)' : 'var(--g-ink-muted)');
 
 	const hasCaption = $derived(caption != null && caption !== '');
@@ -54,7 +54,7 @@
 				class="typo-row"
 				style="font-family:var(--g-font-mono);font-size:{s.row}px;font-weight:500;letter-spacing:0.04em;color:{inkPrimary};display:flex;align-items:baseline;line-height:1"
 			>
-				<span>{$t('bausteine.marke.gregor')}</span><span style:color={inkDot}>.</span><!-- audit:exempt: Markenname/Logo --><span style:color="var(--g-accent)">{$t('bausteine.marke.zwanzig')}</span>
+				<span>{$t('bausteine.marke.gregor')}</span><span style:color={inkDot}>.</span><span style:color="var(--g-accent)">{$t('bausteine.marke.zwanzig')}</span>
 			</span>
 			{#if hasCaption}
 				<span
@@ -73,7 +73,7 @@
 				class="typo-row"
 				style="font-family:var(--g-font-mono);font-size:{s.row}px;font-weight:500;letter-spacing:0.04em;color:{inkPrimary};display:flex;align-items:baseline;line-height:1"
 			>
-				<span>{$t('bausteine.marke.gregor')}</span><span style:color={inkDot}>.</span><!-- audit:exempt: Markenname/Logo --><span style:color="var(--g-accent)">{$t('bausteine.marke.zwanzig')}</span>
+				<span>{$t('bausteine.marke.gregor')}</span><span style:color={inkDot}>.</span><span style:color="var(--g-accent)">{$t('bausteine.marke.zwanzig')}</span>
 			</span>
 		</span>
 		{#if hasCaption}
