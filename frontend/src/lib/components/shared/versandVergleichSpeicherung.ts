@@ -29,10 +29,11 @@ import {
  * `alertCooldownMinutes`/`alertQuietFrom`/`alertQuietTo` sind die drei toten
  * Legacy-Restfelder: kein Kontrollelement des Versand-Reiters mutiert sie
  * (die Alert-Zustellungs-Sektion zog in #1258 S4 nach AlarmeTab.svelte ab).
- * Sie bleiben BEWUSST Teil von Snapshot und Nutzlast (Spec, Implementation
- * Details Punkt 6) — der Go-Handler dekodiert ein PUT ins volle Modell, ein
- * Weglassen würde sie bei einem Bestands-Preset nullen. Entfernung gehört an
- * S6/#2285, sobald ein Patch-DTO existiert. */
+ * Seit #2375 (Teilfeld-Nutzlast) sendet der Versand sie nicht mehr; seit #2794
+ * (Reiter `zustellung`: Versand + Alarme gleichzeitig gemountet) liest auch
+ * `versandSnapshotAus` sie nicht mehr — sonst feuerte der Versand-Speicherer
+ * bei jeder Cooldown-Geste mit. Die Felder bleiben optional im Typ, weil
+ * Hydration und Wertprops sie weiter führen. */
 export interface VersandSnapshot {
 	sendTelegram: boolean;
 	sendSms: boolean;
@@ -113,10 +114,11 @@ export function versandSnapshotAus(wiz: VersandHydrationTarget): VersandSnapshot
 			morningTime: wiz.morningTime,
 			eveningEnabled: wiz.eveningEnabled,
 			eveningTime: wiz.eveningTime,
-			endDate: wiz.endDate,
-			alertCooldownMinutes: wiz.alertCooldownMinutes,
-			alertQuietFrom: wiz.alertQuietFrom,
-			alertQuietTo: wiz.alertQuietTo
+			endDate: wiz.endDate
+			// Issue #2794 (S3a, Fix-Loop): KEINE alert*-Felder — Besitzer ist der
+			// Alarme-Teil, der im Reiter `zustellung` gleichzeitig gemountet ist.
+			// Läse der Versand-Diff sie mit, löste eine Cooldown-Geste zusätzlich
+			// den Versand-Speicherer aus (zwei PUTs, Owner-Verdrängung).
 		})
 	) as VersandSnapshot;
 }
@@ -202,8 +204,9 @@ export function flushPendingVersandSave(
  * Diff-basierter Rollback (Issue #2276 S5, AC-3): ein Feld wird nur
  * zurückgesetzt, wenn `state` noch exakt den Wert trägt, den DIESER
  * gescheiterte Vorgang gesendet hat — eine zwischenzeitliche Änderung des
- * Alarme-Reiters an einem geteilten Feld (`sendTelegram`/`sendSms`) oder an
- * den drei Legacy-Restfeldern überlebt. Ersetzt den bisherigen unbedingten
+ * Alarme-Reiters an einem geteilten Feld (`sendTelegram`/`sendSms`) überlebt.
+ * Die drei alert*-Legacy-Restfelder rollt der Versand nie zurück (Besitzer
+ * Alarme, #2794 — der Versand-Snapshot führt sie nicht). Ersetzt den unbedingten
  * Full-Overwrite-Rollback aus `handleVersandCommit` (Datenverlust-Klasse
  * BUG-DATALOSS-GR221).
  */
@@ -220,10 +223,7 @@ export function rollbackVersandSnapshot(
 		'morningTime',
 		'eveningEnabled',
 		'eveningTime',
-		'endDate',
-		'alertCooldownMinutes',
-		'alertQuietFrom',
-		'alertQuietTo'
+		'endDate'
 	];
 	const target = state as Record<string, unknown>;
 	for (const field of fields) {

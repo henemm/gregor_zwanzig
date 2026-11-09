@@ -60,20 +60,19 @@ type Rumpf = Record<string, unknown>;
  * Schritt-Titel des mobilen Seitenkopfs je kind (fest, aus der Spec-Reiterfolge):
  * Trip „Route · Etappen & GPX · …", Vergleich „Vergleich · Orte · …".
  */
+// #2794 S3a (Spec feat_2794_s3a_teil2_leiste.md AC-6): Schritte Wetter und Zustellung.
 const SCHRITT_TITEL: Record<HubKind, Record<string, string>> = {
 	route: {
 		route: 'Route',
 		etappen: 'Etappen & GPX',
-		'wetter-metriken': 'Wetter-Metriken',
-		wertebereiche: 'Wertebereiche',
-		alarme: 'Alarme'
+		wetter: 'Wetter',
+		zustellung: 'Zustellung'
 	},
 	vergleich: {
 		vergleich: 'Vergleich',
 		orte: 'Orte',
-		'wetter-metriken': 'Wetter-Metriken',
-		wertebereiche: 'Wertebereiche',
-		alarme: 'Alarme'
+		wetter: 'Wetter',
+		zustellung: 'Zustellung'
 	}
 };
 
@@ -156,9 +155,9 @@ const CTA_KETTE: Record<HubKind, { ohneName: string; ersterWeiter: string; punkt
 		punkteWeiter: 'Wetter-Metriken →'
 	}
 };
+// #2794 S3a: ab Wetter genau ein gemeinsamer Weiter-Schritt nach Zustellung.
 const WEITER_GEMEINSAM: ReadonlyArray<[von: string, cta: string, nach: string]> = [
-	['wetter-metriken', 'Wertebereiche festlegen →', 'wertebereiche'],
-	['wertebereiche', 'Alarme einrichten →', 'alarme']
+	['wetter', 'Zustellung einrichten →', 'zustellung']
 ];
 
 test.afterEach(async ({ page }) => {
@@ -192,9 +191,9 @@ async function schrittOeffnen(page: Page, kind: HubKind, id: string, mobil = fal
 	await erwarteZustand(page, kind, id, { aktiv: true }, `Schritt „${id}" wird nicht aktiv`, mobil);
 }
 
-/** Besucht die drei Schwanz-Schritte bis Alarme (Abschluss-Gate `canFinish`). */
+/** Besucht die Schwanz-Schritte bis Zustellung (Abschluss-Gate `canFinish`, #2794 S3a). */
 async function bisAlarme(page: Page, kind: HubKind, mobil = false): Promise<void> {
-	for (const id of ['wetter-metriken', 'wertebereiche', 'alarme']) await schrittOeffnen(page, kind, id, mobil);
+	for (const id of ['wetter', 'zustellung']) await schrittOeffnen(page, kind, id, mobil);
 }
 
 /** Zählt die Anlege-POSTs der Art und sammelt die Kennungen der Antworten. */
@@ -325,7 +324,7 @@ test.describe('Anlege-Ablauf (Desktop 1280)', () => {
 			await erwarteZustand(page, kind, sel.ersterSchritt, { aktiv: false }, 'AN-4: 1. Schritt bleibt aktiv');
 		});
 
-		test(`AN-5 (${kind}): Abschluss gesperrt mit Hinweis, bis alle Pflichtschritte bis Alarme besucht sind`, async ({
+		test(`AN-5 (${kind}): Abschluss gesperrt mit Hinweis, bis alle Pflichtschritte bis Zustellung besucht sind`, async ({
 			page
 		}) => {
 			await anlegenPflicht(page, kind, { name: einName('AN5') });
@@ -337,10 +336,9 @@ test.describe('Anlege-Ablauf (Desktop 1280)', () => {
 				'AN-5: Hinweistext am gesperrten Abschluss fehlt'
 			).toBeVisible();
 
-			await schrittOeffnen(page, kind, 'wetter-metriken');
-			await schrittOeffnen(page, kind, 'wertebereiche');
-			await expect(abschluss, 'AN-5: Abschluss vor dem Alarme-Schritt frei').toBeDisabled();
-			await schrittOeffnen(page, kind, 'alarme');
+			await schrittOeffnen(page, kind, 'wetter');
+			await expect(abschluss, 'AN-5: Abschluss vor dem Zustellungs-Schritt frei').toBeDisabled();
+			await schrittOeffnen(page, kind, 'zustellung');
 			await expect(abschluss, 'AN-5: Abschluss nach Besuch aller Pflichtschritte noch gesperrt').toBeEnabled({
 				timeout: 10_000
 			});
@@ -357,12 +355,17 @@ test.describe('Anlege-Ablauf (Desktop 1280)', () => {
 			try {
 				await anlegenPflicht(page, kind, { name });
 
-				await schrittOeffnen(page, kind, 'wetter-metriken');
+				// #2794 S3a: Schritt Wetter = Metrik-Auswahl + Wertebereiche; Schritt Zustellung =
+				// Zustellungs-Blöcke (u. a. Stundenverlauf) + Versand + Alarme.
+				await schrittOeffnen(page, kind, 'wetter');
 				const metrik = AN_SEL[kind].metrik(page);
-				await expect(metrik, 'AN-6: Metrik-Umschalter im Schritt Wetter-Metriken fehlt').toBeVisible({ timeout: 15_000 });
+				await expect(metrik, 'AN-6: Metrik-Umschalter im Schritt Wetter fehlt').toBeVisible({ timeout: 15_000 });
 				const warAn = await AN_SEL[kind].metrikAn(metrik);
 				await metrik.click();
 				await expect.poll(() => AN_SEL[kind].metrikAn(metrik), { message: 'AN-6: Metrik schaltet nicht um' }).toBe(!warAn);
+				await expect(sel.inhalt.wertebereiche(page), 'AN-6: Wertebereiche-Inhalt fehlt').toBeVisible({ timeout: 15_000 });
+
+				await schrittOeffnen(page, kind, 'zustellung');
 				// Compare-eigen (Kind-Kontraste AN-12/AN-6): Stundenverlauf steht nur im
 				// Vergleich (COMPARE_ONLY_SECTIONS, #2346 S3) — der Trip hat keinen Zweig.
 				if (kind === 'vergleich') {
@@ -370,13 +373,8 @@ test.describe('Anlege-Ablauf (Desktop 1280)', () => {
 					await expect(stunde).toBeVisible({ timeout: 10_000 });
 					await stunde.click();
 				}
-
-				await schrittOeffnen(page, kind, 'wertebereiche');
-				await expect(sel.inhalt.wertebereiche(page), 'AN-6: Wertebereiche-Inhalt fehlt').toBeVisible({ timeout: 15_000 });
-
-				await schrittOeffnen(page, kind, 'alarme');
 				const hoch = page.locator('[data-testid="alert-channel-threshold-telegram-HIGH"]:visible').first();
-				await expect(hoch, 'AN-6: Kanal-Stufe im Alarme-Schritt fehlt').toBeVisible({ timeout: 15_000 });
+				await expect(hoch, 'AN-6: Kanal-Stufe im Zustellungs-Schritt fehlt').toBeVisible({ timeout: 15_000 });
 				await hoch.click();
 				await expect(hoch).toHaveAttribute('aria-pressed', 'true');
 
@@ -441,10 +439,10 @@ test.describe('Anlege-Ablauf (Desktop 1280)', () => {
 					).toBeUndefined();
 				}
 
-				await openHub(page, kind, id, { tab: 'alarme' });
+				await openHub(page, kind, id, { tab: 'zustellung' });
 				await expect(
 					page.locator('[data-testid="alert-channel-threshold-telegram-HIGH"]:visible').first(),
-					'AN-6: Reiter Alarme zeigt die gewählte Stufe nicht'
+					'AN-6: Reiter Zustellung zeigt die gewählte Stufe nicht'
 				).toHaveAttribute('aria-pressed', 'true', { timeout: 15_000 });
 			} finally {
 				await aufraeumen(page.request, kind, name, post.ids);
@@ -533,34 +531,26 @@ test.describe('Anlege-Ablauf (Desktop 1280)', () => {
 		// ist GAR KEIN Weiter-Fuß der Art sichtbar) und der Abschluss ist frei. Zusätzlich:
 		// der Weg über die Weiter-Füße legt nichts an. Trip-Kennungen sind mit Teil E
 		// nachgetragen (TripNewEditor.svelte, dem Vergleich angeglichen).
-		test(`AN-15 (${kind}): Desktop-Weiter-Füße — Wetter-Metriken ⇒ Wertebereiche ⇒ Alarme, danach kein Weiter mehr, Abschluss frei`, async ({
+		// #2794 S3a (Spec feat_2794_s3a_teil2_leiste.md AC-6): Wetter ⇒ Zustellung, danach kein Weiter.
+		test(`AN-15 (${kind}): Desktop-Weiter-Füße — Wetter ⇒ Zustellung, danach kein Weiter mehr, Abschluss frei`, async ({
 			page
 		}) => {
 			const name = einName('AN15');
 			const post = postMitschnitt(page, kind);
 			try {
 				await anlegenPflicht(page, kind, { name });
-				await schrittOeffnen(page, kind, 'wetter-metriken');
-				const zuWertebereichen = sel.weiterNach.wertebereiche(page);
-				await expect(zuWertebereichen, 'AN-15: Weiter-Fuß „Wertebereiche festlegen →" fehlt').toBeVisible({ timeout: 15_000 });
-				await expect(zuWertebereichen).toHaveText(/Wertebereiche festlegen →/);
+				await schrittOeffnen(page, kind, 'wetter');
+				const zuZustellung = sel.weiterNach.zustellung(page);
+				await expect(zuZustellung, 'AN-15: Weiter-Fuß „Zustellung einrichten →" fehlt').toBeVisible({ timeout: 15_000 });
+				await expect(zuZustellung).toHaveText(/Zustellung einrichten →/);
 				// #2837 S2 (AC-11): Weiter ist bei beiden Arten `Btn accent`.
-				await expect(zuWertebereichen, 'AN-15: Weiter ist kein Btn accent').toHaveAttribute('data-variant', 'accent');
-				await expect(sel.weiterNach.alarme(page), 'AN-15: Alarme-Fuß schon im Schritt Wetter-Metriken').toBeHidden();
-				await zuWertebereichen.click();
-				await erwarteZustand(page, kind, 'wertebereiche', { aktiv: true }, 'AN-15: Weiter-Fuß führt nicht nach Wertebereiche');
-
-				const zuAlarmen = sel.weiterNach.alarme(page);
-				await expect(zuAlarmen, 'AN-15: Weiter-Fuß „Alarme einrichten →" fehlt').toBeVisible({ timeout: 15_000 });
-				await expect(zuAlarmen).toHaveText(/Alarme einrichten →/);
-				await expect(zuAlarmen, 'AN-15: Weiter ist kein Btn accent').toHaveAttribute('data-variant', 'accent');
-				await expect(sel.weiterNach.wertebereiche(page), 'AN-15: Wertebereiche-Fuß bleibt im Schritt Wertebereiche stehen').toBeHidden();
-				await zuAlarmen.click();
-				await erwarteZustand(page, kind, 'alarme', { aktiv: true }, 'AN-15: Weiter-Fuß führt nicht nach Alarme');
+				await expect(zuZustellung, 'AN-15: Weiter ist kein Btn accent').toHaveAttribute('data-variant', 'accent');
+				await zuZustellung.click();
+				await erwarteZustand(page, kind, 'zustellung', { aktiv: true }, 'AN-15: Weiter-Fuß führt nicht nach Zustellung');
 
 				await expect(
 					page.locator(`[data-testid^="${sel.weiterPraefix}"]:visible`),
-					'AN-15: im letzten Schritt Alarme steht noch ein Weiter-Fuß'
+					'AN-15: im letzten Schritt Zustellung steht noch ein Weiter-Fuß'
 				).toHaveCount(0);
 				await expect(sel.abschluss(page), 'AN-15: Abschluss nach dem Weg über die Weiter-Füße gesperrt').toBeEnabled({
 					timeout: 10_000
@@ -601,7 +591,7 @@ test.describe('Anlege-Ablauf (mobil 390)', () => {
 
 				await anlegenPflicht(page, kind, { name, mobil: true });
 				const ctaTexte: string[] = [];
-				for (const id of [sel.punkteSchritt, 'wetter-metriken', 'wertebereiche']) {
+				for (const id of [sel.punkteSchritt, 'wetter']) {
 					if (id !== sel.punkteSchritt) await schrittOeffnen(page, kind, id, true);
 					await expect(kopf(page)).toHaveCount(1);
 					await expect(kopf(page).locator('h1'), `AN-9: Titel im Schritt „${id}"`).toHaveText(SCHRITT_TITEL[kind][id]);
@@ -612,9 +602,9 @@ test.describe('Anlege-Ablauf (mobil 390)', () => {
 					ctaTexte.length
 				);
 
-				await schrittOeffnen(page, kind, 'alarme', true);
-				await expect(kopf(page).locator('h1')).toHaveText(SCHRITT_TITEL[kind].alarme);
-				await expect(sel.alleReiterMobil(page).last(), 'AN-9: Alarme ist nicht der letzte Schritt').toContainText('Alarme');
+				await schrittOeffnen(page, kind, 'zustellung', true);
+				await expect(kopf(page).locator('h1')).toHaveText(SCHRITT_TITEL[kind].zustellung);
+				await expect(sel.alleReiterMobil(page).last(), 'AN-9: Zustellung ist nicht der letzte Schritt').toContainText('Zustellung');
 				const abschluss = sel.abschluss(page, true);
 				await expect(abschluss, 'AN-9: Abschluss fehlt im letzten Schritt').toBeVisible();
 				await expect(
@@ -705,7 +695,7 @@ test.describe('Anlege-Ablauf (mobil 390)', () => {
 				});
 				await expect(cta(k.punkteWeiter)).toBeEnabled();
 				await cta(k.punkteWeiter).click();
-				await erwarteZustand(page, kind, 'wetter-metriken', { aktiv: true }, 'AN-14: Weiter aus dem Punkte-Schritt führt nicht in Wetter-Metriken', true);
+				await erwarteZustand(page, kind, 'wetter', { aktiv: true }, 'AN-14: Weiter aus dem Punkte-Schritt führt nicht in Wetter', true);
 
 				for (const [von, text, nach] of WEITER_GEMEINSAM) {
 					await expect(cta(text), `AN-14: CTA „${text}" fehlt im Schritt „${von}"`).toBeEnabled({ timeout: 10_000 });
@@ -729,7 +719,13 @@ test.describe('Anlege-Ablauf (mobil 390)', () => {
 // ─── AN-11 (Desktop) ──────────────────────────────────────────────────────────
 for (const kind of HUB_KINDS) {
 	const sel = ANLEGE_SEL[kind];
-	test(`AN-11 (${kind}): alle fünf Schritte mit echten Etappen bzw. Orten ⇒ kein pageerror, Inhalt sichtbar`, async ({
+	// #2794 S3a: vier Schritte; Inhalt je Schritt: Wetter = Metrik-Oberfläche + Wertebereiche,
+	// Zustellung = Alarme.
+	const INHALT_JE_SCHRITT: Record<string, ReadonlyArray<'wetter-metriken' | 'wertebereiche' | 'alarme'>> = {
+		wetter: ['wetter-metriken', 'wertebereiche'],
+		zustellung: ['alarme']
+	};
+	test(`AN-11 (${kind}): alle vier Schritte mit echten Etappen bzw. Orten ⇒ kein pageerror, Inhalt sichtbar`, async ({
 		page
 	}) => {
 		const fehler: string[] = [];
@@ -738,8 +734,8 @@ for (const kind of HUB_KINDS) {
 		await anlegenPflicht(page, kind, { name: einName('AN11') });
 		for (const id of sel.schritte) {
 			await schrittOeffnen(page, kind, id);
-			if (id === 'wetter-metriken' || id === 'wertebereiche' || id === 'alarme') {
-				await expect(sel.inhalt[id](page), `AN-11: Inhalt des Schritts „${id}" fehlt`).toBeVisible({ timeout: 15_000 });
+			for (const inhalt of INHALT_JE_SCHRITT[id] ?? []) {
+				await expect(sel.inhalt[inhalt](page), `AN-11: Inhalt „${inhalt}" des Schritts „${id}" fehlt`).toBeVisible({ timeout: 15_000 });
 			}
 		}
 		expect(fehler, 'AN-11: pageerror beim Durchklicken').toEqual([]);
@@ -757,7 +753,11 @@ test('AN-12 (vergleich): Stundenverlauf-Schalter da, keine Layout-Attrappe, Temp
 	const kind: HubKind = 'vergleich';
 	await page.setViewportSize(DESKTOP);
 	await anlegenPflicht(page, kind, { name: einName('AN12') });
-	await schrittOeffnen(page, kind, 'wetter-metriken');
+	// #2794 S3a: der Stundenverlauf steht im Schritt Zustellung; Temperatur Max/Min (Metrik-Auswahl)
+	// im Schritt Wetter — beide Blöcke werden unten je im eigenen Schritt geprüft.
+	// Die Kette ist gesperrt: Zustellung öffnet erst nach dem Besuch von Wetter.
+	await schrittOeffnen(page, kind, 'wetter');
+	await schrittOeffnen(page, kind, 'zustellung');
 
 	await expect(page.locator('[data-testid="compare-layout-hourly-enabled-toggle"]:visible').first()).toBeVisible({
 		timeout: 15_000
@@ -793,8 +793,11 @@ test('AN-12 (vergleich): Stundenverlauf-Schalter da, keine Layout-Attrappe, Temp
 	await expect(page.locator('[data-testid="compare-editor-tab-versand"]'), 'AN-12: eigener Anlege-Schritt „Versand"').toHaveCount(0);
 	await expect(page.locator('[data-testid="compare-step4-layout-preview"]')).toHaveCount(0);
 
-	const maxBox = page.locator('.cm-desktop [data-testid="weather-metrics-vergleich-option-temperature-max"] input').first();
-	const minBox = page.locator('.cm-desktop [data-testid="weather-metrics-vergleich-option-temperature-min"] input').first();
+	// #2794 S3a: die Metrik-Auswahl (Max/Min anhaken) steht im Schritt Wetter, die
+	// Reihenfolge-Zeilen (Abschnitt layout_kanal) im Schritt Zustellung.
+	await schrittOeffnen(page, kind, 'wetter');
+	const maxBox = page.locator('.cm-desktop [data-testid="weather-metrics-vergleich-option-temperature-max"] input:visible').first();
+	const minBox = page.locator('.cm-desktop [data-testid="weather-metrics-vergleich-option-temperature-min"] input:visible').first();
 	await expect(maxBox).toBeVisible({ timeout: 10_000 });
 	await expect(minBox).toBeVisible();
 	if (!(await maxBox.isChecked())) await maxBox.click();
@@ -802,7 +805,8 @@ test('AN-12 (vergleich): Stundenverlauf-Schalter da, keine Layout-Attrappe, Temp
 	await expect(maxBox).toBeChecked();
 	await expect(minBox).toBeChecked();
 
-	const reihenfolge = page.locator('.cm-desktop [data-testid="weather-metrics-vergleich-reihenfolge"]').first();
+	await schrittOeffnen(page, kind, 'zustellung');
+	const reihenfolge = page.locator('.cm-desktop [data-testid="weather-metrics-vergleich-reihenfolge"]:visible').first();
 	const maxZeile = reihenfolge.locator('[data-testid="wm2-reihenfolge-row"][data-metric-id="temp_max_c"]');
 	const minZeile = reihenfolge.locator('[data-testid="wm2-reihenfolge-row"][data-metric-id="temp_min_c"]');
 	await expect(maxZeile).toHaveCount(1);
@@ -811,8 +815,10 @@ test('AN-12 (vergleich): Stundenverlauf-Schalter da, keine Layout-Attrappe, Temp
 	await expect(minZeile).toContainText('Minimum');
 
 	// unabhängig: Höchstwert abwählen lässt den Tiefstwert stehen.
+	await schrittOeffnen(page, kind, 'wetter');
 	await maxBox.click();
 	await expect(maxBox).not.toBeChecked();
 	await expect(minBox, 'AN-12: Tiefstwert hängt am Höchstwert').toBeChecked();
+	await schrittOeffnen(page, kind, 'zustellung');
 	await expect(minZeile).toHaveCount(1);
 });

@@ -44,11 +44,9 @@ export interface TripNewStateOverride {
 	name?: string;
 	startDate?: string;
 	stageNames?: string[];
-	/** #2277 S4: Besuchs-Flags (Wetter-Metriken/Wertebereiche/Alarme/Versand). */
+	/** #2794 S3a: Besuchs-Flags (Wetter/Zustellung). */
 	wtVisited?: boolean;
-	wbVisited?: boolean;
-	alVisited?: boolean;
-	vsVisited?: boolean;
+	zuVisited?: boolean;
 }
 
 const { render } = await import('svelte/server');

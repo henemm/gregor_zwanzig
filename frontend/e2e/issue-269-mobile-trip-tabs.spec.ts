@@ -44,7 +44,8 @@ test.describe('Issue #269: Mobile Trip-Detail-Tabs Pill-Scroller', () => {
 		const list = page.getByTestId('trip-detail-tab-list');
 		await expect(list).toBeVisible();
 
-		const band = list.locator('[data-slot="segmented"]').first();
+		// #2794 S3a: die Leiste traegt kein data-slot="segmented" mehr; Wirkort ist das Tablist-Band.
+		const band = list.locator('[role="tablist"]').first();
 		await expect(band).toBeVisible();
 
 		const overflowX = await band.evaluate((el) => getComputedStyle(el).overflowX);
@@ -61,8 +62,8 @@ test.describe('Issue #269: Mobile Trip-Detail-Tabs Pill-Scroller', () => {
 		await page.setViewportSize(MOBILE_VIEWPORT);
 		await page.goto(`/trips/${TRIP_ID}`);
 
-		// Issue #1743: 5 Reiter, versand/vorschau entfallen.
-		const tabs = ['uebersicht', 'etappen', 'wetter-metriken', 'wertebereiche', 'alarme'];
+		// Issue #1743: versand/vorschau entfallen; #2794 S3a: 4 Reiter (Wetter, Zustellung).
+		const tabs = ['uebersicht', 'etappen', 'wetter', 'zustellung'];
 		for (const tab of tabs) {
 			const trigger = page.getByTestId(`trip-detail-tab-${tab}`);
 			// Im DOM vorhanden
@@ -84,7 +85,7 @@ test.describe('Issue #269: Mobile Trip-Detail-Tabs Pill-Scroller', () => {
 		await page.setViewportSize(MOBILE_VIEWPORT);
 		await page.goto(`/trips/${TRIP_ID}`);
 
-		const tabs = ['uebersicht', 'etappen', 'wetter-metriken', 'wertebereiche', 'alarme'];
+		const tabs = ['uebersicht', 'etappen', 'wetter', 'zustellung'];
 		for (const tab of tabs) {
 			const trigger = page.getByTestId(`trip-detail-tab-${tab}`);
 			const whiteSpace = await trigger.evaluate((el) => getComputedStyle(el).whiteSpace);

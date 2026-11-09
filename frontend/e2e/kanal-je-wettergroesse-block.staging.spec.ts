@@ -202,7 +202,7 @@ for (const kind of ['route', 'vergleich'] as const) {
 			const id = kind === 'route' ? await seedTrip(page) : await seedVergleich(page);
 			const blockSel = '[data-testid="kanal-block"]:visible';
 
-			await openHub(page, kind, id, { tab: 'alarme' });
+			await openHub(page, kind, id, { tab: 'zustellung' });
 			await expect(page.locator('[data-testid="alarme-tab"]:visible').first()).toBeVisible({ timeout: 15_000 });
 			let block = page.locator(blockSel).first();
 			const { key, zeile } = await blockPruefen(page, block);
@@ -222,7 +222,7 @@ for (const kind of ['route', 'vergleich'] as const) {
 			}
 
 			// Neu laden: Wahl ist noch da.
-			await openHub(page, kind, id, { tab: 'alarme' });
+			await openHub(page, kind, id, { tab: 'zustellung' });
 			block = page.locator(blockSel).first();
 			const z2 = block.getByTestId(`kanal-zeile-${key}`);
 			await expect(z2).toBeVisible({ timeout: 25_000 });
@@ -241,7 +241,7 @@ for (const kind of ['route', 'vergleich'] as const) {
 				.toBeFalsy();
 
 			// Neu laden: wieder „wie Abo".
-			await openHub(page, kind, id, { tab: 'alarme' });
+			await openHub(page, kind, id, { tab: 'zustellung' });
 			const z3 = page.locator(blockSel).first().getByTestId(`kanal-zeile-${key}`);
 			await expect(z3).toBeVisible({ timeout: 25_000 });
 			await expect(z3.getByTestId(`kanal-erbt-${key}`)).toHaveText(WIE_ABO);
@@ -252,17 +252,16 @@ for (const kind of ['route', 'vergleich'] as const) {
 
 // ── Anlegen-Seiten: Block sichtbar + bedienbar in .tn-/.cm-mobile und -desktop ──
 
-/** Reiterkette bis „Alarme" (jeder Besuch schaltet den nächsten frei). */
+/** Reiterkette bis „Zustellung" mit den Alarmen (#2794 S3a; jeder Besuch schaltet den nächsten frei). */
 async function zumAlarmeReiter(page: Page, kind: HubKind, mobil: boolean): Promise<void> {
 	const sel = ANLEGE_SEL[kind];
 	if (kind === 'vergleich' && !mobil) {
 		// Desktop-Vergleich: Weiter-Knöpfe (Muster compare-neu-kanal-anlegen).
-		await page.getByTestId('compare-editor-continue-wetter-metriken').click();
-		await page.getByTestId('compare-editor-continue-wertebereiche').click();
-		await page.getByTestId('compare-editor-continue-alarme').click();
+		await page.getByTestId('compare-editor-continue-wetter').click();
+		await page.getByTestId('compare-editor-continue-zustellung').click();
 		return;
 	}
-	for (const reiter of ['wetter-metriken', 'wertebereiche', 'alarme']) {
+	for (const reiter of ['wetter', 'zustellung']) {
 		await sel.reiter(page, reiter, mobil).click({ force: true });
 	}
 }

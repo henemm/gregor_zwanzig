@@ -924,7 +924,21 @@ def _render_email_onset_multi(msg: AlertMessage, lang: Lang = "de") -> tuple[str
     Einzel-Onset-Zweig (`_render_email_onset`), nur wenn `msg.cooldown_display`
     gesetzt ist — sonst unverändert (keine leere Zeile/Box)."""
     h1 = t("alarm.regen.buendel", lang, n=len(msg.events))
-    data_rows = [
+    # Finding F003: feste "Quelle: Radar (DWD)"-Fußzeile war falsch, sobald
+    # gebündelte Orte unterschiedliche Quellen haben (z.B. AROME-FR, INCA) —
+    # jetzt die tatsächlich beteiligten, distinct Quell-Labels der Events.
+    footer = (
+        f"{t('alarm.mail.stand', lang, stand=msg.stand_at)} · "
+        f"{t('alarm.mail.quelle', lang, quelle=_distinct_source_labels(msg))}"
+    )
+    return _onset_mail(msg, h1, _onset_multi_rows(msg, lang), footer, lang)
+
+
+def _onset_multi_rows(msg: AlertMessage, lang: Lang = "de") -> list[tuple[str, str]]:
+    """Je Ort eine Zeile (Ort · Art Restzeit, Beginn/Ende/Suffixe ·
+    Intensitaet) -- EIN Baustein fuer E-Mail- und Telegram-Buendel (#1767),
+    damit beide dieselbe Zeile in derselben Reihenfolge fuehren."""
+    return [
         (
             f"{e.location_label} · "
             f"{t('alarm.regen.gewitter_hagel', lang) if e.is_convective else _onset_kind(e, lang)} "
@@ -941,14 +955,6 @@ def _render_email_onset_multi(msg: AlertMessage, lang: Lang = "de") -> tuple[str
         )
         for e in msg.events
     ]
-    # Finding F003: feste "Quelle: Radar (DWD)"-Fußzeile war falsch, sobald
-    # gebündelte Orte unterschiedliche Quellen haben (z.B. AROME-FR, INCA) —
-    # jetzt die tatsächlich beteiligten, distinct Quell-Labels der Events.
-    footer = (
-        f"{t('alarm.mail.stand', lang, stand=msg.stand_at)} · "
-        f"{t('alarm.mail.quelle', lang, quelle=_distinct_source_labels(msg))}"
-    )
-    return _onset_mail(msg, h1, data_rows, footer, lang)
 
 
 def _render_email_onset(msg: AlertMessage, lang: Lang = "de") -> tuple[str, str]:
@@ -978,7 +984,23 @@ def _render_email_onset(msg: AlertMessage, lang: Lang = "de") -> tuple[str, str]
     return _onset_mail(msg, h1, data_rows, footer, lang)
 
 
+def _render_telegram_onset_multi(msg: AlertMessage, lang: Lang = "de") -> str:
+    """Issue #1767: EINE Nachricht, Kopf `alarm.regen.buendel`, je Ort eine
+    Zeile (dieselben Zeilen wie die Buendel-Mail), Quelle einmal am Ende --
+    kein Namens-Join im Kopf, kein `km 0–0`."""
+    lines = [f"<b>{_esc(t('alarm.regen.buendel', lang, n=len(msg.events)))}</b>"]
+    if msg.addendum_reference:  # Issue #2018 (AC-B3), wie im Einzelzweig
+        lines.append(msg.addendum_reference)
+    elif msg.verschaerfung is not None:  # Issue #2848
+        lines.append(_esc(_verschaerfung_text(msg, lang)))
+    lines += [_esc(f"{k}: {v}") for k, v in _onset_multi_rows(msg, lang)]
+    lines.append(_esc(t("alarm.mail.quelle", lang, quelle=_distinct_source_labels(msg))))
+    return "\n".join(lines)
+
+
 def _render_telegram_onset(msg: AlertMessage, lang: Lang = "de") -> str:
+    if msg.source == COMPARE_RADAR_SOURCE and len(msg.events) > 1:
+        return _render_telegram_onset_multi(msg, lang)
     e = msg.events[0]
     label = _onset_kind(e, lang)
     km = _km_str_onset(e, lang)
@@ -1170,7 +1192,10 @@ def _sms_onset_extent_suffix(zonen: tuple[RainZone, ...], budget: int) -> str:
     return " km" + ",".join(genommen)
 
 
-def _render_sms_onset(msg: AlertMessage, limit: int = 140) -> str:
+def _render_sms_onset(
+    msg: AlertMessage, limit: int = 140,
+    location_positions: dict[str, int] | None = None,
+) -> str:
     """Issue #1948 S4: die Nowcast-/Onset-Kurznachricht nennt einen ZEITPUNKT
     (`TH@15:40`) statt eines Countdowns (`TH!8`) und spricht im Kopf dieselbe
     Ortssprache wie Betreff und E-Mail (`format_alert_location`: Ortsname ->
@@ -1187,8 +1212,77 @@ def _render_sms_onset(msg: AlertMessage, limit: int = 140) -> str:
     `_ascii_alert_location` (nicht `_ascii`) entfernt Piktogramme VOR der
     ASCII-Faltung -- sonst stuende `:checkered_flag:` in der SMS (AC-8).
     `_km_str_onset` bleibt bewusst unangetastet: Telegram und Betreff lesen
-    ihn mit (AC-10)."""
+    ihn mit (AC-10).
+
+    Issue #1767 (PO 2026-11-09, loest Entscheid 3b aus #1948 S4 ab): ein
+    Ortsvergleich-Buendel mit MEHR ALS EINEM Ort nennt jeden Ort mit eigenem
+    Token (`_render_sms_onset_multi`); Trip- und Ein-Ort-Fall unveraendert."""
+    if msg.source == COMPARE_RADAR_SOURCE and len(msg.events) > 1:
+        return _render_sms_onset_multi(msg, limit, location_positions)
     e = msg.events[0]
+    token = _sms_onset_token(e)
+    prefix = _stage_prefix(msg.events)  # Issue #2122
+    if getattr(e, "location_label", None):
+        loc = _ascii_alert_location(e.location_label)[:24]
+    elif msg.source == COMPARE_RADAR_SOURCE:
+        loc = _ascii_alert_location(msg.trip_short)[:24]
+    else:
+        loc = _ascii_alert_location(_location_of((e,), None))[:24]
+    head = f"{prefix}{loc}"
+    # Issue #2848: Verschaerfungs-Token direkt nach dem Ortskopf, vor dem
+    # Radar-Token. Es steht VOR der Zonenauswahl im `body`, deren Budget
+    # (`limit - len(body)`) ist damit um seine Laenge reserviert: Zonen und
+    # Marker weichen zuerst, nie Kopf, Hinweis oder Radar-Token.
+    body = f"{head}: {_sms_verschaerfung_token(msg)}{token}"
+    # Issue #2051 S2b: das Zonen-Kuerzel ist das ZULETZT angefuegte Element --
+    # dieselbe Sichtbarkeitsregel wie `_onset_extent_suffix` in der Langform
+    # (nur vermessene Etappe, nur nicht-leere Zonen), und nur so viel, wie
+    # vollstaendig ins Budget passt (AC-4/AC-6/AC-8).
+    if getattr(e, "km_measured", False) and getattr(e, "rain_zones", ()):
+        # Issue #2050 S4b-2: der Platz fuer den Luecken-Marker wird VOR der
+        # Zonenauswahl reserviert. Haengte man ihn danach unbedingt an, fraesse
+        # ihn im Randfall der harte Sicherungsschnitt unten still weg -- der
+        # Text saehe dann vollstaendig gemessen aus, obwohl er es nicht ist,
+        # und keine Pruefung koennte den Unterschied sehen (das Ergebnis waere
+        # byte-identisch zur korrekten Fassung). Im Randfall entfaellt deshalb
+        # die LETZTE ZONE zugunsten des Markers: der Hinweis "unvollstaendig
+        # gemessen" wiegt schwerer als die letzte von vielen Streckenangaben.
+        luecken_marker = _sms_onset_gap_marker(e)
+        zonen = _sms_onset_extent_suffix(
+            e.rain_zones, limit - len(body) - len(luecken_marker),
+        )
+        # Ohne Zonen-Liste entfaellt der Marker mit ihr: freistehend hinter dem
+        # Zeit-Token truege `>` die Ende-Bedeutung ("mindestens bis") und waere
+        # eine falsche Aussage statt einer fehlenden.
+        body += (zonen + luecken_marker) if zonen else ""
+    return body if len(body) <= limit else body[:limit]
+
+
+def _render_sms_onset_multi(
+    msg: AlertMessage, limit: int, location_positions: dict[str, int] | None,
+) -> str:
+    """Issue #1767: Mehrort-Kurzform `1:R@14:05 3:R@14:40` -- je Ort das
+    Token aus `_sms_onset_token`, davor die Ortsnummer im Preset (Muster
+    Aenderungsalarm #1467 S2 AG3b), kein Namenskopf, kein `km0-0`. Fehlt die
+    Nummer, steht der auf 12 Zeichen gekappte ASCII-Ortsname davor (nie eine
+    geratene Zahl). Reihenfolge = `msg.events` (nach Beginn sortiert in
+    `to_multi_location_onset_alert_message`); bei Platzmangel fallen die
+    spaetesten Orte als ` +k` weg, der erste bleibt immer."""
+    tokens = []
+    for e in msg.events:
+        name = e.location_label or ""
+        pos = (location_positions or {}).get(name)
+        tag = str(pos) if pos else _ascii_alert_location(name)[:12]
+        tokens.append(f"{tag}:{_sms_onset_token(e)}")
+    return _fit_tokens_with_overflow(
+        _sms_verschaerfung_token(msg), tokens, limit, keep_first=True,
+    )
+
+
+def _sms_onset_token(e: OnsetEvent) -> str:
+    """Kurzform-Token EINES Onset-Ereignisses (`R@14:05`, `R2.5@14:05@15:00`,
+    `TH@14:05 R2.5`, `R now`) inklusive Ende-, Guete- und Pruefmarker --
+    geteilt von Einzel- und Mehrort-Kurzform (Issue #1767)."""
     kuerzel = "TH" if e.is_convective else "R"
     # Issue #2050 S4b-2: das Zeichen der ausgefallenen Gewitterpruefung haengt
     # unmittelbar am Kuerzel -- in JEDER Token-Form unten, auch dort, wo das
@@ -1240,41 +1334,7 @@ def _render_sms_onset(msg: AlertMessage, limit: int = 140) -> str:
         token = f"{kopf}@{zeit} R{menge}"
     else:
         token = f"{kopf}{menge}@{zeit}"
-    prefix = _stage_prefix(msg.events)  # Issue #2122
-    if getattr(e, "location_label", None):
-        loc = _ascii_alert_location(e.location_label)[:24]
-    elif msg.source == COMPARE_RADAR_SOURCE:
-        loc = _ascii_alert_location(msg.trip_short)[:24]
-    else:
-        loc = _ascii_alert_location(_location_of((e,), None))[:24]
-    head = f"{prefix}{loc}"
-    # Issue #2848: Verschaerfungs-Token direkt nach dem Ortskopf, vor dem
-    # Radar-Token. Es steht VOR der Zonenauswahl im `body`, deren Budget
-    # (`limit - len(body)`) ist damit um seine Laenge reserviert: Zonen und
-    # Marker weichen zuerst, nie Kopf, Hinweis oder Radar-Token.
-    body = f"{head}: {_sms_verschaerfung_token(msg)}{token}"
-    # Issue #2051 S2b: das Zonen-Kuerzel ist das ZULETZT angefuegte Element --
-    # dieselbe Sichtbarkeitsregel wie `_onset_extent_suffix` in der Langform
-    # (nur vermessene Etappe, nur nicht-leere Zonen), und nur so viel, wie
-    # vollstaendig ins Budget passt (AC-4/AC-6/AC-8).
-    if getattr(e, "km_measured", False) and getattr(e, "rain_zones", ()):
-        # Issue #2050 S4b-2: der Platz fuer den Luecken-Marker wird VOR der
-        # Zonenauswahl reserviert. Haengte man ihn danach unbedingt an, fraesse
-        # ihn im Randfall der harte Sicherungsschnitt unten still weg -- der
-        # Text saehe dann vollstaendig gemessen aus, obwohl er es nicht ist,
-        # und keine Pruefung koennte den Unterschied sehen (das Ergebnis waere
-        # byte-identisch zur korrekten Fassung). Im Randfall entfaellt deshalb
-        # die LETZTE ZONE zugunsten des Markers: der Hinweis "unvollstaendig
-        # gemessen" wiegt schwerer als die letzte von vielen Streckenangaben.
-        luecken_marker = _sms_onset_gap_marker(e)
-        zonen = _sms_onset_extent_suffix(
-            e.rain_zones, limit - len(body) - len(luecken_marker),
-        )
-        # Ohne Zonen-Liste entfaellt der Marker mit ihr: freistehend hinter dem
-        # Zeit-Token truege `>` die Ende-Bedeutung ("mindestens bis") und waere
-        # eine falsche Aussage statt einer fehlenden.
-        body += (zonen + luecken_marker) if zonen else ""
-    return body if len(body) <= limit else body[:limit]
+    return token
 
 
 def render_subject(msg: AlertMessage, *, lang: Lang = "de") -> str:
@@ -1853,7 +1913,7 @@ def _render_sms_body(
     `fix_1744_alarm_format_angleichen.md` fuer diesen Pfad auf.
     """
     if msg.source is not None:
-        return _render_sms_onset(msg, limit)
+        return _render_sms_onset(msg, limit, location_positions)
     if not msg.events and msg.onset_shift_events:
         return _render_sms_onset_shift_only(msg, limit)
     evs = _sorted(msg)
@@ -1892,13 +1952,23 @@ def _render_sms_body(
         if rest:
             tokens.append(rest)
     tokens += [_sms_onset_shift_token(oe) for oe in msg.onset_shift_events]
+    return _fit_tokens_with_overflow(head, tokens, limit)
 
+
+def _fit_tokens_with_overflow(
+    head: str, tokens: list[str], limit: int, *, keep_first: bool = False,
+) -> str:
+    """Greedy-Budget der Kurzform (aus `_render_sms_body` ausgelagert, #1767):
+    Tokens ganz oder gar nicht, solange `head + Tokens + ' +k'` <= `limit`;
+    der Rest wird als ` +k` gezaehlt. `keep_first=True` behaelt das erste
+    Token auch dann, wenn es allein nicht passt (Mehrort-Onset: der
+    dringendste Ort faellt nie weg); der harte Endschnitt bleibt Netz."""
     kept: list[str] = []
     for tok in tokens:
         omitted = len(tokens) - len(kept) - 1  # weggelassen, wenn wir hier stoppen
         marker = f" +{omitted}" if omitted > 0 else ""
         candidate = head + " ".join(kept + [tok]) + marker
-        if len(candidate) <= limit:
+        if len(candidate) <= limit or (keep_first and not kept):
             kept.append(tok)
         else:
             break

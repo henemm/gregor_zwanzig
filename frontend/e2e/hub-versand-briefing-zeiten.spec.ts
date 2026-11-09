@@ -183,7 +183,7 @@ for (const kind of HUB_KINDS) {
 			const hub = await seedHub(page.request, kind, { extra: SEED[kind] });
 			try {
 				await openHub(page, kind, hub.id);
-				await page.locator(`[data-testid="${sel.reiter}-wetter-metriken"]:visible`).first().click();
+				await page.locator(`[data-testid="${sel.reiter}-zustellung"]:visible`).first().click(); // #2794 S3a
 				const abschnitt = page.locator('[data-testid="versand-abschnitt"]:visible').first();
 				await expect(abschnitt).toBeVisible({ timeout: 10_000 });
 				// Ist-Texte der geteilten Bausteine (VTBriefingChannels / VTSchedulePlan).
@@ -237,7 +237,8 @@ for (const kind of HUB_KINDS) {
 				await expect(knopf).toHaveText('Bearbeiten →', { timeout: 10_000 });
 				await knopf.click();
 
-				await expect(panel(page, kind, 'wetter-metriken')).toBeVisible({ timeout: 10_000 });
+				// #2794 S3a: Versand-Abschnitt im Reiter Zustellung.
+				await expect(panel(page, kind, 'zustellung')).toBeVisible({ timeout: 10_000 });
 				await expect(page.locator('[data-testid="versand-abschnitt"]:visible').first()).toBeInViewport({ timeout: 10_000 });
 				await expect(page).toHaveURL(sel.hubUrl(hub.id));
 				expect(page.url()).not.toMatch(/\/edit/);
@@ -259,7 +260,7 @@ for (const kind of HUB_KINDS) {
 					await openHub(page, kind, hub.id);
 					await expect(panel(page, kind, 'uebersicht')).toBeVisible({ timeout: 10_000 });
 					await page.locator('[data-testid="hub-overview"]:visible').getByRole('button', { name: 'Zeitplan bearbeiten →' }).click();
-					await expect(panel(page, kind, 'wetter-metriken')).toBeVisible({ timeout: 10_000 });
+					await expect(panel(page, kind, 'zustellung')).toBeVisible({ timeout: 10_000 });
 					await expect(page.locator('[data-testid="versand-abschnitt"]:visible').first()).toBeInViewport({ timeout: 10_000 });
 					await expect(page).toHaveURL(sel.hubUrl(hub.id));
 				} finally {
@@ -303,13 +304,13 @@ for (const kind of HUB_KINDS) {
 		}
 
 		// VB-8 (Alt AC-10) — fängt: Reiter ohne Panel bzw. Versand-/Vorschau-Reiter zurück.
-		test(`VB-8 (${kind}): alle fünf Reiter klickbar, Panel je sichtbar; kein Versand-/Vorschau-Reiter`, async ({ page }) => {
+		test(`VB-8 (${kind}): alle vier Reiter klickbar, Panel je sichtbar; kein Versand-/Vorschau-Reiter`, async ({ page }) => {
 			await page.setViewportSize(DESKTOP);
 			const hub = await seedHub(page.request, kind, { extra: SEED[kind] });
 			try {
 				await openHub(page, kind, hub.id);
-				// Reihenfolge = shared/subscriptionTabs.ts; Punkte-Reiter je kind aus HUB_SEL.
-				for (const tab of ['uebersicht', sel.punkteReiter, 'wetter-metriken', 'wertebereiche', 'alarme']) {
+				// Reihenfolge = shared/subscriptionTabs.ts; Punkte-Reiter je kind aus HUB_SEL (#2794 S3a: vier Reiter).
+				for (const tab of ['uebersicht', sel.punkteReiter, 'wetter', 'zustellung']) {
 					await page.locator(`[data-testid="${sel.reiter}-${tab}"]:visible`).first().click();
 					await expect(panel(page, kind, tab), `Panel ${tab} sichtbar`).toBeVisible({ timeout: 10_000 });
 				}
@@ -337,7 +338,7 @@ for (const kind of HUB_KINDS) {
 				}
 
 				// Beide Slots im Versand-Abschnitt abschalten (echte Geste, Autosave).
-				await openHub(page, kind, hub.id, { tab: 'wetter-metriken', hash: 'versand' });
+				await openHub(page, kind, hub.id, { tab: 'zustellung', hash: 'versand' });
 				const abschnitt = page.locator('[data-testid="versand-abschnitt"]:visible');
 				for (const slot of ['morning', 'evening']) {
 					const schalter = abschnitt.locator(`[data-testid="${slot}-master-switch"] input[type="checkbox"]`);

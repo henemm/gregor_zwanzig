@@ -140,7 +140,7 @@
 					{/if}
 				</p>
 			{/if}
-			<Btn variant="ghost" size="sm" onclick={makeJumpHandler('wetter-metriken')}>{$t('trip.uebersicht.metriken_bearbeiten')}</Btn>
+			<Btn variant="ghost" size="sm" onclick={makeJumpHandler('wetter')}>{$t('trip.uebersicht.metriken_bearbeiten')}</Btn>
 		</Card>
 
 		<Card padding={18}>
@@ -149,7 +149,7 @@
 			<ReportLine kind="evening" time={abendZeit} channels={briefingKanaele} active={reportSlotAktiv(trip.report_config, 'evening')} />
 			<ReportLine kind="alert" time={$t('trip.uebersicht.bei_delta')} channels={alertKanaele} active={wetterAlarmAktiv} alert />
 			<div style="margin-top: 12px;">
-				<Btn variant="ghost" size="sm" onclick={makeJumpHandler('wetter-metriken', 'versand')}>{$t('trip.uebersicht.zeitplan_bearbeiten')}</Btn>
+				<Btn variant="ghost" size="sm" onclick={makeJumpHandler('zustellung', 'versand')}>{$t('trip.uebersicht.zeitplan_bearbeiten')}</Btn>
 			</div>
 		</Card>
 

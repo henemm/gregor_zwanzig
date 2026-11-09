@@ -6,7 +6,7 @@
 //   KO-1 Listen, Hub-Kopf, Reiterleiste, Reiter Übersicht und Etappen/Orte bei 1280 × 900, de/en.
 //   KO-2 dieselben Seiten bei 390 × 844 — aktiver Handy-Reiter mit Zähler (K1/K2), Kürzel (K6).
 //   KO-3 Anlegen von Trip und Vergleich, jeder ohne Netz erreichbare Schritt außerhalb der Reiter
-//        Wetter-Metriken/Wertebereiche/Alarme (#2794), ohne und mit Namen, beide Größen, de/en.
+//        Wetter/Zustellung (#2794), ohne und mit Namen, beide Größen, de/en.
 //   KO-4 Liste: Status „· aktiv" und Zähler „x von y" ≥ 4,5:1; --g-ink-4 nur an Ausnahmen.
 //   KO-5 aktiver „Weiter"-Knopf: Fläche --g-accent-deep, im Hover dunkler, beide ≥ 4,5:1;
 //        Unterstrich des aktiven Hub-Reiters am Computer bleibt --g-accent. Dazu je Größe: JEDER

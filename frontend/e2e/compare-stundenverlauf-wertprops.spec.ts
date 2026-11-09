@@ -73,9 +73,10 @@ async function serverStand(page: Page, id: string): Promise<Record<string, unkno
 const dc = (body: Record<string, unknown>) => (body.display_config as Record<string, unknown>) ?? {};
 
 async function oeffneStundenverlauf(page: Page, id: string) {
-	await page.goto(`/compare/${id}?tab=wetter-metriken`);
+	// #2794 S3a (Spec feat_2794_s3a_teil2_leiste.md): Stundenverlauf im Reiter Zustellung.
+	await page.goto(`/compare/${id}?tab=zustellung`);
 	await page.waitForLoadState('networkidle');
-	await page.locator('[data-testid="compare-detail-tab-wetter-metriken"]:visible').click();
+	await page.locator('[data-testid="compare-detail-tab-zustellung"]:visible').click();
 	const block = page.locator('[data-testid="weather-metrics-stundenverlauf"]:visible');
 	await expect(block, 'Der Stundenverlauf-Block muss im Reiter stehen').toBeVisible({
 		timeout: 10_000

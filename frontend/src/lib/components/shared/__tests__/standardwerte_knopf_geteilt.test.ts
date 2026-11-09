@@ -107,7 +107,7 @@ describe('AC-12/AC-5: Platzierung Trip (/trips/new)', () => {
 		assert.ok(innen(html, 'tn-mobile-footer').includes('data-testid="tn-mobile-standardwerte"'), 'tn-mobile-standardwerte fehlt im mobilen Footer');
 	});
 	test('AC-5: alle Reiter besucht (Bestandsknopf frei) => Standardwerte-Knopf nicht mehr da', async () => {
-		const alle = { wtVisited: true, wbVisited: true, alVisited: true, vsVisited: true };
+		const alle = { wtVisited: true, zuVisited: true }; // #2794 S3a: Wetter/Zustellung
 		const d = await renderTrip({ ...basis, ...alle, isMobileViewport: false });
 		const m = await renderTrip({ ...basis, ...alle, isMobileViewport: true });
 		assert.ok(!d.includes('trip-new-standardwerte-btn') && !m.includes('tn-mobile-standardwerte'));
@@ -132,9 +132,9 @@ describe('AC-12/AC-5: Platzierung Ortsvergleich (/compare/new)', () => {
 	const reiterVorVersand: Array<[string, Record<string, boolean>]> = [
 		['vergleich', {}],
 		['orte', {}],
-		['wetter-metriken', { metrikenVisited: true }],
-		['wertebereiche', { metrikenVisited: true, idealsVisited: true }]
-		// #1743: „Alarme" ist der letzte Schritt — mit seinem Besuch wird Aktivieren frei
+		['wetter', { metrikenVisited: true }],
+		['zustellung', { metrikenVisited: true }]
+		// #2794 S3a: „Zustellung" ist der letzte Schritt — mit seinem Besuch wird Aktivieren frei
 		// und der Standardwerte-Knopf entfaellt (AC-5 unten, nie beide gleichzeitig).
 	];
 	for (const [reiter, flags] of reiterVorVersand) {
@@ -145,9 +145,9 @@ describe('AC-12/AC-5: Platzierung Ortsvergleich (/compare/new)', () => {
 	}
 	// #1743: der Reiter „versand" entfaellt — „Alarme" ist der letzte Schritt.
 	test('AC-5: alle Reiter besucht (Aktivieren frei) => Standardwerte-Knopf nicht mehr da', async () => {
-		const alle = { metrikenVisited: true, idealsVisited: true, alarmeVisited: true };
-		const d = await renderVergleichNeu({ activeTab: 'alarme', isMobileViewport: false, ...alle });
-		const m = await renderVergleichNeu({ activeTab: 'alarme', isMobileViewport: true, ...alle });
+		const alle = { metrikenVisited: true, zustellungVisited: true };
+		const d = await renderVergleichNeu({ activeTab: 'zustellung', isMobileViewport: false, ...alle });
+		const m = await renderVergleichNeu({ activeTab: 'zustellung', isMobileViewport: true, ...alle });
 		assert.ok(!d.includes('compare-editor-standardwerte') && !m.includes('cm-mobile-standardwerte'));
 	});
 });

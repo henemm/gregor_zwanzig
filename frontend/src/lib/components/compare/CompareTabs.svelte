@@ -1,7 +1,7 @@
 <script lang="ts">
 	// Issue #517 — CompareTabs: 6-Tab-Orchestrator für /compare/[id] Detail-Seite.
 	//
-	// Tabs (#1743): Übersicht · Orte · Wetter-Metriken (mit Versand-Abschnitt #versand) · Wertebereiche · Alarme
+	// Tabs (#2794 S3a): Übersicht · Orte · Wetter (Metriken + Wertebereiche) · Zustellung (Versand #versand + Alarme)
 	// Issue #1231, Slice 6 (Begriffs-Konsistenz): Label „Idealwerte" -> „Wertebereiche",
 	// Issue #2287: Kennung jetzt `wertebereiche` (gemeinsam mit dem Trip-Hub). Reine Lesenansicht, keine
 	// funktionale CorridorEditor-Migration hier (bleibt späterer Scope).
@@ -37,8 +37,10 @@
 	// Issue #1256 Scheibe 8 (AC-22): mobile Spiegelung der Idealwerte-Inline-
 	// Edit-Parität, Muster TripTabs.svelte:198-202.
 	import CorridorEditorMobile from '$lib/components/shared/corridor-editor/CorridorEditorMobile.svelte';
-	// Issue #1258 Scheibe 5 (AC-19): geteilter Alarme-Organism im 7. Hub-Tab.
+	// Issue #1258 Scheibe 5 (AC-19): geteilter Alarme-Organism (seit #2794 im Reiter Zustellung).
 	import AlarmeTab from '$lib/components/shared/AlarmeTab.svelte';
+	// Issue #2794 S3a: Uebergangsreiter Zustellung (Versand + AlarmeTab + Zustellungs-Bloecke).
+	import ZustellungTab from '$lib/components/shared/zustellung-tab/ZustellungTab.svelte';
 	// Issue #2276 S6c: EIN Buendel-Bauer fuer alle drei Vergleichs-Mounts.
 	import { alarmePropsAus } from './alarmePropsAus.ts';
 	import { corridorPropsAus } from './corridorPropsAus.ts';
@@ -130,20 +132,25 @@
 	// richtigen Reiter (der $effect unten bereinigt nur noch die Adresszeile).
 	// svelte-ignore state_referenced_locally -- bewusst nur der Startwert; spaetere
 	// initialTab-Aenderungen setzt der $effect unten.
-	let activeTab = $state<string>(resolveTab('vergleich', initialTab).tab);
+	let activeTab = $state<string>(resolveTab('vergleich', initialTab, ankerDerAdresse()).tab);
+	/** #2794 S3a: Anker der geladenen Adresse (`#versand` gewinnt gegen die Reiterkennung). */
+	function ankerDerAdresse(): string | null {
+		return typeof window === 'undefined' ? null : (window.location?.hash ?? null);
+	}
 	// Issue #1743: jede Erhoehung laesst den Baustein zum Versand-Abschnitt scrollen
 	// (der Baustein mountet erst nach der Versand-Hydration, s. Template). Startwert aus
 	// der Alt-Kennung; ein direkter Link mit `#versand` liest der Baustein beim Mount.
 	// svelte-ignore state_referenced_locally -- bewusst nur der Startwert.
 	// Startwert auch aus einem direkten Link mit `#versand`; jeder Reiterwechsel ohne
 	// Anker setzt ihn auf 0 — ein spaeterer Remount des Bausteins scrollt nicht.
-	let versandSprung = $state(versandSprungStart(resolveTab('vergleich', initialTab)));
+	let versandSprung = $state(versandSprungStart(resolveTab('vergleich', initialTab, ankerDerAdresse())));
 	// E4: Alt-/kind-fremde Kennung → Adresszeile EINMAL per replaceState auf die neue
 	// Kennung; unbekannte Kennung → Parameter `tab` entfernt. Keine Schleife: danach
 	// ist die Kennung neu, und history.replaceState aendert `initialTab` nicht.
-	// Issue #1743: `versand`/`briefings` → `?tab=wetter-metriken#versand`.
+	// Issue #1743/#2794: `versand`/`briefings` (und jede Kennung mit `#versand`) →
+	// `?tab=zustellung#versand`.
 	$effect(() => {
-		const r = resolveTab('vergleich', initialTab);
+		const r = resolveTab('vergleich', initialTab, ankerDerAdresse());
 		activeTab = r.tab;
 		if (typeof window === 'undefined') return;
 		const ziel = bereinigteTabAdresse(window.location.href, r);
@@ -387,7 +394,8 @@
 	}
 
 	$effect(() => {
-		if (activeTab !== 'wertebereiche' || idealwerteHydrated || idealwerteHydrating) return;
+		// #2794 S3a: die Wertebereiche-Ansicht steht unter dem Reiter Wetter.
+		if (activeTab !== 'wetter' || idealwerteHydrated || idealwerteHydrating) return;
 		idealwerteHydrating = true;
 		void hydrateIdealwerteTab().finally(() => {
 			idealwerteHydrating = false;
@@ -414,7 +422,8 @@
 	let versandHydrated = $state(false);
 
 	$effect(() => {
-		if (activeTab !== 'wetter-metriken' || versandHydrated) return;
+		// #2794 S3a: der Versand-Abschnitt steht im Reiter Zustellung.
+		if (activeTab !== 'zustellung' || versandHydrated) return;
 		// F005-Muster: aus currentPreset hydrieren, damit ein vorheriger
 		// Orte-/Idealwerte-Edit in derselben Sitzung nicht ueberschrieben wird.
 		const hydrated = hydrateVersandFieldsFromPreset(currentPreset);
@@ -470,7 +479,8 @@
 	}
 
 	$effect(() => {
-		if (activeTab !== 'alarme' || alarmeHydrated || alarmeHydrating) return;
+		// #2794 S3a: der Alarm-Baustein steht im Reiter Zustellung.
+		if (activeTab !== 'zustellung' || alarmeHydrated || alarmeHydrating) return;
 		alarmeHydrating = true;
 		void hydrateAlarmeTab().finally(() => {
 			alarmeHydrating = false;
@@ -524,7 +534,8 @@
 	}
 
 	$effect(() => {
-		if (activeTab !== 'wetter-metriken' || wetterMetrikenHydrated || wetterMetrikenHydrating) return;
+		// #2794 S3a: die Metrik-Oberflaeche erscheint in Wetter UND Zustellung (je ein bereich).
+		if ((activeTab !== 'wetter' && activeTab !== 'zustellung') || wetterMetrikenHydrated || wetterMetrikenHydrating) return;
 		wetterMetrikenHydrating = true;
 		void hydrateWetterMetrikenTab().finally(() => {
 			wetterMetrikenHydrating = false;
@@ -555,7 +566,7 @@
 	}
 
 	$effect(() => {
-		if (activeTab !== 'wetter-metriken' || layoutHydrated || layoutHydrating) return;
+		if ((activeTab !== 'wetter' && activeTab !== 'zustellung') || layoutHydrated || layoutHydrating) return;
 		layoutHydrating = true;
 		void hydrateLayoutTab().finally(() => {
 			layoutHydrating = false;
@@ -780,37 +791,22 @@
 		</div>
 	{/if}
 
-	{#if activeTab === 'wetter-metriken'}
-		<div data-testid="compare-detail-panel-wetter-metriken">
-			{#if wetterMetrikenLayoutHydrationBereit && versandHydrated}
-				<!-- Issue #2276 S4: der Reiter speichert selbst (saveController,
-				     Hub-Queue, Basis-Rueckmeldung, EINE kombinierte Wetter-Metriken/
-				     Layout-Orchestrierung in WeatherMetricsTab.svelte) — kein Wrapper
-				     und keine getrennten Commit-Funktionen mehr. Gemountet wird ERST,
-				     wenn BEIDE Domaenen hydriert sind (wetterMetrikenLayoutHydrationBereit,
-				     AC-3), damit die Orchestrierung gegen eine vollstaendige Baseline
-				     entsteht.
-				     Issue #1743: geteilter Baustein mit Versand-Abschnitt (#versand) samt
-				     Aktivierungs-Karte; er mountet zusaetzlich erst nach der Versand-
-				     Hydration (versandHydrated) — nie mit Platzhalterwerten (AC-9). -->
+	{#if activeTab === 'wetter'}
+		<div data-testid="compare-detail-panel-wetter">
+			<!-- Issue #2794 S3a §4: Metrik-Oberflaeche ohne Zustellungs-Bloecke (bereich
+			     "wetter"), darunter die Wertebereiche-Ansicht (bis Teil-PR 3). Gemountet erst,
+			     wenn beide Metrik-Domaenen hydriert sind (AC-3 #2276 S4). -->
+			{#if wetterMetrikenLayoutHydrationBereit}
 				<WetterMetrikenVersandPanel
 					context="vergleich"
+					bereich="wetter"
 					{...wetterMetrikenPropsAus(wizardState)}
-					versand={versandPropsAus(wizardState)}
-					vergleichTelegramStyle={wizardState.telegramStyle ?? 'rich'}
-					activation={hubActivationCard}
 					preset={currentPreset}
 					{saveController}
 					enqueueHubWrite={reiheHubSchreibvorgangEin}
 					onCompareUpdate={uebernehmeHubAntwort}
-					{versandSprung}
 				/>
 			{/if}
-		</div>
-	{/if}
-
-	{#if activeTab === 'wertebereiche'}
-		<div data-testid="compare-detail-panel-wertebereiche">
 			{#if idealwerteHydrated}
 				<!-- Issue #1256 Scheibe 8 (AC-22): mobile Spiegelung, Muster TripTabs.svelte.
 				     Issue #2276 S3: der Reiter speichert selbst (saveController, Hub-Queue,
@@ -826,6 +822,39 @@
 		</div>
 	{/if}
 
+	{#if activeTab === 'zustellung'}
+		<div data-testid="compare-detail-panel-zustellung">
+			{#if wetterMetrikenLayoutHydrationBereit && versandHydrated && alarmeHydrated}
+				<!-- Issue #2276 S4: der Reiter speichert selbst (saveController,
+				     Hub-Queue, Basis-Rueckmeldung, EINE kombinierte Wetter-Metriken/
+				     Layout-Orchestrierung in WeatherMetricsTab.svelte) — kein Wrapper
+				     und keine getrennten Commit-Funktionen mehr. Gemountet wird ERST,
+				     wenn BEIDE Domaenen hydriert sind (wetterMetrikenLayoutHydrationBereit,
+				     AC-3), damit die Orchestrierung gegen eine vollstaendige Baseline
+				     entsteht.
+				     Issue #1743: geteilter Baustein mit Versand-Abschnitt (#versand) samt
+				     Aktivierungs-Karte; er mountet zusaetzlich erst nach der Versand-
+				     Hydration (versandHydrated) — nie mit Platzhalterwerten (AC-9).
+				     Issue #2794 S3a §3: Uebergangsreiter Zustellung (bereich "zustellung" +
+				     Versand-Abschnitt + AlarmeTab); mountet zusaetzlich erst nach der
+				     Alarm-Hydration (alarmeHydrated, wie bisher der Alarme-Reiter). -->
+				<ZustellungTab
+					context="vergleich"
+					{...wetterMetrikenPropsAus(wizardState)}
+					versand={versandPropsAus(wizardState)}
+					vergleichTelegramStyle={wizardState.telegramStyle ?? 'rich'}
+					activation={hubActivationCard}
+					alarmeBereich={hubAlarme}
+					preset={currentPreset}
+					{saveController}
+					enqueueHubWrite={reiheHubSchreibvorgangEin}
+					onCompareUpdate={uebernehmeHubAntwort}
+					{versandSprung}
+				/>
+			{/if}
+		</div>
+	{/if}
+
 	<!-- Issue #1360 (Scheibe S1a von Epic #1372): das Layout-Panel ist
 	     ersatzlos entfallen. Seine einzige wirksame Einstellung (Stundenverlauf)
 	     liegt jetzt im Reiter "Wetter-Metriken" oben — inklusive ihres
@@ -834,28 +863,27 @@
 	     uebrige (Karte "Übersicht pro Kanal", Limit-Pillen, CompareLayoutRow)
 	     war bedienlose Attrappe mit sachlich falscher Kappungs-Aussage. -->
 
-	{#if activeTab === 'alarme'}
-		<div data-testid="compare-detail-panel-alarme">
-			{#if alarmeHydrated}
-				<!-- Issue #2276 S2: der Reiter speichert selbst (saveController,
-				     Hub-Queue, Basis-Rueckmeldung) — kein Wrapper mehr. -->
-				<AlarmeTab
-					context="vergleich"
-					{...alarmePropsAus(wizardState)}
-					catalog={alarmeCatalogMitNamen}
-					preset={currentPreset}
-					{saveController}
-					enqueueHubWrite={(fn) => hubPutQueue.enqueue(fn)}
-					onCompareUpdate={(updated) => {
-						currentPreset = updated;
-					}}
-				/>
-			{/if}
-		</div>
-	{/if}
-
 	<!-- Issue #1743: das eigene Versand-Panel entfaellt — der Versand-Abschnitt steht
-	     im Reiter Wetter-Metriken (WetterMetrikenVersandPanel oben). -->
+	     seit #2794 S3a im Reiter Zustellung (ZustellungTab oben), ebenso der
+	     Alarm-Baustein (vorher eigener Reiter Alarme), der als Snippet hineinrendert. -->
+
+	{#snippet hubAlarme()}
+		{#if alarmeHydrated}
+			<!-- Issue #2276 S2: der Reiter speichert selbst (saveController,
+			     Hub-Queue, Basis-Rueckmeldung) — kein Wrapper mehr. -->
+			<AlarmeTab
+				context="vergleich"
+				{...alarmePropsAus(wizardState)}
+				catalog={alarmeCatalogMitNamen}
+				preset={currentPreset}
+				{saveController}
+				enqueueHubWrite={(fn) => hubPutQueue.enqueue(fn)}
+				onCompareUpdate={(updated) => {
+					currentPreset = updated;
+				}}
+			/>
+		{/if}
+	{/snippet}
 
 	{#snippet hubActivationCard()}
 		{@const banner = (void $locale, hubActivationBanner(status))}

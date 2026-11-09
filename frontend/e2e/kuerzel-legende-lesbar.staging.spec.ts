@@ -147,8 +147,9 @@ async function createVergleich(request: APIRequestContext): Promise<string> {
 
 async function oeffneTripEditor(page: Page): Promise<Locator> {
 	await page.setViewportSize({ width: 1280, height: 900 });
-	await page.goto(`/trips/${TRIP_ID}?tab=wetter-metriken`);
-	const reiter = page.getByTestId('trip-detail-tab-wetter-metriken');
+	// #2794 S3a: die Kürzel-Legende (Kanal-Karte) steht im Reiter Zustellung.
+	await page.goto(`/trips/${TRIP_ID}?tab=zustellung`);
+	const reiter = page.getByTestId('trip-detail-tab-zustellung');
 	await expect(reiter).toBeVisible({ timeout: 20_000 });
 	await page.waitForLoadState('networkidle');
 	await reiter.click();
@@ -163,8 +164,8 @@ async function oeffneVergleichsEditor(page: Page, presetId: string): Promise<Loc
 	await page.goto(`/compare/${presetId}`);
 	await expect(page.getByTestId('compare-detail-tab-list')).toBeVisible({ timeout: 20_000 });
 	await page.waitForLoadState('networkidle');
-	await page.getByTestId('compare-detail-tab-wetter-metriken').click();
-	const panel = page.getByTestId('compare-detail-panel-wetter-metriken');
+	await page.getByTestId('compare-detail-tab-zustellung').click();
+	const panel = page.getByTestId('compare-detail-panel-zustellung');
 	await expect(panel).toBeVisible({ timeout: 20_000 });
 	await expect(panel.locator(LEGENDE).first()).toBeVisible({ timeout: 20_000 });
 	return panel;

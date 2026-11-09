@@ -8,6 +8,10 @@
 //   AC-25 Versand-Spruenge im Vergleichs-Hub („Bearbeiten →", Mobil-Zeile) ebenso.
 //   AC-28 Weder „Vorschau oeffnen" (HubOverview) noch „Vorschau pruefen →" (Cockpit, CompareTabs).
 //
+// Issue #2794 S3a (Spec feat_2794_s3a_teil2_leiste.md AC-2/AC-5): der Versand-Abschnitt liegt jetzt
+// im Reiter Zustellung — alle Versand-Spruenge zielen auf `?tab=zustellung#versand`. Der Anker
+// `#versand` und die uebrigen Zusicherungen bleiben.
+//
 // Messweise: der Knopf wird im Template-AST ueber seine BESCHRIFTUNG gefunden (nicht ueber
 // Variablennamen), sein ECHTER onclick-Ausdruck wird im Instanz-Skript der Komponente
 // ausgewertet (`umgebungFuer`/`werte`) und ausgeloest. Bei Trip und Vergleichs-Hub laufen die
@@ -167,9 +171,9 @@ describe('#1743 AC-6: „Zeitplan bearbeiten →" der Trip-Uebersicht oeffnet ?t
 		);
 		hub.u.activeTab = 'uebersicht';
 		await (hub.u.handleValueChange as (...a: unknown[]) => Promise<void>)(...spruenge[0]);
-		assert.equal(hub.u.activeTab, 'wetter-metriken', `aktiver Reiter nach dem Sprung ${JSON.stringify(spruenge[0])}`);
+		assert.equal(hub.u.activeTab, 'zustellung', `aktiver Reiter nach dem Sprung ${JSON.stringify(spruenge[0])}`);
 		assert.equal(schreibungen.length, 1, JSON.stringify(schreibungen));
-		assert.equal(ziel(schreibungen[0]).searchParams.get('tab'), 'wetter-metriken', schreibungen[0]);
+		assert.equal(ziel(schreibungen[0]).searchParams.get('tab'), 'zustellung', schreibungen[0]);
 		assert.equal(ziel(schreibungen[0]).hash, '#versand', `Adresse ${schreibungen[0]} springt nicht zum Versand-Abschnitt`);
 	});
 });
@@ -221,9 +225,9 @@ describe('#1743 AC-25: Versand-Spruenge im Ortsvergleich-Hub landen auf ?tab=wet
 		hub.u.activeTab = 'uebersicht';
 		schreibungen = [];
 		await (hub.u.handleValueChange as (...a: unknown[]) => Promise<void>)(...spruenge[0]);
-		assert.equal(hub.u.activeTab, 'wetter-metriken');
+		assert.equal(hub.u.activeTab, 'zustellung');
 		assert.equal(schreibungen.length, 1, JSON.stringify(schreibungen));
-		assert.equal(ziel(schreibungen[0]).searchParams.get('tab'), 'wetter-metriken', schreibungen[0]);
+		assert.equal(ziel(schreibungen[0]).searchParams.get('tab'), 'zustellung', schreibungen[0]);
 		assert.equal(ziel(schreibungen[0]).hash, '#versand', schreibungen[0]);
 	});
 
@@ -330,7 +334,7 @@ describe('#1743 AC-24: „Setup abschliessen" der Ortsvergleich-Detailseite oeff
 		const nachher = (globalThis as Knoten).window.location.href;
 		const zielUrl = nachher !== vorher ? String(nachher) : schreibungen.at(-1);
 		assert.ok(zielUrl, 'der Knopf hat kein Ziel angesteuert');
-		assert.equal(ziel(zielUrl).searchParams.get('tab'), 'wetter-metriken', zielUrl);
+		assert.equal(ziel(zielUrl).searchParams.get('tab'), 'zustellung', zielUrl);
 		assert.equal(ziel(zielUrl).hash, '#versand', zielUrl);
 		assert.equal(resolveTab('vergleich', ziel(zielUrl).searchParams.get('tab')).legacy, false);
 	});
@@ -370,7 +374,7 @@ describe('#1743 AC-23 / AC-28: Cockpit-Schnellaktionen — nur neue Kennungen, V
 		const zeitplan = aktionen.filter((a) => a.label === 'Briefing-Zeitplan');
 		assert.equal(zeitplan.length, 2, `Trip- und Vergleich-Schnellaktion erwartet: ${JSON.stringify(zeitplan)}`);
 		for (const a of zeitplan) {
-			assert.equal(ziel(a.href).searchParams.get('tab'), 'wetter-metriken', a.href);
+			assert.equal(ziel(a.href).searchParams.get('tab'), 'zustellung', a.href);
 			assert.equal(ziel(a.href).hash, '#versand', a.href);
 		}
 	});

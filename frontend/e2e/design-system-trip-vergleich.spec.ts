@@ -30,7 +30,7 @@
 //   DS-4  Aktivität beim Trip-Anlegen = listbox (Maus, Enter/Pfeil/Enter, Fokus sichtbar) und
 //         Mail-Format im Trip-Hub = radiogroup (Maus, Pfeil links) ⇒ Wert nach Neuladen gespeichert.
 //   DS-6  390 × 844: Zurück-Link (Hub, Anlegen), „Mit Standardwerten speichern", jedes ⓘ,
-//         jeder Schnellwahl-Chip der Zustellung ≥ 44 × 44 (boundingBox), kein waagerechtes Überlaufen.
+//         jeder Schnellwahl-Chip der Zustellung ≥ 44 × 44 (Rahmen), kein waagerechtes Überlaufen.
 //
 // Pflicht-Mutationen (Spec Implementation Details 4, Lieferung A): (a) MTabBar-Rahmen-Reset
 // entfernt ⇒ DS-8 rot; (b) `.mono`-Regel gelöscht ⇒ DS-7 rot; (c) „+ Neuer Trip" im Leerzustand
@@ -229,7 +229,8 @@ interface ReiterMass {
 
 async function messeReiterleiste(page: Page, kind: HubKind): Promise<ReiterMass> {
 	const leiste = page.getByTestId(HUB_SEL[kind].reiterListe).locator('.mtabbar');
-	await expect(leiste.getByRole('tab')).toHaveCount(5);
+	// #2794 S3a: vier Hub-Reiter (Übersicht, Etappen/Orte, Wetter, Zustellung).
+	await expect(leiste.getByRole('tab')).toHaveCount(4);
 	await expect(leiste.locator('[data-slot="segmented-badge"]').first()).toBeVisible();
 	await page.mouse.move(1, 1);
 	return leiste.evaluate((el) => {
@@ -296,7 +297,7 @@ test('DS-8: Hub-Reiterleiste am Computer ohne Kasten, Grundlinie --g-rule, 13 px
 			borderBottomColor: RULE,
 			borderRadius: '0px 0px 0px 0px'
 		});
-		expect(m.inaktiv.length, `${kind}: inaktive Reiter`).toBe(4);
+		expect(m.inaktiv.length, `${kind}: inaktive Reiter`).toBe(3);
 		for (const r of m.inaktiv) {
 			expect(r, `${kind}: inaktiver Reiter`).toMatchObject({
 				fontSize: '13px',
@@ -342,7 +343,8 @@ for (const kind of HUB_KINDS) {
 			const segmente = ANLEGE_SEL[kind].fortschrittSegment(page);
 			await expect(segmente).toHaveCount(ANLEGE_SEL[kind].fortschrittSegmente);
 			const fortschritt = ANLEGE_SEL[kind].fortschritt(page);
-			await expect(fortschritt).toContainText('2 / 5 Abschnitte eingerichtet', { timeout: 10_000 });
+			// #2794 S3a: Anlege-Kette mit vier Pflicht-Abschnitten.
+			await expect(fortschritt).toContainText(`2 / ${ANLEGE_SEL[kind].fortschrittSegmente} Abschnitte eingerichtet`, { timeout: 10_000 });
 			await expect(segmente.and(page.locator('[data-done="true"]'))).toHaveCount(2);
 			// Farbwechsel laufen mit `transition: 350ms` — erst messen, wenn keine Animation mehr läuft.
 			await page.evaluate(() =>
@@ -623,7 +625,8 @@ for (const breite of BREITEN) {
 						await expect(page.getByTestId('save-indicator')).toBeVisible();
 						await pruefeSeite(page, `${kind}-Hub ${tab}`, fehler);
 					}
-					await openHub(page, kind, hubs[kind].id, { tab: 'wetter-metriken' });
+					// #2794 S3a: Versand und Mail-Inhalt stehen im Hub-Reiter „Zustellung".
+					await openHub(page, kind, hubs[kind].id, { tab: 'zustellung' });
 					await expect(page.locator('[data-testid="versand-abschnitt"]:visible').first()).toBeVisible({ timeout: 15_000 });
 					await pruefeSeite(page, `${kind}-Hub Zustellung`, fehler, ZUSTELLUNG);
 				}
@@ -637,7 +640,9 @@ for (const breite of BREITEN) {
 					if (mobil && lang === 'en') continue;
 					await anlegenPflicht(page, kind, { name: `E2E-GZ-DS3-${kind}-${Date.now()}`, mobil });
 					await pruefeSeite(page, `${kind}-Anlegen ${ANLEGE_SEL[kind].punkteSchritt}`, fehler);
-					await page.getByTestId(ANLEGE_REITER(kind, 'wetter-metriken', mobil)).click();
+					// #2794 S3a: Anlege-Kette … → Wetter → Zustellung (Zustellung erst nach Wetter frei).
+					await page.getByTestId(ANLEGE_REITER(kind, 'wetter', mobil)).click({ force: mobil });
+					await page.getByTestId(ANLEGE_REITER(kind, 'zustellung', mobil)).click({ force: mobil });
 					await expect(page.locator('[data-testid="versand-abschnitt"]:visible').first()).toBeVisible({ timeout: 15_000 });
 					await pruefeSeite(page, `${kind}-Anlegen Zustellung`, fehler, ZUSTELLUNG);
 				}
@@ -705,7 +710,7 @@ test('DS-4 Mail-Format: Zustellung im Trip-Hub ist eine radiogroup, per Maus und
 	const voll = gruppe.getByRole('radio', { name: /Ausführlich/ });
 	const kompakt = gruppe.getByRole('radio', { name: /Kompakt/ });
 	try {
-		await openHub(page, 'route', hub.id, { tab: 'wetter-metriken' });
+		await openHub(page, 'route', hub.id, { tab: 'zustellung' });
 		await expect(gruppe).toBeVisible({ timeout: 15_000 });
 		await expect(gruppe, 'Mail-Format ist keine radiogroup').toHaveAttribute('role', 'radiogroup');
 		await expect(voll).toBeChecked();
@@ -713,7 +718,7 @@ test('DS-4 Mail-Format: Zustellung im Trip-Hub ist eine radiogroup, per Maus und
 		await kompakt.click();
 		await expect(kompakt).toBeChecked();
 		await expect.poll(format, { message: 'Kompakt nicht gespeichert', timeout: 15_000 }).toBe('compact');
-		await openHub(page, 'route', hub.id, { tab: 'wetter-metriken' });
+		await openHub(page, 'route', hub.id, { tab: 'zustellung' });
 		await expect(kompakt).toBeChecked({ timeout: 15_000 });
 		// Tastatur: Pfeil links wählt das vorherige Format
 		await kompakt.focus();
@@ -726,7 +731,7 @@ test('DS-4 Mail-Format: Zustellung im Trip-Hub ist eine radiogroup, per Maus und
 		});
 		expect(fokus.sichtbar && fokus.stil !== 'none' && fokus.breite !== '0px', `Fokus nicht sichtbar: ${JSON.stringify(fokus)}`).toBe(true);
 		await expect.poll(format, { message: 'Ausführlich nicht gespeichert', timeout: 15_000 }).toBe('full');
-		await openHub(page, 'route', hub.id, { tab: 'wetter-metriken' });
+		await openHub(page, 'route', hub.id, { tab: 'zustellung' });
 		await expect(voll).toBeChecked({ timeout: 15_000 });
 	} finally {
 		await hub.aufraeumen();
@@ -736,14 +741,18 @@ test('DS-4 Mail-Format: Zustellung im Trip-Hub ist eine radiogroup, per Maus und
 // ─── DS-6 (AC-6) ────────────────────────────────────────────────────────────
 
 async function messeTippflaechen(ziel: Locator, seite: string, mindestens: number, fehler: string[]): Promise<void> {
-	const n = await ziel.count();
-	if (n < mindestens) fehler.push(`${seite}: ${n} statt mindestens ${mindestens} Tippflächen gefunden`);
-	for (let i = 0; i < n; i++) {
-		const el = ziel.nth(i);
-		const bb = await el.boundingBox();
-		const name = (await el.getAttribute('data-testid')) ?? `#${i}`;
-		if (!bb || bb.width + 0.01 < 44 || bb.height + 0.01 < 44) {
-			fehler.push(`${seite} ${name}: ${bb ? `${bb.width.toFixed(1)} × ${bb.height.toFixed(1)}` : 'keine Box'} px (< 44 × 44)`);
+	// In EINEM Schritt gemessen (Rahmen wie boundingBox): Bereiche, die nach dem Laden neu aufbauen
+	// (Wertebereiche im Reiter Wetter), tauschen sonst zwischen Zählen und Messen ihre Knoten.
+	const boxen = await ziel.evaluateAll((els) =>
+		els.map((el, i) => {
+			const r = el.getBoundingClientRect();
+			return { name: el.getAttribute('data-testid') ?? `#${i}`, breite: r.width, hoehe: r.height };
+		})
+	);
+	if (boxen.length < mindestens) fehler.push(`${seite}: ${boxen.length} statt mindestens ${mindestens} Tippflächen gefunden`);
+	for (const b of boxen) {
+		if (b.breite + 0.01 < 44 || b.hoehe + 0.01 < 44) {
+			fehler.push(`${seite} ${b.name}: ${b.breite.toFixed(1)} × ${b.hoehe.toFixed(1)} px (< 44 × 44)`);
 		}
 	}
 }
@@ -770,7 +779,7 @@ test('DS-6: Tippflächen am Handy (390 × 844) mindestens 44 × 44 — Zurück, 
 			await messeTippflaechen(zurueck, `${kind}-Hub Zurück`, 1, fehler);
 			await pruefeUeberlauf(page, `${kind}-Hub Übersicht`, fehler);
 
-			await openHub(page, kind, id, { tab: 'wetter-metriken' });
+			await openHub(page, kind, id, { tab: 'zustellung' });
 			const chips = page.locator(
 				'[data-testid^="report-morning-quickpick-"]:visible, [data-testid^="report-evening-quickpick-"]:visible'
 			);
@@ -778,11 +787,12 @@ test('DS-6: Tippflächen am Handy (390 × 844) mindestens 44 × 44 — Zurück, 
 			await messeTippflaechen(chips, `${kind}-Hub Schnellwahl`, 4, fehler);
 			await pruefeUeberlauf(page, `${kind}-Hub Zustellung`, fehler);
 
-			await openHub(page, kind, id, { tab: 'wertebereiche' });
+			// #2794 S3a: die Wertebereiche (mit ⓘ) stehen im Hub-Reiter „Wetter".
+			await openHub(page, kind, id, { tab: 'wetter' });
 			const ii = page.locator('[data-testid^="begriff-erklaerung-"]:visible');
 			await expect(ii.first()).toBeVisible({ timeout: 15_000 });
 			await messeTippflaechen(ii, `${kind}-Hub ⓘ`, 1, fehler);
-			await pruefeUeberlauf(page, `${kind}-Hub Wertebereiche`, fehler);
+			await pruefeUeberlauf(page, `${kind}-Hub Wetter`, fehler);
 		}
 		for (const kind of HUB_KINDS) {
 			await page.goto(ANLEGE_SEL[kind].url);

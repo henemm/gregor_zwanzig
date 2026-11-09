@@ -88,11 +88,12 @@ async function cleanupComparePresets(request: import('@playwright/test').APIRequ
 // ─────────────────────────────────────────────────────────────────────────────
 
 test.describe('#529 Trip-Detail · Kanonische Tab-Namen (nav-map.jsx)', () => {
-	test('AC-1a: Tab "weather" heißt "Wetter-Metriken" (nicht "Wetter-Briefing")', async ({
+	// Issue #2794 S3a (Teil-PR 2): Reiter "weather" heißt jetzt "Wetter" (vorher "Wetter-Metriken").
+	test('AC-1a: Tab "weather" heißt "Wetter" (nicht "Wetter-Briefing")', async ({
 		page
 	}) => {
 		await page.goto(`/trips/${TRIP_ID}`);
-		await expect(page.getByRole('tab', { name: 'Wetter-Metriken' })).toBeVisible();
+		await expect(page.getByRole('tab', { name: 'Wetter', exact: true })).toBeVisible();
 		await expect(page.getByRole('tab', { name: 'Wetter-Briefing' })).not.toBeVisible();
 	});
 
@@ -104,15 +105,18 @@ test.describe('#529 Trip-Detail · Kanonische Tab-Namen (nav-map.jsx)', () => {
 		page
 	}) => {
 		await page.goto(`/trips/${TRIP_ID}`);
-		await expect(page.getByRole('tab', { name: 'Wetter-Metriken' })).toBeVisible();
+		await expect(page.getByRole('tab', { name: 'Wetter', exact: true })).toBeVisible();
 		await expect(page.getByRole('tab', { name: 'Versand' })).toHaveCount(0);
 		await expect(page.getByRole('tab', { name: 'Reports & Kanäle' })).not.toBeVisible();
 	});
 
 	// Issue #1231 Slice 6: alerts-Label erneut umbenannt ("Alerts" -> "Wertebereiche").
-	test('AC-1c: Tab "alerts" heißt "Wertebereiche" (nicht "Alarmregeln")', async ({ page }) => {
+	// Issue #2794 S3a (Teil-PR 2): die Alarm-/Wertebereiche-Oberfläche liegt in den Reitern
+	// "Zustellung"/"Wetter"; es gibt weder "Wertebereiche" noch "Alarmregeln" als Reiter.
+	test('AC-1c: kein Reiter "Wertebereiche" / "Alarmregeln", dafür "Zustellung"', async ({ page }) => {
 		await page.goto(`/trips/${TRIP_ID}`);
-		await expect(page.getByRole('tab', { name: 'Wertebereiche' })).toBeVisible();
+		await expect(page.getByRole('tab', { name: 'Zustellung', exact: true })).toBeVisible();
+		await expect(page.getByRole('tab', { name: 'Wertebereiche' })).toHaveCount(0);
 		await expect(page.getByRole('tab', { name: 'Alarmregeln' })).not.toBeVisible();
 	});
 });

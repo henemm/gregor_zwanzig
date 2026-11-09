@@ -52,7 +52,7 @@ for (const kind of HUB_KINDS) {
 			const pfad = hubApiPath(kind, hub.id);
 			const { puts, beantwortet } = zaehlePuts(page, pfad);
 
-			await openHub(page, kind, hub.id, { tab: 'wetter-metriken', hash: 'versand' });
+			await openHub(page, kind, hub.id, { tab: 'zustellung', hash: 'versand' });
 			await expect(page.locator('[data-testid="versand-abschnitt"]:visible')).toBeVisible({ timeout: 10_000 });
 			const uhrzeit = morgenUhrzeit(page);
 			await expect(uhrzeit).toBeVisible({ timeout: 10_000 });

@@ -35,8 +35,10 @@ const MOBIL = { activeTab: 'route', isMobileViewport: true };
 // Sticky-Footer. Die tn-mobile-save-Prüfungen rendern deshalb im Schritt Alarme.
 // Die Vorbelegung von activeTab ruft switchTab NICHT auf ⇒ alVisited bleibt
 // false, der Anfangszustand „nicht speicherbereit" bleibt erhalten.
-const DESKTOP_ALARME = { activeTab: 'alarme', isMobileViewport: false };
-const MOBIL_ALARME = { activeTab: 'alarme', isMobileViewport: true };
+// #2794 S3a (Spec feat_2794_s3a_teil2_leiste.md AC-6): letzter Schritt ist jetzt „Zustellung"
+// (Alarme liegen darin); die Konstanten-Namen bleiben, der Schritt folgt.
+const DESKTOP_ALARME = { activeTab: 'zustellung', isMobileViewport: false };
+const MOBIL_ALARME = { activeTab: 'zustellung', isMobileViewport: true };
 
 const BUTTON_BACKLINK = /<button\b[^>]*data-testid="back-link"[^>]*>/g;
 const ANCHOR_BACKLINK = /<a\b[^>]*data-testid="back-link"[^>]*>/g;

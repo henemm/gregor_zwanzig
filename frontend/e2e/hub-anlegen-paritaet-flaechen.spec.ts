@@ -42,9 +42,9 @@ const TOL = 1;
 const REITER: { name: string; id: Record<HubKind, string> }[] = [
 	{ name: 'Übersicht', id: { route: 'uebersicht', vergleich: 'uebersicht' } },
 	{ name: 'Etappen ↔ Orte', id: { route: 'etappen', vergleich: 'orte' } },
-	{ name: 'Wetter-Metriken', id: { route: 'wetter-metriken', vergleich: 'wetter-metriken' } },
-	{ name: 'Wertebereiche', id: { route: 'wertebereiche', vergleich: 'wertebereiche' } },
-	{ name: 'Alarme', id: { route: 'alarme', vergleich: 'alarme' } }
+	// #2794 S3a: Reiter Wetter und Zustellung (vorher Wetter-Metriken, Wertebereiche, Alarme).
+	{ name: 'Wetter', id: { route: 'wetter', vergleich: 'wetter' } },
+	{ name: 'Zustellung', id: { route: 'zustellung', vergleich: 'zustellung' } }
 ];
 
 /** Whitelist: Beschriftungstexte je Art und Sprache (Katalog), optionale Anlege-Schritte. */
@@ -55,8 +55,9 @@ const NAME_LABEL: Record<HubKind, Record<'de' | 'en', string>> = {
 const REGION_LABEL: Record<'de' | 'en', string> = { de: 'Region', en: 'Region' };
 const OPTIONALE_SCHRITTE: Record<HubKind, string[]> = { route: ['wegpunkte'], vergleich: [] };
 const ALLE_SCHRITTE: Record<HubKind, string[]> = {
-	route: ['route', 'etappen', 'wegpunkte', 'wetter-metriken', 'wertebereiche', 'alarme'],
-	vergleich: ['vergleich', 'orte', 'wetter-metriken', 'wertebereiche', 'alarme']
+	// #2794 S3a: Anlege-Kette … → Wetter → Zustellung.
+	route: ['route', 'etappen', 'wegpunkte', 'wetter', 'zustellung'],
+	vergleich: ['vergleich', 'orte', 'wetter', 'zustellung']
 };
 
 type Box = { x: number; y: number; width: number; height: number };

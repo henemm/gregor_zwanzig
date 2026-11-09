@@ -112,7 +112,7 @@
 	// Issue #2276 S6g: kein Laufzeit- oder Typ-Import eines Compare-Zustandsobjekts
 	// mehr — der Vergleichs-Zweig arbeitet nur noch auf Wertprops + Rueckrufen,
 	// das Buendel baut `compare/wetterMetrikenPropsAus.ts`.
-	import { weatherMetricsTabSections, type WeatherMetricsContext } from './weather-metrics-tab/weatherMetricsTabSections.ts';
+	import { weatherMetricsTabSections, type WeatherMetricsContext, type WeatherMetricsBereich } from './weather-metrics-tab/weatherMetricsTabSections.ts';
 	// Issue #1360: geteilte Stundenverlauf-Steuerung (Hub + Anlege-Seite),
 	// unveraendert uebernommen aus dem aufgeloesten Layout-Reiter.
 	import CompareHourlyLayoutControls from '$lib/components/compare/CompareHourlyLayoutControls.svelte';
@@ -169,7 +169,7 @@
 
 	interface Props {
 		/** Issue #1311: 'route' (Trip, Default) | 'vergleich' (Ortsvergleich). */
-		context?: WeatherMetricsContext;
+		context?: WeatherMetricsContext; /** #2794 S3a: Darstellungsfilter je Reiter (Default alles), rein darstellend — Speicherwege/Owner unveraendert. */ bereich?: WeatherMetricsBereich;
 		// route (unveraendert)
 		trip?: Trip;
 		/** Issue #622: Create-Modus — kein PUT; Kanäle per onChannelsChange nach oben emittieren */
@@ -224,7 +224,7 @@
 		enqueueHubWrite?: <T>(fn: () => Promise<T>) => Promise<T>; /** #2521 S1: Infobox nur beim Anlegen (Default aus). */ showInfobox?: boolean;
 	}
 	let {
-		context = 'route', trip, createMode = false, onChannelsChange, onWeatherMetricsChange, onDayWindowChange,
+		context = 'route', bereich = 'alles', trip, createMode = false, onChannelsChange, onWeatherMetricsChange, onDayWindowChange,
 		onTripUpdate, saveController,
 		activeMetricKeys, channelActiveMetricKeys, officialAlertsEnabled, dayWindowStartHour, dayWindowEndHour,
 		hourlyMetricKeys, hourlyEnabled, outlookMetricKeys, outlookMetricFormats, outlookEnabled,
@@ -236,7 +236,7 @@
 
 	// Issue #1311: Abschnittsreihenfolge kommt aus einer reinen Funktion, kein
 	// Duplikat der Reihenfolge im Markup (AC-1, AC-8-Attrappen-Verbot).
-	const sections = $derived(weatherMetricsTabSections(context));
+	const sections = $derived(weatherMetricsTabSections(context, bereich));
 
 	let catalog: MetricCatalog = $state({});
 	// Issue #1318 AC-9: SMS-Kuerzel kommen ausschliesslich aus dem Backend
@@ -1486,6 +1486,7 @@
 				<p class="loading-msg">{$t('wertebereiche.tab.laedt')}</p>
 			</div>
 		{:else}
+			{#if sections.includes('grundauswahl')}
 			<Card padding={18}>
 				<Eyebrow style="margin-bottom:4px">{$t('wertebereiche.vergleich.titel')}</Eyebrow>
 				<p class="option-hint">{$t('wertebereiche.vergleich.hinweis')}</p>
@@ -1533,6 +1534,7 @@
 					{/each}
 				</div>
 			</Card>
+			{/if}
 
 			<!-- Issue #1359 Scheibe 1 (AC-1/AC-6): DERSELBE geteilte Reihenfolge-
 			     Baustein wie im Trip — WeatherV2Reihenfolge (SortableList +
@@ -1549,7 +1551,7 @@
 			     153 Zeichen, Telegram 7 Metrik-Zeilen). Eine Mail-VORSCHAU gibt es
 			     hier nicht (der Hub-Reiter "Vorschau" entfiel mit #1743) — der Organism
 			     ist seit #1719 S3 eine reine Ein-Spalten-Huelle. -->
-			{#if sections.includes('reihenfolge')}
+			{#if sections.includes('layout_kanal')}
 			<LayoutTab
 				context="vergleich"
 				bind:channel={compareChannel}
@@ -1708,6 +1710,7 @@
 		<!-- LayoutTab-Organism (Reihenfolge + Vorschau); darunter 04/Mail-Inhalt/ -->
 		<!-- Official-Toggle unverändert einspaltig (KL-4). -->
 		<div class="route-editor-body">
+			{#if sections.includes('grundauswahl')}
 			<div class="top-section">
 				<!-- 01 Profil -->
 				<Card padding={18}>
@@ -1733,6 +1736,7 @@
 					/>
 				</Card>
 			</div>
+			{/if}
 
 			<!-- Fresh-Eyes-Fund #1232-3b: colCount zählt reine Metriken (ohne "+1"
 			     Label-Spalte, die aus dem vergleich-Kontext stammt und dort
@@ -1740,7 +1744,7 @@
 			     (WeatherV2Reihenfolge: tgBudget = Anzahl Metriken, Zeitspalte
 			     zählt nicht mit) erwartet dieselbe reine Metriken-Zählung, sonst
 			     weicht der Überlauf-Chip von der Kapplinie ab. -->
-			{#if sections.includes('reihenfolge')}
+			{#if sections.includes('layout_kanal')}
 			<!-- Issue #1575 Scheibe 3: Reihenfolge-Karte zeigt die EFFEKTIVE
 			     Auswahl des aktiven Kanals (eigener Eintrag, sonst die globale). -->
 			<LayoutTab
@@ -2054,7 +2058,9 @@
 				     der Ortsvergleich hat keinen Nachtblock (kein Compare-Pendant).
 				     !createMode wie 'official_alerts'/'report_config': beim Anlegen
 				     gibt es keinen Rueckkanal zu TripNewEditor, die Geste ginge still
-				     verloren; ein neuer Trip ohne Feld gilt als "an" (loader.py). -->
+				     verloren; ein neuer Trip ohne Feld gilt als "an" (loader.py).
+				     Issue #2794 S3a: Abschnitt 'nachtblock' (Reiter Zustellung). -->
+				{#if sections.includes('nachtblock')}
 				<UiCard.Root class="p-3 space-y-2 hover:translate-y-0 hover:shadow-none">
 					<div class="text-sm">
 						<span class="inline-flex items-center gap-2">
@@ -2063,6 +2069,7 @@
 						<p class="pl-6 text-xs text-muted-foreground mt-0.5">{$t('wertebereiche.nachtblock.text')}</p>
 					</div>
 				</UiCard.Root>
+				{/if}
 				{/if}
 			</div>
 		</div>

@@ -101,13 +101,19 @@ export const VERTRAG_FEHLT_EDITOR =
 	'(lokaler Zustand ohne getContext) — nameOk/orteOk bleiben unwahr.';
 
 /** Wertet das Prop-Buendel der ERSTEN Einbettung von `komponente` im Editor aus:
- *  `attribut` gesetzt ⇒ `attribut={…}`; sonst die Spread-Attribut-Form `{...xPropsAus(…)}`. */
+ *  `attribut` gesetzt ⇒ `attribut={…}` der ersten Einbettung, die dieses Attribut traegt
+ *  (#2794 S3a: das Panel steht je Schritt Wetter/Zustellung, nur der Zustellungs-Mount traegt
+ *  `versand`); sonst die Spread-Attribut-Form `{...xPropsAus(…)}` der ersten Einbettung. */
 export function buendelAus(e: EditorUmgebung, komponente: string, attribut?: string): Knoten {
-	const einbettung = findeKomponenten(e.ast, komponente)[0];
+	const alle = findeKomponenten(e.ast, komponente);
+	const einbettung = alle[0];
 	if (!einbettung) throw new Error(`Messaufbau: <${komponente}> nicht im Anlege-Editor eingebettet.`);
 	let ausdruck: string | null = null;
 	if (attribut) {
-		ausdruck = attributAusdruck(einbettung, e.quelle, attribut);
+		for (const k of alle) {
+			ausdruck = attributAusdruck(k, e.quelle, attribut);
+			if (ausdruck) break;
+		}
 	} else {
 		for (const a of (einbettung.attributes ?? []) as Knoten[]) {
 			if (a.type !== 'SpreadAttribute') continue;

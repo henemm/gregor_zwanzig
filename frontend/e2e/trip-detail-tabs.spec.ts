@@ -8,14 +8,14 @@ const TRIP_ID = 'e2e-cockpit-test';
 const TABS = [
 	{ value: 'uebersicht', label: 'Übersicht' },
 	{ value: 'etappen', label: 'Etappen & Wegpunkte' },
-	{ value: 'wetter-metriken', label: 'Wetter-Metriken' },
-	{ value: 'wertebereiche', label: 'Wertebereiche' },
-	{ value: 'alarme', label: 'Alarme' }
+	{ value: 'wetter', label: 'Wetter' },
+	{ value: 'zustellung', label: 'Zustellung' }
 ];
-// Issue #1743: Reiter `versand`/`vorschau` entfallen (Versand lebt in Wetter-Metriken).
+// Issue #1743: Reiter `versand`/`vorschau` entfallen. Issue #2794 S3a (Spec
+// feat_2794_s3a_teil2_leiste.md): vier Reiter; Versand und Alarme im Reiter Zustellung.
 
 test.describe('Issue #155 — Trip-Detail Tab-Navigation', () => {
-	test('AC-1: 5 Tabs in fester Reihenfolge sichtbar, kein Versand/Vorschau', async ({ page }) => {
+	test('AC-1: 4 Tabs in fester Reihenfolge sichtbar, kein Versand/Vorschau', async ({ page }) => {
 		await page.goto(`/trips/${TRIP_ID}`);
 		const list = page.getByTestId('trip-detail-tab-list');
 		await expect(list).toBeVisible();
@@ -44,10 +44,10 @@ test.describe('Issue #155 — Trip-Detail Tab-Navigation', () => {
 		await expect(panel).toBeVisible();
 	});
 
-	test('AC-4: Aufruf mit ?tab=wertebereiche → Alerts-Tab initial aktiv (Bug #534 — Issue #516)', async ({ page }) => {
-		await page.goto(`/trips/${TRIP_ID}?tab=wertebereiche`);
-		await expect(page.getByTestId('trip-detail-tab-wertebereiche')).toHaveAttribute('data-state', 'active');
-		await expect(page.getByTestId('trip-detail-panel-wertebereiche')).toBeVisible();
+	test('AC-4: Aufruf mit ?tab=wetter → Wetter-Reiter (mit Wertebereichen) initial aktiv (Bug #534 — Issue #516)', async ({ page }) => {
+		await page.goto(`/trips/${TRIP_ID}?tab=wetter`);
+		await expect(page.getByTestId('trip-detail-tab-wetter')).toHaveAttribute('data-state', 'active');
+		await expect(page.getByTestId('trip-detail-panel-wetter')).toBeVisible();
 	});
 
 	test('AC-5: Aktiver Tab hat sichtbare Unterstreichung in --g-accent', async ({ page }) => {
@@ -71,7 +71,8 @@ test.describe('Issue #155 — Trip-Detail Tab-Navigation', () => {
 		// enabled Alert-Rules). Die anderen Tabs dürfen weiterhin kein Badge zeigen.
 		await page.goto(`/trips/${TRIP_ID}`);
 		for (const tab of TABS) {
-			if (tab.value === 'etappen' || tab.value === 'wertebereiche') continue;
+			// #2794 S3a (Spec §6): nur noch der Etappen-Reiter trägt ein Badge.
+			if (tab.value === 'etappen') continue;
 			const badge = page.getByTestId(`trip-detail-tab-badge-${tab.value}`);
 			await expect(badge).toHaveCount(0);
 		}
@@ -116,8 +117,8 @@ test.describe('Issue #155 — Trip-Detail Tab-Navigation', () => {
 			path: '../docs/artifacts/epic-135-step1-tab-navigation/screenshot-tabs-overview.png',
 			fullPage: false
 		});
-		await page.goto(`/trips/${TRIP_ID}?tab=wertebereiche`);
-		await page.waitForSelector('[data-testid="trip-detail-panel-wertebereiche"]');
+		await page.goto(`/trips/${TRIP_ID}?tab=wetter`);
+		await page.waitForSelector('[data-testid="trip-detail-panel-wetter"]');
 		await page.screenshot({
 			path: '../docs/artifacts/epic-135-step1-tab-navigation/screenshot-tabs-alerts.png',
 			fullPage: false

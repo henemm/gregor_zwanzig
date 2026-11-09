@@ -90,9 +90,9 @@
 		startDate?: string;
 		stageNames?: string[];
 		// #2277 S4: Besuchs-Flags vorbelegen (Wirkstelle der Reiterleiste testbar).
+		// #2794 S3a: Wetter (`wtVisited`) und Zustellung (`zuVisited`).
 		wtVisited?: boolean;
-		wbVisited?: boolean;
-		alVisited?: boolean;
+		zuVisited?: boolean;
 	}
 	let { stateOverride }: { stateOverride?: TripNewStateOverride } = $props();
 	// Einmal-Lesung beim Erzeugen (untrack, wie `profileOverride` in
@@ -158,8 +158,7 @@
 
 	// Visited-Flags (Tab-Besuch setzt done)
 	let wtVisited = $state(seed.wtVisited ?? false);
-	let wbVisited = $state(seed.wbVisited ?? false);
-	let alVisited = $state(seed.alVisited ?? false);
+	let zuVisited = $state(seed.zuVisited ?? false);
 
 	let activeTab = $state<TabId>(seed.activeTab ?? 'route');
 
@@ -202,8 +201,8 @@
 
 	// ── Abgeleitete Zustandsgrößen ────────────────────────────────────────────
 	const etDone = $derived(stages.length > 0 && stages.every(s => s.gpx !== null));
-	const unlocked = $derived(unlockedTabs(name, startDate, etDone, wtVisited, wbVisited, alVisited));
-	const done = $derived(doneTabs(name, startDate, etDone, wtVisited, wbVisited, alVisited));
+	const unlocked = $derived(unlockedTabs(name, startDate, etDone, wtVisited, zuVisited));
+	const done = $derived(doneTabs(name, startDate, etDone, wtVisited, zuVisited));
 	const ready = $derived(canSave(done));
 	// #2521 S3: eigenes Gate des Standardwerte-Knopfs (Bestandsknopf bleibt an `ready`).
 	const standardwerteFrei = $derived(canFinishMitStandardwerten({
@@ -286,7 +285,7 @@
 
 	// Mobile Wegpunkte CTA: weiter zu metriken (Factory-Pattern)
 	function makeMobileWegpunkteContinueHandler() {
-		return () => switchTab('wetter-metriken');
+		return () => switchTab('wetter');
 	}
 
 	function switchTab(id: TabId) {
@@ -298,9 +297,8 @@
 		// damit ein erneuter Klick auf den bereits aktiven Tab keine ungespeicherten
 		// Wegpunkt-Edits verwirft.
 		if (id === 'wegpunkte' && prev !== 'wegpunkte') editorStages = buildEditorStages();
-		if (id === 'wetter-metriken') wtVisited = true;
-		if (id === 'wertebereiche') wbVisited = true;
-		if (id === 'alarme') alVisited = true;
+		if (id === 'wetter') wtVisited = true;
+		if (id === 'zustellung') zuVisited = true;
 	}
 
 	// ── Stage-Brücke: lokaler Create-State ⇄ EditStagesPanelNew (Issue #658) ──
@@ -780,7 +778,7 @@
 
 					<div style="padding-top: 20px; border-top: 1px solid var(--g-rule); display: flex; justify-content: flex-end; align-items: center; gap: 8px;">
 						{#if etDone}
-							<button type="button" onclick={makeEtappenContinueHandler('wetter-metriken')}
+							<button type="button" onclick={makeEtappenContinueHandler('wetter')}
 								style="padding: 8px 16px; border-radius: var(--g-r-2); border: 1px solid var(--g-rule); background: transparent; font-size: 13px; font-weight: 500; cursor: pointer; color: var(--g-ink-3);">
 								{$t('trip.anlegen.wetter_direkt')}
 							</button>
@@ -812,11 +810,11 @@
 						</div>
 					</div>
 					<div style="display: flex; gap: 8px; flex-shrink: 0;">
-						<button type="button" onclick={makeEtappenContinueHandler('wetter-metriken')}
+						<button type="button" onclick={makeEtappenContinueHandler('wetter')}
 							style="padding: 6px 12px; border-radius: var(--g-r-2); border: 1px solid var(--g-rule); background: transparent; font-size: 13px; font-weight: 500; cursor: pointer; color: var(--g-ink-3);">
 							{$t('trip.anlegen.ueberspringen_pfeil')}
 						</button>
-						<button type="button" onclick={makeEtappenContinueHandler('wetter-metriken')}
+						<button type="button" onclick={makeEtappenContinueHandler('wetter')}
 							style="padding: 6px 12px; border-radius: var(--g-r-2); border: none; background: var(--g-accent-deep); color: var(--g-paper); font-size: 13px; font-weight: 600; cursor: pointer;">
 							{$t('trip.anlegen.wegpunkte_uebernehmen')}
 						</button>
@@ -829,11 +827,11 @@
 
 				<!-- Footer (1:1 TN_WegpunkteTab) -->
 				<div style="padding: 20px 40px; border-top: 1px solid var(--g-rule); background: var(--g-card); display: flex; justify-content: flex-end; align-items: center; gap: 8px;">
-					<button type="button" onclick={makeEtappenContinueHandler('wetter-metriken')}
+					<button type="button" onclick={makeEtappenContinueHandler('wetter')}
 						style="padding: 8px 16px; border-radius: var(--g-r-2); border: 1px solid var(--g-rule); background: transparent; font-size: 13px; font-weight: 500; cursor: pointer; color: var(--g-ink-3);">
 						{$t('trip.anlegen.ueberspringen')}
 					</button>
-					<button type="button" onclick={makeEtappenContinueHandler('wetter-metriken')}
+					<button type="button" onclick={makeEtappenContinueHandler('wetter')}
 						style="padding: 8px 16px; border-radius: var(--g-r-2); border: none; background: var(--g-accent-deep); color: var(--g-paper); font-size: 13px; font-weight: 600; cursor: pointer;">
 						{$t('trip.anlegen.wegpunkte_uebernehmen')}
 					</button>
@@ -855,32 +853,34 @@
 		     ueberschrieben sich gegenseitig unbegrenzt. catalogLoaded-Gate und
 		     Inhaltsgleichheitspruefung (Fix-Loop 2/3) bleiben als Zusatzschutz
 		     bestehen (Resize-Grenzfall: Tab kann kurzzeitig neu mounten). -->
+		<!-- Issue #2794 S3a §5: EINE dauerhafte WMT-Instanz fuer die Schritte Wetter UND
+		     Zustellung; ihr `bereich` folgt dem aktiven Schritt (nie zwei Instanzen, AC-2.T2). -->
 		{#if !isMobileViewport}
-		<div style:display={activeTab === 'wetter-metriken' ? '' : 'none'}>
+		<div style:display={activeTab === 'wetter' || activeTab === 'zustellung' ? '' : 'none'}>
 			<!-- Issue #1743: geteilter Baustein „Wetter-Metriken + Versand" (createMode,
 			     kein PUT). Der Versand-Abschnitt haelt den report_config-Blob per
 			     bind:reportConfig; die Mail-Inhalt-Karte folgt darunter (im createMode
-			     blendet WeatherMetricsTab sie aus). -->
-			<WetterMetrikenVersandPanel context="route" trip={stubTrip} createMode={true} showInfobox={true} onChannelsChange={handleChannelsChange} onWeatherMetricsChange={handleWeatherMetricsChange} onDayWindowChange={handleDayWindowChange} bind:reportConfig onJump={onVersandJump} />
-			<div style="padding: 0 40px 60px; max-width: 720px;">
+			     blendet WeatherMetricsTab sie aus) — beides im Schritt Zustellung. Ausserhalb
+			     des Schritts Wetter steht `bereich` auf Zustellung: der (verborgene)
+			     Versand-Abschnitt schreibt seine Standardwerte wie bisher ab dem Start. -->
+			<WetterMetrikenVersandPanel context="route" bereich={activeTab === 'wetter' ? 'wetter' : 'zustellung'} trip={stubTrip} createMode={true} showInfobox={true} onChannelsChange={handleChannelsChange} onWeatherMetricsChange={handleWeatherMetricsChange} onDayWindowChange={handleDayWindowChange} bind:reportConfig onJump={onVersandJump} />
+			<div style:display={activeTab === 'zustellung' ? '' : 'none'} style="padding: 0 40px; max-width: 720px;">
 				<MailInhaltCard bind:reportConfig />
-				<!-- #2347 S4 (AC-20): Weiter-Fuß wie compare-editor-continue-wertebereiche im Vergleich. -->
-				<div style="margin-top: 28px; padding-top: 20px; border-top: 1px solid var(--g-rule); display: flex; justify-content: flex-end;">
-					<Btn data-testid="trip-new-continue-wertebereiche" variant="accent" size="md" onclick={makeEtappenContinueHandler('wertebereiche')}>{$t('trip.anlegen.wertebereiche_festlegen')}</Btn>
-				</div>
 			</div>
 		</div>
 		{/if}
 
 		<!-- Issue #2277 S2a — geteilter CorridorEditor (createMode, kein PUT),
 		     Muster WeatherMetricsTab/AlarmeTab: EINE dauerhafte Instanz (Desktop
-		     XOR Mobile), Sichtbarkeit ueber style:display. -->
+		     XOR Mobile), Sichtbarkeit ueber style:display. Issue #2794 S3a: kein eigener
+		     Schritt mehr — er haengt im Schritt Wetter unter der Metrik-Auswahl und bleibt
+		     dauerhaft gemountet, damit die Vorbelegung (corridors) wie bisher laeuft. -->
 		{#if !isMobileViewport}
-		<div style:display={activeTab === 'wertebereiche' ? '' : 'none'}>
+		<div style:display={activeTab === 'wetter' ? '' : 'none'}>
 			<CorridorEditor context="route" trip={stubTrip} createMode={true} showInfobox={true} {corridors} onCorridorsChange={handleCorridorsChange} onVorbelegungFertig={handleVorbelegungFertig} />
-			<!-- #2347 S4 (AC-20): Weiter-Fuß wie compare-editor-continue-alarme im Vergleich. -->
+			<!-- #2347 S4 (AC-20): Weiter-Fuß wie compare-editor-continue-zustellung im Vergleich. -->
 			<div style="padding: 0 40px 60px; display: flex; justify-content: flex-end;">
-				<Btn data-testid="trip-new-continue-alarme" variant="accent" size="md" onclick={makeEtappenContinueHandler('alarme')}>{$t('trip.anlegen.alarme_einrichten')}</Btn>
+				<Btn data-testid="trip-new-continue-zustellung" variant="accent" size="md" onclick={makeEtappenContinueHandler('zustellung')}>{$t('trip.anlegen.zustellung_einrichten')}</Btn>
 			</div>
 		</div>
 		{/if}
@@ -888,9 +888,10 @@
 		<!-- Issue #2277 S1 — geteilter AlarmeTab (createMode, kein PUT), Muster
 		     WeatherMetricsTab: EINE dauerhafte Instanz (Desktop XOR Mobile),
 		     Sichtbarkeit ueber style:display, damit der interne State beim
-		     Tab-Wechsel erhalten bleibt. Kanal-Wertprops bewusst NICHT gesetzt. -->
+		     Tab-Wechsel erhalten bleibt. Kanal-Wertprops bewusst NICHT gesetzt.
+		     Issue #2794 S3a: im Schritt Zustellung. -->
 		{#if !isMobileViewport}
-		<div style:display={activeTab === 'alarme' ? '' : 'none'}>
+		<div style:display={activeTab === 'zustellung' ? '' : 'none'}>
 			<div style="padding: 32px 40px 60px;">
 				<AlarmeTab context="route" trip={stubTrip} createMode={true} showInfobox={true}
 					officialWarningsEnabled={alarm.officialWarningsEnabled}
@@ -1122,25 +1123,28 @@
 			     display ausgeblendet). Fix-Loop 4 (s. Desktop-Mount oben): per
 			     isMobileViewport-Gate nur EINE Instanz im DOM (Desktop XOR Mobile). -->
 			{#if isMobileViewport}
-			<div style:display={activeTab === 'wetter-metriken' ? '' : 'none'}>
-				<!-- Issue #1743: geteilter Baustein, XOR zum Desktop-Mount oben. -->
-				<WetterMetrikenVersandPanel context="route" trip={stubTrip} createMode={true} showInfobox={true} onChannelsChange={handleChannelsChange} onWeatherMetricsChange={handleWeatherMetricsChange} onDayWindowChange={handleDayWindowChange} bind:reportConfig onJump={onVersandJump} />
-				<div style="padding: 0 16px 60px;">
+			<div style:display={activeTab === 'wetter' || activeTab === 'zustellung' ? '' : 'none'}>
+				<!-- Issue #1743: geteilter Baustein, XOR zum Desktop-Mount oben.
+				     Issue #2794 S3a: EINE Instanz fuer Wetter und Zustellung (s. Desktop). -->
+				<WetterMetrikenVersandPanel context="route" bereich={activeTab === 'wetter' ? 'wetter' : 'zustellung'} trip={stubTrip} createMode={true} showInfobox={true} onChannelsChange={handleChannelsChange} onWeatherMetricsChange={handleWeatherMetricsChange} onDayWindowChange={handleDayWindowChange} bind:reportConfig onJump={onVersandJump} />
+				<div style:display={activeTab === 'zustellung' ? '' : 'none'} style="padding: 0 16px;">
 					<MailInhaltCard bind:reportConfig />
 				</div>
 			</div>
 			{/if}
 
-			<!-- Issue #2277 S2a — Mobile CorridorEditor, XOR zum Desktop-Mount oben. -->
+			<!-- Issue #2277 S2a — Mobile CorridorEditor, XOR zum Desktop-Mount oben.
+			     Issue #2794 S3a: im Schritt Wetter, dauerhaft gemountet. -->
 			{#if isMobileViewport}
-			<div style:display={activeTab === 'wertebereiche' ? '' : 'none'}>
+			<div style:display={activeTab === 'wetter' ? '' : 'none'}>
 				<CorridorEditor context="route" trip={stubTrip} createMode={true} showInfobox={true} {corridors} onCorridorsChange={handleCorridorsChange} onVorbelegungFertig={handleVorbelegungFertig} />
 			</div>
 			{/if}
 
-			<!-- Issue #2277 S1 — Mobile AlarmeTab, XOR zum Desktop-Mount oben. -->
+			<!-- Issue #2277 S1 — Mobile AlarmeTab, XOR zum Desktop-Mount oben.
+			     Issue #2794 S3a: im Schritt Zustellung. -->
 			{#if isMobileViewport}
-			<div style:display={activeTab === 'alarme' ? '' : 'none'}>
+			<div style:display={activeTab === 'zustellung' ? '' : 'none'}>
 				<div style="padding: 16px 16px 60px;">
 					<AlarmeTab context="route" trip={stubTrip} createMode={true} showInfobox={true}
 						officialWarningsEnabled={alarm.officialWarningsEnabled}
@@ -1177,7 +1181,7 @@
 						<StandardwerteSpeichernKnopf enabled={standardwerteFrei} {saving} onclick={onStandardwerte} testid="tn-mobile-standardwerte" />
 					</div>
 				{/if}
-				{#if activeTab === 'alarme'}
+				{#if activeTab === 'zustellung'}
 					<MBtn block variant={ready ? 'primary' : 'quiet'} size="xl" disabled={!ready || saving} onclick={onSave} testid="tn-mobile-save">
 						{saving ? $t('trip.anlegen.speichere') : savedTripId ? $t('trip.anlegen.gespeichert') : $t('trip.anlegen.speichern')}
 					</MBtn>
@@ -1194,7 +1198,7 @@
 					{#if etDone}
 						<div style="display: flex; flex-direction: column; gap: 8px;">
 							<MBtn block variant="accent" size="xl" onclick={makeEtappenContinueHandler('wegpunkte')}>{$t('trip.anlegen.wegpunkte_pruefen')}</MBtn>
-							<MBtn block variant="ghost" size="lg" onclick={makeEtappenContinueHandler('wetter-metriken')}>{$t('trip.anlegen.direkt_wetter')}</MBtn>
+							<MBtn block variant="ghost" size="lg" onclick={makeEtappenContinueHandler('wetter')}>{$t('trip.anlegen.direkt_wetter')}</MBtn>
 						</div>
 					{:else}
 						{@const restGpx = stages.length - gpxCount}
@@ -1205,10 +1209,8 @@
 						<MBtn block variant="accent" size="xl" onclick={makeMobileWegpunkteContinueHandler()}>{$t('trip.anlegen.wegpunkte_uebernehmen')}</MBtn>
 						<MBtn block variant="ghost" size="lg" onclick={makeMobileWegpunkteContinueHandler()}>{$t('trip.anlegen.ueberspringen')}</MBtn>
 					</div>
-				{:else if activeTab === 'wetter-metriken'}
-					<MBtn block variant="accent" size="xl" onclick={makeEtappenContinueHandler('wertebereiche')}>{$t('trip.anlegen.wertebereiche_festlegen')}</MBtn>
-				{:else if activeTab === 'wertebereiche'}
-					<MBtn block variant="accent" size="xl" onclick={makeEtappenContinueHandler('alarme')}>{$t('trip.anlegen.alarme_einrichten')}</MBtn>
+				{:else if activeTab === 'wetter'}
+					<MBtn block variant="accent" size="xl" onclick={makeEtappenContinueHandler('zustellung')}>{$t('trip.anlegen.zustellung_einrichten')}</MBtn>
 				{/if}
 			</EditorStickyFooter>
 		</div><!-- /.tn-mobile -->

@@ -160,7 +160,7 @@ for (const kind of HUB_KINDS) {
 			await expect(knopf).toHaveCount(1);
 			await expect(knopf).toHaveText('Bearbeiten →');
 			await knopf.click();
-			await expect(page.locator(`[data-testid="${HUB_SEL[kind].panel}-wetter-metriken"]:visible`).first()).toBeVisible({
+			await expect(page.locator(`[data-testid="${HUB_SEL[kind].panel}-zustellung"]:visible`).first()).toBeVisible({
 				timeout: 10_000
 			});
 			await expect(page.locator('[data-testid="versand-abschnitt"]:visible').first()).toBeInViewport({ timeout: 10_000 });
@@ -225,7 +225,7 @@ for (const kind of HUB_KINDS) {
 			await expect(zeilen).toHaveCount(ue.pfeilZeilen.length);
 			for (const [i, eyebrow] of ue.pfeilZeilen.entries()) await expect(zeilen.nth(i)).toContainText(eyebrow);
 			await zeilen.nth(ue.pfeilZeilen.indexOf('Versand')).click();
-			await expect(page.locator(`[data-testid="${HUB_SEL[kind].panel}-wetter-metriken"]:visible`).first()).toBeVisible({
+			await expect(page.locator(`[data-testid="${HUB_SEL[kind].panel}-zustellung"]:visible`).first()).toBeVisible({
 				timeout: 10_000
 			});
 			await expect(page.locator(`[data-testid="${HUB_SEL[kind].panel}-uebersicht"]`)).toHaveCount(0);

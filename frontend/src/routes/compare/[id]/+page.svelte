@@ -367,7 +367,7 @@
 		crumb={currentPreset.name}
 		sendLabel={status === 'draft' ? $t('vergleich.hub.setup_abschliessen') : isSending ? $t('aktionen.wird_gesendet') : $t('aktionen.senden')}
 		sendMode={status === 'draft' ? 'setup' : 'senden'}
-		onSetup={() => { window.location.href = `?tab=wetter-metriken#versand`; }}
+		onSetup={() => { window.location.href = `?tab=zustellung#versand`; }}
 		onSend={() => (sendDialogOpen = true)}
 		sendDisabled={isSending || lifecycle === 'archived'}
 		actions={hubAktionen}

@@ -81,10 +81,12 @@ describe('AC-3: /trips/new englisch (Desktop und mobil)', () => {
 		assert.deepEqual(deutscheReste(s), []);
 	});
 
-	test('Wegpunkte- und Alarme-Schritt: Hinweise und Weiter-Knoepfe englisch', () => {
+	// #2794 S3a: der Wertebereiche-Schritt entfaellt (kein „Set target ranges →" mehr); der Weiter-Knopf
+	// aus Wetter fuehrt mit „Set up delivery →" in den Schritt Zustellung (Fix-Loop F006: Ziel benannt).
+	test('Wegpunkte- und Zustellungs-Schritt: Hinweise und Weiter-Knoepfe englisch', () => {
 		const { en } = deDannEn(() => alle('anlegen_weiter'));
 		const s = sichtbar(en);
-		for (const t of ['Waypoints calculated from GPX — optional check', 'Waypoints are weather divides — points where elevation, aspect or terrain changes. You can rename, move or add to them. You can also skip this step.', 'Skip →', 'Accept waypoints →', 'Skip', 'Set target ranges →', 'Set up alerts →', 'Waypoints calculated automatically. Adjust names or skip.', 'Save trip', 'Save'])
+		for (const t of ['Waypoints calculated from GPX — optional check', 'Waypoints are weather divides — points where elevation, aspect or terrain changes. You can rename, move or add to them. You can also skip this step.', 'Skip →', 'Accept waypoints →', 'Skip', 'Set up delivery →', 'Waypoints calculated automatically. Adjust names or skip.', 'Save trip', 'Save'])
 			hat(s, t);
 		assert.deepEqual(deutscheReste(s), []);
 	});

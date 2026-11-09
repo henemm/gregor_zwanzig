@@ -42,7 +42,8 @@ import {
 const HIER = dirname(fileURLToPath(import.meta.url));
 const SEITE = resolve(HIER, '..', '..', '..', '..', 'routes', 'compare', 'new', '+page.svelte');
 
-const ALLE_BESUCHT = { activeTab: 'alarme', isMobileViewport: false, metrikenVisited: true, idealsVisited: true, alarmeVisited: true };
+// #2794 S3a (Spec feat_2794_s3a_teil2_leiste.md AC-6): letzter Schritt „Zustellung".
+const ALLE_BESUCHT = { activeTab: 'zustellung', isMobileViewport: false, metrikenVisited: true, zustellungVisited: true };
 const ORTE = ['loc-a', 'loc-b', 'loc-c'].map((id) => ({ id, name: id, lat: 0, lon: 0 }));
 
 let netz: ReturnType<typeof fetchMitschnitt>;
@@ -97,9 +98,9 @@ describe('AC-5: Anlegen postet genau einmal, mit allen Eingaben, und navigiert',
 		assert.equal(netz.presetPosts().length, 1, 'Re-Entrancy-Guard fehlt: Doppelklick legt zwei Presets an');
 	});
 
-	test('Gegenprobe: Alarme nicht besucht ⇒ kein POST (Freischaltung leitet der Editor selbst her)', async () => {
+	test('Gegenprobe: Zustellung nicht besucht ⇒ kein POST (Freischaltung leitet der Editor selbst her)', async () => {
 		const e = await vergleichEditor({
-			stateOverride: { ...ALLE_BESUCHT, alarmeVisited: false, ...EINGABEN },
+			stateOverride: { ...ALLE_BESUCHT, zustellungVisited: false, ...EINGABEN },
 			locations: ORTE
 		});
 		assert.equal(e.u.nameOk, true, VERTRAG_FEHLT_EDITOR);

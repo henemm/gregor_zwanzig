@@ -174,7 +174,7 @@ test.describe('#2828: Compare-Übersicht zeigt den lebenden Stand ohne Neuladen'
 
 /** Reiterwechsel zum Versand-Abschnitt per Klick (kein page.goto — sonst wäre es ein Neuladen). */
 async function openVersandOhneReload(page: Page): Promise<void> {
-	await page.locator('[data-testid="compare-detail-tab-wetter-metriken"]:visible').first().click();
+	await page.locator('[data-testid="compare-detail-tab-zustellung"]:visible').first().click(); // #2794 S3a
 	await expect(page.locator('[data-testid="versand-abschnitt"]:visible')).toBeVisible({ timeout: 10_000 });
 }
 

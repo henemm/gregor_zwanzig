@@ -58,7 +58,7 @@ for (const kind of HUB_KINDS) {
 					expect(vorher.alarm_ab_migration, 'Vorbedingung: der Merker ist gespeichert').toBe('2793');
 
 					await page.setViewportSize(groesse);
-					await openHub(page, kind, hub.id, { tab: 'alarme' });
+					await openHub(page, kind, hub.id, { tab: 'zustellung' });
 					const reiter = page.locator('[data-testid="alarme-tab"]:visible').first();
 					await expect(reiter).toBeVisible({ timeout: 15_000 });
 

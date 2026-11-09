@@ -60,11 +60,11 @@ test.describe('Issue #1379: Versandzeit nur als volle Stunde waehlbar', () => {
 		await request.delete(`/api/trips/${TRIP_ID}`);
 	});
 
-	// Issue #1743: Versand-Abschnitt im Reiter Wetter-Metriken (?tab=wetter-metriken#versand).
+	// Issue #1743 / #2794 S3a: Versand-Abschnitt im Reiter Zustellung (?tab=zustellung#versand).
 	test('AC-1/AC-2: Stunden-Auswahl im Versand-Abschnitt uebersteht Speichern + Reload', async ({
 		page
 	}) => {
-		await page.goto(`/trips/${TRIP_ID}?tab=wetter-metriken#versand`);
+		await page.goto(`/trips/${TRIP_ID}?tab=zustellung#versand`);
 		const morning = page
 			.locator('[data-testid="versand-abschnitt"] [data-testid="report-morning-time"]:visible')
 			.first();
@@ -98,7 +98,7 @@ test.describe('Issue #1379: Versandzeit nur als volle Stunde waehlbar', () => {
 	test('Bug #1379: die Oberflaeche nimmt keine Uhrzeit an, die sie danach still aendert', async ({
 		page
 	}) => {
-		await page.goto(`/trips/${TRIP_ID}?tab=wetter-metriken#versand`);
+		await page.goto(`/trips/${TRIP_ID}?tab=zustellung#versand`);
 		const morning = page
 			.locator('[data-testid="versand-abschnitt"] [data-testid="report-morning-time"]:visible')
 			.first();

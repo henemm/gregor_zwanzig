@@ -136,7 +136,7 @@ test.describe('Issue #758 — Trip-Editor Speicher-Status', () => {
 		page
 	}) => {
 		// Issue #1743: Versand-Abschnitt im Reiter Wetter-Metriken.
-		await page.goto(`/trips/${TRIP_ID}?tab=wetter-metriken#versand`);
+		await page.goto(`/trips/${TRIP_ID}?tab=zustellung#versand`);
 		const timeInput = page.getByTestId('versand-abschnitt').getByTestId('report-morning-time');
 		await expect(timeInput).toBeVisible();
 		await expect(timeInput).toHaveText('07:00');
@@ -168,7 +168,7 @@ test.describe('Issue #758 — Trip-Editor Speicher-Status', () => {
 	// AC-7: In „Briefing" gibt es keinen expliziten Speichern-Button mehr; Änderungen
 	// speichern automatisch und der Indikator quittiert.
 	test('AC-7: Briefing-Tab ohne Speichern-Button — Auto-Save quittiert', async ({ page }) => {
-		await page.goto(`/trips/${TRIP_ID}?tab=wetter-metriken#versand`);
+		await page.goto(`/trips/${TRIP_ID}?tab=zustellung#versand`);
 		await expect(page.getByTestId('versand-abschnitt')).toBeVisible();
 		// Der alte explizite Speichern-Button darf nicht mehr existieren.
 		await expect(page.getByTestId('briefings-save')).toHaveCount(0);
@@ -217,8 +217,8 @@ test.describe('Issue #758 — Ortsvergleich Speicher-Status', () => {
 		await expect(saveIndicator(page)).toHaveAttribute('data-state', 'idle');
 
 		// Versand-Zeit ändern → Autosave.
-		// Issue #1743: Versand-Abschnitt im Reiter Wetter-Metriken.
-		await page.locator('[data-testid="compare-detail-tab-wetter-metriken"]:visible').first().click();
+		// Issue #1743 / #2794 S3a: Versand-Abschnitt im Reiter Zustellung.
+		await page.locator('[data-testid="compare-detail-tab-zustellung"]:visible').first().click();
 		// Volle Stunde: report-morning-time ist eine Stunden-Auswahlliste (#1379).
 		const morningTime = page
 			.locator('[data-testid="versand-abschnitt"] [data-testid="report-morning-time"]:visible')

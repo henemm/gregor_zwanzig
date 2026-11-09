@@ -135,7 +135,7 @@ const cta = (page: Page) => page.locator('[data-testid="compare-hub-activation-c
 const statusPille = (page: Page) => page.locator('[data-testid="trip-detail-status-badge"]:visible').first();
 
 async function oeffneVersand(page: Page, kind: HubKind, id: string): Promise<void> {
-	await openHub(page, kind, id, { tab: 'wetter-metriken', hash: 'versand' });
+	await openHub(page, kind, id, { tab: 'zustellung', hash: 'versand' });
 	await expect(abschnitt(page)).toBeVisible({ timeout: 10_000 });
 	await expect(morgenUhrzeit(page)).toBeVisible({ timeout: 10_000 });
 }

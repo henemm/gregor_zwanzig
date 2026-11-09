@@ -934,7 +934,7 @@ test.describe('Issue #2284 S2 — Trip-Hub-Kopf: Name, Region, Aktivitaet im get
 					// der Chip wird MIT ihr genau einmal gezaehlt.
 					if (vp.mobil) {
 						await expect(
-							page.locator('[data-slot="segmented"][role="tablist"]').first(),
+							page.locator('.mtabbar[role="tablist"]').first(),
 							'AC-19: MTabBar muss mobil sichtbar sein'
 						).toBeVisible({ timeout: 10_000 });
 					}

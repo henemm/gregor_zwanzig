@@ -184,7 +184,8 @@ for (const kind of HUB_KINDS) {
 				const vorher = await stand(page, kind, hub.id);
 				const schreiber = sammleSchreiber(page, pfad);
 
-				for (const tab of [sel.punkteReiter, 'alarme', 'wertebereiche', 'wetter-metriken']) {
+				// #2794 S3a: vier Reiter — Punkte, Zustellung, Wetter.
+				for (const tab of [sel.punkteReiter, 'zustellung', 'wetter']) {
 					await openHub(page, kind, hub.id, { tab });
 					await expect(page.locator(`[data-testid="${sel.panel}-${tab}"]:visible`)).toBeVisible({ timeout: 10_000 });
 					await bleibtBei(() => schreiber.length, 0, 1_500, `GG-1 FAIL: der Reiter „${tab}" schreibt ohne Nutzergeste`);
@@ -215,7 +216,7 @@ for (const kind of HUB_KINDS) {
 				await ersteGeste(page, kind);
 
 				// Entprellt speichernde Geste, danach SOFORT weg — OHNE auf einen PUT zu warten.
-				await page.locator(`[data-testid="${sel.reiter}-wetter-metriken"]:visible`).first().click();
+				await page.locator(`[data-testid="${sel.reiter}-zustellung"]:visible`).first().click(); // #2794 S3a: Versand im Reiter Zustellung
 				const zeit = page.locator('[data-testid="versand-abschnitt"]:visible [data-testid="report-morning-time"]:visible');
 				await expect(zeit).toBeVisible({ timeout: 10_000 });
 				await waehleOption(page, zeit, '05:00');
@@ -318,7 +319,7 @@ for (const kind of HUB_KINDS) {
 				await expect(page.locator('[data-testid="save-indicator"]')).toHaveAttribute('data-state', 'idle', { timeout: 10_000 });
 				await bleibtBei(() => nurObjekt(schreiber, pfad).length, 1, 1_000, 'GG-5 FAIL: die Punkte-Geste muss genau EINEN PUT auslösen');
 
-				await page.locator(`[data-testid="${sel.reiter}-wetter-metriken"]:visible`).first().click();
+				await page.locator(`[data-testid="${sel.reiter}-zustellung"]:visible`).first().click(); // #2794 S3a: Versand im Reiter Zustellung
 				const zeit = page.locator('[data-testid="versand-abschnitt"]:visible [data-testid="report-morning-time"]:visible');
 				await expect(zeit).toBeVisible({ timeout: 10_000 });
 				await waehleOption(page, zeit, '05:00');

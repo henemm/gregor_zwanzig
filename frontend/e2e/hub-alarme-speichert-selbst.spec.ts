@@ -116,7 +116,7 @@ async function stand(page: Page, kind: HubKind, id: string): Promise<Stand> {
 const anzeige = (page: Page) => page.locator('[data-testid="save-indicator"]');
 
 async function oeffneAlarme(page: Page, kind: HubKind, id: string): Promise<void> {
-	await openHub(page, kind, id, { tab: 'alarme' });
+	await openHub(page, kind, id, { tab: 'zustellung' }); // #2794 S3a: Alarme im Reiter Zustellung
 	await expect(page.locator('[data-testid="alarme-tab"]').first()).toBeVisible({ timeout: 10_000 });
 }
 
@@ -193,8 +193,9 @@ for (const kind of HUB_KINDS) {
 
 			await as.schalter(page).click();
 			// sofort, innerhalb des Entprell-Fensters (700 ms), den Reiter wechseln
-			await page.locator(`[data-testid="${sel.reiter}-wetter-metriken"]:visible`).click();
-			await expect(page.locator(`[data-testid="${sel.panel}-wetter-metriken"]`)).toBeVisible();
+			// #2794 S3a: aus dem Reiter Zustellung (Alarme) in den Reiter Wetter.
+			await page.locator(`[data-testid="${sel.reiter}-wetter"]:visible`).click();
+			await expect(page.locator(`[data-testid="${sel.panel}-wetter"]`)).toBeVisible();
 
 			// Der Wechsel wird erst freigegeben, NACHDEM der Alarm-PUT beantwortet ist.
 			expect(beantwortet.length, 'Alarm-PUT war beim Reiterwechsel noch nicht gesendet').toBeGreaterThanOrEqual(1);

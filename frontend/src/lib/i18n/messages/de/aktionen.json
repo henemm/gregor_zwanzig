@@ -25,6 +25,8 @@
 	"aktionen.reiter.etappen_wegpunkte": "Etappen & Wegpunkte",
 	"aktionen.reiter.orte": "Orte",
 	"aktionen.reiter.wertebereiche": "Wertebereiche",
+	"aktionen.reiter.wetter": "Wetter",
+	"aktionen.reiter.zustellung": "Zustellung",
 	"aktionen.sperre.oeffnen": "erst {reiter} öffnen",
 	"aktionen.kopf.ok": "OK",
 	"aktionen.kopf.name_bearbeiten": "Name bearbeiten",

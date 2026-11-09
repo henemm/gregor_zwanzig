@@ -119,7 +119,7 @@ function bereichVon(body: Stand, metric: string): Bereich | null {
 const anzeige = (page: Page) => page.locator('[data-testid="save-indicator"]');
 
 async function oeffne(page: Page, kind: HubKind, id: string, mobil = false): Promise<Locator> {
-	await openHub(page, kind, id, { tab: 'wertebereiche' });
+	await openHub(page, kind, id, { tab: 'wetter' }); // #2794 S3a: Wertebereiche im Reiter Wetter
 	const testid = mobil ? `corridor-editor-mobile-${kind}` : `corridor-editor-${kind}`;
 	const editor = page.locator(`[data-testid="${testid}"]:visible`);
 	await expect(editor).toBeVisible({ timeout: 10_000 });

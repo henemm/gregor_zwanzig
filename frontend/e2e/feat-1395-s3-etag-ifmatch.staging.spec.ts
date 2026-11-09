@@ -189,7 +189,7 @@ test('#1395 S3 Fall 1 (AC-3/AC-2): Wetter-Reiter — beide Schreibvorgaenge geli
 	try {
 		const puts = recordBrowserTripPuts(page, trip.id);
 
-		await page.goto(`/trips/${trip.id}?tab=wetter-metriken`);
+		await page.goto(`/trips/${trip.id}?tab=wetter`); // #2794 S3a: Grundauswahl im Reiter Wetter
 		await expect(page.getByTestId('weather-metrics-tab')).toBeVisible({ timeout: 30_000 });
 
 		// Bisher inaktive Metrik zuschalten — echte Nutzergeste, loest den
@@ -303,7 +303,7 @@ test('#1395 S3 Fall 2 (AC-4/AC-8/AC-7): fremde Aenderung -> 412 mit deutscher Me
 		const puts = recordBrowserTripPuts(page, trip.id);
 
 		// Der Browser laedt die Trip — ab hier fuehrt er ihren Stempel.
-		await page.goto(`/trips/${trip.id}?tab=alarme`);
+		await page.goto(`/trips/${trip.id}?tab=zustellung`);
 		await expect(page.getByTestId('alarme-tab')).toBeVisible({ timeout: 30_000 });
 		const toggle = page
 			.locator('[data-testid="alerts-tab-official-alert-triggers-toggle"]:visible')
@@ -403,7 +403,7 @@ test('#1395 S3 Fall 3 (AC-5): nach dem Pausieren gelingt das Speichern im Alarme
 	const trip = await createTrip(request, 'pause');
 	try {
 		const puts = recordBrowserTripPuts(page, trip.id);
-		await page.goto(`/trips/${trip.id}?tab=alarme`);
+		await page.goto(`/trips/${trip.id}?tab=zustellung`);
 		await expect(page.getByTestId('alarme-tab')).toBeVisible({ timeout: 30_000 });
 
 		// Pausieren auf der Detailseite (echter Klickpfad).
@@ -469,7 +469,7 @@ test('#1395 S3 Fall 4 (AC-5): nach dem Archivieren gelingt das Speichern im Alar
 	const trip = await createTrip(request, 'archiv');
 	try {
 		const puts = recordBrowserTripPuts(page, trip.id);
-		await page.goto(`/trips/${trip.id}?tab=alarme`);
+		await page.goto(`/trips/${trip.id}?tab=zustellung`);
 		await expect(page.getByTestId('alarme-tab')).toBeVisible({ timeout: 30_000 });
 
 		await page.getByTestId('subscription-kebab').click();

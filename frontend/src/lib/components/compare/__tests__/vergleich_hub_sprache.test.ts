@@ -138,7 +138,8 @@ describe('AC-1: Ortsvergleich-Hub englisch, Namen unveraendert, Aktionen wie im 
 	});
 	test('Reiterleiste: Kennungen gleich, Namen englisch wie im Trip-Hub (aktionen.reiter.*)', () => {
 		const { en: e } = deDannEn(() => P.hubOrteRendern());
-		for (const [id, k] of [['uebersicht', 'aktionen.reiter.uebersicht'], ['orte', 'aktionen.reiter.orte'], ['wetter-metriken', 'aktionen.weather'], ['wertebereiche', 'aktionen.reiter.wertebereiche'], ['alarme', 'aktionen.alarms']])
+		// #2794 S3a: Reiter Wetter/Zustellung.
+		for (const [id, k] of [['uebersicht', 'aktionen.reiter.uebersicht'], ['orte', 'aktionen.reiter.orte'], ['wetter', 'aktionen.reiter.wetter'], ['zustellung', 'aktionen.reiter.zustellung']])
 			assert.match(e, new RegExp(`data-testid="compare-detail-tab-${id}"[\\s\\S]{0,400}?${en(k)}`), id);
 		hat(e, `aria-label="${en('vergleich.hub.tabs_aria')}"`);
 	});
@@ -313,7 +314,8 @@ describe('AC-7: Stundenverlauf (transponierte Uebersicht): Name aus dem Register
 	});
 	test('Anlegen Orte/weiter: Reiter, Fortschritt, Schaltflaechen englisch; Plural exakt', () => {
 		const { en: e } = deDannEn(() => sichtbar([...P.ANLEGE_FAELLE.anlegen_orte, ...P.ANLEGE_FAELLE.anlegen_weiter].map(P.anlegenRendern).join('\n')));
-		for (const s of ['1 more location needed', '2 more locations needed', 'select at least 2 locations', 'Weather metrics →', 'Set target ranges →', 'Set up alerts →', '1 / 5 sections set up', 'Set up alerts to activate']) hat(e, s);
+		// #2794 S3a: kein eigener Wertebereiche-Schritt mehr, Fortschritt mit 4 Abschnitten.
+		for (const s of ['1 more location needed', '2 more locations needed', 'select at least 2 locations', 'Weather metrics →', 'Set up delivery →', '1 / 4 sections set up', 'Set up alerts to activate']) hat(e, s);
 		assert.deepEqual(deutscheReste(e), []);
 	});
 });

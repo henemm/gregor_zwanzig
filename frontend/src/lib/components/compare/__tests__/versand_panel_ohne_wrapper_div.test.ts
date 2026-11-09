@@ -183,21 +183,26 @@ describe('AC-1 (#1743 umgezogen): der Versand-Abschnitt hat keinen Sammel-Wrappe
 		assert.equal(findTabPanelFragment(ast(HUB), 'versand'), null, 'ein Hub-Panel activeTab === \'versand\' existiert noch');
 	});
 
-	test('Hub-Panel wetter-metriken: kein Element trägt onchange/onfocusout/onclick', () => {
-		const panel = findTabPanelFragment(ast(HUB), 'wetter-metriken');
-		assert.ok(panel, 'Vorbedingung: das Panel wetter-metriken muss im Hub-Markup auffindbar sein');
-		const mitHandlern = findElementsWithHandlers(panel, ['onchange', 'onfocusout', 'onclick']);
-		assert.deepEqual(
-			mitHandlern.map((e) => e.name),
-			[],
-			'der Speicherweg läuft über saveController.schedule() im Baustein, nicht über einen Wrapper-Div mit Sammel-Ereignissen'
-		);
-	});
+	// #2794 S3a (Spec feat_2794_s3a_teil2_leiste.md §3): der Versand-Abschnitt steht im Reiter
+	// `zustellung`, gemountet ueber den geteilten ZustellungTab (der den Baustein mit
+	// bereich="zustellung" einbettet); der Reiter `wetter` mountet den Baustein mit bereich="wetter".
+	for (const reiter of ['wetter', 'zustellung']) {
+		test(`Hub-Panel ${reiter}: kein Element trägt onchange/onfocusout/onclick`, () => {
+			const panel = findTabPanelFragment(ast(HUB), reiter);
+			assert.ok(panel, `Vorbedingung: das Panel ${reiter} muss im Hub-Markup auffindbar sein`);
+			const mitHandlern = findElementsWithHandlers(panel, ['onchange', 'onfocusout', 'onclick']);
+			assert.deepEqual(
+				mitHandlern.map((e) => e.name),
+				[],
+				'der Speicherweg läuft über saveController.schedule() im Baustein, nicht über einen Wrapper-Div mit Sammel-Ereignissen'
+			);
+		});
+	}
 
-	test('Hub-Panel wetter-metriken mountet genau einen WetterMetrikenVersandPanel (context="vergleich") mit den Props der Selbst-Speicherung', () => {
-		const panel = findTabPanelFragment(ast(HUB), 'wetter-metriken');
-		const mounts = findComponents(panel, 'WetterMetrikenVersandPanel');
-		assert.equal(mounts.length, 1, 'genau ein WetterMetrikenVersandPanel im Panel wetter-metriken erwartet');
+	test('Hub-Panel zustellung mountet genau einen ZustellungTab (context="vergleich") mit den Props der Selbst-Speicherung', () => {
+		const panel = findTabPanelFragment(ast(HUB), 'zustellung');
+		const mounts = findComponents(panel, 'ZustellungTab');
+		assert.equal(mounts.length, 1, 'genau ein ZustellungTab im Panel zustellung erwartet');
 		assert.equal(statischerWert(mounts[0], 'context'), 'vergleich', 'der Vergleichs-Hub mountet den Baustein mit context="vergleich"');
 		const props = propNamen(mounts[0]);
 		for (const pflicht of ['preset', 'saveController', 'enqueueHubWrite', 'onCompareUpdate']) {
@@ -212,9 +217,9 @@ describe('AC-1 (#1743 umgezogen): der Versand-Abschnitt hat keinen Sammel-Wrappe
 	// mit in den Versand-Abschnitt. Der Prop-Name am Baustein ist frei; am VersandTab bleibt es
 	// die bestehende Prop `activation`. Der Trip-Hub reicht keine Karte.
 	test('AC-7: Vergleichs-Hub reicht die Aktivierungs-Karte (hubActivationCard) an den Baustein', () => {
-		const panel = findTabPanelFragment(ast(HUB), 'wetter-metriken');
-		const mounts = findComponents(panel, 'WetterMetrikenVersandPanel');
-		assert.equal(mounts.length, 1, 'genau ein WetterMetrikenVersandPanel im Panel wetter-metriken erwartet');
+		const panel = findTabPanelFragment(ast(HUB), 'zustellung');
+		const mounts = findComponents(panel, 'ZustellungTab');
+		assert.equal(mounts.length, 1, 'genau ein ZustellungTab im Panel zustellung erwartet');
 		const quelle = readFileSync(HUB, 'utf-8');
 		const ausdruecke = (mounts[0].attributes ?? [])
 			.filter((a: any) => a.type === 'Attribute' && a.value?.type === 'ExpressionTag')
@@ -228,12 +233,15 @@ describe('AC-1 (#1743 umgezogen): der Versand-Abschnitt hat keinen Sammel-Wrappe
 	test('AC-7: Trip-Hub reicht dem Baustein KEINE Aktivierungs-Karte', () => {
 		const TRIP_HUB = join(here, '..', '..', 'trip-detail', 'TripTabs.svelte');
 		const quelle = readFileSync(TRIP_HUB, 'utf-8');
-		const mounts = findComponents(ast(TRIP_HUB), 'WetterMetrikenVersandPanel');
-		assert.equal(mounts.length, 1, 'Vorbedingung: der Trip-Hub mountet WetterMetrikenVersandPanel genau einmal');
-		const ausdruecke = (mounts[0].attributes ?? [])
-			.filter((a: any) => a.type === 'Attribute' && a.value?.type === 'ExpressionTag')
-			.map((a: any) => quelle.slice(a.value.expression.start, a.value.expression.end));
-		assert.ok(!ausdruecke.some((x: string) => /\bhubActivationCard\b/.test(x)), 'Aktivierungs-Karte im Trip-Hub');
+		// #2794 S3a: der Trip-Hub mountet den Baustein im Reiter wetter und den ZustellungTab im Reiter zustellung.
+		const mounts = [...findComponents(ast(TRIP_HUB), 'WetterMetrikenVersandPanel'), ...findComponents(ast(TRIP_HUB), 'ZustellungTab')];
+		assert.equal(mounts.length, 2, 'Vorbedingung: der Trip-Hub mountet WetterMetrikenVersandPanel und ZustellungTab je genau einmal');
+		for (const m of mounts) {
+			const ausdruecke = (m.attributes ?? [])
+				.filter((a: any) => a.type === 'Attribute' && a.value?.type === 'ExpressionTag')
+				.map((a: any) => quelle.slice(a.value.expression.start, a.value.expression.end));
+			assert.ok(!ausdruecke.some((x: string) => /\bhubActivationCard\b/.test(x)), 'Aktivierungs-Karte im Trip-Hub');
+		}
 	});
 
 	test('AC-7: im Baustein bekommt der VersandTab im Abschnitt #versand die Prop activation', () => {

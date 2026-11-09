@@ -70,8 +70,10 @@ describe('F001: ein unter der neuen Kennung uebergebener Badge kommt an genau di
 	});
 });
 
-describe('F001: automatisch abgeleitete Badges (Etappen, Wertebereiche) kommen am richtigen Reiter an', () => {
-	test('3 Etappen + 2 aktive Regeln → etappen=3, wertebereiche=2', async () => {
+// Issue #2794 S3a (Spec feat_2794_s3a_teil2_leiste.md §6): der Badge Wertebereiche entfaellt mit dem
+// Reiter; der Etappen-Badge bleibt automatisch abgeleitet.
+describe('F001: automatisch abgeleiteter Badge (Etappen) kommt am richtigen Reiter an', () => {
+	test('3 Etappen + 2 aktive Regeln → etappen=3, sonst kein Badge (kein Wertebereiche-Badge mehr)', async () => {
 		const trip = {
 			stages: [{}, {}, {}],
 			alert_rules: [{ enabled: true }, { enabled: true }, { enabled: false }]
@@ -79,8 +81,7 @@ describe('F001: automatisch abgeleitete Badges (Etappen, Wertebereiche) kommen a
 		const items = await reiterItems({}, trip);
 		const badge = (id: string) => items.find((i) => i.value === id)?.badge;
 		assert.equal(badge('etappen'), 3);
-		assert.equal(badge('wertebereiche'), 2);
-		for (const id of KENNUNGEN.filter((k) => k !== 'etappen' && k !== 'wertebereiche')) {
+		for (const id of KENNUNGEN.filter((k) => k !== 'etappen')) {
 			assert.equal(badge(id), undefined, `unerwarteter Badge am Reiter '${id}'`);
 		}
 	});

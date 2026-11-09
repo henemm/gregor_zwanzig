@@ -199,13 +199,20 @@ def test_ac6_ortsvergleich_buendel_traegt_dieselbe_menge_wie_der_trip_pfad():
     )
     sms = render_sms(msg)
 
-    assert sms.startswith("Zermatt: "), (
-        f"Voraussetzung: der Kopf ist der Ortsname des fuehrenden Events: "
-        f"{sms!r}"
+    # FORTGESCHRIEBEN (Issue #1767, PO 2026-11-09): die Buendel-Kurzform nennt
+    # JEDEN Ort mit eigenem Token; ohne Ortsnummern-Zuordnung (hier keine
+    # `location_positions`) steht davor der ASCII-Ortsname. Fuehrend ist der
+    # frueheste Beginn (Zermatt +20 vor Chamonix +35). Jeder Ort traegt SEINE
+    # Menge -- die Zusicherung von AC-6 gilt damit fuer beide.
+    assert sms.startswith("Zermatt:R"), (
+        f"Voraussetzung: das erste Token gehoert dem fuehrenden Ort: {sms!r}"
     )
-    assert re.search(r"\bR1\.8@\d{1,2}:\d{2}", sms), (
+    assert re.search(r"\bZermatt:R1\.8@\d{1,2}:\d{2}", sms), (
         f"RED: die Menge des fuehrenden Ortes fehlt in der Buendel-Kurzform: "
         f"{sms!r}"
+    )
+    assert re.search(r"\bChamonix:R0\.4@\d{1,2}:\d{2}", sms), (
+        f"Die Menge des zweiten Ortes fehlt in der Buendel-Kurzform: {sms!r}"
     )
     assert "R@" not in sms, (
         f"Der Vergleichspfad zeigt noch die zahlenlose Alt-Form: {sms!r}"

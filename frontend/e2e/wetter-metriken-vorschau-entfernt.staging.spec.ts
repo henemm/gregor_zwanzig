@@ -85,17 +85,19 @@ async function createTrip(request: APIRequestContext) {
 }
 
 async function openMetricsTab(page: Page) {
-	await page.goto(`/trips/${TRIP_ID}?tab=wetter-metriken`);
+	// #2794 S3a (Spec feat_2794_s3a_teil2_leiste.md): Kanal-Wähler und Reihenfolge
+	// (Abschnitt layout_kanal) stehen im Reiter Zustellung.
+	await page.goto(`/trips/${TRIP_ID}?tab=zustellung`);
 	// SvelteKit liefert die Tab-Leiste server-gerendert VOR der Hydration aus —
 	// ein Klick, der vor dem Attachen der Event-Listener ankommt, geht spurlos
 	// verloren (#1771; Muster aus compare-hub-inline-edit.spec.ts).
 	await page.waitForLoadState('networkidle');
-	const weatherTabBtn = page.getByTestId('trip-detail-tab-wetter-metriken');
+	const weatherTabBtn = page.getByTestId('trip-detail-tab-zustellung');
 	await expect(weatherTabBtn).toBeVisible({ timeout: 10_000 });
 	await weatherTabBtn.click();
 	const tab = page.getByTestId('weather-metrics-tab');
 	await expect(tab).toBeVisible({ timeout: 10_000 });
-	await expect(tab.getByTestId('wm2-grundauswahl').locator('.toggle-btn').first()).toBeVisible({
+	await expect(tab.locator('[data-testid="wm2-reihenfolge-row"]').first()).toBeVisible({
 		timeout: 10_000
 	});
 	return tab;
@@ -173,7 +175,7 @@ test.describe('Issue #1719 S3 Block A: Live-Vorschau ist ersatzlos weg', () => {
 
 		// Reload: Reihenfolge bleibt.
 		await page.reload();
-		await page.getByTestId('trip-detail-tab-wetter-metriken').click();
+		await page.getByTestId('trip-detail-tab-zustellung').click();
 		const reloadedRows = page
 			.getByTestId('weather-metrics-tab')
 			.locator('[data-testid="wm2-reihenfolge-row"]');
