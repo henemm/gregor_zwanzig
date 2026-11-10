@@ -162,8 +162,8 @@
 		data-gz-offline-band
 		data-offline-erlaubt
 		role="status"
-		style="padding: 8px 16px; background: rgba(198,40,40,0.10); color: #8a1f1f;
-		       border-bottom: 1px solid #c62828; font-size: 13px; font-weight: 600;
+		style="padding: 8px 16px; background: var(--g-danger-bg); color: var(--g-danger-fg);
+		       border-bottom: 1px solid var(--g-danger-fg); font-size: 13px; font-weight: 600;
 		       line-height: 1.4;"
 	>
 		{gate.hint}
@@ -196,7 +196,7 @@
 		background-image: repeating-linear-gradient(
 			135deg,
 			transparent 0 5px,
-			rgba(26, 26, 24, 0.16) 5px 10px
+			color-mix(in srgb, var(--g-ink) 16%, transparent) 5px 10px
 		) !important;
 	}
 
@@ -214,7 +214,7 @@
 		font-size: 12px;
 		font-weight: 600;
 		line-height: 1.35;
-		color: #8a1f1f;
+		color: var(--g-danger-fg);
 	}
 
 	/* Nur waehrend der Sperre: die Gruppe muss den Hinweis umbrechen duerfen. */

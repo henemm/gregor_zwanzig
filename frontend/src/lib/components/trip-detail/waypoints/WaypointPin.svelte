@@ -48,7 +48,7 @@
 		dominant-baseline="middle"
 		font-size={dim.fs}
 		font-family="var(--g-font-ui)"
-		fill="white"
+		fill="var(--g-on-accent)"
 		font-weight="600"
 	>{index}</text>
 </g>

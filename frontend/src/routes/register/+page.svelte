@@ -121,7 +121,7 @@
 			</div>
 			<a
 				href="/api/auth/google/init"
-				class="inline-flex h-10 w-full items-center justify-center rounded-md border border-input bg-background px-4 py-2 text-sm font-medium text-foreground ring-offset-background hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+				class="inline-flex h-10 w-full items-center justify-center rounded-md border border-input bg-background px-4 py-2 text-sm font-medium text-foreground ring-offset-background hover:bg-[var(--g-accent-deep)] hover:text-[var(--g-on-accent)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
 			>
 				{$t('auth.register.google_knopf')}
 			</a>

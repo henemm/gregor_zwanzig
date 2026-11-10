@@ -13,14 +13,14 @@
 		<h1 class="text-xl font-bold">{$t('auth.reset.titel')}</h1>
 
 		{#if form?.success}
-			<div class="rounded-md bg-green-50 p-3 text-sm text-green-800">
+			<div class="rounded-md border border-[var(--g-ok-fg)] bg-[var(--g-ok-bg)] p-3 text-sm text-[var(--g-ok-fg)]">
 				{$t('auth.reset.erfolg')}
 			</div>
-			<a href="/login" class="block text-sm text-blue-600 hover:underline">{$t('auth.reset.zum_login')}</a>
+			<a href="/login" class="block text-sm text-[var(--g-info)] hover:underline">{$t('auth.reset.zum_login')}</a>
 		{:else}
 			<form method="POST" use:enhance class="space-y-3">
 				{#if form?.error}
-					<div class="rounded-md bg-red-50 p-3 text-sm text-red-800">{form.error}</div>
+					<div class="rounded-md border border-[var(--g-danger-fg)] bg-[var(--g-danger-bg)] p-3 text-sm text-[var(--g-danger-fg)]">{form.error}</div>
 				{/if}
 				<input name="username" type="hidden" value={form?.username ?? data.user} />
 				{#if form?.token || data.token}

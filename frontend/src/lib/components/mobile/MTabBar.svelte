@@ -188,7 +188,7 @@
 		.mtabbar :global([data-slot='segmented-item'][data-state='active']) {
 			background: var(--g-accent-deep);
 			border-color: var(--g-accent-deep);
-			color: var(--g-paper);
+			color: var(--g-on-accent);
 			font-weight: 600;
 			border-bottom-color: var(--g-accent-deep);
 		}

@@ -97,7 +97,7 @@
 <div
 	data-testid="map-canvas"
 	bind:this={mapEl}
-	class="rounded border border-[var(--g-ink-faint)]/20"
+	class="rounded border g-karten-rahmen"
 	style:width="100%"
 	style:height={fillHeight ? '100%' : '440px'}
 ></div>

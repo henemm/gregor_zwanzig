@@ -38,6 +38,25 @@
 		{ name: '--g-info', hex: '#2a6cb3', ratio: 5.39, cls: 'AA' },
 		{ name: '--g-success', hex: '#3a7d44', ratio: 5.0, cls: 'AA' }
 	];
+	// Issue #2400: Dunkles Design — Ratio auf dunkler Card (#1d1d1a), Werte aus dem
+	// Dark-Block `:root[data-theme="dark"]` in app.css (scripts/contrast_audit.py, Tabelle „Dunkel").
+	// --g-ink-4 nur Placeholder/Disabled (ADR-0008), --g-ink-faint nur Linien (>= 3:1).
+	const DARK_CONTRAST_TOKENS: { name: string; hex: string; ratio: number; cls: string }[] = [
+		{ name: '--g-ink', hex: '#f1efe8', ratio: 14.68, cls: 'AAA' },
+		{ name: '--g-ink-2', hex: '#d2cfc4', ratio: 10.83, cls: 'AAA' },
+		{ name: '--g-ink-3', hex: '#aaa699', ratio: 6.94, cls: 'AA' },
+		{ name: '--g-ink-muted', hex: '#aaa699', ratio: 6.94, cls: 'AA' },
+		{ name: '--g-ink-4', hex: '#6f6c63', ratio: 3.22, cls: 'FAIL' },
+		{ name: '--g-ink-faint', hex: '#7a776d', ratio: 3.77, cls: 'AA-large' },
+		{ name: '--g-accent', hex: '#e07a4a', ratio: 5.67, cls: 'AA' },
+		{ name: '--g-accent-deep', hex: '#e07a4a', ratio: 5.67, cls: 'AA' },
+		{ name: '--g-accent-text', hex: '#e07a4a', ratio: 5.67, cls: 'AA' },
+		{ name: '--g-good', hex: '#6fbf6a', ratio: 7.51, cls: 'AAA' },
+		{ name: '--g-warn', hex: '#e0a83a', ratio: 7.91, cls: 'AAA' },
+		{ name: '--g-danger', hex: '#ee7a7a', ratio: 6.2, cls: 'AA' },
+		{ name: '--g-info', hex: '#7aa9dc', ratio: 6.87, cls: 'AA' },
+		{ name: '--g-success', hex: '#6fbf6a', ratio: 7.51, cls: 'AAA' }
+	];
 
 	let dialogOpen = $state(false);
 	let accordionAOpen = $state(true);
@@ -455,6 +474,39 @@
 		</p>
 		<div class="grid grid-cols-2 md:grid-cols-3 gap-3">
 			{#each CONTRAST_TOKENS as t (t.name)}
+				{@const pass = t.ratio >= 4.5}
+				<div
+					class="flex items-center gap-3 rounded p-2"
+					style="border: 1px solid var(--g-rule); background: var(--g-card);"
+				>
+					<span
+						class="inline-block rounded"
+						style="width: 32px; height: 32px; flex: 0 0 auto; background-color: {t.hex};"
+						aria-hidden="true"
+					></span>
+					<div class="flex flex-col" style="min-width: 0;">
+						<code style="font-family: var(--g-font-data); font-size: var(--g-text-xs); color: var(--g-ink);">{t.name}</code>
+						<span style="font-family: var(--g-font-data); font-size: var(--g-text-xs); color: var(--g-ink-muted);">
+							{t.hex} · {t.ratio.toFixed(2)}:1
+						</span>
+					</div>
+					<span
+						class="ml-auto rounded"
+						style="font-family: var(--g-font-data); font-size: 10px; font-weight: 600; padding: 2px 6px; color: {pass ? 'var(--g-success)' : 'var(--g-danger)'}; background: {pass ? 'rgba(61,107,58,0.12)' : 'rgba(168,50,50,0.12)'};"
+					>{pass ? `${t.cls} ✓` : 'FAIL'}</span>
+				</div>
+			{/each}
+		</div>
+	</section>
+	<section data-testid="contrast-section-dark" class="space-y-3">
+		<Eyebrow>Issue #2400</Eyebrow>
+		<h2>Kontrast-Belege Dunkles Design (WCAG-AA auf dunkler Card)</h2>
+		<p style="color: var(--g-ink-muted); font-size: var(--g-text-sm);">
+			Ratio gemessen auf <code>--g-card #1d1d1a</code> (Dark-Block in <code>app.css</code>) via
+			<code>scripts/contrast_audit.py</code>.
+		</p>
+		<div class="grid grid-cols-2 md:grid-cols-3 gap-3">
+			{#each DARK_CONTRAST_TOKENS as t (t.name)}
 				{@const pass = t.ratio >= 4.5}
 				<div
 					class="flex items-center gap-3 rounded p-2"

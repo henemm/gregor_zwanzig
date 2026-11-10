@@ -98,9 +98,9 @@
 	}
 
 	.segmented-control button.active {
-		background: var(--g-accent, #2563eb);
-		color: white;
-		border-color: var(--g-accent, #2563eb);
+		background: var(--g-accent-deep);
+		color: var(--g-on-accent);
+		border-color: var(--g-accent-deep);
 	}
 
 	@media (max-width: 899px) {

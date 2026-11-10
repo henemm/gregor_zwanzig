@@ -262,7 +262,7 @@
 		border-radius: 8px;
 		background: var(--g-card);
 		color: var(--g-ink);
-		box-shadow: 0 6px 20px rgba(26, 26, 24, 0.14);
+		box-shadow: var(--g-shadow-3);
 		font-family: var(--g-font-sans);
 		font-size: 13px;
 	}

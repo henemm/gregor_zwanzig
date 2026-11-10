@@ -39,7 +39,12 @@ const AccountPage = (
 	await import(pathToFileURL(path.join(FRONTEND, 'src/routes/account/+page.svelte')).href)
 ).default;
 
-const FARBEN = ['bg-green-500', 'bg-red-500', 'bg-slate-500', 'bg-gray-300'] as const;
+// #2400: Punktfarben stehen auf Tokens (Dunkles Design), nicht mehr auf Tailwind-Palettenfarben.
+const GRUEN = 'bg-[var(--g-success)]';
+const ROT = 'bg-[var(--g-danger)]';
+const NEUTRAL = 'bg-[var(--g-ink-3)]';
+const GRAU = 'bg-[var(--g-ink-faint)]';
+const FARBEN = [GRUEN, ROT, NEUTRAL, GRAU] as const;
 type Farbe = (typeof FARBEN)[number];
 
 function renderKonto(lastRun: unknown): string {
@@ -95,25 +100,25 @@ function punktFarben(html: string): Farbe[] {
 const T = '2026-09-27T10:00:00Z';
 
 describe('#2155 S2 AC-8 — Farbpunkt in der gerenderten Konto-Karte', () => {
-	test('last_run null -> grauer Punkt (bg-gray-300), sonst keine Farbe', () => {
-		assert.deepEqual(punktFarben(renderKonto(null)), ['bg-gray-300']);
+	test('last_run null -> grauer Punkt (--g-ink-faint), sonst keine Farbe', () => {
+		assert.deepEqual(punktFarben(renderKonto(null)), [GRAU]);
 	});
 
-	test('status ok -> gruener Punkt (bg-green-500)', () => {
+	test('status ok -> gruener Punkt (--g-success)', () => {
 		assert.deepEqual(punktFarben(renderKonto({ time: T, status: 'ok', error: '' })), [
-			'bg-green-500'
+			GRUEN
 		]);
 	});
 
-	test('status error -> roter Punkt (bg-red-500)', () => {
+	test('status error -> roter Punkt (--g-danger)', () => {
 		assert.deepEqual(punktFarben(renderKonto({ time: T, status: 'error', error: 'x' })), [
-			'bg-red-500'
+			ROT
 		]);
 	});
 
 	for (const status of ['partial', 'budget']) {
-		test(`status ${status} -> neutraler Punkt (bg-slate-500), weder gruen noch rot noch grau`, () => {
-			assert.deepEqual(punktFarben(renderKonto({ time: T, status, error: '' })), ['bg-slate-500']);
+		test(`status ${status} -> neutraler Punkt (--g-ink-3), weder gruen noch rot noch grau`, () => {
+			assert.deepEqual(punktFarben(renderKonto({ time: T, status, error: '' })), [NEUTRAL]);
 		});
 	}
 });

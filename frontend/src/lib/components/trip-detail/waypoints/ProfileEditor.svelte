@@ -114,7 +114,7 @@
 	viewBox="0 0 {svgW} {svgH}"
 	role="img"
 	aria-label={$tn('trip.wegpunkt.profil_aria', n)}
-	class="border border-[var(--g-ink-faint)]/20 rounded bg-white/40 w-full"
+	class="border border-[var(--g-ink-faint)]/20 rounded bg-[var(--g-card)]/40 w-full"
 >
 	<!-- Issue #296-FE: transparente Klick-Flaeche zum Hinzufuegen (nur im Editor). -->
 	{#if onProfileAdd}

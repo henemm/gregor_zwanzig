@@ -112,7 +112,7 @@
 		font-weight: 500;
 		cursor: pointer;
 		border: 1px solid transparent;
-		background: var(--g-accent);
-		color: var(--g-paper);
+		background: var(--g-accent-deep);
+		color: var(--g-on-accent);
 	}
 </style>

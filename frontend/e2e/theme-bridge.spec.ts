@@ -68,19 +68,33 @@ test.describe('Epic #133 Step 6 — Theme-Bridge', () => {
 		expect(value).toBe('rgb(179, 58, 42)');
 	});
 
-	test('AC-5: Dark-Mode-Override bleibt aktiv — Bridge versperrt ihn nicht', async ({ page }) => {
+	test('AC-5: Dark-Mode über data-theme — Gregor-Palette und Bridge werden dunkel (#2400)', async ({ page }) => {
 		/**
 		 * GIVEN: Dark-Mode via localStorage aktiviert
-		 * WHEN:  getComputedStyle(:root).getPropertyValue('--color-primary')
-		 * THEN:  liefert NICHT rgb(26, 26, 24), sondern den Dark-Mode-Inline-Wert
-		 *        aus +layout.svelte (helles Grau aus oklch(0.92 0 0))
+		 * WHEN:  Seite geladen (Kopf-Skript in app.html setzt den Modus vor dem ersten Paint)
+		 * THEN:  <html data-theme="dark">, color-scheme dark, berechnetes --g-paper und
+		 *        --color-background dunkel, KEIN Inline-Style-Override mehr (#2400, Spec AC-4/AC-5)
 		 */
 		await page.addInitScript(() => localStorage.setItem('gz-dark', '1'));
 		await page.goto('/');
-		await page.reload(); // Layout neu mounten, damit applyDarkMode(true) läuft
-		const value = await page.evaluate(() =>
-			getComputedStyle(document.documentElement).getPropertyValue('--color-primary').trim()
-		);
-		expect(value).not.toBe('rgb(26, 26, 24)');
+		const z = await page.evaluate(() => {
+			const html = document.documentElement;
+			const cs = getComputedStyle(html);
+			return {
+				theme: html.getAttribute('data-theme'),
+				colorScheme: cs.colorScheme,
+				paper: cs.getPropertyValue('--g-paper').trim().toLowerCase(),
+				background: cs.getPropertyValue('--color-background').trim(),
+				inline: html.style.getPropertyValue('--color-background'),
+				body: getComputedStyle(document.body).backgroundColor
+			};
+		});
+		expect(z.theme).toBe('dark');
+		expect(z.colorScheme).toBe('dark');
+		expect(z.paper).not.toBe('#f6f4ee');
+		expect(z.background).not.toBe('rgb(246, 244, 238)');
+		expect(z.inline, 'Inline-Style-Override (darkVars) muss entfallen').toBe('');
+		const [r, g, b] = (z.body.match(/[\d.]+/g) ?? []).map(Number);
+		expect(Math.max(r, g, b), `Seitengrund nicht dunkel: ${z.body}`).toBeLessThan(60);
 	});
 });

@@ -22,9 +22,10 @@
 
 	const map = {
 		info: { bg: 'var(--g-ink)', fg: 'var(--g-paper)' },
-		success: { bg: 'var(--g-success)', fg: '#fff' },
-		warn: { bg: 'var(--g-warning)', fg: '#fff' },
-		error: { bg: 'var(--g-danger)', fg: '#fff' }
+		// #2400: Statusflaechen sind im Dunklen hell — Schrift folgt --g-on-accent (hell weiss, dunkel #141412).
+		success: { bg: 'var(--g-success)', fg: 'var(--g-on-accent)' },
+		warn: { bg: 'var(--g-warning)', fg: 'var(--g-on-accent)' },
+		error: { bg: 'var(--g-danger)', fg: 'var(--g-on-accent)' }
 	} as const;
 
 	const t = $derived(map[kind] ?? map.info);

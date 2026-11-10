@@ -521,7 +521,7 @@
 	   Warn-Zeile der Legende entfallen (kein Verwender mehr). */
 	.cem-swatch.mark { background: var(--g-good); opacity: 0.85; }
 	.cem-good { color: var(--g-good); }
-	.cem-error { color: #8a6210; background: rgba(192, 138, 26, 0.12); border: 1px solid rgba(192, 138, 26, 0.35); border-radius: var(--g-r-2, 6px); padding: 8px 12px; font-size: 13px; margin-bottom: 12px; }
+	.cem-error { color: var(--g-warn-fg); background: var(--g-warn-bg); border: 1px solid rgba(192, 138, 26, 0.35); border-radius: var(--g-r-2, 6px); padding: 8px 12px; font-size: 13px; margin-bottom: 12px; }
 	.cem-gesperrt { color: var(--g-ink); background: var(--g-card-alt); border: 1px solid var(--g-rule); border-radius: var(--g-r-2, 6px); padding: 8px 12px; font-size: 13px; margin-bottom: 12px; }
 	.cem-card button:disabled { cursor: not-allowed; }
 	.cem-card { background: var(--g-card); border: 1px solid var(--g-rule); border-radius: var(--g-r-3, 10px); padding: 14px 14px 12px; margin-bottom: 10px; }
@@ -535,7 +535,7 @@
 	.cem-band-track { position: relative; height: 14px; margin-top: 22px; margin-bottom: 8px; border-radius: 7px; background: var(--g-rule-soft); }
 	.cem-band-fill { position: absolute; top: 0; bottom: 0; border-radius: 7px; background: var(--g-ink-3); opacity: 0.4; }
 	.cem-band-fill.mark { background: var(--g-good); opacity: 0.85; }
-	.cem-handle { position: absolute; top: 50%; width: 24px; height: 24px; margin-left: -12px; margin-top: -12px; border-radius: 50%; background: #fff; border: 2px solid var(--g-accent); cursor: ew-resize; touch-action: none; z-index: 3; }
+	.cem-handle { position: absolute; top: 50%; width: 24px; height: 24px; margin-left: -12px; margin-top: -12px; border-radius: 50%; background: var(--g-card); border: 2px solid var(--g-accent); cursor: ew-resize; touch-action: none; z-index: 3; }
 	.cem-handle.mark { border-color: var(--g-good); }
 	/* AC-14 Hit-Area-Technik (Tech-Lead-Entscheidung, kein Playwright-Pflichtziel
 	   fuer den Handle selbst — AC-14-Test erfasst nur Stepper/Toggle-Buttons):
@@ -565,7 +565,7 @@
 	.cem-clear-btn { width: 30px; height: 40px; flex-shrink: 0; border: none; background: transparent; cursor: pointer; color: var(--g-ink-3); font-size: 15px; }
 	.cem-effects { display: flex; gap: 8px; margin-top: 12px; }
 	.cem-effect { flex: 1; display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; padding: 0 12px; border-radius: var(--g-r-3, 10px); cursor: pointer; font-size: 14px; font-weight: 600; background: transparent; color: var(--g-ink-3); border: 1px solid var(--g-rule); }
-	.cem-effect.notify.on { color: var(--g-warn, #8a6210); border-color: var(--g-warn, #8a6210); background: rgba(192, 138, 26, 0.12); }
+	.cem-effect.notify.on { color: var(--g-warn); border-color: var(--g-warn); background: rgba(192, 138, 26, 0.12); }
 	.cem-effect.mark.on { color: var(--g-good); border-color: var(--g-good); background: rgba(61, 107, 58, 0.12); }
 	.cem-effect.disabled { opacity: 0.4; cursor: not-allowed; }
 	.cem-remove-row { display: flex; justify-content: flex-end; margin-top: 8px; }
