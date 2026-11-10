@@ -116,7 +116,7 @@
 					{#if eyebrow}
 						<div
 							class="mono"
-							style:font-size="10px"
+							style:font-size="var(--g-text-xs)"
 							style:letter-spacing="0.12em"
 							style:text-transform="uppercase"
 							style:color="var(--g-ink-4)"

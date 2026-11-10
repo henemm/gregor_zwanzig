@@ -1,0 +1,33 @@
+=== Adversary-Laeufe 2026-11-10 (lokaler Stack 8191/8102)
+
+Running 13 tests using 1 worker
+
+  ✓   1 [setup] › e2e/global.setup.ts:23:1 › authenticate and seed test data (808ms)
+  ✓   2 [tests] › e2e/mobile-ux-audit-selbsttest.spec.ts:41:1 › AC-15: 30 Knöpfe à 20×20 px zählen alle als hart (< 24 px), keiner landet in der weichen Liste (93ms)
+  ✓   3 [tests] › e2e/mobile-ux-audit-selbsttest.spec.ts:50:1 › AC-15/AC-11: Element mit data-tap-equivalent (< 24 px breit) wird nicht als hart gezählt, ein gleich großes ohne Attribut schon (59ms)
+  ✓   4 [tests] › e2e/mobile-ux-audit-selbsttest.spec.ts:66:1 › AC-15: ein inneres <main> mit 16 px waagerechtem Überlauf wird erkannt (nicht nur main.mobile-scroll-pad) (58ms)
+  ✓   5 [tests] › e2e/mobile-ux-messung.spec.ts:130:1 › AC-7: Datums-/Uhrzeitsegmente im Etappen-Tab und im Trip-Anlegen ≥ 24×24 px (3 Profile, de+en) (2.6s)
+  ✓   6 [tests] › e2e/mobile-ux-messung.spec.ts:167:1 › AC-8: Datumssegmente im Vergleichs-Editor (Zustellung → Laufzeit „Bis Datum") ≥ 24×24 px (3 Profile, de+en) (2.2s)
+  ✓   7 [tests] › e2e/mobile-ux-messung.spec.ts:200:1 › AC-9: Desktop 1280×800 — Segmentmaße in Etappen-Tab und Trip-Anlegen unverändert (Regressionsschutz) (623ms)
+  ✓   8 [tests] › e2e/mobile-ux-messung.spec.ts:243:1 › AC-10: Brotkrumen-Link im Hub-Kopf (Trip + Vergleich) nicht beschnitten und auf voller Trefferhöhe antippbar (3 Profile) (925ms)
+  ✓   9 [tests] › e2e/mobile-ux-messung.spec.ts:281:1 › AC-11: Höhenprofil-Etappenrechtecke tragen data-tap-equivalent, Etappenwahl im Etappen-Tab ≥ 24×24 px (Hochformat) (768ms)
+  ✓  10 [tests] › e2e/mobile-ux-messung.spec.ts:309:1 › AC-12a: /compare — kein <main> scrollt waagerecht (Überlauf ≤ 1 px, 3 Profile, de+en) (817ms)
+  ✓  11 [tests] › e2e/mobile-ux-messung.spec.ts:334:1 › AC-12b: /compare/new in EN — Mobil-Reiterleiste ohne Überlauf oder letzter Reiter erreichbar und antippbar (3 Profile) (536ms)
+  ✓  12 [tests] › e2e/mobile-ux-messung.spec.ts:391:1 › AC-13: Tab-Badges, ✉ in der Übersicht und Menülabel „AKTIONEN" mit berechneter Schrift ≥ 11 px (3 Profile, de+en) (2.2s)
+  ✓  13 [tests] › e2e/mobile-ux-messung.spec.ts:443:1 › AC-14: „+ Neuer Trip", „+ Neuer Vergleich", „Im Editor öffnen →", „Ort hinzufügen", Laufzeit-Knopf ≥ 36 px hoch (3 Profile) (1.7s)
+
+  13 passed (15.1s)
+--- strenger Audit DE / EN:
+  6 passed (3.0m)
+  6 passed (2.4m)
+--- Mobil-Nachbartests: 73 passed
+ok 1 - AC-16: Audit-Config bricht OHNE GZ_E2E_API_PROXY_TARGET mit verständlicher Meldung ab (Staging-Schutz)
+ok 2 - AC-16: Audit-Config läuft MIT gesetztem GZ_E2E_API_PROXY_TARGET normal (Gegenprobe)
+ok 3 - AC-16: GZ_AUDIT_LOCALE=de|en setzt die Browser-Locale aller drei Profile passend
+# tests 3
+# pass 3
+# fail 0
+=== Runde 3 (Fix-Loop 1) 2026-11-10: strenger Audit, alle 7 Wizard-Schritte je 3 Profile gemessen
+  6 passed (3.0m)
+  6 passed (3.0m)
+Messtests+Selbsttest: 13 passed. Mutation F001 rot (5 Schritte gesperrt); F002 node-Test 3 rot (8091/8090/8001/Host); F003 EN-Lauf rot (Expected de, Received en); alle zurueckgespielt (cmp identisch). Seiteneffekte: Trips/Vergleiche/Orte identisch, Profilsprache wiederhergestellt, 1 GPX im lokalen Seed-Nutzer.

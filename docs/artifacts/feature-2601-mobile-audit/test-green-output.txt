@@ -1,0 +1,305 @@
+=== 2026-11-10T18:19:00+00:00 HEAD a966598f6 (+ uncommitted GREEN-Aenderungen)
+
+$ GZ_E2E_API_PROXY_TARGET=http://localhost:8191 GZ_API_BASE=http://localhost:8191 GZ_REPO_ENV_FILE=/nonexistent npx playwright test e2e/mobile-ux-messung.spec.ts e2e/mobile-ux-audit-selbsttest.spec.ts --workers=1 --reporter=list
+
+Running 13 tests using 1 worker
+
+  ✓   1 [setup] › e2e/global.setup.ts:23:1 › authenticate and seed test data (186ms)
+  ✓   2 [tests] › e2e/mobile-ux-audit-selbsttest.spec.ts:41:1 › AC-15: 30 Knöpfe à 20×20 px zählen alle als hart (< 24 px), keiner landet in der weichen Liste (138ms)
+  ✓   3 [tests] › e2e/mobile-ux-audit-selbsttest.spec.ts:50:1 › AC-15/AC-11: Element mit data-tap-equivalent (< 24 px breit) wird nicht als hart gezählt, ein gleich großes ohne Attribut schon (66ms)
+  ✓   4 [tests] › e2e/mobile-ux-audit-selbsttest.spec.ts:66:1 › AC-15: ein inneres <main> mit 16 px waagerechtem Überlauf wird erkannt (nicht nur main.mobile-scroll-pad) (80ms)
+  ✓   5 [tests] › e2e/mobile-ux-messung.spec.ts:130:1 › AC-7: Datums-/Uhrzeitsegmente im Etappen-Tab und im Trip-Anlegen ≥ 24×24 px (3 Profile, de+en) (3.9s)
+  ✓   6 [tests] › e2e/mobile-ux-messung.spec.ts:167:1 › AC-8: Datumssegmente im Vergleichs-Editor (Zustellung → Laufzeit „Bis Datum") ≥ 24×24 px (3 Profile, de+en) (2.8s)
+  ✓   7 [tests] › e2e/mobile-ux-messung.spec.ts:200:1 › AC-9: Desktop 1280×800 — Segmentmaße in Etappen-Tab und Trip-Anlegen unverändert (Regressionsschutz) (994ms)
+  ✓   8 [tests] › e2e/mobile-ux-messung.spec.ts:243:1 › AC-10: Brotkrumen-Link im Hub-Kopf (Trip + Vergleich) nicht beschnitten und auf voller Trefferhöhe antippbar (3 Profile) (1.4s)
+  ✓   9 [tests] › e2e/mobile-ux-messung.spec.ts:281:1 › AC-11: Höhenprofil-Etappenrechtecke tragen data-tap-equivalent, Etappenwahl im Etappen-Tab ≥ 24×24 px (Hochformat) (1.1s)
+  ✓  10 [tests] › e2e/mobile-ux-messung.spec.ts:309:1 › AC-12a: /compare — kein <main> scrollt waagerecht (Überlauf ≤ 1 px, 3 Profile, de+en) (956ms)
+  ✓  11 [tests] › e2e/mobile-ux-messung.spec.ts:334:1 › AC-12b: /compare/new in EN — Mobil-Reiterleiste ohne Überlauf oder letzter Reiter erreichbar und antippbar (3 Profile) (642ms)
+  ✓  12 [tests] › e2e/mobile-ux-messung.spec.ts:391:1 › AC-13: Tab-Badges, ✉ in der Übersicht und Menülabel „AKTIONEN" mit berechneter Schrift ≥ 11 px (3 Profile, de+en) (2.7s)
+  ✓  13 [tests] › e2e/mobile-ux-messung.spec.ts:443:1 › AC-14: „+ Neuer Trip", „+ Neuer Vergleich", „Im Editor öffnen →", „Ort hinzufügen", Laufzeit-Knopf ≥ 36 px hoch (3 Profile) (2.5s)
+
+  13 passed (19.3s)
+EXIT=0
+
+$ node --import ./test-lib-loader.mjs --experimental-strip-types --experimental-test-module-mocks --test e2e/mobile-ux-audit-staging-schutz.test.ts
+ok 1 - AC-16: Audit-Config bricht OHNE GZ_E2E_API_PROXY_TARGET mit verständlicher Meldung ab (Staging-Schutz)
+ok 2 - AC-16: Audit-Config läuft MIT gesetztem GZ_E2E_API_PROXY_TARGET normal (Gegenprobe)
+ok 3 - AC-16: GZ_AUDIT_LOCALE=de|en setzt die Browser-Locale aller drei Profile passend
+# tests 3
+# pass 3
+# fail 0
+EXIT=0
+
+=== Ergaenzend: strenger Audit-Lauf (lokal, Vorbereitung AC-17; Vergleich + 8-Etappen-Trip lokal angelegt)
+$ GZ_AUDIT_LOCALE=de GZ_AUDIT_STRICT=1 npx playwright test --config=playwright.mobile-ux.local.config.ts --reporter=line
+EXIT=0
+  6 passed (2.4m)
+harte Treffer tap<24 / Kleintext<11 in den Reports: 0
+$ GZ_AUDIT_LOCALE=en GZ_AUDIT_STRICT=1 npx playwright test --config=playwright.mobile-ux.local.config.ts --reporter=line
+EXIT=0
+  6 passed (2.7m)
+harte Treffer tap<24 / Kleintext<11 in den Reports: 0
+
+$ npx svelte-check --tsconfig ./tsconfig.json
+COMPLETED 2111 FILES 29 ERRORS 103 WARNINGS (CI-Baseline BASELINE_ERRORS 34; keine Fehler in geaenderten Dateien)
+
+$ npm test (alle node-Kern-Tests, frontend/)
+# tests 8988 / # pass 8982 / # fail 0 / # todo 1 (Altbefund) — Exit 0
+
+################################################################
+# Fix-Loop 1 (Adversary F001/F002/F003) — 2026-11-10T19:14:52+00:00, HEAD a966598f6 + gestagte Änderungen
+# Stack: ci-stack.sh Go :8191 / Python :8102, Vorschau :4173, GZ_E2E_API_PROXY_TARGET=GZ_API_BASE=http://localhost:8191, GZ_REPO_ENV_FILE=/nonexistent (kein Staging/Prod)
+
+## A) $ npx playwright test e2e/mobile-ux-messung.spec.ts e2e/mobile-ux-audit-selbsttest.spec.ts --workers=1 --reporter=list
+
+Running 13 tests using 1 worker
+
+  ✓   1 [setup] › e2e/global.setup.ts:23:1 › authenticate and seed test data (139ms)
+  ✓   2 [tests] › e2e/mobile-ux-audit-selbsttest.spec.ts:41:1 › AC-15: 30 Knöpfe à 20×20 px zählen alle als hart (< 24 px), keiner landet in der weichen Liste (85ms)
+  ✓   3 [tests] › e2e/mobile-ux-audit-selbsttest.spec.ts:50:1 › AC-15/AC-11: Element mit data-tap-equivalent (< 24 px breit) wird nicht als hart gezählt, ein gleich großes ohne Attribut schon (61ms)
+  ✓   4 [tests] › e2e/mobile-ux-audit-selbsttest.spec.ts:66:1 › AC-15: ein inneres <main> mit 16 px waagerechtem Überlauf wird erkannt (nicht nur main.mobile-scroll-pad) (57ms)
+  ✓   5 [tests] › e2e/mobile-ux-messung.spec.ts:130:1 › AC-7: Datums-/Uhrzeitsegmente im Etappen-Tab und im Trip-Anlegen ≥ 24×24 px (3 Profile, de+en) (2.2s)
+  ✓   6 [tests] › e2e/mobile-ux-messung.spec.ts:167:1 › AC-8: Datumssegmente im Vergleichs-Editor (Zustellung → Laufzeit „Bis Datum") ≥ 24×24 px (3 Profile, de+en) (2.0s)
+  ✓   7 [tests] › e2e/mobile-ux-messung.spec.ts:200:1 › AC-9: Desktop 1280×800 — Segmentmaße in Etappen-Tab und Trip-Anlegen unverändert (Regressionsschutz) (608ms)
+  ✓   8 [tests] › e2e/mobile-ux-messung.spec.ts:243:1 › AC-10: Brotkrumen-Link im Hub-Kopf (Trip + Vergleich) nicht beschnitten und auf voller Trefferhöhe antippbar (3 Profile) (837ms)
+  ✓   9 [tests] › e2e/mobile-ux-messung.spec.ts:281:1 › AC-11: Höhenprofil-Etappenrechtecke tragen data-tap-equivalent, Etappenwahl im Etappen-Tab ≥ 24×24 px (Hochformat) (797ms)
+  ✓  10 [tests] › e2e/mobile-ux-messung.spec.ts:309:1 › AC-12a: /compare — kein <main> scrollt waagerecht (Überlauf ≤ 1 px, 3 Profile, de+en) (647ms)
+  ✓  11 [tests] › e2e/mobile-ux-messung.spec.ts:334:1 › AC-12b: /compare/new in EN — Mobil-Reiterleiste ohne Überlauf oder letzter Reiter erreichbar und antippbar (3 Profile) (526ms)
+  ✓  12 [tests] › e2e/mobile-ux-messung.spec.ts:391:1 › AC-13: Tab-Badges, ✉ in der Übersicht und Menülabel „AKTIONEN" mit berechneter Schrift ≥ 11 px (3 Profile, de+en) (2.0s)
+  ✓  13 [tests] › e2e/mobile-ux-messung.spec.ts:443:1 › AC-14: „+ Neuer Trip", „+ Neuer Vergleich", „Im Editor öffnen →", „Ort hinzufügen", Laufzeit-Knopf ≥ 36 px hoch (3 Profile) (2.0s)
+
+  13 passed (13.8s)
+exit=0
+
+## B) $ node --import ./test-lib-loader.mjs --experimental-strip-types --experimental-test-module-mocks --test e2e/mobile-ux-audit-staging-schutz.test.ts
+TAP version 13
+# Subtest: AC-16: Audit-Config bricht OHNE GZ_E2E_API_PROXY_TARGET mit verständlicher Meldung ab (Staging-Schutz)
+ok 1 - AC-16: Audit-Config bricht OHNE GZ_E2E_API_PROXY_TARGET mit verständlicher Meldung ab (Staging-Schutz)
+  ---
+  duration_ms: 995.231152
+  type: 'test'
+  ...
+# Subtest: AC-16: Audit-Config läuft MIT gesetztem GZ_E2E_API_PROXY_TARGET normal (Gegenprobe)
+ok 2 - AC-16: Audit-Config läuft MIT gesetztem GZ_E2E_API_PROXY_TARGET normal (Gegenprobe)
+  ---
+  duration_ms: 1321.033123
+  type: 'test'
+  ...
+# Subtest: AC-16: Audit-Config bricht ab, wenn GZ_E2E_API_PROXY_TARGET auf einen Staging-/Prod-Port oder -Host zeigt
+not ok 3 - AC-16: Audit-Config bricht ab, wenn GZ_E2E_API_PROXY_TARGET auf einen Staging-/Prod-Port oder -Host zeigt
+  ---
+  duration_ms: 1080.020848
+  type: 'test'
+  location: '/home/hem/gregor_zwanzig/.claude/worktrees/hashed-plotting-corbato/frontend/e2e/mobile-ux-audit-staging-schutz.test.ts:58:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Exit-Code 0: Ziel http://localhost:8091 (Staging/Produktion) darf nicht akzeptiert werden.
+    Ausgabe:
+    Listing tests:
+      [iphone13] › mobile-ux-audit.spec.ts:337:1 › angemeldete Routen
+      [iphone13] › mobile-ux-audit.spec.ts:358:2 › öffentliche Routen › Startseite, login/register/forgot, Passwort/Bestätigung/Magic-Link
+      [iphone18pro] › mobile-ux-audit.spec.ts:337:1 › angemeldete Routen
+      [iphone18pro] › mobile-ux-audit.spec.ts:358:2 › öffentliche Routen › Startseite, login/register/forgot, Passwort/Bestätigung/Magic-Link
+      [landscape] › mobile-ux-audit.spec.ts:337:1 › angemeldete Routen
+      [landscape] › mobile-ux-audit.spec.ts:358:2 › öffentliche Routen › Startseite, login/register/forgot, Passwort/Bestätigung/Magic-Link
+    Total: 6 tests in 1 file
+    
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 0
+  actual: 0
+  operator: 'notStrictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/hashed-plotting-corbato/frontend/e2e/mobile-ux-audit-staging-schutz.test.ts:62:10)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: AC-16: GZ_AUDIT_LOCALE=de|en setzt die Browser-Locale aller drei Profile passend
+ok 4 - AC-16: GZ_AUDIT_LOCALE=de|en setzt die Browser-Locale aller drei Profile passend
+  ---
+  duration_ms: 284.872231
+  type: 'test'
+  ...
+1..4
+# tests 4
+# suites 0
+# pass 3
+# fail 1
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 3876.561994
+schutz exit=1
+
+## C-de) $ GZ_AUDIT_STRICT=1 GZ_AUDIT_LOCALE=de npx playwright test --config=playwright.mobile-ux.local.config.ts
+
+Running 6 tests using 1 worker
+
+  ✓  1 [iphone13] › e2e/mobile-ux-audit.spec.ts:337:1 › angemeldete Routen (47.2s)
+  ✓  2 [iphone13] › e2e/mobile-ux-audit.spec.ts:358:2 › öffentliche Routen › Startseite, login/register/forgot, Passwort/Bestätigung/Magic-Link (9.2s)
+  ✓  3 [iphone18pro] › e2e/mobile-ux-audit.spec.ts:337:1 › angemeldete Routen (46.8s)
+  ✓  4 [iphone18pro] › e2e/mobile-ux-audit.spec.ts:358:2 › öffentliche Routen › Startseite, login/register/forgot, Passwort/Bestätigung/Magic-Link (9.2s)
+  ✓  5 [landscape] › e2e/mobile-ux-audit.spec.ts:337:1 › angemeldete Routen (53.8s)
+  ✓  6 [landscape] › e2e/mobile-ux-audit.spec.ts:358:2 › öffentliche Routen › Startseite, login/register/forgot, Passwort/Bestätigung/Magic-Link (9.4s)
+
+  6 passed (3.0m)
+de exit=0
+# Anlege-Schritte laut Report (je Profil):
+# report-iphone13.md
+- ⚠️ /trips/new
+- ⚠️ /trips/new [schritt-etappen]
+- ⚠️ /trips/new [schritt-wegpunkte]
+- ✅ /trips/new [schritt-wetter]
+- ⚠️ /trips/new [schritt-zustellung]
+- ✅ /compare/new
+- ✅ /compare/new [schritt-orte]
+- ✅ /compare/new [schritt-wetter]
+- ⚠️ /compare/new [schritt-zustellung]
+- ↪️ /gpx-upload
+# report-iphone18pro.md
+- ⚠️ /trips/new
+- ⚠️ /trips/new [schritt-etappen]
+- ⚠️ /trips/new [schritt-wegpunkte]
+- ✅ /trips/new [schritt-wetter]
+- ⚠️ /trips/new [schritt-zustellung]
+- ✅ /compare/new
+- ✅ /compare/new [schritt-orte]
+- ✅ /compare/new [schritt-wetter]
+- ⚠️ /compare/new [schritt-zustellung]
+- ↪️ /gpx-upload
+# report-landscape.md
+- ⚠️ /trips/new
+- ⚠️ /trips/new [schritt-etappen]
+- ⚠️ /trips/new [schritt-wegpunkte]
+- ✅ /trips/new [schritt-wetter]
+- ⚠️ /trips/new [schritt-zustellung]
+- ✅ /compare/new
+- ✅ /compare/new [schritt-orte]
+- ✅ /compare/new [schritt-wetter]
+- ⚠️ /compare/new [schritt-zustellung]
+- ↪️ /gpx-upload
+
+## C-en) $ GZ_AUDIT_STRICT=1 GZ_AUDIT_LOCALE=en npx playwright test --config=playwright.mobile-ux.local.config.ts
+
+Running 6 tests using 1 worker
+
+  ✓  1 [iphone13] › e2e/mobile-ux-audit.spec.ts:337:1 › angemeldete Routen (46.0s)
+  ✓  2 [iphone13] › e2e/mobile-ux-audit.spec.ts:358:2 › öffentliche Routen › Startseite, login/register/forgot, Passwort/Bestätigung/Magic-Link (9.1s)
+  ✓  3 [iphone18pro] › e2e/mobile-ux-audit.spec.ts:337:1 › angemeldete Routen (47.6s)
+  ✓  4 [iphone18pro] › e2e/mobile-ux-audit.spec.ts:358:2 › öffentliche Routen › Startseite, login/register/forgot, Passwort/Bestätigung/Magic-Link (9.5s)
+  ✓  5 [landscape] › e2e/mobile-ux-audit.spec.ts:337:1 › angemeldete Routen (52.8s)
+  ✓  6 [landscape] › e2e/mobile-ux-audit.spec.ts:358:2 › öffentliche Routen › Startseite, login/register/forgot, Passwort/Bestätigung/Magic-Link (9.6s)
+
+  6 passed (2.9m)
+en exit=0
+# Anlege-Schritte laut Report (je Profil):
+# report-iphone13.md
+- ⚠️ /trips/new
+- ⚠️ /trips/new [schritt-etappen]
+- ⚠️ /trips/new [schritt-wegpunkte]
+- ✅ /trips/new [schritt-wetter]
+- ⚠️ /trips/new [schritt-zustellung]
+- ✅ /compare/new
+- ✅ /compare/new [schritt-orte]
+- ✅ /compare/new [schritt-wetter]
+- ⚠️ /compare/new [schritt-zustellung]
+- ↪️ /gpx-upload
+# report-iphone18pro.md
+- ⚠️ /trips/new
+- ⚠️ /trips/new [schritt-etappen]
+- ⚠️ /trips/new [schritt-wegpunkte]
+- ✅ /trips/new [schritt-wetter]
+- ⚠️ /trips/new [schritt-zustellung]
+- ✅ /compare/new
+- ✅ /compare/new [schritt-orte]
+- ✅ /compare/new [schritt-wetter]
+- ⚠️ /compare/new [schritt-zustellung]
+- ↪️ /gpx-upload
+# report-landscape.md
+- ⚠️ /trips/new
+- ⚠️ /trips/new [schritt-etappen]
+- ⚠️ /trips/new [schritt-wegpunkte]
+- ✅ /trips/new [schritt-wetter]
+- ⚠️ /trips/new [schritt-zustellung]
+- ✅ /compare/new
+- ✅ /compare/new [schritt-orte]
+- ✅ /compare/new [schritt-wetter]
+- ⚠️ /compare/new [schritt-zustellung]
+- ↪️ /gpx-upload
+
+## D) Mutationsgegenprobe F001: GPX-Vorbelegung ausgeschaltet (externe Kopie, zurückgespielt, cmp identisch) -> strenger Lauf iphone13 DE rot
+    +   "/trips/new#schritt-wegpunkte (Fehler: Schritt gesperrt — Pflichtangaben im Audit nicht vorbelegt, Schritt nicht gemessen)",
+    +   "/trips/new#schritt-wetter (Fehler: Schritt gesperrt — Pflichtangaben im Audit nicht vorbelegt, Schritt nicht gemessen)",
+    +   "/trips/new#schritt-zustellung (Fehler: Schritt gesperrt — Pflichtangaben im Audit nicht vorbelegt, Schritt nicht gemessen)",
+  1 failed
+mutant exit=1
+
+## E) Nachkontrolle lokaler Stack nach allen Läufen: kein Trip E2E-GZ-Audit-*, Vergleiche unverändert (1), Profilsprache de
+
+################################################################
+# Fix-Loop 1, Nachtrag F002 (loc_limit_override=500 gesetzt, Staging-/Prod-Ziel-Sperre in der Config) — 2026-11-10T19:17:06+00:00
+# Abschnitt B oben (Fall 3 rot) ist damit überholt.
+
+## B2) $ node --import ./test-lib-loader.mjs --experimental-strip-types --experimental-test-module-mocks --test e2e/mobile-ux-audit-staging-schutz.test.ts
+TAP version 13
+# Subtest: AC-16: Audit-Config bricht OHNE GZ_E2E_API_PROXY_TARGET mit verständlicher Meldung ab (Staging-Schutz)
+ok 1 - AC-16: Audit-Config bricht OHNE GZ_E2E_API_PROXY_TARGET mit verständlicher Meldung ab (Staging-Schutz)
+  ---
+  duration_ms: 1249.224624
+  type: 'test'
+  ...
+# Subtest: AC-16: Audit-Config läuft MIT gesetztem GZ_E2E_API_PROXY_TARGET normal (Gegenprobe)
+ok 2 - AC-16: Audit-Config läuft MIT gesetztem GZ_E2E_API_PROXY_TARGET normal (Gegenprobe)
+  ---
+  duration_ms: 1108.94085
+  type: 'test'
+  ...
+# Subtest: AC-16: Audit-Config bricht ab, wenn GZ_E2E_API_PROXY_TARGET auf einen Staging-/Prod-Port oder -Host zeigt
+ok 3 - AC-16: Audit-Config bricht ab, wenn GZ_E2E_API_PROXY_TARGET auf einen Staging-/Prod-Port oder -Host zeigt
+  ---
+  duration_ms: 5092.479811
+  type: 'test'
+  ...
+# Subtest: AC-16: GZ_AUDIT_LOCALE=de|en setzt die Browser-Locale aller drei Profile passend
+ok 4 - AC-16: GZ_AUDIT_LOCALE=de|en setzt die Browser-Locale aller drei Profile passend
+  ---
+  duration_ms: 348.761246
+  type: 'test'
+  ...
+1..4
+# tests 4
+# suites 0
+# pass 4
+# fail 0
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 7941.173288
+schutz exit=0
+
+## A2) Gegenlauf (lokaler Stack Go :8191 / Python :8102, Vorschau :4173, GZ_E2E_API_PROXY_TARGET=http://localhost:8191)
+## $ npx playwright test e2e/mobile-ux-messung.spec.ts e2e/mobile-ux-audit-selbsttest.spec.ts --workers=1 --reporter=list
+
+Running 13 tests using 1 worker
+
+  ✓   1 [setup] › e2e/global.setup.ts:23:1 › authenticate and seed test data (127ms)
+  ✓   2 [tests] › e2e/mobile-ux-audit-selbsttest.spec.ts:41:1 › AC-15: 30 Knöpfe à 20×20 px zählen alle als hart (< 24 px), keiner landet in der weichen Liste (100ms)
+  ✓   3 [tests] › e2e/mobile-ux-audit-selbsttest.spec.ts:50:1 › AC-15/AC-11: Element mit data-tap-equivalent (< 24 px breit) wird nicht als hart gezählt, ein gleich großes ohne Attribut schon (67ms)
+  ✓   4 [tests] › e2e/mobile-ux-audit-selbsttest.spec.ts:66:1 › AC-15: ein inneres <main> mit 16 px waagerechtem Überlauf wird erkannt (nicht nur main.mobile-scroll-pad) (58ms)
+  ✓   5 [tests] › e2e/mobile-ux-messung.spec.ts:130:1 › AC-7: Datums-/Uhrzeitsegmente im Etappen-Tab und im Trip-Anlegen ≥ 24×24 px (3 Profile, de+en) (2.8s)
+  ✓   6 [tests] › e2e/mobile-ux-messung.spec.ts:167:1 › AC-8: Datumssegmente im Vergleichs-Editor (Zustellung → Laufzeit „Bis Datum") ≥ 24×24 px (3 Profile, de+en) (2.2s)
+  ✓   7 [tests] › e2e/mobile-ux-messung.spec.ts:200:1 › AC-9: Desktop 1280×800 — Segmentmaße in Etappen-Tab und Trip-Anlegen unverändert (Regressionsschutz) (697ms)
+  ✓   8 [tests] › e2e/mobile-ux-messung.spec.ts:243:1 › AC-10: Brotkrumen-Link im Hub-Kopf (Trip + Vergleich) nicht beschnitten und auf voller Trefferhöhe antippbar (3 Profile) (863ms)
+  ✓   9 [tests] › e2e/mobile-ux-messung.spec.ts:281:1 › AC-11: Höhenprofil-Etappenrechtecke tragen data-tap-equivalent, Etappenwahl im Etappen-Tab ≥ 24×24 px (Hochformat) (816ms)
+  ✓  10 [tests] › e2e/mobile-ux-messung.spec.ts:309:1 › AC-12a: /compare — kein <main> scrollt waagerecht (Überlauf ≤ 1 px, 3 Profile, de+en) (728ms)
+  ✓  11 [tests] › e2e/mobile-ux-messung.spec.ts:334:1 › AC-12b: /compare/new in EN — Mobil-Reiterleiste ohne Überlauf oder letzter Reiter erreichbar und antippbar (3 Profile) (541ms)
+  ✓  12 [tests] › e2e/mobile-ux-messung.spec.ts:391:1 › AC-13: Tab-Badges, ✉ in der Übersicht und Menülabel „AKTIONEN" mit berechneter Schrift ≥ 11 px (3 Profile, de+en) (2.2s)
+  ✓  13 [tests] › e2e/mobile-ux-messung.spec.ts:443:1 › AC-14: „+ Neuer Trip", „+ Neuer Vergleich", „Im Editor öffnen →", „Ort hinzufügen", Laufzeit-Knopf ≥ 36 px hoch (3 Profile) (1.9s)
+
+  13 passed (14.9s)
+exit=0

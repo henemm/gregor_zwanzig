@@ -158,12 +158,14 @@
 				/>
 			{/if}
 
-			<!-- Hit-Areas pro Stage -->
+			<!-- Hit-Areas pro Stage. #2601 AC-11: kurze Etappen sind schmaler als 24 px — dokumentierte
+			     Ausnahme WCAG 2.5.8 „equivalent“ (dieselbe Etappenwahl im Etappen-Tab), daher data-tap-equivalent. -->
 			{#each boundaries as b (b.stageId)}
 				<!-- svelte-ignore a11y_click_events_have_key_events -->
 				<!-- svelte-ignore a11y_no_static_element_interactions -->
 				<rect
 					data-testid="trip-full-profile-stage-{b.stageId}"
+					data-tap-equivalent
 					role="button"
 					tabindex="0"
 					aria-label={$t('trip.profil.etappe_waehlen', { code: b.code })}

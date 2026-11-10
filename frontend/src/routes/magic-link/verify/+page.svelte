@@ -41,7 +41,7 @@
 			</button>
 		</form>
 
-		<a href="/magic-link" class="block text-center text-sm text-muted-foreground hover:underline">
+		<a href="/magic-link" class="block py-3 text-center text-sm text-muted-foreground hover:underline">
 			{$t('auth.code.neu_anfordern')}
 		</a>
 	</div>

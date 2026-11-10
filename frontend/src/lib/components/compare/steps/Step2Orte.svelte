@@ -399,13 +399,14 @@
 	{/if}
 
 	{#if dense}
-	<!-- Issue #1256 Scheibe 8d (AC-6/AC-7) — mobiler 1-spaltiger Stack
+	<!-- Issue #1256 Scheibe 8d (AC-6/AC-7) — mobiler 1-spaltiger Stack. #2601 Runde 2 (AC-13):
+	     mobil kein Text unter 11 px (--g-text-xs statt 10/10,5 px)
 	     (Soll: screen-compare-editor-mobile.jsx Z.226-266). -->
 	<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-		<div style="font-family:var(--g-font-mono); font-size:10px; letter-spacing:0.10em; text-transform:uppercase; color:var(--g-ink-3); font-weight:600;">{$t('vergleich.orte.im_vergleich', { anzahl: pickedLocations.length })}</div>
+		<div style="font-family:var(--g-font-mono); font-size:var(--g-text-xs); letter-spacing:0.10em; text-transform:uppercase; color:var(--g-ink-3); font-weight:600;">{$t('vergleich.orte.im_vergleich', { anzahl: pickedLocations.length })}</div>
 		<span
 			data-testid="compare-step2-counter"
-			style="font-family:var(--g-font-mono); font-size:10.5px; color:{counterColor}; letter-spacing:0.04em;"
+			style="font-family:var(--g-font-mono); font-size:var(--g-text-xs); color:{counterColor}; letter-spacing:0.04em;"
 		>{denseCounterText}</span>
 	</div>
 
@@ -420,10 +421,10 @@
 					data-testid={`compare-step2-picked-item-${loc.id}`}
 					style="display:flex; align-items:center; gap:10px; padding:11px 14px; background:var(--g-card); border:1px solid var(--g-rule); border-radius:var(--g-r-3); min-height:52px;"
 				>
-					<span style="width:24px; height:24px; border-radius:4px; background:var(--g-ink); color:var(--g-paper); display:inline-flex; align-items:center; justify-content:center; font-size:10px; font-weight:700; flex-shrink:0; font-family:var(--g-font-mono);">{i + 1}</span>
+					<span style="width:24px; height:24px; border-radius:4px; background:var(--g-ink); color:var(--g-paper); display:inline-flex; align-items:center; justify-content:center; font-size:var(--g-text-xs); font-weight:700; flex-shrink:0; font-family:var(--g-font-mono);">{i + 1}</span>
 					<div style="flex:1; min-width:0;">
 						<div style="font-size:14px; font-weight:600; color:var(--g-ink); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">{loc.name}</div>
-						<div style="font-family:var(--g-font-mono); font-size:10.5px; color:var(--g-ink-3); margin-top:1px;">{groupNameById.get(loc.group_id ?? '') ?? '—'} · {loc.elevation_m ?? '–'} m</div>
+						<div style="font-family:var(--g-font-mono); font-size:var(--g-text-xs); color:var(--g-ink-3); margin-top:1px;">{groupNameById.get(loc.group_id ?? '') ?? '—'} · {loc.elevation_m ?? '–'} m</div>
 					</div>
 					<button
 						data-testid={`compare-step2-picked-remove-${loc.id}`}

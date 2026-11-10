@@ -52,7 +52,7 @@
 			</form>
 		{/if}
 
-		<a href="/login" class="block text-center text-sm text-muted-foreground hover:underline">
+		<a href="/login" class="block py-3 text-center text-sm text-muted-foreground hover:underline">
 			{$t('auth.zurueck_login')}
 		</a>
 	</div>

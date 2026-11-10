@@ -474,6 +474,11 @@
       inset: -8px;
     }
   }
+  /* #2601 Runde 2 (AC-14): Touch/Handy-Boden für Btn[sm] 36 px. Muss in DIESER Schicht stehen —
+     der Boden in @layer base (unten) verlor gegen die 28 px oben und griff nie. */
+  @media (max-width: 899px), (pointer: coarse) {
+    [data-slot="btn"][data-size="sm"] { min-height: 36px; }
+  }
 
   /* Variants */
   [data-slot="btn"][data-variant="primary"] {
@@ -792,7 +797,7 @@
   :where(label:has(> input[type="checkbox"]), label:has(> input[type="radio"])) {
     min-height: 44px;
   }
-  [data-slot="btn"][data-size="sm"] { min-height: 36px; }
+  /* Btn[sm] 36px: steht in @layer components bei den Btn-Größen (#2601 Runde 2, AC-14). */
   /* Alle übrigen Knöpfe und Textfelder im Inhalt: mindestens 36/40px hoch.
      Ausgenommen: Btn-Atom (eigene Größen), Schalter, Icon-Knöpfe. */
   :where(main button:not([data-slot="btn"]):not([role="switch"]):not([data-size^="icon"])) { min-height: 36px; }

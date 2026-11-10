@@ -683,3 +683,27 @@ e2e/kontrast-trip-vergleich.spec.ts
 # Rücknahme beim Tippen/Etappenwechsel Startzeit/Rücknahme Startzeit/Startzeit neu tippen,
 # DS-1 Jahr angefangen und Neueintippen. Fallzahl jetzt 36 (+ global.setup).
 e2e/design-system-trip-vergleich.spec.ts
+#
+# Aufnahme 2026-11-10 (#2601 Runde 2, Mobile-UX-Audit, in RED aufgenommen):
+# mobile-ux-messung.spec.ts -- Messtests im echten Browser auf 390x844, 402x874 und
+# 844x390 (setViewportSize im Fall, de/en ueber PUT /api/auth/profile, afterEach zurueck
+# auf de): AC-7/AC-8 Datums-/Uhrzeitsegmente >= 24x24 px (Etappen-Tab, Trip-Anlegen,
+# Vergleichs-Editor), AC-9 Desktop-Gegenprobe 1280x800 (Sollwerte vor Runde 2),
+# AC-10 Brotkrumen im Hub-Kopf ungeclippt + elementFromPoint, AC-11 data-tap-equivalent am
+# Hoehenprofil + Etappenwahl im Etappen-Tab, AC-12 /compare ohne <main>-Ueberlauf und
+# EN-Reiterleiste /compare/new, AC-13 Kleintext >= 11 px, AC-14 Knopfhoehen >= 36 px.
+# Fallzahl: 9 (+ global.setup).
+# mobile-ux-audit-selbsttest.spec.ts -- AC-15: die Audit-Pruefung LAYOUT_CHECK
+# (e2e/mobile-ux-audit-check.ts) auf per page.setContent gebauten Seiten: 30 Knoepfe a
+# 20 px alle hart (ungekappt), data-tap-equivalent nie hart, innerer <main>-Ueberlauf
+# erkannt. Fallzahl: 3 (+ global.setup).
+#   Filter A: kein waitForTimeout/skip/fixme/__dirname/Hauptrepo-Pfad, kein
+#             .staging.spec (grep leer, 2026-11-10).
+#   Filter B: lokal im isolierten Stack (Go 8191 / Py 8102, frische admin.json,
+#             --workers=1) 13/13 inkl. global.setup; 3x gruen im Zielverbund misst der
+#             CI-Hauptlauf des PR.
+#   Filter C: kein Screenshot-Schreibziel.
+# Die Kern-Pruefung mobile-ux-audit-staging-schutz.test.ts (AC-16) laeuft per node --test
+# im frontend-test-Job und steht bewusst NICHT auf dieser Liste.
+e2e/mobile-ux-messung.spec.ts
+e2e/mobile-ux-audit-selbsttest.spec.ts

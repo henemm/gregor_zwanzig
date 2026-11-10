@@ -1,0 +1,542 @@
+# RED-Lauf #2601 Runde 2 — 2026-11-10T17:42:15+00:00, Basis-HEAD d322e2a9e (Produktivcode unverändert)
+# Stack: e2e/ci-stack.sh Go :8191 / Python :8102, Vorschau :4173 mit GZ_E2E_API_PROXY_TARGET=http://localhost:8191 (kein Staging)
+
+## 1) $ npx playwright test e2e/mobile-ux-messung.spec.ts --workers=1 --reporter=list
+
+Running 10 tests using 1 worker
+
+  ✓   1 [setup] › e2e/global.setup.ts:23:1 › authenticate and seed test data (116ms)
+  ✘   2 [tests] › e2e/mobile-ux-messung.spec.ts:130:1 › AC-7: Datums-/Uhrzeitsegmente im Etappen-Tab und im Trip-Anlegen ≥ 24×24 px (3 Profile, de+en) (2.8s)
+  ✘   3 [tests] › e2e/mobile-ux-messung.spec.ts:167:1 › AC-8: Datumssegmente im Vergleichs-Editor (Zustellung → Laufzeit „Bis Datum") ≥ 24×24 px (3 Profile, de+en) (2.4s)
+  ✓   4 [tests] › e2e/mobile-ux-messung.spec.ts:200:1 › AC-9: Desktop 1280×800 — Segmentmaße in Etappen-Tab und Trip-Anlegen unverändert (Regressionsschutz) (753ms)
+  ✘   5 [tests] › e2e/mobile-ux-messung.spec.ts:243:1 › AC-10: Brotkrumen-Link im Hub-Kopf (Trip + Vergleich) nicht beschnitten und auf voller Trefferhöhe antippbar (3 Profile) (916ms)
+  ✘   6 [tests] › e2e/mobile-ux-messung.spec.ts:281:1 › AC-11: Höhenprofil-Etappenrechtecke tragen data-tap-equivalent, Etappenwahl im Etappen-Tab ≥ 24×24 px (Hochformat) (929ms)
+  ✘   7 [tests] › e2e/mobile-ux-messung.spec.ts:309:1 › AC-12a: /compare — kein <main> scrollt waagerecht (Überlauf ≤ 1 px, 3 Profile, de+en) (890ms)
+  ✓   8 [tests] › e2e/mobile-ux-messung.spec.ts:334:1 › AC-12b: /compare/new in EN — Mobil-Reiterleiste ohne Überlauf oder letzter Reiter erreichbar und antippbar (3 Profile) (571ms)
+  ✘   9 [tests] › e2e/mobile-ux-messung.spec.ts:391:1 › AC-13: Tab-Badges, ✉ in der Übersicht und Menülabel „AKTIONEN" mit berechneter Schrift ≥ 11 px (3 Profile, de+en) (2.3s)
+  ✘  10 [tests] › e2e/mobile-ux-messung.spec.ts:443:1 › AC-14: „+ Neuer Trip", „+ Neuer Vergleich", „Im Editor öffnen →", „Ort hinzufügen", Laufzeit-Knopf ≥ 36 px hoch (3 Profile) (2.3s)
+
+
+  1) [tests] › e2e/mobile-ux-messung.spec.ts:130:1 › AC-7: Datums-/Uhrzeitsegmente im Etappen-Tab und im Trip-Anlegen ≥ 24×24 px (3 Profile, de+en) 
+
+    Error: Segmente unter 24×24 px:
+    390×844/de Etappen-Tab stage-date-field: Segment day 22×26 px (< 24×24) ×3
+    390×844/de Etappen-Tab stage-date-field: Segment month 22×26 px (< 24×24) ×3
+    390×844/de Etappen-Tab stage-start-time-field: Segment hour 22×26 px (< 24×24) ×3
+    390×844/de Etappen-Tab stage-start-time-field: Segment minute 22×26 px (< 24×24) ×3
+    390×844/de /trips/new trip-new-date-input: Segment day 22×26 px (< 24×24)
+    390×844/de /trips/new trip-new-date-input: Segment month 22×26 px (< 24×24)
+    402×874/de Etappen-Tab stage-date-field: Segment day 22×26 px (< 24×24) ×3
+    402×874/de Etappen-Tab stage-date-field: Segment month 22×26 px (< 24×24) ×3
+    402×874/de Etappen-Tab stage-start-time-field: Segment hour 22×26 px (< 24×24) ×3
+    402×874/de Etappen-Tab stage-start-time-field: Segment minute 22×26 px (< 24×24) ×3
+    402×874/de /trips/new trip-new-date-input: Segment day 22×26 px (< 24×24)
+    402×874/de /trips/new trip-new-date-input: Segment month 22×26 px (< 24×24)
+    844×390 quer/de Etappen-Tab stage-date-field: Segment day 22×26 px (< 24×24) ×3
+    844×390 quer/de Etappen-Tab stage-date-field: Segment month 22×26 px (< 24×24) ×3
+    844×390 quer/de Etappen-Tab stage-start-time-field: Segment hour 22×26 px (< 24×24) ×3
+    844×390 quer/de Etappen-Tab stage-start-time-field: Segment minute 22×26 px (< 24×24) ×3
+    844×390 quer/de /trips/new trip-new-date-input: Segment day 22×26 px (< 24×24)
+    844×390 quer/de /trips/new trip-new-date-input: Segment month 22×26 px (< 24×24)
+    390×844/en Etappen-Tab stage-date-field: Segment day 22×26 px (< 24×24) ×3
+    390×844/en Etappen-Tab stage-date-field: Segment month 22×26 px (< 24×24) ×3
+    390×844/en Etappen-Tab stage-start-time-field: Segment hour 22×26 px (< 24×24) ×3
+    390×844/en Etappen-Tab stage-start-time-field: Segment minute 22×26 px (< 24×24) ×3
+    390×844/en /trips/new trip-new-date-input: Segment day 22×26 px (< 24×24)
+    390×844/en /trips/new trip-new-date-input: Segment month 22×26 px (< 24×24)
+    402×874/en Etappen-Tab stage-date-field: Segment day 22×26 px (< 24×24) ×3
+    402×874/en Etappen-Tab stage-date-field: Segment month 22×26 px (< 24×24) ×3
+    402×874/en Etappen-Tab stage-start-time-field: Segment hour 22×26 px (< 24×24) ×3
+    402×874/en Etappen-Tab stage-start-time-field: Segment minute 22×26 px (< 24×24) ×3
+    402×874/en /trips/new trip-new-date-input: Segment day 22×26 px (< 24×24)
+    402×874/en /trips/new trip-new-date-input: Segment month 22×26 px (< 24×24)
+    844×390 quer/en Etappen-Tab stage-date-field: Segment day 22×26 px (< 24×24) ×3
+    844×390 quer/en Etappen-Tab stage-date-field: Segment month 22×26 px (< 24×24) ×3
+    844×390 quer/en Etappen-Tab stage-start-time-field: Segment hour 22×26 px (< 24×24) ×3
+    844×390 quer/en Etappen-Tab stage-start-time-field: Segment minute 22×26 px (< 24×24) ×3
+    844×390 quer/en /trips/new trip-new-date-input: Segment day 22×26 px (< 24×24)
+    844×390 quer/en /trips/new trip-new-date-input: Segment month 22×26 px (< 24×24)
+
+    [2mexpect([22m[31mreceived[39m[2m).[22mtoEqual[2m([22m[32mexpected[39m[2m) // deep equality[22m
+
+    [32m- Expected  -  1[39m
+    [31m+ Received  + 38[39m
+
+    [32m- Array [][39m
+    [31m+ Array [[39m
+    [31m+   "390×844/de Etappen-Tab stage-date-field: Segment day 22×26 px (< 24×24) ×3",[39m
+    [31m+   "390×844/de Etappen-Tab stage-date-field: Segment month 22×26 px (< 24×24) ×3",[39m
+    [31m+   "390×844/de Etappen-Tab stage-start-time-field: Segment hour 22×26 px (< 24×24) ×3",[39m
+    [31m+   "390×844/de Etappen-Tab stage-start-time-field: Segment minute 22×26 px (< 24×24) ×3",[39m
+    [31m+   "390×844/de /trips/new trip-new-date-input: Segment day 22×26 px (< 24×24)",[39m
+    [31m+   "390×844/de /trips/new trip-new-date-input: Segment month 22×26 px (< 24×24)",[39m
+    [31m+   "402×874/de Etappen-Tab stage-date-field: Segment day 22×26 px (< 24×24) ×3",[39m
+    [31m+   "402×874/de Etappen-Tab stage-date-field: Segment month 22×26 px (< 24×24) ×3",[39m
+    [31m+   "402×874/de Etappen-Tab stage-start-time-field: Segment hour 22×26 px (< 24×24) ×3",[39m
+    [31m+   "402×874/de Etappen-Tab stage-start-time-field: Segment minute 22×26 px (< 24×24) ×3",[39m
+    [31m+   "402×874/de /trips/new trip-new-date-input: Segment day 22×26 px (< 24×24)",[39m
+    [31m+   "402×874/de /trips/new trip-new-date-input: Segment month 22×26 px (< 24×24)",[39m
+    [31m+   "844×390 quer/de Etappen-Tab stage-date-field: Segment day 22×26 px (< 24×24) ×3",[39m
+    [31m+   "844×390 quer/de Etappen-Tab stage-date-field: Segment month 22×26 px (< 24×24) ×3",[39m
+    [31m+   "844×390 quer/de Etappen-Tab stage-start-time-field: Segment hour 22×26 px (< 24×24) ×3",[39m
+    [31m+   "844×390 quer/de Etappen-Tab stage-start-time-field: Segment minute 22×26 px (< 24×24) ×3",[39m
+    [31m+   "844×390 quer/de /trips/new trip-new-date-input: Segment day 22×26 px (< 24×24)",[39m
+    [31m+   "844×390 quer/de /trips/new trip-new-date-input: Segment month 22×26 px (< 24×24)",[39m
+    [31m+   "390×844/en Etappen-Tab stage-date-field: Segment day 22×26 px (< 24×24) ×3",[39m
+    [31m+   "390×844/en Etappen-Tab stage-date-field: Segment month 22×26 px (< 24×24) ×3",[39m
+    [31m+   "390×844/en Etappen-Tab stage-start-time-field: Segment hour 22×26 px (< 24×24) ×3",[39m
+    [31m+   "390×844/en Etappen-Tab stage-start-time-field: Segment minute 22×26 px (< 24×24) ×3",[39m
+    [31m+   "390×844/en /trips/new trip-new-date-input: Segment day 22×26 px (< 24×24)",[39m
+    [31m+   "390×844/en /trips/new trip-new-date-input: Segment month 22×26 px (< 24×24)",[39m
+    [31m+   "402×874/en Etappen-Tab stage-date-field: Segment day 22×26 px (< 24×24) ×3",[39m
+    [31m+   "402×874/en Etappen-Tab stage-date-field: Segment month 22×26 px (< 24×24) ×3",[39m
+    [31m+   "402×874/en Etappen-Tab stage-start-time-field: Segment hour 22×26 px (< 24×24) ×3",[39m
+    [31m+   "402×874/en Etappen-Tab stage-start-time-field: Segment minute 22×26 px (< 24×24) ×3",[39m
+    [31m+   "402×874/en /trips/new trip-new-date-input: Segment day 22×26 px (< 24×24)",[39m
+    [31m+   "402×874/en /trips/new trip-new-date-input: Segment month 22×26 px (< 24×24)",[39m
+    [31m+   "844×390 quer/en Etappen-Tab stage-date-field: Segment day 22×26 px (< 24×24) ×3",[39m
+    [31m+   "844×390 quer/en Etappen-Tab stage-date-field: Segment month 22×26 px (< 24×24) ×3",[39m
+    [31m+   "844×390 quer/en Etappen-Tab stage-start-time-field: Segment hour 22×26 px (< 24×24) ×3",[39m
+    [31m+   "844×390 quer/en Etappen-Tab stage-start-time-field: Segment minute 22×26 px (< 24×24) ×3",[39m
+    [31m+   "844×390 quer/en /trips/new trip-new-date-input: Segment day 22×26 px (< 24×24)",[39m
+    [31m+   "844×390 quer/en /trips/new trip-new-date-input: Segment month 22×26 px (< 24×24)",[39m
+    [31m+ ][39m
+
+      159 | 		}
+      160 | 	}
+    > 161 | 	expect(verstoesse, `Segmente unter ${MIN_SEGMENT}×${MIN_SEGMENT} px:\n${verstoesse.join('\n')}`).toEqual([]);
+          | 	                                                                                                 ^
+      162 | });
+      163 |
+      164 | // ─────────────────────────────────────────────────────────────────────────────
+        at /home/hem/gregor_zwanzig/.claude/worktrees/hashed-plotting-corbato/frontend/e2e/mobile-ux-messung.spec.ts:161:99
+
+    Error Context: test-results/mobile-ux-messung-AC-7-Dat-9b665-≥-24×24-px-3-Profile-de-en--tests/error-context.md
+
+  2) [tests] › e2e/mobile-ux-messung.spec.ts:167:1 › AC-8: Datumssegmente im Vergleichs-Editor (Zustellung → Laufzeit „Bis Datum") ≥ 24×24 px (3 Profile, de+en) 
+
+    Error: Segmente unter 24×24 px:
+    390×844/de Vergleich compare-versand-enddate-input: Segment day 22×26 px (< 24×24)
+    390×844/de Vergleich compare-versand-enddate-input: Segment month 22×26 px (< 24×24)
+    402×874/de Vergleich compare-versand-enddate-input: Segment day 22×26 px (< 24×24)
+    402×874/de Vergleich compare-versand-enddate-input: Segment month 22×26 px (< 24×24)
+    844×390 quer/de Vergleich compare-versand-enddate-input: Segment day 22×26 px (< 24×24)
+    844×390 quer/de Vergleich compare-versand-enddate-input: Segment month 22×26 px (< 24×24)
+    390×844/en Vergleich compare-versand-enddate-input: Segment day 22×26 px (< 24×24)
+    390×844/en Vergleich compare-versand-enddate-input: Segment month 22×26 px (< 24×24)
+    402×874/en Vergleich compare-versand-enddate-input: Segment day 22×26 px (< 24×24)
+    402×874/en Vergleich compare-versand-enddate-input: Segment month 22×26 px (< 24×24)
+    844×390 quer/en Vergleich compare-versand-enddate-input: Segment day 22×26 px (< 24×24)
+    844×390 quer/en Vergleich compare-versand-enddate-input: Segment month 22×26 px (< 24×24)
+
+    [2mexpect([22m[31mreceived[39m[2m).[22mtoEqual[2m([22m[32mexpected[39m[2m) // deep equality[22m
+
+    [32m- Expected  -  1[39m
+    [31m+ Received  + 14[39m
+
+    [32m- Array [][39m
+    [31m+ Array [[39m
+    [31m+   "390×844/de Vergleich compare-versand-enddate-input: Segment day 22×26 px (< 24×24)",[39m
+    [31m+   "390×844/de Vergleich compare-versand-enddate-input: Segment month 22×26 px (< 24×24)",[39m
+    [31m+   "402×874/de Vergleich compare-versand-enddate-input: Segment day 22×26 px (< 24×24)",[39m
+    [31m+   "402×874/de Vergleich compare-versand-enddate-input: Segment month 22×26 px (< 24×24)",[39m
+    [31m+   "844×390 quer/de Vergleich compare-versand-enddate-input: Segment day 22×26 px (< 24×24)",[39m
+    [31m+   "844×390 quer/de Vergleich compare-versand-enddate-input: Segment month 22×26 px (< 24×24)",[39m
+    [31m+   "390×844/en Vergleich compare-versand-enddate-input: Segment day 22×26 px (< 24×24)",[39m
+    [31m+   "390×844/en Vergleich compare-versand-enddate-input: Segment month 22×26 px (< 24×24)",[39m
+    [31m+   "402×874/en Vergleich compare-versand-enddate-input: Segment day 22×26 px (< 24×24)",[39m
+    [31m+   "402×874/en Vergleich compare-versand-enddate-input: Segment month 22×26 px (< 24×24)",[39m
+    [31m+   "844×390 quer/en Vergleich compare-versand-enddate-input: Segment day 22×26 px (< 24×24)",[39m
+    [31m+   "844×390 quer/en Vergleich compare-versand-enddate-input: Segment month 22×26 px (< 24×24)",[39m
+    [31m+ ][39m
+
+      184 | 		}
+      185 | 	}
+    > 186 | 	expect(verstoesse, `Segmente unter ${MIN_SEGMENT}×${MIN_SEGMENT} px:\n${verstoesse.join('\n')}`).toEqual([]);
+          | 	                                                                                                 ^
+      187 | });
+      188 |
+      189 | // ─────────────────────────────────────────────────────────────────────────────
+        at /home/hem/gregor_zwanzig/.claude/worktrees/hashed-plotting-corbato/frontend/e2e/mobile-ux-messung.spec.ts:186:99
+
+    Error Context: test-results/mobile-ux-messung-AC-8-Dat-36428-≥-24×24-px-3-Profile-de-en--tests/error-context.md
+
+  3) [tests] › e2e/mobile-ux-messung.spec.ts:243:1 › AC-10: Brotkrumen-Link im Hub-Kopf (Trip + Vergleich) nicht beschnitten und auf voller Trefferhöhe antippbar (3 Profile) 
+
+    Error: Brotkrumen beschnitten:
+    route 390×844: hub-kopf-breadcrumb scrollHeight 30 > clientHeight 17 (Link-Trefferhöhe 42.5 px beschnitten)
+    route 390×844: elementFromPoint bei 25 % der Link-Trefferhöhe (y=27) trifft div.hub-kopf-leiste, nicht den Link
+    route 390×844: elementFromPoint bei 75 % der Link-Trefferhöhe (y=49) trifft div.hub-kopf-leiste, nicht den Link
+    route 402×874: hub-kopf-breadcrumb scrollHeight 30 > clientHeight 17 (Link-Trefferhöhe 42.5 px beschnitten)
+    route 402×874: elementFromPoint bei 25 % der Link-Trefferhöhe (y=27) trifft div.hub-kopf-leiste, nicht den Link
+    route 402×874: elementFromPoint bei 75 % der Link-Trefferhöhe (y=49) trifft div.hub-kopf-leiste, nicht den Link
+    route 844×390 quer: hub-kopf-breadcrumb scrollHeight 30 > clientHeight 17 (Link-Trefferhöhe 42.5 px beschnitten)
+    route 844×390 quer: elementFromPoint bei 25 % der Link-Trefferhöhe (y=27) trifft div.hub-kopf-leiste, nicht den Link
+    route 844×390 quer: elementFromPoint bei 75 % der Link-Trefferhöhe (y=49) trifft div.hub-kopf-leiste, nicht den Link
+    vergleich 390×844: hub-kopf-breadcrumb scrollHeight 30 > clientHeight 17 (Link-Trefferhöhe 42.5 px beschnitten)
+    vergleich 390×844: elementFromPoint bei 25 % der Link-Trefferhöhe (y=27) trifft div.hub-kopf-leiste, nicht den Link
+    vergleich 390×844: elementFromPoint bei 75 % der Link-Trefferhöhe (y=49) trifft div.hub-kopf-leiste, nicht den Link
+    vergleich 402×874: hub-kopf-breadcrumb scrollHeight 30 > clientHeight 17 (Link-Trefferhöhe 42.5 px beschnitten)
+    vergleich 402×874: elementFromPoint bei 25 % der Link-Trefferhöhe (y=27) trifft div.hub-kopf-leiste, nicht den Link
+    vergleich 402×874: elementFromPoint bei 75 % der Link-Trefferhöhe (y=49) trifft div.hub-kopf-leiste, nicht den Link
+    vergleich 844×390 quer: hub-kopf-breadcrumb scrollHeight 30 > clientHeight 17 (Link-Trefferhöhe 42.5 px beschnitten)
+    vergleich 844×390 quer: elementFromPoint bei 25 % der Link-Trefferhöhe (y=27) trifft div.hub-kopf-leiste, nicht den Link
+    vergleich 844×390 quer: elementFromPoint bei 75 % der Link-Trefferhöhe (y=49) trifft div.hub-kopf-leiste, nicht den Link
+
+    [2mexpect([22m[31mreceived[39m[2m).[22mtoEqual[2m([22m[32mexpected[39m[2m) // deep equality[22m
+
+    [32m- Expected  -  1[39m
+    [31m+ Received  + 20[39m
+
+    [32m- Array [][39m
+    [31m+ Array [[39m
+    [31m+   "route 390×844: hub-kopf-breadcrumb scrollHeight 30 > clientHeight 17 (Link-Trefferhöhe 42.5 px beschnitten)",[39m
+    [31m+   "route 390×844: elementFromPoint bei 25 % der Link-Trefferhöhe (y=27) trifft div.hub-kopf-leiste, nicht den Link",[39m
+    [31m+   "route 390×844: elementFromPoint bei 75 % der Link-Trefferhöhe (y=49) trifft div.hub-kopf-leiste, nicht den Link",[39m
+    [31m+   "route 402×874: hub-kopf-breadcrumb scrollHeight 30 > clientHeight 17 (Link-Trefferhöhe 42.5 px beschnitten)",[39m
+    [31m+   "route 402×874: elementFromPoint bei 25 % der Link-Trefferhöhe (y=27) trifft div.hub-kopf-leiste, nicht den Link",[39m
+    [31m+   "route 402×874: elementFromPoint bei 75 % der Link-Trefferhöhe (y=49) trifft div.hub-kopf-leiste, nicht den Link",[39m
+    [31m+   "route 844×390 quer: hub-kopf-breadcrumb scrollHeight 30 > clientHeight 17 (Link-Trefferhöhe 42.5 px beschnitten)",[39m
+    [31m+   "route 844×390 quer: elementFromPoint bei 25 % der Link-Trefferhöhe (y=27) trifft div.hub-kopf-leiste, nicht den Link",[39m
+    [31m+   "route 844×390 quer: elementFromPoint bei 75 % der Link-Trefferhöhe (y=49) trifft div.hub-kopf-leiste, nicht den Link",[39m
+    [31m+   "vergleich 390×844: hub-kopf-breadcrumb scrollHeight 30 > clientHeight 17 (Link-Trefferhöhe 42.5 px beschnitten)",[39m
+    [31m+   "vergleich 390×844: elementFromPoint bei 25 % der Link-Trefferhöhe (y=27) trifft div.hub-kopf-leiste, nicht den Link",[39m
+    [31m+   "vergleich 390×844: elementFromPoint bei 75 % der Link-Trefferhöhe (y=49) trifft div.hub-kopf-leiste, nicht den Link",[39m
+    [31m+   "vergleich 402×874: hub-kopf-breadcrumb scrollHeight 30 > clientHeight 17 (Link-Trefferhöhe 42.5 px beschnitten)",[39m
+    [31m+   "vergleich 402×874: elementFromPoint bei 25 % der Link-Trefferhöhe (y=27) trifft div.hub-kopf-leiste, nicht den Link",[39m
+    [31m+   "vergleich 402×874: elementFromPoint bei 75 % der Link-Trefferhöhe (y=49) trifft div.hub-kopf-leiste, nicht den Link",[39m
+    [31m+   "vergleich 844×390 quer: hub-kopf-breadcrumb scrollHeight 30 > clientHeight 17 (Link-Trefferhöhe 42.5 px beschnitten)",[39m
+    [31m+   "vergleich 844×390 quer: elementFromPoint bei 25 % der Link-Trefferhöhe (y=27) trifft div.hub-kopf-leiste, nicht den Link",[39m
+    [31m+   "vergleich 844×390 quer: elementFromPoint bei 75 % der Link-Trefferhöhe (y=49) trifft div.hub-kopf-leiste, nicht den Link",[39m
+    [31m+ ][39m
+
+      273 | 		}
+      274 | 	}
+    > 275 | 	expect(befunde, `Brotkrumen beschnitten:\n${befunde.join('\n')}`).toEqual([]);
+          | 	                                                                  ^
+      276 | });
+      277 |
+      278 | // ─────────────────────────────────────────────────────────────────────────────
+        at /home/hem/gregor_zwanzig/.claude/worktrees/hashed-plotting-corbato/frontend/e2e/mobile-ux-messung.spec.ts:275:68
+
+    Error Context: test-results/mobile-ux-messung-AC-10-Br-c5aef-erhöhe-antippbar-3-Profile--tests/error-context.md
+
+  4) [tests] › e2e/mobile-ux-messung.spec.ts:281:1 › AC-11: Höhenprofil-Etappenrechtecke tragen data-tap-equivalent, Etappenwahl im Etappen-Tab ≥ 24×24 px (Hochformat) 
+
+    Error: Höhenprofil-Ausnahme/Etappenwahl:
+    390×844: trip-full-profile-stage-s1 (35.5 px breit) ohne data-tap-equivalent
+    390×844: trip-full-profile-stage-s2 (230.8 px breit) ohne data-tap-equivalent
+    390×844: trip-full-profile-stage-s3 (17.8 px breit) ohne data-tap-equivalent
+    402×874: trip-full-profile-stage-s1 (37 px breit) ohne data-tap-equivalent
+    402×874: trip-full-profile-stage-s2 (240.5 px breit) ohne data-tap-equivalent
+    402×874: trip-full-profile-stage-s3 (18.5 px breit) ohne data-tap-equivalent
+
+    [2mexpect([22m[31mreceived[39m[2m).[22mtoEqual[2m([22m[32mexpected[39m[2m) // deep equality[22m
+
+    [32m- Expected  - 1[39m
+    [31m+ Received  + 8[39m
+
+    [32m- Array [][39m
+    [31m+ Array [[39m
+    [31m+   "390×844: trip-full-profile-stage-s1 (35.5 px breit) ohne data-tap-equivalent",[39m
+    [31m+   "390×844: trip-full-profile-stage-s2 (230.8 px breit) ohne data-tap-equivalent",[39m
+    [31m+   "390×844: trip-full-profile-stage-s3 (17.8 px breit) ohne data-tap-equivalent",[39m
+    [31m+   "402×874: trip-full-profile-stage-s1 (37 px breit) ohne data-tap-equivalent",[39m
+    [31m+   "402×874: trip-full-profile-stage-s2 (240.5 px breit) ohne data-tap-equivalent",[39m
+    [31m+   "402×874: trip-full-profile-stage-s3 (18.5 px breit) ohne data-tap-equivalent",[39m
+    [31m+ ][39m
+
+      301 | 		});
+      302 | 	}
+    > 303 | 	expect(befunde, `Höhenprofil-Ausnahme/Etappenwahl:\n${befunde.join('\n')}`).toEqual([]);
+          | 	                                                                            ^
+      304 | });
+      305 |
+      306 | // ─────────────────────────────────────────────────────────────────────────────
+        at /home/hem/gregor_zwanzig/.claude/worktrees/hashed-plotting-corbato/frontend/e2e/mobile-ux-messung.spec.ts:303:78
+
+    Error Context: test-results/mobile-ux-messung-AC-11-Hö-7b8d5--Tab-≥-24×24-px-Hochformat--tests/error-context.md
+
+  5) [tests] › e2e/mobile-ux-messung.spec.ts:309:1 › AC-12a: /compare — kein <main> scrollt waagerecht (Überlauf ≤ 1 px, 3 Profile, de+en) 
+
+    Error: waagerechter Überlauf im Hauptbereich von /compare:
+    390×844/de: <main (ohne Klasse)> scrollWidth 374 / clientWidth 358 (+16 px)
+    402×874/de: <main (ohne Klasse)> scrollWidth 386 / clientWidth 370 (+16 px)
+    844×390 quer/de: <main (ohne Klasse)> scrollWidth 828 / clientWidth 812 (+16 px)
+    390×844/en: <main (ohne Klasse)> scrollWidth 374 / clientWidth 358 (+16 px)
+    402×874/en: <main (ohne Klasse)> scrollWidth 386 / clientWidth 370 (+16 px)
+    844×390 quer/en: <main (ohne Klasse)> scrollWidth 828 / clientWidth 812 (+16 px)
+
+    [2mexpect([22m[31mreceived[39m[2m).[22mtoEqual[2m([22m[32mexpected[39m[2m) // deep equality[22m
+
+    [32m- Expected  - 1[39m
+    [31m+ Received  + 8[39m
+
+    [32m- Array [][39m
+    [31m+ Array [[39m
+    [31m+   "390×844/de: <main (ohne Klasse)> scrollWidth 374 / clientWidth 358 (+16 px)",[39m
+    [31m+   "402×874/de: <main (ohne Klasse)> scrollWidth 386 / clientWidth 370 (+16 px)",[39m
+    [31m+   "844×390 quer/de: <main (ohne Klasse)> scrollWidth 828 / clientWidth 812 (+16 px)",[39m
+    [31m+   "390×844/en: <main (ohne Klasse)> scrollWidth 374 / clientWidth 358 (+16 px)",[39m
+    [31m+   "402×874/en: <main (ohne Klasse)> scrollWidth 386 / clientWidth 370 (+16 px)",[39m
+    [31m+   "844×390 quer/en: <main (ohne Klasse)> scrollWidth 828 / clientWidth 812 (+16 px)",[39m
+    [31m+ ][39m
+
+      329 | 		}
+      330 | 	}
+    > 331 | 	expect(befunde, `waagerechter Überlauf im Hauptbereich von /compare:\n${befunde.join('\n')}`).toEqual([]);
+          | 	                                                                                              ^
+      332 | });
+      333 |
+      334 | test('AC-12b: /compare/new in EN — Mobil-Reiterleiste ohne Überlauf oder letzter Reiter erreichbar und antippbar (3 Profile)', async ({ page }) => {
+        at /home/hem/gregor_zwanzig/.claude/worktrees/hashed-plotting-corbato/frontend/e2e/mobile-ux-messung.spec.ts:331:96
+
+    Error Context: test-results/mobile-ux-messung-AC-12a-c-7a7dd-auf-≤-1-px-3-Profile-de-en--tests/error-context.md
+
+  6) [tests] › e2e/mobile-ux-messung.spec.ts:391:1 › AC-13: Tab-Badges, ✉ in der Übersicht und Menülabel „AKTIONEN" mit berechneter Schrift ≥ 11 px (3 Profile, de+en) 
+
+    Error: Text unter 11 px:
+    390×844/de trip-detail-tab-badge: „3" font-size 10 px (< 11)
+    390×844/de ✉ hub-overview: „✉" font-size 10 px (< 11)
+    390×844/de ✉ hub-overview: „✉" font-size 10 px (< 11)
+    390×844/de ✉ hub-overview: „✉" font-size 10 px (< 11)
+    390×844/de compare-detail-tab-orte Badge: „2" font-size 10 px (< 11)
+    390×844/de Karten-Menü Label: „AKTIONEN" font-size 10 px (< 11)
+    402×874/de trip-detail-tab-badge: „3" font-size 10 px (< 11)
+    402×874/de ✉ hub-overview: „✉" font-size 10 px (< 11)
+    402×874/de ✉ hub-overview: „✉" font-size 10 px (< 11)
+    402×874/de ✉ hub-overview: „✉" font-size 10 px (< 11)
+    402×874/de compare-detail-tab-orte Badge: „2" font-size 10 px (< 11)
+    402×874/de Karten-Menü Label: „AKTIONEN" font-size 10 px (< 11)
+    844×390 quer/de trip-detail-tab-badge: „3" font-size 10 px (< 11)
+    844×390 quer/de ✉ hub-overview: „✉" font-size 10 px (< 11)
+    844×390 quer/de ✉ hub-overview: „✉" font-size 10 px (< 11)
+    844×390 quer/de ✉ hub-overview: „✉" font-size 10 px (< 11)
+    844×390 quer/de compare-detail-tab-orte Badge: „2" font-size 10 px (< 11)
+    844×390 quer/de Karten-Menü Label: „AKTIONEN" font-size 10 px (< 11)
+    390×844/en trip-detail-tab-badge: „3" font-size 10 px (< 11)
+    390×844/en ✉ hub-overview: „✉" font-size 10 px (< 11)
+    390×844/en ✉ hub-overview: „✉" font-size 10 px (< 11)
+    390×844/en ✉ hub-overview: „✉" font-size 10 px (< 11)
+    390×844/en compare-detail-tab-orte Badge: „2" font-size 10 px (< 11)
+    390×844/en Karten-Menü Label: „AKTIONEN" font-size 10 px (< 11)
+    402×874/en trip-detail-tab-badge: „3" font-size 10 px (< 11)
+    402×874/en ✉ hub-overview: „✉" font-size 10 px (< 11)
+    402×874/en ✉ hub-overview: „✉" font-size 10 px (< 11)
+    402×874/en ✉ hub-overview: „✉" font-size 10 px (< 11)
+    402×874/en compare-detail-tab-orte Badge: „2" font-size 10 px (< 11)
+    402×874/en Karten-Menü Label: „AKTIONEN" font-size 10 px (< 11)
+    844×390 quer/en trip-detail-tab-badge: „3" font-size 10 px (< 11)
+    844×390 quer/en ✉ hub-overview: „✉" font-size 10 px (< 11)
+    844×390 quer/en ✉ hub-overview: „✉" font-size 10 px (< 11)
+    844×390 quer/en ✉ hub-overview: „✉" font-size 10 px (< 11)
+    844×390 quer/en compare-detail-tab-orte Badge: „2" font-size 10 px (< 11)
+    844×390 quer/en Karten-Menü Label: „AKTIONEN" font-size 10 px (< 11)
+
+    [2mexpect([22m[31mreceived[39m[2m).[22mtoEqual[2m([22m[32mexpected[39m[2m) // deep equality[22m
+
+    [32m- Expected  -  1[39m
+    [31m+ Received  + 38[39m
+
+    [32m- Array [][39m
+    [31m+ Array [[39m
+    [31m+   "390×844/de trip-detail-tab-badge: „3\" font-size 10 px (< 11)",[39m
+    [31m+   "390×844/de ✉ hub-overview: „✉\" font-size 10 px (< 11)",[39m
+    [31m+   "390×844/de ✉ hub-overview: „✉\" font-size 10 px (< 11)",[39m
+    [31m+   "390×844/de ✉ hub-overview: „✉\" font-size 10 px (< 11)",[39m
+    [31m+   "390×844/de compare-detail-tab-orte Badge: „2\" font-size 10 px (< 11)",[39m
+    [31m+   "390×844/de Karten-Menü Label: „AKTIONEN\" font-size 10 px (< 11)",[39m
+    [31m+   "402×874/de trip-detail-tab-badge: „3\" font-size 10 px (< 11)",[39m
+    [31m+   "402×874/de ✉ hub-overview: „✉\" font-size 10 px (< 11)",[39m
+    [31m+   "402×874/de ✉ hub-overview: „✉\" font-size 10 px (< 11)",[39m
+    [31m+   "402×874/de ✉ hub-overview: „✉\" font-size 10 px (< 11)",[39m
+    [31m+   "402×874/de compare-detail-tab-orte Badge: „2\" font-size 10 px (< 11)",[39m
+    [31m+   "402×874/de Karten-Menü Label: „AKTIONEN\" font-size 10 px (< 11)",[39m
+    [31m+   "844×390 quer/de trip-detail-tab-badge: „3\" font-size 10 px (< 11)",[39m
+    [31m+   "844×390 quer/de ✉ hub-overview: „✉\" font-size 10 px (< 11)",[39m
+    [31m+   "844×390 quer/de ✉ hub-overview: „✉\" font-size 10 px (< 11)",[39m
+    [31m+   "844×390 quer/de ✉ hub-overview: „✉\" font-size 10 px (< 11)",[39m
+    [31m+   "844×390 quer/de compare-detail-tab-orte Badge: „2\" font-size 10 px (< 11)",[39m
+    [31m+   "844×390 quer/de Karten-Menü Label: „AKTIONEN\" font-size 10 px (< 11)",[39m
+    [31m+   "390×844/en trip-detail-tab-badge: „3\" font-size 10 px (< 11)",[39m
+    [31m+   "390×844/en ✉ hub-overview: „✉\" font-size 10 px (< 11)",[39m
+    [31m+   "390×844/en ✉ hub-overview: „✉\" font-size 10 px (< 11)",[39m
+    [31m+   "390×844/en ✉ hub-overview: „✉\" font-size 10 px (< 11)",[39m
+    [31m+   "390×844/en compare-detail-tab-orte Badge: „2\" font-size 10 px (< 11)",[39m
+    [31m+   "390×844/en Karten-Menü Label: „AKTIONEN\" font-size 10 px (< 11)",[39m
+    [31m+   "402×874/en trip-detail-tab-badge: „3\" font-size 10 px (< 11)",[39m
+    [31m+   "402×874/en ✉ hub-overview: „✉\" font-size 10 px (< 11)",[39m
+    [31m+   "402×874/en ✉ hub-overview: „✉\" font-size 10 px (< 11)",[39m
+    [31m+   "402×874/en ✉ hub-overview: „✉\" font-size 10 px (< 11)",[39m
+    [31m+   "402×874/en compare-detail-tab-orte Badge: „2\" font-size 10 px (< 11)",[39m
+    [31m+   "402×874/en Karten-Menü Label: „AKTIONEN\" font-size 10 px (< 11)",[39m
+    [31m+   "844×390 quer/en trip-detail-tab-badge: „3\" font-size 10 px (< 11)",[39m
+    [31m+   "844×390 quer/en ✉ hub-overview: „✉\" font-size 10 px (< 11)",[39m
+    [31m+   "844×390 quer/en ✉ hub-overview: „✉\" font-size 10 px (< 11)",[39m
+    [31m+   "844×390 quer/en ✉ hub-overview: „✉\" font-size 10 px (< 11)",[39m
+    [31m+   "844×390 quer/en compare-detail-tab-orte Badge: „2\" font-size 10 px (< 11)",[39m
+    [31m+   "844×390 quer/en Karten-Menü Label: „AKTIONEN\" font-size 10 px (< 11)",[39m
+    [31m+ ][39m
+
+      428 | 		}
+      429 | 	}
+    > 430 | 	expect(befunde, `Text unter ${MIN_TEXT} px:\n${befunde.join('\n')}`).toEqual([]);
+          | 	                                                                     ^
+      431 | });
+      432 |
+      433 | // ─────────────────────────────────────────────────────────────────────────────
+        at /home/hem/gregor_zwanzig/.claude/worktrees/hashed-plotting-corbato/frontend/e2e/mobile-ux-messung.spec.ts:430:71
+
+    Error Context: test-results/mobile-ux-messung-AC-13-Ta-eadda-ft-≥-11-px-3-Profile-de-en--tests/error-context.md
+
+  7) [tests] › e2e/mobile-ux-messung.spec.ts:443:1 › AC-14: „+ Neuer Trip", „+ Neuer Vergleich", „Im Editor öffnen →", „Ort hinzufügen", Laufzeit-Knopf ≥ 36 px hoch (3 Profile) 
+
+    Error: Knöpfe unter dem 36-px-Boden:
+    390×844 trip-list-new-mobile: Höhe 28.39 px (< 36)
+    390×844 compare-list-new-mobile: Höhe 28.39 px (< 36)
+    390×844 „Im Editor öffnen →": Höhe 28.39 px (< 36)
+    390×844 briefings-laufzeit-Knopf: Höhe 28.39 px (< 36)
+    390×844 hub-orte-add: Höhe 28.39 px (< 36)
+    402×874 trip-list-new-mobile: Höhe 28.39 px (< 36)
+    402×874 compare-list-new-mobile: Höhe 28.39 px (< 36)
+    402×874 „Im Editor öffnen →": Höhe 28.39 px (< 36)
+    402×874 briefings-laufzeit-Knopf: Höhe 28.39 px (< 36)
+    402×874 hub-orte-add: Höhe 28.39 px (< 36)
+    844×390 quer trip-list-new-mobile: Höhe 28.39 px (< 36)
+    844×390 quer compare-list-new-mobile: Höhe 28.39 px (< 36)
+    844×390 quer „Im Editor öffnen →": Höhe 28.39 px (< 36)
+    844×390 quer briefings-laufzeit-Knopf: Höhe 28.39 px (< 36)
+    844×390 quer hub-orte-add: Höhe 28.39 px (< 36)
+
+    [2mexpect([22m[31mreceived[39m[2m).[22mtoEqual[2m([22m[32mexpected[39m[2m) // deep equality[22m
+
+    [32m- Expected  -  1[39m
+    [31m+ Received  + 17[39m
+
+    [32m- Array [][39m
+    [31m+ Array [[39m
+    [31m+   "390×844 trip-list-new-mobile: Höhe 28.39 px (< 36)",[39m
+    [31m+   "390×844 compare-list-new-mobile: Höhe 28.39 px (< 36)",[39m
+    [31m+   "390×844 „Im Editor öffnen →\": Höhe 28.39 px (< 36)",[39m
+    [31m+   "390×844 briefings-laufzeit-Knopf: Höhe 28.39 px (< 36)",[39m
+    [31m+   "390×844 hub-orte-add: Höhe 28.39 px (< 36)",[39m
+    [31m+   "402×874 trip-list-new-mobile: Höhe 28.39 px (< 36)",[39m
+    [31m+   "402×874 compare-list-new-mobile: Höhe 28.39 px (< 36)",[39m
+    [31m+   "402×874 „Im Editor öffnen →\": Höhe 28.39 px (< 36)",[39m
+    [31m+   "402×874 briefings-laufzeit-Knopf: Höhe 28.39 px (< 36)",[39m
+    [31m+   "402×874 hub-orte-add: Höhe 28.39 px (< 36)",[39m
+    [31m+   "844×390 quer trip-list-new-mobile: Höhe 28.39 px (< 36)",[39m
+    [31m+   "844×390 quer compare-list-new-mobile: Höhe 28.39 px (< 36)",[39m
+    [31m+   "844×390 quer „Im Editor öffnen →\": Höhe 28.39 px (< 36)",[39m
+    [31m+   "844×390 quer briefings-laufzeit-Knopf: Höhe 28.39 px (< 36)",[39m
+    [31m+   "844×390 quer hub-orte-add: Höhe 28.39 px (< 36)",[39m
+    [31m+ ][39m
+
+      468 | 		merke(await hoehe(page.locator('[data-testid="hub-orte-add"]:visible').first(), `${wo} hub-orte-add`), `${wo} hub-orte-add`);
+      469 | 	}
+    > 470 | 	expect(befunde, `Knöpfe unter dem ${MIN_KNOPF}-px-Boden:\n${befunde.join('\n')}`).toEqual([]);
+          | 	                                                                                  ^
+      471 | });
+      472 |
+        at /home/hem/gregor_zwanzig/.claude/worktrees/hashed-plotting-corbato/frontend/e2e/mobile-ux-messung.spec.ts:470:84
+
+    Error Context: test-results/mobile-ux-messung-AC-14-„--ea310-opf-≥-36-px-hoch-3-Profile--tests/error-context.md
+
+  7 failed
+    [tests] › e2e/mobile-ux-messung.spec.ts:130:1 › AC-7: Datums-/Uhrzeitsegmente im Etappen-Tab und im Trip-Anlegen ≥ 24×24 px (3 Profile, de+en) 
+    [tests] › e2e/mobile-ux-messung.spec.ts:167:1 › AC-8: Datumssegmente im Vergleichs-Editor (Zustellung → Laufzeit „Bis Datum") ≥ 24×24 px (3 Profile, de+en) 
+    [tests] › e2e/mobile-ux-messung.spec.ts:243:1 › AC-10: Brotkrumen-Link im Hub-Kopf (Trip + Vergleich) nicht beschnitten und auf voller Trefferhöhe antippbar (3 Profile) 
+    [tests] › e2e/mobile-ux-messung.spec.ts:281:1 › AC-11: Höhenprofil-Etappenrechtecke tragen data-tap-equivalent, Etappenwahl im Etappen-Tab ≥ 24×24 px (Hochformat) 
+    [tests] › e2e/mobile-ux-messung.spec.ts:309:1 › AC-12a: /compare — kein <main> scrollt waagerecht (Überlauf ≤ 1 px, 3 Profile, de+en) 
+    [tests] › e2e/mobile-ux-messung.spec.ts:391:1 › AC-13: Tab-Badges, ✉ in der Übersicht und Menülabel „AKTIONEN" mit berechneter Schrift ≥ 11 px (3 Profile, de+en) 
+    [tests] › e2e/mobile-ux-messung.spec.ts:443:1 › AC-14: „+ Neuer Trip", „+ Neuer Vergleich", „Im Editor öffnen →", „Ort hinzufügen", Laufzeit-Knopf ≥ 36 px hoch (3 Profile) 
+  3 passed (21.1s)
+exit=1
+
+## 2) $ npx playwright test e2e/mobile-ux-audit-selbsttest.spec.ts --workers=1 --reporter=list
+Error: Cannot find module '/home/hem/gregor_zwanzig/.claude/worktrees/hashed-plotting-corbato/frontend/e2e/mobile-ux-audit-check' imported from /home/hem/gregor_zwanzig/.claude/worktrees/hashed-plotting-corbato/frontend/e2e/mobile-ux-audit-selbsttest.spec.ts
+Error: No tests found.
+Make sure that arguments are regular expressions matching test files.
+You may need to escape symbols like "$" or "*" and quote the arguments.
+
+exit=1
+
+## 3) $ node --import ./test-lib-loader.mjs --experimental-strip-types --experimental-test-module-mocks --test e2e/mobile-ux-audit-staging-schutz.test.ts
+TAP version 13
+# Subtest: AC-16: Audit-Config bricht OHNE GZ_E2E_API_PROXY_TARGET mit verständlicher Meldung ab (Staging-Schutz)
+not ok 1 - AC-16: Audit-Config bricht OHNE GZ_E2E_API_PROXY_TARGET mit verständlicher Meldung ab (Staging-Schutz)
+  ---
+  duration_ms: 1064.051053
+  type: 'test'
+  location: '/home/hem/gregor_zwanzig/.claude/worktrees/hashed-plotting-corbato/frontend/e2e/mobile-ux-audit-staging-schutz.test.ts:45:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    Exit-Code 0: die Config darf ohne GZ_E2E_API_PROXY_TARGET nicht starten (Proxy zeigte sonst auf Staging :8091).
+    Ausgabe:
+    Listing tests:
+      [iphone13] › mobile-ux-audit.spec.ts:371:1 › angemeldete Routen
+      [iphone13] › mobile-ux-audit.spec.ts:389:2 › öffentliche Routen › login/register/forgot
+      [iphone18pro] › mobile-ux-audit.spec.ts:371:1 › angemeldete Routen
+      [iphone18pro] › mobile-ux-audit.spec.ts:389:2 › öffentliche Routen › login/register/forgot
+      [landscape] › mobile-ux-audit.spec.ts:371:1 › angemeldete Routen
+      [landscape] › mobile-ux-audit.spec.ts:389:2 › öffentliche Routen › login/register/forgot
+    Total: 6 tests in 1 file
+    
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: 0
+  actual: 0
+  operator: 'notStrictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/hashed-plotting-corbato/frontend/e2e/mobile-ux-audit-staging-schutz.test.ts:47:9)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.start (node:internal/test_runner/test:944:17)
+    startSubtestAfterBootstrap (node:internal/test_runner/harness:296:17)
+  ...
+# Subtest: AC-16: Audit-Config läuft MIT gesetztem GZ_E2E_API_PROXY_TARGET normal (Gegenprobe)
+ok 2 - AC-16: Audit-Config läuft MIT gesetztem GZ_E2E_API_PROXY_TARGET normal (Gegenprobe)
+  ---
+  duration_ms: 1046.354726
+  type: 'test'
+  ...
+# Subtest: AC-16: GZ_AUDIT_LOCALE=de|en setzt die Browser-Locale aller drei Profile passend
+not ok 3 - AC-16: GZ_AUDIT_LOCALE=de|en setzt die Browser-Locale aller drei Profile passend
+  ---
+  duration_ms: 326.298012
+  type: 'test'
+  location: '/home/hem/gregor_zwanzig/.claude/worktrees/hashed-plotting-corbato/frontend/e2e/mobile-ux-audit-staging-schutz.test.ts:58:1'
+  failureType: 'testCodeFailure'
+  error: 'GZ_AUDIT_LOCALE=de: Profil iphone13 hat Locale (keine)'
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: true
+  actual: false
+  operator: '=='
+  stack: |-
+    TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/hashed-plotting-corbato/frontend/e2e/mobile-ux-audit-staging-schutz.test.ts:69:11)
+    async Test.run (node:internal/test_runner/test:1054:7)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+1..3
+# tests 3
+# suites 0
+# pass 1
+# fail 2
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 2615.068858
+exit=1
+
+## Zusatz: Plausibilitätsprobe AC-15-Selbsttest (lokal, nicht committet)
+# Temporäre Kopie der HEUTIGEN LAYOUT_CHECK als e2e/mobile-ux-audit-check.ts exportiert:
+#   AC-15 30 Knöpfe:        rot — "harte Treffer (tap<24) unter den 30 Probeknöpfen: 15" (Expected 30, Received 15)
+#   AC-15/AC-11 equivalent: rot — probe-equivalent in tinyTargets
+#   AC-15 inneres <main>:   rot — "pageOverflowPx ... ist 0" (Expected >= 16)
+# Dieselbe Kopie mit (a) ungekappter tinyTargets-Liste, (b) Überspringen von [data-tap-equivalent],
+# (c) pageOverflowPx über alle <main>: 4 passed — die Fälle sind erfüllbar. Kopie danach gelöscht.
+#
+## Zusatz: `npm test` (frontend-test-Job) entdeckt e2e/mobile-ux-audit-staging-schutz.test.ts
+# automatisch (im Gesamtlauf als "not ok 8 - AC-16: Audit-Config bricht OHNE ..." gesehen).

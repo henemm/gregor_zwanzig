@@ -199,7 +199,8 @@
 			background: var(--g-paper-deep);
 			color: var(--g-ink-3);
 			font-family: var(--g-font-mono);
-			font-size: 10px;
+			/* #2601 Runde 2 (AC-13): am Handy kein Text unter 11 px — Token statt 10 px. */
+			font-size: var(--g-text-xs);
 			font-weight: 600;
 			margin-left: 0;
 			/* Handy-Pillen unverändert (ADR-0111 Punkt 1 gilt nur am Computer). */

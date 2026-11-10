@@ -252,6 +252,15 @@
 			width: 44px;
 			height: 44px;
 		}
+		/* #2601 Runde 2 (AC-7/AC-8): Tag/Monat als ≥ 24×24-px-Tippziel — echte Breite statt
+		   ::after-Fläche (Nachbarsegmente würden sich sonst überlappen). Jahr bleibt unverändert. */
+		.datum-feld :global(:is([data-segment='day'], [data-segment='month'])) {
+			display: inline-block;
+			box-sizing: border-box;
+			min-width: 24px;
+			min-height: 24px;
+			text-align: center;
+		}
 	}
 
 	/* Kalender im Portal (außerhalb des Bausteins im DOM) — daher global über data-slot. */

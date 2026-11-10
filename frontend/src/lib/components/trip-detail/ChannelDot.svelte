@@ -22,7 +22,7 @@
 		height: 18px;
 		background: var(--g-paper-deep);
 		border-radius: 3px;
-		font-size: 10px;
+		font-size: var(--g-text-xs);
 		font-family: var(--g-font-mono, ui-monospace, monospace);
 	"
 	title={kind}

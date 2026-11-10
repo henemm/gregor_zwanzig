@@ -209,7 +209,11 @@
 {/snippet}
 
 <div style="background: var(--g-paper)">
-	<main style="flex: 1; overflow: auto">
+	<!-- #2601 Runde 2 (AC-12): mobil übernimmt dieses innere <main> (eigener Scroll-Container) den
+	     16-px-Seitenrand des Layout-<main> selbst (-mx-4 px-4). So liegen Ränder, die bewusst
+	     wenige Pixel ausgreifen (Filter-Pills -mx-1), in seinem Polster statt +4 px waagerecht zu
+	     scrollen. Am Computer unverändert (desktop:mx-0 desktop:px-0). -->
+	<main class="-mx-4 px-4 desktop:mx-0 desktop:px-0" style="flex: 1; overflow: auto">
 		<!-- Desktop-Kopf (Issue #582, ≥900px unverändert) -->
 		<div class="hidden desktop:block" style="padding: 32px 40px 60px">
 			<div style="display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 28px">
@@ -278,10 +282,12 @@
 			</div>
 		</div>
 
-		<!-- Mobiler Kopf (Issue #493; Issue #1256 S8d AC-2/AC-4/AC-5). -mx-4
-		     hebt das main-px-4 (S8-Falle Doppel-Padding) auf, bevor die eigene
-		     12/16/24-Polsterung greift — Netto-Abstand bleibt 16px. -->
-		<div class="desktop:hidden -mx-4" style="padding: 12px 16px 24px">
+		<!-- Mobiler Kopf (Issue #493; Issue #1256 S8d AC-2/AC-4/AC-5). Den seitlichen
+		     16-px-Abstand trägt das px-4 des inneren <main> (S8-Falle Doppel-Padding), daher
+		     hier kein eigenes Seitenpolster. #2601 Runde 2 (AC-12): das frühere „-mx-4 + 16 px
+		     Polster" machte den Block 32 px breiter als das innere <main> (overflow:auto) ⇒
+		     +16 px waagerechter Scroll; Netto-Abstand bleibt 16 px. -->
+		<div class="desktop:hidden" style="padding: 12px 0 24px">
 			<PageHeader eyebrow={$t('listen.workspace_anzahl', { anzahl: presets.length })} title={$t('listen.vergleiche.titel')} right={neuerVergleichMobil} compact />
 			<div style="font-size: 13px; color: var(--g-ink-3); line-height: 1.5; margin: 14px 0">
 				{$t('listen.vergleiche.intro_mobil')}

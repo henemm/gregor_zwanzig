@@ -134,6 +134,11 @@
 		white-space: nowrap;
 		overflow: hidden;
 		text-overflow: ellipsis;
+		/* #2601 Runde 2 (AC-10): Raum für die 44-px-Trefferfläche des .g-link-tap-Links (±13 px)
+		   im Bereich selbst, sonst beschneidet overflow:hidden sie oben/unten. Der negative
+		   Block-Rand hebt das Polster für das Layout wieder auf (Zeilenhöhe unverändert). */
+		padding-block: 13px;
+		margin-block: -13px;
 	}
 	.breadcrumb-link {
 		color: inherit;
