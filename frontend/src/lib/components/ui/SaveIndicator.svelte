@@ -90,23 +90,28 @@
 	}
 
 	.save-indicator--idle {
-		color: var(--g-good);
-		background: rgba(46, 125, 50, 0.08);
-		/* Issue #880: Idle-Dimming nach 3s Inaktivität — Opacity sinkt auf 0.5,
-		   nie display:none/visibility:hidden (Barrierefreiheit). */
+		color: var(--g-ok-fg);
+		background: var(--g-ok-bg);
+		/* Issue #880: Idle-Zuruecktreten nach 3s Inaktivitaet, nie display:none/
+		   visibility:hidden (Barrierefreiheit). #2400 (Staging-Messlauf 2): frueher
+		   opacity 0.5 — Text fiel auf 2,9:1 (dunkel). Leitprinzip „Hoher Kontrast =
+		   Lesbarkeit" (design_system.md) hat Vorrang: Toenung faellt weg, Schrift wird
+		   neutral (--g-ink-3), Deckkraft bleibt 1 — Text >= 4,5:1 hell und dunkel. */
 		animation: gz-save-fade 200ms ease-out 3s forwards;
 	}
 	@keyframes gz-save-fade {
-		to { opacity: 0.5; }
+		to {
+			background: transparent;
+			color: var(--g-ink-3);
+		}
 	}
 	.save-time {
 		color: var(--g-ink-3);
 		font-weight: 400;
-		opacity: 0.85;
 	}
 	.save-indicator--dirty {
-		color: var(--g-warn);
-		background: rgba(200, 140, 0, 0.1);
+		color: var(--g-warn-fg);
+		background: var(--g-warn-bg);
 	}
 	.save-indicator--saving {
 		color: var(--g-ink-3);
@@ -114,16 +119,16 @@
 	}
 	/* Fehler-Zustand: keine Animation, opacity bleibt dauerhaft 1 (AC-4). */
 	.save-indicator--error {
-		color: var(--g-danger);
-		background: rgba(179, 74, 42, 0.09);
+		color: var(--g-danger-fg);
+		background: var(--g-danger-bg);
 		animation: none;
 		opacity: 1;
 	}
 
 	/* Konflikt-Zustand: gleiche Signalfarbe wie der Fehler, dauerhaft sichtbar. */
 	.save-indicator[data-state='conflict'] {
-		color: var(--g-danger);
-		background: rgba(179, 74, 42, 0.09);
+		color: var(--g-danger-fg);
+		background: var(--g-danger-bg);
 		animation: none;
 		opacity: 1;
 	}

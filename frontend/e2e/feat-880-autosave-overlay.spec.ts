@@ -102,20 +102,25 @@ test.describe('feat_880 — Trip-Editor Autospeicher-Overlay', () => {
 		await expect(saveIndicator(page)).toContainText(/Gespeichert/i);
 	});
 
-	// AC-3: idle-Overlay dimmt nach >3s auf opacity ≤ 0.5, bleibt aber sichtbar/erreichbar.
-	test('AC-3: idle-Overlay dimmt nach 3s auf opacity ≤ 0.5 (nie display:none)', async ({
+	// AC-3: idle-Overlay tritt nach >3s zurueck, bleibt aber sichtbar/erreichbar.
+	// #2400 (Staging-Messlauf 2): nicht mehr per opacity 0.5 (Text fiel unter 4,5:1) —
+	// die Toenung faellt weg, die Schrift wird neutral, die Deckkraft bleibt 1. Den
+	// Kontrast rechnet src/lib/__tests__/speicheranzeige_ruhe_kontrast.test.ts nach.
+	test('AC-3: idle-Overlay tritt nach 3s zurueck, Text bleibt voll deckend (nie display:none)', async ({
 		page
 	}) => {
 		await openStagesEditor(page);
 		await changeStageDate(page, '2026-08-21');
 		await expect(saveIndicator(page)).toHaveAttribute('data-state', 'idle', { timeout: 10_000 });
+		const farbeVorher = await overlayStyle(page, 'color');
 
 		// Fade-Animation startet 3s nach Erreichen von idle → warten, dann messen.
 		await page.waitForTimeout(3_300);
-		const opacity = parseFloat(await overlayStyle(page, 'opacity'));
-		expect(opacity).toBeLessThanOrEqual(0.5);
-		expect(opacity).toBeGreaterThan(0);
+		expect(parseFloat(await overlayStyle(page, 'opacity'))).toBe(1);
+		expect(await overlayStyle(page, 'background-color')).toBe('rgba(0, 0, 0, 0)');
+		expect(await overlayStyle(page, 'color')).not.toBe(farbeVorher);
 		expect(await overlayStyle(page, 'display')).not.toBe('none');
+		expect(await overlayStyle(page, 'visibility')).not.toBe('hidden');
 	});
 
 	// AC-4: PUT scheitert → data-state="error"; bleibt dauerhaft opacity:1 (kein Dimming).
