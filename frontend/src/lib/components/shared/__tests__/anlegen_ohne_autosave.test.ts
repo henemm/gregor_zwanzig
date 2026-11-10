@@ -24,14 +24,14 @@ const COMPARE_NEW = join(HIER, '..', '..', 'compare-new', 'CompareNewEditor.svel
 
 type Knoten = Record<string, any>;
 
-function panelMounts(datei: string): Knoten[] {
+function panelMounts(datei: string, komponente = 'WetterMetrikenVersandPanel'): Knoten[] {
 	const ast = parse(readFileSync(datei, 'utf-8'), { modern: true });
 	const treffer: Knoten[] = [];
 	const besuche = (n: unknown): void => {
 		if (n === null || typeof n !== 'object') return;
 		if (Array.isArray(n)) return n.forEach(besuche);
 		const k = n as Knoten;
-		if (k.type === 'Component' && k.name === 'WetterMetrikenVersandPanel') treffer.push(k);
+		if (k.type === 'Component' && k.name === komponente) treffer.push(k);
 		for (const key of Object.keys(k)) if (key !== 'parent') besuche(k[key]);
 	};
 	besuche(ast.fragment);
@@ -55,14 +55,27 @@ describe('#1743: Anlege-Seiten ohne Autosave', () => {
 	for (const [name, datei] of [['/trips/new', TRIP_NEW], ['/compare/new', COMPARE_NEW]] as const) {
 		test(`${name}: Baustein-Mounts tragen keine Speicher-Verdrahtung`, () => {
 			const mounts = panelMounts(datei);
-			// #2794 S3a: der Trip haelt je Geraet einen Mount (Darstellungsfilter je Schritt), der Vergleich
-			// je Geraet einen Mount im Schritt Wetter und einen im Schritt Zustellung.
-			const soll = datei === TRIP_NEW ? 2 : 4;
+			// #2794 S3a Teil-PR 3: beide Seiten halten je Geraet einen Panel-Mount im Schritt Zustellung
+			// (der Schritt Wetter ist der WetterTab, unten eigens geprueft).
+			const soll = 2;
 			assert.equal(mounts.length, soll, `${name}: erwartet ${soll} Baustein-Mounts`);
 			for (const m of mounts) {
 				const props = propNamen(m);
 				for (const v of VERBOTEN) assert.ok(!props.includes(v), `${name}: Prop „${v}" verdrahtet einen Speicherweg (Autosave)`);
 				if (datei === TRIP_NEW) assert.ok(props.includes('createMode'), `${name}: Baustein ohne createMode — mountet BriefingScheduleTab`);
+			}
+		});
+
+		// #2794 S3a Teil-PR 3: der WetterTab im Schritt Wetter speichert beim Anlegen nie selbst —
+		// createMode gesetzt, kein Speicher-Controller, keine Hub-Schlange, keine Hub-Rueckmeldung.
+		// (`preset` ist hier die Abo-Sicht des Feldsatzes, kein gespeichertes Preset.)
+		test(`${name}: WetterTab-Mounts im Anlegen ohne Speicher-Verdrahtung, mit createMode`, () => {
+			const mounts = panelMounts(datei, 'WetterTab');
+			assert.equal(mounts.length, 2, `${name}: erwartet 2 WetterTab-Mounts (Desktop + mobil)`);
+			for (const m of mounts) {
+				const props = propNamen(m);
+				for (const v of VERBOTEN.filter((x) => x !== 'preset')) assert.ok(!props.includes(v), `${name}: WetterTab-Prop „${v}" verdrahtet einen Speicherweg (Autosave)`);
+				assert.ok(props.includes('createMode') && props.includes('onAnlegeStand'), `${name}: WetterTab ohne createMode/onAnlegeStand`);
 			}
 		});
 	}

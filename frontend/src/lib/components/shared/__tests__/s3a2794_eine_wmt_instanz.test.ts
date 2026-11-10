@@ -115,11 +115,15 @@ for (const [kind, datei, ctx] of [
 			paarweiseExklusiv(e, quelle, `Hub ${kind}`);
 		});
 
-		test(`s3a2794_t2_hub_${kind}_reiter_wetter_zeigt_wmt_mit_bereich_wetter`, () => {
-			const { e, quelle } = traeger(datei);
+		// Teil-PR 3 (AC-38): der Reiter wetter traegt statt der WMT mit bereich=wetter genau EINEN
+		// WetterTab (eigener Speicherer); kein WMT-Traeger mehr unter wetter (sonst zwei Speicherer).
+		test(`s3a2794_t2_hub_${kind}_reiter_wetter_zeigt_genau_einen_wettertab`, () => {
+			const { e, quelle, ast } = traeger(datei);
 			const w = e.filter((x) => reiterVon(x).includes('wetter'));
-			assert.ok(w.length >= 1, 'Reiter wetter ohne Metrik-Oberfläche');
-			for (const x of w) assert.equal(bereichLiteral(x, quelle), 'wetter', `${beschreibe(x, quelle)}: bereich ≠ 'wetter'`);
+			assert.deepEqual(w.map((x) => beschreibe(x, quelle)), [], 'Reiter wetter: noch ein WMT-Träger');
+			const wt = einbettungenMitWeichen(ast, quelle, ['WetterTab']).filter((x) => reiterVon(x).includes('wetter'));
+			assert.equal(wt.length, 1, 'Reiter wetter ohne (genau einen) WetterTab');
+			assert.equal(attribut(wt[0].knoten, quelle, 'context')?.literal, ctx, 'WetterTab: falscher context');
 		});
 
 		test(`s3a2794_t2_hub_${kind}_reiter_zustellung_bettet_zustellungtab_mit_context_${ctx}`, () => {
@@ -130,13 +134,12 @@ for (const [kind, datei, ctx] of [
 			assert.equal(attribut(z[0].knoten, quelle, 'context')?.literal, ctx, 'ZustellungTab: falscher context');
 		});
 
-		test(`s3a2794_t2_hub_${kind}_reiter_wetter_zeigt_wertebereiche_lesend_darunter`, () => {
+		// Teil-PR 3: die Grenzen zeigt (und bearbeitet) der WetterTab selbst; die Wertebereiche-Ansicht
+		// ist im Hub nicht mehr gemountet (sonst zweiter Speicherer, AC-38) — und nirgends ausserhalb wetter.
+		test(`s3a2794_t2_hub_${kind}_keine_wertebereiche_ansicht_mehr_im_hub`, () => {
 			const { ast, quelle } = svelteAst(datei);
 			const c = einbettungenMitWeichen(ast, quelle, ['CorridorEditor', 'CorridorEditorMobile']);
-			assert.ok(c.length >= 1, 'keine Wertebereiche-Ansicht im Hub');
-			for (const x of c) {
-				assert.deepEqual(reiterVon(x), ['wetter'], `${beschreibe(x, quelle)}: Wertebereiche-Ansicht nicht unter dem Reiter wetter`);
-			}
+			assert.deepEqual(c.map((x) => beschreibe(x, quelle)), [], 'Hub: Wertebereiche-Ansicht noch gemountet');
 		});
 	});
 }
@@ -182,15 +185,28 @@ describe('§3: shared/zustellung-tab/ZustellungTab.svelte — Übergangsreiter',
 });
 
 describe('§2: Panel und WeatherMetricsTab tragen den bereich-Filter', () => {
-	test('s3a2794_panel_versand_abschnitt_nur_bei_bereich_zustellung', () => {
+	// Teil-PR 3: das Panel kennt keinen Bereich wetter mehr (der Reiter Wetter ist der WetterTab) —
+	// die Zusicherung „Versand erscheint nie im Reiter wetter" wandert an die Schnittstelle: die Prop
+	// `bereich` laesst nur 'zustellung' | 'alles' zu, der Versand-Abschnitt (#versand) bleibt Sprungziel.
+	test('s3a2794_panel_versand_abschnitt_nie_im_bereich_wetter', () => {
 		const { ast, quelle } = svelteAst(DATEI.panel);
-		const s = elementeMitId(ast, quelle, 'section', 'versand');
-		for (const x of s) {
-			assert.ok(
-				x.weichen.some((w) => /\bbereich\b/.test(w.test)),
-				'Panel: <section id="versand"> steht nicht unter einer bereich-Weiche — Versand erschiene auch im Reiter wetter'
-			);
-		}
+		assert.equal(elementeMitId(ast, quelle, 'section', 'versand').length, 1, 'Panel: kein <section id="versand">');
+		const literale: string[] = [];
+		(function lauf(n: unknown): void {
+			if (n === null || typeof n !== 'object') return;
+			if (Array.isArray(n)) return n.forEach(lauf);
+			const k = n as Knoten;
+			if (k.type === 'TSPropertySignature' && k.key?.name === 'bereich') {
+				(function typ(t: Knoten | undefined): void {
+					if (!t) return;
+					if (t.type === 'TSLiteralType') literale.push(String(t.literal.value));
+					for (const u of (t.types ?? []) as Knoten[]) typ(u);
+					typ(t.typeAnnotation);
+				})(k.typeAnnotation);
+			}
+			for (const [f, v] of Object.entries(k)) if (f !== 'parent' && f !== 'loc' && f !== 'metadata') lauf(v);
+		})(ast.instance?.content);
+		assert.deepEqual(literale.sort(), ['alles', 'zustellung'], `Panel: bereich-Prop erlaubt ${JSON.stringify(literale)}`);
 	});
 
 	test('s3a2794_panel_reicht_bereich_an_wmt_durch', () => {
@@ -243,40 +259,48 @@ describe('AC-2.T2 Trip-Anlegen (TripNewEditor): eine dauerhafte WMT-Instanz je V
 		paarweiseExklusiv(e, quelle, 'TripNewEditor');
 	});
 
-	for (const schritt of ['wetter', 'zustellung']) {
-		test(`s3a2794_t2_trip_neu_bereich_folgt_dem_schritt_${schritt}`, async () => {
-			const { e, quelle } = traeger(DATEI.tripNeu);
-			assert.ok(e.length > 0, 'kein WMT-Träger');
-			for (const x of e) {
-				const b = attribut(x.knoten, quelle, 'bereich');
-				assert.ok(b?.ausdruck, `${beschreibe(x, quelle)}: bereich fehlt oder ist fest (${JSON.stringify(b)}) — muss dem Schritt folgen`);
-				assert.equal(await werteImSchritt(b!.ausdruck!, schritt), schritt, `${beschreibe(x, quelle)}: bereich im Schritt ${schritt}`);
-			}
-		});
-	}
-
-	test('s3a2794_t2_trip_neu_wmt_sichtbar_nur_in_wetter_und_zustellung', async () => {
+	// Teil-PR 3 (AC-38): die dauerhafte Instanz traegt fest den Bereich zustellung (Auswahl, Ampel,
+	// Tagesfenster meldet allein der WetterTab) — nie bereich=wetter, in keinem Schritt.
+	test('s3a2794_t2_trip_neu_bereich_fest_zustellung', () => {
 		const { e, quelle } = traeger(DATEI.tripNeu);
+		assert.ok(e.length > 0, 'kein WMT-Träger');
+		for (const x of e) assert.equal(attribut(x.knoten, quelle, 'bereich')?.literal, 'zustellung', `${beschreibe(x, quelle)}: bereich ≠ 'zustellung'`);
+	});
+
+	test('s3a2794_t2_trip_neu_wmt_sichtbar_nur_in_zustellung_wettertab_nur_in_wetter', async () => {
+		const { e, quelle, ast } = traeger(DATEI.tripNeu);
 		assert.ok(e.length > 0, 'kein WMT-Träger');
 		for (const x of e) {
 			const d = displayAusdruck(x, quelle);
 			assert.ok(d, `${beschreibe(x, quelle)}: keine style:display-Hülle (Muster #932)`);
-			for (const s of ['wetter', 'zustellung']) assert.equal(await werteImSchritt(d!, s), '', `sichtbar im Schritt ${s}`);
-			for (const s of ['route', 'etappen', 'wegpunkte']) assert.equal(await werteImSchritt(d!, s), 'none', `verborgen im Schritt ${s}`);
+			assert.equal(await werteImSchritt(d!, 'zustellung'), '', 'WMT im Schritt zustellung nicht sichtbar');
+			for (const s of ['wetter', 'route', 'etappen', 'wegpunkte']) assert.equal(await werteImSchritt(d!, s), 'none', `WMT sichtbar im Schritt ${s}`);
+		}
+		const wt = einbettungenMitWeichen(ast, quelle, ['WetterTab']);
+		assert.equal(wt.length, 2, 'WetterTab: erwartet Desktop + Mobil');
+		for (const x of wt) {
+			assert.ok(!haengtAnActiveTabWeiche(x), `${beschreibe(x, quelle)}: WetterTab nicht dauerhaft (Remount verliert den Anlege-Stand)`);
+			const d = displayAusdruck(x, quelle);
+			assert.ok(d, `${beschreibe(x, quelle)}: keine style:display-Hülle`);
+			assert.equal(await werteImSchritt(d!, 'wetter'), '', 'WetterTab im Schritt wetter nicht sichtbar');
+			for (const s of ['zustellung', 'route', 'etappen', 'wegpunkte']) assert.equal(await werteImSchritt(d!, s), 'none', `WetterTab sichtbar im Schritt ${s}`);
 		}
 	});
 
-	test('s3a2794_t4_trip_neu_corridor_editor_dauerhaft_im_schritt_wetter', async () => {
+	// Teil-PR 3 (§6 d, Anlege-Vorbelegung): der CorridorEditor bleibt dauerhaft gemountet (seine
+	// Vorbelegung laeuft weiter aus der gemeldeten Auswahl), ist aber in KEINEM Schritt sichtbar —
+	// die Grenzen bedient der WetterTab (genau ein Bedienort).
+	test('s3a2794_t4_trip_neu_corridor_editor_dauerhaft_und_unsichtbar', async () => {
 		const { ast, quelle } = svelteAst(DATEI.tripNeu);
 		const c = einbettungenMitWeichen(ast, quelle, ['CorridorEditor', 'CorridorEditorMobile']);
 		assert.equal(c.length, 2, `CorridorEditor (createMode): erwartet Desktop + Mobil, gefunden ${c.length}`);
 		for (const x of c) {
 			assert.ok(!haengtAnActiveTabWeiche(x), `${beschreibe(x, quelle)}: nicht dauerhaft gemountet — Vorbelegung liefe nicht`);
 			assert.ok(attribut(x.knoten, quelle, 'onVorbelegungFertig'), `${beschreibe(x, quelle)}: onVorbelegungFertig fehlt`);
+			assert.ok(attribut(x.knoten, quelle, 'onCorridorsChange'), `${beschreibe(x, quelle)}: onCorridorsChange fehlt`);
 			const d = displayAusdruck(x, quelle);
 			assert.ok(d, `${beschreibe(x, quelle)}: keine style:display-Hülle`);
-			assert.equal(await werteImSchritt(d!, 'wetter'), '', 'Wertebereiche-Vorbelegung im Schritt wetter nicht sichtbar');
-			for (const s of ['route', 'zustellung']) assert.equal(await werteImSchritt(d!, s), 'none', `Wertebereiche sichtbar im Schritt ${s}`);
+			for (const s of ['wetter', 'route', 'zustellung']) assert.equal(await werteImSchritt(d!, s), 'none', `Wertebereiche sichtbar im Schritt ${s}`);
 		}
 	});
 });
@@ -327,12 +351,12 @@ describe('AC-2.T4 (F005): das neue Abo enthält die Wertebereiche-Vorbelegung (c
 			weatherMetrics: [{ metric_id: 'gust', enabled: true }],
 			api: { post: async (url: string, body: Knoten) => (posts.push({ url, body }), { id: 'neu-1' }), get: async () => ({}) }
 		});
-		// Der CorridorEditor, der im Schritt wetter sichtbar ist (Desktop-Zweig), meldet seine Vorbelegung.
+		// Der (seit Teil-PR 3 unsichtbar, aber dauerhaft gemountete) Desktop-CorridorEditor meldet
+		// seine Vorbelegung — gemountet heisst: an keiner activeTab-Weiche.
 		const { ast, quelle } = svelteAst(DATEI.tripNeu);
 		const c = einbettungenMitWeichen(ast, quelle, ['CorridorEditor']).find((x) => viewportVon(x) !== 'mobil');
 		assert.ok(c, 'Messaufbau: kein Desktop-CorridorEditor im Trip-Anlegen');
-		const d = displayAusdruck(c!, quelle);
-		assert.equal(d ? werte(d, e.u) : '', '', 'Messaufbau: der CorridorEditor ist im Schritt wetter nicht sichtbar');
+		assert.ok(!haengtAnActiveTabWeiche(c!), 'Messaufbau: der CorridorEditor ist im Schritt wetter nicht gemountet');
 		for (const name of ['onCorridorsChange', 'onVorbelegungFertig']) {
 			const a = attribut(c!.knoten, quelle, name);
 			assert.ok(a?.ausdruck, `F005: CorridorEditor ohne ${name}`);
@@ -375,14 +399,25 @@ describe('AC-2.T2 Vergleich-Anlegen (CompareNewEditor): Schritte wetter/zustellu
 		paarweiseExklusiv(e, quelle, 'CompareNewEditor');
 	});
 
-	for (const schritt of ['wetter', 'zustellung']) {
-		test(`s3a2794_t2_vergleich_neu_schritt_${schritt}_zeigt_bereich_${schritt}`, () => {
-			const { e, quelle } = traeger(DATEI.vergleichNeu);
-			const s = e.filter((x) => reiterVon(x).includes(schritt));
-			assert.ok(s.length >= 1, `Schritt ${schritt} ohne Metrik-Oberfläche`);
-			for (const x of s) assert.equal(bereichLiteral(x, quelle), schritt, `${beschreibe(x, quelle)}: bereich`);
-		});
-	}
+	test('s3a2794_t2_vergleich_neu_schritt_zustellung_zeigt_bereich_zustellung', () => {
+		const { e, quelle } = traeger(DATEI.vergleichNeu);
+		const s = e.filter((x) => reiterVon(x).includes('zustellung'));
+		assert.ok(s.length >= 1, 'Schritt zustellung ohne Metrik-Oberfläche');
+		for (const x of s) assert.equal(bereichLiteral(x, quelle), 'zustellung', `${beschreibe(x, quelle)}: bereich`);
+	});
+
+	// Teil-PR 3 (AC-38): der Schritt wetter zeigt den WetterTab (context vergleich) und keinen
+	// WMT-Traeger mehr (sonst zwei Schreiber in denselben Feldsatz).
+	test('s3a2794_t2_vergleich_neu_schritt_wetter_zeigt_wettertab', () => {
+		const { e, quelle, ast } = traeger(DATEI.vergleichNeu);
+		assert.deepEqual(e.filter((x) => reiterVon(x).includes('wetter')).map((x) => beschreibe(x, quelle)), [], 'Schritt wetter: noch ein WMT-Träger');
+		const wt = einbettungenMitWeichen(ast, quelle, ['WetterTab']);
+		assert.ok(wt.length >= 1, 'Schritt wetter ohne WetterTab');
+		for (const x of wt) {
+			assert.deepEqual(reiterVon(x), ['wetter'], `${beschreibe(x, quelle)}: nicht (nur) im Schritt wetter`);
+			assert.equal(attribut(x.knoten, quelle, 'context')?.literal, 'vergleich', `${beschreibe(x, quelle)}: context`);
+		}
+	});
 
 	test('s3a2794_t2_vergleich_neu_alarme_im_schritt_zustellung', () => {
 		const { ast, quelle } = svelteAst(DATEI.vergleichNeu);

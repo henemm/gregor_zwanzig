@@ -80,25 +80,24 @@ function hub() {
 }
 
 describe('AC-4: activeMetricKeys live gelesen — Wetter-Metriken-Änderung + Wertebereiche-Speicherung im selben Hub-Besuch', () => {
-	test('Metrikauswahl ZUERST geändert, Wertebereiche-Reiter speichert ZULETZT → gespeicherter Stand trägt die AKTUELLE Auswahl', async () => {
+	// #2794 S3a Teil 3 (F006, AC-38): der Wetter-Metriken-Speicherer (jetzt nur Reiter Zustellung)
+	// schreibt `active_metrics` NICHT mehr; die Auswahl gehoert dem Reiter Wetter. Die Live-Lese-
+	// Zusicherung bleibt fuer den Wertebereiche-Schreiber (Test unten) und fuer die eigenen Felder.
+	test('Metrikauswahl in der Kopie geändert → der Wetter-Metriken-Speicherer plant NICHTS ein; Wertebereiche speichert danach die AKTUELLE Auswahl', async () => {
 		const { ws, ctl, wetterMetriken, wertebereiche, bedienung } = hub();
 
 		bedienung.toggleMetric('gust_max_kmh');
 		wetterMetriken.aenderungMelden();
-		assert.equal(ctl.hasPending, true, 'Vorbedingung: Wetter-Metriken-Änderung wartet im Entprell-Fenster');
+		assert.equal(ctl.hasPending, false, '#2794 F006: Metrikauswahl ist kein Feld des Zustellungs-Speicherers');
 
-		// #2794 S3a: Wetter-Metriken und Wertebereiche liegen beide im Reiter „wetter"; gesendet wird
-		// hier beim Verlassen des Reiters (Flush-Guard), danach folgt die Wertebereiche-Änderung.
 		await sichereSelbstSpeichererVorReiterwechsel('wetter', 'zustellung', ctl);
-		assert.equal(puts().length, 1, 'die Wetter-Metriken-Änderung muss VOR dem Reiterwechsel gesendet sein');
-		assert.ok((dc(gespeichert()).active_metrics as string[]).includes('gust_max_kmh'));
+		assert.equal(puts().length, 0, 'der Zustellungs-Speicherer darf active_metrics nicht schreiben');
 
-		// Idealwerte-Reiter ändert einen Korridor — berührt activeMetricKeys NICHT.
 		ws.corridors = [{ metric: 'wind_max_kmh', range: [0, 55], notify: true, mark: true }];
 		wertebereiche.aenderungMelden();
 		await ctl.flush();
 
-		assert.equal(puts().length, 2);
+		assert.equal(puts().length, 1);
 		assert.ok(
 			(dc(gespeichert()).active_metrics as string[]).includes('gust_max_kmh'),
 			'der Wertebereiche-PUT darf die aktuelle Metrikauswahl nicht auf einen alten Stand zurücksetzen'
@@ -122,22 +121,22 @@ describe('AC-4: activeMetricKeys live gelesen — Wetter-Metriken-Änderung + We
 		);
 	});
 
-	test('Wetter-Metriken-SaveFn liest activeMetricKeys ERST bei Ausführung: eine Live-Änderung NACH aenderungMelden(), VOR dem Flush, landet trotzdem im PUT', async () => {
+	test('Wetter-Metriken-SaveFn liest ihre Felder ERST bei Ausführung: eine Live-Änderung NACH aenderungMelden(), VOR dem Flush, landet trotzdem im PUT', async () => {
 		const { ws, ctl, wetterMetriken, bedienung } = hub();
 
-		bedienung.toggleMetric('gust_max_kmh');
+		// #2794 F006: gemessen am eigenen Feld Stundenverlauf (Metrikauswahl gehoert dem Reiter Wetter).
+		bedienung.hourlyDragEnd(['wind_max_kmh', 'temp_max_c']);
 		wetterMetriken.aenderungMelden();
 		// Weitere Live-Mutation VOR dem Flush (z. B. durch eine zweite, schnelle Geste):
-		ws.activeMetricKeys = [...(ws.activeMetricKeys as string[]), 'wind_direction_deg'];
+		ws.hourlyMetricKeys = [...(ws.hourlyMetricKeys as string[]), 'wind_direction_deg'];
 
 		await ctl.flush();
 
 		assert.equal(puts().length, 1);
-		const aktiv = dc(gespeichert()).active_metrics as string[];
-		assert.ok(aktiv.includes('gust_max_kmh'), 'erste Meldung muss ankommen');
-		assert.ok(
-			aktiv.includes('wind_direction_deg'),
-			'die SaveFn muss activeMetricKeys ERST bei Ausführung lesen — sonst geht eine spätere Live-Änderung verloren'
+		assert.deepEqual(
+			dc(gespeichert()).hourly_metrics,
+			['wind_max_kmh', 'temp_max_c', 'wind_direction_deg'],
+			'die SaveFn muss ihre Felder ERST bei Ausführung lesen — sonst geht eine spätere Live-Änderung verloren'
 		);
 	});
 });

@@ -178,13 +178,34 @@ test.describe('Bug #2454 Fix-Loop 2: WeatherMetricsTab-Wirkort (Findings F001/F0
 		await login(page);
 	});
 
-	// Szenario 1 (Lade-Pfad, faengt Mutation A -- computeInitialBuckets()-
-	// Aufruf in initFromTrip() entfernt): wind_chill ist beim Laden bereits
-	// aktiv, Kinder fehlen explizit. Eine UNBETEILIGTE Geste (Toggle einer
-	// anderen Metrik) loest den Autosave aus -- die Payload muss dabei
-	// bereits die vom LADEN abgeleiteten Kinder tragen (nicht erst durch die
-	// Geste selbst erzeugt).
-	test('Szenario 1 (Laden): fehlende wind_chill-Kinder werden global UND im SMS-Kanal abgeleitet und ueberleben einen unbeteiligten Save', async ({
+	// #2794 Teil 3 (Spec feat_2794_s3a_teil3_wetter.md §4, §6 e, AC-19, AC-37): die GLOBALE Metrik-
+	// Auswahl steht jetzt im WetterTab (Reiter Wetter); er schreibt `display_config.metrics[]` als
+	// bestehende Liste mit neuem `enabled` (fehlende Einträge hängt er nur für gewählte Metriken an)
+	// und fasst `channel_layouts` nicht an. Die Kind-Größen von „Gefühlte Temperatur" sind im Katalog
+	// eigene Zeilen. Die Kernaussage von Bug #2454 bleibt dieselbe und wird am neuen Träger geprüft:
+	// der Editor darf fehlende Kind-Größen NIE als `enabled:false` festschreiben (Einfrieren, das die
+	// Elter→Kind-Ableitung des Loaders `_DERIVED_METRIC_RULES` dauerhaft blockiert), weder global noch
+	// im SMS-Kanal-Layout — und `wind_chill` selbst bleibt bzw. wird aktiv gespeichert.
+	const metrikenIm = (body: { metrics?: Array<{ metric_id: string; enabled: boolean }> } | undefined) => body?.metrics ?? [];
+	function keinEingefrorenesKind(liste: Array<{ metric_id: string; enabled: boolean }> = [], wo: string): void {
+		for (const kind of WIND_CHILL_KINDER) {
+			const eintrag = liste.find((m) => m.metric_id === kind);
+			expect(eintrag?.enabled === false, `${kind} ist ${wo} als enabled:false eingefroren (Bug #2454)`).toBe(false);
+		}
+	}
+
+	async function oeffneWetterTab(page: Page, id: string) {
+		await page.goto(`/trips/${id}?tab=wetter`);
+		const reiter = page.locator('[data-testid="wetter-tab"]:visible');
+		await expect(reiter).toBeVisible({ timeout: 15_000 });
+		await expect(reiter.getByTestId('wetter-tab-laden')).toHaveCount(0, { timeout: 15_000 });
+		return reiter;
+	}
+
+	// Szenario 1 (Lade-Pfad): wind_chill ist beim Laden bereits aktiv, Kinder fehlen explizit.
+	// Eine UNBETEILIGTE Geste (Wind „−" und wieder „+") löst Speichervorgänge aus — keiner davon
+	// darf die fehlenden Kinder einfrieren, das SMS-Kanal-Layout bleibt unberührt.
+	test('Szenario 1 (Laden): fehlende wind_chill-Kinder werden bei einem unbeteiligten Save weder global noch im SMS-Kanal eingefroren', async ({
 		page,
 		request
 	}) => {
@@ -192,50 +213,35 @@ test.describe('Bug #2454 Fix-Loop 2: WeatherMetricsTab-Wirkort (Findings F001/F0
 		await deleteTrip(request, id).catch(() => {});
 		await createTrip(request, id);
 		try {
-			await openWeatherTab(page, id);
+			const vorher = await fetchTrip(request, id);
+			const reiter = await oeffneWetterTab(page, id);
+			await expect(reiter.getByTestId('wetter-zeile-wind_chill'), 'Vorbedingung: wind_chill ist im Briefing').toBeVisible();
 
-			// Unbeteiligte Geste: 'wind' aus- und wieder einschalten loest genau
-			// einen weather-config-PUT aus, ohne dass der Nutzer wind_chill anfasst.
-			const windToggle = page
-				.locator('[data-testid="wm2-grundauswahl"] .toggle-btn')
-				.filter({ hasText: 'Wind' })
-				.first();
-			await expect(windToggle).toBeVisible();
-			const [putResponse] = await Promise.all([waitForWeatherConfigPut(page, id), windToggle.click()]);
+			const [putResponse] = await Promise.all([waitForWeatherConfigPut(page, id), reiter.getByTestId('wetter-zeile-entfernen-wind').click()]);
 			expect(putResponse.ok()).toBeTruthy();
-			// Zurueckschalten, damit 'wind' im Endstand aktiv bleibt (fuer die
-			// Server-Rueckfrage unten unerheblich, haelt den Trip aber konsistent).
-			const [putResponse2] = await Promise.all([waitForWeatherConfigPut(page, id), windToggle.click()]);
+			keinEingefrorenesKind(metrikenIm(putResponse.request().postDataJSON()), 'in der gespeicherten Payload (1. Save)');
+			const [putResponse2] = await Promise.all([waitForWeatherConfigPut(page, id), reiter.getByTestId('wetter-nicht-im-briefing-plus-wind').click()]);
 			expect(putResponse2.ok()).toBeTruthy();
+			const body2 = putResponse2.request().postDataJSON() as { metrics?: Array<{ metric_id: string; enabled: boolean }> };
+			keinEingefrorenesKind(metrikenIm(body2), 'in der gespeicherten Payload (2. Save)');
+			expect(activeIds(body2.metrics).has('wind_chill'), 'wind_chill selbst muss aktiv gespeichert bleiben').toBe(true);
 
 			const trip = await fetchTrip(request, id);
-			const globalActive = activeIds(trip.display_config?.metrics);
-			for (const kind of WIND_CHILL_KINDER) {
-				expect(globalActive.has(kind), `${kind} fehlt global nach dem Save (Ist: ${[...globalActive].join(', ')})`).toBe(
-					true
-				);
-			}
-			const smsLayout = trip.display_config?.channel_layouts?.sms as
-				| Array<{ metric_id: string; enabled: boolean }>
-				| undefined;
+			keinEingefrorenesKind(trip.display_config?.metrics, 'global auf dem Server');
+			expect(activeIds(trip.display_config?.metrics).has('wind_chill')).toBe(true);
+			const smsLayout = trip.display_config?.channel_layouts?.sms as Array<{ metric_id: string; enabled: boolean }> | undefined;
 			expect(smsLayout, 'channel_layouts.sms fehlt nach dem Save').toBeTruthy();
-			const smsActive = activeIds(smsLayout);
-			for (const kind of WIND_CHILL_KINDER) {
-				expect(
-					smsActive.has(kind),
-					`${kind} fehlt in channel_layouts.sms nach dem Save (Ist: ${[...smsActive].join(', ')})`
-				).toBe(true);
-			}
+			keinEingefrorenesKind(smsLayout, 'in channel_layouts.sms');
+			expect(smsLayout, 'der Reiter Wetter fasst das SMS-Kanal-Layout nicht an (Spec §6 e)').toEqual(vorher.display_config?.channel_layouts?.sms);
 		} finally {
 			await deleteTrip(request, id);
 		}
 	});
 
-	// Szenario 2 (Toggle-Pfad, faengt Mutation B -- toggleGlobalMetric()-Aufruf
-	// in onToggleMetric() entfernt): wind_chill ist beim Laden AUS. Der Nutzer
-	// schaltet es GLOBAL ein -- die Kinder muessen mitgenommen werden UND die
-	// gespeicherte Payload muss sie mit enabled:true tragen.
-	test('Szenario 2 (globaler Toggle): wind_chill einschalten nimmt seine drei Kinder mit in die gespeicherte Payload', async ({
+	// Szenario 2 (Hinzufügen-Pfad): wind_chill ist beim Laden AUS. Der Nutzer nimmt es über
+	// „Nicht im Briefing" ins Briefing — die gespeicherte Payload trägt wind_chill aktiv und
+	// friert keine Kind-Größe ein.
+	test('Szenario 2 (globaler Toggle): wind_chill einschalten speichert es aktiv und friert keine Kind-Größe ein', async ({
 		page,
 		request
 	}) => {
@@ -243,31 +249,23 @@ test.describe('Bug #2454 Fix-Loop 2: WeatherMetricsTab-Wirkort (Findings F001/F0
 		await deleteTrip(request, id).catch(() => {});
 		await createTripWindChillOff(request, id);
 		try {
-			await openWeatherTab(page, id);
+			const reiter = await oeffneWetterTab(page, id);
+			await expect(reiter.getByTestId('wetter-zeile-wind_chill'), 'Vorbedingung: wind_chill ist nicht im Briefing').toHaveCount(0);
 
-			const windChillToggle = page
-				.locator('[data-testid="wm2-grundauswahl"] .toggle-btn')
-				.filter({ hasText: 'Gefühlte Temperatur' });
-			await expect(windChillToggle).toBeVisible();
-			await expect(windChillToggle).not.toHaveClass(/\bon\b/);
-
-			const [putResponse] = await Promise.all([waitForWeatherConfigPut(page, id), windChillToggle.click()]);
+			const [putResponse] = await Promise.all([
+				waitForWeatherConfigPut(page, id),
+				reiter.getByTestId('wetter-nicht-im-briefing-plus-wind_chill').click()
+			]);
 			expect(putResponse.ok()).toBeTruthy();
 			const body = putResponse.request().postDataJSON() as { metrics?: Array<{ metric_id: string; enabled: boolean }> };
-			const savedActive = activeIds(body.metrics);
-			expect(savedActive.has('wind_chill'), 'wind_chill selbst fehlt in der gespeicherten Payload').toBe(true);
-			for (const kind of WIND_CHILL_KINDER) {
-				expect(
-					savedActive.has(kind),
-					`${kind} fehlt in der gespeicherten Payload nach dem globalen Einschalten (Ist: ${[...savedActive].join(', ')})`
-				).toBe(true);
-			}
+			expect(activeIds(body.metrics).has('wind_chill'), 'wind_chill selbst fehlt in der gespeicherten Payload').toBe(true);
+			keinEingefrorenesKind(metrikenIm(body), 'in der gespeicherten Payload nach dem Einschalten');
 
 			const trip = await fetchTrip(request, id);
-			const globalActive = activeIds(trip.display_config?.metrics);
-			for (const kind of WIND_CHILL_KINDER) {
-				expect(globalActive.has(kind), `${kind} fehlt nach Reload-Rueckfrage global`).toBe(true);
-			}
+			expect(activeIds(trip.display_config?.metrics).has('wind_chill'), 'wind_chill nach Rückfrage nicht aktiv').toBe(true);
+			keinEingefrorenesKind(trip.display_config?.metrics, 'nach Rückfrage global');
+			const r2 = await oeffneWetterTab(page, id);
+			await expect(r2.getByTestId('wetter-zeile-wind_chill'), 'nach Neuladen steht wind_chill im Briefing').toBeVisible();
 		} finally {
 			await deleteTrip(request, id);
 		}

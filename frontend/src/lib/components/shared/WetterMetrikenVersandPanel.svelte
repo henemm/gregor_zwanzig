@@ -19,8 +19,9 @@
 	type WetterProps = ComponentProps<typeof WeatherMetricsTab>;
 	type VersandProps = ComponentProps<typeof VersandTab>;
 
-	interface Props extends Omit<WetterProps, 'context'> {
+	interface Props extends Omit<WetterProps, 'context' | 'bereich'> {
 		context: 'route' | 'vergleich';
+		bereich?: 'zustellung' | 'alles'; // #2794 S3a Teil-PR 3: Reiter Wetter = WetterTab, hier nur Zustellung
 		/** Reiter-Sprung aus dem Versand-Inhalt ("Etappen öffnen →"). Nur route. */
 		onJump?: (tab: string) => void;
 		/** Aktivierungs-Karte (Pausieren/Aktivieren) im Versand-Abschnitt. Nur vergleich. */
@@ -61,7 +62,6 @@
 </script>
 
 <WeatherMetricsTab {context} {...wetter} {bereich} />
-{#if bereich !== 'wetter'}<!-- #2794 S3a: Versand-Abschnitt nur im Reiter Zustellung, nicht unter Wetter. -->
 <section id="versand" data-testid="versand-abschnitt" class="wmv-versand" bind:this={abschnitt}>
 	{#if context === 'route' && !wetter.createMode}
 		{#if wetter.trip}
@@ -89,7 +89,6 @@
 		/>
 	{/if}
 </section>
-{/if}
 
 <style>
 	.wmv-versand {

@@ -55,10 +55,12 @@ async function openIdealwerte(page: Page): Promise<void> {
 	// nach Besuch des NEUEN Wetter-Metriken-Tabs frei (Orte → Wetter-Metriken →
 	// Wertebereiche). Echter Klick auf den Metriken-Tab, kein goto.
 	// #2794 S3a: Metrik-Auswahl und Wertebereiche stehen gemeinsam im Schritt Wetter.
+	// #2794 Teil 3 (Spec feat_2794_s3a_teil3_wetter.md §4, Known Limitations): der Schritt Wetter
+	// zeigt den WetterTab (Ampel-Zeilen mit „Grenzen ändern") statt des CorridorEditors.
 	await page.locator('[data-testid="compare-editor-tab-wetter"]:visible').first().click();
-	await expect(
-		page.locator('[data-testid="corridor-editor-vergleich"]:visible').first()
-	).toBeVisible({ timeout: 8_000 });
+	const reiter = page.locator('[data-testid="wetter-tab"][data-context="vergleich"]:visible').first();
+	await expect(reiter).toBeVisible({ timeout: 8_000 });
+	await expect(reiter.getByTestId('wetter-tab-laden')).toHaveCount(0, { timeout: 8_000 });
 }
 
 /** Legt 2 Orte an und baut im Create-Wizard bis zum Idealwerte-Tab auf. */
@@ -78,9 +80,14 @@ async function seedTwoAndOpenIdealwerte(
 	return { idA, idB };
 }
 
-/** Erste sichtbare Wertebereich-Zeile (CorridorEditor). */
+/** Sichtbare Wertebereich-Zeilen (#2794 Teil 3: Metrik-Zeilen des WetterTab, ohne „−"-Knöpfe). */
+function corridorRows(page: Page) {
+	return page.locator('[data-testid="wetter-tab"]:visible [data-testid^="wetter-zeile-"]:not([data-testid^="wetter-zeile-entfernen-"])');
+}
+
+/** Erste sichtbare Wertebereich-Zeile. */
 function firstCorridorRow(page: Page) {
-	return page.locator('[data-testid^="corridor-row-"]:visible').first();
+	return corridorRows(page).first();
 }
 
 test.describe('Issue #680: Compare-Editor Slice 3 — Orte + Idealwerte', () => {
@@ -163,7 +170,13 @@ test.describe('Issue #680: Compare-Editor Slice 3 — Orte + Idealwerte', () => 
 	// Issue #1231: Slider → CorridorEditor-Band-Griff (Drag in Unit-Tests).
 	test('AC-6: Wertebereich-Editor zeigt eine bearbeitbare Metrik-Zeile', async ({ page }) => {
 		await seedTwoAndOpenIdealwerte(page, 'wintersport', 'Slider');
-		await expect(firstCorridorRow(page)).toBeVisible({ timeout: 5_000 });
+		const zeile = page.locator('[data-testid="wetter-tab"]:visible [data-testid^="wetter-zeile-"]:has([data-testid^="wetter-grenzen-aendern-"])').first();
+		await expect(zeile).toBeVisible({ timeout: 5_000 });
+		// bearbeitbar: „Grenzen ändern" öffnet die Felder der Zeile (AC-16)
+		const knopf = zeile.locator('[data-testid^="wetter-grenzen-aendern-"]');
+		await knopf.click();
+		await expect(knopf).toHaveText('Fertig');
+		await expect(zeile.locator('[data-testid^="wetter-grenze-"]').first()).toBeEditable();
 	});
 
 	// ── AC-7: SUMMER_TREKKING-Profil rendert seine Metrik-Zeilen ─────────────
@@ -177,19 +190,24 @@ test.describe('Issue #680: Compare-Editor Slice 3 — Orte + Idealwerte', () => 
 	// Issue #1231: "＋ Metrik hinzufügen" entfällt; geprüft: mehrere Zeilen.
 	test('AC-8: Wertebereich-Editor zeigt mehrere Metrik-Zeilen', async ({ page }) => {
 		await seedTwoAndOpenIdealwerte(page, 'wintersport', 'Add');
-		const rows = page.locator('[data-testid^="corridor-row-"]:visible');
+		const rows = corridorRows(page);
 		await expect(rows.first()).toBeVisible({ timeout: 5_000 });
-		expect(await rows.count()).toBeGreaterThanOrEqual(1);
+		expect(await rows.count()).toBeGreaterThanOrEqual(2);
 	});
 
 	// ── AC-9: Metrik-Zeile trägt ihren Metrik-Schlüssel ──────────────────────
 	// Issue #1231: ✕-Entfernen im CorridorEditor; Zeilen bleiben adressierbar.
-	test('AC-9: Metrik-Zeilen sind über corridor-row-<metric> adressierbar', async ({ page }) => {
+	// #2794 Teil 3: Zeilen heißen `wetter-zeile-<metric>` (Katalog-Kennung), „−" entfernt (AC-19).
+	test('AC-9: Metrik-Zeilen sind über wetter-zeile-<metric> adressierbar und entfernbar', async ({ page }) => {
 		await seedTwoAndOpenIdealwerte(page, 'wintersport', 'Remove');
 		const firstRow = firstCorridorRow(page);
 		await expect(firstRow).toBeVisible({ timeout: 5_000 });
-		const testid = await firstRow.getAttribute('data-testid');
-		expect((testid ?? '').startsWith('corridor-row-')).toBeTruthy();
+		const testid = (await firstRow.getAttribute('data-testid')) ?? '';
+		expect(testid.startsWith('wetter-zeile-')).toBeTruthy();
+		const metrik = testid.replace('wetter-zeile-', '');
+		await page.locator(`[data-testid="wetter-tab"]:visible [data-testid="wetter-zeile-entfernen-${metrik}"]`).click();
+		await expect(page.locator(`[data-testid="wetter-tab"]:visible [data-testid="wetter-zeile-${metrik}"]`)).toHaveCount(0);
+		await expect(page.locator(`[data-testid="wetter-tab"]:visible [data-testid="wetter-nicht-im-briefing-plus-${metrik}"]`)).toBeVisible();
 	});
 
 	// ── AC-10: Gewählte Orte landen im Aktivierungs-POST ─────────────────────
@@ -259,9 +277,14 @@ test.describe('Issue #680: Compare-Editor Slice 3 — Orte + Idealwerte', () => 
 			expect(body.evening_enabled).toBe(false);
 			expect(body.evening_time).toBe('18:00:00');
 			expect(body.end_date == null, 'end_date darf beim Create ohne Laufzeit-Auswahl fehlen/null sein').toBeTruthy();
-			// Issue #1258 S4 (AC-27, E3): official_warnings wird unconditional gesendet
-			// (F1-Neuanlage-Default false), kein sources-Key ohne Bestand.
-			expect(body.official_warnings).toEqual({ enabled: false });
+			// Issue #1258 S4 (AC-27, E3): official_warnings wird unconditional gesendet, kein
+			// sources-Key ohne Bestand.
+			// #2794 Teil 3: AC-20 (Spec feat_2794_s3a_teil3_wetter.md) — der Schritt Wetter führt EINEN
+			// Schalter „Amtliche Warnungen" mit ODER-Lese-Regel und schreibt `official_alerts_enabled`
+			// und `official_warnings.enabled` immer gleich („bei an beide true"). Der Entwurf startet mit
+			// Bericht an (official_alerts_enabled) ⇒ Schalter an ⇒ beide Felder true im Anlege-POST.
+			expect(body.official_warnings).toEqual({ enabled: true });
+			expect(body.official_alerts_enabled, 'AC-20: beide Warn-Felder tragen denselben Wert').toBe(true);
 		} finally {
 			if (angelegt) await page.request.delete(`/api/compare/presets/${angelegt}`).catch(() => {});
 		}

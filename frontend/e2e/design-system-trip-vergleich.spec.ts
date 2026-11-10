@@ -1269,7 +1269,7 @@ async function pruefeUeberlauf(page: Page, seite: string, fehler: string[]): Pro
 	if (zuviel > 0) fehler.push(`${seite}: läuft waagerecht ${zuviel} px über`);
 }
 
-test('DS-6: Tippflächen am Handy (390 × 844) mindestens 44 × 44 — Zurück, Standardwerte, ⓘ, Schnellwahl — kein waagerechtes Überlaufen', async ({
+test('DS-6: Tippflächen am Handy (390 × 844) mindestens 44 × 44 — Zurück, Standardwerte, ⓘ, Schnellwahl, Wetter-Knöpfe — kein waagerechtes Überlaufen', async ({
 	page
 }) => {
 	test.setTimeout(120_000);
@@ -1294,11 +1294,20 @@ test('DS-6: Tippflächen am Handy (390 × 844) mindestens 44 × 44 — Zurück, 
 			await messeTippflaechen(chips, `${kind}-Hub Schnellwahl`, 4, fehler);
 			await pruefeUeberlauf(page, `${kind}-Hub Zustellung`, fehler);
 
-			// #2794 S3a: die Wertebereiche (mit ⓘ) stehen im Hub-Reiter „Wetter".
-			await openHub(page, kind, id, { tab: 'wetter' });
+			// ⓘ (Begriffserklärung) im Reiter Zustellung.
 			const ii = page.locator('[data-testid^="begriff-erklaerung-"]:visible');
 			await expect(ii.first()).toBeVisible({ timeout: 15_000 });
 			await messeTippflaechen(ii, `${kind}-Hub ⓘ`, 1, fehler);
+
+			// #2794 Teil 3 (Spec feat_2794_s3a_teil3_wetter.md §4, AC-15): der Reiter Wetter ist der
+			// WetterTab ohne ⓘ-Wertebereiche (CorridorEditor entfällt dort); gemessen werden seine
+			// Tippflächen „−" (aus dem Briefing nehmen) und „Grenzen ändern".
+			await openHub(page, kind, id, { tab: 'wetter' });
+			const reiter = page.locator('[data-testid="wetter-tab"]:visible');
+			await expect(reiter.getByTestId('wetter-tab-laden')).toHaveCount(0, { timeout: 15_000 });
+			const wetterKnoepfe = reiter.locator('[data-testid^="wetter-zeile-entfernen-"], [data-testid^="wetter-grenzen-aendern-"]');
+			await expect(wetterKnoepfe.first()).toBeVisible({ timeout: 15_000 });
+			await messeTippflaechen(wetterKnoepfe, `${kind}-Hub Wetter-Knöpfe`, 2, fehler);
 			await pruefeUeberlauf(page, `${kind}-Hub Wetter`, fehler);
 		}
 		for (const kind of HUB_KINDS) {

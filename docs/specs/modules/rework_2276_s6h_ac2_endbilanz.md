@@ -149,7 +149,7 @@ Diese Scheibe:
 |---|---|---|
 | `versandVergleichSpeicherung.ts:244` | Erzeugungs-Prädikat: nur aktiv, wenn `context === 'vergleich'` | Gate für einen strukturell anderen Persistenz-Endpoint (Compare-Preset) |
 | `corridor-editor/wertebereicheVergleichSpeicherung.ts:209` | dito für Wertebereiche | dito |
-| `weather-metrics-tab/weatherMetricsCompareSave.ts:561` | dito für Wetter-Metriken | dito **und** zugleich die von S4 AC-13 geforderte Hydration-Barriere — AC-13 hat Vorrang (siehe AC-3) |
+| `weather-metrics-tab/weatherMetricsCompareSave.ts:556` | dito für Wetter-Metriken (#2794 Teil 3 F006: um 5 Zeilen verschoben, Weiche unverändert) | dito **und** zugleich die von S4 AC-13 geforderte Hydration-Barriere — AC-13 hat Vorrang (siehe AC-3) |
 | `corridor-editor/CorridorEditor.svelte:190` | Katalog-Guard: lädt `loadCompareMetricCatalog()` nur im Vergleich | Mirror-Guard zu `:222`; Auflösung bräuchte injizierte Lade-Funktion statt `context`-Schalter |
 | `corridor-editor/CorridorEditor.svelte:222` | Katalog-Guard: lädt `loadRouteExtraMetricDefs()` nur im Trip | dito, Kehrseite von `:190` |
 | `corridor-editor/CorridorEditorMobile.svelte:173` | Mobil-Zwilling von `:190` | dito |

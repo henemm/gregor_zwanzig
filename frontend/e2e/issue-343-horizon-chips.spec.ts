@@ -91,6 +91,24 @@ async function deleteTestTrip(request: import('@playwright/test').APIRequestCont
 // einen ECHTEN Grundauswahl-Toggle-Klick hergestellt), Name eintragen, submitten,
 // POST-Body/UI-Summary prüfen.
 
+// #2794 Teil 3 (Spec docs/specs/modules/feat_2794_s3a_teil3_wetter.md §5 und AC-42): der Dialog
+// „Als eigene Vorlage speichern" enthält Name, Beschreibung, „Als Standard für neue Trips" und den
+// Hinweis „Gespeichert werden Metrik-Auswahl, Ampel-Grenzen und Alarmstufen. …", aber WEDER
+// Zeithorizonte NOCH Zusammenfassung; die Dialog-Payload trägt kein `horizons` (Migration
+// `scripts/migrate_2794_preset_horizons.py` entfernt sie aus dem Bestand). Die beiden verbliebenen
+// Fälle AC-4/AC-7 prüfen deshalb jetzt das Gegenteil des Alt-Solls am selben Klickpfad: der
+// gespeicherte Horizont-Zustand des Trips erscheint NICHT im Dialog und NICHT im POST, stattdessen
+// trägt der POST die Ampel und die Art (`kind`).
+const reiter = (page: import('@playwright/test').Page) => page.locator('[data-testid="wetter-tab"]:visible');
+
+async function oeffneDialog(page: import('@playwright/test').Page) {
+	await page.goto(`/trips/${TRIP_ID}?tab=wetter`);
+	await expect(reiter(page)).toBeVisible({ timeout: 15_000 });
+	await expect(reiter(page).getByTestId('wetter-tab-laden')).toHaveCount(0, { timeout: 15_000 });
+	await reiter(page).getByTestId('wetter-vorlage-als-eigene').click();
+	await expect(page.getByTestId('save-preset-dialog')).toBeVisible();
+}
+
 test.describe('Issue #343: HorizonChip-UI', () => {
 	test.beforeAll(async ({ request }) => {
 		await createTestTrip(request);
@@ -100,19 +118,13 @@ test.describe('Issue #343: HorizonChip-UI', () => {
 		await deleteTestTrip(request);
 	});
 
-	// Fix #970: AC-1/2/3/5/6 (interaktive HorizonChip-/TablePreview-UI) wurden PO-seitig
-	// endgültig zurückgezogen — der Chip-Toggle-Pfad existiert im v2-DOM nicht mehr
-	// (Dead Code, keine Wiederherstellung). Nur die beiden weiter realen Tests AC-4 und
-	// AC-7 (SavePresetDialog-Anzeige/-Submit über echten Klickpfad) bleiben.
-
-	// AC-7: SavePresetDialog zeigt ZEITHORIZONTE-Box mit EXAKTEM Wording.
-	// Horizon-Zustand wird real via Backend-PUT gesetzt (kein Chip-Klick mehr möglich);
-	// der Dialog-Öffnen-/Anzeige-Pfad läuft über einen echten Klick.
-	test('AC-7: SavePresetDialog zeigt ZEITHORIZONTE-Block mit Wording-Zusammenfassung', async ({
+	// AC-7 (#2794 Teil 3, AC-42): der Dialog zeigt KEINEN Zeithorizonte-Block und keine
+	// Zusammenfassung, auch wenn der Trip Horizonte gespeichert hat; er zeigt den Hinweis.
+	test('AC-7: SavePresetDialog zeigt KEINEN Zeithorizonte-Block und keine Zusammenfassung (AC-42)', async ({
 		page,
 		request: apiRequest
 	}) => {
-		await apiRequest.put(`/api/trips/${TRIP_ID}/weather-config`, {
+		const res = await apiRequest.put(`/api/trips/${TRIP_ID}/weather-config`, {
 			data: {
 				metrics: [
 					{
@@ -124,33 +136,24 @@ test.describe('Issue #343: HorizonChip-UI', () => {
 				]
 			}
 		});
+		expect(res.ok(), 'Messaufbau: Horizont-Zustand gesetzt').toBeTruthy();
 
-		await page.goto(`/trips/${TRIP_ID}`);
-		await page.getByTestId('trip-detail-tab-wetter').click();
-		await expect(page.getByTestId('weather-metrics-tab')).toBeVisible();
-
-		// Dirty-State herstellen über ein ANDERES Metrik-Toggle (Windchill), damit der
-		// oben gesetzte "temperature"-Horizon-Zustand unangetastet bleibt.
-		await page
-			.getByTestId('wm2-grundauswahl')
-			.getByRole('button', { name: 'Gefühlte Temperatur' })
-			.click();
-
-		await page.getByRole('button', { name: 'als eigenes Profil speichern' }).click();
-		await expect(page.getByTestId('save-preset-dialog')).toBeVisible();
-		await expect(page.getByTestId('save-preset-dialog')).toContainText(/ZEITHORIZONTE/);
-
-		const summary = page.getByTestId('save-preset-horizon-summary');
-		await expect(summary).toBeVisible();
-		// Strict: temperature ist genau "nur heute" → "N nur heute" muss exakt vorkommen.
-		await expect(summary).toContainText(/\b\d+ nur heute\b/);
+		await oeffneDialog(page);
+		const dialog = page.getByTestId('save-preset-dialog');
+		await expect(dialog).not.toContainText(/ZEITHORIZONTE|Zeithorizont/i);
+		await expect(page.getByTestId('save-preset-horizon-summary')).toHaveCount(0);
+		await expect(dialog.locator('[data-testid^="horizon-chip-"]')).toHaveCount(0);
+		await expect(page.getByTestId('save-preset-hinweis')).toHaveText(
+			'Gespeichert werden Metrik-Auswahl, Ampel-Grenzen und Alarmstufen. Zustellung, Etappen und Orte gehören nicht dazu.'
+		);
 	});
 
-	// AC-4: Submit speichert horizons in POST /api/metric-presets.
-	// Horizon-Zustand (day_after=false) wird real via Backend-PUT vorab gesetzt; der
-	// Submit-Pfad (Dialog öffnen → Name eintragen → submitten) läuft über echte Klicks.
-	test('AC-4: Submit speichert horizons in POST /api/metric-presets', async ({ page, request: apiRequest }) => {
-		await apiRequest.put(`/api/trips/${TRIP_ID}/weather-config`, {
+	// AC-4 (#2794 Teil 3, AC-42): Submit sendet KEINE horizons, dafür die Ampel des Abos und `kind`.
+	test('AC-4: Submit sendet keine horizons, sondern Ampel und Art in POST /api/metric-presets (AC-42)', async ({
+		page,
+		request: apiRequest
+	}) => {
+		const res = await apiRequest.put(`/api/trips/${TRIP_ID}/weather-config`, {
 			data: {
 				metrics: [
 					{
@@ -162,21 +165,9 @@ test.describe('Issue #343: HorizonChip-UI', () => {
 				]
 			}
 		});
+		expect(res.ok(), 'Messaufbau: Horizont-Zustand gesetzt').toBeTruthy();
 
-		await page.goto(`/trips/${TRIP_ID}`);
-		await page.getByTestId('trip-detail-tab-wetter').click();
-		await expect(page.getByTestId('weather-metrics-tab')).toBeVisible();
-
-		// Dirty-State herstellen über ein ANDERES Metrik-Toggle, damit die gesetzten
-		// temperature-Horizonte unangetastet bleiben (Preset-Link ist nur bei isDirty sichtbar).
-		await page
-			.getByTestId('wm2-grundauswahl')
-			.getByRole('button', { name: 'Gefühlte Temperatur' })
-			.click();
-
-		await page.getByRole('button', { name: 'als eigenes Profil speichern' }).click();
-		await expect(page.getByTestId('save-preset-dialog')).toBeVisible();
-
+		await oeffneDialog(page);
 		const presetName = `AC-4-Test-Preset-${Date.now()}`;
 		await page.getByTestId('save-preset-name').fill(presetName);
 
@@ -188,19 +179,16 @@ test.describe('Issue #343: HorizonChip-UI', () => {
 
 		const body = JSON.parse(postReq.postData() || '{}');
 		expect(body.name).toBe(presetName);
-		expect(Array.isArray(body.metrics)).toBe(true);
-		expect(body.metrics.length).toBeGreaterThan(0);
+		expect(body.kind, 'AC-42: die Vorlage trägt die Art des Kontexts').toBe('route');
+		expect(body.ampel?.metrics, 'AC-42: die Vorlage trägt die Ampel des Abos').toBeTruthy();
+		expect(body.ampel.metrics.temperature?.enabled, 'die gewählte Metrik steht aktiv in der Ampel').toBe(true);
+		expect(JSON.stringify(body), 'AC-42: keine Zeithorizonte im POST').not.toContain('horizons');
+		expect(body, 'AC-42: keine Zusammenfassung im POST').not.toHaveProperty('summary');
 
-		const tempMetric = body.metrics.find((m: { metric_id: string }) => m.metric_id === 'temperature');
-		expect(tempMetric).toBeDefined();
-		expect(tempMetric.horizons).toBeDefined();
-		expect(tempMetric.horizons).toHaveProperty('today');
-		expect(tempMetric.horizons).toHaveProperty('tomorrow');
-		expect(tempMetric.horizons).toHaveProperty('day_after');
-		// Vorab per API gesetzt: day_after=false → muss im Payload reflektiert sein.
-		expect(tempMetric.horizons.day_after).toBe(false);
-
-		// Dialog schließt sich nach erfolgreichem Save
 		await expect(page.getByTestId('save-preset-dialog')).not.toBeVisible({ timeout: 5000 });
+		const list = (await (await apiRequest.get('/api/metric-presets')).json()) as Array<{ id: string; name: string }>;
+		const created = list.find((p) => p.name === presetName);
+		expect(created, 'Vorlage gespeichert').toBeTruthy();
+		await apiRequest.delete(`/api/metric-presets/${created!.id}`).catch(() => {});
 	});
 });

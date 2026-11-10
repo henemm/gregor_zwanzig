@@ -26,6 +26,7 @@ import {
 	type MetricCatalog,
 } from '$lib/components/trip-detail/metricsEditor';
 import type { ChannelOverride } from './channelMetricLayouts';
+import { klon } from '../wetter-tab/klon.ts';
 import type { ChannelId } from '$lib/components/shared/layout-tab/ltChannels';
 
 /** Minimale Bestand-Form — nur die fuer die Auswahl noetigen Felder, damit
@@ -99,6 +100,7 @@ export function ampelBeimAnwenden(
 	userPreset: { ampel?: Record<string, unknown> | null } | undefined,
 	vorlageId: string,
 ): Record<string, unknown> {
-	if (userPreset) return structuredClone(userPreset.ampel ?? { template: 'allgemein' });
+	// Fix-Loop 3 #2794 (C1): `userPreset` stammt aus `$state` (Proxy) — structuredClone wirft dort.
+	if (userPreset) return klon(userPreset.ampel ?? { template: 'allgemein' });
 	return { template: vorlageId };
 }

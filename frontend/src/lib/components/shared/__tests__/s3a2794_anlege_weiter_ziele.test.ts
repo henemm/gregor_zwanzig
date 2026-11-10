@@ -64,8 +64,9 @@ const SOLL_TRIP: Record<string, Ergebnis[]> = {
 		'wegpunkte' // „Wegpunkte pruefen"
 	],
 	'wegpunkte#0': ['wetter', 'wetter', 'wetter', 'wetter'], // Banner + Fuss: Ueberspringen / Uebernehmen (F015)
-	'wetter|zustellung#0': [], // geteilte Wetter-/Versand-Instanz
-	'zustellung#0': [], // Mail-Inhalt (Desktop)
+	// Teil-PR 3: die WMT-/Versand-Instanz traegt nur noch den Schritt Zustellung (samt Mail-Inhalt);
+	// der Schritt Wetter ist der WetterTab mit dem Weiter-Fuss.
+	'zustellung#0': [], // Versand + Mail-Inhalt (Desktop)
 	'wetter#0': ['zustellung'], // „Zustellung einrichten"
 	'zustellung#1': [], // Alarme (Desktop)
 	// ── Handy-Inhalt ──
@@ -78,9 +79,8 @@ const SOLL_TRIP: Record<string, Ergebnis[]> = {
 		'bleibt' // Sheet: Uebernehmen
 	],
 	'wegpunkte#1': [],
-	'wetter|zustellung#1': [],
-	'zustellung#2': [], // Mail-Inhalt (Handy)
-	'wetter#1': [], // Korridore (Handy)
+	'zustellung#2': [], // Versand + Mail-Inhalt (Handy)
+	'wetter#1': [], // WetterTab (Handy)
 	'zustellung#3': [], // Alarme (Handy)
 	// ── Handy Sticky-Fuss ──
 	'zustellung#4': ['abschluss'], // Trip speichern

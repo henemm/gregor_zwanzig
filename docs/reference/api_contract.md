@@ -4822,6 +4822,8 @@ in Kauf genommen. `corridors[].notify` bleibt Feld in Datenmodell und Persistenz
 Datenverlust), nur wirkungslos. `corridors[].mark` (Anzeige-Markierung) wirkt seit #2792 S1c-4b (2026-11-06) ebenfalls nicht mehr: die Markierung entfällt, die Ampel ist die einzige Bewertung. Die gespeicherten Werte bleiben erhalten (Migration nach `display_config.ampel`, §11 „Profil-Ampel“).
 Spec: `docs/specs/modules/rework_1460_t1_relevanzfilter.md`, ADR: `docs/adr/0043-empfindlichkeitsstufe-als-niveau-statt-zweiter-alarm-typ.md`.
 
+**Alarmquelle Profil-Ampel (#2794 Teil 3, 2026-11-10):** Der Alarm-Lauf (`src/services/trip_alert.py`) wird zusätzlich durch `ampel_alarmquelle_aktiv` freigegeben: hat mindestens eine **aktive** Metrik `display_config.ampel.metrics.<id>.alarm_ab` ≠ `never`, alarmiert der Trip/Vergleich auch ohne Empfindlichkeitsstufen (`metric_alert_levels`). Welche Felder alarmfähig sind, liefert `alarmfaehige_felder()` in `src/services/ampel_alarm.py` (reine Anzeige-Metriken, `display_only`, nie).
+
 **Bei Gefahrenstufen-Größen (aktuell: Gewitter/`thunder_level_max`) wirkt die
 Empfindlichkeitsstufe seit #1460 T1 über das erreichte Niveau, nicht über die Sprunggröße**
 (löst den Rest des ADR-0040-Anliegens auf, ohne einen zweiten Alarm-Typ zu brauchen):
@@ -5029,6 +5031,7 @@ Sprache ist Eigenschaft des Nutzers (ADR-0104); Werte `de`/`en`, Standard `de`. 
 ## Changelog
 
 - 2026-11-09: Issue #2794 S3a Teil-PR 1 (Backend) — `MetricPreset.kind` (`route`|`vergleich`, Default `route`), `is_default` exklusiv je Art, Name eindeutig je Art und Systemvorlagen-Namen gesperrt (409 `name_exists`, auch PATCH), `horizons` entfällt (Migration `scripts/migrate_2794_preset_horizons.py`); `POST /api/trips` / `POST /api/compare/presets` ohne `display_config` übernehmen die Standardvorlage der Art (§15.5); `GET /api/metrics` mit `group`, `alertable`, `is_precursor`, `allowed_sides`, `display_only` (§15); Python `app.ampel.deviation_count` (Abweichungszähler, Fixtures `tests/fixtures/ampel_deviation_cases.json`).
+- 2026-11-10: Issue #2794 Teil 3 — Alarmquelle Profil-Ampel (`ampel_alarmquelle_aktiv`, `alarmfaehige_felder()`): Alarm auch ohne Empfindlichkeitsstufen, wenn eine aktive Metrik `alarm_ab` ≠ `never` hat; keine DTO-Änderung.
 - 2026-11-06: Issue #2792 S1c-4b — Ampel als einzige Bewertung (ADR-0106): `sms_threshold` und `corridors[].mark` ohne Wirkung (Werte bleiben gespeichert); §11 „Profil-Ampel“ beschreibt die Umschaltung; SMS/Premium-SMS/Telegram-Hervorhebung nach Ampel (s. `sms_format.md` v2.38).
 - 2026-11-04: Issue #2792 S1a — Profil-Ampel `display_config.ampel` (Trip, ComparePreset, Weather Config; §11 „Profil-Ampel"), `MetricPreset.ampel` (§15.5), `GET /api/templates` mit `ampel` je Vorlage, Fehlercode `ampel_ungueltig`.
 - 2026-10-30: Issue #2645 (S0, Doku) — Abschnitt 26 „Nutzerprofil und Sprache“: `language`, `invalid_language`, Cookie `gz_lang`.

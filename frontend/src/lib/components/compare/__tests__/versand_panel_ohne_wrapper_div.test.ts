@@ -233,9 +233,11 @@ describe('AC-1 (#1743 umgezogen): der Versand-Abschnitt hat keinen Sammel-Wrappe
 	test('AC-7: Trip-Hub reicht dem Baustein KEINE Aktivierungs-Karte', () => {
 		const TRIP_HUB = join(here, '..', '..', 'trip-detail', 'TripTabs.svelte');
 		const quelle = readFileSync(TRIP_HUB, 'utf-8');
-		// #2794 S3a: der Trip-Hub mountet den Baustein im Reiter wetter und den ZustellungTab im Reiter zustellung.
-		const mounts = [...findComponents(ast(TRIP_HUB), 'WetterMetrikenVersandPanel'), ...findComponents(ast(TRIP_HUB), 'ZustellungTab')];
-		assert.equal(mounts.length, 2, 'Vorbedingung: der Trip-Hub mountet WetterMetrikenVersandPanel und ZustellungTab je genau einmal');
+		// #2794 S3a Teil-PR 3: der Reiter wetter ist der WetterTab; der Baustein steht nur noch (ueber
+		// den ZustellungTab) im Reiter zustellung — beide Einbettungen duerfen keine Karte bekommen.
+		const mounts = [...findComponents(ast(TRIP_HUB), 'WetterTab'), ...findComponents(ast(TRIP_HUB), 'ZustellungTab')];
+		assert.equal(mounts.length, 2, 'Vorbedingung: der Trip-Hub mountet WetterTab und ZustellungTab je genau einmal');
+		assert.equal(findComponents(ast(TRIP_HUB), 'WetterMetrikenVersandPanel').length, 0, 'Trip-Hub mountet den Baustein noch direkt');
 		for (const m of mounts) {
 			const ausdruecke = (m.attributes ?? [])
 				.filter((a: any) => a.type === 'Attribute' && a.value?.type === 'ExpressionTag')

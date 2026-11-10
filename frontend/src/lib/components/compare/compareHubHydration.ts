@@ -83,6 +83,18 @@ export function hydrateHubFieldsFromPreset(
  * `official_alert_triggers_enabled !== false` zurueck, wenn `official_warnings`
  * fehlt (Legacy-Kompatibilitaet).
  */
+/**
+ * Issue #2794 S3a Teil-PR 3 (Fix-Loop 2, F-A3): die Alarm-Felder, die der Reiter Wetter setzt
+ * (amtliche Warnungen, Radar), aus einem Preset — auch NACH einem Speichern des Reiters Wetter,
+ * damit der Alarme-Speicherer (besitzt `official_warnings`/`radar_alert_enabled` bis Teil-PR 4)
+ * nicht den alten Stand zurueckschreibt. Uebrige Alarm-Eingaben bleiben unberuehrt.
+ */
+export function hydrateWetterAlarmFelder(state: AlarmHydrationTarget, preset: ComparePreset): void {
+	state.officialWarningsEnabled =
+		preset.official_warnings?.enabled ?? preset.official_alert_triggers_enabled !== false;
+	state.radarAlertEnabled = preset.radar_alert_enabled ?? false;
+}
+
 export function hydrateAlarmFieldsFromPreset(
 	state: AlarmHydrationTarget,
 	preset: ComparePreset,
@@ -93,9 +105,7 @@ export function hydrateAlarmFieldsFromPreset(
 ): void {
 	const displayConfig = (preset.display_config as Record<string, unknown>) ?? {};
 	state.officialAlertsEnabled = preset.official_alerts_enabled ?? true;
-	state.officialWarningsEnabled =
-		preset.official_warnings?.enabled ?? preset.official_alert_triggers_enabled !== false;
-	state.radarAlertEnabled = preset.radar_alert_enabled ?? false;
+	hydrateWetterAlarmFelder(state, preset);
 	state.metricAlertLevels = (displayConfig.metric_alert_levels as Record<string, string>) ?? {};
 	// Issue #2293 Scheibe S2 (AC-9/AC-11 Entkopplung): der Alarm-Kanal-Bestand
 	// hydriert ab jetzt aus `alert_channels` (Defense-in-Depth-Rueckfall auf

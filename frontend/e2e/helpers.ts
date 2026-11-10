@@ -1122,8 +1122,11 @@ export const ANLEGE_SEL: Record<
 		abbrechen: (page) =>
 			page.getByTestId('tn-desktop-footer').locator('[data-slot="btn"]').filter({ hasText: /^\s*Abbrechen\s*$/ }),
 		inhalt: {
-			'wetter-metriken': (page) => page.locator('.tn-desktop [data-testid="weather-metrics-tab"]'),
-			wertebereiche: (page) => page.locator('.tn-desktop [data-testid="corridor-editor-route"]'),
+			// #2794 Teil 3 (Spec feat_2794_s3a_teil3_wetter.md §4): Schritt Wetter = WetterTab; die
+			// Wertebereiche sind die Ampel-Grenzen der Metrik-Zeilen („Grenzen ändern").
+			'wetter-metriken': (page) => page.locator('.tn-desktop [data-testid="wetter-tab"][data-context="route"]'),
+			wertebereiche: (page) =>
+				page.locator('.tn-desktop [data-testid="wetter-tab"][data-context="route"] [data-testid^="wetter-grenzen-aendern-"]').first(),
 			alarme: (page) => page.locator('.tn-desktop [data-testid="alarme-tab"]')
 		},
 		weiterNach: {
@@ -1160,8 +1163,11 @@ export const ANLEGE_SEL: Record<
 		abbrechen: (page) =>
 			page.getByTestId('cm-desktop-footer').locator('[data-slot="btn"]').filter({ hasText: /^\s*Abbrechen\s*$/ }),
 		inhalt: {
-			'wetter-metriken': (page) => page.locator('.cm-desktop [data-testid="weather-metrics-tab-vergleich"]'),
-			wertebereiche: (page) => page.locator('.cm-desktop [data-testid="corridor-editor-vergleich"]'),
+			// #2794 Teil 3 (Spec feat_2794_s3a_teil3_wetter.md §4): Schritt Wetter = WetterTab; die
+			// Wertebereiche sind die Ampel-Grenzen der Metrik-Zeilen („Grenzen ändern").
+			'wetter-metriken': (page) => page.locator('.cm-desktop [data-testid="wetter-tab"][data-context="vergleich"]'),
+			wertebereiche: (page) =>
+				page.locator('.cm-desktop [data-testid="wetter-tab"][data-context="vergleich"] [data-testid^="wetter-grenzen-aendern-"]').first(),
 			alarme: (page) => page.locator('.cm-desktop [data-testid="alarme-tab"]')
 		},
 		weiterNach: {

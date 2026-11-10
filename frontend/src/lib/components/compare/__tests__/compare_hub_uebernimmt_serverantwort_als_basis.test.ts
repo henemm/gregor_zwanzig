@@ -117,7 +117,9 @@ describe('#2375 AC-10: erfolgreiche PUT-Antwort wird Basis fuer die naechste Nut
 	// ausgewertet (Zuweisung an `currentPreset` landet in `u`) und dann so
 	// aufgerufen, wie es der Reiter nach seinem erfolgreichen PUT tut.
 	// #1743: der Versand-Inhalt haengt im geteilten Baustein; der Hub reicht onCompareUpdate dort ein.
-	for (const komponente of ['AlarmeTab', 'WetterMetrikenVersandPanel']) {
+	// #2794 S3a Teil-PR 3: im Hub haengt der Baustein im Reiter Zustellung (Huelle ZustellungTab),
+	// der Reiter Wetter ist der WetterTab mit eigenem onCompareUpdate — beide Einbettungen geprueft.
+	for (const komponente of ['AlarmeTab', 'ZustellungTab', 'WetterTab']) {
 		test(`${komponente}-Einbettung: onCompareUpdate uebernimmt die Serverantwort als Basis`, async () => {
 			const { u, wizardState, ast, quelle } = await hub(serverstand());
 			const einbettungen = findeKomponenten(ast, komponente);

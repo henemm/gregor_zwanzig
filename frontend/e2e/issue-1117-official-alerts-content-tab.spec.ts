@@ -73,12 +73,16 @@ async function deleteTrip(request: APIRequestContext, id: string): Promise<void>
 	expect([200, 204, 404]).toContain(res.status());
 }
 
+// #2794 Teil 3 (Spec feat_2794_s3a_teil3_wetter.md §4, AC-20): der Reiter Wetter ist der WetterTab;
+// der Schalter „Amtliche Warnungen" ist dort die Karte Amtliche Warnungen & Radar
+// (`wetter-warnungen-schalter`, role=switch). Er bleibt die einzige Bedienstelle für
+// `official_alerts_enabled` (und schreibt `official_warnings.enabled` gleich mit, AC-20).
+const SCHALTER = '[data-testid="wetter-tab"] [data-testid="wetter-warnungen-schalter"]';
+
 async function openInhalt(page: Page, id: string): Promise<void> {
-	// #2794 S3a (Spec feat_2794_s3a_teil2_leiste.md): der Abschnitt „Amtliche Warnungen"
-	// steht im Reiter Wetter (die Mail-Inhalt-Karte im Reiter Zustellung).
 	await page.goto(`/trips/${id}?tab=wetter`);
-	await page.locator('[data-testid="weather-metrics-tab"]').waitFor({ state: 'visible' });
-	await page.locator('[data-testid="report-show-official-alerts"]').waitFor({ state: 'visible' });
+	await page.locator('[data-testid="wetter-tab"]').waitFor({ state: 'visible' });
+	await page.locator(SCHALTER).waitFor({ state: 'visible' });
 }
 
 // Exakter Pfad-Match (nicht `.includes()`) — sonst matcht auch die
@@ -102,7 +106,7 @@ test.describe('Issue #1117: Amtliche Warnungen im Inhalt-Tab', () => {
 		try {
 			await openInhalt(page, id);
 
-			const toggle = page.locator('[data-testid="report-show-official-alerts"] input[type="checkbox"]');
+			const toggle = page.locator(SCHALTER);
 			await expect(toggle).toBeVisible();
 			await expect(toggle).toBeChecked();
 
@@ -113,10 +117,8 @@ test.describe('Issue #1117: Amtliche Warnungen im Inhalt-Tab', () => {
 			await putDone;
 
 			await page.reload();
-			await page.locator('[data-testid="weather-metrics-tab"]').waitFor({ state: 'visible' });
-			await expect(
-				page.locator('[data-testid="report-show-official-alerts"] input[type="checkbox"]')
-			).not.toBeChecked();
+			await page.locator(SCHALTER).waitFor({ state: 'visible' });
+			await expect(page.locator(SCHALTER)).not.toBeChecked();
 		} finally {
 			await deleteTrip(request, id);
 		}
@@ -151,7 +153,7 @@ test.describe('Issue #1117: Amtliche Warnungen im Inhalt-Tab', () => {
 		await createTrip(request, id, true);
 		try {
 			await openInhalt(page, id);
-			const inhaltToggle = page.locator('[data-testid="report-show-official-alerts"] input[type="checkbox"]');
+			const inhaltToggle = page.locator(SCHALTER);
 			await expect(inhaltToggle).toBeChecked();
 
 			// Bewusst KEIN Warten auf die PUT-Antwort — echter schneller Nutzer-Pfad,

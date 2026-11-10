@@ -64,14 +64,16 @@ describe('AC-7: Speicherkonflikt beim Wetter-Metriken-Speichern → „Nochmal s
 		await server.handler(PRESET_PFAD, { method: 'PUT', body: JSON.stringify({ name: 'fremd' }) });
 		const { ws, ctl, speicherung, bedienung } = aufbau();
 
-		bedienung.toggleMetric('gust_max_kmh');
+		// #2794 F006: Kanal-Auswahl statt Metrikauswahl (die gehoert dem Reiter Wetter).
+		ws.channelActiveMetricKeys = { email: ['wind_max_kmh'], telegram: null, sms: null };
 		speicherung.aenderungMelden();
 		await ctl.flush();
 
 		assert.equal(puts().at(-1)?.status, 412, 'Vorbedingung: der Server muss den veralteten Stand ablehnen');
 		assert.equal(ctl.state, 'conflict', 'ein 412 muss „Nochmal speichern" auslösen, nicht einen generischen Fehler');
-		assert.ok(
-			(ws.activeMetricKeys as string[]).includes('gust_max_kmh'),
+		assert.deepEqual(
+			(ws.channelActiveMetricKeys as Record<string, unknown>).email,
+			['wind_max_kmh'],
 			'bei 412 darf NICHT zurückgerollt werden — die Änderung bleibt sichtbar'
 		);
 
@@ -79,7 +81,7 @@ describe('AC-7: Speicherkonflikt beim Wetter-Metriken-Speichern → „Nochmal s
 
 		const letzter = puts().at(-1)!;
 		assert.equal(letzter.status, 200, 'der Wiederholungs-PUT muss durchgehen');
-		assert.ok((dc(server.storedBody(PRESET_ID)).active_metrics as string[]).includes('gust_max_kmh'));
+		assert.ok(JSON.stringify(dc(server.storedBody(PRESET_ID)).channel_active_metrics).includes('wind_max_kmh'));
 		assert.equal(ctl.state, 'idle', 'Endzustand „Gespeichert"');
 		assert.ok(ctl.savedAt instanceof Date);
 	});
@@ -92,15 +94,13 @@ describe('AC-7: Speicherkonflikt beim Wetter-Metriken-Speichern → „Nochmal s
 		};
 		const { ws, ctl, speicherung, bedienung } = aufbau(kaputt);
 
-		bedienung.toggleMetric('gust_max_kmh');
+		const vorher = ws.hourlyMetricKeys;
+		bedienung.hourlyDragEnd(['temp_max_c', 'gust_max_kmh']); // #2794 F006: Zustellungs-Geste
 		speicherung.aenderungMelden();
 		await ctl.flush();
 
 		assert.equal(ctl.state, 'error', 'ein 500 ist kein Konflikt');
-		assert.ok(
-			!(ws.activeMetricKeys as string[]).includes('gust_max_kmh'),
-			'bei einem Nicht-412-Fehler muss die Änderung zurückgerollt werden'
-		);
+		assert.deepEqual(ws.hourlyMetricKeys, vorher, 'bei einem Nicht-412-Fehler muss die Änderung zurückgerollt werden');
 	});
 
 	test('Konflikt beim Stundenverlauf (Layout-Domäne) verhält sich identisch — kein zweiter, abweichender Fehlerpfad', async () => {
@@ -149,8 +149,9 @@ describe('Issue #2375: „Nochmal speichern" nach 412 — nur Eigenfelder, fremd
 	test('Fremdfeld überlebt den Retry: danach stehen der Name von A UND die Änderung von B auf dem Server', async () => {
 		const { server } = await konfliktMitFremdemNamen('wetterMetriken', 'cp-2375-retry-wettermetriken');
 		const stand = server.stand('cp-2375-retry-wettermetriken');
-		assert.ok(
-			JSON.stringify((stand.display_config as Record<string, unknown>).active_metrics).includes('gust_max_kmh'),
+		assert.deepEqual(
+			(stand.display_config as Record<string, unknown>).hourly_metrics,
+			['temp_max_c', 'wind_max_kmh'],
 			'die Wetter-Metriken-Änderung von B muss auf dem Server stehen'
 		);
 		assert.equal(stand.name, 'Fremd von A', '„Nochmal speichern" hat den fremd gespeicherten Namen überschrieben');

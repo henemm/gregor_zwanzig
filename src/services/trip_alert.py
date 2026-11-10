@@ -212,6 +212,22 @@ def _radar_fenster_ende(now: datetime, enden_min: list) -> Optional[datetime]:
     return now + timedelta(minutes=max(endlich)) if endlich else None
 
 
+def ampel_alarmquelle_aktiv(trip: "Trip") -> bool:
+    """Issue #2794 AC-29: „Ampel-Alarmquelle aktiv" fuer beide Gate-Bloecke.
+
+    Greift nur, wenn das Abo den Schluessel ``display_config.ampel`` traegt
+    (Ampel-Welt); dann zaehlt die aufgeloeste Ampel inkl. Vorlagen-Vorgaben.
+    „Aktiv" entscheidet dieselbe Funktion, mit der die Alarm-Engine ihre
+    Ampel-Metriken waehlt (``ampel_alarm.alarmfaehige_felder``).
+    """
+    from services.ampel_alarm import alarmfaehige_felder
+
+    dc = trip.display_config
+    if dc is None or getattr(dc, "ampel", None) is None:
+        return False
+    return bool(alarmfaehige_felder(resolve_ampel(trip), dc, False))
+
+
 @dataclass(frozen=True)
 class AlertCheckRunResult:
     """Ergebnis eines check_all_trips()-Laufs (Issue #1447 Teil A) statt des
@@ -698,6 +714,7 @@ class TripAlertService:
             has_preset
             or has_metric_levels
             or any(r.enabled for r in (trip.alert_rules or []))
+            or ampel_alarmquelle_aktiv(trip)  # Issue #2794 AC-29
         )
         if (
             not has_active_rules
@@ -1203,6 +1220,7 @@ class TripAlertService:
                         has_preset
                         or has_metric_levels
                         or any(r.enabled for r in (trip.alert_rules or []))
+                        or ampel_alarmquelle_aktiv(trip)  # Issue #2794 AC-29
                     )
                     # Issue #1088 F001: der amtliche Alert-Trigger ist ein eigenständiger,
                     # vom Wetter-Delta-Alert unabhängiger Auslöser (Default aktiv). Ein Trip

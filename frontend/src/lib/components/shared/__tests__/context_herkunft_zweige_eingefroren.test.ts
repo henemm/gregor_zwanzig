@@ -300,7 +300,9 @@ const EINGEFROREN: readonly string[] = [
 	'corridor-editor/wertebereicheVergleichSpeicherung.ts:209',
 	'weather-metrics-tab/weatherMetricsTabSections.ts:72',
 	'weather-metrics-tab/weatherMetricsTabSections.ts:73',
-	'weather-metrics-tab/weatherMetricsCompareSave.ts:561',
+	// #2794 Teil 3 Fix-Loop F006: dieselbe Weiche (`wetterMetrikenVergleichSpeicherungAktiv`),
+	// nur um 5 Zeilen verschoben (Wetter-Felder aus dem Zustellungs-Speicherer entfernt).
+	'weather-metrics-tab/weatherMetricsCompareSave.ts:556',
 	// Issue #1743: der geteilte Baustein „Wetter-Metriken + Versand" waehlt den
 	// Versand-Inhalt nach Herkunft — Trip-Hub ueber BriefingScheduleTab (route ohne
 	// createMode), Vergleich und Trip-Anlegen ueber den EINEN VersandTab. Diese Weiche
