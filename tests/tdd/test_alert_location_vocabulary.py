@@ -366,8 +366,9 @@ def test_ortsvergleich_aenderungsalarm_nennt_weiterhin_den_ortsnamen():
         "Toulon", tz=ZoneInfo("Europe/Paris"), stand_at="10:00", ampel=resolve_ampel(None),
     )
 
-    assert render_subject(msg) == "[Toulon] Toulon · ↑ Böen: 50 km/h→80 km/h"
-    assert render_telegram(msg).splitlines()[0] == "<b>Toulon · Toulon · ↑ Böen</b>"
+    # Issue #2598: der Ortsname steht nur noch EINMAL (Slot `[Name]`).
+    assert render_subject(msg) == "[Toulon] ↑ Böen: 50 km/h→80 km/h"
+    assert render_telegram(msg).splitlines()[0] == "<b>Toulon · ↑ Böen</b>"
     plain = render_email(msg)[1]
     # Die #1744-Invariante: der Ort steht vorn und ist der Ortsname.
     assert _wo_ort(plain) == "Toulon"
@@ -398,19 +399,19 @@ def test_ortsvergleich_mehrere_orte_nennen_weiterhin_ihre_namen():
     )
 
     assert render_subject(msg) == (
-        "[Toulon, Hyères] Toulon, Hyères · ↑ 2 über Schwelle: Böen 80 km/h, Böen 70 km/h"
+        "[Toulon, Hyères] ↑ 2 über Schwelle: Böen 80 km/h, Böen 70 km/h"
     )
     assert render_telegram(msg).splitlines()[0] == (
-        "<b>Toulon, Hyères · Toulon, Hyères · 2 über Schwelle</b>"
+        "<b>Toulon, Hyères · 2 über Schwelle</b>"
     )
 
 
 def test_ortsvergleich_radaralarm_bleibt_unveraendert():
     """AC-4 (HEUTE GRUEN, Invariante): der Radar-Alarm des Ortsvergleichs hat
     keine Segmente (`km_from=km_to=0.0`, project.py:308) und traegt den
-    Ortsnamen im Trip-Slot. Sein Betreff nennt heute 'km 0–0'; das ist
-    Bestandsverhalten und NICHT Gegenstand von #1744 — der Test bewacht, dass
-    die neue Segment-Sprache hier weder auftaucht noch etwas abstuerzen laesst.
+    Ortsnamen im Trip-Slot. Sein Betreff nannte bis #2598 'km 0–0'; seither
+    entfaellt die Ortsangabe, weil der Name schon im Slot steht. Der Test
+    bewacht weiter, dass die Segment-Sprache hier nicht auftaucht.
     """
     from output.renderers.alert.project import to_multi_location_onset_alert_message
     from output.renderers.alert.render import render_subject
@@ -432,7 +433,8 @@ def test_ortsvergleich_radaralarm_bleibt_unveraendert():
         tz=ZoneInfo("Europe/Paris"), stand_at="10:00", ampel=resolve_ampel(None),
     )
 
-    assert render_subject(single) == "[Toulon] km 0–0 · Regen in 30 Min"
+    # Issue #2598: Ortsname statt "km 0–0" -- der Name steht bereits im Slot.
+    assert render_subject(single) == "[Toulon] Regen in 30 Min"
     assert render_subject(multi) == "[Toulon, Hyères] Regen-Alarm: 2 Orte"
 
 
@@ -460,7 +462,9 @@ def test_ortsname_schlaegt_die_segment_kennung():
     Erweiterung zu ueberlassen.
     """
     from output.renderers.alert.model import AlertEvent, AlertMessage
-    from output.renderers.alert.render import render_email, render_subject
+    from output.renderers.alert.render import (
+        render_email, render_subject, render_telegram,
+    )
 
     event = AlertEvent(
         metric_id="gust", value_from=50.0, value_to=80.0, threshold=20.0,
@@ -472,9 +476,15 @@ def test_ortsname_schlaegt_die_segment_kennung():
         location_label="Toulon", ampel=resolve_ampel(None),
     )
 
-    assert _location_slot(render_subject(msg)) == "Toulon", (
+    # Issue #2598: im Punkt-Kontext traegt der Betreff den Ort nur noch im
+    # `[Name]`-Slot (vorher `[Toulon] Toulon · …`); die Segment-Kennung darf
+    # dort trotzdem nicht auftauchen.
+    assert render_subject(msg) == "[Toulon] ↑ Böen: 50 km/h→80 km/h", (
         "Segment-Kennung verdraengt den Ortsnamen im Betreff — Stufe 1 der "
         "Aufloesungsreihenfolge greift nicht"
+    )
+    assert "Toulon · stärkste Stunde 16:00" in render_telegram(msg).splitlines(), (
+        "Segment-Kennung verdraengt den Ortsnamen in der Telegram-Ereigniszeile"
     )
     assert _wo_ort(render_email(msg)[1]) == "Toulon", (
         "Segment-Kennung verdraengt den Ortsnamen im Mailkoerper"
