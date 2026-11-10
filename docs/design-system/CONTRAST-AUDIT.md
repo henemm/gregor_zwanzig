@@ -26,7 +26,7 @@ WCAG-Schwellen: **AAA-text** ≥ 7:1 · **AA-text** ≥ 4.5:1 · **AA-large** �
 | `--g-warn` | #c08a1a | 3.05 (AA-large) | 2.87 (FAIL) | 2.77 (FAIL) |
 | `--g-warning` | #c8882a | 3.00 (FAIL) | 2.82 (FAIL) | 2.72 (FAIL) |
 | `--g-bad` | #a83232 | 6.63 (AA-text) | 6.24 (AA-text) | 6.03 (AA-text) |
-| `--g-danger` | #b33a2a | 5.91 (AA-text) | 5.56 (AA-text) | 5.37 (AA-text) |
+| `--g-danger` | #a83232 | 6.63 (AA-text) | 6.24 (AA-text) | 6.03 (AA-text) |
 | `--g-info` | #2a6cb3 | 5.39 (AA-text) | 5.07 (AA-text) | 4.90 (AA-text) |
 | `--g-success` | #3a7d44 | 5.00 (AA-text) | 4.71 (AA-text) | 4.55 (AA-text) |
 

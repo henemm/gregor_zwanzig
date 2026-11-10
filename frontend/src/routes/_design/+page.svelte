@@ -34,7 +34,7 @@
 		{ name: '--g-warn', hex: '#c08a1a', ratio: 3.05, cls: 'AA-large' },
 		{ name: '--g-warning', hex: '#c8882a', ratio: 3.0, cls: 'FAIL' },
 		{ name: '--g-bad', hex: '#a83232', ratio: 6.63, cls: 'AA' },
-		{ name: '--g-danger', hex: '#b33a2a', ratio: 5.91, cls: 'AA' },
+		{ name: '--g-danger', hex: '#a83232', ratio: 6.63, cls: 'AA' },
 		{ name: '--g-info', hex: '#2a6cb3', ratio: 5.39, cls: 'AA' },
 		{ name: '--g-success', hex: '#3a7d44', ratio: 5.0, cls: 'AA' }
 	];

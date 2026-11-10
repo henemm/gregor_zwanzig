@@ -101,14 +101,14 @@ test.describe('Issue #214 — Btn Feature-Paritaet', () => {
 		page
 	}) => {
 		// Erwartete Token-Werte aus app.css (Light-Mode-Default, gelesen am 2026-05-13):
-		// --g-ink: #1a1a18, --g-paper: #f6f4ee, --g-accent: #c45a2a, --g-danger: #b33a2a
+		// --g-ink: #1a1a18, --g-paper: #f6f4ee, --g-accent: #c45a2a, --g-danger: #a83232 (#1831)
 		// Browser rendert als rgb(...). Die Werte sind realer als die in der Spec
 		// genannten Beispiel-Tokens (Spec war veraltet, app.css ist Quelle der Wahrheit).
 		const inkRgb = 'rgb(26, 26, 24)';
 		const paperRgb = 'rgb(246, 244, 238)';
 		// #2879 (ADR-0110-Nachtrag): Fläche der Accent-Variante ist --g-accent-deep #8c3e1a.
 		const accentRgb = 'rgb(140, 62, 26)';
-		const dangerRgb = 'rgb(179, 58, 42)';
+		const dangerRgb = 'rgb(168, 50, 50)';
 
 		const primary = page.getByTestId('btn-showcase-variant-primary');
 		const pBg = await primary.evaluate((el) => getComputedStyle(el).backgroundColor);
@@ -125,6 +125,17 @@ test.describe('Issue #214 — Btn Feature-Paritaet', () => {
 		const dBorderColor = await destructive.evaluate((el) => getComputedStyle(el).borderTopColor);
 		expect(dColor).toBe(dangerRgb);
 		expect(dBorderColor).toBe(dangerRgb);
+		// #1831: Flaeche stammt aus demselben Rot — 10-%-Mischung von --g-danger, kein zweites Literal.
+		const dBg = await destructive.evaluate((el) => getComputedStyle(el).backgroundColor);
+		const erwartetBg = await page.evaluate(() => {
+			const probe = document.createElement('div');
+			probe.style.backgroundColor = 'color-mix(in oklab, var(--g-danger) 10%, transparent)';
+			document.body.appendChild(probe);
+			const wert = getComputedStyle(probe).backgroundColor;
+			probe.remove();
+			return wert;
+		});
+		expect(dBg).toBe(erwartetBg);
 	});
 
 	test('AC-19: Tab-Fokus springt nicht auf disabled-Button und nicht auf disabled-Link', async ({
