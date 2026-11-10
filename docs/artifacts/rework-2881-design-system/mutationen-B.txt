@@ -53,3 +53,72 @@ Wirkort (gerendertes UI bzw. Anlege-Ablauf mit gespeichertem Wert), nicht am Que
     Neuaufbau entfernt) blieben DS-2 Etappenwechsel (inkl. Wechsel mitten im Segment), GG-3 und
     SC-4 grün — die Sicherung war wirkungslos und ist ersatzlos entfallen; beim fremden Wechsel
     wird nur noch ein offener Wert verworfen. DS-2 Etappenwechsel bewacht das Verhalten am Wirkort.
+
+# ── Fix-Loop 2 nach Adversary Runde 2 (2026-11-10), Endstand ─────────────────────────────
+# Regel (Tech Lead): jede Schutzstelle der Segmentfelder hat einen roten Test an der Wirkstelle
+# oder fliegt raus. Werkzeug: String-Ersetzung mit externer Sicherungskopie (Skript im Sitzungs-
+# Scratchpad), je Mutation frischer Build (CI=1) und die genannten DS-Fälle, danach Original
+# zurück. Die Tabelle kennt nur „rot" und „entfernt (Begründung)". Alle Läufe am Endstand.
+# (Der Hinweis „Fix-Loop 1: Sperre/Neuaufbau ENTFERNT" oben gilt wieder: in Fix-Loop 2 kurz
+#  zurückgeholt, dann per Kombinations-Mutation als wirkungslos belegt und erneut entfernt.)
+
+ROT (Stelle bleibt):
+M2  DatumFeld `aendern(iso, zaehler.unfertig(feld))` -> `aendern(iso, false)`
+    DS-2 Zwischenstände („halbe Datumsstände gesendet: 2027-08-02, …"), Rückkehr („Zwischenstand
+    Tag 01 gesendet"), Rücktaste (PUT im Stabilitätsfenster) — ROT
+M3  SegmentFeldMeldung.abschliessen als No-op
+    DS-1 Leeren und DS-1 Jahr angefangen („Startdatum fehlt" fehlt); Kern-Test segment_feld_meldung — ROT
+M5  DatumFeld Meldung ohne tick() (synchron)
+    DS-2 Etappenwechsel (Etappe 1 zeigt „20.08.2027"), DS-2 Rücknahme beim Tippen (Anzeige
+    „25.1.2027" statt „01.08.2027") — ROT. Einzige Stelle gegen stehengebliebene Tipp-Anzeige.
+M7  TippZaehler.fokus ohne Zähler-Reset
+    DS-2 Rückkehr ins fertige Segment („Zwischenstand Tag 01 gesendet") — ROT
+M8  TippZaehler: Rücktaste setzt keinen Angefangen-Merker (neu in Fix-Loop 2)
+    DS-2 Rücktaste („20" -> Rücktaste -> Tag 02 als PUT im Stabilitätsfenster) — ROT
+M9  zifferTeil ohne Filter (Literale/Kalender-Knopf zählen als Ziffern-Segment)
+    DS-2 Etappenwechsel (Startzeit 06:45 nicht gespeichert), DS-2 (en) (17:30 nicht gespeichert),
+    DS-2 dasselbe — ROT. Wirkt in segmenteUnvollstaendig (UhrzeitFeld): das „:" zählte sonst als
+    leeres Segment und das Verlassen meldete ''. (Runde 1 nur mit -g "DS-1" gelaufen => grün.)
+M12 DatumFeld leeres Datum sofort statt beim Verlassen melden (`aendern('', true)` -> false)
+    DS-1 Jahr angefangen und Neueintippen („Hinweis flackerte beim Neueintippen") — ROT
+M13 UhrzeitFeld ohne `geleert`-Meldung beim Verlassen
+    DS-2 Leeren („Startzeit nicht geleert", 07:30 bleibt) — ROT
+M14 UhrzeitFeld `aendern(hhmm, zaehler.unfertig(feld))` -> false
+    DS-2 Zwischenstände („halbe Uhrzeiten gesendet: '', 00:00, 07:03") — ROT
+M15 UhrzeitFeld ohne Neuaufbau beim Verlassen
+    DS-2 Leeren, Schritt „erneut geleerte Standard-Startzeit" (Feld zeigt „––:00") — ROT
+M16 DatumFeld ohne Neuaufbau beim Verlassen
+    DS-2 Leeren („tt.mm.jjjj"), DS-2 Jahr angefangen („01.08.0202") — ROT
+M17 DatumFeld `neu.year < 1000` -> `neu.year < 1` (F-C1)
+    DS-2 Jahr angefangen (Anzeige „01.08.0202"), DS-1 Jahr angefangen („Startdatum fehlt" fehlt) — ROT
+M18 DatumFeld ohne `iso === value` -> verwerfen
+    DS-2 dasselbe Datum (1 PUT statt 0), DS-2 Rücknahme beim Tippen (2. PUT nach dem Verlassen) — ROT.
+    Trägt damit auch die Rücknahme: bits-ui setzt den zurückgenommenen Wert, die Stelle verwirft Offenes.
+U-gleich UhrzeitFeld ohne `hhmm === value` -> verwerfen
+    DS-2 dasselbe (dieselbe Startzeit: 1 PUT), DS-2 Rücknahme Startzeit (2. PUT) — ROT
+leer, h12, e (Fix-Loop 1, Felder seither geändert): DS-2 Leeren, DS-2 (en) („08:00 AM"), DS-1 de/en — ROT
+
+ENTFERNT (Begründung):
+M1  tipptIn (Anzeige-Prüfung nach dem Neuzeichnen): redundant zum Tipp-Zähler (Runde 2 einzeln
+    grün, nur zusammen mit M2 rot); M2 ist jetzt allein rot.
+M10 beforeinput-/keyup-Zählung: nur von tipptIn gebraucht, mit M1 entfernt.
+M11 DatumFeld `geleert`-Pfad im Verlassen: grün — bits-ui meldet das Leeren des Datums als
+    undefined (geaendert-Pfad, M12/M16 rot); entfernt.
+M4  Fremder Wertwechsel (DatumFeld und UhrzeitFeld): Sperre bis zum nächsten Task, Neuaufbau,
+    verwerfen, dazu $effect.pre mit eigen/letzter und SegmentFeldMeldung.sperren/freigeben.
+    Kombinations-Mutationen über alle DS-2-Fälle (15): ohne Neuaufbau (M4b) grün; verwerfen statt
+    Sperre ohne Neuaufbau (X2/X4) grün; gar nichts (X5 Datum, X6/X8 Uhr) grün. Die Sperre war nur
+    nötig, weil der Neuaufbau die abgebaute Instanz ihren alten Stand melden liess (Sperre weg,
+    Neuaufbau da: rot). Ohne Neuaufbau trägt M5 (tick) die Anzeige und M18 die Rücknahme; beim
+    Etappenwechsel verlässt der Nutzer das Feld vorher (Meldung geht an die eigene Etappe). Entfernt;
+    die DS-Suite bleibt grün (36 Fälle), auch der Abbau-Verwurf `$effect(() => () => verwerfen())`.
+U-tick UhrzeitFeld-Meldung nach tick(): grün (U-tick; ohne Neuaufbau X3/X8 ebenso), entfernt.
+U-leer UhrzeitFeld undefined-Zweig `aendern('', true)` bzw. danach `verwerfen()`: grün — bits-ui
+    meldet das Leeren der Stunde nicht als undefined; '' kommt über `geleert` (M13 rot). Entfernt.
+D-leer DatumFeld `else meldung.verwerfen()` bei leerem Datum: DS-1 (7) und DS-2 (15) grün, entfernt.
+
+Neue Fälle (DS-Spec): DS-2 Jahr angefangen, dasselbe Datum + dieselbe Startzeit, Rückkehr ins
+fertige Segment, Rücktaste, Rücknahme beim Tippen, Etappenwechsel Startzeit, Rücknahme Startzeit,
+Startzeit neu tippen; DS-1 Jahr angefangen und Neueintippen.
+F-C4 (P11): mit dem Endstand nachgestellt — Rücknahme bei Fokus im Monat, „1" verworfen, danach
+„2" => Februar + Sprung ins Jahr; Anzeige = gespeichert, kein Datenverlust. Known Limitation in der Spec.
