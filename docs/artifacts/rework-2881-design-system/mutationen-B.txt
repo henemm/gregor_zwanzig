@@ -29,3 +29,27 @@
 
 Ergebnis: alle drei Pflicht-Mutationen werden von einem Test der Lieferung B rot gemacht, jeweils am
 Wirkort (gerendertes UI bzw. Anlege-Ablauf mit gespeichertem Wert), nicht am Quelltext.
+
+# ── Fix-Loop nach Adversary (2026-11-10), Stand nach Merge origin/main 4953751 ──────────────
+# Je Mutation: String-Ersetzung mit externer Sicherungskopie, betroffenen DS-Fall laufen lassen,
+# Original zurück (git status danach sauber). Alle ROT:
+
+(tippt) DatumFeld: `meldung.aendern(iso, zaehler.unfertig(feld) || tipptIn(feld))` -> `meldung.aendern(iso, false)`
+    -g "Zwischenstände": DS-2 Zwischenstände rot — „halbe Datumsstände gesendet: 2027-08-02, …, 2027-01-20, …"
+(leer) StageTimeField: `leerMelden` entfernt
+    -g "DS-2 Leeren": rot — „Startzeit nicht geleert", gespeichert bleibt 07:30
+(leerabb) ui/select/Select: `aussen` ohne Rückabbildung des Platzhalters ('' <-> __gz_leer__)
+    -g "Aktivität Standard": DS-4 Standard rot — Auslöser zeigt „ " statt „Wandern (Standard)"
+(tabindex) ui/segmented/Segmented: `tabindex={radio ? (an ? 0 : -1) : undefined}` -> `tabindex={radio ? 0 : undefined}`
+    -g "Mail-Format": DS-4 Mail-Format rot — „Umschalt+Tab landet im nicht gewählten Eintrag"
+(h12) UhrzeitFeld: `hourCycle={24}` entfernt und en -> en-US
+    -g "DS-2 \(en": DS-2 (en) rot — Feld zeigt „08:00 AM" statt „08:00"
+(e, erneut belegt, DatumFeld wurde geändert) Meldung `MM/DD/YYYY` -> DS-1 de/en rot.
+(d, f) BackLink und SaveIndicator vom Fix-Loop/Merge nicht berührt — Belege oben gelten.
+
+(sperre/aufbau beim fremden Wertwechsel) — ENTFERNT statt belegt: Mit der neuen Melde-Regel
+    (gezählte Ziffern, Prüfung nach dem Neuzeichnen, kein Ruhe-Zeitgeber, Meldung beim Verlassen)
+    schreibt bits-ui nach einem Etappenwechsel nichts mehr zurück. Mit der Mutation (Sperre und
+    Neuaufbau entfernt) blieben DS-2 Etappenwechsel (inkl. Wechsel mitten im Segment), GG-3 und
+    SC-4 grün — die Sicherung war wirkungslos und ist ersatzlos entfallen; beim fremden Wechsel
+    wird nur noch ein offener Wert verworfen. DS-2 Etappenwechsel bewacht das Verhalten am Wirkort.
