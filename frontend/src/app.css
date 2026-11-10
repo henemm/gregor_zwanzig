@@ -193,6 +193,11 @@
     --g-nav-hairline: rgba(26, 26, 24, 0.10);
     --g-nav-highlight: rgba(255, 255, 255, 0.65);
     --g-nav-active: rgba(196, 90, 42, 0.12);    /* Kapsel des aktiven Items */
+    /* #2400: aktiver Eintrag der Desktop-Seitenleiste (Toenung + Schrift, auch Hover des
+       Benutzermenue-Knopfes). Grund ist --g-paper-deep; Schrift >= 4,5:1 in beiden Modi
+       (sidebar_aktiv_kontrast.test.ts). Hell: 5,48:1. */
+    --g-sidebar-active-bg: rgba(196, 90, 42, 0.10);
+    --g-sidebar-active-fg: var(--g-accent-deep);
     --g-nav-clearance: calc(var(--g-nav-h) + var(--g-nav-gap) + env(safe-area-inset-bottom));
 
     /* === Atomic-Design-Bridge (#369) — Sandbox-Token-Namen + -Werte, additiv.
@@ -318,6 +323,10 @@
     --g-nav-hairline:   rgba(246, 244, 238, 0.12);
     --g-nav-highlight:  rgba(255, 255, 255, 0.06);
     --g-nav-active:     rgba(224, 122, 74, 0.18);
+    /* Aktiver Seitenleisten-Eintrag: --g-accent-deep (#e07a4a) auf Toenung ueber
+       --g-paper-deep laege bei 4,38:1 — hellere Akzentschrift: 5,19:1. */
+    --g-sidebar-active-bg: rgba(224, 122, 74, 0.12);
+    --g-sidebar-active-fg: #ec9468;
 
     /* Schatten: schwarz mit hoeherer Deckung */
     --g-elev-1:   0 1px 3px rgba(0, 0, 0, 0.35);
