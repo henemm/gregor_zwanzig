@@ -88,15 +88,15 @@ const AN_SEL: Record<
 	HubKind,
 	{
 		metrik: (page: Page) => Locator;
-		metrikAn: (el: Locator) => Promise<boolean>;
+		metrikAn: (page: Page) => Promise<boolean>;
 		metrikImRumpf: (r: Rumpf) => boolean;
 		profilWaehlen: (page: Page) => Promise<void>;
 		erwarteProfil: (page: Page) => Promise<void>;
 	}
 > = {
 	route: {
-		metrik: (page) => page.locator('.tn-desktop [data-testid="wm2-grundauswahl"]').getByRole('button', { name: /Schneehöhe/ }),
-		metrikAn: async (el) => /(^|\s)on(\s|$)/.test((await el.getAttribute('class')) ?? ''),
+		metrik: (page) => page.locator('.tn-desktop [data-testid="wetter-tab"][data-context="route"]'),
+		metrikAn: (page) => metrikImReiter(page, 'tn'),
 		metrikImRumpf: (r) =>
 			(((r.display_config as Rumpf | undefined)?.metrics as Array<{ metric_id?: string; enabled?: boolean }> | undefined) ?? []).some(
 				(m) => m.metric_id === 'snow_depth' && m.enabled === true
@@ -111,8 +111,8 @@ const AN_SEL: Record<
 		}
 	},
 	vergleich: {
-		metrik: (page) => page.locator('.cm-desktop [data-testid="weather-metrics-vergleich-row-snow_depth"] input[type="checkbox"]'),
-		metrikAn: (el) => el.isChecked(),
+		metrik: (page) => page.locator('.cm-desktop [data-testid="wetter-tab"][data-context="vergleich"]'),
+		metrikAn: (page) => metrikImReiter(page, 'cm'),
 		metrikImRumpf: (r) => JSON.stringify((r.display_config as Rumpf | undefined)?.active_metrics ?? []).includes('snow_depth'),
 		profilWaehlen: async (page) => {
 			await page.getByTestId(`compare-editor-profile-${ANLEGE_SEL.vergleich.profilWert}`).click();
@@ -125,6 +125,20 @@ const AN_SEL: Record<
 		}
 	}
 };
+
+/**
+ * #2794 Teil 3 (Spec feat_2794_s3a_teil3_wetter.md §4, AC-19): der Schritt Wetter ist der WetterTab;
+ * eine Metrik steht im Briefing, wenn ihre Zeile `wetter-zeile-<id>` da ist; „−" nimmt sie heraus,
+ * „+" unter „Nicht im Briefing" nimmt sie auf. Geprüfte Metrik: Schneehöhe (`snow_depth`).
+ */
+async function metrikImReiter(page: Page, huelle: 'tn' | 'cm'): Promise<boolean> {
+	return (await page.locator(`.${huelle}-desktop [data-testid="wetter-tab"] [data-testid="wetter-zeile-snow_depth"]`).count()) > 0;
+}
+async function metrikUmschalten(reiter: Locator, warAn: boolean): Promise<void> {
+	await reiter
+		.locator(warAn ? '[data-testid="wetter-zeile-entfernen-snow_depth"]' : '[data-testid="wetter-nicht-im-briefing-plus-snow_depth"]')
+		.click();
+}
 
 const einName = (tag: string) => `${E2E_TEST_PREFIX}AN-${tag}-${Date.now()}`;
 
@@ -360,9 +374,10 @@ test.describe('Anlege-Ablauf (Desktop 1280)', () => {
 				await schrittOeffnen(page, kind, 'wetter');
 				const metrik = AN_SEL[kind].metrik(page);
 				await expect(metrik, 'AN-6: Metrik-Umschalter im Schritt Wetter fehlt').toBeVisible({ timeout: 15_000 });
-				const warAn = await AN_SEL[kind].metrikAn(metrik);
-				await metrik.click();
-				await expect.poll(() => AN_SEL[kind].metrikAn(metrik), { message: 'AN-6: Metrik schaltet nicht um' }).toBe(!warAn);
+				await expect(metrik.getByTestId('wetter-tab-laden')).toHaveCount(0, { timeout: 15_000 });
+				const warAn = await AN_SEL[kind].metrikAn(page);
+				await metrikUmschalten(metrik, warAn);
+				await expect.poll(() => AN_SEL[kind].metrikAn(page), { message: 'AN-6: Metrik schaltet nicht um' }).toBe(!warAn);
 				await expect(sel.inhalt.wertebereiche(page), 'AN-6: Wertebereiche-Inhalt fehlt').toBeVisible({ timeout: 15_000 });
 
 				await schrittOeffnen(page, kind, 'zustellung');
@@ -747,7 +762,7 @@ for (const kind of HUB_KINDS) {
 // COMPARE_ONLY_SECTIONS (#2346 S3), Temperatur Max/Min ist Vergleichs-Vokabular
 // (Trip führt eine Zeile `temperature`), die Layout-Attrappe war Vergleichs-
 // spezifisch (#1301). Der Trip hat keinen Zweig.
-test('AN-12 (vergleich): Stundenverlauf-Schalter da, keine Layout-Attrappe, Temperatur Max/Min je eine eigene, unabhängig anhakbare Zeile', async ({
+test('AN-12 (vergleich): Stundenverlauf-Schalter da, keine Layout-Attrappe, Temperatur als eine Zeile ohne Aggregationswahl', async ({
 	page
 }) => {
 	const kind: HubKind = 'vergleich';
@@ -793,32 +808,17 @@ test('AN-12 (vergleich): Stundenverlauf-Schalter da, keine Layout-Attrappe, Temp
 	await expect(page.locator('[data-testid="compare-editor-tab-versand"]'), 'AN-12: eigener Anlege-Schritt „Versand"').toHaveCount(0);
 	await expect(page.locator('[data-testid="compare-step4-layout-preview"]')).toHaveCount(0);
 
-	// #2794 S3a: die Metrik-Auswahl (Max/Min anhaken) steht im Schritt Wetter, die
-	// Reihenfolge-Zeilen (Abschnitt layout_kanal) im Schritt Zustellung.
+	// #2794 Teil 3 (Spec feat_2794_s3a_teil3_wetter.md §4 und AC-15: „keine Aggregationswahl"): der
+	// Schritt Wetter ist der WetterTab mit EINER Zeile „Temperatur"; die getrennt anhakbaren Max/Min-
+	// Optionen der alten Vergleichs-Metrikliste entfallen fachlich. Geprüft wird deshalb, dass die
+	// Temperatur-Zeile da ist und KEINE Aggregations-Option mehr angeboten wird.
 	await schrittOeffnen(page, kind, 'wetter');
-	const maxBox = page.locator('.cm-desktop [data-testid="weather-metrics-vergleich-option-temperature-max"] input:visible').first();
-	const minBox = page.locator('.cm-desktop [data-testid="weather-metrics-vergleich-option-temperature-min"] input:visible').first();
-	await expect(maxBox).toBeVisible({ timeout: 10_000 });
-	await expect(minBox).toBeVisible();
-	if (!(await maxBox.isChecked())) await maxBox.click();
-	if (!(await minBox.isChecked())) await minBox.click();
-	await expect(maxBox).toBeChecked();
-	await expect(minBox).toBeChecked();
-
-	await schrittOeffnen(page, kind, 'zustellung');
-	const reihenfolge = page.locator('.cm-desktop [data-testid="weather-metrics-vergleich-reihenfolge"]:visible').first();
-	const maxZeile = reihenfolge.locator('[data-testid="wm2-reihenfolge-row"][data-metric-id="temp_max_c"]');
-	const minZeile = reihenfolge.locator('[data-testid="wm2-reihenfolge-row"][data-metric-id="temp_min_c"]');
-	await expect(maxZeile).toHaveCount(1);
-	await expect(minZeile).toHaveCount(1);
-	await expect(maxZeile).toContainText('Maximum');
-	await expect(minZeile).toContainText('Minimum');
-
-	// unabhängig: Höchstwert abwählen lässt den Tiefstwert stehen.
-	await schrittOeffnen(page, kind, 'wetter');
-	await maxBox.click();
-	await expect(maxBox).not.toBeChecked();
-	await expect(minBox, 'AN-12: Tiefstwert hängt am Höchstwert').toBeChecked();
-	await schrittOeffnen(page, kind, 'zustellung');
-	await expect(minZeile).toHaveCount(1);
+	const reiter = page.locator('.cm-desktop [data-testid="wetter-tab"][data-context="vergleich"]');
+	await expect(reiter).toBeVisible({ timeout: 10_000 });
+	await expect(reiter.getByTestId('wetter-tab-laden')).toHaveCount(0, { timeout: 10_000 });
+	await expect(reiter.getByTestId('wetter-zeile-temperature'), 'AN-12: Temperatur-Zeile fehlt im Schritt Wetter').toBeVisible();
+	await expect(
+		page.locator('.cm-desktop [data-testid^="weather-metrics-vergleich-option-"]'),
+		'AN-12: Aggregationswahl (Max/Min) im Schritt Wetter, AC-15 verbietet sie'
+	).toHaveCount(0);
 });

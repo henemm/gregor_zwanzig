@@ -152,24 +152,26 @@ describe('F-A1 (Trip): Warnungen und Tagesfenster aus dem Reiter Wetter reisen i
 		ow: (p.official_warnings as Knoten | undefined)?.enabled
 	});
 
-	test('ohne Aenderung: Warnungen an ⇒ official_alerts_enabled UND official_warnings.enabled true', async () => {
+	// Fix-Loop 3 (C3, Tech-Lead-Entscheid fix-loop-3.md): Neuanlage-Vorgabe ist „aus" (#1258);
+	// vorher stand hier „an" — das war der Befund (zwei Eigentuemer, Startwert falsch).
+	test('ohne Aenderung: Neuanlage-Vorgabe aus ⇒ official_alerts_enabled UND official_warnings.enabled false', async () => {
 		const ed = await editor();
 		const wt = await wetterTabMontieren(ed);
-		assert.equal(wt.stand.warnungenAn, true, 'Messaufbau: Standard ist „an"');
-		assert.deepEqual(warnung(await speichern(ed)), { alerts: true, ow: true });
+		assert.equal(wt.stand.warnungenAn, false, 'Neuanlage-Vorgabe ist „aus" (#1258)');
+		assert.deepEqual(warnung(await speichern(ed)), { alerts: false, ow: false });
 	});
 
-	test('Warnungen aus, Tagesfenster 6–21 ⇒ beide Warn-Felder false, report_config 6/21; ein Neuaufbau behaelt beides', async () => {
+	test('Warnungen an, Tagesfenster 6–21 ⇒ beide Warn-Felder true, report_config 6/21; ein Neuaufbau behaelt beides', async () => {
 		const ed = await editor();
 		const wt1 = await wetterTabMontieren(ed);
-		wt1.aendern({ ...wt1.stand, warnungenAn: false, tagesfenster: { start: 6, end: 21 } });
+		wt1.aendern({ ...wt1.stand, warnungenAn: true, tagesfenster: { start: 6, end: 21 } });
 
 		const wt2 = await wetterTabMontieren(ed); // Wechsel Desktop ↔ Mobil
-		assert.equal(wt2.stand.warnungenAn, false, 'Neuaufbau zeigt die Warnungen wieder an');
+		assert.equal(wt2.stand.warnungenAn, true, 'Neuaufbau zeigt die Warnungen wieder aus');
 		assert.deepEqual(wt2.stand.tagesfenster, { start: 6, end: 21 }, 'Neuaufbau verliert das Tagesfenster');
 
 		const p = await speichern(ed);
-		assert.deepEqual(warnung(p), { alerts: false, ow: false }, 'AC-20: beide Felder muessen im POST aus sein');
+		assert.deepEqual(warnung(p), { alerts: true, ow: true }, 'AC-20: beide Felder muessen im POST an sein');
 		const rc = p.report_config as Knoten;
 		assert.equal(rc.day_window_start_hour, 6);
 		assert.equal(rc.day_window_end_hour, 21);

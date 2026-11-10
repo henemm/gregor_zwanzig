@@ -9,6 +9,7 @@
 // Kein Browser-/SvelteKit-Import, lauffaehig unter node --experimental-strip-types.
 
 import type { Ampel, AmpelAlarmAb, AmpelFarbe, AmpelMetrik, AmpelSeite } from '../../../types.ts';
+import { klon } from './klon.ts';
 
 export type { Ampel, AmpelMetrik, AmpelSeite };
 export type AlarmAb = AmpelAlarmAb;
@@ -48,7 +49,6 @@ const RANG: Record<string, number> = { yellow: 1, orange: 2, red: 3 };
 const GRUPPEN_FOLGE = ['temperature', 'wind', 'precip_thunder', 'sky_visibility', 'snow_height'];
 
 const ohneZeile = (): AmpelMetrik => ({ enabled: false, lower: {}, upper: {}, alarm_ab: 'never' });
-const klon = <T>(x: T): T => structuredClone(x);
 const istObjekt = (x: unknown): x is Record<string, unknown> => x !== null && typeof x === 'object' && !Array.isArray(x);
 
 // ── Daten-Adapter ────────────────────────────────────────────────────────────
@@ -308,22 +308,41 @@ export function aktiveMetriken(aufgeloest: Ampel): string[] {
 	return Object.entries(aufgeloest?.metrics ?? {}).filter(([, e]) => e?.enabled === true).map(([id]) => id);
 }
 
-type AuswahlQuelle = { metrics?: { metric_id: string; enabled?: boolean }[]; active_metrics?: { metric_id: string }[] } & Record<string, unknown>;
+type AuswahlQuelle = { metrics?: { metric_id: string; enabled?: boolean }[]; active_metrics?: (string | { metric_id: string })[] } & Record<string, unknown>;
 
-/** Auswahl lesen: Trip aus `metrics[]` (enabled), Vergleich aus `active_metrics` (eindeutig);
- *  fehlt die Liste, gilt die aufgeloeste Ampel (AC-39). Trip `metrics: []` gilt wie in Python
- *  (models.py D4: leer = kein Maximum, Standard gilt) als fehlende Liste (F007); eine leere
- *  Vergleichs-Liste bleibt leer. */
-export function auswahlLesen(context: Kontext, displayConfig: AuswahlQuelle | null | undefined, aufgeloest: Ampel): string[] {
-	const liste = AUSWAHL_QUELLE[context](displayConfig);
+/** Altformat von `active_metrics` (api_contract #1373): Anzeige-Schluessel -> Groesse + Auswertung. */
+export type AltSchluessel = Record<string, { metric_id: string; aggregation: string }>;
+
+/** Uebersetzungstabelle aus dem Vergleichs-Katalog (GET /api/compare/metrics, `metric` = Schluessel). */
+export function altSchluesselAusKatalog(eintraege: { metric: string; metric_id?: string; aggregation?: string }[]): AltSchluessel {
+	const aus: AltSchluessel = {};
+	for (const e of Array.isArray(eintraege) ? eintraege : []) {
+		if (e?.metric && e.metric_id && e.aggregation) aus[e.metric] = { metric_id: e.metric_id, aggregation: e.aggregation };
+	}
+	return aus;
+}
+
+/** Groesse eines `active_metrics`-Eintrags: Neuformat `{metric_id}` oder Altformat-Schluessel;
+ *  ein nicht aufloesbarer Schluessel bleibt unveraendert stehen (verlustfrei, #1373). */
+export function vergleichsMetrikId(eintrag: unknown, alt: AltSchluessel = {}): string {
+	if (typeof eintrag === 'string') return alt[eintrag]?.metric_id ?? eintrag;
+	return (eintrag as { metric_id: string } | null)?.metric_id as string;
+}
+
+/** Auswahl lesen: Trip aus `metrics[]` (enabled), Vergleich aus `active_metrics` (eindeutig, Alt-
+ *  und Neuformat pro Element); fehlt die Liste, gilt die aufgeloeste Ampel (AC-39). Trip
+ *  `metrics: []` gilt wie in Python (models.py D4: leer = kein Maximum, Standard gilt) als fehlende
+ *  Liste (F007); eine leere Vergleichs-Liste bleibt leer. */
+export function auswahlLesen(context: Kontext, displayConfig: AuswahlQuelle | null | undefined, aufgeloest: Ampel, alt: AltSchluessel = {}): string[] {
+	const liste = AUSWAHL_QUELLE[context](displayConfig, alt);
 	return liste ?? aktiveMetriken(aufgeloest);
 }
 
 /** Auswahl-Quelle je Kontext als Daten (Trip `metrics[]` mit `enabled`, Vergleich `active_metrics`);
  *  `null` = Liste fehlt. Tabelle statt Kontext-Weiche (Ratsche context_herkunft_zweige_eingefroren). */
-const AUSWAHL_QUELLE: Record<Kontext, (dc: AuswahlQuelle | null | undefined) => string[] | null> = {
+const AUSWAHL_QUELLE: Record<Kontext, (dc: AuswahlQuelle | null | undefined, alt: AltSchluessel) => string[] | null> = {
 	route: (dc) => (Array.isArray(dc?.metrics) && dc.metrics.length > 0 ? dc.metrics.filter((m) => m?.enabled === true).map((m) => m.metric_id) : null),
-	vergleich: (dc) => (Array.isArray(dc?.active_metrics) ? [...new Set(dc.active_metrics.map((m) => m.metric_id))] : null)
+	vergleich: (dc, alt) => (Array.isArray(dc?.active_metrics) ? [...new Set(dc.active_metrics.map((m) => vergleichsMetrikId(m, alt)))] : null)
 };
 
 /** Vollstaendige Ampel einer eigenen Vorlage; Bestand ohne `ampel`: „allgemein“ mit `enabled`

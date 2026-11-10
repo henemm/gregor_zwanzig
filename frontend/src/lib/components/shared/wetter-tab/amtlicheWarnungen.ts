@@ -8,6 +8,8 @@
 // Wert; weitere Felder von `official_warnings` (z. B. `sources`) bleiben erhalten.
 // Gleiche Felder bei Trip und Orts-Briefing (beide top-level am Abo).
 
+import { klon } from './klon.ts';
+
 export type WarnFelder = {
 	official_alerts_enabled?: boolean | null;
 	official_warnings?: { enabled?: boolean; sources?: string[] } | null;
@@ -30,6 +32,6 @@ export function amtlicheWarnungenAn(abo: WarnFelder | null | undefined): boolean
 
 /** Beide Felder auf denselben Wert, ohne die Eingabe zu veraendern. */
 export function amtlicheWarnungenFelder(an: boolean, abo: WarnFelder | null | undefined): WarnSchreibFelder {
-	const bestand = abo?.official_warnings && typeof abo.official_warnings === 'object' ? structuredClone(abo.official_warnings) : {};
+	const bestand = abo?.official_warnings && typeof abo.official_warnings === 'object' ? klon(abo.official_warnings) : {};
 	return { official_alerts_enabled: an, official_warnings: { ...bestand, enabled: an } };
 }

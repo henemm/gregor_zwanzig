@@ -10,6 +10,7 @@ import type { Ampel, AmpelMetrik, AmpelSeite } from '../../../types.ts';
 import { vorlageIdFuer } from '../../alerts-tab/alarmAbAnzeige.ts';
 import { amtlicheWarnungenAn, type WarnFelder } from './amtlicheWarnungen.ts';
 import { abweichungsMenge } from './ampelSchreiben.ts';
+import { klon } from './klon.ts';
 import {
 	alarmAbFuerAlle,
 	auswahlLesen,
@@ -18,6 +19,7 @@ import {
 	zuruecksetzen,
 	STANDARD_VORLAGE,
 	type AlarmAb,
+	type AltSchluessel,
 	type Kontext,
 	type MetrikEigenschaften,
 	type VorlagenAmpeln
@@ -63,7 +65,7 @@ export function tagesfensterLesen(context: Kontext, abo: AboSicht | null | undef
 
 /** Erst-Hydration aus dem gespeicherten Abo. `alsVorlage`: ohne eigene Auswahl gilt die Vorlage
  *  (Anlegen, AC-39). Vorlagen-ID wie Python `_aufloesen` (template → preset_name → profil). */
-export function standAusAbo(context: Kontext, abo: AboSicht | null | undefined, vorlagen: VorlagenAmpeln): WetterStand {
+export function standAusAbo(context: Kontext, abo: AboSicht | null | undefined, vorlagen: VorlagenAmpeln, alt: AltSchluessel = {}): WetterStand {
 	const dc = (abo?.display_config ?? {}) as Record<string, unknown>;
 	const aboAmpel = (dc.ampel ?? null) as Ampel | null;
 	const vorlageId = vorlageIdFuer(aboAmpel, dc.preset_name as string | undefined, abo?.profil as string | undefined, vorlagen);
@@ -72,7 +74,7 @@ export function standAusAbo(context: Kontext, abo: AboSicht | null | undefined, 
 	return {
 		vorlageId,
 		ampel,
-		auswahl: auswahlLesen(context, dc as Parameters<typeof auswahlLesen>[1], ampel),
+		auswahl: auswahlLesen(context, dc as Parameters<typeof auswahlLesen>[1], ampel, alt),
 		warnungenAn: amtlicheWarnungenAn(abo as WarnFelder),
 		radarAn: abo?.radar_alert_enabled === true,
 		tagesfenster: tagesfensterLesen(context, abo)
@@ -100,7 +102,7 @@ export function mitVorlage(s: WetterStand, vorlageId: string, vorlagen: Vorlagen
 /** Eigene Vorlage uebernehmen: ihre vollstaendige Ampel, Vorlage = ihre Systemvorlage. */
 export function mitEigenerVorlage(s: WetterStand, ampel: Ampel, vorlagen: VorlagenAmpeln): WetterStand {
 	const vorlageId = ampel?.template && ampel.template in vorlagen ? ampel.template : STANDARD_VORLAGE;
-	const neu = structuredClone(ampel);
+	const neu = klon(ampel);
 	neu.template = vorlageId;
 	const auswahl = Object.entries(neu.metrics ?? {}).filter(([, e]) => e?.enabled === true).map(([id]) => id);
 	return { ...s, vorlageId, ampel: neu, auswahl };
@@ -118,7 +120,7 @@ export function mitMetrik(s: WetterStand, id: string): WetterStand {
 
 /** „Alarm ab" einer Zeile. */
 export function mitAlarmAb(s: WetterStand, id: string, stufe: AlarmAb): WetterStand {
-	const ampel = structuredClone(s.ampel);
+	const ampel = klon(s.ampel);
 	ampel.metrics = ampel.metrics ?? {};
 	ampel.metrics[id] = { ...(ampel.metrics[id] ?? { enabled: false, lower: {}, upper: {} }), alarm_ab: stufe };
 	return { ...s, ampel };
@@ -143,7 +145,7 @@ function anzeigeSeite(seite: AmpelSeite | null | undefined): AmpelSeite {
 /** Stand mit offenem Entwurf aus „Grenzen ändern"; `fuerAnzeige` blendet ungueltige Felder aus. */
 export function mitEntwurf(s: WetterStand, e: Entwurf | null, fuerAnzeige = false): WetterStand {
 	if (!e) return s;
-	const ampel = structuredClone(s.ampel);
+	const ampel = klon(s.ampel);
 	if (e.thunder) ampel.thunder = { ...(ampel.thunder ?? {}), ...e.thunder };
 	const zeile: AmpelMetrik = { ...(ampel.metrics?.[e.id] ?? { enabled: false, alarm_ab: 'never' }) };
 	for (const k of ['lower', 'upper'] as const) {

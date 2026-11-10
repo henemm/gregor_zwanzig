@@ -72,9 +72,14 @@ const TRIP_TAB_NAME: Record<TripReiter, RegExp> = {
 const TRIP_KETTE: TripReiter[] = ['wetter', 'zustellung'];
 
 /** Welche Abschnitts-Infoboxen ein Schwanz-Schritt mindestens trägt (#2794 S3a). */
+// #2794 Teil 3 (Spec feat_2794_s3a_teil3_wetter.md §4 und §6 (d)): der Schritt Wetter ist der
+// WetterTab (Aufbau nach Mockup Fassung 3, ohne Infobox); die Metrik-Oberfläche (Stundenverlauf,
+// 3-Tages-Ausblick) samt Infobox „wetter-metriken" steht im Schritt Zustellung. Der CorridorEditor
+// mit Infobox „wertebereiche" und ⓘ Wertebereiche ist im Schritt Wetter nur noch unsichtbar
+// gemountet (§6 (d): „verschwindet im Schritt wetter aus der Sicht") — die Infobox entfällt.
 const INFOBOXEN_JE_REITER: Record<'wetter' | 'zustellung', string[]> = {
-	wetter: ['wetter-metriken', 'wertebereiche'],
-	zustellung: ['versand', 'alarme']
+	wetter: [],
+	zustellung: ['wetter-metriken', 'versand', 'alarme']
 };
 
 function tripTab(page: Page, mobil: boolean, reiter: TripReiter): Locator {
@@ -255,8 +260,13 @@ for (const mobil of [false, true]) {
 
 			for (const reiter of TRIP_KETTE) {
 				await wechsleTripReiter(page, mobil, reiter);
-				for (const abschnitt of INFOBOXEN_JE_REITER[reiter as 'wetter' | 'zustellung']) {
+				const erwartet = INFOBOXEN_JE_REITER[reiter as 'wetter' | 'zustellung'];
+				for (const abschnitt of erwartet) {
 					await pruefeInfobox(page, abschnitt, 'route');
+				}
+				if (erwartet.length === 0) {
+					await expect(page.locator('[data-testid="wetter-tab"]:visible'), 'Messaufbau: Schritt Wetter nicht offen').toHaveCount(1);
+					await expect(infoboxen(page), `Schritt ${reiter} trägt eine Infobox (#2794 Teil 3 §4)`).toHaveCount(0);
 				}
 			}
 			// Versand (#2794 S3a: Abschnitt im Schritt Zustellung): beim Trip BEIDE Zeiten.
@@ -280,8 +290,13 @@ test.describe('/compare/new (Desktop): Infobox je Reiter', () => {
 
 		for (const reiter of VERGLEICH_KETTE) {
 			await vergleichTab(page, false, reiter).click();
-			for (const abschnitt of INFOBOXEN_JE_REITER[reiter as 'wetter' | 'zustellung']) {
+			const erwartet = INFOBOXEN_JE_REITER[reiter as 'wetter' | 'zustellung'];
+			for (const abschnitt of erwartet) {
 				await pruefeInfobox(page, abschnitt, 'vergleich');
+			}
+			if (erwartet.length === 0) {
+				await expect(page.locator('[data-testid="wetter-tab"]:visible'), 'Messaufbau: Schritt Wetter nicht offen').toHaveCount(1);
+				await expect(infoboxen(page), `Schritt ${reiter} trägt eine Infobox (#2794 Teil 3 §4)`).toHaveCount(0);
 			}
 		}
 		// Ortsvergleich-Versand (#2794 S3a: Abschnitt im Schritt Zustellung): nur Morgen 07:00, kein Abend-Slot.
@@ -289,7 +304,6 @@ test.describe('/compare/new (Desktop): Infobox je Reiter', () => {
 		await pruefeInfobox(page, 'versand', 'vergleich');
 		await expect(infobox(page, 'versand', 'vergleich')).toContainText('07:00');
 		await expect(infobox(page, 'versand', 'vergleich')).not.toContainText('18:00');
-		await vergleichTab(page, false, 'wetter').click();
 		await expect(infobox(page, 'wetter-metriken', 'vergleich')).toContainText('3-Tages-Ausblick');
 	});
 });
@@ -308,13 +322,14 @@ test.describe('AC-7: die Infobox ist zustandslos', () => {
 		const speicherSchluessel = async () =>
 			page.evaluate(() => [...Object.keys(localStorage), ...Object.keys(sessionStorage)]);
 
-		await tripBis(page, false, 'wetter');
+		// #2794 Teil 3 (§4): die Infobox „wetter-metriken" steht im Schritt Zustellung.
+		await tripBis(page, false, 'zustellung');
 		await pruefeInfobox(page, 'wetter-metriken', 'route');
 		const vorher = veraendernde.length;
 
+		await wechsleTripReiter(page, false, 'wetter');
 		await wechsleTripReiter(page, false, 'zustellung');
 		await pruefeInfobox(page, 'alarme', 'route');
-		await wechsleTripReiter(page, false, 'wetter');
 		await pruefeInfobox(page, 'wetter-metriken', 'route');
 		expect(veraendernde.slice(vorher), 'Reiterwechsel/Infobox löst eine Schreib-Anfrage aus').toEqual([]);
 		expect(
@@ -323,7 +338,7 @@ test.describe('AC-7: die Infobox ist zustandslos', () => {
 		).toEqual([]);
 
 		await page.reload();
-		await tripBis(page, false, 'wetter');
+		await tripBis(page, false, 'zustellung');
 		await pruefeInfobox(page, 'wetter-metriken', 'route');
 	});
 });
@@ -334,14 +349,32 @@ test.describe('AC-7: die Infobox ist zustandslos', () => {
 for (const mobil of [false, true]) {
 	const ansicht = mobil ? 'Mobil' : 'Desktop';
 
-	test(`AC-8/12/13 Trip (${ansicht}): ⓘ Wertebereiche — Klick, Enter, Leertaste, Esc, Klick daneben, Fokus`, async ({ page }) => {
+	// #2794 Teil 3: Spec feat_2794_s3a_teil3_wetter.md §6 (d) — „Der CorridorEditor verschwindet im
+	// Schritt wetter aus der Sicht" (bleibt nur unsichtbar als Datenquelle gemountet); damit entfällt
+	// das ⓘ Wertebereiche fachlich. Die Wertebereiche bedient der Nutzer dort über „Grenzen ändern"
+	// des WetterTab. Geprüft: kein sichtbares ⓘ Wertebereiche (auch kein verwaistes), die Grenzen
+	// sind im selben Schritt bedienbar.
+	async function pruefeWertebereicheImWetterTab(page: Page): Promise<void> {
+		const reiter = page.locator('[data-testid="wetter-tab"]:visible');
+		await expect(reiter).toHaveCount(1);
+		await expect(reiter.getByTestId('wetter-tab-laden')).toHaveCount(0, { timeout: 15_000 });
+		await expect(iiKnopf(page, 'wertebereiche'), 'ⓘ Wertebereiche sichtbar, obwohl der CorridorEditor unsichtbar ist').toHaveCount(0);
+		await expect(sprechblase(page, 'wertebereiche')).toBeHidden();
+		const knopf = reiter.locator('[data-testid^="wetter-grenzen-aendern-"]').first();
+		await expect(knopf).toBeVisible();
+		await knopf.click();
+		await expect(knopf).toHaveText('Fertig');
+		await expect(reiter.locator('[data-testid^="wetter-grenze-"]').first()).toBeEditable();
+	}
+
+	test(`AC-8/12/13 Trip (${ansicht}): ⓘ Wertebereiche entfällt (#2794 Teil 3 §6 d) — Grenzen im WetterTab`, async ({ page }) => {
 		await tripBis(page, mobil, 'wetter');
-		await pruefePopover(page, 'wertebereiche', infobox(page, 'wertebereiche', 'route'));
+		await pruefeWertebereicheImWetterTab(page);
 	});
 
-	test(`AC-8/12/13 Ortsvergleich (${ansicht}): ⓘ Wertebereiche — ${mobil ? 'CorridorEditorMobile' : 'CorridorEditor'}`, async ({ page }) => {
+	test(`AC-8/12/13 Ortsvergleich (${ansicht}): ⓘ Wertebereiche entfällt (#2794 Teil 3 §6 d) — Grenzen im WetterTab`, async ({ page }) => {
 		await vergleichBis(page, mobil, 'wetter');
-		await pruefePopover(page, 'wertebereiche', infobox(page, 'wertebereiche', 'vergleich'));
+		await pruefeWertebereicheImWetterTab(page);
 	});
 }
 
@@ -412,7 +445,8 @@ for (const mobil of [false, true]) {
 				}
 			}
 		}
-		expect(geoeffnet, 'Messaufbau: es wurden zu wenige Sprechblasen geöffnet (Wertebereiche, Schwelle, Cooldown)').toBeGreaterThanOrEqual(3);
+		// #2794 Teil 3 (§6 d): ⓘ Wertebereiche entfällt im Schritt Wetter — es bleiben Schwelle und Cooldown.
+		expect(geoeffnet, 'Messaufbau: es wurden zu wenige Sprechblasen geöffnet (Schwelle, Cooldown)').toBeGreaterThanOrEqual(2);
 		expect(fehler, `Konsolenfehler: ${fehler.join(' | ')}`).toEqual([]);
 	});
 
@@ -434,7 +468,8 @@ for (const mobil of [false, true]) {
 				}
 			}
 		}
-		expect(geoeffnet, 'Messaufbau: es wurden zu wenige Sprechblasen geöffnet (Wertebereiche, Schwelle, Cooldown)').toBeGreaterThanOrEqual(3);
+		// #2794 Teil 3 (§6 d): ⓘ Wertebereiche entfällt im Schritt Wetter — es bleiben Schwelle und Cooldown.
+		expect(geoeffnet, 'Messaufbau: es wurden zu wenige Sprechblasen geöffnet (Schwelle, Cooldown)').toBeGreaterThanOrEqual(2);
 		expect(fehler, `Konsolenfehler: ${fehler.join(' | ')}`).toEqual([]);
 	});
 }

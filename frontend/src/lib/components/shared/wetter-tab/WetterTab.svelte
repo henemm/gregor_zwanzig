@@ -15,14 +15,15 @@
 	import { t, locale } from '$lib/i18n';
 	import { metricLabel } from '$lib/i18n/metricLabel';
 	import { loadCompareSelectionEntries } from '../corridor-editor/compareMetricCatalogLoader.ts';
+	import type { CompareSelectionEntry } from '../weather-metrics-tab/compareMetricSelection.ts';
 	import VorlageKarte from './VorlageKarte.svelte';
 	import AlarmAbKopf from './AlarmAbKopf.svelte';
 	import MetrikZeile from './MetrikZeile.svelte';
 	import NichtImBriefing from './NichtImBriefing.svelte';
 	import WarnungenRadarKarte from './WarnungenRadarKarte.svelte';
 	import AnpassenKarte from './AnpassenKarte.svelte';
-	import { alarmZaehler, eigeneVorlageAmpel, gewitterFehler, grenzenFehler, verschmelzen, zeilenGruppen } from './ampelModell.ts';
-	import type { AlarmAb, Farbe, Kontext } from './ampelModell.ts';
+	import { alarmZaehler, altSchluesselAusKatalog, eigeneVorlageAmpel, gewitterFehler, grenzenFehler, verschmelzen, zeilenGruppen } from './ampelModell.ts';
+	import type { AlarmAb, AltSchluessel, Farbe, Kontext } from './ampelModell.ts';
 	import { ladeWetterDaten, type WetterDaten } from './wetterTabLaden.ts';
 	import { SPEICHERER, anlegeSpeicherer, type SpeicherOptionen } from './wetterTabSpeicherung.ts';
 	import * as Z from './wetterZustand.ts';
@@ -43,12 +44,13 @@
 
 	/** Kontext-Unterschiede als Daten (Ratsche context_herkunft_zweige_eingefroren). */
 	const MIT_RADAR: Record<Kontext, boolean> = { route: false, vergleich: true };
-	const AGGREGATIONEN: Record<Kontext, () => Promise<(id: string) => string>> = {
-		route: async () => () => 'max',
-		vergleich: async () => {
-			const k = await loadCompareSelectionEntries().catch(() => []);
-			return (id) => k.find((e) => e.metric_id === id)?.aggregation ?? 'max';
-		}
+	// Vergleichs-Katalog: Auswertung neuer Metriken und Altformat-Schluessel von `active_metrics`
+	// (Fix-Loop 3, C2 — muss VOR der Erst-Hydration da sein). Scheitert er, ist das ein Ladefehler
+	// wie beim Metrik-Katalog (Fix-Loop 4, F001): Fehlerzustand AC-9, keine Hydration, kein Speichern;
+	// „Erneut laden" fragt ihn neu an (der Lader cacht keinen Fehler). Der Trip braucht ihn nicht.
+	const VERGLEICHS_KATALOG: Record<Kontext, () => Promise<CompareSelectionEntry[]>> = {
+		route: async () => [],
+		vergleich: () => loadCompareSelectionEntries()
 	};
 
 	let phase = $state<'laedt' | 'fehler' | 'bereit'>('laedt');
@@ -59,6 +61,7 @@
 	let fehler = $state<string[]>([]);
 	let hinzu = $state<string | null>(null);
 	let aggregation: (id: string) => string = () => 'max';
+	let altSchluessel: AltSchluessel = {};
 	let gemeldet = '';
 
 	const abo = (): Z.AboSicht => (trip ?? preset ?? {}) as Z.AboSicht;
@@ -78,7 +81,8 @@
 			uebernehmen: (a) => uebernahme[context](a),
 			neuGeladen,
 			anlegen: onAnlegeStand,
-			aggregationFuer: (id) => aggregation(id)
+			aggregationFuer: (id) => aggregation(id),
+			altSchluessel
 		};
 	}
 	const melden = () => (createMode ? anlegeSpeicherer(optionen(), context) : SPEICHERER[context](optionen())).melden();
@@ -87,10 +91,12 @@
 	async function laden(): Promise<void> {
 		phase = 'laedt';
 		try {
-			const d = await ladeWetterDaten(api, context);
+			const [d, katalog] = await Promise.all([ladeWetterDaten(api, context), VERGLEICHS_KATALOG[context]()]);
+			aggregation = (id) => katalog.find((e) => e.metric_id === id)?.aggregation ?? 'max';
+			altSchluessel = altSchluesselAusKatalog(katalog);
 			daten = d;
 			if (!stand) {
-				stand = Z.standAusAbo(context, abo(), d.vorlagen);
+				stand = Z.standAusAbo(context, abo(), d.vorlagen, altSchluessel);
 				gemeldet = signatur(stand);
 				if (createMode) melden();
 			}
@@ -101,7 +107,6 @@
 	}
 	onMount(() => {
 		void laden();
-		void AGGREGATIONEN[context]().then((f) => (aggregation = f));
 	});
 
 	/** Jede Aenderung: neuer Stand; nur wenn sich Gespeichertes aendert, meldet der Speicherer. */
@@ -114,7 +119,7 @@
 	}
 	function neuGeladen(frisch: Z.AboSicht): void {
 		if (!daten) return;
-		stand = Z.standAusAbo(context, frisch, daten.vorlagen);
+		stand = Z.standAusAbo(context, frisch, daten.vorlagen, altSchluessel);
 		gemeldet = signatur(stand);
 		offen = null;
 		entwurf = null;

@@ -193,13 +193,14 @@ const KS_REITER: Record<HubKind, ReiterFall[]> = {
 					email_format: 'compact'
 				}
 			},
+			// #2794 Teil 3 (Spec feat_2794_s3a_teil3_wetter.md §4): Reiter Wetter = WetterTab; die
+			// Metrik-Geste ist „−" an der Zeile (AC-19).
 			bereit: async (p) => {
-				const tab = p.locator('[data-testid="weather-metrics-tab"]:visible');
-				await expect(tab.getByTestId('wm2-grundauswahl').getByRole('button', { name: /Schneehöhe/ })).toBeVisible({ timeout: 10_000 });
+				const tab = p.locator('[data-testid="wetter-tab"]:visible');
+				await expect(tab.getByTestId('wetter-zeile-entfernen-snow_depth')).toBeVisible({ timeout: 10_000 });
 			},
 			aendern: async (p) => {
-				const tab = p.locator('[data-testid="weather-metrics-tab"]:visible');
-				await tab.getByTestId('wm2-grundauswahl').getByRole('button', { name: /Schneehöhe/ }).click();
+				await p.locator('[data-testid="wetter-tab"]:visible').getByTestId('wetter-zeile-entfernen-snow_depth').click();
 			},
 			pruefe: (s) =>
 				expect(
@@ -262,21 +263,23 @@ const KS_REITER: Record<HubKind, ReiterFall[]> = {
 		{
 			reiter: 'Wetter-Metriken',
 			tab: 'wetter',
+			// #2794 Teil 3 (Spec feat_2794_s3a_teil3_wetter.md §4, AC-20): Reiter Wetter = WetterTab,
+			// Schalter Amtliche Warnungen. Auswahl im Neuformat (Katalog-Kennung), beide Warn-Felder gleich.
 			seed: {
 				official_alerts_enabled: true,
-				display_config: { active_metrics: ['snow_depth_cm'], telegram_style: 'kurzform' }
+				official_warnings: { enabled: true },
+				display_config: { active_metrics: [{ metric_id: 'snow_depth', aggregation: 'max' }], telegram_style: 'kurzform' }
 			},
 			bereit: async (p) => {
-				await expect(
-					p.locator('[data-testid="weather-metrics-tab-vergleich"]:visible [data-testid="report-show-official-alerts"]')
-				).toBeVisible({ timeout: 10_000 });
+				await expect(p.locator('[data-testid="wetter-tab"]:visible [data-testid="wetter-warnungen-schalter"]')).toBeVisible({ timeout: 10_000 });
 			},
 			aendern: async (p) => {
-				await p
-					.locator('[data-testid="weather-metrics-tab-vergleich"]:visible [data-testid="report-show-official-alerts"] input[type="checkbox"]')
-					.click();
+				await p.locator('[data-testid="wetter-tab"]:visible [data-testid="wetter-warnungen-schalter"]').click();
 			},
-			pruefe: (s) => expect(s.official_alerts_enabled, 'Wetter-Metriken-Änderung von B fehlt auf dem Server').toBe(false)
+			// #2794 Teil 3 (Spec Datenfluss „Konflikt", AC-38): der Vergleich lädt bei 412 das Abo neu und
+			// überschreibt den fremden Stand nicht; „Nochmal speichern" sendet den neu geladenen Stand.
+			// Die Zusicherung „Name von A bleibt" gilt unverändert; B's Schalter steht danach auf dem Serverstand.
+			pruefe: (s) => expect(s.official_alerts_enabled, 'AC-38: nach dem Neuladen gilt der Serverstand').toBe(true)
 		}
 	]
 };

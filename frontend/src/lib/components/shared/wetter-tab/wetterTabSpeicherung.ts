@@ -17,7 +17,7 @@
 import type { SaveFn, SaveStatus } from '../../../stores/saveStatusStore.svelte.ts';
 import { baueWetterMetrikenSpeicherung, mitKonfliktSchluessel } from '../tripSpeicherung.ts';
 import { tripSpeicherPayload, vergleichSpeicherPayload } from './ampelSchreiben.ts';
-import type { VorlagenAmpeln } from './ampelModell.ts';
+import type { AltSchluessel, VorlagenAmpeln } from './ampelModell.ts';
 import type { WarnFelder } from './amtlicheWarnungen.ts';
 import type { AboSicht, WetterStand } from './wetterZustand.ts';
 
@@ -46,6 +46,8 @@ export type SpeicherOptionen = {
 	anlegen?: (nutzlast: unknown) => void;
 	/** Vergleich: Auswertung je neu hinzugefuegter Metrik (Katalog der Vergleichs-Metriken). */
 	aggregationFuer?: (id: string) => string;
+	/** Vergleich: Altformat-Schluessel von `active_metrics` -> Groesse (Fix-Loop 3, C2). */
+	altSchluessel?: AltSchluessel;
 };
 
 export type Speicherer = { melden(): void };
@@ -77,6 +79,7 @@ export function vergleichNutzlast(o: SpeicherOptionen) {
 		auswahl: s.auswahl,
 		displayConfig: (abo.display_config ?? {}) as Parameters<typeof vergleichSpeicherPayload>[0]['displayConfig'],
 		aggregationFuer: o.aggregationFuer ?? (() => 'max'),
+		altSchluessel: o.altSchluessel,
 		warnFelder: abo as WarnFelder,
 		warnungenAn: s.warnungenAn,
 		radarAn: s.radarAn,

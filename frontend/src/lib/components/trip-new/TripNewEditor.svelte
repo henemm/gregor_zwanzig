@@ -47,6 +47,7 @@
 		applyAlarmChannelToggle,
 		applyAlarmThresholdChange,
 		applyAlarmMetricLevelChange,
+		warnungenNachWetterBericht,
 		unlockedTabs,
 		doneTabs,
 		stageDate,
@@ -465,14 +466,16 @@
 	// als Startauswahl nimmt statt einer leeren Liste.
 	// Fix-Loop F001 (Neuaufbau beim Wechsel Desktop/Mobil): die zuletzt gemeldete Ampel gehoert
 	// zur Abo-Sicht, sonst liest der neue WetterTab den Profil-Standard und meldet ihn zurueck.
-	// Fix-Loop 2 (F-A1, AC-20): der gemeldete Warnungen-Schalter (undefined bis zum ersten Bericht)
-	// steht in der Abo-Sicht und im POST in BEIDEN Feldern.
-	let wetterWarnungenAn = $state<boolean | undefined>(undefined);
+	// Fix-Loop 3 (C3): „Amtliche Warnungen" hat EINEN Eigentuemer, `alarm.officialWarningsEnabled`
+	// (Neuanlage-Vorgabe aus, #1258). Die Abo-Sicht des Reiters Wetter und der POST tragen BEIDE
+	// Felder mit diesem Wert (AC-20); ein Bericht des Reiters Wetter wirkt nur bei einer Geste dort
+	// (warnungenNachWetterBericht), eine Geste in der Zustellung baut ihn neu auf (wetterNeuaufbau).
+	let wetterWarnungenGemeldet: boolean | undefined = undefined;
+	let wetterNeuaufbau = $state(0);
 	const wetterAnlegeTrip = $derived<Trip>({
 		...stubTrip,
-		...(wetterWarnungenAn !== undefined
-			? { official_alerts_enabled: wetterWarnungenAn, official_warnings: { enabled: wetterWarnungenAn } }
-			: {}),
+		official_alerts_enabled: alarm.officialWarningsEnabled,
+		official_warnings: { enabled: alarm.officialWarningsEnabled },
 		display_config: {
 			...(weatherMetrics.length > 0 ? stubTrip.display_config : { channels }),
 			...(wetterAmpel ? { ampel: wetterAmpel } : {})
@@ -482,8 +485,10 @@
 		const { weatherConfig, tripFelder } = n as WetterAnlegeNutzlast;
 		handleWeatherMetricsChange(weatherConfig.metrics);
 		wetterAmpel = weatherConfig.ampel;
-		wetterWarnungenAn = tripFelder.official_alerts_enabled;
-		if (alarm.officialWarningsEnabled !== tripFelder.official_alerts_enabled) handleAlarmOfficialWarningsChange(tripFelder.official_alerts_enabled);
+		const gemeldet = tripFelder.official_alerts_enabled;
+		const an = warnungenNachWetterBericht(alarm.officialWarningsEnabled, wetterWarnungenGemeldet, gemeldet);
+		wetterWarnungenGemeldet = gemeldet;
+		if (an !== alarm.officialWarningsEnabled) alarm = { ...alarm, officialWarningsEnabled: an };
 		const rc = tripFelder.report_config;
 		handleDayWindowChange({ day_window_start_hour: rc.day_window_start_hour, day_window_end_hour: rc.day_window_end_hour });
 	}
@@ -501,7 +506,8 @@
 	function handleAlarmChannelToggle(kind: ChannelKind) { alarm = applyAlarmChannelToggle(alarm, kind); }
 	function handleAlarmThresholdChange(kind: ChannelKind, level: ChannelThreshold) { alarm = applyAlarmThresholdChange(alarm, kind, level); }
 	function handleAlarmMetricLevelChange(metric: AlertMetric, level: SensLevel) { alarm = applyAlarmMetricLevelChange(alarm, metric, level); }
-	function handleAlarmOfficialWarningsChange(an: boolean) { alarm = { ...alarm, officialWarningsEnabled: an }; }
+	// Geste im Schritt Zustellung: der verborgen gemountete Reiter Wetter liest den Wert neu (C3).
+	function handleAlarmOfficialWarningsChange(an: boolean) { alarm = { ...alarm, officialWarningsEnabled: an }; wetterNeuaufbau += 1; }
 	function handleAlarmCooldownChange(minuten: number | undefined) { alarm = { ...alarm, cooldownMinutes: minuten }; }
 	function handleAlarmQuietHoursChange(von: string | undefined, bis: string | undefined) { alarm = { ...alarm, quietFrom: von, quietTo: bis }; }
 	function handleAlarmMetricChannelChange(k: string, e: AlertMetricChannelEntry) { alarm = { ...alarm, metricChannels: { ...(alarm.metricChannels ?? {}), [k]: e } }; } // #1895 S3b1
@@ -530,7 +536,8 @@
 				corridors,
 				activity: selectedActivity,
 				ampel: wetterAmpel,
-				officialAlertsEnabled: wetterWarnungenAn,
+				// C3: derselbe Eigentuemer wie official_warnings.enabled (ueber `alarm`), AC-20.
+				officialAlertsEnabled: alarm.officialWarningsEnabled,
 			};
 			const payload = buildCreateTripPayload(state);
 			const created = await api.post<Trip>('/api/trips', payload);
@@ -915,7 +922,9 @@
 			<CorridorEditor context="route" trip={stubTrip} createMode={true} showInfobox={true} {corridors} onCorridorsChange={handleCorridorsChange} onVorbelegungFertig={handleVorbelegungFertig} />
 		</div>
 		<div style:display={activeTab === 'wetter' ? '' : 'none'}>
-			<WetterTab context="route" trip={wetterAnlegeTrip} createMode={true} onAnlegeStand={handleWetterAnlegeStand} />
+			{#key wetterNeuaufbau}
+				<WetterTab context="route" trip={wetterAnlegeTrip} createMode={true} onAnlegeStand={handleWetterAnlegeStand} />
+			{/key}
 			<!-- #2347 S4 (AC-20): Weiter-Fuß wie compare-editor-continue-zustellung im Vergleich. -->
 			<div style="padding: 0 40px 60px; display: flex; justify-content: flex-end;">
 				<Btn data-testid="trip-new-continue-zustellung" variant="accent" size="md" onclick={makeEtappenContinueHandler('zustellung')}>{$t('trip.anlegen.zustellung_einrichten')}</Btn>
@@ -1179,7 +1188,9 @@
 				<CorridorEditor context="route" trip={stubTrip} createMode={true} showInfobox={true} {corridors} onCorridorsChange={handleCorridorsChange} onVorbelegungFertig={handleVorbelegungFertig} />
 			</div>
 			<div style:display={activeTab === 'wetter' ? '' : 'none'}>
-				<WetterTab context="route" trip={wetterAnlegeTrip} createMode={true} onAnlegeStand={handleWetterAnlegeStand} />
+				{#key wetterNeuaufbau}
+					<WetterTab context="route" trip={wetterAnlegeTrip} createMode={true} onAnlegeStand={handleWetterAnlegeStand} />
+				{/key}
 			</div>
 			{/if}
 

@@ -20,7 +20,7 @@ import { register } from 'node:module';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
-import { live } from './wetterTabDaten.ts';
+import { live, vergleichsKatalogFetch } from './wetterTabDaten.ts';
 import { vorlagenAusTemplates } from '../ampelModell.ts';
 import { standAusAbo, type AboSicht } from '../wetterZustand.ts';
 import { tripNutzlast, vergleichNutzlast } from '../wetterTabSpeicherung.ts';
@@ -115,7 +115,13 @@ describe('F-A2/AC-21: Radar lesen und Umlegen als Aenderung erkennen', () => {
 			onAnlegeStand: (n: unknown) => berichte.push(n),
 			api
 		});
-		await u.laden();
+		// Fix-Loop 4 (F001): im Vergleich gehoert der Vergleichs-Katalog (globales `api`) zum Laden.
+		const zurueck = vergleichsKatalogFetch();
+		try {
+			await u.laden();
+		} finally {
+			zurueck();
+		}
 		assert.equal(u.phase, 'bereit', 'Messaufbau: WetterTab hat nicht geladen');
 		assert.equal(berichte.length, 1, 'Messaufbau: erster Stand-Bericht fehlt');
 		u.aendern({ ...u.stand, radarAn: true });

@@ -48,6 +48,43 @@ export function live(): { metrics: Record<string, Json[]>; templates: Json[] } {
 	return structuredClone(cache!);
 }
 
+const PY_VERGLEICHS_KATALOG = [
+	'import sys, json',
+	"sys.path.insert(0, 'src'); sys.path.insert(0, '.')",
+	'from output.renderers.compare_metric_catalog import get_compare_metric_catalog',
+	"print(json.dumps({'metrics': get_compare_metric_catalog(lang='de')}, ensure_ascii=False))"
+].join('\n');
+
+let vergleichsCache: Json | null = null;
+
+/** Die echte Antwort von `GET /api/compare/metrics` (Python-Core, Fix-Loop 4). */
+export function liveVergleichsKatalog(): Json {
+	if (!vergleichsCache) {
+		vergleichsCache = JSON.parse(
+			execFileSync('uv', ['run', 'python3', '-c', PY_VERGLEICHS_KATALOG], { cwd: REPO, encoding: 'utf-8', maxBuffer: 32 * 1024 * 1024 }).trim()
+		);
+	}
+	return structuredClone(vergleichsCache);
+}
+
+/** Ersetzt `globalThis.fetch` fuer `/api/compare/metrics` (Katalog-Lader des WetterTab nutzt das
+ *  globale `api`); `ok()` steuert, ob der Abruf gelingt. Rueckgabe: Wiederherstellen. */
+export function vergleichsKatalogFetch(ok: () => boolean = () => true): () => void {
+	const vorher = globalThis.fetch;
+	(globalThis as { fetch: unknown }).fetch = async (input: unknown) => {
+		const pfad = new URL(String(input), 'http://gz.invalid').pathname;
+		if (pfad === '/api/compare/metrics') {
+			return ok()
+				? new Response(JSON.stringify(liveVergleichsKatalog()), { status: 200, headers: { 'Content-Type': 'application/json' } })
+				: new Response('{"detail":"kaputt"}', { status: 503, headers: { 'Content-Type': 'application/json' } });
+		}
+		return new Response('{}', { status: 404 });
+	};
+	return () => {
+		(globalThis as { fetch: unknown }).fetch = vorher;
+	};
+}
+
 const PY_AUFLOESEN = [
 	'import sys, json',
 	"sys.path.insert(0, 'src'); sys.path.insert(0, '.')",

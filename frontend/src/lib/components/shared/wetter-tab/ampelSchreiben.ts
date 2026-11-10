@@ -9,7 +9,8 @@
 // Kein Browser-/SvelteKit-Import, lauffaehig unter node --experimental-strip-types.
 
 import type { Ampel, AmpelMetrik, AmpelSeite } from './ampelModell.ts';
-import { aktiveMetriken, gleicheSeite } from './ampelModell.ts';
+import { aktiveMetriken, gleicheSeite, vergleichsMetrikId, type AltSchluessel } from './ampelModell.ts';
+import { klon } from './klon.ts';
 import { amtlicheWarnungenFelder, type WarnFelder } from './amtlicheWarnungen.ts';
 
 const OHNE_ZEILE: AmpelMetrik = { enabled: false, lower: {}, upper: {}, alarm_ab: 'never' };
@@ -56,7 +57,7 @@ type TripMetrik = { metric_id: string; enabled: boolean } & Record<string, unkno
 
 /** Trip `metrics[]`: bestehende Eintraege in ihrer Reihenfolge (nur `enabled` neu), neue hinten. */
 function tripMetriken(bestand: TripMetrik[] | undefined, auswahl: string[]): TripMetrik[] {
-	const liste = (Array.isArray(bestand) ? bestand : []).map((e) => ({ ...structuredClone(e), enabled: auswahl.includes(e.metric_id) }));
+	const liste = (Array.isArray(bestand) ? bestand : []).map((e) => ({ ...klon(e), enabled: auswahl.includes(e.metric_id) }));
 	const da = new Set(liste.map((e) => e.metric_id));
 	for (const id of auswahl) if (!da.has(id)) liste.push({ metric_id: id, enabled: true });
 	return liste;
@@ -64,10 +65,29 @@ function tripMetriken(bestand: TripMetrik[] | undefined, auswahl: string[]): Tri
 
 type VergleichMetrik = { metric_id: string; aggregation: string } & Record<string, unknown>;
 
-/** Vergleich `active_metrics`: bestehende Eintraege der Auswahl in ihrer Reihenfolge, neue hinten. */
-function vergleichMetriken(bestand: VergleichMetrik[] | undefined, auswahl: string[], aggregationFuer: (id: string) => string): VergleichMetrik[] {
-	const liste = (Array.isArray(bestand) ? bestand : []).filter((e) => auswahl.includes(e.metric_id)).map((e) => structuredClone(e));
-	const da = new Set(liste.map((e) => e.metric_id));
+/** Vergleich `active_metrics`: bestehende Eintraege der Auswahl in ihrer Reihenfolge, neue hinten.
+ *  Altformat-Eintraege (Zeichenkette, api_contract #1373) werden an ihrem Platz ins Neuformat
+ *  uebersetzt; ein nicht aufloesbarer Schluessel bleibt unveraendert stehen (verlustfrei).
+ *  Doppelte Eintraege (gleiche Groesse + Auswertung, z. B. Alt- und Neuformat derselben Metrik)
+ *  werden zu einem (Fix-Loop 4): das erste Vorkommen gewinnt, die Reihenfolge bleibt. Verschiedene
+ *  Auswertungen derselben Groesse (Temperatur max/min) bleiben getrennte Eintraege. */
+function vergleichMetriken(
+	bestand: (VergleichMetrik | string)[] | undefined,
+	auswahl: string[],
+	aggregationFuer: (id: string) => string,
+	alt: AltSchluessel = {}
+): (VergleichMetrik | string)[] {
+	const gesehen = new Set<string>();
+	const liste: (VergleichMetrik | string)[] = [];
+	for (const e of Array.isArray(bestand) ? bestand : []) {
+		if (!auswahl.includes(vergleichsMetrikId(e, alt))) continue;
+		const eintrag = typeof e === 'string' ? (alt[e] ? { ...alt[e] } : e) : klon(e);
+		const schluessel = typeof eintrag === 'string' ? eintrag : `${eintrag.metric_id}|${eintrag.aggregation}`;
+		if (gesehen.has(schluessel)) continue;
+		gesehen.add(schluessel);
+		liste.push(eintrag);
+	}
+	const da = new Set(liste.map((e) => vergleichsMetrikId(e, alt)));
 	for (const id of auswahl) if (!da.has(id)) liste.push({ metric_id: id, aggregation: aggregationFuer(id) });
 	return liste;
 }
@@ -98,7 +118,7 @@ export function tripSpeicherPayload(e: TripSpeicherEingabe) {
 			official_alerts_enabled: warn.official_alerts_enabled,
 			official_warnings: warn.official_warnings,
 			report_config: {
-				...structuredClone(e.reportConfig ?? {}),
+				...klon(e.reportConfig ?? {}),
 				day_window_start_hour: e.tagesfenster.start,
 				day_window_end_hour: e.tagesfenster.end
 			}
@@ -110,8 +130,10 @@ export type VergleichSpeicherEingabe = {
 	vorlage: Ampel;
 	aufgeloest: Ampel;
 	auswahl: string[];
-	displayConfig: { active_metrics?: VergleichMetrik[] } & Record<string, unknown>;
+	displayConfig: { active_metrics?: (VergleichMetrik | string)[] } & Record<string, unknown>;
 	aggregationFuer: (id: string) => string;
+	/** Altformat-Schluessel -> Groesse (Vergleichs-Katalog); fehlt er, bleiben Zeichenketten unveraendert. */
+	altSchluessel?: AltSchluessel;
 	warnFelder: WarnFelder | null | undefined;
 	warnungenAn: boolean;
 	radarAn: boolean;
@@ -124,9 +146,9 @@ export function vergleichSpeicherPayload(e: VergleichSpeicherEingabe) {
 	const warn = amtlicheWarnungenFelder(e.warnungenAn, e.warnFelder);
 	return {
 		display_config: {
-			...structuredClone(e.displayConfig ?? {}),
+			...klon(e.displayConfig ?? {}),
 			ampel: abweichungsMenge(e.vorlage, e.aufgeloest, e.auswahl),
-			active_metrics: vergleichMetriken(e.displayConfig?.active_metrics, e.auswahl, e.aggregationFuer)
+			active_metrics: vergleichMetriken(e.displayConfig?.active_metrics, e.auswahl, e.aggregationFuer, e.altSchluessel)
 		},
 		official_alerts_enabled: warn.official_alerts_enabled,
 		official_warnings: warn.official_warnings,
@@ -149,7 +171,7 @@ export type EigeneVorlageEingabe = {
 /** Body fuer POST /api/metric-presets: aufgeloeste Abo-Ampel + Art, ohne Zeithorizonte und Zusammenfassung. */
 export function eigeneVorlagePayload(e: EigeneVorlageEingabe) {
 	const beschreibung = (e.beschreibung ?? '').trim();
-	const ampel = structuredClone(e.ampel);
+	const ampel = klon(e.ampel);
 	return {
 		name: (e.name ?? '').trim(),
 		...(beschreibung ? { description: beschreibung } : {}),

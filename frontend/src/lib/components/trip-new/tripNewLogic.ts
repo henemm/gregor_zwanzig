@@ -179,6 +179,17 @@ export function initialCreateTripAlarmState(): CreateTripAlarmState {
 	};
 }
 
+/**
+ * Fix-Loop 3 #2794 (C3): „Amtliche Warnungen" hat beim Anlegen EINEN Eigentuemer, den
+ * Alarm-Zustand (`officialWarningsEnabled`, Neuanlage-Vorgabe aus, #1258). Ein Stand-Bericht des
+ * Reiters Wetter uebernimmt seinen Wert nur bei einer Geste DORT, also wenn er sich gegenueber
+ * dem letzten Bericht desselben Reiters aendert. Der erste Bericht (Lesart) und ein Echo des
+ * alten Werts nach einer Geste im Schritt Zustellung lassen den Editor-Wert stehen.
+ */
+export function warnungenNachWetterBericht(aktuell: boolean, zuletztGemeldet: boolean | undefined, gemeldet: boolean): boolean {
+	return zuletztGemeldet !== undefined && gemeldet !== zuletztGemeldet ? gemeldet : aktuell;
+}
+
 export function applyAlarmChannelToggle(state: CreateTripAlarmState, kind: ChannelKind): CreateTripAlarmState {
 	return { ...state, channels: { ...state.channels, [kind]: !state.channels[kind] } };
 }

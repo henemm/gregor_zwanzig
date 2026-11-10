@@ -79,7 +79,7 @@
 //     --project=tests --reporter=list
 
 import { test, expect, type Page } from '@playwright/test';
-import { E2E_TEST_PREFIX, cleanupTracked, createTestLocation, registerForCleanup } from './helpers';
+import { E2E_TEST_PREFIX, cleanupTracked, createTestLocation, registerForCleanup, waehleOption } from './helpers';
 
 test.afterEach(async ({ request }) => {
 	await cleanupTracked(request);
@@ -504,39 +504,45 @@ test.describe('Issue #2317: jede Trip-Speicherung überlebt das Neuladen und wir
 			}
 		});
 
-		// #2794 S3a: Grundauswahl und Tagesfenster stehen im Reiter Wetter.
+		// #2794 Teil 3 (Spec feat_2794_s3a_teil3_wetter.md §4, AC-19, AC-21): der Reiter Wetter ist der
+		// WetterTab. Die Metrik-Geste ist „−" an der Zeile Böen, das Tagesfenster steht in der
+		// eingeklappten Karte „Anpassen" (Select-Atom statt nativem <select>). Beide Änderungen gehen
+		// in EINEM Speichervorgang aus zwei PUTs hinaus (weather-config + Trip, Spec Datenfluss).
 		await page.goto(`/trips/${tripId}?tab=wetter`);
-		const tab = page.getByTestId('weather-metrics-tab');
+		const tab = page.locator('[data-testid="wetter-tab"]:visible');
 		await expect(tab).toBeVisible({ timeout: 15_000 });
-		const boeen = tab.locator('[data-testid="wm2-grundauswahl"] .toggle-btn[title="Böen"]');
-		await expect(boeen, 'Vorbedingung: Böen ist in der Grundauswahl aktiv').toHaveClass(/\bon\b/, { timeout: 10_000 });
-		const startStunde = tab.locator('[data-testid="day-window-start-hour"]:visible').first();
+		await expect(tab.getByTestId('wetter-tab-laden')).toHaveCount(0, { timeout: 15_000 });
+		const boeen = tab.getByTestId('wetter-zeile-entfernen-gust');
+		await expect(boeen, 'Vorbedingung: Böen ist im Briefing').toBeVisible({ timeout: 10_000 });
+		await tab.getByTestId('wetter-anpassen-aufklappen').click();
+		const startStunde = tab.getByTestId('day-window-start-hour');
 		await expect(startStunde).toBeVisible({ timeout: 10_000 });
-		const vorher = await startStunde.inputValue();
-		const ziel = vorher === '6' ? '7' : '6';
+		const vorher = (await startStunde.innerText()).trim();
+		const ziel = vorher.startsWith('06') ? '7' : '6';
+		const zielText = `0${ziel}:00`;
 		await page.waitForLoadState('networkidle');
 
 		const dialogs = collectLeaveDialogs(page);
 
 		// Beide Entlade-PUTs (weather-config UND Trip) liegen unter /api/trips/{id}.
 		const halt = await haltePutBisNeuemDokument(page, `/api/trips/${tripId}`);
-		await startStunde.selectOption(ziel);
+		await waehleOption(page, startStunde, zielText);
 		await boeen.click();
 		await page.reload();
 		halt.aktiv = false;
 
-		const tabNachher = page.getByTestId('weather-metrics-tab');
+		const tabNachher = page.locator('[data-testid="wetter-tab"]:visible');
 		await expect(tabNachher).toBeVisible({ timeout: 15_000 });
-		const boeenNachher = tabNachher.locator('[data-testid="wm2-grundauswahl"] .toggle-btn[title="Böen"]');
-		await expect(boeenNachher).toBeVisible({ timeout: 10_000 });
+		await expect(tabNachher.getByTestId('wetter-tab-laden')).toHaveCount(0, { timeout: 15_000 });
 		await expect(
-			boeenNachher,
-			'#2317 AC-4: nach dem Neuladen muss binnen 3 s Böen abgewählt angezeigt werden (Wetter-Metriken)'
-		).not.toHaveClass(/\bon\b/, { timeout: 3_000 });
+			tabNachher.getByTestId('wetter-zeile-gust'),
+			'#2317 AC-4: nach dem Neuladen muss binnen 3 s Böen abgewählt angezeigt werden (Wetter)'
+		).toHaveCount(0, { timeout: 3_000 });
+		await tabNachher.getByTestId('wetter-anpassen-aufklappen').click();
 		await expect(
-			tabNachher.locator('[data-testid="day-window-start-hour"]:visible').first(),
-			`#2317 AC-4: nach dem Neuladen muss binnen 3 s der Tagesfenster-Beginn ${ziel}:00 angezeigt werden (Report-Einstellung)`
-		).toHaveValue(ziel, { timeout: 3_000 });
+			tabNachher.getByTestId('day-window-start-hour'),
+			`#2317 AC-4: nach dem Neuladen muss binnen 3 s der Tagesfenster-Beginn ${zielText} angezeigt werden (Report-Einstellung)`
+		).toHaveText(zielText, { timeout: 3_000 });
 		await pruefeGehalten(halt, '#2317 AC-4', 2);
 
 		await expect

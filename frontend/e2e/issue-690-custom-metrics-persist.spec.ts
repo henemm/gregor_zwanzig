@@ -62,26 +62,55 @@ async function clearTestPresets(request: APIRequestContext) {
 	}
 }
 
+// #2794 Teil 3 (Spec feat_2794_s3a_teil3_wetter.md §4/§5, AC-10, AC-11, AC-42): der Reiter Wetter ist
+// der WetterTab. Eigene Profile heißen „eigene Vorlagen"; sie stehen im Vorlagen-Picker unter
+// „Eigene" (getrennt von den Systemvorlagen) statt als Pille in einer Preset-Leiste. Der Dialog
+// „Als eigene Vorlage speichern" (Knopf `wetter-vorlage-als-eigene`) speichert die Ampel des Abos;
+// eine eigene Vorlage wird über den Picker samt Rückfrage übernommen (AC-11). Laut AC-42 meldet der
+// Reiter nach dem Speichern den Erfolg, die Vorlage wird dabei nicht automatisch übernommen.
+const reiter = (page: Page) => page.locator('[data-testid="wetter-tab"]:visible');
+
 async function openWeatherTab(page: Page, tripId: string) {
-	await page.goto(`/trips/${tripId}?tab=wetter`); // #2794 S3a: Metrik-Auswahl im Reiter Wetter
-	await page.waitForSelector('[data-testid="weather-metrics-tab"]', { timeout: 15_000 });
+	await page.goto(`/trips/${tripId}?tab=wetter`);
+	await expect(reiter(page)).toBeVisible({ timeout: 15_000 });
+	await expect(reiter(page).getByTestId('wetter-tab-laden')).toHaveCount(0, { timeout: 15_000 });
 }
 
-// Eine Metrik umschalten → Tab wird „dirty" → der Speichern-Link erscheint.
-// Fix #971: der v2-Editor rendert keine `weather-metrics-tab-checkbox-*` mehr;
-// Aktivierung läuft über die Grundauswahl-Sektion (echter Klickpfad, kein Mock).
-// Die Live-Oberfläche läuft im Autosave-Modus (#758) — die „ungespeichert"-Affordanz
-// ist der Speichern-Link „als eigenes Profil speichern" (nur bei Dirty, vor dem
-// 700ms-Autosave). Deshalb sofort prüfen und im Anschluss zügig den Dialog öffnen.
+/** Metrik-Zeilen (ohne die „−"-Knöpfe) — die Auswahl, wie der Reiter sie zeigt. */
+async function zeilenIds(page: Page): Promise<string[]> {
+	const ids = await reiter(page)
+		.locator('[data-testid^="wetter-zeile-"]:not([data-testid^="wetter-zeile-entfernen-"])')
+		.evaluateAll((els) => els.map((e) => (e.getAttribute('data-testid') ?? '').replace('wetter-zeile-', '')));
+	return ids.sort();
+}
+
+async function pickerOeffnen(page: Page) {
+	await reiter(page).getByTestId('wetter-vorlage-picker').click();
+	await expect(reiter(page).getByTestId('wetter-vorlage-eigene')).toBeVisible();
+}
+
+/** Eine Metrik aus dem Briefing nehmen (AC-19) — der Stand weicht danach von der Vorlage ab. */
 async function makeDirty(page: Page) {
-	await page.getByTestId('wm2-grundauswahl').getByRole('button', { name: 'Gefühlte Temperatur' }).click();
-	await expect(page.getByRole('button', { name: 'als eigenes Profil speichern' })).toBeVisible();
+	await reiter(page).locator('[data-testid^="wetter-zeile-entfernen-"]').first().click();
+	await expect(reiter(page).getByTestId('wetter-vorlage-status')).toHaveText(/^\d+ Abweichung/);
 }
 
-// Speichern-Dialog öffnen (Link „als eigenes Profil speichern" im Dirty-Hinweis).
+// Speichern-Dialog öffnen („Als eigene Vorlage speichern").
 async function openSaveDialog(page: Page) {
-	await page.getByRole('button', { name: 'als eigenes Profil speichern' }).click();
+	await reiter(page).getByTestId('wetter-vorlage-als-eigene').click();
 	await expect(page.locator('[data-testid="save-preset-dialog"]')).toBeVisible();
+}
+
+type Preset = { id: string; name: string; kind?: string; ampel?: { metrics?: Record<string, { enabled?: boolean }> } };
+
+async function speichereVorlage(page: Page, request: APIRequestContext, name: string): Promise<Preset> {
+	await page.fill('[data-testid="save-preset-name"]', name);
+	await page.click('[data-testid="save-preset-submit"]');
+	await expect(page.locator('[data-testid="save-preset-dialog"]')).not.toBeVisible({ timeout: 5_000 });
+	const presets = (await (await request.get('/api/metric-presets')).json()) as Preset[];
+	const created = presets.find((p) => p.name === name);
+	expect(created, 'neues Profil muss persistiert sein').toBeTruthy();
+	return created!;
 }
 
 test.describe('Issue #690: Eigene Metrik-Profile — aktivieren, kennzeichnen, eindeutig', () => {
@@ -103,90 +132,70 @@ test.describe('Issue #690: Eigene Metrik-Profile — aktivieren, kennzeichnen, e
 		await clearTestPresets(request);
 	});
 
-	// AC-1: nach dem Speichern ist das neue Profil sofort aktiv (ohne manuellen Klick).
-	test('AC-1: gespeichertes Profil ist unmittelbar das aktive Profil', async ({ page, request }) => {
+	// AC-1: nach dem Speichern steht das neue Profil sofort (ohne Neuladen) zur Wahl und trägt
+	// genau die aktuelle Auswahl des Abos (#2794 Teil 3, AC-42: Erfolgsmeldung + „Eigene").
+	test('AC-1: gespeichertes Profil steht unmittelbar unter „Eigene" und trägt die aktuelle Auswahl', async ({ page, request }) => {
 		const name = `${PREFIX} Aktiv ${Date.now()}`;
 
 		await openWeatherTab(page, TRIP_A);
 		await makeDirty(page);
 		await openSaveDialog(page);
+		const created = await speichereVorlage(page, request, name);
 
-		await page.fill('[data-testid="save-preset-name"]', name);
-		await page.click('[data-testid="save-preset-submit"]');
-
-		// Dialog schließt.
-		await expect(page.locator('[data-testid="save-preset-dialog"]')).not.toBeVisible({ timeout: 5_000 });
-
-		// Die ID des neu erstellten Profils via API ermitteln.
-		const presets = (await (await request.get('/api/metric-presets')).json()) as Array<{
-			id: string;
-			name: string;
-		}>;
-		const created = presets.find((p) => p.name === name);
-		expect(created, 'neues Profil muss persistiert sein').toBeTruthy();
-		const id = created!.id;
-
-		// Die Pille des neuen Profils ist als aktiv markiert — OHNE manuellen Klick.
-		const pill = page.locator(`[data-testid="weather-preset-pill-${id}"]`);
-		await expect(pill).toBeVisible();
-		await expect(pill).toHaveClass(/active/);
+		await expect(reiter(page).getByTestId('wetter-vorlage-gespeichert')).toContainText(name);
+		await pickerOeffnen(page);
+		await expect(reiter(page).getByTestId('wetter-vorlage-eigene').getByTestId(`wetter-vorlage-eigene-${created.id}`)).toBeVisible();
+		expect(created.kind, 'AC-42: die Vorlage trägt die Art des Kontexts').toBe('route');
+		const aktivInVorlage = Object.entries(created.ampel?.metrics ?? {})
+			.filter(([, e]) => e?.enabled === true)
+			.map(([m]) => m)
+			.sort();
+		expect(aktivInVorlage, 'die Vorlage trägt genau die aktuelle Auswahl des Abos').toEqual(await zeilenIds(page));
 	});
 
-	// AC-2: eigenes Profil trägt „Eigene"-Markierung, System-Vorlage nicht.
-	test('AC-2: eigenes Profil hat „Eigene"-Pille, System-Vorlage nicht', async ({ page, request }) => {
+	// AC-2: eigenes Profil trägt die Kennzeichnung „Eigene", System-Vorlagen nicht.
+	test('AC-2: eigenes Profil steht unter „Eigene", System-Vorlage nicht', async ({ page, request }) => {
 		const name = `${PREFIX} Markiert ${Date.now()}`;
 
 		await openWeatherTab(page, TRIP_A);
 		await makeDirty(page);
 		await openSaveDialog(page);
-		await page.fill('[data-testid="save-preset-name"]', name);
-		await page.click('[data-testid="save-preset-submit"]');
-		await expect(page.locator('[data-testid="save-preset-dialog"]')).not.toBeVisible({ timeout: 5_000 });
+		const { id } = await speichereVorlage(page, request, name);
 
-		const presets = (await (await request.get('/api/metric-presets')).json()) as Array<{
-			id: string;
-			name: string;
-		}>;
-		const id = presets.find((p) => p.name === name)!.id;
-
-		// Eigenes Profil: „Eigene"-Markierung sichtbar.
-		await expect(page.locator(`[data-testid="weather-preset-own-badge-${id}"]`)).toBeVisible();
-
-		// Mindestens eine System-Vorlage-Pille existiert und trägt KEINE „Eigene"-Markierung.
-		const ownBadges = page.locator('[data-testid^="weather-preset-own-badge-"]');
-		const pills = page.locator('[data-testid^="weather-preset-pill-"]');
-		await expect(pills.first()).toBeVisible();
-		// Es gibt mehr Pillen (inkl. System-Vorlagen) als „Eigene"-Badges.
-		expect(await pills.count()).toBeGreaterThan(await ownBadges.count());
+		await pickerOeffnen(page);
+		const eigene = reiter(page).getByTestId('wetter-vorlage-eigene');
+		await expect(eigene.getByTestId(`wetter-vorlage-eigene-${id}`)).toBeVisible();
+		const system = reiter(page).locator('[data-testid^="wetter-vorlage-option-"]');
+		await expect(system.first(), 'Systemvorlagen fehlen im Picker').toBeVisible();
+		await expect(eigene.locator('[data-testid^="wetter-vorlage-option-"]'), 'eine Systemvorlage steht unter „Eigene"').toHaveCount(0);
+		await expect(system.filter({ hasText: name }), 'die eigene Vorlage steht bei den Systemvorlagen').toHaveCount(0);
 	});
 
-	// AC-3 (optional): Profil erscheint auch in der Leiste eines anderen Trips desselben Nutzers.
-	test('AC-3: eigenes Profil erscheint in der Leiste eines anderen Trips', async ({ page, request }) => {
+	// AC-3: Profil erscheint auch im Picker eines anderen Trips desselben Nutzers und lässt sich
+	// dort übernehmen — Trip B zeigt danach genau die Auswahl der Vorlage, auch nach Neuladen.
+	test('AC-3: eigenes Profil erscheint im Picker eines anderen Trips und lässt sich dort übernehmen', async ({ page, request }) => {
 		const name = `${PREFIX} Uebergreifend ${Date.now()}`;
 
-		// Profil auf Trip A anlegen.
 		await openWeatherTab(page, TRIP_A);
 		await makeDirty(page);
 		await openSaveDialog(page);
-		await page.fill('[data-testid="save-preset-name"]', name);
-		await page.click('[data-testid="save-preset-submit"]');
-		await expect(page.locator('[data-testid="save-preset-dialog"]')).not.toBeVisible({ timeout: 5_000 });
+		const { id } = await speichereVorlage(page, request, name);
+		const auswahlA = await zeilenIds(page);
 
-		const presets = (await (await request.get('/api/metric-presets')).json()) as Array<{
-			id: string;
-			name: string;
-		}>;
-		const id = presets.find((p) => p.name === name)!.id;
-
-		// Trip B öffnen → Profil erscheint dort als auswählbare „Eigene"-Pille.
 		await openWeatherTab(page, TRIP_B);
-		const pill = page.locator(`[data-testid="weather-preset-pill-${id}"]`);
-		await expect(pill).toBeVisible();
-		await expect(page.locator(`[data-testid="weather-preset-own-badge-${id}"]`)).toBeVisible();
-
-		// Klick wendet es auf Trip B an → Pille wird aktiv.
-		await pill.click();
-		await expect(pill).toHaveClass(/active/);
+		await pickerOeffnen(page);
+		const eintrag = reiter(page).getByTestId('wetter-vorlage-eigene').getByTestId(`wetter-vorlage-eigene-${id}`);
+		await expect(eintrag).toBeVisible();
+		await eintrag.click();
+		await expect(reiter(page).getByTestId('wetter-vorlage-wechsel-dialog')).toBeVisible();
+		const speichern = page.waitForResponse(
+			(r) => r.request().method() === 'PUT' && new URL(r.url()).pathname === `/api/trips/${TRIP_B}/weather-config`
+		);
+		await reiter(page).getByTestId('wetter-vorlage-wechsel-uebernehmen').click();
+		expect((await speichern).ok()).toBeTruthy();
+		expect(await zeilenIds(page), 'Trip B zeigt die Auswahl der eigenen Vorlage').toEqual(auswahlA);
+		await openWeatherTab(page, TRIP_B);
+		expect(await zeilenIds(page), 'nach Neuladen bleibt die übernommene Vorlage stehen').toEqual(auswahlA);
 	});
 
 	// AC-4: zweites Profil mit gleichem Namen (andere Schreibweise/Leerzeichen) → Fehler, kein Duplikat.
@@ -197,14 +206,9 @@ test.describe('Issue #690: Eigene Metrik-Profile — aktivieren, kennzeichnen, e
 		await openWeatherTab(page, TRIP_A);
 		await makeDirty(page);
 		await openSaveDialog(page);
-		await page.fill('[data-testid="save-preset-name"]', base);
-		await page.click('[data-testid="save-preset-submit"]');
-		await expect(page.locator('[data-testid="save-preset-dialog"]')).not.toBeVisible({ timeout: 5_000 });
+		await speichereVorlage(page, request, base);
 
-		const before = (await (await request.get('/api/metric-presets')).json()) as Array<{
-			id: string;
-			name: string;
-		}>;
+		const before = (await (await request.get('/api/metric-presets')).json()) as Preset[];
 		const countBefore = before.filter((p) => p.name.trim().toLowerCase() === base.trim().toLowerCase()).length;
 		expect(countBefore).toBe(1);
 
@@ -219,10 +223,7 @@ test.describe('Issue #690: Eigene Metrik-Profile — aktivieren, kennzeichnen, e
 		await expect(page.locator('[data-testid="save-preset-dialog"]')).toBeVisible();
 
 		// Kein zweites Profil mit diesem Namen.
-		const after = (await (await request.get('/api/metric-presets')).json()) as Array<{
-			id: string;
-			name: string;
-		}>;
+		const after = (await (await request.get('/api/metric-presets')).json()) as Preset[];
 		const countAfter = after.filter((p) => p.name.trim().toLowerCase() === base.trim().toLowerCase()).length;
 		expect(countAfter, 'kein Duplikat angelegt').toBe(1);
 	});

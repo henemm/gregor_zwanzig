@@ -39,9 +39,22 @@ async function deleteTestTrip(request: import('@playwright/test').APIRequestCont
 	await request.delete(`/api/trips/${TRIP_ID}`).catch(() => {});
 }
 
+// #2794 Teil 3 (Spec feat_2794_s3a_teil3_wetter.md §4/§5, AC-11, AC-12, AC-42): der Reiter Wetter ist
+// der WetterTab. Die Auswahl ändert „−" an einer Metrik-Zeile (AC-19); „ungespeicherte" Abweichung
+// von der Vorlage zeigt der Picker („{n} Abweichung(en)") samt Knopf „Auf ‚…‘ zurücksetzen"; der
+// Dialog heißt „Als eigene Vorlage speichern" (Knopf `wetter-vorlage-als-eigene`), eigene Vorlagen
+// stehen im Picker unter „Eigene" (Pillen der alten Preset-Leiste gibt es nicht mehr).
+const reiter = (page: import('@playwright/test').Page) => page.locator('[data-testid="wetter-tab"]:visible');
+
 async function navigateToMetricsTab(page: import('@playwright/test').Page) {
-	await page.goto(`/trips/${TRIP_ID}?tab=wetter`); // #2794 S3a: Metrik-Auswahl im Reiter Wetter
-	await page.waitForSelector('[data-testid="weather-metrics-tab"]', { timeout: 10_000 });
+	await page.goto(`/trips/${TRIP_ID}?tab=wetter`);
+	await expect(reiter(page)).toBeVisible({ timeout: 10_000 });
+	await expect(reiter(page).getByTestId('wetter-tab-laden')).toHaveCount(0, { timeout: 10_000 });
+}
+
+async function oeffneDialog(page: import('@playwright/test').Page) {
+	await reiter(page).getByTestId('wetter-vorlage-als-eigene').click();
+	await expect(page.locator('[data-testid="save-preset-dialog"]')).toBeVisible();
 }
 
 // Eine Metrik in der Grundauswahl umschalten → Tab wird „dirty".
@@ -52,11 +65,9 @@ async function navigateToMetricsTab(page: import('@playwright/test').Page) {
 // ist der Speichern-Link „als eigenes Profil speichern" (nur bei Dirty sichtbar,
 // bevor der 700ms-Autosave den Snapshot zurücksetzt) — daher sofort prüfen/klicken.
 async function makeDirty(page: import('@playwright/test').Page) {
-	await page
-		.getByTestId('wm2-grundauswahl')
-		.getByRole('button', { name: 'Gefühlte Temperatur' })
-		.click();
-	await expect(page.getByRole('button', { name: 'als eigenes Profil speichern' })).toBeVisible();
+	await reiter(page).locator('[data-testid^="wetter-zeile-entfernen-"]').first().click();
+	await expect(reiter(page).getByTestId('wetter-vorlage-status')).toHaveText(/^\d+ Abweichung/);
+	await expect(reiter(page).getByTestId('wetter-vorlage-zuruecksetzen')).toBeVisible();
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -76,15 +87,14 @@ test.describe('Block B — #178 dirty-State', () => {
 	// Oberfläche Dead Code — dort läuft Autosave (#758), kein expliziter Verwerfen-Button.
 	// Der reale „ungespeichert"-Zustand zeigt sich am Speichern-Link, der nur bei Dirty
 	// erscheint. AC-1 prüft genau diese reale Affordanz (echter Klickpfad, kein Mock).
-	test('AC-1: Grundauswahl-Änderung markiert den Tab als „ungespeichert"', async ({ page }) => {
+	test('AC-1: Auswahl-Änderung zeigt die Abweichung von der Vorlage („ungespeichert" gegenüber der Vorlage)', async ({ page }) => {
 		await navigateToMetricsTab(page);
 
-		// Der Speichern-Link darf initial NICHT sichtbar sein (nichts geändert).
-		await expect(
-			page.getByRole('button', { name: 'als eigenes Profil speichern' })
-		).toHaveCount(0);
+		// Initial: keine Abweichung von der Vorlage, kein Zurücksetzen-Knopf (nichts geändert).
+		await expect(reiter(page).getByTestId('wetter-vorlage-status')).toHaveText('unverändert');
+		await expect(reiter(page).getByTestId('wetter-vorlage-zuruecksetzen')).toHaveCount(0);
 
-		// Eine Grundauswahl-Metrik umschalten → „ungespeichert"-Affordanz erscheint.
+		// Eine Metrik aus dem Briefing nehmen → Abweichung + Zurücksetzen-Knopf erscheinen.
 		await makeDirty(page);
 	});
 });
@@ -129,36 +139,40 @@ test.describe('Block B — #177 SavePresetDialog', () => {
 		expect(Array.isArray(body)).toBe(true);
 	});
 
-	test('AC-6b: Speichern-Link ist bei Dirty sichtbar, Dialog öffnet sich', async ({ page }) => {
+	test('AC-6b: nach einer Änderung öffnet „Als eigene Vorlage speichern" den Dialog', async ({ page }) => {
 		await navigateToMetricsTab(page);
 		await makeDirty(page);
 
-		const trigger = page.getByRole('button', { name: 'als eigenes Profil speichern' });
-		await expect(trigger).toBeVisible();
-		await trigger.click();
-
-		const dialog = page.locator('[data-testid="save-preset-dialog"]');
-		await expect(dialog).toBeVisible();
+		await oeffneDialog(page);
+		await expect(page.locator('[data-testid="save-preset-hinweis"]')).toHaveText(
+			'Gespeichert werden Metrik-Auswahl, Ampel-Grenzen und Alarmstufen. Zustellung, Etappen und Orte gehören nicht dazu.'
+		);
 	});
 
-	test('AC-6c: Speichern-Button deaktiviert bei leerem Namen', async ({ page }) => {
+	test('AC-6c: leerer Name → Pflicht-Hinweis, Dialog bleibt offen, nichts gespeichert', async ({ page }) => {
 		await navigateToMetricsTab(page);
 		await makeDirty(page);
-		await page.getByRole('button', { name: 'als eigenes Profil speichern' }).click();
-		await expect(page.locator('[data-testid="save-preset-dialog"]')).toBeVisible();
+		await oeffneDialog(page);
 
 		const nameInput = page.locator('[data-testid="save-preset-name"]');
 		await nameInput.fill('');
 
-		const submitBtn = page.locator('[data-testid="save-preset-submit"]');
-		await expect(submitBtn).toBeDisabled();
+		// #2794 Teil 3 (Spec AC-42): Name ist Pflicht — statt eines gesperrten Knopfs meldet der Dialog
+		// „Gib der Vorlage einen Namen.", bleibt offen und sendet NICHTS.
+		const posts: string[] = [];
+		page.on('request', (r) => {
+			if (r.method() === 'POST' && new URL(r.url()).pathname === '/api/metric-presets') posts.push(r.url());
+		});
+		await page.locator('[data-testid="save-preset-submit"]').click();
+		await expect(page.locator('[data-testid="save-preset-error"]')).toHaveText('Gib der Vorlage einen Namen.');
+		await expect(page.locator('[data-testid="save-preset-dialog"]')).toBeVisible();
+		expect(posts, 'ohne Namen darf keine Vorlage gesendet werden').toEqual([]);
 	});
 
-	test('AC-6d: POST /api/metric-presets speichert Preset, Preset erscheint als Pille', async ({ page, request }) => {
+	test('AC-6d: POST /api/metric-presets speichert Preset, Preset erscheint unter „Eigene"', async ({ page, request }) => {
 		await navigateToMetricsTab(page);
 		await makeDirty(page);
-		await page.getByRole('button', { name: 'als eigenes Profil speichern' }).click();
-		await expect(page.locator('[data-testid="save-preset-dialog"]')).toBeVisible();
+		await oeffneDialog(page);
 
 		await page.fill('[data-testid="save-preset-name"]', 'Test-Preset Block-B');
 		await page.click('[data-testid="save-preset-submit"]');
@@ -172,8 +186,12 @@ test.describe('Block B — #177 SavePresetDialog', () => {
 		const created = presets.find((p) => p.name === 'Test-Preset Block-B');
 		expect(created, 'Preset muss persistiert sein').toBeTruthy();
 
-		// Das neue Preset erscheint als Pille in der v2-Preset-Leiste
-		await expect(page.locator(`[data-testid="weather-preset-pill-${created!.id}"]`)).toBeVisible();
+		// AC-42: Erfolgsmeldung, und die neue Vorlage steht im Picker unter „Eigene"
+		await expect(reiter(page).getByTestId('wetter-vorlage-gespeichert')).toHaveText(
+			'Vorlage ‚Test-Preset Block-B‘ gespeichert. Du findest sie unter ‚Eigene‘.'
+		);
+		await reiter(page).getByTestId('wetter-vorlage-picker').click();
+		await expect(reiter(page).getByTestId('wetter-vorlage-eigene').getByTestId(`wetter-vorlage-eigene-${created!.id}`)).toBeVisible();
 	});
 
 	test('AC-7: is_default=true setzt alle anderen auf false', async ({ request }) => {

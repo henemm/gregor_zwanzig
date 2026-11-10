@@ -29,24 +29,29 @@
 // Kein fester Schlaf: Stabilitätsfenster per expect.poll (≥ alte 1,2-s-Nachfrist).
 // Läuft im isolierten CI-Stack (frontend/e2e/ci-stack.sh), Anmeldung über den
 // storageState aus global.setup.ts. Wegwerf-Objekte E2E-GZ-, Aufräumen im finally.
+// #2794 Teil 3 (Spec feat_2794_s3a_teil3_wetter.md §4, „Datenfluss und Speicherwege"): der Reiter
+// Wetter ist jetzt `WetterTab` (testid `wetter-tab`, Vertrag WT in s3a2794-teil3.helpers.ts). Die
+// Zusicherungen MS-1..MS-7 gelten unverändert für den neuen Träger: die Metrik-Geste ist „−" an der
+// Metrik-Zeile (AC-19), der Amtliche-Warnungen-Schalter ist `wetter-warnungen-schalter` (AC-20). Der
+// Speicherweg bleibt je kind derselbe (Trip: weather-config + Trip-Rumpf, Vergleich: EIN PUT).
+// Der Vergleich wird im Neuformat `active_metrics: [{metric_id, aggregation}]` geseedet (Katalog-
+// Kennungen, die der Reiter liest).
 
 import { test, expect, type Locator, type Page, type Request } from '@playwright/test';
-import { HUB_KINDS, HUB_SEL, hubApiPath, openHub, seedHub, type HubKind } from './helpers';
+import { HUB_KINDS, HUB_SEL, hubApiPath, seedHub, type HubKind } from './helpers';
+import { WT, auswahlImStand, oeffneWetter } from './s3a2794-teil3.helpers';
 
 type Stand = Record<string, unknown>;
 const dc = (body: Stand) => (body.display_config as Stand | undefined) ?? {};
 type TripMetrik = { metric_id: string; enabled?: boolean };
 
+/** Die einzige geseedete Metrik (Katalog-Kennung, beide Kontexte). */
+const METRIK = 'snow_depth';
+
 const MS_SEL: Record<
 	HubKind,
 	{
 		seed: Record<string, unknown>;
-		/** Reiter-Wurzel des geteilten WeatherMetricsTab (WeatherMetricsTab.svelte:1438 bzw. :1648). */
-		tab: string;
-		/** Bedienelement der einzigen geseedeten Metrik (Schneehöhe). */
-		metrik: (tab: Locator) => Locator;
-		/** Zeigt das Bedienelement die Metrik als gewählt? */
-		erwarteGewaehlt: (el: Locator, an: boolean, message?: string) => Promise<void>;
 		/** Ist die Metrik im gespeicherten Stand gewählt? */
 		gewaehlt: (s: Stand) => boolean;
 		/** Pfad, auf dem die Metrik-Auswahl gesendet wird, und ihre Auswahl im Rumpf. */
@@ -62,13 +67,15 @@ const MS_SEL: Record<
 		alarm: (page: Page) => Locator;
 		alarmWert: (s: Stand) => unknown;
 		alarmNeu: boolean;
+		/** 412: lädt der Reiter das Abo neu (Vergleich, Spec Datenfluss „Konflikt") oder behält er die Eingabe (Trip)? */
+		konfliktLaedtNeu: boolean;
 	}
 > = {
 	route: {
 		seed: {
 			official_alerts_enabled: true,
 			official_warnings: { enabled: true },
-			display_config: { metrics: [{ metric_id: 'snow_depth', enabled: true, bucket: 'primary', order: 0 }] },
+			display_config: { metrics: [{ metric_id: METRIK, enabled: true, bucket: 'primary', order: 0 }] },
 			// vollständig (seedHub ersetzt report_config flach): Versand-Startwerte aus
 			// seedHub + zwei Eigenschlüssel des Reiters mit NICHT-Startwerten, damit
 			// MS-7 bewacht, dass ein gespeicherter Wert nicht vom Startwert überschrieben wird.
@@ -82,14 +89,7 @@ const MS_SEL: Record<
 				email_format: 'compact'
 			}
 		},
-		tab: 'weather-metrics-tab',
-		// WeatherV2Grundauswahl.svelte:38-47: Umschalt-Knopf je Metrik, aktiv = Klasse `on`.
-		metrik: (tab) => tab.getByTestId('wm2-grundauswahl').getByRole('button', { name: /Schneehöhe/ }),
-		erwarteGewaehlt: async (el, an, message) => {
-			if (an) await expect(el, message).toHaveClass(/(^|\s)on(\s|$)/, { timeout: 10_000 });
-			else await expect(el, message).not.toHaveClass(/(^|\s)on(\s|$)/, { timeout: 10_000 });
-		},
-		gewaehlt: (s) => ((dc(s).metrics as TripMetrik[] | undefined) ?? []).some((m) => m.metric_id === 'snow_depth' && m.enabled),
+		gewaehlt: (s) => auswahlImStand('route', s).includes(METRIK),
 		auswahlPfad: (pfad) => `${pfad}/weather-config`,
 		auswahlImRumpf: (r) => ((r.metrics as TripMetrik[] | undefined) ?? []).filter((m) => m.enabled).map((m) => m.metric_id),
 		auswahlImStand: (s) =>
@@ -98,34 +98,26 @@ const MS_SEL: Record<
 		// alert_rules leitet der Server aus der Metrik-Auswahl ab (#850,
 		// weather_config_701_test.go TestPutTripWeatherConfig_SyncsAlertRules).
 		obenEigen: new Set(['display_config', 'updated_at', 'etag', 'alert_rules']),
-		// Eigenschlüssel des Trip-Wetter-Rumpfs (WeatherMetricsTab.svelte:937-951).
-		dcEigen: new Set(['metrics', 'channel_layouts', 'preset_name', 'telegram_kurzform', 'outlook_metrics', 'outlook_metric_formats']),
-		// Der Trip-Rumpf des Reiters trägt report_config NUR mit den Inhalt-/
-		// Tagesfenster-Schlüsseln (WeatherMetricsTab.svelte:956-961, Spec #1433 §2.3)
-		// — im RED 2026-10-27 gemessen: genau diese Schlüssel kommen beim ersten
-		// Speichern mit ihren Startwerten hinzu. Alle ÜBRIGEN report_config-Schlüssel
-		// (Versand: enabled, Uhrzeiten, …) müssen unverändert bleiben.
+		// Eigenschlüssel des Reiters Wetter in display_config (Spec Datenfluss: `ampel`, `metrics`).
+		dcEigen: new Set(['metrics', 'ampel']),
+		// Der Trip-Rumpf des Reiters trägt report_config mit dem Tagesfenster (Spec Datenfluss,
+		// AC-21). Alle ÜBRIGEN report_config-Schlüssel (Versand: enabled, Uhrzeiten, …) müssen
+		// unverändert bleiben.
 		teilEigen: {
-			report_config: new Set([
-				'show_compact_summary',
-				'wind_exposition_min_elevation_m',
-				'show_stage_stats',
-				'show_metrics_summary',
-				'show_outlook',
-				'email_format',
-				'show_yesterday_comparison',
-				'day_window_start_hour',
-				'day_window_end_hour'
-			])
+			report_config: new Set(['day_window_start_hour', 'day_window_end_hour'])
 		},
 		alarm: (page) =>
 			page.locator('[data-testid="alerts-tab-official-alert-triggers-toggle"] input[type="checkbox"]').first(),
 		alarmWert: (s) => (s.official_warnings as { enabled?: boolean } | undefined)?.enabled,
-		alarmNeu: false
+		alarmNeu: false,
+		konfliktLaedtNeu: false
 	},
 	vergleich: {
 		seed: {
+			// beide Warn-Felder gleich (AC-20: der Reiter schreibt sie immer gleich; auseinanderlaufende
+			// Altfelder prüft s3a2794-teil3-karten), damit MS-7 sie streng als unverändert prüft.
 			official_alerts_enabled: true,
+			official_warnings: { enabled: true },
 			radar_alert_enabled: false,
 			send_telegram: true,
 			send_sms: false,
@@ -137,28 +129,26 @@ const MS_SEL: Record<
 			corridors: [{ metric: 'snow_depth_cm', range: [30, 200], notify: false, mark: true }],
 			display_config: {
 				ideal_ranges: { snow_depth_cm: { min: 30, max: 200 } },
-				active_metrics: ['snow_depth_cm'],
+				active_metrics: [{ metric_id: METRIK, aggregation: 'max' }],
 				hourly_metrics: ['snow_depth_cm'],
 				outlook_metrics: ['snow_depth_cm'],
 				telegram_style: 'kurzform'
 			}
 		},
-		tab: 'weather-metrics-tab-vergleich',
-		metrik: (tab) => tab.locator('[data-testid="weather-metrics-vergleich-row-snow_depth"] input[type="checkbox"]'),
-		erwarteGewaehlt: async (el, an, message) => {
-			await expect(el, message).toBeChecked({ checked: an, timeout: 10_000 });
-		},
-		gewaehlt: (s) => ((dc(s).active_metrics as string[] | undefined) ?? []).includes('snow_depth_cm'),
+		gewaehlt: (s) => auswahlImStand('vergleich', s).includes(METRIK),
 		auswahlPfad: (pfad) => pfad,
-		auswahlImRumpf: (r) => dc(r).active_metrics as unknown[],
-		auswahlImStand: (s) => dc(s).active_metrics as unknown[],
+		auswahlImRumpf: (r) => ((dc(r).active_metrics as Array<{ metric_id: string }> | undefined) ?? []).map((m) => m.metric_id),
+		auswahlImStand: (s) => auswahlImStand('vergleich', s),
 		nebenPfad: null,
+		// Top-level schreibt der Reiter Warn-Felder, Radar und Tagesfenster mit ihren Werten mit
+		// (Spec Datenfluss); unverändert gelassen müssen sie gleich bleiben — darum NICHT eigen.
 		obenEigen: new Set(['display_config', 'updated_at', 'etag']),
-		dcEigen: new Set(['active_metrics', 'channel_active_metrics', 'hourly_metrics', 'outlook_metrics', 'outlook_metric_formats']),
+		dcEigen: new Set(['active_metrics', 'ampel']),
 		teilEigen: {},
 		alarm: (page) => page.locator('[data-testid="alarme-radar-toggle"] input[type="checkbox"]').first(),
 		alarmWert: (s) => s.radar_alert_enabled,
-		alarmNeu: true
+		alarmNeu: true,
+		konfliktLaedtNeu: true
 	}
 };
 
@@ -202,15 +192,19 @@ async function stand(page: Page, kind: HubKind, id: string): Promise<Stand> {
 }
 
 const anzeige = (page: Page) => page.locator('[data-testid="save-indicator"]');
-const amtlich = (tab: Locator) => tab.locator('[data-testid="report-show-official-alerts"] input[type="checkbox"]');
+/** Amtliche-Warnungen-Schalter des Reiters Wetter (role=switch, aria-checked; AC-20). */
+const amtlich = (tab: Locator) => tab.getByTestId(WT.warnungen);
+/** Metrik-Geste „−" an der Zeile (AC-19) — nimmt die Metrik aus dem Briefing. */
+const metrik = (tab: Locator) => tab.getByTestId(WT.entfernen(METRIK));
+/** Zeigt der Reiter die Metrik als gewählt (eigene Zeile) bzw. nicht (keine Zeile)? */
+async function erwarteGewaehlt(tab: Locator, an: boolean, message?: string): Promise<void> {
+	await expect(tab.getByTestId(WT.zeile(METRIK)), message).toHaveCount(an ? 1 : 0, { timeout: 10_000 });
+}
 
 async function oeffneWetterMetriken(page: Page, kind: HubKind, id: string): Promise<Locator> {
-	const ms = MS_SEL[kind];
-	// #2794 S3a (Spec feat_2794_s3a_teil2_leiste.md): Metrik-Auswahl und amtliche Warnungen im Reiter Wetter.
-	await openHub(page, kind, id, { tab: 'wetter' });
-	const tab = page.locator(`[data-testid="${ms.tab}"]:visible`);
-	await expect(tab).toBeVisible({ timeout: 10_000 });
-	await expect(ms.metrik(tab)).toBeVisible({ timeout: 10_000 });
+	// #2794 Teil 3: Metrik-Auswahl und amtliche Warnungen im Reiter Wetter (WetterTab).
+	const tab = await oeffneWetter(page, kind, id);
+	await expect(metrik(tab)).toBeVisible({ timeout: 10_000 });
 	return tab;
 }
 
@@ -232,9 +226,9 @@ for (const kind of HUB_KINDS) {
 				const neben = ms.nebenPfad ? zaehlePuts(page, ms.nebenPfad(pfad)) : null;
 				const tab = await oeffneWetterMetriken(page, kind, hub.id);
 				expect(puts.length, 'Vorbedingung: das Öffnen des Reiters speichert nichts').toBe(0);
-				await ms.erwarteGewaehlt(ms.metrik(tab), true, 'Vorbedingung: die geseedete Metrik ist gewählt');
+				await erwarteGewaehlt(tab, true, 'Vorbedingung: die geseedete Metrik ist gewählt');
 
-				await ms.metrik(tab).click();
+				await metrik(tab).click();
 
 				await expect.poll(() => beantwortet.length, { timeout: 10_000 }).toBeGreaterThanOrEqual(1);
 				await expect(anzeige(page)).toHaveAttribute('data-state', 'idle', { timeout: 10_000 });
@@ -265,7 +259,7 @@ for (const kind of HUB_KINDS) {
 					const tab = await oeffneWetterMetriken(page, kind, hub.id);
 
 					// Domäne A: Metrikauswahl
-					await ms.metrik(tab).click();
+					await metrik(tab).click();
 					// Domäne B: Stundenverlauf-Schalter — sofort, innerhalb des Entprell-Fensters, im Reiter Zustellung
 					await page.locator(`[data-testid="${sel.reiter}-zustellung"]:visible`).click();
 					await page.locator('[data-testid="compare-layout-hourly-enabled-toggle"]:visible').first().click();
@@ -318,7 +312,7 @@ for (const kind of HUB_KINDS) {
 				const { beantwortet } = zaehlePuts(page, hubApiPath(kind, hub.id));
 				const tab = await oeffneWetterMetriken(page, kind, hub.id);
 
-				await ms.metrik(tab).click();
+				await metrik(tab).click();
 				// sofort, innerhalb des Entprell-Fensters, den Reiter wechseln
 				// #2794 S3a: die Alarme stehen im Reiter Zustellung.
 				await page.locator(`[data-testid="${sel.reiter}-zustellung"]:visible`).click();
@@ -362,7 +356,7 @@ for (const kind of HUB_KINDS) {
 				const tab = await oeffneWetterMetriken(page, kind, hub.id);
 
 				// GIVEN: eigene erste Änderung gespeichert — die Seite kennt jetzt den ETag (#2375)
-				await ms.metrik(tab).click();
+				await metrik(tab).click();
 				await expect.poll(() => beantwortet.length, { timeout: 10_000 }).toBe(1);
 				await expect(anzeige(page)).toHaveAttribute('data-state', 'idle', { timeout: 10_000 });
 				expect(alle.length, 'Vorbedingung: der erste Speichervorgang ist vollständig').toBe(schritte);
@@ -388,7 +382,12 @@ for (const kind of HUB_KINDS) {
 				expect((await alle[schritte].response())?.status(), 'der Server muss den veralteten Stand ablehnen').toBe(412);
 				const nochmal = anzeige(page).getByRole('button', { name: 'Nochmal speichern' });
 				await expect(nochmal).toBeVisible();
-				await expect(amtlich(tab), 'bei 412 kein Zurückspringen').not.toBeChecked();
+				// #2794 Teil 3 (Spec feat_2794_s3a_teil3_wetter.md, Datenfluss „Konflikt" und AC-38): der
+				// Vergleich lädt bei 412 das Abo neu und zeigt den Serverstand (fremde Änderung wird nicht
+				// still überschrieben); der Trip (kein Neuladen) behält die Eingabe.
+				await expect(amtlich(tab), ms.konfliktLaedtNeu ? 'AC-38: nach 412 zeigt der Reiter den neu geladenen Serverstand' : 'bei 412 kein Zurückspringen').toBeChecked({
+					checked: ms.konfliktLaedtNeu
+				});
 
 				// WHEN: „Nochmal speichern" → THEN: gespeichert, Wert bleibt sichtbar und auf dem Server
 				await nochmal.click();
@@ -409,7 +408,11 @@ for (const kind of HUB_KINDS) {
 				).toBe(true);
 
 				const s = await stand(page, kind, hub.id);
-				expect(s.official_alerts_enabled, 'der Wiederholungs-PUT muss die Änderung tragen').toBe(false);
+				expect(
+					s.official_alerts_enabled,
+					ms.konfliktLaedtNeu ? 'AC-38: „Nochmal speichern" sendet den neu geladenen Stand' : 'der Wiederholungs-PUT muss die Änderung tragen'
+				).toBe(ms.konfliktLaedtNeu);
+				await expect(amtlich(tab), 'Anzeige und Serverstand stimmen nach „Nochmal speichern" überein').toBeChecked({ checked: ms.konfliktLaedtNeu });
 				expect(s.name, '„Nochmal speichern" darf den fremd gespeicherten Namen nicht überschreiben (#2375)').toBe(fremderName);
 			} finally {
 				await hub.aufraeumen();
@@ -424,7 +427,7 @@ for (const kind of HUB_KINDS) {
 				const { beantwortet } = zaehlePuts(page, hubApiPath(kind, hub.id));
 				const tab = await oeffneWetterMetriken(page, kind, hub.id);
 
-				await ms.metrik(tab).click();
+				await metrik(tab).click();
 				await expect.poll(() => beantwortet.length, { timeout: 10_000 }).toBeGreaterThanOrEqual(1);
 				await expect(anzeige(page)).toHaveAttribute('data-state', 'idle', { timeout: 10_000 });
 
@@ -473,9 +476,9 @@ for (const kind of HUB_KINDS) {
 				const objekt = zaehlePuts(page, pfad);
 				const auswahl = ms.auswahlPfad(pfad) === pfad ? objekt : zaehlePuts(page, ms.auswahlPfad(pfad));
 				const tab = await oeffneWetterMetriken(page, kind, hub.id);
-				await ms.erwarteGewaehlt(ms.metrik(tab), true, 'Vorbedingung: die einzige aktive Metrik ist gewählt');
+				await erwarteGewaehlt(tab, true, 'Vorbedingung: die einzige aktive Metrik ist gewählt');
 
-				await ms.metrik(tab).click();
+				await metrik(tab).click();
 				await expect.poll(() => objekt.beantwortet.length, { timeout: 10_000 }).toBeGreaterThanOrEqual(1);
 				await expect(anzeige(page)).toHaveAttribute('data-state', 'idle', { timeout: 10_000 });
 
@@ -487,8 +490,9 @@ for (const kind of HUB_KINDS) {
 				);
 				expect(ms.auswahlImStand(await stand(page, kind, hub.id)), 'die Leerauswahl hat den Server nicht erreicht').toEqual([]);
 
-				const neu = await oeffneWetterMetriken(page, kind, hub.id);
-				await ms.erwarteGewaehlt(ms.metrik(neu), false, 'nach Neuladen muss die Leerauswahl stehen');
+				const neu = await oeffneWetter(page, kind, hub.id);
+				await erwarteGewaehlt(neu, false, 'nach Neuladen muss die Leerauswahl stehen');
+				await expect(neu.locator('[data-testid^="wetter-zeile-"]'), 'nach Neuladen: keine Metrik-Zeile (leere Auswahl, kein Vorlagen-Rückfall)').toHaveCount(0);
 			} finally {
 				await hub.aufraeumen();
 			}

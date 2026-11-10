@@ -180,12 +180,20 @@ test.describe('Issue #616 — EINE Trip-Seite', () => {
 		/**
 		 * GIVEN: Wertebereiche-Tab geöffnet
 		 * WHEN:  Panel gerendert
-		 * THEN:  CorridorEditor (context="route") vorhanden — keine Regression
-		 *        durch die Konsolidierung.
+		 * THEN:  der Reiter-Baustein mit eigenem Speicherweg (context="route") vorhanden —
+		 *        keine Regression durch die Konsolidierung.
+		 *
+		 * #2794 Teil 3 (Spec feat_2794_s3a_teil3_wetter.md §4, „Genau ein Speicherer je Reiter"):
+		 * die Wertebereiche stehen jetzt als Ampel-Grenzen im WetterTab, der als einziger Speicherer
+		 * des Reiters Wetter selbst speichert (der CorridorEditor ist dort nicht mehr gemountet).
 		 */
-		// #2794 S3a: Wertebereiche im Reiter Wetter.
 		await page.goto(`${DETAIL_URL}?tab=wetter`);
-		await expect(page.getByTestId('corridor-editor-route')).toBeVisible({ timeout: 8000 });
+		const reiter = page.locator('[data-testid="wetter-tab"]:visible');
+		await expect(reiter).toBeVisible({ timeout: 8000 });
+		await expect(reiter).toHaveAttribute('data-context', 'route');
+		await expect(reiter.getByTestId('wetter-tab-laden')).toHaveCount(0, { timeout: 8000 });
+		await expect(reiter.getByTestId('wetter-vorlage-picker'), 'die Vorlage-Karte (Grenzen, Auswahl, Alarmstufen) ist im Reiter bedienbar').toBeVisible();
+		await expect(page.getByTestId('corridor-editor-route'), 'kein zweiter Speicherer im Reiter Wetter (AC-38)').toHaveCount(0);
 	});
 
 	// ─── AC-8: Terminologie Trip · Etappe · Wegpunkt ───
