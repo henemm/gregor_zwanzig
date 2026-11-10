@@ -2,6 +2,10 @@
 """
 Design-Fidelity Pixel-Diff Tool (Issue #603)
 
+AUSSER DIENST seit ADR-0111 (#2881, 2026-11-10): wird von keinem Gate mehr verlangt.
+Die Soll-Bilder sind historisch; Ersatz sind die Playwright-Kontrast-/Paritaetstests
+im CI-Check `e2e` (siehe docs/reference/gates_und_ratschen.md).
+
 Usage:
     python3 .claude/hooks/design_fidelity_diff.py --screen <screen-id>
     python3 .claude/hooks/design_fidelity_diff.py --screen <screen-id> --threshold 5.0
