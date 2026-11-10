@@ -129,7 +129,7 @@
 	.dwc-time-caption {
 		font-family: var(--g-font-mono);
 		font-size: 11px;
-		color: var(--g-ink-4);
+		color: var(--g-ink-3);
 		letter-spacing: 0.08em;
 		text-transform: uppercase;
 	}

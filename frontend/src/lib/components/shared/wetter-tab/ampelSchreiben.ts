@@ -55,11 +55,22 @@ export function abweichungsMenge(vorlage: Ampel, aufgeloest: Ampel, auswahl: str
 
 type TripMetrik = { metric_id: string; enabled: boolean } & Record<string, unknown>;
 
-/** Trip `metrics[]`: bestehende Eintraege in ihrer Reihenfolge (nur `enabled` neu), neue hinten. */
+/** Trip `metrics[]`: bestehende Eintraege in ihrer Reihenfolge (nur `enabled` neu), neue hinten.
+ *  Ein im Bestand deaktivierter Eintrag, der jetzt in der Auswahl steht, gilt als neu hinzugefuegt
+ *  (AC-19 „hinten angehaengt“, Fix-Loop 6): er wandert in Auswahl-Reihenfolge ans Ende und behaelt
+ *  alle uebrigen Felder. */
 function tripMetriken(bestand: TripMetrik[] | undefined, auswahl: string[]): TripMetrik[] {
-	const liste = (Array.isArray(bestand) ? bestand : []).map((e) => ({ ...klon(e), enabled: auswahl.includes(e.metric_id) }));
+	const alt = Array.isArray(bestand) ? bestand : [];
+	const aktivImBestand = new Set(alt.filter((e) => e.enabled !== false).map((e) => e.metric_id));
+	const wiederAn = (id: string) => auswahl.includes(id) && !aktivImBestand.has(id);
+	const liste = alt.filter((e) => !wiederAn(e.metric_id)).map((e) => ({ ...klon(e), enabled: auswahl.includes(e.metric_id) }));
 	const da = new Set(liste.map((e) => e.metric_id));
-	for (const id of auswahl) if (!da.has(id)) liste.push({ metric_id: id, enabled: true });
+	for (const id of auswahl) {
+		if (da.has(id)) continue;
+		const bisher = alt.filter((e) => e.metric_id === id);
+		if (bisher.length) for (const e of bisher) liste.push({ ...klon(e), enabled: true });
+		else liste.push({ metric_id: id, enabled: true });
+	}
 	return liste;
 }
 
