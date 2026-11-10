@@ -341,6 +341,18 @@
     @apply bg-background text-foreground;
     font-family: var(--g-font-ui);
   }
+
+  /* #2621: Tailwind v4 nimmt <button> die Hand (Browser-Standard `default`). Boden-Regel für
+     alle Breiten: :where() hält die Spezifität bei 0, damit Bausteinregeln (Btn-Atom
+     `not-allowed`) und Utilities (`cursor-default`) weiter gewinnen; gesperrte Knöpfe ausgenommen. */
+  :where(
+    button:not(:disabled):not([aria-disabled="true"]),
+    [role="button"]:not([aria-disabled="true"]),
+    label[for],
+    summary
+  ) {
+    cursor: pointer;
+  }
 }
 
 /* Issue #267 / Mobile-Shell S2 — Padding für Mobile-Content: oben unter der
