@@ -53,7 +53,7 @@ for (const kind of HUB_KINDS) {
 			let s = await stand(page.request, kind, hub.id);
 			expect(auswahlImStand(kind, s), 'AC-19: Wind nach „−“ noch in der Auswahl-Quelle').not.toContain('wind');
 			expect(s.display_config.ampel.metrics.wind).toEqual({ enabled: false });
-			expect(auswahlImStand(kind, s), 'AC-37: Auswahlliste ≠ aufgeloeste Ampel').toEqual(aufgeloesteAuswahl(v.ampel, s.display_config.ampel));
+			expect(auswahlImStand(kind, s), 'AC-37: Auswahlliste ≠ aufgeloeste Ampel').toEqual(aufgeloesteAuswahl(v, s.display_config.ampel));
 
 			speichern = warteAufSpeichern(page, kind, hub.id);
 			await reiter.getByTestId(WT.plus('wind')).click();
@@ -68,7 +68,7 @@ for (const kind of HUB_KINDS) {
 			const folge = reihenfolge(kind, s);
 			expect(folge[folge.length - 1], 'AC-19: Wind nicht hinten angehaengt').toBe('wind');
 			expect(s.display_config.ampel.metrics?.wind, 'AC-37: enabled bleibt als Abweichung stehen').toBeUndefined();
-			expect(auswahlImStand(kind, s)).toEqual(aufgeloesteAuswahl(v.ampel, s.display_config.ampel));
+			expect(auswahlImStand(kind, s)).toEqual(aufgeloesteAuswahl(v, s.display_config.ampel));
 		} finally {
 			await hub.aufraeumen();
 		}

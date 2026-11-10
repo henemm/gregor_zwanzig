@@ -11,7 +11,9 @@ export default defineConfig({
 	testDir: 'e2e',
 	timeout: 120_000,
 	retries: 0,
-	workers: 2,
+	// Fix-Loop 5: s3a2794-teil3-englisch.spec.ts switches the shared staging account to English;
+	// in parallel the dialog spec would see English. Shared account with profile state => serial.
+	workers: 1,
 	use: {
 		baseURL: process.env.GZ_SVELTE_BASE ?? 'https://staging.gregor20.henemm.com',
 		headless: true,

@@ -58,7 +58,6 @@ const AUSNAHMEN: Record<string, number> = {
 	'lib/components/shared/dnd/DragHandle.svelte': 1,
 	'lib/components/shared/versand-tab/VTSchedulePlan.svelte': 1,
 	'lib/components/shared/hub-uebersicht/HubUebersicht.svelte': 1,
-	'lib/components/shared/weather-metrics-tab/DayWindowCard.svelte': 1,
 	'lib/components/shared/weather-metrics-tab/WeatherV2Grundauswahl.svelte': 1,
 	'lib/components/shared/weather-metrics-tab/WeatherV2Reihenfolge.svelte': 4,
 	'lib/components/mobile/StageCardM.svelte': 1,
