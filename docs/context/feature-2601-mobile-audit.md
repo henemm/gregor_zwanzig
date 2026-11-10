@@ -116,3 +116,22 @@ DatumFeld/UhrzeitFeld werden in Trip-Editor, Vergleichs-Editor und trip-new genu
 
 ### Open Questions
 - keine Produktfrage offen (Höhenprofil-Ausnahme ist WCAG-konform, gleichwertige Bedienung vorhanden).
+
+## RED-Stand (Phase 5, 2026-11-10, Commit 3b18e9211, Basis d322e2a9e)
+
+Testdateien (Namens-Gate verbietet `issue-<N>`-Präfix, daher sprechende Namen; Spec-Testplan in /50 nachziehen):
+- `frontend/e2e/mobile-ux-messung.spec.ts` — AC-7…AC-14 (9 Fälle)
+- `frontend/e2e/mobile-ux-audit-selbsttest.spec.ts` — AC-15 (3 Fälle), importiert künftiges Modul
+- `frontend/e2e/mobile-ux-audit-staging-schutz.test.ts` — AC-16 (`node --test`, läuft automatisch im `frontend-test`-Job via `npm test`; NICHT auf Listen setzen)
+
+RED-Ist: AC-7/8 Segmente 22×26; AC-9 grün (Regressionsschutz, Desktop-Sollwerte als Konstanten); AC-10 Brotkrumen 30/17, elementFromPoint trifft `div.hub-kopf-leiste`; AC-11 kein `data-tap-equivalent` (Etappenwahl-Teil schon grün); AC-12a inneres `<main>` ohne Klasse +16 px in allen Profilen; AC-12b grün (EN-Tabbar bewusst scrollbar: overflow-x:auto + Fade-Maske, letzter Reiter erreichbar) → kein Fix an der Tabbar nötig; AC-13 10 px; AC-14 28,39 px; AC-15 Modul fehlt; AC-16 Liste ohne Variable Exit 0, keine Locale.
+
+Vertrag Audit-Modul `frontend/e2e/mobile-ux-audit-check.ts`: Named Exports `LAYOUT_CHECK`, `type LayoutResult`; `mobile-ux-audit.spec.ts` importiert daraus. `tinyTargets` alle < 24 ungekappt, `smallTargets` nur 24–39, `pageOverflowPx` = Max über Fenster UND jedes `<main>`, `[data-tap-equivalent]` nie hart.
+
+Für /50-implement:
+- `.github/ci_e2e_specs.txt`: `e2e/mobile-ux-messung.spec.ts` + `e2e/mobile-ux-audit-selbsttest.spec.ts` aufnehmen; `E2E_MIN_SPECS` 78→80, `E2E_MIN_EXECUTED_HAUPT` 697→709 (per `npx playwright test --list` über die Positivliste nachmessen, Kommentar-Kette in ci.yml fortschreiben).
+- Selbsttest-Datei allein laufen lassen, solange das Modul fehlt (Ladefehler beendet Sammellauf mit „No tests found").
+- Config AC-16: `GZ_AUDIT_LOCALE` → `use.locale` (de/en) in allen 3 Projekten; fehlt `GZ_E2E_API_PROXY_TARGET` → throw mit Variablennamen.
+- AC-13: „AKTIONEN" (`Sheet.svelte`, inline `style:font-size="10px"`) und ✉ (`ChannelDot.svelte`, inline style) sind Inline-Styles → Fix in diesen geteilten Bausteinen (Token `--g-text-xs`), nicht `!important` in app.css. „AKTIONEN" hart deutsch → gehört zu #2919.
+- AC-8: Vergleichs-Editor hat kein UhrzeitFeld; gemessen wird `compare-versand-enddate-input` (Zustellung → „Bis Datum").
+- Lokaler Stack: Ports 8191/8102, Vorschau 4173 nur mit `GZ_E2E_API_PROXY_TARGET`; alte Worktree-`playwright/.auth/admin.json` gesichert im Scratchpad (ignoriert, nie committen).
