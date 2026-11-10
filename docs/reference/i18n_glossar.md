@@ -183,3 +183,15 @@ Hier nur Beispiele der Konvention; **Kurzform (`col_label`) und Kürzel bleiben*
 | Entwarnung (Abweichungs-Alarm) | all clear | „von orange auf gelb zurückgegangen“ = *back from orange to yellow* |
 | Tageshöchst / Tagestief | daily high / daily low | Seite der Temperatur im Ampel-Satz |
 | Alarm ab | alert from | Schwelle der Ampel je Metrik (`alarm_ab`) |
+
+## Reiter Wetter (#2794 S3a)
+
+| Deutsch | Englisch | Hinweis |
+|---|---|---|
+| Wetter (Reiter) | weather | Reiter-Name in Trip und Orts-Briefing (Katalog `wetter.*`); löst Wertebereiche/Alarme als Wetter-Reiter ab (Bereinigung Teil-PR 4) |
+| Vorlage | template | Systemvorlage oder eigene Vorlage; „Eigene" = *Your own*, „Als eigene Vorlage speichern" = *Save as your own template* |
+| Ampel | traffic light | Bewertung einer Metrik grün/gelb/orange/rot (ADR-0106); „Ampel-Grenzen" = *traffic-light limits* |
+| Grenzen ändern | change limits | Knopf je Metrik-Zeile; „Fertig" = *Done* |
+| Nicht im Briefing | not in the briefing | Liste der abgewählten Metriken mit „+ {Metrik}" |
+| Abweichung (von der Vorlage) | change (from the template) | „{n} Abweichungen" = *{n} changes*; „unverändert" = *unchanged* |
+| Orts-Briefing | location briefing | Kontext `vergleich` im Reiter Wetter |

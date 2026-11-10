@@ -191,10 +191,8 @@ export function bausteineRendern(): string {
 	return [
 		html(DayWindowCard, { startHour: 22, endHour: 2, onStartHour: nix, onEndHour: nix }),
 		html(WeatherV2PresetBar, { selectedTemplate: 'p-golden', dirty: false, templates: TEMPLATES, userPresets: USER_PRESETS, onSelectPreset: nix, onOpenSaveDialog: nix }),
-		html(SavePresetDialog, {
-			open: true, enabledMap: {}, friendlyMap: {}, horizonsMap: {}, catalog: KATALOG_ALT,
-			indicatorCapable: () => false, onClose: nix, onSaved: nix
-		}),
+		// #2794 S3a Teil-PR 3 (AC-42): Dialog auf die Ampel umgestellt (kind + ampel statt Bucket-Karten).
+		html(SavePresetDialog, { open: true, kind: 'route', ampel: { template: 'allgemein' }, onClose: nix, onSaved: nix }),
 		html(WeatherV2Reihenfolge, {
 			primaryColumns: ['temperature', 'wind', 'gust', 'precipitation', 'thunder', 'cloud_total', 'humidity', 'dewpoint', 'wind_chill'],
 			metricById: byId, friendlyMap: { wind: true }, activeChannel: 'telegram', highlight: null,

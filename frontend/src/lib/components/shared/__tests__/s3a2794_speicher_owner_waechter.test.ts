@@ -31,6 +31,8 @@ const STELLEN: Array<[string, string, string, number]> = [
 	['shared/WeatherMetricsTab.svelte', 'saveController.schedule', 'wetter-metriken', 1],
 	['shared/WeatherMetricsTab.svelte', 'saveController.schedule', 'wetter-metriken-report-config', 1],
 	['shared/weather-metrics-tab/weatherMetricsCompareSave.ts', 'saveController.schedule', 'wetter-metriken', 1],
+	// Teil-PR 3 (AC-38): der Reiter Wetter speichert ueber EINEN eigenen Owner (Trip und Orts-Briefing).
+	['shared/wetter-tab/wetterTabSpeicherung.ts', 'saveController.schedule', 'wetter-ampel', 2],
 	['trip-detail/BriefingScheduleTab.svelte', 'saveController.schedule', 'versand', 1],
 	['shared/versandVergleichSpeicherung.ts', 'saveController.schedule', 'versand', 1],
 	['shared/AlarmeTab.svelte', 'baueTripSpeicherung', 'alarme', 1],

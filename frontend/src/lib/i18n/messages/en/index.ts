@@ -1,4 +1,4 @@
-// Issue #2647 (i18n S2) — vereinigt alle 17 Bereichsdateien (en) zu EINER flachen Karte.
+// Issue #2647 (i18n S2) — vereinigt alle 18 Bereichsdateien (en) zu EINER flachen Karte.
 // Migrationspakete fassen nur ihre eigene Bereichsdatei an; diese Liste ist vollstaendig.
 import start from './start.json' with { type: 'json' };
 import auth from './auth.json' with { type: 'json' };
@@ -17,6 +17,7 @@ import aktionen from './aktionen.json' with { type: 'json' };
 import bausteine from './bausteine.json' with { type: 'json' };
 import fehler from './fehler.json' with { type: 'json' };
 import hilfe from './hilfe.json' with { type: 'json' };
+import wetter from './wetter.json' with { type: 'json' };
 
 export const en: Record<string, string> = {
 	...start,
@@ -35,5 +36,6 @@ export const en: Record<string, string> = {
 	...aktionen,
 	...bausteine,
 	...fehler,
-	...hilfe
+	...hilfe,
+	...wetter
 };

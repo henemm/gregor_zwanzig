@@ -72,11 +72,14 @@ test('AC-2 (#629): WeatherConfigDialog bietet Roh/Einfach-Toggle', () => {
 
 // --- AC-3: Preset-Zusammenfassung SavePresetDialog ---
 
-test('AC-3: SavePresetDialog zeigt "als Einfach" statt "als Skala"', () => {
+// #2794 S3a Teil-PR 3 (AC-42): der Dialog speichert die Ampel und zeigt keine Spalten-/Darstellungs-
+// Zusammenfassung mehr ("… als Einfach" ist mit ihr entfallen). Zusicherung uebertragen: auch mit
+// aufgeloesten Katalogtexten taucht der alte Begriff "Skala" im Dialog nirgends auf.
+test('AC-3: SavePresetDialog zeigt "Skala" auch in den Katalogtexten nicht', () => {
 	const src = quelleMitKatalog(readFileSync(SAVE_PRESET_DLG, 'utf-8'));
 	assert.ok(
-		src.includes('als Einfach'),
-		'AC-3 RED: SavePresetDialog muss "als Einfach" enthalten'
+		!/Skala/.test(src),
+		'AC-3: SavePresetDialog (inkl. Katalogtexte) darf "Skala" nicht enthalten'
 	);
 });
 

@@ -75,10 +75,12 @@ function aufbau(preset = makePreset(PRESET_ID)) {
 }
 
 describe('AC-1: eine Wetter-Metriken-Änderung speichert im Takt des Controllers — genau EIN PUT', () => {
-	test('Metrik-Checkbox an → schedule, Flush → genau EIN PUT mit der neuen Auswahl, „Gespeichert"', async () => {
-		const { ctl, speicherung, bedienung, rueckmeldungen } = aufbau();
+	// #2794 S3a Teil 3 (F006): Metrikauswahl, Amtliche Warnungen, Tagesfenster gehoeren dem Reiter
+	// Wetter — gemessen wird mit den Feldern dieses Speicherers (Kanal-Auswahl, Stundenverlauf, Ausblick).
+	test('Kanal-Auswahl → schedule, Flush → genau EIN PUT mit der neuen Auswahl, „Gespeichert"', async () => {
+		const { ws, ctl, speicherung, rueckmeldungen } = aufbau();
 
-		bedienung.toggleMetric('gust_max_kmh');
+		ws.channelActiveMetricKeys = { email: ['gust_max_kmh'], telegram: null, sms: null };
 		speicherung.aenderungMelden();
 
 		assert.equal(ctl.hasPending, true, 'die Änderung muss im Speicher-Takt des Controllers liegen (schedule)');
@@ -92,15 +94,15 @@ describe('AC-1: eine Wetter-Metriken-Änderung speichert im Takt des Controllers
 		assert.equal(puts()[0].status, 200);
 		const body = server.storedBody(PRESET_ID);
 		assert.ok(
-			(dc(body).active_metrics as string[]).includes('gust_max_kmh'),
-			'die neu aktivierte Metrik muss im Rumpf stehen'
+			JSON.stringify(dc(body).channel_active_metrics).includes('gust_max_kmh'),
+			'die neu aktivierte Kanal-Metrik muss im Rumpf stehen'
 		);
 		assert.equal(ctl.state, 'idle', 'Endzustand „Gespeichert"');
 		assert.ok(ctl.savedAt instanceof Date, 'savedAt muss nach echtem Erfolg gestempelt sein');
 		assert.equal(rueckmeldungen.length, 1, 'onCompareUpdate genau einmal mit der Server-Antwort');
 	});
 
-	test('mehrere Zwischenwerte derselben Geste (Kanal-Reihenfolge-Drag) → trotzdem nur EIN PUT mit dem Endwert', async () => {
+	test('mehrere Zwischenwerte derselben Geste (Stundenverlauf-Reihenfolge-Drag) → trotzdem nur EIN PUT mit dem Endwert', async () => {
 		const { ctl, speicherung, bedienung } = aufbau();
 
 		for (const order of [
@@ -108,7 +110,7 @@ describe('AC-1: eine Wetter-Metriken-Änderung speichert im Takt des Controllers
 			['temp_max_c', 'snow_depth_cm', 'wind_max_kmh'],
 			['temp_max_c', 'wind_max_kmh', 'snow_depth_cm']
 		]) {
-			bedienung.reorderMetrics(order);
+			bedienung.hourlyDragEnd(order);
 			speicherung.aenderungMelden();
 		}
 
@@ -116,13 +118,13 @@ describe('AC-1: eine Wetter-Metriken-Änderung speichert im Takt des Controllers
 
 		assert.equal(puts().length, 1, 'Letzter gewinnt: eine Geste, ein PUT');
 		const body = server.storedBody(PRESET_ID);
-		assert.deepEqual(dc(body).active_metrics, ['temp_max_c', 'wind_max_kmh', 'snow_depth_cm']);
+		assert.deepEqual(dc(body).hourly_metrics, ['temp_max_c', 'wind_max_kmh', 'snow_depth_cm']);
 	});
 
 	test('nach erfolgreichem Speichern wandert die Baseline: erneute Meldung ohne Änderung → kein zweiter PUT', async () => {
 		const { ctl, speicherung, bedienung } = aufbau();
 
-		bedienung.toggleOfficialAlerts();
+		bedienung.outlookFormatToggle('temp_max_c', false);
 		speicherung.aenderungMelden();
 		await ctl.flush();
 		assert.equal(puts().length, 1);
@@ -148,12 +150,12 @@ describe('AC-1: eine Wetter-Metriken-Änderung speichert im Takt des Controllers
 		assert.equal(ctl.savedAt, alterStempel);
 	});
 
-	test('Tagesfenster hin und wieder zurück → kein PUT, Zustand idle', async () => {
+	test('Stundenverlauf hin und wieder zurück → kein PUT, Zustand idle', async () => {
 		const { ctl, speicherung, bedienung } = aufbau();
 
-		bedienung.setDayWindow(5, 20);
+		bedienung.hourlyDragEnd(['temp_max_c', 'wind_max_kmh']);
 		speicherung.aenderungMelden();
-		bedienung.setDayWindow(4, 19);
+		bedienung.hourlyDragEnd(['wind_max_kmh', 'temp_max_c']);
 		speicherung.aenderungMelden();
 
 		assert.equal(ctl.hasPending, false, 'der zurückgenommene Vorgang darf nicht mehr ausstehen');

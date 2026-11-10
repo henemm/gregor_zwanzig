@@ -126,10 +126,11 @@ describe('Test 1 / AC-7: jeder Reiter sendet ausschließlich seine Eigenfelder',
 });
 
 describe('Test 2 / AC-8: Leerauswahl und Löschen stehen explizit im Rumpf', () => {
-	test('wetterMetriken: alle Metriken abgewählt, Stundenverlauf/Ausblick leer ⇒ je [] im Rumpf, sonst nur Eigenfelder', async () => {
+	// #2794 S3a Teil 3 (F006): die Metrikauswahl gehoert dem Reiter Wetter und steht hier nicht im Rumpf.
+	test('wetterMetriken: Stundenverlauf/Ausblick leer ⇒ je [] im Rumpf, sonst nur Eigenfelder (kein active_metrics)', async () => {
 		const { body } = await speichereEinmal('wetterMetriken', 'leeren');
 		const dc = body.display_config as Record<string, unknown>;
-		assert.deepEqual(dc.active_metrics, [], 'Leerauswahl Metriken muss als [] gesendet werden');
+		assert.ok(!('active_metrics' in dc), 'active_metrics gehört dem Reiter Wetter');
 		assert.deepEqual(dc.hourly_metrics, [], 'Leerauswahl Stundenverlauf muss als [] gesendet werden');
 		assert.deepEqual(dc.outlook_metrics, [], 'Leerauswahl Ausblick muss als [] gesendet werden');
 		pruefeSchluesselsatz('wetterMetriken', body);

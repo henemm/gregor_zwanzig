@@ -2078,14 +2078,15 @@
 		     + Bottom-Sheet (#618) ist mit der Live-Vorschau ersatzlos entfernt. -->
 
 		<!-- Dialoge & Overlays -->
+		<!-- #2794 S3a Teil 3 (W5b): Dialog auf die Ampel umgestellt; der Reiter Wetter
+		     (shared/wetter-tab) uebergibt die aufgeloeste Abo-Ampel, hier die Auswahl. -->
 		<SavePresetDialog
 			bind:open={showSavePresetDialog}
-			{enabledMap}
-			{friendlyMap}
-			{horizonsMap}
-			{catalog}
-			{indicatorCapable}
-			{buckets}
+			kind={context}
+			ampel={{
+				template: (ampelAngewendet?.template as string | undefined) ?? 'allgemein',
+				metrics: Object.fromEntries(buckets.primary.map((id) => [id, { enabled: true }]))
+			}}
 			existingNames={userPresets.map(p => p.name)}
 			onClose={() => (showSavePresetDialog = false)}
 			onSaved={onPresetSaved}

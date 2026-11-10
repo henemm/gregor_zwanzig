@@ -1,54 +1,30 @@
 <script lang="ts">
-	// Epic #138 Issue #177 — Dialog "Als Preset speichern". POST /api/metric-presets.
-	// Issue #343 — ZEITHORIZONTE-Box: Eyebrow + Wording-Heuristik + Dot-Pattern;
-	//              Save-Payload sendet metrics[] mit horizons mit (Schema #342).
-	// Issue #587 — Custom Fixed-Overlay statt shadcn Dialog (screen-metrics-editor.jsx Z. 641–680).
-	// Spec: docs/specs/modules/epic_138_174_178_metriken_ui.md §6
-	//       docs/specs/modules/issue_343_horizon_chip_ui.md §5
+	// Dialog „Als eigene Vorlage speichern" — POST /api/metric-presets.
+	// Epic #138 Issue #177 (Ursprung), Issue #587 (Fixed-Overlay).
+	// Issue #2794 S3a, Teil-PR 3 (W5b, AC-42): auf die Ampel umgestellt. Gespeichert werden die
+	// aufgeloeste Abo-Ampel und die Art (`kind`: route im Trip, vergleich im Orts-Briefing),
+	// Body ueber `eigeneVorlagePayload` (ampelSchreiben.ts); keine Zeithorizonte, keine
+	// Zusammenfassung. Name ist Pflicht, die Duplikatpruefung laeuft serverseitig (409
+	// `name_exists`) und wird im Dialog angezeigt. Keine nativen Controls (ADR-0111, AC-40).
+	// Spec: docs/specs/modules/feat_2794_s3a_teil3_wetter.md §5
 
 	import { api } from '$lib/api.js';
-	import type { MetricPreset, Horizons, MetricEntry } from '$lib/types';
-	import { HORIZONS_ALL } from '$lib/types';
-	import { Checkbox } from '$lib/components/ui/checkbox';
-	import { Btn, Eyebrow } from '$lib/components/atoms';
-	import { computeHorizonSummary, dotsForHorizons } from '$lib/utils/horizonHelpers';
-	import { buildBucketSummary, type Buckets } from '../../trip-detail/metricsEditor.ts';
-	import { t, tr, locale } from '$lib/i18n';
-	import { metricLabel } from '$lib/i18n/metricLabel';
-	import { textTeile } from '$lib/i18n/textTeile';
-
-	type MetricCatalog = Record<string, MetricEntry[]>;
+	import type { Ampel, MetricPreset } from '$lib/types';
+	import { t, tr } from '$lib/i18n';
+	import { eigeneVorlagePayload, vorlagenNameFehler } from '../wetter-tab/ampelSchreiben.ts';
 
 	interface Props {
 		open: boolean;
-		enabledMap: Record<string, boolean>;
-		friendlyMap: Record<string, boolean>;
-		horizonsMap: Record<string, Horizons>;
-		catalog: MetricCatalog;
-		indicatorCapable: (id: string) => boolean;
+		kind: 'route' | 'vergleich';
+		/** Aufgeloeste Abo-Ampel (Vorlage + Abweichungen, `enabled` = Auswahl). */
+		ampel: Ampel;
 		onClose: () => void;
 		onSaved: (preset: MetricPreset) => void;
-		// Issue #365 — optional: bucket-bewusste Zusammenfassung (Spalten/Detail/Skala).
-		buckets?: Buckets;
-		// Issue #690 — client-seitige Eindeutigkeitsprüfung (case-insensitive, getrimmt).
+		/** Client-seitige Eindeutigkeitspruefung (case-insensitive, getrimmt), Issue #690. */
 		existingNames?: string[];
 	}
 
-	let {
-		open = $bindable(false),
-		enabledMap,
-		friendlyMap,
-		horizonsMap,
-		catalog,
-		indicatorCapable,
-		onClose,
-		onSaved,
-		buckets,
-		existingNames = [],
-	}: Props = $props();
-
-	// Issue #365 — Spalten/Detail/Skala-Zähler (nur wenn Buckets übergeben).
-	const bucketSummary = $derived(buckets ? buildBucketSummary(buckets, friendlyMap) : null);
+	let { open = $bindable(false), kind, ampel, onClose, onSaved, existingNames = [] }: Props = $props();
 
 	let name = $state('');
 	let description = $state('');
@@ -56,37 +32,7 @@
 	let saving = $state(false);
 	let error: string | null = $state(null);
 
-	const allMetrics = $derived.by(() => {
-		const out: MetricEntry[] = [];
-		for (const ms of Object.values(catalog)) {
-			for (const m of ms) out.push(m);
-		}
-		return out;
-	});
-
-	const enabledMetrics = $derived(allMetrics.filter((m) => enabledMap[m.id]));
-	const enabledIds = $derived(enabledMetrics.map((m) => m.id));
-	const indicatorCount = $derived(
-		enabledIds.filter((id) => indicatorCapable(id) && friendlyMap[id]).length,
-	);
-	const rawCount = $derived(
-		enabledIds.filter((id) => indicatorCapable(id) && !friendlyMap[id]).length,
-	);
-
-	// Issue #343 — Wording-Heuristik + Dot-Pattern fuer ZEITHORIZONTE-Box
-	// Issue #2654: computeHorizonSummary liest die Sprache per tr() — `$locale` macht
-	// die Ableitung bei einem Sprachwechsel ohne Neuladen neu.
-	const horizonSummary = $derived.by(() => (void $locale,
-		computeHorizonSummary(
-			enabledMetrics.map((m) => ({
-				metric_id: m.id,
-				horizons: horizonsMap[m.id] ?? HORIZONS_ALL,
-				enabled: true,
-			})),
-		)),
-	);
-
-	const canSubmit = $derived(name.trim().length > 0 && !saving);
+	const STANDARD_TEXT = { route: 'wetter.dialog.standard_route', vergleich: 'wetter.dialog.standard_vergleich' } as const;
 
 	function reset() {
 		name = '';
@@ -102,216 +48,228 @@
 		onClose();
 	}
 
+	function vergeben(n: string): boolean {
+		const x = n.trim().toLowerCase();
+		return existingNames.some((e) => e.trim().toLowerCase() === x);
+	}
+
 	async function submit() {
-		if (!canSubmit) return;
+		if (saving) return;
+		const pflicht = vorlagenNameFehler(name);
+		if (pflicht) return void (error = tr(pflicht as 'wetter.dialog.name_pflicht'));
+		if (vergeben(name)) return void (error = tr('wetter.dialog.name_vergeben', { name: name.trim() }));
 		saving = true;
 		error = null;
-		// Issue #690: Client-seitige Eindeutigkeitsprüfung (case-insensitive, getrimmt).
-		const trimmedName = name.trim().toLowerCase();
-		if (existingNames.some(n => n.trim().toLowerCase() === trimmedName)) {
-			error = tr('wertebereiche.preset_dialog.name_vergeben');
-			saving = false;
-			return;
-		}
 		try {
-			// Issue #343 — Neues Schema (#342): metrics[] mit horizons statt
-			// metrics: string[] + friendly_ids: string[].
-			const preset = await api.post<MetricPreset>('/api/metric-presets', {
-				name: name.trim(),
-				description: description.trim() || undefined,
-				is_default: isDefault,
-				metrics: enabledMetrics.map((m) => ({
-					metric_id: m.id,
-					enabled: true,
-					use_friendly_format: friendlyMap[m.id] ?? false,
-					horizons: horizonsMap[m.id] ?? { ...HORIZONS_ALL },
-				})),
-			});
+			const body = eigeneVorlagePayload({ name, beschreibung: description, alsStandard: isDefault, kind, ampel });
+			const preset = await api.post<MetricPreset>('/api/metric-presets', body);
 			onSaved(preset);
 			open = false;
 			reset();
 		} catch (e: unknown) {
 			const errToken = (e as { error?: string })?.error;
-			if (errToken === 'name_exists') {
-				error = tr('wertebereiche.preset_dialog.name_vergeben');
-			} else {
-				error = errToken ?? tr('wertebereiche.tab.speichern_fehlgeschlagen');
-			}
+			error = errToken === 'name_exists' ? tr('wetter.dialog.name_vergeben', { name: name.trim() }) : (errToken ?? tr('aktionen.speichern_fehlgeschlagen'));
 		} finally {
 			saving = false;
 		}
 	}
+
+	function taste(e: KeyboardEvent) {
+		if (open && e.key === 'Escape') close();
+	}
 </script>
 
-<!-- Issue #587: Custom Fixed-Overlay nach screen-metrics-editor.jsx Z. 641–680.
-     Ersetzt den shadcn-Dialog-Import durch position:fixed Overlay mit Blur-Backdrop. -->
+<svelte:window onkeydown={taste} />
+
 {#if open}
-	<!-- Overlay -->
-	<div
-		style="position:fixed;inset:0;background:rgba(26,26,24,0.45);backdrop-filter:blur(2px);display:flex;align-items:center;justify-content:center;z-index:100"
-		onclick={close}
-		role="presentation"
-	>
-		<!-- Dialog-Container -->
+	<div class="spd-scrim" onclick={close} role="presentation">
 		<div
 			data-testid="save-preset-dialog"
+			class="spd-dialog"
 			role="dialog"
 			aria-modal="true"
-			style="width:520px;background:var(--g-paper);border:1px solid var(--g-rule);border-radius:6px;box-shadow:0 24px 80px rgba(26,26,24,0.25);overflow:hidden"
+			aria-labelledby="spd-titel"
+			tabindex="-1"
 			onclick={(e) => e.stopPropagation()}
+			onkeydown={(e) => e.stopPropagation()}
 		>
-			<!-- Header -->
-			<div style="padding:18px 24px;border-bottom:1px solid var(--g-rule-soft);display:flex;justify-content:space-between;align-items:flex-start">
-				<div>
-					<Eyebrow>{$t('wertebereiche.preset_dialog.eyebrow')}</Eyebrow>
-					<div style="font-size:18px;font-weight:600;margin-top:2px">{$t('wertebereiche.preset_dialog.titel')}</div>
-				</div>
-				<button style="background:none;border:none;font-size:18px;color:var(--g-ink-3);cursor:pointer;padding:0" onclick={close} aria-label={$t('wertebereiche.preset_dialog.schliessen')}>×</button>
+			<div class="spd-kopf">
+				<div id="spd-titel" class="spd-titel">{$t('wetter.dialog.titel')}</div>
+				<button type="button" class="spd-x" onclick={close} aria-label={$t('aktionen.schliessen')}>×</button>
 			</div>
 
-			<!-- Body -->
-			<div style="padding:18px 24px;display:flex;flex-direction:column;gap:var(--g-s-3)">
-				<!-- NAME-Feld -->
-				<label class="field">
-					<span style="font-size:10px;font-weight:600;letter-spacing:0.08em;color:var(--g-ink-3);font-family:var(--g-font-mono);text-transform:uppercase">{$t('wertebereiche.preset_dialog.name')}</span>
-					<input
-						data-testid="save-preset-name"
-						type="text"
-						bind:value={name}
-						maxlength="40"
-						placeholder={$t('wertebereiche.preset_dialog.name_platzhalter')}
-						autofocus
-						required
-						style="padding:10px 12px;font-size:15px;background:var(--g-card);border:1px solid var(--g-rule);border-radius:4px;font:inherit;width:100%;box-sizing:border-box"
-					/>
+			<div class="spd-body">
+				<label class="spd-feld">
+					<span>{$t('wetter.dialog.name')}</span>
+					<input data-testid="save-preset-name" type="text" bind:value={name} maxlength="40" />
 				</label>
-
-				<!-- BESCHREIBUNG-Feld -->
-				<label class="field">
-					<span style="font-size:10px;font-weight:600;letter-spacing:0.08em;color:var(--g-ink-3);font-family:var(--g-font-mono);text-transform:uppercase">{$t('wertebereiche.preset_dialog.beschreibung')}</span>
-					<textarea
-						data-testid="save-preset-description"
-						bind:value={description}
-						maxlength="120"
-						rows="2"
-						placeholder={$t('wertebereiche.preset_dialog.beschreibung_platzhalter')}
-						style="padding:10px 12px;font-size:15px;background:var(--g-card);border:1px solid var(--g-rule);border-radius:4px;font:inherit;resize:vertical;width:100%;box-sizing:border-box"
-					></textarea>
+				<label class="spd-feld">
+					<span>{$t('wetter.dialog.beschreibung')}</span>
+					<textarea data-testid="save-preset-description" bind:value={description} maxlength="120" rows="2"></textarea>
 				</label>
-
-				<!-- WIRD GESPEICHERT Box — Issue #343 ZEITHORIZONTE-Block bleibt erhalten -->
-				<div style="padding:12px 14px;background:var(--g-card-alt);border-radius:4px;border:1px solid var(--g-rule-soft);display:flex;flex-direction:column;gap:var(--g-s-2)" data-testid="save-preset-will-save-box">
-					<Eyebrow>{$t('wertebereiche.preset_dialog.wird_gespeichert')}</Eyebrow>
-					<div class="status" data-testid="save-preset-summary">
-						{#each textTeile($t('wertebereiche.preset_dialog.zusammenfassung')) as teil}{#if teil.platzhalter === 'aktiv'}<strong>{enabledIds.length}</strong>{:else if teil.platzhalter === 'roh'}<strong>{rawCount}</strong>{:else if teil.platzhalter === 'indikator'}<strong>{indicatorCount}</strong>{:else}{teil.text}{/if}{/each}
-					</div>
-					{#if bucketSummary}
-						<div class="status" data-testid="save-preset-bucket-summary">
-							{#each textTeile($t('wertebereiche.preset_dialog.spalten')) as teil}{#if teil.platzhalter === 'spalten'}<strong>{bucketSummary.spalten}</strong>{:else if teil.platzhalter === 'detail'}<strong>{bucketSummary.detail}</strong>{:else if teil.platzhalter === 'skala'}<strong>{bucketSummary.skala}</strong>{:else}{teil.text}{/if}{/each}
-						</div>
-					{/if}
-					<hr />
-					<Eyebrow>{$t('wertebereiche.preset_dialog.zeithorizonte')}</Eyebrow>
-					<div class="horizon-summary" data-testid="save-preset-horizon-summary">
-						{horizonSummary || $t('wertebereiche.preset_dialog.keine_metrik')}
-					</div>
-					{#if enabledMetrics.length > 0}
-						<div class="metric-dot-grid">
-							{#each enabledMetrics as m}
-								<div class="metric-dot-row" data-testid="save-preset-dot-row-{m.id}">
-									<span class="metric-name">{metricLabel(m, $locale)}</span>
-									<span class="dots">{dotsForHorizons(horizonsMap[m.id] ?? HORIZONS_ALL)}</span>
-								</div>
-							{/each}
-						</div>
-					{/if}
-				</div>
-
-				<!-- Als Standard Checkbox -->
-				<div class="field-inline">
-					<Checkbox data-testid="save-preset-is-default" bind:checked={isDefault}>
-						{$t('wertebereiche.preset_dialog.standard')}
-					</Checkbox>
-				</div>
-
+				<button type="button" class="spd-standard" role="switch" aria-checked={isDefault} data-testid="save-preset-is-default" onclick={() => (isDefault = !isDefault)}>
+					<span class="spd-track" class:an={isDefault}><span class="spd-knopf"></span></span>
+					<span>{$t(STANDARD_TEXT[kind])}</span>
+				</button>
+				<p class="spd-hinweis" data-testid="save-preset-hinweis">{$t('wetter.dialog.hinweis')}</p>
 				{#if error}
-					<div class="error" data-testid="save-preset-error">{error}</div>
+					<p class="spd-fehler" role="alert" data-testid="save-preset-error">{error}</p>
 				{/if}
 			</div>
 
-			<!-- Footer -->
-			<div style="padding:14px 24px;border-top:1px solid var(--g-rule-soft);background:var(--g-card-alt);display:flex;justify-content:flex-end;gap:8px">
-				<Btn variant="ghost" size="sm" onclick={close} disabled={saving}>{$t('wertebereiche.preset.abbrechen')}</Btn>
-				<Btn variant="primary" size="sm" data-testid="save-preset-submit" disabled={!canSubmit} onclick={submit}>
-					{saving ? $t('wertebereiche.tab.speichert') : $t('wertebereiche.preset_dialog.speichern')}
-				</Btn>
+			<div class="spd-fuss">
+				<button type="button" class="spd-btn" onclick={close} disabled={saving}>{$t('aktionen.abbrechen')}</button>
+				<button type="button" class="spd-btn spd-btn--primaer" data-testid="save-preset-submit" disabled={saving} onclick={submit}>{$t('aktionen.speichern')}</button>
 			</div>
 		</div>
 	</div>
 {/if}
 
 <style>
-	.field {
-		display: flex;
-		flex-direction: column;
-		gap: var(--g-s-1);
-	}
-	.field-inline {
+	.spd-scrim {
+		position: fixed;
+		inset: 0;
+		background: rgba(26, 26, 24, 0.45);
+		backdrop-filter: blur(2px);
 		display: flex;
 		align-items: center;
-		gap: var(--g-s-2);
-		font-size: var(--g-text-sm);
-		cursor: pointer;
+		justify-content: center;
+		z-index: 100;
 	}
-	.will-save-box hr {
-		border: none;
-		border-top: 1px solid var(--g-ink-faint);
-		margin: var(--g-s-1) 0;
-		width: 100%;
-	}
-	.status {
-		font-size: var(--g-text-sm);
+	.spd-dialog {
+		width: min(520px, calc(100vw - 32px));
+		background: var(--g-paper);
 		color: var(--g-ink);
+		border: 1px solid var(--g-rule);
+		border-radius: 6px;
+		box-shadow: var(--g-shadow-3);
+		overflow: hidden;
 	}
-	.horizon-summary {
-		font-size: var(--g-text-sm);
-		color: var(--g-ink);
-		font-family: var(--g-font-data);
-	}
-	.metric-dot-grid {
-		display: grid;
-		grid-template-columns: repeat(2, 1fr);
-		gap: var(--g-s-1) var(--g-s-4);
-		margin-top: var(--g-s-2);
-	}
-	.metric-dot-row {
+	.spd-kopf {
 		display: flex;
 		justify-content: space-between;
 		align-items: center;
-		gap: var(--g-s-2);
-		font-size: var(--g-text-xs);
+		padding: 12px 16px 12px 24px;
+		border-bottom: 1px solid var(--g-rule-soft);
 	}
-	.metric-dot-row .metric-name {
+	.spd-titel {
+		font-size: 18px;
+		font-weight: 600;
+	}
+	.spd-x {
+		min-width: 44px;
+		min-height: 44px;
+		border: none;
+		background: none;
+		font-size: 20px;
+		color: var(--g-ink-2);
+		cursor: pointer;
+	}
+	.spd-body {
+		display: flex;
+		flex-direction: column;
+		gap: 14px;
+		padding: 18px 24px;
+	}
+	.spd-feld {
+		display: flex;
+		flex-direction: column;
+		gap: 4px;
+		font-size: 13px;
+		color: var(--g-ink-2);
+	}
+	.spd-feld input,
+	.spd-feld textarea {
+		box-sizing: border-box;
+		width: 100%;
+		min-height: 44px;
+		padding: 10px 12px;
+		font: inherit;
+		font-size: 15px;
 		color: var(--g-ink);
+		background: var(--g-card);
+		border: 1px solid var(--g-rule);
+		border-radius: 4px;
 	}
-	.metric-dot-row .dots {
-		font-family: var(--g-font-data);
+	.spd-feld textarea {
+		resize: vertical;
+	}
+	.spd-standard {
+		display: inline-flex;
+		align-items: center;
+		gap: 10px;
+		min-height: 44px;
+		padding: 0;
+		border: none;
+		background: transparent;
 		color: var(--g-ink);
-		letter-spacing: 0.1em;
+		font: inherit;
+		font-size: 14px;
+		text-align: left;
+		cursor: pointer;
 	}
-	@media (max-width: 599px) {
-		.metric-dot-grid {
-			grid-template-columns: 1fr;
-		}
+	.spd-track {
+		position: relative;
+		display: block;
+		flex-shrink: 0;
+		width: 44px;
+		height: 26px;
+		border-radius: 13px;
+		background: var(--g-ink-3);
 	}
-	.error {
-		font-size: var(--g-text-xs);
+	.spd-track.an {
+		background: var(--g-success);
+	}
+	.spd-knopf {
+		position: absolute;
+		top: 2px;
+		left: 2px;
+		width: 22px;
+		height: 22px;
+		border-radius: 50%;
+		background: var(--g-paper);
+	}
+	.spd-track.an .spd-knopf {
+		left: 20px;
+	}
+	.spd-hinweis {
+		margin: 0;
+		font-size: 12.5px;
+		color: var(--g-ink-2);
+	}
+	.spd-fehler {
+		margin: 0;
+		font-size: 13px;
 		color: var(--g-danger);
 	}
+	.spd-fuss {
+		display: flex;
+		justify-content: flex-end;
+		gap: 8px;
+		padding: 12px 24px;
+		border-top: 1px solid var(--g-rule-soft);
+		background: var(--g-card-alt);
+	}
+	.spd-btn {
+		min-height: 44px;
+		min-width: 44px;
+		padding: 0 16px;
+		border: 1px solid var(--g-rule);
+		border-radius: var(--g-r-2);
+		background: var(--g-card);
+		color: var(--g-ink);
+		font: inherit;
+		font-size: 14px;
+		cursor: pointer;
+	}
+	.spd-btn--primaer {
+		background: var(--g-accent-deep);
+		border-color: var(--g-accent-deep);
+		color: var(--g-on-accent);
+	}
 	@media (max-width: 767px) {
-		/* iOS zoom guard (#272): exakt 16px. Scoped auf .field für Spezifität 0-1-1. */
-		.field input[type='text'],
-		.field textarea {
+		.spd-feld input,
+		.spd-feld textarea {
 			font-size: 16px;
 		}
 	}

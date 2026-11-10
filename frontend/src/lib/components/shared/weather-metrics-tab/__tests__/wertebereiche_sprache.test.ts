@@ -151,7 +151,8 @@ describe('AC-5: Deutsch byte-gleich zum Ist-Stand vor der Umstellung (Golden gol
 		for (const s of [
 			'01 — Profil', '02 — Grundauswahl', '04 — Schwellwerte', 'Böen (km/h)', 'Sensibel', 'Leicht Mittel Hoch', 'Lädt…', 'Schwellen nicht ladbar',
 			'Aus in diesem Kanal', 'Tagesfenster', 'Geht über Mitternacht — endet am Folgetag.', 'Preset anwenden', 'Überschreiben',
-			'Auswahl als Preset speichern', 'Metriken aktiv', 'Lade Metriken…', 'Wiederholen', 'Nur angewählte Metriken erscheinen in der Vergleichs-Mail.',
+			// #2794 S3a Teil-PR 3 (AC-42): Dialog auf die Ampel umgestellt (Titel + Hinweis statt Zusammenfassung).
+			'Als eigene Vorlage speichern', 'Gespeichert werden Metrik-Auswahl, Ampel-Grenzen und Alarmstufen.', 'Lade Metriken…', 'Wiederholen', 'Nur angewählte Metriken erscheinen in der Vergleichs-Mail.',
 			'Amtliche Warnungen im Bericht', 'rote Gewitterwarnung', 'Gespeichert', 'Ungespeicherte Änderungen', 'Winter / Schnee', 'Eigene',
 			'So heißen diese Größen in SMS und Telegram-Kurzform:', 'Temperatur Maximum'
 		])
@@ -190,9 +191,10 @@ describe('AC-1: Metrik-Namen aus dem Register, Kurzform und Kuerzel unveraendert
 			'04 — Thresholds', 'Apply to SMS tokens, Telegram compact style and the email outlook/trend block', 'Gusts (km/h)',
 			'Precipitation (mm)', 'Snow line (m)', 'Sensitive Standard Robust', 'Thunderstorm TH Light Moderate High',
 			'Official warnings in the report', 'everything after it is an official warning', 'L = yellow', 'TH:H = red thunderstorm warning',
-			'These are the codes for these values in SMS and Telegram compact style:', 'CUSTOM PRESET', 'Save selection as preset',
-			'DESCRIPTION · OPTIONAL', 'WILL BE SAVED', 'Active metrics: 9 · raw: 5 · indicator: 0', 'Columns: 9 · detail: 0 · simple: 0',
-			'TIME HORIZONS', 'Default for new trips', 'Cancel', 'Save preset', 'Apply preset',
+			// #2794 S3a Teil-PR 3 (AC-42): Dialog-Texte aus `wetter.dialog.*` (ohne Zeithorizonte/Zusammenfassung).
+			'These are the codes for these values in SMS and Telegram compact style:', 'Save as your own template',
+			'Name', 'Description', 'Saved are the metric selection, traffic-light limits and alert levels.',
+			'Default for new trips', 'Cancel', 'Apply preset',
 			'You have unsaved changes. The preset overwrites the current selection.', 'Overwrite'
 		])
 			hat(t, s);
@@ -203,13 +205,13 @@ describe('AC-1: Metrik-Namen aus dem Register, Kurzform und Kuerzel unveraendert
 		const alle = [...attr(eigen, 'title'), ...attr(eigen, 'aria-label'), ...attr(eigen, 'placeholder')]
 			.filter((a) => !a.startsWith('Zum Sortieren ziehen'))
 			.join(' | ');
-		for (const s of ['Short form in the email hourly table', 'Codes in SMS, Premium SMS and Telegram', 'Remove from briefing', 'Close', 'My hiking preset', 'Optimised for day trips', 'Metrics, order'])
+		for (const s of ['Short form in the email hourly table', 'Codes in SMS, Premium SMS and Telegram', 'Remove from briefing', 'Close', 'Metrics, order'])
 			hat(alle, s);
 		assert.deepEqual(deutscheReste(alle), []);
 		const baustein = deDannEn(() => bausteineRendern()).en;
 		hat(attr(baustein, 'title').join(' | '), 'Add back to briefing');
 		const bt = sichtbar(baustein);
-		for (const s of ['Day window', 'Crosses midnight — ends the next day.', 'Custom', 'Off in this channel', 'On', 'No metric active', 'Telegram'])
+		for (const s of ['Day window', 'Crosses midnight — ends the next day.', 'Custom', 'Off in this channel', 'On', 'Save as your own template', 'Default for new trips', 'Telegram'])
 			hat(bt, s);
 		assert.deepEqual(deutscheReste(bt), []);
 	});

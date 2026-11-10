@@ -83,4 +83,6 @@ export function weatherMetricsTabSections(context: WeatherMetricsContext, bereic
 // Nacht-Block der Trip-Mail (#1721, nur route, daher in ROUTE_ONLY_SECTIONS).
 export type WeatherMetricsBereich = 'wetter' | 'zustellung' | 'alles';
 
-const ZUSTELLUNGS_SECTIONS: readonly string[] = ['layout_kanal', 'stundenverlauf', 'ausblick', 'report_config', 'nachtblock'];
+// Issue #2794 S3a (Teil-PR 3, Spec §6 e): die SMS-Schwellen (#624) sind Kanal-Inhalt und
+// wandern in den Bereich Zustellung — der Reiter Wetter mountet keine Metrik-Oberflaeche mehr.
+const ZUSTELLUNGS_SECTIONS: readonly string[] = ['layout_kanal', 'stundenverlauf', 'ausblick', 'report_config', 'nachtblock', 'sms_schwellen'];

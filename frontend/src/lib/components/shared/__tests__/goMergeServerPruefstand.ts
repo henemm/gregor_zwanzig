@@ -274,17 +274,11 @@ export const EIGENFELDER = {
 		top: ['corridors', 'display_config'],
 		display: ['active_metrics', 'ideal_ranges', 'metric_alert_levels']
 	},
+	// #2794 S3a Teil 3 (F006, AC-38): Auswahl, Amtliche Warnungen und Tagesfenster gehoeren
+	// dem Reiter Wetter (WetterTab), nicht mehr dem Zustellungs-Speicherer von WeatherMetricsTab.
 	wetterMetriken: {
-		top: [
-			'day_window_end_hour',
-			'day_window_start_hour',
-			'display_config',
-			'hourly_enabled',
-			'official_alerts_enabled',
-			'outlook_enabled'
-		],
+		top: ['display_config', 'hourly_enabled', 'outlook_enabled'],
 		display: [
-			'active_metrics',
 			'channel_active_metrics',
 			'hourly_metrics',
 			'outlook_metric_formats',

@@ -366,8 +366,28 @@ export interface MetricPreset {
 	metrics: MetricPresetMetric[];
 	created_at: string;
 	/** Issue #2792 S1a: Profil-Ampel samt alarm_ab; fehlt = Vorlage „allgemein". */
-	ampel?: Record<string, unknown> | null;
+	ampel?: Ampel | null;
+	/** Issue #2794 S3a: Art der eigenen Vorlage. */
+	kind?: 'route' | 'vergleich';
 }
+
+// Issue #2794 S3a (Teil-PR 3): Profil-Ampel (Spiegel von src/app/ampel.py).
+// Als `type` (nicht `interface`), damit sie zu `Record<string, unknown>` passt.
+export type AmpelAlarmAb = 'never' | 'yellow' | 'orange' | 'red';
+export type AmpelFarbe = 'yellow' | 'orange' | 'red';
+/** Grenzen einer Seite; `null`/fehlend = keine Grenze. */
+export type AmpelSeite = { red?: number | null; orange?: number | null; yellow?: number | null };
+export type AmpelMetrik = {
+	enabled?: boolean;
+	alarm_ab?: AmpelAlarmAb;
+	lower?: AmpelSeite | null;
+	upper?: AmpelSeite | null;
+};
+export type Ampel = {
+	template?: string;
+	metrics?: Record<string, AmpelMetrik>;
+	thunder?: { mittel?: AmpelFarbe; hoch?: AmpelFarbe };
+};
 
 export interface Trip {
 	id: string;

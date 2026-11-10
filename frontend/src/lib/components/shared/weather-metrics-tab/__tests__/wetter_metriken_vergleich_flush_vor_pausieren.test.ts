@@ -76,7 +76,8 @@ describe('AC-8: Pausieren direkt nach einer Wetter-Metriken-Änderung verliert s
 	test('Änderung im Entprell-Fenster, sofort pausieren → Wetter-Metriken-PUT zuerst, Pausier-PUT trägt die Änderung', async () => {
 		const { ctl, speicherung, bedienung, pausieren } = hub();
 
-		bedienung.toggleMetric('gust_max_kmh');
+		// #2794 F006: Metrikauswahl gehoert dem Reiter Wetter — gemessen mit der Stundenverlauf-Geste.
+		bedienung.hourlyDragEnd(['temp_max_c', 'wind_max_kmh']);
 		speicherung.aenderungMelden();
 		assert.equal(ctl.hasPending, true, 'Vorbedingung: Änderung wartet im Entprell-Fenster');
 
@@ -84,7 +85,7 @@ describe('AC-8: Pausieren direkt nach einer Wetter-Metriken-Änderung verliert s
 
 		assert.equal(puts().length, 2, 'erst die Wetter-Metriken-Änderung, dann das Pausieren');
 		const [erster, zweiter] = puts();
-		assert.ok((dc(erster).active_metrics as string[]).includes('gust_max_kmh'), 'erster PUT = Wetter-Metriken-Änderung');
+		assert.deepEqual(dc(erster).hourly_metrics, ['temp_max_c', 'wind_max_kmh'], 'erster PUT = Wetter-Metriken-Änderung');
 		assert.ok(!('schedule' in erster), 'erster PUT darf den Zeitplan nicht senden (also auch nicht pausieren)');
 		assert.deepEqual(
 			zweiter,
@@ -93,7 +94,7 @@ describe('AC-8: Pausieren direkt nach einer Wetter-Metriken-Änderung verliert s
 		);
 		const stand = server.stand(PRESET_ID);
 		assert.equal(stand.schedule, 'manual');
-		assert.ok((dc(stand).active_metrics as string[]).includes('gust_max_kmh'));
+		assert.deepEqual(dc(stand).hourly_metrics, ['temp_max_c', 'wind_max_kmh']);
 		assert.equal(ctl.hasPending, false, 'nach dem Pausieren darf nichts mehr ausstehen');
 	});
 });

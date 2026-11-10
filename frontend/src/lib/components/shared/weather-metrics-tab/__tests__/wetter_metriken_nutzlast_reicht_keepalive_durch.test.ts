@@ -57,7 +57,7 @@ describe('AC-11: die Entlade-Option (keepalive) erreicht den Wetter-Metriken-PUT
 		const { ctl, speicherung, bedienung } = aufbau();
 		await api.get(PRESET_PFAD); // Stand bekannt, wie nach dem Laden der Seite
 
-		bedienung.toggleMetric('gust_max_kmh');
+		bedienung.hourlyDragEnd(['temp_max_c', 'wind_max_kmh']); // #2794 F006: Zustellungs-Geste statt Metrikauswahl
 		speicherung.aenderungMelden();
 		await ctl.flush({ keepalive: true });
 
@@ -69,7 +69,7 @@ describe('AC-11: die Entlade-Option (keepalive) erreicht den Wetter-Metriken-PUT
 	test('Gegenprobe: regulärer Flush → PUT ohne keepalive', async () => {
 		const { ctl, speicherung, bedienung } = aufbau();
 
-		bedienung.toggleMetric('gust_max_kmh');
+		bedienung.hourlyDragEnd(['temp_max_c', 'wind_max_kmh']); // #2794 F006: Zustellungs-Geste statt Metrikauswahl
 		speicherung.aenderungMelden();
 		await ctl.flush();
 

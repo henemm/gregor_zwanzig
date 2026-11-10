@@ -193,8 +193,10 @@ describe('AC-2/AC-3: /compare/new zeigt die Infobox (Wertebereiche, Versand), De
 		});
 	}
 
+	// #2794 S3a Teil-PR 3: die Metrik-Oberflaeche (Stundenverlauf, 3-Tages-Ausblick) steht nur noch im
+	// Schritt Zustellung — die Infobox folgt ihr dorthin, Text und Kontext unveraendert.
 	test('Wetter-Metriken (Desktop): Infobox mit Vergleichs-Text, nicht dem Trip-Text', async () => {
-		const html = await renderVergleichNeu({ ...VERGLEICH_FLAGS, activeTab: 'wetter', isMobileViewport: false });
+		const html = await renderVergleichNeu({ ...VERGLEICH_FLAGS, activeTab: 'zustellung', isMobileViewport: false });
 		assert.ok(tagsMitTestid(html, 'infobox-wetter-metriken-vergleich').length >= 1, `gefunden: ${JSON.stringify(infoboxIds(html))}`);
 		const text = infoboxText(html, 'wetter-metriken', 'vergleich');
 		assert.equal(text, erwartet('wetter-metriken', 'vergleich'));
@@ -444,8 +446,9 @@ describe('Verdrahtung: jeder Anlege-Mount setzt showInfobox explizit auf true', 
 		[
 			'CompareNewEditor',
 			join(COMPONENTS, 'compare-new/CompareNewEditor.svelte'),
-			// #2794 S3a: je Gerät ein Panel im Schritt Wetter und eines im Schritt Zustellung.
-			{ WeatherMetricsTab: 0, CorridorEditor: 1, CorridorEditorMobile: 1, AlarmeTab: 2, VersandTab: 0, WetterMetrikenVersandPanel: 4 }
+			// #2794 S3a Teil-PR 3 (AC-38): der Schritt Wetter ist der WetterTab; das Panel steht je Gerät
+			// nur noch im Schritt Zustellung (2 statt 4), die Wertebereiche bleiben unsichtbar gemountet.
+			{ WeatherMetricsTab: 0, CorridorEditor: 1, CorridorEditorMobile: 1, AlarmeTab: 2, VersandTab: 0, WetterMetrikenVersandPanel: 2 }
 		]
 	];
 	for (const [name, datei, erwartetAnzahl] of EDITOREN) {
@@ -477,25 +480,41 @@ describe('Verdrahtung: jeder Anlege-Mount setzt showInfobox explizit auf true', 
 describe('AC-6 Verdrahtung: die Bearbeiten-Hubs und die Wertprop-Bündel setzen showInfobox NIE', () => {
 	// Der Trip-Hub mountet Alarme und Versand nicht in TripTabs selbst, sondern in
 	// zwei Reiter-Huellen — alle drei Dateien gehoeren zur Bearbeiten-Flaeche.
+	// #2794 S3a Teil-PR 3: die Metrik-Oberflaeche steht in beiden Hubs im Reiter Zustellung
+	// (Huelle ZustellungTab), die Grenzen traegt der WetterTab — beide gehoeren zur Flaeche.
+	const ZUSTELLUNG_HUELLE = join(COMPONENTS, 'shared/zustellung-tab/ZustellungTab.svelte');
+	const HUB_ORGANISMEN = [...ORGANISMEN, 'WetterTab'];
 	for (const [name, dateien] of [
 		[
 			'Trip-Hub (TripTabs + AlarmeScheduleTab + BriefingScheduleTab)',
 			[
 				join(COMPONENTS, 'trip-detail/TripTabs.svelte'),
 				join(COMPONENTS, 'trip-detail/AlarmeScheduleTab.svelte'),
-				join(COMPONENTS, 'trip-detail/BriefingScheduleTab.svelte')
+				join(COMPONENTS, 'trip-detail/BriefingScheduleTab.svelte'),
+				ZUSTELLUNG_HUELLE
 			]
 		],
-		['CompareTabs', [join(COMPONENTS, 'compare/CompareTabs.svelte')]]
+		['CompareTabs', [join(COMPONENTS, 'compare/CompareTabs.svelte'), ZUSTELLUNG_HUELLE]]
 	] as const) {
 		test(`${name}: mountet die Organismen (nicht vakuum) ohne showInfobox`, () => {
-			const alle: Record<string, Knoten[]> = Object.fromEntries(ORGANISMEN.map((o) => [o, []]));
+			const alle: Record<string, Knoten[]> = Object.fromEntries(HUB_ORGANISMEN.map((o) => [o, []]));
 			for (const datei of dateien) {
-				const m = mounts(datei);
-				for (const o of ORGANISMEN) alle[o].push(...m[o]);
+				const quelle = readFileSync(datei, 'utf-8');
+				const ast = parse(quelle, { modern: true }) as Knoten;
+				for (const o of HUB_ORGANISMEN) alle[o].push(...findeKomponenten(ast, o));
 			}
-			const gesamt = ORGANISMEN.reduce((s, o) => s + alle[o].length, 0);
-			assert.ok(gesamt >= 4, `${name}: nur ${gesamt} Organismus-Mounts gefunden — Messaufbau kaputt`);
+			const gesamt = HUB_ORGANISMEN.reduce((s, o) => s + alle[o].length, 0);
+			// #2794 S3a Teil-PR 3: im Vergleichs-Hub ersetzt EIN WetterTab Desktop- und Mobil-Wertebereiche.
+			// Fix-Loop 2 (F-A5): exakte Zahl statt Untergrenze (vorher `>= 4`) — je Hub gezaehlt,
+			// jeder Traeger unten zusaetzlich einzeln zugesichert. Trip-Hub 4 (AlarmeTab, Panel in der
+			// Zustellungs-Huelle, VersandTab in BriefingScheduleTab, WetterTab); CompareTabs 3 (AlarmeTab, Panel
+			// in der Zustellungs-Huelle, WetterTab — EIN WetterTab ersetzt die zwei Wertebereiche-Mounts).
+			const ERWARTET_GESAMT: Record<string, number> = {
+				'Trip-Hub (TripTabs + AlarmeScheduleTab + BriefingScheduleTab)': 4,
+				CompareTabs: 3
+			};
+			const soll = ERWARTET_GESAMT[name] ?? -1;
+			assert.equal(gesamt, soll, `${name}: ${gesamt} Organismus-Mounts gefunden (erwartet ${soll}) — Messaufbau kaputt`);
 			assert.ok(alle.AlarmeTab.length >= 1, `${name}: kein AlarmeTab-Mount gefunden`);
 			// #1743: Wetter-Metriken/Versand duerfen auch ueber den geteilten Panel-Baustein kommen.
 			for (const org of ['WeatherMetricsTab', 'VersandTab']) {
@@ -504,11 +523,9 @@ describe('AC-6 Verdrahtung: die Bearbeiten-Hubs und die Wertprop-Bündel setzen 
 					`${name}: kein ${org}- bzw. WetterMetrikenVersandPanel-Mount gefunden`
 				);
 			}
-			assert.ok(
-				alle.CorridorEditor.length + alle.CorridorEditorMobile.length >= 1,
-				`${name}: kein Corridor-Mount`
-			);
-			for (const org of ORGANISMEN) {
+			// #2794 S3a Teil-PR 3: Traeger der Grenzen im Hub ist der WetterTab (statt CorridorEditor).
+			assert.ok(alle.WetterTab.length >= 1, `${name}: kein WetterTab-Mount (Grenzen-Traeger)`);
+			for (const org of HUB_ORGANISMEN) {
 				for (const einbettung of alle[org]) {
 					assert.ok(
 						!attributNamen(einbettung).includes('showInfobox'),

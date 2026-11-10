@@ -136,12 +136,13 @@ export function reiterAufbau(
 		ctl,
 		speicherung,
 		basis: () => basis,
+		// #2794 S3a Teil 3 (F006): die Metrikauswahl gehoert dem Reiter Wetter; Geste dieses
+		// Reiters ist die Stundenverlauf-Reihenfolge, Leeren betrifft Stundenverlauf und Ausblick.
 		aendern() {
-			bedienung.toggleMetric('gust_max_kmh');
+			bedienung.hourlyDragEnd(['temp_max_c', 'wind_max_kmh']);
 		},
 		leeren() {
-			// alle Metriken abgewählt, Stundenverlauf und Ausblick geleert
-			bedienung.reorderMetrics([]);
+			// Stundenverlauf und Ausblick geleert
 			bedienung.hourlyDragEnd([]);
 			bedienung.outlookSelect([]);
 		}

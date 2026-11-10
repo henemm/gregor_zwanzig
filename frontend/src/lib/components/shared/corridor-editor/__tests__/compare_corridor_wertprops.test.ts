@@ -518,14 +518,20 @@ function wizStand(): Knoten {
 	};
 }
 
+// #2794 S3a Teil-PR 3 (AC-38): im Hub ersetzt der WetterTab die Wertebereiche-Ansicht (Mount B
+// entfaellt, eigener Waechter unten); die Anlege-Seite haelt sie unsichtbar fuer die Vorbelegung.
 const MOUNTS: [string, string, string][] = [
-	['Hub /compare/[id], Desktop (Mount B)', HUB, 'CorridorEditor'],
-	['Hub /compare/[id], Mobil (Mount B)', HUB, 'CorridorEditorMobile'],
 	['Anlege-Seite /compare/new, Desktop (Mount C)', ANLEGE, 'CorridorEditor'],
 	['Anlege-Seite /compare/new, Mobil (Mount C)', ANLEGE, 'CorridorEditorMobile']
 ];
 
 describe('AC-3: alle Vergleichs-Mounts speisen dasselbe Buendel ein', () => {
+	test('Hub /compare/[id]: keine Wertebereiche-Einbettung mehr (Reiter Wetter = WetterTab, AC-38)', () => {
+		for (const komponente of ['CorridorEditor', 'CorridorEditorMobile']) {
+			assert.strictEqual(einbettungen(HUB, komponente).treffer.length, 0, `Hub mountet noch ${komponente} (zweiter Speicherer)`);
+		}
+		assert.strictEqual(einbettungen(HUB, 'WetterTab').treffer.length, 1, 'Hub mountet keinen (genau einen) WetterTab');
+	});
 	for (const [was, datei, komponente] of MOUNTS) {
 		test(`${was}: ruft \`corridorPropsAus(<zustand>)\` IM Markup-Ausdruck auf`, () => {
 			const { quelle, treffer } = einbettungen(datei, komponente);

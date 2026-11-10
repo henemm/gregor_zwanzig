@@ -115,28 +115,34 @@ function assertNurEigenfelderGesendet(body: unknown): void {
 }
 
 describe('AC-12 (Kern, seit #2375 Teilfeld): baueWetterMetrikenNutzlast — nur die eigenen Felder im Rumpf', () => {
-	test('Metrik hinzugefügt → der Rumpf trägt nur Eigenfelder, die Auswahl ist neu', () => {
+	// #2794 S3a Teil 3 (F006, AC-38): Metrikauswahl, Amtliche Warnungen und Tagesfenster gehoeren
+	// dem Reiter Wetter — sie stehen auch dann nicht im Rumpf, wenn sie sich in der Kopie aendern.
+	test('Kanal-Auswahl geändert → der Rumpf trägt nur Eigenfelder, die Kanal-Auswahl ist neu', () => {
 		const preset = reicherVergleich();
 		const ws = hydrierterWs(preset);
-		wetterMetrikenBedienung(ws).toggleMetric('gust_max_kmh');
+		ws.channelActiveMetricKeys = { email: ['wind_max_kmh'], telegram: null, sms: null };
 
 		const { url, body } = baueWetterMetrikenNutzlast(preset, wetterMetrikenSnapshotAus(ws));
 
 		assert.equal(url, `/api/compare/presets/${PRESET_ID}`);
 		assertNurEigenfelderGesendet(body);
-		assert.ok((dc(body).active_metrics as string[]).includes('gust_max_kmh'));
+		assert.ok(JSON.stringify(dc(body).channel_active_metrics).includes('wind_max_kmh'));
 	});
 
-	test('Tagesfenster geändert → Wertebereiche/Alarme/Versand stehen nicht im Rumpf', () => {
+	test('Tagesfenster und Metrikauswahl in der Kopie geändert → weder sie noch Wertebereiche/Alarme/Versand stehen im Rumpf', () => {
 		const preset = reicherVergleich();
 		const ws = hydrierterWs(preset);
 		wetterMetrikenBedienung(ws).setDayWindow(6, 21);
+		wetterMetrikenBedienung(ws).toggleMetric('gust_max_kmh');
 
 		const { body } = baueWetterMetrikenNutzlast(preset, wetterMetrikenSnapshotAus(ws));
 
 		assertNurEigenfelderGesendet(body);
-		assert.equal((body as unknown as Record<string, unknown>).day_window_start_hour, 6);
-		assert.equal((body as unknown as Record<string, unknown>).day_window_end_hour, 21);
+		const roh = body as unknown as Record<string, unknown>;
+		for (const k of ['day_window_start_hour', 'day_window_end_hour', 'official_alerts_enabled']) {
+			assert.ok(!(k in roh), `${k} gehört dem Reiter Wetter`);
+		}
+		assert.ok(!('active_metrics' in dc(body)), 'active_metrics gehört dem Reiter Wetter');
 		assert.equal(dc(body).metric_alert_levels, undefined, 'metric_alert_levels gehört dem Alarme-Reiter');
 	});
 });
@@ -223,7 +229,7 @@ describe('AC-12 (Rueckfall via Orchestrierung): erstelleWetterMetrikenVergleichS
 
 		// echte Geste unabhaengig von den drei Rueckfall-Feldern, damit
 		// ueberhaupt gespeichert wird (AC-4: kein Schreiben ohne Nutzer-Geste)
-		wetterMetrikenBedienung(ws).toggleOfficialAlerts();
+		ws.hourlyEnabled = false; // #2794 F006: eigenes Feld statt Amtliche Warnungen (Reiter Wetter)
 		speicherung.aenderungMelden();
 		await ctl.flush();
 

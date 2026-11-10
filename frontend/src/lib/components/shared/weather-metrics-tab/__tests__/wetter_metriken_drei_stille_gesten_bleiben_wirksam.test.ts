@@ -1,21 +1,14 @@
-// TDD RED — Issue #2276 Scheibe S4 (Epic #2345), AC-5: drei Gesten hatten
-// historisch KEINEN expliziten Commit-Call und verließen sich vollständig auf
-// den Wrapper-Bubble (Kontext-Dokument Abschnitt 1.5): Metrik-Checkbox
-// (`toggleCompareMetric`), Amtliche-Warnungen-Schalter
-// (`onToggleVergleichOfficialAlerts`) und Tagesfenster Von/Bis
-// (`DayWindowCard`-Handler). Fällt der Wrapper weg, müssen genau diese drei
-// Stellen einen Ersatzweg bekommen (reaktiver `$effect`, der alle acht
-// persistenzrelevanten Felder beobachtet) — sonst verstummt die Persistenz
-// für genau diese drei Gesten lautlos.
+// Issue #2276 Scheibe S4 (Epic #2345), AC-5 — UMGESTELLT durch Issue #2794 S3a Teil-PR 3
+// (Fix-Loop 1, Adversary-Finding F006, AC-38 woertlich):
 //
-// Spec: docs/specs/modules/rework_2276_s4_wetter_metriken.md — AC-5
-//
-// Je Geste ein eigener Testfall (Isolationsnachweis: fällt der Ersatzweg für
-// GENAU eine Geste weg, wird GENAU dieser Test rot, die anderen beiden bleiben
-// grün). Auf Modulebene geprüft (wie AC-1): der kombinierte Snapshot muss ALLE
-// drei Felder tragen, damit ein reiner Feldwechsel — ohne Ziehgeste — als
-// Diff erkannt wird. Prüfort ≠ Wirkort für die tatsächliche `$effect`-
-// Verdrahtung: E2E-Spec hub-wetter-metriken-speichert-selbst.spec.ts.
+// Frueher: die drei „stillen" Gesten Metrik-Checkbox, Amtliche-Warnungen-Schalter und
+// Tagesfenster Von/Bis hatten keinen eigenen Commit-Call und mussten ueber den
+// Wetter-Metriken-Speicherer gespeichert werden.
+// Jetzt: diese drei Felder gehoeren dem Reiter Wetter (WetterTab, wetterTabSpeicherung.ts).
+// WeatherMetricsTab steht nur noch im Reiter Zustellung, und sein Speicherer darf KEINES
+// dieser Felder schreiben — auch nicht, wenn sie sich in seiner Kopie aendern (z. B. nach
+// der Neu-Hydration aus der WetterTab-Antwort). Je Geste ein eigener Testfall
+// (Isolationsnachweis wie bisher): jede der drei loest allein keinen PUT aus.
 //
 // Ausführen:
 //   cd frontend && npm test -- src/lib/components/shared/weather-metrics-tab/__tests__/wetter_metriken_drei_stille_gesten_bleiben_wirksam.test.ts
@@ -29,7 +22,7 @@ import { createFakeTripServer, type FakeTripServer } from '../../../../__tests__
 import type { ComparePreset } from '../../../../types.ts';
 import { createPutQueue } from '../../../compare/compareHubPersistenz.ts';
 import { erstelleWetterMetrikenVergleichSpeicherung } from '../weatherMetricsCompareSave.ts';
-import { createController, dc, hydrierterWs, makePreset, wetterMetrikenBedienung } from './wetterMetrikenVergleichPruefstand.ts';
+import { createController, hydrierterWs, makePreset, wetterMetrikenBedienung } from './wetterMetrikenVergleichPruefstand.ts';
 
 const PRESET_ID = 'cp-2276-s4-stille-gesten';
 
@@ -63,56 +56,21 @@ function aufbau() {
 	return { ws, ctl, speicherung, bedienung: wetterMetrikenBedienung(ws) };
 }
 
-describe('AC-5a: Metrik-Checkbox (toggleCompareMetric) — kein Drag, trotzdem gespeichert', () => {
-	test('Checkbox aus (Metrik entfernen) → gemeldet, gespeichert', async () => {
-		const { ctl, speicherung, bedienung } = aufbau();
-		bedienung.toggleMetric('wind_max_kmh'); // in makePreset aktiv → wird entfernt
-		speicherung.aenderungMelden();
-		await ctl.flush();
-		assert.equal(puts().length, 1, 'die Checkbox-Geste (ohne Ziehgeste) muss gespeichert werden');
-		assert.ok(!(dc(server.storedBody(PRESET_ID)).active_metrics as string[]).includes('wind_max_kmh'));
-	});
-});
+const FAELLE: Array<[string, (b: ReturnType<typeof wetterMetrikenBedienung>) => void]> = [
+	['AC-5a → #2794 F006: Metrik-Checkbox', (b) => b.toggleMetric('wind_max_kmh')],
+	['AC-5b → #2794 F006: Amtliche-Warnungen-Schalter', (b) => b.toggleOfficialAlerts()],
+	['AC-5c → #2794 F006: Tagesfenster Von/Bis', (b) => b.setDayWindow(6, 21)]
+];
 
-describe('AC-5b: Amtliche-Warnungen-Schalter (onToggleVergleichOfficialAlerts) — kein Drag, trotzdem gespeichert', () => {
-	test('Schalter umgelegt → gemeldet, gespeichert', async () => {
-		const { ctl, speicherung, bedienung } = aufbau();
-		bedienung.toggleOfficialAlerts();
-		speicherung.aenderungMelden();
-		await ctl.flush();
-		assert.equal(puts().length, 1, 'der Amtliche-Warnungen-Schalter (ohne Ziehgeste) muss gespeichert werden');
-		assert.equal((server.storedBody(PRESET_ID) as Record<string, unknown>).official_alerts_enabled, false);
-	});
-});
-
-describe('AC-5c: Tagesfenster Von/Bis (DayWindowCard-Handler) — kein Drag, trotzdem gespeichert', () => {
-	test('Von/Bis geändert → gemeldet, gespeichert', async () => {
-		const { ctl, speicherung, bedienung } = aufbau();
-		bedienung.setDayWindow(6, 21);
-		speicherung.aenderungMelden();
-		await ctl.flush();
-		assert.equal(puts().length, 1, 'das Tagesfenster (ohne Ziehgeste) muss gespeichert werden');
-		const stand = server.storedBody(PRESET_ID) as Record<string, unknown>;
-		assert.equal(stand.day_window_start_hour, 6);
-		assert.equal(stand.day_window_end_hour, 21);
-	});
-});
-
-describe('Isolationsnachweis: die drei Gesten sind unabhängig voneinander erkennbar', () => {
-	test('nur EINE der drei Gesten ausgelöst → genau diese eine steht im Diff, die anderen beiden bleiben beim Ausgangswert', async () => {
-		const { ctl, speicherung, bedienung } = aufbau();
-		bedienung.toggleOfficialAlerts();
-		speicherung.aenderungMelden();
-		await ctl.flush();
-
-		const stand = server.storedBody(PRESET_ID) as Record<string, unknown>;
-		assert.equal(stand.official_alerts_enabled, false, 'die ausgelöste Geste muss stehen');
-		assert.equal(stand.day_window_start_hour, 4, 'Tagesfenster-Start unangetastet (Default)');
-		assert.equal(stand.day_window_end_hour, 19, 'Tagesfenster-Ende unangetastet (Default)');
-		assert.deepEqual(
-			dc(stand).active_metrics,
-			['wind_max_kmh', 'snow_depth_cm', 'temp_max_c'],
-			'Metrikauswahl unangetastet (Ausgangsstand aus makePreset)'
-		);
-	});
+describe('#2794 F006: Felder des Reiters Wetter speichert der Zustellungs-Speicherer nicht', () => {
+	for (const [was, geste] of FAELLE) {
+		test(`${was} — allein ⇒ kein PUT, kein Vorgang beim Controller`, async () => {
+			const { ctl, speicherung, bedienung } = aufbau();
+			geste(bedienung);
+			speicherung.aenderungMelden();
+			assert.equal(ctl.hasPending, false, `${was}: der Zustellungs-Speicherer plant einen Vorgang ein`);
+			await ctl.flush();
+			assert.equal(puts().length, 0, `${was}: der Zustellungs-Speicherer schreibt ein Feld des Reiters Wetter`);
+		});
+	}
 });

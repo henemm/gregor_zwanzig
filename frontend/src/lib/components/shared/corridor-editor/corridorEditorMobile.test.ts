@@ -20,6 +20,7 @@ import { readFileSync, existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import { openBoundValue } from './corridorEditorState.ts';
+import { svelteAst, einbettungenMitWeichen, attribut, viewportVon } from '../__tests__/s3a2794Ast.ts';
 import { locale, korridorRendern, routeZustand } from '../layout-tab/__tests__/f8Pruefstand.ts';
 
 /** #2657 (i18n F8): Beschriftungen stehen im Katalog — geprueft am echten SSR-Render (deutsch). */
@@ -200,32 +201,21 @@ describe('#1371 F001: CorridorEditor.svelte (Desktop) hat kein "Warnen"-Bedienel
 // mounten CorridorEditorMobile statt AlertsTab/Step3Idealwerte im Mobile-Zweig.
 // ────────────────────────────────────────────────────────────────────────────
 
-describe('Einbau TripTabs.svelte — Mobile-Zweig context="route"', () => {
-	test('mountet CorridorEditorMobile context="route" statt AlertsTab', () => {
-		const src = readFileSync(TRIP_TABS, 'utf-8');
-		assert.match(src, /<CorridorEditorMobile\s+context="route"/, 'CorridorEditorMobile context="route" fehlt im Mobile-Zweig');
-		assert.ok(!/<AlertsTab\b/.test(src), 'AlertsTab darf nicht mehr instanziiert werden');
+// #2794 S3a Teil-PR 3 (AC-38): in beiden Hubs traegt der Reiter Wetter EINEN WetterTab fuer Desktop
+// UND mobil — die Hub-Einbauten von CorridorEditor/CorridorEditorMobile entfallen. Zusicherung
+// „mobil hat die Grenzen-Bedienung, kein AlertsTab" uebertragen: WetterTab ohne Viewport-Weiche.
+for (const [datei, ctx] of [[TRIP_TABS, 'route'], [COMPARE_TABS, 'vergleich']] as const) {
+	describe(`Einbau ${ctx === 'route' ? 'TripTabs' : 'CompareTabs'}.svelte — Grenzen mobil und Desktop`, () => {
+		// Fix-Loop 2 (F-A5): Weiche per AST (s3a2794Ast.ts) statt Zeichenfenster vor dem Mount.
+		test(`mountet genau einen WetterTab context="${ctx}" ausserhalb jeder isMobileViewport-Weiche, keinen AlertsTab/CorridorEditor`, () => {
+			const { ast, quelle } = svelteAst(datei);
+			const alle = einbettungenMitWeichen(ast, quelle, ['WetterTab', 'AlertsTab', 'CorridorEditor', 'CorridorEditorMobile']);
+			const tabs = alle.filter((e) => e.name === 'WetterTab');
+			assert.equal(tabs.length, 1, `WetterTab nicht genau einmal: ${tabs.length}`);
+			assert.equal(attribut(tabs[0].knoten, quelle, 'context')?.literal, ctx, `WetterTab ohne context="${ctx}"`);
+			assert.equal(viewportVon(tabs[0]), null, 'WetterTab haengt an der Viewport-Weiche');
+			const alt = alle.filter((e) => e.name !== 'WetterTab').map((e) => e.name);
+			assert.deepEqual(alt, [], 'Hub mountet noch AlertsTab bzw. die Alt-Wertebereiche');
+		});
 	});
-});
-
-describe('Einbau CompareTabs.svelte (Hub) — Mobile-Zweig context="vergleich"', () => {
-	test('mountet CorridorEditorMobile context="vergleich" im mobilen Idealwerte-Tab-Zweig', () => {
-		const src = readFileSync(COMPARE_TABS, 'utf-8');
-		assert.match(src, /<CorridorEditorMobile\s+context="vergleich"/, 'CorridorEditorMobile context="vergleich" fehlt im Mobile-Zweig');
-		// Negativ-Gegenprobe: der mobile Mount muss im {#if isMobileViewport}-Zweig
-		// stehen, dessen {:else}-Zweig stattdessen den Desktop-CorridorEditor mountet
-		// (kein Step3Idealwerte-Aequivalent im Hub, s. Recherche-Ergebnis S4b-Kontext).
-		// Issue #2316 Scheibe A (AC-9) + F002 (Adversary MEDIUM): BEIDE Zweige
-		// reichen zusaetzlich saveController/onCompareCommit durch (Speicher-
-		// Waechter-Anschluss, mobil UND Desktop) und tragen je einen
-		// erklaerenden Kommentar davor -- das Muster erlaubt beliebige weitere
-		// Props vor dem `/>` sowie einen optionalen HTML-Kommentar davor, ohne
-		// die eigentliche Zusicherung (Mobile/Desktop-Gegenstueck-Paarung) zu
-		// verwaessern.
-		assert.match(
-			src,
-			/\{#if isMobileViewport\}\s*(?:<!--[\s\S]*?-->\s*)?<CorridorEditorMobile context="vergleich"[^>]*\/>\s*\{:else\}\s*(?:<!--[\s\S]*?-->\s*)?<CorridorEditor context="vergleich"[^>]*\/>/,
-			'CorridorEditorMobile context="vergleich" muss im mobilen Zweig stehen, mit CorridorEditor context="vergleich" als Desktop-Gegenstueck im {:else}-Zweig'
-		);
-	});
-});
+}
