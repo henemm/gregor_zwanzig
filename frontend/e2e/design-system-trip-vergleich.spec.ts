@@ -841,6 +841,33 @@ test('DS-2 Rückkehr ins fertige Segment (1280 px): Tag „1" nachgetippt ist an
 	}
 });
 
+test('DS-2 Rücktaste (1280 px): eine Ziffer im fertigen Tag gelöscht ist angefangen, geht nicht als Zwischenstand hinaus', async ({
+	page
+}) => {
+	test.setTimeout(60_000);
+	await page.setViewportSize(DESKTOP);
+	await setzeSprache(page, 'de');
+	const hub = await seedHub(page.request, 'route');
+	try {
+		await openHub(page, 'route', hub.id, { tab: 'etappen' });
+		await expect(feldEingabe(datumFeld(page))).toHaveText('01.08.2027', { timeout: 15_000 });
+		await tippeDatum(page, datumFeld(page), '2027-08-20');
+		await expect.poll(async () => (await etappen(page, hub.id))[0]?.date, { timeout: 15_000 }).toBe('2027-08-20');
+		const puts = zaehlePuts(page, hub.id);
+		// „20" ⇒ Rücktaste ⇒ „2": bits-ui setzt schon Tag 02 — das darf nicht gespeichert werden.
+		await datumFeld(page).locator('[data-segment="day"]').click();
+		await page.keyboard.press('Backspace');
+		// Stabilitätsfenster länger als die Speicher-Entprellung (700 ms): kein PUT.
+		const ende = Date.now() + 2_000;
+		await expect.poll(() => (Date.now() < ende ? `warte ${puts.anzahl}` : puts.anzahl), { timeout: 5_000, intervals: [200] }).toBe(0);
+		await page.keyboard.type('5');
+		await expect.poll(async () => (await etappen(page, hub.id))[0]?.date, { timeout: 15_000 }).toBe('2027-08-25');
+		expect(puts.staende.map((e) => e.date).filter((d) => d !== '2027-08-25'), 'Zwischenstand Tag 02 gesendet').toEqual([]);
+	} finally {
+		await hub.aufraeumen();
+	}
+});
+
 test('DS-2 Rücknahme beim Tippen (1280 px): scheitert das Speichern, während ein Segment angefangen ist, schreibt das Verlassen nichts nach', async ({
 	page
 }) => {
