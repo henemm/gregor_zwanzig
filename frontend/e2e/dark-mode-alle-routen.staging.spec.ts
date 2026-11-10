@@ -4,19 +4,32 @@
 //
 // Gemessen wird am gerenderten DOM mit berechneten Werten (`messeKontrast` aus helpers.ts:
 // jeder sichtbare Textknoten gegen seinen effektiven Hintergrund, WCAG-Formel). Routen kommen
-// aus dem Routenbaum (src/routes/**/+page.svelte), dynamische Routen ([id]) werden mit der
-// ersten Trip-/Vergleichs-ID aus der Liste des eingeloggten Nutzers belegt (Trip und Vergleich
-// paarweise). Jede Route wird bei 1280x800 und 390x844 gemessen; Screenshots je Route landen
-// unter test-results/ für die Fresh-Eyes-Prüfung.
+// aus dem Routenbaum (src/routes/**/+page.svelte), dynamische Routen ([id]) werden mit einem
+// Trip und einem Ortsvergleich belegt, die diese Spec selbst anlegt (beforeAll, Präfix
+// `E2E-GZ-2400`) und am Ende wieder löscht — nur diese, Bestandsdaten des Nutzers bleiben
+// unberührt (Trip und Vergleich paarweise). Jede Route wird bei 1280x800 und 390x844
+// gemessen; Screenshots je Route landen unter test-results/ für die Fresh-Eyes-Prüfung.
 //
-// Ausführen (gegen Staging, aus frontend/, NACH Deploy):
-//   set -a; source /home/hem/gregor_zwanzig/.claude/validator.env; set +a
+// Ausführen (gegen Staging, aus frontend/, NACH Deploy). Zwei Credential-Paare, nur aus der
+// Umgebung: App-Login GZ_AUTH_USER/GZ_AUTH_PASS (Staging-.env), nginx-Basic-Auth
+// GZ_VALIDATOR_USER/GZ_VALIDATOR_PASS (validator.env):
+//   set -a; source /home/hem/gregor_zwanzig_staging/.env; source /home/hem/gregor_zwanzig/.claude/validator.env; set +a
 //   npx playwright test --config=e2e/playwright.dark-mode.staging.config.ts
-import { test, expect, type Page } from '@playwright/test';
+import { test, expect, type Page, type APIRequestContext } from '@playwright/test';
 import { readdirSync, statSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { messeKontrast, kontrastVerstoesse, kontrastBericht, kontrastVerhaeltnis } from './helpers';
+import {
+	messeKontrast,
+	kontrastVerstoesse,
+	kontrastBericht,
+	kontrastVerhaeltnis,
+	createTestLocation,
+	createTestComparePreset,
+	createTestTrip,
+	cleanupTracked
+} from './helpers';
+import { assertNotProdBaseURL } from './prodUrlGuard';
 
 const ROUTES_DIR = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'src', 'routes');
 const VIEWPORTS = [
@@ -40,9 +53,18 @@ function routenAusBaum(dir = ROUTES_DIR, prefix = ''): string[] {
 	return out;
 }
 
+/**
+ * Startzustand des Schalters setzen — NUR beim ersten Laden des Tabs. Ein Init-Script läuft
+ * bei jedem Laden (auch `page.reload()`); ohne Merker würde es `gz-dark` nach dem Neuladen
+ * wieder überschreiben und AC-5 (Zustand bleibt nach Neuladen) nie echt prüfen. Der Merker
+ * liegt in sessionStorage: überlebt Neuladen und Navigation im selben Tab, nicht aber einen
+ * neuen Kontext.
+ */
 async function setzeDunkel(page: Page, an: boolean) {
 	await page.addInitScript((wert) => {
 		try {
+			if (sessionStorage.getItem('gz-e2e-2400-start')) return;
+			sessionStorage.setItem('gz-e2e-2400-start', '1');
 			if (wert) localStorage.setItem('gz-dark', '1');
 			else localStorage.removeItem('gz-dark');
 		} catch {
@@ -51,8 +73,76 @@ async function setzeDunkel(page: Page, an: boolean) {
 	}, an);
 }
 
-/** Erste ID aus einer Listenseite (`/trips` bzw. `/compare`). */
+// ─── Testdaten: eigener Trip + Ortsvergleich, nur diese werden wieder gelöscht ─
+
+/** Von dieser Spec angelegte IDs (je Worker); `null`, solange nichts angelegt ist. */
+const eigene: Record<'/trips' | '/compare', string | null> = { '/trips': null, '/compare': null };
+
+/**
+ * Eigener API-Kontext für Anlage und Aufräumen: unabhängig vom storageState des Blocks, in dem
+ * das Datei-beforeAll zufällig läuft (der Fixture-`request` erbt z. B. das leere storageState
+ * des ausgeloggt-Blocks ⇒ 401). Login-Zustand aus dem Setup-Projekt, nginx-Basic-Auth wie
+ * in der Config — beides nur aus der Umgebung bzw. der Setup-Datei.
+ */
+const AUTH_DATEI = path.join(path.dirname(fileURLToPath(import.meta.url)), 'playwright', '.auth', 'staging-1888-legende.json');
+let api: APIRequestContext | null = null;
+
+test.beforeAll(async ({ playwright, baseURL }) => {
+	const basis = baseURL ?? process.env.GZ_SVELTE_BASE ?? 'https://staging.gregor20.henemm.com';
+	assertNotProdBaseURL(basis);
+	api = await playwright.request.newContext({
+		baseURL: basis,
+		ignoreHTTPSErrors: true,
+		httpCredentials: {
+			username: process.env.GZ_VALIDATOR_USER ?? process.env.E2E_USER ?? 'admin',
+			password: process.env.GZ_VALIDATOR_PASS ?? process.env.E2E_PASS ?? 'test1234'
+		},
+		storageState: AUTH_DATEI
+	});
+	const request = api;
+	// Namen tragen das reservierte Präfix E2E-GZ- (helpers.ts), damit Waisen nach einem
+	// Abbruch erkennbar bleiben. beforeAll läuft je Worker einmal.
+	const tag = `${Date.now()}`;
+	const morgen = new Date(Date.now() + 86_400_000).toISOString().slice(0, 10);
+	const trip = await createTestTrip(request, {
+		name: `2400 Dark Trip ${tag}`,
+		stages: [
+			{
+				id: 's1',
+				name: 'Etappe 1',
+				date: morgen,
+				waypoints: [
+					{ id: 'wp-a', name: 'Start', lat: 47.1, lon: 11.3, elevation_m: 900 },
+					{ id: 'wp-b', name: 'Ziel', lat: 47.15, lon: 11.35, elevation_m: 1600 }
+				]
+			}
+		]
+	});
+	const ortA = await createTestLocation(request, { name: `2400 Dark Ort A ${tag}`, lat: 47.27, lon: 11.39 });
+	const ortB = await createTestLocation(request, { name: `2400 Dark Ort B ${tag}`, lat: 47.1, lon: 11.3 });
+	const vergleich = await createTestComparePreset(request, {
+		name: `2400 Dark Vergleich ${tag}`,
+		locationIds: [ortA.id, ortB.id],
+		schedule: 'manual'
+	});
+	eigene['/trips'] = trip.id;
+	eigene['/compare'] = vergleich.id;
+});
+
+test.afterAll(async () => {
+	// Löscht ausschließlich die oben registrierten Objekte (Vergleich/Trip vor Orten).
+	if (api) {
+		await cleanupTracked(api);
+		await api.dispose();
+		api = null;
+	}
+	eigene['/trips'] = null;
+	eigene['/compare'] = null;
+});
+
+/** Trip-/Vergleichs-ID: bevorzugt die selbst angelegte, sonst die erste aus der Listenseite. */
 async function ersteId(page: Page, liste: '/trips' | '/compare'): Promise<string | null> {
+	if (eigene[liste]) return eigene[liste];
 	await page.goto(liste);
 	await page.waitForLoadState('networkidle');
 	const hrefs = await page.locator(`a[href^="${liste}/"]`).evaluateAll((as) => as.map((a) => a.getAttribute('href') ?? ''));
@@ -60,16 +150,43 @@ async function ersteId(page: Page, liste: '/trips' | '/compare'): Promise<string
 	return id ?? null;
 }
 
-/** Helle Flächen (Luminanz > 0,5) mit sichtbarer Ausdehnung auf dunklem Seitengrund. */
+/**
+ * Helle Flächen (Luminanz > 0,5) mit sichtbarer Ausdehnung auf dunklem Seitengrund.
+ *
+ * AC-3 meint mit „Karte oder Fläche" Container (Karten, Panels, Blätter, Dialoge, Zeilen),
+ * nicht Bedienelemente: invertiert gefüllte Knöpfe (Primärknopf, Link-Knopf, aktiver
+ * Sprachknopf) sind gewollt (hoher Kontrast, Leitprinzip), ihr Text wird über
+ * `messeKontrast` weiter gegen 4,5:1 geprüft. Übersprungen werden deshalb Bedienelemente
+ * und ihr Inneres — aber nur bis Bedienelement-Höhe (≤ 64 px): eine als Link gebaute
+ * Kachel/Karte bleibt in der Prüfung, ebenso jeder Vorfahren-Container eines Knopfes.
+ */
 async function helleFlaechen(page: Page): Promise<string[]> {
 	return page.evaluate(() => {
 		const lin = (v: number) => {
 			const s = v / 255;
 			return s <= 0.03928 ? s / 12.92 : Math.pow((s + 0.055) / 1.055, 2.4);
 		};
+		const BEDIENELEMENT = [
+			'button',
+			'a',
+			'input',
+			'select',
+			'textarea',
+			'label:has(input, select, textarea)',
+			'[role="button"]',
+			'[role="switch"]',
+			'[role="tab"]',
+			'[role="menuitem"]',
+			'[role="option"]',
+			'[role="radio"]',
+			'[role="checkbox"]'
+		].join(', ');
+		const MAX_BEDIEN_HOEHE = 64;
 		const out: string[] = [];
 		for (const el of Array.from(document.body.querySelectorAll('*'))) {
 			if (el.closest('.leaflet-container, .leaflet-pane')) continue; // Kacheln bleiben hell (Out of Scope)
+			const bedien = el.closest(BEDIENELEMENT);
+			if (bedien && bedien.getBoundingClientRect().height <= MAX_BEDIEN_HOEHE) continue;
 			const r = el.getBoundingClientRect();
 			if (r.width < 40 || r.height < 20) continue;
 			if (!el.checkVisibility({ opacityProperty: true, visibilityProperty: true })) continue;
@@ -153,10 +270,13 @@ test.describe('eingeloggt', () => {
 	test('AC-14: Karten-Container hat erkennbaren Rand (≥ 3:1) gegen den dunklen Grund', async ({ page }) => {
 		await setzeDunkel(page, true);
 		const tripId = await ersteId(page, '/trips');
-		await page.goto(`/trips/${tripId}`);
+		// Die Trip-Karte (MapCanvas, Leaflet) steht im Reiter „Etappen" (TripTabs →
+		// EditStagesSection → EditStagesPanelNew, Karten-Card `map-card`), nicht in der Übersicht.
+		await page.goto(`/trips/${tripId}?tab=etappen`);
 		await page.waitForLoadState('networkidle');
+		// Der selbst angelegte Trip hat eine Etappe mit Wegpunkten ⇒ Karte muss da sein (kein Skip).
 		const karte = page.locator('.leaflet-container').first();
-		test.skip((await karte.count()) === 0, 'keine Karte auf der Trip-Seite');
+		await expect(karte, 'keine Karte im Etappen-Reiter der Trip-Seite').toBeVisible({ timeout: 20_000 });
 		const z = await karte.evaluate((el) => {
 			const rahmen = el.parentElement ?? el;
 			const cs = getComputedStyle(el);
@@ -211,7 +331,13 @@ for (const vp of VIEWPORTS) {
 				await page.getByTestId('konto-sheet-dark').getByRole('switch').click();
 				await page.keyboard.press('Escape');
 			} else {
-				await page.getByRole('switch', { name: /Dunkles Design|Dark/i }).first().click();
+				// Desktop: Umschalter steckt im Benutzermenü der Seitenleiste (Sidebar.svelte).
+				// Menü-Auslöser hat keine testid; er ist der erste Knopf der Seitenleiste (alles
+				// darüber sind Links). Menüpunkt-Text aus dem Katalog: nav.dunkel/nav.hell =
+				// DE „Dark Mode"/„Light Mode", EN „Dark mode"/„Light mode".
+				const seitenleiste = page.getByTestId('desktop-sidebar');
+				await seitenleiste.getByRole('button').first().click();
+				await seitenleiste.getByRole('button', { name: /\b(Dark|Light) mode\b/i }).click();
 			}
 		};
 		expect((await zustand()).paper).toBe('#f6f4ee');

@@ -94,8 +94,8 @@
 					gap: 10px;
 					padding: 8px 12px;
 					border-radius: var(--g-r-3);
-					background: {active ? 'rgba(196,90,42,0.10)' : 'transparent'};
-					color: {active ? 'var(--g-accent-deep)' : 'var(--g-ink-2)'};
+					background: {active ? 'var(--g-sidebar-active-bg)' : 'transparent'};
+					color: {active ? 'var(--g-sidebar-active-fg)' : 'var(--g-ink-2)'};
 					font-size: 13px;
 					font-weight: {active ? 600 : 500};
 					text-decoration: none;
@@ -157,7 +157,7 @@
 	<div style="padding: 16px 18px; border-top: 1px solid var(--g-rule-soft); position: relative;">
 		<button
 			onclick={() => userMenuOpen = !userMenuOpen}
-			class="flex w-full items-center gap-2.5 rounded-md px-3 py-2 text-sm transition-colors hover:bg-[rgba(196,90,42,0.10)]"
+			class="flex w-full items-center gap-2.5 rounded-md px-3 py-2 text-sm transition-colors hover:bg-[var(--g-sidebar-active-bg)]"
 		>
 			<span class="flex size-7 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-semibold text-primary-foreground">
 				{userInitial(shownName)}

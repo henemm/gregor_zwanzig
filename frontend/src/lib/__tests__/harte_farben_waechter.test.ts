@@ -36,7 +36,11 @@ const TREFFER: RegExp[] = [
 	/background(?:-color)?\s*:\s*rgba\(\s*255\s*,\s*255\s*,\s*255\b/gi,
 	/(?<![-\w])color\s*:\s*(?:#fff(?:fff)?|white)\b/gi,
 	/style:(?:color|background)=["'](?:#fff(?:fff)?|white)["']/gi,
-	/\bfg\s*:\s*['"](?:#fff(?:fff)?|white)['"]/gi
+	/\bfg\s*:\s*['"](?:#fff(?:fff)?|white)['"]/gi,
+	// Staging-Messlauf 2026-11-10: Hell-Akzent als rgba-Literal (Inline-Style, Tailwind-Arbitrary,
+	// <style>) folgt dem Dark-Block nicht — so rutschte die Toenung des aktiven
+	// Seitenleisten-Eintrags durch (4,38:1). Auf Tokens (--g-accent-tint, --g-sidebar-active-bg …).
+	/rgba\(\s*196\s*,\s*90\s*,\s*42\b/g
 ];
 /** Hex-Farbe in einer Farb-Eigenschaft (auch `var(--g-x, #abc)`-Fallback) — nur für Scope-Dateien. */
 const HEX_IN_FARBE = /(?:^|[\s;"'{])(?:color|background(?:-color)?|border(?:-[a-z]+)*|outline(?:-color)?|fill|stroke)\s*:\s*[^;"]*#[0-9a-fA-F]{3,8}\b/g;
@@ -65,7 +69,14 @@ const AUSNAHMEN: Record<string, { n: number; grund: string }> = {
 	'lib/components/mobile/Sheet.svelte': { n: 2, grund: 'Scrim + Schatten (gewollt fix)' },
 	'lib/components/compare/LocationNewModal.svelte': { n: 1, grund: 'Scrim (gewollt fix)' },
 	'lib/components/shared/weather-metrics-tab/SavePresetDialog.svelte': { n: 2, grund: 'Scrim + Schatten (gewollt fix)' },
-	'lib/brand/BrandSidebar.svelte': { n: 1, grund: 'Tint 5 % hinter Kürzel-Chip' },
+	'lib/brand/BrandSidebar.svelte': { n: 3, grund: 'Tint 5 % hinter Kürzel-Chip; 2× Hell-Akzent-rgba (Brand-Vorlage, nur Design-Seiten)' },
+	// Staging-Messlauf 2026-11-10: Hell-Akzent-rgba-Bestand. Dunkel gerechnet bleibt Akzentschrift
+	// darauf >= 4,5:1 (Karte/Papier >= 5,0:1) bzw. es liegt keine Schrift darauf; Umstellung auf Tokens offen.
+	'lib/components/ui/elev-sparkline/ElevSparkline.svelte': { n: 1, grund: 'Flächenfüllung des Höhenprofils, keine Schrift' },
+	'lib/components/trip-detail/TripStageRow.svelte': { n: 1, grund: '5-%-Toenung aktive Etappe' },
+	'lib/components/trip-detail/waypoints/WaypointCard.svelte': { n: 2, grund: '3-/5-%-Toenung Hover/Auswahl' },
+	'lib/components/shared/anlege-rahmen/AnlegeReiter.svelte': { n: 1, grund: '10-%-Toenung unter Akzentschrift auf Karte (dunkel 5,14:1)' },
+	'routes/admin/+page.svelte': { n: 1, grund: '12-%-Toenung unter Akzentschrift auf Karte (dunkel 5,02:1)' },
 	'routes/+layout.svelte': { n: 3, grund: 'Schatten-Fallback in var(--g-elev-3, …)' },
 	'routes/email-preview-dev/+page.svelte': { n: 3, grund: 'Entwickler-Vorschau, nicht ausgeliefert' },
 	// Fix-Loop 1 (F002): weisser Schalter-Knopf — gewollte Festfarbe laut Spec (Out of Scope „Switch-Knöpfe").
@@ -158,6 +169,12 @@ describe('Gegenproben der Zählregel', () => {
 	});
 	test('F002: border-color/background-color weiss als Schrift nicht doppelt, Token-Schrift zählt nicht', () => {
 		assert.equal(zaehleHarteFarben('border-color: white; color: var(--g-on-accent);'), 0);
+	});
+	test('Hell-Akzent als rgba wird gezählt (Inline-Style, Tailwind-Arbitrary, <style>)', () => {
+		assert.equal(zaehleHarteFarben("background: {active ? 'rgba(196,90,42,0.10)' : 'transparent'};"), 1);
+		assert.equal(zaehleHarteFarben('class="hover:bg-[rgba(196,90,42,0.10)]"'), 1);
+		assert.equal(zaehleHarteFarben('  background: rgba(196, 90, 42, 0.1);'), 1);
+		assert.equal(zaehleHarteFarben("background: {active ? 'var(--g-sidebar-active-bg)' : 'transparent'};"), 0);
 	});
 	test('Token-Nutzung zählt nicht', () => {
 		assert.equal(zaehleHarteFarben('style="background: var(--g-card); color: var(--g-ink)"'), 0);
