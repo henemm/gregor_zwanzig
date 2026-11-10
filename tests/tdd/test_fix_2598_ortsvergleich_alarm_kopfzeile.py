@@ -41,6 +41,10 @@ ZWEI = "Ort Zwei"
 POSITIONEN = {EINS: 1, ZWEI: 2}
 KM_NULL = "km 0–0"
 _UHR = r"\d\d:\d\d"
+# Kurzform (SMS, Premium-SMS, Telegram-Kurzform) schreibt die Stunde ohne
+# fuehrende Null (`R@3:46`, Bestandsformat, sms_format.md); vor 10 Uhr waere
+# `_UHR` dort rot, unabhaengig vom Fix.
+_SMS_UHR = r"\d{1,2}:\d\d"
 
 
 # ---------------------------------------------------------------------------
@@ -376,7 +380,7 @@ def test_ac5_radar_ein_ort_nennt_den_ort_statt_km(lang, betreff, kopf, wo):
     assert _kopf(k["Telegram"]) == kopf
     assert any(re.fullmatch(wo, z) for z in k["Mail (Text)"].splitlines()), k["Mail (Text)"]
     # Kurznachricht bleibt, wie sie ist: Name einmal, Kuerzel unveraendert.
-    assert re.fullmatch(rf"Ort Eins: R@{_UHR}", k["SMS/Premium-SMS/Telegram-Kurzform"])
+    assert re.fullmatch(rf"Ort Eins: R@{_SMS_UHR}", k["SMS/Premium-SMS/Telegram-Kurzform"])
 
 
 def test_ac5_radar_ein_ort_haelt_die_invariante_1041():
@@ -410,8 +414,8 @@ def test_ac6_radar_zwei_orte_bleibt_wie_seit_1767(lang, betreff, kopf, zeile):
     assert k["Betreff"] == betreff
     assert _kopf(k["Telegram"]) == kopf
     assert any(re.fullmatch(zeile, z) for z in k["Telegram"].splitlines()), k["Telegram"]
-    assert re.fullmatch(rf"1:R@{_UHR} 2:R@{_UHR}", k["SMS/Premium-SMS/Telegram-Kurzform"])
-    assert re.fullmatch(rf"Ort Eins:R@{_UHR} Ort Zwei:R@{_UHR}",
+    assert re.fullmatch(rf"1:R@{_SMS_UHR} 2:R@{_SMS_UHR}", k["SMS/Premium-SMS/Telegram-Kurzform"])
+    assert re.fullmatch(rf"Ort Eins:R@{_SMS_UHR} Ort Zwei:R@{_SMS_UHR}",
                         k["SMS ohne Ortsnummern (Vorschau/Validator)"])
 
 
@@ -440,8 +444,8 @@ _KURZNACHRICHT_VORHER = {
     "2 Orte": r"2:\+G70@14 1:\+G60@14",
     "1 Ort, nur Beginn": r"Ort Eins: TH10:00 2 h früher",
     "1 Ort, Böen + Beginn": r"\+G60@14 TH10:00 2 h früher",
-    "Radar 1 Ort": rf"Ort Eins: R@{_UHR}",
-    "Radar 2 Orte": rf"1:R@{_UHR} 2:R@{_UHR}",
+    "Radar 1 Ort": rf"Ort Eins: R@{_SMS_UHR}",
+    "Radar 2 Orte": rf"1:R@{_SMS_UHR} 2:R@{_SMS_UHR}",
 }
 
 
