@@ -35,34 +35,12 @@
 
 	// Zwischenstände beim Tippen gehen nie nach außen (wie DatumFeld, Regel in segmentFeldMeldung.ts);
 	// `aufbau` baut die Segmente neu auf, wenn ein geleertes/unvollständiges Feld verlassen wird.
+	// Ein fremder Wertwechsel (andere Etappe, Rücknahme) braucht keine eigene Behandlung (Fix-Loop 2,
+	// per Mutation belegt, wie DatumFeld).
 	let feld = $state<HTMLElement | null>(null);
 	const zaehler = new TippZaehler();
-	let eigen: string | null = null;
-	let letzter = untrack(() => value);
 	let aufbau = $state(0);
-	const meldung = new SegmentFeldMeldung((hhmm) => {
-		eigen = hhmm;
-		onchange?.(hhmm);
-	});
-	$effect.pre(() => {
-		const v = value;
-		untrack(() => {
-			// Fremder Wertwechsel (andere Etappe, Rücknahme nach Fehler): Offenes gehört zum alten Wert.
-			if (v !== letzter && v !== eigen) {
-				// Neu aufbauen: bits-ui zeigt sonst weiter angefangene Segmente des alten Werts
-				// (Etappenwechsel, Rücknahme nach gescheitertem Speichern). Bis zum nächsten Task
-				// gesperrt: die abgebaute Instanz meldet beim Abbau noch ihren alten Stand.
-				meldung.sperren();
-				setTimeout(() => meldung.freigeben(), 0);
-				beruehrt = false;
-				aufbau += 1;
-				vollstaendig = /^\d{1,2}:\d{2}/.test(v ?? '');
-			}
-			if (v === eigen) eigen = null;
-			letzter = v;
-		});
-	});
-	$effect(() => () => meldung.verwerfen());
+	const meldung = new SegmentFeldMeldung((hhmm) => onchange?.(hhmm));
 
 	// Steht im Feld gerade eine vollständige Uhrzeit?
 	let vollstaendig = untrack(() => !!zeit);
@@ -72,9 +50,9 @@
 	function geaendert(neu: Time | undefined): void {
 		if (!neu) {
 			vollstaendig = false;
-			// Leer erst beim Verlassen melden (Etappen-Startzeit fällt dann auf 08:00 zurück, #675 AC-5).
-			if (leerMelden) meldung.aendern('', true);
-			else meldung.verwerfen();
+			// Leer wird erst beim Verlassen gemeldet (`geleert` dort; Etappen-Startzeit fällt dann auf
+			// 08:00 zurück, #675 AC-5) — bits-ui meldet das Leeren der Stunde ohnehin nicht als leeren Wert.
+			meldung.verwerfen();
 			return;
 		}
 		vollstaendig = true;
@@ -83,8 +61,9 @@
 			meldung.verwerfen();
 			return;
 		}
-		// Erst nach dem Neuzeichnen melden (wie DatumFeld).
-		void tick().then(() => meldung.aendern(hhmm, zaehler.unfertig(feld)));
+		// Anders als im DatumFeld sofort: das Nachmelden nach dem Neuzeichnen ist hier wirkungslos
+		// (Fix-Loop 2, Mutation ohne Befund im Etappenwechsel).
+		meldung.aendern(hhmm, zaehler.unfertig(feld));
 	}
 
 	function verlassen(e: FocusEvent): void {
@@ -100,7 +79,6 @@
 			// Unvollständig/leer verlassen: nach der Meldung zeigt das Feld den Modellwert (Etappe:
 			// gespeicherte Zeit bzw. 08:00) — nie eine leere Anzeige vor einem stillen Altwert.
 			void tick().then(() => {
-				eigen = null;
 				vollstaendig = !!zeit;
 				beruehrt = false;
 				aufbau += 1;

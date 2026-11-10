@@ -8,15 +8,14 @@
 //     ist (dann sofort) oder das Feld verlassen wird.
 //   * Wahl ohne Tippen (Kalender, Programm) oder fertiges Segment: sofort melden — sonst wäre ein
 //     gleich danach angetippter Knopf, der am Wert hängt („Etappen anlegen"), noch gesperrt.
-//   * Ein FREMDER Wertwechsel (andere Etappe, Rücknahme nach gescheitertem Speichern) verwirft
-//     Offenes und sperrt bis zur Freigabe: der Baustein baut bits-ui neu auf, und die abgebaute
-//     Instanz meldet dabei noch ihren alten, angefangenen Stand (belegt: DS-2 Rücknahme).
+//   * Ein Wert gleich dem gespeicherten verwirft Offenes (`verwerfen`) — das deckt auch die
+//     Rücknahme nach gescheitertem Speichern ab (bits-ui setzt den zurückgenommenen Wert). Eine
+//     eigene Sperre beim fremden Wertwechsel war wirkungslos (Fix-Loop 2, Mutation) und entfiel.
 // Bewusst ohne TS-Parameter-Properties (Kernsuite strippt Typen).
 
 export class SegmentFeldMeldung {
 	#melde: (wert: string) => void;
 	#offen: string | null = null;
-	#gesperrt = false;
 
 	constructor(melde: (wert: string) => void) {
 		this.#melde = melde;
@@ -24,7 +23,6 @@ export class SegmentFeldMeldung {
 
 	/** Neuer Wert aus dem Feld; `unfertig` = das getippte Segment braucht noch Ziffern. */
 	aendern(wert: string, unfertig: boolean): void {
-		if (this.#gesperrt) return;
 		if (unfertig) {
 			this.#offen = wert;
 			return;
@@ -40,7 +38,7 @@ export class SegmentFeldMeldung {
 
 	/** Offenen Wert jetzt melden (Feld verlassen). */
 	abschliessen(): void {
-		if (this.#offen === null || this.#gesperrt) return;
+		if (this.#offen === null) return;
 		const wert = this.#offen;
 		this.#offen = null;
 		this.#melde(wert);
@@ -48,16 +46,6 @@ export class SegmentFeldMeldung {
 
 	verwerfen(): void {
 		this.#offen = null;
-	}
-
-	/** Fremder Wertwechsel: Offenes verwerfen und bis `freigeben()` nichts annehmen. */
-	sperren(): void {
-		this.#offen = null;
-		this.#gesperrt = true;
-	}
-
-	freigeben(): void {
-		this.#gesperrt = false;
 	}
 }
 

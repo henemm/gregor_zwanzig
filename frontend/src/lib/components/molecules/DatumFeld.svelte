@@ -46,34 +46,14 @@
 
 	// Melde-Regel (Zwischenstände beim Tippen nie nach außen): segmentFeldMeldung.ts. `aufbau`
 	// baut die Segmente neu auf, wenn ein geleertes/unvollständiges Feld verlassen wird.
+	// Ein fremder Wertwechsel (andere Etappe, Rücknahme nach gescheitertem Speichern) braucht keine
+	// eigene Behandlung (Fix-Loop 2, per Mutation belegt): wer die Etappe wechselt, verlässt vorher
+	// das Feld, und bei der Rücknahme setzt bits-ui den neuen Wert, den `iso === value` unten
+	// verwirft — samt Offenem.
 	let feld = $state<HTMLElement | null>(null);
 	const zaehler = new TippZaehler();
-	let eigen: string | null = null;
-	let letzter = untrack(() => value);
 	let aufbau = $state(0);
-	const meldung = new SegmentFeldMeldung((iso) => {
-		eigen = iso;
-		onchange?.(iso);
-	});
-	$effect.pre(() => {
-		const v = value;
-		untrack(() => {
-			// Fremder Wertwechsel (andere Etappe, Rücknahme nach Fehler): Offenes gehört zum alten Wert.
-			if (v !== letzter && v !== eigen) {
-				// Neu aufbauen: bits-ui zeigt sonst weiter angefangene Segmente des alten Werts
-				// (Etappenwechsel, Rücknahme nach gescheitertem Speichern). Bis zum nächsten Task
-				// gesperrt: die abgebaute Instanz meldet beim Abbau noch ihren alten Stand.
-				meldung.sperren();
-				setTimeout(() => meldung.freigeben(), 0);
-				beruehrt = false;
-				aufbau += 1;
-				vollstaendig = !!zuDatum(v);
-			}
-			if (v === eigen) eigen = null;
-			letzter = v;
-		});
-	});
-	$effect(() => () => meldung.verwerfen());
+	const meldung = new SegmentFeldMeldung((iso) => onchange?.(iso));
 
 	// Steht im Feld gerade ein vollständiges Datum? (Leeren und halbfertige Jahre 0002/0020 nicht.)
 	let vollstaendig = untrack(() => !!datum);
@@ -111,7 +91,6 @@
 			// Unvollständig/leer verlassen: nach der Meldung ('' bei leerMelden) zeigt das Feld den
 			// Modellwert — Etappe: das gespeicherte Datum, Anlegen: leer mit „Startdatum fehlt".
 			void tick().then(() => {
-				eigen = null;
 				vollstaendig = !!datum;
 				beruehrt = false;
 				aufbau += 1;

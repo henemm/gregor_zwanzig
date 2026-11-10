@@ -1,7 +1,7 @@
 // Issue #2881 Lieferung B — Melde-Regel der Segment-Felder (DatumFeld/UhrzeitFeld):
 // Zwischenstände unfertiger Segmente gehen nie nach außen (auch nicht nach einer Pause, Fix-Loop
 // F-B1), fertige Segmente und Kalender-/Programm-Wahl sofort, beim Verlassen der offene Wert;
-// ein fremder Wertwechsel verwirft Offenes und sperrt bis zur Freigabe (Fix-Loop 2). Echte Klasse.
+// ein Wert gleich dem gespeicherten verwirft Offenes. Echte Klasse.
 // Die Wirkstelle im Browser prüft design-system-trip-vergleich.spec.ts (DS-2).
 // Spec: docs/specs/modules/rework_2881_design_system_bereinigung.md (AC-1, AC-2)
 //
@@ -51,22 +51,6 @@ describe('SegmentFeldMeldung', () => {
 		m.verwerfen();
 		m.abschliessen();
 		assert.deepEqual(gemeldet, []);
-		m.aendern('2027-07-30', false);
-		assert.deepEqual(gemeldet, ['2027-07-30']);
-	});
-
-	test('fremder Wertwechsel: gesperrt nimmt nichts an (auch nicht den Abbau-Stand), Freigabe meldet wieder', () => {
-		const { gemeldet, m } = aufbau();
-		m.aendern('2027-08-25', true);
-		m.sperren();
-		assert.equal(m.offen, false, 'Offenes verworfen');
-		m.aendern('2027-01-25', false);
-		m.aendern('2027-01-25', true);
-		m.abschliessen();
-		assert.deepEqual(gemeldet, [], 'nichts gemeldet, solange gesperrt');
-		m.freigeben();
-		m.abschliessen();
-		assert.deepEqual(gemeldet, [], 'nichts aus der Sperrzeit nachgemeldet');
 		m.aendern('2027-07-30', false);
 		assert.deepEqual(gemeldet, ['2027-07-30']);
 	});
