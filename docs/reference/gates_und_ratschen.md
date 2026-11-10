@@ -617,7 +617,6 @@ liegen **nicht** in `.claude/hooks/`.
 | PreToolUse Bash | `broad_test_run_gate.py` | blockt `uv run pytest` ohne benannte Testdateien | oben „Breiter Testlauf gesperrt" |
 | PreToolUse Bash | `touched_tests_gate.py` | blockt Commit, der einen Test der berührten Dateien rot macht | oben „#1481 A" |
 | PreToolUse Bash | `pendant_gate.py` | blockt Neuanlage einseitiger Trip-/Compare-Dateien | oben „Pendant-Sperre" |
-| PreToolUse Bash | `pre_issue_close_design_gate.py` | blockt `gh issue close` bei Label `design-compliance` ohne bestandenes Design-Diff-Artefakt im aktiven Workflow | #603 |
 | PreToolUse Bash | `secret_in_repo_gate.py` | blockt `git commit`, wenn eine vorgemerkte Datei den Klartextwert eines `.env`-Geheimnisses (`*_PASS`/`_TOKEN`/`_KEY`/`_SECRET`, ≥ 10 Zeichen) enthält; schaltet sich **nicht** automatisch ab, Wirksamkeitsprüfung 2026-11-04 | #1537 S1 |
 | PreToolUse Write\|Edit | `test_naming_gate.py` | blockt neue issue-nummerierte Testdateien; Prüfdatum 2027-01-19 | oben „Testnamens-Gate" |
 | PreToolUse Write\|Edit | `data_schema_backup.py` | Snapshot von `data/users/` nach `.backups/data-pre-rework-<ts>.tar.gz` vor Edit/Write an Schema-Dateien (Retention 20, übersprungen bei Snapshot < 5 Min) | CLAUDE.md „Daten-Schema-Reworks“, #102 |
@@ -632,8 +631,19 @@ liegen **nicht** in `.claude/hooks/`.
 **Nicht in `settings.json` verdrahtet**, aber in `.claude/hooks/` vorhanden und manuell bzw. von
 Skripten/Skills aufgerufen: `staging_gate.py`, `prod_selftest.py`, `briefing_mail_validator.py`,
 `email_spec_validator.py`, `official_alert_mail_validator.py`, `radar_alert_mail_validator.py`,
-`e2e_frontend_browser_gate.py`, `e2e_browser_test.py`, `e2e_telegram_live.py`, `design_fidelity_diff.py`,
+`e2e_frontend_browser_gate.py`, `e2e_browser_test.py`, `e2e_telegram_live.py`,
 `e2e_commit_gate.py` (blockiert seit #339 nichts mehr, nur Hinweis + `detect_scope()`).
+
+**Außer Dienst seit ADR-0111 (#2881, 2026-11-09):** das Design-Gate `pre_issue_close_design_gate.py`
+(blockte `gh issue close` bei Label `design-compliance` ohne Design-Diff-Artefakt, #603) und sein
+Messwerkzeug `design_fidelity_diff.py`. Der Hook-Eintrag in `.claude/settings.json` entfällt, die
+Skripte bleiben mit Vermerk liegen. **Stand 2026-11-09:** Austragung und Vermerk stehen noch aus und
+folgen aus der Server-Sitzung (die Cloud-Sitzung darf ihre eigene Hook-Konfiguration nicht ändern,
+PO-Entscheidung); bis dahin greift das Gate weiter bei `gh issue close` mit Label `design-compliance`. Grund: die Soll-Bilder `claude-code-handoff/current/soll/*.png`
+sind historisch (Juni 2026, zeigen u. a. den entfernten Signal-Kanal), und die Pixel-Differenz ließ auf
+großen Papierflächen völlig andere Layouts bestehen. **Ersatz (Regel-Budget):** die Playwright-
+Kontrast- und Paritätstests `kontrast-trip-vergleich.spec.ts` (#2879), `hub-anlegen-paritaet-flaechen.spec.ts`
+(#2880), `hub-tab-bar.spec.ts` und `design-system-trip-vergleich.spec.ts` (#2881) im CI-Check `e2e`.
 `data_schema_backup.py` ist seit PR `tooling/hooks-pruefdaten` (2026-10-21) als PreToolUse `Write|Edit` verdrahtet (Tabelle oben); vorher fehlte der Eintrag trotz gegenteiliger Doku.
 
 ## Regel-Budget: Prüfdaten im Überblick

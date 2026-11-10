@@ -204,14 +204,14 @@
 		<Wordmark size="sm" />
 		<span class="mono" data-testid="home-datum" style="font-size: 11px; font-weight: 500; letter-spacing: 0.14em; text-transform: uppercase; color: var(--g-ink-3);">{heuteKurz}</span>
 	</div>
-	<!-- Topbar — AC-7: kein sub-Text, beide Buttons ghost -->
+	<!-- Topbar — AC-7 (#568): kein sub-Text; Anlege-Knöpfe seit #2881 (R4, ADR-0111) Btn primary wie auf den Listen -->
 	<PageHeader
 		eyebrow={$t('home.cockpit.eyebrow', { datum: todayPretty })}
 		title={$t('home.cockpit.titel')}
 	>
 		{#snippet right()}
-			<Btn href="/trips/new" variant="ghost" size="sm">{$t('onboarding.willkommen.neuer_trip')}</Btn>
-			<Btn href="/compare/new" variant="ghost" size="sm">{$t('onboarding.willkommen.neuer_vergleich')}</Btn>
+			<Btn href="/trips/new" variant="primary" size="sm">{$t('onboarding.willkommen.neuer_trip')}</Btn>
+			<Btn href="/compare/new" variant="primary" size="sm">{$t('onboarding.willkommen.neuer_vergleich')}</Btn>
 		{/snippet}
 	</PageHeader>
 
@@ -611,9 +611,9 @@
 			<div style:margin-bottom="36px">
 				<SectionH eyebrow={$t('home.abschnitt.schnell_anlegen')} title={$t('home.abschnitt.neu_starten')} />
 				<div class="quick-create-grid">
+					<!-- #2881 (R4, ADR-0111): Anlege-Aktionen ohne Accent-Ton, Trip = Vergleich. -->
 					<QuickAction
 						glyph="route"
-						tone="accent"
 						label={$t('listen.neuer_trip')}
 						sub={$t('home.planung.wizard')}
 						href="/trips/new"

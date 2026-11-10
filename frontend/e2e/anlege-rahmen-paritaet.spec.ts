@@ -85,11 +85,39 @@ async function box(loc: Locator, was: string) {
 const mitteY = (b: { y: number; height: number }) => b.y + b.height / 2;
 const mitteX = (b: { x: number; width: number }) => b.x + b.width / 2;
 
+/**
+ * Berechnete Stile des Elements, gelesen erst, wenn sie RUHEN (#2881 Adversary F001): alle
+ * Stylesheets geladen, keine laufende CSS-Transition/Animation am Element und zwei Lesungen in
+ * Folge gleich. Der Btn blendet Farben über (`transition: background-color 120ms`); ein Lesen
+ * mitten in der Überblendung (z. B. rgba(26, 26, 24, 0.165)) ist kein Befund über das Ziel.
+ * Die Zusicherungen selbst bleiben unverändert streng (Festwerte).
+ */
 async function stil(loc: Locator) {
-	return loc.evaluate((el) => {
-		const s = getComputedStyle(el);
-		return { grund: s.backgroundColor, schrift: s.color, deckkraft: Number(s.opacity), inline: (el as HTMLElement).style.opacity };
-	});
+	type Wert = { grund: string; schrift: string; deckkraft: number; inline: string };
+	let wert: Wert | undefined;
+	let vorher = '';
+	await expect
+		.poll(
+			async () => {
+				const r = await loc.evaluate((el) => {
+					const s = getComputedStyle(el);
+					const laedt = Array.from(document.querySelectorAll<HTMLLinkElement>('link[rel="stylesheet"]')).some((l) => !l.sheet);
+					const laeuft = el.getAnimations().some((a) => a.playState === 'running');
+					return {
+						wert: { grund: s.backgroundColor, schrift: s.color, deckkraft: Number(s.opacity), inline: (el as HTMLElement).style.opacity },
+						ruhig: !laedt && !laeuft
+					};
+				});
+				const jetzt = JSON.stringify(r.wert);
+				const stabil = r.ruhig && jetzt === vorher;
+				vorher = jetzt;
+				wert = r.wert;
+				return stabil;
+			},
+			{ message: 'stil(): Stile kommen nicht zur Ruhe (Transition läuft weiter)', timeout: 10_000 }
+		)
+		.toBe(true);
+	return wert!;
 }
 
 const titel = (page: Page) => page.getByRole('heading', { level: 1 }).filter({ visible: true }).first();
@@ -444,9 +472,10 @@ for (const kind of HUB_KINDS) {
 // #2837 Scheibe S2b — Fortschrittsbalken als EIN Baustein `AnlegeFortschritt` (Computer im
 // Rahmen, Handy an der Handy-Stelle des Editors). Spec: docs/specs/modules/
 // rework_2837_s2b_anlege_fortschritt.md — AC-1 … AC-8, AC-11 (AR-19 … AR-24).
-// Gemessen im Browser: berechnete Hintergrundfarbe je Segment gegen die aufgelösten Tokens
-// --g-accent / --g-rule (Hilfselement mit `background: var(--token)`), data-done, Zählertext,
-// Sichtbarkeit je Breite. Trip und Vergleich werden gegeneinander verglichen (Parität).
+// Gemessen im Browser: berechnete Füllung + Konturfarbe je Segment gegen die aufgelösten Tokens
+// (Hilfselement mit `background: var(--token)`), data-done, Zählertext, Sichtbarkeit je Breite.
+// Seit #2881 (ADR-0111 Punkt 4): erledigt = Füllung und Kontur --g-accent, offen = keine Füllung,
+// 1-px-Kontur --g-ink-3 (vorher Fläche --g-rule, 1,4:1). Trip und Vergleich werden gegeneinander verglichen (Parität).
 // Pflicht-Mutationen: Tönung des aktiven Schritts ⇒ AR-20/AR-22 rot; Farbregel vertauscht ⇒
 // AR-19/AR-21 rot; Handy-Zähler mit Computer-Text ⇒ AR-19/AR-23 rot; data-done entfernt ⇒
 // AR-19 rot; Trip-Handy ohne tn-mobile-progress ⇒ AR-19/AR-24 rot.
@@ -473,7 +502,7 @@ const segmente = (page: Page, kind: HubKind, g: Geraet) => page.locator(`[data-t
 const zaehler = (page: Page, kind: HubKind, g: Geraet) => balken(page, kind, g).locator('> span.mono:last-child');
 
 /** Token-Farbe so, wie der Browser sie als Hintergrund berechnet (rgb(...)). */
-async function tokenFarbe(page: Page, token: '--g-accent' | '--g-rule'): Promise<string> {
+async function tokenFarbe(page: Page, token: '--g-accent' | '--g-ink-3'): Promise<string> {
 	return page.evaluate((t) => {
 		const el = document.createElement('div');
 		el.style.background = `var(${t})`;
@@ -486,38 +515,57 @@ async function tokenFarbe(page: Page, token: '--g-accent' | '--g-rule'): Promise
 
 interface Segment {
 	done: string | null;
+	/** Füllung|Konturfarbe — erledigt `accent|accent`, offen `transparent|ink-3` (#2881). */
 	farbe: string;
 }
 
+/** Soll-Signaturen der beiden Zustände (#2881, ADR-0111 Punkt 4). */
+async function sollFarben(page: Page): Promise<{ erledigt: string; offen: string }> {
+	const accent = await tokenFarbe(page, '--g-accent');
+	return { erledigt: `${accent}|${accent}`, offen: `rgba(0, 0, 0, 0)|${await tokenFarbe(page, '--g-ink-3')}` };
+}
+
 /**
- * Liest data-done und berechnete Farbe aller sichtbaren Segmente. Wartet, bis jede Farbe eine
- * der beiden Token-Farben ist (der Balken blendet 350 ms über — kein fester Schlaf).
+ * Liest data-done und berechnete Farbe aller sichtbaren Segmente, erst wenn der Balken RUHT
+ * (#2881 Adversary F001): keine laufende CSS-Transition an einem Segment (der Balken blendet
+ * 350 ms über), zwei Lesungen in Folge gleich und jede Farbe eine der beiden Ziel-Signaturen.
+ * Vorher akzeptierte die Schleife jede Ziel-Signatur schon beim ersten Lesen — auch die des
+ * offenen Zustands an einem Segment mit data-done="true", bevor die Überblendung begann.
+ * Ob die Signatur zum data-done-Zustand PASST, prüft danach `pruefeRegel` (unverändert streng);
+ * ein dauerhaft falsch gefärbtes Segment kommt hier zur Ruhe und fällt dort sofort rot.
  */
 async function lies(page: Page, kind: HubKind, g: Geraet): Promise<Segment[]> {
-	const accent = await tokenFarbe(page, '--g-accent');
-	const rule = await tokenFarbe(page, '--g-rule');
+	const { erledigt, offen } = await sollFarben(page);
 	let gelesen: Segment[] = [];
+	let vorher = '';
 	await expect
 		.poll(
 			async () => {
-				gelesen = await segmente(page, kind, g).evaluateAll((els) =>
-					els.map((e) => ({ done: e.getAttribute('data-done'), farbe: getComputedStyle(e).backgroundColor }))
-				);
-				return gelesen.length === 5 && gelesen.every((s) => s.farbe === accent || s.farbe === rule);
+				const r = await segmente(page, kind, g).evaluateAll((els) => ({
+					folge: els.map((e) => {
+						const s = getComputedStyle(e);
+						return { done: e.getAttribute('data-done'), farbe: `${s.backgroundColor}|${s.borderTopColor}` };
+					}),
+					laeuft: els.some((e) => e.getAnimations().some((a) => a.playState === 'running'))
+				}));
+				gelesen = r.folge;
+				const jetzt = JSON.stringify(gelesen);
+				const stabil = !r.laeuft && jetzt === vorher;
+				vorher = jetzt;
+				return stabil && gelesen.length === 5 && gelesen.every((s) => s.farbe === erledigt || s.farbe === offen);
 			},
-			{ message: `${BALKEN[kind][g]}: 5 Segmente in Token-Farben (--g-accent/--g-rule) erwartet`, timeout: 10_000 }
+			{ message: `${BALKEN[kind][g]}: 5 ruhende Segmente in Token-Farben (erledigt --g-accent, offen Kontur --g-ink-3) erwartet`, timeout: 10_000 }
 		)
 		.toBe(true);
 	return gelesen;
 }
 
-/** Farbregel: data-done="true" ⇔ --g-accent, sonst --g-rule; erledigte Segmente stehen vorn. */
+/** Farbregel: data-done="true" ⇔ gefüllt --g-accent, sonst Kontur --g-ink-3 ohne Füllung; erledigte Segmente stehen vorn. */
 async function pruefeRegel(page: Page, folge: Segment[], n: number, wo: string): Promise<void> {
-	const accent = await tokenFarbe(page, '--g-accent');
-	const rule = await tokenFarbe(page, '--g-rule');
-	expect(accent, 'Messaufbau: --g-accent und --g-rule sind gleich').not.toBe(rule);
+	const { erledigt, offen } = await sollFarben(page);
+	expect(erledigt, 'Messaufbau: erledigt und offen sind gleich').not.toBe(offen);
 	expect(folge.map((s) => s.done), `${wo}: data-done-Folge`).toEqual([0, 1, 2, 3, 4].map((i) => String(i < n)));
-	folge.forEach((s, i) => expect(s.farbe, `${wo}: Segment ${i} (data-done=${s.done})`).toBe(s.done === 'true' ? accent : rule));
+	folge.forEach((s, i) => expect(s.farbe, `${wo}: Segment ${i} (data-done=${s.done})`).toBe(s.done === 'true' ? erledigt : offen));
 }
 
 /** Erster Schritt ohne Seitenwechsel: Trip Name + Startdatum, Vergleich Name (sprachunabhängig). */
@@ -539,7 +587,7 @@ for (const kind of HUB_KINDS) {
 			const id = BALKEN[kind][g];
 
 			// ── AR-19: AC-1/AC-2/AC-6/AC-11 — Balken der Breite sichtbar, 5 Segmente, Regel, Zähler ──
-			test(`AR-19 (${kind}, ${vp.width} px): ${id} sichtbar, 5 Segmente offen in --g-rule, Zähler „${ZAEHLER.de[g](0)}", der andere Balken unsichtbar`, async ({ page }) => {
+			test(`AR-19 (${kind}, ${vp.width} px): ${id} sichtbar, 5 Segmente offen (Kontur --g-ink-3), Zähler „${ZAEHLER.de[g](0)}", der andere Balken unsichtbar`, async ({ page }) => {
 				await page.setViewportSize(vp);
 				await page.goto(sel.url);
 				await expect(balken(page, kind, g), `AR-19: ${id} nicht sichtbar`).toHaveCount(1, { timeout: 15_000 });
@@ -565,7 +613,7 @@ for (const kind of HUB_KINDS) {
 			});
 
 			// ── AR-20: AC-3 — aktiver, offener Schritt ohne Sonderfarbe ─────────────────────────────
-			test(`AR-20 (${kind}, ${vp.width} px): aktiver offener Schritt ${sel.punkteSchritt} hat --g-rule wie jeder offene Schritt`, async ({ page }) => {
+			test(`AR-20 (${kind}, ${vp.width} px): aktiver offener Schritt ${sel.punkteSchritt} sieht aus wie jeder offene Schritt (Kontur --g-ink-3)`, async ({ page }) => {
 				await page.setViewportSize(vp);
 				await page.goto(sel.url);
 				await expect(balken(page, kind, g)).toHaveCount(1, { timeout: 15_000 });
@@ -577,7 +625,7 @@ for (const kind of HUB_KINDS) {
 					.toBe(true);
 				const folge = await lies(page, kind, g);
 				await pruefeRegel(page, folge, 1, `AR-20 ${id}`);
-				expect(folge[1].farbe, 'AC-3: aktiver offener Schritt getönt').toBe(await tokenFarbe(page, '--g-rule'));
+				expect(folge[1].farbe, 'AC-3: aktiver offener Schritt getönt').toBe((await sollFarben(page)).offen);
 				const stile = await segmente(page, kind, g).evaluateAll((els) => els.map((e) => e.getAttribute('style') ?? ''));
 				expect(stile.join(' '), 'AC-3: --g-accent-soft/#bcd im Balken').not.toMatch(/--g-accent-soft|#bcd/i);
 			});

@@ -723,7 +723,7 @@
 								{#if s.gpx}
 									<div style="display: flex; align-items: center; gap: 7px; padding: 5px 10px; border-radius: var(--g-r-2); background: rgba(61,107,58,0.08); border: 1px solid rgba(61,107,58,0.22);">
 										<span style="width: 16px; height: 16px; border-radius: 3px; flex-shrink: 0; background: var(--g-good); display: flex; align-items: center; justify-content: center;">
-											<svg width="9" height="9" viewBox="0 0 10 10" fill="none"><polyline points="1.5,5.5 4,8 8.5,2" stroke="#fff" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+											<svg width="9" height="9" viewBox="0 0 10 10" fill="none"><polyline points="1.5,5.5 4,8 8.5,2" stroke="var(--g-paper)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
 										</span>
 										<div style="flex: 1; min-width: 0;">
 											<div class="mono" style="font-size: 11px; font-weight: 600; color: var(--g-ink-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">{s.gpx.file}</div>
@@ -787,7 +787,7 @@
 							disabled={!etDone}
 							aria-disabled={etDone ? undefined : 'true'}
 							onclick={makeEtappenContinueHandler('wegpunkte')}
-							style="padding: 8px 16px; border-radius: var(--g-r-2); border: none; background: {etDone ? 'var(--g-accent-deep)' : 'var(--g-ink-3)'}; color: #fff; font-size: 13px; font-weight: 600; cursor: {etDone ? 'pointer' : 'not-allowed'};">
+							style="padding: 8px 16px; border-radius: var(--g-r-2); border: none; background: {etDone ? 'var(--g-accent-deep)' : 'var(--g-ink-3)'}; color: var(--g-paper); font-size: 13px; font-weight: 600; cursor: {etDone ? 'pointer' : 'not-allowed'};">
 							{$t('trip.anlegen.wegpunkte_pruefen')}
 						</button>
 					</div>
@@ -815,7 +815,7 @@
 							{$t('trip.anlegen.ueberspringen_pfeil')}
 						</button>
 						<button type="button" onclick={makeEtappenContinueHandler('wetter')}
-							style="padding: 6px 12px; border-radius: var(--g-r-2); border: none; background: var(--g-accent-deep); color: #fff; font-size: 13px; font-weight: 600; cursor: pointer;">
+							style="padding: 6px 12px; border-radius: var(--g-r-2); border: none; background: var(--g-accent-deep); color: var(--g-paper); font-size: 13px; font-weight: 600; cursor: pointer;">
 							{$t('trip.anlegen.wegpunkte_uebernehmen')}
 						</button>
 					</div>
@@ -832,7 +832,7 @@
 						{$t('trip.anlegen.ueberspringen')}
 					</button>
 					<button type="button" onclick={makeEtappenContinueHandler('wetter')}
-						style="padding: 8px 16px; border-radius: var(--g-r-2); border: none; background: var(--g-accent-deep); color: #fff; font-size: 13px; font-weight: 600; cursor: pointer;">
+						style="padding: 8px 16px; border-radius: var(--g-r-2); border: none; background: var(--g-accent-deep); color: var(--g-paper); font-size: 13px; font-weight: 600; cursor: pointer;">
 						{$t('trip.anlegen.wegpunkte_uebernehmen')}
 					</button>
 				</div>
@@ -1037,7 +1037,7 @@
 									{#if s.gpx}
 										<div style="display: flex; align-items: center; gap: 12px; padding: 10px 14px; min-height: 56px; background: rgba(61,107,58,0.07); border: 1px solid rgba(61,107,58,0.22); border-radius: var(--g-r-2);">
 											<div style="width: 32px; height: 32px; border-radius: 6px; flex-shrink: 0; background: var(--g-good); display: flex; align-items: center; justify-content: center;">
-												<svg width="14" height="14" viewBox="0 0 10 10" fill="none"><polyline points="1.5,5.5 4,8 8.5,2" stroke="#fff" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+												<svg width="14" height="14" viewBox="0 0 10 10" fill="none"><polyline points="1.5,5.5 4,8 8.5,2" stroke="var(--g-paper)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
 											</div>
 											<div style="flex: 1; min-width: 0;">
 												<div class="mono" style="font-size: 12px; font-weight: 600; color: var(--g-ink-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">{s.gpx.file}</div>

@@ -110,8 +110,8 @@ function hubOverview(t: unknown): string {
 }
 
 /** Kanaele (normalisierte ChannelDot-titles) der ReportLine-Zeile mit Etikett `label`. */
-function kanaeleDerZeile(html: string, label: 'Morgen-Briefing' | 'Abend-Briefing' | 'Alert-Trigger'): string[] {
-	const etiketten = ['Morgen-Briefing', 'Abend-Briefing', 'Alert-Trigger'];
+function kanaeleDerZeile(html: string, label: 'Morgen-Briefing' | 'Abend-Briefing' | 'Alarm-Auslöser'): string[] {
+	const etiketten = ['Morgen-Briefing', 'Abend-Briefing', 'Alarm-Auslöser'];
 	const a = html.indexOf(`>${label}</span>`);
 	assert.notEqual(a, -1, `Messaufbau: Zeile „${label}" fehlt in „Briefings laufen"`);
 	const enden = etiketten
@@ -204,9 +204,9 @@ describe('AC-9: „Briefings laufen" zeigt die tatsaechlich eingestellten Briefi
 	});
 });
 
-// ── (a) HubOverview: Alert-Trigger folgt alert_channels (AC-10) ─────────────
+// ── (a) HubOverview: Alarm-Auslöser folgt alert_channels (AC-10) ─────────────
 
-describe('AC-10: Zeile „Alert-Trigger" zeigt die Alert-Kanaele des Trips', () => {
+describe('AC-10: Zeile „Alarm-Auslöser" zeigt die Alert-Kanaele des Trips', () => {
 	test('alert_channels gesetzt ⇒ genau diese (unabhaengig von den Briefing-Flags)', () => {
 		const html = hubOverview(
 			trip(
@@ -214,28 +214,28 @@ describe('AC-10: Zeile „Alert-Trigger" zeigt die Alert-Kanaele des Trips', () 
 				{ alert_channels: { email: false, telegram: false, sms: true, premium_sms: true } }
 			)
 		);
-		assert.deepEqual(kanaeleDerZeile(html, 'Alert-Trigger'), ['premiumsms', 'sms']);
+		assert.deepEqual(kanaeleDerZeile(html, 'Alarm-Auslöser'), ['premiumsms', 'sms']);
 	});
 
 	test('alert_channels fehlt (Altbestand) ⇒ die Briefing-Kanaele', () => {
 		const html = hubOverview(trip({ send_email: true, send_telegram: false, send_sms: true, send_premium_sms: false }));
-		assert.deepEqual(kanaeleDerZeile(html, 'Alert-Trigger'), ['email', 'sms']);
+		assert.deepEqual(kanaeleDerZeile(html, 'Alarm-Auslöser'), ['email', 'sms']);
 	});
 
 	test('alert_channels ohne Schluessel premium_sms ⇒ Premium-SMS AUS, auch wenn das Briefing-Flag an ist (types.ts D4)', () => {
 		const html = hubOverview(
 			trip({ send_premium_sms: true }, { alert_channels: { email: true, telegram: true, sms: false } })
 		);
-		assert.deepEqual(kanaeleDerZeile(html, 'Alert-Trigger'), ['email', 'telegram']);
+		assert.deepEqual(kanaeleDerZeile(html, 'Alarm-Auslöser'), ['email', 'telegram']);
 	});
 });
 
-// ── (a) HubOverview: Alert-Trigger nur aktiv mit Wetter-Alarm-Quelle (AC-15) ─
+// ── (a) HubOverview: Alarm-Auslöser nur aktiv mit Wetter-Alarm-Quelle (AC-15) ─
 //
 // ReportLine zeigt „aktiv" ueber die Punktfarbe: aktive Alarm-Zeile var(--g-accent),
 // inaktiv var(--g-rule). Gelesen wird der background des Punkts vor dem Etikett.
 
-function punktfarbeDerZeile(html: string, label: 'Morgen-Briefing' | 'Abend-Briefing' | 'Alert-Trigger'): string {
+function punktfarbeDerZeile(html: string, label: 'Morgen-Briefing' | 'Abend-Briefing' | 'Alarm-Auslöser'): string {
 	const a = html.indexOf(`>${label}</span>`);
 	assert.notEqual(a, -1, `Messaufbau: Zeile „${label}" fehlt in „Briefings laufen"`);
 	const davor = html.slice(0, a);
@@ -244,15 +244,15 @@ function punktfarbeDerZeile(html: string, label: 'Morgen-Briefing' | 'Abend-Brie
 	return davor.slice(b + 'background:'.length).split(';')[0].trim();
 }
 
-describe('AC-15: Zeile „Alert-Trigger" ist nicht fest aktiv', () => {
+describe('AC-15: Zeile „Alarm-Auslöser" ist nicht fest aktiv', () => {
 	test('Trip ohne jede Wetter-Alarm-Quelle ⇒ Alarm-Zeile inaktiv (var(--g-rule))', () => {
 		const html = hubOverview(trip({ alert_on_changes: false }, { alert_rules: [], display_config: {} }));
-		assert.equal(punktfarbeDerZeile(html, 'Alert-Trigger'), 'var(--g-rule)', 'Alarm-Zeile zeigt „aktiv" ohne Datenquelle');
+		assert.equal(punktfarbeDerZeile(html, 'Alarm-Auslöser'), 'var(--g-rule)', 'Alarm-Zeile zeigt „aktiv" ohne Datenquelle');
 	});
 
 	test('Trip mit alert_preset ⇒ Alarm-Zeile aktiv (var(--g-accent))', () => {
 		const html = hubOverview(trip({ alert_on_changes: false }, { display_config: { alert_preset: 'standard' } }));
-		assert.equal(punktfarbeDerZeile(html, 'Alert-Trigger'), 'var(--g-accent)');
+		assert.equal(punktfarbeDerZeile(html, 'Alarm-Auslöser'), 'var(--g-accent)');
 	});
 });
 

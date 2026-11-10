@@ -48,6 +48,11 @@
 
 ## AP-003 · Tabellen-Layout für Tour-/Ort-/Vergleichs-Listen
 
+> **Teilweise abgelöst durch ADR-0111 Punkt 2 (2026-11-09, #2881):** Trip-Liste und Vergleichsliste
+> sind **Tabellen** (`ListTable`, am Handy Karten-Zeilen) und gleich gebaut; für diese beiden Listen
+> gilt AP-003 nicht mehr. Neue Listen folgen ihrer Schwesterliste, keine dritte Form. Für
+> `archiv` und `wetter-templates` bleibt der Text unten bis zu einer eigenen Entscheidung stehen.
+
 **Verboten:** `<table>` als primäre Struktur für `meine-touren`, `archiv`, `orts-vergleich` (Liste der Vergleiche, nicht die Matrix), `wetter-templates`.
 
 **Warum:** Charter §3: Listen, in denen jedes Item ein Einstiegspunkt ist, werden als **Kachel-Grid** dargestellt. Tabellen sind nur für stündliche Daten (Wetter) und Hourly-Matrix.
@@ -74,6 +79,11 @@
 **Verboten:** Zwei oder mehr Buttons mit `variant="primary"` oder `variant="accent"` auf demselben Screen.
 
 **Warum:** Charter §6: Genau eine Primäraktion. Sekundäres geht ins `<DropdownMenu>`.
+
+> **Hinweis (#2881, ADR-0111, Spec `rework_2881_design_system_bereinigung.md` AC-5):** Die Anlege-Aktionen
+> „+ Neuer Trip" und „+ Neuer Vergleich" sind überall dieselbe Variante `primary` (Ink). Auf der
+> Startseite stehen beide nebeneinander, weil Trip und Ortsvergleich gleichrangige Einstiege sind;
+> eine Accent-Variante für Anlege-Aktionen gibt es nicht.
 
 **Falsch:**
 ```svelte

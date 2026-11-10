@@ -41,8 +41,9 @@ Quelle: `docs/design-requests/issue_15_atomic_design/RESPONSE-FROM-CLAUDE-DESIGN
 | `--g-paper-deep` | `#ede9df` | Bottom-Navigation Hintergrund (leicht dunkler, Issue #267) |
 | `--g-rule-soft` | `rgba(26,26,24,0.08)` | Soft Border/Divider (Sticky-Footer, Sheet-Zeilen, Issue #267) |
 
-**Design-Vision (nicht in `app.css` implementiert):** `--g-card`, `--g-card-alt`, `--g-rule` — wenn benötigt,
-eigener Issue.
+Außerdem implementiert (`app.css`): `--g-card` `#ffffff` (Kartenfläche), `--g-card-alt` `#faf8f1`
+(gedämpfte Fläche), `--g-rule` `#d8d3c2` (Linien, Grundlinie der Hub-Reiterleiste). Inline-Hex
+ist auf Trip- und Vergleichsseiten durch diese Tokens ersetzt (#2881).
 
 ### Ink (Typografie)
 | Token | Hex | Verwendung |
@@ -212,6 +213,23 @@ SVG, Stroke 1.5 px in `--g-accent`, Fläche `rgba(196,90,42,0.10)`. Default 280�
 
 ### Section-Header
 Untertitel-Block: Eyebrow oben, Title 22 px / `font-weight: 600` / `letter-spacing: -0.01em`, optional Kicker 13 px Ink-3. Trennlinie unten `1px solid var(--g-rule)`, `padding-bottom: 12px`, `margin-bottom: 18px`.
+
+### Reiterleisten, Listen, Fortschritt (ADR-0111, #2881)
+- **Genau zwei Reiterleisten.** Im **Hub** `mobile/MTabBar.svelte`: am Computer kein Kasten (die globale
+  Regel `[data-slot="segmented"]` wird zurückgesetzt), eine Grundlinie 1 px `--g-rule`, Reiter 13 px/500
+  `--g-ink`, aktiv 600 mit 2-px-Unterstrich `--g-accent`, Zähler Mono 10 px neutral
+  (`--g-paper-deep`/`--g-ink-3`, Radius 3 px); am Handy Pillen (aktiv `--g-accent-deep`). Beim **Anlegen**
+  `shared/anlege-rahmen/AnlegeReiter.svelte` (Unterstrich auf allen Breiten, Zustände erledigt/gesperrt).
+  Eine dritte, handgebaute Leiste ist nicht zulässig. Trip und Vergleich tragen jeweils dieselbe Leiste.
+- **Listen:** Trip-Liste und Vergleichsliste sind Tabellen (`ListTable`), am Handy Karten-Zeilen; AP-003
+  gilt für sie nicht mehr. Anlege-Aktion „+ Neuer Trip"/„+ Neuer Vergleich" überall `Btn primary` (Ink).
+- **Fortschritt beim Anlegen** (`AnlegeFortschritt.svelte`): erledigt gefüllt `--g-accent` (3,94:1),
+  offen ohne Füllung mit 1-px-Kontur `--g-ink-3` (5,13:1); der Zähler „n / 5" nennt den Stand als Text.
+- **Hilfsklassen** (TOKENS.md §12, `app.css`): `.mono` = `--g-font-mono` mit `"tnum", "zero"`;
+  `.tnum` = tabellarische Ziffern ohne Schriftwechsel.
+- Maßstab sind diese Regeln, das Mockup Fassung 3 und die Playwright-Paritäts-/Kontrasttests
+  (`hub-tab-bar`, `kontrast-trip-vergleich`, `design-system-trip-vergleich`); die Soll-Bilder unter
+  `claude-code-handoff/current/soll/` sind historisch.
 
 ### Topo-Hintergrund (`g-topo`, `TopoBg`)
 Zwei Varianten:

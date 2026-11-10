@@ -97,7 +97,7 @@ describe('#2837 S2b AC-2/AC-8 — Testids des Fortschritts in beiden Editoren', 
 
 describe('#2837 S2b AC-3 — Handy-Balken des Vergleichs tönt den aktiven Schritt nicht', () => {
 	// Aktiver, noch nicht erledigter Schritt: „orte" mit nur einem Ort (vergleich erledigt, orte offen).
-	test('Vergleich mobil, aktiv = orte (offen): kein --g-accent-soft, kein #bcd, aktives Segment = var(--g-rule)', async () => {
+	test('Vergleich mobil, aktiv = orte (offen): kein --g-accent-soft, kein #bcd, aktives Segment = transparent (offen, #2881)', async () => {
 		const html = await renderVergleichNeu({ activeTab: 'orte', isMobileViewport: true, pickedIds: ['loc-a'] });
 		const { container, segmente } = balken(html, 'vergleich', 'mobil');
 		const roh = alle(container, () => true).map((n) => n.attrs.style ?? '').join(' ');
@@ -105,7 +105,7 @@ describe('#2837 S2b AC-3 — Handy-Balken des Vergleichs tönt den aktiven Schri
 		assert.ok(!/#bcd\b/i.test(roh), `Rückfallwert #bcd im Handy-Balken: ${roh}`);
 		assert.equal(segmente.length, SEG);
 		assert.equal(segmente[1].attrs['data-done'], 'false', 'Vorbedingung: Schritt „orte" ist offen');
-		assert.equal(hintergrund(segmente[1]), 'var(--g-rule)', `aktives offenes Segment: „${hintergrund(segmente[1])}"`);
+		assert.equal(hintergrund(segmente[1]), 'transparent', `aktives offenes Segment: „${hintergrund(segmente[1])}"`);
 		assert.equal(hintergrund(segmente[0]), 'var(--g-accent)', 'erledigter Schritt „vergleich" nicht in Akzentfarbe');
 	});
 });
@@ -218,7 +218,7 @@ describe('#2837 S2b F003 — Segment erledigt je Schritt, nicht nach Position (b
 				const { container, segmente } = balken(await fall.render(), fall.art, geraet);
 				assert.equal(segmente.length, SEG);
 				const ist = segmente.map((s) => `${s.attrs['data-done']}|${hintergrund(s)}`);
-				const soll = fall.soll.map((d) => `${d}|${d ? 'var(--g-accent)' : 'var(--g-rule)'}`);
+				const soll = fall.soll.map((d) => `${d}|${d ? 'var(--g-accent)' : 'transparent'}`);
 				assert.deepEqual(ist, soll, `${geraet}: Segmentfolge ${JSON.stringify(ist)}`);
 				// Der Zähler bleibt die Anzahl erledigter Schritte.
 				if (geraet === 'mobil') assert.equal(zaehlerText(container), `1/${SEG}`);

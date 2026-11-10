@@ -110,7 +110,7 @@
 	}
 	.ar-kopf {
 		position: relative;
-		padding: 14px 40px;
+		padding: 16px 40px;
 		border-bottom: 1px solid var(--g-rule-soft);
 	}
 	.ar-pfad {
@@ -136,7 +136,7 @@
 	}
 	.ar-held {
 		position: relative;
-		padding: 20px 40px 14px;
+		padding: 20px 40px 16px;
 	}
 	.ar-titel {
 		font-size: 32px;

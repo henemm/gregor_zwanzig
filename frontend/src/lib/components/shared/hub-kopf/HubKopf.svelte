@@ -120,7 +120,7 @@
 		display: flex;
 		align-items: center;
 		justify-content: space-between;
-		padding: 10px 40px;
+		padding: 12px 40px;
 		border-bottom: 1px solid var(--g-rule-soft);
 		gap: 16px;
 	}
@@ -163,7 +163,7 @@
 	/* #2837 S1 (Adversary F001): Unterkante des Kopfs für beide Arten hier, nie in der Seite —
 	   Abstand unter dem Titelblock und (Desktop) die Trennlinie aus der Design-Fidelity #582. */
 	.hub-kopf-titel {
-		padding: 22px 40px 16px;
+		padding: 24px 40px 16px;
 	}
 	@media (min-width: 900px) {
 		.hub-kopf {
@@ -181,7 +181,7 @@
 	   und Kebab nie in eine zweite Zeile rutschen (#2278 AC-13, AC-5). */
 	@media (max-width: 899px) {
 		.hub-kopf-leiste {
-			padding: 10px 16px;
+			padding: 12px 16px;
 		}
 		.back-mobil {
 			display: flex;

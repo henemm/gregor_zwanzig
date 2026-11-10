@@ -127,7 +127,8 @@ describe('AC-3 (F003): Reiterleiste nach Soll — keine Segmented-Box', () => {
 
 	test('s3a2794_f003_keine_regel_setzt_rahmen_oder_rundung_an_der_wurzel_desktop', () => {
 		const wurzel = desktopStil((sel) => sel === '.mtabbar');
-		assert.equal(wurzel['border-bottom'], '1px solid var(--g-ink-faint)', 'AC-3: die eine Grundlinie fehlt an der Wurzel');
+		// #2881 ADR-0111 Punkt 1: Grundlinie --g-rule (löst --g-ink-faint ab).
+		assert.equal(wurzel['border-bottom'], '1px solid var(--g-rule)', 'AC-3: die eine Grundlinie fehlt an der Wurzel');
 		for (const p of ['border', 'border-radius', 'border-top', 'border-left', 'border-right', 'background', 'box-shadow']) {
 			assert.equal(wurzel[p], undefined, `AC-3: die Leistenwurzel setzt ${p}: ${wurzel[p]} (Segmented-Box)`);
 		}

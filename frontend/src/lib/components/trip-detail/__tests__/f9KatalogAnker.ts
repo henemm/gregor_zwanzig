@@ -111,7 +111,7 @@ export const F9_ANKER: [schluessel: string, de: string, en: string][] = [
 	['trip.uebersicht.briefings_laufen', 'Briefings laufen', 'Briefings running'],
 	['trip.uebersicht.bei_delta', 'bei Δ', 'on Δ'],
 	['trip.uebersicht.zeitplan_bearbeiten', 'Zeitplan bearbeiten →', 'Edit schedule →'],
-	['trip.uebersicht.alert_trigger', 'Alert-Trigger', 'Alert trigger'],
+	['trip.uebersicht.alert_trigger', 'Alarm-Auslöser', 'Alert trigger'], // #2881: Tabu-Begriff ersetzt (ADR-0111)
 	['trip.briefing.morgen', 'Morgen-Briefing', 'Morning briefing'],
 	['trip.briefing.abend', 'Abend-Briefing', 'Evening briefing'],
 	['trip.profil.aria', 'Hoehenprofil aller Etappen', 'Elevation profile of all stages'],

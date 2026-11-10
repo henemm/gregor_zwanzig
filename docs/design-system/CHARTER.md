@@ -31,12 +31,12 @@ Diese Charter gilt für die Web-App `gregor.zwanzig` (SvelteKit-Frontend) und ih
 
 | Aspekt | Entscheidung |
 |---|---|
-| Haupt-Nav-Bereiche | **Genau 4**: Startseite · Touren · Orts-Vergleich · Archiv |
+| Haupt-Nav-Bereiche | Wie die heutige Seitenleiste (ADR-0111 Punkt 6): Startseite · Meine Trips · Orts-Vergleich · Archiv, darunter Hilfe; Admin nur für Admin-Konten. Produktbegriff ist **Trip**, nie „Tour" (Glossar, ADR-0104). |
 | Nav-Reihenfolge | Diese Reihenfolge ist fixiert. Keine Umsortierung. |
 | Konto-Einstellungen | Erreichbar **nur** über das User-Badge: unten in der Sidebar (Desktop) bzw. als **Konto-Kreis** neben der Mobile-Nav. **Nicht** in Haupt-Nav. |
 | Kanal-Einstellungen | Innerhalb der Konto-Seite, keine eigene Nav-Position. |
 | Wetter | **Keine eigene Seite.** Drill-Down inline aus Trip-Detail (Etappe) oder Compare (Ort) als Slide-Panel rechts (Desktop) / Bottom-Sheet (Mobile). |
-| Mobile Nav | Schwebende Bottom-Nav (Glas) mit denselben 4 Bereichen plus User-Badge als **Konto-Kreis** rechts daneben. Der Konto-Kreis öffnet das **Konto-Sheet**: Kanäle & Empfänger · Einstellungen · System-Status · Dunkles Design · Datenexport · Abmelden (Benachrichtigungen erst mit echtem Posteingang, #1701). **Kein Top-Balken**, kein Hamburger-Drawer (Mobile-Shell S2, PO 2026-09-19). |
+| Mobile Nav | Schwebende Bottom-Nav (Glas) mit den 4 Hauptbereichen (Übersicht · Trips · Vergleich · Archiv) plus User-Badge als **Konto-Kreis** rechts daneben. Der Konto-Kreis öffnet das **Konto-Sheet**: Kanäle & Empfänger · Einstellungen · System-Status · Dunkles Design · Datenexport · Abmelden (Benachrichtigungen erst mit echtem Posteingang, #1701). **Kein Top-Balken**, kein Hamburger-Drawer (Mobile-Shell S2, PO 2026-09-19). |
 
 ---
 
@@ -46,16 +46,17 @@ Drei kanonische Patterns. Jeder Screen muss in genau einem dieser Patterns sein.
 
 | Pattern | Wann | Beispielscreens |
 |---|---|---|
-| **Kachel-Grid** | Listen, in denen jedes Item ein eigenständiger Einstiegspunkt ist | Startseite · Touren-Liste · Orts-Vergleich-Liste · Archiv · Wetter-Templates |
+| **Kachel-Grid** | Listen, in denen jedes Item ein eigenständiger Einstiegspunkt ist | Startseite · Wetter-Templates |
+| **Tabelle (`ListTable`)** | Trip-Liste und Vergleichsliste (ADR-0111 Punkt 2); am Handy Karten-Zeilen | Trip-Liste · Orts-Vergleich-Liste |
 | **Master-Detail** | Sammlung mit Gruppen + auswählbarem Inhalt | Orts-Vergleich (Sidebar + Matrix) · Konto (Sektionen + Inhalt) |
-| **Wizard** | Mehrstufiger Anlege-Prozess | Trip-Wizard (4 Schritte) |
+| **Anlegen** | Mehrstufiger Anlege-Prozess im geteilten Anlege-Rahmen (ADR-0110), Schritte über `AnlegeReiter` (ADR-0111 Punkt 3) | Trip anlegen · Vergleich anlegen |
 
 **Tabellen-Layout ist die Ausnahme** und nur erlaubt für:
 - Stündliche Wetterdaten (technische Dichte erforderlich)
 - Hourly-Matrix in Compare (Vergleichszweck)
 - System-Status-Tabellen in Konto
 
-Für Touren, Vergleiche, Archiv, Templates: **Kachel-Grid, keine Tabelle**.
+Trip-Liste und Vergleichsliste sind **Tabellen** (`ListTable`, gleich gebaut); die frühere Kachel-Pflicht ist für diese beiden Listen durch ADR-0111 Punkt 2 abgelöst. Neue Listen folgen ihrer Schwesterliste, keine dritte Form.
 
 ---
 
@@ -76,13 +77,14 @@ Für Touren, Vergleiche, Archiv, Templates: **Kachel-Grid, keine Tabelle**.
 |---|---|
 | Type-Pairing | `Inter Tight` (Sans) + `JetBrains Mono` (Mono). **Keine** weiteren Fonts. |
 | Mono-Verwendung | Zahlen, technische Labels, Eyebrows, Captions, Status-Pills. **Nicht** für Fließtext. |
-| Accent | `--g-accent` (burnt orange `#c45a2a`). **Sparsam** — Primäraktion, aktiver Nav-Item, ein Hervorhebungs-Element pro Screen. |
+| Hauptaktion | **Ink** (`Btn primary`, ADR-0110) — auch „+ Neuer Trip"/„+ Neuer Vergleich" auf Listen und Startseite (ADR-0111). |
+| Accent | `--g-accent` (burnt orange `#c45a2a`). **Sparsam** — Weiter/Aktiv-Zustand, Unterstrich des aktiven Reiters, Fortschritt, ein Hervorhebungs-Element pro Screen. Als Fläche unter Text oder als Textfarbe nur `--g-accent-deep` (WCAG-AA, #2879). |
 | Spacing | Ausschließlich `--g-s-*` Tokens. Keine freien Pixel-Werte. |
 | Radien | Ausschließlich `--g-r-*` Tokens. Default `--g-r-3` (6 px) für Cards. |
 | Schatten | Ausschließlich `--g-shadow-*` Tokens. Dezent — kein Material-Design-Lifting. |
 | Farben | Ausschließlich `--g-*` Tokens. Keine Inline-Hex. |
 | Topo-Pattern | Nur auf Auth-Screens und Empty-States, nicht überall. |
-| Emoji | **Verboten** im Produkt-UI. Auch keine "✓" Status-Symbole — stattdessen `<Dot>` oder semantische Pills. |
+| Emoji | **Verboten** im Produkt-UI. Auch keine Zustands-Symbole „✓"/„⊘" — stattdessen `<Dot>` mit Text (erledigt `--g-good`, gesperrt `--g-ink-4` + `aria-disabled`, ADR-0111 Punkt 7) oder semantische Pills. |
 | Iconographie | Nur die im Katalog deklarierten Line-Icons. **Keine** zusätzlichen SVGs ad-hoc. |
 
 ---
@@ -103,6 +105,8 @@ Für Touren, Vergleiche, Archiv, Templates: **Kachel-Grid, keine Tabelle**.
 ---
 
 ## 7. Daten & Eingabe
+
+Die Regeln gelten unverändert; ADR-0111 (Audit 2026-11-09) setzt sie auf den Trip- und Vergleichsseiten durch (native Felder → Bausteine, Tippflächen ≥ 44 px, `.mono`/`.tnum` nach TOKENS.md §12).
 
 | Aspekt | Entscheidung |
 |---|---|
@@ -166,3 +170,4 @@ Implementierungen, die dieser Charter widersprechen, sind als Bug behandelt.
 | Version | Datum | Anmerkung |
 |---|---|---|
 | v1.0 | 2026-05-21 | Initiale Charter — Runde 1 |
+| v1.1 | 2026-11-09 | ADR-0111 (#2881): §2 Navigation wie die Seitenleiste, „Trip" statt „Tour"; §3 Trip-/Vergleichsliste als Tabelle, Anlegen statt Wizard; §5 Hauptaktion Ink, Accent unter Text `--g-accent-deep`, `Dot` statt ✓/⊘; §7 Verweis auf ADR-0111. |
