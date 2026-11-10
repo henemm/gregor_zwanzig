@@ -706,6 +706,13 @@ test('DS-2 Leeren (1280 px): Startzeit leeren ⇒ 08:00 (gespeichert ohne Startz
 		await verlasseFeld(page);
 		await expect.poll(async () => (await etappen(page, hub.id))[0]?.start_time ?? null, { message: 'Startzeit nicht geleert', timeout: 15_000 }).toBeNull();
 		await expect(feldEingabe(zeitFeld(page)), 'geleerte Startzeit zeigt den Standard').toHaveText('08:00');
+		// Schon Standard (keine Startzeit gespeichert) und erneut geleert: der Wert ändert sich nicht,
+		// das Feld muss sich trotzdem wieder mit 08:00 zeigen statt mit „––".
+		await zeitFeld(page).locator('[data-segment="hour"]').click();
+		await page.keyboard.press('Backspace');
+		await page.keyboard.press('Backspace');
+		await verlasseFeld(page);
+		await expect(feldEingabe(zeitFeld(page)), 'erneut geleerte Standard-Startzeit').toHaveText('08:00');
 
 		await datumFeld(page).locator('[data-segment="day"]').click();
 		await page.keyboard.press('Backspace');
@@ -758,6 +765,150 @@ test('DS-1 Leeren (1280 px): Startdatum beim Anlegen leeren ⇒ „Startdatum fe
 	await expect(page.getByText('Startdatum fehlt'), 'Hinweis nach dem Leeren').toBeVisible();
 	await expect(etappenReiter, 'Etappen ohne Startdatum gesperrt').toHaveAttribute('aria-disabled', 'true');
 	await expect(ANLEGE_SEL.route.weiterErsterSchritt(page)).toBeDisabled();
+});
+
+/** Zählt die PUTs auf den Trip ab jetzt. */
+function zaehlePuts(page: Page, id: string): { anzahl: number; staende: Etappe[] } {
+	const z = { anzahl: 0, staende: [] as Etappe[] };
+	page.on('request', (r) => {
+		if (r.method() !== 'PUT' || new URL(r.url()).pathname !== `/api/trips/${id}`) return;
+		z.anzahl += 1;
+		const st = (r.postDataJSON() as { stages?: Etappe[] } | null)?.stages?.[0];
+		if (st) z.staende.push(st);
+	});
+	return z;
+}
+
+test('DS-2 Jahr angefangen (1280 px): „202" ins Jahr getippt und Feld verlassen ⇒ nichts gespeichert, Anzeige zurück', async ({
+	page
+}) => {
+	await page.setViewportSize(DESKTOP);
+	await setzeSprache(page, 'de');
+	const hub = await seedHub(page.request, 'route');
+	try {
+		await openHub(page, 'route', hub.id, { tab: 'etappen' });
+		await expect(feldEingabe(datumFeld(page))).toHaveText('01.08.2027', { timeout: 15_000 });
+		const puts = zaehlePuts(page, hub.id);
+		await datumFeld(page).locator('[data-segment="year"]').click();
+		await page.keyboard.type('202');
+		await verlasseFeld(page);
+		await expect(feldEingabe(datumFeld(page)), 'Anzeige zurück auf das gespeicherte Datum').toHaveText('01.08.2027');
+		await expect.poll(() => puts.anzahl, { timeout: 2_000 }).toBe(0);
+		expect((await etappen(page, hub.id))[0]?.date, 'kein Jahr 0202 gespeichert').toBe('2027-08-01');
+	} finally {
+		await hub.aufraeumen();
+	}
+});
+
+test('DS-2 dasselbe Datum (1280 px): gespeichertes Datum unverändert neu getippt ⇒ kein Schreibvorgang', async ({ page }) => {
+	await page.setViewportSize(DESKTOP);
+	await setzeSprache(page, 'de');
+	const hub = await seedHub(page.request, 'route');
+	try {
+		await openHub(page, 'route', hub.id, { tab: 'etappen' });
+		await expect(feldEingabe(datumFeld(page))).toHaveText('01.08.2027', { timeout: 15_000 });
+		const puts = zaehlePuts(page, hub.id);
+		await tippeDatum(page, datumFeld(page), '2027-08-01');
+		await verlasseFeld(page);
+		// Stabilitätsfenster: 2 s lang kein PUT (Speicher-Entprellung 700 ms).
+		const ende = Date.now() + 2_000;
+		await expect.poll(() => (Date.now() < ende ? `warte ${puts.anzahl}` : puts.anzahl), { timeout: 5_000, intervals: [200] }).toBe(0);
+	} finally {
+		await hub.aufraeumen();
+	}
+});
+
+test('DS-2 Rückkehr ins fertige Segment (1280 px): Tag „1" nachgetippt ist angefangen, geht nicht als Zwischenstand hinaus', async ({
+	page
+}) => {
+	test.setTimeout(60_000);
+	await page.setViewportSize(DESKTOP);
+	await setzeSprache(page, 'de');
+	const hub = await seedHub(page.request, 'route');
+	try {
+		await openHub(page, 'route', hub.id, { tab: 'etappen' });
+		await expect(feldEingabe(datumFeld(page))).toHaveText('01.08.2027', { timeout: 15_000 });
+		await tippeDatum(page, datumFeld(page), '2027-08-20');
+		await expect.poll(async () => (await etappen(page, hub.id))[0]?.date, { timeout: 15_000 }).toBe('2027-08-20');
+		const puts = zaehlePuts(page, hub.id);
+		// Später zurück in das fertige Tag-Segment: „1", Pause länger als die Entprellung, dann „5".
+		await datumFeld(page).locator('[data-segment="day"]').click();
+		await page.keyboard.type('15', { delay: 1_500 });
+		await expect.poll(async () => (await etappen(page, hub.id))[0]?.date, { timeout: 15_000 }).toBe('2027-08-15');
+		expect(puts.staende.map((e) => e.date).filter((d) => d !== '2027-08-15'), 'Zwischenstand Tag 01 gesendet').toEqual([]);
+	} finally {
+		await hub.aufraeumen();
+	}
+});
+
+test('DS-2 Rücknahme beim Tippen (1280 px): scheitert das Speichern, während ein Segment angefangen ist, schreibt das Verlassen nichts nach', async ({
+	page
+}) => {
+	await page.setViewportSize(DESKTOP);
+	await setzeSprache(page, 'de');
+	const hub = await seedHub(page.request, 'route');
+	let putNr = 0;
+	await page.route(`**/api/trips/${hub.id}`, async (route) => {
+		if (route.request().method() === 'PUT' && ++putNr === 1) {
+			await route.fulfill({ status: 500, body: JSON.stringify({ error: 'Serverfehler' }) });
+			return;
+		}
+		await route.continue();
+	});
+	try {
+		await openHub(page, 'route', hub.id, { tab: 'etappen' });
+		await expect(feldEingabe(datumFeld(page))).toHaveText('01.08.2027', { timeout: 15_000 });
+		// Tag fertig (wird gespeichert und scheitert), Monat gleich danach angefangen („1").
+		await datumFeld(page).locator('[data-segment="day"]').click();
+		await page.keyboard.type('25');
+		await page.keyboard.type('1');
+		await expect(page.getByTestId('save-indicator')).toHaveAttribute('data-state', 'error', { timeout: 15_000 });
+		await expect(feldEingabe(datumFeld(page)), 'Rücknahme sichtbar').toHaveText('01.08.2027');
+		await verlasseFeld(page);
+		await expect(feldEingabe(datumFeld(page))).toHaveText('01.08.2027');
+		// Der angefangene Stand von vor der Rücknahme darf nicht nachträglich gespeichert werden.
+		const ende = Date.now() + 2_000;
+		await expect.poll(() => (Date.now() < ende ? `warte ${putNr}` : putNr), { timeout: 5_000, intervals: [200] }).toBe(1);
+		expect((await etappen(page, hub.id))[0]?.date).toBe('2027-08-01');
+	} finally {
+		await page.unroute(`**/api/trips/${hub.id}`);
+		await hub.aufraeumen();
+	}
+});
+
+test('DS-1 Jahr angefangen und Neueintippen (1280 px): „202" ⇒ „Startdatum fehlt"; Tag neu getippt ⇒ Hinweis erscheint nie', async ({
+	page
+}) => {
+	await page.setViewportSize(DESKTOP);
+	await setzeSprache(page, 'de');
+	await page.goto(ANLEGE_SEL.route.url);
+	const feld = tripDatumFeld(page, false);
+	await expect(feld).toBeVisible({ timeout: 15_000 });
+	await ANLEGE_SEL.route.name(page).fill(`E2E-GZ-DS1-jahr-${Date.now()}`);
+	await tippeDatum(page, feld, '2026-11-19');
+	const etappenReiter = page.getByTestId('trip-new-tab-etappen');
+	await expect(etappenReiter).not.toHaveAttribute('aria-disabled', 'true');
+	// Neueintippen eines Segments (Rücktaste, dann neue Ziffern): kein kurzes „Startdatum fehlt".
+	await page.evaluate(() => {
+		const w = window as unknown as { __fehltGesehen: boolean };
+		w.__fehltGesehen = false;
+		new MutationObserver(() => {
+			if (document.body.innerText.includes('Startdatum fehlt')) w.__fehltGesehen = true;
+		}).observe(document.body, { childList: true, subtree: true, characterData: true });
+	});
+	await feld.locator('[data-segment="day"]').click();
+	await page.keyboard.press('Backspace');
+	await page.keyboard.press('Backspace');
+	await page.keyboard.type('20');
+	await verlasseFeld(page);
+	await expect(feld.locator('[data-slot="datum-feld-eingabe"]')).toHaveText('20.11.2026');
+	expect(await page.evaluate(() => (window as unknown as { __fehltGesehen: boolean }).__fehltGesehen), 'Hinweis flackerte beim Neueintippen').toBe(false);
+	// Jahr nur dreistellig: beim Verlassen fehlt das Startdatum.
+	await feld.locator('[data-segment="year"]').click();
+	await page.keyboard.type('202');
+	await verlasseFeld(page);
+	await expect(page.getByText('Startdatum fehlt'), 'Hinweis nach angefangenem Jahr').toBeVisible();
+	await expect(etappenReiter).toHaveAttribute('aria-disabled', 'true');
 });
 
 test('DS-4 Aktivität Standard (1280 px): „Wandern (Standard)" zurückwählen und anlegen ⇒ ohne Aktivität gespeichert', async ({ page }) => {

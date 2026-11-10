@@ -6,7 +6,7 @@
 	// Spec: docs/specs/modules/rework_2881_design_system_bereinigung.md (AC-2, AC-3)
 	import { tick, untrack } from 'svelte';
 	import { TimeField } from 'bits-ui';
-	import { SegmentFeldMeldung, TippZaehler, segmenteUnvollstaendig, tipptIn } from './segmentFeldMeldung.ts';
+	import { SegmentFeldMeldung, TippZaehler, segmenteUnvollstaendig } from './segmentFeldMeldung.ts';
 	import { Time } from '@internationalized/date';
 	import { locale } from '$lib/i18n';
 
@@ -78,8 +78,7 @@
 			meldung.verwerfen();
 			return;
 		}
-		// Fertig/unfertig erst nach dem Neuzeichnen prüfen (vorher steht noch die alte Anzeige).
-		void tick().then(() => meldung.aendern(hhmm, zaehler.unfertig(feld) || tipptIn(feld)));
+		meldung.aendern(hhmm, zaehler.unfertig(feld));
 	}
 
 	function verlassen(e: FocusEvent): void {
@@ -104,7 +103,7 @@
 	}
 </script>
 
-<div class="uhrzeit-feld" data-slot="uhrzeit-feld" data-groesse={groesse} data-testid={testid} bind:this={feld} onfocusout={verlassen} onkeydowncapture={(e) => { beruehrt = true; zaehler.taste(e); }} onbeforeinputcapture={zaehler.eingabe} onkeyupcapture={zaehler.loslassen} onfocusincapture={zaehler.fokus}>
+<div class="uhrzeit-feld" data-slot="uhrzeit-feld" data-groesse={groesse} data-testid={testid} bind:this={feld} onfocusout={verlassen} onkeydowncapture={(e) => { beruehrt = true; zaehler.taste(e); }} onfocusincapture={zaehler.fokus}>
 	{#key aufbau}
 	<TimeField.Root value={zeit} onValueChange={(v) => geaendert(v as Time | undefined)} hourCycle={24} granularity="minute" locale={intlLocale} {disabled}>
 		<TimeField.Input data-slot="uhrzeit-feld-eingabe" aria-label={ariaLabel}>

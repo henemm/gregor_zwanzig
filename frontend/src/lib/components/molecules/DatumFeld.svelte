@@ -8,7 +8,7 @@
 	// Spec: docs/specs/modules/rework_2881_design_system_bereinigung.md (AC-1, AC-2, AC-3)
 	import { tick, untrack } from 'svelte';
 	import { DatePicker } from 'bits-ui';
-	import { SegmentFeldMeldung, TippZaehler, segmenteUnvollstaendig, tipptIn } from './segmentFeldMeldung.ts';
+	import { SegmentFeldMeldung, TippZaehler } from './segmentFeldMeldung.ts';
 	import { parseDate, type DateValue } from '@internationalized/date';
 	import { t, locale } from '$lib/i18n';
 
@@ -89,22 +89,18 @@
 			meldung.verwerfen();
 			return;
 		}
-		// Fertig/unfertig erst nach dem Neuzeichnen prüfen (vorher steht noch die alte Anzeige).
-		void tick().then(() => meldung.aendern(iso, zaehler.unfertig(feld) || tipptIn(feld)));
+		meldung.aendern(iso, zaehler.unfertig(feld));
 	}
 
 	function verlassen(e: FocusEvent): void {
 		const ziel = e.relatedTarget as Element | null;
 		// In das Feld selbst oder in den eigenen Kalender (Portal) ist kein Verlassen.
 		if (feld?.contains(ziel) || ziel?.closest?.('[data-slot="datum-feld-kalender"]')) return;
-		const hatteOffen = meldung.offen;
 		meldung.abschliessen();
-		// Geleert/angefangen ohne Meldung von bits-ui: zählt wie leer.
-		const geleert = beruehrt && !hatteOffen && segmenteUnvollstaendig(feld);
-		if (geleert && leerMelden && value !== '') meldung.aendern('', false);
-		// Nur was der Nutzer angefasst hat, wird zurückgesetzt (sonst schlösse ein leeres,
-		// unberührtes Feld beim Öffnen des Kalenders seine eigene Liste).
-		if (beruehrt && (!vollstaendig || geleert)) {
+		// Geleert oder Jahr angefangen (bits-ui meldet dann keinen bzw. einen Jahr-<1000-Wert, also
+		// `vollstaendig = false`). Nur was der Nutzer angefasst hat, wird zurückgesetzt (sonst
+		// schlösse ein leeres, unberührtes Feld beim Öffnen des Kalenders seine eigene Liste).
+		if (beruehrt && !vollstaendig) {
 			// Unvollständig/leer verlassen: nach der Meldung ('' bei leerMelden) zeigt das Feld den
 			// Modellwert — Etappe: das gespeicherte Datum, Anlegen: leer mit „Startdatum fehlt".
 			void tick().then(() => {
@@ -117,7 +113,7 @@
 	}
 </script>
 
-<div class="datum-feld" data-slot="datum-feld" data-groesse={groesse} data-testid={testid} bind:this={feld} onfocusout={verlassen} onkeydowncapture={(e) => { beruehrt = true; zaehler.taste(e); }} onbeforeinputcapture={zaehler.eingabe} onkeyupcapture={zaehler.loslassen} onfocusincapture={zaehler.fokus}>
+<div class="datum-feld" data-slot="datum-feld" data-groesse={groesse} data-testid={testid} bind:this={feld} onfocusout={verlassen} onkeydowncapture={(e) => { beruehrt = true; zaehler.taste(e); }} onfocusincapture={zaehler.fokus}>
 	{#key aufbau}
 	<DatePicker.Root
 		value={datum}

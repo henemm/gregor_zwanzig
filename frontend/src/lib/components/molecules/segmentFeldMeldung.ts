@@ -60,37 +60,19 @@ const zifferTeil = (el: Element | null): string | null => {
 };
 
 /**
- * Zählt die im fokussierten Segment getippten Ziffern (Tastatur, und per `beforeinput` auch
- * Bildschirmtastaturen ohne Tastencode). Die Anzeige allein reicht nicht: das Uhrzeitfeld zeigt
- * „0" schon gepolstert als „00".
+ * Zählt die im fokussierten Segment getippten Ziffern — über `keydown`, denselben Weg, über den
+ * bits-ui die Ziffern selbst annimmt. Die Anzeige taugt dafür nicht (das Uhrzeitfeld zeigt „0"
+ * schon gepolstert als „00"). Fokus auf ein Segment setzt dessen Zähler zurück: wer später in ein
+ * fertiges Segment zurückkehrt und „1" tippt, hat ein angefangenes Segment, kein fertiges.
  */
 export class TippZaehler {
 	#anzahl = new WeakMap<Element, number>();
-	#perTaste = false;
-
-	#plus(seg: Element): void {
-		this.#anzahl.set(seg, (this.#anzahl.get(seg) ?? 0) + 1);
-	}
 
 	taste = (e: KeyboardEvent): void => {
 		const seg = e.target as Element | null;
 		if (!zifferTeil(seg)) return;
-		if (/^\d$/.test(e.key)) {
-			this.#perTaste = true;
-			this.#plus(seg!);
-		} else if (e.key === 'Backspace' || e.key === 'Delete') {
-			this.#anzahl.set(seg!, 0);
-		}
-	};
-
-	eingabe = (e: InputEvent): void => {
-		const seg = e.target as Element | null;
-		if (this.#perTaste || !zifferTeil(seg) || !e.data || !/^\d$/.test(e.data)) return;
-		this.#plus(seg!);
-	};
-
-	loslassen = (): void => {
-		this.#perTaste = false;
+		if (/^\d$/.test(e.key)) this.#anzahl.set(seg!, (this.#anzahl.get(seg!) ?? 0) + 1);
+		else if (e.key === 'Backspace' || e.key === 'Delete') this.#anzahl.set(seg!, 0);
 	};
 
 	fokus = (e: FocusEvent): void => {
@@ -119,16 +101,4 @@ export function segmenteUnvollstaendig(feld: HTMLElement | null): boolean {
 		const teil = zifferTeil(el);
 		return !!teil && (el.textContent ?? '').replace(/\D/g, '').length < bedarf(teil);
 	});
-}
-
-/**
- * Zeigt das fokussierte Segment in `feld` weniger Ziffern als es braucht (z. B. Tag „2",
- * Jahr „20")? Zusatzprüfung zum TippZaehler; bits-ui zeigt ein angefangenes Datumssegment
- * ungepolstert an.
- */
-export function tipptIn(feld: HTMLElement | null): boolean {
-	const aktiv = typeof document === 'undefined' ? null : document.activeElement;
-	const teil = zifferTeil(aktiv);
-	if (!(feld && aktiv && teil && feld.contains(aktiv))) return false;
-	return (aktiv.textContent ?? '').replace(/\D/g, '').length < bedarf(teil);
 }
