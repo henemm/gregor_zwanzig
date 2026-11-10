@@ -44,6 +44,7 @@ import {
 	messeKontrast,
 	openHub,
 	registerForCleanup,
+	tippeDatum,
 	type HubKind,
 	type KontrastBefund,
 	type TestLocation
@@ -232,8 +233,9 @@ async function pruefeTripAnlegen(page: Page, mobil: boolean, wo: string, messe: 
 	const etappen = tripReiter(page, mobil, 1);
 	await expect(async () => {
 		await ANLEGE_SEL.route.name(page, mobil).fill(`${E2E_TEST_PREFIX}Kontrast-Anlegen`);
-		await (mobil ? page.getByTestId('trip-new-date-input') : page.locator('.tn-desktop input[type="date"]')).fill(tag(7));
-		await expect(etappen).not.toHaveAccessibleName(/⊘/, { timeout: 500 });
+		// #2881 Lieferung B: Baustein DatumFeld; gesperrt = aria-disabled (Punkt statt ⊘).
+		await tippeDatum(page, page.getByTestId(mobil ? 'trip-new-date-input' : 'trip-new-date-input-desktop'), tag(7));
+		await expect(etappen).not.toHaveAttribute('aria-disabled', 'true', { timeout: 500 });
 	}).toPass({ timeout: 10_000 });
 	await messe(`${wo} Trip anlegen Route mit Namen`);
 	await etappen.click({ force: mobil });
@@ -250,7 +252,7 @@ async function pruefeTripAnlegen(page: Page, mobil: boolean, wo: string, messe: 
 	}
 	await messe(`${wo} Trip anlegen Etappen mit GPX`);
 	const wegpunkte = tripReiter(page, mobil, 2);
-	await expect(wegpunkte).not.toHaveAccessibleName(/⊘/);
+	await expect(wegpunkte).not.toHaveAttribute('aria-disabled', 'true');
 	await wegpunkte.click({ force: mobil });
 	await expect(wegpunkte).toHaveAttribute('aria-selected', 'true');
 	await messe(`${wo} Trip anlegen Wegpunkte prüfen`);
@@ -381,7 +383,7 @@ test('KO-5: aktiver „Weiter"-Knopf — Fläche --g-accent-deep, im Hover dunkl
 			if (kind === 'route') {
 				await expect(async () => {
 					await ANLEGE_SEL.route.name(page).fill(`${E2E_TEST_PREFIX}Kontrast-Weiter`);
-					await page.locator('.tn-desktop input[type="date"]').fill(tag(7));
+					await tippeDatum(page, page.getByTestId('trip-new-date-input-desktop'), tag(7));
 					await expect(ANLEGE_SEL.route.weiterErsterSchritt(page)).toBeEnabled({ timeout: 500 });
 				}).toPass({ timeout: 10_000 });
 			} else {

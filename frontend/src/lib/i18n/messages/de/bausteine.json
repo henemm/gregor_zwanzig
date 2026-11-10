@@ -120,5 +120,8 @@
 	"bausteine.hinweis.nicht_jetzt": "Nicht jetzt",
 	"bausteine.hinweis.einrichten": "Jetzt einrichten",
 	"bausteine.timeline.gesendet": "gesendet",
-	"bausteine.timeline.briefing": "-Briefing"
+	"bausteine.timeline.briefing": "-Briefing",
+	"bausteine.datum.kalender_oeffnen": "Kalender öffnen",
+	"bausteine.datum.voriger_monat": "Voriger Monat",
+	"bausteine.datum.naechster_monat": "Nächster Monat"
 }

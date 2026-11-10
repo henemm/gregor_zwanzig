@@ -12,7 +12,7 @@
 // Ausführung: cd frontend && npx playwright test issue-616-trip-one-surface
 
 import { test, expect } from '@playwright/test';
-import { login } from './helpers.js';
+import { login, waehleOption } from './helpers.js';
 
 const TRIP_ID = 'e2e-cockpit-test';
 const TRIP_NAME = 'E2E Cockpit Test Trip';
@@ -132,7 +132,7 @@ test.describe('Issue #616 — EINE Trip-Seite', () => {
 		await expect(morning).toBeVisible({ timeout: 8000 });
 		// Issue #1379: Stunden-Auswahlliste — Minuten sind nicht mehr waehlbar
 		// (der Server kappte sie seit #1280 ohnehin auf die volle Stunde).
-		await morning.selectOption('05:00');
+		await waehleOption(page, morning, '05:00');
 		await expect(page.getByTestId('save-indicator')).toHaveAttribute('data-state', 'idle', {
 			timeout: 5000
 		});

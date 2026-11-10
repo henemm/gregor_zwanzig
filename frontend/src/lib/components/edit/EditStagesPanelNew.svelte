@@ -913,7 +913,7 @@
 			<Btn variant="primary" size="sm" onclick={() => save()} disabled={saving || !tripId}>
 				{saving ? $t('trip.speichern_laeuft') : $t('trip.etappen_editor.speichern')}
 			</Btn>
-			{#if saveSuccess}<span class="save-ok">{$t('trip.etappen_editor.gespeichert')}</span>{/if}
+			{#if saveSuccess}<span class="save-ok" style="display: inline-flex; align-items: center; gap: 6px;"><Dot tone="good" size="xs" />{$t('trip.etappen_editor.gespeichert')}</span>{/if}
 			{#if saveError !== null}<span class="save-err">{saveError || $t('aktionen.speichern_fehlgeschlagen')}</span>{/if}
 		</div>
 	{/if}

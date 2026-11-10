@@ -1,6 +1,7 @@
 // #2277 S4 (AC-2): Wirkstelle der Trip-Reiterleiste. Der echte TripNewEditor (SSR)
 // reicht die Besuchs-Flags an die geteilte Lock-Engine durch; gelesen wird die
-// gerenderte Reiterleiste (⊘ = gesperrt, ✓ = erledigt), nicht die Logik-Funktion.
+// gerenderte Reiterleiste (Zustandspunkt gesperrt/erledigt — seit #2881 Lieferung B `Dot` mit
+// data-zustand statt ⊘/✓, ADR-0111 Punkt 7), nicht die Logik-Funktion.
 // Wichtig ist der Fall "Besuchs-Flags gesetzt, Etappen ohne GPX (etDone false)":
 // Verhalten wie vor dem Refactoring — der Schwanz-Schritt nach Wetter haengt NUR an
 // den Besuchs-Flags, Wetter und Wegpunkte nur an etDone.
@@ -41,7 +42,7 @@ function bar(over: TripNewStateOverride) {
 		// Bezeichnung als ganzes Wort (sonst trifft „Wetter" auch „Wetter-Metriken").
 		const inner = tabs.find((t) => new RegExp(`(^|[^\\w-])${label}($|[^\\w-])`).test(t));
 		assert.ok(inner, `Reiter ${id} fehlt`);
-		out[id] = { locked: inner!.includes('⊘'), done: inner!.includes('✓') };
+		out[id] = { locked: inner!.includes('data-zustand="gesperrt"'), done: inner!.includes('data-zustand="erledigt"') };
 	}
 	return out;
 }

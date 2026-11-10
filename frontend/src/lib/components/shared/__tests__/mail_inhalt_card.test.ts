@@ -58,14 +58,26 @@ async function renderKarte(reportConfig: Record<string, unknown>): Promise<strin
 function inputTagNach(html: string, testid: string): string {
 	const mi = html.indexOf(`data-testid="${testid}"`);
 	assert.notEqual(mi, -1, `Testid "${testid}" fehlt im Render des Bausteins.`);
-	// Die Radios tragen das Testid am <input> SELBST (e2e: `.check()` auf dem Testid),
-	// die Checkboxen an einem Wrapper-<span> davor. Beide Faelle abdecken.
+	// Die Checkboxen tragen das Testid an einem Wrapper-<span> davor (das Mail-Format prueft
+	// seit #2881 formatGewaehlt). Testid am <input> selbst bleibt abgedeckt.
 	const eigenerTag = html.lastIndexOf('<', mi);
 	const start = html.startsWith('<input', eigenerTag) ? eigenerTag : html.indexOf('<input', mi);
 	assert.notEqual(start, -1, `Kein <input> hinter Testid "${testid}".`);
 	return html.slice(start, html.indexOf('>', start) + 1);
 }
 const hat = (tag: string, name: string) => new RegExp(`\\b${name}(=""|(?=[\\s/>]))`).test(tag);
+
+/**
+ * #2881 Lieferung B (R2): das Mail-Format ist ein Segmented als radiogroup (kein natives Radio
+ * mehr). Gewaehlt = der Eintrag MIT dem Testid traegt role="radio" und aria-checked="true".
+ */
+function formatGewaehlt(html: string, testid: string): boolean {
+	const mi = html.indexOf(`data-testid="${testid}"`);
+	assert.notEqual(mi, -1, `Testid "${testid}" fehlt im Render des Bausteins.`);
+	const tag = html.slice(html.lastIndexOf('<', mi), html.indexOf('>', mi) + 1);
+	assert.ok(tag.startsWith('<button') && tag.includes('role="radio"'), `"${testid}" ist kein radio-Eintrag: ${tag}`);
+	return tag.includes('aria-checked="true"');
+}
 
 const SCHALTER = ['report-show-outlook', 'report-show-stage-stats', 'report-show-yesterday-comparison'];
 
@@ -82,7 +94,7 @@ describe('AC-1: Startzustand der Karte kommt aus dem Blob', () => {
 				'"Ausfuehrlich", weil email_format erst in onMount aus dem Blob uebernommen wird — ' +
 				'der Startzustand muss beim Erzeugen stehen.'
 		);
-		assert.ok(hat(inputTagNach(html, 'report-email-format-compact'), 'checked'), 'Kompakt nicht gewaehlt.');
+		assert.ok(formatGewaehlt(html, 'report-email-format-compact'), 'Kompakt nicht gewaehlt.');
 		const hinweis = html.slice(html.indexOf('data-testid="report-compact-hint"'));
 		assert.ok(
 			hinweis.slice(0, hinweis.indexOf('</p>')).includes(
@@ -90,7 +102,7 @@ describe('AC-1: Startzustand der Karte kommt aus dem Blob', () => {
 			),
 			'F006: Wortlaut des Kompakt-Hinweises weicht vom Original ab.'
 		);
-		assert.ok(!hat(inputTagNach(html, 'report-email-format-full'), 'checked'), 'Ausfuehrlich faelschlich gewaehlt.');
+		assert.ok(!formatGewaehlt(html, 'report-email-format-full'), 'Ausfuehrlich faelschlich gewaehlt.');
 		for (const id of SCHALTER) {
 			assert.ok(hat(inputTagNach(html, id), 'disabled'), `AC-1: Schalter ${id} ist im Kompakt-Modus nicht deaktiviert.`);
 		}
@@ -103,7 +115,7 @@ describe('AC-1: Startzustand der Karte kommt aus dem Blob', () => {
 		const html = await renderKarte({ email_format: 'full', show_yesterday_comparison: false });
 
 		assert.ok(!html.includes('data-testid="report-compact-hint"'), 'Hinweis darf im Modus "Ausfuehrlich" nicht stehen.');
-		assert.ok(hat(inputTagNach(html, 'report-email-format-full'), 'checked'), 'Ausfuehrlich nicht gewaehlt.');
+		assert.ok(formatGewaehlt(html, 'report-email-format-full'), 'Ausfuehrlich nicht gewaehlt.');
 		for (const id of SCHALTER) {
 			assert.ok(!hat(inputTagNach(html, id), 'disabled'), `Schalter ${id} darf im Modus "Ausfuehrlich" nicht deaktiviert sein.`);
 		}
@@ -128,7 +140,7 @@ describe('AC-1: Startzustand der Karte kommt aus dem Blob', () => {
 
 	test('leerer_blob__defaults_ausfuehrlich_alle_drei_schalter_an', async () => {
 		const html = await renderKarte({});
-		assert.ok(hat(inputTagNach(html, 'report-email-format-full'), 'checked'));
+		assert.ok(formatGewaehlt(html, 'report-email-format-full'));
 		for (const id of SCHALTER) assert.ok(hat(inputTagNach(html, id), 'checked'), `Default von ${id} ist "an".`);
 	});
 

@@ -296,13 +296,8 @@
 		<div class="space-y-3">
 			<Eyebrow>Select</Eyebrow>
 			<div class="flex gap-3 items-center flex-wrap">
-				<Select>
-					<option value="a">Option A</option>
-					<option value="b">Option B</option>
-				</Select>
-				<Select disabled>
-					<option value="a">Disabled</option>
-				</Select>
+				<Select options={[{ value: 'a', label: 'Option A' }, { value: 'b', label: 'Option B' }]} value="a" />
+				<Select options={[{ value: 'a', label: 'Disabled' }]} value="a" disabled />
 			</div>
 		</div>
 	</section>

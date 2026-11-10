@@ -230,7 +230,7 @@ test.describe('Issue #1256 S8d (AC-16): Desktop-CTA-Fuß Orte', () => {
 		// (compare-editor-continue-wetter-metriken) und führt zum NEUEN Wetter-Metriken-Tab.
 		// Das ⊘-Gate (disabled bis ≥2 Orte) ist unverändert.
 		const continueBtn = page.getByTestId('compare-editor-continue-wetter'); // #2794 S3a
-		await expect(page.getByText('⊘ min. 2 Orte auswählen')).toBeVisible();
+		await expect(page.getByText('min. 2 Orte auswählen')).toBeVisible();
 		await expect(continueBtn).toBeDisabled();
 		// #2837 S2 (AC-11): gesperrt bleibt der Knopf `Btn accent`, abgeblendet NUR über das globale
 		// disabled-Aussehen — keine Inline-Deckkraft mehr am Knopf.
@@ -241,7 +241,7 @@ test.describe('Issue #1256 S8d (AC-16): Desktop-CTA-Fuß Orte', () => {
 		await expect(page.getByTestId('cm-desktop-footer').getByTestId('compare-editor-activate')).toHaveCount(1);
 
 		await page.getByText(`E2E S8d D-Ort-B ${suffix}`).click();
-		await expect(page.getByText('⊘ min. 2 Orte auswählen')).toHaveCount(0);
+		await expect(page.getByText('min. 2 Orte auswählen')).toHaveCount(0);
 		await expect(continueBtn).toBeEnabled();
 		await continueBtn.click();
 		await expect(page.getByTestId('compare-editor-tab-wetter')).toHaveAttribute('data-active', 'true');

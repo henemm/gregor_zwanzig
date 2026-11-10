@@ -72,7 +72,7 @@ const GOLDEN_DE: Record<string, string> = {
 	wordmarkLeft: '1f7d593ed264942b', // #2896: Logo-Punkt --g-ink-4 → --g-ink-3
 	wordmarkNone: 'a4629a8d8e332251', // #2896: Logo-Punkt --g-ink-4 → --g-ink-3
 	footer: '9c85c44385fe29e2',
-	locationForm: 'c09344f5e4f45680',
+	locationForm: 'c04aa5edcee1d89c', // #2881 Lieferung B: Auswahl-Baustein (bits-ui Select) statt nativem <select>
 	weatherDialog: 'e00ab9e6247728a3',
 	zeileGesendet: '9e87c359f10cb71f',
 	zeileGeplant: '73f413bec9e8047c'

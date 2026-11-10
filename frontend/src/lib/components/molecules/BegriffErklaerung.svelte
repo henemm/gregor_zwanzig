@@ -56,4 +56,13 @@
 		outline: 2px solid var(--g-ink-2);
 		outline-offset: 1px;
 	}
+	/* #2881 R5: am Handy Tippfläche 44 × 44 bei unverändert kleinem Zeichen. Die negativen Ränder
+	   halten den Platzbedarf in der Zeile wie bisher (24 breit, 16 hoch) — nichts verschiebt sich. */
+	@media (max-width: 899px), (pointer: coarse) {
+		.ii-btn {
+			min-width: 44px;
+			min-height: 44px;
+			margin: -14px -10px;
+		}
+	}
 </style>

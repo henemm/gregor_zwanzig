@@ -16,6 +16,7 @@
 //   cd frontend && npx playwright test e2e/trip-new-versand-unter-metriken-konsole.spec.ts
 
 import { test, expect, type Page } from '@playwright/test';
+import { tippeDatum, waehleOption } from './helpers';
 import * as path from 'node:path';
 
 const MOBILE = { width: 390, height: 844 };
@@ -25,7 +26,7 @@ async function oeffneWetterMetrikenMobil(page: Page): Promise<void> {
 	await page.setViewportSize(MOBILE);
 	await page.goto('/trips/new');
 	await page.getByTestId('trip-new-name-input-mobile').fill('E2E-GZ #1743 Versand unter Metriken');
-	await page.getByTestId('trip-new-date-input').fill(new Date().toISOString().slice(0, 10));
+	await tippeDatum(page, page.getByTestId('trip-new-date-input'), new Date().toISOString().slice(0, 10));
 
 	const tabbar = page.getByTestId('tn-mobile-tabbar');
 	await tabbar.getByRole('tab', { name: /Etappen/ }).click({ force: true });
@@ -67,8 +68,8 @@ test('#1743: Metrik anhaken, Versandzeit ändern, Breite wechseln — keine Kons
 	// Versandzeit ändern.
 	const morgen = abschnitt.locator('[data-testid="report-morning-time"]:visible').first();
 	await expect(morgen).toBeVisible({ timeout: 10_000 });
-	await morgen.selectOption('08:00');
-	await expect(morgen).toHaveValue('08:00');
+	await waehleOption(page, morgen, '08:00');
+	await expect(morgen).toHaveText('08:00');
 
 	// Breite wechseln: Mobil → Desktop → Mobil (Instanz-Tausch, #1552 Fix-Loop 4).
 	await page.setViewportSize(DESKTOP);
@@ -92,7 +93,7 @@ test('#1743: Metrik anhaken, Versandzeit ändern, Breite wechseln — keine Kons
 	// Reaktivität lebt: die geänderte Versandzeit ist nach dem Breitenwechsel
 	// noch da, und eine weitere Änderung kommt an.
 	const morgenNachher = abschnittNachher.locator('[data-testid="report-morning-time"]:visible').first();
-	await expect(morgenNachher).toHaveValue('08:00');
-	await morgenNachher.selectOption('09:00');
-	await expect(morgenNachher).toHaveValue('09:00');
+	await expect(morgenNachher).toHaveText('08:00');
+	await waehleOption(page, morgenNachher, '09:00');
+	await expect(morgenNachher).toHaveText('09:00');
 });

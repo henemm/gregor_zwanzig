@@ -21,7 +21,7 @@ import { test, expect, type Page, type Request, type APIRequestContext } from '@
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { assertNotProdBaseURL } from './prodUrlGuard';
-import { E2E_TEST_PREFIX } from './helpers';
+import { E2E_TEST_PREFIX, feldEingabe, tippeUhrzeit } from './helpers';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const AUTH_FILE = path.join(__dirname, 'playwright', '.auth', 'staging-1395-s3.json');
@@ -533,7 +533,7 @@ test('#1395 S3 Fall 5 (Regression): Etappen-Reiter speichert weiterhin, mit If-M
 		await expect(page.getByTestId('edit-stages-panel')).toBeVisible({ timeout: 30_000 });
 
 		const timeInput = page
-			.locator('[data-testid="stage-start-time-field"]:visible input[type="time"]')
+			.locator('[data-testid="stage-start-time-field"]:visible')
 			.first();
 		await expect(timeInput).toBeVisible({ timeout: 30_000 });
 
@@ -542,8 +542,7 @@ test('#1395 S3 Fall 5 (Regression): Etappen-Reiter speichert weiterhin, mit If-M
 				r.request().method() === 'PUT' && new URL(r.url()).pathname === `/api/trips/${trip.id}`,
 			{ timeout: 60_000 }
 		);
-		await timeInput.fill('09:30');
-		await timeInput.blur();
+		await tippeUhrzeit(page, timeInput, '09:30');
 		const savedRes = await saved;
 		const log = await toWriteLog(puts);
 		logWrites('Fall 5', log);
@@ -557,9 +556,9 @@ test('#1395 S3 Fall 5 (Regression): Etappen-Reiter speichert weiterhin, mit If-M
 		await page.reload();
 		await expect(page.getByTestId('edit-stages-panel')).toBeVisible({ timeout: 30_000 });
 		const timeAfter = page
-			.locator('[data-testid="stage-start-time-field"]:visible input[type="time"]')
+			.locator('[data-testid="stage-start-time-field"]:visible')
 			.first();
-		await expect(timeAfter, 'UI nach Neuladen').toHaveValue('09:30', { timeout: 20_000 });
+		await expect(feldEingabe(timeAfter), 'UI nach Neuladen').toHaveText('09:30', { timeout: 20_000 });
 
 		const danach = await fetchTrip(request, trip.id);
 		console.log(

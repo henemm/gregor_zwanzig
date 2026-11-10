@@ -23,7 +23,7 @@ import { test, expect, type Page, type APIRequestContext } from '@playwright/tes
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { assertNotProdBaseURL } from './prodUrlGuard';
-import { E2E_TEST_PREFIX } from './helpers';
+import { E2E_TEST_PREFIX, feldEingabe, tippeDatum } from './helpers';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const AUTH_FILE = path.join(__dirname, 'playwright', '.auth', 'staging-1393.json');
@@ -80,7 +80,8 @@ async function fetchStageDates(request: APIRequestContext, tripId: string) {
 
 /** Sichtbares Datumsfeld der GERADE aktiven Etappe (Mobil-/Desktop-Doppel via :visible). */
 function activeDateInput(page: Page) {
-	return page.locator('[data-testid="stage-date-field"]:visible input[type="date"]').first();
+	// #2881 Lieferung B: Baustein DatumFeld (Segmente) statt <input type="date">.
+	return page.locator('[data-testid="stage-date-field"]:visible').first();
 }
 
 /** Klickt die Etappen-Karte an Position `index` und wartet, bis der Editor
@@ -124,7 +125,9 @@ async function readUiDate(
 	await openStage(page, index, name, isPause);
 	const input = activeDateInput(page);
 	await expect(input).toBeVisible({ timeout: 20_000 });
-	return (await input.inputValue()) ?? '';
+	// Anzeige des DatumFeld (de, TT.MM.JJJJ) zurück in ISO.
+	const [tag, monat, jahr] = ((await feldEingabe(input).textContent()) ?? '').trim().split('.');
+	return jahr ? `${jahr}-${monat}-${tag}` : '';
 }
 
 /** Zaehlt die PUTs auf /api/trips/…, die der BROWSER absetzt.
@@ -199,9 +202,8 @@ test('#1393 Fall A: ungleiche Abstaende, Ausloeser an Etappe 3 — lueckenlos da
 
 		// Ausloesen an Etappe 3 — ausdruecklich NICHT an Position 1.
 		await openStage(page, 2, 'Tag 3');
-		await expect(activeDateInput(page)).toHaveValue('2026-08-15');
-		await activeDateInput(page).fill('2026-07-26');
-		await activeDateInput(page).blur();
+		await expect(feldEingabe(activeDateInput(page))).toHaveText('15.08.2026');
+		await tippeDatum(page, activeDateInput(page), '2026-07-26');
 
 		// P1: die Rueckfrage erscheint ueberhaupt.
 		const strip = page.getByTestId('cascade-strip');
@@ -299,9 +301,8 @@ test('#1393 Fall B: Pausentag rueckt mit, Etappe ohne Datum verbraucht keinen Ta
 		await openStagesEditor(page, trip.id);
 
 		await openStage(page, 2, 'Tag 3');
-		await expect(activeDateInput(page)).toHaveValue('2026-08-15');
-		await activeDateInput(page).fill('2026-07-26');
-		await activeDateInput(page).blur();
+		await expect(feldEingabe(activeDateInput(page))).toHaveText('15.08.2026');
+		await tippeDatum(page, activeDateInput(page), '2026-07-26');
 
 		const strip = page.getByTestId('cascade-strip');
 		await expect(strip).toBeVisible({ timeout: 20_000 });

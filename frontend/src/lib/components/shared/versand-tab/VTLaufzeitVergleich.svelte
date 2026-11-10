@@ -14,6 +14,7 @@
 	//
 	// Spec: docs/specs/modules/versand_tab_vergleich.md (AC-3)
 	import { Eyebrow } from '$lib/components/atoms';
+	import DatumFeld from '$lib/components/molecules/DatumFeld.svelte';
 	import { t } from '$lib/i18n';
 
 	interface Props {
@@ -33,8 +34,8 @@
 		// Kein Auto-Fülldatum: wiz.endDate bleibt null, bis der Nutzer aktiv
 		// ein Datum waehlt (siehe onDateInput).
 	}
-	function onDateInput(e: Event) {
-		const v = (e.target as HTMLInputElement).value;
+	// #2881 Lieferung B: Baustein DatumFeld liefert `YYYY-MM-DD` direkt (vorher natives Feld).
+	function onDateInput(v: string) {
 		mode = 'date';
 		onChange(v || null);
 	}
@@ -66,13 +67,9 @@
 			</button>
 		</div>
 		{#if mode === 'date'}
-			<input
-				type="date"
-				data-testid="compare-versand-enddate-input"
-				value={value ?? ''}
-				onchange={onDateInput}
-				class="vt-date-input"
-			/>
+			<div class="vt-date-input">
+				<DatumFeld testid="compare-versand-enddate-input" leerMelden value={value ?? ''} onchange={onDateInput} ariaLabel={$t('versand.laufzeit.bis_datum')} />
+			</div>
 		{:else}
 			<p class="vt-laufzeit-hint">{$t('versand.laufzeit.ohne_ende')}</p>
 		{/if}
@@ -111,15 +108,7 @@
 		color: var(--g-paper);
 	}
 	.vt-date-input {
-		font-family: var(--g-font-mono);
-		font-size: 13px;
-		font-weight: 600;
-		border: 1px solid var(--g-rule);
-		border-radius: var(--g-r-1, 4px);
-		padding: 8px 10px;
-		background: var(--g-card);
-		color: var(--g-ink);
-		width: fit-content;
+		width: 220px;
 	}
 	.vt-laufzeit-hint {
 		margin: 0;
@@ -133,10 +122,7 @@
 			padding: 14px;
 		}
 		.vt-date-input {
-			min-height: 44px;
-			font-size: 16px;
 			width: 100%;
-			box-sizing: border-box;
 		}
 	}
 </style>

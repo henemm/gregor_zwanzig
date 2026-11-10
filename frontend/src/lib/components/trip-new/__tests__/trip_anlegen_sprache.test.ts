@@ -58,7 +58,10 @@ describe('AC-3: /trips/new englisch (Desktop und mobil)', () => {
 		hatNicht(sichtbar(de), 'Neue Trip anlegen');
 		const s = sichtbar(en);
 		hatNicht(s, 'Create new trip');
-		for (const t of ['New trip', 'No name yet', 'Nothing set up yet', 'Route', 'Stages & GPX', 'Check waypoints', 'Weather metrics', 'Target ranges', 'Alerts', 'optional', 'Trip basics', 'Trip name', 'Region', 'optional · max 50', 'Start date', 'Stage 1 starts on 1 Jul — each following stage +1 day.', 'Activity type', 'Hiking (default)', 'Alpine trekking', 'Hiking', 'Ski touring trips', 'Mountaineering', 'Via ferrata', 'Bike (20 km/h)', 'You upload GPX files in the next step — one file per stage.', '⊘ Trip name missing', '⊘ Start date missing', 'Create stages →', 'Set up alerts to save', 'Save trip', 'Enter trip name', 'New trip', 'Trips'])
+		// #2881 Lieferung B: die Aktivität ist ein Auswahl-Baustein (bits-ui Select) — die Liste rendert
+		// erst beim Öffnen (Portal), serverseitig steht nur der gewählte Wert; die Optionsnamen sichern
+		// der F9-Katalog-Anker (trip.aktivitaet.*) und DS-4 im Browser.
+		for (const t of ['New trip', 'No name yet', 'Nothing set up yet', 'Route', 'Stages & GPX', 'Check waypoints', 'Weather metrics', 'Target ranges', 'Alerts', 'optional', 'Trip basics', 'Trip name', 'Region', 'optional · max 50', 'Start date', 'Stage 1 starts on 1 Jul — each following stage +1 day.', 'Activity type', 'Hiking (default)', 'You upload GPX files in the next step — one file per stage.', 'Trip name missing', 'Start date missing', 'Create stages →', 'Set up alerts to save', 'Save trip', 'Enter trip name', 'New trip', 'Trips'])
 			hat(s, t);
 		for (const t of ['title="Locked — trip name + start date first"', 'placeholder="e.g. Karnischer Höhenweg 2026"', 'placeholder="e.g. Karnische Alpen"']) hat(en, t);
 		assert.deepEqual(deutscheReste(s), []);
@@ -68,7 +71,7 @@ describe('AC-3: /trips/new englisch (Desktop und mobil)', () => {
 		const { de, en } = deDannEn(() => alle('anlegen_etappen'));
 		hat(sichtbar(de), '01.07.');
 		const s = sichtbar(en);
-		for (const t of ['Stages', 'Name stages & upload a GPX file per stage', '0 / 2 GPX loaded', 'Start: 1 Jul', 'Stage name', 'Date', 'GPX file', '1 Jul', '2 Jul', 'Upload GPX', '+ Add stage', '⊘ 2 stages without a GPX file — waypoints are calculated automatically after the upload.', '⊘ 1 stage without a GPX file', 'Check waypoints →', '3 stages', '0/3 GPX', 'Name stage 2 …', '3 more GPX needed', 'Calenzana'])
+		for (const t of ['Stages', 'Name stages & upload a GPX file per stage', '0 / 2 GPX loaded', 'Start: 1 Jul', 'Stage name', 'Date', 'GPX file', '1 Jul', '2 Jul', 'Upload GPX', '+ Add stage', '2 stages without a GPX file — waypoints are calculated automatically after the upload.', '1 stage without a GPX file', 'Check waypoints →', '3 stages', '0/3 GPX', 'Name stage 2 …', '3 more GPX needed', 'Calenzana'])
 			hat(s, t);
 		hat(en, 'placeholder="Name stage 2 …"');
 		hat(en, 'aria-label="Remove stage"');
@@ -125,7 +128,7 @@ describe('AC-3: Etappen-Editor englisch, Wochentag ueber fmtWeekday', () => {
 		const { de, en } = deDannEn(() => sichtbar(P.etappenEditorRendern('kaskade_offen') + ' || ' + P.etappenEditorRendern('kaskade_fertig')));
 		hat(de, 'Diese Etappe liegt jetzt am 05.07.2026.');
 		hat(de, 'Sollen die 2 folgenden Etappen lückenlos anschließen, ab 06.07.2026?');
-		for (const t of ['This stage is now on 5 Jul 2026.', 'Should the 2 following stages follow without a gap, from 6 Jul 2026?', 'Follow without a gap', 'Only this stage', 'Re-dated without gaps', '· the 2 following stages, from 6 Jul 2026.', 'Close', 'Click in the elevation profile to insert a waypoint', 'Saved ✓'])
+		for (const t of ['This stage is now on 5 Jul 2026.', 'Should the 2 following stages follow without a gap, from 6 Jul 2026?', 'Follow without a gap', 'Only this stage', 'Re-dated without gaps', '· the 2 following stages, from 6 Jul 2026.', 'Close', 'Click in the elevation profile to insert a waypoint', 'Saved'])
 			hat(en, t);
 		assert.deepEqual(deutscheReste(en), []);
 	});

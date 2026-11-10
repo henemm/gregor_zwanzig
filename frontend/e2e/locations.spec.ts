@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { login } from './helpers.js';
+import { login, waehleOption } from './helpers.js';
 
 test.describe('Locations Page (M3b)', () => {
 	test.beforeEach(async ({ page }) => {
@@ -127,7 +127,7 @@ test.describe('Locations Page (M3b)', () => {
 		await dialog.locator('input[name="location-lon"]').fill('11.0');
 
 		// Select activity profile
-		await dialog.locator('select[name="activity-profile"]').selectOption('wandern');
+		await waehleOption(page, dialog.locator('#activity-profile'), 'Wandern');
 
 		await dialog.locator('button', { hasText: /Speichern|Save/i }).click();
 		await expect(dialog).not.toBeVisible({ timeout: 5000 });

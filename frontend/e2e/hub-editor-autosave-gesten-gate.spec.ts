@@ -15,7 +15,20 @@
 // Anmeldung über den storageState aus global.setup.ts (Admin-Sitzung), keine Registrierung.
 
 import { test, expect, type Page, type Request } from '@playwright/test';
-import { createTestLocation, HUB_KINDS, HUB_SEL, hubApiPath, openHub, seedHub, type HubKind, type SeededHub } from './helpers';
+import {
+	createTestLocation,
+	datumAnzeige,
+	feldEingabe,
+	HUB_KINDS,
+	HUB_SEL,
+	hubApiPath,
+	openHub,
+	seedHub,
+	tippeDatum,
+	waehleOption,
+	type HubKind,
+	type SeededHub
+} from './helpers';
 
 type Stand = Record<string, unknown>;
 
@@ -95,10 +108,10 @@ async function oeffnePunkte(page: Page, kind: HubKind, id: string, anzahl: numbe
 /** Trip: Etappe im Streifen anwählen, Datum setzen, blur. */
 async function etappenDatum(page: Page, index: number, datum: string): Promise<void> {
 	await page.getByTestId('etappen-strip').getByTestId(`stage-card-${index}`).click();
-	const feld = page.getByTestId('stage-date-field').locator('input[type="date"]');
-	await expect(feld).toHaveValue(TRIP_ZWEI_ETAPPEN.stages[index].date, { timeout: 10_000 });
-	await feld.fill(datum);
-	await feld.blur();
+	// #2881 Lieferung B: Baustein DatumFeld (Segmente) statt <input type="date">.
+	const feld = page.getByTestId('stage-date-field');
+	await expect(feldEingabe(feld)).toHaveText(datumAnzeige(TRIP_ZWEI_ETAPPEN.stages[index].date), { timeout: 10_000 });
+	await tippeDatum(page, feld, datum);
 }
 
 // Trip-Gesten (Produktverhalten, EditStagesPanelNew.handleDateChange, Bug #1389/#1393):
@@ -206,7 +219,7 @@ for (const kind of HUB_KINDS) {
 				await page.locator(`[data-testid="${sel.reiter}-zustellung"]:visible`).first().click(); // #2794 S3a: Versand im Reiter Zustellung
 				const zeit = page.locator('[data-testid="versand-abschnitt"]:visible [data-testid="report-morning-time"]:visible');
 				await expect(zeit).toBeVisible({ timeout: 10_000 });
-				await zeit.selectOption('05:00');
+				await waehleOption(page, zeit, '05:00');
 				await page.goto(sel.liste.url);
 
 				await expect
@@ -309,7 +322,7 @@ for (const kind of HUB_KINDS) {
 				await page.locator(`[data-testid="${sel.reiter}-zustellung"]:visible`).first().click(); // #2794 S3a: Versand im Reiter Zustellung
 				const zeit = page.locator('[data-testid="versand-abschnitt"]:visible [data-testid="report-morning-time"]:visible');
 				await expect(zeit).toBeVisible({ timeout: 10_000 });
-				await zeit.selectOption('05:00');
+				await waehleOption(page, zeit, '05:00');
 				await expect(page.locator('[data-testid="save-indicator"]')).toHaveAttribute('data-state', 'idle', { timeout: 10_000 });
 
 				await bleibtBei(() => nurObjekt(schreiber, pfad).length, 2, 1_500, 'GG-5 FAIL: insgesamt genau ZWEI PUTs (kein Doppel-Feuer, keine verlorene Aktion)');

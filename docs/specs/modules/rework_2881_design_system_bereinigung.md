@@ -2,7 +2,7 @@
 entity_id: rework_2881_design_system_bereinigung
 type: feature
 created: 2026-11-09
-updated: 2026-11-09
+updated: 2026-11-10
 status: approved
 version: "1.0"
 workflow: rework-2881-design-system
@@ -115,7 +115,7 @@ Das Audit vom 9.11.2026 fand zwei Arten von Problemen:
 - **AC-8:** Given Trip-Hub und Vergleichs-Hub bei 1280 × 900 / When die Reiterleiste vermessen wird / Then hat die Leiste oben, links und rechts keinen Rahmen und keinen Radius, unten eine 1-px-Linie in `--g-rule` (rgb(216, 211, 194)); inaktive Reiter 13 px, Stärke 500, Farbe `--g-ink`; der aktive Reiter Stärke 600 mit 2-px-Unterstrich in `--g-accent`; Zähler in Mono 10 px, neutral; bei Trip und Vergleich gleich.
   - Test: Playwright DS-8 (Festwerte aus ADR-0111) und die angepassten Fälle in `hub-tab-bar.spec.ts` (Gleichheit Trip/Vergleich bleibt).
 
-- **AC-9:** Given das Anlegen bei 1280 × 900 mit zwei von fünf erledigten Abschnitten / When die Fortschritts-Segmente gemessen werden / Then sind erledigte Segmente `--g-accent`, offene haben keine Füllung und eine 1-px-Kontur in `--g-ink-3`, und beide erreichen gegen den Seitengrund mindestens 3:1; der Zähler daneben nennt den Stand als Text.
+- **AC-9:** Given das Anlegen bei 1280 × 900 mit zwei von vier erledigten Abschnitten / When die Fortschritts-Segmente gemessen werden / Then sind erledigte Segmente `--g-accent`, offene haben keine Füllung und eine 1-px-Kontur in `--g-ink-3`, und beide erreichen gegen den Seitengrund mindestens 3:1; der Zähler daneben nennt den Stand als Text.
   - Test: Playwright DS-9.
 
 - **AC-10:** Given ein deutschsprachiger Nutzer / When Trip-Liste und Trip-Übersicht geöffnet werden / Then erscheinen die Wörter „Drafts“, „Alert-Trigger“ und „Alerts justieren“ nirgends; an ihrer Stelle stehen „Entwürfe“, „Alarm-Auslöser“ und „Alarme einstellen“.
@@ -140,6 +140,7 @@ Das Audit vom 9.11.2026 fand zwei Arten von Problemen:
 
 - Native Felder in Konto, Admin und GPX-Upload bleiben vorerst (Sammel-Eintrag #1199).
 - Neue Soll-Bilder werden nicht erstellt; Maßstab sind Doku, Mockup und Tests (ADR-0111 Punkt 5).
+- Scheitert das Speichern, während ein Segment des Datumsfelds angefangen ist (z. B. Monat „1“), zeigt das Feld wieder den gespeicherten Wert und die angefangene Ziffer ist verworfen; die nächste Ziffer beginnt das Segment neu (bits-ui: „2“ ergibt dann Februar und springt ins Jahr statt Dezember). Kein Datenverlust, Anzeige = gespeicherter Wert (Adversary Runde 2, P11).
 
 ## Architektur-Entscheidung (ADR)
 
@@ -150,3 +151,6 @@ Das Audit vom 9.11.2026 fand zwei Arten von Problemen:
 
 - 2026-11-09: Initial spec (Issue #2881).
 - 2026-11-09: Vom PO freigegeben.
+- 2026-11-09: Lieferung B umgesetzt (R2, R3, R5; AC-1/2/3/4/6, DS-1/2/3/4/6, Pflicht-Mutationen d–f). Englisches Datumsformat im DatumFeld: Segmente Tag zuerst (`19/11/2026`, en-GB) wie die Tag-zuerst-Reihenfolge im übrigen UI (`19 Nov 2026`); die Segmentfelder sind numerisch. Uhrzeit immer 24 h. Native Felder bleiben nur in den ausgenommenen Reitern (DayWindowCard, Alarme) und in Konto/Admin/GPX-Upload (#1199).
+- 2026-11-10: AC-9 „zwei von fünf“ → „zwei von vier“ Abschnitten (Folge der Anlege-Kette aus #2794 S3a, keine Produktänderung). Fix-Loop Lieferung B nach Adversary (F-B1 bis F-B6): Segmentfelder melden nur fertige Segmente (getippte Ziffern gezählt, kein Ruhe-Zeitgeber), Leeren beim Anlegen ergibt „Startdatum fehlt“, an der Etappe springt ein geleertes/unvollständiges Feld beim Verlassen auf den gespeicherten Wert zurück, Startzeit leeren ⇒ 08:00; neue Fälle DS-1 Leeren, DS-2 Etappenwechsel/Zwischenstände/Leeren/en, DS-4 Standard-Option und rollendes tabindex; DS-5 leer mit frischem Konto. ✓ der Grundauswahl im Reiter Wetter bleibt ausgenommen (Nicht hier, #2794).
+- 2026-11-10: Fix-Loop 2 Lieferung B nach Adversary Runde 2 (F-C1 bis F-C4): ein angefangenes Jahr („202“) wird an der Etappe nie gespeichert (Anzeige springt zurück), beim Anlegen ergibt es „Startdatum fehlt“; ein unverändert neu getipptes Datum schreibt nichts; ein Segment, in das man später zurückkehrt oder in dem man per Rücktaste eine Ziffer löscht, gilt als angefangen; scheitert das Speichern mitten im Tippen, schreibt das Verlassen den alten Tipp-Stand nicht nach. Jede Schutzstelle der Segmentfelder ist per Mutation an der Wirkstelle belegt oder entfernt (Beleg: `docs/artifacts/rework-2881-design-system/mutationen-B.txt`); wirkungslos und entfernt sind u. a. Sperre und Neuaufbau beim fremden Wertwechsel. Neue Fälle DS-2 Jahr angefangen, dasselbe Datum/dieselbe Startzeit, Rückkehr, Rücktaste, Rücknahme beim Tippen (Datum und Startzeit), Etappenwechsel Startzeit, Startzeit neu tippen; DS-1 Jahr angefangen und Neueintippen. P11 (Rücknahme mitten im Monat) als Known Limitation.

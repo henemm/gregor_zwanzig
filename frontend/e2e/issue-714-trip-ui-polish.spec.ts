@@ -14,7 +14,7 @@
 // Ausführung: cd frontend && npx playwright test issue-714-trip-ui-polish
 
 import { test, expect, type Locator } from '@playwright/test';
-import { login } from './helpers.js';
+import { login, tippeDatum } from './helpers.js';
 
 const TRIP_ID = 'e2e-cockpit-test';
 const TRIP_NAME = 'E2E Cockpit Test Trip';
@@ -158,7 +158,7 @@ test.describe('Issue #714 — Trip-Editor UI-Kleinigkeiten', () => {
 		await page.goto('/trips/new');
 
 		await page.getByTestId('trip-new-name-input-mobile').fill('Mobile Lösch-Test');
-		await page.getByTestId('trip-new-date-input').last().fill('2026-07-01');
+		await tippeDatum(page, page.getByTestId('trip-new-date-input').last(), '2026-07-01');
 		await page.getByRole('tab', { name: 'Etappen & GPX' }).click();
 
 		const cards = page.getByTestId('tn-mobile-stage-card');
@@ -193,7 +193,7 @@ test.describe('Issue #714 — Trip-Editor UI-Kleinigkeiten', () => {
 		await page.goto('/trips/new');
 
 		await page.getByTestId('trip-new-name-input-mobile').fill('Mobile Trenn-Test');
-		await page.getByTestId('trip-new-date-input').last().fill('2026-07-01');
+		await tippeDatum(page, page.getByTestId('trip-new-date-input').last(), '2026-07-01');
 		await page.getByRole('tab', { name: 'Etappen & GPX' }).click();
 
 		await expect(page.getByTestId('tn-mobile-stage-card').first()).toBeVisible({ timeout: 8000 });

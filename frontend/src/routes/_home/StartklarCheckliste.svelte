@@ -3,7 +3,7 @@
 	// zwei Info-Punkte); ob sie erscheint, entscheidet onboardingSichtbarkeit.ts.
 	import { t, locale } from '$lib/i18n/index.js';
 	import { fmtDateNumeric } from '$lib/i18n/format.js';
-	import { Btn } from '$lib/components/atoms';
+	import { Btn, Dot } from '$lib/components/atoms';
 	import {
 		checklistePunkte,
 		tarifHinweise,
@@ -65,7 +65,12 @@
 				data-erledigt={p.erledigt ? 'true' : 'false'}
 				style="display: flex; align-items: center; gap: 10px; font-size: 14px; color: var(--g-ink-2);"
 			>
-				<span aria-hidden="true" style="font-weight: 700; color: {p.erledigt ? 'var(--g-success)' : 'var(--g-ink-2)'};">{p.erledigt ? '✓' : '○'}</span>
+				<!-- #2881 R3 (ADR-0111 Punkt 7): Dot statt ✓/○ — erledigt gefüllt --g-good, offen nur Umriss. -->
+				{#if p.erledigt}
+					<Dot tone="good" size="md" />
+				{:else}
+					<Dot tone="neutral" size="md" style="background: transparent; box-shadow: inset 0 0 0 1.5px var(--g-ink-3);" />
+				{/if}
 				{#if p.id !== 'testmail' || p.erledigt}
 					<span>
 						{LABEL[p.id]()}{#if p.id === 'testmail'} {datum(profil.testMailSentAt)}{/if}

@@ -1,0 +1,933 @@
+# #2881 Lieferung B — RED-Lauf auf dem Ausgangsstand 9e64a10 (nur Testdateien geändert)
+# Befehl: cd frontend && CI=1 npx playwright test e2e/design-system-trip-vergleich.spec.ts --trace off --workers=1 -g 'DS-1|DS-2|DS-3|DS-4|DS-6' --reporter=line
+# Stack: bash frontend/e2e/ci-stack.sh start (Go 8091 / Py 8000); [WebServer]-Zeilen entfernt
+# Ergebnis: 12 failed (DS-1 de/en/390, DS-2 1280/390, DS-3 1280/390 x de/en, DS-4 Aktivität + Mail-Format, DS-6),
+#           2 passed (global.setup und DS-10, das der -g-Filter „DS-1" mit erfasst).
+# Gründe (aus dem richtigen Grund rot):
+#   DS-1  Datumsfeld-Baustein fehlt (trip-new-date-input-desktop nicht gefunden; Handy: natives Feld ohne Kalender-Knopf)
+#   DS-2  Etappen-Datum/-Startzeit ohne Segmente (natives input[type=date|time])
+#   DS-3  native input[type=date|time|radio] + <select>, ✓ im Speicher-Chip, ⊘/✓ an Anlege-Reitern und -Hinweisen
+#   DS-4  Aktivität öffnet keine listbox; Mail-Format ist keine radiogroup
+#   DS-6  Zurück 34×36 / 73×36, Schnellwahl ×36, ⓘ 24×24, Standardwerte ×36
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Running 14 tests using 1 worker
+
+[1/14] [setup] › e2e/global.setup.ts:23:1 › authenticate and seed test data
+[2/14] [tests] › e2e/design-system-trip-vergleich.spec.ts:387:1 › DS-10: Trip-Liste und Trip-Übersicht (de) ohne „Drafts", „Alert-Trigger", „Alerts justieren"
+[3/14] [tests] › e2e/design-system-trip-vergleich.spec.ts:488:2 › DS-1 (de): Startdatum per Kalender 19.11.2026, Wochenbeginn Montag, gespeichert als 2026-11-19, Anzeige nach Neuladen
+  1) [tests] › e2e/design-system-trip-vergleich.spec.ts:488:2 › DS-1 (de): Startdatum per Kalender 19.11.2026, Wochenbeginn Montag, gespeichert als 2026-11-19, Anzeige nach Neuladen 
+
+    Error: expect(locator).toBeVisible() failed
+
+    Locator: getByTestId('trip-new-date-input-desktop')
+    Expected: visible
+    Timeout: 15000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toBeVisible" with timeout 15000ms
+      - waiting for getByTestId('trip-new-date-input-desktop')
+
+
+      494 | 			await page.goto(ANLEGE_SEL.route.url);
+      495 | 			const feld = tripDatumFeld(page, false);
+    > 496 | 			await expect(feld).toBeVisible({ timeout: 15_000 });
+          | 			                   ^
+      497 | 			await ANLEGE_SEL.route.name(page).fill(`E2E-GZ-DS1-${lang}-${Date.now()}`);
+      498 | 			const koepfe = await waehleImKalender(page, feld, '2026-11-19');
+      499 | 			expect(koepfe[0], `Kalender beginnt nicht mit Montag: ${koepfe.join(' ')}`).toMatch(montag);
+        at /home/user/gregor_zwanzig/.claude/worktrees/agent-a2c702224b06fb2c7/frontend/e2e/design-system-trip-vergleich.spec.ts:496:23
+
+    Error Context: test-results/design-system-trip-verglei-815de-11-19-Anzeige-nach-Neuladen-tests/error-context.md
+
+
+[4/14] [tests] › e2e/design-system-trip-vergleich.spec.ts:488:2 › DS-1 (en): Startdatum per Kalender 19.11.2026, Wochenbeginn Montag, gespeichert als 2026-11-19, Anzeige nach Neuladen
+  2) [tests] › e2e/design-system-trip-vergleich.spec.ts:488:2 › DS-1 (en): Startdatum per Kalender 19.11.2026, Wochenbeginn Montag, gespeichert als 2026-11-19, Anzeige nach Neuladen 
+
+    Error: expect(locator).toBeVisible() failed
+
+    Locator: getByTestId('trip-new-date-input-desktop')
+    Expected: visible
+    Timeout: 15000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toBeVisible" with timeout 15000ms
+      - waiting for getByTestId('trip-new-date-input-desktop')
+
+
+      494 | 			await page.goto(ANLEGE_SEL.route.url);
+      495 | 			const feld = tripDatumFeld(page, false);
+    > 496 | 			await expect(feld).toBeVisible({ timeout: 15_000 });
+          | 			                   ^
+      497 | 			await ANLEGE_SEL.route.name(page).fill(`E2E-GZ-DS1-${lang}-${Date.now()}`);
+      498 | 			const koepfe = await waehleImKalender(page, feld, '2026-11-19');
+      499 | 			expect(koepfe[0], `Kalender beginnt nicht mit Montag: ${koepfe.join(' ')}`).toMatch(montag);
+        at /home/user/gregor_zwanzig/.claude/worktrees/agent-a2c702224b06fb2c7/frontend/e2e/design-system-trip-vergleich.spec.ts:496:23
+
+    Error Context: test-results/design-system-trip-verglei-9870b-11-19-Anzeige-nach-Neuladen-tests/error-context.md
+
+
+[5/14] [tests] › e2e/design-system-trip-vergleich.spec.ts:519:1 › DS-1 (390 px): Startdatum am Handy per Kalender, Anzeige 19.11.2026, Wochenbeginn Montag
+  3) [tests] › e2e/design-system-trip-vergleich.spec.ts:519:1 › DS-1 (390 px): Startdatum am Handy per Kalender, Anzeige 19.11.2026, Wochenbeginn Montag 
+
+    TimeoutError: locator.click: Timeout 10000ms exceeded.
+    Call log:
+      - waiting for getByTestId('trip-new-date-input').locator('[data-slot="datum-feld-kalender-knopf"]')
+
+
+      440 | /** Kalender des Datumsfelds öffnen, zum Monat blättern, Tag anklicken; liefert die Wochentags-Köpfe. */
+      441 | async function waehleImKalender(page: Page, feld: Locator, iso: string): Promise<string[]> {
+    > 442 | 	await feld.locator(DATUM.knopf).click({ timeout: 10_000 });
+          | 	                                ^
+      443 | 	const kalender = page.locator(`${DATUM.kalender}:visible`);
+      444 | 	await expect(kalender, 'Kalender-Popover öffnet nicht').toBeVisible();
+      445 | 	const koepfe = (await kalender.locator(DATUM.wochentag).allInnerTexts()).map((s) => s.trim());
+        at waehleImKalender (/home/user/gregor_zwanzig/.claude/worktrees/agent-a2c702224b06fb2c7/frontend/e2e/design-system-trip-vergleich.spec.ts:442:34)
+        at /home/user/gregor_zwanzig/.claude/worktrees/agent-a2c702224b06fb2c7/frontend/e2e/design-system-trip-vergleich.spec.ts:526:23
+
+    Error Context: test-results/design-system-trip-verglei-1c755-11-2026-Wochenbeginn-Montag-tests/error-context.md
+
+
+[6/14] [tests] › e2e/design-system-trip-vergleich.spec.ts:536:2 › DS-2 (1280 px): Etappe — Datum 20.11.2026 und Startzeit 07:30 über die neuen Felder, nach Neuladen gespeichert (24 h)
+  4) [tests] › e2e/design-system-trip-vergleich.spec.ts:536:2 › DS-2 (1280 px): Etappe — Datum 20.11.2026 und Startzeit 07:30 über die neuen Felder, nach Neuladen gespeichert (24 h) 
+
+    TimeoutError: locator.click: Timeout 10000ms exceeded.
+    Call log:
+      - waiting for locator('[data-testid="stage-date-field"]:visible').first().locator('[data-segment="day"]')
+
+
+      458 | /** Segment-Feld (Datum/Uhrzeit) per Tastatur: erstes Segment anklicken, Ziffern tippen. */
+      459 | async function tippeSegmente(page: Page, feld: Locator, segment: 'day' | 'hour', ziffern: string): Promise<void> {
+    > 460 | 	await feld.locator(`[data-segment="${segment}"]`).click({ timeout: 10_000 });
+          | 	                                                  ^
+      461 | 	await page.keyboard.type(ziffern);
+      462 | }
+      463 |
+        at tippeSegmente (/home/user/gregor_zwanzig/.claude/worktrees/agent-a2c702224b06fb2c7/frontend/e2e/design-system-trip-vergleich.spec.ts:460:52)
+        at /home/user/gregor_zwanzig/.claude/worktrees/agent-a2c702224b06fb2c7/frontend/e2e/design-system-trip-vergleich.spec.ts:546:10
+
+    Error Context: test-results/design-system-trip-verglei-01a0f--Neuladen-gespeichert-24-h--tests/error-context.md
+
+
+[7/14] [tests] › e2e/design-system-trip-vergleich.spec.ts:536:2 › DS-2 (390 px): Etappe — Datum 20.11.2026 und Startzeit 07:30 über die neuen Felder, nach Neuladen gespeichert (24 h)
+  5) [tests] › e2e/design-system-trip-vergleich.spec.ts:536:2 › DS-2 (390 px): Etappe — Datum 20.11.2026 und Startzeit 07:30 über die neuen Felder, nach Neuladen gespeichert (24 h) 
+
+    TimeoutError: locator.click: Timeout 10000ms exceeded.
+    Call log:
+      - waiting for locator('[data-testid="stage-date-field"]:visible').first().locator('[data-segment="day"]')
+
+
+      458 | /** Segment-Feld (Datum/Uhrzeit) per Tastatur: erstes Segment anklicken, Ziffern tippen. */
+      459 | async function tippeSegmente(page: Page, feld: Locator, segment: 'day' | 'hour', ziffern: string): Promise<void> {
+    > 460 | 	await feld.locator(`[data-segment="${segment}"]`).click({ timeout: 10_000 });
+          | 	                                                  ^
+      461 | 	await page.keyboard.type(ziffern);
+      462 | }
+      463 |
+        at tippeSegmente (/home/user/gregor_zwanzig/.claude/worktrees/agent-a2c702224b06fb2c7/frontend/e2e/design-system-trip-vergleich.spec.ts:460:52)
+        at /home/user/gregor_zwanzig/.claude/worktrees/agent-a2c702224b06fb2c7/frontend/e2e/design-system-trip-vergleich.spec.ts:546:10
+
+    Error Context: test-results/design-system-trip-verglei-be480--Neuladen-gespeichert-24-h--tests/error-context.md
+
+
+[8/14] [tests] › e2e/design-system-trip-vergleich.spec.ts:606:3 › DS-3 (1280 px, de): Listen, Hubs (Übersicht, Etappen/Orte, Zustellung) und Anlegen ohne native Datum/Uhrzeit/Radio/Select, ohne ✓/⊘
+  6) [tests] › e2e/design-system-trip-vergleich.spec.ts:606:3 › DS-3 (1280 px, de): Listen, Hubs (Übersicht, Etappen/Orte, Zustellung) und Anlegen ohne native Datum/Uhrzeit/Radio/Select, ohne ✓/⊘ 
+
+    Error: route-Hub uebersicht: Symbol ✓ in „ km/h) Fahrrad (25 km/h) ✓ Gespeichert 4.5 km · ↑4"
+    route-Hub etappen: natives Feld input[type=date] 
+    route-Hub etappen: natives Feld input[type=time] 
+    route-Hub etappen: Symbol ✓ in „ km/h) Fahrrad (25 km/h) ✓ Gespeichert 4.5 km · ↑4"
+    route-Hub Zustellung: natives Feld input[type=radio] report-email-format-full
+    route-Hub Zustellung: natives Feld input[type=radio] report-email-format-compact
+    route-Hub Zustellung: natives Feld select report-morning-time
+    route-Hub Zustellung: natives Feld select report-evening-time
+    route-Hub Zustellung: Symbol ✓ in „✓ Gespeichert"
+    vergleich-Hub uebersicht: Symbol ✓ in „ Wandern Sommer-Trekking ✓ Gespeichert Übersicht O"
+    vergleich-Hub orte: Symbol ✓ in „ Wandern Sommer-Trekking ✓ Gespeichert Übersicht O"
+    vergleich-Hub Zustellung: natives Feld select report-morning-time
+    vergleich-Hub Zustellung: natives Feld select report-evening-time
+    vergleich-Hub Zustellung: Symbol ✓ in „✓ Gespeichert"
+    route-Anlegen erster Schritt: natives Feld input[type=date] 
+    route-Anlegen erster Schritt: natives Feld input[type=radio] report-email-format-full
+    route-Anlegen erster Schritt: natives Feld input[type=radio] report-email-format-compact
+    route-Anlegen erster Schritt: natives Feld input[type=date] trip-new-date-input
+    route-Anlegen erster Schritt: natives Feld select activity-dropdown
+    route-Anlegen erster Schritt: Symbol ⊘ in „htet Route Etappen & GPX ⊘ Wegpunkte prüfen OPTION"
+    route-Anlegen erster Schritt: Symbol ⊘ in „egpunkte prüfen OPTIONAL ⊘ Wetter-Metriken ⊘ Werte"
+    route-Anlegen erster Schritt: Symbol ⊘ in „TIONAL ⊘ Wetter-Metriken ⊘ Wertebereiche ⊘ Alarme "
+    route-Anlegen erster Schritt: Symbol ⊘ in „Metriken ⊘ Wertebereiche ⊘ Alarme ⊘ TRIP-GRUNDDATE"
+    route-Anlegen erster Schritt: Symbol ⊘ in „⊘ Wertebereiche ⊘ Alarme ⊘ TRIP-GRUNDDATEN TRIP-NA"
+    route-Anlegen erster Schritt: Symbol ⊘ in „— eine Datei pro Etappe. ⊘ Trip-Name fehlt Etappen"
+    route-Anlegen etappen: natives Feld input[type=radio] report-email-format-full
+    route-Anlegen etappen: natives Feld input[type=radio] report-email-format-compact
+    route-Anlegen etappen: Symbol ✓ in „nitte eingerichtet Route ✓ Etappen & GPX Wegpunkte"
+    route-Anlegen etappen: Symbol ✓ in „ × × + Etappe hinzufügen ✓ Alle GPX geladen — Wegp"
+    route-Anlegen etappen: Symbol ⊘ in „r-Metriken Wertebereiche ⊘ Alarme ⊘ ETAPPEN Namen "
+    route-Anlegen etappen: Symbol ⊘ in „n Wertebereiche ⊘ Alarme ⊘ ETAPPEN Namen vergeben "
+    route-Anlegen Zustellung: natives Feld select report-morning-time
+    route-Anlegen Zustellung: natives Feld select report-evening-time
+    route-Anlegen Zustellung: natives Feld input[type=radio] report-email-format-full
+    route-Anlegen Zustellung: natives Feld input[type=radio] report-email-format-compact
+    vergleich-Anlegen erster Schritt: Symbol ⊘ in „gerichtet Vergleich Orte ⊘ Wetter-Metriken ⊘ Werte"
+    vergleich-Anlegen erster Schritt: Symbol ⊘ in „h Orte ⊘ Wetter-Metriken ⊘ Wertebereiche ⊘ Alarme "
+    vergleich-Anlegen erster Schritt: Symbol ⊘ in „Metriken ⊘ Wertebereiche ⊘ Alarme ⊘ ECKDATEN NAME "
+    vergleich-Anlegen erster Schritt: Symbol ⊘ in „⊘ Wertebereiche ⊘ Alarme ⊘ ECKDATEN NAME DES VERGL"
+    vergleich-Anlegen erster Schritt: Symbol ⊘ in „dex max · Sichtweite min ⊘ Name fehlt Orte hinzufü"
+    vergleich-Anlegen orte: Symbol ✓ in „e eingerichtet Vergleich ✓ Orte Wetter-Metriken We"
+    vergleich-Anlegen orte: Symbol ⊘ in „r-Metriken Wertebereiche ⊘ Alarme ⊘ NEUEN ORT HINZ"
+    vergleich-Anlegen orte: Symbol ⊘ in „n Wertebereiche ⊘ Alarme ⊘ NEUEN ORT HINZUFÜGEN SM"
+    vergleich-Anlegen Zustellung: natives Feld select report-morning-time
+    vergleich-Anlegen Zustellung: natives Feld select report-evening-time
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  -  1
+    + Received  + 47
+
+    - Array []
+    + Array [
+    +   "route-Hub uebersicht: Symbol ✓ in „ km/h) Fahrrad (25 km/h) ✓ Gespeichert 4.5 km · ↑4\"",
+    +   "route-Hub etappen: natives Feld input[type=date] ",
+    +   "route-Hub etappen: natives Feld input[type=time] ",
+    +   "route-Hub etappen: Symbol ✓ in „ km/h) Fahrrad (25 km/h) ✓ Gespeichert 4.5 km · ↑4\"",
+    +   "route-Hub Zustellung: natives Feld input[type=radio] report-email-format-full",
+    +   "route-Hub Zustellung: natives Feld input[type=radio] report-email-format-compact",
+    +   "route-Hub Zustellung: natives Feld select report-morning-time",
+    +   "route-Hub Zustellung: natives Feld select report-evening-time",
+    +   "route-Hub Zustellung: Symbol ✓ in „✓ Gespeichert\"",
+    +   "vergleich-Hub uebersicht: Symbol ✓ in „ Wandern Sommer-Trekking ✓ Gespeichert Übersicht O\"",
+    +   "vergleich-Hub orte: Symbol ✓ in „ Wandern Sommer-Trekking ✓ Gespeichert Übersicht O\"",
+    +   "vergleich-Hub Zustellung: natives Feld select report-morning-time",
+    +   "vergleich-Hub Zustellung: natives Feld select report-evening-time",
+    +   "vergleich-Hub Zustellung: Symbol ✓ in „✓ Gespeichert\"",
+    +   "route-Anlegen erster Schritt: natives Feld input[type=date] ",
+    +   "route-Anlegen erster Schritt: natives Feld input[type=radio] report-email-format-full",
+    +   "route-Anlegen erster Schritt: natives Feld input[type=radio] report-email-format-compact",
+    +   "route-Anlegen erster Schritt: natives Feld input[type=date] trip-new-date-input",
+    +   "route-Anlegen erster Schritt: natives Feld select activity-dropdown",
+    +   "route-Anlegen erster Schritt: Symbol ⊘ in „htet Route Etappen & GPX ⊘ Wegpunkte prüfen OPTION\"",
+    +   "route-Anlegen erster Schritt: Symbol ⊘ in „egpunkte prüfen OPTIONAL ⊘ Wetter-Metriken ⊘ Werte\"",
+    +   "route-Anlegen erster Schritt: Symbol ⊘ in „TIONAL ⊘ Wetter-Metriken ⊘ Wertebereiche ⊘ Alarme \"",
+    +   "route-Anlegen erster Schritt: Symbol ⊘ in „Metriken ⊘ Wertebereiche ⊘ Alarme ⊘ TRIP-GRUNDDATE\"",
+    +   "route-Anlegen erster Schritt: Symbol ⊘ in „⊘ Wertebereiche ⊘ Alarme ⊘ TRIP-GRUNDDATEN TRIP-NA\"",
+    +   "route-Anlegen erster Schritt: Symbol ⊘ in „— eine Datei pro Etappe. ⊘ Trip-Name fehlt Etappen\"",
+    +   "route-Anlegen etappen: natives Feld input[type=radio] report-email-format-full",
+    +   "route-Anlegen etappen: natives Feld input[type=radio] report-email-format-compact",
+    +   "route-Anlegen etappen: Symbol ✓ in „nitte eingerichtet Route ✓ Etappen & GPX Wegpunkte\"",
+    +   "route-Anlegen etappen: Symbol ✓ in „ × × + Etappe hinzufügen ✓ Alle GPX geladen — Wegp\"",
+    +   "route-Anlegen etappen: Symbol ⊘ in „r-Metriken Wertebereiche ⊘ Alarme ⊘ ETAPPEN Namen \"",
+    +   "route-Anlegen etappen: Symbol ⊘ in „n Wertebereiche ⊘ Alarme ⊘ ETAPPEN Namen vergeben \"",
+    +   "route-Anlegen Zustellung: natives Feld select report-morning-time",
+    +   "route-Anlegen Zustellung: natives Feld select report-evening-time",
+    +   "route-Anlegen Zustellung: natives Feld input[type=radio] report-email-format-full",
+    +   "route-Anlegen Zustellung: natives Feld input[type=radio] report-email-format-compact",
+    +   "vergleich-Anlegen erster Schritt: Symbol ⊘ in „gerichtet Vergleich Orte ⊘ Wetter-Metriken ⊘ Werte\"",
+    +   "vergleich-Anlegen erster Schritt: Symbol ⊘ in „h Orte ⊘ Wetter-Metriken ⊘ Wertebereiche ⊘ Alarme \"",
+    +   "vergleich-Anlegen erster Schritt: Symbol ⊘ in „Metriken ⊘ Wertebereiche ⊘ Alarme ⊘ ECKDATEN NAME \"",
+    +   "vergleich-Anlegen erster Schritt: Symbol ⊘ in „⊘ Wertebereiche ⊘ Alarme ⊘ ECKDATEN NAME DES VERGL\"",
+    +   "vergleich-Anlegen erster Schritt: Symbol ⊘ in „dex max · Sichtweite min ⊘ Name fehlt Orte hinzufü\"",
+    +   "vergleich-Anlegen orte: Symbol ✓ in „e eingerichtet Vergleich ✓ Orte Wetter-Metriken We\"",
+    +   "vergleich-Anlegen orte: Symbol ⊘ in „r-Metriken Wertebereiche ⊘ Alarme ⊘ NEUEN ORT HINZ\"",
+    +   "vergleich-Anlegen orte: Symbol ⊘ in „n Wertebereiche ⊘ Alarme ⊘ NEUEN ORT HINZUFÜGEN SM\"",
+    +   "vergleich-Anlegen Zustellung: natives Feld select report-morning-time",
+    +   "vergleich-Anlegen Zustellung: natives Feld select report-evening-time",
+    + ]
+
+      651 | 				await cleanupTracked(page.request);
+      652 | 			}
+    > 653 | 			expect(fehler, fehler.join('\n')).toEqual([]);
+          | 			                                  ^
+      654 | 		});
+      655 | 	}
+      656 | }
+        at /home/user/gregor_zwanzig/.claude/worktrees/agent-a2c702224b06fb2c7/frontend/e2e/design-system-trip-vergleich.spec.ts:653:38
+
+    Error Context: test-results/design-system-trip-verglei-b6a1a-rzeit-Radio-Select-ohne-✓-⊘-tests/error-context.md
+
+
+[9/14] [tests] › e2e/design-system-trip-vergleich.spec.ts:606:3 › DS-3 (1280 px, en): Listen, Hubs (Übersicht, Etappen/Orte, Zustellung) und Anlegen ohne native Datum/Uhrzeit/Radio/Select, ohne ✓/⊘
+  7) [tests] › e2e/design-system-trip-vergleich.spec.ts:606:3 › DS-3 (1280 px, en): Listen, Hubs (Übersicht, Etappen/Orte, Zustellung) und Anlegen ohne native Datum/Uhrzeit/Radio/Select, ohne ✓/⊘ 
+
+    Error: route-Hub uebersicht: Symbol ✓ in „(20 km/h) Bike (25 km/h) ✓ Saved 4.5 km · ↑400 m O"
+    route-Hub etappen: natives Feld input[type=date] 
+    route-Hub etappen: natives Feld input[type=time] 
+    route-Hub etappen: Symbol ✓ in „(20 km/h) Bike (25 km/h) ✓ Saved 4.5 km · ↑400 m O"
+    route-Hub Zustellung: natives Feld input[type=radio] report-email-format-full
+    route-Hub Zustellung: natives Feld input[type=radio] report-email-format-compact
+    route-Hub Zustellung: natives Feld select report-morning-time
+    route-Hub Zustellung: natives Feld select report-evening-time
+    route-Hub Zustellung: Symbol ✓ in „✓ Saved"
+    vergleich-Hub uebersicht: Symbol ✓ in „s Hiking Summer trekking ✓ Saved Overview Location"
+    vergleich-Hub orte: Symbol ✓ in „s Hiking Summer trekking ✓ Saved Overview Location"
+    vergleich-Hub Zustellung: natives Feld select report-morning-time
+    vergleich-Hub Zustellung: natives Feld select report-evening-time
+    vergleich-Hub Zustellung: Symbol ✓ in „✓ Saved"
+    route-Anlegen erster Schritt: natives Feld input[type=date] 
+    route-Anlegen erster Schritt: natives Feld input[type=radio] report-email-format-full
+    route-Anlegen erster Schritt: natives Feld input[type=radio] report-email-format-compact
+    route-Anlegen erster Schritt: natives Feld input[type=date] trip-new-date-input
+    route-Anlegen erster Schritt: natives Feld select activity-dropdown
+    route-Anlegen erster Schritt: Symbol ⊘ in „p yet Route Stages & GPX ⊘ Check waypoints OPTIONA"
+    route-Anlegen erster Schritt: Symbol ⊘ in „Check waypoints OPTIONAL ⊘ Weather metrics ⊘ Targe"
+    route-Anlegen erster Schritt: Symbol ⊘ in „TIONAL ⊘ Weather metrics ⊘ Target ranges ⊘ Alerts "
+    route-Anlegen erster Schritt: Symbol ⊘ in „ metrics ⊘ Target ranges ⊘ Alerts ⊘ TRIP BASICS TR"
+    route-Anlegen erster Schritt: Symbol ⊘ in „⊘ Target ranges ⊘ Alerts ⊘ TRIP BASICS TRIP NAME* "
+    route-Anlegen erster Schritt: Symbol ⊘ in „ep — one file per stage. ⊘ Trip name missing Creat"
+    route-Anlegen etappen: natives Feld input[type=radio] report-email-format-full
+    route-Anlegen etappen: natives Feld input[type=radio] report-email-format-compact
+    route-Anlegen etappen: Symbol ✓ in „ 5 sections set up Route ✓ Stages & GPX Check wayp"
+    route-Anlegen etappen: Symbol ✓ in „m · ↑– m × × + Add stage ✓ All GPX loaded — waypoi"
+    route-Anlegen etappen: Symbol ⊘ in „er metrics Target ranges ⊘ Alerts ⊘ STAGES Name st"
+    route-Anlegen etappen: Symbol ⊘ in „s Target ranges ⊘ Alerts ⊘ STAGES Name stages & up"
+    route-Anlegen Zustellung: natives Feld select report-morning-time
+    route-Anlegen Zustellung: natives Feld select report-evening-time
+    route-Anlegen Zustellung: natives Feld input[type=radio] report-email-format-full
+    route-Anlegen Zustellung: natives Feld input[type=radio] report-email-format-compact
+    vergleich-Anlegen erster Schritt: Symbol ⊘ in „yet Comparison Locations ⊘ Weather metrics ⊘ Targe"
+    vergleich-Anlegen erster Schritt: Symbol ⊘ in „ations ⊘ Weather metrics ⊘ Target ranges ⊘ Alerts "
+    vergleich-Anlegen erster Schritt: Symbol ⊘ in „ metrics ⊘ Target ranges ⊘ Alerts ⊘ BASICS COMPARI"
+    vergleich-Anlegen erster Schritt: Symbol ⊘ in „⊘ Target ranges ⊘ Alerts ⊘ BASICS COMPARISON NAME*"
+    vergleich-Anlegen erster Schritt: Symbol ⊘ in „dex max · Visibility min ⊘ Name missing Add locati"
+    vergleich-Anlegen orte: Symbol ✓ in „ctions set up Comparison ✓ Locations Weather metri"
+    vergleich-Anlegen orte: Symbol ⊘ in „er metrics Target ranges ⊘ Alerts ⊘ ADD NEW LOCATI"
+    vergleich-Anlegen orte: Symbol ⊘ in „s Target ranges ⊘ Alerts ⊘ ADD NEW LOCATION SMART "
+    vergleich-Anlegen Zustellung: natives Feld select report-morning-time
+    vergleich-Anlegen Zustellung: natives Feld select report-evening-time
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  -  1
+    + Received  + 47
+
+    - Array []
+    + Array [
+    +   "route-Hub uebersicht: Symbol ✓ in „(20 km/h) Bike (25 km/h) ✓ Saved 4.5 km · ↑400 m O\"",
+    +   "route-Hub etappen: natives Feld input[type=date] ",
+    +   "route-Hub etappen: natives Feld input[type=time] ",
+    +   "route-Hub etappen: Symbol ✓ in „(20 km/h) Bike (25 km/h) ✓ Saved 4.5 km · ↑400 m O\"",
+    +   "route-Hub Zustellung: natives Feld input[type=radio] report-email-format-full",
+    +   "route-Hub Zustellung: natives Feld input[type=radio] report-email-format-compact",
+    +   "route-Hub Zustellung: natives Feld select report-morning-time",
+    +   "route-Hub Zustellung: natives Feld select report-evening-time",
+    +   "route-Hub Zustellung: Symbol ✓ in „✓ Saved\"",
+    +   "vergleich-Hub uebersicht: Symbol ✓ in „s Hiking Summer trekking ✓ Saved Overview Location\"",
+    +   "vergleich-Hub orte: Symbol ✓ in „s Hiking Summer trekking ✓ Saved Overview Location\"",
+    +   "vergleich-Hub Zustellung: natives Feld select report-morning-time",
+    +   "vergleich-Hub Zustellung: natives Feld select report-evening-time",
+    +   "vergleich-Hub Zustellung: Symbol ✓ in „✓ Saved\"",
+    +   "route-Anlegen erster Schritt: natives Feld input[type=date] ",
+    +   "route-Anlegen erster Schritt: natives Feld input[type=radio] report-email-format-full",
+    +   "route-Anlegen erster Schritt: natives Feld input[type=radio] report-email-format-compact",
+    +   "route-Anlegen erster Schritt: natives Feld input[type=date] trip-new-date-input",
+    +   "route-Anlegen erster Schritt: natives Feld select activity-dropdown",
+    +   "route-Anlegen erster Schritt: Symbol ⊘ in „p yet Route Stages & GPX ⊘ Check waypoints OPTIONA\"",
+    +   "route-Anlegen erster Schritt: Symbol ⊘ in „Check waypoints OPTIONAL ⊘ Weather metrics ⊘ Targe\"",
+    +   "route-Anlegen erster Schritt: Symbol ⊘ in „TIONAL ⊘ Weather metrics ⊘ Target ranges ⊘ Alerts \"",
+    +   "route-Anlegen erster Schritt: Symbol ⊘ in „ metrics ⊘ Target ranges ⊘ Alerts ⊘ TRIP BASICS TR\"",
+    +   "route-Anlegen erster Schritt: Symbol ⊘ in „⊘ Target ranges ⊘ Alerts ⊘ TRIP BASICS TRIP NAME* \"",
+    +   "route-Anlegen erster Schritt: Symbol ⊘ in „ep — one file per stage. ⊘ Trip name missing Creat\"",
+    +   "route-Anlegen etappen: natives Feld input[type=radio] report-email-format-full",
+    +   "route-Anlegen etappen: natives Feld input[type=radio] report-email-format-compact",
+    +   "route-Anlegen etappen: Symbol ✓ in „ 5 sections set up Route ✓ Stages & GPX Check wayp\"",
+    +   "route-Anlegen etappen: Symbol ✓ in „m · ↑– m × × + Add stage ✓ All GPX loaded — waypoi\"",
+    +   "route-Anlegen etappen: Symbol ⊘ in „er metrics Target ranges ⊘ Alerts ⊘ STAGES Name st\"",
+    +   "route-Anlegen etappen: Symbol ⊘ in „s Target ranges ⊘ Alerts ⊘ STAGES Name stages & up\"",
+    +   "route-Anlegen Zustellung: natives Feld select report-morning-time",
+    +   "route-Anlegen Zustellung: natives Feld select report-evening-time",
+    +   "route-Anlegen Zustellung: natives Feld input[type=radio] report-email-format-full",
+    +   "route-Anlegen Zustellung: natives Feld input[type=radio] report-email-format-compact",
+    +   "vergleich-Anlegen erster Schritt: Symbol ⊘ in „yet Comparison Locations ⊘ Weather metrics ⊘ Targe\"",
+    +   "vergleich-Anlegen erster Schritt: Symbol ⊘ in „ations ⊘ Weather metrics ⊘ Target ranges ⊘ Alerts \"",
+    +   "vergleich-Anlegen erster Schritt: Symbol ⊘ in „ metrics ⊘ Target ranges ⊘ Alerts ⊘ BASICS COMPARI\"",
+    +   "vergleich-Anlegen erster Schritt: Symbol ⊘ in „⊘ Target ranges ⊘ Alerts ⊘ BASICS COMPARISON NAME*\"",
+    +   "vergleich-Anlegen erster Schritt: Symbol ⊘ in „dex max · Visibility min ⊘ Name missing Add locati\"",
+    +   "vergleich-Anlegen orte: Symbol ✓ in „ctions set up Comparison ✓ Locations Weather metri\"",
+    +   "vergleich-Anlegen orte: Symbol ⊘ in „er metrics Target ranges ⊘ Alerts ⊘ ADD NEW LOCATI\"",
+    +   "vergleich-Anlegen orte: Symbol ⊘ in „s Target ranges ⊘ Alerts ⊘ ADD NEW LOCATION SMART \"",
+    +   "vergleich-Anlegen Zustellung: natives Feld select report-morning-time",
+    +   "vergleich-Anlegen Zustellung: natives Feld select report-evening-time",
+    + ]
+
+      651 | 				await cleanupTracked(page.request);
+      652 | 			}
+    > 653 | 			expect(fehler, fehler.join('\n')).toEqual([]);
+          | 			                                  ^
+      654 | 		});
+      655 | 	}
+      656 | }
+        at /home/user/gregor_zwanzig/.claude/worktrees/agent-a2c702224b06fb2c7/frontend/e2e/design-system-trip-vergleich.spec.ts:653:38
+
+    Error Context: test-results/design-system-trip-verglei-c0d93-rzeit-Radio-Select-ohne-✓-⊘-tests/error-context.md
+
+
+[10/14] [tests] › e2e/design-system-trip-vergleich.spec.ts:606:3 › DS-3 (390 px, de): Listen, Hubs (Übersicht, Etappen/Orte, Zustellung) und Anlegen ohne native Datum/Uhrzeit/Radio/Select, ohne ✓/⊘
+  8) [tests] › e2e/design-system-trip-vergleich.spec.ts:606:3 › DS-3 (390 px, de): Listen, Hubs (Übersicht, Etappen/Orte, Zustellung) und Anlegen ohne native Datum/Uhrzeit/Radio/Select, ohne ✓/⊘ 
+
+    Error: route-Hub uebersicht: Symbol ✓ in „gen — Aktivität wählen ▾ ✓ Gespeichert 4.5 km · ↑4"
+    route-Hub etappen: natives Feld input[type=date] 
+    route-Hub etappen: natives Feld input[type=time] 
+    route-Hub etappen: Symbol ✓ in „gen — Aktivität wählen ▾ ✓ Gespeichert 4.5 km · ↑4"
+    route-Hub Zustellung: natives Feld input[type=radio] report-email-format-full
+    route-Hub Zustellung: natives Feld input[type=radio] report-email-format-compact
+    route-Hub Zustellung: natives Feld select report-morning-time
+    route-Hub Zustellung: natives Feld select report-evening-time
+    route-Hub Zustellung: Symbol ✓ in „✓ Gespeichert"
+    vergleich-Hub uebersicht: Symbol ✓ in „ndern · 2 Orte Wandern ▾ ✓ Gespeichert Übersicht O"
+    vergleich-Hub orte: Symbol ✓ in „ndern · 2 Orte Wandern ▾ ✓ Gespeichert Übersicht O"
+    vergleich-Hub Zustellung: natives Feld select report-morning-time
+    vergleich-Hub Zustellung: natives Feld select report-evening-time
+    vergleich-Hub Zustellung: Symbol ✓ in „✓ Gespeichert"
+    route-Anlegen erster Schritt: natives Feld input[type=date] 
+    route-Anlegen erster Schritt: natives Feld input[type=date] trip-new-date-input
+    route-Anlegen erster Schritt: natives Feld input[type=radio] report-email-format-full
+    route-Anlegen erster Schritt: natives Feld input[type=radio] report-email-format-compact
+    route-Anlegen erster Schritt: natives Feld select activity-dropdown
+    route-Anlegen erster Schritt: Symbol ⊘ in „ 0/5 Route Etappen & GPX ⊘ Wegpunkte prüfen OPT ⊘ "
+    route-Anlegen erster Schritt: Symbol ⊘ in „X ⊘ Wegpunkte prüfen OPT ⊘ Wetter-Metriken ⊘ Werte"
+    route-Anlegen erster Schritt: Symbol ⊘ in „en OPT ⊘ Wetter-Metriken ⊘ Wertebereiche ⊘ Alarme "
+    route-Anlegen erster Schritt: Symbol ⊘ in „Metriken ⊘ Wertebereiche ⊘ Alarme ⊘ TRIP-NAME* REG"
+    route-Anlegen erster Schritt: Symbol ⊘ in „⊘ Wertebereiche ⊘ Alarme ⊘ TRIP-NAME* REGION optio"
+    route-Anlegen etappen: natives Feld input[type=radio] report-email-format-full
+    route-Anlegen etappen: natives Feld input[type=radio] report-email-format-compact
+    route-Anlegen etappen: Symbol ✓ in „ m × + Etappe hinzufügen ✓ Alle GPX geladen — Wegp"
+    route-Anlegen etappen: Symbol ⊘ in „r-Metriken Wertebereiche ⊘ Alarme ⊘ 2 ETAPPEN 2/2 "
+    route-Anlegen etappen: Symbol ⊘ in „n Wertebereiche ⊘ Alarme ⊘ 2 ETAPPEN 2/2 GPX T01 E"
+    route-Anlegen Zustellung: natives Feld select report-morning-time
+    route-Anlegen Zustellung: natives Feld select report-evening-time
+    route-Anlegen Zustellung: natives Feld input[type=radio] report-email-format-full
+    route-Anlegen Zustellung: natives Feld input[type=radio] report-email-format-compact
+    vergleich-Anlegen erster Schritt: Symbol ⊘ in „leich 0/5 Vergleich Orte ⊘ Wetter-Metriken ⊘ Werte"
+    vergleich-Anlegen erster Schritt: Symbol ⊘ in „h Orte ⊘ Wetter-Metriken ⊘ Wertebereiche ⊘ Alarme "
+    vergleich-Anlegen erster Schritt: Symbol ⊘ in „Metriken ⊘ Wertebereiche ⊘ Alarme ⊘ NAME DES VERGL"
+    vergleich-Anlegen erster Schritt: Symbol ⊘ in „⊘ Wertebereiche ⊘ Alarme ⊘ NAME DES VERGLEICHS* RE"
+    vergleich-Anlegen orte: Symbol ⊘ in „r-Metriken Wertebereiche ⊘ Alarme ⊘ IM VERGLEICH ·"
+    vergleich-Anlegen orte: Symbol ⊘ in „n Wertebereiche ⊘ Alarme ⊘ IM VERGLEICH · 2 passt "
+    vergleich-Anlegen Zustellung: natives Feld select report-morning-time
+    vergleich-Anlegen Zustellung: natives Feld select report-evening-time
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  -  1
+    + Received  + 43
+
+    - Array []
+    + Array [
+    +   "route-Hub uebersicht: Symbol ✓ in „gen — Aktivität wählen ▾ ✓ Gespeichert 4.5 km · ↑4\"",
+    +   "route-Hub etappen: natives Feld input[type=date] ",
+    +   "route-Hub etappen: natives Feld input[type=time] ",
+    +   "route-Hub etappen: Symbol ✓ in „gen — Aktivität wählen ▾ ✓ Gespeichert 4.5 km · ↑4\"",
+    +   "route-Hub Zustellung: natives Feld input[type=radio] report-email-format-full",
+    +   "route-Hub Zustellung: natives Feld input[type=radio] report-email-format-compact",
+    +   "route-Hub Zustellung: natives Feld select report-morning-time",
+    +   "route-Hub Zustellung: natives Feld select report-evening-time",
+    +   "route-Hub Zustellung: Symbol ✓ in „✓ Gespeichert\"",
+    +   "vergleich-Hub uebersicht: Symbol ✓ in „ndern · 2 Orte Wandern ▾ ✓ Gespeichert Übersicht O\"",
+    +   "vergleich-Hub orte: Symbol ✓ in „ndern · 2 Orte Wandern ▾ ✓ Gespeichert Übersicht O\"",
+    +   "vergleich-Hub Zustellung: natives Feld select report-morning-time",
+    +   "vergleich-Hub Zustellung: natives Feld select report-evening-time",
+    +   "vergleich-Hub Zustellung: Symbol ✓ in „✓ Gespeichert\"",
+    +   "route-Anlegen erster Schritt: natives Feld input[type=date] ",
+    +   "route-Anlegen erster Schritt: natives Feld input[type=date] trip-new-date-input",
+    +   "route-Anlegen erster Schritt: natives Feld input[type=radio] report-email-format-full",
+    +   "route-Anlegen erster Schritt: natives Feld input[type=radio] report-email-format-compact",
+    +   "route-Anlegen erster Schritt: natives Feld select activity-dropdown",
+    +   "route-Anlegen erster Schritt: Symbol ⊘ in „ 0/5 Route Etappen & GPX ⊘ Wegpunkte prüfen OPT ⊘ \"",
+    +   "route-Anlegen erster Schritt: Symbol ⊘ in „X ⊘ Wegpunkte prüfen OPT ⊘ Wetter-Metriken ⊘ Werte\"",
+    +   "route-Anlegen erster Schritt: Symbol ⊘ in „en OPT ⊘ Wetter-Metriken ⊘ Wertebereiche ⊘ Alarme \"",
+    +   "route-Anlegen erster Schritt: Symbol ⊘ in „Metriken ⊘ Wertebereiche ⊘ Alarme ⊘ TRIP-NAME* REG\"",
+    +   "route-Anlegen erster Schritt: Symbol ⊘ in „⊘ Wertebereiche ⊘ Alarme ⊘ TRIP-NAME* REGION optio\"",
+    +   "route-Anlegen etappen: natives Feld input[type=radio] report-email-format-full",
+    +   "route-Anlegen etappen: natives Feld input[type=radio] report-email-format-compact",
+    +   "route-Anlegen etappen: Symbol ✓ in „ m × + Etappe hinzufügen ✓ Alle GPX geladen — Wegp\"",
+    +   "route-Anlegen etappen: Symbol ⊘ in „r-Metriken Wertebereiche ⊘ Alarme ⊘ 2 ETAPPEN 2/2 \"",
+    +   "route-Anlegen etappen: Symbol ⊘ in „n Wertebereiche ⊘ Alarme ⊘ 2 ETAPPEN 2/2 GPX T01 E\"",
+    +   "route-Anlegen Zustellung: natives Feld select report-morning-time",
+    +   "route-Anlegen Zustellung: natives Feld select report-evening-time",
+    +   "route-Anlegen Zustellung: natives Feld input[type=radio] report-email-format-full",
+    +   "route-Anlegen Zustellung: natives Feld input[type=radio] report-email-format-compact",
+    +   "vergleich-Anlegen erster Schritt: Symbol ⊘ in „leich 0/5 Vergleich Orte ⊘ Wetter-Metriken ⊘ Werte\"",
+    +   "vergleich-Anlegen erster Schritt: Symbol ⊘ in „h Orte ⊘ Wetter-Metriken ⊘ Wertebereiche ⊘ Alarme \"",
+    +   "vergleich-Anlegen erster Schritt: Symbol ⊘ in „Metriken ⊘ Wertebereiche ⊘ Alarme ⊘ NAME DES VERGL\"",
+    +   "vergleich-Anlegen erster Schritt: Symbol ⊘ in „⊘ Wertebereiche ⊘ Alarme ⊘ NAME DES VERGLEICHS* RE\"",
+    +   "vergleich-Anlegen orte: Symbol ⊘ in „r-Metriken Wertebereiche ⊘ Alarme ⊘ IM VERGLEICH ·\"",
+    +   "vergleich-Anlegen orte: Symbol ⊘ in „n Wertebereiche ⊘ Alarme ⊘ IM VERGLEICH · 2 passt \"",
+    +   "vergleich-Anlegen Zustellung: natives Feld select report-morning-time",
+    +   "vergleich-Anlegen Zustellung: natives Feld select report-evening-time",
+    + ]
+
+      651 | 				await cleanupTracked(page.request);
+      652 | 			}
+    > 653 | 			expect(fehler, fehler.join('\n')).toEqual([]);
+          | 			                                  ^
+      654 | 		});
+      655 | 	}
+      656 | }
+        at /home/user/gregor_zwanzig/.claude/worktrees/agent-a2c702224b06fb2c7/frontend/e2e/design-system-trip-vergleich.spec.ts:653:38
+
+    Error Context: test-results/design-system-trip-verglei-9aa68-rzeit-Radio-Select-ohne-✓-⊘-tests/error-context.md
+
+
+[11/14] [tests] › e2e/design-system-trip-vergleich.spec.ts:606:3 › DS-3 (390 px, en): Listen, Hubs (Übersicht, Etappen/Orte, Zustellung) und Anlegen ohne native Datum/Uhrzeit/Radio/Select, ohne ✓/⊘
+  9) [tests] › e2e/design-system-trip-vergleich.spec.ts:606:3 › DS-3 (390 px, en): Listen, Hubs (Übersicht, Etappen/Orte, Zustellung) und Anlegen ohne native Datum/Uhrzeit/Radio/Select, ohne ✓/⊘ 
+
+    Error: route-Hub uebersicht: Symbol ✓ in „days — Choose activity ▾ ✓ Saved 4.5 km · ↑400 m S"
+    route-Hub etappen: natives Feld input[type=date] 
+    route-Hub etappen: natives Feld input[type=time] 
+    route-Hub etappen: Symbol ✓ in „days — Choose activity ▾ ✓ Saved 4.5 km · ↑400 m S"
+    route-Hub Zustellung: natives Feld input[type=radio] report-email-format-full
+    route-Hub Zustellung: natives Feld input[type=radio] report-email-format-compact
+    route-Hub Zustellung: natives Feld select report-morning-time
+    route-Hub Zustellung: natives Feld select report-evening-time
+    route-Hub Zustellung: Symbol ✓ in „✓ Saved"
+    vergleich-Hub uebersicht: Symbol ✓ in „g · 2 locations Hiking ▾ ✓ Saved Overview Location"
+    vergleich-Hub orte: Symbol ✓ in „g · 2 locations Hiking ▾ ✓ Saved Overview Location"
+    vergleich-Hub Zustellung: natives Feld select report-morning-time
+    vergleich-Hub Zustellung: natives Feld select report-evening-time
+    vergleich-Hub Zustellung: Symbol ✓ in „✓ Saved"
+    route-Anlegen erster Schritt: natives Feld input[type=date] 
+    route-Anlegen erster Schritt: natives Feld input[type=date] trip-new-date-input
+    route-Anlegen erster Schritt: natives Feld input[type=radio] report-email-format-full
+    route-Anlegen erster Schritt: natives Feld input[type=radio] report-email-format-compact
+    route-Anlegen erster Schritt: natives Feld select activity-dropdown
+    route-Anlegen erster Schritt: Symbol ⊘ in „e 0/5 Route Stages & GPX ⊘ Check waypoints OPT ⊘ W"
+    route-Anlegen erster Schritt: Symbol ⊘ in „PX ⊘ Check waypoints OPT ⊘ Weather metrics ⊘ Targe"
+    route-Anlegen erster Schritt: Symbol ⊘ in „ts OPT ⊘ Weather metrics ⊘ Target ranges ⊘ Alerts "
+    route-Anlegen erster Schritt: Symbol ⊘ in „ metrics ⊘ Target ranges ⊘ Alerts ⊘ TRIP NAME* REG"
+    route-Anlegen erster Schritt: Symbol ⊘ in „⊘ Target ranges ⊘ Alerts ⊘ TRIP NAME* REGION optio"
+    vergleich-Anlegen erster Schritt: Symbol ⊘ in „0/5 Comparison Locations ⊘ Weather metrics ⊘ Targe"
+    vergleich-Anlegen erster Schritt: Symbol ⊘ in „ations ⊘ Weather metrics ⊘ Target ranges ⊘ Alerts "
+    vergleich-Anlegen erster Schritt: Symbol ⊘ in „ metrics ⊘ Target ranges ⊘ Alerts ⊘ COMPARISON NAM"
+    vergleich-Anlegen erster Schritt: Symbol ⊘ in „⊘ Target ranges ⊘ Alerts ⊘ COMPARISON NAME* REGION"
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  -  1
+    + Received  + 30
+
+    - Array []
+    + Array [
+    +   "route-Hub uebersicht: Symbol ✓ in „days — Choose activity ▾ ✓ Saved 4.5 km · ↑400 m S\"",
+    +   "route-Hub etappen: natives Feld input[type=date] ",
+    +   "route-Hub etappen: natives Feld input[type=time] ",
+    +   "route-Hub etappen: Symbol ✓ in „days — Choose activity ▾ ✓ Saved 4.5 km · ↑400 m S\"",
+    +   "route-Hub Zustellung: natives Feld input[type=radio] report-email-format-full",
+    +   "route-Hub Zustellung: natives Feld input[type=radio] report-email-format-compact",
+    +   "route-Hub Zustellung: natives Feld select report-morning-time",
+    +   "route-Hub Zustellung: natives Feld select report-evening-time",
+    +   "route-Hub Zustellung: Symbol ✓ in „✓ Saved\"",
+    +   "vergleich-Hub uebersicht: Symbol ✓ in „g · 2 locations Hiking ▾ ✓ Saved Overview Location\"",
+    +   "vergleich-Hub orte: Symbol ✓ in „g · 2 locations Hiking ▾ ✓ Saved Overview Location\"",
+    +   "vergleich-Hub Zustellung: natives Feld select report-morning-time",
+    +   "vergleich-Hub Zustellung: natives Feld select report-evening-time",
+    +   "vergleich-Hub Zustellung: Symbol ✓ in „✓ Saved\"",
+    +   "route-Anlegen erster Schritt: natives Feld input[type=date] ",
+    +   "route-Anlegen erster Schritt: natives Feld input[type=date] trip-new-date-input",
+    +   "route-Anlegen erster Schritt: natives Feld input[type=radio] report-email-format-full",
+    +   "route-Anlegen erster Schritt: natives Feld input[type=radio] report-email-format-compact",
+    +   "route-Anlegen erster Schritt: natives Feld select activity-dropdown",
+    +   "route-Anlegen erster Schritt: Symbol ⊘ in „e 0/5 Route Stages & GPX ⊘ Check waypoints OPT ⊘ W\"",
+    +   "route-Anlegen erster Schritt: Symbol ⊘ in „PX ⊘ Check waypoints OPT ⊘ Weather metrics ⊘ Targe\"",
+    +   "route-Anlegen erster Schritt: Symbol ⊘ in „ts OPT ⊘ Weather metrics ⊘ Target ranges ⊘ Alerts \"",
+    +   "route-Anlegen erster Schritt: Symbol ⊘ in „ metrics ⊘ Target ranges ⊘ Alerts ⊘ TRIP NAME* REG\"",
+    +   "route-Anlegen erster Schritt: Symbol ⊘ in „⊘ Target ranges ⊘ Alerts ⊘ TRIP NAME* REGION optio\"",
+    +   "vergleich-Anlegen erster Schritt: Symbol ⊘ in „0/5 Comparison Locations ⊘ Weather metrics ⊘ Targe\"",
+    +   "vergleich-Anlegen erster Schritt: Symbol ⊘ in „ations ⊘ Weather metrics ⊘ Target ranges ⊘ Alerts \"",
+    +   "vergleich-Anlegen erster Schritt: Symbol ⊘ in „ metrics ⊘ Target ranges ⊘ Alerts ⊘ COMPARISON NAM\"",
+    +   "vergleich-Anlegen erster Schritt: Symbol ⊘ in „⊘ Target ranges ⊘ Alerts ⊘ COMPARISON NAME* REGION\"",
+    + ]
+
+      651 | 				await cleanupTracked(page.request);
+      652 | 			}
+    > 653 | 			expect(fehler, fehler.join('\n')).toEqual([]);
+          | 			                                  ^
+      654 | 		});
+      655 | 	}
+      656 | }
+        at /home/user/gregor_zwanzig/.claude/worktrees/agent-a2c702224b06fb2c7/frontend/e2e/design-system-trip-vergleich.spec.ts:653:38
+
+    Error Context: test-results/design-system-trip-verglei-0d8cb-rzeit-Radio-Select-ohne-✓-⊘-tests/error-context.md
+
+
+[12/14] [tests] › e2e/design-system-trip-vergleich.spec.ts:660:1 › DS-4 Aktivität: Auswahl beim Trip-Anlegen ist eine listbox, per Maus und Tastatur bedienbar, Fokus sichtbar, gespeichert
+  10) [tests] › e2e/design-system-trip-vergleich.spec.ts:660:1 › DS-4 Aktivität: Auswahl beim Trip-Anlegen ist eine listbox, per Maus und Tastatur bedienbar, Fokus sichtbar, gespeichert 
+
+    Error: Auswahl öffnet keine listbox
+
+    expect(locator).toBeVisible() failed
+
+    Locator: getByRole('listbox')
+    Expected: visible
+    Timeout: 5000ms
+    Error: element(s) not found
+
+    Call log:
+      - Auswahl öffnet keine listbox with timeout 5000ms
+      - waiting for getByRole('listbox')
+
+
+      671 | 		// Maus
+      672 | 		await ausloeser.click();
+    > 673 | 		await expect(liste, 'Auswahl öffnet keine listbox').toBeVisible({ timeout: 5_000 });
+          | 		                                                    ^
+      674 | 		await liste.getByRole('option', { name: 'Hochtour' }).click();
+      675 | 		await expect(liste).toBeHidden();
+      676 | 		await expect(ausloeser).toContainText('Hochtour');
+        at /home/user/gregor_zwanzig/.claude/worktrees/agent-a2c702224b06fb2c7/frontend/e2e/design-system-trip-vergleich.spec.ts:673:55
+
+    Error Context: test-results/design-system-trip-verglei-1aa8b--Fokus-sichtbar-gespeichert-tests/error-context.md
+
+
+[13/14] [tests] › e2e/design-system-trip-vergleich.spec.ts:700:1 › DS-4 Mail-Format: Zustellung im Trip-Hub ist eine radiogroup, per Maus und Pfeiltaste bedienbar, Fokus sichtbar, gespeichert
+  11) [tests] › e2e/design-system-trip-vergleich.spec.ts:700:1 › DS-4 Mail-Format: Zustellung im Trip-Hub ist eine radiogroup, per Maus und Pfeiltaste bedienbar, Fokus sichtbar, gespeichert 
+
+    Error: Mail-Format ist keine radiogroup
+
+    expect(locator).toHaveAttribute(expected) failed
+
+    Locator:  getByTestId('report-email-format-switcher')
+    Expected: "radiogroup"
+    Received: ""
+    Timeout:  5000ms
+
+    Call log:
+      - Mail-Format ist keine radiogroup with timeout 5000ms
+      - waiting for getByTestId('report-email-format-switcher')
+        9 × locator resolved to <div class="flex gap-2" data-testid="report-email-format-switcher">…</div>
+          - unexpected value "null"
+
+
+      712 | 		await openHub(page, 'route', hub.id, { tab: 'wetter-metriken' });
+      713 | 		await expect(gruppe).toBeVisible({ timeout: 15_000 });
+    > 714 | 		await expect(gruppe, 'Mail-Format ist keine radiogroup').toHaveAttribute('role', 'radiogroup');
+          | 		                                                         ^
+      715 | 		await expect(voll).toBeChecked();
+      716 | 		// Maus
+      717 | 		await kompakt.click();
+        at /home/user/gregor_zwanzig/.claude/worktrees/agent-a2c702224b06fb2c7/frontend/e2e/design-system-trip-vergleich.spec.ts:714:60
+
+    Error Context: test-results/design-system-trip-verglei-b6c38--Fokus-sichtbar-gespeichert-tests/error-context.md
+
+
+[14/14] [tests] › e2e/design-system-trip-vergleich.spec.ts:760:1 › DS-6: Tippflächen am Handy (390 × 844) mindestens 44 × 44 — Zurück, Standardwerte, ⓘ, Schnellwahl — kein waagerechtes Überlaufen
+  12) [tests] › e2e/design-system-trip-vergleich.spec.ts:760:1 › DS-6: Tippflächen am Handy (390 × 844) mindestens 44 × 44 — Zurück, Standardwerte, ⓘ, Schnellwahl — kein waagerechtes Überlaufen 
+
+    Error: route-Hub Zurück back-link: 34.0 × 36.0 px (< 44 × 44)
+    route-Hub Schnellwahl report-morning-quickpick-07: 113.6 × 36.0 px (< 44 × 44)
+    route-Hub Schnellwahl report-morning-quickpick-18: 106.4 × 36.0 px (< 44 × 44)
+    route-Hub Schnellwahl report-evening-quickpick-07: 113.6 × 36.0 px (< 44 × 44)
+    route-Hub Schnellwahl report-evening-quickpick-18: 106.4 × 36.0 px (< 44 × 44)
+    route-Hub ⓘ begriff-erklaerung-wertebereiche-cem-route: 24.0 × 24.0 px (< 44 × 44)
+    vergleich-Hub Zurück back-link: 34.0 × 36.0 px (< 44 × 44)
+    vergleich-Hub Schnellwahl report-morning-quickpick-07: 113.6 × 36.0 px (< 44 × 44)
+    vergleich-Hub Schnellwahl report-morning-quickpick-18: 106.4 × 36.0 px (< 44 × 44)
+    vergleich-Hub Schnellwahl report-evening-quickpick-07: 113.6 × 36.0 px (< 44 × 44)
+    vergleich-Hub Schnellwahl report-evening-quickpick-18: 106.4 × 36.0 px (< 44 × 44)
+    vergleich-Hub ⓘ begriff-erklaerung-wertebereiche-cem-vergleich: 24.0 × 24.0 px (< 44 × 44)
+    route-Anlegen Zurück back-link: 73.3 × 36.0 px (< 44 × 44)
+    route-Anlegen Standardwerte tn-mobile-standardwerte: 199.0 × 36.0 px (< 44 × 44)
+    vergleich-Anlegen Zurück back-link: 156.8 × 36.0 px (< 44 × 44)
+    vergleich-Anlegen Standardwerte cm-mobile-standardwerte: 199.0 × 36.0 px (< 44 × 44)
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  -  1
+    + Received  + 18
+
+    - Array []
+    + Array [
+    +   "route-Hub Zurück back-link: 34.0 × 36.0 px (< 44 × 44)",
+    +   "route-Hub Schnellwahl report-morning-quickpick-07: 113.6 × 36.0 px (< 44 × 44)",
+    +   "route-Hub Schnellwahl report-morning-quickpick-18: 106.4 × 36.0 px (< 44 × 44)",
+    +   "route-Hub Schnellwahl report-evening-quickpick-07: 113.6 × 36.0 px (< 44 × 44)",
+    +   "route-Hub Schnellwahl report-evening-quickpick-18: 106.4 × 36.0 px (< 44 × 44)",
+    +   "route-Hub ⓘ begriff-erklaerung-wertebereiche-cem-route: 24.0 × 24.0 px (< 44 × 44)",
+    +   "vergleich-Hub Zurück back-link: 34.0 × 36.0 px (< 44 × 44)",
+    +   "vergleich-Hub Schnellwahl report-morning-quickpick-07: 113.6 × 36.0 px (< 44 × 44)",
+    +   "vergleich-Hub Schnellwahl report-morning-quickpick-18: 106.4 × 36.0 px (< 44 × 44)",
+    +   "vergleich-Hub Schnellwahl report-evening-quickpick-07: 113.6 × 36.0 px (< 44 × 44)",
+    +   "vergleich-Hub Schnellwahl report-evening-quickpick-18: 106.4 × 36.0 px (< 44 × 44)",
+    +   "vergleich-Hub ⓘ begriff-erklaerung-wertebereiche-cem-vergleich: 24.0 × 24.0 px (< 44 × 44)",
+    +   "route-Anlegen Zurück back-link: 73.3 × 36.0 px (< 44 × 44)",
+    +   "route-Anlegen Standardwerte tn-mobile-standardwerte: 199.0 × 36.0 px (< 44 × 44)",
+    +   "vergleich-Anlegen Zurück back-link: 156.8 × 36.0 px (< 44 × 44)",
+    +   "vergleich-Anlegen Standardwerte cm-mobile-standardwerte: 199.0 × 36.0 px (< 44 × 44)",
+    + ]
+
+      803 | 		for (const h of Object.values(hubs)) await h.aufraeumen();
+      804 | 	}
+    > 805 | 	expect(fehler, fehler.join('\n')).toEqual([]);
+          | 	                                  ^
+      806 | });
+      807 |
+        at /home/user/gregor_zwanzig/.claude/worktrees/agent-a2c702224b06fb2c7/frontend/e2e/design-system-trip-vergleich.spec.ts:805:36
+
+    Error Context: test-results/design-system-trip-verglei-4c18f-ein-waagerechtes-Überlaufen-tests/error-context.md
+
+
+  12 failed
+    [tests] › e2e/design-system-trip-vergleich.spec.ts:488:2 › DS-1 (de): Startdatum per Kalender 19.11.2026, Wochenbeginn Montag, gespeichert als 2026-11-19, Anzeige nach Neuladen 
+    [tests] › e2e/design-system-trip-vergleich.spec.ts:488:2 › DS-1 (en): Startdatum per Kalender 19.11.2026, Wochenbeginn Montag, gespeichert als 2026-11-19, Anzeige nach Neuladen 
+    [tests] › e2e/design-system-trip-vergleich.spec.ts:519:1 › DS-1 (390 px): Startdatum am Handy per Kalender, Anzeige 19.11.2026, Wochenbeginn Montag 
+    [tests] › e2e/design-system-trip-vergleich.spec.ts:536:2 › DS-2 (1280 px): Etappe — Datum 20.11.2026 und Startzeit 07:30 über die neuen Felder, nach Neuladen gespeichert (24 h) 
+    [tests] › e2e/design-system-trip-vergleich.spec.ts:536:2 › DS-2 (390 px): Etappe — Datum 20.11.2026 und Startzeit 07:30 über die neuen Felder, nach Neuladen gespeichert (24 h) 
+    [tests] › e2e/design-system-trip-vergleich.spec.ts:606:3 › DS-3 (1280 px, de): Listen, Hubs (Übersicht, Etappen/Orte, Zustellung) und Anlegen ohne native Datum/Uhrzeit/Radio/Select, ohne ✓/⊘ 
+    [tests] › e2e/design-system-trip-vergleich.spec.ts:606:3 › DS-3 (1280 px, en): Listen, Hubs (Übersicht, Etappen/Orte, Zustellung) und Anlegen ohne native Datum/Uhrzeit/Radio/Select, ohne ✓/⊘ 
+    [tests] › e2e/design-system-trip-vergleich.spec.ts:606:3 › DS-3 (390 px, de): Listen, Hubs (Übersicht, Etappen/Orte, Zustellung) und Anlegen ohne native Datum/Uhrzeit/Radio/Select, ohne ✓/⊘ 
+    [tests] › e2e/design-system-trip-vergleich.spec.ts:606:3 › DS-3 (390 px, en): Listen, Hubs (Übersicht, Etappen/Orte, Zustellung) und Anlegen ohne native Datum/Uhrzeit/Radio/Select, ohne ✓/⊘ 
+    [tests] › e2e/design-system-trip-vergleich.spec.ts:660:1 › DS-4 Aktivität: Auswahl beim Trip-Anlegen ist eine listbox, per Maus und Tastatur bedienbar, Fokus sichtbar, gespeichert 
+    [tests] › e2e/design-system-trip-vergleich.spec.ts:700:1 › DS-4 Mail-Format: Zustellung im Trip-Hub ist eine radiogroup, per Maus und Pfeiltaste bedienbar, Fokus sichtbar, gespeichert 
+    [tests] › e2e/design-system-trip-vergleich.spec.ts:760:1 › DS-6: Tippflächen am Handy (390 × 844) mindestens 44 × 44 — Zurück, Standardwerte, ⓘ, Schnellwahl — kein waagerechtes Überlaufen 
+  2 passed (2.2m)

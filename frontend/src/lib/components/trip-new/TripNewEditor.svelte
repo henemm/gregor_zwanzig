@@ -10,7 +10,7 @@
 	import { onMount, untrack } from 'svelte';
 	import { goto, beforeNavigate } from '$app/navigation';
 	import { api } from '$lib/api.js';
-	import { Eyebrow, Btn, Input, TopoBg, PageHeader } from '$lib/components/atoms';
+	import { Eyebrow, Btn, Input, TopoBg, PageHeader, Dot } from '$lib/components/atoms';
 	import EditorStickyFooter from '$lib/components/shared/EditorStickyFooter.svelte';
 	import AnlegeRahmen from '$lib/components/shared/anlege-rahmen/AnlegeRahmen.svelte';
 	import AnlegeFortschritt from '$lib/components/shared/anlege-rahmen/AnlegeFortschritt.svelte';
@@ -55,6 +55,7 @@
 	} from './tripNewLogic.ts';
 	import { canFinishMitStandardwerten } from '$lib/components/shared/anlegeLockEngine';
 	import StandardwerteSpeichernKnopf from '$lib/components/shared/StandardwerteSpeichernKnopf.svelte';
+	import DatumFeld from '$lib/components/molecules/DatumFeld.svelte';
 	import { t, tn, locale, type MessageKey } from '$lib/i18n';
 
 	// i18n F9: Aktivitaetsliste des Anlegens (Kennungen unveraendert, Namen je Sprache).
@@ -70,6 +71,8 @@
 		{ value: 'fahrrad_20', key: 'trip.aktivitaet.fahrrad_20' },
 		{ value: 'fahrrad_25', key: 'trip.aktivitaet.fahrrad_25' }
 	];
+	// #2881 Lieferung B: Optionen des Auswahl-Bausteins (bits-ui Select), Sprachwechsel ohne Neuladen.
+	const aktivitaetOptionen = $derived(AKTIVITAETEN.map((a) => ({ value: a.value, label: $t(a.key) })));
 
 	// ── Test-Seam (Issue #1738, Muster `profileOverride` aus #1510) ──────────
 	// Der gesamte Anlege-Zustand lebt in internem `$state`; `isMobileViewport`
@@ -335,7 +338,7 @@
 	// ── Route-Tab-Handlers ────────────────────────────────────────────────────
 	function makeNameHandler() { return (e: Event) => { name = (e.target as HTMLInputElement).value; }; }
 	function makeRegionHandler() { return (e: Event) => { region = (e.target as HTMLInputElement).value.slice(0, 50); }; }
-	function makeDateHandler() { return (e: Event) => { startDate = (e.target as HTMLInputElement).value; }; }
+	function makeDateHandler() { return (iso: string) => { startDate = iso; }; }
 	function makeContinueToEtappenHandler() { return () => switchTab('etappen'); }
 
 	// ── Etappen-Tab-Handlers ──────────────────────────────────────────────────
@@ -622,9 +625,7 @@
 					</Field>
 
 					<Field label={$t('trip.startdatum')} pflicht>
-						<input type="date" value={startDate} onchange={makeDateHandler()}
-							aria-required="true"
-							style="width: 100%; box-sizing: border-box; padding: 9px 12px; font-size: 14px; font-family: var(--g-font-mono); border: 1.5px solid var(--g-rule); border-radius: var(--g-r-2); background: var(--g-card); color: var(--g-ink); outline: none; appearance: none; -webkit-appearance: none;" />
+						<DatumFeld value={startDate} onchange={makeDateHandler()} required leerMelden testid="trip-new-date-input-desktop" ariaLabel={$t('trip.startdatum')} />
 						{#if startDate}
 							<div class="mono" style="font-size: 11px; color: var(--g-ink-3); margin-top: 6px;">
 								{$t('trip.anlegen.start_hinweis', { datum: stageDate(startDate, 0, $locale)?.replace(/\.$/, '') ?? '' })}
@@ -636,12 +637,11 @@
 					<!-- Nur auf Desktop-Viewport rendern, damit das Dropdown nur einmal im DOM existiert. -->
 					{#if !isMobileViewport}
 					<Field label={$t('trip.anlegen.aktivitaetstyp')} side={$t('trip.anlegen.optional')}>
-						<Select data-testid="activity-dropdown"
+						<Select data-testid="activity-dropdown" aria-label={$t('trip.anlegen.aktivitaetstyp')}
+							options={aktivitaetOptionen}
 							value={selectedActivity ?? ''}
-							onchange={(e) => { selectedActivity = (e.target as HTMLSelectElement).value as ActivityType || undefined; }}
-							style="width: 100%; max-width: 320px;">
-							{#each AKTIVITAETEN as a, i (a.value)}{#if i > 0}{' '}{/if}<option value={a.value}>{$t(a.key)}</option>{/each}
-						</Select>
+							onValueChange={(v) => { selectedActivity = (v as ActivityType) || undefined; }}
+							style="width: 100%; max-width: 320px;" />
 					</Field>
 					{/if}
 
@@ -653,9 +653,9 @@
 
 					<div style="margin-top: 28px; padding-top: 20px; border-top: 1px solid var(--g-rule); display: flex; justify-content: flex-end; align-items: center; gap: 12px;">
 						{#if !name.trim()}
-							<span class="mono" style="font-size: 11px; color: var(--g-ink-3);">{$t('trip.anlegen.name_fehlt')}</span>
+							<span class="mono" style="display: inline-flex; align-items: center; gap: 6px; font-size: 11px; color: var(--g-ink-3);"><Dot tone="neutral" size="xs" style="background: var(--g-ink-4);" />{$t('trip.anlegen.name_fehlt')}</span>
 						{:else if !startDate}
-							<span class="mono" style="font-size: 11px; color: var(--g-ink-3);">{$t('trip.anlegen.datum_fehlt')}</span>
+							<span class="mono" style="display: inline-flex; align-items: center; gap: 6px; font-size: 11px; color: var(--g-ink-3);"><Dot tone="neutral" size="xs" style="background: var(--g-ink-4);" />{$t('trip.anlegen.datum_fehlt')}</span>
 						{/if}
 						<!-- #2837 S2 (AC-11): Weiter = Btn accent, gesperrt allein über disabled -->
 						<Btn variant="accent" size="md"
@@ -761,8 +761,8 @@
 					<!-- Hinweis GPX fehlen -->
 					{#if !etDone && stages.length > 0}
 						<div style="padding: 10px 15px; border-radius: var(--g-r-2); background: var(--g-paper); border: 1px solid var(--g-rule); margin-bottom: 20px;">
-							<span class="mono" style="font-size: 11px; color: var(--g-ink-3);">
-								{$tn('trip.anlegen.ohne_gpx', stages.length - gpxCount)}
+							<span class="mono" style="display: inline-flex; align-items: center; gap: 6px; font-size: 11px; color: var(--g-ink-3);">
+								<Dot tone="neutral" size="xs" style="background: var(--g-ink-4);" />{$tn('trip.anlegen.ohne_gpx', stages.length - gpxCount)}
 							</span>
 						</div>
 					{/if}
@@ -770,8 +770,8 @@
 					<!-- Hinweis alle GPX geladen -->
 					{#if etDone && stages.length > 0}
 						<div style="padding: 10px 15px; border-radius: var(--g-r-2); background: rgba(61,107,58,0.07); border: 1px solid rgba(61,107,58,0.2); margin-bottom: 20px;">
-							<span class="mono" style="font-size: 11px; color: var(--g-good);">
-								{$t('trip.anlegen.alle_gpx')}
+							<span class="mono" style="display: inline-flex; align-items: center; gap: 6px; font-size: 11px; color: var(--g-good);">
+								<Dot tone="good" size="xs" />{$t('trip.anlegen.alle_gpx')}
 							</span>
 						</div>
 					{/if}
@@ -968,22 +968,18 @@
 					</MField>
 
 					<MField label={$t('trip.startdatum')} pflicht sub={startDate ? $t('trip.anlegen.start_hinweis_kurz', { datum: stageDate(startDate, 0, $locale)?.replace(/\.$/, '') ?? '' }) : undefined}>
-						<input type="date" value={startDate} onchange={makeDateHandler()}
-							aria-required="true"
-							data-testid="trip-new-date-input"
-							style="display: block; width: 100%; box-sizing: border-box; background: var(--g-card); border: 1px solid var(--g-rule); border-radius: var(--g-r-3); padding: 12px 14px; font-size: 16px; font-family: var(--g-font-mono); color: var(--g-ink); outline: none; min-height: 48px; appearance: none; -webkit-appearance: none;" />
+						<DatumFeld value={startDate} onchange={makeDateHandler()} required leerMelden groesse="gross" testid="trip-new-date-input" ariaLabel={$t('trip.startdatum')} />
 					</MField>
 
 					<!-- Issue #932 — Aktivitätstyp (verschoben aus Metriken-Tab). -->
 					<!-- Nur auf Mobile-Viewport rendern, damit das Dropdown nur einmal im DOM existiert. -->
 					{#if isMobileViewport}
 					<MField label={$t('trip.anlegen.aktivitaetstyp')} side={$t('trip.anlegen.optional')}>
-						<Select data-testid="activity-dropdown"
+						<Select data-testid="activity-dropdown" aria-label={$t('trip.anlegen.aktivitaetstyp')}
+							options={aktivitaetOptionen}
 							value={selectedActivity ?? ''}
-							onchange={(e) => { selectedActivity = (e.target as HTMLSelectElement).value as ActivityType || undefined; }}
-							style="width: 100%;">
-							{#each AKTIVITAETEN as a, i (a.value)}{#if i > 0}{' '}{/if}<option value={a.value}>{$t(a.key)}</option>{/each}
-						</Select>
+							onValueChange={(v) => { selectedActivity = (v as ActivityType) || undefined; }}
+							style="width: 100%;" />
 					</MField>
 					{/if}
 
@@ -1070,12 +1066,12 @@
 
 					{#if !etDone && stages.length > 0}
 						<div style="margin-top: 14px; padding: 11px 14px; border-radius: var(--g-r-2); background: var(--g-paper-deep, var(--g-paper)); border: 1px solid var(--g-rule);">
-							<span class="mono" style="font-size: 11px; color: var(--g-ink-3);">{$t('trip.anlegen.noch_gpx', { anzahl: stages.length - gpxCount })}</span>
+							<span class="mono" style="display: inline-flex; align-items: center; gap: 6px; font-size: 11px; color: var(--g-ink-3);"><Dot tone="neutral" size="xs" style="background: var(--g-ink-4);" />{$t('trip.anlegen.noch_gpx', { anzahl: stages.length - gpxCount })}</span>
 						</div>
 					{/if}
 					{#if etDone && stages.length > 0}
 						<div style="margin-top: 14px; padding: 11px 14px; border-radius: var(--g-r-2); background: rgba(61,107,58,0.08); border: 1px solid rgba(61,107,58,0.2);">
-							<span class="mono" style="font-size: 11px; color: var(--g-good);">{$t('trip.anlegen.alle_gpx_kurz')}</span>
+							<span class="mono" style="display: inline-flex; align-items: center; gap: 6px; font-size: 11px; color: var(--g-good);"><Dot tone="good" size="xs" />{$t('trip.anlegen.alle_gpx_kurz')}</span>
 						</div>
 					{/if}
 				</div>

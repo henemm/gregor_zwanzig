@@ -24,7 +24,7 @@
 //   cd frontend && npx playwright test --config playwright.2794-s3a2.staging.config.ts -g "AC-7|AC-8"
 
 import { test, expect, type Page, type Request } from '@playwright/test';
-import { createTestLocation, HUB_KINDS, HUB_SEL, hubApiPath, openHub, seedHub, type HubKind, type SeededHub } from './helpers';
+import { createTestLocation, HUB_KINDS, HUB_SEL, hubApiPath, openHub, seedHub, waehleOption, type HubKind, type SeededHub } from './helpers';
 
 type Stand = Record<string, unknown>;
 
@@ -208,8 +208,8 @@ for (const kind of HUB_KINDS) {
 				await expect(im(page, kind, 'alert-quiet-hours-toggle'), 'Stille Stunden an').toBeChecked();
 				await expect(im(page, kind, 'alert-quiet-from'), 'Stille Stunden von').toHaveValue('22:00');
 				await expect(im(page, kind, 'alert-quiet-to'), 'Stille Stunden bis').toHaveValue('06:00');
-				await expect(im(page, kind, 'report-morning-time'), 'Briefing-Uhrzeit Morgen').toHaveValue('07:00');
-				await expect(im(page, kind, 'report-evening-time'), 'Briefing-Uhrzeit Abend').toHaveValue('19:00');
+				await expect(im(page, kind, 'report-morning-time'), 'Briefing-Uhrzeit Morgen').toHaveText('07:00'); // #2881 B: Auswahl-Baustein
+				await expect(im(page, kind, 'report-evening-time'), 'Briefing-Uhrzeit Abend').toHaveText('19:00');
 				await expect(
 					im(page, kind, 'evening-master-switch').locator('input[type="checkbox"]').first(),
 					'Abend-Briefing an'
@@ -262,7 +262,7 @@ for (const kind of HUB_KINDS) {
 					})
 					.toBe(45);
 
-				await im(page, kind, 'report-morning-time').selectOption('08:00');
+				await waehleOption(page, im(page, kind, 'report-morning-time'), '08:00');
 				await warteAufGespeichert(page);
 				await expect
 					.poll(async () => gesetzt(kind, await stand(page, kind, hub.id)).morgen, {
@@ -278,7 +278,7 @@ for (const kind of HUB_KINDS) {
 				// Neuladen: beide Werte stehen im Reiter
 				await oeffneZustellung(page, kind, hub.id);
 				await expect(im(page, kind, 'alert-cooldown-input'), 'AC-8 FAIL: Cooldown nach Neuladen').toHaveValue('45');
-				await expect(im(page, kind, 'report-morning-time'), 'AC-8 FAIL: Uhrzeit nach Neuladen').toHaveValue('08:00');
+				await expect(im(page, kind, 'report-morning-time'), 'AC-8 FAIL: Uhrzeit nach Neuladen').toHaveText('08:00');
 
 				// alle anderen gespeicherten Felder unverändert
 				const nachher = await stand(page, kind, hub.id);

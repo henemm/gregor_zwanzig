@@ -77,9 +77,10 @@ describe('AC-1: VTSchedulePlan.svelte bietet die Versandzeit als Stunden-Auswahl
 			/import \{[^}]*HOUR_OPTIONS[^}]*\} from '\$lib\/utils\/time'/.test(src),
 			'VTSchedulePlan.svelte muss HOUR_OPTIONS aus $lib/utils/time importieren (keine eigene Liste)'
 		);
+		// #2881 Lieferung B: Auswahl-Baustein (bits-ui Select) mit `options` statt <option>-Kindern.
 		assert.ok(
-			/\{#each HOUR_OPTIONS as /.test(src),
-			'die Optionen muessen ueber {#each HOUR_OPTIONS ...} gerendert werden'
+			/options=\{HOUR_OPTIONS\.map\(/.test(src),
+			'die Optionen muessen aus HOUR_OPTIONS kommen (options={HOUR_OPTIONS.map(...)})'
 		);
 		// Gegenprobe auf die Liste selbst (echter Wert, kein Datei-Text):
 		assert.equal(HOUR_OPTIONS.length, 24);

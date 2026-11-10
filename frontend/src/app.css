@@ -544,6 +544,11 @@
   [data-slot="segmented-item"][data-active="false"]:hover {
     background: var(--g-surface-2);
   }
+  /* #2881 Lieferung B: Segmented als radiogroup — Tastaturfokus sichtbar (innen, der Rahmen schneidet ab). */
+  [data-slot="segmented-item"][role="radio"]:focus-visible {
+    outline: 2px solid var(--g-accent);
+    outline-offset: -3px;
+  }
 
   /* === Issue #418: Segmented size-Varianten === */
   [data-slot="segmented"][data-size="sm"] [data-slot="segmented-item"] {

@@ -10,6 +10,7 @@
 // Ausfuehren: cd frontend && npx playwright test e2e/versandzeit-stundenwahl.spec.ts
 
 import { test, expect, type Locator } from '@playwright/test';
+import { tippeDatum, waehleOption } from './helpers';
 import * as path from 'node:path';
 
 const TRIP_ID = 'e2e-gz-versandzeit-stundenwahl';
@@ -36,9 +37,16 @@ const seedBody = {
 
 /** Alle Options-Werte der Auswahlliste — Grundlage der AC-1-Pruefung. */
 async function optionValues(select: Locator): Promise<string[]> {
-	// `?? []`: ist das Feld (noch) ein <input>, soll die Zusicherung beim
-	// Aufrufer sprechen ("0 statt 24") statt ein TypeError zu fliegen.
-	return select.evaluate((el) => Array.from((el as HTMLSelectElement).options ?? []).map((o) => o.value));
+	// #2881 Lieferung B: Auswahl-Baustein (bits-ui Select) — die Liste öffnen, die Optionen der
+	// listbox lesen, mit Escape schließen (der Wert bleibt unverändert).
+	const page = select.page();
+	await select.click();
+	const liste = page.getByRole('listbox');
+	await expect(liste).toBeVisible();
+	const werte = (await liste.getByRole('option').allInnerTexts()).map((t) => t.trim());
+	await page.keyboard.press('Escape');
+	await expect(liste).toBeHidden();
+	return werte;
 }
 
 test.describe('Issue #1379: Versandzeit nur als volle Stunde waehlbar', () => {
@@ -72,14 +80,14 @@ test.describe('Issue #1379: Versandzeit nur als volle Stunde waehlbar', () => {
 		await expect(page.locator('input[type="time"][data-testid="report-morning-time"]')).toHaveCount(0);
 
 		// AC-2: Stunde waehlen → Auto-Save → Reload → derselbe Wert.
-		await morning.selectOption('09:00');
+		await waehleOption(page, morning, '09:00');
 		await expect(page.getByTestId('save-indicator')).toHaveAttribute('data-state', 'idle', {
 			timeout: 10_000
 		});
 
 		await page.reload();
 		const morningAfter = page.locator('[data-testid="report-morning-time"]:visible').first();
-		await expect(morningAfter).toHaveValue('09:00', { timeout: 15_000 });
+		await expect(morningAfter).toHaveText('09:00', { timeout: 15_000 });
 	});
 
 	// Bug-Reproduktion aus Nutzersicht (#1379): "Ich trage 05:30 ein, es sagt
@@ -124,7 +132,7 @@ test.describe('Issue #1379: Versandzeit nur als volle Stunde waehlbar', () => {
 		await page.setViewportSize(MOBILE);
 		await page.goto('/trips/new');
 		await page.getByTestId('trip-new-name-input-mobile').fill('E2E-GZ-Versandzeit neu');
-		await page.getByTestId('trip-new-date-input').fill(new Date().toISOString().slice(0, 10));
+		await tippeDatum(page, page.getByTestId('trip-new-date-input'), new Date().toISOString().slice(0, 10));
 
 		const tabbar = page.getByTestId('tn-mobile-tabbar');
 		await tabbar.getByRole('tab', { name: /Etappen/ }).click({ force: true });
@@ -152,7 +160,7 @@ test.describe('Issue #1379: Versandzeit nur als volle Stunde waehlbar', () => {
 		expect(values.every((v) => /^\d{2}:00$/.test(v))).toBeTruthy();
 
 		// Bedienbar wie beim Bearbeiten — kein Unterschied Anlegen/Bearbeiten.
-		await morning.selectOption('06:00');
-		await expect(morning).toHaveValue('06:00');
+		await waehleOption(page, morning, '06:00');
+		await expect(morning).toHaveText('06:00');
 	});
 });

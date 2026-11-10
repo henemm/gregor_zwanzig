@@ -134,31 +134,22 @@
 		<Label for="activity-profile">{$t('vergleich.neu.aktivitaetsprofil')}</Label>
 		<Select
 			id="activity-profile"
-			name="activity-profile"
-			bind:value={activityProfile}
+			options={[{ value: '', label: $t('vergleich.gruppe.kein_profil') }, ...ACTIVITY_PROFILE_OPTIONS]}
+			value={activityProfile}
+			onValueChange={(v) => (activityProfile = v as ActivityProfile | '')}
 			class="w-full"
-		>
-			<option value="">{$t('vergleich.gruppe.kein_profil')}</option>
-			{#each ACTIVITY_PROFILE_OPTIONS as opt}
-				<option value={opt.value}>{opt.label}</option>
-			{/each}
-		</Select>
+		/>
 	</div>
 
 	<div>
 		<Label for="location-group">{$t('vergleich.ort.gruppe_optional')}</Label>
 		<Select
 			id="location-group"
-			name="location-group"
 			data-testid="location-form-group"
+			options={[{ value: '', label: $t('listen.orte.form.keine_gruppe') }, ...groups.map((g) => ({ value: g.id, label: g.name }))]}
 			bind:value={groupId}
 			class="w-full"
-		>
-			<option value="">{$t('listen.orte.form.keine_gruppe')}</option>
-			{#each groups as g (g.id)}
-				<option value={g.id}>{g.name}</option>
-			{/each}
-		</Select>
+		/>
 	</div>
 
 	<div class="flex justify-end gap-2 pt-2">
