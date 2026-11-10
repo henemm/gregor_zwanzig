@@ -2,6 +2,10 @@
 """
 PreToolUse:Bash Hook — Design-Fidelity Gate (Issue #603)
 
+AUSSER DIENST seit ADR-0111 (#2881, 2026-11-10): nicht mehr in .claude/settings.json
+verdrahtet. Die Soll-Bilder sind historisch; Ersatz sind die Playwright-Kontrast-/
+Paritaetstests im CI-Check `e2e` (siehe docs/reference/gates_und_ratschen.md).
+
 Blocks 'gh issue close <N>' when:
 - Issue has label 'design-compliance'
 - No passed design-diff artefact exists for the active workflow
