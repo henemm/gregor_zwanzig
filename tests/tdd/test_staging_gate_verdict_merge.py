@@ -472,3 +472,310 @@ def test_f002_rewrite_by_one_workflow_does_not_delete_other_workflows_identical_
         f"Erwartet weiterhin 2 Einträge (W1 nach Re-Write, W2 unverändert), "
         f"bekam {len(findings)}: {findings}"
     )
+
+
+# ===========================================================================
+# RED (#2424): Staging-Verdict je Workflow statt "last writer wins".
+#
+# Spec: docs/specs/modules/fix_2424_staging_gate_verdict_je_workflow.md
+#
+# Bisher werden beim gleichen verified_commit nur die findings gemergt;
+# staging_verdict, scope, langs, frontend_pages_checked und
+# frontend_browser_gate kommen ungemergt aus dem letzten Aufruf. Ein spaeteres
+# oberflaechliches VERIFIED eines fremden Workflows oeffnet so den Prod-Deploy,
+# obwohl ein gruendlicherer Lauf AMBIGUOUS gemeldet hat.
+#
+# Mock-frei: die Workflow-Kennung wird ueber die echte Umgebungsvariable
+# gesetzt; fuer die Gate-Faelle (AC-1/2/7/9) laeuft alles in einem echten,
+# isolierten Temp-Git-Repo (REPO_DIR umgebogen, Muster aus
+# test_e2e_commit_namespacing.py), damit der echte Deploy-Gate-Leser
+# (gate_check) und die echte Vorfahren-Suche die geschriebene Datei lesen,
+# ohne das Hauptrepo zu beruehren.
+# ===========================================================================
+
+import subprocess  # noqa: E402
+
+WF_A = "fix-2424-wf-a-gruendlich"
+WF_B = "fix-2424-wf-b-oberflaechlich"
+WF_C = "fix-2424-wf-c-dritter"
+
+
+def _git(args, cwd):
+    return subprocess.run(["git"] + args, capture_output=True, text=True, cwd=str(cwd))
+
+
+@pytest.fixture
+def iso_repo(tmp_path, monkeypatch):
+    """Echtes Temp-Git-Repo mit Backend-Commit; REPO_DIR zeigt darauf, damit
+    _head_sha, der Default-Nachweis-Pfad und gate_check NUR dieses Repo sehen."""
+    root = tmp_path / "repo"
+    root.mkdir()
+    _git(["init", "-q"], root)
+    _git(["config", "user.email", "t@example.com"], root)
+    _git(["config", "user.name", "Tester"], root)
+    (root / ".gitignore").write_text(".claude/\n")
+    (root / "src").mkdir()
+    (root / "src" / "x.py").write_text("a = 1\n")
+    _git(["add", "-A"], root)
+    _git(["commit", "-qm", "c1"], root)
+    monkeypatch.setattr(mod, "REPO_DIR", root)
+    head = _git(["rev-parse", "HEAD"], root).stdout.strip()
+    assert mod._head_sha() == head
+    return root, head
+
+
+def _write_as(monkeypatch, workflow: str, verdict: str, tmp_path: Path,
+              e2e_path: Path | None, scope: str = "backend",
+              langs: list | None = None, findings: list | None = None) -> int:
+    monkeypatch.setenv("OPENSPEC_ACTIVE_WORKFLOW", workflow)
+    monkeypatch.delenv("GZ_ACTIVE_WORKFLOW", raising=False)
+    fp = tmp_path / f"findings-{workflow}.json"
+    fp.write_text(json.dumps(findings or []))
+    return mod.write_verdict(
+        verdict, fp, e2e_path=e2e_path, scope_override=scope,
+        langs=["de", "en"] if langs is None else langs,
+    )
+
+
+def _default_path(head: str) -> Path:
+    return mod._commit_e2e_path(head)
+
+
+def test_ac1_fremdes_verified_ueberschreibt_ambiguous_nicht(iso_repo, tmp_path, monkeypatch):
+    """AC-1: A schreibt AMBIGUOUS, fremder B schreibt danach VERIFIED auf
+    denselben Commit -> Top-Level bleibt AMBIGUOUS und nennt A."""
+    root, head = iso_repo
+    assert _write_as(monkeypatch, WF_A, "AMBIGUOUS: AC-3 unklar (gruendlich)", tmp_path, None) == 0
+    assert _write_as(monkeypatch, WF_B, "VERIFIED: Smoke grün", tmp_path, None) == 0
+
+    data = json.loads(_default_path(head).read_text())
+    assert data["verified_commit"] == head
+    assert data["staging_verdict"].startswith("AMBIGUOUS"), (
+        "Fremdes VERIFIED hat ein AMBIGUOUS ueberschrieben (last writer wins): "
+        f"{data['staging_verdict']!r}"
+    )
+    assert WF_A in data["staging_verdict"], (
+        f"Top-Level-Verdict muss den blockierenden Workflow {WF_A} nennen: "
+        f"{data['staging_verdict']!r}"
+    )
+    assert set(data.get("verdicts", {})) == {WF_A, WF_B}, (
+        f"verdicts-Map muss je Workflow einen Eintrag fuehren: {data.get('verdicts')!r}"
+    )
+    assert data["verdicts"][WF_A]["verdict"].startswith("AMBIGUOUS")
+    assert data["verdicts"][WF_B]["verdict"].startswith("VERIFIED")
+
+
+def test_ac1_gate_check_blockt_und_nennt_workflow(iso_repo, tmp_path, monkeypatch, capsys):
+    """AC-1 end-to-end: der echte Deploy-Gate-Leser blockt (Exit 1) und die
+    Meldung nennt Workflow A als Urheber."""
+    root, head = iso_repo
+    assert _write_as(monkeypatch, WF_A, "AMBIGUOUS: AC-3 unklar (gruendlich)", tmp_path, None) == 0
+    assert _write_as(monkeypatch, WF_B, "VERIFIED: Smoke grün", tmp_path, None) == 0
+    capsys.readouterr()
+
+    rc = mod.gate_check(None, "backend")
+
+    err = capsys.readouterr().err
+    assert rc == 1, "Prod-Deploy-Gate oeffnet trotz AMBIGUOUS eines fremden Workflows."
+    assert WF_A in err, f"Gate-Meldung nennt den blockierenden Workflow nicht:\n{err}"
+
+
+def test_ac2_eigener_rerun_ersetzt_eigenen_eintrag(iso_repo, tmp_path, monkeypatch):
+    """AC-2: derselbe Workflow A schreibt nach AMBIGUOUS erneut VERIFIED ->
+    sein Eintrag wird ersetzt, Top-Level VERIFIED, Gate oeffnet."""
+    root, head = iso_repo
+    assert _write_as(monkeypatch, WF_A, "AMBIGUOUS: Flake", tmp_path, None) == 0
+    assert _write_as(monkeypatch, WF_A, "VERIFIED: Re-Run grün", tmp_path, None) == 0
+
+    data = json.loads(_default_path(head).read_text())
+    assert data["staging_verdict"].startswith("VERIFIED")
+    assert set(data.get("verdicts", {})) == {WF_A}, (
+        f"Eigener Re-Run muss den eigenen Eintrag ersetzen: {data.get('verdicts')!r}"
+    )
+    assert data["verdicts"][WF_A]["verdict"] == "VERIFIED: Re-Run grün"
+    assert mod.gate_check(None, "backend") == 0
+
+
+@pytest.mark.parametrize("folge, erwartet", [
+    (["full-stack", "docs-only"], "full-stack"),
+    (["frontend-only", "backend"], "full-stack"),
+    (["backend", "docs-only"], "backend"),
+])
+def test_ac3_scope_breitester_rang_kein_herabstufen(tmp_path, monkeypatch, folge, erwartet):
+    """AC-3: Top-Level-Scope ist der breiteste; frontend-only + backend =
+    full-stack; ein spaeterer schmaler Lauf stuft nicht herab."""
+    head = mod._head_sha()
+    e2e_path = tmp_path / "e2e_verified.json"
+    for wf, scope in zip((WF_A, WF_B), folge):
+        assert _write_as(monkeypatch, wf, f"VERIFIED: {scope}", tmp_path, e2e_path,
+                         scope=scope) == 0
+    data = json.loads(e2e_path.read_text())
+    assert data["verified_commit"] == head
+    assert data["scope"] == erwartet, (
+        f"Scope-Folge {folge} muss {erwartet!r} ergeben, bekam {data['scope']!r}"
+    )
+
+
+def test_ac4_langs_vereinigung(tmp_path, monkeypatch):
+    """AC-4: A bezeugt de, B bezeugt en (je docs-only, dort ist eine Sprache
+    zulaessig) -> Top-Level langs ist die Vereinigung."""
+    e2e_path = tmp_path / "e2e_verified.json"
+    assert _write_as(monkeypatch, WF_A, "VERIFIED: de", tmp_path, e2e_path,
+                     scope="docs-only", langs=["de"]) == 0
+    assert _write_as(monkeypatch, WF_B, "VERIFIED: en", tmp_path, e2e_path,
+                     scope="docs-only", langs=["en"]) == 0
+    data = json.loads(e2e_path.read_text())
+    assert sorted(data.get("langs", [])) == ["de", "en"], (
+        f"langs muss die Vereinigung beider Laeufe sein: {data.get('langs')!r}"
+    )
+
+
+def test_ac5_frontend_pages_vereinigung_und_browser_gate_vermerk(tmp_path, monkeypatch):
+    """AC-5: A prueft /trips, B prueft /compare, C laeuft ohne Browser-Nachweis
+    (Vermerk) -> Top-Level enthaelt beide Seiten UND den Vermerk."""
+    e2e_path = tmp_path / "e2e_verified.json"
+
+    def _gate_mit(seiten):
+        def _gate(scope, checked=None):
+            if checked is not None:
+                checked.extend(seiten)
+            return 0
+        return _gate
+
+    monkeypatch.setattr(mod, "_frontend_browser_gate", _gate_mit(["/trips"]))
+    assert _write_as(monkeypatch, WF_A, "VERIFIED: trips", tmp_path, e2e_path,
+                     scope="frontend-only") == 0
+    monkeypatch.setattr(mod, "_frontend_browser_gate", _gate_mit(["/compare"]))
+    assert _write_as(monkeypatch, WF_B, "VERIFIED: compare", tmp_path, e2e_path,
+                     scope="frontend-only") == 0
+    monkeypatch.setattr(mod, "_frontend_browser_gate", _gate_mit([]))
+    assert _write_as(monkeypatch, WF_C, "VERIFIED: ohne Browser", tmp_path, e2e_path,
+                     scope="frontend-only") == 0
+
+    data = json.loads(e2e_path.read_text())
+    seiten = set(data.get("frontend_pages_checked", []))
+    assert {"/trips", "/compare"} <= seiten, (
+        f"frontend_pages_checked muss die Vereinigung sein: {data.get('frontend_pages_checked')!r}"
+    )
+    assert data.get("frontend_browser_gate"), (
+        "Vermerk eines Laufs ohne Browser-Nachweis ging verloren."
+    )
+
+
+def test_ac6_altbestand_wird_legacy_und_bleibt_blockierend(tmp_path, monkeypatch):
+    """AC-6: Datei im Altformat (ohne verdicts) mit AMBIGUOUS, fremder Lauf
+    schreibt VERIFIED -> Altbestand als 'legacy', Top-Level bleibt AMBIGUOUS."""
+    head = mod._head_sha()
+    e2e_path = tmp_path / "e2e_verified.json"
+    _write_existing(e2e_path, head, [FINDING_A], verdict="AMBIGUOUS: Altbestand unklar")
+    assert "verdicts" not in json.loads(e2e_path.read_text())
+
+    assert _write_as(monkeypatch, WF_B, "VERIFIED: fremder Lauf", tmp_path, e2e_path) == 0
+
+    data = json.loads(e2e_path.read_text())
+    assert data["staging_verdict"].startswith("AMBIGUOUS"), (
+        f"Altbestand-AMBIGUOUS ging durch fremden Lauf verloren: {data['staging_verdict']!r}"
+    )
+    assert "legacy" in data.get("verdicts", {}), (
+        f"Altbestand muss als Eintrag 'legacy' uebernommen werden: {data.get('verdicts')!r}"
+    )
+    assert data["verdicts"]["legacy"]["verdict"].startswith("AMBIGUOUS")
+    assert WF_B in data["verdicts"]
+
+
+def test_ac7_neuer_commit_startet_frisch(iso_repo, tmp_path, monkeypatch):
+    """AC-7: bestehende Datei eines ANDEREN Commits mit AMBIGUOUS -> frische
+    Map nur mit eigenem Eintrag, Gate oeffnet."""
+    root, head = iso_repo
+    path = _default_path(head)
+    stale = "deadbeef" + head[8:]
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(json.dumps({
+        "verified_commit": stale,
+        "staging_verdict": f"AMBIGUOUS (Workflow {WF_A}): alter Stand",
+        "verdicts": {WF_A: {"verdict": "AMBIGUOUS: alter Stand", "scope": "backend",
+                            "langs": ["de", "en"], "at": "2026-11-01T00:00:00+00:00"}},
+        "langs": ["de", "en"], "findings": [], "scope": "backend",
+        "verified_at": "2026-11-01T00:00:00+00:00", "environment": "staging",
+    }))
+
+    assert _write_as(monkeypatch, WF_B, "VERIFIED: neuer Commit", tmp_path, None) == 0
+
+    data = json.loads(path.read_text())
+    assert data["verified_commit"] == head
+    assert set(data.get("verdicts", {})) == {WF_B}, (
+        f"Neuer Commit muss frisch starten (nur eigener Eintrag): {data.get('verdicts')!r}"
+    )
+    assert mod.gate_check(None, "backend") == 0
+
+
+def test_ac8_findings_merge_unveraendert_neben_verdict_merge(tmp_path, monkeypatch):
+    """AC-8: Findings und Verdicts im selben Schreibvorgang — Findings-Merge
+    (#1197/#1327/F002) unveraendert, Verdicts je Workflow zusaetzlich."""
+    e2e_path = tmp_path / "e2e_verified.json"
+    assert _write_as(monkeypatch, WF_A, "AMBIGUOUS: A unklar", tmp_path, e2e_path,
+                     findings=[FINDING_A]) == 0
+    assert _write_as(monkeypatch, WF_B, "VERIFIED: B grün", tmp_path, e2e_path,
+                     findings=[FINDING_B]) == 0
+    # A schreibt sein Set neu: eigene Findings ersetzt, fremde bleiben.
+    assert _write_as(monkeypatch, WF_A, "AMBIGUOUS: A immer noch unklar", tmp_path, e2e_path,
+                     findings=[FINDING_SHARED]) == 0
+
+    data = json.loads(e2e_path.read_text())
+    fs = data["findings"]
+    assert not _contains_finding(fs, FINDING_A), "Eigenes altes Finding von A muss ersetzt sein."
+    assert _count_matching(fs, FINDING_B) == 1, "Fremdes Finding von B ging verloren."
+    assert _count_matching(fs, FINDING_SHARED) == 1
+    assert set(data.get("verdicts", {})) == {WF_A, WF_B}
+    assert data["verdicts"][WF_A]["verdict"] == "AMBIGUOUS: A immer noch unklar"
+    assert data["staging_verdict"].startswith("AMBIGUOUS")
+
+
+@pytest.mark.parametrize("folge, erwartet_ok", [
+    ([(WF_A, "VERIFIED: A grün"), (WF_B, "VERIFIED: B grün")], True),
+    ([(WF_A, "AMBIGUOUS: A unklar"), (WF_B, "VERIFIED: B grün")], False),
+])
+def test_ac9_leser_sehen_korrektes_toplevel(iso_repo, tmp_path, monkeypatch, folge, erwartet_ok):
+    """AC-9: unveraenderte Leser (gate_check, _nearest_verified_ancestor)
+    entscheiden auf dem abgeleiteten Top-Level richtig."""
+    root, head = iso_repo
+    for wf, verdict in folge:
+        assert _write_as(monkeypatch, wf, verdict, tmp_path, None) == 0
+
+    ancestor, _cdata = mod._e2e_paths._nearest_verified_ancestor(head, root, root)
+    rc = mod.gate_check(None, "backend")
+    if erwartet_ok:
+        assert ancestor == head, "Reines VERIFIED muss von der Vorfahren-Suche akzeptiert werden."
+        assert rc == 0
+    else:
+        assert ancestor is None, (
+            "Gemischter Stand mit AMBIGUOUS darf von der Vorfahren-Suche nicht akzeptiert werden."
+        )
+        assert rc == 1
+
+
+def test_aggregate_verdicts_deterministisch():
+    """Reine Funktion _aggregate_verdicts(verdicts, aktuell) -> dict mit den
+    abgeleiteten Top-Level-Feldern. Bei zwei AMBIGUOUS-Eintraegen gewinnt
+    unabhaengig von der Einfuegereihenfolge der nach Workflow-Name erste; das
+    Ergebnis traegt das AMBIGUOUS-Praefix vorn und nennt den Urheber."""
+    eintraege = {
+        "zz-wf": {"verdict": "AMBIGUOUS: zweiter Text", "scope": "backend",
+                  "langs": ["de", "en"], "at": "2026-11-10T10:00:00+00:00"},
+        "aa-wf": {"verdict": "AMBIGUOUS: erster Text", "scope": "backend",
+                  "langs": ["de", "en"], "at": "2026-11-10T11:00:00+00:00"},
+        "mm-wf": {"verdict": "VERIFIED: grün", "scope": "full-stack",
+                  "langs": ["de", "en"], "at": "2026-11-10T12:00:00+00:00"},
+    }
+    umgekehrt = dict(reversed(list(eintraege.items())))
+
+    r1 = mod._aggregate_verdicts(eintraege, "mm-wf")
+    r2 = mod._aggregate_verdicts(umgekehrt, "mm-wf")
+
+    assert r1["staging_verdict"] == r2["staging_verdict"]
+    assert r1["staging_verdict"].startswith("AMBIGUOUS")
+    assert "aa-wf" in r1["staging_verdict"] and "erster Text" in r1["staging_verdict"]
+    assert r1["scope"] == "full-stack"
+
+    nur_gruen = {"mm-wf": eintraege["mm-wf"]}
+    assert mod._aggregate_verdicts(nur_gruen, "mm-wf")["staging_verdict"] == "VERIFIED: grün"
