@@ -135,20 +135,21 @@ test.describe('Issue #269: Mobile Trip-Detail-Tabs Pill-Scroller', () => {
 		);
 	});
 
-	test('AC-3b: Aktiver Tab hat auf Mobile hellen Text (--g-paper)', async ({ page }) => {
+	test('AC-3b: Aktiver Tab hat auf Mobile hellen Text (--g-on-accent)', async ({ page }) => {
 		/**
 		 * GIVEN: Viewport ist 375×667 px (Mobile), aktiver Tab = "Übersicht"
 		 * WHEN:  Pill-Hintergrund gesetzt
-		 * THEN:  Text-Farbe ist helles --g-paper (#f6f4ee = rgb(246, 244, 238))
+		 * THEN:  Text-Farbe ist --g-on-accent (hell: #ffffff = rgb(255, 255, 255)),
+		 *        die Schriftrolle auf Akzentflächen seit #2400 (Weiß auf --g-accent-deep 7,45:1)
 		 */
 		await page.setViewportSize(MOBILE_VIEWPORT);
 		await page.goto(`/trips/${TRIP_ID}`);
 
 		const activeTab = page.getByTestId('trip-detail-tab-uebersicht');
 		const color = await activeTab.evaluate((el) => getComputedStyle(el).color);
-		// --g-paper: #f6f4ee = rgb(246, 244, 238)
-		expect(color, `Aktiver Tab hat Textfarbe "${color}" statt hell (g-paper)`).toMatch(
-			/rgb\(246,\s*244,\s*238\)/
+		// --g-on-accent (Hellmodus): #ffffff = rgb(255, 255, 255)
+		expect(color, `Aktiver Tab hat Textfarbe "${color}" statt --g-on-accent (weiß)`).toMatch(
+			/rgb\(255,\s*255,\s*255\)/
 		);
 	});
 

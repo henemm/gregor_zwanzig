@@ -65,7 +65,6 @@ const AUSNAHMEN: Record<string, { n: number; grund: string }> = {
 	'lib/components/mobile/Sheet.svelte': { n: 2, grund: 'Scrim + Schatten (gewollt fix)' },
 	'lib/components/compare/LocationNewModal.svelte': { n: 1, grund: 'Scrim (gewollt fix)' },
 	'lib/components/shared/weather-metrics-tab/SavePresetDialog.svelte': { n: 2, grund: 'Scrim + Schatten (gewollt fix)' },
-	'lib/components/ui/popover/popover-content.svelte': { n: 1, grund: 'Schatten' },
 	'lib/brand/BrandSidebar.svelte': { n: 1, grund: 'Tint 5 % hinter Kürzel-Chip' },
 	'routes/+layout.svelte': { n: 3, grund: 'Schatten-Fallback in var(--g-elev-3, …)' },
 	'routes/email-preview-dev/+page.svelte': { n: 3, grund: 'Entwickler-Vorschau, nicht ausgeliefert' },

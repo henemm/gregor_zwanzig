@@ -18,7 +18,7 @@
 		bind:ref
 		data-slot="popover-content"
 		{sideOffset}
-		style="z-index: 1000; max-width: min(300px, calc(100vw - 24px)); padding: 10px 12px; border: 1px solid var(--g-rule); border-radius: 8px; background: var(--g-card); color: var(--g-ink-2); font-size: 13px; line-height: 1.5; box-shadow: 0 6px 20px rgba(26, 26, 24, 0.14); outline: none;"
+		style="z-index: 1000; max-width: min(300px, calc(100vw - 24px)); padding: 10px 12px; border: 1px solid var(--g-rule); border-radius: 8px; background: var(--g-card); color: var(--g-ink-2); font-size: 13px; line-height: 1.5; box-shadow: var(--g-shadow-3); outline: none;"
 		{...restProps}
 	>
 		{@render children?.()}
