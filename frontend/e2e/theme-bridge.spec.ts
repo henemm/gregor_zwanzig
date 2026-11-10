@@ -55,17 +55,17 @@ test.describe('Epic #133 Step 6 — Theme-Bridge', () => {
 		expect(value).toBe('rgb(196, 90, 42)');
 	});
 
-	test('AC-4: --color-destructive löst zu Danger-Rot auf (rgb(179, 58, 42))', async ({ page }) => {
+	test('AC-4: --color-destructive löst zu Danger-Rot auf (rgb(168, 50, 50))', async ({ page }) => {
 		/**
 		 * GIVEN: Light-Mode geladen
 		 * WHEN:  getComputedStyle(:root).getPropertyValue('--color-destructive')
-		 * THEN:  liefert exakt rgb(179, 58, 42) — Wert von var(--g-danger)
+		 * THEN:  liefert exakt rgb(168, 50, 50) — Wert von var(--g-danger)
 		 */
 		await page.goto('/');
 		const value = await page.evaluate(() =>
 			getComputedStyle(document.documentElement).getPropertyValue('--color-destructive').trim()
 		);
-		expect(value).toBe('rgb(179, 58, 42)');
+		expect(value).toBe('rgb(168, 50, 50)');
 	});
 
 	test('AC-5: Dark-Mode über data-theme — Gregor-Palette und Bridge werden dunkel (#2400)', async ({ page }) => {
