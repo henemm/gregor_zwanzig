@@ -222,6 +222,7 @@ verwendet einfache, leicht erhöhte Schatten.
 - **Sizes:** `xs`, `sm`, `md` (default), `lg`, `icon`, `icon-xs`, `icon-sm`, `icon-lg`
 - **Tag-Switch:** Render als `<a>` wenn `href` gesetzt, sonst `<button>`
 - **Disabled-State:** ARIA-konform (`aria-disabled="true"`; bei Links zusätzlich `role="link"`, `tabindex={-1}`)
+- **Cursor-Boden-Regel (#2621):** `app.css` setzt in `@layer base` per `:where()` (Spezifität 0) `cursor: pointer` für aktive `button`, `[role="button"]`, `label[for]` und `summary` (gesperrt per `:disabled`/`aria-disabled="true"` ausgenommen), damit auch rohe Knöpfe die Hand zeigen; Btn-Atom (`not-allowed`) und Utilities wie `cursor-default` gewinnen weiter.
 - **Tests:** SSR-Render-Test-Suite ist im Spec-Archiv von `issue_214_btn_feature_parity.md` (deaktiviert wegen Svelte-Loader-Limitation, Issue #228)
 
 **Hinweis:** Anthropic-Vision hatte 4 Variants (`primary`/`accent`/`ghost`/`quiet`) —
