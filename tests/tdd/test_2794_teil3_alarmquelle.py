@@ -429,3 +429,43 @@ def test_ac29_trip_block2_ohne_ampel_schluessel_bleibt_stumm(monkeypatch):
     trip = _trip_nur_vorlage("trip-b2-oa", mit_ampel=False)
     ergebnis, mails = _block2_lauf(uid, trip, monkeypatch)
     assert ergebnis.alerts_sent == 0 and mails == [], (ergebnis, mails)
+
+
+# ─────────── Fix-Loop 1 (F008): der Gate-Helfer direkt ──────────────────────
+# Der Versand allein beobachtet nicht, ob das Gate unnoetig oeffnet (die Engine
+# filtert danach selbst). Darum hier ``ampel_alarmquelle_aktiv`` direkt: das
+# Gate oeffnet NUR bei einer AKTIVEN Metrik mit „Alarm ab" != never.
+
+def _gate(trip: Trip) -> bool:
+    from services.trip_alert import ampel_alarmquelle_aktiv
+
+    return ampel_alarmquelle_aktiv(trip)
+
+
+def test_f008_gate_ohne_ampel_schluessel_ist_zu():
+    assert _gate(_trip_nur_vorlage("trip-g-oa", mit_ampel=False)) is False
+
+
+def test_f008_gate_alarm_ab_never_ist_zu():
+    """Ampel vorhanden, aber keine Metrik mit „Alarm ab" != never: zu."""
+    trip = _trip("trip-g-never", OHNE_ALARM_AB)
+    _vorbedingung_ampel(trip.display_config.ampel, alarmfaehig=False)
+    assert _gate(trip) is False
+
+
+def test_f008_gate_alarm_ab_an_nicht_aktiver_metrik_ist_zu():
+    """„Alarm ab Orange" an einer Metrik, die nicht im Briefing ist: zu —
+    Aktivitaet zaehlt, nicht das blosse Vorhandensein von ``alarm_ab``."""
+    trip = _trip("trip-g-inaktiv", NICHT_AKTIV)
+    assert trip.display_config.ampel["metrics"]["gust"]["alarm_ab"] == "orange"
+    assert _gate(trip) is False
+
+
+def test_f008_gate_vorlagen_ampel_ist_offen():
+    """Nur ``{"template": "allgemein"}``: die Vorlage gibt Boeen „Alarm ab
+    Orange“ vor, Boeen ist aktiv — offen."""
+    assert _gate(_trip_nur_vorlage("trip-g-vorlage", mit_ampel=True)) is True
+
+
+def test_f008_gate_aktive_metrik_mit_alarm_ab_ist_offen():
+    assert _gate(_trip("trip-g-aktiv", MIT_ALARM_AB)) is True

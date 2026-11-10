@@ -15,7 +15,11 @@
 	// (Trip/Compare-Teilungs-Invariante: geteilt ist die Steuerung, nicht der
 	// Speicher-Weg).
 
+	// Issue #2794 S3a, Teil-PR 3 (AC-21, AC-40, ADR-0111): von/bis ueber das Select-Atom
+	// (ui/select/Select.svelte) statt nativem <select>; Clamp unveraendert. Optionale
+	// Beschriftungen fuer die Karte „Anpassen" des Reiters Wetter.
 	import { Card } from '$lib/components/atoms';
+	import { Select } from '$lib/components/ui/select';
 	import { t } from '$lib/i18n';
 	import { clampDayWindowEndHour } from '../versand-tab/dayWindowClamp.ts';
 
@@ -24,10 +28,15 @@
 		endHour: number;
 		onStartHour: (v: number) => void;
 		onEndHour: (v: number) => void;
+		/** Beschriftungen (Default: Wertebereiche-Texte). */
+		titel?: string;
+		vonLabel?: string;
+		bisLabel?: string;
 	}
-	let { startHour, endHour, onStartHour, onEndHour }: Props = $props();
+	let { startHour, endHour, onStartHour, onEndHour, titel, vonLabel, bisLabel }: Props = $props();
 
 	const dayWindowHourOptions = Array.from({ length: 24 }, (_, h) => h);
+	const stunde = (h: number) => ({ value: String(h), label: `${h.toString().padStart(2, '0')}:00` });
 	// Issue #1361/#1372 S1b (PO-Entscheidung 2026-07-25): ein Fenster ueber
 	// Mitternacht (Ende < Start, z. B. 22-2 Uhr) ist GUELTIG — Start bietet
 	// wieder alle 24 Stunden an (der bisherige F005-Deckel auf 0..22 galt nur,
@@ -40,51 +49,49 @@
 
 	// Safari-Factory-Pattern (CLAUDE.md).
 	function makeStartHandler() {
-		return function doSetStart(e: Event) {
-			const v = Number((e.target as HTMLSelectElement).value);
+		return function doSetStart(wert: string) {
+			const v = Number(wert);
 			onStartHour(v);
 			onEndHour(clampDayWindowEndHour(v, endHour));
 		};
 	}
 	function makeEndHandler() {
-		return function doSetEnd(e: Event) {
-			onEndHour(Number((e.target as HTMLSelectElement).value));
+		return function doSetEnd(wert: string) {
+			onEndHour(Number(wert));
 		};
 	}
 </script>
 
 <Card padding={18} data-testid="day-window-control">
 	<div class="dwc-head">
-		<div class="dwc-title">{$t('wertebereiche.tagesfenster.titel')}</div>
+		<div class="dwc-title">{titel ?? $t('wertebereiche.tagesfenster.titel')}</div>
 		<div class="dwc-sub">{$t('wertebereiche.tagesfenster.untertitel')}</div>
 	</div>
 	<div class="dwc-body">
-		<label class="dwc-time-label">
-			<span class="dwc-time-caption">{$t('wertebereiche.tagesfenster.von')}</span>
-			<select
+		<div class="dwc-time-label">
+			<span class="dwc-time-caption">{vonLabel ?? $t('wertebereiche.tagesfenster.von')}</span>
+			<Select
 				data-testid="day-window-start-hour"
+				aria-label={vonLabel ?? $t('wertebereiche.tagesfenster.von')}
 				class="dwc-time-input"
-				value={startHour}
-				onchange={makeStartHandler()}
-			>
-				{#each dayWindowStartOptions as h (h)}
-					<option value={h}>{h.toString().padStart(2, '0')}:00</option>
-				{/each}
-			</select>
-		</label>
-		<label class="dwc-time-label">
-			<span class="dwc-time-caption">{$t('wertebereiche.tagesfenster.bis')}</span>
-			<select
+				style="min-height: 44px; min-width: 96px"
+				options={dayWindowStartOptions.map(stunde)}
+				value={String(startHour)}
+				onValueChange={makeStartHandler()}
+			/>
+		</div>
+		<div class="dwc-time-label">
+			<span class="dwc-time-caption">{bisLabel ?? $t('wertebereiche.tagesfenster.bis')}</span>
+			<Select
 				data-testid="day-window-end-hour"
+				aria-label={bisLabel ?? $t('wertebereiche.tagesfenster.bis')}
 				class="dwc-time-input"
-				value={endHour}
-				onchange={makeEndHandler()}
-			>
-				{#each dayWindowEndOptions as h (h)}
-					<option value={h}>{h.toString().padStart(2, '0')}:00</option>
-				{/each}
-			</select>
-		</label>
+				style="min-height: 44px; min-width: 96px"
+				options={dayWindowEndOptions.map(stunde)}
+				value={String(endHour)}
+				onValueChange={makeEndHandler()}
+			/>
+		</div>
 	</div>
 	{#if wrapsMidnight}
 		<div class="dwc-wrap-hint" data-testid="day-window-wrap-hint">
@@ -126,7 +133,7 @@
 		letter-spacing: 0.08em;
 		text-transform: uppercase;
 	}
-	.dwc-time-input {
+	:global(.dwc-time-input) {
 		font-family: var(--g-font-mono);
 		font-size: 13px;
 		font-weight: 600;
@@ -142,7 +149,7 @@
 		color: var(--g-ink-3);
 	}
 	@media (max-width: 899px) {
-		.dwc-time-input {
+		:global(.dwc-time-input) {
 			min-height: 44px;
 			font-size: 16px;
 		}

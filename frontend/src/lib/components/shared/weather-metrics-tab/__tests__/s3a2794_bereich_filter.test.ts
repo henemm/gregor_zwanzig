@@ -26,10 +26,13 @@ type Bereich = 'wetter' | 'zustellung' | 'alles';
 const abschnitte = (ctx: Ctx, bereich?: Bereich): string[] =>
 	(weatherMetricsTabSections as unknown as (c: Ctx, b?: Bereich) => string[])(ctx, bereich);
 
+// Teil-PR 3 (Spec §6 e): `sms_schwellen` (#624) wandert vom Bereich wetter in den Bereich
+// zustellung — der Reiter Wetter traegt keine Metrik-Oberflaeche mehr, die Schwellen bleiben
+// erreichbar (Vereinigung = alles, disjunkt; beide Zusicherungen unten unveraendert).
 const SOLL: Record<Ctx, Record<'wetter' | 'zustellung', string[]>> = {
 	route: {
-		wetter: ['grundauswahl', 'tagesfenster', 'sms_schwellen', 'official_alerts'],
-		zustellung: ['layout_kanal', 'ausblick', 'report_config', 'nachtblock']
+		wetter: ['grundauswahl', 'tagesfenster', 'official_alerts'],
+		zustellung: ['layout_kanal', 'ausblick', 'report_config', 'nachtblock', 'sms_schwellen']
 	},
 	vergleich: {
 		wetter: ['grundauswahl', 'tagesfenster', 'official_alerts'],

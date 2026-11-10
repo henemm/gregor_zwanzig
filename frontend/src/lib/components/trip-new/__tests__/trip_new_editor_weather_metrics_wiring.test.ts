@@ -48,20 +48,29 @@ describe('AC-1/AC-2/AC-3 (Test 4): handleWeatherMetricsChange schreibt weatherMe
 		);
 	});
 
-	test('beide WeatherMetricsTab-Mounts (Desktop+Mobile) uebergeben onWeatherMetricsChange', () => {
-		// #1743: der Anlege-Editor mountet den geteilten Baustein, der die Rueckkanaele
-		// unveraendert an WeatherMetricsTab weiterreicht (Rest-Props `...wetter`).
-		const mounts = code.match(/<WetterMetrikenVersandPanel\b[^>]*\/>/g) ?? [];
-		assert.equal(mounts.length, 2, `Erwartet genau 2 WetterMetrikenVersandPanel-Mounts, gefunden: ${mounts.length}`);
+	// #2794 S3a Teil-PR 3 (AC-38): die Auswahl meldet der WetterTab (Schritt Wetter) ueber EINEN
+	// Rueckkanal, der handleWeatherMetricsChange speist; das Panel (nur Zustellung) meldet sie nicht
+	// mehr (sonst zwei Schreiber). Zusicherung „beide Ansichten verdrahtet" auf den neuen Traeger.
+	test('beide WetterTab-Mounts (Desktop+Mobile) speisen handleWeatherMetricsChange', () => {
+		const mounts = code.match(/<WetterTab\b[^>]*\/>/g) ?? [];
+		assert.equal(mounts.length, 2, `Erwartet genau 2 WetterTab-Mounts, gefunden: ${mounts.length}`);
 		for (const [i, m] of mounts.entries()) {
 			assert.match(
 				m,
-				/onWeatherMetricsChange=\{handleWeatherMetricsChange\}/,
-				`Mount #${i + 1} uebergibt onWeatherMetricsChange nicht — ` +
+				/onAnlegeStand=\{handleWetterAnlegeStand\}/,
+				`Mount #${i + 1} uebergibt onAnlegeStand nicht — ` +
 					`nur eine Ansicht (Desktop ODER Mobile) waere repariert`
 			);
-			// Regression: der bestehende Kanal-Ruckkanal darf nicht verloren gehen.
-			assert.match(m, /onChannelsChange=\{handleChannelsChange\}/, `Mount #${i + 1} verliert onChannelsChange`);
+		}
+		const rumpf = code.match(/function handleWetterAnlegeStand\([^)]*\)\s*\{([\s\S]*?)\n\t\}/)?.[1] ?? '';
+		assert.match(rumpf, /handleWeatherMetricsChange\(weatherConfig\.metrics\)/, 'handleWetterAnlegeStand schreibt die Auswahl nicht');
+		// Regression: der bestehende Kanal-Ruckkanal der Panels darf nicht verloren gehen,
+		// und kein Panel meldet die Auswahl zusaetzlich (genau ein Schreiber).
+		const panels = code.match(/<WetterMetrikenVersandPanel\b[^>]*\/>/g) ?? [];
+		assert.equal(panels.length, 2, `Erwartet genau 2 WetterMetrikenVersandPanel-Mounts, gefunden: ${panels.length}`);
+		for (const [i, m] of panels.entries()) {
+			assert.match(m, /onChannelsChange=\{handleChannelsChange\}/, `Panel #${i + 1} verliert onChannelsChange`);
+			assert.doesNotMatch(m, /onWeatherMetricsChange=/, `Panel #${i + 1} meldet die Auswahl zusaetzlich (zwei Schreiber)`);
 		}
 	});
 });
@@ -103,20 +112,20 @@ describe('AC-2/AC-3/AC-6 (Test 4-6, Issue #1775): handleDayWindowChange + stubTr
 		);
 	});
 
-	test('beide WeatherMetricsTab-Mounts (Desktop+Mobile) uebergeben onDayWindowChange', () => {
-		// #1743: der Anlege-Editor mountet den geteilten Baustein, der die Rueckkanaele
-		// unveraendert an WeatherMetricsTab weiterreicht (Rest-Props `...wetter`).
-		const mounts = code.match(/<WetterMetrikenVersandPanel\b[^>]*\/>/g) ?? [];
-		assert.equal(mounts.length, 2, `Erwartet genau 2 WetterMetrikenVersandPanel-Mounts, gefunden: ${mounts.length}`);
+	// #2794 S3a Teil-PR 3: das Tagesfenster steht im WetterTab (Karte „Anpassen"); sein Rueckkanal
+	// speist handleDayWindowChange — in BEIDEN Ansichten, das Panel meldet es nicht mehr.
+	test('beide WetterTab-Mounts (Desktop+Mobile) speisen handleDayWindowChange', () => {
+		const mounts = code.match(/<WetterTab\b[^>]*\/>/g) ?? [];
+		assert.equal(mounts.length, 2, `Erwartet genau 2 WetterTab-Mounts, gefunden: ${mounts.length}`);
 		for (const [i, m] of mounts.entries()) {
-			assert.match(
-				m,
-				/onDayWindowChange=\{handleDayWindowChange\}/,
-				`Mount #${i + 1} uebergibt onDayWindowChange nicht`
-			);
-			// Regression: bestehende Rueckkanaele duerfen nicht verloren gehen.
-			assert.match(m, /onChannelsChange=\{handleChannelsChange\}/, `Mount #${i + 1} verliert onChannelsChange`);
-			assert.match(m, /onWeatherMetricsChange=\{handleWeatherMetricsChange\}/, `Mount #${i + 1} verliert onWeatherMetricsChange`);
+			assert.match(m, /onAnlegeStand=\{handleWetterAnlegeStand\}/, `Mount #${i + 1} uebergibt onAnlegeStand nicht`);
+		}
+		const rumpf = code.match(/function handleWetterAnlegeStand\([^)]*\)\s*\{([\s\S]*?)\n\t\}/)?.[1] ?? '';
+		assert.match(rumpf, /handleDayWindowChange\(\{ day_window_start_hour: rc\.day_window_start_hour, day_window_end_hour: rc\.day_window_end_hour \}\)/, 'handleWetterAnlegeStand schreibt das Tagesfenster nicht');
+		const panels = code.match(/<WetterMetrikenVersandPanel\b[^>]*\/>/g) ?? [];
+		for (const [i, m] of panels.entries()) {
+			assert.match(m, /onChannelsChange=\{handleChannelsChange\}/, `Panel #${i + 1} verliert onChannelsChange`);
+			assert.doesNotMatch(m, /onDayWindowChange=/, `Panel #${i + 1} meldet das Tagesfenster zusaetzlich (zwei Schreiber)`);
 		}
 	});
 

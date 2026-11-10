@@ -68,7 +68,7 @@ const AUSNAHMEN: Record<string, { n: number; grund: string }> = {
 	'lib/components/mobile/Drawer.svelte': { n: 1, grund: 'Scrim (gewollt fix, Spec Out of Scope)' },
 	'lib/components/mobile/Sheet.svelte': { n: 2, grund: 'Scrim + Schatten (gewollt fix)' },
 	'lib/components/compare/LocationNewModal.svelte': { n: 1, grund: 'Scrim (gewollt fix)' },
-	'lib/components/shared/weather-metrics-tab/SavePresetDialog.svelte': { n: 2, grund: 'Scrim + Schatten (gewollt fix)' },
+	'lib/components/shared/weather-metrics-tab/SavePresetDialog.svelte': { n: 1, grund: 'Scrim (gewollt fix); Schatten seit #2794 Teil 3 ueber --g-shadow-3' },
 	'lib/brand/BrandSidebar.svelte': { n: 3, grund: 'Tint 5 % hinter Kürzel-Chip; 2× Hell-Akzent-rgba (Brand-Vorlage, nur Design-Seiten)' },
 	// Staging-Messlauf 2026-11-10: Hell-Akzent-rgba-Bestand. Dunkel gerechnet bleibt Akzentschrift
 	// darauf >= 4,5:1 (Karte/Papier >= 5,0:1) bzw. es liegt keine Schrift darauf; Umstellung auf Tokens offen.

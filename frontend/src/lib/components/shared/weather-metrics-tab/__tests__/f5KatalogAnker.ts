@@ -31,22 +31,9 @@ export const F5_ANKER: [schluessel: string, de: string, en: string][] = [
 	['wertebereiche.preset.ueberschreiben_hinweis', 'Du hast ungespeicherte Änderungen. Das Preset überschreibt die aktuelle Auswahl.', 'You have unsaved changes. The preset overwrites the current selection.'],
 	['wertebereiche.preset.abbrechen', 'Abbrechen', 'Cancel'],
 	['wertebereiche.preset.ueberschreiben', 'Überschreiben', 'Overwrite'],
-	// Preset speichern (SavePresetDialog)
-	['wertebereiche.preset_dialog.eyebrow', 'EIGENES PRESET', 'CUSTOM PRESET'],
-	['wertebereiche.preset_dialog.titel', 'Auswahl als Preset speichern', 'Save selection as preset'],
-	['wertebereiche.preset_dialog.schliessen', 'Schließen', 'Close'],
-	['wertebereiche.preset_dialog.name', 'NAME', 'NAME'],
-	['wertebereiche.preset_dialog.name_platzhalter', 'Mein Wandern-Preset', 'My hiking preset'],
-	['wertebereiche.preset_dialog.beschreibung', 'BESCHREIBUNG · OPTIONAL', 'DESCRIPTION · OPTIONAL'],
-	['wertebereiche.preset_dialog.beschreibung_platzhalter', 'Optimiert für Tages-Trips', 'Optimised for day trips'],
-	['wertebereiche.preset_dialog.wird_gespeichert', 'WIRD GESPEICHERT', 'WILL BE SAVED'],
-	['wertebereiche.preset_dialog.zusammenfassung', '<aktiv> Metriken aktiv · <roh> Rohwert · <indikator> Indikator', 'Active metrics: <aktiv> · raw: <roh> · indicator: <indikator>'],
-	['wertebereiche.preset_dialog.spalten', '<spalten> Spalten · <detail> Detail · <skala> als Einfach', 'Columns: <spalten> · detail: <detail> · simple: <skala>'],
-	['wertebereiche.preset_dialog.zeithorizonte', 'ZEITHORIZONTE', 'TIME HORIZONS'],
-	['wertebereiche.preset_dialog.keine_metrik', 'Keine Metrik aktiv', 'No metric active'],
-	['wertebereiche.preset_dialog.standard', 'Als Standard für neue Trips', 'Default for new trips'],
-	['wertebereiche.preset_dialog.speichern', 'Preset speichern', 'Save preset'],
-	['wertebereiche.preset_dialog.name_vergeben', 'Ein Profil mit diesem Namen existiert bereits.', 'A profile with this name already exists.'],
+	// Preset speichern (SavePresetDialog): seit #2794 S3a Teil-PR 3 (AC-42) ueber den Katalog
+	// `wetter.dialog.*` (Anker dort: s3a2794_teil3_wetter_katalog); die Schluessel
+	// `wertebereiche.preset_dialog.*` sind mit Zeithorizonten und Zusammenfassung entfallen.
 	// 02 Grundauswahl (WeatherMetricsTab, WeatherV2Grundauswahl, CATEGORY_LABELS)
 	['wertebereiche.grundauswahl.titel', '02 — Grundauswahl', '02 — Basic selection'],
 	['wertebereiche.grundauswahl.frage', 'Welche Metriken ins Briefing?', 'Which metrics go into the briefing?'],

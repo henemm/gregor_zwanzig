@@ -107,11 +107,11 @@ describe('AC-37/AC-38: ampel ist die vollstaendige minimale Abweichungsmenge', (
 		const v = vorlagen['alpen-trekking'];
 		const r = m.zuruecksetzen('alpen-trekking', vorlagen);
 		let a = structuredClone(r.ampel);
-		a.metrics.gust.upper = { yellow: 35, orange: 50, red: 70 };
+		a.metrics.gust.upper = { yellow: 36, orange: 50, red: 70 };
 		a = m.alarmAbFuerAlle(a, ['uv_index'], 'red', eig);
 		a.thunder = { ...a.thunder, mittel: 'red' };
 		const menge = s.abweichungsMenge(v, a, r.auswahl);
-		assert.deepEqual(ohneOffene(menge).metrics.gust, { upper: { yellow: 35, orange: 50, red: 70 } });
+		assert.deepEqual(ohneOffene(menge).metrics.gust, { lower: {}, upper: { yellow: 36, orange: 50, red: 70 } });
 		assert.deepEqual(menge.metrics.uv_index, { alarm_ab: 'red' });
 		assert.deepEqual(menge.thunder, { mittel: 'red' });
 		assert.equal(m.zaehleAbweichungen(menge, vorlagen), 3, 'AC-11-Ausgang: 3 Abweichungen von Alpen-Trekking');
@@ -269,7 +269,7 @@ describe('AC-37/AC-38/AC-39: Vergleichs-Payload (active_metrics + ampel + Radar 
 	test('ac38_vergleich_ampel_ist_abweichungsmenge_und_konsistent', async () => {
 		const { p, menge, u } = await vergleichFall(VGL_DC, (a) => [...a.filter((x) => x !== 'gust'), 'dewpoint']);
 		assert.deepEqual(p.display_config.ampel, menge);
-		assert.deepEqual(ohneOffene(p.display_config.ampel).metrics.gust, { enabled: false, upper: { yellow: 35, orange: 50, red: 65 } }, 'bestehende Grenzen-Abweichung ging verloren');
+		assert.deepEqual(ohneOffene(p.display_config.ampel).metrics.gust, { enabled: false, lower: {}, upper: { yellow: 35, orange: 50, red: 65 } }, 'bestehende Grenzen-Abweichung ging verloren');
 		const aktiv = u.m.aktiveMetriken(u.m.verschmelzen(u.vorlagen.allgemein, p.display_config.ampel));
 		const liste = [...new Set((p.display_config.active_metrics as Json[]).map((x) => x.metric_id))];
 		assert.deepEqual(sortiert(aktiv), sortiert(liste), 'AC-37: Ampel-Auswahl und active_metrics laufen auseinander');

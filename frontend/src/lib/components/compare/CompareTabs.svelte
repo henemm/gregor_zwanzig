@@ -13,8 +13,8 @@
 
 	import { Dot, Pill, Btn, Card, SectionH } from '$lib/components/atoms';
 	import CompareLocationRow from '$lib/components/molecules/CompareLocationRow.svelte';
-	// Issue #1743: Wetter-Metriken und Versand in EINEM geteilten Baustein (Anker #versand).
-	import WetterMetrikenVersandPanel from '$lib/components/shared/WetterMetrikenVersandPanel.svelte';
+	// Issue #2794 S3a Teil-PR 3 (AC-38): Reiter Wetter = genau EIN WetterTab (Ampel).
+	import WetterTab from '$lib/components/shared/wetter-tab/WetterTab.svelte';
 	// Issue #2682: die Übersicht ist der geteilte Baustein (context="vergleich").
 	import HubUebersicht from '$lib/components/shared/hub-uebersicht/HubUebersicht.svelte';
 	// Issue #2880: EINE Reiterfläche (Rand 28/40/60) für Übersicht und Orte, wie im Trip.
@@ -33,17 +33,12 @@
 	// eingebetteter CorridorEditor im Idealwerte-Tab.
 	import SortableList from '$lib/components/shared/dnd/SortableList.svelte';
 	import DragHandle from '$lib/components/shared/dnd/DragHandle.svelte';
-	import CorridorEditor from '$lib/components/shared/corridor-editor/CorridorEditor.svelte';
-	// Issue #1256 Scheibe 8 (AC-22): mobile Spiegelung der Idealwerte-Inline-
-	// Edit-Parität, Muster TripTabs.svelte:198-202.
-	import CorridorEditorMobile from '$lib/components/shared/corridor-editor/CorridorEditorMobile.svelte';
 	// Issue #1258 Scheibe 5 (AC-19): geteilter Alarme-Organism (seit #2794 im Reiter Zustellung).
 	import AlarmeTab from '$lib/components/shared/AlarmeTab.svelte';
 	// Issue #2794 S3a: Uebergangsreiter Zustellung (Versand + AlarmeTab + Zustellungs-Bloecke).
 	import ZustellungTab from '$lib/components/shared/zustellung-tab/ZustellungTab.svelte';
 	// Issue #2276 S6c: EIN Buendel-Bauer fuer alle drei Vergleichs-Mounts.
 	import { alarmePropsAus } from './alarmePropsAus.ts';
-	import { corridorPropsAus } from './corridorPropsAus.ts';
 	import { versandPropsAus } from './versandPropsAus.ts';
 	import { wetterMetrikenPropsAus } from './wetterMetrikenPropsAus.ts';
 	// Issue #1311 (C1 von Epic #1301): geteilter Wetter-Metriken-Tab (Grundauswahl,
@@ -73,7 +68,7 @@
 	import ChannelToggle from '$lib/components/shared/ChannelToggle.svelte';
 	// Epic #1301 Scheibe F2a: Stundenverlauf-Steuerung als geteilte Komponente
 	// (Hub + Anlege-Seite /compare/new). Inline-Markup + Handler wanderten dorthin.
-	import { hydrateHubFieldsFromPreset, hydrateAlarmFieldsFromPreset } from './compareHubHydration.ts';
+	import { hydrateHubFieldsFromPreset, hydrateAlarmFieldsFromPreset, hydrateWetterAlarmFelder } from './compareHubHydration.ts';
 	import { buildComparePresetPartialPayload, compareFeldsatzStandard } from './compareEditorSave.ts';
 	import {
 		snapshotForRollback,
@@ -411,6 +406,16 @@
 	}
 	function uebernehmeHubAntwort(updated: ComparePreset): void {
 		currentPreset = updated;
+	}
+	// #2794 S3a Teil-PR 3: nach einem Speichern des Reiters Wetter den Feldsatz des Reiters
+	// Zustellung (Auswahl, amtliche Warnungen, Tagesfenster) aus der Antwort nachziehen —
+	// sonst schriebe dessen Metrik-Oberflaeche einen veralteten Stand zurueck.
+	function uebernehmeWetterAntwort(updated: ComparePreset): void {
+		uebernehmeHubAntwort(updated);
+		void hydrateWetterMetrikenTab();
+		// Fix-Loop 2 (F-A3): der Alarme-Speicherer sendet Warnungen/Radar aus `wizardState` mit —
+		// nach dem Speichern des Reiters Wetter muss er den neuen Stand haben.
+		if (alarmeHydrated) hydrateWetterAlarmFelder(wizardState, updated);
 	}
 
 	// Issue #1256 Scheibe 7 (AC-35/36): eingebetteter VersandTab (context="vergleich")
@@ -793,31 +798,17 @@
 
 	{#if activeTab === 'wetter'}
 		<div data-testid="compare-detail-panel-wetter">
-			<!-- Issue #2794 S3a §4: Metrik-Oberflaeche ohne Zustellungs-Bloecke (bereich
-			     "wetter"), darunter die Wertebereiche-Ansicht (bis Teil-PR 3). Gemountet erst,
-			     wenn beide Metrik-Domaenen hydriert sind (AC-3 #2276 S4). -->
+			<!-- Issue #2794 S3a Teil-PR 3 (AC-38): genau EIN WetterTab, der Reiter speichert
+			     selbst (Hub-Schreibschlange mit ETag). Gemountet erst nach der Layout-Hydration
+			     (F012, AC-3 #2276 S4), damit der Zustellungs-Feldsatz nie hinterherhinkt. -->
 			{#if wetterMetrikenLayoutHydrationBereit}
-				<WetterMetrikenVersandPanel
+				<WetterTab
 					context="vergleich"
-					bereich="wetter"
-					{...wetterMetrikenPropsAus(wizardState)}
 					preset={currentPreset}
 					{saveController}
 					enqueueHubWrite={reiheHubSchreibvorgangEin}
-					onCompareUpdate={uebernehmeHubAntwort}
+					onCompareUpdate={uebernehmeWetterAntwort}
 				/>
-			{/if}
-			{#if idealwerteHydrated}
-				<!-- Issue #1256 Scheibe 8 (AC-22): mobile Spiegelung, Muster TripTabs.svelte.
-				     Issue #2276 S3: der Reiter speichert selbst (saveController, Hub-Queue,
-				     Basis-Rueckmeldung) — kein Wrapper mehr. -->
-				{#if isMobileViewport}
-					<!-- Mobil: dieselbe Verdrahtung wie der Desktop-Zweig. -->
-					<CorridorEditorMobile context="vergleich" {...corridorPropsAus(wizardState)} preset={currentPreset} {saveController} enqueueHubWrite={reiheHubSchreibvorgangEin} onCompareUpdate={uebernehmeHubAntwort} />
-				{:else}
-					<!-- Desktop. -->
-					<CorridorEditor context="vergleich" {...corridorPropsAus(wizardState)} preset={currentPreset} {saveController} enqueueHubWrite={reiheHubSchreibvorgangEin} onCompareUpdate={uebernehmeHubAntwort} />
-				{/if}
 			{/if}
 		</div>
 	{/if}

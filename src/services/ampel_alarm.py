@@ -89,6 +89,22 @@ def _aktiv(feld: AmpelFeld, display_config, ergaenzen: bool, abgewaehlt: set) ->
     return is_alert_metric_active(feld.aktivierung, display_config)
 
 
+def alarmfaehige_felder(ampel: dict, display_config, ergaenzen: bool) -> list[tuple[AmpelFeld, int]]:
+    """Die Ampel-Felder, die die Engine prueft, mit ihrem „Alarm ab"-Rang:
+    ``alarm_ab`` != never in der aufgeloesten Ampel UND aktiv laut
+    ``display_config``. EINE Quelle fuer ``ampel_changes`` und das
+    Alarmquellen-Gate in ``trip_alert`` (Issue #2794 AC-29)."""
+    from services.alert_preset import explicitly_disabled_fields
+
+    abgewaehlt = explicitly_disabled_fields(display_config)
+    felder = []
+    for feld in AMPEL_FELDER:
+        ab = _ALARM_AB_RANG.get((ampel["metrics"].get(feld.catalog_id) or {}).get("alarm_ab"))
+        if ab is not None and _aktiv(feld, display_config, ergaenzen, abgewaehlt):
+            felder.append((feld, ab))
+    return felder
+
+
 def _ordinal(wert) -> float:
     from app.thunder_scale import thunder_ordinal
 
@@ -149,16 +165,9 @@ def _ereignis(feld, ampel, ab, alter_wert, neuer_wert, segment_id) -> Optional[W
 
 def ampel_changes(cached, fresh, config, alert_state: dict, ampel: dict) -> list[WeatherChange]:
     """Ampel-Ereignisse aller Punkte (Trip-Segmente bzw. Vergleichs-Orte)."""
-    from services.alert_preset import explicitly_disabled_fields
     from services.weather_change_detection import _peak_occurred_at
 
-    dc = config.display_config
-    abgewaehlt = explicitly_disabled_fields(dc)
-    felder = []
-    for feld in AMPEL_FELDER:
-        ab = _ALARM_AB_RANG.get((ampel["metrics"].get(feld.catalog_id) or {}).get("alarm_ab"))
-        if ab is not None and _aktiv(feld, dc, config.supplement_missing_levels, abgewaehlt):
-            felder.append((feld, ab))
+    felder = alarmfaehige_felder(ampel, config.display_config, config.supplement_missing_levels)
     fresh_by_id = {p.id: p for p in fresh}
     changes: list[WeatherChange] = []
     for alt in cached:

@@ -7,15 +7,11 @@
 	import HubUebersicht from '$lib/components/shared/hub-uebersicht/HubUebersicht.svelte';
 	// Issue #2880: EINE Reiterfläche (Rand 28/40/60) für Übersicht und Etappen, wie im Ortsvergleich.
 	import HubReiterflaeche from '$lib/components/shared/hub-reiterflaeche/HubReiterflaeche.svelte';
-	// Issue #1743: Wetter-Metriken und Versand in EINEM geteilten Baustein (Anker #versand).
-	import WetterMetrikenVersandPanel from '$lib/components/shared/WetterMetrikenVersandPanel.svelte';
 	// Issue #2794 S3a: Uebergangsreiter Zustellung (Versand, Alarme, Zustellungs-Bloecke).
 	import ZustellungTab from '$lib/components/shared/zustellung-tab/ZustellungTab.svelte';
-	// Issue #1231: CorridorEditor(Mobile) ersetzt AlertsTab auf Desktop + Mobile.
-	// Import von AlertsTab entfernt (Slice 5) — Datei bleibt vorerst bestehen
-	// (Aufraeumen inkl. AlertMetricLevelTable/-Row ist Slice-6-Thema, s. Spec).
-	import CorridorEditor from '$lib/components/shared/corridor-editor/CorridorEditor.svelte';
-	import CorridorEditorMobile from '$lib/components/shared/corridor-editor/CorridorEditorMobile.svelte';
+	// Issue #2794 S3a Teil-PR 3 (AC-38): Reiter Wetter = genau EIN WetterTab (Ampel), ersetzt
+	// Metrik-Oberflaeche + Wertebereiche-Ansicht (CorridorEditor) im Reiter wetter.
+	import WetterTab from '$lib/components/shared/wetter-tab/WetterTab.svelte';
 	import type { Trip, Stage } from '$lib/types';
 	import type { MetricCatalog } from './metricsEditor.ts';
 	import EditStagesSection from '../edit/EditStagesSection.svelte';
@@ -214,14 +210,8 @@
 						<EditStagesSection bind:stages={localStages} tripId={trip.id} showSave={true} {onTripUpdate} {saveController} activityType={activityType} />
 					{/if}
 				{:else if tab.value === 'wetter' && trip}
-					<!-- Issue #2794 S3a §4: Metrik-Oberflaeche ohne Zustellungs-Bloecke, darunter
-					     die Wertebereiche-Ansicht (bis Teil-PR 3). -->
-					<WetterMetrikenVersandPanel context="route" bereich="wetter" {trip} {onTripUpdate} {saveController} onJump={handleValueChange} />
-					{#if isMobileViewport}
-						<CorridorEditorMobile context="route" {trip} {onTripUpdate} {saveController} />
-					{:else}
-						<CorridorEditor {trip} {onTripUpdate} {saveController} />
-					{/if}
+					<!-- Issue #2794 S3a Teil-PR 3: genau ein Speicherer im Reiter (AC-38). -->
+					<WetterTab context="route" {trip} {onTripUpdate} {saveController} />
 				{:else if tab.value === 'zustellung' && trip}
 					<ZustellungTab context="route" {trip} {onTripUpdate} {saveController} onJump={handleValueChange} {versandSprung} {metricsCatalog} />
 				{:else}

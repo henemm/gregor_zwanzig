@@ -212,9 +212,32 @@ const FLAECHEN: Array<[string, string, string]> = [
 /** Die Hubs haben einen festen Kontext — dort ist nur der statische Literalwert zulaessig. */
 const FESTER_KONTEXT = new Set(['Trip-Hub', 'Ortsvergleich-Hub']);
 
+// #2794 S3a Teil-PR 3: in den Hubs steht der Baustein nur noch im Reiter Zustellung, eingebettet
+// ueber die Huelle ZustellungTab (der Reiter Wetter ist der WetterTab). Zusicherung uebertragen:
+// der Hub mountet die Huelle mit statischem context, die Huelle reicht genau diesen context an
+// DENSELBEN geteilten Baustein weiter.
+const ZUSTELLUNG_HUELLE = join(SHARED, 'zustellung-tab/ZustellungTab.svelte');
+const UEBER_HUELLE = new Set(['Trip-Hub', 'Ortsvergleich-Hub']);
+
+function pruefeHuelle(flaeche: string, datei: string, ctx: string): void {
+	const a = ast(datei);
+	const quelle = readFileSync(datei, 'utf-8');
+	const m = mounts(a.fragment, 'ZustellungTab');
+	assert.equal(m.length, 1, `${flaeche} bettet die Huelle ZustellungTab nicht genau einmal ein`);
+	assert.equal(contextWert(m[0], quelle), ctx, `${flaeche}: context der Huelle muss statisch "${ctx}" sein`);
+	const h = ast(ZUSTELLUNG_HUELLE);
+	const hq = readFileSync(ZUSTELLUNG_HUELLE, 'utf-8');
+	const q = importQuelle(h, 'WetterMetrikenVersandPanel');
+	assert.ok(q && resolve(dirname(ZUSTELLUNG_HUELLE), q) === PANEL, `ZustellungTab importiert nicht den geteilten Baustein: ${q}`);
+	const pm = mounts(h.fragment, 'WetterMetrikenVersandPanel');
+	assert.equal(pm.length, 1, 'ZustellungTab bettet den Baustein nicht genau einmal ein');
+	assert.equal(contextWert(pm[0], hq), 'context', 'ZustellungTab reicht den context nicht durch');
+}
+
 describe('#1743 AC-8 (Einsatz): Trip-Hub, Vergleichs-Hub und beide Anlege-Seiten mounten DENSELBEN Baustein', () => {
 	for (const [flaeche, datei, ctx] of FLAECHEN) {
 		test(`${flaeche}: WetterMetrikenVersandPanel aus shared/, context=${ctx}`, () => {
+			if (UEBER_HUELLE.has(flaeche)) return pruefeHuelle(flaeche, datei, ctx);
 			const a = ast(datei);
 			const quelle = readFileSync(datei, 'utf-8');
 			const q = importQuelle(a, 'WetterMetrikenVersandPanel');

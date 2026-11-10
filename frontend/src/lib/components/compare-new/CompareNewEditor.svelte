@@ -58,6 +58,12 @@
 	import Step2Orte from '$lib/components/compare/steps/Step2Orte.svelte';
 	import { groupLocations } from '$lib/components/compare/locationHelpers';
 	import WetterMetrikenVersandPanel from '$lib/components/shared/WetterMetrikenVersandPanel.svelte';
+	// Issue #2794 S3a Teil-PR 3 (AC-38): Schritt Wetter = WetterTab (createMode, kein PUT).
+	import WetterTab from '$lib/components/shared/wetter-tab/WetterTab.svelte';
+	import type { vergleichNutzlast } from '$lib/components/shared/wetter-tab/wetterTabSpeicherung';
+	import { toStoredActiveMetrics } from '$lib/components/shared/weather-metrics-tab/compareMetricSelection';
+	import type { Ampel } from '$lib/types';
+	type WetterAnlegeNutzlast = ReturnType<typeof vergleichNutzlast>;
 	import { anlegeKette } from '$lib/components/shared/subscriptionTabs';
 	import CorridorEditor from '$lib/components/shared/corridor-editor/CorridorEditor.svelte';
 	import CorridorEditorMobile from '$lib/components/shared/corridor-editor/CorridorEditorMobile.svelte';
@@ -158,6 +164,48 @@
 	onMount(() => {
 		void hydrateAlarmeTab();
 	});
+
+	// ── Reiter Wetter im Anlegen (Issue #2794 S3a Teil-PR 3, AC-38) ─────────────
+	// Der WetterTab liest den Feldsatz einmal als Abo-Sicht und meldet seinen Stand
+	// (dieselbe Nutzlast wie der Hub-PUT) zurueck in den Feldsatz; die Ampel reist im POST.
+	let wetterAmpel = $state<Ampel | undefined>(undefined);
+	// Fix-Loop F001: Ampel und Auswahl (Speicherformat {metric_id, aggregation}) des letzten
+	// Stand-Berichts gehoeren zur Abo-Sicht — der WetterTab wird beim Schrittwechsel zerstoert und
+	// liest sie beim Zurueckkehren (sonst Profil-Standard; die Rueckabbildung ueber die Vergleichs-
+	// Schluessel verliert Metriken ausserhalb des Vergleichs-Katalogs).
+	let wetterAuswahl = $state<WetterAnlegeNutzlast['display_config']['active_metrics'] | undefined>(undefined);
+	const wetterAbo = $derived({
+		profil: wiz.activityProfile,
+		display_config: {
+			...(wetterAuswahl
+				? { active_metrics: wetterAuswahl }
+				: wiz.activeMetricKeys
+					? { active_metrics: toStoredActiveMetrics(wiz.activeMetricKeys, alarmeCatalog) }
+					: {}),
+			...(wetterAmpel ? { ampel: wetterAmpel } : {})
+		},
+		official_alerts_enabled: wiz.officialAlertsEnabled,
+		official_warnings: { enabled: wiz.officialWarningsEnabled },
+		radar_alert_enabled: wiz.radarAlertEnabled,
+		day_window_start_hour: wiz.dayWindowStartHour,
+		day_window_end_hour: wiz.dayWindowEndHour
+	});
+	function auswahlSchluessel(m: { metric_id: string; aggregation?: string }, k: CompareSelectionEntry[]): string {
+		const genau = k.find((e) => e.metric_id === m.metric_id && e.aggregation === m.aggregation);
+		return (genau ?? k.find((e) => e.metric_id === m.metric_id))?.metric ?? m.metric_id;
+	}
+	async function handleWetterAnlegeStand(n: unknown): Promise<void> {
+		const s = n as WetterAnlegeNutzlast;
+		const k = await loadCompareSelectionEntries().catch(() => []);
+		wiz.activeMetricKeys = s.display_config.active_metrics.map((m) => auswahlSchluessel(m, k));
+		wetterAuswahl = s.display_config.active_metrics;
+		wetterAmpel = s.display_config.ampel;
+		wiz.officialAlertsEnabled = s.official_alerts_enabled;
+		wiz.officialWarningsEnabled = s.official_alerts_enabled;
+		wiz.radarAlertEnabled = s.radar_alert_enabled;
+		wiz.dayWindowStartHour = s.day_window_start_hour;
+		wiz.dayWindowEndHour = s.day_window_end_hour;
+	}
 
 	// #2521 S3: Vergleichs-Katalog (GET /api/compare/metrics, geteilter
 	// Promise-Cache) ist Voraussetzung fuer „Mit Standardwerten speichern";
@@ -337,6 +385,14 @@
 			alertMetricChannels: wiz.alertMetricChannels, // Issue #1895 S3b1
 			telegramStyle: wiz.telegramStyle // Issue #1260 S5
 		});
+		// #2794 S3a Teil-PR 3: Abo-Ampel und Auswahl aus dem Reiter Wetter in display_config
+		// (additiv; AC-37: active_metrics im Speicherformat, konsistent mit der Ampel).
+		if (wetterAmpel)
+			payload.display_config = {
+				...((payload.display_config as object) ?? {}),
+				ampel: wetterAmpel,
+				...(wetterAuswahl ? { active_metrics: wetterAuswahl } : {})
+			};
 		try {
 			const created = await api.post<{ id: string }>('/api/compare/presets', payload);
 			await goto('/compare/' + created.id);
@@ -527,12 +583,14 @@
 		</div>
 	{:else if activeTab === 'wetter'}
 		{#if !isMobileViewport}
-			<!-- Issue #1743: geteilter Baustein „Wetter-Metriken + Versand"; ohne
-			     preset/saveController/enqueueHubWrite — gespeichert wird erst per
-			     „Briefing aktivieren" (ein POST). Issue #2794 S3a: Schritt Wetter =
-			     Metrik-Auswahl (bereich "wetter") plus Wertebereiche darunter. -->
-			<WetterMetrikenVersandPanel context="vergleich" bereich="wetter" {...wetterMetrikenPropsAus(wiz)} showInfobox={true} />
-			<CorridorEditor context="vergleich" {...corridorPropsAus(wiz)} showInfobox={true} />
+			<!-- Issue #2794 S3a Teil-PR 3 (AC-38): Schritt Wetter = WetterTab (createMode, ohne
+			     PUT — gespeichert wird erst per „Briefing aktivieren", ein POST). Der
+			     CorridorEditor bleibt unsichtbar gemountet: seine Wertebereiche-Vorbelegung
+			     (wiz.corridors/idealRanges) laeuft unveraendert aus der Auswahl. -->
+			<WetterTab context="vergleich" preset={wetterAbo} createMode={true} onAnlegeStand={handleWetterAnlegeStand} />
+			<div style:display="none" aria-hidden="true">
+				<CorridorEditor context="vergleich" {...corridorPropsAus(wiz)} showInfobox={true} />
+			</div>
 		{/if}
 		<div class="ce-cta-foot" style:max-width="1100px">
 			<div class="ce-cta-row">
@@ -605,8 +663,10 @@
 			<Step2Orte bind:pickedIds={wiz.pickedIds} {locations} groups={ceGroups} dense onOpenLibrary={() => { mobileLibraryOpen = true; }} />
 		{:else if activeTab === 'wetter'}
 			{#if isMobileViewport}
-				<WetterMetrikenVersandPanel context="vergleich" bereich="wetter" {...wetterMetrikenPropsAus(wiz)} showInfobox={true} />
-				<CorridorEditorMobile context="vergleich" {...corridorPropsAus(wiz)} showInfobox={true} />
+				<WetterTab context="vergleich" preset={wetterAbo} createMode={true} onAnlegeStand={handleWetterAnlegeStand} />
+				<div style:display="none" aria-hidden="true">
+					<CorridorEditorMobile context="vergleich" {...corridorPropsAus(wiz)} showInfobox={true} />
+				</div>
 			{/if}
 		{:else if activeTab === 'zustellung'}
 			{#if isMobileViewport}

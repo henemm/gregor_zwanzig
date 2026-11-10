@@ -138,23 +138,17 @@ describe('AC-22 — mobiler Hub: geteilte CompareTabs mit 4-Stat-2×2 statt Besp
 		);
 	});
 
-	test('Idealwerte-Tab schaltet mobil auf CorridorEditorMobile (Muster TripTabs.svelte:198-202)', () => {
+	// #2794 S3a Teil-PR 3 (AC-38): die Grenzen traegt im Reiter Wetter EIN WetterTab fuer Desktop UND
+	// mobil (dieselbe Komponente wie im Trip-Hub). Zusicherung „mobile Inline-Edit-Paritaet" uebertragen:
+	// der WetterTab haengt an KEINER isMobileViewport-Weiche (sonst fehlten die Grenzen auf einem
+	// Geraetetyp), die Alt-Ansicht ist im Hub nicht mehr gemountet.
+	test('Reiter Wetter: ein WetterTab fuer Desktop und mobil, keine Alt-Wertebereiche', () => {
 		const src = readFileSync(TABS, 'utf-8');
-		assert.match(
-			src,
-			/CorridorEditorMobile/,
-			'CompareTabs.svelte importiert CorridorEditorMobile nicht — mobile ' +
-				'Inline-Edit-Parität (S6-Spiegelung) fehlt'
-		);
-		const mobileUse = src.indexOf('<CorridorEditorMobile');
-		assert.ok(mobileUse > -1, 'CorridorEditorMobile wird nicht gerendert');
-		const before = src.slice(Math.max(0, mobileUse - 400), mobileUse);
-		assert.match(
-			before,
-			/\{#if\s+isMobileViewport\}/,
-			'CorridorEditorMobile hängt nicht an der isMobileViewport-Weiche — ' +
-				'Desktop muss weiterhin den vollen CorridorEditor rendern'
-		);
+		const uses = [...src.matchAll(/<WetterTab\b/g)];
+		assert.equal(uses.length, 1, `CompareTabs.svelte rendert ${uses.length} WetterTab statt 1`);
+		const before = src.slice(Math.max(0, uses[0].index! - 600), uses[0].index!);
+		assert.doesNotMatch(before, /\{#if\s+!?isMobileViewport\}/, 'WetterTab haengt an der isMobileViewport-Weiche');
+		assert.doesNotMatch(src, /<CorridorEditor(Mobile)?\b/, 'CompareTabs.svelte mountet noch die Alt-Wertebereiche');
 	});
 });
 

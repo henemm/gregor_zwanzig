@@ -170,8 +170,14 @@ describe('AC-2.T3: CompareTabs hydriert die Bausteine des geöffneten Reiters', 
 		const { u, fehler } = await hydrationNach('wetter');
 		assert.equal(u.activeTab, 'wetter', `Vorbedingung: Reiter wetter offen (aktiv: ${String(u.activeTab)})`);
 		assert.equal(u.wetterMetrikenHydrated, true, `Metrik-Auswahl im Reiter wetter nicht hydriert; ${JSON.stringify(fehler)}`);
-		assert.equal(u.layoutHydrated, true, 'Layout-Hydration (Gate der WMT-Montage) im Reiter wetter nicht gelaufen');
-		assert.equal(u.idealwerteHydrated, true, 'nur lesende Wertebereiche-Ansicht unter Wetter zeigt keine gespeicherten Werte');
+		assert.equal(u.layoutHydrated, true, 'Layout-Hydration (Gate der WetterTab-Montage, F012) im Reiter wetter nicht gelaufen');
+		// Teil-PR 3: der WetterTab mountet erst, wenn dieses Gate offen ist (AC-38/F012) — das Gate
+		// selbst muss nach dem Oeffnen des Reiters wetter offen sein, sonst bliebe der Reiter leer.
+		// (Der Pruefstand rechnet $derived nicht nach — das Gate wird mit der echten Gate-Funktion
+		// des Hubs aus den hydrierten Flags bestimmt.)
+		const gate = (u.wetterMetrikenHydrationAbgeschlossen as (f: object) => boolean)({ wetterMetrikenHydrated: u.wetterMetrikenHydrated, layoutHydrated: u.layoutHydrated });
+		assert.equal(gate, true, 'Gate wetterMetrikenLayoutHydrationBereit nach Hydration im Reiter wetter zu (WetterTab erschiene nie)');
+		assert.equal(u.idealwerteHydrated, true, 'Wertebereiche-Feldsatz unter Wetter nicht hydriert');
 	});
 
 	test('s3a2794_t3_hydration_zustellung_versand_alarme_und_wmt', async () => {

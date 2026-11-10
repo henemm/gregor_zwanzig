@@ -342,15 +342,12 @@ export function wetterMetrikenSnapshotAus(zustand: WetterMetrikenZustand): Wette
 // Issue #2375: Feld-Besitz des Wetter-Metriken-Reiters (Spec
 // compare_konfliktschutz_teilfelder.md §2) — inklusive `official_alerts_enabled`
 // (Bedienelement sitzt hier, nicht im Alarme-Reiter).
-const WETTER_TOP = [
-	'official_alerts_enabled',
-	'day_window_start_hour',
-	'day_window_end_hour',
-	'hourly_enabled',
-	'outlook_enabled'
-] as const;
+// Issue #2794 S3a Teil-PR 3 (AC-38, Fix-Loop F006): der Reiter ist nur noch Zustellung —
+// die Felder des Reiters Wetter (`active_metrics`, `ampel`, `official_alerts_enabled`,
+// `official_warnings`, `radar_alert_enabled`, `day_window_*`) schreibt allein der
+// WetterTab-Speicherer; hier stehen sie weder im Rumpf noch im Aenderungs-Vergleich.
+const WETTER_TOP = ['hourly_enabled', 'outlook_enabled'] as const;
 const WETTER_DISPLAY = [
-	'active_metrics',
 	'channel_active_metrics',
 	'hourly_metrics',
 	'outlook_metrics',
@@ -395,6 +392,23 @@ export function baueWetterMetrikenNutzlast(
 	return waehleEigenfelder(voll, WETTER_TOP, WETTER_DISPLAY);
 }
 
+/** Die Felder, die dieser Speicherer besitzt, normiert fuer den Vergleich. #2794 F006: Felder
+ *  des Reiters Wetter zaehlen hier nicht als Aenderung (AC-38). */
+function zustellungsStand(s: WetterMetrikenLayoutSnapshot) {
+	return {
+		channelActiveMetricKeys: [
+			s.channelActiveMetricKeys?.email ?? null,
+			s.channelActiveMetricKeys?.telegram ?? null,
+			s.channelActiveMetricKeys?.sms ?? null
+		],
+		hourlyMetricKeys: s.hourlyMetricKeys === null ? null : [...s.hourlyMetricKeys],
+		hourlyEnabled: s.hourlyEnabled,
+		outlookMetricKeys: s.outlookMetricKeys == null ? null : [...s.outlookMetricKeys],
+		outlookMetricFormats: s.outlookMetricFormats == null ? null : { ...s.outlookMetricFormats },
+		outlookEnabled: s.outlookEnabled
+	};
+}
+
 /**
  * Liefert `null`, wenn sich der kombinierte Snapshot seit dem letzten
  * gespeicherten Stand NICHT veraendert hat (kein unnoetiger PUT), sonst die
@@ -409,23 +423,7 @@ export function flushPendingWetterMetrikenSave(
 	before: WetterMetrikenLayoutSnapshot | null
 ): { url: string; body: ComparePreset } | null {
 	const baseline = before ?? current;
-	const norm = (s: WetterMetrikenLayoutSnapshot) => ({
-		activeMetricKeys: [...s.activeMetricKeys],
-		channelActiveMetricKeys: [
-			s.channelActiveMetricKeys?.email ?? null,
-			s.channelActiveMetricKeys?.telegram ?? null,
-			s.channelActiveMetricKeys?.sms ?? null
-		],
-		officialAlertsEnabled: s.officialAlertsEnabled,
-		dayWindowStartHour: s.dayWindowStartHour,
-		dayWindowEndHour: s.dayWindowEndHour,
-		hourlyMetricKeys: s.hourlyMetricKeys === null ? null : [...s.hourlyMetricKeys],
-		hourlyEnabled: s.hourlyEnabled,
-		outlookMetricKeys: s.outlookMetricKeys == null ? null : [...s.outlookMetricKeys],
-		outlookMetricFormats: s.outlookMetricFormats == null ? null : { ...s.outlookMetricFormats },
-		outlookEnabled: s.outlookEnabled
-	});
-	if (JSON.stringify(norm(current)) === JSON.stringify(norm(baseline))) return null;
+	if (JSON.stringify(zustellungsStand(current)) === JSON.stringify(zustellungsStand(baseline))) return null;
 	return baueWetterMetrikenNutzlast(preset, current);
 }
 
@@ -441,12 +439,9 @@ export function rollbackWetterMetrikenSnapshot(
 ): void {
 	const target = felder(zustand);
 	const aktuell = wetterMetrikenSnapshotAus(zustand);
+	// #2794 F006: nur die Felder, die dieser Speicherer sendet (Wetter-Felder gehoeren dem WetterTab).
 	const felderListe = [
-		'activeMetricKeys',
 		'channelActiveMetricKeys',
-		'officialAlertsEnabled',
-		'dayWindowStartHour',
-		'dayWindowEndHour',
 		'hourlyMetricKeys',
 		'hourlyEnabled',
 		'outlookMetricKeys',
@@ -521,7 +516,7 @@ export function erstelleWetterMetrikenVergleichSpeicherung(
 	return {
 		aenderungMelden(): void {
 			const current = wetterMetrikenSnapshotAus(zustand);
-			if (JSON.stringify(current) === JSON.stringify(zuletztGespeichert)) {
+			if (JSON.stringify(zustellungsStand(current)) === JSON.stringify(zustellungsStand(zuletztGespeichert))) {
 				if (eigenerVorgangAussteht) {
 					eigenerVorgangAussteht = false;
 					saveController.cancel('wetter-metriken');

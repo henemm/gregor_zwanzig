@@ -18,6 +18,10 @@
 	import AnlegeReiter, { type AnlegeReiterSchritt } from '$lib/components/shared/anlege-rahmen/AnlegeReiter.svelte';
 	import Field from '$lib/components/molecules/Field.svelte';
 	import WetterMetrikenVersandPanel from '$lib/components/shared/WetterMetrikenVersandPanel.svelte';
+	// Issue #2794 S3a Teil-PR 3 (AC-38): Schritt Wetter = WetterTab (createMode, kein PUT).
+	import WetterTab from '$lib/components/shared/wetter-tab/WetterTab.svelte';
+	import type { tripSpeicherPayload } from '$lib/components/shared/wetter-tab/ampelSchreiben';
+	type WetterAnlegeNutzlast = ReturnType<typeof tripSpeicherPayload>;
 	import { anlegeKette } from '$lib/components/shared/subscriptionTabs';
 	import MailInhaltCard from '$lib/components/shared/MailInhaltCard.svelte';
 	import EditStagesPanelNew from '$lib/components/edit/EditStagesPanelNew.svelte';
@@ -34,7 +38,7 @@
 	import Toast from '$lib/components/mobile/Toast.svelte';
 	import Select from '$lib/components/ui/select/Select.svelte';
 	import * as Dialog from '$lib/components/ui/dialog/index.js';
-	import type { Trip, ReportConfig, WeatherConfigMetric, Stage, Waypoint, ActivityType, AlertMetric, SensLevel, Corridor, AlertMetricChannelEntry } from '$lib/types';
+	import type { Trip, ReportConfig, WeatherConfigMetric, Stage, Waypoint, ActivityType, AlertMetric, SensLevel, Corridor, AlertMetricChannelEntry, Ampel } from '$lib/types';
 	import {
 		type TabId,
 		type CreateTripState,
@@ -453,6 +457,37 @@
 		reportConfig = { ...(reportConfig ?? {}), ...w };
 	}
 
+	// ── Stand aus dem Reiter Wetter (Issue #2794 S3a Teil-PR 3, AC-38) ──────────
+	// EIN Rueckkanal fuer Auswahl, Ampel, amtliche Warnungen und Tagesfenster; dieselbe
+	// Nutzlast wie der Trip-PUT (weatherConfig + tripFelder), hier in den Anlege-Zustand.
+	let wetterAmpel = $state<Ampel | undefined>(undefined);
+	// Noch keine Auswahl gemeldet ⇒ ohne `metrics`, damit der Reiter die Vorlage („Allgemein")
+	// als Startauswahl nimmt statt einer leeren Liste.
+	// Fix-Loop F001 (Neuaufbau beim Wechsel Desktop/Mobil): die zuletzt gemeldete Ampel gehoert
+	// zur Abo-Sicht, sonst liest der neue WetterTab den Profil-Standard und meldet ihn zurueck.
+	// Fix-Loop 2 (F-A1, AC-20): der gemeldete Warnungen-Schalter (undefined bis zum ersten Bericht)
+	// steht in der Abo-Sicht und im POST in BEIDEN Feldern.
+	let wetterWarnungenAn = $state<boolean | undefined>(undefined);
+	const wetterAnlegeTrip = $derived<Trip>({
+		...stubTrip,
+		...(wetterWarnungenAn !== undefined
+			? { official_alerts_enabled: wetterWarnungenAn, official_warnings: { enabled: wetterWarnungenAn } }
+			: {}),
+		display_config: {
+			...(weatherMetrics.length > 0 ? stubTrip.display_config : { channels }),
+			...(wetterAmpel ? { ampel: wetterAmpel } : {})
+		} as unknown as Trip['display_config']
+	});
+	function handleWetterAnlegeStand(n: unknown) {
+		const { weatherConfig, tripFelder } = n as WetterAnlegeNutzlast;
+		handleWeatherMetricsChange(weatherConfig.metrics);
+		wetterAmpel = weatherConfig.ampel;
+		wetterWarnungenAn = tripFelder.official_alerts_enabled;
+		if (alarm.officialWarningsEnabled !== tripFelder.official_alerts_enabled) handleAlarmOfficialWarningsChange(tripFelder.official_alerts_enabled);
+		const rc = tripFelder.report_config;
+		handleDayWindowChange({ day_window_start_hour: rc.day_window_start_hour, day_window_end_hour: rc.day_window_end_hour });
+	}
+
 	// ── Wertebereiche-Rueckruf aus CorridorEditor (Issue #2277 S2a) ───────────
 	// Muster handleChannelsChange: reine Uebernahme, kein Inhaltsgleichheits-
 	// Guard noetig (corridors fliesst nicht in stubTrip zurueck).
@@ -494,6 +529,8 @@
 				alarm,
 				corridors,
 				activity: selectedActivity,
+				ampel: wetterAmpel,
+				officialAlertsEnabled: wetterWarnungenAn,
 			};
 			const payload = buildCreateTripPayload(state);
 			const created = await api.post<Trip>('/api/trips', payload);
@@ -853,31 +890,32 @@
 		     ueberschrieben sich gegenseitig unbegrenzt. catalogLoaded-Gate und
 		     Inhaltsgleichheitspruefung (Fix-Loop 2/3) bleiben als Zusatzschutz
 		     bestehen (Resize-Grenzfall: Tab kann kurzzeitig neu mounten). -->
-		<!-- Issue #2794 S3a §5: EINE dauerhafte WMT-Instanz fuer die Schritte Wetter UND
-		     Zustellung; ihr `bereich` folgt dem aktiven Schritt (nie zwei Instanzen, AC-2.T2). -->
+		<!-- Issue #2794 S3a Teil-PR 3 (AC-38): die dauerhafte WMT-Instanz traegt nur noch den
+		     Bereich Zustellung (sichtbar nur dort); Auswahl, Ampel, Warnungen und Tagesfenster
+		     meldet allein der WetterTab (handleWetterAnlegeStand) — genau ein Rueckkanal. -->
 		{#if !isMobileViewport}
-		<div style:display={activeTab === 'wetter' || activeTab === 'zustellung' ? '' : 'none'}>
+		<div style:display={activeTab === 'zustellung' ? '' : 'none'}>
 			<!-- Issue #1743: geteilter Baustein „Wetter-Metriken + Versand" (createMode,
 			     kein PUT). Der Versand-Abschnitt haelt den report_config-Blob per
-			     bind:reportConfig; die Mail-Inhalt-Karte folgt darunter (im createMode
-			     blendet WeatherMetricsTab sie aus) — beides im Schritt Zustellung. Ausserhalb
-			     des Schritts Wetter steht `bereich` auf Zustellung: der (verborgene)
-			     Versand-Abschnitt schreibt seine Standardwerte wie bisher ab dem Start. -->
-			<WetterMetrikenVersandPanel context="route" bereich={activeTab === 'wetter' ? 'wetter' : 'zustellung'} trip={stubTrip} createMode={true} showInfobox={true} onChannelsChange={handleChannelsChange} onWeatherMetricsChange={handleWeatherMetricsChange} onDayWindowChange={handleDayWindowChange} bind:reportConfig onJump={onVersandJump} />
-			<div style:display={activeTab === 'zustellung' ? '' : 'none'} style="padding: 0 40px; max-width: 720px;">
+			     bind:reportConfig und schreibt seine Standardwerte wie bisher ab dem Start;
+			     die Mail-Inhalt-Karte folgt darunter. -->
+			<WetterMetrikenVersandPanel context="route" bereich="zustellung" trip={stubTrip} createMode={true} showInfobox={true} onChannelsChange={handleChannelsChange} bind:reportConfig onJump={onVersandJump} />
+			<div style="padding: 0 40px; max-width: 720px;">
 				<MailInhaltCard bind:reportConfig />
 			</div>
 		</div>
 		{/if}
 
-		<!-- Issue #2277 S2a — geteilter CorridorEditor (createMode, kein PUT),
-		     Muster WeatherMetricsTab/AlarmeTab: EINE dauerhafte Instanz (Desktop
-		     XOR Mobile), Sichtbarkeit ueber style:display. Issue #2794 S3a: kein eigener
-		     Schritt mehr — er haengt im Schritt Wetter unter der Metrik-Auswahl und bleibt
-		     dauerhaft gemountet, damit die Vorbelegung (corridors) wie bisher laeuft. -->
+		<!-- Issue #2277 S2a — geteilter CorridorEditor (createMode, kein PUT), EINE dauerhafte
+		     Instanz (Desktop XOR Mobile). Issue #2794 S3a Teil-PR 3: unsichtbar, aber weiter
+		     gemountet — seine Wertebereiche-Vorbelegung (corridors, handleVorbelegungFertig)
+		     laeuft unveraendert aus der vom WetterTab gemeldeten Auswahl (stubTrip). -->
 		{#if !isMobileViewport}
-		<div style:display={activeTab === 'wetter' ? '' : 'none'}>
+		<div style:display="none" aria-hidden="true">
 			<CorridorEditor context="route" trip={stubTrip} createMode={true} showInfobox={true} {corridors} onCorridorsChange={handleCorridorsChange} onVorbelegungFertig={handleVorbelegungFertig} />
+		</div>
+		<div style:display={activeTab === 'wetter' ? '' : 'none'}>
+			<WetterTab context="route" trip={wetterAnlegeTrip} createMode={true} onAnlegeStand={handleWetterAnlegeStand} />
 			<!-- #2347 S4 (AC-20): Weiter-Fuß wie compare-editor-continue-zustellung im Vergleich. -->
 			<div style="padding: 0 40px 60px; display: flex; justify-content: flex-end;">
 				<Btn data-testid="trip-new-continue-zustellung" variant="accent" size="md" onclick={makeEtappenContinueHandler('zustellung')}>{$t('trip.anlegen.zustellung_einrichten')}</Btn>
@@ -1123,21 +1161,25 @@
 			     display ausgeblendet). Fix-Loop 4 (s. Desktop-Mount oben): per
 			     isMobileViewport-Gate nur EINE Instanz im DOM (Desktop XOR Mobile). -->
 			{#if isMobileViewport}
-			<div style:display={activeTab === 'wetter' || activeTab === 'zustellung' ? '' : 'none'}>
+			<div style:display={activeTab === 'zustellung' ? '' : 'none'}>
 				<!-- Issue #1743: geteilter Baustein, XOR zum Desktop-Mount oben.
-				     Issue #2794 S3a: EINE Instanz fuer Wetter und Zustellung (s. Desktop). -->
-				<WetterMetrikenVersandPanel context="route" bereich={activeTab === 'wetter' ? 'wetter' : 'zustellung'} trip={stubTrip} createMode={true} showInfobox={true} onChannelsChange={handleChannelsChange} onWeatherMetricsChange={handleWeatherMetricsChange} onDayWindowChange={handleDayWindowChange} bind:reportConfig onJump={onVersandJump} />
-				<div style:display={activeTab === 'zustellung' ? '' : 'none'} style="padding: 0 16px;">
+				     Issue #2794 S3a Teil-PR 3: nur Bereich Zustellung (s. Desktop). -->
+				<WetterMetrikenVersandPanel context="route" bereich="zustellung" trip={stubTrip} createMode={true} showInfobox={true} onChannelsChange={handleChannelsChange} bind:reportConfig onJump={onVersandJump} />
+				<div style="padding: 0 16px;">
 					<MailInhaltCard bind:reportConfig />
 				</div>
 			</div>
 			{/if}
 
 			<!-- Issue #2277 S2a — Mobile CorridorEditor, XOR zum Desktop-Mount oben.
-			     Issue #2794 S3a: im Schritt Wetter, dauerhaft gemountet. -->
+			     Issue #2794 S3a Teil-PR 3: unsichtbar dauerhaft gemountet (Vorbelegung, s. Desktop);
+			     im Schritt Wetter steht der WetterTab. -->
 			{#if isMobileViewport}
-			<div style:display={activeTab === 'wetter' ? '' : 'none'}>
+			<div style:display="none" aria-hidden="true">
 				<CorridorEditor context="route" trip={stubTrip} createMode={true} showInfobox={true} {corridors} onCorridorsChange={handleCorridorsChange} onVorbelegungFertig={handleVorbelegungFertig} />
+			</div>
+			<div style:display={activeTab === 'wetter' ? '' : 'none'}>
+				<WetterTab context="route" trip={wetterAnlegeTrip} createMode={true} onAnlegeStand={handleWetterAnlegeStand} />
 			</div>
 			{/if}
 

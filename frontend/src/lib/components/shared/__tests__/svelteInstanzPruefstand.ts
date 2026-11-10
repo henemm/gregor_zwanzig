@@ -56,7 +56,12 @@ export function ohneTypen(quelle: string, knoten: Knoten): string {
 			k.expression &&
 			k.typeAnnotation
 		) {
-			loecher.push([k.expression.end, k.typeAnnotation.end]);
+			// Issue #2794 Teil 3 (Fix-Loop 1): ab dem Schluesselwort, nicht ab dem Ende des
+			// Ausdrucks — bei `(a ?? b) as T` liegt die schliessende Klammer dazwischen und
+			// wuerde sonst mit ausgeblendet (Syntaxfehler, Bindung fehlte still).
+			const kw = k.type === 'TSAsExpression' ? 'as' : 'satisfies';
+			const ab = Math.max(k.expression.end, quelle.lastIndexOf(kw, k.typeAnnotation.start));
+			loecher.push([ab, k.typeAnnotation.end]);
 		}
 		if (k.type === 'TSNonNullExpression' && k.expression) loecher.push([k.expression.end, k.end]);
 		// Optionaler Parameter `name?: T`: die Typannotation ist ausgeblendet, das `?` bliebe stehen

@@ -319,8 +319,12 @@ describe('context vergleich (Ortsvergleich-Hub): Wetter-Metriken und Versand an 
 	});
 
 	const puts = () => server.mitschnitt.filter((e) => e.method === 'PUT');
+	// #2794 S3a Teil 3 (F006, AC-38): die Metrikauswahl (`active_metrics`) gehoert dem Reiter Wetter.
+	// Der Wetter-Metriken-Schreiber dieses Panels (Reiter Zustellung) wird deshalb ueber sein eigenes
+	// Feld Stundenverlauf (`hourly_metrics`) gemessen; die Mechanik (zwei Besitzer, ein Controller)
+	// bleibt dieselbe.
 	const aktiveMetriken = (body: unknown): string[] =>
-		(((body as Record<string, unknown>)?.display_config as Record<string, unknown>)?.active_metrics as string[]) ?? [];
+		(((body as Record<string, unknown>)?.display_config as Record<string, unknown>)?.hourly_metrics as string[]) ?? [];
 
 	/** EIN wizardState, EIN Controller, EINE Queue, EINE Basis — wie CompareTabs. */
 	function panel() {
@@ -346,12 +350,17 @@ describe('context vergleich (Ortsvergleich-Hub): Wetter-Metriken und Versand an 
 		const versand = erstelleVersandVergleichSpeicherung(gemeinsam as never);
 		const wb = wetterMetrikenBedienung(zustand);
 		const vb = versandBedienung(zustand);
+		/** NEUE_METRIK im Stundenverlauf an/aus (eigenes Feld des Wetter-Metriken-Schreibers). */
+		const stundenMetrikUmschalten = () => {
+			const cur = (zustand.hourlyMetricKeys as string[] | null) ?? [];
+			wb.hourlyDragEnd(cur.includes(NEUE_METRIK) ? cur.filter((k) => k !== NEUE_METRIK) : [...cur, NEUE_METRIK]);
+		};
 		return {
 			zustand,
 			ctl,
 			basis: () => basis,
 			metrikAendern() {
-				wb.toggleMetric(NEUE_METRIK);
+				stundenMetrikUmschalten();
 				wetter.aenderungMelden();
 			},
 			versandzeitAendern() {
@@ -360,7 +369,7 @@ describe('context vergleich (Ortsvergleich-Hub): Wetter-Metriken und Versand an 
 			},
 			/** dieselbe Metrik-Geste noch einmal ⇒ Stand wieder gleich der Basis */
 			metrikZuruecksetzen() {
-				wb.toggleMetric(NEUE_METRIK);
+				stundenMetrikUmschalten();
 				wetter.aenderungMelden();
 			},
 			/** Versandzeit zurueck auf den Ausgangswert der Basis (06:30) */
@@ -409,7 +418,7 @@ describe('context vergleich (Ortsvergleich-Hub): Wetter-Metriken und Versand an 
 		beideImBackend();
 		assert.equal(p.ctl.state, 'idle');
 		const neu = neuGeladen();
-		assert.ok((neu.wetter.activeMetricKeys as string[]).includes(NEUE_METRIK), 'UI nach Re-Hydration: Wetter-Metrik fehlt');
+		assert.ok((neu.wetter.hourlyMetricKeys as string[]).includes(NEUE_METRIK), 'UI nach Re-Hydration: Wetter-Metrik fehlt');
 		assert.equal(neu.versand.morningTime, '07:15');
 	});
 
@@ -421,7 +430,7 @@ describe('context vergleich (Ortsvergleich-Hub): Wetter-Metriken und Versand an 
 		beideImBackend();
 		assert.equal(p.ctl.state, 'idle');
 		const neu = neuGeladen();
-		assert.ok((neu.wetter.activeMetricKeys as string[]).includes(NEUE_METRIK));
+		assert.ok((neu.wetter.hourlyMetricKeys as string[]).includes(NEUE_METRIK));
 		assert.equal(neu.versand.morningTime, '07:15', 'UI nach Re-Hydration: Versandzeit fehlt');
 	});
 
@@ -449,15 +458,15 @@ describe('context vergleich (Ortsvergleich-Hub): Wetter-Metriken und Versand an 
 			String(server.stand(ID).morning_time).startsWith('07:15'),
 			'der Versand-PUT muss abgeschlossen sein, waehrend die Wetter-Metrik noch aussteht'
 		);
-		assert.ok((p.zustand.activeMetricKeys as string[]).includes(NEUE_METRIK), 'die neue Basis hat die Wetter-Eingabe ueberschrieben');
+		assert.ok((p.zustand.hourlyMetricKeys as string[]).includes(NEUE_METRIK), 'die neue Basis hat die Wetter-Eingabe ueberschrieben');
 		await leeren(p.ctl);
 		assert.ok(aktiveMetriken(server.stand(ID)).includes(NEUE_METRIK), 'die Wetter-Metrik wurde danach nicht mehr gespeichert');
 	});
 
 	test('AC-15: erster Schreiber scheitert (500), zweiter klappt ⇒ Anzeige „Fehler", nicht „Gespeichert"', async () => {
 		const p = panel();
-		// der PUT des Wetter-Schreibers (traegt active_metrics) scheitert
-		fehler = (m, _p, body) => m === 'PUT' && body.includes('active_metrics') && (wetterPutGesehen = true);
+		// der PUT des Wetter-Schreibers (traegt hourly_metrics) scheitert
+		fehler = (m, _p, body) => m === 'PUT' && body.includes('hourly_metrics') && (wetterPutGesehen = true);
 		p.metrikAendern();
 		p.versandzeitAendern();
 		await leeren(p.ctl);

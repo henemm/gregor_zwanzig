@@ -417,11 +417,12 @@ function quellStand(): Knoten {
 	};
 }
 
-// #2794 S3a: Hub = Reiter wetter (Baustein) + Reiter zustellung (ZustellungTab); Anlegen = je Geraet
-// ein Baustein im Schritt Wetter und einer im Schritt Zustellung.
+// #2794 S3a Teil-PR 3: der Reiter bzw. Schritt Wetter ist der WetterTab (eigener Speicherer, kein
+// Buendel); der Baustein steht nur noch im Reiter/Schritt Zustellung — Hub 1 (ZustellungTab),
+// Anlegen je Geraet 1. Jede verbleibende Einbettung streut weiter dasselbe Buendel.
 const MOUNTS: [string, string, number][] = [
-	['Hub /compare/[id] (Mount B)', HUB, 2],
-	['Anlege-Seite /compare/new, Desktop + Mobil (Mounts C und D)', ANLEGE, 4]
+	['Hub /compare/[id] (Mount B)', HUB, 1],
+	['Anlege-Seite /compare/new, Desktop + Mobil (Mounts C und D)', ANLEGE, 2]
 ];
 
 describe('AC-2: alle drei Vergleichs-Mounts speisen dasselbe Buendel ein', () => {

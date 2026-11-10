@@ -3,7 +3,7 @@
 // (docs/design-requests/trip-anlegen-2026-06-06/screen-trip-new-v2.jsx).
 // Keine Seiteneffekte, keine Svelte-Imports — testbar mit node:test.
 
-import type { Trip, WeatherConfigMetric, ReportConfig, Waypoint, ActivityType, Corridor } from '$lib/types';
+import type { Trip, WeatherConfigMetric, ReportConfig, Waypoint, ActivityType, Corridor, Ampel } from '$lib/types';
 import {
 	resolveAlertChannels,
 	resolveAlertChannelThresholds,
@@ -145,6 +145,12 @@ export interface CreateTripState {
 	// gültige Zeile gemeldet hat; buildCreateTripPayload() setzt trotzdem immer
 	// `trip.corridors = state.corridors ?? []` (AC-6, kein `null` im POST-Body).
 	corridors?: Corridor[];
+	// Issue #2794 S3a Teil-PR 3 (AC-38): Abo-Ampel aus dem Reiter Wetter (Vorlage +
+	// Abweichungen) — landet unveraendert in `display_config.ampel`.
+	ampel?: Ampel;
+	// Fix-Loop 2 (F-A1, AC-20): Schalter „Amtliche Warnungen" aus dem Reiter Wetter; gesetzt
+	// landet er in `official_alerts_enabled` (official_warnings.enabled kommt ueber `alarm`).
+	officialAlertsEnabled?: boolean;
 }
 
 // ── Alarm-Schatten-State (Issue #2277 S1) ────────────────────────────────────
@@ -235,6 +241,7 @@ export function buildCreateTripPayload(state: CreateTripState): Trip {
 	trip.display_config = {
 		channels: state.channels,
 		metrics: state.weatherMetrics ?? [],
+		...(state.ampel ? { ampel: state.ampel } : {}),
 	} as unknown as Trip['display_config'];
 
 	if (state.reportConfig) {
@@ -245,6 +252,7 @@ export function buildCreateTripPayload(state: CreateTripState): Trip {
 	// frisch angelegter Trip ohne Wertebereiche-Interaktion liefert per GET
 	// "corridors": [], nie null.
 	trip.corridors = state.corridors ?? [];
+	if (state.officialAlertsEnabled !== undefined) trip.official_alerts_enabled = state.officialAlertsEnabled;
 
 	// Issue #2277 S1 — Alarm-Felder additiv mergen: Read-Modify-Write auf dem
 	// bereits gebauten display_config (channels/metrics bleiben erhalten).

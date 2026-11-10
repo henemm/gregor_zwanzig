@@ -160,6 +160,8 @@ export function displayAusdruck(e: Einbettung, quelle: string): string | null {
 				const v = attr.value;
 				const tag = Array.isArray(v) ? v[0] : v;
 				if (tag?.type === 'ExpressionTag') return quelle.slice(tag.expression.start, tag.expression.end);
+				// Teil-PR 3: fester Wert (`style:display="none"`) als auswertbares String-Literal.
+				if (tag?.type === 'Text') return JSON.stringify(tag.data);
 			}
 		}
 	}

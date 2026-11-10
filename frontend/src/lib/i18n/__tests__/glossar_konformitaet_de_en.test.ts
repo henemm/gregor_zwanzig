@@ -78,8 +78,8 @@ function glossarZeilen(): [string, string][] {
 }
 
 describe('AC-3: Produktbegriffe erscheinen im Englischen in der Glossar-Form', () => {
-	test('Messaufbau: alle 17 Bereiche, je de und en', () => {
-		assert.equal(BEREICHE.length, 17, BEREICHE.join(', '));
+	test('Messaufbau: alle 18 Bereiche, je de und en', () => {
+		assert.equal(BEREICHE.length, 18, BEREICHE.join(', '));
 	});
 	test('jeder Katalogschluessel mit Produktbegriff im Deutschen traegt die Glossar-Form im Englischen', () => {
 		const alle: string[] = [];

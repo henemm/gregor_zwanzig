@@ -90,7 +90,8 @@ describe('AC-6: Reiterwechsel „wetter" → „zustellung" im Entprell-Fenster 
 	test('Wetter-Metriken ändern, sofort zu „zustellung", dort Radar an → BEIDE Änderungen gespeichert', async () => {
 		const { ws, ctl, wetterMetriken, alarme, bedienung } = hub();
 
-		bedienung.toggleMetric('gust_max_kmh');
+		// #2794 F006: Stundenverlauf statt Metrikauswahl (die gehoert dem Reiter Wetter).
+		bedienung.hourlyDragEnd(['temp_max_c', 'wind_max_kmh']);
 		wetterMetriken.aenderungMelden();
 		assert.equal(ctl.hasPending, true, 'Vorbedingung: Wetter-Metriken-Änderung wartet im Entprell-Fenster');
 
@@ -98,7 +99,7 @@ describe('AC-6: Reiterwechsel „wetter" → „zustellung" im Entprell-Fenster 
 
 		assert.equal(puts().length, 1, 'die Wetter-Metriken-Änderung muss VOR dem Reiterwechsel gesendet sein');
 		assert.equal(puts()[0].status, 200);
-		assert.ok((dc(puts()[0].body as unknown).active_metrics as string[]).includes('gust_max_kmh'));
+		assert.deepEqual(dc(puts()[0].body as unknown).hourly_metrics, ['temp_max_c', 'wind_max_kmh']);
 
 		ws.radarAlertEnabled = true;
 		alarme.aenderungMelden();
@@ -106,8 +107,9 @@ describe('AC-6: Reiterwechsel „wetter" → „zustellung" im Entprell-Fenster 
 
 		assert.equal(puts().length, 2, 'zwei Reiter, zwei Änderungen, zwei PUTs');
 		const stand = server.stand(PRESET_ID);
-		assert.ok(
-			(dc(stand).active_metrics as string[]).includes('gust_max_kmh'),
+		assert.deepEqual(
+			dc(stand).hourly_metrics,
+			['temp_max_c', 'wind_max_kmh'],
 			'die Wetter-Metriken-Änderung darf vom Alarm-Speichern nicht überschrieben werden'
 		);
 		assert.equal(stand.radar_alert_enabled, true);
@@ -121,7 +123,7 @@ describe('AC-6: Reiterwechsel „wetter" → „zustellung" im Entprell-Fenster 
 	test('#1743: auch OHNE Flush beim Wechsel verdrängt der Alarm-Vorgang den Wetter-Metriken-Vorgang nicht mehr', async () => {
 		const { ws, ctl, wetterMetriken, alarme, bedienung } = hub();
 
-		bedienung.toggleMetric('gust_max_kmh');
+		bedienung.hourlyDragEnd(['temp_max_c', 'wind_max_kmh']);
 		wetterMetriken.aenderungMelden();
 		ws.radarAlertEnabled = true;
 		alarme.aenderungMelden();
@@ -132,8 +134,9 @@ describe('AC-6: Reiterwechsel „wetter" → „zustellung" im Entprell-Fenster 
 
 		assert.equal(puts().length, 2, 'der fremde Platz muss zuerst gesendet werden — zwei PUTs');
 		const stand = server.stand(PRESET_ID);
-		assert.ok(
-			(dc(stand).active_metrics as string[]).includes('gust_max_kmh'),
+		assert.deepEqual(
+			dc(stand).hourly_metrics,
+			['temp_max_c', 'wind_max_kmh'],
 			'die Wetter-Metriken-Änderung darf vom Alarm-Vorgang nicht verdrängt werden'
 		);
 		assert.equal(stand.radar_alert_enabled, true);
@@ -141,7 +144,7 @@ describe('AC-6: Reiterwechsel „wetter" → „zustellung" im Entprell-Fenster 
 
 	test('kein echter Wechsel (gleicher Reiter) → nichts wird vorzeitig gesendet', async () => {
 		const { ctl, wetterMetriken, bedienung } = hub();
-		bedienung.toggleMetric('gust_max_kmh');
+		bedienung.hourlyDragEnd(['temp_max_c', 'wind_max_kmh']);
 		wetterMetriken.aenderungMelden();
 
 		await sichereSelbstSpeichererVorReiterwechsel('wetter', 'wetter', ctl);
