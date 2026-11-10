@@ -2,7 +2,7 @@
 entity_id: rework_2881_design_system_bereinigung
 type: feature
 created: 2026-11-09
-updated: 2026-11-09
+updated: 2026-11-10
 status: approved
 version: "1.0"
 workflow: rework-2881-design-system
@@ -152,3 +152,4 @@ Das Audit vom 9.11.2026 fand zwei Arten von Problemen:
 - 2026-11-09: Vom PO freigegeben.
 - 2026-11-09: Lieferung B umgesetzt (R2, R3, R5; AC-1/2/3/4/6, DS-1/2/3/4/6, Pflicht-Mutationen d–f). Englisches Datumsformat im DatumFeld: Segmente Tag zuerst (`19/11/2026`, en-GB) wie die Tag-zuerst-Reihenfolge im übrigen UI (`19 Nov 2026`); die Segmentfelder sind numerisch. Uhrzeit immer 24 h. Native Felder bleiben nur in den ausgenommenen Reitern (DayWindowCard, Alarme) und in Konto/Admin/GPX-Upload (#1199).
 - 2026-11-10: AC-9 „zwei von fünf“ → „zwei von vier“ Abschnitten (Folge der Anlege-Kette aus #2794 S3a, keine Produktänderung). Fix-Loop Lieferung B nach Adversary (F-B1 bis F-B6): Segmentfelder melden nur fertige Segmente (getippte Ziffern gezählt, kein Ruhe-Zeitgeber), Leeren beim Anlegen ergibt „Startdatum fehlt“, an der Etappe springt ein geleertes/unvollständiges Feld beim Verlassen auf den gespeicherten Wert zurück, Startzeit leeren ⇒ 08:00; neue Fälle DS-1 Leeren, DS-2 Etappenwechsel/Zwischenstände/Leeren/en, DS-4 Standard-Option und rollendes tabindex; DS-5 leer mit frischem Konto. ✓ der Grundauswahl im Reiter Wetter bleibt ausgenommen (Nicht hier, #2794).
+- 2026-11-10: Fix-Loop 2 Lieferung B nach Adversary Runde 2 (F-C1 bis F-C4): ein angefangenes Jahr („202“) wird an der Etappe nie gespeichert (Anzeige springt zurück), beim Anlegen ergibt es „Startdatum fehlt“; ein unverändert neu getipptes Datum schreibt nichts; ein Segment, in das man später zurückkehrt oder in dem man per Rücktaste eine Ziffer löscht, gilt als angefangen; scheitert das Speichern mitten im Tippen, schreibt das Verlassen den alten Tipp-Stand nicht nach. Jede Schutzstelle der Segmentfelder ist per Mutation an der Wirkstelle belegt oder entfernt (Beleg: `docs/artifacts/rework-2881-design-system/mutationen-B.txt`); neue Fälle DS-2 Jahr angefangen/dasselbe Datum/Rückkehr/Rücktaste/Rücknahme beim Tippen, DS-1 Jahr angefangen und Neueintippen.

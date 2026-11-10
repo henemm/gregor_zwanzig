@@ -800,15 +800,18 @@ test('DS-2 Jahr angefangen (1280 px): „202" ins Jahr getippt und Feld verlasse
 	}
 });
 
-test('DS-2 dasselbe Datum (1280 px): gespeichertes Datum unverändert neu getippt ⇒ kein Schreibvorgang', async ({ page }) => {
+test('DS-2 dasselbe Datum (1280 px): gespeichertes Datum und gespeicherte Startzeit unverändert neu getippt ⇒ kein Schreibvorgang', async ({ page }) => {
 	await page.setViewportSize(DESKTOP);
 	await setzeSprache(page, 'de');
-	const hub = await seedHub(page.request, 'route');
+	const hub = await seedHub(page.request, 'route', { extra: { stages: [{ ...ZWEI_ETAPPEN[0], start_time: '07:30' }] } });
 	try {
 		await openHub(page, 'route', hub.id, { tab: 'etappen' });
 		await expect(feldEingabe(datumFeld(page))).toHaveText('01.08.2027', { timeout: 15_000 });
+		await expect(feldEingabe(zeitFeld(page))).toHaveText('07:30');
 		const puts = zaehlePuts(page, hub.id);
 		await tippeDatum(page, datumFeld(page), '2027-08-01');
+		await verlasseFeld(page);
+		await tippeUhrzeit(page, zeitFeld(page), '07:30');
 		await verlasseFeld(page);
 		// Stabilitätsfenster: 2 s lang kein PUT (Speicher-Entprellung 700 ms).
 		const ende = Date.now() + 2_000;
@@ -899,6 +902,100 @@ test('DS-2 Rücknahme beim Tippen (1280 px): scheitert das Speichern, während e
 		expect((await etappen(page, hub.id))[0]?.date).toBe('2027-08-01');
 	} finally {
 		await page.unroute(`**/api/trips/${hub.id}`);
+		await hub.aufraeumen();
+	}
+});
+
+test('DS-2 Etappenwechsel Startzeit (1280 px): Startzeit in Etappe 2 fertig bzw. angefangen, sofort zu Etappe 1 — keine Vermischung', async ({
+	page
+}) => {
+	await page.setViewportSize(DESKTOP);
+	await setzeSprache(page, 'de');
+	const hub = await seedHub(page.request, 'route', { extra: { stages: ZWEI_ETAPPEN } });
+	try {
+		await openHub(page, 'route', hub.id, { tab: 'etappen' });
+		await waehleEtappe(page, 1);
+		await expect(feldEingabe(datumFeld(page))).toHaveText('02.08.2027', { timeout: 15_000 });
+		await tippeUhrzeit(page, zeitFeld(page), '06:45');
+		await waehleEtappe(page, 0); // sofort wechseln — der Fokus steht noch im Minuten-Segment
+		await expect(feldEingabe(zeitFeld(page)), 'Etappe 1 zeigt ihre eigene Startzeit').toHaveText('08:00');
+		// Mitten im Segment wechseln (Stunde „1" angefangen).
+		await waehleEtappe(page, 1);
+		await expect(feldEingabe(zeitFeld(page))).toHaveText('06:45', { timeout: 15_000 });
+		await zeitFeld(page).locator('[data-segment="hour"]').click();
+		await page.keyboard.type('1');
+		await waehleEtappe(page, 0);
+		await expect(feldEingabe(zeitFeld(page)), 'Etappe 1 nach Wechsel mitten im Segment').toHaveText('08:00');
+		await verlasseFeld(page);
+		await expect
+			.poll(async () => JSON.stringify((await etappen(page, hub.id)).map((e) => [e.id, e.start_time ?? null])), {
+				message: 'gespeicherte Startzeiten beider Etappen',
+				timeout: 15_000
+			})
+			.toBe(JSON.stringify([['s1', null], ['s2', '06:45']]));
+		await openHub(page, 'route', hub.id, { tab: 'etappen' });
+		await expect(feldEingabe(zeitFeld(page))).toHaveText('08:00', { timeout: 15_000 });
+		await waehleEtappe(page, 1);
+		await expect(feldEingabe(zeitFeld(page))).toHaveText('06:45');
+	} finally {
+		await hub.aufraeumen();
+	}
+});
+
+test('DS-2 Rücknahme Startzeit (1280 px): scheitert das Speichern, während die Minute angefangen ist, schreibt das Verlassen nichts nach', async ({
+	page
+}) => {
+	await page.setViewportSize(DESKTOP);
+	await setzeSprache(page, 'de');
+	const hub = await seedHub(page.request, 'route', { extra: { stages: [{ ...ZWEI_ETAPPEN[0], start_time: '07:30' }] } });
+	let putNr = 0;
+	await page.route(`**/api/trips/${hub.id}`, async (route) => {
+		if (route.request().method() === 'PUT' && ++putNr === 1) {
+			await route.fulfill({ status: 500, body: JSON.stringify({ error: 'Serverfehler' }) });
+			return;
+		}
+		await route.continue();
+	});
+	try {
+		await openHub(page, 'route', hub.id, { tab: 'etappen' });
+		await expect(feldEingabe(zeitFeld(page))).toHaveText('07:30', { timeout: 15_000 });
+		// Stunde fertig (wird gespeichert und scheitert), Minute gleich danach angefangen („1").
+		await zeitFeld(page).locator('[data-segment="hour"]').click();
+		await page.keyboard.type('09');
+		await page.keyboard.type('1');
+		await expect(page.getByTestId('save-indicator')).toHaveAttribute('data-state', 'error', { timeout: 15_000 });
+		await expect(feldEingabe(zeitFeld(page)), 'Rücknahme sichtbar').toHaveText('07:30');
+		await verlasseFeld(page);
+		await expect(feldEingabe(zeitFeld(page))).toHaveText('07:30');
+		const ende = Date.now() + 2_000;
+		await expect.poll(() => (Date.now() < ende ? `warte ${putNr}` : putNr), { timeout: 5_000, intervals: [200] }).toBe(1);
+		expect((await etappen(page, hub.id))[0]?.start_time).toBe('07:30');
+	} finally {
+		await page.unroute(`**/api/trips/${hub.id}`);
+		await hub.aufraeumen();
+	}
+});
+
+test('DS-2 Startzeit neu tippen (1280 px): Stunde per Rücktaste geleert ⇒ bis zur neuen Zeit kein Schreibvorgang', async ({ page }) => {
+	test.setTimeout(60_000);
+	await page.setViewportSize(DESKTOP);
+	await setzeSprache(page, 'de');
+	const hub = await seedHub(page.request, 'route', { extra: { stages: [{ ...ZWEI_ETAPPEN[0], start_time: '07:30' }] } });
+	try {
+		await openHub(page, 'route', hub.id, { tab: 'etappen' });
+		await expect(feldEingabe(zeitFeld(page))).toHaveText('07:30', { timeout: 15_000 });
+		const puts = zaehlePuts(page, hub.id);
+		await zeitFeld(page).locator('[data-segment="hour"]').click();
+		await page.keyboard.press('Backspace');
+		await page.keyboard.press('Backspace');
+		// Stabilitätsfenster länger als die Speicher-Entprellung (700 ms): weder „" noch ein Rest geht hinaus.
+		const ende = Date.now() + 2_000;
+		await expect.poll(() => (Date.now() < ende ? `warte ${puts.anzahl}` : puts.anzahl), { timeout: 5_000, intervals: [200] }).toBe(0);
+		await page.keyboard.type('0915');
+		await verlasseFeld(page);
+		await expect.poll(async () => (await etappen(page, hub.id))[0]?.start_time, { timeout: 15_000 }).toBe('09:15');
+		expect(puts.staende.map((e) => e.start_time ?? null).filter((z) => !['09:15', '09:30'].includes(z ?? '')), 'leere oder halbe Startzeit gesendet').toEqual([]);
+	} finally {
 		await hub.aufraeumen();
 	}
 });
