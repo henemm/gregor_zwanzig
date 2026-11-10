@@ -8,15 +8,15 @@
 //     ist (dann sofort) oder das Feld verlassen wird.
 //   * Wahl ohne Tippen (Kalender, Programm) oder fertiges Segment: sofort melden — sonst wäre ein
 //     gleich danach angetippter Knopf, der am Wert hängt („Etappen anlegen"), noch gesperrt.
-//   * Ein FREMDER Wertwechsel (z. B. andere Etappe gewählt) verwirft Offenes (der Baustein ruft
-//     `verwerfen`). Eine eigene Sperre gegen Rückschreiben von bits-ui ist entfallen (Fix-Loop
-//     F-B3): mit dieser Regel schreibt bits-ui nach einem Wechsel nichts zurück — belegt durch
-//     DS-2 Etappenwechsel, GG-3 und SC-4 ohne Sperre.
+//   * Ein FREMDER Wertwechsel (andere Etappe, Rücknahme nach gescheitertem Speichern) verwirft
+//     Offenes und sperrt bis zur Freigabe: der Baustein baut bits-ui neu auf, und die abgebaute
+//     Instanz meldet dabei noch ihren alten, angefangenen Stand (belegt: DS-2 Rücknahme).
 // Bewusst ohne TS-Parameter-Properties (Kernsuite strippt Typen).
 
 export class SegmentFeldMeldung {
 	#melde: (wert: string) => void;
 	#offen: string | null = null;
+	#gesperrt = false;
 
 	constructor(melde: (wert: string) => void) {
 		this.#melde = melde;
@@ -24,6 +24,7 @@ export class SegmentFeldMeldung {
 
 	/** Neuer Wert aus dem Feld; `unfertig` = das getippte Segment braucht noch Ziffern. */
 	aendern(wert: string, unfertig: boolean): void {
+		if (this.#gesperrt) return;
 		if (unfertig) {
 			this.#offen = wert;
 			return;
@@ -39,7 +40,7 @@ export class SegmentFeldMeldung {
 
 	/** Offenen Wert jetzt melden (Feld verlassen). */
 	abschliessen(): void {
-		if (this.#offen === null) return;
+		if (this.#offen === null || this.#gesperrt) return;
 		const wert = this.#offen;
 		this.#offen = null;
 		this.#melde(wert);
@@ -47,6 +48,16 @@ export class SegmentFeldMeldung {
 
 	verwerfen(): void {
 		this.#offen = null;
+	}
+
+	/** Fremder Wertwechsel: Offenes verwerfen und bis `freigeben()` nichts annehmen. */
+	sperren(): void {
+		this.#offen = null;
+		this.#gesperrt = true;
+	}
+
+	freigeben(): void {
+		this.#gesperrt = false;
 	}
 }
 
@@ -67,26 +78,37 @@ const zifferTeil = (el: Element | null): string | null => {
  */
 export class TippZaehler {
 	#anzahl = new WeakMap<Element, number>();
+	/** Segment per Rücktaste angefasst und noch nicht wieder voll getippt. */
+	#geloescht = new WeakSet<Element>();
 
 	taste = (e: KeyboardEvent): void => {
 		const seg = e.target as Element | null;
-		if (!zifferTeil(seg)) return;
-		if (/^\d$/.test(e.key)) this.#anzahl.set(seg!, (this.#anzahl.get(seg!) ?? 0) + 1);
-		else if (e.key === 'Backspace' || e.key === 'Delete') this.#anzahl.set(seg!, 0);
+		const teil = zifferTeil(seg);
+		if (!teil) return;
+		if (/^\d$/.test(e.key)) {
+			const n = (this.#anzahl.get(seg!) ?? 0) + 1;
+			this.#anzahl.set(seg!, n);
+			if (n >= bedarf(teil)) this.#geloescht.delete(seg!);
+		} else if (e.key === 'Backspace' || e.key === 'Delete') {
+			this.#anzahl.set(seg!, 0);
+			this.#geloescht.add(seg!);
+		}
 	};
 
 	fokus = (e: FocusEvent): void => {
 		const seg = e.target as Element | null;
-		if (zifferTeil(seg)) this.#anzahl.set(seg!, 0);
+		if (!zifferTeil(seg)) return;
+		this.#anzahl.set(seg!, 0);
+		this.#geloescht.delete(seg!);
 	};
 
-	/** Hat das fokussierte Segment in `feld` angefangene, aber noch nicht genug Ziffern? */
+	/** Ist das fokussierte Segment in `feld` angefangen (zu wenige Ziffern oder per Rücktaste gekürzt)? */
 	unfertig(feld: HTMLElement | null): boolean {
 		const aktiv = typeof document === 'undefined' ? null : document.activeElement;
 		const teil = zifferTeil(aktiv);
 		if (!(feld && aktiv && teil && feld.contains(aktiv))) return false;
 		const n = this.#anzahl.get(aktiv) ?? 0;
-		return n > 0 && n < bedarf(teil);
+		return this.#geloescht.has(aktiv) || (n > 0 && n < bedarf(teil));
 	}
 }
 

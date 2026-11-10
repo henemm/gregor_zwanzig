@@ -60,8 +60,13 @@
 		untrack(() => {
 			// Fremder Wertwechsel (andere Etappe, Rücknahme nach Fehler): Offenes gehört zum alten Wert.
 			if (v !== letzter && v !== eigen) {
-				meldung.verwerfen();
+				// Neu aufbauen: bits-ui zeigt sonst weiter angefangene Segmente des alten Werts
+				// (Etappenwechsel, Rücknahme nach gescheitertem Speichern). Bis zum nächsten Task
+				// gesperrt: die abgebaute Instanz meldet beim Abbau noch ihren alten Stand.
+				meldung.sperren();
+				setTimeout(() => meldung.freigeben(), 0);
 				beruehrt = false;
+				aufbau += 1;
 				vollstaendig = !!zuDatum(v);
 			}
 			if (v === eigen) eigen = null;
@@ -89,7 +94,9 @@
 			meldung.verwerfen();
 			return;
 		}
-		meldung.aendern(iso, zaehler.unfertig(feld));
+		// Erst nach dem Neuzeichnen melden: bits-ui räumt seine Tipp-Zwischenstände in einem Effekt
+		// weg; ein synchron gemeldeter Wert liesse sie bei einem folgenden Etappenwechsel stehen.
+		void tick().then(() => meldung.aendern(iso, zaehler.unfertig(feld)));
 	}
 
 	function verlassen(e: FocusEvent): void {
