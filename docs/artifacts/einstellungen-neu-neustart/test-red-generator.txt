@@ -1,0 +1,5 @@
+# RED-Lauf erneut ohne webServer (die Generator-Spec braucht keinen Vite-Server; die vorige Fassung enthielt nur Vite-Log-Rauschen).
+# Befehl: cd frontend && npx playwright test --config=<Config ohne webServer, testMatch elementliste-generator.mockup.spec.ts>
+Error: Cannot find module '/home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/scripts/elementliste_aus_mockup.ts' imported from /home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/e2e/elementliste-generator.mockup.spec.ts
+Error: No tests found
+EXIT=1 (FAILED: Generator-Modul fehlt, Spec nicht ladbar)

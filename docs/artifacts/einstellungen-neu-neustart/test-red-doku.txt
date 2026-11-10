@@ -1,0 +1,164 @@
+FFFFFFFFFFF...............................                               [100%]
+=================================== FAILURES ===================================
+__________________ test_adr_0112_liegt_vor_und_ist_akzeptiert __________________
+
+    def test_adr_0112_liegt_vor_und_ist_akzeptiert():
+>       t = _text(ADR_0112)
+            ^^^^^^^^^^^^^^^
+
+tests/test_adr_0112_bausteine_regel_doku.py:32: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+p = PosixPath('/home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/docs/adr/0112-oberflaechen-nur-aus-design-system-bausteinen.md')
+
+    def _text(p: Path) -> str:
+>       assert p.exists(), f"{p.relative_to(REPO)} fehlt"
+E       AssertionError: docs/adr/0112-oberflaechen-nur-aus-design-system-bausteinen.md fehlt
+E       assert False
+E        +  where False = exists()
+E        +    where exists = PosixPath('/home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/docs/adr/0112-oberflaechen-nur-aus-design-system-bausteinen.md').exists
+
+tests/test_adr_0112_bausteine_regel_doku.py:26: AssertionError
+_____________________ test_adr_0112_nennt_die_vier_regeln ______________________
+
+    def test_adr_0112_nennt_die_vier_regeln():
+>       t = _text(ADR_0112).lower()
+            ^^^^^^^^^^^^^^^
+
+tests/test_adr_0112_bausteine_regel_doku.py:38: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+p = PosixPath('/home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/docs/adr/0112-oberflaechen-nur-aus-design-system-bausteinen.md')
+
+    def _text(p: Path) -> str:
+>       assert p.exists(), f"{p.relative_to(REPO)} fehlt"
+E       AssertionError: docs/adr/0112-oberflaechen-nur-aus-design-system-bausteinen.md fehlt
+E       assert False
+E        +  where False = exists()
+E        +    where exists = PosixPath('/home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/docs/adr/0112-oberflaechen-nur-aus-design-system-bausteinen.md').exists
+
+tests/test_adr_0112_bausteine_regel_doku.py:26: AssertionError
+_______________ test_adr_0112_hat_pruefdatum_und_loeschbedingung _______________
+
+    def test_adr_0112_hat_pruefdatum_und_loeschbedingung():
+>       t = _text(ADR_0112)
+            ^^^^^^^^^^^^^^^
+
+tests/test_adr_0112_bausteine_regel_doku.py:48: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+p = PosixPath('/home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/docs/adr/0112-oberflaechen-nur-aus-design-system-bausteinen.md')
+
+    def _text(p: Path) -> str:
+>       assert p.exists(), f"{p.relative_to(REPO)} fehlt"
+E       AssertionError: docs/adr/0112-oberflaechen-nur-aus-design-system-bausteinen.md fehlt
+E       assert False
+E        +  where False = exists()
+E        +    where exists = PosixPath('/home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/docs/adr/0112-oberflaechen-nur-aus-design-system-bausteinen.md').exists
+
+tests/test_adr_0112_bausteine_regel_doku.py:26: AssertionError
+________________ test_adr_index_enthaelt_0112_und_0111_verweist ________________
+
+    def test_adr_index_enthaelt_0112_und_0111_verweist():
+        readme = _text(ADR_DIR / "README.md")
+>       assert "](0112-oberflaechen-nur-aus-design-system-bausteinen.md)" in readme, "Index-Zeile 0112 fehlt"
+E       AssertionError: Index-Zeile 0112 fehlt
+E       assert '](0112-oberflaechen-nur-aus-design-system-bausteinen.md)' in '# Architecture Decision Records (ADR)\n\nDieses Verzeichnis hält **wichtige Architektur- und Produkt-Grundsatzentsche... (Design-Gate außer Dienst), Copy/Charter auf Trip und Hauptaktion Ink, `Dot` statt ✓/⊘ (Issue #2881) | Akzeptiert |\n'
+
+tests/test_adr_0112_bausteine_regel_doku.py:56: AssertionError
+___________ test_anti_patterns_006_bis_008_sind_pflicht_mit_waechter ___________
+
+    def test_anti_patterns_006_bis_008_sind_pflicht_mit_waechter():
+        t = _text(REPO / "docs" / "design-system" / "ANTI-PATTERNS.md")
+        for ap in ("AP-006", "AP-007", "AP-008"):
+            start = t.index(f"## {ap}")
+            nxt = t.find("\n## ", start + 5)
+            abschnitt = t[start : nxt if nxt > 0 else len(t)]
+>           assert "Pflicht mit Wächter, ADR-0112" in abschnitt, f"{ap}: Vermerk „Pflicht mit Wächter, ADR-0112“ fehlt"
+E           AssertionError: AP-006: Vermerk „Pflicht mit Wächter, ADR-0112“ fehlt
+E           assert 'Pflicht mit Wächter, ADR-0112' in '## AP-006 · Eigene Implementierung katalogisierter Komponenten\n\n**Verboten:** Lokale Implementierungen von Komponen...Toast statt <Toast> -->\n```\n\n**Richtig:**\n```svelte\n<Toast tone="success">Tour gespeichert.</Toast>\n```\n\n---\n'
+
+tests/test_adr_0112_bausteine_regel_doku.py:66: AssertionError
+______________ test_pruef_agent_hat_nur_bildlesen_kein_quellcode _______________
+
+    def test_pruef_agent_hat_nur_bildlesen_kein_quellcode():
+>       t = _text(AGENT)
+            ^^^^^^^^^^^^
+
+tests/test_adr_0112_bausteine_regel_doku.py:77: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+p = PosixPath('/home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/.claude/agents/mockup-bildpruefer.md')
+
+    def _text(p: Path) -> str:
+>       assert p.exists(), f"{p.relative_to(REPO)} fehlt"
+E       AssertionError: .claude/agents/mockup-bildpruefer.md fehlt
+E       assert False
+E        +  where False = exists()
+E        +    where exists = PosixPath('/home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/.claude/agents/mockup-bildpruefer.md').exists
+
+tests/test_adr_0112_bausteine_regel_doku.py:26: AssertionError
+__________________ test_pruef_agent_eingaben_runden_und_rolle __________________
+
+    def test_pruef_agent_eingaben_runden_und_rolle():
+>       t = _text(AGENT)
+            ^^^^^^^^^^^^
+
+tests/test_adr_0112_bausteine_regel_doku.py:89: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ 
+
+p = PosixPath('/home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/.claude/agents/mockup-bildpruefer.md')
+
+    def _text(p: Path) -> str:
+>       assert p.exists(), f"{p.relative_to(REPO)} fehlt"
+E       AssertionError: .claude/agents/mockup-bildpruefer.md fehlt
+E       assert False
+E        +  where False = exists()
+E        +    where exists = PosixPath('/home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/.claude/agents/mockup-bildpruefer.md').exists
+
+tests/test_adr_0112_bausteine_regel_doku.py:26: AssertionError
+___________________ test_pruef_agent_probelauf_dokumentiert ____________________
+
+    def test_pruef_agent_probelauf_dokumentiert():
+        belege = list((REPO / "docs" / "artifacts" / "einstellungen-neu-neustart").glob("*bildpruefer*probelauf*"))
+>       assert belege, "Probelauf des Prüf-Agenten ist nicht dokumentiert (docs/artifacts/einstellungen-neu-neustart/)"
+E       AssertionError: Probelauf des Prüf-Agenten ist nicht dokumentiert (docs/artifacts/einstellungen-neu-neustart/)
+E       assert []
+
+tests/test_adr_0112_bausteine_regel_doku.py:100: AssertionError
+____________ test_gates_und_ratschen_beschreibt_waechter_und_budget ____________
+
+    def test_gates_und_ratschen_beschreibt_waechter_und_budget():
+        t = _text(REF / "gates_und_ratschen.md")
+>       assert "bausteine_waechter" in t
+E       assert 'bausteine_waechter' in '# Gates & Ratschen — Detailmechanik\n\nAusgelagert aus `CLAUDE.md` (2026-08-15), damit die Detailmechanik nicht in **...ht mehr gearbeitet werden\nkann. Umgekehrt gilt: „Nachweis nicht erbringbar" ist **kein** Gate-Defekt und blockiert.\n'
+
+tests/test_adr_0112_bausteine_regel_doku.py:106: AssertionError
+___________________ test_design_system_verweist_auf_adr_0112 ___________________
+
+    def test_design_system_verweist_auf_adr_0112():
+        t = _text(REF / "design_system.md")
+>       assert "ADR-0112" in t and "bausteine_waechter" in t
+E       AssertionError: assert ('ADR-0112' in '# Design-System Gregor 20 — Referenz\n\n**Stand:** 2026-05-16 · **Quelle:** Anthropic-Artifact „Gregor 20 — Redesign ...6 (Issue #213). Quelle: Anthropic-Design-Artifact `puP0zvL3b8eR2dsEqc3R9Q`, synchronisiert mit `app.css`-Ist-Stand.*\n')
+
+tests/test_adr_0112_bausteine_regel_doku.py:115: AssertionError
+________________ test_workflow_doku_beschreibt_scheiben_ablauf _________________
+
+    def test_workflow_doku_beschreibt_scheiben_ablauf():
+        t = _text(REF / "workflow_und_agenten.md")
+>       assert "mockup-bildpruefer" in t
+E       AssertionError: assert 'mockup-bildpruefer' in '# Workflow & Agenten — Detailmechanik\n\n> Ausgelagert aus `CLAUDE.md` (#2640, 2026-10-30). In `CLAUDE.md` bleibt nur...> …` |\n\nMQ ist ausschließlich der **Instanz-übergreifende** Weg. Innerhalb von `gregor` gilt immer\n`SendMessage`.\n'
+
+tests/test_adr_0112_bausteine_regel_doku.py:120: AssertionError
+=========================== short test summary info ============================
+FAILED tests/test_adr_0112_bausteine_regel_doku.py::test_adr_0112_liegt_vor_und_ist_akzeptiert
+FAILED tests/test_adr_0112_bausteine_regel_doku.py::test_adr_0112_nennt_die_vier_regeln
+FAILED tests/test_adr_0112_bausteine_regel_doku.py::test_adr_0112_hat_pruefdatum_und_loeschbedingung
+FAILED tests/test_adr_0112_bausteine_regel_doku.py::test_adr_index_enthaelt_0112_und_0111_verweist
+FAILED tests/test_adr_0112_bausteine_regel_doku.py::test_anti_patterns_006_bis_008_sind_pflicht_mit_waechter
+FAILED tests/test_adr_0112_bausteine_regel_doku.py::test_pruef_agent_hat_nur_bildlesen_kein_quellcode
+FAILED tests/test_adr_0112_bausteine_regel_doku.py::test_pruef_agent_eingaben_runden_und_rolle
+FAILED tests/test_adr_0112_bausteine_regel_doku.py::test_pruef_agent_probelauf_dokumentiert
+FAILED tests/test_adr_0112_bausteine_regel_doku.py::test_gates_und_ratschen_beschreibt_waechter_und_budget
+FAILED tests/test_adr_0112_bausteine_regel_doku.py::test_design_system_verweist_auf_adr_0112
+FAILED tests/test_adr_0112_bausteine_regel_doku.py::test_workflow_doku_beschreibt_scheiben_ablauf

@@ -139,6 +139,8 @@
 
 **Warum:** Drift ist die Hauptquelle für Inkonsistenz. Wenn der Katalog die Komponente nicht abdeckt: Katalog erweitern, dann nutzen.
 
+**Pflicht mit Wächter, ADR-0112:** Für Seiten in `SEITEN_SCOPE` erzwingt `bausteine_waechter` (Regel (a)): Komponenten nur aus `atoms/molecules/organisms`, keine rohen `<button>/<input>/<select>/<textarea>/<table>`, kein lokales Styling. Fehlt ein Baustein, wird er zuerst im Design-System gebaut.
+
 **Falsch:**
 ```svelte
 <div style="background: #1a1a18; color: white; padding: 12px; ...">Toast</div>
@@ -157,6 +159,8 @@
 **Verboten:** Hex-Codes in `style=`-Attributen oder CSS-Regeln außerhalb von `tokens.css`.
 
 **Warum:** Charter §5. Farbe ist eine semantische Entscheidung, kein Hex-Wert.
+
+**Pflicht mit Wächter, ADR-0112:** In Bausteinen (`atoms/molecules/organisms`) zählt `bausteine_waechter` (Regel (b)) Hex-Farben, Farbfunktionen (`rgba()` usw.) und `var()`-Fallbacks mit Hex als Verstoß; nur `var(--g-*)` ist erlaubt. Der Bestand steht als Ratsche in `AUSNAHMEN` und darf nur sinken. Das `rgba()`-Beispiel unter „Richtig“ ist damit für neue Bausteine überholt: dafür ein Token anlegen.
 
 **Falsch:**
 ```css
@@ -181,6 +185,8 @@
 **Verboten:** `padding`, `margin`, `gap`, `width`, `height` Werte, die nicht aus `--g-s-*` (Spacing) oder semantisch erklärt sind.
 
 **Erlaubt:** Werte aus `--g-s-1` bis `--g-s-20`, plus semantische Werte (z. B. `width: 100%`, `height: 100vh`, `width: 1px` für Trennlinien, `44px` für Touch-Target).
+
+**Pflicht mit Wächter, ADR-0112:** In Bausteinen zählt `bausteine_waechter` (Regel (b)) jeden `px`/`rem`/`em`/`pt`-Wert außer `0` und 1-px-Rahmen als Verstoß (`%`, `fr`, `auto`, `vh/vw`, `calc()/min()/max()` über Tokens bleiben erlaubt). Semantische Festwerte wie 44 px Touch-Target brauchen ein Token oder `audit:exempt` mit Begründung.
 
 **Falsch:**
 ```css

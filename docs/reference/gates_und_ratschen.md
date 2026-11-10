@@ -602,6 +602,74 @@ sobald `trip_command_processor.py` ohne Fund ist.
 *Regel-Budget: i18n-Ratsche Python — Prüfdatum 2027-01-28, siehe Tabelle unten. Spec:
 `docs/specs/modules/i18n_p11_api_meldungen_ratsche_2674.md`.*
 
+## Bausteine-Wächter `bausteine_waechter` (ADR-0112, #2913, seit 2026-11-10)
+
+Erzwingt ADR-0112 „Oberflächen nur aus Design-System-Bausteinen und Tokens“ beim Merge (CI-Job
+`frontend-test`, `npm test`). Test `frontend/src/lib/__tests__/bausteine_waechter.test.ts`, Regeln und
+Konfiguration in `frontend/src/lib/__tests__/bausteine_waechter_regeln.ts` (Svelte-AST über
+`svelte/compiler`, kein Regex für den Aufbau). Gleiches Ratschen-Muster wie `harte_farben_waechter`.
+
+- **Regel (a) Aufbau** — nur für Dateien in `SEITEN_SCOPE` (Opt-in, startet leer; jede Scheibe von
+  „Einstellungen neu“ trägt ihre neuen Seiten-/Reiter-Dateien ein): kein `<style>`, kein `style=`, keine
+  `style:`-Direktive, keine Tailwind-Utility-Klassen (statisch, im Ausdruck, per `class:`-Direktive, auch auf
+  Komponenten), keine rohen `<button>/<input>/<select>/<textarea>/<table>`, Komponenten-Importe nur aus
+  `$lib/components/{atoms,molecules,organisms}` oder `FREIGEGEBENE_KOMPOSITIONEN`.
+- **Regel (b) Tokens** — alle Dateien in `atoms/molecules/organisms` (`<style>`, `style=`, `style:`-Direktiven,
+  Tailwind-Arbitrary-Werte wie `p-[12px]`): Hex, Farbfunktionen, Farbnamen, `var()` außerhalb `--g-*` und
+  `px/rem/em/pt` (außer `0` und 1-px-Rahmen) sind Verstöße; `%`, `fr`, `auto`, `vh/vw`, `calc()/min()/max()`
+  über Tokens sind erlaubt. Ratsche `AUSNAHMEN` = Ist-Stand je Bestandsdatei (Start 2026-11-10: 39 Dateien,
+  396 Verstöße), Obergrenze darf nur sinken; neue Baustein-Dateien starten bei 0.
+- **Neue-Datei-Regel** — jede `.svelte` unter `routes/` oder `lib/components/**` außerhalb der Baustein-Ordner
+  steht in `SEITEN_SCOPE` oder in `BESTAND` (Start: 204 Dateien, `BESTAND_OBERGRENZE` = 204 als feste Zahl).
+  Verwaiste Einträge und ein Bestand über der Obergrenze sind rot: der Bestand darf nur sinken.
+- **Ausnahme:** `audit:exempt` mit Begründung in derselben Zeile oder der Zeile davor (Svelte-Kommentar
+  `<!-- audit:exempt: … -->` bzw. CSS `/* audit:exempt: … */`); ohne Begründung bleibt es rot.
+- **Geschlossen (Fix-Loop 1, Adversary F004/F005):** `<svelte:element>` (jedes Tag), `<style>` in
+  `<svelte:head>`, `{@html}`, Spread mit `class`/`style`, Importpfade werden normalisiert
+  (`$lib/components/atoms/../shared` ist fremd) und relativ aufgelöst, Barrel-Importe unter
+  `lib/components/` zählen als Komponente, Importe im `<script module>`, weitere Tailwind-Präfixe
+  (`table-`, `caption-`, `transform-`, `backface-`, `mask-`, `field-sizing-`, `scheme-`, `wrap-`, `contain-`,
+  `prose`, `@container`); Regel (b): Farbnamen auch in Kurzschreibweisen (`border: 1px solid red`),
+  Custom Properties mit Ziffern (`--g-s-2: 12px`), Großschreibung (`12PX`). Begründung bei `audit:exempt`:
+  mindestens 10 Buchstaben, ein Wort mit mindestens 3.
+- **Bekannte Restlücken:** Klassen nur aus Variablen (`class={cls}` ohne String-Literal) und Spread aus
+  Variablen (`{...props}`), dynamische Komponenten (`<svelte:component>`, Komponente aus einer Variablen)
+  und dynamische `import()`, Komponenten aus npm-Paketen (z. B. `bits-ui`) sind unsichtbar;
+  Tailwind-Erkennung über eine Präfixliste (eigene Klassen mit Utility-Präfix wie `text-…` gelten als
+  Utility, neue Tailwind-Präfixe fehlen bis zur Nachpflege); CSS-Deklarationen per Regex; unitlose Zahlen
+  (Schriftgewicht, Zeilenhöhe) und Zeitangaben zählen nicht; Farbnamen nur aus einer festen Liste
+  häufiger Namen. Tailwind-Utilities in Bausteinen (z. B. `p-4`) zählen nicht als Token-Verstoß, nur
+  Arbitrary-Werte mit Hex/Maß.
+- **Neuzählung Fix-Loop 1:** `AUSNAHMEN` Summe 396 → 398 (nur `organisms/PresetRail.svelte` 19 → 21),
+  weiterhin 39 Dateien.
+
+*Regel-Budget: Prüfdatum 2027-02-08, siehe Tabelle unten. Ersetzt das seit ADR-0111 außer Dienst gestellte
+Design-Gate. Löschbedingung: kein nachweisbarer Fang bis dahin → Rückbau. Spec:
+`docs/specs/modules/einstellungen_neu_neustart_adr_waechter_elementliste.md`.*
+
+Zum Wächter gehört die **Elementliste** aus dem Mockup (Fassung 3): Generator
+`scripts/elementliste_aus_mockup.ts` (Playwright per `file://`, Lauf: `cd frontend && node
+--experimental-strip-types ../scripts/elementliste_aus_mockup.ts`), Artefakt
+`docs/context/einstellungen_neu/elementliste.json` mit Mockup-Hash; `elementliste_aktuell.test.ts` wird rot,
+wenn das Mockup geändert und die Liste nicht neu erzeugt wurde. Der Staging-Abgleich
+`frontend/e2e/elementliste-abgleich.staging.spec.ts` (Config `playwright.elementliste.staging.config.ts`,
+**nicht** im PR-CI, `assertNotProdBaseURL`) schreibt je Element `gefunden`/`abweichend`/`nicht_pruefbar`
+(mit Grund) als JSON und Markdown. Start über den Starter `scripts/elementliste_abgleich.ts`:
+`cd frontend && npm run elementliste:abgleich -- [--strict] [--scope <reiter[/zustand]>] [--sprache en]`
+(übersetzt die Flags in `ELEMENTLISTE_STRICT/SCOPE/SPRACHE`, reicht den Exit-Code durch; `--strict` ⇒ rot bei
+Abweichung oder `nicht_pruefbar`). Login mit `GZ_AUTH_USER/GZ_AUTH_PASS` nur im Speicher (fehlen sie, liest
+der Starter nur diese zwei Werte aus der Staging-`.env`), keine Auth-Datei; nginx-Basic-Auth nur bei gesetztem
+`GZ_VALIDATOR_*`. Fehlt dem Test-Konto ein Trip oder Orts-Vergleich, legt die Spec einen kurzlebigen
+`E2E-GZ`-Datensatz an und löscht ihn. Zustände per Route-Abfangen: „lädt“ hängt die Datenabrufe auf,
+„Ladefehler“ beantwortet sie mit 500, „Konto mit Lücken“ schreibt nur die lesenden Konto-Abrufe
+(GET `/api/auth/profile` und die Hub-Seitendaten `__data.json`, dafür Navigation im Browser) auf
+Telegram fehlt / SMS unbestätigt / Premium-SMS-Rückadresse verfallen um; Schreib-Requests laufen durch,
+das Konto ändert sich nicht. Wird kein Konto-Abruf abgefangen, wird das Element mit Grund `nicht_pruefbar`.
+Die Entscheidungslogik (Prod-Schutz, Scope, Route-Abfangen-Plan,
+Bewertung, Bericht, Exit) liegt browserfrei in `e2e/elementliste_abgleich_logik.ts`
+(`elementliste_abgleich_verdrahtung.test.ts`). Neue Seiten markieren ihre Abschnitte
+mit `data-abschnitt="<name aus der Elementliste>"`, sonst bleibt ein Element `abweichend`.
+
 ## Aktive Hooks in `.claude/settings.json` — Kurzreferenz (Stand 2026-10-21)
 
 Vollständige Liste der im Repo verdrahteten Hooks. Alle stehen in der geschützten Form
@@ -675,6 +743,7 @@ Kontrast- und Paritätstests `kontrast-trip-vergleich.spec.ts` (#2879), `hub-anl
 | i18n-Ratsche Go (`internal/i18n/hardcode_guard_test.go`, Allowlist `internal/i18n/hardcode_allowlist.json`, #2679) | 2027-01-28 | Startstand = alle Fundstellen vom Tag der Einführung (2026-10-31: 72 Befunde in 16 Dateien, 16 Einträge (nur Einzeldateien, kein Verzeichnis-Präfix)); Endstand 2026-11-02: 0 Einträge (`[]`) |
 | i18n-Ratsche Python (`tests/test_i18n_keine_hartkodierten_nutzertexte_python.py`, Allowlist `tests/fixtures/i18n_python_allowlist.json`, #2674) | 2027-01-28 | — (Startstand 2026-11-02: 222 Funde in 50 Dateien; Stand nach #2751 Teil 2: 17 Funde in 7 Einträgen (nur Renderer-Gate-Dateien) mit Baseline-Fundzahl je Datei; Endstand leer nach Abbau der Restbefunde im Folge-Issue) |
 | i18n-Paritätstests je Katalog (Frontend `paritaet_de_en.test.ts`, Python `test_i18n_*_katalog_paritaet.py`, Go `katalog_paritaet_test.go`; Epic #2644) | 2027-01-31 | eingeführt im Epic #2644 (Frontend laut Testkopf mit #2647); Kriterium: ein Schlüssel nur in `de` oder ein Platzhalter, der in einer Sprache fehlt |
+| Bausteine-Wächter `bausteine_waechter` (ADR-0112, #2913) — Regel (a) Aufbau für `SEITEN_SCOPE`, Regel (b) Tokens als Ratsche `AUSNAHMEN`, Neue-Datei-Regel mit `BESTAND`; ersetzt das Design-Gate (ADR-0111) | 2027-02-08 | offen — Start 2026-11-10: `SEITEN_SCOPE` leer, 204 Bestandsdateien, 39 Bausteine mit 396 Token-Verstößen (398 nach Verschärfung Fix-Loop 1). Löschbedingung: kein nachweisbarer Fang (kein Merge mit echtem Verstoß aufgehalten, kein fehlender Baustein durch ihn zuerst ins System gebracht) → Rückbau |
 | i18n-Token-Wächter `tests/test_metric_tokens_eingefroren.py` (Fixture `tests/fixtures/metric_tokens_frozen.json`, Epic #2644 P1) | 2027-01-31 | eingeführt im Epic #2644 (laut Konvention P1); Kriterium: eine Übersetzung oder Umbenennung von `col_label`, `compact_label` oder `sms_code`, die sonst still in Kanäle wanderte |
 
 **Weitere Prüfdaten, die nur im Code stehen** (Abgleich 2026-10-21 per

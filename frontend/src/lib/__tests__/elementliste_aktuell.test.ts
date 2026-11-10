@@ -59,13 +59,20 @@ function liste(): { mockup_hash: string; elemente: Element[] } {
 // Soll unabhängig vom Generator festgehalten (Spec AC-9) — sonst prüfte der Test sich selbst.
 const ZUSTAENDE = ['normal', 'laedt', 'fehler', 'luecken'];
 const KANAL_SEGMENTE = ['E-Mail', 'Telegram', 'SMS', 'Premium-SMS', '3-Tages-Ausblick'];
+// Die Kanal-Segmente gehören zur Karte „Inhalt je Kanal und Fläche“, die das Mockup im Reiter
+// WETTER rendert (viewWetter, mockup-hub-fassung3.html Z. 451/524-525; stand-2026-11-03.md:137),
+// und nur in den Zuständen normal und Konto mit Lücken — bei lädt/Ladefehler zeigt viewWetter nur
+// Skelett bzw. Fehlerbox, die Karte gibt es dort nicht.
 const SOLL: Array<{ ctx: string; reiter: string; zustand: string; segment: string | null }> = [];
 for (const ctx of ['trip', 'orte']) {
 	for (const zustand of ZUSTAENDE) {
 		SOLL.push({ ctx, reiter: 'wetter', zustand, segment: null });
 		SOLL.push({ ctx, reiter: ctx === 'trip' ? 'etappen' : 'orte', zustand, segment: null });
-		const segs = ctx === 'orte' ? [...KANAL_SEGMENTE, 'Stundenverlauf'] : KANAL_SEGMENTE;
-		for (const segment of segs) SOLL.push({ ctx, reiter: 'zustellung', zustand, segment });
+		SOLL.push({ ctx, reiter: 'zustellung', zustand, segment: null });
+		if (zustand === 'normal' || zustand === 'luecken') {
+			const segs = ctx === 'orte' ? [...KANAL_SEGMENTE, 'Stundenverlauf'] : KANAL_SEGMENTE;
+			for (const segment of segs) SOLL.push({ ctx, reiter: 'wetter', zustand, segment });
+		}
 	}
 }
 
@@ -106,9 +113,9 @@ describe('AC-9: alle Kombinationen Kontext × Zustand × Reiter × Kanal-Segment
 		assert.deepEqual(fehlend, [], `fehlende Kombinationen: ${fehlend.length}`);
 	});
 
-	test('Kanal-Segmente gehören nur zur Zustellung; Stundenverlauf nur bei Orte', () => {
+	test('Kanal-Segmente gehören nur zum Wetter-Reiter (Karte „Inhalt je Kanal und Fläche“); Stundenverlauf nur bei Orte', () => {
 		for (const e of liste().elemente) {
-			if (e.reiter !== 'zustellung') assert.equal(e.segment ?? null, null, `${e.id}: Segment außerhalb Zustellung`);
+			if (e.reiter !== 'wetter') assert.equal(e.segment ?? null, null, `${e.id}: Segment außerhalb des Wetter-Reiters`);
 			if (e.segment === 'Stundenverlauf') assert.equal(e.ctx, 'orte', `${e.id}: Stundenverlauf bei Trip`);
 		}
 	});

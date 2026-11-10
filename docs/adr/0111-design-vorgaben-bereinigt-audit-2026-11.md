@@ -2,6 +2,7 @@
 
 - **Status:** Akzeptiert (PO 2026-11-09, Freigabe Spec `docs/specs/modules/rework_2881_design_system_bereinigung.md`)
 - **Datum:** 2026-11-09
+- **Ergänzt durch: ADR-0112** (Oberflächen nur aus Design-System-Bausteinen und Tokens, Wächter `bausteine_waechter` ersetzt das außer Dienst gestellte Design-Gate)
 - **Bezug:** Issue #2881 (Teil 2), Design-Audit der Trip- und Vergleichsseiten (`origin/main` 08e0d9f1a); präzisiert ADR-0109 Punkt 7 und ADR-0110; löst AP-003 (`docs/design-system/ANTI-PATTERNS.md`) und Charter §3 für die Trip- und die Vergleichsliste ab; nimmt die Desktop-Werte aus Spec #2845 (`docs/specs/modules/rework_2845_hub_reiterleiste.md`) zurück; Folgen in #2879 (Kontrast) und #2880 (Parität).
 
 ## Kontext
