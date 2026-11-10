@@ -1,0 +1,2420 @@
+{
+  "_format": "#2794 S3a AC-37: gemeinsame Paritaets-Faelle der Metrik-Auswahl. Gelesen von pytest (tests/tdd/test_2794_teil3_auswahl_paritaet.py, Python-Referenz app.ampel.resolve_ampel) und von node --test (Frontend-Ableitung shared/wetter-tab/ampelModell.ts). vorlagen.<id>.ampel = vollstaendige Vorlagen-Ampel aus src/app/ampel_templates.py (template, metrics.<id>{enabled, lower, upper, alarm_ab}, thunder); vorlagen.<id>.aktiv = Metrik-IDs mit enabled=true in dieser Vorlage. faelle[].ampel = Abo-Ampel (display_config.ampel, nur Abweichungen; fehlt template, gilt 'allgemein'; unbekannte Vorlage faellt auf 'allgemein'); faelle[].aktiv = Metrik-IDs mit enabled=true nach Aufloesung Vorlage + Abweichungen (Metrik ohne Vorlagen-Zeile startet als enabled=false/alarm_ab=never). Reihenfolge von aktiv = Reihenfolge der aufgeloesten Ampel (Vorlagen-Zeilen, hinzugefuegte hinten); verglichen wird als Menge. Neu erzeugen nur, wenn sich die Vorlagen bewusst aendern; der pytest meldet jede Abweichung zur Python-Referenz.",
+  "vorlagen": {
+    "alpen-trekking": {
+      "ampel": {
+        "template": "alpen-trekking",
+        "metrics": {
+          "temperature": {
+            "enabled": true,
+            "lower": {
+              "red": -10,
+              "orange": -3,
+              "yellow": 2
+            },
+            "upper": {
+              "yellow": 27,
+              "orange": 30,
+              "red": 33
+            },
+            "alarm_ab": "orange"
+          },
+          "temperature_night": {
+            "enabled": true,
+            "lower": {
+              "red": -8,
+              "orange": -3,
+              "yellow": 0
+            },
+            "upper": {
+              "yellow": null,
+              "orange": null,
+              "red": null
+            },
+            "alarm_ab": "orange"
+          },
+          "wind_chill": {
+            "enabled": true,
+            "lower": {
+              "red": -15,
+              "orange": -8,
+              "yellow": -2
+            },
+            "upper": {
+              "yellow": null,
+              "orange": null,
+              "red": null
+            },
+            "alarm_ab": "never"
+          },
+          "dewpoint": {
+            "enabled": false,
+            "lower": {
+              "red": null,
+              "orange": null,
+              "yellow": null
+            },
+            "upper": {
+              "yellow": 16,
+              "orange": 18,
+              "red": 21
+            },
+            "alarm_ab": "never"
+          },
+          "humidity": {
+            "enabled": false,
+            "lower": {
+              "red": null,
+              "orange": null,
+              "yellow": null
+            },
+            "upper": {
+              "yellow": null,
+              "orange": null,
+              "red": null
+            },
+            "alarm_ab": "never"
+          },
+          "wind": {
+            "enabled": true,
+            "lower": {
+              "red": null,
+              "orange": null,
+              "yellow": null
+            },
+            "upper": {
+              "yellow": 30,
+              "orange": 45,
+              "red": 60
+            },
+            "alarm_ab": "orange"
+          },
+          "gust": {
+            "enabled": true,
+            "lower": {
+              "red": null,
+              "orange": null,
+              "yellow": null
+            },
+            "upper": {
+              "yellow": 35,
+              "orange": 50,
+              "red": 70
+            },
+            "alarm_ab": "orange"
+          },
+          "wind_direction": {
+            "enabled": false,
+            "lower": {
+              "red": null,
+              "orange": null,
+              "yellow": null
+            },
+            "upper": {
+              "yellow": null,
+              "orange": null,
+              "red": null
+            },
+            "alarm_ab": "never"
+          },
+          "precipitation": {
+            "enabled": true,
+            "lower": {
+              "red": null,
+              "orange": null,
+              "yellow": null
+            },
+            "upper": {
+              "yellow": 1,
+              "orange": 5,
+              "red": 15
+            },
+            "alarm_ab": "orange"
+          },
+          "rain_probability": {
+            "enabled": true,
+            "lower": {
+              "red": null,
+              "orange": null,
+              "yellow": null
+            },
+            "upper": {
+              "yellow": 30,
+              "orange": 60,
+              "red": 80
+            },
+            "alarm_ab": "never"
+          },
+          "thunder": {
+            "enabled": true,
+            "lower": {
+              "red": null,
+              "orange": null,
+              "yellow": null
+            },
+            "upper": {
+              "yellow": null,
+              "orange": null,
+              "red": null
+            },
+            "alarm_ab": "orange"
+          },
+          "visibility": {
+            "enabled": true,
+            "lower": {
+              "red": 100,
+              "orange": 300,
+              "yellow": 1000
+            },
+            "upper": {
+              "yellow": null,
+              "orange": null,
+              "red": null
+            },
+            "alarm_ab": "orange"
+          },
+          "cloud_total": {
+            "enabled": true,
+            "lower": {
+              "red": null,
+              "orange": null,
+              "yellow": null
+            },
+            "upper": {
+              "yellow": 70,
+              "orange": 90,
+              "red": null
+            },
+            "alarm_ab": "never"
+          },
+          "cloud_low": {
+            "enabled": true,
+            "lower": {
+              "red": null,
+              "orange": null,
+              "yellow": null
+            },
+            "upper": {
+              "yellow": 50,
+              "orange": 80,
+              "red": null
+            },
+            "alarm_ab": "never"
+          },
+          "sunshine": {
+            "enabled": false,
+            "lower": {
+              "red": null,
+              "orange": 1,
+              "yellow": 3
+            },
+            "upper": {
+              "yellow": null,
+              "orange": null,
+              "red": null
+            },
+            "alarm_ab": "never"
+          },
+          "uv_index": {
+            "enabled": true,
+            "lower": {
+              "red": null,
+              "orange": null,
+              "yellow": null
+            },
+            "upper": {
+              "yellow": 6,
+              "orange": 8,
+              "red": 10
+            },
+            "alarm_ab": "never"
+          },
+          "freezing_level": {
+            "enabled": true,
+            "lower": {
+              "red": -300,
+              "orange": 0,
+              "yellow": 300
+            },
+            "upper": {
+              "yellow": null,
+              "orange": null,
+              "red": null
+            },
+            "alarm_ab": "orange"
+          },
+          "snowfall_limit": {
+            "enabled": true,
+            "lower": {
+              "red": -500,
+              "orange": 0,
+              "yellow": 300
+            },
+            "upper": {
+              "yellow": null,
+              "orange": null,
+              "red": null
+            },
+            "alarm_ab": "orange"
+          },
+          "fresh_snow": {
+            "enabled": false,
+            "lower": {
+              "red": null,
+              "orange": null,
+              "yellow": null
+            },
+            "upper": {
+              "yellow": 5,
+              "orange": 10,
+              "red": 20
+            },
+            "alarm_ab": "orange"
+          },
+          "snow_depth": {
+            "enabled": false,
+            "lower": {
+              "red": null,
+              "orange": null,
+              "yellow": null
+            },
+            "upper": {
+              "yellow": null,
+              "orange": null,
+              "red": null
+            },
+            "alarm_ab": "never"
+          }
+        },
+        "thunder": {
+          "mittel": "orange",
+          "hoch": "red"
+        }
+      },
+      "aktiv": [
+        "temperature",
+        "temperature_night",
+        "wind_chill",
+        "wind",
+        "gust",
+        "precipitation",
+        "rain_probability",
+        "thunder",
+        "visibility",
+        "cloud_total",
+        "cloud_low",
+        "uv_index",
+        "freezing_level",
+        "snowfall_limit"
+      ]
+    },
+    "wandern": {
+      "ampel": {
+        "template": "wandern",
+        "metrics": {
+          "temperature": {
+            "enabled": true,
+            "lower": {
+              "red": -10,
+              "orange": -5,
+              "yellow": 0
+            },
+            "upper": {
+              "yellow": 26,
+              "orange": 30,
+              "red": 33
+            },
+            "alarm_ab": "orange"
+          },
+          "temperature_night": {
+            "enabled": true,
+            "lower": {
+              "red": -8,
+              "orange": -3,
+              "yellow": 0
+            },
+            "upper": {
+              "yellow": null,
+              "orange": null,
+              "red": null
+            },
+            "alarm_ab": "orange"
+          },
+          "wind_chill": {
+            "enabled": false,
+            "lower": {
+              "red": -15,
+              "orange": -5,
+              "yellow": 0
+            },
+            "upper": {
+              "yellow": 28,
+              "orange": 31,
+              "red": 34
+            },
+            "alarm_ab": "never"
+          },
+          "dewpoint": {
+            "enabled": false,
+            "lower": {
+              "red": null,
+              "orange": null,
+              "yellow": null
+            },
+            "upper": {
+              "yellow": 16,
+              "orange": 18,
+              "red": 21
+            },
+            "alarm_ab": "never"
+          },
+          "humidity": {
+            "enabled": true,
+            "lower": {
+              "red": null,
+              "orange": null,
+              "yellow": null
+            },
+            "upper": {
+              "yellow": null,
+              "orange": null,
+              "red": null
+            },
+            "alarm_ab": "never"
+          },
+          "wind": {
+            "enabled": true,
+            "lower": {
+              "red": null,
+              "orange": null,
+              "yellow": null
+            },
+            "upper": {
+              "yellow": 30,
+              "orange": 50,
+              "red": 70
+            },
+            "alarm_ab": "orange"
+          },
+          "gust": {
+            "enabled": true,
+            "lower": {
+              "red": null,
+              "orange": null,
+              "yellow": null
+            },
+            "upper": {
+              "yellow": 40,
+              "orange": 60,
+              "red": 75
+            },
+            "alarm_ab": "orange"
+          },
+          "wind_direction": {
+            "enabled": false,
+            "lower": {
+              "red": null,
+              "orange": null,
+              "yellow": null
+            },
+            "upper": {
+              "yellow": null,
+              "orange": null,
+              "red": null
+            },
+            "alarm_ab": "never"
+          },
+          "precipitation": {
+            "enabled": true,
+            "lower": {
+              "red": null,
+              "orange": null,
+              "yellow": null
+            },
+            "upper": {
+              "yellow": 1,
+              "orange": 5,
+              "red": 10
+            },
+            "alarm_ab": "orange"
+          },
+          "rain_probability": {
+            "enabled": true,
+            "lower": {
+              "red": null,
+              "orange": null,
+              "yellow": null
+            },
+            "upper": {
+              "yellow": 30,
+              "orange": 60,
+              "red": 80
+            },
+            "alarm_ab": "never"
+          },
+          "thunder": {
+            "enabled": true,
+            "lower": {
+              "red": null,
+              "orange": null,
+              "yellow": null
+            },
+            "upper": {
+              "yellow": null,
+              "orange": null,
+              "red": null
+            },
+            "alarm_ab": "orange"
+          },
+          "visibility": {
+            "enabled": false,
+            "lower": {
+              "red": 500,
+              "orange": 1000,
+              "yellow": 2000
+            },
+            "upper": {
+              "yellow": null,
+              "orange": null,
+              "red": null
+            },
+            "alarm_ab": "orange"
+          },
+          "cloud_total": {
+            "enabled": true,
+            "lower": {
+              "red": null,
+              "orange": null,
+              "yellow": null
+            },
+            "upper": {
+              "yellow": 70,
+              "orange": 90,
+              "red": null
+            },
+            "alarm_ab": "never"
+          },
+          "cloud_low": {
+            "enabled": false,
+            "lower": {
+              "red": null,
+              "orange": null,
+              "yellow": null
+            },
+            "upper": {
+              "yellow": 50,
+              "orange": 80,
+              "red": null
+            },
+            "alarm_ab": "never"
+          },
+          "sunshine": {
+            "enabled": true,
+            "lower": {
+              "red": null,
+              "orange": 1,
+              "yellow": 3
+            },
+            "upper": {
+              "yellow": null,
+              "orange": null,
+              "red": null
+            },
+            "alarm_ab": "never"
+          },
+          "uv_index": {
+            "enabled": true,
+            "lower": {
+              "red": null,
+              "orange": null,
+              "yellow": null
+            },
+            "upper": {
+              "yellow": 5,
+              "orange": 7,
+              "red": 9
+            },
+            "alarm_ab": "never"
+          },
+          "freezing_level": {
+            "enabled": false,
+            "lower": {
+              "red": -300,
+              "orange": 0,
+              "yellow": 300
+            },
+            "upper": {
+              "yellow": null,
+              "orange": null,
+              "red": null
+            },
+            "alarm_ab": "orange"
+          },
+          "snowfall_limit": {
+            "enabled": false,
+            "lower": {
+              "red": -300,
+              "orange": 0,
+              "yellow": 300
+            },
+            "upper": {
+              "yellow": null,
+              "orange": null,
+              "red": null
+            },
+            "alarm_ab": "orange"
+          },
+          "fresh_snow": {
+            "enabled": false,
+            "lower": {
+              "red": null,
+              "orange": null,
+              "yellow": null
+            },
+            "upper": {
+              "yellow": 10,
+              "orange": 20,
+              "red": 30
+            },
+            "alarm_ab": "orange"
+          },
+          "snow_depth": {
+            "enabled": false,
+            "lower": {
+              "red": null,
+              "orange": null,
+              "yellow": null
+            },
+            "upper": {
+              "yellow": null,
+              "orange": null,
+              "red": null
+            },
+            "alarm_ab": "never"
+          }
+        },
+        "thunder": {
+          "mittel": "orange",
+          "hoch": "red"
+        }
+      },
+      "aktiv": [
+        "temperature",
+        "temperature_night",
+        "humidity",
+        "wind",
+        "gust",
+        "precipitation",
+        "rain_probability",
+        "thunder",
+        "cloud_total",
+        "sunshine",
+        "uv_index"
+      ]
+    },
+    "skitouren": {
+      "ampel": {
+        "template": "skitouren",
+        "metrics": {
+          "temperature": {
+            "enabled": true,
+            "lower": {
+              "red": -30,
+              "orange": -20,
+              "yellow": -15
+            },
+            "upper": {
+              "yellow": 3,
+              "orange": 8,
+              "red": 15
+            },
+            "alarm_ab": "orange"
+          },
+          "temperature_night": {
+            "enabled": true,
+            "lower": {
+              "red": -25,
+              "orange": -18,
+              "yellow": -12
+            },
+            "upper": {
+              "yellow": 0,
+              "orange": 2,
+              "red": 5
+            },
+            "alarm_ab": "orange"
+          },
+          "wind_chill": {
+            "enabled": true,
+            "lower": {
+              "red": -35,
+              "orange": -25,
+              "yellow": -15
+            },
+            "upper": {
+              "yellow": null,
+              "orange": null,
+              "red": null
+            },
+            "alarm_ab": "never"
+          },
+          "dewpoint": {
+            "enabled": false,
+            "lower": {
+              "red": null,
+              "orange": null,
+              "yellow": null
+            },
+            "upper": {
+              "yellow": 16,
+              "orange": 18,
+              "red": 21
+            },
+            "alarm_ab": "never"
+          },
+          "humidity": {
+            "enabled": false,
+            "lower": {
+              "red": null,
+              "orange": null,
+              "yellow": null
+            },
+            "upper": {
+              "yellow": null,
+              "orange": null,
+              "red": null
+            },
+            "alarm_ab": "never"
+          },
+          "wind": {
+            "enabled": true,
+            "lower": {
+              "red": null,
+              "orange": null,
+              "yellow": null
+            },
+            "upper": {
+              "yellow": 30,
+              "orange": 45,
+              "red": 60
+            },
+            "alarm_ab": "orange"
+          },
+          "gust": {
+            "enabled": true,
+            "lower": {
+              "red": null,
+              "orange": null,
+              "yellow": null
+            },
+            "upper": {
+              "yellow": 40,
+              "orange": 55,
+              "red": 70
+            },
+            "alarm_ab": "orange"
+          },
+          "wind_direction": {
+            "enabled": false,
+            "lower": {
+              "red": null,
+              "orange": null,
+              "yellow": null
+            },
+            "upper": {
+              "yellow": null,
+              "orange": null,
+              "red": null
+            },
+            "alarm_ab": "never"
+          },
+          "precipitation": {
+            "enabled": true,
+            "lower": {
+              "red": null,
+              "orange": null,
+              "yellow": null
+            },
+            "upper": {
+              "yellow": 2,
+              "orange": 10,
+              "red": 20
+            },
+            "alarm_ab": "orange"
+          },
+          "rain_probability": {
+            "enabled": false,
+            "lower": {
+              "red": null,
+              "orange": null,
+              "yellow": null
+            },
+            "upper": {
+              "yellow": 30,
+              "orange": 60,
+              "red": 80
+            },
+            "alarm_ab": "never"
+          },
+          "thunder": {
+            "enabled": false,
+            "lower": {
+              "red": null,
+              "orange": null,
+              "yellow": null
+            },
+            "upper": {
+              "yellow": null,
+              "orange": null,
+              "red": null
+            },
+            "alarm_ab": "orange"
+          },
+          "visibility": {
+            "enabled": true,
+            "lower": {
+              "red": 200,
+              "orange": 500,
+              "yellow": 1000
+            },
+            "upper": {
+              "yellow": null,
+              "orange": null,
+              "red": null
+            },
+            "alarm_ab": "orange"
+          },
+          "cloud_total": {
+            "enabled": true,
+            "lower": {
+              "red": null,
+              "orange": null,
+              "yellow": null
+            },
+            "upper": {
+              "yellow": 70,
+              "orange": 90,
+              "red": null
+            },
+            "alarm_ab": "never"
+          },
+          "cloud_low": {
+            "enabled": true,
+            "lower": {
+              "red": null,
+              "orange": null,
+              "yellow": null
+            },
+            "upper": {
+              "yellow": 40,
+              "orange": 70,
+              "red": 90
+            },
+            "alarm_ab": "never"
+          },
+          "sunshine": {
+            "enabled": false,
+            "lower": {
+              "red": null,
+              "orange": 1,
+              "yellow": 3
+            },
+            "upper": {
+              "yellow": null,
+              "orange": null,
+              "red": null
+            },
+            "alarm_ab": "never"
+          },
+          "uv_index": {
+            "enabled": false,
+            "lower": {
+              "red": null,
+              "orange": null,
+              "yellow": null
+            },
+            "upper": {
+              "yellow": 3,
+              "orange": 6,
+              "red": 8
+            },
+            "alarm_ab": "never"
+          },
+          "freezing_level": {
+            "enabled": true,
+            "lower": {
+              "red": null,
+              "orange": null,
+              "yellow": null
+            },
+            "upper": {
+              "yellow": 300,
+              "orange": 800,
+              "red": 1500
+            },
+            "alarm_ab": "orange"
+          },
+          "snowfall_limit": {
+            "enabled": true,
+            "lower": {
+              "red": null,
+              "orange": null,
+              "yellow": null
+            },
+            "upper": {
+              "yellow": 0,
+              "orange": 300,
+              "red": 800
+            },
+            "alarm_ab": "orange"
+          },
+          "fresh_snow": {
+            "enabled": true,
+            "lower": {
+              "red": null,
+              "orange": null,
+              "yellow": null
+            },
+            "upper": {
+              "yellow": 20,
+              "orange": 30,
+              "red": 50
+            },
+            "alarm_ab": "orange"
+          },
+          "snow_depth": {
+            "enabled": true,
+            "lower": {
+              "red": 15,
+              "orange": 30,
+              "yellow": 50
+            },
+            "upper": {
+              "yellow": null,
+              "orange": null,
+              "red": null
+            },
+            "alarm_ab": "orange"
+          }
+        },
+        "thunder": {
+          "mittel": "orange",
+          "hoch": "red"
+        }
+      },
+      "aktiv": [
+        "temperature",
+        "temperature_night",
+        "wind_chill",
+        "wind",
+        "gust",
+        "precipitation",
+        "visibility",
+        "cloud_total",
+        "cloud_low",
+        "freezing_level",
+        "snowfall_limit",
+        "fresh_snow",
+        "snow_depth"
+      ]
+    },
+    "wintersport": {
+      "ampel": {
+        "template": "wintersport",
+        "metrics": {
+          "temperature": {
+            "enabled": true,
+            "lower": {
+              "red": -25,
+              "orange": -20,
+              "yellow": -15
+            },
+            "upper": {
+              "yellow": 5,
+              "orange": 10,
+              "red": 15
+            },
+            "alarm_ab": "orange"
+          },
+          "temperature_night": {
+            "enabled": true,
+            "lower": {
+              "red": -25,
+              "orange": -18,
+              "yellow": -12
+            },
+            "upper": {
+              "yellow": 0,
+              "orange": 2,
+              "red": 5
+            },
+            "alarm_ab": "never"
+          },
+          "wind_chill": {
+            "enabled": true,
+            "lower": {
+              "red": -30,
+              "orange": -22,
+              "yellow": -15
+            },
+            "upper": {
+              "yellow": null,
+              "orange": null,
+              "red": null
+            },
+            "alarm_ab": "never"
+          },
+          "dewpoint": {
+            "enabled": false,
+            "lower": {
+              "red": null,
+              "orange": null,
+              "yellow": null
+            },
+            "upper": {
+              "yellow": 16,
+              "orange": 18,
+              "red": 21
+            },
+            "alarm_ab": "never"
+          },
+          "humidity": {
+            "enabled": false,
+            "lower": {
+              "red": null,
+              "orange": null,
+              "yellow": null
+            },
+            "upper": {
+              "yellow": null,
+              "orange": null,
+              "red": null
+            },
+            "alarm_ab": "never"
+          },
+          "wind": {
+            "enabled": true,
+            "lower": {
+              "red": null,
+              "orange": null,
+              "yellow": null
+            },
+            "upper": {
+              "yellow": 30,
+              "orange": 50,
+              "red": 70
+            },
+            "alarm_ab": "orange"
+          },
+          "gust": {
+            "enabled": true,
+            "lower": {
+              "red": null,
+              "orange": null,
+              "yellow": null
+            },
+            "upper": {
+              "yellow": 40,
+              "orange": 60,
+              "red": 80
+            },
+            "alarm_ab": "orange"
+          },
+          "wind_direction": {
+            "enabled": false,
+            "lower": {
+              "red": null,
+              "orange": null,
+              "yellow": null
+            },
+            "upper": {
+              "yellow": null,
+              "orange": null,
+              "red": null
+            },
+            "alarm_ab": "never"
+          },
+          "precipitation": {
+            "enabled": true,
+            "lower": {
+              "red": null,
+              "orange": null,
+              "yellow": null
+            },
+            "upper": {
+              "yellow": 2,
+              "orange": 10,
+              "red": 20
+            },
+            "alarm_ab": "orange"
+          },
+          "rain_probability": {
+            "enabled": false,
+            "lower": {
+              "red": null,
+              "orange": null,
+              "yellow": null
+            },
+            "upper": {
+              "yellow": 30,
+              "orange": 60,
+              "red": 80
+            },
+            "alarm_ab": "never"
+          },
+          "thunder": {
+            "enabled": false,
+            "lower": {
+              "red": null,
+              "orange": null,
+              "yellow": null
+            },
+            "upper": {
+              "yellow": null,
+              "orange": null,
+              "red": null
+            },
+            "alarm_ab": "orange"
+          },
+          "visibility": {
+            "enabled": true,
+            "lower": {
+              "red": 200,
+              "orange": 500,
+              "yellow": 1000
+            },
+            "upper": {
+              "yellow": null,
+              "orange": null,
+              "red": null
+            },
+            "alarm_ab": "orange"
+          },
+          "cloud_total": {
+            "enabled": true,
+            "lower": {
+              "red": null,
+              "orange": null,
+              "yellow": null
+            },
+            "upper": {
+              "yellow": 70,
+              "orange": 90,
+              "red": null
+            },
+            "alarm_ab": "never"
+          },
+          "cloud_low": {
+            "enabled": false,
+            "lower": {
+              "red": null,
+              "orange": null,
+              "yellow": null
+            },
+            "upper": {
+              "yellow": 50,
+              "orange": 80,
+              "red": null
+            },
+            "alarm_ab": "never"
+          },
+          "sunshine": {
+            "enabled": true,
+            "lower": {
+              "red": null,
+              "orange": 1,
+              "yellow": 3
+            },
+            "upper": {
+              "yellow": null,
+              "orange": null,
+              "red": null
+            },
+            "alarm_ab": "never"
+          },
+          "uv_index": {
+            "enabled": false,
+            "lower": {
+              "red": null,
+              "orange": null,
+              "yellow": null
+            },
+            "upper": {
+              "yellow": 3,
+              "orange": 6,
+              "red": 8
+            },
+            "alarm_ab": "never"
+          },
+          "freezing_level": {
+            "enabled": false,
+            "lower": {
+              "red": -300,
+              "orange": 0,
+              "yellow": 300
+            },
+            "upper": {
+              "yellow": null,
+              "orange": null,
+              "red": null
+            },
+            "alarm_ab": "orange"
+          },
+          "snowfall_limit": {
+            "enabled": false,
+            "lower": {
+              "red": -300,
+              "orange": 0,
+              "yellow": 300
+            },
+            "upper": {
+              "yellow": null,
+              "orange": null,
+              "red": null
+            },
+            "alarm_ab": "orange"
+          },
+          "fresh_snow": {
+            "enabled": true,
+            "lower": {
+              "red": null,
+              "orange": null,
+              "yellow": null
+            },
+            "upper": {
+              "yellow": null,
+              "orange": null,
+              "red": null
+            },
+            "alarm_ab": "never"
+          },
+          "snow_depth": {
+            "enabled": true,
+            "lower": {
+              "red": 10,
+              "orange": 20,
+              "yellow": 40
+            },
+            "upper": {
+              "yellow": null,
+              "orange": null,
+              "red": null
+            },
+            "alarm_ab": "orange"
+          }
+        },
+        "thunder": {
+          "mittel": "orange",
+          "hoch": "red"
+        }
+      },
+      "aktiv": [
+        "temperature",
+        "temperature_night",
+        "wind_chill",
+        "wind",
+        "gust",
+        "precipitation",
+        "visibility",
+        "cloud_total",
+        "sunshine",
+        "fresh_snow",
+        "snow_depth"
+      ]
+    },
+    "radtour": {
+      "ampel": {
+        "template": "radtour",
+        "metrics": {
+          "temperature": {
+            "enabled": true,
+            "lower": {
+              "red": -5,
+              "orange": 0,
+              "yellow": 5
+            },
+            "upper": {
+              "yellow": 28,
+              "orange": 32,
+              "red": 35
+            },
+            "alarm_ab": "orange"
+          },
+          "temperature_night": {
+            "enabled": true,
+            "lower": {
+              "red": -5,
+              "orange": 0,
+              "yellow": 5
+            },
+            "upper": {
+              "yellow": null,
+              "orange": null,
+              "red": null
+            },
+            "alarm_ab": "never"
+          },
+          "wind_chill": {
+            "enabled": true,
+            "lower": {
+              "red": -15,
+              "orange": -5,
+              "yellow": 0
+            },
+            "upper": {
+              "yellow": 28,
+              "orange": 31,
+              "red": 34
+            },
+            "alarm_ab": "never"
+          },
+          "dewpoint": {
+            "enabled": false,
+            "lower": {
+              "red": null,
+              "orange": null,
+              "yellow": null
+            },
+            "upper": {
+              "yellow": 16,
+              "orange": 18,
+              "red": 21
+            },
+            "alarm_ab": "never"
+          },
+          "humidity": {
+            "enabled": false,
+            "lower": {
+              "red": null,
+              "orange": null,
+              "yellow": null
+            },
+            "upper": {
+              "yellow": null,
+              "orange": null,
+              "red": null
+            },
+            "alarm_ab": "never"
+          },
+          "wind": {
+            "enabled": true,
+            "lower": {
+              "red": null,
+              "orange": null,
+              "yellow": null
+            },
+            "upper": {
+              "yellow": 20,
+              "orange": 30,
+              "red": 45
+            },
+            "alarm_ab": "orange"
+          },
+          "gust": {
+            "enabled": true,
+            "lower": {
+              "red": null,
+              "orange": null,
+              "yellow": null
+            },
+            "upper": {
+              "yellow": 35,
+              "orange": 50,
+              "red": 65
+            },
+            "alarm_ab": "orange"
+          },
+          "wind_direction": {
+            "enabled": true,
+            "lower": {
+              "red": null,
+              "orange": null,
+              "yellow": null
+            },
+            "upper": {
+              "yellow": null,
+              "orange": null,
+              "red": null
+            },
+            "alarm_ab": "never"
+          },
+          "precipitation": {
+            "enabled": true,
+            "lower": {
+              "red": null,
+              "orange": null,
+              "yellow": null
+            },
+            "upper": {
+              "yellow": 0.5,
+              "orange": 2,
+              "red": 5
+            },
+            "alarm_ab": "orange"
+          },
+          "rain_probability": {
+            "enabled": true,
+            "lower": {
+              "red": null,
+              "orange": null,
+              "yellow": null
+            },
+            "upper": {
+              "yellow": 30,
+              "orange": 50,
+              "red": 70
+            },
+            "alarm_ab": "never"
+          },
+          "thunder": {
+            "enabled": true,
+            "lower": {
+              "red": null,
+              "orange": null,
+              "yellow": null
+            },
+            "upper": {
+              "yellow": null,
+              "orange": null,
+              "red": null
+            },
+            "alarm_ab": "orange"
+          },
+          "visibility": {
+            "enabled": false,
+            "lower": {
+              "red": 500,
+              "orange": 1000,
+              "yellow": 2000
+            },
+            "upper": {
+              "yellow": null,
+              "orange": null,
+              "red": null
+            },
+            "alarm_ab": "orange"
+          },
+          "cloud_total": {
+            "enabled": true,
+            "lower": {
+              "red": null,
+              "orange": null,
+              "yellow": null
+            },
+            "upper": {
+              "yellow": 80,
+              "orange": 95,
+              "red": null
+            },
+            "alarm_ab": "never"
+          },
+          "cloud_low": {
+            "enabled": false,
+            "lower": {
+              "red": null,
+              "orange": null,
+              "yellow": null
+            },
+            "upper": {
+              "yellow": 50,
+              "orange": 80,
+              "red": null
+            },
+            "alarm_ab": "never"
+          },
+          "sunshine": {
+            "enabled": true,
+            "lower": {
+              "red": null,
+              "orange": 1,
+              "yellow": 3
+            },
+            "upper": {
+              "yellow": null,
+              "orange": null,
+              "red": null
+            },
+            "alarm_ab": "never"
+          },
+          "uv_index": {
+            "enabled": true,
+            "lower": {
+              "red": null,
+              "orange": null,
+              "yellow": null
+            },
+            "upper": {
+              "yellow": 6,
+              "orange": 8,
+              "red": 10
+            },
+            "alarm_ab": "never"
+          },
+          "freezing_level": {
+            "enabled": false,
+            "lower": {
+              "red": -300,
+              "orange": 0,
+              "yellow": 300
+            },
+            "upper": {
+              "yellow": null,
+              "orange": null,
+              "red": null
+            },
+            "alarm_ab": "orange"
+          },
+          "snowfall_limit": {
+            "enabled": false,
+            "lower": {
+              "red": -300,
+              "orange": 0,
+              "yellow": 300
+            },
+            "upper": {
+              "yellow": null,
+              "orange": null,
+              "red": null
+            },
+            "alarm_ab": "orange"
+          },
+          "fresh_snow": {
+            "enabled": false,
+            "lower": {
+              "red": null,
+              "orange": null,
+              "yellow": null
+            },
+            "upper": {
+              "yellow": 10,
+              "orange": 20,
+              "red": 30
+            },
+            "alarm_ab": "orange"
+          },
+          "snow_depth": {
+            "enabled": false,
+            "lower": {
+              "red": null,
+              "orange": null,
+              "yellow": null
+            },
+            "upper": {
+              "yellow": null,
+              "orange": null,
+              "red": null
+            },
+            "alarm_ab": "never"
+          }
+        },
+        "thunder": {
+          "mittel": "orange",
+          "hoch": "red"
+        }
+      },
+      "aktiv": [
+        "temperature",
+        "temperature_night",
+        "wind_chill",
+        "wind",
+        "gust",
+        "wind_direction",
+        "precipitation",
+        "rain_probability",
+        "thunder",
+        "cloud_total",
+        "sunshine",
+        "uv_index"
+      ]
+    },
+    "wassersport": {
+      "ampel": {
+        "template": "wassersport",
+        "metrics": {
+          "temperature": {
+            "enabled": true,
+            "lower": {
+              "red": 0,
+              "orange": 5,
+              "yellow": 10
+            },
+            "upper": {
+              "yellow": 30,
+              "orange": 33,
+              "red": 36
+            },
+            "alarm_ab": "orange"
+          },
+          "temperature_night": {
+            "enabled": true,
+            "lower": {
+              "red": 0,
+              "orange": 5,
+              "yellow": 8
+            },
+            "upper": {
+              "yellow": null,
+              "orange": null,
+              "red": null
+            },
+            "alarm_ab": "never"
+          },
+          "wind_chill": {
+            "enabled": false,
+            "lower": {
+              "red": -15,
+              "orange": -5,
+              "yellow": 0
+            },
+            "upper": {
+              "yellow": 28,
+              "orange": 31,
+              "red": 34
+            },
+            "alarm_ab": "never"
+          },
+          "dewpoint": {
+            "enabled": false,
+            "lower": {
+              "red": null,
+              "orange": null,
+              "yellow": null
+            },
+            "upper": {
+              "yellow": 16,
+              "orange": 18,
+              "red": 21
+            },
+            "alarm_ab": "never"
+          },
+          "humidity": {
+            "enabled": false,
+            "lower": {
+              "red": null,
+              "orange": null,
+              "yellow": null
+            },
+            "upper": {
+              "yellow": null,
+              "orange": null,
+              "red": null
+            },
+            "alarm_ab": "never"
+          },
+          "wind": {
+            "enabled": true,
+            "lower": {
+              "red": null,
+              "orange": 4,
+              "yellow": 8
+            },
+            "upper": {
+              "yellow": 30,
+              "orange": 40,
+              "red": 50
+            },
+            "alarm_ab": "orange"
+          },
+          "gust": {
+            "enabled": true,
+            "lower": {
+              "red": null,
+              "orange": null,
+              "yellow": null
+            },
+            "upper": {
+              "yellow": 40,
+              "orange": 50,
+              "red": 62
+            },
+            "alarm_ab": "orange"
+          },
+          "wind_direction": {
+            "enabled": true,
+            "lower": {
+              "red": null,
+              "orange": null,
+              "yellow": null
+            },
+            "upper": {
+              "yellow": null,
+              "orange": null,
+              "red": null
+            },
+            "alarm_ab": "never"
+          },
+          "precipitation": {
+            "enabled": true,
+            "lower": {
+              "red": null,
+              "orange": null,
+              "yellow": null
+            },
+            "upper": {
+              "yellow": 2,
+              "orange": 5,
+              "red": 10
+            },
+            "alarm_ab": "orange"
+          },
+          "rain_probability": {
+            "enabled": true,
+            "lower": {
+              "red": null,
+              "orange": null,
+              "yellow": null
+            },
+            "upper": {
+              "yellow": 30,
+              "orange": 60,
+              "red": 80
+            },
+            "alarm_ab": "never"
+          },
+          "thunder": {
+            "enabled": true,
+            "lower": {
+              "red": null,
+              "orange": null,
+              "yellow": null
+            },
+            "upper": {
+              "yellow": null,
+              "orange": null,
+              "red": null
+            },
+            "alarm_ab": "orange"
+          },
+          "visibility": {
+            "enabled": true,
+            "lower": {
+              "red": 500,
+              "orange": 1000,
+              "yellow": 2000
+            },
+            "upper": {
+              "yellow": null,
+              "orange": null,
+              "red": null
+            },
+            "alarm_ab": "orange"
+          },
+          "cloud_total": {
+            "enabled": true,
+            "lower": {
+              "red": null,
+              "orange": null,
+              "yellow": null
+            },
+            "upper": {
+              "yellow": 80,
+              "orange": 95,
+              "red": null
+            },
+            "alarm_ab": "never"
+          },
+          "cloud_low": {
+            "enabled": false,
+            "lower": {
+              "red": null,
+              "orange": null,
+              "yellow": null
+            },
+            "upper": {
+              "yellow": 50,
+              "orange": 80,
+              "red": null
+            },
+            "alarm_ab": "never"
+          },
+          "sunshine": {
+            "enabled": false,
+            "lower": {
+              "red": null,
+              "orange": 1,
+              "yellow": 3
+            },
+            "upper": {
+              "yellow": null,
+              "orange": null,
+              "red": null
+            },
+            "alarm_ab": "never"
+          },
+          "uv_index": {
+            "enabled": false,
+            "lower": {
+              "red": null,
+              "orange": null,
+              "yellow": null
+            },
+            "upper": {
+              "yellow": 6,
+              "orange": 8,
+              "red": 10
+            },
+            "alarm_ab": "never"
+          },
+          "freezing_level": {
+            "enabled": false,
+            "lower": {
+              "red": -300,
+              "orange": 0,
+              "yellow": 300
+            },
+            "upper": {
+              "yellow": null,
+              "orange": null,
+              "red": null
+            },
+            "alarm_ab": "orange"
+          },
+          "snowfall_limit": {
+            "enabled": false,
+            "lower": {
+              "red": -300,
+              "orange": 0,
+              "yellow": 300
+            },
+            "upper": {
+              "yellow": null,
+              "orange": null,
+              "red": null
+            },
+            "alarm_ab": "orange"
+          },
+          "fresh_snow": {
+            "enabled": false,
+            "lower": {
+              "red": null,
+              "orange": null,
+              "yellow": null
+            },
+            "upper": {
+              "yellow": 10,
+              "orange": 20,
+              "red": 30
+            },
+            "alarm_ab": "orange"
+          },
+          "snow_depth": {
+            "enabled": false,
+            "lower": {
+              "red": null,
+              "orange": null,
+              "yellow": null
+            },
+            "upper": {
+              "yellow": null,
+              "orange": null,
+              "red": null
+            },
+            "alarm_ab": "never"
+          }
+        },
+        "thunder": {
+          "mittel": "red",
+          "hoch": "red"
+        }
+      },
+      "aktiv": [
+        "temperature",
+        "temperature_night",
+        "wind",
+        "gust",
+        "wind_direction",
+        "precipitation",
+        "rain_probability",
+        "thunder",
+        "visibility",
+        "cloud_total"
+      ]
+    },
+    "allgemein": {
+      "ampel": {
+        "template": "allgemein",
+        "metrics": {
+          "temperature": {
+            "enabled": true,
+            "lower": {
+              "red": -15,
+              "orange": -5,
+              "yellow": 0
+            },
+            "upper": {
+              "yellow": 28,
+              "orange": 31,
+              "red": 34
+            },
+            "alarm_ab": "orange"
+          },
+          "temperature_night": {
+            "enabled": false,
+            "lower": {
+              "red": -10,
+              "orange": -5,
+              "yellow": 0
+            },
+            "upper": {
+              "yellow": null,
+              "orange": null,
+              "red": null
+            },
+            "alarm_ab": "orange"
+          },
+          "wind_chill": {
+            "enabled": false,
+            "lower": {
+              "red": -15,
+              "orange": -5,
+              "yellow": 0
+            },
+            "upper": {
+              "yellow": 28,
+              "orange": 31,
+              "red": 34
+            },
+            "alarm_ab": "never"
+          },
+          "dewpoint": {
+            "enabled": false,
+            "lower": {
+              "red": null,
+              "orange": null,
+              "yellow": null
+            },
+            "upper": {
+              "yellow": 16,
+              "orange": 18,
+              "red": 21
+            },
+            "alarm_ab": "never"
+          },
+          "humidity": {
+            "enabled": false,
+            "lower": {
+              "red": null,
+              "orange": null,
+              "yellow": null
+            },
+            "upper": {
+              "yellow": null,
+              "orange": null,
+              "red": null
+            },
+            "alarm_ab": "never"
+          },
+          "wind": {
+            "enabled": true,
+            "lower": {
+              "red": null,
+              "orange": null,
+              "yellow": null
+            },
+            "upper": {
+              "yellow": 30,
+              "orange": 50,
+              "red": 70
+            },
+            "alarm_ab": "orange"
+          },
+          "gust": {
+            "enabled": true,
+            "lower": {
+              "red": null,
+              "orange": null,
+              "yellow": null
+            },
+            "upper": {
+              "yellow": 30,
+              "orange": 45,
+              "red": 60
+            },
+            "alarm_ab": "orange"
+          },
+          "wind_direction": {
+            "enabled": false,
+            "lower": {
+              "red": null,
+              "orange": null,
+              "yellow": null
+            },
+            "upper": {
+              "yellow": null,
+              "orange": null,
+              "red": null
+            },
+            "alarm_ab": "never"
+          },
+          "precipitation": {
+            "enabled": true,
+            "lower": {
+              "red": null,
+              "orange": null,
+              "yellow": null
+            },
+            "upper": {
+              "yellow": 1,
+              "orange": 5,
+              "red": 10
+            },
+            "alarm_ab": "orange"
+          },
+          "rain_probability": {
+            "enabled": true,
+            "lower": {
+              "red": null,
+              "orange": null,
+              "yellow": null
+            },
+            "upper": {
+              "yellow": 30,
+              "orange": 60,
+              "red": 80
+            },
+            "alarm_ab": "never"
+          },
+          "thunder": {
+            "enabled": true,
+            "lower": {
+              "red": null,
+              "orange": null,
+              "yellow": null
+            },
+            "upper": {
+              "yellow": null,
+              "orange": null,
+              "red": null
+            },
+            "alarm_ab": "orange"
+          },
+          "visibility": {
+            "enabled": false,
+            "lower": {
+              "red": 500,
+              "orange": 1000,
+              "yellow": 2000
+            },
+            "upper": {
+              "yellow": null,
+              "orange": null,
+              "red": null
+            },
+            "alarm_ab": "orange"
+          },
+          "cloud_total": {
+            "enabled": true,
+            "lower": {
+              "red": null,
+              "orange": null,
+              "yellow": null
+            },
+            "upper": {
+              "yellow": 60,
+              "orange": 85,
+              "red": null
+            },
+            "alarm_ab": "never"
+          },
+          "cloud_low": {
+            "enabled": false,
+            "lower": {
+              "red": null,
+              "orange": null,
+              "yellow": null
+            },
+            "upper": {
+              "yellow": 50,
+              "orange": 80,
+              "red": null
+            },
+            "alarm_ab": "never"
+          },
+          "sunshine": {
+            "enabled": true,
+            "lower": {
+              "red": null,
+              "orange": 1,
+              "yellow": 3
+            },
+            "upper": {
+              "yellow": null,
+              "orange": null,
+              "red": null
+            },
+            "alarm_ab": "never"
+          },
+          "uv_index": {
+            "enabled": false,
+            "lower": {
+              "red": null,
+              "orange": null,
+              "yellow": null
+            },
+            "upper": {
+              "yellow": 3,
+              "orange": 6,
+              "red": 8
+            },
+            "alarm_ab": "never"
+          },
+          "freezing_level": {
+            "enabled": false,
+            "lower": {
+              "red": -300,
+              "orange": 0,
+              "yellow": 300
+            },
+            "upper": {
+              "yellow": null,
+              "orange": null,
+              "red": null
+            },
+            "alarm_ab": "orange"
+          },
+          "snowfall_limit": {
+            "enabled": false,
+            "lower": {
+              "red": -300,
+              "orange": 0,
+              "yellow": 300
+            },
+            "upper": {
+              "yellow": null,
+              "orange": null,
+              "red": null
+            },
+            "alarm_ab": "orange"
+          },
+          "fresh_snow": {
+            "enabled": false,
+            "lower": {
+              "red": null,
+              "orange": null,
+              "yellow": null
+            },
+            "upper": {
+              "yellow": 10,
+              "orange": 20,
+              "red": 30
+            },
+            "alarm_ab": "orange"
+          },
+          "snow_depth": {
+            "enabled": false,
+            "lower": {
+              "red": null,
+              "orange": null,
+              "yellow": null
+            },
+            "upper": {
+              "yellow": null,
+              "orange": null,
+              "red": null
+            },
+            "alarm_ab": "never"
+          }
+        },
+        "thunder": {
+          "mittel": "orange",
+          "hoch": "red"
+        }
+      },
+      "aktiv": [
+        "temperature",
+        "wind",
+        "gust",
+        "precipitation",
+        "rain_probability",
+        "thunder",
+        "cloud_total",
+        "sunshine"
+      ]
+    }
+  },
+  "faelle": [
+    {
+      "name": "nur_vorlage_wandern",
+      "ampel": {
+        "template": "wandern"
+      },
+      "aktiv": [
+        "temperature",
+        "temperature_night",
+        "humidity",
+        "wind",
+        "gust",
+        "precipitation",
+        "rain_probability",
+        "thunder",
+        "cloud_total",
+        "sunshine",
+        "uv_index"
+      ]
+    },
+    {
+      "name": "metrik_entfernt",
+      "ampel": {
+        "template": "wandern",
+        "metrics": {
+          "gust": {
+            "enabled": false
+          }
+        }
+      },
+      "aktiv": [
+        "temperature",
+        "temperature_night",
+        "humidity",
+        "wind",
+        "precipitation",
+        "rain_probability",
+        "thunder",
+        "cloud_total",
+        "sunshine",
+        "uv_index"
+      ]
+    },
+    {
+      "name": "metrik_hinzugefuegt_vorlagenzeile_aus",
+      "ampel": {
+        "template": "wandern",
+        "metrics": {
+          "dewpoint": {
+            "enabled": true
+          }
+        }
+      },
+      "aktiv": [
+        "temperature",
+        "temperature_night",
+        "dewpoint",
+        "humidity",
+        "wind",
+        "gust",
+        "precipitation",
+        "rain_probability",
+        "thunder",
+        "cloud_total",
+        "sunshine",
+        "uv_index"
+      ]
+    },
+    {
+      "name": "metrik_hinzugefuegt_ohne_vorlagenzeile",
+      "ampel": {
+        "template": "allgemein",
+        "metrics": {
+          "pressure": {
+            "enabled": true
+          }
+        }
+      },
+      "aktiv": [
+        "temperature",
+        "wind",
+        "gust",
+        "precipitation",
+        "rain_probability",
+        "thunder",
+        "cloud_total",
+        "sunshine",
+        "pressure"
+      ]
+    },
+    {
+      "name": "entfernt_und_hinzugefuegt",
+      "ampel": {
+        "template": "alpen-trekking",
+        "metrics": {
+          "wind": {
+            "enabled": false
+          },
+          "fresh_snow": {
+            "enabled": true
+          }
+        }
+      },
+      "aktiv": [
+        "temperature",
+        "temperature_night",
+        "wind_chill",
+        "gust",
+        "precipitation",
+        "rain_probability",
+        "thunder",
+        "visibility",
+        "cloud_total",
+        "cloud_low",
+        "uv_index",
+        "freezing_level",
+        "snowfall_limit",
+        "fresh_snow"
+      ]
+    },
+    {
+      "name": "nur_alarm_ab_geaendert_auswahl_gleich",
+      "ampel": {
+        "template": "skitouren",
+        "metrics": {
+          "gust": {
+            "alarm_ab": "red"
+          }
+        }
+      },
+      "aktiv": [
+        "temperature",
+        "temperature_night",
+        "wind_chill",
+        "wind",
+        "gust",
+        "precipitation",
+        "visibility",
+        "cloud_total",
+        "cloud_low",
+        "freezing_level",
+        "snowfall_limit",
+        "fresh_snow",
+        "snow_depth"
+      ]
+    },
+    {
+      "name": "enabled_gleich_vorlage",
+      "ampel": {
+        "template": "radtour",
+        "metrics": {
+          "wind_direction": {
+            "enabled": true
+          },
+          "cloud_low": {
+            "enabled": false
+          }
+        }
+      },
+      "aktiv": [
+        "temperature",
+        "temperature_night",
+        "wind_chill",
+        "wind",
+        "gust",
+        "wind_direction",
+        "precipitation",
+        "rain_probability",
+        "thunder",
+        "cloud_total",
+        "sunshine",
+        "uv_index"
+      ]
+    },
+    {
+      "name": "alles_aus_ausser_boeen",
+      "ampel": {
+        "template": "wassersport",
+        "metrics": {
+          "temperature": {
+            "enabled": false
+          },
+          "temperature_night": {
+            "enabled": false
+          },
+          "wind": {
+            "enabled": false
+          },
+          "wind_direction": {
+            "enabled": false
+          },
+          "precipitation": {
+            "enabled": false
+          },
+          "rain_probability": {
+            "enabled": false
+          },
+          "thunder": {
+            "enabled": false
+          },
+          "visibility": {
+            "enabled": false
+          },
+          "cloud_total": {
+            "enabled": false
+          }
+        }
+      },
+      "aktiv": [
+        "gust"
+      ]
+    },
+    {
+      "name": "ohne_template_faellt_auf_allgemein",
+      "ampel": {
+        "metrics": {
+          "visibility": {
+            "enabled": true
+          },
+          "cloud_total": {
+            "enabled": false
+          }
+        }
+      },
+      "aktiv": [
+        "temperature",
+        "wind",
+        "gust",
+        "precipitation",
+        "rain_probability",
+        "thunder",
+        "visibility",
+        "sunshine"
+      ]
+    },
+    {
+      "name": "unbekannte_vorlage_faellt_auf_allgemein",
+      "ampel": {
+        "template": "gibt-es-nicht",
+        "metrics": {
+          "humidity": {
+            "enabled": true
+          }
+        }
+      },
+      "aktiv": [
+        "temperature",
+        "humidity",
+        "wind",
+        "gust",
+        "precipitation",
+        "rain_probability",
+        "thunder",
+        "cloud_total",
+        "sunshine"
+      ]
+    },
+    {
+      "name": "wintersport_hinzugefuegt_und_entfernt",
+      "ampel": {
+        "template": "wintersport",
+        "metrics": {
+          "thunder": {
+            "enabled": true
+          },
+          "sunshine": {
+            "enabled": false
+          }
+        }
+      },
+      "aktiv": [
+        "temperature",
+        "temperature_night",
+        "wind_chill",
+        "wind",
+        "gust",
+        "precipitation",
+        "thunder",
+        "visibility",
+        "cloud_total",
+        "fresh_snow",
+        "snow_depth"
+      ]
+    }
+  ]
+}
