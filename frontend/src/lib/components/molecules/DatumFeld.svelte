@@ -8,7 +8,7 @@
 	// Spec: docs/specs/modules/rework_2881_design_system_bereinigung.md (AC-1, AC-2, AC-3)
 	import { tick, untrack } from 'svelte';
 	import { DatePicker } from 'bits-ui';
-	import { SegmentFeldMeldung, tipptIn } from './segmentFeldMeldung.ts';
+	import { SegmentFeldMeldung, TippZaehler, segmenteUnvollstaendig, tipptIn } from './segmentFeldMeldung.ts';
 	import { parseDate, type DateValue } from '@internationalized/date';
 	import { t, locale } from '$lib/i18n';
 
@@ -23,9 +23,15 @@
 		disabled?: boolean;
 		/** kompakt = Etappen-Karte, normal = Formular am Computer, gross = Formular am Handy. */
 		groesse?: 'kompakt' | 'normal' | 'gross';
+		/**
+		 * Geleertes/unvollständiges Feld beim Verlassen als '' melden (Anlegen: „Startdatum fehlt",
+		 * wie früher das native Feld). Ohne: das Feld springt beim Verlassen auf den gespeicherten
+		 * Wert zurück (Etappe: kein Datenverlust, kein stiller Altwert hinter einer leeren Anzeige).
+		 */
+		leerMelden?: boolean;
 	}
 
-	let { value = '', onchange, testid, ariaLabel, required = false, disabled = false, groesse = 'normal' }: Props = $props();
+	let { value = '', onchange, testid, ariaLabel, required = false, disabled = false, groesse = 'normal', leerMelden = false }: Props = $props();
 
 	const intlLocale = $derived($locale === 'en' ? 'en-GB' : 'de-DE');
 
@@ -38,11 +44,10 @@
 	}
 	const datum = $derived(zuDatum(value));
 
-	// Ein FREMDER Wertwechsel (z. B. andere Etappe gewählt) baut die Segmente neu auf: bits-ui hält
-	// sonst die zuletzt getippten Segmente fest und schreibt sie in den neuen Wert zurück. Die eigene
-	// Meldung lässt das Feld stehen — sonst ginge der Fokus mitten im Tippen verloren.
-	// Melde-Regel (Zwischenstände beim Tippen nie nach außen): segmentFeldMeldung.ts.
+	// Melde-Regel (Zwischenstände beim Tippen nie nach außen): segmentFeldMeldung.ts. `aufbau`
+	// baut die Segmente neu auf, wenn ein geleertes/unvollständiges Feld verlassen wird.
 	let feld = $state<HTMLElement | null>(null);
+	const zaehler = new TippZaehler();
 	let eigen: string | null = null;
 	let letzter = untrack(() => value);
 	let aufbau = $state(0);
@@ -53,10 +58,11 @@
 	$effect.pre(() => {
 		const v = value;
 		untrack(() => {
+			// Fremder Wertwechsel (andere Etappe, Rücknahme nach Fehler): Offenes gehört zum alten Wert.
 			if (v !== letzter && v !== eigen) {
-				meldung.sperren();
-				aufbau += 1;
-				void tick().then(() => meldung.freigeben());
+				meldung.verwerfen();
+				beruehrt = false;
+				vollstaendig = !!zuDatum(v);
 			}
 			if (v === eigen) eigen = null;
 			letzter = v;
@@ -64,23 +70,54 @@
 	});
 	$effect(() => () => meldung.verwerfen());
 
+	// Steht im Feld gerade ein vollständiges Datum? (Leeren und halbfertige Jahre 0002/0020 nicht.)
+	let vollstaendig = untrack(() => !!datum);
+	// Hat der Nutzer das Feld seit dem letzten Aufbau angefasst (Taste oder Wertänderung)?
+	let beruehrt = false;
+
 	function geaendert(neu: DateValue | undefined): void {
-		// Leeren und halbfertige Jahre (beim Tippen 0002, 0020 …) werden nicht nach außen gegeben.
-		if (!neu || neu.year < 1000) return;
+		if (!neu || neu.year < 1000) {
+			vollstaendig = false;
+			// Leer erst beim Verlassen melden (siehe verlassen) — nie als Zwischenstand.
+			if (leerMelden && value !== '') meldung.aendern('', true);
+			else meldung.verwerfen();
+			return;
+		}
+		vollstaendig = true;
 		const iso = neu.toString().slice(0, 10);
 		if (iso === value) {
 			meldung.verwerfen();
 			return;
 		}
-		meldung.aendern(iso, tipptIn(feld));
+		// Fertig/unfertig erst nach dem Neuzeichnen prüfen (vorher steht noch die alte Anzeige).
+		void tick().then(() => meldung.aendern(iso, zaehler.unfertig(feld) || tipptIn(feld)));
 	}
 
 	function verlassen(e: FocusEvent): void {
-		if (!feld?.contains(e.relatedTarget as Node | null)) meldung.abschliessen();
+		const ziel = e.relatedTarget as Element | null;
+		// In das Feld selbst oder in den eigenen Kalender (Portal) ist kein Verlassen.
+		if (feld?.contains(ziel) || ziel?.closest?.('[data-slot="datum-feld-kalender"]')) return;
+		const hatteOffen = meldung.offen;
+		meldung.abschliessen();
+		// Geleert/angefangen ohne Meldung von bits-ui: zählt wie leer.
+		const geleert = beruehrt && !hatteOffen && segmenteUnvollstaendig(feld);
+		if (geleert && leerMelden && value !== '') meldung.aendern('', false);
+		// Nur was der Nutzer angefasst hat, wird zurückgesetzt (sonst schlösse ein leeres,
+		// unberührtes Feld beim Öffnen des Kalenders seine eigene Liste).
+		if (beruehrt && (!vollstaendig || geleert)) {
+			// Unvollständig/leer verlassen: nach der Meldung ('' bei leerMelden) zeigt das Feld den
+			// Modellwert — Etappe: das gespeicherte Datum, Anlegen: leer mit „Startdatum fehlt".
+			void tick().then(() => {
+				eigen = null;
+				vollstaendig = !!datum;
+				beruehrt = false;
+				aufbau += 1;
+			});
+		}
 	}
 </script>
 
-<div class="datum-feld" data-slot="datum-feld" data-groesse={groesse} data-testid={testid} bind:this={feld} onfocusout={verlassen}>
+<div class="datum-feld" data-slot="datum-feld" data-groesse={groesse} data-testid={testid} bind:this={feld} onfocusout={verlassen} onkeydowncapture={(e) => { beruehrt = true; zaehler.taste(e); }} onbeforeinputcapture={zaehler.eingabe} onkeyupcapture={zaehler.loslassen} onfocusincapture={zaehler.fokus}>
 	{#key aufbau}
 	<DatePicker.Root
 		value={datum}

@@ -6,7 +6,7 @@
 	// Spec: docs/specs/modules/rework_2881_design_system_bereinigung.md (AC-2, AC-3)
 	import { tick, untrack } from 'svelte';
 	import { TimeField } from 'bits-ui';
-	import { SegmentFeldMeldung, tipptIn } from './segmentFeldMeldung.ts';
+	import { SegmentFeldMeldung, TippZaehler, segmenteUnvollstaendig, tipptIn } from './segmentFeldMeldung.ts';
 	import { Time } from '@internationalized/date';
 	import { locale } from '$lib/i18n';
 
@@ -33,9 +33,10 @@
 		return m ? new Time(Number(m[1]), Number(m[2])) : undefined;
 	});
 
-	// Fremder Wertwechsel baut die Segmente neu auf, die eigene Meldung nicht; Zwischenstände beim
-	// Tippen gehen nie nach außen (wie DatumFeld, Regel in segmentFeldMeldung.ts).
+	// Zwischenstände beim Tippen gehen nie nach außen (wie DatumFeld, Regel in segmentFeldMeldung.ts);
+	// `aufbau` baut die Segmente neu auf, wenn ein geleertes/unvollständiges Feld verlassen wird.
 	let feld = $state<HTMLElement | null>(null);
+	const zaehler = new TippZaehler();
 	let eigen: string | null = null;
 	let letzter = untrack(() => value);
 	let aufbau = $state(0);
@@ -46,10 +47,11 @@
 	$effect.pre(() => {
 		const v = value;
 		untrack(() => {
+			// Fremder Wertwechsel (andere Etappe, Rücknahme nach Fehler): Offenes gehört zum alten Wert.
 			if (v !== letzter && v !== eigen) {
-				meldung.sperren();
-				aufbau += 1;
-				void tick().then(() => meldung.freigeben());
+				meldung.verwerfen();
+				beruehrt = false;
+				vollstaendig = /^\d{1,2}:\d{2}/.test(v ?? '');
 			}
 			if (v === eigen) eigen = null;
 			letzter = v;
@@ -57,25 +59,52 @@
 	});
 	$effect(() => () => meldung.verwerfen());
 
+	// Steht im Feld gerade eine vollständige Uhrzeit?
+	let vollstaendig = untrack(() => !!zeit);
+	// Hat der Nutzer das Feld seit dem letzten Aufbau angefasst (Taste oder Wertänderung)?
+	let beruehrt = false;
+
 	function geaendert(neu: Time | undefined): void {
 		if (!neu) {
-			if (leerMelden) meldung.aendern('', tipptIn(feld));
+			vollstaendig = false;
+			// Leer erst beim Verlassen melden (Etappen-Startzeit fällt dann auf 08:00 zurück, #675 AC-5).
+			if (leerMelden) meldung.aendern('', true);
+			else meldung.verwerfen();
 			return;
 		}
+		vollstaendig = true;
 		const hhmm = `${zwei(neu.hour)}:${zwei(neu.minute)}`;
 		if (hhmm === value) {
 			meldung.verwerfen();
 			return;
 		}
-		meldung.aendern(hhmm, tipptIn(feld));
+		// Fertig/unfertig erst nach dem Neuzeichnen prüfen (vorher steht noch die alte Anzeige).
+		void tick().then(() => meldung.aendern(hhmm, zaehler.unfertig(feld) || tipptIn(feld)));
 	}
 
 	function verlassen(e: FocusEvent): void {
-		if (!feld?.contains(e.relatedTarget as Node | null)) meldung.abschliessen();
+		if (feld?.contains(e.relatedTarget as Node | null)) return;
+		const hatteOffen = meldung.offen;
+		meldung.abschliessen();
+		// Geleert ohne Meldung von bits-ui (Stunde „––"): zählt wie leer.
+		const geleert = beruehrt && !hatteOffen && segmenteUnvollstaendig(feld);
+		if (geleert && leerMelden && value !== '') meldung.aendern('', false);
+		// Nur was der Nutzer angefasst hat, wird zurückgesetzt (sonst schlösse ein leeres,
+		// unberührtes Feld beim Öffnen des Kalenders seine eigene Liste).
+		if (beruehrt && (!vollstaendig || geleert)) {
+			// Unvollständig/leer verlassen: nach der Meldung zeigt das Feld den Modellwert (Etappe:
+			// gespeicherte Zeit bzw. 08:00) — nie eine leere Anzeige vor einem stillen Altwert.
+			void tick().then(() => {
+				eigen = null;
+				vollstaendig = !!zeit;
+				beruehrt = false;
+				aufbau += 1;
+			});
+		}
 	}
 </script>
 
-<div class="uhrzeit-feld" data-slot="uhrzeit-feld" data-groesse={groesse} data-testid={testid} bind:this={feld} onfocusout={verlassen}>
+<div class="uhrzeit-feld" data-slot="uhrzeit-feld" data-groesse={groesse} data-testid={testid} bind:this={feld} onfocusout={verlassen} onkeydowncapture={(e) => { beruehrt = true; zaehler.taste(e); }} onbeforeinputcapture={zaehler.eingabe} onkeyupcapture={zaehler.loslassen} onfocusincapture={zaehler.fokus}>
 	{#key aufbau}
 	<TimeField.Root value={zeit} onValueChange={(v) => geaendert(v as Time | undefined)} hourCycle={24} granularity="minute" locale={intlLocale} {disabled}>
 		<TimeField.Input data-slot="uhrzeit-feld-eingabe" aria-label={ariaLabel}>

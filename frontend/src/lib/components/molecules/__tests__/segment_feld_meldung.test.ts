@@ -1,6 +1,8 @@
 // Issue #2881 Lieferung B — Melde-Regel der Segment-Felder (DatumFeld/UhrzeitFeld):
-// Zwischenstände beim Tippen gehen nie nach außen, Kalender-/Programm-Wahl sofort, ein fremder
-// Wertwechsel verwirft Offenes und sperrt bis zur Freigabe. Echte Klasse, echte Zeitgeber.
+// Zwischenstände unfertiger Segmente gehen nie nach außen (auch nicht nach einer Pause, Fix-Loop
+// F-B1), fertige Segmente und Kalender-/Programm-Wahl sofort, beim Verlassen der offene Wert;
+// ein fremder Wertwechsel verwirft Offenes. Echte Klasse.
+// Die Wirkstelle im Browser prüft design-system-trip-vergleich.spec.ts (DS-2).
 // Spec: docs/specs/modules/rework_2881_design_system_bereinigung.md (AC-1, AC-2)
 //
 //   cd frontend && node --import ./test-lib-loader.mjs --experimental-strip-types \
@@ -12,43 +14,43 @@ import { SegmentFeldMeldung } from '../segmentFeldMeldung.ts';
 
 const warte = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
-function aufbau(ruheMs = 20) {
+function aufbau() {
 	const gemeldet: string[] = [];
-	return { gemeldet, m: new SegmentFeldMeldung((w) => gemeldet.push(w), ruheMs) };
+	return { gemeldet, m: new SegmentFeldMeldung((w) => gemeldet.push(w)) };
 }
 
 describe('SegmentFeldMeldung', () => {
-	test('Wahl ohne Tippen (Kalender) wird sofort gemeldet', () => {
+	test('fertiges Segment bzw. Kalender-Wahl wird sofort gemeldet', () => {
 		const { gemeldet, m } = aufbau();
 		m.aendern('2026-11-19', false);
 		assert.deepEqual(gemeldet, ['2026-11-19']);
 	});
 
-	test('Tippen: Zwischenstände (Monat „0" ⇒ Januar) gehen nicht hinaus, nur der Endstand nach der Ruhezeit', async () => {
+	test('unfertiges Segment (Tag „2") bleibt zurück — auch nach einer Pause; das fertige ersetzt es', async () => {
 		const { gemeldet, m } = aufbau();
-		for (const zwischen of ['2027-08-02', '2027-08-20', '2027-01-20', '2027-08-20']) m.aendern(zwischen, true);
-		assert.deepEqual(gemeldet, [], 'während des Tippens nichts gemeldet');
-		await warte(60);
-		assert.deepEqual(gemeldet, ['2027-08-20']);
-	});
-
-	test('Feld verlassen meldet den offenen Wert sofort, danach nicht noch einmal', async () => {
-		const { gemeldet, m } = aufbau();
-		m.aendern('07:30', true);
+		m.aendern('2026-08-02', true);
+		await warte(400);
+		assert.deepEqual(gemeldet, [], 'Zwischenstand nach Pause nicht gemeldet');
+		m.aendern('2026-08-26', false);
+		assert.deepEqual(gemeldet, ['2026-08-26']);
 		m.abschliessen();
-		assert.deepEqual(gemeldet, ['07:30']);
-		await warte(60);
-		assert.deepEqual(gemeldet, ['07:30']);
+		assert.deepEqual(gemeldet, ['2026-08-26'], 'nichts Offenes mehr');
 	});
 
-	test('fremder Wertwechsel: Offenes verworfen, Rückschreiben gesperrt bis zur Freigabe', async () => {
+	test('Feld verlassen meldet den offenen Wert (z. B. geleert = "")', () => {
 		const { gemeldet, m } = aufbau();
-		m.aendern('2027-08-20', true);
-		m.sperren();
-		m.aendern('2027-08-20', false); // bits-ui schreibt die alten Segmente zurück
-		await warte(60);
-		assert.deepEqual(gemeldet, [], 'weder der offene noch der zurückgeschriebene Wert');
-		m.freigeben();
+		m.aendern('', true);
+		assert.equal(m.offen, true);
+		m.abschliessen();
+		assert.deepEqual(gemeldet, ['']);
+	});
+
+	test('fremder Wertwechsel: verworfenes Offenes geht beim Verlassen nicht mehr hinaus', () => {
+		const { gemeldet, m } = aufbau();
+		m.aendern('2027-08-03', true);
+		m.verwerfen();
+		m.abschliessen();
+		assert.deepEqual(gemeldet, []);
 		m.aendern('2027-07-30', false);
 		assert.deepEqual(gemeldet, ['2027-07-30']);
 	});

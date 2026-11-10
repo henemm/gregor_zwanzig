@@ -1,43 +1,44 @@
 // Issue #2881 Lieferung B: Melde-Regel der Segment-Felder DatumFeld und UhrzeitFeld (bits-ui).
 //
-// bits-ui setzt den Wert schon bei jedem getippten Segment (z. B. Monat „0" ⇒ Januar, Jahr „2" ⇒
-// 0002) — ein natives Feld meldet erst den fertigen Wert. Deshalb:
-//   * Tippen in einem noch unfertigen Segment (Monat „0", Jahr „20"): Wert erst nach kurzer Ruhe
-//     melden, beim Verlassen des Felds sofort; ist das Segment fertig, sofort melden.
-//   * Wahl ohne Tippen (Kalender, Programm): sofort melden.
-//   * Ein FREMDER Wertwechsel (z. B. andere Etappe gewählt) verwirft Offenes und sperrt bis zum
-//     nächsten Takt — bits-ui schreibt sonst die zuletzt getippten Segmente in den neuen Wert zurück.
+// bits-ui setzt den Wert schon bei jedem getippten Segment (z. B. Tag „2" ⇒ 02, Monat „0" ⇒
+// Januar, Jahr „2" ⇒ 0002) — ein natives Feld meldet erst den fertigen Wert. Deshalb:
+//   * Ist das gerade getippte Segment noch unfertig (weniger Ziffern als es braucht), bleibt der
+//     Wert zurück — ohne Zeitgeber (Fix-Loop F-B1: ein Ruhe-Zeitgeber liess „02.08." als PUT
+//     hinaus, wenn die nächste Ziffer später kam). Er geht erst hinaus, wenn das Segment fertig
+//     ist (dann sofort) oder das Feld verlassen wird.
+//   * Wahl ohne Tippen (Kalender, Programm) oder fertiges Segment: sofort melden — sonst wäre ein
+//     gleich danach angetippter Knopf, der am Wert hängt („Etappen anlegen"), noch gesperrt.
+//   * Ein FREMDER Wertwechsel (z. B. andere Etappe gewählt) verwirft Offenes (der Baustein ruft
+//     `verwerfen`). Eine eigene Sperre gegen Rückschreiben von bits-ui ist entfallen (Fix-Loop
+//     F-B3): mit dieser Regel schreibt bits-ui nach einem Wechsel nichts zurück — belegt durch
+//     DS-2 Etappenwechsel, GG-3 und SC-4 ohne Sperre.
 // Bewusst ohne TS-Parameter-Properties (Kernsuite strippt Typen).
 
 export class SegmentFeldMeldung {
 	#melde: (wert: string) => void;
-	#ruheMs: number;
-	#timer: ReturnType<typeof setTimeout> | null = null;
 	#offen: string | null = null;
-	#gesperrt = false;
 
-	constructor(melde: (wert: string) => void, ruheMs = 300) {
+	constructor(melde: (wert: string) => void) {
 		this.#melde = melde;
-		this.#ruheMs = ruheMs;
 	}
 
-	/** Neuer Wert aus dem Feld; `tippt` = Fokus liegt auf einem Segment. */
-	aendern(wert: string, tippt: boolean): void {
-		if (this.#gesperrt) return;
-		if (!tippt) {
-			this.verwerfen();
-			this.#melde(wert);
+	/** Neuer Wert aus dem Feld; `unfertig` = das getippte Segment braucht noch Ziffern. */
+	aendern(wert: string, unfertig: boolean): void {
+		if (unfertig) {
+			this.#offen = wert;
 			return;
 		}
-		this.#offen = wert;
-		if (this.#timer) clearTimeout(this.#timer);
-		this.#timer = setTimeout(() => this.abschliessen(), this.#ruheMs);
+		this.#offen = null;
+		this.#melde(wert);
 	}
 
-	/** Offenen Wert sofort melden (Feld verlassen, Ruhezeit um). */
+	/** Gibt es einen zurückgehaltenen Wert? */
+	get offen(): boolean {
+		return this.#offen !== null;
+	}
+
+	/** Offenen Wert jetzt melden (Feld verlassen). */
 	abschliessen(): void {
-		if (this.#timer) clearTimeout(this.#timer);
-		this.#timer = null;
 		if (this.#offen === null) return;
 		const wert = this.#offen;
 		this.#offen = null;
@@ -45,32 +46,89 @@ export class SegmentFeldMeldung {
 	}
 
 	verwerfen(): void {
-		if (this.#timer) clearTimeout(this.#timer);
-		this.#timer = null;
 		this.#offen = null;
 	}
+}
 
-	/** Fremder Wertwechsel: Offenes verwerfen, bis `freigeben()` nichts annehmen. */
-	sperren(): void {
-		this.verwerfen();
-		this.#gesperrt = true;
+const bedarf = (teil: string) => (teil === 'year' ? 4 : 2);
+// Nur echte Ziffern-Segmente (bits-ui markiert auch Literale, AM/PM und den Kalender-Knopf
+// „trigger" mit data-segment).
+const ZIFFERN_TEILE = new Set(['day', 'month', 'year', 'hour', 'minute', 'second']);
+const zifferTeil = (el: Element | null): string | null => {
+	const teil = el?.getAttribute?.('data-segment') ?? null;
+	return teil && ZIFFERN_TEILE.has(teil) ? teil : null;
+};
+
+/**
+ * Zählt die im fokussierten Segment getippten Ziffern (Tastatur, und per `beforeinput` auch
+ * Bildschirmtastaturen ohne Tastencode). Die Anzeige allein reicht nicht: das Uhrzeitfeld zeigt
+ * „0" schon gepolstert als „00".
+ */
+export class TippZaehler {
+	#anzahl = new WeakMap<Element, number>();
+	#perTaste = false;
+
+	#plus(seg: Element): void {
+		this.#anzahl.set(seg, (this.#anzahl.get(seg) ?? 0) + 1);
 	}
 
-	freigeben(): void {
-		this.#gesperrt = false;
+	taste = (e: KeyboardEvent): void => {
+		const seg = e.target as Element | null;
+		if (!zifferTeil(seg)) return;
+		if (/^\d$/.test(e.key)) {
+			this.#perTaste = true;
+			this.#plus(seg!);
+		} else if (e.key === 'Backspace' || e.key === 'Delete') {
+			this.#anzahl.set(seg!, 0);
+		}
+	};
+
+	eingabe = (e: InputEvent): void => {
+		const seg = e.target as Element | null;
+		if (this.#perTaste || !zifferTeil(seg) || !e.data || !/^\d$/.test(e.data)) return;
+		this.#plus(seg!);
+	};
+
+	loslassen = (): void => {
+		this.#perTaste = false;
+	};
+
+	fokus = (e: FocusEvent): void => {
+		const seg = e.target as Element | null;
+		if (zifferTeil(seg)) this.#anzahl.set(seg!, 0);
+	};
+
+	/** Hat das fokussierte Segment in `feld` angefangene, aber noch nicht genug Ziffern? */
+	unfertig(feld: HTMLElement | null): boolean {
+		const aktiv = typeof document === 'undefined' ? null : document.activeElement;
+		const teil = zifferTeil(aktiv);
+		if (!(feld && aktiv && teil && feld.contains(aktiv))) return false;
+		const n = this.#anzahl.get(aktiv) ?? 0;
+		return n > 0 && n < bedarf(teil);
 	}
 }
 
 /**
- * Wird in `feld` gerade ein Segment getippt, das noch nicht fertig ist (z. B. Monat „0", Jahr „20")?
- * Nur dann wird die Meldung zurückgehalten; ein fertiges Segment meldet sofort — sonst wäre ein
- * gleich danach angetippter Knopf, der am Wert hängt („Etappen anlegen"), noch gesperrt.
+ * Ist in `feld` irgendein Ziffern-Segment leer oder angefangen (z. B. Stunde nach Rücktaste „––")?
+ * bits-ui meldet das Leeren eines Uhrzeit-Segments nicht immer als leeren Wert — beim Verlassen
+ * zählt deshalb, was im Feld steht.
+ */
+export function segmenteUnvollstaendig(feld: HTMLElement | null): boolean {
+	if (!feld) return false;
+	return Array.from(feld.querySelectorAll('[data-segment]')).some((el) => {
+		const teil = zifferTeil(el);
+		return !!teil && (el.textContent ?? '').replace(/\D/g, '').length < bedarf(teil);
+	});
+}
+
+/**
+ * Zeigt das fokussierte Segment in `feld` weniger Ziffern als es braucht (z. B. Tag „2",
+ * Jahr „20")? Zusatzprüfung zum TippZaehler; bits-ui zeigt ein angefangenes Datumssegment
+ * ungepolstert an.
  */
 export function tipptIn(feld: HTMLElement | null): boolean {
 	const aktiv = typeof document === 'undefined' ? null : document.activeElement;
-	if (!(feld && aktiv && feld.contains(aktiv))) return false;
-	const teil = aktiv.getAttribute('data-segment');
-	if (!teil || teil === 'literal' || teil === 'dayPeriod') return false;
-	const ziffern = (aktiv.textContent ?? '').replace(/\D/g, '').length;
-	return ziffern < (teil === 'year' ? 4 : 2);
+	const teil = zifferTeil(aktiv);
+	if (!(feld && aktiv && teil && feld.contains(aktiv))) return false;
+	return (aktiv.textContent ?? '').replace(/\D/g, '').length < bedarf(teil);
 }

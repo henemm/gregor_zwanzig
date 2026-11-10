@@ -625,7 +625,7 @@
 					</Field>
 
 					<Field label={$t('trip.startdatum')} pflicht>
-						<DatumFeld value={startDate} onchange={makeDateHandler()} required testid="trip-new-date-input-desktop" ariaLabel={$t('trip.startdatum')} />
+						<DatumFeld value={startDate} onchange={makeDateHandler()} required leerMelden testid="trip-new-date-input-desktop" ariaLabel={$t('trip.startdatum')} />
 						{#if startDate}
 							<div class="mono" style="font-size: 11px; color: var(--g-ink-3); margin-top: 6px;">
 								{$t('trip.anlegen.start_hinweis', { datum: stageDate(startDate, 0, $locale)?.replace(/\.$/, '') ?? '' })}
@@ -968,7 +968,7 @@
 					</MField>
 
 					<MField label={$t('trip.startdatum')} pflicht sub={startDate ? $t('trip.anlegen.start_hinweis_kurz', { datum: stageDate(startDate, 0, $locale)?.replace(/\.$/, '') ?? '' }) : undefined}>
-						<DatumFeld value={startDate} onchange={makeDateHandler()} required groesse="gross" testid="trip-new-date-input" ariaLabel={$t('trip.startdatum')} />
+						<DatumFeld value={startDate} onchange={makeDateHandler()} required leerMelden groesse="gross" testid="trip-new-date-input" ariaLabel={$t('trip.startdatum')} />
 					</MField>
 
 					<!-- Issue #932 — Aktivitätstyp (verschoben aus Metriken-Tab). -->

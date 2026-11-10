@@ -31,6 +31,13 @@
 //         Mail-Format im Trip-Hub = radiogroup (Maus, Pfeil links) ⇒ Wert nach Neuladen gespeichert.
 //   DS-6  390 × 844: Zurück-Link (Hub, Anlegen), „Mit Standardwerten speichern", jedes ⓘ,
 //         jeder Schnellwahl-Chip der Zustellung ≥ 44 × 44 (Rahmen), kein waagerechtes Überlaufen.
+//   Fix-Loop (Adversary F-B1..F-B6), Zusicherungen an der Wirkstelle:
+//   DS-1 Leeren   Startdatum beim Anlegen leeren ⇒ „Startdatum fehlt", Etappen gesperrt.
+//   DS-2 Etappenwechsel  Datum/Zeit in Etappe 2 tippen, sofort Etappe 1 ⇒ keine Vermischung, API + Neuladen.
+//   DS-2 Zwischenstände  langsam getippt (Pause > Entprellung) ⇒ kein halbes Segment im PUT.
+//   DS-2 Leeren   Startzeit leeren ⇒ 08:00 ohne gespeicherte Startzeit; Datum leeren ⇒ gespeichertes bleibt.
+//   DS-2 (en)     24 h im englischen UI.  DS-4 Standard-Option zurückwählen ⇒ ohne Aktivität gespeichert;
+//                 Mail-Format mit rollendem tabindex (Umschalt+Tab verlässt die Gruppe).
 //
 // Pflicht-Mutationen (Spec Implementation Details 4, Lieferung A): (a) MTabBar-Rahmen-Reset
 // entfernt ⇒ DS-8 rot; (b) `.mono`-Regel gelöscht ⇒ DS-7 rot; (c) „+ Neuer Trip" im Leerzustand
@@ -38,14 +45,16 @@
 // rot; (e) DatumFeld gibt `MM/DD/YYYY` nach außen ⇒ DS-1 rot (gespeicherter Wert/Anzeige nach
 // Neuladen); (f) ein ✓ in SaveIndicator zurück ⇒ DS-3 rot (Speicher-Chip im Hub, innerText).
 //
-// Leerzustände (DS-5) brauchen ein Konto ohne Trips und Vergleiche: dafür der zustellbare
-// Zweitnutzer je Worker (testMitZustellbaremZiel, keine zusätzliche Registrierung). Sein Seed-Trip
-// `e2e-cockpit-test` wird für die Messung entfernt und im finally unverändert neu angelegt
-// (seedeZweitnutzerTrip), damit nachfolgende Specs desselben Workers ihn wieder vorfinden.
+// Leerzustände (DS-5) brauchen ein Konto ohne Trips und Vergleiche: je Fall ein frisch
+// registriertes, bestätigtes Konto (Fix-Loop F-B6) unter EIGENER X-Real-IP (Muster sprachwechsel,
+// die Registrierungsbremse 5/h je IP bleibt den übrigen Specs) — der Leerzustand wird per API
+// geprüft, nicht aus dem Zustand fremder Specs abgeleitet; das Konto wird im finally gelöscht.
 // Kein fester Schlaf, kein networkidle: gewartet wird auf sichtbare Elemente.
 // Sprachwechsel über PUT /api/auth/profile, im finally zurück auf de (Muster kontrast-trip-vergleich).
 
-import { test, expect, type Locator, type Page } from '@playwright/test';
+import { test, expect, request as pwRequest, type APIRequestContext, type BrowserContext, type Locator, type Page } from '@playwright/test';
+
+type Sitzung = Awaited<ReturnType<BrowserContext['storageState']>>;
 import {
 	ANLEGE_SEL,
 	HUB_KINDS,
@@ -57,11 +66,11 @@ import {
 	openHub,
 	registerForCleanup,
 	seedHub,
-	seedeZweitnutzerTrip,
-	testMitZustellbaremZiel,
+	feldEingabe,
 	tippeDatum,
 	tippeUhrzeit,
 	tripGpxHochladen,
+	waehleOption,
 	type HubKind
 } from './helpers';
 
@@ -139,20 +148,42 @@ test.describe('DS-5: Anlege-Aktion überall Btn primary (Ink)', () => {
 	}
 });
 
-testMitZustellbaremZiel.describe('DS-5: Leerzustände (Konto ohne Trips und Vergleiche)', () => {
+/** Frisches, bestätigtes Konto unter eigener X-Real-IP; liefert seinen Anmeldezustand. */
+async function leeresKonto(admin: APIRequestContext, baseURL: string, ip: string): Promise<{ zustand: Sitzung; aufraeumen: () => Promise<void> }> {
+	const name = `e2egzleer${Date.now().toString(36)}${Math.floor(Math.random() * 1e4)}`;
+	const passwort = 'Test1234!x';
+	const gast = await pwRequest.newContext({ baseURL, storageState: { cookies: [], origins: [] }, extraHTTPHeaders: { 'X-Real-IP': ip } });
+	const reg = await gast.post('/api/auth/register', { data: { username: name, password: passwort, email: `${name}@example.com` } });
+	expect([200, 201], `Registrierung: ${reg.status()} ${await reg.text()}`).toContain(reg.status());
+	const { id } = (await reg.json()) as { id: string };
+	const tok = await admin.post('/api/auth/verify-email/staging-token', { data: { username: id } });
+	expect(tok.ok(), `Staging-Token: ${tok.status()}`).toBeTruthy();
+	const { token } = (await tok.json()) as { token: string };
+	expect((await gast.post('/api/auth/verify-email', { data: { user: id, token } })).ok(), 'Bestätigung').toBeTruthy();
+	expect((await gast.post('/api/auth/login', { data: { username: id, password: passwort } })).ok(), 'Anmeldung').toBeTruthy();
+	const zustand = await gast.storageState();
+	return {
+		zustand,
+		aufraeumen: async () => {
+			await gast.post('/api/auth/account/delete', { data: { password: passwort } }).catch(() => {});
+			await gast.dispose();
+		}
+	};
+}
+
+test.describe('DS-5: Leerzustände (frisches Konto ohne Trips und Vergleiche)', () => {
 	for (const breite of BREITEN) {
-		testMitZustellbaremZiel(`DS-5 leer (${breite.width} px): Trip-Liste, Vergleichsliste, Startseite`, async ({ page }) => {
-			await page.setViewportSize(breite);
+		test(`DS-5 leer (${breite.width} px): Trip-Liste, Vergleichsliste, Startseite`, async ({ browser, request, baseURL }) => {
+			const ip = `10.28.${1 + Math.floor(Math.random() * 250)}.${breite === MOBIL ? 2 : 1}`;
+			const konto = await leeresKonto(request, baseURL as string, ip);
+			const ctx = await browser.newContext({ storageState: konto.zustand, serviceWorkers: 'block', viewport: breite });
+			const page = await ctx.newPage();
 			const req = page.request;
-			// Vorbedingung Leerzustand: Seed-Trip des Zweitnutzers und etwaige Reste entfernen.
-			const trips = ((await (await req.get('/api/trips')).json()) as { id: string }[]) ?? [];
-			for (const t of trips) await req.delete(`/api/trips/${t.id}`);
-			const presets = ((await (await req.get('/api/compare/presets')).json()) as { id: string }[]) ?? [];
-			for (const p of presets) await req.delete(`/api/compare/presets/${p.id}`);
 			const fehler: string[] = [];
-			const profil = (await (await req.get('/api/auth/profile')).json()) as { onboarding_dismissed?: boolean };
-			const warAusgeblendet = profil?.onboarding_dismissed === true;
 			try {
+				// Vorbedingung Leerzustand — geprüft, nicht angenommen.
+				expect(await (await req.get('/api/trips')).json(), 'frisches Konto ohne Trips').toEqual([]);
+				expect((await (await req.get('/api/compare/presets')).json()) ?? [], 'frisches Konto ohne Vergleiche').toEqual([]);
 				// Trip-Liste leer: Kopf-Knopf + Leerzustands-Knopf.
 				await page.goto('/trips');
 				await expect(page.getByText('Noch keine Trips').first()).toBeVisible({ timeout: 15_000 });
@@ -169,13 +200,13 @@ testMitZustellbaremZiel.describe('DS-5: Leerzustände (Konto ohne Trips und Verg
 					await page.goto('/');
 					const willkommen = page.getByTestId('onboarding-willkommen');
 					if (ausblenden) await expect(willkommen, 'Leerzustand ohne Willkommen erwartet').toHaveCount(0, { timeout: 15_000 });
+					else await expect(willkommen, 'neues Konto zeigt das Willkommen').toBeVisible({ timeout: 15_000 });
 					const seite = `Startseite leer (${ausblenden ? 'Leerzustand' : 'Willkommen'}) ${breite.width}`;
 					pruefeInk(await messeAnlegeKnoepfe(page, seite, 4), seite, fehler);
 				}
 			} finally {
-				await req.put('/api/auth/profile', { data: { onboarding_dismissed: warAusgeblendet } });
-				const neu = await seedeZweitnutzerTrip(req);
-				expect(neu.ok(), `Seed-Trip des Zweitnutzers wiederherstellen: ${neu.status()}`).toBeTruthy();
+				await ctx.close();
+				await konto.aufraeumen();
 			}
 			expect(fehler, fehler.join('\n')).toEqual([]);
 		});
@@ -564,6 +595,191 @@ for (const breite of BREITEN) {
 	});
 }
 
+// ─── Fix-Loop (F-B1/F-B2/F-B3/F-B5): Zusicherungen an der Wirkstelle ────────────
+
+const ZWEI_ETAPPEN = [
+	{ id: 's1', name: 'Tag 1', date: '2027-08-01', waypoints: [{ id: 'a', name: 'a', lat: 42.0, lon: 9.0, elevation_m: 800 }, { id: 'b', name: 'b', lat: 42.04, lon: 9.0, elevation_m: 1200 }] },
+	{ id: 's2', name: 'Tag 2', date: '2027-08-02', waypoints: [{ id: 'c', name: 'c', lat: 42.1, lon: 9.0, elevation_m: 900 }, { id: 'd', name: 'd', lat: 42.14, lon: 9.0, elevation_m: 1300 }] }
+];
+type Etappe = { id: string; date?: string; start_time?: string };
+const etappen = async (page: Page, id: string) => (await tripStand(page, id)).stages as Etappe[];
+const datumFeld = (page: Page) => page.locator('[data-testid="stage-date-field"]:visible').first();
+const zeitFeld = (page: Page) => page.locator('[data-testid="stage-start-time-field"]:visible').first();
+const waehleEtappe = (page: Page, i: number) => page.getByTestId('etappen-strip').getByTestId(`stage-card-${i}`).click();
+/** Feld verlassen (Fokus weg vom Segment — Tab bliebe im nächsten Segment desselben Felds). */
+const verlasseFeld = (page: Page) => page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur());
+
+test('DS-2 Etappenwechsel (1280 px): Datum/Zeit in Etappe 2 tippen, sofort zu Etappe 1 — keine Vermischung, nach Neuladen beides richtig', async ({
+	page
+}) => {
+	await page.setViewportSize(DESKTOP);
+	await setzeSprache(page, 'de');
+	const hub = await seedHub(page.request, 'route', { extra: { stages: ZWEI_ETAPPEN } });
+	try {
+		await openHub(page, 'route', hub.id, { tab: 'etappen' });
+		await waehleEtappe(page, 1);
+		await expect(feldEingabe(datumFeld(page))).toHaveText('02.08.2027', { timeout: 15_000 });
+		await tippeUhrzeit(page, zeitFeld(page), '06:45');
+		await tippeDatum(page, datumFeld(page), '2027-08-20');
+		await waehleEtappe(page, 0); // sofort wechseln — der Fokus steht noch im Jahr-Segment
+		await expect(feldEingabe(datumFeld(page)), 'Etappe 1 zeigt ihr eigenes Datum').toHaveText('01.08.2027');
+		await expect(feldEingabe(zeitFeld(page)), 'Etappe 1 zeigt ihre eigene Startzeit').toHaveText('08:00');
+		await expect
+			.poll(async () => JSON.stringify((await etappen(page, hub.id)).map((e) => [e.id, e.date, e.start_time ?? null])), {
+				message: 'gespeicherter Stand beider Etappen',
+				timeout: 15_000
+			})
+			.toBe(JSON.stringify([['s1', '2027-08-01', null], ['s2', '2027-08-20', '06:45']]));
+		await openHub(page, 'route', hub.id, { tab: 'etappen' });
+		await waehleEtappe(page, 1);
+		await expect(feldEingabe(datumFeld(page))).toHaveText('20.08.2027', { timeout: 15_000 });
+		await expect(feldEingabe(zeitFeld(page))).toHaveText('06:45');
+		await waehleEtappe(page, 0);
+		await expect(feldEingabe(datumFeld(page))).toHaveText('01.08.2027');
+		await expect(feldEingabe(zeitFeld(page))).toHaveText('08:00');
+		// Mitten im Segment wechseln (Tag „3" angefangen): Etappe 1 bekommt weder die angefangene
+		// Ziffer angezeigt noch zurückgeschrieben.
+		await waehleEtappe(page, 1);
+		await expect(feldEingabe(datumFeld(page))).toHaveText('20.08.2027');
+		await datumFeld(page).locator('[data-segment="day"]').click();
+		await page.keyboard.type('3');
+		await waehleEtappe(page, 0);
+		await expect(feldEingabe(datumFeld(page)), 'Etappe 1 nach Wechsel mitten im Segment').toHaveText('01.08.2027');
+		await page.getByTestId('save-indicator').waitFor();
+		await expect
+			.poll(async () => (await etappen(page, hub.id))[0]?.date, { message: 'Etappe 1 darf nichts abbekommen', timeout: 5_000 })
+			.toBe('2027-08-01');
+		await openHub(page, 'route', hub.id, { tab: 'etappen' });
+		await expect(feldEingabe(datumFeld(page))).toHaveText('01.08.2027', { timeout: 15_000 });
+	} finally {
+		await hub.aufraeumen();
+	}
+});
+
+test('DS-2 Zwischenstände (1280 px): langsam getippt geht kein halbes Segment (Tag „2", Monat „1", Stunde „0") als PUT hinaus', async ({
+	page
+}) => {
+	test.setTimeout(90_000);
+	await page.setViewportSize(DESKTOP);
+	await setzeSprache(page, 'de');
+	const hub = await seedHub(page.request, 'route');
+	const gesendet: Etappe[] = [];
+	page.on('request', (r) => {
+		if (r.method() !== 'PUT' || new URL(r.url()).pathname !== `/api/trips/${hub.id}`) return;
+		const stages = (r.postDataJSON() as { stages?: Etappe[] } | null)?.stages;
+		if (stages?.[0]) gesendet.push(stages[0]);
+	});
+	try {
+		await openHub(page, 'route', hub.id, { tab: 'etappen' });
+		await expect(feldEingabe(datumFeld(page))).toHaveText('01.08.2027', { timeout: 15_000 });
+		// Pause zwischen den Ziffern länger als die Speicher-Entprellung: ein Zwischenstand ginge hinaus.
+		await datumFeld(page).locator('[data-segment="day"]').click();
+		await page.keyboard.type('20112026', { delay: 1_500 });
+		await expect.poll(async () => (await etappen(page, hub.id))[0]?.date, { timeout: 15_000 }).toBe('2026-11-20');
+		await zeitFeld(page).locator('[data-segment="hour"]').click();
+		await page.keyboard.type('0730', { delay: 1_500 });
+		await expect.poll(async () => (await etappen(page, hub.id))[0]?.start_time, { timeout: 15_000 }).toBe('07:30');
+		// Erlaubt sind nur Stände mit fertigen Segmenten.
+		const daten = [...new Set(gesendet.map((e) => e.date))];
+		const zeiten = [...new Set(gesendet.map((e) => e.start_time ?? null))];
+		expect(daten.filter((d) => !['2027-08-01', '2027-08-20', '2027-11-20', '2026-11-20'].includes(d ?? '')), `halbe Datumsstände gesendet: ${daten}`).toEqual([]);
+		expect(zeiten.filter((z) => ![null, '07:00', '07:30'].includes(z)), `halbe Uhrzeiten gesendet: ${zeiten}`).toEqual([]);
+	} finally {
+		await hub.aufraeumen();
+	}
+});
+
+test('DS-2 Leeren (1280 px): Startzeit leeren ⇒ 08:00 (gespeichert ohne Startzeit); Datum leeren ⇒ gespeichertes Datum bleibt und wird wieder angezeigt', async ({
+	page
+}) => {
+	await page.setViewportSize(DESKTOP);
+	await setzeSprache(page, 'de');
+	const hub = await seedHub(page.request, 'route', {
+		extra: { stages: [{ ...ZWEI_ETAPPEN[0], start_time: '07:30' }] }
+	});
+	try {
+		await openHub(page, 'route', hub.id, { tab: 'etappen' });
+		await expect(feldEingabe(zeitFeld(page))).toHaveText('07:30', { timeout: 15_000 });
+		await zeitFeld(page).locator('[data-segment="hour"]').click();
+		await page.keyboard.press('Backspace');
+		await page.keyboard.press('Backspace');
+		await verlasseFeld(page);
+		await expect.poll(async () => (await etappen(page, hub.id))[0]?.start_time ?? null, { message: 'Startzeit nicht geleert', timeout: 15_000 }).toBeNull();
+		await expect(feldEingabe(zeitFeld(page)), 'geleerte Startzeit zeigt den Standard').toHaveText('08:00');
+
+		await datumFeld(page).locator('[data-segment="day"]').click();
+		await page.keyboard.press('Backspace');
+		await page.keyboard.press('Backspace');
+		await verlasseFeld(page);
+		await expect(feldEingabe(datumFeld(page)), 'Anzeige zurück auf das gespeicherte Datum').toHaveText('01.08.2027');
+		expect((await etappen(page, hub.id))[0]?.date, 'kein Datenverlust').toBe('2027-08-01');
+		await openHub(page, 'route', hub.id, { tab: 'etappen' });
+		await expect(feldEingabe(datumFeld(page))).toHaveText('01.08.2027', { timeout: 15_000 });
+		await expect(feldEingabe(zeitFeld(page))).toHaveText('08:00');
+	} finally {
+		await hub.aufraeumen();
+	}
+});
+
+test('DS-2 (en, 1280 px): Startzeit 17:30 im englischen UI in 24 h, ohne AM/PM, gespeichert', async ({ page }) => {
+	await page.setViewportSize(DESKTOP);
+	await setzeSprache(page, 'en');
+	const hub = await seedHub(page.request, 'route');
+	try {
+		await openHub(page, 'route', hub.id, { tab: 'etappen' });
+		await expect(feldEingabe(zeitFeld(page))).toHaveText('08:00', { timeout: 15_000 });
+		await expect(zeitFeld(page).locator('[data-segment="dayPeriod"]'), '24 h: kein AM/PM-Segment').toHaveCount(0);
+		await tippeUhrzeit(page, zeitFeld(page), '17:30');
+		await verlasseFeld(page);
+		await expect.poll(async () => (await etappen(page, hub.id))[0]?.start_time, { timeout: 15_000 }).toBe('17:30');
+		await openHub(page, 'route', hub.id, { tab: 'etappen' });
+		await expect(feldEingabe(zeitFeld(page))).toHaveText('17:30', { timeout: 15_000 });
+		await expect(zeitFeld(page).locator('[data-segment="dayPeriod"]')).toHaveCount(0);
+	} finally {
+		await setzeSprache(page, 'de');
+		await hub.aufraeumen();
+	}
+});
+
+test('DS-1 Leeren (1280 px): Startdatum beim Anlegen leeren ⇒ „Startdatum fehlt", Etappen gesperrt', async ({ page }) => {
+	await page.setViewportSize(DESKTOP);
+	await setzeSprache(page, 'de');
+	await page.goto(ANLEGE_SEL.route.url);
+	const feld = tripDatumFeld(page, false);
+	await expect(feld).toBeVisible({ timeout: 15_000 });
+	await ANLEGE_SEL.route.name(page).fill(`E2E-GZ-DS1-leer-${Date.now()}`);
+	await tippeDatum(page, feld, '2026-11-19');
+	const etappenReiter = page.getByTestId('trip-new-tab-etappen');
+	await expect(etappenReiter).not.toHaveAttribute('aria-disabled', 'true');
+	await feld.locator('[data-segment="day"]').click();
+	await page.keyboard.press('Backspace');
+	await page.keyboard.press('Backspace');
+	await verlasseFeld(page);
+	await expect(page.getByText('Startdatum fehlt'), 'Hinweis nach dem Leeren').toBeVisible();
+	await expect(etappenReiter, 'Etappen ohne Startdatum gesperrt').toHaveAttribute('aria-disabled', 'true');
+	await expect(ANLEGE_SEL.route.weiterErsterSchritt(page)).toBeDisabled();
+});
+
+test('DS-4 Aktivität Standard (1280 px): „Wandern (Standard)" zurückwählen und anlegen ⇒ ohne Aktivität gespeichert', async ({ page }) => {
+	await page.setViewportSize(DESKTOP);
+	await setzeSprache(page, 'de');
+	try {
+		await anlegenPflicht(page, 'route', { name: `E2E-GZ-DS4-std-${Date.now()}` });
+		await page.getByTestId('trip-new-tab-route').click();
+		const ausloeser = page.getByTestId('activity-dropdown');
+		await waehleOption(page, ausloeser, 'Hochtour');
+		await expect(ausloeser).toHaveText('Hochtour');
+		await waehleOption(page, ausloeser, 'Wandern (Standard)');
+		await expect(ausloeser).toHaveText('Wandern (Standard)');
+		const knopf = ANLEGE_SEL.route.standardwerte(page);
+		await expect(knopf).toBeEnabled({ timeout: 15_000 });
+		const id = await postId(page, '/api/trips', () => knopf.click());
+		expect((await tripStand(page, id)).activity ?? '', 'Standard = keine Aktivität').toBe('');
+	} finally {
+		await cleanupTracked(page.request);
+	}
+});
+
 // ─── DS-3 (AC-3) ────────────────────────────────────────────────────────────
 
 /** Zustellung im Hub/Anlegen: Versand-Abschnitt, Mail-Inhalt-Karte, Speicher-Chip. */
@@ -720,6 +936,12 @@ test('DS-4 Mail-Format: Zustellung im Trip-Hub ist eine radiogroup, per Maus und
 		await expect.poll(format, { message: 'Kompakt nicht gespeichert', timeout: 15_000 }).toBe('compact');
 		await openHub(page, 'route', hub.id, { tab: 'zustellung' });
 		await expect(kompakt).toBeChecked({ timeout: 15_000 });
+		// Fix-Loop F-B3: nur der gewählte Eintrag liegt in der Tab-Reihenfolge (WAI-ARIA-Radiogroup) —
+		// Umschalt+Tab vom gewählten verlässt die Gruppe, statt auf „Ausführlich" zu landen.
+		await kompakt.focus();
+		await page.keyboard.press('Shift+Tab');
+		await expect(voll, 'Umschalt+Tab landet im nicht gewählten Eintrag (kein rollendes tabindex)').not.toBeFocused();
+		await expect(kompakt).not.toBeFocused();
 		// Tastatur: Pfeil links wählt das vorherige Format
 		await kompakt.focus();
 		await page.keyboard.press('ArrowLeft');

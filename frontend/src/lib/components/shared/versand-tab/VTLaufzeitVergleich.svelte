@@ -68,7 +68,7 @@
 		</div>
 		{#if mode === 'date'}
 			<div class="vt-date-input">
-				<DatumFeld testid="compare-versand-enddate-input" value={value ?? ''} onchange={onDateInput} ariaLabel={$t('versand.laufzeit.bis_datum')} />
+				<DatumFeld testid="compare-versand-enddate-input" leerMelden value={value ?? ''} onchange={onDateInput} ariaLabel={$t('versand.laufzeit.bis_datum')} />
 			</div>
 		{:else}
 			<p class="vt-laufzeit-hint">{$t('versand.laufzeit.ohne_ende')}</p>
