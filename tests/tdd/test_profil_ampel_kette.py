@@ -913,6 +913,9 @@ DIENST_EINSTIEGE = {
     # nicht auf, fehlt sie, scheitert sie laut).
     ("trip_alert.py", "check_and_send_alerts"): 1,
     ("compare_alert.py", "_build_eval_config"): 1,
+    # #2794 Teil 3 (AC-29): das Alarmquellen-Gate loest die Abo-Ampel des Trips
+    # auf (nur bei gesetztem display_config.ampel), um alarm_ab zu erkennen.
+    ("trip_alert.py", "ampel_alarmquelle_aktiv"): 1,
 }
 
 

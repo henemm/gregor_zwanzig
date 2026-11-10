@@ -669,6 +669,13 @@ Reiter „Zustellung" (Teil-PR 2): `shared/zustellung-tab/ZustellungTab.svelte` 
 `trip-detail/AlarmeScheduleTab.svelte` ein; „Wetter" rendert `WeatherMetricsTab` mit
 `bereich="wetter"`. `bereich` ist nur ein Darstellungsfilter, kein neuer Speicherweg.
 
+Reiter „Wetter" (Teil-PR 3, #2794, 2026-11-10): `shared/wetter-tab/*` + `WetterTab.svelte`
+(ein Code, `context="route"|"vergleich"`) mit Vorlage-Karte, Ampel-Zeilen je Metrik,
+„Grenzen ändern", „Alarm ab" und „Nicht im Briefing". `WeatherMetricsTab` rendert nur noch
+den Bereich `zustellung`. `SavePresetDialog` speichert Vorlagen mit `ampel`/`kind`, ohne
+Zeithorizonte/Zusammenfassung. Texte über den i18n-Katalog `wetter` (de/en). Spec:
+`docs/specs/modules/feat_2794_s3a_teil3_wetter.md`.
+
 ---
 
 ## Trip-Detail Wegpunkt-Editor (`trip-detail/waypoints/`)

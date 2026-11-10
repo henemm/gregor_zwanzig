@@ -824,6 +824,8 @@ uv run python3 scripts/migrate_2794_preset_horizons.py --root /var/lib/gregor/us
 
 Sicherung als `tar.gz` je Nutzer; Sperre und atomares Schreiben wie `migrate_2792_profil_ampel.py`; wiederholbar (idempotent). Exit 1 = offene Dateien, Lauf wiederholen.
 
+**Deploy-Hinweis Teil 3 von #2794:** Die Migration muss auf Staging und Produktion gelaufen sein, **bevor** der neue Vorlagen-Dialog ohne Zeithorizonte live geht. Reihenfolge je Umgebung: `gregor-api-staging` bzw. `gregor-api` stoppen, Probelauf ohne `--execute` lesen, mit `--execute` ausführen (legt vorher die Sicherung je Nutzer an), Dienst wieder starten, erst dann den Teil-3-Stand ausliefern.
+
 ---
 
 ## E-Mail-Bestätigung rückwirkend nachtragen (#2304, S1 aus #2271/#2146)
