@@ -75,7 +75,7 @@ ist auf Trip- und Vergleichsseiten durch diese Tokens ersetzt (#2881).
 |---|---|---|
 | `--g-success` | `#3a7d44` | Wetter OK, low risk |
 | `--g-warning` | `#c8882a` | Achtung, Schwellwert nahe |
-| `--g-danger` | `#b33a2a` | Alarm, kritisch |
+| `--g-danger` | `#a83232` | Alarm, kritisch (identisch mit `--g-bad`, 6,63:1 auf weißer Card, AA; #1831) |
 | `--g-info` | `#2a6cb3` | Neutrale Daten-Highlight |
 
 **Status (2026-06-02):** Alte Namen `--g-good`/`--g-warn`/`--g-bad` wurden vollständig durch Tailwind-konforme Namen ersetzt (Issue #541, #543, #544). Alle Komponenten und `app.css` verwenden die kanonischen Token.
@@ -218,6 +218,7 @@ verwendet einfache, leicht erhöhte Schatten.
 
 ### Button (`Btn`) — implementiert in `frontend/src/lib/components/ui/btn/Btn.svelte`
 - **Variants:** `primary` (default), `accent`, `outline`, `ghost`, `secondary`, `destructive`, `link`
+- **`destructive`-Fläche (#1831):** per `color-mix(in oklab, var(--g-danger) 10%/18%, transparent)` aus dem Token gemischt (kein Literal `rgba(179,58,42,…)`); im Dunkelmodus dadurch aus `#ee7a7a` getönt. `@property --color-destructive` initial-value `rgb(168, 50, 50)`.
 - **Sizes:** `xs`, `sm`, `md` (default), `lg`, `icon`, `icon-xs`, `icon-sm`, `icon-lg`
 - **Tag-Switch:** Render als `<a>` wenn `href` gesetzt, sonst `<button>`
 - **Disabled-State:** ARIA-konform (`aria-disabled="true"`; bei Links zusätzlich `role="link"`, `tabindex={-1}`)
