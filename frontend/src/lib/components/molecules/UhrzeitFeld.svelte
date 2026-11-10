@@ -147,5 +147,13 @@
 		.uhrzeit-feld[data-groesse] {
 			font-size: 16px;
 		}
+		/* #2601 Runde 2 (AC-7): Stunde/Minute als ≥ 24×24-px-Tippziel (echte Breite, kein ::after). */
+		.uhrzeit-feld :global(:is([data-segment='hour'], [data-segment='minute'])) {
+			display: inline-block;
+			box-sizing: border-box;
+			min-width: 24px;
+			min-height: 24px;
+			text-align: center;
+		}
 	}
 </style>

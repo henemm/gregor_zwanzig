@@ -55,6 +55,16 @@ test('AC-16: Audit-Config läuft MIT gesetztem GZ_E2E_API_PROXY_TARGET normal (G
 	assert.match(r.ausgabe, /Total: \d+ tests?/, `Auflistung erwartet.\nAusgabe:\n${r.ausgabe.slice(0, 1500)}`);
 });
 
+test('AC-16: Audit-Config bricht ab, wenn GZ_E2E_API_PROXY_TARGET auf einen Staging-/Prod-Port oder -Host zeigt', () => {
+	const ziele = ['http://localhost:8091', 'http://127.0.0.1:8090', 'http://localhost:8001', 'http://localhost:8000', 'https://staging.gregor20.henemm.com'];
+	for (const ziel of ziele) {
+		const r = auflisten({ GZ_E2E_API_PROXY_TARGET: ziel });
+		assert.notEqual(r.status, 0, `Exit-Code ${r.status}: Ziel ${ziel} (Staging/Produktion) darf nicht akzeptiert werden.\nAusgabe:\n${r.ausgabe.slice(0, 1500)}`);
+		assert.match(r.ausgabe, /Staging oder Produktion/, `Die Abbruchmeldung muss den Grund nennen (Ziel ${ziel}).\nAusgabe:\n${r.ausgabe.slice(0, 1500)}`);
+		assert.doesNotMatch(r.ausgabe, /Total: \d+ tests?/, `Mit Ziel ${ziel} darf kein Test gelistet werden`);
+	}
+});
+
 test('AC-16: GZ_AUDIT_LOCALE=de|en setzt die Browser-Locale aller drei Profile passend', async () => {
 	for (const lang of ['de', 'en'] as const) {
 		process.env.GZ_E2E_API_PROXY_TARGET = LOKAL;

@@ -16,7 +16,7 @@
 			<div class="rounded-md border border-[var(--g-ok-fg)] bg-[var(--g-ok-bg)] p-3 text-sm text-[var(--g-ok-fg)]">
 				{$t('auth.reset.erfolg')}
 			</div>
-			<a href="/login" class="block text-sm text-[var(--g-info)] hover:underline">{$t('auth.reset.zum_login')}</a>
+			<a href="/login" class="block py-3 text-sm text-[var(--g-info)] hover:underline">{$t('auth.reset.zum_login')}</a>
 		{:else}
 			<form method="POST" use:enhance class="space-y-3">
 				{#if form?.error}
@@ -46,7 +46,7 @@
 					{$t('auth.reset.knopf')}
 				</button>
 			</form>
-			<a href="/login" class="block text-sm text-muted-foreground hover:underline">{$t('auth.zurueck_login')}</a>
+			<a href="/login" class="block py-3 text-sm text-muted-foreground hover:underline">{$t('auth.zurueck_login')}</a>
 		{/if}
 	</div>
 </div>
