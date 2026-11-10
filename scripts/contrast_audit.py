@@ -24,7 +24,7 @@ TOKENS: dict[str, str] = {
     "--g-warn": "#c08a1a",
     "--g-warning": "#c8882a",
     "--g-bad": "#a83232",
-    "--g-danger": "#b33a2a",
+    "--g-danger": "#a83232",
     "--g-info": "#2a6cb3",
     "--g-success": "#3a7d44",
 }

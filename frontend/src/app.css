@@ -58,7 +58,7 @@
 @property --color-primary-foreground { syntax: "<color>"; inherits: true; initial-value: rgb(246, 244, 238); }
 @property --color-accent { syntax: "<color>"; inherits: true; initial-value: rgb(196, 90, 42); }
 @property --color-accent-foreground { syntax: "<color>"; inherits: true; initial-value: rgb(246, 244, 238); }
-@property --color-destructive { syntax: "<color>"; inherits: true; initial-value: rgb(179, 58, 42); }
+@property --color-destructive { syntax: "<color>"; inherits: true; initial-value: rgb(168, 50, 50); }
 @property --color-sidebar { syntax: "<color>"; inherits: true; initial-value: rgb(255, 255, 255); }
 @property --color-sidebar-foreground { syntax: "<color>"; inherits: true; initial-value: rgb(26, 26, 24); }
 @property --color-sidebar-accent { syntax: "<color>"; inherits: true; initial-value: rgb(236, 234, 217); }
@@ -516,12 +516,12 @@
   }
 
   [data-slot="btn"][data-variant="destructive"] {
-    background-color: rgba(179, 58, 42, 0.10);
+    background-color: color-mix(in oklab, var(--g-danger) 10%, transparent);
     color: var(--g-danger);
     border: 1px solid var(--g-danger);
   }
   [data-slot="btn"][data-variant="destructive"]:hover {
-    background-color: rgba(179, 58, 42, 0.18);
+    background-color: color-mix(in oklab, var(--g-danger) 18%, transparent);
   }
 
   [data-slot="btn"][data-variant="link"] {

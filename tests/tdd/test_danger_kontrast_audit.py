@@ -52,7 +52,7 @@ def test_audit_misst_g_danger_6_63_auf_card(cab):
     """AC-5: --g-danger auf weisser Card = 6.63:1 (AA), gemessen, nicht geschaetzt."""
     ratio = cab.contrast_ratio(cab.TOKENS["--g-danger"], "#ffffff")
     assert round(ratio, 2) == 6.63
-    assert cab.classify(ratio) == "AA"
+    assert cab.classify(ratio) == "AA-text"
 
 
 def test_design_seite_zeigt_gemessenen_g_danger_wert(cab):
