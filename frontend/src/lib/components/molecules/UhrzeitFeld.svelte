@@ -52,7 +52,6 @@
 			vollstaendig = false;
 			// Leer wird erst beim Verlassen gemeldet (`geleert` dort; Etappen-Startzeit fällt dann auf
 			// 08:00 zurück, #675 AC-5) — bits-ui meldet das Leeren der Stunde ohnehin nicht als leeren Wert.
-			meldung.verwerfen();
 			return;
 		}
 		vollstaendig = true;

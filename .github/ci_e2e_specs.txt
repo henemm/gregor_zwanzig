@@ -680,5 +680,6 @@ e2e/kontrast-trip-vergleich.spec.ts
 # Zwischenstände/Leeren/en, DS-4 Standard-Option; DS-5 leer mit frischem Konto unter eigener
 # X-Real-IP (stackunabhängig). Fallzahl jetzt 27 (+ global.setup). Fix-Loop 2 nach Adversary
 # Runde 2: + DS-2 Jahr angefangen/dasselbe Datum/Rückkehr ins fertige Segment/Rücktaste/
-# Rücknahme beim Tippen, DS-1 Jahr angefangen und Neueintippen. Fallzahl jetzt 33 (+ global.setup).
+# Rücknahme beim Tippen/Etappenwechsel Startzeit/Rücknahme Startzeit/Startzeit neu tippen,
+# DS-1 Jahr angefangen und Neueintippen. Fallzahl jetzt 36 (+ global.setup).
 e2e/design-system-trip-vergleich.spec.ts

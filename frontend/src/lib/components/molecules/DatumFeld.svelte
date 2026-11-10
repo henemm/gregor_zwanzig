@@ -65,7 +65,6 @@
 			vollstaendig = false;
 			// Leer erst beim Verlassen melden (siehe verlassen) — nie als Zwischenstand.
 			if (leerMelden && value !== '') meldung.aendern('', true);
-			else meldung.verwerfen();
 			return;
 		}
 		vollstaendig = true;

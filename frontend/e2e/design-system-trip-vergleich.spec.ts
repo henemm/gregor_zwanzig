@@ -38,6 +38,15 @@
 //   DS-2 Leeren   Startzeit leeren ⇒ 08:00 ohne gespeicherte Startzeit; Datum leeren ⇒ gespeichertes bleibt.
 //   DS-2 (en)     24 h im englischen UI.  DS-4 Standard-Option zurückwählen ⇒ ohne Aktivität gespeichert;
 //                 Mail-Format mit rollendem tabindex (Umschalt+Tab verlässt die Gruppe).
+//   Fix-Loop 2 (Adversary Runde 2, F-C1..F-C3), je Schutzstelle der Segmentfelder ein Fall an der
+//   Wirkstelle (Mutationsbeleg docs/artifacts/rework-2881-design-system/mutationen-B.txt):
+//   DS-2 Jahr angefangen „202" verlassen ⇒ kein PUT, Anzeige zurück.  DS-2 dasselbe Datum und
+//                 dieselbe Startzeit neu getippt ⇒ kein PUT.  DS-2 Rückkehr ins fertige Segment und
+//                 Rücktaste ⇒ angefangen, kein Zwischenstand.  DS-2 Rücknahme beim Tippen (Datum/
+//                 Startzeit): gescheitertes Speichern, Verlassen schreibt nichts nach.  DS-2 Etappen-
+//                 wechsel Startzeit (fertig/angefangen).  DS-2 Startzeit neu tippen (Stunde geleert ⇒
+//                 kein PUT bis zur neuen Zeit).  DS-1 Jahr angefangen ⇒ „Startdatum fehlt"; geleert
+//                 und neu getippt ⇒ Hinweis erscheint nie.
 //
 // Pflicht-Mutationen (Spec Implementation Details 4, Lieferung A): (a) MTabBar-Rahmen-Reset
 // entfernt ⇒ DS-8 rot; (b) `.mono`-Regel gelöscht ⇒ DS-7 rot; (c) „+ Neuer Trip" im Leerzustand

@@ -140,6 +140,7 @@ Das Audit vom 9.11.2026 fand zwei Arten von Problemen:
 
 - Native Felder in Konto, Admin und GPX-Upload bleiben vorerst (Sammel-Eintrag #1199).
 - Neue Soll-Bilder werden nicht erstellt; Maßstab sind Doku, Mockup und Tests (ADR-0111 Punkt 5).
+- Scheitert das Speichern, während ein Segment des Datumsfelds angefangen ist (z. B. Monat „1“), zeigt das Feld wieder den gespeicherten Wert und die angefangene Ziffer ist verworfen; die nächste Ziffer beginnt das Segment neu (bits-ui: „2“ ergibt dann Februar und springt ins Jahr statt Dezember). Kein Datenverlust, Anzeige = gespeicherter Wert (Adversary Runde 2, P11).
 
 ## Architektur-Entscheidung (ADR)
 
