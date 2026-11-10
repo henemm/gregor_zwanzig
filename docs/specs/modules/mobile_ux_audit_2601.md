@@ -146,7 +146,7 @@ Runde 1 (v1.0; AC-3 und AC-6 auf die heutigen Tab-Namen fortgeschrieben):
 Runde 2 (v1.1):
 
 - **AC-7:** Given ein Trip mit mehreren Etappen auf einem Telefon-Profil (390×844, 402×874 oder 844×390) / When im Etappen-Tab die Datumsfelder (Tag, Monat) und die Startzeit-Felder (Stunde, Minute) sowie im Trip-Anlegen das Datumsfeld vermessen werden / Then ist jedes Segment mindestens 24×24 px groß, in Deutsch und Englisch.
-  - Test: Playwright-Messtest `issue-2601-*.spec.ts` liest `getBoundingClientRect()` aller Segmente (`stage-date-field`, `stage-start-time-field`, `trip-new-date-input`) in allen drei Profilen.
+  - Test: Playwright-Messtest `mobile-ux-messung.spec.ts` liest `getBoundingClientRect()` aller Segmente (`stage-date-field`, `stage-start-time-field`, `trip-new-date-input`) in allen drei Profilen.
 
 - **AC-8:** Given der Vergleichs-Editor mit Datums- und Uhrzeitsegmenten auf einem Telefon-Profil / When die Segmente vermessen werden / Then gelten dieselben Mindestgrößen von 24×24 px wie im Trip-Editor, ohne dass dafür eine Compare-eigene Regel existiert.
   - Test: Messtest im Vergleichs-Editor (`context="vergleich"`), identische Schwelle; die Größe stammt aus den geteilten Bausteinen DatumFeld und UhrzeitFeld.
@@ -188,7 +188,7 @@ Runde 2 (v1.1):
 
 ## Test Plan
 
-- **Messtests (Playwright, Kern-Schicht im CI-`e2e`-Job):** `frontend/e2e/issue-2601-*.spec.ts` liest berechnete Größen (`getBoundingClientRect`, computed style) — Segmente Tag/Monat/Stunde/Minute ≥ 24×24 px in Etappen-Tab, Trip-Anlegen und Vergleichs-Editor (AC-7, AC-8); Desktop 1280×800 unverändert (AC-9); Brotkrumen `scrollHeight ≤ clientHeight` in Trip- und Vergleichs-Hub (AC-10); `<main>` auf /compare ohne Überlauf > 1 px, letzter Reiter der EN-Tabbar erreichbar (AC-12); kein sichtbarer Text < 11 px an den Fundstellen (AC-13); Knopfhöhen ≥ 36 px (AC-14).
+- **Messtests (Playwright, Kern-Schicht im CI-`e2e`-Job):** `frontend/e2e/mobile-ux-messung.spec.ts`, `frontend/e2e/mobile-ux-audit-selbsttest.spec.ts` und `frontend/e2e/mobile-ux-audit-staging-schutz.test.ts` lesen berechnete Größen (`getBoundingClientRect`, computed style) — Segmente Tag/Monat/Stunde/Minute ≥ 24×24 px in Etappen-Tab, Trip-Anlegen und Vergleichs-Editor (AC-7, AC-8); Desktop 1280×800 unverändert (AC-9); Brotkrumen `scrollHeight ≤ clientHeight` in Trip- und Vergleichs-Hub (AC-10); `<main>` auf /compare ohne Überlauf > 1 px, letzter Reiter der EN-Tabbar erreichbar (AC-12); kein sichtbarer Text < 11 px an den Fundstellen (AC-13); Knopfhöhen ≥ 36 px (AC-14).
 - **Audit-Lauf (lokal, wiederholbar):** `playwright.mobile-ux.local.config.ts` mit `GZ_AUDIT_LOCALE=de` und `=en`, je drei Profile, Report- und Strikt-Modus (AC-11, AC-15, AC-16, AC-17); Selbsttest der Härtung über ein 20-px-Probeelement jenseits der alten Kappungsgrenze.
 - **Kein Mock-Theater, keine Dateiinhalt-Checks;** Nachweis immer über das gerenderte Element.
 
@@ -202,6 +202,9 @@ Runde 2 (v1.1):
 - Das Höhenprofil bleibt bei Etappen mit kleinem Streckenanteil unter 24 px breit; das ist die dokumentierte WCAG-2.5.8-Ausnahme mit gleichwertiger Bedienung im Etappen-Tab.
 - Englische Übersetzungslücken (Filterchips ALLE/AKTIV/GEPLANT/PAUSIERT/FERTIG, Status „AKTIV", „AKTIONEN", „WETTER-BRIEFING" auf /login) sind kein Mobile-Befund und nach #2919 (Epic #2730) ausgegliedert.
 - Der Seed legt keinen Vergleich an; Vergleichs-Routen brauchen einen manuell angelegten Vergleich.
+- Die Hub-Kopf-Desktop-Gegenprobe ist nicht als eigener Messtest umgesetzt; die Brotkrumen-Änderung ist per Konstruktion layoutneutral (padding-block 13px + margin-block -13px).
+- Der Audit legt beim GPX-Upload-Schritt einen Datensatz im lokalen Seed-Nutzer an (nicht rein lesend).
+- Ein gesetztes `GZ_API_BASE` wird von der Audit-Config nicht gegen Staging geprüft (Adversary F004, LOW).
 
 ## Laufanleitung (lokal, kurz)
 
@@ -220,3 +223,4 @@ Runde 2 (v1.1):
 
 - 2026-10-22: Erstfassung (#2601), Runde 1, geliefert mit PR #2602.
 - 2026-11-10: v1.1 (Runde 2, HEAD 76ca6e4d9, DE und EN × 3 Profile): Tab-Namen in AC-3/AC-6 auf übersicht/etappen/wetter/zustellung aktualisiert; neue AC-7 bis AC-17 (Segmentgrößen, Brotkrumen, Höhenprofil-Ausnahme, /compare-Überlauf, weiche Befunde, Audit-Härtung, Sprache, Staging-Schutz, strenger Lauf); Laufanleitung ergänzt. Status wieder `draft`, Freigabe durch den PO steht aus.
+- 2026-11-10: Runde 2 umgesetzt und validiert; Spec freigegeben, Status `approved`. Die Messtests heißen anders als in der Dateitabelle geplant (`mobile-ux-messung.spec.ts`, `mobile-ux-audit-selbsttest.spec.ts`, `mobile-ux-audit-staging-schutz.test.ts`). Der Vergleichs-Editor hat kein Uhrzeitfeld, AC-8 misst daher nur Datumssegmente.

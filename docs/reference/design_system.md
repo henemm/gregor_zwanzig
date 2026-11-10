@@ -280,6 +280,7 @@ Untertitel-Block: Eyebrow oben, Title 22 px / `font-weight: 600` / `letter-spaci
   `aria-disabled` und Punkt `--g-ink-4` (Speicher-Chip, Anlege-Reiter, Anlege-Hinweise, Startklar-Liste).
 - **Tippflächen am Handy (< 900 px) mindestens 44 × 44:** Zurück-Link, „Mit Standardwerten speichern",
   Schnellwahl-Chips der Zustellung, ⓘ (unsichtbar vergrößert, negative Ränder halten die Zeile).
+- **Mobil-Mindestgrößen (#2601):** Datums-/Uhrzeitsegmente (`DatumFeld`/`UhrzeitFeld`) ≥ 24 × 24 px auf Touch bzw. ≤ 899 px; Knopfboden 36 px zentral in `app.css`; Mindestschrift mobil 11 px. Einzige dokumentierte Ausnahme: Höhenprofil-Etappenwahl mit `data-tap-equivalent` (WCAG 2.5.8 „equivalent", gleichwertige Bedienung im Etappen-Tab). Mobil-Audit: Laufanleitung in `docs/specs/modules/mobile_ux_audit_2601.md`.
 - Maßstab sind diese Regeln, das Mockup Fassung 3 und die Playwright-Paritäts-/Kontrasttests
   (`hub-tab-bar`, `kontrast-trip-vergleich`, `design-system-trip-vergleich`); die Soll-Bilder unter
   `claude-code-handoff/current/soll/` sind historisch.
