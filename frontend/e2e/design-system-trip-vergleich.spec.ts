@@ -876,7 +876,7 @@ test('DS-2 Rücknahme beim Tippen (1280 px): scheitert das Speichern, während e
 	}
 });
 
-test('DS-1 Jahr angefangen und Neueintippen (1280 px): „202" ⇒ „Startdatum fehlt"; Tag neu getippt ⇒ Hinweis erscheint nie', async ({
+test('DS-1 Jahr angefangen und Neueintippen (1280 px): „202" ⇒ „Startdatum fehlt"; geleert und neu getippt ⇒ Hinweis erscheint nie', async ({
 	page
 }) => {
 	await page.setViewportSize(DESKTOP);
@@ -888,7 +888,7 @@ test('DS-1 Jahr angefangen und Neueintippen (1280 px): „202" ⇒ „Startdatum
 	await tippeDatum(page, feld, '2026-11-19');
 	const etappenReiter = page.getByTestId('trip-new-tab-etappen');
 	await expect(etappenReiter).not.toHaveAttribute('aria-disabled', 'true');
-	// Neueintippen eines Segments (Rücktaste, dann neue Ziffern): kein kurzes „Startdatum fehlt".
+	// Neueintippen (Rücktaste leert, dann neue Ziffern): bis zum Verlassen kein kurzes „Startdatum fehlt".
 	await page.evaluate(() => {
 		const w = window as unknown as { __fehltGesehen: boolean };
 		w.__fehltGesehen = false;
@@ -899,7 +899,8 @@ test('DS-1 Jahr angefangen und Neueintippen (1280 px): „202" ⇒ „Startdatum
 	await feld.locator('[data-segment="day"]').click();
 	await page.keyboard.press('Backspace');
 	await page.keyboard.press('Backspace');
-	await page.keyboard.type('20');
+	// bits-ui leert mit dem Tag das ganze Datum (alle Segmente) — also vollständig neu tippen.
+	await page.keyboard.type('20112026');
 	await verlasseFeld(page);
 	await expect(feld.locator('[data-slot="datum-feld-eingabe"]')).toHaveText('20.11.2026');
 	expect(await page.evaluate(() => (window as unknown as { __fehltGesehen: boolean }).__fehltGesehen), 'Hinweis flackerte beim Neueintippen').toBe(false);
