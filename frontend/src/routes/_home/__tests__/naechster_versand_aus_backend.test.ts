@@ -51,7 +51,7 @@ describe('AC-23/AC-24: homeCompareTimeline liest den Backend-Wert', () => {
 		const rows = homeCompareTimeline(PRESET, NB_07);
 		const next = rows.find((r: { when: string }) => r.when.startsWith('Nächster · '));
 		assert.ok(next, `keine Nächster-Zeile: ${JSON.stringify(rows)}`);
-		assert.ok(next.when.includes('Do 07:00 (CEST)'), `Backend-Zeit fehlt: ${next.when}`);
+		assert.ok(next.when.includes('Do 22.10. 07:00 (CEST)'), `Backend-Zeit fehlt: ${next.when}`);
 		assert.ok(!next.when.includes('07:30'), `Minuten-Fiktion 07:30 sichtbar: ${next.when}`);
 		assert.ok(!next.when.includes('22:00'), `Browser-Zone sichtbar: ${next.when}`);
 		assert.equal(next.status, 'planned');

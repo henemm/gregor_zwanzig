@@ -51,7 +51,7 @@ const text = (props: Record<string, unknown>) =>
 		.replace(/\s+/g, ' ');
 
 describe('AC-23/AC-24: CompareStatusRow zeigt den Backend-Wert', () => {
-	test('Backend 07:00 (CEST) → „Do 07:00 (CEST)", nie 07:30, nie Browser-Zone', () => {
+	test('Backend 07:00 (CEST) → „Do 22.10. 07:00 (CEST)", nie 07:30, nie Browser-Zone', () => {
 		const t = text({
 			preset: PRESET,
 			nextBriefing: {
@@ -63,7 +63,7 @@ describe('AC-23/AC-24: CompareStatusRow zeigt den Backend-Wert', () => {
 				slot: 'morning'
 			}
 		});
-		assert.ok(t.includes('Do 07:00 (CEST)'), `Backend-Zeit fehlt: ${t}`);
+		assert.ok(t.includes('Do 22.10. 07:00 (CEST)'), `Backend-Zeit fehlt: ${t}`);
 		assert.ok(!t.includes('07:30'), `Minuten-Fiktion sichtbar: ${t}`);
 		assert.ok(!t.includes('22:00'), `Browser-Zone sichtbar: ${t}`);
 	});
@@ -80,8 +80,24 @@ describe('AC-23/AC-24: CompareStatusRow zeigt den Backend-Wert', () => {
 				slot: 'evening'
 			}
 		});
-		assert.ok(t.includes('Do 19:00 (CEST)'), t);
+		assert.ok(t.includes('Do 22.10. 19:00 (CEST)'), t);
 		assert.ok(!t.includes('06:00') && !t.includes('18:00'), t);
+	});
+
+	// #2869 AC-8: Status-Zeile des Ortsvergleichs zeigt denselben Wert mit Datum.
+	test('#2869 AC-8: Backend 2026-11-08 06:00 CET → „So 08.11. 06:00 (CET)"', () => {
+		const t = text({
+			preset: PRESET,
+			nextBriefing: {
+				at: '2026-11-08T06:00:00+01:00',
+				local_date: '2026-11-08',
+				local_time: '06:00',
+				tz: 'Europe/Vienna',
+				tz_abbr: 'CET',
+				slot: 'morning'
+			}
+		});
+		assert.ok(t.includes('So 08.11. 06:00 (CET)'), `Datum fehlt: ${t}`);
 	});
 
 	test('manual → „nur manueller Versand"', () => {

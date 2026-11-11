@@ -922,3 +922,56 @@ def test_ac15_compare_ergebnis_folgt_dem_ausgabeformat(overrides):
 
     _schema(r, skip_next=False)
     assert "skipped" not in r
+
+
+# ═══════════════════════ #2869 Regression (AC-10) ═══════════════════════
+# Spec: docs/specs/modules/fix_2869_naechster_versand_datum.md
+# Seed der Abnahme #2837 (frontend/e2e/helpers.ts seedRumpf): Trip mit EINER
+# Etappe am So 01.08.2027 auf Korsika, Vergleich daily 06:00 in Innsbruck.
+# Beide Termine fallen auf einen Sonntag, aber auf VERSCHIEDENE Tage — die
+# unterschiedlichen Kürzel (CEST/CET) sind korrekt. Diese Tests halten das
+# Verhalten fest (kein Fix im Backend, erwartbar grün).
+
+KORSIKA_SEED = (42.0, 9.0)        # -> Europe/Paris
+INNSBRUCK = (47.27, 11.39)        # -> Europe/Vienna
+NOW_2869 = datetime(2026, 11, 7, 17, 0, tzinfo=timezone.utc)
+
+
+def test_2869_seed_trip_einzige_etappe_im_august_traegt_cest():
+    """AC-10 (#2869): Seed-Trip, einzige Etappe 2027-08-01, morning 06:00
+    (Abend aus), now = 2026-11-07 17:00 UTC ⇒ 2027-08-01 06:00 CEST."""
+    nb = _nb()
+    trip = _trip(
+        "seed-2869", [date(2027, 8, 1)], KORSIKA_SEED,
+        morning="06:00:00", morning_enabled=True, evening_enabled=False,
+    )
+
+    r = nb.next_trip_briefing(trip, NOW_2869, _store())
+
+    assert r["local_date"] == "2027-08-01", r
+    assert r["local_time"] == "06:00", r
+    assert r["tz"] == "Europe/Paris", r
+    assert r["tz_abbr"] == "CEST", r
+    assert r["slot"] == "morning", r
+    assert datetime.fromisoformat(r["at"]) == datetime(2027, 8, 1, 6, tzinfo=PARIS_TZ)
+    assert datetime.fromisoformat(r["at"]).utcoffset() == timedelta(hours=2)
+
+
+def test_2869_vergleich_innsbruck_daily_0600_am_naechsten_tag_traegt_cet():
+    """AC-10 (#2869): Ortsvergleich daily 06:00 (Abend aus) in Innsbruck,
+    gleiches now ⇒ So 2026-11-08 06:00 CET (Winterzeit)."""
+    nb = _nb()
+    preset = _preset(
+        location_ids=["ort-innsbruck"],
+        morning_time="06:00:00", morning_enabled=True, evening_enabled=False,
+    )
+    orte = {"ort-innsbruck": _ort("ort-innsbruck", INNSBRUCK)}
+
+    r = nb.next_compare_briefing(preset, orte, NOW_2869)
+
+    assert r["local_date"] == "2026-11-08", r
+    assert r["local_time"] == "06:00", r
+    assert r["tz"] == "Europe/Vienna", r
+    assert r["tz_abbr"] == "CET", r
+    assert r["slot"] == "morning", r
+    assert datetime.fromisoformat(r["at"]).utcoffset() == timedelta(hours=1)

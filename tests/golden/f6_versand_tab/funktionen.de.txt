@@ -13,9 +13,9 @@ sendTargetLabel(ohne_adresse) → {"text":"Im Konto ist keine E-Mail-Adresse hin
 sendTargetLabel(unbestaetigt) → {"text":"Die Adresse a@example.org ist nicht bestätigt — es wird nichts zugestellt.","deliverable":false,"gesperrt":true}
 sendTargetLabel(nur_email) → {"text":"Geht an E-Mail (golden@example.org).","deliverable":true,"gesperrt":false}
 sendTargetLabel(alles) → {"text":"Geht an E-Mail (golden@example.org) · Telegram · SMS · Premium-SMS.","deliverable":true,"gesperrt":false}
-formatNextBriefing(termin, route) → "Mi 07:00 (CEST)"
-formatNextBriefing(uebersprungen, route) → "Mi 07:00 (CEST) — Do 07:00 wird übersprungen"
-formatNextBriefing(ueberfaellig, route) → "Mi 07:00 (CET) — läuft jetzt / wird nachgeholt"
+formatNextBriefing(termin, route) → "Mi 28.10. 07:00 (CET)"
+formatNextBriefing(uebersprungen, route) → "Mi 28.10. 07:00 (CET) — Do 29.10. 07:00 wird übersprungen"
+formatNextBriefing(ueberfaellig, route) → "Mi 28.10. 07:00 (CET) — läuft jetzt / wird nachgeholt"
 formatNextBriefing(pausiert_bis, route) → "pausiert bis 28.10."
 formatNextBriefing(pausiert, route) → "pausiert"
 formatNextBriefing(manuell, route) → "nur manueller Versand"
@@ -27,9 +27,9 @@ formatNextBriefing(nicht_geladen, route) → "—"
 vtBriefingLeadText(route) → "Das Trip-Briefing ist eine Etappen-Tabelle — E-Mail trägt alle Spalten, Telegram die ersten 7, SMS kein Raster, Fließtext."
 vtBriefingSubTexts(route, rich) → {"email":"Layout · volle Tabelle","telegram":"Layout · 7 Spalten","sms":"Layout · kein Raster, 160 Zeichen"}
 vtBriefingSubTexts(route, kurzform) → {"email":"Layout · volle Tabelle","telegram":"folgt der SMS-Auswahl","sms":"Layout · kein Raster, 160 Zeichen"}
-formatNextBriefing(termin, vergleich) → "Mi 07:00 (CEST)"
-formatNextBriefing(uebersprungen, vergleich) → "Mi 07:00 (CEST) — Do 07:00 wird übersprungen"
-formatNextBriefing(ueberfaellig, vergleich) → "Mi 07:00 (CET) — läuft jetzt / wird nachgeholt"
+formatNextBriefing(termin, vergleich) → "Mi 28.10. 07:00 (CET)"
+formatNextBriefing(uebersprungen, vergleich) → "Mi 28.10. 07:00 (CET) — Do 29.10. 07:00 wird übersprungen"
+formatNextBriefing(ueberfaellig, vergleich) → "Mi 28.10. 07:00 (CET) — läuft jetzt / wird nachgeholt"
 formatNextBriefing(pausiert_bis, vergleich) → "pausiert bis 28.10."
 formatNextBriefing(pausiert, vergleich) → "pausiert"
 formatNextBriefing(manuell, vergleich) → "nur manueller Versand"

@@ -34,6 +34,7 @@ import {
 	baueReportConfigPayload,
 	ladeReportZustand,
 	kanaeleRendern,
+	naechstesBriefingRendern,
 	tabRendern,
 	htmlFaelle,
 	funktionsTabelle,
@@ -213,9 +214,12 @@ describe('AC-3: formatNextBriefing in beiden Sprachen', () => {
 		['beendet', 'vergleich', 'Ortsvergleich beendet', 'Location comparison ended'],
 		['abgeschaltet', 'route', 'Briefings abgeschaltet', 'Briefings switched off'],
 		['kein_termin', 'vergleich', 'kein Termin geplant', 'no time scheduled'],
-		['termin', 'route', 'Mi 07:00 (CEST)', 'Wed 07:00 (CEST)'],
-		['uebersprungen', 'route', 'Mi 07:00 (CEST) — Do 07:00 wird übersprungen', 'Wed 07:00 (CEST) — Thu 07:00 is skipped'],
-		['ueberfaellig', 'vergleich', 'Mi 07:00 (CET) — läuft jetzt / wird nachgeholt', 'Wed 07:00 (CET) — running now / will be caught up'],
+		// #2869: Termin immer mit Datum; Kürzel passt zum Offset +01:00 (28.10. = Winterzeit, AC-11).
+		['termin', 'route', 'Mi 28.10. 07:00 (CET)', 'Wed 28 Oct 07:00 (CET)'],
+		['termin', 'vergleich', 'Mi 28.10. 07:00 (CET)', 'Wed 28 Oct 07:00 (CET)'],
+		['uebersprungen', 'route', 'Mi 28.10. 07:00 (CET) — Do 29.10. 07:00 wird übersprungen', 'Wed 28 Oct 07:00 (CET) — Thu 29 Oct 07:00 is skipped'],
+		['uebersprungen', 'vergleich', 'Mi 28.10. 07:00 (CET) — Do 29.10. 07:00 wird übersprungen', 'Wed 28 Oct 07:00 (CET) — Thu 29 Oct 07:00 is skipped'],
+		['ueberfaellig', 'vergleich', 'Mi 28.10. 07:00 (CET) — läuft jetzt / wird nachgeholt', 'Wed 28 Oct 07:00 (CET) — running now / will be caught up'],
 		['kaputt', 'route', '—', '—'],
 		['nicht_geladen', 'route', '—', '—']
 	];
@@ -229,9 +233,46 @@ describe('AC-3: formatNextBriefing in beiden Sprachen', () => {
 	test('alle sieben Wochentage je Sprache (zonenfrei aus local_date)', () => {
 		const tage = ['2026-10-25', '2026-10-26', '2026-10-27', '2026-10-28', '2026-10-29', '2026-10-30', '2026-10-31'];
 		const { de, en } = deDannEn(() => tage.map((d) => formatNextBriefing({ at: 'x', local_date: d, local_time: '07:00', tz_abbr: 'CET' })).join(' | '));
-		assert.equal(de, ['So', 'Mo', 'Di', 'Mi', 'Do', 'Fr', 'Sa'].map((w) => `${w} 07:00 (CET)`).join(' | '));
-		assert.equal(en, ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((w) => `${w} 07:00 (CET)`).join(' | '));
+		assert.equal(de, 'So 25.10. 07:00 (CET) | Mo 26.10. 07:00 (CET) | Di 27.10. 07:00 (CET) | Mi 28.10. 07:00 (CET) | Do 29.10. 07:00 (CET) | Fr 30.10. 07:00 (CET) | Sa 31.10. 07:00 (CET)');
+		assert.equal(en, 'Sun 25 Oct 07:00 (CET) | Mon 26 Oct 07:00 (CET) | Tue 27 Oct 07:00 (CET) | Wed 28 Oct 07:00 (CET) | Thu 29 Oct 07:00 (CET) | Fri 30 Oct 07:00 (CET) | Sat 31 Oct 07:00 (CET)');
 	});
+});
+
+// Issue #2869 — „Nächster Versand" zeigt immer das Datum (Spec fix_2869_naechster_versand_datum.md).
+// Echter SSR-Render des geteilten Bausteins VTNextBriefing in BEIDEN Kontexten, sichtbarer Text.
+describe('#2869 AC-1/AC-2/AC-3/AC-11: Versand-Reiter zeigt Wochentag + Datum + Uhrzeit + Kürzel', () => {
+	const SEED_TRIP = { at: '2027-08-01T06:00:00+02:00', local_date: '2027-08-01', local_time: '06:00', tz: 'Europe/Paris', tz_abbr: 'CEST', slot: 'morning' };
+	const VERGLEICH = { at: '2026-11-08T06:00:00+01:00', local_date: '2026-11-08', local_time: '06:00', tz: 'Europe/Vienna', tz_abbr: 'CET', slot: 'morning' };
+	const zeile = (nb: Record<string, unknown> | null, context: 'route' | 'vergleich') => sichtbar(naechstesBriefingRendern(nb, context));
+
+	test('AC-1: Trip (route), de → „Nächstes Briefing So 01.08. 06:00 (CEST)"', () => {
+		locale.set('de');
+		assert.equal(zeile(SEED_TRIP, 'route'), 'Nächstes Briefing So 01.08. 06:00 (CEST)');
+	});
+	test('AC-2: Ortsvergleich (vergleich), de → „Nächstes Briefing So 08.11. 06:00 (CET)"', () => {
+		locale.set('de');
+		assert.equal(zeile(VERGLEICH, 'vergleich'), 'Nächstes Briefing So 08.11. 06:00 (CET)');
+	});
+	test('AC-2: route und vergleich zeigen bei identischem Backend-Wert denselben Text', () => {
+		for (const nb of [SEED_TRIP, VERGLEICH]) {
+			const { de, en } = deDannEn(() => [zeile(nb, 'route'), zeile(nb, 'vergleich')]);
+			assert.equal(de[0], de[1]);
+			assert.equal(en[0], en[1]);
+		}
+	});
+	test('AC-3: en (erst de, dann ohne Neuladen en) → „Sun 1 Aug 06:00 (CEST)" / „Sun 8 Nov 06:00 (CET)"', () => {
+		const { en } = deDannEn(() => [zeile(SEED_TRIP, 'route'), zeile(VERGLEICH, 'vergleich')]);
+		assert.equal(en[0], 'Next briefing Sun 1 Aug 06:00 (CEST)');
+		assert.equal(en[1], 'Next briefing Sun 8 Nov 06:00 (CET)');
+	});
+	for (const context of ['route', 'vergleich'] as const) {
+		test(`AC-11: Prüfstand-Termin Mi 28.10.2026 (+01:00) → „Mi 28.10. 07:00 (CET)", nie (CEST) — ${context}`, () => {
+			const { de, en } = deDannEn(() => zeile(NB.termin, context));
+			assert.equal(de, 'Nächstes Briefing Mi 28.10. 07:00 (CET)');
+			assert.equal(en, 'Next briefing Wed 28 Oct 07:00 (CET)');
+			assert.ok(!de.includes('CEST') && !en.includes('CEST'), `Kürzel passt nicht zum Offset: ${de} / ${en}`);
+		});
+	}
 });
 
 describe('AC-4: zwei Nutzer, zwei Sprachen, eigene Kanaele, gleiche report_config', () => {
