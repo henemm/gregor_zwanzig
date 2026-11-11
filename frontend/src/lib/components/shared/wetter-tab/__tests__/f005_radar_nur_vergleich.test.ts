@@ -34,7 +34,7 @@ import { svelteAst } from '../../__tests__/s3a2794Ast.ts';
 
 const HIER = dirname(fileURLToPath(import.meta.url));
 const FRONTEND = resolve(HIER, '../../../../../..');
-const WETTER_TAB = join(HIER, '..', '..', '..', 'organisms', 'wetter-tab', 'WetterTab.svelte');
+const WETTER_TAB = join(HIER, '..', '..', '..', 'organisms', 'wetter-tab', 'WetterTabInhalt.svelte');
 
 register(pathToFileURL(join(FRONTEND, 'test-svelte-ssr-hooks.mjs')).href, pathToFileURL(FRONTEND + '/').href);
 

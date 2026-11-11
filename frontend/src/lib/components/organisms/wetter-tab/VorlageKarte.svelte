@@ -4,6 +4,8 @@
 	// (nur Vorlagen der Art des Kontexts), Rueckfrage vor dem Wechsel (W4), „Auf ‚…‘ zurücksetzen"
 	// nur bei Abweichungen, Dialog „Als eigene Vorlage speichern". Trip und Orts-Briefing gleich.
 	import type { Ampel, MetricPreset } from '$lib/types';
+	// #2913 Teil 2 (K-6): alle Knöpfe aus dem Atom Btn (Größe tap, Touch-Ziel >= 44px).
+	import { Btn } from '$lib/components/atoms';
 	import { t, tn } from '$lib/i18n';
 	import SavePresetDialog from '../../shared/weather-metrics-tab/SavePresetDialog.svelte';
 	import type { Kontext } from '../../shared/wetter-tab/ampelModell.ts';
@@ -64,10 +66,12 @@
 <div class="wt-karte">
 	<div class="wt-picker-wrap">
 		<span class="wt-eyebrow">{$t('wetter.vorlage.titel')}</span>
-		<button type="button" class="wt-picker" data-testid="wetter-vorlage-picker" aria-expanded={pickerOffen} aria-haspopup="listbox" onclick={() => (pickerOffen ? schliessen() : (pickerOffen = true))}>
-			<span>{label}</span>
-			<small>▾ <span data-testid="wetter-vorlage-status">{status}</span></small>
-		</button>
+		<div class="wt-picker">
+			<Btn variant="ghost" size="tap" data-testid="wetter-vorlage-picker" aria-expanded={pickerOffen} aria-haspopup="listbox" onclick={() => (pickerOffen ? schliessen() : (pickerOffen = true))}>
+				<span>{label}</span>
+				<small>▾ <span data-testid="wetter-vorlage-status">{status}</span></small>
+			</Btn>
+		</div>
 		{#if pickerOffen}
 			<div class="wt-menue">
 				{#if wahl}
@@ -78,33 +82,37 @@
 							{$t('wetter.vorlage.bleibt')}
 						</p>
 						<div class="wt-reihe">
-							<button type="button" class="wt-btn wt-btn--primaer" data-testid="wetter-vorlage-wechsel-uebernehmen" onclick={uebernehmen}>{$t('wetter.vorlage.uebernehmen')}</button>
-							<button type="button" class="wt-btn" data-testid="wetter-vorlage-wechsel-abbrechen" onclick={schliessen}>{$t('aktionen.abbrechen')}</button>
+							<Btn variant="accent" size="tap" data-testid="wetter-vorlage-wechsel-uebernehmen" onclick={uebernehmen}>{$t('wetter.vorlage.uebernehmen')}</Btn>
+							<Btn variant="ghost" size="tap" data-testid="wetter-vorlage-wechsel-abbrechen" onclick={schliessen}>{$t('aktionen.abbrechen')}</Btn>
 						</div>
 					</div>
 				{/if}
 				<div class="wt-gruppe">{$t('wetter.vorlage.systemvorlagen')}</div>
 				{#each liste as v (v.id)}
-					<button type="button" class="wt-option" class:aktiv={v.id === vorlageId} data-testid="wetter-vorlage-option-{v.id}" onclick={() => waehlen(v.id, v.label, false)}>
-						<span>{v.label}</span>
-						<small data-testid="wetter-vorlage-beschreibung-{v.id}">{beschreibung(v)}</small>
-					</button>
+					<div class="wt-option">
+						<Btn variant="quiet" size="tap" data-aktiv={v.id === vorlageId ? 'true' : undefined} data-testid="wetter-vorlage-option-{v.id}" onclick={() => waehlen(v.id, v.label, false)}>
+							<span>{v.label}</span>
+							<small data-testid="wetter-vorlage-beschreibung-{v.id}">{beschreibung(v)}</small>
+						</Btn>
+					</div>
 				{/each}
 				<div data-testid="wetter-vorlage-eigene">
 					<div class="wt-gruppe">{$t('wetter.vorlage.eigene')}</div>
 					{#each eigene as e (e.id)}
-						<button type="button" class="wt-option" data-testid="wetter-vorlage-eigene-{e.id}" onclick={() => waehlen(e.id, e.name, true)}>
-							<span>{e.name}</span>
-						</button>
+						<div class="wt-option">
+							<Btn variant="quiet" size="tap" data-testid="wetter-vorlage-eigene-{e.id}" onclick={() => waehlen(e.id, e.name, true)}>
+								<span>{e.name}</span>
+							</Btn>
+						</div>
 					{/each}
 				</div>
 			</div>
 		{/if}
 	</div>
-	<div class="wt-reihe">
-		<button type="button" class="wt-btn" data-testid="wetter-vorlage-als-eigene" onclick={() => ((gespeichert = null), (dialogOffen = true))}>{$t('wetter.vorlage.speichern')}</button>
+	<div class="wt-reihe wt-aktionen">
+		<Btn variant="ghost" size="tap" data-testid="wetter-vorlage-als-eigene" onclick={() => ((gespeichert = null), (dialogOffen = true))}>{$t('wetter.vorlage.speichern')}</Btn>
 		{#if abweichungen > 0}
-			<button type="button" class="wt-btn" data-testid="wetter-vorlage-zuruecksetzen" onclick={onZuruecksetzen}>{$t('wetter.vorlage.zuruecksetzen', { vorlage: label })}</button>
+			<Btn variant="ghost" size="tap" data-testid="wetter-vorlage-zuruecksetzen" onclick={onZuruecksetzen}>{$t('wetter.vorlage.zuruecksetzen', { vorlage: label })}</Btn>
 		{/if}
 	</div>
 	{#if gespeichert}
@@ -140,20 +148,17 @@
 		color: var(--g-ink-3);
 	}
 	.wt-picker {
-		display: inline-flex;
+		align-self: flex-start;
+	}
+	.wt-picker :global([data-slot='btn']) {
 		align-items: baseline;
 		gap: var(--g-size-10px);
-		min-height: var(--g-tap-min);
-		padding: 0 var(--g-size-14px);
-		border: 1px solid var(--g-rule);
-		border-radius: var(--g-r-2);
 		background: var(--g-card);
-		color: var(--g-ink);
-		font: inherit;
 		font-size: var(--g-s-4);
 		font-weight: 600;
-		cursor: pointer;
-		align-self: flex-start;
+	}
+	.wt-picker :global([data-slot='btn']:hover) {
+		background: var(--g-surface-2);
 	}
 	.wt-picker small {
 		font-size: var(--g-size-12-5px);
@@ -183,25 +188,23 @@
 		text-transform: uppercase;
 		color: var(--g-ink-3);
 	}
-	.wt-option {
+	.wt-option :global([data-slot='btn']) {
 		display: flex;
 		flex-direction: column;
 		align-items: flex-start;
+		justify-content: center;
 		gap: var(--g-size-2px);
 		width: 100%;
-		min-height: var(--g-tap-min);
 		padding: var(--g-size-6px) var(--g-size-10px);
 		border: none;
-		border-radius: var(--g-r-2);
-		background: transparent;
 		color: var(--g-ink);
-		font: inherit;
 		font-size: var(--g-size-14px);
+		font-weight: 400;
 		text-align: left;
-		cursor: pointer;
+		white-space: normal;
 	}
-	.wt-option.aktiv,
-	.wt-option:hover {
+	.wt-option :global([data-slot='btn'][data-aktiv='true']),
+	.wt-option :global([data-slot='btn']:hover) {
 		background: var(--g-paper-deep);
 	}
 	.wt-option small {
@@ -225,22 +228,14 @@
 		flex-wrap: wrap;
 		gap: var(--g-s-2);
 	}
-	.wt-btn {
-		min-height: var(--g-tap-min);
-		min-width: var(--g-tap-min);
-		padding: 0 var(--g-size-14px);
-		border: 1px solid var(--g-rule);
-		border-radius: var(--g-r-2);
+	.wt-aktionen :global([data-slot='btn']),
+	.wt-frage :global([data-slot='btn'][data-variant='ghost']) {
 		background: var(--g-card);
-		color: var(--g-ink);
-		font: inherit;
-		font-size: var(--g-text-sm);
-		cursor: pointer;
+		font-weight: 400;
 	}
-	.wt-btn--primaer {
-		background: var(--g-accent-deep);
-		border-color: var(--g-accent-deep);
-		color: var(--g-on-accent);
+	.wt-aktionen :global([data-slot='btn']:hover),
+	.wt-frage :global([data-slot='btn'][data-variant='ghost']:hover) {
+		background: var(--g-surface-2);
 	}
 	.wt-meldung {
 		flex-basis: 100%;

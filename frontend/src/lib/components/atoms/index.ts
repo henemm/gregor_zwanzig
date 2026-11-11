@@ -35,6 +35,9 @@ export { default as BackLink } from './BackLink.svelte';
 // Issue #578 — Stat Atom
 export { default as Stat } from './Stat.svelte';
 
+// Issue #2913 Teil 2 — Skelett (Lade-Platzhalter, Mockup `.skel`)
+export { default as Skelett } from './Skelett.svelte';
+
 // Typen aus neuen Atomen
 export type { SwitchSize, SwitchTone } from './Switch.svelte';
 export type { AvatarUser } from './AvatarStack.svelte';

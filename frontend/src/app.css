@@ -202,6 +202,16 @@
     --g-size-1100px:    1100px;
     --g-size-0-08em:    0.08em;
     --g-size-0-1em:     0.1em;
+    /* #2913 Teil 2 (K-4): Stärke der Ampel-Unterkante am Input (Mockup .lr/.lo/.ly). */
+    --g-size-3px:       3px;
+
+    /* #2913 Teil 2 (AC-11, K-3): Ampelfarben des Wetter-Reiters (Mockup Fassung 3). Grafische
+       Elemente, je >= 3:1 gegen --g-card. Gelb ist gegenüber dem Mockup (#d69500, nur 2,6:1 auf Weiß)
+       abgedunkelt; Dark-Werte im Dark-Block. Prüfung: ampel_tokens_kontrast.test.ts. */
+    --g-ampel-gruen:    #15803d;
+    --g-ampel-gelb:     #b98100;
+    --g-ampel-orange:   #d4530a;
+    --g-ampel-rot:      #a8104a;
 
     /* Issue #267 — Mobile App-Shell Tokens */
     --g-paper-deep: #ecead9;  /* #576: tokens.css-Sync */
@@ -335,6 +345,13 @@
     --g-bad:            #ee7a7a;
     --g-info:           #7aa9dc;
     --g-info-deep:      #9cc0e6;
+
+    /* #2913 Teil 2 (AC-11, K-3): Ampelfarben gegen --g-card #1d1d1a, je >= 3:1.
+       Rot gegenüber dem Mockup (#a8104a, nur 2,3:1) aufgehellt. */
+    --g-ampel-gruen:    #15803d;
+    --g-ampel-gelb:     #d69500;
+    --g-ampel-orange:   #d4530a;
+    --g-ampel-rot:      #d43a76;
 
     /* Status-Paare */
     --g-ok-bg:          #16281a;
@@ -489,6 +506,8 @@
   [data-slot="btn"][data-size="icon-xs"] { padding: 0; width: 24px; height: 24px; min-height: 24px; }
   [data-slot="btn"][data-size="icon-sm"] { padding: 0; width: 28px; height: 28px; min-height: 28px; }
   [data-slot="btn"][data-size="icon-lg"] { padding: 0; width: 36px; height: 36px; min-height: 36px; }
+  /* #2913 Teil 2 (K-5): Touch-Größe — Höhe und Breite mindestens --g-tap-min (44px). */
+  [data-slot="btn"][data-size="tap"]     { padding: 0 var(--g-size-14px); font-size: var(--g-text-sm); min-height: var(--g-tap-min); min-width: var(--g-tap-min); }
 
   /* Touch-Geräte: Icon-Buttons behalten ihre Optik, bekommen aber eine
      unsichtbar vergrößerte Trefferfläche (Design-Vorgabe: Touch-Ziele >= 44px). */
@@ -712,6 +731,34 @@
     font-size: var(--g-text-sm);
   }
 
+  /* === #2913 Teil 2 (AC-13): Farbpunkt je Segment (Mockup .seg .d, 8px rund) === */
+  [data-slot="segmented-punkt"] {
+    display: inline-block;
+    width: var(--g-s-2);
+    height: var(--g-s-2);
+    margin-right: var(--g-size-6px);
+    border-radius: 50%;
+    vertical-align: middle;
+    box-shadow: 0 0 0 1px var(--g-card);
+  }
+  [data-slot="segmented-punkt"][data-farbe="green"]  { background: var(--g-ampel-gruen); }
+  [data-slot="segmented-punkt"][data-farbe="yellow"] { background: var(--g-ampel-gelb); }
+  [data-slot="segmented-punkt"][data-farbe="orange"] { background: var(--g-ampel-orange); }
+  [data-slot="segmented-punkt"][data-farbe="red"]    { background: var(--g-ampel-rot); }
+
+  /* === #2913 Teil 2 (AC-14): Skelett — Lade-Platzhalter (Mockup .skel) === */
+  [data-slot="skelett"] {
+    display: flex;
+    flex-direction: column;
+    gap: var(--g-s-3);
+  }
+  [data-slot="skelett-zeile"] {
+    display: block;
+    height: var(--g-size-14px);
+    border-radius: var(--g-r-2);
+    background: var(--g-rule-soft);
+  }
+
   /* === Issue #144: Eyebrow — JSX-konform: color = var(--g-ink-3), nicht --g-ink-muted (Issue #577) === */
   [data-slot="eyebrow"] {
     display: block;
@@ -834,6 +881,17 @@
   [data-testid="switch"]::after { content: ""; position: absolute; inset: -12px -8px; }
 }
 }
+/* #2913 Teil 2 (AC-13, K-4): Input mit Ampel-Unterkante (Mockup .lr/.lo/.ly, 3px).
+   Bewusst ohne @layer: das ui/input trägt die Tailwind-Utility `border` (1px rundum) im
+   utilities-Layer; die Unterkante muss dagegen gewinnen. */
+[data-slot="input"][data-ampel] {
+  border-bottom-style: solid;
+  border-bottom-width: var(--g-size-3px);
+}
+[data-slot="input"][data-ampel="green"]  { border-bottom-color: var(--g-ampel-gruen); }
+[data-slot="input"][data-ampel="yellow"] { border-bottom-color: var(--g-ampel-gelb); }
+[data-slot="input"][data-ampel="orange"] { border-bottom-color: var(--g-ampel-orange); }
+[data-slot="input"][data-ampel="red"]    { border-bottom-color: var(--g-ampel-rot); }
 .g-link-tap {
   display: inline-block;
   padding: 13px 12px;

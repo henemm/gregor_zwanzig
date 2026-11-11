@@ -27,7 +27,7 @@ import * as L from '../tripNewLogic.ts';
 
 const HIER = dirname(fileURLToPath(import.meta.url));
 const EDITOR = join(HIER, '..', 'TripNewEditor.svelte');
-const WETTER_TAB = join(HIER, '..', '..', 'organisms', 'wetter-tab', 'WetterTab.svelte');
+const WETTER_TAB = join(HIER, '..', '..', 'organisms', 'wetter-tab', 'WetterTabInhalt.svelte');
 
 const LIVE_API = {
 	get: async (pfad: string) => {

@@ -27,8 +27,11 @@ const DAY_WINDOW = join(SHARED, 'weather-metrics-tab', 'DayWindowCard.svelte');
 const DIALOG = join(SHARED, 'weather-metrics-tab', 'SavePresetDialog.svelte');
 
 /** Bausteine laut Spec (Source, Trip/Ortsvergleich-Teilung). */
+// #2913 Teil 2 (K-1): der Organismus mit Zustand heißt WetterTabInhalt; die Seite shared/WetterTab.svelte
+// wird unten zusätzlich geprüft.
+const SEITE = join(SHARED, 'WetterTab.svelte');
 const BAUSTEINE = [
-	'WetterTab', 'VorlageKarte', 'AlarmAbKopf', 'MetrikZeile', 'AmpelLeiste',
+	'WetterTabInhalt', 'VorlageKarte', 'AlarmAbKopf', 'MetrikZeile', 'AmpelLeiste',
 	'GrenzenEditor', 'NichtImBriefing', 'WarnungenRadarKarte', 'AnpassenKarte'
 ];
 const VERBOTENE_TYPEN = new Set(['checkbox', 'date', 'time', 'datetime-local', 'month', 'week']);
@@ -80,7 +83,7 @@ describe('AC-40: keine nativen Controls im Reiter Wetter und im Dialog', () => {
 		assert.deepEqual(funde, [], 'AC-40: native Controls im Reiter Wetter');
 	});
 
-	for (const [name, datei] of [['DayWindowCard', DAY_WINDOW], ['SavePresetDialog', DIALOG]] as const) {
+	for (const [name, datei] of [['DayWindowCard', DAY_WINDOW], ['SavePresetDialog', DIALOG], ['WetterTab', SEITE]] as const) {
 		test(`s3a2794_t3_${name}_ohne_native_controls`, () => {
 			assert.ok(existiert(datei), `${name}.svelte fehlt`);
 			assert.deepEqual(nativeControls(datei), [], `AC-40: native Controls in ${name}.svelte`);

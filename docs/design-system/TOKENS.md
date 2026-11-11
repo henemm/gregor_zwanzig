@@ -69,6 +69,17 @@
 | `--g-weather-sun` | `#d99a2a` | Sonne, klar |
 | `--g-weather-cloud` | `#9a958a` | Bewölkt |
 
+### 5a. Ampel — Wetter-Reiter (#2913)
+
+Grafische Farben der Ampelstufen (Ampel-Leiste, Input-Unterkante, Segment-Farbpunkt). Nahe am Mockup Fassung 3, jede mindestens **3:1 gegen `--g-card`** in Hell und Dunkel (eigener Dark-Block). Abweichung vom Mockup nur, wo WCAG es verlangt. Farbe ist nie alleiniger Informationsträger. Prüfung: `ampel_tokens_kontrast.test.ts`.
+
+| Token | Hell | Dunkel | Mockup |
+|---|---|---|---|
+| `--g-ampel-gruen` | `#15803d` | `#15803d` | `#15803d` |
+| `--g-ampel-gelb` | `#b98100` (abgedunkelt) | `#d69500` | `#d69500` |
+| `--g-ampel-orange` | `#d4530a` | `#d4530a` | `#d4530a` |
+| `--g-ampel-rot` | `#a8104a` | `#d43a76` (aufgehellt) | `#a8104a` |
+
 ---
 
 ## 6. Typography — Schriften
@@ -135,6 +146,7 @@ Reine Maße, **Light = Dark** (kein Wert im Dark-Block). Regel: Ein Maß im 4px-
 |---|---|---|
 | `--g-tap-min` | 44 px | Mindest-Touch-Ziel (min-height/min-width von Knöpfen, Tap-Spalte) |
 | `--g-size-2px` | 2 px | kleinste Abstände, Fokusring-Versatz |
+| `--g-size-3px` | 3 px | Ampel-Unterkante am Input (#2913 Teil 2) |
 | `--g-size-5px` | 5 px | Radius halbhoher Balken (Ampel-Leiste) |
 | `--g-size-6px` | 6 px | enge Abstände/Polster |
 | `--g-size-10px` | 10 px | Abstände/Polster, Balkenhöhe |

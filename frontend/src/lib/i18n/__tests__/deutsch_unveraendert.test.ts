@@ -447,6 +447,8 @@ const NEU_IN_FOLGEPAKETEN = [
 	'bausteine.datum.kalender_oeffnen',
 	'bausteine.datum.voriger_monat',
 	'bausteine.datum.naechster_monat',
+	// #2913 Teil 2 (K-4): Standard-Beschriftung des Atoms atoms/Skelett: bausteine.json
+	'bausteine.skelett.laedt',
 	// #2794 S3a Teil-PR 3: Reiter Wetter und Dialog „Als eigene Vorlage speichern“: wetter.json
 	'wetter.kopf.titel',
 	'wetter.kopf.erklaerung',

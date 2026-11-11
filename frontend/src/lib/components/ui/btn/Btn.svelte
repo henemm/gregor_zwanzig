@@ -21,7 +21,9 @@
 		| 'icon'
 		| 'icon-xs'
 		| 'icon-sm'
-		| 'icon-lg';
+		| 'icon-lg'
+		// #2913 Teil 2 (K-5): Touch-Ziel, Höhe/Breite mindestens --g-tap-min.
+		| 'tap';
 
 	export type BtnProps = WithElementRef<HTMLButtonAttributes> &
 		Partial<HTMLAnchorAttributes> & {
