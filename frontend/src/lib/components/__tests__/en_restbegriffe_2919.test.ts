@@ -160,6 +160,36 @@ describe('AC-4: Logo-Untertitel', () => {
 		const h = text(mitSprache('en', () => html(W, { caption: 'Eigener Text' })));
 		assert.match(h, /EIGENER TEXT/);
 	});
+
+	// Wrapper ui/wordmark/Wordmark.svelte: ueber ihn erreichen /login, Seitenleiste,
+	// Startseite und Auth-Seiten das Logo (Adversary F001).
+	test('Wrapper Wordmark, en, Default-Groesse: V0.20 · WEATHER BRIEFING', async () => {
+		const W = await lade('components/ui/wordmark/Wordmark.svelte');
+		const h = text(mitSprache('en', () => html(W, {})));
+		assert.match(h, /V0\.20 · WEATHER BRIEFING/);
+		assert.doesNotMatch(h, /WETTER/);
+	});
+	test('Wrapper Wordmark, en, size md und lg: englischer Untertitel', async () => {
+		const W = await lade('components/ui/wordmark/Wordmark.svelte');
+		for (const size of ['md', 'lg'] as const) {
+			const h = text(mitSprache('en', () => html(W, { size })));
+			assert.match(h, /V0\.20 · WEATHER BRIEFING/, size);
+			assert.doesNotMatch(h, /WETTER/, size);
+		}
+	});
+	test('Wrapper Wordmark, de, size md: V0.20 · WETTER-BRIEFING', async () => {
+		const W = await lade('components/ui/wordmark/Wordmark.svelte');
+		const h = text(mitSprache('de', () => html(W, { size: 'md' })));
+		assert.match(h, /V0\.20 · WETTER-BRIEFING/);
+		assert.doesNotMatch(h, /WEATHER/);
+	});
+	test('Wrapper Wordmark, size sm: kein Untertitel, in beiden Sprachen', async () => {
+		const W = await lade('components/ui/wordmark/Wordmark.svelte');
+		for (const lang of ['de', 'en'] as const) {
+			const h = text(mitSprache(lang, () => html(W, { size: 'sm' })));
+			assert.doesNotMatch(h, /V0\.20|BRIEFING/i, lang);
+		}
+	});
 });
 
 // ---------------------------------------------------------------- AC-5

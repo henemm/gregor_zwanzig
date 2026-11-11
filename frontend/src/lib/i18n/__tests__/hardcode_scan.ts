@@ -19,7 +19,7 @@ export type Pruefung = { ohneEintrag: string[]; eintraegeOhneTreffer: string[] }
 export const MINDEST_DATEIEN = 150;
 const AUSDRUCK = '\u0001';
 const BUCHSTABE = /[A-Za-zÄÖÜäöüß]/g;
-const ATTRIBUT = /(?<=\s)(title|aria-label|placeholder|alt|label)\s*=\s*(?:"([^"]*)"|'([^']*)')/g;
+const ATTRIBUT = /(?<=\s)(title|aria-label|placeholder|alt|label|eyebrow)\s*=\s*(?:"([^"]*)"|'([^']*)')/g;
 
 function leer(bereich: string, ersatz = ' '): string {
 	return ersatz + bereich.replace(/[^\n]/g, '');

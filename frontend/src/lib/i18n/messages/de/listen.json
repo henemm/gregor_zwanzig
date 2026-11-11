@@ -41,6 +41,8 @@
 	"listen.status.pausiert": "pausiert",
 	"listen.status.fertig": "fertig",
 	"listen.status.draft": "draft",
+	"listen.status.archiviert": "archiviert",
+	"listen.filter.alle": "Alle",
 	"listen.spalte.name": "Name",
 	"listen.spalte.etappen": "Etappen",
 	"listen.spalte.zeitraum": "Zeitraum",

@@ -75,6 +75,15 @@
 				: 'archiviert'
 			: ({ active: 'aktiv', paused: 'pausiert', draft: 'draft', archived: 'archiviert' } as const)[status]
 	);
+	// #2919: Anzeige aus dem Katalog; statusText bleibt Logikwert (ADR-0104).
+	const STATUS_SCHLUESSEL = {
+		aktiv: 'listen.status.aktiv',
+		geplant: 'listen.status.geplant',
+		pausiert: 'listen.status.pausiert',
+		fertig: 'listen.status.fertig',
+		draft: 'listen.status.draft',
+		archiviert: 'listen.status.archiviert'
+	} as const;
 	const region = $derived(
 		kind === 'trip'
 			? (trip.region ?? '')
@@ -186,7 +195,7 @@
 					style:color="var(--g-ink-3)"
 					style:text-transform="uppercase"
 					style:letter-spacing="0.14em"
-				>{statusText}</span>
+				>{$t(STATUS_SCHLUESSEL[statusText])}</span>
 				{#if region}
 					<span
 						style:font-size="12px"

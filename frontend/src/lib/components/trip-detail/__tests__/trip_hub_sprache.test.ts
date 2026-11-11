@@ -389,7 +389,9 @@ describe('Anker: jeder F9-Katalogwert ist als festes de/en-Literal verankert', (
 			assert.deepEqual(lies('trip').sort(), anker('trip.').sort(), `${lang}: trip.json`);
 			// F10 (#2659): die geteilte Hub-Uebersicht ergaenzt aktionen.uebersicht.* (Anker in f10KatalogAnker.ts).
 			const f10 = F10_ANKER.map(([k]) => k).filter((k) => k.startsWith('aktionen.'));
-			assert.deepEqual(lies('aktionen').sort(), [...BESTAND_AKTIONEN, ...anker('aktionen.'), ...f10].sort(), `${lang}: aktionen.json`);
+			// #2919: Eyebrow des mobilen Aktionsblatts (Anker in en_restbegriffe_2919.test.ts).
+			const neu2919 = ['aktionen.sheet.eyebrow'];
+			assert.deepEqual(lies('aktionen').sort(), [...BESTAND_AKTIONEN, ...anker('aktionen.'), ...f10, ...neu2919].sort(), `${lang}: aktionen.json`);
 			assert.deepEqual(lies('vergleich').filter((k) => k.startsWith('vergleich.anlegen.')).sort(), anker('vergleich.anlegen.').sort(), `${lang}: vergleich.anlegen.*`);
 		}
 		assert.equal(new Set(F9_ANKER.map(([k]) => k)).size, F9_ANKER.length, 'doppelte Anker');
