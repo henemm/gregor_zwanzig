@@ -19,6 +19,8 @@ tags: [official-alerts, massif-closure, account-page, adr-0051]
   „—") aufgenommen, Zonenkürzel in **beiden** Anzeigefällen. Danach als nicht führbar erkannt und
   vom PO entschieden: **AC-7 wird zurückgestellt** (Grenze dokumentiert, Nachholen über Issue #1972),
   weil keine Testumgebung einen echten Termin liefert.
+  **Nachgeholt 2026-11-11 in #1972** (Spec `fix_1972_zonenwechsel_browsernachweis.md`): Browsernachweis
+  per Abfang von `/account/__data.json` bei clientseitiger Navigation, siehe AC-7.
 
 ## Purpose
 
@@ -209,6 +211,14 @@ in der Zeitzone des Nutzers.
     - **Ersatznachweis:** der Zonenwechsel wird in AC-5 mit konkreten Sollwerten belegt (22:30 MEZ
       gegen 16:30 GMT-5), die Browser-Schicht prüft AC-4 und AC-9 in zwei Zonen. Ein Nachweis auf
       einem erfundenen Wert wäre kein Nachweis.
+  - ✅ **Nachgeholt in #1972 (2026-11-11)** — Nachweisort: Test „AC-7: derselbe Termin erscheint in Wien
+    und New York…" in `frontend/e2e/konto-naechste-pruefung.staging.spec.ts`
+    (Spec `fix_1972_zonenwechsel_browsernachweis.md`). Weg: Bei **clientseitiger** Navigation
+    (Benutzermenü → „Konto") holt der Browser die Load-Daten selbst über `/account/__data.json`; der Test
+    fängt diese Antwort ab und ersetzt den Nullwert durch den festen Wintertermin
+    `2026-12-15T05:00:00Z`. Die echte Seite formatiert ihn in der Browserzone: Wien 06:00 MEZ,
+    New York 00:00 GMT-5. Gestellt ist nur die Datenquelle, nicht die Formatierung; der echte
+    Nullwert (AC-9) bleibt im bestehenden Test ungestubbt der Nachweis.
 
   - 🔴 **Anschlussrisiko, das AC-7 mitgenommen hätte** (siehe Implementation Details B.6): Die Seite
     wird serverseitig vorgerendert, der Server läuft in `Etc/UTC`. Ohne feste Zone formatiert zuerst
@@ -273,6 +283,11 @@ in der Zeitzone des Nutzers.
   Browser-Stub scheidet aus, weil die Seite serverseitig lädt. Belegt ist der Zonenwechsel deshalb im
   Unit-Test mit konkreten Sollwerten (AC-5); im Browser sind Beschriftung (AC-4) und Nullwert-
   Darstellung (AC-9) belegt. Wer daraus „im Browser verifiziert" macht, überdehnt den Nachweis.
+  **Nachtrag 2026-11-11 (#1972):** Der Browsernachweis ist nachgeholt — Test „AC-7: derselbe Termin
+  erscheint in Wien und New York…" in `frontend/e2e/konto-naechste-pruefung.staging.spec.ts` fängt bei
+  clientseitiger Navigation `/account/__data.json` ab und setzt den Wintertermin
+  `2026-12-15T05:00:00Z` (Wien 06:00 MEZ, New York 00:00 GMT-5). Der SSR-Erstaufruf bleibt nicht
+  abfangbar; die Termin-Quelle ist gestellt, nicht ein laufender Scheduler.
 - **Dass die Serverzone nie sichtbar wird, ist durch die Bauweise sichergestellt, nicht durch einen
   Test** (Implementation Details B.6) — derselbe fehlende Terminwert macht auch hier jeden
   Ausgabetest unmöglich.
@@ -303,6 +318,10 @@ in der Zeitzone des Nutzers.
   gemessen, dass die Zeile dort „Nächster: 01.01., 01:05" zeigt — der durchformatierte Go-Nullwert.
   PO-Entscheid am 2026-08-19: in diese Scheibe aufnehmen statt eigenes Issue. Zusätzlich entschieden:
   das Zonenkürzel erscheint in **beiden** Anzeigefällen (nah und fern), nicht nur im nahen.
+- 2026-11-11: Nachweisort für AC-7 nachgetragen (Issue #1972): Browsertest in
+  `frontend/e2e/konto-naechste-pruefung.staging.spec.ts` per Abfang von `/account/__data.json` bei
+  clientseitiger Navigation (Wintertermin `2026-12-15T05:00:00Z` → Wien 06:00 MEZ, New York 00:00 GMT-5).
+  Bestehende Aussagen zur Zurückstellung bleiben als Historie stehen.
 
 ## Offene Punkte
 
