@@ -109,11 +109,11 @@ Pro Trip/Vergleich ein Objekt `NextBriefing`:
 
 ### Anzeige-Wortlaut (Frontend)
 
-- Normal: „Nächstes Briefing: Do 07:00 (CEST)"; geplant, keine Zusicherung (Ist-Versand = HH:00 + Laufzeit, bei ausgefallenem Tick bis +2 h).
+- Normal: „Nächstes Briefing: Do 29.10. 07:00 (CEST)" (immer Wochentag + Datum, #2869; en „Thu 29 Oct 07:00 (CEST)"); geplant, keine Zusicherung (Ist-Versand = HH:00 + Laufzeit, bei ausgefallenem Tick bis +2 h).
 - Überfällig: „läuft jetzt / wird nachgeholt".
-- `skip_next`: „Do 18:00 (CEST) — Do 07:00 wird übersprungen".
+- `skip_next`: „Do 29.10. 18:00 (CEST) — Do 29.10. 07:00 wird übersprungen".
 - Kein Termin: „pausiert bis 28.10.", „Trip beendet", „nur manueller Versand", „Briefings abgeschaltet".
-- Uhrzeit ohne Minuten, Wochentag/Datum aus `local_date`, Kürzel aus `tz_abbr` — nie Browser-Zone (ADR-0051 Regel 2/3).
+- Uhrzeit ohne Minuten, Wochentag und Datum aus `local_date`, Kürzel aus `tz_abbr` — nie Browser-Zone (ADR-0051 Regel 2/3).
 
 ## Expected Behavior
 
@@ -257,3 +257,4 @@ Diese Zusicherungen werden durch die jeweiligen Bestandstests weiter bewacht; An
 ## Changelog
 
 - 2026-10-23: Initial spec created (PO-Entscheidungen 2026-10-23 eingearbeitet: `skip_next` ⇒ übernächster tatsächlich versendeter Termin + Hinweis auf den übersprungenen; nichts ansteht ⇒ Grund nennen).
+- 2026-11-11: „Anzeige-Wortlaut" auf Wochentag + Datum umgestellt (Issue #2869, Spec `fix_2869_naechster_versand_datum.md`): mehrdeutiger Wortlaut „So 06:00" ohne Datum ließ zwei Termine an verschiedenen Sonntagen wie einen Zonenwiderspruch aussehen.

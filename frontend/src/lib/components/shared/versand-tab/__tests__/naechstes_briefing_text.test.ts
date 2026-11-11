@@ -259,6 +259,41 @@ describe('#2869 AC-7: ohne local_date nie ein erfundenes Datum', () => {
 	test('local_date ungültig → „—"', () => {
 		assert.equal(inSprache('de', { at: 'x', local_date: '08.11.2026', local_time: '06:00', tz_abbr: 'CET' }), '—');
 	});
+	test('AC-7 #2869: skip_next mit fehlendem/ungültigem skipped.local_date → nur Haupttermin, nie „null"/„undefined" (de und en)', () => {
+		for (const kaputt of ['29.10.2026', undefined]) {
+			const nb = termin('2026-10-29', '18:00', 'CET', {
+				slot: 'evening',
+				skipped: { local_date: kaputt, local_time: '07:00', slot: 'morning' }
+			});
+			const de = inSprache('de', nb);
+			const en = inSprache('en', nb);
+			assert.equal(de, 'Do 29.10. 18:00 (CET)', `de bei skipped.local_date=${kaputt}`);
+			assert.equal(en, 'Thu 29 Oct 18:00 (CET)', `en bei skipped.local_date=${kaputt}`);
+			for (const out of [de, en]) assert.doesNotMatch(out, /null|undefined/);
+		}
+	});
+	test('AC-7 #2869: Kalenderprüfung — Haupttermin mit unmöglichem local_date → „—" (de und en)', () => {
+		for (const unmoeglich of ['2026-13-99', '2026-02-30']) {
+			const nb = termin(unmoeglich, '07:00', 'CET');
+			assert.equal(inSprache('de', nb), '—', `de bei local_date=${unmoeglich}`);
+			assert.equal(inSprache('en', nb), '—', `en bei local_date=${unmoeglich}`);
+		}
+	});
+	test('AC-7 #2869: Kalenderprüfung — skipped.local_date unmöglich → nur Haupttermin (de und en)', () => {
+		const nb = termin('2026-10-29', '18:00', 'CET', {
+			slot: 'evening',
+			skipped: { local_date: '2026-13-99', local_time: '07:00', slot: 'morning' }
+		});
+		assert.equal(inSprache('de', nb), 'Do 29.10. 18:00 (CET)');
+		assert.equal(inSprache('en', nb), 'Thu 29 Oct 18:00 (CET)');
+	});
+	test('AC-7 #2869: Kalenderprüfung — pausiert mit unmöglichem paused_until → „pausiert" ohne Datum (de und en)', () => {
+		for (const unmoeglich of ['2026-13-99', '2026-02-30']) {
+			const nb = { at: null, reason: 'paused', paused_until: unmoeglich };
+			assert.equal(inSprache('de', nb), 'pausiert', `de bei paused_until=${unmoeglich}`);
+			assert.equal(inSprache('en', nb), inSprache('en', { at: null, reason: 'paused' }), `en bei paused_until=${unmoeglich}`);
+		}
+	});
 	test('Gründe bleiben unverändert und ohne Datum (pausiert bis 28.10. bleibt)', () => {
 		assert.equal(inSprache('de', { at: null, reason: 'manual' }), 'nur manueller Versand');
 		assert.equal(inSprache('de', { at: null, reason: 'paused', paused_until: '2026-10-28' }), 'pausiert bis 28.10.');
