@@ -16,18 +16,49 @@ import { DESKTOP, MOBIL, WT, oeffneWetter, seedWetter } from './s3a2794-teil3.he
 const NATIV = 'select, input[type="checkbox"], input[type="date"], input[type="time"], input[type="datetime-local"], input[type="month"], input[type="week"]';
 const ZIELE = 'button, [role="radio"], [role="switch"], [role="tab"], a[href]';
 
+// Elemente mit `data-tap="true"` (Atom Switch mit `tap`) bleiben sichtbar 36×20 und vergrößern die
+// Trefferfläche über ein unsichtbares `::before` (≥ --g-tap-min = 44 px). Für sie zählt, WO der Tap
+// wirkt: das 44×44-Quadrat um die Mitte des Elements muss an Mitte und vier Ecken (1 px eingerückt)
+// per elementFromPoint das Element selbst oder einen Nachfahren treffen. Alle anderen: bbox ≥ 44×44.
 async function zuKleineZiele(wurzel: Locator): Promise<string[]> {
-	return wurzel.locator(ZIELE).evaluateAll((els) =>
-		els
-			.filter((e) => {
-				const r = (e as HTMLElement).getBoundingClientRect();
-				const st = getComputedStyle(e as HTMLElement);
-				return r.width > 0 && r.height > 0 && st.visibility !== 'hidden' && st.display !== 'none';
-			})
-			.map((e) => ({ e: e as HTMLElement, r: (e as HTMLElement).getBoundingClientRect() }))
-			.filter(({ r }) => r.width < 44 || r.height < 44)
-			.map(({ e, r }) => `${e.getAttribute('data-testid') ?? e.tagName}: ${Math.round(r.width)}×${Math.round(r.height)} „${(e.textContent ?? '').trim().slice(0, 30)}“`)
-	);
+	return wurzel.locator(ZIELE).evaluateAll((els) => {
+		const MIN = 44;
+		const name = (e: HTMLElement) => `${e.getAttribute('data-testid') ?? e.tagName}`;
+		const textVon = (e: HTMLElement) => (e.textContent ?? '').trim().slice(0, 30);
+		const fehler: string[] = [];
+		for (const el of els) {
+			const e = el as HTMLElement;
+			const st = getComputedStyle(e);
+			let r = e.getBoundingClientRect();
+			if (!(r.width > 0 && r.height > 0 && st.visibility !== 'hidden' && st.display !== 'none')) continue;
+			if (e.getAttribute('data-tap') !== 'true') {
+				if (r.width < MIN || r.height < MIN) fehler.push(`${name(e)}: ${Math.round(r.width)}×${Math.round(r.height)} „${textVon(e)}“`);
+				continue;
+			}
+			e.scrollIntoView({ block: 'center', inline: 'center', behavior: 'instant' });
+			r = e.getBoundingClientRect();
+			const cx = r.left + r.width / 2;
+			const cy = r.top + r.height / 2;
+			const h = MIN / 2 - 1;
+			const punkte: [string, number, number][] = [
+				['Mitte', cx, cy],
+				['oben-links', cx - h, cy - h],
+				['oben-rechts', cx + h, cy - h],
+				['unten-links', cx - h, cy + h],
+				['unten-rechts', cx + h, cy + h]
+			];
+			const daneben = punkte.filter(([, x, y]) => {
+				const hit = document.elementFromPoint(x, y);
+				return !hit || !e.contains(hit);
+			});
+			if (daneben.length > 0) {
+				fehler.push(
+					`${name(e)}: sichtbar ${Math.round(r.width)}×${Math.round(r.height)}, wirksame Tapfläche ${MIN}×${MIN} verfehlt an ${daneben.map(([p]) => p).join(', ')} „${textVon(e)}“`
+				);
+			}
+		}
+		return fehler;
+	});
 }
 
 async function rahmen(wurzel: Locator): Promise<Record<string, string>> {

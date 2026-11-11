@@ -25,7 +25,7 @@
 	const zeilen = $derived(schalterZeilen(props));
 </script>
 
-<div class="wt-karte">
+<div class="wt-karte" data-abschnitt="warnungen-radar">
 	{#each zeilen as z (z.testid)}
 		<Einstellungszeile titel={$t(z.titel)} hinweis={$t(z.hinweis, { orte: $t('wetter.radar.deine_orte') })}>
 			<Switch checked={z.an} testid={z.testid} tap aria-label={$t(z.titel)} onchange={z.umlegen} />

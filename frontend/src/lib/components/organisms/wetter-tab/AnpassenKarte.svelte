@@ -26,7 +26,7 @@
 	const steuerung = $derived(tagesfensterSteuerung({ fenster: () => tagesfenster, onStart, onEnde, onNeuAufbau: () => (endeAufbau += 1) }));
 </script>
 
-<div class="wt-karte">
+<div class="wt-karte" data-abschnitt="anpassen">
 	<Aufklapper titel={$t('wetter.anpassen.titel')} testid="wetter-anpassen-karte" summaryTestid="wetter-anpassen-aufklappen">
 		<Einstellungszeile titel={$t('wetter.anpassen.tagesfenster')} hinweis={$t('wetter.anpassen.hinweis')}>
 			<UhrzeitFeld stundenraster value={hhmm(tagesfenster.start)} testid="day-window-start-hour" ariaLabel={$t('wetter.anpassen.von')} onchange={steuerung.beiStart} />
