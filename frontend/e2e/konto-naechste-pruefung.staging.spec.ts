@@ -10,16 +10,22 @@
 // Ein Dateiinhalt-Check auf `+page.svelte` ist als Nachweis ausdruecklich
 // untersagt (Spec AC-4; CLAUDE.md "Test-Politik") — er belegt kein Verhalten.
 //
-// WAS HIER BEWUSST NICHT GEPRUEFT WIRD: der Zonenwechsel (AC-7). Auf Staging
+// ZONENWECHSEL (AC-7 der Ursprungs-Spec, nachgeholt in Issue #1972, Spec
+// docs/specs/modules/fix_1972_zonenwechsel_browsernachweis.md): Auf Staging
 // startet der Scheduler nie (`scheduler_gate.go:11-13`, `env=staging`, Issue
-// #1329 — geteiltes Open-Meteo-Kontingent), `/api/scheduler/status` liefert
-// dort fuer alle zehn Jobs dauerhaft `next_run: "0001-01-01T00:00:00Z"`. Es
-// gibt also keinen echten Termin, gegen den zwei Zonen vergleichbar waeren;
-// der lokale E2E-Stack faehrt aus demselben Grund ohne Scheduler
-// (`ci-stack.sh:57`), und Prod-Testlaeufe sind verboten. Ein Stub im Browser
-// hilft nicht, weil die Seite serverseitig laedt (`+page.server.ts:23`).
-// Der Zonenwechsel ist deshalb im Unit-Test belegt (AC-5, konkrete Sollwerte);
-// das Nachholen im Browser ist Issue #1972. Diese Datei behauptet ihn NICHT.
+// #1329 — geteiltes Open-Meteo-Kontingent), `/api/scheduler/status/me` liefert
+// dort dauerhaft `next_run: "0001-01-01T00:00:00Z"`. Der Erstaufruf laedt
+// serverseitig (`+page.server.ts`), dort greift `page.route()` nicht. Bei
+// CLIENTSEITIGER Navigation (Benutzermenue -> "Konto") holt der Browser die
+// Load-Daten aber selbst ueber `/account/__data.json` — diese Antwort faengt
+// der AC-7-Test ab und ersetzt den Nullwert durch einen festen Wintertermin.
+// Gestellt ist nur die Datenquelle; formatiert wird von der ECHTEN Seite mit
+// dem ECHTEN `formatNextRun` in der Browserzone — dort, wo die Umrechnung wirkt.
+//
+// WAS HIER BEWUSST NICHT GEPRUEFT WIRD: dass die Serverzone (`Etc/UTC`) nie
+// sichtbar wird. Der SSR-Erstaufruf ist nicht abfangbar; das bleibt
+// Bauweise-Vorgabe (`imBrowser` erst in `onMount`, Spec #1972 Known Limitations).
+// Der Abfang gilt NUR im AC-7-Test; AC-4/AC-9 unten laufen ungestubbt.
 //
 // Genau dieser Umstand macht aber AC-9 hier besonders gut pruefbar: der
 // Nullwert liegt auf Staging ECHT an, nicht gestellt.
@@ -29,7 +35,7 @@
 // Nullwert. Die krumme Uhrzeit stammt daher, dass Wien im Jahr 1 eine Ortszeit
 // von +01:05 gegenueber UTC hatte.
 //
-// Ausfuehren (aus frontend/, gegen Staging):
+// Ausfuehren (aus frontend/, gegen Staging; App-Login aus der Staging-.env):
 //   npx playwright test --config=e2e/playwright.konto-naechste-pruefung.staging.config.ts
 
 import { test, expect, type Browser, type Page } from '@playwright/test';
@@ -131,5 +137,122 @@ test.describe('#1727 S5e — Konto-Seite: ehrliche Beschriftung und kein Fantasi
 			`Wien zeigt ${JSON.stringify(wien)}, New York ${JSON.stringify(newYork)} — die ` +
 				`Erkennung "kein Termin" darf nicht von der Browser-Zone abhaengen.`
 		).toBe(wien);
+	});
+});
+
+// ---------------------------------------------------------------------------
+// #1972 — AC-7 der Ursprungs-Spec: Zonenwechsel im echten Browser
+// ---------------------------------------------------------------------------
+
+/** Echter Go-Nullwert, wie ihn Staging in `/account/__data.json` liefert. */
+const NULLWERT = '0001-01-01T00:00:00Z';
+/** Fester Wintertermin (kein Sommerzeit-Wechsel in beiden Zonen):
+ *  05:00 UTC = 06:00 Wien (MEZ, UTC+1) = 00:00 New York (EST, UTC-5). */
+const WINTERTERMIN = '2026-12-15T05:00:00Z';
+/** Abgefangen wird nur die Load-Datenantwort der Konto-Seite. */
+const DATA_ROUTE = '**/account/__data.json*';
+
+/** Im Browser (Chromium, Testnutzer DE) einmal gemessene Zonenkuerzel —
+ *  feste Erwartung, keine Raten-Liste (Spec #1972, Implementation Details). */
+const SOLL = {
+	'Europe/Vienna': { uhrzeit: '06:00', kuerzel: 'MEZ' },
+	'America/New_York': { uhrzeit: '00:00', kuerzel: 'GMT-5' }
+} as const;
+
+type Zone = keyof typeof SOLL;
+
+/** Konto-Seite per Benutzermenue (clientseitige Navigation) oeffnen, waehrend
+ *  `__data.json` abgefangen und der Nullwert durch WINTERTERMIN ersetzt wird.
+ *  Liefert die Zeile und die Zahl tatsaechlich erfolgter Ersetzungen. */
+async function kontoSeiteMitTerminInZone(
+	browser: Browser,
+	timezoneId: Zone
+): Promise<{ text: string; ersetzt: number }> {
+	assertNotProdBaseURL(BASE);
+	const ctx = await browser.newContext({
+		baseURL: BASE,
+		timezoneId,
+		storageState: AUTH_STATE,
+		ignoreHTTPSErrors: true,
+		httpCredentials: {
+			username: process.env.GZ_VALIDATOR_USER ?? 'admin',
+			password: process.env.GZ_VALIDATOR_PASS ?? 'test1234'
+		}
+	});
+	let ersetzt = 0;
+	try {
+		const page = await ctx.newPage();
+		// VOR jeder Navigation registrieren: Hover-Preload des Menue-Links kann
+		// `__data.json` schon vor dem Klick holen.
+		await page.route(DATA_ROUTE, async (route) => {
+			const res = await route.fetch();
+			const body = await res.text();
+			if (body.includes(NULLWERT)) ersetzt++;
+			await route.fulfill({ response: res, body: body.split(NULLWERT).join(WINTERTERMIN) });
+		});
+
+		await page.goto('/', { waitUntil: 'domcontentloaded' });
+		const sidebar = page.getByTestId('desktop-sidebar');
+		await sidebar.locator('div[style*="border-top"] > button').first().click();
+		await sidebar.getByRole('link', { name: /^\s*(Konto|Account)\s*$/ }).click();
+		await page.waitForURL(/\/account(\?|#|$)/);
+
+		const text = await schedulerZeile(page);
+		return { text, ersetzt };
+	} finally {
+		await ctx.close();
+	}
+}
+
+test.describe('#1972 — Konto-Seite: "Nächste Prüfung" in der Zone des Browsers (AC-7)', () => {
+	test.beforeAll(() => {
+		assertNotProdBaseURL(BASE);
+	});
+
+	test('AC-7: derselbe Termin erscheint in Wien und New York mit eigener Uhrzeit und eigenem Kuerzel', async ({
+		browser
+	}) => {
+		const wien = await kontoSeiteMitTerminInZone(browser, 'Europe/Vienna');
+		const newYork = await kontoSeiteMitTerminInZone(browser, 'America/New_York');
+
+		// (a) Abfang muss gegriffen haben — VOR allen Zeitzusicherungen, damit ein
+		// geaendertes Route-Muster oder Datenformat nie still gruen wird.
+		for (const [zone, lauf] of [
+			['Europe/Vienna', wien],
+			['America/New_York', newYork]
+		] as const) {
+			expect(
+				lauf.ersetzt,
+				`Abfang hat nicht gegriffen, kein Nachweis (${zone}): keine Antwort auf ` +
+					`${DATA_ROUTE} enthielt ${NULLWERT}. Zeile: ${JSON.stringify(lauf.text)}`
+			).toBeGreaterThan(0);
+		}
+
+		// (b)+(d) konkrete Sollwerte je Zone.
+		for (const [zone, lauf] of [
+			['Europe/Vienna', wien],
+			['America/New_York', newYork]
+		] as const) {
+			const soll = SOLL[zone];
+			expect(
+				lauf.text,
+				`In ${zone}: ${JSON.stringify(lauf.text)} — erwartet Uhrzeit ${soll.uhrzeit} ` +
+					`fuer ${WINTERTERMIN} in der Browserzone.`
+			).toContain(soll.uhrzeit);
+			expect(
+				lauf.text,
+				`In ${zone}: ${JSON.stringify(lauf.text)} — erwartet Zonenkuerzel ${soll.kuerzel}.`
+			).toMatch(new RegExp(`\\b${soll.kuerzel.replace(/[-+]/g, '\\$&')}\\b`));
+		}
+
+		// (c) verschieden — gleiche Uhrzeit hiesse: Zone wird ignoriert.
+		const uhr = (t: string) => t.match(/\d{1,2}:\d{2}/)?.[0];
+		expect(
+			uhr(newYork.text),
+			`Wien ${JSON.stringify(wien.text)} und New York ${JSON.stringify(newYork.text)} ` +
+				`zeigen dieselbe Uhrzeit — die Anzeige folgt nicht der Browserzone.`
+		).not.toBe(uhr(wien.text));
+		expect(newYork.text).not.toContain(SOLL['Europe/Vienna'].kuerzel);
+		expect(wien.text).not.toContain(SOLL['America/New_York'].kuerzel);
 	});
 });
