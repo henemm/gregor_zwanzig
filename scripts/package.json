@@ -1,0 +1,5 @@
+{
+	"private": true,
+	"description": "Nur Modulformat fuer TypeScript-Werkzeuge in scripts/ (ESM), z. B. elementliste_aus_mockup.ts (#2913). Keine Abhaengigkeiten; Playwright kommt aus frontend/node_modules.",
+	"type": "module"
+}

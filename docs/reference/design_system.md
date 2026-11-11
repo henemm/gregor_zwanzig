@@ -27,6 +27,12 @@ Alpin, präzise, datenehrlich. Paper-Off-White als Bühne, Burnt-Orange als einz
 
 Quelle: `docs/design-requests/issue_15_atomic_design/RESPONSE-FROM-CLAUDE-DESIGN.md`. Folge-Arbeit: Surface-Stack-Migration → Token-Rename → Atom-Migration (Epic #368).
 
+## Nur Bausteine und Tokens (ADR-0112, Wächter seit 2026-11-10)
+
+Oberflächen entstehen ausschließlich aus Bausteinen in `frontend/src/lib/components/atoms`, `molecules` und `organisms`; fehlt ein Baustein, wird er zuerst hier im Design-System gebaut, nie in der Seite. Styling läuft nur über die Tokens `var(--g-*)` aus `frontend/src/app.css` (erlaubt daneben `0`, 1-px-Rahmen, `%`, `fr`, `auto`, `vh/vw`, `calc()/min()/max()` über Tokens).
+
+Erzwungen durch den Wächter `bausteine_waechter` (`frontend/src/lib/__tests__/bausteine_waechter.test.ts`, CI-Job `frontend-test`): Regel (a) Aufbau für Seiten in `SEITEN_SCOPE`, Regel (b) Tokens für alle Bausteine (Ratsche `AUSNAHMEN`, neue Bausteine bei 0), Neue-Datei-Regel mit Bestandsliste. Ausnahme nur `audit:exempt` mit Begründung. Mechanik und Restlücken: `docs/reference/gates_und_ratschen.md`, Abschnitt „Bausteine-Wächter“. Anti-Patterns AP-006 bis AP-008 sind damit Pflicht.
+
 ---
 
 ## 1 · Farben

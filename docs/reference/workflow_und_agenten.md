@@ -32,6 +32,25 @@ Nach der Implementation führt ein unabhängiger `implementation-validator` (Son
 
 **Fresh Eyes:** Bei UI-Änderungen prüft zusätzlich ein `fresh-eyes-inspector` Screenshots OHNE Bug-Kontext.
 
+## Oberflächen-Scheiben: Scheibe → Staging-Abgleich → Prüf-Agent (ADR-0112, #2913)
+
+Seiten nach einem Mockup (zuerst „Einstellungen neu“, Mockup Fassung 3) entstehen in Scheiben, je eine
+mit eigener Spec. „Fertig“ heißt „Elementliste lückenlos und Prüf-Agent ohne Befund“, nicht „Tests grün“.
+Ablauf am Ende jeder Scheibe: **Scheibe → Staging-Abgleich → Prüf-Agent**.
+
+1. **Scheibe:** nur aus Bausteinen (`atoms/molecules/organisms`); fehlende Bausteine zuerst in einem eigenen
+   Bausteine-Workflow. Neue Seiten-/Reiter-Dateien in `SEITEN_SCOPE` von `bausteine_waechter` eintragen,
+   Abschnitte mit `data-abschnitt="<name>"` aus der Elementliste markieren, neue Texte nur über den Katalog.
+2. **Staging-Abgleich:** `npm run elementliste:abgleich -- --scope <reiter[/zustand]>` (im Ordner
+   `frontend`, nach dem Push gegen Staging) mit der Teilmenge der Scheibe; Bericht JSON + Markdown.
+   Abschluss der Scheibe erst mit `--strict` grün für ihre Teilmenge (DE, danach `--sprache en`).
+   Vor dem Abgleich läuft der Generator-Spec (`npx playwright test --config
+   playwright.elementliste.mockup.config.ts`), falls Mockup oder Katalog geändert wurden.
+3. **Prüf-Agent `mockup-bildpruefer`:** bekommt nur Mockup-Bild, Staging-Bild (gleicher Viewport, gleicher
+   Zustand) und den Elementlisten-Auszug, keinen Quellcode. Je Scheibe **höchstens zwei Runden**; er ergänzt
+   die Elementliste um die Optik und ersetzt sie nicht. Befunde der zweiten Runde, die offen bleiben, gehen
+   als Issue an die nächste Scheibe.
+
 ## Product Owner Pattern
 
 Main Context (Opus) ist reiner Orchestrierer und schreibt KEINEN Code. Implementierung geht an den Developer Agent (Opus, Worktree-Isolation). >10 Min ohne grüne Tests → `TaskStop` + Neustart mit präziserem Briefing; max 2 Versuche, danach Eskalation.
