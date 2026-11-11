@@ -17,6 +17,16 @@
 //
 // RED heute: Die neun Dateien liegen noch unter shared/wetter-tab/ und enthalten rohe px-Werte.
 //
+// Teil 2 (Workflow feature-2913-teil2), Spec AC-17, AC-19, Klarstellung K-1 — überholt bewusst die Teil-1-Fassung
+// „Importeure zeigen auf organisms/wetter-tab/WetterTab.svelte“:
+//   - organisms/wetter-tab/WetterTab.svelte wird per git mv zu organisms/wetter-tab/WetterTabInhalt.svelte (einer
+//     der neun Organismen; die AC-3/AC-4-Zusicherungen gelten für ihn unverändert weiter).
+//   - Neue dünne Seite lib/components/shared/WetterTab.svelte bindet WetterTabInhalt ein; die vier Importeure
+//     importieren WetterTab aus $lib/components/shared/WetterTab.svelte (Trip und Vergleich teilen weiter
+//     denselben Pfad).
+//   - AC-17: die Seite steht in SEITEN_SCOPE und die Regel-a-Prüfung des Wächters (pruefeSeitenDatei) meldet
+//     0 Verstöße.
+//
 //   cd frontend && npm test -- src/lib/components/organisms/__tests__/wetter_tab_ort.test.ts
 
 import { test, describe } from 'node:test';
@@ -26,7 +36,7 @@ import { dirname, join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { parse } from 'svelte/compiler';
 
-import { zaehleTokenVerstoesse, KONFIG } from '../../../__tests__/bausteine_waechter_regeln.ts';
+import { zaehleTokenVerstoesse, pruefeSeitenDatei, KONFIG } from '../../../__tests__/bausteine_waechter_regeln.ts';
 
 const HIER = dirname(fileURLToPath(import.meta.url));
 const KOMP = join(HIER, '..', '..'); // src/lib/components
@@ -36,8 +46,11 @@ const FRONTEND = join(SRC, '..');
 const NEU = join(KOMP, 'organisms', 'wetter-tab');
 const ALT = join(KOMP, 'shared', 'wetter-tab');
 
+const SEITE = join(KOMP, 'shared', 'WetterTab.svelte');
+
+// Teil 2 (K-1): WetterTab.svelte ist per git mv zu WetterTabInhalt.svelte geworden.
 const NEUN = [
-	'WetterTab',
+	'WetterTabInhalt',
 	'VorlageKarte',
 	'MetrikZeile',
 	'GrenzenEditor',
@@ -136,12 +149,13 @@ describe('AC-4/AC-2: Regel b meldet 0 Verstöße, ohne Abkürzung über AUSNAHME
 	});
 });
 
-describe('AC-8/AC-19: Importeure zeigen auf organisms/wetter-tab/, Trip und Vergleich teilen denselben Pfad', () => {
+describe('AC-8/AC-19 (Teil 2, K-1): Importeure zeigen auf die Seite shared/WetterTab.svelte, Trip und Vergleich teilen denselben Pfad', () => {
+	const ziel = (datei: string, q: string) => (q.startsWith('.') ? relSrc(join(dirname(datei), q)) : q.replace(/^\$lib\//, 'lib/'));
 	for (const [name, datei] of Object.entries(IMPORTEURE)) {
-		test(`${name} importiert WetterTab aus organisms/wetter-tab/`, () => {
+		test(`${name} importiert WetterTab aus $lib/components/shared/WetterTab.svelte`, () => {
 			const q = importQuelle(datei, 'WetterTab');
 			assert.ok(q, `${name}: kein Import von WetterTab`);
-			assert.match(q!, /(^|\/)organisms\/wetter-tab\/WetterTab\.svelte$/, `${name}: Import zeigt auf ${q}`);
+			assert.equal(ziel(datei, q!), 'lib/components/shared/WetterTab.svelte', `TDD RED: ${name}: Import zeigt auf ${q}`);
 		});
 	}
 	test('alle vier Importeure lösen auf DIESELBE Datei auf', () => {
@@ -149,10 +163,22 @@ describe('AC-8/AC-19: Importeure zeigen auf organisms/wetter-tab/, Trip und Verg
 			Object.values(IMPORTEURE).map((datei) => {
 				const q = importQuelle(datei, 'WetterTab');
 				assert.ok(q);
-				return q!.startsWith('.') ? relSrc(join(dirname(datei), q!)) : q!.replace(/^\$lib\//, 'lib/');
+				return ziel(datei, q!);
 			})
 		);
-		assert.deepEqual([...ziele], ['lib/components/organisms/wetter-tab/WetterTab.svelte']);
+		assert.deepEqual([...ziele], ['lib/components/shared/WetterTab.svelte']);
+	});
+	test('organisms/wetter-tab/WetterTab.svelte existiert nicht mehr (git mv zu WetterTabInhalt.svelte)', () => {
+		assert.equal(existsSync(join(NEU, 'WetterTab.svelte')), false, 'TDD RED: organisms/wetter-tab/WetterTab.svelte liegt noch dort');
+	});
+	test('die Seite shared/WetterTab.svelte existiert und bindet organisms/wetter-tab/WetterTabInhalt.svelte ein', () => {
+		assert.ok(existsSync(SEITE), 'TDD RED: lib/components/shared/WetterTab.svelte fehlt');
+		const q = importQuelle(SEITE, 'WetterTabInhalt');
+		assert.ok(q, 'Seite importiert WetterTabInhalt nicht');
+		assert.equal(ziel(SEITE, q!), 'lib/components/organisms/wetter-tab/WetterTabInhalt.svelte');
+		const markup = parse(readFileSync(SEITE, 'utf8'), { modern: true }) as unknown as Record<string, any>;
+		const nutzt = JSON.stringify(markup.fragment, (k, v) => (k === 'parent' ? undefined : v)).includes('"name":"WetterTabInhalt"');
+		assert.ok(nutzt, 'Seite rendert <WetterTabInhalt> nicht');
 	});
 	test('kein Quell- oder Testtext verweist noch auf eine .svelte-Datei im alten Ordner', () => {
 		const alt = /shared\/wetter-tab\/[A-Za-z]+\.svelte/;
@@ -165,5 +191,22 @@ describe('AC-8/AC-19: Importeure zeigen auf organisms/wetter-tab/, Trip und Verg
 			.filter((d) => alt.test(readFileSync(d, 'utf8')))
 			.map((d) => relative(FRONTEND, d));
 		assert.deepEqual(treffer, [], `alte Pfade in: ${treffer.join(', ')}`);
+	});
+});
+
+describe('AC-17 (Teil 2, K-1): die Seite shared/WetterTab.svelte steht in SEITEN_SCOPE, Regel a ohne Verstoß', () => {
+	const REL = 'lib/components/shared/WetterTab.svelte';
+	test('SEITEN_SCOPE enthält lib/components/shared/WetterTab.svelte', () => {
+		assert.ok(KONFIG.SEITEN_SCOPE.includes(REL), `TDD RED: ${REL} fehlt in SEITEN_SCOPE`);
+	});
+	test('Regel a (pruefeSeitenDatei) meldet 0 Verstöße für die Seite', () => {
+		assert.ok(existsSync(SEITE), `TDD RED: ${REL} fehlt`);
+		const v = pruefeSeitenDatei(REL, readFileSync(SEITE, 'utf8'), KONFIG.FREIGEGEBENE_KOMPOSITIONEN);
+		assert.deepEqual(v.map((x) => x.meldung), []);
+	});
+	test('die Seite steht nicht in BESTAND oder AUSNAHMEN und trägt kein audit:exempt', () => {
+		assert.equal(KONFIG.BESTAND.includes(REL), false);
+		assert.equal(REL in KONFIG.AUSNAHMEN, false);
+		if (existsSync(SEITE)) assert.doesNotMatch(readFileSync(SEITE, 'utf8'), /audit:exempt/);
 	});
 });
