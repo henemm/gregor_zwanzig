@@ -180,9 +180,8 @@ Bei Push auf `main` läuft `.github/workflows/ci.yml`:
 1. **Test + Lint** (`uv run pytest`, `uv run ruff check`)
 2. **Staging-Wait**: CI wartet max. 6 Minuten, bis Staging denselben Commit ausliefert.
 3. **Staging Smoke-Test**: `GET /` (200/302) und `GET /api/health` (200).
-4. **Staging-Verdict**: `staging_gate.py --write-verdict 'VERIFIED: CI smoke test ...'`
-5. **Production-Deploy**: `ssh ... bash /home/hem/henemm-infra/scripts/deploy-gregor-prod.sh`
-6. **Telegram-Benachrichtigung** bei Erfolg oder Fehlschlag.
+4. **Production-Deploy**: `ssh ... bash /home/hem/henemm-infra/scripts/deploy-gregor-prod.sh`
+5. **Telegram-Benachrichtigung** bei Erfolg oder Fehlschlag.
 
 ### Staging-Auto-Deploy (Cron)
 
