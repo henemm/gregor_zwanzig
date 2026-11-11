@@ -57,9 +57,13 @@ entfernt werden (Trip-Kontingent `free`: 3). `staging_gate.py --write-verdict` v
 | `GZ_AUTH_USER` / `GZ_AUTH_PASS` | bestätigtes Helfer-Konto (holt `staging-token`) | Staging-`.env` |
 | `GZ_TEST_IMAP_USER` | Basispostfach, aus dem die Subadresse abgeleitet wird | Staging-`.env` |
 
-Das Skript **hängt** die drei `GZ_E2E_EN_*` bei der Erstanlage an (Dateirechte 600) und
+Das Skript **hängt** die drei `GZ_E2E_EN_*` bei der Erstanlage an und
 überschreibt nie vorhandene Werte. Das Passwort steht nie in Ausgabe, Log oder Repo
 (`secret_in_repo_gate.py`, `secret_output_gate.py`).
+
+Rechte: Bestehende Rechte und ACL der `.env` bleiben erhalten (das Skript hängt nur an,
+kein `chmod`; der Staging-Dienst liest weiter per ACL). Nur eine neu angelegte Datei
+bekommt Modus 600 (#2788).
 
 ## Rate-Limit
 

@@ -44,8 +44,11 @@ StagingApi, StagingFehler, http_transport = (
 
 
 def adresse_en(test_imap_user: str) -> str:
-    """'gregor-test@henemm.com' -> 'gregor-test+en@henemm.com'."""
-    lokal, domain = test_imap_user.strip().split("@", 1)
+    """'gregor-test@henemm.com' oder 'gregor-test' -> 'gregor-test+en@henemm.com'."""
+    wert = test_imap_user.strip()
+    if "@" not in wert:
+        wert += "@henemm.com"  # Stalwart: reiner Benutzername (wie config.py)
+    lokal, domain = wert.split("@", 1)
     return f"{lokal}+en@{domain}"
 
 
@@ -64,7 +67,11 @@ def lade_env(pfad: Path) -> dict[str, str]:
 
 
 def schreibe_fehlende_schluessel(pfad: Path, werte: dict) -> None:
-    """Haengt nur Schluessel an, die in der Datei noch fehlen; nie ueberschreiben."""
+    """Haengt nur Schluessel an, die in der Datei noch fehlen; nie ueberschreiben.
+
+    Bestehende Datei: nur anhaengen, Modus und ACL bleiben unangetastet (#2788).
+    Fehlende Datei: direkt mit 0o600 angelegt, kein nachtraegliches chmod.
+    """
     pfad = Path(pfad)
     vorhanden = lade_env(pfad)
     neu = [f"{k}={v}" for k, v in werte.items() if k not in vorhanden]
@@ -72,9 +79,14 @@ def schreibe_fehlende_schluessel(pfad: Path, werte: dict) -> None:
         return
     alt = pfad.read_text(encoding="utf-8") if pfad.exists() else ""
     praefix = "" if not alt or alt.endswith("\n") else "\n"
-    with pfad.open("a", encoding="utf-8") as f:
-        f.write(praefix + "\n".join(neu) + "\n")
-    os.chmod(pfad, 0o600)
+    text = praefix + "\n".join(neu) + "\n"
+    if pfad.exists():
+        with pfad.open("a", encoding="utf-8") as f:
+            f.write(text)
+        return
+    fd = os.open(pfad, os.O_CREAT | os.O_WRONLY | os.O_APPEND, 0o600)
+    with os.fdopen(fd, "a", encoding="utf-8") as f:
+        f.write(text)
 
 
 class EnApi(StagingApi):
