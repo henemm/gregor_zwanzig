@@ -2,7 +2,7 @@
 // Spec: docs/specs/modules/feat_2794_s3a_teil3_wetter.md — AC-38, Implementation Details §4 (Mount-Stellen, Teil-2-Lehre F012)
 //
 // Soll:
-//   - TripTabs.svelte mountet im Reiter `wetter` genau EINEN `WetterTab` (shared/wetter-tab/) mit context="route"
+//   - TripTabs.svelte mountet im Reiter `wetter` genau EINEN `WetterTab` (organisms/wetter-tab/) mit context="route"
 //     per if-Kette; CompareTabs.svelte genau einen mit context="vergleich", NUR unter der bestehenden
 //     Bedingung `wetterMetrikenLayoutHydrationBereit`.
 //   - Im Reiter `wetter` der Hubs haengt KEIN WetterMetrikenVersandPanel, kein WeatherMetricsTab und kein
@@ -14,7 +14,7 @@
 //   - WetterTab und seine Bausteine betten selbst keinen zweiten Speicherer (WMT/Panel/CorridorEditor) ein.
 //
 // Messweise: AST nach Repo-Muster (s3a2794Ast.ts), keine Textsuche.
-// RED heute: shared/wetter-tab/WetterTab.svelte fehlt, die Hubs/Editoren mounten noch Panel + CorridorEditor.
+// RED heute: organisms/wetter-tab/WetterTab.svelte fehlt, die Hubs/Editoren mounten noch Panel + CorridorEditor.
 //
 //   cd frontend && npm test -- src/lib/components/shared/__tests__/s3a2794_teil3_wettertab_mount.test.ts
 
@@ -39,14 +39,17 @@ import { werte } from './svelteInstanzPruefstand.ts';
 
 const HIER = dirname(fileURLToPath(import.meta.url));
 const KOMP = join(HIER, '..', '..');
-const WETTER_TAB_ORDNER = join(KOMP, 'shared', 'wetter-tab');
+const WETTER_TAB_ORDNER = join(KOMP, 'organisms', 'wetter-tab');
 
 const DATEI = {
 	tripHub: join(KOMP, 'trip-detail', 'TripTabs.svelte'),
 	vergleichHub: join(KOMP, 'compare', 'CompareTabs.svelte'),
 	tripNeu: join(KOMP, 'trip-new', 'TripNewEditor.svelte'),
 	vergleichNeu: join(KOMP, 'compare-new', 'CompareNewEditor.svelte'),
-	wetterTab: join(WETTER_TAB_ORDNER, 'WetterTab.svelte')
+	// #2913 Teil 2 (K-1): WetterTab ist die dünne Seite shared/WetterTab.svelte; der Organismus mit
+	// Zustand heißt organisms/wetter-tab/WetterTabInhalt.svelte.
+	wetterTab: join(KOMP, 'shared', 'WetterTab.svelte'),
+	wetterTabInhalt: join(WETTER_TAB_ORDNER, 'WetterTabInhalt.svelte')
 };
 
 const ALT_IM_REITER_WETTER = ['WetterMetrikenVersandPanel', 'WeatherMetricsTab', 'CorridorEditor', 'CorridorEditorMobile'];
@@ -60,7 +63,7 @@ function wetterTabs(datei: string): { e: Einbettung[]; quelle: string } {
 	return { e: einbettungenMitWeichen(ast, quelle, ['WetterTab']), quelle };
 }
 
-/** Der Import von WetterTab zeigt auf shared/wetter-tab/WetterTab.svelte (kein Pendant). */
+/** Der Import von WetterTab zeigt auf organisms/wetter-tab/WetterTab.svelte (kein Pendant). */
 function importQuelle(datei: string, name: string): string | null {
 	const { ast } = svelteAst(datei);
 	for (const s of (ast.instance?.content?.body ?? []) as Array<Record<string, any>>) {
@@ -79,20 +82,23 @@ function sichtbarIm(e: Einbettung, quelle: string, schritt: string): boolean {
 	return werte(d!, { activeTab: schritt }) === '';
 }
 
-describe('WetterTab: shared/wetter-tab/WetterTab.svelte mit context-Prop', () => {
+describe('WetterTab: shared/WetterTab.svelte (Seite) und organisms/wetter-tab/WetterTabInhalt.svelte mit context-Prop', () => {
 	test('s3a2794_t3_wettertab_existiert_mit_context', () => {
-		assert.ok(existiert(DATEI.wetterTab), 'TDD RED: shared/wetter-tab/WetterTab.svelte fehlt');
-		const { ast } = svelteAst(DATEI.wetterTab);
-		assert.ok(propNamen(ast).includes('context'), `WetterTab: keine Prop context (Props: ${propNamen(ast).join(', ')})`);
+		for (const datei of [DATEI.wetterTab, DATEI.wetterTabInhalt]) {
+			assert.ok(existiert(datei), `TDD RED: ${datei} fehlt`);
+			const { ast } = svelteAst(datei);
+			assert.ok(propNamen(ast).includes('context'), `${datei}: keine Prop context (Props: ${propNamen(ast).join(', ')})`);
+		}
 	});
 
 	test('s3a2794_t3_wettertab_bettet_keinen_zweiten_speicherer_ein', () => {
-		assert.ok(existiert(WETTER_TAB_ORDNER), 'TDD RED: Ordner shared/wetter-tab/ fehlt');
+		assert.ok(existiert(WETTER_TAB_ORDNER), 'TDD RED: Ordner organisms/wetter-tab/ fehlt');
 		const dateien = readdirSync(WETTER_TAB_ORDNER)
 			.filter((f) => f.endsWith('.svelte'))
 			.map((f) => join(WETTER_TAB_ORDNER, f))
 			.filter((f) => statSync(f).isFile());
-		assert.ok(dateien.length > 0, 'TDD RED: keine .svelte-Datei unter shared/wetter-tab/');
+		dateien.push(DATEI.wetterTab);
+		assert.ok(dateien.length > 0, 'TDD RED: keine .svelte-Datei unter organisms/wetter-tab/');
 		for (const d of dateien) {
 			const { ast, quelle } = svelteAst(d);
 			const fremd = einbettungenMitWeichen(ast, quelle, [...ALT_IM_REITER_WETTER, 'ZustellungTab']);
@@ -112,7 +118,7 @@ for (const [kind, datei, ctx] of [
 			assert.deepEqual(reiterVon(e[0]), ['wetter'], `${beschreibe(e[0], quelle)} haengt nicht (nur) am Reiter wetter`);
 			assert.equal(attribut(e[0].knoten, quelle, 'context')?.literal, ctx, `WetterTab im ${kind}-Hub: context ≠ ${ctx}`);
 			const q = importQuelle(datei, 'WetterTab');
-			assert.ok(q && /shared\/wetter-tab\/WetterTab\.svelte$/.test(q), `WetterTab wird nicht aus shared/wetter-tab/ importiert: ${q}`);
+			assert.ok(q && /^\$lib\/components\/shared\/WetterTab\.svelte$/.test(q), `WetterTab wird nicht aus $lib/components/shared/WetterTab.svelte importiert: ${q}`);
 		});
 
 		test(`s3a2794_t3_hub_${kind}_kein_alt_baustein_im_reiter_wetter`, () => {

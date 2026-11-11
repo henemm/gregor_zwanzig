@@ -4,9 +4,11 @@
 	// statt Zahlen die Farbe je Stufe (mittel: gelb · orange · rot, hoch: orange · rot).
 	// Die Eingaben gehen als Entwurf an den Reiter; gespeichert wird erst bei „Fertig".
 	import type { Ampel, AmpelMetrik } from '$lib/types';
-	import { Segmented } from '$lib/components/atoms';
+	// #2913 Teil 2 (K-6): Eingaben als Atom Input mit Ampel-Unterkante der Feldfarbe; Gewitter-Farben
+	// als Segmented mit Farbpunkt.
+	import { Input, Segmented } from '$lib/components/atoms';
 	import { t } from '$lib/i18n';
-	import { gewitterFarben, type Farbe } from './ampelModell.ts';
+	import { gewitterFarben, type Farbe } from '../../shared/wetter-tab/ampelModell.ts';
 
 	type Seite = 'lower' | 'upper';
 	interface Props {
@@ -46,7 +48,7 @@
 	// i18n-dynamic: wetter.farbe.
 	const farbwort = (f: Farbe) => $t(`wetter.farbe.${f}` as 'wetter.farbe.red');
 	const farbOptionen = (stufe: 'mittel' | 'hoch') =>
-		gewitterFarben(stufe).map((f) => ({ value: f, label: farbwort(f), testid: `wetter-gewitter-${stufe}-${f}` }));
+		gewitterFarben(stufe).map((f) => ({ value: f, label: farbwort(f), testid: `wetter-gewitter-${stufe}-${f}`, farbe: f }));
 </script>
 
 <div class="wt-edit">
@@ -67,12 +69,13 @@
 				{#each FOLGE[s] as f (f)}
 					<label class="wt-feld">
 						<span>{farbwort(f)} {ZEICHEN[s]}</span>
-						<input
+						<Input
 							type="text"
 							inputmode="decimal"
+							ampel={f}
 							data-testid="wetter-grenze-{id}-{s}-{f}"
 							value={lies(s, f)}
-							oninput={(e) => eingabe(s, f, (e.currentTarget as HTMLInputElement).value)}
+							oninput={(e: Event) => eingabe(s, f, (e.currentTarget as HTMLInputElement).value)}
 						/>
 					</label>
 				{/each}
@@ -95,18 +98,18 @@
 		grid-column: 1 / -1;
 		display: flex;
 		flex-wrap: wrap;
-		gap: 12px 20px;
+		gap: var(--g-s-3) var(--g-s-5);
 		align-items: flex-end;
-		padding: 12px 0 4px;
+		padding: var(--g-s-3) 0 var(--g-s-1);
 	}
 	.wt-grp {
 		display: flex;
 		flex-wrap: wrap;
 		align-items: flex-end;
-		gap: 8px;
+		gap: var(--g-s-2);
 	}
 	.wt-grp-name {
-		font-size: 12px;
+		font-size: var(--g-s-3);
 		color: var(--g-ink-2);
 		max-width: 9ch;
 		align-self: center;
@@ -114,26 +117,28 @@
 	.wt-feld {
 		display: flex;
 		flex-direction: column;
-		gap: 2px;
-		font-size: 12px;
+		gap: var(--g-size-2px);
+		font-size: var(--g-s-3);
 		color: var(--g-ink-2);
 	}
-	.wt-feld input {
-		width: 72px;
-		min-height: 44px;
+	/* Unterkante (Ampelfarbe, --g-size-3px) setzt app.css über data-ampel; hier nur die übrigen Kanten. */
+	.wt-feld :global([data-slot='input']) {
+		width: var(--g-size-72px);
+		min-height: var(--g-tap-min);
 		box-sizing: border-box;
-		padding: 6px 8px;
+		padding: var(--g-size-6px) var(--g-s-2);
 		font: inherit;
 		font-family: var(--g-font-mono);
-		font-size: 14px;
+		font-size: var(--g-size-14px);
 		color: var(--g-ink);
 		background: var(--g-card);
-		border: 1px solid var(--g-rule);
+		border-top-color: var(--g-rule);
+		border-inline-color: var(--g-rule);
 		border-radius: var(--g-r-2);
 	}
 	.wt-seg :global([data-slot='segmented-item']) {
-		min-height: 44px;
-		min-width: 44px;
+		min-height: var(--g-tap-min);
+		min-width: var(--g-tap-min);
 		color: var(--g-ink-2);
 	}
 	.wt-seg :global([data-slot='segmented-item'][data-active='true']) {
@@ -142,18 +147,18 @@
 	.wt-hint {
 		flex-basis: 100%;
 		margin: 0;
-		font-size: 12.5px;
+		font-size: var(--g-size-12-5px);
 		color: var(--g-ink-3);
 	}
 	.wt-fehler {
 		flex-basis: 100%;
 		margin: 0;
-		font-size: 13px;
+		font-size: var(--g-text-sm);
 		color: var(--g-danger);
 	}
 	@media (max-width: 899px) {
-		.wt-feld input {
-			font-size: 16px;
+		.wt-feld :global([data-slot='input']) {
+			font-size: var(--g-s-4);
 		}
 	}
 </style>

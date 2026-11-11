@@ -3,11 +3,12 @@
 	// Ampel-Leiste mit Grenzzahlen, Erklaersatz, „grün: …", „Alarm ab" bzw. „kein Alarm",
 	// „Grenzen ändern". Keine Aggregationswahl, kein Roh/Einfach (S3b). Trip und Orts-Briefing gleich.
 	import type { Ampel, AmpelMetrik } from '$lib/types';
-	import { Segmented } from '$lib/components/atoms';
+	// #2913 Teil 2 (K-6): Knöpfe als Btn (Größe tap), „Alarm ab“-Stufen mit Farbpunkt.
+	import { Btn, Segmented } from '$lib/components/atoms';
 	import { t } from '$lib/i18n';
 	import AmpelLeiste from './AmpelLeiste.svelte';
 	import GrenzenEditor from './GrenzenEditor.svelte';
-	import { alarmAbOptionen, erklaersatz, gruenZeile, type AlarmAb, type Farbe, type KatalogModell, type MetrikEigenschaften } from './ampelModell.ts';
+	import { alarmAbOptionen, erklaersatz, gruenZeile, type AlarmAb, type Farbe, type KatalogModell, type MetrikEigenschaften } from '../../shared/wetter-tab/ampelModell.ts';
 
 	interface Props {
 		id: string;
@@ -42,13 +43,20 @@
 	const gruen = $derived(text(gruenZeile(eintrag ?? {}, eig)));
 	// i18n-dynamic: alarme.alarm_ab.stufe.
 	const segmente = $derived(
-		optionen.map((s) => ({ value: s, label: $t(`alarme.alarm_ab.stufe.${s}` as 'alarme.alarm_ab.stufe.never'), testid: `wetter-alarm-ab-${id}-${s}` }))
+		optionen.map((s) => ({
+			value: s,
+			label: $t(`alarme.alarm_ab.stufe.${s}` as 'alarme.alarm_ab.stufe.never'),
+			testid: `wetter-alarm-ab-${id}-${s}`,
+			farbe: s === 'never' ? undefined : s
+		}))
 	);
 	const stufe = $derived(eintrag?.alarm_ab ?? 'never');
 </script>
 
 <div class="wt-zeile" data-testid="wetter-zeile-{id}">
-	<button type="button" class="wt-rm" data-testid="wetter-zeile-entfernen-{id}" aria-label={$t('wetter.zeile.entfernen', { metrik: name })} title={$t('wetter.zeile.entfernen', { metrik: name })} onclick={onEntfernen}>−</button>
+	<div class="wt-rm">
+		<Btn variant="ghost" size="tap" data-testid="wetter-zeile-entfernen-{id}" aria-label={$t('wetter.zeile.entfernen', { metrik: name })} title={$t('wetter.zeile.entfernen', { metrik: name })} onclick={onEntfernen}>−</Btn>
+	</div>
 	<div class="wt-name">
 		<b>{name}</b>
 		{#if eig.unit}<small>{eig.unit}</small>{/if}
@@ -76,9 +84,9 @@
 			<span class="wt-lbl" data-testid="wetter-alarm-ab-{id}">{$t(eig.is_precursor ? 'wetter.alarm_ab.vorbote' : 'wetter.alarm_ab.kein_alarm')}</span>
 		{/if}
 		{#if !eig.display_only}
-			<button type="button" class="wt-btn" data-testid="wetter-grenzen-aendern-{id}" aria-expanded={offen} onclick={onGrenzen}>
+			<Btn variant="ghost" size="tap" data-testid="wetter-grenzen-aendern-{id}" aria-expanded={offen} onclick={onGrenzen}>
 				{$t(offen ? 'wetter.grenzen.fertig' : 'wetter.grenzen.aendern')}
-			</button>
+			</Btn>
 		{/if}
 	</div>
 	{#if offen}
@@ -89,30 +97,22 @@
 <style>
 	.wt-zeile {
 		display: grid;
-		grid-template-columns: 44px minmax(120px, 180px) minmax(0, 1fr) auto;
-		gap: 8px 14px;
+		grid-template-columns: var(--g-tap-min) minmax(var(--g-size-120px), var(--g-size-180px)) minmax(0, 1fr) auto;
+		gap: var(--g-s-2) var(--g-size-14px);
 		align-items: center;
-		padding: 12px 20px;
+		padding: var(--g-s-3) var(--g-s-5);
 		border-top: 1px solid var(--g-rule-soft);
 	}
-	.wt-rm,
-	.wt-btn {
-		min-height: 44px;
-		min-width: 44px;
-		box-sizing: border-box;
-		border: 1px solid var(--g-rule);
-		border-radius: var(--g-r-2);
+	.wt-zeile :global([data-slot='btn']) {
 		background: var(--g-card);
-		color: var(--g-ink);
-		font: inherit;
-		font-size: 13px;
-		cursor: pointer;
+		font-weight: 400;
 	}
-	.wt-btn {
-		padding: 0 12px;
+	.wt-zeile :global([data-slot='btn']:hover) {
+		background: var(--g-surface-2);
 	}
-	.wt-rm {
-		font-size: 18px;
+	.wt-rm :global([data-slot='btn']) {
+		padding: 0;
+		font-size: var(--g-size-18px);
 		line-height: 1;
 	}
 	.wt-name {
@@ -121,24 +121,24 @@
 		min-width: 0;
 	}
 	.wt-name b {
-		font-size: 14px;
+		font-size: var(--g-size-14px);
 		color: var(--g-ink);
 	}
 	.wt-name small,
 	.wt-lbl,
 	.wt-nur {
-		font-size: 12.5px;
+		font-size: var(--g-size-12-5px);
 		color: var(--g-ink-2);
 	}
 	.wt-mitte {
 		display: flex;
 		flex-direction: column;
-		gap: 6px;
+		gap: var(--g-size-6px);
 		min-width: 0;
 	}
 	.wt-why {
 		margin: 0;
-		font-size: 12.5px;
+		font-size: var(--g-size-12-5px);
 		line-height: 1.45;
 		color: var(--g-ink-2);
 	}
@@ -150,11 +150,11 @@
 		flex-wrap: wrap;
 		align-items: center;
 		justify-content: flex-end;
-		gap: 8px;
+		gap: var(--g-s-2);
 	}
 	.wt-seg :global([data-slot='segmented-item']) {
-		min-height: 44px;
-		min-width: 44px;
+		min-height: var(--g-tap-min);
+		min-width: var(--g-tap-min);
 		color: var(--g-ink-2);
 	}
 	.wt-seg :global([data-slot='segmented-item'][data-active='true']) {
@@ -162,8 +162,8 @@
 	}
 	@media (max-width: 899px) {
 		.wt-zeile {
-			grid-template-columns: 44px minmax(0, 1fr);
-			padding: 12px 16px;
+			grid-template-columns: var(--g-tap-min) minmax(0, 1fr);
+			padding: var(--g-s-3) var(--g-s-4);
 		}
 		.wt-mitte,
 		.wt-act {

@@ -3,7 +3,7 @@
 	// Geteilt fuer Trip und Orts-Briefing; Geometrie in ampelLeiste.ts.
 	import type { Ampel, AmpelMetrik } from '$lib/types';
 	import { t } from '$lib/i18n';
-	import { gewitterLeiste, leisteVon, type LeisteFarbe } from './ampelLeiste.ts';
+	import { gewitterLeiste, leisteVon, type LeisteFarbe } from '../../shared/wetter-tab/ampelLeiste.ts';
 
 	interface Props {
 		id: string;
@@ -15,11 +15,14 @@
 
 	const leiste = $derived(gewitter ? { segmente: gewitterLeiste(gewitter), marken: [] } : leisteVon(eintrag));
 
+	// #2913 Teil 2 (AC-12): Ampelfarben aus --g-ampel-* (Light/Dark, je >= 3:1 gegen die Karte).
+	// Ohne Farbe erkennbar: feste Reihenfolge, Trennfuge, Grenzwerte/Stufenwörter darüber; für
+	// Hilfstechnik je Segment role="img" mit dem Farbnamen aus dem Katalog.
 	const FARBE: Record<LeisteFarbe, string> = {
-		green: 'var(--g-success)',
-		yellow: 'var(--g-wx-sun)',
-		orange: 'var(--g-accent)',
-		red: 'var(--g-danger)'
+		green: 'var(--g-ampel-gruen)',
+		yellow: 'var(--g-ampel-gelb)',
+		orange: 'var(--g-ampel-orange)',
+		red: 'var(--g-ampel-rot)'
 	};
 	// i18n-dynamic: wetter.farbe.
 	const farbwort = (f: LeisteFarbe) => $t(`wetter.farbe.${f}` as 'wetter.farbe.green');
@@ -39,7 +42,7 @@
 	{/if}
 	<div class="wt-band">
 		{#each leiste.segmente as s, i (i)}
-			<span title={farbwort(s.farbe)} style:width="{(Math.max(0, s.anteil) * 100).toFixed(2)}%" style:background={FARBE[s.farbe]}></span>
+			<span role="img" aria-label={farbwort(s.farbe)} data-farbe={s.farbe} title={farbwort(s.farbe)} style:width="{(Math.max(0, s.anteil) * 100).toFixed(2)}%" style:background={FARBE[s.farbe]}></span>
 		{/each}
 	</div>
 </div>
@@ -48,14 +51,14 @@
 	.wt-leiste {
 		display: flex;
 		flex-direction: column;
-		gap: 2px;
+		gap: var(--g-size-2px);
 		min-width: 0;
 	}
 	.wt-marken {
 		position: relative;
-		height: 16px;
+		height: var(--g-s-4);
 		font-family: var(--g-font-mono);
-		font-size: 11px;
+		font-size: var(--g-text-xs);
 		color: var(--g-ink-2);
 	}
 	.wt-marken i {
@@ -71,13 +74,17 @@
 	}
 	.wt-band {
 		display: flex;
-		height: 10px;
-		border-radius: 5px;
+		height: var(--g-size-10px);
+		border-radius: var(--g-size-5px);
 		overflow: hidden;
 		border: 1px solid var(--g-rule);
 	}
 	.wt-band span {
 		display: block;
 		height: 100%;
+	}
+	/* Trennfuge: Stufen auch ohne Farbe als getrennte Segmente erkennbar. */
+	.wt-band span + span {
+		border-left: 1px solid var(--g-card);
 	}
 </style>

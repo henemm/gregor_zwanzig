@@ -69,6 +69,17 @@
 | `--g-weather-sun` | `#d99a2a` | Sonne, klar |
 | `--g-weather-cloud` | `#9a958a` | Bewölkt |
 
+### 5a. Ampel — Wetter-Reiter (#2913)
+
+Grafische Farben der Ampelstufen (Ampel-Leiste, Input-Unterkante, Segment-Farbpunkt). Nahe am Mockup Fassung 3, jede mindestens **3:1 gegen `--g-card`** in Hell und Dunkel (eigener Dark-Block). Abweichung vom Mockup nur, wo WCAG es verlangt. Farbe ist nie alleiniger Informationsträger. Prüfung: `ampel_tokens_kontrast.test.ts`.
+
+| Token | Hell | Dunkel | Mockup |
+|---|---|---|---|
+| `--g-ampel-gruen` | `#15803d` | `#15803d` | `#15803d` |
+| `--g-ampel-gelb` | `#b98100` (abgedunkelt) | `#d69500` | `#d69500` |
+| `--g-ampel-orange` | `#d4530a` | `#d4530a` | `#d4530a` |
+| `--g-ampel-rot` | `#a8104a` | `#d43a76` (aufgehellt) | `#a8104a` |
+
 ---
 
 ## 6. Typography — Schriften
@@ -126,6 +137,35 @@
 | `--g-s-12` | 48 px | Sektion-Gap (groß) |
 | `--g-s-16` | 64 px | Hero-Margin |
 | `--g-s-20` | 80 px | Page-Top-Margin auf Auth-Screens |
+
+### 9a. Maß-Tokens (#2913)
+
+Reine Maße, **Light = Dark** (kein Wert im Dark-Block). Regel: Ein Maß im 4px-Raster nimmt `--g-s-*`, eine Schriftgröße der Skala `--g-text-*`, ein Radius `--g-r-*`. Nur was dort keinen exakten Wert hat, bekommt ein `--g-size-*`. **Nie runden** — so blieb der Wetter-Reiter beim Umzug in die Organismen pixelgleich. Der Name nennt den Wert: `--g-size-10px` ist 10 px (nicht Rasterstufe 10 wie `--g-s-10` = 40 px). Ein `--g-size-*` mit Rasterwert ist verboten (`tokens_masse.test.ts`).
+
+| Token | Wert | Verwendung |
+|---|---|---|
+| `--g-tap-min` | 44 px | Mindest-Touch-Ziel (min-height/min-width von Knöpfen, Tap-Spalte) |
+| `--g-size-2px` | 2 px | kleinste Abstände, Fokusring-Versatz |
+| `--g-size-3px` | 3 px | Ampel-Unterkante am Input (#2913 Teil 2) |
+| `--g-size-5px` | 5 px | Radius halbhoher Balken (Ampel-Leiste) |
+| `--g-size-6px` | 6 px | enge Abstände/Polster |
+| `--g-size-10px` | 10 px | Abstände/Polster, Balkenhöhe |
+| `--g-size-12-5px` | 12.5 px | Hilfs- und Erklärtext (Wetter-Reiter) |
+| `--g-size-13px` | 13 px | Radius Schalter-Bahn |
+| `--g-size-14px` | 14 px | Fließtext/Knopftext, Abstände |
+| `--g-size-18px` | 18 px | Symbol-Knopf (Entfernen) |
+| `--g-size-22px` | 22 px | Reiter-Überschrift, Schalter-Knopf |
+| `--g-size-26px` | 26 px | Schalter-Bahn-Höhe |
+| `--g-size-28px` | 28 px | Seiten-Polster oben |
+| `--g-size-56px` | 56 px | Mindestbreite Schalter-Fläche |
+| `--g-size-60px` | 60 px | Seiten-Polster unten |
+| `--g-size-72px` | 72 px | Zahlenfeld-Breite (Grenzen-Editor) |
+| `--g-size-120px` | 120 px | Spalten-Mindestbreite (Metrik-Name) |
+| `--g-size-180px` | 180 px | Spalten-Höchstbreite (Metrik-Name) |
+| `--g-size-420px` | 420 px | Menübreite (Vorlagen-Auswahl) |
+| `--g-size-1100px` | 1100 px | Höchstbreite Reiter-Inhalt |
+| `--g-size-0-08em` | 0.08 em | Laufweite Menü-Eyebrow |
+| `--g-size-0-1em` | 0.1 em | Laufweite Gruppen-Eyebrow |
 
 ---
 

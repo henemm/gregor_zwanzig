@@ -123,5 +123,6 @@
 	"bausteine.timeline.briefing": "-Briefing",
 	"bausteine.datum.kalender_oeffnen": "Kalender öffnen",
 	"bausteine.datum.voriger_monat": "Voriger Monat",
-	"bausteine.datum.naechster_monat": "Nächster Monat"
+	"bausteine.datum.naechster_monat": "Nächster Monat",
+	"bausteine.skelett.laedt": "Wird geladen …"
 }

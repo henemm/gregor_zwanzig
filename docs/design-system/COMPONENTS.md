@@ -57,7 +57,8 @@ Slots werden in der "Was sie tut"-Spalte erwähnt.
 
 | Komponente | Props | Was sie tut |
 |---|---|---|
-| `<Btn>` | `variant: "primary" \| "accent" \| "ghost" \| "quiet"`, `size: "xs" \| "sm" \| "md" \| "lg"`, `icon: ReactNode`, `onClick` | Der einzige Button. |
+| `<Btn>` | `variant: "primary" \| "accent" \| "ghost" \| "quiet"`, `size: "xs" \| "sm" \| "md" \| "lg" \| "tap"`, `icon: ReactNode`, `onClick` | Der einzige Button. `size="tap"`: Höhe/Breite mindestens `--g-tap-min` (44 px, Touch-Ziel; #2913). |
+| `<Skelett>` | `label?: string` (Katalogtext des Aufrufers), `breiten?: number[]` (Prozent je Zeile), `testid?` | Lade-Platzhalter (Mockup `.skel`): `role="status"`, `aria-busy="true"`, `aria-label`; ohne `label` der Katalogtext `bausteine.skelett.laedt`. Maße nur aus Tokens. #2913. |
 | `<Eyebrow>` | `color: string` (default `--g-ink-muted`) + Children | Mono-Caps-Label oberhalb von Titles. Default-Farbe via app.css-Regel `[data-slot="eyebrow"]`: `--g-ink-muted` (~6,91:1, WCAG-AA) — durchgesetzt vom Kontrast-Audit seit #377. (Frühere Katalog-Angabe `--g-ink-3` war eine Token-Namens-Divergenz; Code-Name gewinnt, siehe CLAUDE.md.) |
 | `<Pill>` | `tone: "neutral" \| "accent" \| "good" \| "warn" \| "bad" \| "ghost"` | Status-Pill. |
 | `<Dot>` | `tone: "good" \| "warn" \| "bad" \| "info" \| "neutral"`, `size: number` (default `8`) | Status-Indikator. |
@@ -73,12 +74,12 @@ Slots werden in der "Was sie tut"-Spalte erwähnt.
 | Komponente | Props | Was sie tut |
 |---|---|---|
 | `<Field>` | `label: string`, `hint: string`, `error: string`, Slot `side` (Helper-Link) | Form-Field-Wrapper mit Label-Bar + Input + Hint/Error. |
-| `<Input>` | `type`, `placeholder`, `value`, `error: boolean`, `mono: boolean`, `onChange` | Text-Input. **Ersetzt** native `<input>`. |
+| `<Input>` | `type`, `placeholder`, `value`, `error: boolean`, `mono: boolean`, `onChange`, `ampel?: "green" \| "yellow" \| "orange" \| "red"` | Text-Input. **Ersetzt** native `<input>`. `ampel` → `data-ampel`, 3-px-Unterkante aus `--g-ampel-*` (#2913). |
 | `<Checkbox>` | `checked`, `label`, `onChange`, `disabled` | Brand-Checkbox. **Ersetzt** native checkbox. |
 | `<Select>` | `value`, `options: Array<{id, label}>`, `placeholder`, `onChange` | Brand-Select. **Ersetzt** native `<select>`. |
 | `<Switch>` | `checked`, `onChange`, `disabled`, `size: "sm" \| "md"` (default `md`) | On/Off Toggle. 44×24 default, 32×18 für `sm`. |
 | `<SwitchRow>` | `label`, `sub`, `checked`, `onChange` | Switch als volle Zeile mit Label + Sub-Text. |
-| `<Segmented>` | **`options: Array<{value, label, badge?}>`**, **`selected`**, **`onselect(v)`** — Alias: `items` (mit `id` statt `value`), `value`, `onChange` werden ebenfalls akzeptiert; `size: "sm" \| "md"` (optional) | 2–3-Way-Toggle. |
+| `<Segmented>` | **`options: Array<{value, label, badge?}>`**, **`selected`**, **`onselect(v)`** — Alias: `items` (mit `id` statt `value`), `value`, `onChange` werden ebenfalls akzeptiert; `size: "sm" \| "md"` (optional); je Option/Item `testid?`, `badge_testid?`, `farbe?: "green" \| "yellow" \| "orange" \| "red"` (Farbpunkt `data-slot="segmented-punkt"`, #2913); `rolle: "radio"` für Auswahl-Leisten | 2–3-Way-Toggle. |
 
 ---
 
@@ -98,6 +99,8 @@ Zusammenbauten aus Atoms und `ui/`-Primitives, kanonisch im Barrel `$lib/compone
 | `<ThresholdRow>` | `label: string`, `value: string \| number`, `divider: boolean`, `last: boolean`, `editable: boolean`, `onEdit: () => void` | Schwellwert-Zeile (Alert-Limits). |
 | `<Stat>` | `label: string`, `value: string \| number`, `sub: string`, `unit: string`, `tone: "default" \| "accent"` (default `"default"`), `layout: "stack" \| "inline"` (default `"stack"`), `size: "sm" \| "md" \| "lg"` (default `"md"`), `mono: boolean` (default `true`) | Statistik-Anzeige (Etappen-Anzahl, Distanz, etc.); leerer `value` → Em-Dash. |
 | `<AlertRow>` | `alert: {kind, when, msg, channel?}`, `variant: "icon" \| "dot" \| "plain"` (default `"icon"`), `divider: boolean`, `last: boolean` | Alert-Konfiguration-Zeile. |
+| `<Einstellungszeile>` | `titel: string`, `hinweis?: string`, `testid?: string`, `hinweisTestid?: string`, Snippet `children` (Bedienelement) | Generische Einstellungszeile (Mockup `.lrow`): links Titel und Hinweis, rechts der Bereich `data-slot="einstellungszeile-bedienung"`. #2913 Teil 2. |
+| `<ChipLeiste>` | `eintraege: Array<{id, label, testid?}>`, `onWahl(id)` | Chip-Leiste (Mockup `.more .chip`), je Eintrag ein `Btn`-Chip (`size="tap"`). #2913 Teil 2. |
 | `<ConfirmDialog>` | `open: boolean`, `title: string`, `description: string`, `confirmLabel: string`, `confirmVariant: "primary" \| "destructive"` (default `"primary"`), `cancelLabel: string` (default `"Abbrechen"`), `disabled: boolean`, `data-testid: string`, `cancelTestid: string`, `confirmTestid: string`, `onConfirm: () => void`, `onCancel: () => void`, `onOpenChange: (open: boolean) => void` | Modal-Dialog für destruktive Bestätigungen (Archivieren, Löschen). Kapselt `ui/dialog`-Primitives + Btn-Atome. |
 
 **Schicht-Regeln (Epic #368):**
@@ -163,6 +166,20 @@ Komplexe Zusammenbauten aus Atoms und Molecules, kanonisch im Barrel `$lib/compo
 | `<WeatherMetricsTab>` | `$lib/components/organisms` | `trip`, `stage?` | Tab-Inhalt mit Wetter-Metrik-Auswahl. Physisch in `shared/WeatherMetricsTab.svelte` (geteilt Trip/Compare). Bis #1719 S3 (2026-08-11) lief die Kanal-Vorschau (E-Mail/Telegram/SMS) über die eingebettete `WeatherV2MailPreview.svelte` — diese Live-Vorschau ist auf PO-Entscheid ersatzlos entfernt; der Tab zeigt seither nur noch Kanal-Wähler + Reihenfolge ohne Vorschau-Spalte (`docs/specs/modules/fix_1719_s3_aus_ist_ein_zustand.md`). |
 | `<MetricGroup>` | `$lib/components/organisms` | `group`, `metrics`, `onChange` | Gruppen-Sektion in der Metrik-Auswahl. Physisch in `trip-detail/MetricGroup.svelte`. |
 | `<MetricCheckbox>` | `$lib/components/organisms` | `metric`, `checked`, `onChange` | Metrik-Checkbox mit Horizon-Chip. Physisch in `trip-detail/MetricCheckbox.svelte`. ⚠ C2-Verstoß (ui/horizon-chip) — Folge-Issue offen. |
+
+**Wetter-Reiter (#2913, ADR-0112):** physisch in `organisms/wetter-tab/`, im Barrel exportiert; Trip und Orts-Briefing nutzen dieselben Dateien (`context="route"|"vergleich"`, ADR-0097). Logik-Module (`ampelModell.ts`, `ampelLeiste.ts`, `wetterTabSpeicherung.ts` …) bleiben in `shared/wetter-tab/`. Styles nur über `--g-*`-Tokens (Regel b des Bausteine-Wächters).
+
+| Komponente | Was sie tut |
+|---|---|
+| `<WetterTabInhalt>` | Reiter „Wetter“: lädt Daten, hält den Zustand, speichert; setzt die übrigen acht zusammen. Ladeanzeige aus `Skelett`, „Erneut laden“ als `Btn`. Die Seite dazu ist `shared/WetterTab.svelte` (dünne Durchreichung, `SEITEN_SCOPE`, Regel a; #2913 Teil 2). |
+| `<VorlageKarte>` | Vorlagen-Auswahl und „als Vorlage speichern“; alle Knöpfe `Btn` (`size="tap"`). |
+| `<AlarmAbKopf>` | „Alarm ab“ für alle Metriken als `Einstellungszeile` (Segmente Nie/Gelb/Orange/Rot mit Farbpunkt). |
+| `<MetrikZeile>` | Eine Metrik: Name, Ampel-Leiste, Erklärsatz, Alarm-ab (`Segmented` mit Farbpunkt), Entfernen und Grenzen bearbeiten (`Btn`). |
+| `<AmpelLeiste>` | Farbband der Ampelstufen einer Metrik aus `--g-ampel-*`; je Segment `role="img"` mit Farbnamen, feste Reihenfolge und Trennfuge (ohne Farbe erkennbar). |
+| `<GrenzenEditor>` | Eingabe der Ampel-Grenzen einer Metrik (`Input` mit `ampel` = Feldfarbe). |
+| `<NichtImBriefing>` | Metriken, die nicht im Briefing sind, zum Hinzufügen (auf `ChipLeiste`). |
+| `<WarnungenRadarKarte>` | Schalter amtliche Warnungen / Radar, Zeilen als `Einstellungszeile` (Schalter vorerst roh, Known Limitation #2913). |
+| `<AnpassenKarte>` | Tagesfenster anpassen. |
 
 **Schicht-Regeln (Epic #471):**
 - Organisms importieren **NICHT** direkt aus `ui/` (shadcn/Primitives)

@@ -151,8 +151,8 @@
 		.uhrzeit-feld :global(:is([data-segment='hour'], [data-segment='minute'])) {
 			display: inline-block;
 			box-sizing: border-box;
-			min-width: 24px;
-			min-height: 24px;
+			min-width: var(--g-s-6);
+			min-height: var(--g-s-6);
 			text-align: center;
 		}
 	}

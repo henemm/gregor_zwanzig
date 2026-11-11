@@ -34,7 +34,7 @@ import { svelteAst } from '../../__tests__/s3a2794Ast.ts';
 
 const HIER = dirname(fileURLToPath(import.meta.url));
 const FRONTEND = resolve(HIER, '../../../../../..');
-const WETTER_TAB = join(HIER, '..', 'WetterTab.svelte');
+const WETTER_TAB = join(HIER, '..', '..', '..', 'organisms', 'wetter-tab', 'WetterTabInhalt.svelte');
 
 register(pathToFileURL(join(FRONTEND, 'test-svelte-ssr-hooks.mjs')).href, pathToFileURL(FRONTEND + '/').href);
 
@@ -151,7 +151,7 @@ describe('F005/AC-21: Radar-Schalter nur im Orts-Briefing sichtbar', () => {
 
 	test('WarnungenRadarKarte rendert den Radar-Schalter genau bei mitRadar', async () => {
 		const { render } = await import('svelte/server');
-		const Karte = (await import(pathToFileURL(join(HIER, '..', 'WarnungenRadarKarte.svelte')).href)).default;
+		const Karte = (await import(pathToFileURL(join(HIER, '..', '..', '..', 'organisms', 'wetter-tab', 'WarnungenRadarKarte.svelte')).href)).default;
 		const props = (mitRadar: boolean) => ({ warnungenAn: true, radarAn: false, mitRadar, onWarnungen: () => {}, onRadar: () => {} });
 		const ohne = render(Karte, { props: props(false) }).body;
 		const mit = render(Karte, { props: props(true) }).body;
