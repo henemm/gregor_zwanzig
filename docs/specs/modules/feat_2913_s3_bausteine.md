@@ -224,6 +224,9 @@ Alle Tests laufen mit `node --test` über `npm test -- <datei>` im Ordner `front
 - Dringlichkeits-Tokens, Kanal-Tabelle und die übrigen Scheibe-(c)–(e)-Bausteine fehlen noch; die Elementliste-Abgleich-Messung ist erst ab Scheibe (a) sinnvoll.
 - `--g-wx-*` hat weiterhin keinen Dark-Wert; Teil 2 löst das nur für die Ampel-Nutzung in `AmpelLeiste`.
 - Der Showcase nimmt Organismen weiter aus (bestehende Regel); er zeigt in Teil 2 Tokens und Atome.
+- Teil 1, AC-6: Der Maßvergleich läuft deterministisch in `wetter_tab_render_gleich.test.ts` (gleicher Markup-Baum und gleiches CSS nach Token-Auflösung gegen die Referenz vor der Verschiebung; daraus folgen gleiche berechnete Maße). Ein eigener Playwright-Vorher/Nachher-Lauf in `frontend/e2e/` entfällt; die Sichtprüfung im Browser übernimmt `/e2e-verify` auf Staging.
+- Teil 1: Die Historie der neun Dateien ist commitweise erhalten (Umbenennung `shared/` → `organisms/` im Implementierungs-Commit); im Gesamt-Diff ordnet Git sie den byte-gleichen Referenzkopien `*.svelte.txt` zu.
+- Teil 1, Nebenwirkungen: `DatumFeld`/`UhrzeitFeld` nutzen `--g-s-6` statt `24px` (pixelgleich). Die Golden-Dateien `tests/golden/f9_trip_flaechen/anlegen_*.de.html` und `f10_vergleich_flaechen/anlegen_weiter.de.html` sind nur im Svelte-Scoping-Hash des Wetter-Reiters nachgezogen (Texte unverändert). `docs/context/einstellungen_neu/elementliste.json` ist mit `ermittleEn` gegen den aktuellen Katalog neu berechnet (vorher rot auf `main`, verwaister Schlüssel `wertebereiche.preset_dialog.standard`).
 
 ## Changelog
 
