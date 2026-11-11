@@ -541,6 +541,11 @@ const NEU_IN_FOLGEPAKETEN = [
 	'wetter.dialog.hinweis',
 	'wetter.dialog.name_vergeben',
 	'wetter.dialog.gespeichert',
+	// #2919 EN-Restbegriffe: Filterchip „Alle“, Kartenstatus „archiviert“, Aktionsblatt-Eyebrow, Logo-Untertitel.
+	'listen.filter.alle',
+	'listen.status.archiviert',
+	'aktionen.sheet.eyebrow',
+	'bausteine.wordmark.caption',
 ];
 
 test('AC-5: das Golden enthaelt die 112 Bestandsschluessel', () => {

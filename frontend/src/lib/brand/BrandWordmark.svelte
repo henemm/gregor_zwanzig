@@ -14,7 +14,7 @@
 	let {
 		size = 'md',
 		dark = false,
-		caption = 'V0.20 · Wetter-Briefing',
+		caption,
 		icon = 'left'
 	}: Props = $props();
 
@@ -34,10 +34,13 @@
 	const inkDot = $derived(dark ? 'rgba(246,244,238,0.55)' : 'var(--g-ink-3)');
 	const inkCaption = $derived(dark ? 'rgba(246,244,238,0.55)' : 'var(--g-ink-muted)');
 
-	const hasCaption = $derived(caption != null && caption !== '');
+	// #2919: Default-Untertitel zur Renderzeit aus dem Katalog (reaktiv zur Sprache);
+	// undefined = Default, null = kein Untertitel, sonst der uebergebene Text.
+	const captionWert = $derived(caption === undefined ? $t('bausteine.wordmark.caption') : caption);
+	const hasCaption = $derived(captionWert != null && captionWert !== '');
 	// Caption als UPPERCASE-Textknoten (nicht nur via CSS text-transform), damit
 	// der DOM-Text der visuellen Mono-Caps-Darstellung entspricht (Spec §9, AC-10).
-	const captionText = $derived(hasCaption ? (caption as string).toUpperCase() : '');
+	const captionText = $derived(hasCaption ? (captionWert as string).toUpperCase() : '');
 	// Caption unter dem Schriftzug einruecken (um Icon-Breite + iconGap), damit sie
 	// linksbuendig zum Schriftzug startet, nicht unter dem Symbol (icon="left").
 	const captionIndent = $derived(s.iconPx + s.iconGap);

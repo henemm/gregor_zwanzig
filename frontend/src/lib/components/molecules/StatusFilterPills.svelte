@@ -1,6 +1,7 @@
 <script lang="ts">
 	// Issue #2278 (AC-2/AC-14) — EINE Filter-Pillen-Leiste fuer Trip- und Vergleichs-Liste.
 	import { Pill } from '$lib/components/atoms';
+	import { t, type MessageKey } from '$lib/i18n';
 
 	export type StatusFilterValue = 'all' | 'aktiv' | 'geplant' | 'pausiert' | 'fertig';
 
@@ -12,12 +13,13 @@
 
 	let { active, counts, onSelect }: Props = $props();
 
-	const PILLEN: Array<{ label: string; value: StatusFilterValue }> = [
-		{ label: 'Alle', value: 'all' },
-		{ label: 'Aktiv', value: 'aktiv' },
-		{ label: 'Geplant', value: 'geplant' },
-		{ label: 'Pausiert', value: 'pausiert' },
-		{ label: 'Fertig', value: 'fertig' }
+	// #2919: Anzeige aus dem Katalog; Filterwerte bleiben Logikwerte (ADR-0104).
+	const PILLEN: Array<{ key: MessageKey; value: StatusFilterValue }> = [
+		{ key: 'listen.filter.alle', value: 'all' },
+		{ key: 'trip.status.active', value: 'aktiv' },
+		{ key: 'trip.status.planned', value: 'geplant' },
+		{ key: 'trip.status.paused', value: 'pausiert' },
+		{ key: 'trip.status.finished', value: 'fertig' }
 	];
 </script>
 
@@ -31,7 +33,7 @@
 			onclick={() => onSelect(f.value)}
 		>
 			<Pill tone={active === f.value ? 'accent' : 'default'}>
-				{f.label} ({counts[f.value] ?? 0})
+				{$t(f.key)} ({counts[f.value] ?? 0})
 			</Pill>
 		</button>
 	{/each}

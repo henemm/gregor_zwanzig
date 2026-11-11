@@ -3,7 +3,7 @@
 	// Aktionen kommen aus der einen Quelle `subscriptionActions`; Dispatch via onAction(id), danach onClose().
 
 	import Sheet from './Sheet.svelte';
-	import { locale } from '$lib/i18n';
+	import { locale, t } from '$lib/i18n';
 	import {
 		subscriptionActions,
 		type SubscriptionLifecycle,
@@ -27,7 +27,7 @@
 	const actions = $derived.by(() => (void $locale, subscriptionActions(kind, status, surface)));
 </script>
 
-<Sheet {open} {onClose} snap="half" title={name} eyebrow="AKTIONEN">
+<Sheet {open} {onClose} snap="half" title={name} eyebrow={$t('aktionen.sheet.eyebrow')}>
 	<div style:display="flex" style:flex-direction="column" style:gap="2px">
 		{#each actions as action (action.id)}
 			<button

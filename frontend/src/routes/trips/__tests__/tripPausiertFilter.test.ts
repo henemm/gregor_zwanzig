@@ -37,10 +37,13 @@ test('AC-7/#1271: Filter-Pillen enthalten einen Eintrag für value "pausiert"', 
 });
 
 test('AC-7/#1271: Filter-Pillen zeigen das Label "Pausiert"', () => {
+	// #2919: das Label kommt aus dem Katalog (trip.status.paused, de "Pausiert").
 	assert.ok(
-		/label:\s*['"]Pausiert['"]/.test(pillsSource),
-		'StatusFilterPills.svelte: soll ein Label "Pausiert" enthalten.'
+		/key:\s*['"]trip\.status\.paused['"],\s*value:\s*['"]pausiert['"]/.test(pillsSource),
+		'StatusFilterPills.svelte: der Pausiert-Eintrag soll den Katalogschluessel trip.status.paused tragen.'
 	);
+	const deTrip = JSON.parse(readFileSync(join(here, '../../../lib/i18n/messages/de/trip.json'), 'utf8'));
+	assert.equal(deTrip['trip.status.paused'], 'Pausiert');
 });
 
 test('AC-7/#1271: Pausiert-Zähler der Trip-Liste wird aus tripStatus() === "pausiert" berechnet', () => {
