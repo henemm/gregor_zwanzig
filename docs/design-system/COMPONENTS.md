@@ -77,7 +77,8 @@ Slots werden in der "Was sie tut"-Spalte erwähnt.
 | `<Input>` | `type`, `placeholder`, `value`, `error: boolean`, `mono: boolean`, `onChange`, `ampel?: "green" \| "yellow" \| "orange" \| "red"` | Text-Input. **Ersetzt** native `<input>`. `ampel` → `data-ampel`, 3-px-Unterkante aus `--g-ampel-*` (#2913). |
 | `<Checkbox>` | `checked`, `label`, `onChange`, `disabled` | Brand-Checkbox. **Ersetzt** native checkbox. |
 | `<Select>` | `value`, `options: Array<{id, label}>`, `placeholder`, `onChange` | Brand-Select. **Ersetzt** native `<select>`. |
-| `<Switch>` | `checked`, `onChange`, `disabled`, `size: "sm" \| "md"` (default `md`) | On/Off Toggle. 44×24 default, 32×18 für `sm`. |
+| `<Switch>` | `checked`, `onChange`, `disabled`, `size: "sm" \| "md"` (default `md`), `testid?: string` (default `"switch"`), `tap?: boolean` | On/Off Toggle. 44×24 default, 32×18 für `sm`. `testid` setzt `data-testid` am `role="switch"`-Element; `tap` → `data-tap="true"`, unsichtbare Trefferfläche mindestens `--g-tap-min` (44 px), sichtbare Größe bleibt (md 36×20). #2913 Scheibe (c). |
+| `<UhrzeitFeld>` | `value: "HH:MM"`, `onchange(hhmm)`, `testid?`, `ariaLabel?`, `groesse?: "kompakt" \| "normal"`, `leerMelden?`, `stundenraster?: boolean` | Uhrzeitfeld (bits-ui TimeField, 24 h). `stundenraster`: nur die Stunde ist editierbar, die Minute steht fest auf `00`, gemeldet wird `HH:00`; Wurzel `data-stundenraster="true"` (Tagesfenster, #2913 Scheibe (c)). Nicht im Barrel, Import `$lib/components/molecules/UhrzeitFeld.svelte`. |
 | `<SwitchRow>` | `label`, `sub`, `checked`, `onChange` | Switch als volle Zeile mit Label + Sub-Text. |
 | `<Segmented>` | **`options: Array<{value, label, badge?}>`**, **`selected`**, **`onselect(v)`** — Alias: `items` (mit `id` statt `value`), `value`, `onChange` werden ebenfalls akzeptiert; `size: "sm" \| "md"` (optional); je Option/Item `testid?`, `badge_testid?`, `farbe?: "green" \| "yellow" \| "orange" \| "red"` (Farbpunkt `data-slot="segmented-punkt"`, #2913); `rolle: "radio"` für Auswahl-Leisten | 2–3-Way-Toggle. |
 
@@ -101,6 +102,7 @@ Zusammenbauten aus Atoms und `ui/`-Primitives, kanonisch im Barrel `$lib/compone
 | `<AlertRow>` | `alert: {kind, when, msg, channel?}`, `variant: "icon" \| "dot" \| "plain"` (default `"icon"`), `divider: boolean`, `last: boolean` | Alert-Konfiguration-Zeile. |
 | `<Einstellungszeile>` | `titel: string`, `hinweis?: string`, `testid?: string`, `hinweisTestid?: string`, Snippet `children` (Bedienelement) | Generische Einstellungszeile (Mockup `.lrow`): links Titel und Hinweis, rechts der Bereich `data-slot="einstellungszeile-bedienung"`. #2913 Teil 2. |
 | `<ChipLeiste>` | `eintraege: Array<{id, label, testid?}>`, `onWahl(id)` | Chip-Leiste (Mockup `.more .chip`), je Eintrag ein `Btn`-Chip (`size="tap"`). #2913 Teil 2. |
+| `<Aufklapper>` | `titel: string`, `offen?: boolean` (Startzustand, default zu), `testid?` (am `<details>`), `summaryTestid?` (am `<summary>`), Snippet `children` (Inhalt) | Aufklapper (Mockup `details.adv`): natives `<details>`/`<summary>`, Zeichen „＋“ zu / „－“ auf, `aria-expanded` am `<summary>`; Inhalt steht immer im DOM. #2913 Scheibe (c). |
 | `<ConfirmDialog>` | `open: boolean`, `title: string`, `description: string`, `confirmLabel: string`, `confirmVariant: "primary" \| "destructive"` (default `"primary"`), `cancelLabel: string` (default `"Abbrechen"`), `disabled: boolean`, `data-testid: string`, `cancelTestid: string`, `confirmTestid: string`, `onConfirm: () => void`, `onCancel: () => void`, `onOpenChange: (open: boolean) => void` | Modal-Dialog für destruktive Bestätigungen (Archivieren, Löschen). Kapselt `ui/dialog`-Primitives + Btn-Atome. |
 
 **Schicht-Regeln (Epic #368):**
@@ -177,9 +179,9 @@ Komplexe Zusammenbauten aus Atoms und Molecules, kanonisch im Barrel `$lib/compo
 | `<MetrikZeile>` | Eine Metrik: Name, Ampel-Leiste, Erklärsatz, Alarm-ab (`Segmented` mit Farbpunkt), Entfernen und Grenzen bearbeiten (`Btn`). |
 | `<AmpelLeiste>` | Farbband der Ampelstufen einer Metrik aus `--g-ampel-*`; je Segment `role="img"` mit Farbnamen, feste Reihenfolge und Trennfuge (ohne Farbe erkennbar). |
 | `<GrenzenEditor>` | Eingabe der Ampel-Grenzen einer Metrik (`Input` mit `ampel` = Feldfarbe). |
-| `<NichtImBriefing>` | Metriken, die nicht im Briefing sind, zum Hinzufügen (auf `ChipLeiste`). |
-| `<WarnungenRadarKarte>` | Schalter amtliche Warnungen / Radar, Zeilen als `Einstellungszeile` (Schalter vorerst roh, Known Limitation #2913). |
-| `<AnpassenKarte>` | Tagesfenster anpassen. |
+| `<NichtImBriefing>` | Metriken, die nicht im Briefing sind, zum Hinzufügen: Label und `ChipLeiste` in einer waagrechten, umbrechenden Zeile (Mockup `.more`). |
+| `<WarnungenRadarKarte>` | Schalter amtliche Warnungen / Radar (Radar nur im Orts-Briefing), Zeilen als `Einstellungszeile`, Schalter aus dem Atom `Switch` (`tap`, eigene Testids). #2913 Scheibe (c). |
+| `<AnpassenKarte>` | `Aufklapper` „Anpassen“ mit der `Einstellungszeile` „Tagesfenster“ und zwei `UhrzeitFeld` im Stundenraster (von/bis); Ende = Start verhindert `dayWindowClamp`, Über-Mitternacht-Hinweis. #2913 Scheibe (c). |
 
 **Schicht-Regeln (Epic #471):**
 - Organisms importieren **NICHT** direkt aus `ui/` (shadcn/Primitives)

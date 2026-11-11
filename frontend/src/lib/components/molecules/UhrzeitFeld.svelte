@@ -21,16 +21,21 @@
 		groesse?: 'kompakt' | 'normal';
 		/** Geleertes Feld als '' melden (Etappen-Startzeit: zurück auf den Standard, #675 AC-5). */
 		leerMelden?: boolean;
+		/**
+		 * #2913 Scheibe (c) (AC-5): Stundenraster — nur die Stunde ist editierbar, die Minute steht fest
+		 * auf `00` (Tagesfenster in ganzen Stunden); gemeldet wird `HH:00`.
+		 */
+		stundenraster?: boolean;
 	}
 
-	let { value = '', onchange, testid, ariaLabel, disabled = false, groesse = 'normal', leerMelden = false }: Props = $props();
+	let { value = '', onchange, testid, ariaLabel, disabled = false, groesse = 'normal', leerMelden = false, stundenraster = false }: Props = $props();
 
 	const intlLocale = $derived($locale === 'en' ? 'en-GB' : 'de-DE');
 	const zwei = (n: number) => String(n).padStart(2, '0');
 
 	const zeit = $derived.by(() => {
 		const m = /^(\d{1,2}):(\d{2})/.exec(value ?? '');
-		return m ? new Time(Number(m[1]), Number(m[2])) : undefined;
+		return m ? new Time(Number(m[1]), stundenraster ? 0 : Number(m[2])) : undefined;
 	});
 
 	// Zwischenstände beim Tippen gehen nie nach außen (wie DatumFeld, Regel in segmentFeldMeldung.ts);
@@ -55,7 +60,7 @@
 			return;
 		}
 		vollstaendig = true;
-		const hhmm = `${zwei(neu.hour)}:${zwei(neu.minute)}`;
+		const hhmm = `${zwei(neu.hour)}:${zwei(stundenraster ? 0 : neu.minute)}`;
 		if (hhmm === value) {
 			meldung.verwerfen();
 			return;
@@ -86,14 +91,15 @@
 	}
 </script>
 
-<div class="uhrzeit-feld" data-slot="uhrzeit-feld" data-groesse={groesse} data-testid={testid} bind:this={feld} onfocusout={verlassen} onkeydowncapture={(e) => { beruehrt = true; zaehler.taste(e); }} onfocusincapture={zaehler.fokus}>
+<div class="uhrzeit-feld" data-slot="uhrzeit-feld" data-groesse={groesse} data-testid={testid} data-stundenraster={stundenraster ? 'true' : undefined} bind:this={feld} onfocusout={verlassen} onkeydowncapture={(e) => { beruehrt = true; zaehler.taste(e); }} onfocusincapture={zaehler.fokus}>
 	{#key aufbau}
-	<TimeField.Root value={zeit} onValueChange={(v) => geaendert(v as Time | undefined)} hourCycle={24} granularity="minute" locale={intlLocale} {disabled}>
+	<TimeField.Root value={zeit} onValueChange={(v) => geaendert(v as Time | undefined)} hourCycle={24} granularity={stundenraster ? 'hour' : 'minute'} locale={intlLocale} {disabled}>
 		<TimeField.Input data-slot="uhrzeit-feld-eingabe" aria-label={ariaLabel}>
 			{#snippet children({ segments })}
 				{#each segments as { part, value: teil }, i (i)}
-					<TimeField.Segment {part}>{teil}</TimeField.Segment>
-				{/each}
+					<!-- Stundenraster: Locale-Literal der Stunden-Granularität (de „ Uhr“) entfällt, es folgt fest „:00“. -->
+					{#if !(stundenraster && part === 'literal')}<TimeField.Segment {part}>{teil}</TimeField.Segment>{/if}
+				{/each}{#if stundenraster}<span class="uhrzeit-feld-minute" data-slot="uhrzeit-feld-minute">:00</span>{/if}
 			{/snippet}
 		</TimeField.Input>
 	</TimeField.Root>
@@ -138,6 +144,10 @@
 	.uhrzeit-feld :global([data-segment]:focus) {
 		background: var(--g-ink);
 		color: var(--g-paper);
+	}
+	/* #2913 Scheibe (c): feste Minute im Stundenraster (nicht editierbar) gedämpft. */
+	.uhrzeit-feld-minute {
+		color: var(--g-ink-2);
 	}
 	.uhrzeit-feld :global([data-segment][data-placeholder]) {
 		color: var(--g-ink-3);

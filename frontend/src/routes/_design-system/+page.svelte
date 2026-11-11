@@ -48,8 +48,11 @@
 		AlertRow,
 		BriefingTimelineRow,
 		BriefingScheduleRow,
-		ThresholdRow
+		ThresholdRow,
+		Aufklapper,
+		Einstellungszeile
 	} from '$lib/components/molecules';
+	import UhrzeitFeld from '$lib/components/molecules/UhrzeitFeld.svelte';
 
 	// Schicht 4 — Mobile (#373)
 	import { MBtn, MSwitch, MTab, Sheet, Toast, MobileShell } from '$lib/components/mobile';
@@ -140,6 +143,9 @@
 	let swA = $state(true);
 	let swB = $state(true);
 	let swC = $state(true);
+	// #2913 Scheibe (c): Switch mit Tapfläche, Aufklapper, Uhrzeitfeld im Stundenraster.
+	let swTap = $state(true);
+	let stundeVon = $state('06:00');
 
 	// ── Mobile-Demo State (PhoneFrame mit MobileShell) ──────────────────────
 	let sheetOpen = $state(false);
@@ -496,9 +502,24 @@
 							<Switch bind:checked={swC} size="lg" aria-label="lg" />
 							{@render MonoTag('sm · md · lg')}
 						</div>
+						<!-- #2913 Scheibe (c): testid + Tapfläche ≥ --g-tap-min bei sichtbar 36×20 -->
+						<div style:display="flex" style:align-items="center" style:gap="var(--g-s-3)">
+							<Switch bind:checked={swTap} tap testid="showcase-switch-tap" aria-label="tap" />
+							{@render MonoTag('tap · testid')}
+						</div>
 					</div>
 				{/snippet}
 				{@render Panel('Switch · 3 Größen × 5 Tones', switchBody)}
+
+				<!-- #2913 Scheibe (c) (AC-4, AC-5): Aufklapper mit Uhrzeitfeld im Stundenraster -->
+				{#snippet aufklapperBody()}
+					<Aufklapper titel="Anpassen" testid="showcase-aufklapper">
+						<Einstellungszeile titel="Tagesfenster" hinweis="Welche Stunden bewertet werden">
+							<UhrzeitFeld stundenraster value={stundeVon} ariaLabel="von" onchange={(v) => (stundeVon = v)} />
+						</Einstellungszeile>
+					</Aufklapper>
+				{/snippet}
+				{@render Panel('Aufklapper · Uhrzeitfeld im Stundenraster', aufklapperBody)}
 
 				<!-- Wetter-Icons -->
 				{#snippet wiconBody()}

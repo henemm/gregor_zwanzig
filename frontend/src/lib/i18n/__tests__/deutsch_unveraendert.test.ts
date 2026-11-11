@@ -529,6 +529,9 @@ const NEU_IN_FOLGEPAKETEN = [
 	'wetter.anpassen.tagesfenster',
 	'wetter.anpassen.von',
 	'wetter.anpassen.bis',
+	// #2913 Scheibe (c): Hinweis der Zeile „Tagesfenster“ und Über-Mitternacht-Hinweis im wetter-Namensraum.
+	'wetter.anpassen.hinweis',
+	'wetter.anpassen.ueber_mitternacht',
 	'wetter.dialog.titel',
 	'wetter.dialog.name',
 	'wetter.dialog.beschreibung',

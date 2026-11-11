@@ -3,6 +3,7 @@
 	// als „+ Name" (AC-19). Neu hinzugefuegte Metriken haengen hinten an; die Meldung nennt,
 	// wo Roh/Einfach eingestellt wird. Trip und Orts-Briefing gleich.
 	// #2913 Teil 2 (AC-15, K-2): die Chips kommen aus dem Molekül ChipLeiste (Btn-Chips).
+	// #2913 Scheibe (c) (AC-1): Label und Chips stehen in einer waagrechten Zeile (Mockup `.more`).
 	import { ChipLeiste } from '$lib/components/molecules';
 	import { t } from '$lib/i18n';
 
@@ -32,11 +33,13 @@
 </div>
 
 <style>
+	/* #2913 Scheibe (c) (AC-1): Label und Chips in EINER waagrechten, umbrechenden Zeile (Mockup `.more`). */
 	.wt-mehr {
 		display: flex;
-		flex-direction: column;
+		flex-wrap: wrap;
+		align-items: center;
 		gap: var(--g-s-2);
-		padding: var(--g-size-14px) var(--g-s-5);
+		padding: var(--g-s-3) var(--g-s-5);
 		border-top: 1px solid var(--g-rule-soft);
 	}
 	.wt-titel {
@@ -44,13 +47,14 @@
 		color: var(--g-ink-2);
 	}
 	.wt-meldung {
+		flex-basis: 100%;
 		margin: 0;
 		font-size: var(--g-text-sm);
 		color: var(--g-ink-2);
 	}
 	@media (max-width: 899px) {
 		.wt-mehr {
-			padding: var(--g-size-14px) var(--g-s-4);
+			padding: var(--g-s-3) var(--g-s-4);
 		}
 	}
 </style>

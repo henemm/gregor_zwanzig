@@ -18,9 +18,22 @@
 // Ausführen (gegen Staging/Preview):
 //   cd frontend && npx playwright test e2e/daywindow-shared-both-contexts.spec.ts
 
-import { test, expect, type APIRequestContext, type Page, type Request } from '@playwright/test';
+import { test, expect, type APIRequestContext, type Locator, type Page, type Request } from '@playwright/test';
 import { login } from './helpers.js';
 import { cleanupTracked, createTestLocation, createTestComparePreset } from './helpers';
+import { setzeStunde, stundeAnzeige, stundeEingabe } from './s3a2794-teil3.helpers';
+
+/**
+ * #2913 Scheibe (c): das Tagesfenster steht in der eingeklappten Karte „Anpassen" (Aufklapper) mit zwei
+ * Uhrzeitfeldern im Stundenraster (statt DayWindowCard mit Select). Klappt auf und liefert die Karte.
+ */
+async function oeffneTagesfenster(bereich: Page | Locator): Promise<Locator> {
+	const karte = bereich.locator('[data-testid="wetter-anpassen-karte"]:visible').first();
+	await expect(karte).toBeVisible({ timeout: 10_000 });
+	await karte.getByTestId('wetter-anpassen-aufklappen').click();
+	await expect(karte.getByTestId('day-window-start-hour')).toBeVisible({ timeout: 10_000 });
+	return karte;
+}
 
 const TRIP_PREFIX = 'e2e-1361-daywindow-shared';
 const tripId = (suffix: string) => `${TRIP_PREFIX}-${suffix}`;
@@ -93,11 +106,10 @@ test.describe('Issue #1361/#1372 S1b (AC-4): Tagesfenster-Control — geteilt, b
 			await page.goto(`/trips/${id}`);
 			await expect(page.getByTestId('trip-detail-tab-list')).toBeVisible();
 			await page.getByTestId('trip-detail-tab-wetter').first().click();
-			await expect(page.getByTestId('weather-metrics-tab')).toBeVisible();
+			await expect(page.locator('[data-testid="wetter-tab"]:visible').first()).toBeVisible();
 
-			await expect(page.locator('[data-testid="day-window-control"]:visible').first()).toBeVisible({
-				timeout: 10_000
-			});
+			const karte = await oeffneTagesfenster(page);
+			await expect(karte.getByTestId('day-window-end-hour')).toBeVisible({ timeout: 10_000 });
 		} finally {
 			await deleteTrip(page.request, id);
 		}
@@ -124,20 +136,19 @@ test.describe('Issue #1361/#1372 S1b (AC-4): Tagesfenster-Control — geteilt, b
 		await login(page);
 		const panel = await openHubMetricsTab(page, preset.id);
 
-		const control = panel.locator('[data-testid="day-window-control"]:visible').first();
-		await expect(control).toBeVisible({ timeout: 10_000 });
-		const startSelect = control.locator('[data-testid="day-window-start-hour"]:visible').first();
-		const endSelect = control.locator('[data-testid="day-window-end-hour"]:visible').first();
+		const control = await oeffneTagesfenster(panel);
+		const startFeld = control.locator('[data-testid="day-window-start-hour"]:visible').first();
+		const endFeld = control.locator('[data-testid="day-window-end-hour"]:visible').first();
 
 		const puts = collectPresetPuts(page, preset.id);
 		// Stunde 0 bewusst gewählt (Team-Hinweis): eine `||`-Verkettung statt `??`
 		// würde die falsy-aber-gültige Stunde 0 stillschweigend verschlucken.
-		// Beide Selects nacheinander -- jede Aenderung kann ueber den
-		// Bubble-Wrapper einen eigenen PUT ausloesen (Zwischenstand mit der
-		// Default-Endstunde moeglich); massgeblich fuer die folgenden Pruefungen
+		// Beide Uhrzeitfelder nacheinander (#2913 Scheibe (c), Stundenraster) -- jede
+		// Aenderung kann ueber den Bubble-Wrapper einen eigenen PUT ausloesen (Zwischenstand
+		// mit der Default-Endstunde moeglich); massgeblich fuer die folgenden Pruefungen
 		// ist ausschliesslich der LETZTE PUT nach dem Debounce-Fenster.
-		await startSelect.selectOption('0');
-		await endSelect.selectOption('10');
+		await setzeStunde(page, startFeld, 0);
+		await setzeStunde(page, endFeld, 10);
 		await page.waitForTimeout(1_500); // Debounce-Fenster (Autosave-Muster anderer Tabs)
 
 		// Nachweis 1 — es wurde WIRKLICH gespeichert, nicht nur umgeschaltet.
@@ -169,13 +180,13 @@ test.describe('Issue #1361/#1372 S1b (AC-4): Tagesfenster-Control — geteilt, b
 
 		// Nachweis 3 — ein echter Reload zeigt weiterhin den gespeicherten Wert.
 		const reloadedPanel = await openHubMetricsTab(page, preset.id);
-		const reloadedControl = reloadedPanel.locator('[data-testid="day-window-control"]:visible').first();
-		await expect(reloadedControl.locator('[data-testid="day-window-start-hour"]:visible').first()).toHaveValue(
-			'0',
+		const reloadedControl = await oeffneTagesfenster(reloadedPanel);
+		await expect(stundeEingabe(reloadedControl.locator('[data-testid="day-window-start-hour"]:visible').first())).toHaveText(
+			stundeAnzeige(0),
 			{ timeout: 10_000 }
 		);
-		await expect(reloadedControl.locator('[data-testid="day-window-end-hour"]:visible').first()).toHaveValue(
-			'10',
+		await expect(stundeEingabe(reloadedControl.locator('[data-testid="day-window-end-hour"]:visible').first())).toHaveText(
+			stundeAnzeige(10),
 			{ timeout: 10_000 }
 		);
 	});

@@ -19,6 +19,10 @@
 		onchange?: (checked: boolean) => void;
 		'aria-label'?: string;
 		class?: string;
+		/** #2913 Scheibe (c): Testid am role="switch"-Element (Default "switch", bisherige Nutzer unverändert). */
+		testid?: string;
+		/** #2913 Scheibe (c): unsichtbare Trefferfläche von mindestens --g-tap-min (44 px), sichtbare Größe bleibt. */
+		tap?: boolean;
 	}
 
 	let {
@@ -28,7 +32,9 @@
 		disabled = false,
 		onchange,
 		'aria-label': ariaLabel,
-		class: className = ''
+		class: className = '',
+		testid = 'switch',
+		tap = false
 	}: Props = $props();
 
 	const sizes = {
@@ -70,7 +76,8 @@
 	aria-checked={checked}
 	aria-disabled={disabled || undefined}
 	aria-label={ariaLabel}
-	data-testid="switch"
+	data-testid={testid}
+	data-tap={tap ? 'true' : undefined}
 	data-size={size}
 	data-tone={tone}
 	class={className}
@@ -100,3 +107,16 @@
 		style:transition="left 120ms"
 	></span>
 </span>
+
+<style>
+	/* #2913 Scheibe (c): Tapfläche ≥ --g-tap-min um den sichtbaren Schalter (unsichtbar, zentriert). */
+	[data-tap='true']::before {
+		content: '';
+		position: absolute;
+		left: 50%;
+		top: 50%;
+		width: max(100%, var(--g-tap-min));
+		height: max(100%, var(--g-tap-min));
+		transform: translate(-50%, -50%);
+	}
+</style>
