@@ -164,6 +164,20 @@ Komplexe Zusammenbauten aus Atoms und Molecules, kanonisch im Barrel `$lib/compo
 | `<MetricGroup>` | `$lib/components/organisms` | `group`, `metrics`, `onChange` | Gruppen-Sektion in der Metrik-Auswahl. Physisch in `trip-detail/MetricGroup.svelte`. |
 | `<MetricCheckbox>` | `$lib/components/organisms` | `metric`, `checked`, `onChange` | Metrik-Checkbox mit Horizon-Chip. Physisch in `trip-detail/MetricCheckbox.svelte`. ⚠ C2-Verstoß (ui/horizon-chip) — Folge-Issue offen. |
 
+**Wetter-Reiter (#2913, ADR-0112):** physisch in `organisms/wetter-tab/`, im Barrel exportiert; Trip und Orts-Briefing nutzen dieselben Dateien (`context="route"|"vergleich"`, ADR-0097). Logik-Module (`ampelModell.ts`, `ampelLeiste.ts`, `wetterTabSpeicherung.ts` …) bleiben in `shared/wetter-tab/`. Styles nur über `--g-*`-Tokens (Regel b des Bausteine-Wächters).
+
+| Komponente | Was sie tut |
+|---|---|
+| `<WetterTab>` | Reiter „Wetter“: lädt Daten, hält den Zustand, speichert; setzt die übrigen acht zusammen. Wird mit #2913 Teil 2 zur dünnen Seite. |
+| `<VorlageKarte>` | Vorlagen-Auswahl und „als Vorlage speichern“. |
+| `<AlarmAbKopf>` | „Alarm ab“ für alle Metriken (Segmente Nie/Gelb/Orange/Rot). |
+| `<MetrikZeile>` | Eine Metrik: Name, Ampel-Leiste, Erklärsatz, Alarm-ab, Grenzen bearbeiten. |
+| `<AmpelLeiste>` | Farbband der Ampelstufen einer Metrik. |
+| `<GrenzenEditor>` | Eingabe der Ampel-Grenzen einer Metrik. |
+| `<NichtImBriefing>` | Metriken, die nicht im Briefing sind, zum Hinzufügen. |
+| `<WarnungenRadarKarte>` | Schalter amtliche Warnungen / Radar. |
+| `<AnpassenKarte>` | Tagesfenster anpassen. |
+
 **Schicht-Regeln (Epic #471):**
 - Organisms importieren **NICHT** direkt aus `ui/` (shadcn/Primitives)
 - Imports erfolgen von `atoms/`, `molecules/`, oder anderen `organisms/`
