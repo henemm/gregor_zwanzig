@@ -30,7 +30,7 @@ describe('AC-15: Trip-Kachel zeigt den letzten Versand aus last_briefing', () =>
 	test('Trip mit gestern versendetem Briefing: lastSent "gestern" (nicht null), nextSend aus next', () => {
 		const v = kachelVersand('trip', TRIP, { ...NB, last_briefing: vor(TAG) });
 		assert.equal(v.lastSent, 'gestern');
-		assert.equal(v.nextSend, 'Do 07:00 (CEST)');
+		assert.equal(v.nextSend, 'Do 22.10. 07:00 (CEST)');
 	});
 
 	test('Trip mit heute versendetem Briefing: "heute"', () => {

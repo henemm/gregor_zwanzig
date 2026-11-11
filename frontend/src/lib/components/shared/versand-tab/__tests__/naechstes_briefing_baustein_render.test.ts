@@ -9,7 +9,7 @@
 // formatNextBriefing (nextBriefingText.ts).
 //
 // Prozess-Zone ≠ Trip-Zone (AC-16): TZ=America/Los_Angeles. Eine Umrechnung von
-// `at` in Browser-Zone ergäbe „Mi 22:00" statt „Do 07:00 (CEST)".
+// `at` in Browser-Zone ergäbe „Mi 22:00" statt „Do 22.10. 07:00 (CEST)".
 //
 // Ausführen:
 //   cd frontend && node --import ./test-lib-loader.mjs --experimental-strip-types \
@@ -70,11 +70,11 @@ const baustein = (props: Record<string, unknown>) => ohneKommentare(render(VTNex
 
 describe('AC-16/AC-17: ein Baustein, beide Kontexte, gleiches Ergebnis in Trip-Zone', () => {
 	for (const context of ['route', 'vergleich'] as const) {
-		test(`context=${context}: Wurzel trägt die testid, Etikett + „Do 07:00 (CEST)"`, () => {
+		test(`context=${context}: Wurzel trägt die testid, Etikett + „Do 22.10. 07:00 (CEST)"`, () => {
 			const html = baustein({ nextBriefing: MORGEN_DO, context });
 			const el = text(elementMit(html, TESTID));
 			assert.ok(el.includes('Nächstes Briefing'), `Etikett fehlt: ${el}`);
-			assert.ok(el.includes('Do 07:00 (CEST)'), `Trip-Zonen-Zeit fehlt: ${el}`);
+			assert.ok(el.includes('Do 22.10. 07:00 (CEST)'), `Trip-Zonen-Zeit fehlt: ${el}`);
 			assert.ok(!el.includes('22:00'), `Browser-Zonen-Umrechnung sichtbar: ${el}`);
 		});
 	}

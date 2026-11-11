@@ -154,7 +154,7 @@ describe('AC-18: naechster/letzter Versand aus der Backend-Antwort, ohne eigene 
 
 	test('Trip mit Termin: Wert aus local_date/local_time/tz_abbr; letzter Versand null bis S4', async () => {
 		const { kachelVersand } = await modul(path.join(HOME, 'kachelVersand.ts'));
-		assert.deepEqual(kachelVersand('trip', TRIP, NB), { nextSend: 'Do 07:00 (CEST)', lastSent: null });
+		assert.deepEqual(kachelVersand('trip', TRIP, NB), { nextSend: 'Do 22.10. 07:00 (CEST)', lastSent: null });
 	});
 
 	test('at === null: der Grund statt eines Zeitpunkts (Trip und Vergleich)', async () => {

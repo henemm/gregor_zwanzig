@@ -383,8 +383,15 @@ describe('Naechster Versand und Briefings-Zeiten aus echten Quellen', () => {
 	test('route: Naechster Versand = formatNextBriefing(wert, "route"); nicht geladen ⇒ „—"', async () => {
 		const nb = NB('07:00');
 		assert.equal(kennzahl(await route(trip({}), 'planned', nb), 'naechster-versand').lang, formatNextBriefing(nb, 'route'));
-		assert.equal(kennzahl(await route(trip({}), 'planned', nb), 'naechster-versand').lang, 'Do 07:00 (CEST)');
+		assert.equal(kennzahl(await route(trip({}), 'planned', nb), 'naechster-versand').lang, 'Do 22.10. 07:00 (CEST)');
 		assert.equal(kennzahl(await route(trip({}), 'planned', undefined), 'naechster-versand').lang, '—');
+	});
+
+	// #2869 AC-8: Kennzahl „Nächster Versand" trägt das Datum, Trip und Vergleich gleich.
+	test('#2869 AC-8: route + vergleich, Backend 2026-11-08 06:00 CET ⇒ „So 08.11. 06:00 (CET)"', async () => {
+		const nb = { at: '2026-11-08T06:00:00+01:00', local_date: '2026-11-08', local_time: '06:00', tz: 'Europe/Vienna', tz_abbr: 'CET', slot: 'morning' };
+		assert.equal(kennzahl(await route(trip({}), 'planned', nb), 'naechster-versand').lang, 'So 08.11. 06:00 (CET)');
+		assert.equal(kennzahl(await vergleich(preset(), 'active', nb), 'naechster-versand').lang, 'So 08.11. 06:00 (CET)');
 	});
 
 	test('vergleich: Naechster Versand = formatNextBriefing(wert, "vergleich")', async () => {

@@ -49,7 +49,7 @@ describe('F001/AC-18: Trip-Kachel der Startseite liest den naechsten Versand aus
 	test('Wert aus `trips`, nicht aus dem gleichnamigen `compare`-Eintrag', () => {
 		const k = kachel(html, 't2');
 		const feld = /data-field="next-send"[^>]*>([^<]*)</.exec(k)?.[1] ?? '';
-		assert.match(feld, /Do 08:00 \(CEST\)/, `naechster Versand: ${sichtbar(k)}`);
+		assert.match(feld, /Do 22\.10\. 08:00 \(CEST\)/, `naechster Versand: ${sichtbar(k)}`);
 		assert.doesNotMatch(k, /09:00/, 'Wert aus der Vergleichs-Map gelesen');
 	});
 
@@ -79,7 +79,7 @@ function pruefeVergleichsKachel(html: string, id: string) {
 	const k = kachel(html, id);
 	assert.match(k, /data-kind="vergleich"/);
 	const feld = /data-field="next-send"[^>]*>([^<]*)</.exec(k)?.[1] ?? '';
-	assert.match(feld, /Do 07:00 \(CEST\)/, `naechster Versand: ${sichtbar(k)}`);
+	assert.match(feld, /Do 22\.10\. 07:00 \(CEST\)/, `naechster Versand: ${sichtbar(k)}`);
 	assert.doesNotMatch(k, /09:00/, 'Wert aus der Trip-Map gelesen');
 }
 

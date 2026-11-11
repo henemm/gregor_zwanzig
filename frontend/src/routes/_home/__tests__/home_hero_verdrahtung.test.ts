@@ -80,7 +80,7 @@ describe('A: homeHeroProps — Verdrahtung, die +page.svelte an HomeHero reicht'
 			href: '/compare/cmp-1',
 			subtitle: 'Tirol · 2 Orte verglichen',
 			channels: ['Email'],
-			nextSend: 'Fr 18:00 (CET)'
+			nextSend: 'Fr 30.10. 18:00 (CET)'
 		});
 	});
 
@@ -92,7 +92,7 @@ describe('A: homeHeroProps — Verdrahtung, die +page.svelte an HomeHero reicht'
 			href: '/trips/trip-1?tab=uebersicht',
 			subtitle: 'Korsika',
 			channels: ['Email'],
-			nextSend: 'Do 07:00 (CET)'
+			nextSend: 'Do 29.10. 07:00 (CET)'
 		});
 	});
 
@@ -111,7 +111,7 @@ describe('A: homeHeroProps — Verdrahtung, die +page.svelte an HomeHero reicht'
 	test('gerendert: der Vergleichs-Hero zeigt nur Email und den Backend-Versand', () => {
 		const h = html({ ...homeHeroProps('vergleich', PRESET, NBS) });
 		assert.deepEqual(kanaele(h), ['Email']);
-		assert.ok(h.includes('Fr 18:00 (CET)'), 'naechster Versand fehlt im Hero');
+		assert.ok(h.includes('Fr 30.10. 18:00 (CET)'), 'naechster Versand fehlt im Hero');
 		assert.ok(!/telegram|sms/i.test(h), 'Kanal aus empfaenger im Hero');
 	});
 });

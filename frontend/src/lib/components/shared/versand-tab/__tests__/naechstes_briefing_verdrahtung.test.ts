@@ -128,7 +128,7 @@ describe('(a) VersandTab → VTNextBriefing: Quelle je Kontext', () => {
 		assert.equal(q.neuLaden, GESPEICHERT, 'Neuladen muss am Speicher-Zeitstempel hängen');
 		const { pfade, zeile } = await abrufUndAnzeige(q, ANTWORT);
 		assert.deepEqual(pfade, ['/api/next-briefings?preset_id=cp-1969']);
-		assert.ok(zeile.includes('Nächstes Briefing') && zeile.includes('Do 07:00 (CEST)'), zeile);
+		assert.ok(zeile.includes('Nächstes Briefing') && zeile.includes('Do 22.10. 07:00 (CEST)'), zeile);
 	});
 
 	test('Trip: fragt trip_id ab und zeigt .trips[id]', async () => {
@@ -139,7 +139,7 @@ describe('(a) VersandTab → VTNextBriefing: Quelle je Kontext', () => {
 		assert.equal(q.neuLaden, GESPEICHERT);
 		const { pfade, zeile } = await abrufUndAnzeige(q, ANTWORT);
 		assert.deepEqual(pfade, ['/api/next-briefings?trip_id=t-1969']);
-		assert.ok(zeile.includes('Do 08:00 (CEST)'), zeile);
+		assert.ok(zeile.includes('Do 22.10. 08:00 (CEST)'), zeile);
 	});
 
 	test('neues savedAt ⇒ neue Quelle; ungespeicherte Zeitplan-Eingaben ändern die Quelle nicht', async () => {
@@ -205,8 +205,8 @@ describe('(c) Vergleichs-Hub: Hub-Stat „Nächster Versand" aus dem Backend-Wer
 			(deklaration(ast, quelle, u, 'modell') as Knoten).kennzahlen.find((k: Knoten) => k.id === 'naechster-versand');
 		assert.equal(naechster().lang, '—', 'nicht geladen ⇒ „—"');
 		u.naechstesBriefing = { wert: NB('07:00'), quelle: u.naechstesBriefing.quelle };
-		assert.equal(naechster().lang, 'Do 07:00 (CEST)');
-		assert.equal(naechster().kurz, 'Do 07:00 (CEST)');
+		assert.equal(naechster().lang, 'Do 22.10. 07:00 (CEST)');
+		assert.equal(naechster().kurz, 'Do 22.10. 07:00 (CEST)');
 	});
 });
 
@@ -250,7 +250,7 @@ describe('(c/F007) Vergleichs-Übersicht: jede „Nächster Versand"-Anzeige ren
 		return r;
 	}
 
-	test('Stat-Karten (mobil + Desktop): der Wert-Knoten neben dem Etikett zeigt „Do 07:00 (CEST)"', async () => {
+	test('Stat-Karten (mobil + Desktop): der Wert-Knoten neben dem Etikett zeigt „Do 22.10. 07:00 (CEST)"', async () => {
 		const { ast, quelle, u } = await hubMitWert();
 		const schleifen = knoten(ast.fragment, 'EachBlock').filter((e) => /kennzahlen|Kennzahlen/.test(quelle.slice(e.expression.start, e.expression.end)));
 		assert.equal(schleifen.length, 2, 'Messaufbau: genau zwei Kennzahlen-Raster (mobil, Desktop) erwartet');
@@ -273,7 +273,7 @@ describe('(c/F007) Vergleichs-Übersicht: jede „Nächster Versand"-Anzeige ren
 			assert.ok(wertKnoten, 'Wert-Knoten neben dem Etikett fehlt');
 			const tags = fragmentAusdruecke(wertKnoten);
 			assert.ok(tags.length >= 1, 'Wert-Knoten rendert keinen Ausdruck');
-			for (const t of tags) assert.equal(werte(ohneTypen(quelle, t.expression), bindung), 'Do 07:00 (CEST)');
+			for (const t of tags) assert.equal(werte(ohneTypen(quelle, t.expression), bindung), 'Do 22.10. 07:00 (CEST)');
 		}
 	});
 
@@ -285,7 +285,7 @@ describe('(c/F007) Vergleichs-Übersicht: jede „Nächster Versand"-Anzeige ren
 		);
 		assert.equal(tags.length, 1, 'Messaufbau: Zusammenfassung wird genau einmal gerendert');
 		const gerendert = String(werte(ohneTypen(quelle, tags[0].expression), u));
-		assert.ok(gerendert.includes('nächster Versand Do 07:00 (CEST)'), gerendert);
+		assert.ok(gerendert.includes('nächster Versand Do 22.10. 07:00 (CEST)'), gerendert);
 	});
 });
 

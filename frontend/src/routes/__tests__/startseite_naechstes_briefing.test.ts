@@ -92,7 +92,7 @@ describe('(e) Startseite zeigt den Wert aus data.nextBriefings', () => {
 		const t = sichtbar(html);
 		assert.ok(t.includes('Was geht raus'), 'Messaufbau: Trip-Hero fehlt');
 		assert.ok(t.includes('08:00 (CEST)'), `Trip-Wert aus dem Backend fehlt: ${t}`);
-		assert.ok(t.includes('Do 07:00 (CEST)'), `Vergleichs-Kachel zeigt den Backend-Wert nicht: ${t}`);
+		assert.ok(t.includes('Do 22.10. 07:00 (CEST)'), `Vergleichs-Kachel zeigt den Backend-Wert nicht: ${t}`);
 	});
 
 	test('Vergleichs-Hero: Stat „Nächster Versand" und Timeline „Nächster · …"', () => {
@@ -102,8 +102,8 @@ describe('(e) Startseite zeigt den Wert aus data.nextBriefings', () => {
 			nextBriefings: { trips: {}, compare: { p1: NB('07:00') } }
 		});
 		const t = sichtbar(html);
-		assert.ok(t.includes('Nächster · Do 07:00 (CEST)'), `Timeline-Zeile fehlt: ${t}`);
-		assert.ok(/Nächster Versand\s+Do 07:00 \(CEST\)/.test(t), `Hero-Stat zeigt den Backend-Wert nicht: ${t}`);
+		assert.ok(t.includes('Nächster · Do 22.10. 07:00 (CEST)'), `Timeline-Zeile fehlt: ${t}`);
+		assert.ok(/Nächster Versand\s+Do 22\.10\. 07:00 \(CEST\)/.test(t), `Hero-Stat zeigt den Backend-Wert nicht: ${t}`);
 	});
 
 	test('ohne Backend-Wert: „—", keine erfundene Zeit', () => {

@@ -85,12 +85,12 @@ export const PROFILE: Record<string, Record<string, unknown>> = {
 
 /** Backend-Werte `NextBriefing` (GET /api/next-briefings). */
 export const NB: Record<string, Record<string, unknown> | null> = {
-	termin: { at: '2026-10-28T07:00:00+01:00', local_date: '2026-10-28', local_time: '07:00', tz: 'Europe/Paris', tz_abbr: 'CEST', slot: 'morning' },
+	termin: { at: '2026-10-28T07:00:00+01:00', local_date: '2026-10-28', local_time: '07:00', tz: 'Europe/Paris', tz_abbr: 'CET', slot: 'morning' },
 	uebersprungen: {
 		at: '2026-10-28T07:00:00+01:00',
 		local_date: '2026-10-28',
 		local_time: '07:00',
-		tz_abbr: 'CEST',
+		tz_abbr: 'CET',
 		skipped: { local_date: '2026-10-29', local_time: '07:00', slot: 'morning' }
 	},
 	ueberfaellig: { at: '2026-10-28T07:00:00+01:00', local_date: '2026-10-28', local_time: '07:00', tz_abbr: 'CET', overdue: true },
@@ -129,6 +129,11 @@ export function tabRendern(context: Kontext): string {
 		return html(VersandTab, { context, trip: { id: 't1', stages: [{ date: '2026-10-28' }, { date: '2026-10-31' }] } });
 	}
 	return html(VersandTab, { context, sendEmail: true, sendTelegram: false, endDate: null, preset: { id: 'p1' } });
+}
+
+/** #2869: nur der Baustein „Nächstes Briefing" (VTNextBriefing) mit einem Backend-Wert. */
+export function naechstesBriefingRendern(nextBriefing: Record<string, unknown> | null, context: Kontext): string {
+	return html(VTNextBriefing, { nextBriefing, context });
 }
 
 /** Restliche Zustaende, die der Reiter nur in Sonderfaellen zeigt. */

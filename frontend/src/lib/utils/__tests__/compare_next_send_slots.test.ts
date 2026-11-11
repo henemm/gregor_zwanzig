@@ -59,7 +59,7 @@ describe('#1268 AC-9 / #1969: Anzeige zeigt die Versandzeit (Backend-Wert), nich
 		const preset = makeCompare({ schedule: 'daily', hour_from: 9, morning_enabled: true, morning_time: '07:00:00' });
 		const zeile = naechster(preset, NB('07:00'));
 		assert.ok(zeile, 'daily-Preset mit Backend-Termin muss eine Nächster-Zeile liefern');
-		assert.ok(zeile!.includes('Fr 07:00 (CEST)'), `Versandzeit 07:00 fehlt: ${zeile}`);
+		assert.ok(zeile!.includes('Fr 05.06. 07:00 (CEST)'), `Versandzeit 07:00 fehlt: ${zeile}`);
 		assert.ok(!zeile!.includes('09:00'), `hour_from=9 sichtbar: ${zeile}`);
 	});
 
@@ -83,7 +83,7 @@ describe('#1268 AC-9 / #1969: Anzeige zeigt die Versandzeit (Backend-Wert), nich
 			evening_enabled: true,
 			evening_time: '18:00:00'
 		});
-		assert.ok(naechster(preset, NB('18:00', 'evening'))?.includes('Fr 18:00 (CEST)'));
+		assert.ok(naechster(preset, NB('18:00', 'evening'))?.includes('Fr 05.06. 18:00 (CEST)'));
 	});
 
 	test('(d) schedule "manual" (Backend: reason manual) → keine Nächster-Zeile', () => {

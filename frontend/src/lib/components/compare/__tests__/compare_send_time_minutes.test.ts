@@ -69,7 +69,7 @@ function makePreset(overrides: Partial<ComparePreset> = {}): ComparePreset {
 }
 
 describe('#1268 F007 / #1969 AC-24: „Nächster Versand" zeigt HH:00 — Minuten werden ignoriert', () => {
-	test('Slot 07:30 → Backend 07:00 → Anzeige "Fr 07:00 (CEST)", nie 07:30', () => {
+	test('Slot 07:30 → Backend 07:00 → Anzeige "Fr 05.06. 07:00 (CEST)", nie 07:30', () => {
 		// GIVEN: ein Vergleich mit Slot-Zeit 07:30 (Bestandswert); der Versand
 		//        nutzt nur die Stunde → Backend meldet local_time "07:00"
 		// WHEN: die "Nächster Versand"-Anzeige gerendert wird
@@ -77,17 +77,17 @@ describe('#1268 F007 / #1969 AC-24: „Nächster Versand" zeigt HH:00 — Minute
 		const preset = makePreset({ morning_time: '07:30:00' });
 		assert.deepEqual(primarySendSlot(preset), { hour: 7, minute: 30 }, 'Messaufbau: Slot traegt Minuten');
 		const label = formatNextBriefing(backendWert('07:00'), 'vergleich');
-		assert.equal(label, 'Fr 07:00 (CEST)');
+		assert.equal(label, 'Fr 05.06. 07:00 (CEST)');
 		assert.ok(!label.includes('07:30'), `Minuten-Fiktion sichtbar: ${label}`);
 		// Durch einen echten Konsumenten MIT dem 07:30-Preset: rechnete dort wieder
 		// das Frontend aus dem Preset, erschiene 07:30.
 		const zeile = homeCompareTimeline(preset, backendWert('07:00')).find((r) => r.when.startsWith('Nächster · '));
-		assert.equal(zeile?.when, 'Nächster · Fr 07:00 (CEST)');
+		assert.equal(zeile?.when, 'Nächster · Fr 05.06. 07:00 (CEST)');
 	});
 
 	test('volle Stunde bleibt zweistellig formatiert: 07:00', () => {
 		// Regressionsanker: der haeufige Fall darf sich nicht veraendern.
-		assert.equal(formatNextBriefing(backendWert('07:00'), 'vergleich'), 'Fr 07:00 (CEST)');
+		assert.equal(formatNextBriefing(backendWert('07:00'), 'vergleich'), 'Fr 05.06. 07:00 (CEST)');
 	});
 
 	test('Abend-Slot 18:45 → Backend 18:00 → Anzeige 18:00, nie 18:45', () => {
@@ -98,12 +98,12 @@ describe('#1268 F007 / #1969 AC-24: „Nächster Versand" zeigt HH:00 — Minute
 			evening_time: '18:45:00'
 		});
 		const label = formatNextBriefing(backendWert('18:00', 'evening'), 'vergleich');
-		assert.equal(label, 'Fr 18:00 (CEST)');
+		assert.equal(label, 'Fr 05.06. 18:00 (CEST)');
 		assert.ok(!label.includes('18:45'));
 		const zeile = homeCompareTimeline(preset, backendWert('18:00', 'evening')).find((r) =>
 			r.when.startsWith('Nächster · ')
 		);
-		assert.equal(zeile?.when, 'Nächster · Fr 18:00 (CEST)');
+		assert.equal(zeile?.when, 'Nächster · Fr 05.06. 18:00 (CEST)');
 	});
 
 	test('null → "manuell" (unveraendert)', () => {

@@ -103,14 +103,14 @@ test('AC-4: daily — Backend meldet heute 06:00 → Zeile zeigt Fr 06:00', () =
 	const preset = makeCompare({ schedule: 'daily', morning_time: '06:00:00' });
 	const zeile = naechsteZeile(preset, nb('2026-06-05', '06:00'));
 	assert.ok(zeile, 'Nächster-Zeile fehlt');
-	assert.ok(zeile!.when.includes('Fr 06:00 (CEST)'), zeile!.when);
+	assert.ok(zeile!.when.includes('Fr 05.06. 06:00 (CEST)'), zeile!.when);
 	assert.strictEqual(zeile!.status, 'planned');
 });
 
 test('AC-4b: daily — Backend meldet morgen 06:00 → Zeile zeigt Sa 06:00', () => {
 	const preset = makeCompare({ schedule: 'daily', morning_time: '06:00:00' });
 	const zeile = naechsteZeile(preset, nb('2026-06-06', '06:00'));
-	assert.ok(zeile!.when.includes('Sa 06:00 (CEST)'), zeile!.when);
+	assert.ok(zeile!.when.includes('Sa 06.06. 06:00 (CEST)'), zeile!.when);
 });
 
 test('AC-4c: manual — Backend meldet keinen Termin → keine Nächster-Zeile', () => {
