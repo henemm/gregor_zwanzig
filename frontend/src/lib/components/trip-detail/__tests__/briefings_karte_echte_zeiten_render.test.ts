@@ -78,6 +78,13 @@ describe('AC-20: Karte „Briefings laufen" zeigt echte Zeiten statt 06:00/18:00
 		assert.ok(k.includes('20:00'), `20:00 fehlt: ${k}`);
 		assert.ok(!k.includes('06:00'), `fest verdrahtetes 06:00 sichtbar: ${k}`);
 		assert.ok(!k.includes('18:00'), `fest verdrahtetes 18:00 sichtbar: ${k}`);
+		// AC-9 (#2869): Die Karte zeigt je Slot nur die Uhrzeit, kein Datum, keinen Wochentag.
+		const datum = /\d{1,2}\.\d{1,2}\./;
+		const wochentag = /\b(Mo|Di|Mi|Do|Fr|Sa|So|Mon|Tue|Wed|Thu|Fri|Sat|Sun)\.?\s+\d/;
+		assert.ok(!datum.test(k), `Datum in der Karte sichtbar: ${k}`);
+		assert.ok(!wochentag.test(k), `Wochentag in der Karte sichtbar: ${k}`);
+		// Gegenprobe: die Muster schlagen auf den verbotenen Wortlaut an
+		assert.ok(datum.test('So 08.11. 06:00 (CET)') && wochentag.test('So 08.11. 06:00 (CET)'));
 	});
 
 	test('Zonenkürzel stammt aus dem Backend-Wert (CEST), nicht aus der Browser-Zone', () => {

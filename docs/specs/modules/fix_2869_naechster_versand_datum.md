@@ -196,4 +196,4 @@ Zusammen belegen sie: die beiden verschiedenen Kürzel gehören zu verschiedenen
 
 ## Changelog
 
-- 2026-11-11: Erstfassung. Anlass Issue #2869 (Nebenbefund aus #2845): Analyse ergab keinen Zonenfehler, sondern mehrdeutigen Wortlaut; PO-Entscheidung „Datum immer anzeigen". Anpassung des Abschnitts „Anzeige-Wortlaut" in `feat_1969_naechstes_briefing.md` gehört zur Umsetzung (Normal: „Do 29.10. 07:00 (CEST)"; `skip_next`: „Do 29.10. 18:00 (CEST) — Do 29.10. 07:00 wird übersprungen"; letzter Punkt: „Wochentag und Datum aus `local_date`").
+- 2026-11-11: Erstfassung. Anlass Issue #2869 (Nebenbefund aus #2845): Analyse ergab keinen Zonenfehler, sondern mehrdeutigen Wortlaut; PO-Entscheidung „Datum immer anzeigen". Anpassung des Abschnitts „Anzeige-Wortlaut" in `feat_1969_naechstes_briefing.md` gehört zur Umsetzung (Normal: „Do 29.10. 07:00 (CET)"; `skip_next`: „Do 29.10. 18:00 (CET) — Do 29.10. 07:00 wird übersprungen"; letzter Punkt: „Wochentag und Datum aus `local_date`").
