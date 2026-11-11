@@ -3,6 +3,9 @@
 	// Ein Schalter fuer die amtlichen Warnungen (ODER-Regel beim Lesen, beide Felder beim Schreiben,
 	// amtlicheWarnungen.ts); der Radar-Schalter nur, wenn der Aufrufer `mitRadar` setzt
 	// (Orts-Briefing; Trip folgt mit S8 #2800).
+	// #2913 Teil 2 (K-6): Zeilen aus dem Molekül Einstellungszeile. Der Schalter bleibt vorerst roh
+	// (role=switch, Known Limitation: atoms/Switch reicht weder Testid noch aria-checked durch).
+	import { Einstellungszeile } from '$lib/components/molecules';
 	import { t } from '$lib/i18n';
 
 	interface Props {
@@ -22,21 +25,13 @@
 {/snippet}
 
 <div class="wt-karte">
-	<div class="wt-zeile">
-		<div class="wt-text">
-			<b>{$t('wetter.warnungen.titel')}</b>
-			<small>{$t('wetter.warnungen.beschreibung')}</small>
-		</div>
+	<Einstellungszeile titel={$t('wetter.warnungen.titel')} hinweis={$t('wetter.warnungen.beschreibung')}>
 		{@render schalter(warnungenAn, 'wetter-warnungen-schalter', $t('wetter.warnungen.titel'), onWarnungen)}
-	</div>
+	</Einstellungszeile>
 	{#if mitRadar}
-		<div class="wt-zeile">
-			<div class="wt-text">
-				<b>{$t('wetter.radar.titel')}</b>
-				<small>{$t('wetter.radar.beschreibung', { orte: $t('wetter.radar.deine_orte') })}</small>
-			</div>
+		<Einstellungszeile titel={$t('wetter.radar.titel')} hinweis={$t('wetter.radar.beschreibung', { orte: $t('wetter.radar.deine_orte') })}>
 			{@render schalter(radarAn, 'wetter-radar-schalter', $t('wetter.radar.titel'), onRadar)}
-		</div>
+		</Einstellungszeile>
 	{/if}
 </div>
 
@@ -46,36 +41,12 @@
 		border-radius: var(--g-r-3);
 		background: var(--g-card);
 	}
-	.wt-zeile {
-		display: flex;
-		align-items: center;
-		justify-content: space-between;
-		gap: 16px;
-		padding: 12px 20px;
-	}
-	.wt-zeile + .wt-zeile {
-		border-top: 1px solid var(--g-rule-soft);
-	}
-	.wt-text {
-		display: flex;
-		flex-direction: column;
-		gap: 2px;
-		min-width: 0;
-	}
-	.wt-text b {
-		font-size: 14px;
-		color: var(--g-ink);
-	}
-	.wt-text small {
-		font-size: 12.5px;
-		color: var(--g-ink-2);
-	}
 	.wt-switch {
 		display: inline-flex;
 		align-items: center;
 		justify-content: center;
-		min-width: 56px;
-		min-height: 44px;
+		min-width: var(--g-size-56px);
+		min-height: var(--g-tap-min);
 		padding: 0;
 		border: none;
 		background: transparent;
@@ -83,15 +54,15 @@
 		flex-shrink: 0;
 	}
 	.wt-switch:focus-visible {
-		outline: 2px solid var(--g-accent);
-		outline-offset: 2px;
+		outline: var(--g-size-2px) solid var(--g-accent);
+		outline-offset: var(--g-size-2px);
 	}
 	.wt-track {
 		position: relative;
 		display: block;
-		width: 44px;
-		height: 26px;
-		border-radius: 13px;
+		width: var(--g-tap-min);
+		height: var(--g-size-26px);
+		border-radius: var(--g-size-13px);
 		background: var(--g-ink-3);
 		transition: background 120ms;
 	}
@@ -100,20 +71,15 @@
 	}
 	.wt-knopf {
 		position: absolute;
-		top: 2px;
-		left: 2px;
-		width: 22px;
-		height: 22px;
+		top: var(--g-size-2px);
+		left: var(--g-size-2px);
+		width: var(--g-size-22px);
+		height: var(--g-size-22px);
 		border-radius: 50%;
 		background: var(--g-paper);
 		transition: left 120ms;
 	}
 	.wt-track.an .wt-knopf {
-		left: 20px;
-	}
-	@media (max-width: 899px) {
-		.wt-zeile {
-			padding: 12px 16px;
-		}
+		left: var(--g-s-5);
 	}
 </style>

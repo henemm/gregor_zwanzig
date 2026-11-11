@@ -59,7 +59,7 @@
 	import { groupLocations } from '$lib/components/compare/locationHelpers';
 	import WetterMetrikenVersandPanel from '$lib/components/shared/WetterMetrikenVersandPanel.svelte';
 	// Issue #2794 S3a Teil-PR 3 (AC-38): Schritt Wetter = WetterTab (createMode, kein PUT).
-	import WetterTab from '$lib/components/shared/wetter-tab/WetterTab.svelte';
+	import WetterTab from '$lib/components/shared/WetterTab.svelte';
 	import type { vergleichNutzlast } from '$lib/components/shared/wetter-tab/wetterTabSpeicherung';
 	import { toStoredActiveMetrics } from '$lib/components/shared/weather-metrics-tab/compareMetricSelection';
 	import type { Ampel } from '$lib/types';

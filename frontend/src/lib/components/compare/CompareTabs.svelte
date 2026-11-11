@@ -14,7 +14,7 @@
 	import { Dot, Pill, Btn, Card, SectionH } from '$lib/components/atoms';
 	import CompareLocationRow from '$lib/components/molecules/CompareLocationRow.svelte';
 	// Issue #2794 S3a Teil-PR 3 (AC-38): Reiter Wetter = genau EIN WetterTab (Ampel).
-	import WetterTab from '$lib/components/shared/wetter-tab/WetterTab.svelte';
+	import WetterTab from '$lib/components/shared/WetterTab.svelte';
 	// Issue #2682: die Übersicht ist der geteilte Baustein (context="vergleich").
 	import HubUebersicht from '$lib/components/shared/hub-uebersicht/HubUebersicht.svelte';
 	// Issue #2880: EINE Reiterfläche (Rand 28/40/60) für Übersicht und Orte, wie im Trip.

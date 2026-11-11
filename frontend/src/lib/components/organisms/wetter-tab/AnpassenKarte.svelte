@@ -3,8 +3,8 @@
 	// ADR-0035). Die Bedienung ist die bestehende DayWindowCard (Select-Atom, Clamp unveraendert);
 	// gespeichert wird ueber den Reiter (Trip report_config, Orte top-level).
 	import { t } from '$lib/i18n';
-	import DayWindowCard from '../weather-metrics-tab/DayWindowCard.svelte';
-	import type { Tagesfenster } from './wetterZustand.ts';
+	import DayWindowCard from '../../shared/weather-metrics-tab/DayWindowCard.svelte';
+	import type { Tagesfenster } from '../../shared/wetter-tab/wetterZustand.ts';
 
 	interface Props {
 		tagesfenster: Tagesfenster;
@@ -45,20 +45,20 @@
 	.wt-auf {
 		display: flex;
 		align-items: center;
-		gap: 8px;
+		gap: var(--g-s-2);
 		width: 100%;
-		min-height: 44px;
-		padding: 0 20px;
+		min-height: var(--g-tap-min);
+		padding: 0 var(--g-s-5);
 		border: none;
 		background: transparent;
 		color: var(--g-ink);
 		font: inherit;
-		font-size: 14px;
+		font-size: var(--g-size-14px);
 		font-weight: 600;
 		text-align: left;
 		cursor: pointer;
 	}
 	.wt-inhalt {
-		padding: 0 12px 12px;
+		padding: 0 var(--g-s-3) var(--g-s-3);
 	}
 </style>

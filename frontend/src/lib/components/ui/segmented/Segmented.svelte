@@ -5,8 +5,11 @@
   // WAI-ARIA-Radiogroup (statt nativer Radio-Knöpfe): Container `radiogroup`, Einträge `radio`
   // mit aria-checked, nur der gewählte in der Tab-Reihenfolge, Pfeiltasten wählen und fokussieren.
   // Ohne `rolle` bleibt alles wie bisher (Reiter, `role="tab"`).
-  type SollItem = { id: string; label: string; badge?: number };
-  type IstOption = { value: string; label: string; badge?: number; testid?: string; badge_testid?: string };
+  // Issue #2913 Teil 2 (K-4): `farbe` → Farbpunkt je Segment (data-slot="segmented-punkt", Farbe aus
+  // --g-ampel-* in app.css); die items-API reicht testid/badge_testid/farbe durch wie die options-API.
+  type Farbe = 'green' | 'yellow' | 'orange' | 'red';
+  type SollItem = { id: string; label: string; badge?: number; testid?: string; badge_testid?: string; farbe?: Farbe };
+  type IstOption = { value: string; label: string; badge?: number; testid?: string; badge_testid?: string; farbe?: Farbe };
 
   let {
     items,
@@ -34,7 +37,7 @@
 
   const resolvedItems = $derived(
     items
-      ? items.map(i => ({ value: i.id, label: i.label, badge: i.badge, testid: undefined, badge_testid: undefined }))
+      ? items.map((i): IstOption => ({ value: i.id, label: i.label, badge: i.badge, testid: i.testid, badge_testid: i.badge_testid, farbe: i.farbe }))
       : (options ?? [])
   );
   const resolvedValue = $derived(value ?? selected ?? '');
@@ -81,6 +84,6 @@
       data-testid={item.testid ?? undefined}
       onclick={() => resolvedChange(item.value ?? '')}
       onkeydown={(e) => taste(e, i)}
-    >{item.label}{#if item.badge !== undefined && item.badge >= 1}<span data-slot="segmented-badge" data-testid={item.badge_testid ?? undefined}>{item.badge}</span>{/if}</button>
+    >{#if item.farbe}<i data-slot="segmented-punkt" data-farbe={item.farbe} aria-hidden="true"></i>{/if}{item.label}{#if item.badge !== undefined && item.badge >= 1}<span data-slot="segmented-badge" data-testid={item.badge_testid ?? undefined}>{item.badge}</span>{/if}</button>
   {/each}
 </div>

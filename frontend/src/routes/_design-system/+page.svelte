@@ -32,7 +32,9 @@
 		Eyebrow,
 		SectionH,
 		AvatarStack,
-		TopoBg
+		TopoBg,
+		Segmented,
+		Skelett
 	} from '$lib/components/atoms';
 
 	// Schicht 3 — Molecules (#372)
@@ -101,6 +103,22 @@
 		{ v: 'var(--g-wx-sun)', n: 'sun', hex: '#e8a820' },
 		{ v: 'var(--g-wx-fog)', n: 'fog', hex: '#9a9a8a' }
 	];
+	// #2913 Teil 2 (AC-20): Ampel-Tokens des Wetter-Reiters, Swatch zeigt den aktiven Modus,
+	// das Label nennt hell und dunkel (je >= 3:1 gegen --g-card).
+	const AMPEL_COLORS = [
+		{ v: 'var(--g-ampel-gruen)', n: 'ampel-gruen', hex: 'hell #15803d · dunkel #15803d' },
+		{ v: 'var(--g-ampel-gelb)', n: 'ampel-gelb', hex: 'hell #b98100 · dunkel #d69500' },
+		{ v: 'var(--g-ampel-orange)', n: 'ampel-orange', hex: 'hell #d4530a · dunkel #d4530a' },
+		{ v: 'var(--g-ampel-rot)', n: 'ampel-rot', hex: 'hell #a8104a · dunkel #d43a76' }
+	];
+	// #2913 Teil 2 (AC-20): Segmented mit Farbpunkt („Alarm ab“-Stufen).
+	const AMPEL_STUFEN = [
+		{ id: 'never', label: 'Nie' },
+		{ id: 'yellow', label: 'Gelb', farbe: 'yellow' as const },
+		{ id: 'orange', label: 'Orange', farbe: 'orange' as const },
+		{ id: 'red', label: 'Rot', farbe: 'red' as const }
+	];
+	let ampelStufe = $state('orange');
 
 	const WICON_KINDS = ['sun', 'cloud', 'rain', 'thunder', 'snow', 'wind', 'moon', 'headlamp'] as const;
 
@@ -374,6 +392,7 @@
 			{@render ColorRow('Accent', ACCENT_COLORS)}
 			{@render ColorRow('Semantic', SEMANTIC_COLORS)}
 			{@render ColorRow('Wetter', WEATHER_COLORS)}
+			{@render ColorRow('Ampel (hell / dunkel)', AMPEL_COLORS)}
 		{/snippet}
 		{@render Section('03', 'Farben', 'Paper-Off-White als Bühne, Burnt-Orange als einziger Markenakzent. Wetter-Farben aus dem echten Email-Briefing abgeleitet.', farbenBody)}
 
@@ -418,6 +437,29 @@
 					</div>
 				{/snippet}
 				{@render Panel('Input · drei Größen', inputsBody)}
+
+				<!-- #2913 Teil 2 (AC-20): Input mit Ampel-Unterkante -->
+				{#snippet inputAmpelBody()}
+					<div style:display="flex" style:flex-wrap="wrap" style:gap="10px">
+						<Input ampel="green" value="10" inputmode="decimal" aria-label="grün" />
+						<Input ampel="yellow" value="30" inputmode="decimal" aria-label="gelb" />
+						<Input ampel="orange" value="50" inputmode="decimal" aria-label="orange" />
+						<Input ampel="red" value="70" inputmode="decimal" aria-label="rot" />
+					</div>
+				{/snippet}
+				{@render Panel('Input · Ampel-Unterkante', inputAmpelBody)}
+
+				<!-- #2913 Teil 2 (AC-20): Segmented mit Farbpunkt -->
+				{#snippet segmentedBody()}
+					<Segmented rolle="radio" ariaLabel="Alarm ab" items={AMPEL_STUFEN} value={ampelStufe} onChange={(v: string) => (ampelStufe = v)} />
+				{/snippet}
+				{@render Panel('Segmented · Farbpunkt', segmentedBody)}
+
+				<!-- #2913 Teil 2 (AC-20): Skelett (Lade-Platzhalter) -->
+				{#snippet skelettBody()}
+					<Skelett label="Lade Metriken …" />
+				{/snippet}
+				{@render Panel('Skelett · Lade-Platzhalter', skelettBody)}
 
 				<!-- Switch -->
 				{#snippet switchBody()}

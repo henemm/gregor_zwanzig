@@ -1,0 +1,3330 @@
+
+> frontend@0.0.1 test
+> node --import ./test-lib-loader.mjs --experimental-strip-types --experimental-test-module-mocks --test src/lib/__tests__/ampel_tokens_kontrast.test.ts src/lib/components/atoms/__tests__/ampel_atome.test.ts src/lib/components/molecules/__tests__/einstellungszeile_chips.test.ts src/lib/components/organisms/__tests__/wetter_tab_bausteine.test.ts src/lib/components/organisms/__tests__/wetter_tab_i18n.test.ts src/lib/components/organisms/__tests__/wetter_tab_ort.test.ts src/lib/components/organisms/__tests__/wetter_tab_barrel.test.ts src/routes/_design-system/showcase.test.ts
+
+TAP version 13
+# Subtest: AC-11: Ampel-Tokens existieren in Light und (eigenem) Dark-Block
+    # Subtest: --g-ampel-gruen im ersten :root-Block
+    not ok 1 - --g-ampel-gruen im ersten :root-Block
+      ---
+      duration_ms: 1.328674
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/__tests__/ampel_tokens_kontrast.test.ts:130:3'
+      failureType: 'testCodeFailure'
+      error: 'TDD RED: --g-ampel-gruen fehlt im ersten :root-Block von app.css'
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: true
+      actual: ~
+      operator: '=='
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/__tests__/ampel_tokens_kontrast.test.ts:131:11)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Test.start (node:internal/test_runner/test:944:17)
+        node:internal/test_runner/test:1440:71
+        node:internal/per_context/primordials:466:82
+        new Promise (<anonymous>)
+        new SafePromise (node:internal/per_context/primordials:435:3)
+        node:internal/per_context/primordials:466:9
+        Array.map (<anonymous>)
+      ...
+    # Subtest: --g-ampel-gruen im Dark-Block :root[data-theme="dark"]
+    not ok 2 - --g-ampel-gruen im Dark-Block :root[data-theme="dark"]
+      ---
+      duration_ms: 0.246211
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/__tests__/ampel_tokens_kontrast.test.ts:133:3'
+      failureType: 'testCodeFailure'
+      error: 'TDD RED: --g-ampel-gruen fehlt im Dark-Block (eigener Dark-Wert verlangt)'
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: true
+      actual: ~
+      operator: '=='
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/__tests__/ampel_tokens_kontrast.test.ts:134:11)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Promise.all (index 0)
+        async Suite.run (node:internal/test_runner/test:1442:7)
+        async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+      ...
+    # Subtest: --g-ampel-gelb im ersten :root-Block
+    not ok 3 - --g-ampel-gelb im ersten :root-Block
+      ---
+      duration_ms: 2.766266
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/__tests__/ampel_tokens_kontrast.test.ts:130:3'
+      failureType: 'testCodeFailure'
+      error: 'TDD RED: --g-ampel-gelb fehlt im ersten :root-Block von app.css'
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: true
+      actual: ~
+      operator: '=='
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/__tests__/ampel_tokens_kontrast.test.ts:131:11)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: --g-ampel-gelb im Dark-Block :root[data-theme="dark"]
+    not ok 4 - --g-ampel-gelb im Dark-Block :root[data-theme="dark"]
+      ---
+      duration_ms: 0.187841
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/__tests__/ampel_tokens_kontrast.test.ts:133:3'
+      failureType: 'testCodeFailure'
+      error: 'TDD RED: --g-ampel-gelb fehlt im Dark-Block (eigener Dark-Wert verlangt)'
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: true
+      actual: ~
+      operator: '=='
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/__tests__/ampel_tokens_kontrast.test.ts:134:11)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: --g-ampel-orange im ersten :root-Block
+    not ok 5 - --g-ampel-orange im ersten :root-Block
+      ---
+      duration_ms: 0.211721
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/__tests__/ampel_tokens_kontrast.test.ts:130:3'
+      failureType: 'testCodeFailure'
+      error: 'TDD RED: --g-ampel-orange fehlt im ersten :root-Block von app.css'
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: true
+      actual: ~
+      operator: '=='
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/__tests__/ampel_tokens_kontrast.test.ts:131:11)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: --g-ampel-orange im Dark-Block :root[data-theme="dark"]
+    not ok 6 - --g-ampel-orange im Dark-Block :root[data-theme="dark"]
+      ---
+      duration_ms: 0.101021
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/__tests__/ampel_tokens_kontrast.test.ts:133:3'
+      failureType: 'testCodeFailure'
+      error: 'TDD RED: --g-ampel-orange fehlt im Dark-Block (eigener Dark-Wert verlangt)'
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: true
+      actual: ~
+      operator: '=='
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/__tests__/ampel_tokens_kontrast.test.ts:134:11)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: --g-ampel-rot im ersten :root-Block
+    not ok 7 - --g-ampel-rot im ersten :root-Block
+      ---
+      duration_ms: 0.158891
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/__tests__/ampel_tokens_kontrast.test.ts:130:3'
+      failureType: 'testCodeFailure'
+      error: 'TDD RED: --g-ampel-rot fehlt im ersten :root-Block von app.css'
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: true
+      actual: ~
+      operator: '=='
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/__tests__/ampel_tokens_kontrast.test.ts:131:11)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: --g-ampel-rot im Dark-Block :root[data-theme="dark"]
+    not ok 8 - --g-ampel-rot im Dark-Block :root[data-theme="dark"]
+      ---
+      duration_ms: 0.189019
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/__tests__/ampel_tokens_kontrast.test.ts:133:3'
+      failureType: 'testCodeFailure'
+      error: 'TDD RED: --g-ampel-rot fehlt im Dark-Block (eigener Dark-Wert verlangt)'
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: true
+      actual: ~
+      operator: '=='
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/__tests__/ampel_tokens_kontrast.test.ts:134:11)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    1..8
+not ok 1 - AC-11: Ampel-Tokens existieren in Light und (eigenem) Dark-Block
+  ---
+  duration_ms: 6.221765
+  type: 'suite'
+  location: '/home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/__tests__/ampel_tokens_kontrast.test.ts:128:1'
+  failureType: 'subtestsFailed'
+  error: '8 subtests failed'
+  code: 'ERR_TEST_FAILURE'
+  ...
+# Subtest: AC-11: Kontrast >= 3:1 gegen --g-card je Modus
+    # Subtest: --g-ampel-gruen (hell) gegen --g-card >= 3:1
+    not ok 1 - --g-ampel-gruen (hell) gegen --g-card >= 3:1
+      ---
+      duration_ms: 0.445981
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/__tests__/ampel_tokens_kontrast.test.ts:142:4'
+      failureType: 'testCodeFailure'
+      error: 'TDD RED: Token --g-ampel-gruen fehlt im ersten :root-Block von app.css'
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: true
+      actual: ~
+      operator: '=='
+      stack: |-
+        roh (file:///home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/__tests__/ampel_tokens_kontrast.test.ts:66:9)
+        farbe (file:///home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/__tests__/ampel_tokens_kontrast.test.ts:79:12)
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/__tests__/ampel_tokens_kontrast.test.ts:143:24)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Test.start (node:internal/test_runner/test:944:17)
+        node:internal/test_runner/test:1440:71
+        node:internal/per_context/primordials:466:82
+        new Promise (<anonymous>)
+        new SafePromise (node:internal/per_context/primordials:435:3)
+      ...
+    # Subtest: --g-ampel-gelb (hell) gegen --g-card >= 3:1
+    not ok 2 - --g-ampel-gelb (hell) gegen --g-card >= 3:1
+      ---
+      duration_ms: 0.384511
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/__tests__/ampel_tokens_kontrast.test.ts:142:4'
+      failureType: 'testCodeFailure'
+      error: 'TDD RED: Token --g-ampel-gelb fehlt im ersten :root-Block von app.css'
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: true
+      actual: ~
+      operator: '=='
+      stack: |-
+        roh (file:///home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/__tests__/ampel_tokens_kontrast.test.ts:66:9)
+        farbe (file:///home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/__tests__/ampel_tokens_kontrast.test.ts:79:12)
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/__tests__/ampel_tokens_kontrast.test.ts:143:24)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Promise.all (index 0)
+        async Suite.run (node:internal/test_runner/test:1442:7)
+      ...
+    # Subtest: --g-ampel-orange (hell) gegen --g-card >= 3:1
+    not ok 3 - --g-ampel-orange (hell) gegen --g-card >= 3:1
+      ---
+      duration_ms: 0.212351
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/__tests__/ampel_tokens_kontrast.test.ts:142:4'
+      failureType: 'testCodeFailure'
+      error: 'TDD RED: Token --g-ampel-orange fehlt im ersten :root-Block von app.css'
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: true
+      actual: ~
+      operator: '=='
+      stack: |-
+        roh (file:///home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/__tests__/ampel_tokens_kontrast.test.ts:66:9)
+        farbe (file:///home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/__tests__/ampel_tokens_kontrast.test.ts:79:12)
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/__tests__/ampel_tokens_kontrast.test.ts:143:24)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: --g-ampel-rot (hell) gegen --g-card >= 3:1
+    not ok 4 - --g-ampel-rot (hell) gegen --g-card >= 3:1
+      ---
+      duration_ms: 0.19725
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/__tests__/ampel_tokens_kontrast.test.ts:142:4'
+      failureType: 'testCodeFailure'
+      error: 'TDD RED: Token --g-ampel-rot fehlt im ersten :root-Block von app.css'
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: true
+      actual: ~
+      operator: '=='
+      stack: |-
+        roh (file:///home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/__tests__/ampel_tokens_kontrast.test.ts:66:9)
+        farbe (file:///home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/__tests__/ampel_tokens_kontrast.test.ts:79:12)
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/__tests__/ampel_tokens_kontrast.test.ts:143:24)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: --g-ampel-gruen (dunkel) gegen --g-card >= 3:1
+    not ok 5 - --g-ampel-gruen (dunkel) gegen --g-card >= 3:1
+      ---
+      duration_ms: 0.211861
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/__tests__/ampel_tokens_kontrast.test.ts:142:4'
+      failureType: 'testCodeFailure'
+      error: 'TDD RED: Token --g-ampel-gruen fehlt im Dark-Block :root[data-theme="dark"] (eigener Dark-Wert verlangt)'
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: true
+      actual: ~
+      operator: '=='
+      stack: |-
+        roh (file:///home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/__tests__/ampel_tokens_kontrast.test.ts:62:10)
+        farbe (file:///home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/__tests__/ampel_tokens_kontrast.test.ts:79:12)
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/__tests__/ampel_tokens_kontrast.test.ts:143:24)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: --g-ampel-gelb (dunkel) gegen --g-card >= 3:1
+    not ok 6 - --g-ampel-gelb (dunkel) gegen --g-card >= 3:1
+      ---
+      duration_ms: 0.104789
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/__tests__/ampel_tokens_kontrast.test.ts:142:4'
+      failureType: 'testCodeFailure'
+      error: 'TDD RED: Token --g-ampel-gelb fehlt im Dark-Block :root[data-theme="dark"] (eigener Dark-Wert verlangt)'
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: true
+      actual: ~
+      operator: '=='
+      stack: |-
+        roh (file:///home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/__tests__/ampel_tokens_kontrast.test.ts:62:10)
+        farbe (file:///home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/__tests__/ampel_tokens_kontrast.test.ts:79:12)
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/__tests__/ampel_tokens_kontrast.test.ts:143:24)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: --g-ampel-orange (dunkel) gegen --g-card >= 3:1
+    not ok 7 - --g-ampel-orange (dunkel) gegen --g-card >= 3:1
+      ---
+      duration_ms: 0.13809
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/__tests__/ampel_tokens_kontrast.test.ts:142:4'
+      failureType: 'testCodeFailure'
+      error: 'TDD RED: Token --g-ampel-orange fehlt im Dark-Block :root[data-theme="dark"] (eigener Dark-Wert verlangt)'
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: true
+      actual: ~
+      operator: '=='
+      stack: |-
+        roh (file:///home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/__tests__/ampel_tokens_kontrast.test.ts:62:10)
+        farbe (file:///home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/__tests__/ampel_tokens_kontrast.test.ts:79:12)
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/__tests__/ampel_tokens_kontrast.test.ts:143:24)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: --g-ampel-rot (dunkel) gegen --g-card >= 3:1
+    not ok 8 - --g-ampel-rot (dunkel) gegen --g-card >= 3:1
+      ---
+      duration_ms: 0.135321
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/__tests__/ampel_tokens_kontrast.test.ts:142:4'
+      failureType: 'testCodeFailure'
+      error: 'TDD RED: Token --g-ampel-rot fehlt im Dark-Block :root[data-theme="dark"] (eigener Dark-Wert verlangt)'
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: true
+      actual: ~
+      operator: '=='
+      stack: |-
+        roh (file:///home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/__tests__/ampel_tokens_kontrast.test.ts:62:10)
+        farbe (file:///home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/__tests__/ampel_tokens_kontrast.test.ts:79:12)
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/__tests__/ampel_tokens_kontrast.test.ts:143:24)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    1..8
+not ok 2 - AC-11: Kontrast >= 3:1 gegen --g-card je Modus
+  ---
+  duration_ms: 2.126856
+  type: 'suite'
+  location: '/home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/__tests__/ampel_tokens_kontrast.test.ts:139:1'
+  failureType: 'subtestsFailed'
+  error: '8 subtests failed'
+  code: 'ERR_TEST_FAILURE'
+  ...
+# Subtest: AC-11/K-3: nahe am Mockup, Abweichung nur wo WCAG es verlangt
+    # Subtest: --g-ampel-gruen (hell): Farbton ±8°, Helligkeit im Korridor
+    not ok 1 - --g-ampel-gruen (hell): Farbton ±8°, Helligkeit im Korridor
+      ---
+      duration_ms: 0.3493
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/__tests__/ampel_tokens_kontrast.test.ts:153:4'
+      failureType: 'testCodeFailure'
+      error: 'TDD RED: Token --g-ampel-gruen fehlt im ersten :root-Block von app.css'
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: true
+      actual: ~
+      operator: '=='
+      stack: |-
+        roh (file:///home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/__tests__/ampel_tokens_kontrast.test.ts:66:9)
+        farbe (file:///home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/__tests__/ampel_tokens_kontrast.test.ts:79:12)
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/__tests__/ampel_tokens_kontrast.test.ts:154:21)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Test.start (node:internal/test_runner/test:944:17)
+        node:internal/test_runner/test:1440:71
+        node:internal/per_context/primordials:466:82
+        new Promise (<anonymous>)
+        new SafePromise (node:internal/per_context/primordials:435:3)
+      ...
+    # Subtest: --g-ampel-gruen (hell): gleich Mockup, wenn das Mockup selbst 3:1 erreicht
+    not ok 2 - --g-ampel-gruen (hell): gleich Mockup, wenn das Mockup selbst 3:1 erreicht
+      ---
+      duration_ms: 0.505001
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/__tests__/ampel_tokens_kontrast.test.ts:165:4'
+      failureType: 'testCodeFailure'
+      error: 'TDD RED: Token --g-ampel-gruen fehlt im ersten :root-Block von app.css'
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: true
+      actual: ~
+      operator: '=='
+      stack: |-
+        roh (file:///home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/__tests__/ampel_tokens_kontrast.test.ts:66:9)
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/__tests__/ampel_tokens_kontrast.test.ts:167:15)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Promise.all (index 0)
+        async Suite.run (node:internal/test_runner/test:1442:7)
+        async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: --g-ampel-gelb (hell): Farbton ±8°, Helligkeit im Korridor
+    not ok 3 - --g-ampel-gelb (hell): Farbton ±8°, Helligkeit im Korridor
+      ---
+      duration_ms: 0.09946
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/__tests__/ampel_tokens_kontrast.test.ts:153:4'
+      failureType: 'testCodeFailure'
+      error: 'TDD RED: Token --g-ampel-gelb fehlt im ersten :root-Block von app.css'
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: true
+      actual: ~
+      operator: '=='
+      stack: |-
+        roh (file:///home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/__tests__/ampel_tokens_kontrast.test.ts:66:9)
+        farbe (file:///home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/__tests__/ampel_tokens_kontrast.test.ts:79:12)
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/__tests__/ampel_tokens_kontrast.test.ts:154:21)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: --g-ampel-gelb (hell): gleich Mockup, wenn das Mockup selbst 3:1 erreicht
+    not ok 4 - --g-ampel-gelb (hell): gleich Mockup, wenn das Mockup selbst 3:1 erreicht
+      ---
+      duration_ms: 0.164731
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/__tests__/ampel_tokens_kontrast.test.ts:165:4'
+      failureType: 'testCodeFailure'
+      error: 'TDD RED: Token --g-ampel-gelb fehlt im ersten :root-Block von app.css'
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: true
+      actual: ~
+      operator: '=='
+      stack: |-
+        roh (file:///home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/__tests__/ampel_tokens_kontrast.test.ts:66:9)
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/__tests__/ampel_tokens_kontrast.test.ts:167:15)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: --g-ampel-orange (hell): Farbton ±8°, Helligkeit im Korridor
+    not ok 5 - --g-ampel-orange (hell): Farbton ±8°, Helligkeit im Korridor
+      ---
+      duration_ms: 0.094599
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/__tests__/ampel_tokens_kontrast.test.ts:153:4'
+      failureType: 'testCodeFailure'
+      error: 'TDD RED: Token --g-ampel-orange fehlt im ersten :root-Block von app.css'
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: true
+      actual: ~
+      operator: '=='
+      stack: |-
+        roh (file:///home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/__tests__/ampel_tokens_kontrast.test.ts:66:9)
+        farbe (file:///home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/__tests__/ampel_tokens_kontrast.test.ts:79:12)
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/__tests__/ampel_tokens_kontrast.test.ts:154:21)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: --g-ampel-orange (hell): gleich Mockup, wenn das Mockup selbst 3:1 erreicht
+    not ok 6 - --g-ampel-orange (hell): gleich Mockup, wenn das Mockup selbst 3:1 erreicht
+      ---
+      duration_ms: 0.14965
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/__tests__/ampel_tokens_kontrast.test.ts:165:4'
+      failureType: 'testCodeFailure'
+      error: 'TDD RED: Token --g-ampel-orange fehlt im ersten :root-Block von app.css'
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: true
+      actual: ~
+      operator: '=='
+      stack: |-
+        roh (file:///home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/__tests__/ampel_tokens_kontrast.test.ts:66:9)
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/__tests__/ampel_tokens_kontrast.test.ts:167:15)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: --g-ampel-rot (hell): Farbton ±8°, Helligkeit im Korridor
+    not ok 7 - --g-ampel-rot (hell): Farbton ±8°, Helligkeit im Korridor
+      ---
+      duration_ms: 0.076811
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/__tests__/ampel_tokens_kontrast.test.ts:153:4'
+      failureType: 'testCodeFailure'
+      error: 'TDD RED: Token --g-ampel-rot fehlt im ersten :root-Block von app.css'
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: true
+      actual: ~
+      operator: '=='
+      stack: |-
+        roh (file:///home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/__tests__/ampel_tokens_kontrast.test.ts:66:9)
+        farbe (file:///home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/__tests__/ampel_tokens_kontrast.test.ts:79:12)
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/__tests__/ampel_tokens_kontrast.test.ts:154:21)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: --g-ampel-rot (hell): gleich Mockup, wenn das Mockup selbst 3:1 erreicht
+    not ok 8 - --g-ampel-rot (hell): gleich Mockup, wenn das Mockup selbst 3:1 erreicht
+      ---
+      duration_ms: 0.167901
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/__tests__/ampel_tokens_kontrast.test.ts:165:4'
+      failureType: 'testCodeFailure'
+      error: 'TDD RED: Token --g-ampel-rot fehlt im ersten :root-Block von app.css'
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: true
+      actual: ~
+      operator: '=='
+      stack: |-
+        roh (file:///home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/__tests__/ampel_tokens_kontrast.test.ts:66:9)
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/__tests__/ampel_tokens_kontrast.test.ts:167:15)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: --g-ampel-gruen (dunkel): Farbton ±8°, Helligkeit im Korridor
+    not ok 9 - --g-ampel-gruen (dunkel): Farbton ±8°, Helligkeit im Korridor
+      ---
+      duration_ms: 0.087201
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/__tests__/ampel_tokens_kontrast.test.ts:153:4'
+      failureType: 'testCodeFailure'
+      error: 'TDD RED: Token --g-ampel-gruen fehlt im Dark-Block :root[data-theme="dark"] (eigener Dark-Wert verlangt)'
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: true
+      actual: ~
+      operator: '=='
+      stack: |-
+        roh (file:///home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/__tests__/ampel_tokens_kontrast.test.ts:62:10)
+        farbe (file:///home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/__tests__/ampel_tokens_kontrast.test.ts:79:12)
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/__tests__/ampel_tokens_kontrast.test.ts:154:21)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: --g-ampel-gruen (dunkel): gleich Mockup, wenn das Mockup selbst 3:1 erreicht
+    not ok 10 - --g-ampel-gruen (dunkel): gleich Mockup, wenn das Mockup selbst 3:1 erreicht
+      ---
+      duration_ms: 0.11899
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/__tests__/ampel_tokens_kontrast.test.ts:165:4'
+      failureType: 'testCodeFailure'
+      error: 'TDD RED: Token --g-ampel-gruen fehlt im Dark-Block :root[data-theme="dark"] (eigener Dark-Wert verlangt)'
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: true
+      actual: ~
+      operator: '=='
+      stack: |-
+        roh (file:///home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/__tests__/ampel_tokens_kontrast.test.ts:62:10)
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/__tests__/ampel_tokens_kontrast.test.ts:167:15)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: --g-ampel-gelb (dunkel): Farbton ±8°, Helligkeit im Korridor
+    not ok 11 - --g-ampel-gelb (dunkel): Farbton ±8°, Helligkeit im Korridor
+      ---
+      duration_ms: 0.07783
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/__tests__/ampel_tokens_kontrast.test.ts:153:4'
+      failureType: 'testCodeFailure'
+      error: 'TDD RED: Token --g-ampel-gelb fehlt im Dark-Block :root[data-theme="dark"] (eigener Dark-Wert verlangt)'
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: true
+      actual: ~
+      operator: '=='
+      stack: |-
+        roh (file:///home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/__tests__/ampel_tokens_kontrast.test.ts:62:10)
+        farbe (file:///home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/__tests__/ampel_tokens_kontrast.test.ts:79:12)
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/__tests__/ampel_tokens_kontrast.test.ts:154:21)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: --g-ampel-gelb (dunkel): gleich Mockup, wenn das Mockup selbst 3:1 erreicht
+    not ok 12 - --g-ampel-gelb (dunkel): gleich Mockup, wenn das Mockup selbst 3:1 erreicht
+      ---
+      duration_ms: 0.195109
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/__tests__/ampel_tokens_kontrast.test.ts:165:4'
+      failureType: 'testCodeFailure'
+      error: 'TDD RED: Token --g-ampel-gelb fehlt im Dark-Block :root[data-theme="dark"] (eigener Dark-Wert verlangt)'
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: true
+      actual: ~
+      operator: '=='
+      stack: |-
+        roh (file:///home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/__tests__/ampel_tokens_kontrast.test.ts:62:10)
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/__tests__/ampel_tokens_kontrast.test.ts:167:15)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: --g-ampel-orange (dunkel): Farbton ±8°, Helligkeit im Korridor
+    not ok 13 - --g-ampel-orange (dunkel): Farbton ±8°, Helligkeit im Korridor
+      ---
+      duration_ms: 0.15385
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/__tests__/ampel_tokens_kontrast.test.ts:153:4'
+      failureType: 'testCodeFailure'
+      error: 'TDD RED: Token --g-ampel-orange fehlt im Dark-Block :root[data-theme="dark"] (eigener Dark-Wert verlangt)'
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: true
+      actual: ~
+      operator: '=='
+      stack: |-
+        roh (file:///home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/__tests__/ampel_tokens_kontrast.test.ts:62:10)
+        farbe (file:///home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/__tests__/ampel_tokens_kontrast.test.ts:79:12)
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/__tests__/ampel_tokens_kontrast.test.ts:154:21)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: --g-ampel-orange (dunkel): gleich Mockup, wenn das Mockup selbst 3:1 erreicht
+    not ok 14 - --g-ampel-orange (dunkel): gleich Mockup, wenn das Mockup selbst 3:1 erreicht
+      ---
+      duration_ms: 0.15442
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/__tests__/ampel_tokens_kontrast.test.ts:165:4'
+      failureType: 'testCodeFailure'
+      error: 'TDD RED: Token --g-ampel-orange fehlt im Dark-Block :root[data-theme="dark"] (eigener Dark-Wert verlangt)'
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: true
+      actual: ~
+      operator: '=='
+      stack: |-
+        roh (file:///home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/__tests__/ampel_tokens_kontrast.test.ts:62:10)
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/__tests__/ampel_tokens_kontrast.test.ts:167:15)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: --g-ampel-rot (dunkel): Farbton ±8°, Helligkeit im Korridor
+    not ok 15 - --g-ampel-rot (dunkel): Farbton ±8°, Helligkeit im Korridor
+      ---
+      duration_ms: 0.122671
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/__tests__/ampel_tokens_kontrast.test.ts:153:4'
+      failureType: 'testCodeFailure'
+      error: 'TDD RED: Token --g-ampel-rot fehlt im Dark-Block :root[data-theme="dark"] (eigener Dark-Wert verlangt)'
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: true
+      actual: ~
+      operator: '=='
+      stack: |-
+        roh (file:///home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/__tests__/ampel_tokens_kontrast.test.ts:62:10)
+        farbe (file:///home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/__tests__/ampel_tokens_kontrast.test.ts:79:12)
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/__tests__/ampel_tokens_kontrast.test.ts:154:21)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: --g-ampel-rot (dunkel): gleich Mockup, wenn das Mockup selbst 3:1 erreicht
+    not ok 16 - --g-ampel-rot (dunkel): gleich Mockup, wenn das Mockup selbst 3:1 erreicht
+      ---
+      duration_ms: 0.17104
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/__tests__/ampel_tokens_kontrast.test.ts:165:4'
+      failureType: 'testCodeFailure'
+      error: 'TDD RED: Token --g-ampel-rot fehlt im Dark-Block :root[data-theme="dark"] (eigener Dark-Wert verlangt)'
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: true
+      actual: ~
+      operator: '=='
+      stack: |-
+        roh (file:///home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/__tests__/ampel_tokens_kontrast.test.ts:62:10)
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/__tests__/ampel_tokens_kontrast.test.ts:167:15)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    1..16
+not ok 3 - AC-11/K-3: nahe am Mockup, Abweichung nur wo WCAG es verlangt
+  ---
+  duration_ms: 5.416383
+  type: 'suite'
+  location: '/home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/__tests__/ampel_tokens_kontrast.test.ts:150:1'
+  failureType: 'subtestsFailed'
+  error: '16 subtests failed'
+  code: 'ERR_TEST_FAILURE'
+  ...
+# Subtest: AC-13: atoms/Input mit Ampel-Unterkante
+    # Subtest: ampel="green" → data-ampel="green" am <input>, kein rohes ampel=-Attribut
+    not ok 1 - ampel="green" → data-ampel="green" am <input>, kein rohes ampel=-Attribut
+      ---
+      duration_ms: 90.250482
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/components/atoms/__tests__/ampel_atome.test.ts:69:3'
+      failureType: 'testCodeFailure'
+      error: 'TDD RED: <input> ohne data-ampel="green"'
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected:
+      actual: '<input data-slot="input" data-testid="input" class="dark:bg-input/30 border-input focus-visible:border-ring focus-visible:ring-ring/50 aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive dark:aria-invalid:border-destructive/50 disabled:bg-input/50 dark:disabled:bg-input/80 h-8 rounded-lg border bg-transparent px-2.5 py-1 text-base transition-colors file:h-6 file:text-sm file:font-medium focus-visible:ring-3 aria-invalid:ring-3 md:text-sm file:text-foreground placeholder:text-muted-foreground w-full min-w-0 outline-none file:inline-flex file:border-0 file:bg-transparent disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50" value="12" ampel="green"/>'
+      operator: 'match'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/components/atoms/__tests__/ampel_atome.test.ts:73:11)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Promise.all (index 0)
+        async Suite.run (node:internal/test_runner/test:1442:7)
+        async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+      ...
+    # Subtest: ampel="yellow" → data-ampel="yellow" am <input>, kein rohes ampel=-Attribut
+    not ok 2 - ampel="yellow" → data-ampel="yellow" am <input>, kein rohes ampel=-Attribut
+      ---
+      duration_ms: 1.300653
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/components/atoms/__tests__/ampel_atome.test.ts:69:3'
+      failureType: 'testCodeFailure'
+      error: 'TDD RED: <input> ohne data-ampel="yellow"'
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected:
+      actual: '<input data-slot="input" data-testid="input" class="dark:bg-input/30 border-input focus-visible:border-ring focus-visible:ring-ring/50 aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive dark:aria-invalid:border-destructive/50 disabled:bg-input/50 dark:disabled:bg-input/80 h-8 rounded-lg border bg-transparent px-2.5 py-1 text-base transition-colors file:h-6 file:text-sm file:font-medium focus-visible:ring-3 aria-invalid:ring-3 md:text-sm file:text-foreground placeholder:text-muted-foreground w-full min-w-0 outline-none file:inline-flex file:border-0 file:bg-transparent disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50" value="12" ampel="yellow"/>'
+      operator: 'match'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/components/atoms/__tests__/ampel_atome.test.ts:73:11)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: ampel="orange" → data-ampel="orange" am <input>, kein rohes ampel=-Attribut
+    not ok 3 - ampel="orange" → data-ampel="orange" am <input>, kein rohes ampel=-Attribut
+      ---
+      duration_ms: 0.630492
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/components/atoms/__tests__/ampel_atome.test.ts:69:3'
+      failureType: 'testCodeFailure'
+      error: 'TDD RED: <input> ohne data-ampel="orange"'
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected:
+      actual: '<input data-slot="input" data-testid="input" class="dark:bg-input/30 border-input focus-visible:border-ring focus-visible:ring-ring/50 aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive dark:aria-invalid:border-destructive/50 disabled:bg-input/50 dark:disabled:bg-input/80 h-8 rounded-lg border bg-transparent px-2.5 py-1 text-base transition-colors file:h-6 file:text-sm file:font-medium focus-visible:ring-3 aria-invalid:ring-3 md:text-sm file:text-foreground placeholder:text-muted-foreground w-full min-w-0 outline-none file:inline-flex file:border-0 file:bg-transparent disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50" value="12" ampel="orange"/>'
+      operator: 'match'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/components/atoms/__tests__/ampel_atome.test.ts:73:11)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: ampel="red" → data-ampel="red" am <input>, kein rohes ampel=-Attribut
+    not ok 4 - ampel="red" → data-ampel="red" am <input>, kein rohes ampel=-Attribut
+      ---
+      duration_ms: 0.54233
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/components/atoms/__tests__/ampel_atome.test.ts:69:3'
+      failureType: 'testCodeFailure'
+      error: 'TDD RED: <input> ohne data-ampel="red"'
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected:
+      actual: '<input data-slot="input" data-testid="input" class="dark:bg-input/30 border-input focus-visible:border-ring focus-visible:ring-ring/50 aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive dark:aria-invalid:border-destructive/50 disabled:bg-input/50 dark:disabled:bg-input/80 h-8 rounded-lg border bg-transparent px-2.5 py-1 text-base transition-colors file:h-6 file:text-sm file:font-medium focus-visible:ring-3 aria-invalid:ring-3 md:text-sm file:text-foreground placeholder:text-muted-foreground w-full min-w-0 outline-none file:inline-flex file:border-0 file:bg-transparent disabled:pointer-events-none disabled:cursor-not-allowed disabled:opacity-50" value="12" ampel="red"/>'
+      operator: 'match'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/components/atoms/__tests__/ampel_atome.test.ts:73:11)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: ohne ampel: kein data-ampel, Markup gleich dem ui/input (wie heute)
+    ok 5 - ohne ampel: kein data-ampel, Markup gleich dem ui/input (wie heute)
+      ---
+      duration_ms: 7.708627
+      type: 'test'
+      ...
+    # Subtest: app.css: Regel [data-ampel="green"] nutzt var(--g-ampel-gruen)
+    not ok 6 - app.css: Regel [data-ampel="green"] nutzt var(--g-ampel-gruen)
+      ---
+      duration_ms: 1.132622
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/components/atoms/__tests__/ampel_atome.test.ts:86:3'
+      failureType: 'testCodeFailure'
+      error: 'TDD RED: keine Regel [data-ampel="green"] { … var(--g-ampel-gruen) … } in app.css'
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: true
+      actual: false
+      operator: '=='
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/components/atoms/__tests__/ampel_atome.test.ts:88:11)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: app.css: Regel [data-ampel="yellow"] nutzt var(--g-ampel-gelb)
+    not ok 7 - app.css: Regel [data-ampel="yellow"] nutzt var(--g-ampel-gelb)
+      ---
+      duration_ms: 0.280139
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/components/atoms/__tests__/ampel_atome.test.ts:86:3'
+      failureType: 'testCodeFailure'
+      error: 'TDD RED: keine Regel [data-ampel="yellow"] { … var(--g-ampel-gelb) … } in app.css'
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: true
+      actual: false
+      operator: '=='
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/components/atoms/__tests__/ampel_atome.test.ts:88:11)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: app.css: Regel [data-ampel="orange"] nutzt var(--g-ampel-orange)
+    not ok 8 - app.css: Regel [data-ampel="orange"] nutzt var(--g-ampel-orange)
+      ---
+      duration_ms: 0.690622
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/components/atoms/__tests__/ampel_atome.test.ts:86:3'
+      failureType: 'testCodeFailure'
+      error: 'TDD RED: keine Regel [data-ampel="orange"] { … var(--g-ampel-orange) … } in app.css'
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: true
+      actual: false
+      operator: '=='
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/components/atoms/__tests__/ampel_atome.test.ts:88:11)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: app.css: Regel [data-ampel="red"] nutzt var(--g-ampel-rot)
+    not ok 9 - app.css: Regel [data-ampel="red"] nutzt var(--g-ampel-rot)
+      ---
+      duration_ms: 0.26228
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/components/atoms/__tests__/ampel_atome.test.ts:86:3'
+      failureType: 'testCodeFailure'
+      error: 'TDD RED: keine Regel [data-ampel="red"] { … var(--g-ampel-rot) … } in app.css'
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: true
+      actual: false
+      operator: '=='
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/components/atoms/__tests__/ampel_atome.test.ts:88:11)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: app.css: Unterkanten-Stärke aus Maß-Token --g-size-3px (= 3px) in einer data-ampel-Regel
+    not ok 10 - app.css: Unterkanten-Stärke aus Maß-Token --g-size-3px (= 3px) in einer data-ampel-Regel
+      ---
+      duration_ms: 0.447111
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/components/atoms/__tests__/ampel_atome.test.ts:91:2'
+      failureType: 'testCodeFailure'
+      error: 'TDD RED: Maß-Token --g-size-3px fehlt in app.css'
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: true
+      actual: ~
+      operator: '=='
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/components/atoms/__tests__/ampel_atome.test.ts:93:10)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    1..10
+not ok 4 - AC-13: atoms/Input mit Ampel-Unterkante
+  ---
+  duration_ms: 104.467995
+  type: 'suite'
+  location: '/home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/components/atoms/__tests__/ampel_atome.test.ts:67:1'
+  failureType: 'subtestsFailed'
+  error: '9 subtests failed'
+  code: 'ERR_TEST_FAILURE'
+  ...
+# Subtest: AC-13: atoms/Segmented mit Farbpunkt
+    # Subtest: items-API mit farbe: je Segment ein Farbpunkt data-farbe
+    not ok 1 - items-API mit farbe: je Segment ein Farbpunkt data-farbe
+      ---
+      duration_ms: 43.852969
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/components/atoms/__tests__/ampel_atome.test.ts:107:2'
+      failureType: 'testCodeFailure'
+      error: 'TDD RED: Segment green ohne Farbpunkt: <button type="button" role="radio" data-slot="segmented-item" data-value="green" data-active="false" data-state="inactive" aria-checked="false" tabindex="-1">GREEN</button>'
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected:
+      actual: '<button type="button" role="radio" data-slot="segmented-item" data-value="green" data-active="false" data-state="inactive" aria-checked="false" tabindex="-1">GREEN</button>'
+      operator: 'match'
+      stack: |-
+        file:///home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/components/atoms/__tests__/ampel_atome.test.ts:113:11
+        Array.forEach (<anonymous>)
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/components/atoms/__tests__/ampel_atome.test.ts:112:5)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Promise.all (index 0)
+        async Suite.run (node:internal/test_runner/test:1442:7)
+        async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: options-API mit farbe: Farbpunkt nur am Segment mit farbe
+    not ok 2 - options-API mit farbe: Farbpunkt nur am Segment mit farbe
+      ---
+      duration_ms: 5.454943
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/components/atoms/__tests__/ampel_atome.test.ts:117:2'
+      failureType: 'testCodeFailure'
+      error: 'TDD RED: options-Segment ohne Farbpunkt: <button type="button" role="radio" data-slot="segmented-item" data-value="red" data-active="false" data-state="inactive" aria-checked="false" tabindex="-1" data-testid="t-red">Rot</button>'
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected:
+      actual: '<button type="button" role="radio" data-slot="segmented-item" data-value="red" data-active="false" data-state="inactive" aria-checked="false" tabindex="-1" data-testid="t-red">Rot</button>'
+      operator: 'match'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/components/atoms/__tests__/ampel_atome.test.ts:125:10)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: items-API reicht testid und badge_testid durch (heute verworfen)
+    not ok 3 - items-API reicht testid und badge_testid durch (heute verworfen)
+      ---
+      duration_ms: 0.709563
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/components/atoms/__tests__/ampel_atome.test.ts:127:2'
+      failureType: 'testCodeFailure'
+      error: 'TDD RED: items-API verwirft testid'
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected:
+      actual: '<div data-slot="segmented"><button type="button" role="tab" data-slot="segmented-item" data-value="a" data-active="true" data-state="active" aria-selected="true">A<span data-slot="segmented-badge">2</span></button></div>'
+      operator: 'match'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/components/atoms/__tests__/ampel_atome.test.ts:131:10)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: ohne farbe: kein Farbpunkt (Markup wie heute)
+    ok 4 - ohne farbe: kein Farbpunkt (Markup wie heute)
+      ---
+      duration_ms: 0.601981
+      type: 'test'
+      ...
+    # Subtest: app.css: Farbpunkt-Regel (segmented-punkt) und je Farbe [data-farbe] mit var(--g-ampel-*)
+    not ok 5 - app.css: Farbpunkt-Regel (segmented-punkt) und je Farbe [data-farbe] mit var(--g-ampel-*)
+      ---
+      duration_ms: 6.236083
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/components/atoms/__tests__/ampel_atome.test.ts:139:2'
+      failureType: 'testCodeFailure'
+      error: 'TDD RED: keine Regel für [data-slot="segmented-punkt"] in app.css'
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: true
+      actual: false
+      operator: '=='
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/components/atoms/__tests__/ampel_atome.test.ts:140:10)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    1..5
+not ok 5 - AC-13: atoms/Segmented mit Farbpunkt
+  ---
+  duration_ms: 57.070629
+  type: 'suite'
+  location: '/home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/components/atoms/__tests__/ampel_atome.test.ts:106:1'
+  failureType: 'subtestsFailed'
+  error: '4 subtests failed'
+  code: 'ERR_TEST_FAILURE'
+  ...
+# Subtest: AC-14: atoms/Skelett
+    # Subtest: Datei atoms/Skelett.svelte existiert
+    not ok 1 - Datei atoms/Skelett.svelte existiert
+      ---
+      duration_ms: 0.19034
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/components/atoms/__tests__/ampel_atome.test.ts:163:2'
+      failureType: 'testCodeFailure'
+      error: 'TDD RED: atoms/Skelett.svelte fehlt'
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: true
+      actual: false
+      operator: '=='
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/components/atoms/__tests__/ampel_atome.test.ts:164:10)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Test.start (node:internal/test_runner/test:944:17)
+        node:internal/test_runner/test:1440:71
+        node:internal/per_context/primordials:466:82
+        new Promise (<anonymous>)
+        new SafePromise (node:internal/per_context/primordials:435:3)
+        node:internal/per_context/primordials:466:9
+        Array.map (<anonymous>)
+      ...
+    # Subtest: SSR: role="status", aria-busy="true", aria-label vom Aufrufer
+    not ok 2 - SSR: role="status", aria-busy="true", aria-label vom Aufrufer
+      ---
+      duration_ms: 0.14512
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/components/atoms/__tests__/ampel_atome.test.ts:166:2'
+      failureType: 'testCodeFailure'
+      error: 'TDD RED: atoms/Skelett.svelte fehlt'
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: true
+      actual: ~
+      operator: '=='
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/components/atoms/__tests__/ampel_atome.test.ts:168:10)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: SSR ohne label: Standardtext aus dem Allgemein-Katalog, nicht leer
+    not ok 3 - SSR ohne label: Standardtext aus dem Allgemein-Katalog, nicht leer
+      ---
+      duration_ms: 0.145481
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/components/atoms/__tests__/ampel_atome.test.ts:175:2'
+      failureType: 'testCodeFailure'
+      error: 'TDD RED: atoms/Skelett.svelte fehlt'
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: true
+      actual: ~
+      operator: '=='
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/components/atoms/__tests__/ampel_atome.test.ts:177:10)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: Regel b: <style> nur aus Tokens (keine rohen px/rem, keine Farben)
+    not ok 4 - Regel b: <style> nur aus Tokens (keine rohen px/rem, keine Farben)
+      ---
+      duration_ms: 0.10679
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/components/atoms/__tests__/ampel_atome.test.ts:185:2'
+      failureType: 'testCodeFailure'
+      error: 'TDD RED: atoms/Skelett.svelte fehlt'
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: true
+      actual: false
+      operator: '=='
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/components/atoms/__tests__/ampel_atome.test.ts:186:10)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: Barrel atoms/index.ts exportiert Skelett
+    not ok 5 - Barrel atoms/index.ts exportiert Skelett
+      ---
+      duration_ms: 0.246691
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/components/atoms/__tests__/ampel_atome.test.ts:190:2'
+      failureType: 'testCodeFailure'
+      error: 'TDD RED: Skelett fehlt im Barrel atoms/index.ts'
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected:
+      actual: |-
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        export { default as Switch } from './Switch.svelte';
+        export { default as SectionH } from './SectionH.svelte';
+        export { default as AvatarStack } from './AvatarStack.svelte';
+        export { default as KV } from './KV.svelte';
+        
+        
+        export { default as Eyebrow } from './Eyebrow.svelte';
+        export { default as Pill } from './Pill.svelte';
+        export { default as Card } from './Card.svelte';
+        export { default as Btn } from './Btn.svelte';
+        export { default as Input } from './Input.svelte';
+        export { default as Dot } from './Dot.svelte';
+        export { default as WIcon } from './WIcon.svelte';
+        export { default as ElevSparkline } from './ElevSparkline.svelte';
+        export { default as TopoBg } from './TopoBg.svelte';
+        export { default as Segmented } from './Segmented.svelte';
+        
+        
+        export { default as PageHeader } from './PageHeader.svelte';
+        
+        export { default as BackLink } from './BackLink.svelte';
+        
+        
+        export { default as Stat } from './Stat.svelte';
+        
+        
+        export type { SwitchSize, SwitchTone } from './Switch.svelte';
+        export type { AvatarUser } from './AvatarStack.svelte';
+        
+      operator: 'match'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/components/atoms/__tests__/ampel_atome.test.ts:192:10)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    1..5
+not ok 6 - AC-14: atoms/Skelett
+  ---
+  duration_ms: 0.962582
+  type: 'suite'
+  location: '/home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/components/atoms/__tests__/ampel_atome.test.ts:161:1'
+  failureType: 'subtestsFailed'
+  error: '5 subtests failed'
+  code: 'ERR_TEST_FAILURE'
+  ...
+# Subtest: K-5: Btn-Größe tap (Touch-Ziel --g-tap-min)
+    # Subtest: SSR: atoms/Btn size="tap" → data-size="tap"
+    ok 1 - SSR: atoms/Btn size="tap" → data-size="tap"
+      ---
+      duration_ms: 26.39968
+      type: 'test'
+      ...
+    # Subtest: BtnSize kennt die Größe tap (ui/btn/Btn.svelte)
+    not ok 2 - BtnSize kennt die Größe tap (ui/btn/Btn.svelte)
+      ---
+      duration_ms: 0.24885
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/components/atoms/__tests__/ampel_atome.test.ts:204:2'
+      failureType: 'testCodeFailure'
+      error: "TDD RED: BtnSize ohne 'tap'"
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected:
+      actual: |-
+        
+        		| 'xs'
+        		| 'sm'
+        		| 'md'
+        		| 'lg'
+        		| 'icon'
+        		| 'icon-xs'
+        		| 'icon-sm'
+        		| 'icon-lg'
+      operator: 'match'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/components/atoms/__tests__/ampel_atome.test.ts:207:10)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Promise.all (index 0)
+        async Suite.run (node:internal/test_runner/test:1442:7)
+        async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: app.css: [data-slot="btn"][data-size="tap"] nutzt var(--g-tap-min)
+    not ok 3 - app.css: [data-slot="btn"][data-size="tap"] nutzt var(--g-tap-min)
+      ---
+      duration_ms: 0.262661
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/components/atoms/__tests__/ampel_atome.test.ts:209:2'
+      failureType: 'testCodeFailure'
+      error: 'TDD RED: keine Btn-Regel für data-size="tap" mit var(--g-tap-min) in app.css'
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: true
+      actual: false
+      operator: '=='
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/components/atoms/__tests__/ampel_atome.test.ts:211:10)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    1..3
+not ok 7 - K-5: Btn-Größe tap (Touch-Ziel --g-tap-min)
+  ---
+  duration_ms: 27.18123
+  type: 'suite'
+  location: '/home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/components/atoms/__tests__/ampel_atome.test.ts:198:1'
+  failureType: 'subtestsFailed'
+  error: '2 subtests failed'
+  code: 'ERR_TEST_FAILURE'
+  ...
+# Subtest: AC-15: molecules/Einstellungszeile
+    # Subtest: SSR: Titel, Hinweis und Bedienelement im Bereich einstellungszeile-bedienung
+    not ok 1 - SSR: Titel, Hinweis und Bedienelement im Bereich einstellungszeile-bedienung
+      ---
+      duration_ms: 1.822665
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/components/molecules/__tests__/einstellungszeile_chips.test.ts:83:2'
+      failureType: 'testCodeFailure'
+      error: 'TDD RED: molecules/Einstellungszeile.svelte fehlt'
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: true
+      actual: false
+      operator: '=='
+      stack: |-
+        lade (file:///home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/components/molecules/__tests__/einstellungszeile_chips.test.ts:43:9)
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/components/molecules/__tests__/einstellungszeile_chips.test.ts:84:19)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Test.start (node:internal/test_runner/test:944:17)
+        node:internal/test_runner/test:1440:71
+        node:internal/per_context/primordials:466:82
+        new Promise (<anonymous>)
+        new SafePromise (node:internal/per_context/primordials:435:3)
+        node:internal/per_context/primordials:466:9
+      ...
+    # Subtest: SSR ohne hinweis: kein Hinweis-Element
+    not ok 2 - SSR ohne hinweis: kein Hinweis-Element
+      ---
+      duration_ms: 0.33171
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/components/molecules/__tests__/einstellungszeile_chips.test.ts:96:2'
+      failureType: 'testCodeFailure'
+      error: 'TDD RED: molecules/Einstellungszeile.svelte fehlt'
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: true
+      actual: false
+      operator: '=='
+      stack: |-
+        lade (file:///home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/components/molecules/__tests__/einstellungszeile_chips.test.ts:43:9)
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/components/molecules/__tests__/einstellungszeile_chips.test.ts:97:19)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Promise.all (index 0)
+        async Suite.run (node:internal/test_runner/test:1442:7)
+        async startSubtestAfterBootstrap (node:internal/test_runner/harness:296:3)
+      ...
+    # Subtest: Quelle ohne rohe Controls
+    not ok 3 - Quelle ohne rohe Controls
+      ---
+      duration_ms: 0.1651
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/components/molecules/__tests__/einstellungszeile_chips.test.ts:103:2'
+      failureType: 'testCodeFailure'
+      error: 'TDD RED: molecules/Einstellungszeile.svelte fehlt'
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: true
+      actual: false
+      operator: '=='
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/components/molecules/__tests__/einstellungszeile_chips.test.ts:104:10)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    1..3
+not ok 8 - AC-15: molecules/Einstellungszeile
+  ---
+  duration_ms: 3.295008
+  type: 'suite'
+  location: '/home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/components/molecules/__tests__/einstellungszeile_chips.test.ts:82:1'
+  failureType: 'subtestsFailed'
+  error: '3 subtests failed'
+  code: 'ERR_TEST_FAILURE'
+  ...
+# Subtest: AC-15/K-2: molecules/ChipLeiste
+    # Subtest: SSR: je Eintrag genau ein Chip aus Btn mit Text und Testid
+    not ok 1 - SSR: je Eintrag genau ein Chip aus Btn mit Text und Testid
+      ---
+      duration_ms: 0.383719
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/components/molecules/__tests__/einstellungszeile_chips.test.ts:115:2'
+      failureType: 'testCodeFailure'
+      error: 'TDD RED: molecules/ChipLeiste.svelte fehlt'
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: true
+      actual: false
+      operator: '=='
+      stack: |-
+        lade (file:///home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/components/molecules/__tests__/einstellungszeile_chips.test.ts:43:9)
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/components/molecules/__tests__/einstellungszeile_chips.test.ts:116:19)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Test.start (node:internal/test_runner/test:944:17)
+        node:internal/test_runner/test:1440:71
+        node:internal/per_context/primordials:466:82
+        new Promise (<anonymous>)
+        new SafePromise (node:internal/per_context/primordials:435:3)
+        node:internal/per_context/primordials:466:9
+      ...
+    # Subtest: SSR: leere Liste ergibt keinen Chip
+    not ok 2 - SSR: leere Liste ergibt keinen Chip
+      ---
+      duration_ms: 0.210411
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/components/molecules/__tests__/einstellungszeile_chips.test.ts:126:2'
+      failureType: 'testCodeFailure'
+      error: 'TDD RED: molecules/ChipLeiste.svelte fehlt'
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: true
+      actual: false
+      operator: '=='
+      stack: |-
+        lade (file:///home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/components/molecules/__tests__/einstellungszeile_chips.test.ts:43:9)
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/components/molecules/__tests__/einstellungszeile_chips.test.ts:127:19)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Promise.all (index 0)
+        async Suite.run (node:internal/test_runner/test:1442:7)
+        async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: Quelle ohne rohe Controls, Chip aus dem Atom Btn
+    not ok 3 - Quelle ohne rohe Controls, Chip aus dem Atom Btn
+      ---
+      duration_ms: 0.150711
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/components/molecules/__tests__/einstellungszeile_chips.test.ts:130:2'
+      failureType: 'testCodeFailure'
+      error: 'TDD RED: molecules/ChipLeiste.svelte fehlt'
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: true
+      actual: false
+      operator: '=='
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/components/molecules/__tests__/einstellungszeile_chips.test.ts:131:10)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    1..3
+not ok 9 - AC-15/K-2: molecules/ChipLeiste
+  ---
+  duration_ms: 1.194003
+  type: 'suite'
+  location: '/home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/components/molecules/__tests__/einstellungszeile_chips.test.ts:109:1'
+  failureType: 'subtestsFailed'
+  error: '3 subtests failed'
+  code: 'ERR_TEST_FAILURE'
+  ...
+# Subtest: AC-15: Barrel molecules/index.ts
+    # Subtest: Einstellungszeile im Barrel
+    not ok 1 - Einstellungszeile im Barrel
+      ---
+      duration_ms: 0.480191
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/components/molecules/__tests__/einstellungszeile_chips.test.ts:141:3'
+      failureType: 'testCodeFailure'
+      error: 'TDD RED: Einstellungszeile fehlt im Barrel molecules/index.ts'
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected:
+      actual: |-
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        export { default as Field } from './Field.svelte';
+        export { default as DetailRow } from './DetailRow.svelte';
+        export { default as StagePill } from './StagePill.svelte';
+        export { default as ChannelRow } from './ChannelRow.svelte';
+        export { default as ChannelChip, channelGlyph } from './ChannelChip.svelte';
+        export { default as BriefingTimelineRow } from './BriefingTimelineRow.svelte';
+        export { default as BriefingScheduleRow } from './BriefingScheduleRow.svelte';
+        export { default as ThresholdRow } from './ThresholdRow.svelte';
+        export { default as Stat } from './Stat.svelte';
+        export { default as AlertRow } from './AlertRow.svelte';
+        export { default as ConfirmDialog } from './ConfirmDialog.svelte';
+        
+        
+        
+        
+        
+        export { default as CompareLocationRow } from './CompareLocationRow.svelte';
+        
+        
+        export { default as QuickAction } from './QuickAction.svelte';
+        export { default as SetupResumeCard } from './SetupResumeCard.svelte';
+        
+        
+        export { default as CompareStatusRow } from './CompareStatusRow.svelte';
+        
+        
+        
+        
+        export { default as HorizonChips }          from './HorizonChips.svelte';
+        export { default as ScoreToggle }           from './ScoreToggle.svelte';
+        
+        
+        
+        
+        
+      operator: 'match'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/components/molecules/__tests__/einstellungszeile_chips.test.ts:142:11)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Test.start (node:internal/test_runner/test:944:17)
+        node:internal/test_runner/test:1440:71
+        node:internal/per_context/primordials:466:82
+        new Promise (<anonymous>)
+        new SafePromise (node:internal/per_context/primordials:435:3)
+        node:internal/per_context/primordials:466:9
+        Array.map (<anonymous>)
+      ...
+    # Subtest: ChipLeiste im Barrel
+    not ok 2 - ChipLeiste im Barrel
+      ---
+      duration_ms: 0.22948
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/components/molecules/__tests__/einstellungszeile_chips.test.ts:141:3'
+      failureType: 'testCodeFailure'
+      error: 'TDD RED: ChipLeiste fehlt im Barrel molecules/index.ts'
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected:
+      actual: |-
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        
+        export { default as Field } from './Field.svelte';
+        export { default as DetailRow } from './DetailRow.svelte';
+        export { default as StagePill } from './StagePill.svelte';
+        export { default as ChannelRow } from './ChannelRow.svelte';
+        export { default as ChannelChip, channelGlyph } from './ChannelChip.svelte';
+        export { default as BriefingTimelineRow } from './BriefingTimelineRow.svelte';
+        export { default as BriefingScheduleRow } from './BriefingScheduleRow.svelte';
+        export { default as ThresholdRow } from './ThresholdRow.svelte';
+        export { default as Stat } from './Stat.svelte';
+        export { default as AlertRow } from './AlertRow.svelte';
+        export { default as ConfirmDialog } from './ConfirmDialog.svelte';
+        
+        
+        
+        
+        
+        export { default as CompareLocationRow } from './CompareLocationRow.svelte';
+        
+        
+        export { default as QuickAction } from './QuickAction.svelte';
+        export { default as SetupResumeCard } from './SetupResumeCard.svelte';
+        
+        
+        export { default as CompareStatusRow } from './CompareStatusRow.svelte';
+        
+        
+        
+        
+        export { default as HorizonChips }          from './HorizonChips.svelte';
+        export { default as ScoreToggle }           from './ScoreToggle.svelte';
+        
+        
+        
+        
+        
+      operator: 'match'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/components/molecules/__tests__/einstellungszeile_chips.test.ts:142:11)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Promise.all (index 0)
+        async Suite.run (node:internal/test_runner/test:1442:7)
+        async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    1..2
+not ok 10 - AC-15: Barrel molecules/index.ts
+  ---
+  duration_ms: 1.036622
+  type: 'suite'
+  location: '/home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/components/molecules/__tests__/einstellungszeile_chips.test.ts:138:1'
+  failureType: 'subtestsFailed'
+  error: '2 subtests failed'
+  code: 'ERR_TEST_FAILURE'
+  ...
+# Subtest: AC-10: Barrel exportiert die neun Organismen aus ./wetter-tab/
+    # Subtest: WetterTabInhalt im Barrel aus ./wetter-tab/WetterTabInhalt.svelte
+    not ok 1 - WetterTabInhalt im Barrel aus ./wetter-tab/WetterTabInhalt.svelte
+      ---
+      duration_ms: 2.867486
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/components/organisms/__tests__/wetter_tab_barrel.test.ts:52:3'
+      failureType: 'testCodeFailure'
+      error: |-
+        TDD RED: Barrel-Export WetterTabInhalt fehlt oder zeigt woanders hin
+        + actual - expected
+        
+        + undefined
+        - './wetter-tab/WetterTabInhalt.svelte'
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: './wetter-tab/WetterTabInhalt.svelte'
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/components/organisms/__tests__/wetter_tab_barrel.test.ts:53:11)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Test.start (node:internal/test_runner/test:944:17)
+        node:internal/test_runner/test:1440:71
+        node:internal/per_context/primordials:466:82
+        new Promise (<anonymous>)
+        new SafePromise (node:internal/per_context/primordials:435:3)
+        node:internal/per_context/primordials:466:9
+        Array.map (<anonymous>)
+      ...
+    # Subtest: VorlageKarte im Barrel aus ./wetter-tab/VorlageKarte.svelte
+    ok 2 - VorlageKarte im Barrel aus ./wetter-tab/VorlageKarte.svelte
+      ---
+      duration_ms: 0.09895
+      type: 'test'
+      ...
+    # Subtest: MetrikZeile im Barrel aus ./wetter-tab/MetrikZeile.svelte
+    ok 3 - MetrikZeile im Barrel aus ./wetter-tab/MetrikZeile.svelte
+      ---
+      duration_ms: 0.064979
+      type: 'test'
+      ...
+    # Subtest: GrenzenEditor im Barrel aus ./wetter-tab/GrenzenEditor.svelte
+    ok 4 - GrenzenEditor im Barrel aus ./wetter-tab/GrenzenEditor.svelte
+      ---
+      duration_ms: 0.047471
+      type: 'test'
+      ...
+    # Subtest: WarnungenRadarKarte im Barrel aus ./wetter-tab/WarnungenRadarKarte.svelte
+    ok 5 - WarnungenRadarKarte im Barrel aus ./wetter-tab/WarnungenRadarKarte.svelte
+      ---
+      duration_ms: 0.06483
+      type: 'test'
+      ...
+    # Subtest: AmpelLeiste im Barrel aus ./wetter-tab/AmpelLeiste.svelte
+    ok 6 - AmpelLeiste im Barrel aus ./wetter-tab/AmpelLeiste.svelte
+      ---
+      duration_ms: 0.091491
+      type: 'test'
+      ...
+    # Subtest: AlarmAbKopf im Barrel aus ./wetter-tab/AlarmAbKopf.svelte
+    ok 7 - AlarmAbKopf im Barrel aus ./wetter-tab/AlarmAbKopf.svelte
+      ---
+      duration_ms: 0.05046
+      type: 'test'
+      ...
+    # Subtest: NichtImBriefing im Barrel aus ./wetter-tab/NichtImBriefing.svelte
+    ok 8 - NichtImBriefing im Barrel aus ./wetter-tab/NichtImBriefing.svelte
+      ---
+      duration_ms: 0.14471
+      type: 'test'
+      ...
+    # Subtest: AnpassenKarte im Barrel aus ./wetter-tab/AnpassenKarte.svelte
+    ok 9 - AnpassenKarte im Barrel aus ./wetter-tab/AnpassenKarte.svelte
+      ---
+      duration_ms: 0.11066
+      type: 'test'
+      ...
+    1..9
+not ok 11 - AC-10: Barrel exportiert die neun Organismen aus ./wetter-tab/
+  ---
+  duration_ms: 4.587072
+  type: 'suite'
+  location: '/home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/components/organisms/__tests__/wetter_tab_barrel.test.ts:50:1'
+  failureType: 'subtestsFailed'
+  error: '1 subtest failed'
+  code: 'ERR_TEST_FAILURE'
+  ...
+# Subtest: AC-10 (Teil 2, K-1): Barrel exportiert keinen Organismus WetterTab mehr
+    # Subtest: kein Export WetterTab aus ./wetter-tab/WetterTab.svelte
+    not ok 1 - kein Export WetterTab aus ./wetter-tab/WetterTab.svelte
+      ---
+      duration_ms: 0.315411
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/components/organisms/__tests__/wetter_tab_barrel.test.ts:59:2'
+      failureType: 'testCodeFailure'
+      error: |-
+        TDD RED: Barrel exportiert noch WetterTab (./wetter-tab/WetterTab.svelte)
+        
+        true !== false
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: false
+      actual: true
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/components/organisms/__tests__/wetter_tab_barrel.test.ts:60:10)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Test.start (node:internal/test_runner/test:944:17)
+        node:internal/test_runner/test:1440:71
+        node:internal/per_context/primordials:466:82
+        new Promise (<anonymous>)
+        new SafePromise (node:internal/per_context/primordials:435:3)
+        node:internal/per_context/primordials:466:9
+        Array.map (<anonymous>)
+      ...
+    1..1
+not ok 12 - AC-10 (Teil 2, K-1): Barrel exportiert keinen Organismus WetterTab mehr
+  ---
+  duration_ms: 0.40826
+  type: 'suite'
+  location: '/home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/components/organisms/__tests__/wetter_tab_barrel.test.ts:58:1'
+  failureType: 'subtestsFailed'
+  error: '1 subtest failed'
+  code: 'ERR_TEST_FAILURE'
+  ...
+# Subtest: AC-10: Doku beschreibt Organismen und Maß-Tokens
+    # Subtest: COMPONENTS.md nennt alle neun Organismen des Wetter-Reiters
+    not ok 1 - COMPONENTS.md nennt alle neun Organismen des Wetter-Reiters
+      ---
+      duration_ms: 0.887622
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/components/organisms/__tests__/wetter_tab_barrel.test.ts:65:2'
+      failureType: 'testCodeFailure'
+      error: |-
+        COMPONENTS.md ohne: WetterTabInhalt
+        + actual - expected
+        
+        + [
+        +   'WetterTabInhalt'
+        + ]
+        - []
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected:
+      actual:
+        0: 'WetterTabInhalt'
+      operator: 'deepStrictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/components/organisms/__tests__/wetter_tab_barrel.test.ts:67:10)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Test.start (node:internal/test_runner/test:944:17)
+        node:internal/test_runner/test:1440:71
+        node:internal/per_context/primordials:466:82
+        new Promise (<anonymous>)
+        new SafePromise (node:internal/per_context/primordials:435:3)
+        node:internal/per_context/primordials:466:9
+        Array.map (<anonymous>)
+      ...
+    # Subtest: TOKENS.md beschreibt --g-tap-min und --g-size-*
+    ok 2 - TOKENS.md beschreibt --g-tap-min und --g-size-*
+      ---
+      duration_ms: 0.151841
+      type: 'test'
+      ...
+    1..2
+not ok 13 - AC-10: Doku beschreibt Organismen und Maß-Tokens
+  ---
+  duration_ms: 1.115673
+  type: 'suite'
+  location: '/home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/components/organisms/__tests__/wetter_tab_barrel.test.ts:64:1'
+  failureType: 'subtestsFailed'
+  error: '1 subtest failed'
+  code: 'ERR_TEST_FAILURE'
+  ...
+# Subtest: AC-16/K-6: Organismen ohne rohe Controls
+    # Subtest: VorlageKarte: kein rohes <button>/<input>/<select>/<textarea>
+    not ok 1 - VorlageKarte: kein rohes <button>/<input>/<select>/<textarea>
+      ---
+      duration_ms: 65.404218
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/components/organisms/__tests__/wetter_tab_bausteine.test.ts:110:3'
+      failureType: 'testCodeFailure'
+      error: |-
+        TDD RED: VorlageKarte enthält rohe Controls
+        + actual - expected
+        
+        + [
+        +   '<button>',
+        +   '<button>',
+        +   '<button>',
+        +   '<button>',
+        +   '<button>',
+        +   '<button>',
+        +   '<button>'
+        + ]
+        - []
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected:
+      actual:
+        0: '<button>'
+        1: '<button>'
+        2: '<button>'
+        3: '<button>'
+        4: '<button>'
+        5: '<button>'
+        6: '<button>'
+      operator: 'deepStrictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/components/organisms/__tests__/wetter_tab_bausteine.test.ts:111:11)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Test.start (node:internal/test_runner/test:944:17)
+        node:internal/test_runner/test:1440:71
+        node:internal/per_context/primordials:466:82
+        new Promise (<anonymous>)
+        new SafePromise (node:internal/per_context/primordials:435:3)
+        node:internal/per_context/primordials:466:9
+        Array.map (<anonymous>)
+      ...
+    # Subtest: AlarmAbKopf: kein rohes <button>/<input>/<select>/<textarea>
+    ok 2 - AlarmAbKopf: kein rohes <button>/<input>/<select>/<textarea>
+      ---
+      duration_ms: 4.480929
+      type: 'test'
+      ...
+    # Subtest: MetrikZeile: kein rohes <button>/<input>/<select>/<textarea>
+    not ok 3 - MetrikZeile: kein rohes <button>/<input>/<select>/<textarea>
+      ---
+      duration_ms: 31.114279
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/components/organisms/__tests__/wetter_tab_bausteine.test.ts:110:3'
+      failureType: 'testCodeFailure'
+      error: |-
+        TDD RED: MetrikZeile enthält rohe Controls
+        + actual - expected
+        
+        + [
+        +   '<button>',
+        +   '<button>'
+        + ]
+        - []
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected:
+      actual:
+        0: '<button>'
+        1: '<button>'
+      operator: 'deepStrictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/components/organisms/__tests__/wetter_tab_bausteine.test.ts:111:11)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: AmpelLeiste: kein rohes <button>/<input>/<select>/<textarea>
+    ok 4 - AmpelLeiste: kein rohes <button>/<input>/<select>/<textarea>
+      ---
+      duration_ms: 18.203801
+      type: 'test'
+      ...
+    # Subtest: GrenzenEditor: kein rohes <button>/<input>/<select>/<textarea>
+    not ok 5 - GrenzenEditor: kein rohes <button>/<input>/<select>/<textarea>
+      ---
+      duration_ms: 8.649588
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/components/organisms/__tests__/wetter_tab_bausteine.test.ts:110:3'
+      failureType: 'testCodeFailure'
+      error: |-
+        TDD RED: GrenzenEditor enthält rohe Controls
+        + actual - expected
+        
+        + [
+        +   '<input>'
+        + ]
+        - []
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected:
+      actual:
+        0: '<input>'
+      operator: 'deepStrictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/components/organisms/__tests__/wetter_tab_bausteine.test.ts:111:11)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: NichtImBriefing: kein rohes <button>/<input>/<select>/<textarea>
+    not ok 6 - NichtImBriefing: kein rohes <button>/<input>/<select>/<textarea>
+      ---
+      duration_ms: 5.114931
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/components/organisms/__tests__/wetter_tab_bausteine.test.ts:110:3'
+      failureType: 'testCodeFailure'
+      error: |-
+        TDD RED: NichtImBriefing enthält rohe Controls
+        + actual - expected
+        
+        + [
+        +   '<button>'
+        + ]
+        - []
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected:
+      actual:
+        0: '<button>'
+      operator: 'deepStrictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/components/organisms/__tests__/wetter_tab_bausteine.test.ts:111:11)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: WetterTabInhalt: kein rohes <button>/<input>/<select>/<textarea>
+    not ok 7 - WetterTabInhalt: kein rohes <button>/<input>/<select>/<textarea>
+      ---
+      duration_ms: 0.19887
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/components/organisms/__tests__/wetter_tab_bausteine.test.ts:110:3'
+      failureType: 'testCodeFailure'
+      error: 'TDD RED: organisms/wetter-tab/WetterTabInhalt.svelte fehlt'
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: true
+      actual: false
+      operator: '=='
+      stack: |-
+        quelle (file:///home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/components/organisms/__tests__/wetter_tab_bausteine.test.ts:50:9)
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/components/organisms/__tests__/wetter_tab_bausteine.test.ts:111:34)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: AlarmAbKopf: Zeile aus dem Molekül Einstellungszeile
+    not ok 8 - AlarmAbKopf: Zeile aus dem Molekül Einstellungszeile
+      ---
+      duration_ms: 3.288108
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/components/organisms/__tests__/wetter_tab_bausteine.test.ts:115:3'
+      failureType: 'testCodeFailure'
+      error: 'TDD RED: AlarmAbKopf importiert Einstellungszeile nicht'
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: true
+      actual: ~
+      operator: '=='
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/components/organisms/__tests__/wetter_tab_bausteine.test.ts:118:11)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: WarnungenRadarKarte: Zeile aus dem Molekül Einstellungszeile
+    not ok 9 - WarnungenRadarKarte: Zeile aus dem Molekül Einstellungszeile
+      ---
+      duration_ms: 5.349342
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/components/organisms/__tests__/wetter_tab_bausteine.test.ts:115:3'
+      failureType: 'testCodeFailure'
+      error: 'TDD RED: WarnungenRadarKarte importiert Einstellungszeile nicht'
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: true
+      actual: ~
+      operator: '=='
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/components/organisms/__tests__/wetter_tab_bausteine.test.ts:118:11)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: WetterTabInhalt: Ladeanzeige aus dem Atom Skelett
+    not ok 10 - WetterTabInhalt: Ladeanzeige aus dem Atom Skelett
+      ---
+      duration_ms: 0.500891
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/components/organisms/__tests__/wetter_tab_bausteine.test.ts:123:2'
+      failureType: 'testCodeFailure'
+      error: 'TDD RED: organisms/wetter-tab/WetterTabInhalt.svelte fehlt'
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: true
+      actual: false
+      operator: '=='
+      stack: |-
+        quelle (file:///home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/components/organisms/__tests__/wetter_tab_bausteine.test.ts:50:9)
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/components/organisms/__tests__/wetter_tab_bausteine.test.ts:124:13)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    1..10
+not ok 14 - AC-16/K-6: Organismen ohne rohe Controls
+  ---
+  duration_ms: 143.575384
+  type: 'suite'
+  location: '/home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/components/organisms/__tests__/wetter_tab_bausteine.test.ts:108:1'
+  failureType: 'subtestsFailed'
+  error: '8 subtests failed'
+  code: 'ERR_TEST_FAILURE'
+  ...
+# Subtest: AC-12: AmpelLeiste aus --g-ampel-*, Stufe ohne Farbe erkennbar
+    # Subtest: Quelle nutzt var(--g-ampel-gruen/-gelb/-orange/-rot)
+    not ok 1 - Quelle nutzt var(--g-ampel-gruen/-gelb/-orange/-rot)
+      ---
+      duration_ms: 0.646652
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/components/organisms/__tests__/wetter_tab_bausteine.test.ts:142:2'
+      failureType: 'testCodeFailure'
+      error: |-
+        TDD RED: AmpelLeiste ohne var(--g-ampel-gruen/gelb/orange/rot)
+        + actual - expected
+        
+        + [
+        +   'gruen',
+        +   'gelb',
+        +   'orange',
+        +   'rot'
+        + ]
+        - []
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected:
+      actual:
+        0: 'gruen'
+        1: 'gelb'
+        2: 'orange'
+        3: 'rot'
+      operator: 'deepStrictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/components/organisms/__tests__/wetter_tab_bausteine.test.ts:145:10)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Test.start (node:internal/test_runner/test:944:17)
+        node:internal/test_runner/test:1440:71
+        node:internal/per_context/primordials:466:82
+        new Promise (<anonymous>)
+        new SafePromise (node:internal/per_context/primordials:435:3)
+        node:internal/per_context/primordials:466:9
+        Array.map (<anonymous>)
+      ...
+    # Subtest: Quelle ohne Behelfs-Tokens --g-success/--g-wx-sun/--g-accent/--g-danger
+    not ok 2 - Quelle ohne Behelfs-Tokens --g-success/--g-wx-sun/--g-accent/--g-danger
+      ---
+      duration_ms: 0.286341
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/components/organisms/__tests__/wetter_tab_bausteine.test.ts:147:2'
+      failureType: 'testCodeFailure'
+      error: |-
+        TDD RED: Behelfs-Tokens noch in AmpelLeiste: --g-success, --g-wx-sun, --g-accent, --g-danger
+        + actual - expected
+        
+        + [
+        +   '--g-success',
+        +   '--g-wx-sun',
+        +   '--g-accent',
+        +   '--g-danger'
+        + ]
+        - []
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected:
+      actual:
+        0: '--g-success'
+        1: '--g-wx-sun'
+        2: '--g-accent'
+        3: '--g-danger'
+      operator: 'deepStrictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/components/organisms/__tests__/wetter_tab_bausteine.test.ts:150:10)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Promise.all (index 0)
+        async Suite.run (node:internal/test_runner/test:1442:7)
+        async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: SSR nur oben (Wind): je Segment data-farbe in Reihenfolge von ampelLeiste.ts
+    not ok 3 - SSR nur oben (Wind): je Segment data-farbe in Reihenfolge von ampelLeiste.ts
+      ---
+      duration_ms: 209.878072
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/components/organisms/__tests__/wetter_tab_bausteine.test.ts:171:3'
+      failureType: 'testCodeFailure'
+      error: |-
+        TDD RED: Segmente ohne data-farbe oder in anderer Reihenfolge
+        + actual - expected
+        
+        + []
+        - [
+        -   'green',
+        -   'yellow',
+        -   'orange',
+        -   'red'
+        - ]
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected:
+        0: 'green'
+        1: 'yellow'
+        2: 'orange'
+        3: 'red'
+      actual:
+      operator: 'deepStrictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/components/organisms/__tests__/wetter_tab_bausteine.test.ts:174:11)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: SSR nur oben (Wind): je Segment role="img" und aria-label = Farbname aus dem Katalog
+    not ok 4 - SSR nur oben (Wind): je Segment role="img" und aria-label = Farbname aus dem Katalog
+      ---
+      duration_ms: 12.846108
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/components/organisms/__tests__/wetter_tab_bausteine.test.ts:176:3'
+      failureType: 'testCodeFailure'
+      error: |-
+        TDD RED: Segmente ohne data-farbe
+        
+        0 !== 4
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 4
+      actual: 0
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/components/organisms/__tests__/wetter_tab_bausteine.test.ts:179:11)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: SSR beidseitig (Temperatur): je Segment data-farbe in Reihenfolge von ampelLeiste.ts
+    not ok 5 - SSR beidseitig (Temperatur): je Segment data-farbe in Reihenfolge von ampelLeiste.ts
+      ---
+      duration_ms: 6.120714
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/components/organisms/__tests__/wetter_tab_bausteine.test.ts:171:3'
+      failureType: 'testCodeFailure'
+      error: |-
+        TDD RED: Segmente ohne data-farbe oder in anderer Reihenfolge
+        + actual - expected
+        
+        + []
+        - [
+        -   'red',
+        -   'orange',
+        -   'yellow',
+        -   'green',
+        -   'yellow'
+        - ]
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected:
+        0: 'red'
+        1: 'orange'
+        2: 'yellow'
+        3: 'green'
+        4: 'yellow'
+      actual:
+      operator: 'deepStrictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/components/organisms/__tests__/wetter_tab_bausteine.test.ts:174:11)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: SSR beidseitig (Temperatur): je Segment role="img" und aria-label = Farbname aus dem Katalog
+    not ok 6 - SSR beidseitig (Temperatur): je Segment role="img" und aria-label = Farbname aus dem Katalog
+      ---
+      duration_ms: 2.695495
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/components/organisms/__tests__/wetter_tab_bausteine.test.ts:176:3'
+      failureType: 'testCodeFailure'
+      error: |-
+        TDD RED: Segmente ohne data-farbe
+        
+        0 !== 5
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 5
+      actual: 0
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/components/organisms/__tests__/wetter_tab_bausteine.test.ts:179:11)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: SSR Gewitter (Stufen): je Segment data-farbe in Reihenfolge von ampelLeiste.ts
+    not ok 7 - SSR Gewitter (Stufen): je Segment data-farbe in Reihenfolge von ampelLeiste.ts
+      ---
+      duration_ms: 5.040811
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/components/organisms/__tests__/wetter_tab_bausteine.test.ts:171:3'
+      failureType: 'testCodeFailure'
+      error: |-
+        TDD RED: Segmente ohne data-farbe oder in anderer Reihenfolge
+        + actual - expected
+        
+        + []
+        - [
+        -   'green',
+        -   'orange',
+        -   'red'
+        - ]
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected:
+        0: 'green'
+        1: 'orange'
+        2: 'red'
+      actual:
+      operator: 'deepStrictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/components/organisms/__tests__/wetter_tab_bausteine.test.ts:174:11)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: SSR Gewitter (Stufen): je Segment role="img" und aria-label = Farbname aus dem Katalog
+    not ok 8 - SSR Gewitter (Stufen): je Segment role="img" und aria-label = Farbname aus dem Katalog
+      ---
+      duration_ms: 3.032908
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/components/organisms/__tests__/wetter_tab_bausteine.test.ts:176:3'
+      failureType: 'testCodeFailure'
+      error: |-
+        TDD RED: Segmente ohne data-farbe
+        
+        0 !== 3
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 3
+      actual: 0
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/components/organisms/__tests__/wetter_tab_bausteine.test.ts:179:11)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: SSR: Testid wetter-ampel-leiste-<id> bleibt (K-7)
+    ok 9 - SSR: Testid wetter-ampel-leiste-<id> bleibt (K-7)
+      ---
+      duration_ms: 10.702304
+      type: 'test'
+      ...
+    1..9
+not ok 15 - AC-12: AmpelLeiste aus --g-ampel-*, Stufe ohne Farbe erkennbar
+  ---
+  duration_ms: 251.713256
+  type: 'suite'
+  location: '/home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/components/organisms/__tests__/wetter_tab_bausteine.test.ts:141:1'
+  failureType: 'subtestsFailed'
+  error: '8 subtests failed'
+  code: 'ERR_TEST_FAILURE'
+  ...
+# Subtest: AC-15/K-2: NichtImBriefing baut auf ChipLeiste
+    # Subtest: Quelle importiert ChipLeiste aus molecules und verwendet sie
+    not ok 1 - Quelle importiert ChipLeiste aus molecules und verwendet sie
+      ---
+      duration_ms: 6.550744
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/components/organisms/__tests__/wetter_tab_bausteine.test.ts:202:2'
+      failureType: 'testCodeFailure'
+      error: 'TDD RED: NichtImBriefing importiert ChipLeiste nicht'
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: true
+      actual: ~
+      operator: '=='
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/components/organisms/__tests__/wetter_tab_bausteine.test.ts:205:10)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Test.start (node:internal/test_runner/test:944:17)
+        node:internal/test_runner/test:1440:71
+        node:internal/per_context/primordials:466:82
+        new Promise (<anonymous>)
+        new SafePromise (node:internal/per_context/primordials:435:3)
+        node:internal/per_context/primordials:466:9
+        Array.map (<anonymous>)
+      ...
+    # Subtest: SSR: je nicht ausgewählter Metrik ein Btn-Chip mit erhaltener Testid und Katalogtext
+    not ok 2 - SSR: je nicht ausgewählter Metrik ein Btn-Chip mit erhaltener Testid und Katalogtext
+      ---
+      duration_ms: 41.572174
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/components/organisms/__tests__/wetter_tab_bausteine.test.ts:209:2'
+      failureType: 'testCodeFailure'
+      error: |-
+        TDD RED: erwartet 3 Btn-Chips, gefunden 0
+        
+        0 !== 3
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 3
+      actual: 0
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/components/organisms/__tests__/wetter_tab_bausteine.test.ts:213:10)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    1..2
+not ok 16 - AC-15/K-2: NichtImBriefing baut auf ChipLeiste
+  ---
+  duration_ms: 48.402508
+  type: 'suite'
+  location: '/home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/components/organisms/__tests__/wetter_tab_bausteine.test.ts:196:1'
+  failureType: 'subtestsFailed'
+  error: '2 subtests failed'
+  code: 'ERR_TEST_FAILURE'
+  ...
+# Subtest: K-6/K-7: MetrikZeile — Alarm-ab-Stufen mit Farbpunkt, Knöpfe als Btn
+    # Subtest: SSR: vier Stufen role=radio, aria-checked nur an der gewählten, Testids erhalten (Erhalt)
+    ok 1 - SSR: vier Stufen role=radio, aria-checked nur an der gewählten, Testids erhalten (Erhalt)
+      ---
+      duration_ms: 288.111058
+      type: 'test'
+      ...
+    # Subtest: SSR: Farbstufen tragen einen Farbpunkt data-farbe, „never“ keinen
+    not ok 2 - SSR: Farbstufen tragen einen Farbpunkt data-farbe, „never“ keinen
+      ---
+      duration_ms: 0.881823
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/components/organisms/__tests__/wetter_tab_bausteine.test.ts:268:2'
+      failureType: 'testCodeFailure'
+      error: 'TDD RED: Stufe yellow ohne Farbpunkt'
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected:
+      actual: 'Gelb'
+      operator: 'match'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/components/organisms/__tests__/wetter_tab_bausteine.test.ts:274:11)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: SSR: Entfernen und Grenzen-ändern sind Btn (data-slot="btn"), Testids erhalten
+    not ok 3 - SSR: Entfernen und Grenzen-ändern sind Btn (data-slot="btn"), Testids erhalten
+      ---
+      duration_ms: 0.828942
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/components/organisms/__tests__/wetter_tab_bausteine.test.ts:277:2'
+      failureType: 'testCodeFailure'
+      error: 'TDD RED: wetter-zeile-entfernen-wind ist kein Btn'
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected:
+      actual: '<button type="button" class="wt-rm svelte-1ikdj7t" data-testid="wetter-zeile-entfernen-wind" aria-label="Wind aus dem Briefing nehmen" title="Wind aus dem Briefing nehmen">'
+      operator: 'match'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/components/organisms/__tests__/wetter_tab_bausteine.test.ts:283:11)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    1..3
+not ok 17 - K-6/K-7: MetrikZeile — Alarm-ab-Stufen mit Farbpunkt, Knöpfe als Btn
+  ---
+  duration_ms: 289.980062
+  type: 'suite'
+  location: '/home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/components/organisms/__tests__/wetter_tab_bausteine.test.ts:257:1'
+  failureType: 'subtestsFailed'
+  error: '2 subtests failed'
+  code: 'ERR_TEST_FAILURE'
+  ...
+# Subtest: K-6: GrenzenEditor — Eingaben als Input mit Ampel-Unterkante
+    # Subtest: SSR: je Feld das Atom Input (data-slot="input") mit data-ampel der Feldfarbe, Testid erhalten
+    not ok 1 - SSR: je Feld das Atom Input (data-slot="input") mit data-ampel der Feldfarbe, Testid erhalten
+      ---
+      duration_ms: 0.900352
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/components/organisms/__tests__/wetter_tab_bausteine.test.ts:291:2'
+      failureType: 'testCodeFailure'
+      error: 'TDD RED: Feld yellow ist nicht das Atom Input'
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected:
+      actual: '<input type="text" inputmode="decimal" data-testid="wetter-grenze-wind-upper-yellow" value="30" class="svelte-19tege"/>'
+      operator: 'match'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/components/organisms/__tests__/wetter_tab_bausteine.test.ts:308:11)
+        async Test.run (node:internal/test_runner/test:1054:7)
+        async Promise.all (index 0)
+        async Suite.run (node:internal/test_runner/test:1442:7)
+        async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    1..1
+not ok 18 - K-6: GrenzenEditor — Eingaben als Input mit Ampel-Unterkante
+  ---
+  duration_ms: 1.002302
+  type: 'suite'
+  location: '/home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/components/organisms/__tests__/wetter_tab_bausteine.test.ts:290:1'
+  failureType: 'subtestsFailed'
+  error: '1 subtest failed'
+  code: 'ERR_TEST_FAILURE'
+  ...
+# Subtest: AC-21: wetter.json DE/EN unverändert gegenüber dem Abzweigpunkt von origin/main
+    # Subtest: de/wetter.json byte-gleich
+    ok 1 - de/wetter.json byte-gleich
+      ---
+      duration_ms: 4.760781
+      type: 'test'
+      ...
+    # Subtest: en/wetter.json byte-gleich
+    ok 2 - en/wetter.json byte-gleich
+      ---
+      duration_ms: 4.03635
+      type: 'test'
+      ...
+    # Subtest: DE und EN haben dieselben wetter.*-Schlüssel
+    ok 3 - DE und EN haben dieselben wetter.*-Schlüssel
+      ---
+      duration_ms: 1.074013
+      type: 'test'
+      ...
+    1..3
+ok 19 - AC-21: wetter.json DE/EN unverändert gegenüber dem Abzweigpunkt von origin/main
+  ---
+  duration_ms: 10.846983
+  type: 'suite'
+  ...
+# Subtest: AC-21: keine hartcodierten Nutzertexte in den neuen Bausteinen
+    # Subtest: atoms/Skelett.svelte: kein Textknoten/beschriftendes Attribut außerhalb des Katalogs
+    not ok 1 - atoms/Skelett.svelte: kein Textknoten/beschriftendes Attribut außerhalb des Katalogs
+      ---
+      duration_ms: 0.654971
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/components/organisms/__tests__/wetter_tab_i18n.test.ts:72:3'
+      failureType: 'testCodeFailure'
+      error: 'TDD RED: atoms/Skelett.svelte fehlt'
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: true
+      actual: false
+      operator: '=='
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/components/organisms/__tests__/wetter_tab_i18n.test.ts:74:11)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Test.start (node:internal/test_runner/test:944:17)
+        node:internal/test_runner/test:1440:71
+        node:internal/per_context/primordials:466:82
+        new Promise (<anonymous>)
+        new SafePromise (node:internal/per_context/primordials:435:3)
+        node:internal/per_context/primordials:466:9
+        Array.map (<anonymous>)
+      ...
+    # Subtest: molecules/Einstellungszeile.svelte: kein Textknoten/beschriftendes Attribut außerhalb des Katalogs
+    not ok 2 - molecules/Einstellungszeile.svelte: kein Textknoten/beschriftendes Attribut außerhalb des Katalogs
+      ---
+      duration_ms: 0.14423
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/components/organisms/__tests__/wetter_tab_i18n.test.ts:72:3'
+      failureType: 'testCodeFailure'
+      error: 'TDD RED: molecules/Einstellungszeile.svelte fehlt'
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: true
+      actual: false
+      operator: '=='
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/components/organisms/__tests__/wetter_tab_i18n.test.ts:74:11)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Promise.all (index 0)
+        async Suite.run (node:internal/test_runner/test:1442:7)
+        async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: molecules/ChipLeiste.svelte: kein Textknoten/beschriftendes Attribut außerhalb des Katalogs
+    not ok 3 - molecules/ChipLeiste.svelte: kein Textknoten/beschriftendes Attribut außerhalb des Katalogs
+      ---
+      duration_ms: 0.10522
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/components/organisms/__tests__/wetter_tab_i18n.test.ts:72:3'
+      failureType: 'testCodeFailure'
+      error: 'TDD RED: molecules/ChipLeiste.svelte fehlt'
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: true
+      actual: false
+      operator: '=='
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/components/organisms/__tests__/wetter_tab_i18n.test.ts:74:11)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: shared/WetterTab.svelte: kein Textknoten/beschriftendes Attribut außerhalb des Katalogs
+    not ok 4 - shared/WetterTab.svelte: kein Textknoten/beschriftendes Attribut außerhalb des Katalogs
+      ---
+      duration_ms: 0.142151
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/components/organisms/__tests__/wetter_tab_i18n.test.ts:72:3'
+      failureType: 'testCodeFailure'
+      error: 'TDD RED: shared/WetterTab.svelte fehlt'
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: true
+      actual: false
+      operator: '=='
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/components/organisms/__tests__/wetter_tab_i18n.test.ts:74:11)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: organisms/wetter-tab/WetterTabInhalt.svelte: kein Textknoten/beschriftendes Attribut außerhalb des Katalogs
+    not ok 5 - organisms/wetter-tab/WetterTabInhalt.svelte: kein Textknoten/beschriftendes Attribut außerhalb des Katalogs
+      ---
+      duration_ms: 1.030322
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/components/organisms/__tests__/wetter_tab_i18n.test.ts:72:3'
+      failureType: 'testCodeFailure'
+      error: 'TDD RED: organisms/wetter-tab/WetterTabInhalt.svelte fehlt'
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: true
+      actual: false
+      operator: '=='
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/components/organisms/__tests__/wetter_tab_i18n.test.ts:74:11)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    1..5
+not ok 20 - AC-21: keine hartcodierten Nutzertexte in den neuen Bausteinen
+  ---
+  duration_ms: 2.404755
+  type: 'suite'
+  location: '/home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/components/organisms/__tests__/wetter_tab_i18n.test.ts:63:1'
+  failureType: 'subtestsFailed'
+  error: '5 subtests failed'
+  code: 'ERR_TEST_FAILURE'
+  ...
+# Subtest: AC-3: neun Organismen unter organisms/wetter-tab/, Logik bleibt in shared/wetter-tab/
+    # Subtest: WetterTabInhalt.svelte liegt unter organisms/wetter-tab/
+    not ok 1 - WetterTabInhalt.svelte liegt unter organisms/wetter-tab/
+      ---
+      duration_ms: 2.270956
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/components/organisms/__tests__/wetter_tab_ort.test.ts:106:3'
+      failureType: 'testCodeFailure'
+      error: 'TDD RED: organisms/wetter-tab/WetterTabInhalt.svelte fehlt'
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: true
+      actual: false
+      operator: '=='
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/components/organisms/__tests__/wetter_tab_ort.test.ts:107:11)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Test.start (node:internal/test_runner/test:944:17)
+        node:internal/test_runner/test:1440:71
+        node:internal/per_context/primordials:466:82
+        new Promise (<anonymous>)
+        new SafePromise (node:internal/per_context/primordials:435:3)
+        node:internal/per_context/primordials:466:9
+        Array.map (<anonymous>)
+      ...
+    # Subtest: VorlageKarte.svelte liegt unter organisms/wetter-tab/
+    ok 2 - VorlageKarte.svelte liegt unter organisms/wetter-tab/
+      ---
+      duration_ms: 0.1248
+      type: 'test'
+      ...
+    # Subtest: MetrikZeile.svelte liegt unter organisms/wetter-tab/
+    ok 3 - MetrikZeile.svelte liegt unter organisms/wetter-tab/
+      ---
+      duration_ms: 0.079941
+      type: 'test'
+      ...
+    # Subtest: GrenzenEditor.svelte liegt unter organisms/wetter-tab/
+    ok 4 - GrenzenEditor.svelte liegt unter organisms/wetter-tab/
+      ---
+      duration_ms: 0.06768
+      type: 'test'
+      ...
+    # Subtest: WarnungenRadarKarte.svelte liegt unter organisms/wetter-tab/
+    ok 5 - WarnungenRadarKarte.svelte liegt unter organisms/wetter-tab/
+      ---
+      duration_ms: 0.128281
+      type: 'test'
+      ...
+    # Subtest: AmpelLeiste.svelte liegt unter organisms/wetter-tab/
+    ok 6 - AmpelLeiste.svelte liegt unter organisms/wetter-tab/
+      ---
+      duration_ms: 0.077592
+      type: 'test'
+      ...
+    # Subtest: AlarmAbKopf.svelte liegt unter organisms/wetter-tab/
+    ok 7 - AlarmAbKopf.svelte liegt unter organisms/wetter-tab/
+      ---
+      duration_ms: 0.057092
+      type: 'test'
+      ...
+    # Subtest: NichtImBriefing.svelte liegt unter organisms/wetter-tab/
+    ok 8 - NichtImBriefing.svelte liegt unter organisms/wetter-tab/
+      ---
+      duration_ms: 0.096741
+      type: 'test'
+      ...
+    # Subtest: AnpassenKarte.svelte liegt unter organisms/wetter-tab/
+    ok 9 - AnpassenKarte.svelte liegt unter organisms/wetter-tab/
+      ---
+      duration_ms: 0.15351
+      type: 'test'
+      ...
+    # Subtest: unter shared/wetter-tab/ liegt keine .svelte-Datei mehr
+    ok 10 - unter shared/wetter-tab/ liegt keine .svelte-Datei mehr
+      ---
+      duration_ms: 1.119802
+      type: 'test'
+      ...
+    # Subtest: die acht .ts-Module liegen weiterhin unter shared/wetter-tab/
+    ok 11 - die acht .ts-Module liegen weiterhin unter shared/wetter-tab/
+      ---
+      duration_ms: 0.177811
+      type: 'test'
+      ...
+    # Subtest: unter organisms/wetter-tab/ liegt kein .ts-Logikmodul (keine Verschiebung der Logik)
+    ok 12 - unter organisms/wetter-tab/ liegt kein .ts-Logikmodul (keine Verschiebung der Logik)
+      ---
+      duration_ms: 0.158709
+      type: 'test'
+      ...
+    1..12
+not ok 21 - AC-3: neun Organismen unter organisms/wetter-tab/, Logik bleibt in shared/wetter-tab/
+  ---
+  duration_ms: 5.519602
+  type: 'suite'
+  location: '/home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/components/organisms/__tests__/wetter_tab_ort.test.ts:104:1'
+  failureType: 'subtestsFailed'
+  error: '1 subtest failed'
+  code: 'ERR_TEST_FAILURE'
+  ...
+# Subtest: AC-4/AC-2: Regel b meldet 0 Verstöße, ohne Abkürzung über AUSNAHMEN, BESTAND oder audit:exempt
+    # Subtest: WetterTabInhalt.svelte: Regel b ohne Verstoß
+    not ok 1 - WetterTabInhalt.svelte: Regel b ohne Verstoß
+      ---
+      duration_ms: 0.253491
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/components/organisms/__tests__/wetter_tab_ort.test.ts:126:3'
+      failureType: 'testCodeFailure'
+      error: 'TDD RED: organisms/wetter-tab/WetterTabInhalt.svelte fehlt'
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: true
+      actual: false
+      operator: '=='
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/components/organisms/__tests__/wetter_tab_ort.test.ts:128:11)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Test.start (node:internal/test_runner/test:944:17)
+        node:internal/test_runner/test:1440:71
+        node:internal/per_context/primordials:466:82
+        new Promise (<anonymous>)
+        new SafePromise (node:internal/per_context/primordials:435:3)
+        node:internal/per_context/primordials:466:9
+        Array.map (<anonymous>)
+      ...
+    # Subtest: WetterTabInhalt.svelte: kein AUSNAHMEN-/BESTAND-Eintrag und kein audit:exempt
+    not ok 2 - WetterTabInhalt.svelte: kein AUSNAHMEN-/BESTAND-Eintrag und kein audit:exempt
+      ---
+      duration_ms: 0.15331
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/components/organisms/__tests__/wetter_tab_ort.test.ts:137:3'
+      failureType: 'testCodeFailure'
+      error: 'TDD RED: organisms/wetter-tab/WetterTabInhalt.svelte fehlt'
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: true
+      actual: false
+      operator: '=='
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/components/organisms/__tests__/wetter_tab_ort.test.ts:139:11)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Promise.all (index 0)
+        async Suite.run (node:internal/test_runner/test:1442:7)
+        async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: VorlageKarte.svelte: Regel b ohne Verstoß
+    ok 3 - VorlageKarte.svelte: Regel b ohne Verstoß
+      ---
+      duration_ms: 48.998151
+      type: 'test'
+      ...
+    # Subtest: VorlageKarte.svelte: kein AUSNAHMEN-/BESTAND-Eintrag und kein audit:exempt
+    ok 4 - VorlageKarte.svelte: kein AUSNAHMEN-/BESTAND-Eintrag und kein audit:exempt
+      ---
+      duration_ms: 0.396472
+      type: 'test'
+      ...
+    # Subtest: MetrikZeile.svelte: Regel b ohne Verstoß
+    ok 5 - MetrikZeile.svelte: Regel b ohne Verstoß
+      ---
+      duration_ms: 26.31191
+      type: 'test'
+      ...
+    # Subtest: MetrikZeile.svelte: kein AUSNAHMEN-/BESTAND-Eintrag und kein audit:exempt
+    ok 6 - MetrikZeile.svelte: kein AUSNAHMEN-/BESTAND-Eintrag und kein audit:exempt
+      ---
+      duration_ms: 0.180311
+      type: 'test'
+      ...
+    # Subtest: GrenzenEditor.svelte: Regel b ohne Verstoß
+    ok 7 - GrenzenEditor.svelte: Regel b ohne Verstoß
+      ---
+      duration_ms: 10.253212
+      type: 'test'
+      ...
+    # Subtest: GrenzenEditor.svelte: kein AUSNAHMEN-/BESTAND-Eintrag und kein audit:exempt
+    ok 8 - GrenzenEditor.svelte: kein AUSNAHMEN-/BESTAND-Eintrag und kein audit:exempt
+      ---
+      duration_ms: 0.13992
+      type: 'test'
+      ...
+    # Subtest: WarnungenRadarKarte.svelte: Regel b ohne Verstoß
+    ok 9 - WarnungenRadarKarte.svelte: Regel b ohne Verstoß
+      ---
+      duration_ms: 6.030853
+      type: 'test'
+      ...
+    # Subtest: WarnungenRadarKarte.svelte: kein AUSNAHMEN-/BESTAND-Eintrag und kein audit:exempt
+    ok 10 - WarnungenRadarKarte.svelte: kein AUSNAHMEN-/BESTAND-Eintrag und kein audit:exempt
+      ---
+      duration_ms: 0.127341
+      type: 'test'
+      ...
+    # Subtest: AmpelLeiste.svelte: Regel b ohne Verstoß
+    ok 11 - AmpelLeiste.svelte: Regel b ohne Verstoß
+      ---
+      duration_ms: 6.282394
+      type: 'test'
+      ...
+    # Subtest: AmpelLeiste.svelte: kein AUSNAHMEN-/BESTAND-Eintrag und kein audit:exempt
+    ok 12 - AmpelLeiste.svelte: kein AUSNAHMEN-/BESTAND-Eintrag und kein audit:exempt
+      ---
+      duration_ms: 0.20252
+      type: 'test'
+      ...
+    # Subtest: AlarmAbKopf.svelte: Regel b ohne Verstoß
+    ok 13 - AlarmAbKopf.svelte: Regel b ohne Verstoß
+      ---
+      duration_ms: 5.16286
+      type: 'test'
+      ...
+    # Subtest: AlarmAbKopf.svelte: kein AUSNAHMEN-/BESTAND-Eintrag und kein audit:exempt
+    ok 14 - AlarmAbKopf.svelte: kein AUSNAHMEN-/BESTAND-Eintrag und kein audit:exempt
+      ---
+      duration_ms: 0.151681
+      type: 'test'
+      ...
+    # Subtest: NichtImBriefing.svelte: Regel b ohne Verstoß
+    ok 15 - NichtImBriefing.svelte: Regel b ohne Verstoß
+      ---
+      duration_ms: 1.428153
+      type: 'test'
+      ...
+    # Subtest: NichtImBriefing.svelte: kein AUSNAHMEN-/BESTAND-Eintrag und kein audit:exempt
+    ok 16 - NichtImBriefing.svelte: kein AUSNAHMEN-/BESTAND-Eintrag und kein audit:exempt
+      ---
+      duration_ms: 0.107711
+      type: 'test'
+      ...
+    # Subtest: AnpassenKarte.svelte: Regel b ohne Verstoß
+    ok 17 - AnpassenKarte.svelte: Regel b ohne Verstoß
+      ---
+      duration_ms: 1.370413
+      type: 'test'
+      ...
+    # Subtest: AnpassenKarte.svelte: kein AUSNAHMEN-/BESTAND-Eintrag und kein audit:exempt
+    ok 18 - AnpassenKarte.svelte: kein AUSNAHMEN-/BESTAND-Eintrag und kein audit:exempt
+      ---
+      duration_ms: 0.09887
+      type: 'test'
+      ...
+    # Subtest: kein Eintrag für den Wetter-Reiter in AUSNAHMEN oder BESTAND (alter oder neuer Ort)
+    ok 19 - kein Eintrag für den Wetter-Reiter in AUSNAHMEN oder BESTAND (alter oder neuer Ort)
+      ---
+      duration_ms: 0.154131
+      type: 'test'
+      ...
+    1..19
+not ok 22 - AC-4/AC-2: Regel b meldet 0 Verstöße, ohne Abkürzung über AUSNAHMEN, BESTAND oder audit:exempt
+  ---
+  duration_ms: 108.376154
+  type: 'suite'
+  location: '/home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/components/organisms/__tests__/wetter_tab_ort.test.ts:124:1'
+  failureType: 'subtestsFailed'
+  error: '2 subtests failed'
+  code: 'ERR_TEST_FAILURE'
+  ...
+# Subtest: AC-8/AC-19 (Teil 2, K-1): Importeure zeigen auf die Seite shared/WetterTab.svelte, Trip und Vergleich teilen denselben Pfad
+    # Subtest: TripTabs importiert WetterTab aus $lib/components/shared/WetterTab.svelte
+    not ok 1 - TripTabs importiert WetterTab aus $lib/components/shared/WetterTab.svelte
+      ---
+      duration_ms: 12.84781
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/components/organisms/__tests__/wetter_tab_ort.test.ts:155:3'
+      failureType: 'testCodeFailure'
+      error: |-
+        TDD RED: TripTabs: Import zeigt auf $lib/components/organisms/wetter-tab/WetterTab.svelte
+        + actual - expected
+        
+        + 'lib/components/organisms/wetter-tab/WetterTab.svelte'
+        - 'lib/components/shared/WetterTab.svelte'
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 'lib/components/shared/WetterTab.svelte'
+      actual: 'lib/components/organisms/wetter-tab/WetterTab.svelte'
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/components/organisms/__tests__/wetter_tab_ort.test.ts:158:11)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Test.start (node:internal/test_runner/test:944:17)
+        node:internal/test_runner/test:1440:71
+        node:internal/per_context/primordials:466:82
+        new Promise (<anonymous>)
+        new SafePromise (node:internal/per_context/primordials:435:3)
+        node:internal/per_context/primordials:466:9
+        Array.map (<anonymous>)
+      ...
+    # Subtest: CompareTabs importiert WetterTab aus $lib/components/shared/WetterTab.svelte
+    not ok 2 - CompareTabs importiert WetterTab aus $lib/components/shared/WetterTab.svelte
+      ---
+      duration_ms: 49.576912
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/components/organisms/__tests__/wetter_tab_ort.test.ts:155:3'
+      failureType: 'testCodeFailure'
+      error: |-
+        TDD RED: CompareTabs: Import zeigt auf $lib/components/organisms/wetter-tab/WetterTab.svelte
+        + actual - expected
+        
+        + 'lib/components/organisms/wetter-tab/WetterTab.svelte'
+        - 'lib/components/shared/WetterTab.svelte'
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 'lib/components/shared/WetterTab.svelte'
+      actual: 'lib/components/organisms/wetter-tab/WetterTab.svelte'
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/components/organisms/__tests__/wetter_tab_ort.test.ts:158:11)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Promise.all (index 0)
+        async Suite.run (node:internal/test_runner/test:1442:7)
+        async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: TripNewEditor importiert WetterTab aus $lib/components/shared/WetterTab.svelte
+    not ok 3 - TripNewEditor importiert WetterTab aus $lib/components/shared/WetterTab.svelte
+      ---
+      duration_ms: 111.360331
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/components/organisms/__tests__/wetter_tab_ort.test.ts:155:3'
+      failureType: 'testCodeFailure'
+      error: |-
+        TDD RED: TripNewEditor: Import zeigt auf $lib/components/organisms/wetter-tab/WetterTab.svelte
+        + actual - expected
+        
+        + 'lib/components/organisms/wetter-tab/WetterTab.svelte'
+        - 'lib/components/shared/WetterTab.svelte'
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 'lib/components/shared/WetterTab.svelte'
+      actual: 'lib/components/organisms/wetter-tab/WetterTab.svelte'
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/components/organisms/__tests__/wetter_tab_ort.test.ts:158:11)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: CompareNewEditor importiert WetterTab aus $lib/components/shared/WetterTab.svelte
+    not ok 4 - CompareNewEditor importiert WetterTab aus $lib/components/shared/WetterTab.svelte
+      ---
+      duration_ms: 72.670803
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/components/organisms/__tests__/wetter_tab_ort.test.ts:155:3'
+      failureType: 'testCodeFailure'
+      error: |-
+        TDD RED: CompareNewEditor: Import zeigt auf $lib/components/organisms/wetter-tab/WetterTab.svelte
+        + actual - expected
+        
+        + 'lib/components/organisms/wetter-tab/WetterTab.svelte'
+        - 'lib/components/shared/WetterTab.svelte'
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: 'lib/components/shared/WetterTab.svelte'
+      actual: 'lib/components/organisms/wetter-tab/WetterTab.svelte'
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/components/organisms/__tests__/wetter_tab_ort.test.ts:158:11)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: alle vier Importeure lösen auf DIESELBE Datei auf
+    not ok 5 - alle vier Importeure lösen auf DIESELBE Datei auf
+      ---
+      duration_ms: 154.851358
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/components/organisms/__tests__/wetter_tab_ort.test.ts:161:2'
+      failureType: 'testCodeFailure'
+      error: |-
+        Expected values to be strictly deep-equal:
+        + actual - expected
+        
+          [
+        +   'lib/components/organisms/wetter-tab/WetterTab.svelte'
+        -   'lib/components/shared/WetterTab.svelte'
+          ]
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected:
+        0: 'lib/components/shared/WetterTab.svelte'
+      actual:
+        0: 'lib/components/organisms/wetter-tab/WetterTab.svelte'
+      operator: 'deepStrictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/components/organisms/__tests__/wetter_tab_ort.test.ts:169:10)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: organisms/wetter-tab/WetterTab.svelte existiert nicht mehr (git mv zu WetterTabInhalt.svelte)
+    not ok 6 - organisms/wetter-tab/WetterTab.svelte existiert nicht mehr (git mv zu WetterTabInhalt.svelte)
+      ---
+      duration_ms: 0.323201
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/components/organisms/__tests__/wetter_tab_ort.test.ts:171:2'
+      failureType: 'testCodeFailure'
+      error: |-
+        TDD RED: organisms/wetter-tab/WetterTab.svelte liegt noch dort
+        
+        true !== false
+        
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: false
+      actual: true
+      operator: 'strictEqual'
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/components/organisms/__tests__/wetter_tab_ort.test.ts:172:10)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: die Seite shared/WetterTab.svelte existiert und bindet organisms/wetter-tab/WetterTabInhalt.svelte ein
+    not ok 7 - die Seite shared/WetterTab.svelte existiert und bindet organisms/wetter-tab/WetterTabInhalt.svelte ein
+      ---
+      duration_ms: 0.19627
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/components/organisms/__tests__/wetter_tab_ort.test.ts:174:2'
+      failureType: 'testCodeFailure'
+      error: 'TDD RED: lib/components/shared/WetterTab.svelte fehlt'
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: true
+      actual: false
+      operator: '=='
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/components/organisms/__tests__/wetter_tab_ort.test.ts:175:10)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Suite.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: kein Quell- oder Testtext verweist noch auf eine .svelte-Datei im alten Ordner
+    ok 8 - kein Quell- oder Testtext verweist noch auf eine .svelte-Datei im alten Ordner
+      ---
+      duration_ms: 311.960511
+      type: 'test'
+      ...
+    1..8
+not ok 23 - AC-8/AC-19 (Teil 2, K-1): Importeure zeigen auf die Seite shared/WetterTab.svelte, Trip und Vergleich teilen denselben Pfad
+  ---
+  duration_ms: 714.176056
+  type: 'suite'
+  location: '/home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/components/organisms/__tests__/wetter_tab_ort.test.ts:152:1'
+  failureType: 'subtestsFailed'
+  error: '7 subtests failed'
+  code: 'ERR_TEST_FAILURE'
+  ...
+# Subtest: AC-17 (Teil 2, K-1): die Seite shared/WetterTab.svelte steht in SEITEN_SCOPE, Regel a ohne Verstoß
+    # Subtest: SEITEN_SCOPE enthält lib/components/shared/WetterTab.svelte
+    not ok 1 - SEITEN_SCOPE enthält lib/components/shared/WetterTab.svelte
+      ---
+      duration_ms: 0.272531
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/components/organisms/__tests__/wetter_tab_ort.test.ts:199:2'
+      failureType: 'testCodeFailure'
+      error: 'TDD RED: lib/components/shared/WetterTab.svelte fehlt in SEITEN_SCOPE'
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: true
+      actual: false
+      operator: '=='
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/components/organisms/__tests__/wetter_tab_ort.test.ts:200:10)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Test.start (node:internal/test_runner/test:944:17)
+        node:internal/test_runner/test:1440:71
+        node:internal/per_context/primordials:466:82
+        new Promise (<anonymous>)
+        new SafePromise (node:internal/per_context/primordials:435:3)
+        node:internal/per_context/primordials:466:9
+        Array.map (<anonymous>)
+      ...
+    # Subtest: Regel a (pruefeSeitenDatei) meldet 0 Verstöße für die Seite
+    not ok 2 - Regel a (pruefeSeitenDatei) meldet 0 Verstöße für die Seite
+      ---
+      duration_ms: 0.15606
+      type: 'test'
+      location: '/home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/components/organisms/__tests__/wetter_tab_ort.test.ts:202:2'
+      failureType: 'testCodeFailure'
+      error: 'TDD RED: lib/components/shared/WetterTab.svelte fehlt'
+      code: 'ERR_ASSERTION'
+      name: 'AssertionError'
+      expected: true
+      actual: false
+      operator: '=='
+      stack: |-
+        TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/components/organisms/__tests__/wetter_tab_ort.test.ts:203:10)
+        Test.runInAsyncScope (node:async_hooks:214:14)
+        Test.run (node:internal/test_runner/test:1047:25)
+        Suite.processPendingSubtests (node:internal/test_runner/test:744:18)
+        Test.postRun (node:internal/test_runner/test:1173:19)
+        Test.run (node:internal/test_runner/test:1101:12)
+        async Promise.all (index 0)
+        async Suite.run (node:internal/test_runner/test:1442:7)
+        async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+      ...
+    # Subtest: die Seite steht nicht in BESTAND oder AUSNAHMEN und trägt kein audit:exempt
+    ok 3 - die Seite steht nicht in BESTAND oder AUSNAHMEN und trägt kein audit:exempt
+      ---
+      duration_ms: 0.08916
+      type: 'test'
+      ...
+    1..3
+not ok 24 - AC-17 (Teil 2, K-1): die Seite shared/WetterTab.svelte steht in SEITEN_SCOPE, Regel a ohne Verstoß
+  ---
+  duration_ms: 0.64816
+  type: 'suite'
+  location: '/home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/lib/components/organisms/__tests__/wetter_tab_ort.test.ts:197:1'
+  failureType: 'subtestsFailed'
+  error: '2 subtests failed'
+  code: 'ERR_TEST_FAILURE'
+  ...
+# Subtest: \#374 AC-1: Route +page.svelte existiert + importiert alle 4 Schichten
+ok 25 - \#374 AC-1: Route +page.svelte existiert + importiert alle 4 Schichten
+  ---
+  duration_ms: 1.007222
+  type: 'test'
+  ...
+# Subtest: \#374 AC-2: 6 Sektionen Brand/Typografie/Farben/Bausteine/Molecules/Voice
+ok 26 - \#374 AC-2: 6 Sektionen Brand/Typografie/Farben/Bausteine/Molecules/Voice
+  ---
+  duration_ms: 0.933091
+  type: 'test'
+  ...
+# Subtest: \#374 AC-2: gezeigte Pflicht-Varianten (Switch-Tones, Btn quiet, Pill ghost, Stat, AlertRow)
+ok 27 - \#374 AC-2: gezeigte Pflicht-Varianten (Switch-Tones, Btn quiet, Pill ghost, Stat, AlertRow)
+  ---
+  duration_ms: 0.24164
+  type: 'test'
+  ...
+# Subtest: \#374 AC-3: Mobile-Demo nutzt MobileShell + Mobile-Primitive
+ok 28 - \#374 AC-3: Mobile-Demo nutzt MobileShell + Mobile-Primitive
+  ---
+  duration_ms: 0.26519
+  type: 'test'
+  ...
+# Subtest: \#374 AC-4: Token-basiert (kein nackter Hex außer in Farben-Swatch-Labels)
+ok 29 - \#374 AC-4: Token-basiert (kein nackter Hex außer in Farben-Swatch-Labels)
+  ---
+  duration_ms: 0.1863
+  type: 'test'
+  ...
+# Subtest: \#374 AC-5: Frontend-Doku "Atomic-Design-Disziplin"
+ok 30 - \#374 AC-5: Frontend-Doku "Atomic-Design-Disziplin"
+  ---
+  duration_ms: 0.16776
+  type: 'test'
+  ...
+# Subtest: \#2913 AC-20: Skelett aus dem Atom-Barrel importiert und gezeigt
+not ok 31 - \#2913 AC-20: Skelett aus dem Atom-Barrel importiert und gezeigt
+  ---
+  duration_ms: 148.997305
+  type: 'test'
+  location: '/home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/routes/_design-system/showcase.test.ts:107:1'
+  failureType: 'testCodeFailure'
+  error: 'TDD RED: Showcase importiert Skelett nicht aus $lib/components/atoms'
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: true
+  actual: false
+  operator: '=='
+  stack: |-
+    TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/routes/_design-system/showcase.test.ts:108:9)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: \#2913 AC-20: Input mit Ampel-Unterkante (alle vier Farben)
+not ok 32 - \#2913 AC-20: Input mit Ampel-Unterkante (alle vier Farben)
+  ---
+  duration_ms: 82.005473
+  type: 'test'
+  location: '/home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/routes/_design-system/showcase.test.ts:112:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    TDD RED: <Input ampel=…> fehlt im Showcase für: green, yellow, orange, red
+    + actual - expected
+    
+    + [
+    +   'green',
+    +   'yellow',
+    +   'orange',
+    +   'red'
+    + ]
+    - []
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+  actual:
+    0: 'green'
+    1: 'yellow'
+    2: 'orange'
+    3: 'red'
+  operator: 'deepStrictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/routes/_design-system/showcase.test.ts:118:9)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: \#2913 AC-20: Segmented mit Farbpunkt (farbe in items/options)
+not ok 33 - \#2913 AC-20: Segmented mit Farbpunkt (farbe in items/options)
+  ---
+  duration_ms: 58.036599
+  type: 'test'
+  location: '/home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/routes/_design-system/showcase.test.ts:121:1'
+  failureType: 'testCodeFailure'
+  error: 'TDD RED: Showcase importiert Segmented nicht aus $lib/components/atoms'
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected: true
+  actual: false
+  operator: '=='
+  stack: |-
+    TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/routes/_design-system/showcase.test.ts:122:9)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+# Subtest: \#2913 AC-20: die vier Ampel-Tokens --g-ampel-* sind im Showcase zu sehen
+not ok 34 - \#2913 AC-20: die vier Ampel-Tokens --g-ampel-* sind im Showcase zu sehen
+  ---
+  duration_ms: 0.786592
+  type: 'test'
+  location: '/home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/routes/_design-system/showcase.test.ts:130:1'
+  failureType: 'testCodeFailure'
+  error: |-
+    TDD RED: Showcase ohne --g-ampel-gruen/gelb/orange/rot
+    + actual - expected
+    
+    + [
+    +   'gruen',
+    +   'gelb',
+    +   'orange',
+    +   'rot'
+    + ]
+    - []
+    
+  code: 'ERR_ASSERTION'
+  name: 'AssertionError'
+  expected:
+  actual:
+    0: 'gruen'
+    1: 'gelb'
+    2: 'orange'
+    3: 'rot'
+  operator: 'deepStrictEqual'
+  stack: |-
+    TestContext.<anonymous> (file:///home/hem/gregor_zwanzig/.claude/worktrees/lazy-sleeping-stonebraker/frontend/src/routes/_design-system/showcase.test.ts:133:9)
+    Test.runInAsyncScope (node:async_hooks:214:14)
+    Test.run (node:internal/test_runner/test:1047:25)
+    Test.processPendingSubtests (node:internal/test_runner/test:744:18)
+    Test.postRun (node:internal/test_runner/test:1173:19)
+    Test.run (node:internal/test_runner/test:1101:12)
+    async Test.processPendingSubtests (node:internal/test_runner/test:744:7)
+  ...
+1..34
+# tests 160
+# suites 24
+# pass 55
+# fail 105
+# cancelled 0
+# skipped 0
+# todo 0
+# duration_ms 2613.264438

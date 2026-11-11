@@ -31,3 +31,15 @@ export { default as AlertsCard }               from './AlertsCard.svelte';
 export { default as PresetRail }               from './PresetRail.svelte';
 export { default as MetricOffShelf }           from './MetricOffShelf.svelte';
 export { default as MetricsEditorContextBar }  from './MetricsEditorContextBar.svelte';
+
+// Issue #2913 — Wetter-Reiter (Trip + Orts-Briefing, context="route"|"vergleich"), Logik bleibt in shared/wetter-tab/*.ts
+// Teil 2 (K-1): die Seite ist shared/WetterTab.svelte (Regel (a)); Zustand/Laden/Speichern im Organismus WetterTabInhalt.
+export { default as WetterTabInhalt }          from './wetter-tab/WetterTabInhalt.svelte';
+export { default as VorlageKarte }             from './wetter-tab/VorlageKarte.svelte';
+export { default as MetrikZeile }              from './wetter-tab/MetrikZeile.svelte';
+export { default as GrenzenEditor }            from './wetter-tab/GrenzenEditor.svelte';
+export { default as WarnungenRadarKarte }      from './wetter-tab/WarnungenRadarKarte.svelte';
+export { default as AmpelLeiste }              from './wetter-tab/AmpelLeiste.svelte';
+export { default as AlarmAbKopf }              from './wetter-tab/AlarmAbKopf.svelte';
+export { default as NichtImBriefing }          from './wetter-tab/NichtImBriefing.svelte';
+export { default as AnpassenKarte }            from './wetter-tab/AnpassenKarte.svelte';
