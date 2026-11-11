@@ -50,8 +50,8 @@
 		display: flex;
 		align-items: center;
 		justify-content: space-between;
-		gap: 16px;
-		padding: 12px 20px;
+		gap: var(--g-s-4);
+		padding: var(--g-s-3) var(--g-s-5);
 	}
 	.wt-zeile + .wt-zeile {
 		border-top: 1px solid var(--g-rule-soft);
@@ -59,23 +59,23 @@
 	.wt-text {
 		display: flex;
 		flex-direction: column;
-		gap: 2px;
+		gap: var(--g-size-2px);
 		min-width: 0;
 	}
 	.wt-text b {
-		font-size: 14px;
+		font-size: var(--g-size-14px);
 		color: var(--g-ink);
 	}
 	.wt-text small {
-		font-size: 12.5px;
+		font-size: var(--g-size-12-5px);
 		color: var(--g-ink-2);
 	}
 	.wt-switch {
 		display: inline-flex;
 		align-items: center;
 		justify-content: center;
-		min-width: 56px;
-		min-height: 44px;
+		min-width: var(--g-size-56px);
+		min-height: var(--g-tap-min);
 		padding: 0;
 		border: none;
 		background: transparent;
@@ -83,15 +83,15 @@
 		flex-shrink: 0;
 	}
 	.wt-switch:focus-visible {
-		outline: 2px solid var(--g-accent);
-		outline-offset: 2px;
+		outline: var(--g-size-2px) solid var(--g-accent);
+		outline-offset: var(--g-size-2px);
 	}
 	.wt-track {
 		position: relative;
 		display: block;
-		width: 44px;
-		height: 26px;
-		border-radius: 13px;
+		width: var(--g-tap-min);
+		height: var(--g-size-26px);
+		border-radius: var(--g-size-13px);
 		background: var(--g-ink-3);
 		transition: background 120ms;
 	}
@@ -100,20 +100,20 @@
 	}
 	.wt-knopf {
 		position: absolute;
-		top: 2px;
-		left: 2px;
-		width: 22px;
-		height: 22px;
+		top: var(--g-size-2px);
+		left: var(--g-size-2px);
+		width: var(--g-size-22px);
+		height: var(--g-size-22px);
 		border-radius: 50%;
 		background: var(--g-paper);
 		transition: left 120ms;
 	}
 	.wt-track.an .wt-knopf {
-		left: 20px;
+		left: var(--g-s-5);
 	}
 	@media (max-width: 899px) {
 		.wt-zeile {
-			padding: 12px 16px;
+			padding: var(--g-s-3) var(--g-s-4);
 		}
 	}
 </style>

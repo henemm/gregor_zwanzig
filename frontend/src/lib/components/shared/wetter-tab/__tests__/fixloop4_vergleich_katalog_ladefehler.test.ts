@@ -32,7 +32,7 @@ import { standAusAbo } from '../wetterZustand.ts';
 import { klon } from '../klon.ts';
 
 const HIER = dirname(fileURLToPath(import.meta.url));
-const WETTER_TAB = join(HIER, '..', 'WetterTab.svelte');
+const WETTER_TAB = join(HIER, '..', '..', '..', 'organisms', 'wetter-tab', 'WetterTab.svelte');
 
 const LIVE_API = {
 	get: async (pfad: string) => {

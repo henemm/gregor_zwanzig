@@ -177,6 +177,32 @@
     --g-s-16: 64px;
     --g-s-20: 80px;
 
+    /* #2913: Maß-Tokens (Light = Dark, kein Dark-Wert). --g-tap-min = Mindest-Touch-Ziel.
+       --g-size-<wert> nur für Maße AUSSERHALB des 4px-Rasters --g-s-*; der Name nennt den Wert
+       (--g-size-10px = 10px, nicht Rasterstufe 10). Nie runden: Bestandsmaße bleiben pixelgleich.
+       Doku: docs/design-system/TOKENS.md (Maß-Tokens). */
+    --g-tap-min:        44px;
+    --g-size-2px:       2px;
+    --g-size-5px:       5px;
+    --g-size-6px:       6px;
+    --g-size-10px:      10px;
+    --g-size-12-5px:    12.5px;
+    --g-size-13px:      13px;
+    --g-size-14px:      14px;
+    --g-size-18px:      18px;
+    --g-size-22px:      22px;
+    --g-size-26px:      26px;
+    --g-size-28px:      28px;
+    --g-size-56px:      56px;
+    --g-size-60px:      60px;
+    --g-size-72px:      72px;
+    --g-size-120px:     120px;
+    --g-size-180px:     180px;
+    --g-size-420px:     420px;
+    --g-size-1100px:    1100px;
+    --g-size-0-08em:    0.08em;
+    --g-size-0-1em:     0.1em;
+
     /* Issue #267 — Mobile App-Shell Tokens */
     --g-paper-deep: #ecead9;  /* #576: tokens.css-Sync */
     --g-rule-soft: #e7e2d3;  /* #378: opak, ersetzt rgba(26,26,24,0.08) */

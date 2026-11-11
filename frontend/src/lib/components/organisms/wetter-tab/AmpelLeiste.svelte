@@ -3,7 +3,7 @@
 	// Geteilt fuer Trip und Orts-Briefing; Geometrie in ampelLeiste.ts.
 	import type { Ampel, AmpelMetrik } from '$lib/types';
 	import { t } from '$lib/i18n';
-	import { gewitterLeiste, leisteVon, type LeisteFarbe } from './ampelLeiste.ts';
+	import { gewitterLeiste, leisteVon, type LeisteFarbe } from '../../shared/wetter-tab/ampelLeiste.ts';
 
 	interface Props {
 		id: string;
@@ -48,14 +48,14 @@
 	.wt-leiste {
 		display: flex;
 		flex-direction: column;
-		gap: 2px;
+		gap: var(--g-size-2px);
 		min-width: 0;
 	}
 	.wt-marken {
 		position: relative;
-		height: 16px;
+		height: var(--g-s-4);
 		font-family: var(--g-font-mono);
-		font-size: 11px;
+		font-size: var(--g-text-xs);
 		color: var(--g-ink-2);
 	}
 	.wt-marken i {
@@ -71,8 +71,8 @@
 	}
 	.wt-band {
 		display: flex;
-		height: 10px;
-		border-radius: 5px;
+		height: var(--g-size-10px);
+		border-radius: var(--g-size-5px);
 		overflow: hidden;
 		border: 1px solid var(--g-rule);
 	}

@@ -5,9 +5,9 @@
 	// nur bei Abweichungen, Dialog „Als eigene Vorlage speichern". Trip und Orts-Briefing gleich.
 	import type { Ampel, MetricPreset } from '$lib/types';
 	import { t, tn } from '$lib/i18n';
-	import SavePresetDialog from '../weather-metrics-tab/SavePresetDialog.svelte';
-	import type { Kontext } from './ampelModell.ts';
-	import type { EigeneVorlage, VorlageEintrag } from './wetterTabLaden.ts';
+	import SavePresetDialog from '../../shared/weather-metrics-tab/SavePresetDialog.svelte';
+	import type { Kontext } from '../../shared/wetter-tab/ampelModell.ts';
+	import type { EigeneVorlage, VorlageEintrag } from '../../shared/wetter-tab/wetterTabLaden.ts';
 
 	interface Props {
 		context: Kontext;
@@ -120,8 +120,8 @@
 		flex-wrap: wrap;
 		align-items: flex-end;
 		justify-content: space-between;
-		gap: 12px 16px;
-		padding: 16px 20px;
+		gap: var(--g-s-3) var(--g-s-4);
+		padding: var(--g-s-4) var(--g-s-5);
 		border: 1px solid var(--g-rule);
 		border-radius: var(--g-r-3);
 		background: var(--g-card);
@@ -130,33 +130,33 @@
 		position: relative;
 		display: flex;
 		flex-direction: column;
-		gap: 6px;
+		gap: var(--g-size-6px);
 	}
 	.wt-eyebrow {
 		font-family: var(--g-font-mono);
-		font-size: 11px;
-		letter-spacing: 0.12em;
+		font-size: var(--g-text-xs);
+		letter-spacing: var(--g-track-caps);
 		text-transform: uppercase;
 		color: var(--g-ink-3);
 	}
 	.wt-picker {
 		display: inline-flex;
 		align-items: baseline;
-		gap: 10px;
-		min-height: 44px;
-		padding: 0 14px;
+		gap: var(--g-size-10px);
+		min-height: var(--g-tap-min);
+		padding: 0 var(--g-size-14px);
 		border: 1px solid var(--g-rule);
 		border-radius: var(--g-r-2);
 		background: var(--g-card);
 		color: var(--g-ink);
 		font: inherit;
-		font-size: 16px;
+		font-size: var(--g-s-4);
 		font-weight: 600;
 		cursor: pointer;
 		align-self: flex-start;
 	}
 	.wt-picker small {
-		font-size: 12.5px;
+		font-size: var(--g-size-12-5px);
 		font-weight: 400;
 		color: var(--g-ink-2);
 	}
@@ -165,21 +165,21 @@
 		top: 100%;
 		left: 0;
 		z-index: 30;
-		margin-top: 4px;
-		width: min(420px, calc(100vw - 48px));
+		margin-top: var(--g-s-1);
+		width: min(var(--g-size-420px), calc(100vw - var(--g-s-12)));
 		max-height: 70vh;
 		overflow-y: auto;
-		padding: 6px;
+		padding: var(--g-size-6px);
 		border: 1px solid var(--g-rule);
-		border-radius: 8px;
+		border-radius: var(--g-radius-md);
 		background: var(--g-card);
 		box-shadow: var(--g-shadow-3);
 	}
 	.wt-gruppe {
-		padding: 8px 10px 4px;
+		padding: var(--g-s-2) var(--g-size-10px) var(--g-s-1);
 		font-family: var(--g-font-mono);
-		font-size: 11px;
-		letter-spacing: 0.08em;
+		font-size: var(--g-text-xs);
+		letter-spacing: var(--g-size-0-08em);
 		text-transform: uppercase;
 		color: var(--g-ink-3);
 	}
@@ -187,16 +187,16 @@
 		display: flex;
 		flex-direction: column;
 		align-items: flex-start;
-		gap: 2px;
+		gap: var(--g-size-2px);
 		width: 100%;
-		min-height: 44px;
-		padding: 6px 10px;
+		min-height: var(--g-tap-min);
+		padding: var(--g-size-6px) var(--g-size-10px);
 		border: none;
 		border-radius: var(--g-r-2);
 		background: transparent;
 		color: var(--g-ink);
 		font: inherit;
-		font-size: 14px;
+		font-size: var(--g-size-14px);
 		text-align: left;
 		cursor: pointer;
 	}
@@ -205,36 +205,36 @@
 		background: var(--g-paper-deep);
 	}
 	.wt-option small {
-		font-size: 12px;
+		font-size: var(--g-s-3);
 		color: var(--g-ink-2);
 	}
 	.wt-frage {
-		margin: 4px 4px 8px;
-		padding: 10px 12px;
+		margin: var(--g-s-1) var(--g-s-1) var(--g-s-2);
+		padding: var(--g-size-10px) var(--g-s-3);
 		border: 1px solid var(--g-rule);
 		border-radius: var(--g-r-2);
 		background: var(--g-card-alt);
-		font-size: 13px;
+		font-size: var(--g-text-sm);
 		color: var(--g-ink);
 	}
 	.wt-frage p {
-		margin: 0 0 8px;
+		margin: 0 0 var(--g-s-2);
 	}
 	.wt-reihe {
 		display: flex;
 		flex-wrap: wrap;
-		gap: 8px;
+		gap: var(--g-s-2);
 	}
 	.wt-btn {
-		min-height: 44px;
-		min-width: 44px;
-		padding: 0 14px;
+		min-height: var(--g-tap-min);
+		min-width: var(--g-tap-min);
+		padding: 0 var(--g-size-14px);
 		border: 1px solid var(--g-rule);
 		border-radius: var(--g-r-2);
 		background: var(--g-card);
 		color: var(--g-ink);
 		font: inherit;
-		font-size: 13px;
+		font-size: var(--g-text-sm);
 		cursor: pointer;
 	}
 	.wt-btn--primaer {
@@ -245,12 +245,12 @@
 	.wt-meldung {
 		flex-basis: 100%;
 		margin: 0;
-		font-size: 13px;
+		font-size: var(--g-text-sm);
 		color: var(--g-ink-2);
 	}
 	@media (max-width: 899px) {
 		.wt-karte {
-			padding: 14px 16px;
+			padding: var(--g-size-14px) var(--g-s-4);
 		}
 	}
 </style>

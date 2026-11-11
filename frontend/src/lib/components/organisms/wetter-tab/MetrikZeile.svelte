@@ -7,7 +7,7 @@
 	import { t } from '$lib/i18n';
 	import AmpelLeiste from './AmpelLeiste.svelte';
 	import GrenzenEditor from './GrenzenEditor.svelte';
-	import { alarmAbOptionen, erklaersatz, gruenZeile, type AlarmAb, type Farbe, type KatalogModell, type MetrikEigenschaften } from './ampelModell.ts';
+	import { alarmAbOptionen, erklaersatz, gruenZeile, type AlarmAb, type Farbe, type KatalogModell, type MetrikEigenschaften } from '../../shared/wetter-tab/ampelModell.ts';
 
 	interface Props {
 		id: string;
@@ -89,30 +89,30 @@
 <style>
 	.wt-zeile {
 		display: grid;
-		grid-template-columns: 44px minmax(120px, 180px) minmax(0, 1fr) auto;
-		gap: 8px 14px;
+		grid-template-columns: var(--g-tap-min) minmax(var(--g-size-120px), var(--g-size-180px)) minmax(0, 1fr) auto;
+		gap: var(--g-s-2) var(--g-size-14px);
 		align-items: center;
-		padding: 12px 20px;
+		padding: var(--g-s-3) var(--g-s-5);
 		border-top: 1px solid var(--g-rule-soft);
 	}
 	.wt-rm,
 	.wt-btn {
-		min-height: 44px;
-		min-width: 44px;
+		min-height: var(--g-tap-min);
+		min-width: var(--g-tap-min);
 		box-sizing: border-box;
 		border: 1px solid var(--g-rule);
 		border-radius: var(--g-r-2);
 		background: var(--g-card);
 		color: var(--g-ink);
 		font: inherit;
-		font-size: 13px;
+		font-size: var(--g-text-sm);
 		cursor: pointer;
 	}
 	.wt-btn {
-		padding: 0 12px;
+		padding: 0 var(--g-s-3);
 	}
 	.wt-rm {
-		font-size: 18px;
+		font-size: var(--g-size-18px);
 		line-height: 1;
 	}
 	.wt-name {
@@ -121,24 +121,24 @@
 		min-width: 0;
 	}
 	.wt-name b {
-		font-size: 14px;
+		font-size: var(--g-size-14px);
 		color: var(--g-ink);
 	}
 	.wt-name small,
 	.wt-lbl,
 	.wt-nur {
-		font-size: 12.5px;
+		font-size: var(--g-size-12-5px);
 		color: var(--g-ink-2);
 	}
 	.wt-mitte {
 		display: flex;
 		flex-direction: column;
-		gap: 6px;
+		gap: var(--g-size-6px);
 		min-width: 0;
 	}
 	.wt-why {
 		margin: 0;
-		font-size: 12.5px;
+		font-size: var(--g-size-12-5px);
 		line-height: 1.45;
 		color: var(--g-ink-2);
 	}
@@ -150,11 +150,11 @@
 		flex-wrap: wrap;
 		align-items: center;
 		justify-content: flex-end;
-		gap: 8px;
+		gap: var(--g-s-2);
 	}
 	.wt-seg :global([data-slot='segmented-item']) {
-		min-height: 44px;
-		min-width: 44px;
+		min-height: var(--g-tap-min);
+		min-width: var(--g-tap-min);
 		color: var(--g-ink-2);
 	}
 	.wt-seg :global([data-slot='segmented-item'][data-active='true']) {
@@ -162,8 +162,8 @@
 	}
 	@media (max-width: 899px) {
 		.wt-zeile {
-			grid-template-columns: 44px minmax(0, 1fr);
-			padding: 12px 16px;
+			grid-template-columns: var(--g-tap-min) minmax(0, 1fr);
+			padding: var(--g-s-3) var(--g-s-4);
 		}
 		.wt-mitte,
 		.wt-act {

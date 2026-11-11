@@ -19,7 +19,7 @@
 	import Field from '$lib/components/molecules/Field.svelte';
 	import WetterMetrikenVersandPanel from '$lib/components/shared/WetterMetrikenVersandPanel.svelte';
 	// Issue #2794 S3a Teil-PR 3 (AC-38): Schritt Wetter = WetterTab (createMode, kein PUT).
-	import WetterTab from '$lib/components/shared/wetter-tab/WetterTab.svelte';
+	import WetterTab from '$lib/components/organisms/wetter-tab/WetterTab.svelte';
 	import type { tripSpeicherPayload } from '$lib/components/shared/wetter-tab/ampelSchreiben';
 	type WetterAnlegeNutzlast = ReturnType<typeof tripSpeicherPayload>;
 	import { anlegeKette } from '$lib/components/shared/subscriptionTabs';

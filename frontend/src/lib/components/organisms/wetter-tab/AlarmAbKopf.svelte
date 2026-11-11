@@ -4,7 +4,7 @@
 	// Metrik steht der Hinweis statt der Segmente. Trip und Orts-Briefing gleich.
 	import { Segmented } from '$lib/components/atoms';
 	import { t } from '$lib/i18n';
-	import type { AlarmAb, KatalogModell } from './ampelModell.ts';
+	import type { AlarmAb, KatalogModell } from '../../shared/wetter-tab/ampelModell.ts';
 
 	interface Props {
 		zaehler: KatalogModell<'zaehler' | 'keine_alarmfaehig'>;
@@ -38,32 +38,32 @@
 		flex-wrap: wrap;
 		align-items: center;
 		justify-content: space-between;
-		gap: 10px 16px;
-		padding: 14px 20px;
+		gap: var(--g-size-10px) var(--g-s-4);
+		padding: var(--g-size-14px) var(--g-s-5);
 		background: var(--g-card-alt);
 	}
 	.wt-text {
 		display: flex;
 		flex-direction: column;
-		gap: 2px;
+		gap: var(--g-size-2px);
 		min-width: 0;
 	}
 	.wt-text b {
-		font-size: 14px;
+		font-size: var(--g-size-14px);
 		color: var(--g-ink);
 	}
 	.wt-text small {
-		font-size: 12.5px;
+		font-size: var(--g-size-12-5px);
 		color: var(--g-ink-2);
 	}
 	.wt-seg :global([data-slot='segmented-item']) {
-		min-height: 44px;
-		min-width: 44px;
+		min-height: var(--g-tap-min);
+		min-width: var(--g-tap-min);
 		color: var(--g-ink-2);
 	}
 	@media (max-width: 899px) {
 		.wt-kopf {
-			padding: 14px 16px;
+			padding: var(--g-size-14px) var(--g-s-4);
 		}
 	}
 </style>

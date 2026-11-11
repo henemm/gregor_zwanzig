@@ -6,7 +6,7 @@
 	import type { Ampel, AmpelMetrik } from '$lib/types';
 	import { Segmented } from '$lib/components/atoms';
 	import { t } from '$lib/i18n';
-	import { gewitterFarben, type Farbe } from './ampelModell.ts';
+	import { gewitterFarben, type Farbe } from '../../shared/wetter-tab/ampelModell.ts';
 
 	type Seite = 'lower' | 'upper';
 	interface Props {
@@ -95,18 +95,18 @@
 		grid-column: 1 / -1;
 		display: flex;
 		flex-wrap: wrap;
-		gap: 12px 20px;
+		gap: var(--g-s-3) var(--g-s-5);
 		align-items: flex-end;
-		padding: 12px 0 4px;
+		padding: var(--g-s-3) 0 var(--g-s-1);
 	}
 	.wt-grp {
 		display: flex;
 		flex-wrap: wrap;
 		align-items: flex-end;
-		gap: 8px;
+		gap: var(--g-s-2);
 	}
 	.wt-grp-name {
-		font-size: 12px;
+		font-size: var(--g-s-3);
 		color: var(--g-ink-2);
 		max-width: 9ch;
 		align-self: center;
@@ -114,26 +114,26 @@
 	.wt-feld {
 		display: flex;
 		flex-direction: column;
-		gap: 2px;
-		font-size: 12px;
+		gap: var(--g-size-2px);
+		font-size: var(--g-s-3);
 		color: var(--g-ink-2);
 	}
 	.wt-feld input {
-		width: 72px;
-		min-height: 44px;
+		width: var(--g-size-72px);
+		min-height: var(--g-tap-min);
 		box-sizing: border-box;
-		padding: 6px 8px;
+		padding: var(--g-size-6px) var(--g-s-2);
 		font: inherit;
 		font-family: var(--g-font-mono);
-		font-size: 14px;
+		font-size: var(--g-size-14px);
 		color: var(--g-ink);
 		background: var(--g-card);
 		border: 1px solid var(--g-rule);
 		border-radius: var(--g-r-2);
 	}
 	.wt-seg :global([data-slot='segmented-item']) {
-		min-height: 44px;
-		min-width: 44px;
+		min-height: var(--g-tap-min);
+		min-width: var(--g-tap-min);
 		color: var(--g-ink-2);
 	}
 	.wt-seg :global([data-slot='segmented-item'][data-active='true']) {
@@ -142,18 +142,18 @@
 	.wt-hint {
 		flex-basis: 100%;
 		margin: 0;
-		font-size: 12.5px;
+		font-size: var(--g-size-12-5px);
 		color: var(--g-ink-3);
 	}
 	.wt-fehler {
 		flex-basis: 100%;
 		margin: 0;
-		font-size: 13px;
+		font-size: var(--g-text-sm);
 		color: var(--g-danger);
 	}
 	@media (max-width: 899px) {
 		.wt-feld input {
-			font-size: 16px;
+			font-size: var(--g-s-4);
 		}
 	}
 </style>

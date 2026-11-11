@@ -257,8 +257,8 @@
 		.datum-feld :global(:is([data-segment='day'], [data-segment='month'])) {
 			display: inline-block;
 			box-sizing: border-box;
-			min-width: 24px;
-			min-height: 24px;
+			min-width: var(--g-s-6);
+			min-height: var(--g-s-6);
 			text-align: center;
 		}
 	}

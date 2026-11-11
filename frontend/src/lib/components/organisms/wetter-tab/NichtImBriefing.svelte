@@ -31,39 +31,39 @@
 	.wt-mehr {
 		display: flex;
 		flex-direction: column;
-		gap: 8px;
-		padding: 14px 20px;
+		gap: var(--g-s-2);
+		padding: var(--g-size-14px) var(--g-s-5);
 		border-top: 1px solid var(--g-rule-soft);
 	}
 	.wt-titel {
-		font-size: 12.5px;
+		font-size: var(--g-size-12-5px);
 		color: var(--g-ink-2);
 	}
 	.wt-chips {
 		display: flex;
 		flex-wrap: wrap;
-		gap: 8px;
+		gap: var(--g-s-2);
 	}
 	.wt-chip {
-		min-height: 44px;
-		min-width: 44px;
-		padding: 0 12px;
+		min-height: var(--g-tap-min);
+		min-width: var(--g-tap-min);
+		padding: 0 var(--g-s-3);
 		border: 1px solid var(--g-rule);
 		border-radius: var(--g-r-pill);
 		background: var(--g-card);
 		color: var(--g-ink);
 		font: inherit;
-		font-size: 13px;
+		font-size: var(--g-text-sm);
 		cursor: pointer;
 	}
 	.wt-meldung {
 		margin: 0;
-		font-size: 13px;
+		font-size: var(--g-text-sm);
 		color: var(--g-ink-2);
 	}
 	@media (max-width: 899px) {
 		.wt-mehr {
-			padding: 14px 16px;
+			padding: var(--g-size-14px) var(--g-s-4);
 		}
 	}
 </style>
