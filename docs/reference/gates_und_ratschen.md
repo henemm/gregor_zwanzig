@@ -349,7 +349,8 @@ ergänzt): fällt eine Datei weg, sinkt `expected` darunter und das Gate wird ro
 
 **Die Reihenfolge ist kritisch: PWA-Lauf VOR dem bug-703-Ratelimit-Lauf** (gemessen 2026-09-06).
 Die frühere Begründung — „unkritisch, weil `global.setup.ts` nur einloggt, wenn
-`playwright/.auth/admin.json` fehlt/abgelaufen ist" — beschreibt nur `global.setup` und übersieht
+`playwright/.auth/admin.json` fehlt/abgelaufen ist" (seit Issue #2390 auch, wenn der gespeicherte
+Anmeldezustand vom laufenden Server abgelehnt wird: Probe `GET /api/auth/profile`, nur 200 gilt) — beschreibt nur `global.setup` und übersieht
 den datei-eigenen `test.afterAll` in `pwa-update-und-abmelden.spec.ts`: der Nachweis „AC-11: Auf
 allen Geräten abmelden" widerruft absichtlich **alle** Sitzungen inklusive der in `admin.json`, und
 der Hook stellt sie mit **einem echten Login** wieder her. Lief bug-703 davor, war das IP-Kontingent
