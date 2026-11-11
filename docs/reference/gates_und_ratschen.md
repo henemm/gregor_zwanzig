@@ -78,6 +78,12 @@ Dieselbe Bedingung gilt für Deploy-Gate und Post-Deploy-Selftest: exakter Treff
 der bestanden **und** frisch ist **und** dessen Zuwachs reine Doku ist. Ein ausdrücklich übergebener
 `--e2e-path` ist maßgeblich (keine Vorgänger-Suche).
 
+**Verdict je Workflow (seit #2424):** Schreiben mehrere Workflows für denselben Stand, führt die
+Datei unter `verdicts` je Workflow einen eigenen Eintrag; das Top-Level leitet sich daraus ab
+(schwächstes Verdict gewinnt: ein `AMBIGUOUS` blockt mit Nennung des Workflows, breitester Scope,
+`langs` als Vereinigung). Ein erneuter Lauf desselben Workflows ersetzt nur dessen Eintrag; einen
+Override-Schalter gibt es bewusst nicht, ein neuer Commit startet frisch.
+
 Meldet ein Lauf `verified_commit (<fremder Stand>) != expected-commit`, ist das der **alte** Wortlaut
 — dann läuft dort noch Code vor #1382.
 

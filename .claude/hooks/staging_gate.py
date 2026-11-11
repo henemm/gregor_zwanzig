@@ -342,6 +342,68 @@ def _langs_fehlen(data, scope: str) -> bool:
     return scope != "docs-only" and not _e2e_paths.langs_vollstaendig(data)
 
 
+_SCOPE_RANG = {"docs-only": 0, "backend": 1, "frontend-only": 1, "full-stack": 2}
+
+
+def _breitester_scope(scopes: set) -> str:
+    """Issue #2424: breitester Scope; frontend-only plus backend ergibt full-stack.
+    Unbekannte Scope-Werte gelten konservativ als breit."""
+    if {"frontend-only", "backend"} <= scopes:
+        return "full-stack"
+    return max(sorted(scopes), key=lambda s: _SCOPE_RANG.get(s, 2))
+
+
+def _aggregate_verdicts(verdicts: dict, aktuell: str) -> dict:
+    """Issue #2424: Top-Level-Felder aus den Verdicts je Workflow ableiten.
+
+    Schwächstes Verdict gewinnt: der nach Workflow-Name erste AMBIGUOUS-Eintrag
+    wird mit Urheber ausgegeben (Präfix AMBIGUOUS bleibt vorn), sonst der Text
+    des aktuellen Schreibers. Scope breitester Rang, langs und geprüfte Seiten
+    als Vereinigung, ein Browser-Gate-Vermerk bleibt erhalten.
+    """
+    namen = sorted(verdicts)
+    ambig = [n for n in namen if str(verdicts[n].get("verdict", "")).startswith("AMBIGUOUS")]
+    if ambig:
+        text = verdicts[ambig[0]]["verdict"][len("AMBIGUOUS"):].lstrip(" :")
+        staging_verdict = f"AMBIGUOUS (Workflow {ambig[0]}): {text}"
+    else:
+        staging_verdict = verdicts[aktuell]["verdict"]
+    alle_langs = {s for n in namen for s in (verdicts[n].get("langs") or [])}
+    seiten: list = []
+    for n in namen:
+        seiten += [p for p in verdicts[n].get("frontend_pages_checked") or [] if p not in seiten]
+    result = {
+        "staging_verdict": staging_verdict,
+        "scope": _breitester_scope({verdicts[n].get("scope") or "docs-only" for n in namen}),
+        "langs": [s for s in _e2e_paths.ERFORDERLICHE_SPRACHEN if s in alle_langs],
+    }
+    if seiten:
+        result["frontend_pages_checked"] = seiten
+    vermerk = next((verdicts[n]["frontend_browser_gate"] for n in namen
+                    if verdicts[n].get("frontend_browser_gate")), None)
+    if vermerk:
+        result["frontend_browser_gate"] = vermerk
+    return result
+
+
+def _bestehende_verdicts(existing: dict) -> dict:
+    """Issue #2424: verdicts-Map einer Datei mit gleichem Commit; Altbestand
+    ohne Map wird als Eintrag 'legacy' übernommen."""
+    verdicts = existing.get("verdicts")
+    if isinstance(verdicts, dict):
+        return {k: v for k, v in verdicts.items() if isinstance(v, dict)}
+    legacy = {
+        "verdict": existing.get("staging_verdict", ""),
+        "scope": existing.get("scope"),
+        "langs": existing.get("langs") or [],
+        "at": existing.get("verified_at"),
+    }
+    for feld in ("frontend_pages_checked", "frontend_browser_gate"):
+        if existing.get(feld):
+            legacy[feld] = existing[feld]
+    return {"legacy": legacy}
+
+
 def write_verdict(verdict: str, findings_path: Path, e2e_path: Path | None = None,
                   scope_override: str | None = None, langs: list | None = None) -> int:
     """Mode A: Verdict in die commit-getaggte Nachweis-Datei schreiben."""
@@ -419,27 +481,28 @@ def write_verdict(verdict: str, findings_path: Path, e2e_path: Path | None = Non
     frontend_pages: list[str] = []
     if _frontend_browser_gate(scope, frontend_pages) != 0:
         return 1
+    now = datetime.now(timezone.utc).isoformat()
     payload = {
         "verified_commit": sha,
-        "staging_verdict": verdict,
         "findings": findings,
-        "verified_at": datetime.now(timezone.utc).isoformat(),
-        "scope": scope,
+        "verified_at": now,
         "environment": "staging",
     }
-    if langs:
-        payload["langs"] = langs
+    # Issue #2424: eigener Eintrag in der verdicts-Map; das Top-Level wird
+    # unten per _aggregate_verdicts daraus abgeleitet (kein last writer wins).
+    entry = {"verdict": verdict, "scope": scope, "langs": langs, "at": now}
     if frontend_pages:
-        payload["frontend_pages_checked"] = frontend_pages
+        entry["frontend_pages_checked"] = frontend_pages
     elif scope in ("frontend-only", "full-stack"):
         # Das Artefakt darf einen nie gefuehrten Nachweis nicht verschweigen:
         # ohne diesen Vermerk sieht eine uebersprungene Attestation genauso aus
         # wie eine aus der Zeit vor dem Gate.
-        payload["frontend_browser_gate"] = (
+        entry["frontend_browser_gate"] = (
             f"UEBERSPRUNGEN via {SKIP_FRONTEND_GATE_VAR}=1"
             if os.environ.get(SKIP_FRONTEND_GATE_VAR) == "1"
             else "NICHT GELAUFEN (Gate-Modul nicht ladbar)"
         )
+    verdicts: dict = {}
     # Issue #1197: Blind-Overwrite bei zwei Workflows auf demselben HEAD
     # vermeiden. Traegt eine bestehende Attestation denselben verified_commit,
     # werden die findings verlustfrei vereinigt (dedup ueber stabile
@@ -454,6 +517,7 @@ def write_verdict(verdict: str, findings_path: Path, e2e_path: Path | None = Non
         # eine kaputte Attestation behandelt (isinstance-Guard VOR .get()) —
         # kein AttributeError, regulaeres Ueberschreiben bleibt moeglich.
         if isinstance(existing, dict) and existing.get("verified_commit") == sha:
+            verdicts = _bestehende_verdicts(existing)
             existing_findings = existing.get("findings") or []
             # Fix #1689 (AC-4): Nicht-Dict-Altlasten (z.B. aus einer frueheren
             # Objekt-statt-Liste-Fehlform, #1653/#1677) werden VOR dem
@@ -502,9 +566,15 @@ def write_verdict(verdict: str, findings_path: Path, e2e_path: Path | None = Non
                     seen.add(key)
                     merged.append(f)
             payload["findings"] = merged
+    verdicts[workflow] = entry
+    payload.update(_aggregate_verdicts(verdicts, workflow))
+    if not payload["langs"]:
+        del payload["langs"]
+    payload["verdicts"] = verdicts
     e2e_path.parent.mkdir(parents=True, exist_ok=True)
     e2e_path.write_text(json.dumps(payload, indent=2))
-    _log(f"Verdict geschrieben: {verdict} (commit={payload['verified_commit'][:8]}, scope={scope})")
+    _log(f"Verdict geschrieben: {payload['staging_verdict']} "
+         f"(commit={payload['verified_commit'][:8]}, scope={payload['scope']})")
     try:
         prune_old_attestations(e2e_path.parent)
     except OSError:
