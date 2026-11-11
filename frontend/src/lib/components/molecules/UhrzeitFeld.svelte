@@ -99,8 +99,7 @@
 				{#each segments as { part, value: teil }, i (i)}
 					<!-- Stundenraster: Locale-Literal der Stunden-Granularität (de „ Uhr“) entfällt, es folgt fest „:00“. -->
 					{#if !(stundenraster && part === 'literal')}<TimeField.Segment {part}>{teil}</TimeField.Segment>{/if}
-				{/each}
-				{#if stundenraster}<span class="uhrzeit-feld-minute" data-slot="uhrzeit-feld-minute">:00</span>{/if}
+				{/each}{#if stundenraster}<span class="uhrzeit-feld-minute" data-slot="uhrzeit-feld-minute">:00</span>{/if}
 			{/snippet}
 		</TimeField.Input>
 	</TimeField.Root>

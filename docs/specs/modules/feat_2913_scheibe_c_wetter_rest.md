@@ -190,3 +190,4 @@ Fertig ist Scheibe (c), wenn die vier Abschnitte „Nicht im Briefing“, Amtlic
 ## Changelog
 
 - 2026-11-11: Initiale Spec (draft) für Workflow `feature-2913-scheibe-c`, Issue #2913.
+- 2026-11-11: Zusätzliche Hilfsmodule (Implementierung): `frontend/src/lib/components/organisms/wetter-tab/tagesfensterEingabe.ts` (Tagesfenster-Eingabelogik aus `AnpassenKarte` ausgelagert, testbar) und `warnungenRadarZeilen.ts` (Zeilenaufbau Warnungen/Radar aus `WarnungenRadarKarte` ausgelagert). Validierung: Golden-Dateien (`tests/golden/**`) um den Svelte-Scoping-Hash `svelte-i4qg81` des Atoms `Switch` nachgezogen (`<style>`-Block für die Tapfläche), sonst byte-gleich.
