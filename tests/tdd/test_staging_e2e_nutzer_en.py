@@ -197,3 +197,109 @@ def test_veraltete_zugangsdaten_401_ohne_neuanlage(staging, capsys):
     assert server.registrierungen == []
     assert "staging_e2e_nutzer_en.md" in capsys.readouterr().err
     assert mod.lade_env(env)["GZ_E2E_EN_PASS"] == "alt"
+
+
+# --- Issue #2788: Dateirechte der Staging-.env erhalten, reiner Benutzername ----
+# Spec: docs/specs/bugfix/fix_2788_staging_env_rechte.md
+
+import os  # noqa: E402
+import shutil  # noqa: E402
+import stat  # noqa: E402
+import subprocess  # noqa: E402
+
+
+def _modus(pfad: Path) -> int:
+    return stat.S_IMODE(os.stat(pfad).st_mode)
+
+
+@pytest.fixture
+def umask_022():
+    alt = os.umask(0o022)
+    try:
+        yield
+    finally:
+        os.umask(alt)
+
+
+def test_adresse_en_reiner_benutzername():
+    """AC-4: Stalwart-Konvention, nur Benutzername -> Domain henemm.com."""
+    assert _modul().adresse_en("gregor-test") == "gregor-test+en@henemm.com"
+
+
+def test_adresse_en_volle_adresse_unveraendert():
+    """AC-5: volle Adresse bleibt rueckwaertskompatibel."""
+    assert _modul().adresse_en("gregor-test@henemm.com") == "gregor-test+en@henemm.com"
+
+
+def test_bestehende_env_behaelt_modus_640(staging):
+    """AC-1: Anhaengen an eine bestehende .env aendert ihren Modus nicht."""
+    mod = _modul()
+    server, env = staging
+    os.chmod(env, 0o640)
+    assert _lauf(mod, server, env) == 0
+    assert "GZ_E2E_EN_USER" in mod.lade_env(env), "Schluessel muessen angehaengt sein"
+    assert _modus(env) == 0o640, f"Modus veraendert: {oct(_modus(env))}"
+
+
+def test_neue_env_entsteht_mit_600(staging, umask_022, monkeypatch):
+    """AC-3: fehlt die Datei, entsteht sie mit 600 (Zugang per Umgebungsvariablen)."""
+    mod = _modul()
+    server, env = staging
+    env.unlink()
+    for k, v in {**HELFER, "GZ_TEST_IMAP_USER": "gregor-test@henemm.com"}.items():
+        monkeypatch.setenv(k, v)
+    assert _lauf(mod, server, env) == 0
+    assert env.exists()
+    assert _modus(env) == 0o600, f"Modus: {oct(_modus(env))}"
+    assert "GZ_E2E_EN_PASS" in mod.lade_env(env)
+
+
+def test_erstanlage_mit_reinem_benutzernamen(staging):
+    """AC-4: GZ_TEST_IMAP_USER=gregor-test -> Registrierung unter +en@henemm.com."""
+    mod = _modul()
+    server, env = staging
+    env.write_text(env.read_text().replace(
+        "GZ_TEST_IMAP_USER=gregor-test@henemm.com", "GZ_TEST_IMAP_USER=gregor-test"))
+    assert _lauf(mod, server, env) == 0
+    assert [r["email"] for r in server.registrierungen] == ["gregor-test+en@henemm.com"]
+    assert mod.lade_env(env)["GZ_E2E_EN_MAIL"] == "gregor-test+en@henemm.com"
+
+
+def test_erstanlage_mit_voller_adresse_identisch(staging):
+    """AC-5: Erstanlage mit voller Adresse ergibt dieselbe Subadresse."""
+    mod = _modul()
+    server, env = staging
+    assert _lauf(mod, server, env) == 0
+    assert [r["email"] for r in server.registrierungen] == ["gregor-test+en@henemm.com"]
+
+
+@pytest.mark.skipif(not (shutil.which("setfacl") and shutil.which("getfacl")),
+                    reason="setfacl/getfacl nicht verfuegbar")
+def test_acl_maske_bleibt_erhalten(staging):
+    """AC-2: ACL-Eintrag und Maske r-- ueberleben das Anhaengen."""
+    mod = _modul()
+    server, env = staging
+    os.chmod(env, 0o640)
+    nutzer = subprocess.run(["id", "-un"], capture_output=True, text=True,
+                            check=True).stdout.strip()
+    r = subprocess.run(["setfacl", "-m", f"u:{nutzer}:r--,m::r--", str(env)],
+                       capture_output=True, text=True)
+    if r.returncode != 0:
+        pytest.skip(f"Dateisystem ohne ACL-Unterstuetzung: {r.stderr.strip()}")
+
+    def acl():
+        return subprocess.run(["getfacl", "-c", str(env)], capture_output=True,
+                              text=True, check=True).stdout
+
+    assert "mask::r--" in acl()
+    assert _lauf(mod, server, env) == 0
+    nachher = acl()
+    assert "mask::r--" in nachher, nachher
+    assert f"user:{nutzer}:r--" in nachher, nachher
+
+
+def test_runbook_nennt_rechte_erhalt():  # doc-compliance-test
+    """AC-6: Runbook beschreibt den Rechte-Erhalt statt 'Dateirechte 600'."""
+    text = (SKRIPT.parents[1] / "docs" / "runbooks" / "staging_e2e_nutzer_en.md").read_text()
+    assert "Dateirechte 600" not in text
+    assert "ACL" in text and "600" in text
