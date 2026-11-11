@@ -542,14 +542,14 @@ scannt jede `*.svelte` unter `frontend/src/` (ohne `__tests__/`, `routes/_design
 `routes/email-preview-dev`) mit dem Test-Hilfsmodul `__tests__/hardcode_scan.ts`: `<script>`,
 `<style>`, Kommentare, `{…}`-Ausdrücke und HTML-Entities entfernen (zeilentreu), dann melden
 (a) Textknoten mit ≥ 2 Buchstaben `[A-Za-zÄÖÜäöüß]`, (b) statische Werte von
-`title|aria-label|placeholder|alt|label` (gemischte Werte mit `{…}` nicht). Altbestand steht in
+`title|aria-label|placeholder|alt|label|eyebrow` (gemischte Werte mit `{…}` nicht; `eyebrow` seit #2919, 2026-11-11). Altbestand steht in
 `frontend/src/lib/i18n/hardcode_allowlist.json` (Pfade relativ zu `frontend/src/`, Verzeichnis
 endet auf `/`, sonst exakte Datei). **Beide Richtungen rot:** Treffer ohne Eintrag (`Datei:Zeile  "Text"`)
 und Eintrag ohne Treffer — das F-Paket, das einen Bereich migriert, muss seinen Eintrag streichen
 bzw. durch die noch belasteten Unterordner/Dateien ersetzen. Weniger als 150 gescannte Dateien
 bricht mit „Messaufbau leer" ab (gegen vakuum-grün). Startstand per `--messen`
 (2026-10-31, `4f386528a`): 253 Dateien gescannt, 115 mit Treffern, 1115 Trefferzeilen,
-33 Einträge. Nicht erfasst: Texte in `<script>` und sonstige Props (`eyebrow="…"`). `*.ts` wird seit F11 (#2660) in `lib/utils`, `lib/stores` und `lib/api.ts` gescannt.
+33 Einträge. Nicht erfasst: Texte in `<script>` und sonstige Props (außer `eyebrow="…"`, seit #2919 geprüft). `*.ts` wird seit F11 (#2660) in `lib/utils`, `lib/stores` und `lib/api.ts` gescannt.
 Marken-Schriftzüge (`lib/brand/*`, „gregor"/„zwanzig") meldet der Scanner wie jeden Text; F12
 (#2661) führt sie als Katalogwerte `bausteine.marke.*` (in beiden Sprachen gleich).
 **Seit F12 (#2661, 2026-11-02) ist die Allowlist leer (`[]`)**; `hardcode_allowlist_leer.test.ts`
