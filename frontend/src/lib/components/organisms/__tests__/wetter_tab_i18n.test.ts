@@ -42,15 +42,25 @@ function git(args: string[]): string | null {
 }
 const BASIS = git(['merge-base', 'HEAD', 'origin/main'])?.trim() || null;
 
-describe('AC-21: wetter.json DE/EN unverändert gegenüber dem Abzweigpunkt von origin/main', () => {
+// #2913 Scheibe (c) (Spec feat_2913_scheibe_c_wetter_rest.md, AC-5/AC-8): diese Lieferung ergänzt bewusst genau
+// zwei neue Schlüssel. Der Erhaltungsschutz bleibt: jeder Bestandsschlüssel ist mit byte-gleichem Wert vorhanden,
+// kein Schlüssel entfällt, und hinzukommen dürfen nur die hier freigegebenen Schlüssel.
+const NEU_FREIGEGEBEN = new Set(['wetter.anpassen.hinweis', 'wetter.anpassen.ueber_mitternacht']);
+
+describe('AC-21: wetter.json DE/EN — Bestandstexte unverändert gegenüber dem Abzweigpunkt von origin/main', () => {
 	for (const lang of ['de', 'en']) {
 		const rel = `frontend/src/lib/i18n/messages/${lang}/wetter.json`;
-		test(`${lang}/wetter.json byte-gleich`, (t) => {
+		test(`${lang}/wetter.json: Bestandsschlüssel byte-gleich, nur freigegebene Schlüssel neu`, (t) => {
 			if (!BASIS) return t.skip('git merge-base HEAD origin/main nicht verfügbar (flacher Checkout)');
-			const vorher = git(['show', `${BASIS}:${rel}`]);
-			assert.ok(vorher !== null, `${rel} fehlt am Abzweigpunkt ${BASIS}`);
-			const jetzt = readFileSync(path.join(REPO, rel), 'utf8');
-			assert.equal(jetzt, vorher, `${rel} wurde gegenüber ${BASIS.slice(0, 9)} verändert (AC-21: Texte unverändert)`);
+			const vorherText = git(['show', `${BASIS}:${rel}`]);
+			assert.ok(vorherText !== null, `${rel} fehlt am Abzweigpunkt ${BASIS}`);
+			const vorher: Record<string, string> = JSON.parse(vorherText!);
+			const jetzt: Record<string, string> = JSON.parse(readFileSync(path.join(REPO, rel), 'utf8'));
+			for (const [k, v] of Object.entries(vorher)) {
+				assert.equal(jetzt[k], v, `${rel}: ${k} wurde gegenüber ${BASIS.slice(0, 9)} verändert oder entfernt (AC-21: Texte unverändert)`);
+			}
+			const neu = Object.keys(jetzt).filter((k) => !(k in vorher));
+			assert.deepEqual(neu.filter((k) => !NEU_FREIGEGEBEN.has(k)), [], `${rel}: nicht freigegebene neue Schlüssel`);
 		});
 	}
 	test('DE und EN haben dieselben wetter.*-Schlüssel', () => {

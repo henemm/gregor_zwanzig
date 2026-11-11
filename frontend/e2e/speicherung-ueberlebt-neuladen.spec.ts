@@ -79,7 +79,8 @@
 //     --project=tests --reporter=list
 
 import { test, expect, type Page } from '@playwright/test';
-import { E2E_TEST_PREFIX, cleanupTracked, createTestLocation, registerForCleanup, waehleOption } from './helpers';
+import { E2E_TEST_PREFIX, cleanupTracked, createTestLocation, registerForCleanup } from './helpers';
+import { setzeStunde, stundeEingabe } from './s3a2794-teil3.helpers';
 
 test.afterEach(async ({ request }) => {
 	await cleanupTracked(request);
@@ -506,7 +507,7 @@ test.describe('Issue #2317: jede Trip-Speicherung überlebt das Neuladen und wir
 
 		// #2794 Teil 3 (Spec feat_2794_s3a_teil3_wetter.md §4, AC-19, AC-21): der Reiter Wetter ist der
 		// WetterTab. Die Metrik-Geste ist „−" an der Zeile Böen, das Tagesfenster steht in der
-		// eingeklappten Karte „Anpassen" (Select-Atom statt nativem <select>). Beide Änderungen gehen
+		// eingeklappten Karte „Anpassen" (#2913 Scheibe (c): Uhrzeitfeld im Stundenraster). Beide Änderungen gehen
 		// in EINEM Speichervorgang aus zwei PUTs hinaus (weather-config + Trip, Spec Datenfluss).
 		await page.goto(`/trips/${tripId}?tab=wetter`);
 		const tab = page.locator('[data-testid="wetter-tab"]:visible');
@@ -517,7 +518,7 @@ test.describe('Issue #2317: jede Trip-Speicherung überlebt das Neuladen und wir
 		await tab.getByTestId('wetter-anpassen-aufklappen').click();
 		const startStunde = tab.getByTestId('day-window-start-hour');
 		await expect(startStunde).toBeVisible({ timeout: 10_000 });
-		const vorher = (await startStunde.innerText()).trim();
+		const vorher = (await stundeEingabe(startStunde).innerText()).trim();
 		const ziel = vorher.startsWith('06') ? '7' : '6';
 		const zielText = `0${ziel}:00`;
 		await page.waitForLoadState('networkidle');
@@ -526,7 +527,7 @@ test.describe('Issue #2317: jede Trip-Speicherung überlebt das Neuladen und wir
 
 		// Beide Entlade-PUTs (weather-config UND Trip) liegen unter /api/trips/{id}.
 		const halt = await haltePutBisNeuemDokument(page, `/api/trips/${tripId}`);
-		await waehleOption(page, startStunde, zielText);
+		await setzeStunde(page, startStunde, Number(ziel));
 		await boeen.click();
 		await page.reload();
 		halt.aktiv = false;
@@ -540,7 +541,7 @@ test.describe('Issue #2317: jede Trip-Speicherung überlebt das Neuladen und wir
 		).toHaveCount(0, { timeout: 3_000 });
 		await tabNachher.getByTestId('wetter-anpassen-aufklappen').click();
 		await expect(
-			tabNachher.getByTestId('day-window-start-hour'),
+			stundeEingabe(tabNachher.getByTestId('day-window-start-hour')),
 			`#2317 AC-4: nach dem Neuladen muss binnen 3 s der Tagesfenster-Beginn ${zielText} angezeigt werden (Report-Einstellung)`
 		).toHaveText(zielText, { timeout: 3_000 });
 		await pruefeGehalten(halt, '#2317 AC-4', 2);

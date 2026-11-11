@@ -67,8 +67,11 @@ export const WT = {
 	radar: 'wetter-radar-schalter', // nur vergleich
 	anpassen: 'wetter-anpassen-karte',
 	anpassenAuf: 'wetter-anpassen-aufklappen',
-	tagVon: 'day-window-start-hour', // bestehende DayWindowCard (Select-Atom)
+	// #2913 Scheibe (c): Uhrzeitfelder (molecules/UhrzeitFeld) im Stundenraster statt Select-Atom;
+	// bedienen mit setzeStunde(), lesen mit stundeAnzeige().
+	tagVon: 'day-window-start-hour',
 	tagBis: 'day-window-end-hour',
+	tagHinweisMitternacht: 'day-window-wrap-hint',
 	// Dialog „Als eigene Vorlage speichern" (SavePresetDialog, bestehende testids)
 	dialog: 'save-preset-dialog',
 	dialogName: 'save-preset-name',
@@ -81,6 +84,22 @@ export const WT = {
 } as const;
 
 export const tid = (page: Page | Locator, id: string): Locator => page.locator(`[data-testid="${id}"]:visible`).first();
+
+/**
+ * #2913 Scheibe (c): Stunde in ein Tagesfenster-Uhrzeitfeld (molecules/UhrzeitFeld, Stundenraster) tippen.
+ * Nur die Stunde ist ein Segment, die Minute steht fest auf 00. Zwei Ziffern machen das Segment fertig,
+ * der Wert geht sofort als `HH:00` hinaus (segmentFeldMeldung.ts).
+ */
+export async function setzeStunde(page: Page, feld: Locator, stunde: number): Promise<void> {
+	await feld.locator('[data-segment="hour"]').click();
+	await page.keyboard.type(String(stunde).padStart(2, '0'));
+}
+
+/** Angezeigter Wert eines Tagesfenster-Uhrzeitfelds als `HH:00` (für toHaveText statt toHaveValue). */
+export const stundeAnzeige = (stunde: number): string => `${String(stunde).padStart(2, '0')}:00`;
+
+/** Eingabebereich eines Uhrzeitfelds (Segment Stunde + feste Minute). */
+export const stundeEingabe = (feld: Locator): Locator => feld.locator('[data-slot="uhrzeit-feld-eingabe"]');
 
 /** /api/templates (Vorlagen mit vollstaendiger Ampel). */
 export async function vorlagen(request: APIRequestContext): Promise<Record<string, Json>> {

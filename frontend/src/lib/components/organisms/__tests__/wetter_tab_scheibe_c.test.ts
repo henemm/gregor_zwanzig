@@ -109,7 +109,15 @@ describe('AC-6: die drei Organismen nur aus Bausteinen (doc-compliance-test)', (
 		}
 		assert.ok(nutzt(q, 'Aufklapper') === 1, 'genau ein <Aufklapper>');
 		assert.ok(nutzt(q, 'UhrzeitFeld') === 2, 'genau zwei <UhrzeitFeld>');
-		assert.match(importVon(q, 'clampDayWindowEndHour') ?? '', /versand-tab\/dayWindowClamp(\.ts)?$/, 'TDD RED: Clamp nicht aus dayWindowClamp');
+		// Fix-Loop 2 (Adversary F004): die Verdrahtung samt Klemme liegt in tagesfensterEingabe.ts; die
+		// Komponente nutzt deren Steuerung, die Steuerung importiert die Klemme aus versand-tab/dayWindowClamp.
+		assert.match(importVon(q, 'tagesfensterSteuerung') ?? '', /^\.\/tagesfensterEingabe(\.ts)?$/, 'AnpassenKarte nutzt tagesfensterSteuerung nicht');
+		const logik = readFileSync(path.join(WT, 'tagesfensterEingabe.ts'), 'utf8');
+		assert.match(
+			logik,
+			/import\s*\{[^}]*\bclampDayWindowEndHour\b[^}]*\}\s*from\s*'[^']*versand-tab\/dayWindowClamp(\.ts)?'/,
+			'TDD RED: Clamp nicht aus dayWindowClamp'
+		);
 		assert.equal(importVon(q, 'DayWindowCard'), null, 'TDD RED: DayWindowCard noch importiert');
 	});
 });

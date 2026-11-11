@@ -14,8 +14,9 @@
 // Ausfuehren (gegen Staging/Preview):
 //   cd frontend && npx playwright test e2e/daywindow-schedule-control.spec.ts
 
-import { test, expect, type APIRequestContext, type Page, type Request } from '@playwright/test';
+import { test, expect, type APIRequestContext, type Locator, type Page, type Request } from '@playwright/test';
 import { login } from './helpers.js';
+import { setzeStunde, stundeAnzeige, stundeEingabe } from './s3a2794-teil3.helpers';
 
 const TRIP_PREFIX = 'e2e-1319-daywindow';
 const tripId = (suffix: string) => `${TRIP_PREFIX}-${suffix}`;
@@ -57,7 +58,19 @@ async function openTripOverview(page: Page, id: string): Promise<void> {
 
 async function clickWeatherTab(page: Page): Promise<void> {
 	await page.getByTestId('trip-detail-tab-wetter').first().click(); // #2794 S3a: Tagesfenster im Reiter Wetter
-	await expect(page.getByTestId('weather-metrics-tab')).toBeVisible();
+	await expect(page.locator('[data-testid="wetter-tab"]:visible').first()).toBeVisible();
+}
+
+/**
+ * #2913 Scheibe (c): das Tagesfenster steht in der eingeklappten Karte „Anpassen" (Aufklapper) mit zwei
+ * Uhrzeitfeldern im Stundenraster (statt DayWindowCard mit Select). Klappt auf und liefert die Karte.
+ */
+async function oeffneTagesfenster(page: Page): Promise<Locator> {
+	const karte = page.locator('[data-testid="wetter-anpassen-karte"]:visible').first();
+	await expect(karte).toBeVisible({ timeout: 10_000 });
+	await karte.getByTestId('wetter-anpassen-aufklappen').click();
+	await expect(karte.getByTestId('day-window-start-hour')).toBeVisible({ timeout: 10_000 });
+	return karte;
 }
 
 /** Zeichnet jeden PUT-Request auf den Trip auf (Muster: weather-metrics-tab-autosave.spec.ts). */
@@ -69,6 +82,59 @@ function collectTripPuts(page: Page, id: string): Request[] {
 		}
 	});
 	return puts;
+}
+
+/**
+ * Disjunktheit der Trip-Speicherung (feat_2794_s3a_teil3_wetter.md Z.131, AC-38; Isolationsgarantie
+ * #1234/#1361): hoechstens `maxWetter` PUTs auf /weather-config, und keiner davon traegt ein
+ * Tagesfenster- oder Warn-Feld. Liefert die PUTs auf den Trip selbst (ohne /weather-config).
+ */
+function pruefeDisjunkteSpeicherung(puts: Request[], maxWetter = 1): Request[] {
+	const urls = puts.map((r) => r.url()).join(', ');
+	const wetterPuts = puts.filter((r) => r.url().includes('/weather-config'));
+	expect(wetterPuts.length, `hoechstens ${maxWetter} PUT(s) auf /weather-config erwartet, getroffene URLs: ${urls}`).toBeLessThanOrEqual(maxWetter);
+	for (const r of wetterPuts) {
+		const roh = r.postData() ?? '';
+		expect(roh, `/weather-config darf kein Tagesfenster tragen (Disjunktheit, #1361): ${roh}`).not.toMatch(/"day_window_/);
+		expect(roh, `/weather-config darf keine Warn-Felder tragen (Disjunktheit, AC-38): ${roh}`).not.toMatch(/"(official_alerts_enabled|official_warnings|radar_alert_enabled)"/);
+	}
+	return puts.filter((r) => !r.url().includes('/weather-config'));
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type Json = any;
+/** Metrik-Katalog des Trips am Server: `display_config.metrics` (Reihenfolge) und `display_config.ampel` (Grenzen). */
+type Katalog = { metrics: Json[]; ampel: Json };
+
+async function katalogAmServer(request: APIRequestContext, id: string): Promise<Katalog> {
+	const res = await request.get(`/api/trips/${id}`);
+	expect(res.ok(), `GET /api/trips/${id} fehlgeschlagen: ${res.status()}`).toBeTruthy();
+	const dc = ((await res.json()) as Json).display_config ?? {};
+	return { metrics: dc.metrics ?? [], ampel: dc.ampel ?? {} };
+}
+
+/**
+ * Intent der #1361-Zusicherung (Adversary F001, #2913 Scheibe (c)): ein reiner Tagesfenster-Wechsel
+ * veraendert den Metrik-Katalog NICHT. Der freigegebene Speicherweg sendet dabei immer auch den
+ * /weather-config-PUT (feat_2794_s3a_teil3_wetter.md Z.131, AC-38); dessen Inhalt muss deshalb dem
+ * Server-Stand VOR der Aenderung entsprechen: dieselben Metriken in derselben Reihenfolge (keine hinzu,
+ * keine weg, nicht umsortiert), jede gesendete Metrik-Angabe wie am Server, Ampel-Grenzen gleich.
+ */
+function pruefeKatalogUnveraendertGesendet(puts: Request[], vorher: Katalog): void {
+	// Leerer Vorher-Katalog machte den Vergleich wertlos (Adversary F001, Low).
+	expect(vorher.metrics.length, '#1361: Vorbedingung — der Trip hat am Server einen Metrik-Katalog').toBeGreaterThan(0);
+	for (const r of puts.filter((x) => x.url().includes('/weather-config'))) {
+		const body = r.postDataJSON() as Json;
+		const gesendet: Json[] = body?.metrics ?? [];
+		expect(
+			gesendet.map((m) => m.metric_id),
+			'#1361: /weather-config darf beim Tagesfenster-Wechsel keine Metrik hinzufuegen, entfernen oder umsortieren'
+		).toEqual(vorher.metrics.map((m) => m.metric_id));
+		gesendet.forEach((m, i) =>
+			expect(vorher.metrics[i], `#1361: Metrik ${m.metric_id} wurde beim Tagesfenster-Wechsel veraendert gesendet`).toMatchObject(m)
+		);
+		expect(body?.ampel ?? {}, '#1361: Ampel-Grenzen duerfen sich beim Tagesfenster-Wechsel nicht aendern').toEqual(vorher.ampel);
+	}
 }
 
 test.describe('Issue #1361/#1372 S1b: Tagesfenster-Control im Reiter Wetter-Metriken (context=route)', () => {
@@ -92,43 +158,50 @@ test.describe('Issue #1361/#1372 S1b: Tagesfenster-Control im Reiter Wetter-Metr
 		await openTripOverview(page, tripId('ac5'));
 		await clickWeatherTab(page);
 
-		const control = page.locator('[data-testid="day-window-control"]:visible').first();
-		await expect(control).toBeVisible({ timeout: 10_000 });
+		const control = await oeffneTagesfenster(page);
 
-		const startSelect = control.locator('[data-testid="day-window-start-hour"]:visible').first();
-		const endSelect = control.locator('[data-testid="day-window-end-hour"]:visible').first();
+		const startFeld = control.locator('[data-testid="day-window-start-hour"]:visible').first();
+		const endFeld = control.locator('[data-testid="day-window-end-hour"]:visible').first();
 
-		await startSelect.selectOption('6');
+		// #2913 Scheibe (c): Stundenraster — die Minute ist kein Eingabesegment (fest 00).
+		await expect(startFeld.locator('[data-segment="minute"]')).toHaveCount(0);
+		await expect(endFeld.locator('[data-segment="minute"]')).toHaveCount(0);
+
+		await setzeStunde(page, startFeld, 6);
 
 		// ADR-0035: alle Stunden AUSSER der Startstunde sind waehlbar (auch
 		// Werte VOR der Startstunde -- das bildet ein Fenster ueber Mitternacht).
-		const endOptionValues = await endSelect.locator('option').evaluateAll((opts) =>
-			opts.map((o) => (o as HTMLOptionElement).value)
-		);
-		expect(endOptionValues.map(Number)).not.toContain(6);
-		expect(endOptionValues.length, 'erwartet 23 Optionen (alle 24 Stunden ausser der Startstunde)').toBe(23);
+		// Uhrzeitfeld statt Optionsliste: die Startstunde als Ende wird auf die
+		// naechste Stunde gezogen (clampDayWindowEndHour), jede andere Stunde --
+		// auch eine VOR der Startstunde -- bleibt stehen.
+		await setzeStunde(page, endFeld, 6);
+		await expect(stundeEingabe(endFeld), 'Ende = Start muss ausgeschlossen sein (Klemme auf 07:00)').toHaveText(stundeAnzeige(7));
+		await setzeStunde(page, endFeld, 5);
+		await expect(stundeEingabe(endFeld), 'eine Stunde VOR der Startstunde muss waehlbar sein').toHaveText(stundeAnzeige(5));
+		await page.waitForTimeout(1_500); // Zwischenstaende vor der Messung absetzen lassen
 
+		// Katalog-Stand am Server unmittelbar vor der gemessenen Aenderung (Intent #1361, F001).
+		const katalogVorher = await katalogAmServer(page.request, tripId('ac5'));
 		const puts = collectTripPuts(page, tripId('ac5'));
-		await endSelect.selectOption('16');
+		await setzeStunde(page, endFeld, 16);
 		await page.waitForTimeout(1_500); // Debounce-Fenster (Autosave-Muster anderer Tabs)
 
-		// Staging-Fund AC-5 (zweifach live reproduziert): ein reiner
-		// Endstunden-Wechsel loeste zusaetzlich einen unbeteiligten PUT auf
-		// /weather-config aus (kompletter, unveraenderter Metrik-Katalog
-		// mitgeschrieben — Verstoss gegen die #1234-Isolationsgarantie).
-		// `collectTripPuts` filtert nur auf ".../trips/{id}" als Substring, das
-		// faengt BEIDE Endpunkte (".../trips/{id}" UND ".../trips/{id}/weather-
-		// config" enthalten beide diesen Substring) -- die Laengen-Pruefung
-		// allein haette den Bug also bereits gefangen; die explizite
-		// Endpunkt-Pruefung unten macht die Ursache im Fehlerfall sofort sichtbar.
-		const weatherConfigPuts = puts.filter((r) => r.url().includes('weather-config'));
-		expect(
-			weatherConfigPuts.length,
-			`Ein reiner Tagesfenster-Wechsel darf /weather-config nicht anfassen (Isolationsgarantie #1234), ` +
-				`getroffene URLs: ${puts.map((r) => r.url()).join(', ')}`
-		).toBe(0);
-		expect(puts.length, `Erwartet genau 1 PUT nach Fenster-Aenderung, erhalten ${puts.length}`).toBe(1);
-		const body = puts[0].postDataJSON() as {
+		// Staging-Fund AC-5 (#1361, zweifach live reproduziert): ein reiner
+		// Endstunden-Wechsel schrieb den kompletten, unveraenderten Metrik-Katalog
+		// mit — Verstoss gegen die #1234-Isolationsgarantie. Die fruehere Zusicherung
+		// „0 PUTs auf /weather-config, genau 1 PUT" ist abgeloest durch die
+		// freigegebene Entscheidung feat_2794_s3a_teil3_wetter.md (Z.131, AC-38,
+		// Changelog Z.316): ein Speichervorgang des Reiters Wetter besteht aus zwei
+		// DISJUNKTEN PUTs, kein PUT wiederholt den Inhalt des anderen. Gleichwertig
+		// streng uebersetzt (#2913 Scheibe (c)): genau 1 Trip-PUT mit dem Tagesfenster,
+		// hoechstens 1 /weather-config-PUT, und der traegt weder Tagesfenster noch
+		// Warn-Felder (Disjunktheit = Kern der Isolationsgarantie), dessen Inhalt
+		// dem Katalog am Server vor der Aenderung entspricht, und nach dem Neuladen
+		// ist der Katalog am Server unveraendert (Intent #1361, Adversary F001).
+		const tripPuts = pruefeDisjunkteSpeicherung(puts);
+		pruefeKatalogUnveraendertGesendet(puts, katalogVorher);
+		expect(tripPuts.length, `Erwartet genau 1 PUT auf den Trip nach Fenster-Aenderung, erhalten ${tripPuts.length}`).toBe(1);
+		const body = tripPuts[0].postDataJSON() as {
 			report_config?: { day_window_start_hour?: number; day_window_end_hour?: number };
 		};
 		expect(body.report_config?.day_window_start_hour).toBe(6);
@@ -137,9 +210,13 @@ test.describe('Issue #1361/#1372 S1b: Tagesfenster-Control im Reiter Wetter-Metr
 		await page.reload();
 		await page.waitForLoadState('networkidle');
 		await clickWeatherTab(page);
+		const neu = await oeffneTagesfenster(page);
 
-		await expect(startSelect).toHaveValue('6', { timeout: 10_000 });
-		await expect(endSelect).toHaveValue('16', { timeout: 10_000 });
+		await expect(stundeEingabe(neu.getByTestId('day-window-start-hour'))).toHaveText(stundeAnzeige(6), { timeout: 10_000 });
+		await expect(stundeEingabe(neu.getByTestId('day-window-end-hour'))).toHaveText(stundeAnzeige(16), { timeout: 10_000 });
+		expect(await katalogAmServer(page.request, tripId('ac5')), '#1361: Metrik-Katalog am Server nach dem Neuladen unveraendert').toEqual(
+			katalogVorher
+		);
 	});
 
 	// AC-3/AC-5 (ADR-0035, Punkt 5): ein Fenster ueber Mitternacht (Endstunde
@@ -152,19 +229,30 @@ test.describe('Issue #1361/#1372 S1b: Tagesfenster-Control im Reiter Wetter-Metr
 		await openTripOverview(page, tripId('ac5'));
 		await clickWeatherTab(page);
 
-		const control = page.locator('[data-testid="day-window-control"]:visible').first();
-		await expect(control).toBeVisible({ timeout: 10_000 });
+		const control = await oeffneTagesfenster(page);
 
-		const startSelect = control.locator('[data-testid="day-window-start-hour"]:visible').first();
-		const endSelect = control.locator('[data-testid="day-window-end-hour"]:visible').first();
+		const startFeld = control.locator('[data-testid="day-window-start-hour"]:visible').first();
+		const endFeld = control.locator('[data-testid="day-window-end-hour"]:visible').first();
+
+		// Vorlauf: eine erste Fenster-Aenderung, damit der Reiter seinen Katalog einmal gespeichert hat
+		// (ein frisch per API angelegter Trip traegt noch keine display_config). Danach ist der Server-Stand
+		// die Vergleichsbasis fuer den Intent #1361 (Adversary F001).
+		await setzeStunde(page, startFeld, 21);
+		await page.waitForTimeout(1_500);
+		const katalogVorher = await katalogAmServer(page.request, tripId('ac5'));
 
 		const puts = collectTripPuts(page, tripId('ac5'));
-		await startSelect.selectOption('22');
-		await endSelect.selectOption('2');
+		await setzeStunde(page, startFeld, 22);
+		await setzeStunde(page, endFeld, 2);
 		await page.waitForTimeout(1_500);
 
-		expect(puts.length, `Erwartet mindestens 1 PUT, erhalten ${puts.length}`).toBeGreaterThanOrEqual(1);
-		const lastBody = puts[puts.length - 1].postDataJSON() as {
+		// Zwei Eingaben (Start, Ende) koennen je einen Speichervorgang ausloesen; jeder besteht aus
+		// disjunkten PUTs (feat_2794_s3a_teil3_wetter.md Z.131, AC-38), und jeder /weather-config-PUT
+		// sendet den unveraenderten Katalog (Intent #1361). Massgeblich ist der letzte Trip-PUT.
+		const tripPuts = pruefeDisjunkteSpeicherung(puts, 2);
+		pruefeKatalogUnveraendertGesendet(puts, katalogVorher);
+		expect(tripPuts.length, `Erwartet mindestens 1 PUT auf den Trip, erhalten ${tripPuts.length}`).toBeGreaterThanOrEqual(1);
+		const lastBody = tripPuts[tripPuts.length - 1].postDataJSON() as {
 			report_config?: { day_window_start_hour?: number; day_window_end_hour?: number };
 		};
 		expect(lastBody.report_config?.day_window_start_hour).toBe(22);
@@ -175,8 +263,12 @@ test.describe('Issue #1361/#1372 S1b: Tagesfenster-Control im Reiter Wetter-Metr
 		await page.reload();
 		await page.waitForLoadState('networkidle');
 		await clickWeatherTab(page);
+		const neu = await oeffneTagesfenster(page);
 
-		await expect(startSelect).toHaveValue('22', { timeout: 10_000 });
-		await expect(endSelect).toHaveValue('2', { timeout: 10_000 });
+		await expect(stundeEingabe(neu.getByTestId('day-window-start-hour'))).toHaveText(stundeAnzeige(22), { timeout: 10_000 });
+		await expect(stundeEingabe(neu.getByTestId('day-window-end-hour'))).toHaveText(stundeAnzeige(2), { timeout: 10_000 });
+		expect(await katalogAmServer(page.request, tripId('ac5')), '#1361: Metrik-Katalog am Server nach dem Neuladen unveraendert').toEqual(
+			katalogVorher
+		);
 	});
 });

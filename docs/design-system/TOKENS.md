@@ -144,7 +144,7 @@ Reine Maße, **Light = Dark** (kein Wert im Dark-Block). Regel: Ein Maß im 4px-
 
 | Token | Wert | Verwendung |
 |---|---|---|
-| `--g-tap-min` | 44 px | Mindest-Touch-Ziel (min-height/min-width von Knöpfen, Tap-Spalte) |
+| `--g-tap-min` | 44 px | Mindest-Touch-Ziel (min-height/min-width von Knöpfen, Tap-Spalte; unsichtbare Trefferfläche des `Switch` mit `tap`, Höhe des `Aufklapper`-Kopfs — #2913 Scheibe (c)) |
 | `--g-size-2px` | 2 px | kleinste Abstände, Fokusring-Versatz |
 | `--g-size-3px` | 3 px | Ampel-Unterkante am Input (#2913 Teil 2) |
 | `--g-size-5px` | 5 px | Radius halbhoher Balken (Ampel-Leiste) |

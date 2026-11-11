@@ -11,8 +11,8 @@
 //   cd frontend && npx playwright test --config playwright.2794-s3a3.staging.config.ts s3a2794-teil3-karten
 
 import { test, expect } from '@playwright/test';
-import { HUB_KINDS, waehleOption, type HubKind } from './helpers';
-import { DESKTOP, WT, fremdeFelder, oeffneWetter, seedWetter, stand, type Json } from './s3a2794-teil3.helpers';
+import { HUB_KINDS, type HubKind } from './helpers';
+import { DESKTOP, WT, fremdeFelder, oeffneWetter, seedWetter, setzeStunde, stand, stundeAnzeige, stundeEingabe, type Json } from './s3a2794-teil3.helpers';
 
 const warnFelder = (s: Json) => ({ bericht: s.official_alerts_enabled, alarm: s.official_warnings?.enabled });
 const tagesfenster = (kind: HubKind, s: Json) =>
@@ -65,7 +65,7 @@ for (const kind of HUB_KINDS) {
 		}
 	});
 
-	test(`AC-21 (${kind}): Karte „Anpassen“ eingeklappt, Tagesfenster ueber Select-Atom gespeichert`, async ({ page }) => {
+	test(`AC-21 (${kind}): Karte „Anpassen“ eingeklappt, Tagesfenster ueber Uhrzeitfelder gespeichert`, async ({ page }) => {
 		await page.setViewportSize(DESKTOP);
 		const hub = await seedWetter(page.request, kind);
 		try {
@@ -78,12 +78,17 @@ for (const kind of HUB_KINDS) {
 			const bis = karte.getByTestId(WT.tagBis);
 			await expect(von).toBeVisible();
 			await expect(karte.locator('select'), 'AC-21: natives <select>').toHaveCount(0);
-			await waehleOption(page, von, '06:00');
-			await waehleOption(page, bis, '20:00');
+			// #2913 Scheibe (c): Uhrzeitfelder im Stundenraster (Minute fest 00, kein Minuten-Segment)
+			await expect(von.locator('[data-segment="minute"]'), 'Minute darf nicht editierbar sein').toHaveCount(0);
+			await setzeStunde(page, von, 6);
+			await setzeStunde(page, bis, 20);
 			await expect.poll(async () => tagesfenster(kind, await stand(page.request, kind, hub.id)), { timeout: 20_000 }).toEqual([6, 20]);
+			await expect(stundeEingabe(von)).toHaveText(stundeAnzeige(6));
+			await expect(stundeEingabe(bis)).toHaveText(stundeAnzeige(20));
 			// Begrenzung wie bisher: Ende == Start wird auf die naechste Stunde gezogen
-			await waehleOption(page, von, '20:00');
+			await setzeStunde(page, von, 20);
 			await expect.poll(async () => tagesfenster(kind, await stand(page.request, kind, hub.id)), { timeout: 20_000 }).toEqual([20, 21]);
+			await expect(stundeEingabe(bis)).toHaveText(stundeAnzeige(21));
 		} finally {
 			await hub.aufraeumen();
 		}

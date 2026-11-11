@@ -78,6 +78,8 @@
 	"wetter.anpassen.tagesfenster": "Day window",
 	"wetter.anpassen.von": "from",
 	"wetter.anpassen.bis": "to",
+	"wetter.anpassen.hinweis": "Which hours are assessed",
+	"wetter.anpassen.ueber_mitternacht": "Crosses midnight and ends the next day.",
 	"wetter.dialog.titel": "Save as your own template",
 	"wetter.dialog.name": "Name",
 	"wetter.dialog.beschreibung": "Description",

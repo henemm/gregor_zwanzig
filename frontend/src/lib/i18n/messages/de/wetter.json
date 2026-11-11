@@ -78,6 +78,8 @@
 	"wetter.anpassen.tagesfenster": "Tagesfenster",
 	"wetter.anpassen.von": "von",
 	"wetter.anpassen.bis": "bis",
+	"wetter.anpassen.hinweis": "Welche Stunden bewertet werden",
+	"wetter.anpassen.ueber_mitternacht": "Geht über Mitternacht und endet am Folgetag.",
 	"wetter.dialog.titel": "Als eigene Vorlage speichern",
 	"wetter.dialog.name": "Name",
 	"wetter.dialog.beschreibung": "Beschreibung",
