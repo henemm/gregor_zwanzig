@@ -1,24 +1,11 @@
 import { test as setup, expect, request as playwrightRequest } from '@playwright/test';
-import * as fs from 'fs';
 import { assertNotProdBaseURL, assertNotProdApiProxyTarget } from './prodUrlGuard';
 import { API_PROXY_TARGET, PROD_API_PROXY_TARGET } from './apiProxyTarget';
 import { resolveE2EUser } from './testUser.ts';
+import { prepareAuthState } from './authStateProbe.ts';
 
 const authFile = 'playwright/.auth/admin.json';
 const TRIP_ID = 'e2e-cockpit-test';
-
-function isAuthFileValid(): boolean {
-	if (!fs.existsSync(authFile)) return false;
-	try {
-		const state = JSON.parse(fs.readFileSync(authFile, 'utf-8'));
-		const cookies = state.cookies ?? [];
-		const sessionCookie = cookies.find((c: { name: string; expires: number }) => c.name === 'gz_session');
-		if (!sessionCookie) return false;
-		return sessionCookie.expires * 1000 > Date.now() + 60_000;
-	} catch {
-		return false;
-	}
-}
 
 setup('authenticate and seed test data', async ({ page, baseURL }) => {
 	// Issue #1265 Teil D: harter Abbruch VOR jeder Datenanlage, falls die
@@ -36,7 +23,19 @@ setup('authenticate and seed test data', async ({ page, baseURL }) => {
 
 	const { user, pass } = resolveE2EUser();
 
-	if (!isAuthFileValid()) {
+	// Issue #2390: Die Ablaufzeit allein reicht nicht -- nach einem
+	// Stack-Neustart lehnt der Server gespeicherte Cookies mit 401 ab. Daher
+	// (erst NACH den Prod-Guards oben) gespeicherte Cookies setzen und ueber
+	// page.request (dieselbe baseURL wie die Tests) gegen GET /api/auth/profile
+	// proben. Fail-closed: nur 200 heisst wiederverwenden.
+	const authDecision = await prepareAuthState({
+		authFile,
+		context: page.context(),
+		request: page.request,
+		log: console.log
+	});
+
+	if (!authDecision.reuse) {
 		await page.goto('/login');
 		await page.fill('input[name="username"]', user);
 		await page.fill('input[name="password"]', pass);
@@ -47,10 +46,6 @@ setup('authenticate and seed test data', async ({ page, baseURL }) => {
 		await page.waitForURL((url) => url.pathname === '/');
 		await expect(page).toHaveURL((url) => url.pathname === '/');
 		await page.context().storageState({ path: authFile });
-	} else {
-		await page.context().addCookies(
-			JSON.parse(fs.readFileSync(authFile, 'utf-8')).cookies
-		);
 	}
 
 	// Seed: E2E-Test-Locations für Compare-Tests (Issue #263).
