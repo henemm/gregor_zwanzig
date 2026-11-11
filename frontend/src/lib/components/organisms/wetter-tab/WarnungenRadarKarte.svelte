@@ -3,6 +3,9 @@
 	// Ein Schalter fuer die amtlichen Warnungen (ODER-Regel beim Lesen, beide Felder beim Schreiben,
 	// amtlicheWarnungen.ts); der Radar-Schalter nur, wenn der Aufrufer `mitRadar` setzt
 	// (Orts-Briefing; Trip folgt mit S8 #2800).
+	// #2913 Teil 2 (K-6): Zeilen aus dem Molekül Einstellungszeile. Der Schalter bleibt vorerst roh
+	// (role=switch, Known Limitation: atoms/Switch reicht weder Testid noch aria-checked durch).
+	import { Einstellungszeile } from '$lib/components/molecules';
 	import { t } from '$lib/i18n';
 
 	interface Props {
@@ -22,21 +25,13 @@
 {/snippet}
 
 <div class="wt-karte">
-	<div class="wt-zeile">
-		<div class="wt-text">
-			<b>{$t('wetter.warnungen.titel')}</b>
-			<small>{$t('wetter.warnungen.beschreibung')}</small>
-		</div>
+	<Einstellungszeile titel={$t('wetter.warnungen.titel')} hinweis={$t('wetter.warnungen.beschreibung')}>
 		{@render schalter(warnungenAn, 'wetter-warnungen-schalter', $t('wetter.warnungen.titel'), onWarnungen)}
-	</div>
+	</Einstellungszeile>
 	{#if mitRadar}
-		<div class="wt-zeile">
-			<div class="wt-text">
-				<b>{$t('wetter.radar.titel')}</b>
-				<small>{$t('wetter.radar.beschreibung', { orte: $t('wetter.radar.deine_orte') })}</small>
-			</div>
+		<Einstellungszeile titel={$t('wetter.radar.titel')} hinweis={$t('wetter.radar.beschreibung', { orte: $t('wetter.radar.deine_orte') })}>
 			{@render schalter(radarAn, 'wetter-radar-schalter', $t('wetter.radar.titel'), onRadar)}
-		</div>
+		</Einstellungszeile>
 	{/if}
 </div>
 
@@ -45,30 +40,6 @@
 		border: 1px solid var(--g-rule);
 		border-radius: var(--g-r-3);
 		background: var(--g-card);
-	}
-	.wt-zeile {
-		display: flex;
-		align-items: center;
-		justify-content: space-between;
-		gap: var(--g-s-4);
-		padding: var(--g-s-3) var(--g-s-5);
-	}
-	.wt-zeile + .wt-zeile {
-		border-top: 1px solid var(--g-rule-soft);
-	}
-	.wt-text {
-		display: flex;
-		flex-direction: column;
-		gap: var(--g-size-2px);
-		min-width: 0;
-	}
-	.wt-text b {
-		font-size: var(--g-size-14px);
-		color: var(--g-ink);
-	}
-	.wt-text small {
-		font-size: var(--g-size-12-5px);
-		color: var(--g-ink-2);
 	}
 	.wt-switch {
 		display: inline-flex;
@@ -110,10 +81,5 @@
 	}
 	.wt-track.an .wt-knopf {
 		left: var(--g-s-5);
-	}
-	@media (max-width: 899px) {
-		.wt-zeile {
-			padding: var(--g-s-3) var(--g-s-4);
-		}
 	}
 </style>

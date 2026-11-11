@@ -32,7 +32,7 @@ import type { Ampel } from '../../../types.ts';
 
 const HIER = dirname(fileURLToPath(import.meta.url));
 const EDITOR = join(HIER, '..', 'CompareNewEditor.svelte');
-const WETTER_TAB = join(HIER, '..', '..', 'organisms', 'wetter-tab', 'WetterTab.svelte');
+const WETTER_TAB = join(HIER, '..', '..', 'organisms', 'wetter-tab', 'WetterTabInhalt.svelte');
 
 const PY_KATALOG = [
 	'import sys, json',

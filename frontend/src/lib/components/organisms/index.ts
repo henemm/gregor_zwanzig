@@ -33,7 +33,8 @@ export { default as MetricOffShelf }           from './MetricOffShelf.svelte';
 export { default as MetricsEditorContextBar }  from './MetricsEditorContextBar.svelte';
 
 // Issue #2913 — Wetter-Reiter (Trip + Orts-Briefing, context="route"|"vergleich"), Logik bleibt in shared/wetter-tab/*.ts
-export { default as WetterTab }                from './wetter-tab/WetterTab.svelte';
+// Teil 2 (K-1): die Seite ist shared/WetterTab.svelte (Regel (a)); Zustand/Laden/Speichern im Organismus WetterTabInhalt.
+export { default as WetterTabInhalt }          from './wetter-tab/WetterTabInhalt.svelte';
 export { default as VorlageKarte }             from './wetter-tab/VorlageKarte.svelte';
 export { default as MetrikZeile }              from './wetter-tab/MetrikZeile.svelte';
 export { default as GrenzenEditor }            from './wetter-tab/GrenzenEditor.svelte';

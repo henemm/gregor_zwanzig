@@ -8,25 +8,28 @@
 	// Genau EIN Speicherer (AC-38): Trip zwei disjunkte PUTs, Orts-Briefing ein Eintrag in der
 	// Hub-Schreibschlange (wetterTabSpeicherung.ts); beim Anlegen geht der Stand an die Anlege-Seite.
 	// Der Reiter liest das Abo nur beim ersten Laden (Seitenneuaufbau nach Konflikt-Retry, #2317).
+	// #2913 Teil 2 (K-1, K-6): Organismus mit Zustand, Laden und Speichern; die Seite ist
+	// shared/WetterTab.svelte. Ladeanzeige aus dem Atom Skelett, „Erneut laden“ als Btn.
 	import { onMount } from 'svelte';
+	import { Btn, Skelett } from '$lib/components/atoms';
 	import { api } from '$lib/api';
 	import type { ComparePreset, MetricPreset, Trip } from '$lib/types';
 	import type { SaveStatus } from '$lib/stores/saveStatusStore.svelte';
 	import { t, locale } from '$lib/i18n';
 	import { metricLabel } from '$lib/i18n/metricLabel';
-	import { loadCompareSelectionEntries } from '../corridor-editor/compareMetricCatalogLoader.ts';
-	import type { CompareSelectionEntry } from '../weather-metrics-tab/compareMetricSelection.ts';
+	import { loadCompareSelectionEntries } from '../../shared/corridor-editor/compareMetricCatalogLoader.ts';
+	import type { CompareSelectionEntry } from '../../shared/weather-metrics-tab/compareMetricSelection.ts';
 	import VorlageKarte from './VorlageKarte.svelte';
 	import AlarmAbKopf from './AlarmAbKopf.svelte';
 	import MetrikZeile from './MetrikZeile.svelte';
 	import NichtImBriefing from './NichtImBriefing.svelte';
 	import WarnungenRadarKarte from './WarnungenRadarKarte.svelte';
 	import AnpassenKarte from './AnpassenKarte.svelte';
-	import { alarmZaehler, altSchluesselAusKatalog, eigeneVorlageAmpel, gewitterFehler, grenzenFehler, verschmelzen, zeilenGruppen } from './ampelModell.ts';
-	import type { AlarmAb, AltSchluessel, Farbe, Kontext } from './ampelModell.ts';
-	import { ladeWetterDaten, type WetterDaten } from './wetterTabLaden.ts';
-	import { SPEICHERER, anlegeSpeicherer, type SpeicherOptionen } from './wetterTabSpeicherung.ts';
-	import * as Z from './wetterZustand.ts';
+	import { alarmZaehler, altSchluesselAusKatalog, eigeneVorlageAmpel, gewitterFehler, grenzenFehler, verschmelzen, zeilenGruppen } from '../../shared/wetter-tab/ampelModell.ts';
+	import type { AlarmAb, AltSchluessel, Farbe, Kontext } from '../../shared/wetter-tab/ampelModell.ts';
+	import { ladeWetterDaten, type WetterDaten } from '../../shared/wetter-tab/wetterTabLaden.ts';
+	import { SPEICHERER, anlegeSpeicherer, type SpeicherOptionen } from '../../shared/wetter-tab/wetterTabSpeicherung.ts';
+	import * as Z from '../../shared/wetter-tab/wetterZustand.ts';
 
 	interface Props {
 		context: Kontext;
@@ -221,13 +224,13 @@
 
 	{#if phase === 'laedt'}
 		<div class="wt-karte wt-laden" data-testid="wetter-tab-laden" aria-busy="true">
-			<span>{$t('wetter.kopf.laden')}</span>
-			{#each [72, 90, 55, 80, 64] as breite, i (i)}<div class="wt-skel" style:width="{breite}%"></div>{/each}
+			<span aria-hidden="true">{$t('wetter.kopf.laden')}</span>
+			<Skelett label={$t('wetter.kopf.laden')} />
 		</div>
 	{:else if phase === 'fehler'}
 		<div class="wt-karte wt-fehler" role="alert" data-testid="wetter-tab-fehler">
 			<p>{$t('wetter.kopf.fehler')}</p>
-			<button type="button" class="wt-btn" data-testid="wetter-tab-erneut-laden" onclick={() => void laden()}>{$t('wetter.kopf.erneut_laden')}</button>
+			<Btn variant="accent" size="tap" data-testid="wetter-tab-erneut-laden" onclick={() => void laden()}>{$t('wetter.kopf.erneut_laden')}</Btn>
 		</div>
 	{:else if stand && daten && anzeige && zaehler}
 		<VorlageKarte
@@ -289,21 +292,21 @@
 	.wt {
 		display: flex;
 		flex-direction: column;
-		gap: 16px;
+		gap: var(--g-s-4);
 		box-sizing: border-box;
-		max-width: 1100px;
-		padding: 28px 40px 60px;
+		max-width: var(--g-size-1100px);
+		padding: var(--g-size-28px) var(--g-s-10) var(--g-size-60px);
 		color: var(--g-ink);
 	}
 	.wt-kopf h2 {
-		margin: 0 0 4px;
-		font-size: 22px;
+		margin: 0 0 var(--g-s-1);
+		font-size: var(--g-size-22px);
 		font-weight: 600;
 		color: var(--g-ink);
 	}
 	.wt-kopf p {
 		margin: 0;
-		font-size: 14px;
+		font-size: var(--g-size-14px);
 		color: var(--g-ink-2);
 	}
 	.wt-karte {
@@ -317,55 +320,41 @@
 	.wt-laden {
 		display: flex;
 		flex-direction: column;
-		gap: 12px;
-		padding: 20px;
+		gap: var(--g-s-3);
+		padding: var(--g-s-5);
 		color: var(--g-ink-2);
-	}
-	.wt-skel {
-		height: 12px;
-		border-radius: 6px;
-		background: var(--g-paper-deep);
 	}
 	.wt-fehler {
 		display: flex;
 		flex-direction: column;
 		align-items: flex-start;
-		gap: 10px;
-		padding: 16px 20px;
+		gap: var(--g-size-10px);
+		padding: var(--g-s-4) var(--g-s-5);
 		border-color: var(--g-danger);
 	}
 	.wt-fehler p {
 		margin: 0;
-		font-size: 14px;
+		font-size: var(--g-size-14px);
 		color: var(--g-ink);
 	}
-	.wt-btn {
-		min-height: 44px;
-		min-width: 44px;
-		padding: 0 14px;
-		border: 1px solid var(--g-accent-deep);
-		border-radius: var(--g-r-2);
-		background: var(--g-accent-deep);
-		color: var(--g-on-accent);
-		font: inherit;
-		font-size: 14px;
-		cursor: pointer;
+	.wt-fehler :global([data-slot='btn']) {
+		font-size: var(--g-size-14px);
 	}
 	.wt-gh {
-		padding: 14px 20px 4px;
+		padding: var(--g-size-14px) var(--g-s-5) var(--g-s-1);
 		font-family: var(--g-font-mono);
-		font-size: 11px;
-		letter-spacing: 0.1em;
+		font-size: var(--g-text-xs);
+		letter-spacing: var(--g-size-0-1em);
 		text-transform: uppercase;
 		color: var(--g-ink-3);
 		border-top: 1px solid var(--g-rule-soft);
 	}
 	@media (max-width: 899px) {
 		.wt {
-			padding: 16px 16px 40px;
+			padding: var(--g-s-4) var(--g-s-4) var(--g-s-10);
 		}
 		.wt-gh {
-			padding: 14px 16px 4px;
+			padding: var(--g-size-14px) var(--g-s-4) var(--g-s-1);
 		}
 	}
 </style>

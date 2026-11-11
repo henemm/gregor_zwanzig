@@ -11,6 +11,10 @@
 //
 // RED heute: Barrel und Doku kennen den Wetter-Reiter nicht.
 //
+// Teil 2 (Workflow feature-2913-teil2, K-1): organisms/wetter-tab/WetterTab.svelte ist zu WetterTabInhalt.svelte
+// geworden; der Barrel exportiert WetterTabInhalt statt WetterTab (die Seite WetterTab liegt unter shared/ und ist
+// kein Organismus). COMPONENTS.md nennt entsprechend WetterTabInhalt.
+//
 //   cd frontend && npm test -- src/lib/components/organisms/__tests__/wetter_tab_barrel.test.ts
 
 import { test, describe } from 'node:test';
@@ -26,8 +30,9 @@ const BARREL = readFileSync(join(ORGANISMS, 'index.ts'), 'utf8').replace(/\/\/.*
 const COMPONENTS_MD = readFileSync(join(REPO, 'docs', 'design-system', 'COMPONENTS.md'), 'utf8');
 const TOKENS_MD = readFileSync(join(REPO, 'docs', 'design-system', 'TOKENS.md'), 'utf8');
 
+// Teil 2 (K-1): WetterTabInhalt statt WetterTab.
 const NEUN = [
-	'WetterTab',
+	'WetterTabInhalt',
 	'VorlageKarte',
 	'MetrikZeile',
 	'GrenzenEditor',
@@ -48,6 +53,12 @@ describe('AC-10: Barrel exportiert die neun Organismen aus ./wetter-tab/', () =>
 			assert.equal(EXPORTE.get(n), `./wetter-tab/${n}.svelte`, `TDD RED: Barrel-Export ${n} fehlt oder zeigt woanders hin`);
 		});
 	}
+});
+
+describe('AC-10 (Teil 2, K-1): Barrel exportiert keinen Organismus WetterTab mehr', () => {
+	test('kein Export WetterTab aus ./wetter-tab/WetterTab.svelte', () => {
+		assert.equal(EXPORTE.has('WetterTab'), false, `TDD RED: Barrel exportiert noch WetterTab (${EXPORTE.get('WetterTab')})`);
+	});
 });
 
 describe('AC-10: Doku beschreibt Organismen und Maß-Tokens', () => {

@@ -38,6 +38,10 @@ export { default as CompareStatusRow } from './CompareStatusRow.svelte';
 // produktiv lebt sie inline in edit/EditStagesPanelNew.svelte).
 export { default as HorizonChips }          from './HorizonChips.svelte';
 export { default as ScoreToggle }           from './ScoreToggle.svelte';
+
+// Issue #2913 Teil 2 — Einstellungszeile (Mockup `.lrow`) und Chip-Leiste (Mockup `.more .chip`).
+export { default as Einstellungszeile } from './Einstellungszeile.svelte';
+export { default as ChipLeiste } from './ChipLeiste.svelte';
 // #2283 AC-14: ComparePreviewMissing, CompareSmsPreview, CompareBriefingPreview
 // entfernt (Hub-Vorschau-Reiter entfiel mit #1743). #1743 F003 (PO-Entscheid
 // 2026-10-22): auch CompareChannelSwitch und CompareChatBubble entfallen ersatzlos.

@@ -435,6 +435,14 @@ rot `#a8104a`/`#f7d3e2` statt vormals `#ca8a04`/`#fbeeb8` bzw.
 dreistufiges System, keine Spiegelung der vierstufigen Mail-Ampel. Details:
 `docs/reference/renderer_email_spec.md` §„Segmente (Sektion 4)".
 
+**Frontend-Ampel (#2913 Teil 2, 2026-11-11):** Das Frontend hat dafür eigene
+Tokens `--g-ampel-gruen/-gelb/-orange/-rot` in `app.css` (Hell und Dunkel,
+je >= 3:1 gegen `--g-card`; z. B. gelb hell `#b98100`, dunkel `#d69500`) für
+Ampel-Leiste, Input-Unterkante (`Input ampel`, Maß `--g-size-3px`) und
+Segmented-Farbpunkt (`farbe`). Sie sind unabhängig von der Mail-Palette oben.
+Atome/Moleküle/Organismen: `docs/design-system/COMPONENTS.md`; Tokens:
+`docs/design-system/TOKENS.md` §5a.
+
 ### Inventar: `src/output/renderers/email/html.py`
 
 Status-Bewertung der sechs Bausteine, die EPIC 9 (Issue #236) adressiert:

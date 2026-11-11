@@ -11,7 +11,7 @@
 	import ZustellungTab from '$lib/components/shared/zustellung-tab/ZustellungTab.svelte';
 	// Issue #2794 S3a Teil-PR 3 (AC-38): Reiter Wetter = genau EIN WetterTab (Ampel), ersetzt
 	// Metrik-Oberflaeche + Wertebereiche-Ansicht (CorridorEditor) im Reiter wetter.
-	import WetterTab from '$lib/components/organisms/wetter-tab/WetterTab.svelte';
+	import WetterTab from '$lib/components/shared/WetterTab.svelte';
 	import type { Trip, Stage } from '$lib/types';
 	import type { MetricCatalog } from './metricsEditor.ts';
 	import EditStagesSection from '../edit/EditStagesSection.svelte';

@@ -32,7 +32,7 @@ import { mitAlarmAb, standAusAbo, type AboSicht, type WetterStand } from '../wet
 import { SPEICHERER, vergleichNutzlast } from '../wetterTabSpeicherung.ts';
 
 const HIER = dirname(fileURLToPath(import.meta.url));
-const WETTER_TAB = join(HIER, '..', '..', '..', 'organisms', 'wetter-tab', 'WetterTab.svelte');
+const WETTER_TAB = join(HIER, '..', '..', '..', 'organisms', 'wetter-tab', 'WetterTabInhalt.svelte');
 
 const PY_KATALOG = [
 	'import sys, json',
