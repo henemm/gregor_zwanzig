@@ -1,9 +1,19 @@
 // Soll/Ist-Bilder #2794 S3a Teil-PR 4b — nur Screenshots, Staging, Wegwerfdaten (E2E-GZ-).
 import { test, expect, type Page } from '@playwright/test';
+import { mkdirSync } from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { cleanupTracked, createTestTrip, seedHub } from './helpers';
 
-const OUT = '/tmp/claude-1000/-home-hem-gregor-zwanzig--claude-worktrees-hashed-plotting-corbato/8723626f-fa9b-43ed-badd-c356c0d53832/scratchpad/bilder/roh';
-const MOCKUP = 'file:///home/hem/gregor_zwanzig/.claude/worktrees/hashed-plotting-corbato/docs/context/einstellungen_neu/seiten/mockup-hub-fassung3.html';
+const HIER = path.dirname(fileURLToPath(import.meta.url));
+const MOCKUP = 'file://' + path.resolve(HIER, '..', '..', 'docs', 'context', 'einstellungen_neu', 'seiten', 'mockup-hub-fassung3.html');
+
+/** Bildablage außerhalb des versionierten Baums (BILD_DIR oder Playwright-Ausgabeordner). */
+function bild(name: string): string {
+	const d = process.env.BILD_DIR ?? test.info().outputPath('bilder');
+	mkdirSync(d, { recursive: true });
+	return path.join(d, name);
+}
 const GERAETE = { desktop: { width: 1280, height: 900 }, handy: { width: 390, height: 844 } } as const;
 
 test.setTimeout(400_000);
@@ -33,7 +43,7 @@ async function mockup(page: Page, ctx: 'trip' | 'orte', geraet: 'desktop' | 'han
 	await page.locator('#tabs [data-tab="uebersicht"]').click();
 	await page.addStyleTag({ content: '.frame,.fb{display:none!important}' });
 	await page.waitForTimeout(400);
-	await page.screenshot({ path: `${OUT}/soll-${ctx}-${geraet}.png`, fullPage: true });
+	await page.screenshot({ path: bild(`soll-${ctx}-${geraet}.png`), fullPage: true });
 }
 
 test('Bilder', async ({ page }) => {
@@ -63,13 +73,13 @@ test('Bilder', async ({ page }) => {
 			await expect(page.locator('[data-testid="hub-overview"]:visible').first()).toBeVisible({ timeout: 20_000 });
 			await page.waitForTimeout(2500);
 			await expect(page.getByText('Übersicht', { exact: true }).locator('visible=true').first()).toBeVisible();
-			await vollbild(page, `${OUT}/ist-trip-uebersicht-${g}.png`, g);
+			await vollbild(page, bild(`ist-trip-uebersicht-${g}.png`), g);
 			// (2) Orts-Briefing-Hub Übersicht
 			await page.goto(`/compare/${hub.id}?tab=uebersicht`);
 			await expect(page.locator('[data-testid="compare-detail-panel-uebersicht"]:visible').first()).toBeVisible({ timeout: 20_000 });
 			await page.waitForTimeout(2500);
 			await expect(page.getByText('Übersicht', { exact: true }).locator('visible=true').first()).toBeVisible();
-			await vollbild(page, `${OUT}/ist-orte-uebersicht-${g}.png`, g);
+			await vollbild(page, bild(`ist-orte-uebersicht-${g}.png`), g);
 			// (3) Trip-Liste mit Menü
 			await page.goto('/trips');
 			if (g === 'handy') {
@@ -82,7 +92,7 @@ test('Bilder', async ({ page }) => {
 				await expect(page.getByRole('menu')).toBeVisible();
 			}
 			await page.waitForTimeout(600);
-			await page.screenshot({ path: `${OUT}/ist-trip-liste-menue-${g}.png` });
+			await page.screenshot({ path: bild(`ist-trip-liste-menue-${g}.png`) });
 			await page.keyboard.press('Escape');
 			// (4) Orts-Liste mit Menü
 			await page.goto('/compare');
@@ -96,7 +106,7 @@ test('Bilder', async ({ page }) => {
 				await expect(page.getByRole('menu')).toBeVisible();
 			}
 			await page.waitForTimeout(600);
-			await page.screenshot({ path: `${OUT}/ist-orte-liste-menue-${g}.png` });
+			await page.screenshot({ path: bild(`ist-orte-liste-menue-${g}.png`) });
 			await page.keyboard.press('Escape');
 		}
 	} finally {
