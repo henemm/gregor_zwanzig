@@ -487,10 +487,15 @@ def _check_rendered(html: str) -> list[str]:
         tmp.write(html)
         tmp.close()
         url = f"file://{tmp.name}"
+        ctx = None
         try:
             ctx = sync_playwright().start()
             browser = ctx.chromium.launch(headless=True)
         except Exception as e:
+            # Gestarteten Treiber wieder stoppen, sonst blockiert seine Ereignis-
+            # schleife jeden spaeteren sync_playwright()-Aufruf im selben Prozess.
+            if ctx is not None:
+                ctx.stop()
             raise RenderUnavailable(f"Browser-Launch fehlgeschlagen: {e}")
         try:
             wrong = {390: ".desktop-only", 1000: ".mobile-compact"}
