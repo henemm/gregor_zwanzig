@@ -65,7 +65,7 @@ describe('F002: planeAbgleich — Prod-Schutz, Optionen, Scope, Kombinationen (v
 		assert.equal(p.kombis.reduce((s, k) => s + k.el.length, 0), LISTE.length);
 		const keys = p.kombis.map(({ k }) => [k.ctx, k.reiter, k.zustand, k.segment].join('|'));
 		assert.equal(new Set(keys).size, keys.length);
-		assert.deepEqual(p.optionen, { strict: false, scope: null });
+		assert.deepEqual(p.optionen, { strict: false, scope: null, abnahme: false });
 	});
 	test('Scope aus der Umgebung filtert; Strict und Sprache werden übernommen', () => {
 		const p = planeAbgleich({ liste: LISTE, env: { ELEMENTLISTE_SCOPE: 'wetter/normal', ELEMENTLISTE_STRICT: '1', ELEMENTLISTE_SPRACHE: 'en' }, baseURL: STAGING });
