@@ -131,7 +131,7 @@ const SEITEN_EN: Array<{ name: string; datei: string; props: () => Promise<Recor
 		props: async () => ({
 			form: await formAus(
 				'magic-link/verify/+page.server.ts',
-				{ email: 'a@b.de', code: '123456' },
+				{ email: 'a@b.de', code: '12345678' },
 				{ status: 400, body: { error: 'invalid' } }
 			),
 			data: { email: 'a@b.de' }
@@ -246,9 +246,19 @@ const ACTIONS_FAELLE: Array<{
 		key: 'auth.code.fehler_pflicht'
 	},
 	{
-		name: 'code_zu_viele_versuche',
+		// Issue #2961: der Anmelde-Code hat acht Ziffern; kuerzere Eingaben
+		// gehen gar nicht erst an die API.
+		name: 'code_nicht_achtstellig',
 		datei: 'magic-link/verify/+page.server.ts',
 		felder: { email: 'a@b.de', code: '123456' },
+		antwort: null,
+		de: 'Ungültiger oder abgelaufener Code.',
+		key: 'auth.code.fehler_ungueltig'
+	},
+	{
+		name: 'code_zu_viele_versuche',
+		datei: 'magic-link/verify/+page.server.ts',
+		felder: { email: 'a@b.de', code: '12345678' },
 		antwort: { status: 400, body: { error: 'max_attempts_exceeded' } },
 		de: 'Zu viele Fehlversuche. Bitte fordere einen neuen Code an.',
 		key: 'auth.code.fehler_zu_viele'
@@ -256,7 +266,7 @@ const ACTIONS_FAELLE: Array<{
 	{
 		name: 'code_ungueltig',
 		datei: 'magic-link/verify/+page.server.ts',
-		felder: { email: 'a@b.de', code: '123456' },
+		felder: { email: 'a@b.de', code: '12345678' },
 		antwort: { status: 400, body: { error: 'invalid' } },
 		de: 'Ungültiger oder abgelaufener Code.',
 		key: 'auth.code.fehler_ungueltig'

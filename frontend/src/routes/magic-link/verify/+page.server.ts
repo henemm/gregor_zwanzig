@@ -14,10 +14,14 @@ export const actions = {
 	default: async ({ request, cookies, locals }) => {
 		const data = await request.formData();
 		const email = data.get('email')?.toString() ?? '';
-		const code = data.get('code')?.toString() ?? '';
+		const code = (data.get('code')?.toString() ?? '').trim();
 
 		if (!email || !code) {
 			return fail(400, { error: trFor(locals.lang, 'auth.code.fehler_pflicht'), email });
+		}
+		// Issue #2961: der Anmelde-Code hat acht Ziffern.
+		if (!/^[0-9]{8}$/.test(code)) {
+			return fail(400, { error: trFor(locals.lang, 'auth.code.fehler_ungueltig'), email });
 		}
 
 		const clientIP = request.headers.get('x-real-ip') ?? '';
