@@ -6,7 +6,7 @@
 //
 // Issue #2276 S3: umgehaengt von der alten Hub-Commit-Funktion auf den heute
 // einzigen Speicherweg des Wertebereiche-Reiters
-// (`shared/corridor-editor/wertebereicheVergleichSpeicherung.ts`). Die
+// (`shared/wetter-tab/wertebereicheVergleichSpeicherung.ts`). Die
 // Zusicherungen an den Speicher-Takt bleiben unveraendert; entfallen ist nur
 // der Fall „Oberflaechen-Geste ohne Speicher-Takt" — diesen zweiten Weg gibt es
 // nicht mehr (Spec rework_2276_s3_wertebereiche, Design Punkt 3).
@@ -25,14 +25,14 @@ import assert from 'node:assert/strict';
 import { erzeugeSpeicherAnmeldestelle } from '../../../stores/aktiveSpeicherung.ts';
 import type { ComparePreset } from '../../../types.ts';
 import { createPutQueue } from '../compareHubPersistenz.ts';
-import { erstelleWertebereicheVergleichSpeicherung } from '../../shared/corridor-editor/wertebereicheVergleichSpeicherung.ts';
+import { erstelleWertebereicheVergleichSpeicherung } from '../../shared/wetter-tab/wertebereicheVergleichSpeicherung.ts';
 import {
 	createController,
 	hydrierterWs,
 	korridor,
 	makePreset,
 	wertebereicheBedienung
-} from '../../shared/corridor-editor/__tests__/wertebereicheVergleichPruefstand.ts';
+} from '../../shared/wetter-tab/__tests__/wertebereicheVergleichPruefstand.ts';
 
 const OFFLINE = 'Ohne Verbindung lässt sich nichts speichern — die Änderung wurde nicht abgeschickt.';
 

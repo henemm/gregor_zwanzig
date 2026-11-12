@@ -24,7 +24,7 @@ import { merkeNutzlast } from '../../../stores/nutzlastStand.ts';
 import type { PutClient } from '../tripSpeicherung.ts';
 import { buildComparePresetSavePayload, waehleEigenfelder } from '../../compare/compareEditorSave.ts';
 import { rehydrateActiveMetrics } from '../../compare/compareEditorLoad.ts';
-import { COMPARE_METRIC_KEYS } from '../corridor-editor/corridorEditorState.ts';
+import { COMPARE_METRIC_KEYS } from '../wetter-tab/corridorEditorState.ts';
 // Issue #1373 (S2 Scheibe B): Übersetzungsquelle für das Speicherformat der
 // Metrik-Auswahl (Größe + Auswertung) — die geladene Katalogantwort.
 import {

@@ -13,7 +13,7 @@
 // „nie eingestellt" (`null`) von „bewusst leer" (`[]`) -- EINZIGE Quelle der
 // Wahrheit fuer Anzeige UND Umschalt-Handler in WeatherMetricsTab.svelte.
 
-import { COMPARE_METRIC_KEYS } from '../corridor-editor/corridorEditorState.ts';
+import { COMPARE_METRIC_KEYS } from '../wetter-tab/corridorEditorState.ts';
 
 /**
  * `null` (nie eingestellt) -> Vorgabemenge (COMPARE_METRIC_KEYS, dieselbe

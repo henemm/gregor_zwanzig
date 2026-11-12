@@ -11,7 +11,7 @@
 // Gate entscheidet jetzt ausschließlich nach `catalogLoaded` + `userTouched`.
 //
 // Vorbild-Muster (Daten-Gate statt Timing-Guard):
-//   shared/corridor-editor/corridorEditorState.ts:517-519 `saveGateDecision()`
+//   shared/wetter-tab/corridorEditorState.ts:517-519 `saveGateDecision()`
 //
 // Reine Verhaltenstests (echter Funktionsaufruf, KEIN Mock, KEINE
 // Datei-Inhalt-Prüfung).

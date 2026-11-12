@@ -501,7 +501,7 @@ const REPO_ROOT = resolve(here, ...Array(7).fill('..'));
 // Eine Altlasten-Basislinie wie im Backend braucht das Frontend NICHT: der
 // Bestand ist seit #1488/#1911 frei von aktiven Kopien.
 const CANONICAL_SYMBOLS: Array<[string, string]> = [
-	['src/lib/components/shared/corridor-editor/corridorEditorState.ts', 'ORDINAL_ENUM']
+	['src/lib/components/shared/wetter-tab/corridorEditorState.ts', 'ORDINAL_ENUM']
 ];
 
 const MARKER = 'gz-thunder-scale';

@@ -19,7 +19,7 @@
 //
 // Zielschnittstelle (existiert noch NICHT → RED per ERR_MODULE_NOT_FOUND):
 //
-//   frontend/src/lib/components/shared/corridor-editor/wertebereicheVergleichSpeicherung.ts
+//   frontend/src/lib/components/shared/wetter-tab/wertebereicheVergleichSpeicherung.ts
 //   erstelleWertebereicheVergleichSpeicherung({
 //     client,            // PutClient (echtes `api`)
 //     ws,                // Wizard-Zustand (corridors/idealRanges/activeMetricKeys/metricAlertLevels)

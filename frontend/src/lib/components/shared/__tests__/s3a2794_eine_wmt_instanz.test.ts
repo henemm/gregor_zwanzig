@@ -44,7 +44,7 @@ import {
 	type Einbettung,
 	type Knoten
 } from './s3a2794Ast.ts';
-import { umgebungFuer, werte } from './svelteInstanzPruefstand.ts';
+import { umgebungFuer, werte, effekteVon } from './svelteInstanzPruefstand.ts';
 
 const HIER = dirname(fileURLToPath(import.meta.url));
 const FRONTEND = resolve(HIER, '../../../../..');
@@ -287,21 +287,13 @@ describe('AC-2.T2 Trip-Anlegen (TripNewEditor): eine dauerhafte WMT-Instanz je V
 		}
 	});
 
-	// Teil-PR 3 (§6 d, Anlege-Vorbelegung): der CorridorEditor bleibt dauerhaft gemountet (seine
-	// Vorbelegung laeuft weiter aus der gemeldeten Auswahl), ist aber in KEINEM Schritt sichtbar —
-	// die Grenzen bedient der WetterTab (genau ein Bedienort).
-	test('s3a2794_t4_trip_neu_corridor_editor_dauerhaft_und_unsichtbar', async () => {
+	// Teil-PR 3 (§6 d, Anlege-Vorbelegung) hielt den CorridorEditor unsichtbar dauerhaft gemountet;
+	// seit Teil-PR 4a (AC-31/AC-43) laeuft die Vorbelegung als Effekt im Skript — es gibt keine
+	// Wertebereiche-Ansicht mehr im Trip-Anlegen; die Grenzen bedient der WetterTab (genau ein Bedienort).
+	test('s3a2794_t4_trip_neu_keine_wertebereiche_ansicht_mehr', () => {
 		const { ast, quelle } = svelteAst(DATEI.tripNeu);
 		const c = einbettungenMitWeichen(ast, quelle, ['CorridorEditor', 'CorridorEditorMobile']);
-		assert.equal(c.length, 2, `CorridorEditor (createMode): erwartet Desktop + Mobil, gefunden ${c.length}`);
-		for (const x of c) {
-			assert.ok(!haengtAnActiveTabWeiche(x), `${beschreibe(x, quelle)}: nicht dauerhaft gemountet — Vorbelegung liefe nicht`);
-			assert.ok(attribut(x.knoten, quelle, 'onVorbelegungFertig'), `${beschreibe(x, quelle)}: onVorbelegungFertig fehlt`);
-			assert.ok(attribut(x.knoten, quelle, 'onCorridorsChange'), `${beschreibe(x, quelle)}: onCorridorsChange fehlt`);
-			const d = displayAusdruck(x, quelle);
-			assert.ok(d, `${beschreibe(x, quelle)}: keine style:display-Hülle`);
-			for (const s of ['wetter', 'route', 'zustellung']) assert.equal(await werteImSchritt(d!, s), 'none', `Wertebereiche sichtbar im Schritt ${s}`);
-		}
+		assert.deepEqual(c.map((x) => beschreibe(x, quelle)), [], 'Trip-Anlegen: Wertebereiche-Ansicht noch eingebettet');
 	});
 });
 
@@ -333,9 +325,10 @@ describe('AC-2.T4 (Regressionswächter): „Mit Standardwerten speichern" wartet
 });
 
 // Fix-Loop 1 (Adversary F005, Mutation M6): die Vorbelegung muss im Anlege-PAYLOAD ankommen —
-// gemessen am POST, den der ECHTE Editor nach der Meldung des CorridorEditors im Schritt wetter
-// abschickt (Muster standardwerte_wartet_auf_wertebereiche_vorbelegung.test.ts), fuer
-// „Speichern" UND „Mit Standardwerten speichern".
+// gemessen am POST, den der ECHTE Editor nach seinem Vorbelegungs-Effekt (seit #2794 Teil-PR 4a
+// statt der Meldung eines versteckten CorridorEditors) abschickt (Muster
+// standardwerte_wartet_auf_wertebereiche_vorbelegung.test.ts), fuer „Speichern" UND
+// „Mit Standardwerten speichern".
 describe('AC-2.T4 (F005): das neue Abo enthält die Wertebereiche-Vorbelegung (corridors) im Anlege-Payload', () => {
 	const VORBELEGUNG = [{ metric: 'wind_gust', range: [null, 70], notify: true, mark: false }];
 
@@ -349,21 +342,13 @@ describe('AC-2.T4 (F005): das neue Abo enthält die Wertebereiche-Vorbelegung (c
 			stages: [1, 2].map((id) => ({ id, name: `E${id}`, gpx: { file: 'a.gpx', km: 10, asc: 500 }, waypoints: [] })),
 			catalogLoaded: true,
 			weatherMetrics: [{ metric_id: 'gust', enabled: true }],
+			routeExtraDefs: [], // Zusatz-Katalog geladen (leer: nur die fest verdrahteten Startwerte)
 			api: { post: async (url: string, body: Knoten) => (posts.push({ url, body }), { id: 'neu-1' }), get: async () => ({}) }
 		});
-		// Der (seit Teil-PR 3 unsichtbar, aber dauerhaft gemountete) Desktop-CorridorEditor meldet
-		// seine Vorbelegung — gemountet heisst: an keiner activeTab-Weiche.
-		const { ast, quelle } = svelteAst(DATEI.tripNeu);
-		const c = einbettungenMitWeichen(ast, quelle, ['CorridorEditor']).find((x) => viewportVon(x) !== 'mobil');
-		assert.ok(c, 'Messaufbau: kein Desktop-CorridorEditor im Trip-Anlegen');
-		assert.ok(!haengtAnActiveTabWeiche(c!), 'Messaufbau: der CorridorEditor ist im Schritt wetter nicht gemountet');
-		for (const name of ['onCorridorsChange', 'onVorbelegungFertig']) {
-			const a = attribut(c!.knoten, quelle, name);
-			assert.ok(a?.ausdruck, `F005: CorridorEditor ohne ${name}`);
-			const fn = werte(a!.ausdruck!, e.u) as (...x: unknown[]) => unknown;
-			if (name === 'onCorridorsChange') fn(VORBELEGUNG);
-			else fn();
-		}
+		// Der ECHTE Vorbelegungs-Effekt des Editors (einziger Effekt, der den Lauf nennt).
+		const effekte = effekteVon(e.ast, e.quelle, e.u, 'vorbelegungsLauf');
+		assert.equal(effekte.length, 1, `Messaufbau: ${effekte.length} Vorbelegungs-Effekte im Trip-Anlegen (erwartet genau 1)`);
+		effekte[0]();
 		derivedNeu(e);
 		return { e, posts };
 	}

@@ -17,7 +17,7 @@
 // gz-eigenstaendig: Compare-Hub-Orchestrierung (ComparePreset-Hydration fuer CompareTabs.svelte), reiner Umzug der aufgeloesten Compare-Klebeschicht; kein Trip-Pendant (Spec rework_2276_s6f_bridge_umzug.md)
 
 import type { ActivityProfile, ComparePreset, Corridor } from '../../types.ts';
-import type { IdealRange } from '../shared/corridor-editor/corridorEditorState.ts';
+import type { IdealRange } from '../shared/wetter-tab/corridorEditorState.ts';
 import { rehydrateActiveMetrics } from './compareEditorLoad.ts';
 // Issue #1373 (S2 Scheibe B, AC-12): dieselbe Lesenormalisierung wie im
 // Lade-Pfad — Alt- UND Neuformat der gespeicherten Metrik-Auswahl.

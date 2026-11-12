@@ -87,25 +87,25 @@ describe('S6h AC-2-Endbilanz: Spec-Tabelle deckt die Ratsche restlos ab', () => 
 		assert.ok(existsSync(RATSCHE), `Ratsche nicht gefunden (aufgeloest: ${RATSCHE})`);
 	});
 
-	test('aus der Ratsche extrahiert: genau 48 Eintraege (Positiv-Kontrolle des Regex)', () => {
+	test('aus der Ratsche extrahiert: genau 26 Eintraege (Positiv-Kontrolle des Regex)', () => {
 		const ratsche = extrahiereRatschenListe();
 		assert.strictEqual(
 			ratsche.length,
-			48, // #2287: alarmeTabSections.ts:42 gestrichen; #1743: WetterMetrikenVersandPanel.svelte:66 neu; #1721: WeatherMetricsTab.svelte:2042 neu
-			`Extraktion aus EINGEFROREN lieferte ${ratsche.length} statt 48 Eintraege`
+			26, // #2287: alarmeTabSections.ts:42 gestrichen; #1743: WetterMetrikenVersandPanel.svelte:66 neu; #1721: WeatherMetricsTab.svelte:2042 neu; #2794 Teil-PR 4a: 22 CorridorEditor-Eintraege entfernt
+			`Extraktion aus EINGEFROREN lieferte ${ratsche.length} statt 26 Eintraege`
 		);
 		assert.strictEqual(new Set(ratsche).size, ratsche.length, 'EINGEFROREN enthaelt Duplikate');
 	});
 
-	test('aus der Spec extrahiert: FACHLICH 28, DARSTELLUNG 5, HERKUNFT 15, Summe 48', () => {
+	test('aus der Spec extrahiert: FACHLICH 14, DARSTELLUNG 3, HERKUNFT 9, Summe 26', () => {
 		const spec = leseSpec();
 		const fachlich = extrahiereSpecKategorie(spec, 'FACHLICH');
 		const darstellung = extrahiereSpecKategorie(spec, 'DARSTELLUNG');
 		const herkunft = extrahiereSpecKategorie(spec, 'HERKUNFT');
-		assert.strictEqual(fachlich.length, 28, 'FACHLICH-Tabelle hat nicht 28 Eintraege (#1721: +WeatherMetricsTab.svelte:2042)');
-		assert.strictEqual(darstellung.length, 5, 'DARSTELLUNG-Tabelle hat nicht 5 Eintraege');
-		assert.strictEqual(herkunft.length, 15, 'HERKUNFT-Tabelle hat nicht 15 Eintraege (#1743: +WetterMetrikenVersandPanel.svelte:66)');
-		assert.strictEqual(fachlich.length + darstellung.length + herkunft.length, 48);
+		assert.strictEqual(fachlich.length, 14, 'FACHLICH-Tabelle hat nicht 14 Eintraege (#1721: +WeatherMetricsTab.svelte:2042; #2794 4a: -14 CorridorEditor)');
+		assert.strictEqual(darstellung.length, 3, 'DARSTELLUNG-Tabelle hat nicht 3 Eintraege (#2794 4a: -2 CorridorEditor)');
+		assert.strictEqual(herkunft.length, 9, 'HERKUNFT-Tabelle hat nicht 9 Eintraege (#1743: +WetterMetrikenVersandPanel.svelte:66; #2794 4a: -6 CorridorEditor)');
+		assert.strictEqual(fachlich.length + darstellung.length + herkunft.length, 26);
 	});
 
 	test('jeder Spec-Eintrag steht genau einmal (keine Duplikate, keine Kategorie-Ueberschneidung)', () => {

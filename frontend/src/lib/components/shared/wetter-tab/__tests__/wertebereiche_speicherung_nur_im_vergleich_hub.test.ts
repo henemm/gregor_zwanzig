@@ -16,7 +16,7 @@
 // benutzt. Zielschnittstelle, die dieser Test festschreibt (existiert noch
 // NICHT → RED per ERR_MODULE_NOT_FOUND):
 //
-//   shared/corridor-editor/wertebereicheVergleichSpeicherung.ts
+//   shared/wetter-tab/wertebereicheVergleichSpeicherung.ts
 //   wertebereicheVergleichSpeicherungAktiv({ context, zustand, preset, saveController }): boolean
 //
 // Mutations-Gegenprobe (Spec AC-12): Kontext-Prüfung entfernen ⇒ der

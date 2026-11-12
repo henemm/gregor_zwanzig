@@ -95,7 +95,6 @@
 	"trip.layout.preset_metriken.one": "{count} metric",
 	"trip.layout.preset_metriken.other": "{count} metrics",
 	"trip.layout.standard": "Default",
-	"trip.layout.indikator": "Indicator",
 	"trip.vorschau.titel": "Table preview",
 	"trip.vorschau.hinweis": "Sample data · shows only enabled columns per day",
 	"trip.vorschau.heute": "TODAY",

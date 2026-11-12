@@ -179,13 +179,13 @@ describe('rehydrateActiveMetrics — Lade-Pfad-Rehydrierung (#1191)', () => {
 describe('Profil-Default-Metriken (AC-4/AC-5)', () => {
 	// Importiere PROFILE_METRICS_WITH_SCALES direkt — keine Logik, reine Daten-Prüfung
 	test('WINTERSPORT-Profil hat snow_depth_cm in seinen Default-Metriken', async () => {
-		const { PROFILE_METRICS_WITH_SCALES } = await import('../shared/corridor-editor/corridorEditorState.ts');
+		const { PROFILE_METRICS_WITH_SCALES } = await import('../shared/wetter-tab/corridorEditorState.ts');
 		const keys = PROFILE_METRICS_WITH_SCALES.WINTERSPORT.map((m) => m.key);
 		assert.ok(keys.includes('snow_depth_cm'), 'snow_depth_cm fehlt in WINTERSPORT');
 	});
 
 	test('SUMMER_TREKKING-Profil hat thunder_level_max', async () => {
-		const { PROFILE_METRICS_WITH_SCALES } = await import('../shared/corridor-editor/corridorEditorState.ts');
+		const { PROFILE_METRICS_WITH_SCALES } = await import('../shared/wetter-tab/corridorEditorState.ts');
 		const keys = PROFILE_METRICS_WITH_SCALES.SUMMER_TREKKING.map((m) => m.key);
 		assert.ok(keys.includes('thunder_level_max'), 'thunder_level_max fehlt in SUMMER_TREKKING');
 	});

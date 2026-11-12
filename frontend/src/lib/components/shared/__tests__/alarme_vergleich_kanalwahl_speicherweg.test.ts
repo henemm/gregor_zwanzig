@@ -12,7 +12,7 @@ import { hydrateAlarmFieldsFromPreset } from '../../compare/compareHubHydration.
 import { alarmePropsAus } from '../../compare/alarmePropsAus.ts';
 import { buildComparePresetSavePayload, buildNewComparePresetPayload } from '../../compare/compareEditorSave.ts';
 import { baueVersandNutzlast, hydrateVersandFieldsFromPreset } from '../versandVergleichSpeicherung.ts';
-import { baueWertebereichNutzlast, corridorSnapshotAus } from '../corridor-editor/wertebereicheVergleichSpeicherung.ts';
+import { baueWertebereichNutzlast, corridorSnapshotAus } from '../wetter-tab/wertebereicheVergleichSpeicherung.ts';
 import { goMerge } from './goMergeServerPruefstand.ts';
 import { baueWetterMetrikenNutzlast, wetterMetrikenSnapshotAus } from '../weather-metrics-tab/weatherMetricsCompareSave.ts';
 import { hydrierterWs } from '../weather-metrics-tab/__tests__/wetterMetrikenVergleichPruefstand.ts';

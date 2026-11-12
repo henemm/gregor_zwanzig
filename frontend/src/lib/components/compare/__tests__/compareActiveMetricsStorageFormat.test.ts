@@ -22,7 +22,7 @@ import {
 	hydrateAlarmFieldsFromPreset,
 	hydrateHubFieldsFromPreset
 } from '../compareHubHydration.ts';
-import { buildCompareCorridorSavePayload } from '../../shared/corridor-editor/corridorEditorState.ts';
+import { buildCompareCorridorSavePayload } from '../../shared/wetter-tab/corridorEditorState.ts';
 import { rehydrateActiveMetrics } from '../compareEditorLoad.ts';
 import {
 	normalizeStoredActiveMetrics,

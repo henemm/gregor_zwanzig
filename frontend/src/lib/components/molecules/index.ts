@@ -36,7 +36,6 @@ export { default as CompareStatusRow } from './CompareStatusRow.svelte';
 // Issue #578 — Block B: neue Molecules
 // StageCascadeNotice mit #1375 entfernt (tote Zweitfassung der Kaskaden-Rückfrage;
 // produktiv lebt sie inline in edit/EditStagesPanelNew.svelte).
-export { default as HorizonChips }          from './HorizonChips.svelte';
 export { default as ScoreToggle }           from './ScoreToggle.svelte';
 
 // Issue #2913 Teil 2 — Einstellungszeile (Mockup `.lrow`) und Chip-Leiste (Mockup `.more .chip`).

@@ -18,7 +18,7 @@ import assert from 'node:assert/strict';
 import {
 	SELBST_SPEICHERNDE_VERGLEICH_REITER,
 	sichereSelbstSpeichererVorReiterwechsel
-} from '../corridor-editor/wertebereicheVergleichSpeicherung.ts';
+} from '../wetter-tab/wertebereicheVergleichSpeicherung.ts';
 import { createController } from './versandVergleichPruefstand.ts';
 
 function ausstehend(): { ctl: ReturnType<typeof createController>; laeufe: () => number } {

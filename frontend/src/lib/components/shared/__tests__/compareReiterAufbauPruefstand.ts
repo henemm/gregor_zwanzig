@@ -27,13 +27,13 @@ import {
 	erstelleVersandVergleichSpeicherung,
 	hydrateVersandFieldsFromPreset
 } from '../versandVergleichSpeicherung.ts';
-import { erstelleWertebereicheVergleichSpeicherung } from '../corridor-editor/wertebereicheVergleichSpeicherung.ts';
+import { erstelleWertebereicheVergleichSpeicherung } from '../wetter-tab/wertebereicheVergleichSpeicherung.ts';
 import { erstelleWetterMetrikenVergleichSpeicherung } from '../weather-metrics-tab/weatherMetricsCompareSave.ts';
 import { createController } from './versandVergleichPruefstand.ts';
 import {
 	hydrierterWs as hydrierterWertebereicheWs,
 	wertebereicheBedienung
-} from '../corridor-editor/__tests__/wertebereicheVergleichPruefstand.ts';
+} from '../wetter-tab/__tests__/wertebereicheVergleichPruefstand.ts';
 import {
 	hydrierterWs as hydrierterWetterWs,
 	wetterMetrikenBedienung

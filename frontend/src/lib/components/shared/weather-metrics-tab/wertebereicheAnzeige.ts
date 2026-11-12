@@ -8,7 +8,7 @@
 
 import { trFor, type Lang, type MessageKey } from '../../../i18n/index.ts';
 import { metricLabel, metricAggregationLabel, type MetricLabelFields } from '../../../i18n/metricLabel.ts';
-import { vergleichsMetrikLabel } from '../corridor-editor/compareMetricCatalogLoader.ts';
+import { vergleichsMetrikLabel } from '../wetter-tab/compareMetricCatalogLoader.ts';
 import { groupCompareCatalog, type CompareAggregationGroup } from './compareAggregationGrouping.ts';
 import type { CompareSelectionEntry } from './compareMetricSelection.ts';
 

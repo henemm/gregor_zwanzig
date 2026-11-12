@@ -62,7 +62,9 @@ async function deleteTestTrip(request: import('@playwright/test').APIRequestCont
 // pro Metrik/Tag direkt im Trip-Detail-Tab) existiert im aktuellen DOM NICHT MEHR.
 // `MetricCheckbox.svelte` (rendert <HorizonChip>) wird von `WeatherMetricsTab.svelte`
 // seit dem v2-Rewrite (#587/#848) nicht mehr importiert/gerendert (Dead Code, nur noch
-// von eigenen Unit-Tests referenziert). `WeatherV2Reihenfolge.svelte` (die tatsächliche
+// von eigenen Unit-Tests referenziert; #2794 S3a Teil-PR 4a hat MetricCheckbox, MetricGroup,
+// HorizonChip und HorizonChips geloescht — dieser Spec prueft nur noch den bleibenden
+// SavePresetDialog). `WeatherV2Reihenfolge.svelte` (die tatsächliche
 // "Reihenfolge & Darstellung"-Sektion) hat KEINE Horizont-Chips — nur Roh/Einfach-Toggle
 // + "Aus"-Button. `TablePreview.svelte` (table-preview-day-*) ist ebenfalls Dead Code —
 // die reale Live-Vorschau ist `WeatherV2MailPreview.svelte` (Email/Telegram/SMS-Tabs,

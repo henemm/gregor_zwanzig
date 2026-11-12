@@ -48,7 +48,6 @@
 	"wertebereiche.tagesfenster.von": "Von",
 	"wertebereiche.tagesfenster.bis": "Bis",
 	"wertebereiche.tagesfenster.ueber_mitternacht": "Geht über Mitternacht — endet am Folgetag.",
-	"wertebereiche.gesperrt.hinweis_reiter": "Wird gerade umgebaut – deine Werte sind übernommen.",
 	"wertebereiche.gesperrt.hinweis_sms": "Wird gerade umgebaut – deine Werte sind übernommen.",
 	"wertebereiche.schwelle.titel": "04 — Schwellwerte",
 	"wertebereiche.schwelle.hinweis": "Gelten für SMS-Token, Telegram-Kurzform und den E-Mail-Ausblick/Trend-Block",

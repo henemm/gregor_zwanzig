@@ -32,7 +32,7 @@ import { buildComparePresetPartialPayload } from '../compareEditorSave.ts';
 import {
 	flushPendingCorridorSave,
 	type CorridorSnapshot
-} from '../../shared/corridor-editor/wertebereicheVergleichSpeicherung.ts';
+} from '../../shared/wetter-tab/wertebereicheVergleichSpeicherung.ts';
 // Issue #1703 Scheibe 8 (Bearbeiten-Pfad) — s. letztes describe dieser Datei.
 import type { CompareChannelActiveMetrics } from '../../shared/weather-metrics-tab/compareChannelMetricLayouts.ts';
 import { toCompareSelectionEntries } from '../../shared/weather-metrics-tab/compareMetricSelection.ts';

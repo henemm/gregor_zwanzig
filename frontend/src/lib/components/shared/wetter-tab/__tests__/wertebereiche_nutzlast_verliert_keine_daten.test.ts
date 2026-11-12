@@ -9,7 +9,7 @@
 // display_config nur auf Ebene 1, ein Teil-PUT wäre ein Verlustpfad).
 //
 // Zielschnittstelle (existiert noch NICHT → RED):
-//   shared/corridor-editor/wertebereicheVergleichSpeicherung.ts
+//   shared/wetter-tab/wertebereicheVergleichSpeicherung.ts
 //     corridorSnapshotAus(zustand): CorridorSnapshot
 //     baueWertebereichNutzlast(preset, current: CorridorSnapshot): { url, body }
 //   (Spec „Affected Files" schreibt `baueWertebereichNutzlast`; der AC-11-Text

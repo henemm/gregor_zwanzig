@@ -4919,7 +4919,8 @@ class Corridor:
 ```
 
 ```typescript
-// frontend/src/lib/components/shared/corridor-editor/corridorMatch.ts
+// ehemals frontend/src/lib/components/shared/corridor-editor/corridorMatch.ts
+// (Verzeichnis seit #2794 S3a Teil-PR 4a entfernt; Datei nicht mehr im Frontend vorhanden)
 export interface Corridor {
   metric: string;
   range: [number | null, number | null];
@@ -4935,7 +4936,7 @@ export interface Corridor {
 |------|-----|------------|
 | metric | string | Metrik-ID, kontextabhängig: `route` bot ursprünglich (Issue #1231) nur die 6 `AlertableMetrics` (`wind_gust`, `precipitation_sum`, `temperature_min`, `temperature_max`, `thunder_level`, `snow_line`) — seit #1425 S2 kommen 17 weitere Größen aus dem zentralen Katalog (`GET /api/compare/metrics`) hinzu (23 insgesamt), `thunder_level` bleibt bewusst ausgenommen (weiterhin Prozent-Skala statt Katalog-Ordinalskala; Vereinheitlichung ist ein separater Folge-Workflow). `vergleich` nutzt die 10 Compare-Summary-Keys (`temp_max_c`, `temp_min_c`, `wind_max_kmh`, `gust_max_kmh`, `precip_sum_mm`, `thunder_level_max`, `visibility_min_m`, `snow_new_sum_cm`, `cape_max_jkg`, `freezing_level_m`) für `notify` — diese Liste selbst ist unverändert, ihre Herkunft im Backend seit #1435 E1a-1 aber nicht mehr die eigenständige `alarmCapable`-Prüfung des Compare-Katalogs, sondern dessen register-abgeleitetes `alertMetric` (s. Section 15.1); darüber hinaus stehen beiden Kontexten inzwischen dieselben Katalog-Größen als `mark`-fähige Wertebereiche zur Verfügung. `confidence_pct` (`selectable=false`, #710) darf in keinem der beiden Pools erscheinen. |
 | range | `[min\|null, max\|null]` | Wertebereich; jede Seite unabhängig auf `null` (offen) setzbar, mind. eine Seite muss gesetzt sein (Editor-Validierung, UI-seitig — Slice 3+). `corridorInside(v, min, max)`: `v==null → null`; `v<min → false`; `v>max → false`; sonst `true` (`<`/`>` exklusiv geprüft, Grenzwert exakt gilt als „innen"). |
-| notify | bool | Seit #1460 T1 (ADR-0043) **ohne Alarm-Wirkung** — verbleibt aus Bestandsschutz im Datenmodell (kein Feld-Entfernen), wird aber von keiner Auswertung mehr gelesen. Alarme laufen ausschließlich über `display_config.metric_alert_levels[metric]` (entspannt/standard/sensibel), unabhängig von diesem Schalter; seit #2793 S2b für die Ampel-Metriken über `display_config.ampel.metrics.<id>.alarm_ab` (§11 „Profil-Ampel“). Die Stufen-Feinwahl ist im CorridorEditor nicht einzeln wählbar (Known Limitation, gespeicherter Wert bleibt erhalten). |
+| notify | bool | Seit #1460 T1 (ADR-0043) **ohne Alarm-Wirkung** — verbleibt aus Bestandsschutz im Datenmodell (kein Feld-Entfernen), wird aber von keiner Auswertung mehr gelesen. Alarme laufen ausschließlich über `display_config.metric_alert_levels[metric]` (entspannt/standard/sensibel), unabhängig von diesem Schalter; seit #2793 S2b für die Ampel-Metriken über `display_config.ampel.metrics.<id>.alarm_ab` (§11 „Profil-Ampel“). Die Stufen-Feinwahl war im CorridorEditor (seit #2794 S3a Teil-PR 4a entfernt) nicht einzeln wählbar (Known Limitation, gespeicherter Wert bleibt erhalten). |
 | mark | bool | **Ohne Wirkung seit #2792 S1c-4b:** die Wertebereich-Markierung im Compare-Mail-Renderer entfällt (`corridor_mark.py` gelöscht); die Farbe kommt aus der Profil-Ampel. Feld bleibt gespeichert. Kein Einfluss auf `comparison_scoring.py::calculate_score()`. |
 | prio | enum \| optional | `"hoch"` \| `"mittel"` \| `"niedrig"` — **nur** Anzeige-Reihenfolge im Editor, kein Rang-/Score-Einfluss. |
 
@@ -4945,7 +4946,7 @@ Wortgleich an drei Stellen implementiert (keine Duplikate zulässig):
 
 | Ort | Datei | Zweck |
 |---|---|---|
-| Frontend-Util | `frontend/src/lib/components/shared/corridor-editor/corridorMatch.ts` | ersetzt `shared/layout-tab/ltIdealRange.ts::isIdealGood()`, Basis für Editor-Live-Vorschau |
+| Frontend-Util (entfernt, Datei nicht mehr vorhanden; Verzeichnis `shared/corridor-editor/` seit #2794 S3a Teil-PR 4a weg) | `frontend/src/lib/components/shared/corridor-editor/corridorMatch.ts` | ersetzt `shared/layout-tab/ltIdealRange.ts::isIdealGood()`, Basis für Editor-Live-Vorschau |
 | Python-Port | `src/services/corridor_match.py::corridor_inside()` | Compare-Mail-Renderer (`compare_html.py`) |
 
 ```js
@@ -5683,7 +5684,7 @@ Sprache ist Eigenschaft des Nutzers (ADR-0104); Werte `de`/`en`, Standard `de`. 
   hinter einem gemeinsamen Editor (Slices 3–7, folgen), ohne den bestehenden Δ-Wächter
   (`AlertRule`/`metric_alert_levels`) zu verändern — rein additiv. Single-Source-Matchlogik
   `corridorInside()` in Python (`src/services/corridor_match.py`) und TS
-  (`frontend/src/lib/components/shared/corridor-editor/corridorMatch.ts`). Loader normalisiert malformed
+  (TS-Seite `shared/corridor-editor/corridorMatch.ts` nicht mehr vorhanden, Verzeichnis seit #2794 S3a Teil-PR 4a entfernt). Loader normalisiert malformed
   `range` defensiv (nie trip-unladbar). Siehe Section 24 und
   `docs/specs/_archive/modules/issue_1231_korridor_editor.md`.
 - 2026-07-11: Issue #1226 — `POST /api/auth/register` bekommt neues Pflichtfeld `email`

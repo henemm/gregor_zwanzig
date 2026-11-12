@@ -413,7 +413,7 @@ describe('TypeScript-Ratsche (F11, AC-6)', () => {
 				(p) =>
 					p === 'lib/components/shared/WeatherMetricsTab.svelte' ||
 					p === 'lib/components/shared/StandardwerteSpeichernKnopf.svelte' ||
-					p === 'lib/components/shared/corridor-editor/compareMetricCatalogLoader.ts' ||
+					p === 'lib/components/shared/wetter-tab/compareMetricCatalogLoader.ts' ||
 					p === 'lib/i18n/metricLabel.ts' ||
 					p.startsWith('lib/components/shared/weather-metrics-tab/') ||
 					p.startsWith('lib/components/shared/trip-metrics/')
@@ -424,7 +424,7 @@ describe('TypeScript-Ratsche (F11, AC-6)', () => {
 			'lib/components/shared/weather-metrics-tab/SavePresetDialog.svelte',
 			'lib/components/shared/weather-metrics-tab/kuerzelLegende.ts',
 			'lib/components/shared/trip-metrics/tripActiveMetricNames.ts',
-			'lib/components/shared/corridor-editor/compareMetricCatalogLoader.ts',
+			'lib/components/shared/wetter-tab/compareMetricCatalogLoader.ts',
 			'lib/i18n/metricLabel.ts'
 		])
 			assert.ok(F5.includes(p), `Messaufbau: ${p} nicht gescannt`);
@@ -446,8 +446,7 @@ describe('TypeScript-Ratsche (F11, AC-6)', () => {
 			'lib/components/shared/layout-tab/LTCapNote.svelte',
 			'lib/components/shared/layout-tab/LTChannelPicker.svelte',
 			'lib/components/shared/layout-tab/LTCutLine.svelte',
-			'lib/components/shared/corridor-editor/CorridorEditor.svelte',
-			'lib/components/shared/corridor-editor/CorridorEditorMobile.svelte',
+			// #2794 S3a Teil-PR 4a: CorridorEditor/CorridorEditorMobile entfernt (Oberflaeche weg).
 			'lib/components/shared/OutputLayoutEditor.svelte',
 			'lib/components/shared/OutlookLayoutControls.svelte',
 			'lib/components/shared/MailInhaltCard.svelte',
@@ -455,7 +454,7 @@ describe('TypeScript-Ratsche (F11, AC-6)', () => {
 		];
 		const deckt = (a: string, p: string) => (a.endsWith('/') ? p.startsWith(a) : p === a);
 		assert.deepEqual(F8.filter((p) => ALLOWLIST.some((a) => deckt(a, p))), []);
-		for (const alt of ['lib/components/shared/layout-tab/', 'lib/components/shared/corridor-editor/', 'routes/gpx-upload/', 'lib/components/shared/MailInhaltCard.svelte', 'lib/components/shared/OutlookLayoutControls.svelte', 'lib/components/shared/OutputLayoutEditor.svelte'])
+		for (const alt of ['lib/components/shared/layout-tab/', 'lib/components/shared/wetter-tab/', 'routes/gpx-upload/', 'lib/components/shared/MailInhaltCard.svelte', 'lib/components/shared/OutlookLayoutControls.svelte', 'lib/components/shared/OutputLayoutEditor.svelte'])
 			assert.ok(!ALLOWLIST.includes(alt), alt);
 		const alle = scanneVerzeichnis(SRC);
 		assert.equal(alle.filter((e) => F8.includes(e.pfad)).length, F8.length, 'Messaufbau: F8-Dateien nicht gescannt');
@@ -466,17 +465,17 @@ describe('TypeScript-Ratsche (F11, AC-6)', () => {
 		const ts = scanneVerzeichnis(SRC).filter(
 			(e) =>
 				e.pfad.endsWith('.ts') &&
-				(e.pfad.startsWith('lib/components/shared/layout-tab/') || e.pfad.startsWith('lib/components/shared/corridor-editor/') || e.pfad === 'lib/components/shared/mailInhaltKonstanten.ts' || e.pfad.startsWith('routes/gpx-upload/'))
+				(e.pfad.startsWith('lib/components/shared/layout-tab/') || /^lib\/components\/shared\/wetter-tab\/(corridorEditorState|compareMetricCatalogLoader|wertebereicheVergleichSpeicherung|anlegeVorbelegung)\.ts$/.test(e.pfad) || e.pfad === 'lib/components/shared/mailInhaltKonstanten.ts' || e.pfad.startsWith('routes/gpx-upload/'))
 		);
-		for (const p of ['layout-tab/ltChannels.ts', 'corridor-editor/corridorEditorState.ts', 'mailInhaltKonstanten.ts'])
+		for (const p of ['layout-tab/ltChannels.ts', 'wetter-tab/corridorEditorState.ts', 'wetter-tab/wertebereicheVergleichSpeicherung.ts', 'wetter-tab/anlegeVorbelegung.ts', 'mailInhaltKonstanten.ts'])
 			assert.ok(ts.some((e) => e.pfad === `lib/components/shared/${p}`), p);
 		assert.ok(ts.some((e) => e.pfad === 'routes/gpx-upload/gpxTrip.ts'), 'routes/gpx-upload/gpxTrip.ts');
 		assert.deepEqual(ts.filter((e) => e.treffer.length > 0).map((e) => `${e.pfad}: ${e.treffer.map((t) => t.text).join(' | ')}`), []);
 		assert.equal(wirdGescanntTs('lib/components/shared/layout-tab/__tests__/f8Pruefstand.ts'), false);
-		assert.equal(wirdGescanntTs('lib/components/shared/corridor-editor/corridorEditorState.test.ts'), false);
+		assert.equal(wirdGescanntTs('lib/components/shared/wetter-tab/corridorEditorState.test.ts'), false);
 		// Gegenprobe: ein zurueckgekehrtes deutsches Literal waere ein Treffer ohne Eintrag.
 		const treffer = scanneTs("{ metric: 'wind_gust', label: 'Böen', note: 'Grat-kritisch' }");
-		assert.equal(pruefeGegenAllowlist([{ pfad: 'lib/components/shared/corridor-editor/corridorEditorState.ts', treffer }], ALLOWLIST).ohneEintrag.length, 1);
+		assert.equal(pruefeGegenAllowlist([{ pfad: 'lib/components/shared/wetter-tab/corridorEditorState.ts', treffer }], ALLOWLIST).ohneEintrag.length, 1);
 	});
 
 	// Issue #2658 (i18n F9, AC-8): Trip-Hub, Anlegen, Etappen-Editor, Vorschau-Rahmen,

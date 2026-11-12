@@ -47,8 +47,6 @@ const HEX_IN_FARBE = /(?:^|[\s;"'{])(?:color|background(?:-color)?|border(?:-[a-
 
 /** Scope der Spec (Nr. 7): hier muss alles auf Tokens stehen. */
 const SCOPE = [
-	'lib/components/shared/corridor-editor/CorridorEditor.svelte',
-	'lib/components/shared/corridor-editor/CorridorEditorMobile.svelte',
 	'lib/components/trip-detail/waypoints/ProfileEditor.svelte',
 	'lib/components/shared/OfflineSperre.svelte',
 	'lib/components/ui/SaveIndicator.svelte',

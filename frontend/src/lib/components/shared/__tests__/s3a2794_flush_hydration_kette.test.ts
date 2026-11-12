@@ -30,7 +30,7 @@ import { subscriptionTabs } from '../subscriptionTabs.ts';
 import {
 	SELBST_SPEICHERNDE_VERGLEICH_REITER,
 	sichereSelbstSpeichererVorReiterwechsel
-} from '../corridor-editor/wertebereicheVergleichSpeicherung.ts';
+} from '../wetter-tab/wertebereicheVergleichSpeicherung.ts';
 import { canFinish } from '../anlegeLockEngine.ts';
 import { infoboxKey } from '../infoboxKeys.ts';
 import { PROGRESS_STEPS, canSave } from '../../trip-new/tripNewLogic.ts';

@@ -26,7 +26,11 @@
 	import MailInhaltCard from '$lib/components/shared/MailInhaltCard.svelte';
 	import EditStagesPanelNew from '$lib/components/edit/EditStagesPanelNew.svelte';
 	import AlarmeTab from '$lib/components/shared/AlarmeTab.svelte';
-	import CorridorEditor from '$lib/components/shared/corridor-editor/CorridorEditor.svelte';
+	// Issue #2794 S3a Teil-PR 4a (AC-43/AC-45): Vorbelegung der Wertebereiche als reine
+	// Funktion (vorher ein unsichtbar gemounteter CorridorEditor), ein Effekt unten.
+	import { erstelleTripVorbelegungsLauf } from '../shared/wetter-tab/anlegeVorbelegung.ts';
+	import { loadRouteExtraMetricDefs } from '$lib/components/shared/wetter-tab/compareMetricCatalogLoader';
+	import type { RouteMetricDef } from '$lib/components/shared/wetter-tab/corridorEditorState';
 	import Infobox from '$lib/components/molecules/Infobox.svelte';
 	import type { ChannelKind, ChannelThreshold } from '$lib/components/shared/alarme-tab/alertChannelState';
 	import { deriveActiveAlertMetricsForTrip } from '$lib/components/shared/alarme-tab/tripAlertMetricsFromCatalog';
@@ -139,9 +143,9 @@
 	// Issue #2277 S1 — Alarm-Schatten-State fuer den geteilten AlarmeTab (createMode).
 	// Fliesst bewusst NICHT in stubTrip ein (neue trip-Referenz je Klick = Effekt-Schleife).
 	let alarm = $state<CreateTripAlarmState>(initialCreateTripAlarmState());
-	// Issue #2277 S2a — Wertebereiche-Schatten-State fuer den geteilten
-	// CorridorEditor (createMode). Fliesst bewusst NICHT in stubTrip ein
-	// (dieselbe Effekt-Schleifen-Gefahr wie beim Alarm-Schatten-State oben).
+	// Issue #2277 S2a — Wertebereiche-Schatten-State (Anlege-Vorbelegung, #2794 S3a
+	// Teil-PR 4a: aus anlegeVorbelegung.ts statt aus dem CorridorEditor). Fliesst bewusst
+	// NICHT in stubTrip ein (dieselbe Effekt-Schleifen-Gefahr wie beim Alarm-Schatten-State oben).
 	let corridors = $state<Corridor[]>([]);
 	// Metrik-Katalog fuer die Alarm-Metrik-Zeilen (fail-soft, Muster WeatherMetricsTab).
 	let metricsCatalog = $state<MetricCatalog>({});
@@ -149,13 +153,18 @@
 	// Metrik-Katalog geladen UND Standardauswahl vom Wetter-Metriken-Reiter
 	// gemeldet (gesetzt in handleWeatherMetricsChange).
 	let catalogLoaded = $state(false);
-	// #2347 S4 (AC-20, Race): die Wertebereiche-Vorbelegung des CorridorEditors
-	// wartet zusaetzlich auf dessen eigenen Katalog-Abruf. Erst wenn sie gelaufen
-	// ist (gesetzt in handleVorbelegungFertig), traegt „Mit Standardwerten
-	// speichern" dieselben Korridore wie der durchgeklickte Trip.
+	// #2347 S4 (AC-20, Race): die Wertebereiche-Vorbelegung wartet zusaetzlich auf
+	// den Zusatz-Katalog (routeExtraDefs). Erst wenn sie gelaufen ist (gesetzt in
+	// handleVorbelegungFertig), traegt „Mit Standardwerten speichern" dieselben
+	// Korridore wie der durchgeklickte Trip.
 	let wertebereicheVorbelegt = $state(false);
+	// #2794 S3a Teil-PR 4a: Zusatz-Metriken der Vorbelegung (geteilter Promise-Cache wie
+	// im Reiter Wetter). Scheitert der Abruf, gelten die fest verdrahteten Startwerte (`[]`)
+	// — wie vorher im CorridorEditor; `null` = noch nicht geladen.
+	let routeExtraDefs = $state<RouteMetricDef[] | null>(null);
 	onMount(() => {
 		api.get<MetricCatalog>('/api/metrics').then((c) => { metricsCatalog = c; }).catch(() => {});
+		loadRouteExtraMetricDefs().then((d) => { routeExtraDefs = d; }).catch(() => { routeExtraDefs = []; });
 	});
 	const activeAlertMetrics = $derived(deriveActiveAlertMetricsForTrip(weatherMetrics, metricsCatalog));
 	// Issue #674 — Aktivitätstyp aus WeatherMetricsTab übernehmen (Fahrrad/Wanderer).
@@ -212,8 +221,8 @@
 	// #2521 S3: eigenes Gate des Standardwerte-Knopfs (Bestandsknopf bleibt an `ready`).
 	const standardwerteFrei = $derived(canFinishMitStandardwerten({
 		pflichtErfuellt: name.trim().length > 0 && !!startDate && etDone,
-		// Ohne aktive Metrik gibt es nichts vorzubelegen (CorridorEditor bricht dann
-		// vor der Vorbelegung ab) — sonst bliebe der Knopf dauerhaft gesperrt.
+		// Ohne aktive Metrik gibt es nichts vorzubelegen (der Vorbelegungs-Lauf wartet
+		// dann) — sonst bliebe der Knopf dauerhaft gesperrt.
 		defaultsBereit: catalogLoaded && (wertebereicheVorbelegt || weatherMetrics.length === 0),
 		bestandFrei: ready,
 	}));
@@ -493,13 +502,30 @@
 		handleDayWindowChange({ day_window_start_hour: rc.day_window_start_hour, day_window_end_hour: rc.day_window_end_hour });
 	}
 
-	// ── Wertebereiche-Rueckruf aus CorridorEditor (Issue #2277 S2a) ───────────
+	// ── Wertebereiche-Vorbelegung beim Anlegen (Issue #2277 S2a, #2794 S3a Teil-PR 4a) ──
 	// Muster handleChannelsChange: reine Uebernahme, kein Inhaltsgleichheits-
 	// Guard noetig (corridors fliesst nicht in stubTrip zurueck).
 	function handleCorridorsChange(c: Corridor[]) { corridors = [...c]; }
 	// #2347 S4 (AC-20, Race): Vorbelegung gelaufen (mit oder ohne Zeilen) — erst
 	// jetzt gibt der Standardwerte-Knopf frei (defaultsBereit).
 	function handleVorbelegungFertig() { wertebereicheVorbelegt = true; }
+	// AC-43/AC-45: EIN Lauf je Editor-Instanz — wartet auf Zusatz-Katalog und gemeldete
+	// Metrik-Auswahl, meldet dann genau einmal erst die Korridore, dann „fertig" (auch ohne
+	// Vorbelegung). Ein Mobil/Desktop-Wechsel belegt nicht erneut vor. Der Lauf entsteht
+	// erst im Effekt (nicht als Skript-Konstante): die Zeilen tragen sprachabhaengige
+	// Namen und werden so zum Zeitpunkt der Vorbelegung gebaut (Reaktivitaets-Waechter).
+	let vorbelegungsLauf: ReturnType<typeof erstelleTripVorbelegungsLauf> | null = null;
+	$effect(() => {
+		const extraDefs = routeExtraDefs;
+		const metrics = weatherMetrics;
+		untrack(() => {
+			const lauf = (vorbelegungsLauf ??= erstelleTripVorbelegungsLauf({
+				onCorridors: (c: Corridor[]) => handleCorridorsChange(c),
+				onFertig: () => handleVorbelegungFertig()
+			}));
+			lauf.versuchen({ extraDefs, metrics, vorhandeneCorridors: corridors });
+		});
+	});
 
 	// ── Alarm-Rueckrufe aus AlarmeTab (Issue #2277 S1) ────────────────────────
 	// Delta-Logik liegt in tripNewLogic.ts (gleicher Code wie im Payload-Test).
@@ -913,14 +939,10 @@
 		</div>
 		{/if}
 
-		<!-- Issue #2277 S2a — geteilter CorridorEditor (createMode, kein PUT), EINE dauerhafte
-		     Instanz (Desktop XOR Mobile). Issue #2794 S3a Teil-PR 3: unsichtbar, aber weiter
-		     gemountet — seine Wertebereiche-Vorbelegung (corridors, handleVorbelegungFertig)
-		     laeuft unveraendert aus der vom WetterTab gemeldeten Auswahl (stubTrip). -->
+		<!-- Issue #2794 S3a Teil-PR 4a: die Wertebereiche-Vorbelegung laeuft als Effekt im
+		     Skript (anlegeVorbelegung.ts); der frueher unsichtbar gemountete CorridorEditor
+		     ist entfernt. Im Schritt Wetter steht der WetterTab. -->
 		{#if !isMobileViewport}
-		<div style:display="none" aria-hidden="true">
-			<CorridorEditor context="route" trip={stubTrip} createMode={true} showInfobox={true} {corridors} onCorridorsChange={handleCorridorsChange} onVorbelegungFertig={handleVorbelegungFertig} />
-		</div>
 		<div style:display={activeTab === 'wetter' ? '' : 'none'}>
 			{#key wetterNeuaufbau}
 				<WetterTab context="route" trip={wetterAnlegeTrip} createMode={true} onAnlegeStand={handleWetterAnlegeStand} />
@@ -1180,13 +1202,9 @@
 			</div>
 			{/if}
 
-			<!-- Issue #2277 S2a — Mobile CorridorEditor, XOR zum Desktop-Mount oben.
-			     Issue #2794 S3a Teil-PR 3: unsichtbar dauerhaft gemountet (Vorbelegung, s. Desktop);
-			     im Schritt Wetter steht der WetterTab. -->
+			<!-- Mobil: im Schritt Wetter steht der WetterTab (XOR zum Desktop-Zweig oben);
+			     die Vorbelegung laeuft unabhaengig von der Breite im Skript (#2794 Teil-PR 4a). -->
 			{#if isMobileViewport}
-			<div style:display="none" aria-hidden="true">
-				<CorridorEditor context="route" trip={stubTrip} createMode={true} showInfobox={true} {corridors} onCorridorsChange={handleCorridorsChange} onVorbelegungFertig={handleVorbelegungFertig} />
-			</div>
 			<div style:display={activeTab === 'wetter' ? '' : 'none'}>
 				{#key wetterNeuaufbau}
 					<WetterTab context="route" trip={wetterAnlegeTrip} createMode={true} onAnlegeStand={handleWetterAnlegeStand} />

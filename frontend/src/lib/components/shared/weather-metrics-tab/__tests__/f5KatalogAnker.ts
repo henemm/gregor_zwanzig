@@ -4,7 +4,7 @@
 // Umstellung, Commit a0effc47e) abgeglichen: WeatherMetricsTab.svelte,
 // weather-metrics-tab/{DayWindowCard,SavePresetDialog,WeatherV2Grundauswahl,
 // WeatherV2PresetBar,WeatherV2Reihenfolge}.svelte, trip-detail/metricsEditor.ts
-// (CATEGORY_LABELS), corridor-editor/compareMetricCatalogLoader.ts (Gewitter-Stufen
+// (CATEGORY_LABELS), wetter-tab/compareMetricCatalogLoader.ts (Gewitter-Stufen
 // aus `ordinalLabels`, grossgeschrieben) und dem Register (Auswertungen
 // Minimum/Maximum/Mittel/Summe, src/app/metric_catalog.py). Saetze mit
 // hervorgehobenem Element (<code>, <strong>) stehen mit Platzhalter an dessen Stelle.
@@ -69,8 +69,8 @@ export const F5_ANKER: [schluessel: string, de: string, en: string][] = [
 	['wertebereiche.tagesfenster.von', 'Von', 'From'],
 	['wertebereiche.tagesfenster.bis', 'Bis', 'To'],
 	['wertebereiche.tagesfenster.ueber_mitternacht', 'Geht über Mitternacht — endet am Folgetag.', 'Crosses midnight — ends the next day.'],
-	// #2792 S1c-3 (AC-22): Sperr-Hinweis oben im Reiter Wertebereiche und im SMS-Schwellwert-Block
-	['wertebereiche.gesperrt.hinweis_reiter', 'Wird gerade umgebaut – deine Werte sind übernommen.', 'Being rebuilt – your values have been carried over.'],
+	// #2792 S1c-3 (AC-22): Sperr-Hinweis im SMS-Schwellwert-Block (der Hinweis oben im
+	// Reiter Wertebereiche entfiel mit dem Korridor-Editor, #2794 Teil-PR 4a)
 	['wertebereiche.gesperrt.hinweis_sms', 'Wird gerade umgebaut – deine Werte sind übernommen.', 'Being rebuilt – your values have been carried over.'],
 	// 04 Schwellwerte (WeatherMetricsTab)
 	['wertebereiche.schwelle.titel', '04 — Schwellwerte', '04 — Thresholds'],

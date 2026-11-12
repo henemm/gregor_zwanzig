@@ -140,26 +140,9 @@ describe('AC-3: Fremdaenderung, A (Alarme) und B (Versand) stehen nach „Nochma
 	});
 });
 
-describe('AC-3 mit Wertebereiche als zweitem Reiter (anderes Top-Level-Feld)', () => {
-	test('Fremd: Name; A: Alarme; B: Wertebereiche — nach dem Retry stehen alle drei auf dem Server', async () => {
-		server.foreignWrite(P.TRIP_ID, { name: 'Fremder Name' });
-		const a = P.neuerAufbau();
-		await konfliktInAUndWechsel(a);
-
-		const b = await P.wertebereicheReiter(a);
-		b.inst.u.rows = [{ metric: 'wind_max_kmh', label: 'Wind', min: 0, max: 55, notify: true, mark: true }];
-		b.speichern();
-		await P.fertig(a.ctl);
-		assert.equal(puts().at(-1)!.status, 412, 'Vorbedingung: B wird bei offenem Konflikt abgelehnt');
-
-		await a.ctl.retryConflict();
-
-		assert.equal(stand().name, 'Fremder Name', 'Fremdaenderung bleibt');
-		assert.equal((dc().metric_alert_levels as Record<string, unknown>).wind, 'sensibel', 'A steht auf dem Server');
-		assert.deepEqual(stand().corridors, [{ metric: 'wind_max_kmh', range: [0, 55], notify: true, mark: true }], 'B steht auf dem Server');
-		assert.equal(a.ctl.state, 'idle');
-	});
-});
+// #2794 S3a Teil-PR 4a (AC-31): „Wertebereiche als zweiter Reiter" entfaellt mit dem CorridorEditor
+// (einziger Schreiber von `corridors`). Ein zweiter Reiter mit anderem Top-Level-Feld bleibt oben
+// abgedeckt (B = Versand, report_config).
 
 describe('Retry bei erneutem Konflikt: nichts geht verloren', () => {
 	test('ein weiterer Fremdschreiber waehrend des Retry ⇒ Konflikt bleibt, ein zweiter Retry sendet weiterhin BEIDE Saetze', async () => {

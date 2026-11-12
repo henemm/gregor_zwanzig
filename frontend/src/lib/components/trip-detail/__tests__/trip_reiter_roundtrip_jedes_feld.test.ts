@@ -120,39 +120,8 @@ describe('Alarme (AC-11, AC-17)', () => {
 	});
 });
 
-for (const mobil of [false, true]) {
-	describe(`Wertebereiche ${mobil ? 'Mobile' : 'Desktop'} (AC-12, AC-17)`, () => {
-		const zeile = (metric: string, max: number) => ({ metric, label: metric, min: 0, max, notify: true, mark: true });
-
-		test('Korridor aendern', async () => {
-			const a = P.neuerAufbau();
-			const r = await P.wertebereicheReiter(a, mobil);
-			r.inst.u.rows = [zeile('wind_max_kmh', 55)];
-			r.speichern();
-			await P.fertig(a.ctl);
-			assert.deepEqual(stand().corridors, [{ metric: 'wind_max_kmh', range: [0, 55], notify: true, mark: true }]);
-			assert.deepEqual(stand().display_config, SEED.display_config, 'display_config bleibt vollstaendig erhalten');
-		});
-
-		test('Korridor hinzufuegen', async () => {
-			const a = P.neuerAufbau();
-			const r = await P.wertebereicheReiter(a, mobil);
-			r.inst.u.rows = [zeile('wind_max_kmh', 40), zeile('snow_depth_cm', 200)];
-			r.speichern();
-			await P.fertig(a.ctl);
-			assert.equal((stand().corridors as unknown[]).length, 2);
-		});
-
-		test('alle Korridore leeren: [] kommt auf dem Server an', async () => {
-			const a = P.neuerAufbau();
-			const r = await P.wertebereicheReiter(a, mobil);
-			r.inst.u.rows = [];
-			r.speichern();
-			await P.fertig(a.ctl);
-			assert.deepEqual(stand().corridors, []);
-		});
-	});
-}
+// Wertebereiche Desktop/Mobile (AC-12, AC-17): #2794 S3a Teil-PR 4a (AC-31) mit dem
+// CorridorEditor entfernt — die Grenzen schreibt der Reiter Wetter.
 
 describe('Wetter-Metriken (AC-13, AC-17)', () => {
 	async function mitReiter(): Promise<{ a: P.Aufbau; w: Awaited<ReturnType<typeof P.wetterMetrikenReiter>> }> {

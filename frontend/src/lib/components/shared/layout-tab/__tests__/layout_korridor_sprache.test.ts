@@ -6,8 +6,10 @@
 //     (tests/golden/f8_layout_korridor/*.de.html und funktionen.de.txt),
 //   * AC-1: Layout-Reiter in Trip und Ortsvergleich englisch, Kanalnamen und
 //     Kurzformen unveraendert,
-//   * AC-2: Korridor-Editor in beiden Kontexten und Fassungen englisch, Einheiten,
-//     Skalen und Standardgrenzen gleich,
+//   * AC-2: Korridor-Logik (Zeilennamen, Profil-Metriken) je Sprache, Einheiten,
+//     Skalen und Standardgrenzen gleich. #2794 S3a Teil-PR 4a (AC-31): die
+//     Render-Faelle des entfernten Korridor-Editors (CorridorEditor/-Mobile) und
+//     ihre Golden entfallen,
 //   * AC-3: ltCapNoteText / ltKanalAbwahlHinweisText je Sprache,
 //   * AC-4: zwei Nutzer (en/de) durch den ECHTEN Layout-Loader (+layout.server.ts);
 //     ersetzt ist nur die Netzgrenze (fetch je Sitzungs-Cookie).
@@ -39,9 +41,6 @@ import {
 	CONTENT_MODULE_DESCRIPTIONS,
 	layoutTabRendern,
 	bausteineRendern,
-	korridorRendern,
-	routeZustand,
-	vergleichZustand,
 	htmlFaelle,
 	funktionsTabelle,
 	schreibeGolden
@@ -120,7 +119,7 @@ describe('AC-6: Deutsch byte-gleich zum Ist-Stand vor der Umstellung (Golden gol
 	});
 	test('Messaufbau: Golden enthaelt die deutschen Texte aller Bausteine', () => {
 		const alle = Object.keys(FAELLE).map((f) => readFileSync(path.join(GOLDEN_DIR, `${f}.de.html`), 'utf-8')).join('');
-		for (const s of ['Kanal · Auswahl &amp; Kappung', 'Sag mir, welche Werte für dich passen', 'Sag mir, welche Werte dir ideal sind', 'Grat-kritisch', 'title="Grenze öffnen"', 'Metrik hinzufügen', '1 weiterer Eintrag bleibt erhalten', '2 weitere Einträge bleiben erhalten', 'Lade Metriken…', 'Preset-Auswahl', 'Detail-Werte', 'E-Mail-Inhalt', 'Erscheint nur in der E-Mail.', '✂ ab hier Telegram-Limit (max 7)', 'Etappen-Vorschau', 'Als Trip speichern', 'Trip wurde erfolgreich gespeichert.'])
+		for (const s of ['Kanal · Auswahl &amp; Kappung', 'Preset-Auswahl', 'Detail-Werte', 'E-Mail-Inhalt', 'Erscheint nur in der E-Mail.', '✂ ab hier Telegram-Limit (max 7)', 'Etappen-Vorschau', 'Als Trip speichern', 'Trip wurde erfolgreich gespeichert.'])
 			assert.ok(alle.includes(s), s);
 	});
 });
@@ -211,106 +210,11 @@ describe('AC-1: Layout-Reiter englisch in Trip und Ortsvergleich, Kanalnamen und
 	});
 });
 
-/** Einheiten, Skalen-Beschriftung, Eingabewerte und Band-Positionen eines Renders. */
-function zahlenUndEinheiten(h: string): string[] {
-	const muster = [/class="ce?m?-unit[^"]*"[^>]*>([^<]*)</g, /class="cem-step-unit[^"]*"[^>]*>([^<]*)</g, /class="cem-step-num[^"]*"[^>]*>([^<]*)</g, /value="([^"]*)"/g, /style="([^"]*)"/g, /step="([^"]*)"/g];
-	const aus: string[] = [];
-	for (const m of muster) for (const x of h.matchAll(m)) aus.push(x[1]);
-	for (const x of h.matchAll(/class="cem-band-scale[^"]*"[^>]*>([\s\S]*?)<\/div>/g)) aus.push(sichtbar(x[1]));
-	return aus;
-}
-
-describe('AC-2: Korridor-Editor englisch in Trip und Ortsvergleich, Desktop und mobil', () => {
-	for (const fassung of ['desktop', 'mobil'] as const) {
-		test(`Trip ${fassung}: Ueberschrift, Zeilen, Hinweise, Grenzen, Pool englisch`, () => {
-			const { de, en } = deDannEn(() => korridorRendern('route', fassung, routeZustand(true)));
-			const text = sichtbar(en);
-			hat(sichtbar(de), 'Sag mir, welche Werte für dich passen');
-			for (const s of [
-				'Target ranges',
-				'Tell me which values suit you',
-				'One target range per metric sets which values you still accept on the trip. Values within the range are highlighted in the briefing. You set warnings between briefings in the Alerts tab.',
-				'Additional metrics could not be loaded — the standard metrics are available to choose from.',
-				'Retry',
-				'within range = marked',
-				'At least one limit (From or To) is required: Snow line',
-				'Wind gusts',
-				'Critical on ridges',
-				'Temperature min',
-				'Frost limit',
-				'Snow line',
-				'Snow instead of rain',
-				'◂ open',
-				'open ▸',
-				'open · + limit',
-				'Mark',
-				'✕ remove',
-				'Add metric',
-				'＋ Precipitation',
-				'＋ Temperature max',
-				'2 × Mark'
-			])
-				hat(text, s);
-			if (fassung === 'desktop') {
-				hat(text, 'How to read a target range');
-				hat(text, 'Add metric:');
-				hat(text, 'From');
-				hat(text, 'To');
-			} else {
-				hat(text, 'From');
-				hat(text, '≥ -5 °C');
-				hat(text, '≤ 70 km/h');
-			}
-			hat(en, 'title="Open limit"');
-			hatNicht(en, 'title="Grenze öffnen"');
-			// API-Metriknamen (Gewitter, Stufen kein/mittel/hoch) stellt F5 um, sie bleiben.
-			hat(text, 'Gewitter');
-			assert.deepEqual(deutscheReste(text), []);
-			assert.deepEqual(zahlenUndEinheiten(en), zahlenUndEinheiten(de));
-		});
-		test(`Ortsvergleich ${fassung}: Ueberschrift, Neutralitaet, Plural exakt`, () => {
-			for (const n of [1, 2] as const) {
-				const { de, en } = deDannEn(() => korridorRendern('vergleich', fassung, vergleichZustand(n)));
-				const text = sichtbar(en);
-				for (const s of [
-					'Target ranges · ideal ranges',
-					'Tell me which values are ideal for you',
-					'One target range per metric sets your ideal range. Values within the range are marked green per location in the briefing — no score, no ranking, just a reading aid.',
-					'no score · no rank · target ranges only mark, they do not sort',
-					'Add metric',
-					'Mark'
-				])
-					hat(text, s);
-				hat(en, 'title="Open limit"');
-				const hinweis = (h: string) => sichtbar(/data-testid="corridor-editor(?:-mobile)?-unknown-hint"[^>]*>([\s\S]*?)<\/(?:span|div)>/.exec(h)?.[1] ?? '');
-				const punkt = fassung === 'desktop' ? '· ' : '';
-				assert.equal(hinweis(de), n === 1 ? `${punkt}1 weiterer Eintrag bleibt erhalten` : `${punkt}2 weitere Einträge bleiben erhalten`);
-				assert.equal(hinweis(en), n === 1 ? `${punkt}1 more entry is kept` : `${punkt}2 more entries are kept`);
-				assert.deepEqual(deutscheReste(text), []);
-				assert.deepEqual(zahlenUndEinheiten(en), zahlenUndEinheiten(de));
-			}
-		});
-	}
-	test('Lade- und Fehlerzustaende beider Fassungen englisch', () => {
-		const { en } = deDannEn(() => sichtbar(htmlFaelle().korridor_laden()));
-		hat(en, 'Target ranges ⓘ Loading metrics…');
-		hat(en, 'Target ranges · ideal ranges ⓘ Loading metrics…');
-		hat(en, 'HTTP 503 Retry');
-		assert.deepEqual(deutscheReste(en), []);
-	});
-	test('Zeilen in de aufgebaut, Anzeige nach Sprachwechsel ohne Neuladen englisch (Zeile, Hinweis, Pflicht-Fehler, Pool)', () => {
-		locale.set('de');
-		const zustand = routeZustand(false);
-		assert.equal((zustand.rows as { label: string }[])[0].label, 'Böen', 'Messaufbau: Zeilen auf Deutsch aufgebaut');
-		locale.set('en');
-		for (const fassung of ['desktop', 'mobil'] as const) {
-			const text = sichtbar(korridorRendern('route', fassung, zustand));
-			for (const s of ['Wind gusts', 'Critical on ridges', 'At least one limit (From or To) is required: Snow line', '＋ Precipitation', '＋ Temperature max']) hat(text, s);
-			hatNicht(text, 'Böen');
-			hatNicht(text, 'Grat-kritisch');
-			hatNicht(text, 'Schneefallgrenze');
-		}
-	});
+// #2794 S3a Teil-PR 4a (AC-31): die Render-Faelle des Korridor-Editors (Desktop und mobil,
+// Lade- und Fehlerzustaende, Sprachwechsel ohne Neuladen) entfallen mit der Oberflaeche.
+// Die Korridor-Logik bleibt (shared/wetter-tab/corridorEditorState.ts) und spricht weiter
+// die Sprache des Nutzers.
+describe('AC-2: Korridor-Logik je Sprache, Einheiten/Skalen/Standardgrenzen gleich', () => {
 	test('ROUTE_METRIC_DEFS: Beschriftung je Sprache, metric/unit/scale/step/defaultMin/defaultMax identisch', () => {
 		const { de, en } = deDannEn(() => ce.ROUTE_METRIC_DEFS.map((d: Record<string, unknown>) => ({ ...d })));
 		const fest = (l: Record<string, unknown>[]) => l.map(({ metric, unit, scale, step, defaultMin, defaultMax }) => ({ metric, unit, scale, step, defaultMin, defaultMax }));
@@ -413,8 +317,9 @@ describe('AC-4: zwei Nutzer, zwei Sprachen, gleiche Wertebereiche, gleiche Speic
 			lang,
 			fremd,
 			layout: sichtbar(layoutTabRendern('route', 'email')),
-			korridor: sichtbar(korridorRendern('route', 'desktop', { ...routeZustand(false), rows: zeilen })),
-			vergleich: sichtbar(korridorRendern('vergleich', 'mobil', { ...vergleichZustand(1), rows: vZeilen, unknownCorridors: [] })),
+			// #2794 S3a Teil-PR 4a: die Korridor-Ansicht (CorridorEditor) ist entfernt; die
+			// Zeilennamen der Logik folgen weiter der Sprache, die Nutzlast bleibt sprachfrei.
+			zeilenNamen: zeilen.map((z: { label: string }) => z.label),
 			nutzlast: ce.buildCorridorSavePayload(zeilen, {}, route.unknownCorridors),
 			vNutzlast: ce.buildCompareCorridorSavePayload(vZeilen, [], { idealRanges: p.display_config.ideal_ranges, activeMetricKeys: p.display_config.active_metrics, metricAlertLevels: {} }, vergleich.unknownCorridors)
 		};
@@ -430,13 +335,8 @@ describe('AC-4: zwei Nutzer, zwei Sprachen, gleiche Wertebereiche, gleiche Speic
 		assert.equal(b.fremd, null, 'B liest den Trip von A');
 		hat(a.layout, 'Channel · selection & cutoff');
 		hat(b.layout, 'Kanal · Auswahl & Kappung');
-		hat(a.korridor, 'Wind gusts');
-		hat(a.korridor, 'Tell me which values suit you');
-		hat(b.korridor, 'Böen');
-		hat(b.korridor, 'Sag mir, welche Werte für dich passen');
-		hat(a.vergleich, 'Tell me which values are ideal for you');
-		hat(b.vergleich, 'Sag mir, welche Werte dir ideal sind');
-		assert.deepEqual(deutscheReste(a.korridor), []);
+		assert.ok(a.zeilenNamen.includes('Wind gusts'), `A (en): ${a.zeilenNamen.join(', ')}`);
+		assert.ok(b.zeilenNamen.includes('Böen'), `B (de): ${b.zeilenNamen.join(', ')}`);
 		assert.deepEqual(a.nutzlast, b.nutzlast);
 		assert.equal(JSON.stringify(a.nutzlast), JSON.stringify(b.nutzlast));
 		assert.deepEqual(a.vNutzlast, b.vNutzlast);
@@ -468,10 +368,10 @@ describe('Anker: jeder F8-Katalogwert ist als festes de/en-Literal verankert', (
 		assert.equal(new Set(F8_ANKER.map(([k]) => k)).size, F8_ANKER.length, 'doppelte Anker');
 	});
 
-	test('Plural: weitere_erhalten und spalten_* unterscheiden one/other exakt', () => {
-		assert.equal(trFor('en', 'layout.korridor.weitere_erhalten.one', { count: 1 }), '1 more entry is kept');
-		assert.equal(trFor('en', 'layout.korridor.weitere_erhalten.other', { count: 3 }), '3 more entries are kept');
-		assert.equal(trFor('de', 'layout.korridor.weitere_erhalten.one', { count: 1 }), '1 weiterer Eintrag bleibt erhalten');
-		assert.equal(trFor('de', 'layout.korridor.weitere_erhalten.other', { count: 3 }), '3 weitere Einträge bleiben erhalten');
+	test('Plural: spalten_* unterscheiden one/other exakt', () => {
+		const p = { kanal: 'SMS', subjekt: 'Ort', max: 5 };
+		assert.equal(trFor('en', 'layout.kappung.spalten_passt.one', { ...p, count: 1 }), 'SMS: 1 column (label + Ort) · fits (max 5)');
+		assert.equal(trFor('en', 'layout.kappung.spalten_passt.other', { ...p, count: 3 }), 'SMS: 3 columns (label + Ort) · fits (max 5)');
+		assert.equal(trFor('de', 'layout.kappung.spalten_passt.other', { ...p, count: 3 }), 'SMS: 3 Spalten (Label + Ort) · passt (max 5)');
 	});
 });

@@ -161,7 +161,6 @@ export const F9_ANKER: [schluessel: string, de: string, en: string][] = [
 	['trip.layout.preset_metriken.one', '<count> Metriken', '<count> metric'],
 	['trip.layout.preset_metriken.other', '<count> Metriken', '<count> metrics'],
 	['trip.layout.standard', 'Standard', 'Default'],
-	['trip.layout.indikator', 'Indikator', 'Indicator'],
 	['trip.vorschau.titel', 'Tabellen-Vorschau', 'Table preview'],
 	['trip.vorschau.hinweis', 'Beispiel-Daten · zeigt nur aktivierte Spalten pro Tag', 'Sample data · shows only enabled columns per day'],
 	['trip.vorschau.heute', 'HEUTE', 'TODAY'],

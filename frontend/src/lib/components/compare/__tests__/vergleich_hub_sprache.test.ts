@@ -260,7 +260,7 @@ describe('AC-3: Orte-Reiter, Orte-Schritt, Neuer Ort englisch; Nutzlast nur Ort-
 
 describe('AC-7: Groessennamen im Alarme-Reiter des Vergleichs (Register-Ergaenzung)', () => {
 	test('mitRegisterNamen + registerAusKatalog: unalertable Groessen englisch, ohne label_en deutsch', async () => {
-		const L = await import(pathToFileURL(path.join(P.KOMP, 'shared/corridor-editor/compareMetricCatalogLoader.ts')).href);
+		const L = await import(pathToFileURL(path.join(P.KOMP, 'shared/wetter-tab/compareMetricCatalogLoader.ts')).href);
 		const A = await import(pathToFileURL(path.join(P.KOMP, 'shared/alarme-tab/activeAlertMetricsFromCatalog.ts')).href);
 		const register = L.registerAusKatalog({ a: [P.REGISTER.temperature, P.REGISTER.cloud_total], b: [P.REGISTER.sunshine], kaputt: null });
 		assert.deepEqual(Object.keys(register).sort(), ['cloud_total', 'sunshine', 'temperature']);

@@ -162,7 +162,7 @@ function assertDefMatches(actual: Record<string, unknown> | undefined, expected:
 }
 
 describe('AC-2: compareMetricCatalogLoader.ts existiert und exportiert buildCompareMetricDefs', () => {
-	test('frontend/.../corridor-editor/compareMetricCatalogLoader.ts existiert', () => {
+	test('frontend/.../wetter-tab/compareMetricCatalogLoader.ts existiert', () => {
 		assert.ok(
 			moduleExists(),
 			'AC-2 FAIL: compareMetricCatalogLoader.ts existiert noch nicht — der Schwellen-Editor ' +

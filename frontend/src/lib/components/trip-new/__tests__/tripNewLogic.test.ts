@@ -43,7 +43,7 @@ import {
 	addRow,
 	patchRow,
 	buildCorridorSavePayload,
-} from '../../shared/corridor-editor/corridorEditorState.ts';
+} from '../../shared/wetter-tab/corridorEditorState.ts';
 
 // ── AC-2/AC-3: Progressiver Lock-State (TN_unlocked) ────────────────────────
 //

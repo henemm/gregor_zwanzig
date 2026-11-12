@@ -40,7 +40,7 @@ const variante = async (datei: string, ersetzungen: [string, string][]) =>
 export const { locale, tr, trFor } = await imp(path.join(FRONTEND, 'src/lib/i18n/index.ts'));
 export const { toCompareSelectionEntries } = await imp(path.join(WMT, 'compareMetricSelection.ts'));
 export const { resolveTripMetricsOverviewState } = await imp(path.join(SHARED, 'trip-metrics', 'tripActiveMetricNames.ts'));
-export const loader = await imp(path.join(SHARED, 'corridor-editor', 'compareMetricCatalogLoader.ts'));
+export const loader = await imp(path.join(SHARED, 'wetter-tab', 'compareMetricCatalogLoader.ts'));
 
 const fixture = (name: string) => JSON.parse(readFileSync(path.join(HERE, 'fixtures', name), 'utf-8'));
 type Eintrag = Record<string, unknown> & { id: string; label: string };

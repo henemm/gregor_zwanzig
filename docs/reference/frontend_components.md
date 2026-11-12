@@ -34,7 +34,8 @@ frontend/src/lib/components/
 ├── compare-new/          # Progressiver Anlege-Editor /compare/new (CompareNewEditor, #1301 F2)
 ├── shared/               # Geteilte Tab-Organismen (context="route"|"vergleich"):
 │                         #   WeatherMetricsTab, layout-tab/, versand-tab/, alarme-tab/,
-│                         #   OutputLayoutEditor, corridor-editor/, dnd/
+│                         #   OutputLayoutEditor, wetter-tab/ (Logikmodule; Corridor-Editor-Oberfläche seit
+│                         #   #2794 S3a Teil-PR 4a entfernt), dnd/
 ├── trip-detail/          # Trip-Detail-Ansicht + Wegpunkt-Editor
 ├── compare/              # Vergleichs-Screen (CompareTabs, CompareDetail, CompareMatrix, …)
 ├── edit/                 # Trip-Bearbeitungs-Sektionen
@@ -366,7 +367,7 @@ import { ConfirmDialog, DetailRow, ChannelRow, AlertRow, Stat } from '$lib/compo
 
 - `molecules/BegriffErklaerung.svelte`: ⓘ-Knopf mit Sprechblase (bits-ui-Popover unter `ui/popover/`); erklärt Wertebereiche, Kanal-Schwelle („Dringlichkeits-Schwelle"), CAPE und Cooldown. Texte `tip.*` in `frontend/src/lib/i18n/messages/de.json`.
 - `molecules/Infobox.svelte` (`<aside>`): immer sichtbar, nicht wegklickbar, „Kannst du überspringen — Standard: …" (Texte `info.*`). Nur auf den Anlege-Seiten `/trips/new` und `/compare/new` über Prop `showInfobox`; Schlüsselauswahl über `shared/infoboxKeys.ts`. Bearbeiten-Hubs zeigen nur die ⓘ, keine Infobox.
-- Eingebunden in die geteilten Reiter-Organismen (AlarmeTab, VersandTab, WeatherMetricsTab, CorridorEditor inkl. Mobile) — Trip und Ortsvergleich nutzen denselben Code.
+- Eingebunden in die geteilten Reiter-Organismen (AlarmeTab, VersandTab, WeatherMetricsTab; CorridorEditor inkl. Mobile seit #2794 S3a Teil-PR 4a entfernt) — Trip und Ortsvergleich nutzen denselben Code.
 - SSR-Testharness `frontend/test-svelte-ssr-hooks.mjs` kompiliert zusätzlich `node_modules/**/*.svelte.js` (bits-ui-Runen).
 
 ### ConfirmDialog Component
@@ -655,10 +656,17 @@ liefert 404).
 **„Wertebereiche"** (seit S3a Teil-PR 2, Epic #2791, im Reiter **„Wetter"** gebündelt;
 Anlege-Ketten Route · Etappen · Wegpunkte · Wetter · Zustellung bzw. Vergleich · Orte ·
 Wetter · Zustellung, Anlegen erst nach Besuch von „Zustellung", einem Übergangsreiter bis
-S3b, ADR-0109; Kennungen/Umleitung: `navigation.md`). Gemountet wird darin
-derselbe geteilte `shared/corridor-editor/CorridorEditor.svelte`, den Trip-Hub
-und Ortsvergleich bereits nutzen — mit neuem Prop `createMode` (Default
-`false`), der den Selbst-Speicher-PUT abschaltet; Änderungen fließen stattdessen
+S3b, ADR-0109; Kennungen/Umleitung: `navigation.md`). **Stand seit #2794 S3a
+Teil-PR 4a:** Der frühere geteilte `shared/corridor-editor/CorridorEditor.svelte`
+(samt Mobile-Variante, HorizonChip(s), MetricCheckbox, MetricGroup,
+MetricsEditorContextBar, `corridorPropsAus`) ist entfernt; die Logikmodule
+`corridorEditorState.ts`, `compareMetricCatalogLoader.ts`,
+`wertebereicheVergleichSpeicherung.ts` liegen unverändert in `shared/wetter-tab/`.
+Die Vorbelegung der Wertebereiche beim Anlegen (Trip und Orts-Briefing) ist die reine
+Funktion `shared/wetter-tab/anlegeVorbelegung.ts`, je Anlege-Editor ein `$effect`.
+*Historisch (vor 4a):* Gemountet wurde darin
+derselbe geteilte `CorridorEditor.svelte` — mit Prop `createMode` (Default
+`false`), der den Selbst-Speicher-PUT abschaltet; Änderungen flossen
 über den Rückruf `onCorridorsChange` in `CreateTripState.corridors` und mit dem
 einen `POST /api/trips` in den neuen Trip. Gleiches `createMode`-Muster nutzen
 dort bereits `WeatherMetricsTab` und `AlarmeTab` (S1, #2426). Details:

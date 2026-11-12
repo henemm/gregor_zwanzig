@@ -30,7 +30,7 @@ import { createPutQueue, buildToggleActivePutPayload } from '../compareHubPersis
 import {
 	flushPendingCorridorSave,
 	type CorridorSnapshot
-} from '../../shared/corridor-editor/wertebereicheVergleichSpeicherung.ts';
+} from '../../shared/wetter-tab/wertebereicheVergleichSpeicherung.ts';
 
 function makePreset(overrides: Partial<ComparePreset> = {}): ComparePreset {
 	return {

@@ -163,15 +163,17 @@ def test_kein_spec_schreibt_in_den_versionierten_baum():
 def test_filter_c_kriterium_ist_geeicht():
     """AC-5/AC-7 Gegenprobe: die Messung unterscheidet richtig von falsch.
 
-    GIVEN 24 korrekte `../`-Pfade im Korpus (gemessen 2026-08-14) plus die sonst
+    GIVEN 23 korrekte `../`-Pfade im Korpus (gemessen 2026-08-14: 24; nachgemessen
+          2026-11-12: 23, nach Löschung von fix-1350t3 (#2794 S3a Teil-PR 4a))
+          plus die sonst
           ungemessene Annahme, ein fehlendes `../` schreibe versioniert
     WHEN beides gemessen wird
-    THEN faellt keiner der 24 durch (ein Kriterium, das auch die korrekten
+    THEN faellt keiner der 23 durch (ein Kriterium, das auch die korrekten
          verwirft, macht die Ratsche unbenutzbar), und Git fuehrt unter
          `frontend/docs/artifacts/` wirklich Dateien -- die Praemisse haelt.
     """
     korrekt = [t for t in _schreibpfade() if t[2].startswith("../")]
-    assert len(korrekt) >= 24, f"nur {len(korrekt)} korrekte Pfade als Gegenprobe"
+    assert len(korrekt) >= 23, f"nur {len(korrekt)} korrekte Pfade als Gegenprobe"
     assert not [f"{d}:{n} {p}" for d, n, p in korrekt
                 if _im_versionierten_baum(p)[0]], "korrekter Pfad falsch verworfen"
     assert _git("ls-files", "frontend/docs/artifacts").stdout.strip(), (
