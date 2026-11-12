@@ -224,6 +224,7 @@ Signaturen: `format_wind_strength(kmh, *, lang: Lang = "de")` und analog für di
   - Test: tests/test_i18n_api_katalog_paritaet.py — `# doc-compliance-test` (Paritätstest, kein Verhaltensnachweis); Verhaltensanteil: Mutation „en-Schlüssel entfernen" färbt den Test rot.
 
 - **AC-8:** Given ein bestehender Aufrufer, der `detail` als String liest (Go-Proxy, Frontend) / When ein Vorschau-Fehler auftritt / Then enthält die Antwort `detail` weiter als String, zusätzlich das Feld `code`, und Fehlerfälle ohne Code (`unbekannt`) behalten ihren bisherigen Text unverändert.
+  > **Teilweise abgelöst (#2961, 2026-11-12):** Fehlerfälle ohne Code melden seither den Katalogtext `api.fehler.unbekannt` in der Kontosprache; der Ausnahmetext steht nur noch im Log (`docs/specs/modules/security_haertung_2026_11_python_core.md`, AC-5).
   - Test: tests/tdd/test_api_fehler_nutzersprache.py — Antwortform per `response.json()`: `isinstance(detail, str)`, `code` vorhanden; ungeregelter `ValueError` aus einer Quelle ohne `.code` liefert `code == "unbekannt"` und unveränderten Text.
 
 ## Known Limitations

@@ -81,6 +81,18 @@ ANKER: dict[str, tuple[str, str]] = {
     "api.fehler.gpx_nur_gpx": (
         "Nur .gpx Dateien erlaubt, nicht '{filename}'",
         "Only .gpx files are allowed, not '{filename}'"),
+    "api.fehler.gpx_zu_gross": (
+        "Die GPX-Datei ist zu groß (höchstens {max_mb} MB).",
+        "The GPX file is too large (at most {max_mb} MB)."),
+    "api.fehler.gpx_speicher_voll": (
+        "Dein GPX-Speicher ist voll (höchstens {max_dateien} Dateien und {max_mb} MB). Lade eine Datei mit gleichem Namen hoch, um sie zu ersetzen.",
+        "Your GPX storage is full (at most {max_dateien} files and {max_mb} MB). Upload a file with the same name to replace it."),
+    "api.fehler.gpx_ungueltig": (
+        "Die GPX-Datei konnte nicht gelesen werden: Sie ist leer, beschädigt oder enthält keinen verwertbaren Track (mindestens 10 Punkte).",
+        "The GPX file could not be read: it is empty, damaged or contains no usable track (at least 10 points)."),
+    "api.fehler.unbekannt": (
+        "Die Anfrage konnte nicht verarbeitet werden.",
+        "The request could not be processed."),
     "api.skala.wind.schwach": ("schwach", "weak"),
     "api.skala.wind.maessig": ("mäßig", "moderate"),
     "api.skala.wind.stark": ("stark", "strong"),
