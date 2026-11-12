@@ -52,7 +52,7 @@ def test_ausgehende_mail_traegt_auto_submitted(html):
 @pytest.mark.parametrize("kopf", [
     b"Auto-Submitted: auto-replied", b"Auto-Submitted: auto-generated",
     b"Precedence: bulk", b"Precedence: junk", b"Precedence: auto_reply",
-    b"Precedence: list", b"X-Autoreply: yes", b"X-Auto-Response-Suppress: All",
+    b"Precedence: list", b"X-Autoreply: yes",
 ])
 def test_automatische_mail_wird_ohne_antwort_verworfen(monkeypatch, user_ids, kopf):
     rec = install_transport_fakes(monkeypatch)
@@ -69,6 +69,26 @@ def test_auto_submitted_no_ist_ein_normaler_befehl(monkeypatch, user_ids):
     imap = _FakeImap(_mit_kopf(_befehlsmail(nutzer), b"Auto-Submitted: no"))
     assert InboundEmailReader()._process_single(imap, b"1", basis_settings()) == (1, 0)
     assert len(rec.emails) == 1
+
+
+def test_auto_response_suppress_befehl_wird_ausgefuehrt_und_beantwortet(monkeypatch, user_ids):
+    rec = install_transport_fakes(monkeypatch)
+    nutzer = lege_lage_an(user_ids, "L2")
+    imap = _FakeImap(_mit_kopf(_befehlsmail(nutzer, "Hilfe"), b"X-Auto-Response-Suppress: All"))
+    assert InboundEmailReader()._process_single(imap, b"1", basis_settings()) == (1, 0)
+    assert len(rec.emails) == 1
+
+
+def test_auto_response_suppress_bekommt_keine_fehlerantwort(monkeypatch, user_ids):
+    rec = install_transport_fakes(monkeypatch)
+    nutzer = lege_lage_an(user_ids, "L2")
+    kopf = b"X-Auto-Response-Suppress: All"
+    unbekannt = _mit_kopf(_befehlsmail(nutzer, "xyzzy"), kopf)
+    assert InboundEmailReader()._process_single(_FakeImap(unbekannt), b"1", basis_settings()) == (1, 0)
+    fremder_trip = _mit_kopf(
+        _mime_plain(nutzer.mail_to, "Re: [Gibt es nicht] Etappe", "Hilfe"), kopf)
+    assert InboundEmailReader()._process_single(_FakeImap(fremder_trip), b"1", basis_settings()) == (0, 0)
+    assert rec.emails == []
 
 
 def _authorize_settings(**kw):
