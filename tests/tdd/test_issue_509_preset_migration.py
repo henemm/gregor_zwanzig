@@ -108,6 +108,9 @@ class TestEmpfaengerFallback:
         from services.scheduler_dispatch_service import run_compare_presets_daily as _run_compare_presets_daily
 
         monkeypatch.setenv("GZ_MAIL_TO", "fallback@example.com")
+        # #2961: Empfaenger kommt nur noch aus dem Nutzerprofil.
+        from tests.helpers.nutzerprofil import lege_profil_an
+        lege_profil_an("fallback-user2", mail_to="fallback@example.com")
 
         preset = _minimal_preset("cp-fallback", empfaenger=[])
         preset["location_ids"] = ["loc-does-not-exist"]  # nicht leer, aber kein Match

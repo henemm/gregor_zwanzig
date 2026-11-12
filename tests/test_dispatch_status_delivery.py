@@ -20,6 +20,7 @@ from services.trip_report_scheduler import TripReportSchedulerService
 from tests.tdd.test_briefing_slot_idempotenz import (
     KORSIKA, _schreibe, _trip_json, _zeitpunkt, PARIS,
 )
+from tests.helpers.nutzerprofil import lege_profil_an
 
 TAGE = [date(2026, 8, 19), date(2026, 8, 20), date(2026, 8, 21)]
 TAG = date(2026, 8, 20)
@@ -59,6 +60,7 @@ def client(monkeypatch):
 def _lauf(client, user: str, ausgang) -> dict:
     _AUSGANG[user] = ausgang
     _schreibe(user, [_trip_json("korsika", *KORSIKA, TAGE, morning="07:00:00")])
+    lege_profil_an(user, mail_to="dummy@example.com")  # #2961: Empfaenger aus dem Profil
     at = _zeitpunkt(PARIS, TAG, 7).isoformat()
     r = client.post("/api/scheduler/trip-reports", params={"user_id": user, "at": at})
     assert r.status_code == 200
@@ -107,6 +109,7 @@ def test_f001_bereits_vermerkter_slot_ist_kein_versandversuch(client, monkeypatc
     user = "u2218-f001-vermerkt"
     _AUSGANG[user] = "sent"
     _schreibe(user, [_trip_json("korsika", *KORSIKA, TAGE, morning="07:00:00")])
+    lege_profil_an(user, mail_to="dummy@example.com")  # #2961: Empfaenger aus dem Profil
     at = _zeitpunkt(PARIS, TAG, 7)
     original = TripReportSchedulerService._collect_due_trips
 

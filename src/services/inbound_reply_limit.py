@@ -51,5 +51,5 @@ def fehlerantwort_erlaubt(user_id: str, *, now: float | None = None) -> bool:
             tmp.write_text(json.dumps([*stempel, jetzt]))
             os.replace(tmp, pfad)
         except OSError as e:
-            logger.warning("Fehlerantwort-Drossel nicht speicherbar: %s", e)
+            logger.warning("Fehlerantwort-Drossel nicht speicherbar: %s", e)  # i18n-log
         return True
