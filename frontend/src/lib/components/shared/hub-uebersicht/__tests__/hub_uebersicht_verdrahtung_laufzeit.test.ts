@@ -13,6 +13,9 @@
 //   F003  Ortsvergleich: nach dem ECHTEN Pause-Weg von CompareTabs (handleToggleActive,
 //         PUT gegen einen Ersatz-Server) zeigt die Status-Kennzahl „Pausiert".
 //   B02   Scheitert der geteilte Abruf, zeigt die Versand-Historie ihren Fehlertext.
+//   #2794 Fix-Loop teil4b (Adversary F001, Spec fix_2794_s3a_teil4b_befunde AC-8/AC-10):
+//         der ECHTE onMount-Rueckruf der Komponente laedt /api/templates (nur mit Preset),
+//         reicht die Vorlagen an deriveVergleichKennzahlen; Ladefehler ⇒ null ⇒ „—".
 //
 // Messaufbau und warum so:
 //   - Ein echter Client-Mount ist hier strukturell nicht moeglich: im Projekt gibt es
@@ -83,6 +86,8 @@ const { erstelleNaechstesBriefingLader } = await import(
 );
 const { briefingHistoryUrl } = await import(pathToFileURL(join(SHARED, 'briefingHistory.ts')).href);
 const { formatLastSent } = await import(pathToFileURL(join(COMPONENTS, 'compare', 'subscriptionHelpers.ts')).href);
+const { live } = await import(pathToFileURL(join(SHARED, 'wetter-tab', '__tests__', 'wetterTabDaten.ts')).href);
+const { vorlagenAusTemplates } = await import(pathToFileURL(join(SHARED, 'wetter-tab', 'ampelModell.ts')).href);
 const BriefingHistory = (await import(pathToFileURL(BH).href)).default;
 
 // ── Netz: Fetch-Ersatz am Ausgang, Antworten wie die Go-Handler ──────────────
@@ -99,8 +104,9 @@ afterEach(() => {
 	globalThis.fetch = echtesFetch;
 });
 
-/** Ersatz-Server: `historie` je „kind:id"; `/api/next-briefings` beantwortet jede Kennung mit NB. */
-function netz(historie: Record<string, Eintrag[] | 'fehler'>) {
+/** Ersatz-Server: `historie` je „kind:id"; `/api/next-briefings` beantwortet jede Kennung mit NB;
+ *  `/api/templates` liefert `vorlagen` (Antwort des Python-Core) oder scheitert mit 502. */
+function netz(historie: Record<string, Eintrag[] | 'fehler'>, vorlagen: unknown[] | 'fehler' = []) {
 	const urls: string[] = [];
 	const antwort = (status: number, body: unknown) =>
 		new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } });
@@ -112,6 +118,7 @@ function netz(historie: Record<string, Eintrag[] | 'fehler'>) {
 			const log = historie[`${bh[2]}:${decodeURIComponent(bh[1])}`];
 			return log === 'fehler' ? antwort(502, { error: 'bad gateway' }) : antwort(200, log ?? []);
 		}
+		if (url === '/api/templates') return vorlagen === 'fehler' ? antwort(502, { error: 'bad gateway' }) : antwort(200, vorlagen);
 		const nb = /^\/api\/next-briefings\?(trip_id|preset_id)=(.+)$/.exec(url);
 		if (nb) {
 			const id = decodeURIComponent(nb[2]);
@@ -122,7 +129,9 @@ function netz(historie: Record<string, Eintrag[] | 'fehler'>) {
 	return {
 		urls,
 		historienAbrufe: () => urls.filter((u) => u.includes('/briefing-history')),
-		naechsteAbrufe: () => urls.filter((u) => u.startsWith('/api/next-briefings'))
+		naechsteAbrufe: () => urls.filter((u) => u.startsWith('/api/next-briefings')),
+		/** Alles, was weder Historie noch „Nächster Versand" ist (Vorlagen-Abruf). */
+		uebrigeAbrufe: () => urls.filter((u) => !u.includes('/briefing-history') && !u.startsWith('/api/next-briefings'))
 	};
 }
 
@@ -378,5 +387,78 @@ describe('F003 / AC-3: CompareTabs reicht den lokalen Status an HubUebersicht', 
 		assert.equal(ct.u.localSchedule, 'manual');
 		neuAuswerten(ct.ast, ct.quelle, ct.u, 'status');
 		assert.equal(await statusText(), 'Pausiert', 'lokales Pausieren kommt in der Übersicht nicht an');
+	});
+});
+
+// ── #2794 Fix-Loop teil4b (F001): Vorlagen-Abruf der Übersicht und Karte „Wetter" ──
+
+/** Browser-Umgebung des onMount-Rumpfs: Viewport-Abfrage (Desktop), sonst nichts. */
+const FENSTER = {
+	matchMedia: () => ({ matches: false, addEventListener() {}, removeEventListener() {} })
+};
+
+/** Fuehrt JEDEN onMount-Rueckruf des Instanz-Skripts aus — wie der Mount im Browser.
+ *  Gezaehlt wird jeder Aufruf; fehlt der Vorlagen-Abruf, faellt das ueber die Netz-Zusicherung auf. */
+function mounten(hu: { ast: Knoten; quelle: string; u: Knoten }): number {
+	const rueckrufe: Array<() => unknown> = [];
+	hu.u.onMount = (fn: () => unknown) => rueckrufe.push(fn);
+	hu.u.window = FENSTER;
+	for (const stmt of (hu.ast.instance?.content?.body as Knoten[]) ?? []) {
+		const aufruf = stmt.type === 'ExpressionStatement' ? (stmt.expression as Knoten) : null;
+		if (aufruf?.type === 'CallExpression' && aufruf.callee?.type === 'Identifier' && aufruf.callee.name === 'onMount') {
+			werte(ohneTypen(hu.quelle, aufruf), hu.u);
+		}
+	}
+	for (const fn of rueckrufe) fn();
+	return rueckrufe.length;
+}
+
+const VORLAGEN_ANTWORT = live().templates as unknown[];
+const DREI = (() => {
+	const v = vorlagenAusTemplates(VORLAGEN_ANTWORT) as Record<string, { metrics?: Record<string, unknown> }>;
+	const ids = Object.keys(v.allgemein?.metrics ?? Object.values(v)[0]?.metrics ?? {});
+	assert.ok(ids.length >= 3, 'Fixtur-Schutz: Vorlage braucht mindestens drei Metriken');
+	return ids.slice(0, 3);
+})();
+const PRESET_DREI = { ...PRESET, display_config: { active_metrics: DREI, ideal_ranges: { a: {}, b: {} } } };
+
+function wetterKarte(hu: { ast: Knoten; quelle: string; u: Knoten }) {
+	const modell = neuAuswerten(hu.ast, hu.quelle, hu.u, 'modell') as any;
+	assert.ok(modell?.wertebereicheKarte, 'Messaufbau: Vergleichs-Modell ohne Karte „Wetter"');
+	return modell.wertebereicheKarte;
+}
+
+describe('#2794 teil4b F001 / AC-8, AC-10: HubUebersicht lädt die Vorlagen und zählt die Metriken im Briefing', () => {
+	test('Vergleich mit 3 gewählten Metriken ⇒ genau EIN Abruf /api/templates, Karte „3 Metriken im Briefing"', async () => {
+		const n = netz({}, VORLAGEN_ANTWORT);
+		const hu = await hubUebersicht({ context: 'vergleich', preset: PRESET_DREI, orte: [] });
+		assert.equal(wetterKarte(hu).beschreibungLang, '—', 'Messaufbau: vor dem Mount sind keine Vorlagen geladen');
+		assert.ok(mounten(hu) >= 1, 'Messaufbau: kein onMount-Rueckruf');
+		await setzen();
+		assert.deepEqual(n.uebrigeAbrufe(), ['/api/templates'], 'Abrufe: ' + JSON.stringify(n.urls));
+		const k = wetterKarte(hu);
+		assert.equal(k.beschreibungKurz, '3 Metriken im Briefing');
+		assert.match(k.beschreibungLang, /^3 Metriken im Briefing/);
+	});
+
+	test('Vorlagen-Abruf scheitert ⇒ Zustand null, Karte „—" (keine erfundene Zahl)', async () => {
+		const n = netz({}, 'fehler');
+		const hu = await hubUebersicht({ context: 'vergleich', preset: PRESET_DREI, orte: [] });
+		mounten(hu);
+		await setzen();
+		assert.deepEqual(n.uebrigeAbrufe(), ['/api/templates'], 'Messaufbau: der Abruf lief');
+		// Vertrag wie trip-detail/HubOverview.svelte: Ladefehler ⇒ null (nicht ein leeres Objekt).
+		assert.strictEqual(hu.u.vorlagen, null, 'Ladefehler setzt die Vorlagen nicht auf null');
+		const k = wetterKarte(hu);
+		assert.equal(k.beschreibungKurz, '—');
+		assert.equal(k.beschreibungLang, '—');
+	});
+
+	test('Trip-Übersicht (kein Preset) ⇒ kein Abruf von /api/templates', async () => {
+		const n = netz({ [`route:${TRIP.id}`]: LOG }, VORLAGEN_ANTWORT);
+		const hu = await hubUebersicht({ context: 'route', trip: TRIP });
+		mounten(hu);
+		await setzen();
+		assert.deepEqual(n.uebrigeAbrufe(), [], 'Trip ruft die Vorlagen ab (doppelt zu HubOverview): ' + JSON.stringify(n.urls));
 	});
 });

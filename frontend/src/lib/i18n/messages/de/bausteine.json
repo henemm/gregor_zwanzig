@@ -38,7 +38,7 @@
 	"bausteine.setup.fortschritt": "{erledigt} von {gesamt} Schritten",
 	"bausteine.setup.weiter_bei": "Weiter bei:",
 	"bausteine.setup.bereit": "Bereit zum Aktivieren",
-	"bausteine.alarme.titel": "Alerts · letzte 24 h",
+	"bausteine.alarme.titel": "Alarme · letzte 24 h",
 	"bausteine.alarme.ausgeloest": "{anzahl} ausgelöst",
 	"bausteine.alarme.keine": "Keine",
 	"bausteine.alarme.schwellen": "Schwellen →",

@@ -19,7 +19,7 @@
 	"home.trip.tag_von": "Tag {tag} / {gesamt}",
 	"home.trip.keine_briefings_geplant": "Keine Briefings für diesen Trip geplant.",
 	"home.aktion.pausentag": "Pausentag einplanen",
-	"home.aktion.pausentag_ziel": "→ Etappen & Wegpunkte",
+	"home.aktion.pausentag_ziel": "→ Etappen",
 	"home.aktion.metriken": "Wetter ändern",
 	"home.aktion.metriken_ziel": "→ Wetter",
 	"home.aktion.zeitplan": "Briefing-Zeitplan",

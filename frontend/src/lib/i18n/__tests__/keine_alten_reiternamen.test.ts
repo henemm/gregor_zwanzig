@@ -48,7 +48,8 @@ const ALT: Record<Sprache, string[]> = {
 	en: ['Target ranges', 'Alerts', 'Layout', 'Weather metrics']
 };
 const BESCHRIFTUNG: Record<Sprache, string[]> = { de: ['Wertebereiche', 'Alarme', 'Layout', 'Wetter-Metriken'], en: ALT.en };
-const NEUE_REITER = ['uebersicht', 'etappen_wegpunkte', 'orte', 'wetter', 'zustellung'];
+// #2794 Fix-Loop B1: Trip-Reiter heißt kurz „Etappen" (aktionen.reiter.etappen ersetzt etappen_wegpunkte).
+const NEUE_REITER = ['uebersicht', 'etappen', 'orte', 'wetter', 'zustellung'];
 const Q = `["„“”"'‚‘]?`;
 const oder = (namen: string[]) => `(${namen.map((n) => n.replace(/[-]/g, '\\-')).join('|')})`;
 

@@ -108,11 +108,13 @@ describe('AC-6: Deutsch byte-gleich zum Ist-Stand vor der Umstellung (Golden gol
 describe('AC-1: Trip-Hub englisch, Namen unveraendert', () => {
 	test('Reiterleiste und Seite: Reiter, Aktionen, Kopf, Erfolg/Fehler englisch (erst de, dann ohne Neuladen en)', () => {
 		const { de, en } = deDannEn(() => P.reiterRendern() + P.seiteRendern('gesendet') + P.seiteRendern('fehler'));
-		// #2794 S3a: Reiter Wetter/Zustellung.
-		for (const s of ['Übersicht', 'Etappen &amp; Wegpunkte', 'Wetter', 'Zustellung', 'Briefing gesendet!', 'aria-label="Weitere Aktionen"']) hat(de, s);
-		for (const s of ['data-testid="trip-detail-tab-uebersicht">Overview', 'data-testid="trip-detail-tab-etappen">Stages &amp; waypoints', 'data-testid="trip-detail-tab-wetter">Weather', 'data-testid="trip-detail-tab-zustellung">Delivery', 'Briefing sent', 'Send', 'aria-label="More actions"', 'aria-label="Trip details"', 'Error while sending', 'aria-label="Edit name"', 'aria-label="Edit region"'])
+		// #2794 S3a: Reiter Wetter/Zustellung. #2794 Fix-Loop B1: Reiter heißt kurz „Etappen"/„Stages".
+		for (const s of ['Übersicht', 'data-testid="trip-detail-tab-etappen">Etappen', 'Wetter', 'Zustellung', 'Briefing gesendet!', 'aria-label="Weitere Aktionen"']) hat(de, s);
+		for (const s of ['data-testid="trip-detail-tab-uebersicht">Overview', 'data-testid="trip-detail-tab-etappen">Stages', 'data-testid="trip-detail-tab-wetter">Weather', 'data-testid="trip-detail-tab-zustellung">Delivery', 'Briefing sent', 'Send', 'aria-label="More actions"', 'aria-label="Trip details"', 'Error while sending', 'aria-label="Edit name"', 'aria-label="Edit region"'])
 			hat(en, s);
 		hatNicht(en, 'Briefing gesendet');
+		hatNicht(de, 'data-testid="trip-detail-tab-etappen">Etappen &amp; Wegpunkte');
+		hatNicht(en, 'data-testid="trip-detail-tab-etappen">Stages &amp; waypoints');
 		const sEn = sichtbar(en);
 		hat(sEn, 'GR20 Nord 2026');
 		hat(sEn, 'Calenzana – Ortu di u Piobbu');
@@ -235,7 +237,7 @@ describe('AC-2: Aktionsliste Trip == Ortsvergleich, Texte aus aktionen.*', () =>
 		const { de, en } = deDannEn(() => ({ t: P.reiter.subscriptionTabs('trip'), v: P.reiter.subscriptionTabs('vergleich'), at: P.reiter.anlegeKette('trip'), av: P.reiter.anlegeKette('vergleich') }));
 		assert.deepEqual(en.t.map((r: { id: string }) => r.id), de.t.map((r: { id: string }) => r.id));
 		// #2794 S3a (Spec feat_2794_s3a_teil2_leiste.md AC-1/AC-6): Reiter und Schritte Wetter/Zustellung.
-		assert.deepEqual(en.t.map((r: { label: string }) => r.label), ['Overview', 'Stages & waypoints', 'Weather', 'Delivery']);
+		assert.deepEqual(en.t.map((r: { label: string }) => r.label), ['Overview', 'Stages', 'Weather', 'Delivery'] /* #2794 Fix-Loop B1 */);
 		assert.deepEqual(en.v.map((r: { label: string }) => r.label), ['Overview', 'Locations', 'Weather', 'Delivery']);
 		assert.deepEqual(en.at.map((r: { label: string }) => r.label), ['Route', 'Stages & GPX', 'Check waypoints', 'Weather', 'Delivery']);
 		assert.deepEqual(en.at.map((r: { lockHint?: string }) => r.lockHint ?? null), [null, 'trip name + start date first', 'upload all GPX files first', 'upload all GPX files first', 'open Weather first']);

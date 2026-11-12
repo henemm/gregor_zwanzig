@@ -333,9 +333,10 @@ describe('AC-16/17: OutboxCard + AlertsCard', () => {
 	test('AC-17: AlertsCard.svelte existiert in organisms/', () => {
 		assert.ok(hasOrg('AlertsCard.svelte'), 'organisms/AlertsCard.svelte fehlt');
 	});
-	test('AC-17: AlertsCard Eyebrow "Alerts · letzte 24 h" + Schwellen-Link', async () => {
+	// #2794 Fix-Loop B5: deutscher Titel „Alarme · letzte 24 h".
+	test('AC-17: AlertsCard Eyebrow "Alarme · letzte 24 h" + Schwellen-Link', async () => {
 		const text = await gerenderterText('organisms/AlertsCard.svelte', { alerts: [] });
-		assert.ok(/Alerts · letzte 24 h/.test(text), 'AlertsCard: Eyebrow "Alerts · letzte 24 h" fehlt');
+		assert.ok(/Alarme · letzte 24 h/.test(text), 'AlertsCard: Eyebrow "Alarme · letzte 24 h" fehlt');
 		assert.ok(/Schwellen →/.test(text), 'AlertsCard: "Schwellen →"-Link fehlt');
 	});
 	test('AC-17: AlertsCard rendert AlertRow bei alerts > 0', () => {

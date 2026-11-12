@@ -27,7 +27,7 @@ Quelle der Befunde: `docs/context/fix-2794-s3a-teil4b-befunde.md`. Vorgänger-Sp
 - **Frontend (Übersicht, B3/B4):** `frontend/src/lib/components/shared/hub-uebersicht/HubUebersicht.svelte`, `hubUebersichtModell.ts`, `frontend/src/lib/components/shared/wetter-tab/wetterZustand.ts` (nur lesen), `frontend/src/lib/components/trip-detail/HubOverview.svelte` (Muster zum Laden der Vorlagen), `frontend/src/lib/utils/cockpitHelpers568.ts`
 - **Texte (B1, B4, B5):** `frontend/src/lib/i18n/messages/{de,en}/{aktionen,home,vergleich,bausteine}.json`, Verwendung `frontend/src/routes/+page.svelte` (Zeilen 292 und 362)
 - **Doku:** `docs/reference/i18n_glossar.md` (nur lesen)
-- **Identifier:** `REITER_DEFINITION` (subscriptionTabs.ts), `badges.etappen` (TripTabs.svelte), Pill-Leiste `MTabBar`, Karten-Grid in `HubUebersicht`, Wetter-Karte in `hubUebersichtModell` (`wertebereicheKarte`), `standAusAbo` (wetterZustand.ts), `setupStepCompare` (cockpitHelpers568.ts); Katalog-Schlüssel `aktionen.reiter.etappen` (neu), `aktionen.reiter.etappen_wegpunkte`, `home.aktion.pausentag_ziel`, `vergleich.hub.wertebereiche_kurz`, `vergleich.hub.wertebereiche_lang`, `bausteine.alarme.titel`
+- **Identifier:** `REITER_DEFINITION` (subscriptionTabs.ts), `badges.etappen` (TripTabs.svelte), Pill-Leiste `MTabBar`, Karten-Grid in `HubUebersicht`, Wetter-Karte in `hubUebersichtModell` (`wertebereicheKarte`), `standAusAbo` (wetterZustand.ts), `setupStepCompare` (cockpitHelpers568.ts); Katalog-Schlüssel `aktionen.reiter.etappen` (neu), `aktionen.reiter.etappen_wegpunkte` (entfällt), `home.aktion.pausentag_ziel`, `vergleich.hub.wertebereiche_kurz`, `vergleich.hub.wertebereiche_lang`, `bausteine.alarme.titel`
 
 > **Schicht-Hinweis:** Alles Frontend (SvelteKit). Go-API und Python-Core bleiben unberührt.
 >
@@ -56,7 +56,7 @@ Quelle der Befunde: `docs/context/fix-2794-s3a-teil4b-befunde.md`. Vorgänger-Sp
 
 | File | Change Type | Description |
 |------|-------------|-------------|
-| frontend/src/lib/i18n/messages/{de,en}/aktionen.json | MODIFY | Neuer Schlüssel `aktionen.reiter.etappen` („Etappen“ / „Stages“); `etappen_wegpunkte` bleibt |
+| frontend/src/lib/i18n/messages/{de,en}/aktionen.json | MODIFY | Neuer Schlüssel `aktionen.reiter.etappen` („Etappen“ / „Stages“); `etappen_wegpunkte` entfällt (siehe AC-1) |
 | frontend/src/lib/components/shared/subscriptionTabs.ts | MODIFY | Trip-Reiter nutzt `aktionen.reiter.etappen` |
 | frontend/src/lib/i18n/messages/{de,en}/home.json | MODIFY | `home.aktion.pausentag_ziel` → „→ Etappen“ / „→ Stages“ |
 | frontend/src/lib/components/mobile/MTabBar.svelte | MODIFY (nur falls Messung es verlangt) | Pill-Innen- und Zwischenabstände; Wischen bleibt Fallback |
@@ -86,7 +86,7 @@ Quelle der Befunde: `docs/context/fix-2794-s3a-teil4b-befunde.md`. Vorgänger-Sp
 
 ## Implementation Details
 
-**B1 Reiter-Label.** Neuer Katalog-Schlüssel `aktionen.reiter.etappen` („Etappen“ / „Stages“). `subscriptionTabs.ts` verweist für den Trip-Reiter darauf; Desktop-Leiste und Handy-Pill-Leiste lesen beide dort. `aktionen.reiter.etappen_wegpunkte` bleibt unverändert für die Bereichsüberschrift im Reiter (Mockup Z. 579). Der Zähler am Reiter (`TripTabs.svelte`, Zahl der Etappen) entspricht dem Mockup „Etappen 4“ und bleibt unverändert. `home.aktion.pausentag_ziel` wird „→ Etappen“ / „→ Stages“, weil es auf den Reiter verweist.
+**B1 Reiter-Label.** Neuer Katalog-Schlüssel `aktionen.reiter.etappen` („Etappen“ / „Stages“). `subscriptionTabs.ts` verweist für den Trip-Reiter darauf; Desktop-Leiste und Handy-Pill-Leiste lesen beide dort. `aktionen.reiter.etappen_wegpunkte` entfällt (Korrektur Phase 6, siehe AC-1); die Bereichsköpfe aller Reiter kommen mit #2913. Der Zähler am Reiter (`TripTabs.svelte`, Zahl der Etappen) entspricht dem Mockup „Etappen 4“ und bleibt unverändert. `home.aktion.pausentag_ziel` wird „→ Etappen“ / „→ Stages“, weil es auf den Reiter verweist.
 
 **B2 Handy-Leiste.** Nach B1 wird auf Staging bei 360, 375 und 390 px (DE und EN) gemessen. Passen die vier Pills noch nicht ohne Wischen, werden Innen- und Zwischenabstände der Pills in `MTabBar.svelte` reduziert. Mindest-Trefferhöhe 44 px, `overflow-x`-Wisch-Fallback und die Regel „aktiver Reiter immer voll sichtbar“ bleiben.
 
@@ -113,7 +113,7 @@ Quelle der Befunde: `docs/context/fix-2794-s3a-teil4b-befunde.md`. Vorgänger-Sp
 ### Automated Tests (TDD RED)
 
 Kern-Schicht (Unit, `node --test`, deterministisch):
-- [ ] Katalog: Reiter-Label des Trips löst in DE zu „Etappen“, in EN zu „Stages“ auf; Bereichsüberschrift bleibt „Etappen & Wegpunkte“ / „Stages & waypoints“.
+- [ ] Katalog: Reiter-Label des Trips löst in DE zu „Etappen“, in EN zu „Stages“ auf; der verwaiste Schlüssel `etappen_wegpunkte` ist aus beiden Katalogen entfernt.
 - [ ] `home.aktion.pausentag_ziel` ergibt „→ Etappen“ (DE) und „→ Stages“ (EN); Ratsche `deutsch_unveraendert` entsprechend nachgezogen.
 - [ ] Modell der Übersicht: Vergleich mit 3 gewählten Metriken liefert Zahl 3 aus `standAusAbo`, mit 1 Metrik den Singulartext, ohne Vorlagen „—“.
 - [ ] Modell: Vergleich mit Profil ohne `ideal_ranges`, aber mit Vorlage-Metriken, zeigt nicht mehr 0.
@@ -131,8 +131,9 @@ Live-E2E / Staging (nur in `/e2e-verify`, Playwright):
 
 ## Acceptance Criteria
 
-- **AC-1:** Given ein Nutzer öffnet einen Trip auf dem Desktop (DE) / When er die Reiterleiste ansieht / Then heißt der Reiter „Etappen“ (nicht „Etappen & Wegpunkte“), und die Überschrift des Bereichs im Reiter lautet weiterhin „Etappen & Wegpunkte“.
-  - Test: Nutzersicht Trip-Detail, Leistenbeschriftung und Bereichsüberschrift per Playwright lesen.
+- **AC-1:** Given ein Nutzer öffnet einen Trip auf dem Desktop (DE) / When er die Reiterleiste ansieht / Then heißt der Reiter „Etappen“ (nicht „Etappen & Wegpunkte“).
+  - Test: Nutzersicht Trip-Detail, Leistenbeschriftung per Playwright lesen.
+  - Korrektur 2026-11-12 (Phase 6): Die angenommene Bereichsüberschrift „Etappen & Wegpunkte“ im Reiter existiert in der App nicht (kein Reiter hat einen Bereichskopf). Der Schlüssel `aktionen.reiter.etappen_wegpunkte` verwaist nach B1 und wird entfernt (Ratsche `katalog_schluessel_haben_verwender`). Die Bereichsköpfe aller Reiter laut Mockup (Z. 442, 556, 579, 590, 594) sind Teil von #2913.
 
 - **AC-2:** Given die Sprache ist Englisch / When der Nutzer die Reiterleiste eines Trips ansieht / Then heißt der Reiter „Stages“ und der Hinweis auf der Startseite zum Pausentag „→ Stages“; in Deutsch lautet dieser Hinweis „→ Etappen“.
   - Test: Katalogauflösung beider Sprachen und Startseite im Browser.
@@ -192,7 +193,7 @@ Live-E2E / Staging (nur in `/e2e-verify`, Playwright):
 
 ## Risiken
 
-- Viele Tests schreiben „Etappen & Wegpunkte“ oder das alte Layout fest; sie werden bewusst angepasst, nicht gelöscht. Die Bereichsüberschrift im Reiter darf dabei nicht mit umbenannt werden.
+- Viele Tests schreiben „Etappen & Wegpunkte“ oder das alte Layout fest; sie werden bewusst angepasst, nicht gelöscht.
 - B2 ist nur durch Messung abgeschlossen; ohne Messung auf Staging gilt der Befund als offen.
 - B3: Die Trip-Übersicht mit nur einer Karte sieht anders aus; beide Kontexte sind im Bild zu prüfen.
 - B4: Weichen Reiter und Checkliste in der Zählregel auseinander, zeigt die Startseite „Wetter offen“ trotz gewählter Metriken. Deshalb gilt die oben festgelegte Regel.
@@ -206,3 +207,4 @@ Live-E2E / Staging (nur in `/e2e-verify`, Playwright):
 ## Changelog
 
 - 2026-11-12: Initial spec created (Fix-Loop zu Teil-PR 4b, Befunde B1 bis B5)
+- 2026-11-12: AC-1 korrigiert — Bereichsüberschrift existiert nicht, Schlüssel `etappen_wegpunkte` entfällt, Bereichsköpfe → #2913

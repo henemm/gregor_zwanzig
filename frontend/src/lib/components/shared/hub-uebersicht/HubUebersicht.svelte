@@ -16,7 +16,8 @@
 	import { Card, Dot, Eyebrow } from '$lib/components/atoms';
 	import BriefingHistory from '$lib/components/shared/BriefingHistory.svelte';
 	import { api } from '$lib/api.js';
-	import type { ComparePreset, Trip } from '$lib/types';
+	import type { Ampel, ComparePreset, Trip } from '$lib/types';
+	import { vorlagenAusTemplates, type VorlagenAmpeln } from '../wetter-tab/ampelModell.ts';
 	import { deriveTripStatus } from '$lib/utils/tripStatus';
 	import { deriveStatusFromPreset, type CompareStatus } from '$lib/components/compare/subscriptionHelpers';
 	import type { SaveStatus } from '$lib/stores/saveStatusStore.svelte';
@@ -60,6 +61,17 @@
 		(p) => api.get(p)
 	);
 
+	// #2794 Fix-Loop B4: Vorlagen wie trip-detail/HubOverview.svelte (Reiter Wetter); die Karte
+	// „Wetter" (nur mit `preset`) zählt damit dieselbe Auswahl. Ladefehler ⇒ null ⇒ „—".
+	let vorlagen = $state<VorlagenAmpeln | null>(null);
+	onMount(() => {
+		if (!preset) return;
+		api.get<{ id: string; ampel?: Ampel | null }[]>('/api/templates').then(
+			(liste) => (vorlagen = vorlagenAusTemplates(liste)),
+			() => (vorlagen = null)
+		);
+	});
+
 	const modell = $derived(
 		(void $locale, trip)
 			? deriveRouteKennzahlen(trip, deriveTripStatus(trip, new Date()), naechstesBriefing.wert, historie)
@@ -67,7 +79,8 @@
 					preset as ComparePreset,
 					status ?? deriveStatusFromPreset(preset as ComparePreset),
 					naechstesBriefing.wert,
-					orte ?? []
+					orte ?? [],
+					vorlagen
 				)
 	);
 	const mobileKennzahlen = $derived(modell.kennzahlen.filter((k) => k.mobil));
@@ -159,7 +172,8 @@
 			</button>
 		</div>
 	{:else}
-		<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px">
+		<!-- #2794 Fix-Loop B3: Mockup-Muster `.two` — eine Karte füllt die Zeile, keine leere Hälfte. -->
+		<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px">
 			{#each [modell.orteKarte, modell.wertebereicheKarte] as karte, i (i)}
 				{#if karte}
 					<Card padding={20} style="display: flex; flex-direction: column">

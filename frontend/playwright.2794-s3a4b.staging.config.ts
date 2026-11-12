@@ -1,6 +1,6 @@
 import { defineConfig } from '@playwright/test';
-// Issue #2794 S3a, Teil-PR 3 „Reiter Wetter": Staging-Lauf der Specs `s3a2794-teil3-*.spec.ts`
-// (AC-9 bis AC-21, AC-38 bis AC-42) gegen https://staging.gregor20.henemm.com
+// Issue #2794 S3a, Teil-PR 4b und Fix-Loop teil4b: Staging-Lauf von `s3a2794-teil4b-staging.spec.ts`
+// (feat_2794_s3a_teil4_entfernen AC-32/33/34/48, fix_2794_s3a_teil4b_befunde AC-4/6/7/8) gegen https://staging.gregor20.henemm.com
 // (nur /e2e-verify, nie gegen Produktion). Staging steht hinter nginx-Basic-Auth
 // (Validator-Creds), Login ueber das Setup-Projekt von #1895. Analog playwright.2794-s3a2.staging.config.ts.
 //   cd frontend && npx playwright test --config playwright.2794-s3a4b.staging.config.ts

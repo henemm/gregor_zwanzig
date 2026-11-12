@@ -5,7 +5,8 @@
 //
 //   B1: REITER_DEFINITION.punkte.trip.label === 'aktionen.reiter.etappen'
 //       Katalog: aktionen.reiter.etappen = „Etappen" / „Stages";
-//                aktionen.reiter.etappen_wegpunkte bleibt „Etappen & Wegpunkte" / „Stages & waypoints".
+//                aktionen.reiter.etappen_wegpunkte entfällt (keine Bereichsüberschrift im Reiter;
+//                Bereichsköpfe aller Reiter kommen mit #2913).
 //       home.aktion.pausentag_ziel = „→ Etappen" / „→ Stages".
 //
 //   B4: deriveVergleichKennzahlen(preset, status, briefing, orte, vorlagen?: VorlagenAmpeln | null)
@@ -92,12 +93,14 @@ describe('B1 (AC-1/AC-2): Trip-Reiter heißt „Etappen", Bereichsüberschrift b
 		);
 	});
 
-	test('Katalog: Reiter „Etappen"/„Stages", Bereichsüberschrift unverändert', async () => {
+	test('Katalog: Reiter „Etappen"/„Stages", alter Schlüssel etappen_wegpunkte entfällt (Bereichsköpfe: #2913)', async () => {
 		const { trFor } = await i18n();
 		assert.equal(trFor('de', 'aktionen.reiter.etappen'), 'Etappen');
 		assert.equal(trFor('en', 'aktionen.reiter.etappen'), 'Stages');
-		assert.equal(trFor('de', 'aktionen.reiter.etappen_wegpunkte'), 'Etappen & Wegpunkte');
-		assert.equal(trFor('en', 'aktionen.reiter.etappen_wegpunkte'), 'Stages & waypoints');
+		const { de } = await lade(join(FRONTEND, 'src', 'lib', 'i18n', 'messages', 'de', 'index.ts'));
+		const { en } = await lade(join(FRONTEND, 'src', 'lib', 'i18n', 'messages', 'en', 'index.ts'));
+		assert.ok(!('aktionen.reiter.etappen_wegpunkte' in de), 'de-Katalog führt noch aktionen.reiter.etappen_wegpunkte');
+		assert.ok(!('aktionen.reiter.etappen_wegpunkte' in en), 'en-Katalog führt noch aktionen.reiter.etappen_wegpunkte');
 	});
 
 	test('Startseite, Pausentag-Hinweis: „→ Etappen" / „→ Stages"', async () => {

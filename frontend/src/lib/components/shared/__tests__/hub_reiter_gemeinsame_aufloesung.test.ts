@@ -228,7 +228,7 @@ for (const kind of ['trip', 'vergleich'] as Kind[]) {
 			// fest eingesetzt (nicht aus subscriptionTabs abgeleitet) — sonst wanderte die Erwartung mit
 			assert.deepEqual(
 				items.map((i) => i.label),
-				['Übersicht', kind === 'trip' ? 'Etappen & Wegpunkte' : 'Orte', 'Wetter', 'Zustellung']
+				['Übersicht', kind === 'trip' ? 'Etappen' : 'Orte', 'Wetter', 'Zustellung'] // #2794 Fix-Loop B1
 			);
 			assert.deepEqual(
 				items.map((i) => i.value),

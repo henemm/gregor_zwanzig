@@ -79,9 +79,9 @@ export function setupStepTrip(trip: Trip): SetupStep[] {
  * Setup-Schritte für einen ComparePreset (in fester Reihenfolge):
  *   1. Vergleich  — immer done (Entwurf existiert)
  *   2. Orte       — done wenn location_ids.length >= 2
- *   3. Wetter     — done wenn display_config.ideal_ranges nicht leer
- *      (Issue #1231 Slice 6: Label „Idealwerte" -> „Wertebereiche", seit #2794 S3a
- *      Reiter „Wetter"; Datenfeld unverändert)
+ *   3. Wetter     — done wenn display_config.active_metrics nicht leer ODER keine Liste
+ *      gespeichert (dann gilt die Vorlage); offen nur bei ausdrücklich leerer Liste.
+ *      #2794 Fix-Loop B4: alte ideal_ranges werden nicht mehr ausgewertet (und nie verändert).
  *   4. Layout je Kanal — done wenn display_config.active_metrics nicht leer (Nutzer hat
  *      tatsächlich Metriken ausgewählt)
  *   5. Versand    — done wenn report_config.morning_enabled || evening_enabled
@@ -98,15 +98,10 @@ export function setupStepCompare(preset: ComparePreset): SetupStep[] {
 	const locCount = Array.isArray(preset.location_ids) ? preset.location_ids.length : 0;
 
 	const dc = (preset.display_config ?? {}) as Record<string, unknown>;
-	const idealRanges = dc['ideal_ranges'];
-	const hasIdealValues =
-		idealRanges != null &&
-		typeof idealRanges === 'object' &&
-		!Array.isArray(idealRanges) &&
-		Object.keys(idealRanges as Record<string, unknown>).length > 0;
-
 	const activeMetrics = dc['active_metrics'];
 	const hasLayout = Array.isArray(activeMetrics) && activeMetrics.length > 0;
+	// #2794 Fix-Loop B4: wie der Reiter Wetter — ohne gespeicherte Liste gilt die Vorlage.
+	const hasWetter = hasLayout || !Array.isArray(activeMetrics);
 
 	const rc = (preset as unknown as Record<string, unknown>)['report_config'];
 	const rcObj = rc && typeof rc === 'object' && !Array.isArray(rc)
@@ -118,7 +113,7 @@ export function setupStepCompare(preset: ComparePreset): SetupStep[] {
 	return [
 		{ label: tr('bausteine.checkliste.vergleich'), done: true },
 		{ label: tr('bausteine.checkliste.orte'), done: locCount >= 2 },
-		{ label: tr('bausteine.checkliste.wetter'), done: hasIdealValues },
+		{ label: tr('bausteine.checkliste.wetter'), done: hasWetter },
 		{ label: tr('bausteine.checkliste.layout'), done: hasLayout },
 		{ label: tr('bausteine.checkliste.versand'), done: hasActiveSend }
 	];
