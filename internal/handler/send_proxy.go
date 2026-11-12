@@ -4,8 +4,13 @@ import (
 	"context"
 	"io"
 	"net/http"
+	"net/url"
 
+	"github.com/go-chi/chi/v5"
+
+	"github.com/henemm/gregor-api/internal/i18n"
 	"github.com/henemm/gregor-api/internal/middleware"
+	"github.com/henemm/gregor-api/internal/store"
 )
 
 // forwardSend ist die EINE Proxy-Behandlung aller Versand-Routen (Issue #2280
@@ -46,4 +51,18 @@ func forwardSend(w http.ResponseWriter, r *http.Request, path, rawQuery string) 
 	w.Header().Set("Content-Type", ct)
 	w.WriteHeader(resp.StatusCode)
 	io.Copy(w, resp.Body)
+}
+
+// coreKennung liest den Pfad-Parameter param, prueft ihn als
+// Entitaets-Kennung und liefert ihn als KODIERTES Pfadsegment fuer die
+// Python-URL (Issue #2961, ADR-0114 Punkt 2). Ungueltig => 400
+// validation_error (variante wie uebergeben), ok=false, Python wird nicht
+// erreicht.
+func coreKennung(w http.ResponseWriter, r *http.Request, param string, variante i18n.Args) (string, bool) {
+	id := chi.URLParam(r, param)
+	if !store.ValidEntityID(id) {
+		WriteError(w, r, http.StatusBadRequest, "validation_error", variante)
+		return "", false
+	}
+	return url.PathEscape(id), true
 }

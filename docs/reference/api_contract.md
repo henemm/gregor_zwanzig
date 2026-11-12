@@ -307,6 +307,36 @@ Admin-Trigger `radar-alert-checks`, `compare-alert-checks`, `compare-radar-alert
 läuft in `compare-alert-checks` mit). Die frühere Angabe „80 Pfade/100 Registrierungen" war
 bereits vor #2218 veraltet.)
 
+### 0.6) Härtung der Go-Schnittstellen (Issue #2961, ADR-0114, seit 2026-11-12)
+
+Spec: `docs/specs/modules/security_haertung_2026_11_go_schnittstellen.md`. Alle Fehler im
+Fehlerobjekt `code`/`message` (Abschnitt 0); Texte unter `fach.fehler.*` (DE/EN).
+
+**Mengenbremsen je Nutzer** (gleitendes Fenster, `429 rate_limit_exceeded` mit Header
+`Retry-After` in Sekunden; Admins und `GZ_QUOTA_EXEMPT_USER_IDS` ausgenommen, im Fixture-Modus
+nicht aktiv; bei `GZ_ENV=staging` gelten die zehnfachen Werte, auch für die Gleichzeitigkeit):
+
+| Route | Grenze | Text-Variante |
+|---|---|---|
+| `POST /api/locations/resolve` | 30 je Minute | `rate_limit_exceeded_aufloesen` |
+| `POST /api/notify/test` | 10 je Stunde | `rate_limit_exceeded_testnachricht` |
+| `POST /api/briefings/{id}/send`, `POST /api/trips/{id}/send`, `POST /api/compare/presets/{id}/send` | zusammen 20 je Stunde | `rate_limit_exceeded_versand` |
+| `GET /api/compare`, `GET /api/trips/{id}/stages/weather`, Vorschau (`GET /api/preview/{trip_id}/sms`, `POST /api/trips/{id}/alert-preview`, `POST /api/briefings/{id}/alert-preview`) | je 60 je Minute (Vergleich, Etappenwetter und die drei Vorschau-Routen zusammen je ein Fenster) | `rate_limit_exceeded_abruf` |
+| dieselben fünf Routen | gemeinsam höchstens 4 gleichzeitig | `rate_limit_exceeded_parallel` (`Retry-After: 1`) |
+| `POST /api/gpx/parse` | 30 je Stunde | `rate_limit_exceeded_gpx` |
+
+**Weitere Status-/Fehlercodes:**
+
+| Route | Status | `code` | Fall |
+|---|---|---|---|
+| `POST /api/gpx/parse` | 413 | `payload_too_large` (Text `…_gpx`) | Rumpf größer als 10 MB; der Core wird nicht erreicht |
+| `POST /api/locations/resolve` | 422 | `resolve_failed` (`fach.resolver.maps_aufloesen`) | Kartenlink nicht https, Host nicht auf der Erlaubnisliste oder Weiterleitung auf einen fremden Host — es findet kein Abruf statt |
+| alle Routen mit Pfad-Kennung, die an den Core weiterreichen (Versand, Vorschau, Etappenwetter, `/_internal/trip/{id}/loaded`) | 400 | `validation_error` | Kennung ungültig (Pfadtrenner, Steuerzeichen, `?`, `#`, `%`) — gilt jetzt auch auf den Alt-Routen |
+| `PUT /api/trips/{id}`, `POST /api/trips`, `PUT /api/trips/{id}/weather-config`, `PUT /api/locations/{id}/weather-config`, `POST/PUT /api/locations[/{id}]`, `POST/PUT /api/compare/presets[/{id}]`, `PUT /api/briefings/{id}` | 400 | `limit_exceeded` (Texte `…_schluessel`, `…_etappen`, `…_wegpunkte`) | neuer Config-Schlüssel nicht `^[a-z0-9_.-]{1,64}$`, mehr als 200 Schlüssel je Map, mehr als 100 Etappen je Trip oder 500 Wegpunkte je Etappe |
+| dieselben Schreibrouten | 413 | `entity_too_large` | gespeicherte Datei wäre größer als 2 MB; nichts wird geschrieben, Bestandsdateien bleiben lesbar |
+| `GET /api/forecast` | 502 | `provider_error` | Text nur noch aus dem Katalog; Anbieter-Einzelheiten nur im Log |
+| `POST /api/auth/verify-email/staging-token` (nur Staging) | 404 | `{"error":"unknown user"}` | Zielkonto unbekannt ODER weder eigenes Konto, Testkonto noch frisch registriert (≤ 1 h) und unbestätigt (beide Fälle identisch); eine gültige Sitzung genügt als Aufrufer |
+
 ---
 
 ## 1) Provider Adapter
@@ -894,6 +924,8 @@ Leitet GPX-Upload vom SvelteKit-Frontend via Go-Proxy an Python FastAPI weiter. 
 |--------|------|----------|
 | 400 | `{"error":"invalid_gpx","detail":"..."}` | Kein `file`-Field oder GPX nicht parsebar |
 | 503 | `{"error":"core_unavailable"}` | Python-Backend nicht erreichbar oder Timeout (>30s) |
+| 413 | `payload_too_large` (Fehlerobjekt) | Rumpf größer als 10 MB (Issue #2961); der Core wird nicht erreicht |
+| 429 | `rate_limit_exceeded` + `Retry-After` | mehr als 30 Uploads je Stunde und Nutzer (Issue #2961) |
 
 #### Source Files
 

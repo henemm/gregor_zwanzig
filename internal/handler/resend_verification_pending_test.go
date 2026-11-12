@@ -15,6 +15,7 @@ import (
 	"testing"
 
 	"github.com/henemm/gregor-api/internal/config"
+	"github.com/henemm/gregor-api/internal/middleware"
 	"github.com/henemm/gregor-api/internal/store"
 )
 
@@ -133,6 +134,8 @@ func TestStagingTokenwegAdressiertAusstehendeAdresse(t *testing.T) {
 	req := httptest.NewRequest(http.MethodPost, "/api/auth/verify-email/staging-token",
 		strings.NewReader(fmt.Sprintf(`{"username":%q}`, uid)))
 	w := httptest.NewRecorder()
+	// Issue #2961: das Token gibt es fuer das EIGENE Konto (Sitzungskennung).
+	req = req.WithContext(middleware.ContextWithUserID(req.Context(), uid))
 	StagingVerificationTokenHandler(s).ServeHTTP(w, req)
 	if w.Code != http.StatusOK {
 		t.Fatalf("Staging-Token: erwartet 200, bekommen %d: %s", w.Code, w.Body.String())

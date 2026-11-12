@@ -132,7 +132,10 @@ func ForecastHandler(p provider.WeatherProvider, coreURL string) http.HandlerFun
 
 		ts, err := p.FetchForecast(lat, lon, hours)
 		if err != nil {
-			WriteError(w, r, http.StatusBadGateway, "provider_error", i18n.Args{"detail": err.Error()})
+			// Issue #2961: der rohe Anbieter-Fehler (URL, Upstream-Text) geht
+			// nur ins Log; nach aussen der Katalogtext fach.fehler.provider_error.
+			log.Printf("[forecast] provider-Fehler fuer %s: %v", userID, err)
+			WriteError(w, r, http.StatusBadGateway, "provider_error", nil)
 			return
 		}
 

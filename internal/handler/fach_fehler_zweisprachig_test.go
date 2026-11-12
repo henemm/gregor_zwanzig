@@ -458,6 +458,14 @@ func g3bPruefe(t *testing.T, fall string, w *httptest.ResponseRecorder, status i
 	}
 }
 
+// g3bEtappenwetterRoute haengt den Handler unter sein Routenmuster: seit
+// Issue #2961 prueft er die Kennung aus dem Pfad (leer = 400).
+func g3bEtappenwetterRoute(coreURL string) http.Handler {
+	rt := chi.NewRouter()
+	rt.Get("/api/trips/{id}/stages/weather", StagesWeatherProxyHandler(coreURL))
+	return rt
+}
+
 func g3bTot(t *testing.T) string {
 	srv := httptest.NewServer(http.NewServeMux())
 	srv.Close()
@@ -476,7 +484,7 @@ func TestG3bProxyFehlerJeSprache(t *testing.T) {
 	} {
 		w := g3bDo(s, ProxyHandler(tot, "/api/x"), u.id, "", http.MethodGet, "/api/x")
 		g3bPruefe(t, "core_unavailable "+u.id, w, 503, "core_unavailable", u.core)
-		w = g3bDo(s, StagesWeatherProxyHandler(tot), u.id, "", http.MethodGet, "/api/trips/t1/stages/weather")
+		w = g3bDo(s, g3bEtappenwetterRoute(tot), u.id, "", http.MethodGet, "/api/trips/t1/stages/weather")
 		g3bPruefe(t, "upstream_unreachable "+u.id, w, 502, "upstream_unreachable", u.upstream)
 	}
 	w := g3bDo(s, NextBriefingsProxyHandler(tot), "", "en", http.MethodGet, "/api/next-briefings")
@@ -493,7 +501,7 @@ func TestG3bProxyReichtPythonDurch(t *testing.T) {
 		w.Write([]byte(`{"detail":"Python sagt nein","code":"py_code"}`))
 	}))
 	defer py.Close()
-	w := g3bDo(s, StagesWeatherProxyHandler(py.URL), "anna-en", "", http.MethodGet, "/api/trips/t1/stages/weather")
+	w := g3bDo(s, g3bEtappenwetterRoute(py.URL), "anna-en", "", http.MethodGet, "/api/trips/t1/stages/weather")
 	if w.Code != http.StatusConflict || w.Body.String() != `{"detail":"Python sagt nein","code":"py_code"}` {
 		t.Errorf("Python-Antwort veraendert: %d %s", w.Code, w.Body.String())
 	}

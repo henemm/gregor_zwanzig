@@ -16,7 +16,14 @@ func resolveGoogleMaps(input string) (ResolveResult, error) {
 	// Save the original input to extract q= before following redirects
 	originalInput := input
 
-	finalURL, err := followGoogleMapsRedirect(input)
+	// Issue #2961 (ADR-0114): nur https-Links auf Google-Hosts der
+	// Erlaubnisliste werden abgerufen; alles andere endet ohne Abruf im
+	// bestehenden fachlichen Fehler.
+	link, err := parseLinkURL(input)
+	if err != nil {
+		return ResolveResult{}, newResolveError("resolve_failed", "fach.resolver.maps_aufloesen", nil)
+	}
+	finalURL, err := followGoogleMapsRedirect(link)
 	if err != nil {
 		return ResolveResult{}, newResolveError("resolve_failed", "fach.resolver.maps_aufloesen", nil)
 	}
@@ -76,9 +83,11 @@ func resolveGoogleMaps(input string) (ResolveResult, error) {
 	return ResolveResult{}, newResolveError("resolve_failed", "fach.resolver.maps_koordinaten", nil)
 }
 
-func followGoogleMapsRedirect(input string) (string, error) {
-	client := &http.Client{Timeout: 10 * time.Second}
-	req, err := http.NewRequest("GET", input, nil)
+// followGoogleMapsRedirect folgt dem geteilten Link ueber den abgeschotteten
+// Client (safefetch.go) und liefert die End-URL. Der Rumpf wird nie gelesen.
+func followGoogleMapsRedirect(link *url.URL) (string, error) {
+	client := newLinkClient(10 * time.Second)
+	req, err := http.NewRequest("GET", link.String(), nil)
 	if err != nil {
 		return "", err
 	}
@@ -88,12 +97,27 @@ func followGoogleMapsRedirect(input string) (string, error) {
 		return "", err
 	}
 	defer resp.Body.Close()
+	// Weiterleitung auf einen Host ausserhalb der Erlaubnisliste (z. B. eine
+	// Einwilligungsseite mit dem eigentlichen Kartenziel im Parameter): nicht
+	// abrufen, nur das Ziel als Text auswerten.
+	if resp.StatusCode >= 300 && resp.StatusCode < 400 {
+		if loc := resp.Header.Get("Location"); loc != "" {
+			if dec, err := url.QueryUnescape(loc); err == nil {
+				return dec, nil
+			}
+			return loc, nil
+		}
+	}
 	return resp.Request.URL.String(), nil
 }
 
+// nominatimSearchURL: fester Anbieter-Endpunkt; nur export_test.go ersetzt ihn
+// (netzfreie Kern-Tests, Issue #2961).
+var nominatimSearchURL = "https://nominatim.openstreetmap.org/search"
+
 func resolveViaNominatim(placeName string) (float64, float64, bool) {
 	tryQuery := func(q string) (float64, float64, bool) {
-		apiURL := "https://nominatim.openstreetmap.org/search?q=" + url.QueryEscape(q) + "&format=json&limit=1"
+		apiURL := nominatimSearchURL + "?q=" + url.QueryEscape(q) + "&format=json&limit=1"
 		req, err := http.NewRequest("GET", apiURL, nil)
 		if err != nil {
 			return 0, 0, false

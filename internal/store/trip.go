@@ -324,6 +324,9 @@ func (s *Store) SaveTrip(trip *model.Trip) error {
 	if err != nil {
 		return err
 	}
+	if err := pruefeEntityGroesse(data); err != nil {
+		return err
+	}
 
 	return writeFileLogged(filepath.Join(dir, trip.ID+".json"), data)
 }

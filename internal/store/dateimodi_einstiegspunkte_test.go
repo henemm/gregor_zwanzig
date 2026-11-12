@@ -47,7 +47,9 @@ func TestDateimodi_JederEinstiegspunktLegtNutzerverzeichnisSelbstAn(t *testing.T
 			return s.SaveBriefing(&model.BriefingSubscription{ID: "b1", Kind: "route"})
 		}},
 		{"AddSession", func(s *Store) error { return s.AddSession(uid, "sess-1") }},
-		{"LockBriefing", func(s *Store) error { s.LockBriefing("b1")(); return nil }},
+		// Issue #2961: die Sperrdatei einer Kennung OHNE .json wird beim
+		// Freigeben abgeraeumt — gemessen wird deshalb waehrend sie gehalten wird.
+		{"LockBriefing", func(s *Store) error { t.Cleanup(s.LockBriefing("b1")); return nil }},
 	}
 	for _, f := range faelle {
 		t.Run(f.name, func(t *testing.T) {

@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/url"
 	"regexp"
 	"strings"
 	"time"
@@ -32,6 +33,24 @@ type komootResponse struct {
 	} `json:"_embedded"`
 }
 
+// komootInputHostAllowed prueft den Host der Eingabe gegen die
+// Komoot-Erlaubnisliste (Issue #2961). Abgerufen wird die Eingabe nie, nur die
+// feste Komoot-API; die Pruefung haelt fremde Hosts mit "komoot.com" im Pfad
+// oder in der Query aus dem Komoot-Zweig heraus. Links ohne Schema
+// (www.komoot.com/...) bleiben gueltig.
+func komootInputHostAllowed(input string) bool {
+	raw := input
+	if !strings.Contains(raw, "://") {
+		raw = "https://" + raw
+	}
+	u, err := url.Parse(raw)
+	if err != nil || u.User != nil {
+		return false
+	}
+	scheme := strings.ToLower(u.Scheme)
+	return (scheme == "https" || scheme == "http") && isKomootLinkHost(u.Hostname())
+}
+
 func resolveKomoot(input string) (ResolveResult, error) {
 	low := strings.ToLower(input)
 	if strings.Contains(low, "/tour/") || strings.Contains(low, "/collection/") {
@@ -39,7 +58,7 @@ func resolveKomoot(input string) (ResolveResult, error) {
 	}
 
 	m := reKomootHighlight.FindStringSubmatch(input)
-	if m == nil {
+	if m == nil || !komootInputHostAllowed(input) {
 		return ResolveResult{}, newResolveError("unsupported_url", "fach.resolver.komoot_url", nil)
 	}
 	id := m[1]
