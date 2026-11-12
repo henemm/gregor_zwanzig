@@ -28,6 +28,24 @@ Schritt: `python3 .claude/tools/staging_mail_pruefen.py --typ trip|compare|beide
   Mail allein über den Lauf-Tag im Betreff (Trip-Name bzw. Preset-Name), deshalb immer mit
   `--subject-contains <Tag-Betreff>` aufrufen; ohne Filter kann eine fremde Mail geprüft werden.
 
+- **Nur Mails des Dienst-Absenders (#2961):** Beim Lesen aus dem Postfach (nicht im
+  Datei-Modus `--eml`) wählen alle vier Validatoren nur Mails, die **genau einen** `From`-Kopf
+  mit **genau einer** Adresse tragen und deren Adresse ein konfigurierter Dienst-Absender ist
+  (`.claude/hooks/_mail_trust.py`): Test-Routing `GZ_TEST_MAIL_FROM` bzw.
+  `<GZ_TEST_SMTP_USER>@henemm.com`, dazu `GZ_MAIL_FROM`, `GZ_INBOUND_ADDRESS` und
+  `GZ_SMTP_USER`; Überschreiben kommagetrennt per `GZ_VALIDATOR_MAIL_FROM`. Ist kein Absender
+  konfiguriert, wird keine Mail akzeptiert. Trägt die Mail als **ersten**
+  `Authentication-Results`-Kopf einen des eigenen Mailservers (authserv-id =
+  `GZ_MAIL_SERVER_HOSTNAME`), muss er DKIM oder SPF `pass` ausweisen und darf für keines der
+  beiden `fail`/`softfail`/`permerror` melden; fehlt ein solcher Kopf (lokal eingelieferte
+  Mail), entfällt diese Teilprüfung, ein unlesbarer Kopf führt zum Verwerfen. Verworfene Mails
+  werden übersprungen (eine fremde jüngere Mail verdrängt die echte nicht); findet sich keine
+  passende Mail, nennt die Fehlermeldung die Zahl der verworfenen und den Grund der neuesten.
+  Marker-Köpfe, Schwellen und Frische-Fenster bleiben unverändert.
+- **Render ohne Skript und Netz (#2961):** `briefing_mail_validator.py` rendert das Mail-HTML in
+  Headless-Chromium mit abgeschaltetem JavaScript; jede Anfrage außer `file:`/`data:` wird
+  abgebrochen, gewartet wird auf `load` statt `networkidle`.
+
 | Pfad | `X-GZ-Mail-Type` | Validator | Pflicht-Argumente |
 |---|---|---|---|
 | Trip (`full`/`compact`) | `trip-briefing` | `briefing_mail_validator.py` | `--mail-type trip-briefing --subject-contains <Tag-Betreff>` |

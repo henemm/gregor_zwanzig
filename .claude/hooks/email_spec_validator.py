@@ -35,6 +35,7 @@ from typing import List, Tuple
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import _e2e_paths  # noqa: E402
 import _validator_log  # noqa: E402  (#1408 F005: kollisionsfreie Log-Ablage)
+import _mail_trust  # noqa: E402  (#2961: Absender/DKIM-SPF des eigenen Servers)
 
 
 def _write_validation_log(
@@ -384,6 +385,7 @@ def _fetch_latest_message(
     ignore_mail_age_reason: "str | None" = None,
     lang: str = "de",
     to_contains: "str | None" = None,
+    vertrauen=None,
 ):
     """IMAP-Fetch der zu pruefenden Compare-Mail (Issue #1124 Teil B).
 
@@ -411,6 +413,9 @@ def _fetch_latest_message(
 
     Ist ``imap`` (eine fertige, bereits angemeldete Verbindung) uebergeben, wird
     sie direkt genutzt -- ohne Settings/Credentials/IMAP4_SSL-Aufbau (Test-Seam).
+
+    #2961: nur Mails des Dienst-Absenders (``_mail_trust``); mit eigener
+    Verbindung kommt ``vertrauen`` aus der Konfiguration.
     """
     # None heisst "Standardgrenze anwenden", NICHT "keine Grenze": ein Aufruf
     # ohne neue Argumente (AC-4) laeuft weiter, bleibt aber geschuetzt.
@@ -444,7 +449,10 @@ def _fetch_latest_message(
 
         imap = imaplib.IMAP4_SSL(imap_host, settings.imap_port)
         imap.login(imap_user, imap_pass)
+        if vertrauen is None:
+            vertrauen = _mail_trust.aus_settings(settings)
 
+    verworfen: list = []
     try:
         imap.select('INBOX')
 
@@ -463,15 +471,20 @@ def _fetch_latest_message(
             _, hdr_data = imap.fetch(uid, '(BODY.PEEK[HEADER] INTERNALDATE)')
             headers = email.message_from_bytes(hdr_data[0][1])
             if _message_matches(headers, subject_contains, lang, to_contains):
+                grund = _mail_trust.fehler(headers, vertrauen) if vertrauen else None
+                if grund:
+                    verworfen.append(grund)
+                    continue
                 selected_uid = uid
                 selected_subject = _decode_subject(headers.get("Subject"))
                 selected_response_line = _internaldate_line(hdr_data)
                 break
         if selected_uid is None:
-            raise _no_compare_mail_error(
+            fehler = _no_compare_mail_error(
                 subject_contains=subject_contains,
                 max_age_minutes=None if ignore_mail_age_reason else max_age_minutes,
             )
+            raise ValueError(str(fehler) + _mail_trust.hinweis(verworfen))
 
         # #1408 AC-3/AC-6: Zeitpruefung des Treffers. Bewusst abgeschaltet
         # (mit Begruendung) => komplett uebersprungen, sonst muss eine

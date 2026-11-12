@@ -33,6 +33,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import _e2e_paths  # noqa: E402
 import _validator_log  # noqa: E402  (#1408 F005: kollisionsfreie Log-Ablage)
+import _mail_trust  # noqa: E402  (#2961: Absender/DKIM-SPF des eigenen Servers)
 
 # Sequenzielle Stundentabellen-Heuristik: mind. 2 distinct HH:00-Treffer.
 _HOUR_RE = re.compile(r"\b([01]?\d|2[0-3]):00\b")
@@ -461,6 +462,14 @@ def _selector_present_and_visible(page, selector: str) -> tuple[bool, bool]:
     return bool(res[0]), bool(res[1])
 
 
+def _nur_lokal(route) -> None:
+    """#2961: nur ``file:``/``data:`` laden, jede Netzanfrage abbrechen."""
+    if route.request.url.startswith(("file:", "data:")):
+        route.continue_()
+    else:
+        route.abort()
+
+
 def _check_rendered(html: str) -> list[str]:
     """AC-1: headless Render bei 390px und 1000px; Daten muessen sichtbar bleiben.
 
@@ -486,9 +495,12 @@ def _check_rendered(html: str) -> list[str]:
         try:
             wrong = {390: ".desktop-only", 1000: ".mobile-compact"}
             for w, lbl in ((390, "390px (mobil)"), (1000, "1000px (Desktop)")):
-                page = browser.new_page(viewport={"width": w, "height": 844})
-                page.goto(url, timeout=10000)
-                page.wait_for_load_state("networkidle")
+                # #2961: Mail-HTML ist fremder Inhalt -- kein JavaScript, kein Netz.
+                page = browser.new_page(
+                    viewport={"width": w, "height": 844}, java_script_enabled=False,
+                )
+                page.route("**/*", _nur_lokal)
+                page.goto(url, timeout=10000, wait_until="load")
                 if not _data_visible(page):
                     errors.append(
                         f"FULL: bei {lbl} ist keine Wetterdaten-Tabelle sichtbar "
@@ -731,16 +743,22 @@ def fetch_latest_message(
     lang: str = "de",
     to_contains: str | None = None,
     imap=None,
+    vertrauen=None,
 ) -> Message:
     """Holt die passende Mail aus dem Test-Postfach als Message-Objekt.
 
     Scannt die Header der bis zu `max_scan` neuesten Mails (newest-first) und
     liefert die erste, die `_message_matches` erfuellt (Issue #780; #2681:
     Sprache und Empfaenger). ``imap``: fertige, angemeldete Verbindung (Test-Seam).
+    #2961: nur Mails des Dienst-Absenders (``_mail_trust``); mit eigener
+    Verbindung kommt ``vertrauen`` aus der Konfiguration.
     """
     own_connection = imap is None
     if own_connection:
         imap = _open_test_imap()
+        if vertrauen is None:
+            vertrauen = _mail_trust.aus_konfiguration()
+    verworfen: list = []
     try:
         imap.select("INBOX")
         _, data = imap.search(None, "ALL")
@@ -752,6 +770,10 @@ def fetch_latest_message(
             _, hdr_data = imap.fetch(mid, "(BODY.PEEK[HEADER])")
             headers = email.message_from_bytes(hdr_data[0][1])
             if _message_matches(headers, mail_type, subject_contains, lang, to_contains):
+                grund = _mail_trust.fehler(headers, vertrauen) if vertrauen else None
+                if grund:
+                    verworfen.append(grund)
+                    continue
                 _, msg_data = imap.fetch(mid, "(RFC822)")
                 return email.message_from_bytes(msg_data[0][1])
 
@@ -759,6 +781,7 @@ def fetch_latest_message(
             f"Keine passende Mail gefunden (mail_type={mail_type!r}, "
             f"subject_contains={subject_contains!r}, lang={lang!r}, "
             f"to_contains={to_contains!r}, scan={max_scan})"
+            + _mail_trust.hinweis(verworfen)
         )
     finally:
         if own_connection:
