@@ -1,7 +1,10 @@
 // Issue #2657 (i18n F8, Epic #2644) — gemeinsamer SSR-Pruefstand fuer den
 // geteilten Layout-Reiter (LayoutTab + LTCapNote/LTChannelPicker/LTCutLine,
-// OutputLayoutEditor), den Korridor-Editor (Wertebereiche, Desktop UND mobil,
-// Trip UND Ortsvergleich), Ausblick-Steuerung, Mail-Inhalt und die GPX-Seite.
+// OutputLayoutEditor), Ausblick-Steuerung, Mail-Inhalt und die GPX-Seite.
+// #2794 S3a Teil-PR 4a (AC-31): der Korridor-Editor (CorridorEditor/
+// CorridorEditorMobile) ist als Oberflaeche entfernt — seine Faelle samt Golden
+// entfallen; die Korridor-Logik (`ce`, shared/wetter-tab/corridorEditorState.ts)
+// bleibt fuer die Funktionstabelle.
 // Echte Svelte-Komponenten, gerendert mit svelte/server. Zustaende, die die
 // Komponenten erst in `$effect`/Klick-Handlern setzen, kommen ueber den Hook
 // f8VarianteHook.mjs (exakte Umlenkung benannter `$state`-Startwerte) — Markup und
@@ -22,7 +25,6 @@ export const HERE = path.dirname(fileURLToPath(import.meta.url));
 export const FRONTEND = path.resolve(HERE, '../../../../../..');
 export const SHARED = path.resolve(HERE, '../..');
 export const LT = path.join(SHARED, 'layout-tab');
-export const CE = path.join(SHARED, 'corridor-editor');
 export const GPX_SEITE = path.join(FRONTEND, 'src', 'routes', 'gpx-upload', '+page.svelte');
 export const GOLDEN_DIR = path.resolve(FRONTEND, '..', 'tests', 'golden', 'f8_layout_korridor');
 const basis = pathToFileURL(FRONTEND + '/').href;
@@ -38,27 +40,13 @@ const variante = async (datei: string, ersetzungen: [string, string][]) =>
 
 export const { locale, tr, trFor } = await imp(path.join(FRONTEND, 'src/lib/i18n/index.ts'));
 export const lt = await imp(path.join(LT, 'ltChannels.ts'));
-export const ce = await imp(path.join(CE, 'corridorEditorState.ts'));
+export const ce = await imp(path.join(SHARED, 'wetter-tab', 'corridorEditorState.ts'));
 export const { CONTENT_MODULE_DESCRIPTIONS } = await imp(path.join(SHARED, 'mailInhaltKonstanten.ts'));
 
 const LayoutTabPruefstand = await komp(path.join(HERE, 'LayoutTabPruefstand.svelte'));
 const LTCutLine = await komp(path.join(LT, 'LTCutLine.svelte'));
 const OutlookLayoutControls = await komp(path.join(SHARED, 'OutlookLayoutControls.svelte'));
 const MailInhaltCard = await komp(path.join(SHARED, 'MailInhaltCard.svelte'));
-
-// Korridor-Editor: Zeilen, Pool und Ladezustand setzt der Editor erst nach dem
-// Katalog-Laden ($effect) — hier aus globalThis.__F8_KORRIDOR (Feldnamen = Variablen).
-const KORRIDOR_ZUSTAND: [string, string][] = [
-	['let rows = $state<CorridorRowState[]>([]);', 'let rows = $state<CorridorRowState[]>(globalThis.__F8_KORRIDOR.rows);'],
-	['let poolLeft = $state<(RouteMetricDef | CompareMetricDef)[]>([]);', 'let poolLeft = $state<(RouteMetricDef | CompareMetricDef)[]>(globalThis.__F8_KORRIDOR.poolLeft);'],
-	['let unknownCorridors = $state<Corridor[]>([]);', 'let unknownCorridors = $state<Corridor[]>(globalThis.__F8_KORRIDOR.unknownCorridors);'],
-	['let compareDefs = $state<CompareMetricDef[] | null>(null);', 'let compareDefs = $state<CompareMetricDef[] | null>(globalThis.__F8_KORRIDOR.compareDefs);'],
-	['let compareDefsError = $state<string | null>(null);', 'let compareDefsError = $state<string | null>(globalThis.__F8_KORRIDOR.compareDefsError);'],
-	['let routeExtraDefs = $state<RouteMetricDef[] | null>(null);', 'let routeExtraDefs = $state<RouteMetricDef[] | null>(globalThis.__F8_KORRIDOR.routeExtraDefs);'],
-	['let routeDefsFailed = $state(false);', 'let routeDefsFailed = $state(globalThis.__F8_KORRIDOR.routeDefsFailed);']
-];
-const CorridorEditor = await variante(path.join(CE, 'CorridorEditor.svelte'), KORRIDOR_ZUSTAND);
-const CorridorEditorMobile = await variante(path.join(CE, 'CorridorEditorMobile.svelte'), KORRIDOR_ZUSTAND);
 
 // GPX-Seite: Vorschau/Speichern erscheinen erst nach dem Hochladen (Klick).
 const GPX_ZUSTAND: [string, string][] = [
@@ -122,7 +110,7 @@ export function bausteineRendern(): string {
 	].join('\n');
 }
 
-// ── Korridor-Editor ──────────────────────────────────────────────────────────
+// ── Korridor-Logik (Daten fuer die Speicher-Nutzlast, AC-4) ─────────────────
 
 /** Gespeicherte Trip-Korridore (Nutzer golden-de): offen links, offen rechts, beidseitig offen (Pflicht-Fehler), Ordinal. */
 export const ROUTE_KORRIDORE = [
@@ -148,41 +136,9 @@ export const VERGLEICH_KORRIDORE = [
 	{ metric: 'zukunft_metrik_b', range: [3, 4], notify: false, mark: true }
 ];
 
-type Zustand = Record<string, unknown>;
-const LEER: Zustand = { rows: [], poolLeft: [], unknownCorridors: [], compareDefs: null, compareDefsError: null, routeExtraDefs: null, routeDefsFailed: false };
-
-/** Zustand nach dem Katalog-Laden, gebaut mit den ECHTEN Pool-Funktionen. */
-export function routeZustand(routeDefsFailed = false): Zustand {
-	const pool = ce.buildRoutePool(ROUTE_KORRIDORE, undefined, ROUTE_EXTRA);
-	return { ...LEER, rows: pool.rows, poolLeft: pool.poolLeft, routeExtraDefs: ROUTE_EXTRA, routeDefsFailed };
-}
-export function vergleichZustand(anzahlUnbekannt: 1 | 2): Zustand {
-	const pool = ce.buildComparePool(VERGLEICH_KORRIDORE.slice(0, 2 + anzahlUnbekannt), VERGLEICH_DEFS);
-	return { ...LEER, rows: pool.rows, poolLeft: pool.poolLeft, unknownCorridors: pool.unknownCorridors, compareDefs: VERGLEICH_DEFS };
-}
-
-export function korridorRendern(context: Kontext, fassung: 'desktop' | 'mobil', zustand: Zustand): string {
-	g.__F8_KORRIDOR = zustand;
-	try {
-		const props = context === 'route' ? { context, trip: { id: 't1', corridors: ROUTE_KORRIDORE, stages: [] } } : { context, corridors: VERGLEICH_KORRIDORE, isEditMode: true };
-		return html(fassung === 'desktop' ? CorridorEditor : CorridorEditorMobile, props);
-	} finally {
-		delete g.__F8_KORRIDOR;
-	}
-}
-
-/** Lade- und Fehlerzustaende beider Fassungen. */
-export function korridorLadenRendern(): string {
-	const teile: string[] = [];
-	for (const fassung of ['desktop', 'mobil'] as const) {
-		teile.push(korridorRendern('route', fassung, LEER));
-		teile.push(korridorRendern('vergleich', fassung, LEER));
-		teile.push(korridorRendern('vergleich', fassung, { ...LEER, compareDefsError: 'HTTP 503' }));
-	}
-	return teile.join('\n');
-}
-
 // ── GPX-Seite ────────────────────────────────────────────────────────────────
+
+type Zustand = Record<string, unknown>;
 
 export const GPX_ETAPPE = {
 	name: 'GR20 Etappe 1',
@@ -209,11 +165,6 @@ export function htmlFaelle(): Record<string, () => string> {
 	return {
 		layout_tab_route: () => (['email', 'telegram', 'sms'] as const).map((k) => layoutTabRendern('route', k)).join('\n'),
 		layout_tab_vergleich: () => (['email', 'telegram', 'sms'] as const).map((k) => layoutTabRendern('vergleich', k, 9)).join('\n'),
-		korridor_route_desktop: () => korridorRendern('route', 'desktop', routeZustand(true)),
-		korridor_route_mobil: () => korridorRendern('route', 'mobil', routeZustand(true)),
-		korridor_vergleich_desktop: () => korridorRendern('vergleich', 'desktop', vergleichZustand(1)) + '\n' + korridorRendern('vergleich', 'desktop', vergleichZustand(2)),
-		korridor_vergleich_mobil: () => korridorRendern('vergleich', 'mobil', vergleichZustand(1)) + '\n' + korridorRendern('vergleich', 'mobil', vergleichZustand(2)),
-		korridor_laden: korridorLadenRendern,
 		bausteine: bausteineRendern,
 		gpx_start: () => gpxRendern(),
 		gpx_vorschau: () => gpxRendern({ parsedStage: GPX_ETAPPE, tripName: GPX_ETAPPE.name }),

@@ -59,16 +59,8 @@ async function seiteMit(): Promise<{ a: P.Aufbau; seite: Awaited<ReturnType<type
 }
 
 describe('jeder Schreiber: 412 ⇒ `trip` der Seite traegt die abgelehnte Nutzlast', () => {
-	test('Wertebereiche (Desktop)', async () => {
-		const { a, seite, neu } = await seiteMit();
-		const wb = await P.wertebereicheReiter(neu());
-		wb.inst.u.rows = [{ metric: 'wind_max_kmh', label: 'Wind', min: 0, max: 55, notify: true, mark: true }];
-		wb.speichern();
-		await P.fertig(a.ctl);
-		assert.equal(abgelehnt().length, 1, 'Vorbedingung: 412');
-		assert.deepEqual(seite.trip().corridors, [{ metric: 'wind_max_kmh', range: [0, 55], notify: true, mark: true }]);
-		traegt(seite.trip(), abgelehnt()[0].anfrage as Rec);
-	});
+	// #2794 S3a Teil-PR 4a (AC-31): der Schreiber „Wertebereiche" (CorridorEditor) ist mit der
+	// Oberflaeche entfernt; die Grenzen schreibt der Reiter Wetter (eigene Tests in wetter-tab/).
 
 	test('Wetter-Metriken (Katalog): display_config-Teil UND report_config-Teil', async () => {
 		const { a, seite, neu } = await seiteMit();

@@ -30,9 +30,9 @@ from services.corridor_match import corridor_inside
 # ---------------------------------------------------------------------------
 # Fixture-Tabelle: (value, min_bound, max_bound, expected)
 #
-# 1:1 gegen die TS-Implementierung (frontend/src/lib/shared/corridor-editor/
-# corridorMatch.ts, Slice 3+) und die JSX-Referenz haltbar — bei Änderung an
-# einer Seite MUSS die Tabelle synchron bleiben (C5, Single-Source-Pflicht).
+# 1:1 gegen die JSX-Referenz haltbar. Die fruehere TS-Implementierung
+# (shared/corridor-editor/corridorMatch.ts) ist mit #2794 S3a Teil-PR 4a samt
+# ihrem einzigen Verwender (CorridorEditorMobile) entfernt.
 # ---------------------------------------------------------------------------
 CORRIDOR_INSIDE_FIXTURES: list[tuple[float | None, float | None, float | None, bool | None]] = [
     # value=None -> neutral (None), unabhaengig von min/max

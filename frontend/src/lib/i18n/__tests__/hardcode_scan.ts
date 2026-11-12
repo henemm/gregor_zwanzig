@@ -262,7 +262,13 @@ export const TS_KOMPONENTEN_ORDNER = [
 	'lib/i18n/metricLabel.ts',
 	// F8 (#2657): Layout-Reiter, Korridor-Editor, Mail-Inhalt-Konstanten, GPX-Seite
 	'lib/components/shared/layout-tab/',
-	'lib/components/shared/corridor-editor/',
+	// #2794 S3a Teil-PR 4a: die Korridor-Logikmodule zogen aus corridor-editor/ nach
+	// shared/wetter-tab/ um (Oberflaeche entfernt) — sie bleiben unter der TS-Ratsche,
+	// dazu die neue Anlege-Vorbelegung.
+	'lib/components/shared/wetter-tab/corridorEditorState.ts',
+	'lib/components/shared/wetter-tab/compareMetricCatalogLoader.ts',
+	'lib/components/shared/wetter-tab/wertebereicheVergleichSpeicherung.ts',
+	'lib/components/shared/wetter-tab/anlegeVorbelegung.ts',
 	'lib/components/shared/mailInhaltKonstanten.ts',
 	'routes/gpx-upload/',
 	// F9 (#2658): Aktionsliste, Reiter, Anlege-Logik, Etappen-Editor, Vorschau-Rahmen, Trip-Loader.

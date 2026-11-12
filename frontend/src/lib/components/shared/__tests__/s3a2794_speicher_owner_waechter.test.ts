@@ -35,9 +35,9 @@ const STELLEN: Array<[string, string, string, number]> = [
 	['shared/wetter-tab/wetterTabSpeicherung.ts', 'saveController.schedule', 'wetter-ampel', 2],
 	['trip-detail/BriefingScheduleTab.svelte', 'saveController.schedule', 'versand', 1],
 	['shared/versandVergleichSpeicherung.ts', 'saveController.schedule', 'versand', 1],
-	['shared/AlarmeTab.svelte', 'baueTripSpeicherung', 'alarme', 1],
-	['shared/corridor-editor/CorridorEditor.svelte', 'baueTripSpeicherung', 'wertebereiche', 1],
-	['shared/corridor-editor/CorridorEditorMobile.svelte', 'baueTripSpeicherung', 'wertebereiche', 1]
+	['shared/AlarmeTab.svelte', 'baueTripSpeicherung', 'alarme', 1]
+	// #2794 S3a Teil-PR 4a (AC-31): der Owner 'wertebereiche' stand nur im CorridorEditor/
+	// CorridorEditorMobile (entfernt); die Grenzen speichert der Reiter Wetter ('wetter-ampel').
 ];
 
 function aufrufeIn(datei: string): { liste: Knoten[]; quelle: string } {

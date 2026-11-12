@@ -8,7 +8,7 @@
 // Spec: docs/specs/modules/rework_2276_s5_versand.md — AC-4
 //
 // Der Guard ist listenbasiert: `sichereSelbstSpeichererVorReiterwechsel`
-// (shared/corridor-editor/wertebereicheVergleichSpeicherung.ts) flusht nur,
+// (shared/wetter-tab/wertebereicheVergleichSpeicherung.ts) flusht nur,
 // wenn der VERLASSENE Reiter in `SELBST_SPEICHERNDE_VERGLEICH_REITER` steht —
 // 'versand' fehlt dort heute (RED).
 //
@@ -40,7 +40,7 @@ import { erstelleAlarmeVergleichSpeicherung } from '../alarmeVergleichSpeicherun
 import {
 	SELBST_SPEICHERNDE_VERGLEICH_REITER,
 	sichereSelbstSpeichererVorReiterwechsel
-} from '../corridor-editor/wertebereicheVergleichSpeicherung.ts';
+} from '../wetter-tab/wertebereicheVergleichSpeicherung.ts';
 import { erstelleVersandVergleichSpeicherung } from '../versandVergleichSpeicherung.ts';
 import { createController, hydrierterWiz, makePreset, versandBedienung } from './versandVergleichPruefstand.ts';
 

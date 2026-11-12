@@ -4,12 +4,13 @@
 // der Nutzer dort schon geaendert hat.
 // Spec: docs/specs/modules/onboarding_standardwerte_hilfe.md
 //
-// VERGLEICHSMASSSTAB (nicht tautologisch): Was der ECHTE `CorridorEditor.svelte`
-// (context="vergleich", Prop-Buendel `corridorPropsAus(feldsatz)` wie in
-// CompareNewEditor) beim Mount ueber `syncToWizard` in den Feldsatz
-// schreibt — sein Lade-`$effect` wird gegen das echte Instanz-Skript ausgefuehrt
-// (svelteInstanzPruefstand.ts). Dieser Test ruft `buildComparePrefillRows` /
-// `buildCompareCorridorSavePayload` NIE selbst auf.
+// VERGLEICHSMASSSTAB: Was der ECHTE CompareNewEditor beim Betreten des Schritts
+// Wetter in den Feldsatz schreibt — sein Vorbelegungs-`$effect` wird gegen das
+// echte Instanz-Skript ausgefuehrt (svelteInstanzPruefstand.ts). Bis #2794 S3a
+// Teil-PR 4a war das der Lade-Effekt eines unsichtbar gemounteten
+// `CorridorEditor.svelte`; die Oberflaeche ist entfernt, die Vorbelegung ist ein
+// Effekt im Editor (shared/wetter-tab/anlegeVorbelegung.ts, AC-44). Dieser Test
+// ruft `buildComparePrefillRows` / `buildCompareCorridorSavePayload` NIE selbst auf.
 //
 // STANDARDWERTE-WEG: der Klick-Handler der ECHTEN `<StandardwerteSpeichernKnopf>`-
 // Einbettung in CompareNewEditor.svelte, ausgewertet gegen dessen Instanz-Skript.
@@ -20,9 +21,8 @@
 // der tatsaechlich gesendete Create-Request (`POST /api/compare/presets`, Netzgrenze fetch); der
 // Referenzwert des Reiter-Besuchs wird ueber DIESELBE Payload-Funktion
 // (`buildNewComparePresetPayload`) in dasselbe Format gebracht, damit beide Seiten vergleichbar
-// sind. Name/Orte/Profil reisen ueber `stateOverride`; Nutzer-Aenderungen im Wertebereiche-Reiter
-// (AC-8) ueber die Rueckrufe des Prop-Buendels, das der Editor selbst an `<CorridorEditor>` haengt.
-// Heute rot: ohne Context hat der Editor keinen Zustand (VERTRAG FEHLT).
+// sind. Name/Orte/Profil reisen ueber `stateOverride`; ein bereits geaenderter Wertebereich
+// (AC-8) steht im Feldsatz des Editors, bevor der Schritt Wetter betreten wird.
 //
 // Netzgrenze: `globalThis.fetch`. GET /api/compare/metrics = LIVE-Katalog aus dem
 // Python-Kern (Muster compareMetricCatalogParity.test.ts).
@@ -37,10 +37,10 @@
 import { test, describe, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
-import { dirname, join, resolve } from 'node:path';
+import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { neuerFeldsatz } from '../../shared/__tests__/compareFeldsatzPruefstand.ts';
-import { buendelAus, MATCH_MEDIA, VERTRAG_FEHLT_EDITOR } from '../../shared/__tests__/compareNeuEditorPruefstand.ts';
+import { MATCH_MEDIA, VERTRAG_FEHLT_EDITOR } from '../../shared/__tests__/compareNeuEditorPruefstand.ts';
 import { effekteVon, type Knoten } from '../../shared/__tests__/svelteInstanzPruefstand.ts';
 import {
 	COMPARE_EDITOR,
@@ -51,11 +51,9 @@ import {
 	knopfAttribut,
 	ruhe
 } from '../../shared/__tests__/standardwerteEditorPruefstand.ts';
-import { corridorPropsAus } from '../../compare/corridorPropsAus.ts';
 import { buildNewComparePresetPayload } from '../../compare/compareEditorSave.ts';
 
 const HIER = dirname(fileURLToPath(import.meta.url));
-const CORRIDOR_EDITOR = join(HIER, '..', '..', 'shared', 'corridor-editor', 'CorridorEditor.svelte');
 const REPO_ROOT = resolve(HIER, ...Array(6).fill('..'));
 const PY =
 	'import sys, json\n' +
@@ -106,24 +104,32 @@ function alsKoerper(w: Wertebereiche): Knoten {
 	return wertebereicheImKoerper(buildNewComparePresetPayload({ ...neuerFeldsatz(), ...klon(w) } as never));
 }
 
-/** Wertebereiche nach UNVERAENDERTEM Besuch des Reiters (echter CorridorEditor). */
+/** Der ECHTE Vorbelegungs-Effekt des Anlege-Editors (AST-Auswahl ueber die importierte Funktion). */
+function vorbelegungsEffekt(e: { ast: Knoten; quelle: string; u: Knoten }): () => void {
+	const effekte = effekteVon(e.ast, e.quelle, e.u, 'vergleichVorbelegung');
+	assert.equal(effekte.length, 1, `Messaufbau kaputt: ${effekte.length} Vorbelegungs-Effekte im CompareNewEditor (erwartet genau 1)`);
+	return effekte[0];
+}
+
+/** Wertebereiche nach UNVERAENDERTEM Besuch des Schritts Wetter (echter Editor-Effekt). */
 async function nachReiterBesuch(activityProfile: string | null): Promise<Wertebereiche> {
-	const wiz = neuerFeldsatz({ name: 'Ref', pickedIds: ['loc0', 'loc1'], activityProfile });
-	const ohneWert = Object.fromEntries(
-		['trip', 'onTripUpdate', 'saveController', 'preset', 'enqueueHubWrite', 'onCompareUpdate'].map((k) => [k, undefined])
-	);
-	const e = await editorUmgebung(CORRIDOR_EDITOR, {
-		...ohneWert,
-		context: 'vergleich',
-		showInfobox: true,
-		...corridorPropsAus(wiz)
+	const e = await editorUmgebung(COMPARE_EDITOR, {
+		stateOverride: {
+			activeTab: 'wetter',
+			isMobileViewport: false,
+			metrikenVisited: true,
+			name: 'Ref',
+			pickedIds: ['loc0', 'loc1'],
+			activityProfile
+		},
+		window: MATCH_MEDIA
 	});
-	const effekte = effekteVon(e.ast, e.quelle, e.u, 'loadCompareMetricCatalog');
-	assert.ok(effekte.length >= 1, 'Messaufbau kaputt: Lade-$effect des CorridorEditor nicht gefunden');
-	for (const fn of effekte) fn();
+	await mountenUndWarten(e); // laedt den Vergleichs-Katalog (onMount)
+	assert.ok(Array.isArray(e.u.standardwerteKatalog), 'Messaufbau kaputt: Vergleichs-Katalog nicht geladen');
+	vorbelegungsEffekt(e)();
 	await ruhe();
-	const w = auszug(wiz);
-	assert.ok(Array.isArray(w.corridors) && (w.corridors as unknown[]).length > 0, 'Messaufbau kaputt: Reiter-Besuch hat nichts vorbelegt');
+	const w = auszug(e.u.wiz as Knoten);
+	assert.ok(Array.isArray(w.corridors) && (w.corridors as unknown[]).length > 0, 'Messaufbau kaputt: Schritt-Besuch hat nichts vorbelegt');
 	return w;
 }
 
@@ -131,7 +137,7 @@ async function nachReiterBesuch(activityProfile: string | null): Promise<Wertebe
 async function anlegeEditor(eingaben: Knoten, besucht: { metriken?: boolean; ideals?: boolean } = {}) {
 	const e = await editorUmgebung(COMPARE_EDITOR, {
 		stateOverride: {
-			activeTab: besucht.ideals ? 'wertebereiche' : 'vergleich',
+			activeTab: besucht.ideals ? 'wetter' : 'vergleich',
 			isMobileViewport: false,
 			metrikenVisited: !!besucht.metriken,
 			idealsVisited: !!besucht.ideals,
@@ -154,13 +160,15 @@ async function nachStandardwerteKlick(
 	const e = await anlegeEditor({ name: 'Std', pickedIds: ['loc0', 'loc1'], ...eingaben }, besucht);
 	assert.equal(e.u.nameOk, true, VERTRAG_FEHLT_EDITOR);
 	if (nutzer) {
-		const b = buendelAus(e, 'CorridorEditor');
-		(b.onCorridorsChange as (v: unknown) => void)(klon(nutzer.corridors));
-		(b.onIdealRangesChange as (v: unknown) => void)(klon(nutzer.idealRanges));
-		(b.onActiveMetricKeysChange as (v: unknown) => void)(klon(nutzer.activeMetricKeys));
-		(b.onMetricAlertLevelsChange as (v: unknown) => void)(klon(nutzer.metricAlertLevels));
+		// Bereits geaenderte Wertebereiche stehen im Feldsatz, bevor der Schritt Wetter
+		// (wieder) betreten wird — der Vorbelegungs-Effekt darf sie nicht ueberschreiben (AC-44).
+		const wiz = e.u.wiz as Knoten;
+		for (const f of FELDER) wiz[f] = klon(nutzer[f]);
 	}
 	await mountenUndWarten(e);
+	// Nach dem Katalog-Laden laeuft der Vorbelegungs-Effekt (im Schritt Wetter) erneut.
+	vorbelegungsEffekt(e)();
+	await ruhe();
 	derivedNeu(e);
 	const knoepfe = knopfEinbettungen(e.ast);
 	assert.ok(knoepfe.length >= 1, 'CompareNewEditor bettet <StandardwerteSpeichernKnopf> nicht ein');
@@ -214,6 +222,36 @@ describe('AC-8: besuchter, geaenderter Wertebereich bleibt erhalten', () => {
 	});
 });
 
+// ── #2794 Teil-PR 4a, Fix-Loop 1 ─────────────────────────────────────────────
+describe('F003: Vorbelegung nur im Schritt Wetter, mit dem dann aktuellen Profil', () => {
+	test('Katalog geladen, Schritt Vergleich ⇒ nichts vorbelegt; Wechsel auf Wetter ⇒ vorbelegt mit dem jetzt gewaehlten Profil', async () => {
+		const ref = await nachReiterBesuch('wandern');
+		assert.notDeepEqual(ref, await nachReiterBesuch(null), 'Messaufbau: „wandern" muss anders vorbelegen als ohne Profil');
+		const e = await anlegeEditor({ name: 'F003', pickedIds: ['loc0', 'loc1'], activityProfile: null });
+		const leer = auszug(e.u.wiz as Knoten);
+		await mountenUndWarten(e); // laedt den Katalog und laesst alle Effekte im Schritt „vergleich" laufen
+		assert.ok(Array.isArray(e.u.standardwerteKatalog), 'Messaufbau: Vergleichs-Katalog nicht geladen');
+		const effekt = vorbelegungsEffekt(e);
+		effekt();
+		await ruhe();
+		assert.deepEqual(auszug(e.u.wiz as Knoten), leer, 'F003 FAIL: ausserhalb des Schritts Wetter vorbelegt');
+		(e.u.wiz as Knoten).activityProfile = 'wandern';
+		e.u.activeTab = 'wetter';
+		effekt();
+		await ruhe();
+		assert.deepEqual(auszug(e.u.wiz as Knoten), ref, 'F003 FAIL: nicht mit dem beim Betreten gewaehlten Profil vorbelegt');
+	});
+});
+
+describe('F001: Standardwerte nach besuchtem Schritt Wetter belegen nicht vor', () => {
+	test('Schritt besucht, Wertebereiche leer ⇒ der Standardwerte-POST traegt keine Vorbelegung (Verhalten wie vor 4a)', async () => {
+		const { gesendet } = await nachStandardwerteKlick({ activityProfile: null }, { metriken: true });
+		assert.equal(gesendet.length, 1, `erwartet genau ein Speichern, gesehen ${gesendet.length}`);
+		assert.deepEqual(gesendet[0].corridors ?? [], [], 'F001 FAIL: trotz besuchtem Schritt vorbelegt (corridors)');
+		assert.deepEqual(gesendet[0].ideal_ranges, {}, 'F001 FAIL: trotz besuchtem Schritt vorbelegt (ideal_ranges)');
+	});
+});
+
 // ── Adversary F002: Klick bei gesperrtem Gate (Katalog GELADEN, nur 1 Ort) ────
 // Der Katalog ist da — damit greift allein der Gate-Guard des Klick-Handlers,
 // nicht der Katalog-Guard.
@@ -231,6 +269,6 @@ describe('F002: Ortsvergleich — Klick bei gesperrtem Gate speichert nichts', (
 		await (knopfAttribut(knoepfe[0], e, 'onclick') as () => unknown)();
 		await ruhe();
 		assert.equal(presetPosts.length, 0, 'Klick-Handler ignoriert das gesperrte Standardwerte-Gate');
-		assert.deepEqual(buendelAus(e, 'CorridorEditor').corridors ?? [], [], 'Klick bei gesperrtem Gate hat trotzdem vorbelegt');
+		assert.deepEqual((e.u.wiz as Knoten).corridors ?? [], [], 'Klick bei gesperrtem Gate hat trotzdem vorbelegt');
 	});
 });

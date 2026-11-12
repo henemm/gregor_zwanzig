@@ -17,7 +17,7 @@
 	import type { SaveStatus } from '$lib/stores/saveStatusStore.svelte';
 	import { t, locale } from '$lib/i18n';
 	import { metricLabel } from '$lib/i18n/metricLabel';
-	import { loadCompareSelectionEntries } from '../../shared/corridor-editor/compareMetricCatalogLoader.ts';
+	import { loadCompareSelectionEntries } from '../../shared/wetter-tab/compareMetricCatalogLoader.ts';
 	import type { CompareSelectionEntry } from '../../shared/weather-metrics-tab/compareMetricSelection.ts';
 	import VorlageKarte from './VorlageKarte.svelte';
 	import AlarmAbKopf from './AlarmAbKopf.svelte';

@@ -35,12 +35,9 @@ def test_no_g_surface_alt_token():
     assert hits == [], f"Undefinierter --g-surface-alt Token gefunden ({len(hits)} Stellen):\n{details}"
 
 
-def test_metric_checkbox_uses_paper_token():
-    """AC-3: MetricCheckbox nutzt --g-paper statt --g-surface für background + color."""
-    path = FRONTEND_LIB / "components" / "trip-detail" / "MetricCheckbox.svelte"
-    content = path.read_text(encoding="utf-8")
-    assert "var(--g-paper)" in content, "MetricCheckbox: --g-paper nicht gefunden"
-    assert "var(--g-surface, #fff)" not in content, "MetricCheckbox: undefinierter --g-surface noch vorhanden"
+# AC-3 (MetricCheckbox nutzt --g-paper) entfaellt mit #2794 S3a Teil-PR 4a (AC-31):
+# die Metrik-Checkbox ist als Oberflaeche entfernt. Der undefinierte Token bleibt
+# ueber test_no_undefined_g_surface_token fuer alle uebrigen Dateien bewacht.
 
 
 def test_preset_row_color_mix_uses_surface0():

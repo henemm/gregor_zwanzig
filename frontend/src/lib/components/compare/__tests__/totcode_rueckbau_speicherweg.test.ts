@@ -137,7 +137,7 @@ describe('AC-1 / Teil B: Typ-Alias, tote Bedingung und Kommentar-Leichen sind we
 	const speicherModule: Array<[string[], string]> = [
 		[['shared', 'alarmeVergleichSpeicherung.ts'], 'buildComparePresetSavePayload'],
 		[['shared', 'versandVergleichSpeicherung.ts'], 'buildComparePresetSavePayload'],
-		[['shared', 'corridor-editor', 'wertebereicheVergleichSpeicherung.ts'], 'context'],
+		[['shared', 'wetter-tab', 'wertebereicheVergleichSpeicherung.ts'], 'context'],
 		[['shared', 'weather-metrics-tab', 'weatherMetricsCompareSave.ts'], 'buildComparePresetSavePayload']
 	];
 

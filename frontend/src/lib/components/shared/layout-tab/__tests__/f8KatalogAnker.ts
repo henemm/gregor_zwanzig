@@ -28,44 +28,8 @@ export const F8_ANKER: [schluessel: string, de: string, en: string][] = [
 		'Ein Kanal zeigt höchstens, was in der Grundauswahl gewählt ist. Was dort fehlt, erscheint in keinem Kanal.',
 		'A channel shows at most what is selected in the base selection. Anything missing there appears in no channel.'
 	],
-	// Korridor-Editor (Desktop und mobil teilen die Schluessel)
-	['layout.korridor.eyebrow', 'Wertebereiche', 'Target ranges'],
-	['layout.korridor.eyebrow_idealbereiche', 'Wertebereiche · Idealbereiche', 'Target ranges · ideal ranges'],
-	['layout.korridor.wiederholen', 'Wiederholen', 'Retry'],
-	['layout.korridor.lade', 'Lade Metriken…', 'Loading metrics…'],
-	['layout.korridor.fehler_laden', 'Fehler beim Laden der Metriken', 'Failed to load metrics'],
-	['layout.korridor.titel_route', 'Sag mir, welche Werte für dich passen', 'Tell me which values suit you'],
-	['layout.korridor.titel_vergleich', 'Sag mir, welche Werte dir ideal sind', 'Tell me which values are ideal for you'],
-	[
-		'layout.korridor.einleitung_route',
-		'Ein Wertebereich je Metrik legt fest, welche Werte du auf der Trip noch akzeptierst. Werte im Bereich werden im Briefing hervorgehoben. Warnungen zwischen den Briefings stellst du im Reiter Alarme ein.',
-		'One target range per metric sets which values you still accept on the trip. Values within the range are highlighted in the briefing. You set warnings between briefings in the Alerts tab.'
-	],
-	[
-		'layout.korridor.einleitung_vergleich',
-		'Ein Wertebereich je Metrik legt deinen Idealbereich fest. Werte im Bereich werden im Briefing pro Ort grün markiert — kein Score, kein Ranking, nur eine Lese-Hilfe.',
-		'One target range per metric sets your ideal range. Values within the range are marked green per location in the briefing — no score, no ranking, just a reading aid.'
-	],
-	[
-		'layout.korridor.zusatz_fehlt',
-		'Zusätzliche Metriken konnten nicht geladen werden — es stehen nur die Standard-Metriken zur Auswahl.',
-		'Additional metrics could not be loaded — the standard metrics are available to choose from.'
-	],
-	['layout.korridor.legende_titel', 'So liest sich ein Wertebereich', 'How to read a target range'],
-	['layout.korridor.legende_im_bereich', 'im Bereich =', 'within range ='],
-	['layout.korridor.legende_markiert', 'markiert', 'marked'],
-	['layout.korridor.pflicht', 'Mindestens eine Grenze (Von oder Bis) ist Pflicht: <metriken>', 'At least one limit (From or To) is required: <metriken>'],
-	['layout.korridor.offen', 'offen', 'open'],
-	['layout.korridor.von', 'Von', 'From'],
-	['layout.korridor.bis', 'Bis', 'To'],
-	['layout.korridor.grenze_setzen', 'offen · + Grenze', 'open · + limit'],
-	['layout.korridor.grenze_oeffnen', 'Grenze öffnen', 'Open limit'],
-	['layout.korridor.markieren', 'Markieren', 'Mark'],
-	['layout.korridor.entfernen', 'entfernen', 'remove'],
-	['layout.korridor.metrik_hinzufuegen', 'Metrik hinzufügen', 'Add metric'],
-	['layout.korridor.neutral', 'kein Score · kein Rang · Wertebereiche markieren nur, sie sortieren nicht', 'no score · no rank · target ranges only mark, they do not sort'],
-	['layout.korridor.weitere_erhalten.one', '<count> weiterer Eintrag bleibt erhalten', '<count> more entry is kept'],
-	['layout.korridor.weitere_erhalten.other', '<count> weitere Einträge bleiben erhalten', '<count> more entries are kept'],
+	// #2794 S3a Teil-PR 4a (AC-31): die Schluessel des Korridor-Editors (layout.korridor.*)
+	// entfallen mit der Oberflaeche; die Zeilen der Korridor-Logik bleiben.
 	// Zeilen des Trip-Korridors (corridorEditorState.ts::ROUTE_METRIC_DEFS)
 	['layout.korridor_zeile.wind_gust', 'Böen', 'Wind gusts'],
 	['layout.korridor_zeile.precipitation_sum', 'Niederschlag', 'Precipitation'],

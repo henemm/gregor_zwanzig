@@ -116,7 +116,7 @@ def test_forward_mapping_is_exact_inverse_of_backward_mapping():
 
 _REPO = Path(__file__).resolve().parents[2]
 _FE_BRIDGE = (
-    _REPO / "frontend/src/lib/components/shared/corridor-editor/corridorEditorState.ts"
+    _REPO / "frontend/src/lib/components/shared/wetter-tab/corridorEditorState.ts"
 )
 
 # Begruendete, benannte Ausnahme (KEIN stiller Filter): "temperature_cold" ist

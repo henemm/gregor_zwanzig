@@ -223,27 +223,9 @@ describe('AC-5: CompareStatusRow — konsistente Empfänger-Pille', () => {
 // eine Fassung dieses Dialogs gibt; die Tests hier prüften ohnehin nur
 // Dateiinhalte per Regex (kein Verhaltensnachweis nach Projekt-Testpolitik).
 
-describe('AC-7: HorizonChips — neues Molecule', () => {
-	test('HorizonChips.svelte existiert in molecules/', () => {
-		assert.ok(
-			hasMol('HorizonChips.svelte'),
-			'molecules/HorizonChips.svelte fehlt — noch nicht implementiert'
-		);
-	});
-	test('HorizonChips aktiver Chip nutzt accent-Tokens', () => {
-		const src = readMol('HorizonChips.svelte');
-		assert.ok(/g-accent-tint/.test(src), 'HorizonChips: aktiver Chip --g-accent-tint fehlt');
-		assert.ok(/g-accent-deep/.test(src), 'HorizonChips: aktiver Chip --g-accent-deep fehlt');
-	});
-	test('HorizonChips hat compact-Prop', () => {
-		const src = readMol('HorizonChips.svelte');
-		assert.ok(/compact/.test(src), 'HorizonChips: compact-Prop fehlt');
-	});
-	test('HorizonChips in molecules/index.ts exportiert', () => {
-		const idx = readMol('index.ts');
-		assert.ok(/HorizonChips/.test(idx), 'molecules/index.ts: HorizonChips nicht exportiert');
-	});
-});
+// AC-7 (HorizonChips) entfernt mit #2794 S3a Teil-PR 4a (AC-31): die Molecule war
+// nirgends eingebunden (reiner Barrel-Re-Export); die Zeithorizont-Chips gibt es
+// als Oberflaeche nicht mehr.
 
 describe('AC-8: ScoreToggle — neues Molecule', () => {
 	test('ScoreToggle.svelte existiert in molecules/', () => {
@@ -331,7 +313,8 @@ describe('#2283 AC-14: CompareBriefingPreview, ComparePreviewMissing, CompareSms
 // Issue #2346 S2 (AC-10): HomeHeroTrip ist ebenfalls gelöscht (kein Importeur) —
 // AC-14 hat damit keinen Prüfling mehr; der Hero folgt in S3 als ein `HomeHero`.
 const HOME_ORGANISMS = ['OutboxCard', 'AlertsCard'];
-const METRICS_ORGANISMS = ['PresetRail', 'MetricOffShelf', 'MetricsEditorContextBar'];
+// #2794 S3a Teil-PR 4a (AC-31): MetricsEditorContextBar entfernt (kein Mount, reiner Re-Export).
+const METRICS_ORGANISMS = ['PresetRail', 'MetricOffShelf'];
 
 describe('AC-16/17: OutboxCard + AlertsCard', () => {
 	test('AC-16: OutboxCard.svelte existiert in organisms/', () => {
@@ -361,7 +344,7 @@ describe('AC-16/17: OutboxCard + AlertsCard', () => {
 	});
 });
 
-describe('AC-18: Metrics-Organisms (PresetRail, MetricOffShelf, MetricsEditorContextBar)', () => {
+describe('AC-18: Metrics-Organisms (PresetRail, MetricOffShelf)', () => {
 	for (const name of METRICS_ORGANISMS) {
 		test(`${name}.svelte existiert in organisms/`, () => {
 			assert.ok(
@@ -382,11 +365,6 @@ describe('AC-18: Metrics-Organisms (PresetRail, MetricOffShelf, MetricsEditorCon
 			/Nicht im Briefing|nicht.*briefing|offShelf/i.test(src),
 			'MetricOffShelf: "Nicht im Briefing"-Sektion fehlt'
 		);
-	});
-
-	test('MetricsEditorContextBar hat Context + Preset + Bucket-Summary', () => {
-		const src = readOrg('MetricsEditorContextBar.svelte');
-		assert.ok(/context|preset|bucket/i.test(src), 'MetricsEditorContextBar: Context/Preset/Bucket fehlt');
 	});
 });
 
@@ -413,8 +391,8 @@ describe('AC-19: organisms/index.ts — alle neuen Organisms exportiert', () => 
 
 describe('AC-20: molecules/index.ts — alle neuen Molecules exportiert', () => {
 	const ALL_NEW_MOLECULES = [
-		// 'StageCascadeNotice' entfällt seit #1375 (tote Zweitfassung, s.o.)
-		'HorizonChips',
+		// 'StageCascadeNotice' entfällt seit #1375 (tote Zweitfassung, s.o.),
+		// 'HorizonChips' seit #2794 S3a Teil-PR 4a (AC-31).
 		'ScoreToggle',
 		// CompareBriefingPreview, CompareSmsPreview, ComparePreviewMissing entfallen
 		// mit #2283 AC-14, CompareChannelSwitch und CompareChatBubble mit #1743 F003

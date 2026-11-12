@@ -20,14 +20,14 @@ import {
 	buildRoutePool,
 	buildComparePool,
 	buildCompareCorridorSavePayload,
-} from '../corridor-editor/corridorEditorState.ts';
+} from '../wetter-tab/corridorEditorState.ts';
 import { buildComparePresetSavePayload, type CompareEditorEdits } from '../../compare/compareEditorSave.ts';
 import type { ComparePreset } from '../../../types.ts';
 // Issue #1350 Teil 3: buildComparePool() braucht seit der SSoT-Migration ein
 // explizites `defs`-Argument (vorher Modul-Konstante COMPARE_METRIC_DEFS).
 // Dieser Test braucht nur wind_max_kmh -> minimale, lokale Fixture statt des
 // vollen 25-Eintraege-Katalogs (der lebt in corridorEditorState.test.ts).
-import { buildCompareMetricDefs } from '../corridor-editor/compareMetricCatalogLoader.ts';
+import { buildCompareMetricDefs } from '../wetter-tab/compareMetricCatalogLoader.ts';
 
 const TEST_DEFS = buildCompareMetricDefs({
 	metrics: [

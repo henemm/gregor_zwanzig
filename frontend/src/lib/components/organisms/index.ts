@@ -2,7 +2,7 @@
 //
 // Eine Quelle fuer alle Organisms:
 //   import { TripHeader, OutputLayoutEditor,
-//            WeatherMetricsTab, MetricGroup, MetricCheckbox }
+//            WeatherMetricsTab }
 //     from '$lib/components/organisms';
 //
 // Barrel-Pattern: physische .svelte-Dateien verbleiben in ihren Feature-Ordnern.
@@ -16,8 +16,6 @@ export { default as OutputLayoutEditor } from '../shared/OutputLayoutEditor.svel
 
 // Issue #520 — trip-detail Organisms aufnehmen
 export { default as WeatherMetricsTab }   from '../shared/WeatherMetricsTab.svelte';
-export { default as MetricGroup }         from '../trip-detail/MetricGroup.svelte';
-export { default as MetricCheckbox }      from '../trip-detail/MetricCheckbox.svelte';
 
 // Issue #578 — Block C: neue Home-Organisms + Metrics-Organisms
 // Issue #1277 — Geteiltes Listen-Tabellen-Organism (Trips + Orts-Vergleiche)
@@ -30,7 +28,6 @@ export { default as OutboxCard }               from './OutboxCard.svelte';
 export { default as AlertsCard }               from './AlertsCard.svelte';
 export { default as PresetRail }               from './PresetRail.svelte';
 export { default as MetricOffShelf }           from './MetricOffShelf.svelte';
-export { default as MetricsEditorContextBar }  from './MetricsEditorContextBar.svelte';
 
 // Issue #2913 — Wetter-Reiter (Trip + Orts-Briefing, context="route"|"vergleich"), Logik bleibt in shared/wetter-tab/*.ts
 // Teil 2 (K-1): die Seite ist shared/WetterTab.svelte (Regel (a)); Zustand/Laden/Speichern im Organismus WetterTabInhalt.

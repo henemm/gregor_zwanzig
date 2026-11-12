@@ -4,8 +4,9 @@
 	//
 	// Struktureller Spiegel von trip-new/TripNewEditor.svelte (#622): eigene
 	// Anlege-Shell je Domäne (ADR-0029), zusammengesetzt aus den GETEILTEN
-	// Organismen (Step2Orte, WeatherMetricsTab, CorridorEditor(Mobile),
-	// AlarmeTab, VersandTab; Stundenverlauf jetzt via WeatherMetricsTab, #1360).
+	// Organismen (Step2Orte, WetterTab, WeatherMetricsTab, AlarmeTab, VersandTab;
+	// Stundenverlauf jetzt via WeatherMetricsTab, #1360). Die Wertebereiche-Vorbelegung
+	// ist seit #2794 S3a Teil-PR 4a eine reine Funktion (shared/wetter-tab/anlegeVorbelegung.ts).
 	// Reine Freischalt-Logik
 	// im geteilten Kern shared/anlegeLockEngine.ts (#2277 S4). Lokaler Feldsatz `wiz` ($state, #2727), EIN POST bei
 	// „Briefing aktivieren" über die lokale Funktion speichereNeuenVergleich() — kein Backend-Change.
@@ -35,14 +36,13 @@
 	import { feldsatzAusVorlage } from './compareNewVorlage.ts';
 	import {
 		PROFILE_METRICS_WITH_SCALES,
-		buildComparePrefillRows,
-		buildCompareCorridorSavePayload,
 		type CompareMetricDef,
 		type ProfileKey
-	} from '$lib/components/shared/corridor-editor/corridorEditorState';
-	import { materializeActiveMetricKeys } from '$lib/components/shared/weather-metrics-tab/compareMetricOrder';
+	} from '$lib/components/shared/wetter-tab/corridorEditorState';
+	// Issue #2794 S3a Teil-PR 4a (AC-44/AC-45): Vorbelegung der Wertebereiche als reine
+	// Funktion (vorher ein unsichtbar gemounteter CorridorEditor), ein Effekt unten.
+	import { vergleichVorbelegung, type VergleichVorbelegung } from '../shared/wetter-tab/anlegeVorbelegung.ts';
 	import StandardwerteSpeichernKnopf from '$lib/components/shared/StandardwerteSpeichernKnopf.svelte';
-	import type { SensLevel } from '$lib/types';
 	import { api } from '$lib/api.js';
 	// Issue #2659 (i18n F10): Texte aus dem Katalog; Reiter/Anlege-Kette und Sperr-Hinweise
 	// werden je Sprache abgeleitet (`$locale`), nichts auf Skript-Ebene eingefroren.
@@ -65,12 +65,9 @@
 	import type { Ampel } from '$lib/types';
 	type WetterAnlegeNutzlast = ReturnType<typeof vergleichNutzlast>;
 	import { anlegeKette } from '$lib/components/shared/subscriptionTabs';
-	import CorridorEditor from '$lib/components/shared/corridor-editor/CorridorEditor.svelte';
-	import CorridorEditorMobile from '$lib/components/shared/corridor-editor/CorridorEditorMobile.svelte';
 	import AlarmeTab from '$lib/components/shared/AlarmeTab.svelte';
 	// Issue #2276 S6c: EIN Buendel-Bauer fuer alle drei Vergleichs-Mounts.
 	import { alarmePropsAus } from '../compare/alarmePropsAus.ts';
-	import { corridorPropsAus } from '../compare/corridorPropsAus.ts';
 	import { versandPropsAus } from '../compare/versandPropsAus.ts';
 	import { wetterMetrikenPropsAus } from '../compare/wetterMetrikenPropsAus.ts';
 	// #1435 E1a-2: der Alarme-Reiter leitet seine Zeilen aus dem Register-Katalog
@@ -81,7 +78,7 @@
 		loadCompareMetricCatalog,
 		loadMetricRegister,
 		mitRegisterNamen
-	} from '$lib/components/shared/corridor-editor/compareMetricCatalogLoader';
+	} from '$lib/components/shared/wetter-tab/compareMetricCatalogLoader';
 	import type { MetricLabelFields } from '$lib/i18n/metricLabel';
 	import type { CompareSelectionEntry } from '$lib/components/shared/weather-metrics-tab/compareMetricSelection';
 	import Toast from '$lib/components/mobile/Toast.svelte';
@@ -420,31 +417,43 @@
 		}
 	}
 
-	// ── „Mit Standardwerten speichern" (#2521 S3) ──────────────────────────────
-	// Wertebereiche wie beim unveraenderten Reiter-Besuch vorbelegen (dieselbe
-	// Kette und dasselbe Prefill-Profil wie CorridorEditor), ausser der Nutzer
-	// hat den Reiter schon besucht — dann gelten dessen Werte. Danach derselbe
-	// Speicherweg wie „Briefing aktivieren".
-	function belegeWertebereicheVor(defs: CompareMetricDef[]) {
-		const profileKey = wiz.activityProfile ? (toCompareProfile(wiz.activityProfile) as ProfileKey) : 'ALLGEMEIN';
-		const levels = wiz.metricAlertLevels as Record<string, SensLevel | undefined> | undefined;
-		const payload = buildCompareCorridorSavePayload(buildComparePrefillRows(profileKey, defs), [], {
-			idealRanges: wiz.idealRanges ?? {},
-			activeMetricKeys: materializeActiveMetricKeys(wiz.activeMetricKeys ?? null),
-			metricAlertLevels: levels ?? {}
-		}, []);
-		wiz.corridors = payload.corridors;
-		wiz.idealRanges = payload.idealRanges;
-		wiz.activeMetricKeys = payload.activeMetricKeys;
-		wiz.metricAlertLevels = payload.metricAlertLevels;
+	// ── Wertebereiche-Vorbelegung beim Anlegen (#2794 S3a Teil-PR 4a, AC-44/AC-45) ──
+	// Dieselbe Kette und dasselbe Prefill-Profil wie vorher der unsichtbar gemountete
+	// CorridorEditor: beim Betreten des Schritts Wetter, sobald der Vergleichs-Katalog
+	// geladen ist, und nur, solange die Wertebereiche leer sind (Nutzereingaben und
+	// Vorlagen-Werte bleiben). `vergleichVorbelegung` ist rein; geschrieben wird hier.
+	function uebernimmVorbelegung(v: VergleichVorbelegung) {
+		wiz.corridors = v.corridors;
+		wiz.idealRanges = v.idealRanges;
+		wiz.activeMetricKeys = v.activeMetricKeys;
+		wiz.metricAlertLevels = v.metricAlertLevels;
 	}
+	// EIN Effekt je Editor-Instanz (auch beim Mobil/Desktop-Wechsel): ein zweiter Lauf
+	// findet nicht-leere Wertebereiche vor und liefert `null` — keine Doppel-Vorbelegung.
+	$effect(() => {
+		if (activeTab !== 'wetter' || !standardwerteKatalog) return;
+		const katalog = standardwerteKatalog;
+		untrack(() => {
+			const v = vergleichVorbelegung(wiz, katalog);
+			if (v) uebernimmVorbelegung(v);
+		});
+	});
+
+	// ── „Mit Standardwerten speichern" (#2521 S3) ──────────────────────────────
+	// Wertebereiche wie beim unveraenderten Besuch des Schritts Wetter vorbelegen
+	// (dieselbe reine Funktion wie der Effekt oben), ausser der Nutzer hat den
+	// Schritt schon besucht — dann gelten dessen Werte. Danach derselbe
+	// Speicherweg wie „Briefing aktivieren".
 	function makeStandardwerteHandler() {
 		return async function doStandardwerte() {
 			if (!standardwerteFrei || activating || !standardwerteKatalog) return;
 			activating = true;
 			try {
 				// #2794 S3a: die Wertebereiche stehen im Schritt Wetter (vorher eigener Reiter).
-				if (!metrikenVisited) belegeWertebereicheVor(standardwerteKatalog);
+				if (!metrikenVisited) {
+					const v = vergleichVorbelegung(wiz, standardwerteKatalog);
+					if (v) uebernimmVorbelegung(v);
+				}
 				await speichereNeuenVergleich();
 			} finally {
 				activating = false;
@@ -584,13 +593,10 @@
 	{:else if activeTab === 'wetter'}
 		{#if !isMobileViewport}
 			<!-- Issue #2794 S3a Teil-PR 3 (AC-38): Schritt Wetter = WetterTab (createMode, ohne
-			     PUT — gespeichert wird erst per „Briefing aktivieren", ein POST). Der
-			     CorridorEditor bleibt unsichtbar gemountet: seine Wertebereiche-Vorbelegung
-			     (wiz.corridors/idealRanges) laeuft unveraendert aus der Auswahl. -->
+			     PUT — gespeichert wird erst per „Briefing aktivieren", ein POST). Die
+			     Wertebereiche-Vorbelegung (wiz.corridors/idealRanges) laeuft seit Teil-PR 4a
+			     als Effekt im Skript (anlegeVorbelegung.ts), ohne versteckten CorridorEditor. -->
 			<WetterTab context="vergleich" preset={wetterAbo} createMode={true} onAnlegeStand={handleWetterAnlegeStand} />
-			<div style:display="none" aria-hidden="true">
-				<CorridorEditor context="vergleich" {...corridorPropsAus(wiz)} showInfobox={true} />
-			</div>
 		{/if}
 		<div class="ce-cta-foot" style:max-width="1100px">
 			<div class="ce-cta-row">
@@ -664,9 +670,6 @@
 		{:else if activeTab === 'wetter'}
 			{#if isMobileViewport}
 				<WetterTab context="vergleich" preset={wetterAbo} createMode={true} onAnlegeStand={handleWetterAnlegeStand} />
-				<div style:display="none" aria-hidden="true">
-					<CorridorEditorMobile context="vergleich" {...corridorPropsAus(wiz)} showInfobox={true} />
-				</div>
 			{/if}
 		{:else if activeTab === 'zustellung'}
 			{#if isMobileViewport}

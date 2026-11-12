@@ -576,8 +576,6 @@ const BESTAND: string[] = [
 	'lib/components/shared/anlege-rahmen/AnlegeFortschritt.svelte',
 	'lib/components/shared/anlege-rahmen/AnlegeRahmen.svelte',
 	'lib/components/shared/anlege-rahmen/AnlegeReiter.svelte',
-	'lib/components/shared/corridor-editor/CorridorEditor.svelte',
-	'lib/components/shared/corridor-editor/CorridorEditorMobile.svelte',
 	'lib/components/shared/dnd/DragHandle.svelte',
 	'lib/components/shared/dnd/SortableList.svelte',
 	'lib/components/shared/hub-kopf/HubKopf.svelte',
@@ -614,8 +612,6 @@ const BESTAND: string[] = [
 	'lib/components/trip-detail/DetailCard.svelte',
 	'lib/components/trip-detail/FullProfile.svelte',
 	'lib/components/trip-detail/HubOverview.svelte',
-	'lib/components/trip-detail/MetricCheckbox.svelte',
-	'lib/components/trip-detail/MetricGroup.svelte',
 	'lib/components/trip-detail/PresetRow.svelte',
 	'lib/components/trip-detail/ReportLine.svelte',
 	'lib/components/trip-detail/StageDetailRow.svelte',
@@ -661,7 +657,6 @@ const BESTAND: string[] = [
 	'lib/components/ui/empty-state/EmptyState.svelte',
 	'lib/components/ui/eyebrow/Eyebrow.svelte',
 	'lib/components/ui/g-card/GCard.svelte',
-	'lib/components/ui/horizon-chip/HorizonChip.svelte',
 	'lib/components/ui/input/input.svelte',
 	'lib/components/ui/label/label.svelte',
 	'lib/components/ui/pill/Pill.svelte',
@@ -718,7 +713,9 @@ const BESTAND: string[] = [
 ];
 
 /** Obergrenze des Bestands (feste Zahl, nicht die Länge): neue Dateien gehen in SEITEN_SCOPE. */
-const BESTAND_OBERGRENZE = 204;
+// #2794 S3a Teil-PR 4a: 204 → 199 (CorridorEditor, CorridorEditorMobile, MetricCheckbox,
+// MetricGroup, HorizonChip entfernt).
+const BESTAND_OBERGRENZE = 199;
 
 /** Token-Verstöße je Baustein-Datei (Ist-Stand 2026-11-10, ADR-0112). Darf nur sinken. */
 const AUSNAHMEN: Ausnahmen = {
@@ -740,7 +737,6 @@ const AUSNAHMEN: Ausnahmen = {
 	'lib/components/molecules/DatumFeld.svelte': { n: 41, grund: 'Bestand vor ADR-0112 (harte Maße/Farben)' },
 	'lib/components/molecules/DetailRow.svelte': { n: 9, grund: 'Bestand vor ADR-0112 (harte Maße/Farben)' },
 	'lib/components/molecules/Field.svelte': { n: 8, grund: 'Bestand vor ADR-0112 (harte Maße/Farben)' },
-	'lib/components/molecules/HorizonChips.svelte': { n: 4, grund: 'Bestand vor ADR-0112 (harte Maße/Farben)' },
 	'lib/components/molecules/Infobox.svelte': { n: 5, grund: 'Bestand vor ADR-0112 (harte Maße/Farben)' },
 	'lib/components/molecules/QuickAction.svelte': { n: 8, grund: 'Bestand vor ADR-0112 (harte Maße/Farben)' },
 	'lib/components/molecules/ScoreToggle.svelte': { n: 6, grund: 'Bestand vor ADR-0112 (harte Maße/Farben)' },
@@ -757,7 +753,6 @@ const AUSNAHMEN: Ausnahmen = {
 	'lib/components/organisms/ListTable.svelte': { n: 5, grund: 'Bestand vor ADR-0112 (harte Maße/Farben)' },
 	'lib/components/organisms/ListTableRow.svelte': { n: 16, grund: 'Bestand vor ADR-0112 (harte Maße/Farben)' },
 	'lib/components/organisms/MetricOffShelf.svelte': { n: 16, grund: 'Bestand vor ADR-0112 (harte Maße/Farben)' },
-	'lib/components/organisms/MetricsEditorContextBar.svelte': { n: 8, grund: 'Bestand vor ADR-0112 (harte Maße/Farben)' },
 	'lib/components/organisms/OutboxCard.svelte': { n: 5, grund: 'Bestand vor ADR-0112 (harte Maße/Farben)' },
 	// Fix-Loop 1 (#2913): Neuzählung mit verschärfter Regel (b) 19 → 21.
 	'lib/components/organisms/PresetRail.svelte': { n: 21, grund: 'Bestand vor ADR-0112 (harte Maße/Farben)' },

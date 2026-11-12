@@ -13,7 +13,7 @@
 // Orchestrierungen (Alarme aus S2, Wertebereiche neu) — genau die Lage im Hub.
 //
 // Zielschnittstelle, die dieser Test festschreibt (existiert noch NICHT → RED):
-//   shared/corridor-editor/wertebereicheVergleichSpeicherung.ts
+//   shared/wetter-tab/wertebereicheVergleichSpeicherung.ts
 //     erstelleWertebereicheVergleichSpeicherung(...)            (s. wertebereiche_vergleich_speichert_einmal.test.ts)
 //     SELBST_SPEICHERNDE_VERGLEICH_REITER: readonly string[]     — enthält 'alarme' UND 'wertebereiche'
 //     sichereSelbstSpeichererVorReiterwechsel(aktiverReiter, zielReiter, saveController?): Promise<void>

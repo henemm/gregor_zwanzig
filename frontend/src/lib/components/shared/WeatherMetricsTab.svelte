@@ -133,7 +133,7 @@
 	// Auswahl-Schluessel <-> Groesse+Auswertung.
 	import {
 		loadCompareSelectionEntries, thunderThresholdLevelsFromCatalog, vergleichsMetrikLabel
-	} from './corridor-editor/compareMetricCatalogLoader.ts'; import { t, tr, locale } from '$lib/i18n'; import { textTeile } from '$lib/i18n/textTeile'; // #2654 i18n F5
+	} from './wetter-tab/compareMetricCatalogLoader.ts'; import { t, tr, locale } from '$lib/i18n'; import { textTeile } from '$lib/i18n/textTeile'; // #2654 i18n F5
 	// Issue #1359 Scheibe 1: reihenfolge-erhaltendes An-/Abwaehlen als reine,
 	// testbare Funktion (Muster: weatherMetricsTabSections.ts nebenan).
 	// Issue #1366 F002: materializeActiveMetricKeys/toggleCompareMetricKeyFromState

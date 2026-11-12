@@ -40,8 +40,6 @@ const SCOPE = [
 	'lib/components/compare-new/CompareNewEditor.svelte',
 	'routes/archiv/+page.svelte',
 	'lib/components/compare/steps/Step2Orte.svelte',
-	'lib/components/shared/corridor-editor/CorridorEditor.svelte',
-	'lib/components/shared/corridor-editor/CorridorEditorMobile.svelte',
 	// Hinweistext unter Feldern in /compare/new (CompareNewEditor rendert <Field hint=…>)
 	'lib/components/molecules/Field.svelte'
 ];

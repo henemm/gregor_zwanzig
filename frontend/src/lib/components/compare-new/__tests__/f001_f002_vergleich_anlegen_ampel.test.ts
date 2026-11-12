@@ -185,10 +185,9 @@ describe('F001/F002: Vergleich anlegen — die Ampel ueberlebt den Reiterwechsel
 });
 
 // Fix-Loop 2, F-A1 (AC-20/AC-21/AC-37/AC-38): die uebrigen Felder des Rueckkanals am POST bzw.
-// dort, wo sie wirken. `wiz.activeMetricKeys` speist die (unsichtbar gemountete) Wertebereiche-
-// Vorbelegung und damit `corridors` im POST — gemessen an der ECHTEN Prop-Herleitung der
-// CorridorEditor-Einbettung (`{...corridorPropsAus(wiz)}`); die Vorbelegung selbst rechnet
-// der CorridorEditor (eigene Tests), sie ist hier nicht ausgewertet.
+// dort, wo sie wirken. `wiz.activeMetricKeys` speist die Wertebereiche-Vorbelegung und damit
+// `corridors` im POST; die Vorbelegung selbst rechnet shared/wetter-tab/anlegeVorbelegung.ts
+// (eigene Tests, anlege_vorbelegung.test.ts), sie ist hier nicht ausgewertet.
 describe('F-A1 (Vergleich): Warnungen, Radar, Tagesfenster und Auswahl aus dem Reiter Wetter', () => {
 	test('Warnungen aus, Radar an, Tagesfenster 6–21, eine Metrik entfernt ⇒ POST und Wertebereiche-Auswahl folgen; Remount behaelt alles', async () => {
 		const ed = await editor();
@@ -201,13 +200,10 @@ describe('F-A1 (Vergleich): Warnungen, Radar, Tagesfenster und Auswahl aus dem R
 		wt1.aendern({ ...Z.ohneMetrik(wt1.stand, weg), warnungenAn: false, radarAn: true, tagesfenster: { start: 6, end: 21 } });
 		await ed.fertig();
 
-		// Wertebereiche-Vorbelegung bekommt die neue Auswahl (CorridorEditor-Einbettung, Desktop).
-		const ce = findeKomponenten(ed.ast, 'CorridorEditor')[0];
-		assert.ok(ce, 'Messaufbau: CorridorEditor-Einbettung fehlt');
-		const spread = (ce.attributes as Knoten[]).find((a) => a.type === 'SpreadAttribute');
-		assert.ok(spread, 'Messaufbau: CorridorEditor ohne {...corridorPropsAus(wiz)}');
-		const props = werte(ed.quelle.slice(spread.expression.start, spread.expression.end), ed.u) as Knoten;
-		const keys = props.activeMetricKeys as string[];
+		// Wertebereiche-Vorbelegung bekommt die neue Auswahl: sie liest `wiz.activeMetricKeys`
+		// (seit #2794 Teil-PR 4a direkt im Effekt des Editors, vorher ueber die Einbettung
+		// `{...corridorPropsAus(wiz)}` eines versteckten CorridorEditors).
+		const keys = ed.u.wiz.activeMetricKeys as string[];
 		assert.ok(Array.isArray(keys) && keys.length > 0, `Wertebereiche bekommen keine Auswahl: ${JSON.stringify(keys)}`);
 		for (const k of wegSchluessel) assert.ok(!keys.includes(k), `entfernte Metrik ${k} steht noch in der Wertebereiche-Auswahl`);
 

@@ -1,7 +1,7 @@
 // Issue #1319 Scheibe B Fix-Loop (F001): pure Klemm-Logik fuer das
 // Tagesfenster-Start-/Endstunden-Paar, ausgelagert damit sie ohne
 // Svelte-Rendering-Harness direkt testbar ist (Praezedenz:
-// corridor-editor/corridorEditorState.ts openBoundValue).
+// wetter-tab/corridorEditorState.ts openBoundValue).
 //
 // Issue #1361/#1372 S1b (PO-Entscheidung 2026-07-25): ein Fenster mit
 // end < start ist seit dieser Scheibe ein GUELTIGES Fenster ueber Mitternacht

@@ -10,7 +10,7 @@ Endpoint existiert zum Zeitpunkt dieses Commits noch nicht -> alle Tests sind RO
 Paritaets-Fixture (AC-3): eingefroren aus
 frontend/src/lib/components/compare/compareMetricDefs.ts::ALL_METRICS (urspruenglich
 25 Eintraege, Stand 2026-07-23), angereichert um die ``kind``-Sonderbehandlung aus
-frontend/src/lib/components/shared/corridor-editor/corridorEditorState.ts:273-289
+frontend/src/lib/components/shared/wetter-tab/corridorEditorState.ts:273-289
 (thunder_level_max -> 'ordinal' statt 'enum', PO-Entscheidung 2026-07-12).
 
 Issue #1351 Teil 1: ``wind_chill_max_c`` (Gefuehlte Temp. max, analog

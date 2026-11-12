@@ -25,7 +25,7 @@ import { createPutQueue } from '../../../compare/compareHubPersistenz.ts';
 import {
 	erstelleWertebereicheVergleichSpeicherung,
 	sichereSelbstSpeichererVorReiterwechsel
-} from '../../corridor-editor/wertebereicheVergleichSpeicherung.ts';
+} from '../../wetter-tab/wertebereicheVergleichSpeicherung.ts';
 import { erstelleWetterMetrikenVergleichSpeicherung } from '../weatherMetricsCompareSave.ts';
 import { createController, dc, hydrierterWs, makePreset, wetterMetrikenBedienung } from './wetterMetrikenVergleichPruefstand.ts';
 

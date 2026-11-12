@@ -91,10 +91,15 @@ function erwartet(reiter: string, kontext: Kontext): string {
 // ─────────────────────────────────────────────────────────────────────────────
 // AC-1, AC-3, AC-4: /trips/new — Desktop UND Mobile
 // ─────────────────────────────────────────────────────────────────────────────
+// #2794 S3a Teil-PR 4a (AC-31): die Wertebereiche-Infobox stand nur im (seit Teil-PR 3 unsichtbar
+// gemounteten) Korridor-Editor; mit ihm entfaellt sie in beiden Anlege-Editoren. Den Schluessel
+// selbst (info.wertebereiche.*) raeumt Teil-PR 4b auf; der Baustein Infobox kennt ihn noch.
+const OHNE_KORRIDOR_EDITOR = (r: string) => r !== 'wertebereiche';
+
 describe('AC-1/AC-3/AC-4: /trips/new zeigt die Infobox in jedem überspringbaren Reiter', () => {
 	for (const mobil of [false, true]) {
 		const ansicht = mobil ? 'Mobil' : 'Desktop';
-		for (const reiter of REITER_MIT_INFOBOX.route) {
+		for (const reiter of REITER_MIT_INFOBOX.route.filter(OHNE_KORRIDOR_EDITOR)) {
 			test(`${ansicht}: Reiter ${reiter} trägt genau eine Infobox mit dem freigegebenen Text`, async () => {
 				const html = await renderTrip({ ...TRIP_BASIS, activeTab: (REITER_DES_ABSCHNITTS as Record<string, string>)[reiter], isMobileViewport: mobil });
 				const id = `infobox-${reiter}-route`;
@@ -164,18 +169,18 @@ describe('AC-5: Trip-Pflichtreiter Route und Etappen tragen keine Infobox', () =
 // ─────────────────────────────────────────────────────────────────────────────
 // AC-2, AC-3 (Ortsvergleich, Anlegen) — Reiter, die im SSR gemountet sind
 // ─────────────────────────────────────────────────────────────────────────────
-describe('AC-2/AC-3: /compare/new zeigt die Infobox (Wertebereiche, Versand), Desktop UND Mobil', () => {
+describe('AC-2/AC-3: /compare/new zeigt die Infobox (Versand), Desktop UND Mobil', () => {
 	for (const mobil of [false, true]) {
 		const ansicht = mobil ? 'Mobil' : 'Desktop';
-		test(`${ansicht}: Wertebereiche — genau eine Infobox mit dem freigegebenen Text`, async () => {
-			const html = await renderVergleichNeu({ ...VERGLEICH_FLAGS, activeTab: 'wetter', isMobileViewport: mobil });
-			assert.equal(
-				tagsMitTestid(html, 'infobox-wertebereiche-vergleich').length,
-				1,
-				`${ansicht}: fehlt \`showInfobox\` am ${mobil ? 'CorridorEditorMobile' : 'CorridorEditor'}-Mount? ` +
-					`gefunden: ${JSON.stringify(infoboxIds(html))}`
-			);
-			assert.equal(infoboxText(html, 'wertebereiche', 'vergleich'), erwartet('wertebereiche', 'vergleich'));
+		// #2794 S3a Teil-PR 4a (AC-31): kein versteckter Korridor-Editor mehr — damit auch keine
+		// (unsichtbare) Wertebereiche-Infobox im Schritt Wetter, in keinem der beiden Anlege-Editoren.
+		test(`${ansicht}: Schritt Wetter — keine Wertebereiche-Infobox mehr (Korridor-Editor entfernt)`, async () => {
+			const vergleich = await renderVergleichNeu({ ...VERGLEICH_FLAGS, activeTab: 'wetter', isMobileViewport: mobil });
+			const trip = await renderTrip({ ...TRIP_BASIS, activeTab: 'wetter', isMobileViewport: mobil });
+			assert.ok(vergleich.includes('data-testid="wetter-tab'), 'Messaufbau: Schritt Wetter (Vergleich) nicht gerendert');
+			assert.deepEqual(tagsMitTestid(vergleich, 'infobox-wertebereiche-vergleich'), [], `gefunden: ${JSON.stringify(infoboxIds(vergleich))}`);
+			assert.deepEqual(tagsMitTestid(trip, 'infobox-wertebereiche-route'), [], `gefunden: ${JSON.stringify(infoboxIds(trip))}`);
+			assert.ok(!/data-testid="corridor-editor/.test(vergleich + trip), 'Korridor-Editor noch im Anlege-Markup');
 		});
 
 		test(`${ansicht}: Versand-Abschnitt im Schritt Zustellung — Infobox je Abschnitt mit Vergleichs-Text (nur 07:00, kein 18:00)`, async () => {
@@ -315,30 +320,7 @@ const REZEPTE: Rezept[] = [
 			profileOverride: PROFIL
 		})
 	},
-	{
-		name: 'CorridorEditor (vergleich)',
-		datei: 'shared/corridor-editor/CorridorEditor.svelte',
-		kontext: 'vergleich',
-		reiter: 'wertebereiche',
-		begriffe: ['wertebereiche'],
-		props: async () => ({ context: 'vergleich', ...(await propsAus('compare/corridorPropsAus', 'corridorPropsAus', neuerFeldsatz())) })
-	},
-	{
-		name: 'CorridorEditorMobile (vergleich)',
-		datei: 'shared/corridor-editor/CorridorEditorMobile.svelte',
-		kontext: 'vergleich',
-		reiter: 'wertebereiche',
-		begriffe: ['wertebereiche'],
-		props: async () => ({ context: 'vergleich', ...(await propsAus('compare/corridorPropsAus', 'corridorPropsAus', neuerFeldsatz())) })
-	},
-	{
-		name: 'CorridorEditor (route, Anlegen)',
-		datei: 'shared/corridor-editor/CorridorEditor.svelte',
-		kontext: 'route',
-		reiter: 'wertebereiche',
-		begriffe: ['wertebereiche'],
-		props: async () => ({ context: 'route', trip: TRIP, createMode: true })
-	},
+	// #2794 S3a Teil-PR 4a: die drei CorridorEditor-Rezepte entfallen mit dem Korridor-Editor.
 	{
 		name: 'WeatherMetricsTab (vergleich)',
 		datei: 'shared/WeatherMetricsTab.svelte',
@@ -409,6 +391,8 @@ describe('AC-6: Organismus OHNE showInfobox (Bearbeiten-Hub): keine Infobox, abe
 // die Hubs und die Wertprop-Bündel setzen es NIE.
 // ─────────────────────────────────────────────────────────────────────────────
 // #1743: der geteilte Panel-Baustein (Wetter-Metriken + Versand) zaehlt als Organismus-Mount.
+// #2794 S3a Teil-PR 4a: CorridorEditor/CorridorEditorMobile entfernt — ein Wiederauftauchen
+// faellt im Mount-Zaehler (Soll 0) auf, solange die Namen gezaehlt werden.
 const ORGANISMEN = ['WeatherMetricsTab', 'CorridorEditor', 'CorridorEditorMobile', 'AlarmeTab', 'VersandTab', 'WetterMetrikenVersandPanel'];
 
 function mounts(datei: string): Record<string, Knoten[]> {
@@ -441,14 +425,16 @@ describe('Verdrahtung: jeder Anlege-Mount setzt showInfobox explizit auf true', 
 			'TripNewEditor',
 			join(COMPONENTS, 'trip-new/TripNewEditor.svelte'),
 			// #1743: Wetter-Metriken und Versand nur noch ueber den geteilten Panel-Baustein (Desktop + Mobil).
-			{ WeatherMetricsTab: 0, CorridorEditor: 2, CorridorEditorMobile: 0, AlarmeTab: 2, VersandTab: 0, WetterMetrikenVersandPanel: 2 }
+			// #2794 S3a Teil-PR 4a: die zwei versteckten CorridorEditor-Mounts sind entfernt (Soll 0).
+			{ WeatherMetricsTab: 0, CorridorEditor: 0, CorridorEditorMobile: 0, AlarmeTab: 2, VersandTab: 0, WetterMetrikenVersandPanel: 2 }
 		],
 		[
 			'CompareNewEditor',
 			join(COMPONENTS, 'compare-new/CompareNewEditor.svelte'),
 			// #2794 S3a Teil-PR 3 (AC-38): der Schritt Wetter ist der WetterTab; das Panel steht je Gerät
-			// nur noch im Schritt Zustellung (2 statt 4), die Wertebereiche bleiben unsichtbar gemountet.
-			{ WeatherMetricsTab: 0, CorridorEditor: 1, CorridorEditorMobile: 1, AlarmeTab: 2, VersandTab: 0, WetterMetrikenVersandPanel: 2 }
+			// nur noch im Schritt Zustellung (2 statt 4). Teil-PR 4a: die unsichtbaren Wertebereiche-Mounts
+			// sind entfernt (Soll 0).
+			{ WeatherMetricsTab: 0, CorridorEditor: 0, CorridorEditorMobile: 0, AlarmeTab: 2, VersandTab: 0, WetterMetrikenVersandPanel: 2 }
 		]
 	];
 	for (const [name, datei, erwartetAnzahl] of EDITOREN) {
@@ -544,11 +530,11 @@ describe('AC-6 Verdrahtung: die Bearbeiten-Hubs und die Wertprop-Bündel setzen 
 		});
 	}
 
-	test('wetterMetriken-/corridor-/alarme-/versandPropsAus liefern kein showInfobox-Feld', async () => {
+	// #2794 S3a Teil-PR 4a: corridorPropsAus ist mit seinem einzigen Verwender (Korridor-Editor) entfallen.
+	test('wetterMetriken-/alarme-/versandPropsAus liefern kein showInfobox-Feld', async () => {
 		const wiz = neuerFeldsatz();
 		for (const [modul, fn] of [
 			['compare/wetterMetrikenPropsAus', 'wetterMetrikenPropsAus'],
-			['compare/corridorPropsAus', 'corridorPropsAus'],
 			['compare/alarmePropsAus', 'alarmePropsAus'],
 			['compare/versandPropsAus', 'versandPropsAus']
 		] as const) {

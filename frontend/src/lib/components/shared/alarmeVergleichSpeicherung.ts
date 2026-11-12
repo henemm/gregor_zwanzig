@@ -13,7 +13,7 @@
 // Kein Browser-/SvelteKit-Import — lauffähig unter node --experimental-strip-types.
 
 import type { ActivityProfile, ComparePreset, Corridor } from '../../types.ts';
-import type { IdealRange } from './corridor-editor/corridorEditorState.ts';
+import type { IdealRange } from './wetter-tab/corridorEditorState.ts';
 import type { SaveFn, SaveStatus } from '../../stores/saveStatusStore.svelte.ts';
 import { merkeNutzlast } from '../../stores/nutzlastStand.ts';
 import type { PutClient } from './tripSpeicherung.ts';

@@ -102,39 +102,9 @@ describe('AC-11: Alarme — Eigenfelder, display_config nur mit metric_alert_lev
 	});
 });
 
-// Desktop (`CorridorEditor.svelte`) UND Mobile (`CorridorEditorMobile.svelte`):
-// zwei Schreibwege, dieselbe Zusicherung (AC-12).
-for (const mobil of [false, true]) {
-	const ort = mobil ? 'Mobile' : 'Desktop';
-	describe(`AC-12: Wertebereiche (${ort}) — ausschliesslich corridors`, () => {
-		test('Korridor aendern: Rumpf = { corridors } ohne display_config', async () => {
-			const a = P.neuerAufbau();
-			const wb = await P.wertebereicheReiter(a, mobil);
-			wb.inst.u.rows = [{ metric: 'wind_max_kmh', label: 'Wind', min: 0, max: 55, notify: true, mark: true }];
-			wb.speichern();
-			await P.fertig(a.ctl);
-
-			const b = rumpf(0);
-			assert.deepEqual(
-				P.sortiert(b),
-				['corridors'],
-				`Wertebereiche-${ort}-Rumpf: ${JSON.stringify(P.sortiert(b))} (heute inkl. der ganzen display_config)`
-			);
-			keineFremdschluessel(b, `Wertebereiche ${ort}`);
-		});
-
-		test('Leerung: corridors = [] wird gesendet (der Server loescht nie von selbst)', async () => {
-			const a = P.neuerAufbau();
-			const wb = await P.wertebereicheReiter(a, mobil);
-			wb.inst.u.rows = [];
-			wb.speichern();
-			await P.fertig(a.ctl);
-
-			assert.deepEqual(rumpf(0).corridors, []);
-			assert.deepEqual(P.sortiert(rumpf(0)), ['corridors']);
-		});
-	});
-}
+// AC-12 Wertebereiche (Desktop `CorridorEditor.svelte` UND Mobile `CorridorEditorMobile.svelte`):
+// #2794 S3a Teil-PR 4a (AC-31) mit beiden Schreibwegen entfernt — die Grenzen schreibt der
+// Reiter Wetter (Nutzlast-Tests in shared/wetter-tab/__tests__/).
 
 describe('AC-13: Wetter-Metriken — /weather-config nur Wetter-Metriken-Schluessel, Trip-PUT nur Inhalt + Tagesfenster', () => {
 	test('Metriken speichern: /weather-config ohne metric_alert_levels und Fremdschluessel', async () => {

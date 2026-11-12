@@ -52,7 +52,7 @@ const BEREICHE: Record<string, string[]> = {
 	],
 	'F8 #2657 Layout-Reiter, Korridor-Editor, Ausgabe-Layout, GPX': [
 		'lib/components/shared/layout-tab/',
-		'lib/components/shared/corridor-editor/',
+		// #2794 S3a Teil-PR 4a: corridor-editor/ (CorridorEditor, CorridorEditorMobile) entfernt.
 		'lib/components/shared/OutputLayoutEditor.svelte',
 		'lib/components/shared/OutlookLayoutControls.svelte',
 		'lib/components/shared/MailInhaltCard.svelte',
@@ -180,16 +180,16 @@ describe('Bestand: Sprachwechsel ohne Neuladen erreicht jede Anzeige', () => {
 		assert.equal(gezaehlt, 5);
 	});
 
-	test('Messaufbau F8: ohne die $locale-Lesung waeren zwoelf Ableitungen/Ausdruecke gemeldet', () => {
-		// LTCapNote (1), CorridorEditor (Pflicht-Fehler, Zeile, Hinweis, Pool = 4), mobil
-		// (dieselben 4 + Bereichs-Anzeige = 5), MailInhaltCard (1), Abwahl-Hinweis (1).
+	test('Messaufbau F8: ohne die $locale-Lesung waeren drei Ableitungen/Ausdruecke gemeldet', () => {
+		// LTCapNote (1), MailInhaltCard (1), Abwahl-Hinweis (1). Die neun Fundstellen von
+		// CorridorEditor (4) und CorridorEditorMobile (5) entfallen mit #2794 S3a Teil-PR 4a.
 		const { dateien } = scanneEintraege(SRC, BEREICHE['F8 #2657 Layout-Reiter, Korridor-Editor, Ausgabe-Layout, GPX']);
 		let gezaehlt = 0;
 		for (const rel of dateien) {
 			const q = (readFileSync(join(SRC, rel), 'utf8') as string).replace(/\(void \$locale, /g, '(');
 			gezaehlt += scanneKomponente(q, join(SRC, rel), SRC, rel).length;
 		}
-		assert.equal(gezaehlt, 12);
+		assert.equal(gezaehlt, 3);
 	});
 
 	test('Messaufbau F7: ohne die $locale-Lesung waeren zwei Ableitungen/Ausdruecke gemeldet', () => {

@@ -83,7 +83,7 @@
 // (`WeatherMetricsTab.svelte:589/602/1273/1323`,
 // `weather-metrics-tab/weatherMetricsCompareSave.ts:534`,
 // `versandVergleichSpeicherung.ts:221`,
-// `corridor-editor/wertebereicheVergleichSpeicherung.ts:200`), deren
+// `wetter-tab/wertebereicheVergleichSpeicherung.ts:200`), deren
 // Zeilennummern sonst verrutschen. Wird dieser Waechter waehrend `/50` rot:
 // die Zeilenzahl der bearbeiteten Datei wiederherstellen — NICHT die
 // eingefrorene Liste nachziehen.
@@ -147,8 +147,8 @@ const ZAEHLBEFEHL =
  *   * die 22 BLEIBT-Eintraege werden auf ihre neu gemessenen Zeilennummern
  *     nachgefuehrt und sind ALLE in `BLEIBT_MIT_INHALT` gefesselt — geprueft
  *     wird der Bedingungstext, nicht die Position,
- *   * `corridor-editor/corridorEditorState.ts:331` und
- *     `corridor-editor/wertebereicheVergleichSpeicherung.ts:200` bleiben AUF
+ *   * `wetter-tab/corridorEditorState.ts:331` und
+ *     `wetter-tab/wertebereicheVergleichSpeicherung.ts:200` bleiben AUF
  *     IHRER ZEILE; fuer sie gilt weiterhin der alte, positionsbasierte
  *     Vertrag. Die Textaenderung an :200 (`!!p.ws` -> `!!p.zustand`) bekommt
  *     bewusst KEINE Fesselung (Spec, Design-Entscheidung 3).
@@ -259,45 +259,18 @@ const EINGEFROREN: readonly string[] = [
 	// dem Katalog statt Konkatenation); Bedingungen unveraendert, nachgemessen.
 	'versand-tab/vtBriefingChannelsText.ts:22',
 	'versand-tab/vtBriefingChannelsText.ts:29',
-	// S6d: von 14 Corridor-Paaren bleiben elf (Schicksals-Tabelle der Spec).
-	// Ihre Zeilennummern verschieben sich durch den Wertprop-Umbau — die neuen
-	// sind gemessen und unten in BLEIBT_MIT_INHALT inhaltlich gefesselt.
-	// #2657 (F8): alle Corridor-Zweige nur verschoben (Katalog-Import, Kommentar an der
-	// Pflicht-Fehler-Ableitung, einzeilige Lauftexte, Profil-Metriken als Tabelle);
-	// Bedingungen unveraendert, nachgemessen (Inhalt unten in BLEIBT_MIT_INHALT gefesselt).
-	'corridor-editor/CorridorEditorMobile.svelte:145',
-	'corridor-editor/CorridorEditorMobile.svelte:173',
-	'corridor-editor/CorridorEditorMobile.svelte:198',
-	'corridor-editor/CorridorEditorMobile.svelte:254',
-	'corridor-editor/CorridorEditorMobile.svelte:285',
-	'corridor-editor/CorridorEditorMobile.svelte:348',
-	'corridor-editor/CorridorEditorMobile.svelte:361',
-	'corridor-editor/CorridorEditorMobile.svelte:364',
-	'corridor-editor/CorridorEditorMobile.svelte:369',
-	'corridor-editor/CorridorEditorMobile.svelte:381',
-	'corridor-editor/CorridorEditorMobile.svelte:502',
-	'corridor-editor/CorridorEditor.svelte:147',
-	'corridor-editor/CorridorEditor.svelte:190',
-	'corridor-editor/CorridorEditor.svelte:222',
-	// #2347 S4 (AC-20): die acht folgenden um 26 Zeilen verschoben (Trip-
-	// Vorbelegungs-Effekt eingefuegt, selbst KEINE neue context-Weiche);
-	// Bedingungstext unveraendert, unten in BLEIBT_MIT_INHALT gefesselt.
-	'corridor-editor/CorridorEditor.svelte:332',
-	'corridor-editor/CorridorEditor.svelte:373',
-	'corridor-editor/CorridorEditor.svelte:407',
-	'corridor-editor/CorridorEditor.svelte:420',
-	'corridor-editor/CorridorEditor.svelte:423',
-	'corridor-editor/CorridorEditor.svelte:429',
-	'corridor-editor/CorridorEditor.svelte:447',
-	'corridor-editor/CorridorEditor.svelte:576',
-	'corridor-editor/corridorEditorState.ts:331',
+	// #2794 S3a Teil-PR 4a (AC-31): die 22 Corridor-Eintraege (CorridorEditor.svelte 11,
+	// CorridorEditorMobile.svelte 11) entfallen mit der entfernten Oberflaeche — eine
+	// ENTFERNTE Verzweigung, keine verschobene. Die Logik-Weiche der Korridor-Logik zog mit
+	// dem Modul nach wetter-tab/ um (Zeile unveraendert, nur der Pfad). Soll 48 → 26.
+	'wetter-tab/corridorEditorState.ts:331',
 	// #2655 (F6): verschoben (zwei Katalog-Importe, Zeitplan-Hinweis einzeilig);
 	// Bedingungen `context === 'route'` / `{#if context === 'vergleich'}` unveraendert.
 	'versand-tab/VTSchedulePlan.svelte:57',
 	'versand-tab/VTSchedulePlan.svelte:84',
 	'alarme-tab/alarmeTabSections.ts:27',
 	'alarme-tab/alarmeTabSections.ts:38',
-	'corridor-editor/wertebereicheVergleichSpeicherung.ts:209',
+	'wetter-tab/wertebereicheVergleichSpeicherung.ts:209',
 	'weather-metrics-tab/weatherMetricsTabSections.ts:72',
 	'weather-metrics-tab/weatherMetricsTabSections.ts:73',
 	// #2794 Teil 3 Fix-Loop F006: dieselbe Weiche (`wetterMetrikenVergleichSpeicherungAktiv`),
@@ -320,7 +293,8 @@ const EINGEFROREN: readonly string[] = [
 // Issue #1721: `WeatherMetricsTab.svelte:2042` nachgetragen (Nacht-Stundentabelle-
 // Schalter nur im Trip, kein Compare-Pendant — Spec fix_1721_nachtausgabe.md).
 // Soll 47 → 48.
-const EINGEFROREN_SOLL_ANZAHL = 48;
+// #2794 S3a Teil-PR 4a: CorridorEditor/CorridorEditorMobile entfernt (22 Eintraege). Soll 48 → 26.
+const EINGEFROREN_SOLL_ANZAHL = 26;
 
 /**
  * S6c: die vier ueberlebenden AlarmeTab-Eintraege, GEGEN IHREN INHALT gefesselt.
@@ -357,121 +331,6 @@ const BLEIBT_MIT_INHALT: readonly { eintrag: string; zeile: string; folgt: strin
 		// Anker samt `kind="vergleich"`: das FENSTER (8 Zeilen) reicht bis in den
 		// Trip-Zweig, dessen `<AlertPreviewCard kind="route">` sonst vakuum traefe.
 		folgt: 'AlertPreviewCard kind="vergleich"'
-	},
-	// S6d (Issue #2276): die 22 ueberlebenden Corridor-Eintraege — gemessen am
-	// Quelltext NACH dem Wertprop-Umbau. `isFreshCompareCreate` ist der eine
-	// Eintrag, dessen TEXT sich mitgeaendert hat (`ws?.isEditMode`/`ws?.corridors`
-	// -> Wertprops, Spec Design-Entscheidung 3); die uebrigen zehn Paare tragen
-	// ihren Bedingungstext byte-identisch weiter, nur ihre Position verschob sich.
-	{
-		eintrag: 'corridor-editor/CorridorEditor.svelte:147',
-		zeile: "const isFreshCompareCreate = context === 'vergleich' && !isEditMode && (corridors ?? []).length === 0;",
-		folgt: 'buildComparePrefillRows(profileKey, defs)'
-	},
-	{
-		eintrag: 'corridor-editor/CorridorEditor.svelte:190',
-		zeile: "if (context !== 'vergleich' || compareDefs !== null || compareDefsError) return;",
-		folgt: 'loadCompareMetricCatalog()'
-	},
-	{
-		eintrag: 'corridor-editor/CorridorEditor.svelte:222',
-		zeile: "if (context !== 'route' || routeExtraDefs !== null) return;",
-		folgt: 'loadRouteExtraMetricDefs()'
-	},
-	{
-		eintrag: 'corridor-editor/CorridorEditor.svelte:332',
-		zeile: "if (context === 'vergleich') {",
-		folgt: 'vergleichSpeicherung?.aenderungMelden();'
-	},
-	{
-		eintrag: 'corridor-editor/CorridorEditor.svelte:373',
-		zeile: "const next = context === 'vergleich'",
-		folgt: 'addCompareRow(rows, poolLeft'
-	},
-	{
-		eintrag: 'corridor-editor/CorridorEditor.svelte:407',
-		zeile: "{#if context === 'vergleich' && compareDefsError}",
-		folgt: 'corridor-editor-vergleich-load-error'
-	},
-	{
-		eintrag: 'corridor-editor/CorridorEditor.svelte:420',
-		zeile: "{:else if context === 'vergleich' && compareDefs === null}",
-		folgt: 'corridor-editor-vergleich-loading'
-	},
-	{
-		eintrag: 'corridor-editor/CorridorEditor.svelte:423',
-		zeile: "{:else if context === 'route' && routeExtraDefs === null}",
-		folgt: 'corridor-editor-route-loading'
-	},
-	{
-		eintrag: 'corridor-editor/CorridorEditor.svelte:429',
-		zeile: "{#if context === 'vergleich'}",
-		folgt: 'class="ce-h2"'
-	},
-	{
-		eintrag: 'corridor-editor/CorridorEditor.svelte:447',
-		zeile: "{#if context === 'route' && routeDefsFailed}",
-		folgt: 'corridor-editor-route-load-warning'
-	},
-	{
-		eintrag: 'corridor-editor/CorridorEditor.svelte:576',
-		zeile: "{#if context === 'vergleich'}",
-		folgt: 'corridor-editor-neutral-hint'
-	},
-	{
-		eintrag: 'corridor-editor/CorridorEditorMobile.svelte:145',
-		zeile: "const isFreshCompareCreate = context === 'vergleich' && !isEditMode && (corridors ?? []).length === 0;",
-		folgt: 'buildComparePrefillRows(profileKey, defs)'
-	},
-	{
-		eintrag: 'corridor-editor/CorridorEditorMobile.svelte:173',
-		zeile: "if (context !== 'vergleich' || compareDefs !== null || compareDefsError) return;",
-		folgt: 'loadCompareMetricCatalog()'
-	},
-	{
-		eintrag: 'corridor-editor/CorridorEditorMobile.svelte:198',
-		zeile: "if (context !== 'route' || routeExtraDefs !== null) return;",
-		folgt: 'loadRouteExtraMetricDefs()'
-	},
-	{
-		eintrag: 'corridor-editor/CorridorEditorMobile.svelte:254',
-		zeile: "if (context === 'vergleich') {",
-		folgt: 'vergleichSpeicherung?.aenderungMelden();'
-	},
-	{
-		eintrag: 'corridor-editor/CorridorEditorMobile.svelte:285',
-		zeile: "const next = context === 'vergleich'",
-		folgt: 'addCompareRow(rows, poolLeft'
-	},
-	{
-		eintrag: 'corridor-editor/CorridorEditorMobile.svelte:348',
-		zeile: "{#if context === 'vergleich' && compareDefsError}",
-		folgt: 'corridor-editor-mobile-vergleich-load-error'
-	},
-	{
-		eintrag: 'corridor-editor/CorridorEditorMobile.svelte:361',
-		zeile: "{:else if context === 'vergleich' && compareDefs === null}",
-		folgt: 'corridor-editor-mobile-vergleich-loading'
-	},
-	{
-		eintrag: 'corridor-editor/CorridorEditorMobile.svelte:364',
-		zeile: "{:else if context === 'route' && routeExtraDefs === null}",
-		folgt: 'corridor-editor-mobile-route-loading'
-	},
-	{
-		eintrag: 'corridor-editor/CorridorEditorMobile.svelte:369',
-		zeile: "{#if context === 'vergleich'}",
-		folgt: 'class="cem-title"'
-	},
-	{
-		eintrag: 'corridor-editor/CorridorEditorMobile.svelte:381',
-		zeile: "{#if context === 'route' && routeDefsFailed}",
-		folgt: 'corridor-editor-mobile-route-load-warning'
-	},
-	{
-		eintrag: 'corridor-editor/CorridorEditorMobile.svelte:502',
-		zeile: "{#if context === 'vergleich'}",
-		folgt: 'corridor-editor-mobile-neutral-hint'
 	},
 	// S6e (Issue #2276): die drei VersandTab-Eintraege — gemessen am Quelltext
 	// NACH dem Wertprop-Umbau. Der Wirkort-Guard im Effekt (:348) traegt seinen

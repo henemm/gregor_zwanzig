@@ -2,7 +2,7 @@
 // Spec: docs/specs/modules/issue_1234_autosave_hydration_gate.md
 //   § Implementation Details (Entscheidungstabelle), § Acceptance Criteria
 // Vorbild-Muster (Daten-Gate statt Timing-Guard):
-//   shared/corridor-editor/corridorEditorState.ts:517-519 `saveGateDecision()`
+//   shared/wetter-tab/corridorEditorState.ts:517-519 `saveGateDecision()`
 //
 // Reine Entscheidungsfunktion — kein DOM, kein Svelte-State, unit-testbar
 // ohne Mocks (weatherSaveGate.test.ts).

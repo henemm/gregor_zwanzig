@@ -27,11 +27,13 @@ describe('F006: EN-Schutzregeln des Generators', () => {
 		assert.equal(ermittleEn('Etappe T3 auswählen', katalog).text_en, 'Select stage {code}');
 	});
 	test('Wertlänge: eingesetzter Wert über 40 Zeichen ⇒ Lücke; bis 40 Zeichen ⇒ Treffer', () => {
-		const vor = 'Mindestens eine Grenze (Von oder Bis) ist Pflicht: ';
+		// #2794 Teil-PR 4a: das fruehere Muster `layout.korridor.pflicht` ist mit dem
+		// Korridor-Editor entfallen — gleichartiges Muster (Wortlaut + Platzhalter am Ende).
+		const vor = 'Letzter Lauf fehlgeschlagen: ';
 		const kurz = ermittleEn(vor + 'Wind, Böen', katalog);
-		assert.equal(kurz.i18n_key, 'layout.korridor.pflicht');
-		// C5: die deutschen Metriknamen landen nicht im EN-Text.
-		assert.equal(kurz.text_en, 'At least one limit (From or To) is required: {metriken}');
+		assert.equal(kurz.i18n_key, 'konto.reports.lauf_fehlgeschlagen_mit');
+		// C5: die deutschen Werte landen nicht im EN-Text — EN bleibt das Katalog-Muster.
+		assert.equal(kurz.text_en, 'Last run failed: {fehler}');
 		assert.doesNotMatch(kurz.text_en ?? '', /Böen/);
 		const lang = ermittleEn(vor + 'Wind, Böen, Regen, Gewitter, Temperatur, Schneefallgrenze', katalog);
 		assert.equal(lang.luecke, true, JSON.stringify(lang));

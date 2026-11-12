@@ -59,7 +59,7 @@
 		loadCompareSelectionEntries,
 		loadMetricRegister,
 		mitRegisterNamen
-	} from '../shared/corridor-editor/compareMetricCatalogLoader.ts';
+	} from '../shared/wetter-tab/compareMetricCatalogLoader.ts';
 	import type { CompareSelectionEntry } from '../shared/weather-metrics-tab/compareMetricSelection.ts';
 	import type { MetricLabelFields } from '../../i18n/metricLabel.ts';
 	// Issue #1299/#1291/#1287 (C2 von Epic #1301): Stundenverlauf-Steuerung im
@@ -87,7 +87,7 @@
 	// Nutzlast und Rollback liegen im geteilten Baustein; hier bleibt nur die
 	// Hydration des Wizard-Zustands vor dem Mount.
 	import { hydrateVersandFieldsFromPreset } from '../shared/versandVergleichSpeicherung.ts';
-	import { sichereSelbstSpeichererVorReiterwechsel } from '../shared/corridor-editor/wertebereicheVergleichSpeicherung.ts';
+	import { sichereSelbstSpeichererVorReiterwechsel } from '../shared/wetter-tab/wertebereicheVergleichSpeicherung.ts';
 	import { groupLocations } from './locationHelpers.js';
 	import { subscriptionTabs, resolveTab, bereinigteTabAdresse, versandSprungStart } from '../shared/subscriptionTabs.ts';
 	import MTabBar from '$lib/components/mobile/MTabBar.svelte';
@@ -398,7 +398,7 @@
 	});
 
 	// Issue #2276 S3: der Wertebereiche-Reiter speichert selbst (CorridorEditor/
-	// Mobile -> shared/corridor-editor/wertebereicheVergleichSpeicherung.ts) —
+	// Mobile -> shared/wetter-tab/wertebereicheVergleichSpeicherung.ts) —
 	// EIN Speicherweg, kein Wrapper und kein fensterweiter pointerup-Auffang mehr.
 	// Queue und Basis-Rueckmeldung als benannte Funktionen durchgereicht.
 	function reiheHubSchreibvorgangEin<T>(fn: () => Promise<T>): Promise<T> {

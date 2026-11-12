@@ -30,7 +30,7 @@ import {
 import {
 	SELBST_SPEICHERNDE_VERGLEICH_REITER,
 	sichereSelbstSpeichererVorReiterwechsel
-} from '../../corridor-editor/wertebereicheVergleichSpeicherung.ts';
+} from '../../wetter-tab/wertebereicheVergleichSpeicherung.ts';
 import { erstelleWetterMetrikenVergleichSpeicherung } from '../weatherMetricsCompareSave.ts';
 import { createController, dc, hydrierterWs, makePreset, wetterMetrikenBedienung } from './wetterMetrikenVergleichPruefstand.ts';
 

@@ -1,8 +1,9 @@
 // TDD RED — Issue #2521 S1 (Spec begriff_erklaerung_infobox.md): das ⓘ steht an
 // den vier Fachbegriffen, in Trip UND Ortsvergleich, Desktop UND Mobil.
 //
-//   AC-8   Wertebereiche: ⓘ in CorridorEditor (Desktop) UND CorridorEditorMobile
-//   AC-9   Alarme: sichtbares Label „Dringlichkeits-Schwelle“ + ⓘ im Kanal-Block
+//   AC-8   Wertebereiche: ⓘ in CorridorEditor (Desktop) UND CorridorEditorMobile — ENTFALLEN mit
+//          #2794 S3a Teil-PR 4a (AC-31: keine Wertebereiche-Oberflaeche mehr; Glossar-Zeile in 4b)
+//   AC-9  Alarme: sichtbares Label „Dringlichkeits-Schwelle“ + ⓘ im Kanal-Block
 //   AC-10  Alarm-Tabelle: ⓘ NUR an der CAPE-Zeile; `title` der Schwellwert-Zelle unveraendert
 //   AC-11  Cooldown: ⓘ an der Eyebrow; `.hint`-Text unveraendert
 //
@@ -32,7 +33,6 @@ import {
 	tagsMitTestid
 } from './infoboxSsr.ts';
 import { neuerFeldsatz } from './compareFeldsatzPruefstand.ts';
-import { corridorPropsAus } from '../../compare/corridorPropsAus.ts';
 import { alarmePropsAus } from '../../compare/alarmePropsAus.ts';
 
 const TRIP = {
@@ -47,37 +47,6 @@ const TRIP = {
 function ii(html: string, begriff: string): string[] {
 	return tagsMitTestid(html, `begriff-erklaerung-${begriff}`);
 }
-
-// ─────────────────────────────────────────────────────────────────────────────
-// AC-8
-// ─────────────────────────────────────────────────────────────────────────────
-describe('AC-8: Wertebereiche tragen das ⓘ in Desktop- UND Mobil-Editor, in beiden Kontexten', () => {
-	const faelle: [string, string, 'route' | 'vergleich'][] = [
-		['CorridorEditor (Desktop)', 'shared/corridor-editor/CorridorEditor.svelte', 'vergleich'],
-		['CorridorEditorMobile', 'shared/corridor-editor/CorridorEditorMobile.svelte', 'vergleich'],
-		['CorridorEditor (Desktop)', 'shared/corridor-editor/CorridorEditor.svelte', 'route'],
-		['CorridorEditorMobile', 'shared/corridor-editor/CorridorEditorMobile.svelte', 'route']
-	];
-	for (const [name, datei, kontext] of faelle) {
-		test(`${name}, context="${kontext}": genau ein ⓘ „wertebereiche“ mit Knopfname`, async () => {
-			const Komp = await lade(datei);
-			const props =
-				kontext === 'vergleich'
-					? { context: 'vergleich', ...corridorPropsAus(neuerFeldsatz()) }
-					: { context: 'route', trip: TRIP, createMode: true };
-			// Issue #2727: kein Context mehr — der Reiter liest nur seine Props (corridorPropsAus).
-			const html = renderKomponente(Komp, props);
-			const tags = ii(html, 'wertebereiche');
-			assert.equal(tags.length, 1, `${name} (${kontext}): ⓘ fehlt oder doppelt — ${tags.length}`);
-			assert.match(attribut(tags[0], 'aria-label') ?? '', /Wertebereich/);
-			// Das ⓘ steht an der Ueberschrift (Eyebrow „Wertebereiche…“), vor dem Lade-/Inhaltstext.
-			const text = sichtbarerText(html);
-			assert.match(text, /Wertebereiche/);
-			const ladePos = text.indexOf('Lade Metriken');
-			assert.ok(ladePos === -1 || text.indexOf("ⓘ") < ladePos, 'ⓘ steht nicht an der Ueberschrift');
-		});
-	}
-});
 
 // ─────────────────────────────────────────────────────────────────────────────
 // AC-9

@@ -25,7 +25,7 @@ const here = dirname(fileURLToPath(import.meta.url));
 // __tests__ -> weather-metrics-tab -> shared
 const WEATHER_METRICS_TAB = join(here, '..', '..', 'WeatherMetricsTab.svelte');
 // __tests__ -> weather-metrics-tab -> shared -> corridor-editor
-const MODULE_SPECIFIER = '../../corridor-editor/compareMetricCatalogLoader.ts';
+const MODULE_SPECIFIER = '../../wetter-tab/compareMetricCatalogLoader.ts';
 const REPO_ROOT = resolve(here, ...Array(7).fill('..'));
 
 interface Level {
@@ -48,7 +48,7 @@ async function loadDerive(): Promise<DeriveFn> {
 	if (typeof fn !== 'function') {
 		assert.fail(
 			'#1911 FAIL: `deriveThunderThresholdLevels` ist in ' +
-				'shared/corridor-editor/compareMetricCatalogLoader.ts nicht exportiert -- ' +
+				'shared/wetter-tab/compareMetricCatalogLoader.ts nicht exportiert -- ' +
 				'die Ableitungsfunktion (Spec Implementation Details Punkt 3) fehlt noch.'
 		);
 	}
@@ -75,7 +75,7 @@ async function loadFromCatalog(): Promise<FromCatalogFn> {
 	if (typeof fn !== 'function') {
 		assert.fail(
 			'#1911 Runde-2-FAIL: `thunderThresholdLevelsFromCatalog` ist in ' +
-				'shared/corridor-editor/compareMetricCatalogLoader.ts nicht exportiert -- ' +
+				'shared/wetter-tab/compareMetricCatalogLoader.ts nicht exportiert -- ' +
 				'die Naht Katalog-Suche + Ableitung fehlt noch.'
 		);
 	}

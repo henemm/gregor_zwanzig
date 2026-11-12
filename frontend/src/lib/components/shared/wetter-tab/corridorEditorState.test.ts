@@ -2,7 +2,7 @@
 //
 // Ausführung:
 //   cd frontend && node --import ./test-lib-loader.mjs --experimental-strip-types --test \
-//     src/lib/components/shared/corridor-editor/corridorEditorState.test.ts
+//     src/lib/components/shared/wetter-tab/corridorEditorState.test.ts
 
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';

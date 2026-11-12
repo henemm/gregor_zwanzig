@@ -9,7 +9,7 @@ import {
 	toggleCompareMetricKeyFromState
 } from '../weather-metrics-tab/compareMetricOrder.ts';
 import { flushPendingWeatherMetricsSave } from '../weather-metrics-tab/weatherMetricsCompareSave.ts';
-import { COMPARE_METRIC_KEYS } from '../corridor-editor/corridorEditorState.ts';
+import { COMPARE_METRIC_KEYS } from '../wetter-tab/corridorEditorState.ts';
 import type { ComparePreset } from '../../../types.ts';
 
 describe('Issue #1359 Scheibe 1: Reihenfolge-Abschnitt im Vergleich', () => {

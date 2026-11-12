@@ -98,9 +98,9 @@ Diese Scheibe:
   Zählbefehl) und prüft, dass die drei Kategorie-Summen 27/6/14 ergeben.
   Verhindert, dass diese Dokumentation und die Ratsche künftig auseinanderlaufen.
 
-## Anhang: AC-2-Endbilanz — alle 48 Ratschen-Einträge (Stand `3cece096`, S6g live; seit #2287 ohne `alarmeTabSections.ts:42`; seit #1743 mit `WetterMetrikenVersandPanel.svelte:66`; seit #1721 mit `WeatherMetricsTab.svelte:2042`; AlarmeTab-Zeilen seit #1895 S3b1 und S3b2 nachgemessen)
+## Anhang: AC-2-Endbilanz — alle 26 Ratschen-Einträge (Stand `3cece096`, S6g live; seit #2287 ohne `alarmeTabSections.ts:42`; seit #1743 mit `WetterMetrikenVersandPanel.svelte:66`; seit #1721 mit `WeatherMetricsTab.svelte:2042`; AlarmeTab-Zeilen seit #1895 S3b1 und S3b2 nachgemessen; seit #2794 S3a Teil-PR 4a ohne die 22 Einträge von `CorridorEditor.svelte`/`CorridorEditorMobile.svelte` (Oberfläche entfernt), Korridor-Logik unter `wetter-tab/`)
 
-### FACHLICH (28 — echter Sachunterschied, bleibt dauerhaft)
+### FACHLICH (14 — echter Sachunterschied, bleibt dauerhaft)
 
 | Datei:Zeile | Grund |
 |---|---|
@@ -115,47 +115,25 @@ Diese Scheibe:
 | `versand-tab/vtBriefingChannelsText.ts:29` | Einleitungstext: Etappen-Tabelle vs. Orts-Tabelle — inhaltlich verschiedene Datenform |
 | `versand-tab/VTSchedulePlan.svelte:57` | `isRoute`-Ableitung — Mehrtages-Trend-Karte existiert nur im Trip |
 | `alarme-tab/alarmeTabSections.ts:27` | Radar-Abschnitt nur im Vergleich |
-| `corridor-editor/corridorEditorState.ts:331` | Markieren-Schalter bei Tages-Summen nur im Trip gesperrt |
+| `wetter-tab/corridorEditorState.ts:331` | Markieren-Schalter bei Tages-Summen nur im Trip gesperrt |
 | `weather-metrics-tab/weatherMetricsTabSections.ts:72` | SMS-Schwellen/Report-Config nur im Trip |
 | `weather-metrics-tab/weatherMetricsTabSections.ts:73` | Stundenverlauf-Abschnitt nur im Vergleich |
-| `corridor-editor/CorridorEditor.svelte:147` | `isFreshCompareCreate` — Profil-Prefill nur bei frischer Vergleichs-Anlage, kein Trip-Äquivalent (seit #2347 S4 AC-20 belegt die Trip-Anlage über einen eigenen `createMode`-Effekt mit `buildRoutePrefillRows` vor — ohne context-Weiche; die Zeilennummern ab `:332` sind dadurch um 26 verschoben) |
-| `corridor-editor/CorridorEditor.svelte:373` | `add()` — `addCompareRow`/`addRow` unterscheiden sich strukturell (CompareMetricDef vs. RouteMetricDef) |
-| `corridor-editor/CorridorEditor.svelte:407` | Ladefehler-Banner, gebunden an den Compare-Katalog-Ladepfad |
-| `corridor-editor/CorridorEditor.svelte:420` | Ladezustand „Lade Metriken…", gebunden an den Compare-Katalog-Ladepfad |
-| `corridor-editor/CorridorEditor.svelte:423` | Ladezustand „Lade Metriken…", gebunden an den Route-Zusatzmetriken-Ladepfad |
-| `corridor-editor/CorridorEditor.svelte:447` | Rückfall-Warnung auf die 6 Standardmetriken, nur route-spezifisch |
-| `corridor-editor/CorridorEditor.svelte:576` | AC-13-Neutralitäts-Hinweis — Ranking-Konzept existiert nur im Vergleich |
-| `corridor-editor/CorridorEditorMobile.svelte:145` | Mobil-Zwilling von `CorridorEditor.svelte:147` |
-| `corridor-editor/CorridorEditorMobile.svelte:285` | Mobil-Zwilling von `CorridorEditor.svelte:373` |
-| `corridor-editor/CorridorEditorMobile.svelte:348` | Mobil-Zwilling von `CorridorEditor.svelte:407` |
-| `corridor-editor/CorridorEditorMobile.svelte:361` | Mobil-Zwilling von `CorridorEditor.svelte:420` |
-| `corridor-editor/CorridorEditorMobile.svelte:364` | Mobil-Zwilling von `CorridorEditor.svelte:423` |
-| `corridor-editor/CorridorEditorMobile.svelte:381` | Mobil-Zwilling von `CorridorEditor.svelte:447` |
-| `corridor-editor/CorridorEditorMobile.svelte:502` | Mobil-Zwilling von `CorridorEditor.svelte:576` |
 
-### DARSTELLUNG (5 — nur Beschriftung/Sichtbarkeit, kein Datenweg-Unterschied)
+### DARSTELLUNG (3 — nur Beschriftung/Sichtbarkeit, kein Datenweg-Unterschied)
 
 | Datei:Zeile | Grund |
 |---|---|
 | `AlarmeTab.svelte:571` | Kurzstil-Schalter — im Trip steht derselbe Schalter im Versand-Reiter (#1260 S5), reine Platzierung |
-| `corridor-editor/CorridorEditor.svelte:429` | Überschrift-/Lauftext-Wahl, keine Datenverzweigung |
-| `corridor-editor/CorridorEditorMobile.svelte:369` | Mobil-Zwilling von `CorridorEditor.svelte:429` |
 | `versand-tab/VTSchedulePlan.svelte:84` | Erklärtext „wie beim Trip" — reine Zusatzerklärung, keine Funktionsänderung |
 | `alarme-tab/alarmeTabSections.ts:38` | nur Überschrifttext |
 
-### HERKUNFT (15 — AC-2-Abweichung, bleibt bestehen, siehe Begründung oben)
+### HERKUNFT (9 — AC-2-Abweichung, bleibt bestehen, siehe Begründung oben)
 
 | Datei:Zeile | Warum es (noch) eine HERKUNFT-Verzweigung ist | Warum sie bleibt |
 |---|---|---|
 | `versandVergleichSpeicherung.ts:244` | Erzeugungs-Prädikat: nur aktiv, wenn `context === 'vergleich'` | Gate für einen strukturell anderen Persistenz-Endpoint (Compare-Preset) |
-| `corridor-editor/wertebereicheVergleichSpeicherung.ts:209` | dito für Wertebereiche | dito |
+| `wetter-tab/wertebereicheVergleichSpeicherung.ts:209` | dito für Wertebereiche | dito |
 | `weather-metrics-tab/weatherMetricsCompareSave.ts:556` | dito für Wetter-Metriken (#2794 Teil 3 F006: um 5 Zeilen verschoben, Weiche unverändert) | dito **und** zugleich die von S4 AC-13 geforderte Hydration-Barriere — AC-13 hat Vorrang (siehe AC-3) |
-| `corridor-editor/CorridorEditor.svelte:190` | Katalog-Guard: lädt `loadCompareMetricCatalog()` nur im Vergleich | Mirror-Guard zu `:222`; Auflösung bräuchte injizierte Lade-Funktion statt `context`-Schalter |
-| `corridor-editor/CorridorEditor.svelte:222` | Katalog-Guard: lädt `loadRouteExtraMetricDefs()` nur im Trip | dito, Kehrseite von `:190` |
-| `corridor-editor/CorridorEditorMobile.svelte:173` | Mobil-Zwilling von `:190` | dito |
-| `corridor-editor/CorridorEditorMobile.svelte:198` | Mobil-Zwilling von `:222` | dito |
-| `corridor-editor/CorridorEditor.svelte:332` | `maybeSchedule()`: wählt zwischen `vergleichSpeicherung.aenderungMelden()` und `saveController.schedule(buildSaveFn())` | Genau der in AC-2 benannte Beispielfall „Vergleichs-Speicherweg vs. `saveController.schedule`" — Auflösung bräuchte eine injizierte `SaveFn`, eigene Architekturentscheidung |
-| `corridor-editor/CorridorEditorMobile.svelte:254` | Mobil-Zwilling von `:332` | dito |
 | `VersandTab.svelte:360` | Wirkort-Guard des Selbst-Speicher-Effekts — läuft nur im Vergleich | Effekt existiert nur für den Compare-Speicherweg; Trip speichert über einen anderen Mechanismus außerhalb dieser Datei |
 | `WeatherMetricsTab.svelte:594` | Ladepfad-Zwilling: Hydration-Guard nur für `route` | Trip und Vergleich laden ihre Kataloge über verschiedene Wege; echte Vereinheitlichung ist eine Ladeschicht-Frage, nicht Teil von S6 |
 | `WeatherMetricsTab.svelte:609` | Ladepfad-Zwilling: Katalog-Nachlade-Guard nur für `route` | dito |
@@ -163,12 +141,20 @@ Diese Scheibe:
 | `WeatherMetricsTab.svelte:651` | Ladepfad-Zwilling: Katalog-Nachlade-Guard nur für `vergleich` | dito |
 | `WetterMetrikenVersandPanel.svelte:66` | #1743: Versand-Inhalt nach Herkunft — Trip-Hub über `BriefingScheduleTab`, Vergleich und Trip-Anlegen über den EINEN `VersandTab` | ersetzt die Direkt-Mounts in TripTabs/CompareTabs/Anlege-Seiten |
 
-**Summe:** 28 FACHLICH + 5 DARSTELLUNG + 15 HERKUNFT = **48**, deckungsgleich
+**Summe:** 14 FACHLICH + 3 DARSTELLUNG + 9 HERKUNFT = **26**, deckungsgleich
 mit `EINGEFROREN_SOLL_ANZAHL` (Summenzeile in #2727 korrigiert — sie nannte 14 / 46;
 Abgleich der `context ===`-Zweige gegen die Soll-Liste bestanden, kein Zweig entfällt;
-#1721 hob danach FACHLICH 27 → 28).
+#1721 hob danach FACHLICH 27 → 28; #2794 S3a Teil-PR 4a senkte sie mit dem entfernten
+Corridor-Editor auf 14 / 3 / 9 = 26).
 
 ## Changelog
+
+- 2026-11-12: #2794 S3a Teil-PR 4a (AC-31) — `CorridorEditor.svelte` und
+  `CorridorEditorMobile.svelte` sind gelöscht; ihre 22 Einträge entfallen als ENTFERNTE
+  Verzweigungen (FACHLICH −14, DARSTELLUNG −2, HERKUNFT −6). Die Logikmodule zogen nach
+  `wetter-tab/` um (`corridorEditorState.ts:331`, `wertebereicheVergleichSpeicherung.ts:209`,
+  Zeilen und Bedingungstext unverändert, nur der Pfad). Summe 48 → 26 (Ratsche und
+  Doc-Compliance-Tests nachgezogen).
 
 - 2026-11-02: #1721 — `WeatherMetricsTab.svelte:2042` (Nacht-Stundentabelle-Schalter nur im
   Trip) neu als FACHLICH; die fünf übrigen WeatherMetricsTab-Einträge nur verschoben

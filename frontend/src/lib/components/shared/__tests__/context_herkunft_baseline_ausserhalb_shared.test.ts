@@ -45,11 +45,11 @@ const ZAEHLBEFEHL =
 /** Eingefrorener Ist-Stand vom 2026-09-21 (vor der S6b-Umstellung), als
  *  Literal — kein Verzeichnis-Scan auf der Soll-Seite (sonst vakuum-gruen,
  *  Memory `ratsche_leeren_macht_den_abhaengigen_test_vakuum_gruen`). */
-const BASELINE: readonly string[] = [
-	'lib/components/organisms/MetricsEditorContextBar.svelte:53',
-	'lib/components/organisms/MetricsEditorContextBar.svelte:60',
-	'lib/components/organisms/MetricsEditorContextBar.svelte:94'
-];
+// #2794 S3a Teil-PR 4a (AC-31): die drei Fundstellen lagen allein in der
+// Kontext-Leiste `organisms/MetricsEditorContextBar.svelte` (ohne Mount, entfernt).
+// Die Baseline sinkt damit auf null — jede neue Verzweigung ausserhalb von
+// `shared/` ist ab jetzt ein Befund.
+const BASELINE: readonly string[] = [];
 
 function messeIstListe(): string[] {
 	let ausgabe = '';
@@ -72,18 +72,18 @@ function messeIstListe(): string[] {
 describe('AC-6: ausserhalb von shared/ entsteht keine neue HERKUNFT-Verzweigung', () => {
 	test('Messflaeche ist ueberhaupt erreichbar (Schutz gegen falsches cwd)', () => {
 		assert.ok(
-			existsSync(join(SRC, 'lib', 'components', 'organisms', 'MetricsEditorContextBar.svelte')),
+			existsSync(join(SRC, 'lib', 'components', 'organisms', 'index.ts')),
 			`SRC zeigt nicht auf frontend/src (aufgeloest: ${SRC})`
 		);
 	});
 
-	test('die Aussen-Baseline ist unveraendert — 3 Fundstellen, alle in der Kontext-Leiste', () => {
+	test('die Aussen-Baseline ist unveraendert — keine Fundstelle (seit #2794 Teil-PR 4a)', () => {
 		const ist = messeIstListe();
 		assert.deepStrictEqual(
 			[...ist].sort(),
 			[...BASELINE].sort(),
 			'AC-6 FAIL: die Aussen-Baseline hat sich veraendert.\n' +
-				`  Soll (eingefroren, 3): ${BASELINE.join(', ')}\n` +
+				`  Soll (eingefroren, ${BASELINE.length}): ${BASELINE.join(', ')}\n` +
 				`  Ist (Zaehlbefehl, ${ist.length}): ${ist.join(', ') || '—'}\n` +
 				'  Eine Umstellung darf eine HERKUNFT-Verzweigung ENTFERNEN, nicht aus\n' +
 				'  shared/ heraus in eine Aufrufstelle VERSCHIEBEN.'

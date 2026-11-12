@@ -85,20 +85,8 @@ describe('W1 / AC-1: Fremdaenderung ueberlebt ein Speichern aus Reiter B nach de
 		assert.equal(a.ctl.state, 'conflict', 'AC-2: „Nochmal speichern" bleibt nach dem Speichern in Reiter B sichtbar');
 	});
 
-	test('B = Wertebereiche: dieselbe Zusicherung (sendet heute die GANZE display_config zurueck)', async () => {
-		const a = P.neuerAufbau();
-		await konfliktInReiterA(a);
-
-		const wb = await P.wertebereicheReiter(a);
-		wb.speichern();
-		await P.fertig(a.ctl);
-
-		assert.deepEqual(metrikenAufServer(), FREMDE_METRIKEN, 'Wertebereiche hat display_config.metrics zurueckgeschrieben');
-		const letzter = puts().at(-1)!;
-		assert.equal(letzter.status, 412, 'der Wertebereiche-PUT muss abgelehnt werden');
-		assert.ok(letzter.ifMatch, 'der Wertebereiche-PUT muss If-Match tragen');
-		assert.equal(a.ctl.state, 'conflict');
-	});
+	// #2794 S3a Teil-PR 4a (AC-31): „B = Wertebereiche" entfaellt — der CorridorEditor (Schreiber
+	// von `corridors`) ist entfernt; die Grenzen schreibt der Reiter Wetter.
 
 	test('B = Alarme (derselbe Reiter noch einmal): auch das aendert nichts am Server', async () => {
 		const a = P.neuerAufbau();

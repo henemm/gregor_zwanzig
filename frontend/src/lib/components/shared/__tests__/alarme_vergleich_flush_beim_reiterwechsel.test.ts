@@ -9,7 +9,7 @@
 // Prüfstand nicht ausführbar (kein DOM, SSR führt keine Ereignisse aus).
 // Die Entscheidung „wann wird vor dem Wechsel gesichert" liegt deshalb in
 //
-//   shared/corridor-editor/wertebereicheVergleichSpeicherung.ts (seit #2276 S3
+//   shared/wetter-tab/wertebereicheVergleichSpeicherung.ts (seit #2276 S3
 //   generisch fuer alle selbst speichernden Reiter, vorher reiter-spezifisch)
 //   sichereSelbstSpeichererVorReiterwechsel(aktiverReiter: string, zielReiter: string,
 //                                           saveController?: SaveStatus): Promise<void>
@@ -36,7 +36,7 @@ import { hydrateAlarmFieldsFromPreset } from '../../compare/compareHubHydration.
 import { erstelleAlarmeVergleichSpeicherung } from '../alarmeVergleichSpeicherung.ts';
 // Issue #2276 S3: der reiter-spezifische Guard ist im generischen, listenbasierten
 // Flush-Guard aufgegangen — die S2-Zusicherungen gelten fuer ihn unveraendert.
-import { sichereSelbstSpeichererVorReiterwechsel } from '../corridor-editor/wertebereicheVergleichSpeicherung.ts';
+import { sichereSelbstSpeichererVorReiterwechsel } from '../wetter-tab/wertebereicheVergleichSpeicherung.ts';
 
 const PRESET_ID = 'cp-2276-reiter';
 

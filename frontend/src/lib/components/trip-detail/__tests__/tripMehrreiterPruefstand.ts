@@ -40,8 +40,6 @@ const KOMPONENTEN = join(FRONTEND, 'src/lib/components');
 export const DATEI = {
 	alarme: join(KOMPONENTEN, 'shared/AlarmeTab.svelte'),
 	wetterMetriken: join(KOMPONENTEN, 'shared/WeatherMetricsTab.svelte'),
-	wertebereiche: join(KOMPONENTEN, 'shared/corridor-editor/CorridorEditor.svelte'),
-	wertebereicheMobil: join(KOMPONENTEN, 'shared/corridor-editor/CorridorEditorMobile.svelte'),
 	versand: join(KOMPONENTEN, 'trip-detail/BriefingScheduleTab.svelte'),
 	kopf: join(KOMPONENTEN, 'trip-detail/TripHeader.svelte'),
 	tabs: join(KOMPONENTEN, 'trip-detail/TripTabs.svelte'),
@@ -401,30 +399,8 @@ export async function versandReiter(a: Aufbau): Promise<{
 	};
 }
 
-/** Wertebereiche-Reiter (CorridorEditor, route, Desktop). */
-export async function wertebereicheReiter(
-	a: Aufbau,
-	/** true = `CorridorEditorMobile.svelte` (zweiter Schreibweg, gleiche Nutzlast-Regel) */
-	mobil = false
-): Promise<{
-	inst: Instanz;
-	/** Den Speicherweg des Reiters ausloesen (Controller-`schedule` der echten `buildSaveFn`). */
-	speichern(): void;
-}> {
-	const inst = await bauen(mobil ? DATEI.wertebereicheMobil : DATEI.wertebereiche, {
-		...gemeinsam(a),
-		context: 'route',
-		createMode: false
-	});
-	return {
-		inst,
-		speichern() {
-			const build = inst.u.buildSaveFn as () => (init?: RequestInit) => Promise<void>;
-			if (typeof build !== 'function') throw new Error('Messaufbau: CorridorEditor.buildSaveFn nicht herleitbar');
-			a.ctl.schedule(build());
-		}
-	};
-}
+// #2794 S3a Teil-PR 4a (AC-31): `wertebereicheReiter` (CorridorEditor/CorridorEditorMobile)
+// entfaellt mit der Oberflaeche.
 
 /**
  * Issue #2284 S2 — SCHNITTSTELLE, die der Kopf ab S2 bauen muss (AC-6, AC-8, AC-9, AC-17):
