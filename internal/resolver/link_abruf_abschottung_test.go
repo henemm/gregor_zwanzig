@@ -99,7 +99,9 @@ func TestLinkAbruf_NurHTTPS(t *testing.T) {
 	}
 }
 
-// AC-2: Ein Redirect auf einen Host ausserhalb der Liste wird nicht verfolgt.
+// AC-2: Ein Redirect auf einen Host ausserhalb der Liste wird nicht verfolgt;
+// sein Ziel wird nur als Text ausgewertet (Koordinaten im Ziel-URL, z. B. bei
+// einer Einwilligungsseite mit dem Kartenziel im Parameter).
 func TestLinkAbruf_RedirectAufFremdenHostWirdNichtVerfolgt(t *testing.T) {
 	var fremd empfang
 	fremdSrv := zielServer(t, &fremd, nil)
@@ -108,7 +110,8 @@ func TestLinkAbruf_RedirectAufFremdenHostWirdNichtVerfolgt(t *testing.T) {
 	// "localhost" ist hier der erlaubte Link-Host; das Redirect-Ziel 127.0.0.1
 	// ist derselbe Rechner, steht aber nicht auf der Liste.
 	erlaubtSrv := zielServer(t, &erlaubt, func(w http.ResponseWriter, r *http.Request) {
-		http.Redirect(w, r, fremdSrv.URL+"/maps/@47.1,11.1,13z", http.StatusFound)
+		ziel := url.QueryEscape("https://www.google.com/maps/place/X/@47.1,11.1,13z")
+		http.Redirect(w, r, fremdSrv.URL+"/m?continue="+ziel, http.StatusFound)
 	})
 	u, _ := url.Parse(erlaubtSrv.URL)
 	link := "http://localhost:" + u.Port() + "/maps?q=.google."
@@ -117,8 +120,10 @@ func TestLinkAbruf_RedirectAufFremdenHostWirdNichtVerfolgt(t *testing.T) {
 	resolver.ErlaubeHTTPSchema(t)
 	resolver.ErlaubeLoopbackVerbindung(t)
 
-	_, err := resolver.Resolve(link)
-	erwarteNichtAufloesbar(t, link, err)
+	res, err := resolver.Resolve(link)
+	if err != nil || res.Lat < 47.09 || res.Lat > 47.11 || res.Lon < 11.09 || res.Lon > 11.11 {
+		t.Fatalf("Koordinaten aus dem Weiterleitungsziel erwartet (47.1, 11.1), bekam %+v / %v", res, err)
+	}
 	if erlaubt.anzahl() != 1 {
 		t.Fatalf("erlaubter Link: %d Abrufe, erwartet 1", erlaubt.anzahl())
 	}

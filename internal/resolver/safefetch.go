@@ -182,11 +182,17 @@ func newLinkClient(timeout time.Duration) *http.Client {
 	return &http.Client{
 		Timeout:   timeout,
 		Transport: egressTransport{next: transport},
+		// Ein Hop ausserhalb der Liste wird NICHT abgerufen: der Client
+		// liefert die Weiterleitungsantwort selbst zurueck, ihr Ziel wird
+		// hoechstens als Text ausgewertet (followGoogleMapsRedirect).
 		CheckRedirect: func(req *http.Request, via []*http.Request) error {
 			if len(via) >= maxRedirectHops {
 				return fmt.Errorf("%w: zu viele weiterleitungen", errZielGesperrt)
 			}
-			return checkLinkURL(req.URL)
+			if checkLinkURL(req.URL) != nil {
+				return http.ErrUseLastResponse
+			}
+			return nil
 		},
 	}
 }

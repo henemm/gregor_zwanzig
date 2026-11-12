@@ -97,6 +97,17 @@ func followGoogleMapsRedirect(link *url.URL) (string, error) {
 		return "", err
 	}
 	defer resp.Body.Close()
+	// Weiterleitung auf einen Host ausserhalb der Erlaubnisliste (z. B. eine
+	// Einwilligungsseite mit dem eigentlichen Kartenziel im Parameter): nicht
+	// abrufen, nur das Ziel als Text auswerten.
+	if resp.StatusCode >= 300 && resp.StatusCode < 400 {
+		if loc := resp.Header.Get("Location"); loc != "" {
+			if dec, err := url.QueryUnescape(loc); err == nil {
+				return dec, nil
+			}
+			return loc, nil
+		}
+	}
 	return resp.Request.URL.String(), nil
 }
 
