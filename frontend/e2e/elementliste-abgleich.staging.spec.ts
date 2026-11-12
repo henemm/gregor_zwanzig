@@ -30,13 +30,18 @@ import {
 	wiederherzustellendeSprache,
 	stelleSpracheWieder,
 	GEGENRICHTUNG_WURZEL,
+	HUB_ANKER_KOPF,
+	HUB_ANKER_FLAECHE,
+	zaehleAnker,
+	type HubAnker,
 	istGegenrichtung,
-	findeZusaetzliche,
+	werteGegenrichtungAus,
 	ladeRegeln,
 	ladeKontoTexte,
 	werteLaufAus,
 	type Ergebnis,
 	type ListenElement,
+	type OhneHubEintrag,
 	type ZusaetzlichEintrag
 } from './elementliste_abgleich_logik.ts';
 
@@ -67,10 +72,13 @@ async function texteImBereich(page: Page, abschnitt: string): Promise<{ marker: 
  * (`GEGENRICHTUNG_WURZEL`: HubKopf und Reiterfläche), nie `body` — Seitenleiste, BottomNav und
  * SaveIndicator liegen außerhalb und gehören nicht zur Seite.
  */
-async function texteUnterHub(page: Page): Promise<{ marker: boolean; texte: string[] }> {
+async function texteUnterHub(page: Page): Promise<{ anker: HubAnker; texte: string[] }> {
 	await page.evaluate(oeffneDetails, { selektor: GEGENRICHTUNG_WURZEL, alle: true });
 	await page.waitForTimeout(200);
-	return page.evaluate(sichtbareTexte, { selektor: GEGENRICHTUNG_WURZEL, alle: true });
+	// Fix-Loop 3 (F002): Rohwerte je Anker; entscheiden tut pruefeHubAnker (über werteGegenrichtungAus).
+	const anker = await page.evaluate(zaehleAnker, { kopf: HUB_ANKER_KOPF, flaeche: HUB_ANKER_FLAECHE });
+	const { texte } = await page.evaluate(sichtbareTexte, { selektor: GEGENRICHTUNG_WURZEL, alle: true });
+	return { anker, texte };
 }
 
 /** Im Browser: alle `details` unter dem ersten (bzw. jedem) Treffer des Selektors öffnen. */
@@ -182,6 +190,8 @@ test('Elementliste gegen Staging: Bericht je Element (gefunden / abweichend / ni
 	const plan = planeAbgleich({ liste: alle, env: process.env, baseURL });
 	const ergebnisse = new Map<string, Ergebnis>();
 	const zusaetzlich: ZusaetzlichEintrag[] = [];
+	// Gegenrichtungs-Kombinationen ohne Hub-Marker: im Bericht sichtbar, unter --strict/--abnahme rot.
+	const ohneHub: OhneHubEintrag[] = [];
 	// Freigaben, Besitzer und Ausnahmen zuerst lesen: ein ungültiger Eintrag bricht ab, bevor eine Seite lädt.
 	const regeln = ladeRegeln({ freigaben: FREIGABEN, besitzer: BESITZER }, alle);
 	const api = page.request;
@@ -261,7 +271,10 @@ test('Elementliste gegen Staging: Bericht je Element (gefunden / abweichend / ni
 			// ganze Liste (kopf/reiterleiste stehen unter Reiter wetter), unabhängig vom Scope.
 			if (istGegenrichtung(k)) {
 				const hub = await texteUnterHub(page);
-				zusaetzlich.push(...findeZusaetzliche({ ctx: k.ctx, reiter: k.reiter, texte: hub.texte }, alle, regeln.ausnahmen, konto, plan.sprache));
+				// Fehlt Kopf oder Reiterfläche, ist die Seite nur teilweise gelesen: nie still „kein zusaetzlich“, sondern Befund ohneHub.
+				const gegen = werteGegenrichtungAus({ ctx: k.ctx, reiter: k.reiter, anker: hub.anker, texte: hub.texte }, alle, regeln.ausnahmen, konto, plan.sprache);
+				zusaetzlich.push(...gegen.zusaetzlich);
+				if (gegen.ohneHub) ohneHub.push(gegen.ohneHub);
 			}
 		}
 	} finally {
@@ -272,7 +285,7 @@ test('Elementliste gegen Staging: Bericht je Element (gefunden / abweichend / ni
 	}
 
 	// Freigaben, Besitzer, Bericht und Exit (strict UND abnahme aus plan.optionen) bildet die Logik.
-	const { pfade, ende } = werteLaufAus({ plan, ergebnisse, zusaetzlich, regeln, berichtDir: BERICHT_DIR });
+	const { pfade, ende } = werteLaufAus({ plan, ergebnisse, zusaetzlich, ohneHub, regeln, berichtDir: BERICHT_DIR });
 	console.log(`Elementlisten-Abgleich: ${ende.meldung} → ${pfade.json}, ${pfade.md}`);
 	// F005: ein gescheitertes Zurückstellen der Profilsprache lässt den Lauf scheitern (auch ohne --strict).
 	expect(spracheZurueck.ok, spracheZurueck.ok ? '' : spracheZurueck.meldung).toBe(true);

@@ -279,6 +279,15 @@ describe('AC-7: leseBesitzer lehnt Einträge ohne Grund, ohne oder mit ungültig
 	test('unbekannte Ziel-Art ⇒ Fehler', () => {
 		assert.throws(() => L.leseBesitzer(eins({ art: 'seite', grund: 'g', verweis: '#2795' })), /art/);
 	});
+	test('Fix-Loop 2 (Befund 2): Prototyp-Namen als Art ⇒ saubere Parser-Meldung mit Eintrag, kein TypeError', () => {
+		for (const art of ['constructor', 'toString', '__proto__', 'hasOwnProperty', 'valueOf']) {
+			assert.throws(
+				() => L.leseBesitzer(eins({ art, id: 'a.b', grund: 'g', verweis: '#2795' })),
+				(e: unknown) => e instanceof Error && !(e instanceof TypeError) && /^Besitzer 0: „art“/.test(e.message) && e.message.includes(art),
+				`Art „${art}“ muss als unbekannt gemeldet werden`
+			);
+		}
+	});
 });
 
 // ---------------------------------------------------------------- AC-8
@@ -455,11 +464,133 @@ describe('AC-5: Gegenrichtung liest nur [data-seite="hub"], nur normal/ohne Segm
 		const spec = readFileSync(join(FRONTEND, 'e2e/elementliste-abgleich.staging.spec.ts'), 'utf8');
 		assert.match(spec, /GEGENRICHTUNG_WURZEL/);
 		assert.match(spec, /istGegenrichtung\(/);
-		assert.match(spec, /findeZusaetzliche\(/);
+		// Fix-Loop 2 (Befund 1): die Gegenrichtung läuft über werteGegenrichtungAus (prüft den Hub-Marker, ruft findeZusaetzliche).
+		assert.match(spec, /werteGegenrichtungAus\(/);
 		// Fix-Loop 1 (F001): Besitzer wendet werteLaufAus an (Wirkung: elementliste_abgleich_verdrahtung.test.ts).
 		assert.match(spec, /werteLaufAus\(/);
 		assert.match(spec, /elementliste_besitzer\.json/);
 		assert.ok(!/querySelectorAll\(\s*['"]body['"]/.test(spec), 'Gegenrichtung darf nicht body lesen');
+	});
+});
+
+// ---------------------------------------------------------------- Fix-Loop 2, Befund 1 (AC-5): fehlender Hub-Marker nie still grün
+// Fix-Loop 3 (F002): Rohwerte je Anker (Anzahl Treffer im Browser) statt eines einzigen Marker-Booleans.
+const KEIN_ANKER = { kopf: 0, flaeche: 0 };
+const BEIDE_ANKER = { kopf: 1, flaeche: 1 };
+
+describe('Fix-Loop 2 (Befund 1): Gegenrichtung ohne Hub-Marker ist sichtbar und unter --abnahme rot', () => {
+	const elemente = LISTE.filter((e) => e.ctx === 'trip' && e.reiter === 'zustellung');
+	const alleGefunden = () => new Map(elemente.map((e) => [e.id, { status: 'gefunden' as const }]));
+
+	test('ohne Marker: kein zusaetzlich, aber ein Befund „Hub-Marker fehlt“ mit ctx und Reiter', () => {
+		const g = L.werteGegenrichtungAus({ ctx: 'trip', reiter: 'zustellung', anker: KEIN_ANKER, texte: [] }, LISTE, [], [], 'de');
+		assert.deepEqual(g.zusaetzlich, []);
+		assert.ok(g.ohneHub, 'fehlender Hub-Marker muss einen Befund ergeben');
+		assert.equal(g.ohneHub.ctx, 'trip');
+		assert.equal(g.ohneHub.reiter, 'zustellung');
+		assert.match(g.ohneHub.grund, /data-seite="hub"/);
+	});
+	test('mit Marker: kein Befund, zusaetzlich wie findeZusaetzliche', () => {
+		const befund = { ctx: 'trip', reiter: 'zustellung', texte: ['Kanäle', 'Fremd'] };
+		const g = L.werteGegenrichtungAus({ ...befund, anker: BEIDE_ANKER }, LISTE, [], [], 'de');
+		assert.equal(g.ohneHub, null);
+		assert.deepEqual(g.zusaetzlich, L.findeZusaetzliche(befund, LISTE, [], [], 'de'));
+	});
+	test('Bericht: ohne_hub steht im Bericht und im Markdown, Elementliste bleibt vollständig', () => {
+		const g = L.werteGegenrichtungAus({ ctx: 'trip', reiter: 'zustellung', anker: KEIN_ANKER, texte: [] }, LISTE, [], [], 'de');
+		const b = L.baueBericht(elemente, alleGefunden(), [], [g.ohneHub]);
+		assert.equal(b.ohne_hub.length, 1);
+		assert.equal(b.eintraege.length, elemente.length);
+		const md: string = L.berichtAlsMarkdown(b);
+		assert.match(md, /Hub-Marker fehlt/);
+		assert.ok(md.split('\n').some((z) => z.includes('trip') && z.includes('zustellung') && z.includes('data-seite')), 'Kombi fehlt im Markdown');
+		// Besitzer-Anwendung darf den Befund nicht verlieren.
+		assert.equal(L.wendeBesitzerAn(b, []).ohne_hub.length, 1);
+	});
+	test('Exit (Fix-Loop 3, F001/AC-10): nur --abnahme ≠ 0; --strict allein und ohne Flags 0; abschluss nennt den Befund', () => {
+		const g = L.werteGegenrichtungAus({ ctx: 'trip', reiter: 'zustellung', anker: KEIN_ANKER, texte: [] }, LISTE, [], [], 'de');
+		const b = L.baueBericht(elemente, alleGefunden(), [], [g.ohneHub]);
+		assert.equal(L.exitCode(b, { strict: true }), 0, '--strict gilt unverändert (AC-10): ohne_hub ist ein Abnahme-Thema');
+		assert.notEqual(L.exitCode(b, { strict: false, abnahme: true }), 0);
+		assert.notEqual(L.exitCode(b, { strict: true, abnahme: true }), 0);
+		assert.equal(L.exitCode(b, { strict: false }), 0);
+		const strict = L.abschluss(b, elemente, { strict: true });
+		assert.equal(strict.exit, 0);
+		assert.match(strict.meldung, /Hub-Marker fehlt 1/, 'der Befund bleibt auch unter --strict sichtbar');
+		const ende = L.abschluss(b, elemente, { strict: false, abnahme: true });
+		assert.notEqual(ende.exit, 0);
+		assert.match(ende.meldung, /Hub-Marker fehlt 1/);
+	});
+	test('Fix-Loop 3 (F001): --strict mit ohne_hub UND abweichend bleibt rot (strict-Regel unverändert)', () => {
+		const g = L.werteGegenrichtungAus({ ctx: 'trip', reiter: 'zustellung', anker: KEIN_ANKER, texte: [] }, LISTE, [], [], 'de');
+		const erg = alleGefunden();
+		erg.set(elemente[0].id, { status: 'abweichend' as const, ist: 'x' } as never);
+		const b = L.baueBericht(elemente, erg, [], [g.ohneHub]);
+		assert.notEqual(L.exitCode(b, { strict: true }), 0);
+	});
+	test('mit Marker und ohne Abweichung: Exit 0 unter --strict und --abnahme', () => {
+		const g = L.werteGegenrichtungAus({ ctx: 'trip', reiter: 'zustellung', anker: BEIDE_ANKER, texte: ['Kanäle'] }, LISTE, [], [], 'de');
+		const b = L.baueBericht(elemente, alleGefunden(), g.zusaetzlich, g.ohneHub ? [g.ohneHub] : []);
+		assert.equal(L.exitCode(b, { strict: true, abnahme: true }), 0);
+	});
+});
+
+// ---------------------------------------------------------------- Fix-Loop 3, F002 (AC-5): beide Hub-Anker Pflicht
+describe('Fix-Loop 3 (F002): Gegenrichtung braucht Kopf UND Reiterfläche, sonst ohne_hub mit dem fehlenden Anker', () => {
+	test('Selektoren: Kopf = Hub mit Abschnitt kopf, Fläche = Hub ohne Abschnitt kopf', () => {
+		assert.equal(L.HUB_ANKER_KOPF, '[data-seite="hub"][data-abschnitt="kopf"]');
+		assert.equal(L.HUB_ANKER_FLAECHE, '[data-seite="hub"]:not([data-abschnitt="kopf"])');
+	});
+	test('pruefeHubAnker: beide vorhanden ⇒ null; je fehlender Anker ein Grund, der ihn nennt', () => {
+		assert.equal(L.pruefeHubAnker({ kopf: 1, flaeche: 1 }), null);
+		assert.equal(L.pruefeHubAnker({ kopf: 1, flaeche: 3 }), null);
+		const ohneFlaeche: string = L.pruefeHubAnker({ kopf: 1, flaeche: 0 });
+		assert.ok(ohneFlaeche, 'fehlende Reiterfläche muss einen Grund ergeben');
+		assert.match(ohneFlaeche, /Reiterfläche/);
+		assert.ok(ohneFlaeche.includes(L.HUB_ANKER_FLAECHE));
+		assert.ok(!/Kopf/.test(ohneFlaeche), 'nur der fehlende Anker wird genannt');
+		const ohneKopf: string = L.pruefeHubAnker({ kopf: 0, flaeche: 1 });
+		assert.match(ohneKopf, /Kopf/);
+		assert.ok(ohneKopf.includes(L.HUB_ANKER_KOPF));
+		assert.ok(!/Reiterfläche/.test(ohneKopf));
+		const keiner: string = L.pruefeHubAnker({ kopf: 0, flaeche: 0 });
+		assert.match(keiner, /Kopf/);
+		assert.match(keiner, /Reiterfläche/);
+		assert.match(keiner, /Hub-Marker fehlt/);
+	});
+	test('werteGegenrichtungAus: Kopf da, Reiterfläche fehlt ⇒ kein zusaetzlich, ohne_hub nennt die Reiterfläche', () => {
+		// Teilverlust: der Kopf liefert Texte, die Reiterfläche fehlt — darf nicht still als „geprüft“ gelten.
+		const g = L.werteGegenrichtungAus({ ctx: 'orte', reiter: 'wetter', anker: { kopf: 1, flaeche: 0 }, texte: ['Fremd-Text im Kopf'] }, LISTE, [], [], 'de');
+		assert.deepEqual(g.zusaetzlich, []);
+		assert.ok(g.ohneHub);
+		assert.equal(g.ohneHub.ctx, 'orte');
+		assert.equal(g.ohneHub.reiter, 'wetter');
+		assert.match(g.ohneHub.grund, /Reiterfläche/);
+		assert.match(g.ohneHub.grund, /data-seite="hub"/);
+	});
+	test('werteGegenrichtungAus: Reiterfläche da, Kopf fehlt ⇒ ohne_hub nennt den Kopf', () => {
+		const g = L.werteGegenrichtungAus({ ctx: 'trip', reiter: 'wetter', anker: { kopf: 0, flaeche: 1 }, texte: ['Kanäle'] }, LISTE, [], [], 'de');
+		assert.deepEqual(g.zusaetzlich, []);
+		assert.match(g.ohneHub.grund, /Kopf/);
+		assert.match(g.ohneHub.grund, /data-abschnitt="kopf"/);
+	});
+	test('Staging-Spec zählt beide Anker im Browser und reicht sie durch (doc-compliance-test)', () => {
+		// doc-compliance-test: Verdrahtung; die Entscheidung prüft pruefeHubAnker oben, die Wirkung der Staging-Lauf.
+		const spec = readFileSync(join(FRONTEND, 'e2e/elementliste-abgleich.staging.spec.ts'), 'utf8');
+		assert.match(spec, /HUB_ANKER_KOPF/);
+		assert.match(spec, /HUB_ANKER_FLAECHE/);
+		assert.match(spec, /anker: hub\.anker/);
+		assert.ok(!/marker: hub\.marker/.test(spec), 'ein einziger Marker-Boolean verliert die Reiterfläche still');
+	});
+	test('HubKopf trägt den Kopf-Anker, TripTabs/CompareTabs die Flächen-Wurzel ohne Abschnitt kopf (doc-compliance-test)', () => {
+		// doc-compliance-test: Attribut-Präsenz der Anker; Wirkung belegt der Staging-Lauf.
+		const kopf = readFileSync(join(FRONTEND, 'src/lib/components/shared/hub-kopf/HubKopf.svelte'), 'utf8');
+		assert.match(kopf, /data-seite="hub" data-abschnitt="kopf"/);
+		for (const f of ['src/lib/components/trip-detail/TripTabs.svelte', 'src/lib/components/compare/CompareTabs.svelte']) {
+			const zeile = readFileSync(join(FRONTEND, f), 'utf8').split('\n').find((z) => z.includes('data-seite="hub"'));
+			assert.ok(zeile, `${f}: Hub-Wurzel fehlt`);
+			assert.ok(!zeile.includes('data-abschnitt="kopf"'), `${f}: Flächen-Wurzel darf nicht als Kopf markiert sein`);
+		}
 	});
 });
 

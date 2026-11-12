@@ -58,7 +58,9 @@ export type BerichtEintrag = {
 };
 /** Live sichtbarer Text, der keinem Eintrag, Konto-Text oder keiner Ausnahme entspricht. */
 export type ZusaetzlichEintrag = { id: string; ctx: string; reiter: string; text: string; status: 'zusaetzlich'; besitzer?: BesitzerVerweis };
-export type Bericht = { eintraege: BerichtEintrag[]; zusaetzlich: ZusaetzlichEintrag[]; zaehler: Record<Status, number> };
+/** Gegenrichtungs-Kombination, auf der ein Hub-Anker (Kopf oder Reiterfläche) fehlte: nicht prüfbar, nie still grün. */
+export type OhneHubEintrag = { ctx: string; reiter: string; grund: string };
+export type Bericht = { eintraege: BerichtEintrag[]; zusaetzlich: ZusaetzlichEintrag[]; ohne_hub: OhneHubEintrag[]; zaehler: Record<Status, number> };
 
 const OHNE_ERGEBNIS = 'kein Ergebnis: das Element wurde im Lauf nicht geprüft';
 
@@ -83,7 +85,12 @@ export function filtereScope<E extends { reiter: string; zustand: string }>(elem
  * Bericht über ALLE übergebenen Elemente; fehlendes Ergebnis ⇒ nicht_pruefbar mit Grund. Zusätzliche Texte
  * (Gegenrichtung) stehen in einer eigenen Liste mit eigenem Zähler, nie in `eintraege`.
  */
-export function baueBericht(elemente: ListenElement[], ergebnisse: Map<string, Ergebnis>, zusaetzlich: ZusaetzlichEintrag[] = []): Bericht {
+export function baueBericht(
+	elemente: ListenElement[],
+	ergebnisse: Map<string, Ergebnis>,
+	zusaetzlich: ZusaetzlichEintrag[] = [],
+	ohneHub: OhneHubEintrag[] = []
+): Bericht {
 	const zaehler: Record<Status, number> = { gefunden: 0, abweichend: 0, nicht_pruefbar: 0, freigegeben: 0, zusaetzlich: zusaetzlich.length };
 	const eintraege = elemente.map((e): BerichtEintrag => {
 		const erg: Ergebnis = ergebnisse.get(e.id) ?? { status: 'nicht_pruefbar', grund: OHNE_ERGEBNIS };
@@ -106,8 +113,10 @@ export function baueBericht(elemente: ListenElement[], ergebnisse: Map<string, E
 		if (erg.ist !== undefined) eintrag.ist = erg.ist;
 		return eintrag;
 	});
-	return { eintraege, zusaetzlich: [...zusaetzlich], zaehler };
+	return { eintraege, zusaetzlich: [...zusaetzlich], ohne_hub: ohneHub.map((o) => ({ ...o })), zaehler };
 }
+
+const ohneHubAnzahl = (bericht: Bericht) => (bericht.ohne_hub ?? []).length;
 
 export type Optionen = { strict: boolean; scope: string | null; abnahme: boolean };
 
@@ -118,10 +127,13 @@ export function herrenlos(bericht: Bericht): number {
 }
 
 /**
- * Ohne Flags immer 0. --strict: ≠ 0, sobald etwas abweicht oder nicht prüfbar ist (freigegeben und
- * zusaetzlich zählen nicht). --abnahme: ≠ 0, sobald eine Abweichung keinen Besitzer hat.
+ * Ohne Flags immer 0. --strict (unverändert, AC-10): ≠ 0, sobald etwas abweicht oder nicht prüfbar ist
+ * (freigegeben, zusaetzlich und ohne_hub zählen nicht). --abnahme: ≠ 0, sobald eine Abweichung keinen
+ * Besitzer hat oder auf einer Gegenrichtungs-Kombination ein Hub-Anker fehlte (Gegenrichtung nicht prüfbar,
+ * nie still grün). ohne_hub steht unabhängig davon immer im Bericht.
  */
 export function exitCode(bericht: Bericht, opt: { strict: boolean; abnahme?: boolean }): number {
+	if (opt.abnahme && ohneHubAnzahl(bericht) > 0) return 1;
 	if (opt.strict && bericht.zaehler.abweichend + bericht.zaehler.nicht_pruefbar > 0) return 1;
 	if (opt.abnahme && herrenlos(bericht) > 0) return 1;
 	return 0;
@@ -151,6 +163,10 @@ export function berichtAlsMarkdown(bericht: Bericht): string {
 	zeilen.push('', '## Zusätzlich (live sichtbar, ohne Eintrag)', '', '| id | Kontext | Reiter | Text | Besitzer |', '|---|---|---|---|---|');
 	for (const x of bericht.zusaetzlich) {
 		zeilen.push(`| ${zelle(x.id)} | ${zelle(x.ctx)} | ${zelle(x.reiter)} | ${zelle(x.text)} | ${besitzerZelle(x.besitzer)} |`);
+	}
+	if (ohneHubAnzahl(bericht) > 0) {
+		zeilen.push('', `## Gegenrichtung nicht prüfbar: Hub-Marker fehlt (${ohneHubAnzahl(bericht)})`, '', '| Kontext | Reiter | Grund |', '|---|---|---|');
+		for (const o of bericht.ohne_hub) zeilen.push(`| ${zelle(o.ctx)} | ${zelle(o.reiter)} | ${zelle(o.grund)} |`);
 	}
 	return zeilen.join('\n') + '\n';
 }
@@ -422,6 +438,31 @@ export function wendeFreigabenAn(elemente: ListenElement[], ergebnisse: Map<stri
 
 /** Wurzel der Gegenrichtung: alle Hub-Container (Kopf und Reiterfläche), nie `body` (Seitenleiste, BottomNav, SaveIndicator). */
 export const GEGENRICHTUNG_WURZEL = '[data-seite="hub"]';
+/** Anker der Gegenrichtung (Fix-Loop 3, F002): HubKopf und Reiterfläche (TripTabs/CompareTabs-Wurzel, Geschwister des Kopfs). */
+export const HUB_ANKER_KOPF = '[data-seite="hub"][data-abschnitt="kopf"]';
+export const HUB_ANKER_FLAECHE = '[data-seite="hub"]:not([data-abschnitt="kopf"])';
+/** Rohwerte aus dem Browser: Anzahl Treffer je Anker. */
+export type HubAnker = { kopf: number; flaeche: number };
+
+/**
+ * Im Browser (per `page.evaluate(zaehleAnker, { kopf: HUB_ANKER_KOPF, flaeche: HUB_ANKER_FLAECHE })`):
+ * Anzahl Treffer je Hub-Anker. Fix-Runde 4 (F003): hier statt in der Spec, damit die Verdrahtung bewacht ist.
+ * page.evaluate serialisiert die Funktion: keine Modul-Closures, Selektoren nur aus `arg`, Wurzel `document`.
+ */
+export function zaehleAnker(arg: { kopf: string; flaeche: string }, wurzel: ParentNode = document): HubAnker {
+	return { kopf: wurzel.querySelectorAll(arg.kopf).length, flaeche: wurzel.querySelectorAll(arg.flaeche).length };
+}
+
+/**
+ * Beide Anker sind Pflicht: fehlt einer, wäre ein Teil der Seite still nicht gelesen. null = prüfbar,
+ * sonst der Grund mit dem fehlenden Anker.
+ */
+export function pruefeHubAnker(anker: HubAnker): string | null {
+	const fehlt: string[] = [];
+	if (!(anker.kopf > 0)) fehlt.push(`Kopf ${HUB_ANKER_KOPF}`);
+	if (!(anker.flaeche > 0)) fehlt.push(`Reiterfläche ${HUB_ANKER_FLAECHE}`);
+	return fehlt.length === 0 ? null : `Hub-Marker fehlt: ${fehlt.join(' und ')} nicht auf der Seite: Gegenrichtung nicht prüfbar`;
+}
 
 /** Gegenrichtung nur im Zustand normal und ohne Kanal-Segment (Desktop-Lauf). */
 export function istGegenrichtung(k: Kombi): boolean {
@@ -507,6 +548,25 @@ export function findeZusaetzliche(
 	return [...out.values()];
 }
 
+/**
+ * Gegenrichtung einer Kombination aus dem DOM-Befund unter `GEGENRICHTUNG_WURZEL`. Fehlt einer der beiden
+ * Anker (Kopf, Reiterfläche; `pruefeHubAnker`), ist die Gegenrichtung nicht prüfbar: kein `zusaetzlich`,
+ * aber ein Befund `ohneHub` mit dem fehlenden Anker (im Bericht sichtbar, unter --abnahme rot). Sonst wie
+ * `findeZusaetzliche`.
+ */
+export function werteGegenrichtungAus(
+	befund: { ctx: string; reiter: string; anker: HubAnker; texte: string[] },
+	liste: ListenElement[],
+	ausnahmen: Ausnahme[],
+	kontoTexte: string[],
+	sprache: Sprache
+): { zusaetzlich: ZusaetzlichEintrag[]; ohneHub: OhneHubEintrag | null } {
+	const { ctx, reiter } = befund;
+	const grund = pruefeHubAnker(befund.anker);
+	if (grund !== null) return { zusaetzlich: [], ohneHub: { ctx, reiter, grund } };
+	return { zusaetzlich: findeZusaetzliche({ ctx, reiter, texte: befund.texte }, liste, ausnahmen, kontoTexte, sprache), ohneHub: null };
+}
+
 /** Besitzer einer Abweichung: ein Element (id), ein ganzer Abschnitt oder ein zusätzlicher Text (Text/Muster). */
 export type Besitzer =
 	| { art: 'element'; id: string; grund: string; verweis: string }
@@ -536,7 +596,8 @@ export function leseBesitzer(text: string, elemente?: ListenElement[]): Besitzer
 
 /** Ein Besitzer-Eintrag: bekannte Ziel-Art, Pflichtfelder je Art, Grund und gültiger Verweis. */
 function pruefeBesitzer(b: Record<string, unknown>, i: number): Besitzer {
-	const pflicht = PFLICHT_JE_ART[String(b.art)];
+	// Fix-Loop 2 (Befund 2): nur eigene Schlüssel; „constructor“, „toString“, „__proto__“ kämen sonst vom Prototyp.
+	const pflicht = Object.hasOwn(PFLICHT_JE_ART, String(b.art)) ? PFLICHT_JE_ART[String(b.art)] : undefined;
 	if (!pflicht) throw new Error(`Besitzer ${i}: „art“ „${String(b.art)}“ unbekannt (erlaubt: element, abschnitt, zusaetzlich)`);
 	for (const feld of [...pflicht, 'grund', 'verweis']) {
 		if (!nichtLeer(b[feld])) throw new Error(`Besitzer ${i}: „${feld}“ fehlt`);
@@ -572,7 +633,7 @@ export function wendeBesitzerAn(bericht: Bericht, besitzer: Besitzer[]): Bericht
 		const b = besitzer.find((x) => x.art === 'zusaetzlich' && trifftZiel(x, z.ctx, z.reiter, z.text));
 		return b ? { ...z, besitzer: alsVerweis(b) } : { ...z };
 	});
-	return { eintraege, zusaetzlich, zaehler: { ...bericht.zaehler } };
+	return { eintraege, zusaetzlich, ohne_hub: (bericht.ohne_hub ?? []).map((o) => ({ ...o })), zaehler: { ...bericht.zaehler } };
 }
 
 /** Regeln des Laufs: Freigaben, Besitzer und Ausnahmen (aus dem Kontext-Ordner der Elementliste). */
@@ -618,13 +679,20 @@ export async function ladeKontoTexte(get: (pfad: string) => Promise<GetAntwort>,
  * Auswertung nach dem Lauf: Freigaben, Bericht mit Zusätzlich-Liste, Besitzer, Bericht schreiben und
  * Abschluss mit den VOLLSTÄNDIGEN Optionen des Plans (strict und abnahme).
  */
-export function werteLaufAus(arg: { plan: Plan; ergebnisse: Map<string, Ergebnis>; zusaetzlich: ZusaetzlichEintrag[]; regeln: Regeln; berichtDir: string }): {
+export function werteLaufAus(arg: {
+	plan: Plan;
+	ergebnisse: Map<string, Ergebnis>;
+	zusaetzlich: ZusaetzlichEintrag[];
+	ohneHub?: OhneHubEintrag[];
+	regeln: Regeln;
+	berichtDir: string;
+}): {
 	bericht: Bericht;
 	pfade: { json: string; md: string };
 	ende: { exit: number; meldung: string };
 } {
 	const { plan, regeln } = arg;
-	const roh = baueBericht(plan.elemente, wendeFreigabenAn(plan.elemente, arg.ergebnisse, regeln.freigaben), arg.zusaetzlich);
+	const roh = baueBericht(plan.elemente, wendeFreigabenAn(plan.elemente, arg.ergebnisse, regeln.freigaben), arg.zusaetzlich, arg.ohneHub ?? []);
 	const bericht = wendeBesitzerAn(roh, regeln.besitzer);
 	const pfade = schreibeBericht(arg.berichtDir, bericht, { optionen: plan.optionen, sprache: plan.sprache, baseURL: plan.baseURL });
 	return { bericht, pfade, ende: abschluss(bericht, plan.elemente, plan.optionen) };
@@ -774,9 +842,10 @@ export function abschluss(bericht: Bericht, elemente: ListenElement[], opt: { st
 	const z = bericht.zaehler;
 	const exit = exitCode(bericht, opt);
 	const modus = [opt.strict ? ' (strict)' : '', opt.abnahme ? ` (abnahme: ${herrenlos(bericht)} ohne Besitzer)` : ''].join('');
+	const hub = ohneHubAnzahl(bericht) > 0 ? `, Gegenrichtung: Hub-Marker fehlt ${ohneHubAnzahl(bericht)}` : '';
 	return {
 		exit,
-		meldung: `gefunden ${z.gefunden}, abweichend ${z.abweichend}, nicht_pruefbar ${z.nicht_pruefbar}, freigegeben ${z.freigegeben}, zusaetzlich ${z.zusaetzlich}${modus} → Exit ${exit}`
+		meldung: `gefunden ${z.gefunden}, abweichend ${z.abweichend}, nicht_pruefbar ${z.nicht_pruefbar}, freigegeben ${z.freigegeben}, zusaetzlich ${z.zusaetzlich}${hub}${modus} → Exit ${exit}`
 	};
 }
 

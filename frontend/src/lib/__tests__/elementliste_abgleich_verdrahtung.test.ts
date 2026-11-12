@@ -26,9 +26,11 @@ import {
 	leseSprache,
 	DATEN_ABRUF,
 	findeZusaetzliche,
+	werteGegenrichtungAus,
 	ladeRegeln,
 	ladeKontoTexte,
 	werteLaufAus,
+	zaehleAnker,
 	type ListenElement
 } from '../../../e2e/elementliste_abgleich_logik.ts';
 import { starterUmgebung, PLAYWRIGHT_ARGS } from '../../../../scripts/elementliste_abgleich.ts';
@@ -399,6 +401,30 @@ describe('Ganzseite F001: Regeln, Konto-Texte und Auswertung (strict + abnahme) 
 		assert.equal(lauf({ ELEMENTLISTE_STRICT: '1' }, []).ende.exit, 0);
 		assert.equal(lauf({}, []).ende.exit, 0);
 	});
+	test('Fix-Loop 2/3 (Befund 1, F001): werteLaufAus mit Kombi ohne Hub-Marker ⇒ im Bericht; nur --abnahme Exit 1, --strict und ohne Flags 0', () => {
+		const gegen = werteGegenrichtungAus({ ctx: 'trip', reiter: 'zustellung', anker: { kopf: 1, flaeche: 0 }, texte: ['Kanäle'] }, liste, [], [], 'de');
+		const laufOhneHub = (env: Record<string, string>) =>
+			mitDateien({ besitzer: [], ausnahmen: [] }, (d) => {
+				const dir = mkdtempSync(join(tmpdir(), 'abgleich-hub-'));
+				try {
+					const plan = planeAbgleich({ liste, env, baseURL: STAGING });
+					const ohneHub = gegen.ohneHub ? [gegen.ohneHub] : [];
+					const r = werteLaufAus({ plan, ergebnisse: new Map([['w.a', { status: 'gefunden' as const }]]), zusaetzlich: gegen.zusaetzlich, ohneHub, regeln: ladeRegeln(d, liste), berichtDir: dir });
+					return { ...r, json: JSON.parse(readFileSync(r.pfade.json, 'utf8')), md: readFileSync(r.pfade.md, 'utf8') };
+				} finally {
+					rmSync(dir, { recursive: true, force: true });
+				}
+			});
+		const strict = laufOhneHub({ ELEMENTLISTE_STRICT: '1' });
+		assert.equal(strict.ende.exit, 0, `--strict gilt unverändert (AC-10): ${strict.ende.meldung}`);
+		assert.equal(strict.json.ohne_hub.length, 1);
+		assert.equal(strict.json.ohne_hub[0].reiter, 'zustellung');
+		assert.match(strict.md, /Hub-Marker fehlt/);
+		assert.match(strict.md, /Reiterfläche/);
+		assert.equal(laufOhneHub({ ELEMENTLISTE_ABNAHME: '1' }).ende.exit, 1);
+		assert.equal(laufOhneHub({ ELEMENTLISTE_STRICT: '1', ELEMENTLISTE_ABNAHME: '1' }).ende.exit, 1);
+		assert.equal(laufOhneHub({}).ende.exit, 0);
+	});
 	test('werteLaufAus wendet Freigaben an (echte Freigaben-Datei)', () => {
 		const f = JSON.parse(readFileSync(join(KONTEXT, 'elementliste_freigaben.json'), 'utf8')).freigaben[0];
 		const e = el('fg.1', f.abschnitt, 1, 'x', { ctx: f.ctx, reiter: f.reiter, i18n_key: f.i18n_keys[0] });
@@ -439,10 +465,29 @@ describe('Ganzseite F001: Regeln, Konto-Texte und Auswertung (strict + abnahme) 
 		const spec = readFileSync(join(FRONTEND, 'e2e/elementliste-abgleich.staging.spec.ts'), 'utf8');
 		assert.match(spec, /const regeln = ladeRegeln\(\{ freigaben: FREIGABEN, besitzer: BESITZER \}, alle\);/);
 		assert.match(spec, /const konto = await ladeKontoTexte\(\(pfad\) => api\.get\(pfad\), ids\);/);
-		assert.match(spec, /findeZusaetzliche\(\{ ctx: k\.ctx, reiter: k\.reiter, texte: hub\.texte \}, alle, regeln\.ausnahmen, konto, plan\.sprache\)/);
-		assert.match(spec, /werteLaufAus\(\{ plan, ergebnisse, zusaetzlich, regeln, berichtDir: BERICHT_DIR \}\)/);
-		for (const umgehung of [/\babschluss\(/, /\bleseBesitzer\(/, /\bleseAusnahmen\(/, /\bbaueBericht\(/, /\bexitCode\(/]) {
+		// Fix-Loop 2/3 (Befund 1, F002): beide Hub-Anker werden mitgegeben, der Befund ohne Hub landet in ohneHub und geht an werteLaufAus.
+		assert.match(spec, /werteGegenrichtungAus\(\{ ctx: k\.ctx, reiter: k\.reiter, anker: hub\.anker, texte: hub\.texte \}, alle, regeln\.ausnahmen, konto, plan\.sprache\)/);
+		assert.match(spec, /if \(gegen\.ohneHub\) ohneHub\.push\(gegen\.ohneHub\);/);
+		assert.match(spec, /zusaetzlich\.push\(\.\.\.gegen\.zusaetzlich\);/);
+		assert.match(spec, /werteLaufAus\(\{ plan, ergebnisse, zusaetzlich, ohneHub, regeln, berichtDir: BERICHT_DIR \}\)/);
+		for (const umgehung of [/\babschluss\(/, /\bleseBesitzer\(/, /\bleseAusnahmen\(/, /\bbaueBericht\(/, /\bexitCode\(/, /\bfindeZusaetzliche\(/]) {
 			assert.ok(!umgehung.test(spec), `Spec umgeht die Logik: ${umgehung}`);
 		}
+	});
+
+	test('Hub-Anker werden je Selektor gezählt, nicht fest verdrahtet oder vertauscht (doc-compliance-test, F003)', () => {
+		// doc-compliance-test: im Projekt gibt es keinen DOM-Parser (kein jsdom/linkedom/happy-dom), die Zählung
+		// läuft nur im Browser. Geprüft wird darum genau der Quelltext, den page.evaluate in den Browser schickt
+		// (zaehleAnker.toString()), und der Aufruf in der Spec mit beiden Selektoren an der richtigen Stelle.
+		const spec = readFileSync(join(FRONTEND, 'e2e/elementliste-abgleich.staging.spec.ts'), 'utf8');
+		assert.match(spec, /await page\.evaluate\(zaehleAnker, \{ kopf: HUB_ANKER_KOPF, flaeche: HUB_ANKER_FLAECHE \}\)/);
+		assert.ok(!/function zaehleAnker\b/.test(spec), 'Spec darf keine eigene Zählfunktion haben, sie kommt aus der Logik');
+		assert.match(spec, /^\s*zaehleAnker,$/m, 'Spec importiert zaehleAnker aus der Logik');
+		const quelle = zaehleAnker.toString();
+		assert.match(quelle, /\bkopf:\s*wurzel\.querySelectorAll\(arg\.kopf\)\.length\b/, `kopf wird nicht über arg.kopf gezählt: ${quelle}`);
+		assert.match(quelle, /\bflaeche:\s*wurzel\.querySelectorAll\(arg\.flaeche\)\.length\b/, `flaeche wird nicht über arg.flaeche gezählt: ${quelle}`);
+		assert.match(quelle, /wurzel\s*=\s*document\b/, 'Wurzel im Browser muss document sein');
+		// Serialisierbar: nur arg, wurzel und document, keine Modul-Konstanten (HUB_ANKER_*) im Funktionsrumpf.
+		assert.ok(!/HUB_ANKER|GEGENRICHTUNG_WURZEL/.test(quelle), 'Zählfunktion nutzt Modul-Closures');
 	});
 });
