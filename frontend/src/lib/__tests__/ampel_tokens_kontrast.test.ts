@@ -175,3 +175,18 @@ describe('AC-11/K-3: nahe am Mockup, Abweichung nur wo WCAG es verlangt', () => 
 		}
 	}
 });
+
+// #2913 Fix Metrik-Liste, Fix-Runde 1 (F001): „grün: …“ in der Metrik-Zeile ist TEXT (12 px/600), kein Grafik-
+// Element — dafür gilt WCAG-AA 4,5:1, nicht 3:1. --g-ampel-gruen erreicht dunkel nur 3,37:1; die Zeile nutzt den
+// Text-Token --g-ok-fg (eigener Dark-Wert). Fällt er unter 4,5:1 gegen Karte oder Karten-Alt, wird das hier rot.
+const TEXT_MIN = 4.5;
+describe('#2913 Fix Metrik-Liste: grüner Text (--g-ok-fg) >= 4,5:1 je Modus', () => {
+	for (const modus of MODI) {
+		for (const grund of ['g-card', 'g-card-alt']) {
+			test(`--g-ok-fg (${modus}) gegen --${grund} >= ${TEXT_MIN}:1`, () => {
+				const k = kontrast(farbe('g-ok-fg', modus, true), farbe(grund, modus));
+				assert.ok(k >= TEXT_MIN, `--g-ok-fg (${modus}) hat nur ${k.toFixed(2)}:1 gegen --${grund}`);
+			});
+		}
+	}
+});

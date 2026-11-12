@@ -258,6 +258,37 @@ export function gruenZeile(eintrag: AmpelMetrik, eig: MetrikEigenschaften | unde
 	return { art: 'immer', schluessel: 'wetter.gruen.immer', werte: {} };
 }
 
+// ── Untertitel `Einheit · Hinweis` (#2913 Fix Metrik-Liste, AC-5, Mockup Z. ~434) ──
+
+/** Metriken mit eigenem Hinweis im Katalog (`wetter.hinweis.<id>`, Mockup Fassung 3). */
+export const HINWEIS_IDS: readonly string[] = [
+	'temperature',
+	'temperature_night',
+	'wind',
+	'gust',
+	'precipitation',
+	'thunder',
+	'visibility',
+	'cloud_low',
+	'uv_index',
+	'freezing_level',
+	'snowfall_limit',
+	'sunshine'
+];
+
+/** Katalogschluessel des Hinweises: reine Anzeige vor Vorbote vor Metrik-Hinweis; sonst keiner. */
+export function hinweisSchluessel(id: string, eig: MetrikEigenschaften | undefined): string | null {
+	if (eig?.display_only) return 'wetter.untertitel.nur_anzeige';
+	if (eig?.is_precursor) return 'wetter.untertitel.vorbote';
+	return HINWEIS_IDS.includes(id) ? `wetter.hinweis.${id}` : null;
+}
+
+/** Untertitel unter dem Metrik-Namen: `[Einheit, Hinweis]` mit „ · “ verbunden, ohne leere Teile. */
+export function untertitel(id: string, eig: MetrikEigenschaften | undefined, uebersetze: (schluessel: string) => string): string {
+	const k = hinweisSchluessel(id, eig);
+	return [eig?.unit ?? '', k ? uebersetze(k) : ''].filter(Boolean).join(' · ');
+}
+
 export type ErklaerArt = 'normal' | 'gewitter' | 'gewitter_nie' | 'nie' | 'vorbote' | 'anzeige' | 'ohne_grenze';
 
 /** Gewitter: erste Stufe (mittel, hoch), deren Farbe die Alarmstufe erreicht. */

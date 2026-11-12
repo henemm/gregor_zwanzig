@@ -136,13 +136,13 @@ Fertig ist die Scheibe, wenn die Metrik-Liste im Reiter Wetter von Trip und Orts
 - **AC-2:** Given die Karte der Metrik-Liste ist Container (`container-type: inline-size`) / When die Kartenbreite 700 px oder weniger beträgt / Then wechselt die Zeile ins zweizeilige Handy-Layout, bei größerer Kartenbreite bleibt das Desktop-Layout; der Wechsel hängt an der Kartenbreite, nicht an der Viewportbreite, und bei Viewport 390 px ist die Zeile zweizeilig wie im Mockup.
   - Test: Playwright prüft bei Viewport 1024 (Karte ca. 750 px) Desktop-Layout, bei 390 px das Handy-Layout (Spalten `40px 1fr`) und per Containerbreiten-Variation (Seitenleiste ein/aus) den Wechsel an der 700-px-Schwelle.
 
-- **AC-3:** Given der Reiter Wetter ist offen / When die Karte gemessen wird / Then ist das doppelte Innen-Padding abgebaut: bei Viewport 1280 ist die Karte mindestens 1060 px breit (Mockup 1068, vorher 932), bei 390 px beginnt sie bei x = 16 px (vorher 32).
-  - Test: Playwright misst `getBoundingClientRect()` der Karte bei 1280 und 390 px, Trip und Orte.
+- **AC-3:** Given der Reiter Wetter ist offen / When die Karte gemessen wird / Then ist das doppelte Innen-Padding abgebaut: bei Viewport 1280 füllt die Karte die Inhaltsbreite von `main` (Abweichung ≤ 2 px, rechnerisch 1280 − 220 Seitenleiste − 2·24 = 1012 px, mindestens 1000 px; vorher 932; das Mockup-Maß 1068 gilt ohne Seitenleiste), bei 390 px beginnt sie bei x = 16 px (vorher 32).
+  - Test: Playwright misst `getBoundingClientRect()` der Karte und die Inhaltsbreite von `main` bei 1280 und 390 px, Trip und Orte.
 
 - **AC-4:** Given Viewport 1280 / When die Zeile „Temperatur“ gemessen wird / Then ist sie höchstens 124 px hoch (Mockup 112 px, Toleranz 12 px, vorher 168), die Erklärung hat höchstens 4 Zeilen bei 12 px Schriftgröße (vorher 6 Zeilen bei 12,5 px).
   - Test: Playwright misst Zeilenhöhe, `font-size` und Zeilenzahl (Höhe / `line-height`) der Erklärung.
 
-- **AC-5:** Given die Sprache ist DE oder EN / When die Metrik-Liste angezeigt wird / Then zeigt jeder Untertitel `Einheit · Hinweis` (z. B. „°C · Tageshöchst · Tagestief“, „km/h · Mittelwind“, „mm · Summe“, „% · Vorbote, kein Alarm“, „m · Minimum“), Vorbote-Metriken zeigen „Vorbote, kein Alarm“ aus `is_precursor`, Zeilen ohne Ampel „nur Anzeige, keine Ampel“ aus `display_only`, und Metriken ohne Hinweis zeigen nur die Einheit ohne endenden Trennpunkt.
+- **AC-5:** Given die Sprache ist DE oder EN / When die Metrik-Liste angezeigt wird / Then zeigt jeder Untertitel `Einheit · Hinweis` (z. B. „°C · Tageshöchst · Tagestief“, „km/h · Mittelwind“, „mm · Summe“, „% · Vorbote, kein Alarm“, Sichtweite „km · Minimum“ bis #2946), Vorbote-Metriken zeigen „Vorbote, kein Alarm“ aus `is_precursor`, Zeilen ohne Ampel „nur Anzeige, keine Ampel“ aus `display_only`, und Metriken ohne Hinweis zeigen nur die Einheit ohne endenden Trennpunkt.
   - Test: Kern-Test der Funktion `untertitel()` und Katalogvollständigkeit DE/EN; Playwright liest die Untertitel im DOM in beiden Sprachen.
 
 - **AC-6:** Given eine Metrik mit „grün: …“-Angabe / When die Zeile dargestellt wird / Then hat die Angabe die Farbe des Tokens `--a-green` und Schriftgewicht 600 (vorher grau).
@@ -185,3 +185,4 @@ Fertig ist die Scheibe, wenn die Metrik-Liste im Reiter Wetter von Trip und Orts
 ## Changelog
 
 - 2026-11-12: Initial spec created (Fix nach PO-Befund 12.11.2026, Teil von #2913)
+- 2026-11-12 (Phase 6): AC-3-Schwelle rechnerisch korrigiert. „≥ 1060 px" stammte aus dem Mockup ohne Seitenleiste; mit der Seitenleiste (App-Rahmen, bleibt laut Impl. Detail 3) ist das Maximum 1012 px. Zweck unverändert (doppeltes Padding weg), neue Zusicherung: Karte = Inhaltsbreite von `main` ±2 px. AC-5-Beispiel Sichtweite lautet bis #2946 „km · Minimum" (Einheit kommt aus `/api/metrics`, km→m ist Nicht-Ziel).

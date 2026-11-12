@@ -1,7 +1,7 @@
 ---
 spec_file: docs/specs/modules/fix_2913_metrikliste_mockup.md
-spec_sha256: 8f3ab492f80f28b7306f529ea38d9feba2af4f2bb9c98b8a2d629e3187dc5f17
-spec_frozen_sha256: a81935c44f8b85988982f293291d7775bd015b4e1ea999a3dab0dacdfe25ee35
+spec_sha256: 6a9b4de9ea350abe198ade26f4bfcdae99c28867342d3796bd49be36fb18943d
+spec_frozen_sha256: e1e197ac1eb8de626c40b3104a50a2c90c3eeef32eca463b4c6a7fe82f9ae180
 ---
 
 # PO-Briefing: fix-2913-metrikliste-mockup
@@ -20,12 +20,12 @@ Auf Staging stimmen Spaltenbreiten, Zeilenhöhen, Untertitel, grüne Angabe und 
 
 ## Wie geprüft wird
 
-Automatische Messungen bei mehreren Fensterbreiten in Deutsch und Englisch sowie Bildvergleich Mockup gegen Staging; Dunkelmodus wird nur auf Lesbarkeit geprüft.
+Automatische Messungen bei mehreren Fensterbreiten in Deutsch und Englisch sowie Bildvergleich Mockup gegen Staging; Dunkelmodus nur auf Lesbarkeit.
 
 ## Kritische Anmerkungen
 
-- Sichtweite in km statt m bleibt bewusst unbehoben (eigenes Ticket #2946).
-- Dunkelmodus wird nicht gegen das Mockup abgenommen, nur auf Lesbarkeit.
+- Karte ist wegen der Seitenleiste 1012 statt 1068 px breit (Mockup ohne Seitenleiste); unvermeidbar, Seitenleiste bleibt.
+- Sichtweite in km statt m bleibt bewusst unbehoben (Ticket #2946).
 
 ## Freigabe-Frage
 

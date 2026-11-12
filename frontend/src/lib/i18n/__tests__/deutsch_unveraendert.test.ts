@@ -526,6 +526,21 @@ const NEU_IN_FOLGEPAKETEN = [
 	'listen.status.archiviert',
 	'aktionen.sheet.eyebrow',
 	'bausteine.wordmark.caption',
+	// #2913 Fix Metrik-Liste (AC-5): Untertitel-Hinweise der Metrik-Zeile (Mockup Fassung 3).
+	'wetter.untertitel.vorbote',
+	'wetter.untertitel.nur_anzeige',
+	'wetter.hinweis.temperature',
+	'wetter.hinweis.temperature_night',
+	'wetter.hinweis.wind',
+	'wetter.hinweis.gust',
+	'wetter.hinweis.precipitation',
+	'wetter.hinweis.thunder',
+	'wetter.hinweis.visibility',
+	'wetter.hinweis.cloud_low',
+	'wetter.hinweis.uv_index',
+	'wetter.hinweis.freezing_level',
+	'wetter.hinweis.snowfall_limit',
+	'wetter.hinweis.sunshine',
 ];
 
 test('AC-5: das Golden enthaelt die 112 Bestandsschluessel', () => {

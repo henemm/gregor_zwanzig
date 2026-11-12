@@ -8,7 +8,7 @@
 	import { t } from '$lib/i18n';
 	import AmpelLeiste from './AmpelLeiste.svelte';
 	import GrenzenEditor from './GrenzenEditor.svelte';
-	import { alarmAbOptionen, erklaersatz, gruenZeile, type AlarmAb, type Farbe, type KatalogModell, type MetrikEigenschaften } from '../../shared/wetter-tab/ampelModell.ts';
+	import { alarmAbOptionen, erklaersatz, gruenZeile, untertitel, type AlarmAb, type Farbe, type KatalogModell, type MetrikEigenschaften } from '../../shared/wetter-tab/ampelModell.ts';
 
 	interface Props {
 		id: string;
@@ -51,15 +51,18 @@
 		}))
 	);
 	const stufe = $derived(eintrag?.alarm_ab ?? 'never');
+	// #2913 Fix Metrik-Liste (AC-5): Untertitel `Einheit · Hinweis` (Mockup Z. ~434), Hinweis aus dem Katalog.
+	// i18n-dynamic: wetter.hinweis.
+	const unter = $derived(untertitel(id, eig, (k) => $t(k as 'wetter.untertitel.vorbote')));
 </script>
 
 <div class="wt-zeile" data-testid="wetter-zeile-{id}">
 	<div class="wt-rm">
-		<Btn variant="ghost" size="tap" data-testid="wetter-zeile-entfernen-{id}" aria-label={$t('wetter.zeile.entfernen', { metrik: name })} title={$t('wetter.zeile.entfernen', { metrik: name })} onclick={onEntfernen}>−</Btn>
+		<Btn variant="ghost" size="tap" data-tap="true" data-testid="wetter-zeile-entfernen-{id}" aria-label={$t('wetter.zeile.entfernen', { metrik: name })} title={$t('wetter.zeile.entfernen', { metrik: name })} onclick={onEntfernen}>−</Btn>
 	</div>
 	<div class="wt-name">
 		<b>{name}</b>
-		{#if eig.unit}<small>{eig.unit}</small>{/if}
+		{#if unter}<small>{unter}</small>{/if}
 	</div>
 	<div class="wt-mitte">
 		{#if eig.display_only}
@@ -70,7 +73,7 @@
 		<p class="wt-why">
 			<span data-testid="wetter-erklaersatz-{id}">{erklaer}</span>
 			{#if !istGewitter && !eig.display_only}
-				<span aria-hidden="true">·</span> <span class="wt-gruen" data-testid="wetter-gruen-{id}">{gruen}</span>
+				<span class="wt-gruen" data-testid="wetter-gruen-{id}"><span aria-hidden="true">·</span> {gruen}</span>
 			{/if}
 		</p>
 	</div>
@@ -78,13 +81,13 @@
 		{#if optionen.length > 0}
 			<span class="wt-lbl">{$t('alarme.alarm_ab.titel')}</span>
 			<div class="wt-seg">
-				<Segmented rolle="radio" testid="wetter-alarm-ab-{id}" ariaLabel={$t('wetter.alarm_ab.wert', { stufe: $t(`alarme.alarm_ab.stufe.${stufe}` as 'alarme.alarm_ab.stufe.never') })} options={segmente} value={stufe} onChange={(s: string) => onAlarmAb(s as AlarmAb)} />
+				<Segmented variant="kompakt" rolle="radio" testid="wetter-alarm-ab-{id}" ariaLabel={$t('wetter.alarm_ab.wert', { stufe: $t(`alarme.alarm_ab.stufe.${stufe}` as 'alarme.alarm_ab.stufe.never') })} options={segmente} value={stufe} onChange={(s: string) => onAlarmAb(s as AlarmAb)} />
 			</div>
 		{:else}
 			<span class="wt-lbl" data-testid="wetter-alarm-ab-{id}">{$t(eig.is_precursor ? 'wetter.alarm_ab.vorbote' : 'wetter.alarm_ab.kein_alarm')}</span>
 		{/if}
 		{#if !eig.display_only}
-			<Btn variant="ghost" size="tap" data-testid="wetter-grenzen-aendern-{id}" aria-expanded={offen} onclick={onGrenzen}>
+			<Btn variant="ghost" size="tap" data-tap="true" data-testid="wetter-grenzen-aendern-{id}" aria-expanded={offen} onclick={onGrenzen}>
 				{$t(offen ? 'wetter.grenzen.fertig' : 'wetter.grenzen.aendern')}
 			</Btn>
 		{/if}
@@ -95,10 +98,13 @@
 </div>
 
 <style>
+	/* #2913 Fix Metrik-Liste: Raster nach Mockup Fassung 3 `.mr` (Z. ~97). Die Mittelspalte hat eine
+	   harte Untergrenze (160 px) und fällt nicht mehr auf 0; der Umbruch hängt an der Kartenbreite
+	   (Container `.wt-metriken` in WetterTabInhalt), nicht am Viewport. */
 	.wt-zeile {
 		display: grid;
-		grid-template-columns: var(--g-tap-min) minmax(var(--g-size-120px), var(--g-size-180px)) minmax(0, 1fr) auto;
-		gap: var(--g-s-2) var(--g-size-14px);
+		grid-template-columns: var(--g-s-8) minmax(var(--g-size-130px), var(--g-size-190px)) minmax(var(--g-size-160px), 1fr) auto;
+		gap: var(--g-s-2) var(--g-size-18px);
 		align-items: center;
 		padding: var(--g-s-3) var(--g-s-5);
 		border-top: 1px solid var(--g-rule-soft);
@@ -110,7 +116,14 @@
 	.wt-zeile :global([data-slot='btn']:hover) {
 		background: var(--g-surface-2);
 	}
+	/* Kompakte Knöpfe (Mockup `.btn.sm` / `.rm`, 28 px sichtbar); Trefferfläche 44 px über data-tap (app.css). */
+	.wt-zeile :global([data-slot='btn'][data-tap='true']) {
+		height: var(--g-size-28px);
+		min-height: var(--g-size-28px);
+		font-size: var(--g-s-3);
+	}
 	.wt-rm :global([data-slot='btn']) {
+		width: var(--g-size-28px);
 		padding: 0;
 		font-size: var(--g-size-18px);
 		line-height: 1;
@@ -125,7 +138,10 @@
 		color: var(--g-ink);
 	}
 	.wt-name small,
-	.wt-lbl,
+	.wt-lbl {
+		font-size: var(--g-s-3);
+		color: var(--g-ink-3);
+	}
 	.wt-nur {
 		font-size: var(--g-size-12-5px);
 		color: var(--g-ink-2);
@@ -133,36 +149,31 @@
 	.wt-mitte {
 		display: flex;
 		flex-direction: column;
-		gap: var(--g-size-6px);
+		gap: var(--g-s-1);
 		min-width: 0;
 	}
 	.wt-why {
 		margin: 0;
-		font-size: var(--g-size-12-5px);
+		font-size: var(--g-s-3);
 		line-height: 1.45;
 		color: var(--g-ink-2);
 	}
+	/* Mockup `.why .gr`: „grün: …“ grün, Gewicht 600, Trennpunkt in der Span. Text-Token --g-ok-fg statt
+	   --g-ampel-gruen (Grafik-Token, nur ≥ 3:1; dunkel 3,37:1): Text braucht 4,5:1 in Hell UND Dunkel (AC-13). */
 	.wt-gruen {
-		color: var(--g-ink-3);
+		color: var(--g-ok-fg);
+		font-weight: 600;
 	}
 	.wt-act {
 		display: flex;
 		flex-wrap: wrap;
 		align-items: center;
 		justify-content: flex-end;
-		gap: var(--g-s-2);
+		gap: var(--g-size-10px);
 	}
-	.wt-seg :global([data-slot='segmented-item']) {
-		min-height: var(--g-tap-min);
-		min-width: var(--g-tap-min);
-		color: var(--g-ink-2);
-	}
-	.wt-seg :global([data-slot='segmented-item'][data-active='true']) {
-		color: var(--g-paper);
-	}
-	@media (max-width: 899px) {
+	@container (max-width: 700px) {
 		.wt-zeile {
-			grid-template-columns: var(--g-tap-min) minmax(0, 1fr);
+			grid-template-columns: var(--g-s-10) 1fr;
 			padding: var(--g-s-3) var(--g-s-4);
 		}
 		.wt-mitte,

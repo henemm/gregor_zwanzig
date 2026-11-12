@@ -146,7 +146,8 @@ describe('AC-5: Untertitel `Einheit · Hinweis` aus dem Katalog DE/EN', () => {
 		['gust', 'km/h · Spitze'],
 		['precipitation', 'mm · Summe'],
 		['rain_probability', '% · Vorbote, kein Alarm'],
-		['visibility', 'm · Minimum'],
+		// Einheit aus /api/metrics (km); km→m ist Nicht-Ziel dieser Scheibe (AC-13, #2946).
+		['visibility', 'km · Minimum'],
 		['freezing_level', 'm · m über höchster Stelle'],
 		['thunder', 'Stufe'],
 		['uv_index', 'Maximum']
@@ -339,9 +340,12 @@ describe('AC-1/2/4/6: Stil der Metrik-Zeile gegen das Mockup', () => {
 		assert.equal(aufloesen(regel(css, '.wt-why')['font-size'] ?? ''), '12px');
 	});
 
-	test('AC-6: „grün“ in der Ampel-Grün-Farbe des Mockups (#15803d), Gewicht 600', () => {
+	// Fix-Runde 1 (F001): Text-Token --g-ok-fg statt Grafik-Token --g-ampel-gruen (dunkel nur 3,37:1 < 4,5:1);
+	// Kontrast beider Modi sichert ampel_tokens_kontrast.test.ts.
+	test('AC-6: „grün“ im grünen Text-Token --g-ok-fg (hell #166534), Gewicht 600', () => {
 		const g = regel(css, '.wt-gruen');
-		assert.equal(aufloesen(g['color'] ?? ''), '#15803d', 'TDD RED: „grün“ noch grau');
+		assert.equal(g['color'], 'var(--g-ok-fg)', 'TDD RED: „grün“ nicht im grünen Text-Token');
+		assert.equal(aufloesen(g['color'] ?? ''), TOKENS['--g-ok-fg'].toLowerCase());
 		assert.equal(g['font-weight'], '600');
 	});
 });
