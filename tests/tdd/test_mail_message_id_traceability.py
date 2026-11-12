@@ -76,7 +76,7 @@ def _installiere(monkeypatch, skript=None, starttls_skript=None) -> _Draht:
         def __exit__(self, *exc):
             return False
 
-        def starttls(self):
+        def starttls(self, context=None):
             if starttls_skript is not None:
                 fehler = starttls_skript(self._host)
                 if fehler is not None:

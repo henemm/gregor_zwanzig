@@ -9,6 +9,7 @@ import json
 import logging
 import re
 import smtplib
+import ssl
 import time
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
@@ -539,7 +540,9 @@ class EmailOutput:
             host, port, timeout=_phase_timeout_or_raise(deadline_at)
         ) as server:
             server.sock.settimeout(_phase_timeout_or_raise(deadline_at))
-            server.starttls()
+            # #2961: Zertifikat und Hostname pruefen (smtplib prueft ohne
+            # Kontext nicht).
+            server.starttls(context=ssl.create_default_context())
             server.sock.settimeout(_phase_timeout_or_raise(deadline_at))
             server.login(user, password)
             if len(recipients) == 1:

@@ -141,7 +141,7 @@ def _installiere_transport(
             verlauf.append(("close", self._host))
             return False
 
-        def starttls(self):
+        def starttls(self, context=None):
             verlauf.append(("starttls", self._host))
 
         def login(self, user, password):

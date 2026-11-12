@@ -12,6 +12,7 @@ from __future__ import annotations
 import email
 import email.utils
 import imaplib
+import ssl
 import logging
 import re
 from dataclasses import dataclass
@@ -238,6 +239,10 @@ def _html_zu_befehlstext(html_text: str) -> str:
     return parser.text()
 
 
+# #2961: Zeitgrenze je IMAP-Operation (Verbindungsaufbau und jede Antwort).
+IMAP_TIMEOUT_SECONDS = 30.0
+
+
 class InboundEmailReader:
     """Polls IMAP inbox and processes trip commands from email replies."""
 
@@ -290,7 +295,13 @@ class InboundEmailReader:
         try:
             imap_host = settings.imap_host or settings.smtp_host
             imap_port = settings.imap_port
-            imap = imaplib.IMAP4_SSL(imap_host, imap_port)
+            # #2961: Zertifikat pruefen und Zeitgrenze setzen (ohne Kontext
+            # prueft imaplib nicht, ohne Timeout haengt ein stummer Server).
+            imap = imaplib.IMAP4_SSL(
+                imap_host, imap_port,
+                ssl_context=ssl.create_default_context(),
+                timeout=IMAP_TIMEOUT_SECONDS,
+            )
             imap.login(imap_user, imap_pass)
             imap.select("INBOX")
 

@@ -298,7 +298,7 @@ def _install_smtp_sink(monkeypatch):
         def __exit__(self, *exc):
             return False
 
-        def starttls(self):
+        def starttls(self, context=None):
             return None
 
         def login(self, user, password):
