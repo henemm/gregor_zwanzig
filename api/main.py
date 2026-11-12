@@ -133,7 +133,7 @@ async def invalid_user_id_handler(request, exc):  # noqa: ANN001
 
     Ein zentraler Handler fuer alle Router (statt unbehandelter 500). Kein
     neuer Fehlercode, keine Kennung im Text, nur Warn-Log ohne Traceback."""
-    logger.warning("Ungueltige Nutzerkennung an %s abgewiesen (#2163)", request.url.path)
+    logger.warning("Ungueltige Nutzerkennung an %s abgewiesen (#2163)", request.scope["path"])
     return JSONResponse(status_code=404, content={"detail": "not_found", "code": "not_found"})
 
 
@@ -147,6 +147,34 @@ CORE_AUTH_HEADER = "X-GZ-Core-Auth"
 # ci-stack.sh pollt ihn als Boot-Pruefung, bevor irgendetwas konfiguriert sein
 # kann. Der Endpoint liefert keine Nutzerdaten.
 CORE_AUTH_EXEMPT_PATHS = frozenset({"/health"})
+
+# Issue #2961: Der Core nimmt nur Anfragen mit einem erwarteten Host an. Go
+# spricht ihn ueber ``GZ_PYTHON_CORE_URL`` (Default ``http://localhost:8000``)
+# an, ``TestClient`` ueber ``testserver``. Weitere Namen (z. B. ein
+# Container-Hostname) per ``GZ_CORE_ALLOWED_HOSTS`` (kommagetrennt).
+CORE_DEFAULT_ALLOWED_HOSTS = frozenset({"localhost", "127.0.0.1", "::1", "testserver"})
+
+
+def _core_allowed_hosts() -> frozenset[str]:
+    extra = os.environ.get("GZ_CORE_ALLOWED_HOSTS", "")
+    names = {h.strip().lower().strip("[]") for h in extra.split(",") if h.strip()}
+    return CORE_DEFAULT_ALLOWED_HOSTS | names
+
+
+def _host_name(raw: str) -> str | None:
+    """Hostname aus einem Host-Header (ohne Port); ``None`` bei Unform."""
+    raw = raw.strip().lower()
+    if raw.startswith("["):
+        end = raw.find("]")
+        if end < 0:
+            return None
+        name, rest = raw[1:end], raw[end + 1:]
+    else:
+        name, _, port = raw.partition(":")
+        rest = ":" + port if port else ""
+    if rest and not (rest.startswith(":") and rest[1:].isdigit()):
+        return None
+    return name or None
 
 
 def _core_shared_secret() -> str:
@@ -177,7 +205,14 @@ async def enforce_core_auth(request, call_next):  # noqa: ANN001
     mit 503 statt unauthentifiziert durchzulassen — dasselbe Muster wie
     ``telegram_webhook.go`` ("webhook not configured").
     """
-    if request.url.path in CORE_AUTH_EXEMPT_PATHS:
+    # #2961: Host-Header pruefen und die Ausnahme am echten Pfad aus dem
+    # ASGI-Scope festmachen -- ``request.url`` wird aus dem Host-Header gebaut.
+    host = _host_name(request.headers.get("host", ""))
+    if host is None or host not in _core_allowed_hosts():
+        logger.warning("Anfrage mit unerwartetem Host-Header abgewiesen (#2961)")
+        return JSONResponse(status_code=400, content={"detail": "invalid host"})
+
+    if request.scope["path"] in CORE_AUTH_EXEMPT_PATHS:
         return await call_next(request)
 
     expected = _core_shared_secret()
