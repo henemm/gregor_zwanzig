@@ -37,6 +37,11 @@ def zertifikat(tmp_path_factory):
     return cert, key
 
 
+def _schreibe(f, daten: bytes) -> None:
+    f.write(daten)
+    f.flush()
+
+
 class _TlsGegenstelle:
     """Minimaler SMTP-(STARTTLS) bzw. IMAPS-Server; protokolliert, ob Zugangsdaten ankamen."""
 
@@ -76,56 +81,42 @@ class _TlsGegenstelle:
 
     def _smtp(self, conn) -> None:
         f = conn.makefile("rwb")
-        f.write(b"220 test ESMTP\r\n"); f.flush()
+        _schreibe(f, b"220 test ESMTP\r\n")
         for raw in f:
             zeile = raw.decode().strip().upper()
             if zeile.startswith("EHLO"):
-                f.write(b"250-test\r\n250 STARTTLS\r\n"); f.flush()
+                _schreibe(f, b"250-test\r\n250 STARTTLS\r\n")
             elif zeile == "STARTTLS":
-                f.write(b"220 go\r\n"); f.flush()
+                _schreibe(f, b"220 go\r\n")
                 break
         tls = self.ctx.wrap_socket(conn, server_side=True)
         tf = tls.makefile("rwb")
-
-        def antwort(z: str):
-            u = z.upper()
-            if u.startswith("EHLO"):
-                return "250-test\r\n250 AUTH PLAIN LOGIN\r\n"
-            if u.startswith("AUTH"):
-                return "235 ok\r\n"
-            if u.startswith(("MAIL", "RCPT", "RSET", "NOOP")):
-                return "250 ok\r\n"
-            if u == "DATA":
-                return "354 go\r\n"
-            if u == ".":
-                return "250 queued\r\n"
-            if u == "QUIT":
-                return None
-            return "" if self._in_data else "250 ok\r\n"
-
-        self._in_data = False
+        im_rumpf = False
         for raw in tf:
             zeile = raw.decode(errors="replace").rstrip("\r\n")
             self.zeilen.append(zeile)
             u = zeile.upper()
-            if self._in_data:
+            if im_rumpf:
                 if zeile == ".":
-                    self._in_data = False
-                    tf.write(b"250 queued\r\n"); tf.flush()
-                continue
-            if u == "DATA":
-                self._in_data = True
-            out = antwort(zeile)
-            if out is None:
-                tf.write(b"221 bye\r\n"); tf.flush()
+                    im_rumpf = False
+                    _schreibe(tf, b"250 queued\r\n")
+            elif u.startswith("EHLO"):
+                _schreibe(tf, b"250-test\r\n250 AUTH PLAIN LOGIN\r\n")
+            elif u.startswith("AUTH"):
+                _schreibe(tf, b"235 ok\r\n")
+            elif u == "DATA":
+                im_rumpf = True
+                _schreibe(tf, b"354 go\r\n")
+            elif u == "QUIT":
+                _schreibe(tf, b"221 bye\r\n")
                 return
-            if out:
-                tf.write(out.encode()); tf.flush()
+            else:
+                _schreibe(tf, b"250 ok\r\n")
 
     def _imap(self, conn) -> None:
         tls = self.ctx.wrap_socket(conn, server_side=True)
         f = tls.makefile("rwb")
-        f.write(b"* OK test IMAP4rev1\r\n"); f.flush()
+        _schreibe(f, b"* OK test IMAP4rev1\r\n")
 
         def antwort(z: str):
             tag, _, rest = z.partition(" ")
