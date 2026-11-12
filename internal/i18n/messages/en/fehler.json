@@ -13,5 +13,8 @@
   "fehler.unbekannt": "Unknown error ({code}).",
   "fehler.core_unavailable": "The core service is not reachable right now. Please try again later.",
   "fehler.nothing_to_set": "No fields to set were given.",
-  "fehler.proxy_error": "The service did not respond. Please try again later."
+  "fehler.proxy_error": "The service did not respond. Please try again later.",
+  "fehler.origin_forbidden": "The request did not come from this site and was rejected.",
+  "fehler.unsupported_media_type": "The request has an unsupported format.",
+  "fehler.payload_too_large": "The request is too large."
 }

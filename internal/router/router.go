@@ -35,11 +35,24 @@ type Deps struct {
 	GitCommit             string
 }
 
+// Issue #2961: Rumpfgrenzen der globalen Schutzschicht.
+const (
+	maxAPIBodyBytes   int64 = 1 << 20
+	maxGPXUploadBytes int64 = 10 << 20
+	gpxUploadPath           = "/api/gpx/parse"
+)
+
 // New builds the chi router with all application routes.
 // It does not start the scheduler or the HTTP server.
 func New(deps Deps) chi.Router {
 	r := chi.NewRouter()
 	r.Use(chimw.Logger)
+	// Issue #2961 (ADR-0113): globale Schutzschicht fuer schreibende
+	// Anfragen VOR der Anmeldepruefung — Rumpfgroesse (1 MB, GPX-Upload
+	// 10 MB), Herkunft (Origin/Sec-Fetch-Site), JSON-Pflicht fuer Rumpfe.
+	r.Use(authmw.LimitBody(maxAPIBodyBytes, map[string]int64{gpxUploadPath: maxGPXUploadBytes}))
+	r.Use(authmw.OriginGuard(authmw.NewOriginPolicy(deps.Config)))
+	r.Use(authmw.RequireJSONBody(gpxUploadPath))
 	r.Use(authmw.AuthMiddleware(deps.Config.SessionSecret, deps.Store))
 	// Issue #2675 (ADR-0104): Sprache einmal je Anfrage in den Kontext —
 	// Nutzer aus dem Auth-Kontext > Cookie gz_lang > Accept-Language > de.
@@ -265,7 +278,7 @@ func New(deps Deps) chi.Router {
 	r.Put("/api/trips/{id}/weather-config", handler.PutTripWeatherConfigHandler(deps.Store))
 	r.Get("/api/locations/{id}/weather-config", handler.GetLocationWeatherConfigHandler(deps.Store))
 	r.Put("/api/locations/{id}/weather-config", handler.PutLocationWeatherConfigHandler(deps.Store))
-	r.Post("/api/gpx/parse", handler.GpxProxyHandler(deps.Config.PythonCoreURL))
+	r.Post(gpxUploadPath, handler.GpxProxyHandler(deps.Config.PythonCoreURL))
 	r.Post("/api/notify/test", handler.NotifyTestHandler(deps.Store, deps.Config.PythonCoreURL))
 	r.Get("/api/compare", handler.CompareProxyHandler(deps.Config.PythonCoreURL))
 	// Issue #1350 Teil 1: read-only Compare-Metrik-Katalog (statisch, kein user_id-Bezug).
