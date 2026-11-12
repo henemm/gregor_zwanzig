@@ -78,6 +78,10 @@ def _hook(repo: Path, kommando: str = "git commit -m 'x'") -> subprocess.Complet
     umgebung = {**os.environ, "GIT_DIR": "", "GIT_WORK_TREE": ""}
     umgebung.pop("GIT_DIR", None)
     umgebung.pop("GIT_WORK_TREE", None)
+    # #2503: Die Phase des aktiven Workflows entscheidet mit. Sie darf nur aus dem
+    # Wegwerf-Repo kommen — nie aus der Sitzung, die diesen Test gerade ausfuehrt.
+    umgebung.pop("CLAUDE_PROJECT_DIR", None)
+    umgebung.pop("OPENSPEC_ACTIVE_WORKFLOW", None)
     return subprocess.run(
         [sys.executable, str(GATE)], input=eingabe, cwd=str(repo),
         capture_output=True, text=True, timeout=180, env=umgebung,
@@ -417,4 +421,321 @@ def test_ac12_ungepruefte_schicht_wird_benannt(tmp_path):
     assert "go" in text, (
         "Bei einer nicht pruefbaren Schicht muss die Meldung sie benennen (AC-12) — sonst "
         f"sieht 'Commit ging durch' wie 'geprueft' aus. Ausgabe: {text!r}"
+    )
+
+
+# ===========================================================================
+# #2503: neu angelegte RED-Tests in Phase TDD-RED durchlassen
+#
+# Spec: docs/specs/modules/fix_2503_red_tests_gate.md
+#
+# Die Phase kommt aus einer echten Workflow-State-Datei IM Wegwerf-Repo
+# (`.claude/active_workflow` + `.claude/workflows/<name>.json`) — genau so, wie das
+# Gate sie in einer echten Sitzung liest. Kein Mock der Phasenabfrage.
+# ===========================================================================
+
+WF_NAME = "wf-2503-probe"
+NUR_RED = "nur in phase tdd-red erlaubt"
+NEU_ANGELEGT = "neu angelegt rot"
+
+
+def _phase_setzen(repo: Path, phase: str | None, defekt: bool = False) -> None:
+    """Workflow-State im Wegwerf-Repo: Phase setzen, weglassen (None) oder zerstoeren."""
+    if phase is None and not defekt:
+        return
+    wf = repo / ".claude" / "workflows"
+    wf.mkdir(parents=True, exist_ok=True)
+    (repo / ".claude" / "active_workflow").write_text(WF_NAME + "\n")
+    datei = wf / f"{WF_NAME}.json"
+    if defekt:
+        datei.write_text("{ das ist kein JSON")
+    else:
+        datei.write_text(json.dumps({"name": WF_NAME, "current_phase": phase}))
+
+
+def _repo_init(repo: Path) -> None:
+    _git(repo.parent, "init", "-q", str(repo))
+    _git(repo, "config", "user.email", "test@example.invalid")
+    _git(repo, "config", "user.name", "Test")
+    _git(repo, "add", "-A")
+    _git(repo, "commit", "-q", "-m", "Ausgangsstand")
+
+
+# --- Python ----------------------------------------------------------------
+
+NEUER_ROTER_PY_TEST = GRUENER_TEST + (
+    "def test_neu_angelegt_rot():\n"
+    "    assert verdopple(2) == 5\n"
+)
+
+
+def _python_repo_mit_neuem_rotem_test(tmp_path: Path) -> Path:
+    """Gruene Testdatei committet; im Arbeitsstand kommt eine neue, rote Funktion dazu."""
+    repo = _wegwerf_repo(tmp_path, HEIL + "# echte Aenderung\n", GRUENER_TEST)
+    (repo / "tests" / "unit" / "test_rechner.py").write_text(NEUER_ROTER_PY_TEST)
+    _git(repo, "add", "-A")
+    return repo
+
+
+def test_2503_ac2_neuer_roter_python_test_in_phase_red_laesst_durch(tmp_path):
+    """AC-2: Neue rote Funktion in bestehender Datei, Phase RED -> Exit 0, Name genannt."""
+    repo = _python_repo_mit_neuem_rotem_test(tmp_path)
+    _phase_setzen(repo, "phase5_tdd_red")
+    r = _hook(repo)
+    assert r.returncode == 0, (
+        "Ein neu angelegter, erwartungsgemaess roter Test darf in Phase TDD-RED nicht "
+        f"blockieren (AC-2, Exit {r.returncode})\n{r.stderr}"
+    )
+    assert "test_neu_angelegt_rot" in r.stderr and NEU_ANGELEGT in r.stderr.lower(), (
+        "Der durchgelassene Test muss namentlich als 'neu angelegt rot' gemeldet werden:\n"
+        + r.stderr
+    )
+
+
+@pytest.mark.parametrize("zustand", ["phase6_implement", "kein_workflow", "defekt"])
+def test_2503_ac4_neuer_roter_test_ausserhalb_red_blockiert(tmp_path, zustand):
+    """AC-4: Derselbe neue rote Test, aber nicht in Phase RED -> Exit 2 mit eigener Meldung.
+
+    ⚠️ Ohne diesen Fall waere die Ausnahme phasenlos — jede Sitzung koennte rote Tests
+    committen. Ein unlesbarer State ist fehlende Erlaubnis, keine Stoerung des Gates.
+    """
+    repo = _python_repo_mit_neuem_rotem_test(tmp_path)
+    if zustand == "phase6_implement":
+        _phase_setzen(repo, "phase6_implement")
+    elif zustand == "defekt":
+        _phase_setzen(repo, None, defekt=True)
+    r = _hook(repo)
+    assert r.returncode == 2, (
+        f"Ausserhalb der Phase TDD-RED ({zustand}) muss ein neuer roter Test blockieren "
+        f"(AC-4, Exit {r.returncode})\n{r.stderr}"
+    )
+    assert NUR_RED in r.stderr.lower() and "test_neu_angelegt_rot" in r.stderr, (
+        "Die Meldung muss sagen, dass ein neu angelegter roter Test 'nur in Phase TDD-RED "
+        f"erlaubt' ist, und den Test nennen ({zustand}):\n{r.stderr}"
+    )
+
+
+def test_2503_ac5_aus_gruen_wird_rot_blockiert_auch_in_phase_red(tmp_path):
+    """AC-5 (Gegenprobe): Bestehender gruener Test wird rot -> in Phase RED weiter Exit 2.
+
+    Faengt die Mutation „Existenzmessung durch 'immer neu' ersetzt".
+    """
+    repo = _wegwerf_repo(tmp_path, KAPUTT, GRUENER_TEST, basis=HEIL)
+    _phase_setzen(repo, "phase5_tdd_red")
+    r = _hook(repo)
+    assert r.returncode == 2 and "test_verdopple" in r.stderr, (
+        "Ein im letzten Commit gruener Test, der jetzt rot ist, MUSS auch in Phase RED "
+        f"blockieren (AC-5, Exit {r.returncode})\n{r.stderr}"
+    )
+    assert "macht tests rot" in r.stderr.lower(), r.stderr
+
+
+@pytest.mark.parametrize("phase", ["phase5_tdd_red", None])
+def test_2503_ac6_vorbestehend_rot_unabhaengig_von_der_phase(tmp_path, phase):
+    """AC-6: Vorbestehend roter Test laeuft in jeder Phase durch und wird gemeldet."""
+    repo = _wegwerf_repo(tmp_path, KAPUTT + "# harmlose Zeile\n", GRUENER_TEST, basis=KAPUTT)
+    _phase_setzen(repo, phase)
+    r = _hook(repo)
+    assert r.returncode == 0, f"Vorbestehend rot darf nicht blockieren ({phase})\n{r.stderr}"
+    assert "vorbesteh" in r.stderr.lower(), r.stderr
+
+
+# --- Go --------------------------------------------------------------------
+
+def _go_oder_skip() -> str:
+    go = shutil.which("go") or "/usr/local/go/bin/go"
+    if not Path(go).exists():
+        pytest.skip("Go-Werkzeug nicht vorhanden — Go-Faelle von #2503 UNGEPRUEFT")
+    return go
+
+
+GO_QUELLE = "package rechner\n\nfunc Verdopple(x int) int { return x * 2 }\n"
+
+
+def _go_repo(tmp_path: Path, test_basis: str, test_neu: str,
+             quelle_neu: str | None = None) -> Path:
+    """Go-Paket mit committetem Test (`test_basis`), Arbeitsstand `test_neu` gestagt."""
+    repo = tmp_path / "repo"
+    paket = repo / "internal" / "rechner"
+    paket.mkdir(parents=True)
+    (repo / "go.mod").write_text("module beispiel\n\ngo 1.21\n")
+    (paket / "rechner.go").write_text(GO_QUELLE)
+    (paket / "rechner_test.go").write_text(test_basis)
+    _repo_init(repo)
+    (paket / "rechner_test.go").write_text(test_neu)
+    if quelle_neu is not None:
+        (paket / "rechner.go").write_text(quelle_neu)
+    _git(repo, "add", "-A")
+    return repo
+
+
+GO_TEST_KOPF = 'package rechner\n\nimport "testing"\n\n'
+GO_TEST_ALT = (
+    "func TestVerdopple(t *testing.T) {\n"
+    '\tif Verdopple(2) != 4 { t.Fatal("falsch") }\n}\n'
+)
+GO_TEST_NEU_ROT = (
+    "\nfunc TestNeu(t *testing.T) {\n"
+    '\tif Verdopple(2) != 5 { t.Fatal("erwartet rot") }\n}\n'
+)
+
+
+def test_2503_ac1_neue_go_testfunktion_in_phase_red_laesst_durch(tmp_path):
+    """AC-1: Neue Go-Testfunktion per Assertion rot, Phase RED -> Exit 0, `TestNeu` genannt.
+
+    Genau der Fall aus #2261 A-2 S2, an dem das Gate den RED-Commit verweigerte.
+    """
+    _go_oder_skip()
+    repo = _go_repo(tmp_path, GO_TEST_KOPF + GO_TEST_ALT,
+                    GO_TEST_KOPF + GO_TEST_ALT + GO_TEST_NEU_ROT)
+    _phase_setzen(repo, "phase5_tdd_red")
+    r = _hook(repo)
+    assert r.returncode == 0, (
+        f"Neue rote Go-Testfunktion in Phase RED muss durch (AC-1, Exit {r.returncode})\n"
+        + r.stderr
+    )
+    assert "TestNeu" in r.stderr and NEU_ANGELEGT in r.stderr.lower(), (
+        "Hinweis muss `TestNeu` als 'neu angelegt rot (TDD-RED, blockiert nicht)' nennen:\n"
+        + r.stderr
+    )
+
+
+def test_2503_ac1b_neue_go_testfunktion_ausserhalb_red_blockiert(tmp_path):
+    """AC-1/AC-4 fuer Go: derselbe Fall in Phase 6 -> Exit 2 mit 'nur in Phase TDD-RED'."""
+    _go_oder_skip()
+    repo = _go_repo(tmp_path, GO_TEST_KOPF + GO_TEST_ALT,
+                    GO_TEST_KOPF + GO_TEST_ALT + GO_TEST_NEU_ROT)
+    _phase_setzen(repo, "phase6_implement")
+    r = _hook(repo)
+    assert r.returncode == 2 and NUR_RED in r.stderr.lower(), (
+        f"Ausserhalb Phase RED muss blockiert werden, mit eigener Meldung (Exit "
+        f"{r.returncode})\n{r.stderr}"
+    )
+
+
+GO_SUBTEST_BASIS = GO_TEST_KOPF + (
+    "func TestA(t *testing.T) {\n"
+    '\tt.Run("alt", func(t *testing.T) { if Verdopple(2) != 4 { t.Fatal("alt") } })\n'
+    "}\n"
+)
+GO_SUBTEST_NEU = GO_TEST_KOPF + (
+    "func TestA(t *testing.T) {\n"
+    '\tt.Run("alt", func(t *testing.T) { if Verdopple(2) != 4 { t.Fatal("alt") } })\n'
+    '\tt.Run("neu", func(t *testing.T) { if Verdopple(2) != 5 { t.Fatal("neu") } })\n'
+    "}\n"
+)
+
+
+def test_2503_ac3_neuer_go_subtest_in_phase_red_laesst_durch(tmp_path):
+    """AC-3 (erster Teil): Neuer roter Subtest in bestehender Funktion -> Exit 0.
+
+    Die Elternfunktion `TestA` existierte schon und ist jetzt rot — entschuldigt nur,
+    weil ALLE ihre roten Subtests neu angelegt sind.
+    """
+    _go_oder_skip()
+    repo = _go_repo(tmp_path, GO_SUBTEST_BASIS, GO_SUBTEST_NEU)
+    _phase_setzen(repo, "phase5_tdd_red")
+    r = _hook(repo)
+    assert r.returncode == 0, (
+        f"Neuer roter Subtest in Phase RED muss durch (AC-3, Exit {r.returncode})\n"
+        + r.stderr
+    )
+    assert "TestA/neu" in r.stderr, "Der neue Subtest muss genannt werden:\n" + r.stderr
+
+
+def test_2503_ac3b_vorbestehender_subtest_rot_blockiert_die_elternfunktion(tmp_path):
+    """AC-3 (zweiter Teil): Zusaetzlich wird ein vorher gruener Subtest rot -> Exit 2.
+
+    Faengt die Mutationen „Subtest-Elternregel gelockert" und „eingeruecktes
+    `--- FAIL:` uebersehen": `go test` rueckt Subtest-Zeilen ein; wer nur `^--- FAIL:`
+    sucht, sieht `TestA/alt` nie.
+    """
+    _go_oder_skip()
+    repo = _go_repo(tmp_path, GO_SUBTEST_BASIS, GO_SUBTEST_NEU,
+                    quelle_neu="package rechner\n\nfunc Verdopple(x int) int { return x * 3 }\n")
+    _phase_setzen(repo, "phase5_tdd_red")
+    r = _hook(repo)
+    assert r.returncode == 2, (
+        "Ist ein vorbestehender Subtest rot, darf die Elternfunktion nicht als 'neu "
+        f"angelegt' entschuldigt werden (AC-3, Exit {r.returncode})\n{r.stderr}"
+    )
+    assert "TestA/alt" in r.stderr, (
+        "Der vorbestehende, jetzt rote Subtest muss erkannt und genannt werden "
+        "(eingeruecktes `--- FAIL:`):\n" + r.stderr
+    )
+
+
+@pytest.mark.parametrize("phase", ["phase5_tdd_red", "phase6_implement"])
+def test_2503_ac8_go_uebersetzungsfehler_bleibt_stoerung(tmp_path, phase):
+    """AC-8: Nicht kompilierender Go-Test ist Stoerung -> Exit 0 mit Hinweis, jede Phase."""
+    _go_oder_skip()
+    repo = _go_repo(tmp_path, GO_TEST_KOPF + GO_TEST_ALT,
+                    GO_TEST_KOPF + GO_TEST_ALT
+                    + "\nfunc TestKaputt(t *testing.T) { GibtEsNicht() }\n")
+    _phase_setzen(repo, phase)
+    r = _hook(repo)
+    assert r.returncode == 0, (
+        f"Uebersetzungsfehler ist eine Stoerung des Laufs, kein Block ({phase}, Exit "
+        f"{r.returncode})\n{r.stderr}"
+    )
+    assert "ungeprueft" in r.stderr.lower(), "Stoerung muss sichtbar sein:\n" + r.stderr
+
+
+# --- Frontend --------------------------------------------------------------
+
+FE_TEST_ALT = (
+    "import { test } from 'node:test';\n"
+    "import assert from 'node:assert/strict';\n"
+    "import { verdopple } from './rechner.ts';\n"
+    "test('verdopple alt', () => { assert.equal(verdopple(2), 4); });\n"
+)
+FE_TEST_NEU = FE_TEST_ALT + (
+    "test('verdopple neu rot', () => { assert.equal(verdopple(2), 5); });\n"
+)
+
+
+def _frontend_repo(tmp_path: Path) -> Path:
+    if not shutil.which("node"):
+        pytest.skip("node nicht vorhanden — Frontend-Faelle von #2503 UNGEPRUEFT")
+    repo = tmp_path / "repo"
+    lib = repo / "frontend" / "src" / "lib"
+    lib.mkdir(parents=True)
+    (repo / "frontend" / "package.json").write_text('{"type":"module"}\n')
+    (repo / "frontend" / "test-lib-loader.mjs").write_text("// leer: kein $lib-Resolver noetig\n")
+    # Wie im echten Repo: node_modules ist NICHT eingecheckt (.gitignore). Damit fehlt es
+    # im Wegwerf-Abzug der Vorzustandsmessung — das Gate muss trotzdem messen koennen,
+    # sonst gilt jeder Frontend-Fehlschlag als „Vorzustand unbekannt" und nichts blockiert.
+    (repo / ".gitignore").write_text("node_modules/\n")
+    (repo / "frontend" / "node_modules").mkdir()
+    (repo / "frontend" / "node_modules" / ".platzhalter").write_text("x\n")
+    (lib / "rechner.ts").write_text(
+        "export function verdopple(x: number): number { return x * 2; }\n")
+    (lib / "rechner.test.ts").write_text(FE_TEST_ALT)
+    _repo_init(repo)
+    (lib / "rechner.ts").write_text(
+        "export function verdopple(x: number): number { return x * 2; }\n// Aenderung\n")
+    (lib / "rechner.test.ts").write_text(FE_TEST_NEU)
+    _git(repo, "add", "-A")
+    return repo
+
+
+def test_2503_ac7_neuer_roter_frontend_test_in_phase_red_laesst_durch(tmp_path):
+    """AC-7: Neuer roter `node --test`-Fall in Phase RED -> Exit 0, Name genannt."""
+    repo = _frontend_repo(tmp_path)
+    _phase_setzen(repo, "phase5_tdd_red")
+    r = _hook(repo)
+    assert r.returncode == 0, (
+        f"Neuer roter Frontend-Test in Phase RED muss durch (AC-7, Exit {r.returncode})\n"
+        + r.stderr
+    )
+    assert "verdopple neu rot" in r.stderr and NEU_ANGELEGT in r.stderr.lower(), r.stderr
+
+
+def test_2503_ac7b_neuer_roter_frontend_test_ausserhalb_red_blockiert(tmp_path):
+    """AC-7 Gegenprobe: derselbe Fall in Phase 6 -> Exit 2 mit 'nur in Phase TDD-RED'."""
+    repo = _frontend_repo(tmp_path)
+    _phase_setzen(repo, "phase6_implement")
+    r = _hook(repo)
+    assert r.returncode == 2 and NUR_RED in r.stderr.lower(), (
+        f"Ausserhalb Phase RED muss blockiert werden (Exit {r.returncode})\n{r.stderr}"
     )
