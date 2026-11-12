@@ -246,6 +246,7 @@ Testschichten: **Kern** = ohne Netz (`node --test`, `svelte-check`, Build); **Li
 - **Menü-Wortlaut:** „Wetter“ und „Alarme“ ist ein Vorschlag, der mit der Spec-Freigabe bestätigt wird; kippt der PO ihn, ändert sich nur Katalogtext.
 - **Golden und Wächter:** Golden-HTML wird neu geschrieben; ein fachlich unerwarteter Unterschied im Diff gilt als Befund, nicht als zu akzeptierender Neuschrieb.
 - **Radar Trip** fehlt weiter bis S8 (#2800).
+- **Glossarzeile „Wertebereiche“ (Validierung 4b):** Die Zeile wird nicht gestrichen, sondern auf „Fachbegriff in Erklärtexten, kein Reiter mehr“ umgeschrieben, weil der Begriff in den Erklärtexten (`bausteine.*`) weiter vorkommt und nach der Regel „Glossar zuerst“ (ADR-0104) einen Glossareintrag braucht. Ziel von AC-49 (kein Reiter „Wertebereiche“ mehr) ist damit erfüllt; der Wächter `keine_alten_reiternamen.test.ts` prüft, dass die Zeile den Begriff nicht mehr als Reiter-Namen führt.
 
 ## Risiken
 
