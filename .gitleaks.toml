@@ -57,6 +57,8 @@ paths = [
   '''(^|/)internal/handler/session_issuance_test\.go$''',
   '''(^|/)internal/handler/verify_resend_test\.go$''',
   '''(^|/)internal/router/admin_invites_test\.go$''',
+  '''(^|/)internal/router/telegram_webhook_inbound_route_test\.go$''',
+  '''(^|/)internal/router/webhook_secrets_config_route_test\.go$''',
 ]
 
 [[allowlists]]
