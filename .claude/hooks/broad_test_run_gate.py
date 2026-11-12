@@ -48,10 +48,9 @@ Erlaubt ist ein pytest-Aufruf, wenn mindestens eines zutrifft:
    Shell-Zerlegung fanden je eine neue Umgehung (zuletzt Zeilenfortsetzung
    ``\\`` + Zeilenumbruch). Jede Abweichung (Zusatz-Flag, Praefix, Pipe,
    ``; echo``, Mehrzeilenform, anderer Leerraum) faellt ins normale Gate.
-4. **Menschliche Freigabe** — gueltiges Einmal-Token aus ``override``. Das kann
-   der Agent NICHT selbst erzeugen: ``user_override_token.json`` steht auf der
-   Schutzliste des ``bash_gate``, und angelegt wird es nur, wenn der User das
-   Wort woertlich tippt.
+
+Ein ``override`` des Users oeffnet dieses Gate NICHT (mehr, Issue #2227): ein
+breiter Lauf mit Netz ist genau der Weg des Produktiv-Versands aus #1477.
 
 Verzeichnisse (``pytest tests/``, ``pytest tests/unit/``) gelten NICHT als
 konkrete Auswahl — genau so faengt man sich einen ungemarkerten Live-Test ein.
@@ -71,17 +70,13 @@ Exit-Codes: 0 = erlaubt, 2 = blockiert.
 """
 from __future__ import annotations
 
-import json
 import re
 import shlex
 import sys
-from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
 import hook_utils  # noqa: E402
-
-_OVERRIDE_TTL = timedelta(hours=1)
 
 # Tokens, die "es wird nichts ausgefuehrt" bedeuten. ``--disable-socket``
 # allein ist seit #1755 keine Freigabe mehr (siehe _offline_form_is_safe).
@@ -104,48 +99,6 @@ _OFFLINE_REDIRECT_RE = re.compile(r" > ([A-Za-z0-9_./-]+) 2>&1")
 _TEST_FILE_RE = re.compile(r"[^\s]+\.py(?:::[^\s]*)?$")
 
 _NESTED_SHELL_RE = re.compile(r"\b(?:ba|z|da|k)?sh\s+-c\b|\beval\b")
-
-
-def _project_root() -> Path:
-    try:
-        return hook_utils.find_project_root()
-    except Exception:
-        return Path(__file__).resolve().parents[2]
-
-
-def _active_workflow_name() -> str:
-    try:
-        return hook_utils.get_active_workflow_name() or ""
-    except Exception:
-        return ""
-
-
-def _has_valid_override(workflow_name: str) -> bool:
-    """Gueltiges, nicht abgelaufenes Einmal-Token? (nicht verbrauchend gelesen)
-
-    Bewusst NICHT verbrauchend: ein einzelner Testlauf soll nicht das Token
-    fuer den naechsten Gate-Treffer derselben Freigabe wegnehmen. Die TTL
-    begrenzt den Zeitraum.
-    """
-    if not workflow_name:
-        return False
-    token_path = _project_root() / ".claude" / "user_override_token.json"
-    if not token_path.exists():
-        return False
-    try:
-        data = json.loads(token_path.read_text())
-    except (OSError, json.JSONDecodeError):
-        return False
-    entry = (data.get("tokens", {}) if isinstance(data, dict) else {}).get(workflow_name)
-    if not isinstance(entry, dict):
-        return False
-    try:
-        created = datetime.fromisoformat(entry.get("created", ""))
-    except (TypeError, ValueError):
-        return False
-    if created.tzinfo is None:
-        created = created.replace(tzinfo=timezone.utc)
-    return datetime.now(timezone.utc) - created <= _OVERRIDE_TTL
 
 
 def _tokens(command: str) -> list[str] | None:
@@ -392,7 +345,6 @@ def _block(detail: str) -> None:
     print(f"       {OFFLINE_CALL}", file=sys.stderr)
     print("     optional dahinter genau ' > datei 2>&1'; jede andere Abweichung", file=sys.stderr)
     print("     blockt. (--disable-socket allein reicht NICHT mehr.)", file=sys.stderr)
-    print("  4. Freigabe des Users: er tippt woertlich 'override' im Chat.", file=sys.stderr)
     print("", file=sys.stderr)
     print(
         "NICHT tun: diesen Hook abschalten, umgehen oder aufweichen, um\n"
@@ -411,8 +363,6 @@ def _check_raw(command: str) -> None:
     flat = _raw_split(command)
     starts = [i for i, t in enumerate(flat) if t == "pytest" or t.endswith("/pytest")]
     if starts and all(_invocation_ok(_args_after(flat, s)) for s in starts):
-        sys.exit(0)
-    if _has_valid_override(_active_workflow_name()):
         sys.exit(0)
     _block(
         "Kommando nicht verlaesslich zerlegbar (verschachtelte Shell oder "
@@ -442,8 +392,6 @@ def main() -> None:
     for start in starts:
         args = _args_after(tokens, start)
         if _invocation_ok(args):
-            continue
-        if _has_valid_override(_active_workflow_name()):
             continue
         shown = " ".join(args[:8]) or "(keine Argumente)"
         _block(f"pytest-Aufruf ohne konkrete Testdateien: pytest {shown}")
