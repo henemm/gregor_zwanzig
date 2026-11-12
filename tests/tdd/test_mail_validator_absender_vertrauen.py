@@ -25,6 +25,20 @@ HOOKS = ROOT / ".claude" / "hooks"
 sys.path.insert(0, str(HOOKS))
 
 import _mail_trust  # noqa: E402
+from tests.fixtures.authentication_results_fixtures import (  # noqa: E402
+    AR_DKIM_PASS_NO_D,
+    AR_FAIL,
+    AR_FOREIGN_AUTHSERV,
+    AR_H1_NORMAL,
+    AR_H1_SPF_SWAPPED,
+    AR_H2_INJECTION,
+    AR_H3_ESCAPED_QUOTE,
+    AR_H4_RESEND,
+    AR_MAILFROM_FAIL_HELO_PASS,
+    AR_SPF_PASS_NO_SCOPE,
+    PROD_AUTHSERV_ID,
+    TEST_AUTHSERV_ID,
+)
 
 DIENST = "gregor-test@henemm.com"
 SERVER = "mail.henemm.com"
@@ -130,30 +144,78 @@ def _kopf(roh: str):
     return message_from_string(roh)
 
 
-def test_regeln_der_vertrauenspruefung():
+def _mit(auth: str | None, von: str = DIENST, server: str = SERVER):
+    """(Grund, Warnung) fuer eine Mail mit diesem Authentication-Results-Kopf;
+    IMAP-Faltung ``\\r\\n\\t`` wird zur RFC-822-Folgezeile."""
+    kopf = None if auth is None else auth.replace("\r\n", "\n")
+    v = _mail_trust.Vertrauen(frozenset({DIENST}), server)
+    return _mail_trust.pruefen(_kopf(_roh(von, "compare", "x", kopf)), v)
+
+
+def test_absender_regeln():
     ok = _roh(DIENST, "compare", "x")
-    assert _mail_trust.fehler(_kopf(ok), VERTRAUEN) is None
+    assert _mail_trust.pruefen(_kopf(ok), VERTRAUEN) == (None, None)
     # Gross-/Kleinschreibung der Adresse ist egal
-    assert _mail_trust.fehler(_kopf(_roh(DIENST.upper(), "compare", "x")), VERTRAUEN) is None
+    assert _mit(None, von=DIENST.upper()) == (None, None)
     # zwei From-Koepfe
-    doppelt = "From: <a@example.org>\n" + ok
-    assert "genau ein From" in _mail_trust.fehler(_kopf(doppelt), VERTRAUEN)
-    # fremder Server-Kopf zaehlt nicht (Pruefung nicht verfuegbar), eigener schon
-    fremd = _roh(DIENST, "compare", "x", "mx.example.org; dkim=fail")
-    assert _mail_trust.fehler(_kopf(fremd), VERTRAUEN) is None
-    keins = _roh(DIENST, "compare", "x", f"{SERVER}; dkim=none; spf=none")
-    assert "weder DKIM noch SPF" in _mail_trust.fehler(_kopf(keins), VERTRAUEN)
-    kommentar = _roh(DIENST, "compare", "x", f"{SERVER} (Stalwart); dkim=pass (ok)")
-    assert _mail_trust.fehler(_kopf(kommentar), VERTRAUEN) is None
-    unlesbar = _roh(DIENST, "compare", "x", f'{SERVER}; dkim=pass header.b="x"')
-    assert "unlesbar" in _mail_trust.fehler(_kopf(unlesbar), VERTRAUEN)
-    # ohne konfigurierten Absender wird nichts akzeptiert (fail-closed)
+    grund, _ = _mail_trust.pruefen(_kopf("From: <a@example.org>\n" + ok), VERTRAUEN)
+    assert "genau ein From" in grund
+    # fremde Domain: Ablehnung
+    grund, _ = _mit(None, von="angreifer@example.org")
+    assert grund.startswith("ABSENDER")
+    # eigene Domain, nicht gelistet: Warnung, keine Ablehnung
+    grund, warnung = _mit(None, von="gregor_zwanzig@henemm.com")
+    assert grund is None and "nicht als Dienst-Absender gelistet" in warnung
+    # kein Absender ermittelbar: Warnung statt Ablehnung (fail-soft)
     leer = _mail_trust.Vertrauen(frozenset(), SERVER)
-    assert "kein Dienst-Absender" in _mail_trust.fehler(_kopf(ok), leer)
+    grund, warnung = _mail_trust.pruefen(_kopf(ok), leer)
+    assert grund is None and "kein Dienst-Absender ermittelbar" in warnung
+
+
+@pytest.mark.parametrize("auth", [AR_H1_NORMAL, AR_H1_SPF_SWAPPED])
+def test_helo_permerror_neben_mailfrom_pass_wird_akzeptiert(auth):
+    """Echter Staging-/Prod-Kopf: spf=permerror im HELO-Scope + spf=pass mailfrom."""
+    assert _mit(auth, server=PROD_AUTHSERV_ID) == (None, None)
+
+
+def test_resend_dkim_pass_wird_akzeptiert():
+    """Echte Resend-Zustellung (dkim=pass header.d=henemm.com header.s=resend)."""
+    assert _mit(AR_H4_RESEND, von="gregor_zwanzig@henemm.com", server=PROD_AUTHSERV_ID)[0] is None
+
+
+def test_ohne_kopf_entfaellt_die_teilpruefung():
+    """Port 587 traegt strukturell keinen Kopf."""
+    assert _mit(None) == (None, None)
+
+
+def test_kopf_eines_fremden_servers_zaehlt_nicht():
+    assert _mit(AR_FOREIGN_AUTHSERV, server=TEST_AUTHSERV_ID.replace("test", "x"))[0] is None
+
+
+@pytest.mark.parametrize("auth", [AR_FAIL, AR_MAILFROM_FAIL_HELO_PASS, AR_SPF_PASS_NO_SCOPE,
+                                  AR_DKIM_PASS_NO_D])
+def test_nicht_bestaetigte_domain_wird_verworfen(auth):
+    """mailfrom-fail, nur HELO-pass, scope-lose bzw. nicht ausgerichtete Ergebnisse."""
+    grund, _ = _mit(auth, server=TEST_AUTHSERV_ID)
+    assert grund and grund.startswith("AUTHENTISIERUNG")
+
+
+def test_fremde_header_d_ohne_ausrichtung_wird_verworfen():
+    auth = (f"{TEST_AUTHSERV_ID}; spf=pass smtp.mailfrom=a@attacker.example; "
+            "dkim=pass header.d=attacker.example; dmarc=fail header.from=henemm.com")
+    grund, _ = _mit(auth, server=TEST_AUTHSERV_ID)
+    assert grund and grund.startswith("AUTHENTISIERUNG")
+
+
+@pytest.mark.parametrize("auth", [AR_H2_INJECTION, AR_H3_ESCAPED_QUOTE])
+def test_injektion_ueber_quotes_wird_verworfen(auth):
+    grund, _ = _mit(auth, server=PROD_AUTHSERV_ID)
+    assert grund and "unlesbar" in grund
 
 
 def test_absender_kommt_aus_der_versandkonfiguration(monkeypatch):
-    """AC-5: der erwartete Absender ist der, den der Versand selbst setzt."""
+    """AC-5: der erwartete Absender ist der, den der Versand selbst setzt; auf
+    Staging ist das das Konto des Test-Postfachs (fix-2542, Staging-.env)."""
     from app.config import Settings
 
     monkeypatch.delenv(_mail_trust.ENV_ABSENDER, raising=False)
@@ -161,6 +223,9 @@ def test_absender_kommt_aus_der_versandkonfiguration(monkeypatch):
                  mail_server_hostname=SERVER)
     v = _mail_trust.aus_settings(s)
     assert DIENST in v.absender and v.authserv_id == SERVER
+    # nur der Postfach-Zugang, den der Validator ohnehin braucht, genuegt
+    nur_imap = Settings(_env_file=None, test_imap_user="gregor-test")
+    assert DIENST in _mail_trust.aus_settings(nur_imap).absender
     monkeypatch.setenv(_mail_trust.ENV_ABSENDER, "Dienst@Example.org, zweiter@example.org")
     v = _mail_trust.aus_settings(s)
     assert v.absender == {"dienst@example.org", "zweiter@example.org"}

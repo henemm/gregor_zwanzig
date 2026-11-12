@@ -87,7 +87,7 @@ Dienstes und rendern deren HTML ohne Skript und ohne Netzzugriff.
 - **AC-4:** Given die Ops-Skripte für Telegram, seven.io und das Validator-Konto / When sie laufen / Then erscheinen Bot-Token, Secrets, API-Schlüssel und Passwörter nicht in den Argumenten des curl-Prozesses, und der Empfänger erhält dieselbe Anfrage wie vorher.
   - Test: echter curl gegen ein lokales Antwort-Double mit argv-Mitschnitt (seven.io), curl-Stub mit Konfigurationsmitschnitt (Telegram), Loopback-Trockenlauf (Validator-Konto)
 
-- **AC-5:** Given im Test-Postfach liegt nach der echten Dienst-Mail eine jüngere fremde Mail mit denselben Marker-Köpfen / When einer der vier Mail-Validatoren seine Mail wählt / Then prüft er die echte Mail; liegt nur die fremde Mail vor oder meldet der eigene Mailserver DKIM/SPF fail, endet die Auswahl mit einem Fehler, der den Grund nennt.
+- **AC-5:** Given im Test-Postfach liegt nach der echten Dienst-Mail eine jüngere Mail mit denselben Marker-Köpfen aus fremder Domain / When einer der vier Mail-Validatoren seine Mail wählt / Then prüft er die echte Mail; liegt nur die fremde Mail vor oder bestätigt der Kopf des eigenen Mailservers die Absender-Domain nicht (Regel des Produktions-Eingangs, HELO-Scope zählt nicht), endet die Auswahl mit einem Fehler, der den Grund nennt.
   - Test: Auswahl je Validator über das IMAP-Double, Regeln der Prüfung, Ableitung des Absenders aus der Versandkonfiguration
 
 - **AC-6:** Given Mail-HTML mit Skript und externem Bild / When der Briefing-Validator es rendert / Then läuft das Skript nicht und keine Anfrage erreicht das Netz.
@@ -100,9 +100,10 @@ Dienstes und rendern deren HTML ohne Skript und ohne Netzzugriff.
 - Environment `production`, Branch-Bindung der Deploy-Secrets, `DEPLOY_KNOWN_HOSTS` und die
   Begrenzung des SSH-Schlüssels per `command=…,restrict` liegen beim Eigentümer
   (`docs/reference/operations_playbook.md`, „Deploy-Geheimnisse an main binden").
-- Ob der Stalwart-Server bei lokal eingelieferten Mails einen eigenen
-  `Authentication-Results`-Kopf mit `dkim=none`/`spf=none` setzt, ist nicht belegt; dann
-  würde der Validator die Mail verwerfen und der Grund in der Fehlermeldung stehen.
+- Die Absenderprüfung ist bewusst fail-soft: ein Absender der eigenen Domain, der nicht
+  gelistet ist, oder eine fehlende Absender-Konfiguration erzeugen nur eine Warnzeile; abgelehnt
+  werden fremde Domains und Köpfe des eigenen Servers ohne ausgerichtete Bestätigung
+  (Auswertung des Produktions-Eingangs, HELO-Scope zählt nicht).
 - `frontend/e2e` enthält weiterhin Rückfallwerte für Testpasswörter; außerhalb dieses Pakets.
 
 ## Architektur-Entscheidung (ADR)
