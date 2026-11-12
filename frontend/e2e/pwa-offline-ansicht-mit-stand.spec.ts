@@ -380,7 +380,7 @@ test('AC-6: ohne Netz erscheint auf der Startseite die Offline-Uebersicht, nie e
 			'ohne Netz erscheint auf der Startseite keine Offline-Uebersicht'
 		).toBeVisible({ timeout: 15_000 });
 		await expect(
-			page.getByText('Alerts · letzte 24 h'),
+			page.getByText('Alarme · letzte 24 h'), // #2794 Fix-Loop B5
 			'die Alarm-Kachel der Startseite kam aus dem Gerätespeicher — ' +
 				'ein eingefrorener Alarm-Stand ist die gefaehrlichste Anzeige des Produkts'
 		).toHaveCount(0);

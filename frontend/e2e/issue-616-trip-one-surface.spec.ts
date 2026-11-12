@@ -23,7 +23,8 @@ const DESKTOP = { width: 1440, height: 900 };
 // Issue #1231 Slice 6: alerts-Label erneut umbenannt ("Alerts" -> "Wertebereiche").
 const CANONICAL_TABS: ReadonlyArray<[string, string]> = [
 	['uebersicht', 'Übersicht'],
-	['etappen', 'Etappen & Wegpunkte'],
+	// #2794 Fix-Loop B1: Reiter heißt kurz „Etappen" (Mockup Fassung 3).
+	['etappen', 'Etappen'],
 	['wetter', 'Wetter'],
 	['zustellung', 'Zustellung']
 ];
@@ -84,7 +85,7 @@ test.describe('Issue #616 — EINE Trip-Seite', () => {
 		/**
 		 * GIVEN: die kanonische Trip-Oberfläche
 		 * WHEN:  die Tab-Leiste gerendert ist
-		 * THEN:  4 Tabs: Übersicht · Etappen & Wegpunkte · Wetter · Zustellung;
+		 * THEN:  4 Tabs: Übersicht · Etappen · Wetter · Zustellung;
 		 *        kein Reiter Versand/Vorschau/Wetter-Metriken/Wertebereiche/Alarme.
 		 */
 		await page.goto(DETAIL_URL);

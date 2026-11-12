@@ -7,7 +7,7 @@ const TRIP_ID = 'e2e-cockpit-test';
 // Issue #2287: Reihenfolge und Beschriftungen = shared/subscriptionTabs.ts ('trip').
 const TABS = [
 	{ value: 'uebersicht', label: 'Übersicht' },
-	{ value: 'etappen', label: 'Etappen & Wegpunkte' },
+	{ value: 'etappen', label: 'Etappen' }, // #2794 Fix-Loop B1
 	{ value: 'wetter', label: 'Wetter' },
 	{ value: 'zustellung', label: 'Zustellung' }
 ];

@@ -286,13 +286,17 @@ function orteKarte(aufgeloesteOrte: Array<{ rank: number; loc?: { name: string }
 	};
 }
 
-function wertebereicheKarte(preset: ComparePreset): Karte {
-	const anzahl = Object.keys(preset.display_config?.ideal_ranges ?? {}).length;
+/** Karte „Wetter" (#2794 Fix-Loop B4): Zahl der Metriken im Briefing aus `standAusAbo`
+ *  (dieselbe Auswahl wie der Reiter Wetter), nicht aus den alten `ideal_ranges`.
+ *  Vorlagen nicht geladen (fehlt/null/leer) ⇒ „—" statt einer erfundenen Zahl. Liest nur. */
+function wertebereicheKarte(preset: ComparePreset, vorlagen: VorlagenAmpeln | null | undefined): Karte {
+	const geladen = !!vorlagen && Object.keys(vorlagen).length > 0;
+	const anzahl = geladen ? standAusAbo('vergleich', preset as unknown as AboSicht, vorlagen).auswahl.length : null;
 	return {
 		eyebrow: tr('aktionen.reiter.wetter'),
 		titel: presetProfileLabel(preset.profil) || String(preset.profil ?? ''),
-		beschreibungKurz: trn('vergleich.hub.wertebereiche_kurz', anzahl),
-		beschreibungLang: trn('vergleich.hub.wertebereiche_lang', anzahl),
+		beschreibungKurz: anzahl === null ? '—' : trn('vergleich.hub.wertebereiche_kurz', anzahl),
+		beschreibungLang: anzahl === null ? '—' : trn('vergleich.hub.wertebereiche_lang', anzahl),
 		sprungziel: { tab: 'wetter' }
 	};
 }
@@ -301,7 +305,8 @@ export function deriveVergleichKennzahlen(
 	preset: ComparePreset,
 	status: CompareStatus,
 	briefing: NextBriefing | null | undefined,
-	aufgeloesteOrte: Array<{ rank: number; loc?: { id: string; name: string } }>
+	aufgeloesteOrte: Array<{ rank: number; loc?: { id: string; name: string } }>,
+	vorlagen?: VorlagenAmpeln | null
 ): HubUebersichtModell {
 	const zeiten = presetBriefingTimesLabel(preset);
 	const naechster = formatNextBriefing(briefing, 'vergleich');
@@ -324,6 +329,6 @@ export function deriveVergleichKennzahlen(
 		rasterTestid: 'compare-detail-monitoring-mobile',
 		stapelTestid: 'compare-detail-summary-mobile',
 		orteKarte: orteKarte(aufgeloesteOrte),
-		wertebereicheKarte: wertebereicheKarte(preset)
+		wertebereicheKarte: wertebereicheKarte(preset, vorlagen)
 	};
 }

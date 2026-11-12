@@ -11,7 +11,7 @@
 // Kind-Kontraste (nur dort, wo die Spec sie ausweist):
 //   - testids: Vergleich behält `compare-*`, Trip bekommt `hub-uebersicht-*`
 //     (Spec „Stabile testids"; Tabelle UE unten, keine Assertions darin).
-//   - mobile Pfeil-Zeilen: Vergleich Orte · Wertebereiche · Versand (3), Trip nur
+//   - mobile Pfeil-Zeilen: Vergleich Orte · Wetter · Versand (3), Trip nur
 //     Versand (1) — Orte/Wertebereiche-Karten sind Vergleichs-Hauptfläche
 //     (Spec Entscheidung 1, AC-2).
 //   - Status: Vergleich „Läuft autom." (mobil) / „Läuft automatisch" (Desktop);
@@ -66,7 +66,7 @@ const UE: Record<
 		versandEdit: 'compare-hub-versand-edit',
 		raster: 'compare-detail-monitoring-mobile',
 		stapel: 'compare-detail-summary-mobile',
-		pfeilZeilen: ['Orte', 'Wertebereiche', 'Versand']
+		pfeilZeilen: ['Orte', 'Wetter', 'Versand'] // #2794: Eyebrow der Wetter-Karte heißt „Wetter“
 	}
 };
 

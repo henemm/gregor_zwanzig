@@ -16,7 +16,8 @@
 	import { Card, Dot, Eyebrow } from '$lib/components/atoms';
 	import BriefingHistory from '$lib/components/shared/BriefingHistory.svelte';
 	import { api } from '$lib/api.js';
-	import type { ComparePreset, Trip } from '$lib/types';
+	import type { Ampel, ComparePreset, Trip } from '$lib/types';
+	import { vorlagenAusTemplates, type VorlagenAmpeln } from '../wetter-tab/ampelModell.ts';
 	import { deriveTripStatus } from '$lib/utils/tripStatus';
 	import { deriveStatusFromPreset, type CompareStatus } from '$lib/components/compare/subscriptionHelpers';
 	import type { SaveStatus } from '$lib/stores/saveStatusStore.svelte';
@@ -60,6 +61,17 @@
 		(p) => api.get(p)
 	);
 
+	// #2794 Fix-Loop B4: Vorlagen wie trip-detail/HubOverview.svelte (Reiter Wetter); die Karte
+	// „Wetter" (nur mit `preset`) zählt damit dieselbe Auswahl. Ladefehler ⇒ null ⇒ „—".
+	let vorlagen = $state<VorlagenAmpeln | null>(null);
+	onMount(() => {
+		if (!preset) return;
+		api.get<{ id: string; ampel?: Ampel | null }[]>('/api/templates').then(
+			(liste) => (vorlagen = vorlagenAusTemplates(liste)),
+			() => (vorlagen = null)
+		);
+	});
+
 	const modell = $derived(
 		(void $locale, trip)
 			? deriveRouteKennzahlen(trip, deriveTripStatus(trip, new Date()), naechstesBriefing.wert, historie)
@@ -67,7 +79,8 @@
 					preset as ComparePreset,
 					status ?? deriveStatusFromPreset(preset as ComparePreset),
 					naechstesBriefing.wert,
-					orte ?? []
+					orte ?? [],
+					vorlagen
 				)
 	);
 	const mobileKennzahlen = $derived(modell.kennzahlen.filter((k) => k.mobil));
@@ -159,10 +172,13 @@
 			</button>
 		</div>
 	{:else}
-		<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px">
+		<!-- #2794 Fix-Loop B3: Flex-Umbruch statt Grid — jede Karte wächst, daher füllt eine Karte
+		     allein ihre Zeile (Trip) und drei Karten brechen bei schmalem Raster (Desktop ab 900 px,
+		     abzüglich Seitenleiste) ohne leere Hälfte um. Grid auto-fit ließ dort zwei Spalten mit Lücke. -->
+		<div style="display: flex; flex-wrap: wrap; gap: 16px">
 			{#each [modell.orteKarte, modell.wertebereicheKarte] as karte, i (i)}
 				{#if karte}
-					<Card padding={20} style="display: flex; flex-direction: column">
+					<Card padding={20} style="display: flex; flex-direction: column; flex: 1 1 280px; min-width: 0">
 						<div style="display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 4px">
 							<Eyebrow>{karte.eyebrow}</Eyebrow>
 							<button onclick={springe(karte.sprungziel)} style="background: none; border: none; cursor: pointer; padding: 0; font-size: 12px; font-weight: 600; color: var(--g-accent-deep); font-family: var(--g-font-sans)">{$t('aktionen.edit')} →</button>
@@ -172,7 +188,7 @@
 					</Card>
 				{/if}
 			{/each}
-			<Card padding={20} style="display: flex; flex-direction: column">
+			<Card padding={20} style="display: flex; flex-direction: column; flex: 1 1 280px; min-width: 0">
 				<div style="display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 4px">
 					<Eyebrow>{$t('bausteine.checkliste.versand')}</Eyebrow>
 					<button data-testid={modell.versandKarte.testid} onclick={springe(modell.versandKarte.sprungziel)} style="background: none; border: none; cursor: pointer; padding: 0; font-size: 12px; font-weight: 600; color: var(--g-accent-deep); font-family: var(--g-font-sans)">{$t('aktionen.edit')} →</button>

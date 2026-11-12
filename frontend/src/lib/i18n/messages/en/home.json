@@ -19,7 +19,7 @@
 	"home.trip.tag_von": "Day {tag} / {gesamt}",
 	"home.trip.keine_briefings_geplant": "No briefings planned for this trip.",
 	"home.aktion.pausentag": "Plan a rest day",
-	"home.aktion.pausentag_ziel": "→ Stages & waypoints",
+	"home.aktion.pausentag_ziel": "→ Stages",
 	"home.aktion.metriken": "Change weather",
 	"home.aktion.metriken_ziel": "→ Weather",
 	"home.aktion.zeitplan": "Briefing schedule",

@@ -28,7 +28,8 @@ export const F9_ANKER: [schluessel: string, de: string, en: string][] = [
 	['aktionen.wird_gesendet', 'Wird gesendet…', 'Sending…'],
 	['aktionen.zurueck_uebersicht', 'Zurück zur Übersicht', 'Back to overview'],
 	['aktionen.reiter.uebersicht', 'Übersicht', 'Overview'],
-	['aktionen.reiter.etappen_wegpunkte', 'Etappen & Wegpunkte', 'Stages & waypoints'],
+	// #2794 Fix-Loop B1: kurzes Reiter-Label ersetzt aktionen.reiter.etappen_wegpunkte (Bereichsköpfe: #2913).
+	['aktionen.reiter.etappen', 'Etappen', 'Stages'],
 	['aktionen.reiter.orte', 'Orte', 'Locations'],
 	// #2794 S3a: die Reiter Wetter und Zustellung.
 	['aktionen.reiter.wetter', 'Wetter', 'Weather'],

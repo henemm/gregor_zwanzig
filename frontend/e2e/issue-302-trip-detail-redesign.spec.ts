@@ -68,14 +68,15 @@ test.describe('Issue #302 — Trip-Detail-Seite Redesign', () => {
 	// -------------------------------------------------------------------------
 	// Tab-Leiste: Neue Labels + Badges
 
-	// Fix-Loop 2026-07-13 (F003): Label ist seit langem "Etappen & Wegpunkte"
-	// (Konsistenz mit CANONICAL_TABS in issue-616-trip-one-surface.spec.ts) —
-	// die alte "Etappen"-Kurzform existiert nicht mehr.
-	test('AC-3a: Tab "stages" heißt "Etappen & Wegpunkte"', async ({ page }) => {
+	// #2794 Fix-Loop B1 (Spec fix_2794_s3a_teil4b_befunde AC-1): der Reiter heißt wieder
+	// kurz „Etappen" (Mockup Fassung 3), Konsistenz mit CANONICAL_TABS in
+	// issue-616-trip-one-surface.spec.ts.
+	test('AC-3a: Tab "stages" heißt "Etappen"', async ({ page }) => {
 		await page.goto(`/trips/${TRIP_ID}`);
 		const stagesTab = page.getByTestId('trip-detail-tab-etappen');
 		await expect(stagesTab).toBeVisible();
-		await expect(stagesTab).toContainText('Etappen & Wegpunkte');
+		await expect(stagesTab).toContainText('Etappen');
+		await expect(stagesTab).not.toContainText('Wegpunkte');
 	});
 
 	// Issue #529 — Kanonische Tab-Namen (nav-map.jsx Drift aufgelöst).

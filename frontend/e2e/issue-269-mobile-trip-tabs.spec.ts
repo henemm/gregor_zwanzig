@@ -80,7 +80,7 @@ test.describe('Issue #269: Mobile Trip-Detail-Tabs Pill-Scroller', () => {
 		 * GIVEN: Viewport ist 375×667 px (Mobile)
 		 * WHEN:  Trip-Detail-Seite geladen
 		 * THEN:  Alle Tab-Trigger haben white-space: nowrap
-		 *        (kein Umbruch bei "Etappen & Wegpunkte")
+		 *        (kein Umbruch beim Reiter "Etappen")
 		 */
 		await page.setViewportSize(MOBILE_VIEWPORT);
 		await page.goto(`/trips/${TRIP_ID}`);
@@ -93,7 +93,7 @@ test.describe('Issue #269: Mobile Trip-Detail-Tabs Pill-Scroller', () => {
 		}
 	});
 
-	test('AC-2b: "Etappen & Wegpunkte" Tab ist einzeilige 44px-Pill auf Mobile', async ({
+	test('AC-2b: "Etappen" Tab ist einzeilige 44px-Pill auf Mobile', async ({
 		page
 	}) => {
 		/**
@@ -110,8 +110,8 @@ test.describe('Issue #269: Mobile Trip-Detail-Tabs Pill-Scroller', () => {
 
 		const stagesTab = page.getByTestId('trip-detail-tab-etappen');
 		const height = await stagesTab.evaluate((el) => el.getBoundingClientRect().height);
-		expect(height, `"Etappen & Wegpunkte"-Tab ist ${height}px hoch (Erwartung: 44px-Pill)`).toBeGreaterThanOrEqual(44);
-		expect(height, `"Etappen & Wegpunkte"-Tab ist ${height}px hoch (Umbruch?)`).toBeLessThanOrEqual(50);
+		expect(height, `"Etappen"-Tab ist ${height}px hoch (Erwartung: 44px-Pill)`).toBeGreaterThanOrEqual(44);
+		expect(height, `"Etappen"-Tab ist ${height}px hoch (Umbruch?)`).toBeLessThanOrEqual(50);
 	});
 
 	// ─── AC-3: Aktiver Tab als Pill dargestellt ──────────────────────────────
@@ -156,7 +156,7 @@ test.describe('Issue #269: Mobile Trip-Detail-Tabs Pill-Scroller', () => {
 	test('AC-3c: Inaktiver Tab hat auf Mobile KEINEN Pill-Hintergrund', async ({ page }) => {
 		/**
 		 * GIVEN: Viewport ist 375×667 px (Mobile), "Übersicht" aktiv
-		 * WHEN:  Inaktiver Tab "Etappen & Wegpunkte" betrachtet
+		 * WHEN:  Inaktiver Tab "Etappen" betrachtet
 		 * THEN:  Hintergrund ist transparent, NICHT --g-accent
 		 */
 		await page.setViewportSize(MOBILE_VIEWPORT);

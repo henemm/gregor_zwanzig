@@ -41,6 +41,12 @@
 // Huell-Knoten <div class="hub-reiterflaeche" data-testid="compare-detail-uebersicht-reiterflaeche">
 // um den unveraenderten Inhalt ergaenzt (gezielt eingefuegt, nicht neu aufgenommen).
 //
+// Issue #2794 Fix-Loop (Spec fix_2794_s3a_teil4b_befunde, B3/B4): im Golden bewusst
+// nachgezogen — Karten-Raster als Flex-Umbruch (`flex-wrap: wrap`, Karten `flex: 1 1 280px`)
+// statt `1fr 1fr` (zuvor kurz `repeat(auto-fit, …)`, das bei schmalem Desktop eine Lücke ließ), und
+// die Karte „Wetter" zeigt im SSR „—" (Vorlagen laden erst im Browser per onMount; ohne
+// Vorlagen keine erfundene Zahl, AC-10). Die Zahl selbst prueft s3a2794_teil4b_befunde.test.ts.
+//
 // MOBIL: `isMobileViewport` setzt CompareTabs erst im Browser per matchMedia
 // (onMount). Im SSR (svelte/server) laeuft kein onMount — gerendert wird nur der
 // Desktop-Zweig. Bewusst KEINE Produktaenderung, um Mobil zu erzwingen. Der

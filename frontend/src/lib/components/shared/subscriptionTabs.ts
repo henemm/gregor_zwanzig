@@ -43,7 +43,9 @@ export interface ReiterDefinition {
 export const REITER_DEFINITION: ReiterDefinition = {
 	uebersicht: { id: 'uebersicht', label: 'aktionen.reiter.uebersicht' },
 	punkte: {
-		trip: { id: 'etappen', label: 'aktionen.reiter.etappen_wegpunkte' },
+		// #2794 Fix-Loop B1: Reiter heißt kurz „Etappen"; der Schlüssel etappen_wegpunkte entfällt
+		// (Bereichsköpfe der Reiter kommen mit #2913).
+		trip: { id: 'etappen', label: 'aktionen.reiter.etappen' },
 		vergleich: { id: 'orte', label: 'aktionen.reiter.orte' }
 	},
 	// Issue #2794 S3a (Teil-PR 2): Wetter · Zustellung ersetzen Wetter-Metriken ·
