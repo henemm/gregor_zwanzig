@@ -63,7 +63,7 @@
 
 <svelte:window onkeydown={taste} />
 
-<div class="wt-karte">
+<div class="wt-karte" data-abschnitt="vorlage">
 	<div class="wt-picker-wrap">
 		<span class="wt-eyebrow">{$t('wetter.vorlage.titel')}</span>
 		<div class="wt-picker">

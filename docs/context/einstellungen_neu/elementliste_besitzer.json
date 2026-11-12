@@ -1,0 +1,5 @@
+{
+"zweck": "Besitzer und Ausnahmen für den Ganzseiten-Abgleich der Elementliste (frontend/e2e/elementliste_abgleich_logik.ts: leseBesitzer, wendeBesitzerAn, leseAusnahmen, findeZusaetzliche; Spec docs/specs/modules/feat_2913_abgleich_ganzseite.md). 'besitzer': jede Abweichung (abweichend, nicht_pruefbar, zusaetzlich) braucht einen Verantwortlichen, sonst ist der Lauf mit --abnahme rot. Ziel-Art 'element' (id), 'abschnitt' (ctx, reiter, abschnitt) oder 'zusaetzlich' (text oder muster, optional ctx/reiter); Pflicht sind 'grund' und 'verweis' (#2913-c2, #2913-d, #2913-e oder #NNNN). 'ausnahmen': Live-Texte, die bewusst nicht in der Elementliste stehen (z. B. Kontodaten ohne Muster), je mit 'text' oder 'muster', 'grund' und 'spec'. Eine Freigabe aus elementliste_freigaben.json zählt bereits als Besitzer.",
+"besitzer": [],
+"ausnahmen": []
+}

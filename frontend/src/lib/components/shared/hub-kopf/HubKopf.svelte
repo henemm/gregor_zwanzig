@@ -68,7 +68,7 @@
 	const KIND = { route: 'trip', vergleich: 'vergleich' } as const;
 </script>
 
-<div class="hub-kopf" data-kind={context}>
+<div class="hub-kopf" data-kind={context} data-seite="hub" data-abschnitt="kopf">
 	<div data-testid={leisteTestid}>
 		<div class="hub-kopf-leiste" data-testid="hub-kopf-leiste">
 			<div class="back-mobil"><BackLink href={parent.href} label="" ariaLabel={$t('aktionen.zurueck_uebersicht')} /></div>

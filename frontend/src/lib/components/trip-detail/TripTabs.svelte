@@ -183,17 +183,20 @@
 	}
 </script>
 
-<div class="trip-tabs" data-testid="trip-detail-tab-list">
+<div class="trip-tabs" data-testid="trip-detail-tab-list" data-seite="hub">
 	<!-- Mobile Usability Paket 2 (Spec mobile_tab_leisten_mtabbar): geteilter
 	     Baustein — Band + Fade + scrollIntoView + A11y + 44px-Trigger. Die
 	     Unterline-Desktop-Optik lebt ebenfalls im Baustein (AP-006: kein
-	     divergierendes Tab-CSS mehr hier). -->
-	<MTabBar
-		items={segmentedOptions}
-		active={activeTab}
-		onChange={(v) => void handleValueChange(v)}
-		ariaLabel={$t('trip.hub.tabs_aria')}
-	/>
+	     divergierendes Tab-CSS mehr hier).
+	     #2913: Wrapper ohne Klasse/Style = unsichtbarer Haken für den Elementlisten-Abgleich. -->
+	<div data-abschnitt="reiterleiste">
+		<MTabBar
+			items={segmentedOptions}
+			active={activeTab}
+			onChange={(v) => void handleValueChange(v)}
+			ariaLabel={$t('trip.hub.tabs_aria')}
+		/>
+	</div>
 	{#each TABS as tab}
 		{#if activeTab === tab.value}
 			<div data-testid="trip-detail-panel-{tab.value}">

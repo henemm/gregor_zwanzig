@@ -173,7 +173,7 @@ describe('Freigegebene Abweichung: Trip-Radar (AC-3, #2800)', () => {
 	test('Bericht zählt freigegeben getrennt; strict besteht damit, nicht aber mit abweichend', () => {
 		const erg = wendeFreigabenAn([radarTitel, warn], new Map([['rt', ab()], ['w', { status: 'gefunden' as const }]]), freigaben);
 		const b = baueBericht([radarTitel, warn], erg);
-		assert.deepEqual(b.zaehler, { gefunden: 1, abweichend: 0, nicht_pruefbar: 0, freigegeben: 1 });
+		assert.deepEqual(b.zaehler, { gefunden: 1, abweichend: 0, nicht_pruefbar: 0, freigegeben: 1, zusaetzlich: 0 });
 		assert.equal(exitCode(b, { strict: true }), 0);
 		assert.match(abschluss(b, [radarTitel, warn], { strict: true }).meldung, /freigegeben 1/);
 		assert.match(berichtAlsMarkdown(b), /\| freigegeben \|/);
