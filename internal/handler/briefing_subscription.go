@@ -290,8 +290,12 @@ func UpdateBriefingHandler(s *store.Store) http.HandlerFunc {
 			WriteError(w, r, http.StatusBadRequest, "validation_error", i18n.Args{"detail": err.Error()})
 			return
 		}
+		if presetGrenzenVerletzt(w, r, &original, preset) {
+			return
+		}
 		// Issue #1250 Scheibe 7b: nur die eigene Datei per-Datei zurueckschreiben.
-		if bailIf(w, r, s.SaveComparePreset(preset) != nil, http.StatusInternalServerError, "store_error") {
+		if err := s.SaveComparePreset(preset); err != nil {
+			writeSaveError(w, r, err)
 			return
 		}
 		newFp, newFpErr := s.BriefingFingerprint(id)

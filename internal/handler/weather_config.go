@@ -98,6 +98,10 @@ func PutTripWeatherConfigHandler(s *store.Store) http.HandlerFunc {
 		if bailIf(w, r, displayConfigAmpelUngueltig(cfg), 400, "ampel_ungueltig") {
 			return
 		}
+		// Issue #2961: Wachstumsgrenze vor dem Merge.
+		if configMergesVerletzt(w, r, [2]map[string]interface{}{trip.DisplayConfig, cfg}) {
+			return
+		}
 		// Issue #1151: Feld-Level-Merge statt Blind-Replace, analog #1129/#1103.
 		// Teil-Updates (nur `metrics` gesendet) duerfen andere zuvor gespeicherte
 		// display_config-Keys (z.B. `theme`) nicht loeschen.
@@ -115,7 +119,7 @@ func PutTripWeatherConfigHandler(s *store.Store) http.HandlerFunc {
 		// fuer gespeichert — ein Vertrauensanker, den es vor S2 nicht gab.
 		trip.ID = id
 		if err := s.SaveTrip(trip); err != nil {
-			WriteError(w, r, 500, "store_error", nil)
+			writeSaveError(w, r, err)
 			return
 		}
 		// Issue #1395 S2: neuer Stempel fuer den Folge-Schreibvorgang; fail-soft,
@@ -175,6 +179,10 @@ func PutLocationWeatherConfigHandler(s *store.Store) http.HandlerFunc {
 			WriteError(w, r, 400, "bad_request", nil)
 			return
 		}
+		// Issue #2961: Wachstumsgrenze vor dem Merge.
+		if configMergesVerletzt(w, r, [2]map[string]interface{}{loc.DisplayConfig, cfg}) {
+			return
+		}
 		// Issue #1159: Feld-Level-Merge statt Blind-Replace — behebt aktiven
 		// Datenverlust (BUG-DATALOSS-GR221, s. mergeConfigMap-Doku).
 		loc.DisplayConfig = mergeConfigMap(loc.DisplayConfig, cfg)
@@ -185,7 +193,7 @@ func PutLocationWeatherConfigHandler(s *store.Store) http.HandlerFunc {
 		// FREMDEN Ort, waehrend der angefragte unveraendert blieb.
 		loc.ID = id
 		if err := s.SaveLocation(*loc); err != nil {
-			WriteError(w, r, 500, "store_error", nil)
+			writeSaveError(w, r, err)
 			return
 		}
 		w.Header().Set("Content-Type", "application/json")

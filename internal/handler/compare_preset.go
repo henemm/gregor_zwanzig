@@ -286,6 +286,11 @@ func CreateComparePresetHandler(s *store.Store) http.HandlerFunc {
 			preset.DisplayConfig = displayConfigAusVorlage(std, false)
 		}
 
+		// Issue #2961: Wachstumsgrenzen der freien Maps.
+		if presetGrenzenVerletzt(w, r, nil, preset) {
+			return
+		}
+
 		unlockB, okB := lockBriefingOr503(w, r, s, preset.ID)
 		if !okB {
 			return
@@ -446,6 +451,9 @@ func UpdateComparePresetHandler(s *store.Store) http.HandlerFunc {
 
 		if err := validateComparePreset(updated); err != nil {
 			WriteError(w, r, http.StatusBadRequest, "validation_error", i18n.Args{"detail": err.Error()})
+			return
+		}
+		if presetGrenzenVerletzt(w, r, &original, updated) {
 			return
 		}
 
@@ -635,10 +643,13 @@ func GetComparePresetHandler(s *store.Store) http.HandlerFunc {
 
 // POST /api/compare/presets/{id}/send — Proxy to Python Core. Issue #627.
 // Issue #2280 AC-13: Alt-Route, Delegate auf forwardSend (send_proxy.go);
-// ohne ID-Validierung (Bestand).
+// Issue #2961: Kennung wird geprueft (400) und kodiert weitergereicht.
 func SendComparePresetHandler(pythonURL string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		id := chi.URLParam(r, "id")
+		id, ok := coreKennung(w, r, "id", sendVarianteKennung)
+		if !ok {
+			return
+		}
 		forwardSend(w, r, pythonURL+"/api/scheduler/compare-presets/"+id+"/send", r.URL.RawQuery)
 	}
 }

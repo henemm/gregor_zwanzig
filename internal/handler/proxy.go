@@ -1,15 +1,16 @@
 package handler
 
 import (
+	"bytes"
 	"encoding/json"
+	"errors"
 	"io"
 	"net/http"
 	"net/url"
 	"strings"
 	"time"
 
-	"github.com/go-chi/chi/v5"
-
+	"github.com/henemm/gregor-api/internal/i18n"
 	"github.com/henemm/gregor-api/internal/middleware"
 )
 
@@ -182,7 +183,7 @@ func appendUserID(rawQuery, userID string) string {
 	values, err := url.ParseQuery(rawQuery)
 	if err != nil {
 		// Malformed query — defense-in-depth: drop everything, keep only auth.
-		return "user_id=" + userID
+		return url.Values{"user_id": {userID}}.Encode()
 	}
 	values.Del("user_id")
 	values.Set("user_id", userID)
@@ -195,7 +196,10 @@ func appendUserID(rawQuery, userID string) string {
 // Spec: docs/specs/modules/validator_internal_loaded_endpoint.md (Issue #115).
 func LoadedTripProxyHandler(pythonURL string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		id := chi.URLParam(r, "id")
+		id, ok := coreKennung(w, r, "id", nil)
+		if !ok {
+			return
+		}
 		query := appendUserID("", middleware.UserIDFromContext(r.Context()))
 		url := pythonURL + "/api/_internal/trip/" + id + "/loaded?" + query
 
@@ -225,7 +229,10 @@ func LoadedTripProxyHandler(pythonURL string) http.HandlerFunc {
 // Spec: docs/specs/modules/stage_weather_go_proxy.md (Issue #1212, Slice R2).
 func StagesWeatherProxyHandler(pythonURL string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		id := chi.URLParam(r, "id")
+		id, ok := coreKennung(w, r, "id", nil)
+		if !ok {
+			return
+		}
 		query := appendUserID("", middleware.UserIDFromContext(r.Context()))
 		url := pythonURL + "/api/_internal/trips/" + id + "/stages-weather?" + query
 
@@ -314,10 +321,14 @@ func ValidatorFormatMetricProxyHandler(pythonURL string) http.HandlerFunc {
 // Trip ID via chi.URLParam, user_id from auth context appended to query.
 // Spec: docs/specs/modules/issue_695_test_briefing_send.md
 // Issue #2280 AC-13: Alt-Route, Delegate auf forwardSend (send_proxy.go);
-// ohne ID-Validierung (Bestand), Default report_type=evening setzt Python.
+// Issue #2961: Kennung wird geprueft (400) und kodiert weitergereicht.
+// Default report_type=evening setzt Python.
 func SendTripReportProxyHandler(pythonURL string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		id := chi.URLParam(r, "id")
+		id, ok := coreKennung(w, r, "id", sendVarianteKennung)
+		if !ok {
+			return
+		}
 		forwardSend(w, r, pythonURL+"/api/scheduler/trips/"+id+"/send", r.URL.RawQuery)
 	}
 }
@@ -328,7 +339,10 @@ func SendTripReportProxyHandler(pythonURL string) http.HandlerFunc {
 // Issue #2283 AC-16: Alt-Route, Delegate auf forwardPreview (preview_proxy.go).
 func AlertPreviewProxyHandler(pythonURL string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		id := chi.URLParam(r, "id")
+		id, ok := coreKennung(w, r, "id", nil)
+		if !ok {
+			return
+		}
 		forwardPreview(w, r, http.MethodPost, pythonURL+"/api/trips/"+id+"/alert-preview", previewProxyTimeout)
 	}
 }
@@ -391,6 +405,10 @@ func MetricsForChannelProxyHandler(pythonURL string) http.HandlerFunc {
 	}
 }
 
+// gpxUploadMaxBytes begrenzt den GPX-Upload (Issue #2961): groessere Rumpfe
+// erreichen den Core nie.
+const gpxUploadMaxBytes = 10 << 20
+
 func GpxProxyHandler(pythonURL string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		client := &http.Client{Timeout: 30 * time.Second}
@@ -401,7 +419,20 @@ func GpxProxyHandler(pythonURL string) http.HandlerFunc {
 			url += "?" + query
 		}
 
-		req, err := http.NewRequestWithContext(r.Context(), http.MethodPost, url, r.Body)
+		// Vollstaendig (begrenzt) lesen statt streamen: nur so steht VOR dem
+		// Upstream-Aufruf fest, ob der Rumpf die Grenze reisst (413 statt 503).
+		body, err := io.ReadAll(http.MaxBytesReader(w, r.Body, gpxUploadMaxBytes))
+		if err != nil {
+			var tooLarge *http.MaxBytesError
+			if errors.As(err, &tooLarge) {
+				WriteError(w, r, http.StatusRequestEntityTooLarge, "payload_too_large", i18n.Args{"variante": "gpx"})
+				return
+			}
+			WriteError(w, r, http.StatusBadRequest, "bad_request", nil)
+			return
+		}
+
+		req, err := http.NewRequestWithContext(r.Context(), http.MethodPost, url, bytes.NewReader(body))
 		if err != nil {
 			WriteError(w, r, 500, "proxy_error", nil)
 			return

@@ -12,6 +12,7 @@ package handler
 
 import (
 	"net/http"
+	"net/url"
 
 	"github.com/go-chi/chi/v5"
 
@@ -31,7 +32,7 @@ func briefingPreviewTarget(w http.ResponseWriter, r *http.Request, pythonURL, su
 	if bailIf(w, r, !store.ValidEntityID(id), http.StatusBadRequest, "validation_error") {
 		return "", "", false
 	}
-	return pythonURL + "/api/briefings/" + id + "/" + suffix, kind, true
+	return pythonURL + "/api/briefings/" + url.PathEscape(id) + "/" + suffix, kind, true
 }
 
 // POST /api/briefings/{id}/alert-preview?kind=route|vergleich
