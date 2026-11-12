@@ -166,7 +166,7 @@ const CTA_KETTE: Record<HubKind, { ohneName: string; ersterWeiter: string; punkt
 		ohneName: 'Name eingeben',
 		ersterWeiter: 'Orte hinzufügen →',
 		punkteGate: /^\s*noch 2 Orte nötig\s*$/,
-		punkteWeiter: 'Wetter-Metriken →'
+		punkteWeiter: 'Wetter →' // #2794 S3a 4b: Reitername „Wetter"
 	}
 };
 // #2794 S3a: ab Wetter genau ein gemeinsamer Weiter-Schritt nach Zustellung.

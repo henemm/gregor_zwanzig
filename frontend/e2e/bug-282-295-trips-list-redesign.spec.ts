@@ -106,7 +106,7 @@ test.describe('Bug #282 + #295 — Trips-Liste Redesign', () => {
 		for (const label of [
 			'Senden',
 			'Alarme',
-			'Wetter-Metriken',
+			'Wetter', // #2794 S3a 4b (AC-48)
 			'Bearbeiten',
 			'Löschen',
 		]) {

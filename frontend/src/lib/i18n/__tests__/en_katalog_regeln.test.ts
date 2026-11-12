@@ -73,8 +73,9 @@ describe('AC-8: englische Texte', () => {
 		assert.match(enText('info.wertebereiche.route'), /target ranges/);
 		assert.match(enText('tip.aria.wertebereiche'), /target ranges/);
 		assert.match(enText('hilfe.briefing.abends'), /Delivery tab/);
-		assert.match(enText('hilfe.alarme.text'), /Alerts tab/);
-		assert.match(enText('telegram_kurzstil.hinweis_aktiv'), /Layout tab/);
+		// #2794 S3a 4b: alte Reiter Alerts/Layout gibt es nicht mehr, beides liegt im Reiter Zustellung.
+		assert.match(enText('hilfe.alarme.text'), /Delivery tab/);
+		assert.match(enText('telegram_kurzstil.hinweis_aktiv'), /Delivery tab/);
 	});
 	test('Beispiel-Schluessel der Spec (Konto/Anmeldung, Standardwerte, Onboarding)', () => {
 		assert.equal(enText('start.cta.register'), 'Sign up');

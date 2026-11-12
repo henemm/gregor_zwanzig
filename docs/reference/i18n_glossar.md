@@ -21,8 +21,8 @@
 | Alarme einstellen | adjust alerts | nie „Alerts justieren" (#2881) |
 | Entwürfe | drafts | Listen-Zähler; nie „Drafts" im deutschen UI (#2881) |
 | amtliche Warnung | official warning | Quelle unverändert (DWD, MeteoAlarm, Météo-France, GeoSphere, SLF) |
-| Wertebereiche | target ranges | Reiter-Name |
-| Versand | delivery | Reiter-Name; „Versandkanal" = *delivery channel* |
+| Wertebereiche | target ranges | Fachbegriff in Erklärtexten (Begriffs-Erklärung, Infobox); kein Reiter mehr, seit #2794 S3a liegen die Grenzen im Reiter Wetter |
+| Versand | delivery | Abschnitt des Reiters Zustellung (Anker `#versand`), kein Reiter mehr seit #2794 S3a; „Versandkanal" = *delivery channel* |
 | Layout | layout | bleibt |
 | Korridor | corridor | bleibt |
 | Orte | locations | |

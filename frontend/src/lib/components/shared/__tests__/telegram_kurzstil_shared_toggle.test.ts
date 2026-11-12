@@ -238,7 +238,7 @@ describe('#2455 AC-1/AC-2: Hinweis am Kurzstil-Schalter', () => {
 	for (const ctx of ['route', 'vergleich'] as const) {
 		test(`AC-1 (${ctx}): Hinweis nennt SMS-Auswahl und Geltung nur fuer ausfuehrliches Telegram`, () => {
 			const hint = tr('telegram_kurzstil.hinweis_aktiv');
-			assert.match(hint, /SMS-Auswahl im Layout-Reiter/);
+			assert.match(hint, /SMS-Auswahl im Reiter Zustellung/);
 			assert.match(hint, /nur für das ausführliche Telegram/);
 			const html = renderToggle(ctx, false);
 			assert.ok(html.includes(hint), 'gerenderter Hinweis muss der Katalogtext sein');

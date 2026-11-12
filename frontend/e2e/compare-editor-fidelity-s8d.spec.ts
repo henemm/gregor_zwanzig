@@ -143,7 +143,7 @@ test.describe('Issue #1256 S8d (AC-9..AC-12): kontextuelle Floating-CTA + Versan
 		await page.getByTestId('compare-step2-mobile-library-btn').click();
 		await page.locator(`[data-testid="compare-step2-mobile-lib-check-${locB}"]`).click();
 		await page.locator('button[aria-label="Schliessen"]:visible').click();
-		await expect(cta).toContainText('Wetter-Metriken →');
+		await expect(cta).toContainText('Wetter →'); // #2794 S3a 4b
 		await cta.getByRole('button').click();
 		// #2794 S3a (Spec feat_2794_s3a_teil2_leiste.md): Schritt Wetter (Metriken + Wertebereiche).
 		await expect(page.locator('[data-testid="cm-mobile-tab-wetter"]:visible')).toHaveAttribute(

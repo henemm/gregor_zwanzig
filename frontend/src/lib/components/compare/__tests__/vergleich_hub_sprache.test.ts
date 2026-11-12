@@ -315,7 +315,7 @@ describe('AC-7: Stundenverlauf (transponierte Uebersicht): Name aus dem Register
 	test('Anlegen Orte/weiter: Reiter, Fortschritt, Schaltflaechen englisch; Plural exakt', () => {
 		const { en: e } = deDannEn(() => sichtbar([...P.ANLEGE_FAELLE.anlegen_orte, ...P.ANLEGE_FAELLE.anlegen_weiter].map(P.anlegenRendern).join('\n')));
 		// #2794 S3a: kein eigener Wertebereiche-Schritt mehr, Fortschritt mit 4 Abschnitten.
-		for (const s of ['1 more location needed', '2 more locations needed', 'select at least 2 locations', 'Weather metrics →', 'Set up delivery →', '1 / 4 sections set up', 'Set up alerts to activate']) hat(e, s);
+		for (const s of ['1 more location needed', '2 more locations needed', 'select at least 2 locations', 'Weather →', 'Set up delivery →', '1 / 4 sections set up', 'Set up alerts to activate']) hat(e, s);
 		assert.deepEqual(deutscheReste(e), []);
 	});
 });

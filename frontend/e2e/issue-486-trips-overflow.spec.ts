@@ -103,7 +103,7 @@ test.describe('Issue #486 — Desktop Trips-Zeile: Overflow-Menü statt Icon-Ges
 		for (const label of [
 			'Senden',
 			'Alarme',
-			'Wetter-Metriken',
+			'Wetter', // #2794 S3a 4b (AC-48)
 			'Bearbeiten',
 			'Löschen',
 		]) {

@@ -10,7 +10,7 @@
 // 'draft' | 'active' | 'paused' | 'archived' (Ausgabe von `subscriptionLifecycle`).
 //
 // Beschriftungen = die PO-freigegebenen AC-Texte (AC-1/AC-2/AC-12): Pausieren/Fortsetzen,
-// Senden, Alarme, Wetter-Metriken, Bearbeiten, Loeschen, Setup fortsetzen,
+// Senden, Alarme, Wetter, Bearbeiten, Loeschen, Setup fortsetzen,
 // Archivieren/Reaktivieren.
 // #1743 (Spec feat_1743_reiter_aufraeumen AC-27): die Aktion „Vorschau" entfaellt ersatzlos;
 // die uebrigen Aktionen bleiben in Reihenfolge und Wirkung unveraendert.
@@ -50,7 +50,7 @@ const LABEL: Record<string, string> = {
 	resume: 'Fortsetzen',
 	send: 'Senden',
 	alarms: 'Alarme',
-	weather: 'Wetter-Metriken',
+	weather: 'Wetter', // #2794 S3a 4b (AC-48): Menü-Wortlaut = Reiter Wetter
 	edit: 'Bearbeiten',
 	archive: 'Archivieren',
 	unarchive: 'Reaktivieren',

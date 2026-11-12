@@ -174,7 +174,7 @@ for (const kind of HUB_KINDS) {
 			await expect(p).toBeVisible({ timeout: 10_000 });
 			await expect(p.getByText('Noch nicht geplant')).toBeVisible();
 			if (kind === 'vergleich') {
-				await expect(p.getByText('Briefing-Uhrzeiten unter Wetter-Metriken im Abschnitt Versand festlegen.')).toBeVisible();
+				await expect(p.getByText('Briefing-Uhrzeiten im Reiter Zustellung im Abschnitt Versand festlegen.')).toBeVisible();
 			}
 		});
 

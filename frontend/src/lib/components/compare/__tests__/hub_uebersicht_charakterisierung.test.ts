@@ -225,7 +225,7 @@ describe('AC-3/AC-13: tragende Texte und Kennungen der Uebersicht', () => {
 		const t = reinerText(uebersicht('entwurf'));
 		assert.ok(t.includes('Entwurf · nicht aktiv'), t);
 		assert.ok(t.includes('Noch nicht geplant'), t);
-		assert.ok(t.includes('Briefing-Uhrzeiten unter Wetter-Metriken im Abschnitt Versand festlegen.'), t);
+		assert.ok(t.includes('Briefing-Uhrzeiten im Reiter Zustellung im Abschnitt Versand festlegen.'), t); // #2794 S3a 4b
 		assert.ok(t.includes('2 Kandidaten'), t);
 	});
 

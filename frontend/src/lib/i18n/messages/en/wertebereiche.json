@@ -78,7 +78,7 @@
 	"wertebereiche.warnungen.text": "Show official weather warnings (e.g. severe weather warning) in the email briefing.",
 	"wertebereiche.warnungen.legende_block": "In SMS and Telegram compact style the warning block starts with {zeichen} — everything after it is an official warning, not our own forecast.",
 	"wertebereiche.warnungen.legende_stufe": "The warning level follows the colon: {l} = yellow, {m} = orange, {h} = red (e.g. {beispiel} = red thunderstorm warning).",
-	"wertebereiche.vergleich.titel": "Weather metrics",
+	"wertebereiche.vergleich.titel": "Metric selection",
 	"wertebereiche.vergleich.hinweis": "Only selected metrics appear in the comparison email.",
 	"wertebereiche.vergleich.warn_hinweis": "Official warnings always come first regardless of this order and are therefore not part of the sortable list.",
 	"wertebereiche.symbolzeile.temperature": "Temperature",

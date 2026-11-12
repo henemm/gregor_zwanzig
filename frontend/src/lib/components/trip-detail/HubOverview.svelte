@@ -3,11 +3,14 @@
 	import FullProfile from './FullProfile.svelte';
 	import TripStageRow from './TripStageRow.svelte';
 	import ReportLine from './ReportLine.svelte';
-	import type { Trip } from '$lib/types';
+	import type { Ampel, Trip } from '$lib/types';
 	// Issue #2682: echte Briefing-/Alert-Kanäle (EINE Regel mit der Kanäle-Kennzahl der Übersicht).
-	import { tripAlertKanaele, tripBriefingKanaele, tripWetterAlarmAktiv } from '../shared/hub-uebersicht/hubUebersichtModell.ts';
+	import { tripAlarmAbText, tripAlertKanaele, tripBriefingKanaele, tripWetterAlarmAktiv } from '../shared/hub-uebersicht/hubUebersichtModell.ts';
+	// Issue #2794 U4: Alarm-Zeile = „Alarm ab"-Zähler des Reiters Wetter (aufgelöste Ampel).
+	import { eigenschaftenAusKatalog, vorlagenAusTemplates, type VorlagenAmpeln } from '../shared/wetter-tab/ampelModell.ts';
+	import { onMount } from 'svelte';
 	import { fetchStageRisk, type StageRisk } from '$lib/utils/stageRisk';
-	// Feature #1435 Etappe E3a: Wetter-Metriken-Block. `metricsCatalog` kommt
+	// Feature #1435 Etappe E3a: Block Wetter. `metricsCatalog` kommt
 	// ausschließlich als Prop aus der Server-Naht (+page.server.ts) — kein
 	// eigener Fetch, kein $effect (AC-5, Fehlerklasse #1320).
 	import { resolveTripMetricsOverviewState } from '$lib/components/shared/trip-metrics/tripActiveMetricNames';
@@ -21,7 +24,7 @@
 
 	interface Props {
 		trip: Trip;
-		/** #1743: optionaler Anker im Ziel-Reiter (Versand-Abschnitt unter Wetter-Metriken). */
+		/** #1743: optionaler Anker im Ziel-Reiter (Abschnitt Versand im Reiter Zustellung). */
 		onJump?: (tab: string, anchor?: 'versand') => void;
 		metricsCatalog?: MetricCatalog | null;
 		/** #1969: Backend-Wert (GET /api/next-briefings?trip_id=). Fehlt er, laedt die Karte ihn selbst. */
@@ -50,8 +53,18 @@
 	// Issue #2682 (AC-9/AC-10): tatsaechlich eingestellte Kanaele statt fester Liste.
 	const briefingKanaele = $derived(tripBriefingKanaele(trip));
 	const alertKanaele = $derived(tripAlertKanaele(trip));
-	// AC-15: Alarm-Zeile nur aktiv, wenn der Trip eine Wetter-Alarm-Quelle hat.
-	const wetterAlarmAktiv = $derived(tripWetterAlarmAktiv(trip));
+	// Issue #2794 U4: Vorlagen-Ampeln clientseitig (wie der Reiter Wetter); Ladefehler ⇒ null ⇒ „—".
+	let vorlagen = $state<VorlagenAmpeln | null>(null);
+	onMount(() => {
+		api.get<{ id: string; ampel?: Ampel | null }[]>('/api/templates').then(
+			(liste) => (vorlagen = vorlagenAusTemplates(liste)),
+			() => (vorlagen = null)
+		);
+	});
+	const eig = $derived(metricsCatalog ? eigenschaftenAusKatalog(metricsCatalog as unknown as Record<string, Record<string, unknown>[]>) : null);
+	// AC-15 + #2794 U4: Alarm-Zeile aktiv, wenn der Trip eine Wetter-Alarm-Quelle hat (inkl. Ampel wie der Server).
+	const wetterAlarmAktiv = $derived(tripWetterAlarmAktiv(trip, vorlagen, eig));
+	const alarmAbText = $derived((void $locale, tripAlarmAbText(trip, vorlagen, eig)));
 
 	// i18n F9: die Namensliste kommt sprachabhaengig aus F5 — `$locale` haelt sie reaktiv.
 	const metricsState = $derived.by(() =>
@@ -113,7 +126,7 @@
 
 	<!-- Right column -->
 	<div style="display: flex; flex-direction: column; gap: 20px;">
-		<!-- Feature #1435 Etappe E3a: Wetter-Metriken-Block — die inhaltlich
+		<!-- Feature #1435 Etappe E3a: Block Wetter — die inhaltlich
 		     wichtigste Einstellung einer Trip, deshalb erste Karte. Vier sich
 		     ausschließende Zweige in dieser Prüfreihenfolge: Katalog-Fehler ->
 		     Altbestand -> Leerauswahl -> Auswahl (AC-4). -->
@@ -147,7 +160,7 @@
 			<Eyebrow style="margin-bottom: 10px;">{$t('trip.uebersicht.briefings_laufen')}</Eyebrow>
 			<ReportLine kind="morning" time={morgenZeit} channels={briefingKanaele} active={reportSlotAktiv(trip.report_config, 'morning')} />
 			<ReportLine kind="evening" time={abendZeit} channels={briefingKanaele} active={reportSlotAktiv(trip.report_config, 'evening')} />
-			<ReportLine kind="alert" time={$t('trip.uebersicht.bei_delta')} channels={alertKanaele} active={wetterAlarmAktiv} alert />
+			<ReportLine kind="alert" time={alarmAbText} channels={alertKanaele} active={wetterAlarmAktiv} alert />
 			<div style="margin-top: 12px;">
 				<Btn variant="ghost" size="sm" onclick={makeJumpHandler('zustellung', 'versand')}>{$t('trip.uebersicht.zeitplan_bearbeiten')}</Btn>
 			</div>
@@ -155,7 +168,7 @@
 
 		<!-- Issue #2682: die Versand-Historie steht im geteilten Baustein HubUebersicht (EIN Laden
 		     mit „Zuletzt raus"); die Karte „Alerts (letzte 7 Tage)" mit Festtext ohne Datenquelle
-		     entfaellt (AC-11) — Alarme bleiben ueber den Reiter Alarme erreichbar. -->
+		     entfaellt (AC-11) — Alarme bleiben ueber den Reiter Zustellung erreichbar. -->
 	</div>
 </div>
 

@@ -65,7 +65,7 @@ test('Trip und Vergleich: je Zeile „Alarm ab" aus der Abo-Ampel, sonst aus der
 	assert.equal(zelle(html, 'freezing_level'), 'Entspannt', 'D4 zeigt die heutige Stufe');
 	assert.equal(zelle(html, 'cape'), 'Alarm ab: Nie', 'CAPE alarmiert nicht mehr eigenstaendig (P1)');
 	assert.ok(
-		html.includes('Wird gerade umgebaut: Alarme folgen jetzt der Ampel. Einstellbar wird ‚Alarm ab‘ mit dem neuen Reiter Wetter.'),
+		html.includes('Alarme folgen jetzt der Ampel. ‚Alarm ab‘ stellst du im Reiter Wetter ein.'),
 		'Hinweis oben fehlt'
 	);
 });
@@ -83,7 +83,7 @@ test('EN: Hinweis und Stufen aus dem Katalog, Protokoll-Kennung bleibt gleich', 
 	const html = tabelle({ activeMetrics: ['wind_gust', 'humidity'], levels: {}, vorlage: VORLAGEN.allgemein });
 	assert.equal(zelle(html, 'wind_gust'), 'Alert from: Orange');
 	assert.equal(zelle(html, 'humidity'), 'no alert (precursor)');
-	assert.ok(html.includes('Being rebuilt: alerts now follow the traffic light.'), html);
+	assert.ok(html.includes('Alerts now follow the traffic light. You set ‘Alert from’ in the Weather tab.'), html);
 	assert.ok(html.includes('data-alarm-ab="orange"'), 'Kennung ist Protokoll-Token, sprachunabhaengig');
 });
 

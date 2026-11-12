@@ -145,7 +145,7 @@ describe('AC-1: Trip-Hub englisch, Namen unveraendert', () => {
 		const { de, en } = deDannEn(() => sichtbar(P.uebersichtRendern()));
 		hat(de, '· 1 Größe unbekannt');
 		hat(de, '· 2 Größen unbekannt');
-		for (const s of ['Order & profile', 'Open in editor →', 'Weather metrics could not be loaded.', 'Not set yet — the standard set applies.', 'No weather metrics selected — the briefing contains no weather table.', '· 1 metric unknown', '· 2 metrics unknown', 'Edit weather metrics →', 'Briefings running', 'Morning briefing', 'Evening briefing', 'Alert trigger', 'on Δ', 'Edit schedule →'])
+		for (const s of ['Order & profile', 'Open in editor →', 'Weather metrics could not be loaded.', 'Not set yet — the standard set applies.', 'No weather metrics selected — the briefing contains no weather table.', '· 1 metric unknown', '· 2 metrics unknown', 'Edit weather →', 'Briefings running', 'Morning briefing', 'Evening briefing', 'Alert trigger', 'Edit schedule →'])
 			hat(en, s);
 		assert.deepEqual(deutscheReste(en, DATEN), []);
 	});
@@ -400,7 +400,12 @@ describe('Anker: jeder F9-Katalogwert ist als festes de/en-Literal verankert', (
 	test('ein Text steht in aktionen.* nie unter zwei Schluesseln (de)', () => {
 		const MSG = path.join(P.FRONTEND, 'src', 'lib', 'i18n', 'messages');
 		const kat = JSON.parse(readFileSync(path.join(MSG, 'de', 'aktionen.json'), 'utf-8')) as Record<string, string>;
-		const werte = Object.entries(kat).filter(([k]) => !k.endsWith('.one') && !k.endsWith('.other')).map(([, v]) => v);
+		// Einzige begruendete Ausnahme (#2794 S3a 4b, AC-48): der Menue-Eintrag `aktionen.weather`
+		// traegt bewusst denselben Wortlaut wie der Reiter `aktionen.reiter.wetter` (eine Bezeichnung,
+		// kein zweiter Begriff); der Schluessel bleibt, weil Menue und Reiter-Definition ihn fuehren.
+		assert.equal(kat['aktionen.weather'], kat['aktionen.reiter.wetter'], 'Ausnahme nur, solange beide gleich lauten');
+		const AUSNAHME = new Set(['aktionen.weather']);
+		const werte = Object.entries(kat).filter(([k]) => !k.endsWith('.one') && !k.endsWith('.other') && !AUSNAHME.has(k)).map(([, v]) => v);
 		assert.equal(new Set(werte).size, werte.length, werte.join(' | '));
 	});
 

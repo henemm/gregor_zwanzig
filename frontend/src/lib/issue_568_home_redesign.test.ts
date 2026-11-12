@@ -106,13 +106,13 @@ test('#1351 F006 setupStepCompare: ausgewählte active_metrics → Layout-Schrit
 	const steps = setupStepCompare(comparePreset({
 		display_config: { active_metrics: ['wind_speed', 'temp_max_c'] }
 	}));
-	assert.strictEqual(steps[3].label, 'Layout');
+	assert.strictEqual(steps[3].label, 'Layout je Kanal');
 	assert.strictEqual(steps[3].done, true, 'Layout-Schritt: gesetzte active_metrics → done');
 });
 
 test('#1351 F006 setupStepCompare: frischer, unkonfigurierter Vergleich → Layout-Schritt offen', () => {
 	const steps = setupStepCompare(comparePreset());
-	assert.strictEqual(steps[3].label, 'Layout');
+	assert.strictEqual(steps[3].label, 'Layout je Kanal');
 	assert.strictEqual(steps[3].done, false, 'Layout-Schritt: keine active_metrics → offen');
 });
 

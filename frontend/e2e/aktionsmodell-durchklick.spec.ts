@@ -168,7 +168,7 @@ for (const kind of ['trip', 'vergleich'] as const) {
 				const ZIELE: Array<[string, string, string]> = [
 					// #2794 S3a: Alarme im Reiter Zustellung, Wetter-Metriken im Reiter Wetter.
 					['alarms', 'Alarme', `${o.pfad}?tab=zustellung`],
-					['weather', 'Wetter-Metriken', `${o.pfad}?tab=wetter`]
+					['weather', 'Wetter', `${o.pfad}?tab=wetter`]
 				];
 				// Issue #1743: Aktion „Vorschau" entfaellt im Listen-Menue.
 				await listenMenueOeffnen(page, kind, o, viewport);

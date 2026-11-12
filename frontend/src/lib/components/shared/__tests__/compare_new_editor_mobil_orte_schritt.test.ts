@@ -91,7 +91,7 @@ describe('AC-6 mobil (F001): Auswahl des Editors erreicht den mobilen Orte-Schri
 		assert.match(sichtbarerText(innen(einer.mobil, 'compare-step2-counter')), /min\. 2/);
 		assert.match(sichtbarerText(einer.mobil), /noch 1 Ort nötig/);
 		const zwei = await renderMobilOrte(['loc-b', 'loc-a']);
-		assert.match(sichtbarerText(zwei.mobil), /Wetter-Metriken →/);
+		assert.match(sichtbarerText(zwei.mobil), /Wetter →/); // #2794 S3a 4b: Reitername „Wetter"
 		assert.doesNotMatch(sichtbarerText(zwei.mobil), /Ort(e)? nötig/);
 	});
 });

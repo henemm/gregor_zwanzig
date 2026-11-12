@@ -210,11 +210,12 @@ async function loadDerivations(): Promise<{ alarmfaehig: Fn; ohneAlarm: Fn }> {
 }
 
 describe('#1435 E1b AC-6: der Leerzustand nennt den richtigen Reiter', () => {
-	test('Der echte Leerzustand fuehrt zum Reiter „Wetter-Metriken" — in Trip wie Vergleich', () => {
+	// #2794 S3a 4b: die Metrik-Auswahl liegt im Reiter Wetter (früher „Wetter-Metriken").
+	test('Der echte Leerzustand fuehrt zum Reiter „Wetter" — in Trip wie Vergleich', () => {
 		const vergleich = screen();
 		assert.deepEqual(vergleich.testids, ['alarme-no-metrics']);
 		assert.ok(
-			vergleich.text.includes('Wetter-Metriken'),
+			vergleich.text.includes('Reiter Wetter') && !vergleich.text.includes('Wetter-Metriken'),
 			'Der Leerzustand schickt den Nutzer nicht in den Reiter, in dem die Groessen ' +
 				`tatsaechlich gewaehlt werden. Angezeigt wird: „${vergleich.text.trim()}" (AC-6).`
 		);

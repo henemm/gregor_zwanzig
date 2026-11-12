@@ -72,9 +72,9 @@ describe('AC-5: Versand-SummaryCard Draft-Sonderfall (jsx:175-177)', () => {
 		const code = modell();
 		assert.ok(code.includes('Noch nicht geplant'), 'AC-5 FAIL: Draft-Titel „Noch nicht geplant" fehlt');
 		assert.ok(
-			// #1743: kein Reiter „Versand" mehr — die Copy verweist auf den Abschnitt unter Wetter-Metriken.
-			code.includes('Briefing-Uhrzeiten unter Wetter-Metriken im Abschnitt Versand festlegen.'),
-			'AC-5 FAIL: Draft-Copy „Briefing-Uhrzeiten unter Wetter-Metriken im Abschnitt Versand festlegen." fehlt'
+			// #1743/#2794 S3a 4b: kein Reiter „Versand" mehr — die Copy verweist auf den Abschnitt Versand im Reiter Zustellung.
+			code.includes('Briefing-Uhrzeiten im Reiter Zustellung im Abschnitt Versand festlegen.'),
+			'AC-5 FAIL: Draft-Copy „Briefing-Uhrzeiten im Reiter Zustellung im Abschnitt Versand festlegen." fehlt'
 		);
 	});
 });

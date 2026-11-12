@@ -105,7 +105,7 @@ export const F5_ANKER: [schluessel: string, de: string, en: string][] = [
 	['wertebereiche.warnungen.legende_block', 'In SMS und Telegram-Kurzform beginnt der Warn-Block mit <zeichen> — alles dahinter ist eine amtliche Warnung, nicht die eigene Vorhersage.', 'In SMS and Telegram compact style the warning block starts with <zeichen> — everything after it is an official warning, not our own forecast.'],
 	['wertebereiche.warnungen.legende_stufe', 'Die Warnstufe steht nach dem Doppelpunkt: <l> = gelb, <m> = orange, <h> = rot (z. B. <beispiel> = rote Gewitterwarnung).', 'The warning level follows the colon: <l> = yellow, <m> = orange, <h> = red (e.g. <beispiel> = red thunderstorm warning).'],
 	// Ortsvergleich (WeatherMetricsTab context="vergleich")
-	['wertebereiche.vergleich.titel', 'Wetter-Metriken', 'Weather metrics'],
+	['wertebereiche.vergleich.titel', 'Metrik-Auswahl', 'Metric selection'], // #2794 S3a 4b: kein alter Reitername (AC-33)
 	['wertebereiche.vergleich.hinweis', 'Nur angewählte Metriken erscheinen in der Vergleichs-Mail.', 'Only selected metrics appear in the comparison email.'],
 	['wertebereiche.vergleich.warn_hinweis', 'Amtliche Warnungen stehen unabhängig von dieser Reihenfolge immer an erster Stelle und sind deshalb nicht Teil der sortierbaren Liste.', 'Official warnings always come first regardless of this order and are therefore not part of the sortable list.'],
 	// Nacht-Stundentabelle (#1721, nur Trip)

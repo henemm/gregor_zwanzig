@@ -79,10 +79,11 @@ export function setupStepTrip(trip: Trip): SetupStep[] {
  * Setup-Schritte für einen ComparePreset (in fester Reihenfolge):
  *   1. Vergleich  — immer done (Entwurf existiert)
  *   2. Orte       — done wenn location_ids.length >= 2
- *   3. Wertebereiche — done wenn display_config.ideal_ranges nicht leer
- *      (Issue #1231 Slice 6: Label „Idealwerte" -> „Wertebereiche", Datenfeld unverändert)
- *   4. Layout     — done wenn display_config.active_metrics nicht leer (Nutzer hat
- *      im Wetter-Metriken-Tab tatsächlich Metriken ausgewählt)
+ *   3. Wetter     — done wenn display_config.ideal_ranges nicht leer
+ *      (Issue #1231 Slice 6: Label „Idealwerte" -> „Wertebereiche", seit #2794 S3a
+ *      Reiter „Wetter"; Datenfeld unverändert)
+ *   4. Layout je Kanal — done wenn display_config.active_metrics nicht leer (Nutzer hat
+ *      tatsächlich Metriken ausgewählt)
  *   5. Versand    — done wenn report_config.morning_enabled || evening_enabled
  *
  * F002-Fix (Adversary): Orte liegen in location_ids (string[]), nicht locations.
@@ -117,7 +118,7 @@ export function setupStepCompare(preset: ComparePreset): SetupStep[] {
 	return [
 		{ label: tr('bausteine.checkliste.vergleich'), done: true },
 		{ label: tr('bausteine.checkliste.orte'), done: locCount >= 2 },
-		{ label: tr('bausteine.checkliste.wertebereiche'), done: hasIdealValues },
+		{ label: tr('bausteine.checkliste.wetter'), done: hasIdealValues },
 		{ label: tr('bausteine.checkliste.layout'), done: hasLayout },
 		{ label: tr('bausteine.checkliste.versand'), done: hasActiveSend }
 	];

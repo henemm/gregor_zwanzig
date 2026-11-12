@@ -25,6 +25,8 @@ import {
 // Issue #2659 (i18n F10): Texte je Aufruf aus dem Katalog (aktionen.*/home.*/trip.status.*,
 // vergleich.hub.*); der Baustein liest `$locale` und rechnet beim Sprachwechsel neu.
 import { tr, trn, type MessageKey } from '../../../i18n/index.ts';
+import { alarmZaehler, type MetrikEigenschaften, type VorlagenAmpeln } from '../wetter-tab/ampelModell.ts';
+import { standAusAbo, type AboSicht } from '../wetter-tab/wetterZustand.ts';
 
 export type KennzahlId = 'status' | 'naechster-versand' | 'briefings' | 'zuletzt-raus' | 'kanaele';
 export type Sprungziel = { tab: string; anchor?: 'versand' };
@@ -126,18 +128,52 @@ export function tripAlertKanaele(trip: Trip): Kanal[] {
 	return (['email', 'telegram', 'sms', 'premium_sms'] as const).filter((k) => ac[k] === true);
 }
 
-/** Hat der Trip Wetter-Änderungs-Alarme („bei Δ")? Spiegel der Backend-Regel
+/** „Alarm ab"-Zähler des Reiters Wetter auf der aufgelösten Ampel des Trips (Issue #2794 U4):
+ *  dieselbe Funktion `alarmZaehler` auf `standAusAbo`, kein zweites Rechenmodell.
+ *  `null` = Vorlagen oder Metrik-Katalog nicht geladen. */
+function tripAlarmZaehler(
+	trip: Trip,
+	vorlagen: VorlagenAmpeln | null | undefined,
+	eig: Record<string, MetrikEigenschaften> | null | undefined
+): ReturnType<typeof alarmZaehler> | null {
+	if (!vorlagen || !eig || Object.keys(vorlagen).length === 0) return null;
+	const stand = standAusAbo('route', trip as unknown as AboSicht, vorlagen);
+	return alarmZaehler(stand.ampel, stand.auswahl, eig);
+}
+
+/** Text der Alarm-Zeile der Trip-Übersicht = Zähler des Reiters Wetter; Ladefehler ⇒ „—". */
+export function tripAlarmAbText(
+	trip: Trip,
+	vorlagen: VorlagenAmpeln | null | undefined,
+	eig: Record<string, MetrikEigenschaften> | null | undefined
+): string {
+	const z = tripAlarmZaehler(trip, vorlagen, eig);
+	if (!z) return '—';
+	return tr(z.schluessel as MessageKey, z.werte);
+}
+
+/** Hat der Trip Wetter-Änderungs-Alarme? Spiegel der Backend-Regel
  *  (src/services/trip_alert.py has_preset/has_metric_levels/has_active_rules +
- *  report_config.alert_on_changes; fehlendes Feld lädt src/app/loader.py als True).
- *  Amtliche Warnungen zählen nicht. */
-export function tripWetterAlarmAktiv(trip: Trip): boolean {
+ *  report_config.alert_on_changes; fehlendes Feld lädt src/app/loader.py als True)
+ *  ODER Ampel-Alarmquelle (`ampel_alarmquelle_aktiv`: nur mit `display_config.ampel`,
+ *  mindestens eine gewählte, alarmfähige Metrik mit „Alarm ab" ≠ nie auf der aufgelösten Ampel).
+ *  Ohne geladene Vorlagen/Katalog zählen nur die bisherigen Quellen. Amtliche Warnungen zählen nicht. */
+export function tripWetterAlarmAktiv(
+	trip: Trip,
+	vorlagen?: VorlagenAmpeln | null,
+	eig?: Record<string, MetrikEigenschaften> | null
+): boolean {
 	const dc = trip.display_config;
 	const hatPreset = !!dc?.alert_preset && dc.alert_preset !== 'deaktiviert';
 	const hatStufen = !!dc?.metric_alert_levels && Object.keys(dc.metric_alert_levels).length > 0;
 	const hatRegel = (trip.alert_rules ?? []).some((r) => r.enabled);
 	const rc = trip.report_config;
 	const beiAenderung = !!rc && (rc.alert_on_changes === undefined ? true : !!rc.alert_on_changes);
-	return hatPreset || hatStufen || hatRegel || beiAenderung;
+	if (hatPreset || hatStufen || hatRegel || beiAenderung) return true;
+	// Wie der Server: die Ampel-Alarmquelle greift nur, wenn das Abo den Schlüssel `ampel` trägt.
+	if ((dc as { ampel?: unknown } | undefined)?.ampel == null) return false;
+	const z = tripAlarmZaehler(trip, vorlagen, eig);
+	return z?.art === 'zaehler' && Number(z.werte.ausloesend) > 0;
 }
 
 /** Slot-Stunde als „HH:00" — der Versand nutzt nur die Stunde (Default 7/18 wie der Scheduler). */
@@ -253,7 +289,7 @@ function orteKarte(aufgeloesteOrte: Array<{ rank: number; loc?: { name: string }
 function wertebereicheKarte(preset: ComparePreset): Karte {
 	const anzahl = Object.keys(preset.display_config?.ideal_ranges ?? {}).length;
 	return {
-		eyebrow: tr('aktionen.reiter.wertebereiche'),
+		eyebrow: tr('aktionen.reiter.wetter'),
 		titel: presetProfileLabel(preset.profil) || String(preset.profil ?? ''),
 		beschreibungKurz: trn('vergleich.hub.wertebereiche_kurz', anzahl),
 		beschreibungLang: trn('vergleich.hub.wertebereiche_lang', anzahl),
