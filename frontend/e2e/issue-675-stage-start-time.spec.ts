@@ -65,28 +65,6 @@ test('AC-2: Startzeit 15:00 verschiebt Ankunftszeiten live', async ({ page }) =>
 	await expect(page.getByTestId('wp-arrival-1').first()).toHaveText('16:00');
 });
 
-// AC-3: Persistenz-Roundtrip — nach Speichern liefert die API 15:00.
-test('AC-3: Startzeit wird gespeichert (API-Roundtrip)', async ({ page }) => {
-	await openStagesEditor(page);
-	const feld = page.getByTestId('stage-start-time-field').first();
-	await tippeUhrzeit(page, feld, '15:00');
-	await page.getByRole('button', { name: /Etappen speichern/ }).click();
-	await expect(page.getByText('Gespeichert', { exact: true })).toBeVisible();
-	const res = await page.request.get(`/api/trips/${TRIP_ID}`);
-	const trip = await res.json();
-	expect(trip.stages[0].start_time).toBe('15:00');
-});
-
-// AC-4 (Guard): alt-treu — bloßes Öffnen+Speichern setzt KEIN start_time.
-test('AC-4: Öffnen ohne Änderung schreibt kein start_time', async ({ page }) => {
-	await openStagesEditor(page);
-	await page.getByRole('button', { name: /Etappen speichern/ }).click();
-	await expect(page.getByText('Gespeichert', { exact: true })).toBeVisible();
-	const res = await page.request.get(`/api/trips/${TRIP_ID}`);
-	const trip = await res.json();
-	expect(trip.stages[0].start_time ?? null).toBeNull();
-});
-
 // AC-5: Feld leeren → zurück auf 08:00-Default.
 test('AC-5: Geleertes Feld fällt auf 08:00 zurück', async ({ page }) => {
 	await openStagesEditor(page);

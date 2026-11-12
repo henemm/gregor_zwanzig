@@ -3,7 +3,7 @@
 // Spec: docs/specs/modules/issue_215_sprint1_trip_detail_header.md
 //
 // Verifiziert:
-//   AC-1: TripHeader.svelte importiert Btn statt Button (Source-Check).
+//   AC-1 (Quelltext-Check über Hauptrepo-Pfad) entfiel mit #2243.
 //   AC-2: alle Header-Action-Buttons rendern mit data-slot="btn" (DOM-Check).
 //
 // Voraussetzung: Test-Trip `e2e-cockpit-test` aus global.setup.ts existiert.
@@ -41,15 +41,5 @@ test.describe('Issue #215 Sprint 1 — TripHeader Button→Btn Migration', () =>
 		const confirmBtn = page.getByTestId('trip-detail-archive-confirm-yes');
 		await expect(cancelBtn).toHaveAttribute('data-slot', 'btn');
 		await expect(confirmBtn).toHaveAttribute('data-slot', 'btn');
-	});
-
-	test('AC-1: TripHeader.svelte importiert Btn statt Button', async () => {
-		const fs = await import('node:fs/promises');
-		const content = await fs.readFile(
-			'/home/hem/gregor_zwanzig/frontend/src/lib/components/trip-detail/TripHeader.svelte',
-			'utf-8'
-		);
-		expect(content).toContain(`import { Btn } from '$lib/components/ui/btn/index.js'`);
-		expect(content).not.toContain(`import { Button } from '$lib/components/ui/button`);
 	});
 });

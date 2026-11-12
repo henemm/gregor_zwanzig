@@ -9,6 +9,7 @@ const authFile = path.join(__dirname, 'playwright', '.auth', 'staging-2213.json'
 
 setup('authenticate via API (staging) — 2213_bauliche_aenderung', async ({ playwright }) => {
 	// Helfer-Konto des Staging-Betriebs (GZ_AUTH_USER/GZ_AUTH_PASS), nie die Projekt-.env.
+	// gz-main-path: Staging-.env liegt im Staging-Checkout außerhalb des Repos (Credential-Ort)
 	try { process.loadEnvFile('/home/hem/gregor_zwanzig_staging/.env'); } catch { /* fehlt: Fallbacks */ }
 	const base = process.env.GZ_SVELTE_BASE ?? 'https://staging.gregor20.henemm.com';
 	assertNotProdBaseURL(base);

@@ -7,7 +7,7 @@
 // BEFUND: Step3Idealwerte (compare-step3-*) wurde von #1231 durch den geteilten
 // CorridorEditor ersetzt — die Idealwerte-Tests prüfen gegen corridor-row-*.
 //
-// gz-eigenstaendig: Anlege-Wizard /compare/new hat kein Trip-Pendant mit denselben Kennungen (compare-editor-*, compare-step2-*); die Datei fällt mit #2243 (#2347 S4) ersatzlos, Wertebereiche je kind decken hub-wertebereiche-*.spec.ts ab.
+// gz-eigenstaendig: Anlege-Wizard /compare/new hat kein Trip-Pendant mit denselben Kennungen (compare-editor-*, compare-step2-*); die Datei bleibt eigenständig (Create-POST mit 5 Slot-Feldern und official_warnings, in hub-anlegen-ablauf nicht abgedeckt), Wertebereiche je kind decken hub-wertebereiche-*.spec.ts ab.
 //
 // #2347 S3b: der Fall „Create-Flow sendet die 5 Slot-Felder + official_warnings"
 // (Alt versand-tab-vergleich.spec.ts AC-6) steht hier, weil er zum Alt-Wizard gehört.

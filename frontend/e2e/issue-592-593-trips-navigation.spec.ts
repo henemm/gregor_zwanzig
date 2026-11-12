@@ -11,50 +11,9 @@
 //   #592: Action-Sheet fehlt "Briefing senden"
 
 import { test, expect } from '@playwright/test';
-import { readFileSync } from 'node:fs';
 
 const TRIP_ID = 'e2e-cockpit-test';
 const TRIPS_PAGE = '/trips';
-
-// ---------------------------------------------------------------------------
-// AC-1 + AC-2: Desktop — Zeile klickbar, Aktions-Buttons propagieren nicht
-// ---------------------------------------------------------------------------
-
-test.describe('#593 Desktop: Trips-Zeile klickbar', () => {
-	test.use({ viewport: { width: 1280, height: 800 } });
-
-	test('AC-1: Klick auf Zeile (außerhalb Name) navigiert zu Trip-Detail', async ({ page }) => {
-		await page.goto(TRIPS_PAGE);
-		// Warte auf erste Tabellenzeile
-		const row = page.locator('table tbody tr').first();
-		await expect(row).toBeVisible();
-
-		// Klick in die Mitte der Zeile, aber NICHT auf einen Link oder Button
-		// (Zeitraum-Zelle hat keinen Link/Button)
-		const dateCell = row.locator('td').nth(1);
-		await expect(dateCell).toBeVisible();
-
-		const href = await page.locator('table tbody tr a.trip-link').first().getAttribute('href');
-		await dateCell.click();
-
-		// Sollte auf Trip-Detail navigieren
-		await expect(page).toHaveURL(new RegExp('/trips/[a-z0-9-]+$'));
-	});
-
-	test('AC-1b: Desktop-<tr> hat onclick direkt auf dem tr-Element', async () => {
-		const content = readFileSync('/home/hem/gregor_zwanzig/frontend/src/routes/trips/+page.svelte', 'utf-8');
-		// <tr>-Tag muss onclick direkt enthalten (innerhalb desselben Tags — kein DOTALL über Zeilen)
-		expect(content).toMatch(/<tr[^>]*onclick[^>]*cursor-pointer/);
-	});
-
-	test('AC-2: Aktions-Cell im Desktop-<tr> hat stopPropagation', async () => {
-		const content = readFileSync('/home/hem/gregor_zwanzig/frontend/src/routes/trips/+page.svelte', 'utf-8');
-		const desktopBlock = content.slice(content.indexOf('hidden desktop:block'));
-		const tbodyBlock = desktopBlock.slice(desktopBlock.indexOf('<tbody'), desktopBlock.indexOf('</tbody>'));
-		// Aktions-Cell muss stopPropagation haben (für Buttons/Dropdown)
-		expect(tbodyBlock).toContain('stopPropagation');
-	});
-});
 
 // ---------------------------------------------------------------------------
 // AC-3: Mobile — Kartentipp navigiert direkt

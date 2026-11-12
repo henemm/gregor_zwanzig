@@ -324,10 +324,9 @@ jobs:
             echo "Vermessungsmodus: verschaerfter Filter-A-Kandidatenpool (kein waitForTimeout/test.skip/test.fixme/describe.skip, ohne .staging.spec.ts, ohne hartkodierten Hauptrepo-Pfad, ohne __dirname)."
             # F007 (#1771 S2 Runde 2): die reine waitForTimeout/test.skip/test.fixme-
             # Bedingung liefert 105 Dateien -- inklusive der zwei am Code bestaetigt
-            # strukturell kaputten (list-routes-btn-migration.spec.ts: hartkodierter
-            # Hauptrepo-Pfad /home/hem/gregor_zwanzig, Pfadregel #1409; issue-322-
-            # wicon-komponente.spec.ts: __dirname in einem ESM-Modul, deterministischer
-            # ReferenceError) sowie einer describe.skip-only-Datei, die von test.skip/
+            # strukturell kaputten (eine mit hartkodiertem Hauptrepo-Pfad, Pfadregel
+            # #1409, eine mit __dirname in einem ESM-Modul; beide mit #2243
+            # geloescht) sowie einer describe.skip-only-Datei, die von test.skip/
             # test.fixme nicht erfasst wird. Mit allen vier Ausschlusskriterien
             # zusammen (gemessen am 2026-08-13): exakt 87 Dateien -- die Zahl aus
             # Spec/AC-8/ci_e2e_specs.txt-Kopf.

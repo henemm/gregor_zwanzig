@@ -17,7 +17,8 @@ function adminCredentials(): { user: string; pass: string } {
 	let user = process.env.GZ_STAGING_ADMIN_USER;
 	let pass = process.env.GZ_STAGING_ADMIN_PASS;
 	if (!user || !pass) {
-		const datei = '/home/hem/gregor_zwanzig/.claude/staging_admin.env';
+		// gz-main-path: Credential-Ort staging_admin.env liegt nur im Hauptrepo (gitignored, nie im Worktree)
+		const datei ='/home/hem/gregor_zwanzig/.claude/staging_admin.env';
 		for (const zeile of readFileSync(datei, 'utf8').split('\n')) {
 			const m = zeile.trim().replace(/^export\s+/, '').match(/^(\w+)=(.*)$/);
 			if (m?.[1] === 'GZ_STAGING_ADMIN_USER') user = m[2].replace(/^["']|["']$/g, '');
