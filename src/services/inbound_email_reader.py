@@ -12,7 +12,6 @@ from __future__ import annotations
 import email
 import email.utils
 import imaplib
-import ssl
 import logging
 import re
 from dataclasses import dataclass
@@ -23,6 +22,7 @@ from html.parser import HTMLParser
 from app.config import Settings
 from app.loader import load_all_trips
 from i18n import resolve_user_lang, t
+from utils.mail_tls import tls_kontext_fuer
 from utils.pii_masking import mask_addr_for_pii_log
 from services.inbound_reply_limit import fehlerantwort_erlaubt
 from services.notification_service import NotificationService
@@ -258,7 +258,14 @@ def _is_automatic(msg: email.message.Message) -> bool:
         return True
     if str(msg.get("Precedence") or "").strip().lower() in _AUTO_PRECEDENCE:
         return True
-    return msg.get("X-Autoreply") is not None or msg.get("X-Auto-Response-Suppress") is not None
+    return msg.get("X-Autoreply") is not None
+
+
+def _keine_automatische_antwort_erbeten(msg: email.message.Message) -> bool:
+    """#2961: ``X-Auto-Response-Suppress`` ist eine Bitte des Absenders, nicht
+    automatisch zu antworten (setzen manche Firmen-Mailsysteme auch bei
+    Handantworten). Befehle werden ausgefuehrt, Fehlerantworten unterbleiben."""
+    return msg.get("X-Auto-Response-Suppress") is not None
 
 
 def _fetch_message(imap, uid: bytes, spec: str) -> tuple[bytes, int | None]:
@@ -333,7 +340,7 @@ class InboundEmailReader:
             # prueft imaplib nicht, ohne Timeout haengt ein stummer Server).
             imap = imaplib.IMAP4_SSL(
                 imap_host, imap_port,
-                ssl_context=ssl.create_default_context(),
+                ssl_context=tls_kontext_fuer(imap_host),
                 timeout=IMAP_TIMEOUT_SECONDS,
             )
             imap.login(imap_user, imap_pass)
@@ -448,7 +455,8 @@ class InboundEmailReader:
             # Issue #1405 S4b: nicht zugestellte Antwort = Fehler des Laufs;
             # kein Versand eingerichtet = kein Versuch = kein Fehler.
             zugestellt = True
-            if user_settings.can_send_email() and fehlerantwort_erlaubt(_user_id):
+            if (user_settings.can_send_email() and not _keine_automatische_antwort_erbeten(msg)
+                    and fehlerantwort_erlaubt(_user_id)):
                 zugestellt = self._notification_service.send_command_reply_email(
                     result, user_settings, lang=lang,
                 )
@@ -476,7 +484,7 @@ class InboundEmailReader:
             result = processor.process(inbound)
             zugestellt = True
             if (user_settings.can_send_email() and not result.suppress_email_reply
-                    and self._reply_allowed(result, _user_id)):
+                    and self._reply_allowed(result, _user_id, msg)):
                 zugestellt = self._notification_service.send_command_reply_email(
                     result, user_settings, lang=lang,
                 )
@@ -490,10 +498,14 @@ class InboundEmailReader:
             imap.store(uid, "+FLAGS", "\\Seen")
 
     @staticmethod
-    def _reply_allowed(result: CommandResult, user_id: str) -> bool:
-        """#2961: Fehlerantworten je Nutzer gedrosselt, Erfolgsantworten nie."""
+    def _reply_allowed(result: CommandResult, user_id: str, msg: email.message.Message) -> bool:
+        """#2961: Fehlerantworten je Nutzer gedrosselt und nie an Mails mit
+        ``X-Auto-Response-Suppress``; Erfolgsantworten immer."""
         if result.success:
             return True
+        if _keine_automatische_antwort_erbeten(msg):
+            logger.info("Fehlerantwort unterdrueckt (X-Auto-Response-Suppress)")
+            return False
         if fehlerantwort_erlaubt(user_id):
             return True
         logger.info("Fehlerantwort gedrosselt (Stundengrenze erreicht)")

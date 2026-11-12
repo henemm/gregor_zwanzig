@@ -9,7 +9,6 @@ import json
 import logging
 import re
 import smtplib
-import ssl
 import time
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
@@ -19,6 +18,7 @@ from typing import TYPE_CHECKING
 
 from app.origin_guard import running_origin
 from output.channels.base import ChannelBlockedError, OutputConfigError, OutputError
+from utils.mail_tls import tls_kontext_fuer
 
 if TYPE_CHECKING:
     from app.config import Settings
@@ -544,8 +544,8 @@ class EmailOutput:
         ) as server:
             server.sock.settimeout(_phase_timeout_or_raise(deadline_at))
             # #2961: Zertifikat und Hostname pruefen (smtplib prueft ohne
-            # Kontext nicht).
-            server.starttls(context=ssl.create_default_context())
+            # Kontext nicht); ausgenommen nur Loopback-Ziele (utils.mail_tls).
+            server.starttls(context=tls_kontext_fuer(host))
             server.sock.settimeout(_phase_timeout_or_raise(deadline_at))
             server.login(user, password)
             if len(recipients) == 1:

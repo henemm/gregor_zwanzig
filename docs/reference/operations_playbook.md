@@ -293,6 +293,12 @@ weist ohne gesetztes Geheimnis jede Anfrage außer `/health` mit `503` ab. Siehe
 `GZ_PYTHON_CORE_URL` einen anderen Hostnamen, muss er in `GZ_CORE_ALLOWED_HOSTS`
 (kommagetrennt) stehen.
 
+**Seit #2961** prüfen Postausgang (STARTTLS) und Posteingang (IMAPS) das
+Zertifikat samt Hostnamen. Ausnahme ohne Schalter: Steht als `GZ_SMTP_HOST`/
+`GZ_IMAP_HOST` wörtlich `localhost` oder eine Loopback-IP, wird nicht geprüft
+(Info-Logzeile „Mail-TLS zu Loopback-Ziel …"). Jeder andere Name braucht ein
+gültiges, passendes Zertifikat — sonst scheitern Versand bzw. Befehlseingang.
+
 **Seit #2159** gilt dasselbe Geheimnis auch für die internen Go-Endpunkte
 (`/api/internal/premium-sms-learn`, `/api/internal/telegram-connect`): Der Python-Core
 sendet es als `X-GZ-Core-Auth`; ohne Geheimnis auf Go-Seite antworten sie `503`, bei

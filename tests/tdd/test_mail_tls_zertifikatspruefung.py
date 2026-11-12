@@ -1,10 +1,14 @@
 """Postausgang (SMTP/STARTTLS) und Posteingang (IMAPS) pruefen das Zertifikat (#2961, AC-2).
 
 Gegenstelle ist ein echter TLS-Server auf Loopback (eigener Port, im Test
-gebunden) mit einem frisch erzeugten, selbstsignierten Zertifikat. Ohne
-Vertrauen in dieses Zertifikat darf der Core keine Zugangsdaten senden; ist das
-Zertifikat als vertrauenswuerdig hinterlegt (``SSL_CERT_FILE``), klappt die
-Anmeldung wie bisher.
+gebunden) mit einem frisch erzeugten, selbstsignierten Zertifikat.
+
+* Strenger Zweig: der Core spricht die Gegenstelle ueber einen NICHT-Loopback-
+  Namen an (``mail.pruefung.invalid``; nur die Namensaufloesung ist auf den
+  Loopback-Port umgebogen). Ohne Vertrauen in das Zertifikat sendet er keine
+  Zugangsdaten; mit hinterlegtem Zertifikat (``SSL_CERT_FILE``) klappt es.
+* Loopback-Zweig: ist der Host woertlich eine Loopback-Adresse, verlaesst der
+  Verkehr den Rechner nicht -- dort wird das Zertifikat nicht geprueft.
 """
 from __future__ import annotations
 
@@ -17,9 +21,15 @@ import time
 
 import pytest
 
+from app import egress_guard
 from app.config import Settings
 from output.channels.email import EmailOutput
 from services.inbound_email_reader import InboundEmailReader
+from utils.mail_tls import ist_loopback_host, tls_kontext_fuer
+
+#: Nicht aufloesbarer Name (RFC 2606) -- ohne die Umleitung unten kann keine
+#: Verbindung zu einem echten Server entstehen.
+NAME = "mail.pruefung.invalid"
 
 pytestmark = pytest.mark.skipif(shutil.which("openssl") is None, reason="openssl fehlt")
 
@@ -30,11 +40,25 @@ def zertifikat(tmp_path_factory):
     cert, key = d / "cert.pem", d / "key.pem"
     subprocess.run(
         ["openssl", "req", "-x509", "-newkey", "rsa:2048", "-nodes", "-days", "2",
-         "-subj", "/CN=127.0.0.1", "-addext", "subjectAltName=IP:127.0.0.1",
+         "-subj", f"/CN={NAME}", "-addext", f"subjectAltName=DNS:{NAME},IP:127.0.0.1",
          "-keyout", str(key), "-out", str(cert)],
         check=True, capture_output=True,
     )
     return cert, key
+
+
+@pytest.fixture
+def name_auf_loopback(monkeypatch):
+    """Loest ``NAME`` auf 127.0.0.1 auf (nur die Namensaufloesung, TLS und
+    Protokoll laufen echt) und laesst ihn am Test-Egress-Waechter passieren."""
+    echt = socket.create_connection
+
+    def _verbinden(adresse, *args, **kwargs):
+        host, port = adresse
+        return echt(("127.0.0.1" if host == NAME else host, port), *args, **kwargs)
+
+    monkeypatch.setattr(socket, "create_connection", _verbinden)
+    monkeypatch.setattr(egress_guard, "_dynamic_test_hosts", {*egress_guard._dynamic_test_hosts, NAME})
 
 
 def _schreibe(f, daten: bytes) -> None:
@@ -145,18 +169,18 @@ class _TlsGegenstelle:
         self.sock.close()
 
 
-def _smtp_settings(port: int) -> Settings:
+def _smtp_settings(port: int, host: str) -> Settings:
     return Settings(
-        smtp_host="127.0.0.1", smtp_port=port, smtp_user="u@example.org",
+        smtp_host=host, smtp_port=port, smtp_user="u@example.org",
         smtp_pass="geheim-pass", mail_from="u@example.org", mail_to="ziel@example.org",
     )
 
 
-def _smtp_senden(port: int) -> Exception | None:
-    out = EmailOutput(_smtp_settings(port))
+def _smtp_senden(port: int, host: str = NAME) -> Exception | None:
+    out = EmailOutput(_smtp_settings(port, host))
     try:
         out._dial_and_send(
-            "127.0.0.1", port, "u@example.org", "geheim-pass", ["ziel@example.org"],
+            host, port, "u@example.org", "geheim-pass", ["ziel@example.org"],
             _einfache_mail(), "u@example.org", time.monotonic() + 20,
         )
     except Exception as exc:  # noqa: BLE001
@@ -174,7 +198,7 @@ def _einfache_mail():
     return m
 
 
-def test_smtp_starttls_lehnt_unbekanntes_zertifikat_ab(zertifikat, monkeypatch):
+def test_smtp_starttls_lehnt_unbekanntes_zertifikat_ab(zertifikat, monkeypatch, name_auf_loopback):
     monkeypatch.delenv("SSL_CERT_FILE", raising=False)
     srv = _TlsGegenstelle("smtp", *zertifikat)
     fehler = _smtp_senden(srv.port)
@@ -183,7 +207,7 @@ def test_smtp_starttls_lehnt_unbekanntes_zertifikat_ab(zertifikat, monkeypatch):
     assert not srv.login_gesehen(), "Zugangsdaten an nicht gepruefte Gegenstelle gesendet"
 
 
-def test_smtp_starttls_mit_vertrautem_zertifikat_sendet(zertifikat, monkeypatch):
+def test_smtp_starttls_mit_vertrautem_zertifikat_sendet(zertifikat, monkeypatch, name_auf_loopback):
     monkeypatch.setenv("SSL_CERT_FILE", str(zertifikat[0]))
     srv = _TlsGegenstelle("smtp", *zertifikat)
     fehler = _smtp_senden(srv.port)
@@ -192,16 +216,16 @@ def test_smtp_starttls_mit_vertrautem_zertifikat_sendet(zertifikat, monkeypatch)
     assert srv.login_gesehen()
 
 
-def _imap_poll(port: int) -> tuple[int, int]:
+def _imap_poll(port: int, host: str = NAME) -> tuple[int, int]:
     s = Settings(
-        imap_host="127.0.0.1", imap_port=port, imap_user="u@example.org",
-        imap_pass="geheim-pass", smtp_host="127.0.0.1", smtp_user="u@example.org",
+        imap_host=host, imap_port=port, imap_user="u@example.org",
+        imap_pass="geheim-pass", smtp_host=host, smtp_user="u@example.org",
         smtp_pass="geheim-pass",
     )
     return InboundEmailReader()._poll_inbox(s, "u@example.org", "geheim-pass")
 
 
-def test_imap_lehnt_unbekanntes_zertifikat_ab(zertifikat, monkeypatch):
+def test_imap_lehnt_unbekanntes_zertifikat_ab(zertifikat, monkeypatch, name_auf_loopback):
     monkeypatch.delenv("SSL_CERT_FILE", raising=False)
     srv = _TlsGegenstelle("imap", *zertifikat)
     processed, failed = _imap_poll(srv.port)
@@ -210,10 +234,49 @@ def test_imap_lehnt_unbekanntes_zertifikat_ab(zertifikat, monkeypatch):
     assert not srv.login_gesehen(), "IMAP-Zugangsdaten an nicht gepruefte Gegenstelle gesendet"
 
 
-def test_imap_mit_vertrautem_zertifikat_meldet_an(zertifikat, monkeypatch):
+def test_imap_mit_vertrautem_zertifikat_meldet_an(zertifikat, monkeypatch, name_auf_loopback):
     monkeypatch.setenv("SSL_CERT_FILE", str(zertifikat[0]))
     srv = _TlsGegenstelle("imap", *zertifikat)
     processed, failed = _imap_poll(srv.port)
     srv.stoppen()
     assert (processed, failed) == (0, 0)
     assert srv.login_gesehen()
+
+
+# ─────────────────────────── Loopback-Zweig ─────────────────────────────────
+
+def test_smtp_zu_loopback_ziel_ohne_zertifikatspruefung(zertifikat, monkeypatch, caplog):
+    monkeypatch.delenv("SSL_CERT_FILE", raising=False)
+    srv = _TlsGegenstelle("smtp", *zertifikat)
+    with caplog.at_level("INFO", logger="utils.mail_tls"):
+        fehler = _smtp_senden(srv.port, host="127.0.0.1")
+    srv.stoppen()
+    assert fehler is None, repr(fehler)
+    assert srv.login_gesehen()
+    assert any("Loopback" in r.getMessage() for r in caplog.records)
+
+
+def test_imap_zu_loopback_ziel_ohne_zertifikatspruefung(zertifikat, monkeypatch):
+    monkeypatch.delenv("SSL_CERT_FILE", raising=False)
+    srv = _TlsGegenstelle("imap", *zertifikat)
+    processed, failed = _imap_poll(srv.port, host="127.0.0.1")
+    srv.stoppen()
+    assert (processed, failed) == (0, 0)
+    assert srv.login_gesehen()
+
+
+@pytest.mark.parametrize("host", ["localhost", "LOCALHOST", "127.0.0.1", "127.0.0.2", "::1", "[::1]"])
+def test_loopback_hosts_bekommen_ungeprueften_kontext(host):
+    assert ist_loopback_host(host)
+    ctx = tls_kontext_fuer(host)
+    assert ctx.verify_mode == ssl.CERT_NONE and not ctx.check_hostname
+
+
+@pytest.mark.parametrize("host", [
+    "mail.henemm.com", "smtp.resend.com", "localhost.example.org", "127.0.0.1.example.org",
+    "10.0.0.5", "192.168.1.2", "", None,
+])
+def test_alle_anderen_hosts_bekommen_strengen_kontext(host):
+    assert not ist_loopback_host(host)
+    ctx = tls_kontext_fuer(host)
+    assert ctx.verify_mode == ssl.CERT_REQUIRED and ctx.check_hostname
