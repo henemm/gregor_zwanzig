@@ -23,13 +23,16 @@ describe('F006: EN-Schutzregeln des Generators', () => {
 		assert.equal(r.text_en, null);
 	});
 	test('Wortlaut-Hälfte erlaubt echte Muster („Etappe T3 auswählen“)', () => {
-		assert.equal(ermittleEn('Etappe T3 auswählen', katalog).text_en, 'Select stage T3');
+		// #2913 Fix-Loop 2 (C5): EN bleibt Muster mit Platzhalter, kein DE-Wert eingesetzt.
+		assert.equal(ermittleEn('Etappe T3 auswählen', katalog).text_en, 'Select stage {code}');
 	});
 	test('Wertlänge: eingesetzter Wert über 40 Zeichen ⇒ Lücke; bis 40 Zeichen ⇒ Treffer', () => {
 		const vor = 'Mindestens eine Grenze (Von oder Bis) ist Pflicht: ';
 		const kurz = ermittleEn(vor + 'Wind, Böen', katalog);
 		assert.equal(kurz.i18n_key, 'layout.korridor.pflicht');
-		assert.equal(kurz.text_en, 'At least one limit (From or To) is required: Wind, Böen');
+		// C5: die deutschen Metriknamen landen nicht im EN-Text.
+		assert.equal(kurz.text_en, 'At least one limit (From or To) is required: {metriken}');
+		assert.doesNotMatch(kurz.text_en ?? '', /Böen/);
 		const lang = ermittleEn(vor + 'Wind, Böen, Regen, Gewitter, Temperatur, Schneefallgrenze', katalog);
 		assert.equal(lang.luecke, true, JSON.stringify(lang));
 	});

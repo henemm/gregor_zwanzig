@@ -112,9 +112,10 @@
 		align-items: center;
 		box-sizing: border-box;
 		padding: 0 12px;
-		border: 1.5px solid var(--g-rule);
+		/* #2913 Scheibe (c) Fix-Loop 2: wie Mockup `.input` — graue Fläche (--g-paper), feiner Rand. */
+		border: 1px solid var(--g-rule);
 		border-radius: var(--g-r-2);
-		background: var(--g-card);
+		background: var(--g-paper);
 		color: var(--g-ink);
 		font-family: var(--g-font-mono);
 		font-feature-settings: 'tnum', 'zero';

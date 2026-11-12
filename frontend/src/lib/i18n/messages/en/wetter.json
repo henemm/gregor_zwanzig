@@ -66,7 +66,7 @@
 	"wetter.grenzen.fehler_kreuz": "The lower limit must not be above the upper limit.",
 	"wetter.grenzen.fehler_zahl": "Please enter a number or leave the field empty.",
 	"wetter.grenzen.fehler_ungueltig": "This setting is not valid and will not be saved.",
-	"wetter.nicht_im_briefing.titel": "Not in the briefing",
+	"wetter.nicht_im_briefing.titel": "Not in the briefing:",
 	"wetter.nicht_im_briefing.hinzufuegen": "+ {metrik}",
 	"wetter.nicht_im_briefing.hinzugefuegt": "{metrik} is now in the briefing and appears in all lists under ‘Content per channel and view’. Set raw or simple there.",
 	"wetter.warnungen.titel": "Official warnings",

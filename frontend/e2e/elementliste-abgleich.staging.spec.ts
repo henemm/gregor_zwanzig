@@ -26,6 +26,11 @@ import {
 	seitenPfad,
 	bewerteAbschnitt,
 	alleNichtPruefbar,
+	leseFreigaben,
+	wendeFreigabenAn,
+	sprachGrund,
+	wiederherzustellendeSprache,
+	stelleSpracheWieder,
 	baueBericht,
 	schreibeBericht,
 	abschluss,
@@ -38,13 +43,24 @@ assertNotProdBaseURL(process.env.GZ_SVELTE_BASE ?? STAGING_URL);
 
 const FRONTEND = join(fileURLToPath(new URL('.', import.meta.url)), '..');
 const LISTE = join(FRONTEND, '..', 'docs/context/einstellungen_neu/elementliste.json');
+const FREIGABEN = join(FRONTEND, '..', 'docs/context/einstellungen_neu/elementliste_freigaben.json');
 const BERICHT_DIR = process.env.ELEMENTLISTE_BERICHT_DIR ?? join(FRONTEND, 'test-results', 'elementliste-abgleich');
 
-/** Sichtbare Texte (eigene Textknoten, aria-label von Schaltern/Knöpfen, Eingaben) in DOM-Reihenfolge. */
+/**
+ * Sichtbare Texte (eigene Textknoten, aria-label von Schaltern/Knöpfen/Gruppen/Textfeldern, Eingaben) in
+ * DOM-Reihenfolge. #2913 Fix-Loop 2: vorher werden alle `details` im Abschnitt geöffnet, wie der Generator
+ * es im Mockup tut (C1); aria-label auch von role=group/textbox, z. B. bits-ui TimeField (C2).
+ */
 async function texteImBereich(page: Page, abschnitt: string): Promise<{ marker: boolean; texte: string[] }> {
+	await page.evaluate((abschnitt) => {
+		const marker = document.querySelector(`[data-abschnitt="${abschnitt}"]`);
+		marker?.querySelectorAll('details').forEach((d) => ((d as HTMLDetailsElement).open = true));
+	}, abschnitt);
+	await page.waitForTimeout(200);
 	return page.evaluate((abschnitt) => {
 		const marker = document.querySelector(`[data-abschnitt="${abschnitt}"]`);
 		const wurzel = marker ?? document.body;
+		const MIT_LABEL = new Set(['switch', 'group', 'textbox']);
 		const n = (s: string | null) => String(s ?? '').replace(/\s+/g, ' ').trim();
 		const texte: string[] = [];
 		for (const el of [wurzel, ...Array.from(wurzel.querySelectorAll('*'))]) {
@@ -55,7 +71,7 @@ async function texteImBereich(page: Page, abschnitt: string): Promise<{ marker: 
 				continue;
 			}
 			const label = el.getAttribute('aria-label');
-			if (label && (el.tagName === 'BUTTON' || el.getAttribute('role') === 'switch')) texte.push(n(label));
+			if (label && (el.tagName === 'BUTTON' || MIT_LABEL.has(el.getAttribute('role') ?? ''))) texte.push(n(label));
 			let eigen = '';
 			for (const k of Array.from(el.childNodes)) if (k.nodeType === 3) eigen += k.nodeValue;
 			if (n(eigen)) texte.push(n(eigen));
@@ -144,8 +160,15 @@ test('Elementliste gegen Staging: Bericht je Element (gefunden / abweichend / ni
 		expect(login.ok(), `Login HTTP ${login.status()}`).toBeTruthy();
 	}
 	const ids: Record<string, string | null> = { trip: process.env.ELEMENTLISTE_TRIP_ID ?? null, orte: process.env.ELEMENTLISTE_ORTE_ID ?? null };
+	// C3: die Profilsprache überstimmt das Cookie. Sie wird für den Lauf gesetzt und im finally auf den
+	// vorherigen Wert zurückgestellt (geteiltes Staging-Hilfskonto — Zurückstellen ist Pflicht).
+	const profil = await api.get('/api/auth/profile');
+	const vorherSprache = wiederherzustellendeSprache(profil.ok() ? await profil.json() : null);
 	const aufraeumen = await pruefDaten(api, ids);
+	let spracheZurueck: Awaited<ReturnType<typeof stelleSpracheWieder>> = { ok: false, meldung: 'Zurückstellen der Profilsprache nicht gelaufen' };
 	try {
+		const gesetzt = await api.put('/api/auth/profile', { data: { language: plan.sprache } });
+		expect(gesetzt.ok(), `Profilsprache ${plan.sprache} setzen: HTTP ${gesetzt.status()}`).toBeTruthy();
 		for (const { k, el } of plan.kombis) {
 			const id = ids[k.ctx];
 			if (!id) {
@@ -178,6 +201,11 @@ test('Elementliste gegen Staging: Bericht je Element (gefunden / abweichend / ni
 				await page.goto(pfad, { waitUntil: 'domcontentloaded' });
 			}
 			await page.waitForTimeout(rp.art === 'haengen' ? 1500 : 3000);
+			const falscheSprache = sprachGrund(plan.sprache, await page.evaluate(() => document.documentElement.getAttribute('lang')));
+			if (falscheSprache) {
+				for (const [i, e] of alleNichtPruefbar(el, falscheSprache)) ergebnisse.set(i, e);
+				continue;
+			}
 			const nichtHergestellt = herstellungsGrund(rp, umgeschrieben);
 			if (nichtHergestellt) {
 				for (const [i, e] of alleNichtPruefbar(el, nichtHergestellt)) ergebnisse.set(i, e);
@@ -200,13 +228,17 @@ test('Elementliste gegen Staging: Bericht je Element (gefunden / abweichend / ni
 		}
 	} finally {
 		await page.unrouteAll({ behavior: 'ignoreErrors' });
+		spracheZurueck = await stelleSpracheWieder((daten) => api.put('/api/auth/profile', { data: daten }), vorherSprache);
 		await aufraeumen();
 		await api.post('/api/auth/logout').catch(() => {});
 	}
 
-	const bericht = baueBericht(plan.elemente, ergebnisse);
+	const freigaben = leseFreigaben(readFileSync(FREIGABEN, 'utf8'));
+	const bericht = baueBericht(plan.elemente, wendeFreigabenAn(plan.elemente, ergebnisse, freigaben));
 	const pfade = schreibeBericht(BERICHT_DIR, bericht, { optionen: plan.optionen, sprache: plan.sprache, baseURL: plan.baseURL });
 	const ende = abschluss(bericht, plan.elemente, plan.optionen);
 	console.log(`Elementlisten-Abgleich: ${ende.meldung} → ${pfade.json}, ${pfade.md}`);
+	// F005: ein gescheitertes Zurückstellen der Profilsprache lässt den Lauf scheitern (auch ohne --strict).
+	expect(spracheZurueck.ok, spracheZurueck.ok ? '' : spracheZurueck.meldung).toBe(true);
 	expect(ende.exit, ende.meldung).toBe(0);
 });

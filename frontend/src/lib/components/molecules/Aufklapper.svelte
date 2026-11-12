@@ -46,6 +46,8 @@
 		padding: var(--g-size-14px) var(--g-s-5);
 		list-style: none;
 		cursor: pointer;
+		/* #2913 Scheibe (c) Fix-Loop 2: Kopf wie Mockup `details.adv summary` (14 px, 600). */
+		font-size: var(--g-size-14px);
 		font-weight: 600;
 		color: var(--g-ink);
 	}
@@ -58,6 +60,7 @@
 	}
 	.aufklapper-zeichen {
 		color: var(--g-ink-2);
+		font-weight: 400;
 	}
 	@media (max-width: 899px) {
 		.aufklapper summary {

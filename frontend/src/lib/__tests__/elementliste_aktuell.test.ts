@@ -209,12 +209,12 @@ describe('AC-11: EN aus dem Katalog — exakter Treffer, Muster, sonst Lücke (n
 		assert.equal(r.text_en, 'Delivery');
 	});
 
-	test('Musterabgleich: Platzhalter-Text aus dem Katalog liefert EN mit eingesetztem Wert', () => {
+	test('Musterabgleich: Platzhalter-Text aus dem Katalog liefert das EN-Muster (Platzhalter bleiben, #2913 C5)', () => {
 		const r = ermittleEn('Etappe T3 auswählen', katalog);
 		assert.equal(r.luecke, false);
 		assert.equal(r.i18n_key, 'trip.profil.etappe_waehlen');
 		assert.equal(r.muster, 'Etappe {code} auswählen');
-		assert.equal(r.text_en, 'Select stage T3');
+		assert.equal(r.text_en, 'Select stage {code}');
 	});
 
 	test('kein Treffer: luecke = true, kein erfundenes EN', () => {

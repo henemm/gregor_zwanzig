@@ -46,6 +46,12 @@ const BASIS = git(['merge-base', 'HEAD', 'origin/main'])?.trim() || null;
 // zwei neue Schlüssel. Der Erhaltungsschutz bleibt: jeder Bestandsschlüssel ist mit byte-gleichem Wert vorhanden,
 // kein Schlüssel entfällt, und hinzukommen dürfen nur die hier freigegebenen Schlüssel.
 const NEU_FREIGEGEBEN = new Set(['wetter.anpassen.hinweis', 'wetter.anpassen.ueber_mitternacht']);
+// #2913 Scheibe (c) Fix-Loop 2 (Bildprüfer Runde 1, Befund 1): Label wie im Mockup mit Doppelpunkt. Bewusst geändert,
+// mit genau dem erwarteten neuen Wert — jede andere Änderung bleibt rot.
+const GEAENDERT_FREIGEGEBEN: Record<string, Record<string, string>> = {
+	de: { 'wetter.nicht_im_briefing.titel': 'Nicht im Briefing:' },
+	en: { 'wetter.nicht_im_briefing.titel': 'Not in the briefing:' }
+};
 
 describe('AC-21: wetter.json DE/EN — Bestandstexte unverändert gegenüber dem Abzweigpunkt von origin/main', () => {
 	for (const lang of ['de', 'en']) {
@@ -57,7 +63,8 @@ describe('AC-21: wetter.json DE/EN — Bestandstexte unverändert gegenüber dem
 			const vorher: Record<string, string> = JSON.parse(vorherText!);
 			const jetzt: Record<string, string> = JSON.parse(readFileSync(path.join(REPO, rel), 'utf8'));
 			for (const [k, v] of Object.entries(vorher)) {
-				assert.equal(jetzt[k], v, `${rel}: ${k} wurde gegenüber ${BASIS.slice(0, 9)} verändert oder entfernt (AC-21: Texte unverändert)`);
+				const soll = GEAENDERT_FREIGEGEBEN[lang][k] !== undefined && jetzt[k] !== v ? GEAENDERT_FREIGEGEBEN[lang][k] : v;
+				assert.equal(jetzt[k], soll, `${rel}: ${k} wurde gegenüber ${BASIS.slice(0, 9)} verändert oder entfernt (AC-21: Texte unverändert)`);
 			}
 			const neu = Object.keys(jetzt).filter((k) => !(k in vorher));
 			assert.deepEqual(neu.filter((k) => !NEU_FREIGEGEBEN.has(k)), [], `${rel}: nicht freigegebene neue Schlüssel`);

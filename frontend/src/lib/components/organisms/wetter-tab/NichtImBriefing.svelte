@@ -26,21 +26,26 @@
 
 <div class="wt-mehr" data-testid="wetter-nicht-im-briefing">
 	<span class="wt-titel">{$t('wetter.nicht_im_briefing.titel')}</span>
-	<ChipLeiste eintraege={chips} onWahl={onHinzufuegen} />
+	<ChipLeiste eintraege={chips} onWahl={onHinzufuegen} imFluss />
 	{#if hinzugefuegt}
 		<p class="wt-meldung" role="status" data-testid="wetter-hinzugefuegt-meldung">{$t('wetter.nicht_im_briefing.hinzugefuegt', { metrik: hinzugefuegt })}</p>
 	{/if}
 </div>
 
 <style>
-	/* #2913 Scheibe (c) (AC-1): Label und Chips in EINER waagrechten, umbrechenden Zeile (Mockup `.more`). */
+	/* #2913 Scheibe (c) (AC-1): Label und Chips in EINER waagrechten, umbrechenden Zeile (Mockup `.more`).
+	   Fix-Loop 2: die Chips fließen direkt in diese Zeile (ChipLeiste imFluss), Umbruch läuft unter dem
+	   Label weiter; Zeilenabstand 18 px hält die 44-px-Trefferflächen der kompakten Chips auseinander;
+	   graue Fläche wie im Mockup-Bild. */
 	.wt-mehr {
 		display: flex;
 		flex-wrap: wrap;
 		align-items: center;
-		gap: var(--g-s-2);
+		column-gap: var(--g-s-2);
+		row-gap: var(--g-size-18px);
 		padding: var(--g-s-3) var(--g-s-5);
 		border-top: 1px solid var(--g-rule-soft);
+		background: var(--g-card-alt);
 	}
 	.wt-titel {
 		font-size: var(--g-size-12-5px);

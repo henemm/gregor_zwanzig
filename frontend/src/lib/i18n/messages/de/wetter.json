@@ -66,7 +66,7 @@
 	"wetter.grenzen.fehler_kreuz": "Die untere Grenze darf nicht über der oberen liegen.",
 	"wetter.grenzen.fehler_zahl": "Bitte eine Zahl eingeben oder das Feld leer lassen.",
 	"wetter.grenzen.fehler_ungueltig": "Diese Einstellung ist ungültig und wird nicht gespeichert.",
-	"wetter.nicht_im_briefing.titel": "Nicht im Briefing",
+	"wetter.nicht_im_briefing.titel": "Nicht im Briefing:",
 	"wetter.nicht_im_briefing.hinzufuegen": "+ {metrik}",
 	"wetter.nicht_im_briefing.hinzugefuegt": "{metrik} ist jetzt im Briefing und steht in allen Listen unter ‚Inhalt je Kanal und Fläche‘. Dort stellst du Roh oder Einfach ein.",
 	"wetter.warnungen.titel": "Amtliche Warnungen",
