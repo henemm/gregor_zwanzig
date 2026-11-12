@@ -132,7 +132,32 @@ func main() {
 	})
 
 	log.Printf("Go API listening on %s:%s, proxying to %s", cfg.Host, cfg.Port, cfg.PythonCoreURL)
-	http.ListenAndServe(cfg.Host+":"+cfg.Port, r)
+	if err := newHTTPServer(cfg.Host+":"+cfg.Port, r).ListenAndServe(); err != nil {
+		log.Printf("http server stopped: %v", err)
+	}
+}
+
+// Issue #2961: Server-Zeitgrenzen gegen langsame bzw. haengende Verbindungen.
+// Bewusst KEIN WriteTimeout: der Versand und die Proxys zum Python-Kern
+// duerfen bis zu 300 s laufen (proxy.go sendProxyTimeout, nginx 330 s, Spec
+// fix_2124_versand_nginx_timeout.md) — ein WriteTimeout braeche sie ab.
+// ReadTimeout begrenzt nur das Einlesen von Kopf und Rumpf (GPX-Upload bis
+// 10 MB auch ueber langsame Mobilverbindungen) und beendet keine laufende
+// Bearbeitung.
+const (
+	serverReadHeaderTimeout = 10 * time.Second
+	serverReadTimeout       = 2 * time.Minute
+	serverIdleTimeout       = 2 * time.Minute
+)
+
+func newHTTPServer(addr string, h http.Handler) *http.Server {
+	return &http.Server{
+		Addr:              addr,
+		Handler:           h,
+		ReadHeaderTimeout: serverReadHeaderTimeout,
+		ReadTimeout:       serverReadTimeout,
+		IdleTimeout:       serverIdleTimeout,
+	}
 }
 
 // warnPrivilegedIDsWithoutAccount schreibt beim Start je eine Warnzeile fuer

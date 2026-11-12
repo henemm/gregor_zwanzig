@@ -1772,6 +1772,9 @@ func hasControlChars(s string) bool {
 }
 
 func ChangePasswordHandler(s *store.Store, bcryptCost int, secret, publicHost string) http.HandlerFunc {
+	// Issue #2961: hoechstens 5 Fehlversuche des alten Passworts je Nutzer und
+	// 15 Minuten (gezaehlt vor dem Vergleich).
+	guard := newAttemptGuard(5, 15*time.Minute, 15*time.Minute)
 	return func(w http.ResponseWriter, r *http.Request) {
 		userId := middleware.UserIDFromContext(r.Context())
 		w.Header().Set("Content-Type", "application/json")
@@ -1796,10 +1799,16 @@ func ChangePasswordHandler(s *store.Store, bcryptCost int, secret, publicHost st
 			return
 		}
 
+		if !guard.Reserve(userId) {
+			w.Header().Set("Retry-After", "900")
+			WriteError(w, r, http.StatusTooManyRequests, "rate_limit_exceeded", nil)
+			return
+		}
 		if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(req.OldPassword)); err != nil {
 			WriteError(w, r, http.StatusForbidden, "wrong_password", nil)
 			return
 		}
+		guard.Success(userId)
 
 		newHash, err := bcrypt.GenerateFromPassword([]byte(req.NewPassword), bcryptCost)
 		if err != nil {
@@ -1850,6 +1859,8 @@ func ChangePasswordHandler(s *store.Store, bcryptCost int, secret, publicHost st
 // an den PO aus. Das effektive tier-Feld bleibt unverändert — die Freigabe
 // erfolgt weiterhin manuell durch den PO.
 func RequestTierChangeHandler(s *store.Store, cfg config.Config) http.HandlerFunc {
+	// Issue #2961: hoechstens 3 Antraege (= Betreiber-Mails) je Nutzer und Tag.
+	limiter := NewMailFloodLimiter(3, 24*time.Hour)
 	return func(w http.ResponseWriter, r *http.Request) {
 		userId := middleware.UserIDFromContext(r.Context())
 		w.Header().Set("Content-Type", "application/json")
@@ -1876,6 +1887,18 @@ func RequestTierChangeHandler(s *store.Store, cfg config.Config) http.HandlerFun
 		currentTier := model.EffectiveTier(user.Tier)
 		if req.RequestedTier == currentTier {
 			WriteError(w, r, http.StatusBadRequest, "already_current_tier", nil)
+			return
+		}
+
+		// Issue #2961: derselbe, bereits gemeldete Antrag erneut — keine
+		// zweite Mail, kein Kontingentverbrauch, Antrag bleibt unveraendert.
+		if user.RequestedTier == req.RequestedTier && user.RequestedNotifiedAt != nil {
+			json.NewEncoder(w).Encode(map[string]any{"status": "ok", "po_notified": true})
+			return
+		}
+		if !limiter.AllowAddressOnly(userId) {
+			w.Header().Set("Retry-After", limiter.RetryAfterHeader())
+			WriteError(w, r, http.StatusTooManyRequests, "rate_limit_exceeded", nil)
 			return
 		}
 
