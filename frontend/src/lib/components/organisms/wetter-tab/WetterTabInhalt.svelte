@@ -246,7 +246,7 @@
 			onZuruecksetzen={() => vorlageSetzen(Z.mitVorlage(stand!, stand!.vorlageId, vorlagen))}
 			onGespeichert={vorlageGespeichert}
 		/>
-		<div class="wt-karte wt-metriken">
+		<div class="wt-karte wt-metriken" data-abschnitt="metriken">
 			<AlarmAbKopf {zaehler} onAlle={(s: AlarmAb) => aendern(Z.mitAlarmAbFuerAlle(stand!, s, daten!.eig))} />
 			{#each gruppen as g (g.gruppe)}
 				<div class="wt-gruppe" data-testid="wetter-gruppe-{g.gruppe}">
