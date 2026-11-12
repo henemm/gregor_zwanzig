@@ -47,6 +47,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import _e2e_paths  # noqa: E402
 import _validator_log  # noqa: E402  (#1408 F005: kollisionsfreie Log-Ablage)
+import _mail_trust  # noqa: E402  (#2961: Absender/DKIM-SPF des eigenen Servers)
 
 # Verdict-Zeile: "{N} amtliche Warnung" / "{N} amtliche Warnungen".
 _VERDICT_RE = re.compile(r"(\d+)\s+amtliche Warnung(?:en)?")
@@ -492,14 +493,20 @@ def _message_matches(headers, lang: str = "de", to_contains: str | None = None,
 
 def fetch_latest_message(max_scan: int = 50, lang: str = "de",
                          to_contains: str | None = None, imap=None,
-                         subject_contains: str | None = None) -> Message:
+                         subject_contains: str | None = None,
+                         vertrauen=None) -> Message:
     """Holt die neueste passende official-alert-Mail aus dem Test-Postfach.
 
-    ``imap``: fertige, angemeldete Verbindung (Test-Seam, #2681)."""
+    ``imap``: fertige, angemeldete Verbindung (Test-Seam, #2681). #2961: nur
+    Mails des Dienst-Absenders (``_mail_trust``); mit eigener Verbindung kommt
+    ``vertrauen`` aus der Konfiguration."""
     _e2e_paths.betreff_fragment_pruefen(subject_contains)
     own_connection = imap is None
     if own_connection:
         imap = _open_test_imap()
+        if vertrauen is None:
+            vertrauen = _mail_trust.aus_konfiguration()
+    verworfen: list = []
     try:
         imap.select("INBOX")
         _, data = imap.search(None, "ALL")
@@ -511,6 +518,10 @@ def fetch_latest_message(max_scan: int = 50, lang: str = "de",
             _, hdr_data = imap.fetch(mid, "(BODY.PEEK[HEADER])")
             headers = email.message_from_bytes(hdr_data[0][1])
             if _message_matches(headers, lang, to_contains, subject_contains):
+                grund = _mail_trust.fehler(headers, vertrauen) if vertrauen else None
+                if grund:
+                    verworfen.append(grund)
+                    continue
                 _, msg_data = imap.fetch(mid, "(RFC822)")
                 return email.message_from_bytes(msg_data[0][1])
 
@@ -518,6 +529,7 @@ def fetch_latest_message(max_scan: int = 50, lang: str = "de",
             f"Keine passende official-alert-Mail gefunden (lang={lang!r}, "
             f"to_contains={to_contains!r}, subject_contains={subject_contains!r}, "
             f"scan={max_scan} Mails)"
+            + _mail_trust.hinweis(verworfen)
         )
     finally:
         if own_connection:

@@ -30,6 +30,12 @@ VALIDATE_SCRIPT = REPO_ROOT / ".claude" / "validate-external.sh"
 VALIDATOR_ENV = REPO_ROOT / ".claude" / "validator.env"
 SPEC_PATH = "docs/specs/modules/fix_698_validator_user_sync.md"
 
+# Zugangsdaten nie im Repo (#2961): AC-3 braucht ein gueltiges Pruefkonto aus
+# der Umgebung (GZ_VALIDATOR_USER/GZ_VALIDATOR_PASS); fehlt es, wird AC-3
+# uebersprungen.
+_VALIDATOR_USER = os.environ.get("GZ_VALIDATOR_USER", "")
+_VALIDATOR_PASS = os.environ.get("GZ_VALIDATOR_PASS", "")
+
 
 def _run(cmd: list[str], env: dict | None = None, timeout: int = 30) -> subprocess.CompletedProcess:
     merged_env = {**os.environ, **(env or {})}
@@ -136,10 +142,12 @@ class TestAC3ValidateExternalDetectsAnthropicApiError:
     """
 
     def test_validate_external_exits_with_api_key_message(self):
+        if not (_VALIDATOR_USER and _VALIDATOR_PASS):
+            pytest.skip("GZ_VALIDATOR_USER/GZ_VALIDATOR_PASS fehlen -- Live-Staging-Test")
         # Korrekter Gregor-Login, aber ANTHROPIC_API_KEY fehlt
         env = {
-            "GZ_VALIDATOR_USER": "validator-issue110",
-            "GZ_VALIDATOR_PASS": "457442e8830f5ee3afe9afe2d5f0d923",
+            "GZ_VALIDATOR_USER": _VALIDATOR_USER,
+            "GZ_VALIDATOR_PASS": _VALIDATOR_PASS,
             "GZ_VALIDATION_URL": "https://staging.gregor20.henemm.com",
         }
         # ANTHROPIC_API_KEY explizit löschen falls gesetzt

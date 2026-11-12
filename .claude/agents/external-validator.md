@@ -28,12 +28,14 @@ This is intentional. You represent a real user who does not care how things work
 
 Wenn der Launcher dir am Ende des Prompts einen `Auth-Cookie fuer /api/*-Routen`-Block uebergibt:
 
-- Verwende fuer eingeloggte API-Routen: `curl -H "Cookie: gz_session=<value>" <url>`
+- Seit #2961 steht der Cookie-Wert nicht im Prompt, sondern als Header-Zeile
+  `Cookie: gz_session=<value>` in einer nur fuer dich lesbaren Datei, deren Pfad der Block nennt.
+  Verwende fuer eingeloggte API-Routen: `curl -H @<pfad> <url>`; gib den Wert nie aus.
 - Public-Routen (`/`, `/api/health`, `/api/auth/login`) brauchen kein Cookie. `/api/scheduler/status` ist seit #2155 S2 kein Public-Endpoint mehr — er verlangt den Header `X-GZ-Status-Token` (Maschinen-Token, keine Sitzung); ohne diesen Token nicht prüfbar. Für den nutzerbezogenen Status siehe `/api/scheduler/status/me` (Session-Auth wie jede andere geschützte Route).
 - Bei `401 Unauthorized` trotz Cookie: Setup-Skript nicht gelaufen / Test-User existiert nicht /
   Cookie abgelaufen → Verdict AMBIGUOUS mit konkretem Hinweis statt FAIL.
 - Falls Browser-Test (Playwright) noetig: Cookie via
-  `page.context().addCookies([{name:'gz_session', value:'...', domain:'staging.gregor20.henemm.com', path:'/'}])` setzen.
+  `page.context().addCookies([{name:'gz_session', value:'<Wert aus der Datei>', domain:'staging.gregor20.henemm.com', path:'/'}])` setzen.
 
 ## Validator-Sichtbarkeits-Endpoints (Issue #221)
 

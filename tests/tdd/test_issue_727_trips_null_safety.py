@@ -11,8 +11,11 @@ RED-Erwartung (vor Fix):
 Ausführung:
     uv run pytest tests/tdd/test_issue_727_trips_null_safety.py -v
 """
+import atexit
 import json
 import os
+import shutil
+import tempfile
 
 import httpx
 import pytest
@@ -27,11 +30,22 @@ from tests.helpers.staging_auth import (  # Bündel H #987: Staging-Basic-Auth
 pytestmark = pytest.mark.staging
 
 BASE = "https://staging.gregor20.henemm.com"
+# Zugangsdaten nie im Repo (#2961): Passwort nur aus der Umgebung.
 USER = "tdd-727"
-PASS = "f2675a9ec77f2b94f58ba740"
+PASS = os.environ.get("GZ_TDD727_PASS", "")
+if not PASS:
+    pytest.skip(
+        "GZ_TDD727_PASS fehlt -- Live-Staging-Test laeuft nur mit Zugangsdaten "
+        "aus der Umgebung",
+        allow_module_level=True,
+    )
 NULL_STAGES_TRIP_ID = "tdd-727-null-stages"
 REAL_STAGES_TRIP_ID = "tdd-727-real-stages"
-STATE_FILE = "/tmp/tdd-727-storage-state.json"
+# Sitzungsdaten nur in einem eigenen, nur fuer den Nutzer lesbaren Verzeichnis
+# dieses Laufs (#2961: kein fester, vorhersagbarer /tmp-Pfad); beim Ende geloescht.
+_STATE_DIR = tempfile.mkdtemp(prefix="gz-tdd-727-")
+atexit.register(shutil.rmtree, _STATE_DIR, True)
+STATE_FILE = os.path.join(_STATE_DIR, "storage-state.json")
 
 
 # ---------------------------------------------------------------------------

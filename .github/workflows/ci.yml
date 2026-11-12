@@ -16,15 +16,20 @@ on:
         type: boolean
         default: false
 
+# #2961: der GITHUB_TOKEN darf nur lesen. Kein Job schreibt Kommentare,
+# Statuses oder Releases; der Artefakt-Upload braucht keine Token-Rechte.
+permissions:
+  contents: read
+
 jobs:
   test:
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
       - name: Install uv
-        uses: astral-sh/setup-uv@v4
+        uses: astral-sh/setup-uv@38f3f104447c67c051c4a08e39b64a148898af3a # v4.2.0
         with:
-          version: "latest"
+          version: "0.11.32"
       - name: Set up Python
         run: uv python install 3.12
       - name: Install dependencies
@@ -68,9 +73,9 @@ jobs:
   go-test:
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
       - name: Set up Go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5.6.0
         with:
           go-version-file: go.mod
       - name: Run Go tests
@@ -82,9 +87,9 @@ jobs:
       run:
         working-directory: frontend
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
       - name: Set up Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: 22
           cache: npm
@@ -95,9 +100,9 @@ jobs:
       # lesen den echten Backend-Katalog via `uv run python3` — ohne uv+Sync
       # scheiterten genau diese 6 Tests seit jeher nur auf dem Runner (#1196).
       - name: Install uv (fuer LIVE-Katalog-Drift-Waechter)
-        uses: astral-sh/setup-uv@v4
+        uses: astral-sh/setup-uv@38f3f104447c67c051c4a08e39b64a148898af3a # v4.2.0
         with:
-          version: "latest"
+          version: "0.11.32"
       - name: Set up Python + Projekt-Abhaengigkeiten
         working-directory: .
         run: |
@@ -143,9 +148,9 @@ jobs:
       run:
         working-directory: frontend
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
       - name: Set up Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: 22
           cache: npm
@@ -172,11 +177,28 @@ jobs:
   lint:
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      # #2961: Geheimnis-Suche ueber den Arbeitsstand (nicht die Historie), VOR
+      # uv sync, damit nur der ausgecheckte Stand geprueft wird. Feste Version,
+      # Release-Archiv gegen die veroeffentlichte SHA-256-Summe geprueft.
+      # Ausnahmen (nur Test-/Platzhalterwerte, pfad- und regelgenau): .gitleaks.toml
+      - name: Geheimnis-Suche (gitleaks, Arbeitsstand)
+        env:
+          GITLEAKS_VERSION: "8.30.1"
+          GITLEAKS_SHA256: "551f6fc83ea457d62a0d98237cbad105af8d557003051f41f3e7ca7b3f2470eb"
+        run: |
+          set -euo pipefail
+          D="$RUNNER_TEMP/gitleaks"
+          mkdir -p "$D"
+          curl -sSfL -o "$D/gitleaks.tar.gz" \
+            "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"
+          echo "${GITLEAKS_SHA256}  $D/gitleaks.tar.gz" | sha256sum -c -
+          tar -xzf "$D/gitleaks.tar.gz" -C "$D" gitleaks
+          "$D/gitleaks" dir . --config .gitleaks.toml --redact --no-banner --exit-code 1
       - name: Install uv
-        uses: astral-sh/setup-uv@v4
+        uses: astral-sh/setup-uv@38f3f104447c67c051c4a08e39b64a148898af3a # v4.2.0
         with:
-          version: "latest"
+          version: "0.11.32"
       - name: Set up Python
         run: uv python install 3.12
       - name: Install dependencies
@@ -290,23 +312,23 @@ jobs:
       E2E_MIN_EXECUTED_PWA: 61         # Zweitlauf: 60 Faelle in 5 PWA-Dateien (Issue #2316: pwa-update-erkennung.spec.ts neu; Issue #2317: +1 Fall AC-6 dort, statisch aus --list abgeleitet) + global.setup -- kein Puffer
       E2E_MIN_EXECUTED_RATELIMIT: 3    # Drittlauf: bug-703 (2 Faelle) + global.setup -- exakt belegt, kein Puffer
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
       - name: Set up Go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@40f1582b2485089dde7abd97c1529aa768e1baff # v5.6.0
         with:
           go-version-file: go.mod
       - name: Go-Server bauen
         run: go build -o /tmp/gregor-server ./cmd/server
       - name: Install uv
-        uses: astral-sh/setup-uv@v4
+        uses: astral-sh/setup-uv@38f3f104447c67c051c4a08e39b64a148898af3a # v4.2.0
         with:
-          version: "latest"
+          version: "0.11.32"
       - name: Set up Python + Projekt-Abhaengigkeiten
         run: |
           uv python install 3.12
           uv sync
       - name: Set up Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: 22
           cache: npm
@@ -503,7 +525,7 @@ jobs:
         run: bash frontend/e2e/ci-stack.sh stop
       - name: Trace-Artefakt hochladen (nur bei Fehlschlag)
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: e2e-traces
           path: frontend/test-results/
@@ -520,7 +542,7 @@ jobs:
       group: prod-deploy
       cancel-in-progress: false
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           # Volle Historie fuer den Ancestor-Check im Staging-Wait (s. u.).
           fetch-depth: 0
@@ -547,16 +569,55 @@ jobs:
           done
 
       - name: Smoke-Test Staging
+        env:
+          STAGING_BASIC_AUTH: ${{ secrets.STAGING_BASIC_AUTH }}
         run: |
           BASE="https://staging.gregor20.henemm.com"
           # Root liegt hinter Basic-Auth (#1030) — mit Creds prüfen, damit der
           # Frontend-Service selbst getestet wird, nicht nur die Auth-Schicht.
-          ROOT=$(curl -s -o /dev/null -w "%{http_code}" -u "${{ secrets.STAGING_BASIC_AUTH }}" "$BASE/")
+          ROOT=$(curl -s -o /dev/null -w "%{http_code}" -u "$STAGING_BASIC_AUTH" "$BASE/")
           HEALTH=$(curl -s -o /dev/null -w "%{http_code}" "$BASE/api/health")
           echo "ROOT=$ROOT HEALTH=$HEALTH"
           { [ "$ROOT" = "200" ] || [ "$ROOT" = "302" ]; } || { echo "ROOT $ROOT != 200/302"; exit 1; }
           [ "$HEALTH" = "200" ] || { echo "HEALTH $HEALTH != 200"; exit 1; }
           echo "Staging Smoke: OK"
+
+      # #2961: SSH-Zugang EINMAL vorbereiten. Schluessel und Ziel kommen per
+      # env (nie per ${{ }} in den Shell-Text), Dateien liegen mit umask 077
+      # unter $RUNNER_TEMP. Ist das Secret DEPLOY_KNOWN_HOSTS gesetzt, wird der
+      # Host-Schluessel geprueft (StrictHostKeyChecking=yes); fehlt es, bleibt
+      # das bisherige Verhalten mit einer sichtbaren Warnung, damit der Deploy
+      # nicht bricht, bevor der Eigentuemer das Secret angelegt hat
+      # (docs/reference/operations_playbook.md "Deploy-Geheimnisse an main binden").
+      - name: SSH-Zugang vorbereiten
+        env:
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          DEPLOY_KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+        run: |
+          umask 077
+          D="$RUNNER_TEMP/gz-deploy-ssh"
+          mkdir -p "$D"
+          printf '%s\n' "$DEPLOY_SSH_KEY" > "$D/deploy_key"
+          if [ -n "$DEPLOY_KNOWN_HOSTS" ]; then
+            printf '%s\n' "$DEPLOY_KNOWN_HOSTS" > "$D/known_hosts"
+            CHECK=yes
+            KNOWN="$D/known_hosts"
+          else
+            echo "::warning::Secret DEPLOY_KNOWN_HOSTS fehlt - SSH-Host-Schluessel wird NICHT geprueft (StrictHostKeyChecking=no). Bitte anlegen, siehe operations_playbook.md 'Deploy-Geheimnisse an main binden'."
+            CHECK=no
+            KNOWN=/dev/null
+          fi
+          cat > "$D/config" <<EOF
+          Host gz-deploy
+            HostName $DEPLOY_HOST
+            User $DEPLOY_USER
+            IdentityFile $D/deploy_key
+            IdentitiesOnly yes
+            StrictHostKeyChecking $CHECK
+            UserKnownHostsFile $KNOWN
+          EOF
 
       # #2047 Scheibe 2: Die CI schreibt KEINEN Staging-Nachweis mehr und resettet
       # den Haupt-Checkout nicht. Sie liefert nur aus, wenn fuer origin/main bereits
@@ -568,15 +629,11 @@ jobs:
       - name: Prod-Gate pruefen
         id: gate
         run: |
-          echo "${{ secrets.DEPLOY_SSH_KEY }}" > /tmp/deploy_key
-          chmod 600 /tmp/deploy_key
           set +e
-          OUT=$(ssh -i /tmp/deploy_key -o StrictHostKeyChecking=no -o ConnectTimeout=30 \
-            ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }} \
+          OUT=$(ssh -F "$RUNNER_TEMP/gz-deploy-ssh/config" -o ConnectTimeout=30 gz-deploy \
             "cd /home/hem/gregor_zwanzig && t=\$(mktemp /tmp/ci_prod_gate.XXXXXX) && git fetch origin 2>/dev/null && git show origin/main:scripts/ci_prod_gate.sh > \"\$t\" && bash \"\$t\" /home/hem/gregor_zwanzig; rc=\$?; rm -f \"\$t\"; exit \$rc")
           RC=$?
           set -e
-          rm -f /tmp/deploy_key
           echo "$OUT"
           GATE=$(echo "$OUT" | grep -E '^PROD_GATE=(open|closed)$' | tail -n 1 || true)
           if [ "$RC" -ne 0 ] || [ -z "$GATE" ]; then
@@ -608,18 +665,14 @@ jobs:
         id: deploy
         if: steps.gate.outputs.open == 'true'
         run: |
-          echo "${{ secrets.DEPLOY_SSH_KEY }}" > /tmp/deploy_key
-          chmod 600 /tmp/deploy_key
           LOG=$(mktemp)
           set +e
-          ssh -i /tmp/deploy_key \
-            -o StrictHostKeyChecking=no \
+          ssh -F "$RUNNER_TEMP/gz-deploy-ssh/config" \
             -o ConnectTimeout=10 \
-            ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }} \
+            gz-deploy \
             "bash /home/hem/henemm-infra/scripts/deploy-gregor-prod.sh" 2>&1 | tee "$LOG"
           EXIT=${PIPESTATUS[0]}
           set -e
-          rm -f /tmp/deploy_key
           if grep -qF "bereits ausgeliefert" "$LOG"; then
             echo "already=true" >> "$GITHUB_OUTPUT"
           else
@@ -633,18 +686,19 @@ jobs:
       - name: Post-Deploy-Selbsttest Produktion
         if: success() && steps.gate.outputs.open == 'true'
         run: |
-          echo "${{ secrets.DEPLOY_SSH_KEY }}" > /tmp/deploy_key
-          chmod 600 /tmp/deploy_key
           set +e
-          ssh -i /tmp/deploy_key \
-            -o StrictHostKeyChecking=no \
+          ssh -F "$RUNNER_TEMP/gz-deploy-ssh/config" \
             -o ConnectTimeout=10 \
-            ${{ secrets.DEPLOY_USER }}@${{ secrets.DEPLOY_HOST }} \
+            gz-deploy \
             "cd /home/hem/gregor_zwanzig && python3 .claude/hooks/prod_selftest.py"
           EXIT=$?
           set -e
-          rm -f /tmp/deploy_key
           exit $EXIT
+
+      # #2961: Schluesselmaterial nach den SSH-Schritten entfernen (immer).
+      - name: SSH-Zugang aufraeumen
+        if: always()
+        run: rm -rf "$RUNNER_TEMP/gz-deploy-ssh"
 
       # Commit-Message NIE per ${{ }} in den Shell-Text interpolieren:
       # Anfuehrungszeichen in der Message (z.B. "Nachtrag 2", 4c9ad35)
@@ -660,6 +714,7 @@ jobs:
         env:
           COMMIT_MSG: ${{ github.event.head_commit.message }}
           CHAT_ID: ${{ secrets.HENEMM_DEPLOY_CHAT_ID }}
+          BOT_TOKEN: ${{ secrets.HENEMM_DEPLOY_BOT_TOKEN }}
           SHA: ${{ github.sha }}
         run: |
           BODY=$(python3 - <<'EOF'
@@ -670,7 +725,7 @@ jobs:
           print(json.dumps({"chat_id": os.environ["CHAT_ID"], "text": "gregor20 deployed: %s %s" % (sha, first)}))
           EOF
           )
-          curl -s -X POST "https://api.telegram.org/bot${{ secrets.HENEMM_DEPLOY_BOT_TOKEN }}/sendMessage" \
+          curl -s -X POST "https://api.telegram.org/bot${BOT_TOKEN}/sendMessage" \
             -H "Content-Type: application/json" \
             -d "$BODY" > /dev/null
 
@@ -679,6 +734,7 @@ jobs:
         env:
           COMMIT_MSG: ${{ github.event.head_commit.message }}
           CHAT_ID: ${{ secrets.HENEMM_DEPLOY_CHAT_ID }}
+          BOT_TOKEN: ${{ secrets.HENEMM_DEPLOY_BOT_TOKEN }}
           SHA: ${{ github.sha }}
         run: |
           BODY=$(python3 - <<'EOF'
@@ -690,7 +746,7 @@ jobs:
           print(json.dumps({"chat_id": os.environ["CHAT_ID"], "text": text}))
           EOF
           )
-          curl -s -X POST "https://api.telegram.org/bot${{ secrets.HENEMM_DEPLOY_BOT_TOKEN }}/sendMessage" \
+          curl -s -X POST "https://api.telegram.org/bot${BOT_TOKEN}/sendMessage" \
             -H "Content-Type: application/json" \
             -d "$BODY" > /dev/null
 
@@ -699,6 +755,7 @@ jobs:
         env:
           COMMIT_MSG: ${{ github.event.head_commit.message }}
           CHAT_ID: ${{ secrets.HENEMM_DEPLOY_CHAT_ID }}
+          BOT_TOKEN: ${{ secrets.HENEMM_DEPLOY_BOT_TOKEN }}
           SHA: ${{ github.sha }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
@@ -711,6 +768,6 @@ jobs:
           print(json.dumps({"chat_id": os.environ["CHAT_ID"], "text": text}))
           EOF
           )
-          curl -s -X POST "https://api.telegram.org/bot${{ secrets.HENEMM_DEPLOY_BOT_TOKEN }}/sendMessage" \
+          curl -s -X POST "https://api.telegram.org/bot${BOT_TOKEN}/sendMessage" \
             -H "Content-Type: application/json" \
             -d "$BODY" > /dev/null

@@ -286,8 +286,11 @@ Pfad löst `staging_gate.py` selbst aus dem aktuellen HEAD ab; kein dupliziertes
 Pfad-Wissen mehr.
 
 ```bash
-# Findings als JSON-Array vorbereiten (was auf Staging geprüft wurde):
-cat > /tmp/e2e_findings.json <<'EOF'
+# Findings als JSON-Array vorbereiten (was auf Staging geprüft wurde). #2961: in ein
+# eigenes, nur für dich lesbares Verzeichnis (mktemp -d), nie ein fester /tmp-Pfad;
+# den ganzen Block in EINEM Bash-Aufruf ausführen (sonst ist D im nächsten Aufruf leer).
+D=$(mktemp -d)
+cat > "$D/e2e_findings.json" <<'EOF'
 [
   {"ac": "AC-1", "status": "PASS", "url": "/", "evidence": "HIER BESCHREIBEN WAS GEPRÜFT WURDE"}
 ]
@@ -296,8 +299,9 @@ EOF
 # Attestation commit-getaggt schreiben (.claude/e2e_verified/<HEAD>.json):
 python3 .claude/hooks/staging_gate.py \
   --write-verdict "VERIFIED: <kurze Begründung>" \
-  --findings-json /tmp/e2e_findings.json \
+  --findings-json "$D/e2e_findings.json" \
   --langs de,en
+rm -rf "$D"
 ```
 
 **`--langs de,en` ist Pflicht (Issue #2681)** ausser bei Scope `docs-only`: ohne beide

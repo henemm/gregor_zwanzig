@@ -10,6 +10,7 @@ RED-Erwartung:
 Ausführung:
     uv run pytest tests/tdd/test_701_alerts_metrik_sync.py -v
 """
+import os
 import re
 import time
 import uuid
@@ -17,12 +18,23 @@ import uuid
 import pytest
 from playwright.sync_api import sync_playwright
 
+from tests.helpers.staging_auth import _load_validator_env
+
 # Dialt real gegen Staging/Prod (#1211 Scheibe 2a) -- nur via -m staging ausfuehren.
 pytestmark = pytest.mark.staging
 
 BASE = "https://staging.gregor20.henemm.com"
-USER = "validator-issue110"
-PASS = "457442e8830f5ee3afe9afe2d5f0d923"
+# Zugangsdaten nie im Repo (#2961): aus der Umgebung, sonst aus
+# .claude/validator.env des Servers. Fehlen sie, wird uebersprungen.
+_VALIDATOR_ENV = _load_validator_env()
+USER = os.environ.get("GZ_VALIDATOR_USER") or _VALIDATOR_ENV.get("GZ_VALIDATOR_USER", "")
+PASS = os.environ.get("GZ_VALIDATOR_PASS") or _VALIDATOR_ENV.get("GZ_VALIDATOR_PASS", "")
+if not (USER and PASS):
+    pytest.skip(
+        "GZ_VALIDATOR_USER/GZ_VALIDATOR_PASS fehlen (Umgebung oder "
+        ".claude/validator.env) -- Live-Staging-Test laeuft nur auf dem Server",
+        allow_module_level=True,
+    )
 
 
 # ---------------------------------------------------------------------------

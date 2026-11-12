@@ -314,6 +314,37 @@ alle 3 Services restarten → Smoke-Test`. Ohne diesen vollen Lauf entsteht Code
 **parallel-session-sicher**: es blockiert nicht mehr bei „dirty" Arbeitsbaum und serialisiert
 gleichzeitige Deploys über `flock`. Schritt 4 darf daher aus jeder Session jederzeit laufen.
 
+### Deploy-Geheimnisse an main binden (#2961)
+
+Stand im Repo: `ci.yml` gibt dem `GITHUB_TOKEN` nur Leserechte (`permissions: contents: read`),
+alle Actions sind auf Commit-SHAs gepinnt, die Deploy-Geheimnisse gehen per `env:` in die
+Schritte (nie per `${{ }}` in den Shell-Text), und der SSH-Zugang wird einmal im Schritt
+„SSH-Zugang vorbereiten" unter `$RUNNER_TEMP` (umask 077) angelegt und am Ende gelöscht.
+Ist das Secret `DEPLOY_KNOWN_HOSTS` gesetzt, prüft SSH den Host-Schlüssel
+(`StrictHostKeyChecking yes`); fehlt es, läuft der Deploy wie bisher ohne Prüfung weiter und
+der Lauf zeigt eine `::warning::`-Zeile. Drei Schritte liegen beim Repo-Eigentümer
+(GitHub-Einstellungen bzw. Server) und sind **noch offen**:
+
+1. **Environment `production`** anlegen (Settings → Environments) mit der Regel
+   „Deployment branches: nur `main`". Die Secrets `DEPLOY_SSH_KEY`, `DEPLOY_USER`,
+   `DEPLOY_HOST`, `DEPLOY_KNOWN_HOSTS`, `STAGING_BASIC_AUTH`, `HENEMM_DEPLOY_BOT_TOKEN`,
+   `HENEMM_DEPLOY_CHAT_ID` von den Repository-Secrets dorthin verschieben. **Erst danach**
+   im Job `deploy` die Zeile `environment: production` ergänzen; vorher würde der Job ohne
+   Secrets laufen und scheitern. Damit kann ein Workflow auf einem anderen Branch die
+   Schlüssel nicht mehr lesen.
+2. **SSH-Schlüssel begrenzen:** in `authorized_keys` des Deploy-Kontos den CI-Schlüssel mit
+   `command="…",restrict` auf ein Wrapper-Skript beschränken, das nur die drei Aufrufe der CI
+   zulässt (Prod-Gate, `deploy-gregor-prod.sh`, `prod_selftest.py`; Auswahl über
+   `SSH_ORIGINAL_COMMAND`, alles andere ablehnen).
+3. **`DEPLOY_KNOWN_HOSTS` anlegen:** die Host-Schlüssel-Zeile(n) des Servers für genau den
+   Namen bzw. die Adresse aus `DEPLOY_HOST` (z. B. aus `ssh-keyscan`, Fingerabdruck auf dem
+   Server selbst mit `ssh-keygen -lf /etc/ssh/ssh_host_ed25519_key.pub` abgleichen). Danach
+   verschwindet die Warnung im Deploy-Lauf.
+
+**Geheimnis-Suche:** Der Job `lint` prüft den ausgecheckten Stand mit gitleaks in fester
+Version (`.gitleaks.toml`, eigene Regel für Hex-Passwörter). Ein Platzhalter-Geheimnis in
+einem neuen Test braucht einen eigenen, pfad- und wertgenauen Ausnahme-Eintrag dort.
+
 ### Was zählt als „Staging-validiert"?
 
 Mindestens diese Checks gegen `https://staging.gregor20.henemm.com`:
