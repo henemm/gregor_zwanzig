@@ -1,7 +1,10 @@
 package store_test
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
 	"sync"
@@ -16,6 +19,8 @@ import (
 // lebt im Paket handler; dieser Test liegt im externen Testpaket store_test,
 // damit kein Importzyklus entsteht. Erwartet GRUEN: #2160 AC-14 hat Sperre und
 // atomares Schreiben schon geliefert, Produktivcode bleibt unveraendert.
+// Seit #2961 gilt je Nutzer nur EIN Token und die Datei traegt nur den
+// SHA-256 des Tokens: darum 60 verschiedene Nutzer und Abgleich ueber den Hash.
 func TestTelegramTokenConcurrency_ParalleleSchreiberVerlierenKeinenToken(t *testing.T) {
 	dir := t.TempDir()
 	ts := handler.NewTelegramTokenStore(dir)
@@ -30,7 +35,7 @@ func TestTelegramTokenConcurrency_ParalleleSchreiberVerlierenKeinenToken(t *test
 		go func() {
 			defer wg.Done()
 			<-start
-			tok, err := ts.IssueToken("user-" + string(rune('a'+i%26)))
+			tok, err := ts.IssueToken(fmt.Sprintf("user-%02d", i))
 			if err != nil {
 				t.Errorf("IssueToken %d: %v", i, err)
 				return
@@ -50,7 +55,8 @@ func TestTelegramTokenConcurrency_ParalleleSchreiberVerlierenKeinenToken(t *test
 		t.Fatalf("Datei ist kein gueltiges JSON (halb geschrieben?): %v", err)
 	}
 	for i, tok := range tokens {
-		if _, ok := onDisk[tok]; !ok {
+		sum := sha256.Sum256([]byte(tok))
+		if _, ok := onDisk[hex.EncodeToString(sum[:])]; !ok {
 			t.Errorf("Token %d fehlt in telegram_tokens.json", i)
 		}
 	}
