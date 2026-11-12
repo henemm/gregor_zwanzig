@@ -31,7 +31,7 @@ import (
 
 func registriere2194(t *testing.T, s *store.Store, inv *store.InviteStore, rumpf string) *httptest.ResponseRecorder {
 	t.Helper()
-	h := RegisterHandlerWithInvites(s, bcrypt.MinCost, config.Config{}, inv)
+	h := RegisterHandlerWithInvites(s, bcrypt.MinCost, config.Config{Env: "staging"} /* #2961: Testkonten nur Staging/Fixture/Admin */, inv)
 	req := httptest.NewRequest(http.MethodPost, "/api/auth/register", strings.NewReader(rumpf))
 	req.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()

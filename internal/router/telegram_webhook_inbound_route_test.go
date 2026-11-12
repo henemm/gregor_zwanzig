@@ -48,7 +48,7 @@ func (c *tgCore) snapshot() []string {
 
 func tgRouter(t *testing.T) (http.Handler, *tgCore) {
 	t.Helper()
-	t.Setenv("TELEGRAM_WEBHOOK_SECRET", "tg-geheim-1814")
+	t.Setenv("TELEGRAM_WEBHOOK_SECRET", "tg-geheim-1814-0123456789abcdef0123456789")
 	core := &tgCore{}
 	srv := httptest.NewServer(http.HandlerFunc(core.handler))
 	t.Cleanup(srv.Close)
@@ -74,7 +74,7 @@ func TestTelegramInbound_KorrekterHeader_200UndWeiterreichung_ZweiNutzer(t *test
 	alice := `{"update_id":1,"message":{"chat":{"id":1001},"text":"status"}}`
 	bob := `{"update_id":2,"message":{"chat":{"id":2002},"text":"status"}}`
 	for _, body := range []string{alice, bob} {
-		w := tgPost(r, "/api/webhooks/telegram/inbound", body, "tg-geheim-1814")
+		w := tgPost(r, "/api/webhooks/telegram/inbound", body, "tg-geheim-1814-0123456789abcdef0123456789")
 		if w.Code != http.StatusOK {
 			t.Fatalf("POST /inbound: erwartet 200, bekam %d: %s", w.Code, w.Body.String())
 		}
@@ -109,8 +109,8 @@ func TestTelegramInbound_FalscherOderFehlenderHeader_403_KeinForwarding(t *testi
 // 200 noch Weiterreichung (Mutation: Route wieder einfuegen => rot).
 func TestTelegramInbound_AltRoute_NichtMehrZugestellt(t *testing.T) {
 	r, core := tgRouter(t)
-	for _, seg := range []string{"tg-geheim-1814", "whatever", "x", "inbound2"} {
-		w := tgPost(r, "/api/webhooks/telegram/"+seg, `{"update_id":3}`, "tg-geheim-1814")
+	for _, seg := range []string{"tg-geheim-1814-0123456789abcdef0123456789", "whatever", "x", "inbound2"} {
+		w := tgPost(r, "/api/webhooks/telegram/"+seg, `{"update_id":3}`, "tg-geheim-1814-0123456789abcdef0123456789")
 		if w.Code != http.StatusNotFound && w.Code != http.StatusMethodNotAllowed {
 			t.Errorf("Alt-Route /%s: erwartet 404/405, bekam %d", seg, w.Code)
 		}

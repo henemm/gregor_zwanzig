@@ -121,6 +121,18 @@ func RegisterHandlerWithInvites(s *store.Store, bcryptCost int, cfg config.Confi
 		// Sonst wird der Body-username ignoriert — auch nicht validiert — und
 		// die ID nach allen Pruefungen per NewOpaqueUserID erzeugt.
 		if req.IsTestUser {
+			// Issue #2961 (ADR-0113): der Schalter (und damit die frei
+			// waehlbare Kennung) gilt nur im Staging, im Fixture-Modus oder
+			// fuer eine Admin-Sitzung — sonst Ablehnung statt stillem Ignorieren.
+			if !testAccountCreationAllowed(r, s, cfg) {
+				log.Printf("register: is_test_user rejected outside staging/fixture without admin session")
+				WriteError(w, r, http.StatusBadRequest, "validation_failed", nil)
+				return
+			}
+			if store.IsReservedUserID(req.Username) {
+				WriteError(w, r, http.StatusBadRequest, "validation_failed", nil)
+				return
+			}
 			if len(req.Username) < 3 || len(req.Username) > 50 {
 				WriteError(w, r, http.StatusBadRequest, "validation_failed", nil)
 				return
@@ -243,8 +255,14 @@ func RegisterHandlerWithInvites(s *store.Store, bcryptCost int, cfg config.Confi
 			}
 		}
 		model.MarkOnboardingPending(&user)
-		if err := s.SaveUser(user); err != nil {
+		// Issue #2961: exklusive Anlage — ein vorhandener (auch verwaister)
+		// Kontoordner oder eine gleichzeitige Anlage derselben Kennung ergibt 409.
+		if err := s.CreateUser(user); err != nil {
 			rollbackInvite()
+			if errors.Is(err, store.ErrUserIDTaken) {
+				WriteError(w, r, http.StatusConflict, "user_already_exists", nil)
+				return
+			}
 			WriteError(w, r, http.StatusInternalServerError, "store_error", nil)
 			return
 		}
@@ -265,6 +283,29 @@ func RegisterHandlerWithInvites(s *store.Store, bcryptCost int, cfg config.Confi
 		w.WriteHeader(201)
 		json.NewEncoder(w).Encode(map[string]string{"id": userID})
 	}
+}
+
+// testAccountCreationAllowed: Testkonten (is_test_user, frei waehlbare
+// Kennung) nur im Staging, im Fixture-Modus oder mit gueltiger Admin-Sitzung
+// (Issue #2961, ADR-0113). Die Registrierung ist ein oeffentlicher Pfad, die
+// Sitzung wird deshalb hier selbst geprueft.
+func testAccountCreationAllowed(r *http.Request, s *store.Store, cfg config.Config) bool {
+	if cfg.Env == "staging" || cfg.TestFixtureDir != "" {
+		return true
+	}
+	cookie, err := r.Cookie("gz_session")
+	if err != nil {
+		return false
+	}
+	uid, sid, ok := middleware.SessionFromCookie(cookie.Value, cfg.SessionSecret)
+	if !ok {
+		return false
+	}
+	if _, admin := config.ParseAdminUserIDs(cfg.AdminUserIDs)[uid]; !admin {
+		return false
+	}
+	listed, err := s.HasSession(uid, sid)
+	return err == nil && listed
 }
 
 // hasVerifiedEmail liest den Bestaetigungsstand IMMER frisch von der Platte
@@ -684,13 +725,15 @@ func ResetPasswordHandler(s *store.Store, bcryptCost int) http.HandlerFunc {
 			return
 		}
 
-		if time.Now().After(resetToken.ExpiresAt) {
-			WriteError(w, r, http.StatusBadRequest, "token_expired", nil)
+		// Issue #2961: erst vergleichen, dann den Ablauf melden — sonst
+		// verriete "abgelaufen" ohne gueltiges Token, dass ein Reset laeuft.
+		if err := bcrypt.CompareHashAndPassword([]byte(resetToken.TokenHash), []byte(req.Token)); err != nil {
+			WriteError(w, r, http.StatusBadRequest, "invalid_token", nil)
 			return
 		}
 
-		if err := bcrypt.CompareHashAndPassword([]byte(resetToken.TokenHash), []byte(req.Token)); err != nil {
-			WriteError(w, r, http.StatusBadRequest, "invalid_token", nil)
+		if time.Now().After(resetToken.ExpiresAt) {
+			WriteError(w, r, http.StatusBadRequest, "token_expired", nil)
 			return
 		}
 
@@ -756,10 +799,7 @@ func VerifyEmailHandler(s *store.Store) http.HandlerFunc {
 			WriteError(w, r, http.StatusBadRequest, "invalid_token", nil)
 			return
 		}
-		if time.Now().After(vt.ExpiresAt) {
-			WriteError(w, r, http.StatusBadRequest, "token_expired", nil)
-			return
-		}
+		// Issue #2961: Ablauf erst NACH dem Vergleich melden (siehe Reset).
 		if err := bcrypt.CompareHashAndPassword([]byte(vt.TokenHash), []byte(req.Token)); err != nil {
 			// Issue #2147 Scheibe B2 (AC-3): es gibt nur EIN Token je Konto —
 			// ein zweiter Adresswechsel ueberschreibt das erste, dessen Hash
@@ -771,6 +811,10 @@ func VerifyEmailHandler(s *store.Store) http.HandlerFunc {
 				return
 			}
 			WriteError(w, r, http.StatusBadRequest, "invalid_token", nil)
+			return
+		}
+		if time.Now().After(vt.ExpiresAt) {
+			WriteError(w, r, http.StatusBadRequest, "token_expired", nil)
 			return
 		}
 
@@ -1731,6 +1775,9 @@ func hasControlChars(s string) bool {
 }
 
 func ChangePasswordHandler(s *store.Store, bcryptCost int, secret, publicHost string) http.HandlerFunc {
+	// Issue #2961: hoechstens 5 Fehlversuche des alten Passworts je Nutzer und
+	// 15 Minuten (gezaehlt vor dem Vergleich).
+	guard := newAttemptGuard(5, 15*time.Minute, 15*time.Minute)
 	return func(w http.ResponseWriter, r *http.Request) {
 		userId := middleware.UserIDFromContext(r.Context())
 		w.Header().Set("Content-Type", "application/json")
@@ -1755,10 +1802,16 @@ func ChangePasswordHandler(s *store.Store, bcryptCost int, secret, publicHost st
 			return
 		}
 
+		if !guard.Reserve(userId) {
+			w.Header().Set("Retry-After", "900")
+			WriteError(w, r, http.StatusTooManyRequests, "rate_limit_exceeded", nil)
+			return
+		}
 		if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(req.OldPassword)); err != nil {
 			WriteError(w, r, http.StatusForbidden, "wrong_password", nil)
 			return
 		}
+		guard.Success(userId)
 
 		newHash, err := bcrypt.GenerateFromPassword([]byte(req.NewPassword), bcryptCost)
 		if err != nil {
@@ -1809,6 +1862,8 @@ func ChangePasswordHandler(s *store.Store, bcryptCost int, secret, publicHost st
 // an den PO aus. Das effektive tier-Feld bleibt unverändert — die Freigabe
 // erfolgt weiterhin manuell durch den PO.
 func RequestTierChangeHandler(s *store.Store, cfg config.Config) http.HandlerFunc {
+	// Issue #2961: hoechstens 3 Antraege (= Betreiber-Mails) je Nutzer und Tag.
+	limiter := NewMailFloodLimiter(3, 24*time.Hour)
 	return func(w http.ResponseWriter, r *http.Request) {
 		userId := middleware.UserIDFromContext(r.Context())
 		w.Header().Set("Content-Type", "application/json")
@@ -1835,6 +1890,18 @@ func RequestTierChangeHandler(s *store.Store, cfg config.Config) http.HandlerFun
 		currentTier := model.EffectiveTier(user.Tier)
 		if req.RequestedTier == currentTier {
 			WriteError(w, r, http.StatusBadRequest, "already_current_tier", nil)
+			return
+		}
+
+		// Issue #2961: derselbe, bereits gemeldete Antrag erneut — keine
+		// zweite Mail, kein Kontingentverbrauch, Antrag bleibt unveraendert.
+		if user.RequestedTier == req.RequestedTier && user.RequestedNotifiedAt != nil {
+			json.NewEncoder(w).Encode(map[string]any{"status": "ok", "po_notified": true})
+			return
+		}
+		if !limiter.AllowAddressOnly(userId) {
+			w.Header().Set("Retry-After", limiter.RetryAfterHeader())
+			WriteError(w, r, http.StatusTooManyRequests, "rate_limit_exceeded", nil)
 			return
 		}
 

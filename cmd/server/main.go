@@ -3,6 +3,7 @@ package main
 import (
 	"log"
 	"net/http"
+	"sort"
 	"time"
 
 	"golang.org/x/crypto/bcrypt"
@@ -77,6 +78,8 @@ func main() {
 	// Seed-Konto aus ENV-Zugangsdaten beim ersten Start. Fehler sind in
 	// seedAdminUser bereits geloggt; der Start laeuft bewusst weiter (#2151 B).
 	_ = seedAdminUser(s, cfg)
+	// Issue #2961: privilegierte Kennungen ohne Konto sichtbar machen.
+	warnPrivilegedIDsWithoutAccount(s, cfg)
 
 	var weatherProvider provider.WeatherProvider
 	if cfg.TestFixtureDir != "" {
@@ -129,7 +132,56 @@ func main() {
 	})
 
 	log.Printf("Go API listening on %s:%s, proxying to %s", cfg.Host, cfg.Port, cfg.PythonCoreURL)
-	http.ListenAndServe(cfg.Host+":"+cfg.Port, r)
+	if err := newHTTPServer(cfg.Host+":"+cfg.Port, r).ListenAndServe(); err != nil {
+		log.Printf("http server stopped: %v", err)
+	}
+}
+
+// Issue #2961: Server-Zeitgrenzen gegen langsame bzw. haengende Verbindungen.
+// Bewusst KEIN WriteTimeout: der Versand und die Proxys zum Python-Kern
+// duerfen bis zu 300 s laufen (proxy.go sendProxyTimeout, nginx 330 s, Spec
+// fix_2124_versand_nginx_timeout.md) — ein WriteTimeout braeche sie ab.
+// ReadTimeout begrenzt nur das Einlesen von Kopf und Rumpf (GPX-Upload bis
+// 10 MB auch ueber langsame Mobilverbindungen) und beendet keine laufende
+// Bearbeitung.
+const (
+	serverReadHeaderTimeout = 10 * time.Second
+	serverReadTimeout       = 2 * time.Minute
+	serverIdleTimeout       = 2 * time.Minute
+)
+
+func newHTTPServer(addr string, h http.Handler) *http.Server {
+	return &http.Server{
+		Addr:              addr,
+		Handler:           h,
+		ReadHeaderTimeout: serverReadHeaderTimeout,
+		ReadTimeout:       serverReadTimeout,
+		IdleTimeout:       serverIdleTimeout,
+	}
+}
+
+// warnPrivilegedIDsWithoutAccount schreibt beim Start je eine Warnzeile fuer
+// jede Kennung aus GZ_ADMIN_USER_IDS / GZ_QUOTA_EXEMPT_USER_IDS, zu der es kein
+// Konto (keine lesbare user.json) gibt (Issue #2961, ADR-0113). Eine solche
+// Kennung ist ein Rechte-Platzhalter, der nicht frei herumliegen soll.
+func warnPrivilegedIDsWithoutAccount(s *store.Store, cfg *config.Config) {
+	lists := []struct{ env, raw string }{
+		{"GZ_ADMIN_USER_IDS", cfg.AdminUserIDs},
+		{"GZ_QUOTA_EXEMPT_USER_IDS", cfg.QuotaExemptUserIDs},
+	}
+	for _, l := range lists {
+		ids := make([]string, 0)
+		for id := range config.ParseAdminUserIDs(l.raw) {
+			ids = append(ids, id)
+		}
+		sort.Strings(ids)
+		for _, id := range ids {
+			if u, err := s.LoadUser(id); err == nil && u != nil {
+				continue
+			}
+			log.Printf("WARN [auth] %s nennt %q, dazu existiert kein Konto", l.env, id)
+		}
+	}
 }
 
 // seedAdminUser legt beim ersten Start das Betreiber-Konto aus den
@@ -139,7 +191,18 @@ func main() {
 // stiller Rueckfall auf "default"). Ein Fehlschlag von SaveUser wird geloggt
 // und zurueckgegeben, beendet den Server aber nicht.
 func seedAdminUser(s *store.Store, cfg *config.Config) error {
-	if cfg.UserID == "" || cfg.AuthPass == "" || s.UserExists(cfg.UserID) {
+	if cfg.UserID == "" || cfg.AuthPass == "" {
+		return nil
+	}
+	// Issue #2961: UserExists meldet seither auch einen Ordner ohne user.json
+	// als belegt. Fuer die Betreiberkennung zaehlt hier allein die user.json
+	// (eine unlesbare Datei wird nie ueberschrieben).
+	existing, err := s.LoadUser(cfg.UserID)
+	if err != nil {
+		log.Printf("Seed user '%s' skipped: %v", cfg.UserID, err)
+		return err
+	}
+	if existing != nil {
 		return nil
 	}
 	hash, _ := bcrypt.GenerateFromPassword([]byte(cfg.AuthPass), bcrypt.DefaultCost)

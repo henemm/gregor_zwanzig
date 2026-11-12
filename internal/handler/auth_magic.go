@@ -4,22 +4,28 @@ package handler
 // Spec: docs/specs/modules/issue_449_magic_link.md
 //
 // Two endpoints:
-//   POST /api/auth/magic-link        — request a 6-digit code via e-mail
+//   POST /api/auth/magic-link        — request an 8-digit code via e-mail
 //   POST /api/auth/magic-link/verify — exchange a valid code for a session cookie
 //
 // The OTP-Store is a package-level sync.Map (key: normalized e-mail,
-// value: *otpEntry). TTL is 15 minutes; max 3 wrong attempts per entry.
+// value: *otpEntry). TTL is 15 minutes; max 3 compared attempts per code.
 // Issue #2147: the account is resolved only when the code is redeemed
 // (store.ResolveAddressOwner); new users ("m-{8hex}") are created then, never
 // on request.
+//
+// Issue #2961 (ADR-0113): additionally per target address — at most 5 failed
+// attempts per 15 minutes across re-requests (magicFailGuard, counted BEFORE
+// the comparison), at most 5 code mails per hour, and a still valid code is
+// re-sent instead of being replaced.
 
 import (
 	"crypto/rand"
-	"encoding/binary"
+	"crypto/subtle"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"log"
+	"math/big"
 	"net/http"
 	"strings"
 	"sync"
@@ -45,8 +51,10 @@ type otpEntry struct {
 var otpStore sync.Map
 
 // gcOTPStore entfernt abgelaufene Login-OTPs (Issue #2160 AC-15). OTPs mit
-// attempts>=3 bleiben bis zum Ablauf — sie SIND die Sperre.
+// attempts>=3 bleiben bis zum Ablauf. Zusaetzlich verfallene Eintraege der
+// Fehlversuchsbremse je Adresse (Issue #2961).
 func gcOTPStore(now time.Time) {
+	magicFailGuard.gc()
 	otpStore.Range(func(k, v any) bool {
 		if e := v.(*otpEntry); !now.Before(e.expiresAt) {
 			otpStore.CompareAndDelete(k, e)
@@ -72,9 +80,11 @@ func removeLoginOTPs(addresses ...string) {
 var magicLinkBeforeTakeoverReload func(userID string)
 
 // MagicLinkRequestHandler returns the HTTP handler for POST /api/auth/magic-link.
-// Always responds 200 (no user enumeration); generates a 6-digit OTP, stores it
-// with a 15-min TTL, and dispatches the OTP-mail asynchronously (10s timeout).
+// Always responds 200 (no user enumeration); generates an 8-digit OTP (or
+// re-sends the still valid one), stores it with a 15-min TTL, and dispatches
+// the OTP-mail asynchronously.
 func MagicLinkRequestHandler(s *store.Store, cfg *config.Config) http.HandlerFunc {
+	requestLimiter := NewMailFloodLimiter(magicRequestsPerHour, time.Hour)
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 
@@ -90,20 +100,20 @@ func MagicLinkRequestHandler(s *store.Store, cfg *config.Config) http.HandlerFun
 		// address, the account is resolved when it is redeemed.
 		normalizedEmail := store.NormalizeEmailAddress(req.Email)
 
-		// Generate 6-digit OTP via crypto/rand.
-		var b [4]byte
-		if _, err := rand.Read(b[:]); err != nil {
-			log.Printf("magic-link: rand.Read error: %v", err)
+		// Issue #2961: per-address mail budget. Over budget the answer stays
+		// the same neutral 200 — only no mail goes out (no enumeration).
+		if !requestLimiter.AllowAddressOnly(normalizedEmail) {
+			log.Printf("magic-link: per-address request limit reached for %s", mail.MaskAddrForLog(normalizedEmail))
 			w.Write([]byte(`{"status":"ok"}`))
 			return
 		}
-		code := fmt.Sprintf("%06d", binary.BigEndian.Uint32(b[:])%1_000_000)
 
-		otpStore.Store(normalizedEmail, &otpEntry{
-			code:      code,
-			expiresAt: time.Now().Add(15 * time.Minute),
-			attempts:  0,
-		})
+		code, err := currentOrNewLoginCode(normalizedEmail)
+		if err != nil {
+			log.Printf("magic-link: code generation failed: %v", err)
+			w.Write([]byte(`{"status":"ok"}`))
+			return
+		}
 
 		// Dispatch e-mail in background goroutine with 10s timeout.
 		if cfg.SMTPHost == "" {
@@ -168,23 +178,28 @@ func MagicLinkVerifyHandler(s *store.Store, cfg *config.Config) http.HandlerFunc
 		}
 		entry := val.(*otpEntry)
 
-		// Max-attempts gate runs BEFORE code comparison so leaked/correct
-		// codes cannot be exploited after the limit is reached.
-		if atomic.LoadInt32(&entry.attempts) >= 3 {
-			WriteError(w, r, http.StatusBadRequest, "max_attempts_exceeded", nil)
+		// Issue #2961: per-address failure budget, counted BEFORE the
+		// comparison. While locked even the correct code is refused with the
+		// same neutral answer as a wrong one.
+		if !magicFailGuard.Reserve(normalizedEmail) {
+			WriteError(w, r, http.StatusBadRequest, "invalid_or_expired_code", nil)
 			return
 		}
 
 		// TTL gate.
 		if time.Now().After(entry.expiresAt) {
-			otpStore.Delete(normalizedEmail)
+			otpStore.CompareAndDelete(normalizedEmail, entry)
 			WriteError(w, r, http.StatusBadRequest, "invalid_or_expired_code", nil)
 			return
 		}
 
-		// Code comparison — increment attempts on miss.
-		if entry.code != req.Code {
-			atomic.AddInt32(&entry.attempts, 1)
+		// Per-code gate: claim a comparison slot atomically BEFORE comparing,
+		// so concurrent requests cannot exceed the limit.
+		if !claimOTPAttempt(entry) {
+			WriteError(w, r, http.StatusBadRequest, "max_attempts_exceeded", nil)
+			return
+		}
+		if subtle.ConstantTimeCompare([]byte(entry.code), []byte(req.Code)) != 1 {
 			WriteError(w, r, http.StatusBadRequest, "invalid_or_expired_code", nil)
 			return
 		}
@@ -196,6 +211,7 @@ func MagicLinkVerifyHandler(s *store.Store, cfg *config.Config) http.HandlerFunc
 			WriteError(w, r, http.StatusBadRequest, "invalid_or_expired_code", nil)
 			return
 		}
+		magicFailGuard.Success(normalizedEmail)
 
 		unlock := store.LockEmailAddress(normalizedEmail)
 		defer unlock()
@@ -207,6 +223,72 @@ func MagicLinkVerifyHandler(s *store.Store, cfg *config.Config) http.HandlerFunc
 			return
 		}
 		json.NewEncoder(w).Encode(map[string]string{"id": userID})
+	}
+}
+
+const (
+	otpCodeDigits        = 8
+	otpTTL               = 15 * time.Minute
+	otpMaxAttempts       = 3
+	magicRequestsPerHour = 5
+)
+
+var otpCodeSpace = big.NewInt(100_000_000) // 10^otpCodeDigits
+
+// newLoginCode draws a uniformly distributed 8-digit code from crypto/rand
+// (rand.Int rejects out-of-range samples — no modulo bias).
+func newLoginCode() (string, error) {
+	n, err := rand.Int(rand.Reader, otpCodeSpace)
+	if err != nil {
+		return "", err
+	}
+	return fmt.Sprintf("%0*d", otpCodeDigits, n.Int64()), nil
+}
+
+// otpUsable: unexpired and comparisons left.
+func otpUsable(e *otpEntry, now time.Time) bool {
+	return now.Before(e.expiresAt) && atomic.LoadInt32(&e.attempts) < otpMaxAttempts
+}
+
+// currentOrNewLoginCode returns the still usable code of address or stores a
+// fresh one. A running code is never replaced, so a third party cannot
+// invalidate the owner's code by requesting another one.
+func currentOrNewLoginCode(address string) (string, error) {
+	now := time.Now()
+	if v, ok := otpStore.Load(address); ok && otpUsable(v.(*otpEntry), now) {
+		return v.(*otpEntry).code, nil
+	}
+	code, err := newLoginCode()
+	if err != nil {
+		return "", err
+	}
+	fresh := &otpEntry{code: code, expiresAt: now.Add(otpTTL)}
+	for {
+		v, loaded := otpStore.LoadOrStore(address, fresh)
+		if !loaded {
+			return code, nil
+		}
+		old := v.(*otpEntry)
+		if otpUsable(old, now) {
+			return old.code, nil
+		}
+		if otpStore.CompareAndSwap(address, old, fresh) {
+			return code, nil
+		}
+	}
+}
+
+// claimOTPAttempt reserves one comparison on e; false once all
+// otpMaxAttempts comparisons are used.
+func claimOTPAttempt(e *otpEntry) bool {
+	for {
+		cur := atomic.LoadInt32(&e.attempts)
+		if cur >= otpMaxAttempts {
+			return false
+		}
+		if atomic.CompareAndSwapInt32(&e.attempts, cur, cur+1) {
+			return true
+		}
 	}
 }
 

@@ -3,6 +3,7 @@ package store
 import (
 	"archive/zip"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"io/fs"
@@ -11,6 +12,7 @@ import (
 	"path/filepath"
 	"reflect"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/henemm/gregor-api/internal/fsmode"
@@ -694,14 +696,63 @@ func exportFilterUserJSON(raw []byte) ([]byte, error) {
 	return json.MarshalIndent(felder, "", "  ")
 }
 
+// UserExists meldet, ob die Kennung belegt ist. Issue #2961 (ADR-0113): belegt
+// ist sie, sobald der Kontoordner existiert — auch ohne user.json. Sonst
+// erbte eine Neuanlage verwaiste Daten. Ein unklarer Dateisystemfehler gilt
+// ebenfalls als belegt (fail-closed).
 // gz-store-scope-exempt: die Kennung kommt als Parameter id herein, nicht aus s.UserID
 func (s *Store) UserExists(id string) bool {
 	if !ValidUserID(id) {
 		return false
 	}
-	path := filepath.Join(s.UserDir(id), "user.json")
-	_, err := os.Stat(path)
-	return err == nil
+	_, err := os.Lstat(s.UserDir(id))
+	// ENOTDIR: an der Stelle von users/ liegt kein Ordner — dann kann es auch
+	// keinen Kontoordner geben (die Anlage scheitert ohnehin).
+	return !os.IsNotExist(err) && !errors.Is(err, syscall.ENOTDIR)
+}
+
+// ErrUserIDTaken: die Kennung ist bereits belegt (CreateUser).
+var ErrUserIDTaken = errors.New("user id already taken")
+
+// reservedUserIDs sind nie ueber eine Registrierung vergebbar (Issue #2961).
+var reservedUserIDs = map[string]struct{}{
+	"default": {}, "admin": {}, "root": {}, "system": {},
+}
+
+// IsReservedUserID meldet reservierte Kennungen (Gross-/Kleinschreibung egal).
+func IsReservedUserID(id string) bool {
+	_, ok := reservedUserIDs[strings.ToLower(id)]
+	return ok
+}
+
+// CreateUser legt ein NEUES Konto exklusiv an (Issue #2961): der Kontoordner
+// entsteht per os.Mkdir, das bei einem vorhandenen Ordner scheitert — von
+// zwei gleichzeitigen Anlagen derselben Kennung gewinnt genau eine, ein
+// verwaister Ordner wird nie uebernommen (ErrUserIDTaken).
+// gz-store-scope-exempt: die Kennung steckt im uebergebenen Nutzer-Objekt, nicht in s.UserID
+func (s *Store) CreateUser(user model.User) error {
+	if !ValidUserID(user.ID) {
+		return ErrInvalidUserID
+	}
+	if err := fsmode.MkdirAll(filepath.Join(s.DataDir, "users")); err != nil {
+		return err
+	}
+	dir := s.UserDir(user.ID)
+	if err := os.Mkdir(dir, fsmode.DirMode); err != nil {
+		if errors.Is(err, fs.ErrExist) {
+			return ErrUserIDTaken
+		}
+		return err
+	}
+	err := os.Chmod(dir, fsmode.DirMode)
+	if err == nil {
+		err = s.SaveUser(user)
+	}
+	if err != nil {
+		_ = os.Remove(dir) // nur der eben angelegte, noch leere Ordner
+		return err
+	}
+	return nil
 }
 
 // FindUserByOAuthSub searches for a user matching both OAuthProvider and OAuthSub.

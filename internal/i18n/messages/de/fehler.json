@@ -13,5 +13,8 @@
   "fehler.unbekannt": "Unbekannter Fehler ({code}).",
   "fehler.core_unavailable": "Der Kern-Dienst ist gerade nicht erreichbar. Bitte versuche es später erneut.",
   "fehler.nothing_to_set": "Es wurden keine Felder zum Setzen angegeben.",
-  "fehler.proxy_error": "Der Dienst antwortet nicht. Bitte versuche es später erneut."
+  "fehler.proxy_error": "Der Dienst antwortet nicht. Bitte versuche es später erneut.",
+  "fehler.origin_forbidden": "Die Anfrage kommt nicht von dieser Seite und wurde abgelehnt.",
+  "fehler.unsupported_media_type": "Die Anfrage hat ein nicht unterstütztes Format.",
+  "fehler.payload_too_large": "Die Anfrage ist zu groß."
 }

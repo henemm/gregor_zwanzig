@@ -2,6 +2,7 @@ package handler
 
 import (
 	"crypto/rand"
+	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
 	"log"
@@ -24,6 +25,11 @@ type pendingTelegramToken struct {
 // TelegramTokenStore holds pending deep-link tokens for Telegram account
 // connection. It replaces the previous package-level state and is created once
 // in main.go, then injected into the handlers that need it.
+//
+// Issue #2961: keys are the SHA-256 (hex) of the token — the file never holds
+// a redeemable token. Each user has at most ONE valid token (a new one
+// replaces the old), expired entries are dropped on every write. The Python
+// core never reads the file; it redeems via POST /api/internal/telegram-connect.
 type TelegramTokenStore struct {
 	path   string
 	tokens map[string]pendingTelegramToken
@@ -54,9 +60,24 @@ func (s *TelegramTokenStore) load() {
 	now := time.Now()
 	for k, v := range saved {
 		if now.Before(v.ExpiresAt) {
-			s.tokens[k] = v
+			s.tokens[normalizeTokenKey(k)] = v
 		}
 	}
+}
+
+// telegramTokenKey ist der Speicherschluessel eines Tokens (SHA-256, hex).
+func telegramTokenKey(token string) string {
+	sum := sha256.Sum256([]byte(token))
+	return hex.EncodeToString(sum[:])
+}
+
+// normalizeTokenKey uebersetzt Klartext-Schluessel aus Dateien vor #2961
+// (32 Hex-Zeichen) in den Hash-Schluessel; Hash-Schluessel (64) bleiben.
+func normalizeTokenKey(k string) string {
+	if len(k) == 32 {
+		return telegramTokenKey(k)
+	}
+	return k
 }
 
 // saveLocked persistiert tokens atomar (Temp-Datei + Rename, Issue #2160
@@ -115,8 +136,13 @@ func (s *TelegramTokenStore) IssueToken(userID string) (string, error) {
 	token := hex.EncodeToString(b)
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	next := s.copyTokensLocked(nil)
-	next[token] = pendingTelegramToken{UserID: userID, ExpiresAt: time.Now().Add(24 * time.Hour)}
+	now := time.Now()
+	// Issue #2961: ein Token je Nutzer — das bisherige des Nutzers und alle
+	// abgelaufenen fallen beim Schreiben weg.
+	next := s.copyTokensLocked(func(pt pendingTelegramToken) bool {
+		return pt.UserID == userID || !now.Before(pt.ExpiresAt)
+	})
+	next[telegramTokenKey(token)] = pendingTelegramToken{UserID: userID, ExpiresAt: now.Add(24 * time.Hour)}
 	if err := s.saveLocked(next); err != nil {
 		return "", err
 	}
@@ -172,10 +198,11 @@ func (s *TelegramTokenStore) gc(now time.Time) {
 // pending token details. The second return value is false if the token does not
 // exist or is expired.
 func (s *TelegramTokenStore) ResolveAndDelete(token string) (pendingTelegramToken, bool) {
+	key := telegramTokenKey(token)
 	s.mu.Lock()
-	pt, ok := s.tokens[token]
+	pt, ok := s.tokens[key]
 	if ok {
-		delete(s.tokens, token)
+		delete(s.tokens, key)
 		if err := s.saveLocked(s.tokens); err != nil {
 			log.Printf("telegram tokens: speichern nach Einloesung fehlgeschlagen: %v", err)
 		}
@@ -191,10 +218,17 @@ func (s *TelegramTokenStore) ResolveAndDelete(token string) (pendingTelegramToke
 // Generates a one-time deep-link token (24h TTL) for the authenticated user.
 // botUsername ist config.TelegramBotUsername (Issue #2715).
 func GetTelegramLinkHandler(s *store.Store, ts *TelegramTokenStore, botUsername string) http.HandlerFunc {
+	// Issue #2961: Mengenbremse je Nutzer (10 Links je Stunde).
+	limiter := NewMailFloodLimiter(10, time.Hour)
 	return func(w http.ResponseWriter, r *http.Request) {
 		userID := middleware.UserIDFromContext(r.Context())
 		if userID == "" {
 			WriteError(w, r, http.StatusUnauthorized, "unauthorized", nil)
+			return
+		}
+		if !limiter.AllowAddressOnly(userID) {
+			w.Header().Set("Retry-After", limiter.RetryAfterHeader())
+			WriteError(w, r, http.StatusTooManyRequests, "rate_limit_exceeded", nil)
 			return
 		}
 		if botUsername == "" {

@@ -98,6 +98,7 @@ func (s *Store) LoadSessions(userId string) ([]Session, error) {
 // Bei einer pfadunsicheren userId ist die Antwort (false, error), nicht
 // (false, nil) — der Aufrufer soll eine Traversal-Kennung nicht mit einer
 // schlicht abgemeldeten Sitzung verwechseln koennen (Issue #2140).
+// gz-store-scope-exempt: die Kennung kommt aus dem signierten Sitzungsmerkmal, nicht aus s.UserID
 func (s *Store) HasSession(userId, sessionId string) (bool, error) {
 	if userId == "" || sessionId == "" {
 		return false, nil

@@ -5,7 +5,6 @@ import (
 	"time"
 
 	"github.com/go-chi/chi/v5"
-	chimw "github.com/go-chi/chi/v5/middleware"
 	"github.com/go-webauthn/webauthn/webauthn"
 	"golang.org/x/crypto/bcrypt"
 
@@ -35,15 +34,39 @@ type Deps struct {
 	GitCommit             string
 }
 
+// Issue #2961: Rumpfgrenzen der globalen Schutzschicht.
+const (
+	maxAPIBodyBytes   int64 = 1 << 20
+	maxGPXUploadBytes int64 = 10 << 20
+	gpxUploadPath           = "/api/gpx/parse"
+)
+
 // New builds the chi router with all application routes.
 // It does not start the scheduler or the HTTP server.
 func New(deps Deps) chi.Router {
 	r := chi.NewRouter()
-	r.Use(chimw.Logger)
+	// Issue #2961: Zugriffslog ohne Pfad-/Query-Geheimnisse (statt chimw.Logger).
+	r.Use(authmw.AccessLog())
+	// Issue #2961 (ADR-0113): globale Schutzschicht fuer schreibende
+	// Anfragen VOR der Anmeldepruefung — Rumpfgroesse (1 MB, GPX-Upload
+	// 10 MB), Herkunft (Origin/Sec-Fetch-Site), JSON-Pflicht fuer Rumpfe.
+	r.Use(authmw.LimitBody(maxAPIBodyBytes, map[string]int64{gpxUploadPath: maxGPXUploadBytes}))
+	r.Use(authmw.OriginGuard(authmw.NewOriginPolicy(deps.Config)))
+	r.Use(authmw.RequireJSONBody(gpxUploadPath))
 	r.Use(authmw.AuthMiddleware(deps.Config.SessionSecret, deps.Store))
 	// Issue #2675 (ADR-0104): Sprache einmal je Anfrage in den Kontext —
 	// Nutzer aus dem Auth-Kontext > Cookie gz_lang > Accept-Language > de.
 	r.Use(authmw.Lang(deps.Store))
+
+	// Issue #2961: gesetzte, aber zu kurze Maschinen-Geheimnisse erzeugen
+	// eine Warnzeile; der Endpunkt bleibt mit dem Wert in Betrieb (kein
+	// stilles Schliessen beim Deploy). Der Seven-Signierschluessel kommt aus dem
+	// seven.io-Dashboard (Format nicht in unserer Hand) und ist ausgenommen.
+	statusToken := config.EffectiveMachineSecret("GZ_STATUS_TOKEN", deps.Config.StatusToken)
+	telegramSecret := config.EffectiveMachineSecret("TELEGRAM_WEBHOOK_SECRET", deps.Config.TelegramWebhookSecret)
+	sevenPathSecret := config.EffectiveMachineSecret("SEVEN_WEBHOOK_PATH_SECRET", deps.Config.SevenWebhookPathSecret)
+	stalwartPathSecret := config.EffectiveMachineSecret("STALWART_WEBHOOK_PATH_SECRET", deps.Config.StalwartWebhookPathSecret)
+	stalwartSecret := config.EffectiveMachineSecret("STALWART_WEBHOOK_SECRET", deps.Config.StalwartWebhookSecret)
 
 	// Issue #2155 S1 (ADR-0078): Admin-Menge einmal aus GZ_ADMIN_USER_IDS.
 	admins := config.ParseAdminUserIDs(deps.Config.AdminUserIDs)
@@ -174,14 +197,14 @@ func New(deps Deps) chi.Router {
 	// Issue #1814: registrierte URL ist die statische Route /inbound (kein Secret
 	// im Pfad); Auth-Traeger ist allein der Header X-Telegram-Bot-Api-Secret-Token.
 	// Die fruehere Route mit Secret im Pfad ist entfernt (#1814 Scheibe 2).
-	telegramWebhook := handler.TelegramWebhookHandler(deps.Config.PythonCoreURL, deps.Config.TelegramWebhookSecret)
+	telegramWebhook := handler.TelegramWebhookHandler(deps.Config.PythonCoreURL, telegramSecret)
 	r.Post("/api/webhooks/telegram/inbound", telegramWebhook)
 	// Issue #2439: Push-Eingang fuer Befehle (SMS seven.io, Mail Stalwart) --
 	// oeffentlich, secret-/signaturgeschuetzt, weckt nur den Poll-Job (ADR-0088).
 	r.Post("/api/webhooks/sms/{secret}", handler.InboundSMSWebhook(deps.Scheduler, deps.Config.PublicHost,
-		deps.Config.SevenWebhookPathSecret, deps.Config.SevenWebhookSigningKey, time.Now))
+		sevenPathSecret, deps.Config.SevenWebhookSigningKey, time.Now))
 	r.Post("/api/webhooks/mail/{secret}", handler.InboundMailWebhook(deps.Scheduler,
-		deps.Config.StalwartWebhookPathSecret, deps.Config.StalwartWebhookSecret))
+		stalwartPathSecret, stalwartSecret))
 	r.Get("/api/auth/google/init", handler.GoogleOAuthInitHandler(deps.Config))
 	r.Get("/api/auth/google/callback", handler.GoogleOAuthCallbackHandler(deps.Config, deps.Store))
 	magicLinkLimiter := authmw.NewIPRateLimiter(5, 15*time.Minute)
@@ -265,7 +288,7 @@ func New(deps Deps) chi.Router {
 	r.Put("/api/trips/{id}/weather-config", handler.PutTripWeatherConfigHandler(deps.Store))
 	r.Get("/api/locations/{id}/weather-config", handler.GetLocationWeatherConfigHandler(deps.Store))
 	r.Put("/api/locations/{id}/weather-config", handler.PutLocationWeatherConfigHandler(deps.Store))
-	r.Post("/api/gpx/parse", handler.GpxProxyHandler(deps.Config.PythonCoreURL))
+	r.Post(gpxUploadPath, handler.GpxProxyHandler(deps.Config.PythonCoreURL))
 	r.Post("/api/notify/test", handler.NotifyTestHandler(deps.Store, deps.Config.PythonCoreURL))
 	r.Get("/api/compare", handler.CompareProxyHandler(deps.Config.PythonCoreURL))
 	// Issue #1350 Teil 1: read-only Compare-Metrik-Katalog (statisch, kein user_id-Bezug).
@@ -319,7 +342,7 @@ func New(deps Deps) chi.Router {
 	// X-GZ-Status-Token); die Route bleibt auf der Public-Allowlist, der
 	// Schutz haengt ausschliesslich an der Route. Nutzer-Sicht: /status/me
 	// (Session-Pflicht ueber die AuthMiddleware, nur eigener Laufzustand).
-	statusGuard := authmw.RequireStatusToken(deps.Config.StatusToken)
+	statusGuard := authmw.RequireStatusToken(statusToken)
 	r.With(statusGuard).Get("/api/scheduler/status", handler.SchedulerStatusHandler(deps.Scheduler))
 	r.Get("/api/scheduler/status/me", handler.SchedulerStatusMeHandler(deps.Scheduler))
 

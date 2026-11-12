@@ -26,10 +26,10 @@
 					name="code"
 					type="text"
 					inputmode="numeric"
-					maxlength="6"
-					pattern="[0-9]{6}"
+					maxlength="8"
+					pattern="[0-9]{8}"
 					required
-					placeholder="000000"
+					placeholder="00000000"
 					class="flex h-12 w-full rounded-md border border-input bg-background px-3 py-2 text-center text-xl font-mono tracking-[0.5em] ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
 				/>
 			</div>

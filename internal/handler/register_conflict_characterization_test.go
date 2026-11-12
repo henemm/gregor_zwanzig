@@ -55,7 +55,8 @@ func TestRegisterKonto_VergebenerNameUndEmail_409Unveraendert_AC1(t *testing.T) 
 		t.Run(f.name, func(t *testing.T) {
 			s := newTestStore(t)
 			seedRegisterConflictUser(t, s)
-			h := RegisterHandler(s, bcrypt.MinCost, config.Config{PublicHost: "https://test.example.com"})
+			// #2961: Testkonten (feste Kennung) nur im Staging/Fixture-Modus/als Admin.
+			h := RegisterHandler(s, bcrypt.MinCost, config.Config{PublicHost: "https://test.example.com", Env: "staging"})
 			req := httptest.NewRequest(http.MethodPost, "/api/auth/register", strings.NewReader(f.body))
 			w := httptest.NewRecorder()
 			h.ServeHTTP(w, req)

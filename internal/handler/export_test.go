@@ -14,6 +14,7 @@ func ResetOTPStoreForTest() {
 		otpStore.Delete(k)
 		return true
 	})
+	magicFailGuard.reset() // Issue #2961: Fehlversuche je Adresse
 }
 
 // ObserveVerificationMailForTest reicht die bestehende Versand-Naht
