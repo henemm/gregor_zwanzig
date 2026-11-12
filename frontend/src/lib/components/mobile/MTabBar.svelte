@@ -176,7 +176,9 @@
 			display: inline-flex;
 			align-items: center;
 			gap: 6px;
-			padding: var(--g-s-2) var(--g-s-3);
+			/* #2794 B2 (AC-4): seitlich 10 statt 12 px — vier DE-Pills passen bei 360 px
+			   mit 15 px Reserve (vorher 1 px Überlauf); Höhe hält min-height 44 px. */
+			padding: var(--g-s-2) var(--g-size-10px);
 			border: 1px solid var(--g-rule);
 			border-bottom: 1px solid var(--g-rule);
 			border-radius: var(--g-r-pill);

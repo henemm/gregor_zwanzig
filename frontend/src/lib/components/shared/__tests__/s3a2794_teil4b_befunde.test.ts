@@ -26,7 +26,9 @@
 
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import { register } from 'node:module';
+import { parse } from 'svelte/compiler';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { live } from '../wetter-tab/__tests__/wetterTabDaten.ts';
@@ -238,5 +240,83 @@ describe('B5 (AC-13): Alarm-Baustein heißt auf Deutsch „Alarme · letzte 24 h
 		const { trFor } = await i18n();
 		assert.equal(trFor('de', 'bausteine.alarme.titel'), 'Alarme · letzte 24 h');
 		assert.equal(trFor('en', 'bausteine.alarme.titel'), 'Alerts · last 24 h');
+	});
+});
+
+// ─────────────────────────────── B2 ───────────────────────────────
+//
+// Fix-Loop AC-4: Staging-Messung DE 360 px ergab `.mtabbar` scrollWidth 329 > clientWidth 328
+// (Pill „Zustellung" 1 px abgeschnitten) bei Pill-Innenabstand 12 px seitlich, Rahmen 1 px,
+// kein Abstand zwischen den Pills. Daraus folgt die Summe der Pill-INHALTE (Text + Zähler +
+// inneres gap) der DE-Leiste: 329 − 4 · (2 · 12 + 2 · 1) = 225 px.
+// Dieser Test rechnet mit den Stilwerten aus MTabBar.svelte (Handy-Media-Query) und app.css die
+// DE-Leistenbreite bei 360 px nach und verlangt ≥ 8 px Reserve. Das ist ein Modell aus einer
+// Messung, kein Browser-Layout: der eigentliche Nachweis ist die Staging-Messung
+// (e2e/s3a2794-teil4b-staging.spec.ts, AC-4: scrollWidth ≤ clientWidth bei 360/375/390, DE+EN).
+
+const MTABBAR = join(FRONTEND, 'src', 'lib', 'components', 'mobile', 'MTabBar.svelte');
+const DE_INHALT_360 = 225; // aus der Staging-Messung abgeleitet (siehe oben)
+const LEISTE_360 = 328; // clientWidth der Leiste bei 360 px Viewport (Staging-Messung)
+const RESERVE_MIN = 8;
+
+/** Deklarationen der Handy-Regel (max-width: 899px) für genau den Selektor `sel`. */
+function handyRegel(sel: string): Record<string, string> {
+	const quelle = readFileSync(MTABBAR, 'utf-8');
+	const ast = parse(quelle, { modern: true }) as Json;
+	const out: Record<string, string> = {};
+	for (const at of ast.css?.children ?? []) {
+		if (at.type !== 'Atrule' || !/max-width:\s*899px/.test(String(at.prelude))) continue;
+		for (const r of at.block?.children ?? []) {
+			if (r.type !== 'Rule') continue;
+			const selektor = quelle.slice(r.prelude.start, r.prelude.end).replace(/\s+/g, ' ').trim();
+			if (selektor !== sel) continue;
+			for (const d of r.block.children) if (d.type === 'Declaration') out[d.property] = String(d.value).trim();
+		}
+	}
+	return out;
+}
+
+/** Löst var(--g-…) über app.css auf und liefert px (nur px/0 erlaubt). */
+function px(wert: string): number {
+	const css = readFileSync(join(FRONTEND, 'src', 'app.css'), 'utf-8');
+	const aufgeloest = wert.replace(/var\((--[\w-]+)\)/g, (_, name) => {
+		const m = new RegExp(`${name}\\s*:\\s*([^;]+);`).exec(css);
+		assert.ok(m, `Token ${name} nicht in app.css`);
+		return m![1].trim();
+	});
+	if (aufgeloest === '0') return 0;
+	const m = /^(-?\d*\.?\d+)px$/.exec(aufgeloest);
+	assert.ok(m, `kein px-Wert: ${wert} → ${aufgeloest}`);
+	return Number(m![1]);
+}
+
+describe('B2 (AC-4/AC-5): Handy-Pill-Leiste passt DE bei 360 px mit Reserve', () => {
+	const ITEM = ".mtabbar :global([data-slot='segmented-item'])";
+
+	test('DE-Leiste 360 px: Breite aus Stilwerten ≤ Leiste − 8 px', () => {
+		const item = handyRegel(ITEM);
+		const leiste = handyRegel('.mtabbar');
+		const teile = (item.padding ?? '').split(/\s+/);
+		assert.ok(teile.length === 2, `Messaufbau: padding erwartet als „senkrecht seitlich": ${item.padding}`);
+		const seitlich = px(teile[1]);
+		const rahmen = px((item.border ?? '').split(/\s+/)[0]);
+		const zwischen = leiste.gap ? px(leiste.gap) : 0;
+		const margin = item.margin ?? item['margin-left'] ?? item['margin-right'];
+		assert.equal(margin, undefined, `Messaufbau: Pill-margin unbekannt im Modell: ${margin}`);
+		const breite = DE_INHALT_360 + 4 * (2 * seitlich + 2 * rahmen) + 3 * zwischen;
+		assert.ok(
+			breite <= LEISTE_360 - RESERVE_MIN,
+			`AC-4: DE-Leiste rechnerisch ${breite} px bei ${LEISTE_360} px Platz (Reserve ${LEISTE_360 - breite} < ${RESERVE_MIN})`
+		);
+	});
+
+	test('Trefferhöhe, Wisch-Fallback und Einrasten bleiben (AC-4/AC-5)', () => {
+		const item = handyRegel(ITEM);
+		const leiste = handyRegel('.mtabbar');
+		assert.equal(item['min-height'], '44px', 'AC-4: Mindest-Trefferhöhe 44 px');
+		assert.equal(item['flex-shrink'], '0', 'AC-5: Pills dürfen nicht gestaucht werden');
+		assert.equal(item['scroll-snap-align'], 'start', 'AC-5: Einrasten');
+		assert.equal(leiste['overflow-x'], 'auto', 'AC-5: Wisch-Fallback');
+		assert.equal(leiste['scroll-snap-type'], 'x proximity', 'AC-5: Scroll-Snap');
 	});
 });
