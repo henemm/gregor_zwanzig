@@ -25,6 +25,10 @@ import {
 	loginAusEnvText,
 	leseSprache,
 	DATEN_ABRUF,
+	findeZusaetzliche,
+	ladeRegeln,
+	ladeKontoTexte,
+	werteLaufAus,
 	type ListenElement
 } from '../../../e2e/elementliste_abgleich_logik.ts';
 import { starterUmgebung, PLAYWRIGHT_ARGS } from '../../../../scripts/elementliste_abgleich.ts';
@@ -328,5 +332,117 @@ describe('AC-15: die Config bricht mit Prod-URL beim Laden ab (echter Ladevorgan
 	test('Staging-URL ⇒ Config lädt', () => {
 		const r = lade(STAGING);
 		assert.equal(r.status, 0, r.stderr);
+	});
+});
+
+// feat_2913_abgleich_ganzseite, Fix-Loop 1 (Adversary F001): Regeln laden, Konto-Texte laden und die
+// Auswertung nach dem Lauf liegen als Logik vor; hier wird ihre WIRKUNG geprüft (echte Dateien im
+// Temp-Ordner, echte Freigaben-Datei). Die Staging-Spec ruft nur noch diese Funktionen.
+describe('Ganzseite F001: Regeln, Konto-Texte und Auswertung (strict + abnahme) wirken', () => {
+	const KONTEXT = join(FRONTEND, '..', 'docs/context/einstellungen_neu');
+	const liste = [el('w.a', 'kopf', 1, 'Wetter', { reiter: 'zustellung' })];
+	const zusFremd = () => findeZusaetzliche({ ctx: 'trip', reiter: 'zustellung', texte: ['Wetter', 'Fremd 3'] }, liste, [], [], 'de');
+	const mitDateien = <T>(besitzer: unknown, f: (d: { freigaben: string; besitzer: string }) => T): T => {
+		const dir = mkdtempSync(join(tmpdir(), 'abgleich-regeln-'));
+		try {
+			const pfad = join(dir, 'elementliste_besitzer.json');
+			writeFileSync(pfad, JSON.stringify(besitzer));
+			return f({ freigaben: join(KONTEXT, 'elementliste_freigaben.json'), besitzer: pfad });
+		} finally {
+			rmSync(dir, { recursive: true, force: true });
+		}
+	};
+	const BESITZER_FREMD = { art: 'zusaetzlich', ctx: 'trip', reiter: 'zustellung', muster: 'Fremd {n}', grund: 'g', verweis: '#2913-e' };
+	const AUSNAHME = { text: 'Gespeichert', grund: 'Speicher-Rückmeldung', spec: 's.md' };
+
+	test('ladeRegeln liest Freigaben, Besitzer und Ausnahmen (nicht leer)', () => {
+		const r = mitDateien({ besitzer: [BESITZER_FREMD], ausnahmen: [AUSNAHME] }, (d) => ladeRegeln(d, liste));
+		assert.ok(r.freigaben.length > 0, 'Freigaben fehlen');
+		assert.deepEqual(r.besitzer.map((b) => b.verweis), ['#2913-e']);
+		assert.deepEqual(r.ausnahmen.map((a) => a.text), ['Gespeichert']);
+		const z = findeZusaetzliche({ ctx: 'trip', reiter: 'zustellung', texte: ['Gespeichert', 'Neu'] }, liste, r.ausnahmen, [], 'de');
+		assert.deepEqual(z.map((x) => x.text), ['Neu'], 'Ausnahme aus der Datei erklärt den Text');
+	});
+	test('ladeRegeln bricht bei element-Besitzer mit unbekannter ID ab und nennt den Eintrag', () => {
+		const b = { besitzer: [{ art: 'element', id: 'gibt.es.nicht', grund: 'g', verweis: '#2913-d' }], ausnahmen: [] };
+		assert.throws(() => mitDateien(b, (d) => ladeRegeln(d, liste)), /Besitzer 0.*gibt\.es\.nicht/);
+	});
+	test('echte Besitzer-Datei lädt gegen die echte Elementliste', () => {
+		const r = ladeRegeln({ freigaben: join(KONTEXT, 'elementliste_freigaben.json'), besitzer: join(KONTEXT, 'elementliste_besitzer.json') }, LISTE);
+		assert.ok(Array.isArray(r.besitzer) && Array.isArray(r.ausnahmen));
+	});
+
+	const lauf = (env: Record<string, string>, besitzer: unknown[]) =>
+		mitDateien({ besitzer, ausnahmen: [] }, (d) => {
+			const dir = mkdtempSync(join(tmpdir(), 'abgleich-lauf-'));
+			try {
+				const plan = planeAbgleich({ liste, env, baseURL: STAGING });
+				const r = werteLaufAus({ plan, ergebnisse: new Map([['w.a', { status: 'gefunden' as const }]]), zusaetzlich: zusFremd(), regeln: ladeRegeln(d, liste), berichtDir: dir });
+				return { ...r, json: JSON.parse(readFileSync(r.pfade.json, 'utf8')) };
+			} finally {
+				rmSync(dir, { recursive: true, force: true });
+			}
+		});
+	test('werteLaufAus mit --abnahme: herrenloser Fremdtext ⇒ Exit 1 (abnahme wird durchgereicht)', () => {
+		const r = lauf({ ELEMENTLISTE_ABNAHME: '1' }, []);
+		assert.equal(r.ende.exit, 1);
+		assert.match(r.ende.meldung, /abnahme: 1 ohne Besitzer/);
+		assert.equal(r.json.zaehler.zusaetzlich, 1);
+		assert.equal(r.json.optionen.abnahme, true);
+	});
+	test('werteLaufAus wendet die Besitzer der Datei an ⇒ Exit 0, Besitzer im geschriebenen Bericht', () => {
+		const r = lauf({ ELEMENTLISTE_ABNAHME: '1' }, [BESITZER_FREMD]);
+		assert.equal(r.ende.exit, 0, r.ende.meldung);
+		assert.equal(r.json.zusaetzlich[0].besitzer.verweis, '#2913-e');
+	});
+	test('werteLaufAus nur --strict: zusaetzlich allein ⇒ Exit 0; ohne Flags Exit 0', () => {
+		assert.equal(lauf({ ELEMENTLISTE_STRICT: '1' }, []).ende.exit, 0);
+		assert.equal(lauf({}, []).ende.exit, 0);
+	});
+	test('werteLaufAus wendet Freigaben an (echte Freigaben-Datei)', () => {
+		const f = JSON.parse(readFileSync(join(KONTEXT, 'elementliste_freigaben.json'), 'utf8')).freigaben[0];
+		const e = el('fg.1', f.abschnitt, 1, 'x', { ctx: f.ctx, reiter: f.reiter, i18n_key: f.i18n_keys[0] });
+		const dir = mkdtempSync(join(tmpdir(), 'abgleich-fg-'));
+		try {
+			const r = mitDateien({ besitzer: [], ausnahmen: [] }, (d) =>
+				werteLaufAus({ plan: planeAbgleich({ liste: [e], env: { ELEMENTLISTE_STRICT: '1' }, baseURL: STAGING }), ergebnisse: new Map([['fg.1', { status: 'abweichend' as const, ist: 'fehlt' }]]), zusaetzlich: [], regeln: ladeRegeln(d, [e]), berichtDir: dir })
+			);
+			assert.equal(r.bericht.eintraege[0].status, 'freigegeben');
+			assert.equal(r.ende.exit, 0);
+		} finally {
+			rmSync(dir, { recursive: true, force: true });
+		}
+	});
+
+	test('ladeKontoTexte fragt Trip, Vergleich, Orte, Vorlagen ab und sammelt die Namen; Fehlantwort liefert nichts', async () => {
+		// Netzgrenze: die Antworten sind echte API-Formen; geprüft wird Pfadauswahl und Zusammenführung.
+		const ANTWORT: Record<string, unknown> = {
+			'/api/trips/t%201': { id: 't 1', name: 'GR20 Nord', stages: [{ id: 's1', name: 'Calenzana – Ortu', waypoints: [{ name: 'Bocca' }] }] },
+			'/api/compare/presets/v1': { id: 'v1', name: 'Alpen-Vergleich' },
+			'/api/compare/presets': [{ id: 'v2', name: 'Zweiter Vergleich' }],
+			'/api/locations': [{ id: 'o1', name: 'Innsbruck' }],
+			'/api/metric-presets': [{ id: 'm1', name: 'Meine Vorlage' }]
+		};
+		const gefragt: string[] = [];
+		const get = async (p: string) => {
+			gefragt.push(p);
+			return { ok: () => p in ANTWORT, json: async () => ANTWORT[p] };
+		};
+		const t = await ladeKontoTexte(get, { trip: 't 1', orte: 'v1' });
+		for (const n of ['GR20 Nord', 'Calenzana – Ortu', 'Bocca', 'Alpen-Vergleich', 'Zweiter Vergleich', 'Innsbruck', 'Meine Vorlage']) assert.ok(t.includes(n), `${n} fehlt`);
+		assert.deepEqual([...gefragt].sort(), Object.keys(ANTWORT).sort());
+		assert.deepEqual(await ladeKontoTexte(async () => ({ ok: () => false, json: async () => ({ name: 'X' }) }), { trip: null, orte: null }), []);
+	});
+
+	test('Staging-Spec reicht Regeln, Konto-Texte und Plan vollständig durch (doc-compliance-test)', () => {
+		// doc-compliance-test: Restverdrahtung der Live-Spec; die Wirkung der Funktionen prüfen die Tests oben.
+		const spec = readFileSync(join(FRONTEND, 'e2e/elementliste-abgleich.staging.spec.ts'), 'utf8');
+		assert.match(spec, /const regeln = ladeRegeln\(\{ freigaben: FREIGABEN, besitzer: BESITZER \}, alle\);/);
+		assert.match(spec, /const konto = await ladeKontoTexte\(\(pfad\) => api\.get\(pfad\), ids\);/);
+		assert.match(spec, /findeZusaetzliche\(\{ ctx: k\.ctx, reiter: k\.reiter, texte: hub\.texte \}, alle, regeln\.ausnahmen, konto, plan\.sprache\)/);
+		assert.match(spec, /werteLaufAus\(\{ plan, ergebnisse, zusaetzlich, regeln, berichtDir: BERICHT_DIR \}\)/);
+		for (const umgehung of [/\babschluss\(/, /\bleseBesitzer\(/, /\bleseAusnahmen\(/, /\bbaueBericht\(/, /\bexitCode\(/]) {
+			assert.ok(!umgehung.test(spec), `Spec umgeht die Logik: ${umgehung}`);
+		}
 	});
 });

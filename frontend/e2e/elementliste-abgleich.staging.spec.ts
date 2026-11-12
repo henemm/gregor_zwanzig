@@ -2,9 +2,9 @@
 // Spec: docs/specs/modules/einstellungen_neu_neustart_adr_waechter_elementliste.md
 //
 // Start über den Starter (übersetzt CLI-Flags in die Umgebung und reicht den Exit-Code durch):
-//   cd frontend && npm run elementliste:abgleich -- [--strict] [--scope <reiter[/zustand]>] [--sprache en]
+//   cd frontend && npm run elementliste:abgleich -- [--strict] [--abnahme] [--scope <reiter[/zustand]>] [--sprache en]
 // Direkt: npx playwright test --config playwright.elementliste.staging.config.ts
-//   (Umgebung: ELEMENTLISTE_SCOPE, ELEMENTLISTE_STRICT, ELEMENTLISTE_SPRACHE, ELEMENTLISTE_TRIP_ID,
+//   (Umgebung: ELEMENTLISTE_SCOPE, ELEMENTLISTE_STRICT, ELEMENTLISTE_ABNAHME, ELEMENTLISTE_SPRACHE, ELEMENTLISTE_TRIP_ID,
 //    ELEMENTLISTE_ORTE_ID, ELEMENTLISTE_BERICHT_DIR; Login GZ_AUTH_USER/GZ_AUTH_PASS)
 //
 // Die ganze Entscheidungslogik (Prod-Schutz, Optionen, Scope, Route-Abfangen-Plan, Bewertung, Bericht,
@@ -26,16 +26,18 @@ import {
 	seitenPfad,
 	bewerteAbschnitt,
 	alleNichtPruefbar,
-	leseFreigaben,
-	wendeFreigabenAn,
 	sprachGrund,
 	wiederherzustellendeSprache,
 	stelleSpracheWieder,
-	baueBericht,
-	schreibeBericht,
-	abschluss,
+	GEGENRICHTUNG_WURZEL,
+	istGegenrichtung,
+	findeZusaetzliche,
+	ladeRegeln,
+	ladeKontoTexte,
+	werteLaufAus,
 	type Ergebnis,
-	type ListenElement
+	type ListenElement,
+	type ZusaetzlichEintrag
 } from './elementliste_abgleich_logik.ts';
 
 // Prod-Schutz, bevor irgendeine Seite geladen wird (auch bei überschriebener Base-URL).
@@ -44,6 +46,8 @@ assertNotProdBaseURL(process.env.GZ_SVELTE_BASE ?? STAGING_URL);
 const FRONTEND = join(fileURLToPath(new URL('.', import.meta.url)), '..');
 const LISTE = join(FRONTEND, '..', 'docs/context/einstellungen_neu/elementliste.json');
 const FREIGABEN = join(FRONTEND, '..', 'docs/context/einstellungen_neu/elementliste_freigaben.json');
+// Ganzseiten-Abgleich (feat_2913_abgleich_ganzseite): Besitzer je Abweichung und Ausnahmen der Gegenrichtung.
+const BESITZER = join(FRONTEND, '..', 'docs/context/einstellungen_neu/elementliste_besitzer.json');
 const BERICHT_DIR = process.env.ELEMENTLISTE_BERICHT_DIR ?? join(FRONTEND, 'test-results', 'elementliste-abgleich');
 
 /**
@@ -52,17 +56,40 @@ const BERICHT_DIR = process.env.ELEMENTLISTE_BERICHT_DIR ?? join(FRONTEND, 'test
  * es im Mockup tut (C1); aria-label auch von role=group/textbox, z. B. bits-ui TimeField (C2).
  */
 async function texteImBereich(page: Page, abschnitt: string): Promise<{ marker: boolean; texte: string[] }> {
-	await page.evaluate((abschnitt) => {
-		const marker = document.querySelector(`[data-abschnitt="${abschnitt}"]`);
-		marker?.querySelectorAll('details').forEach((d) => ((d as HTMLDetailsElement).open = true));
-	}, abschnitt);
+	const selektor = `[data-abschnitt="${abschnitt}"]`;
+	await page.evaluate(oeffneDetails, { selektor, alle: false });
 	await page.waitForTimeout(200);
-	return page.evaluate((abschnitt) => {
-		const marker = document.querySelector(`[data-abschnitt="${abschnitt}"]`);
-		const wurzel = marker ?? document.body;
-		const MIT_LABEL = new Set(['switch', 'group', 'textbox']);
-		const n = (s: string | null) => String(s ?? '').replace(/\s+/g, ' ').trim();
-		const texte: string[] = [];
+	return page.evaluate(sichtbareTexte, { selektor, alle: false });
+}
+
+/**
+ * Gegenrichtung (feat_2913_abgleich_ganzseite, AC-5): sichtbare Texte unter ALLEN Hub-Containern
+ * (`GEGENRICHTUNG_WURZEL`: HubKopf und Reiterfläche), nie `body` — Seitenleiste, BottomNav und
+ * SaveIndicator liegen außerhalb und gehören nicht zur Seite.
+ */
+async function texteUnterHub(page: Page): Promise<{ marker: boolean; texte: string[] }> {
+	await page.evaluate(oeffneDetails, { selektor: GEGENRICHTUNG_WURZEL, alle: true });
+	await page.waitForTimeout(200);
+	return page.evaluate(sichtbareTexte, { selektor: GEGENRICHTUNG_WURZEL, alle: true });
+}
+
+/** Im Browser: alle `details` unter dem ersten (bzw. jedem) Treffer des Selektors öffnen. */
+function oeffneDetails(arg: { selektor: string; alle: boolean }): void {
+	const wurzeln = arg.alle ? Array.from(document.querySelectorAll(arg.selektor)) : [document.querySelector(arg.selektor)];
+	for (const w of wurzeln) w?.querySelectorAll('details').forEach((d) => ((d as HTMLDetailsElement).open = true));
+}
+
+/**
+ * Im Browser: sichtbare Texte unter dem ersten Treffer (`alle: false`, ohne Treffer ersatzweise die ganze
+ * Seite für „nur seitenweit gefunden“) bzw. unter jedem Treffer (`alle: true`, ohne Treffer keine Texte).
+ */
+function sichtbareTexte(arg: { selektor: string; alle: boolean }): { marker: boolean; texte: string[] } {
+	const treffer = arg.alle ? Array.from(document.querySelectorAll(arg.selektor)) : [document.querySelector(arg.selektor)].filter((x): x is Element => x !== null);
+	const wurzeln = treffer.length > 0 ? treffer.filter((w) => !treffer.some((a) => a !== w && a.contains(w))) : arg.alle ? [] : [document.body];
+	const MIT_LABEL = new Set(['switch', 'group', 'textbox']);
+	const n = (s: string | null) => String(s ?? '').replace(/\s+/g, ' ').trim();
+	const texte: string[] = [];
+	for (const wurzel of wurzeln) {
 		for (const el of [wurzel, ...Array.from(wurzel.querySelectorAll('*'))]) {
 			if (el.closest('script,style,[aria-hidden="true"]') || !el.checkVisibility()) continue;
 			if (el instanceof HTMLInputElement) {
@@ -76,9 +103,10 @@ async function texteImBereich(page: Page, abschnitt: string): Promise<{ marker: 
 			for (const k of Array.from(el.childNodes)) if (k.nodeType === 3) eigen += k.nodeValue;
 			if (n(eigen)) texte.push(n(eigen));
 		}
-		return { marker: marker !== null, texte };
-	}, abschnitt);
+	}
+	return { marker: treffer.length > 0, texte };
 }
+
 
 /**
  * Navigation im Browser statt Seitenaufruf vom Server: erst die Startseite laden, dann einen Link zum Ziel
@@ -153,6 +181,9 @@ test('Elementliste gegen Staging: Bericht je Element (gefunden / abweichend / ni
 	const alle: ListenElement[] = JSON.parse(readFileSync(LISTE, 'utf8')).elemente;
 	const plan = planeAbgleich({ liste: alle, env: process.env, baseURL });
 	const ergebnisse = new Map<string, Ergebnis>();
+	const zusaetzlich: ZusaetzlichEintrag[] = [];
+	// Freigaben, Besitzer und Ausnahmen zuerst lesen: ein ungültiger Eintrag bricht ab, bevor eine Seite lädt.
+	const regeln = ladeRegeln({ freigaben: FREIGABEN, besitzer: BESITZER }, alle);
 	const api = page.request;
 
 	if (process.env.GZ_AUTH_USER && process.env.GZ_AUTH_PASS) {
@@ -169,6 +200,7 @@ test('Elementliste gegen Staging: Bericht je Element (gefunden / abweichend / ni
 	try {
 		const gesetzt = await api.put('/api/auth/profile', { data: { language: plan.sprache } });
 		expect(gesetzt.ok(), `Profilsprache ${plan.sprache} setzen: HTTP ${gesetzt.status()}`).toBeTruthy();
+		const konto = await ladeKontoTexte((pfad) => api.get(pfad), ids);
 		for (const { k, el } of plan.kombis) {
 			const id = ids[k.ctx];
 			if (!id) {
@@ -225,6 +257,12 @@ test('Elementliste gegen Staging: Bericht je Element (gefunden / abweichend / ni
 				const befund = await texteImBereich(page, abschnitt);
 				for (const [i, e] of bewerteAbschnitt(liste, befund, plan.sprache, abschnitt)) ergebnisse.set(i, e);
 			}
+			// Gegenrichtung: nur Zustand normal, ohne Segment, Desktop-Viewport (Config); erklärt wird gegen die
+			// ganze Liste (kopf/reiterleiste stehen unter Reiter wetter), unabhängig vom Scope.
+			if (istGegenrichtung(k)) {
+				const hub = await texteUnterHub(page);
+				zusaetzlich.push(...findeZusaetzliche({ ctx: k.ctx, reiter: k.reiter, texte: hub.texte }, alle, regeln.ausnahmen, konto, plan.sprache));
+			}
 		}
 	} finally {
 		await page.unrouteAll({ behavior: 'ignoreErrors' });
@@ -233,10 +271,8 @@ test('Elementliste gegen Staging: Bericht je Element (gefunden / abweichend / ni
 		await api.post('/api/auth/logout').catch(() => {});
 	}
 
-	const freigaben = leseFreigaben(readFileSync(FREIGABEN, 'utf8'));
-	const bericht = baueBericht(plan.elemente, wendeFreigabenAn(plan.elemente, ergebnisse, freigaben));
-	const pfade = schreibeBericht(BERICHT_DIR, bericht, { optionen: plan.optionen, sprache: plan.sprache, baseURL: plan.baseURL });
-	const ende = abschluss(bericht, plan.elemente, plan.optionen);
+	// Freigaben, Besitzer, Bericht und Exit (strict UND abnahme aus plan.optionen) bildet die Logik.
+	const { pfade, ende } = werteLaufAus({ plan, ergebnisse, zusaetzlich, regeln, berichtDir: BERICHT_DIR });
 	console.log(`Elementlisten-Abgleich: ${ende.meldung} → ${pfade.json}, ${pfade.md}`);
 	// F005: ein gescheitertes Zurückstellen der Profilsprache lässt den Lauf scheitern (auch ohne --strict).
 	expect(spracheZurueck.ok, spracheZurueck.ok ? '' : spracheZurueck.meldung).toBe(true);

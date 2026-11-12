@@ -386,6 +386,57 @@ describe('AC-11: Rot-Probe Profil-Zeile — herrenlos Exit 1, mit Besitzer Exit 
 	});
 });
 
+// ---------------------------------------------------------------- Fix-Loop 1 (Adversary F002–F004)
+describe('Fix-Loop 1: Besitzer-Bindung, Hash-Normalisierung, Parser-Härte', () => {
+	const eins = (b: unknown) => JSON.stringify({ besitzer: [b] });
+	test('F002: Abschnitts-Besitzer gilt nur für denselben ctx und Reiter', () => {
+		const elemente = [
+			el('t.w.k', { reiter: 'wetter', abschnitt: 'kopf' }),
+			el('o.w.k', { ctx: 'orte', reiter: 'wetter', abschnitt: 'kopf' }),
+			el('t.z.k', { reiter: 'zustellung', abschnitt: 'kopf' })
+		];
+		const erg = new Map(elemente.map((e) => [e.id, { status: 'abweichend' as const, ist: 'x' }]));
+		const b = L.wendeBesitzerAn(L.baueBericht(elemente, erg), L.leseBesitzer(eins({ art: 'abschnitt', ctx: 'trip', reiter: 'wetter', abschnitt: 'kopf', grund: 'g', verweis: '#2913-c2' })));
+		const v = (id: string) => b.eintraege.find((x: { id: string }) => x.id === id).besitzer?.verweis;
+		assert.equal(v('t.w.k'), '#2913-c2');
+		assert.equal(v('o.w.k'), undefined, 'anderer ctx darf nicht gedeckt sein');
+		assert.equal(v('t.z.k'), undefined, 'anderer Reiter darf nicht gedeckt sein');
+	});
+	test('F002: gefunden und freigegeben bekommen nie einen Besitzer', () => {
+		const elemente = [el('a.g', { abschnitt: 's' }), el('a.f', { abschnitt: 's' })];
+		const erg = new Map<string, { status: 'gefunden' | 'freigegeben'; grund?: string }>([
+			['a.g', { status: 'gefunden' }],
+			['a.f', { status: 'freigegeben', grund: 'g (s.md)' }]
+		]);
+		const besitzer = L.leseBesitzer(
+			JSON.stringify({
+				besitzer: [
+					{ art: 'element', id: 'a.g', grund: 'g', verweis: '#2913-d' },
+					{ art: 'abschnitt', ctx: 'trip', reiter: 'zustellung', abschnitt: 's', grund: 'g', verweis: '#2913-d' }
+				]
+			})
+		);
+		const b = L.wendeBesitzerAn(L.baueBericht(elemente, erg), besitzer);
+		for (const e of b.eintraege) assert.equal(e.besitzer, undefined, `${e.id} (${e.status}) darf keinen Besitzer tragen`);
+		assert.ok(!L.berichtAlsMarkdown(b).includes('#2913-d'), 'kein Besitzer-Verweis im Markdown');
+	});
+	test('F003: „Etappe 3“ und „Etappe“ ergeben verschiedene IDs (Zahl wird {zahl}, nicht entfernt)', () => {
+		assert.notEqual(L.zusaetzlichId('trip', 'zustellung', 'Etappe 3'), L.zusaetzlichId('trip', 'zustellung', 'Etappe'));
+		assert.notEqual(L.zusaetzlichId('trip', 'zustellung', '3 Etappen'), L.zusaetzlichId('trip', 'zustellung', 'Etappen'));
+		assert.equal(L.zusaetzlichId('trip', 'zustellung', 'Etappe 3'), L.zusaetzlichId('trip', 'zustellung', 'Etappe 12'));
+	});
+	test('F004: null- bzw. Nicht-Objekt-Eintrag ⇒ Fehler mit Index', () => {
+		for (const roh of [null, 'text', 3, ['x']]) {
+			assert.throws(() => L.leseBesitzer(JSON.stringify({ besitzer: [{ art: 'element', id: 'a', grund: 'g', verweis: '#2795' }, roh] })), /Besitzer 1: Eintrag ist kein Objekt/);
+		}
+	});
+	test('F004: element-Besitzer mit unbekannter ID ⇒ Fehler mit Index und ID, bekannte ID gilt', () => {
+		const liste = [el('a.bekannt')];
+		assert.throws(() => L.leseBesitzer(eins({ art: 'element', id: 'a.fremd', grund: 'g', verweis: '#2795' }), liste), /Besitzer 0: Element „a\.fremd“/);
+		assert.equal(L.leseBesitzer(eins({ art: 'element', id: 'a.bekannt', grund: 'g', verweis: '#2795' }), liste).length, 1);
+	});
+});
+
 // ---------------------------------------------------------------- AC-5 (Verdrahtung)
 describe('AC-5: Gegenrichtung liest nur [data-seite="hub"], nur normal/ohne Segment', () => {
 	test('Wurzel-Selektor ist [data-seite="hub"], nie body', () => {
@@ -405,7 +456,8 @@ describe('AC-5: Gegenrichtung liest nur [data-seite="hub"], nur normal/ohne Segm
 		assert.match(spec, /GEGENRICHTUNG_WURZEL/);
 		assert.match(spec, /istGegenrichtung\(/);
 		assert.match(spec, /findeZusaetzliche\(/);
-		assert.match(spec, /wendeBesitzerAn\(/);
+		// Fix-Loop 1 (F001): Besitzer wendet werteLaufAus an (Wirkung: elementliste_abgleich_verdrahtung.test.ts).
+		assert.match(spec, /werteLaufAus\(/);
 		assert.match(spec, /elementliste_besitzer\.json/);
 		assert.ok(!/querySelectorAll\(\s*['"]body['"]/.test(spec), 'Gegenrichtung darf nicht body lesen');
 	});

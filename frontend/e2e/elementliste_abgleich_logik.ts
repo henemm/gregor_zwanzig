@@ -9,15 +9,22 @@
 // Fix-Loop 1 (#2913, F002/F003): Die gesamte Verdrahtung der Staging-Spec liegt hier als
 // browserfreie Funktionen (Plan mit Prod-Schutz/Optionen/Scope, Route-Abfangen-Plan je Zustand,
 // Bewertung je Abschnitt, Bericht schreiben, Abschluss/Exit). Die Spec ruft nur diese Funktionen;
-// die CLI-Flags --strict/--scope/--sprache übersetzt der Starter scripts/elementliste_abgleich.ts.
-import { mkdirSync, writeFileSync } from 'node:fs';
+// die CLI-Flags --strict/--scope/--sprache/--abnahme übersetzt der Starter scripts/elementliste_abgleich.ts.
+//
+// Ganzseiten-Abgleich (Spec feat_2913_abgleich_ganzseite): Gegenrichtung (`zusaetzlich` = live sichtbarer
+// Text ohne Eintrag), Besitzer je Abweichung (elementliste_besitzer.json) und Modus `--abnahme`.
+import { createHash } from 'node:crypto';
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { assertNotProdBaseURL } from './prodUrlGuard.ts';
 
 // #2913 Scheibe (c) Fix-Loop 2: `freigegeben` = Abweichung, die eine Spec ausdrücklich erlaubt (Liste
 // elementliste_freigaben.json, je Eintrag Grund + Spec-Verweis). Eigener Zähler, nie als gefunden gezählt.
-export type Status = 'gefunden' | 'abweichend' | 'nicht_pruefbar' | 'freigegeben';
-export type Ergebnis = { status: Status; grund?: string; ist?: string };
+// `zusaetzlich` (Ganzseiten-Abgleich): Text ohne Listeneintrag; steht in einer eigenen Liste des Berichts.
+export type Status = 'gefunden' | 'abweichend' | 'nicht_pruefbar' | 'freigegeben' | 'zusaetzlich';
+export type Ergebnis = { status: Exclude<Status, 'zusaetzlich'>; grund?: string; ist?: string };
+/** Verantwortlicher einer Abweichung: Scheibe (#2913-c2|d|e) oder Issue (#NNNN), immer mit Grund. */
+export type BesitzerVerweis = { grund: string; verweis: string };
 
 export type ListenElement = {
 	id: string;
@@ -47,8 +54,11 @@ export type BerichtEintrag = {
 	status: Status;
 	grund?: string;
 	ist?: string;
+	besitzer?: BesitzerVerweis;
 };
-export type Bericht = { eintraege: BerichtEintrag[]; zaehler: Record<Status, number> };
+/** Live sichtbarer Text, der keinem Eintrag, Konto-Text oder keiner Ausnahme entspricht. */
+export type ZusaetzlichEintrag = { id: string; ctx: string; reiter: string; text: string; status: 'zusaetzlich'; besitzer?: BesitzerVerweis };
+export type Bericht = { eintraege: BerichtEintrag[]; zusaetzlich: ZusaetzlichEintrag[]; zaehler: Record<Status, number> };
 
 const OHNE_ERGEBNIS = 'kein Ergebnis: das Element wurde im Lauf nicht geprüft';
 
@@ -69,9 +79,12 @@ export function filtereScope<E extends { reiter: string; zustand: string }>(elem
 	return treffer;
 }
 
-/** Bericht über ALLE übergebenen Elemente; fehlendes Ergebnis ⇒ nicht_pruefbar mit Grund. */
-export function baueBericht(elemente: ListenElement[], ergebnisse: Map<string, Ergebnis>): Bericht {
-	const zaehler: Record<Status, number> = { gefunden: 0, abweichend: 0, nicht_pruefbar: 0, freigegeben: 0 };
+/**
+ * Bericht über ALLE übergebenen Elemente; fehlendes Ergebnis ⇒ nicht_pruefbar mit Grund. Zusätzliche Texte
+ * (Gegenrichtung) stehen in einer eigenen Liste mit eigenem Zähler, nie in `eintraege`.
+ */
+export function baueBericht(elemente: ListenElement[], ergebnisse: Map<string, Ergebnis>, zusaetzlich: ZusaetzlichEintrag[] = []): Bericht {
+	const zaehler: Record<Status, number> = { gefunden: 0, abweichend: 0, nicht_pruefbar: 0, freigegeben: 0, zusaetzlich: zusaetzlich.length };
 	const eintraege = elemente.map((e): BerichtEintrag => {
 		const erg: Ergebnis = ergebnisse.get(e.id) ?? { status: 'nicht_pruefbar', grund: OHNE_ERGEBNIS };
 		if ((erg.status === 'nicht_pruefbar' || erg.status === 'freigegeben') && !(erg.grund && erg.grund.trim())) {
@@ -93,51 +106,73 @@ export function baueBericht(elemente: ListenElement[], ergebnisse: Map<string, E
 		if (erg.ist !== undefined) eintrag.ist = erg.ist;
 		return eintrag;
 	});
-	return { eintraege, zaehler };
+	return { eintraege, zusaetzlich: [...zusaetzlich], zaehler };
 }
 
-/** Ohne --strict immer 0; mit --strict ≠ 0, sobald etwas abweicht oder nicht prüfbar ist (freigegeben zählt nicht). */
-export function exitCode(bericht: Bericht, opt: { strict: boolean }): number {
-	if (!opt.strict) return 0;
-	return bericht.zaehler.abweichend + bericht.zaehler.nicht_pruefbar > 0 ? 1 : 0;
+export type Optionen = { strict: boolean; scope: string | null; abnahme: boolean };
+
+/** Anzahl Abweichungen (abweichend, nicht_pruefbar, zusaetzlich) ohne Besitzer; Freigaben sind Besitzer. */
+export function herrenlos(bericht: Bericht): number {
+	const ohne = bericht.eintraege.filter((e) => (e.status === 'abweichend' || e.status === 'nicht_pruefbar') && !e.besitzer).length;
+	return ohne + bericht.zusaetzlich.filter((z) => !z.besitzer).length;
+}
+
+/**
+ * Ohne Flags immer 0. --strict: ≠ 0, sobald etwas abweicht oder nicht prüfbar ist (freigegeben und
+ * zusaetzlich zählen nicht). --abnahme: ≠ 0, sobald eine Abweichung keinen Besitzer hat.
+ */
+export function exitCode(bericht: Bericht, opt: { strict: boolean; abnahme?: boolean }): number {
+	if (opt.strict && bericht.zaehler.abweichend + bericht.zaehler.nicht_pruefbar > 0) return 1;
+	if (opt.abnahme && herrenlos(bericht) > 0) return 1;
+	return 0;
 }
 
 const zelle = (s: string | null | undefined) => String(s ?? '').replace(/\|/g, '\\|').replace(/\n/g, ' ');
+const besitzerZelle = (b: BesitzerVerweis | undefined) => (b ? zelle(`${b.verweis} (${b.grund})`) : '–');
 
 export function berichtAlsMarkdown(bericht: Bericht): string {
 	const z = bericht.zaehler;
 	const zeilen = [
 		'# Elementlisten-Abgleich (Staging)',
 		'',
-		`| gefunden | abweichend | nicht_pruefbar | freigegeben | gesamt |`,
-		`|---|---|---|---|---|`,
-		`| ${z.gefunden} | ${z.abweichend} | ${z.nicht_pruefbar} | ${z.freigegeben} | ${bericht.eintraege.length} |`,
+		`| gefunden | abweichend | nicht_pruefbar | freigegeben | zusaetzlich | gesamt |`,
+		`|---|---|---|---|---|---|`,
+		`| ${z.gefunden} | ${z.abweichend} | ${z.nicht_pruefbar} | ${z.freigegeben} | ${z.zusaetzlich} | ${bericht.eintraege.length} |`,
 		'',
-		'| id | Kontext | Reiter | Zustand | Segment | Abschnitt | Nr. | Text | Status | Grund / Ist |',
-		'|---|---|---|---|---|---|---|---|---|---|'
+		'| id | Kontext | Reiter | Zustand | Segment | Abschnitt | Nr. | Text | Status | Grund / Ist | Besitzer |',
+		'|---|---|---|---|---|---|---|---|---|---|---|'
 	];
 	for (const e of bericht.eintraege) {
 		const hinweis = [e.grund, e.ist !== undefined ? `ist: ${e.ist}` : ''].filter(Boolean).join(' · ');
 		zeilen.push(
-			`| ${zelle(e.id)} | ${zelle(e.ctx)} | ${zelle(e.reiter)} | ${zelle(e.zustand)} | ${zelle(e.segment ?? '–')} | ${zelle(e.abschnitt)} | ${e.ordnung} | ${zelle(e.text_de)} | ${e.status} | ${zelle(hinweis)} |`
+			`| ${zelle(e.id)} | ${zelle(e.ctx)} | ${zelle(e.reiter)} | ${zelle(e.zustand)} | ${zelle(e.segment ?? '–')} | ${zelle(e.abschnitt)} | ${e.ordnung} | ${zelle(e.text_de)} | ${e.status} | ${zelle(hinweis)} | ${besitzerZelle(e.besitzer)} |`
 		);
+	}
+	zeilen.push('', '## Zusätzlich (live sichtbar, ohne Eintrag)', '', '| id | Kontext | Reiter | Text | Besitzer |', '|---|---|---|---|---|');
+	for (const x of bericht.zusaetzlich) {
+		zeilen.push(`| ${zelle(x.id)} | ${zelle(x.ctx)} | ${zelle(x.reiter)} | ${zelle(x.text)} | ${besitzerZelle(x.besitzer)} |`);
 	}
 	return zeilen.join('\n') + '\n';
 }
 
 const WAHR = new Set(['1', 'true', 'ja', 'yes']);
 
-/** `--strict`, `--scope X` bzw. `--scope=X`; ersatzweise ELEMENTLISTE_STRICT / ELEMENTLISTE_SCOPE. */
-export function leseOptionen(argv: string[], env: Record<string, string | undefined>): { strict: boolean; scope: string | null } {
+/**
+ * `--strict`, `--abnahme`, `--scope X` bzw. `--scope=X`; ersatzweise ELEMENTLISTE_STRICT /
+ * ELEMENTLISTE_ABNAHME / ELEMENTLISTE_SCOPE.
+ */
+export function leseOptionen(argv: string[], env: Record<string, string | undefined>): Optionen {
 	let strict = WAHR.has(String(env.ELEMENTLISTE_STRICT ?? '').toLowerCase());
+	let abnahme = WAHR.has(String(env.ELEMENTLISTE_ABNAHME ?? '').toLowerCase());
 	let scope: string | null = env.ELEMENTLISTE_SCOPE && env.ELEMENTLISTE_SCOPE.trim() ? env.ELEMENTLISTE_SCOPE.trim() : null;
 	for (let i = 0; i < argv.length; i++) {
 		const a = argv[i];
 		if (a === '--strict') strict = true;
+		else if (a === '--abnahme') abnahme = true;
 		else if (a === '--scope' && i + 1 < argv.length) scope = argv[++i];
 		else if (a.startsWith('--scope=')) scope = a.slice('--scope='.length);
 	}
-	return { strict, scope };
+	return { strict, scope, abnahme };
 }
 
 /** Text normalisieren (Leerraum, typografische Zeichen) für den Vergleich mit dem DOM. */
@@ -163,7 +198,7 @@ export type Sprache = 'de' | 'en';
 export type Kombi = { ctx: string; reiter: string; zustand: string; segment: string | null };
 export type Plan = {
 	baseURL: string;
-	optionen: { strict: boolean; scope: string | null };
+	optionen: Optionen;
 	sprache: Sprache;
 	elemente: ListenElement[];
 	kombis: Array<{ k: Kombi; el: ListenElement[] }>;
@@ -383,6 +418,218 @@ export function wendeFreigabenAn(elemente: ListenElement[], ergebnisse: Map<stri
 	return out;
 }
 
+// ------------------------------------------------------------------ Ganzseiten-Abgleich (feat_2913_abgleich_ganzseite)
+
+/** Wurzel der Gegenrichtung: alle Hub-Container (Kopf und Reiterfläche), nie `body` (Seitenleiste, BottomNav, SaveIndicator). */
+export const GEGENRICHTUNG_WURZEL = '[data-seite="hub"]';
+
+/** Gegenrichtung nur im Zustand normal und ohne Kanal-Segment (Desktop-Lauf). */
+export function istGegenrichtung(k: Kombi): boolean {
+	return k.zustand === 'normal' && (k.segment ?? null) === null;
+}
+
+/** Abschnitte, die auf jedem Reiter eines ctx sichtbar sind (in der Liste unter Reiter wetter geführt). */
+const REITERUEBERGREIFEND = new Set(['kopf', 'reiterleiste']);
+
+/** Stabile ID eines zusätzlichen Texts: `zus:<ctx>/<reiter>/<hash>`; Zahlen werden vor dem Hash zu `{zahl}`. */
+export function zusaetzlichId(ctx: string, reiter: string, text: string): string {
+	const basis = normalisiere(normalisiere(text).replace(/\d+(?:[.,:]\d+)*/g, '{zahl}'));
+	return `zus:${ctx}/${reiter}/${createHash('sha1').update(basis).digest('hex').slice(0, 12)}`;
+}
+
+/** Live-Text, der bewusst nicht in der Elementliste steht (Text oder Muster), mit Grund und Spec-Verweis. */
+export type Ausnahme = { ctx?: string; reiter?: string; text?: string; muster?: string; grund: string; spec: string };
+
+const nichtLeer = (x: unknown): x is string => typeof x === 'string' && x.trim() !== '';
+
+/** Ausnahmen aus dem JSON-Text ({"ausnahmen": [...]}); jede braucht Text oder Muster, Grund und Spec. */
+export function leseAusnahmen(text: string): Ausnahme[] {
+	const liste = (JSON.parse(text) as { ausnahmen?: unknown }).ausnahmen;
+	if (!Array.isArray(liste)) throw new Error('Ausnahmen: Feld „ausnahmen“ fehlt');
+	return liste.map((a: Ausnahme, i) => {
+		if (!nichtLeer(a.text) && !nichtLeer(a.muster)) throw new Error(`Ausnahme ${i}: „text“ oder „muster“ fehlt`);
+		for (const feld of ['grund', 'spec'] as const) {
+			if (!nichtLeer(a[feld])) throw new Error(`Ausnahme ${i}: „${feld}“ fehlt`);
+		}
+		return a;
+	});
+}
+
+/** Passt ein normalisierter Text auf Text bzw. Muster (`{name}` = beliebiger Wert) und ggf. ctx/Reiter? */
+function trifftZiel(ziel: { ctx?: string; reiter?: string; text?: string; muster?: string }, ctx: string, reiter: string, t: string): boolean {
+	if ((ziel.ctx !== undefined && ziel.ctx !== ctx) || (ziel.reiter !== undefined && ziel.reiter !== reiter)) return false;
+	if (nichtLeer(ziel.text) && normalisiere(ziel.text) === t) return true;
+	return nichtLeer(ziel.muster) && new RegExp('^' + musterAlsRegExp(ziel.muster).source + '$').test(t);
+}
+
+/** Alle `name`-Werte (Trip, Preset, Etappe, Ort) aus API-Antworten; IDs sind keine Konto-Texte. */
+export function sammleKontoTexte(daten: unknown): string[] {
+	const out = new Set<string>();
+	const gehe = (x: unknown): void => {
+		if (Array.isArray(x)) x.forEach(gehe);
+		else if (istObjekt(x)) {
+			for (const [k, v] of Object.entries(x)) {
+				if (k === 'name' && nichtLeer(v)) out.add(v.trim());
+				else gehe(v);
+			}
+		}
+	};
+	gehe(daten);
+	return [...out];
+}
+
+/**
+ * Gegenrichtung: sichtbare Texte einer Kombination (ctx × Reiter, Zustand normal), die weder zu einem
+ * Eintrag des Reiters bzw. zu kopf/reiterleiste desselben ctx (DE/EN), noch zu einem Konto-Text, noch zu
+ * einer Ausnahme passen. Reihenfolge egal; jeder Text (je ID) höchstens einmal.
+ */
+export function findeZusaetzliche(
+	befund: { ctx: string; reiter: string; texte: string[] },
+	liste: ListenElement[],
+	ausnahmen: Ausnahme[],
+	kontoTexte: string[],
+	sprache: Sprache
+): ZusaetzlichEintrag[] {
+	const { ctx, reiter } = befund;
+	const regeln = liste
+		.filter((e) => e.ctx === ctx && e.zustand === 'normal' && (e.reiter === reiter || REITERUEBERGREIFEND.has(e.abschnitt)))
+		.map((e) => erwartung(e, sprache))
+		.filter((re): re is RegExp => re !== null);
+	const konto = new Set(kontoTexte.map(normalisiere));
+	const out = new Map<string, ZusaetzlichEintrag>();
+	for (const roh of befund.texte) {
+		const t = normalisiere(roh);
+		if (!t || konto.has(t) || regeln.some((re) => re.test(t))) continue;
+		if (ausnahmen.some((a) => trifftZiel(a, ctx, reiter, t))) continue;
+		const id = zusaetzlichId(ctx, reiter, t);
+		if (!out.has(id)) out.set(id, { id, ctx, reiter, text: t, status: 'zusaetzlich' });
+	}
+	return [...out.values()];
+}
+
+/** Besitzer einer Abweichung: ein Element (id), ein ganzer Abschnitt oder ein zusätzlicher Text (Text/Muster). */
+export type Besitzer =
+	| { art: 'element'; id: string; grund: string; verweis: string }
+	| { art: 'abschnitt'; ctx: string; reiter: string; abschnitt: string; grund: string; verweis: string }
+	| { art: 'zusaetzlich'; ctx?: string; reiter?: string; text?: string; muster?: string; grund: string; verweis: string };
+
+/** Scheibe von #2913 (c2, d, e) oder ein Issue `#NNNN`. */
+export const BESITZER_VERWEIS = /^#(?:2913-(?:c2|d|e)|\d+)$/;
+
+const PFLICHT_JE_ART: Record<string, string[]> = { element: ['id'], abschnitt: ['ctx', 'reiter', 'abschnitt'], zusaetzlich: [] };
+
+/**
+ * Besitzer aus dem JSON-Text ({"besitzer": [...]}); Grund und gültiger Verweis sind Pflicht. Mit `elemente`
+ * (Elementliste) muss jeder element-Besitzer auf eine bekannte ID zeigen.
+ */
+export function leseBesitzer(text: string, elemente?: ListenElement[]): Besitzer[] {
+	const liste = (JSON.parse(text) as { besitzer?: unknown }).besitzer;
+	if (!Array.isArray(liste)) throw new Error('Besitzer: Feld „besitzer“ fehlt');
+	const ids = elemente ? new Set(elemente.map((e) => e.id)) : null;
+	return liste.map((b: unknown, i) => {
+		if (!istObjekt(b)) throw new Error(`Besitzer ${i}: Eintrag ist kein Objekt`);
+		const geprueft = pruefeBesitzer(b, i);
+		if (ids && geprueft.art === 'element' && !ids.has(geprueft.id)) throw new Error(`Besitzer ${i}: Element „${geprueft.id}“ steht nicht in der Elementliste`);
+		return geprueft;
+	});
+}
+
+/** Ein Besitzer-Eintrag: bekannte Ziel-Art, Pflichtfelder je Art, Grund und gültiger Verweis. */
+function pruefeBesitzer(b: Record<string, unknown>, i: number): Besitzer {
+	const pflicht = PFLICHT_JE_ART[String(b.art)];
+	if (!pflicht) throw new Error(`Besitzer ${i}: „art“ „${String(b.art)}“ unbekannt (erlaubt: element, abschnitt, zusaetzlich)`);
+	for (const feld of [...pflicht, 'grund', 'verweis']) {
+		if (!nichtLeer(b[feld])) throw new Error(`Besitzer ${i}: „${feld}“ fehlt`);
+	}
+	if (!BESITZER_VERWEIS.test(String(b.verweis).trim())) {
+		throw new Error(`Besitzer ${i}: „verweis“ „${String(b.verweis)}“ ungültig (erlaubt: #2913-c2, #2913-d, #2913-e oder #NNNN)`);
+	}
+	if (b.art === 'zusaetzlich' && !nichtLeer(b.text) && !nichtLeer(b.muster)) throw new Error(`Besitzer ${i}: „text“ oder „muster“ fehlt`);
+	return b as Besitzer;
+}
+
+const alsVerweis = (b: Besitzer): BesitzerVerweis => ({ grund: b.grund, verweis: b.verweis });
+
+/** Besitzer eines Listen-Eintrags: zuerst per Element-ID, sonst per Abschnitt. */
+function besitzerFuerEintrag(e: BerichtEintrag, besitzer: Besitzer[]): Besitzer | undefined {
+	return (
+		besitzer.find((b) => b.art === 'element' && b.id === e.id) ??
+		besitzer.find((b) => b.art === 'abschnitt' && b.ctx === e.ctx && b.reiter === e.reiter && b.abschnitt === e.abschnitt)
+	);
+}
+
+/**
+ * Setzt `besitzer` an jeder gedeckten Abweichung (abweichend, nicht_pruefbar, zusaetzlich). Status und
+ * Zähler bleiben unverändert; der Bericht wird nicht verändert, sondern kopiert.
+ */
+export function wendeBesitzerAn(bericht: Bericht, besitzer: Besitzer[]): Bericht {
+	const eintraege = bericht.eintraege.map((e) => {
+		if (e.status !== 'abweichend' && e.status !== 'nicht_pruefbar') return { ...e };
+		const b = besitzerFuerEintrag(e, besitzer);
+		return b ? { ...e, besitzer: alsVerweis(b) } : { ...e };
+	});
+	const zusaetzlich = bericht.zusaetzlich.map((z) => {
+		const b = besitzer.find((x) => x.art === 'zusaetzlich' && trifftZiel(x, z.ctx, z.reiter, z.text));
+		return b ? { ...z, besitzer: alsVerweis(b) } : { ...z };
+	});
+	return { eintraege, zusaetzlich, zaehler: { ...bericht.zaehler } };
+}
+
+/** Regeln des Laufs: Freigaben, Besitzer und Ausnahmen (aus dem Kontext-Ordner der Elementliste). */
+export type Regeln = { freigaben: Freigabe[]; besitzer: Besitzer[]; ausnahmen: Ausnahme[] };
+
+/**
+ * Liest die Freigaben- und die Besitzer-Datei (elementliste_freigaben.json, elementliste_besitzer.json). Ein
+ * ungültiger Eintrag (auch ein element-Besitzer mit einer ID, die nicht in `liste` steht) bricht den Lauf
+ * vor jedem Seitenaufruf ab.
+ */
+export function ladeRegeln(dateien: { freigaben: string; besitzer: string }, liste: ListenElement[]): Regeln {
+	const besitzerText = readFileSync(dateien.besitzer, 'utf8');
+	return {
+		freigaben: leseFreigaben(readFileSync(dateien.freigaben, 'utf8')),
+		besitzer: leseBesitzer(besitzerText, liste),
+		ausnahmen: leseAusnahmen(besitzerText)
+	};
+}
+
+/** Minimaler Ausschnitt einer Playwright-Antwort für lesende Konto-Abrufe. */
+export type GetAntwort = { ok(): boolean; json(): Promise<unknown> };
+
+/** API-Pfade, deren `name`-Werte Konto-Texte sind (Trip, Etappen, Orte, Orts-Vergleiche, Wetter-Vorlagen). */
+export function kontoPfade(ids: Record<string, string | null>): string[] {
+	const pfade = ['/api/compare/presets', '/api/locations', '/api/metric-presets'];
+	if (ids.trip) pfade.push(`/api/trips/${encodeURIComponent(ids.trip)}`);
+	if (ids.orte) pfade.push(`/api/compare/presets/${encodeURIComponent(ids.orte)}`);
+	return pfade;
+}
+
+/** Konto-Texte aller `kontoPfade`; ein gescheiterter Abruf liefert keine Texte (nie geraten). */
+export async function ladeKontoTexte(get: (pfad: string) => Promise<GetAntwort>, ids: Record<string, string | null>): Promise<string[]> {
+	const texte = new Set<string>();
+	for (const pfad of kontoPfade(ids)) {
+		const r = await get(pfad).catch(() => null);
+		if (!r || !r.ok()) continue;
+		for (const t of sammleKontoTexte(await r.json().catch(() => null))) texte.add(t);
+	}
+	return [...texte];
+}
+
+/**
+ * Auswertung nach dem Lauf: Freigaben, Bericht mit Zusätzlich-Liste, Besitzer, Bericht schreiben und
+ * Abschluss mit den VOLLSTÄNDIGEN Optionen des Plans (strict und abnahme).
+ */
+export function werteLaufAus(arg: { plan: Plan; ergebnisse: Map<string, Ergebnis>; zusaetzlich: ZusaetzlichEintrag[]; regeln: Regeln; berichtDir: string }): {
+	bericht: Bericht;
+	pfade: { json: string; md: string };
+	ende: { exit: number; meldung: string };
+} {
+	const { plan, regeln } = arg;
+	const roh = baueBericht(plan.elemente, wendeFreigabenAn(plan.elemente, arg.ergebnisse, regeln.freigaben), arg.zusaetzlich);
+	const bericht = wendeBesitzerAn(roh, regeln.besitzer);
+	const pfade = schreibeBericht(arg.berichtDir, bericht, { optionen: plan.optionen, sprache: plan.sprache, baseURL: plan.baseURL });
+	return { bericht, pfade, ende: abschluss(bericht, plan.elemente, plan.optionen) };
+}
+
 /**
  * #2913 Fix-Loop 2 (C3): Die Profilsprache überstimmt das Cookie. Nach dem Setzen der Profilsprache muss
  * `<html lang>` der Seite die Soll-Sprache tragen; sonst sagt der Lauf nichts aus ⇒ Grund für nicht_pruefbar.
@@ -519,28 +766,29 @@ export function schreibeBericht(dir: string, bericht: Bericht, meta: Record<stri
 	return { json, md };
 }
 
-/** Abschluss: jedes Element im Bericht (sonst Fehler), Exit-Entscheid nach Strict. */
-export function abschluss(bericht: Bericht, elemente: ListenElement[], opt: { strict: boolean }): { exit: number; meldung: string } {
+/** Abschluss: jedes Element im Bericht (sonst Fehler), Exit-Entscheid nach Strict bzw. Abnahme. */
+export function abschluss(bericht: Bericht, elemente: ListenElement[], opt: { strict: boolean; abnahme?: boolean }): { exit: number; meldung: string } {
 	if (bericht.eintraege.length !== elemente.length) {
 		throw new Error(`Bericht unvollständig: ${bericht.eintraege.length} von ${elemente.length} Elementen`);
 	}
 	const z = bericht.zaehler;
 	const exit = exitCode(bericht, opt);
+	const modus = [opt.strict ? ' (strict)' : '', opt.abnahme ? ` (abnahme: ${herrenlos(bericht)} ohne Besitzer)` : ''].join('');
 	return {
 		exit,
-		meldung: `gefunden ${z.gefunden}, abweichend ${z.abweichend}, nicht_pruefbar ${z.nicht_pruefbar}, freigegeben ${z.freigegeben}${opt.strict ? ' (strict)' : ''} → Exit ${exit}`
+		meldung: `gefunden ${z.gefunden}, abweichend ${z.abweichend}, nicht_pruefbar ${z.nicht_pruefbar}, freigegeben ${z.freigegeben}, zusaetzlich ${z.zusaetzlich}${modus} → Exit ${exit}`
 	};
 }
 
-/** Starter: CLI-Flags --strict, --scope <x>, --sprache <de|en> in die Umgebung der Spec übersetzen. */
+/** Starter: CLI-Flags --strict, --abnahme, --scope <x>, --sprache <de|en> in die Umgebung der Spec übersetzen. */
 export function flagsAlsUmgebung(argv: string[]): Record<string, string> {
-	const bekannt = new Set(['--strict', '--scope', '--sprache']);
+	const bekannt = new Set(['--strict', '--abnahme', '--scope', '--sprache']);
 	const rest: string[] = [];
 	let sprache: string | null = null;
 	for (let i = 0; i < argv.length; i++) {
 		const a = argv[i];
 		const name = a.split('=')[0];
-		if (!bekannt.has(name)) throw new Error(`unbekannte Option „${a}“ (erlaubt: --strict, --scope <reiter[/zustand]>, --sprache <de|en>)`);
+		if (!bekannt.has(name)) throw new Error(`unbekannte Option „${a}“ (erlaubt: --strict, --abnahme, --scope <reiter[/zustand]>, --sprache <de|en>)`);
 		if ((a === '--scope' || a === '--sprache') && (i + 1 >= argv.length || argv[i + 1].startsWith('--'))) {
 			throw new Error(`${a} braucht einen Wert`);
 		}
@@ -554,6 +802,7 @@ export function flagsAlsUmgebung(argv: string[]): Record<string, string> {
 	const opt = leseOptionen(rest, {});
 	const env: Record<string, string> = {};
 	if (opt.strict) env.ELEMENTLISTE_STRICT = '1';
+	if (opt.abnahme) env.ELEMENTLISTE_ABNAHME = '1';
 	if (opt.scope) env.ELEMENTLISTE_SCOPE = opt.scope;
 	if (sprache !== null) env.ELEMENTLISTE_SPRACHE = leseSprache({ ELEMENTLISTE_SPRACHE: sprache });
 	return env;
