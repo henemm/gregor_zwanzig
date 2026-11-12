@@ -65,13 +65,19 @@ bewusst keine Anleitung zu den behobenen Schwächen.
 - **Core-Auth:** Ausnahme `/health` am Pfad aus dem ASGI-Scope; Host-Header muss
   `localhost`, `127.0.0.1`, `::1` oder (Tests) `testserver` sein, erweiterbar per
   `GZ_CORE_ALLOWED_HOSTS` (kommagetrennt), sonst `400`.
-- **TLS:** `ssl.create_default_context()` für STARTTLS und IMAPS; IMAP-Zeitgrenze
-  30 s. Keine Ausnahme-Schaltung: die betriebenen Mail-Hosts (Stalwart unter
-  `mail.henemm.com`, Resend) haben öffentlich gültige Zertifikate.
+- **TLS:** volle Zertifikats- und Namensprüfung (`ssl.create_default_context()`)
+  für STARTTLS und IMAPS, ohne Schalter; IMAP-Zeitgrenze 30 s. Einzige Ausnahme
+  (`src/utils/mail_tls.py`): Ist der Host wörtlich `localhost` oder eine
+  Loopback-IP (`127.0.0.1`, `::1`, …), wird das Zertifikat nicht geprüft — der
+  Verkehr verlässt den Rechner nicht (Stalwart auf demselben Server) — und eine
+  Info-Zeile protokolliert.
 - **HTML-Ausgabe:** `html.escape` für Trip-Name, Etappentitel, Trip-Link,
   Hinweistexte, Starkregen-Hinweis und Service-Fehlermail.
 - **Mail-Schleifen:** Kopf `Auto-Submitted: auto-generated` auf jeder
-  ausgehenden Mail; Eingang verwirft automatisch erzeugte Mails; System-Adressen
+  ausgehenden Mail; Eingang verwirft automatisch erzeugte Mails (Auto-Submitted
+  außer `no`, Precedence bulk/junk/auto_reply/list, X-Autoreply); bei
+  `X-Auto-Response-Suppress` (Bitte, nicht automatisch zu antworten) wird der
+  Befehl ausgeführt, aber keine Fehlerantwort geschickt; System-Adressen
   sind nie Befehlsgeber; Fehlerantworten ≤ 5 je Nutzer und Stunde, gespeichert
   in `data/users/<id>/inbound_fehlerantworten.json`.
 - **Fehlertexte:** Ausnahmen ohne Code → Katalogtext `api.fehler.unbekannt`,
@@ -103,13 +109,13 @@ bewusst keine Anleitung zu den behobenen Schwächen.
 **AC-1:** Given der Python-Core mit konfiguriertem gemeinsamen Geheimnis / When eine Anfrage mit einem Host-Header außerhalb der erlaubten Namen eintrifft (mit oder ohne Geheimnis) / Then antwortet der Core mit 400 und liefert keine Nutzdaten; Anfragen mit erlaubtem Host bleiben unverändert (mit Geheimnis 200, ohne 401, `/health` immer 200).
 - Test: `tests/tdd/test_core_auth_host_header.py`, `tests/tdd/test_core_auth_enforcement.py`
 
-**AC-2:** Given ein Mail-Server mit einem nicht vertrauenswürdigen Zertifikat / When der Core Mails versendet (STARTTLS) oder den Posteingang abruft (IMAPS) / Then bricht der Verbindungsaufbau ab, bevor Zugangsdaten gesendet werden; mit vertrauenswürdigem Zertifikat funktioniert beides wie bisher.
-- Test: `tests/tdd/test_mail_tls_zertifikatspruefung.py` (TLS-Server auf Loopback mit frisch erzeugtem Zertifikat)
+**AC-2:** Given ein Mail-Server mit einem nicht vertrauenswürdigen Zertifikat, angesprochen über einen Hostnamen, der keine Loopback-Adresse ist / When der Core Mails versendet (STARTTLS) oder den Posteingang abruft (IMAPS) / Then bricht der Verbindungsaufbau ab, bevor Zugangsdaten gesendet werden; mit vertrauenswürdigem Zertifikat funktioniert beides wie bisher; ist der Host wörtlich `localhost` oder eine Loopback-IP, wird ohne Zertifikatsprüfung verbunden und das protokolliert.
+- Test: `tests/tdd/test_mail_tls_zertifikatspruefung.py` (TLS-Server auf Loopback mit frisch erzeugtem Zertifikat; strenger Zweig über einen nicht auflösbaren Namen, dessen Namensauflösung auf den Loopback-Port zeigt; Kontextwahl je Hostname)
 
 **AC-3:** Given ein Trip-, Etappen-, Orts- oder Abo-Name bzw. ein Hinweis- oder Provider-Fehlertext mit HTML-Sonderzeichen / When die Mail gerendert wird (Trip-Briefing, Service-Fehlermail, Hinweiszeile, Alarm, Ortsvergleich) / Then erscheint der Text im HTML-Teil genau einmal escaped und im Klartext-Teil unverändert.
 - Test: `tests/tdd/test_mail_html_nutzertext_escaping.py`
 
-**AC-4:** Given der Mail-Posteingang / When eine automatisch erzeugte Mail (Auto-Submitted ungleich `no`, Precedence bulk/junk/auto_reply/list, X-Autoreply, X-Auto-Response-Suppress) oder eine Mail von einer System-Adresse (Absender-, Eingangs-, Postfachadresse) eintrifft / Then wird sie ohne Antwort als gelesen markiert; jede ausgehende Mail trägt `Auto-Submitted: auto-generated`; Fehlerantworten per Mail gehen je Nutzer höchstens fünfmal pro Stunde raus, Erfolgsantworten ungedrosselt.
+**AC-4:** Given der Mail-Posteingang / When eine automatisch erzeugte Mail (Auto-Submitted ungleich `no`, Precedence bulk/junk/auto_reply/list, X-Autoreply) oder eine Mail von einer System-Adresse (Absender-, Eingangs-, Postfachadresse) eintrifft / Then wird sie ohne Antwort als gelesen markiert; eine Mail mit `X-Auto-Response-Suppress` wird als Befehl ausgeführt und bei Erfolg beantwortet, bekommt aber keine Fehlerantwort; jede ausgehende Mail trägt `Auto-Submitted: auto-generated`; Fehlerantworten per Mail gehen je Nutzer höchstens fünfmal pro Stunde raus, Erfolgsantworten ungedrosselt.
 - Test: `tests/tdd/test_mail_schleifenschutz.py`, `tests/tdd/test_bug_inbound_email_loop.py`
 
 **AC-5:** Given eine Ausnahme ohne Fehlercode, ein fehlgeschlagener Kanaltest oder eine unlesbare GPX-Datei / When der Core dem Client antwortet / Then enthält die Antwort einen Katalogtext in der Sprache des Nutzers ohne Pfade, Hostnamen oder Konfigurationsnamen, und die Details stehen im Log.
@@ -119,7 +125,7 @@ bewusst keine Anleitung zu den behobenen Schwächen.
 - Test: `tests/tdd/test_gpx_upload_grenzen.py`
 
 **AC-7:** Given ein Ort mit Bergfex-Kurzname, ein Settings-Objekt mit Geheimnissen bzw. ein Nutzer ohne lesbares Profil / When Schneedaten abgerufen, die Settings protokolliert bzw. die Nutzer-Settings gebildet werden / Then werden Kurznamen außerhalb `[a-z0-9-]+` abgelehnt und Weiterleitungen nicht verfolgt, erscheint kein Geheimnis im Klartext und gibt es keinen Mail-Empfänger (kein Rückfall auf die globale Adresse).
-- Test: `tests/tdd/test_eingaben_streng_geprueft.py`
+- Test: `tests/tdd/test_eingaben_streng_geprueft.py`, `tests/unit/test_entity_id_pattern_parity.py` (geteilte Wahrheitstabelle, u. a. Steuerzeichen, `?`, `#`, `%` ungültig)
 
 **AC-8:** Given ein Telegram-Chat ohne zugeordnetes Konto / When er mehrfach schreibt bzw. die Sende-Drossel für ihn voll ist / Then erhält er höchstens einen Registrierungshinweis pro Stunde, die Merktabelle bleibt beschränkt, und der Webhook-Worker wartet nie in der Drossel.
 - Test: `tests/tdd/test_telegram_unbekannte_chats.py`
@@ -135,12 +141,13 @@ bewusst keine Anleitung zu den behobenen Schwächen.
 - Die Host-Prüfung setzt voraus, dass `GZ_PYTHON_CORE_URL` in Prod/Staging einen
   der erlaubten Namen trägt (Standard `http://localhost:8000`); sonst muss der
   Name in `GZ_CORE_ALLOWED_HOSTS` stehen.
-- `fullmatch` ändert für das heutige Kennungsmuster nichts Messbares (die
-  Zeichenklasse lässt Zeilenumbrüche weiterhin zu); eine Verschärfung des
-  Musters muss mit der Go-Seite (`store.ValidEntityID`, geteilte
-  Wahrheitstabelle) gemeinsam erfolgen.
-- `X-Auto-Response-Suppress` wird als Automatik-Merkmal gewertet; sollte ein
-  Mailprogramm den Kopf auch bei Handantworten setzen, würde die Mail verworfen.
+- Kennungsmuster: Python `VALID_ENTITY_ID_RE` und Go `store.ValidEntityIDRe`
+  sperren gleichlautend zusätzlich Steuerzeichen (`\x00`–`\x1f`, `\x7f`) sowie
+  `?`, `#`, `%`; Leerzeichen bleiben erlaubt. Die geteilte Wahrheitstabelle
+  `tests/fixtures/entity_id_pattern_parity/faelle.json` enthält diese Fälle; der
+  Go-Paritätstest besteht sie erst zusammen mit dem verschärften Go-Muster.
+- Loopback-Ausnahme der TLS-Prüfung gilt nur für wörtliche Loopback-Hosts; ein
+  Name, der erst per DNS auf 127.0.0.1 zeigt, wird streng geprüft.
 - Die Telegram-Hinweistabelle ist prozesslokal; nach einem Neustart darf ein
   unbekannter Chat einmal erneut einen Hinweis bekommen.
 - Nicht Teil dieser Spec (Welle 2): Abruf-Kontingent interaktiver Routen,

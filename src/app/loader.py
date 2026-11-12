@@ -1318,7 +1318,10 @@ VALID_USER_ID_RE = re.compile(r"^[a-zA-Z0-9_-]+$")
 # ``pollença``) und muessen erreichbar bleiben. Erstes Zeichen weder "." noch
 # Trenner noch NUL (deckt "", ".", "..", ".hidden" ab), alle weiteren Zeichen
 # kein Trenner und kein NUL.
-VALID_ENTITY_ID_RE = re.compile(r"^[^./\\\x00][^/\\\x00]*$")
+# Issue #2961 (Paritaet zu Go store.ValidEntityIDRe): zusaetzlich gesperrt
+# sind Steuerzeichen (\x00-\x1f, \x7f) sowie "?", "#", "%" -- sie haetten in
+# URL-Pfaden oder Dateinamen eine Sonderbedeutung. Leerzeichen bleiben erlaubt.
+VALID_ENTITY_ID_RE = re.compile(r"^[^./\\\x00-\x1f\x7f?#%][^/\\\x00-\x1f\x7f?#%]*$")
 
 
 class InvalidUserIdError(ValueError):
