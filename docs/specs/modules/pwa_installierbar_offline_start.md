@@ -200,6 +200,13 @@ Bedingungsloses Räumen beim Betreten der Anmeldeseite ist ausdrücklich **nicht
 landet auch, wessen Sitzung abgelaufen ist oder wer die Seite schlicht aufruft — das würde die
 Offline-Fähigkeit genau dann zerstören, wenn sie gebraucht wird.
 
+**Nachtrag 2026-11-12 (#2961):** Das Merkmal in der Adresse (`?abgemeldet=1`) zählt nur noch,
+wenn die Go-API keine gültige Sitzung mehr bestätigt (load-Funktion der Anmeldeseite) — ein
+fremder Verweis leert den Speicher eines Angemeldeten nicht. Der Abmelde-Merker im
+Sitzungsspeicher des Tabs gilt unverändert. Unabhängig davon löscht ein **echtes 401** der Go-API
+in `lib/api.ts` die Inhaltsspeicher (`gz-daten-*`); Programm-Speicher und Worker bleiben — AC-12
+gilt für sie weiter. Spec `security_haertung_2026_11_frontend.md` AC-11/AC-12.
+
 ### Betroffene Dateien (Ist-Stand nach Lieferung)
 
 Die Zahl unter „Estimated Scope" war eine Schätzung vor der Arbeit; das hier ist die gemessene
@@ -440,3 +447,5 @@ Liste. Ergänzt wurde alles, was tatsächlich mitgeändert wurde und in der Sch�
 - 2026-09-06: Ist-Stand nachgezogen (Befunde aus `/60-validate`): Python-Anteil präzisiert
   (`tests/test_pwa_maskable_icon.py` ist ein Prüfmittel, kein Anwendungscode), Schriften auf zwei
   variable Dateien mit sieben `@font-face`-Regeln korrigiert (mit Begründung), Dateiliste ergänzt.
+- 2026-11-12: Sicherheits-Härtung (#2961) — Abmelde-Merkmal in der Adresse nur ohne gültige
+  Sitzung; echtes 401 räumt die Inhaltsspeicher (Abschnitt „Räumen beim Abmelden").
