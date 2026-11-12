@@ -200,9 +200,22 @@ def test_validate_external_injects_cookie_with_real_login():
     assert "Auth-Cookie" in result.stdout, (
         f"Auth-Cookie-Block fehlt im Prompt:\n{result.stdout}"
     )
-    assert "gz_session=" in result.stdout, (
-        f"gz_session-Wert fehlt im Prompt:\n{result.stdout}"
-    )
+    # #2961: der Cookie-Wert steht nicht im Prompt, sondern in einer 0600-Datei,
+    # deren Pfad der Prompt nennt.
+    import re
+    import shutil
+    import stat
+
+    treffer = re.search(r"in der Datei (\S+)", result.stdout)
+    assert treffer, f"Pfad der Cookie-Datei fehlt im Prompt:\n{result.stdout}"
+    datei = Path(treffer.group(1))
+    try:
+        assert datei.read_text().startswith("Cookie: gz_session=")
+        assert stat.S_IMODE(datei.stat().st_mode) == 0o600
+        wert = datei.read_text().split("gz_session=", 1)[1].strip()
+        assert wert not in result.stdout, "Cookie-Wert darf nicht im Prompt stehen"
+    finally:
+        shutil.rmtree(datei.parent, ignore_errors=True)
 
 
 # Issue #355: echter Setup-Test gegen Staging (setup-validator-user.sh legt
