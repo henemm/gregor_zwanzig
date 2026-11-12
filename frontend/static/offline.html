@@ -175,7 +175,10 @@
 			<!-- Issue #2131 AC-18: der Service Worker ersetzt diese Marke beim
 			     Ausliefern durch die Liste der vorgehaltenen Ansichten. -->
 			<!--GZ_LISTE-->
-			<button type="button" onclick="location.reload()">Erneut versuchen</button>
+			<!-- Issue #2961: kein Inline-Handler; offline.js (Programmdatei, liegt im
+			     Gerätespeicher) haengt das Neuladen an. -->
+			<button type="button" data-gz-erneut>Erneut versuchen</button>
 		</main>
+		<script src="/offline.js"></script>
 	</body>
 </html>
