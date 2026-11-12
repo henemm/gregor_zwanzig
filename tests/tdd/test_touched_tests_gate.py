@@ -666,6 +666,28 @@ def test_2503_ac3b_vorbestehender_subtest_rot_blockiert_die_elternfunktion(tmp_p
 
 
 @pytest.mark.parametrize("phase", ["phase5_tdd_red", "phase6_implement"])
+def test_2503_ac8_gescheiterte_vorzustandsmessung_in_jeder_phase(tmp_path, phase):
+    """AC-8: Gescheiterte Vorzustandsmessung ist Stoerung -> Exit 0 mit Hinweis, jede Phase."""
+    repo = _wegwerf_repo(tmp_path, KAPUTT + "# harmlose Zeile\n", GRUENER_TEST, basis=KAPUTT)
+    _phase_setzen(repo, phase)
+    gitdir = repo / ".git"
+    urspruenglich = gitdir.stat().st_mode
+    gitdir.chmod(0o500)
+    try:
+        r = _hook(repo)
+    finally:
+        gitdir.chmod(urspruenglich)
+    text = (r.stderr + r.stdout).lower()
+    assert r.returncode == 0, (
+        "Gescheiterte Vorzustandsmessung ist eine Stoerung des Gates und darf nie "
+        f"blockieren ({phase}, Exit {r.returncode})\n{r.stderr}"
+    )
+    assert "unbekannt" in text or "nicht messbar" in text, (
+        f"Gate muss sagen, dass es den Vorzustand nicht kennt ({phase}). Ausgabe: {text!r}"
+    )
+
+
+@pytest.mark.parametrize("phase", ["phase5_tdd_red", "phase6_implement"])
 def test_2503_ac8_go_uebersetzungsfehler_bleibt_stoerung(tmp_path, phase):
     """AC-8: Nicht kompilierender Go-Test ist Stoerung -> Exit 0 mit Hinweis, jede Phase."""
     _go_oder_skip()
