@@ -147,6 +147,11 @@ Reine Maße, **Light = Dark** (kein Wert im Dark-Block). Regel: Ein Maß im 4px-
 | `--g-tap-min` | 44 px | Mindest-Touch-Ziel (min-height/min-width von Knöpfen, Tap-Spalte; unsichtbare Trefferfläche des `Switch` mit `tap`, Höhe des `Aufklapper`-Kopfs — #2913 Scheibe (c)) |
 | `--g-size-2px` | 2 px | kleinste Abstände, Fokusring-Versatz |
 | `--g-size-3px` | 3 px | Ampel-Unterkante am Input (#2913 Teil 2) |
+| `--g-size-10-5px` | 10.5 px | Grenzzahlen der Ampel-Leiste (#2913 Fix Metrik-Liste) |
+| `--g-size-11-5px` | 11.5 px | Schrift der kompakten Segmented-Variante („Alarm ab“) |
+| `--g-size-130px` | 130 px | Spalten-Mindestbreite Metrik-Name (Mockup `.mr`) |
+| `--g-size-160px` | 160 px | Mindestbreite Mittelspalte (Ampel-Leiste + Erklärung) |
+| `--g-size-190px` | 190 px | Spalten-Höchstbreite Metrik-Name (Mockup `.mr`) |
 | `--g-size-5px` | 5 px | Radius halbhoher Balken (Ampel-Leiste) |
 | `--g-size-6px` | 6 px | enge Abstände/Polster |
 | `--g-size-10px` | 10 px | Abstände/Polster, Balkenhöhe |

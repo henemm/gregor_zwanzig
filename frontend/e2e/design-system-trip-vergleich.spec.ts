@@ -1253,7 +1253,13 @@ async function messeTippflaechen(ziel: Locator, seite: string, mindestens: numbe
 	const boxen = await ziel.evaluateAll((els) =>
 		els.map((el, i) => {
 			const r = el.getBoundingClientRect();
-			return { name: el.getAttribute('data-testid') ?? `#${i}`, breite: r.width, hoehe: r.height };
+			// #2913: kompakte Knöpfe (data-tap) sind sichtbar kleiner; ihre Trefferfläche ist ein
+			// unsichtbares, absolut positioniertes ::before (app.css). Gemessen wird die wirksame Fläche.
+			const vor = getComputedStyle(el, '::before');
+			const mitVor = vor.content !== 'none' && vor.position === 'absolute';
+			const breite = mitVor ? Math.max(r.width, parseFloat(vor.width) || 0) : r.width;
+			const hoehe = mitVor ? Math.max(r.height, parseFloat(vor.height) || 0) : r.height;
+			return { name: el.getAttribute('data-testid') ?? `#${i}`, breite, hoehe };
 		})
 	);
 	if (boxen.length < mindestens) fehler.push(`${seite}: ${boxen.length} statt mindestens ${mindestens} Tippflächen gefunden`);

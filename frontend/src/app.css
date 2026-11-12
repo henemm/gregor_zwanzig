@@ -204,6 +204,12 @@
     --g-size-0-1em:     0.1em;
     /* #2913 Teil 2 (K-4): Stärke der Ampel-Unterkante am Input (Mockup .lr/.lo/.ly). */
     --g-size-3px:       3px;
+    /* #2913 Fix Metrik-Liste (Mockup Fassung 3 `.mr`, `.ticks`, `.seg`): Zeilenraster und Kleinschrift. */
+    --g-size-10-5px:    10.5px;
+    --g-size-11-5px:    11.5px;
+    --g-size-130px:     130px;
+    --g-size-160px:     160px;
+    --g-size-190px:     190px;
 
     /* #2913 Teil 2 (AC-11, K-3): Ampelfarben des Wetter-Reiters (Mockup Fassung 3). Grafische
        Elemente, je >= 3:1 gegen --g-card. Gelb ist gegenüber dem Mockup (#d69500, nur 2,6:1 auf Weiß)
@@ -741,6 +747,50 @@
   [data-slot="segmented"][data-size="md"] [data-slot="segmented-item"] {
     padding: 4px 12px;
     font-size: var(--g-text-sm);
+  }
+
+  /* === #2913 Fix Metrik-Liste (AC-7/AC-8): Variante „kompakt“ (Mockup .seg, Z. 76–78) ===
+     NUR unter data-variant="kompakt" — der Standard oben (CompareTabs, MTabBar, HorizonChip,
+     VersandTab …) bleibt unverändert. Sichtbar ca. 23 px hoch, aktives Segment hell mit Ring;
+     Trefferfläche je Segment ≥ --g-tap-min unsichtbar per ::before (wie Btn data-tap). */
+  [data-slot="segmented"][data-variant="kompakt"] {
+    flex-wrap: wrap;
+    gap: var(--g-size-2px);
+    padding: var(--g-size-2px);
+    overflow: visible;
+    background: var(--g-card-alt);
+    border: 1px solid var(--g-rule-soft);
+    border-radius: var(--g-s-1);
+  }
+  [data-slot="segmented"][data-variant="kompakt"] [data-slot="segmented-item"] {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: var(--g-size-5px);
+    padding: var(--g-s-1) var(--g-size-10px);
+    border: none;
+    border-radius: var(--g-size-3px);
+    font-weight: 600;
+    font-size: var(--g-size-11-5px);
+    line-height: normal;
+    color: var(--g-ink-3);
+  }
+  [data-slot="segmented"][data-variant="kompakt"] [data-slot="segmented-item"]::before {
+    content: "";
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: max(100%, var(--g-tap-min));
+    height: max(100%, var(--g-tap-min));
+    transform: translate(-50%, -50%);
+  }
+  [data-slot="segmented"][data-variant="kompakt"] [data-slot="segmented-item"][data-active="true"] {
+    background: var(--g-paper);
+    color: var(--g-accent-deep);
+    box-shadow: 0 0 0 1px var(--g-rule);
+  }
+  [data-slot="segmented"][data-variant="kompakt"] [data-slot="segmented-punkt"] {
+    margin-right: 0;
   }
 
   /* === #2913 Teil 2 (AC-13): Farbpunkt je Segment (Mockup .seg .d, 8px rund) === */
