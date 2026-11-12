@@ -5,6 +5,7 @@ import { mitAngebotMarker } from '$lib/passkeyAngebot.js';
 import { SESSION_MAX_AGE_SECONDS } from '$lib/auth.js';
 import type { Actions, PageServerLoad } from './$types.js';
 import { apiBase as API } from '$lib/server/apiBase.js';
+import { cookieSicher } from '$lib/server/cookieSicherheit.js';
 
 
 export const load: PageServerLoad = async () => {
@@ -60,7 +61,7 @@ export const actions = {
 					path: '/',
 					httpOnly: true,
 					sameSite: 'lax',
-					secure: env.NODE_ENV === 'production',
+					secure: cookieSicher(env.NODE_ENV, url),
 					maxAge: SESSION_MAX_AGE_SECONDS,
 				});
 			}
@@ -71,7 +72,7 @@ export const actions = {
 					path: '/',
 					maxAge: 31536000,
 					sameSite: 'lax',
-					secure: env.NODE_ENV === 'production',
+					secure: cookieSicher(env.NODE_ENV, url),
 					httpOnly: false,
 				});
 			}
