@@ -1,0 +1,146 @@
+// E2E (Staging) — Issue #2794 S3a, Teil-PR 4b: Listen-Sprünge, Menü-Wortlaut, Übersicht U3/U4, Englisch.
+// Spec: docs/specs/modules/feat_2794_s3a_teil4_entfernen.md — AC-32, AC-33, AC-34, AC-48
+// Nur gegen Staging (/e2e-verify), nie gegen Produktion. Daten nur Wegwerf (Präfix E2E-GZ-).
+//
+//   cd frontend && npx playwright test --config playwright.2794-s3a4b.staging.config.ts
+
+import { test, expect, type Page } from '@playwright/test';
+import { cleanupTracked, createTestTrip, seedHub } from './helpers';
+
+const HANDY = { width: 390, height: 844 };
+const DESKTOP = { width: 1280, height: 900 };
+
+test.afterEach(async ({ page }) => {
+	await cleanupTracked(page.request);
+});
+
+async function aktiverTrip(page: Page): Promise<string> {
+	const heute = new Date().toISOString().slice(0, 10);
+	const tripId = `e2e-gz-trip-${Date.now()}-${Math.floor(Math.random() * 1e6)}`;
+	const { id } = await createTestTrip(page.request, {
+		id: tripId,
+		stages: [
+			{
+				id: `${tripId}-s1`,
+				name: 'Etappe 1',
+				date: heute,
+				waypoints: [{ id: `${tripId}-w1`, name: 'Start', lat: 42.1, lon: 9.0, elevation_m: 500 }]
+			}
+		]
+	});
+	return id;
+}
+
+type Ziel = { aktion: 'weather' | 'alarms'; label: string; tab: 'wetter' | 'zustellung' };
+const ZIELE_DE: Ziel[] = [
+	{ aktion: 'weather', label: 'Wetter', tab: 'wetter' },
+	{ aktion: 'alarms', label: 'Alarme', tab: 'zustellung' }
+];
+
+/** Öffnet das Listen-Menü und liefert den Menüeintrag (Handy: Aktionsblatt, Desktop: Zeilen-Kebab). */
+async function eintragImMenue(page: Page, kind: 'trip' | 'compare', id: string, ansicht: 'handy' | 'desktop', z: Ziel) {
+	if (ansicht === 'handy') {
+		await page.getByTestId(`subscription-card-menu-${id}`).click();
+		return page.getByTestId(`subscription-action-${z.aktion}`).locator('visible=true').first();
+	}
+	const zeile = page.getByTestId(kind === 'trip' ? `trip-row-${id}` : `compare-tile-${id}`).locator('visible=true').first();
+	await zeile.getByTestId(kind === 'trip' ? 'trip-row-menu-btn' : 'compare-row-kebab').click();
+	const menue = page.getByRole('menu');
+	await expect(menue).not.toContainText('Wetter-Metriken');
+	return menue.getByRole('menuitem', { name: z.label, exact: true });
+}
+
+for (const ansicht of ['handy', 'desktop'] as const) {
+	for (const z of ZIELE_DE) {
+		test(`AC-33/AC-48 Trip-Liste (${ansicht}): „${z.label}" führt in den Reiter ${z.tab}`, async ({ page }) => {
+			const id = await aktiverTrip(page);
+			await page.setViewportSize(ansicht === 'handy' ? HANDY : DESKTOP);
+			await page.goto('/trips');
+			const eintrag = await eintragImMenue(page, 'trip', id, ansicht, z);
+			await expect(eintrag).toContainText(z.label);
+			await eintrag.click();
+			await expect(page).toHaveURL(new RegExp(`/trips/${id}\\?tab=${z.tab}`), { timeout: 15_000 });
+			await expect(page.locator(`[data-testid="trip-detail-panel-${z.tab}"]:visible`).first()).toBeVisible({ timeout: 15_000 });
+		});
+
+		test(`AC-33/AC-48 Orts-Liste (${ansicht}): „${z.label}" führt in den Reiter ${z.tab}`, async ({ page }) => {
+			const hub = await seedHub(page.request, 'vergleich');
+			try {
+				await page.setViewportSize(ansicht === 'handy' ? HANDY : DESKTOP);
+				await page.goto('/compare');
+				const eintrag = await eintragImMenue(page, 'compare', hub.id, ansicht, z);
+				await expect(eintrag).toContainText(z.label);
+				await eintrag.click();
+				await expect(page).toHaveURL(new RegExp(`/compare/${hub.id}\\?tab=${z.tab}`), { timeout: 15_000 });
+				await expect(page.locator(`[data-testid="compare-detail-panel-${z.tab}"]:visible`).first()).toBeVisible({ timeout: 15_000 });
+			} finally {
+				await hub.aufraeumen();
+			}
+		});
+	}
+}
+
+test('AC-32 U3: Übersicht Orts-Briefing nennt „Wetter" und springt in den Reiter Wetter', async ({ page }) => {
+	const hub = await seedHub(page.request, 'vergleich');
+	try {
+		await page.setViewportSize(DESKTOP);
+		await page.goto(`/compare/${hub.id}?tab=uebersicht`);
+		const panel = page.locator('[data-testid="compare-detail-panel-uebersicht"]:visible').first();
+		await expect(panel).toBeVisible({ timeout: 15_000 });
+		await expect(panel).not.toContainText(/Wertebereiche/i);
+		const karte = panel.locator('div', { has: page.getByText('Wetter', { exact: true }) }).filter({ has: page.getByRole('button', { name: /Bearbeiten/ }) }).last();
+		await karte.getByRole('button', { name: /Bearbeiten/ }).first().click();
+		await expect(page).toHaveURL(new RegExp(`/compare/${hub.id}\\?tab=wetter`), { timeout: 15_000 });
+		await expect(page.locator('[data-testid="compare-detail-panel-wetter"]:visible').first()).toBeVisible({ timeout: 15_000 });
+	} finally {
+		await hub.aufraeumen();
+	}
+});
+
+test('AC-32 U4: Trip-Übersicht zeigt den „Alarm ab"-Zähler wie der Reiter Wetter', async ({ page }) => {
+	const id = await aktiverTrip(page);
+	await page.setViewportSize(DESKTOP);
+	await page.goto(`/trips/${id}?tab=uebersicht`);
+	const ov = page.locator('[data-testid="hub-overview"]:visible').first();
+	await expect(ov).toBeVisible({ timeout: 15_000 });
+	await expect(ov).toContainText(/\d+ von \d+ Metriken lösen einen Alarm aus|—/, { timeout: 15_000 });
+	const text = (await ov.innerText()).match(/(\d+) von (\d+) Metriken lösen einen Alarm aus/);
+	await page.goto(`/trips/${id}?tab=wetter`);
+	const zaehler = page.locator('[data-testid="wetter-alarm-zaehler"]:visible').first();
+	await expect(zaehler).toBeVisible({ timeout: 15_000 });
+	if (text) await expect(zaehler).toContainText(`${text[1]} von ${text[2]} Metriken lösen einen Alarm aus`);
+});
+
+test('AC-34/AC-48 Englisch: Menü heißt „Weather" und „Alerts", Übersicht englisch', async ({ page }) => {
+	const id = await aktiverTrip(page);
+	const res = await page.request.put('/api/auth/profile', { data: { language: 'en' } });
+	expect(res.ok(), `Sprachwechsel: ${res.status()}`).toBeTruthy();
+	try {
+		await page.setViewportSize(HANDY);
+		await page.goto('/trips');
+		await page.getByTestId(`subscription-card-menu-${id}`).click();
+		await expect(page.getByTestId('subscription-action-weather').locator('visible=true').first()).toContainText('Weather');
+		await expect(page.getByTestId('subscription-action-alarms').locator('visible=true').first()).toContainText('Alerts');
+		await page.getByTestId('subscription-action-weather').locator('visible=true').first().click();
+		await expect(page).toHaveURL(new RegExp(`/trips/${id}\\?tab=wetter`), { timeout: 15_000 });
+		await page.setViewportSize(DESKTOP);
+		await page.goto(`/trips/${id}?tab=uebersicht`);
+		const ov = page.locator('[data-testid="hub-overview"]:visible').first();
+		await expect(ov).toContainText(/\d+ of \d+ metrics trigger an alert|—/, { timeout: 15_000 });
+	} finally {
+		await page.request.put('/api/auth/profile', { data: { language: 'de' } }).catch(() => {});
+	}
+});
+
+test('AC-33 Startseite: Schnellaktionen führen in Reiter Wetter bzw. Zustellung, keine alten Reiter', async ({ page }) => {
+	await aktiverTrip(page);
+	await page.setViewportSize(DESKTOP);
+	await page.goto('/');
+	const wetter = page.locator('a[href*="?tab=wetter"]:visible').first();
+	await expect(wetter).toBeVisible({ timeout: 15_000 });
+	await expect(page.locator('a[href*="?tab=alerts"], a[href*="?tab=layout"], a[href*="?tab=wertebereiche"], a[href*="?tab=idealwerte"]')).toHaveCount(0);
+	await expect(page.locator('a[href*="?tab=zustellung"]:visible').first()).toBeVisible();
+	await wetter.click();
+	await expect(page).toHaveURL(/\?tab=wetter/, { timeout: 15_000 });
+	await expect(page.locator('[data-testid$="-panel-wetter"]:visible').first()).toBeVisible({ timeout: 15_000 });
+});
