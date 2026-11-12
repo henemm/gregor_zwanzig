@@ -3,7 +3,7 @@
 	// Geteilt fuer Trip und Orts-Briefing; Geometrie in ampelLeiste.ts.
 	import type { Ampel, AmpelMetrik } from '$lib/types';
 	import { t } from '$lib/i18n';
-	import { gewitterLeiste, leisteVon, type LeisteFarbe } from '../../shared/wetter-tab/ampelLeiste.ts';
+	import { entzerreMarken, gewitterLeiste, leisteVon, type LeisteFarbe } from '../../shared/wetter-tab/ampelLeiste.ts';
 
 	interface Props {
 		id: string;
@@ -14,6 +14,17 @@
 	let { id, eintrag, gewitter = null }: Props = $props();
 
 	const leiste = $derived(gewitter ? { segmente: gewitterLeiste(gewitter), marken: [] } : leisteVon(eintrag));
+
+	// #2913 AC-9: eng liegende Grenzzahlen (schmale Mittelspalte, z. B. 1024 px) nicht überlappen lassen.
+	// Gemessene Breiten von Leiste und Zahlen; bis gemessen ist, stehen die Zahlen in Prozent wie bisher.
+	const ABSTAND_PX = 3;
+	let breite = $state(0);
+	let zahlBreiten = $state<number[]>([]);
+	const lagen = $derived.by(() => {
+		const b = zahlBreiten.slice(0, leiste.marken.length);
+		if (breite <= 0 || b.length !== leiste.marken.length || !b.every((w) => w > 0)) return null;
+		return entzerreMarken(leiste.marken.map((m) => m.pos), b, breite, ABSTAND_PX);
+	});
 
 	// #2913 Teil 2 (AC-12): Ampelfarben aus --g-ampel-* (Light/Dark, je >= 3:1 gegen die Karte).
 	// Ohne Farbe erkennbar: feste Reihenfolge, Grenzwerte/Stufenwörter darüber; für
@@ -34,9 +45,9 @@
 			<span>&nbsp;</span><span>{$t('wetter.gewitter.mittel')}</span><span>{$t('wetter.gewitter.hoch')}</span>
 		</div>
 	{:else}
-		<div class="wt-marken" aria-hidden="true">
+		<div class="wt-marken" aria-hidden="true" bind:clientWidth={breite}>
 			{#each leiste.marken as m, i (i)}
-				<i style:left="{m.pos.toFixed(1)}%">{m.wert}</i>
+				<i bind:offsetWidth={zahlBreiten[i]} style:left={lagen ? `${lagen[i].toFixed(1)}px` : `${m.pos.toFixed(1)}%`}>{m.wert}</i>
 			{/each}
 		</div>
 	{/if}

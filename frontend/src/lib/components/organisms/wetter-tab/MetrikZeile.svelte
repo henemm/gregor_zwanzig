@@ -152,10 +152,13 @@
 		gap: var(--g-s-1);
 		min-width: 0;
 	}
+	/* AC-4: Zeilenhöhe 1,4 statt Mockup 1,5. Mit Seitenleiste ist die Karte bei 1280 nur 1012 px breit
+	   (Mockup ohne Seitenleiste 1068), die Mittelspalte daher ca. 280 statt 337 px und die Erklärung
+	   „Temperatur“ 4 statt 3 Zeilen; mit 1,4 bleibt die Zeile in der Toleranz (≤ 124 px). */
 	.wt-why {
 		margin: 0;
 		font-size: var(--g-s-3);
-		line-height: 1.45;
+		line-height: 1.4;
 		color: var(--g-ink-2);
 	}
 	/* Mockup `.why .gr`: „grün: …“ grün, Gewicht 600, Trennpunkt in der Span. Text-Token --g-ok-fg statt
@@ -169,7 +172,10 @@
 		flex-wrap: wrap;
 		align-items: center;
 		justify-content: flex-end;
-		gap: var(--g-size-10px);
+		/* AC-8: Bricht die Aktionsspalte um (1024/1100, Handy), liegen Segmente und „Grenzen ändern“
+		   untereinander. Ihre unsichtbaren 44-px-Trefferflächen (::before) dürfen sich nicht überdecken:
+		   Segment 29 + Knopf 28 sichtbar ⇒ Zeilenabstand ≥ 16 px. */
+		gap: var(--g-s-4) var(--g-size-10px);
 	}
 	@container (max-width: 700px) {
 		.wt-zeile {
