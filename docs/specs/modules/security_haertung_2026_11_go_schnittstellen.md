@@ -142,9 +142,9 @@ sichere Soll-Verhalten der Go-Schnittstellen fest (Grundsatzentscheidungen in AD
   Versandroute zusammen mehr als 20 Sofort-Versände in einer Stunde auslöst / Then erreicht der
   21. den Core nicht (429), während der zweite Nutzer weiter versenden kann.
   - Test: `TestMengenbremse_HandversandGeteilt20JeStunde`
-- **AC-13:** Given ein Nutzer / When er Wettervergleich, Etappenwetter oder Vorschauen je Route
-  mehr als 60-mal in einer Minute abruft / Then erhält er 429; das Fenster einer Route belastet
-  die andere nicht.
+- **AC-13:** Given ein Nutzer / When er den Wettervergleich, das Etappenwetter oder die
+  Vorschauen (drei Vorschau-Routen zusammen) jeweils mehr als 60-mal in einer Minute abruft /
+  Then erhält er 429; das Fenster des Vergleichs belastet die Vorschau nicht.
   - Test: `TestMengenbremse_Vergleich60JeMinute`
 - **AC-14:** Given ein Nutzer hat vier schwere Abrufe gleichzeitig laufen / When er einen fünften
   startet / Then erhält er 429 (Variante „parallel"), ein anderer Nutzer nicht, und nach dem Ende

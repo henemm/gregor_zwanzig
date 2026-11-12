@@ -315,7 +315,7 @@ nicht aktiv):
 | `POST /api/locations/resolve` | 30 je Minute | `rate_limit_exceeded_aufloesen` |
 | `POST /api/notify/test` | 10 je Stunde | `rate_limit_exceeded_testnachricht` |
 | `POST /api/briefings/{id}/send`, `POST /api/trips/{id}/send`, `POST /api/compare/presets/{id}/send` | zusammen 20 je Stunde | `rate_limit_exceeded_versand` |
-| `GET /api/compare`, `GET /api/trips/{id}/stages/weather`, `GET /api/preview/{trip_id}/sms`, `POST /api/trips/{id}/alert-preview`, `POST /api/briefings/{id}/alert-preview` | je Route 60 je Minute | `rate_limit_exceeded_abruf` |
+| `GET /api/compare`, `GET /api/trips/{id}/stages/weather`, Vorschau (`GET /api/preview/{trip_id}/sms`, `POST /api/trips/{id}/alert-preview`, `POST /api/briefings/{id}/alert-preview`) | je 60 je Minute (Vergleich, Etappenwetter und die drei Vorschau-Routen zusammen je ein Fenster) | `rate_limit_exceeded_abruf` |
 | dieselben fünf Routen | gemeinsam höchstens 4 gleichzeitig | `rate_limit_exceeded_parallel` (`Retry-After: 1`) |
 | `POST /api/gpx/parse` | 30 je Stunde | `rate_limit_exceeded_gpx` |
 
