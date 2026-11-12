@@ -20,13 +20,13 @@ Issue: #2502 · Refs #1196 · Refs #2947 (Umfangserweiterung 2026-11-12)
 - Keine weitere Produktdatei außer den oben genannten.
 
 ## Acceptance Criteria
-**AC-1:** Given ein Lauf der Suite `issue-675-stage-start-time` gegen Staging, in dem mindestens ein Testfall rot endet, When der Lauf vorbei ist, Then existiert der Trip `e2e-675-starttime` im Konto des Test-Nutzers nicht mehr (`GET /api/trips/e2e-675-starttime` → 404).
+- **AC-1:** Given ein Lauf der Suite `issue-675-stage-start-time` gegen Staging, in dem mindestens ein Testfall rot endet, When der Lauf vorbei ist, Then existiert der Trip `e2e-675-starttime` im Konto des Test-Nutzers nicht mehr (`GET /api/trips/e2e-675-starttime` → 404).
 
-**AC-2:** Given ein vollständig grüner Lauf derselben Suite gegen Staging, When der Lauf vorbei ist, Then existiert der Trip `e2e-675-starttime` ebenfalls nicht mehr und alle vier Testfälle sind grün.
+- **AC-2:** Given ein vollständig grüner Lauf derselben Suite gegen Staging, When der Lauf vorbei ist, Then existiert der Trip `e2e-675-starttime` ebenfalls nicht mehr und alle vier Testfälle sind grün.
 
-**AC-3:** Given eine Etappe mit Startzeit 15:00 im Etappen-Editor, When der Nutzer im Stunden-Segment zweimal die Rücktaste drückt und das Feld verlässt, Then wird keine Startzeit 01:00 gespeichert, und die Ankunftszeit des ersten Wegpunkts zeigt 08:00.
+- **AC-3:** Given eine Etappe mit Startzeit 15:00 im Etappen-Editor, When der Nutzer im Stunden-Segment zweimal die Rücktaste drückt und das Feld verlässt, Then wird keine Startzeit 01:00 gespeichert, und die Ankunftszeit des ersten Wegpunkts zeigt 08:00.
 
-**AC-4:** Given das Uhrzeitfeld mit Wert 07:30 (Design-System-Seite), When der Nutzer es wie bisher leert, Then verhält es sich unverändert (Test DS-2 bleibt grün), und eine normal getippte Uhrzeit wird weiterhin unverändert übernommen.
+- **AC-4:** Given das Uhrzeitfeld mit Wert 07:30 (Design-System-Seite), When der Nutzer es wie bisher leert, Then verhält es sich unverändert (Test DS-2 bleibt grün), und eine normal getippte Uhrzeit wird weiterhin unverändert übernommen.
 
 ## Manuelle Test-Schritte
 1. Suite per `playwright.675.config.ts` gegen Staging (nach Deploy der Korrektur) laufen lassen: vier Fälle grün; danach `GET /api/trips/e2e-675-starttime` als Test-Nutzer → 404.

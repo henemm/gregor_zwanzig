@@ -1,7 +1,7 @@
 ---
 spec_file: docs/specs/fast/fix-2502-e2e-675-teardown.md
-spec_sha256: 8abd3a914c31f7398252d7b0f1cdb970da1b7d8cb5c5be4e06ca2ed81a21e525
-spec_frozen_sha256: fcb22ca3eb3ceb53acf7ec89caaba029ab010d01cb5937890c6c963436f903ca
+spec_sha256: 1ffddaf01e6af1b2ad3f150cb6d56033182ffcc94532badfc39e15486e41c1f2
+spec_frozen_sha256: f7fc438700de5070068da160fe7fa07641a0395882b1ea1f7617f5ee529d6dcb
 ---
 
 # PO-Briefing: fix-2502-e2e-675-teardown
@@ -20,7 +20,7 @@ Nach grünem wie rotem Testlauf auf Staging ist der Test-Trip weg, und das Leere
 
 ## Wie geprüft wird
 
-Automatische Tests prüfen Aufräumen und Leeren-Verhalten; die Gegenprobe mit absichtlich rotem Lauf geschieht nur manuell.
+Ein Komponententest und der Staging-Lauf prüfen Leeren und Aufräumen; der Aufräum-Nachweis nach rotem Lauf erfolgt nur manuell.
 
 ## Kritische Anmerkungen
 
