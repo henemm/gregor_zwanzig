@@ -739,3 +739,230 @@ def test_2503_ac7b_neuer_roter_frontend_test_ausserhalb_red_blockiert(tmp_path):
     assert r.returncode == 2 and NUR_RED in r.stderr.lower(), (
         f"Ausserhalb Phase RED muss blockiert werden (Exit {r.returncode})\n{r.stderr}"
     )
+
+
+# --- Adversary-Runde 1 (#2503) ---------------------------------------------
+
+FE_KOPF = (
+    "import { test, describe } from 'node:test';\n"
+    "import assert from 'node:assert/strict';\n"
+    "import { verdopple } from './rechner.ts';\n"
+)
+FE_QUELLE_HEIL = "export function verdopple(x: number): number { return x * 2; }\n"
+FE_QUELLE_KAPUTT = "export function verdopple(x: number): number { return x * 3; }\n"
+FE_DESCRIBE_ALT = FE_KOPF + (
+    "describe('rechner', () => {\n"
+    "  test('verdopple alt', () => { assert.equal(verdopple(2), 4); });\n"
+    "});\n"
+)
+FE_DESCRIBE_NEU = FE_KOPF + (
+    "describe('rechner', () => {\n"
+    "  test('verdopple alt', () => { assert.equal(verdopple(2), 4); });\n"
+    "  test('verdopple neu im describe', () => { assert.equal(verdopple(2), 5); });\n"
+    "});\n"
+)
+
+
+def _frontend_repo_mit(tmp_path: Path, test_alt: str, test_neu: str,
+                       quelle_neu: str) -> Path:
+    """Frontend-Wegwerf-Repo mit frei waehlbarem Test- und Quell-Stand (gestagt)."""
+    if not shutil.which("node"):
+        pytest.skip("node nicht vorhanden — Frontend-Faelle von #2503 UNGEPRUEFT")
+    repo = tmp_path / "repo"
+    lib = repo / "frontend" / "src" / "lib"
+    lib.mkdir(parents=True)
+    (repo / "frontend" / "package.json").write_text('{"type":"module"}\n')
+    (repo / "frontend" / "test-lib-loader.mjs").write_text("// leer\n")
+    (repo / ".gitignore").write_text("node_modules/\n")
+    (repo / "frontend" / "node_modules").mkdir()
+    (repo / "frontend" / "node_modules" / ".platzhalter").write_text("x\n")
+    (lib / "rechner.ts").write_text(FE_QUELLE_HEIL)
+    (lib / "rechner.test.ts").write_text(test_alt)
+    _repo_init(repo)
+    (lib / "rechner.ts").write_text(quelle_neu)
+    (lib / "rechner.test.ts").write_text(test_neu)
+    _git(repo, "add", "-A")
+    return repo
+
+
+def test_2503_f001_neuer_roter_test_im_describe_in_phase_red_laesst_durch(tmp_path):
+    """F001: Neuer roter test() in BESTEHENDEM describe -> Exit 0 in Phase RED.
+
+    Die Eltern-Suite (`not ok 1 - rechner`) lief schon im Vorzustand und ist jetzt rot —
+    entschuldigt nur, weil ihr einziger roter Kind-Test neu angelegt ist (Elternregel).
+    """
+    repo = _frontend_repo_mit(tmp_path, FE_DESCRIBE_ALT, FE_DESCRIBE_NEU,
+                              FE_QUELLE_HEIL + "// Aenderung\n")
+    _phase_setzen(repo, "phase5_tdd_red")
+    r = _hook(repo)
+    assert r.returncode == 0, (
+        f"Neuer roter Test im bestehenden describe muss in Phase RED durch (Exit "
+        f"{r.returncode})\n{r.stderr}"
+    )
+    assert "verdopple neu im describe" in r.stderr and NEU_ANGELEGT in r.stderr.lower(), r.stderr
+
+
+def test_2503_f001b_bestehender_test_im_describe_wird_rot_blockiert(tmp_path):
+    """F001 Gegenprobe: vorher gruener test() im describe wird rot -> Exit 2, auch in RED."""
+    repo = _frontend_repo_mit(tmp_path, FE_DESCRIBE_ALT, FE_DESCRIBE_NEU, FE_QUELLE_KAPUTT)
+    _phase_setzen(repo, "phase5_tdd_red")
+    r = _hook(repo)
+    assert r.returncode == 2 and "verdopple alt" in r.stderr, (
+        "Ein vorher gruener Test im describe, der jetzt rot ist, MUSS blockieren "
+        f"(Exit {r.returncode})\n{r.stderr}"
+    )
+    assert "macht tests rot" in r.stderr.lower(), r.stderr
+
+
+def test_2503_f003_flacher_frontend_test_aus_gruen_wird_rot_blockiert(tmp_path):
+    """F003: flacher, vorher gruener Frontend-Test wird rot, Phase RED -> Exit 2.
+
+    Bewacht die Mutation „Frontend-gelaufen-Menge leer" (dann gaelte alles als neu).
+    """
+    repo = _frontend_repo_mit(tmp_path, FE_TEST_ALT, FE_TEST_ALT, FE_QUELLE_KAPUTT)
+    _phase_setzen(repo, "phase5_tdd_red")
+    r = _hook(repo)
+    assert r.returncode == 2 and "verdopple alt" in r.stderr, (
+        f"Aus gruen wird rot muss auch im Frontend blockieren (Exit {r.returncode})\n"
+        + r.stderr
+    )
+
+
+def test_2503_f004_node_modules_bleibt_und_kein_abzug_bleibt_zurueck(tmp_path):
+    """F004: Der Verweis im Abzug darf das echte node_modules nicht anfassen."""
+    repo = _frontend_repo_mit(tmp_path, FE_DESCRIBE_ALT, FE_DESCRIBE_NEU, FE_QUELLE_KAPUTT)
+    _phase_setzen(repo, "phase5_tdd_red")
+    _hook(repo)
+    assert (repo / "frontend" / "node_modules" / ".platzhalter").exists(), (
+        "node_modules des Arbeitsstands wurde beim Aufraeumen beschaedigt")
+    liste = subprocess.run(["git", "-C", str(repo), "worktree", "list"],
+                           capture_output=True, text=True).stdout.strip().splitlines()
+    assert len(liste) == 1, f"Mess-Abzug blieb registriert:\n{liste}"
+
+
+def test_2503_f002_elternfunktion_mit_altem_rotem_subtest_wird_genannt(tmp_path):
+    """F002: Elternregel bewacht — alter Subtest rot + neuer roter Subtest, Phase RED.
+
+    Die Elternfunktion `TestA` darf NICHT entschuldigt werden: Sie muss selbst als
+    blockierender Fehlschlag in der Meldung stehen (faengt „Eltern immer entschuldigt").
+    """
+    _go_oder_skip()
+    repo = _go_repo(tmp_path, GO_SUBTEST_BASIS, GO_SUBTEST_NEU,
+                    quelle_neu="package rechner\n\nfunc Verdopple(x int) int { return x * 3 }\n")
+    _phase_setzen(repo, "phase5_tdd_red")
+    r = _hook(repo)
+    blockiert = [z.strip() for z in r.stderr.split("Einzeln nachstellen")[0].splitlines()]
+    assert r.returncode == 2 and "TestA" in blockiert, (
+        "Die Elternfunktion mit vorbestehendem, jetzt rotem Subtest muss als blockierender "
+        f"Fehlschlag genannt werden (Exit {r.returncode})\n{r.stderr}"
+    )
+
+
+def test_2503_python_sammelfehler_bestehender_datei_blockiert_auch_in_red(tmp_path):
+    """Ein Importfehler einer BESTEHENDEN Testdatei (`ERROR <datei>`) ist keine neu
+    angelegte Kennung — die Datei lief im Vorzustand. Auch in Phase RED -> Exit 2.
+    """
+    repo = _wegwerf_repo(tmp_path, HEIL, GRUENER_TEST)
+    _git(repo, "mv", "src/rechner.py", "src/rechenwerk.py")
+    (repo / "src" / "rechenwerk.py").write_text(KAPUTT)
+    _git(repo, "add", "-A")
+    _phase_setzen(repo, "phase5_tdd_red")
+    r = _hook(repo)
+    assert r.returncode == 2 and "test_rechner" in r.stderr, (
+        "Ein Sammelfehler einer bestehenden Testdatei darf in Phase RED nicht als 'neu "
+        f"angelegt' durchgehen (Exit {r.returncode})\n{r.stderr}"
+    )
+
+
+# --- Adversary-Runde 2 (#2503) ---------------------------------------------
+
+FE_ZWEI_EBENEN_ALT = FE_KOPF + (
+    "describe('aussen', () => {\n"
+    "  describe('innen', () => {\n"
+    "    test('verdopple alt', () => { assert.equal(verdopple(2), 4); });\n"
+    "  });\n"
+    "});\n"
+)
+FE_ZWEI_EBENEN_NEU = FE_KOPF + (
+    "describe('aussen', () => {\n"
+    "  describe('innen', () => {\n"
+    "    test('verdopple alt', () => { assert.equal(verdopple(2), 4); });\n"
+    "    test('verdopple neu tief', () => { assert.equal(verdopple(2), 5); });\n"
+    "  });\n"
+    "});\n"
+)
+
+
+def test_2503_f006_neuer_roter_test_zwei_ebenen_tief_in_phase_red_laesst_durch(tmp_path):
+    """F006: `aussen > innen > neu` neu und rot, `aussen > innen` bestand schon.
+
+    Die Zwischenebene ist alt — darf die Wurzel aber nicht zu neu_rot machen: Fuer die
+    Elternregel zaehlen nur die roten BLAETTER.
+    """
+    repo = _frontend_repo_mit(tmp_path, FE_ZWEI_EBENEN_ALT, FE_ZWEI_EBENEN_NEU,
+                              FE_QUELLE_HEIL + "// Aenderung\n")
+    _phase_setzen(repo, "phase5_tdd_red")
+    r = _hook(repo)
+    assert r.returncode == 0, (
+        f"Neuer roter Test zwei Ebenen tief muss in Phase RED durch (Exit "
+        f"{r.returncode})\n{r.stderr}"
+    )
+    assert "verdopple neu tief" in r.stderr and NEU_ANGELEGT in r.stderr.lower(), r.stderr
+
+
+def test_2503_f006b_altes_blatt_zwei_ebenen_tief_wird_rot_blockiert(tmp_path):
+    """F006 Gegenprobe: das alte Blatt zwei Ebenen tief wird rot -> Exit 2, Wurzel genannt."""
+    repo = _frontend_repo_mit(tmp_path, FE_ZWEI_EBENEN_ALT, FE_ZWEI_EBENEN_NEU,
+                              FE_QUELLE_KAPUTT)
+    _phase_setzen(repo, "phase5_tdd_red")
+    r = _hook(repo)
+    blockiert = [z.strip() for z in r.stderr.split("Einzeln nachstellen")[0].splitlines()]
+    assert r.returncode == 2 and "aussen" in blockiert, (
+        f"Altes, jetzt rotes Blatt muss blockieren und die Wurzel nennen (Exit "
+        f"{r.returncode})\n{r.stderr}"
+    )
+
+
+GO_ZWEI_EBENEN_BASIS = GO_TEST_KOPF + (
+    "func TestA(t *testing.T) {\n"
+    '\tt.Run("sub", func(t *testing.T) {\n'
+    '\t\tt.Run("alt", func(t *testing.T) { if Verdopple(2) != 4 { t.Fatal("alt") } })\n'
+    "\t})\n}\n"
+)
+GO_ZWEI_EBENEN_NEU = GO_TEST_KOPF + (
+    "func TestA(t *testing.T) {\n"
+    '\tt.Run("sub", func(t *testing.T) {\n'
+    '\t\tt.Run("alt", func(t *testing.T) { if Verdopple(2) != 4 { t.Fatal("alt") } })\n'
+    '\t\tt.Run("neu", func(t *testing.T) { if Verdopple(2) != 5 { t.Fatal("neu") } })\n'
+    "\t})\n}\n"
+)
+
+
+def test_2503_f006_go_neuer_subtest_zwei_ebenen_tief_in_phase_red_laesst_durch(tmp_path):
+    """F006 (Go): `TestA/sub/neu` neu und rot, `TestA/sub` bestand schon -> Exit 0."""
+    _go_oder_skip()
+    repo = _go_repo(tmp_path, GO_ZWEI_EBENEN_BASIS, GO_ZWEI_EBENEN_NEU)
+    _phase_setzen(repo, "phase5_tdd_red")
+    r = _hook(repo)
+    assert r.returncode == 0 and "TestA/sub/neu" in r.stderr, (
+        f"Neuer Subtest zwei Ebenen tief muss in Phase RED durch (Exit {r.returncode})\n"
+        + r.stderr
+    )
+
+
+def test_2503_f007_bestehende_frontend_datei_bricht_beim_import_blockiert(tmp_path):
+    """F007-Umfeld: Eine BESTEHENDE Testdatei wirft beim Laden.
+
+    node meldet dann `not ok 1 - <dateipfad>` — dieser Name lief im Vorzustand nie als
+    Einzeltest. Ohne Gegenmassnahme gaelte die kaputte Datei in Phase RED als „neu
+    angelegt" und ginge durch.
+    """
+    repo = _frontend_repo_mit(tmp_path, FE_TEST_ALT,
+                              "throw new Error('kaputt beim Laden');\n" + FE_TEST_ALT,
+                              FE_QUELLE_HEIL + "// Aenderung\n")
+    _phase_setzen(repo, "phase5_tdd_red")
+    r = _hook(repo)
+    assert r.returncode == 2, (
+        "Eine bestehende Testdatei, die nicht mehr laedt, darf in Phase RED nicht als "
+        f"'neu angelegt' durchgehen (Exit {r.returncode})\n{r.stderr}"
+    )

@@ -81,7 +81,7 @@ def _schicht(pfad: str) -> str | None:
 
 
 def _vorzustand_messen(wurzel: Path, schicht: str, ziele: list[str],
-                       laeufer) -> tuple[set[str], str | None]:
+                       laeufer) -> tuple[set[str], set[str], str | None]:
     """Welche dieser Tests waren schon VOR der Aenderung rot? (gemessen, nicht geglaubt)
 
     🔴 **Warum es hier keine gepflegte Liste gibt** (Adversary F001/F001b, beide CRITICAL):
@@ -104,19 +104,83 @@ def _vorzustand_messen(wurzel: Path, schicht: str, ziele: list[str],
 
     tmp = Path(tempfile.mkdtemp(prefix="gz-vorzustand-"))
     abzug = tmp / "stand"
+    # #2503: node_modules ist nicht eingecheckt — ohne Verweis auf die Abhaengigkeiten des
+    # Arbeitsstands scheitert die Frontend-Messung IMMER und nichts wuerde je blockiert.
+    verweis = abzug / "frontend" / "node_modules"
     try:
         r = _lauf(["git", "worktree", "add", "--detach", "-q", str(abzug), "HEAD"], wurzel, 120)
         if r.returncode != 0:
-            return set(), f"Vorzustand nicht messbar ({r.stderr.strip()[:80]})"
-        vorher, stoerung = laeufer(abzug, ziele)
+            return set(), set(), f"Vorzustand nicht messbar ({r.stderr.strip()[:80]})"
+        quelle = wurzel / "frontend" / "node_modules"
+        if schicht == "frontend" and quelle.exists() and verweis.parent.is_dir() \
+                and not os.path.lexists(verweis):
+            verweis.symlink_to(quelle.resolve(), target_is_directory=True)
+        vorher, gelaufen, stoerung = laeufer(abzug, ziele)
         if stoerung:
-            return set(), f"Vorzustand nicht messbar ({stoerung})"
-        return vorher, None
+            return set(), set(), f"Vorzustand nicht messbar ({stoerung})"
+        return vorher, gelaufen, None
     except Exception as e:
-        return set(), f"Vorzustand nicht messbar ({e})"
+        return set(), set(), f"Vorzustand nicht messbar ({e})"
     finally:
+        if verweis.is_symlink():
+            verweis.unlink()
         _lauf(["git", "worktree", "remove", "--force", str(abzug)], wurzel, 60)
         shutil.rmtree(tmp, ignore_errors=True)
+
+
+def _klassifizieren(fehl: set[str], vorher_rot: set[str],
+                    vorher_gelaufen: set[str]) -> tuple[list[str], list[str], list[str]]:
+    """#2503: (vorbestehend, neu angelegt rot, neu_rot) — je Fehlschlag gemessen.
+
+    Neu angelegt heisst: im Vorzustand NICHT gelaufen. Eine Elternfunktion (Go
+    `TestA` mit rotem `TestA/sub`) ist nur entschuldigt, wenn ALLE ihre roten Subtests
+    neu angelegt sind — sonst versteckte ein neuer Subtest einen alten, jetzt roten.
+    """
+    vorbestehend, neu_angelegt, neu_rot = [], [], []
+    for f in sorted(fehl):
+        kinder = _rote_blaetter(f, fehl)
+        if f in vorher_rot:
+            vorbestehend.append(f)
+        elif f not in vorher_gelaufen:
+            neu_angelegt.append(f)
+        elif kinder and all(k not in vorher_gelaufen for k in kinder):
+            continue  # Elternfunktion: nur durch neu angelegte Subtests rot
+        else:
+            neu_rot.append(f)
+    return vorbestehend, neu_angelegt, neu_rot
+
+
+def _nachfahren(f: str, namen: set[str]) -> list[str]:
+    return [k for k in namen if k.startswith((f + "/", f + " > "))]
+
+
+def _rote_blaetter(f: str, fehl: set[str]) -> list[str]:
+    """Rote Nachfahren ohne eigene rote Nachfahren (Adversary F006).
+
+    Zwischenebenen (`aussen > innen`, `TestA/sub`) sind selbst nur Eltern — ob sie alt
+    sind, sagt nichts darueber, ob ein altes BLATT rot wurde.
+    """
+    return [k for k in _nachfahren(f, fehl) if not _nachfahren(k, fehl)]
+
+
+def _phase_ist_red() -> bool:
+    """Steht der aktive Workflow (worktree-bewusst) in Phase TDD-RED?
+
+    Jede Unklarheit (kein Workflow, unlesbarer State, hook_utils fehlt) ist FEHLENDE
+    Erlaubnis — keine Stoerung des Gates (Spec #2503, Punkt 4).
+    """
+    try:
+        sys.path.insert(0, str(Path(__file__).resolve().parent))
+        import hook_utils  # noqa: PLC0415 — nur bei Bedarf laden
+        name = hook_utils.get_active_workflow_name()
+        if not name:
+            return False
+        wurzel = hook_utils.find_project_root()
+        state = hook_utils.read_state_json(
+            wurzel / ".claude" / "workflows" / f"{name}.json", wurzel)
+        return isinstance(state, dict) and state.get("current_phase") == "phase5_tdd_red"
+    except Exception:
+        return False
 
 
 # ---------------------------------------------------------------------------
@@ -176,10 +240,14 @@ def _pytest_befehl(wurzel: Path) -> list[str]:
     return [sys.executable, "-m", "pytest"]
 
 
-def _lauf_python(wurzel: Path, tests: list[str]) -> tuple[set[str], str | None]:
-    """(fehlgeschlagene Test-Kennungen, Stoermeldung)."""
+def _lauf_python(wurzel: Path, tests: list[str]) -> tuple[set[str], set[str], str | None]:
+    """(fehlgeschlagene Test-Kennungen, gelaufene Test-Kennungen, Stoermeldung).
+
+    #2503: `-rA` listet JEDEN gelaufenen Test — nur so laesst sich im Vorzustand messen,
+    ob ein Test dort ueberhaupt existierte.
+    """
     befehl = _pytest_befehl(wurzel) + [
-        "-q", "-p", "no:randomly", "--no-header",
+        "-q", "-rA", "-p", "no:randomly", "--no-header",
         # AC-5: die Live-Schicht bleibt draussen, sonst loest ein Commit echten Versand aus
         "-m", "not live and not email and not staging",
         *tests,
@@ -187,7 +255,7 @@ def _lauf_python(wurzel: Path, tests: list[str]) -> tuple[set[str], str | None]:
     try:
         r = _lauf(befehl, wurzel, ZEITGRENZE)
     except Exception as e:
-        return set(), f"Python-Tests nicht ausfuehrbar ({e})"
+        return set(), set(), f"Python-Tests nicht ausfuehrbar ({e})"
     # pytest-Rueckgabewerte: 0 gruen · 1 Tests rot · 2 Abbruch/Sammelfehler · 3 interner
     # Fehler · 4 Aufruffehler · 5 nichts gesammelt.
     # ⚠️ Die 2 gehoert auf die Fehlschlag-Seite, nicht auf die Stoerungs-Seite: Ein
@@ -195,52 +263,93 @@ def _lauf_python(wurzel: Path, tests: list[str]) -> tuple[set[str], str | None]:
     # Sammlung ab — der Testlauf hat dann NICHT stattgefunden, und genau das darf nicht
     # als „alles in Ordnung" durchgehen. Der erste Entwurf hat hier durchgelassen.
     if r.returncode == 5:
-        return set(), "keine Tests gesammelt"
+        return set(), set(), "keine Tests gesammelt"
     if r.returncode not in (0, 1, 2):
-        return set(), f"Python-Testlauf gestoert (Exit {r.returncode})"
+        return set(), set(), f"Python-Testlauf gestoert (Exit {r.returncode})"
+    gelaufen = set(re.findall(r"^(?:PASSED|FAILED|ERROR|SKIPPED|XFAIL|XPASS) (\S+)",
+                              r.stdout, re.M))
+    # Die Datei selbst gilt als gelaufen: ein spaeterer Sammelfehler `ERROR <datei>`
+    # einer bestehenden Testdatei ist kein „neu angelegter" Test.
+    gelaufen |= {k.split("::")[0] for k in gelaufen}
     # Auch Sammel-Fehler zaehlen: Ein Importfehler meldet `ERROR <datei>`, nicht `FAILED`.
     # Genau so sieht eine Modul-Umbenennung aus (Adversary-Fund F003) — wer nur nach
     # FAILED sucht, laesst eine Testdatei durch, die gar nicht mehr startet.
     return (set(re.findall(r"^FAILED (\S+)", r.stdout, re.M))
-            | set(re.findall(r"^ERROR (\S+)", r.stdout, re.M))), None
+            | set(re.findall(r"^ERROR (\S+)", r.stdout, re.M))), gelaufen, None
 
 
-def _lauf_go(wurzel: Path, pakete: list[str]) -> tuple[set[str], str | None]:
+def _lauf_go(wurzel: Path, pakete: list[str]) -> tuple[set[str], set[str], str | None]:
     go = shutil.which("go") or "/usr/local/go/bin/go"
     if not Path(go).exists():
-        return set(), "Go-Werkzeug nicht gefunden — Go-Dateien UNGEPRUEFT"
+        return set(), set(), "Go-Werkzeug nicht gefunden — Go-Dateien UNGEPRUEFT"
     try:
-        r = _lauf([go, "test", *pakete], wurzel, ZEITGRENZE)
+        r = _lauf([go, "test", "-v", *pakete], wurzel, ZEITGRENZE)
     except Exception as e:
-        return set(), f"Go-Tests nicht ausfuehrbar ({e}) — Go-Dateien UNGEPRUEFT"
+        return set(), set(), f"Go-Tests nicht ausfuehrbar ({e}) — Go-Dateien UNGEPRUEFT"
+    # #2503: `-v` meldet jeden gelaufenen Test (`=== RUN Eltern/sub`) und rueckt die
+    # Subtest-Ergebnisse ein — `^--- FAIL:` allein saehe einen roten Subtest nie.
+    gelaufen = set(re.findall(r"^=== RUN\s+(\S+)", r.stdout, re.M))
     if r.returncode == 0:
-        return set(), None
-    fehl = set(re.findall(r"^--- FAIL: (\S+)", r.stdout, re.M))
+        return set(), gelaufen, None
+    fehl = set(re.findall(r"^\s*--- FAIL: (\S+)", r.stdout, re.M))
     if fehl:
-        return fehl, None
+        return fehl, gelaufen, None
     # ⚠️ Der Unterschied, der beim ersten Anlauf gefehlt hat: Ein Lauf, der gar nicht
     # STATTFINDEN konnte (kein go.mod, Uebersetzungsfehler, fehlende Abhaengigkeit),
     # meldet ebenfalls Exit != 0 — er ist aber eine Stoerung, kein roter Test. Wer beides
     # gleichsetzt, blockiert Arbeit wegen eines Werkzeugproblems (AC-7/AC-12).
     grund = (r.stderr or r.stdout).strip().splitlines()
-    return set(), ("Go-Lauf nicht moeglich — Go-Dateien UNGEPRUEFT"
-                   + (f": {grund[0][:120]}" if grund else ""))
+    return set(), set(), ("Go-Lauf nicht moeglich — Go-Dateien UNGEPRUEFT"
+                          + (f": {grund[0][:120]}" if grund else ""))
 
 
-def _lauf_frontend(wurzel: Path, tests: list[str]) -> tuple[set[str], str | None]:
+def _lauf_frontend(wurzel: Path, tests: list[str]) -> tuple[set[str], set[str], str | None]:
     fe = wurzel / "frontend"
     lader = fe / "test-lib-loader.mjs"
     if not (fe / "node_modules").exists() or not lader.exists():
-        return set(), "Frontend-Abhaengigkeiten fehlen — Frontend-Dateien UNGEPRUEFT"
+        return set(), set(), "Frontend-Abhaengigkeiten fehlen — Frontend-Dateien UNGEPRUEFT"
     rel = [str(Path(t).relative_to("frontend")) for t in tests]
     try:
         r = _lauf(["node", "--import", "./test-lib-loader.mjs",
                    "--experimental-strip-types", "--test", *rel], fe, ZEITGRENZE)
     except Exception as e:
-        return set(), f"Frontend-Tests nicht ausfuehrbar ({e}) — UNGEPRUEFT"
+        return set(), set(), f"Frontend-Tests nicht ausfuehrbar ({e}) — UNGEPRUEFT"
+    fehl, gelaufen = _tap_auswerten(r.stdout)
+    # Der Ersatzname steht fuer „Lauf rot ohne Einzelzeile" — er gilt als gelaufen, damit
+    # er nie als „neu angelegt" durchrutscht.
+    gelaufen.add("frontend: rot")
+    # Eine Datei, die beim Laden wirft, meldet node als `not ok N - <pfad>` — vorhandene
+    # Testdateien gelten deshalb selbst als gelaufen (sonst waeren sie „neu angelegt").
+    gelaufen |= {p for p in rel if (fe / p).exists()}
     if r.returncode == 0:
-        return set(), None
-    return set(re.findall(r"^not ok \d+ - (.+)$", r.stdout, re.M)) or {"frontend: rot"}, None
+        return set(), gelaufen, None
+    return fehl or {"frontend: rot"}, gelaufen, None
+
+
+def _tap_auswerten(tap: str) -> tuple[set[str], set[str]]:
+    """(fehlgeschlagen, gelaufen) als Pfade `suite > test` (Adversary F001, #2503).
+
+    `describe` verschachtelt: die Kind-Zeilen sind eingerueckt (4 Leerzeichen je Ebene),
+    die Eltern-Suite wird rot, sobald ein Kind rot ist. Nur mit vollem Pfad kann die
+    Elternregel greifen.
+    """
+    stapel: list[str] = []
+    fehl: set[str] = set()
+    gelaufen: set[str] = set()
+    for zeile in tap.splitlines():
+        m = re.match(r"^( *)# Subtest: (.+)$", zeile)
+        if m:
+            tiefe = len(m.group(1)) // 4
+            stapel = stapel[:tiefe] + [m.group(2)]
+            continue
+        m = re.match(r"^( *)(not )?ok \d+ - (.+)$", zeile)
+        if m:
+            tiefe = len(m.group(1)) // 4
+            pfad = " > ".join(stapel[:tiefe] + [m.group(3)])
+            gelaufen.add(pfad)
+            if m.group(2):
+                fehl.add(pfad)
+    return fehl, gelaufen
 
 
 # ---------------------------------------------------------------------------
@@ -268,6 +377,7 @@ def main() -> int:
 
     hinweise: list[str] = []
     neu_rot: list[tuple[str, str]] = []
+    neu_angelegt: list[tuple[str, str]] = []
     vorbestehend: list[str] = []
     geprueft: list[str] = []
     ziele_je_schicht: dict[str, list[str]] = {}
@@ -289,7 +399,7 @@ def main() -> int:
                 f"(Notbremse bei {MAX_TESTDATEIEN})"
             )
             continue
-        fehlschlaege, stoerung = laeufer(wurzel, ziele)
+        fehlschlaege, _, stoerung = laeufer(wurzel, ziele)
         if stoerung:
             hinweise.append(f"{schicht}: {stoerung}")
             continue
@@ -300,7 +410,8 @@ def main() -> int:
         if not fehlschlaege:
             continue
         # Erst jetzt — und nur jetzt — kostet es einen zweiten Lauf: War das schon vorher rot?
-        vorher, vorher_stoerung = _vorzustand_messen(wurzel, schicht, ziele, laeufer)
+        vorher, vorher_gelaufen, vorher_stoerung = _vorzustand_messen(
+            wurzel, schicht, ziele, laeufer)
         if vorher_stoerung:
             # 🔴 Adversary-Fund F007 (CRITICAL): Hier stand vorher „alle Fehlschlaege
             # gelten als NEU" — und damit blockierte eine gescheiterte MESSUNG den Commit,
@@ -316,11 +427,10 @@ def main() -> int:
             for f in sorted(fehlschlaege):
                 vorbestehend.append(f"{f} (Vorzustand unbekannt)")
             continue
-        for f in sorted(fehlschlaege):
-            if f in vorher:
-                vorbestehend.append(f)
-            else:
-                neu_rot.append((schicht, f))
+        alt, neu, rot = _klassifizieren(fehlschlaege, vorher, vorher_gelaufen)
+        vorbestehend.extend(alt)
+        neu_rot.extend((schicht, f) for f in rot)
+        neu_angelegt.extend((schicht, f) for f in neu)
 
     meldung: list[str] = []
     if geprueft:
@@ -330,10 +440,23 @@ def main() -> int:
     for v in vorbestehend:
         meldung.append(f"vorbestehend rot (blockiert nicht): {v}")
 
+    # #2503: neu angelegte rote Tests nur in Phase TDD-RED — sonst blockieren sie mit.
+    if neu_angelegt and _phase_ist_red():
+        for _, n in neu_angelegt:
+            meldung.append(f"neu angelegt rot (TDD-RED, blockiert nicht): {n}")
+        neu_angelegt = []
+    if neu_angelegt:
+        meldung.insert(0, "BLOCKIERT — neu angelegter Test ist rot — nur in Phase "
+                          "TDD-RED erlaubt:")
+        for _, n in neu_angelegt:
+            meldung.insert(1, f"   {n}")
+
     if neu_rot:
         meldung.insert(0, "BLOCKIERT — diese Aenderung macht Tests rot:")
         for _, n in neu_rot:
             meldung.insert(1, f"   {n}")
+    neu_rot = neu_rot + neu_angelegt
+    if neu_rot:
         meldung.append("")
         meldung.append("Einzeln nachstellen:")
         # Adversary-Fund F005: Der Reparaturbefehl haing fest an pytest — bei einem

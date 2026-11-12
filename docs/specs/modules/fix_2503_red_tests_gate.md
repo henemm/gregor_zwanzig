@@ -127,6 +127,8 @@ Alle in `tests/tdd/test_touched_tests_gate.py`, mit Wegwerf-Repo, echtem `git co
 - Ein geaenderter bestehender Test (z. B. verschaerfte Assertion), der dadurch rot wird, bleibt blockiert; bewusst ausserhalb des Umfangs.
 - Ein Go-Uebersetzungsfehler bleibt eine Stoerung (durchlassen, AC-7 der Ursprungs-Spec); der Fehlanreiz zu absichtlich nicht kompilierenden RED-Tests entfaellt, weil kompilierbare rote Tests jetzt committbar sind.
 - Neue Python-Testdatei: Vorzustand liefert pytest Exit 4, bleibt Stoerungspfad (durchlassen) wie bisher.
+- **Elternfunktion mit eigenem Fehlschlag:** Eine bestehende Go-Elternfunktion (bzw. Frontend-Suite), die selbst per `t.Error` rot wird und zugleich nur neu angelegte rote Subtests hat, wird in Phase RED mitentschuldigt. Die Ausgabe von `go test -v` trennt den eigenen Fehlschlag der Eltern nicht von dem ihrer Kinder; die neuen Subtests werden namentlich gemeldet.
+- **Testnamen ohne Paket-/Dateikontext (Adversary F005):** Vorzustand und Arbeitsstand werden ueber den Testnamen verglichen (Go `TestX`, Frontend `suite > test`). Gleichnamige Tests in verschiedenen Paketen bzw. Dateien derselben Schicht koennen sich vermischen: Ein neuer Test, dessen Name anderswo schon lief, gilt als bestehend (blockiert strenger), und umgekehrt kann ein dort gelaufener Name einen roten Test nicht als neu ausweisen.
 
 ## Architektur-Entscheidung (ADR)
 
@@ -137,3 +139,4 @@ Alle in `tests/tdd/test_touched_tests_gate.py`, mit Wegwerf-Repo, echtem `git co
 
 - 2026-11-12: Initial spec created (Issue #2503)
 - 2026-11-12: TDD-RED-Befund ergaenzt (Implementation Details Punkt 6: node_modules im Vorzustands-Abzug)
+- 2026-11-12: Adversary-Runde 1: describe-Verschachtelung, Limitations ergänzt
