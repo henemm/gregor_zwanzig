@@ -695,7 +695,6 @@ liegen **nicht** in `.claude/hooks/`.
 | PreToolUse Bash | `secret_in_repo_gate.py` | blockt `git commit`, wenn eine vorgemerkte Datei den Klartextwert eines `.env`-Geheimnisses (`*_PASS`/`_TOKEN`/`_KEY`/`_SECRET`, ≥ 10 Zeichen) enthält; schaltet sich **nicht** automatisch ab, Wirksamkeitsprüfung 2026-11-04 | #1537 S1 |
 | PreToolUse Write\|Edit | `test_naming_gate.py` | blockt neue issue-nummerierte Testdateien; Prüfdatum 2027-01-19 | oben „Testnamens-Gate" |
 | PreToolUse Write\|Edit | `data_schema_backup.py` | Snapshot von `data/users/` nach `.backups/data-pre-rework-<ts>.tar.gz` vor Edit/Write an Schema-Dateien (Retention 20, übersprungen bei Snapshot < 5 Min) | CLAUDE.md „Daten-Schema-Reworks“, #102 |
-| PreToolUse Write\|Edit | `file_claim_gate.py` | trägt jede bearbeitete Datei in `.claude/file_claims.json` (Hauptrepo) ein und blockt Edit/Write bei Belegung durch eine andere aktive Session; deaktiviert sich selbst ab 2026-11-11 | PO-go 2026-08-13 |
 | PostToolUse * | `secret_output_gate.py` | ersetzt Klartextwerte von `.env`-Geheimnissen in **Tool-Ergebnissen** durch `***<SCHLÜSSEL>***` | #1537 S2 |
 | UserPromptSubmit | `context_budget_guard.py` | `⚑`-Zeile ab 180k Kontext, Aufforderung zu `/clear` ab 260k; blockiert nie | CLAUDE.md „Parallele Sessions & Token-Budget" |
 | Stop | `terminology_gate.py` | weist eine Antwort mit „Tour"/„Touren" zurück (Exit 2; Zitatzeilen `>` ausgenommen; fail-open) | Produktbegriffe Trip/Etappe/Ortsvergleich/Briefing |
@@ -717,6 +716,13 @@ sind historisch (Juni 2026, zeigen u. a. den entfernten Signal-Kanal), und die P
 großen Papierflächen völlig andere Layouts bestehen. **Ersatz (Regel-Budget):** die Playwright-
 Kontrast- und Paritätstests `kontrast-trip-vergleich.spec.ts` (#2879), `hub-anlegen-paritaet-flaechen.spec.ts`
 (#2880), `hub-tab-bar.spec.ts` und `design-system-trip-vergleich.spec.ts` (#2881) im CI-Check `e2e`.
+**Stillgelegt am 2026-11-12 (#2940):** das Datei-Claim-Gate `file_claim_gate.py` (PreToolUse
+`Write|Edit`, trug bearbeitete Dateien in `.claude/file_claims.json` ein und blockte bei Belegung
+durch eine andere Sitzung; PO-go 2026-08-13). Skript und Tests sind entfernt; ein noch verbliebener
+Hook-Eintrag in `.claude/settings.json` läuft wegen seiner Existenzprüfung (`if [ -f … ]`) ins Leere. Grund:
+Prüfdatum 2026-11-11 erreicht, kein Fang-Nachweis in `gate-events.jsonl`, strukturell umgehbar
+(nur `Write|Edit`, nicht Bash; #1197), und parallele Sitzungen arbeiten seit dem Worktree-Modell
+isoliert, Kollisionen zeigen sich als Merge-Konflikt im PR.
 `data_schema_backup.py` ist seit PR `tooling/hooks-pruefdaten` (2026-10-21) als PreToolUse `Write|Edit` verdrahtet (Tabelle oben); vorher fehlte der Eintrag trotz gegenteiliger Doku.
 
 ## Regel-Budget: Prüfdaten im Überblick
@@ -730,7 +736,6 @@ Kontrast- und Paritätstests `kontrast-trip-vergleich.spec.ts` (#2879), `hub-anl
 | Touched-Tests-Gate (#1481 A) | 2026-11-03 | — |
 | Testnamens-Gate | 2027-01-19 (verlängert 2026-10-21, PO) | — |
 | Test-Pfadregel-Ratsche (#1409) | 2026-10-27 | — |
-| Datei-Claim-Gate `file_claim_gate.py` | 2026-11-11 (Selbstabschaltung im Hook) | — |
 | Secret-in-Repo-Sperre `secret_in_repo_gate.py` (#1537 S1) | 2026-11-04 (Wirksamkeitsprüfung, **keine** Selbstabschaltung) | #1537 (`GZ_AUTH_PASS` im Klartext im öffentlichen Repo) |
 | Frontend-Browser-Gate (#1558) | 2026-11-05 | #1552 (Kernseite unbedienbar bei grüner Ampel) |
 | 6. Check `e2e` (#1771 S2) | 2026-11-11 | offen — Kriterium: eine Regression, die die anderen fünf durchlassen |
