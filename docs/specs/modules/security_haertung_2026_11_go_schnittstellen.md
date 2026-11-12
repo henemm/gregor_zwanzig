@@ -75,10 +75,14 @@ sichere Soll-Verhalten der Go-Schnittstellen fest (Grundsatzentscheidungen in AD
    Ablaufprüfung, jede Kennung auf der Liste ist eine gültige Anmeldung; Datei gehört zum
    Anmeldebereich).
 5. **Bremsen (GC5).** `NutzerBremsen` (gleitendes Fenster je Nutzer, geteilte Parallel-Grenze),
-   im Router um die Routen gelegt; aus bei `TestFixtureDir != ""`. GPX: `MaxBytesReader` 10 MB,
+   im Router um die Routen gelegt; aus bei `TestFixtureDir != ""`, bei `Env == "staging"` alle
+   Grenzen (Fenster und Gleichzeitigkeit) mal 10, Produktion unverändert. GPX: `MaxBytesReader` 10 MB,
    vollständig gelesen vor dem Upstream-Aufruf. Forecast: Anbieter-Fehler nur ins Log.
-6. **Staging (GC6).** `StagingZugang{Admins, Betreiber=GZ_AUTH_USER}`; Testkonto über
-   `model.IsTestAccount`.
+6. **Staging (GC6).** Eine gültige Sitzung genügt (keine Aufrufer-Rolle, damit `/e2e-verify`
+   nicht von Server-Einstellungen abhängt). Tragend ist die Zielregel `tokenZielZulaessig`
+   (`staging_zugang.go`): Token nur für das eigene Konto, Testkonten (`model.IsTestAccount`) und
+   frisch registrierte (≤ 1 h), unbestätigte Konten; sonst dieselbe 404 wie für unbekannte Konten.
+   SMS-Code und Seed wirken nur auf das Konto der Sitzung.
 7. **Premium-SMS (GC7 c/d).** Fehlversuche je gleitender Stunde (10), Warn-Log bei Erschöpfung,
    Kommentar zum Schlüsselraum (23³·8³ ≈ 6,2 Mio.). Kein Ablauf/keine Entwertung des Codes.
 8. **GC8.** `LoadBriefing`/`SaveBriefing` prüfen die Kennung.
@@ -86,7 +90,7 @@ sichere Soll-Verhalten der Go-Schnittstellen fest (Grundsatzentscheidungen in AD
 ## Expected Behavior
 
 - **Input:** Anfragen an die genannten Routen.
-- **Output:** wie bisher; zusätzlich 400/403/404/413/422/429 laut `docs/reference/api_contract.md`
+- **Output:** wie bisher; zusätzlich 400/404/413/422/429 laut `docs/reference/api_contract.md`
   Abschnitt 0.6.
 - **Side effects:** keine verwaisten Sperrdateien; Warn-Log bei erschöpfter Premium-SMS-Bremse.
 
@@ -160,19 +164,18 @@ sichere Soll-Verhalten der Go-Schnittstellen fest (Grundsatzentscheidungen in AD
 - **AC-17:** Given der CI-Stack im Fixture-Modus / When ein E2E-Lauf viele Versände auslöst /
   Then greift keine Bremse.
   - Test: `TestMengenbremse_FixtureModusOhneBremse`
-- **AC-18:** Given Staging und ein gewöhnliches, nicht frisch angelegtes Konto / When es
-  Bestätigungstoken, SMS-Code oder Seed anfordert / Then erhält es 403 und sein Tarif bleibt
-  unverändert.
+- **AC-18:** Given Staging und ein angemeldetes, gewöhnliches Konto / When es ein
+  Bestätigungstoken für ein fremdes, bereits bestätigtes Konto anfordert / Then erhält es dieselbe
+  404-Antwort wie für ein unbekanntes Konto, und für das fremde Konto entsteht kein Token.
   - Test: `internal/router/staging_hilfswege_zugang_test.go`
-- **AC-19:** Given Staging und ein Admin-, Betreiber- oder Testkonto / When es ein
-  Bestätigungstoken für ein frisch registriertes, unbestätigtes Konto anfordert / Then erhält es
-  das Token; für ein fremdes bestätigtes Konto erhält es dieselbe 404-Antwort wie für ein
-  unbekanntes, und es entsteht kein Token.
-  - Test: `TestStagingHilfswege_ZugangUndZielkonten`
-- **AC-20:** Given Staging und ein vor wenigen Minuten registriertes Wegwerfkonto / When es seinen
-  eigenen SMS-Bestätigungscode anfordert / Then erhält es den Code (Live-Spec
-  `feat-2406-sms-verify.spec.ts` bleibt lauffähig).
-  - Test: `TestStagingHilfswege_ZugangUndZielkonten`
+- **AC-19:** Given Staging und ein angemeldetes, gewöhnliches Konto / When es ein
+  Bestätigungstoken für sich selbst, für ein Testkonto oder für ein frisch registriertes,
+  unbestätigtes Konto (E2E-Zweitnutzer) anfordert / Then erhält es das Token.
+  - Test: `TestStagingHilfswege_ZielregelUndEigenesKonto`
+- **AC-20:** Given Staging und ein angemeldetes Konto / When es SMS-Code oder Seed anfordert und
+  im Rumpf ein fremdes Konto nennt / Then wirkt der Aufruf nur auf das eigene Konto; das fremde
+  Konto bleibt unverändert.
+  - Test: `TestStagingHilfswege_ZielregelUndEigenesKonto`
 - **AC-21:** Given zehn falsche Verknüpfungscodes innerhalb einer Stunde / When danach der
   richtige Code eintrifft / Then wird er abgewiesen (429) und eine Warnung steht im Log; eine
   Stunde nach dem ersten Fehlversuch verknüpft derselbe Code wieder.
@@ -185,6 +188,11 @@ sichere Soll-Verhalten der Go-Schnittstellen fest (Grundsatzentscheidungen in AD
   Nutzer `/api/forecast` abruft / Then erhält er 502 `provider_error` mit Katalogtext, ohne den
   Anbieter-Text.
   - Test: `TestForecastHandler_AnbieterFehlerOhneRohtext`
+- **AC-24:** Given der Dienst läuft als Staging (`GZ_ENV=staging`) / When ein Konto ohne
+  Ausnahme-Eintrag den 21. Sofort-Versand in einer Stunde auslöst / Then geht er durch (zehnfache
+  Grenzen, auch für die Gleichzeitigkeit), erst der 201. wird gebremst; in Produktion wird schon
+  der 21. mit 429 abgewiesen.
+  - Test: `TestMengenbremse_StagingZehnfacheGrenzen`
 
 ## Known Limitations
 
@@ -195,13 +203,14 @@ sichere Soll-Verhalten der Go-Schnittstellen fest (Grundsatzentscheidungen in AD
   keinen neuen erzeugen. Die Oberfläche sagt „notiere ihn jetzt", Erneuern entwertet den alten
   (fix_2154). Umgesetzt sind nur Zeitfenster-Bremse und Kommentar. Produktentscheidung offen.
 - **Staging-Testkonten sind selbst erklärbar.** `is_test_user` lässt sich bei der Registrierung
-  setzen (ADR-0072, Konsequenzen); die Aufrufer-Prüfung der Staging-Wege hält daher vor allem
-  gewöhnliche Konten fern, die tragende Grenze ist die Zielkonto-Regel.
+  setzen (ADR-0072); wer ein eigenes Testkonto anlegt, bekommt dafür ein Token — das betrifft nur
+  sein eigenes Konto. Fremde, bestätigte Konten bleiben gesperrt und unsichtbar.
 - **Kennungsmuster Python.** `app.loader.VALID_ENTITY_ID_RE` ist nicht nachgezogen; die geteilte
   Wahrheitstabelle enthält die neuen Fälle bewusst nicht.
 - **Mengenbremsen im Arbeitsspeicher**, je Prozess; ein Neustart setzt sie zurück.
-- **Staging-E2E-Konten** (`GZ_AUTH_USER`, `GZ_E2E_EN_USER`, Validator-Konten) laufen in die
-  Bremsen, wenn sie weder Admin noch in `GZ_QUOTA_EXEMPT_USER_IDS` stehen.
+- **Staging hat zehnfache Grenzen**, damit E2E-Läufe und Validator-Werkzeuge ohne
+  Ausnahme-Eintrag nicht gebremst werden; die Staging-Werte sind damit kein Messwert für die
+  Produktionsgrenzen (die prüft der Kern-Test).
 
 ## Architektur-Entscheidung (ADR)
 

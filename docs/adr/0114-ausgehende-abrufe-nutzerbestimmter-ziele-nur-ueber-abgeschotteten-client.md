@@ -63,7 +63,9 @@ und verlassen sich darauf, dass `coreauth` das Geheimnis anhängt (ADR-0062 Rege
    Handversand (alle drei Routen gemeinsam) 20/h, Ortsauflösung 30/min, GPX-Upload 30/h,
    Wettervergleich, Etappenwetter und Vorschauen je 60/min bei höchstens vier gleichzeitigen
    schweren Abrufen je Nutzer. Admins und `GZ_QUOTA_EXEMPT_USER_IDS` sind ausgenommen (dieselbe
-   Policy wie die Mengen-Quoten), im Fixture-Modus sind die Bremsen nicht eingehängt. Das ergänzt
+   Policy wie die Mengen-Quoten), im Fixture-Modus sind die Bremsen nicht eingehängt, auf Staging
+   (`GZ_ENV=staging`) gelten die zehnfachen Grenzen (Fenster und Gleichzeitigkeit), damit die
+   Auslieferungsprüfung nicht von Ausnahme-Einträgen abhängt. Das ergänzt
    ADR-0092 („eine Mail pro Klick") um eine Obergrenze; der Zustand liegt im Arbeitsspeicher.
 
 ## Verworfene Alternativen
@@ -85,8 +87,8 @@ und verlassen sich darauf, dass `coreauth` das Geheimnis anhängt (ADR-0062 Rege
   Klicks haben je Nutzer eine Obergrenze.
 - **Negativ / Preis:** Geteilte Kartenlinks funktionieren nur noch über https und die gelisteten
   Google-Hosts; ein neuer Kurzlink-Dienst braucht einen Listeneintrag. Mengenbremsen sind
-  prozesslokal und überleben keinen Neustart. Staging-E2E-Konten ohne Admin-/Ausnahme-Status
-  können in die Bremse laufen, wenn ein Lauf mehr als 20 Handversände je Stunde auslöst.
+  prozesslokal und überleben keinen Neustart. Auf Staging sind die Grenzen zehnfach; dort
+  gemessene Werte belegen die Produktionsgrenzen nicht.
 - **Folgepflichten:** Jede neue Stelle, die eine nutzerbestimmte URL abruft, nutzt den
   abgeschotteten Client (oder einen gleichwertigen mit eigenem Transport). Jede neue Proxy-Route
   mit Pfad-Kennung nutzt `coreKennung` (Prüfung + Kodierung). Neue interaktive Auslöser mit

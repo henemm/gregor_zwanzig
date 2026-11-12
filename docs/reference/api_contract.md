@@ -308,7 +308,7 @@ Fehlerobjekt `code`/`message` (Abschnitt 0); Texte unter `fach.fehler.*` (DE/EN)
 
 **Mengenbremsen je Nutzer** (gleitendes Fenster, `429 rate_limit_exceeded` mit Header
 `Retry-After` in Sekunden; Admins und `GZ_QUOTA_EXEMPT_USER_IDS` ausgenommen, im Fixture-Modus
-nicht aktiv):
+nicht aktiv; bei `GZ_ENV=staging` gelten die zehnfachen Werte, auch für die Gleichzeitigkeit):
 
 | Route | Grenze | Text-Variante |
 |---|---|---|
@@ -329,8 +329,7 @@ nicht aktiv):
 | `PUT /api/trips/{id}`, `POST /api/trips`, `PUT /api/trips/{id}/weather-config`, `PUT /api/locations/{id}/weather-config`, `POST/PUT /api/locations[/{id}]`, `POST/PUT /api/compare/presets[/{id}]`, `PUT /api/briefings/{id}` | 400 | `limit_exceeded` (Texte `…_schluessel`, `…_etappen`, `…_wegpunkte`) | neuer Config-Schlüssel nicht `^[a-z0-9_.-]{1,64}$`, mehr als 200 Schlüssel je Map, mehr als 100 Etappen je Trip oder 500 Wegpunkte je Etappe |
 | dieselben Schreibrouten | 413 | `entity_too_large` | gespeicherte Datei wäre größer als 2 MB; nichts wird geschrieben, Bestandsdateien bleiben lesbar |
 | `GET /api/forecast` | 502 | `provider_error` | Text nur noch aus dem Katalog; Anbieter-Einzelheiten nur im Log |
-| `POST /api/auth/verify-email/staging-token`, `POST /api/auth/sms/staging-code`, `POST /api/auth/staging-seed` (nur Staging) | 403 | `forbidden` | Aufrufer ist weder Admin noch Betreiber-Konto (`GZ_AUTH_USER`) noch Testkonto; der SMS-Code des eigenen Kontos bleibt für ein höchstens eine Stunde altes Konto erlaubt |
-| `POST /api/auth/verify-email/staging-token` (nur Staging) | 404 | `{"error":"unknown user"}` | Zielkonto unbekannt ODER weder eigenes Konto, Testkonto noch frisch registriert und unbestätigt (beide Fälle identisch) |
+| `POST /api/auth/verify-email/staging-token` (nur Staging) | 404 | `{"error":"unknown user"}` | Zielkonto unbekannt ODER weder eigenes Konto, Testkonto noch frisch registriert (≤ 1 h) und unbestätigt (beide Fälle identisch); eine gültige Sitzung genügt als Aufrufer |
 
 ---
 

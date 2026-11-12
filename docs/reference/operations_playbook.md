@@ -596,6 +596,15 @@ Freigeben eine Sperrdatei ab, neben der keine `<id>.json` steht (unbekannte Kenn
 mit denselben Schutzregeln wie #2237 (nur wenn der `flock` sofort frei ist); eine Sperrdatei
 ohne `.json` ist danach nur noch ein Rest aus Python-Zugriffen oder älteren Ständen.
 
+## Mengenbremsen je Nutzer (#2961, ADR-0114)
+
+Testnachricht, Sofort-Versand, Ortsauflösung, GPX-Upload, Wettervergleich, Etappenwetter und
+Vorschauen sind je Nutzer gebremst (429 mit `Retry-After`, Grenzen in `api_contract.md`
+Abschnitt 0.6). Admins und `GZ_QUOTA_EXEMPT_USER_IDS` sind ausgenommen, im Fixture-Modus (CI-Stack)
+sind die Bremsen aus, auf Staging (`GZ_ENV=staging`) gelten die zehnfachen Grenzen — E2E-Läufe und
+Validator-Werkzeuge brauchen dort keinen Ausnahme-Eintrag. Der Zustand liegt im Arbeitsspeicher;
+ein Neustart setzt ihn zurück.
+
 ## Beschädigte `briefing_slots.json` / `briefing_log.json` (#2231)
 
 Ist die Versand-Vermerk-Datei (`briefing_slots.json`) oder das Versandprotokoll
