@@ -190,43 +190,52 @@ for (const sprache of ['de', 'en'] as const) {
 	}
 }
 
-test('AC-6 Trip-Übersicht Desktop: Versand-Karte füllt die Zeile (≥ 90 % des Rasters)', async ({ page }) => {
-	const id = await aktiverTrip(page);
-	await page.setViewportSize(DESKTOP);
-	await page.goto(`/trips/${id}?tab=uebersicht`);
-	const raster = kartenRaster(page, 'hub-uebersicht-versand-edit');
-	await expect(raster).toBeVisible({ timeout: 15_000 });
-	const r = await raster.boundingBox();
-	const k = await raster.locator(':scope > [data-slot="card"]').first().boundingBox();
-	expect(r && k, 'Raster/Karte ohne Box').toBeTruthy();
-	expect(k!.width / r!.width, `Versand-Karte ${k!.width} von ${r!.width} px`).toBeGreaterThanOrEqual(0.9);
-});
+// #2794 B3: Desktop beginnt bei 900 px Viewport; mit 220 px Seitenleiste ist das Raster bei
+// 1024 px nur ~700 px breit — genau dort stand die Versand-Karte allein in halber Breite.
+const DESKTOP_BREITEN = [1024, 1280, 1440];
 
-test('AC-7 Vergleich-Übersicht Desktop: keine Karte allein in halber Breite', async ({ page }) => {
-	const hub = await seedHub(page.request, 'vergleich');
-	try {
-		await page.setViewportSize(DESKTOP);
-		await page.goto(`/compare/${hub.id}?tab=uebersicht`);
-		const raster = kartenRaster(page, 'compare-hub-versand-edit');
+for (const breite of DESKTOP_BREITEN) {
+	test(`AC-6 Trip-Übersicht Desktop ${breite} px: Versand-Karte füllt die Zeile (≥ 90 % des Rasters)`, async ({ page }) => {
+		const id = await aktiverTrip(page);
+		await page.setViewportSize({ width: breite, height: 900 });
+		await page.goto(`/trips/${id}?tab=uebersicht`);
+		const raster = kartenRaster(page, 'hub-uebersicht-versand-edit');
 		await expect(raster).toBeVisible({ timeout: 15_000 });
-		const r = (await raster.boundingBox())!;
-		const karten = raster.locator(':scope > [data-slot="card"]');
-		await expect(karten).toHaveCount(3);
-		const boxen = [];
-		for (let i = 0; i < 3; i++) boxen.push((await karten.nth(i).boundingBox())!);
-		// Zeilen nach y gruppieren; steht eine Karte allein in ihrer Zeile, muss sie die Zeile füllen.
-		const zeilen = new Map<number, typeof boxen>();
-		for (const b of boxen) {
-			const key = [...zeilen.keys()].find((y) => Math.abs(y - b.y) < 2) ?? b.y;
-			zeilen.set(key, [...(zeilen.get(key) ?? []), b]);
+		const r = await raster.boundingBox();
+		const k = await raster.locator(':scope > [data-slot="card"]').first().boundingBox();
+		expect(r && k, 'Raster/Karte ohne Box').toBeTruthy();
+		expect(k!.width / r!.width, `Versand-Karte ${k!.width} von ${r!.width} px`).toBeGreaterThanOrEqual(0.9);
+	});
+
+	test(`AC-7 Vergleich-Übersicht Desktop ${breite} px: keine Karte allein in halber Breite`, async ({ page }) => {
+		const hub = await seedHub(page.request, 'vergleich');
+		try {
+			await page.setViewportSize({ width: breite, height: 900 });
+			await page.goto(`/compare/${hub.id}?tab=uebersicht`);
+			const raster = kartenRaster(page, 'compare-hub-versand-edit');
+			await expect(raster).toBeVisible({ timeout: 15_000 });
+			const r = (await raster.boundingBox())!;
+			const karten = raster.locator(':scope > [data-slot="card"]');
+			await expect(karten).toHaveCount(3);
+			const boxen = [];
+			for (let i = 0; i < 3; i++) boxen.push((await karten.nth(i).boundingBox())!);
+			// Zeilen nach y gruppieren; jede Zeile muss gefüllt sein (eine Karte allein füllt sie).
+			const zeilen = new Map<number, typeof boxen>();
+			for (const b of boxen) {
+				const key = [...zeilen.keys()].find((y) => Math.abs(y - b.y) < 2) ?? b.y;
+				zeilen.set(key, [...(zeilen.get(key) ?? []), b]);
+			}
+			for (const [y, z] of zeilen) {
+				const links = Math.min(...z.map((b) => b.x));
+				const rechts = Math.max(...z.map((b) => b.x + b.width));
+				expect((rechts - links) / r.width, `Zeile y=${y} (${z.length} Karte(n)): ${rechts - links} von ${r.width} px belegt`).toBeGreaterThanOrEqual(0.9);
+				if (z.length === 1) expect(z[0].width / r.width, `Karte allein in Zeile y=${y}: ${z[0].width} von ${r.width} px`).toBeGreaterThanOrEqual(0.9);
+			}
+		} finally {
+			await hub.aufraeumen();
 		}
-		for (const [y, z] of zeilen) {
-			if (z.length === 1) expect(z[0].width / r.width, `Karte allein in Zeile y=${y}: ${z[0].width} von ${r.width} px`).toBeGreaterThanOrEqual(0.9);
-		}
-	} finally {
-		await hub.aufraeumen();
-	}
-});
+	});
+}
 
 test('AC-8 Vergleich-Übersicht: Karte „Wetter" nennt die Metriken im Briefing (Zahl > 0)', async ({ page }) => {
 	// Seed ohne gespeicherte Metrikliste ⇒ die Vorlage gilt (wie im Reiter Wetter).

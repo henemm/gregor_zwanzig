@@ -172,11 +172,13 @@
 			</button>
 		</div>
 	{:else}
-		<!-- #2794 Fix-Loop B3: Mockup-Muster `.two` — eine Karte füllt die Zeile, keine leere Hälfte. -->
-		<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 16px">
+		<!-- #2794 Fix-Loop B3: Flex-Umbruch statt Grid — jede Karte wächst, daher füllt eine Karte
+		     allein ihre Zeile (Trip) und drei Karten brechen bei schmalem Raster (Desktop ab 900 px,
+		     abzüglich Seitenleiste) ohne leere Hälfte um. Grid auto-fit ließ dort zwei Spalten mit Lücke. -->
+		<div style="display: flex; flex-wrap: wrap; gap: 16px">
 			{#each [modell.orteKarte, modell.wertebereicheKarte] as karte, i (i)}
 				{#if karte}
-					<Card padding={20} style="display: flex; flex-direction: column">
+					<Card padding={20} style="display: flex; flex-direction: column; flex: 1 1 280px; min-width: 0">
 						<div style="display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 4px">
 							<Eyebrow>{karte.eyebrow}</Eyebrow>
 							<button onclick={springe(karte.sprungziel)} style="background: none; border: none; cursor: pointer; padding: 0; font-size: 12px; font-weight: 600; color: var(--g-accent-deep); font-family: var(--g-font-sans)">{$t('aktionen.edit')} →</button>
@@ -186,7 +188,7 @@
 					</Card>
 				{/if}
 			{/each}
-			<Card padding={20} style="display: flex; flex-direction: column">
+			<Card padding={20} style="display: flex; flex-direction: column; flex: 1 1 280px; min-width: 0">
 				<div style="display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin-bottom: 4px">
 					<Eyebrow>{$t('bausteine.checkliste.versand')}</Eyebrow>
 					<button data-testid={modell.versandKarte.testid} onclick={springe(modell.versandKarte.sprungziel)} style="background: none; border: none; cursor: pointer; padding: 0; font-size: 12px; font-weight: 600; color: var(--g-accent-deep); font-family: var(--g-font-sans)">{$t('aktionen.edit')} →</button>

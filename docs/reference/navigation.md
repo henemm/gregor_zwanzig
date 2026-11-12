@@ -17,7 +17,7 @@ Beide Hubs nutzen EINE gemeinsame Reiter-Definition: `frontend/src/lib/component
 | Wert | Label | Hinweis |
 |------|-------|---------|
 | `uebersicht` | Übersicht | |
-| `etappen` | Etappen & Wegpunkte | nur Trip |
+| `etappen` | Etappen (EN: Stages) | nur Trip |
 | `orte` | Orte | nur Ortsvergleich |
 | `wetter` | Wetter | bündelt Wetter-Metriken und Wertebereiche |
 | `zustellung` | Zustellung | bündelt Versand (Briefing-Zeiten, Layout/Kanal, Stundenverlauf, Ausblick, Nachtblock; Anker `#versand`) und Alarme |

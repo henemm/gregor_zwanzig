@@ -54,7 +54,7 @@ async function vorlagen(): Promise<Json> {
 /** Drei verschiedene, in der Vorlage „allgemein" bekannte Metrik-Kennungen. */
 async function dreiMetriken(): Promise<string[]> {
 	const v = await vorlagen();
-	const ids = Object.keys(v.allgemein?.metrics ?? Object.values(v)[0]?.metrics ?? {});
+	const ids = Object.keys(v.allgemein?.metrics ?? (Object.values(v)[0] as Json)?.metrics ?? {});
 	assert.ok(ids.length >= 3, 'Fixtur-Schutz: Vorlage braucht mindestens drei Metriken');
 	return ids.slice(0, 3);
 }
