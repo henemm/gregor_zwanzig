@@ -213,7 +213,7 @@ Verboten bleibt **Mock-Theater**: `Mock()`/`patch()`/`MagicMock`, die nur die ei
 
 Bug-Nachweis: mindestens ein Test reproduziert den Bug aus Nutzersicht (rot vor Fix, grün nach Fix) — in der Live-Schicht, wenn er Staging braucht, sonst im Kern.
 
-**Testdateien nach Verhalten benennen** (`test_alert_throttle.py`), NICHT nach Issue-Nummer (Gate: „Testnamens-Gate" unten). **`uv run pytest` ohne benannte Testdateien ist gesperrt** — ein ungemarkerter Test genügt für echten Versand an Produktiv-Empfänger (#1477). Erlaubt: Dateien benennen · `--collect-only` · sicherer Offline-Volllauf (genaue Form unten, #1755) · Einmal-Freigabe, die **nur der User** durch Tippen von `override` erzeugt (Gate: „Breiter Testlauf gesperrt" unten). Ein Test löst seinen Prüfling **relativ zur eigenen Testdatei** auf, nie über den festen Hauptrepo-Pfad (sonst falsches Grün aus dem Worktree).
+**Testdateien nach Verhalten benennen** (`test_alert_throttle.py`), NICHT nach Issue-Nummer (Gate: „Testnamens-Gate" unten). **`uv run pytest` ohne benannte Testdateien ist gesperrt** — ein ungemarkerter Test genügt für echten Versand an Produktiv-Empfänger (#1477). Erlaubt: Dateien benennen · `--collect-only` · sicherer Offline-Volllauf (genaue Form unten, #1755) (Gate: „Breiter Testlauf gesperrt" unten). Ein Test löst seinen Prüfling **relativ zur eigenen Testdatei** auf, nie über den festen Hauptrepo-Pfad (sonst falsches Grün aus dem Worktree).
 
 ## Testnamens-Gate
 
@@ -238,8 +238,8 @@ Verzeichnis-Lauf. Grund: eine ungemarkerte Testdatei genügt, um echten Versand 
 `Settings(...)` fällt bei fehlenden Feldern still auf die Prod-`.env` im Worktree zurück, und ein
 `mail_sink` schützt nur Mail). Durchgesetzt via `.claude/hooks/broad_test_run_gate.py`.
 
-**Erlaubt:** Dateien benennen · `--collect-only` · sicherer Offline-Volllauf · Einmal-Freigabe,
-die **nur der User** durch Tippen von `override` erzeugt. Prüfdatum 2026-11-01.
+**Erlaubt:** Dateien benennen · `--collect-only` · sicherer Offline-Volllauf. `override` wirkt auf
+dieses Gate nicht mehr (#2227).
 
 **Sicherer Offline-Volllauf (#1755)**, genau diese Zeile, einzeilig und wörtlich (`--ignore=tests/red/`
 darf fehlen; optional dahinter genau ` > datei 2>&1`):
@@ -738,7 +738,7 @@ isoliert, Kollisionen zeigen sich als Merge-Konflikt im PR.
 | Regel / Gate | Prüfdatum | Fang-Beleg bei Einführung |
 |---|---|---|
 | Mutations-Gegenprobe | 2026-11-01 | #1448 (2 von 3 Scheiben), #1457 (6 Findings) |
-| Breiter Testlauf gesperrt | 2026-11-01 | #1477 (echter Telegram-Versand an Prod-Chat) |
+| Breiter Testlauf gesperrt | 2027-02-10 | #1477 (echter Telegram-Versand an Prod-Chat); `override` öffnet das Gate nicht mehr, Fang-Nachweis `tests/tdd/test_broad_test_run_gate_ignores_override.py` (#2227) |
 | CI-Ampel (eingeführt mit 5 Checks; seit #1771 S2 sechs, s. eigene Zeile `e2e`) | 2026-11-02 | 6 wochenlang unbemerkte test-Rote + ~5000 unbewachte tdd-Tests (#1196) |
 | Pendant-Sperre (#1481 B, erweitert #2346) | 2027-01-21 (verlängert 2026-10-23, PO (Spec #2346)) | 8 Paare außerhalb der alten Reichweite (Aufmaß 2026-10-23, nachgemessen Adversary F003; Spec #2346) |
 | Touched-Tests-Gate (#1481 A) | 2026-11-03 | — |
