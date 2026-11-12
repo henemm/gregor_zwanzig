@@ -3,18 +3,10 @@
 // Spec: docs/specs/modules/issue_215_sprint2_forms_dialogs.md
 //
 // Verifiziert:
-//   AC-1: Alle 6 Spec-Dateien importieren Btn statt Button (Source-Check).
+//   AC-1 (Quelltext-Check über Hauptrepo-Pfad) entfiel mit #2243.
 //   AC-2: Dialog-Content-Close-Button rendert mit data-slot="btn" (DOM-Check).
 
 import { test, expect } from '@playwright/test';
-import { readFile } from 'node:fs/promises';
-
-const FILES = [
-	'frontend/src/lib/components/LocationForm.svelte',
-	'frontend/src/lib/components/WeatherConfigDialog.svelte',
-	'frontend/src/lib/components/ui/dialog/dialog-content.svelte',
-	'frontend/src/lib/components/ui/dialog/dialog-footer.svelte'
-];
 
 const TRIP_ID = 'e2e-cockpit-test';
 
@@ -25,15 +17,6 @@ async function resetTripState(request: import('@playwright/test').APIRequestCont
 }
 
 test.describe('Issue #215 Sprint 2 — Forms+Dialogs Button→Btn Migration', () => {
-	for (const file of FILES) {
-		const basename = file.split('/').pop();
-		test(`AC-1 (${basename}): Btn-Import statt Button-Import`, async () => {
-			const content = await readFile(`/home/hem/gregor_zwanzig/${file}`, 'utf-8');
-			expect(content).toContain(`import { Btn } from '$lib/components/ui/btn/index.js'`);
-			expect(content).not.toContain(`import { Button } from '$lib/components/ui/button`);
-		});
-	}
-
 	test('AC-2: Dialog-Close-Button (via dialog-content.svelte) rendert als Btn', async ({
 		page,
 		request

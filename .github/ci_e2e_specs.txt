@@ -7,16 +7,9 @@
 # Runde 2 -- Adversary-Fund F007: der zuvor in ci.yml verdrahtete Filter war
 # schwaecher als hier dokumentiert und lieferte 105 statt 87): Kandidatenpool
 # ohne waitForTimeout/test.skip/test.fixme/describe.skip, ohne
-# .staging.spec.ts, ZUSAETZLICH ausgeschlossen zwei strukturell kaputte
-# Dateien (Adversary-Fund, am Code bestaetigt):
-#   - list-routes-btn-migration.spec.ts:26 -- liest ueber den fest
-#     verdrahteten Hauptrepo-Pfad `/home/hem/gregor_zwanzig/${file}`. Auf
-#     einem Runner => ENOENT; aus einem Worktree prueft er die UNVERAENDERTE
-#     Hauptrepo-Kopie und meldet falsches Gruen (Verstoss gegen die
-#     Pfadregel #1409).
-#   - issue-322-wicon-komponente.spec.ts:14 -- `__dirname` in einem
-#     ESM-Modul (`frontend/package.json` hat `"type": "module"`) =>
-#     deterministischer ReferenceError.
+# .staging.spec.ts, ZUSAETZLICH ausgeschlossen waren zwei strukturell
+# kaputte Dateien (fest verdrahteter Hauptrepo-Pfad bzw. `__dirname` in
+# ESM); beide sind mit #2243 geloescht.
 # `describe.skip` kommt zusaetzlich zu test.skip/test.fixme hinzu, weil
 # mindestens eine Datei (epic-138-metriken-editor.spec.ts) ausschliesslich
 # describe.skip nutzt und sonst faelschlich als Kandidat gezaehlt wuerde.
@@ -174,8 +167,8 @@
 #                                 hub-metrik-reihenfolge-ziehen.spec.ts.)
 # Hinweis zum Neuzugang (bewusst, kein Versehen): compare-hub-inline-edit.spec.ts:9
 # nennt `/home/hem/gregor_zwanzig` in einem AUSFUEHRUNGSHINWEIS-Kommentar, nicht
-# im Code -- die Datei liest daraus nichts (anders als
-# list-routes-btn-migration.spec.ts:26, das dort wirklich zugreift). Fuer den
+# im Code -- die Datei liest daraus nichts (anders als die mit #2243
+# geloeschte Spec, die dort wirklich zugriff). Fuer den
 # regulaeren Positivlisten-Lauf ist das folgenlos; der Kandidatenpool-Filter des
 # VERMESSUNGSMODUS (ci.yml) grept den Pfad jedoch pauschal und wuerde die Datei
 # dort nicht auffuehren.
