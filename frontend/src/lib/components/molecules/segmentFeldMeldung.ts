@@ -47,6 +47,22 @@ export class SegmentFeldMeldung {
 	verwerfen(): void {
 		this.#offen = null;
 	}
+
+	/**
+	 * Feld verlassen (#2947). Berührt und unvollständig (Segment „––") ⇒ geleert: ein
+	 * zurückgehaltener Zwischenwert (z. B. „01:00" nach der ersten Rücktaste aus 15:00) wird
+	 * verworfen, nie gemeldet; mit `leerMelden` und gespeichertem Wert wird einmal '' gemeldet.
+	 * Sonst wie `abschliessen()`. Rückgabe true = geleert verlassen.
+	 */
+	verlassen(o: { beruehrt: boolean; unvollstaendig: boolean; leerMelden: boolean; gespeichert: string }): boolean {
+		if (o.beruehrt && o.unvollstaendig) {
+			this.#offen = null;
+			if (o.leerMelden && o.gespeichert !== '') this.#melde('');
+			return true;
+		}
+		this.abschliessen();
+		return false;
+	}
 }
 
 const bedarf = (teil: string) => (teil === 'year' ? 4 : 2);

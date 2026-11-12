@@ -72,11 +72,9 @@
 
 	function verlassen(e: FocusEvent): void {
 		if (feld?.contains(e.relatedTarget as Node | null)) return;
-		const hatteOffen = meldung.offen;
-		meldung.abschliessen();
-		// Geleert ohne Meldung von bits-ui (Stunde „––"): zählt wie leer.
-		const geleert = beruehrt && !hatteOffen && segmenteUnvollstaendig(feld);
-		if (geleert && leerMelden && value !== '') meldung.aendern('', false);
+		// Geleert (Stunde „––"): zählt wie leer, ein zurückgehaltener Zwischenwert wird verworfen
+		// (#2947: 15:00 leeren gab sonst 01:00). Sonst geht der offene Wert hinaus.
+		const geleert = meldung.verlassen({ beruehrt, unvollstaendig: segmenteUnvollstaendig(feld), leerMelden, gespeichert: value });
 		// Nur was der Nutzer angefasst hat, wird zurückgesetzt (sonst schlösse ein leeres,
 		// unberührtes Feld beim Öffnen des Kalenders seine eigene Liste).
 		if (beruehrt && (!vollstaendig || geleert)) {
