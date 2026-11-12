@@ -65,3 +65,43 @@ export function gewitterLeiste(thunder: Ampel['thunder']): LeisteSegment[] {
 		{ farbe: thunder?.hoch ?? 'orange', anteil: 1 / 3 }
 	];
 }
+
+/**
+ * #2913 AC-9: Mittelpunkte (px) der Grenzzahlen, sodass sich benachbarte Zahlen nicht überlappen
+ * und keine über den Rand der Leiste ragt. Liegen Grenzen eng beieinander (z. B. 27/30/33 °C bei
+ * 160 px Mittelspalte), wird die Gruppe um den Mittelwert ihrer Soll-Lagen auseinandergezogen;
+ * ohne Konflikt bleibt jede Zahl genau über ihrer Grenze (Mockup-Bild).
+ * `pos` in Prozent (wie `LeisteMarke.pos`, aufsteigend), `breiten` und `breite` (Leiste) in px.
+ */
+export function entzerreMarken(pos: readonly number[], breiten: readonly number[], breite: number, abstand: number): number[] {
+	const anker = pos.map((p) => (p / 100) * breite);
+	type Gruppe = { von: number; bis: number; links: number };
+	/** Abstand der Mittelpunkte von Zahl `von` bis Zahl `j` einer Gruppe (dicht an dicht). */
+	const versatz = (von: number, j: number) => {
+		let v = 0;
+		for (let k = von + 1; k <= j; k++) v += (breiten[k - 1] + breiten[k]) / 2 + abstand;
+		return v;
+	};
+	/** Gruppe so legen, dass der Mittelwert der Lagen dem Mittelwert der Soll-Lagen entspricht, im Rand. */
+	const lege = (von: number, bis: number): Gruppe => {
+		let summe = 0;
+		for (let j = von; j <= bis; j++) summe += anker[j] - versatz(von, j);
+		const min = breiten[von] / 2;
+		const max = breite - breiten[bis] / 2 - versatz(von, bis);
+		return { von, bis, links: Math.max(min, Math.min(max, summe / (bis - von + 1))) };
+	};
+	const stapel: Gruppe[] = [];
+	for (let i = 0; i < anker.length; i++) {
+		stapel.push(lege(i, i));
+		while (stapel.length > 1) {
+			const b = stapel[stapel.length - 1];
+			const a = stapel[stapel.length - 2];
+			const endeA = a.links + versatz(a.von, a.bis);
+			if (b.links - endeA >= (breiten[a.bis] + breiten[b.von]) / 2 + abstand - 1e-6) break;
+			stapel.splice(-2, 2, lege(a.von, b.bis));
+		}
+	}
+	const aus: number[] = [];
+	for (const g of stapel) for (let j = g.von; j <= g.bis; j++) aus.push(g.links + versatz(g.von, j));
+	return aus;
+}

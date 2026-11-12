@@ -35,6 +35,7 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import path from 'node:path';
 import { live, ampelModell } from '../../shared/wetter-tab/__tests__/wetterTabDaten.ts';
+import { entzerreMarken, leisteVon } from '../../shared/wetter-tab/ampelLeiste.ts';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 // __tests__ -> organisms -> components -> lib -> src -> frontend
@@ -384,5 +385,43 @@ describe('AC-9: Ampel-Leiste nach Mockup (.ticks/.band)', () => {
 		const b = regel(css, '.wt-band');
 		assert.ok(!b['border'] || /^(none|0(px)?)$/.test(b['border']), `TDD RED: Leiste hat Rahmen ${b['border']}`);
 		assert.equal(Object.keys(regel(css, '.wt-band span + span')).length, 0, 'TDD RED: Fugen zwischen den Zonen');
+	});
+});
+
+// ─── Fix-Loop nach Staging-Messung (AC-4, AC-8, AC-9) ───────────────────────
+
+describe('AC-9: Grenzzahlen überlappen sich auch bei 160 px Mittelspalte nicht (entzerreMarken)', () => {
+	// Echte Vorlage „Alpen-Trekking“, Temperatur: 27/30/33 °C liegen bei 160 px nur 7 px auseinander.
+	const temp = leisteVon({ lower: { red: -10, orange: -3, yellow: 2 }, upper: { yellow: 27, orange: 30, red: 33 } } as never);
+	const pos = temp.marken.map((m) => m.pos);
+	const breiten = temp.marken.map((m) => String(m.wert).length * 6); // Mono 10,5 px ≈ 6 px je Zeichen (gemessen)
+	const kanten = (lagen: number[]) => lagen.map((x, i) => [x - breiten[i] / 2, x + breiten[i] / 2]);
+
+	test('160 px: keine Überlappung (≥ 3 px Luft), keine Zahl über den Rand', () => {
+		const k = kanten(entzerreMarken(pos, breiten, 160, 3));
+		for (let i = 1; i < k.length; i++) assert.ok(k[i][0] - k[i - 1][1] >= 3 - 1e-6, `Zahl ${i} überlappt: ${JSON.stringify(k)}`);
+		assert.ok(k[0][0] >= 0 && k[k.length - 1][1] <= 160, `ragt über den Rand: ${JSON.stringify(k)}`);
+	});
+
+	test('genug Platz: jede Zahl bleibt genau über ihrer Grenze (Mockup-Bild)', () => {
+		const lagen = entzerreMarken(pos, breiten, 400, 3);
+		lagen.forEach((x, i) => assert.ok(Math.abs(x - (pos[i] / 100) * 400) < 1e-9, `Zahl ${i} verschoben: ${x}`));
+	});
+
+	test('Gruppe wird um den Mittelwert ihrer Soll-Lagen auseinandergezogen, nicht einseitig verschoben', () => {
+		const lagen = entzerreMarken([50, 50, 50], [12, 12, 12], 200, 3);
+		assert.deepEqual(lagen, [85, 100, 115]);
+	});
+});
+
+describe('AC-4/AC-8: Zeilenhöhe und Trefferflächen der Aktionsspalte (Messung Staging 12.11.)', () => {
+	const css = stilVon(path.join(WT, 'MetrikZeile.svelte'));
+	test('AC-8: Zeilenabstand der umbrechenden Aktionsspalte trennt die 44-px-Trefferflächen von Segment (29 px) und Knopf (28 px)', () => {
+		const zeilenabstand = parseFloat(aufloesen(regel(css, '.wt-act')['gap'] ?? '').split(' ')[0]);
+		assert.ok(zeilenabstand >= 44 - (29 + 28) / 2, `Zeilenabstand ${zeilenabstand} px: Trefferflächen überdecken sich`);
+	});
+	test('AC-4: 4 Zeilen Erklärung passen bei 1280 in 124 px (12 + 27 Leiste + 4 + 4 Zeilen + 12)', () => {
+		const lh = parseFloat(regel(css, '.wt-why')['line-height'] ?? '');
+		assert.ok(12 + 27 + 4 + 4 * 12 * lh + 12 <= 124, `Zeilenhöhe ${lh}: Zeile Temperatur > 124 px`);
 	});
 });
