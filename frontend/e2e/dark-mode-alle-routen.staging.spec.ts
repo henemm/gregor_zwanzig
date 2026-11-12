@@ -30,6 +30,7 @@ import {
 	cleanupTracked
 } from './helpers';
 import { assertNotProdBaseURL } from './prodUrlGuard';
+import { ausUmgebung } from './stagingZugang';
 
 const ROUTES_DIR = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'src', 'routes');
 const VIEWPORTS = [
@@ -94,8 +95,8 @@ test.beforeAll(async ({ playwright, baseURL }) => {
 		baseURL: basis,
 		ignoreHTTPSErrors: true,
 		httpCredentials: {
-			username: process.env.GZ_VALIDATOR_USER ?? process.env.E2E_USER ?? 'admin',
-			password: process.env.GZ_VALIDATOR_PASS ?? process.env.E2E_PASS ?? 'test1234'
+			username: ausUmgebung('GZ_VALIDATOR_USER', 'E2E_USER'),
+			password: ausUmgebung('GZ_VALIDATOR_PASS', 'E2E_PASS')
 		},
 		storageState: AUTH_DATEI
 	});

@@ -45,11 +45,11 @@ import {
 import { assertNotProdBaseURL } from './prodUrlGuard';
 
 const BASE = process.env.GZ_SVELTE_BASE ?? 'https://staging.gregor20.henemm.com';
-const NGINX_USER = process.env.GZ_VALIDATOR_USER ?? process.env.E2E_USER ?? 'admin';
-const NGINX_PASS = process.env.GZ_VALIDATOR_PASS ?? process.env.E2E_PASS ?? 'test1234';
-const APP_USER = process.env.GZ_AUTH_USER ?? process.env.E2E_USER ?? 'admin';
-const APP_PASS = process.env.GZ_AUTH_PASS ?? process.env.E2E_PASS ?? 'test1234';
-const GAST_PASSWORT = 'test1234';
+const NGINX_USER = ausUmgebung('GZ_VALIDATOR_USER', 'E2E_USER');
+const NGINX_PASS = ausUmgebung('GZ_VALIDATOR_PASS', 'E2E_PASS');
+const APP_USER = ausUmgebung('GZ_AUTH_USER', 'E2E_USER');
+const APP_PASS = ausUmgebung('GZ_AUTH_PASS', 'E2E_PASS');
+const GAST_PASSWORT = wegwerfPasswort();
 
 // ---------------------------------------------------------------------------
 // Helfer
@@ -133,6 +133,7 @@ if ids:
 imap.logout()
 print(json.dumps(treffer))
 `;
+import { ausUmgebung, wegwerfPasswort } from './stagingZugang';
 
 function mailsAn(adresse: string): { subject: string; to: string }[] {
 	for (const pflicht of ['GZ_TEST_IMAP_USER', 'GZ_TEST_IMAP_PASS']) {

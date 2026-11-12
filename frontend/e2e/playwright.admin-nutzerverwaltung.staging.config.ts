@@ -1,10 +1,11 @@
 import { defineConfig } from '@playwright/test';
+import { ausUmgebung } from './stagingZugang';
 // E2E-Config Issue #2155 S4: Admin-Seite `/admin` gegen Staging (Muster:
 // playwright.konto-naechste-pruefung.staging.config.ts). Zwei Anmeldezustaende
 // (Admin, Nicht-Admin) entstehen im Setup; die Spec oeffnet je Kontext den passenden.
 // Kein lokaler webServer. Staging steht hinter nginx-Basic-Auth (GZ_VALIDATOR_*).
-const user = process.env.GZ_VALIDATOR_USER ?? process.env.E2E_USER ?? 'admin';
-const pass = process.env.GZ_VALIDATOR_PASS ?? process.env.E2E_PASS ?? 'test1234';
+const user = ausUmgebung('GZ_VALIDATOR_USER', 'E2E_USER');
+const pass = ausUmgebung('GZ_VALIDATOR_PASS', 'E2E_PASS');
 
 export default defineConfig({
 	testDir: '.',

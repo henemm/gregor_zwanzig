@@ -1,10 +1,11 @@
 import { defineConfig } from '@playwright/test';
+import { ausUmgebung } from './stagingZugang';
 
 // Wegwerf-Staging-Config für den RED-Nachweis von Fix #1047 (Mail-Inhalt-Karte im
 // Wetter-Metriken-Reiter). Wird nach Implementierung/Deploy wieder entfernt — kein
 // dauerhaftes Repo-Artefakt. Setup-Projekt wiederverwendet aus Bündel I.
-const user = process.env.GZ_VALIDATOR_USER ?? process.env.E2E_USER ?? 'admin';
-const pass = process.env.GZ_VALIDATOR_PASS ?? process.env.E2E_PASS ?? 'test1234';
+const user = ausUmgebung('GZ_VALIDATOR_USER', 'E2E_USER');
+const pass = ausUmgebung('GZ_VALIDATOR_PASS', 'E2E_PASS');
 
 export default defineConfig({
 	testDir: '.',

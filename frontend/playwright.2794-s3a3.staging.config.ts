@@ -1,11 +1,12 @@
 import { defineConfig } from '@playwright/test';
+import { ausUmgebung } from './e2e/stagingZugang';
 // Issue #2794 S3a, Teil-PR 3 „Reiter Wetter": Staging-Lauf der Specs `s3a2794-teil3-*.spec.ts`
 // (AC-9 bis AC-21, AC-38 bis AC-42) gegen https://staging.gregor20.henemm.com
 // (nur /e2e-verify, nie gegen Produktion). Staging steht hinter nginx-Basic-Auth
 // (Validator-Creds), Login ueber das Setup-Projekt von #1895. Analog playwright.2794-s3a2.staging.config.ts.
 //   cd frontend && npx playwright test --config playwright.2794-s3a3.staging.config.ts
-const user = process.env.GZ_VALIDATOR_USER ?? process.env.E2E_USER ?? 'admin';
-const pass = process.env.GZ_VALIDATOR_PASS ?? process.env.E2E_PASS ?? 'test1234';
+const user = ausUmgebung('GZ_VALIDATOR_USER', 'E2E_USER');
+const pass = ausUmgebung('GZ_VALIDATOR_PASS', 'E2E_PASS');
 
 export default defineConfig({
 	testDir: 'e2e',

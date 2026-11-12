@@ -1,10 +1,11 @@
 import { defineConfig } from '@playwright/test';
+import { ausUmgebung } from './stagingZugang';
 
 // Wegwerf-Staging-Config für den RED/GREEN-Nachweis von Issue #1059 (Fortsetzen-Button
 // ohne Fehler-Feedback). Analog e2e/playwright.fix-1047.staging.config.ts — liegt bewusst
 // unter e2e/, damit strict_code_gate ihn wie eine Testdatei behandelt.
-const user = process.env.GZ_VALIDATOR_USER ?? process.env.E2E_USER ?? 'admin';
-const pass = process.env.GZ_VALIDATOR_PASS ?? process.env.E2E_PASS ?? 'test1234';
+const user = ausUmgebung('GZ_VALIDATOR_USER', 'E2E_USER');
+const pass = ausUmgebung('GZ_VALIDATOR_PASS', 'E2E_PASS');
 
 export default defineConfig({
 	testDir: '.',

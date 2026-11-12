@@ -1,6 +1,7 @@
 import { defineConfig } from '@playwright/test';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { ausUmgebung } from './stagingZugang';
 
 // Staging-Nachpruefung Issue #1393 — „Ich aendere eine Etappe z.B. auf den 26.7.
 // und erwarte, dass die folgende Etappe auf den 27.7. geaendert wird."
@@ -12,8 +13,8 @@ import { fileURLToPath } from 'node:url';
 // Rate-Limit-Bucket #703).
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const nginxUser = process.env.GZ_VALIDATOR_USER ?? process.env.E2E_USER ?? 'admin';
-const nginxPass = process.env.GZ_VALIDATOR_PASS ?? process.env.E2E_PASS ?? 'test1234';
+const nginxUser = ausUmgebung('GZ_VALIDATOR_USER', 'E2E_USER');
+const nginxPass = ausUmgebung('GZ_VALIDATOR_PASS', 'E2E_PASS');
 
 export default defineConfig({
 	testDir: '.',

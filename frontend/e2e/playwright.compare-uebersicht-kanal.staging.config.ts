@@ -1,6 +1,7 @@
 import { defineConfig } from '@playwright/test';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { ausUmgebung } from './stagingZugang';
 // E2E-Config Issue #1703 Scheibe 8 (kanal-eigene Metrikauswahl der
 // Vergleichs-Uebersicht) gegen Staging — EIN Setup fuer ALLE Buendel:
 // die beiden Hub-Buendel (Bearbeiten-Pfad) und den Anlege-Pfad
@@ -9,8 +10,8 @@ import { fileURLToPath } from 'node:url';
 // retries: 0 — die Klickpfade veraendern ihren eigenen Test-Vergleich; ein
 // Wiederholungslauf traefe auf einen bereits editierten Stand.
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const user = process.env.GZ_VALIDATOR_USER ?? process.env.E2E_USER ?? 'admin';
-const pass = process.env.GZ_VALIDATOR_PASS ?? process.env.E2E_PASS ?? 'test1234';
+const user = ausUmgebung('GZ_VALIDATOR_USER', 'E2E_USER');
+const pass = ausUmgebung('GZ_VALIDATOR_PASS', 'E2E_PASS');
 
 export default defineConfig({
 	testDir: '.',

@@ -1,6 +1,7 @@
 import { test as setup, expect } from '@playwright/test';
 import { assertNotProdBaseURL } from './prodUrlGuard';
 import type { APIRequestContext } from '@playwright/test';
+import { ausUmgebung } from './stagingZugang';
 
 // Staging-Auth für Bündel I (#970/#971) via API (Wegwerf-Testnutzer, keine echten
 // Secrets). Einmaliger Register+Login im setup-Projekt → storageState; Tests laufen
@@ -16,7 +17,7 @@ import type { APIRequestContext } from '@playwright/test';
 // nicht bei 429 — sonst verlängert jeder Auth-Hit das gleitende Limit-Fenster.
 const authFile = 'playwright/.auth/staging-bundle-i.json';
 const E2E_USER = 'bundle-i-e2e-user';
-const E2E_PASS = 'bundleI-e2e-pass-2026!';
+const E2E_PASS = ausUmgebung('GZ_E2E_BUNDLE_I_PASS');
 
 function sleep(ms: number) {
 	return new Promise((r) => setTimeout(r, ms));
@@ -30,8 +31,8 @@ setup('register + authenticate via API (staging) — Bündel I', async ({ playwr
 	setup.setTimeout(420_000);
 	const base = process.env.GZ_SVELTE_BASE ?? 'https://staging.gregor20.henemm.com';
 	assertNotProdBaseURL(base);
-	const nginxUser = process.env.GZ_VALIDATOR_USER ?? process.env.E2E_USER ?? 'admin';
-	const nginxPass = process.env.GZ_VALIDATOR_PASS ?? process.env.E2E_PASS ?? 'test1234';
+	const nginxUser = ausUmgebung('GZ_VALIDATOR_USER', 'E2E_USER');
+	const nginxPass = ausUmgebung('GZ_VALIDATOR_PASS', 'E2E_PASS');
 	const ctx = await playwright.request.newContext({
 		baseURL: base,
 		ignoreHTTPSErrors: true,

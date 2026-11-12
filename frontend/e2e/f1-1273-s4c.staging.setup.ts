@@ -3,6 +3,7 @@ import { assertNotProdBaseURL } from './prodUrlGuard';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import * as fs from 'fs';
+import { ausUmgebung } from './stagingZugang';
 // Staging-Auth für Epic #1273 Slice S4c (E2E-Migration Compare-Hub/Wizard).
 // Analog feat-1256-s2.staging.setup.ts: nginx-Basic-Auth
 // (GZ_VALIDATOR_*) UND App-Login (gz_session via GZ_AUTH_*) sind getrennte
@@ -17,10 +18,10 @@ const authFile = path.join(__dirname, '..', 'playwright', '.auth', 'staging-1273
 setup('authenticate via API (staging) — epic_1273_s4c_e2e_migration', async ({ playwright }) => {
 	const base = process.env.GZ_SVELTE_BASE ?? 'https://staging.gregor20.henemm.com';
 	assertNotProdBaseURL(base);
-	const nginxUser = process.env.GZ_VALIDATOR_USER ?? 'admin';
-	const nginxPass = process.env.GZ_VALIDATOR_PASS ?? 'test1234';
-	const appUser = process.env.GZ_AUTH_USER ?? process.env.E2E_USER ?? 'admin';
-	const appPass = process.env.GZ_AUTH_PASS ?? process.env.E2E_PASS ?? 'test1234';
+	const nginxUser = ausUmgebung('GZ_VALIDATOR_USER');
+	const nginxPass = ausUmgebung('GZ_VALIDATOR_PASS');
+	const appUser = ausUmgebung('GZ_AUTH_USER', 'E2E_USER');
+	const appPass = ausUmgebung('GZ_AUTH_PASS', 'E2E_PASS');
 
 	const ctx = await playwright.request.newContext({
 		baseURL: base,

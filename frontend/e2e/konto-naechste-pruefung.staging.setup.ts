@@ -2,6 +2,7 @@ import { test as setup, expect } from '@playwright/test';
 import { assertNotProdBaseURL } from './prodUrlGuard';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { ausUmgebung } from './stagingZugang';
 // Staging-Auth fuer Issue #1727 S5e (Konto-Seite, AC-4/AC-7). Muster:
 // kuerzel-marken-sichtbar.staging.setup.ts — nginx-Basic-Auth (GZ_VALIDATOR_*)
 // und App-Login (GZ_AUTH_*) sind ZWEI getrennte Credential-Paare, und die
@@ -16,10 +17,10 @@ setup('authenticate via API (staging) — fix_1727_s5e_konto_naechste_pruefung',
 }) => {
 	const base = process.env.GZ_SVELTE_BASE ?? 'https://staging.gregor20.henemm.com';
 	assertNotProdBaseURL(base);
-	const nginxUser = process.env.GZ_VALIDATOR_USER ?? 'admin';
-	const nginxPass = process.env.GZ_VALIDATOR_PASS ?? 'test1234';
-	const appUser = process.env.GZ_AUTH_USER ?? process.env.E2E_USER ?? 'admin';
-	const appPass = process.env.GZ_AUTH_PASS ?? process.env.E2E_PASS ?? 'test1234';
+	const nginxUser = ausUmgebung('GZ_VALIDATOR_USER');
+	const nginxPass = ausUmgebung('GZ_VALIDATOR_PASS');
+	const appUser = ausUmgebung('GZ_AUTH_USER', 'E2E_USER');
+	const appPass = ausUmgebung('GZ_AUTH_PASS', 'E2E_PASS');
 
 	const ctx = await playwright.request.newContext({
 		baseURL: base,

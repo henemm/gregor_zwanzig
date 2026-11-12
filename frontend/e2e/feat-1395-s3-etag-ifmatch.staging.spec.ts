@@ -22,6 +22,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { assertNotProdBaseURL } from './prodUrlGuard';
 import { E2E_TEST_PREFIX, feldEingabe, tippeUhrzeit } from './helpers';
+import { ausUmgebung } from './stagingZugang';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const AUTH_FILE = path.join(__dirname, 'playwright', '.auth', 'staging-1395-s3.json');
@@ -158,8 +159,8 @@ test.afterAll(async ({ playwright }) => {
 		baseURL: base,
 		ignoreHTTPSErrors: true,
 		httpCredentials: {
-			username: process.env.GZ_VALIDATOR_USER ?? 'admin',
-			password: process.env.GZ_VALIDATOR_PASS ?? 'test1234'
+			username: ausUmgebung('GZ_VALIDATOR_USER'),
+			password: ausUmgebung('GZ_VALIDATOR_PASS')
 		},
 		storageState: AUTH_FILE
 	});
