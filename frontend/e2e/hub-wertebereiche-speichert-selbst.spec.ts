@@ -343,7 +343,7 @@ for (const kind of HUB_KINDS) {
 				const zeile = await grenzenOeffnen(reiter, ZEILE);
 				for (const f of ['yellow', 'orange', 'red'] as const) await zeile.getByTestId(WT.grenze(ZEILE, 'upper', f)).fill('');
 				await fertig(zeile, ZEILE);
-				await expect(zeile.getByTestId(WT.gruen(ZEILE))).toHaveText('immer grün (keine Grenze gesetzt)');
+				await expect(zeile.getByTestId(WT.gruen(ZEILE))).toHaveText('· immer grün (keine Grenze gesetzt)');
 
 				await expect.poll(() => beantwortet.length, { timeout: 10_000 }).toBe(1);
 				await bleibtBei(() => puts.length, 1, 1_200, 'WS-6: genau EIN Schreibvorgang');
@@ -354,7 +354,7 @@ for (const kind of HUB_KINDS) {
 
 				const r2 = await oeffneWetter(page, kind, hub.id);
 				await expect(r2.getByTestId(WT.zeile(ZEILE)), 'nach Neuladen steht die Zeile noch').toBeVisible();
-				await expect(r2.getByTestId(WT.gruen(ZEILE))).toHaveText('immer grün (keine Grenze gesetzt)');
+				await expect(r2.getByTestId(WT.gruen(ZEILE))).toHaveText('· immer grün (keine Grenze gesetzt)');
 			} finally {
 				await hub.aufraeumen();
 			}
