@@ -32,7 +32,14 @@ const (
 	smsCodeLaenge      = 6
 	smsCodeGueltigkeit = 10 * time.Minute
 	smsCodeMaxVersuche = 5
+
+	// Issue #2961: Mengenbremse der Einloese-Route je Nutzer.
+	smsVerifyVersucheJeFenster = 10
+	smsVerifyFenster           = 10 * time.Minute
 )
+
+// smsVerifyLocks serialisiert den Pruefzyklus je Nutzer (Issue #2961).
+var smsVerifyLocks = newKeyedLock()
 
 // smsVerifiziert meldet, ob die WIRKSAME Nummer des Kontos bewiesen ist —
 // dieselbe Frage, die `with_user_profile` auf der Python-Seite stellt. Beide
@@ -138,6 +145,8 @@ func smsFehler(w http.ResponseWriter, r *http.Request, status int, code string) 
 // AUSSCHLIESSLICH aus der Sitzung — nie aus dem Rumpf (der Endpunkt ist
 // anmeldepflichtig, anders als ResendVerificationHandler).
 func PostSmsVerifyHandler(s *store.Store) http.HandlerFunc {
+	// Issue #2961: Mengenbremse je Nutzer (Schluessel = Sitzungskennung).
+	limiter := NewMailFloodLimiter(smsVerifyVersucheJeFenster, smsVerifyFenster)
 	return func(w http.ResponseWriter, r *http.Request) {
 		userId := middleware.UserIDFromContext(r.Context())
 		var req struct {
@@ -147,6 +156,16 @@ func PostSmsVerifyHandler(s *store.Store) http.HandlerFunc {
 			smsFehler(w, r, 400, "invalid_request")
 			return
 		}
+		if !limiter.AllowAddressOnly(userId) {
+			w.Header().Set("Retry-After", limiter.RetryAfterHeader())
+			smsFehler(w, r, http.StatusTooManyRequests, "rate_limit_exceeded")
+			return
+		}
+		// Issue #2961: der ganze Pruefzyklus (Laden, Zaehlen, Vergleichen,
+		// Speichern) laeuft unter einer Sperre je Nutzer — gleichzeitige
+		// Versuche koennen den Zaehler nicht ueberholen.
+		unlock := smsVerifyLocks.Lock(userId)
+		defer unlock()
 		user, err := s.LoadUser(userId)
 		if err != nil || user == nil {
 			smsFehler(w, r, 404, "not_found")
@@ -165,16 +184,21 @@ func PostSmsVerifyHandler(s *store.Store) http.HandlerFunc {
 			smsFehler(w, r, 400, "invalid_code")
 			return
 		}
+		// Issue #2961: der Versuch wird VOR dem Vergleich gezaehlt und
+		// gespeichert; ohne gespeicherten Zaehler kein Vergleich (fail-closed).
+		rec.FailedAttempts++
+		if err := s.SaveSmsVerification(userId, *rec); err != nil {
+			log.Printf("sms verification: attempt counter not persisted for %s: %v", userId, err)
+			smsFehler(w, r, 500, "store_error")
+			return
+		}
 		if bcrypt.CompareHashAndPassword([]byte(rec.CodeHash), []byte(req.Code)) != nil {
-			rec.FailedAttempts++
 			if rec.FailedAttempts >= smsCodeMaxVersuche {
 				// Sofort verbrennen: ein sechster Versuch ist nicht noetig,
 				// um den Code wertlos zu machen.
 				if err := s.DeleteSmsVerification(userId); err != nil {
 					log.Printf("sms verification: delete after lockout failed for %s: %v", userId, err)
 				}
-			} else if err := s.SaveSmsVerification(userId, *rec); err != nil {
-				log.Printf("sms verification: attempt counter not persisted for %s: %v", userId, err)
 			}
 			smsFehler(w, r, 400, "invalid_code")
 			return
