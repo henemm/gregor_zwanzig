@@ -887,7 +887,13 @@ Leitet GPX-Upload vom SvelteKit-Frontend via Go-Proxy an Python FastAPI weiter. 
 | Status | Body | Szenario |
 |--------|------|----------|
 | 400 | `{"error":"invalid_gpx","detail":"..."}` | Kein `file`-Field oder GPX nicht parsebar |
+| 400 | `{"detail":"<Katalogtext>","code":"gpx_ungueltig"}` | Python: Datei leer, kaputt oder ohne verwertbaren Track (#2961; ohne Pfad/Interna) |
+| 409 | `{"detail":"<Katalogtext>","code":"gpx_speicher_voll"}` | Python: GPX-Ablage des Nutzers voll — höchstens 200 Dateien und 200 MB je Nutzer; eine gleichnamige Datei wird ersetzt und zählt nicht doppelt (#2961) |
+| 413 | `{"detail":"<Katalogtext>","code":"gpx_zu_gross"}` | Python: Datei größer als 10 MB (#2961) |
 | 503 | `{"error":"core_unavailable"}` | Python-Backend nicht erreichbar oder Timeout (>30s) |
+
+Gespeichert wird die Datei unter `data/users/<user_id>/gpx/<dateiname>`; ein Upload mit
+gleichem Namen ersetzt die vorhandene Datei erst, wenn die neue lesbar ist (#2961).
 
 #### Source Files
 
