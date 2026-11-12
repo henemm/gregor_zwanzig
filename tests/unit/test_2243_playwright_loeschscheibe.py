@@ -13,7 +13,6 @@ AC-6 (TS-Pfadwächter) in `tests/unit/test_ts_repo_path_hardcoding.py`.
 """
 
 import re
-import shutil
 import subprocess
 from pathlib import Path
 
