@@ -82,14 +82,17 @@ For each parsed `AC-N`:
 ### Step 7 (PFLICHT): Write the verdict via `staging_gate.py`
 
 ```bash
-# Collect all findings into one JSON file
+# Collect all findings into one JSON file -- #2961: in a private directory from
+# `mktemp -d` (mode 0700), never a fixed /tmp path; run this whole block in ONE Bash call.
+D=$(mktemp -d)
 echo '[{"ac": "AC-1", "status": "PASS", "url": "...", "evidence": "..."}, ...]' \
-  > /tmp/staging_findings_${GZ_ACTIVE_WORKFLOW}.json
+  > "$D/staging_findings.json"
 
 python3 .claude/hooks/staging_gate.py \
   --write-verdict "VERIFIED: N/N ACs grün" \
-  --findings-json /tmp/staging_findings_${GZ_ACTIVE_WORKFLOW}.json \
+  --findings-json "$D/staging_findings.json" \
   --langs de,en
+rm -rf "$D"
 ```
 
 `--langs de,en` is mandatory except for scope `docs-only` (Issue #2681): only pass it after the

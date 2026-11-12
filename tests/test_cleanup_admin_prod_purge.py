@@ -78,7 +78,7 @@ def _build_fixture_tree(users_root: Path) -> None:
     )
     _write_json(
         users_root / "steffi" / "user.json",
-        {"mail_to": "steffi.emmrich@gmail.com"},
+        {"mail_to": "steffi@example.com"},
     )
     _write_json(
         users_root / "validator-issue110" / "user.json",
