@@ -1476,10 +1476,12 @@ def lookup_user_by_email(email: str, data_dir: str | None = None) -> str | None:
             real_matches.append(uid)
 
     if len(real_matches) > 1:
+        from utils.pii_masking import mask_addr_for_pii_log
+
         logger.error(
             "Email-Adresse %s ist mehrdeutig — keine Zuordnung. "
             "Kollidierende Nutzer: %s (Issue #2143)",
-            email,
+            mask_addr_for_pii_log(email),  # #2961: nie im Klartext
             ", ".join(real_matches),
         )
         return None
