@@ -515,6 +515,32 @@ def test_2503_ac4_neuer_roter_test_ausserhalb_red_blockiert(tmp_path, zustand):
     )
 
 
+def test_2503_ac4_workflow_name_mit_pfadausbruch_blockiert(tmp_path):
+    """AC-4: Ein Workflow-Name mit `../` ist keine Erlaubnis — auch wenn dort ein
+    State in Phase RED liegt (gilt mit Plugin und im Rueckfall ohne Plugin, CI).
+
+    `.claude/workflows/` muss existieren (F002): sonst scheitert der Ausbruchspfad
+    `workflows/../<name>.json` schon am Betriebssystem (FileNotFoundError) und der Test
+    bliebe gruen, auch wenn die Namenspruefung `_workflow_name_ok` fehlte. Mit dem Ordner
+    loest der Pfad auf die RED-State-Datei in `.claude/` auf — nur die Namenspruefung
+    kann dann noch blockieren."""
+    repo = _python_repo_mit_neuem_rotem_test(tmp_path)
+    claude = repo / ".claude"
+    workflows = claude / "workflows"
+    workflows.mkdir(parents=True, exist_ok=True)
+    (workflows / "anderer-workflow.json").write_text(
+        json.dumps({"name": "anderer-workflow", "current_phase": "phase6_implement"}))
+    (claude / "active_workflow").write_text(f"../{WF_NAME}\n")
+    (claude / f"{WF_NAME}.json").write_text(
+        json.dumps({"name": WF_NAME, "current_phase": "phase5_tdd_red"}))
+    r = _hook(repo)
+    assert r.returncode == 2, (
+        f"Ein Workflow-Name mit '../' darf keine RED-Erlaubnis geben (Exit {r.returncode})"
+        f"\n{r.stderr}"
+    )
+    assert NUR_RED in r.stderr.lower() and "test_neu_angelegt_rot" in r.stderr, r.stderr
+
+
 def test_2503_ac5_aus_gruen_wird_rot_blockiert_auch_in_phase_red(tmp_path):
     """AC-5 (Gegenprobe): Bestehender gruener Test wird rot -> in Phase RED weiter Exit 2.
 

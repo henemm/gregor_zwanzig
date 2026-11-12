@@ -166,14 +166,19 @@ def _rote_blaetter(f: str, fehl: set[str]) -> list[str]:
 def _phase_ist_red() -> bool:
     """Steht der aktive Workflow (worktree-bewusst) in Phase TDD-RED?
 
-    Jede Unklarheit (kein Workflow, unlesbarer State, hook_utils fehlt) ist FEHLENDE
-    Erlaubnis — keine Stoerung des Gates (Spec #2503, Punkt 4).
+    Jede Unklarheit (kein Workflow, unlesbarer State) ist FEHLENDE Erlaubnis — keine
+    Stoerung des Gates (Spec #2503, Punkt 4). Fehlt das Plugin (CI-Runner: `hook_utils`
+    ist nur ein Shim darauf), liest `_phase_ist_red_ohne_plugin` den State direkt.
     """
     try:
         sys.path.insert(0, str(Path(__file__).resolve().parent))
         import hook_utils  # noqa: PLC0415 — nur bei Bedarf laden
+        _ = hook_utils.get_active_workflow_name
+    except Exception:
+        return _phase_ist_red_ohne_plugin()
+    try:
         name = hook_utils.get_active_workflow_name()
-        if not name:
+        if not _workflow_name_ok(name):
             return False
         wurzel = hook_utils.find_project_root()
         state = hook_utils.read_state_json(
@@ -181,6 +186,29 @@ def _phase_ist_red() -> bool:
         return isinstance(state, dict) and state.get("current_phase") == "phase5_tdd_red"
     except Exception:
         return False
+
+
+def _phase_ist_red_ohne_plugin() -> bool:
+    """Rueckfall ohne Plugin: State aus `<git-wurzel>/.claude/` lesen, sonst False."""
+    try:
+        wurzel = Path(subprocess.run(
+            ["git", "rev-parse", "--show-toplevel"], capture_output=True, text=True,
+            timeout=10, check=True).stdout.strip())
+        zeilen = (wurzel / ".claude" / "active_workflow").read_text().splitlines()
+        name = zeilen[0].strip() if zeilen else ""
+        if not _workflow_name_ok(name):
+            return False
+        with open(wurzel / ".claude" / "workflows" / f"{name}.json") as fh:
+            state = json.load(fh)
+        return isinstance(state, dict) and state.get("current_phase") == "phase5_tdd_red"
+    except Exception:
+        return False
+
+
+def _workflow_name_ok(name: object) -> bool:
+    """Nur schlichte Namen — ein `../` darf keinen State ausserhalb von workflows/ waehlen."""
+    return (isinstance(name, str) and bool(re.fullmatch(r"[A-Za-z0-9._-]+", name))
+            and ".." not in name)
 
 
 # ---------------------------------------------------------------------------
