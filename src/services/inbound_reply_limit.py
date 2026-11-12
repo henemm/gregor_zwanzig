@@ -45,11 +45,10 @@ def fehlerantwort_erlaubt(user_id: str, *, now: float | None = None) -> bool:
         stempel = [s for s in _lesen(pfad) if 0 <= jetzt - s < _FENSTER_SEKUNDEN]
         if len(stempel) >= FEHLERANTWORTEN_JE_STUNDE:
             return False
-        stempel.append(jetzt)
         try:
             ordner.mkdir(parents=True, exist_ok=True)
             tmp = pfad.with_name(pfad.name + ".tmp")
-            tmp.write_text(json.dumps(stempel))
+            tmp.write_text(json.dumps([*stempel, jetzt]))
             os.replace(tmp, pfad)
         except OSError as e:
             logger.warning("Fehlerantwort-Drossel nicht speicherbar: %s", e)
