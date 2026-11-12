@@ -89,16 +89,19 @@ func TestDeleteComparePresetHandler_RaeumtEigeneSperrdateiAb_ZweiNutzer(t *testi
 	dlcAssertBUnchanged(t, s, "cp1", jsonB, lockB)
 }
 
-// Kein erfolgreiches Loeschen (404) => die vom Handler angelegte Sperrdatei
-// bleibt; nur nach erfolgreichem Delete wird aufgeraeumt.
-func TestDeleteComparePresetHandler_404LaesstSperrdateiStehen(t *testing.T) {
+// Issue #2961 (loest die fruehere #2237-Erwartung "404 laesst die Sperrdatei
+// stehen" ab): ein Zugriff auf eine UNBEKANNTE Kennung hinterlaesst keine
+// Sperrdatei — sonst waechst briefings/ mit jeder erfundenen Kennung. Eine
+// Sperrdatei NEBEN einer existierenden .json bleibt dagegen stehen
+// (TestDeleteTripHandler_VergleichBleibtSamtSperrdatei unten).
+func TestDeleteComparePresetHandler_404HinterlaesstKeineSperrdatei(t *testing.T) {
 	s := store.New(t.TempDir(), "u-a")
 	w := p2158Do(DeleteComparePresetHandler(s), "DELETE", "/api/compare/presets/{id}", "/api/compare/presets/unbekannt", "", "u-a")
 	if w.Code != 404 {
 		t.Fatalf("DELETE: %d (%s)", w.Code, w.Body.String())
 	}
-	if !dlcExists(filepath.Join(s.WithUser("u-a").BriefingsDir(), "unbekannt.json.lock")) {
-		t.Error("Sperrdatei darf ohne erfolgreiches Loeschen nicht entfernt werden")
+	if dlcExists(filepath.Join(s.WithUser("u-a").BriefingsDir(), "unbekannt.json.lock")) {
+		t.Error("Zugriff auf eine unbekannte Kennung hat eine Sperrdatei hinterlassen")
 	}
 }
 

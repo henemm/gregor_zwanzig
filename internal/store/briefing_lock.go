@@ -103,15 +103,39 @@ func (s *Store) LockBriefing(id string) func() {
 	if err != nil {
 		// Pfad nicht anlegbar (z. B. leerer Nutzer): nur der Prozess-Mutex.
 		unlock, _ = s.lockBriefing(id, -1)
+		return unlock
 	}
-	return unlock
+	return s.mitAufraeumen(id, unlock)
 }
 
 // LockBriefingErr wie LockBriefing, aber mit Frist (~5 s) fuer den
 // Datei-flock. Fristablauf => ErrBriefingLockTimeout, nichts ist gesperrt.
 // gz-store-scope-required: baut den Sperrschluessel direkt aus s.UserID, ohne requireUser aufzurufen
 func (s *Store) LockBriefingErr(id string) (func(), error) {
-	return s.lockBriefing(id, currentBriefingLockTimeout())
+	unlock, err := s.lockBriefing(id, currentBriefingLockTimeout())
+	if err != nil {
+		return unlock, err
+	}
+	return s.mitAufraeumen(id, unlock), nil
+}
+
+// mitAufraeumen haengt an die Freigabe die Entfernung einer VERWAISTEN
+// Sperrdatei (Issue #2961): steht nach dem Freigeben keine <id>.json neben
+// der Sperrdatei — Zugriff auf eine unbekannte Kennung (404), Loeschung,
+// abgebrochene Neuanlage —, raeumt RemoveBriefingLockFile sie mit denselben
+// Schutzregeln wie #2237 ab (Prozess-Mutex, flock ohne Warten; haelt der
+// Python-Kern sie gerade, bleibt sie stehen). Das Sperrprotokoll gegenueber
+// Python (ADR-0083: gleicher Pfad, flock, Haltedauer) bleibt unveraendert.
+func (s *Store) mitAufraeumen(id string, unlock func()) func() {
+	var once sync.Once
+	return func() {
+		once.Do(func() {
+			unlock()
+			if _, err := os.Stat(filepath.Join(s.briefingsDir(), id+".json")); os.IsNotExist(err) {
+				s.RemoveBriefingLockFile(id)
+			}
+		})
+	}
 }
 
 // lockBriefing: timeout<0 = nur Mutex, 0 = flock unbegrenzt, >0 = mit Frist.
