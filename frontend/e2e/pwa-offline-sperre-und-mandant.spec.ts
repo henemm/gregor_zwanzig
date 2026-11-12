@@ -602,6 +602,67 @@ test('AC-14: meldet sich B ohne As Abmeldung an, faellt As Speicherbereich beim 
 });
 
 // ===========================================================================
+// Issue #2961 (Haertungs-Spec AC-8): schon die erste Seite NACH dem Wechsel
+// raeumt — auch wenn sie selbst nie abgelegt wird (ADR-0063 §4)
+// ===========================================================================
+
+test('#2961 AC-8: meldet sich B an, faellt As Speicherbereich schon beim Aufruf der Startseite', async ({
+	page
+}) => {
+	test.setTimeout(120_000);
+
+	await activateServiceWorker(page);
+	const tripA = await tripAblegen(page);
+	const speicherA = await cacheNamenMitEintrag(page, `/trips/${tripA}`);
+	expect(speicherA.length, 'As Ansicht liegt gar nicht im Speicher').toBeGreaterThan(0);
+
+	await zweiterNutzerAnmelden(page);
+	expect(
+		await cacheNames(page),
+		'Aufbau misslungen: As Bereich ist schon vor Bs erstem Seitenaufruf fort'
+	).toEqual(expect.arrayContaining(speicherA));
+
+	// Die Startseite steht NIE auf der Ablage-Positivliste (Alarm-Historie).
+	await page.goto('/');
+	await page.waitForLoadState('networkidle');
+
+	await expect
+		.poll(() => cacheNames(page), { timeout: 15_000 })
+		.not.toEqual(expect.arrayContaining(speicherA));
+	expect(
+		(await readCacheEntries(page)).map((e) => new URL(e.url).pathname),
+		'As Ansicht ist nach Bs erstem Seitenaufruf weiterhin abgelegt'
+	).not.toContain(`/trips/${tripA}`);
+});
+
+// ===========================================================================
+// Issue #2961 (Haertungs-Spec AC-12): ein Verweis auf /login?abgemeldet=1
+// leert den Speicher eines weiterhin angemeldeten Nutzers nicht
+// ===========================================================================
+
+test('#2961 AC-12: /login?abgemeldet=1 bei bestehender Sitzung laesst den Speicher stehen', async ({
+	page
+}) => {
+	test.setTimeout(120_000);
+
+	await activateServiceWorker(page);
+	const tripId = await tripAblegen(page);
+	const vorher = await cacheNames(page);
+
+	await page.goto('/login?abgemeldet=1');
+	await page.waitForLoadState('networkidle');
+	// Ein Ausbleiben laesst sich nicht erwarten, nur abwarten: das Raeumen der
+	// Anmeldeseite laeuft sofort nach dem Laden los und braucht ~1,5 s Ruhezeit.
+	await page.waitForTimeout(4_000);
+
+	expect(
+		await cacheNamenMitEintrag(page, `/trips/${tripId}`),
+		'ein Verweis mit Abmelde-Merkmal hat den Offline-Speicher eines angemeldeten Nutzers geleert'
+	).not.toEqual([]);
+	expect(await cacheNames(page)).toEqual(expect.arrayContaining(vorher));
+});
+
+// ===========================================================================
 // AC-12 — nach ordnungsgemaessem Abmelden sieht B nichts von A
 // ===========================================================================
 //

@@ -1,17 +1,20 @@
 import type { RequestHandler } from './$types.js';
 import { apiBase as API } from '$lib/server/apiBase.js';
+import { proxyAnfrageKopfzeilen, proxyZielPfad } from '$lib/server/apiPfad.js';
 
-
-const handler: RequestHandler = async ({ request, params, cookies, url: reqUrl }) => {
-	const url = `${API()}/api/${params.path}${reqUrl.search}`;
-	const headers = new Headers(request.headers);
-
-	const session = cookies.get('gz_session');
-	if (session) {
-		headers.set('Cookie', `gz_session=${session}`);
+// Issue #2961 (FE3): der Durchreicher bildet den Zielpfad Segment fuer Segment
+// neu (ungueltige Segmente => 400, ohne Aufruf der Go-API) und reicht nur eine
+// feste Positivliste von Kopfzeilen weiter, als Cookie nur die Sitzung.
+const handler: RequestHandler = async ({ request, cookies, url: reqUrl }) => {
+	const zielPfad = proxyZielPfad(reqUrl.pathname);
+	if (zielPfad === null) {
+		return new Response(JSON.stringify({ error: 'invalid path' }), {
+			status: 400,
+			headers: { 'content-type': 'application/json' }
+		});
 	}
-	// Remove host header to avoid conflicts
-	headers.delete('host');
+	const url = `${API()}${zielPfad}${reqUrl.search}`;
+	const headers = proxyAnfrageKopfzeilen(request.headers, cookies.get('gz_session'));
 
 	const res = await fetch(url, {
 		method: request.method,

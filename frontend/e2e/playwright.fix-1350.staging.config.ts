@@ -1,14 +1,15 @@
 import { defineConfig } from '@playwright/test';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { ausUmgebung } from './stagingZugang';
 // Staging-Validierung Issue #1350 Teil 2 (Compare-Metrik-Auswahlliste aus
 // GET /api/compare/metrics). Kein lokaler webServer, gegen Staging hinter
 // nginx-Basic-Auth (Validator-Creds). Wiederverwendet den bereits gueltigen
 // App-Login-storageState aus Issue #1332 (kein neuer Login-Request,
 // Rate-Limit-Bucket #703) — analog playwright.fix-1335.staging.config.ts.
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const nginxUser = process.env.GZ_VALIDATOR_USER ?? process.env.E2E_USER ?? 'admin';
-const nginxPass = process.env.GZ_VALIDATOR_PASS ?? process.env.E2E_PASS ?? 'test1234';
+const nginxUser = ausUmgebung('GZ_VALIDATOR_USER', 'E2E_USER');
+const nginxPass = ausUmgebung('GZ_VALIDATOR_PASS', 'E2E_PASS');
 
 export default defineConfig({
 	testDir: '.',

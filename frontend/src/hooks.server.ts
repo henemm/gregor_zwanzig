@@ -4,6 +4,7 @@ import { env } from '$env/dynamic/private';
 import { verifySession } from '$lib/auth.js';
 import { assertSessionSecretConfigured } from '$lib/sessionSecretGate.js';
 import { resolveLang } from '$lib/i18n/resolveLang.js';
+import { sicherheitsKopfzeilenSetzen } from '$lib/server/sicherheitsKopfzeilen.js';
 
 assertSessionSecretConfigured(env.GZ_SESSION_SECRET, env.GZ_TEST_FIXTURE_DIR);
 
@@ -22,7 +23,7 @@ function mandantenKennung(userId: string): string {
 	return createHash('sha256').update(userId).digest('hex').slice(0, 16);
 }
 
-export const handle: Handle = async ({ event, resolve: weiter }) => {
+const kern: Handle = async ({ event, resolve: weiter }) => {
 	// Issue #2647 (i18n S2) — Sprache je Anfrage: Cookie gz_lang > Accept-Language > de.
 	// Fuer Angemeldete ueberschreibt +layout.server.ts sie mit der Profilsprache;
 	// darum liest transformPageChunk `locals.lang` erst beim Ersetzen von %lang%.
@@ -33,7 +34,7 @@ export const handle: Handle = async ({ event, resolve: weiter }) => {
 	const resolve = (ev: typeof event) =>
 		weiter(ev, { transformPageChunk: ({ html }) => html.replace('%lang%', ev.locals.lang) });
 
-	const publicPaths = ['/login', '/register', '/logout', '/forgot-password', '/reset-password', '/verify-email', '/email-preview-dev', '/magic-link', '/magic-link/verify', '/lang'];
+	const publicPaths = ['/login', '/register', '/logout', '/forgot-password', '/reset-password', '/verify-email', '/magic-link', '/magic-link/verify', '/lang'];
 	if (publicPaths.includes(event.url.pathname)) {
 		const response = await resolve(event);
 		const ct = response.headers.get('content-type') ?? '';
@@ -80,3 +81,9 @@ export const handle: Handle = async ({ event, resolve: weiter }) => {
 	}
 	return response;
 };
+
+/**
+ * Issue #2961 (FE6): jede Antwort traegt die Sicherheits-Kopfzeilen. Eine
+ * geworfene Umleitung (z. B. auf /login) laeuft unveraendert durch SvelteKit.
+ */
+export const handle: Handle = async (eingabe) => sicherheitsKopfzeilenSetzen(await kern(eingabe));

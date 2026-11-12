@@ -42,6 +42,7 @@ import { test, expect, type Browser, type Page } from '@playwright/test';
 import { assertNotProdBaseURL } from './prodUrlGuard';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { ausUmgebung } from './stagingZugang';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const AUTH_STATE = path.join(__dirname, 'playwright', '.auth', 'staging-1727-s5e.json');
@@ -76,8 +77,8 @@ async function kontoSeiteInZone(browser: Browser, timezoneId: string): Promise<s
 		storageState: AUTH_STATE,
 		ignoreHTTPSErrors: true,
 		httpCredentials: {
-			username: process.env.GZ_VALIDATOR_USER ?? 'admin',
-			password: process.env.GZ_VALIDATOR_PASS ?? 'test1234'
+			username: ausUmgebung('GZ_VALIDATOR_USER'),
+			password: ausUmgebung('GZ_VALIDATOR_PASS')
 		}
 	});
 	try {
@@ -175,8 +176,8 @@ async function kontoSeiteMitTerminInZone(
 		storageState: AUTH_STATE,
 		ignoreHTTPSErrors: true,
 		httpCredentials: {
-			username: process.env.GZ_VALIDATOR_USER ?? 'admin',
-			password: process.env.GZ_VALIDATOR_PASS ?? 'test1234'
+			username: ausUmgebung('GZ_VALIDATOR_USER'),
+			password: ausUmgebung('GZ_VALIDATOR_PASS')
 		}
 	});
 	let ersetzt = 0;

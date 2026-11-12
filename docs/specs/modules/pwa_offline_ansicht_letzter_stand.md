@@ -110,6 +110,12 @@ Bucket mit fremder Kennung existiert, und löscht ihn sofort. Das schließt auch
 meldet sich an, ohne dass Nutzer A sich vorher abgemeldet hat" — ohne neue Speicherart und ohne
 Zeitfenster, in dem beide Bestände nebeneinander lägen.
 
+> **Nachtrag 2026-11-12 (#2961):** Geräumt wird seit der Sicherheits-Härtung bei **jeder**
+> same-origin-Antwort mit Mandantenkennung, nicht nur bei einer Ablage; gelesen wird nur aus dem
+> Bucket des zuletzt angemeldeten Mandanten (mehrere ⇒ keiner), nichts ist älter als 30 Tage, und
+> ein echtes 401 der Go-API löscht die Inhaltsspeicher. Details: ADR-0063, Nachtrag 2026-11-12;
+> Spec `security_haertung_2026_11_frontend.md` AC-8 bis AC-12.
+
 **E. Cache Storage exklusiv — bindende Bauform.** Kein IndexedDB, kein localStorage. Damit greift
 `raeumeGeraetespeicher()` (iteriert `caches.keys()` ungefiltert) für den neuen Bucket automatisch
 mit, ohne dass die Räumfunktion selbst angefasst werden muss.
@@ -276,6 +282,8 @@ Zwei-Nutzer-Playwright-Nachweis.
   - Test: Playwright meldet A an, legt Inhalt ab, wechselt im selben Kontext zu B ohne
     Abmelde-Aufruf, löst einen Online-Abruf aus und prüft, dass As Cache-Name danach nicht mehr
     existiert.
+  - Erweitert 2026-11-12 (#2961): schon der erste Seitenaufruf **außerhalb** der Positivliste
+    (Startseite) räumt — Nachweis „#2961 AC-8" in derselben Spec-Datei.
 
 - **AC-15:** Given ein Nutzer mit gefülltem Inhaltsspeicher (Trip- und/oder Ortsvergleichs-Ansicht
   abgelegt) / When er sich abmeldet — über die Seitenleiste oder über „Auf allen Geräten abmelden"
@@ -397,3 +405,6 @@ Liste.
   ADR-0061") angelegt (`docs/adr/0063-pwa-offline-inhalte-positivliste-und-mandanten-bucket.md`)
   und im Index (`docs/adr/README.md`) eingetragen. Nummer 0062 war beim Rebase bereits durch
   #2142 belegt — deshalb 0063.
+- 2026-11-12: Sicherheits-Härtung (#2961) nachgetragen — Räumen bei jeder Antwort mit
+  Mandantenkennung, Lesen nur aus dem aktuellen Bucket, Höchstalter 30 Tage, Räumen bei 401
+  (Abschnitt D, AC-14; ADR-0063 Nachtrag 2026-11-12).

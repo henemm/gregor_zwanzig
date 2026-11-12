@@ -8,5 +8,5 @@ import type { PageServerLoad } from './$types.js';
 // alle bekannten Aufrufer verlinken bereits direkt mit dem korrekten ?tab=-Ziel.
 // Spec: docs/specs/modules/feat_1273_s3_redirect.md (AC-1).
 export const load: PageServerLoad = async ({ params }) => {
-	throw redirect(307, `/compare/${params.id}`);
+	throw redirect(307, `/compare/${encodeURIComponent(params.id)}`);
 };

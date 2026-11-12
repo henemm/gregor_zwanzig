@@ -28,6 +28,7 @@ import {
 	controllingScriptUrl,
 	triggerServiceWorkerUpdate
 } from './pwaHelpers.ts';
+import { ausUmgebung } from './stagingZugang';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const STAGING_AUTH = path.join(__dirname, 'playwright', '.auth', 'staging-2128.json');
@@ -139,8 +140,8 @@ test('Staging: kein Aufruf an fonts.googleapis.com/fonts.gstatic.com, woff2 vom 
 		serviceWorkers: 'allow',
 		ignoreHTTPSErrors: true,
 		httpCredentials: {
-			username: process.env.GZ_VALIDATOR_USER ?? 'admin',
-			password: process.env.GZ_VALIDATOR_PASS ?? 'test1234'
+			username: ausUmgebung('GZ_VALIDATOR_USER'),
+			password: ausUmgebung('GZ_VALIDATOR_PASS')
 		}
 	});
 	const angefragt: string[] = [];

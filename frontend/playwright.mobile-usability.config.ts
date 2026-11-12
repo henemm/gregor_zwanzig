@@ -12,9 +12,10 @@
 // schreibt der Spec selbst nach test-results/mobile-usability/.
 
 import { defineConfig, devices } from '@playwright/test';
+import { ausUmgebung } from './e2e/stagingZugang';
 
-const user = process.env.GZ_VALIDATOR_USER ?? process.env.E2E_USER ?? 'admin';
-const pass = process.env.GZ_VALIDATOR_PASS ?? process.env.E2E_PASS ?? 'test1234';
+const user = ausUmgebung('GZ_VALIDATOR_USER', 'E2E_USER');
+const pass = ausUmgebung('GZ_VALIDATOR_PASS', 'E2E_PASS');
 const storageState = 'playwright/.auth/staging-mobile-usability.json';
 
 export default defineConfig({

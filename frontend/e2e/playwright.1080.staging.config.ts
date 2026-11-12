@@ -1,6 +1,7 @@
 import { defineConfig } from '@playwright/test';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { ausUmgebung } from './stagingZugang';
 // E2E-Config für issue_1080 (compare/new: Ort per URL hinzufügen bleibt unsichtbar +
 // kein Benennen) gegen Staging. Kein lokaler webServer. Staging steht hinter
 // nginx-Basic-Auth (Validator-Creds).
@@ -12,8 +13,8 @@ import { fileURLToPath } from 'node:url';
 // storageState als absoluter __dirname-Pfad (s. issue-1080.staging.setup.ts) statt
 // String-Literal — vermeidet Mehrdeutigkeit zwischen CWD- und Config-relativer Auflösung.
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const user = process.env.GZ_VALIDATOR_USER ?? process.env.E2E_USER ?? 'admin';
-const pass = process.env.GZ_VALIDATOR_PASS ?? process.env.E2E_PASS ?? 'test1234';
+const user = ausUmgebung('GZ_VALIDATOR_USER', 'E2E_USER');
+const pass = ausUmgebung('GZ_VALIDATOR_PASS', 'E2E_PASS');
 
 export default defineConfig({
 	testDir: '.',

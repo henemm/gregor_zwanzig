@@ -3,6 +3,7 @@ import { env } from '$env/dynamic/private';
 import type { Actions, PageServerLoad } from './$types.js';
 import { apiBase as API } from '$lib/server/apiBase.js';
 import { SESSION_MAX_AGE_SECONDS } from '$lib/auth.js';
+import { cookieSicher } from '$lib/server/cookieSicherheit.js';
 import { trFor } from '$lib/i18n/index.js';
 
 
@@ -11,7 +12,7 @@ export const load: PageServerLoad = async ({ url }) => {
 };
 
 export const actions = {
-	default: async ({ request, cookies, locals }) => {
+	default: async ({ request, cookies, locals, url }) => {
 		const data = await request.formData();
 		const email = data.get('email')?.toString() ?? '';
 		const code = (data.get('code')?.toString() ?? '').trim();
@@ -49,7 +50,7 @@ export const actions = {
 					path: '/',
 					httpOnly: true,
 					sameSite: 'lax',
-					secure: env.NODE_ENV === 'production',
+					secure: cookieSicher(env.NODE_ENV, url),
 					maxAge: SESSION_MAX_AGE_SECONDS
 				});
 			}

@@ -1,9 +1,10 @@
 import { fileURLToPath } from 'node:url';
 import { defineConfig } from '@playwright/test';
+import { ausUmgebung } from './e2e/stagingZugang';
 // Staging-Validierung Issue #2347 S2 (vormals #1471, umbenannt aus der früheren
 // Compare-only-Config). Analog playwright.staging.config.ts.
-const user = process.env.GZ_VALIDATOR_USER ?? process.env.E2E_USER ?? 'admin';
-const pass = process.env.GZ_VALIDATOR_PASS ?? process.env.E2E_PASS ?? 'test1234';
+const user = ausUmgebung('GZ_VALIDATOR_USER', 'E2E_USER');
+const pass = ausUmgebung('GZ_VALIDATOR_PASS', 'E2E_PASS');
 
 export default defineConfig({
 	testDir: 'e2e',

@@ -168,6 +168,16 @@ bereits gesetzte Umgebungsvariable > Staging-`.env` (nur bei Staging-Ziel) >
 `.claude/validator.env`/lokale `.env`. Dieselbe Quelle nennen die Playwright-Staging-Specs
 (`frontend/e2e/issue-1093-compare-layout-crash.spec.ts:21-22`).
 
+**Playwright gegen Staging (#2961, seit 2026-11-12):** Specs, Setups und Configs mit Ziel Staging
+lesen Zugangsdaten nur noch über `ausUmgebung()` aus `frontend/e2e/stagingZugang.ts` — es gibt
+**keinen** Rückfallwert mehr. Fehlt eine Variable, bricht der Lauf mit ihrem Namen ab. Benötigt
+werden je nach Spec: `GZ_VALIDATOR_USER`/`GZ_VALIDATOR_PASS` (nginx-Schranke, Alternative
+`E2E_USER`/`E2E_PASS`), `GZ_AUTH_USER`/`GZ_AUTH_PASS` (App-Anmeldung), sowie für die fest
+angelegten Staging-Testkonten `GZ_E2E_BUNDLE_I_PASS`, `GZ_E2E_675_PASS`, `GZ_E2E_774_PASS` und
+`GZ_MOBILE_AUDIT_PASS`. Wegwerf-Konten, die ein Test selbst anlegt und löscht, bekommen ein
+zufälliges Passwort. Der isolierte CI-Stack (`frontend/e2e/ci-stack.sh`) arbeitet unverändert mit
+festen Testwerten.
+
 ### Blockade lesen: die Meldung sagt, wo das Problem liegt
 
 Vier unterscheidbare Ausgänge. **„Anmeldung abgelehnt" ist etwas anderes als

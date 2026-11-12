@@ -1,4 +1,5 @@
 import { defineConfig } from '@playwright/test';
+import { ausUmgebung } from './stagingZugang';
 // E2E-Config Onboarding S2 (Spec docs/specs/modules/onboarding_willkommen_checkliste.md,
 // AC-2/3/8/16/17) gegen Staging. Muster playwright.kanal-an-aus-kette.staging.config.ts.
 //
@@ -8,8 +9,8 @@ import { defineConfig } from '@playwright/test';
 // KEIN Setup-Projekt: die Spec registriert einen frischen Wegwerf-Nutzer
 // (`gregor-test+<nutzer>@henemm.com`), denn nur ein NEU angelegtes Konto traegt
 // das Merkmal `onboarding_pending`; das Altkonto ist das Bestandskonto GZ_AUTH_USER.
-const user = process.env.GZ_VALIDATOR_USER ?? process.env.E2E_USER ?? 'admin';
-const pass = process.env.GZ_VALIDATOR_PASS ?? process.env.E2E_PASS ?? 'test1234';
+const user = ausUmgebung('GZ_VALIDATOR_USER', 'E2E_USER');
+const pass = ausUmgebung('GZ_VALIDATOR_PASS', 'E2E_PASS');
 
 export default defineConfig({
 	testDir: '.',

@@ -34,25 +34,29 @@ import { build, files, version } from '$service-worker';
 import { ansichtVon, DATEN_ENDUNG } from './lib/pwa/ansicht.ts';
 // #2652: Stand-Zeile und Offline-Liste (Sprache aus <html lang>) in einem pruefbaren Modul.
 import { offlineListe, standEinschreiben, type OfflineEintrag } from './lib/pwa/standDokument.ts';
+// #2961: Mandantentrennung, Hoechstalter und Lesen nur aus dem aktuellen Speicher.
+import {
+	ABLAGE_HEADER,
+	DATEN_PRAEFIX,
+	MANDANT_HEADER,
+	alleAbgelaufenenEntfernen,
+	fremdeDatenspeicherLoeschen,
+	indexLesen,
+	indexSchreiben,
+	nachMandantRaeumen,
+	vorgehalteneAnsichten,
+	vorgehalteneAntwort
+} from './lib/pwa/datenspeicher.ts';
 
 const sw = self as unknown as ServiceWorkerGlobalScope;
 
 /** Der Speichername traegt die Version -- so raeumt `activate` alle alten weg. */
 const CACHE = `gz-${version}`;
 
-/**
- * Inhaltsspeicher, getrennt vom Programm-Speicher und je Mandant benannt
- * (Issue #2131). Getrennt, weil `activate` den Programm-Speicher der
- * Vorfassung raeumt -- der vorgehaltene Inhalt wuerde sonst nach jedem
- * angenommenen Update mitverschwinden (AC-16).
- */
-const DATEN_PRAEFIX = 'gz-daten-';
-
-/** Kennung des Mandanten, gesetzt von `hooks.server.ts`. */
-const MANDANT_HEADER = 'x-gz-mandant';
-
-/** Buchfuehrung ueber die vorgehaltenen Ansichten (Verdraengung + Uebersicht). */
-const INDEX_SCHLUESSEL = '/__gz-offline-index';
+// Inhaltsspeicher (`DATEN_PRAEFIX` + Mandant), getrennt vom Programm-Speicher
+// (Issue #2131): `activate` raeumt den Programm-Speicher der Vorfassung -- der
+// vorgehaltene Inhalt wuerde sonst nach jedem angenommenen Update
+// mitverschwinden (AC-16). Regeln dazu in `lib/pwa/datenspeicher.ts`.
 
 /** Obergrenze vorgehaltener Ansichten, Aeltestes zuerst verdraengt (AC-17). */
 const OBERGRENZE = 10;
@@ -113,6 +117,10 @@ sw.addEventListener('activate', (event) => {
 					if (name !== CACHE && !name.startsWith(DATEN_PRAEFIX)) await caches.delete(name);
 				}
 			}
+			// Issue #2961: nichts Vorgehaltenes ist aelter als das Hoechstalter.
+			// Ein Fehler hier darf `claim` nicht verhindern; der Zugriff prueft
+			// das Hoechstalter ohnehin noch einmal.
+			await alleAbgelaufenenEntfernen(caches, Date.now()).catch(() => {});
 			// Ohne `claim` bliebe die bereits geladene Seite bis zum naechsten
 			// Seitenaufruf unkontrolliert -- die Programmdateien kaemen dann noch
 			// einmal komplett aus dem Netz. `claim` widerspricht dem Leitsatz
@@ -127,31 +135,12 @@ sw.addEventListener('activate', (event) => {
 // Positivliste (Issue #2131, Regel 2)
 // ---------------------------------------------------------------------------
 
-async function datenSpeicherNamen(): Promise<string[]> {
-	return (await caches.keys()).filter((name) => name.startsWith(DATEN_PRAEFIX));
-}
-
+/**
+ * Vorgehaltene Antwort -- seit #2961 nur aus dem Speicher des zuletzt
+ * angemeldeten Mandanten und nur innerhalb des Hoechstalters.
+ */
 async function ausDatenspeicher(schluessel: string): Promise<Response | undefined> {
-	for (const name of await datenSpeicherNamen()) {
-		const cache = await caches.open(name);
-		const treffer = await cache.match(schluessel);
-		if (treffer) return treffer;
-	}
-	return undefined;
-}
-
-async function indexLesen(): Promise<OfflineEintrag[]> {
-	for (const name of await datenSpeicherNamen()) {
-		const cache = await caches.open(name);
-		const treffer = await cache.match(INDEX_SCHLUESSEL);
-		if (!treffer) continue;
-		try {
-			return (await treffer.json()) as OfflineEintrag[];
-		} catch {
-			return [];
-		}
-	}
-	return [];
+	return vorgehalteneAntwort(caches, schluessel, Date.now());
 }
 
 /**
@@ -166,15 +155,7 @@ async function indexPflegen(
 	titel: string,
 	zeit: Date
 ): Promise<void> {
-	const treffer = await cache.match(INDEX_SCHLUESSEL);
-	let eintraege: OfflineEintrag[] = [];
-	if (treffer) {
-		try {
-			eintraege = (await treffer.json()) as OfflineEintrag[];
-		} catch {
-			eintraege = [];
-		}
-	}
+	let eintraege: OfflineEintrag[] = await indexLesen(cache);
 	eintraege = eintraege.filter((e) => e.pfad !== pfad);
 	eintraege.push({ pfad, titel, stand: zeit.toISOString() });
 	// Aeltestes zuerst. `localeCompare` liefert bei gleichem Zeitpunkt 0 --
@@ -186,24 +167,18 @@ async function indexPflegen(
 		await cache.delete(alt.pfad);
 		await cache.delete(alt.pfad + DATEN_ENDUNG);
 	}
-	await cache.put(
-		INDEX_SCHLUESSEL,
-		new Response(JSON.stringify(eintraege), {
-			headers: { 'content-type': 'application/json' }
-		})
-	);
+	await indexSchreiben(cache, eintraege);
 }
 
 /**
  * Nutzerwechsel: jeder fremde Inhaltsspeicher faellt beim ERSTEN Abruf des
- * neuen Nutzers (AC-14). Die Kennung haengt ohnehin an jeder Antwort -- es
- * braucht dafuer kein eigenes Ereignis und keinen Zeitraum, in dem zwei
- * Bestaende nebeneinander laegen (ADR-0003).
+ * neuen Nutzers (AC-14) -- seit #2961 bei JEDER Antwort mit Mandantenkennung
+ * (`nachMandantRaeumen`), nicht erst beim Ablegen. Die Kennung haengt ohnehin
+ * an jeder angemeldeten Antwort -- es braucht dafuer kein eigenes Ereignis und
+ * keinen Zeitraum, in dem zwei Bestaende nebeneinander laegen (ADR-0003).
  */
-async function fremdeBestaendeLoeschen(eigener: string): Promise<void> {
-	for (const name of await datenSpeicherNamen()) {
-		if (name !== eigener) await caches.delete(name);
-	}
+function mandantPruefen(event: FetchEvent, antwort: Response): void {
+	event.waitUntil(nachMandantRaeumen(caches, antwort).catch(() => {}));
 }
 
 /**
@@ -235,7 +210,7 @@ async function ablegen(
 	if (!mandant) return;
 
 	const name = DATEN_PRAEFIX + mandant;
-	await fremdeBestaendeLoeschen(name);
+	await fremdeDatenspeicherLoeschen(caches, name);
 	const cache = await caches.open(name);
 	const zeit = new Date();
 
@@ -246,7 +221,10 @@ async function ablegen(
 			ansicht,
 			new Response(html, {
 				status: 200,
-				headers: { 'content-type': 'text/html; charset=utf-8' }
+				headers: {
+					'content-type': 'text/html; charset=utf-8',
+					[ABLAGE_HEADER]: zeit.toISOString()
+				}
 			})
 		);
 		await indexPflegen(cache, ansicht, titelAus(roh, ansicht), zeit);
@@ -263,7 +241,8 @@ async function ablegen(
 		new Response(await antwort.text(), {
 			status: 200,
 			headers: {
-				'content-type': antwort.headers.get('content-type') ?? 'application/json'
+				'content-type': antwort.headers.get('content-type') ?? 'application/json',
+				[ABLAGE_HEADER]: zeit.toISOString()
 			}
 		})
 	);
@@ -282,7 +261,8 @@ async function datenVorladen(ansicht: string, speicherName: string): Promise<voi
 			new Response(await antwort.text(), {
 				status: 200,
 				headers: {
-					'content-type': antwort.headers.get('content-type') ?? 'application/json'
+					'content-type': antwort.headers.get('content-type') ?? 'application/json',
+					[ABLAGE_HEADER]: new Date().toISOString()
 				}
 			})
 		);
@@ -333,6 +313,8 @@ async function netzSonstSpeicher(
 	try {
 		if (geraetMeldetOffline()) throw new Error('Geraet meldet keine Verbindung');
 		const antwort = await fetch(request);
+		// #2961: auch eine nicht abgelegte Antwort (z. B. 404) mit Kennung raeumt.
+		await nachMandantRaeumen(caches, antwort).catch(() => {});
 		if (antwort.ok && antwort.status === 200) {
 			await ablegen(ansicht, schluessel, antwort.clone());
 		}
@@ -341,7 +323,9 @@ async function netzSonstSpeicher(
 	} catch (fehler) {
 		const abgelegt = await ausDatenspeicher(schluessel);
 		if (abgelegt) {
-			const eintrag = (await indexLesen()).find((e) => e.pfad === ansicht);
+			const eintrag = (await vorgehalteneAnsichten(caches, Date.now())).find(
+				(e) => e.pfad === ansicht
+			);
 			await meldeStand(ansicht, eintrag?.stand ?? null);
 			return abgelegt;
 		}
@@ -385,7 +369,10 @@ async function offlineUebersicht(): Promise<Response> {
 	if (!grundlage) throw new Error('offline und keine Offline-Seite im Speicher');
 	const roh = await grundlage.text();
 
-	const eintraege = (await indexLesen()).sort((a, b) => b.stand.localeCompare(a.stand));
+	// #2961: nur die Ansichten des zuletzt angemeldeten Mandanten, ohne Abgelaufenes.
+	const eintraege = (await vorgehalteneAnsichten(caches, Date.now())).sort((a, b) =>
+		b.stand.localeCompare(a.stand)
+	);
 	// #2652: Sprache aus <html lang> der Offline-Seite (Fallback de), siehe standDokument.ts.
 	return new Response(offlineListe(roh, eintraege), {
 		status: 200,
@@ -421,12 +408,17 @@ sw.addEventListener('fetch', (event) => {
 	if (request.mode === 'navigate') {
 		event.respondWith(
 			(async () => {
+				let antwort: Response;
 				try {
 					if (geraetMeldetOffline()) throw new Error('Geraet meldet keine Verbindung');
-					return await fetch(request);
+					antwort = await fetch(request);
 				} catch {
 					return offlineUebersicht();
 				}
+				// #2961 / ADR-0063 §4: auch eine nicht abgelegte Seite raeumt
+				// fremde Inhaltsspeicher, sobald sie eine Mandantenkennung traegt.
+				await nachMandantRaeumen(caches, antwort).catch(() => {});
+				return antwort;
 			})()
 		);
 		return;
@@ -438,7 +430,17 @@ sw.addEventListener('fetch', (event) => {
 		return;
 	}
 
-	// Regel 5 -- alles Uebrige: Netz, ohne Ablage (kein respondWith noetig).
+	// Regel 5 -- alles Uebrige: Netz, ohne Ablage. Same-origin-Antworten werden
+	// dabei auf eine Mandantenkennung geprueft (#2961) -- etwa `__data.json` der
+	// Client-Navigation ausserhalb der Positivliste.
+	if (url.origin === location.origin) {
+		event.respondWith(
+			fetch(request).then((antwort) => {
+				mandantPruefen(event, antwort);
+				return antwort;
+			})
+		);
+	}
 });
 
 sw.addEventListener('message', (event) => {

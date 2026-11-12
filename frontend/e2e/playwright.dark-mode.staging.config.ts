@@ -1,12 +1,13 @@
 import { defineConfig } from '@playwright/test';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { ausUmgebung } from './stagingZugang';
 // E2E-Config Issue #2400: vollständiger Dark Mode, Messlauf aller Routen auf Staging.
 // Kein lokaler webServer — geprüft wird die auf Staging deployte App. Login-Setup und
 // storageState werden vom Kürzel-Legende-Setup (#1888) mitbenutzt (gleiches Credential-Paar).
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const user = process.env.GZ_VALIDATOR_USER ?? process.env.E2E_USER ?? 'admin';
-const pass = process.env.GZ_VALIDATOR_PASS ?? process.env.E2E_PASS ?? 'test1234';
+const user = ausUmgebung('GZ_VALIDATOR_USER', 'E2E_USER');
+const pass = ausUmgebung('GZ_VALIDATOR_PASS', 'E2E_PASS');
 
 export default defineConfig({
 	testDir: '.',

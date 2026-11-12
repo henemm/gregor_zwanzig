@@ -22,6 +22,7 @@ import { test, expect, type Browser, type BrowserContext, type Page } from '@pla
 import { assertNotProdBaseURL } from './prodUrlGuard';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { ausUmgebung } from './stagingZugang';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 // Pfade wie im Setup (dort NICHT importierbar: ein Import wuerde dessen setup() im Spec-Projekt registrieren).
@@ -38,8 +39,8 @@ async function kontext(browser: Browser, state: string, viewport = DESKTOP): Pro
 		viewport,
 		ignoreHTTPSErrors: true,
 		httpCredentials: {
-			username: process.env.GZ_VALIDATOR_USER ?? 'admin',
-			password: process.env.GZ_VALIDATOR_PASS ?? 'test1234'
+			username: ausUmgebung('GZ_VALIDATOR_USER'),
+			password: ausUmgebung('GZ_VALIDATOR_PASS')
 		}
 	});
 }
