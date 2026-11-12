@@ -683,10 +683,13 @@ class NotificationService:
         return TelegramOutput(self._settings, recipient=recipient)
 
     @staticmethod
-    def _telegram_reply(settings: Settings, chat_id) -> TelegramOutput:
+    def _telegram_reply(settings: Settings, chat_id, *, wait_for_slot: bool = True) -> TelegramOutput:
         """Issue #1412 S4a (R7): Antwort geht an die uebergebene ``chat_id``
         -- nur zulaessig als Absender des laufenden Webhook-Updates."""
-        return TelegramOutput(settings, recipient=TelegramRecipient.inbound_reply(chat_id))
+        output = TelegramOutput(settings, recipient=TelegramRecipient.inbound_reply(chat_id))
+        if not wait_for_slot:
+            output.wait_for_slot = False  # #2961
+        return output
 
     def _sms_output(self) -> SMSOutput:
         """Issue #1412 S4b: SMS an die bestaetigte Profilnummer (frisch aus
@@ -2380,13 +2383,17 @@ class NotificationService:
         body: str,
         settings: Settings,
         reply_markup: dict | None = None,
+        wait_for_slot: bool = True,
     ) -> int | None:
-        """Sendet eine einfache Telegram-Nachricht (z.B. Fehlerhinweis)."""
+        """Sendet eine einfache Telegram-Nachricht (z.B. Fehlerhinweis).
+
+        ``wait_for_slot=False`` (#2961): ist die Sende-Drossel fuer den Chat
+        voll, wird die Nachricht verworfen statt gewartet."""
         try:
             kwargs = {"subject": subject, "body": body}
             if reply_markup is not None:
                 kwargs["reply_markup"] = reply_markup
-            return self._telegram_reply(settings, chat_id).send(**kwargs)
+            return self._telegram_reply(settings, chat_id, wait_for_slot=wait_for_slot).send(**kwargs)
         except Exception as e:
             logger.error(f"Telegram message failed for {mask_number(chat_id)}: {e}")
             return None

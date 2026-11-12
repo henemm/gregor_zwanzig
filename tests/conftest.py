@@ -706,9 +706,12 @@ def _reset_telegram_rate_limit():
     die dieselbe Chat-ID verwenden, im 60-Sekunden-Fenster auf und ein spaeterer
     Test laeuft in eine echte Wartezeit. Analog ``_reset_shared_radar_cache``."""
     from output.channels.telegram import reset_telegram_rate_limit_for_tests
+    from services.inbound_telegram_reader import reset_registrierungshinweise_for_tests
     reset_telegram_rate_limit_for_tests()
+    reset_registrierungshinweise_for_tests()  # #2961: Hinweis-Sperre je Chat
     yield
     reset_telegram_rate_limit_for_tests()
+    reset_registrierungshinweise_for_tests()
 
 # ---------------------------------------------------------------------------
 # Issue #2096: gestellte Wanduhr fuer den GANZEN Lauf

@@ -12,6 +12,9 @@ from __future__ import annotations
 
 import logging
 import re
+import threading
+import time
+from collections import OrderedDict
 from datetime import datetime, timezone
 from urllib.parse import urlsplit
 
@@ -72,6 +75,36 @@ def _bare_public_host(settings: Settings) -> str | None:
 # Abfrage-Schluessel, die er selbst als `### query: <key>` kodiert.
 _VALID_COMMANDS = _PROCESSOR_COMMANDS | _QUERY_KEYS
 _VERGLEICH_LADE_KEYS = frozenset({"report", "heute", "morgen"})  # #2282 S2
+
+# Issue #2961: der Registrierungshinweis an einen unbekannten Chat geht
+# hoechstens einmal je Sperrfrist raus. Prozesslokal genuegt: der Hinweis ist
+# eine Hoeflichkeit, kein Zustand; die Tabelle ist beschraenkt (aelteste
+# Eintraege fallen heraus), damit viele Chats sie nicht aufblaehen.
+REGISTRIERUNGSHINWEIS_SPERRE_SEKUNDEN = 3600.0
+REGISTRIERUNGSHINWEIS_MAX_CHATS = 10_000
+_registrierungshinweise: "OrderedDict[str, float]" = OrderedDict()
+_registrierungshinweise_lock = threading.Lock()
+
+
+def _registrierungshinweis_faellig(chat_id: str) -> bool:
+    """``True`` (und vermerkt), wenn dieser Chat jetzt einen Hinweis bekommt."""
+    jetzt = time.monotonic()
+    with _registrierungshinweise_lock:
+        zuletzt = _registrierungshinweise.get(chat_id)
+        if zuletzt is not None and jetzt - zuletzt < REGISTRIERUNGSHINWEIS_SPERRE_SEKUNDEN:
+            return False
+        _registrierungshinweise[chat_id] = jetzt
+        _registrierungshinweise.move_to_end(chat_id)
+        while len(_registrierungshinweise) > REGISTRIERUNGSHINWEIS_MAX_CHATS:
+            _registrierungshinweise.popitem(last=False)
+        return True
+
+
+def reset_registrierungshinweise_for_tests() -> None:
+    """Leert die prozessweite Hinweis-Tabelle (Muster ``reset_telegram_rate_limit_for_tests``)."""
+    with _registrierungshinweise_lock:
+        _registrierungshinweise.clear()
+
 
 _SHORTCUT_MAP = {
     "/s": "glance",
@@ -211,6 +244,9 @@ class InboundTelegramReader:
         # KEINE Trip-/Wetterdaten. Betreiber-Account faellt hier nie hinein, da
         # `henning` regulaer per telegram_chat_id registriert ist.
         if user_id is None:
+            # #2961: hoechstens ein Hinweis je Chat und Stunde.
+            if not _registrierungshinweis_faellig(chat_id):
+                return True
             host = _bare_public_host(settings)
             mid = self._notification_service.send_telegram_message(
                 chat_id=chat_id,
@@ -218,6 +254,8 @@ class InboundTelegramReader:
                 body=_registrierungs_hinweis(host),
                 # #2168/#1412 S4a: Antwort an den fragenden Chat (inbound_reply).
                 settings=settings,
+                # #2961: fuer Unbekannte nie in der Sende-Drossel warten.
+                wait_for_slot=False,
             )
             if mid is not None:
                 self.sent_message_ids.append(mid)

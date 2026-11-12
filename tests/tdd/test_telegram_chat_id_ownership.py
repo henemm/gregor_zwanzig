@@ -134,7 +134,8 @@ class _RecordingNotificationService(NotificationService):
         super().__init__(user_id="default")
         self.addressed: list[str] = []
 
-    def send_telegram_message(self, *, chat_id, subject, body, settings, reply_markup=None):
+    def send_telegram_message(self, *, chat_id, subject, body, settings, reply_markup=None,
+                              wait_for_slot=True):
         self.addressed.append(str(chat_id))
         return super().send_telegram_message(
             chat_id=chat_id, subject=subject, body=body,

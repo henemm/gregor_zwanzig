@@ -198,6 +198,10 @@ class TelegramOutput:
     _rate_limit_lock = threading.Lock()
     _rate_limit_stamps: dict[str, list[float]] = {}
 
+    #: Issue #2961: False = bei voller Drossel sofort aufgeben statt warten
+    #: (Antworten an unbekannte Chats duerfen den Worker nicht blockieren).
+    wait_for_slot: bool = True
+
     def __init__(
         self, settings: Settings | None = None, *, recipient: TelegramRecipient | None = None,
     ) -> None:
@@ -377,6 +381,11 @@ class TelegramOutput:
                     stamps.append(now)
                     return
                 wait = window - (now - stamps[0])
+
+            if not self.wait_for_slot:
+                logger.info("Telegram-Drossel voll (chat=%s) -- Nachricht ohne Warten verworfen",
+                            mask_number(chat_key))
+                raise OutputError("telegram", "send slot busy (no wait)")
 
             remaining = deadline_at - time.monotonic()
             if remaining <= 0:
