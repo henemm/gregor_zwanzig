@@ -40,13 +40,11 @@ import json
 import os
 import subprocess
 import sys
-from datetime import datetime, timezone
 from pathlib import Path
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 HOOK = _REPO_ROOT / ".claude" / "hooks" / "prod_send_gate.py"
 
-_WORKFLOW_NAME = "gate-1148-prod-send-deny"
 
 
 def _run_hook(cmd: str, env: dict) -> subprocess.CompletedProcess:
@@ -114,40 +112,44 @@ def test_staging_python_port_post_send_allowed(tmp_path):
 
 # --- AC-3 -----------------------------------------------------------------
 
-def test_valid_override_token_allows_once_then_consumed(tmp_path):
-    claude_dir = tmp_path / ".claude"
-    claude_dir.mkdir(parents=True)
-    token_path = claude_dir / "user_override_token.json"
-    token_path.write_text(json.dumps({
-        "version": 2,
-        "tokens": {
-            _WORKFLOW_NAME: {
-                "created": datetime.now(timezone.utc).isoformat(),
-                "granted_by": "user_prompt",
-            }
-        },
-    }))
+def test_prod_send_release_allows_once_then_consumed(tmp_path):
+    """#2125: Notausgang ist die allein getippte Phrase `prod-versand freigeben`
+    (Release-Hook, an die session_id gebunden) — nicht mehr das Plugin-Token
+    unter einem Workflow-Namen."""
+    (tmp_path / ".git").mkdir()
+    (tmp_path / ".claude").mkdir()
+    release_hook = _REPO_ROOT / ".claude" / "hooks" / "prod_send_release.py"
+    session = "sess-1148-override"
+    env = _isolated_env(tmp_path)
 
-    env = _isolated_env(
-        tmp_path,
-        OPENSPEC_ACTIVE_WORKFLOW=_WORKFLOW_NAME,
-        GZ_ACTIVE_WORKFLOW=_WORKFLOW_NAME,
+    rel = subprocess.run(
+        [sys.executable, str(release_hook)],
+        input=json.dumps({"session_id": session, "prompt": "prod-versand freigeben"}),
+        text=True, capture_output=True, env=env, cwd=str(tmp_path),
     )
+    assert rel.returncode == 0, (
+        f"Release-Hook: rc={rel.returncode} stderr={rel.stderr!r}"
+    )
+
     cmd = "curl -X POST 'http://localhost:8000/api/scheduler/trips/1/send?user_id=x'"
 
-    first = _run_hook(cmd, env)
+    def _gate() -> subprocess.CompletedProcess:
+        return subprocess.run(
+            [sys.executable, str(HOOK)],
+            input=json.dumps({"session_id": session, "tool_input": {"command": cmd}}),
+            text=True, capture_output=True, env=env, cwd=str(tmp_path),
+        )
+
+    first = _gate()
     assert first.returncode == 0, (
-        f"Erster Aufruf mit gueltigem Override-Token muss Exit 0 liefern. "
+        f"Erster Aufruf mit gueltiger Prod-Versand-Freigabe muss Exit 0 liefern. "
         f"stdout={first.stdout!r} stderr={first.stderr!r}"
     )
+    _assert_blocked(_gate())
 
-    second = _run_hook(cmd, env)
-    _assert_blocked(second)
-
-    data = json.loads(token_path.read_text())
-    assert _WORKFLOW_NAME not in data.get("tokens", {}), (
-        "Token-Eintrag muss nach erfolgreichem Verbrauch entfernt sein: "
-        f"{data}"
+    data = json.loads((tmp_path / ".claude" / "prod_send_release.json").read_text())
+    assert session not in data.get("releases", {}), (
+        f"Freigabe-Eintrag muss nach Verbrauch entfernt sein: {data}"
     )
 
 
