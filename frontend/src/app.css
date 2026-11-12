@@ -508,6 +508,18 @@
   [data-slot="btn"][data-size="icon-lg"] { padding: 0; width: 36px; height: 36px; min-height: 36px; }
   /* #2913 Teil 2 (K-5): Touch-Größe — Höhe und Breite mindestens --g-tap-min (44px). */
   [data-slot="btn"][data-size="tap"]     { padding: 0 var(--g-size-14px); font-size: var(--g-text-sm); min-height: var(--g-tap-min); min-width: var(--g-tap-min); }
+  /* #2913 Scheibe (c): kompakter Chip (Mockup `.chip`) — `tap` mit data-tap="true" bleibt sichtbar
+     26 px hoch, die Trefferfläche wächst unsichtbar per ::before auf ≥ --g-tap-min (wie Atom Switch). */
+  [data-slot="btn"][data-size="tap"][data-tap="true"] { position: relative; padding: 0 var(--g-s-3); font-size: var(--g-size-12-5px); min-height: var(--g-size-26px); height: var(--g-size-26px); min-width: 0; }
+  [data-slot="btn"][data-size="tap"][data-tap="true"]::before {
+    content: "";
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: max(100%, var(--g-tap-min));
+    height: max(100%, var(--g-tap-min));
+    transform: translate(-50%, -50%);
+  }
 
   /* Touch-Geräte: Icon-Buttons behalten ihre Optik, bekommen aber eine
      unsichtbar vergrößerte Trefferfläche (Design-Vorgabe: Touch-Ziele >= 44px). */

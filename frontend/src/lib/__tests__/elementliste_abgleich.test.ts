@@ -76,7 +76,7 @@ describe('AC-13: Bericht enthält jedes Element mit Status; nichts wird still ü
 		const e4 = b.eintraege.find((e: { id: string }) => e.id === 'e4');
 		assert.equal(e4!.status, 'nicht_pruefbar', 'Element ohne Ergebnis darf nicht fehlen oder als gefunden gelten');
 		assert.ok(e4!.grund && e4!.grund.length > 0, 'nicht_pruefbar braucht einen Grund');
-		assert.deepEqual(b.zaehler, { gefunden: 1, abweichend: 1, nicht_pruefbar: 2 });
+		assert.deepEqual(b.zaehler, { gefunden: 1, abweichend: 1, nicht_pruefbar: 2, freigegeben: 0 });
 	});
 
 	test('nicht_pruefbar ohne Grund wird abgelehnt', () => {

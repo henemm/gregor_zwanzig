@@ -1,0 +1,13 @@
+{
+"zweck": "Freigegebene Abweichungen vom Mockup für den Elementlisten-Abgleich (frontend/e2e/elementliste_abgleich_logik.ts, wendeFreigabenAn). Ein Element, das hier gedeckt ist und auf Staging fehlt, erscheint im Bericht als 'freigegeben' mit Grund und Spec-Verweis, eigener Zähler, nie als gefunden. Klein halten: jede Freigabe braucht eine Spec-Stelle.",
+"freigaben": [
+	{
+		"ctx": "trip",
+		"reiter": "wetter",
+		"abschnitt": "warnungen-radar",
+		"i18n_keys": ["wetter.radar.titel", "wetter.radar.beschreibung"],
+		"grund": "Radar-Zeile beim Trip bleibt aus, bis #2800 (S8) die Fachlogik liefert",
+		"spec": "docs/specs/modules/feat_2913_scheibe_c_wetter_rest.md AC-3"
+	}
+]
+}

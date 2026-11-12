@@ -160,6 +160,28 @@ describe('AC-1: „Nicht im Briefing“ als eine waagrechte Zeile', () => {
 		assert.ok(tagMitTestid(h, 'wetter-hinzugefuegt-meldung'));
 		assert.ok(text(h).startsWith(DE['wetter.nicht_im_briefing.titel']));
 	});
+	// #2913 Fix-Loop 2 (F002): Chips fließen in die Label-Zeile. Gerendert wird der ChipLeiste-Wrapper mit der
+	// Fluss-Klasse; das kompilierte CSS dieser Klasse ist display:contents (Chips = direkte Flex-Kinder von .wt-mehr).
+	test('SSR: ChipLeiste-Wrapper fließt (display: contents) in der Label-Zeile, eigenständig nicht', async () => {
+		const { compile } = await import('svelte/compiler');
+		const CL = path.resolve(HERE, '..', '..', 'molecules', 'ChipLeiste.svelte');
+		const css = compile(readFileSync(CL, 'utf8'), { generate: 'server', css: 'external', filename: CL }).css?.code ?? '';
+		const klassenMit = (decl: RegExp) =>
+			[...css.matchAll(/([^{}]+)\{([^{}]*)\}/g)].filter((m) => decl.test(m[2])).flatMap((m) => [...m[1].matchAll(/\.([\w-]+)/g)].map((x) => x[1]));
+		const fluss = klassenMit(/display:\s*contents/).filter((k) => !k.startsWith('svelte-'));
+		assert.ok(fluss.length > 0, 'ChipLeiste hat keine display:contents-Regel');
+		const wrapperKlassen = (h: string) => (h.match(/<div\b[^>]*data-slot="chip-leiste"[^>]*>/)?.[0].match(/class="([^"]*)"/)?.[1] ?? '').split(/\s+/);
+
+		const N = await lade('NichtImBriefing');
+		const h = html(N, { metriken: METRIKEN, hinzugefuegt: null, onHinzufuegen: noop });
+		assert.ok(wrapperKlassen(h).some((k) => fluss.includes(k)), 'NichtImBriefing: ChipLeiste-Wrapper nicht im Fluss (display:contents)');
+		const zeile = h.match(/<div\b[^>]*data-testid="wetter-nicht-im-briefing"[^>]*>([\s\S]*)<\/div>\s*$/)?.[1] ?? h;
+		assert.ok(zeile.indexOf(DE['wetter.nicht_im_briefing.titel']) < zeile.indexOf('data-slot="chip-leiste"'), 'Label steht nicht vor den Chips');
+
+		const ChipLeiste = (await import(pathToFileURL(CL).href)).default;
+		const allein = html(ChipLeiste, { eintraege: [{ id: 'a', label: '+ A' }], onWahl: noop });
+		assert.ok(!wrapperKlassen(allein).some((k) => fluss.includes(k)), 'eigenständige ChipLeiste darf nicht display:contents sein');
+	});
 });
 
 // ─── AC-2/AC-3: Warnungen und Radar ──────────────────────────────────────────

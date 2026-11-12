@@ -14,7 +14,9 @@ import { mkdirSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { assertNotProdBaseURL } from './prodUrlGuard.ts';
 
-export type Status = 'gefunden' | 'abweichend' | 'nicht_pruefbar';
+// #2913 Scheibe (c) Fix-Loop 2: `freigegeben` = Abweichung, die eine Spec ausdrücklich erlaubt (Liste
+// elementliste_freigaben.json, je Eintrag Grund + Spec-Verweis). Eigener Zähler, nie als gefunden gezählt.
+export type Status = 'gefunden' | 'abweichend' | 'nicht_pruefbar' | 'freigegeben';
 export type Ergebnis = { status: Status; grund?: string; ist?: string };
 
 export type ListenElement = {
@@ -69,11 +71,11 @@ export function filtereScope<E extends { reiter: string; zustand: string }>(elem
 
 /** Bericht über ALLE übergebenen Elemente; fehlendes Ergebnis ⇒ nicht_pruefbar mit Grund. */
 export function baueBericht(elemente: ListenElement[], ergebnisse: Map<string, Ergebnis>): Bericht {
-	const zaehler: Record<Status, number> = { gefunden: 0, abweichend: 0, nicht_pruefbar: 0 };
+	const zaehler: Record<Status, number> = { gefunden: 0, abweichend: 0, nicht_pruefbar: 0, freigegeben: 0 };
 	const eintraege = elemente.map((e): BerichtEintrag => {
 		const erg: Ergebnis = ergebnisse.get(e.id) ?? { status: 'nicht_pruefbar', grund: OHNE_ERGEBNIS };
-		if (erg.status === 'nicht_pruefbar' && !(erg.grund && erg.grund.trim())) {
-			throw new Error(`${e.id}: nicht_pruefbar ohne Grund ist nicht erlaubt`);
+		if ((erg.status === 'nicht_pruefbar' || erg.status === 'freigegeben') && !(erg.grund && erg.grund.trim())) {
+			throw new Error(`${e.id}: ${erg.status} ohne Grund ist nicht erlaubt`);
 		}
 		zaehler[erg.status] += 1;
 		const eintrag: BerichtEintrag = {
@@ -94,7 +96,7 @@ export function baueBericht(elemente: ListenElement[], ergebnisse: Map<string, E
 	return { eintraege, zaehler };
 }
 
-/** Ohne --strict immer 0; mit --strict ≠ 0, sobald etwas abweicht oder nicht prüfbar ist. */
+/** Ohne --strict immer 0; mit --strict ≠ 0, sobald etwas abweicht oder nicht prüfbar ist (freigegeben zählt nicht). */
 export function exitCode(bericht: Bericht, opt: { strict: boolean }): number {
 	if (!opt.strict) return 0;
 	return bericht.zaehler.abweichend + bericht.zaehler.nicht_pruefbar > 0 ? 1 : 0;
@@ -107,9 +109,9 @@ export function berichtAlsMarkdown(bericht: Bericht): string {
 	const zeilen = [
 		'# Elementlisten-Abgleich (Staging)',
 		'',
-		`| gefunden | abweichend | nicht_pruefbar | gesamt |`,
-		`|---|---|---|---|`,
-		`| ${z.gefunden} | ${z.abweichend} | ${z.nicht_pruefbar} | ${bericht.eintraege.length} |`,
+		`| gefunden | abweichend | nicht_pruefbar | freigegeben | gesamt |`,
+		`|---|---|---|---|---|`,
+		`| ${z.gefunden} | ${z.abweichend} | ${z.nicht_pruefbar} | ${z.freigegeben} | ${bericht.eintraege.length} |`,
 		'',
 		'| id | Kontext | Reiter | Zustand | Segment | Abschnitt | Nr. | Text | Status | Grund / Ist |',
 		'|---|---|---|---|---|---|---|---|---|---|'
@@ -333,19 +335,135 @@ export function seitenPfad(ctx: string, id: string, reiter: string): string {
 /** Abschnitte, die nur nach einer Bedienung erscheinen (Script-Zustände im Mockup). */
 export const SCRIPT_ABSCHNITT = /^(grenzen-|vorlage-auswahl|vorlage-bestaetigung|vorlage-speichern|test-menue|kebab-)/;
 
-/** Erwarteter Text als RegExp (DE: Muster bzw. exakt; EN: text_en mit beliebigen Zahlen); null = EN-Lücke. */
+const HAT_PLATZHALTER = /\{[^}]+\}/;
+
+/**
+ * Erwarteter Text als RegExp (DE: Muster bzw. exakt; EN: text_en mit beliebigen Zahlen); null = EN-Lücke.
+ * #2913 Fix-Loop 2 (C5): EN-Texte mit Platzhaltern (`{metrik}`) sind Muster — der Generator setzt keine
+ * DE-Werte mehr ein; ein Platzhalter passt auf jeden Wert.
+ */
 export function erwartung(e: ListenElement, sprache: Sprache): RegExp | null {
 	if (sprache === 'en') {
 		if (e.luecke || !e.text_en) return null;
+		if (HAT_PLATZHALTER.test(e.text_en)) return new RegExp('^' + musterAlsRegExp(e.text_en).source + '$');
 		return new RegExp('^' + normalisiere(e.text_en).split(/\d+(?:[.,]\d+)?/).map(esc).join('[\\d.,]+') + '$');
 	}
 	if (e.muster) return new RegExp('^' + musterAlsRegExp(e.muster).source + '$');
 	return new RegExp('^' + esc(normalisiere(e.text_de)) + '$');
 }
 
+/** Freigegebene Abweichung: Elemente eines Abschnitts (per Katalogschlüssel), die laut Spec fehlen dürfen. */
+export type Freigabe = { ctx: string; reiter: string; abschnitt: string; i18n_keys: string[]; grund: string; spec: string };
+
+/** Freigaben aus dem JSON-Text ({"freigaben": [...]}); jede braucht Grund und Spec-Verweis. */
+export function leseFreigaben(text: string): Freigabe[] {
+	const liste = (JSON.parse(text) as { freigaben?: unknown }).freigaben;
+	if (!Array.isArray(liste)) throw new Error('Freigaben: Feld „freigaben“ fehlt');
+	return liste.map((f: Freigabe, i) => {
+		for (const feld of ['ctx', 'reiter', 'abschnitt', 'grund', 'spec'] as const) {
+			if (typeof f[feld] !== 'string' || !f[feld].trim()) throw new Error(`Freigabe ${i}: „${feld}“ fehlt`);
+		}
+		if (!Array.isArray(f.i18n_keys) || f.i18n_keys.length === 0) throw new Error(`Freigabe ${i}: „i18n_keys“ fehlt`);
+		return f;
+	});
+}
+
+/**
+ * Macht aus `abweichend` ein `freigegeben` (Grund + Spec), wenn eine Freigabe das Element deckt. Gefunden
+ * bleibt gefunden (die Abweichung besteht nicht mehr), nicht_pruefbar bleibt nicht_pruefbar (nicht geprüft).
+ */
+export function wendeFreigabenAn(elemente: ListenElement[], ergebnisse: Map<string, Ergebnis>, freigaben: Freigabe[]): Map<string, Ergebnis> {
+	const out = new Map(ergebnisse);
+	for (const e of elemente) {
+		const erg = out.get(e.id);
+		if (!erg || erg.status !== 'abweichend' || !e.i18n_key) continue;
+		const f = freigaben.find((x) => x.ctx === e.ctx && x.reiter === e.reiter && x.abschnitt === e.abschnitt && x.i18n_keys.includes(e.i18n_key as string));
+		if (f) out.set(e.id, { status: 'freigegeben', grund: `${f.grund} (${f.spec})`, ist: erg.ist ?? erg.grund });
+	}
+	return out;
+}
+
+/**
+ * #2913 Fix-Loop 2 (C3): Die Profilsprache überstimmt das Cookie. Nach dem Setzen der Profilsprache muss
+ * `<html lang>` der Seite die Soll-Sprache tragen; sonst sagt der Lauf nichts aus ⇒ Grund für nicht_pruefbar.
+ */
+export function sprachGrund(soll: Sprache, htmlLang: string | null): string | null {
+	const ist = String(htmlLang ?? '').trim().toLowerCase().split('-')[0];
+	return ist === soll ? null : `Seite rendert Sprache „${ist || 'unbekannt'}“ statt „${soll}“ (<html lang>); Abgleich in dieser Sprache nicht aussagekräftig`;
+}
+
+/** Profilsprache, die nach dem Lauf wiederhergestellt wird (geteiltes Staging-Konto): de/en, sonst de. */
+export function wiederherzustellendeSprache(profil: unknown): Sprache {
+	const s = typeof profil === 'object' && profil !== null ? String((profil as Record<string, unknown>).language ?? '') : '';
+	return s === 'en' ? 'en' : 'de';
+}
+
+/** Minimaler Ausschnitt einer Playwright-Antwort für den Sprach-PUT. */
+export type PutAntwort = { ok(): boolean; status(): number };
+
+/**
+ * #2913 Fix-Loop 2 (F005): Profilsprache des geteilten Staging-Hilfskontos auf den Wert VOR dem Lauf
+ * zurückstellen. Nie still: ein Fehlschlag (HTTP ≠ 2xx oder Ausnahme) wird per console.error gemeldet und
+ * als `ok: false` mit Meldung zurückgegeben; die Spec lässt den Lauf daran scheitern.
+ */
+export async function stelleSpracheWieder(
+	put: (daten: { language: Sprache }) => Promise<PutAntwort>,
+	vorherSprache: Sprache
+): Promise<{ ok: true } | { ok: false; meldung: string }> {
+	let meldung: string;
+	try {
+		const r = await put({ language: vorherSprache });
+		if (r.ok()) return { ok: true };
+		meldung = `HTTP ${r.status()}`;
+	} catch (e) {
+		meldung = e instanceof Error ? e.message : String(e);
+	}
+	meldung = `Profilsprache NICHT auf „${vorherSprache}“ zurückgestellt (${meldung}) — geteiltes Staging-Hilfskonto bitte prüfen`;
+	console.error(`Elementlisten-Abgleich: ${meldung}`);
+	return { ok: false, meldung };
+}
+
 /** Alle Elemente einer Kombination als nicht_pruefbar mit demselben Grund. */
 export function alleNichtPruefbar(el: ListenElement[], grund: string): Map<string, Ergebnis> {
 	return new Map(el.map((e) => [e.id, { status: 'nicht_pruefbar' as const, grund }]));
+}
+
+/** Chip aus Kontodaten (z. B. „+ {metrik}“ in „Nicht im Briefing“): Rolle chip mit Platzhalter-Muster. */
+export function istKontoChip(e: ListenElement): boolean {
+	return e.rolle === 'chip' && !!e.muster && HAT_PLATZHALTER.test(e.muster);
+}
+
+/**
+ * #2913 Fix-Loop 2 (C5): Welche Metriken als Chip erscheinen, sind Kontodaten — Menge und Reihenfolge
+ * werden nicht verglichen. Geprüft wird: Abschnitt-Haken da und mindestens ein sichtbarer Text passt auf
+ * das Chip-Muster (sonst alle abweichend). Dann: das erste Chip-Element steht für die Chip-Zeile
+ * (gefunden); jedes weitere ist gefunden, wenn genau sein DE-Text sichtbar ist, sonst nicht_pruefbar
+ * mit Grund (in EN ist der Einzeltext nicht ableitbar, nur das Muster).
+ */
+export function bewerteKontoChips(
+	chips: ListenElement[],
+	befund: { marker: boolean; texte: string[] },
+	sprache: Sprache,
+	abschnitt: string
+): Map<string, Ergebnis> {
+	const out = new Map<string, Ergebnis>();
+	const sortiert = [...chips].sort((a, b) => a.ordnung - b.ordnung);
+	if (sortiert.length === 0) return out;
+	const re = erwartung(sortiert[0], sprache);
+	const treffer = re ? befund.texte.filter((t) => re.test(t)) : [];
+	const muster = sprache === 'en' ? sortiert[0].text_en : sortiert[0].muster;
+	sortiert.forEach((e, i) => {
+		if (!befund.marker) out.set(e.id, { status: 'abweichend', grund: `Abschnitt-Haken data-abschnitt="${abschnitt}" fehlt` });
+		else if (!re) out.set(e.id, { status: 'nicht_pruefbar', grund: 'EN-Lücke: kein Katalogtext' });
+		else if (treffer.length === 0) out.set(e.id, { status: 'abweichend', grund: `kein Chip mit Muster „${muster}“ sichtbar`, ist: 'nicht gefunden' });
+		else if (sprache === 'de' && treffer.includes(normalisiere(e.text_de))) out.set(e.id, { status: 'gefunden' });
+		else if (i === 0) out.set(e.id, { status: 'gefunden', grund: `Chip-Zeile mit Muster „${muster}“ vorhanden (${treffer.length} Chips; Menge ist Kontodaten)` });
+		else {
+			const warum = sprache === 'en' ? 'in EN ist nur das Muster prüfbar' : `„${e.text_de}“ ist in diesem Konto kein Chip`;
+			out.set(e.id, { status: 'nicht_pruefbar', grund: `Chip-Menge ist Kontodaten: ${warum}`, ist: `${treffer.length} Chips mit Muster „${muster}“` });
+		}
+	});
+	return out;
 }
 
 /**
@@ -365,8 +483,10 @@ export function bewerteAbschnitt(
 		return out;
 	}
 	const norm = befund.texte.map(normalisiere);
+	const chips = liste.filter(istKontoChip);
+	for (const [i, e] of bewerteKontoChips(chips, { marker: befund.marker, texte: norm }, sprache, abschnitt)) out.set(i, e);
 	let zuletzt = -1;
-	for (const e of [...liste].sort((a, b) => a.ordnung - b.ordnung)) {
+	for (const e of liste.filter((x) => !istKontoChip(x)).sort((a, b) => a.ordnung - b.ordnung)) {
 		const re = erwartung(e, sprache);
 		if (!re) {
 			out.set(e.id, { status: 'nicht_pruefbar', grund: 'EN-Lücke: kein Katalogtext' });
@@ -406,7 +526,10 @@ export function abschluss(bericht: Bericht, elemente: ListenElement[], opt: { st
 	}
 	const z = bericht.zaehler;
 	const exit = exitCode(bericht, opt);
-	return { exit, meldung: `gefunden ${z.gefunden}, abweichend ${z.abweichend}, nicht_pruefbar ${z.nicht_pruefbar}${opt.strict ? ' (strict)' : ''} → Exit ${exit}` };
+	return {
+		exit,
+		meldung: `gefunden ${z.gefunden}, abweichend ${z.abweichend}, nicht_pruefbar ${z.nicht_pruefbar}, freigegeben ${z.freigegeben}${opt.strict ? ' (strict)' : ''} → Exit ${exit}`
+	};
 }
 
 /** Starter: CLI-Flags --strict, --scope <x>, --sprache <de|en> in die Umgebung der Spec übersetzen. */

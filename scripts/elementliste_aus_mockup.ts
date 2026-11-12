@@ -115,7 +115,10 @@ function index(katalog: Katalog) {
 
 /**
  * EN für einen Mockup-Text: exakter Treffer im DE-Katalog → EN desselben Schlüssels;
- * sonst Musterabgleich (Platzhalter) → EN mit eingesetzten Werten; sonst Lücke (nichts erfunden).
+ * sonst Musterabgleich (Platzhalter) → EN-Muster MIT Platzhaltern; sonst Lücke (nichts erfunden).
+ * #2913 Fix-Loop 2 (C5): die eingesetzten Werte stammen aus dem deutschen Mockup (z. B. Metriknamen);
+ * sie in den EN-Text zu kopieren, hieße Deutsch als Englisch zu erwarten. Der Abgleich liest
+ * Platzhalter als „beliebiger Wert“.
  */
 export function ermittleEn(textDe: string, katalog: Katalog): EnErgebnis {
 	const t = norm(textDe);
@@ -128,12 +131,26 @@ export function ermittleEn(textDe: string, katalog: Katalog): EnErgebnis {
 		if (m.literal * 2 < t.length) continue;
 		const treffer = t.match(m.re);
 		if (!treffer || treffer.slice(1).some((w) => w.length > 40)) continue;
-		const werte: Record<string, string> = {};
-		m.namen.forEach((n, i) => (werte[n] = treffer[i + 1]));
-		const en = katalog.en[m.key].replace(PLATZHALTER, (_: string, n: string) => werte[n] ?? `{${n}}`);
-		return { i18n_key: m.key, text_en: en, muster: m.de, luecke: false };
+		return { i18n_key: m.key, text_en: katalog.en[m.key], muster: m.de, luecke: false };
 	}
 	return { i18n_key: null, text_en: null, muster: null, luecke: true };
+}
+
+/** Katalogschlüssel der „+ Metrik“-Chips in „Nicht im Briefing“. */
+export const CHIP_SCHLUESSEL = 'wetter.nicht_im_briefing.hinzufuegen';
+
+/**
+ * #2913 Fix-Loop 2 (C5): Chip „+ Name“ (Rolle chip) → Muster „+ {metrik}“ aus dem Katalog. Das Muster ist
+ * zu kurz für den allgemeinen Musterabgleich (Mindest-Wortlaut), die Chip-Rolle macht den Treffer eindeutig.
+ * Welche Metriken Chips sind, sind Kontodaten; der Abgleich prüft Präfix und Vorhandensein.
+ */
+export function chipEn(rolle: string, textDe: string, katalog: Katalog): EnErgebnis | null {
+	const de = katalog.de[CHIP_SCHLUESSEL];
+	const en = katalog.en[CHIP_SCHLUESSEL];
+	if (rolle !== 'chip' || typeof de !== 'string' || typeof en !== 'string' || !en.trim()) return null;
+	const praefix = de.split('{')[0];
+	if (!praefix.trim() || !norm(textDe).startsWith(praefix) || norm(textDe).length <= praefix.length) return null;
+	return { i18n_key: CHIP_SCHLUESSEL, text_en: en, muster: de, luecke: false };
 }
 
 // ------------------------------------------------------------------ Auslesen im Browser
@@ -273,7 +290,7 @@ function baueElemente(gruppen: Rohgruppe[], katalog: Katalog): ListenEintrag[] {
 					[g.ctx, g.reiter, g.zustand, g.segment ?? '-', abschnitt].join('.') +
 					'.' +
 					createHash('sha256').update(identitaet + '|' + nr).digest('hex').slice(0, 10);
-				const en = ermittleEn(r.text, katalog);
+				const en = chipEn(r.rolle, r.text, katalog) ?? ermittleEn(r.text, katalog);
 				// Muster: aus dem Katalog (Platzhalter) oder, ohne Katalogtreffer, Zahlen als {zahl}.
 				// Ein exakter Katalogtreffer ist fester Text (z. B. „3-Tages-Ausblick“), kein Muster.
 				const zahlMuster = !en.i18n_key && /\d/.test(r.text) ? r.text.replace(ZAHL, '{zahl}') : null;
