@@ -53,48 +53,52 @@ func TestZugriffslog_MaskiertGeheimnisse(t *testing.T) {
 	}
 }
 
-// AC-27: ein gesetztes, aber zu kurzes Maschinen-Geheimnis haelt den
-// Endpunkt geschlossen (fail-closed), statt mit dem schwachen Wert zu oeffnen.
-func TestMaschinenGeheimnisse_ZuKurzHaeltEndpunktGeschlossen(t *testing.T) {
+// AC-27: ein gesetztes, aber kurzes Maschinen-Geheimnis erzeugt beim Aufbau
+// eine Warnzeile, der Endpunkt arbeitet mit dem konfigurierten Wert weiter
+// (ein Deploy schliesst keinen Eingangskanal still). Fail-closed bleibt nur
+// der Fall "kein Geheimnis gesetzt" (eigene Tests der Routen).
+func TestMaschinenGeheimnisse_KurzWarntUndBleibtInBetrieb(t *testing.T) {
 	kurz := "kurz-aber-gesetzt"
-	lang := strings.Repeat("s", 32)
+	var logBuf syncBuf
+	alt := log.Writer()
+	log.SetOutput(&logBuf)
+	t.Cleanup(func() { log.SetOutput(alt) })
 
-	r, _, _ := schutzRouter2961(t, func(c *config.Config) { c.StatusToken = kurz })
-	req := httptest.NewRequest(http.MethodGet, "/api/scheduler/status", nil)
-	req.Header.Set("X-GZ-Status-Token", kurz)
-	w := httptest.NewRecorder()
-	r.ServeHTTP(w, req)
-	if w.Code != http.StatusUnauthorized {
-		t.Fatalf("kurzes Status-Token: erwartet 401 (geschlossen), bekommen %d", w.Code)
-	}
-
-	r, _, _ = schutzRouter2961(t, func(c *config.Config) { c.StatusToken = lang })
-	req = httptest.NewRequest(http.MethodGet, "/api/scheduler/status", nil)
-	req.Header.Set("X-GZ-Status-Token", lang)
-	w = httptest.NewRecorder()
-	r.ServeHTTP(w, req)
-	if w.Code != http.StatusOK {
-		t.Fatalf("ausreichend langes Status-Token: erwartet 200, bekommen %d", w.Code)
-	}
-
-	r, _, _ = schutzRouter2961(t, func(c *config.Config) { c.TelegramWebhookSecret = kurz })
-	req = httptest.NewRequest(http.MethodPost, "/api/webhooks/telegram/inbound", strings.NewReader(`{}`))
-	req.Header.Set("X-Telegram-Bot-Api-Secret-Token", kurz)
-	w = httptest.NewRecorder()
-	r.ServeHTTP(w, req)
-	if w.Code < 400 {
-		t.Fatalf("kurzes Telegram-Secret: Endpunkt muss geschlossen sein, bekommen %d", w.Code)
-	}
-
-	r, _, _ = schutzRouter2961(t, func(c *config.Config) {
+	r, _, _ := schutzRouter2961(t, func(c *config.Config) {
+		c.StatusToken = kurz
+		c.TelegramWebhookSecret = kurz
 		c.StalwartWebhookPathSecret = kurz
-		c.StalwartWebhookSecret = lang
+		c.StalwartWebhookSecret = kurz
 	})
-	req = httptest.NewRequest(http.MethodPost, "/api/webhooks/mail/"+kurz, strings.NewReader(`{}`))
-	req.Header.Set("Authorization", "Bearer "+lang)
-	w = httptest.NewRecorder()
-	r.ServeHTTP(w, req)
-	if w.Code < 400 {
-		t.Fatalf("kurzes Mail-Pfadgeheimnis: Endpunkt muss geschlossen sein, bekommen %d", w.Code)
+	for _, name := range []string{"GZ_STATUS_TOKEN", "TELEGRAM_WEBHOOK_SECRET", "STALWART_WEBHOOK_PATH_SECRET", "STALWART_WEBHOOK_SECRET"} {
+		if !strings.Contains(logBuf.String(), "WARN [config] "+name) {
+			t.Errorf("Warnzeile fuer %s fehlt:\n%s", name, logBuf.String())
+		}
+	}
+
+	schick := func(method, pfad string, header map[string]string) int {
+		req := httptest.NewRequest(method, pfad, strings.NewReader(`{}`))
+		req.Header.Set("Content-Type", "application/json")
+		for k, v := range header {
+			req.Header.Set(k, v)
+		}
+		w := httptest.NewRecorder()
+		r.ServeHTTP(w, req)
+		return w.Code
+	}
+	if c := schick(http.MethodGet, "/api/scheduler/status", map[string]string{"X-GZ-Status-Token": kurz}); c != http.StatusOK {
+		t.Fatalf("kurzes Status-Token: erwartet 200 (in Betrieb), bekommen %d", c)
+	}
+	if c := schick(http.MethodGet, "/api/scheduler/status", map[string]string{"X-GZ-Status-Token": "falsch"}); c != http.StatusUnauthorized {
+		t.Fatalf("falsches Status-Token: erwartet 401, bekommen %d", c)
+	}
+	if c := schick(http.MethodPost, "/api/webhooks/telegram/inbound", map[string]string{"X-Telegram-Bot-Api-Secret-Token": "falsch"}); c != http.StatusForbidden {
+		t.Fatalf("Telegram mit kurzem Secret, falscher Header: erwartet 403 (konfiguriert), bekommen %d", c)
+	}
+	if c := schick(http.MethodPost, "/api/webhooks/telegram/inbound", map[string]string{"X-Telegram-Bot-Api-Secret-Token": kurz}); c == http.StatusForbidden || c == http.StatusServiceUnavailable {
+		t.Fatalf("Telegram mit kurzem Secret, richtiger Header: Endpunkt muss arbeiten, bekommen %d", c)
+	}
+	if c := schick(http.MethodPost, "/api/webhooks/mail/"+kurz, map[string]string{"Authorization": "Bearer " + kurz}); c == http.StatusForbidden || c == http.StatusServiceUnavailable {
+		t.Fatalf("Mail mit kurzen Secrets: Endpunkt muss arbeiten, bekommen %d", c)
 	}
 }

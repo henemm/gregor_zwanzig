@@ -58,8 +58,9 @@ func New(deps Deps) chi.Router {
 	// Nutzer aus dem Auth-Kontext > Cookie gz_lang > Accept-Language > de.
 	r.Use(authmw.Lang(deps.Store))
 
-	// Issue #2961: gesetzte, aber zu kurze Maschinen-Geheimnisse halten den
-	// Endpunkt geschlossen. Der Seven-Signierschluessel kommt aus dem
+	// Issue #2961: gesetzte, aber zu kurze Maschinen-Geheimnisse erzeugen
+	// eine Warnzeile; der Endpunkt bleibt mit dem Wert in Betrieb (kein
+	// stilles Schliessen beim Deploy). Der Seven-Signierschluessel kommt aus dem
 	// seven.io-Dashboard (Format nicht in unserer Hand) und ist ausgenommen.
 	statusToken := config.EffectiveMachineSecret("GZ_STATUS_TOKEN", deps.Config.StatusToken)
 	telegramSecret := config.EffectiveMachineSecret("TELEGRAM_WEBHOOK_SECRET", deps.Config.TelegramWebhookSecret)

@@ -46,6 +46,10 @@ Schwächen, die einzeln klein, zusammen aber relevant sind:
    Rümpfe müssen `application/json` sein (`415`), ausgenommen der GPX-Upload (multipart).
    Rümpfe sind auf 1 MB begrenzt (GPX-Upload 10 MB, `413`). Ausgenommen sind Webhooks,
    interne Pfade, der Maschinen-Status und der OAuth-Rückruf.
+4. **Maschinen-Geheimnisse.** `GZ_STATUS_TOKEN` und die selbst gewählten Webhook-Secrets
+   sollen mindestens 32 Zeichen haben; ein kürzerer gesetzter Wert erzeugt beim Start eine
+   Warnzeile, der Endpunkt bleibt mit diesem Wert in Betrieb. Der Seven-Signierschlüssel
+   (vom Anbieter vergeben) ist ausgenommen.
 
 ## Verworfene Alternativen
 
@@ -54,9 +58,11 @@ Schwächen, die einzeln klein, zusammen aber relevant sind:
   ohne Frontend-Umbau.
 - **Testkonto-Schalter ganz entfernen** — Staging-Validator, Fixture-Stack und E2E-Zweitnutzer
   brauchen feste Kennungen; die Beschränkung auf Staging/Fixture/Admin genügt.
-- **Startabbruch bei zu kurzen Maschinen-Geheimnissen** — ein Deploy darf Produktion nicht
-  ausfallen lassen; stattdessen bleibt der betroffene Endpunkt geschlossen und es wird
-  gewarnt.
+- **Startabbruch oder geschlossener Endpunkt bei zu kurzen Maschinen-Geheimnissen** — ein
+  Deploy darf weder Produktion noch einen Eingangskanal (Telegram-/SMS-/Mail-Webhook,
+  Betriebsstatus) still ausfallen lassen; die Längen der Betriebswerte sind vorab nicht
+  prüfbar. Stattdessen: Warnzeile beim Start, der Endpunkt arbeitet mit dem konfigurierten
+  Wert weiter; fail-closed bleibt nur „kein Geheimnis gesetzt“.
 
 ## Konsequenzen
 

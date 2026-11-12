@@ -81,8 +81,9 @@ ADR-0113.
    `IdleTimeout` 2 min, ohne `WriteTimeout` (Versand bis 300 s, vgl.
    `fix_2124_versand_nginx_timeout.md`).
 6. **Kleinteile (GA10).** Zugriffslog maskiert Webhook-Pfadgeheimnisse und `code`/`state`/`token`.
-   Maschinen-Geheimnisse unter 32 Zeichen: Warnung, Endpunkt geschlossen (Seven-Signierschlüssel
-   ausgenommen). Reset-/Bestätigungs-Token: erst Vergleich, dann Ablauf. Passkey-Start: schon
+   Maschinen-Geheimnisse unter 32 Zeichen: nur Warnzeile beim Start, der Endpunkt bleibt mit dem
+   konfigurierten Wert in Betrieb (kein stilles Schließen eines Eingangskanals beim Deploy);
+   fail-closed bleibt allein „kein Geheimnis gesetzt“ (Seven-Signierschlüssel ausgenommen). Reset-/Bestätigungs-Token: erst Vergleich, dann Ablauf. Passkey-Start: schon
    gleichförmig, per Test festgehalten. `/api/health` bleibt unverändert (die CI liest die
    Commit-Kennung unangemeldet vom Staging).
 
@@ -173,8 +174,8 @@ ADR-0113.
 **AC-26:** Given Anfragen an Webhooks mit Pfadgeheimnis oder mit `code`/`state`/`token` in der Query / When das Zugriffslog schreibt / Then stehen diese Werte maskiert im Log, der übrige Pfad bleibt lesbar.
   - Test: `TestZugriffslog_MaskiertGeheimnisse`
 
-**AC-27:** Given ein gesetztes, aber kürzer als 32 Zeichen langes Maschinen-Geheimnis / When der Router aufgebaut wird / Then bleibt der betroffene Endpunkt geschlossen, der Start läuft weiter; ein ausreichend langes Geheimnis öffnet ihn.
-  - Test: `TestMaschinenGeheimnisse_ZuKurzHaeltEndpunktGeschlossen`
+**AC-27:** Given ein gesetztes, aber kürzer als 32 Zeichen langes Maschinen-Geheimnis / When der Router aufgebaut wird / Then erscheint je Geheimnis eine Warnzeile im Log, der betroffene Endpunkt arbeitet mit dem konfigurierten Wert weiter (richtiger Wert angenommen, falscher abgewiesen); geschlossen bleibt ein Endpunkt nur, wenn gar kein Geheimnis gesetzt ist.
+  - Test: `TestMaschinenGeheimnisse_KurzWarntUndBleibtInBetrieb`
 
 **AC-28:** Given ein abgelaufenes Reset- bzw. Bestätigungs-Token / When ein falsches Token eingereicht wird / Then lautet die Antwort `invalid_token`; `token_expired` erst, wenn das Token selbst stimmt.
   - Test: `TestResetToken_AblaufErstNachVergleich`, `TestBestaetigungsToken_AblaufErstNachVergleich`
@@ -203,3 +204,4 @@ ADR-0113.
 ## Changelog
 
 - 2026-11-12: Erstfassung und Umsetzung (Issue #2961).
+- 2026-11-12: AC-27 geändert — kurze Maschinen-Geheimnisse nur noch Warnung, Endpunkt bleibt in Betrieb (Längen der Betriebswerte nicht prüfbar, Deploy darf keinen Kanal schließen).
