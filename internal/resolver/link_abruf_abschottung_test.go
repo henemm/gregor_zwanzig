@@ -69,6 +69,7 @@ func erwarteNichtAufloesbar(t *testing.T, input string, err error) {
 // AC-1: Eine Eingabe, die nur nach Kartenlink aussieht, aber auf einen
 // fremden Host zeigt, wird nie abgerufen.
 func TestLinkAbruf_FremderHostWirdNichtAbgerufen(t *testing.T) {
+	resolver.OhneNachschlagDienste(t)
 	var e empfang
 	srv := zielServer(t, &e, nil)
 
@@ -87,6 +88,7 @@ func TestLinkAbruf_FremderHostWirdNichtAbgerufen(t *testing.T) {
 
 // AC-1: Selbst ein erlaubter Host wird ueber http:// nicht abgerufen.
 func TestLinkAbruf_NurHTTPS(t *testing.T) {
+	resolver.OhneNachschlagDienste(t)
 	var e empfang
 	srv := zielServer(t, &e, nil)
 	resolver.ErlaubeTestHosts(t, hostOf(t, srv.URL))
@@ -103,6 +105,7 @@ func TestLinkAbruf_NurHTTPS(t *testing.T) {
 // sein Ziel wird nur als Text ausgewertet (Koordinaten im Ziel-URL, z. B. bei
 // einer Einwilligungsseite mit dem Kartenziel im Parameter).
 func TestLinkAbruf_RedirectAufFremdenHostWirdNichtVerfolgt(t *testing.T) {
+	resolver.OhneNachschlagDienste(t)
 	var fremd empfang
 	fremdSrv := zielServer(t, &fremd, nil)
 
@@ -134,6 +137,7 @@ func TestLinkAbruf_RedirectAufFremdenHostWirdNichtVerfolgt(t *testing.T) {
 
 // AC-2: Hoechstens fuenf Weiterleitungen.
 func TestLinkAbruf_HoechstensFuenfWeiterleitungen(t *testing.T) {
+	resolver.OhneNachschlagDienste(t)
 	var e empfang
 	var srv *httptest.Server
 	srv = zielServer(t, &e, func(w http.ResponseWriter, r *http.Request) {
@@ -153,6 +157,7 @@ func TestLinkAbruf_HoechstensFuenfWeiterleitungen(t *testing.T) {
 // AC-3: Ein erlaubter Name, der auf eine interne Adresse aufloest, wird nicht
 // verbunden — die Sperre greift an der tatsaechlichen IP.
 func TestLinkAbruf_InterneAdresseWirdNichtVerbunden(t *testing.T) {
+	resolver.OhneNachschlagDienste(t)
 	var e empfang
 	srv := zielServer(t, &e, nil)
 	u, _ := url.Parse(srv.URL)
@@ -171,6 +176,7 @@ func TestLinkAbruf_InterneAdresseWirdNichtVerbunden(t *testing.T) {
 // Python-Core nie — auch dann nicht, wenn das Ziel zufaellig die Core-Adresse
 // ist und alle anderen Sperren fuer den Test geoeffnet sind.
 func TestLinkAbruf_TraegtKeinDienstgeheimnis(t *testing.T) {
+	resolver.OhneNachschlagDienste(t)
 	var core empfang
 	coreSrv := zielServer(t, &core, nil)
 

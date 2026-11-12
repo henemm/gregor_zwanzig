@@ -13,10 +13,14 @@ type openElevationResponse struct {
 	} `json:"results"`
 }
 
+// elevationLookupURL: fester Anbieter-Endpunkt; nur export_test.go ersetzt ihn
+// (netzfreie Kern-Tests, Issue #2961).
+var elevationLookupURL = "https://api.open-elevation.com/api/v1/lookup"
+
 // lookupElevation fragt Open-Elevation nach der Höhe für lat/lon.
 // Soft-Fail: bei jedem Fehler nil zurückgeben, kein Error an Caller.
 func lookupElevation(lat, lon float64) *int {
-	url := fmt.Sprintf("https://api.open-elevation.com/api/v1/lookup?locations=%f,%f", lat, lon)
+	url := fmt.Sprintf("%s?locations=%f,%f", elevationLookupURL, lat, lon)
 
 	client := &http.Client{Timeout: 8 * time.Second}
 	req, err := http.NewRequest("GET", url, nil)

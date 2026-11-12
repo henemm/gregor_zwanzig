@@ -1,6 +1,8 @@
 package resolver
 
 import (
+	"net/http"
+	"net/http/httptest"
 	"net/netip"
 	"strings"
 	"testing"
@@ -50,3 +52,16 @@ func IstOeffentlicheAdresse(s string) bool {
 
 // IstGoogleLinkHost macht die Erlaubnisliste direkt pruefbar.
 func IstGoogleLinkHost(h string) bool { return isGoogleLinkHost(h) }
+
+// OhneNachschlagDienste lenkt Hoehen- und Ortsnamen-Nachschlag auf einen
+// lokalen Server, der nichts findet — Tests bleiben netzfrei.
+func OhneNachschlagDienste(t *testing.T) {
+	t.Helper()
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusNotFound)
+	}))
+	t.Cleanup(srv.Close)
+	origE, origN := elevationLookupURL, nominatimSearchURL
+	t.Cleanup(func() { elevationLookupURL, nominatimSearchURL = origE, origN })
+	elevationLookupURL, nominatimSearchURL = srv.URL+"/hoehe", srv.URL+"/suche"
+}

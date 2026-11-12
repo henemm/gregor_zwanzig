@@ -111,9 +111,13 @@ func followGoogleMapsRedirect(link *url.URL) (string, error) {
 	return resp.Request.URL.String(), nil
 }
 
+// nominatimSearchURL: fester Anbieter-Endpunkt; nur export_test.go ersetzt ihn
+// (netzfreie Kern-Tests, Issue #2961).
+var nominatimSearchURL = "https://nominatim.openstreetmap.org/search"
+
 func resolveViaNominatim(placeName string) (float64, float64, bool) {
 	tryQuery := func(q string) (float64, float64, bool) {
-		apiURL := "https://nominatim.openstreetmap.org/search?q=" + url.QueryEscape(q) + "&format=json&limit=1"
+		apiURL := nominatimSearchURL + "?q=" + url.QueryEscape(q) + "&format=json&limit=1"
 		req, err := http.NewRequest("GET", apiURL, nil)
 		if err != nil {
 			return 0, 0, false
