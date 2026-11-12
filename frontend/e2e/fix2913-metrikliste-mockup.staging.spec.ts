@@ -24,7 +24,7 @@ const katalog = (s: 'de' | 'en'): Record<string, string> => JSON.parse(readFileS
 const BREITEN = [1024, 1100, 1280, 1440] as const;
 const AUFNAHME_BREITEN = [1280, 1024, 390] as const;
 /** Zeilen mit Ampel und mindestens eine reine Anzeige (display_only), damit AC-10 Vergleichszeilen hat. */
-const ZUSATZ = ['temperature', 'wind', 'precipitation', 'rain_probability', 'visibility', 'wind_direction', 'pressure'];
+const ZUSATZ = ['temperature', 'wind', 'precipitation', 'thunder', 'rain_probability', 'visibility', 'wind_direction', 'pressure'];
 
 test.describe.configure({ mode: 'serial' });
 
@@ -67,7 +67,18 @@ async function ganzseite(page: Page, datei: string): Promise<number> {
 	}
 }
 
-type Zeile = { id: string; spalten: string[]; gap: string; hoehe: number; mitteLinks: number; mitteBreite: number; aktRechts: number; nurAnzeige: boolean };
+type Zeile = {
+	id: string;
+	spalten: string[];
+	gap: string;
+	hoehe: number;
+	mitteLinks: number;
+	mitteBreite: number;
+	aktRechts: number;
+	nurAnzeige: boolean;
+	/** Runde 2, Befund 2: Zeilen der Aktionsspalte („Alarm ab“, Segmente, Knopf); Mitten innerhalb 6 px = eine Zeile. */
+	aktZeilen: number;
+};
 type Messung = {
 	karte: { x: number; breite: number };
 	/** Inhaltsbreite von <main>: clientWidth minus horizontales Padding (AC-3). */
@@ -112,7 +123,13 @@ async function messen(reiter: Locator): Promise<Messung> {
 				mitteLinks: r(mitte).left,
 				mitteBreite: r(mitte).width,
 				aktRechts: r(akt).right,
-				nurAnzeige: !!z.querySelector('.wt-nur')
+				nurAnzeige: !!z.querySelector('.wt-nur'),
+				aktZeilen: Array.from(akt.children)
+					.map((c) => r(c))
+					.filter((b) => b.height > 0)
+					.map((b) => b.top + b.height / 2)
+					.sort((x, y) => x - y)
+					.filter((m, i, a) => i === 0 || m - a[i - 1] > 6).length
 			};
 		});
 		const tz = karte.querySelector('[data-testid="wetter-zeile-temperature"]');
@@ -238,6 +255,11 @@ test('AC-1/2/3/4/6/7/8/9/10/11: Messwerte bei 1024/1100/1280/1440 und 390 px, Tr
 				expect(px(t!.spalten[1]), `AC-1 ${tag}`).toBeLessThanOrEqual(190);
 				expect(px(t!.spalten[2]), `AC-1 ${tag}: Mittelspalte`).toBeGreaterThanOrEqual(160);
 				expect(t!.gap, `AC-1 ${tag}`).toBe('18px');
+				// Runde 2, Befund 2: Mitte ≥ 160 px allein war grün, obwohl die Aktionsspalte dreizeilig umbrach.
+				// Die Wirkung entsteht in der Aktionsspalte: „Alarm ab“, Segmente und Knopf in EINER Zeile,
+				// Erklärung „Temperatur“ höchstens 4 Zeilen (vorher 6–7 bei 1024).
+				for (const z of m.zeilen) expect(z.aktZeilen, `Befund 2 ${tag}: Aktionsspalte ${z.id} umgebrochen`).toBe(1);
+				expect(m.temp!.warum.zeilen, `Befund 2 ${tag}: Erklärung Temperatur`).toBeLessThanOrEqual(4);
 			}
 			// AC-6: „grün“ im grünen Text-Token --g-ok-fg, 600.
 			expect(m.temp!.gruen.farbe, `AC-6 ${tag}`).toBe(m.gruenToken);
@@ -314,6 +336,8 @@ test('AC-5: Untertitel `Einheit · Hinweis` in DE und EN', async ({ page }) => {
 				await expect(unter('precipitation')).toHaveText(`mm · ${k['wetter.hinweis.precipitation']}`);
 				await expect(unter('rain_probability')).toHaveText(`% · ${k['wetter.untertitel.vorbote']}`);
 				await expect(unter('wind_direction')).toHaveText(`° · ${k['wetter.untertitel.nur_anzeige']}`);
+				// Runde 2, Befund 1: Gewitter-Leiste beschriftet alle drei Zonen (Mockup „keins · mittel · hoch“).
+				await expect(reiter.getByTestId('wetter-ampel-leiste-thunder').locator('.wt-marken--stufen span')).toHaveText([k['wetter.gewitter.keins'], k['wetter.gewitter.mittel'], k['wetter.gewitter.hoch']]);
 			} finally {
 				await hub.aufraeumen();
 			}

@@ -425,3 +425,65 @@ describe('AC-4/AC-8: Zeilenhöhe und Trefferflächen der Aktionsspalte (Messung 
 		assert.ok(12 + 27 + 4 + 4 * 12 * lh + 12 <= 124, `Zeilenhöhe ${lh}: Zeile Temperatur > 124 px`);
 	});
 });
+
+// ─── Staging-Abnahme Runde 2 (nach PR #2956): Befunde 1 und 2 ───────────────
+
+describe('Befund 1: Gewitter-Leiste beschriftet „keins · mittel · hoch“ (Mockup Z. 344)', () => {
+	const stufen = (h: string) => {
+		const block = h.match(/<div class="wt-marken wt-marken--stufen[^"]*"[^>]*>([\s\S]*?)<\/div>/);
+		assert.ok(block, 'Stufen-Beschriftung fehlt');
+		return Array.from(block![1].matchAll(/<span\b[^>]*>([\s\S]*?)<\/span>/g)).map((m) => text(m[1]));
+	};
+	test('DE: über den drei Zonen stehen „keins“, „mittel“, „hoch“ — keine leere erste Zone', async () => {
+		const L = await ladeSvelte(path.join(WT, 'AmpelLeiste.svelte'));
+		const h = html(L, { id: 'thunder', eintrag: undefined, gewitter: { mittel: 'yellow', hoch: 'orange' } });
+		assert.deepEqual(stufen(h), ['keins', 'mittel', 'hoch']);
+	});
+	test('Katalog: wetter.gewitter.keins in DE „keins“, in EN eigener Text', () => {
+		assert.equal(DE['wetter.gewitter.keins'], 'keins');
+		assert.ok(typeof EN['wetter.gewitter.keins'] === 'string' && EN['wetter.gewitter.keins'].trim() !== '' && EN['wetter.gewitter.keins'] !== 'keins', 'EN: wetter.gewitter.keins fehlt');
+	});
+});
+
+describe('Befund 2: Karte 701–960 px (Viewport 1024/1100 mit Seitenleiste) — Aktionsspalte einzeilig', () => {
+	// Kartenbreite = Viewport − 220 Seitenleiste − 2·24 Innenabstand von main (AC-3). Das Mockup-Raster braucht
+	// für eine einzeilige Aktionsspalte (≈ 418 px: „Alarm ab“ 46 + Segmente 243 + Knopf 109 + 2·10) mindestens
+	// 32 + 130 + 160 + 418 + 3·18 + 2·20 ≈ 834 px; bei 756 px bricht sie dreizeilig um, die Mitte fällt auf 160 px.
+	const KARTE = { 390: 358, 1024: 756, 1100: 832, 1280: 1012, 1440: 1172 } as const;
+	const css = stilVon(path.join(WT, 'MetrikZeile.svelte'));
+	/** Wirksame Deklarationen eines Selektors bei Kartenbreite `w` (Quellreihenfolge, @container max-width). */
+	function wirksam(selektor: string, w: number): Record<string, string> {
+		const aus: Record<string, string> = {};
+		for (const b of bloecke(ohneKommentare(css))) {
+			if (!b.kopf.startsWith('@')) {
+				if (b.kopf.split(',').map(normSel).includes(selektor)) Object.assign(aus, regel(`${b.kopf}{${b.inhalt}}`, selektor));
+				continue;
+			}
+			const max = b.kopf.match(/^@container\b[^{]*max-width:\s*(\d+)px/);
+			if (max && w <= Number(max[1])) Object.assign(aus, regel(b.inhalt, selektor));
+		}
+		return aus;
+	}
+	for (const vp of [1024, 1100] as const) {
+		test(`${vp} px (Karte ${KARTE[vp]}): Raster bleibt, Mitte und Aktionen teilen sich Spalte 3 bis Ende, Aktionen einzeilig`, () => {
+			assert.equal(aufloesen(wirksam('.wt-zeile', KARTE[vp])['grid-template-columns'] ?? ''), '32px minmax(130px, 190px) minmax(160px, 1fr) auto', 'AC-1: Raster verändert');
+			assert.equal(wirksam('.wt-mitte', KARTE[vp])['grid-column'], '3 / -1', 'Mittelspalte nutzt die Breite der Aktionsspalte nicht');
+			const akt = wirksam('.wt-act', KARTE[vp]);
+			assert.equal(akt['grid-column'], '3 / -1', 'Aktionsspalte steht weiter rechts neben einer 160-px-Mitte');
+			assert.equal(akt['flex-wrap'], 'nowrap', 'Aktionsspalte darf in dieser Breite nicht umbrechen');
+			assert.equal(akt['justify-content'], 'flex-start');
+		});
+	}
+	for (const vp of [1280, 1440] as const) {
+		test(`${vp} px (Karte ${KARTE[vp]}): Mockup-Raster, Aktionsspalte rechts in Spalte 4`, () => {
+			assert.equal(wirksam('.wt-mitte', KARTE[vp])['grid-column'], undefined);
+			assert.equal(wirksam('.wt-act', KARTE[vp])['grid-column'], undefined);
+		});
+	}
+	test('390 px: Handy-Layout bleibt (Mitte und Aktionen über die volle Breite)', () => {
+		assert.equal(wirksam('.wt-mitte', KARTE[390])['grid-column'], '1 / -1');
+		assert.equal(wirksam('.wt-act', KARTE[390])['grid-column'], '1 / -1');
+		assert.equal(wirksam('.wt-act', KARTE[390])['flex-wrap'], 'wrap', 'Handy: Aktionen müssen umbrechen dürfen');
+		assert.equal(aufloesen(wirksam('.wt-zeile', KARTE[390])['grid-template-columns'] ?? ''), '40px 1fr');
+	});
+});

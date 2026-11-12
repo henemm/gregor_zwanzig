@@ -42,7 +42,8 @@
 <div class="wt-leiste" data-testid="wetter-ampel-leiste-{id}">
 	{#if gewitter}
 		<div class="wt-marken wt-marken--stufen" aria-hidden="true">
-			<span>&nbsp;</span><span>{$t('wetter.gewitter.mittel')}</span><span>{$t('wetter.gewitter.hoch')}</span>
+			<!-- #2913 Runde 2: alle drei Zonen beschriftet (Mockup `ticks` keins · mittel · hoch). -->
+			<span>{$t('wetter.gewitter.keins')}</span><span>{$t('wetter.gewitter.mittel')}</span><span>{$t('wetter.gewitter.hoch')}</span>
 		</div>
 	{:else}
 		<div class="wt-marken" aria-hidden="true" bind:clientWidth={breite}>

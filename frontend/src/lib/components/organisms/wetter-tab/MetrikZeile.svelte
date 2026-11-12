@@ -177,6 +177,21 @@
 		   Segment 29 + Knopf 28 sichtbar ⇒ Zeilenabstand ≥ 16 px. */
 		gap: var(--g-s-4) var(--g-size-10px);
 	}
+	/* #2913 Runde 2 (Befund 2): Mit Seitenleiste ist die Karte bei 1024/1100 px nur 756/832 px breit. Das Raster
+	   braucht für eine einzeilige Aktionsspalte (≈ 420 px DE, ≈ 450 px EN) mindestens ≈ 834 px Karte; darunter fiel
+	   die Mitte auf 160 px und die Aktionen brachen dreizeilig um (im Mockup bei gleicher Kartenbreite ebenso).
+	   Bis 960 px Karte stehen die Aktionen daher einzeilig UNTER der Mitte (Spalte 3 bis Ende); das Raster selbst
+	   (AC-1) bleibt, ab 961 px (1280 px Viewport: 1012) gilt das Mockup-Bild mit Aktionen rechts. */
+	@container (max-width: 960px) {
+		.wt-mitte,
+		.wt-act {
+			grid-column: 3 / -1;
+		}
+		.wt-act {
+			flex-wrap: nowrap;
+			justify-content: flex-start;
+		}
+	}
 	@container (max-width: 700px) {
 		.wt-zeile {
 			grid-template-columns: var(--g-s-10) 1fr;
@@ -187,6 +202,7 @@
 			grid-column: 1 / -1;
 		}
 		.wt-act {
+			flex-wrap: wrap;
 			justify-content: flex-start;
 		}
 	}
