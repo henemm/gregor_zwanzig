@@ -22,15 +22,27 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+	"time"
 
+	"github.com/henemm/gregor-api/internal/middleware"
 	"github.com/henemm/gregor-api/internal/model"
 	"github.com/henemm/gregor-api/internal/store"
 )
 
 // StagingVerificationTokenHandler erzeugt ein Verifikations-Token für das
 // genannte Konto und liefert es im Klartext zurück — ohne Mailversand.
-func StagingVerificationTokenHandler(s *store.Store) http.HandlerFunc {
+//
+// Issue #2961: nur fuer berechtigte Aufrufer (staging_zugang.go) und nur fuer
+// zulaessige Zielkonten; unbekannte und unzulaessige Ziele erhalten dieselbe
+// 404-Antwort.
+func StagingVerificationTokenHandler(s *store.Store, zugang StagingZugang) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		aufruferID := middleware.UserIDFromContext(r.Context())
+		aufrufer, _ := s.LoadUser(aufruferID)
+		if !zugang.berechtigt(aufrufer) {
+			WriteError(w, r, http.StatusForbidden, "forbidden", nil)
+			return
+		}
 		var req struct {
 			Username string `json:"username"`
 		}
@@ -60,10 +72,13 @@ func StagingVerificationTokenHandler(s *store.Store) http.HandlerFunc {
 			var err error
 			user, err = s.LoadUser(req.Username)
 			if err != nil || user == nil {
-				w.WriteHeader(http.StatusNotFound)
-				w.Write([]byte(`{"error":"unknown user"}`))
-				return
+				user = nil
 			}
+		}
+		if !tokenZielZulaessig(aufruferID, user, time.Now()) {
+			w.WriteHeader(http.StatusNotFound)
+			w.Write([]byte(`{"error":"unknown user"}`))
+			return
 		}
 
 		// Bewusst OHNE Blick auf user.EmailVerifiedAt: der Testweg gibt auch

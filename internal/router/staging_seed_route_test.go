@@ -118,7 +118,8 @@ func newSeedRouter(t *testing.T, gzEnv string, coreURL func(*fakeCore) string) (
 	}
 
 	for _, id := range []string{"seedA", "seedB"} {
-		if err := s.SaveUser(model.User{ID: id, Tier: "free", CreatedAt: time.Now()}); err != nil {
+		// Issue #2961: der Seed-Weg verlangt ein Testkonto (oder Admin/Betreiber).
+		if err := s.SaveUser(model.User{ID: id, Tier: "free", CreatedAt: time.Now(), IsTestUser: true}); err != nil {
 			t.Fatalf("SaveUser %s: %v", id, err)
 		}
 		if err := s.AddSession(id, sessionIDFor(id)); err != nil {
@@ -279,7 +280,7 @@ func TestStagingSeedNurTarifWirktAufEingeloggtesKontoOhneNutzerfeld(t *testing.T
 // AC-4: Merge statt Replace — bekannte UND unbekannte Felder bleiben erhalten.
 func TestStagingSeedTarifIstMergeKeinReplace(t *testing.T) {
 	r, s, secret, _ := newSeedRouter(t, "staging", nil)
-	raw := `{"id":"seedA","tier":"free","display_name":"Alice","email":"a@example.org","created_at":"2026-01-01T00:00:00Z","zukunftsfeld":{"x":[1,2,3]}}`
+	raw := `{"id":"seedA","tier":"free","display_name":"Alice","email":"a@example.org","created_at":"2026-01-01T00:00:00Z","is_test_user":true,"zukunftsfeld":{"x":[1,2,3]}}`
 	path := filepath.Join(s.DataDir, "users", "seedA", "user.json")
 	if err := os.WriteFile(path, []byte(raw), 0o644); err != nil {
 		t.Fatalf("Fixture: %v", err)
