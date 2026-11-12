@@ -8,6 +8,7 @@ der Scheduler (und später Alert-/Inbound-Pfade) von formatters/output/outputs.
 from __future__ import annotations
 
 import inspect
+from html import escape as _html_escape
 import logging
 from dataclasses import dataclass, field
 from datetime import date, datetime, timezone
@@ -392,12 +393,12 @@ def build_service_error_email_html(
         '<div class="container">'
         f'<h2 class="heading">{t("versand.servicefehler.titel", lang)}</h2>'
         '<div class="meta">'
-        f'<strong>Trip:</strong> {trip_name}<br>'
+        f'<strong>Trip:</strong> {_html_escape(trip_name)}<br>'
         f'<strong>Report:</strong> {report_type.title()}<br>'
         f'<strong>Problem:</strong> {t("versand.servicefehler.problem", lang)}'
         '</div>'
         f'<p><strong>{t("versand.servicefehler.segmente", lang)}</strong></p>'
-        f'<div class="error-block">{error_lines}</div>'
+        f'<div class="error-block">{_html_escape(error_lines)}</div>'
         '<p style="font-size:13px; color:#5c5a52;">'
         f'{t("versand.servicefehler.grund", lang)}'
         '</p>'
@@ -2484,9 +2485,11 @@ class NotificationService:
 
     @staticmethod
     def _inject_html_hint(html: str, hint: str) -> str:
+        # #2961: der Hinweis ist Text (kann Etappennamen enthalten).
+        hint_html = _html_escape(hint)
         if "<body>" in html:
-            return html.replace("<body>", f"<body><p>{hint}</p>", 1)
-        return f"<p>{hint}</p>{html}"
+            return html.replace("<body>", f"<body><p>{hint_html}</p>", 1)
+        return f"<p>{hint_html}</p>{html}"
 
     @staticmethod
     def _target_date_from_report(report, request: TripReportRequest):
