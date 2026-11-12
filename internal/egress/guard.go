@@ -105,3 +105,18 @@ func SMTPAllowed(host string) error {
 	}
 	return fmt.Errorf("%w: SMTP-Host %q ist nicht als TestAccess deklariert", ErrEgressBlocked, host)
 }
+
+// HTTPAllowed ist dieselbe Pruefung fuer HTTP-Clients mit EIGENEM Transport
+// (Issue #2961, ADR-0114: der abgeschottete Client fuer nutzerbestimmte Ziele
+// laeuft bewusst nicht ueber http.DefaultTransport und muss den Waechter
+// deshalb selbst fragen). Ohne installierten Waechter (Prod) immer nil.
+func HTTPAllowed(host string) error {
+	mu.Lock()
+	active := installed
+	mu.Unlock()
+
+	if !active || isAllowed(host) {
+		return nil
+	}
+	return fmt.Errorf("%w: Host %q ist nicht als TestAccess deklariert", ErrEgressBlocked, host)
+}

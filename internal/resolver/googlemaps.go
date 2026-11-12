@@ -16,7 +16,14 @@ func resolveGoogleMaps(input string) (ResolveResult, error) {
 	// Save the original input to extract q= before following redirects
 	originalInput := input
 
-	finalURL, err := followGoogleMapsRedirect(input)
+	// Issue #2961 (ADR-0114): nur https-Links auf Google-Hosts der
+	// Erlaubnisliste werden abgerufen; alles andere endet ohne Abruf im
+	// bestehenden fachlichen Fehler.
+	link, err := parseLinkURL(input)
+	if err != nil {
+		return ResolveResult{}, newResolveError("resolve_failed", "fach.resolver.maps_aufloesen", nil)
+	}
+	finalURL, err := followGoogleMapsRedirect(link)
 	if err != nil {
 		return ResolveResult{}, newResolveError("resolve_failed", "fach.resolver.maps_aufloesen", nil)
 	}
@@ -76,9 +83,11 @@ func resolveGoogleMaps(input string) (ResolveResult, error) {
 	return ResolveResult{}, newResolveError("resolve_failed", "fach.resolver.maps_koordinaten", nil)
 }
 
-func followGoogleMapsRedirect(input string) (string, error) {
-	client := &http.Client{Timeout: 10 * time.Second}
-	req, err := http.NewRequest("GET", input, nil)
+// followGoogleMapsRedirect folgt dem geteilten Link ueber den abgeschotteten
+// Client (safefetch.go) und liefert die End-URL. Der Rumpf wird nie gelesen.
+func followGoogleMapsRedirect(link *url.URL) (string, error) {
+	client := newLinkClient(10 * time.Second)
+	req, err := http.NewRequest("GET", link.String(), nil)
 	if err != nil {
 		return "", err
 	}
