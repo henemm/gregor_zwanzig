@@ -48,10 +48,11 @@ describe('subscriptionTabs(kind): Reihenfolge, Kennungen, Beschriftung (#2794: v
 		);
 	});
 
-	test('Beschriftung unveraendert (Trip „Etappen & Wegpunkte", Vergleich „Orte")', () => {
+	// #2794 Fix-Loop B1 (fix_2794_s3a_teil4b_befunde AC-1): Reiter heißt kurz „Etappen".
+	test('Beschriftung (Trip „Etappen", Vergleich „Orte")', () => {
 		assert.deepEqual(
 			subscriptionTabs('trip').map((t) => t.label),
-			['Übersicht', 'Etappen & Wegpunkte', 'Wetter', 'Zustellung']
+			['Übersicht', 'Etappen', 'Wetter', 'Zustellung']
 		);
 		assert.deepEqual(
 			subscriptionTabs('vergleich').map((t) => t.label),
