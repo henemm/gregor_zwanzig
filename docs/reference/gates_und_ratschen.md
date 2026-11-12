@@ -685,6 +685,23 @@ Bewertung, Bericht, Exit) liegt browserfrei in `e2e/elementliste_abgleich_logik.
 (`elementliste_abgleich_verdrahtung.test.ts`). Neue Seiten markieren ihre Abschnitte
 mit `data-abschnitt="<name aus der Elementliste>"`, sonst bleibt ein Element `abweichend`.
 
+**Ganzseiten-Abgleich / Gegenrichtung (#2913, Spec `docs/specs/modules/feat_2913_abgleich_ganzseite.md`,
+Stand 2026-11-12):** Der Abgleich prüft auch die Gegenrichtung: Live-Texte unter `[data-seite="hub"]`, die weder
+Listeneintrag noch Konto-Text noch Ausnahme sind, erhalten den Status `zusaetzlich` (stabile ID
+`zus:<ctx>/<reiter>/<hash>`, Zahlen normalisiert). Gegenrichtung nur im Zustand normal, ohne Segment, Desktop;
+fehlt der Hub-Anker, wird nie still grün gemeldet. Die Marker `data-seite="hub"` und `data-abschnitt` (in
+`HubKopf`, `TripTabs`, `CompareTabs`, `VorlageKarte`, `WetterTabInhalt`) sind **unsichtbare Haken** ohne
+Optik-Wirkung (nur ein stilloser Wrapper um die Reiterleiste): nicht entfernen, sonst läuft der Abgleich ins
+Leere bzw. rot; ihre Golden-HTMLs (`tests/golden/f9_trip_flaechen`, `f10_vergleich_flaechen`) ziehen mit.
+Besitzer-Datei `docs/context/einstellungen_neu/elementliste_besitzer.json` ordnet Einträge der Arten
+`abweichend`/`nicht_pruefbar`/`zusaetzlich` einem Besitzer zu: `{ "besitzer": [ … ], "ausnahmen": [ … ] }`, je
+Besitzer-Eintrag `art` = `element` (`id`), `abschnitt` (`ctx`, `reiter`, `abschnitt`; deckt alle Abweichungen des
+Abschnitts) oder `zusaetzlich` (`text` oder `muster`, optional `ctx`/`reiter`), dazu Pflicht `grund` und `verweis`
+(`#2913-c2`, `#2913-d`, `#2913-e` oder `#NNNN`); ein ungültiger Eintrag lässt den Parser mit Fehler abbrechen.
+Ausnahmen (Text, der bewusst auf der Seite steht) brauchen Grund und Spec-Verweis. Flag `--abnahme`: Exit ≠ 0, solange ein Eintrag dieser drei Arten keinen Besitzer hat (Freigaben zählen
+als Besitzer). `--strict` unverändert (rot bei Abweichung oder `nicht_pruefbar`); `--abnahme` ist die mildere,
+besitzerbasierte Prüfung für den Scheiben-Abschluss.
+
 ## Aktive Hooks in `.claude/settings.json` — Kurzreferenz (Stand 2026-10-21)
 
 Vollständige Liste der im Repo verdrahteten Hooks. Alle stehen in der geschützten Form
