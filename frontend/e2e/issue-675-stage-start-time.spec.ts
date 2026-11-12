@@ -47,6 +47,12 @@ test.beforeEach(async ({ page }) => {
 	expect(res.ok(), `seed HTTP ${res.status()}`).toBeTruthy();
 });
 
+// #2502: Trip nach jedem Testfall abräumen (auch nach rotem Test), sonst blockiert er das
+// Trip-Kontingent des Test-Nutzers (409 beim Seed folgender Suites). Fehler (404, Netz) ignorieren.
+test.afterEach(async ({ page }) => {
+	await page.request.delete(`/api/trips/${TRIP_ID}`).catch(() => {});
+});
+
 // AC-1: Startzeit-Feld erscheint pro Etappe, zeigt sichtbar 08:00 bei ungesetzt.
 test('AC-1: Startzeit-Feld sichtbar mit Default 08:00', async ({ page }) => {
 	await openStagesEditor(page);
@@ -71,10 +77,12 @@ test('AC-5: Geleertes Feld fällt auf 08:00 zurück', async ({ page }) => {
 	const feld = page.getByTestId('stage-start-time-field').first();
 	await tippeUhrzeit(page, feld, '15:00');
 	await expect(page.getByTestId('wp-arrival-0').first()).toHaveText('15:00');
-	// Leeren: Stunden-Segment per Rücktaste löschen ⇒ das Feld meldet '' (leerMelden).
+	// Leeren: Stunden-Segment per Rücktaste löschen und das Feld verlassen ⇒ das Feld meldet ''
+	// (leerMelden). UhrzeitFeld (#2881) meldet das Leeren erst beim Verlassen (focusout).
 	await feld.locator('[data-segment="hour"]').click();
 	await page.keyboard.press('Backspace');
 	await page.keyboard.press('Backspace');
+	await page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur());
 	await expect(page.getByTestId('wp-arrival-0').first()).toHaveText('08:00');
 });
 

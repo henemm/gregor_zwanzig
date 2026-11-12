@@ -1,7 +1,7 @@
 ---
 spec_file: docs/specs/fast/fix-2502-e2e-675-teardown.md
-spec_sha256: 9b876413fcc11becdbdbc9c4207d22e43c27e5c7ff1253ee55bac4857abd617a
-spec_frozen_sha256: 5858207b1753c49bbd90d46dc64c1dce06b9ab890174b277f458dba82564a550
+spec_sha256: 8abd3a914c31f7398252d7b0f1cdb970da1b7d8cb5c5be4e06ca2ed81a21e525
+spec_frozen_sha256: fcb22ca3eb3ceb53acf7ec89caaba029ab010d01cb5937890c6c963436f903ca
 ---
 
 # PO-Briefing: fix-2502-e2e-675-teardown
@@ -12,19 +12,20 @@ spec_frozen_sha256: 5858207b1753c49bbd90d46dc64c1dce06b9ab890174b277f458dba82564
 
 ## Was gebaut wird
 
-Der automatische Browser-Test für Etappen-Startzeiten räumt seinen Test-Trip immer wieder weg, auch wenn er fehlschlägt.
+Der Testlauf räumt seinen Test-Trip immer ab, und eine geleerte Startzeit fällt wieder auf 08:00 zurück.
 
 ## Definition of Done
 
-Nach jedem Testlauf, rot oder grün, existiert der Test-Trip im Konto des Test-Nutzers nicht mehr, und die vier Testfälle laufen grün.
+Nach grünem wie rotem Testlauf auf Staging ist der Test-Trip weg, und das Leeren von 15:00 ergibt 08:00 statt 01:00.
 
 ## Wie geprüft wird
 
-Per manuellem Lauf gegen Staging mit Gegenproben (absichtlich roter Test, Aufräumschritt entfernt); es gibt keinen dauerhaft automatischen Nachweis.
+Automatische Tests prüfen Aufräumen und Leeren-Verhalten; die Gegenprobe mit absichtlich rotem Lauf geschieht nur manuell.
 
 ## Kritische Anmerkungen
 
-- Das Ticket wollte die zwei kaputten Testfälle aktualisieren; sie wurden stattdessen früher entfernt (#2243). Weniger Testabdeckung, bereits entschieden.
+- Zusatz zum Ticket: Ein echter Produktfehler im Uhrzeitfeld (#2947) wird mitrepariert, nicht nur der Test.
+- Aufräumen nach rotem Lauf hat keinen automatischen Test, nur manuelle Schritte.
 
 ## Freigabe-Frage
 
