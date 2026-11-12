@@ -380,6 +380,9 @@ def build_mime_message(
         if compare_hourly_enabled is not None:
             msg["X-GZ-Compare-Hourly-Enabled"] = "true" if compare_hourly_enabled else "false"
     msg["X-GZ-Lang"] = "en" if lang == "en" else "de"
+    # Issue #2961 (RFC 3834): jede Mail des Dienstes ist automatisch erzeugt;
+    # Abwesenheitsnotizen und Autoresponder antworten darauf nicht.
+    msg["Auto-Submitted"] = "auto-generated"
     msg["Message-ID"] = message_id or new_message_id()
     return msg
 

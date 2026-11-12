@@ -102,16 +102,18 @@ class TestAuthorizeRejectsUnknown:
 
 
 class TestAuthorizeInboundAddress:
-    """AC-4: inbound_address (Plus-Adressierung) wird akzeptiert — keine Regression."""
+    """AC-4 (abgeloest durch #2961, Spec security_haertung_2026_11_python_core AC-4):
+    ``inbound_address`` ist die Eingangsadresse des SYSTEMS (Reply-To jeder
+    ausgehenden Mail) und damit nie ein Befehlsgeber."""
 
-    def test_inbound_address_authorized(self):
+    def test_inbound_address_is_not_a_command_sender(self):
         reader = InboundEmailReader()
         settings = _settings(
             mail_to="user@example.com",
             mail_from="system@app.com",
             inbound_address="user+gregor@example.com",
         )
-        assert reader._authorize("user+gregor@example.com", settings, _valid_msg("user+gregor@example.com")) is True
+        assert reader._authorize("user+gregor@example.com", settings, _valid_msg("user+gregor@example.com")) is False
 
     def test_inbound_address_does_not_accept_mail_from(self):
         """inbound_address ändert nichts daran, dass mail_from abgelehnt wird."""
@@ -139,15 +141,16 @@ class TestAuthorizeProductionScenario:
         # Sie darf NICHT verarbeitet werden
         assert reader._authorize("gregor_zwanzig@henemm.com", settings, _valid_msg("gregor_zwanzig@henemm.com")) is False
 
-    def test_inbound_address_different_from_mail_from_accepted(self):
-        """Wenn inbound_address eine echte User-Adresse ist, bleibt sie erlaubt."""
+    def test_inbound_address_different_from_mail_from_still_rejected(self):
+        """#2961: auch eine von mail_from verschiedene Eingangsadresse ist eine
+        System-Adresse -- Mails von dort sind kein Befehl (Schleifenschutz)."""
         reader = InboundEmailReader()
         settings = _settings(
             mail_to="user@example.com",
             mail_from="system@app.com",
             inbound_address="user+commands@example.com",  # verschieden von mail_from
         )
-        assert reader._authorize("user+commands@example.com", settings, _valid_msg("user+commands@example.com")) is True
+        assert reader._authorize("user+commands@example.com", settings, _valid_msg("user+commands@example.com")) is False
 
     def test_mail_to_none_returns_false(self):
         """Wenn mail_to nicht gesetzt ist (None), wird alles abgelehnt."""
