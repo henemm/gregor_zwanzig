@@ -14,8 +14,11 @@ RED-Erwartung:
 Ausführung:
     uv run pytest tests/tdd/test_794_mobile_metric_label.py -v
 """
+import atexit
 import json
 import os
+import shutil
+import tempfile
 import time
 
 import pytest
@@ -46,21 +49,30 @@ def _load_credentials() -> tuple[str, str]:
                 user = v
             if k == "GZ_VALIDATOR_PASS" and not pw:
                 pw = v
-    # Fallback: tdd-702-User ist auf Staging bekannt und hat bereits Metriken
+    # Kein Passwort im Repo (#2961): Rueckfall nur auf die Umgebung
+    # (GZ_TEST_USER/GZ_TEST_PASS, tdd-702-Nutzer mit Metriken).
     if not user:
-        user = "tdd-702-1781109629"
+        user = os.environ.get("GZ_TEST_USER", "tdd-702-1781109629")
     if not pw:
-        pw = "720c7e56751c8133e771e7bc903fc122"
+        pw = os.environ.get("GZ_TEST_PASS", "")
     return user, pw
 
 from pathlib import Path
 _USER, _PASS = _load_credentials()
+if not _PASS:
+    pytest.skip(
+        "GZ_VALIDATOR_PASS/GZ_TEST_PASS fehlen -- Live-Staging-Test laeuft nur "
+        "mit Zugangsdaten aus Umgebung oder .claude/validator.env",
+        allow_module_level=True,
+    )
 
 MOBILE_VIEWPORT = {"width": 390, "height": 844}
 DESKTOP_VIEWPORT = {"width": 1280, "height": 800}
-# Reihenfolge: eigene Session-Datei → tdd-702-Session (gleicher Nutzer, pre-gecacht)
-STATE_FILE = "/tmp/tdd-794-storage-state.json"
-STATE_FILE_FALLBACK = "/tmp/tdd-702-storage-state.json"
+# Sitzungsdaten nur in einem eigenen, nur fuer den Nutzer lesbaren Verzeichnis
+# dieses Laufs (#2961: kein fester, vorhersagbarer /tmp-Pfad); beim Ende geloescht.
+_STATE_DIR = tempfile.mkdtemp(prefix="gz-tdd-794-")
+atexit.register(shutil.rmtree, _STATE_DIR, True)
+STATE_FILE = os.path.join(_STATE_DIR, "storage-state.json")
 
 
 # ---------------------------------------------------------------------------
@@ -69,9 +81,9 @@ STATE_FILE_FALLBACK = "/tmp/tdd-702-storage-state.json"
 
 def _ensure_session_state() -> dict:
     """Login via Formular einmal durchführen, Session-State cachen.
-    Versucht STATE_FILE, dann STATE_FILE_FALLBACK (tdd-702 Session), dann frischen Login.
+    Versucht STATE_FILE (Sitzung dieses Laufs), sonst frischer Login.
     """
-    for sf in [STATE_FILE, STATE_FILE_FALLBACK]:
+    for sf in [STATE_FILE]:
         if os.path.exists(sf):
             with open(sf) as f:
                 state = json.load(f)

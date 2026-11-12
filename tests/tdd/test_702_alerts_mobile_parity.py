@@ -11,8 +11,11 @@ RED-Erwartung:
 Ausführung:
     uv run pytest tests/tdd/test_702_alerts_mobile_parity.py -v
 """
+import atexit
 import json
 import os
+import shutil
+import tempfile
 import time
 
 import pytest
@@ -24,11 +27,22 @@ from tests.helpers.staging_auth import playwright_http_credentials
 pytestmark = pytest.mark.staging
 
 BASE = "https://staging.gregor20.henemm.com"
-USER = "tdd-702-1781109629"
-PASS = "720c7e56751c8133e771e7bc903fc122"
+# Zugangsdaten nie im Repo (#2961): Passwort nur aus der Umgebung.
+USER = os.environ.get("GZ_TEST_USER", "tdd-702-1781109629")
+PASS = os.environ.get("GZ_TEST_PASS", "")
+if not PASS:
+    pytest.skip(
+        "GZ_TEST_PASS fehlt -- Live-Staging-Test laeuft nur mit Zugangsdaten "
+        "aus der Umgebung",
+        allow_module_level=True,
+    )
 
 MOBILE_VIEWPORT = {"width": 375, "height": 812}
-STATE_FILE = "/tmp/tdd-702-storage-state.json"
+# Sitzungsdaten nur in einem eigenen, nur fuer den Nutzer lesbaren Verzeichnis
+# dieses Laufs (#2961: kein fester, vorhersagbarer /tmp-Pfad); beim Ende geloescht.
+_STATE_DIR = tempfile.mkdtemp(prefix="gz-tdd-702-")
+atexit.register(shutil.rmtree, _STATE_DIR, True)
+STATE_FILE = os.path.join(_STATE_DIR, "storage-state.json")
 
 
 # ---------------------------------------------------------------------------
