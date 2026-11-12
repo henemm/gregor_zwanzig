@@ -191,7 +191,7 @@ for (const kind of HUB_KINDS) {
 				await fertig(zeile, id);
 
 				await expect(zeile.getByTestId(WT.grenzenFehler(id)), 'WW-4: kein Fehlertext').toHaveCount(0);
-				await expect(zeile.getByTestId(WT.gruen(id))).toHaveText('immer grün (keine Grenze gesetzt)');
+				await expect(zeile.getByTestId(WT.gruen(id))).toHaveText('· immer grün (keine Grenze gesetzt)');
 				await expect.poll(() => beantwortet.length, { timeout: 10_000 }).toBe(1);
 				await bleibtBei(() => puts.length, 1, 2_500, 'WW-4: genau EIN Schreibvorgang');
 				await expect(anzeige(page)).toHaveAttribute('data-state', 'idle');

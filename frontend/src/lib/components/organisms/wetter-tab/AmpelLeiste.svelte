@@ -16,7 +16,7 @@
 	const leiste = $derived(gewitter ? { segmente: gewitterLeiste(gewitter), marken: [] } : leisteVon(eintrag));
 
 	// #2913 Teil 2 (AC-12): Ampelfarben aus --g-ampel-* (Light/Dark, je >= 3:1 gegen die Karte).
-	// Ohne Farbe erkennbar: feste Reihenfolge, Trennfuge, Grenzwerte/Stufenwörter darüber; für
+	// Ohne Farbe erkennbar: feste Reihenfolge, Grenzwerte/Stufenwörter darüber; für
 	// Hilfstechnik je Segment role="img" mit dem Farbnamen aus dem Katalog.
 	const FARBE: Record<LeisteFarbe, string> = {
 		green: 'var(--g-ampel-gruen)',
@@ -51,15 +51,16 @@
 	.wt-leiste {
 		display: flex;
 		flex-direction: column;
-		gap: var(--g-size-2px);
+		gap: var(--g-size-3px);
 		min-width: 0;
 	}
 	.wt-marken {
 		position: relative;
-		height: var(--g-s-4);
+		height: var(--g-size-14px);
 		font-family: var(--g-font-mono);
-		font-size: var(--g-text-xs);
-		color: var(--g-ink-2);
+		font-size: var(--g-size-10-5px);
+		line-height: var(--g-size-14px);
+		color: var(--g-ink-3);
 	}
 	.wt-marken i {
 		position: absolute;
@@ -77,14 +78,10 @@
 		height: var(--g-size-10px);
 		border-radius: var(--g-size-5px);
 		overflow: hidden;
-		border: 1px solid var(--g-rule);
+		background: var(--g-rule-soft);
 	}
 	.wt-band span {
 		display: block;
 		height: 100%;
-	}
-	/* Trennfuge: Stufen auch ohne Farbe als getrennte Segmente erkennbar. */
-	.wt-band span + span {
-		border-left: 1px solid var(--g-card);
 	}
 </style>

@@ -7,6 +7,8 @@
   // Ohne `rolle` bleibt alles wie bisher (Reiter, `role="tab"`).
   // Issue #2913 Teil 2 (K-4): `farbe` → Farbpunkt je Segment (data-slot="segmented-punkt", Farbe aus
   // --g-ampel-* in app.css); die items-API reicht testid/badge_testid/farbe durch wie die options-API.
+  // #2913 Fix Metrik-Liste (AC-7): optionale `variant="kompakt"` → nur data-variant am Container,
+  // Stil allein unter [data-slot="segmented"][data-variant="kompakt"] in app.css. Ohne Prop kein Attribut.
   type Farbe = 'green' | 'yellow' | 'orange' | 'red';
   type SollItem = { id: string; label: string; badge?: number; testid?: string; badge_testid?: string; farbe?: Farbe };
   type IstOption = { value: string; label: string; badge?: number; testid?: string; badge_testid?: string; farbe?: Farbe };
@@ -22,6 +24,7 @@
     rolle = 'tabs',
     ariaLabel,
     testid,
+    variant,
   }: {
     items?: SollItem[];
     value?: string;
@@ -33,6 +36,7 @@
     rolle?: 'tabs' | 'radio';
     ariaLabel?: string;
     testid?: string;
+    variant?: 'kompakt';
   } = $props();
 
   const resolvedItems = $derived(
@@ -64,6 +68,7 @@
 <div
   data-slot="segmented"
   data-size={size ?? undefined}
+  data-variant={variant ?? undefined}
   bind:this={leiste}
   role={radio ? 'radiogroup' : undefined}
   aria-label={radio ? ariaLabel : undefined}

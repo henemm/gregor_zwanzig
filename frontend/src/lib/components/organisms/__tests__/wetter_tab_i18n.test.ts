@@ -45,7 +45,14 @@ const BASIS = git(['merge-base', 'HEAD', 'origin/main'])?.trim() || null;
 // #2913 Scheibe (c) (Spec feat_2913_scheibe_c_wetter_rest.md, AC-5/AC-8): diese Lieferung ergänzt bewusst genau
 // zwei neue Schlüssel. Der Erhaltungsschutz bleibt: jeder Bestandsschlüssel ist mit byte-gleichem Wert vorhanden,
 // kein Schlüssel entfällt, und hinzukommen dürfen nur die hier freigegebenen Schlüssel.
-const NEU_FREIGEGEBEN = new Set(['wetter.anpassen.hinweis', 'wetter.anpassen.ueber_mitternacht']);
+// #2913 Fix Metrik-Liste (Spec fix_2913_metrikliste_mockup.md, AC-5): Untertitel-Hinweise der Metrik-Zeile.
+const NEU_FREIGEGEBEN = new Set([
+	'wetter.anpassen.hinweis',
+	'wetter.anpassen.ueber_mitternacht',
+	'wetter.untertitel.vorbote',
+	'wetter.untertitel.nur_anzeige',
+	...['temperature', 'temperature_night', 'wind', 'gust', 'precipitation', 'thunder', 'visibility', 'cloud_low', 'uv_index', 'freezing_level', 'snowfall_limit', 'sunshine'].map((id) => `wetter.hinweis.${id}`)
+]);
 // #2913 Scheibe (c) Fix-Loop 2 (Bildprüfer Runde 1, Befund 1): Label wie im Mockup mit Doppelpunkt. Bewusst geändert,
 // mit genau dem erwarteten neuen Wert — jede andere Änderung bleibt rot.
 const GEAENDERT_FREIGEGEBEN: Record<string, Record<string, string>> = {

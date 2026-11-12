@@ -45,7 +45,7 @@ for (const kind of HUB_KINDS) {
 				}
 				await expect(zeile.getByTestId(WT.leiste(id))).toBeVisible();
 				await expect(zeile.getByTestId(WT.erklaersatz(id))).not.toBeEmpty();
-				if (id !== 'thunder') await expect(zeile.getByTestId(WT.gruen(id))).toHaveText(/^(grün: .+|immer grün \(keine Grenze gesetzt\))$/);
+				if (id !== 'thunder') await expect(zeile.getByTestId(WT.gruen(id))).toHaveText(/^· (grün: .+|immer grün \(keine Grenze gesetzt\))$/);
 				await expect(zeile.getByTestId(WT.grenzenAendern(id))).toHaveText('Grenzen ändern');
 				if (kat[id].alertable) await expect(zeile.getByTestId(WT.alarmAbStufe(id, 'never'))).toBeVisible();
 				else await expect(zeile.getByTestId(WT.alarmAb(id))).toHaveText(kat[id].is_precursor ? 'kein Alarm (Vorbote)' : 'kein Alarm');

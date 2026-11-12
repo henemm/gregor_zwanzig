@@ -295,7 +295,8 @@
 		gap: var(--g-s-4);
 		box-sizing: border-box;
 		max-width: var(--g-size-1100px);
-		padding: var(--g-size-28px) var(--g-s-10) var(--g-size-60px);
+		/* #2913 Fix Metrik-Liste (AC-3): kein seitliches Innen-Padding zusätzlich zu <main>. */
+		padding: var(--g-size-28px) 0 var(--g-size-60px);
 		color: var(--g-ink);
 	}
 	.wt-kopf h2 {
@@ -314,8 +315,10 @@
 		border-radius: var(--g-r-3);
 		background: var(--g-card);
 	}
+	/* #2913 Fix Metrik-Liste (AC-2): die Karte ist Container; MetrikZeile bricht an ihrer Breite um. */
 	.wt-metriken {
 		overflow: hidden;
+		container-type: inline-size;
 	}
 	.wt-laden {
 		display: flex;
@@ -351,7 +354,7 @@
 	}
 	@media (max-width: 899px) {
 		.wt {
-			padding: var(--g-s-4) var(--g-s-4) var(--g-s-10);
+			padding: var(--g-s-4) 0 var(--g-s-10);
 		}
 		.wt-gh {
 			padding: var(--g-size-14px) var(--g-s-4) var(--g-s-1);
