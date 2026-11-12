@@ -16,7 +16,7 @@ export const F9_ANKER: [schluessel: string, de: string, en: string][] = [
 	['aktionen.pause', 'Pausieren', 'Pause'],
 	['aktionen.resume', 'Fortsetzen', 'Resume'],
 	['aktionen.alarms', 'Alarme', 'Alerts'],
-	['aktionen.weather', 'Wetter-Metriken', 'Weather metrics'],
+	['aktionen.weather', 'Wetter', 'Weather'], // #2794 S3a 4b: Menü-Wortlaut = Reiter Wetter (AC-48)
 	['aktionen.edit', 'Bearbeiten', 'Edit'],
 	['aktionen.archive', 'Archivieren', 'Archive'],
 	['aktionen.unarchive', 'Reaktivieren', 'Reactivate'],
@@ -30,7 +30,6 @@ export const F9_ANKER: [schluessel: string, de: string, en: string][] = [
 	['aktionen.reiter.uebersicht', 'Übersicht', 'Overview'],
 	['aktionen.reiter.etappen_wegpunkte', 'Etappen & Wegpunkte', 'Stages & waypoints'],
 	['aktionen.reiter.orte', 'Orte', 'Locations'],
-	['aktionen.reiter.wertebereiche', 'Wertebereiche', 'Target ranges'],
 	// #2794 S3a: die Reiter Wetter und Zustellung.
 	['aktionen.reiter.wetter', 'Wetter', 'Weather'],
 	['aktionen.reiter.zustellung', 'Zustellung', 'Delivery'],
@@ -107,9 +106,8 @@ export const F9_ANKER: [schluessel: string, de: string, en: string][] = [
 	['trip.uebersicht.metriken_leer', 'Keine Wettergrößen ausgewählt — das Briefing enthält keine Wettertabelle.', 'No weather metrics selected — the briefing contains no weather table.'],
 	['trip.uebersicht.unbekannt.one', '<count> Größe unbekannt', '<count> metric unknown'],
 	['trip.uebersicht.unbekannt.other', '<count> Größen unbekannt', '<count> metrics unknown'],
-	['trip.uebersicht.metriken_bearbeiten', 'Wetter-Metriken bearbeiten →', 'Edit weather metrics →'],
+	['trip.uebersicht.metriken_bearbeiten', 'Wetter bearbeiten →', 'Edit weather →'], // #2794 S3a 4b (AC-33)
 	['trip.uebersicht.briefings_laufen', 'Briefings laufen', 'Briefings running'],
-	['trip.uebersicht.bei_delta', 'bei Δ', 'on Δ'],
 	['trip.uebersicht.zeitplan_bearbeiten', 'Zeitplan bearbeiten →', 'Edit schedule →'],
 	['trip.uebersicht.alert_trigger', 'Alarm-Auslöser', 'Alert trigger'], // #2881: Tabu-Begriff ersetzt (ADR-0111)
 	['trip.briefing.morgen', 'Morgen-Briefing', 'Morning briefing'],
@@ -332,7 +330,7 @@ export const F9_ANKER: [schluessel: string, de: string, en: string][] = [
 	['trip.anlegen.etappe_hinzufuegen', '+ Etappe hinzufügen', '+ Add stage'],
 	['trip.anlegen.ohne_gpx.one', '<count> Etappe ohne GPX-Datei — nach dem Upload werden Wegpunkte automatisch berechnet.', '<count> stage without a GPX file — waypoints are calculated automatically after the upload.'],
 	['trip.anlegen.ohne_gpx.other', '<count> Etappen ohne GPX-Datei — nach dem Upload werden Wegpunkte automatisch berechnet.', '<count> stages without a GPX file — waypoints are calculated automatically after the upload.'],
-	['trip.anlegen.alle_gpx', 'Alle GPX geladen — Wegpunkte werden berechnet. Jetzt weiter zu „Wegpunkte prüfen" (optional) oder direkt zu „Wetter-Metriken".', 'All GPX loaded — waypoints are being calculated. Now continue to “Check waypoints” (optional) or go straight to “Weather metrics”.'],
+	['trip.anlegen.alle_gpx', 'Alle GPX geladen — Wegpunkte werden berechnet. Jetzt weiter zu „Wegpunkte prüfen" (optional) oder direkt zu „Wetter".', 'All GPX loaded — waypoints are being calculated. Now continue to “Check waypoints” (optional) or go straight to “Weather”.'], // #2794 S3a 4b (AC-33)
 	['trip.anlegen.noch_gpx', 'Noch <anzahl> GPX fehlen — danach Wegpunkte prüfen oder direkt zu Wetter.', '<anzahl> GPX still missing — then check waypoints or go straight to weather.'],
 	['trip.anlegen.alle_gpx_kurz', 'Alle GPX geladen — Wegpunkte werden berechnet.', 'All GPX loaded — waypoints are being calculated.'],
 	['trip.anlegen.wetter_direkt', 'Wetter direkt →', 'Weather directly →'],

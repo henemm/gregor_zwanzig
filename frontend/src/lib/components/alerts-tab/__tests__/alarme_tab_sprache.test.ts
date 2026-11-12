@@ -136,7 +136,7 @@ describe('AC-6: Deutsch byte-gleich zum Ist-Stand vor der Umstellung (Golden gol
 	});
 	test('Messaufbau: Golden enthaelt die deutschen Texte aller Bausteine', () => {
 		const alle = Object.keys(FAELLE).map((f) => readFileSync(path.join(GOLDEN_DIR, `${f}.de.html`), 'utf-8')).join('');
-		for (const s of ['Amtliche &amp; Radar-Warnungen', 'Radar-Alarm', 'Alert-Kanäle', 'Premium-SMS ab Level Premium verfügbar', 'Tarif wird geprüft', 'kein Kanal — Alerts gehen nirgends hin', 'sofortiger Push', '(Ortszeit des ersten Orts)', '(Ortszeit der Trip)', 'Stille Stunden über Mitternacht (22:00 bis 07:00 des nächsten Tages).', 'Für diese Größen gibt es keinen Alarm', 'Keine der gewählten Größen', 'Wähle im Tab „Wetter-Metriken"', 'Wird gerade umgebaut: Alarme folgen jetzt der Ampel.', 'Alarm ab: Orange', 'Alarm ab: Nie', 'Lade…', 'title="Alert-Vorschau E-Mail"', 'Noch keine Orte konfiguriert'])
+		for (const s of ['Amtliche &amp; Radar-Warnungen', 'Radar-Alarm', 'Alert-Kanäle', 'Premium-SMS ab Level Premium verfügbar', 'Tarif wird geprüft', 'kein Kanal — Alerts gehen nirgends hin', 'sofortiger Push', '(Ortszeit des ersten Orts)', '(Ortszeit der Trip)', 'Stille Stunden über Mitternacht (22:00 bis 07:00 des nächsten Tages).', 'Für diese Größen gibt es keinen Alarm', 'Keine der gewählten Größen', 'Wähle im Reiter Wetter', 'Alarme folgen jetzt der Ampel.', 'Alarm ab: Orange', 'Alarm ab: Nie', 'Lade…', 'title="Alert-Vorschau E-Mail"', 'Noch keine Orte konfiguriert'])
 			assert.ok(alle.includes(s), s);
 	});
 });
@@ -151,7 +151,7 @@ describe('AC-1: Alarme-Reiter englisch in Trip und Ortsvergleich, Zahlen und Sym
 			'Official warnings trigger an alert',
 			// #2793 S2b (Spec §6): Regler und Schnellwahl entfallen, die Tabelle
 			// zeigt „Alarm ab" nur lesbar; D4 (Beginn) zeigt seine Stufe („Off").
-			'Being rebuilt: alerts now follow the traffic light.',
+			'Alerts now follow the traffic light. You set ‘Alert from’ in the Weather tab.',
 			'Metric',
 			'Alert from',
 			'Alert from: Orange',
@@ -216,7 +216,7 @@ describe('AC-1: Alarme-Reiter englisch in Trip und Ortsvergleich, Zahlen und Sym
 		const { en } = deDannEn(() => zustaendeRendern());
 		const text = sichtbar(en);
 		for (const s of [
-			'Select metrics in the “Weather metrics” tab to configure alert thresholds.',
+			'Select metrics in the Weather tab to configure alert thresholds.',
 			'None of the selected metrics can trigger an alert: Luftfeuchtigkeit, Gefühlte Temperatur (Minimum), Gefühlte Temperatur (Maximum). They still appear in the briefing but do not trigger a warning.',
 			'no channel — alerts go nowhere',
 			'instant push',
@@ -226,12 +226,12 @@ describe('AC-1: Alarme-Reiter englisch in Trip und Ortsvergleich, Zahlen und Sym
 			'The preview with real data is available after saving.',
 			'No locations configured yet — add candidates in the Locations tab.',
 			'Activate at least one alert rule to load the preview.',
-			'No alert-capable weather metrics active. First activate weather metrics (e.g. wind gusts, temperature) in the Weather metrics tab.',
+			'No alert-capable weather metrics active. First activate weather metrics (e.g. wind gusts, temperature) in the Weather tab.',
 			'Do not send alerts in this period (local time of the trip)'
 		])
 			hat(text, s);
 		// #2794 S3a: Sprung in den Reiter Wetter.
-		hat(en, '<a href="?tab=wetter" data-testid="alert-preview-no-metrics-link"><strong>Weather metrics</strong></a>');
+		hat(en, '<a href="?tab=wetter" data-testid="alert-preview-no-metrics-link"><strong>Weather</strong></a>');
 		assert.deepEqual(deutscheReste(text, OHNE_LABEL_EN), []);
 	});
 	test('Bausteine unter alerts-tab/ englisch (Stufen-Tabelle, Vorschau)', () => {
@@ -241,7 +241,7 @@ describe('AC-1: Alarme-Reiter englisch in Trip und Ortsvergleich, Zahlen und Sym
 			// #2793 S2b: nur lesbar — Abo-Wert (Nie) vor Vorlage (Orange), kein Regler.
 			'Alert from: Never',
 			'Alert from: Orange',
-			'No alertable metrics active. Select metrics in the Weather metrics tab.',
+			'No alertable metrics active. Select metrics in the Weather tab.',
 			'Loading…',
 			'Load preview'
 		])

@@ -273,7 +273,7 @@ test.describe('Listen-Menü (Desktop 1280)', () => {
 					'Pausieren',
 					'Senden',
 					'Alarme',
-					'Wetter-Metriken',
+					'Wetter', // #2794 S3a 4b (AC-48)
 					'Bearbeiten',
 					'Löschen'
 				]);

@@ -21,7 +21,7 @@ export const F7_ANKER: [schluessel: string, de: string, en: string][] = [
 	['alarme.amtlich.label', 'Amtliche Warnungen lösen Alert aus', 'Official warnings trigger an alert'],
 	['alarme.radar.label', 'Radar-Alarm', 'Rain alert (radar)'],
 	['alarme.beispiel_warnung', 'Beispiel-Warnung', 'Example warning'],
-	['alarme.metriken.keine_gewaehlt', 'Wähle im Tab „Wetter-Metriken" Metriken aus, um Alarm-Schwellen zu konfigurieren.', 'Select metrics in the “Weather metrics” tab to configure alert thresholds.'],
+	['alarme.metriken.keine_gewaehlt', 'Wähle im Reiter Wetter Metriken aus, um Alarm-Schwellen zu konfigurieren.', 'Select metrics in the Weather tab to configure alert thresholds.'], // #2794 S3a 4b (AC-33)
 	['alarme.metriken.nur_ohne_alarm', 'Keine der gewählten Größen kann einen Alarm auslösen: <namen>. Sie erscheinen weiterhin im Briefing, lösen aber keine Warnung aus.', 'None of the selected metrics can trigger an alert: <namen>. They still appear in the briefing but do not trigger a warning.'],
 	['alarme.metriken.ohne_alarm', 'Für diese Größen gibt es keinen Alarm: <namen>. Sie erscheinen weiterhin im Briefing, lösen aber keine Warnung aus.', 'There is no alert for these metrics: <namen>. They still appear in the briefing but do not trigger a warning.'],
 	// Alarm-Kanaele (AlertChannelPicker, alertChannelState.ts, premiumSmsAlarmGate.ts)
@@ -48,7 +48,7 @@ export const F7_ANKER: [schluessel: string, de: string, en: string][] = [
 	['alarme.kanaele.stufe.moderate', 'mittel', 'moderate'],
 	['alarme.kanaele.stufe.high', 'hoch', 'high'],
 	// #1895 S3b2: Hinweise „Kanal ohne Empfänger" und „Kanal-Schwelle über Metrik-Stufe" (AC-75).
-	['alarme.kanaele.kein_empfaenger', '<kanal> hat keinen Empfänger — diese Alarme kommen dort nicht an. Eintragen im Reiter Versand bzw. im Profil.', '<kanal> has no recipient — these alerts will not arrive there. Add it in the Delivery tab or in your profile.'],
+	['alarme.kanaele.kein_empfaenger', '<kanal> hat keinen Empfänger — diese Alarme kommen dort nicht an. Eintragen im Reiter Zustellung bzw. im Profil.', '<kanal> has no recipient — these alerts will not arrive there. Add it in the Delivery tab or in your profile.'],
 	['alarme.kanaele.schwelle_hinweis', '<kanal> hat die Dringlichkeits-Schwelle „<schwelle>“ — schwächere Warnungen kommen über diesen Kanal nicht an.', '<kanal> has the urgency threshold "<schwelle>" — weaker warnings will not arrive over this channel.'],
 	['alarme.premium_sms.tarif_wird_geprueft', 'Tarif wird geprüft — der Kanal lässt sich einen Moment lang nicht umschalten.', 'Checking your level — the channel cannot be switched for a moment.'],
 	// Cooldown und Stille Stunden
@@ -64,7 +64,7 @@ export const F7_ANKER: [schluessel: string, de: string, en: string][] = [
 	['alarme.stille_stunden.bis', 'Bis', 'To'],
 	['alarme.stille_stunden.mitternacht', 'Stille Stunden über Mitternacht (<von> bis <bis> des nächsten Tages).', 'Quiet hours across midnight (<von> to <bis> of the next day).'],
 	// Empfindlichkeits-Tabelle (AlertMetricLevelTable/-Row)
-	['alarme.tabelle.leer', 'Keine alertable Metriken aktiv. Wähle Metriken im Wetter-Metriken-Tab.', 'No alertable metrics active. Select metrics in the Weather metrics tab.'],
+	['alarme.tabelle.leer', 'Keine alertable Metriken aktiv. Wähle Metriken im Reiter Wetter.', 'No alertable metrics active. Select metrics in the Weather tab.'], // #2794 S3a 4b (AC-33)
 	['alarme.tabelle.metrik', 'Metrik', 'Metric'],
 	// #2793 S2b: nur lesbare Tabelle „Alarm ab" (Spec §6).
 	['alarme.alarm_ab.titel', 'Alarm ab', 'Alert from'],
@@ -76,8 +76,9 @@ export const F7_ANKER: [schluessel: string, de: string, en: string][] = [
 	['alarme.alarm_ab.vorbote', 'kein Alarm (Vorbote)', 'no alert (precursor)'],
 	[
 		'alarme.alarm_ab.umbau_hinweis',
-		'Wird gerade umgebaut: Alarme folgen jetzt der Ampel. Einstellbar wird ‚Alarm ab‘ mit dem neuen Reiter Wetter.',
-		'Being rebuilt: alerts now follow the traffic light. ‘Alert from’ becomes adjustable with the new Weather tab.'
+		// #2794 S3a 4b: der Reiter Wetter ist da, der Hinweis nennt ihn als Ort der Einstellung.
+		'Alarme folgen jetzt der Ampel. ‚Alarm ab‘ stellst du im Reiter Wetter ein.',
+		'Alerts now follow the traffic light. You set ‘Alert from’ in the Weather tab.'
 	],
 	['alarme.richtwert', 'Richtwert — wird je Wettermodell und Gebiet umgerechnet', 'Guide value — converted per weather model and area'],
 	['alarme.empfindlichkeit.aus', 'Aus', 'Off'],
@@ -108,7 +109,7 @@ export const F7_ANKER: [schluessel: string, de: string, en: string][] = [
 	['alarme.metrik.precipitation_heavy_onset', 'Starkregen (Beginn)', 'Heavy rain (onset)'],
 	// Beispiel-Warnung (AlertPreviewCard)
 	['alarme.vorschau.keine_metriken', 'Keine alert-fähigen Wetter-Metriken aktiv. Aktiviere zuerst Wetter-Metriken (z.B. Windböen, Temperatur) im Tab <link>.', 'No alert-capable weather metrics active. First activate weather metrics (e.g. wind gusts, temperature) in the <link> tab.'],
-	['alarme.vorschau.reiter_wetter_metriken', 'Wetter-Metriken', 'Weather metrics'],
+	['alarme.vorschau.reiter_wetter_metriken', 'Wetter', 'Weather'], // #2794 S3a 4b (AC-33)
 	['alarme.vorschau.nach_speichern', 'Die Vorschau mit echten Daten ist nach dem Speichern verfügbar.', 'The preview with real data is available after saving.'],
 	['alarme.vorschau.keine_orte', 'Noch keine Orte konfiguriert — im Reiter <reiter> Kandidaten hinzufügen.', 'No locations configured yet — add candidates in the <reiter> tab.'],
 	['alarme.vorschau.reiter_orte', 'Orte', 'Locations'],

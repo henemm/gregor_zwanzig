@@ -73,7 +73,7 @@ const GOLDEN_DE: Record<string, string> = {
 	wordmarkNone: 'a4629a8d8e332251', // #2896: Logo-Punkt --g-ink-4 → --g-ink-3
 	footer: '9c85c44385fe29e2',
 	locationForm: 'c04aa5edcee1d89c', // #2881 Lieferung B: Auswahl-Baustein (bits-ui Select) statt nativem <select>
-	weatherDialog: 'e00ab9e6247728a3',
+	weatherDialog: '0f1e44b73e849edb', // #2794 S3a 4b: Titel „Wetter — …" statt „Wetter-Metriken — …" (einzige Abweichung, gegengeprüft)
 	zeileGesendet: '9e87c359f10cb71f',
 	zeileGeplant: '73f413bec9e8047c'
 };
@@ -93,7 +93,7 @@ describe('F12: Reste der Allowlist (AC-1)', () => {
 			brandIcon: [en('bausteine.marke.name')],
 			footer: [en('bausteine.footer.rechtliches'), en('bausteine.footer.impressum'), en('bausteine.footer.datenschutz')],
 			locationForm: ['Location name', 'Google Maps coordinates (DMS)', 'Latitude (lat)', 'Longitude (lon)', 'Elevation (m)', 'Activity profile', 'Group (optional)', 'No group', '— No profile —', 'Cancel', 'Save', 'e.g. hochfuegen'],
-			weatherDialog: ['Weather metrics — E2E-Ort', 'Which metrics should the report show?', 'Cancel', 'Save'],
+			weatherDialog: ['Weather — E2E-Ort', 'Which metrics should the report show?', 'Cancel', 'Save'],
 			zeileGesendet: [`X${en('bausteine.timeline.briefing')}`, en('bausteine.timeline.gesendet')],
 			zeileGeplant: [en('listen.status.geplant')]
 		};

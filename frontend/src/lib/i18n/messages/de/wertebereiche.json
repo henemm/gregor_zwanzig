@@ -78,7 +78,7 @@
 	"wertebereiche.warnungen.text": "Amtliche Wetterwarnungen (z. B. Unwetterwarnung) im E-Mail-Briefing anzeigen.",
 	"wertebereiche.warnungen.legende_block": "In SMS und Telegram-Kurzform beginnt der Warn-Block mit {zeichen} — alles dahinter ist eine amtliche Warnung, nicht die eigene Vorhersage.",
 	"wertebereiche.warnungen.legende_stufe": "Die Warnstufe steht nach dem Doppelpunkt: {l} = gelb, {m} = orange, {h} = rot (z. B. {beispiel} = rote Gewitterwarnung).",
-	"wertebereiche.vergleich.titel": "Wetter-Metriken",
+	"wertebereiche.vergleich.titel": "Metrik-Auswahl",
 	"wertebereiche.vergleich.hinweis": "Nur angewählte Metriken erscheinen in der Vergleichs-Mail.",
 	"wertebereiche.vergleich.warn_hinweis": "Amtliche Warnungen stehen unabhängig von dieser Reihenfolge immer an erster Stelle und sind deshalb nicht Teil der sortierbaren Liste.",
 	"wertebereiche.symbolzeile.temperature": "Temperatur",

@@ -17,7 +17,7 @@ export const F10_ANKER: [schluessel: string, de: string, en: string][] = [
 	['aktionen.uebersicht.zuletzt_raus', 'Zuletzt raus', 'Last sent'],
 	['aktionen.uebersicht.noch_nicht_geplant', 'Noch nicht geplant', 'Not scheduled yet'],
 	['aktionen.uebersicht.nicht_geplant', 'Nicht geplant', 'Not scheduled'],
-	['aktionen.uebersicht.uhrzeiten_festlegen', 'Briefing-Uhrzeiten unter Wetter-Metriken im Abschnitt Versand festlegen.', 'Set the briefing times under Weather metrics in the Delivery section.'],
+	['aktionen.uebersicht.uhrzeiten_festlegen', 'Briefing-Uhrzeiten im Reiter Zustellung im Abschnitt Versand festlegen.', 'Set the briefing times in the Delivery tab.'], // #2794 S3a 4b (AC-33)
 	['aktionen.uebersicht.aktivierung_offen', 'Aktivierung offen', 'Activation pending'],
 	['aktionen.uebersicht.briefings_zeiten', 'Briefings <zeiten>', 'Briefings <zeiten>'],
 	['aktionen.uebersicht.briefings_naechster', 'Briefings <zeiten> · nächster Versand <naechster>.', 'Briefings <zeiten> · next delivery <naechster>.'],
@@ -152,11 +152,11 @@ export const F10_ANKER: [schluessel: string, de: string, en: string][] = [
 	['vergleich.neu.optional_max', 'optional · max 60', 'optional · max 60'],
 	['vergleich.neu.region_beispiel', 'z.B. Hochkönig · Salzburger Land', 'e.g. Hochkönig · Salzburger Land'],
 	['vergleich.neu.aktivitaetsprofil', 'Aktivitätsprofil', 'Activity profile'],
-	['vergleich.neu.profil_hinweis', 'Bestimmt, welche Wetter-Metriken verglichen werden. Die Wertebereiche legst du in den nächsten Tabs fest.', 'Determines which weather metrics are compared. You set the target ranges in the next tabs.'],
+	['vergleich.neu.profil_hinweis', 'Bestimmt, welche Wetter-Metriken verglichen werden. Die Grenzen legst du im Reiter Wetter fest.', 'Determines which weather metrics are compared. You set the limits in the Weather tab.'], // #2794 S3a 4b (AC-33)
 	['vergleich.neu.name_fehlt', 'Name fehlt', 'Name missing'],
 	['vergleich.neu.orte_hinzufuegen', 'Orte hinzufügen →', 'Add locations →'],
 	['vergleich.neu.min_orte', 'min. 2 Orte auswählen', 'select at least 2 locations'],
-	['vergleich.neu.wetter_metriken', 'Wetter-Metriken →', 'Weather metrics →'],
+	['vergleich.neu.wetter_metriken', 'Wetter →', 'Weather →'], // #2794 S3a 4b (AC-33)
 	['vergleich.neu.tab_gesperrt', 'Tab gesperrt', 'Tab locked'],
 	['vergleich.neu.name_eingeben', 'Name eingeben', 'Enter name'],
 	['vergleich.neu.noch_orte.one', 'noch <count> Ort nötig', '<count> more location needed'],

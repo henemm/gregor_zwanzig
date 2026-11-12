@@ -64,15 +64,16 @@ describe('F001: Hilfstexte folgen der Sprache zum Aufrufzeitpunkt (de -> en ohne
 	});
 
 	test('cockpitHelpers568: beide Checklisten (Trip und Ortsvergleich)', () => {
+		// #2794 S3a 4b: Checkliste nennt die neuen Reiter (Wetter) und den Abschnitt „Layout je Kanal".
 		locale.set('de');
-		assert.deepEqual(labels(setupStepTrip(TRIP)), ['Route', 'Etappen', 'Wetter', 'Layout', 'Reports']);
-		assert.deepEqual(labels(setupStepCompare(PRESET)), ['Vergleich', 'Orte', 'Wertebereiche', 'Layout', 'Versand']);
+		assert.deepEqual(labels(setupStepTrip(TRIP)), ['Route', 'Etappen', 'Wetter', 'Layout je Kanal', 'Reports']);
+		assert.deepEqual(labels(setupStepCompare(PRESET)), ['Vergleich', 'Orte', 'Wetter', 'Layout je Kanal', 'Versand']);
 		locale.set('en');
 		const en = (k: string) => trFor('en', `bausteine.checkliste.${k}` as never);
 		assert.deepEqual(labels(setupStepTrip(TRIP)), ['route', 'etappen', 'wetter', 'layout', 'reports'].map(en));
-		assert.deepEqual(labels(setupStepCompare(PRESET)), ['vergleich', 'orte', 'wertebereiche', 'layout', 'versand'].map(en));
-		assert.notDeepEqual(labels(setupStepTrip(TRIP)), ['Route', 'Etappen', 'Wetter', 'Layout', 'Reports']);
-		assert.notDeepEqual(labels(setupStepCompare(PRESET)), ['Vergleich', 'Orte', 'Wertebereiche', 'Layout', 'Versand']);
+		assert.deepEqual(labels(setupStepCompare(PRESET)), ['vergleich', 'orte', 'wetter', 'layout', 'versand'].map(en));
+		assert.notDeepEqual(labels(setupStepTrip(TRIP)), ['Route', 'Etappen', 'Wetter', 'Layout je Kanal', 'Reports']);
+		assert.notDeepEqual(labels(setupStepCompare(PRESET)), ['Vergleich', 'Orte', 'Wetter', 'Layout je Kanal', 'Versand']);
 	});
 
 	test('rightColumn: Profil-Standard-Beschriftungen', () => {

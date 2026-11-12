@@ -266,10 +266,10 @@ describe('AC-4: Trip und Ortsvergleich englisch mit demselben Baustein', () => {
 		const { de, en } = deDannEn(() => vergleichRendern({ catalog: katalogMitRegister() }));
 		const deT = paketText(de);
 		const enT = paketText(en);
-		hat(deT, 'Wetter-Metriken');
+		hat(deT, 'Metrik-Auswahl'); // #2794 S3a 4b: Abschnittstitel ohne alten Reiternamen
 		hat(deT, 'Temperatur Maximum');
 		for (const s of [
-			'Weather metrics', 'Only selected metrics appear in the comparison email.',
+			'Metric selection', 'Only selected metrics appear in the comparison email.',
 			'Official warnings always come first regardless of this order and are therefore not part of the sortable list.',
 			'Temperature Maximum', 'Temperature Minimum', 'Wind gusts', 'Sunshine hours', 'Total', 'Thunderstorm',
 			'Order', 'Off in this channel', 'Day window', 'Official warnings in the report'

@@ -107,8 +107,8 @@ export const F6_ANKER: [schluessel: string, de: string, en: string][] = [
 	['telegram_kurzstil.checkbox', 'Telegram im SMS-Kurzstil', 'Telegram in SMS compact style'],
 	[
 		'telegram_kurzstil.hinweis_aktiv',
-		'Telegram bekommt denselben kurzen Ein-Zeilen-Text wie SMS, ohne Knöpfe. Inhalt und Werte folgen der SMS-Auswahl im Layout-Reiter; die Telegram-Auswahl gilt nur für das ausführliche Telegram.',
-		'Telegram gets the same short one-line text as SMS, without buttons. Content and values follow the SMS selection in the Layout tab; the Telegram selection only applies to the detailed Telegram message.'
+		'Telegram bekommt denselben kurzen Ein-Zeilen-Text wie SMS, ohne Knöpfe. Inhalt und Werte folgen der SMS-Auswahl im Reiter Zustellung; die Telegram-Auswahl gilt nur für das ausführliche Telegram.',
+		'Telegram gets the same short one-line text as SMS, without buttons. Content and values follow the SMS selection in the Delivery tab; the Telegram selection only applies to the detailed Telegram message.'
 	],
 	['telegram_kurzstil.hinweis_inaktiv', 'Erst aktiv, wenn Telegram als Kanal an ist.', 'Only active when Telegram is switched on as a channel.']
 ];

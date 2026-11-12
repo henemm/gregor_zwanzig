@@ -389,7 +389,6 @@ const NEU_IN_FOLGEPAKETEN = [
 	'bausteine.checkliste.reports',
 	'bausteine.checkliste.vergleich',
 	'bausteine.checkliste.orte',
-	'bausteine.checkliste.wertebereiche',
 	'bausteine.checkliste.versand',
 	'bausteine.risiko.rot',
 	'bausteine.risiko.gelb',
@@ -532,9 +531,33 @@ test('AC-5: das Golden enthaelt die 112 Bestandsschluessel', () => {
 	assert.equal(Object.keys(GOLDEN).length, 112);
 });
 
+/**
+ * Bewusst geaenderte Bestandstexte — je Schluessel der neue Wortlaut (byte-genau) und der
+ * Grund. Der Golden-Fixture bleibt die unveraenderte Kopie vor #2647; nur hier steht,
+ * was ein spaeteres Paket mit Absicht geaendert hat.
+ * #2794 S3a Teil-PR 4b (AC-33/AC-49): die Texte nannten die alten Reiter Layout, Versand
+ * und Alarme; seit S3a gibt es nur Uebersicht · Etappen/Orte · Wetter · Zustellung.
+ */
+const GEAENDERT: Record<string, string> = {
+	'telegram_kurzstil.hinweis_aktiv':
+		'Telegram bekommt denselben kurzen Ein-Zeilen-Text wie SMS, ohne Knöpfe. Inhalt und Werte folgen der SMS-Auswahl im Reiter Zustellung; die Telegram-Auswahl gilt nur für das ausführliche Telegram.',
+	'hilfe.briefing.abends':
+		'Abends kommt ein Briefing mit dem Wetter für die Etappe des nächsten Tages (Standard beim Trip: 18:00 Uhr). Die Zeiten stehen im Reiter Zustellung deines Trips bzw. Ortsvergleichs.',
+	'hilfe.alarme.text':
+		'Zwischen den Briefings meldet Gregor einen Alarm, wenn sich das Wetter für deine Strecke relevant ändert, etwa bei Gewitter, Starkregen oder Sturm. Welche Stufe über welchen Kanal kommt, legt die Dringlichkeits-Schwelle im Reiter Zustellung fest.'
+};
+const soll = (k: string): string => GEAENDERT[k] ?? GOLDEN[k];
+
+test('AC-5: jeder bewusst geaenderte Schluessel ist ein Bestandsschluessel mit anderem Wert', () => {
+	for (const [k, v] of Object.entries(GEAENDERT)) {
+		assert.ok(k in GOLDEN, `${k} ist kein Bestandsschluessel`);
+		assert.notEqual(v, GOLDEN[k], `${k} ist unveraendert und gehoert nicht in GEAENDERT`);
+	}
+});
+
 test('AC-5: jeder Bestandsschluessel ist mit byte-gleichem Wert in der de-Karte', () => {
 	const karte = de as Record<string, string>;
-	const abweichend = Object.keys(GOLDEN).filter((k) => karte[k] !== GOLDEN[k]);
+	const abweichend = Object.keys(GOLDEN).filter((k) => karte[k] !== soll(k));
 	assert.deepEqual(abweichend, []);
 });
 
@@ -544,7 +567,8 @@ test('AC-5: die de-Karte enthaelt ausser dem Bestand nur die neuen Schluessel di
 });
 
 test('AC-5: trFor(de) und tr() mit Standard-Locale liefern die Bestandstexte unveraendert', () => {
-	for (const [k, v] of Object.entries(GOLDEN)) {
+	for (const k of Object.keys(GOLDEN)) {
+		const v = soll(k);
 		assert.equal(trFor('de', k as MessageKey), v, k);
 		assert.equal(trFor(undefined, k as MessageKey), v, k);
 		assert.equal(tr(k as MessageKey), v, k);

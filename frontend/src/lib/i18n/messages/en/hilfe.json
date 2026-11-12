@@ -4,7 +4,7 @@
 	"hilfe.briefing.morgens": "In the morning, a briefing arrives with the weather for the day's stage or for the locations of your location comparison (default: 07:00).",
 	"hilfe.briefing.abends": "In the evening, a briefing arrives with the weather for the next day's stage (trip default: 18:00). The times are set in the Delivery tab of your trip or location comparison.",
 	"hilfe.alarme.titel": "Alerts",
-	"hilfe.alarme.text": "Between briefings, Gregor sends an alert when the weather for your route changes in a relevant way, for example with thunderstorms, heavy rain or storms. The urgency threshold in the Alerts tab defines which level is sent through which channel.",
+	"hilfe.alarme.text": "Between briefings, Gregor sends an alert when the weather for your route changes in a relevant way, for example with thunderstorms, heavy rain or storms. The urgency threshold in the Delivery tab defines which level is sent through which channel.",
 	"hilfe.kanaele.titel": "Channels",
 	"hilfe.kanaele.email": "Email: briefing as a table with hourly values, alerts as a separate message.",
 	"hilfe.kanaele.telegram": "Telegram: briefing and alerts as a message, detailed or in compact style.",

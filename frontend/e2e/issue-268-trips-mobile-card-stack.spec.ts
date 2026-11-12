@@ -89,7 +89,7 @@ test.describe('Issue #268: Mobile Card-Stack für Trips-Liste', () => {
 		// Issue #1743: Aktion „Vorschau" entfaellt.
 		await expect(sheet.getByTestId('subscription-action-preview')).toHaveCount(0);
 		await expect(sheet.getByTestId('subscription-action-alarms')).toHaveText('Alarme');
-		await expect(sheet.getByTestId('subscription-action-weather')).toHaveText('Wetter-Metriken');
+		await expect(sheet.getByTestId('subscription-action-weather')).toHaveText('Wetter'); // #2794 S3a 4b (AC-48)
 		await expect(sheet.getByTestId('subscription-action-edit')).toHaveText('Bearbeiten');
 		await expect(sheet.getByTestId('subscription-action-delete')).toHaveText('Löschen');
 	});
