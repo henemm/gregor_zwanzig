@@ -1,8 +1,8 @@
 package handler
 
 // F003: scheitert SaveUser nach der Reservierung, wird die Einladung
-// zurueckgerollt (bleibt offen). Root-sicher: users/<id> wird als DATEI
-// vorbelegt, so scheitert MkdirAll in SaveUser ohne chmod.
+// zurueckgerollt (bleibt offen). Root-sicher: users wird als DATEI
+// vorbelegt, so scheitert die Kontoanlage ohne chmod.
 
 import (
 	"bytes"
@@ -23,16 +23,16 @@ func TestRegisterMitEinladung_SaveUserScheitert_EinladungBleibtOffen(t *testing.
 	s := store.New(dir, "test")
 	inv := store.NewInviteStore(t.TempDir())
 	_, token, _ := inv.Create("premium", "", "admin")
-	if err := os.MkdirAll(filepath.Join(dir, "users"), 0o755); err != nil {
+	// Issue #2961: ein vorhandener Kontoordner (auch eine Datei an seiner
+	// Stelle) gilt als belegt (409 vor der Einloesung). Darum steht hier die
+	// Datei an der Stelle von users/: die Kennung ist frei, Redeem laeuft, erst
+	// die Kontoanlage scheitert — so wird der Rollback-Pfad wirklich betreten.
+	if err := os.WriteFile(filepath.Join(dir, "users"), []byte("x"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(s.UserDir("blockiert"), []byte("x"), 0o644); err != nil {
-		t.Fatal(err)
-	}
-	h := RegisterHandlerWithInvites(s, bcrypt.MinCost, config.Config{}, inv)
-	// Issue #2194: eine vorhersagbare ID (users/blockiert) gibt es nur fuer
-	// Testkonten; UserExists meldet fuer die Datei false, Redeem laeuft, erst
-	// SaveUser scheitert — so wird der Rollback-Pfad wirklich betreten.
+	// Issue #2194/#2961: eine vorhersagbare ID gibt es nur fuer Testkonten,
+	// und die nur im Staging/Fixture-Modus/als Admin.
+	h := RegisterHandlerWithInvites(s, bcrypt.MinCost, config.Config{Env: "staging"}, inv)
 	body := `{"username":"blockiert","password":"geheim-pw-123","email":"b@example.org","is_test_user":true,"invite":"` + token + `"}`
 	w := httptest.NewRecorder()
 	h.ServeHTTP(w, httptest.NewRequest(http.MethodPost, "/api/auth/register", bytes.NewReader([]byte(body))))

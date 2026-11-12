@@ -121,6 +121,18 @@ func RegisterHandlerWithInvites(s *store.Store, bcryptCost int, cfg config.Confi
 		// Sonst wird der Body-username ignoriert — auch nicht validiert — und
 		// die ID nach allen Pruefungen per NewOpaqueUserID erzeugt.
 		if req.IsTestUser {
+			// Issue #2961 (ADR-0113): der Schalter (und damit die frei
+			// waehlbare Kennung) gilt nur im Staging, im Fixture-Modus oder
+			// fuer eine Admin-Sitzung — sonst Ablehnung statt stillem Ignorieren.
+			if !testAccountCreationAllowed(r, s, cfg) {
+				log.Printf("register: is_test_user rejected outside staging/fixture without admin session")
+				WriteError(w, r, http.StatusBadRequest, "validation_failed", nil)
+				return
+			}
+			if store.IsReservedUserID(req.Username) {
+				WriteError(w, r, http.StatusBadRequest, "validation_failed", nil)
+				return
+			}
 			if len(req.Username) < 3 || len(req.Username) > 50 {
 				WriteError(w, r, http.StatusBadRequest, "validation_failed", nil)
 				return
@@ -243,8 +255,14 @@ func RegisterHandlerWithInvites(s *store.Store, bcryptCost int, cfg config.Confi
 			}
 		}
 		model.MarkOnboardingPending(&user)
-		if err := s.SaveUser(user); err != nil {
+		// Issue #2961: exklusive Anlage — ein vorhandener (auch verwaister)
+		// Kontoordner oder eine gleichzeitige Anlage derselben Kennung ergibt 409.
+		if err := s.CreateUser(user); err != nil {
 			rollbackInvite()
+			if errors.Is(err, store.ErrUserIDTaken) {
+				WriteError(w, r, http.StatusConflict, "user_already_exists", nil)
+				return
+			}
 			WriteError(w, r, http.StatusInternalServerError, "store_error", nil)
 			return
 		}
@@ -265,6 +283,29 @@ func RegisterHandlerWithInvites(s *store.Store, bcryptCost int, cfg config.Confi
 		w.WriteHeader(201)
 		json.NewEncoder(w).Encode(map[string]string{"id": userID})
 	}
+}
+
+// testAccountCreationAllowed: Testkonten (is_test_user, frei waehlbare
+// Kennung) nur im Staging, im Fixture-Modus oder mit gueltiger Admin-Sitzung
+// (Issue #2961, ADR-0113). Die Registrierung ist ein oeffentlicher Pfad, die
+// Sitzung wird deshalb hier selbst geprueft.
+func testAccountCreationAllowed(r *http.Request, s *store.Store, cfg config.Config) bool {
+	if cfg.Env == "staging" || cfg.TestFixtureDir != "" {
+		return true
+	}
+	cookie, err := r.Cookie("gz_session")
+	if err != nil {
+		return false
+	}
+	uid, sid, ok := middleware.SessionFromCookie(cookie.Value, cfg.SessionSecret)
+	if !ok {
+		return false
+	}
+	if _, admin := config.ParseAdminUserIDs(cfg.AdminUserIDs)[uid]; !admin {
+		return false
+	}
+	listed, err := s.HasSession(uid, sid)
+	return err == nil && listed
 }
 
 // hasVerifiedEmail liest den Bestaetigungsstand IMMER frisch von der Platte

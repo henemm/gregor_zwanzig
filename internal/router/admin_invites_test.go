@@ -407,11 +407,13 @@ func TestEinladungBleibtOffen_WennBenutzernameVergebenIst(t *testing.T) {
 	r, _, secret, _ := adminTestRouter(t, "alice")
 	_, tok := ivErstellen(t, r, secret, "premium", "")
 	// Issue #2194: eine feste Kennung (und damit der Kennungskonflikt) gibt
-	// es nur noch bei der Testkonto-Registrierung.
+	// es nur noch bei der Testkonto-Registrierung — seit #2961 ausserhalb von
+	// Staging/Fixture-Modus nur mit Admin-Sitzung.
 	b, _ := json.Marshal(map[string]any{"username": "bob", "password": "geheim-2519-pw",
 		"email": "bob-neu@example.org", "invite": tok, "is_test_user": true})
 	req := httptest.NewRequest(http.MethodPost, "/api/auth/register", bytes.NewReader(b))
 	req.Header.Set("Content-Type", "application/json")
+	req.AddCookie(sessionCookieFor("alice", secret))
 	w := httptest.NewRecorder()
 	r.ServeHTTP(w, req)
 	if w.Code != http.StatusConflict {
