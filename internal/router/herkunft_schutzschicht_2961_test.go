@@ -253,6 +253,11 @@ func TestSchutz_GroessenBegrenzung(t *testing.T) {
 	if w.Code != http.StatusRequestEntityTooLarge {
 		t.Fatalf("Login 1 MB+: erwartet 413, bekommen %d", w.Code)
 	}
+	// AC-18: Webhooks setzen eigene Grenzen, die globale greift dort nicht.
+	if w := schicke2961(t, r, anfrage2961{method: http.MethodPost, path: "/api/webhooks/telegram/inbound",
+		rawBody: gross, contentType: "application/json"}); code2961(w) == "payload_too_large" {
+		t.Fatalf("Webhook: globale Rumpfgrenze darf nicht greifen")
+	}
 	gpx := func(n int) *httptest.ResponseRecorder {
 		var buf bytes.Buffer
 		mw := multipart.NewWriter(&buf)

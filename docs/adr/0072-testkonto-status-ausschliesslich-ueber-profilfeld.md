@@ -3,6 +3,7 @@
 - **Status:** Akzeptiert (löst die Known Limitation aus ADR-0028 „Konsequenzen" ab)
 - **Datum:** 2026-09-18
 - **Bezug:** GitHub-Issue #2152 (Epic #2138), Spec `docs/specs/modules/testkonto_profilfeld.md`
+- **Ergänzt durch:** [ADR-0113](0113-anmelde-haertung-adress-limits-testkonto-herkunftspruefung.md) (Schalter bei der Registrierung nur Staging/Fixture-Modus/Admin-Sitzung)
 
 ## Kontext
 
