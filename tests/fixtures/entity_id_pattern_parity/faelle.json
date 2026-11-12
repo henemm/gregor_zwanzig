@@ -11,7 +11,19 @@
     "..",
     "../x",
     "../../bob/user",
-    ".hidden"
+    ".hidden",
+    "trip\n",
+    "a\nb",
+    "a\tb",
+    "a\u001fb",
+    "a\u007fb",
+    "\u0001x",
+    "a?b",
+    "?x",
+    "a#b",
+    "#x",
+    "a%2fb",
+    "%2e%2e"
   ],
   "valid": [
     "trip123",
@@ -20,6 +32,8 @@
     "pollença",
     "übergangsjoch-zillertal-arena",
     "serfaus-schöngamp-berg",
-    "mühlbach"
+    "mühlbach",
+    "mit leerzeichen",
+    "Etappe 2 Sóller"
   ]
 }

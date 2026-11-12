@@ -12,6 +12,8 @@ ein Briefing-Baustein, kein amtliche-Warnung-Renderer — Muster
 """
 from __future__ import annotations
 
+import html as _html
+
 from datetime import datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
 
@@ -104,7 +106,7 @@ def render_starkregen_hint_html(hint_text: str) -> str:
         f'<div style="background:{G_BOX_DANGER_BG};'
         f'border-left:4px solid {G_DANGER};padding:12px;margin:8px 20px;'
         f'border-radius:4px;font-family:{FONT_UI};">'
-        f'<strong style="color:{G_DANGER};font-size:14px;">{hint_text}</strong>'
+        f'<strong style="color:{G_DANGER};font-size:14px;">{_html.escape(hint_text)}</strong>'
         f'</div>'
     )
 

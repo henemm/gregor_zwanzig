@@ -1199,8 +1199,10 @@ class TripCommandProcessor:
         try:
             ergebnis = self._process(msg)
         except Exception:
+            # #2961: nur das Befehlswort (gekuerzt), nie der ganze Text.
             logger.exception(
-                "Kommando %r fuer Trip %r: unerwarteter Fehler", msg.body, msg.trip_name)
+                "Kommando %r fuer Trip %r: unerwarteter Fehler",
+                (_erstes_wort(msg.body) or "")[:20], msg.trip_name)
             ergebnis = CommandResult(
                 success=False, command="error",
                 confirmation_subject=self._m("antwort.fehler.betreff"),

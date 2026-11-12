@@ -439,7 +439,7 @@ def _smtp_aufzeichner_installieren(monkeypatch) -> list[str]:
         def __exit__(self, *exc):
             return False
 
-        def starttls(self):
+        def starttls(self, context=None):
             pass
 
         def login(self, user, password):

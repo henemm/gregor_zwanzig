@@ -242,7 +242,7 @@ class _MitschnittNotifier(NotificationService):
         self.gesendet: list[tuple[str, str]] = []
 
     def send_telegram_message(self, *, chat_id, subject, body, settings,
-                              reply_markup=None):
+                              reply_markup=None, wait_for_slot=True):
         self.gesendet.append((subject, body))
         return len(self.gesendet)
 

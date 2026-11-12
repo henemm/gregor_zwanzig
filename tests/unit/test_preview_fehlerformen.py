@@ -27,10 +27,15 @@ class _StoerenderDienst:
     """Steht fuer "Wetterdaten nicht verfuegbar" — die Ausnahme, die
     ``PreviewService`` in dem Fall wirft."""
 
-    MELDUNG = "Wetterdaten nicht verfuegbar (Testfall)"
+    # #2961: wie der echte Dienst eine Ausnahme MIT Fehlercode; Ausnahmen ohne
+    # Code meldet der Router nur noch als Katalogtext "unbekannt".
+    MELDUNG = "Wetterdaten nicht verfügbar für Trip 'gr221-mallorca' am 2026-07-01"
 
     def render_sms_preview(self, *args, **kwargs):  # noqa: ANN002, ANN003
-        raise RuntimeError(self.MELDUNG)
+        from services.fehler_code import fehler_mit_code
+
+        raise fehler_mit_code(RuntimeError, "vorschau_wetter_fehlt",
+                              trip_id="gr221-mallorca", datum="2026-07-01")
 
 
 @pytest.fixture

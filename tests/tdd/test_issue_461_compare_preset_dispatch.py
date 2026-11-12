@@ -254,6 +254,9 @@ class TestComparePresetsFilterLogic:
         from services.scheduler_dispatch_service import run_compare_presets_daily as _run_compare_presets_daily
 
         monkeypatch.setenv("GZ_MAIL_TO", "gregor-test@henemm.com")
+        # #2961: Empfaenger kommt nur noch aus dem Nutzerprofil.
+        from tests.helpers.nutzerprofil import lege_profil_an
+        lege_profil_an("default")
 
         # Preset mit leeren location_ids → sollte error_count erhöhen, nicht crashen
         # Issue #1726: ohne aufloesbaren Ort gibt es auch keine Ortszone, das

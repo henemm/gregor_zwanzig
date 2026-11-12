@@ -22,7 +22,9 @@ from html.parser import HTMLParser
 from app.config import Settings
 from app.loader import load_all_trips
 from i18n import resolve_user_lang, t
+from utils.mail_tls import tls_kontext_fuer
 from utils.pii_masking import mask_addr_for_pii_log
+from services.inbound_reply_limit import fehlerantwort_erlaubt
 from services.notification_service import NotificationService
 from services.trip_command_processor import (
     CommandResult,
@@ -238,6 +240,50 @@ def _html_zu_befehlstext(html_text: str) -> str:
     return parser.text()
 
 
+# #2961: Zeitgrenze je IMAP-Operation (Verbindungsaufbau und jede Antwort).
+IMAP_TIMEOUT_SECONDS = 30.0
+# #2961: je Lauf hoechstens so viele Mails; groessere Mails werden nicht geladen.
+MAX_MAILS_PER_RUN = 50
+MAX_MAIL_BYTES = 2 * 1024 * 1024
+# Kopfzeilen samt Groesse, ohne das Gelesen-Flag zu setzen.
+_HEADER_FETCH = "(RFC822.SIZE BODY.PEEK[HEADER])"
+_SIZE_RE = re.compile(rb"RFC822\.SIZE (\d+)")
+_AUTO_PRECEDENCE = frozenset({"bulk", "junk", "auto_reply", "list"})
+
+
+def _is_automatic(msg: email.message.Message) -> bool:
+    """#2961: Abwesenheitsnotizen, Verteiler und andere Automaten (RFC 3834)."""
+    auto = str(msg.get("Auto-Submitted") or "").split(";")[0].strip().lower()
+    if auto and auto != "no":
+        return True
+    if str(msg.get("Precedence") or "").strip().lower() in _AUTO_PRECEDENCE:
+        return True
+    return msg.get("X-Autoreply") is not None
+
+
+def _keine_automatische_antwort_erbeten(msg: email.message.Message) -> bool:
+    """#2961: ``X-Auto-Response-Suppress`` ist eine Bitte des Absenders, nicht
+    automatisch zu antworten (setzen manche Firmen-Mailsysteme auch bei
+    Handantworten). Befehle werden ausgefuehrt, Fehlerantworten unterbleiben."""
+    return msg.get("X-Auto-Response-Suppress") is not None
+
+
+def _fetch_message(imap, uid: bytes, spec: str) -> tuple[bytes, int | None]:
+    """Erster Literal-Inhalt einer FETCH-Antwort plus ``RFC822.SIZE``, falls genannt."""
+    _, data = imap.fetch(uid, spec)
+    inhalt, groesse = b"", None
+    for item in data or []:
+        teile = item if isinstance(item, tuple) else (item,)
+        for i, teil in enumerate(teile):
+            if not isinstance(teil, bytes):
+                continue
+            if isinstance(item, tuple) and i == 1 and not inhalt:
+                inhalt = teil
+            elif groesse is None and (m := _SIZE_RE.search(teil)):
+                groesse = int(m.group(1))
+    return inhalt, groesse
+
+
 class InboundEmailReader:
     """Polls IMAP inbox and processes trip commands from email replies."""
 
@@ -290,7 +336,13 @@ class InboundEmailReader:
         try:
             imap_host = settings.imap_host or settings.smtp_host
             imap_port = settings.imap_port
-            imap = imaplib.IMAP4_SSL(imap_host, imap_port)
+            # #2961: Zertifikat pruefen und Zeitgrenze setzen (ohne Kontext
+            # prueft imaplib nicht, ohne Timeout haengt ein stummer Server).
+            imap = imaplib.IMAP4_SSL(
+                imap_host, imap_port,
+                ssl_context=tls_kontext_fuer(imap_host),
+                timeout=IMAP_TIMEOUT_SECONDS,
+            )
             imap.login(imap_user, imap_pass)
             imap.select("INBOX")
 
@@ -300,7 +352,7 @@ class InboundEmailReader:
                 _, data = imap.search(None, "UNSEEN", "TO", inbound)
             else:
                 _, data = imap.search(None, "UNSEEN")
-            uids = data[0].split()
+            uids = data[0].split()[:MAX_MAILS_PER_RUN]
 
             for uid in uids:
                 try:
@@ -344,8 +396,14 @@ class InboundEmailReader:
         settings: Settings,
     ) -> tuple[int, int]:
         self._ensure_notification_service(settings)
-        _, msg_data = imap.fetch(uid, "(RFC822)")
-        msg = email.message_from_bytes(msg_data[0][1])
+        # #2961: zuerst nur die Kopfzeilen; der Rumpf folgt erst nach der
+        # Autorisierung des Absenders.
+        kopf, groesse = _fetch_message(imap, uid, _HEADER_FETCH)
+        msg = email.message_from_bytes(kopf)
+        if _is_automatic(msg):
+            logger.info("Automatisch erzeugte Mail verworfen (uid=%s)", uid)
+            imap.store(uid, "+FLAGS", "\\Seen")
+            return 0, 0
 
         # 1. Resolve user-scoped settings for sender, then authorize
         from_addr = self._parse_sender(msg.get("From", ""))
@@ -363,6 +421,12 @@ class InboundEmailReader:
         if not self._authorize(from_addr, user_settings, msg):
             imap.store(uid, "+FLAGS", "\\Seen")
             return 0, 0
+        if (groesse if groesse is not None else len(kopf)) > MAX_MAIL_BYTES:
+            logger.warning("Mail ueber %d Bytes uebersprungen (uid=%s)", MAX_MAIL_BYTES, uid)
+            imap.store(uid, "+FLAGS", "\\Seen")
+            return 0, 0
+        voll, _ = _fetch_message(imap, uid, "(RFC822)")
+        msg = email.message_from_bytes(voll)
 
         # 2. Extract trip name from Subject — error reply if missing
         subject = msg.get("Subject", "")
@@ -391,7 +455,8 @@ class InboundEmailReader:
             # Issue #1405 S4b: nicht zugestellte Antwort = Fehler des Laufs;
             # kein Versand eingerichtet = kein Versuch = kein Fehler.
             zugestellt = True
-            if user_settings.can_send_email():
+            if (user_settings.can_send_email() and not _keine_automatische_antwort_erbeten(msg)
+                    and fehlerantwort_erlaubt(_user_id)):
                 zugestellt = self._notification_service.send_command_reply_email(
                     result, user_settings, lang=lang,
                 )
@@ -418,7 +483,8 @@ class InboundEmailReader:
             processor = TripCommandProcessor()
             result = processor.process(inbound)
             zugestellt = True
-            if user_settings.can_send_email() and not result.suppress_email_reply:
+            if (user_settings.can_send_email() and not result.suppress_email_reply
+                    and self._reply_allowed(result, _user_id, msg)):
                 zugestellt = self._notification_service.send_command_reply_email(
                     result, user_settings, lang=lang,
                 )
@@ -430,6 +496,20 @@ class InboundEmailReader:
             return 0, 1
         finally:
             imap.store(uid, "+FLAGS", "\\Seen")
+
+    @staticmethod
+    def _reply_allowed(result: CommandResult, user_id: str, msg: email.message.Message) -> bool:
+        """#2961: Fehlerantworten je Nutzer gedrosselt und nie an Mails mit
+        ``X-Auto-Response-Suppress``; Erfolgsantworten immer."""
+        if result.success:
+            return True
+        if _keine_automatische_antwort_erbeten(msg):
+            logger.info("Fehlerantwort unterdrueckt (X-Auto-Response-Suppress)")
+            return False
+        if fehlerantwort_erlaubt(user_id):
+            return True
+        logger.info("Fehlerantwort gedrosselt (Stundengrenze erreicht)")
+        return False
 
     def _strip_reply_prefixes(self, subject: str) -> str:
         """Recursively remove Re:, AW:, Fwd:, WG: etc."""
@@ -458,22 +538,26 @@ class InboundEmailReader:
     def _authorize(
         self, sender: str, settings: Settings, msg: email.message.Message,
     ) -> bool:
-        """Single-user: sender must match mail_to or inbound_address (only if distinct from mail_from).
+        """Absender muss die ``mail_to`` des Nutzers sein; System-Adressen
+        (``mail_from``, Eingangsadresse, Postfach-Login) nie (#2961).
 
         #2143: zusaetzlich zur bestehenden Adress-Logik muss der Absender
         verifiziert sein (email_verified_at) und der Transport SPF/DKIM
         bestehen -- beides fail-closed.
         """
-        mail_from_lower = (settings.mail_from or "").lower()
-        if mail_from_lower and sender == mail_from_lower:
+        # #2961: Schleifenschutz -- Absender-, Eingangs- und Postfachadresse
+        # des Systems sind nie Befehlsgeber (die Eingangsadresse steht als
+        # Reply-To in jeder ausgehenden Mail).
+        eigene = {
+            a.strip().lower()
+            for a in (settings.mail_from, settings.get_inbound_address(), settings.smtp_user)
+            if a and "@" in a
+        }
+        if sender in eigene:
             return False
         if not settings.mail_to:
             return False
-        allowed = {settings.mail_to.lower()}
-        inbound = settings.get_inbound_address()
-        if inbound and inbound.lower() != mail_from_lower:
-            allowed.add(inbound.lower())
-        authorized = sender in allowed
+        authorized = sender == settings.mail_to.lower()
         if not authorized:
             logger.debug(f"Ignoring email from: {mask_addr_for_pii_log(sender)!r}")
             return False

@@ -1318,7 +1318,10 @@ VALID_USER_ID_RE = re.compile(r"^[a-zA-Z0-9_-]+$")
 # ``pollença``) und muessen erreichbar bleiben. Erstes Zeichen weder "." noch
 # Trenner noch NUL (deckt "", ".", "..", ".hidden" ab), alle weiteren Zeichen
 # kein Trenner und kein NUL.
-VALID_ENTITY_ID_RE = re.compile(r"^[^./\\\x00][^/\\\x00]*$")
+# Issue #2961 (Paritaet zu Go store.ValidEntityIDRe): zusaetzlich gesperrt
+# sind Steuerzeichen (\x00-\x1f, \x7f) sowie "?", "#", "%" -- sie haetten in
+# URL-Pfaden oder Dateinamen eine Sonderbedeutung. Leerzeichen bleiben erlaubt.
+VALID_ENTITY_ID_RE = re.compile(r"^[^./\\\x00-\x1f\x7f?#%][^/\\\x00-\x1f\x7f?#%]*$")
 
 
 class InvalidUserIdError(ValueError):
@@ -1476,10 +1479,12 @@ def lookup_user_by_email(email: str, data_dir: str | None = None) -> str | None:
             real_matches.append(uid)
 
     if len(real_matches) > 1:
+        from utils.pii_masking import mask_addr_for_pii_log
+
         logger.error(
             "Email-Adresse %s ist mehrdeutig — keine Zuordnung. "
             "Kollidierende Nutzer: %s (Issue #2143)",
-            email,
+            mask_addr_for_pii_log(email),  # #2961: nie im Klartext
             ", ".join(real_matches),
         )
         return None

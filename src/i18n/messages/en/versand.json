@@ -19,6 +19,7 @@
   "versand.test.betreff": "Gregor 20 — Test message",
   "versand.test.text": "Your channel works.",
   "versand.test.kanal_unbekannt": "Unknown channel: {kanal}",
+  "versand.test.fehlgeschlagen": "The test message could not be sent. Please try again later.",
   "versand.test.mail_gesperrt": "The test email was not sent: your account has no confirmed email address. Please confirm your address in your profile first.",
   "versand.ergebnis.kind_required": "Briefing kind is missing or invalid (allowed: route, vergleich)",
   "versand.ergebnis.not_found": "Briefing {entity_id} not found",

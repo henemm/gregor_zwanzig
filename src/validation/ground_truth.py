@@ -37,10 +37,14 @@ class BergfexScraper:
         "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
     )
 
+    # Issue #2961: der Kurzname wird Teil des URL-Pfads -- nur Kleinbuchstaben,
+    # Ziffern und Bindestrich; Weiterleitungen werden nicht verfolgt.
+    SLUG_RE = re.compile(r"[a-z0-9-]+")
+
     def __init__(self) -> None:
         self._client = httpx.Client(
             headers={"User-Agent": self.USER_AGENT},
-            follow_redirects=True,
+            follow_redirects=False,
             timeout=30.0,
         )
 
@@ -54,6 +58,8 @@ class BergfexScraper:
         Returns:
             SnowReport with current snow data
         """
+        if not isinstance(resort_slug, str) or not self.SLUG_RE.fullmatch(resort_slug):
+            raise ValueError("invalid bergfex slug")
         # Try to get from mapping first, otherwise use defaults
         try:
             resort_info = get_resort(resort_slug)

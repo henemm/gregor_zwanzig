@@ -7,9 +7,12 @@ outputs.* modules.
 from __future__ import annotations
 
 import json
+import logging
 
 from app.config import Settings
 from i18n import Lang, resolve_user_lang, t
+
+logger = logging.getLogger(__name__)
 
 
 def _sperre_email(user_id: str, lang: Lang = "de") -> str | None:
@@ -76,4 +79,6 @@ def send_test_message(channel: str, user_id: str) -> dict:
             return {"error": t("versand.test.kanal_unbekannt", lang, kanal=channel)}
         return {"status": "ok"}
     except Exception as exc:
-        return {"error": str(exc)}
+        # Issue #2961: Ausnahmetexte (Hosts, Konfiguration) nur ins Log.
+        logger.warning("Kanaltest %s fehlgeschlagen (%s): %s", channel, type(exc).__name__, exc)
+        return {"error": t("versand.test.fehlgeschlagen", lang)}

@@ -44,6 +44,9 @@ def _versende_und_fange_body(tmp_path) -> str:
     from services.scheduler_dispatch_service import send_one_compare_preset
 
     user_id = f"nb-versand-{uuid.uuid4().hex[:8]}"
+    # #2961: Empfaenger kommt nur noch aus dem Nutzerprofil.
+    from tests.helpers.nutzerprofil import lege_profil_an
+    lege_profil_an(user_id)
     settings = Settings(
         smtp_host="mail.henemm.com", smtp_port=587,
         smtp_user="dummy-user-1969", smtp_pass="dummy-pass-1969",
