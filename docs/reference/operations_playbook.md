@@ -591,7 +591,10 @@ Python per `flock` teilen. Sie ist **keine Nutzerdatei**: Listen filtern nur `*.
 und `scripts/cleanup_1708c_dead_trips.py` überspringen `*.lock`. Beim Sichten von
 `briefings/` also nicht als Datenrest werten. (Der ADR trifft keine Aussage zum Löschen von
 Hand — nicht ohne Not anfassen; `flock` gilt nur auf lokalem Dateisystem.) Dauert eine
-Sperre über ~5 s, antwortet die API mit 503 + `Retry-After`.
+Sperre über ~5 s, antwortet die API mit 503 + `Retry-After`. Seit #2961 räumt Go beim
+Freigeben eine Sperrdatei ab, neben der keine `<id>.json` steht (unbekannte Kennung, Löschung),
+mit denselben Schutzregeln wie #2237 (nur wenn der `flock` sofort frei ist); eine Sperrdatei
+ohne `.json` ist danach nur noch ein Rest aus Python-Zugriffen oder älteren Ständen.
 
 ## Beschädigte `briefing_slots.json` / `briefing_log.json` (#2231)
 
