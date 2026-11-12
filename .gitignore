@@ -98,6 +98,20 @@ test-results/
 .env
 .env.backup.*
 .env.bak-*
+# #2961: jede .env-Variante (z. B. .env.local, .env.prod, .env.staging, .env.bak*)
+# ist ignoriert; nur die getrackten Vorlagen sind ausgenommen.
+.env.*
+!.env.example
+!.env.tpl
+!.env.e2e
+.claude/*.env
+.claude/*.env.*
+!.claude/validator.env.example
+.claude/user_override_token.json
+*.pem
+*.key
+cookies.txt
+**/playwright/.auth/
 
 # bug89 test sandbox data — durch die Regel `data/users/*` oben abgedeckt (#1602)
 *.zip
