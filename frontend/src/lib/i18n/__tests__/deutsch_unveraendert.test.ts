@@ -525,6 +525,8 @@ const NEU_IN_FOLGEPAKETEN = [
 	'listen.status.archiviert',
 	'aktionen.sheet.eyebrow',
 	'bausteine.wordmark.caption',
+	// #2913 Runde 2 (Befund 1): Beschriftung der grünen Gewitter-Zone (Mockup „keins · mittel · hoch“).
+	'wetter.gewitter.keins',
 	// #2913 Fix Metrik-Liste (AC-5): Untertitel-Hinweise der Metrik-Zeile (Mockup Fassung 3).
 	'wetter.untertitel.vorbote',
 	'wetter.untertitel.nur_anzeige',

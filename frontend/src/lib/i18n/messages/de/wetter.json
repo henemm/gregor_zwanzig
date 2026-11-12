@@ -63,6 +63,7 @@
 	"wetter.erklaer.vorbote": "Nur im Briefing gefärbt. Vorboten lösen keinen Alarm aus.",
 	"wetter.erklaer.anzeige": "Nur Anzeige: keine Ampel und kein Alarm. Roh oder Einfach stellst du unten je Liste ein.",
 	"wetter.erklaer.ohne_grenze": "Für {stufe} ist keine Grenze gesetzt, daher kein Alarm.",
+	"wetter.gewitter.keins": "keins",
 	"wetter.gewitter.mittel": "mittel",
 	"wetter.gewitter.hoch": "hoch",
 	"wetter.gewitter.keins_gruen": "‚keins‘ ist immer grün.",

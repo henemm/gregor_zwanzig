@@ -63,6 +63,7 @@
 	"wetter.erklaer.vorbote": "Only coloured in the briefing. Precursors do not trigger alerts.",
 	"wetter.erklaer.anzeige": "Display only: no traffic light and no alert. You set raw or simple below for each list.",
 	"wetter.erklaer.ohne_grenze": "No limit is set for {stufe}, so no alert.",
+	"wetter.gewitter.keins": "none",
 	"wetter.gewitter.mittel": "moderate",
 	"wetter.gewitter.hoch": "high",
 	"wetter.gewitter.keins_gruen": "‘none’ is always green.",
