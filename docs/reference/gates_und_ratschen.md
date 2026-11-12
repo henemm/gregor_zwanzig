@@ -180,6 +180,14 @@ einem Wegwerf-Abzug des letzten Commits **gemessen**, nicht gepflegt. Geprüft w
 was ungeprüft blieb, nennt die Meldung. Abhilfe: den genannten Test reparieren oder löschen — nicht
 drumherum arbeiten. Prüfdatum 2026-11-03.
 
+**Neu angelegte rote Tests (#2503):** Ein Test, der im Vorzustand gar nicht lief (neue Funktion, neuer
+Subtest, neuer Frontend-Test), blockiert nur dann nicht, wenn der aktive Workflow in Phase
+`phase5_tdd_red` steht; die Meldung nennt ihn als „neu angelegt rot (TDD-RED, blockiert nicht)". In jeder
+anderen Phase, ohne Workflow oder bei unlesbarem State blockiert er („nur in Phase TDD-RED erlaubt").
+Ein vorher grüner Test, der rot wird, blockiert in jeder Phase; bei Go blockiert auch die Elternfunktion,
+wenn ein vorbestehender Subtest rot wird. Eigene Störungen lassen weiterhin in jeder Phase durch. Spec:
+`docs/specs/modules/fix_2503_red_tests_gate.md`.
+
 ## Test-Pfadregel-Ratsche (#1409, ab 2026-07-29)
 
 Ein Test löst seinen **Prüfling** relativ zur eigenen Testdatei auf
