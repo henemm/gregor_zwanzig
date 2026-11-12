@@ -74,7 +74,6 @@ func TestStagingTokenwegExistiertNurUnterGzEnvStaging_AC9(t *testing.T) {
 	t.Setenv("GZ_ENV", "staging")
 	stg := neueVerifyUmgebung2304(t)
 	stg.konto2304(t, uid, "rosa@beispiel.de", "rosa-empfang@beispiel.de", nil)
-	alsTestkonto2304(t, stg, uid)
 	wStg := stg.post(t, stagingTokenPfad2304, `{"username":"`+uid+`"}`, stg.anmeldeCookie(t, uid))
 
 	if wStg.Code != http.StatusOK {
@@ -97,7 +96,6 @@ func TestStagingTokenwegSetztBestaetigungNichtSelbst_AC10(t *testing.T) {
 
 	const uid = "clara2304"
 	e.konto2304(t, uid, "clara@beispiel.de", "clara-empfang@beispiel.de", nil)
-	alsTestkonto2304(t, e, uid)
 
 	w := e.post(t, stagingTokenPfad2304, `{"username":"`+uid+`"}`, e.anmeldeCookie(t, uid))
 	if w.Code != http.StatusOK {
@@ -141,7 +139,6 @@ func TestStagingTokenwegLaesstBestehendenZeitstempelUnveraendert_AC11(t *testing
 	const uid = "doris2304"
 	bestaetigt := time.Date(2026, 1, 2, 3, 4, 5, 0, time.UTC)
 	e.konto2304(t, uid, "doris@beispiel.de", "doris-empfang@beispiel.de", &bestaetigt)
-	alsTestkonto2304(t, e, uid)
 
 	// Ausgangswert aus dem Speicher lesen (nach JSON-Roundtrip), nicht die
 	// lokale Variable — verglichen wird, was tatsächlich auf der Platte steht.
@@ -191,7 +188,6 @@ func TestStagingTokenwegVerlangtAnmeldung_AC12(t *testing.T) {
 
 	const uid = "erik2304"
 	e.konto2304(t, uid, "erik@beispiel.de", "erik-empfang@beispiel.de", nil)
-	alsTestkonto2304(t, e, uid)
 
 	// --- ohne Cookie
 	wAnonym := e.post(t, stagingTokenPfad2304, `{"username":"`+uid+`"}`, nil)
@@ -217,19 +213,5 @@ func TestStagingTokenwegVerlangtAnmeldung_AC12(t *testing.T) {
 	}
 	if tok, _ := e.store.LoadVerificationToken(uid); tok == nil {
 		t.Error("AC-12 Positivkontrolle: nach dem angemeldeten Aufruf muss ein Token im Speicher liegen")
-	}
-}
-
-// alsTestkonto2304 setzt is_test_user (Issue #2961): der Staging-Testweg
-// verlangt einen berechtigten Aufrufer (Admin, Betreiber-Konto, Testkonto).
-func alsTestkonto2304(t *testing.T, e *verifyUmgebung2304, uid string) {
-	t.Helper()
-	u, err := e.store.LoadUser(uid)
-	if err != nil || u == nil {
-		t.Fatalf("Konto %q laden: %v", uid, err)
-	}
-	u.IsTestUser = true
-	if err := e.store.SaveUser(*u); err != nil {
-		t.Fatalf("Konto %q speichern: %v", uid, err)
 	}
 }

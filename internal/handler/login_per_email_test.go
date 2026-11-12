@@ -289,10 +289,6 @@ func TestZweiNutzerEmailUndIDLoginGetrennt_AC15_2194(t *testing.T) {
 // eine E-Mail-Kennung loest das Konto auf; das Token liegt beim Konto.
 func TestStagingTokenwegPerEmail_2194(t *testing.T) {
 	t.Setenv("GZ_ENV", "staging")
-	// Issue #2961: Testweg nur fuer Admin/Betreiber/Testkonten. Hanna darf kein
-	// Testkonto sein (die E-Mail-Weiche loest Testkonten nicht auf, ADR-0105),
-	// deshalb ist sie hier das Betreiber-Konto (GZ_AUTH_USER).
-	t.Setenv("GZ_AUTH_USER", "hanna2194")
 	e := neueVerifyUmgebung2304(t)
 	e.konto2194(t, kontoSpec2194{id: "hanna2194", email: "hanna@beispiel.de", passwort: "hanna-passwort-1"})
 

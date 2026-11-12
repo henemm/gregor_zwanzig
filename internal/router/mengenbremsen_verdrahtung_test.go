@@ -77,6 +77,7 @@ func neueBremsUmgebung(t *testing.T, mutiere func(*config.Config)) *bremsUmgebun
 	cfg.DataDir = t.TempDir()
 	cfg.PythonCoreURL = core.URL
 	cfg.TestFixtureDir = ""
+	cfg.Env = ""
 	cfg.AdminUserIDs = ""
 	cfg.QuotaExemptUserIDs = ""
 	if mutiere != nil {
@@ -294,4 +295,34 @@ func TestMengenbremse_FixtureModusOhneBremse(t *testing.T) {
 			t.Fatalf("Fixture-Modus: Versand %d gebremst", i+1)
 		}
 	}
+}
+
+// AC-24: auf Staging gelten die zehnfachen Grenzen — der 21. Sofort-Versand
+// in der Stunde geht durch (E2E/Validator ohne Ausnahme-Eintrag), in
+// Produktion wird er gebremst; auch auf Staging gibt es eine Obergrenze.
+func TestMengenbremse_StagingZehnfacheGrenzen(t *testing.T) {
+	for _, fall := range []struct {
+		env, uid string
+		gebremst bool
+	}{{"staging", "lena-staging", false}, {"", "lena-prod", true}} {
+		e := neueBremsUmgebung(t, func(c *config.Config) { c.Env = fall.env })
+		c := e.konto(t, fall.uid, "de")
+		for i := 0; i < handler.BremseVersandJeStunde; i++ {
+			if w := e.rufe(t, http.MethodPost, "/api/trips/t1/send", nil, c); w.Code == http.StatusTooManyRequests {
+				t.Fatalf("Env %q: Versand %d vorzeitig gebremst", fall.env, i+1)
+			}
+		}
+		w := e.rufe(t, http.MethodPost, "/api/trips/t1/send", nil, c)
+		if fall.gebremst {
+			erwarte429(t, w, "versand")
+		} else if w.Code == http.StatusTooManyRequests {
+			t.Fatalf("Staging: 21. Versand gebremst: %s", w.Body.String())
+		}
+	}
+	e := neueBremsUmgebung(t, func(c *config.Config) { c.Env = "staging" })
+	c := e.konto(t, "lena-obergrenze", "de")
+	for i := 0; i < handler.BremseVersandJeStunde*handler.BremseStagingFaktor; i++ {
+		e.rufe(t, http.MethodPost, "/api/trips/t1/send", nil, c)
+	}
+	erwarte429(t, e.rufe(t, http.MethodPost, "/api/trips/t1/send", nil, c), "versand")
 }

@@ -108,11 +108,8 @@ func New(deps Deps) chi.Router {
 	// NICHT in der Public-Allowlist und bewusst nicht unter /api/debug/,
 	// /api/internal/ oder /api/webhooks/telegram/, die AuthMiddleware pauschal
 	// freigibt.
-	// Issue #2961: Staging-Hilfsendpunkte nur fuer Admin, Betreiber-Konto
-	// (GZ_AUTH_USER) und Testkonten (handler/staging_zugang.go).
-	stagingZugang := handler.StagingZugang{Admins: admins, Betreiber: deps.Config.AuthUser}
 	if os.Getenv("GZ_ENV") == "staging" {
-		r.Post("/api/auth/verify-email/staging-token", handler.StagingVerificationTokenHandler(deps.Store, stagingZugang))
+		r.Post("/api/auth/verify-email/staging-token", handler.StagingVerificationTokenHandler(deps.Store))
 	}
 	// Issue #2160 (ADR-0081): Kontoloeschung nur mit frischem Nachweis
 	// (Passwort oder Lösch-Code). Der alte DELETE /api/auth/account entfaellt.
@@ -147,9 +144,9 @@ func New(deps Deps) chi.Router {
 	// Staging-only Testweg (Muster verify-email/staging-token): gibt den
 	// Klartext-Code des EIGENEN Kontos heraus, ohne Sendeversuch.
 	if os.Getenv("GZ_ENV") == "staging" {
-		r.Post("/api/auth/sms/staging-code", handler.StagingSmsCodeHandler(deps.Store, stagingZugang))
+		r.Post("/api/auth/sms/staging-code", handler.StagingSmsCodeHandler(deps.Store))
 		// Issue #2423 — Tarif/SMS-Tageszaehler des EIGENEN Kontos setzen.
-		r.Post("/api/auth/staging-seed", handler.StagingSeedHandler(deps.Store, *deps.Config, stagingZugang))
+		r.Post("/api/auth/staging-seed", handler.StagingSeedHandler(deps.Store, *deps.Config))
 	}
 	r.Put("/api/auth/password", handler.ChangePasswordHandler(deps.Store, bcrypt.DefaultCost, deps.Config.SessionSecret, deps.Config.PublicHost))
 	// Issue #1071 — Level-Änderungs-Antrag (authentifiziert, NICHT in Public-Allowlist)
@@ -246,8 +243,8 @@ func New(deps Deps) chi.Router {
 	r.Get("/api/locations/{id}", handler.LocationHandler(deps.Store))
 	// Issue #2961 (ADR-0114): Mengenbremsen je Nutzer fuer interaktive
 	// Ausloeser; Admins/GZ_QUOTA_EXEMPT_USER_IDS ausgenommen, im Fixture-Modus
-	// (CI-Stack) nicht eingehaengt.
-	bremsen := handler.NeueNutzerBremsen(deps.Config.TestFixtureDir != "")
+	// (CI-Stack) nicht eingehaengt, auf Staging zehnfache Grenzen.
+	bremsen := handler.NeueNutzerBremsen(deps.Config.TestFixtureDir != "", deps.Config.Env == "staging")
 	r.Post("/api/locations/resolve", bremsen.Aufloesen(handler.ResolveLocationHandler()))
 	r.Post("/api/locations", handler.CreateLocationHandler(deps.Store))
 	r.Put("/api/locations/{id}", handler.UpdateLocationHandler(deps.Store))

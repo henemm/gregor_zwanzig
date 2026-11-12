@@ -43,8 +43,7 @@ func TestSmsStagingCodeNurInStagingUmgebung(t *testing.T) {
 	}
 
 	stag := neueSmsUmgebung2406(t, true)
-	// Issue #2961: der Testweg verlangt ein Testkonto (oder Admin/Betreiber).
-	stag.konto(t, uid, "standard", map[string]any{"pending_sms_to": nummerB2406, "sms_to": nummerA2406, "sms_verified_number": nummerA2406, "is_test_user": true})
+	stag.konto(t, uid, "standard", map[string]any{"pending_sms_to": nummerB2406, "sms_to": nummerA2406, "sms_verified_number": nummerA2406})
 	status, code, body := stagingCode2406(t, stag, stag.cookie(t, uid), `{}`)
 	if status != http.StatusOK || len(code) != 6 || strings.Trim(code, "0123456789") != "" {
 		t.Fatalf("AC-15 Gegenprobe: mit GZ_ENV=staging erwartet 200 und 6-stelligen code, bekommen %d: %s", status, body)
@@ -62,7 +61,7 @@ func TestSmsStagingCodeNurInStagingUmgebung(t *testing.T) {
 func TestSmsStagingCodeIgnoriertFremdeKennungImBody(t *testing.T) {
 	e := neueSmsUmgebung2406(t, true)
 	const eigen, fremd = "smsstageigen", "smsstagfremd"
-	e.konto(t, eigen, "standard", map[string]any{"sms_to": nummerA2406, "is_test_user": true})
+	e.konto(t, eigen, "standard", map[string]any{"sms_to": nummerA2406})
 	e.konto(t, fremd, "standard", map[string]any{"sms_to": nummerB2406})
 
 	status, code, body := stagingCode2406(t, e, e.cookie(t, eigen),
@@ -91,7 +90,6 @@ func TestSmsStagingCodeBestaetigtUeberDenRegulaerenWeg(t *testing.T) {
 	const uid = "smsstagok"
 	bestand := bestaetigtA2406()
 	bestand["pending_sms_to"] = nummerB2406
-	bestand["is_test_user"] = true // Issue #2961
 	e.konto(t, uid, "standard", bestand)
 	c := e.cookie(t, uid)
 

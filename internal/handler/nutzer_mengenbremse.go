@@ -133,20 +133,31 @@ const (
 	BremseGpxJeStunde           = 30
 )
 
+// BremseStagingFaktor vervielfacht auf Staging (GZ_ENV=staging) alle Grenzen
+// — Fenster UND Gleichzeitigkeit —, damit E2E-Laeufe und Validator-Skripte
+// ohne Eintrag in GZ_QUOTA_EXEMPT_USER_IDS nicht in die Bremse laufen.
+const BremseStagingFaktor = 10
+
 // NeueNutzerBremsen baut alle Bremsen. Der Handversand (drei Routen) teilt
 // sich EIN Kontingent; die schweren Lesewege teilen sich die Obergrenze
 // gleichzeitiger Anfragen, haben aber je ein eigenes Minutenfenster.
-func NeueNutzerBremsen(aus bool) *NutzerBremsen {
-	parallel := NewNutzerParallel(BremseAbrufParallel)
+// aus=true: Fixture-Modus, keine Bremse. staging=true: Grenzen mal
+// BremseStagingFaktor. Produktion: Grenzen wie dokumentiert.
+func NeueNutzerBremsen(aus, staging bool) *NutzerBremsen {
+	f := 1
+	if staging {
+		f = BremseStagingFaktor
+	}
+	parallel := NewNutzerParallel(BremseAbrufParallel * f)
 	return &NutzerBremsen{
 		aus:           aus,
-		aufloesen:     NewNutzerBremse("aufloesen", BremseAufloesenJeMinute, time.Minute, nil),
-		testnachricht: NewNutzerBremse("testnachricht", BremseTestnachrichtJeStunde, time.Hour, nil),
-		versand:       NewNutzerBremse("versand", BremseVersandJeStunde, time.Hour, nil),
-		vergleich:     NewNutzerBremse("abruf", BremseAbrufJeMinute, time.Minute, parallel),
-		etappenwetter: NewNutzerBremse("abruf", BremseAbrufJeMinute, time.Minute, parallel),
-		vorschau:      NewNutzerBremse("abruf", BremseAbrufJeMinute, time.Minute, parallel),
-		gpx:           NewNutzerBremse("gpx", BremseGpxJeStunde, time.Hour, nil),
+		aufloesen:     NewNutzerBremse("aufloesen", BremseAufloesenJeMinute*f, time.Minute, nil),
+		testnachricht: NewNutzerBremse("testnachricht", BremseTestnachrichtJeStunde*f, time.Hour, nil),
+		versand:       NewNutzerBremse("versand", BremseVersandJeStunde*f, time.Hour, nil),
+		vergleich:     NewNutzerBremse("abruf", BremseAbrufJeMinute*f, time.Minute, parallel),
+		etappenwetter: NewNutzerBremse("abruf", BremseAbrufJeMinute*f, time.Minute, parallel),
+		vorschau:      NewNutzerBremse("abruf", BremseAbrufJeMinute*f, time.Minute, parallel),
+		gpx:           NewNutzerBremse("gpx", BremseGpxJeStunde*f, time.Hour, nil),
 	}
 }
 

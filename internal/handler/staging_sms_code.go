@@ -24,24 +24,17 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
-	"time"
 
 	"github.com/henemm/gregor-api/internal/middleware"
 	"github.com/henemm/gregor-api/internal/store"
 )
 
-// Issue #2961: berechtigte Aufrufer (staging_zugang.go) oder ein frisch
-// registriertes Wegwerfkonto fuer seinen EIGENEN Code; sonst 403.
-func StagingSmsCodeHandler(s *store.Store, zugang StagingZugang) http.HandlerFunc {
+func StagingSmsCodeHandler(s *store.Store) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		userId := middleware.UserIDFromContext(r.Context())
 		user, err := s.LoadUser(userId)
 		if err != nil || user == nil {
 			smsFehler(w, r, 404, "not_found")
-			return
-		}
-		if !zugang.berechtigt(user) && !frischRegistriert(user, time.Now()) {
-			WriteError(w, r, http.StatusForbidden, "forbidden", nil)
 			return
 		}
 		ziel := smsZielnummer(user)

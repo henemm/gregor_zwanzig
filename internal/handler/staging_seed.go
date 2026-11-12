@@ -41,15 +41,10 @@ func seedCounter(raw map[string]json.RawMessage, key string) (val int, present, 
 	return int(f), true, true
 }
 
-// Issue #2961: nur fuer berechtigte Aufrufer (staging_zugang.go), sonst 403.
-func StagingSeedHandler(s *store.Store, cfg config.Config, zugang StagingZugang) http.HandlerFunc {
+func StagingSeedHandler(s *store.Store, cfg config.Config) http.HandlerFunc {
 	client := &http.Client{Timeout: 3 * time.Second}
 	return func(w http.ResponseWriter, r *http.Request) {
 		userID := middleware.UserIDFromContext(r.Context())
-		if aufrufer, _ := s.LoadUser(userID); !zugang.berechtigt(aufrufer) {
-			WriteError(w, r, http.StatusForbidden, "forbidden", nil)
-			return
-		}
 		var raw map[string]json.RawMessage
 		if err := json.NewDecoder(io.LimitReader(r.Body, 4096)).Decode(&raw); err != nil {
 			WriteError(w, r, http.StatusBadRequest, "validation_error", nil)

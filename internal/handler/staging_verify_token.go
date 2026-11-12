@@ -32,17 +32,12 @@ import (
 // StagingVerificationTokenHandler erzeugt ein Verifikations-Token für das
 // genannte Konto und liefert es im Klartext zurück — ohne Mailversand.
 //
-// Issue #2961: nur fuer berechtigte Aufrufer (staging_zugang.go) und nur fuer
-// zulaessige Zielkonten; unbekannte und unzulaessige Ziele erhalten dieselbe
-// 404-Antwort.
-func StagingVerificationTokenHandler(s *store.Store, zugang StagingZugang) http.HandlerFunc {
+// Issue #2961: nur fuer zulaessige Zielkonten (staging_zugang.go: eigenes
+// Konto, Testkonto, frisch registriertes unbestaetigtes Konto); unbekannte und
+// unzulaessige Ziele erhalten dieselbe 404-Antwort.
+func StagingVerificationTokenHandler(s *store.Store) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		aufruferID := middleware.UserIDFromContext(r.Context())
-		aufrufer, _ := s.LoadUser(aufruferID)
-		if !zugang.berechtigt(aufrufer) {
-			WriteError(w, r, http.StatusForbidden, "forbidden", nil)
-			return
-		}
 		var req struct {
 			Username string `json:"username"`
 		}
