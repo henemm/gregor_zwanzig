@@ -27,7 +27,7 @@
 	import { isWebAuthnSupported, loginWithPasskey, loginWithDiscoverablePasskey } from '$lib/passkey';
 	import { t } from '$lib/i18n';
 
-	let { form, data }: { form: ActionData; data: { googleEnabled: boolean } } = $props();
+	let { form, data }: { form: ActionData; data: { googleEnabled: boolean; sitzungAktiv?: boolean } } = $props();
 	const registered = $derived($page.url.searchParams.get('registered') === '1');
 	// Issue #1006 — Sitzung abgelaufen (zentraler 401-Redirect aus api.ts).
 	const sessionExpired = $derived($page.url.searchParams.get('expired') === '1');
@@ -67,8 +67,11 @@
 	// scheitert eine Speicher-Schnittstelle, bliebe der Rest sonst fuer immer
 	// stehen -- ein spaeterer Aufruf der Anmeldeseite waere nach AC-12
 	// zurecht kein Abmelde-Vorgang mehr und duerfte nichts nachholen.
+	//
+	// Issue #2961: das Merkmal in der Adresse zaehlt nur, wenn der Server keine
+	// gueltige Sitzung mehr sieht -- ein fremder Verweis leert sonst nichts.
 	onMount(() => {
-		if (!abmeldungLiegtVor($page.url)) return;
+		if (!abmeldungLiegtVor($page.url, data.sitzungAktiv === true)) return;
 		void raeumeGeraetespeicher()
 			.then((gelungen) => {
 				if (gelungen) vergissAbmeldung();
