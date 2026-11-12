@@ -725,13 +725,15 @@ func ResetPasswordHandler(s *store.Store, bcryptCost int) http.HandlerFunc {
 			return
 		}
 
-		if time.Now().After(resetToken.ExpiresAt) {
-			WriteError(w, r, http.StatusBadRequest, "token_expired", nil)
+		// Issue #2961: erst vergleichen, dann den Ablauf melden — sonst
+		// verriete "abgelaufen" ohne gueltiges Token, dass ein Reset laeuft.
+		if err := bcrypt.CompareHashAndPassword([]byte(resetToken.TokenHash), []byte(req.Token)); err != nil {
+			WriteError(w, r, http.StatusBadRequest, "invalid_token", nil)
 			return
 		}
 
-		if err := bcrypt.CompareHashAndPassword([]byte(resetToken.TokenHash), []byte(req.Token)); err != nil {
-			WriteError(w, r, http.StatusBadRequest, "invalid_token", nil)
+		if time.Now().After(resetToken.ExpiresAt) {
+			WriteError(w, r, http.StatusBadRequest, "token_expired", nil)
 			return
 		}
 
@@ -797,10 +799,7 @@ func VerifyEmailHandler(s *store.Store) http.HandlerFunc {
 			WriteError(w, r, http.StatusBadRequest, "invalid_token", nil)
 			return
 		}
-		if time.Now().After(vt.ExpiresAt) {
-			WriteError(w, r, http.StatusBadRequest, "token_expired", nil)
-			return
-		}
+		// Issue #2961: Ablauf erst NACH dem Vergleich melden (siehe Reset).
 		if err := bcrypt.CompareHashAndPassword([]byte(vt.TokenHash), []byte(req.Token)); err != nil {
 			// Issue #2147 Scheibe B2 (AC-3): es gibt nur EIN Token je Konto —
 			// ein zweiter Adresswechsel ueberschreibt das erste, dessen Hash
@@ -812,6 +811,10 @@ func VerifyEmailHandler(s *store.Store) http.HandlerFunc {
 				return
 			}
 			WriteError(w, r, http.StatusBadRequest, "invalid_token", nil)
+			return
+		}
+		if time.Now().After(vt.ExpiresAt) {
+			WriteError(w, r, http.StatusBadRequest, "token_expired", nil)
 			return
 		}
 
