@@ -61,12 +61,12 @@ def test_python_muster_folgt_der_geteilten_wahrheitstabelle():
     invalid, valid = _lade_falltabelle()
 
     for entity_id in invalid:
-        assert not VALID_ENTITY_ID_RE.match(entity_id), (
+        assert not VALID_ENTITY_ID_RE.fullmatch(entity_id), (
             f"VALID_ENTITY_ID_RE akzeptiert unsicheres Segment {entity_id!r} — "
             "die Go-Seite lehnt es laut geteilter Wahrheitstabelle ab."
         )
     for entity_id in valid:
-        assert VALID_ENTITY_ID_RE.match(entity_id), (
+        assert VALID_ENTITY_ID_RE.fullmatch(entity_id), (
             f"VALID_ENTITY_ID_RE lehnt gueltiges Unicode-Segment {entity_id!r} "
             "ab — die Go-Seite laesst es laut geteilter Wahrheitstabelle zu."
         )
