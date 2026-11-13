@@ -37,11 +37,13 @@ test.describe('Issue #302 — Trip-Detail-Seite Redesign', () => {
 		await expect(h1).toContainText('E2E Cockpit Test Trip');
 	});
 
-	test('AC-2: Statuszeile zeigt km und Höhenmeter (data-testid="trip-detail-meta")', async ({ page }) => {
+	// #2913 c2: Meta-Zeile des Mockups „Datum · N Etappen · km · ↑m" (testid hub-kopf-meta, vormals trip-detail-meta).
+	test('AC-2: Meta-Zeile zeigt km und Höhenmeter (data-testid="hub-kopf-meta")', async ({ page }) => {
 		await page.goto(`/trips/${TRIP_ID}`);
-		const meta = page.getByTestId('trip-detail-meta');
+		const meta = page.getByTestId('hub-kopf-meta');
 		await expect(meta).toBeVisible();
 		await expect(meta).toContainText('km');
+		await expect(meta).toContainText('↑');
 	});
 
 	// Fix-Loop 2026-07-13 (F002): Test-Briefing ist heute ein Dropdown-Toggle
@@ -53,7 +55,7 @@ test.describe('Issue #302 — Trip-Detail-Seite Redesign', () => {
 		await page.goto(`/trips/${TRIP_ID}`);
 		const btn = page.getByTestId('subscription-hub-send');
 		await expect(btn).toBeVisible();
-		await expect(btn).toContainText('Senden');
+		await expect(btn).toContainText('Test schicken'); // #2913 c2: Beschriftung „Test schicken ▾"
 		await expect(page.getByTestId('subscription-kebab')).toBeVisible();
 	});
 

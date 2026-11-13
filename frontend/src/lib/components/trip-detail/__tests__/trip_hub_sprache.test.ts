@@ -406,7 +406,11 @@ describe('Anker: jeder F9-Katalogwert ist als festes de/en-Literal verankert', (
 		// traegt bewusst denselben Wortlaut wie der Reiter `aktionen.reiter.wetter` (eine Bezeichnung,
 		// kein zweiter Begriff); der Schluessel bleibt, weil Menue und Reiter-Definition ihn fuehren.
 		assert.equal(kat['aktionen.weather'], kat['aktionen.reiter.wetter'], 'Ausnahme nur, solange beide gleich lauten');
-		const AUSNAHME = new Set(['aktionen.weather']);
+		// Zweite begruendete Ausnahme (#2913 c2, Spec feat_2913_c2_seitenkopf.md): der Brotkrumen-
+		// Elternteil `aktionen.kopf.eltern_orte` (Liste aller Vergleiche) lautet laut Mockup wie der
+		// Reiter `aktionen.reiter.orte` (Orte EINES Vergleichs) — zwei Stellen, ein Wortlaut.
+		assert.equal(kat['aktionen.kopf.eltern_orte'], kat['aktionen.reiter.orte'], 'Ausnahme nur, solange beide gleich lauten');
+		const AUSNAHME = new Set(['aktionen.weather', 'aktionen.kopf.eltern_orte']);
 		const werte = Object.entries(kat).filter(([k]) => !k.endsWith('.one') && !k.endsWith('.other') && !AUSNAHME.has(k)).map(([, v]) => v);
 		assert.equal(new Set(werte).size, werte.length, werte.join(' | '));
 	});

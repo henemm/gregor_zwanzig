@@ -57,9 +57,10 @@ const NEU_FREIGEGEBEN = new Set([
 ]);
 // #2913 Scheibe (c) Fix-Loop 2 (Bildprüfer Runde 1, Befund 1): Label wie im Mockup mit Doppelpunkt. Bewusst geändert,
 // mit genau dem erwarteten neuen Wert — jede andere Änderung bleibt rot.
+// #2913 Scheibe c2 (Spec feat_2913_c2_seitenkopf.md AC-8): Rücksetz-Text mit den Anführungszeichen des Mockups.
 const GEAENDERT_FREIGEGEBEN: Record<string, Record<string, string>> = {
-	de: { 'wetter.nicht_im_briefing.titel': 'Nicht im Briefing:' },
-	en: { 'wetter.nicht_im_briefing.titel': 'Not in the briefing:' }
+	de: { 'wetter.nicht_im_briefing.titel': 'Nicht im Briefing:', 'wetter.vorlage.zuruecksetzen': 'Auf „{vorlage}“ zurücksetzen' },
+	en: { 'wetter.nicht_im_briefing.titel': 'Not in the briefing:', 'wetter.vorlage.zuruecksetzen': 'Reset to “{vorlage}”' }
 };
 
 describe('AC-21: wetter.json DE/EN — Bestandstexte unverändert gegenüber dem Abzweigpunkt von origin/main', () => {

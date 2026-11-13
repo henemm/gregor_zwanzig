@@ -13,6 +13,7 @@
 	//   des sichtbaren Bandbereichs (scrollIntoView inline:start, 12px Padding).
 	// - WAI-ARIA: role=tablist/tab, aria-selected, roving tabindex (nur der
 	//   aktive Tab tabindex=0), ←/→ aktiviert den Folge-Tab inkl. Fokus.
+	//   #2913 c2 (Mockup): der aktive Reiter trägt zusätzlich aria-current="page".
 	// - Mobile (<900px): horizontales Band + 16px-Fade + Scroll-Snap,
 	//   Trigger min-height 44px, Pill-Optik, Badges neutral.
 	// - Desktop (>=900px): ADR-0111 Punkt 1 (= ADR-0109 Punkt 7, Mockup Fassung 3):
@@ -91,6 +92,7 @@
 			data-active={isActive ? 'true' : 'false'}
 			data-state={isActive ? 'active' : 'inactive'}
 			aria-selected={isActive ? 'true' : 'false'}
+			aria-current={isActive ? 'page' : undefined}
 			tabindex={isActive ? 0 : -1}
 			data-testid={item.testid ?? undefined}
 			onclick={() => onChange(item.value)}

@@ -17,7 +17,7 @@
 	"wetter.vorlage.verlust.other": "Deine {count} Abweichungen von ‚{alt}‘ gehen verloren.",
 	"wetter.vorlage.bleibt": "Zustellung, Etappen und Orte bleiben unverändert.",
 	"wetter.vorlage.uebernehmen": "Übernehmen",
-	"wetter.vorlage.zuruecksetzen": "Auf ‚{vorlage}‘ zurücksetzen",
+	"wetter.vorlage.zuruecksetzen": "Auf „{vorlage}“ zurücksetzen",
 	"wetter.vorlage.speichern": "Als eigene Vorlage speichern",
 	"wetter.alarm_ab.fuer_alle": "Alarm ab für alle",
 	"wetter.alarm_ab.zaehler": "{ausloesend} von {alarmfaehig} Metriken lösen einen Alarm aus. {ohne} können keinen auslösen (Vorboten und reine Anzeige).",

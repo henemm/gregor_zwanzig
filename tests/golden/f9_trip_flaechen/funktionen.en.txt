@@ -22,7 +22,7 @@ subscriptionActions(vergleich,paused,mobile) → [{"id":"resume","label":"Resume
 subscriptionActions(vergleich,archived,list) → [{"id":"unarchive","label":"Reactivate"},{"id":"delete","label":"Delete","danger":true}]
 subscriptionActions(vergleich,archived,hub) → [{"id":"unarchive","label":"Reactivate"},{"id":"delete","label":"Delete","danger":true}]
 subscriptionActions(vergleich,archived,mobile) → [{"id":"unarchive","label":"Reactivate"},{"id":"delete","label":"Delete","danger":true}]
-subscriptionTabs(trip) → [{"id":"uebersicht","label":"Overview"},{"id":"etappen","label":"Stages & waypoints"},{"id":"wetter","label":"Weather"},{"id":"zustellung","label":"Delivery"}]
+subscriptionTabs(trip) → [{"id":"uebersicht","label":"Overview"},{"id":"etappen","label":"Stages"},{"id":"wetter","label":"Weather"},{"id":"zustellung","label":"Delivery"}]
 anlegeKette(trip) → [{"id":"route","label":"Route"},{"id":"etappen","label":"Stages & GPX","lockHint":"trip name + start date first"},{"id":"wegpunkte","label":"Check waypoints","lockHint":"upload all GPX files first","optional":true},{"id":"wetter","label":"Weather","lockHint":"upload all GPX files first"},{"id":"zustellung","label":"Delivery","lockHint":"open Weather first"}]
 subscriptionTabs(vergleich) → [{"id":"uebersicht","label":"Overview"},{"id":"orte","label":"Locations"},{"id":"wetter","label":"Weather"},{"id":"zustellung","label":"Delivery"}]
 anlegeKette(vergleich) → [{"id":"vergleich","label":"Comparison"},{"id":"orte","label":"Locations","lockHint":"name the comparison first"},{"id":"wetter","label":"Weather","lockHint":"select at least 2 locations first"},{"id":"zustellung","label":"Delivery","lockHint":"open Weather first"}]

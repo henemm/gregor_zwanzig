@@ -21,19 +21,14 @@ const PAUSED_TRIP_ID = 'e2e-336-paused';
 test.describe('Issue #336 — Status-Dedup im Trip-Kopf', () => {
 	test.use({ storageState: 'playwright/.auth/admin.json' });
 
-	// AC-1: Zusatztext lebt im getesteten Supplement-Span, ohne Versalien-Präfix.
-	test('AC-1: Supplement zeigt Zusatz ("läuft seit") ohne "AKTIV"-Präfix', async ({ page }) => {
-		/**
-		 * GIVEN: aktive Trip wird geöffnet
-		 * WHEN: die Status-Zeile gerendert wird
-		 * THEN: [data-testid="trip-detail-status-supplement"] enthält den Zusatz
-		 *       und NICHT das Versalien-Präfix "AKTIV"
-		 */
+	// AC-1 — UMGEDREHT durch #2913 c2 (Spec feat_2913_c2_seitenkopf.md, Mockup renderHead): neben
+	// der Pill steht kein Zusatz („läuft seit …") mehr; der Zeitraum steht in der Meta-Zeile.
+	test('AC-1 (#2913 c2): kein Zusatz neben der Pill, kein "AKTIV"-Präfix; Zeitraum in der Meta-Zeile', async ({ page }) => {
 		await page.goto(`/trips/${ACTIVE_TRIP_ID}`);
-		const supplement = page.getByTestId('trip-detail-status-supplement');
-		await expect(supplement).toBeVisible();
-		await expect(supplement).toContainText('läuft seit');
-		await expect(supplement).not.toContainText('AKTIV');
+		await expect(page.getByTestId('trip-detail-status-badge')).toBeVisible();
+		await expect(page.getByTestId('trip-detail-status-supplement')).toHaveCount(0);
+		await expect(page.locator('header.trip-header')).not.toContainText('läuft seit');
+		await expect(page.getByTestId('hub-kopf-meta')).toContainText('Etappen');
 	});
 
 	// AC-2: Status erscheint genau einmal — Pill bleibt, Versalien-Präfix ist weg.
@@ -59,16 +54,17 @@ test.describe('Issue #336 — Status-Dedup im Trip-Kopf', () => {
 	// als Badge IN DER TITELZEILE neben dem Namen, „Tag x von y" daneben; eine eigene
 	// Statuszeile gibt es nicht mehr. Gemessen am Desktop (1440 px): die senkrechte Mitte von
 	// Badge und Zusatz liegt innerhalb der Überschrift-Box.
-	test('AC-5 (#2837 S1): Status genau einmal, als Badge in der Titelzeile; Zusatz daneben; keine Statuszeile', async ({ page }) => {
+	// #2913 c2: der Zusatz neben dem Badge entfällt (Mockup) — geprüft wird nur noch das Badge.
+	test('AC-5 (#2837 S1): Status genau einmal, als Badge in der Titelzeile; keine Statuszeile', async ({ page }) => {
 		await page.setViewportSize({ width: 1440, height: 900 });
 		await page.goto(`/trips/${ACTIVE_TRIP_ID}`);
 		const h1 = page.getByTestId('trip-detail-h1');
 		await expect(h1).toBeVisible();
 		const badge = page.getByTestId('trip-detail-status-badge');
 		await expect(badge).toHaveCount(1);
-		await expect(page.getByTestId('trip-detail-status-supplement')).toHaveCount(1);
+		await expect(page.getByTestId('trip-detail-status-supplement')).toHaveCount(0);
 		const titel = (await h1.boundingBox())!;
-		for (const [name, loc] of [['Badge', badge], ['Zusatz', page.getByTestId('trip-detail-status-supplement')]] as const) {
+		for (const [name, loc] of [['Badge', badge]] as const) {
 			const box = (await loc.boundingBox())!;
 			const mitte = box.y + box.height / 2;
 			expect(mitte, `${name} steht nicht in der Titelzeile (eigene Statuszeile?)`).toBeGreaterThanOrEqual(titel.y);
@@ -77,26 +73,17 @@ test.describe('Issue #336 — Status-Dedup im Trip-Kopf', () => {
 		await expect(page.locator('.status-line'), 'eigene Statuszeile existiert noch').toHaveCount(0);
 	});
 
-	// AC-4: Zusatz ist gedämpfter Sekundärtext (--g-ink-muted), nicht Status-Accent.
-	test('AC-4: Supplement nutzt gedämpfte Sekundärfarbe (= .meta-line)', async ({ page }) => {
-		/**
-		 * GIVEN: der Trip-Kopf wird gerendert
-		 * WHEN: der Zusatz-Span dargestellt wird
-		 * THEN: dessen color entspricht --g-ink-muted (gleiche Farbe wie die
-		 *       bereits gedämpfte Meta-Zeile), nicht der Accent-Statusfarbe
-		 */
+	// AC-4 — umgehängt durch #2913 c2: der Zusatz-Span entfällt; die Meta-Zeile (hub-kopf-meta) ist
+	// gedämpfter Sekundärtext, nicht die Farbe der Status-Pill.
+	test('AC-4 (#2913 c2): Meta-Zeile ist gedämpfter Sekundärtext, nicht Status-Farbe', async ({ page }) => {
 		await page.goto(`/trips/${ACTIVE_TRIP_ID}`);
-		const supplement = page.getByTestId('trip-detail-status-supplement');
-		await expect(supplement).toBeVisible();
-
-		const supplementColor = await supplement.evaluate(
-			(el) => window.getComputedStyle(el).color
-		);
-		const metaColor = await page
-			.getByTestId('trip-detail-meta')
-			.evaluate((el) => window.getComputedStyle(el).color);
-
-		expect(supplementColor).toBe(metaColor);
+		const meta = page.getByTestId('hub-kopf-meta');
+		await expect(meta).toBeVisible();
+		const metaColor = await meta.evaluate((el) => window.getComputedStyle(el).color);
+		const badgeColor = await page.getByTestId('trip-detail-status-badge').evaluate((el) => window.getComputedStyle(el).color);
+		const h1Color = await page.getByTestId('trip-detail-h1').evaluate((el) => window.getComputedStyle(el).color);
+		expect(metaColor, 'Meta-Zeile in Status-Farbe').not.toBe(badgeColor);
+		expect(metaColor, 'Meta-Zeile so kräftig wie der Titel').not.toBe(h1Color);
 	});
 
 	// AC-3: Regressions-Guard — Pill bleibt bei pausierter Trip sichtbar/korrekt.

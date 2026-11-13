@@ -130,29 +130,31 @@ describe('#699 AC-1: keine zweite Breadcrumb im Trip-Kopf', () => {
 	});
 });
 
-describe('#699 AC-3-follow-up: Meta-Zeile zeigt nur Strecke und Höhenmeter, kein Datum', () => {
-	test('trip-detail-meta zeigt km und Hm, aber keinen Datumsbereich', async () => {
-		const meta = elementText(await html(trip()), 'trip-detail-meta');
+// #2913 Scheibe c2 (docs/specs/modules/feat_2913_c2_seitenkopf.md, AC-3) kehrt die #2284-S2-Aufteilung
+// nach dem freigegebenen Mockup um: Eyebrow „Trip · Region", der Datumsbereich wandert in die
+// Meta-Zeile „Datum · N Etappen · km · ↑m" (testid hub-kopf-meta statt trip-detail-meta).
+describe('#699 AC-3-follow-up / #2913 c2: Meta-Zeile zeigt Datum, Etappen, Strecke und Höhenmeter', () => {
+	test('hub-kopf-meta zeigt Datumsbereich, Etappen, km und Hm', async () => {
+		const meta = elementText(await html(trip()), 'hub-kopf-meta');
+		assert.ok(meta.startsWith(DATUM), `Datumsbereich fehlt am Anfang der Meta-Zeile: ${meta}`);
+		assert.match(meta, / · 2 Etappen · /, `Etappenzahl fehlt: ${meta}`);
 		assert.match(meta, /\bkm\b/, `km fehlt: ${meta}`);
 		assert.match(meta, /↑\s*\S+\s*m\b/, `Hm fehlt: ${meta}`);
-		assert.ok(!meta.includes('Oktober') && !/\d{1,2}\.\d{1,2}\./.test(meta), `Datum in der Meta-Zeile: ${meta}`);
+	});
+	test('kein altes trip-detail-meta mehr (genau eine Meta-Zeile)', async () => {
+		assert.ok(!(await html(trip())).includes('data-testid="trip-detail-meta"'), 'alte Meta-Zeile steht noch im Kopf');
 	});
 });
 
-describe('#699 / #2284 S2 AC-2: Eyebrow nur Datumsbereich, Region in eigener Zeile', () => {
-	test('Eyebrow (Text vor der Überschrift) zeigt den Datumsbereich', async () => {
-		const eyebrow = vorH1(await html(trip()));
-		assert.ok(eyebrow.includes(DATUM), `Datumsbereich fehlt in der Eyebrow: „${eyebrow}"`);
+describe('#699 / #2913 c2 AC-3: Eyebrow „Trip · Region", Region bleibt in eigener (bearbeitbarer) Zeile', () => {
+	// Rest der #2284-S2-Aussage: die Region-Zeile mit Stift bleibt (AC-9, Name/Region inline bearbeitbar).
+	test('Eyebrow (Text vor der Überschrift) ist „Trip · Region"', async () => {
+		assert.equal(vorH1(await html(trip())), 'Trip · Karnische Alpen');
 	});
 
-	test('Eyebrow beginnt nicht mit „Trip ·"', async () => {
-		assert.ok(!/^Trip\s*·/.test(vorH1(await html(trip()))));
-	});
-
-	test('Eyebrow zeigt NUR den Datumsbereich — keine Region, kein Trenner', async () => {
+	test('Eyebrow enthält keinen Datumsbereich mehr', async () => {
 		const eyebrow = vorH1(await html(trip()));
-		assert.ok(!eyebrow.includes('Karnische Alpen'), `Region steht noch in der Eyebrow: „${eyebrow}"`);
-		assert.equal(eyebrow, DATUM, `Eyebrow ist nicht genau der Datumsbereich: „${eyebrow}"`);
+		assert.ok(!eyebrow.includes(DATUM), `Datumsbereich steht noch in der Eyebrow: „${eyebrow}"`);
 	});
 
 	// #2837 S1 (ADR-0110): die eigene Statuszeile entfällt — Status und „Tag x von y" stehen in der
@@ -166,18 +168,16 @@ describe('#699 / #2284 S2 AC-2: Eyebrow nur Datumsbereich, Region in eigener Zei
 		assert.ok(nachH1.includes('data-testid="trip-region-edit-toggle"'), 'Region-Stift fehlt unter dem Namen');
 		assert.ok(text(bisStift).includes('Karnische Alpen'), `Region fehlt zwischen Name und Region-Stift: „${text(bisStift)}"`);
 		assert.ok(!b.includes('class="status-line'), 'die eigene Statuszeile (.status-line) steht noch im Kopf');
-		assert.equal(text(b).split('Karnische Alpen').length - 1, 1, 'Region steht nicht genau einmal im Kopf');
+		// #2913 c2: Eyebrow und Region-Zeile — sonst nirgends (z. B. nicht in der Meta-Zeile).
+		assert.equal(text(b).split('Karnische Alpen').length - 1, 2, 'Region steht nicht genau in Eyebrow und Region-Zeile');
 	});
 
-	test('Trip ohne Region: Eyebrow bleibt der Datumsbereich, kein verwaistes „·"', async () => {
-		const eyebrow = vorH1(await html(trip({ region: undefined })));
-		assert.equal(eyebrow, DATUM);
+	test('Trip ohne Region: Eyebrow nur „Trip", kein verwaistes „·"', async () => {
+		assert.equal(vorH1(await html(trip({ region: undefined }))), 'Trip');
 	});
 
-	test('Trip ohne Etappendaten: kein verwaistes „·" vor der Überschrift', async () => {
+	test('Trip ohne Etappendaten: Eyebrow unverändert „Trip · Region", kein Datum vor der Überschrift', async () => {
 		const ohneDaten = trip({ stages: [{ id: 'T1', name: 'E1', waypoints: [] }] });
-		const eyebrow = vorH1(await html(ohneDaten));
-		assert.ok(!eyebrow.includes('·'), `verwaister Trenner in der Eyebrow: „${eyebrow}"`);
-		assert.ok(!eyebrow.includes('Karnische Alpen'), `Region in der Eyebrow: „${eyebrow}"`);
+		assert.equal(vorH1(await html(ohneDaten)), 'Trip · Karnische Alpen');
 	});
 });

@@ -17,7 +17,7 @@
 	"wetter.vorlage.verlust.other": "Your {count} changes from ‘{alt}’ will be lost.",
 	"wetter.vorlage.bleibt": "Delivery, stages and locations stay unchanged.",
 	"wetter.vorlage.uebernehmen": "Use template",
-	"wetter.vorlage.zuruecksetzen": "Reset to ‘{vorlage}’",
+	"wetter.vorlage.zuruecksetzen": "Reset to “{vorlage}”",
 	"wetter.vorlage.speichern": "Save as your own template",
 	"wetter.alarm_ab.fuer_alle": "Alert from for all",
 	"wetter.alarm_ab.zaehler": "{ausloesend} of {alarmfaehig} metrics trigger an alert. {ohne} cannot trigger one (precursors and display only).",

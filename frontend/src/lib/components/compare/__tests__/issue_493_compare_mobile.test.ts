@@ -131,14 +131,18 @@ describe('AC-3: ⋯-Button öffnet Bottom-Sheet auf /compare/[id]', () => {
 // ── AC-4: /compare/[id] mobiles Layout ───────────────────────────────────────
 
 describe('AC-4: /compare/[id]/+page.svelte hat mobilen Render-Pfad', () => {
-	test('/compare/[id]/+page.svelte hat desktop:hidden-Block für mobiles Layout', () => {
+	// Umgehängt durch #2913 c2: der letzte desktop:hidden-Block der Seite (mobile Orte-Anzahl im Kopf)
+	// entfällt — die Meta-Zeile ist für beide Breiten dieselbe (HubKopf). Der mobile Render-Pfad der
+	// Seite ist die Umschaltung `mobil` per matchMedia (Aktionsblatt statt Dropdown, #2278 AC-12).
+	test('/compare/[id]/+page.svelte hat einen mobilen Render-Pfad (matchMedia ≤899 px → mobil)', () => {
 		assert.ok(existsSync(DETAIL_PAGE), '/compare/[id]/+page.svelte fehlt');
 		const src = readFileSync(DETAIL_PAGE, 'utf-8');
 		assert.match(
 			src,
-			/desktop:hidden/,
-			'/compare/[id]/+page.svelte hat keinen desktop:hidden-Block — mobiler Render-Pfad fehlt'
+			/matchMedia\('\(max-width: 899px\)'\)/,
+			'/compare/[id]/+page.svelte schaltet nicht auf mobil um — mobiler Render-Pfad fehlt'
 		);
+		assert.match(src, /\{mobil\}/, '/compare/[id]/+page.svelte reicht `mobil` nicht an den HubKopf');
 	});
 
 	// Issue #1256 Scheibe 8 (AC-22, Ein-Mount-Strategie): der Bespoke-2×2-Grid

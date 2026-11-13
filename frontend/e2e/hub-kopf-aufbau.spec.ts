@@ -89,9 +89,9 @@ function kopfIds(kind: HubKind): string[] {
 	return [`${kopf}-name-edit-toggle`, `${kopf}-region-edit-toggle`, ...PROFIL_WERTE[kind].map((v) => `${kopf}-profil-option-${v}`)];
 }
 
-/** Vergleich-Unterzeile „Wandern · 2 Orte“ (Profil-Label + Orte-Anzahl, compare-eigen). */
+/** Vergleich-Meta-Zeile seit #2913 c2 (AC-4): „2 Orte · Vergleichstabelle[ · Briefing HH:MM]“ (vorher „Wandern · 2 Orte“). */
 function vergleichUnterzeile(page: Page) {
-	return page.getByText(/Wandern\s*·\s*2 Orte/).filter({ visible: true }).first();
+	return page.getByText(/2 Orte\s*·\s*Vergleichstabelle|Wandern\s*·\s*2 Orte/).filter({ visible: true }).first();
 }
 
 /** Region-Text in der Region-Zeile (Elternelement des Stifts), für beide kinds. */
@@ -100,23 +100,18 @@ function regionText(page: Page) {
 }
 
 /**
- * Orte-Anzahl des Vergleichs-Rahmens: je Viewport eine eigene testid, jede genau
- * einmal im DOM; die frühere gemeinsame testid existiert nicht mehr.
+ * Orte-Anzahl des Vergleichs-Rahmens. #2913 c2 (Mockup): EINE Meta-Zeile `hub-kopf-meta`
+ * „N Orte · Vergleichstabelle · …" für beide Breiten (Zähler = gespeicherte IDs); die früheren
+ * Viewport-Spans existieren nicht mehr.
  * Compare-eigen (siehe Kopfkommentar) — wird nur im Zweig `vergleich` aufgerufen.
  */
-async function pruefeOrteAnzahlSpans(page: Page, viewport: 'desktop' | 'mobil'): Promise<void> {
-	expect(await page.locator('[data-testid="compare-hub-orte-anzahl"]').count(), 'alte gemeinsame testid').toBe(0);
-	const orteDesktop = page.locator('[data-testid="compare-hub-orte-anzahl-desktop"]');
-	const orteMobil = page.locator('[data-testid="compare-hub-orte-anzahl-mobil"]');
-	expect(await orteDesktop.count(), 'compare-hub-orte-anzahl-desktop: Anzahl im DOM').toBe(1);
-	expect(await orteMobil.count(), 'compare-hub-orte-anzahl-mobil: Anzahl im DOM').toBe(1);
-	if (viewport === 'desktop') {
-		await expect(orteDesktop).toBeVisible();
-		await expect(orteMobil).toBeHidden();
-	} else {
-		await expect(orteMobil).toBeVisible();
-		await expect(orteDesktop).toBeHidden();
-	}
+async function pruefeOrteAnzahlSpans(page: Page, _viewport: 'desktop' | 'mobil'): Promise<void> {
+	for (const alt of ['compare-hub-orte-anzahl', 'compare-hub-orte-anzahl-desktop', 'compare-hub-orte-anzahl-mobil'])
+		expect(await page.locator(`[data-testid="${alt}"]`).count(), `alte testid ${alt}`).toBe(0);
+	const meta = page.getByTestId('hub-kopf-meta');
+	expect(await meta.count(), 'hub-kopf-meta: Anzahl im DOM').toBe(1);
+	await expect(meta).toBeVisible();
+	await expect(meta).toHaveText(/^\d+ Orte? · Vergleichstabelle\b/);
 }
 
 /** Bearbeiten-Modus: Eingabe und Speichern-Knopf ebenfalls genau einmal im DOM. */
@@ -448,7 +443,8 @@ for (const kind of HUB_KINDS) {
 // Katalog-Wortlaut im geteilten Breadcrumb des HubKopf — für beide Arten derselbe Ort.
 const KRUEMEL: Record<HubKind, (page: Page) => ReturnType<Page['locator']>> = {
 	route: (page) => page.getByTestId(HUB_KOPF_SEL.breadcrumb).getByRole('link', { name: 'Trips', exact: true }),
-	vergleich: (page) => page.getByTestId(HUB_KOPF_SEL.breadcrumb).getByRole('link', { name: /^Orts-Vergleiche$/i })
+	// #2913 c2 (Mockup): Elternteil „Orte" statt „Orts-Vergleiche".
+	vergleich: (page) => page.getByTestId(HUB_KOPF_SEL.breadcrumb).getByRole('link', { name: /^Orte$/i })
 };
 
 for (const kind of HUB_KINDS) {
@@ -512,7 +508,9 @@ test.describe('KA-6..KA-9 (vergleich, compare-eigen)', () => {
 	// #2837 S1 (ADR-0110, Entscheidung 4) — UMGEDREHT: Breadcrumb „Orts-Vergleiche / <Name>“
 	// statt „ORTS-VERGLEICHE / Hub“; genau zwei Krümel bleiben, das Kind ist der
 	// Vergleichsname und kein Link, „Hub“ kommt im Kopf nicht mehr vor.
-	test('KA-7 (vergleich): Desktop — keine Eyebrow, Breadcrumb „Orts-Vergleiche / <Name>“, Unterzeile mit Profil', async ({
+	// #2913 c2: Elternteil „Orte" (Mockup); die alte Eyebrow „Orts-Vergleich · Hub" bleibt weg,
+	// die neue Eyebrow „Orte · Region" prüft hub-kopf-c2-mockup.staging.spec.ts.
+	test('KA-7 (vergleich): Desktop — keine alte Eyebrow „Orts-Vergleich · Hub“, Breadcrumb „Orte / <Name>“, Unterzeile mit Profil', async ({
 		page
 	}) => {
 		await page.setViewportSize(DESKTOP);
@@ -526,10 +524,10 @@ test.describe('KA-6..KA-9 (vergleich, compare-eigen)', () => {
 			await expect(krumen.getByText('Hub', { exact: true }), 'KA-7: Krümel „Hub“ steht noch').toHaveCount(0);
 			await expect(page.getByTestId(HUB_KOPF_SEL.leiste).getByText('Hub', { exact: true })).toHaveCount(0);
 			// #2347 S4, Rumpf-Abgleich compare-hub-fidelity-s8c AC-10: genau ZWEI Krümel —
-			// ein Link „Orts-Vergleiche", kein app-weiter Extra-Krümel „WORKSPACE".
+			// ein Link „Orte", kein app-weiter Extra-Krümel „WORKSPACE".
 			const kruemel = krumen.locator('a:visible');
 			await expect(kruemel, 'KA-7: Breadcrumb hat nicht genau einen Link-Krümel').toHaveCount(1);
-			await expect(kruemel).toHaveText('Orts-Vergleiche');
+			await expect(kruemel).toHaveText('Orte');
 			await expect(krumen).toContainText(name);
 			await expect(kruemel, 'KA-7: der Vergleichsname ist Teil des Links').not.toContainText(name);
 			await expect(page.getByText('WORKSPACE', { exact: true }), 'KA-7: Extra-Krümel „WORKSPACE"').toHaveCount(0);
@@ -539,7 +537,9 @@ test.describe('KA-6..KA-9 (vergleich, compare-eigen)', () => {
 		}
 	});
 
-	test('KA-8 (vergleich): Orte-Anzahl — Desktop zählt gespeicherte IDs, Mobil aufgelöste Orte (Singular)', async ({
+	// #2913 c2 (Mockup, Vertrag hub_kopf_c2_mockup.test.ts): EINE Meta-Zeile für beide Breiten,
+	// Zähler = gespeicherte IDs (location_ids.length) — vormals Mobil = aufgelöste Orte.
+	test('KA-8 (vergleich): Orte-Anzahl — Desktop und Mobil zählen die gespeicherten IDs', async ({
 		page
 	}) => {
 		// Zustand „gespeicherte ID ohne aufgelösten Ort": Ein vom Vergleich
@@ -557,34 +557,27 @@ test.describe('KA-6..KA-9 (vergleich, compare-eigen)', () => {
 				'Messaufbau: der Vergleich behält beide IDs'
 			).toBe(2);
 
-			const desktop = page.locator('[data-testid="compare-hub-orte-anzahl-desktop"]');
-			const mobil = page.locator('[data-testid="compare-hub-orte-anzahl-mobil"]');
-			for (const [viewport, sichtbar, verborgen, soll] of [
-				[DESKTOP, desktop, mobil, /^\s*·\s*2 Orte\s*$/],
-				[MOBIL, mobil, desktop, /^\s*·\s*1 Ort\s*$/]
-			] as const) {
+			const meta = page.getByTestId('hub-kopf-meta');
+			for (const viewport of [DESKTOP, MOBIL]) {
 				await page.setViewportSize(viewport);
 				await openHub(page, kind, hub.id);
-				expect(await desktop.count(), 'Desktop-Span genau 1 im DOM').toBe(1);
-				expect(await mobil.count(), 'Mobil-Span genau 1 im DOM').toBe(1);
-				await expect(verborgen).toBeHidden();
-				await expect(sichtbar).toBeVisible();
-				await expect(sichtbar).toHaveText(soll);
+				expect(await meta.count(), 'Meta-Zeile genau 1 im DOM').toBe(1);
+				await expect(meta).toBeVisible();
+				await expect(meta).toHaveText(/^2 Orte · Vergleichstabelle\b/);
 			}
 		} finally {
 			await hub?.aufraeumen();
 		}
 	});
 
-	test('KA-9 (vergleich): Orte-Anzahl Desktop-Singular — Vergleich mit 1 Ort zeigt „· 1 Ort“', async ({ page }) => {
+	test('KA-9 (vergleich): Orte-Anzahl Desktop-Singular — Vergleich mit 1 Ort zeigt „1 Ort · …“', async ({ page }) => {
 		await page.setViewportSize(DESKTOP);
 		const hub = await seedKopf(page, kind, { location_ids: ['e2e-loc-innsbruck'] });
 		try {
 			await openHub(page, kind, hub.id);
-			const sichtbar = page.locator('[data-testid="compare-hub-orte-anzahl-desktop"]');
+			const sichtbar = page.getByTestId('hub-kopf-meta');
 			await expect(sichtbar).toBeVisible();
-			await expect(page.locator('[data-testid="compare-hub-orte-anzahl-mobil"]')).toBeHidden();
-			await expect(sichtbar).toHaveText(/^\s*·\s*1 Ort\s*$/);
+			await expect(sichtbar).toHaveText(/^1 Ort · Vergleichstabelle\b/);
 		} finally {
 			await hub.aufraeumen();
 		}

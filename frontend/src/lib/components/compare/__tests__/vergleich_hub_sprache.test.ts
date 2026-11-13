@@ -102,7 +102,7 @@ describe('AC-6: Deutsch byte-gleich zum Ist-Stand vor der Umstellung (Golden gol
 	test('Messaufbau: jeder deutsche Anker-Text (Festteile) steht im Golden oder in der Funktionstabelle', () => {
 		const alle = leerraum([...Object.keys(FAELLE).map((f) => `${f}.de.html`), 'funktionen.de.txt'].map((f) => readFileSync(path.join(P.GOLDEN_DIR, f), 'utf-8')).join(' ')).replace(/&amp;/g, '&');
 		// Nicht im golden-de-Zustand erreichbar (nur Fehler-/Grenzfaelle), im Bestand je Datei nachgewiesen.
-		const UNERREICHT = new Set(['vergleich.relativ.diese_woche', 'vergleich.hub.archivieren_fehler', 'vergleich.hub.reaktivieren_fehler', 'vergleich.hub.delete_fehler', 'vergleich.hub.delete_titel', 'listen.dialog.unwiderruflich', 'vergleich.hub.nicht_gefunden', 'vergleich.orte.format_unbekannt', 'vergleich.orte.fehler_hinzufuegen', 'vergleich.gruppe.neu', 'vergleich.gruppe.beispiel', 'vergleich.gruppe.standard_profil', 'vergleich.gruppe.kein_profil', 'vergleich.gruppe.legt_an', 'vergleich.gruppe.fehler', 'vergleich.neu.bereit_titel', 'vergleich.neu.bereit_zeile.one', 'vergleich.neu.bereit_zeile.other', 'vergleich.neu.bereit_text', 'vergleich.neu.alarme_zum_aktivieren_punkt', 'vergleich.neu.tab_gesperrt', 'vergleich.neu.ort_waehlen', 'vergleich.neu.kopie', 'vergleich.relativ.wochen.one', 'vergleich.orte.manuell', 'vergleich.orte.breitengrad', 'vergleich.orte.laengengrad', 'vergleich.orte.hinzufuegen', 'vergleich.hub.test_gesendet', 'vergleich.aktivierung.aktivieren', 'vergleich.orte.viel_kurz',
+		const UNERREICHT = new Set(['vergleich.relativ.diese_woche', 'vergleich.hub.archivieren_fehler', 'vergleich.hub.reaktivieren_fehler', 'vergleich.hub.delete_fehler', 'vergleich.hub.delete_titel', 'listen.dialog.unwiderruflich', 'vergleich.hub.nicht_gefunden', 'vergleich.orte.format_unbekannt', 'vergleich.orte.fehler_hinzufuegen', 'vergleich.gruppe.neu', 'vergleich.gruppe.beispiel', 'vergleich.gruppe.standard_profil', 'vergleich.gruppe.kein_profil', 'vergleich.gruppe.legt_an', 'vergleich.gruppe.fehler', 'vergleich.neu.bereit_titel', 'vergleich.neu.bereit_zeile.one', 'vergleich.neu.bereit_zeile.other', 'vergleich.neu.bereit_text', 'vergleich.neu.alarme_zum_aktivieren_punkt', 'vergleich.neu.tab_gesperrt', 'vergleich.neu.ort_waehlen', 'vergleich.neu.kopie', 'vergleich.relativ.wochen.one', 'vergleich.orte.manuell', 'vergleich.orte.breitengrad', 'vergleich.orte.laengengrad', 'vergleich.orte.hinzufuegen', 'vergleich.hub.test_gesendet', 'aktionen.kopf.aktivieren', 'vergleich.orte.viel_kurz',
 			// #2794 Fix-Loop B4: die Karte „Wetter" zählt erst mit im Browser geladenen Vorlagen;
 			// im SSR-Golden steht „—". Die Zahl prüft shared/__tests__/s3a2794_teil4b_befunde.test.ts.
 			'vergleich.hub.wertebereiche_kurz.one', 'vergleich.hub.wertebereiche_kurz.other',
@@ -120,12 +120,14 @@ describe('AC-6: Deutsch byte-gleich zum Ist-Stand vor der Umstellung (Golden gol
 describe('AC-1: Ortsvergleich-Hub englisch, Namen unveraendert, Aktionen wie im Trip-Hub', () => {
 	test('Uebersicht und Seite: Kennzahlen, Karten, Kopf englisch (erst de, dann ohne Neuladen en)', () => {
 		const { de, en: e } = deDannEn(() => P.hubUebersichtRendern() + P.hubSeiteRendern());
-		for (const s of ['Läuft automatisch', 'Nächster Versand', 'Zuletzt raus', 'Orts-Vergleiche']) hat(sichtbar(de), s);
+		// #2913 c2 (Mockup): Brotkrumen-Elternteil „Orte", Eyebrow „Orte · Region", Meta-Zeile.
+		// Die mobile Orte-Anzahl („1 location" = aufgelöste Orte) entfällt: eine Meta-Zeile, Zähler = location_ids.
+		for (const s of ['Läuft automatisch', 'Nächster Versand', 'Zuletzt raus', 'Orte · Tirol', 'Vergleichstabelle · Morgen-Briefing 07:00']) hat(sichtbar(de), s);
 		// #2837 S1 (ADR-0110): Breadcrumb aus dem geteilten HubKopf — Elternteil im Katalog-Wortlaut,
 		// kein Krümel „Hub“, keine Mobil-Eyebrow „Orts-Vergleich · Hub“.
 		for (const alt of ['ORTS-VERGLEICHE', 'Orts-Vergleich · Hub']) hatNicht(sichtbar(de), alt);
 		const s = sichtbar(e);
-		for (const t of ['Runs automatically', 'Runs auto.', 'Draft · not active', 'Next delivery', 'Last sent', 'Channels', 'Email · Telegram', 'Morning 07:00 · Evening 18:00', '3 candidates', '1 candidate', 'Edit →', 'Delivery', 'Not scheduled yet', 'Location comparisons', 'End date passed', 'Finish setup', 'Send', 'Sending…', 'Status change failed. Please try again.', '3 locations', '1 location', 'Winter sports', '27 Oct 2026', 'No delivery yet', 'Active', 'Paused'])
+		for (const t of ['Runs automatically', 'Runs auto.', 'Draft · not active', 'Next delivery', 'Last sent', 'Channels', 'Email · Telegram', 'Morning 07:00 · Evening 18:00', '3 candidates', '1 candidate', 'Edit →', 'Delivery', 'Not scheduled yet', 'Locations · Tirol', 'Comparison table · Morning briefing 07:00', 'End date passed', 'Finish setup', 'Send test ▾', 'Sending…', 'Status change failed. Please try again.', '3 locations', 'Winter sports', '27 Oct 2026', 'No delivery yet', 'Active', 'Paused'])
 			hat(s, t);
 		for (const t of ['aria-label="More actions"', 'aria-label="Back to overview"']) hat(e, t);
 		// #2794 Fix-Loop B4: Karte „Wetter" ohne die alten Begriffe (SSR ohne Vorlagen ⇒ „—").

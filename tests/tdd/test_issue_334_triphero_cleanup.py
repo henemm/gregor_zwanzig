@@ -3,8 +3,9 @@ TDD RED: Issue #334 — Cleanup: TripHero.svelte (toter Code entfernen)
 
 Verifiziert, dass die seit dem Trip-Detail-Redesign (#302) nicht mehr
 gerenderte Komponente ``TripHero`` samt Begleit-Code entfernt ist — und
-dass der noch aktiv von ``TripHeader.svelte`` genutzte Code (Util-Funktionen
-``getDaysLabel`` + ``formatDateRange``) NICHT mit-entfernt wurde.
+dass der noch aktiv von ``TripHeader.svelte`` genutzte Code (Util-Funktion
+``formatDateRange``) NICHT mit-entfernt wurde. getDaysLabel entfernt mit #2913 c2
+(Tageszähler nicht im Mockup; Spec docs/specs/modules/feat_2913_c2_seitenkopf.md).
 
 Wichtige Namens-Unterscheidung (case-sensitiv!):
 - ``TripHero``  = die zu entfernende Svelte-Komponente (großes T, großes H, ...o)
@@ -130,12 +131,11 @@ def test_ac6_surviving_util_functions_intact():
     """
     GIVEN: tripHero.ts nach dem Cleanup
     WHEN:  nach den von TripHeader.svelte genutzten Exporten gegrept wird
-    THEN:  getDaysLabel und formatDateRange existieren weiterhin (je genau 1 export)
+    THEN:  formatDateRange existiert weiterhin (genau 1 export)
+
+    getDaysLabel entfernt mit #2913 c2 (Tageszähler nicht im Mockup) — seither kein Nutzer mehr.
     """
     content = TRIPHERO_UTILS.read_text(encoding="utf-8")
-    assert len(re.findall(r"export function getDaysLabel\b", content)) == 1, (
-        "getDaysLabel fehlt oder ist mehrfach — wird von TripHeader.svelte gebraucht!"
-    )
     assert len(re.findall(r"export function formatDateRange\b", content)) == 1, (
         "formatDateRange fehlt oder ist mehrfach — wird von TripHeader.svelte gebraucht!"
     )
@@ -147,7 +147,8 @@ def test_ac7_orphan_tests_removed_survivors_intact():
     """
     GIVEN: tripHero.test.ts nach dem Cleanup
     WHEN:  nach Referenzen auf die verwaisten Funktionen gegrept wird
-    THEN:  0 Treffer; getDaysLabel- und formatDateRange-Tests sind weiterhin vorhanden
+    THEN:  0 Treffer; die formatDateRange-Tests sind weiterhin vorhanden
+           (getDaysLabel und seine Tests entfernt mit #2913 c2, Tageszähler nicht im Mockup)
     """
     content = TRIPHERO_UTILS_TEST.read_text(encoding="utf-8")
     orphan_hits = [
@@ -158,5 +159,8 @@ def test_ac7_orphan_tests_removed_survivors_intact():
     assert orphan_hits == [], (
         "tripHero.test.ts referenziert noch verwaiste Funktionen:\n" + "\n".join(orphan_hits)
     )
-    assert "getDaysLabel" in content, "getDaysLabel-Tests fehlen — überlebende Tests dürfen NICHT entfernt werden!"
-    assert "formatDateRange" in content, "formatDateRange-Tests fehlen — überlebende Tests dürfen NICHT entfernt werden!"
+    # Echte Zusicherung statt Wort-Treffer: die überlebenden Testfälle stehen als test(...)-Aufrufe da.
+    survivors = re.findall(r"^test\('[^']*formatDateRange", content, re.MULTILINE)
+    assert len(survivors) >= 5, (
+        f"formatDateRange-Tests fehlen ({len(survivors)} test-Aufrufe) — überlebende Tests dürfen NICHT entfernt werden!"
+    )

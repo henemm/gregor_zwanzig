@@ -50,10 +50,8 @@ const NEU_IN_F3 = [
 	'home.abschnitt.kein_trip_text', 'home.archiv.mehrtages.one', 'home.archiv.mehrtages.other',
 	'home.archiv.abgeschlossen.one', 'home.archiv.abgeschlossen.other', 'home.timeline.zuletzt',
 	'home.timeline.naechster', 'home.timeline.morgen', 'home.timeline.abend', 'home.tage.heute',
-	'home.tage.morgen', 'home.tage.in_tagen.one', 'home.tage.in_tagen.other', 'home.tage.nicht_geplant',
-	'home.tage.pausiert_seit_heute', 'home.tage.pausiert_seit.one', 'home.tage.pausiert_seit.other',
-	'home.tage.tag_eins', 'home.tage.laeuft_seit', 'home.tage.beendet', 'home.tage.beendet_heute',
-	'home.tage.beendet_vor.one', 'home.tage.beendet_vor.other', 'home.monat.1', 'home.monat.2', 'home.monat.3',
+	// #2913 c2: übrige home.tage.* entfernt (einziger Nutzer getDaysLabel entfiel mit dem Zusatz neben der Pill).
+	'home.monat.1', 'home.monat.2', 'home.monat.3',
 	'home.monat.4', 'home.monat.5', 'home.monat.6', 'home.monat.7', 'home.monat.8', 'home.monat.9',
 	'home.monat.10', 'home.monat.11', 'home.monat.12', 'home.monat_kurz.1', 'home.monat_kurz.2',
 	'home.monat_kurz.3', 'home.monat_kurz.4', 'home.monat_kurz.5', 'home.monat_kurz.6', 'home.monat_kurz.7',

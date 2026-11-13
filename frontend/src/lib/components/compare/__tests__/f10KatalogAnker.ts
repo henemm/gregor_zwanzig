@@ -39,7 +39,7 @@ export const F10_ANKER: [schluessel: string, de: string, en: string][] = [
 	['vergleich.aktivierung.aktiv_text', 'Läuft automatisch — unbegrenzt, bis du pausierst. Das Briefing geht zu den konfigurierten Zeiten in die Kanäle.', 'Runs automatically — with no end date until you pause it. The briefing goes out to the channels at the configured times.'],
 	['vergleich.aktivierung.pausiert_text', 'Pausiert. Es geht aktuell kein Briefing raus.', 'Paused. No briefing is going out at the moment.'],
 	['vergleich.aktivierung.entwurf_text', 'Noch nicht aktiv. Sobald Orte, Idealwerte und mindestens ein Kanal stehen, kannst du den Vergleich aktivieren.', 'Not active yet. As soon as locations, target ranges and at least one channel are set, you can activate the comparison.'],
-	['vergleich.aktivierung.aktivieren', 'Aktivieren', 'Activate'],
+	['aktionen.kopf.aktivieren', 'Aktivieren', 'Activate'], // #2913 c2: vormals vergleich.aktivierung.aktivieren (ein Text, ein Schlüssel)
 
 	// ── vergleich.hub.* — Hub: Kennzahlen, Orte-Reiter, Seite /compare/[id] ──
 	['vergleich.hub.laeuft_autom', 'Läuft autom.', 'Runs auto.'],

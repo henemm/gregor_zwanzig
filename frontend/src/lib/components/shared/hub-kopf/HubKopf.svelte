@@ -8,8 +8,13 @@
 	// auf demselben Platz), Kebab und Meldungen; darunter der geteilte `SubscriptionHeader`.
 	// Fachlich Verschiedenes kommt nur über Snippets (Whitelist, Spec Entscheidung 8).
 	// Der Baustein ruft keine API: „Senden" öffnet über `onSend` nur den Dialog der Seite (#2278).
+	//
+	// #2913 Scheibe c2 (Spec docs/specs/modules/feat_2913_c2_seitenkopf.md): Kopf nach Mockup —
+	// Eyebrow („Trip · Region" / „Orte · Region") und Meta-Zeile kommen als reiner Text über
+	// `eyebrowText`/`metaTeile` (genau ein Eyebrow, genau eine Meta-Zeile, für beide Arten gleich);
+	// im Entwurf steht „Aktivieren" als Link (`aktivierenHref`, Ziel wählt die Seite) neben der Status-Pill.
 	import type { Snippet } from 'svelte';
-	import { Btn, BackLink } from '$lib/components/atoms';
+	import { Btn, BackLink, Eyebrow } from '$lib/components/atoms';
 	import SubscriptionKebab from '$lib/components/molecules/SubscriptionKebab.svelte';
 	import SubscriptionHeader from '$lib/components/shared/subscription-header/SubscriptionHeader.svelte';
 	import type { SaveStatus } from '$lib/stores/saveStatusStore.svelte';
@@ -50,6 +55,12 @@
 		eyebrow?: Snippet;
 		namePrefix?: Snippet;
 		meta?: Snippet;
+		/** #2913 c2: Eyebrow über dem Titel als reiner Text (Trip „Trip · Region", Vergleich „Orte · Region"). */
+		eyebrowText?: string;
+		/** #2913 c2: Meta-Zeile unter dem Titel, Teile mit „ · " verbunden. */
+		metaTeile?: string[];
+		/** #2913 c2: nur im Entwurf übergeben — „Aktivieren" als Link neben der Status-Pill (Ziel im Markup prüfbar). */
+		aktivierenHref?: string;
 		meldungen?: Snippet;
 		/** Fachliches unter dem Titelblock (Whitelist: Trip-km/Hm und Mobil-Kacheln), über der Unterkante. */
 		unten?: Snippet;
@@ -60,13 +71,20 @@
 		actions = [], onSelect, mobil = false, onSheetOpen, leisteTestid,
 		name, region, profile, profileOptions, profileLabel = '', regionMaxLength = 60, testidPrefix,
 		titleTestid, titleSize = 38, saveController, onSaveField,
-		status, eyebrow, namePrefix, meta, meldungen, unten
+		status, eyebrow, namePrefix, meta, eyebrowText, metaTeile, aktivierenHref, meldungen, unten
 	}: Props = $props();
 
 	// SubscriptionHeader kennt die Arten als 'trip' | 'vergleich' — reine Datenmarke (Tabelle,
 	// keine HERKUNFT-Verzweigung im Sinne von context_herkunft_zweige_eingefroren.test.ts).
 	const KIND = { route: 'trip', vergleich: 'vergleich' } as const;
 </script>
+
+{#snippet kopfEyebrow()}
+	<div class="hub-kopf-eyebrow"><Eyebrow data-testid="hub-kopf-eyebrow">{eyebrowText}</Eyebrow></div>
+{/snippet}
+{#snippet kopfMeta()}
+	<p class="hub-kopf-meta" data-testid="hub-kopf-meta">{(metaTeile ?? []).join(' · ')}</p>
+{/snippet}
 
 <div class="hub-kopf" data-kind={context} data-seite="hub" data-abschnitt="kopf">
 	<div data-testid={leisteTestid}>
@@ -103,12 +121,16 @@
 			{titleSize}
 			{saveController}
 			{onSaveField}
-			{eyebrow}
+			eyebrow={eyebrowText !== undefined ? kopfEyebrow : eyebrow}
+			unterTitel={metaTeile !== undefined ? kopfMeta : undefined}
 			{namePrefix}
 			{meta}
 		>
 			{#snippet badges()}
-				<span class="hub-kopf-status" data-testid="hub-kopf-status">{#if status}{@render status()}{/if}</span>
+				<span class="hub-kopf-status" data-testid="hub-kopf-status">
+					{#if status}{@render status()}{/if}
+					{#if aktivierenHref}<Btn variant="primary" size="sm" data-testid="hub-kopf-aktivieren" href={aktivierenHref}>{$t('aktionen.kopf.aktivieren')}</Btn>{/if}
+				</span>
 			{/snippet}
 		</SubscriptionHeader>
 		{#if unten}{@render unten()}{/if}
@@ -174,6 +196,15 @@
 		.hub-kopf {
 			border-bottom: 1px solid var(--g-rule);
 		}
+	}
+	.hub-kopf-eyebrow {
+		margin-bottom: var(--g-s-2);
+	}
+	.hub-kopf-meta {
+		margin: var(--g-s-2) 0 0;
+		font-size: var(--g-text-sm);
+		color: var(--g-ink-2);
+		font-variant-numeric: tabular-nums;
 	}
 	.hub-kopf-status {
 		display: inline-flex;

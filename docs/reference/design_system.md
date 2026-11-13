@@ -58,7 +58,7 @@ ist auf Trip- und Vergleichsseiten durch diese Tokens ersetzt (#2881).
 | `--g-ink-muted` | `#5c5a52` | Sekundärtext, Body |
 | `--g-ink-faint` | `#9c9a90` | Tertiär, Labels, Placeholder, Borders |
 
-**Hauptaktion = Ink (`Btn primary`, `--g-ink`)** — z. B. „Senden“ im Hub-Kopf, „Trip speichern“/„Briefing aktivieren“ unten rechts im Fuß des geteilten Anlege-Rahmens (`shared/anlege-rahmen/AnlegeRahmen.svelte`, „Abbrechen“ als `Btn ghost` unten links, „Weiter“ als `Btn accent`). Ink auf Papier etwa 15:1 (Leitprinzip oben, ADR-0110, #2837). Die Fläche von `Btn accent` ist seit #2879 `--g-accent-deep` (siehe Accent).
+**Hauptaktion = Ink (`Btn primary`, `--g-ink`)** — z. B. „Test schicken ▾“ im Hub-Kopf (#2913 c2, 2026-11-13; vorher „Senden“), „Trip speichern“/„Briefing aktivieren“ unten rechts im Fuß des geteilten Anlege-Rahmens (`shared/anlege-rahmen/AnlegeRahmen.svelte`, „Abbrechen“ als `Btn ghost` unten links, „Weiter“ als `Btn accent`). Ink auf Papier etwa 15:1 (Leitprinzip oben, ADR-0110, #2837). Die Fläche von `Btn accent` ist seit #2879 `--g-accent-deep` (siehe Accent).
 
 **Design-Vision (nicht implementiert):** vierte Stufe (`--g-ink-4`) für Hint/Placeholder
 — `--g-ink-faint` deckt beide ab.

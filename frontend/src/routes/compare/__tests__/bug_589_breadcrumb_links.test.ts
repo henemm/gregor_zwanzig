@@ -30,9 +30,10 @@ const SRC = fileURLToPath(new URL('../../..', import.meta.url)); // -> frontend/
 const HUBKOPF = 'lib/components/shared/hub-kopf/HubKopf.svelte';
 
 const krumen = () => einzig(baum(C.seiteRendern('ruhe', C.vergleichAktiv())), 'hub-kopf-breadcrumb');
-const ELTERN = C.trFor('de', 'listen.vergleiche.titel'); // „Orts-Vergleiche"
+// #2913 Scheibe c2 (Mockup): Elternteil „Orte" (aktionen.kopf.eltern_orte) statt „Orts-Vergleiche".
+const ELTERN = C.trFor('de', 'aktionen.kopf.eltern_orte'); // „Orte"
 
-test('AC-1: „Orts-Vergleiche" ist ein Link auf /compare (Breadcrumb des Hub-Kopfs)', () => {
+test('AC-1: „Orte" ist ein Link auf /compare (Breadcrumb des Hub-Kopfs)', () => {
 	const links = alle(krumen(), (n) => n.tag === 'a');
 	assert.equal(links.length, 1, `genau ein Link im Breadcrumb erwartet, gefunden ${links.length}`);
 	assert.equal(links[0].attrs.href, '/compare');

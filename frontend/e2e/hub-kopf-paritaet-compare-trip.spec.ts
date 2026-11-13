@@ -51,7 +51,8 @@ const PAPIER = 'rgb(246, 244, 238)'; // --g-paper (Schrift auf Btn primary)
 /** Katalogtexte des Breadcrumb-Elternteils (listen.json, de/en) — Whitelist-Wert je Art. */
 const ELTERN: Record<HubKind, { de: string; en: string; url: string }> = {
 	route: { de: 'Trips', en: 'Trips', url: '/trips' },
-	vergleich: { de: 'Orts-Vergleiche', en: 'Location comparisons', url: '/compare' }
+	// #2913 c2 (Mockup): Elternteil „Orte"/„Locations" (aktionen.kopf.eltern_orte).
+	vergleich: { de: 'Orte', en: 'Locations', url: '/compare' }
 };
 
 type Zustand = 'aktiv' | 'pausiert' | 'entwurf';
@@ -395,7 +396,8 @@ for (const kind of HUB_KINDS) {
 				await expect(leiste(page).locator(`[data-testid="${HUB_KOPF_SEL.kebab}"]:visible`)).toHaveAttribute('aria-label', lang === 'de' ? 'Weitere Aktionen' : 'More actions');
 				await page.setViewportSize(MOBIL);
 				await expect(leiste(page).locator('[data-testid="back-link"]:visible')).toHaveAttribute('aria-label', lang === 'de' ? 'Zurück zur Übersicht' : 'Back to overview');
-				await expect(senden(page)).toHaveText(lang === 'de' ? 'Senden' : 'Send');
+				// #2913 c2: Beschriftung „Test schicken ▾" / „Send test ▾" (Menü folgt mit #2797).
+				await expect(senden(page)).toHaveText(lang === 'de' ? 'Test schicken ▾' : 'Send test ▾');
 			}
 		} finally {
 			await page.request.put('/api/auth/profile', { data: { language: 'de' } }).catch(() => {});

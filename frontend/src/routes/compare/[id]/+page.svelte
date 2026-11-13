@@ -16,7 +16,8 @@
 	import {
 		deriveStatusWithScheduleOverride,
 		presetProfileLabel,
-		isRuntimeExceeded
+		isRuntimeExceeded,
+		compareFilterStatus
 	} from '$lib/components/compare/subscriptionHelpers.js';
 	import { page } from '$app/state';
 	import { browser } from '$app/environment';
@@ -35,6 +36,7 @@
 	import { adoptEtagBeiSeitenaufbau, adoptEtagFromPageLoad } from '$lib/etagRegistry';
 	import { ACTIVITY_PROFILE_OPTIONS, type ComparePreset } from '$lib/types';
 	import HubKopf from '$lib/components/shared/hub-kopf/HubKopf.svelte';
+	import type { TripStatus } from '$lib/utils/tripStatus';
 	// Issue #2659 (i18n F10): Texte aus dem Katalog — Aktionen/Senden wortgleich zum Trip-Hub
 	// (aktionen.*). Fehler ohne Server-Text halten nur den Schluessel (Sprachwechsel ohne Neuladen).
 	import { locale, t, tn, type MessageKey } from '$lib/i18n';
@@ -165,6 +167,26 @@
 	}
 
 	let status = $derived(deriveStatusWithScheduleOverride(currentPreset, scheduleOverride));
+	// #2913 Scheibe c2 (AC-5): Status-Pill mit allen fünf Zuständen wie beim Trip — archiviert
+	// (archived_at), fertig (Enddatum vor heute, Regel wie compareFilterStatus), sonst wie bisher.
+	let kopfStatus: TripStatus = $derived(
+		currentPreset.archived_at != null
+			? 'archived'
+			: status !== 'draft' && compareFilterStatus(currentPreset) === 'fertig'
+				? 'finished'
+				: status
+	);
+	// #2913 c2 (AC-4): Eyebrow „Orte · Region", Meta „N Orte · Vergleichstabelle · Briefing HH:MM".
+	// Ohne Region nur „Orte" (kein verwaister Trenner, wie beim Trip).
+	const kopfRegion = $derived((currentPreset.display_config?.region as string | undefined) || '');
+	const kopfEyebrow = $derived(kopfRegion ? $t('aktionen.kopf.eyebrow_orte', { region: kopfRegion }) : $t('aktionen.kopf.eltern_orte'));
+	const metaTeile = $derived.by(() => {
+		const p = currentPreset;
+		const teile = [$tn('listen.anzahl.orte', p.location_ids.length), $t('aktionen.kopf.vergleichstabelle')];
+		if (p.morning_enabled && p.morning_time) teile.push($t('aktionen.kopf.morgen_briefing', { zeit: p.morning_time.slice(0, 5) }));
+		else if (p.evening_enabled && p.evening_time) teile.push($t('aktionen.kopf.abend_briefing', { zeit: p.evening_time.slice(0, 5) }));
+		return teile;
+	});
 	// Issue #1250 Scheibe 3 (AC-12): Hub-Hinweis, wenn Auto-Pause wegen
 	// ueberschrittenem end_date gegriffen hat.
 	let runtimeExceeded = $derived(isRuntimeExceeded(currentPreset));
@@ -355,7 +377,7 @@
 <!-- Status-Snippet ausserhalb des HubKopf-Tags: ein gleichnamiges Kind-Snippet `status` verdeckte dort
      die Seiten-Variable `status` (auch in den Attributen). -->
 {#snippet statusBadge()}
-	<span class="flex-shrink-0"><StatusSchild {status} testid="trip-detail-status-badge" /></span>
+	<span class="flex-shrink-0"><StatusSchild status={kopfStatus} testid="trip-detail-status-badge" /></span>
 	{#if runtimeExceeded}
 		<span data-testid="runtime-exceeded-hint" class="flex-shrink-0 text-[11px] desktop:text-xs" style="font-weight: 600; color: var(--g-bad)">{$t('vergleich.hub.laufzeit_ueberschritten')}</span>
 	{/if}
@@ -363,9 +385,9 @@
 <!-- Kein eigener Wrapper: Abstand und Unterkante (Linie --g-rule, #582) trägt der HubKopf (Adversary F001). -->
 	<HubKopf
 		context="vergleich"
-		parent={{ label: $t('listen.vergleiche.titel'), href: '/compare' }}
+		parent={{ label: $t('aktionen.kopf.eltern_orte'), href: '/compare' }}
 		crumb={currentPreset.name}
-		sendLabel={status === 'draft' ? $t('vergleich.hub.setup_abschliessen') : isSending ? $t('aktionen.wird_gesendet') : $t('aktionen.senden')}
+		sendLabel={status === 'draft' ? $t('vergleich.hub.setup_abschliessen') : isSending ? $t('aktionen.wird_gesendet') : $t('aktionen.kopf.test_schicken')}
 		sendMode={status === 'draft' ? 'setup' : 'senden'}
 		onSetup={() => { window.location.href = `?tab=zustellung#versand`; }}
 		onSend={() => (sendDialogOpen = true)}
@@ -385,15 +407,10 @@
 		{onSaveField}
 		saveController={hubSaveCtl}
 		status={statusBadge}
+		eyebrowText={kopfEyebrow}
+		{metaTeile}
+		aktivierenHref={status === 'draft' ? '?tab=zustellung#versand' : undefined}
 	>
-		{#snippet meta()}
-			<!-- Orte-Anzahl je Viewport aus derselben Quelle wie vor #2284 S1:
-			     Desktop zählte die gespeicherten IDs, Mobil die aufgelösten Orte
-			     (weichen ab, wenn ein Ort gelöscht/nicht auflösbar ist). Getrennte
-			     testids je Viewport, damit jede Kopf-testid genau einmal im DOM steht (AC-8). -->
-			<span data-testid="compare-hub-orte-anzahl-desktop" class="hidden desktop:inline">{' · '}{$tn('listen.anzahl.orte', currentPreset.location_ids.length)}</span>
-			<span data-testid="compare-hub-orte-anzahl-mobil" class="desktop:hidden">{' · '}{$tn('listen.anzahl.orte', data.locations.length)}</span>
-		{/snippet}
 		{#snippet meldungen()}
 			<!-- #2837 S1: Meldungen wie beim Trip in jeder Breite (keine Whitelist-Ausnahme). -->
 			{#if sendMsg || sendKey}

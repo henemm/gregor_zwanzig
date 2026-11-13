@@ -28,11 +28,12 @@ test('#491 AC-5: CompareDetail.svelte existiert', () => {
 // Breadcrumb kommt aus dem geteilten HubKopf, Elternteil im Katalog-Wortlaut „Orts-Vergleiche"
 // (keine Versalien im Markup), Elternteil aus listen.vergleiche.titel. Gerendert geprüft in
 // routes/compare/__tests__/bug_589_breadcrumb_links.test.ts und hub_kopf_seiten_paritaet AC-4.
-test('#491 AC-1: Breadcrumb „Orts-Vergleiche" kommt über den HubKopf aus listen.vergleiche.titel, keine Versalien', () => {
+// #2913 c2 (Mockup): Elternteil „Orte" aus aktionen.kopf.eltern_orte statt listen.vergleiche.titel.
+test('#491 AC-1: Breadcrumb „Orte" kommt über den HubKopf aus aktionen.kopf.eltern_orte, keine Versalien', () => {
 	const pagePath = '../../../routes/compare/[id]/+page.svelte';
 	assert.ok(has(pagePath), 'frontend/src/routes/compare/[id]/+page.svelte fehlt');
 	const src = read(pagePath);
-	assert.match(src, /<HubKopf[\s\S]*?parent=\{\{ label: \$t\('listen\.vergleiche\.titel'\), href: '\/compare' \}\}/, 'HubKopf ohne Breadcrumb-Elternteil listen.vergleiche.titel → /compare');
+	assert.match(src, /<HubKopf[\s\S]*?parent=\{\{ label: \$t\('aktionen\.kopf\.eltern_orte'\), href: '\/compare' \}\}/, 'HubKopf ohne Breadcrumb-Elternteil aktionen.kopf.eltern_orte → /compare');
 	assert.ok(!src.includes('ORTS-VERGLEICHE') && !src.includes('.toUpperCase()'), '+page.svelte baut noch den Versalien-Krümel „ORTS-VERGLEICHE"');
 });
 
