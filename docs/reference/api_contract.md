@@ -832,8 +832,8 @@ Epochensekunden**; die lesbare Aufbereitung dort ist als Nebenbefund in #1199 no
 | enabled                         | bool        | Reports aktiv? (default: true) — Gesamtschalter, Master über beide Slots |
 | morning_enabled                 | bool \| None | Einzel-Schalter „Morgen aktiv" (Issue #2422 S3). Fehlt/`null`/kein bool ⇒ None ⇒ Rückfall auf `enabled`. Wird nur geschrieben, wenn gesetzt (additiv). |
 | evening_enabled                 | bool \| None | Einzel-Schalter „Abend aktiv" (Issue #2422 S3), Semantik wie `morning_enabled`. Regel `slot_aktiv(rc, slot)` (`src/app/models.py`): kein `report_config` ⇒ aktiv; `enabled=false` ⇒ aus; sonst Einzel-Schalter, fehlend ⇒ aktiv. Dieselbe Regel steuert Versand (`_get_active_trips`), Alarm-Vorlauf (`trip_briefing_due_at`) und die abgeleiteten flachen Trip-Felder `morning_enabled`/`evening_enabled`. |
-| morning_time                    | time        | Morgen-Report Zeit (default: 07:00)                    |
-| evening_time                    | time        | Abend-Report Zeit (default: 18:00)                     |
+| morning_time                    | time        | Morgen-Report Zeit (default: 07:00). Viertelstunden-Raster (Minute 00/15/30/45, Issue #2795); unzulässige Minute ⇒ HTTP 400 (Trip-POST/PUT, Preset-PUT). Lesen kappt nicht mehr auf die volle Stunde: ein nicht rasterkonformer Altwert wird beim Lesen auf die vorige Viertelstunde abgerundet (nicht zurückgeschrieben) |
+| evening_time                    | time        | Abend-Report Zeit (default: 18:00), Raster und 400-Verhalten wie `morning_time` |
 | timezone                        | str         | Zeitzone (default: "Europe/Vienna")                    |
 | send_email                      | bool        | E-Mail senden? (default: true)                         |
 | send_sms                        | bool        | SMS senden? (default: false)                           |
@@ -1128,6 +1128,8 @@ Wirkung: eine ausgelöste Meldung erreicht einen eingeschalteten Kanal nur, wenn
 Quelle: `internal/model/trip.go` / `internal/model/compare_preset.go` (`AlertChannelThresholdsConfig`), ADR-0046, Spec `docs/specs/modules/feat_1461_s3b2a_kanal_schwelle.md` (Trip), `docs/specs/modules/feat_1461_s3b2b_compare_kanal_schwelle.md` (Ortsvergleich).
 
 ### alert_metric_channels (Issue #1895 S1 · S2 · S3a · S3b1 · Epic #1230)
+
+> **VERALTET, OHNE WIRKUNG (seit 2026-11-13, Issue #2795 S3b Teil 1, Teilschritt 1a).** „Kanäle je Wettergröße" wirkt nicht mehr: Alarmziele ergeben sich ausschließlich aus `alert_channels` + `alert_channel_thresholds` (Dringlichkeit je Kanal, ADR-0046). Auch alte `alert_rules[].channels` wirken nicht mehr. Go hält das Feld lesetolerant (Roundtrip, kein Fehler bei Altdaten); Python ignoriert es. Bis zum Neubau der Oberfläche (Teilschritt 1b) schreibt die alte Oberfläche das Feld noch, ohne Wirkung. Bestandsdaten bereinigt `scripts/migrate_2795_alert_metric_channels.py` (Read-Modify-Write, Sicherung vorher, idempotent, Protokoll nur auf der Konsole). Die folgenden Abschnitte beschreiben den historischen Stand S1–S3b1.
 
 Dritte Kanal-Schicht neben `alert_channels`/`send_*` („je Abo") und `alert_channel_thresholds` („je Kanal", ADR-0046): **je Metrik** die Kanal-Zuordnung. Identischer Vertrag auf `Trip` **und** `ComparePreset` (Go jeweils `map[string]interface{}`, Python `Optional[dict]`), Parität ab S1.
 
@@ -2698,7 +2700,7 @@ type ComparePreset struct {
     HourlyEnabled        *bool                  `json:"hourly_enabled,omitempty"`              // Issue #1107, Pointer-Muster analog OfficialAlertsEnabled (#1040): nil/true = Stundenverlauf-Sektion sichtbar (Default), false = komplett weggelassen (Mail behält Übersichtstabelle). Seit Issue #1299 (C2 von Epic #1301) im Hub-Layout-Tab (`CompareTabs.svelte`, `activeTab==="layout"`) bedienbar — vorher nur über den seit S3 weggeleiteten Legacy-`CompareEditor` erreichbar.
     OutlookEnabled       *bool                  `json:"outlook_enabled,omitempty"`             // Issue #1361/#1368 (S3 Scheibe A von Epic #1372, 2026-07-27), Pointer-Muster wie HourlyEnabled: nil/true = 3-Tages-Ausblick je Ort gerendert (Python-Default true, `report_config_resolver.py`), false = komplett weggelassen. Feld fehlte bis dahin im Struct — ein PUT verlor den Wert beim Decode still (nil-Preserve-Block in `internal/handler/compare_preset.go` analog `HourlyEnabled`). Bedienbar in `shared/OutlookLayoutControls.svelte` (bis #2346 S3 `CompareOutlookLayoutControls.svelte`; Wetter-Metriken-Reiter, `context="vergleich"`).
     MorningEnabled       *bool                  `json:"morning_enabled,omitempty"`             // Issue #1232 Scheibe 2a: Zwei-Slot-Zeitplan analog Trip. nil = Altdaten vor Migration (Load-Migration setzt echten Wert), sonst true/false
-    MorningTime          *string                `json:"morning_time,omitempty"`                // "HH:MM:SS", Fälligkeits-Check nur auf volle Stunde (Minuten ignoriert, KL-2)
+    MorningTime          *string                `json:"morning_time,omitempty"`                // "HH:MM:SS", Viertelstunden-Raster (00/15/30/45; andere Minute ⇒ HTTP 400, Issue #2795), Fälligkeit in Minuten
     EveningEnabled       *bool                  `json:"evening_enabled,omitempty"`             // wie MorningEnabled, für den Abend-Slot
     EveningTime          *string                `json:"evening_time,omitempty"`                // "HH:MM:SS"; Abend-Versand zielt auf target_date = morgen (Ankündigungs-Charakter, wie Trip-Abendbriefing)
     EndDate              *string                `json:"end_date,omitempty"`                    // "YYYY-MM-DD", nil = unbegrenzte Laufzeit; gesetzt+<heute (Europe/Vienna) = Versand-Guard greift. PUT-Sentinel (`internal/handler/compare_preset.go:338-340`): `end_date: ""` löscht das Enddatum (nil), ein fehlendes Feld erhält den gespeicherten Wert, ein ungültiges Datum ergibt 400
@@ -2713,6 +2715,7 @@ type ComparePreset struct {
     AlertCooldownMinutes *int                   `json:"alert_cooldown_minutes,omitempty"`      // Issue #1170: nil = Default in compare_alert.py
     AlertQuietFrom       *string                `json:"alert_quiet_from,omitempty"`            // Issue #1170
     AlertQuietTo         *string                `json:"alert_quiet_to,omitempty"`              // Issue #1170
+    SendEmail            *bool                  `json:"send_email,omitempty"`                  // Issue #2795: Orts-Mail des Briefings an/aus; nil/fehlend = true (Alt-Presets verstummen nicht), nur false schaltet die Mail ab; Telegram/SMS/Premium-SMS unberührt
     SendTelegram         *bool                  `json:"send_telegram,omitempty"`               // Issue #1216 Slice 2b: Briefing-Kanal-Opt-in (Default falsy = E-Mail-only); steuert NUR das planmäßige Briefing, nicht den Alarm-Versand (s. AlertChannels)
     SendSms              *bool                  `json:"send_sms,omitempty"`                    // Issue #1216 Slice 2b — Briefing-Kanal, s. SendTelegram
     SendPremiumSms       *bool                  `json:"send_premium_sms,omitempty"`            // Issue #1701 S2b (D8); Versand-Reiter (#2293 S2/#2448) — Briefing-Kanal, s. SendTelegram
@@ -2749,7 +2752,7 @@ Details in `docs/specs/modules/compare_preset_zeitplan.md`). `weekday` gilt als 
 ("Compare Presets Slot-Check (hourly)", vormals einmal täglich 06:00 UTC) prüft pro Preset, ob
 die aktuelle Stunde **in der Ortszone dieses Presets** (erster auflösbarer Ort seiner
 konfigurierten Reihenfolge, seit #1726; davor fest `Europe/Vienna`) mit
-`morning_time`/`evening_time` übereinstimmt; Morgen-Slot
+`morning_time`/`evening_time` übereinstimmt (seit #2795: Fälligkeit in Minuten im Viertelstunden-Raster, Cron alle 15 Minuten, Nachholfenster 3 h, Dedupe je (Abo, Slot, Ortstag)); Morgen-Slot
 versendet für `target_date=heute`, Abend-Slot für `target_date=morgen`. Guards vor jedem Versand:
 siehe `compare_alert_guard.is_silenced()` (Issue #1467 S2 AG6: `paused_at` gesetzt, `schedule=="manual"`,
 oder `archived_at` gesetzt); zusätzlich `end_date` gesetzt und `< heute`.
@@ -3152,6 +3155,7 @@ auf `schedule='daily'`. **Aktuell:** Der Go-Cron `compare_presets_daily` läuft 
 pro Preset die Zwei-Slot-Felder (`morning_time`/`evening_time`, s. Abschnitt 16) gegen die aktuelle
 Stunde (Europe/Vienna) statt eines einzigen festen Filters. `schedule` wirkt nur noch als
 Pause-Flag (`manual` = pausiert). Details: `docs/specs/modules/compare_preset_zeitplan.md`.
+**Seit 2026-11-13 (Issue #2795, 1a):** Takt alle 15 Minuten (`*/15 * * * *`), Fälligkeit in Minuten (Viertelstunden-Raster), Nachholfenster 3 h, Dedupe je (Abo, Slot, Ortstag). Der Preset-Schalter `send_email` (fehlend = true) nimmt bei `false` nur die E-Mail aus dem Briefing und aus dem geerbten Orts-Alarm-Satz; ein explizit gesetztes `alert_channels.email` bleibt wirksam; Telegram/SMS/Premium-SMS unberührt.
 
 **Handler:** `api/routers/scheduler.py` (`run_compare_presets_daily`) | **Routing:** `internal/router/router.go`
 
@@ -3212,7 +3216,7 @@ Bei mindestens einem fehlgeschlagenen fälligen Preset (seit Issue #1290, identi
 
 1. Load über den zentralen Loader `load_compare_presets()`/`compare_preset_to_dict()` (`src/app/loader.py`, Issue #1250 Scheibe 1, `strict=True`) — liest seit Issue #1250 S7b per-Datei `data/users/{user_id}/briefings/*.json`, invers gefiltert auf `kind == "vergleich"` (partial-tolerant) statt der alten Single-File `compare_presets.json` (nur noch Migrations-Quelle/Rollback) — Rückgabe bleibt dieselbe Dict-Liste wie zuvor (`compare_preset_to_dict()` liefert den unveränderten Roh-Dict je Preset)
 2. Für jedes Preset: Guards prüfen — via `compare_alert_guard.is_silenced()` (Issue #1467 S2 AG6): `paused_at` gesetzt → skip (pausiert); `schedule == "manual"` → skip (pausiert); `archived_at` gesetzt → skip; zusätzlich `end_date` gesetzt und `< heute` (Europe/Vienna) → skip
-3. Slot-Werte lesen (Preset ohne Slot-Felder — z. B. weil die Go-Migration die Datei noch nicht neu geschrieben hat — bekommt dieselben Fallback-Defaults wie `LoadComparePresets`); Morgen-Slot fällig wenn `morning_enabled` und `morning_time.hour == hour` (`target_date=heute`), Abend-Slot fällig wenn `evening_enabled` und `evening_time.hour == hour` (`target_date=morgen`)
+3. Slot-Werte lesen (Preset ohne Slot-Felder — z. B. weil die Go-Migration die Datei noch nicht neu geschrieben hat — bekommt dieselben Fallback-Defaults wie `LoadComparePresets`); Morgen-Slot fällig wenn `morning_enabled` und die Zeit `morning_time` (Viertelstunden-Raster, Vergleich in Minuten, Nachholfenster 3 h seit #2795; vorher nur `.hour == hour`) erreicht ist (`target_date=heute`), Abend-Slot analog mit `evening_time` (`target_date=morgen`); `send_email=false` unterdrückt nur die Orts-Mail
 4. Für jedes fällige Preset:
    - Validate `location_ids` (warn if empty, increment `error_count`)
    - Convert `preset["profil"]` (Uppercase Go string → lowercase Python enum, fallback ALLGEMEIN)

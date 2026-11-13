@@ -62,9 +62,24 @@ VERMERK_AUSGAENGE = frozenset({"sent", "no_stage", "no_weather", "no_channels"})
 NACHHOL_FENSTER_STUNDEN = 3
 
 
-def fenster_offen(slot_stunde: int, ortsstunde: int) -> bool:
-    """Das geteilte Faelligkeits-Fenster (#1725, #1777), Konstante zur LAUFZEIT."""
-    return slot_stunde <= ortsstunde < slot_stunde + NACHHOL_FENSTER_STUNDEN
+def tagesminute(zeit) -> int:
+    """Minute des Tages (0..1439) einer ``time``/``datetime`` (#2795)."""
+    return zeit.hour * 60 + zeit.minute
+
+
+def viertelstunde(zeit):
+    """Abrundung auf die vorherige Viertelstunde wie Go beim Lesen (#2795 F006):
+    ein rasterfremder Altwert 07:20 gilt als 07:15 (nicht zurueckgeschrieben)."""
+    return zeit.replace(minute=zeit.minute - zeit.minute % 15, second=0, microsecond=0)
+
+
+def fenster_offen(slot_minute: int, ortsminute: int) -> bool:
+    """Das geteilte Faelligkeits-Fenster (#1725, #1777), Konstante zur LAUFZEIT.
+
+    Issue #2795 (Viertelstunden-Raster): beide Werte sind MINUTEN des Ortstags
+    (``tagesminute``), nicht mehr Stunden -- ein 06:45-Slot ist von 06:45 bis
+    vor 09:45 faellig, nicht schon ab 06:00."""
+    return slot_minute <= ortsminute < slot_minute + NACHHOL_FENSTER_STUNDEN * 60
 _BRIEFING_LOG_FILENAME = "briefing_log.json"
 _REBUILT_MARKER = "rebuilt_from_log_at"
 

@@ -13,9 +13,9 @@ Delivered late — delivery at x:00 failed
 ----- nachlieferung.komplett.header -----
 en
 ----- nachlieferung.komplett.mail -----
-Delivered late — the weather service was unavailable at 6:00
+Delivered late — the weather service was unavailable at 06:00
 ----- nachlieferung.komplett.telegram -----
-Delivered late — the weather service was unavailable at 6:00
+Delivered late — the weather service was unavailable at 06:00
 ----- nachlieferung.komplett.sms -----
 E1: TF- W- G- R- CT:SCT@4 VS- SU16 SD5
 ----- nachlieferung.vollstaendig.ergebnis -----

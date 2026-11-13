@@ -254,10 +254,13 @@ def test_kl5_same_hour_for_morning_and_evening_yields_two_entries():
     """GIVEN ein Preset mit morning_time.hour == evening_time.hour == 9
     WHEN presets_due_for_hour bei hour=9 laeuft
     THEN enthaelt das Ergebnis ZWEI Eintraege: (preset, heute) und
-    (preset, heute+1) — beide Mails gehen raus, keine Deduplizierung."""
+    (preset, heute+1) — beide Mails gehen raus, keine Deduplizierung.
+
+    #2795: Faelligkeit in Minuten -- beide Slots stehen deshalb auf 09:00
+    (vorher 09:00/09:45, das 09:45 galt nur ueber den Stundenvergleich ab 09:00)."""
     preset = _preset(
         morning_enabled=True, morning_time="09:00:00",
-        evening_enabled=True, evening_time="09:45:00",
+        evening_enabled=True, evening_time="09:00:00",
     )
 
     due = presets_due_for_hour([preset], {}, utc_moment(TODAY, 9))
@@ -265,22 +268,26 @@ def test_kl5_same_hour_for_morning_and_evening_yields_two_entries():
     assert due == [(preset, TODAY, 0), (preset, TODAY + timedelta(days=1), 1)]
 
 
-# --- KL-2: Minuten-Granularitaet wird ignoriert ---------------------------
+# --- KL-2 (abgeloest durch #2795): die Minute zaehlt -----------------------
 
-def test_kl2_morning_time_minutes_are_ignored_for_due_check():
+def test_kl2_morning_time_minutes_count_for_due_check():
     """GIVEN ein Preset mit morning_time="07:45:00"
-    WHEN presets_due_for_hour bei hour=7 laeuft
-    THEN ist es trotz der 45-Minuten-Differenz faellig (nur volle Stunde
-    zaehlt); resolve_preset_slots liefert dennoch die echte Minute (45)."""
+    WHEN presets_due_for_hour um 07:00 bzw. 07:45 laeuft
+    THEN ist es um 07:00 NICHT faellig und ab 07:45 faellig (Viertelstunden-
+    Raster, #2795; vorher zaehlte nur die volle Stunde);
+    resolve_preset_slots liefert die echte Minute (45)."""
     preset = _preset(
         morning_enabled=True, morning_time="07:45:00",
         evening_enabled=False, evening_time="18:00:00",
     )
 
-    due = presets_due_for_hour([preset], {}, utc_moment(TODAY, 7))
+    due_0700 = presets_due_for_hour([preset], {}, utc_moment(TODAY, 7))
+    due_0745 = presets_due_for_hour(
+        [preset], {}, utc_moment(TODAY, 7) + timedelta(minutes=45))
     _, morning_time, _, _ = resolve_preset_slots(preset)
 
-    assert due == [(preset, TODAY, 0)]
+    assert due_0700 == []
+    assert due_0745 == [(preset, TODAY, 0)]
     assert morning_time.hour == 7
     assert morning_time.minute == 45
 
@@ -406,9 +413,10 @@ def test_f003_slot_versatz_und_zieldatum_stammen_aus_derselben_zeitabfrage():
     Der Test faengt beide naheliegenden Verfaelschungen: Morgen-/Abend-Versatz
     vertauscht, und Versatz fest auf einen Wert verdrahtet.
     """
+    # #2795: beide Slots auf 09:00 (Faelligkeit in Minuten, s. KL-5).
     preset = _preset(
         morning_enabled=True, morning_time="09:00:00",
-        evening_enabled=True, evening_time="09:45:00",
+        evening_enabled=True, evening_time="09:00:00",
     )
 
     due = presets_due_for_hour([preset], {}, utc_moment(TODAY, 9))

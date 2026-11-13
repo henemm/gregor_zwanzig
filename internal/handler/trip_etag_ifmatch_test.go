@@ -170,7 +170,8 @@ func TestUpdateTripHandler_StaleIfMatch_Returns412_FileUnchanged(t *testing.T) {
 }
 
 // AC-6: Der S1-Heilungsfall. Die gespeicherte Datei traegt eine krumme
-// Versandzeit ("07:30:00"); LoadTrip heilt sie in-memory auf "07:00:00" OHNE
+// Versandzeit ("07:20:00", seit #2795 ausserhalb des Viertelstunden-Rasters);
+// LoadTrip heilt sie in-memory auf "07:15:00" OHNE
 // Rueckschreiben. Der erste PUT persistiert die Heilung — der Fingerabdruck
 // aendert sich also, obwohl der Nutzer inhaltlich nichts geaendert hat. Genau
 // deshalb MUSS der PUT den neuen ETag mitliefern, sonst laeuft der Client mit
@@ -182,7 +183,7 @@ func TestUpdateTripHandler_ReturnsNewETag_SecondPutSucceeds(t *testing.T) {
 		Stages: []model.Stage{{ID: "S1", Name: "D1", Date: "2026-05-01",
 			Waypoints: []model.Waypoint{{ID: "W1", Name: "P", Lat: 47.0, Lon: 11.0, ElevationM: 500}},
 		}},
-		ReportConfig: map[string]interface{}{"morning_time": "07:30:00", "enabled": true},
+		ReportConfig: map[string]interface{}{"morning_time": "07:20:00", "enabled": true},
 	}
 	if err := s.SaveTrip(&trip); err != nil {
 		t.Fatalf("SaveTrip: %v", err)

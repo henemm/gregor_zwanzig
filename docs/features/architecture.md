@@ -76,7 +76,7 @@ doppelte Ticks an Zeitumstellungstagen auf); Doppelversand verhindert je ein Ver
 
 | Go-Job (`jobID`) | Takt | Python-Endpunkt | Aufruf |
 |---|---|---|---|
-| `briefing_dispatch` → `trip_reports_hourly` + `compare_presets_daily` | `0 * * * *` | `/trip-reports`, `/compare-presets-daily` | je Nutzer (`runForAllUsers`) |
+| `briefing_dispatch` → `trip_reports_hourly` + `compare_presets_daily` | `*/15 * * * *` (seit #2795, vorher `0 * * * *`; Viertelstunden-Raster, Nachholfenster 3 h) | `/trip-reports`, `/compare-presets-daily` | je Nutzer (`runForAllUsers`) |
 | `alert_checks` | `*/15` | `/alert-checks` | je Nutzer |
 | `compare_alert_checks` | `*/15` | `/compare-alert-checks` (Abweichung + amtliche Warnungen, seit #2286) | je Nutzer |
 | `radar_alert_checks` | `3-58/5` | `/radar-alert-checks` | je Nutzer |

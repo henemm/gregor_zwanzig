@@ -118,26 +118,29 @@ def _briefing_channels(config) -> set[str]:
 
 
 def _trip_channel_inputs(trip) -> tuple[dict | None, set[str], list[Iterable[str]]]:
-    """Adapter fuer `kind="route"`: liest `alert_channels`, `report_config`
-    und aktive `alert_rules` von einem `app.trip.Trip`."""
-    active_rules = [r for r in (trip.alert_rules or []) if r.enabled]
+    """Adapter fuer `kind="route"`: liest `alert_channels` und `report_config`
+    von einem `app.trip.Trip`.
+
+    Issue #2795 (Spec §4.3): alte Regel-Kanaele `alert_rules[].channels`
+    wirken im Alarmversand nicht mehr -- die Zielkanaele ergeben sich nur aus
+    der Kanal-Tabelle (bzw. dem geerbten Briefing-Satz), fuer alle Metriken
+    gleich. Die Regel-Liste ist daher immer leer."""
     briefing = _briefing_channels(trip.report_config)
     inherited = briefing if (briefing or trip.report_config is not None) else {"email"}
-    rule_channel_sets = [rule.channels for rule in active_rules]
-    return trip.alert_channels, inherited, rule_channel_sets
+    return trip.alert_channels, inherited, []
 
 
 def _compare_channel_inputs(preset: dict) -> tuple[dict | None, set[str], list[Iterable[str]]]:
     """Adapter fuer `kind="vergleich"`: liest `alert_channels` und die
     flachen `send_telegram`/`send_sms`/`send_premium_sms`-Opt-ins aus dem
-    Compare-Preset-Rohdict. E-Mail ist beim Vergleich immer im geerbten
-    Anteil (KL-6, `versand_tab_vergleich.md`) — der Vergleich kennt noch
-    kein eigenstaendiges `send_email`. Der Vergleich kennt keine
+    Compare-Preset-Rohdict. E-Mail ist im geerbten Anteil, ausser
+    `send_email` ist ausdruecklich false (#2795 §4.2); ein gesetztes
+    `alert_channels.email` bleibt davon unberuehrt. Der Vergleich kennt keine
     Alarm-Regeln, daher immer eine leere Regel-Liste."""
     override = preset.get("alert_channels")
     if not isinstance(override, dict):
         override = None
-    inherited = {"email"}
+    inherited = set() if preset.get("send_email") is False else {"email"}
     for ch in ("telegram", "sms", "premium_sms"):
         if preset.get(f"send_{ch}"):
             inherited.add(ch)
@@ -162,35 +165,6 @@ def _metric_id_for_summary_key(summary_key: str) -> str | None:
     return pair[0] if pair else None
 
 
-def _entry_channels(entry) -> set[str]:
-    """Ein `alert_metric_channels`-Eintrag -> Menge der EINGESCHALTETEN
-    Kanaele. Persistiert wird `{kanal: bool}` (S1, ADR-0077); eine Liste wird
-    ebenfalls gelesen, damit die Bedeutung und nicht die Schreibweise
-    entscheidet. Kein Eintrag ⇒ leere Menge ⇒ die Metrik erbt."""
-    if isinstance(entry, dict):
-        return {ch for ch in _ALL_CHANNELS if entry.get(ch)}
-    if isinstance(entry, (list, tuple, set, frozenset)):
-        return {ch for ch in _ALL_CHANNELS if ch in entry}
-    return set()
-
-
-def _metric_channel_sets(raw_entries, metrics) -> dict[str, set[str]] | None:
-    """Issue #1895 S2: {Summary-Key der ausloesenden Metrik -> Kanalmenge des
-    Eintrags}. Enthaelt ALLE ausloesenden Metriken — auch die ohne Eintrag
-    (leere Menge), weil nur so der geerbte Anteil in die Union einfliesst
-    (AC-10). Ohne ausloesende Metriken ⇒ `None` ⇒ kein Metrik-Arm (die acht
-    metrikfreien Aufrufstellen bleiben unveraendert, AC-13)."""
-    if not metrics:
-        return None
-    entries = raw_entries if isinstance(raw_entries, dict) else {}
-    sets: dict[str, set[str]] = {}
-    for summary_key in metrics:
-        metric_id = _metric_id_for_summary_key(summary_key)
-        entry = entries.get(metric_id) if metric_id is not None else None
-        sets[str(summary_key)] = _entry_channels(entry)
-    return sets
-
-
 def effective_alert_channels(
     subscription, settings, user_id: str, metrics: Iterable[str] | None = None,
 ) -> set[str]:
@@ -202,19 +176,19 @@ def effective_alert_channels(
     Inertheit, AC-5) und bleibt in der Auflösung selbst ungenutzt.
 
     `metrics` (Issue #1895 S2) sind die ROHEN Summary-Keys der tatsaechlich
-    ausloesenden Aenderungen. Ohne sie (Default `None`) bleibt das Ergebnis
-    byte-gleich zum Stand vor dieser Scheibe — genau das gilt fuer die
-    metrikfreien Alarmpfade (Radar/Nowcast, amtliche Warnungen), die den
-    Parameter bauartbedingt nicht uebergeben (AC-13).
+    ausloesenden Aenderungen. Seit Issue #2795 ohne Wirkung auf das Ergebnis
+    (kein Metrik-Arm mehr, `alert_metric_channels` wird ignoriert).
     """
     if isinstance(subscription, dict):
         override, inherited, rule_channel_sets = _compare_channel_inputs(subscription)
-        raw_entries = subscription.get("alert_metric_channels")
     else:
         override, inherited, rule_channel_sets = _trip_channel_inputs(subscription)
-        raw_entries = getattr(subscription, "alert_metric_channels", None)
 
-    return resolve_alert_channels(
-        override, inherited, rule_channel_sets, user_id,
-        metric_channel_sets=_metric_channel_sets(raw_entries, metrics),
-    )
+    # Issue #2795 (AC-29): „Kanaele je Wettergroesse" entfaellt. Ein noch
+    # vorhandener Altschluessel `alert_metric_channels` wird IGNORIERT, nicht
+    # ausgewertet -- die Zielkanaele ergeben sich nur aus der Kanal-Tabelle
+    # (`alert_channels` + Schwelle je Kanal), fuer alle Metriken gleich; auch
+    # alte Regel-Kanaele (`alert_rules[].channels`) fliessen nicht mehr ein
+    # (beide Adapter liefern eine leere Regel-Liste).
+    # `metrics` bleibt der Signatur wegen (Aufrufer reichen es weiter).
+    return resolve_alert_channels(override, inherited, rule_channel_sets, user_id)

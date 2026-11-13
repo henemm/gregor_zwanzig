@@ -847,23 +847,23 @@ def test_versandzeit_fenster_und_kein_doppelversand(mit, caplog, slot, stunde, m
 # ═══════════════════════════ AC-14 ═══════════════════════════════════════════
 
 
-def test_zeitfeld_mit_minuten_loest_zur_stunde_aus(mit):
-    """AC-14: ein Zeitfeld mit Minuten (``morning_time="07:30:00"``, Altbestand
-    oder direkter API-Weg) loest zur STUNDE aus: der Lauf um 07:00 Ortszeit
-    liefert das Morgen-Briefing (nicht erst "um halb acht", nicht gar nicht);
-    um 06:59 (Stunde davor) kommt noch nichts. Heute GRUEN.
+def test_zeitfeld_mit_minuten_loest_zur_minute_aus(mit):
+    """AC-14, abgeloest durch #2795 (Viertelstunden-Raster): ein Zeitfeld mit
+    Minuten (``morning_time="07:30:00"``) loest zur MINUTE aus: der Lauf um
+    07:15 Ortszeit liefert noch nichts, der Lauf um 07:30 das Morgen-Briefing.
+    (Bis #2795 loeste es schon zur vollen Stunde 07:00 aus.)
     """
     rc = _rc(**_NUR_EMAIL, morning_time="07:30:00", evening_time="20:00:00")
     frueh, puenktlich = frisches_profil(), frisches_profil()
     _trip_schreiben(frueh, rc)
     _trip_schreiben(puenktlich, rc)
 
-    _lauf(frueh, _jetzt(6, 59))
-    assert mit.kanaele == [], f"AC-14: um 06:59 ist noch nichts faellig: {_kurz(mit)}"
+    _lauf(frueh, _jetzt(7, 15))
+    assert mit.kanaele == [], f"AC-14/#2795: um 07:15 ist noch nichts faellig: {_kurz(mit)}"
 
-    _lauf(puenktlich, _jetzt(7, 0))
+    _lauf(puenktlich, _jetzt(7, 30))
     assert _slots(mit) == ["morning"], (
-        f"AC-14: um 07:00 Ortszeit muss das Morgen-Briefing ankommen "
+        f"AC-14/#2795: um 07:30 Ortszeit muss das Morgen-Briefing ankommen "
         f"(Zeitfeld mit Minuten), aufgezeichnet: {_kurz(mit)}"
     )
 

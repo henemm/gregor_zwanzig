@@ -78,11 +78,10 @@ func TestUpdateComparePreset_SlotFieldsPreservedWhenBodyOmitsThem(t *testing.T) 
 	if p.MorningEnabled == nil || !*p.MorningEnabled {
 		t.Errorf("MorningEnabled erased by PUT without field: expected true, got %v", p.MorningEnabled)
 	}
-	// Issue #1280: der preserved Original-Wert wird beim PUT-Re-Validate auf die
-	// volle Stunde gekappt (07:30 -> 07:00). Das Feld bleibt erhalten (nil-Preserve),
-	// nur die Minuten fallen weg — Sende-Realitaet ist stundengenau.
-	if p.MorningTime == nil || *p.MorningTime != "07:00:00" {
-		t.Errorf("MorningTime nach PUT ohne Feld: erwartet 07:00:00 (gekappt), got %v", p.MorningTime)
+	// Issue #1280 kappte hier beim PUT-Re-Validate auf 07:00; seit #2795
+	// (Viertelstunden-Raster) bleibt der preserved Original-Wert 07:30 erhalten.
+	if p.MorningTime == nil || *p.MorningTime != "07:30:00" {
+		t.Errorf("MorningTime nach PUT ohne Feld: erwartet 07:30:00 (erhalten, #2795), got %v", p.MorningTime)
 	}
 	if p.EveningEnabled == nil || *p.EveningEnabled {
 		t.Errorf("EveningEnabled erased by PUT without field: expected false, got %v", p.EveningEnabled)

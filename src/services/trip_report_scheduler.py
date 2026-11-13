@@ -49,7 +49,8 @@ from services.alert_briefing_anchor import (
 )
 from services.alert_check_state import report_unit_failure
 from services.briefing_slots import (  # noqa: F401  (Re-Export, #1777)
-    NACHHOL_FENSTER_STUNDEN, VERMERK_AUSGAENGE, BriefingSlotStore, fenster_offen)
+    NACHHOL_FENSTER_STUNDEN, VERMERK_AUSGAENGE, BriefingSlotStore, fenster_offen,
+    tagesminute, viertelstunde)
 from services.day_comparison import DayComparison
 from services.notification_service import NotificationService, TripReportRequest, abschnitt_id
 from services.user_tier import (
@@ -256,16 +257,23 @@ def thunder_prewarm_windows(segments) -> list[tuple[datetime, datetime]]:
 _BEKANNTE_KANAELE = {"email", "sms", "premium_sms", "telegram"}
 
 
-def _slot_stunde(trip: "Trip", report_type: str) -> int:
-    """Konfigurierte Ortsstunde eines Slots — EINE Fassung fuer den Sammellauf
-    und fuer das Faelligkeits-Praedikat (#1594)."""
+def _slot_zeit(trip: "Trip", report_type: str) -> time:
+    """Konfigurierte Orts-Uhrzeit eines Slots — EINE Fassung fuer den
+    Sammellauf, das Faelligkeits-Praedikat (#1594) und die Anzeige.
+
+    Issue #2795: inklusive Minute (Viertelstunden-Raster, 06:45 bleibt 06:45)."""
     rc = trip.report_config
     zeit = None
     if rc is not None:
         zeit = rc.morning_time if report_type == "morning" else rc.evening_time
     if zeit is not None:
-        return zeit.hour
-    return 7 if report_type == "morning" else 18
+        return viertelstunde(time(zeit.hour, zeit.minute))  # #2795 F006: wie Go
+    return time(7, 0) if report_type == "morning" else time(18, 0)
+
+
+def _slot_stunde(trip: "Trip", report_type: str) -> int:
+    """Konfigurierte Ortsstunde eines Slots (Nachliefer-Marker ``slot_hour``)."""
+    return _slot_zeit(trip, report_type).hour
 
 
 def trip_briefing_due_at(
@@ -337,9 +345,10 @@ def trip_slot_aktiv_am_ortstag(trip: "Trip", report_type: str, ortstag: date) ->
 
 
 def nachhol_fenster_offen(trip: "Trip", report_type: str, vor_ort: datetime) -> bool:
-    """Faelligkeits-Fenster (Issue #1725): ``stunde <= ortsstunde < stunde +
-    NACHHOL_FENSTER_STUNDEN`` — EINE Fassung fuer Sammellauf und Praedikat."""
-    return fenster_offen(_slot_stunde(trip, report_type), vor_ort.hour)
+    """Faelligkeits-Fenster (Issue #1725): ``slot <= ortszeit < slot +
+    NACHHOL_FENSTER_STUNDEN`` — EINE Fassung fuer Sammellauf und Praedikat.
+    Issue #2795: verglichen wird in Minuten, nicht nur die Stunde."""
+    return fenster_offen(tagesminute(_slot_zeit(trip, report_type)), tagesminute(vor_ort))
 
 
 def _slot_faellig_vor_ort(
@@ -986,7 +995,7 @@ class TripReportSchedulerService:
                 # "Vorher", das aktualisiert wuerde. Kein Technikjargon.
                 # Issue #2587: geteilter Baustein mit dem Ortsvergleich.
                 prefix = pending_briefings.dispatch_error_hint(
-                    entry.get("slot_hour"), lang=self._lang,
+                    entry.get("slot_hour"), entry.get("slot_minute"), lang=self._lang,
                 )
                 self._remove_pending_marker(trip_id)
                 outcome = self._send_trip_report_outcome(
@@ -1015,7 +1024,8 @@ class TripReportSchedulerService:
             was_complete_failure = len(previously_failed) >= len(segments)
             if was_complete_failure:
                 prefix = t("versand.scheduler.nachgeliefert", self._lang,
-                           stunde=entry.get("slot_hour"))
+                           stunde=pending_briefings.slot_uhrzeit(
+                               entry.get("slot_hour"), entry.get("slot_minute")))
             elif failed_ids_now:
                 # Adversary Finding F003: ein (neues) Segment schlägt beim
                 # Nachliefer-Versuch fehl, obwohl kein zuvor bekanntes
@@ -1067,6 +1077,7 @@ class TripReportSchedulerService:
             "report_type": report_type,
             "date": target_date.isoformat(),
             "slot_hour": slot_hour,
+            "slot_minute": _slot_zeit(trip, report_type).minute,  # #2795, additiv
             "failed_segment_ids": failed_segment_ids,
             "attempts": 0,
             "created_at": datetime.now(tz=timezone.utc).isoformat(),

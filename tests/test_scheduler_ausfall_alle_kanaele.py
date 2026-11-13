@@ -51,7 +51,7 @@ def test_ac3_totalausfall_englisch_auf_allen_kanaelen(rig, monkeypatch, tmp_path
 
 
 @pytest.mark.parametrize("fall,schluessel,werte", [
-    ("komplett", "versand.scheduler.nachgeliefert", {"stunde": 6}),
+    ("komplett", "versand.scheduler.nachgeliefert", {"stunde": "06:00"}),
     ("vollstaendig", "versand.scheduler.aktualisiert_vollstaendig", {}),
     ("unvollstaendig", "versand.scheduler.aktualisiert_unvollstaendig", {}),
     ("versandfehler", "versand.scheduler.zustellung_fehlgeschlagen", {"stunde": "06:00"}),

@@ -10,7 +10,8 @@ nutzen seit Issue #2279 S1 die geteilte Alarm-Auflösung
 Funktionsname dieses Moduls vor der Umbenennung ist vollstaendig entfernt
 (Spec-Abschnitt "Umbenennung des Briefing-Resolvers").
 
-Regel: E-Mail ist immer aktiv; Telegram nur bei `preset.get("send_telegram")`
+Regel: E-Mail ist aktiv, ausser ``send_email`` ist ausdruecklich ``false``
+(Issue #2795; fehlend = true); Telegram nur bei `preset.get("send_telegram")`
 UND `settings.can_send_telegram()`; SMS nur bei `preset.get("send_sms")` UND
 `settings.can_send_sms()` UND `sms_allowed(user_id)`. Gelesen wird
 ausschliesslich aus dem Preset-Rohdict ueber `.get(...)` — ein fehlender
@@ -43,7 +44,10 @@ def effective_compare_briefing_channels(preset: dict, settings: Settings, user_i
     die Sendebereitschaft selbst prueft ausschliesslich der Kanal zur
     Sendezeit (Spec D3 der Vorgaenger-Scheibe).
     """
-    channels = {"email"}
+    # Issue #2795 (AC-22): ``send_email`` schaltet die Orts-Mail; FEHLENDES Feld
+    # (Alt-Preset) heisst true, sonst verstummten Bestands-Briefings. Nur ein
+    # ausdrueckliches ``false`` nimmt die Mail heraus.
+    channels = set() if preset.get("send_email") is False else {"email"}
     if preset.get("send_telegram") and settings.can_send_telegram():
         channels.add("telegram")
     if preset.get("send_sms") and settings.can_send_sms() and sms_allowed(user_id):

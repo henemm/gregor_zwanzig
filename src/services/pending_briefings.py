@@ -158,15 +158,29 @@ def bump_attempts(path: Path, match: Match) -> None:
         write_pending_data(path, data)
 
 
-def dispatch_error_hint(slot_hour, *, lang: Lang = "de") -> str:
-    """Nachhol-Hinweis nach Versandfehler (#1662 AC-3, #2587 AC-5).
+def slot_uhrzeit(slot_hour, slot_minute=None) -> str:
+    """Slot-Uhrzeit eines Vermerks als ``HH:MM`` (#2795, Viertelstunden-Raster).
 
-    EIN Text fuer Trip und Ortsvergleich. Stunde zweistellig (``07:00``,
-    Wortlaut AC-5); ein unlesbarer Wert faellt auf die bisherige Fassung
-    zurueck, statt den Nachholversand abzubrechen.
+    ``slot_minute`` ist additiv (seit #2795): Bestandsvermerke tragen nur
+    ``slot_hour`` und gelten als volle Stunde (``:00``). Ein unlesbarer Wert
+    faellt auf die bisherige Fassung zurueck, statt den Nachholversand
+    abzubrechen.
     """
     try:
-        stunde = f"{int(slot_hour):02d}:00"
+        minute = int(slot_minute) if slot_minute is not None else 0
     except (TypeError, ValueError):
-        stunde = f"{slot_hour}:00"
-    return t("versand.scheduler.zustellung_fehlgeschlagen", lang, stunde=stunde)
+        minute = 0
+    try:
+        return f"{int(slot_hour):02d}:{minute:02d}"
+    except (TypeError, ValueError):
+        return f"{slot_hour}:00"
+
+
+def dispatch_error_hint(slot_hour, slot_minute=None, *, lang: Lang = "de") -> str:
+    """Nachhol-Hinweis nach Versandfehler (#1662 AC-3, #2587 AC-5).
+
+    EIN Text fuer Trip und Ortsvergleich. Uhrzeit zweistellig (``07:00``,
+    Wortlaut AC-5; seit #2795 mit Minute, z. B. ``06:45``).
+    """
+    return t("versand.scheduler.zustellung_fehlgeschlagen", lang,
+             stunde=slot_uhrzeit(slot_hour, slot_minute))
