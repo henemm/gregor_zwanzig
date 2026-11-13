@@ -199,10 +199,20 @@ class PremiumSmsRecipient:
         return cls(number, RecipientPurpose.user_profile, user_id, _FABRIK)
 
 
+def normalize_premium_number(number) -> str:
+    """Vergleichsform einer Premium-SMS-Rueckadresse (ADR-0116): nur Ziffern,
+    ein fuehrendes ``+`` bzw. ``00`` entfaellt, Leerzeichen, Bindestriche und
+    Klammern ebenso. Nur fuer Vergleiche -- gesendet wird an die gespeicherte
+    Form. Go-Pendant ``model.NormalizePremiumSmsNumber``, gemeinsame Tabelle
+    ``tests/fixtures/premium_sms_nummern_normalform.json``."""
+    if not isinstance(number, str):
+        return ""
+    ziffern = "".join(c for c in number if "0" <= c <= "9")
+    return ziffern[2:] if ziffern.startswith("00") else ziffern
+
+
 def _premium_key(number: str) -> str:
-    """Vergleichsform einer Rueckadresse: Go speichert die Absendernummer roh
-    (ohne ``+``), aeltere Profile tragen sie teils mit ``+``."""
-    return number.strip().lstrip("+")
+    return normalize_premium_number(number)
 
 
 def _check_reply_address_unique(user_id: str, number: str) -> None:

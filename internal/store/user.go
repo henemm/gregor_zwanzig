@@ -86,6 +86,10 @@ func (s *Store) LoadUser(id string) (*model.User, error) {
 var sicherheitsSchluessel = []string{
 	"password_hash", "passkey_credentials", "oauth_provider", "oauth_sub",
 	"disabled", "tier", "email_verified_at",
+	// ADR-0116: Rueckadresse nur ueber LearnPremiumSmsReplyTo/
+	// ClearPremiumSmsReply (bzw. UpdateUser) — ein veraltetes SaveUser darf
+	// eine entfernte oder gewanderte Nummer nicht zurueckschreiben.
+	"premium_sms_reply_to", "premium_sms_reply_at",
 }
 
 // SaveUser schreibt das Nutzerobjekt per Read-Modify-Write mit Merge. Bei einer

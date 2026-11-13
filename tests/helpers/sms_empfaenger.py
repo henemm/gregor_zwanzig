@@ -85,7 +85,9 @@ def rueckadresse_bei_anderen_entfernen(user_id: str, nummer: str) -> None:
     verschwindet bei allen anderen Profilen der Testdatenwurzel."""
     from app.loader import list_all_user_ids
 
-    key = nummer.strip().lstrip("+")
+    from output.channels.recipient import normalize_premium_number
+
+    key = normalize_premium_number(nummer)
     for other in list_all_user_ids():
         if other == user_id:
             continue
@@ -95,7 +97,7 @@ def rueckadresse_bei_anderen_entfernen(user_id: str, nummer: str) -> None:
         except (OSError, ValueError):
             continue
         roh = profil.get("premium_sms_reply_to") if isinstance(profil, dict) else None
-        if isinstance(roh, str) and roh.strip().lstrip("+") == key:
+        if isinstance(roh, str) and normalize_premium_number(roh) == key:
             profil.pop("premium_sms_reply_to", None)
             profil.pop("premium_sms_reply_at", None)
             pfad.write_text(json.dumps(profil))

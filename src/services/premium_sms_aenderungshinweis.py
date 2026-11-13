@@ -83,6 +83,9 @@ def melde_aenderung(service, result, *, befehl: str, zeitpunkt: datetime, lang: 
         return []
     try:
         user_id = service._require_user()
+        # Ohne zustellbaren Kanal wird nichts gezaehlt (Gegenpruefung F003).
+        if not service.premium_sms_change_notice_ziele():
+            return []
         if not sms_daily_limit.reserve_daily_slot(user_id, ZAEHLER_SCHLUESSEL, TAGESGRENZE, zeitpunkt):
             logger.warning(
                 "Aenderungs-Mitteilung fuer Nutzer %s uebersprungen: "  # i18n-log

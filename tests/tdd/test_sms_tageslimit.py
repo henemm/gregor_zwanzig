@@ -585,6 +585,28 @@ def test_ac4c_bestehende_zaehlerdatei_ohne_antwortfeld_bleibt_lesbar(mitschrift)
     }
 
 
+def test_ac4d_fehlversand_einer_antwort_bucht_den_antwort_zaehler_zurueck(mitschrift):
+    """ADR-0116 (Gegenpruefung F003): schlaegt der Transport einer Antwort fehl,
+    wird der ANTWORT-Zaehler zurueckgebucht -- der Alarm-Zaehler bleibt."""
+    uid = _kennung("ac4d")
+    _nutzer_anlegen(uid, "premium")
+    pfad = _zaehler_pfad(uid)
+    pfad.parent.mkdir(parents=True, exist_ok=True)
+    pfad.write_text(json.dumps({
+        "date": _heute_utc(), "sms": 0, "premium_sms": 4, "premium_sms_reply": 2,
+    }))
+    mitschrift.fehler["premium_sms"] = RuntimeError("Transport kaputt")
+    NotificationService(settings=_settings(), user_id=uid).send_command_reply_premium_sms(
+        CommandResult(success=True, command="status",
+                      confirmation_subject="Status", confirmation_body="OK"),
+        _settings(),
+    )
+    assert "premium_sms" not in mitschrift.fehler, "Vorbedingung: Transport wurde versucht"
+    stand = _zaehler_lesen(uid)
+    assert stand.get("premium_sms_reply") == 2, f"Antwort-Zaehler nicht zurueckgebucht: {stand}"
+    assert stand.get("premium_sms") == 4, f"Alarm-Zaehler veraendert: {stand}"
+
+
 # ---------------------------------------------------------------------------
 # AC-5 — UTC-Mitternachtsreset (Modul-Ebene, injizierte Uhr)
 # ---------------------------------------------------------------------------

@@ -90,7 +90,9 @@ func PostPremiumSmsLearnHandler(s *store.Store, rl *PremiumSmsRateLimiter) http.
 				continue
 			}
 			candidates = append(candidates, user)
-			if user.PremiumSmsReplyTo == body.From {
+			// ADR-0116: Vergleich in der Normalform (jede Schreibweise
+			// derselben Nummer ist ein Absender).
+			if user.PremiumSmsReplyTo != "" && model.NormalizePremiumSmsNumber(user.PremiumSmsReplyTo) == model.NormalizePremiumSmsNumber(body.From) {
 				storedMatches = append(storedMatches, user)
 			}
 		}
@@ -190,7 +192,8 @@ func resolvePremiumSmsTarget(
 func resolveByLinkCode(
 	s *store.Store, candidates []*model.User, from, code string, rl *PremiumSmsRateLimiter,
 ) (*model.User, string) {
-	if !rl.AllowFrom(from) {
+	absender := model.NormalizePremiumSmsNumber(from)
+	if !rl.AllowFrom(absender) {
 		return nil, reasonLinkCodeRateLimited
 	}
 	var matches []*model.User
@@ -206,7 +209,7 @@ func resolveByLinkCode(
 	if len(matches) == 1 {
 		return matches[0], ""
 	}
-	rl.RecordFailureFrom(from)
+	rl.RecordFailureFrom(absender)
 	return nil, reasonLinkCodeInvalid
 }
 

@@ -34,9 +34,8 @@ func (s *Store) MigrateClearPremiumSmsReplyAddresses() (int, error) {
 		if user.PremiumSmsReplyTo == "" && user.PremiumSmsReplyAt == nil {
 			continue
 		}
-		user.PremiumSmsReplyTo = ""
-		user.PremiumSmsReplyAt = nil
-		if err := s.SaveUser(*user); err != nil {
+		// ADR-0116: die Rueckadresse ist fuer SaveUser schreibgeschuetzt.
+		if err := s.ClearPremiumSmsReply(id); err != nil {
 			return cleared, err
 		}
 		cleared++

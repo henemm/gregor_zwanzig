@@ -886,6 +886,7 @@
 			onDialogConfirm={onDialogConfirm}
 			onDialogCancel={onDialogCancel}
 			replyState={data.profile?.premium_sms_reply_state}
+			legacyFormat={data.premiumSmsLinkCodeLegacy}
 			onDisconnect={async () => {
 				await api.del('/api/auth/premium-sms-reply');
 				await invalidateAll();
@@ -1228,17 +1229,21 @@
 							<div class="flex items-center justify-between text-sm">
 								<span>{KANAL.premiumSms}</span>
 								<span class="font-medium">
-									{#if data.smsDailyUsage.premium_sms.used > data.smsDailyUsage.premium_sms.limit}
-										{$t('konto.menge.von', { anzahl: data.smsDailyUsage.premium_sms.limit, grenze: data.smsDailyUsage.premium_sms.limit })}
-										{$tn('konto.kontingent.antworten', data.smsDailyUsage.premium_sms.used - data.smsDailyUsage.premium_sms.limit)}
-									{:else}
-										{$t('konto.menge.von', { anzahl: data.smsDailyUsage.premium_sms.used, grenze: data.smsDailyUsage.premium_sms.limit })}
-									{/if}
+									{$t('konto.menge.von', { anzahl: data.smsDailyUsage.premium_sms.used, grenze: data.smsDailyUsage.premium_sms.limit })}
 								</span>
 							</div>
 							<p class="text-xs text-muted-foreground">
 								{$t('konto.kontingent.davon', { briefings: data.smsDailyUsage.premium_sms.limit - data.smsDailyUsage.premium_sms.reserve, reserve: data.smsDailyUsage.premium_sms.reserve })}
 							</p>
+							<!-- ADR-0116: Antworten auf Befehle haben ein eigenes Tageskontingent. -->
+							{#if shouldShowSmsUsageRow(data.smsDailyUsage.premium_sms.reply_limit)}
+								<div class="flex items-center justify-between text-sm">
+									<span>{$t('konto.kontingent.antworten_zeile')}</span>
+									<span class="font-medium">
+										{$t('konto.menge.von', { anzahl: data.smsDailyUsage.premium_sms.reply_used ?? 0, grenze: data.smsDailyUsage.premium_sms.reply_limit })}
+									</span>
+								</div>
+							{/if}
 						{/if}
 					</div>
 				{/if}

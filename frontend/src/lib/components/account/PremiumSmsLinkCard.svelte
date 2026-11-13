@@ -36,6 +36,8 @@
 		replyState?: string;
 		/** Trennt die Verbindung (DELETE) und laedt die Seitendaten neu. */
 		onDisconnect?: () => Promise<void>;
+		/** Gespeicherter Code im alten, kuerzeren Format (ADR-0116). */
+		legacyFormat?: boolean;
 		/** Rueckfrage offen — nur fuer den Darstellungstest von aussen setzbar. */
 		disconnectConfirm?: boolean;
 	}
@@ -49,6 +51,7 @@
 		onDialogConfirm,
 		onDialogCancel,
 		replyState = undefined,
+		legacyFormat = false,
 		onDisconnect = async () => {},
 		disconnectConfirm = $bindable(false)
 	}: Props = $props();
@@ -102,6 +105,12 @@
 			>
 				{$t('konto.kopplung.erneuern')}
 			</Btn>
+		{/if}
+
+		{#if legacyFormat && exists && codeValue === null}
+			<p data-testid="premium-sms-link-legacy" class="text-sm text-muted-foreground">
+				{$t('konto.kopplung.altes_format')}
+			</p>
 		{/if}
 
 		{#if codeValue !== null}

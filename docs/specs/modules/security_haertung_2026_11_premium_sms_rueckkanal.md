@@ -4,7 +4,7 @@ type: module
 created: 2026-11-13
 updated: 2026-11-13
 status: approved
-version: "1.0"
+version: "1.1"
 tags: [premium-sms, garmin, inbound, security, mandantentrennung, kontingent]
 ---
 
@@ -141,17 +141,41 @@ Journal: limit=100; volle Seite ohne Ueberlappung mit Lesezeiger -> Warnung
 **AC-16:** Given das Journal liefert eine volle Seite (100 Einträge), die nicht mit dem Lesezeiger überlappt / When der Poll läuft / Then steht eine Warnung „möglicherweise abgeschnitten" im Log; bei Überlappung oder kleinerer Seite nicht.
   - Test: `test_journal_volle_seite_ohne_ueberlappung_warnt`, `test_journal_volle_seite_mit_ueberlappung_warnt_nicht`, `test_journal_unvolle_seite_warnt_nicht`
 
+**AC-17:** Given zwei gleichzeitige Lernvorgänge derselben Nummer für zwei Konten / When beide abgeschlossen sind / Then trägt genau ein Konto die Nummer.
+  - Test: `TestLearnPremiumSmsReplyToGleichzeitigGenauEinInhaber` (mit `-race`)
+
+**AC-18:** Given ein Schreiber hält eine vor dem Lernen bzw. Trennen geladene Kopie eines Kontos / When er sie mit `SaveUser` speichert / Then wird weder eine entfernte noch eine an ein anderes Konto gewanderte Rückadresse wiederhergestellt, übrige Felder werden geschrieben.
+  - Test: `TestSaveUserVeralteteKopieStelltRueckadresseNichtWiederHer`
+
+**AC-19:** Given dieselbe Nummer in verschiedenen Schreibweisen (`+49…`, `49…`, `0049…`, mit Leerzeichen, Bindestrichen, Klammern) / When gelernt, verglichen oder gebremst wird / Then gilt sie in Go und Python als dieselbe Nummer und als ein Absender.
+  - Test: `TestNormalizePremiumSmsNumberGemeinsameTabelle`, `test_premium_sms_nummer_normalform.py`, `TestLearnPremiumSmsReplyToEntferntAndereSchreibweisen`, `TestPremiumSmsSchreibweisenSindEinAbsender`
+
+**AC-20:** Given eine Antwort wurde reserviert und ihr Transport scheitert / When zurückgebucht wird / Then sinkt der Antwort-Zähler, der Alarm-Zähler bleibt; Nicht-Premium-Konten sind keine Lern-Kandidaten.
+  - Test: `test_ac4d_fehlversand_einer_antwort_bucht_den_antwort_zaehler_zurueck`, `TestLearnNichtPremiumKontenSindKeineKandidaten`
+
+**AC-21:** Given ein ändernder Befehl / When er per Premium-SMS ausgeführt wird / Then meldet jeder ändernde Befehl über den echten Eingang, ein fehlgeschlagener nicht, ein Konto ohne zustellbaren Kanal verbraucht keinen Mitteilungs-Zähler, ein Versandfehler bricht die Verarbeitung nicht ab und der Text nennt das Ergebnis (DE/EN).
+  - Test: `test_jeder_aendernde_befehl_meldet_ueber_den_echten_weg`, `test_fehlgeschlagener_aendernder_befehl_meldet_nichts`, `test_ohne_zustellbaren_kanal_wird_kein_mitteilungs_zaehler_verbraucht`, `test_fehler_beim_mitteilungsversand_bricht_die_verarbeitung_nicht_ab`, `test_mitteilungstext_nennt_das_ergebnis`
+
+**AC-22:** Given ein Konto mit Code im alten, kürzeren Format bzw. mit Antworten auf Befehle / When die Konto-Seite erscheint / Then empfiehlt die Premium-SMS-Karte das Erneuern (GET liefert `legacy_format`, nie Code oder Hash) und die Kontingent-Anzeige zeigt die Antworten als eigene Zeile.
+  - Test: `TestLinkCodeStatusMeldetAltesFormat`, `premium_sms_link_card_render.test.ts` („Hinweis altes Code-Format"), `sms_kontingent_anzeige.test.ts` AC-3
+
 ## Known Limitations
+
+- Wer mit wechselnden Absendernummern falsche Codes schickt, kann das globale Budget (30
+  Fehlversuche je Stunde) leeren und damit Neuverknüpfungen per Code für diese Stunde blockieren;
+  bestehende frische Zuordnungen funktionieren weiter. Kosten für den Angreifer: 30 bezahlte
+  Satelliten-Nachrichten je Stunde; die Zähler liegen im Arbeitsspeicher und beginnen nach einem
+  Neustart bei null.
+- Eine Nachricht mit Koordinaten schreibt einen Positions-Fix ohne Mitteilung (begrenzt auf
+  höchstens 100 m neben der Heute-Etappe, ADR-0102).
 
 - Ein Angreifer, der eine Nummer aus dem Garmin-Pool erhält, die einem Konto noch frisch
   zugeordnet ist, kann bis zur nächsten Nachricht des Inhabers mit Code oder bis zum Trennen
   Befehle für dieses Konto senden; die Mitteilung macht das sichtbar und nennt den Rückweg.
 - Bestandscodes (6,2 Mio.) sind bei der globalen Bremse von 30/h schwächer geschützt als neue
-  Codes; kein Zwangstausch (Empfehlung: erneuern).
+  Codes; kein Zwangstausch, die Konto-Karte empfiehlt das Erneuern.
 - Ob die seven.io-Journal-Schnittstelle Blättern anbietet, war aus der Sandbox nicht prüfbar
   (keine Verbindung zur Dokumentation); daher nur die Warnung.
-- Die Kontoanzeige des Tageskontingents zeigt das Antwort-Kontingent (`reply_used`/`reply_limit`)
-  noch nicht an; die Anzeige des Alarm-Kontingents bleibt korrekt.
 
 ## Architektur-Entscheidung (ADR)
 
@@ -162,3 +186,6 @@ Journal: limit=100; volle Seite ohne Ueberlappung mit Lesezeiger -> Warnung
 ## Changelog
 
 - 2026-11-13: v1.0 angelegt und umgesetzt (Issue #2961 Welle 2).
+- 2026-11-13: v1.1 Fix-Runde nach Gegenprüfung: Lern-Sperre, Schreibschutz in SaveUser,
+  Nummern-Normalform, Testlücken, Restrisiken, Hinweis altes Code-Format, Antwort-Zeile
+  in der Kontingent-Anzeige (AC-17 bis AC-22).

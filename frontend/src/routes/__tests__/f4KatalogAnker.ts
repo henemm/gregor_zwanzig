@@ -59,6 +59,7 @@ export const F4_ANKER: [schluessel: string, de: string, en: string][] = [
 	['konto.kopplung.trennen', 'Verbindung trennen', 'Disconnect'],
 	['konto.kopplung.trennen_frage', 'Die Rückadresse wird gelöscht; bis zur nächsten Nachricht mit Verknüpfungscode gehen keine Premium-SMS mehr an das Gerät. Der Verknüpfungscode bleibt gültig, bis du ihn erneuerst. Fortfahren?', 'The reply address will be deleted; no Premium SMS will reach the device until its next message with the link code. The link code stays valid until you renew it. Continue?'],
 	['konto.kopplung.trennen_fehlgeschlagen', 'Trennen fehlgeschlagen', 'Disconnect failed'],
+	['konto.kopplung.altes_format', 'Dein Code ist ein älteres, kürzeres Format; erneuere ihn bei Gelegenheit.', 'Your code uses an older, shorter format; renew it when convenient.'],
 	['konto.passkey.titel', 'Passkeys', 'Passkeys'],
 	['konto.passkey.leer', 'Du hast noch keinen Passkey. Mit einem Passkey meldest du dich per Face ID, Touch ID, Windows Hello oder Sicherheitsschlüssel an — ohne Passwort.', 'You have no passkey yet. With a passkey you sign in with Face ID, Touch ID, Windows Hello or a security key, without a password.'],
 	['konto.passkey.angelegt_am', 'Angelegt am <datum>', 'Created on <datum>'],
@@ -123,8 +124,8 @@ export const F4_ANKER: [schluessel: string, de: string, en: string][] = [
 	['konto.menge.locations', 'Locations', 'Locations'],
 	['konto.menge.von', '<anzahl> von <grenze>', '<anzahl> of <grenze>'],
 	['konto.kontingent.titel', 'SMS-Kontingent (heute)', 'SMS quota (today)'],
-	['konto.kontingent.antworten.one', '(+<count> Antworten)', '(+<count> reply)'],
-	['konto.kontingent.antworten.other', '(+<count> Antworten)', '(+<count> replies)'],
+	// ADR-0116 (#2961): eigenes Antwort-Kontingent statt Ueberhang-Zusatz.
+	['konto.kontingent.antworten_zeile', 'Premium-SMS-Antworten auf Befehle', 'Premium SMS command replies'],
 	['konto.kontingent.davon', 'davon max. <briefings> Briefings, <reserve> Alarm-Reserve', 'of which up to <briefings> briefings, <reserve> alert reserve'],
 	['konto.benachrichtigung.titel', 'Benachrichtigungen', 'Notifications'],
 	['konto.benachrichtigung.keine', 'Keine Benachrichtigungen konfiguriert — <link>', 'No notifications configured — <link>'],

@@ -53,7 +53,7 @@ func TestGetSmsDailyUsageHandlerUsesContextUserIdNeverQuery(t *testing.T) {
 	py := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		empfangeneUserId = r.URL.Query().Get("user_id")
 		w.Header().Set("Content-Type", "application/json")
-		w.Write([]byte(`{"sms":{"used":0,"limit":10,"reserve":2},"premium_sms":{"used":0,"limit":0,"reserve":3,"reply_overshoot":3}}`))
+		w.Write([]byte(`{"sms":{"used":0,"limit":10,"reserve":2},"premium_sms":{"used":0,"limit":0,"reserve":3,"reply_used":0,"reply_limit":0}}`))
 	}))
 	defer py.Close()
 

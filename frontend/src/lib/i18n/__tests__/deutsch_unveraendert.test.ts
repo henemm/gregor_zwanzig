@@ -120,7 +120,7 @@ const NEU_IN_F4 = [
 	'konto.level.wird_gesendet', 'konto.level.antrag_stellen', 'konto.level.antrag_gesendet',
 	'konto.level.bereits_aktiv', 'konto.level.ungueltig', 'konto.level.antrag_fehlgeschlagen',
 	'konto.menge.aktive_trips', 'konto.menge.aktive_vergleiche', 'konto.menge.locations', 'konto.menge.von',
-	'konto.kontingent.titel', 'konto.kontingent.antworten.one', 'konto.kontingent.antworten.other',
+	'konto.kontingent.titel', 'konto.kontingent.antworten_zeile',
 	'konto.kontingent.davon', 'konto.benachrichtigung.titel', 'konto.benachrichtigung.keine',
 	'konto.benachrichtigung.einrichten', 'konto.modelle.titel', 'konto.modelle.keine', 'konto.modelle.anlegen',
 	'konto.status.titel', 'konto.status.nicht_erreichbar', 'konto.status.laeuft', 'konto.status.eingeschraenkt',
@@ -238,6 +238,7 @@ const NEU_IN_FOLGEPAKETEN = [
 	'konto.kopplung.trennen',
 	'konto.kopplung.trennen_frage',
 	'konto.kopplung.trennen_fehlgeschlagen',
+	'konto.kopplung.altes_format',
 	// #2648 (S3) Sprachumschalter und Konto-Sprache
 	'konto.sprache.titel',
 	'konto.sprache.option_de',

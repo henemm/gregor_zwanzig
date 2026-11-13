@@ -27,6 +27,7 @@ import {
 	errorMessageFrom,
 	shouldShowDisconnect,
 	resolveDisconnectClick,
+	deriveLinkCodeLegacy,
 } from './premiumSmsLinkCodeHelpers.ts';
 
 // =========================================================================
@@ -169,6 +170,18 @@ describe('shouldShowDisconnect — nur mit gelernter Rückadresse', () => {
 	test('none und fehlend → false', () => {
 		assert.equal(shouldShowDisconnect('none'), false);
 		assert.equal(shouldShowDisconnect(undefined), false);
+	});
+});
+
+describe('deriveLinkCodeLegacy — Hinweis nur bei gemeldetem alten Format', () => {
+	test('exists + legacy_format → true', () => {
+		assert.equal(deriveLinkCodeLegacy({ exists: true, legacy_format: true }), true);
+	});
+	test('neues Format, kein Code, fehlende Antwort → false', () => {
+		assert.equal(deriveLinkCodeLegacy({ exists: true, legacy_format: false }), false);
+		assert.equal(deriveLinkCodeLegacy({ exists: false, legacy_format: true }), false);
+		assert.equal(deriveLinkCodeLegacy({ exists: true }), false);
+		assert.equal(deriveLinkCodeLegacy(null), false);
 	});
 });
 
