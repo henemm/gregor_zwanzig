@@ -183,6 +183,14 @@ def test_ac2_sockel_gilt_wenn_fairer_anteil_kleiner_ist():
     assert _snap(a)["user_interactive_calls_today"] == SOCKEL
 
 
+def test_ac2_ohne_kennung_nie_interaktiv():
+    """Ohne Nutzer-Topf gibt es keinen interaktiven Anteil -- ein Aufruf ohne
+    Kennung darf nie mehr als einer mit Kennung (ADR-0075 Punkt 4)."""
+    assert ForecastBudgetGate(None).reserve(INTERAKTIV) is False
+    assert ForecastBudgetGate(None).allow(INTERAKTIV) is False
+    assert ForecastBudgetGate(_uid("ac2k")).allow(INTERAKTIV) is True
+
+
 def test_ac2_fairer_anteil_ueber_dem_sockel_bei_wenigen_nutzern():
     a, b = _uid("ac2f-a"), _uid("ac2f-b")
     _schreibe_global(calls=0, aktive=[a, b])
@@ -287,7 +295,9 @@ def _trip_mit_etappe(uid: str, trip_id: str, lat: float):
         Waypoint(id="w1", name="w1", lat=lat, lon=11.0, elevation_m=900),
         Waypoint(id="w2", name="w2", lat=lat + 0.05, lon=11.05, elevation_m=1100),
     ])
-    save_trip(Trip(id=trip_id, name=trip_id, stages=[etappe]), user_id=uid)
+    trip = Trip(id=trip_id, name=trip_id, stages=[etappe])
+    save_trip(trip, user_id=uid)
+    return trip
 
 
 def _etappenwetter(client, uid: str, trip_id: str, fake):
@@ -453,6 +463,64 @@ def test_ac9_sms_vorschau_erschoepft_429(client):
     _erschoepfe(a, b)
     resp = client.get("/api/preview/trip-v/sms", params={
         "user_id": a, "date": utc_tag().isoformat()})
+    assert resp.status_code == 429, resp.text
+    assert resp.json()["code"] == "abruf_kontingent_erschoepft"
+
+
+def _tagesanker(uid: str, trip) -> None:
+    """Tages-Anker des Trips wie ihn ein Briefing schreibt (echter Segment-Weg
+    ueber den Zaehl-Anbieter), danach leerer Cache: die Vorschau muss frisch
+    abrufen."""
+    from app.models import GPXPoint, TripSegment
+    from providers.base import get_provider
+    from services.segment_weather import SegmentWeatherService
+    from services.trip_day import trip_local_today
+    from services.weather_cache import reset_shared_weather_cache_for_tests
+    from services.weather_snapshot import WeatherSnapshotService
+
+    start = datetime.now(timezone.utc).replace(hour=0, minute=0, second=0, microsecond=0)
+    wp = trip.stages[0].waypoints
+    seg = TripSegment(
+        segment_id="1",
+        start_point=GPXPoint(lat=wp[0].lat, lon=wp[0].lon, elevation_m=900,
+                             distance_from_start_km=0.0),
+        end_point=GPXPoint(lat=wp[1].lat, lon=wp[1].lon, elevation_m=1100,
+                           distance_from_start_km=5.0),
+        start_time=start, end_time=start + timedelta(hours=23, minutes=59),
+        duration_hours=23.98, distance_km=5.0, ascent_m=200, descent_m=0,
+    )
+    anker = SegmentWeatherService(get_provider("openmeteo")).fetch_segment_weather(
+        seg, enrich_ensemble=False, enrich_snow=False, priority="alert_check", user_id=uid,
+    )
+    assert not anker.has_error
+    WeatherSnapshotService(uid).save_dated(
+        trip.id, trip_local_today(trip, datetime.now(timezone.utc)), [anker])
+    reset_shared_weather_cache_for_tests()
+
+
+def test_ac9_alarm_vorschau_erschoepft_429(client, anbieter):
+    from services.weather_cache import reset_shared_weather_cache_for_tests
+
+    a, b = _uid("ac9a-a"), _uid("ac9a-b")
+    trip = _trip_mit_etappe(a, "trip-alarm", 47.2692)
+    _tagesanker(a, trip)
+    body = {
+        "changes": [{"metric": "gust_max_kmh", "old_value": 40.0, "new_value": 60.0,
+                     "delta": 20.0, "threshold": 50.0, "severity": "moderate",
+                     "direction": "above", "segment_id": "1"}],
+        "segment_times": [{"segment_id": "1", "start": "08:00", "end": "17:00"}],
+    }
+    pfad = f"/api/trips/{trip.id}/alert-preview"
+
+    vorher = len(anbieter.abrufe)
+    ok = client.post(pfad, params={"user_id": a}, json=body)
+    assert ok.status_code == 200, ok.text
+    assert len(anbieter.abrufe) > vorher, "Positivkontrolle: die Vorschau ruft frisch ab"
+    assert _snap(a)["user_interactive_calls_today"] >= 1, "Vorschau bucht interaktiv"
+
+    reset_shared_weather_cache_for_tests()
+    _erschoepfe(a, b)
+    resp = client.post(pfad, params={"user_id": a}, json=body)
     assert resp.status_code == 429, resp.text
     assert resp.json()["code"] == "abruf_kontingent_erschoepft"
 
