@@ -12,15 +12,18 @@
 		onclick?: () => void;
 		label?: string;
 		badge?: string | number | null;
+		// #2810: sprachneutrale Kennung fuer E2E-Locator (ohne Prop kein Attribut).
+		testid?: string;
 	}
 
-	let { kind = 'menu', onclick, label, badge = null }: Props = $props();
+	let { kind = 'menu', onclick, label, badge = null, testid }: Props = $props();
 </script>
 
 <button
 	type="button"
 	{onclick}
 	aria-label={label}
+	data-testid={testid}
 	style:width="44px"
 	style:height="44px"
 	style:display="inline-flex"
