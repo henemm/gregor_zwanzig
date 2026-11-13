@@ -218,6 +218,7 @@ const FESTER_KONTEXT = new Set(['Trip-Hub', 'Ortsvergleich-Hub']);
 // DENSELBEN geteilten Baustein weiter.
 const ZUSTELLUNG_HUELLE = join(SHARED, 'zustellung-tab/ZustellungTab.svelte');
 const UEBER_HUELLE = new Set(['Trip-Hub', 'Ortsvergleich-Hub']);
+const UEBERGANG = join(COMPONENTS, 'organisms/zustellung-tab/UebergangBlock.svelte');
 
 function pruefeHuelle(flaeche: string, datei: string, ctx: string): void {
 	const a = ast(datei);
@@ -225,13 +226,21 @@ function pruefeHuelle(flaeche: string, datei: string, ctx: string): void {
 	const m = mounts(a.fragment, 'ZustellungTab');
 	assert.equal(m.length, 1, `${flaeche} bettet die Huelle ZustellungTab nicht genau einmal ein`);
 	assert.equal(contextWert(m[0], quelle), ctx, `${flaeche}: context der Huelle muss statisch "${ctx}" sein`);
+	// #2795 S3b Teilschritt 1b: die Huelle reicht den context an den Uebergangsblock, der den
+	// geteilten Baustein (ohne Versand-Abschnitt) traegt — gemessen wird die ganze Kette.
 	const h = ast(ZUSTELLUNG_HUELLE);
 	const hq = readFileSync(ZUSTELLUNG_HUELLE, 'utf-8');
-	const q = importQuelle(h, 'WetterMetrikenVersandPanel');
-	assert.ok(q && resolve(dirname(ZUSTELLUNG_HUELLE), q) === PANEL, `ZustellungTab importiert nicht den geteilten Baustein: ${q}`);
-	const pm = mounts(h.fragment, 'WetterMetrikenVersandPanel');
-	assert.equal(pm.length, 1, 'ZustellungTab bettet den Baustein nicht genau einmal ein');
-	assert.equal(contextWert(pm[0], hq), 'context', 'ZustellungTab reicht den context nicht durch');
+	const um = mounts(h.fragment, 'UebergangBlock');
+	assert.equal(um.length, 1, 'ZustellungTab bettet den Uebergangsblock nicht genau einmal ein');
+	assert.equal(contextWert(um[0], hq), 'context', 'ZustellungTab reicht den context nicht an den Uebergangsblock');
+	assert.equal(mounts(h.fragment, 'WetterMetrikenVersandPanel').length, 0, 'ZustellungTab bettet den Baustein zusaetzlich direkt ein');
+	const u = ast(UEBERGANG);
+	const uq = readFileSync(UEBERGANG, 'utf-8');
+	const q = importQuelle(u, 'WetterMetrikenVersandPanel');
+	assert.ok(q && resolve(dirname(UEBERGANG), q) === PANEL, `UebergangBlock importiert nicht den geteilten Baustein: ${q}`);
+	const pm = mounts(u.fragment, 'WetterMetrikenVersandPanel');
+	assert.equal(pm.length, 1, 'UebergangBlock bettet den Baustein nicht genau einmal ein');
+	assert.equal(contextWert(pm[0], uq), 'context', 'UebergangBlock reicht den context nicht durch');
 }
 
 describe('#1743 AC-8 (Einsatz): Trip-Hub, Vergleichs-Hub und beide Anlege-Seiten mounten DENSELBEN Baustein', () => {

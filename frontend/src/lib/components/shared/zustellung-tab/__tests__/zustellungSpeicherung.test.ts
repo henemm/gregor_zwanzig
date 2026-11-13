@@ -342,3 +342,93 @@ describe('AC-4/AC-33 (route): Trip-Speicherweg PUT /api/trips/{id}', () => {
 		assert.equal(puts, 0, '18:50 darf nicht gesendet werden');
 	});
 });
+
+// ── Fix-Loop 1 (Adversary Runde 1) ───────────────────────────────────────────
+// F002 (M2): Trip-Gesamtschalter `enabled`. F005 (M30): Einzelschalter Morgen/Abend allein.
+// F003 (M15): Fehlerpfad — die Basis bleibt, der naechste Vorgang sendet dieselbe Differenz.
+// Gemessen wird, was beim Nutzer ankommt: der Slot-Zustand NACH dem Server-Merge des
+// report_config (Go: je Schluessel; reportSlotAktiv = dieselbe Regel wie Go/Python).
+
+/** report_config nach dem Server-Merge je Schluessel (Go mergeReportConfig). */
+const rcNachMerge = (rc: Json, teil: Json) => ({ ...rc, ...(teil?.report_config ?? {}) });
+
+describe('F002: Trip mit ausgeschaltetem Gesamtschalter — Morgen einschalten kommt an', () => {
+	test('f002_enabled_false_morgen_an_sendet_enabled_true_und_slot_ist_danach_aktiv', async () => {
+		const m = await zustellungModell();
+		const s = await zustellungSpeicherung();
+		const { reportSlotAktiv } = await import('../../../../utils/reportSlotAktiv.ts');
+		const trip = tripVoll();
+		trip.report_config = { ...trip.report_config, enabled: false, morning_enabled: true, evening_enabled: false };
+		const vorher = m.standAusTrip(trip);
+		assert.equal(vorher.morgenAn, false, 'Messaufbau: enabled:false zeigt Morgen aus');
+		const n = s.zustellungNutzlast('route', vorher, { ...kopie(vorher), morgenAn: true });
+		assert.equal(n.versand?.report_config?.enabled, true, `Gesamtschalter muss mitgehen, gesendet: ${JSON.stringify(n.versand)}`);
+		assert.equal(n.versand.report_config.morning_enabled, true);
+		const danach = rcNachMerge(trip.report_config, n.versand);
+		assert.equal(reportSlotAktiv(danach, 'morning'), true, 'nach dem Speichern kaeme das Morgen-Briefing nicht (enabled bliebe false)');
+		assert.equal(reportSlotAktiv(danach, 'evening'), false, 'Abend bleibt aus');
+	});
+
+	test('f002_beide_aus_setzt_gesamtschalter_false', async () => {
+		const m = await zustellungModell();
+		const s = await zustellungSpeicherung();
+		const vorher = m.standAusTrip(tripVoll());
+		const n = s.zustellungNutzlast('route', vorher, { ...kopie(vorher), morgenAn: false, abendAn: false });
+		assert.deepEqual(n.versand, { report_config: { morning_enabled: false, evening_enabled: false, enabled: false } });
+	});
+});
+
+describe('F005: Einzelschalter Morgen allein / Abend allein', () => {
+	for (const context of ['route', 'vergleich'] as const) {
+		for (const [slot, feld, schluessel] of [
+			['morgen', 'morgenAn', 'morning_enabled'],
+			['abend', 'abendAn', 'evening_enabled']
+		] as const) {
+			test(`f005_${context}_nur_${slot}_aus_und_wieder_an`, async () => {
+				const { s, vorher } = await basis(context);
+				assert.equal(vorher[feld], true, `Messaufbau: ${slot} startet an`);
+				const aus = s.zustellungNutzlast(context, vorher, { ...kopie(vorher), [feld]: false });
+				const ausErwartet = context === 'route' ? { report_config: { [schluessel]: false, enabled: true } } : { [schluessel]: false };
+				assert.deepEqual(aus, { versand: ausErwartet, alarme: null }, `${slot} aus: ${JSON.stringify(aus)}`);
+				const ausStand = { ...kopie(vorher), [feld]: false };
+				const an = s.zustellungNutzlast(context, ausStand, { ...kopie(ausStand), [feld]: true });
+				const anErwartet = context === 'route' ? { report_config: { [schluessel]: true, enabled: true } } : { [schluessel]: true };
+				assert.deepEqual(an, { versand: anErwartet, alarme: null }, `${slot} an: ${JSON.stringify(an)}`);
+			});
+		}
+	}
+});
+
+describe('F003: Speicherfehler — Basis bleibt, der naechste Vorgang sendet dieselbe Differenz', () => {
+	for (const context of ['route', 'vergleich'] as const) {
+		test(`f003_${context}_nach_fehler_wird_dieselbe_aenderung_erneut_gesendet`, async () => {
+			const { s, vorher } = await basis(context);
+			const gesendet: Json[] = [];
+			let scheitern = true;
+			const client = {
+				async put<T>(_pfad: string, body: unknown): Promise<T> {
+					gesendet.push(kopie(body));
+					if (scheitern) throw new Error('Netz weg');
+					return {} as T;
+				}
+			};
+			const ctl = createController('x-2795');
+			const sp = s.erstelleZustellungSpeicherung({ context, id: 'x-2795', client, saveController: ctl, basis: vorher });
+			const jetzt = { ...kopie(vorher), abendZeit: '19:15' };
+			sp.aenderungMelden(jetzt);
+			await ctl.flush();
+			assert.equal(gesendet.length, 1, 'Messaufbau: erster Versuch erreicht den Client');
+			assert.equal(ctl.state, 'error', 'Messaufbau: der Fehler kommt beim Controller an');
+			scheitern = false;
+			// Die naechste Eingabe meldet denselben Formularstand erneut.
+			sp.aenderungMelden(kopie(jetzt));
+			await ctl.flush();
+			assert.equal(gesendet.length, 2, 'nach dem Fehler wurde die Aenderung nicht erneut gesendet — sie ginge still verloren');
+			assert.deepEqual(gesendet[1], gesendet[0], 'der zweite Vorgang sendet dieselbe Differenz');
+			// Nach Erfolg ist die Basis fortgeschrieben: derselbe Stand erzeugt keinen dritten PUT.
+			sp.aenderungMelden(kopie(jetzt));
+			await ctl.flush();
+			assert.equal(gesendet.length, 2, 'nach Erfolg darf derselbe Stand nicht erneut gesendet werden');
+		});
+	}
+});

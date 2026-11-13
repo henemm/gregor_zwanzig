@@ -18,6 +18,8 @@ import bausteine from './bausteine.json' with { type: 'json' };
 import fehler from './fehler.json' with { type: 'json' };
 import hilfe from './hilfe.json' with { type: 'json' };
 import wetter from './wetter.json' with { type: 'json' };
+// Issue #2795 S3b Teilschritt 1b: Reiter Zustellung.
+import zustellung from './zustellung.json' with { type: 'json' };
 
 export const en: Record<string, string> = {
 	...start,
@@ -37,5 +39,6 @@ export const en: Record<string, string> = {
 	...bausteine,
 	...fehler,
 	...hilfe,
-	...wetter
+	...wetter,
+	...zustellung
 };

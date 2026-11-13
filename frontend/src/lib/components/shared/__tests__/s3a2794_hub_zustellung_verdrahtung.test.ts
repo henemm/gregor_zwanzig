@@ -40,7 +40,10 @@ const DATEI = {
 	tripHub: join(KOMP, 'trip-detail', 'TripTabs.svelte'),
 	vergleichHub: join(KOMP, 'compare', 'CompareTabs.svelte'),
 	zustellung: join(KOMP, 'shared', 'zustellung-tab', 'ZustellungTab.svelte'),
-	panel: join(KOMP, 'shared', 'WetterMetrikenVersandPanel.svelte')
+	panel: join(KOMP, 'shared', 'WetterMetrikenVersandPanel.svelte'),
+	// #2795 S3b Teilschritt 1b: neue Bausteine des Reiters.
+	uebergang: join(KOMP, 'organisms', 'zustellung-tab', 'UebergangBlock.svelte'),
+	briefingZeiten: join(KOMP, 'organisms', 'zustellung-tab', 'BriefingZeiten.svelte')
 };
 
 /** Die eine ZustellungTab-Einbettung eines Hubs (unter dem Reiter zustellung). */
@@ -97,18 +100,17 @@ function testids(wurzel: Knoten, quelle: string): string[] {
 // ── F001: Vergleichs-Hub reicht Alarme und Aktivieren an den Reiter Zustellung ──
 
 describe('AC-7 (F001): Vergleichs-Hub übergibt ZustellungTab den Alarm-Baustein und die Aktivierungs-Karte', () => {
-	test('s3a2794_f001_vergleich_zustellung_bekommt_alarmeBereich_mit_alarmetab_vergleich', () => {
-		const { knoten, quelle, ast } = zustellungEinbettung(DATEI.vergleichHub);
-		const s = snippetAmAttribut(knoten, quelle, ast, 'alarmeBereich');
-		const alarme = einbettungenMitWeichen({ fragment: s.body }, quelle, ['AlarmeTab']);
-		assert.equal(alarme.length, 1, `F001: das Snippet alarmeBereich bettet ${alarme.length} AlarmeTab ein (erwartet 1)`);
-		assert.equal(attribut(alarme[0].knoten, quelle, 'context')?.literal, 'vergleich', 'F001: AlarmeTab im Snippet nicht context="vergleich"');
-		// Das Alarm-Buendel des Vergleichs (alle Werte + Rueckrufe) muss am Mount haengen, sonst zeigt der Reiter Vorgaben.
-		const spread = (alarme[0].knoten.attributes as Knoten[]).some(
-			(a) => a.type === 'SpreadAttribute' && /\balarmePropsAus\s*\(/.test(quelle.slice(a.start, a.end))
-		);
-		assert.ok(spread, 'F001: AlarmeTab im Snippet ohne {...alarmePropsAus(…)} — gespeicherte Alarm-Werte kämen nicht an');
-		assert.ok(attribut(alarme[0].knoten, quelle, 'saveController'), 'F001: AlarmeTab im Snippet ohne saveController — Änderungen würden nicht gespeichert');
+	// #2795 S3b Teilschritt 1b: die Alarm-Zustellung (Kanaele, Dringlichkeit, Stille Stunden,
+	// Mindestabstand) ist jetzt Teil des Reiters selbst (KanalTabelle/StilleStunden, ein Speicherer,
+	// s3b2795_zustellung_struktur). Der Hub reicht deshalb KEIN Alarm-Snippet mehr — prueft hier,
+	// dass der alte Weg nicht still parallel weiterlaeuft (sonst zwei Speicherwege fuer alert_*).
+	test('s3b2795_vergleich_zustellung_ohne_alarmeBereich_alarme_im_reiter_selbst', () => {
+		const { knoten, quelle } = zustellungEinbettung(DATEI.vergleichHub);
+		assert.equal(attribut(knoten, quelle, 'alarmeBereich'), null, '#2795: der Vergleichs-Hub reicht noch ein alarmeBereich-Snippet an ZustellungTab');
+		const { ast: zAst, quelle: zQ } = svelteAst(DATEI.zustellung);
+		for (const name of ['KanalTabelle', 'StilleStunden']) {
+			assert.equal(einbettungenMitWeichen(zAst, zQ, [name]).length, 1, `#2795: ZustellungTab bettet ${name} nicht genau einmal ein`);
+		}
 	});
 
 	test('s3a2794_f001_vergleich_zustellung_bekommt_activation_karte', () => {
@@ -121,29 +123,27 @@ describe('AC-7 (F001): Vergleichs-Hub übergibt ZustellungTab den Alarm-Baustein
 		assert.equal(attributAusdruck(knopf!, quelle, 'onclick'), 'handleToggleActive', 'F001: der Aktivieren-Knopf ruft nicht handleToggleActive');
 	});
 
-	test('s3a2794_f001_zustellungtab_rendert_alarmeBereich_und_reicht_activation_zum_versand', () => {
+	// #2795 S3b Teilschritt 1b: die Aktivierungs-Karte steht im Uebergangsblock (der alte
+	// Versand-Abschnitt des Panels entfaellt im Reiter). Gemessen wird die Kette Hub -> ZustellungTab
+	// -> UebergangBlock -> {@render activation()}.
+	test('s3b2795_zustellungtab_reicht_activation_an_den_uebergangsblock_der_sie_rendert', () => {
 		const { ast, quelle } = svelteAst(DATEI.zustellung);
-		// alarmeBereich wird gerendert ({@render alarmeBereich()}).
+		const ueb = einbettungenMitWeichen(ast, quelle, ['UebergangBlock']);
+		assert.equal(ueb.length, 1, 'Messaufbau: ZustellungTab bettet den Uebergangsblock nicht genau einmal ein');
+		assert.ok(attribut(ueb[0].knoten, quelle, 'activation'), 'F001: ZustellungTab reicht activation nicht an den Uebergangsblock');
+		const { ast: uAst, quelle: uQ } = svelteAst(DATEI.uebergang);
 		let rendert = false;
 		(function lauf(n: unknown): void {
 			if (rendert || n === null || typeof n !== 'object') return;
 			if (Array.isArray(n)) return n.forEach(lauf);
 			const k = n as Knoten;
-			if (k.type === 'RenderTag' && /^alarmeBereich\s*\(/.test(quelle.slice(k.expression.start, k.expression.end).replace(/\?\./g, ''))) {
+			if (k.type === 'RenderTag' && /^activation\s*\(/.test(uQ.slice(k.expression.start, k.expression.end).replace(/\?\./g, ''))) {
 				rendert = true;
 				return;
 			}
 			for (const [f, v] of Object.entries(k)) if (f !== 'parent' && f !== 'loc' && f !== 'metadata') lauf(v);
-		})(ast.fragment);
-		assert.ok(rendert, 'F001: ZustellungTab rendert das Snippet alarmeBereich nicht');
-		// activation wird NICHT abgefangen, sondern ueber die Streuung ans Panel gereicht, das sie VersandTab gibt.
-		assert.ok(!propNamen(ast).includes('activation'), 'F001: ZustellungTab faengt activation ab, statt es ans Panel zu reichen');
-		const panel = einbettungenMitWeichen(ast, quelle, ['WetterMetrikenVersandPanel']);
-		assert.equal(panel.length, 1, 'Messaufbau: ZustellungTab bettet das Panel nicht genau einmal ein');
-		assert.ok((panel[0].knoten.attributes as Knoten[]).some((a) => a.type === 'SpreadAttribute'), 'F001: ZustellungTab streut die Panel-Props nicht');
-		const { ast: pAst, quelle: pQ } = svelteAst(DATEI.panel);
-		const versand = einbettungenMitWeichen(pAst, pQ, ['VersandTab']);
-		assert.ok(versand.some((v) => attribut(v.knoten, pQ, 'activation')), 'F001: das Panel reicht activation nicht an VersandTab');
+		})(uAst.fragment);
+		assert.ok(rendert, 'F001: der Uebergangsblock rendert das Snippet activation nicht');
 	});
 });
 
@@ -184,11 +184,15 @@ for (const [kind, datei] of [
 	});
 }
 
-describe('AC-5 (F004): ZustellungTab reicht versandSprung ans Panel, das zum Abschnitt springt', () => {
-	test('s3a2794_f004_zustellungtab_faengt_versandSprung_nicht_ab_und_panel_nimmt_ihn', () => {
-		const { ast } = svelteAst(DATEI.zustellung);
-		assert.ok(!propNamen(ast).includes('versandSprung'), 'F004: ZustellungTab faengt versandSprung ab, statt es ans Panel zu streuen');
-		const { ast: pAst } = svelteAst(DATEI.panel);
-		assert.ok(propNamen(pAst).includes('versandSprung'), 'F004: das Panel nimmt kein versandSprung');
+// #2795 S3b Teilschritt 1b: `#versand` ist jetzt die Karte der Briefing-Zeiten (das Panel steht
+// im Uebergangsblock OHNE Versand-Abschnitt). Der Zaehler muss deshalb dort ankommen.
+describe('AC-5 (F004): ZustellungTab reicht versandSprung an die Briefing-Zeiten, die #versand tragen', () => {
+	test('s3b2795_zustellungtab_reicht_versandSprung_an_briefingzeiten', () => {
+		const { ast, quelle } = svelteAst(DATEI.zustellung);
+		const bz = einbettungenMitWeichen(ast, quelle, ['BriefingZeiten']);
+		assert.equal(bz.length, 1, 'Messaufbau: ZustellungTab bettet BriefingZeiten nicht genau einmal ein');
+		assert.equal(attributAusdruck(bz[0].knoten, quelle, 'versandSprung'), 'versandSprung', 'F004: ZustellungTab reicht versandSprung nicht an BriefingZeiten');
+		const { ast: bAst } = svelteAst(DATEI.briefingZeiten);
+		assert.ok(propNamen(bAst).includes('versandSprung'), 'F004: BriefingZeiten nimmt kein versandSprung');
 	});
 });

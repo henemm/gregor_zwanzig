@@ -221,7 +221,7 @@
 		// `saveController` (Anlege-Seite) bleibt der Speicherzweig inaktiv.
 		preset?: ComparePreset;
 		onCompareUpdate?: (updated: ComparePreset) => void;
-		enqueueHubWrite?: <T>(fn: () => Promise<T>) => Promise<T>; /** #2521 S1: Infobox nur beim Anlegen (Default aus). */ showInfobox?: boolean;
+		enqueueHubWrite?: <T>(fn: () => Promise<T>) => Promise<T>; /** #2521 S1: Infobox nur beim Anlegen (Default aus). */ showInfobox?: boolean; /** #2795 S3b 1b (AC-36): Profil von aussen (Reiter Zustellung laedt es EINMAL); `undefined` = selbst laden. */ profil?: { mail_to?: string; telegram_chat_id?: string; sms_to?: string; sms_verified?: boolean; pending_sms_to?: string } | null;
 	}
 	let {
 		context = 'route', bereich = 'alles', trip, createMode = false, onChannelsChange, onWeatherMetricsChange, onDayWindowChange,
@@ -231,7 +231,7 @@
 		onVergleichsMetrikenChange, onOfficialAlertsEnabledChange, onDayWindowStartHourChange, onDayWindowEndHourChange,
 		onHourlyMetricKeysChange, onHourlyEnabledChange, onOutlookMetricKeysChange, onOutlookMetricFormatsChange,
 		onOutlookEnabledChange,
-		preset, onCompareUpdate, enqueueHubWrite, showInfobox = false
+		preset, onCompareUpdate, enqueueHubWrite, showInfobox = false, profil
 	}: Props = $props();
 
 	// Issue #1311: Abschnittsreihenfolge kommt aus einer reinen Funktion, kein
@@ -548,7 +548,7 @@
 				api.get<MetricCatalog>('/api/metrics'),
 				api.get<Template[]>('/api/templates').catch(() => [] as Template[]),
 				api.get<MetricPreset[]>('/api/metric-presets').catch(() => [] as MetricPreset[]),
-				fetch('/api/auth/profile', { credentials: 'same-origin' })
+				profil !== undefined ? Promise.resolve(profil) : fetch('/api/auth/profile', { credentials: 'same-origin' })
 					.then((r) => (r.ok ? r.json() : null))
 					.catch(() => null),
 				loadSmsSymbols(),

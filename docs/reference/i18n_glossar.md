@@ -195,3 +195,11 @@ Hier nur Beispiele der Konvention; **Kurzform (`col_label`) und Kürzel bleiben*
 | Nicht im Briefing | not in the briefing | Liste der abgewählten Metriken mit „+ {Metrik}" |
 | Abweichung (von der Vorlage) | change (from the template) | „{n} Abweichungen" = *{n} changes*; „unverändert" = *unchanged* |
 | Orts-Briefing | location briefing | Kontext `vergleich` im Reiter Wetter |
+
+## Reiter Zustellung (#2795 S3b)
+
+| Deutsch | Englisch | Hinweis |
+|---|---|---|
+| Zustellung | delivery | Reiter-Name in Trip und Orts-Briefing (Katalog `zustellung.*`): wann die Briefings kommen und über welche Kanäle Briefings und Alarme ankommen |
+| Stille Stunden | quiet hours | Zeitfenster ohne Alarme (`alert_quiet_from`/`alert_quiet_to`); gestaute Alarme kommen mit dem nächsten Morgen-Briefing |
+| Dringlichkeit | urgency | Stufe je Kanal „gering/mittel/hoch“ = *low/moderate/high*; Datenwerte `LOW`/`MODERATE`/`HIGH` nie übersetzen |

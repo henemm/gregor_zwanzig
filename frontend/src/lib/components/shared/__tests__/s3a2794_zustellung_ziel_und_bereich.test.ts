@@ -38,6 +38,8 @@ register(
 const DATEI = {
 	tripNeu: join(KOMP, 'trip-new', 'TripNewEditor.svelte'),
 	zustellung: join(KOMP, 'shared', 'zustellung-tab', 'ZustellungTab.svelte'),
+	// #2795 S3b Teilschritt 1b: das Panel steht im Uebergangsblock des Reiters (Mount-Ort).
+	uebergang: join(KOMP, 'organisms', 'zustellung-tab', 'UebergangBlock.svelte'),
 	panel: join(KOMP, 'shared', 'WetterMetrikenVersandPanel.svelte')
 };
 
@@ -114,9 +116,13 @@ describe('AC-6 (F007): Trip-Anlegen — „Zustellung einrichten →“ schaltet
 
 describe('AC-1/AC-7 (F008): ZustellungTab zeigt am Panel nur die Zustellungs-Abschnitte', () => {
 	test('s3a2794_f008_zustellungtab_uebergibt_bereich_zustellung_und_filter_wirkt', () => {
-		const { ast, quelle } = svelteAst(DATEI.zustellung);
+		// #2795 S3b 1b: ZustellungTab -> UebergangBlock (genau einmal) -> Panel; gemessen am Panel-Mount.
+		const z = svelteAst(DATEI.zustellung);
+		assert.equal(einbettungenMitWeichen(z.ast, z.quelle, ['WetterMetrikenVersandPanel']).length, 0, 'F008: ZustellungTab bettet das Panel zusaetzlich direkt ein');
+		assert.equal(einbettungenMitWeichen(z.ast, z.quelle, ['UebergangBlock']).length, 1, 'Messaufbau: ZustellungTab bettet den Uebergangsblock nicht genau einmal ein');
+		const { ast, quelle } = svelteAst(DATEI.uebergang);
 		const panel = einbettungenMitWeichen(ast, quelle, ['WetterMetrikenVersandPanel']);
-		assert.equal(panel.length, 1, `Messaufbau: ZustellungTab bettet das Panel ${panel.length}× ein (erwartet 1)`);
+		assert.equal(panel.length, 1, `Messaufbau: der Uebergangsblock bettet das Panel ${panel.length}× ein (erwartet 1)`);
 		const attrs = panel[0].knoten.attributes as Knoten[];
 		const b = attribut(panel[0].knoten, quelle, 'bereich');
 		assert.ok(b, 'F008: ZustellungTab uebergibt dem Panel kein `bereich` — der Reiter zeigte alles (Wetter + Zustellung)');
