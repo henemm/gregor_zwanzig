@@ -118,7 +118,10 @@ func RequireReauthForAddressChange(s *store.Store, secret string, next http.Hand
 			MailTo *string `json:"mail_to"`
 		}
 		uid := middleware.UserIDFromContext(r.Context())
-		if json.Unmarshal(body, &felder) == nil && (felder.Email != nil || felder.MailTo != nil) {
+		// Bewusst derselbe Decoder wie im Handler (erster JSON-Wert, Rest
+		// ignoriert): ein strengeres Parsen hier liesse einen Rumpf mit
+		// angehaengten Daten ungeprueft durch, den der Handler dann annimmt.
+		if json.NewDecoder(bytes.NewReader(body)).Decode(&felder) == nil && (felder.Email != nil || felder.MailTo != nil) {
 			u, lerr := s.LoadUser(uid)
 			if lerr == nil && u != nil && addressFieldsChange(u, felder.Email, felder.MailTo) &&
 				!hasFreshReauth(uid, sessionIDFromRequest(r, secret), time.Now()) {

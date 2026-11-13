@@ -70,6 +70,19 @@ func TestKontoaenderung_AdresswechselOhneNachweis_403(t *testing.T) {
 	if w.Code != http.StatusForbidden || fehlerCode(t, w) != "reauth_required" {
 		t.Fatalf("Kennungswechsel ohne Nachweis: erwartet 403 reauth_required, bekommen %d: %s", w.Code, w.Body.String())
 	}
+	// Angehaengte Daten hinter dem JSON-Objekt aendern nichts an der Pruefung.
+	w = kontoAnfrage(r, secret, http.MethodPut, "/api/auth/profile", `{"mail_to":"neu-anke@beispiel.de"} {}`, "anke")
+	if w.Code == http.StatusOK {
+		t.Fatalf("Rumpf mit angehaengten Daten darf den Nachweis nicht umgehen: %d %s", w.Code, w.Body.String())
+	}
+	// Schluessel in anderer Schreibweise sind fuer Go-JSON dasselbe Feld.
+	w = kontoAnfrage(r, secret, http.MethodPut, "/api/auth/profile", `{"MAIL_TO":"neu-anke@beispiel.de"}`, "anke")
+	if w.Code != http.StatusForbidden || fehlerCode(t, w) != "reauth_required" {
+		t.Fatalf("Schreibweise des Schluessels: erwartet 403 reauth_required, bekommen %d: %s", w.Code, w.Body.String())
+	}
+	if u, _ := s.LoadUser("anke"); u.PendingContactAddress != "" || u.MailTo != "" {
+		t.Errorf("ohne Nachweis darf nichts geschrieben werden: pending=%q mail_to=%q", u.PendingContactAddress, u.MailTo)
+	}
 }
 
 func TestKontoaenderung_ProfilOhneAdressaenderungBrauchtKeinenNachweis(t *testing.T) {
