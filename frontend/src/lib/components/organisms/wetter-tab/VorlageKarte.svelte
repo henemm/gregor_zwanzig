@@ -126,7 +126,8 @@
 	.wt-karte {
 		display: flex;
 		flex-wrap: wrap;
-		align-items: flex-end;
+		/* #2980 AC-27 (Mockup .vorlage): Aktion „Als eigene Vorlage speichern" vertikal mittig. */
+		align-items: center;
 		justify-content: space-between;
 		gap: var(--g-s-3) var(--g-s-4);
 		padding: var(--g-s-4) var(--g-s-5);
@@ -150,20 +151,23 @@
 	.wt-picker {
 		align-self: flex-start;
 	}
+	/* #2980 AC-26 (Mockup .picker): Rahmen --g-rule (Btn ghost), Grund --g-paper, Name 15 px/600. */
 	.wt-picker :global([data-slot='btn']) {
 		align-items: baseline;
 		gap: var(--g-size-10px);
-		background: var(--g-card);
-		font-size: var(--g-s-4);
+		background: var(--g-paper);
+		font-size: var(--g-text-md);
 		font-weight: 600;
 	}
 	.wt-picker :global([data-slot='btn']:hover) {
 		background: var(--g-surface-2);
 	}
+	/* #2980 AC-26 (Mockup .picker small): „▾ unverändert" Mono 11 px in --g-ink-3. */
 	.wt-picker small {
-		font-size: var(--g-size-12-5px);
-		font-weight: 400;
-		color: var(--g-ink-2);
+		font-family: var(--g-font-mono);
+		font-size: var(--g-text-xs);
+		font-weight: 500;
+		color: var(--g-ink-3);
 	}
 	.wt-menue {
 		position: absolute;

@@ -5,7 +5,7 @@
 	//
 	// Verallgemeinert das bisher in TripTabs.svelte lokal gepflegte Muster
 	// (Band + Fade, #1231) statt es zu kopieren (AP-006). Desktop-Optik
-	// (Underline) und Mobile-Band (Pills) leben hier in einem Baustein;
+	// (Underline) und Mobile-Band leben hier in einem Baustein;
 	// Konsumenten tragen nur noch ihre Item-Daten.
 	//
 	// Verhalten:
@@ -15,9 +15,10 @@
 	//   aktive Tab tabindex=0), ←/→ aktiviert den Folge-Tab inkl. Fokus.
 	//   #2913 c2 (Mockup): der aktive Reiter trägt zusätzlich aria-current="page".
 	// - Mobile (<900px): horizontales Band + 16px-Fade + Scroll-Snap,
-	//   Trigger min-height 44px, Pill-Optik, Badges neutral.
+	//   Trigger min-height 44px, Badges neutral; seit #2980 (ADR-0118) dieselbe
+	//   Text-Reiter-Optik mit Unterstrich wie am Desktop (keine Pillen mehr).
 	// - Desktop (>=900px): ADR-0111 Punkt 1 (= ADR-0109 Punkt 7, Mockup Fassung 3):
-	//   kein Kasten, EINE Grundlinie 1px --g-rule, Reiter 13px/500 --g-ink, aktiv 600
+	//   kein Kasten, EINE Grundlinie 1px --g-rule, Reiter 13px/500 --g-ink-3 (#2980), aktiv 600 --g-ink
 	//   mit 2px-Unterstrich --g-accent, Zähler Mono 10px neutral, Radius 3px. Eine
 	//   Optik für Trip und Vergleich, ohne Varianten-Prop (#2845).
 	// - Kein Kasten durch Struktur (#2794 S3a, §7 AC-3): die Wurzel trägt KEIN
@@ -122,7 +123,8 @@
 		border: none;
 		border-bottom: 2px solid transparent;
 		background: transparent;
-		color: var(--g-ink);
+		/* #2980 AC-17 (Mockup .tab): inaktiv --g-ink-3, aktiv --g-ink (Regeln unten). */
+		color: var(--g-ink-3);
 		cursor: pointer;
 		white-space: nowrap;
 		font-family: var(--g-font-sans);
@@ -134,6 +136,7 @@
 		color: var(--g-ink);
 	}
 	.mtabbar :global([data-slot='segmented-item'][data-state='active']) {
+		color: var(--g-ink);
 		border-bottom-color: var(--g-accent);
 		/* #2794 S3a (AC-3): aktiver Reiter 600 stark. */
 		font-weight: 600;
@@ -154,7 +157,7 @@
 		font-weight: 600;
 	}
 
-	/* Mobile (<900px): horizontales Band + Fade (#1231) + Pill-Trigger. */
+	/* Mobile (<900px): horizontales Band + Fade (#1231), Text-Reiter wie Desktop (#2980). */
 	@media (max-width: 899px) {
 		.mtabbar {
 			overflow-x: auto;
@@ -163,13 +166,16 @@
 			-ms-overflow-style: none;
 			scroll-snap-type: x proximity;
 			scroll-padding-inline: 12px;
-			border-bottom: none;
+			/* #2980 AC-17: Grundlinie --g-rule bleibt auch am Handy (Desktop-Regel oben). */
 			mask-image: linear-gradient(to right, transparent, black 16px, black calc(100% - 16px), transparent);
 			-webkit-mask-image: linear-gradient(to right, transparent, black 16px, black calc(100% - 16px), transparent);
 		}
 		.mtabbar::-webkit-scrollbar {
 			display: none;
 		}
+		/* #2980 AC-17/AC-18 (ADR-0118, PO 13.11.2026): Text-Reiter wie am Desktop — keine Pillen,
+		   Farben, Gewichte und Unterstrich erben die Desktop-Regeln oben; hier nur Band-Verhalten
+		   (Scroll-Snap) und die 44-px-Tippfläche (#2284). */
 		.mtabbar :global([data-slot='segmented-item']) {
 			white-space: nowrap;
 			flex-shrink: 0;
@@ -178,37 +184,15 @@
 			display: inline-flex;
 			align-items: center;
 			gap: 6px;
-			/* #2794 B2 (AC-4): seitlich 10 statt 12 px — vier DE-Pills passen bei 360 px
-			   mit 15 px Reserve (vorher 1 px Überlauf); Höhe hält min-height 44 px. */
+			/* #2794 B2 (AC-4): seitlich 10 statt 12 px — vier DE-Reiter passen bei 360 px. */
 			padding: var(--g-s-2) var(--g-size-10px);
-			border: 1px solid var(--g-rule);
-			border-bottom: 1px solid var(--g-rule);
-			border-radius: var(--g-r-pill);
-			background: var(--g-card);
-			color: var(--g-ink-2);
 			font-size: var(--g-text-sm);
 		}
-		/* #2879: aktiver Reiter --g-accent-deep (Papier darauf 6,77:1, WCAG-AA). */
-		.mtabbar :global([data-slot='segmented-item'][data-state='active']) {
-			background: var(--g-accent-deep);
-			border-color: var(--g-accent-deep);
-			color: var(--g-on-accent);
-			font-weight: 600;
-			border-bottom-color: var(--g-accent-deep);
-		}
-		/* Badge neutral statt Accent-Fill (Design-Doc Paket 2, offener #585-Punkt
-		   als Vorschlag umgesetzt): paper-deep/ink-3 — seit #2879 auch im aktiven
-		   Reiter (vorher transluzent, 2,79:1; ADR-0110 „Zähler neutral"). */
+		/* Badge neutral (ADR-0110 „Zähler neutral"): paper-deep/ink-3. */
 		.mtabbar :global([data-slot='segmented-badge']) {
-			background: var(--g-paper-deep);
-			color: var(--g-ink-3);
-			font-family: var(--g-font-mono);
 			/* #2601 Runde 2 (AC-13): am Handy kein Text unter 11 px — Token statt 10 px. */
 			font-size: var(--g-text-xs);
-			font-weight: 600;
 			margin-left: 0;
-			/* Handy-Pillen unverändert (ADR-0111 Punkt 1 gilt nur am Computer). */
-			border-radius: 9999px;
 		}
 		.mtabbar :global([data-slot='segmented-item']:focus-visible) {
 			outline: 2px solid var(--g-accent);

@@ -100,7 +100,8 @@ describe('AC-6: Deutsch byte-gleich zum Ist-Stand vor der Umstellung (Golden gol
 	});
 	test('Messaufbau: Golden enthaelt die deutschen Texte der Bausteine', () => {
 		const alle = Object.keys(FAELLE).map((f) => readFileSync(path.join(P.GOLDEN_DIR, `${f}.de.html`), 'utf-8')).join('');
-		for (const s of ['Tag 2', 'START IN', 'Briefing gesendet!', 'Weitere Aktionen', '1 Größe unbekannt', '2 Größen unbekannt', 'Lückenlos neu datiert', 'Neuer Trip','Gesperrt — erst Trip-Name + Startdatum', 'Fertig', 'Archiviert', 'Versand-Historie', 'von Hand', '✂ ab hier bei', '▾ Aufklappen', 'Speichern fehlgeschlagen', 'Gespeichert', 'Karte &amp; Höhenprofil', 'Fehler beim Senden', 'Name bearbeiten', 'Tour-Detail', 'Trip-Start', '01.07.'])
+		// #2980 AC-19: 'Tag 2'/'START IN' (Kennzahlenzeile #416) stehen nicht mehr im Golden.
+		for (const s of ['Briefing gesendet!', 'Weitere Aktionen', '1 Größe unbekannt', '2 Größen unbekannt', 'Lückenlos neu datiert', 'Neuer Trip','Gesperrt — erst Trip-Name + Startdatum', 'Fertig', 'Archiviert', 'Versand-Historie', 'von Hand', '✂ ab hier bei', '▾ Aufklappen', 'Speichern fehlgeschlagen', 'Gespeichert', 'Karte &amp; Höhenprofil', 'Fehler beim Senden', 'Name bearbeiten', 'Tour-Detail', 'Trip-Start', '01.07.'])
 			assert.ok(alle.includes(s), s);
 	});
 });
@@ -123,10 +124,14 @@ describe('AC-1: Trip-Hub englisch, Namen unveraendert', () => {
 		assert.deepEqual(deutscheReste(sEn, [...DATEN, 'aktionen.fehler.allgemein']), []);
 	});
 
-	test('Kopf: Tag/ETAPPE/START IN, Zahlenformat en-GB, Aktivitaeten englisch', () => {
+	// #2980 AC-19 (ADR-0118): die Handy-Kennzahlenzeile (Tag/ETAPPE/START IN, #416) entfällt in
+	// beiden Sprachen; geprüft bleiben Zahlenformat und Aktivitäten.
+	test('Kopf: ohne Kennzahlenzeile (#2980), Zahlenformat en-GB, Aktivitaeten englisch', () => {
 		const { de, en } = deDannEn(() => sichtbar(P.kopfRendern()));
-		for (const s of ['Tag 2', 'ETAPPE 2/3', 'START IN 70 Tg', '↑1.527 m', 'Skitour', 'Hochtour']) hat(de, s);
-		for (const s of ['Day 2', 'STAGE 2/3', 'BRIEFING 07:00', 'DAY Day 2', 'STARTS IN 70 d', '↑1,527 m', 'Ski touring', 'Mountaineering', 'Via ferrata', 'Bike (15 km/h)', 'Rename', 'Cancel', 'Save']) hat(en, s);
+		for (const s of ['↑1.527 m', 'Skitour', 'Hochtour']) hat(de, s);
+		for (const s of ['↑1,527 m', 'Ski touring', 'Mountaineering', 'Via ferrata', 'Bike (15 km/h)', 'Rename', 'Cancel', 'Save']) hat(en, s);
+		for (const s of ['START IN', 'ETAPPE 2/3']) hatNicht(de, s);
+		for (const s of ['STARTS IN', 'STAGE 2/3', 'DAY Day 2']) hatNicht(en, s);
 		hatNicht(en, 'Tg');
 		hatNicht(en, '1.527');
 		// Fixture-Trip „Entwurf Dolomiten" (Name = Daten).
@@ -274,9 +279,12 @@ describe('AC-7: Trip-Status je Sprache', () => {
 	const STATUS = ['Aktiv', 'Pausiert', 'Entwurf', 'Archiviert', 'Fertig', 'Geplant'];
 	const EN = ['Active', 'Paused', 'Draft', 'Archived', 'Finished', 'Planned'];
 	test('de unveraendert, en Draft/Planned/Active/Paused/Finished/Archived', () => {
-		const { de, en } = deDannEn(() => sichtbar(P.kopfRendern()));
-		const ende = (s: string) => s.slice(s.lastIndexOf('STATUS'));
-		for (const s of STATUS) hat(de, s);
+		const { de, en } = deDannEn(() => P.kopfRendern());
+		// Die einzelnen Status-Schilder stehen hinter dem letzten TripHeader (`</header>`); vormals
+		// Anker „STATUS" der Kennzahlenzeile, die mit #2980 AC-19 entfällt. Davor steht der
+		// Fixture-Name „Entwurf Dolomiten" (Daten), der nicht als deutscher Rest zählen darf.
+		const ende = (h: string) => sichtbar(h.slice(h.lastIndexOf('</header>')));
+		for (const s of STATUS) hat(sichtbar(de), s);
 		const enEnde = ende(en);
 		for (const s of EN) hat(enEnde, s);
 		for (const s of STATUS) hatNicht(enEnde, s);

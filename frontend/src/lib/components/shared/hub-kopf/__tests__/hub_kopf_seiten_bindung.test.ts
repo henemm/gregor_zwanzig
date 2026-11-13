@@ -83,14 +83,16 @@ describe('#2837 S1 Entscheidung 6 / AC-7 — Kebab-Symbol: nur vertikal, nur in 
 	});
 });
 
-describe('#2837 S1 Entscheidungen 2/3 — Senden im HubKopf: Btn primary, Bindung an die Props', () => {
-	test('genau ein Senden-Knopf: Btn variant="primary", onclick = onSend, disabled = sendDisabled', () => {
+// #2980 AC-16 (ADR-0118): „Test schicken ▾" ist seit dem Fix-Loop Bildabgleich Btn accent
+// (Fläche --g-accent-deep) statt primary/Ink; „Setup abschließen" bleibt primary (ADR-0110).
+describe('#2837 S1 Entscheidungen 2/3 — Senden im HubKopf: Btn accent (#2980), Bindung an die Props', () => {
+	test('genau ein Senden-Knopf: Btn variant="accent", onclick = onSend, disabled = sendDisabled', () => {
 		const ast = hubKopf();
 		const s = mitAttribut(ast, 'data-testid', 'subscription-hub-send');
 		assert.equal(s.length, 1, `Senden ${s.length}× im HubKopf`);
 		assert.equal(s[0].type, 'Component');
 		assert.equal(s[0].name, 'Btn');
-		assert.equal(attrKurz(s[0], 'variant'), '"primary"', 'Senden ist nicht Btn primary (Mutation a)');
+		assert.equal(attrKurz(s[0], 'variant'), '"accent"', 'Senden ist nicht Btn accent (Mutation a, #2980 AC-16)');
 		assert.ok(['onSend', '() => onSend()', '() => onSend?.()'].includes(attrKurz(s[0], 'onclick') ?? ''), `onclick: ${attrKurz(s[0], 'onclick')}`);
 		assert.equal(attrKurz(s[0], 'disabled'), 'sendDisabled');
 	});

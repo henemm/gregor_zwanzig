@@ -299,16 +299,23 @@
 		padding: var(--g-size-28px) 0 var(--g-size-60px);
 		color: var(--g-ink);
 	}
+	/* #2980 AC-28 (Mockup .sectionh, Z. 442): Trennlinie --g-rule-soft mit 12 px Abstand darüber. */
+	.wt-kopf {
+		padding-bottom: var(--g-s-3);
+		border-bottom: 1px solid var(--g-rule-soft);
+	}
 	.wt-kopf h2 {
 		margin: 0 0 var(--g-s-1);
 		font-size: var(--g-size-22px);
 		font-weight: 600;
 		color: var(--g-ink);
 	}
+	/* #2980 AC-28: Erklärtext höchstens 68ch, 13 px in --g-ink-3. */
 	.wt-kopf p {
 		margin: 0;
-		font-size: var(--g-size-14px);
-		color: var(--g-ink-2);
+		max-width: 68ch;
+		font-size: var(--g-text-sm);
+		color: var(--g-ink-3);
 	}
 	.wt-karte {
 		border: 1px solid var(--g-rule);

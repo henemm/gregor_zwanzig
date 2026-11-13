@@ -45,7 +45,7 @@ describe('AC-5: Compare-Flaechen nutzen die gemeinsamen Aktionen', () => {
 	test('Aktionen und Reiternamen kommen aus aktionen.* (Hub-Seite, Uebersicht, Anlegen)', () => {
 		const alle = FLAECHEN.map(quelle).join('\n');
 		// #2913 c2: Kopf-Knopf „Test schicken ▾" (aktionen.kopf.test_schicken) statt aktionen.senden.
-		for (const k of ['aktionen.edit', 'aktionen.delete', 'aktionen.kopf.test_schicken', 'aktionen.wird_gesendet', 'aktionen.weitere', 'aktionen.abbrechen', 'aktionen.pause', 'aktionen.reiter.orte', 'aktionen.reiter.wetter', 'aktionen.zurueck_uebersicht']) // #2794 S3a 4b: Karte nennt den Reiter Wetter (U3)
+		for (const k of ['aktionen.edit', 'aktionen.delete', 'aktionen.kopf.test_schicken', 'aktionen.wird_gesendet', 'aktionen.weitere', 'aktionen.abbrechen', 'aktionen.pause', 'aktionen.reiter.orte', 'aktionen.reiter.wetter']) // #2794 S3a 4b: Karte nennt den Reiter Wetter (U3); #2980 AC-24: aktionen.zurueck_uebersicht entfällt mit dem Zurück-Pfeil
 			assert.ok(alle.includes(`'${k}'`), k);
 		assert.match(quelle('lib/components/compare'), /aktionen\./);
 		// Aktionsliste und Reiter: die EINE Quelle (shared/subscriptionActions.ts, subscriptionTabs.ts).

@@ -1604,6 +1604,11 @@
 			"text": "Edit region",
 			"grund": "Name und Region bleiben am Hub inline bearbeitbar (Inventar §3.3 K1/K2, feat_1273_s2); Beschriftung des Stift-Symbols für Screenreader, im Mockup nicht vorgesehen",
 			"spec": "docs/specs/modules/feat_2913_c2_seitenkopf.md"
+		},
+		{
+			"text": "Test schicken ▾",
+			"grund": "Bewusste Abweichung der Knopf-Fläche (#2980 AC-16, ADR-0118): Akzent-Knopf mit Fläche --g-accent-deep statt Mockup-Orange --g-accent, weil weiße Schrift auf --g-accent nur ca. 4,3:1 erreicht (WCAG-AA verlangt 4,5:1); der Text entspricht der Elementliste, abweichend ist nur die Farbe",
+			"spec": "docs/specs/modules/feat_2913_c2_seitenkopf.md"
 		}
 	]
 }

@@ -4,7 +4,7 @@
 	//
 	// EIN Markup, keine Verzweigung nach `context`: es wählt nur Datenmarke (`data-kind`) und
 	// den Text, den die Seite hineinreicht (Breadcrumb-Elternteil, Kind). Die Leiste trägt
-	// Zurück-Pfeil (mobil), Breadcrumb, „Senden" (bzw. im Vergleich-Entwurf „Setup abschließen"
+	// Breadcrumb (seit #2980 ohne Zurück-Pfeil), „Senden" (bzw. im Vergleich-Entwurf „Setup abschließen"
 	// auf demselben Platz), Kebab und Meldungen; darunter der geteilte `SubscriptionHeader`.
 	// Fachlich Verschiedenes kommt nur über Snippets (Whitelist, Spec Entscheidung 8).
 	// Der Baustein ruft keine API: „Senden" öffnet über `onSend` nur den Dialog der Seite (#2278).
@@ -14,7 +14,7 @@
 	// `eyebrowText`/`metaTeile` (genau ein Eyebrow, genau eine Meta-Zeile, für beide Arten gleich);
 	// im Entwurf steht „Aktivieren" als Link (`aktivierenHref`, Ziel wählt die Seite) neben der Status-Pill.
 	import type { Snippet } from 'svelte';
-	import { Btn, BackLink, Eyebrow } from '$lib/components/atoms';
+	import { Btn, Eyebrow } from '$lib/components/atoms';
 	import SubscriptionKebab from '$lib/components/molecules/SubscriptionKebab.svelte';
 	import SubscriptionHeader from '$lib/components/shared/subscription-header/SubscriptionHeader.svelte';
 	import type { SaveStatus } from '$lib/stores/saveStatusStore.svelte';
@@ -24,9 +24,9 @@
 
 	interface Props {
 		context: 'route' | 'vergleich';
-		/** Elternteil des Breadcrumbs (Katalogtext + Listen-Adresse); Ziel auch des Zurück-Pfeils. */
+		/** Elternteil des Breadcrumbs (Katalogtext + Listen-Adresse); einziger Weg zur Liste (#2980 AC-24). */
 		parent: { label: string; href: string };
-		/** Kind des Breadcrumbs (Trip: Kürzel ?? Name, Vergleich: Name) — kein Link. */
+		/** Kind des Breadcrumbs: voller Name (#2980 AC-24, kein Kürzel) — kein Link. */
 		crumb: string;
 		sendLabel: string;
 		onSend?: () => void;
@@ -89,7 +89,8 @@
 <div class="hub-kopf" data-kind={context} data-seite="hub" data-abschnitt="kopf">
 	<div data-testid={leisteTestid}>
 		<div class="hub-kopf-leiste" data-testid="hub-kopf-leiste">
-			<div class="back-mobil"><BackLink href={parent.href} label="" ariaLabel={$t('aktionen.zurueck_uebersicht')} /></div>
+			<!-- #2980 AC-24 (ADR-0118, Mockup Z. 229–240): kein Zurück-Pfeil mehr, auch am Handy —
+			     der Elternteil des Breadcrumbs ist der Weg zur Liste. -->
 			<div class="breadcrumb-path" data-testid="hub-kopf-breadcrumb">
 				<a href={parent.href} class="breadcrumb-link g-link-tap">{parent.label}</a>
 				<span class="trenner">/</span>
@@ -101,8 +102,9 @@
 				{#if sendMode === 'setup'}
 					<Btn variant="primary" size="sm" onclick={() => onSetup?.()}>{sendLabel}</Btn>
 				{:else}
-					<!-- „Senden" öffnet nur den Sende-Dialog der Seite (#2278 AC-12). -->
-					<Btn variant="primary" size="sm" data-testid="subscription-hub-send" onclick={() => onSend?.()} disabled={sendDisabled}>{sendLabel}</Btn>
+					<!-- „Senden" öffnet nur den Sende-Dialog der Seite (#2278 AC-12).
+					     #2980 AC-16 (ADR-0118): Akzent-Hauptaktion, Fläche --g-accent-deep (WCAG-AA statt Mockup-Orange). -->
+					<Btn variant="accent" size="sm" data-testid="subscription-hub-send" onclick={() => onSend?.()} disabled={sendDisabled}>{sendLabel}</Btn>
 				{/if}
 				{#if meldungen}{@render meldungen()}{/if}
 			</div>
@@ -152,16 +154,13 @@
 		font-size: 11px;
 		letter-spacing: 0.06em;
 		color: var(--g-ink-3);
+		/* #2980 AC-23 (Mockup .crumbs): Großschreibung nur per CSS, der DOM-Text bleibt unverändert. */
+		text-transform: uppercase;
 		flex: 1 1 0;
+		/* #2980 AC-24: langer Name bricht um statt mit Auslassungspunkten gekürzt zu werden
+		   (kein overflow:hidden mehr, daher beschneidet nichts die 44-px-Trefferfläche des Links). */
 		min-width: 0;
-		white-space: nowrap;
-		overflow: hidden;
-		text-overflow: ellipsis;
-		/* #2601 Runde 2 (AC-10): Raum für die 44-px-Trefferfläche des .g-link-tap-Links (±13 px)
-		   im Bereich selbst, sonst beschneidet overflow:hidden sie oben/unten. Der negative
-		   Block-Rand hebt das Polster für das Layout wieder auf (Zeilenhöhe unverändert). */
-		padding-block: 13px;
-		margin-block: -13px;
+		overflow-wrap: anywhere;
 	}
 	.breadcrumb-link {
 		color: inherit;
@@ -173,8 +172,11 @@
 	.trenner {
 		margin: 0 8px;
 	}
+	/* #2980 AC-23 (Mockup .crumbs .path b): Name in --g-ink, Gewicht 500. */
 	.kind {
 		color: var(--g-ink);
+		font-weight: 500;
+		overflow-wrap: anywhere;
 	}
 	.hub-actions {
 		display: flex;
@@ -184,9 +186,6 @@
 		gap: 8px;
 		/* schrumpfbar: eine Meldung bricht IN den Aktionen um statt die Leiste zu sprengen (AC-8). */
 		min-width: 0;
-	}
-	.back-mobil {
-		display: none;
 	}
 	/* #2837 S1 (Adversary F001): Unterkante des Kopfs für beide Arten hier, nie in der Seite —
 	   Abstand unter dem Titelblock und (Desktop) die Trennlinie aus der Design-Fidelity #582. */
@@ -201,11 +200,21 @@
 	.hub-kopf-eyebrow {
 		margin-bottom: var(--g-s-2);
 	}
+	/* #2980 AC-20 (Mockup .meta): Mono 13 px in --g-ink-3. */
 	.hub-kopf-meta {
 		margin: var(--g-s-2) 0 0;
+		font-family: var(--g-font-mono);
 		font-size: var(--g-text-sm);
-		color: var(--g-ink-2);
+		color: var(--g-ink-3);
 		font-variant-numeric: tabular-nums;
+	}
+	/* #2980 AC-25 (Mockup .btn.ghost): Kebab als Ghost-Knopf mit Rahmen --g-rule auf transparentem
+	   Grund, Desktop und Handy. !important nötig, weil SubscriptionKebab Rahmen und Grund als
+	   Inline-Stil setzt (Desktop --g-rule-soft, Handy ohne Rahmen) und auch in der Listen-Karte
+	   (SubscriptionCard) dient, deren Optik hier unverändert bleibt. */
+	.hub-actions > :global([data-testid='subscription-kebab']) {
+		border: 1px solid var(--g-rule) !important;
+		background: transparent !important;
 	}
 	.hub-kopf-status {
 		display: inline-flex;
@@ -213,18 +222,12 @@
 		gap: 8px;
 		flex-shrink: 0;
 	}
-	/* Mobil (≤899 px): Zurück-Pfeil statt Pfad-Anfang, 44-px-Tippflächen ohne Zeilenhöhe
-	   (negativer Block-Rand, #2284 S2 AC-13); der Pfad kürzt mit Ellipsis, damit „Senden"
-	   und Kebab nie in eine zweite Zeile rutschen (#2278 AC-13, AC-5). */
+	/* Mobil (≤899 px): 44-px-Tippflächen ohne Zeilenhöhe (negativer Block-Rand, #2284 S2 AC-13).
+	   #2980 AC-24: kein Zurück-Pfeil mehr; der Pfad bricht um (min-width:0 oben), damit
+	   „Test schicken" und Kebab ihren Platz in der Leiste behalten. */
 	@media (max-width: 899px) {
 		.hub-kopf-leiste {
 			padding: 12px 16px;
-		}
-		.back-mobil {
-			display: flex;
-			flex-shrink: 0;
-			margin-block: -8px;
-			margin-right: -12px;
 		}
 		.hub-actions > :global([data-slot='btn']),
 		.hub-actions > :global([data-testid='subscription-kebab']) {

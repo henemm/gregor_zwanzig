@@ -4,8 +4,9 @@
 //
 // Spec: docs/specs/modules/rework_2837_s1_hub_kopf.md — AC-1 … AC-10, AC-13 (HP-1 … HP-13).
 // Gemessen wird im echten Browser (getComputedStyle, boundingBox), nicht am Quelltext:
-//   - Senden: in der Leiste ganz oben, Hintergrund --g-ink, helle Schrift, gleiche Zeile wie
-//     Breadcrumb bzw. Zurück-Pfeil, bei beiden Arten an derselben Stelle; mobil ≥ 44 px hoch.
+//   - Senden: in der Leiste ganz oben, Fläche --g-accent-deep (#2980 AC-16, ADR-0118), helle
+//     Schrift, gleiche Zeile wie der Breadcrumb (kein Zurück-Pfeil mehr, #2980 AC-24), bei beiden
+//     Arten an derselben Stelle; mobil ≥ 44 px hoch.
 //   - Entwurf: Trip-Senden gesperrt, Vergleich „Setup abschließen" auf dem Senden-Platz.
 //   - Breadcrumb: Elternteil Link (Klick → Liste), Kind kein Link, kein „Hub".
 //   - Status als Badge in der Titelzeile (aktiv, pausiert, Entwurf), keine Statuszeile.
@@ -15,8 +16,8 @@
 //     Kontrast ≥ 4,5:1 berechnet.
 //   - de/en: Breadcrumb und Aria-Texte über den Katalog (Zweitnutzer mit Sprache en).
 //
-// Pflicht-Mutationen (Spec Test Plan): (a) Trip-Senden wieder `accent` ⇒ HP-1 rot
-// (Hintergrund rgb(196, 90, 42) statt Ink); (b) Zähler wieder Accent ⇒ HP-10 rot;
+// Pflicht-Mutationen (Spec Test Plan): (a) Trip-Senden wieder `primary` (Ink) ⇒ HP-1 rot
+// (Hintergrund rgb(26, 26, 24) statt --g-accent-deep, seit #2980); (b) Zähler wieder Accent ⇒ HP-10 rot;
 // (c) Status wieder eigene Zeile ⇒ HP-6 rot.
 //
 // Kind-Zweige NUR für Seeds (Vergleich-Entwurf = keine Orte, Trip-Entwurf = Etappe ohne
@@ -46,7 +47,8 @@ import {
 const DESKTOP = { width: 1440, height: 900 };
 const MOBIL = { width: 390, height: 844 };
 const BREITEN = [DESKTOP, MOBIL] as const;
-const PAPIER = 'rgb(246, 244, 238)'; // --g-paper (Schrift auf Btn primary)
+const PAPIER = 'rgb(246, 244, 238)'; // --g-paper (Schrift auf Btn primary, z. B. „Setup abschließen")
+const ON_ACCENT = 'rgb(255, 255, 255)'; // --g-on-accent (Schrift auf Btn accent, #2980 AC-16)
 
 /** Katalogtexte des Breadcrumb-Elternteils (listen.json, de/en) — Whitelist-Wert je Art. */
 const ELTERN: Record<HubKind, { de: string; en: string; url: string }> = {
@@ -105,26 +107,28 @@ for (const kind of HUB_KINDS) {
 	for (const vp of BREITEN) {
 		const w = vp.width;
 
-		test(`HP-1/HP-2 (${kind}, ${w} px): „Senden" in der Leiste, schwarz mit heller Schrift, gleiche Zeile wie Pfad/Zurück`, async ({ page }) => {
+		test(`HP-1/HP-2 (${kind}, ${w} px): „Senden" in der Leiste, Akzent-Fläche --g-accent-deep mit heller Schrift (#2980), gleiche Zeile wie der Breadcrumb`, async ({ page }) => {
 			await page.setViewportSize(vp);
 			const hub = await seed(page.request, kind);
 			try {
 				await openHub(page, kind, hub.id);
 				await expect(senden(page), 'HP-1: „Senden" steht nicht in der Leiste').toHaveCount(1);
 				await expect(page.locator(`[data-testid="${HUB_KOPF_SEL.senden}"]:visible`), 'HP-1: ein zweites „Senden" (z. B. neben dem Titel)').toHaveCount(1);
+				// #2980 AC-16 (ADR-0118): Akzent-Hauptaktion — Fläche --g-accent-deep, Schrift --g-on-accent
+				// (weiß), nie das Mockup-Orange --g-accent (AA verfehlt), nicht mehr Ink.
 				const f = await stil(senden(page));
-				expect(f.grund, 'HP-1: „Senden" ist nicht schwarz (--g-ink) — Mutation (a)').toBe(TOKEN_RGB.ink);
+				expect(f.grund, 'HP-1: „Senden" hat nicht die Fläche --g-accent-deep — Mutation (a)').toBe(TOKEN_RGB.accentDeep);
 				expect(f.grund).not.toBe(TOKEN_RGB.accent);
-				expect(f.schrift, 'HP-1: Schrift auf „Senden" nicht hell (--g-paper)').toBe(PAPIER);
+				expect(f.grund).not.toBe(TOKEN_RGB.ink);
+				expect(f.schrift, 'HP-1: Schrift auf „Senden" nicht --g-on-accent (weiß)').toBe(ON_ACCENT);
 				expect(kontrastVerhaeltnis(f.schrift, f.grund)).toBeGreaterThanOrEqual(4.5);
 
 				const s = await box(senden(page), 'Senden');
 				expect(s.x + s.width / 2, 'HP-1: „Senden" steht nicht rechts').toBeGreaterThan(w / 2);
-				const pfad = w === DESKTOP.width
-					? page.getByTestId(HUB_KOPF_SEL.breadcrumb)
-					: leiste(page).locator('[data-testid="back-link"]:visible');
-				const p = await box(pfad, w === DESKTOP.width ? 'Breadcrumb' : 'Zurück-Pfeil');
-				expect(Math.abs(mitteY(p) - mitteY(s)), 'HP-1: „Senden" steht nicht in derselben Zeile wie Pfad/Zurück').toBeLessThanOrEqual(8);
+				// #2980 AC-24: kein Zurück-Pfeil mehr, auch am Handy — der Breadcrumb steht in derselben Zeile.
+				await expect(leiste(page).locator('[data-testid="back-link"]'), 'HP-1: Zurück-Pfeil in der Leiste (entfällt, #2980 AC-24)').toHaveCount(0);
+				const p = await box(page.getByTestId(HUB_KOPF_SEL.breadcrumb), 'Breadcrumb');
+				expect(Math.abs(mitteY(p) - mitteY(s)), 'HP-1: „Senden" steht nicht in derselben Zeile wie der Breadcrumb').toBeLessThanOrEqual(8);
 				const t = await box(titel(page), 'Überschrift');
 				expect(s.y + s.height, 'HP-1: „Senden" steht nicht über dem Titel').toBeLessThanOrEqual(t.y + 1);
 				if (w === MOBIL.width) expect(s.height, 'HP-2: „Senden" mobil < 44 px hoch').toBeGreaterThanOrEqual(44);
@@ -196,7 +200,8 @@ for (const kind of HUB_KINDS) {
 			await expect(links).toHaveCount(1);
 			// textContent (nicht innerText): CSS-Versalien dürfen den Katalogtext nicht ersetzen.
 			expect((await links.first().textContent())?.trim()).toBe(ELTERN[kind].de);
-			const kind_ = kind === 'route' ? daten.shortcode ?? daten.name : daten.name;
+			// #2980 AC-24: voller Name bei beiden Arten, nie das Kürzel.
+			const kind_ = daten.name;
 			await expect(krumen).toContainText(kind_);
 			await expect(links.first()).not.toContainText(kind_);
 			await expect(leiste(page).getByText(/(^|\s)Hub(\s|$)/)).toHaveCount(0);
@@ -286,7 +291,10 @@ test.describe('HP Parität — beide Arten nebeneinander gemessen', () => {
 				const setup = leiste(page).getByRole('button', { name: 'Setup abschließen' }).filter({ visible: true });
 				await expect(setup).toHaveCount(1);
 				await expect(page.getByRole('button', { name: 'Setup abschließen' }).filter({ visible: true }), '„Setup abschließen" zusätzlich neben dem Titel').toHaveCount(1);
-				expect((await stil(setup)).grund).toBe(TOKEN_RGB.ink);
+				// „Setup abschließen" bleibt Btn primary (Ink, ADR-0110); nur „Test schicken ▾" ist accent (#2980).
+				const fs = await stil(setup);
+				expect(fs.grund).toBe(TOKEN_RGB.ink);
+				expect(fs.schrift).toBe(PAPIER);
 				const l = await box(leiste(page), 'Leiste');
 				const s = await box(setup, 'Setup abschließen');
 				expect(Math.abs(l.x + l.width - (s.x + s.width) - tripLage!.rechts), 'nicht auf dem Senden-Platz (rechts)').toBeLessThanOrEqual(4);
@@ -343,7 +351,7 @@ test.describe('HP Parität — beide Arten nebeneinander gemessen', () => {
 	});
 
 	for (const kind of HUB_KINDS) {
-		test(`HP-5/HP-8 (${kind}, 390 px): sehr langer Name — Leiste einzeilig und oben, „Senden" sichtbar, Badge lesbar, kein waagerechtes Scrollen`, async ({ page }) => {
+		test(`HP-5/HP-8 (${kind}, 390 px): sehr langer Name — Name bricht um (#2980), Leiste oben, „Senden" sichtbar, Badge lesbar, kein waagerechtes Scrollen`, async ({ page }) => {
 			await page.setViewportSize(MOBIL);
 			const kurz = await seed(page.request, kind);
 			let kurzLeiste: { y: number; height: number };
@@ -358,9 +366,14 @@ test.describe('HP Parität — beide Arten nebeneinander gemessen', () => {
 			});
 			try {
 				await openHub(page, kind, lang.id);
+				// #2980 AC-24 (ADR-0118): der volle Name bricht im Breadcrumb um statt mit „…" gekürzt zu
+				// werden — die Leiste darf dafür höher werden (vormals: einzeilig), bleibt aber oben.
 				const l = await box(leiste(page), 'Leiste (langer Name)');
-				expect(Math.abs(l.height - kurzLeiste!.height), 'HP-5: Leiste bricht um (Höhe verändert)').toBeLessThanOrEqual(1);
+				expect(l.height, 'HP-5: Leiste niedriger als mit kurzem Namen').toBeGreaterThanOrEqual(kurzLeiste!.height - 1);
 				expect(Math.abs(l.y - kurzLeiste!.y), 'HP-8: Leiste verschoben').toBeLessThanOrEqual(1);
+				const krumen = page.getByTestId(HUB_KOPF_SEL.breadcrumb);
+				await expect(krumen, 'HP-5: voller Name steht nicht im Breadcrumb').toContainText('niemals in eine Zeile passt und umbrechen muss');
+				expect(await krumen.evaluate((el) => getComputedStyle(el).textOverflow), 'HP-5: Breadcrumb kürzt mit Auslassungspunkten').not.toBe('ellipsis');
 				await expect(senden(page)).toBeInViewport();
 				const b = await box(page.getByTestId(HUB_KOPF_SEL.status).filter({ visible: true }), 'Status');
 				expect(b.x).toBeGreaterThanOrEqual(0);
@@ -395,7 +408,12 @@ for (const kind of HUB_KINDS) {
 				expect((await link.first().textContent())?.trim(), `${lang}: Elternteil`).toBe(ELTERN[kind][lang]);
 				await expect(leiste(page).locator(`[data-testid="${HUB_KOPF_SEL.kebab}"]:visible`)).toHaveAttribute('aria-label', lang === 'de' ? 'Weitere Aktionen' : 'More actions');
 				await page.setViewportSize(MOBIL);
-				await expect(leiste(page).locator('[data-testid="back-link"]:visible')).toHaveAttribute('aria-label', lang === 'de' ? 'Zurück zur Übersicht' : 'Back to overview');
+				// #2980 AC-24 (ADR-0118): am Handy kein Zurück-Pfeil mehr — der Elternteil-Link des
+				// Breadcrumbs ist sichtbar und spricht die Nutzersprache.
+				await expect(leiste(page).locator('[data-testid="back-link"]'), `${lang}: Zurück-Pfeil am Handy (entfällt)`).toHaveCount(0);
+				const linkMobil = page.getByTestId(HUB_KOPF_SEL.breadcrumb).locator('a').first();
+				await expect(linkMobil, `${lang}: Elternteil-Link am Handy nicht sichtbar`).toBeVisible();
+				expect((await linkMobil.textContent())?.trim(), `${lang}: Elternteil am Handy`).toBe(ELTERN[kind][lang]);
 				// #2913 c2: Beschriftung „Test schicken ▾" / „Send test ▾" (Menü folgt mit #2797).
 				await expect(senden(page)).toHaveText(lang === 'de' ? 'Test schicken ▾' : 'Send test ▾');
 			}
@@ -409,14 +427,28 @@ for (const kind of HUB_KINDS) {
 
 // ─── #2837 Nachbesserung S1b: EIN Status-Schild, Profil in der Unterzeile (HS-1 … HS-6) ────────
 // Spec: docs/specs/modules/rework_2837_s1b_status_profil.md — AC-1 … AC-8, AC-11 (Browser-Anteil).
-// Gemessen per getComputedStyle; der Schild-Grund ist transparent, deshalb gilt der Kontrast
-// gegen den ersten nicht-transparenten Vorfahren (Papier bzw. Karte).
-// Pflicht-Mutationen: Vergleich wieder gefüllt/eigenes Schild ⇒ HS-1/HS-4 rot; Pausiert wieder
-// --g-warning ⇒ HS-3 rot; profileLabel im Trip weg ⇒ HS-5 rot.
+// Gemessen per getComputedStyle; seit #2980 trägt das Schild einen eigenen (aktiv halbtransparenten)
+// Grund, der Kontrast gilt gegen diesen Grund über dem ersten nicht-transparenten Vorfahren.
+// Pflicht-Mutationen: Schild wieder umrandet (data-outlined) ⇒ HS-1/HS-4 rot; aktiv wieder accent ⇒
+// HS-1 rot; profileLabel im Trip weg ⇒ HS-5 rot.
 // Status: in RED geschrieben, NICHT ausgeführt (Lauf in /e2e-verify bzw. CI-`e2e`).
 
+// #2980 AC-21/AC-22 (ADR-0118, Mockup .pill.good/.pill.neutral): das Schild ist jetzt GEFÜLLT ohne
+// Rahmen — aktiv = --g-good auf hellgrün rgba(61,107,58,0.1), alles andere neutral --g-ink-3 auf
+// --g-paper-deep. Die Zusicherungen „umrandet, Pausiert --g-warn-deep, Aktiv --g-accent-deep" (S1b)
+// sind damit abgelöst. Kontrast gegen den eigenen Grund, halbtransparent über dem Seitengrund gemischt.
+
 const SCHILD = 'trip-detail-status-badge';
-const SCHILD_RGB = { pausiert: 'rgb(138, 98, 16)', aktiv: 'rgb(140, 62, 26)' } as const; // --g-warn-deep, --g-accent-deep
+const SCHILD_RGB = { aktivSchrift: 'rgb(61, 107, 58)', aktivGrund: 'rgba(61, 107, 58, 0.1)' } as const; // --g-good, Mockup .pill.good
+
+/** `oben` (rgb/rgba aus getComputedStyle) deckend über `unten` mischen → rgb(...). */
+function mischen(oben: string, unten: string): string {
+	const teile = (c: string) => (/rgba?\(([^)]*)\)/.exec(c)?.[1] ?? '0,0,0,0').split(/[\s,/]+/).filter(Boolean).map(Number);
+	const [r1, g1, b1, a = 1] = teile(oben);
+	const [r2, g2, b2] = teile(unten);
+	const m = (x: number, y: number) => Math.round(x * a + y * (1 - a));
+	return `rgb(${m(r1, r2)}, ${m(g1, g2)}, ${m(b1, b2)})`;
+}
 const DATA_STATUS: Record<Zustand, string> = { aktiv: 'active', pausiert: 'paused', entwurf: 'draft' };
 
 /** Lokales Datum (YYYY-MM-DD) mit Tagesversatz: der Trip ist nur „aktiv", wenn heute in seine Etappen fällt. */
@@ -460,7 +492,7 @@ async function schildMessen(page: Page) {
 test.describe('HS S1b — Trip und Vergleich zeigen im selben Zustand dasselbe Status-Schild', () => {
 	for (const vp of BREITEN) {
 		for (const zustand of ['aktiv', 'pausiert', 'entwurf'] as const) {
-			test(`HS-1/HS-2/HS-4 (${vp.width} px, ${zustand}): gleicher Text, gleiche Schrift- und Randfarbe, umrandet, Kontrast ≥ 4,5`, async ({ page }) => {
+			test(`HS-1/HS-2/HS-4 (${vp.width} px, ${zustand}): gleicher Text, gleiche Schrift- und Grundfarbe, gefüllt ohne Rahmen (#2980), Kontrast ≥ 4,5`, async ({ page }) => {
 				await page.setViewportSize(vp);
 				const m: Partial<Record<HubKind, Awaited<ReturnType<typeof schildMessen>>>> = {};
 				for (const kind of HUB_KINDS) {
@@ -476,18 +508,24 @@ test.describe('HS S1b — Trip und Vergleich zeigen im selben Zustand dasselbe S
 				for (const [kind, x] of [['route', route], ['vergleich', vergleich]] as const) {
 					expect(x.status, `${kind}: data-status (AC-8)`).toBe(DATA_STATUS[zustand]);
 					expect(x.slot, `${kind}: Schild ist nicht das Pill-Atom`).toBe('pill');
-					expect(x.umrandet, `${kind}: Schild nicht umrandet`).toBe(true);
-					expect(x.eigenerGrund, `${kind}: Schild gefüllt (--g-accent) statt umrandet — AC-5`).not.toBe(TOKEN_RGB.accent);
-					expect(x.eigenerGrund, `${kind}: Schild hat eigenen Hintergrund`).toMatch(/rgba\(.*,\s*0\)$|transparent/);
-					expect(x.randBreite, `${kind}: kein Rand`).not.toBe('0px');
-					expect(kontrastVerhaeltnis(x.schrift, x.grund), `${kind}: Kontrast Schild-Schrift zu ${x.grund}`).toBeGreaterThanOrEqual(4.5);
+					// #2980 AC-21: gefüllt ohne Rahmen, Großschreibung nur per CSS.
+					expect(x.umrandet, `${kind}: Schild noch umrandet (data-outlined)`).toBe(false);
+					expect(x.randBreite, `${kind}: Schild hat einen Rahmen`).toBe('0px');
+					expect(x.umformung, `${kind}: Großschreibung nicht per CSS`).toBe('uppercase');
+					if (zustand === 'aktiv') {
+						expect(x.schrift, `${kind}: Aktiv nicht --g-good`).toBe(SCHILD_RGB.aktivSchrift);
+						expect(x.eigenerGrund, `${kind}: Aktiv nicht hellgrün gefüllt`).toBe(SCHILD_RGB.aktivGrund);
+					} else {
+						expect(x.schrift, `${kind}: ${zustand} nicht neutral --g-ink-3`).toBe(TOKEN_RGB.ink3);
+						expect(x.eigenerGrund, `${kind}: ${zustand} nicht auf --g-paper-deep`).toBe(TOKEN_RGB.paperDeep);
+					}
+					const flaeche = mischen(x.eigenerGrund, x.grund);
+					expect(kontrastVerhaeltnis(x.schrift, flaeche), `${kind}: Kontrast Schild-Schrift zu ${flaeche} (AC-22)`).toBeGreaterThanOrEqual(4.5);
 				}
 				expect(vergleich.text, 'AC-1: Text (inkl. Großschreibung) verschieden').toBe(route.text);
 				expect(vergleich.umformung, 'AC-1: Schreibung (text-transform) verschieden').toBe(route.umformung);
 				expect(vergleich.schrift, 'AC-1: Schriftfarbe verschieden').toBe(route.schrift);
-				expect(vergleich.rand, 'AC-1: Randfarbe verschieden').toBe(route.rand);
-				if (zustand === 'pausiert') expect(route.schrift, 'AC-4: Pausiert nicht --g-warn-deep').toBe(SCHILD_RGB.pausiert);
-				if (zustand === 'aktiv') expect(vergleich.schrift, 'AC-5: Aktiv nicht --g-accent-deep').toBe(SCHILD_RGB.aktiv);
+				expect(vergleich.eigenerGrund, 'AC-1: Grundfarbe verschieden').toBe(route.eigenerGrund);
 				if (zustand === 'entwurf') {
 					expect(vergleich.text.toLowerCase(), 'AC-3: Vergleich-Entwurf zeigt „draft"').not.toContain('draft');
 					expect(vergleich.text.toLowerCase()).toBe('entwurf');

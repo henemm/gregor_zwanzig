@@ -476,9 +476,10 @@ test.describe('HT-14: Trip und Ortsvergleich tragen dieselbe Reiterleiste', () =
 				// AC-1 — Desktop-Werte seit #2881 nach ADR-0111 Punkt 1 (lösen 14 px / --g-ink-faint /
 				// aktiv 500 aus #2845 ab): 13 px, --g-ink, 1-px-Grundlinie --g-rule. Die Gleichheit
 				// Trip = Vergleich aus #2845 bleibt (oben und unten).
+				// #2980 AC-17 (ADR-0118, Mockup .tab): inaktiver Reiter --g-ink-3 statt --g-ink.
 				for (const m of [t, v]) {
 					expect(m.inaktiv.fontSize).toBe('13px');
-					expect(m.inaktiv.color).toBe('rgb(26, 26, 24)');
+					expect(m.inaktiv.color, 'inaktiver Reiter nicht --g-ink-3').toBe('rgb(107, 103, 92)');
 					expect(m.leiste.borderBottomWidth).toBe('1px');
 					expect(m.leiste.borderBottomColor, 'Grundlinie nicht --g-rule').toBe('rgb(216, 211, 194)');
 				}

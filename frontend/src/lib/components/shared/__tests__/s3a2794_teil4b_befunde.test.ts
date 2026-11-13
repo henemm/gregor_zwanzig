@@ -299,7 +299,9 @@ describe('B2 (AC-4/AC-5): Handy-Pill-Leiste passt DE bei 360 px mit Reserve', ()
 		const teile = (item.padding ?? '').split(/\s+/);
 		assert.ok(teile.length === 2, `Messaufbau: padding erwartet als „senkrecht seitlich": ${item.padding}`);
 		const seitlich = px(teile[1]);
-		const rahmen = px((item.border ?? '').split(/\s+/)[0]);
+		// #2980 AC-17 (ADR-0118): Handy-Reiter sind Text-Reiter ohne Seitenrahmen (keine Pillen mehr) —
+		// die Handy-Regel setzt keinen `border`, seitlich zählt dann 0 px.
+		const rahmen = item.border === undefined ? 0 : px(item.border.split(/\s+/)[0]);
 		const zwischen = leiste.gap ? px(leiste.gap) : 0;
 		const margin = item.margin ?? item['margin-left'] ?? item['margin-right'];
 		assert.equal(margin, undefined, `Messaufbau: Pill-margin unbekannt im Modell: ${margin}`);
