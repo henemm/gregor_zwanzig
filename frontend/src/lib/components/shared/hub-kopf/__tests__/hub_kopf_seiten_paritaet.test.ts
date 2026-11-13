@@ -260,7 +260,7 @@ describe('#2837 S1 AC-6 — Trip: Status steht in der Titelzeile, die Region dar
 
 describe('#2837 S1 AC-13 — Breadcrumb und Kopftexte folgen der Nutzersprache (de/en, ohne Neuladen)', () => {
 	for (const art of ARTEN) {
-		test(`${art}: Elternteil de → en aus dem Katalog; kein „Hub"-Text, keine Mobil-Eyebrow`, () => {
+		test(`${art}: Elternteil de → en aus dem Katalog; kein „Hub"-Text, keine Mobil-Eyebrow; neu #2980 AC-16/AC-24: kein Zurück-Link, Senden accent`, () => {
 			locale.set('de');
 			const de = seite(art);
 			locale.set('en');
