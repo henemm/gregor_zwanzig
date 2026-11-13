@@ -48,7 +48,7 @@ def preview_sms(
         # Issue #2961 (ADR-0117): eine Vorschau ist ein interaktiver Ausloeser.
         # Lehnt das Kontingent einen Abruf ab, gibt es keine still
         # unvollstaendige Vorschau, sondern 429 mit Katalogtext.
-        with interaktiver_abruf() as kontingent:
+        with interaktiver_abruf(user_id) as kontingent:
             subject, token_line = service.render_sms_preview(
                 trip_id, user_id=user_id, report_type=type, target_date=date, demo=demo,
             )

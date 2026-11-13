@@ -25,9 +25,11 @@ Issue #2961 Welle 2 (ADR-0117): eigene Prioritaet ``user_interactive`` fuer
 alles, was ein Nutzer beliebig oft von Hand ausloest (Vergleich,
 Etappenwetter, Vorschauen). Sie bucht nie ueber ``INTERACTIVE_THRESHOLD`` der
 Tagesmenge (Reserve fuer Zeitplan-Briefings und Alarme) und je Nutzer nie
-ueber seinen interaktiven Anteil (fairer Anteil, mindestens
-``INTERACTIVE_FLOOR``). Interaktiver Verbrauch wird global und je Nutzer
-getrennt gefuehrt und zaehlt nicht in die Fairness der uebrigen Prioritaeten.
+ueber ``INTERACTIVE_USER_LIMIT``. Nachtrag: ``user_manual`` fuer Handversand
+und Antwort-Befehle (global bis ``MANUAL_THRESHOLD``, je Nutzer
+``MANUAL_USER_LIMIT``, Vorab-Buchung der ganzen Schaetzung). Beide Klassen
+werden global und je Nutzer getrennt gefuehrt und zaehlen nicht in die
+Fairness der uebrigen Prioritaeten.
 SPEC: docs/specs/modules/security_haertung_2026_11_abruf_kontingent_interaktiv.md
 """
 from __future__ import annotations
@@ -69,23 +71,42 @@ def _count_lost_booking() -> None:
         forecast_budget_lost_bookings += 1
 
 
-# --- Interaktiver Kontext (ADR-0117) -------------------------------------------
+# --- Interaktiver und manueller Kontext (ADR-0117) ---------------------------
 
 INTERACTIVE = "user_interactive"
+#: ADR-0117 Nachtrag (#2961 Fix-Runde): alles, was ein Nutzer von Hand ausloest
+#: UND versendet (Handversand, Antwort-Befehle aller Kanaele).
+MANUAL = "user_manual"
 
 
 class InteraktivStatus:
-    """Sammelt je Anfrage, ob eine interaktive Buchung abgelehnt wurde. Wird
-    ueber kopierte Kontexte in Arbeiter-Threads geteilt (gleiches Objekt),
-    daher mit eigener Sperre."""
+    """Zustand EINER markierten Anfrage (interaktiv oder manuell). Wird ueber
+    kopierte Kontexte in Arbeiter-Threads geteilt (gleiches Objekt), daher mit
+    eigener Sperre.
 
-    def __init__(self) -> None:
+    ``gedrosselt`` zaehlt Segment-Abrufe, die das Kontingent abgelehnt hat
+    (``melde_drosselung``). Nur fuer ``user_manual``: ``schaetzung`` ist die
+    Obergrenze der Einheiten des ganzen Versands; sie wird beim ERSTEN Abruf
+    auf einmal gebucht (``guthaben``), der Rest beim Verlassen erstattet.
+    Passt sie nicht mehr ins Kontingent, ist der ganze Versand ``abgelehnt``
+    -- danach wird nichts mehr abgerufen (keine Teil-Briefings)."""
+
+    def __init__(self, prioritaet: str = INTERACTIVE, user_id: Optional[str] = None,
+                 schaetzung: int = 0) -> None:
         self._lock = threading.Lock()
         self.gedrosselt = 0
+        self.prioritaet = prioritaet
+        self.user_id = user_id
+        self.schaetzung = max(int(schaetzung), 0)
+        self.guthaben = 0
+        self.vorausgebucht = False
+        self.abgelehnt = False
 
     def vermerke(self) -> None:
         with self._lock:
             self.gedrosselt += 1
+            if self.prioritaet == MANUAL:
+                self.abgelehnt = True
 
 
 _INTERAKTIV: contextvars.ContextVar[Optional[InteraktivStatus]] = contextvars.ContextVar(
@@ -94,13 +115,13 @@ _INTERAKTIV: contextvars.ContextVar[Optional[InteraktivStatus]] = contextvars.Co
 
 
 @contextmanager
-def interaktiver_abruf() -> Iterator[InteraktivStatus]:
+def interaktiver_abruf(user_id: Optional[str] = None) -> Iterator[InteraktivStatus]:
     """Markiert alle Wetterabrufe innerhalb des Blocks als interaktiv: der
-    Segment-Weg bucht dann ``user_interactive`` statt der Prioritaet des
-    Aufrufers. Arbeiter-Threads erben die Markierung nur ueber
-    ``contextvars.copy_context()`` (``parallel_fetch``, ``comparison_parallel``,
-    ``stage_weather``)."""
-    status = InteraktivStatus()
+    Segment-Weg (und die Anreicherung, sofern ``user_id`` bekannt) bucht dann
+    ``user_interactive`` statt der Prioritaet des Aufrufers. Arbeiter-Threads
+    erben die Markierung nur ueber ``contextvars.copy_context()``
+    (``parallel_fetch``, ``comparison_parallel``, ``stage_weather``)."""
+    status = InteraktivStatus(INTERACTIVE, user_id)
     token = _INTERAKTIV.set(status)
     try:
         yield status
@@ -108,10 +129,56 @@ def interaktiver_abruf() -> Iterator[InteraktivStatus]:
         _INTERAKTIV.reset(token)
 
 
+@contextmanager
+def manueller_abruf(user_id: str, schaetzung: int) -> Iterator[InteraktivStatus]:
+    """Markiert einen Handversand bzw. Antwort-Befehl (``user_manual``).
+    ``schaetzung`` = Obergrenze der Einheiten (``manuelles_kontingent``);
+    nicht verbrauchtes Vorab-Guthaben (Cache-Treffer) wird beim Verlassen
+    erstattet."""
+    status = InteraktivStatus(MANUAL, user_id, schaetzung)
+    token = _INTERAKTIV.set(status)
+    try:
+        yield status
+    finally:
+        _INTERAKTIV.reset(token)
+        with status._lock:
+            rest, status.guthaben = status.guthaben, 0
+        if rest > 0:
+            ForecastBudgetGate(user_id).erstatte(MANUAL, rest)
+
+
 def wirksame_prioritaet(priority: str) -> str:
-    """Im interaktiven Kontext bucht jeder Segment-Abruf interaktiv, sonst
-    bleibt die Prioritaet des Aufrufers."""
-    return INTERACTIVE if _INTERAKTIV.get() is not None else priority
+    """Im markierten Kontext bucht jeder Segment-Abruf mit der Prioritaet des
+    Kontexts, sonst bleibt die Prioritaet des Aufrufers."""
+    status = _INTERAKTIV.get()
+    return status.prioritaet if status is not None else priority
+
+
+def kontext_zurechnung(priority: str, user_id: Optional[str]) -> tuple[str, Optional[str]]:
+    """Zurechnung fuer die Anreicherung (Radar/Gewitter, F3): im markierten
+    Kontext zaehlt ein Abruf beim ausloesenden Nutzer mit dessen Prioritaet;
+    ausserhalb (oder ohne bekannte Kennung) bleibt alles wie bisher."""
+    status = _INTERAKTIV.get()
+    if status is None:
+        return priority, user_id
+    nutzer = user_id or status.user_id
+    if nutzer is None:
+        return priority, user_id
+    return status.prioritaet, nutzer
+
+
+def melde_drosselung() -> None:
+    """Segment-Weg: ein Abruf wurde vom Kontingent abgelehnt."""
+    status = _INTERAKTIV.get()
+    if status is not None:
+        status.vermerke()
+
+
+def manuell_abgelehnt() -> bool:
+    """True, wenn der laufende Handversand/Befehl am Kontingent gescheitert ist
+    -- der Versand muss dann vor jeder Zustellung abbrechen."""
+    status = _INTERAKTIV.get()
+    return status is not None and status.prioritaet == MANUAL and status.abgelehnt
 
 
 def sekunden_bis_utc_mitternacht(jetzt: Optional[datetime] = None) -> int:
@@ -132,6 +199,13 @@ def kennung_maskiert(user_id: str) -> str:
     return f"{user_id[:2]}***{digest}"
 
 
+#: Klasse -> (globaler Zaehler, Zaehler im Nutzer-Topf).
+_KLASSEN = {
+    INTERACTIVE: ("interactive_calls", "interactive"),
+    MANUAL: ("manual_calls", "manual"),
+}
+
+
 class ForecastBudgetGate:
     """`allow(priority)` ist eine reine, deterministische Funktion des
     Tageszaehlers -- kein adaptiver Rate-Limiter (ADR-0075)."""
@@ -140,11 +214,15 @@ class ForecastBudgetGate:
     POLLING_THRESHOLD = 0.80  # ab 80% Budget: polling abweisen
     BRIEFING_ONLY_THRESHOLD = 0.95  # ab 95%: nur noch user_briefing
     # ADR-0117: interaktive Abrufe insgesamt hoechstens bis 70 % der Tagesmenge
-    # (10 Punkte unter der Polling-Schwelle), je Nutzer der faire Anteil daran,
-    # mindestens der Sockel (Herleitung in der Spec).
+    # (10 Punkte unter der Polling-Schwelle), je Nutzer fest hoechstens 1500
+    # Einheiten (Nachtrag: kein Teilen durch aktive Nutzer, Herleitung in der Spec).
     INTERACTIVE_THRESHOLD = 0.70
-    INTERACTIVE_FLOOR = 1500
+    INTERACTIVE_USER_LIMIT = 1500
     INTERACTIVE_WARN_SHARE = 0.5
+    # ADR-0117 Nachtrag: Handversand und Antwort-Befehle (user_manual) global
+    # hoechstens bis 90 % (Alarme erst ab 95 % gedrosselt), je Nutzer 1500.
+    MANUAL_THRESHOLD = 0.90
+    MANUAL_USER_LIMIT = 1500
 
     def __init__(self, user_id: Optional[str], data_root: Optional[Path] = None) -> None:
         """`user_id` ist PFLICHT-Parameter OHNE Default (Muster
@@ -218,9 +296,9 @@ class ForecastBudgetGate:
         """
         if priority == "user_briefing":
             return True
-        if priority == INTERACTIVE:
+        if priority in _KLASSEN:
             try:
-                return self._interaktiv_erlaubt(self._load_for_today(now), 1, now)
+                return self._klasse_erlaubt(priority, self._load_for_today(now), 1, now)
             except Exception:
                 return True  # fail-open wie alle Prioritaeten
         schwelle = self._schwelle_fuer(priority)
@@ -250,10 +328,16 @@ class ForecastBudgetGate:
         ``user_briefing`` und unbekannte Prioritaeten werden nie gedrosselt,
         aber gebucht. Bei Ablehnung wird nichts gebucht.
 
-        ``user_interactive`` (ADR-0117) entscheidet ueber eigene Grenzen, siehe
-        ``_reserve_interaktiv``."""
+        ``user_interactive`` und ``user_manual`` (ADR-0117) entscheiden ueber
+        eigene Grenzen, siehe ``_reserve_klasse``/``_reserve_manuell``.
+        ``units <= 0`` ist ein Programmfehler (ValueError): eine Null- oder
+        Minusbuchung koennte Zaehler senken."""
+        if not isinstance(units, int) or units <= 0:
+            raise ValueError("units muss eine positive ganze Zahl sein")
+        if priority == MANUAL:
+            return self._reserve_manuell(units, now)
         if priority == INTERACTIVE:
-            return self._reserve_interaktiv(units, now)
+            return self._reserve_klasse(INTERACTIVE, units, now)
         schwelle = self._schwelle_fuer(priority)
         entscheidung: list = []  # leer = nicht entschieden (Update fehlgeschlagen)
 
@@ -279,24 +363,65 @@ class ForecastBudgetGate:
         self._safe_update_user(_nutzer, now)
         return True
 
-    def _reserve_interaktiv(self, units: int, now: Optional[datetime]) -> bool:
-        """Interaktive Buchung: global nie ueber ``INTERACTIVE_THRESHOLD`` der
-        Tagesmenge, je Nutzer nie ueber seinen interaktiven Anteil. Entschieden
-        wird unter der globalen Sperre; der Nutzer-Topf wird dort nur gelesen
-        (Reihenfolge global -> Nutzer wie in ``reserve``). Eine Ablehnung bucht
-        nichts und wird im interaktiven Kontext vermerkt."""
+    def _reserve_manuell(self, units: int, now: Optional[datetime]) -> bool:
+        """``user_manual``: im eigenen manuellen Kontext wird beim ersten Abruf
+        die ganze Schaetzung auf einmal gebucht; danach zehren die Abrufe vom
+        Guthaben. Passt die Schaetzung nicht mehr, ist der Versand abgelehnt,
+        bevor irgendetwas abgerufen wurde, und bleibt es."""
+        status = _INTERAKTIV.get()
+        if (status is None or status.prioritaet != MANUAL
+                or status.user_id != self._user_id or self._user_id is None):
+            return self._reserve_klasse(MANUAL, units, now)
+        with status._lock:
+            if status.abgelehnt:
+                return False
+            if not status.vorausgebucht:
+                status.vorausgebucht = True
+                vorab = max(status.schaetzung, units)
+                if not self._reserve_klasse(MANUAL, vorab, now):
+                    status.abgelehnt = True
+                    return False
+                status.guthaben = vorab
+            if status.guthaben >= units:
+                status.guthaben -= units
+                return True
+        # Schaetzung ueberschritten: einzeln nachbuchen (Segment-Weg meldet
+        # eine Ablehnung ueber melde_drosselung, der Versand bricht dann ab).
+        return self._reserve_klasse(MANUAL, units, now)
+
+    def erstatte(self, klasse: str, units: int) -> None:
+        """Nicht verbrauchtes Vorab-Guthaben zurueckbuchen (global und je
+        Nutzer, nie unter 0). Fail-open wie jede Buchung."""
+        if klasse not in _KLASSEN or units <= 0:
+            return
+        g_topf, n_topf = _KLASSEN[klasse][0], _KLASSEN[klasse][1]
+
+        def _minus(data: dict, topf: str) -> None:
+            for name in ("calls", topf):
+                zaehler = data.setdefault(name, {})
+                zaehler[PROVIDER] = max(zaehler.get(PROVIDER, 0) - units, 0)
+
+        self._safe_update(lambda d: _minus(d, g_topf))
+        self._safe_update_user(lambda d: _minus(d, n_topf))
+
+    def _reserve_klasse(self, klasse: str, units: int, now: Optional[datetime]) -> bool:
+        """Buchung einer Klasse mit eigener globaler Obergrenze und eigener
+        Grenze je Nutzer. Entschieden wird unter der globalen Sperre; der
+        Nutzer-Topf wird dort nur gelesen (Reihenfolge global -> Nutzer wie in
+        ``reserve``). Eine Ablehnung bucht nichts."""
+        g_topf, n_topf = _KLASSEN[klasse][0], _KLASSEN[klasse][1]
         entscheidung: list = []
-        gesamt_interaktiv: list = []
+        gesamt_klasse: list = []
 
         def _global(data: dict) -> None:
-            erlaubt = self._interaktiv_erlaubt(data, units, now)
+            erlaubt = self._klasse_erlaubt(klasse, data, units, now)
             entscheidung.append(erlaubt)
             if not erlaubt:
                 return
             data["calls"][PROVIDER] = data["calls"].get(PROVIDER, 0) + units
-            topf = data.setdefault("interactive_calls", {})
+            topf = data.setdefault(g_topf, {})
             topf[PROVIDER] = topf.get(PROVIDER, 0) + units
-            gesamt_interaktiv.append(topf[PROVIDER])
+            gesamt_klasse.append(topf[PROVIDER])
             if self._user_id is not None and self._user_id not in data["active_users"]:
                 data["active_users"].append(self._user_id)
 
@@ -304,18 +429,16 @@ class ForecastBudgetGate:
 
         def _nutzer(data: dict) -> None:
             data["calls"][PROVIDER] = data["calls"].get(PROVIDER, 0) + units
-            eigen = data.setdefault("interactive", {})
+            eigen = data.setdefault(n_topf, {})
             eigen[PROVIDER] = eigen.get(PROVIDER, 0) + units
-            if (gesamt_interaktiv and not data.get("interactive_warned")
-                    and self._ueber_warnschwelle(eigen[PROVIDER], gesamt_interaktiv[0])):
+            if (klasse == INTERACTIVE and gesamt_klasse
+                    and not data.get("interactive_warned")
+                    and self._ueber_warnschwelle(eigen[PROVIDER], gesamt_klasse[0])):
                 data["interactive_warned"] = True
-                warnung.append((eigen[PROVIDER], gesamt_interaktiv[0]))
+                warnung.append((eigen[PROVIDER], gesamt_klasse[0]))
 
         self._safe_update(_global, now)
         if entscheidung and entscheidung[0] is False:
-            status = _INTERAKTIV.get()
-            if status is not None:
-                status.vermerke()
             return False
         self._safe_update_user(_nutzer, now)
         if warnung and self._user_id is not None:
@@ -330,7 +453,7 @@ class ForecastBudgetGate:
         """Mehr als die Haelfte des interaktiven Tagesverbrauchs -- erst ab
         einem Gesamtverbrauch in Hoehe des Sockels (sonst meldete jeder
         erste Nutzer eines ruhigen Tages 100 %)."""
-        return gesamt >= self.INTERACTIVE_FLOOR and eigen > self.INTERACTIVE_WARN_SHARE * gesamt
+        return gesamt >= self.INTERACTIVE_USER_LIMIT and eigen > self.INTERACTIVE_WARN_SHARE * gesamt
 
     def record_call(self) -> None:
         """Zaehlt einen tatsaechlichen Upstream-Call (Cache-Miss, der den
@@ -387,8 +510,8 @@ class ForecastBudgetGate:
                 "status": "ok",
             }
             ergebnis["interactive_calls_today"] = data["interactive_calls"].get(PROVIDER, 0)
+            ergebnis["manual_calls_today"] = data["manual_calls"].get(PROVIDER, 0)
             aktive = len(data["active_users"])
-            mit_mir = self._aktive_mit_mir(data)
         except Exception:
             ergebnis = {
                 "date": None,
@@ -399,17 +522,20 @@ class ForecastBudgetGate:
                 "cache_misses": 0,
                 "status": "unavailable",
                 "interactive_calls_today": 0,
+                "manual_calls_today": 0,
             }
             aktive = 0
-            mit_mir = 1
-        gesamt, interaktiv = self._user_verbrauch()
+        gesamt, interaktiv, manuell = self._user_verbrauch()
         ergebnis["user_calls_today"] = gesamt
         ergebnis["fair_share"] = self._fair_share_fuer(aktive)
         ergebnis["active_users_count"] = aktive
         # ADR-0117: interaktiver Verbrauch getrennt ausgewiesen.
-        ergebnis["interactive_budget"] = self._interaktive_grenze()
+        ergebnis["interactive_budget"] = self._globale_grenze(INTERACTIVE)
         ergebnis["user_interactive_calls_today"] = interaktiv
-        ergebnis["interactive_limit"] = self._interaktiver_anteil(mit_mir)
+        ergebnis["interactive_limit"] = self.INTERACTIVE_USER_LIMIT
+        ergebnis["manual_budget"] = self._globale_grenze(MANUAL)
+        ergebnis["user_manual_calls_today"] = manuell
+        ergebnis["manual_limit"] = self.MANUAL_USER_LIMIT
         return ergebnis
 
     # --- Intern -----------------------------------------------------------
@@ -460,49 +586,47 @@ class ForecastBudgetGate:
         zur Laufzeit und wird rot, sobald eine Konstante wandert."""
         return self.DAILY_BUDGET / max(aktive, 1)
 
-    def _user_verbrauch(self, now: Optional[datetime] = None) -> tuple[int, int]:
-        """Eigener Tagesverbrauch ``(gesamt, davon interaktiv)``. Fail-open
-        (E3/ADR-0075 Punkt 3): ein unlesbarer Topf oder ein Lesefehler gilt
-        als 0."""
+    def _user_verbrauch(self, now: Optional[datetime] = None) -> tuple[int, int, int]:
+        """Eigener Tagesverbrauch ``(gesamt, davon interaktiv, davon manuell)``.
+        Fail-open (E3/ADR-0075 Punkt 3): ein unlesbarer Topf oder ein
+        Lesefehler gilt als 0."""
         if self._user_path is None:
-            return 0, 0
+            return 0, 0, 0
         try:
             data = self._load_user_for_today(now)
-            return data["calls"].get(PROVIDER, 0), data["interactive"].get(PROVIDER, 0)
+            return (data["calls"].get(PROVIDER, 0), data["interactive"].get(PROVIDER, 0),
+                    data["manual"].get(PROVIDER, 0))
         except Exception as exc:
             logger.warning(
                 "Nutzer-Budgettopf %s nicht lesbar (%s) -- Verbrauch gilt als "
                 "0, es wird NICHT gedrosselt",
                 self._user_path, exc,
             )
-            return 0, 0
+            return 0, 0, 0
 
     def _user_calls_today(self, now: Optional[datetime] = None) -> int:
         return self._user_verbrauch(now)[0]
 
-    def _interaktive_grenze(self) -> int:
-        """Globale Obergrenze interaktiver Buchungen (ADR-0117 Punkt 3)."""
-        return int(self.INTERACTIVE_THRESHOLD * self.DAILY_BUDGET)
+    def _globale_grenze(self, klasse: str) -> int:
+        """Globale Obergrenze einer Klasse (ADR-0117 Punkt 3 und Nachtrag)."""
+        anteil = self.INTERACTIVE_THRESHOLD if klasse == INTERACTIVE else self.MANUAL_THRESHOLD
+        return int(anteil * self.DAILY_BUDGET)
 
-    def _interaktiver_anteil(self, aktive: int) -> int:
-        """Interaktives Tageskontingent je Nutzer: fairer Anteil an der
-        interaktiven Obergrenze, mindestens der Sockel (ADR-0117 Punkt 2)."""
-        return max(self._interaktive_grenze() // max(aktive, 1), self.INTERACTIVE_FLOOR)
+    def _grenze_je_nutzer(self, klasse: str) -> int:
+        return self.INTERACTIVE_USER_LIMIT if klasse == INTERACTIVE else self.MANUAL_USER_LIMIT
 
-    def _aktive_mit_mir(self, data: dict) -> int:
-        aktive = data["active_users"]
-        neu = self._user_id is not None and self._user_id not in aktive
-        return len(aktive) + (1 if neu else 0)
-
-    def _interaktiv_erlaubt(self, data: dict, units: int, now: Optional[datetime]) -> bool:
-        """Entscheidung fuer ``user_interactive`` auf geladenen Daten. Ohne
-        Kennung kein Nutzer-Topf und damit keine Befreiung (ADR-0075 Punkt 4)."""
-        if data["calls"].get(PROVIDER, 0) + units > self._interaktive_grenze():
+    def _klasse_erlaubt(self, klasse: str, data: dict, units: int,
+                        now: Optional[datetime]) -> bool:
+        """Entscheidung fuer ``user_interactive``/``user_manual`` auf geladenen
+        Daten. Ohne Kennung kein Nutzer-Topf und damit keine Befreiung
+        (ADR-0075 Punkt 4)."""
+        if data["calls"].get(PROVIDER, 0) + units > self._globale_grenze(klasse):
             return False
         if self._user_path is None:
             return False
-        eigen = self._user_verbrauch(now)[1]
-        return eigen + units <= self._interaktiver_anteil(self._aktive_mit_mir(data))
+        verbrauch = self._user_verbrauch(now)
+        eigen = verbrauch[1] if klasse == INTERACTIVE else verbrauch[2]
+        return eigen + units <= self._grenze_je_nutzer(klasse)
 
     def _ueber_fairem_anteil(self, now: Optional[datetime] = None) -> bool:
         """Stufe 1: liegt DIESER Nutzer ueber seinem fairen Anteil?
@@ -524,8 +648,8 @@ class ForecastBudgetGate:
             return True
         # ADR-0117: interaktiver Verbrauch hat sein eigenes Kontingent und
         # zaehlt nicht in die Fairness von Alarm-Pruefung und Polling.
-        gesamt, interaktiv = self._user_verbrauch(now)
-        return gesamt - interaktiv > self._fair_share_fuer(aktive)
+        gesamt, interaktiv, manuell = self._user_verbrauch(now)
+        return gesamt - interaktiv - manuell > self._fair_share_fuer(aktive)
 
     def _leerer_tag(self, today: str) -> dict:
         return {
@@ -535,6 +659,7 @@ class ForecastBudgetGate:
             "cache_misses": 0,
             "active_users": [],
             "interactive_calls": {},
+            "manual_calls": {},
         }
 
     def _load_for_today(self, now: Optional[datetime] = None) -> dict:
@@ -564,6 +689,7 @@ class ForecastBudgetGate:
             # begonnen (Migrationsweg der Spec, AC-9).
             aktive = []
         interaktiv = raw.get("interactive_calls")
+        manuell = raw.get("manual_calls")
         return {
             "date": today,
             "calls": calls,
@@ -571,6 +697,7 @@ class ForecastBudgetGate:
             "cache_misses": raw.get("cache_misses", 0),
             "active_users": [u for u in aktive if isinstance(u, str)],
             "interactive_calls": interaktiv if isinstance(interaktiv, dict) else {},
+            "manual_calls": manuell if isinstance(manuell, dict) else {},
         }
 
     def _load_user_for_today(self, now: Optional[datetime] = None) -> dict:
@@ -589,9 +716,11 @@ class ForecastBudgetGate:
         if not isinstance(calls, dict):
             calls = {}
         interaktiv = raw.get("interactive")
+        manuell = raw.get("manual")
         return {
             "date": today, "calls": calls,
             "interactive": interaktiv if isinstance(interaktiv, dict) else {},
+            "manual": manuell if isinstance(manuell, dict) else {},
             "interactive_warned": raw.get("interactive_warned") is True,
         }
 
@@ -599,7 +728,8 @@ class ForecastBudgetGate:
     def _leerer_nutzertag(today: str) -> dict:
         """Nutzer-Topf eines neuen Tages; seit ADR-0117 mit getrenntem
         interaktivem Zaehler und Warn-Merker (eine Warnzeile je Tag)."""
-        return {"date": today, "calls": {}, "interactive": {}, "interactive_warned": False}
+        return {"date": today, "calls": {}, "interactive": {}, "manual": {},
+                "interactive_warned": False}
 
     def _write(self, verzeichnis: Path, pfad: Path, data: dict) -> None:
         verzeichnis.mkdir(parents=True, exist_ok=True)

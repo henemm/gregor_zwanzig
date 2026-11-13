@@ -29,7 +29,28 @@ _KINDS = ("route", "vergleich")
 def _error(code: str, user_id: str, **values: str) -> JSONResponse:
     """Fehlerantwort in der Sprache des angemeldeten Nutzers (#2671)."""
     status, body = error_body(code, lang=resolve_user_lang(user_id), **values)
-    return JSONResponse(status_code=status, content=body)
+    kopf = None
+    if code == KONTINGENT:
+        from services.forecast_budget import sekunden_bis_utc_mitternacht
+        kopf = {"Retry-After": str(sekunden_bis_utc_mitternacht())}
+    return JSONResponse(status_code=status, content=body, headers=kopf)
+
+
+#: Issue #2961 (ADR-0117 Nachtrag): Handversand am erschoepften user_manual.
+KONTINGENT = "kontingent_erschoepft"
+
+
+def _vergleich_schaetzung(entity_id: str, user_id: str) -> int:
+    """Obergrenze der Einheiten eines Ortsvergleich-Versands (Orte des Presets)."""
+    from app.loader import load_compare_presets
+    from services.manuelles_kontingent import schaetzung_vergleich
+
+    try:
+        presets = load_compare_presets(user_id=user_id)
+    except Exception:  # noqa: BLE001 -- der Versand meldet den Fehler selbst
+        presets = []
+    preset = next((p for p in presets if p.id == entity_id), None)
+    return schaetzung_vergleich(len(getattr(preset, "location_ids", None) or []))
 
 
 def _send_trip(entity_id: str, user_id: str, report_type: str):
@@ -44,12 +65,19 @@ def _send_trip(entity_id: str, user_id: str, report_type: str):
         return _error("no_stage", user_id, report_type=report_type)
     if not Settings().with_user_profile(user_id).can_send_email():
         return _error("smtp_not_configured", user_id)
+    from services.forecast_budget import manueller_abruf
+    from services.manuelles_kontingent import schaetzung_trip
+
     try:
-        outcome = TripReportSchedulerService(user_id=user_id).send_test_report_outcome(
-            trip, report_type,
-        )
+        # Issue #2961 (ADR-0117 Nachtrag): Handversand bucht user_manual.
+        with manueller_abruf(user_id, schaetzung_trip(trip)) as kontingent:
+            outcome = TripReportSchedulerService(user_id=user_id).send_test_report_outcome(
+                trip, report_type,
+            )
     except ValueError:
         return _error("invalid_report_type", user_id, report_type=report_type)
+    if kontingent.abgelehnt:
+        outcome = KONTINGENT
     if outcome in SEND_OUTCOMES:
         return _error(outcome, user_id, report_type=report_type)
     return {
@@ -60,8 +88,12 @@ def _send_trip(entity_id: str, user_id: str, report_type: str):
 
 
 def _send_vergleich(entity_id: str, user_id: str):
+    from services.forecast_budget import manueller_abruf
+
     try:
-        result = send_compare_preset(user_id, entity_id)
+        # Issue #2961 (ADR-0117 Nachtrag): Handversand bucht user_manual.
+        with manueller_abruf(user_id, _vergleich_schaetzung(entity_id, user_id)):
+            result = send_compare_preset(user_id, entity_id)
     except InvalidUserIdError:
         # #2163 S2: VOR InvalidPresetError/ValueError (beide erben von
         # ValueError) -- sonst "invalid_preset" mit gespiegelter Kennung.

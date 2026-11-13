@@ -1,6 +1,8 @@
 {
   "inbound.antwort.fehler.betreff": "Befehl fehlgeschlagen",
   "inbound.antwort.fehler.text": "Befehl konnte nicht sicher ausgefuehrt werden. Bitte mit STATUS pruefen, bevor du ihn erneut sendest.",
+  "inbound.antwort.kontingent.betreff": "Tageskontingent erschöpft",
+  "inbound.antwort.kontingent.text": "Tageskontingent für Abrufe erschöpft, automatische Briefings und Alarme laufen weiter.",
   "inbound.antwort.intern.betreff": "Fehler",
   "inbound.antwort.intern.text": "Interner Fehler.",
   "inbound.antwort.intern.query": "Unbekannter Query-Key.",

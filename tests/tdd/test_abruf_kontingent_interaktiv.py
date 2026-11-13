@@ -191,10 +191,25 @@ def test_ac2_ohne_kennung_nie_interaktiv():
     assert ForecastBudgetGate(_uid("ac2k")).allow(INTERAKTIV) is True
 
 
-def test_ac2_fairer_anteil_ueber_dem_sockel_bei_wenigen_nutzern():
-    a, b = _uid("ac2f-a"), _uid("ac2f-b")
-    _schreibe_global(calls=0, aktive=[a, b])
-    assert ForecastBudgetGate(a).snapshot()["interactive_limit"] == GRENZE_GLOBAL // 2
+def test_ac2_erster_nutzer_des_tages_bekommt_nicht_den_ganzen_topf():
+    """Fix-Runde F2 (ADR-0117 Nachtrag): feste Grenze 1500 je Nutzer, auch als
+    einziger aktiver Nutzer des Tages -- nie die ganzen 6300."""
+    a = _uid("ac2f-a")
+    _schreibe_global(calls=SOCKEL - 1, aktive=[a], interaktiv=SOCKEL - 1)
+    _schreibe_nutzer(a, calls=SOCKEL - 1, interaktiv=SOCKEL - 1)
+    gate = ForecastBudgetGate(a)
+    assert gate.snapshot()["interactive_limit"] == SOCKEL
+    assert gate.reserve(INTERAKTIV) is True
+    assert gate.reserve(INTERAKTIV) is False, "N=1 darf nicht ueber 1500 hinaus"
+    assert ForecastBudgetGate(_uid("ac2f-b")).reserve(INTERAKTIV) is True
+
+
+def test_kleinteil_reserve_lehnt_nicht_positive_einheiten_ab():
+    gate = ForecastBudgetGate(_uid("units"))
+    for wert in (0, -3):
+        with pytest.raises(ValueError):
+            gate.reserve("user_briefing", units=wert)
+    assert gate.snapshot()["calls_today"] == 0
 
 
 # --- AC-3: globale Reserve fuer Zeitplan-Briefings und Alarme ----------------
@@ -523,6 +538,72 @@ def test_ac9_alarm_vorschau_erschoepft_429(client, anbieter):
     resp = client.post(pfad, params={"user_id": a}, json=body)
     assert resp.status_code == 429, resp.text
     assert resp.json()["code"] == "abruf_kontingent_erschoepft"
+
+
+def test_f4_vergleich_alarm_vorschau_bucht_interaktiv(client, anbieter):
+    """Fix-Runde F4: die Ortsvergleich-Alarm-Vorschau (kind=vergleich) bucht
+    ueber die echte ASGI-App interaktiv und meldet ein erschoepftes
+    Kontingent mit 429."""
+    from services.compare_location_weather_source import CompareLocationWeatherSource
+    from services.compare_weather_snapshot import CompareWeatherSnapshotService
+    from services.weather_cache import reset_shared_weather_cache_for_tests
+    from tests.tdd.test_alert_preview_compare_paritaet import LOCATIONS, PRESET_ID, _seed
+
+    a, b = _uid("f4-a"), _uid("f4-b")
+    _seed(a)
+    orte = [loc for loc in LOCATIONS if loc.id in ("loc-ibk", "loc-bz")]
+    snap = CompareWeatherSnapshotService(user_id=a)
+    for loc in orte:
+        punkt = CompareLocationWeatherSource().fetch(
+            loc.id, loc.lat, loc.lon, 9, 16, elevation_m=loc.elevation_m, user_id=a)
+        snap.save(PRESET_ID, loc.id, punkt)
+    reset_shared_weather_cache_for_tests()
+    body = {"changes": [
+        {"metric": "gust_max_kmh", "old_value": 40.0, "new_value": 60.0, "delta": 20.0,
+         "threshold": 50.0, "severity": "moderate", "direction": "above",
+         "location_id": loc.id}
+        for loc in orte
+    ]}
+    pfad = f"/api/briefings/{PRESET_ID}/alert-preview"
+    params = {"kind": "vergleich", "user_id": a}
+
+    vorher_abrufe = len(anbieter.abrufe)
+    vorher_interaktiv = _snap(a)["user_interactive_calls_today"]
+    ok = client.post(pfad, params=params, json=body)
+    assert ok.status_code == 200, ok.text
+    assert len(anbieter.abrufe) > vorher_abrufe, "Positivkontrolle: frischer Abruf"
+    assert _snap(a)["user_interactive_calls_today"] > vorher_interaktiv, "bucht interaktiv"
+
+    reset_shared_weather_cache_for_tests()
+    _erschoepfe(a, b)
+    resp = client.post(pfad, params=params, json=body)
+    assert resp.status_code == 429, resp.text
+    assert resp.json()["code"] == "abruf_kontingent_erschoepft"
+
+
+def test_f5_etappe_mit_gedrosseltem_abschnitt_wird_nicht_aus_teildaten_bewertet(client):
+    """Fix-Runde F5: liegt EIN Abschnitt einer Etappe im Cache und der andere
+    wird vom Kontingent abgelehnt, liefert die Etappe keine Bewertung aus dem
+    einen Abschnitt, sondern null samt Hinweis."""
+    from services.segment_weather import SegmentWeatherService
+    from services.stage_weather import _segments_for_stage
+
+    a, b = _uid("f5-a"), _uid("f5-b")
+    trip = _trip_mit_etappe(a, "trip-f5", 45.2)
+    abschnitte = _segments_for_stage(trip, trip.stages[0])
+    assert len(abschnitte) == 2, "Vorbedingung: zwei Abschnitte"
+    fake = ZaehlAnbieter()
+    # Ersten Abschnitt ueber den echten Segment-Weg in den geteilten Cache legen.
+    erster = SegmentWeatherService(fake).fetch_segment_weather(
+        abschnitte[0], enrich_ensemble=False, user_id=b)
+    assert not erster.has_error
+    _erschoepfe(a, b)
+
+    resp = _etappenwetter(client, a, "trip-f5", fake)
+    # Ohne Bewertung bleibt keine Etappe lieferbar -> 429 (nicht 200 mit einer
+    # Ampel aus dem einen gecachten Abschnitt).
+    assert resp.status_code == 429, resp.text
+    assert len(fake.abrufe) == 1, "der zweite Abschnitt wurde nicht abgerufen"
 
 
 # --- Messung (Herleitung des Sockels, Spec "Zahlen") -------------------------
