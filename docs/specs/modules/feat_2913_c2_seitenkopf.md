@@ -35,7 +35,7 @@ Der Hub-Kopf von Trip und Orts-Vergleich (Brotkrumen, Eyebrow, Titel mit Status-
 ### In Scope
 
 1. **Kopfleiste:** Brotkrumen „Trips / **Name**“ bzw. „Orte / **Name**“, Kebab „Weitere Aktionen“, Knopf mit Beschriftung „Test schicken ▾“ (nur Beschriftung, kein neues Menü; Menü bleibt #2797).
-2. **Kopf:** Eyebrow „Trip · Region“ bzw. „Orte · Region“, h1 mit Status-Pill (fertig, aktiv, Entwurf mit „Aktivieren“, pausiert, archiviert), Meta-Zeile nach Mockup (Trip: „Datum · N Etappen · km · ↑m“; Orte: „N Orte · Vergleichstabelle · Briefing HH:MM“). Der Tageszähler neben der Pill („läuft seit Tag N“, `trip-detail-status-supplement`) und die bisherige km/Hm-Zeile `trip-detail-meta` entfallen, weil das freigegebene Mockup sie nicht zeigt (Zeitraum und Strecke stehen in der Meta-Zeile); die nur dafür genutzte Funktion `getDaysLabel` und ihre Katalogschlüssel `home.tage.*` (außer `home.tage.heute`) werden entfernt.
+2. **Kopf:** Eyebrow „Trip · Region“ bzw. „Orte · Region“, h1 mit Status-Pill (fertig, aktiv, Entwurf mit „Aktivieren“, pausiert, archiviert), Meta-Zeile nach Mockup (Trip: „Datum · N Etappen · km · ↑m“; Orte: „N Orte · Vergleichstabelle · Briefing HH:MM“).
 3. **Reiterleiste:** Zähler-Badge „Etappen (N)“ / „Orte (N)“, `aria-current` am aktiven Reiter.
 4. **Vorlage-Karte:** Texte und Gruppen (Vorlagen / Eigene) nach Mockup, ohne den Satz „Name der Vorlage ersetzt das Profil und steht im Kopf der Mail“.
 5. **Name/Region** bleiben inline bearbeitbar; im Ruhezustand nur Stift-Icon mit `aria-label`.
@@ -186,4 +186,3 @@ Fertig ist Scheibe c2, wenn Kopfleiste (Brotkrumen, Kebab, „Test schicken ▾�
 ## Changelog
 
 - 2026-11-13: Initial spec created (Scheibe c2, Arbeitsplan #2913)
-- 2026-11-13: Scope Punkt 2 präzisiert (Adversary F002): Tageszähler „läuft seit Tag N“ und `trip-detail-meta` entfallen nach Mockup, `getDaysLabel` samt `home.tage.*` (außer `heute`) entfernt; „Aktivieren“ ist ein Link mit prüfbarem Ziel (F001).
