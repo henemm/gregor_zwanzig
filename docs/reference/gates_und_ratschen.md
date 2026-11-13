@@ -698,7 +698,11 @@ Besitzer-Datei `docs/context/einstellungen_neu/elementliste_besitzer.json` ordne
 Besitzer-Eintrag `art` = `element` (`id`), `abschnitt` (`ctx`, `reiter`, `abschnitt`; deckt alle Abweichungen des
 Abschnitts) oder `zusaetzlich` (`text` oder `muster`, optional `ctx`/`reiter`), dazu Pflicht `grund` und `verweis`
 (`#2913-c2`, `#2913-d`, `#2913-e` oder `#NNNN`); ein ungültiger Eintrag lässt den Parser mit Fehler abbrechen.
-Ausnahmen (Text, der bewusst auf der Seite steht) brauchen Grund und Spec-Verweis. Flag `--abnahme`: Exit ≠ 0, solange ein Eintrag dieser drei Arten keinen Besitzer hat (Freigaben zählen
+Ausnahmen (Text, der bewusst auf der Seite steht) brauchen Grund und Spec-Verweis.
+Kategorie **„Mockup-Beispieldaten“** (Scheibe c2, #2913, Stand 2026-11-13): Kopf-Inhalte, die vom Prüf-Datensatz
+abhängen (Name, Status-Pill, Meta-Zeile, Zähler, Vorlage-Stand), bekommen `verweis` `#2913` und einen `grund` mit dem
+Präfix „Mockup-Beispieldaten, hängt vom Prüf-Datensatz ab: …“; belegt werden sie durch
+`frontend/e2e/hub-kopf-c2-mockup.staging.spec.ts`. `#2913` (ohne Teil-Kennung) ist nach `BESITZER_VERWEIS` zulässig (`#NNNN`). Flag `--abnahme`: Exit ≠ 0, solange ein Eintrag dieser drei Arten keinen Besitzer hat (Freigaben zählen
 als Besitzer). `--strict` unverändert (rot bei Abweichung oder `nicht_pruefbar`); `--abnahme` ist die mildere,
 besitzerbasierte Prüfung für den Scheiben-Abschluss.
 

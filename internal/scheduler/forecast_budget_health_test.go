@@ -1,5 +1,7 @@
 package scheduler
 
+// PARITAET-BEGRUENDUNG: Go-Scheduler und Python-Core fuehren das Abruf-Budget in zwei Prozessen, der Test liest die Python-Zahlen zur Laufzeit und erzwingt gleiche Konstanten.
+
 import (
 	"encoding/json"
 	"os"

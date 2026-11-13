@@ -1,3 +1,4 @@
+# PARITAET-BEGRUENDUNG: STATUS, Verschiebe-Bestaetigung und Briefing sind je eigene Antwortformen, geprueft wird nur die gleiche Etappennummer ueber alle Kanaele.
 """#2441 -- STATUS und Verschiebe-Bestaetigungen nennen dieselbe Etappennummer
 wie Briefing/`heute`.
 

@@ -1,4 +1,5 @@
 # doc-compliance-test
+# PARITAET-BEGRUENDUNG: Python-Core und Go-API sind zwei Prozesse mit je eigenem user_id-Muster, dieser Abgleich ist der Zwang zur Gleichheit.
 """user_id-Muster-Paritaet Python <-> Go (#1364).
 
 Das Zulassungsmuster fuer Nutzer-Kennungen existiert zweimal: in der

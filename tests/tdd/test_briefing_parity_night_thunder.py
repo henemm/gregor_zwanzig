@@ -1,3 +1,4 @@
+# PARITAET-BEGRUENDUNG: Morgen- und Abendbriefing werden je Kanal eigens gerendert, ein gemeinsamer Test wuerde die Kanalunterschiede verwischen.
 """TDD RED — Briefing-Paritaet Morgen/Abend (Issue #1313).
 
 PO-Entscheidungen 2026-07-18:

@@ -1,4 +1,5 @@
 # doc-compliance-test
+# PARITAET-BEGRUENDUNG: Prueft die Vollstaendigkeit der Kataloge de und en im Bereich api, es gibt keinen Doppelcode, nur zwei Sprachdateien.
 """Katalogbereich ``api``: Schluessel- und Platzhalterparitaet (Issue #2674, AC-7).
 
 SPEC: docs/specs/modules/i18n_p11_api_meldungen_ratsche_2674.md AC-7.

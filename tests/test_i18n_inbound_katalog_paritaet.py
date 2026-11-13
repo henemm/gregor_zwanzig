@@ -1,4 +1,5 @@
 # doc-compliance-test
+# PARITAET-BEGRUENDUNG: Prueft die Vollstaendigkeit der Kataloge de und en im Bereich inbound, es gibt keinen Doppelcode, nur zwei Sprachdateien.
 """Katalogbereich ``inbound``: Paritaet und Ratsche (Issue #2673, AC-8).
 
 SPEC: docs/specs/modules/i18n_p10_inbound_2673.md AC-8.
