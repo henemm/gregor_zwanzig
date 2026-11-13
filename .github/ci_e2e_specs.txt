@@ -700,3 +700,8 @@ e2e/design-system-trip-vergleich.spec.ts
 # im frontend-test-Job und steht bewusst NICHT auf dieser Liste.
 e2e/mobile-ux-messung.spec.ts
 e2e/mobile-ux-audit-selbsttest.spec.ts
+# karte-wegpunktname-als-text.spec.ts -- #2961: Wegpunktnamen erscheinen in der
+# Karten-Sprechblase als Text. sicherheitsrichtlinie-ohne-verletzung.spec.ts -- #2961:
+# die ausgelieferte Content-Security-Policy erzeugt auf den Kernseiten keine Verletzung.
+e2e/karte-wegpunktname-als-text.spec.ts
+e2e/sicherheitsrichtlinie-ohne-verletzung.spec.ts
