@@ -1,0 +1,298 @@
+============================= test session starts ==============================
+platform linux -- Python 3.12.3, pytest-9.2.0, pluggy-1.6.0
+rootdir: /home/hem/gregor_zwanzig/.claude/worktrees/joyful-snacking-fountain
+configfile: pyproject.toml
+plugins: timeout-2.4.0, anyio-4.14.2, socket-0.8.0
+timeout: 30.0s
+timeout method: signal
+timeout func_only: False
+collected 19 items
+
+tests/unit/test_paritaet_begruendung_marker.py FFFFFFFFFFFFFFFFFF.       [100%]
+
+=================================== FAILURES ===================================
+_ test_datei_traegt_marker_mit_begruendung[tests/tdd/test_briefing_parity_night_thunder.py] _
+
+rel = 'tests/tdd/test_briefing_parity_night_thunder.py'
+
+    @pytest.mark.parametrize("rel", BEGRUENDET_GETRENNT)
+    def test_datei_traegt_marker_mit_begruendung(rel):
+        pfad = REPO / rel
+        assert pfad.is_file(), f"{rel} fehlt"
+        b = begruendung(pfad.read_text(encoding="utf-8"))
+>       assert b, f"{rel}: Kopfzeile ohne 'PARITAET-BEGRUENDUNG: <Begruendung>'"
+E       AssertionError: tests/tdd/test_briefing_parity_night_thunder.py: Kopfzeile ohne 'PARITAET-BEGRUENDUNG: <Begruendung>'
+E       assert None
+
+tests/unit/test_paritaet_begruendung_marker.py:56: AssertionError
+_ test_datei_traegt_marker_mit_begruendung[tests/tdd/test_channel_origin_guard_parity.py] _
+
+rel = 'tests/tdd/test_channel_origin_guard_parity.py'
+
+    @pytest.mark.parametrize("rel", BEGRUENDET_GETRENNT)
+    def test_datei_traegt_marker_mit_begruendung(rel):
+        pfad = REPO / rel
+        assert pfad.is_file(), f"{rel} fehlt"
+        b = begruendung(pfad.read_text(encoding="utf-8"))
+>       assert b, f"{rel}: Kopfzeile ohne 'PARITAET-BEGRUENDUNG: <Begruendung>'"
+E       AssertionError: tests/tdd/test_channel_origin_guard_parity.py: Kopfzeile ohne 'PARITAET-BEGRUENDUNG: <Begruendung>'
+E       assert None
+
+tests/unit/test_paritaet_begruendung_marker.py:56: AssertionError
+_ test_datei_traegt_marker_mit_begruendung[tests/tdd/test_regen_ausdehnung_kanalparitaet.py] _
+
+rel = 'tests/tdd/test_regen_ausdehnung_kanalparitaet.py'
+
+    @pytest.mark.parametrize("rel", BEGRUENDET_GETRENNT)
+    def test_datei_traegt_marker_mit_begruendung(rel):
+        pfad = REPO / rel
+        assert pfad.is_file(), f"{rel} fehlt"
+        b = begruendung(pfad.read_text(encoding="utf-8"))
+>       assert b, f"{rel}: Kopfzeile ohne 'PARITAET-BEGRUENDUNG: <Begruendung>'"
+E       AssertionError: tests/tdd/test_regen_ausdehnung_kanalparitaet.py: Kopfzeile ohne 'PARITAET-BEGRUENDUNG: <Begruendung>'
+E       assert None
+
+tests/unit/test_paritaet_begruendung_marker.py:56: AssertionError
+_ test_datei_traegt_marker_mit_begruendung[tests/tdd/test_vorlauf_kanalparitaet.py] _
+
+rel = 'tests/tdd/test_vorlauf_kanalparitaet.py'
+
+    @pytest.mark.parametrize("rel", BEGRUENDET_GETRENNT)
+    def test_datei_traegt_marker_mit_begruendung(rel):
+        pfad = REPO / rel
+        assert pfad.is_file(), f"{rel} fehlt"
+        b = begruendung(pfad.read_text(encoding="utf-8"))
+>       assert b, f"{rel}: Kopfzeile ohne 'PARITAET-BEGRUENDUNG: <Begruendung>'"
+E       AssertionError: tests/tdd/test_vorlauf_kanalparitaet.py: Kopfzeile ohne 'PARITAET-BEGRUENDUNG: <Begruendung>'
+E       assert None
+
+tests/unit/test_paritaet_begruendung_marker.py:56: AssertionError
+_ test_datei_traegt_marker_mit_begruendung[tests/tdd/test_alarm_sms_paritaet_amtlicher_zusatz.py] _
+
+rel = 'tests/tdd/test_alarm_sms_paritaet_amtlicher_zusatz.py'
+
+    @pytest.mark.parametrize("rel", BEGRUENDET_GETRENNT)
+    def test_datei_traegt_marker_mit_begruendung(rel):
+        pfad = REPO / rel
+        assert pfad.is_file(), f"{rel} fehlt"
+        b = begruendung(pfad.read_text(encoding="utf-8"))
+>       assert b, f"{rel}: Kopfzeile ohne 'PARITAET-BEGRUENDUNG: <Begruendung>'"
+E       AssertionError: tests/tdd/test_alarm_sms_paritaet_amtlicher_zusatz.py: Kopfzeile ohne 'PARITAET-BEGRUENDUNG: <Begruendung>'
+E       assert None
+
+tests/unit/test_paritaet_begruendung_marker.py:56: AssertionError
+_ test_datei_traegt_marker_mit_begruendung[tests/tdd/test_hiking_window_parity.py] _
+
+rel = 'tests/tdd/test_hiking_window_parity.py'
+
+    @pytest.mark.parametrize("rel", BEGRUENDET_GETRENNT)
+    def test_datei_traegt_marker_mit_begruendung(rel):
+        pfad = REPO / rel
+        assert pfad.is_file(), f"{rel} fehlt"
+        b = begruendung(pfad.read_text(encoding="utf-8"))
+>       assert b, f"{rel}: Kopfzeile ohne 'PARITAET-BEGRUENDUNG: <Begruendung>'"
+E       AssertionError: tests/tdd/test_hiking_window_parity.py: Kopfzeile ohne 'PARITAET-BEGRUENDUNG: <Begruendung>'
+E       assert None
+
+tests/unit/test_paritaet_begruendung_marker.py:56: AssertionError
+_ test_datei_traegt_marker_mit_begruendung[tests/tdd/test_etappennummer_status_paritaet.py] _
+
+rel = 'tests/tdd/test_etappennummer_status_paritaet.py'
+
+    @pytest.mark.parametrize("rel", BEGRUENDET_GETRENNT)
+    def test_datei_traegt_marker_mit_begruendung(rel):
+        pfad = REPO / rel
+        assert pfad.is_file(), f"{rel} fehlt"
+        b = begruendung(pfad.read_text(encoding="utf-8"))
+>       assert b, f"{rel}: Kopfzeile ohne 'PARITAET-BEGRUENDUNG: <Begruendung>'"
+E       AssertionError: tests/tdd/test_etappennummer_status_paritaet.py: Kopfzeile ohne 'PARITAET-BEGRUENDUNG: <Begruendung>'
+E       assert None
+
+tests/unit/test_paritaet_begruendung_marker.py:56: AssertionError
+_ test_datei_traegt_marker_mit_begruendung[tests/test_mail_recipient_parity.py] _
+
+rel = 'tests/test_mail_recipient_parity.py'
+
+    @pytest.mark.parametrize("rel", BEGRUENDET_GETRENNT)
+    def test_datei_traegt_marker_mit_begruendung(rel):
+        pfad = REPO / rel
+        assert pfad.is_file(), f"{rel} fehlt"
+        b = begruendung(pfad.read_text(encoding="utf-8"))
+>       assert b, f"{rel}: Kopfzeile ohne 'PARITAET-BEGRUENDUNG: <Begruendung>'"
+E       AssertionError: tests/test_mail_recipient_parity.py: Kopfzeile ohne 'PARITAET-BEGRUENDUNG: <Begruendung>'
+E       assert None
+
+tests/unit/test_paritaet_begruendung_marker.py:56: AssertionError
+_ test_datei_traegt_marker_mit_begruendung[internal/mail/recipient_parity_test.go] _
+
+rel = 'internal/mail/recipient_parity_test.go'
+
+    @pytest.mark.parametrize("rel", BEGRUENDET_GETRENNT)
+    def test_datei_traegt_marker_mit_begruendung(rel):
+        pfad = REPO / rel
+        assert pfad.is_file(), f"{rel} fehlt"
+        b = begruendung(pfad.read_text(encoding="utf-8"))
+>       assert b, f"{rel}: Kopfzeile ohne 'PARITAET-BEGRUENDUNG: <Begruendung>'"
+E       AssertionError: internal/mail/recipient_parity_test.go: Kopfzeile ohne 'PARITAET-BEGRUENDUNG: <Begruendung>'
+E       assert None
+
+tests/unit/test_paritaet_begruendung_marker.py:56: AssertionError
+_ test_datei_traegt_marker_mit_begruendung[tests/unit/test_user_id_pattern_parity.py] _
+
+rel = 'tests/unit/test_user_id_pattern_parity.py'
+
+    @pytest.mark.parametrize("rel", BEGRUENDET_GETRENNT)
+    def test_datei_traegt_marker_mit_begruendung(rel):
+        pfad = REPO / rel
+        assert pfad.is_file(), f"{rel} fehlt"
+        b = begruendung(pfad.read_text(encoding="utf-8"))
+>       assert b, f"{rel}: Kopfzeile ohne 'PARITAET-BEGRUENDUNG: <Begruendung>'"
+E       AssertionError: tests/unit/test_user_id_pattern_parity.py: Kopfzeile ohne 'PARITAET-BEGRUENDUNG: <Begruendung>'
+E       assert None
+
+tests/unit/test_paritaet_begruendung_marker.py:56: AssertionError
+_ test_datei_traegt_marker_mit_begruendung[tests/unit/test_entity_id_pattern_parity.py] _
+
+rel = 'tests/unit/test_entity_id_pattern_parity.py'
+
+    @pytest.mark.parametrize("rel", BEGRUENDET_GETRENNT)
+    def test_datei_traegt_marker_mit_begruendung(rel):
+        pfad = REPO / rel
+        assert pfad.is_file(), f"{rel} fehlt"
+        b = begruendung(pfad.read_text(encoding="utf-8"))
+>       assert b, f"{rel}: Kopfzeile ohne 'PARITAET-BEGRUENDUNG: <Begruendung>'"
+E       AssertionError: tests/unit/test_entity_id_pattern_parity.py: Kopfzeile ohne 'PARITAET-BEGRUENDUNG: <Begruendung>'
+E       assert None
+
+tests/unit/test_paritaet_begruendung_marker.py:56: AssertionError
+_ test_datei_traegt_marker_mit_begruendung[internal/handler/briefing_route_get_lock_etag_test.go] _
+
+rel = 'internal/handler/briefing_route_get_lock_etag_test.go'
+
+    @pytest.mark.parametrize("rel", BEGRUENDET_GETRENNT)
+    def test_datei_traegt_marker_mit_begruendung(rel):
+        pfad = REPO / rel
+        assert pfad.is_file(), f"{rel} fehlt"
+        b = begruendung(pfad.read_text(encoding="utf-8"))
+>       assert b, f"{rel}: Kopfzeile ohne 'PARITAET-BEGRUENDUNG: <Begruendung>'"
+E       AssertionError: internal/handler/briefing_route_get_lock_etag_test.go: Kopfzeile ohne 'PARITAET-BEGRUENDUNG: <Begruendung>'
+E       assert None
+
+tests/unit/test_paritaet_begruendung_marker.py:56: AssertionError
+_ test_datei_traegt_marker_mit_begruendung[tests/test_i18n_api_katalog_paritaet.py] _
+
+rel = 'tests/test_i18n_api_katalog_paritaet.py'
+
+    @pytest.mark.parametrize("rel", BEGRUENDET_GETRENNT)
+    def test_datei_traegt_marker_mit_begruendung(rel):
+        pfad = REPO / rel
+        assert pfad.is_file(), f"{rel} fehlt"
+        b = begruendung(pfad.read_text(encoding="utf-8"))
+>       assert b, f"{rel}: Kopfzeile ohne 'PARITAET-BEGRUENDUNG: <Begruendung>'"
+E       AssertionError: tests/test_i18n_api_katalog_paritaet.py: Kopfzeile ohne 'PARITAET-BEGRUENDUNG: <Begruendung>'
+E       assert None
+
+tests/unit/test_paritaet_begruendung_marker.py:56: AssertionError
+_ test_datei_traegt_marker_mit_begruendung[tests/test_i18n_inbound_katalog_paritaet.py] _
+
+rel = 'tests/test_i18n_inbound_katalog_paritaet.py'
+
+    @pytest.mark.parametrize("rel", BEGRUENDET_GETRENNT)
+    def test_datei_traegt_marker_mit_begruendung(rel):
+        pfad = REPO / rel
+        assert pfad.is_file(), f"{rel} fehlt"
+        b = begruendung(pfad.read_text(encoding="utf-8"))
+>       assert b, f"{rel}: Kopfzeile ohne 'PARITAET-BEGRUENDUNG: <Begruendung>'"
+E       AssertionError: tests/test_i18n_inbound_katalog_paritaet.py: Kopfzeile ohne 'PARITAET-BEGRUENDUNG: <Begruendung>'
+E       assert None
+
+tests/unit/test_paritaet_begruendung_marker.py:56: AssertionError
+_ test_datei_traegt_marker_mit_begruendung[tests/unit/test_i18n_katalog_paritaet.py] _
+
+rel = 'tests/unit/test_i18n_katalog_paritaet.py'
+
+    @pytest.mark.parametrize("rel", BEGRUENDET_GETRENNT)
+    def test_datei_traegt_marker_mit_begruendung(rel):
+        pfad = REPO / rel
+        assert pfad.is_file(), f"{rel} fehlt"
+        b = begruendung(pfad.read_text(encoding="utf-8"))
+>       assert b, f"{rel}: Kopfzeile ohne 'PARITAET-BEGRUENDUNG: <Begruendung>'"
+E       AssertionError: tests/unit/test_i18n_katalog_paritaet.py: Kopfzeile ohne 'PARITAET-BEGRUENDUNG: <Begruendung>'
+E       assert None
+
+tests/unit/test_paritaet_begruendung_marker.py:56: AssertionError
+_ test_datei_traegt_marker_mit_begruendung[internal/i18n/katalog_paritaet_test.go] _
+
+rel = 'internal/i18n/katalog_paritaet_test.go'
+
+    @pytest.mark.parametrize("rel", BEGRUENDET_GETRENNT)
+    def test_datei_traegt_marker_mit_begruendung(rel):
+        pfad = REPO / rel
+        assert pfad.is_file(), f"{rel} fehlt"
+        b = begruendung(pfad.read_text(encoding="utf-8"))
+>       assert b, f"{rel}: Kopfzeile ohne 'PARITAET-BEGRUENDUNG: <Begruendung>'"
+E       AssertionError: internal/i18n/katalog_paritaet_test.go: Kopfzeile ohne 'PARITAET-BEGRUENDUNG: <Begruendung>'
+E       assert None
+
+tests/unit/test_paritaet_begruendung_marker.py:56: AssertionError
+_ test_datei_traegt_marker_mit_begruendung[frontend/src/lib/i18n/__tests__/paritaet_de_en.test.ts] _
+
+rel = 'frontend/src/lib/i18n/__tests__/paritaet_de_en.test.ts'
+
+    @pytest.mark.parametrize("rel", BEGRUENDET_GETRENNT)
+    def test_datei_traegt_marker_mit_begruendung(rel):
+        pfad = REPO / rel
+        assert pfad.is_file(), f"{rel} fehlt"
+        b = begruendung(pfad.read_text(encoding="utf-8"))
+>       assert b, f"{rel}: Kopfzeile ohne 'PARITAET-BEGRUENDUNG: <Begruendung>'"
+E       AssertionError: frontend/src/lib/i18n/__tests__/paritaet_de_en.test.ts: Kopfzeile ohne 'PARITAET-BEGRUENDUNG: <Begruendung>'
+E       assert None
+
+tests/unit/test_paritaet_begruendung_marker.py:56: AssertionError
+_ test_datei_traegt_marker_mit_begruendung[frontend/e2e/hub-anlegen-paritaet-flaechen.spec.ts] _
+
+rel = 'frontend/e2e/hub-anlegen-paritaet-flaechen.spec.ts'
+
+    @pytest.mark.parametrize("rel", BEGRUENDET_GETRENNT)
+    def test_datei_traegt_marker_mit_begruendung(rel):
+        pfad = REPO / rel
+        assert pfad.is_file(), f"{rel} fehlt"
+        b = begruendung(pfad.read_text(encoding="utf-8"))
+>       assert b, f"{rel}: Kopfzeile ohne 'PARITAET-BEGRUENDUNG: <Begruendung>'"
+E       AssertionError: frontend/e2e/hub-anlegen-paritaet-flaechen.spec.ts: Kopfzeile ohne 'PARITAET-BEGRUENDUNG: <Begruendung>'
+E       assert None
+
+tests/unit/test_paritaet_begruendung_marker.py:56: AssertionError
+=============================== warnings summary ===============================
+.venv/lib/python3.12/site-packages/anyio/pytest_plugin.py:14
+  /home/hem/gregor_zwanzig/.claude/worktrees/joyful-snacking-fountain/.venv/lib/python3.12/site-packages/anyio/pytest_plugin.py:14: PytestRemovedIn10Warning: _pytest.python.CallSpec2 has been renamed to CallSpec.
+  The CallSpec2 alias will be removed in pytest 10.
+  Update imports to use CallSpec instead.
+  See https://docs.pytest.org/en/stable/deprecations.html#callspec2-renamed
+    from _pytest.python import CallSpec2
+
+tests/conftest.py:128
+  /home/hem/gregor_zwanzig/.claude/worktrees/joyful-snacking-fountain/tests/conftest.py:128: StarletteDeprecationWarning: Using `httpx` with `starlette.testclient` is deprecated; install `httpx2` instead.
+    from starlette.testclient import TestClient
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+FAILED tests/unit/test_paritaet_begruendung_marker.py::test_datei_traegt_marker_mit_begruendung[tests/tdd/test_briefing_parity_night_thunder.py]
+FAILED tests/unit/test_paritaet_begruendung_marker.py::test_datei_traegt_marker_mit_begruendung[tests/tdd/test_channel_origin_guard_parity.py]
+FAILED tests/unit/test_paritaet_begruendung_marker.py::test_datei_traegt_marker_mit_begruendung[tests/tdd/test_regen_ausdehnung_kanalparitaet.py]
+FAILED tests/unit/test_paritaet_begruendung_marker.py::test_datei_traegt_marker_mit_begruendung[tests/tdd/test_vorlauf_kanalparitaet.py]
+FAILED tests/unit/test_paritaet_begruendung_marker.py::test_datei_traegt_marker_mit_begruendung[tests/tdd/test_alarm_sms_paritaet_amtlicher_zusatz.py]
+FAILED tests/unit/test_paritaet_begruendung_marker.py::test_datei_traegt_marker_mit_begruendung[tests/tdd/test_hiking_window_parity.py]
+FAILED tests/unit/test_paritaet_begruendung_marker.py::test_datei_traegt_marker_mit_begruendung[tests/tdd/test_etappennummer_status_paritaet.py]
+FAILED tests/unit/test_paritaet_begruendung_marker.py::test_datei_traegt_marker_mit_begruendung[tests/test_mail_recipient_parity.py]
+FAILED tests/unit/test_paritaet_begruendung_marker.py::test_datei_traegt_marker_mit_begruendung[internal/mail/recipient_parity_test.go]
+FAILED tests/unit/test_paritaet_begruendung_marker.py::test_datei_traegt_marker_mit_begruendung[tests/unit/test_user_id_pattern_parity.py]
+FAILED tests/unit/test_paritaet_begruendung_marker.py::test_datei_traegt_marker_mit_begruendung[tests/unit/test_entity_id_pattern_parity.py]
+FAILED tests/unit/test_paritaet_begruendung_marker.py::test_datei_traegt_marker_mit_begruendung[internal/handler/briefing_route_get_lock_etag_test.go]
+FAILED tests/unit/test_paritaet_begruendung_marker.py::test_datei_traegt_marker_mit_begruendung[tests/test_i18n_api_katalog_paritaet.py]
+FAILED tests/unit/test_paritaet_begruendung_marker.py::test_datei_traegt_marker_mit_begruendung[tests/test_i18n_inbound_katalog_paritaet.py]
+FAILED tests/unit/test_paritaet_begruendung_marker.py::test_datei_traegt_marker_mit_begruendung[tests/unit/test_i18n_katalog_paritaet.py]
+FAILED tests/unit/test_paritaet_begruendung_marker.py::test_datei_traegt_marker_mit_begruendung[internal/i18n/katalog_paritaet_test.go]
+FAILED tests/unit/test_paritaet_begruendung_marker.py::test_datei_traegt_marker_mit_begruendung[frontend/src/lib/i18n/__tests__/paritaet_de_en.test.ts]
+FAILED tests/unit/test_paritaet_begruendung_marker.py::test_datei_traegt_marker_mit_begruendung[frontend/e2e/hub-anlegen-paritaet-flaechen.spec.ts]
+=================== 18 failed, 1 passed, 2 warnings in 0.71s ===================
