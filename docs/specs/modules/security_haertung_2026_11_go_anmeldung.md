@@ -55,8 +55,8 @@ ADR-0113.
 
 ## Implementation Details
 
-1. **Einmal-Code (GA1).** `attemptGuard` (Zähler je Schlüssel, vor dem Vergleich erhöht,
-   Sperre nach `max` Versuchen) mit 5/15 min/15 min je Zieladresse; je Code weiterhin höchstens
+1. **Einmal-Code (GA1).** `attemptGuard` (Versuchszeitpunkte je Schlüssel im gleitenden
+   Fenster, vor dem Vergleich gezählt, Sperre ab dem `max`-ten Versuch, Erfolg setzt zurück) mit 5/15 min/15 min je Zieladresse; je Code weiterhin höchstens
    3 Vergleiche (atomar reserviert). Anforderung: `MailFloodLimiter(5, 1h)` je Adresse, über dem
    Kontingent neutrale 200 ohne Versand; ein nutzbarer Code (nicht abgelaufen, Vergleiche übrig)
    wird erneut zugestellt. Code: `rand.Int(rand.Reader, 10^8)`, 8 Ziffern, Vergleich mit
@@ -80,7 +80,10 @@ ADR-0113.
    umgerechnet, Bremse 10/h. `http.Server` mit `ReadHeaderTimeout` 10 s, `ReadTimeout` und
    `IdleTimeout` 2 min, ohne `WriteTimeout` (Versand bis 300 s, vgl.
    `fix_2124_versand_nginx_timeout.md`).
-6. **Kleinteile (GA10).** Zugriffslog maskiert Webhook-Pfadgeheimnisse und `code`/`state`/`token`.
+6. **Kleinteile (GA10).** Zugriffslog maskiert Webhook-Pfadgeheimnisse (aus der geparsten URL,
+   auch absolute Form und doppelte Schrägstriche) und die Query-Werte `code`/`state`/`token`/
+   `id_token`/`access_token`/`invite`/`secret`/`password` (Schlüssel ohne Groß-/Kleinschreibung).
+   Der Telegram-Eingang liest höchstens 1 MB Rumpf (413 darüber, keine Weitergabe).
    Maschinen-Geheimnisse unter 32 Zeichen: nur Warnzeile beim Start, der Endpunkt bleibt mit dem
    konfigurierten Wert in Betrieb (kein stilles Schließen eines Eingangskanals beim Deploy);
    fail-closed bleibt allein „kein Geheimnis gesetzt“ (Seven-Signierschlüssel ausgenommen). Reset-/Bestätigungs-Token: erst Vergleich, dann Ablauf. Passkey-Start: schon
@@ -96,8 +99,8 @@ ADR-0113.
 
 ## Acceptance Criteria
 
-**AC-1:** Given eine Adresse mit angefordertem Einmal-Code / When fünf falsche Codes innerhalb von 15 Minuten eingegeben werden, auch über eine Neuanforderung hinweg / Then wird für diese Adresse 15 Minuten lang jeder Code, auch der richtige, mit derselben neutralen Antwort abgelehnt, eine andere Adresse ist nicht betroffen, und gleichzeitige Fehlversuche führen zu höchstens fünf gezählten Versuchen.
-  - Test: `internal/handler/anmelde_code_haertung_2961_test.go` (Sperre, zweite Adresse, Parallelität)
+**AC-1:** Given eine Adresse mit angefordertem Einmal-Code / When fünf falsche Codes innerhalb eines beliebigen (gleitenden) 15-Minuten-Intervalls eingegeben werden, auch über eine Neuanforderung und über einen festen Zeitrand hinweg / Then wird für diese Adresse 15 Minuten lang jeder Code, auch der richtige, mit derselben neutralen Antwort abgelehnt, eine andere Adresse ist nicht betroffen, und gleichzeitige Fehlversuche führen zu höchstens fünf gezählten Versuchen.
+  - Test: `internal/handler/anmelde_code_haertung_2961_test.go` (Sperre, zweite Adresse, Parallelität), `internal/handler/attempt_guard_2961_test.go` (gleitendes Fenster, Sperrdauer ab dem fünften Versuch, Reset nach Erfolg für Code-Anmeldung und Passwortwechsel)
 
 **AC-2:** Given eine Adresse / When innerhalb einer Stunde mehr als fünf Codes angefordert werden / Then antwortet der Dienst immer gleich neutral, verschickt aber ab der sechsten Anforderung keine Mail mehr, und eine andere Adresse bekommt ihre Mail weiterhin.
   - Test: `TestAnmeldeCode_AnforderungsBremseJeAdresse`
@@ -123,8 +126,8 @@ ADR-0113.
 **AC-9:** Given ein vorhandener Kontoordner ohne `user.json` / When dieselbe Kennung registriert wird / Then antwortet der Dienst 409 `user_already_exists` und übernimmt keine verwaisten Daten.
   - Test: `TestTestkontoSchalter_VerwaisterOrdnerIstBelegt`
 
-**AC-10:** Given eine reservierte Kennung wie `default` / When sie registriert werden soll / Then lehnt der Dienst mit 400 ab, auch im Staging.
-  - Test: `TestTestkontoSchalter_ReservierteKennungAbgelehnt`
+**AC-10:** Given eine reservierte Kennung wie `default` oder eine Kennung aus `GZ_ADMIN_USER_IDS`/`GZ_QUOTA_EXEMPT_USER_IDS` (jeweils ohne Groß-/Kleinschreibung) / When sie ohne Admin-Sitzung als Testkonto registriert werden soll, auch im Staging oder Fixture-Modus / Then lehnt der Dienst mit 400 `validation_failed` ab; reservierte Kennungen sind nie registrierbar, privilegierte nur mit gültiger, nicht widerrufener Admin-Sitzung (gefälschte Signatur oder widerrufene Sitzung → 400).
+  - Test: `TestTestkontoSchalter_ReservierteKennungAbgelehnt`, `TestTestkontoSchalter_PrivilegierteKennungNurMitAdminSitzung`, `TestTestkontoSchalter_GefaelschteOderWiderrufeneAdminSitzung`
 
 **AC-11:** Given zwei oder mehr gleichzeitige Registrierungen derselben Kennung / When sie verarbeitet werden / Then gewinnt genau eine, alle anderen erhalten 409.
   - Test: `TestTestkontoSchalter_KontoanlageIstExklusiv`
@@ -171,8 +174,8 @@ ADR-0113.
 **AC-25:** Given der HTTP-Server / When ein Client seinen Anfragekopf nicht fertig sendet bzw. eine Bearbeitung länger als die Einlesegrenze dauert / Then wird die hängende Verbindung geschlossen, die lange Bearbeitung aber zu Ende beantwortet (kein `WriteTimeout`).
   - Test: `cmd/server/server_zeitgrenzen_2961_test.go`
 
-**AC-26:** Given Anfragen an Webhooks mit Pfadgeheimnis oder mit `code`/`state`/`token` in der Query / When das Zugriffslog schreibt / Then stehen diese Werte maskiert im Log, der übrige Pfad bleibt lesbar.
-  - Test: `TestZugriffslog_MaskiertGeheimnisse`
+**AC-26:** Given Anfragen an Webhooks mit Pfadgeheimnis (auch in absoluter Form oder mit doppeltem Schrägstrich) oder mit `code`/`state`/`token`/`id_token`/`access_token`/`invite`/`secret`/`password` in der Query (beliebige Schreibweise des Schlüssels) / When das Zugriffslog schreibt / Then stehen diese Werte maskiert im Log, der übrige Pfad bleibt lesbar und der Handler sieht die unveränderte Anfrage.
+  - Test: `TestZugriffslog_MaskiertGeheimnisse`, `TestAccessLog_MaskiertAlleSchreibweisen`
 
 **AC-27:** Given ein gesetztes, aber kürzer als 32 Zeichen langes Maschinen-Geheimnis / When der Router aufgebaut wird / Then erscheint je Geheimnis eine Warnzeile im Log, der betroffene Endpunkt arbeitet mit dem konfigurierten Wert weiter (richtiger Wert angenommen, falscher abgewiesen); geschlossen bleibt ein Endpunkt nur, wenn gar kein Geheimnis gesetzt ist.
   - Test: `TestMaschinenGeheimnisse_KurzWarntUndBleibtInBetrieb`
@@ -182,6 +185,12 @@ ADR-0113.
 
 **AC-29:** Given eine unbekannte Kennung bzw. ein Konto ohne Passkey / When der Passkey-Anmeldestart aufgerufen wird / Then sind Status und Rumpf beider Antworten gleich.
   - Test: `TestPasskeyStart_UnbekanntUndOhnePasskeyGleichfoermig`
+
+**AC-30:** Given der Telegram-Eingang mit gültigem Geheimnis / When ein Rumpf über 1 MB eintrifft / Then antwortet er 413 und reicht nichts an den Python-Kern weiter; kleinere Rümpfe gehen vollständig weiter.
+  - Test: `TestTelegramWebhook_RumpfBegrenztAufEinMB`
+
+**AC-31:** Given eine schreibende Anfrage mit Rumpf unbekannter Länge (chunked oder ohne Längenangabe) / When ihr Inhaltstyp nicht JSON ist bzw. sie über 1 MB groß ist / Then antwortet der Dienst 415 bzw. bricht beim Lesen ab, ohne etwas anzulegen.
+  - Test: `internal/middleware/request_guard_rumpf_2961_test.go`, `TestSchutz_ChunkedRumpfUeberRouter`
 
 ## Known Limitations
 
@@ -204,4 +213,5 @@ ADR-0113.
 ## Changelog
 
 - 2026-11-12: Erstfassung und Umsetzung (Issue #2961).
+- 2026-11-13: Nachbesserung aus der Gegenprüfung — AC-1 (gleitendes Fenster), AC-10 (privilegierte Kennungen nur mit Admin-Sitzung), AC-26 (Maskierung aus der geparsten URL, weitere Schlüssel), neu AC-30 (Telegram-Rumpf 1 MB) und AC-31 (Rumpf unbekannter Länge).
 - 2026-11-12: AC-27 geändert — kurze Maschinen-Geheimnisse nur noch Warnung, Endpunkt bleibt in Betrieb (Längen der Betriebswerte nicht prüfbar, Deploy darf keinen Kanal schließen).
