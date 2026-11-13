@@ -98,6 +98,7 @@ var storeMethodRegister = map[string]guardEntry{
 	"QuarantineUser":            exempt("Kennung als expliziter Parameter id, nicht s.UserID"),
 	"PurgeAblage":               exempt("kontouebergreifende Ablage ausserhalb von users/"),
 	"AblagePfad":                exempt("Pfad der Datenwurzel, nutzerunabhaengig"),
+	"RestoreFromAblage":         exempt("Kennung als expliziter Parameter id, nicht s.UserID"),
 	"SetUserTier":               exempt("Kennung als expliziter Parameter id, nicht s.UserID (#2423)"),
 	"SetUserDisabled":           exempt("Kennung als expliziter Parameter id, nicht s.UserID (#2155 S3)"),
 	"SetUserOnboardingFlags":    exempt("Kennung als expliziter Parameter id, nicht s.UserID (#2521 S2)"),
