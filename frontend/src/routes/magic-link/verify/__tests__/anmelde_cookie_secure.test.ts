@@ -45,7 +45,7 @@ async function secureBeiAnmeldung(nodeEnv: string, adresse: string): Promise<unk
 	try {
 		const body = new FormData();
 		body.set('email', 'wanderer@example.com');
-		body.set('code', '123456');
+		body.set('code', '12345678');
 		const gesetzt: Record<string, unknown>[] = [];
 		const ereignis = {
 			request: new Request(adresse, { method: 'POST', body }),
