@@ -83,7 +83,7 @@ unverändert.
 |--------|------|---------|
 | `<Segmented>` (`frontend/src/lib/components/atoms/Segmented.svelte`) | component | Basis-Atom (Options/selected/onselect, `data-slot`-Test-IDs) — MTabBar kapselt es, baut es nicht nach |
 | `compareTabsResolve.ts` (`COMPARE_TABS`) | constant | Compare-Tab-Definition + Deep-Link-Resolve — unverändert, wird nur an MTabBar durchgereicht |
-| `mobile_usability_tabs_soll.html` | mockup | Verbindliche Optik (Band, Fade, Pill, Badge-Stil) |
+| `mobile_usability_tabs_soll.html` | mockup | Optik für Band, Fade, Badge-Stil (die Pill-Form ist seit 2026-11-13 überholt, ADR-0118: Text-Reiter mit Unterstrich) |
 | `mobile_stages_tab_listen_only` (Spec) | spec | Gleicher Screen, unabhängiger Change — koordinieren, nicht mischen |
 
 ## Implementation Details

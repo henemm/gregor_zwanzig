@@ -218,4 +218,5 @@ Weitere zu prüfende Tests (Zuordnung in Phase 4): `trip-detail/TripHeader.spaci
 
 ## Changelog
 
+- 2026-11-13: Teilweise überholt durch #2980 / ADR-0118 (PO-Entscheidung 13.11.2026): Die Mobil-Kennzahl-Kacheln des Trips (Zeile „Etappe · Briefing · Start in“, #416) entfallen am Handy, die Kennzahl-Ausnahme in Punkt 8 gilt nicht mehr. Kopf-Knopf „Test schicken ▾“ ist Akzent-Knopf mit Fläche `--g-accent-deep`, Handy-Reiter sind Text-Reiter mit Unterstrich.
 - 2026-11-06: Initial spec created (Issue #2837, Epic #2345, Scheibe S1 Hub-Kopf; Anlege-Rahmen als Scheibe S2 ausgegliedert)
