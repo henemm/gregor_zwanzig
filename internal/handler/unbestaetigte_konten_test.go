@@ -28,7 +28,8 @@ import (
 )
 
 // unbestaetigteAnmeldung legt ein Konto an, wie es eine Registrierung
-// hinterlaesst: unbestaetigt, mit Passwort, Passkey und Bestaetigungstoken.
+// hinterlaesst: unbestaetigt, mit Passwort, Passkey, Bestaetigungstoken und
+// leeren Standardverzeichnissen — ohne Nutzinhalte.
 func unbestaetigteAnmeldung(t *testing.T, s *store.Store, id, adresse string, angelegt, tokenAblauf time.Time) {
 	t.Helper()
 	h, _ := bcrypt.GenerateFromPassword([]byte("fremdes-pw-123"), bcrypt.MinCost)
@@ -39,9 +40,31 @@ func unbestaetigteAnmeldung(t *testing.T, s *store.Store, id, adresse string, an
 	if err := s.SaveVerificationToken(id, model.EmailVerificationToken{TokenHash: "x", ExpiresAt: tokenAblauf, Address: adresse}); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(s.UserDir(id), "trips.json"), []byte(`[]`), 0o600); err != nil {
+	if err := s.ProvisionUserDirs(id); err != nil {
 		t.Fatal(err)
 	}
+}
+
+// mitNutzinhalt legt eine Nutzdatei in den Kontoordner (hier einen Ort).
+func mitNutzinhalt(t *testing.T, s *store.Store, id string) {
+	t.Helper()
+	if err := os.WriteFile(filepath.Join(s.UserDir(id), "locations", "ort.json"), []byte(`{"id":"ort"}`), 0o600); err != nil {
+		t.Fatal(err)
+	}
+}
+
+// ablageEintraege liefert die Namen in der Ablage (leer, wenn es sie nicht gibt).
+func ablageEintraege(t *testing.T, s *store.Store) []string {
+	t.Helper()
+	e, err := os.ReadDir(s.AblagePfad())
+	if err != nil && !os.IsNotExist(err) {
+		t.Fatal(err)
+	}
+	var namen []string
+	for _, x := range e {
+		namen = append(namen, x.Name())
+	}
+	return namen
 }
 
 func registrieren(s *store.Store, adresse, passwort string) *httptest.ResponseRecorder {
@@ -69,7 +92,10 @@ func TestRegistrierung_ErsetztUnbestaetigtesKonto(t *testing.T) {
 		t.Fatalf("neues Konto erwartet, bekommen %q", neu.ID)
 	}
 	if s.UserExists("u-vorweg") {
-		t.Error("das unbestaetigte Konto muss samt Ordner (Zugangsdaten, Passkeys, Daten) entfernt sein")
+		t.Error("das unbestaetigte Konto muss samt Zugangsdaten und Passkeys aus users/ verschwunden sein")
+	}
+	if a := ablageEintraege(t, s); len(a) != 1 || !strings.HasPrefix(a[0], "u-vorweg-") {
+		t.Errorf("der Ordner muss in die Ablage verschoben, nicht geloescht sein: %v", a)
 	}
 	u, _ := s.LoadUser(neu.ID)
 	if u == nil || u.Email != "opfer@beispiel.de" || len(u.PasskeyCredentials) != 0 ||
@@ -136,15 +162,21 @@ func TestReaper_LoeschtNurAbgelaufeneUnbestaetigteAnmeldungen(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	unbestaetigteAnmeldung(t, s, "u-reif-voll", "voll@beispiel.de", jetzt.Add(-49*time.Hour), vor25h)
+	mitNutzinhalt(t, s, "u-reif-voll")
+
 	if n := reapUnconfirmedAccounts(s, jetzt); n != 2 {
-		t.Errorf("erwartet 2 geloeschte Konten, bekommen %d", n)
+		t.Errorf("erwartet 2 verschobene Konten, bekommen %d", n)
 	}
 	for _, weg := range []string{"u-reif-a", "u-reif-b"} {
 		if s.UserExists(weg) {
-			t.Errorf("%s muss samt Ordner geloescht sein", weg)
+			t.Errorf("%s muss aus users/ verschwunden sein", weg)
 		}
 	}
-	for _, bleibt := range []string{"u-frisch", "u-altbestand", "u-test", "u-bestaetigt", "u-ohnetoken"} {
+	if a := ablageEintraege(t, s); len(a) != 2 {
+		t.Errorf("beide reifen Konten muessen in der Ablage liegen: %v", a)
+	}
+	for _, bleibt := range []string{"u-frisch", "u-altbestand", "u-test", "u-bestaetigt", "u-ohnetoken", "u-reif-voll"} {
 		if !s.UserExists(bleibt) {
 			t.Errorf("%s darf nicht geloescht werden", bleibt)
 		}
@@ -162,5 +194,82 @@ func TestBestaetigungsmail_NenntFremdausgeloesteRegistrierung(t *testing.T) {
 		if !strings.Contains(m.PlainBody, erwartet) || !strings.Contains(m.HTMLBody, "Gregor 20") {
 			t.Errorf("%s: Hinweis fehlt in der Bestaetigungsmail: %q", lang, m.PlainBody)
 		}
+	}
+}
+
+// Bestandsdaten bleiben erhalten: ein unbestaetigtes Konto MIT Nutzinhalt
+// wird weder ersetzt noch geraeumt, und sein Ordner bleibt byte-gleich.
+func TestUnbestaetigt_NichtLeererOrdnerBleibtUnangetastet(t *testing.T) {
+	s := newTestStore(t)
+	jetzt := time.Now()
+	unbestaetigteAnmeldung(t, s, "u-voll", "voll-reg@beispiel.de", jetzt.Add(-49*time.Hour), jetzt.Add(-25*time.Hour))
+	mitNutzinhalt(t, s, "u-voll")
+
+	if w := registrieren(s, "voll-reg@beispiel.de", "eigenes-pw-123"); w.Code != http.StatusConflict {
+		t.Fatalf("nicht leeres Konto: Registrierung erwartet 409, bekommen %d: %s", w.Code, w.Body.String())
+	}
+	if n := reapUnconfirmedAccounts(s, jetzt); n != 0 {
+		t.Fatalf("nicht leeres Konto darf der Reaper nicht anfassen, verschoben: %d", n)
+	}
+	if !s.UserExists("u-voll") || len(ablageEintraege(t, s)) != 0 {
+		t.Fatal("nicht leeres Konto muss in users/ bleiben, Ablage leer")
+	}
+	if b, err := os.ReadFile(filepath.Join(s.UserDir("u-voll"), "locations", "ort.json")); err != nil || string(b) != `{"id":"ort"}` {
+		t.Fatalf("Nutzinhalt veraendert: %q %v", b, err)
+	}
+}
+
+// Die Ablage wird nach 30 Tagen (injizierte Uhr) endgueltig entfernt, vorher
+// nicht; Zurueckschieben stellt das Konto wieder her; kein Leser sieht sie.
+func TestAblage_DreissigTageZurueckholbarUndUnsichtbar(t *testing.T) {
+	s := newTestStore(t)
+	jetzt := time.Now()
+	unbestaetigteAnmeldung(t, s, "u-ablage-a", "ablage-a@beispiel.de", jetzt.Add(-49*time.Hour), jetzt.Add(-25*time.Hour))
+	unbestaetigteAnmeldung(t, s, "u-ablage-b", "ablage-b@beispiel.de", jetzt.Add(-49*time.Hour), jetzt.Add(-25*time.Hour))
+	if n := reapUnconfirmedAccounts(s, jetzt); n != 2 {
+		t.Fatalf("erwartet 2 verschobene Konten, bekommen %d", n)
+	}
+
+	// Unsichtbar fuer Nutzerliste und Adress-Eindeutigkeit.
+	ids, _ := s.ListUserIDs()
+	for _, id := range ids {
+		if strings.HasPrefix(id, "u-ablage") || strings.HasPrefix(id, ".") {
+			t.Errorf("Ablage taucht in der Nutzerliste auf: %v", ids)
+		}
+	}
+	if taken, err := s.IsAddressTakenByOtherAccount("ablage-a@beispiel.de", ""); err != nil || taken {
+		t.Errorf("Ablage darf keine Adresse halten: %v %v", taken, err)
+	}
+
+	// Zurueckholen: Ordner unter der Kennung nach users/ zurueckschieben.
+	var quelle string
+	for _, n := range ablageEintraege(t, s) {
+		if strings.HasPrefix(n, "u-ablage-a-") {
+			quelle = filepath.Join(s.AblagePfad(), n)
+		}
+	}
+	if err := os.Rename(quelle, s.UserDir("u-ablage-a")); err != nil {
+		t.Fatal(err)
+	}
+	if u, err := s.LoadUser("u-ablage-a"); err != nil || u == nil || u.Email != "ablage-a@beispiel.de" || u.PasswordHash == "" {
+		t.Fatalf("zurueckgeschobenes Konto nicht wiederhergestellt: %+v %v", u, err)
+	}
+	// Ein zurueckgeholtes, weiter unbestaetigtes Konto wuerde der Reaper erneut
+	// verschieben; hier bestaetigt der Inhaber danach seine Adresse.
+	bestaetigt := jetzt.UTC()
+	if _, err := s.UpdateUser("u-ablage-a", func(u *model.User) error { u.EmailVerifiedAt = &bestaetigt; return nil }); err != nil {
+		t.Fatal(err)
+	}
+
+	// 29 Tage: bleibt; 31 Tage: endgueltig entfernt.
+	if n, err := s.PurgeAblage(jetzt.Add(29 * 24 * time.Hour)); err != nil || n != 0 {
+		t.Fatalf("vor 30 Tagen darf nichts entfernt werden: %d %v", n, err)
+	}
+	reapUnconfirmedAccounts(s, jetzt.Add(31*24*time.Hour))
+	if a := ablageEintraege(t, s); len(a) != 0 {
+		t.Fatalf("nach 30 Tagen muss die Ablage leer sein: %v", a)
+	}
+	if !s.UserExists("u-ablage-a") {
+		t.Fatal("das zurueckgeholte Konto darf vom Aufraeumen nicht betroffen sein")
 	}
 }

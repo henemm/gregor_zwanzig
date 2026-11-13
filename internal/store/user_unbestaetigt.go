@@ -25,7 +25,8 @@ func IsUnconfirmedSignup(u *model.User, tok *model.EmailVerificationToken) bool 
 
 // ReplaceableAddressHolders liefert die Konten, die address (normalisiert, in
 // email ODER mail_to) halten, und ob ALLE davon unbestaetigte Anmeldungen
-// sind (IsUnconfirmedSignup) — nur dann darf eine neue Registrierung sie
+// (IsUnconfirmedSignup) mit leerem Kontoordner (IsAccountDirPristine)
+// sind — nur dann darf eine neue Registrierung sie
 // ersetzen (Issue #2961, GA2a). Testkonten zaehlen wie bei
 // IsAddressTakenByOtherAccount nicht. Ein Lesefehler bricht ab (fail-closed).
 // gz-store-scope-exempt: sucht kontouebergreifend nach den Inhabern einer Adresse
@@ -47,6 +48,12 @@ func (s *Store) ReplaceableAddressHolders(address string) ([]*model.User, bool, 
 			loadErr = err
 		}
 		if !IsUnconfirmedSignup(u, tok) {
+			allReplaceable = false
+			return
+		}
+		// Bestandsdaten bleiben erhalten: nur ein Ordner ohne Nutzinhalte
+		// darf ersetzt werden (IsAccountDirPristine).
+		if leer, perr := s.IsAccountDirPristine(u.ID); perr != nil || !leer {
 			allReplaceable = false
 		}
 	}); err != nil {
