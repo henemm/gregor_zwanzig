@@ -1,3 +1,4 @@
+# PARITAET-BEGRUENDUNG: Die SMS hat eine eigene Kurzform des amtlichen Zusatzblocks, ein Zusammenfuehren mit der Langform wuerde den Kanalunterschied verwischen.
 """TDD RED — Issue #2422 Scheibe S4 / Issue #1088: SMS-Paritäts-Korrektur bei
 gebündelten Abweichungsalarmen mit eingebettetem amtlichem Zusatzblock.
 

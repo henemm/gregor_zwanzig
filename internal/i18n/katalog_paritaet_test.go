@@ -8,6 +8,8 @@ package i18n
 // Der echte, eingebettete Katalog muss bestehen; dieselbe Pruefung wird mit
 // absichtlich fehlerhaften fstest.MapFS-Katalogen aufgerufen und muss dort
 // scheitern und den Schluessel nennen.
+//
+// PARITAET-BEGRUENDUNG: Prueft die Vollstaendigkeit des Go-Katalogs de und en, es gibt keinen Doppelcode, nur zwei Sprachdateien.
 
 import (
 	"io/fs"

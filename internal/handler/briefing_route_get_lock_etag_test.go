@@ -1,5 +1,7 @@
 package handler
 
+// PARITAET-BEGRUENDUNG: Trip- und Briefing-Route lesen dieselbe Datei in zwei Handlern, der gleiche ETag ist der Zwang zur Gleichheit beider Lesewege.
+
 // TDD RED: Issue #2285 AC-4 (Dach-Epic #1374)
 //
 // Spec: docs/specs/modules/fix_2285_compare_put_merge_kernel.md

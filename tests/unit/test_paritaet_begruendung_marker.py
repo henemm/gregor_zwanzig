@@ -38,6 +38,11 @@ BEGRUENDET_GETRENNT = [
     "frontend/src/lib/i18n/__tests__/paritaet_de_en.test.ts",
     # Regressionswaechter, Rahmen bereits geteilt
     "frontend/e2e/hub-anlegen-paritaet-flaechen.spec.ts",
+    # Go-Waechter, begruendet getrennt
+    "internal/store/entity_id_test.go",
+    "internal/store/entity_id_upstream_zeichen_test.go",
+    "internal/scheduler/forecast_budget_health_test.go",
+    "internal/model/trip_schema_drift_test.go",
 ]
 
 

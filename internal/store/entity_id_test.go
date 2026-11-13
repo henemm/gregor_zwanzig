@@ -1,5 +1,7 @@
 package store
 
+// PARITAET-BEGRUENDUNG: Go-Store und Python-Loader pruefen Entitaets-Kennungen in zwei Prozessen, die gemeinsame Wahrheitstabelle entity_id_pattern_parity/faelle.json ist der Zwang zur Gleichheit.
+
 import (
 	"encoding/json"
 	"io/fs"

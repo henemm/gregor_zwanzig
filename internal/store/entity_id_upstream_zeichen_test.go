@@ -1,5 +1,7 @@
 package store
 
+// PARITAET-BEGRUENDUNG: Go sperrt bewusst mehr Zeichen als die mit Python geteilte Wahrheitstabelle (ADR-0114), deren Bestandsfaelle bleiben der gemeinsame Zwang beider Prozesse.
+
 import "testing"
 
 // Issue #2961 (ADR-0114 Punkt 2): Go ist strenger als die geteilte

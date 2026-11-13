@@ -1,3 +1,4 @@
+# PARITAET-BEGRUENDUNG: Kachelzeile, SMS-Zeile und Kurzzusammenfassung sind je eigene Ausgabeformen, geprueft wird dieselbe Gehzeit-Quelle ueber alle Formen.
 """EINE Gehzeit-Fenster-Quelle fuer alle vier Ausgaben.
 
 Spec:  docs/specs/modules/hiking_window_single_source.md (AC-1 bis AC-8)

@@ -1,3 +1,4 @@
+# PARITAET-BEGRUENDUNG: Prueft die Vollstaendigkeit der Python-Kataloge de und en, es gibt keinen Doppelcode, nur zwei Sprachdateien je Bereich.
 """Paritaet der Python-Textkataloge de/en (Issue #2662 AC-2).
 
 # doc-compliance-test: Paritaetstest ueber die echten Katalogdateien.

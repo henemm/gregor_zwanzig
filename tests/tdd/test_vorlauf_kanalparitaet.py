@@ -1,3 +1,4 @@
+# PARITAET-BEGRUENDUNG: Jeder der vier Kanaele hat seine eigene Ausgabeform, deshalb wird der Inhalt je Kanal eigens geprueft statt in einer gemeinsamen Form.
 """TDD RED — Issue #2261 Teil A (A-1), AC-10: ein Alarm mit Beginn in 170
 Minuten erreicht alle vier Kanaele mit demselben Inhalt.
 

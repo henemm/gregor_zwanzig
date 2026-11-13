@@ -1,5 +1,7 @@
 package model
 
+// PARITAET-BEGRUENDUNG: Go und Python haben je ein eigenes Trip-Datenmodell in zwei Prozessen, die gemeinsame Fixture erzwingt dieselben Schluessel auf beiden Seiten.
+
 // Trip-Schema-Drift-Gate, Go-Seite (#2058, Spec trip_schema_drift_gate).
 //
 // Liest dieselbe voll besetzte Fixture wie tests/test_trip_schema_drift.py,
