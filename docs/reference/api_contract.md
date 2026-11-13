@@ -1161,7 +1161,9 @@ Dritte Kanal-Schicht neben `alert_channels`/`send_*` („je Abo") und `alert_cha
 
 **Ergänzung S3b1 (Issue #1895 · Oberfläche, Frontend-only, 2026-11-04):** Der geteilte Block „Kanäle je Wettergröße" (`frontend/src/lib/components/alerts-tab/AlertMetricChannelsBlock.svelte`) sendet das Feld jetzt aus dem Alarme-Reiter auf allen vier Flächen (Trip-Hub, `/trips/new`, Ortsvergleich-Editor, `/compare/new`); es gibt keine API-Änderung.
 
-- **Pro aktiver Alarm-Wettergröße** (Schlüssel aus `GET /api/alert-metric-channel-keys`): „wie Abo-Kanäle" oder eigene Auswahl aus E-Mail/Telegram/SMS/Premium-SMS.
+**Stand 2026-11-13 (#2795 S3b Teilschritt 1b, Frontend-only):** Der Block „Kanäle je Wettergröße" ist aus der Oberfläche entfallen (Reiter Zustellung neu gebaut); das Frontend schreibt `alert_metric_channels` nicht mehr. Der Vertrag bleibt unverändert, Bestandswerte bleiben erhalten (Merge). Der neue Reiter schreibt `alert_channel_thresholds` (Dringlichkeit je Kanal), `alert_quiet_from`/`alert_quiet_to`, `alert_cooldown_minutes` (Mindestabstand) und die Kanal-Schalter über EINEN Speicherer (Owner `versand`/`alarme`), alles über die bestehenden Felder ohne Vertragsänderung.
+
+- **Pro aktiver Alarm-Wettergröße** (historisch, Schlüssel aus `GET /api/alert-metric-channel-keys`): „wie Abo-Kanäle" oder eigene Auswahl aus E-Mail/Telegram/SMS/Premium-SMS.
 - **Payload = Diff:** gesendet wird nur der geänderte Eintrag (Per-Metrik-Merge, siehe oben), immer mit allen vier Flags (`email`, `telegram`, `sms`, `premium_sms`). Zurück auf „wie Abo-Kanäle" sendet `{"<schluessel>": null}` (Per-Metrik-`null`, nicht Top-Level-`null`); ist der Schlüssel-Abruf nicht verfügbar, schreibt der Block nichts.
 - **Hinweis im Block:** Radar-/Regen-Alarme und amtliche Warnungen gehen weiterhin immer über die Abo-Kanäle.
 

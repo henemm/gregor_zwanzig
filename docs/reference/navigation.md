@@ -28,7 +28,8 @@ Seit Epic #2791 S3a Teil-PR 2 (2026-11-09) hat die Leiste **vier Reiter** (Trip 
 „Wetter" bzw. „Zustellung" aufgegangen; „Versand" und „Vorschau" waren bereits mit #1743 entfallen:
 
 - **Versand** ist ein Abschnitt im Reiter Zustellung (Anker `#versand`, Baustein
-  `shared/zustellung-tab/ZustellungTab.svelte` mit `shared/WetterMetrikenVersandPanel.svelte`, `context="route"|"vergleich"`).
+  `shared/zustellung-tab/ZustellungTab.svelte`, `context="route"|"vergleich"`; seit #2795 S3b Teilschritt 1b
+  (2026-11-13) neu gebaut, Altbausteine nur noch im Übergangsblock).
   Beim Ortsvergleich steht dort zusätzlich die Aktivierungs-Karte (Pausieren/Aktivieren).
 - **Vorschau** entfällt ersatzlos (samt Endpoint `GET /api/briefings/{id}/preview` und den verwaisten Resten
   `CompareChatBubble`/`CompareChannelSwitch`, PO-Entscheid 2026-10-22). Es bleibt nur die Alarm-Vorschau im Reiter
