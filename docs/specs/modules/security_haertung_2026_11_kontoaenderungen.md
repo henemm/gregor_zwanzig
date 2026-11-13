@@ -143,6 +143,21 @@ Schreiber setzen Sicherheitswerte nicht zurück. Architektur-Entscheidung: ADR-0
 **AC-16:** Given ein in die Ablage `<Datenwurzel>/.entfernt-unbestaetigt/<kennung>-<UTC-Zeitstempel>/` verschobenes Konto / When Nutzerliste und Adress-Eindeutigkeit abgefragt werden, der Ordner zurückgeschoben wird bzw. der Reaper vor und nach 30 Tagen läuft / Then sieht kein Leser die Ablage, das zurückgeschobene Konto ist mit allen Feldern wieder da, und die Ablage wird erst nach 30 Tagen endgültig entfernt.
   - Test: `TestAblage_DreissigTageZurueckholbarUndUnsichtbar`
 
+**AC-17:** Given eine Adresse, die nur eine leere unbestätigte Anmeldung hält / When eine Registrierung (Passwort oder Passkey) vor der Kontoanlage scheitert (ungültige Einladung, Validierung) oder die Kontoanlage selbst scheitert / Then bleibt die Anmeldung in `users/` bzw. kommt aus der Ablage zurück; eine Adresse wird höchstens einmal je Stunde ersetzt, darüber antwortet der Dienst 409 wie bei belegter Adresse; der Passkey-Weg ersetzt wie der Passwort-Weg; ein inzwischen bestätigtes Konto wird nie verschoben (Prüfung unter der Sperre, auch im Reaper).
+  - Test: `internal/handler/unbestaetigte_verdraengung_test.go`, `TestQuarantineUser_InzwischenBestaetigtWirdNichtVerschoben`
+
+**AC-18:** Given ein bestätigter Adresswechsel bzw. ein verworfenes Pending / When gleichzeitig veraltete Profil-Schreiber laufen (zwei Nutzer, `-race`) / Then überleben `email`, `mail_to` und `pending_contact_*` auf dem Plattenstand; sie werden nur über `UpdateUser` geschrieben, der Profil-PUT schreibt nur seine geänderten Felder und antwortet bei zwischenzeitlich verändertem Adressstand 412.
+  - Test: `internal/handler/adressfelder_frisch_test.go`
+
+**AC-19:** Given ein bestätigtes Konto / When ein Adress- oder Kennungswechsel angefordert wird / Then geht sofort ein Hinweis mit der neuen Adresse an die bisherige bestätigte Adresse (zusätzlich zum Hinweis beim Wirksamwerden); unbestätigte Konten und andere Konten bekommen keinen.
+  - Test: `TestHinweis_WechselAngefordertGehtAnDieBisherigeAdresse`
+
+**AC-20:** Given das Passkey-Angebot nach der Anmeldung / When das Einrichten an einem fehlenden Nachweis scheitert / Then führt es zur Passkey-Karte der Konto-Seite (`/account?passkey=einrichten`), wo der Nachweis-Dialog von selbst und danach der Anlegen-Dialog aufgeht; Abbruch und andere Fehler zeigt das Angebot sichtbar an.
+  - Test: `frontend/src/lib/passkeyAngebotNachweis.test.ts`
+
+**AC-21:** Given eine ausstehende Adressänderung / When ein Nachweis-Code angefordert wird / Then geht er an die bisherige wirksame Adresse; ein überholter Bestätigungslink wirkt nicht.
+  - Test: `TestReauthCode_GehtAnBisherigeAdresseTrotzAusstehenderAenderung`, `TestBestaetigung_UeberholterLinkWirktNicht`
+
 **AC-11:** Given eine Bestätigungsmail / When sie in Deutsch oder Englisch gebaut wird / Then sagt sie, dass sie zu ignorieren ist, wer sich nicht selbst registriert und die Adresse nicht selbst eingetragen hat.
   - Test: `TestBestaetigungsmail_NenntFremdausgeloesteRegistrierung`, Goldens `internal/mail/testdata/golden/verify.*`
 
@@ -177,4 +192,5 @@ Schreiber setzen Sicherheitswerte nicht zurück. Architektur-Entscheidung: ADR-0
 ## Changelog
 
 - 2026-11-13: Erstfassung und Umsetzung (Issue #2961, Welle 2).
+- 2026-11-13: Fix-Runde aus der Gegenprüfung: AC-17 bis AC-21 neu (spätes Verdrängen mit Rückholung und Bremse, Adressfelder nur frisch geladen, Hinweis beim Anstoßen, Passkey-Angebot zur Konto-Seite, Code-Empfänger).
 - 2026-11-13: Nachbesserung „Bestandsdaten bleiben erhalten“: nur leere Kontoordner, Ablage statt Löschen, 30 Tage zurückholbar (AC-9, AC-10 geändert; AC-15, AC-16 neu).

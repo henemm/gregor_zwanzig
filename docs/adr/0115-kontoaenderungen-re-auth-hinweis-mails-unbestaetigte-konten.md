@@ -46,8 +46,9 @@ Das Sicherheits-Review 2026-11 fand im Bereich Kontoverwaltung vier zusammenhän
    (gleichwertig zu einem Code an die Adresse, ADR-0067), und meldet sich per Hinweis-Mail.
    Gelöst wird sie über den Passwort-Reset (Punkt 4). Wer künftig eine sitzungsgebundene
    Verknüpfen-/Lösen-Funktion baut, hängt sie hinter denselben Nachweis.
-3. **Hinweis-Mails.** Ein wirksam gewordener Adress- oder Kennungswechsel meldet sich an die
-   **alte** bestätigte Adresse (mit der neuen Adresse im Text); Passkey hinzugefügt/entfernt,
+3. **Hinweis-Mails.** Schon das Anstoßen eines Adress- oder Kennungswechsels meldet sich an die
+   bisherige bestätigte Adresse; ein wirksam gewordener Wechsel meldet sich dort erneut
+   (jeweils mit der neuen Adresse im Text); Passkey hinzugefügt/entfernt,
    Passwort geändert/zurückgesetzt und Google verknüpft an die aktuelle bestätigte Adresse.
    Unbestätigte Konten bekommen keine. Texte über den Katalog (DE/EN), Versand über den engen
    Go-Mailweg mit Empfängerschutz (ADR-0087), fail-soft, höchstens 5 je Nutzer und Stunde.
@@ -87,7 +88,15 @@ Das Sicherheits-Review 2026-11 fand im Bereich Kontoverwaltung vier zusammenhän
    der Python-Core liest nur). `password_hash`, `passkey_credentials`, `oauth_provider`,
    `oauth_sub`, `disabled`, `tier` und `email_verified_at` schreibt nur `UpdateUser` (lädt unter
    der Sperre frisch) oder ein Merge-Setter; `SaveUser` übernimmt sie bei vorhandener Datei vom
-   Plattenstand. Ein veralteter Schreiber kann sie damit nicht zurücksetzen.
+   Plattenstand. Ein veralteter Schreiber kann sie damit nicht zurücksetzen. Dasselbe gilt für
+   `email`, `mail_to` und `pending_contact_*`: der Profil-PUT schreibt nur die Felder, die er
+   ändert, auf den frisch geladenen Stand (bei zwischenzeitlich verändertem Adressstand 412), der
+   Bestätigungslink wendet die ausstehende Änderung auf dem frischen Stand an.
+8. **Verdrängen unbestätigter Anmeldungen.** Eine Registrierung verdrängt erst unmittelbar vor
+   der Kontoanlage, nachdem alle Prüfungen bestanden sind; scheitert die Anlage, kommt die
+   Anmeldung aus der Ablage zurück. Je Adresse höchstens eine Ersetzung pro Stunde (darüber
+   „Adresse vergeben“). Die Ablage prüft unter der Nutzersperre erneut, ob es noch eine leere
+   unbestätigte Anmeldung ist.
 
 ## Verworfene Alternativen
 
