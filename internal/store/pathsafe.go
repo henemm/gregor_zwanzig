@@ -3,6 +3,7 @@ package store
 import (
 	"errors"
 	"regexp"
+	"unicode/utf8"
 )
 
 // Pfad-Traversal-Sperre fuer Nutzer-Kennungen (Issue #2140, Scheibe 1).
@@ -53,9 +54,14 @@ func ValidUserID(id string) bool {
 // Kein ID-Erzeuger im Bestand (Frontend-Slugs, toKebab, randomUUID-Kuerzel,
 // GPX-Slug) bildet sie; Leerzeichen bleiben aus Bestandsschutz zulaessig,
 // weil Altdaten mit Leerzeichen nicht ausgeschlossen werden koennen und das
-// Weiterreichen jedes Segment ohnehin kodiert. Die Python-Seite ist (noch)
-// nicht verschaerft: Go ist hier strenger, nie lockerer.
-var ValidEntityIDRe = regexp.MustCompile(`^[^./\\\x00-\x1f\x7f?#%][^/\\\x00-\x1f\x7f?#%]*$`)
+// Weiterreichen jedes Segment ohnehin kodiert. Die Python-Seite
+// (app.loader.VALID_ENTITY_ID_RE) ist gleichlautend.
+//
+// Fix-Runde #2961 (F8): ebenfalls gesperrt sind C1-Steuerzeichen
+// (U+0080-U+009F) und die Zeilen-/Absatztrenner U+2028/U+2029;
+// ValidEntityID lehnt zusaetzlich ungueltiges UTF-8 ab. Python zieht
+// gleichlautend nach (geteilte Wahrheitstabelle).
+var ValidEntityIDRe = regexp.MustCompile(`^[^./\\\x00-\x1f\x7f-\x{9f}\x{2028}\x{2029}?#%][^/\\\x00-\x1f\x7f-\x{9f}\x{2028}\x{2029}?#%]*$`)
 
 // ErrInvalidEntityID meldet eine Entitaets-Kennung, die kein einzelnes,
 // sicheres Pfadsegment ist — analog ErrInvalidUserID bewusst ein eigener
@@ -86,7 +92,7 @@ var ErrNotFound = errors.New("not found")
 
 // ValidEntityID prueft, ob eine Entitaets-Kennung ein sicheres Pfadsegment ist.
 func ValidEntityID(id string) bool {
-	return ValidEntityIDRe.MatchString(id)
+	return utf8.ValidString(id) && ValidEntityIDRe.MatchString(id)
 }
 
 // requireUser verweigert jeden nutzerbezogenen Dateizugriff, solange der
