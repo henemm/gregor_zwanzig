@@ -1,5 +1,1507 @@
 {
-"zweck": "Besitzer und Ausnahmen für den Ganzseiten-Abgleich der Elementliste (frontend/e2e/elementliste_abgleich_logik.ts: leseBesitzer, wendeBesitzerAn, leseAusnahmen, findeZusaetzliche; Spec docs/specs/modules/feat_2913_abgleich_ganzseite.md). 'besitzer': jede Abweichung (abweichend, nicht_pruefbar, zusaetzlich) braucht einen Verantwortlichen, sonst ist der Lauf mit --abnahme rot. Ziel-Art 'element' (id), 'abschnitt' (ctx, reiter, abschnitt) oder 'zusaetzlich' (text oder muster, optional ctx/reiter); Pflicht sind 'grund' und 'verweis' (#2913-c2, #2913-d, #2913-e oder #NNNN). 'ausnahmen': Live-Texte, die bewusst nicht in der Elementliste stehen (z. B. Kontodaten ohne Muster), je mit 'text' oder 'muster', 'grund' und 'spec'. Eine Freigabe aus elementliste_freigaben.json zählt bereits als Besitzer.",
-"besitzer": [],
-"ausnahmen": []
+	"zweck": "Besitzer und Ausnahmen für den Ganzseiten-Abgleich der Elementliste (frontend/e2e/elementliste_abgleich_logik.ts: leseBesitzer, wendeBesitzerAn, leseAusnahmen, findeZusaetzliche; Spec docs/specs/modules/feat_2913_abgleich_ganzseite.md). 'besitzer': jede Abweichung (abweichend, nicht_pruefbar, zusaetzlich) braucht einen Verantwortlichen, sonst ist der Lauf mit --abnahme rot. Ziel-Art 'element' (id), 'abschnitt' (ctx, reiter, abschnitt) oder 'zusaetzlich' (text oder muster, optional ctx/reiter); Pflicht sind 'grund' und 'verweis' (#2913-c2, #2913-d, #2913-e oder #NNNN). 'ausnahmen': Live-Texte, die bewusst nicht in der Elementliste stehen (z. B. Kontodaten ohne Muster), je mit 'text' oder 'muster', 'grund' und 'spec'. Eine Freigabe aus elementliste_freigaben.json zählt bereits als Besitzer.",
+	"besitzer": [
+		{
+			"art": "abschnitt",
+			"ctx": "trip",
+			"reiter": "zustellung",
+			"abschnitt": "abschnittskopf",
+			"grund": "Reiter Zustellung wird in Scheibe d komplett neu gebaut (läuft in #2795). Ursachen: Abschnitt-Haken fehlt, Text nicht sichtbar, EN-Lücke: #2968",
+			"verweis": "#2913-d"
+		},
+		{
+			"art": "abschnitt",
+			"ctx": "trip",
+			"reiter": "zustellung",
+			"abschnitt": "briefing-zeiten",
+			"grund": "Reiter Zustellung wird in Scheibe d komplett neu gebaut (läuft in #2795). Ursachen: Abschnitt-Haken fehlt, Text nicht sichtbar, Reihenfolge, EN-Lücke: #2968",
+			"verweis": "#2913-d"
+		},
+		{
+			"art": "abschnitt",
+			"ctx": "trip",
+			"reiter": "zustellung",
+			"abschnitt": "kanaele",
+			"grund": "Reiter Zustellung wird in Scheibe d komplett neu gebaut (läuft in #2795). Ursachen: Text nicht sichtbar, Abschnitt-Haken fehlt, Reihenfolge, EN-Lücke: #2968",
+			"verweis": "#2913-d"
+		},
+		{
+			"art": "abschnitt",
+			"ctx": "trip",
+			"reiter": "zustellung",
+			"abschnitt": "laufzeit",
+			"grund": "Reiter Zustellung wird in Scheibe d komplett neu gebaut (läuft in #2795). Ursachen: Abschnitt-Haken fehlt, Text nicht sichtbar, EN-Lücke: #2968",
+			"verweis": "#2913-d"
+		},
+		{
+			"art": "abschnitt",
+			"ctx": "trip",
+			"reiter": "zustellung",
+			"abschnitt": "stille-stunden",
+			"grund": "Reiter Zustellung wird in Scheibe d komplett neu gebaut (läuft in #2795). Ursachen: Abschnitt-Haken fehlt, Text nicht sichtbar, Reihenfolge, EN-Lücke: #2968",
+			"verweis": "#2913-d"
+		},
+		{
+			"art": "abschnitt",
+			"ctx": "trip",
+			"reiter": "wetter",
+			"abschnitt": "abschnittskopf",
+			"grund": "Werkzeuglücke im Abgleich: Abschnitt-Haken bzw. gezielt herstellbare Zustände fehlen. Ursachen: Abschnitt-Haken fehlt",
+			"verweis": "#2966"
+		},
+		{
+			"art": "abschnitt",
+			"ctx": "trip",
+			"reiter": "wetter",
+			"abschnitt": "grenzen-cloud_low",
+			"grund": "Werkzeuglücke im Abgleich: Abschnitt-Haken bzw. gezielt herstellbare Zustände fehlen. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar",
+			"verweis": "#2966"
+		},
+		{
+			"art": "abschnitt",
+			"ctx": "trip",
+			"reiter": "wetter",
+			"abschnitt": "grenzen-freezing_level",
+			"grund": "Werkzeuglücke im Abgleich: Abschnitt-Haken bzw. gezielt herstellbare Zustände fehlen. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar",
+			"verweis": "#2966"
+		},
+		{
+			"art": "abschnitt",
+			"ctx": "trip",
+			"reiter": "wetter",
+			"abschnitt": "grenzen-gust",
+			"grund": "Werkzeuglücke im Abgleich: Abschnitt-Haken bzw. gezielt herstellbare Zustände fehlen. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar",
+			"verweis": "#2966"
+		},
+		{
+			"art": "abschnitt",
+			"ctx": "trip",
+			"reiter": "wetter",
+			"abschnitt": "grenzen-precipitation",
+			"grund": "Werkzeuglücke im Abgleich: Abschnitt-Haken bzw. gezielt herstellbare Zustände fehlen. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar",
+			"verweis": "#2966"
+		},
+		{
+			"art": "abschnitt",
+			"ctx": "trip",
+			"reiter": "wetter",
+			"abschnitt": "grenzen-rain_probability",
+			"grund": "Werkzeuglücke im Abgleich: Abschnitt-Haken bzw. gezielt herstellbare Zustände fehlen. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar",
+			"verweis": "#2966"
+		},
+		{
+			"art": "abschnitt",
+			"ctx": "trip",
+			"reiter": "wetter",
+			"abschnitt": "grenzen-snowfall_limit",
+			"grund": "Werkzeuglücke im Abgleich: Abschnitt-Haken bzw. gezielt herstellbare Zustände fehlen. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar",
+			"verweis": "#2966"
+		},
+		{
+			"art": "abschnitt",
+			"ctx": "trip",
+			"reiter": "wetter",
+			"abschnitt": "grenzen-temperature",
+			"grund": "Werkzeuglücke im Abgleich: Abschnitt-Haken bzw. gezielt herstellbare Zustände fehlen. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar",
+			"verweis": "#2966"
+		},
+		{
+			"art": "abschnitt",
+			"ctx": "trip",
+			"reiter": "wetter",
+			"abschnitt": "grenzen-temperature_night",
+			"grund": "Werkzeuglücke im Abgleich: Abschnitt-Haken bzw. gezielt herstellbare Zustände fehlen. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar",
+			"verweis": "#2966"
+		},
+		{
+			"art": "abschnitt",
+			"ctx": "trip",
+			"reiter": "wetter",
+			"abschnitt": "grenzen-thunder",
+			"grund": "Werkzeuglücke im Abgleich: Abschnitt-Haken bzw. gezielt herstellbare Zustände fehlen. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar",
+			"verweis": "#2966"
+		},
+		{
+			"art": "abschnitt",
+			"ctx": "trip",
+			"reiter": "wetter",
+			"abschnitt": "grenzen-uv_index",
+			"grund": "Werkzeuglücke im Abgleich: Abschnitt-Haken bzw. gezielt herstellbare Zustände fehlen. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar",
+			"verweis": "#2966"
+		},
+		{
+			"art": "abschnitt",
+			"ctx": "trip",
+			"reiter": "wetter",
+			"abschnitt": "grenzen-visibility",
+			"grund": "Werkzeuglücke im Abgleich: Abschnitt-Haken bzw. gezielt herstellbare Zustände fehlen. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar",
+			"verweis": "#2966"
+		},
+		{
+			"art": "abschnitt",
+			"ctx": "trip",
+			"reiter": "wetter",
+			"abschnitt": "grenzen-wind",
+			"grund": "Werkzeuglücke im Abgleich: Abschnitt-Haken bzw. gezielt herstellbare Zustände fehlen. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar",
+			"verweis": "#2966"
+		},
+		{
+			"art": "abschnitt",
+			"ctx": "trip",
+			"reiter": "wetter",
+			"abschnitt": "grenzen-wind_chill",
+			"grund": "Werkzeuglücke im Abgleich: Abschnitt-Haken bzw. gezielt herstellbare Zustände fehlen. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar",
+			"verweis": "#2966"
+		},
+		{
+			"art": "abschnitt",
+			"ctx": "trip",
+			"reiter": "wetter",
+			"abschnitt": "kanal-inhalt",
+			"grund": "Kanal-Segmente „Inhalt je Kanal und Fläche“ sind noch nicht gebaut, daher nicht bedienbar. Ursachen: Kanal-Segment nicht bedienbar",
+			"verweis": "#2795"
+		},
+		{
+			"art": "abschnitt",
+			"ctx": "trip",
+			"reiter": "wetter",
+			"abschnitt": "kebab-bestaetigung-archivieren",
+			"grund": "Menü „Test schicken ▾“ und Kebab-Menü samt Bestätigungen fehlen noch. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar",
+			"verweis": "#2797"
+		},
+		{
+			"art": "abschnitt",
+			"ctx": "trip",
+			"reiter": "wetter",
+			"abschnitt": "kebab-bestaetigung-loeschen",
+			"grund": "Menü „Test schicken ▾“ und Kebab-Menü samt Bestätigungen fehlen noch. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar",
+			"verweis": "#2797"
+		},
+		{
+			"art": "abschnitt",
+			"ctx": "trip",
+			"reiter": "wetter",
+			"abschnitt": "kebab-menue",
+			"grund": "Menü „Test schicken ▾“ und Kebab-Menü samt Bestätigungen fehlen noch. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar",
+			"verweis": "#2797"
+		},
+		{
+			"art": "abschnitt",
+			"ctx": "trip",
+			"reiter": "wetter",
+			"abschnitt": "kopf",
+			"grund": "Seitenkopf nach Mockup (Eyebrow, Meta-Zeile, „Test schicken ▾“) und Vorlage statt Profil kommen in Scheibe c2. Ursachen: Text nicht sichtbar, EN-Lücke: #2968",
+			"verweis": "#2913-c2"
+		},
+		{
+			"art": "abschnitt",
+			"ctx": "trip",
+			"reiter": "wetter",
+			"abschnitt": "laden",
+			"grund": "Werkzeuglücke im Abgleich: Abschnitt-Haken bzw. gezielt herstellbare Zustände fehlen. Ursachen: Text nicht sichtbar",
+			"verweis": "#2966"
+		},
+		{
+			"art": "abschnitt",
+			"ctx": "trip",
+			"reiter": "wetter",
+			"abschnitt": "metriken",
+			"grund": "Prüfkonto weicht vom Mockup-Beispiel (GR221 / Alpen-Trekking) ab: andere Metriken, Chips und Reihenfolge. Ursachen: Text nicht sichtbar, Reihenfolge, Chip-Menge ist Kontodaten, EN-Lücke: #2968",
+			"verweis": "#2967"
+		},
+		{
+			"art": "abschnitt",
+			"ctx": "trip",
+			"reiter": "wetter",
+			"abschnitt": "reiterleiste",
+			"grund": "Seitenkopf nach Mockup (Eyebrow, Meta-Zeile, „Test schicken ▾“) und Vorlage statt Profil kommen in Scheibe c2. Ursachen: EN-Lücke: #2968",
+			"verweis": "#2913-c2"
+		},
+		{
+			"art": "abschnitt",
+			"ctx": "trip",
+			"reiter": "wetter",
+			"abschnitt": "test-menue",
+			"grund": "Menü „Test schicken ▾“ und Kebab-Menü samt Bestätigungen fehlen noch. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar",
+			"verweis": "#2797"
+		},
+		{
+			"art": "abschnitt",
+			"ctx": "trip",
+			"reiter": "wetter",
+			"abschnitt": "vorlage",
+			"grund": "Seitenkopf nach Mockup (Eyebrow, Meta-Zeile, „Test schicken ▾“) und Vorlage statt Profil kommen in Scheibe c2. Ursachen: Text nicht sichtbar, EN-Lücke: #2968",
+			"verweis": "#2913-c2"
+		},
+		{
+			"art": "abschnitt",
+			"ctx": "trip",
+			"reiter": "wetter",
+			"abschnitt": "vorlage-auswahl",
+			"grund": "Werkzeuglücke im Abgleich: Abschnitt-Haken bzw. gezielt herstellbare Zustände fehlen. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar",
+			"verweis": "#2966"
+		},
+		{
+			"art": "abschnitt",
+			"ctx": "trip",
+			"reiter": "wetter",
+			"abschnitt": "vorlage-bestaetigung",
+			"grund": "Werkzeuglücke im Abgleich: Abschnitt-Haken bzw. gezielt herstellbare Zustände fehlen. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar",
+			"verweis": "#2966"
+		},
+		{
+			"art": "abschnitt",
+			"ctx": "trip",
+			"reiter": "wetter",
+			"abschnitt": "vorlage-speichern",
+			"grund": "Werkzeuglücke im Abgleich: Abschnitt-Haken bzw. gezielt herstellbare Zustände fehlen. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar",
+			"verweis": "#2966"
+		},
+		{
+			"art": "abschnitt",
+			"ctx": "trip",
+			"reiter": "wetter",
+			"abschnitt": "vorlage-speichern-fehler",
+			"grund": "Werkzeuglücke im Abgleich: Abschnitt-Haken bzw. gezielt herstellbare Zustände fehlen. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar",
+			"verweis": "#2966"
+		},
+		{
+			"art": "abschnitt",
+			"ctx": "trip",
+			"reiter": "wetter",
+			"abschnitt": "warnung",
+			"grund": "Werkzeuglücke im Abgleich: Abschnitt-Haken bzw. gezielt herstellbare Zustände fehlen. Ursachen: Text nicht sichtbar, EN-Lücke: #2968",
+			"verweis": "#2966"
+		},
+		{
+			"art": "abschnitt",
+			"ctx": "trip",
+			"reiter": "etappen",
+			"abschnitt": "abschnittskopf",
+			"grund": "Reiter Etappen wird in Scheibe e neu gebaut. Ursachen: Text nicht sichtbar, EN-Lücke: #2968",
+			"verweis": "#2913-e"
+		},
+		{
+			"art": "abschnitt",
+			"ctx": "trip",
+			"reiter": "etappen",
+			"abschnitt": "liste",
+			"grund": "Reiter Etappen wird in Scheibe e neu gebaut. Ursachen: Text nicht sichtbar, EN-Lücke: #2968",
+			"verweis": "#2913-e"
+		},
+		{
+			"art": "abschnitt",
+			"ctx": "trip",
+			"reiter": "etappen",
+			"abschnitt": "tempo",
+			"grund": "Tempo zieht in Scheibe c2 in den Reiter Etappen um. Ursachen: Text nicht sichtbar, Abschnitt-Haken fehlt, EN-Lücke: #2968",
+			"verweis": "#2913-c2"
+		},
+		{
+			"art": "abschnitt",
+			"ctx": "orte",
+			"reiter": "zustellung",
+			"abschnitt": "abschnittskopf",
+			"grund": "Reiter Zustellung wird in Scheibe d komplett neu gebaut (läuft in #2795). Ursachen: Abschnitt-Haken fehlt, Text nicht sichtbar, EN-Lücke: #2968",
+			"verweis": "#2913-d"
+		},
+		{
+			"art": "abschnitt",
+			"ctx": "orte",
+			"reiter": "zustellung",
+			"abschnitt": "briefing-zeiten",
+			"grund": "Reiter Zustellung wird in Scheibe d komplett neu gebaut (läuft in #2795). Ursachen: Abschnitt-Haken fehlt, Text nicht sichtbar, Reihenfolge, EN-Lücke: #2968",
+			"verweis": "#2913-d"
+		},
+		{
+			"art": "abschnitt",
+			"ctx": "orte",
+			"reiter": "zustellung",
+			"abschnitt": "kanaele",
+			"grund": "Reiter Zustellung wird in Scheibe d komplett neu gebaut (läuft in #2795). Ursachen: Text nicht sichtbar, Abschnitt-Haken fehlt, Reihenfolge, EN-Lücke: #2968",
+			"verweis": "#2913-d"
+		},
+		{
+			"art": "abschnitt",
+			"ctx": "orte",
+			"reiter": "zustellung",
+			"abschnitt": "laufzeit",
+			"grund": "Reiter Zustellung wird in Scheibe d komplett neu gebaut (läuft in #2795). Ursachen: Abschnitt-Haken fehlt, Text nicht sichtbar, EN-Lücke: #2968",
+			"verweis": "#2913-d"
+		},
+		{
+			"art": "abschnitt",
+			"ctx": "orte",
+			"reiter": "zustellung",
+			"abschnitt": "stille-stunden",
+			"grund": "Reiter Zustellung wird in Scheibe d komplett neu gebaut (läuft in #2795). Ursachen: Abschnitt-Haken fehlt, Text nicht sichtbar, Reihenfolge, EN-Lücke: #2968",
+			"verweis": "#2913-d"
+		},
+		{
+			"art": "abschnitt",
+			"ctx": "orte",
+			"reiter": "wetter",
+			"abschnitt": "abschnittskopf",
+			"grund": "Werkzeuglücke im Abgleich: Abschnitt-Haken bzw. gezielt herstellbare Zustände fehlen. Ursachen: Abschnitt-Haken fehlt, Text nicht sichtbar",
+			"verweis": "#2966"
+		},
+		{
+			"art": "abschnitt",
+			"ctx": "orte",
+			"reiter": "wetter",
+			"abschnitt": "grenzen-cloud_total",
+			"grund": "Werkzeuglücke im Abgleich: Abschnitt-Haken bzw. gezielt herstellbare Zustände fehlen. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar",
+			"verweis": "#2966"
+		},
+		{
+			"art": "abschnitt",
+			"ctx": "orte",
+			"reiter": "wetter",
+			"abschnitt": "grenzen-gust",
+			"grund": "Werkzeuglücke im Abgleich: Abschnitt-Haken bzw. gezielt herstellbare Zustände fehlen. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar",
+			"verweis": "#2966"
+		},
+		{
+			"art": "abschnitt",
+			"ctx": "orte",
+			"reiter": "wetter",
+			"abschnitt": "grenzen-precipitation",
+			"grund": "Werkzeuglücke im Abgleich: Abschnitt-Haken bzw. gezielt herstellbare Zustände fehlen. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar",
+			"verweis": "#2966"
+		},
+		{
+			"art": "abschnitt",
+			"ctx": "orte",
+			"reiter": "wetter",
+			"abschnitt": "grenzen-rain_probability",
+			"grund": "Werkzeuglücke im Abgleich: Abschnitt-Haken bzw. gezielt herstellbare Zustände fehlen. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar",
+			"verweis": "#2966"
+		},
+		{
+			"art": "abschnitt",
+			"ctx": "orte",
+			"reiter": "wetter",
+			"abschnitt": "grenzen-sunshine",
+			"grund": "Werkzeuglücke im Abgleich: Abschnitt-Haken bzw. gezielt herstellbare Zustände fehlen. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar",
+			"verweis": "#2966"
+		},
+		{
+			"art": "abschnitt",
+			"ctx": "orte",
+			"reiter": "wetter",
+			"abschnitt": "grenzen-temperature",
+			"grund": "Werkzeuglücke im Abgleich: Abschnitt-Haken bzw. gezielt herstellbare Zustände fehlen. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar",
+			"verweis": "#2966"
+		},
+		{
+			"art": "abschnitt",
+			"ctx": "orte",
+			"reiter": "wetter",
+			"abschnitt": "grenzen-thunder",
+			"grund": "Werkzeuglücke im Abgleich: Abschnitt-Haken bzw. gezielt herstellbare Zustände fehlen. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar",
+			"verweis": "#2966"
+		},
+		{
+			"art": "abschnitt",
+			"ctx": "orte",
+			"reiter": "wetter",
+			"abschnitt": "grenzen-wind",
+			"grund": "Werkzeuglücke im Abgleich: Abschnitt-Haken bzw. gezielt herstellbare Zustände fehlen. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar",
+			"verweis": "#2966"
+		},
+		{
+			"art": "abschnitt",
+			"ctx": "orte",
+			"reiter": "wetter",
+			"abschnitt": "kanal-inhalt",
+			"grund": "Kanal-Segmente „Inhalt je Kanal und Fläche“ sind noch nicht gebaut, daher nicht bedienbar. Ursachen: Kanal-Segment nicht bedienbar",
+			"verweis": "#2795"
+		},
+		{
+			"art": "abschnitt",
+			"ctx": "orte",
+			"reiter": "wetter",
+			"abschnitt": "kebab-bestaetigung-archivieren",
+			"grund": "Menü „Test schicken ▾“ und Kebab-Menü samt Bestätigungen fehlen noch. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar",
+			"verweis": "#2797"
+		},
+		{
+			"art": "abschnitt",
+			"ctx": "orte",
+			"reiter": "wetter",
+			"abschnitt": "kebab-bestaetigung-loeschen",
+			"grund": "Menü „Test schicken ▾“ und Kebab-Menü samt Bestätigungen fehlen noch. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar",
+			"verweis": "#2797"
+		},
+		{
+			"art": "abschnitt",
+			"ctx": "orte",
+			"reiter": "wetter",
+			"abschnitt": "kebab-menue",
+			"grund": "Menü „Test schicken ▾“ und Kebab-Menü samt Bestätigungen fehlen noch. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar",
+			"verweis": "#2797"
+		},
+		{
+			"art": "abschnitt",
+			"ctx": "orte",
+			"reiter": "wetter",
+			"abschnitt": "kopf",
+			"grund": "Seitenkopf nach Mockup (Eyebrow, Meta-Zeile, „Test schicken ▾“) und Vorlage statt Profil kommen in Scheibe c2. Ursachen: Text nicht sichtbar, EN-Lücke: #2968",
+			"verweis": "#2913-c2"
+		},
+		{
+			"art": "abschnitt",
+			"ctx": "orte",
+			"reiter": "wetter",
+			"abschnitt": "laden",
+			"grund": "Werkzeuglücke im Abgleich: Abschnitt-Haken bzw. gezielt herstellbare Zustände fehlen. Ursachen: Text nicht sichtbar",
+			"verweis": "#2966"
+		},
+		{
+			"art": "abschnitt",
+			"ctx": "orte",
+			"reiter": "wetter",
+			"abschnitt": "metriken",
+			"grund": "Prüfkonto weicht vom Mockup-Beispiel (GR221 / Alpen-Trekking) ab: andere Metriken, Chips und Reihenfolge. Ursachen: Text nicht sichtbar, Reihenfolge, Chip-Menge ist Kontodaten, EN-Lücke: #2968",
+			"verweis": "#2967"
+		},
+		{
+			"art": "abschnitt",
+			"ctx": "orte",
+			"reiter": "wetter",
+			"abschnitt": "reiterleiste",
+			"grund": "Seitenkopf nach Mockup (Eyebrow, Meta-Zeile, „Test schicken ▾“) und Vorlage statt Profil kommen in Scheibe c2. Ursachen: EN-Lücke: #2968",
+			"verweis": "#2913-c2"
+		},
+		{
+			"art": "abschnitt",
+			"ctx": "orte",
+			"reiter": "wetter",
+			"abschnitt": "test-menue",
+			"grund": "Menü „Test schicken ▾“ und Kebab-Menü samt Bestätigungen fehlen noch. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar",
+			"verweis": "#2797"
+		},
+		{
+			"art": "abschnitt",
+			"ctx": "orte",
+			"reiter": "wetter",
+			"abschnitt": "vorlage",
+			"grund": "Seitenkopf nach Mockup (Eyebrow, Meta-Zeile, „Test schicken ▾“) und Vorlage statt Profil kommen in Scheibe c2. Ursachen: Text nicht sichtbar, EN-Lücke: #2968",
+			"verweis": "#2913-c2"
+		},
+		{
+			"art": "abschnitt",
+			"ctx": "orte",
+			"reiter": "wetter",
+			"abschnitt": "vorlage-auswahl",
+			"grund": "Werkzeuglücke im Abgleich: Abschnitt-Haken bzw. gezielt herstellbare Zustände fehlen. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar",
+			"verweis": "#2966"
+		},
+		{
+			"art": "abschnitt",
+			"ctx": "orte",
+			"reiter": "wetter",
+			"abschnitt": "vorlage-bestaetigung",
+			"grund": "Werkzeuglücke im Abgleich: Abschnitt-Haken bzw. gezielt herstellbare Zustände fehlen. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar",
+			"verweis": "#2966"
+		},
+		{
+			"art": "abschnitt",
+			"ctx": "orte",
+			"reiter": "wetter",
+			"abschnitt": "vorlage-speichern",
+			"grund": "Werkzeuglücke im Abgleich: Abschnitt-Haken bzw. gezielt herstellbare Zustände fehlen. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar",
+			"verweis": "#2966"
+		},
+		{
+			"art": "abschnitt",
+			"ctx": "orte",
+			"reiter": "wetter",
+			"abschnitt": "vorlage-speichern-fehler",
+			"grund": "Werkzeuglücke im Abgleich: Abschnitt-Haken bzw. gezielt herstellbare Zustände fehlen. Ursachen: Zustand ohne Abschnitt-Haken nicht herstellbar",
+			"verweis": "#2966"
+		},
+		{
+			"art": "abschnitt",
+			"ctx": "orte",
+			"reiter": "wetter",
+			"abschnitt": "warnung",
+			"grund": "Werkzeuglücke im Abgleich: Abschnitt-Haken bzw. gezielt herstellbare Zustände fehlen. Ursachen: Text nicht sichtbar, EN-Lücke: #2968",
+			"verweis": "#2966"
+		},
+		{
+			"art": "abschnitt",
+			"ctx": "orte",
+			"reiter": "orte",
+			"abschnitt": "abschnittskopf",
+			"grund": "Reiter Orte wird in Scheibe e neu gebaut. Ursachen: Abschnitt-Haken fehlt, Text nicht sichtbar, EN-Lücke: #2968",
+			"verweis": "#2913-e"
+		},
+		{
+			"art": "abschnitt",
+			"ctx": "orte",
+			"reiter": "orte",
+			"abschnitt": "liste",
+			"grund": "Reiter Orte wird in Scheibe e neu gebaut. Ursachen: Text nicht sichtbar, EN-Lücke: #2968",
+			"verweis": "#2913-e"
+		},
+		{
+			"art": "zusaetzlich",
+			"ctx": "trip",
+			"text": "Trips",
+			"grund": "Seitenkopf-Text (Nachtrag 12.11. in #2913): Profil-Zeile mit Profil-Optionen, leere Beschreibung „— ✎“ und Kopfzeilen (Brotkrumen, Status, Datum, Meta-Zeile) stehen noch nicht in der Elementliste; Scheibe c2 baut den Kopf nach Mockup",
+			"verweis": "#2913-c2"
+		},
+		{
+			"art": "zusaetzlich",
+			"ctx": "trip",
+			"text": "/",
+			"grund": "Seitenkopf-Text (Nachtrag 12.11. in #2913): Profil-Zeile mit Profil-Optionen, leere Beschreibung „— ✎“ und Kopfzeilen (Brotkrumen, Status, Datum, Meta-Zeile) stehen noch nicht in der Elementliste; Scheibe c2 baut den Kopf nach Mockup",
+			"verweis": "#2913-c2"
+		},
+		{
+			"art": "zusaetzlich",
+			"ctx": "trip",
+			"text": "Senden",
+			"grund": "Seitenkopf-Text (Nachtrag 12.11. in #2913): Profil-Zeile mit Profil-Optionen, leere Beschreibung „— ✎“ und Kopfzeilen (Brotkrumen, Status, Datum, Meta-Zeile) stehen noch nicht in der Elementliste; Scheibe c2 baut den Kopf nach Mockup",
+			"verweis": "#2913-c2"
+		},
+		{
+			"art": "zusaetzlich",
+			"ctx": "trip",
+			"text": "Name bearbeiten",
+			"grund": "Seitenkopf-Text (Nachtrag 12.11. in #2913): Profil-Zeile mit Profil-Optionen, leere Beschreibung „— ✎“ und Kopfzeilen (Brotkrumen, Status, Datum, Meta-Zeile) stehen noch nicht in der Elementliste; Scheibe c2 baut den Kopf nach Mockup",
+			"verweis": "#2913-c2"
+		},
+		{
+			"art": "zusaetzlich",
+			"ctx": "trip",
+			"text": "Region bearbeiten",
+			"grund": "Seitenkopf-Text (Nachtrag 12.11. in #2913): Profil-Zeile mit Profil-Optionen, leere Beschreibung „— ✎“ und Kopfzeilen (Brotkrumen, Status, Datum, Meta-Zeile) stehen noch nicht in der Elementliste; Scheibe c2 baut den Kopf nach Mockup",
+			"verweis": "#2913-c2"
+		},
+		{
+			"art": "zusaetzlich",
+			"ctx": "trip",
+			"text": "Aktiv",
+			"grund": "Seitenkopf-Text (Nachtrag 12.11. in #2913): Profil-Zeile mit Profil-Optionen, leere Beschreibung „— ✎“ und Kopfzeilen (Brotkrumen, Status, Datum, Meta-Zeile) stehen noch nicht in der Elementliste; Scheibe c2 baut den Kopf nach Mockup",
+			"verweis": "#2913-c2"
+		},
+		{
+			"art": "zusaetzlich",
+			"ctx": "trip",
+			"muster": "läuft seit Tag {zahl}",
+			"grund": "Seitenkopf-Text (Nachtrag 12.11. in #2913): Profil-Zeile mit Profil-Optionen, leere Beschreibung „— ✎“ und Kopfzeilen (Brotkrumen, Status, Datum, Meta-Zeile) stehen noch nicht in der Elementliste; Scheibe c2 baut den Kopf nach Mockup",
+			"verweis": "#2913-c2"
+		},
+		{
+			"art": "zusaetzlich",
+			"ctx": "trip",
+			"text": "—",
+			"grund": "Seitenkopf-Text (Nachtrag 12.11. in #2913): Profil-Zeile mit Profil-Optionen, leere Beschreibung „— ✎“ und Kopfzeilen (Brotkrumen, Status, Datum, Meta-Zeile) stehen noch nicht in der Elementliste; Scheibe c2 baut den Kopf nach Mockup",
+			"verweis": "#2913-c2"
+		},
+		{
+			"art": "zusaetzlich",
+			"ctx": "trip",
+			"text": "Gespeichert",
+			"grund": "Seitenkopf-Text (Nachtrag 12.11. in #2913): Profil-Zeile mit Profil-Optionen, leere Beschreibung „— ✎“ und Kopfzeilen (Brotkrumen, Status, Datum, Meta-Zeile) stehen noch nicht in der Elementliste; Scheibe c2 baut den Kopf nach Mockup",
+			"verweis": "#2913-c2"
+		},
+		{
+			"art": "zusaetzlich",
+			"ctx": "trip",
+			"text": "·",
+			"grund": "Seitenkopf-Text (Nachtrag 12.11. in #2913): Profil-Zeile mit Profil-Optionen, leere Beschreibung „— ✎“ und Kopfzeilen (Brotkrumen, Status, Datum, Meta-Zeile) stehen noch nicht in der Elementliste; Scheibe c2 baut den Kopf nach Mockup",
+			"verweis": "#2913-c2"
+		},
+		{
+			"art": "zusaetzlich",
+			"ctx": "trip",
+			"muster": "{zahl} km",
+			"grund": "Seitenkopf-Text (Nachtrag 12.11. in #2913): Profil-Zeile mit Profil-Optionen, leere Beschreibung „— ✎“ und Kopfzeilen (Brotkrumen, Status, Datum, Meta-Zeile) stehen noch nicht in der Elementliste; Scheibe c2 baut den Kopf nach Mockup",
+			"verweis": "#2913-c2"
+		},
+		{
+			"art": "zusaetzlich",
+			"ctx": "trip",
+			"muster": "↑{zahl} m",
+			"grund": "Seitenkopf-Text (Nachtrag 12.11. in #2913): Profil-Zeile mit Profil-Optionen, leere Beschreibung „— ✎“ und Kopfzeilen (Brotkrumen, Status, Datum, Meta-Zeile) stehen noch nicht in der Elementliste; Scheibe c2 baut den Kopf nach Mockup",
+			"verweis": "#2913-c2"
+		},
+		{
+			"art": "zusaetzlich",
+			"ctx": "trip",
+			"text": "Trekking",
+			"grund": "Seitenkopf-Text (Nachtrag 12.11. in #2913): Profil-Zeile mit Profil-Optionen, leere Beschreibung „— ✎“ und Kopfzeilen (Brotkrumen, Status, Datum, Meta-Zeile) stehen noch nicht in der Elementliste; Scheibe c2 baut den Kopf nach Mockup",
+			"verweis": "#2913-c2"
+		},
+		{
+			"art": "zusaetzlich",
+			"ctx": "trip",
+			"text": "Skitour",
+			"grund": "Seitenkopf-Text (Nachtrag 12.11. in #2913): Profil-Zeile mit Profil-Optionen, leere Beschreibung „— ✎“ und Kopfzeilen (Brotkrumen, Status, Datum, Meta-Zeile) stehen noch nicht in der Elementliste; Scheibe c2 baut den Kopf nach Mockup",
+			"verweis": "#2913-c2"
+		},
+		{
+			"art": "zusaetzlich",
+			"ctx": "trip",
+			"text": "Hochtour",
+			"grund": "Seitenkopf-Text (Nachtrag 12.11. in #2913): Profil-Zeile mit Profil-Optionen, leere Beschreibung „— ✎“ und Kopfzeilen (Brotkrumen, Status, Datum, Meta-Zeile) stehen noch nicht in der Elementliste; Scheibe c2 baut den Kopf nach Mockup",
+			"verweis": "#2913-c2"
+		},
+		{
+			"art": "zusaetzlich",
+			"ctx": "trip",
+			"text": "Klettersteig",
+			"grund": "Seitenkopf-Text (Nachtrag 12.11. in #2913): Profil-Zeile mit Profil-Optionen, leere Beschreibung „— ✎“ und Kopfzeilen (Brotkrumen, Status, Datum, Meta-Zeile) stehen noch nicht in der Elementliste; Scheibe c2 baut den Kopf nach Mockup",
+			"verweis": "#2913-c2"
+		},
+		{
+			"art": "zusaetzlich",
+			"ctx": "trip",
+			"muster": "Fahrrad ({zahl} km/h)",
+			"grund": "Seitenkopf-Text (Nachtrag 12.11. in #2913): Profil-Zeile mit Profil-Optionen, leere Beschreibung „— ✎“ und Kopfzeilen (Brotkrumen, Status, Datum, Meta-Zeile) stehen noch nicht in der Elementliste; Scheibe c2 baut den Kopf nach Mockup",
+			"verweis": "#2913-c2"
+		},
+		{
+			"art": "zusaetzlich",
+			"ctx": "trip",
+			"text": "MTB",
+			"grund": "Seitenkopf-Text (Nachtrag 12.11. in #2913): Profil-Zeile mit Profil-Optionen, leere Beschreibung „— ✎“ und Kopfzeilen (Brotkrumen, Status, Datum, Meta-Zeile) stehen noch nicht in der Elementliste; Scheibe c2 baut den Kopf nach Mockup",
+			"verweis": "#2913-c2"
+		},
+		{
+			"art": "zusaetzlich",
+			"ctx": "trip",
+			"text": "Send",
+			"grund": "Seitenkopf-Text (Nachtrag 12.11. in #2913): Profil-Zeile mit Profil-Optionen, leere Beschreibung „— ✎“ und Kopfzeilen (Brotkrumen, Status, Datum, Meta-Zeile) stehen noch nicht in der Elementliste; Scheibe c2 baut den Kopf nach Mockup",
+			"verweis": "#2913-c2"
+		},
+		{
+			"art": "zusaetzlich",
+			"ctx": "trip",
+			"text": "Edit name",
+			"grund": "Seitenkopf-Text (Nachtrag 12.11. in #2913): Profil-Zeile mit Profil-Optionen, leere Beschreibung „— ✎“ und Kopfzeilen (Brotkrumen, Status, Datum, Meta-Zeile) stehen noch nicht in der Elementliste; Scheibe c2 baut den Kopf nach Mockup",
+			"verweis": "#2913-c2"
+		},
+		{
+			"art": "zusaetzlich",
+			"ctx": "trip",
+			"text": "Edit region",
+			"grund": "Seitenkopf-Text (Nachtrag 12.11. in #2913): Profil-Zeile mit Profil-Optionen, leere Beschreibung „— ✎“ und Kopfzeilen (Brotkrumen, Status, Datum, Meta-Zeile) stehen noch nicht in der Elementliste; Scheibe c2 baut den Kopf nach Mockup",
+			"verweis": "#2913-c2"
+		},
+		{
+			"art": "zusaetzlich",
+			"ctx": "trip",
+			"text": "Active",
+			"grund": "Seitenkopf-Text (Nachtrag 12.11. in #2913): Profil-Zeile mit Profil-Optionen, leere Beschreibung „— ✎“ und Kopfzeilen (Brotkrumen, Status, Datum, Meta-Zeile) stehen noch nicht in der Elementliste; Scheibe c2 baut den Kopf nach Mockup",
+			"verweis": "#2913-c2"
+		},
+		{
+			"art": "zusaetzlich",
+			"ctx": "trip",
+			"muster": "running since day {zahl}",
+			"grund": "Seitenkopf-Text (Nachtrag 12.11. in #2913): Profil-Zeile mit Profil-Optionen, leere Beschreibung „— ✎“ und Kopfzeilen (Brotkrumen, Status, Datum, Meta-Zeile) stehen noch nicht in der Elementliste; Scheibe c2 baut den Kopf nach Mockup",
+			"verweis": "#2913-c2"
+		},
+		{
+			"art": "zusaetzlich",
+			"ctx": "trip",
+			"text": "Saved",
+			"grund": "Seitenkopf-Text (Nachtrag 12.11. in #2913): Profil-Zeile mit Profil-Optionen, leere Beschreibung „— ✎“ und Kopfzeilen (Brotkrumen, Status, Datum, Meta-Zeile) stehen noch nicht in der Elementliste; Scheibe c2 baut den Kopf nach Mockup",
+			"verweis": "#2913-c2"
+		},
+		{
+			"art": "zusaetzlich",
+			"ctx": "trip",
+			"text": "1",
+			"grund": "Seitenkopf-Text (Nachtrag 12.11. in #2913): Profil-Zeile mit Profil-Optionen, leere Beschreibung „— ✎“ und Kopfzeilen (Brotkrumen, Status, Datum, Meta-Zeile) stehen noch nicht in der Elementliste; Scheibe c2 baut den Kopf nach Mockup",
+			"verweis": "#2913-c2"
+		},
+		{
+			"art": "zusaetzlich",
+			"ctx": "trip",
+			"text": "Ski touring",
+			"grund": "Seitenkopf-Text (Nachtrag 12.11. in #2913): Profil-Zeile mit Profil-Optionen, leere Beschreibung „— ✎“ und Kopfzeilen (Brotkrumen, Status, Datum, Meta-Zeile) stehen noch nicht in der Elementliste; Scheibe c2 baut den Kopf nach Mockup",
+			"verweis": "#2913-c2"
+		},
+		{
+			"art": "zusaetzlich",
+			"ctx": "trip",
+			"text": "Mountaineering",
+			"grund": "Seitenkopf-Text (Nachtrag 12.11. in #2913): Profil-Zeile mit Profil-Optionen, leere Beschreibung „— ✎“ und Kopfzeilen (Brotkrumen, Status, Datum, Meta-Zeile) stehen noch nicht in der Elementliste; Scheibe c2 baut den Kopf nach Mockup",
+			"verweis": "#2913-c2"
+		},
+		{
+			"art": "zusaetzlich",
+			"ctx": "trip",
+			"text": "Via ferrata",
+			"grund": "Seitenkopf-Text (Nachtrag 12.11. in #2913): Profil-Zeile mit Profil-Optionen, leere Beschreibung „— ✎“ und Kopfzeilen (Brotkrumen, Status, Datum, Meta-Zeile) stehen noch nicht in der Elementliste; Scheibe c2 baut den Kopf nach Mockup",
+			"verweis": "#2913-c2"
+		},
+		{
+			"art": "zusaetzlich",
+			"ctx": "trip",
+			"muster": "Bike ({zahl} km/h)",
+			"grund": "Seitenkopf-Text (Nachtrag 12.11. in #2913): Profil-Zeile mit Profil-Optionen, leere Beschreibung „— ✎“ und Kopfzeilen (Brotkrumen, Status, Datum, Meta-Zeile) stehen noch nicht in der Elementliste; Scheibe c2 baut den Kopf nach Mockup",
+			"verweis": "#2913-c2"
+		},
+		{
+			"art": "zusaetzlich",
+			"ctx": "trip",
+			"muster": "{tag}. Januar {jahr}",
+			"grund": "Seitenkopf-Text (Nachtrag 12.11. in #2913): Profil-Zeile mit Profil-Optionen, leere Beschreibung „— ✎“ und Kopfzeilen (Brotkrumen, Status, Datum, Meta-Zeile) stehen noch nicht in der Elementliste; Scheibe c2 baut den Kopf nach Mockup (Datum ändert sich täglich, daher je Monat ein Muster)",
+			"verweis": "#2913-c2"
+		},
+		{
+			"art": "zusaetzlich",
+			"ctx": "trip",
+			"muster": "{tag}. Februar {jahr}",
+			"grund": "Seitenkopf-Text (Nachtrag 12.11. in #2913): Profil-Zeile mit Profil-Optionen, leere Beschreibung „— ✎“ und Kopfzeilen (Brotkrumen, Status, Datum, Meta-Zeile) stehen noch nicht in der Elementliste; Scheibe c2 baut den Kopf nach Mockup (Datum ändert sich täglich, daher je Monat ein Muster)",
+			"verweis": "#2913-c2"
+		},
+		{
+			"art": "zusaetzlich",
+			"ctx": "trip",
+			"muster": "{tag}. März {jahr}",
+			"grund": "Seitenkopf-Text (Nachtrag 12.11. in #2913): Profil-Zeile mit Profil-Optionen, leere Beschreibung „— ✎“ und Kopfzeilen (Brotkrumen, Status, Datum, Meta-Zeile) stehen noch nicht in der Elementliste; Scheibe c2 baut den Kopf nach Mockup (Datum ändert sich täglich, daher je Monat ein Muster)",
+			"verweis": "#2913-c2"
+		},
+		{
+			"art": "zusaetzlich",
+			"ctx": "trip",
+			"muster": "{tag}. April {jahr}",
+			"grund": "Seitenkopf-Text (Nachtrag 12.11. in #2913): Profil-Zeile mit Profil-Optionen, leere Beschreibung „— ✎“ und Kopfzeilen (Brotkrumen, Status, Datum, Meta-Zeile) stehen noch nicht in der Elementliste; Scheibe c2 baut den Kopf nach Mockup (Datum ändert sich täglich, daher je Monat ein Muster)",
+			"verweis": "#2913-c2"
+		},
+		{
+			"art": "zusaetzlich",
+			"ctx": "trip",
+			"muster": "{tag}. Mai {jahr}",
+			"grund": "Seitenkopf-Text (Nachtrag 12.11. in #2913): Profil-Zeile mit Profil-Optionen, leere Beschreibung „— ✎“ und Kopfzeilen (Brotkrumen, Status, Datum, Meta-Zeile) stehen noch nicht in der Elementliste; Scheibe c2 baut den Kopf nach Mockup (Datum ändert sich täglich, daher je Monat ein Muster)",
+			"verweis": "#2913-c2"
+		},
+		{
+			"art": "zusaetzlich",
+			"ctx": "trip",
+			"muster": "{tag}. Juni {jahr}",
+			"grund": "Seitenkopf-Text (Nachtrag 12.11. in #2913): Profil-Zeile mit Profil-Optionen, leere Beschreibung „— ✎“ und Kopfzeilen (Brotkrumen, Status, Datum, Meta-Zeile) stehen noch nicht in der Elementliste; Scheibe c2 baut den Kopf nach Mockup (Datum ändert sich täglich, daher je Monat ein Muster)",
+			"verweis": "#2913-c2"
+		},
+		{
+			"art": "zusaetzlich",
+			"ctx": "trip",
+			"muster": "{tag}. Juli {jahr}",
+			"grund": "Seitenkopf-Text (Nachtrag 12.11. in #2913): Profil-Zeile mit Profil-Optionen, leere Beschreibung „— ✎“ und Kopfzeilen (Brotkrumen, Status, Datum, Meta-Zeile) stehen noch nicht in der Elementliste; Scheibe c2 baut den Kopf nach Mockup (Datum ändert sich täglich, daher je Monat ein Muster)",
+			"verweis": "#2913-c2"
+		},
+		{
+			"art": "zusaetzlich",
+			"ctx": "trip",
+			"muster": "{tag}. August {jahr}",
+			"grund": "Seitenkopf-Text (Nachtrag 12.11. in #2913): Profil-Zeile mit Profil-Optionen, leere Beschreibung „— ✎“ und Kopfzeilen (Brotkrumen, Status, Datum, Meta-Zeile) stehen noch nicht in der Elementliste; Scheibe c2 baut den Kopf nach Mockup (Datum ändert sich täglich, daher je Monat ein Muster)",
+			"verweis": "#2913-c2"
+		},
+		{
+			"art": "zusaetzlich",
+			"ctx": "trip",
+			"muster": "{tag}. September {jahr}",
+			"grund": "Seitenkopf-Text (Nachtrag 12.11. in #2913): Profil-Zeile mit Profil-Optionen, leere Beschreibung „— ✎“ und Kopfzeilen (Brotkrumen, Status, Datum, Meta-Zeile) stehen noch nicht in der Elementliste; Scheibe c2 baut den Kopf nach Mockup (Datum ändert sich täglich, daher je Monat ein Muster)",
+			"verweis": "#2913-c2"
+		},
+		{
+			"art": "zusaetzlich",
+			"ctx": "trip",
+			"muster": "{tag}. Oktober {jahr}",
+			"grund": "Seitenkopf-Text (Nachtrag 12.11. in #2913): Profil-Zeile mit Profil-Optionen, leere Beschreibung „— ✎“ und Kopfzeilen (Brotkrumen, Status, Datum, Meta-Zeile) stehen noch nicht in der Elementliste; Scheibe c2 baut den Kopf nach Mockup (Datum ändert sich täglich, daher je Monat ein Muster)",
+			"verweis": "#2913-c2"
+		},
+		{
+			"art": "zusaetzlich",
+			"ctx": "trip",
+			"muster": "{tag}. November {jahr}",
+			"grund": "Seitenkopf-Text (Nachtrag 12.11. in #2913): Profil-Zeile mit Profil-Optionen, leere Beschreibung „— ✎“ und Kopfzeilen (Brotkrumen, Status, Datum, Meta-Zeile) stehen noch nicht in der Elementliste; Scheibe c2 baut den Kopf nach Mockup (Datum ändert sich täglich, daher je Monat ein Muster)",
+			"verweis": "#2913-c2"
+		},
+		{
+			"art": "zusaetzlich",
+			"ctx": "trip",
+			"muster": "{tag}. Dezember {jahr}",
+			"grund": "Seitenkopf-Text (Nachtrag 12.11. in #2913): Profil-Zeile mit Profil-Optionen, leere Beschreibung „— ✎“ und Kopfzeilen (Brotkrumen, Status, Datum, Meta-Zeile) stehen noch nicht in der Elementliste; Scheibe c2 baut den Kopf nach Mockup (Datum ändert sich täglich, daher je Monat ein Muster)",
+			"verweis": "#2913-c2"
+		},
+		{
+			"art": "zusaetzlich",
+			"ctx": "trip",
+			"muster": "{tag} January {jahr}",
+			"grund": "Seitenkopf-Text (Nachtrag 12.11. in #2913): Profil-Zeile mit Profil-Optionen, leere Beschreibung „— ✎“ und Kopfzeilen (Brotkrumen, Status, Datum, Meta-Zeile) stehen noch nicht in der Elementliste; Scheibe c2 baut den Kopf nach Mockup (Datum ändert sich täglich, daher je Monat ein Muster)",
+			"verweis": "#2913-c2"
+		},
+		{
+			"art": "zusaetzlich",
+			"ctx": "trip",
+			"muster": "{tag} February {jahr}",
+			"grund": "Seitenkopf-Text (Nachtrag 12.11. in #2913): Profil-Zeile mit Profil-Optionen, leere Beschreibung „— ✎“ und Kopfzeilen (Brotkrumen, Status, Datum, Meta-Zeile) stehen noch nicht in der Elementliste; Scheibe c2 baut den Kopf nach Mockup (Datum ändert sich täglich, daher je Monat ein Muster)",
+			"verweis": "#2913-c2"
+		},
+		{
+			"art": "zusaetzlich",
+			"ctx": "trip",
+			"muster": "{tag} March {jahr}",
+			"grund": "Seitenkopf-Text (Nachtrag 12.11. in #2913): Profil-Zeile mit Profil-Optionen, leere Beschreibung „— ✎“ und Kopfzeilen (Brotkrumen, Status, Datum, Meta-Zeile) stehen noch nicht in der Elementliste; Scheibe c2 baut den Kopf nach Mockup (Datum ändert sich täglich, daher je Monat ein Muster)",
+			"verweis": "#2913-c2"
+		},
+		{
+			"art": "zusaetzlich",
+			"ctx": "trip",
+			"muster": "{tag} April {jahr}",
+			"grund": "Seitenkopf-Text (Nachtrag 12.11. in #2913): Profil-Zeile mit Profil-Optionen, leere Beschreibung „— ✎“ und Kopfzeilen (Brotkrumen, Status, Datum, Meta-Zeile) stehen noch nicht in der Elementliste; Scheibe c2 baut den Kopf nach Mockup (Datum ändert sich täglich, daher je Monat ein Muster)",
+			"verweis": "#2913-c2"
+		},
+		{
+			"art": "zusaetzlich",
+			"ctx": "trip",
+			"muster": "{tag} May {jahr}",
+			"grund": "Seitenkopf-Text (Nachtrag 12.11. in #2913): Profil-Zeile mit Profil-Optionen, leere Beschreibung „— ✎“ und Kopfzeilen (Brotkrumen, Status, Datum, Meta-Zeile) stehen noch nicht in der Elementliste; Scheibe c2 baut den Kopf nach Mockup (Datum ändert sich täglich, daher je Monat ein Muster)",
+			"verweis": "#2913-c2"
+		},
+		{
+			"art": "zusaetzlich",
+			"ctx": "trip",
+			"muster": "{tag} June {jahr}",
+			"grund": "Seitenkopf-Text (Nachtrag 12.11. in #2913): Profil-Zeile mit Profil-Optionen, leere Beschreibung „— ✎“ und Kopfzeilen (Brotkrumen, Status, Datum, Meta-Zeile) stehen noch nicht in der Elementliste; Scheibe c2 baut den Kopf nach Mockup (Datum ändert sich täglich, daher je Monat ein Muster)",
+			"verweis": "#2913-c2"
+		},
+		{
+			"art": "zusaetzlich",
+			"ctx": "trip",
+			"muster": "{tag} July {jahr}",
+			"grund": "Seitenkopf-Text (Nachtrag 12.11. in #2913): Profil-Zeile mit Profil-Optionen, leere Beschreibung „— ✎“ und Kopfzeilen (Brotkrumen, Status, Datum, Meta-Zeile) stehen noch nicht in der Elementliste; Scheibe c2 baut den Kopf nach Mockup (Datum ändert sich täglich, daher je Monat ein Muster)",
+			"verweis": "#2913-c2"
+		},
+		{
+			"art": "zusaetzlich",
+			"ctx": "trip",
+			"muster": "{tag} August {jahr}",
+			"grund": "Seitenkopf-Text (Nachtrag 12.11. in #2913): Profil-Zeile mit Profil-Optionen, leere Beschreibung „— ✎“ und Kopfzeilen (Brotkrumen, Status, Datum, Meta-Zeile) stehen noch nicht in der Elementliste; Scheibe c2 baut den Kopf nach Mockup (Datum ändert sich täglich, daher je Monat ein Muster)",
+			"verweis": "#2913-c2"
+		},
+		{
+			"art": "zusaetzlich",
+			"ctx": "trip",
+			"muster": "{tag} September {jahr}",
+			"grund": "Seitenkopf-Text (Nachtrag 12.11. in #2913): Profil-Zeile mit Profil-Optionen, leere Beschreibung „— ✎“ und Kopfzeilen (Brotkrumen, Status, Datum, Meta-Zeile) stehen noch nicht in der Elementliste; Scheibe c2 baut den Kopf nach Mockup (Datum ändert sich täglich, daher je Monat ein Muster)",
+			"verweis": "#2913-c2"
+		},
+		{
+			"art": "zusaetzlich",
+			"ctx": "trip",
+			"muster": "{tag} October {jahr}",
+			"grund": "Seitenkopf-Text (Nachtrag 12.11. in #2913): Profil-Zeile mit Profil-Optionen, leere Beschreibung „— ✎“ und Kopfzeilen (Brotkrumen, Status, Datum, Meta-Zeile) stehen noch nicht in der Elementliste; Scheibe c2 baut den Kopf nach Mockup (Datum ändert sich täglich, daher je Monat ein Muster)",
+			"verweis": "#2913-c2"
+		},
+		{
+			"art": "zusaetzlich",
+			"ctx": "trip",
+			"muster": "{tag} November {jahr}",
+			"grund": "Seitenkopf-Text (Nachtrag 12.11. in #2913): Profil-Zeile mit Profil-Optionen, leere Beschreibung „— ✎“ und Kopfzeilen (Brotkrumen, Status, Datum, Meta-Zeile) stehen noch nicht in der Elementliste; Scheibe c2 baut den Kopf nach Mockup (Datum ändert sich täglich, daher je Monat ein Muster)",
+			"verweis": "#2913-c2"
+		},
+		{
+			"art": "zusaetzlich",
+			"ctx": "trip",
+			"muster": "{tag} December {jahr}",
+			"grund": "Seitenkopf-Text (Nachtrag 12.11. in #2913): Profil-Zeile mit Profil-Optionen, leere Beschreibung „— ✎“ und Kopfzeilen (Brotkrumen, Status, Datum, Meta-Zeile) stehen noch nicht in der Elementliste; Scheibe c2 baut den Kopf nach Mockup (Datum ändert sich täglich, daher je Monat ein Muster)",
+			"verweis": "#2913-c2"
+		},
+		{
+			"art": "zusaetzlich",
+			"ctx": "orte",
+			"text": "Orts-Vergleiche",
+			"grund": "Seitenkopf-Text (Nachtrag 12.11. in #2913): Profil-Zeile mit Profil-Optionen, leere Beschreibung „— ✎“ und Kopfzeilen (Brotkrumen, Status, Datum, Meta-Zeile) stehen noch nicht in der Elementliste; Scheibe c2 baut den Kopf nach Mockup",
+			"verweis": "#2913-c2"
+		},
+		{
+			"art": "zusaetzlich",
+			"ctx": "orte",
+			"text": "/",
+			"grund": "Seitenkopf-Text (Nachtrag 12.11. in #2913): Profil-Zeile mit Profil-Optionen, leere Beschreibung „— ✎“ und Kopfzeilen (Brotkrumen, Status, Datum, Meta-Zeile) stehen noch nicht in der Elementliste; Scheibe c2 baut den Kopf nach Mockup",
+			"verweis": "#2913-c2"
+		},
+		{
+			"art": "zusaetzlich",
+			"ctx": "orte",
+			"text": "Senden",
+			"grund": "Seitenkopf-Text (Nachtrag 12.11. in #2913): Profil-Zeile mit Profil-Optionen, leere Beschreibung „— ✎“ und Kopfzeilen (Brotkrumen, Status, Datum, Meta-Zeile) stehen noch nicht in der Elementliste; Scheibe c2 baut den Kopf nach Mockup",
+			"verweis": "#2913-c2"
+		},
+		{
+			"art": "zusaetzlich",
+			"ctx": "orte",
+			"text": "Name bearbeiten",
+			"grund": "Seitenkopf-Text (Nachtrag 12.11. in #2913): Profil-Zeile mit Profil-Optionen, leere Beschreibung „— ✎“ und Kopfzeilen (Brotkrumen, Status, Datum, Meta-Zeile) stehen noch nicht in der Elementliste; Scheibe c2 baut den Kopf nach Mockup",
+			"verweis": "#2913-c2"
+		},
+		{
+			"art": "zusaetzlich",
+			"ctx": "orte",
+			"text": "Region bearbeiten",
+			"grund": "Seitenkopf-Text (Nachtrag 12.11. in #2913): Profil-Zeile mit Profil-Optionen, leere Beschreibung „— ✎“ und Kopfzeilen (Brotkrumen, Status, Datum, Meta-Zeile) stehen noch nicht in der Elementliste; Scheibe c2 baut den Kopf nach Mockup",
+			"verweis": "#2913-c2"
+		},
+		{
+			"art": "zusaetzlich",
+			"ctx": "orte",
+			"text": "Aktiv",
+			"grund": "Seitenkopf-Text (Nachtrag 12.11. in #2913): Profil-Zeile mit Profil-Optionen, leere Beschreibung „— ✎“ und Kopfzeilen (Brotkrumen, Status, Datum, Meta-Zeile) stehen noch nicht in der Elementliste; Scheibe c2 baut den Kopf nach Mockup",
+			"verweis": "#2913-c2"
+		},
+		{
+			"art": "zusaetzlich",
+			"ctx": "orte",
+			"text": "—",
+			"grund": "Seitenkopf-Text (Nachtrag 12.11. in #2913): Profil-Zeile mit Profil-Optionen, leere Beschreibung „— ✎“ und Kopfzeilen (Brotkrumen, Status, Datum, Meta-Zeile) stehen noch nicht in der Elementliste; Scheibe c2 baut den Kopf nach Mockup",
+			"verweis": "#2913-c2"
+		},
+		{
+			"art": "zusaetzlich",
+			"ctx": "orte",
+			"text": "Gespeichert",
+			"grund": "Seitenkopf-Text (Nachtrag 12.11. in #2913): Profil-Zeile mit Profil-Optionen, leere Beschreibung „— ✎“ und Kopfzeilen (Brotkrumen, Status, Datum, Meta-Zeile) stehen noch nicht in der Elementliste; Scheibe c2 baut den Kopf nach Mockup",
+			"verweis": "#2913-c2"
+		},
+		{
+			"art": "zusaetzlich",
+			"ctx": "orte",
+			"text": "Sommer-Trekking",
+			"grund": "Seitenkopf-Text (Nachtrag 12.11. in #2913): Profil-Zeile mit Profil-Optionen, leere Beschreibung „— ✎“ und Kopfzeilen (Brotkrumen, Status, Datum, Meta-Zeile) stehen noch nicht in der Elementliste; Scheibe c2 baut den Kopf nach Mockup",
+			"verweis": "#2913-c2"
+		},
+		{
+			"art": "zusaetzlich",
+			"ctx": "orte",
+			"text": "· Wandern",
+			"grund": "Seitenkopf-Text (Nachtrag 12.11. in #2913): Profil-Zeile mit Profil-Optionen, leere Beschreibung „— ✎“ und Kopfzeilen (Brotkrumen, Status, Datum, Meta-Zeile) stehen noch nicht in der Elementliste; Scheibe c2 baut den Kopf nach Mockup",
+			"verweis": "#2913-c2"
+		},
+		{
+			"art": "zusaetzlich",
+			"ctx": "orte",
+			"muster": "· {zahl} Ort",
+			"grund": "Seitenkopf-Text (Nachtrag 12.11. in #2913): Profil-Zeile mit Profil-Optionen, leere Beschreibung „— ✎“ und Kopfzeilen (Brotkrumen, Status, Datum, Meta-Zeile) stehen noch nicht in der Elementliste; Scheibe c2 baut den Kopf nach Mockup",
+			"verweis": "#2913-c2"
+		},
+		{
+			"art": "zusaetzlich",
+			"ctx": "orte",
+			"text": "Allgemein",
+			"grund": "Seitenkopf-Text (Nachtrag 12.11. in #2913): Profil-Zeile mit Profil-Optionen, leere Beschreibung „— ✎“ und Kopfzeilen (Brotkrumen, Status, Datum, Meta-Zeile) stehen noch nicht in der Elementliste; Scheibe c2 baut den Kopf nach Mockup",
+			"verweis": "#2913-c2"
+		},
+		{
+			"art": "zusaetzlich",
+			"ctx": "orte",
+			"text": "Wandern",
+			"grund": "Seitenkopf-Text (Nachtrag 12.11. in #2913): Profil-Zeile mit Profil-Optionen, leere Beschreibung „— ✎“ und Kopfzeilen (Brotkrumen, Status, Datum, Meta-Zeile) stehen noch nicht in der Elementliste; Scheibe c2 baut den Kopf nach Mockup",
+			"verweis": "#2913-c2"
+		},
+		{
+			"art": "zusaetzlich",
+			"ctx": "orte",
+			"text": "Wintersport",
+			"grund": "Seitenkopf-Text (Nachtrag 12.11. in #2913): Profil-Zeile mit Profil-Optionen, leere Beschreibung „— ✎“ und Kopfzeilen (Brotkrumen, Status, Datum, Meta-Zeile) stehen noch nicht in der Elementliste; Scheibe c2 baut den Kopf nach Mockup",
+			"verweis": "#2913-c2"
+		},
+		{
+			"art": "zusaetzlich",
+			"ctx": "orte",
+			"text": "Location comparisons",
+			"grund": "Seitenkopf-Text (Nachtrag 12.11. in #2913): Profil-Zeile mit Profil-Optionen, leere Beschreibung „— ✎“ und Kopfzeilen (Brotkrumen, Status, Datum, Meta-Zeile) stehen noch nicht in der Elementliste; Scheibe c2 baut den Kopf nach Mockup",
+			"verweis": "#2913-c2"
+		},
+		{
+			"art": "zusaetzlich",
+			"ctx": "orte",
+			"text": "Send",
+			"grund": "Seitenkopf-Text (Nachtrag 12.11. in #2913): Profil-Zeile mit Profil-Optionen, leere Beschreibung „— ✎“ und Kopfzeilen (Brotkrumen, Status, Datum, Meta-Zeile) stehen noch nicht in der Elementliste; Scheibe c2 baut den Kopf nach Mockup",
+			"verweis": "#2913-c2"
+		},
+		{
+			"art": "zusaetzlich",
+			"ctx": "orte",
+			"text": "Edit name",
+			"grund": "Seitenkopf-Text (Nachtrag 12.11. in #2913): Profil-Zeile mit Profil-Optionen, leere Beschreibung „— ✎“ und Kopfzeilen (Brotkrumen, Status, Datum, Meta-Zeile) stehen noch nicht in der Elementliste; Scheibe c2 baut den Kopf nach Mockup",
+			"verweis": "#2913-c2"
+		},
+		{
+			"art": "zusaetzlich",
+			"ctx": "orte",
+			"text": "Edit region",
+			"grund": "Seitenkopf-Text (Nachtrag 12.11. in #2913): Profil-Zeile mit Profil-Optionen, leere Beschreibung „— ✎“ und Kopfzeilen (Brotkrumen, Status, Datum, Meta-Zeile) stehen noch nicht in der Elementliste; Scheibe c2 baut den Kopf nach Mockup",
+			"verweis": "#2913-c2"
+		},
+		{
+			"art": "zusaetzlich",
+			"ctx": "orte",
+			"text": "Active",
+			"grund": "Seitenkopf-Text (Nachtrag 12.11. in #2913): Profil-Zeile mit Profil-Optionen, leere Beschreibung „— ✎“ und Kopfzeilen (Brotkrumen, Status, Datum, Meta-Zeile) stehen noch nicht in der Elementliste; Scheibe c2 baut den Kopf nach Mockup",
+			"verweis": "#2913-c2"
+		},
+		{
+			"art": "zusaetzlich",
+			"ctx": "orte",
+			"text": "Saved",
+			"grund": "Seitenkopf-Text (Nachtrag 12.11. in #2913): Profil-Zeile mit Profil-Optionen, leere Beschreibung „— ✎“ und Kopfzeilen (Brotkrumen, Status, Datum, Meta-Zeile) stehen noch nicht in der Elementliste; Scheibe c2 baut den Kopf nach Mockup",
+			"verweis": "#2913-c2"
+		},
+		{
+			"art": "zusaetzlich",
+			"ctx": "orte",
+			"text": "Summer trekking",
+			"grund": "Seitenkopf-Text (Nachtrag 12.11. in #2913): Profil-Zeile mit Profil-Optionen, leere Beschreibung „— ✎“ und Kopfzeilen (Brotkrumen, Status, Datum, Meta-Zeile) stehen noch nicht in der Elementliste; Scheibe c2 baut den Kopf nach Mockup",
+			"verweis": "#2913-c2"
+		},
+		{
+			"art": "zusaetzlich",
+			"ctx": "orte",
+			"text": "· Hiking",
+			"grund": "Seitenkopf-Text (Nachtrag 12.11. in #2913): Profil-Zeile mit Profil-Optionen, leere Beschreibung „— ✎“ und Kopfzeilen (Brotkrumen, Status, Datum, Meta-Zeile) stehen noch nicht in der Elementliste; Scheibe c2 baut den Kopf nach Mockup",
+			"verweis": "#2913-c2"
+		},
+		{
+			"art": "zusaetzlich",
+			"ctx": "orte",
+			"muster": "· {zahl} location",
+			"grund": "Seitenkopf-Text (Nachtrag 12.11. in #2913): Profil-Zeile mit Profil-Optionen, leere Beschreibung „— ✎“ und Kopfzeilen (Brotkrumen, Status, Datum, Meta-Zeile) stehen noch nicht in der Elementliste; Scheibe c2 baut den Kopf nach Mockup",
+			"verweis": "#2913-c2"
+		},
+		{
+			"art": "zusaetzlich",
+			"ctx": "orte",
+			"text": "1",
+			"grund": "Seitenkopf-Text (Nachtrag 12.11. in #2913): Profil-Zeile mit Profil-Optionen, leere Beschreibung „— ✎“ und Kopfzeilen (Brotkrumen, Status, Datum, Meta-Zeile) stehen noch nicht in der Elementliste; Scheibe c2 baut den Kopf nach Mockup",
+			"verweis": "#2913-c2"
+		},
+		{
+			"art": "zusaetzlich",
+			"ctx": "orte",
+			"text": "General",
+			"grund": "Seitenkopf-Text (Nachtrag 12.11. in #2913): Profil-Zeile mit Profil-Optionen, leere Beschreibung „— ✎“ und Kopfzeilen (Brotkrumen, Status, Datum, Meta-Zeile) stehen noch nicht in der Elementliste; Scheibe c2 baut den Kopf nach Mockup",
+			"verweis": "#2913-c2"
+		},
+		{
+			"art": "zusaetzlich",
+			"ctx": "orte",
+			"text": "Hiking",
+			"grund": "Seitenkopf-Text (Nachtrag 12.11. in #2913): Profil-Zeile mit Profil-Optionen, leere Beschreibung „— ✎“ und Kopfzeilen (Brotkrumen, Status, Datum, Meta-Zeile) stehen noch nicht in der Elementliste; Scheibe c2 baut den Kopf nach Mockup",
+			"verweis": "#2913-c2"
+		},
+		{
+			"art": "zusaetzlich",
+			"ctx": "orte",
+			"text": "Winter sports",
+			"grund": "Seitenkopf-Text (Nachtrag 12.11. in #2913): Profil-Zeile mit Profil-Optionen, leere Beschreibung „— ✎“ und Kopfzeilen (Brotkrumen, Status, Datum, Meta-Zeile) stehen noch nicht in der Elementliste; Scheibe c2 baut den Kopf nach Mockup",
+			"verweis": "#2913-c2"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "wetter",
+			"text": "▾",
+			"grund": "Vorlage-Zeile im Reiter Wetter (Auswahl „▾“, Stand „unverändert“, Vorlagen- bzw. Profilname); Vorlage ersetzt in Scheibe c2 das Profil",
+			"verweis": "#2913-c2"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "wetter",
+			"text": "unverändert",
+			"grund": "Vorlage-Zeile im Reiter Wetter (Auswahl „▾“, Stand „unverändert“, Vorlagen- bzw. Profilname); Vorlage ersetzt in Scheibe c2 das Profil",
+			"verweis": "#2913-c2"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "wetter",
+			"text": "unchanged",
+			"grund": "Vorlage-Zeile im Reiter Wetter (Auswahl „▾“, Stand „unverändert“, Vorlagen- bzw. Profilname); Vorlage ersetzt in Scheibe c2 das Profil",
+			"verweis": "#2913-c2"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "wetter",
+			"text": "−",
+			"grund": "Vorlage-Zeile im Reiter Wetter (Auswahl „▾“, Stand „unverändert“, Vorlagen- bzw. Profilname); Vorlage ersetzt in Scheibe c2 das Profil",
+			"verweis": "#2913-c2"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "wetter",
+			"text": "Allgemein",
+			"grund": "Vorlage-Zeile im Reiter Wetter (Auswahl „▾“, Stand „unverändert“, Vorlagen- bzw. Profilname); Vorlage ersetzt in Scheibe c2 das Profil",
+			"verweis": "#2913-c2"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "wetter",
+			"text": "%",
+			"grund": "Metrik-Zeile im Reiter Wetter (Name, Einheit, Grenze „grün: …“, Alarm-Satz): Prüfkonto zeigt andere Metriken als das Mockup-Beispiel GR221 / Alpen-Trekking",
+			"verweis": "#2967"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "wetter",
+			"text": ":00",
+			"grund": "Metrik-Zeile im Reiter Wetter (Name, Einheit, Grenze „grün: …“, Alarm-Satz): Prüfkonto zeigt andere Metriken als das Mockup-Beispiel GR221 / Alpen-Trekking",
+			"verweis": "#2967"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "wetter",
+			"text": "Bewölkung",
+			"grund": "Metrik-Zeile im Reiter Wetter (Name, Einheit, Grenze „grün: …“, Alarm-Satz): Prüfkonto zeigt andere Metriken als das Mockup-Beispiel GR221 / Alpen-Trekking",
+			"verweis": "#2967"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "wetter",
+			"text": "Sonnenstunden",
+			"grund": "Metrik-Zeile im Reiter Wetter (Name, Einheit, Grenze „grün: …“, Alarm-Satz): Prüfkonto zeigt andere Metriken als das Mockup-Beispiel GR221 / Alpen-Trekking",
+			"verweis": "#2967"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "wetter",
+			"text": "Luftfeuchtigkeit",
+			"grund": "Metrik-Zeile im Reiter Wetter (Name, Einheit, Grenze „grün: …“, Alarm-Satz): Prüfkonto zeigt andere Metriken als das Mockup-Beispiel GR221 / Alpen-Trekking",
+			"verweis": "#2967"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "wetter",
+			"text": "Maximum",
+			"grund": "Metrik-Zeile im Reiter Wetter (Name, Einheit, Grenze „grün: …“, Alarm-Satz): Prüfkonto zeigt andere Metriken als das Mockup-Beispiel GR221 / Alpen-Trekking",
+			"verweis": "#2967"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "wetter",
+			"text": "Nacht-Tiefsttemperatur",
+			"grund": "Metrik-Zeile im Reiter Wetter (Name, Einheit, Grenze „grün: …“, Alarm-Satz): Prüfkonto zeigt andere Metriken als das Mockup-Beispiel GR221 / Alpen-Trekking",
+			"verweis": "#2967"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "wetter",
+			"text": "UV-Index",
+			"grund": "Metrik-Zeile im Reiter Wetter (Name, Einheit, Grenze „grün: …“, Alarm-Satz): Prüfkonto zeigt andere Metriken als das Mockup-Beispiel GR221 / Alpen-Trekking",
+			"verweis": "#2967"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "wetter",
+			"muster": "grün: {zahl} bis {zahl} °C",
+			"grund": "Metrik-Zeile im Reiter Wetter (Name, Einheit, Grenze „grün: …“, Alarm-Satz): Prüfkonto zeigt andere Metriken als das Mockup-Beispiel GR221 / Alpen-Trekking",
+			"verweis": "#2967"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "wetter",
+			"muster": "grün: ab {zahl} °C",
+			"grund": "Metrik-Zeile im Reiter Wetter (Name, Einheit, Grenze „grün: …“, Alarm-Satz): Prüfkonto zeigt andere Metriken als das Mockup-Beispiel GR221 / Alpen-Trekking",
+			"verweis": "#2967"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "wetter",
+			"muster": "grün: ab {zahl} h",
+			"grund": "Metrik-Zeile im Reiter Wetter (Name, Einheit, Grenze „grün: …“, Alarm-Satz): Prüfkonto zeigt andere Metriken als das Mockup-Beispiel GR221 / Alpen-Trekking",
+			"verweis": "#2967"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "wetter",
+			"muster": "grün: bis {zahl} mm",
+			"grund": "Metrik-Zeile im Reiter Wetter (Name, Einheit, Grenze „grün: …“, Alarm-Satz): Prüfkonto zeigt andere Metriken als das Mockup-Beispiel GR221 / Alpen-Trekking",
+			"verweis": "#2967"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "wetter",
+			"muster": "grün: bis {zahl} %",
+			"grund": "Metrik-Zeile im Reiter Wetter (Name, Einheit, Grenze „grün: …“, Alarm-Satz): Prüfkonto zeigt andere Metriken als das Mockup-Beispiel GR221 / Alpen-Trekking",
+			"verweis": "#2967"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "wetter",
+			"muster": "grün: bis {zahl} km/h",
+			"grund": "Metrik-Zeile im Reiter Wetter (Name, Einheit, Grenze „grün: …“, Alarm-Satz): Prüfkonto zeigt andere Metriken als das Mockup-Beispiel GR221 / Alpen-Trekking",
+			"verweis": "#2967"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "wetter",
+			"muster": "grün: bis {zahl}",
+			"grund": "Metrik-Zeile im Reiter Wetter (Name, Einheit, Grenze „grün: …“, Alarm-Satz): Prüfkonto zeigt andere Metriken als das Mockup-Beispiel GR221 / Alpen-Trekking",
+			"verweis": "#2967"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "wetter",
+			"text": "immer grün (keine Grenze gesetzt)",
+			"grund": "Metrik-Zeile im Reiter Wetter (Name, Einheit, Grenze „grün: …“, Alarm-Satz): Prüfkonto zeigt andere Metriken als das Mockup-Beispiel GR221 / Alpen-Trekking",
+			"verweis": "#2967"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "wetter",
+			"text": "h · zu wenig ist schlecht",
+			"grund": "Metrik-Zeile im Reiter Wetter (Name, Einheit, Grenze „grün: …“, Alarm-Satz): Prüfkonto zeigt andere Metriken als das Mockup-Beispiel GR221 / Alpen-Trekking",
+			"verweis": "#2967"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "wetter",
+			"text": "°C · vor der Etappe",
+			"grund": "Metrik-Zeile im Reiter Wetter (Name, Einheit, Grenze „grün: …“, Alarm-Satz): Prüfkonto zeigt andere Metriken als das Mockup-Beispiel GR221 / Alpen-Trekking",
+			"verweis": "#2967"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "wetter",
+			"muster": "Alarm, wenn der Wert seit dem letzten Briefing unter {zahl} °C fällt (orange), dazu bei sehr großen Sprüngen. Entwarnung, wenn er zurückgeht.",
+			"grund": "Metrik-Zeile im Reiter Wetter (Name, Einheit, Grenze „grün: …“, Alarm-Satz): Prüfkonto zeigt andere Metriken als das Mockup-Beispiel GR221 / Alpen-Trekking",
+			"verweis": "#2967"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "wetter",
+			"text": "Kein Alarm. Die Farbe erscheint nur im Briefing.",
+			"grund": "Metrik-Zeile im Reiter Wetter (Name, Einheit, Grenze „grün: …“, Alarm-Satz): Prüfkonto zeigt andere Metriken als das Mockup-Beispiel GR221 / Alpen-Trekking",
+			"verweis": "#2967"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "wetter",
+			"text": "% · precursor, no alert",
+			"grund": "Metrik-Zeile im Reiter Wetter (Name, Einheit, Grenze „grün: …“, Alarm-Satz): Prüfkonto zeigt andere Metriken als das Mockup-Beispiel GR221 / Alpen-Trekking",
+			"verweis": "#2967"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "wetter",
+			"text": "Cloud cover",
+			"grund": "Metrik-Zeile im Reiter Wetter (Name, Einheit, Grenze „grün: …“, Alarm-Satz): Prüfkonto zeigt andere Metriken als das Mockup-Beispiel GR221 / Alpen-Trekking",
+			"verweis": "#2967"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "wetter",
+			"text": "Rain probability",
+			"grund": "Metrik-Zeile im Reiter Wetter (Name, Einheit, Grenze „grün: …“, Alarm-Satz): Prüfkonto zeigt andere Metriken als das Mockup-Beispiel GR221 / Alpen-Trekking",
+			"verweis": "#2967"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "wetter",
+			"text": "Sunshine hours",
+			"grund": "Metrik-Zeile im Reiter Wetter (Name, Einheit, Grenze „grün: …“, Alarm-Satz): Prüfkonto zeigt andere Metriken als das Mockup-Beispiel GR221 / Alpen-Trekking",
+			"verweis": "#2967"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "wetter",
+			"text": "Humidity",
+			"grund": "Metrik-Zeile im Reiter Wetter (Name, Einheit, Grenze „grün: …“, Alarm-Satz): Prüfkonto zeigt andere Metriken als das Mockup-Beispiel GR221 / Alpen-Trekking",
+			"verweis": "#2967"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "wetter",
+			"text": "Night low",
+			"grund": "Metrik-Zeile im Reiter Wetter (Name, Einheit, Grenze „grün: …“, Alarm-Satz): Prüfkonto zeigt andere Metriken als das Mockup-Beispiel GR221 / Alpen-Trekking",
+			"verweis": "#2967"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "wetter",
+			"text": "UV index",
+			"grund": "Metrik-Zeile im Reiter Wetter (Name, Einheit, Grenze „grün: …“, Alarm-Satz): Prüfkonto zeigt andere Metriken als das Mockup-Beispiel GR221 / Alpen-Trekking",
+			"verweis": "#2967"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "wetter",
+			"text": "maximum",
+			"grund": "Metrik-Zeile im Reiter Wetter (Name, Einheit, Grenze „grün: …“, Alarm-Satz): Prüfkonto zeigt andere Metriken als das Mockup-Beispiel GR221 / Alpen-Trekking",
+			"verweis": "#2967"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "wetter",
+			"text": "level",
+			"grund": "Metrik-Zeile im Reiter Wetter (Name, Einheit, Grenze „grün: …“, Alarm-Satz): Prüfkonto zeigt andere Metriken als das Mockup-Beispiel GR221 / Alpen-Trekking",
+			"verweis": "#2967"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "wetter",
+			"muster": "green: {zahl} to {zahl} °C",
+			"grund": "Metrik-Zeile im Reiter Wetter (Name, Einheit, Grenze „grün: …“, Alarm-Satz): Prüfkonto zeigt andere Metriken als das Mockup-Beispiel GR221 / Alpen-Trekking",
+			"verweis": "#2967"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "wetter",
+			"muster": "green: from {zahl} °C",
+			"grund": "Metrik-Zeile im Reiter Wetter (Name, Einheit, Grenze „grün: …“, Alarm-Satz): Prüfkonto zeigt andere Metriken als das Mockup-Beispiel GR221 / Alpen-Trekking",
+			"verweis": "#2967"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "wetter",
+			"muster": "green: from {zahl} h",
+			"grund": "Metrik-Zeile im Reiter Wetter (Name, Einheit, Grenze „grün: …“, Alarm-Satz): Prüfkonto zeigt andere Metriken als das Mockup-Beispiel GR221 / Alpen-Trekking",
+			"verweis": "#2967"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "wetter",
+			"muster": "green: up to {zahl} mm",
+			"grund": "Metrik-Zeile im Reiter Wetter (Name, Einheit, Grenze „grün: …“, Alarm-Satz): Prüfkonto zeigt andere Metriken als das Mockup-Beispiel GR221 / Alpen-Trekking",
+			"verweis": "#2967"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "wetter",
+			"muster": "green: up to {zahl} %",
+			"grund": "Metrik-Zeile im Reiter Wetter (Name, Einheit, Grenze „grün: …“, Alarm-Satz): Prüfkonto zeigt andere Metriken als das Mockup-Beispiel GR221 / Alpen-Trekking",
+			"verweis": "#2967"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "wetter",
+			"muster": "green: up to {zahl} km/h",
+			"grund": "Metrik-Zeile im Reiter Wetter (Name, Einheit, Grenze „grün: …“, Alarm-Satz): Prüfkonto zeigt andere Metriken als das Mockup-Beispiel GR221 / Alpen-Trekking",
+			"verweis": "#2967"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "wetter",
+			"muster": "green: up to {zahl}",
+			"grund": "Metrik-Zeile im Reiter Wetter (Name, Einheit, Grenze „grün: …“, Alarm-Satz): Prüfkonto zeigt andere Metriken als das Mockup-Beispiel GR221 / Alpen-Trekking",
+			"verweis": "#2967"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "wetter",
+			"text": "always green (no limit set)",
+			"grund": "Metrik-Zeile im Reiter Wetter (Name, Einheit, Grenze „grün: …“, Alarm-Satz): Prüfkonto zeigt andere Metriken als das Mockup-Beispiel GR221 / Alpen-Trekking",
+			"verweis": "#2967"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "wetter",
+			"text": "h · too little is bad",
+			"grund": "Metrik-Zeile im Reiter Wetter (Name, Einheit, Grenze „grün: …“, Alarm-Satz): Prüfkonto zeigt andere Metriken als das Mockup-Beispiel GR221 / Alpen-Trekking",
+			"verweis": "#2967"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "wetter",
+			"text": "km/h · mean wind",
+			"grund": "Metrik-Zeile im Reiter Wetter (Name, Einheit, Grenze „grün: …“, Alarm-Satz): Prüfkonto zeigt andere Metriken als das Mockup-Beispiel GR221 / Alpen-Trekking",
+			"verweis": "#2967"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "wetter",
+			"text": "km/h · peak",
+			"grund": "Metrik-Zeile im Reiter Wetter (Name, Einheit, Grenze „grün: …“, Alarm-Satz): Prüfkonto zeigt andere Metriken als das Mockup-Beispiel GR221 / Alpen-Trekking",
+			"verweis": "#2967"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "wetter",
+			"text": "mm · total",
+			"grund": "Metrik-Zeile im Reiter Wetter (Name, Einheit, Grenze „grün: …“, Alarm-Satz): Prüfkonto zeigt andere Metriken als das Mockup-Beispiel GR221 / Alpen-Trekking",
+			"verweis": "#2967"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "wetter",
+			"text": "°C · daily high · daily low",
+			"grund": "Metrik-Zeile im Reiter Wetter (Name, Einheit, Grenze „grün: …“, Alarm-Satz): Prüfkonto zeigt andere Metriken als das Mockup-Beispiel GR221 / Alpen-Trekking",
+			"verweis": "#2967"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "wetter",
+			"text": "°C · before the stage",
+			"grund": "Metrik-Zeile im Reiter Wetter (Name, Einheit, Grenze „grün: …“, Alarm-Satz): Prüfkonto zeigt andere Metriken als das Mockup-Beispiel GR221 / Alpen-Trekking",
+			"verweis": "#2967"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "wetter",
+			"muster": "Alert when the value falls below {zahl} °C since the last briefing (orange), and on very large jumps. All clear when it goes back.",
+			"grund": "Metrik-Zeile im Reiter Wetter (Name, Einheit, Grenze „grün: …“, Alarm-Satz): Prüfkonto zeigt andere Metriken als das Mockup-Beispiel GR221 / Alpen-Trekking",
+			"verweis": "#2967"
+		},
+		{
+			"art": "zusaetzlich",
+			"reiter": "wetter",
+			"text": "No alert. The colour only appears in the briefing.",
+			"grund": "Metrik-Zeile im Reiter Wetter (Name, Einheit, Grenze „grün: …“, Alarm-Satz): Prüfkonto zeigt andere Metriken als das Mockup-Beispiel GR221 / Alpen-Trekking",
+			"verweis": "#2967"
+		},
+		{
+			"art": "zusaetzlich",
+			"ctx": "trip",
+			"reiter": "zustellung",
+			"muster": "{text}",
+			"grund": "Reiter Zustellung wird in Scheibe d komplett neu gebaut (läuft in #2795); zusätzliche Live-Texte bleiben im Bericht sichtbar",
+			"verweis": "#2913-d"
+		},
+		{
+			"art": "zusaetzlich",
+			"ctx": "orte",
+			"reiter": "zustellung",
+			"muster": "{text}",
+			"grund": "Reiter Zustellung wird in Scheibe d komplett neu gebaut (läuft in #2795); zusätzliche Live-Texte bleiben im Bericht sichtbar",
+			"verweis": "#2913-d"
+		},
+		{
+			"art": "zusaetzlich",
+			"ctx": "trip",
+			"reiter": "etappen",
+			"muster": "{text}",
+			"grund": "Reiter Etappen wird in Scheibe e neu gebaut; zusätzliche Live-Texte bleiben im Bericht sichtbar",
+			"verweis": "#2913-e"
+		},
+		{
+			"art": "zusaetzlich",
+			"ctx": "orte",
+			"reiter": "orte",
+			"muster": "{text}",
+			"grund": "Reiter Orte wird in Scheibe e neu gebaut; zusätzliche Live-Texte bleiben im Bericht sichtbar",
+			"verweis": "#2913-e"
+		}
+	],
+	"ausnahmen": [
+		{
+			"ctx": "trip",
+			"reiter": "uebersicht",
+			"muster": "{text}",
+			"grund": "Reiter Übersicht fehlt in der Elementliste; Einträge aus dem Mockup erzeugen: #2969",
+			"spec": "docs/specs/modules/feat_2913_abgleich_ganzseite.md"
+		},
+		{
+			"ctx": "orte",
+			"reiter": "uebersicht",
+			"muster": "{text}",
+			"grund": "Reiter Übersicht fehlt in der Elementliste; Einträge aus dem Mockup erzeugen: #2969",
+			"spec": "docs/specs/modules/feat_2913_abgleich_ganzseite.md"
+		}
+	]
 }
