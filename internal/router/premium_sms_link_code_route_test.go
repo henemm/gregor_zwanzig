@@ -36,11 +36,12 @@ import (
 
 const linkCodeRoutePath = "/api/auth/premium-sms-link-code"
 
-// Gestalt des Codes (Issue #2323): Praefix "XX" + 3 Buchstaben (ohne I/L/O) +
-// 3 Ziffern (ohne 0/1). Hier package-lokal nachgebildet, weil die Konstanten
-// in internal/handler unexportiert sind; die zeichengenaue Pruefung je Block
+// Gestalt des Codes (Issue #2323, seit ADR-0116 / Issue #2961 mit 5 statt 3
+// Buchstaben): Praefix "XX" + 5 Buchstaben (ohne I/L/O) + 3 Ziffern (ohne
+// 0/1). Hier package-lokal nachgebildet, weil die Konstanten in
+// internal/handler unexportiert sind; die zeichengenaue Pruefung je Block
 // leistet assertLinkCodeShape in handler/premium_sms_link_code_test.go.
-var linkCodeShapeRe = regexp.MustCompile(`^XX[A-HJKMNP-Z]{3}[2-9]{3}$`)
+var linkCodeShapeRe = regexp.MustCompile(`^XX[A-HJKMNP-Z]{5}[2-9]{3}$`)
 
 func TestPremiumSmsLinkCodeRouteIstVerdrahtetUndAnmeldepflichtig(t *testing.T) {
 	r, s, secret := newBriefingTestRouter(t)

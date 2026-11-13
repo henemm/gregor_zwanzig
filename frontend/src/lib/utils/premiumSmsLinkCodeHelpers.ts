@@ -32,6 +32,20 @@ export function resolveDialogAction(action: 'confirm' | 'cancel'): 'call-post' |
 	return action === 'confirm' ? 'call-post' : 'none';
 }
 
+/**
+ * Issue #2961 Welle 2 (ADR-0116): "Verbindung trennen" nur, wenn eine
+ * Rückadresse gelernt ist (frisch oder veraltet) — sonst gibt es nichts zu
+ * trennen. Quelle ist allein das Server-Feld `premium_sms_reply_state`.
+ */
+export function shouldShowDisconnect(replyState: string | undefined): boolean {
+	return replyState === 'fresh' || replyState === 'stale';
+}
+
+/** Klick auf "Verbindung trennen": immer erst Rückfrage, nie während eines Aufrufs. */
+export function resolveDisconnectClick(busy: boolean): 'confirm-dialog' | 'noop' {
+	return busy ? 'noop' : 'confirm-dialog';
+}
+
 /** Fail-closed: alles ausser explizit {exists:false} gilt als vorhanden (AC-10). */
 export function deriveLinkCodeExists(resp: { exists?: boolean } | null | undefined): boolean {
 	if (resp && resp.exists === false) return false;

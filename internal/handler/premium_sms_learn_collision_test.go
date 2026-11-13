@@ -31,6 +31,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"reflect"
 	"testing"
 	"time"
 
@@ -95,8 +96,9 @@ func TestLearnRejectsAmbiguousFreshCollisionWithoutCode(t *testing.T) {
 
 // ---------------------------------------------------------------------------
 // AC-2: dieselbe Kollision, gueltiger Code eines der beiden Nutzer -> 200,
-// GENAU dieser Nutzer aktualisiert, der andere unveraendert (Beweis gegen
-// Self-DoS/Lockout).
+// GENAU dieser Nutzer aktualisiert (Beweis gegen Self-DoS/Lockout). Der Teil
+// "der andere bleibt unveraendert" ist durch ADR-0116 abgeloest: der andere
+// verliert die Nummer (Eindeutigkeit der Rueckadresse).
 //
 // "premium-collision-anna" (Code-Inhaberin) sortiert lexikalisch VOR
 // "premium-collision-bert" (kein Code) -- bert laedt zuletzt und gewinnt
@@ -136,9 +138,21 @@ func TestLearnResolvesAmbiguousCollisionWithValidCode(t *testing.T) {
 	if anna.PremiumSmsReplyTo != garminFromCollision {
 		t.Errorf("AC-2: PremiumSmsReplyTo von anna erwartet %q, bekam %q", garminFromCollision, anna.PremiumSmsReplyTo)
 	}
-	if after := readUserJSON2154(t, s, "premium-collision-bert"); !bytes.Equal(beforeBert, after) {
-		t.Errorf("AC-2: user.json von premium-collision-bert (kein Code) MUSS unveraendert bleiben.\n"+
-			"vorher:  %s\nnachher: %s", beforeBert, after)
+	// Abgeloest durch ADR-0116 (Issue #2961 Welle 2): "bert bleibt
+	// unveraendert" galt bis zur Eindeutigkeit der Rueckadresse. Jetzt verliert
+	// bert GENAU die beiden Rueckadress-Felder; alles andere bleibt.
+	if after := userFieldsExcept2154(t, readUserJSON2154(t, s, "premium-collision-bert"), "premium_sms_reply_to"); after["premium_sms_reply_at"] != nil {
+		t.Errorf("AC-2 (ADR-0116): bert muss auch den Zeitstempel verlieren, bekam %v", after)
+	}
+	vorher := userFieldsExcept2154(t, beforeBert, "premium_sms_reply_to")
+	delete(vorher, "premium_sms_reply_at")
+	nachher := userFieldsExcept2154(t, readUserJSON2154(t, s, "premium-collision-bert"), "premium_sms_reply_to")
+	if !reflect.DeepEqual(vorher, nachher) {
+		t.Errorf("AC-2 (ADR-0116): ausser der Rueckadresse darf sich bei bert nichts aendern.\nvorher:  %v\nnachher: %v",
+			vorher, nachher)
+	}
+	if got := mustLoadUser(t, s, "premium-collision-bert").PremiumSmsReplyTo; got != "" {
+		t.Errorf("AC-2 (ADR-0116): bert muss die Nummer verlieren, hat %q", got)
 	}
 }
 

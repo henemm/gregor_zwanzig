@@ -10,22 +10,24 @@ package handler
 // Spec: docs/specs/modules/feat_1676_s1_premium_sms_rueckkanal.md v1.1,
 // Implementation Details "Go: neuer Endpoint POST /api/internal/premium-sms-learn".
 //
-// Aufloesung seit Issue #2154 Scheibe A (Kandidaten nur Premium-Tier); loest
-// die alte R3-Heuristik ab, deren Ein-Kandidaten-Fallback jede fremde Nummer
-// ohne Geheimnis zur Rueckadresse machte:
-//  1. GENAU EIN frischer Treffer auf gespeicherte PremiumSmsReplyTo (innerhalb
-//     model.PremiumSmsReplyTTL) -> dieser Nutzer, Code wird ignoriert.
-//  1a. Bei >=2 frischen Treffern (Garmin vergibt Rueckadressen aus einem
-//     rotierenden Pool erneut, Issue #2328) wird NICHT sofort abgelehnt,
-//     sondern der Code-Pfad entscheidet; scheitert dieser mangels Code,
-//     lautet der Grund reasonStoredReplyToAmbiguous statt
-//     reasonLinkCodeRequired. Sonst waere die Kollision ein Lockout, aus dem
-//     sich niemand mehr heilen kann.
-//  2. Sonst ohne Code -> kein Ziel (der eigentliche Bugfix, AC-1).
-//  3. Sonst mit Code -> Budget der Ratebremse pruefen, dann bcrypt-Vergleich
-//     gegen den gespeicherten Verknuepfungs-Code jedes Kandidaten; genau ein
-//     Treffer -> Ziel, sonst Zaehler +1 und kein Ziel. NIE Fallback auf
-//     "default".
+// Aufloesung (Issue #2154 Scheibe A, #2328, seit Issue #2961 Welle 2 /
+// ADR-0116 mit Vorrang des Codes; Kandidaten nur Premium-Tier, nicht gesperrt):
+//  1. Mit Code -> Budget der Ratebremse pruefen (je Absender, dann global),
+//     dann bcrypt-Vergleich gegen den gespeicherten Verknuepfungs-Code jedes
+//     Kandidaten; GENAU EIN Treffer -> dieses Konto, auch wenn die Nummer
+//     gerade frisch bei einem ANDEREN Konto gespeichert ist (Garmin vergibt
+//     Nummern aus einem rotierenden Pool neu). Ein falscher Code zaehlt als
+//     Fehlversuch.
+//  2. Sonst GENAU EIN frischer Treffer auf gespeicherte PremiumSmsReplyTo
+//     (innerhalb model.PremiumSmsReplyTTL) -> dieser Nutzer. So kippt ein
+//     Vertipper im Code die bestehende Zuordnung nicht.
+//  3. Sonst ohne Code: >=2 frische Treffer -> reasonStoredReplyToAmbiguous,
+//     kein Treffer -> reasonLinkCodeRequired; mit Code der Grund aus Schritt 1
+//     (ungueltig bzw. Ratebremse). NIE Fallback auf "default".
+//
+// Beim Lernen entfernt der Store die Nummer bei allen anderen Konten
+// (store.LearnPremiumSmsReplyTo): eine Rueckadresse gehoert hoechstens einem
+// Konto.
 //
 // Der Dry-Run-Zweig (AC-10) ist ein eigener Rueckgabepfad VOR SaveUser, kein
 // `if` drumherum — SaveUser ist im Dry-Run strukturell unerreichbar.
@@ -100,7 +102,7 @@ func PostPremiumSmsLearnHandler(s *store.Store, rl *PremiumSmsRateLimiter) http.
 			// prozessweite Fehlversuchszaehler sind von hier aus erreichbar.
 			// Der Trockenlauf rechnet gegen eine Wegwerf-Bremse, damit ein
 			// falscher Code die echte Bremse nie beruehrt (AC-8).
-			target, reason := resolvePremiumSmsTarget(s, candidates, storedMatches, body.Code, rl.scratch())
+			target, reason := resolvePremiumSmsTarget(s, candidates, storedMatches, body.From, body.Code, rl.scratch())
 			if target == nil {
 				json.NewEncoder(w).Encode(map[string]string{
 					"status":  "dry_run",
@@ -119,7 +121,7 @@ func PostPremiumSmsLearnHandler(s *store.Store, rl *PremiumSmsRateLimiter) http.
 			return
 		}
 
-		target, reason := resolvePremiumSmsTarget(s, candidates, storedMatches, body.Code, rl)
+		target, reason := resolvePremiumSmsTarget(s, candidates, storedMatches, body.From, body.Code, rl)
 		if reason == reasonLinkCodeRateLimited {
 			w.WriteHeader(http.StatusTooManyRequests)
 			json.NewEncoder(w).Encode(map[string]string{
@@ -137,10 +139,7 @@ func PostPremiumSmsLearnHandler(s *store.Store, rl *PremiumSmsRateLimiter) http.
 			return
 		}
 
-		now := time.Now().UTC()
-		target.PremiumSmsReplyTo = body.From
-		target.PremiumSmsReplyAt = &now
-		if err := s.SaveUser(*target); err != nil {
+		if err := s.LearnPremiumSmsReplyTo(target.ID, body.From, time.Now().UTC()); err != nil {
 			http.Error(w, "save failed", http.StatusInternalServerError)
 			return
 		}
@@ -149,42 +148,49 @@ func PostPremiumSmsLearnHandler(s *store.Store, rl *PremiumSmsRateLimiter) http.
 	}
 }
 
-// resolvePremiumSmsTarget setzt die Schritte 4-6 des Entscheidungsbaums um und
-// liefert das Zielkonto oder nil samt Ablehnungsgrund (Issue #2154 Scheibe A).
-//
-// Die Reihenfolge ist die Zusicherung: das Budget der Ratebremse wird VOR jedem
-// bcrypt-Vergleich gefragt (AC-7). Stuende die Pruefung dahinter, koennte ein
-// Angreifer weiter raten und die Bremse waere Zierde.
+// resolvePremiumSmsTarget liefert das Zielkonto oder nil samt Ablehnungsgrund
+// (Reihenfolge siehe Kopfkommentar, ADR-0116).
 func resolvePremiumSmsTarget(
 	s *store.Store, candidates []*model.User, storedMatches []*model.User,
-	code string, rl *PremiumSmsRateLimiter,
+	from, code string, rl *PremiumSmsRateLimiter,
 ) (*model.User, string) {
-	// Schritt 4: nur ein EINZIGER FRISCHER gespeicherter Treffer bestaetigt ohne
-	// Code. Dieselbe Frist-Semantik wie im Sendepfad und in der Oberflaeche —
-	// eine zweite, eigene Vergleichsformel hier waere ein Drift-Risiko.
+	// Dieselbe Frist-Semantik wie im Sendepfad und in der Oberflaeche — eine
+	// zweite, eigene Vergleichsformel hier waere ein Drift-Risiko.
 	var freshMatches []*model.User
 	for _, candidate := range storedMatches {
 		if model.DerivePremiumSmsReplyState(candidate.PremiumSmsReplyTo, candidate.PremiumSmsReplyAt) == model.PremiumSmsStateFresh {
 			freshMatches = append(freshMatches, candidate)
 		}
 	}
+
+	codeReason := ""
+	if code != "" {
+		target, reason := resolveByLinkCode(s, candidates, from, code, rl)
+		if target != nil {
+			return target, ""
+		}
+		codeReason = reason
+	}
 	if len(freshMatches) == 1 {
 		return freshMatches[0], ""
 	}
-
-	// Schritt 5: ohne Code kein Ziel. Hier stand bis #2154 der
-	// len(candidates)==1-Fallback — er entfaellt ersatzlos (AC-1). Bei >=2
-	// frischen Treffern (Issue #2328) benennt der eigene Grund die Kollision,
-	// damit sie nicht als fehlender Code missverstanden wird.
-	if code == "" {
-		if len(freshMatches) > 1 {
-			return nil, reasonStoredReplyToAmbiguous
-		}
-		return nil, reasonLinkCodeRequired
+	if codeReason != "" {
+		return nil, codeReason
 	}
+	if len(freshMatches) > 1 {
+		return nil, reasonStoredReplyToAmbiguous
+	}
+	return nil, reasonLinkCodeRequired
+}
 
-	// Schritt 6: Budget zuerst, Hash-Vergleich danach.
-	if !rl.Allow() {
+// resolveByLinkCode prueft den mitgeschickten Code. Die Reihenfolge ist die
+// Zusicherung: das Budget der Ratebremse wird VOR jedem bcrypt-Vergleich
+// gefragt (#2154 AC-7). Stuende die Pruefung dahinter, koennte ein Angreifer
+// weiter raten und die Bremse waere Zierde.
+func resolveByLinkCode(
+	s *store.Store, candidates []*model.User, from, code string, rl *PremiumSmsRateLimiter,
+) (*model.User, string) {
+	if !rl.AllowFrom(from) {
 		return nil, reasonLinkCodeRateLimited
 	}
 	var matches []*model.User
@@ -200,7 +206,7 @@ func resolvePremiumSmsTarget(
 	if len(matches) == 1 {
 		return matches[0], ""
 	}
-	rl.RecordFailure()
+	rl.RecordFailureFrom(from)
 	return nil, reasonLinkCodeInvalid
 }
 

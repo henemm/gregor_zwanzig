@@ -287,6 +287,11 @@ def premium_profil_schreiben(user_id: str, *, reply_at: datetime) -> None:
         "premium_sms_reply_to": _PREMIUM_TO,
         "premium_sms_reply_at": reply_at.isoformat().replace("+00:00", "Z"),
     })
+    # ADR-0116: die Rueckadresse gehoert hoechstens einem Konto (wie beim
+    # Lernen in Go) -- andere Profile der Testwurzel geben sie ab.
+    from tests.helpers.sms_empfaenger import rueckadresse_bei_anderen_entfernen
+
+    rueckadresse_bei_anderen_entfernen(user_id, _PREMIUM_TO)
     pfad.write_text(json.dumps(profil))
 
 

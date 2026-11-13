@@ -830,6 +830,11 @@
 			onGenerateOrRenewClick={onGenerateOrRenewClick}
 			onDialogConfirm={onDialogConfirm}
 			onDialogCancel={onDialogCancel}
+			replyState={data.profile?.premium_sms_reply_state}
+			onDisconnect={async () => {
+				await api.del('/api/auth/premium-sms-reply');
+				await invalidateAll();
+			}}
 		/>
 	{/if}
 

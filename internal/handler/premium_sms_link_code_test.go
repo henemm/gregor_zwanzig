@@ -35,12 +35,13 @@ import (
 	"github.com/henemm/gregor-api/internal/store"
 )
 
-// Gestalt des Codes (Issue #2323): fester Praefix "XX" + 3 Buchstaben aus dem
-// Buchstaben-Alphabet (ohne I/L/O) + 3 Ziffern aus dem Ziffern-Alphabet (ohne
-// 0/1) — 8 Zeichen insgesamt.
+// Gestalt des Codes (Issue #2323, verlaengert durch ADR-0116 / Issue #2961):
+// fester Praefix "XX" + 5 Buchstaben aus dem Buchstaben-Alphabet (ohne I/L/O)
+// + 3 Ziffern aus dem Ziffern-Alphabet (ohne 0/1) — 10 Zeichen insgesamt,
+// Schluesselraum 23^5 * 8^3 ~ 3,3 Mrd. (>= 10^9).
 const (
 	linkCodePrefix      = "XX"
-	linkCodeLetterCount = 3
+	linkCodeLetterCount = 5
 	linkCodeDigitCount  = 3
 	linkCodeLength      = len(linkCodePrefix) + linkCodeLetterCount + linkCodeDigitCount
 )
@@ -346,5 +347,39 @@ func TestLinkCodeStatusWithoutAuthContextNeverFallsBackToDefault(t *testing.T) {
 	if strings.Contains(raw, "exists") {
 		t.Errorf("F003: der anonyme Statusaufruf BEANTWORTET die Frage — Rueckfall auf die "+
 			"Vorgabe-Kennung users/default/ statt der Kennung aus dem Auth-Kontext, body=%s", raw)
+	}
+}
+
+// ADR-0116 (Issue #2961 Welle 2): der Schluesselraum neuer Codes betraegt
+// mindestens 10^9 — gerechnet aus den Konstanten, die der Erzeuger benutzt.
+func TestLinkCodeKeySpaceAtLeastOneBillion(t *testing.T) {
+	raum := 1.0
+	for i := 0; i < premiumSmsLinkCodeLetterCount; i++ {
+		raum *= float64(len(premiumSmsLinkCodeLetterAlphabet))
+	}
+	for i := 0; i < premiumSmsLinkCodeDigitCount; i++ {
+		raum *= float64(len(premiumSmsLinkCodeDigitAlphabet))
+	}
+	if raum < 1e9 {
+		t.Fatalf("Schluesselraum %.0f < 10^9", raum)
+	}
+}
+
+// ADR-0116: ein Bestandscode im alten, kuerzeren Format bleibt gueltig — es
+// gibt keinen Zwangstausch. Gemessen am echten Lern-Handler.
+func TestLearnAcceptsLegacyShortLinkCode(t *testing.T) {
+	s := learnTestStore(t)
+	mustSaveUser(t, s, model.User{ID: "premium-anna", Tier: "premium"})
+	mustSaveUser(t, s, model.User{ID: "premium-bert", Tier: "premium"})
+	const altCode = "XXABC234"
+	mustSaveLinkCode(t, s, "premium-anna", altCode)
+	rr := httptest.NewRecorder()
+	PostPremiumSmsLearnHandler(s, NewPremiumSmsRateLimiter(DefaultPremiumSmsLinkCodeBudget))(
+		rr, newLearnRequest("127.0.0.1:54321", map[string]any{"from": garminFromCoded, "code": altCode}))
+	if rr.Code != http.StatusOK {
+		t.Fatalf("Bestandscode: erwartet 200, bekam %d: %s", rr.Code, rr.Body.String())
+	}
+	if got := mustLoadUser(t, s, "premium-anna").PremiumSmsReplyTo; got != garminFromCoded {
+		t.Fatalf("anna: Rueckadresse %q, erwartet %q", got, garminFromCoded)
 	}
 }

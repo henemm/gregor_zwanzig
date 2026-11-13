@@ -2337,8 +2337,9 @@ class NotificationService:
     ) -> None:
         """Sendet eine Command-Bestätigung per Premium-SMS (Issue #2184).
 
-        Issue #2412 S4a: `purpose="reply"` -- Garmin-Antworten duerfen die
-        Reply-Reserve ueber dem Premium-SMS-Grundlimit ausschoepfen. Kein
+        Issue #2412 S4a / ADR-0116: `purpose="reply"` -- Garmin-Antworten
+        zaehlen in ein eigenes Tageskontingent und verbrauchen nie das
+        Alarm-Kontingent des Kanals. Kein
         `NotificationResult` an dieser Stelle (`-> None`); eine Sperre bleibt
         nur ueber die Aufzeichner-/Transport-Beobachtung sichtbar (Spec).
         """
@@ -2353,8 +2354,37 @@ class NotificationService:
             )
             logger.info(f"Premium-SMS confirmation sent: {result.confirmation_subject}")
         except Exception as e:
-            sms_daily_limit.release_reservation(self._require_user(), "premium_sms", now)
+            sms_daily_limit.release_reservation(
+                self._require_user(), "premium_sms", now, purpose="reply",
+            )
             logger.error(f"Failed to send premium-sms confirmation: {e}")
+
+    def send_premium_sms_change_notice(self, subject: str, body: str) -> list[str]:
+        """ADR-0116 (Issue #2961 Welle 2): Mitteilung ueber eine per
+        Premium-SMS ausgefuehrte Aenderung auf den ANDEREN Kanaelen des
+        Nutzers -- E-Mail nur an eine bestaetigte Adresse, Telegram nur an den
+        verbundenen Profil-Chat. Fail-soft je Kanal; Rueckgabe: zugestellte
+        Kanaele."""
+        from output.channels.recipient import _load_profile
+
+        user_id = self._require_user()
+        profil = _load_profile(user_id)
+        zugestellt: list[str] = []
+        if profil.get("email_verified_at") and (profil.get("mail_to") or profil.get("email")):
+            try:
+                EmailOutput(self._settings).send(
+                    subject=subject, body=body, html=False, lang=self._lang,
+                )
+                zugestellt.append("email")
+            except Exception as e:  # noqa: BLE001 -- fail-soft
+                logger.warning(f"Change notice email failed for {user_id}: {e}")
+        if profil.get("telegram_chat_id"):
+            try:
+                self._telegram_output().send(subject=subject, body=body)
+                zugestellt.append("telegram")
+            except Exception as e:  # noqa: BLE001 -- fail-soft
+                logger.warning(f"Change notice telegram failed for {user_id}: {e}")
+        return zugestellt
 
     def send_command_reply_telegram(
         self,

@@ -7,6 +7,13 @@ zusammengezaehlt, mit einer festen Reserve fuer Alarme (die Empfangslage
 unterwegs ist unvorhersehbar -- jeder Kanal muss jede Frage beantworten
 koennen, CLAUDE.md PO-Korrektur 2026-09-05).
 
+ADR-0116 (Issue #2961 Welle 2): Antworten auf eingehende Befehle
+(``purpose="reply"``) zaehlen in einen EIGENEN Zaehler ``<kind>_reply`` mit
+eigener Grenze. Ein erschoepftes Antwort-Kontingent sperrt keine Alarme und
+umgekehrt. Bestehende Zaehlerdateien ohne dieses Feld bleiben lesbar (fehlend
+= 0, tolerantes Lesen statt Migration). Dieselbe Datei traegt auch den
+Tageszaehler der Aenderungs-Mitteilungen (``reserve_daily_slot``).
+
 SPEC: docs/specs/modules/sms_daily_limit.md (AC-1..AC-10)
 
 Muster (Sidecar-Lock + atomares tempfile/os.replace-Schreiben, Fail-Open bei
@@ -107,6 +114,11 @@ def _write(path, data: dict) -> None:
         raise
 
 
+def _counter_key(kind: str, purpose: str) -> str:
+    """Zaehlerfeld: Antworten haben ein eigenes Feld (ADR-0116)."""
+    return f"{kind}_reply" if purpose == "reply" else kind
+
+
 def _cap(user_id: str, kind: str, purpose: str) -> int:
     """Obergrenze fuer `kind`/`purpose` nach Tier (Spec: Obergrenzen-Tabelle)."""
     if kind == "sms":
@@ -118,12 +130,11 @@ def _cap(user_id: str, kind: str, purpose: str) -> int:
     if purpose == "briefing":
         return max(0, limit - reserve)
     if purpose == "reply":
-        # Issue #2412 S4a Nachbesserung: die Reply-Zusatzmenge gilt NUR, wenn
-        # das Grundlimit > 0 ist (Spec-Tabelle: free/standard Reply-Cap 0,
-        # nicht 0+Overshoot) -- Verteidigung in der Tiefe darf einem Tier
-        # ohne Premium-SMS-Zugriff nicht durch den Overshoot doch 3 Reply-SMS
-        # gewaehren.
-        return limit + user_tier.PREMIUM_SMS_REPLY_OVERSHOOT if limit > 0 else 0
+        # ADR-0116: eigenes Kontingent auf eigenem Zaehler. Ohne
+        # Premium-SMS-Grundlimit (free/standard) bleibt es 0.
+        if kind == "sms" or limit <= 0:
+            return 0
+        return user_tier.daily_premium_sms_reply_limit(user_id)
     return limit  # purpose == "alert"
 
 
@@ -183,12 +194,13 @@ def check_and_reserve(user_id: str, kind: str, purpose: str, now: datetime) -> N
         try:
             today = _today(now)
             data = _tagesstand(_load(path), today)
-            current = _zaehlerwert(data, kind)
+            key = _counter_key(kind, purpose)
+            current = _zaehlerwert(data, key)
             if current >= cap:
                 raise ChannelBlockedError(
                     kind, "SMS-Tageslimit erreicht", reason_code=REASON_CODE,
                 )
-            data[kind] = current + 1
+            data[key] = current + 1
             data.setdefault("sms", 0)
             data.setdefault("premium_sms", 0)
             try:
@@ -206,8 +218,9 @@ def check_and_reserve(user_id: str, kind: str, purpose: str, now: datetime) -> N
         os.close(fd)
 
 
-def release_reservation(user_id: str, kind: str, now: datetime) -> None:
-    """Gegenstueck zu `check_and_reserve` -- dekrementiert `kind` um 1, nur
+def release_reservation(user_id: str, kind: str, now: datetime, purpose: str = "") -> None:
+    """Gegenstueck zu `check_and_reserve` -- dekrementiert den Zaehler von
+    `kind` (bei ``purpose="reply"`` den Antwort-Zaehler, ADR-0116) um 1, nur
     fuer den laufenden Tag. Nur aus dem Fehlerzweig eines tatsaechlich
     fehlgeschlagenen Transports aufrufen, nie bei einer Sperre.
 
@@ -246,8 +259,9 @@ def release_reservation(user_id: str, kind: str, now: datetime) -> None:
             data = _load(path)
             if not data or data.get("date") != today:
                 return  # Tageswechsel zwischen Reservierung und Release -- No-op
-            current = _zaehlerwert(data, kind)
-            data[kind] = max(0, current - 1)
+            key = _counter_key(kind, purpose)
+            current = _zaehlerwert(data, key)
+            data[key] = max(0, current - 1)
             try:
                 _write(path, data)
             except OSError as e:
@@ -256,6 +270,43 @@ def release_reservation(user_id: str, kind: str, now: datetime) -> None:
                     "(%s) -- Zaehlerstand bleibt unveraendert (fail-open)",
                     path, e,
                 )
+        finally:
+            fcntl.flock(fd, fcntl.LOCK_UN)
+    finally:
+        os.close(fd)
+
+
+def reserve_daily_slot(user_id: str, key: str, cap: int, now: datetime) -> bool:
+    """Allgemeiner Tageszaehler in derselben Datei (ADR-0116, z. B. die
+    Aenderungs-Mitteilungen): ``True`` und +1, solange ``key`` unter ``cap``
+    liegt, sonst ``False`` ohne Aenderung. Gleiche Sperre und dasselbe
+    Fail-Open wie ``check_and_reserve`` (Sperr-/Schreibfehler => zugelassen).
+    Freigabe ueber ``release_reservation(user_id, key, now)``."""
+    path = _path(user_id)
+    lock_path = str(path) + _LOCK_SUFFIX
+    try:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        fd = open_lock_file(lock_path)
+    except OSError as e:
+        logger.warning("Tageszaehler %s: Sperrdatei nicht erreichbar (%s) -- fail-open", key, e)
+        return True
+    try:
+        if not acquire_exclusive(fd, LOCK_TIMEOUT_SECONDS):
+            logger.warning("Tageszaehler %s: Sperre nicht erhalten -- fail-open", key)
+            return True
+        try:
+            data = _tagesstand(_load(path), _today(now))
+            current = _zaehlerwert(data, key)
+            if current >= cap:
+                return False
+            data[key] = current + 1
+            data.setdefault("sms", 0)
+            data.setdefault("premium_sms", 0)
+            try:
+                _write(path, data)
+            except OSError as e:
+                logger.warning("Tageszaehler %s: Schreiben fehlgeschlagen (%s) -- fail-open", key, e)
+            return True
         finally:
             fcntl.flock(fd, fcntl.LOCK_UN)
     finally:
@@ -318,6 +369,8 @@ def get_daily_usage(user_id: str, now: datetime) -> dict:
             "used": _zaehlerwert(data, "premium_sms"),
             "limit": _limit(user_tier.daily_premium_sms_limit, "premium_sms"),
             "reserve": user_tier.PREMIUM_SMS_ALARM_RESERVE,
-            "reply_overshoot": user_tier.PREMIUM_SMS_REPLY_OVERSHOOT,
+            # ADR-0116: Antworten auf eingehende Befehle, eigenes Kontingent.
+            "reply_used": _zaehlerwert(data, "premium_sms_reply"),
+            "reply_limit": _limit(user_tier.daily_premium_sms_reply_limit, "premium_sms_reply"),
         },
     }

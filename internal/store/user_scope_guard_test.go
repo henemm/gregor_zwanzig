@@ -111,6 +111,8 @@ var storeMethodRegister = map[string]guardEntry{
 	"DeleteResetToken":        exempt("Kennung als expliziter Parameter, nicht s.UserID"),
 	"SaveLinkCode":            exempt("Kennung als expliziter Parameter, nicht s.UserID"),
 	"LoadLinkCode":            exempt("Kennung als expliziter Parameter, nicht s.UserID"),
+	"LearnPremiumSmsReplyTo":  exempt("Kennung als expliziter Parameter id, kontouebergreifende Eindeutigkeit (ADR-0116)"),
+	"ClearPremiumSmsReply":    exempt("Kennung als expliziter Parameter id, nicht s.UserID (ADR-0116)"),
 	"SaveVerificationToken":   exempt("Kennung als expliziter Parameter, nicht s.UserID"),
 	"LoadVerificationToken":   exempt("Kennung als expliziter Parameter, nicht s.UserID"),
 	"DeleteVerificationToken": exempt("Kennung als expliziter Parameter, nicht s.UserID"),

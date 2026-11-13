@@ -227,12 +227,13 @@ Fehlerantworten der Go-API, die über `handler.WriteError`/`WriteErrorWith` lauf
 | `/api/auth/passkey/register/public/begin` | POST |
 | `/api/auth/passkey/register/public/finish` | POST |
 | `/api/auth/password` | PUT |
-| `/api/auth/premium-sms-link-code` | GET, POST (Issue #2154 Scheibe A — POST erzeugt/erneuert den Verknüpfungs-Code und gibt ihn EINMAL im Klartext zurück `{"code":"XXABC234"}`; GET meldet nur `{"exists":true\|false}`, nie den Code oder dessen Hash. Code-Format seit Issue #2323: `XX`+3+3, s.u.) |
+| `/api/auth/premium-sms-link-code` | GET, POST (Issue #2154 Scheibe A — POST erzeugt/erneuert den Verknüpfungs-Code und gibt ihn EINMAL im Klartext zurück `{"code":"XXABCDE234"}`; GET meldet nur `{"exists":true\|false}`, nie den Code oder dessen Hash. Code-Format seit ADR-0116 / #2961: `XX`+5+3, Bestandscodes `XX`+3+3 bleiben gültig, s.u.) |
+| `/api/auth/premium-sms-reply` | DELETE (Issue #2961 Welle 2, ADR-0116 — „Verbindung trennen": löscht `premium_sms_reply_to`/`premium_sms_reply_at` des angemeldeten Kontos, Kennung nur aus dem Auth-Kontext; der Verknüpfungs-Code bleibt. 204 ohne Rumpf, 401 ohne Sitzung, 404 Konto fehlt) |
 | `/api/auth/profile` | GET, PUT (`language` seit #2646, s. „Nutzerprofil und Sprache“) |
 | `/api/auth/invite/check` | POST — öffentlich, rate-limited 30/h/IP, Token im Body; Vorab-Check einer Einladung (#2519) |
 | `/api/auth/register` | POST (optional `language` seit #2646) |
 | `/api/auth/reset-password` | POST |
-| `/api/auth/sms-daily-usage` | GET (Issue #2412, Sammel-Issue #2153 S4b — liefert das tägliche SMS-/Premium-SMS-Tageskontingent zur Anzeige auf /account; Fail-Soft 204 bei nicht erreichbarem Python-Core) |
+| `/api/auth/sms-daily-usage` | GET (Issue #2412, Sammel-Issue #2153 S4b — liefert das tägliche SMS-/Premium-SMS-Tageskontingent zur Anzeige auf /account; Fail-Soft 204 bei nicht erreichbarem Python-Core. Seit ADR-0116 / #2961 trägt `premium_sms` statt `reply_overshoot` das eigene Antwort-Kontingent `reply_used`/`reply_limit`) |
 | `/api/auth/sms/resend` | POST (Issue #2406 — stellt den Bestätigungscode für die ausstehende Nummer erneut zu; Mengenbremse 3/h je Nutzer, sonst 429 mit `Retry-After`) |
 | `/api/auth/sms/staging-code` | POST (nur `GZ_ENV=staging`, sonst nicht registriert → 404; liefert den Klartext-Code der angemeldeten Sitzung, ignoriert den Body) |
 | `/api/auth/staging-seed` | POST (Issue #2423 — nur `GZ_ENV=staging`, sonst nicht registriert → 404; setzt für das EIGENE Konto `tier` (`free`/`standard`/`premium`) und/oder `sms`/`premium_sms` (Ganzzahl 0..1000, Tageszähler); Nutzerfelder im Body werden ignoriert; 400 `nothing_to_set`/`validation_error`, 502 `core_unavailable`; Antwort `{tier, sms, premium_sms}`. Intern: Python `POST /api/_internal/sms/seed-daily-usage`, ebenfalls nur bei `GZ_ENV=staging`) |
@@ -3974,11 +3975,15 @@ stored, fresh reply address or a valid link code) and persists the address on th
 ```
 
 - `from` (string, required): The sender phone number from the SMS.
-- `code` (string, optional): Link code in the format `XX` + 3 letters (no I/L/O) + 3 digits (no
-  0/1), case-insensitive (Issue #2323; previously a 7-character alphanumeric code) issued by
-  `POST /api/auth/premium-sms-link-code`. If a stored reply address exists and is within the
-  `PremiumSmsReplyTTL` (30 days), `code` is ignored and the stored match confirms without
-  verification. Otherwise, `code` is required for resolution.
+- `code` (string, optional): Link code in the format `XX` + 5 letters (no I/L/O) + 3 digits (no
+  0/1), or the older `XX` + 3 letters + 3 digits, case-insensitive (ADR-0116, Issue #2323)
+  issued by `POST /api/auth/premium-sms-link-code`. Since ADR-0116 (Issue #2961) a **valid code
+  always wins**, even against a fresh stored reply address of another account; a wrong code
+  counts as a failed attempt but does not override the sender's own unique fresh stored match.
+  Without code, exactly one fresh stored match (within `PremiumSmsReplyTTL`, 30 days) confirms.
+  Rate limit before any comparison: 3 failed attempts per sender number and 30 overall per
+  sliding hour (429 `link_code_rate_limited`). On success the address is stored on the target
+  and **removed from every other account** (a reply address belongs to at most one account).
 - `dry_run` (bool, optional): If `true`, the endpoint returns the resolution outcome without
   calling `SaveUser` — structurally unreachable, independent of success or failure.
 
@@ -4287,14 +4292,16 @@ one-time TTL-less deep-link code to a `user_id` and generates a new link code, r
 **Response 200:**
 ```json
 {
-  "code": "XXABC234"
+  "code": "XXABCDE234"
 }
 ```
 
-The code has a fixed prefix `XX` followed by 3 letters (no I/L/O) and 3 digits (no 0/1),
-case-insensitive on input (Issue #2323; previously a 7-character alphanumeric code without the
-fixed prefix). Returned **only once**; subsequent `GET /api/auth/premium-sms-link-code` calls
-never expose it.
+The code has a fixed prefix `XX` followed by 5 letters (no I/L/O) and 3 digits (no 0/1),
+case-insensitive on input (ADR-0116 / Issue #2961, key space ~3.3e9; Issue #2323 used 3 letters,
+and such existing codes stay valid; before that a 7-character alphanumeric code without the fixed
+prefix). The code does not expire and may be used repeatedly (it is the only way to re-link a
+device without web access); renewing invalidates the previous one. Returned **only once**;
+subsequent `GET /api/auth/premium-sms-link-code` calls never expose it.
 
 **Error Responses:**
 
