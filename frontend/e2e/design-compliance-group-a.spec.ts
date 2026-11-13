@@ -153,7 +153,7 @@ test.describe('#528 Compare Hub · Header-Primäraktion', () => {
 		page
 	}) => {
 		await page.goto(`/compare/${activePresetId}`);
-		await expect(page.getByTestId('subscription-hub-send')).toHaveText('Senden');
+		await expect(page.getByTestId('subscription-hub-send')).toHaveText('Test schicken ▾'); // #2913 c2
 		await expect(page.getByRole('link', { name: 'Bearbeiten' })).toHaveCount(0);
 	});
 });

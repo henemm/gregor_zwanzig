@@ -117,7 +117,7 @@ export function hubActivationBanner(status: CompareStatus): {
 		return {
 			statusLabel: tr('trip.status.paused'),
 			text: tr('vergleich.aktivierung.pausiert_text'),
-			cta: tr('vergleich.aktivierung.aktivieren'),
+			cta: tr('aktionen.kopf.aktivieren'),
 			border: 'var(--g-rule)',
 			dotTone: 'neutral'
 		};
@@ -125,7 +125,7 @@ export function hubActivationBanner(status: CompareStatus): {
 	return {
 		statusLabel: tr('trip.status.draft'),
 		text: tr('vergleich.aktivierung.entwurf_text'),
-		cta: tr('vergleich.aktivierung.aktivieren'),
+		cta: tr('aktionen.kopf.aktivieren'),
 		border: 'var(--g-accent)',
 		dotTone: 'neutral'
 	};

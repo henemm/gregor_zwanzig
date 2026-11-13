@@ -38,6 +38,8 @@
 		namePrefix?: Snippet;
 		badges?: Snippet;
 		meta?: Snippet;
+		/** #2913 c2: Zeile direkt unter dem Titel (Meta-Zeile des Mockups), vor der Region-Zeile. */
+		unterTitel?: Snippet;
 		actions?: Snippet;
 	}
 
@@ -58,6 +60,7 @@
 		namePrefix,
 		badges,
 		meta,
+		unterTitel,
 		actions
 	}: Props = $props();
 
@@ -132,6 +135,7 @@
 		{#if actions}{@render actions()}{/if}
 	</div>
 	{@render fieldError('name', 'order-1')}
+	{#if unterTitel}{@render unterTitel()}{/if}
 	<div class="text-sm flex items-center gap-2 flex-wrap desktop:mt-2 desktop:mb-2.5" style="color: var(--g-ink-3)">
 		{#if open.region}
 			<input type="text" data-testid={`${p}-region-edit`} bind:value={draft.region} aria-label={$t('aktionen.kopf.region_bearbeiten')} maxlength={regionMaxLength} class="min-w-0 flex-1 desktop:flex-none px-2 py-1 rounded-md text-sm" style="border: 1px solid var(--g-rule); background: var(--g-card)" />

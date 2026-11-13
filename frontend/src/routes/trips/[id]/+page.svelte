@@ -314,7 +314,7 @@
 		onStatusChange={handleStatusChange}
 		onTripUpdate={handleTripUpdate}
 		saveController={tripSaveCtl}
-		sendLabel={sendLoading ? $t('aktionen.wird_gesendet') : $t('aktionen.senden')}
+		sendLabel={sendLoading ? $t('aktionen.wird_gesendet') : $t('aktionen.kopf.test_schicken')}
 		onSend={() => { sendDialogOpen = true; }}
 		sendDisabled={sendLoading || lifecycle === 'archived' || lifecycle === 'draft'}
 		actions={hubAktionen}

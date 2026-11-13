@@ -16,7 +16,6 @@
 	"vergleich.aktivierung.aktiv_text": "Läuft automatisch — unbegrenzt, bis du pausierst. Das Briefing geht zu den konfigurierten Zeiten in die Kanäle.",
 	"vergleich.aktivierung.pausiert_text": "Pausiert. Es geht aktuell kein Briefing raus.",
 	"vergleich.aktivierung.entwurf_text": "Noch nicht aktiv. Sobald Orte, Idealwerte und mindestens ein Kanal stehen, kannst du den Vergleich aktivieren.",
-	"vergleich.aktivierung.aktivieren": "Aktivieren",
 	"vergleich.hub.laeuft_autom": "Läuft autom.",
 	"vergleich.hub.laeuft_automatisch": "Läuft automatisch",
 	"vergleich.hub.entwurf": "Entwurf · nicht aktiv",

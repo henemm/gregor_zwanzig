@@ -69,7 +69,8 @@ const PFLICHT: Pflicht[] = [
 	),
 	P('AC-11', 'Deine {*} Abweichungen von ‚{*}‘ gehen verloren.', 'Zustellung, Etappen und Orte bleiben unverändert.'),
 	GETEILT('AC-11', '^Übernehmen', '^Abbrechen'),
-	P('AC-12', 'Auf ‚{*}‘ zurücksetzen'),
+	// #2913 c2 (Spec feat_2913_c2_seitenkopf.md AC-8, Mockup): doppelte Anführungszeichen „…“ statt ‚…‘.
+	P('AC-12', 'Auf „{*}“ zurücksetzen'),
 	P('AC-14', 'Alarm ab für alle'),
 	P('AC-14', '{*} von {*} Metriken lösen einen Alarm aus. {*} können keinen auslösen (Vorboten und reine Anzeige).'),
 	P('AC-14', 'Keine der gewählten Metriken kann einen Alarm auslösen. Nimm z.B. Wind, Böen oder Gewitter dazu.'),

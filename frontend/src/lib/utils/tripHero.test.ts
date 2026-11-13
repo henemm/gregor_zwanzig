@@ -9,10 +9,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 
-import {
-	getDaysLabel,
-	formatDateRange
-} from './tripHero.ts';
+import { formatDateRange } from './tripHero.ts';
 import type { Trip, Stage } from '../types.ts';
 
 function tripWith(overrides: Partial<Trip>): Trip {
@@ -27,53 +24,6 @@ function tripWith(overrides: Partial<Trip>): Trip {
 function stage(date: string, name = 'Etappe', id?: string): Stage {
 	return { id: id ?? `s-${date}`, name, date, waypoints: [] } as Stage;
 }
-
-const TODAY = new Date('2026-05-12T12:00:00Z');
-
-// =============================================================================
-// getDaysLabel
-// =============================================================================
-
-// AC-9: planned, 3 Tage → "in 3 Tagen"
-test('AC-9: getDaysLabel — planned + 3 Tage bis Start → "in 3 Tagen"', () => {
-	const trip = tripWith({ stages: [stage('2026-05-15')] });
-	assert.equal(getDaysLabel(trip, TODAY), 'in 3 Tagen');
-});
-
-// AC-9-Edge: planned + 1 Tag → "morgen"
-test('AC-9-Edge: getDaysLabel — planned + 1 Tag → "morgen"', () => {
-	const trip = tripWith({ stages: [stage('2026-05-13')] });
-	assert.equal(getDaysLabel(trip, TODAY), 'morgen');
-});
-
-// AC-9-Edge: planned + 0 Tage (heute!) — Stage IST heute, ist also active, nicht planned
-// Aber für planned mit 0 Tagen Differenz (Stage am gleichen Tag wie now)
-// = ist eigentlich "active" durch deriveTripStatus. Daher kein eigener Test.
-
-// AC-10: active, Tag 2 → "läuft seit Tag 2"
-test('AC-10: getDaysLabel — active, Tag 2 → "läuft seit Tag 2"', () => {
-	const trip = tripWith({
-		stages: [stage('2026-05-11'), stage('2026-05-12'), stage('2026-05-13')]
-	});
-	assert.equal(getDaysLabel(trip, TODAY), 'läuft seit Tag 2');
-});
-
-// #1271: draft (keine datierten Etappen) → eigener Text statt "Trip beendet"
-// (Fallback-Branch war vor der Statuskonsolidierung nur für archived gedacht).
-test('#1271: getDaysLabel — draft (keine Etappen) → "Trip noch nicht geplant"', () => {
-	const trip = tripWith({ stages: [] });
-	assert.equal(getDaysLabel(trip, TODAY), 'Trip noch nicht geplant');
-});
-
-// #1271: finished (vergangene Etappen, nicht archiviert) → "beendet vor X Tagen"
-// (vorher fälschlich "heute", weil deriveTripStatus für diesen Fall bisher
-// 'planned' statt 'finished' lieferte).
-test('#1271: getDaysLabel — finished (vergangene Etappen) → "beendet vor X Tagen"', () => {
-	const trip = tripWith({
-		stages: [stage('2026-05-01'), stage('2026-05-03')]
-	});
-	assert.equal(getDaysLabel(trip, TODAY), 'beendet vor 9 Tagen');
-});
 
 // =============================================================================
 // formatDateRange

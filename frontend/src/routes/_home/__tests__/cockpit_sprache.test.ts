@@ -170,18 +170,14 @@ describe('Englische Anker (feste Literale aus Spec und Glossar)', () => {
 		for (const a of ['Archive', '1 completed trip', 'Past trips']) exakt(p, a);
 		assert.doesNotMatch(p, /1 completed trips/);
 	});
-	test('Helfer: Edit, 1 location compared, Tagesangaben in day/days', async () => {
+	test('Helfer: Edit, 1 location compared', async () => {
 		locale.set('de');
 		kachelActions();
 		locale.set('en');
 		assert.deepEqual(kachelActions(), [{ id: 'edit', label: 'Edit' }]);
 		const ein = { ...vergleich(), location_ids: ['a'], display_config: {} };
 		assert.equal(homeHeroProps('vergleich', ein, null).subtitle, '1 location compared');
-		const { getDaysLabel } = await import(pathToFileURL(path.join(HERE, '../../../lib/utils/tripHero.ts')).href);
-		const heute = new Date('2026-10-12T12:00:00');
-		const geplant = (d: string) => ({ id: 't', name: 'T', stages: [{ id: 's', name: 'E', date: d, waypoints: [] }] });
-		assert.equal(getDaysLabel(geplant('2026-10-17'), heute), 'in 5 days');
-		assert.equal(trnFor('en', 'home.tage.in_tagen', 1), 'in 1 day');
+		// #2913 c2: Tagesangaben (getDaysLabel) entfallen — Zusatz neben der Pill laut Mockup weg.
 		assert.equal(trnFor('en', 'home.archiv.abgeschlossen', 1), '1 completed trip');
 	});
 	test('Listen: No trips yet, Archive, 1 stage / 1 location exakt', async () => {

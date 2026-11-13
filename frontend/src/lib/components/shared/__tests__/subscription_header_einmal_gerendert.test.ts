@@ -221,7 +221,9 @@ describe('#2284 S2 AC-10/AC-4 — TripHeader mountet den Baustein: alles genau e
 	// „Zusatz trip-detail-status-supplement genau einmal, in der Titelzeile").
 	const HUELLE_IDS = [
 		...TRIP_KOPF_IDS,
-		'trip-detail-meta',
+		// #2913 c2: Eyebrow und Meta-Zeile des Mockups (vormals trip-detail-meta) aus dem HubKopf.
+		'hub-kopf-eyebrow',
+		'hub-kopf-meta',
 		'trip-header-mobile-metrics'
 	];
 	for (const id of HUELLE_IDS) {

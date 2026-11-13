@@ -52,7 +52,8 @@ function seite(art: Art, daten?: Record<string, unknown>): Knoten {
 
 const ELTERN: Record<Art, { schluessel: string; href: string }> = {
 	route: { schluessel: 'listen.trips.titel', href: '/trips' },
-	vergleich: { schluessel: 'listen.vergleiche.titel', href: '/compare' }
+	// #2913 c2 (Mockup): Elternteil „Orte" statt „Orts-Vergleiche".
+	vergleich: { schluessel: 'aktionen.kopf.eltern_orte', href: '/compare' }
 };
 /** Kind des Breadcrumbs: Trip = Kürzel ?? Name, Vergleich = Name. */
 const KIND: Record<Art, string> = { route: 'GR20', vergleich: 'Skitouren Tirol' };
@@ -233,12 +234,14 @@ describe('#2837 S1 AC-5 — Trip ohne Kürzel: Breadcrumb zeigt den Namen', () =
 	});
 });
 
-describe('#2837 S1 AC-6 — Trip: „Tag x von y" steht in der Titelzeile, die Region darunter (vormals .status-line)', () => {
-	test('Zusatz trip-detail-status-supplement genau einmal, in der Titelzeile; keine eigene Statuszeile', () => {
+describe('#2837 S1 AC-6 — Trip: Status steht in der Titelzeile, die Region darunter (vormals .status-line)', () => {
+	// #2913 c2 (Mockup Z. 358–365): neben der Pill steht kein Zusatz „Tag x von y" mehr —
+	// der Zeitraum steht in der Meta-Zeile (hub_kopf_c2_mockup.test.ts).
+	test('Status-Pill in der Titelzeile, kein Zusatz trip-detail-status-supplement; keine eigene Statuszeile', () => {
 		const w = seite('route');
 		const zeile = titelzeile(w);
-		const zusatz = einzig(w, 'trip-detail-status-supplement');
-		assert.ok(liegtIn(zusatz, zeile), 'der Zusatz „Tag x von y" steht nicht in der Titelzeile');
+		assert.ok(liegtIn(einzig(w, 'trip-detail-status-badge'), zeile), 'die Status-Pill steht nicht in der Titelzeile');
+		assert.equal(mitTestid(w, 'trip-detail-status-supplement').length, 0, 'Zusatz „Tag x von y" steht noch neben der Pill');
 		assert.equal(alle(w, (n) => klassen(n).includes('status-line')).length, 0, 'es gibt noch eine eigene Statuszeile (.status-line)');
 	});
 	test('Reihenfolge: Überschrift → Status (Titelzeile) → Region-Zeile', () => {
@@ -328,7 +331,9 @@ describe('#2837 S1 Parität — die Unterkante des Kopfs trägt nur der HubKopf 
 describe('#2837 S1b — Trip und Vergleich zeigen im selben Zustand dasselbe Status-Schild', () => {
 	const PAARE = [
 		{ zustand: 'active', trip: () => T.tripLaufend(), vergleich: () => C.vergleichAktiv() },
-		{ zustand: 'paused', trip: () => T.tripPausiert(), vergleich: () => C.vergleichPausiert() },
+		// #2913 c2: ein pausierter Vergleich mit vergangenem Enddatum zeigt „fertig" (Regel wie
+		// compareFilterStatus) — für „pausiert" daher ein Vergleich ohne abgelaufene Laufzeit.
+		{ zustand: 'paused', trip: () => T.tripPausiert(), vergleich: () => C.vergleichAktiv({ schedule: 'manual', previous_schedule: 'daily', paused_at: '2026-10-20T08:00:00Z' }) },
 		{ zustand: 'draft', trip: () => T.tripEntwurf(), vergleich: () => C.vergleichEntwurf() }
 	] as const;
 	const schild = (w: Knoten, art: Art): Knoten => {

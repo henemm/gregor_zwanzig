@@ -4,21 +4,16 @@
 // Alle Funktionen sind seiteneffektfrei und arbeiten auf Tages-Granularitaet
 // in lokaler Zeit. KEIN toLocaleString — Monatsnamen und Zeitraum-Muster aus
 // dem Katalog (home.monat.*, home.zeitraum.*; #2652 i18n F3), deterministisch
-// ohne ICU. Sprache: aktuelle `locale` (tr/trn), Aufrufer in Svelte lesen
+// ohne ICU. Sprache: aktuelle `locale` (tr), Aufrufer in Svelte lesen
 // `$locale` im $derived mit, damit ein Sprachwechsel ohne Neuladen wirkt.
+// #2913 c2: getDaysLabel („läuft seit Tag N“ u. a.) entfernt — einziger Nutzer war der Zusatz
+// neben der Status-Pill im Trip-Kopf, den das Mockup nicht zeigt (Spec feat_2913_c2_seitenkopf.md).
 
 import type { Trip } from '../types.ts';
-import { deriveTripStatus } from './tripStatus.ts';
-import { tr, trn, type MessageKey } from '../i18n/index.ts';
+import { tr, type MessageKey } from '../i18n/index.ts';
 
 // i18n-dynamic: home.monat.
 const monat = (m: number) => tr(`home.monat.${m + 1}` as MessageKey);
-
-function daysBetween(a: Date, b: Date): number {
-	const aDay = new Date(a.getFullYear(), a.getMonth(), a.getDate());
-	const bDay = new Date(b.getFullYear(), b.getMonth(), b.getDate());
-	return Math.round((bDay.getTime() - aDay.getTime()) / 86400000);
-}
 
 function parseStageDate(dateStr: string): Date {
 	// ISO-Date 'YYYY-MM-DD' (oder Datetime mit T-Suffix) → lokales Date um Mitternacht.
@@ -27,62 +22,12 @@ function parseStageDate(dateStr: string): Date {
 	return new Date(y, (m ?? 1) - 1, d ?? 1);
 }
 
-function todayIso(now: Date): string {
-	const y = now.getFullYear();
-	const m = String(now.getMonth() + 1).padStart(2, '0');
-	const d = String(now.getDate()).padStart(2, '0');
-	return `${y}-${m}-${d}`;
-}
-
 function sortedStageDates(trip: Trip): string[] {
 	return (trip.stages ?? [])
 		.map((s) => s.date)
 		.filter((d): d is string => !!d)
 		.slice()
 		.sort();
-}
-
-export function getDaysLabel(trip: Trip, now: Date): string {
-	const status = deriveTripStatus(trip, now);
-	const today = todayIso(now);
-
-	if (status === 'paused') {
-		if (trip.paused_at) {
-			const pausedDate = new Date(trip.paused_at);
-			const diff = daysBetween(pausedDate, now);
-			if (diff <= 0) return tr('home.tage.pausiert_seit_heute');
-			return trn('home.tage.pausiert_seit', diff);
-		}
-		return tr('home.tage.pausiert_seit_heute');
-	}
-
-	if (status === 'planned') {
-		const dates = sortedStageDates(trip);
-		if (dates.length === 0) return tr('home.tage.nicht_geplant');
-		const diff = daysBetween(now, parseStageDate(dates[0]));
-		if (diff <= 0) return tr('home.tage.heute');
-		if (diff === 1) return tr('home.tage.morgen');
-		return trn('home.tage.in_tagen', diff);
-	}
-
-	if (status === 'active') {
-		const stages = trip.stages ?? [];
-		const idx = stages.findIndex((s) => s.date === today);
-		if (idx === -1) return tr('home.tage.tag_eins');
-		return tr('home.tage.laeuft_seit', { tag: idx + 1 });
-	}
-
-	// #1271: draft (keine datierten Etappen) hat kein "Tage bis Start" —
-	// sonst fiele es in den Fallback unten und zeigte fälschlich "Trip beendet".
-	if (status === 'draft') return tr('home.tage.nicht_geplant');
-
-	// finished/archived
-	const dates = sortedStageDates(trip);
-	if (dates.length === 0) return tr('home.tage.beendet');
-	const last = parseStageDate(dates[dates.length - 1]);
-	const diff = daysBetween(last, now);
-	if (diff <= 0) return tr('home.tage.beendet_heute');
-	return trn('home.tage.beendet_vor', diff);
 }
 
 export function formatDateRange(trip: Trip): string {

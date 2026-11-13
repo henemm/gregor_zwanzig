@@ -10,7 +10,7 @@
 	import StatusSchild from '$lib/components/shared/status-schild/StatusSchild.svelte';
 	import HubKopf from '$lib/components/shared/hub-kopf/HubKopf.svelte';
 	import { api } from '$lib/api.js';
-	import { formatDateRange, getDaysLabel } from '$lib/utils/tripHero';
+	import { formatDateRange } from '$lib/utils/tripHero';
 	import { computeTripStats } from '$lib/utils/tripStats';
 	import { deriveTripStatus, todayStageIndex } from '$lib/utils/tripStatus';
 	import { getReportSchedule } from '$lib/utils/rightColumn';
@@ -18,7 +18,7 @@
 	import { ACTIVITY_TYPE_OPTIONS, type Trip } from '$lib/types';
 	import { baueTripSpeicherung, speichereKopfFeld } from '$lib/components/shared/tripSpeicherung';
 	import type { SaveStatus } from '$lib/stores/saveStatusStore.svelte';
-	import { t, locale, type MessageKey } from '$lib/i18n';
+	import { t, tn, locale, type MessageKey } from '$lib/i18n';
 
 	// i18n F9: Aktivitaetsnamen je Sprache (Kennungen unveraendert).
 	const AKTIVITAET: Record<string, MessageKey> = {
@@ -77,13 +77,24 @@
 	// i18n F9: tripHero-Helfer lesen die Sprache per tr() — `$locale` haelt die Ableitung reaktiv.
 	const dateRange = $derived.by(() => (void $locale, formatDateRange(trip)));
 
-	// Issue #2284 S2 — Eyebrow zeigt nur noch den Datumsbereich; die Region steht in der Region-Zeile des Bausteins.
-	const daysLabel = $derived.by(() => (void $locale, getDaysLabel(trip, now)));
+	// #2913 Scheibe c2 (Mockup): Eyebrow „Trip · Region" über dem Titel, Meta-Zeile
+	// „Datum · N Etappen · km · ↑m" darunter; Zahlen locale-formatiert (DE „31,5", EN „31.5").
+	// Ohne Region nur „Trip" (kein verwaister Trenner).
+	const eyebrowText = $derived(trip.region ? $t('aktionen.kopf.eyebrow_trip', { region: trip.region }) : $t('listen.typ.trip'));
+	const metaTeile = $derived.by(() => {
+		const loc = $locale === 'en' ? 'en-GB' : 'de-DE';
+		const km = new Intl.NumberFormat(loc, { minimumFractionDigits: 1, maximumFractionDigits: 1 }).format(stats.kmTotal);
+		const m = new Intl.NumberFormat(loc, { maximumFractionDigits: 0 }).format(Math.round(stats.ascentM));
+		return [dateRange, $tn('listen.anzahl.etappen', trip.stages?.length ?? 0), `${km} km`, `↑${m} m`].filter((x) => x !== '');
+	});
 	const aktivitaeten = $derived(ACTIVITY_TYPE_OPTIONS.map((o) => ({ value: o.value, label: $t(AKTIVITAET[o.value]) })));
 	// #2837 S1b: Profil in der Titel-Unterzeile wie beim Vergleich („— ✎ · Trekking"); ohne Aktivität kein Zusatz.
 	const profileLabel = $derived(aktivitaeten.find((o) => o.value === trip.activity)?.label);
 	// #2837 S1b: Zustand für das geteilte StatusSchild.
 	const tripStatus = $derived(deriveTripStatus(trip, now));
+	// #2913 c2: „Aktivieren" im Entwurf — ein Trip wird aktiv, sobald seine Etappen Daten tragen,
+	// deshalb führt der Link in den Reiter Etappen (Muster „Setup abschließen" des Vergleichs).
+	const AKTIVIEREN_ZIEL = '?tab=etappen';
 
 	// Issue #416 — Mobile Kennzahlen-Kacheln (sichtbar nur ≤ 899px).
 	// Spec: docs/specs/modules/issue_416_mobile_trip_kennzahlen.md
@@ -142,7 +153,7 @@
 		context="route"
 		parent={{ label: $t('listen.trips.titel'), href: '/trips' }}
 		crumb={trip.shortcode ?? trip.name}
-		sendLabel={sendLabel ?? $t('aktionen.senden')}
+		sendLabel={sendLabel ?? $t('aktionen.kopf.test_schicken')}
 		{onSend}
 		{sendDisabled}
 		{actions}
@@ -162,24 +173,18 @@
 		titleSize={38}
 		{saveController}
 		{onSaveField}
+		{eyebrowText}
+		{metaTeile}
+		aktivierenHref={tripStatus === 'draft' ? AKTIVIEREN_ZIEL : undefined}
 	>
-		{#snippet eyebrow()}
-			<div class="trip-eyebrow-region">{dateRange}</div>
-		{/snippet}
 		{#snippet namePrefix()}
 			{#if trip.shortcode}<span class="h1-shortcode">{trip.shortcode}</span> ·&nbsp;{/if}
 		{/snippet}
 		{#snippet status()}
 			<StatusSchild status={tripStatus} testid="trip-detail-status-badge" />
-			<span class="status-supplement" data-testid="trip-detail-status-supplement">{daysLabel}</span>
 		{/snippet}
-		<!-- Whitelist (Entscheidung 8): km/Hm und Mobil-Kacheln im Titelblock, über der Unterkante des HubKopf. -->
+		<!-- Whitelist (Entscheidung 8): Mobil-Kacheln im Titelblock, über der Unterkante des HubKopf. -->
 		{#snippet unten()}
-			<div class="meta-line" data-testid="trip-detail-meta">
-				<span>{`${stats.kmTotal.toFixed(1)} km`}</span>
-				· <span>{`↑${Math.round(stats.ascentM).toLocaleString($locale === 'en' ? 'en-GB' : 'de-DE')} m`}</span>
-			</div>
-
 			<div class="mobile-metrics" data-testid="trip-header-mobile-metrics">
 				<div data-testid="metric-etappe">
 					<Stat label={$t('trip.kopf.etappe')} value={etappeValue} size="sm" mono />
@@ -201,26 +206,6 @@
 	.h1-shortcode {
 		font-family: var(--g-font-mono, ui-monospace, monospace);
 		color: var(--g-accent-deep); /* #2879: Accent als Text = accent-deep (20 px ist kein großer Text, 6,77:1) */
-	}
-	.status-supplement {
-		font-size: var(--g-text-sm);
-		color: var(--g-ink-muted);
-		white-space: nowrap;
-	}
-	.meta-line {
-		display: flex;
-		flex-wrap: wrap;
-		gap: 0.25rem;
-		font-size: var(--g-text-sm);
-		color: var(--g-ink-muted);
-		font-variant-numeric: tabular-nums;
-	}
-	.trip-eyebrow-region {
-		font-size: 11px;
-		font-family: var(--g-font-mono, ui-monospace, monospace);
-		color: var(--g-ink-3);
-		letter-spacing: 0.06em;
-		text-transform: uppercase;
 	}
 	.mobile-metrics {
 		display: none;

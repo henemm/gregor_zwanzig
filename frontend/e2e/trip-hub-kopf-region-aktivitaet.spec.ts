@@ -280,7 +280,9 @@ test.describe('Issue #2284 S2 — Trip-Hub-Kopf: Name, Region, Aktivitaet im get
 	});
 
 	// ─── AC-2 ────────────────────────────────────────────────────────────────
-	test('AC-2: Region per Stift aendern → eigene Zeile unter dem Namen, persistent, Eyebrow nur Datum', async ({
+	// #2913 c2 (Spec feat_2913_c2_seitenkopf.md AC-3/AC-9): Eyebrow „Trip · Region" nach Mockup —
+	// die Region steht seither in der Eyebrow UND in der (bearbeitbaren) Region-Zeile.
+	test('AC-2: Region per Stift aendern → eigene Zeile unter dem Namen, persistent, Eyebrow „Trip · Region“', async ({
 		page
 	}) => {
 		await page.setViewportSize(DESKTOP);
@@ -299,13 +301,13 @@ test.describe('Issue #2284 S2 — Trip-Hub-Kopf: Name, Region, Aktivitaet im get
 			const pruefeKopf = async () => {
 				await expect(regionLine(page, 'trip')).toContainText('Alpen Nord');
 				await expect(page.getByTestId('trip-detail-h1')).not.toContainText('Alpen Nord');
-				// Die Region kommt im ganzen Kopf genau EINMAL vor (Region-Zeile) —
-				// nicht zusaetzlich in der Eyebrow („REGION · DATUM").
+				// #2913 c2: Region genau zweimal im Kopf — Eyebrow „Trip · Region" und Region-Zeile.
+				await expect(page.getByTestId('hub-kopf-eyebrow')).toHaveText('Trip · Alpen Nord');
 				const kopfText = (await page.locator('header.trip-header').textContent()) ?? '';
 				expect(
 					kopfText.split('Alpen Nord').length - 1,
-					'AC-2: die Region steht in der Eyebrow UND in der Region-Zeile (Eyebrow darf nur das Datum zeigen)'
-				).toBe(1);
+					'AC-2: die Region steht nicht genau in Eyebrow und Region-Zeile'
+				).toBe(2);
 				// Region-Zeile liegt unter der Ueberschrift.
 				const h1Box = await page.getByTestId('trip-detail-h1').boundingBox();
 				const regionBox = await regionLine(page, 'trip').boundingBox();

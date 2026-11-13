@@ -39,6 +39,15 @@ export const F9_ANKER: [schluessel: string, de: string, en: string][] = [
 	['aktionen.kopf.name_bearbeiten', 'Name bearbeiten', 'Edit name'],
 	['aktionen.kopf.region_bearbeiten', 'Region bearbeiten', 'Edit region'],
 	['aktionen.kopf.aktivitaet_waehlen', 'Aktivität wählen', 'Choose activity'],
+	// #2913 Scheibe c2: Seitenkopf nach Mockup (Knopf, Brotkrumen „Orte", Eyebrow, Meta-Zeile).
+	// aktionen.kopf.aktivieren steht im F10-Anker (vormals vergleich.aktivierung.aktivieren).
+	['aktionen.kopf.test_schicken', 'Test schicken ▾', 'Send test ▾'],
+	['aktionen.kopf.eltern_orte', 'Orte', 'Locations'],
+	['aktionen.kopf.eyebrow_trip', 'Trip · <region>', 'Trip · <region>'],
+	['aktionen.kopf.eyebrow_orte', 'Orte · <region>', 'Locations · <region>'],
+	['aktionen.kopf.vergleichstabelle', 'Vergleichstabelle', 'Comparison table'],
+	['aktionen.kopf.morgen_briefing', 'Morgen-Briefing <zeit>', 'Morning briefing <zeit>'],
+	['aktionen.kopf.abend_briefing', 'Abend-Briefing <zeit>', 'Evening briefing <zeit>'],
 	['aktionen.historie.titel', 'Versand-Historie', 'Delivery history'],
 	['aktionen.historie.laedt', 'Lade Versand-Historie…', 'Loading delivery history…'],
 	['aktionen.historie.fehler', 'Versand-Historie konnte nicht geladen werden.', 'Delivery history could not be loaded.'],
