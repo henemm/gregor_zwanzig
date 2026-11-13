@@ -31,7 +31,7 @@ ROOT = Path(__file__).resolve().parent.parent.parent
 HOOK = ROOT / ".claude" / "hooks" / "broad_test_run_gate.py"
 
 sys.path.insert(0, str(ROOT / ".claude" / "hooks"))
-pytest.importorskip("broad_test_run_gate")
+pytest.importorskip("broad_test_run_gate", exc_type=ImportError)
 
 NEW_FORM = (
     "--disable-socket --allow-unix-socket "
