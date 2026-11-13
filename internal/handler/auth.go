@@ -1655,7 +1655,7 @@ func UpdateProfileHandler(s *store.Store, cfg config.Config, mailLimiter *MailFl
 			}
 			uebernehmeProfilFelder(u, user, profilFelderGesendet{
 				displayName: update.DisplayName != nil, sms: smsGeaendert,
-				telegram: update.TelegramChatID != nil && *update.TelegramChatID == "",
+				telegram:      update.TelegramChatID != nil && *update.TelegramChatID == "",
 				passkeyPrompt: update.PasskeyPromptDismissed != nil, language: update.Language != nil,
 				onboarding: update.OnboardingDismissed != nil, checklist: update.ChecklistDismissed != nil,
 			})
