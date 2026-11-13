@@ -162,3 +162,41 @@ func TestKontoaenderung_NachweisEndpunkteBrauchenAnmeldung(t *testing.T) {
 		}
 	}
 }
+
+// Eine frische Anmeldung ist selbst ein Nachweis: 10 Minuten lang braucht
+// die NEUE Sitzung keinen weiteren; eine aeltere Sitzung desselben Nutzers
+// gewinnt dadurch nichts.
+func TestKontoaenderung_FrischeAnmeldungGiltAlsNachweis(t *testing.T) {
+	r, s, secret, _ := adminTestRouter(t, "")
+	bestaetigterNutzerMitPasswort(t, s, "lena")
+
+	req := httptest.NewRequest(http.MethodPost, "/api/auth/login", strings.NewReader(`{"username":"lena","password":"`+routerPasswort+`"}`))
+	req.Header.Set("Content-Type", "application/json")
+	lw := httptest.NewRecorder()
+	r.ServeHTTP(lw, req)
+	if lw.Code != http.StatusOK {
+		t.Fatalf("Login: %d %s", lw.Code, lw.Body.String())
+	}
+	var cookie *http.Cookie
+	for _, c := range lw.Result().Cookies() {
+		if c.Name == "gz_session" {
+			cookie = c
+		}
+	}
+	if cookie == nil {
+		t.Fatal("kein Sitzungs-Cookie")
+	}
+	put := httptest.NewRequest(http.MethodPut, "/api/auth/profile", strings.NewReader(`{"mail_to":"neu-lena@beispiel.de"}`))
+	put.Header.Set("Content-Type", "application/json")
+	put.AddCookie(cookie)
+	pw := httptest.NewRecorder()
+	r.ServeHTTP(pw, put)
+	if pw.Code != http.StatusOK {
+		t.Fatalf("Adresswechsel direkt nach der Anmeldung: erwartet 200, bekommen %d: %s", pw.Code, pw.Body.String())
+	}
+	// Die vorher bestehende Sitzung (sess-lena) hat keinen Nachweis.
+	w := kontoAnfrage(r, secret, http.MethodPut, "/api/auth/profile", `{"mail_to":"dritte-lena@beispiel.de"}`, "lena")
+	if w.Code != http.StatusForbidden || fehlerCode(t, w) != "reauth_required" {
+		t.Fatalf("aeltere Sitzung: erwartet 403 reauth_required, bekommen %d: %s", w.Code, w.Body.String())
+	}
+}

@@ -153,9 +153,11 @@ func New(deps Deps) chi.Router {
 		deleteCodeLimiter.Middleware(handler.RequestDeleteCodeHandler(deps.Store, *deps.Config, deleteCodeMailLimiter)).ServeHTTP,
 	)
 	// Issue #2961 (ADR-0115): frischer Nachweis vor Kontoaenderungen (Adresse,
-	// Passkeys). Gleiche Bremsen wie beim Lösch-Code, eigene Instanzen.
+	// Passkeys). Nachweis: 30 Anfragen je IP und 15 Minuten (falsche Passwoerter
+	// bremst zusaetzlich der Handler mit 5 je Nutzer); Code-Anforderung wie
+	// beim Lösch-Code. Eigene Instanzen.
 	secret := deps.Config.SessionSecret
-	reauthLimiter := authmw.NewIPRateLimiter(10, 15*time.Minute)
+	reauthLimiter := authmw.NewIPRateLimiter(30, 15*time.Minute)
 	r.Post("/api/auth/reauth", reauthLimiter.Middleware(handler.ReauthHandler(deps.Store, secret)).ServeHTTP)
 	reauthCodeLimiter := authmw.NewIPRateLimiter(3, 15*time.Minute)
 	reauthCodeMailLimiter := handler.NewMailFloodLimiter(1, time.Minute)

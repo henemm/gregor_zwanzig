@@ -416,6 +416,10 @@ func issueSessionWithoutVerificationGate(w http.ResponseWriter, r *http.Request,
 		WriteError(w, r, http.StatusInternalServerError, "store_error", nil)
 		return false
 	}
+	// Issue #2961 (ADR-0115): eine frische Anmeldung ist selbst ein Nachweis
+	// (Passwort, Passkey, Code an die Adresse oder Google) — 10 Minuten lang
+	// verlangt eine Kontoaenderung in DIESER Sitzung keinen weiteren.
+	grantReauth(userId, sessionId, time.Now())
 	middleware.SetSessionCookie(w, r, middleware.SignSessionWithID(userId, sessionId, secret), publicHost)
 	// Issue #2675 (G1 AC-6): EINE Stelle fuer alle Anmeldewege (Passwort,
 	// Magic-Link, Passkey, Google) — gz_lang nur bei gespeicherter Sprache.
