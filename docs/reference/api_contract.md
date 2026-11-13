@@ -2713,6 +2713,7 @@ type ComparePreset struct {
     AlertCooldownMinutes *int                   `json:"alert_cooldown_minutes,omitempty"`      // Issue #1170: nil = Default in compare_alert.py
     AlertQuietFrom       *string                `json:"alert_quiet_from,omitempty"`            // Issue #1170
     AlertQuietTo         *string                `json:"alert_quiet_to,omitempty"`              // Issue #1170
+    SendEmail            *bool                  `json:"send_email,omitempty"`                  // Issue #2795: Orts-Mail des Briefings an/aus; nil/fehlend = true (Alt-Presets verstummen nicht), nur false schaltet die Mail ab; Telegram/SMS/Premium-SMS unberührt
     SendTelegram         *bool                  `json:"send_telegram,omitempty"`               // Issue #1216 Slice 2b: Briefing-Kanal-Opt-in (Default falsy = E-Mail-only); steuert NUR das planmäßige Briefing, nicht den Alarm-Versand (s. AlertChannels)
     SendSms              *bool                  `json:"send_sms,omitempty"`                    // Issue #1216 Slice 2b — Briefing-Kanal, s. SendTelegram
     SendPremiumSms       *bool                  `json:"send_premium_sms,omitempty"`            // Issue #1701 S2b (D8); Versand-Reiter (#2293 S2/#2448) — Briefing-Kanal, s. SendTelegram

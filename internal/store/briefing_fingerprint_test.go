@@ -13,7 +13,7 @@ import (
 // Objekts). Echte Dateisystem-Operationen, kein Mock.
 
 // seedHealableTrip legt eine Trip-Rohdatei mit einer Versandzeit an, die der
-// Lese-Pfad in-memory heilt (07:30:00 -> 07:00:00, healTripSlotTimes).
+// Lese-Pfad in-memory heilt (07:20:00 -> 07:15:00, healTripSlotTimes; Viertelstunden-Raster seit #2795).
 func seedHealableTrip(t *testing.T, s *Store, id string) {
 	t.Helper()
 	if err := os.MkdirAll(s.BriefingsDir(), 0755); err != nil {
@@ -21,7 +21,7 @@ func seedHealableTrip(t *testing.T, s *Store, id string) {
 	}
 	data, err := json.MarshalIndent(map[string]interface{}{
 		"id": id, "name": "Heilbar", "kind": "route",
-		"report_config": map[string]interface{}{"morning_time": "07:30:00"},
+		"report_config": map[string]interface{}{"morning_time": "07:20:00"},
 	}, "", "  ")
 	if err != nil {
 		t.Fatalf("marshal: %v", err)
@@ -77,8 +77,8 @@ func TestBriefingFingerprint_UnaffectedByInMemoryHealing(t *testing.T) {
 	if err != nil || loaded == nil {
 		t.Fatalf("LoadTrip: %v / %v", loaded, err)
 	}
-	if got := loaded.ReportConfig["morning_time"]; got != "07:00:00" {
-		t.Fatalf("erwarte in-memory geheilte Zeit 07:00:00, bekam %v", got)
+	if got := loaded.ReportConfig["morning_time"]; got != "07:15:00" {
+		t.Fatalf("erwarte in-memory geheilte Zeit 07:15:00, bekam %v", got)
 	}
 
 	if after := fingerprintOrFail(t, s, "t1"); after != before {

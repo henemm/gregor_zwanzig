@@ -69,10 +69,10 @@ BRIEFING_VORLAUF_MINUTEN = 60
 # Abtastung des Faelligkeits-Fensters. Das Praedikat beantwortet „faellig zu
 # DIESEM Zeitpunkt?"; zwei Stichproben (jetzt und jetzt+Vorlauf) koennen ein
 # dazwischen liegendes Faelligkeits-Fenster ueberspringen. Fuenf Minuten sind
-# feiner als jede real existierende Faelligkeit — Versandzeiten sind
-# stundengenau (Go kappt sie beim Schreiben UND beim Laden,
-# `internal/store/slot_hour_normalization.go`), das schmalste reale Fenster ist
-# damit eine volle Stunde. Die abgetastete Funktion ist rein, die Auswertungen
+# feiner als jede real existierende Faelligkeit — Versandzeiten liegen seit
+# #2795 im Viertelstunden-Raster (Go prueft beim Schreiben und rundet beim
+# Laden ab, `internal/store/slot_hour_normalization.go`), das schmalste reale
+# Fenster ist damit 15 Minuten. Die abgetastete Funktion ist rein, die Auswertungen
 # kosten keinen Abruf.
 _ABTAST_SCHRITT_MINUTEN = 5
 

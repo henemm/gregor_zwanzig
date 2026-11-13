@@ -168,12 +168,11 @@ func TestLoadComparePresets_AlreadyMigratedPresetNotOverwritten(t *testing.T) {
 	if p.MorningEnabled == nil || *p.MorningEnabled {
 		t.Errorf("expected explicit MorningEnabled=false to survive re-load, got %v", p.MorningEnabled)
 	}
-	// Issue #1280: Read-Heilung kappt die krumme Bestandszeit (09:30) beim
-	// Laden auf die volle Stunde (09:00) — das Feld selbst (morning_time
-	// gesetzt statt Migrations-Default) bleibt unangetastet/idempotent, nur
-	// der Minutenanteil wird an die stundengenaue Sende-Realitaet angeglichen.
-	if p.MorningTime == nil || *p.MorningTime != "09:00:00" {
-		t.Errorf("expected explicit MorningTime=09:30:00 truncated to 09:00:00 to survive re-load, got %v", p.MorningTime)
+	// Issue #1280 kappte die Bestandszeit (09:30) beim Laden auf 09:00; seit
+	// #2795 (Viertelstunden-Raster) ist 09:30 rasterkonform und bleibt — das
+	// Feld (morning_time gesetzt statt Migrations-Default) ist idempotent.
+	if p.MorningTime == nil || *p.MorningTime != "09:30:00" {
+		t.Errorf("expected explicit MorningTime=09:30:00 to survive re-load, got %v", p.MorningTime)
 	}
 	if p.EveningTime == nil || *p.EveningTime != "20:00:00" {
 		t.Errorf("expected explicit EveningTime=20:00:00 to survive re-load, got %v", p.EveningTime)

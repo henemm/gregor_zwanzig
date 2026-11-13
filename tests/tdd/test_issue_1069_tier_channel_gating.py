@@ -437,7 +437,9 @@ class TestAC8AlertChannelsRespectTier:
         svc = TripAlertService(settings=Settings().with_user_profile(user_id), user_id=user_id)
 
         assert "sms" in svc._effective_alert_channels(trip_briefing)
-        assert "sms" in svc._effective_alert_channels(trip_rule)
+        # Issue #2795 (Spec §4.3): Regel-Kanaele wirken nicht mehr -- die Regel
+        # mit channels=['sms'] erbt den Briefing-Satz (ohne SMS).
+        assert "sms" not in svc._effective_alert_channels(trip_rule)
 
 
 def _active_window_now(lat: float, lon: float):

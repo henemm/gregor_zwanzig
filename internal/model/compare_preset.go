@@ -88,8 +88,12 @@ type ComparePreset struct {
 	// funktional ab (Legacy-Feld bleibt fuer Rollback-Sicherheit unveraendert
 	// bestehen). Gleicher Typ wie Trip.OfficialWarnings (internal/model/trip.go).
 	OfficialWarnings *OfficialWarningsConfig `json:"official_warnings,omitempty"`
-	SendTelegram     *bool                   `json:"send_telegram,omitempty"`
-	SendSms          *bool                   `json:"send_sms,omitempty"`
+	// SendEmail — Issue #2795 (S3b Teil 1a, AC-22/23): Orts-Mail des Briefings
+	// an/aus. Pointer + omitempty: FEHLT das Feld (Alt-Preset), liest Python
+	// true — Alt-Presets verstummen nicht. Nur ein gesetztes false schaltet ab.
+	SendEmail    *bool `json:"send_email,omitempty"`
+	SendTelegram *bool `json:"send_telegram,omitempty"`
+	SendSms      *bool `json:"send_sms,omitempty"`
 	// SendPremiumSms — Issue #1701 (S2b, D8): Premium-SMS-Kanal-Opt-in fuer
 	// das planmaessige Briefing des Ortsvergleichs (Versand-Reiter). Seit
 	// Issue #2293 (S2) existiert daneben AlertChannels als eigenes

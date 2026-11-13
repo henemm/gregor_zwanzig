@@ -52,15 +52,14 @@ func TestLoadTrip_DerivesFlatSlotChannelFieldsFromReportConfig(t *testing.T) {
 		t.Fatal("expected trip, got nil")
 	}
 
-	// Issue #1280: Read-Heilung kappt die abgeleiteten Flach-Felder beim Laden
-	// auf die volle Stunde (07:30 -> 07:00, 18:15 -> 18:00) — die Ableitung aus
-	// report_config selbst (Dual-Read) bleibt unveraendert, nur der
-	// Minutenanteil wird an die stundengenaue Sende-Realitaet angeglichen.
-	if loaded.MorningTime == nil || *loaded.MorningTime != "07:00:00" {
-		t.Errorf("MorningTime = %v, want 07:00:00 (07:30 truncated)", loaded.MorningTime)
+	// Issue #1280 kappte die abgeleiteten Flach-Felder auf die volle Stunde;
+	// seit #2795 (Viertelstunden-Raster) bleiben 07:30/18:15 unveraendert —
+	// die Ableitung aus report_config (Dual-Read) ist das Pruefziel.
+	if loaded.MorningTime == nil || *loaded.MorningTime != "07:30:00" {
+		t.Errorf("MorningTime = %v, want 07:30:00", loaded.MorningTime)
 	}
-	if loaded.EveningTime == nil || *loaded.EveningTime != "18:00:00" {
-		t.Errorf("EveningTime = %v, want 18:00:00 (18:15 truncated)", loaded.EveningTime)
+	if loaded.EveningTime == nil || *loaded.EveningTime != "18:15:00" {
+		t.Errorf("EveningTime = %v, want 18:15:00", loaded.EveningTime)
 	}
 	if loaded.SendSms == nil || *loaded.SendSms != true {
 		t.Errorf("SendSms = %v, want true", loaded.SendSms)

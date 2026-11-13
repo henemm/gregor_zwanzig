@@ -417,7 +417,7 @@ def test_ac5_settings_readiness_does_not_change_the_resolved_set_for_compare(cle
 # disambiguiert per Richtung, `_SUMMARY_KEY_TO_CATALOG_ID`
 # (`compare_alert.py:64`) mappt unbedingt auf `temperature_cold`.
 
-def test_ac14_temp_min_c_loest_in_beiden_flaechen_auf_temperature_auf(clean_user_dir):
+def test_ac14_temp_min_c_altschluessel_in_beiden_flaechen_ohne_wirkung(clean_user_dir):
     """AC-14 (ROT): ein Alarm mit dem rohen Summary-Key `temp_min_c` liest
     den Kanal-Eintrag unter `temperature` (waehlbar) — niemals unter
     `temperature_cold`. Und zwar in BEIDEN Flaechen identisch: Trip und
@@ -452,17 +452,27 @@ def test_ac14_temp_min_c_loest_in_beiden_flaechen_auf_temperature_auf(clean_user
         preset, settings, user_id, metrics=["temp_min_c"],
     )
 
-    assert trip_result == {"telegram"}, (
-        "AC-14 (Trip): `temp_min_c` muss auf die WAEHLBARE Katalog-Groesse "
-        "`temperature` aufloesen (Eintrag {telegram}), nie auf "
-        f"`temperature_cold` (Eintrag {{sms}}). Gemessen: {trip_result!r}"
+    # Issue #2795 (AC-29): „Kanaele je Wettergroesse" entfaellt -- der
+    # Altschluessel `alert_metric_channels` wird in BEIDEN Flaechen ignoriert.
+    # Die fruehere Zusicherung (Eintrag unter `temperature` gewinnt) ist damit
+    # ueberholt; bewacht wird jetzt: mit Altschluessel == ohne Altschluessel,
+    # weder der `temperature`- ({telegram}-only) noch der
+    # `temperature_cold`-Eintrag ({sms}) verengt/verschiebt die Menge.
+    trip.alert_metric_channels = None
+    trip_ohne = effective_alert_channels(trip, settings, user_id, metrics=["temp_min_c"])
+    compare_ohne = effective_alert_channels(
+        _compare_preset("p-ac14", send_telegram=True), settings, user_id,
+        metrics=["temp_min_c"],
     )
-    assert compare_result == {"telegram"}, (
-        "AC-14 (Ortsvergleich): dieselbe Aufloesung wie beim Trip — "
-        f"`temperature`, nicht `temperature_cold`. Gemessen: {compare_result!r}"
+    assert trip_result == trip_ohne, (
+        f"AC-14/#2795 (Trip): Altschluessel darf nichts aendern — mit {trip_result!r}, "
+        f"ohne {trip_ohne!r}"
     )
-    assert trip_result == compare_result, (
-        "AC-14: derselbe Summary-Key muss in beiden Flaechen denselben "
-        f"Kanal-Schluessel liefern — Trip: {trip_result!r}, "
-        f"Compare: {compare_result!r}"
+    assert compare_result == compare_ohne, (
+        f"AC-14/#2795 (Ortsvergleich): Altschluessel darf nichts aendern — mit "
+        f"{compare_result!r}, ohne {compare_ohne!r}"
+    )
+    assert "sms" not in trip_result | compare_result, (
+        "AC-14/#2795: der `temperature_cold`-Eintrag ({sms}) darf keinen Kanal "
+        f"hinzufuegen — Trip {trip_result!r}, Compare {compare_result!r}"
     )

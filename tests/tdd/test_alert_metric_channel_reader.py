@@ -248,42 +248,7 @@ def _trip_versand(trip, user_id: str, aenderungen) -> _TripVersandRekorder:
 
 # ═════════════════ AC-10 — Trip: dreiarmige Union je Metrik ═════════════════
 
-def test_ac10_trip_versand_nutzt_eintrag_der_ausloesenden_metrik(sauberer_nutzer):
-    """AC-10 (ROT, Klasse b): Trip mit Eintrag `{telegram}` fuer Metrik X
-    (`gust`), KEIN Eintrag fuer Metrik Y (`precipitation`), geerbter Satz
-    `{email, telegram}`.
-
-    * Alarm ausschliesslich ueber X  ⇒ versandter Satz exakt `{telegram}`.
-    * Alarm ueber X UND Y            ⇒ versandter Satz `{email, telegram}`
-      (Y erbt und zieht die Union wieder hoch).
-
-    Gemessen an `trip_alert.py:2509` (`_send_alert` → `send_deviation_alert`),
-    ausdruecklich NICHT an `:552`.
-
-    Der X-ONLY-Fall ist der rote: er liefert heute `{email, telegram}`, weil
-    der Versand preset-weit aufloest. Der X+Y-Fall ist heute schon gruen und
-    steht bewusst daneben — ohne ihn koennte eine Implementierung die Union
-    kaputtsparen (Kanal-Verlust, #1701/ADR-0046), ohne dass ein Test es merkt.
-    """
-    user_id = sauberer_nutzer("ac10")
-    _schreibe_tarif(user_id, "premium")
-    trip = _trip("trip-ac10", eintrag={"gust": {"telegram": True}})
-
-    nur_x = _trip_versand(trip, user_id, [_aenderung("gust_max_kmh")])
-    x_und_y = _trip_versand(
-        trip, user_id, [_aenderung("gust_max_kmh"), _aenderung("precip_sum_mm")]
-    )
-
-    assert nur_x.abweichung == [{"telegram"}], (
-        "AC-10: ein Alarm ausschliesslich ueber die Metrik mit Eintrag "
-        "{telegram} muss GENAU ueber telegram versendet werden. Gemessen an "
-        f"trip_alert.py:2509: {nur_x.abweichung!r}"
-    )
-    assert x_und_y.abweichung == [{"email", "telegram"}], (
-        "AC-10: kommt eine Metrik OHNE Eintrag dazu, erbt sie den abo-weiten "
-        "Satz und die Union zieht wieder hoch — eine Verengung waere hier "
-        f"Kanal-Verlust (#1701). Gemessen: {x_und_y.abweichung!r}"
-    )
+# test_ac10_trip_versand_nutzt_eintrag_der_ausloesenden_metrik: entfallen mit Issue #2795 (AC-29) -- alert_metric_channels wird im Alarmversand ignoriert; Ersatz: tests/test_2795_alert_metric_channels_ignoriert.py
 
 
 def test_ac10_kern_unioniert_je_metrik_mit_rueckfall_auf_geerbt(sauberer_nutzer):
@@ -419,51 +384,7 @@ def _vergleich_versand(monkeypatch, user_id: str,
     return rekorder
 
 
-def test_ac11_vergleich_versand_traegt_dieselbe_union_je_metrik(
-    monkeypatch, sauberer_nutzer,
-):
-    """AC-11 (ROT, Klasse b): Preset mit `config.channels={email}` (kein
-    `send_telegram`) und Metrik-Eintrag `{telegram}` fuer Metrik X
-    (`precipitation`), KEIN Eintrag fuer Metrik Y (`gust`). EIN Ort loest
-    ueber X UND Y aus ⇒ versandter Satz fuer diesen Ort ist
-    `{email, telegram}`.
-
-    Gemessen an `compare_alert.py:335`
-    (`send_multi_location_deviation_alert`), NICHT an `:601` — dort ist nur
-    der preset-weite Startwert bekannt, die ausloesenden Metriken nicht.
-
-    Heute: der Versand traegt `{email}`; `alert_metric_channels` hat keinen
-    Leser. Zusaetzlich bewacht dieser Fall die `ids_by_channel`-Vorbelegung
-    (AC-17): `telegram` steht nicht in `config.channels`.
-    """
-    user_id = sauberer_nutzer("ac11")
-    _schreibe_tarif(user_id, "premium")
-    _lege_vergleich_an(
-        user_id, "cp-ac11", orte=["loc-graz"],
-        anker={"loc-graz": {"precip_sum_mm": 2.0, "gust_max_kmh": 10.0}},
-        alert_metric_channels={"precipitation": {"telegram": True}},
-    )
-
-    rekorder = _vergleich_versand(
-        monkeypatch, user_id,
-        {"loc-graz": {"precip_sum_mm": 40.0, "gust_max_kmh": 95.0}},
-    )
-
-    assert len(rekorder.abweichung) == 1, (
-        "Vorbedingung: der Ort muss genau EINEN Vergleichs-Alarm ausloesen, "
-        f"aufgezeichnet: {rekorder.abweichung!r}"
-    )
-    kanaele, orte = rekorder.abweichung[0]
-    assert orte == ["Graz"], f"Vorbedingung: Ort 'Graz' erwartet, {orte!r}"
-    assert rekorder.metriken_je_ort.get("Graz") == {"precip_sum_mm", "gust_max_kmh"}, (
-        "Vorbedingung AC-11: der Ort muss ueber BEIDE Metriken ausloesen "
-        f"(X mit Eintrag, Y ohne), gemessen: {rekorder.metriken_je_ort!r}"
-    )
-    assert kanaele == {"email", "telegram"}, (
-        "AC-11: Metrik X traegt den Eintrag {telegram}, Metrik Y erbt "
-        "{email} — die Union je Metrik muss BEIDES versenden. Gemessen an "
-        f"compare_alert.py:335: {kanaele!r}"
-    )
+# test_ac11_vergleich_versand_traegt_dieselbe_union_je_metrik: entfallen mit Issue #2795 (AC-29) -- alert_metric_channels wird im Alarmversand ignoriert; Ersatz: tests/test_2795_alert_metric_channels_ignoriert.py
 
 
 # ═══════════ AC-12 — Leer-Rueckfall VOR den Tier-Gates ══════════════════════
@@ -708,34 +629,7 @@ def test_ac28_vergleich_versand_faellt_bei_gesperrtem_metrik_kanal_auf_email(
     )
 
 
-def test_ac28_kontrolle_vergleich_fixture_loest_mit_tarif_ueber_sms_aus(
-    monkeypatch, sauberer_nutzer,
-):
-    """AC-28 Kontrolle (🟢 HEUTE GRUEN): derselbe Aufbau wie der rote
-    Vergleichsfall, aber mit Standard-Tarif (`sms` erlaubt). Der Ort MUSS
-    genau einen Alarm ueber `{sms}` ausloesen. Damit ist bewiesen, dass der
-    rote Fall an der fehlenden Rueckfall-Logik scheitert und nicht daran,
-    dass der Boeen-Anker gar nicht ausloest."""
-    user_id = sauberer_nutzer("ac28-kontr")
-    _schreibe_tarif(user_id, "standard")
-    _lege_vergleich_an(
-        user_id, "cp-ac28k", orte=["loc-graz"],
-        anker={"loc-graz": {"gust_max_kmh": 10.0}},
-        alert_metric_channels={"gust": {"sms": True}},
-    )
-
-    rekorder = _vergleich_versand(
-        monkeypatch, user_id, {"loc-graz": {"gust_max_kmh": 95.0}},
-    )
-
-    assert rekorder.metriken_je_ort == {"Graz": {"gust_max_kmh"}}, (
-        "Kontrolle AC-28: der Ort muss ueber die Boeen ausloesen, gemessen: "
-        f"{rekorder.metriken_je_ort!r}"
-    )
-    assert [k for k, _ in rekorder.abweichung] == [{"sms"}], (
-        "Kontrolle AC-28: mit SMS-Tarif traegt der Metrik-Arm {sms}, "
-        f"aufgezeichnet: {rekorder.abweichung!r}"
-    )
+# test_ac28_kontrolle_vergleich_fixture_loest_mit_tarif_ueber_sms_aus: entfallen mit Issue #2795 (AC-29) -- alert_metric_channels wird im Alarmversand ignoriert; Ersatz: tests/test_2795_alert_metric_channels_ignoriert.py
 
 
 # ═══ AC-29 — Kanal-Schwelle wirkt unveraendert NACH der Aufloesung ═══════════
@@ -1093,170 +987,17 @@ def test_ac15_unaufloesbarer_summary_key_erbt_und_wirft_nicht(sauberer_nutzer):
 
 # ═══ AC-16 — zwei Orte, zwei verschiedene Kanalsaetze im selben Lauf ════════
 
-def test_ac16_zwei_orte_erhalten_unterschiedliche_kanalsaetze(
-    monkeypatch, sauberer_nutzer,
-):
-    """AC-16 (ROT, Klasse b): Ort 1 (Graz) loest NUR ueber `precipitation`
-    aus (Eintrag `{telegram}`), Ort 2 (Wien) NUR ueber `gust` (Eintrag
-    `{sms}`). Im selben Alarmlauf muss Graz ausschliesslich ueber `telegram`
-    und Wien ausschliesslich ueber `sms` erreicht werden.
-
-    Das ist nur moeglich, wenn die metrik-bewusste Aufloesung JE ORT in der
-    Ortsschleife (`compare_alert.py:286-293`) geschieht — bei `:601`
-    (`_build_eval_config`) sind die ausloesenden Metriken noch unbekannt.
-
-    Der entscheidende Nachweis ist die NEGATIVE Zusicherung: kein einziger
-    Versand-Aufruf darf beide Kanaele gemeinsam tragen. Ohne sie koennte eine
-    preset-weite Aufloesung (Union ueber alle Orte) den Test bestehen.
-    """
-    user_id = sauberer_nutzer("ac16")
-    _schreibe_tarif(user_id, "standard")  # standard ⇒ `sms` passiert das Gate
-    _lege_vergleich_an(
-        user_id, "cp-ac16", orte=["loc-graz", "loc-wien"],
-        anker={
-            "loc-graz": {"precip_sum_mm": 2.0, "gust_max_kmh": 10.0},
-            "loc-wien": {"precip_sum_mm": 2.0, "gust_max_kmh": 10.0},
-        },
-        alert_metric_channels={
-            "precipitation": {"telegram": True},
-            "gust": {"sms": True},
-        },
-    )
-
-    rekorder = _vergleich_versand(
-        monkeypatch, user_id,
-        {
-            # Graz: nur Niederschlag steigt, Boeen bleiben gleich.
-            "loc-graz": {"precip_sum_mm": 40.0, "gust_max_kmh": 10.0},
-            # Wien: nur Boeen steigen, Niederschlag bleibt gleich.
-            "loc-wien": {"precip_sum_mm": 2.0, "gust_max_kmh": 95.0},
-        },
-    )
-
-    # Vorbedingung: jeder Ort loest GENAU ueber seine eine Metrik aus —
-    # sonst misst der Test etwas anderes als die AC beschreibt.
-    assert rekorder.metriken_je_ort.get("Graz") == {"precip_sum_mm"}, (
-        "Vorbedingung AC-16: Graz muss ausschliesslich ueber Niederschlag "
-        f"ausloesen, gemessen: {rekorder.metriken_je_ort!r}"
-    )
-    assert rekorder.metriken_je_ort.get("Wien") == {"gust_max_kmh"}, (
-        "Vorbedingung AC-16: Wien muss ausschliesslich ueber Boeen ausloesen, "
-        f"gemessen: {rekorder.metriken_je_ort!r}"
-    )
-
-    assert len(rekorder.abweichung) == 2, (
-        "AC-16: zwei Orte mit verschiedenen Kanalsaetzen ergeben ZWEI "
-        "getrennte Versand-Aufrufe (die Kanal-Buendelung fasst nur Kanaele "
-        "mit IDENTISCHER Ortsliste zusammen, `compare_alert.py:296-302`). "
-        f"Aufgezeichnet: {rekorder.abweichung!r}"
-    )
-    for kanaele, orte in rekorder.abweichung:
-        assert len(orte) == 1, (
-            "AC-16: jeder der beiden Aufrufe traegt GENAU EINEN Ort — ein "
-            "Aufruf mit beiden Orten waere eine preset-weite Aufloesung. "
-            f"Aufgezeichnet: {rekorder.abweichung!r}"
-        )
-
-    je_ort = {}
-    for kanaele, orte in rekorder.abweichung:
-        for ort in orte:
-            je_ort.setdefault(ort, set()).update(kanaele)
-
-    assert je_ort.get("Graz") == {"telegram"}, (
-        "AC-16: Ort 1 loest nur ueber die Metrik mit Eintrag {telegram} aus "
-        f"und darf nur telegram erreichen. Gemessen: {je_ort!r}"
-    )
-    assert je_ort.get("Wien") == {"sms"}, (
-        "AC-16: Ort 2 loest nur ueber die Metrik mit Eintrag {sms} aus und "
-        f"darf nur sms erreichen. Gemessen: {je_ort!r}"
-    )
-    for kanaele, orte in rekorder.abweichung:
-        assert not {"telegram", "sms"} <= kanaele, (
-            "AC-16: kein Versand-Aufruf darf die Vereinigung {telegram, sms} "
-            "tragen — das waere eine preset-weite Aufloesung statt einer je "
-            f"Ort. Aufgezeichnet: {rekorder.abweichung!r}"
-        )
+# test_ac16_zwei_orte_erhalten_unterschiedliche_kanalsaetze: entfallen mit Issue #2795 (AC-29) -- alert_metric_channels wird im Alarmversand ignoriert; Ersatz: tests/test_2795_alert_metric_channels_ignoriert.py
 
 
 # ═══ AC-17 — hinzukommender Kanal sprengt `ids_by_channel` nicht ════════════
 
-def test_ac17_hinzukommender_kanal_laesst_den_ortsalarm_nicht_ausfallen(
-    monkeypatch, sauberer_nutzer,
-):
-    """AC-17 (ROT, Klasse b): `config.channels` ist `{email}`, der
-    Metrik-Eintrag der ausloesenden Metrik bringt `telegram` NEU hinzu.
-
-    POSITIV formuliert (bewusst KEIN `pytest.raises(KeyError)`): der Alarm
-    fuer diesen Ort wird versendet UND der Kanalsatz enthaelt den
-    hinzugekommenen Kanal. Ein `pytest.raises` waere heute gruen und nach dem
-    Fix rot — also genau verkehrt herum.
-
-    Der heutige Defekt liegt bei `compare_alert.py:293`: `ids_by_channel`
-    wird nur aus `config.channels` vorbelegt; ein erst durch den Metrik-
-    Eintrag hinzugekommener Kanal wirft dort `KeyError` und der GANZE
-    Vergleichs-Alarm fuer den Ort faellt aus. Diese Zusicherung faellt in
-    beiden Fehlerrichtungen: kein Leser ⇒ `telegram` fehlt; Leser ohne
-    reparierte Vorbelegung ⇒ der `KeyError` reisst den Lauf mit.
-    """
-    user_id = sauberer_nutzer("ac17")
-    _schreibe_tarif(user_id, "premium")
-    _lege_vergleich_an(
-        user_id, "cp-ac17", orte=["loc-graz"],
-        anker={"loc-graz": {"precip_sum_mm": 2.0}},
-        alert_metric_channels={"precipitation": {"telegram": True}},
-    )
-
-    rekorder = _vergleich_versand(
-        monkeypatch, user_id, {"loc-graz": {"precip_sum_mm": 40.0}},
-    )
-
-    assert rekorder.abweichung, (
-        "AC-17: der Vergleichs-Alarm fuer diesen Ort darf NICHT ausfallen — "
-        "aufgezeichnet wurde kein einziger Versand-Aufruf."
-    )
-    kanaele = set().union(*(k for k, _orte in rekorder.abweichung))
-    assert "telegram" in kanaele, (
-        "AC-17: der erst durch den Metrik-Eintrag hinzugekommene Kanal "
-        f"`telegram` muss im Versand ankommen. Gemessen: {kanaele!r}"
-    )
+# test_ac17_hinzukommender_kanal_laesst_den_ortsalarm_nicht_ausfallen: entfallen mit Issue #2795 (AC-29) -- alert_metric_channels wird im Alarmversand ignoriert; Ersatz: tests/test_2795_alert_metric_channels_ignoriert.py
 
 
 # ═════ AC-24 — echte `user_id`, nie `"default"`, nie fremde Daten ═══════════
 
-def test_ac24_aufloesung_traegt_je_nutzer_ausschliesslich_eigene_eintraege(
-    sauberer_nutzer,
-):
-    """AC-24 (ROT, Klasse b): zwei verschiedene Nutzer mit unterschiedlichen
-    `alert_metric_channels`-Eintraegen auf derselben Metrik. Die Aufloesung
-    fuer A verwendet ausschliesslich As Eintrag, die fuer B ausschliesslich
-    Bs — kein Rueckfall auf `"default"`, keine Vermischung.
-
-    Gemessen an der Versandstelle `trip_alert.py:2509`, fuer jeden Nutzer mit
-    einem EIGENEN `TripAlertService` (eigene `user_id`). Zusaetzlich bewacht
-    vom AST-Waechter `tests/test_user_id_default_guard.py` (ADR-0003).
-    """
-    user_a = sauberer_nutzer("ac24-a")
-    user_b = sauberer_nutzer("ac24-b")
-    assert user_a != "default" and user_b != "default" and user_a != user_b
-    _schreibe_tarif(user_a, "premium")
-    _schreibe_tarif(user_b, "premium")
-
-    trip_a = _trip("trip-ac24-a", eintrag={"gust": {"telegram": True}},
-                   geerbt=("email", "telegram"))
-    trip_b = _trip("trip-ac24-b", eintrag={"gust": {"email": True}},
-                   geerbt=("email", "telegram"))
-
-    rek_a = _trip_versand(trip_a, user_a, [_aenderung("gust_max_kmh")])
-    rek_b = _trip_versand(trip_b, user_b, [_aenderung("gust_max_kmh")])
-
-    assert rek_a.abweichung == [{"telegram"}], (
-        f"AC-24: Nutzer A muss genau seinen eigenen Eintrag bekommen, "
-        f"gemessen: {rek_a.abweichung!r}"
-    )
-    assert rek_b.abweichung == [{"email"}], (
-        f"AC-24: Nutzer B muss genau seinen eigenen Eintrag bekommen, "
-        f"gemessen: {rek_b.abweichung!r}"
-    )
+# test_ac24_aufloesung_traegt_je_nutzer_ausschliesslich_eigene_eintraege: entfallen mit Issue #2795 (AC-29) -- alert_metric_channels wird im Alarmversand ignoriert; Ersatz: tests/test_2795_alert_metric_channels_ignoriert.py
 
 
 # ────────────────── Bausteine fuer den Trip-Radar-Pfad ──────────────────────

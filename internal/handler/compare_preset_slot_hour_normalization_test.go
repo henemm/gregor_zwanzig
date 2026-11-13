@@ -1,6 +1,9 @@
 package handler
 
 // Issue #1280 — Versandzeit-Eingabe auf volle Stunden begrenzen (Compare-Pfad).
+// Issue #2795 — abgeloest durch das Viertelstunden-Raster: rasterkonforme
+// Minuten (07:30) bleiben beim Schreiben erhalten, Lese-Heilung rundet einen
+// Altwert (18:50) auf die vorherige Viertelstunde (18:45) ab.
 // Spec: docs/specs/modules/fix_1280_versandzeit_stunden_raster.md (AC-1, AC-3, AC-4)
 //
 // Co-located Handler-Tests gegen echten Store (t.TempDir, keine Mocks), Muster
@@ -22,7 +25,7 @@ import (
 // AC-1: PUT eines Compare-Presets mit krummer morning_time (07:30) speichert und
 // liefert den Wert auf die volle Stunde gekappt (07:00) — sowohl in der Response
 // als auch persistiert auf der Platte.
-func TestUpdateComparePreset_MorningTimeTruncatedToFullHourOnWrite(t *testing.T) {
+func TestUpdateComparePreset_MorningTimeQuarterHourKeptOnWrite(t *testing.T) {
 	s := newTestStore(t)
 
 	trueVal := true
@@ -74,16 +77,16 @@ func TestUpdateComparePreset_MorningTimeTruncatedToFullHourOnWrite(t *testing.T)
 	if err := json.Unmarshal(w.Body.Bytes(), &resp); err != nil {
 		t.Fatalf("unmarshal response: %v", err)
 	}
-	if resp.MorningTime == nil || *resp.MorningTime != "07:00:00" {
-		t.Errorf("Response morning_time: erwartet 07:00:00 (gekappt), got %v", resp.MorningTime)
+	if resp.MorningTime == nil || *resp.MorningTime != "07:30:00" {
+		t.Errorf("Response morning_time: erwartet 07:30:00 (Viertelstunden-Raster, #2795), got %v", resp.MorningTime)
 	}
 
 	loaded, err := s.WithUser("user1").LoadComparePresets()
 	if err != nil {
 		t.Fatalf("LoadComparePresets: %v", err)
 	}
-	if loaded[0].MorningTime == nil || *loaded[0].MorningTime != "07:00:00" {
-		t.Errorf("Persistierte morning_time: erwartet 07:00:00 (gekappt), got %v", loaded[0].MorningTime)
+	if loaded[0].MorningTime == nil || *loaded[0].MorningTime != "07:30:00" {
+		t.Errorf("Persistierte morning_time: erwartet 07:30:00 (Viertelstunden-Raster, #2795), got %v", loaded[0].MorningTime)
 	}
 }
 
@@ -96,7 +99,7 @@ func TestGetComparePresetHandler_ReadHealsMorningTime_ButPreservesLetzterVersand
 	s := newTestStore(t)
 
 	trueVal := true
-	morningTime := "18:45:00"
+	morningTime := "18:50:00"
 	realSend := time.Date(2026, 7, 16, 6, 3, 0, 0, time.UTC)
 	seeded := model.ComparePreset{
 		ID:             "cp-1280-heal",
@@ -133,8 +136,8 @@ func TestGetComparePresetHandler_ReadHealsMorningTime_ButPreservesLetzterVersand
 		t.Fatalf("unmarshal response: %v", err)
 	}
 	// AC-3: Konfig-Feld auf volle Stunde geheilt.
-	if resp.MorningTime == nil || *resp.MorningTime != "18:00:00" {
-		t.Errorf("GET morning_time: erwartet 18:00:00 (geheilt), got %v", resp.MorningTime)
+	if resp.MorningTime == nil || *resp.MorningTime != "18:45:00" {
+		t.Errorf("GET morning_time: erwartet 18:45:00 (auf Viertelstunde geheilt, #2795), got %v", resp.MorningTime)
 	}
 	// AC-4: realer Zeitstempel bleibt minutengenau (#1268-Schutz).
 	if resp.LetzterVersand == nil {

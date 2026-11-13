@@ -21,7 +21,7 @@ from datetime import date, datetime, time as dt_time, timedelta
 from typing import NamedTuple
 
 from services.alert_check_state import report_unit_failure
-from services.briefing_slots import fenster_offen
+from services.briefing_slots import fenster_offen, tagesminute, viertelstunde
 from services.compare_alert_guard import is_silenced
 from utils.timezone import first_resolvable_tz, local_dt
 
@@ -77,7 +77,7 @@ def _due(preset: dict, today: date, tage_ab_ortstag: int) -> DuePreset:
 
 
 def _parse_time(value: str) -> dt_time:
-    return dt_time.fromisoformat(value)
+    return viertelstunde(dt_time.fromisoformat(value))  # #2795 F006: wie Go
 
 
 def resolve_preset_slots(preset: dict) -> PresetSlots:
@@ -196,7 +196,7 @@ def presets_due_for_hour(presets: list, all_locations: dict, now_utc: datetime,
 
             preset_id = preset.get("id", "?")
             vor_ort = _preset_ortszeit(preset, all_locations, now_utc)
-            hour, today = vor_ort.hour, vor_ort.date()
+            ortsminute, today = tagesminute(vor_ort), vor_ort.date()
 
             try:
                 end_date_str = preset.get("end_date")
@@ -226,7 +226,7 @@ def presets_due_for_hour(presets: list, all_locations: dict, now_utc: datetime,
                 (slots.morning_enabled, slots.morning_time, "morning", MORGEN_SLOT_VERSATZ),
                 (slots.evening_enabled, slots.evening_time, "evening", ABEND_SLOT_VERSATZ),
             ):
-                if not (aktiv and fenster_offen(zeit.hour, hour)):
+                if not (aktiv and fenster_offen(tagesminute(zeit), ortsminute)):
                     continue
                 if store is not None and _vermerkt(store, preset, all_locations, now_utc, slot):
                     continue

@@ -742,6 +742,8 @@ export interface ComparePreset {
 	alert_quiet_to?: string;
 	// Issue #1216 Slice 2b — Amtliche-Warnungen-Alarm-Trigger + Kanal-Opt-in.
 	official_alert_triggers_enabled?: boolean;
+	// Issue #2795 — Orts-Mail des Briefings an/aus; fehlt = true (Alt-Presets).
+	send_email?: boolean;
 	send_telegram?: boolean;
 	send_sms?: boolean;
 	// Issue #1745 A / #2293 S2 — Premium-SMS-Opt-in fuer das planmaessige

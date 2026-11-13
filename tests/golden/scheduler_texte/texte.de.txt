@@ -13,9 +13,9 @@ Nachgeliefert — die Zustellung um x:00 ist fehlgeschlagen
 ----- nachlieferung.komplett.header -----
 de
 ----- nachlieferung.komplett.mail -----
-Nachgeliefert — der Wetterdienst war um 6:00 nicht erreichbar
+Nachgeliefert — der Wetterdienst war um 06:00 nicht erreichbar
 ----- nachlieferung.komplett.telegram -----
-Nachgeliefert — der Wetterdienst war um 6:00 nicht erreichbar
+Nachgeliefert — der Wetterdienst war um 06:00 nicht erreichbar
 ----- nachlieferung.komplett.sms -----
 E1: TF- W- G- R- CT:SCT@4 VS- SU16 SD5
 ----- nachlieferung.vollstaendig.ergebnis -----

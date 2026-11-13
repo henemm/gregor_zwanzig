@@ -160,7 +160,7 @@ def _termin(ergebnis: dict, erwartet_utc: datetime, zone: ZoneInfo, slot: str) -
         f"{vor_ort.utcoffset()}"
     )
     assert ergebnis["local_date"] == vor_ort.date().isoformat()
-    assert ergebnis["local_time"] == vor_ort.strftime("%H:00")
+    assert ergebnis["local_time"] == vor_ort.strftime("%H:%M")
     assert ergebnis["tz"] == zone.key
     assert ergebnis["tz_abbr"] == vor_ort.tzname()
     assert ergebnis["slot"] == slot
@@ -856,7 +856,7 @@ def _schema(r: dict, *, skip_next: bool) -> None:
         assert re.fullmatch(r"\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2})?([+-]\d{2}:\d{2}|Z)", r["at"]), (
             f"`at` nicht ISO-8601 mit Offset: {r['at']!r}"
         )
-        assert re.fullmatch(r"\d{2}:00", r["local_time"]), r["local_time"]
+        assert re.fullmatch(r"\d{2}:(00|15|30|45)", r["local_time"]), r["local_time"]
         date.fromisoformat(r["local_date"])
         ZoneInfo(r["tz"])
         assert r["slot"] in {"morning", "evening"}

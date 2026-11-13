@@ -315,8 +315,13 @@ _METRIK_UEBERSCHREIBUNG = {"precipitation": {"email": True, "telegram": True, "s
 
 @pytest.mark.parametrize("stufe", ["LOW", "HIGH"])
 def test_abweichungsalarm_kanalmenge_schwelle_und_tarif(mit, stufe):
-    """AC-15: Kanalmenge aus Ueberschreibung (``alert_metric_channels``), Metrik-Union, Schwelle
-    (SMS erst ab HIGH) und Tarif; zwei Nutzer mit verschiedenem Tarif bekommen je ihre Menge."""
+    """AC-15: Kanalmenge, Schwelle (SMS erst ab HIGH) und Tarif; zwei Nutzer mit
+    verschiedenem Tarif bekommen je ihre Menge.
+
+    Issue #2795 (AC-29): die Ueberschreibung ``alert_metric_channels`` (alle vier
+    Kanaele fuer ``precipitation``) liegt weiter im Preset, wird aber IGNORIERT --
+    es gilt allein die Kanal-Tabelle ``alert_channels`` (E-Mail, SMS, Premium-SMS;
+    Telegram aus), d. h. Telegram kommt trotz Altschluessel nie an."""
     vorlage = fixture_dict("alarm_kanaele")
     vorlage["alert_metric_channels"] = _METRIK_UEBERSCHREIBUNG
     premium = _nutzer(vorlage, "premium")
@@ -327,11 +332,11 @@ def test_abweichungsalarm_kanalmenge_schwelle_und_tarif(mit, stufe):
         assert gemeldet == 1
         ergebnisse[n.tier] = _pruefen(snap, n, "abweichung", stufe, metric_id="precipitation")
     if stufe == "LOW":
-        assert ergebnisse["premium"] == {"email", "telegram", "premium_sms"}, "SMS liegt unter ihrer Schwelle HIGH"
-        assert ergebnisse["standard"] == {"email", "telegram"}
+        assert ergebnisse["premium"] == {"email", "premium_sms"}, "SMS liegt unter ihrer Schwelle HIGH"
+        assert ergebnisse["standard"] == {"email"}
     else:
-        assert ergebnisse["premium"] == set(COMPARE_KANAELE)
-        assert ergebnisse["standard"] == {"email", "telegram", "sms"}, "kein Premium-SMS im Tarif standard"
+        assert ergebnisse["premium"] == {"email", "sms", "premium_sms"}
+        assert ergebnisse["standard"] == {"email", "sms"}, "kein Premium-SMS im Tarif standard"
 
 
 # ---------------------------------------------------------------------------

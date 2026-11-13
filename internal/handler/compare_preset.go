@@ -50,13 +50,17 @@ func validateComparePresetSlotTime(fieldName string, value *string) error {
 	if !comparePresetTimePattern.MatchString(*value) {
 		return fmt.Errorf("%s must match HH:MM or HH:MM:SS", fieldName)
 	}
-	t, err := time.Parse("15:04:05", normalizeComparePresetTime(*value))
-	if err != nil {
+	if _, err := time.Parse("15:04:05", normalizeComparePresetTime(*value)); err != nil {
 		return fmt.Errorf("%s is not a valid time: %v", fieldName, err)
 	}
-	// Issue #1280: Write-Normalisierung — Minuten/Sekunden auf :00 kappen
-	// (Truncate, nicht Runden). Der Scheduler nimmt ohnehin nur .hour.
-	*value = store.TruncateTimeStringToHour(t.Format("15:04:05"))
+	// Issue #2795: Viertelstunden-Raster statt Kappen auf die volle Stunde
+	// (#1280). Minuten 00/15/30/45, Sekunden -> :00; jede andere Minute ist
+	// ein Fehler (400), keine stille Rundung.
+	n, err := store.ValidateQuarterHourSlotTime(fieldName, *value)
+	if err != nil {
+		return err
+	}
+	*value = n
 	return nil
 }
 

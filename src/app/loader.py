@@ -282,6 +282,8 @@ def compare_preset_from_dict(data: Dict[str, Any]) -> ComparePreset:
         official_alert_triggers_enabled=data.get("official_alert_triggers_enabled"),
         # Issue #1258: explizit durchreichen (auch als None) — Parität zu _parse_trip.
         official_warnings=data.get("official_warnings"),
+        # Issue #2795: fehlend (oder null) = true, nur ausdrueckliches false schaltet ab.
+        send_email=data.get("send_email") is not False,
         send_telegram=data.get("send_telegram"),
         send_sms=data.get("send_sms"),
         # Issue #2293 Scheibe S2: explizit durchreichen (auch als None) —
@@ -653,12 +655,13 @@ def _parse_trip(data: Dict[str, Any]) -> Trip:
     # Issue #205: Alert Rules — either directly from JSON or migrated from legacy.
     alert_rules = _migrate_legacy_alert_rules(data)
 
-    # Issue #1895 S2: die Kanalzuordnung wandert beim Laden von der Regel auf
-    # die Metrik (kopierend, RMW mit Merge) — erst dadurch bekommt der Leser
-    # im Alarm-Pfad fuer Bestandsdaten ueberhaupt etwas zu lesen.
-    alert_metric_channels = _migrate_rule_channels_to_metric_channels(
-        alert_rules, data.get("alert_metric_channels"),
-    )
+    # Issue #2795 (Spec §4.3): „Kanaele je Wettergroesse" entfaellt. Die
+    # Lade-Migration aus #1895 S2 (Regel-Kanaele -> alert_metric_channels)
+    # entfaellt mit; ein vorhandener Wert wird nur lesetolerant durchgereicht
+    # (kein Datenverlust), aber nicht mehr aus alert_rules erzeugt -- sonst
+    # belebte save_trip den Schluessel nach der Migration wieder.
+    bestehend = data.get("alert_metric_channels")
+    alert_metric_channels = dict(bestehend) if isinstance(bestehend, dict) and bestehend else None
 
     # Issue #1231 (Slice 1): Corridors — additiv neben alert_rules, kein
     # Legacy-Migrationspfad in Slice 1 (s. scripts/migrate_1231_corridors.py, Slice 2).
@@ -854,6 +857,10 @@ def _migrate_rule_channels_to_metric_channels(
     alert_rules: List[AlertRule], bestehend: Any,
 ) -> Optional[Dict[str, Any]]:
     """Issue #1895 S2: `alert_rules[].channels` -> `alert_metric_channels`.
+
+    Issue #2795: wird beim LADEN nicht mehr aufgerufen (der Schluessel entfaellt,
+    Spec §4.3). Bleibt bis zum Aufraeumen (#2795 Teilschritt 1c) nur als reine
+    Abbildung fuer den Schluessel-Vertrag (`alert_metric_channel_keys`, AC-33).
 
     Die Kanalzuordnung hing an der falschen Entitaet (Regel statt Metrik,
     #1895). Beim Laden wandert sie auf die Metrik — KOPIEREND, `alert_rules`

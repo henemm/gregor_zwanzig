@@ -564,8 +564,9 @@ def test_radar_alert_logs_configured_but_unreachable_channel(monkeypatch):
 # ═══════════════════════════════ AC-7 ═══════════════════════════════════════
 
 
-def test_radar_alert_channels_follow_active_alert_rule_override(monkeypatch):
-    """AC-7: Given ein Trip hat eine aktive Alarm-Regel mit eigenem Kanal
+def test_radar_alert_channels_ignorieren_alten_regel_kanal(monkeypatch):
+    """AC-7 (seit #2795 umgekehrt: der Regel-Kanal wirkt NICHT mehr, s. Asserts).
+    Ursprünglich: Given ein Trip hat eine aktive Alarm-Regel mit eigenem Kanal
     (nur SMS), waehrend der Alarme-Reiter selbst E-Mail eingeschaltet hat /
     When ein Regen-Alarm ausgeloest wird / Then beruecksichtigt der
     Regen-Alarm den Kanal der Regel — Regen-Alarme sind keine Ausnahme von
@@ -599,16 +600,16 @@ def test_radar_alert_channels_follow_active_alert_rule_override(monkeypatch):
 
         _run_radar(monkeypatch, uid, [trip], settings_no_channel_reachable())
 
+        # Issue #2795 (Spec §4.3): der Regel-Kanal wirkt nicht mehr — auch der
+        # Regen-Alarm folgt allein der Kanal-Tabelle (E-Mail), SMS bleibt aus.
         entry = _single_entry(uid, trip_id)
-        assert reason_for_channel(entry, "sms") == REASON_DELIVERY_FAILED, (
-            "AC-7: der Kanal-Override der aktiven Alarm-Regel muss auch fuer "
-            "Regen-Alarme gelten, erhalten: "
-            f"{reason_for_channel(entry, 'sms')!r} (Eintrag: {entry!r})"
+        assert reason_for_channel(entry, "email") == REASON_DELIVERY_FAILED, (
+            "AC-7/#2795: der Regen-Alarm folgt der Kanal-Tabelle (E-Mail), "
+            f"erhalten: {reason_for_channel(entry, 'email')!r} (Eintrag: {entry!r})"
         )
-        assert reason_for_channel(entry, "email") == REASON_CHANNEL_DISABLED, (
-            "AC-7: bei einer Regel mit eigenem Kanal gewinnt deren Union — "
-            "der Standard-Kanal E-Mail zaehlt dann nicht mit, erhalten: "
-            f"{reason_for_channel(entry, 'email')!r} (Eintrag: {entry!r})"
+        assert reason_for_channel(entry, "sms") == REASON_CHANNEL_DISABLED, (
+            "AC-7/#2795: der alte Regel-Kanal SMS darf nicht mehr zaehlen, "
+            f"erhalten: {reason_for_channel(entry, 'sms')!r} (Eintrag: {entry!r})"
         )
     finally:
         clean_uid(uid)

@@ -398,9 +398,9 @@ class CompareAlertService:
         # Issue #1895 S2: die Kanalmenge entsteht METRIK-BEWUSST JE ORT —
         # erst hier liegt `t["changes"]` vor. `_build_eval_config` kennt
         # die ausloesenden Metriken noch nicht und liefert weiter nur den
-        # preset-weiten Startwert (AC-11/AC-16). Ohne Eintrag in
-        # `alert_metric_channels` ist das Ergebnis je Ort identisch mit
-        # `config.channels` — Bestandsverhalten bleibt byte-gleich.
+        # preset-weiten Startwert (AC-11/AC-16). Seit Issue #2795 wird
+        # `alert_metric_channels` ignoriert: das Ergebnis je Ort ist identisch
+        # mit `config.channels` (Kanal-Tabelle, fuer alle Metriken gleich).
         kanaele_je_ort = {
             t["entity_id"]: self._kanaele_fuer_ort(preset, config, t)
             for t in triggered

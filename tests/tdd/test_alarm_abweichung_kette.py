@@ -139,6 +139,12 @@ def test_kanalmatrix_und_schwelle_konsistent_bis_zum_versand():
     `resolve_alert_channels()` Schritt 4 VOLLSTÄNDIG ersetzt; SMS scheitert
     an der Schwelle. Alle vier Kanäle werden gleich streng geprüft.
 
+    Issue #2795 (AC-29): „Kanäle je Wettergröße“ entfällt, der Altschlüssel
+    `alert_metric_channels` wird IGNORIERT. Neue Zusicherung: die Kanal-Tabelle
+    (`alert_channels` = E-Mail, SMS, Premium-SMS) gilt allein; der noch
+    vorhandene Altschlüssel (nur Telegram) hat keine Wirkung; SMS fällt an der
+    Schwelle HIGH, E-Mail und Premium-SMS (Default LOW) kommen durch.
+
     Orakel (unabhängig von `resolve_alert_channels()`/`split_by_threshold()`
     von Hand nachgebildet, NICHT aus der Produktfunktion übernommen): einzige
     auslösende Metrik `precip_sum_mm` → Katalog-`metric_id` `precipitation` →
@@ -154,8 +160,8 @@ def test_kanalmatrix_und_schwelle_konsistent_bis_zum_versand():
     try:
         trip = _abweichungs_trip(
             uid,
-            alert_channels={"email": True, "telegram": True},
-            alert_metric_channels={"precipitation": {"sms": True, "premium_sms": True}},
+            alert_channels={"email": True, "telegram": False, "sms": True, "premium_sms": True},
+            alert_metric_channels={"precipitation": {"telegram": True}},
             alert_channel_thresholds={"sms": "HIGH"},
         )
         strecke = _strecke(uid)
@@ -172,10 +178,10 @@ def test_kanalmatrix_und_schwelle_konsistent_bis_zum_versand():
             f"AC-1 Vorbedingung: der Regen-Sprung muss auslösen (war "
             f"{lauf.triggered_count})."
         )
-        assert _kanaele(lauf) == {"mail": 0, "telegram": 0, "sms": 0, "premium_sms": 1}, (
-            f"AC-1: nur Premium-SMS darf bedient werden (Metrik-Override "
-            f"ersetzt den Zwei-Kanal-Override, SMS fällt an der Schwelle "
-            f"raus): {_kanaele(lauf)!r}"
+        assert _kanaele(lauf) == {"mail": 1, "telegram": 0, "sms": 0, "premium_sms": 1}, (
+            f"AC-1/#2795: E-Mail und Premium-SMS nach der Kanal-Tabelle, "
+            f"Altschlüssel (nur Telegram) ohne Wirkung, SMS fällt an der "
+            f"Schwelle raus: {_kanaele(lauf)!r}"
         )
     finally:
         _clean_user(uid)

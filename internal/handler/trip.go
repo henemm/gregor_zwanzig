@@ -182,7 +182,11 @@ func CreateTripHandler(s *store.Store) http.HandlerFunc {
 		// hierher; ohne diesen Schritt wuerde eine krumme Versandzeit
 		// unnormalisiert persistiert (und die Flach-Felder wuerden beim
 		// nachfolgenden SaveTrip aus dem noch krummen ReportConfig abgeleitet).
-		store.NormalizeReportConfigSlotTimes(trip.ReportConfig)
+		// Issue #2795: Viertelstunden-Raster statt Kappen; unzulaessige Minute -> 400.
+		if err := store.ValidateReportConfigSlotTimes(trip.ReportConfig); err != nil {
+			WriteError(w, r, http.StatusBadRequest, "validation_error", i18n.Args{"detail": err.Error()})
+			return
+		}
 		// Issue #1319 Scheibe B (F001 Fix): Write-Seam-Klemmung analog
 		// NormalizeReportConfigSlotTimes — ein ungueltiges day_window-Paar
 		// (start>=end oder ausserhalb 0-23) darf nie auf die Platte kommen,
@@ -428,9 +432,13 @@ func UpdateTripHandler(s *store.Store) http.HandlerFunc {
 			// Issue #1103: Feld-Level-Merge statt Blind-Replace — Teil-Updates
 			// duerfen bestehende report_config-Keys nicht loeschen.
 			existing.ReportConfig = mergeConfigMap(existing.ReportConfig, *req.ReportConfig)
-			// Issue #1280: Write-Normalisierung — nur morning_time/evening_time auf
-			// volle Stunde kappen, alle anderen report_config-Keys unangetastet.
-			store.NormalizeReportConfigSlotTimes(existing.ReportConfig)
+			// Issue #2795 (vorher #1280 Kappen auf volle Stunde): morning_time/
+			// evening_time muessen im Viertelstunden-Raster liegen; sonst 400,
+			// keine stille Rundung. Nichts wird geschrieben (Save folgt erst unten).
+			if err := store.ValidateReportConfigSlotTimes(existing.ReportConfig); err != nil {
+				WriteError(w, r, http.StatusBadRequest, "validation_error", i18n.Args{"detail": err.Error()})
+				return
+			}
 			// Issue #1319 Scheibe B (F001 Fix): gleicher Write-Seam-Schutz fuer
 			// day_window_start_hour/_end_hour — ein ungueltiges Paar wird hier
 			// entfernt (statt erst beim naechsten Load), damit auch die
