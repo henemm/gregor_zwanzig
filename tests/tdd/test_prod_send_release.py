@@ -386,3 +386,251 @@ def test_ac11_gate_without_session_id_stays_closed(tmp_path, sid):
 
     _assert_blocked(_gate(wt, session_id=sid))
     assert SESSION_A in _releases(main)
+
+
+# --- Nachschaerfung nach Adversary-Mutationen (F001-F008) --------------------
+
+def test_f001_phrase_in_other_session_keeps_existing_release(tmp_path):
+    """Freigabe von A liegt vor; B tippt die Phrase -> A bleibt einloesbar."""
+    main, wt = _fake_repo(tmp_path)
+    _write_release(main, {SESSION_A: {"created": _now_iso()}})
+
+    _assert_release_ok(_release(wt, PHRASE, session_id=SESSION_B))
+
+    releases = _releases(main)
+    assert SESSION_A in releases and SESSION_B in releases, (
+        f"Freigabe von B darf die von A nicht verdraengen: {releases!r}"
+    )
+    _assert_allowed(_gate(wt, session_id=SESSION_A))
+    _assert_allowed(_gate(wt, session_id=SESSION_B))
+
+
+def test_f002_consuming_own_release_keeps_other_sessions_release(tmp_path):
+    """A verbraucht seine Freigabe -> B bleibt in der Datei und einloesbar."""
+    main, wt = _fake_repo(tmp_path)
+    _write_release(main, {SESSION_A: {"created": _now_iso()},
+                          SESSION_B: {"created": _now_iso()}})
+
+    _assert_allowed(_gate(wt, session_id=SESSION_A))
+
+    releases = _releases(main)
+    assert SESSION_A not in releases
+    assert SESSION_B in releases, f"Verbrauch durch A darf B nicht loeschen: {releases!r}"
+    _assert_allowed(_gate(wt, session_id=SESSION_B))
+
+
+def test_f003_confirmation_names_validity_of_one_hour(tmp_path):
+    _main, wt = _fake_repo(tmp_path)
+    result = _release(wt, PHRASE)
+    _assert_release_ok(result)
+    msg = _system_message(result)
+    assert "1 Stunde" in msg, f"Bestaetigung muss die Gueltigkeitsdauer nennen: {msg!r}"
+
+
+def test_f004_release_dated_in_the_future_is_invalid(tmp_path):
+    main, wt = _fake_repo(tmp_path)
+    _write_release(main, {SESSION_A: {"created": _now_iso(timedelta(days=1))}})
+    _assert_blocked(_gate(wt))
+    assert SESSION_A in _releases(main), "Ungueltiger Eintrag wird nicht verbraucht"
+
+
+def test_f005_open_locked_refuses_symlink_with_eloop(tmp_path):
+    """O_NOFOLLOW einzeln bewacht: der Symlink wird gar nicht erst geoeffnet
+    (ELOOP), statt erst ueber die Inode-Nachpruefung zu scheitern."""
+    import errno
+
+    target = tmp_path / "elsewhere.json"
+    target.write_text("{}")
+    link = tmp_path / "prod_send_release.json"
+    link.symlink_to(target)
+
+    with pytest.raises(OSError) as exc_info:
+        _gz_mod._gz_open_locked(link, create=False)
+    assert exc_info.value.errno == errno.ELOOP, (
+        f"Symlink muss per O_NOFOLLOW abgewiesen werden, nicht spaeter: {exc_info.value!r}"
+    )
+    assert target.read_text() == "{}"
+
+
+def test_f005_open_locked_rechecks_inode_after_waiting_for_lock(tmp_path):
+    """Inode-Nachpruefung einzeln bewacht: Wartet ein Aufrufer auf die Sperre
+    und ersetzt der Vorgaenger die Datei per rename, muss der Aufrufer die
+    NEUE Datei gesperrt bekommen, nicht die verwaiste alte."""
+    import fcntl
+    import threading
+    import time
+
+    path = tmp_path / "prod_send_release.json"
+    path.write_text("{}")
+    holder = os.open(str(path), os.O_RDWR)
+    fcntl.flock(holder, fcntl.LOCK_EX)
+
+    result: dict = {}
+
+    def _worker():
+        try:
+            result["fd"] = _gz_mod._gz_open_locked(path, create=False)
+        except BaseException as exc:  # Diagnose im Assert unten
+            result["exc"] = exc
+
+    def _fds_on_path() -> int:
+        count = 0
+        for name in os.listdir("/proc/self/fd"):
+            try:
+                if os.readlink(f"/proc/self/fd/{name}") == str(path):
+                    count += 1
+            except OSError:
+                pass
+        return count
+
+    worker = threading.Thread(target=_worker, daemon=True)
+    worker.start()
+    try:
+        deadline = time.monotonic() + 10
+        while _fds_on_path() < 2:
+            assert time.monotonic() < deadline, "Worker hat die Datei nie geoeffnet"
+            time.sleep(0.01)
+        # Worker hat die alte Datei offen und wartet auf die Sperre:
+        # der Vorgaenger ersetzt die Datei atomar.
+        replacement = tmp_path / "replacement.tmp"
+        replacement.write_text('{"version": 1, "releases": {}}')
+        os.rename(str(replacement), str(path))
+    finally:
+        fcntl.flock(holder, fcntl.LOCK_UN)
+        os.close(holder)
+    worker.join(10)
+
+    assert "exc" not in result, f"_gz_open_locked scheiterte: {result.get('exc')!r}"
+    fd = result["fd"]
+    try:
+        assert os.fstat(fd).st_ino == os.lstat(str(path)).st_ino, (
+            "Gesperrt wurde die ersetzte alte Datei statt der aktuellen"
+        )
+    finally:
+        os.close(fd)
+
+
+def test_f006_relative_gitdir_resolves_to_main_repo(tmp_path):
+    """Relativer gitdir-Pfad gilt relativ zum Worktree, nicht zum cwd."""
+    main, wt = _fake_repo(tmp_path)
+    (wt / ".git").write_text("gitdir: ../main/.git/worktrees/wt\n")
+    elsewhere = tmp_path / "a" / "b"
+    elsewhere.mkdir(parents=True)
+
+    payload = {"prompt": PHRASE, "hook_event_name": "UserPromptSubmit",
+               "session_id": SESSION_A}
+    rel = subprocess.run(
+        [sys.executable, str(RELEASE_HOOK)],
+        input=json.dumps(payload), text=True, capture_output=True,
+        env=_env(wt), cwd=str(elsewhere),
+    )
+    _assert_release_ok(rel)
+    assert SESSION_A in _releases(main), (
+        f"Freigabe muss im Haupt-Repo liegen. stdout={rel.stdout!r}"
+    )
+    _assert_allowed(_gate(wt))
+
+
+@pytest.mark.parametrize("content_tpl", [
+    "kein gitdir hier\n",
+    "\n",
+    "gitdir: {main}/.git/modules/wt\n",
+    # Pfad waere gueltig, aber das Schluesselwort stimmt nicht.
+    "gitdyr: {main}/.git/worktrees/wt\n",
+])
+def test_f006_malformed_git_file_fails_closed(tmp_path, content_tpl):
+    main, wt = _fake_repo(tmp_path)
+    (wt / ".git").write_text(content_tpl.format(main=main))
+
+    result = _release(wt, PHRASE)
+
+    _assert_release_ok(result)
+    low = _system_message(result).lower()
+    assert "nicht" in low or "fehl" in low, f"Scheitern muss sichtbar sein: {low!r}"
+    assert not _release_file(main).exists()
+    assert not (wt / ".claude" / "prod_send_release.json").exists()
+
+
+def test_f006_symlinked_git_dir_is_not_a_repo_root(tmp_path):
+    """`.git` als Symlink auf einen Ordner zaehlt nicht als Repo-Wurzel."""
+    main, wt = _fake_repo(tmp_path)
+    (wt / ".git").unlink()
+    (wt / ".git").symlink_to(main / ".git")
+
+    result = _release(wt, PHRASE)
+
+    _assert_release_ok(result)
+    assert not (wt / ".claude" / "prod_send_release.json").exists(), (
+        "Symlink-.git darf den Worktree nicht zur Wurzel machen"
+    )
+    assert not _release_file(main).exists()
+
+
+def test_f007_release_file_has_mode_0600(tmp_path):
+    main, wt = _fake_repo(tmp_path)
+    _assert_release_ok(_release(wt, PHRASE))
+    mode = stat.S_IMODE(os.stat(_release_file(main)).st_mode)
+    assert mode == 0o600, f"Freigabe-Datei muss 0600 haben, ist {oct(mode)}"
+
+
+_PARALLEL_WRITER = r"""
+import importlib.util, sys, time
+spec = importlib.util.spec_from_file_location("hook_utils", sys.argv[1])
+mod = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(mod)
+start_at = float(sys.argv[3])
+time.sleep(max(0.0, start_at - time.time()))
+
+def _add(releases):
+    time.sleep(0.4)  # Lesen-Aendern-Schreiben-Fenster bewusst weit
+    releases[sys.argv[2]] = {"created": "2026-01-01T00:00:00+00:00"}
+    return True, None
+
+mod.update_prod_send_releases(_add, create=True)
+"""
+
+
+@pytest.mark.timeout(60)
+def test_f007_parallel_writers_keep_all_entries(tmp_path):
+    """Mehrere Prozesse schreiben gleichzeitig -> keine Freigabe geht verloren.
+    Gemeinsamer Startzeitpunkt + weites Mutate-Fenster machen das Rennen
+    ohne Sperre reproduzierbar."""
+    import time
+
+    main, wt = _fake_repo(tmp_path)
+    hook_utils_path = _REPO_ROOT / ".claude" / "hooks" / "hook_utils.py"
+    sessions = [f"sess-par-{i}" for i in range(5)]
+    start_at = time.time() + 2.0
+    procs = [
+        subprocess.Popen(
+            [sys.executable, "-c", _PARALLEL_WRITER, str(hook_utils_path), sid,
+             repr(start_at)],
+            env=_env(wt), cwd=str(wt),
+            stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
+        )
+        for sid in sessions
+    ]
+    for proc in procs:
+        _out, err = proc.communicate(timeout=50)
+        assert proc.returncode == 0, f"Schreiber scheiterte: {err!r}"
+
+    releases = _releases(main)
+    missing = [sid for sid in sessions if sid not in releases]
+    assert not missing, f"Verlorene Freigaben bei Parallelzugriff: {missing}"
+
+
+@pytest.mark.parametrize("sid", ["   ", "\t\n"])
+def test_f008_whitespace_session_id_writes_nothing(tmp_path, sid):
+    main, wt = _fake_repo(tmp_path)
+    result = _release(wt, PHRASE, session_id=sid)
+    _assert_release_ok(result)
+    assert _releases(main) == {}, "Leerzeichen-session_id darf keine Freigabe erzeugen"
+    assert "nicht" in _system_message(result).lower()
+
+
+@pytest.mark.parametrize("sid", ["   ", "\t\n"])
+def test_f008_whitespace_session_id_keeps_gate_closed(tmp_path, sid):
+    main, wt = _fake_repo(tmp_path)
+    _write_release(main, {sid: {"created": _now_iso()}})
+    _assert_blocked(_gate(wt, session_id=sid))
+    assert sid in _releases(main)
