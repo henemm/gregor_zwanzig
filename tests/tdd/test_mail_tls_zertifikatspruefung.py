@@ -280,3 +280,26 @@ def test_alle_anderen_hosts_bekommen_strengen_kontext(host):
     assert not ist_loopback_host(host)
     ctx = tls_kontext_fuer(host)
     assert ctx.verify_mode == ssl.CERT_REQUIRED and ctx.check_hostname
+
+
+def _imap_poll_hosts(port: int, imap_host: str, smtp_host: str) -> tuple[int, int]:
+    s = Settings(
+        imap_host=imap_host, imap_port=port, imap_user="u@example.org",
+        imap_pass="geheim-pass", smtp_host=smtp_host, smtp_user="u@example.org",
+        smtp_pass="geheim-pass",
+    )
+    return InboundEmailReader()._poll_inbox(s, "u@example.org", "geheim-pass")
+
+
+def test_imap_waehlt_kontext_nach_imap_host_nicht_smtp_host(zertifikat, monkeypatch, name_auf_loopback):
+    """IMAP-Host fremd, SMTP-Host Loopback: es zaehlt der IMAP-Host (streng)."""
+    monkeypatch.delenv("SSL_CERT_FILE", raising=False)
+    srv = _TlsGegenstelle("imap", *zertifikat)
+    assert _imap_poll_hosts(srv.port, imap_host=NAME, smtp_host="127.0.0.1") == (0, 1)
+    srv.stoppen()
+    assert not srv.login_gesehen()
+    # umgekehrt: IMAP-Host Loopback, SMTP-Host fremd -> Loopback-Zweig
+    srv = _TlsGegenstelle("imap", *zertifikat)
+    assert _imap_poll_hosts(srv.port, imap_host="127.0.0.1", smtp_host=NAME) == (0, 0)
+    srv.stoppen()
+    assert srv.login_gesehen()
