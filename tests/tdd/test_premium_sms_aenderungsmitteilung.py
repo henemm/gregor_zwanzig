@@ -23,19 +23,28 @@ import pytest
 from app.loader import get_data_dir
 from services import premium_sms_aenderungshinweis as hinweis
 from services.trip_command_processor import _BARE_KEYWORD_MAP, _VALID_COMMANDS
-from tests.tdd.test_premium_sms_kommandopfad import (  # noqa: F401 (Fixture)
+from tests.tdd.test_premium_sms_kommandopfad import (
+    _TRANSPORT_ENV,
     NUMMER_A,
     NUMMER_B,
     RUECKADRESSE_A,
     RUECKADRESSE_B,
+    _aufzeichner_installieren,
     _garmin,
     _Journal,
     _kennung,
     _LernEndpunkt,
     _poll,
     _trip_anlegen,
-    mitschrift,
 )
+
+
+@pytest.fixture
+def mitschrift(monkeypatch):
+    """Dieselben Aufzeichner wie in ``test_premium_sms_kommandopfad``."""
+    for name, wert in _TRANSPORT_ENV.items():
+        monkeypatch.setenv(name, wert)
+    return _aufzeichner_installieren(monkeypatch)
 
 
 def _nutzer(user_id: str, *, rueckadresse: str, bestaetigt: bool = True,
