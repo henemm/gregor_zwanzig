@@ -57,5 +57,6 @@
   "fach.fehler.limit_exceeded_schluessel": "Die Einstellungen enthalten zu viele oder ungültige Einträge.",
   "fach.fehler.limit_exceeded_etappen": "Ein Trip kann höchstens {max} Etappen haben.",
   "fach.fehler.limit_exceeded_wegpunkte": "Eine Etappe kann höchstens {max} Wegpunkte haben.",
+  "fach.fehler.limit_exceeded_orte_vergleich": "Ein Vergleich kann in deinem Tarif höchstens {max} Orte enthalten.",
   "fach.fehler.entity_too_large": "Die Daten sind zu umfangreich, um gespeichert zu werden."
 }

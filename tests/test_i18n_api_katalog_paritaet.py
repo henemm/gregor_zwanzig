@@ -96,6 +96,16 @@ ANKER: dict[str, tuple[str, str]] = {
     "api.fehler.unbekannt": (
         "Die Anfrage konnte nicht verarbeitet werden.",
         "The request could not be processed."),
+    # Issue #2961 (ADR-0117): interaktives Abruf-Kontingent und Eingabegrenzen.
+    "api.fehler.abruf_kontingent_erschoepft": (
+        "Dein Kontingent für Wetterabfragen ist für heute aufgebraucht, und für diese Anfrage liegen keine zwischengespeicherten Daten vor. Ab Mitternacht (UTC) geht es wieder. Geplante Briefings und Alarme laufen unverändert weiter.",
+        "Your weather request quota for today is used up, and no cached data is available for this request. It resets at midnight (UTC). Scheduled briefings and alerts continue as usual."),
+    "api.fehler.etappenwetter_teilweise": (
+        "Für einige Etappen gibt es heute keine Wetterdaten mehr, weil dein Kontingent für Wetterabfragen aufgebraucht ist. Ab Mitternacht (UTC) geht es wieder.",
+        "Some stages have no weather data today because your weather request quota is used up. It resets at midnight (UTC)."),
+    "api.fehler.vergleich_parameter_ungueltig": (
+        "Ungültige Angabe für {parameter}: erlaubt ist {erlaubt}.",
+        "Invalid value for {parameter}: allowed is {erlaubt}."),
     "api.skala.wind.schwach": ("schwach", "weak"),
     "api.skala.wind.maessig": ("mäßig", "moderate"),
     "api.skala.wind.stark": ("stark", "strong"),

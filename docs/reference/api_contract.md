@@ -1823,6 +1823,33 @@ never leaks another user's error text. No recorded run for the caller yet →
 
 ---
 
+### 0.7) Abruf-Kontingent für interaktive Auslöser (Issue #2961, ADR-0117, seit 2026-11-13)
+
+Spec: `docs/specs/modules/security_haertung_2026_11_abruf_kontingent_interaktiv.md`.
+Sofortvergleich, Etappenwetter, SMS-Vorschau, Alarm-Vorschau (Trip und Ortsvergleich) und
+`GET /api/forecast` buchen das Open-Meteo-Tageskontingent mit der Priorität `user_interactive`:
+je Nutzer höchstens `max(6300 / N, 1500)` Einheiten (N = heute aktive Nutzer), global nur bis
+70 % der Tagesmenge (6300 von 9000). Zeitplan-Versand und Handversand buchen unverändert
+`user_briefing`. Cache-Treffer buchen nichts und werden auch bei erschöpftem Kontingent geliefert.
+
+| Route | Status | `code` / Feld | Fall |
+|---|---|---|---|
+| `GET /api/compare` | 200 | je Ort `error` (übersetzter Text) und **neu** `error_code: "abruf_kontingent_erschoepft"` (sonst `null`) | Kontingent erschöpft, Ort nicht im Cache; andere Orte liefern Daten |
+| `GET /api/compare` | 429 | `abruf_kontingent_erschoepft` (Python-Fehlerform `{"detail","code"}`), Header `Retry-After` (Sekunden bis UTC-Mitternacht) | kein einziger Ort lieferbar, weil das Kontingent erschöpft ist |
+| `GET /api/compare` | 422 | `vergleich_parameter_ungueltig` | `forecast_hours` außerhalb 1–96, `time_window_start`/`time_window_end` außerhalb 0–23 oder `target_date` nicht `YYYY-MM-DD`; kein Abruf |
+| `GET /api/compare` | 422 | `limit_exceeded` (Text `fach.fehler.limit_exceeded_orte_vergleich`), Zusatzfelder `limit`, `current` | mehr verschiedene Orte (`*` = alle gespeicherten) als die Orte-Quote des Tarifs (10/50/200); Admins und `GZ_QUOTA_EXEMPT_USER_IDS` frei; Prüfung in Go vor dem Core |
+| `GET /api/trips/{id}/stages/weather` | 200 | **neu, nur bei Teilausfall:** `hinweis` (übersetzter Text), `gedrosselt` (Liste der Etappen-IDs, deren Ergebnis `null` ist) | einzelne Abschnitte vom Kontingent abgelehnt; eine solche Etappe wird nicht aus Teildaten bewertet |
+| `GET /api/trips/{id}/stages/weather` | 429 | `abruf_kontingent_erschoepft`, `Retry-After` (Go reicht den Header durch) | keine Etappe lieferbar |
+| `GET /api/preview/{trip_id}/sms`, `POST /api/trips/{id}/alert-preview`, `POST /api/briefings/{id}/alert-preview` | 429 | `abruf_kontingent_erschoepft`, `Retry-After` | mindestens ein Abruf der Vorschau vom Kontingent abgelehnt (keine still unvollständige Vorschau) |
+| `POST /api/_internal/forecast-budget/reserve` | 200 | `priority=user_interactive` zulässig | Go-Vorhersage bucht seit ADR-0117 interaktiv |
+
+**Statusfelder (additiv):** `GET /api/scheduler/status` → `forecast_budget` trägt
+`interactive_calls_today` (int), `interactive_budget` (int, 6300) und `interactive_throttled`
+(bool, Tageszähler hat die interaktive Obergrenze erreicht); `throttle_level` ist unverändert.
+`GET /api/admin/users` → `AdminUser.open_meteo_interactive_calls_today` (int, davon interaktiv).
+Zählerdateien: global zusätzlich `interactive_calls: {"openmeteo": n}`, je Nutzer
+`interactive: {"openmeteo": n}` und `interactive_warned` (bool, eine Warnzeile je Tag).
+
 ### Admin-API Nutzerverwaltung (Issue #2155 S3, ADR-0080)
 
 Alle drei Routen: ohne Session 401, ohne Admin 403 `{"error":"forbidden"}`.
@@ -1832,7 +1859,7 @@ vorhanden, kein `omitempty`): `id`, `email`, `display_name`, `tier`, `requested_
 `requested_at`, `email_verified_at`, `created_at`, `disabled` (bool), `is_test_user` (bool),
 `last_trip_report_run` (`{"time","status","error"}` oder `null`), `open_meteo_calls_today`
 (int, heutiger Open-Meteo-Verbrauch des Nutzers, UTC-Tag; 0 bei fehlender/kaputter/gestriger
-Zaehlerdatei, #2475). Nie `password_hash`,
+Zaehlerdatei, #2475), `open_meteo_interactive_calls_today` (int, davon interaktiv; ADR-0117, #2961). Nie `password_hash`,
 Passkey- oder Token-/Code-Felder.
 
 **`PUT /api/admin/users/{id}/tier`**, Body `{"tier":"free|standard|premium"}` -> 200 mit
@@ -1933,7 +1960,7 @@ Fetches normalized weather forecast for a given coordinate.
 
 **Note (Issue #2391, ADR-0076):** Vor dem eigentlichen Abruf reserviert der Go-Handler das
 Tageskontingent beim Python-Core über den neuen internen Endpunkt `POST
-/api/_internal/forecast-budget/reserve?user_id=...&priority=polling` (`api/routers/internal.py`,
+/api/_internal/forecast-budget/reserve?user_id=...&priority=user_interactive` (seit ADR-0117/#2961; vorher `polling`; `api/routers/internal.py`,
 Section 23-Muster — kein Go-Proxy, `X-GZ-Core-Auth`-geschützt). Antwort `{"allowed": bool,
 "retry_after_s"?: int}` — `retry_after_s` ist nur bei `allowed: false` gesetzt. Ein Erfolg bucht
 2 Einheiten (ein Forecast-Abruf kostet Vorhersage- **und** UV-Abruf) gegen dieselbe

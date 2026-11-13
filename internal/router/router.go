@@ -294,7 +294,8 @@ func New(deps Deps) chi.Router {
 	r.Put("/api/locations/{id}/weather-config", handler.PutLocationWeatherConfigHandler(deps.Store))
 	r.Post(gpxUploadPath, bremsen.Gpx(handler.GpxProxyHandler(deps.Config.PythonCoreURL)))
 	r.Post("/api/notify/test", bremsen.Testnachricht(handler.NotifyTestHandler(deps.Store, deps.Config.PythonCoreURL)))
-	r.Get("/api/compare", bremsen.Vergleich(handler.CompareProxyHandler(deps.Config.PythonCoreURL)))
+	// Issue #2961 (ADR-0117): hoechstens so viele Orte wie die Tarif-Quote.
+	r.Get("/api/compare", bremsen.Vergleich(handler.VergleichOrteGrenze(deps.Store, handler.CompareProxyHandler(deps.Config.PythonCoreURL))))
 	// Issue #1350 Teil 1: read-only Compare-Metrik-Katalog (statisch, kein user_id-Bezug).
 	r.Get("/api/compare/metrics", handler.ProxyHandler(deps.Config.PythonCoreURL, "/api/compare/metrics"))
 	r.Get("/api/_internal/trip/{id}/loaded", handler.LoadedTripProxyHandler(deps.Config.PythonCoreURL))

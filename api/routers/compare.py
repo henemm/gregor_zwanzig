@@ -28,6 +28,42 @@ def get_compare_metrics(lang: Optional[str] = Query(None, description="de|en, so
     return {"metrics": get_compare_metric_catalog(lang="en" if lang == "en" else "de")}
 
 
+def _pruefe_eingaben(user_id: str, forecast_hours: int, start: int, ende: int,
+                     target_date: Optional[str]) -> Optional[date]:
+    """Issue #2961 (ADR-0117): Eingabegrenzen vor jedem Abruf. Obergrenze des
+    Horizonts ist der groesste, den das Produkt selbst nutzt
+    (``COMPARE_FORECAST_HOURS``, Versand und Vorschau); Stunden 0..23."""
+    from api.fehler import api_fehler
+    from services.comparison_engine import COMPARE_FORECAST_HOURS
+
+    if not 1 <= forecast_hours <= COMPARE_FORECAST_HOURS:
+        raise api_fehler(422, "vergleich_parameter_ungueltig", user_id,
+                         parameter="forecast_hours", erlaubt=f"1-{COMPARE_FORECAST_HOURS}")
+    for name, wert in (("time_window_start", start), ("time_window_end", ende)):
+        if not 0 <= wert <= 23:
+            raise api_fehler(422, "vergleich_parameter_ungueltig", user_id,
+                             parameter=name, erlaubt="0-23")
+    if not target_date:
+        return None
+    try:
+        return date.fromisoformat(target_date)
+    except ValueError:
+        raise api_fehler(422, "vergleich_parameter_ungueltig", user_id,
+                         parameter="target_date", erlaubt="YYYY-MM-DD") from None
+
+
+def _kontingent_ganz_erschoepft(result, user_id: str) -> None:
+    """Liefert KEIN Ort Daten, weil das interaktive Kontingent erschoepft ist,
+    antwortet der Vergleich mit 429 statt einer Liste leerer Orte. Sonst
+    bleibt der Hinweis je Ort (``error``/``error_code``) sichtbar."""
+    from api.fehler import kontingent_erschoepft
+    from services.comparison_engine import KONTINGENT_CODE
+
+    orte = result.locations
+    if orte and all(lr.error_code == KONTINGENT_CODE for lr in orte):
+        raise kontingent_erschoepft(user_id)
+
+
 @router.get("/api/compare")
 def run_comparison(
     location_ids: str = Query(..., description="Comma-separated location IDs, or '*' for all"),
@@ -41,7 +77,11 @@ def run_comparison(
     from app.loader import load_all_locations
     from app.profile import ActivityProfile
     from services.comparison_parallel import run_comparison_parallel
+    from services.forecast_budget import interaktiver_abruf
 
+    gewaehltes_datum = _pruefe_eingaben(
+        user_id, forecast_hours, time_window_start, time_window_end, target_date,
+    )
     all_locations = load_all_locations(user_id=user_id)
 
     if location_ids == '*':
@@ -57,8 +97,8 @@ def run_comparison(
     # ADR-0044): "14:00" ist die ORTSZEIT des ersten aufloesbaren Orts, nicht
     # mehr die zonenlose Serveruhr — Stunde UND Tag kommen aus DERSELBEN
     # Aufloesung, sonst waere die Schwelle in sich widersprochen.
-    if target_date:
-        td = date.fromisoformat(target_date)
+    if gewaehltes_datum is not None:
+        td = gewaehltes_datum
     else:
         from datetime import timedelta, timezone
 
@@ -81,15 +121,19 @@ def run_comparison(
     # Parameter unveraendert; ``comparison_engine.py`` bleibt unangetastet.
     # ``call_source`` MUSS ausdruecklich gesetzt werden: ein ThreadPoolExecutor
     # reicht den ContextVar-Kontext nicht an seine Arbeiter weiter.
-    result = run_comparison_parallel(
-        locations=selected,
-        time_window=(time_window_start, time_window_end),
-        target_date=td,
-        forecast_hours=forecast_hours,
-        profile=profile,
-        call_source="vergleich",
-        user_id=user_id,  # Issue #2234: Budget beim ausloesenden Nutzer
-    )
+    # Issue #2961 (ADR-0117): der Sofortvergleich ist ein interaktiver
+    # Ausloeser und bucht auf das interaktive Kontingent des Nutzers.
+    with interaktiver_abruf():
+        result = run_comparison_parallel(
+            locations=selected,
+            time_window=(time_window_start, time_window_end),
+            target_date=td,
+            forecast_hours=forecast_hours,
+            profile=profile,
+            call_source="vergleich",
+            user_id=user_id,  # Issue #2234: Budget beim ausloesenden Nutzer
+        )
+    _kontingent_ganz_erschoepft(result, user_id)
 
     # Convert to JSON-serializable dict
     locations_data = []
@@ -100,6 +144,7 @@ def run_comparison(
             "elevation_m": loc_result.location.elevation_m,
             "score": loc_result.score,
             "error": loc_result.error,
+            "error_code": loc_result.error_code,
             "snow_depth_cm": loc_result.snow_depth_cm,
             "snow_new_cm": loc_result.snow_new_cm,
             "temp_min": loc_result.temp_min,
