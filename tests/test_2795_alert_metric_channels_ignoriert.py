@@ -121,6 +121,33 @@ def _trip_versand(trip, user_id: str, aenderungen) -> _TripVersandRekorder:
     return rekorder
 
 
+def test_aufloesung_der_kanal_tabelle_traegt_je_nutzer_nur_eigene_kanaele():
+    """Ersatz fuer AC-24 (ADR-0003, Zwei-Nutzer): Nutzer A hat in der
+    Kanal-Tabelle nur Telegram, Nutzer B nur E-Mail. Gleicher Alarm ueber die
+    echte Versandstelle, je Nutzer ein eigener Service (eigene ``user_id``):
+    A bekommt genau {telegram}, B genau {email} — keine Vermischung, kein
+    Rueckfall auf ``"default"``."""
+    user_a, user_b = "u2795-zweinutzer-a", "u2795-zweinutzer-b"
+    assert user_a != "default" and user_b != "default" and user_a != user_b
+    _tarif(user_a)
+    _tarif(user_b)
+
+    trip_a = _trip("trip-2795-zn-a", altschluessel=None)
+    trip_a.alert_channels = {"email": False, "telegram": True, "sms": False, "premium_sms": False}
+    trip_a.alert_channel_thresholds = {"telegram": "LOW"}
+    trip_b = _trip("trip-2795-zn-b", altschluessel=None)
+    trip_b.alert_channels = {"email": True, "telegram": False, "sms": False, "premium_sms": False}
+    trip_b.alert_channel_thresholds = {"email": "LOW"}
+
+    rek_a = _trip_versand(trip_a, user_a, [_aenderung("gust_max_kmh", "major")])
+    rek_b = _trip_versand(trip_b, user_b, [_aenderung("gust_max_kmh", "major")])
+
+    assert rek_a.abweichung == [{"telegram"}], (
+        f"Nutzer A muss genau seine eigene Kanal-Tabelle bekommen: {rek_a.abweichung!r}")
+    assert rek_b.abweichung == [{"email"}], (
+        f"Nutzer B muss genau seine eigene Kanal-Tabelle bekommen: {rek_b.abweichung!r}")
+
+
 # ─────────────────────── Trip: am Versandweg ────────────────────────────────
 
 def test_ac29_trip_alarm_hoch_geht_trotz_altschluessel_an_beide_kanaele():

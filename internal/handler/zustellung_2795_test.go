@@ -26,6 +26,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/go-chi/chi/v5"
 	"github.com/henemm/gregor-api/internal/model"
 	"github.com/henemm/gregor-api/internal/store"
 )
@@ -408,5 +409,30 @@ func TestZustellung_2795_ZweiNutzerGetrennt(t *testing.T) {
 	if pa["alert_cooldown_minutes"] != float64(45) || pa["alert_quiet_to"] != "06:00" {
 		t.Errorf("AC-34: A's Preset Cooldown/Stille Stunden nicht gespeichert: %v / %v",
 			pa["alert_cooldown_minutes"], pa["alert_quiet_to"])
+	}
+}
+
+// AC-8 (POST-Pfad): eine unzulaessige Versandminute beim ANLEGEN eines Trips
+// wird mit 400 abgelehnt, und es entsteht kein Trip auf der Platte.
+func TestCreate_2795_UnzulaessigeMinuteWird400(t *testing.T) {
+	for _, eingabe := range []string{"06:50", "06:50:00", "07:01"} {
+		t.Run(eingabe, func(t *testing.T) {
+			s := newTestStore(t)
+			r := chi.NewRouter()
+			r.Post("/api/trips", CreateTripHandler(s))
+			body := `{"id":"trip-2795-neu","name":"Neu","stages":[{"id":"S1","name":"Tag 1","date":"2026-08-20","waypoints":[{"id":"W1","name":"P","lat":47.0,"lon":11.0,"elevation_m":500}]}],"report_config":{"enabled":true,"send_email":true,"morning_time":"` + eingabe + `","evening_time":"18:00"}}`
+
+			w := doReq(r, http.MethodPost, "/api/trips", body, "", "usera")
+			if w.Code != http.StatusBadRequest {
+				t.Errorf("AC-8: Trip-POST %s erwartet 400, got %d: %s", eingabe, w.Code, w.Body.String())
+			}
+			tripPfad := filepath.Join(s.WithUser("usera").BriefingsDir(), "trip-2795-neu.json")
+			if _, err := os.Stat(tripPfad); err == nil {
+				t.Errorf("AC-8: nach abgelehntem POST darf kein Trip angelegt sein: %s", tripPfad)
+			}
+			if tr, _ := s.WithUser("usera").LoadTrip("trip-2795-neu"); tr != nil {
+				t.Errorf("AC-8: Trip trotz 400 geladen")
+			}
+		})
 	}
 }

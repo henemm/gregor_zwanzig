@@ -2,7 +2,7 @@
 entity_id: feat_2795_s3b_teil1_zustellung
 type: module
 created: 2026-11-12
-updated: 2026-11-12
+updated: 2026-11-13
 status: draft
 version: "1.0"
 tags: [hub, reiter, zustellung, briefing-zeiten, kanal-tabelle, alarme, stille-stunden, i18n, epic-2791]
@@ -281,6 +281,7 @@ Alle neuen Nutzertexte nur über `frontend/src/lib/i18n/messages/{de,en}/zustell
 - *Go (`go test`):* Zeitnormalisierung (06:45 bleibt, 07:00 bleibt, 06:50 → 400, Sekunden → :00, Lesen rundet Altwert ab ohne Rückschreiben); `send_email` fehlt/true/false im Preset-Roundtrip; Preset-PUT und Trip-PUT mit **zwei Nutzern** (Fremdzugriff abgelehnt); Merge lässt Fremdfelder unberührt (`internal/handler/*_test.go`, `internal/store/slot_hour_normalization_test.go`, `compare_preset_slot_migration_test.go`).
 - *Python (benannte Testdateien, nie ein Lauf ohne Dateinamen):* Fälligkeit in Minuten (`fenster_offen` für 06:45 vor/nach/im Fenster), Dedupe über 12 Ticks mit echter `briefing_slots.json` im tmp-Verzeichnis (nicht gemockt), Fail-closed bleibt (`test_briefing_slot_fail_closed.py`, `test_scheduler_unknown_outcome_locks_slot.py`), `send_email` fehlt/true/false im Versandpfad, Alarmauflösung mit Altschlüssel `alert_metric_channels` (ignoriert) und Dringlichkeit je Kanal, Migration (Idempotenz, Fremdfelder erhalten, Protokoll).
 - *Frontend (`node --test`):* Modell und Speicherer als reine Funktionen (Diff nur geänderter Felder, Owner-Trennung, Premium-SMS-Sperren, Zähler Singular/Plural), Katalog-Parität de/en, Marker `data-abschnitt` je Abschnitt, AST-Wächter `s3a2794_speicher_owner_waechter`, Pendant-Sperre (#1170), Raster-Validierung des Uhrzeitfelds.
+- *Umgesetzt in 1a (2026-11-13):* `internal/handler/zustellung_2795_test.go` (Trip-POST 06:50 → 400, Zwei-Nutzer-Preset-PUT) und `tests/test_2795_alert_metric_channels_ignoriert.py` (Zwei-Nutzer-Test Kanal-Auflösung, Altschlüssel ignoriert).
 - Ein Verhaltens-Nachweis ist zuerst aus Nutzersicht rot (z. B. 06:45 wird zu 06:00 gespeichert), danach grün.
 
 **Live-E2E auf Staging (`/e2e-verify`, nach dem Push):** Playwright für Trip und Orte: 06:45 eintippen, speichern, Neuladen, Wert steht; 06:50 → Meldung; Kanal ohne Verbindung gesperrt mit Konto-Link; Dringlichkeit nur bei Alarm an; Premium-SMS verfallen gesperrt; E-Mail-Schalter Orte aus/an; Stille Stunden und Cooldown speichern; Übergangsblock vorhanden; U2/K13-Sprünge; Elementlisten-Abgleich Scope `zustellung` (beide Kontexte, vier Zustände); Soll/Ist-Bild über `mockup-bildpruefer`.
@@ -314,6 +315,10 @@ Alle neuen Nutzertexte nur über `frontend/src/lib/i18n/messages/{de,en}/zustell
 - Die Anlegeseiten zeigen bis zu einer späteren Scheibe weiter die alte Versand-/Alarm-Oberfläche.
 - Der Übergangsblock ist bewusst unfertig und wird mit Teil 2 (Inhalt je Kanal) und S5 (Test schicken) abgebaut.
 - Das Raster ist Viertelstunde; feinere Zeiten sind kein Ziel.
+- Das Migrationsprotokoll (betroffene Abos von `scripts/migrate_2795_alert_metric_channels.py`) erscheint nur auf der Konsole; beim `--execute`-Lauf ist die Ausgabe zu sichern.
+- Bis Teilschritt 1b schreibt die alte Oberfläche weiter `alert_metric_channels`; das Feld hat keine Wirkung mehr.
+- Entfallene Prüfungen (per Design nicht mehr möglich, kein Testverlust): F005/F101 (Teilausfall disjunkter Kanalgruppen je Ort) sowie ac16/ac17, da es keine metrikgenauen Kanalgruppen mehr gibt.
+- 1a-Ist-Umfang: 21 Produktiv-Dateien, ca. +455/-162 Produktiv-LoC (Schätzung der Tabelle oben: ca. 12 Dateien, +350/-60).
 
 ## Architektur-Entscheidung (ADR)
 
@@ -323,3 +328,4 @@ Alle neuen Nutzertexte nur über `frontend/src/lib/i18n/messages/{de,en}/zustell
 ## Changelog
 
 - 2026-11-12: Initiale Fassung (Entwurf).
+- 2026-11-13: Teilschritt 1a (Backend) umgesetzt. Tatsächlicher Umfang: 21 Produktiv-Dateien, ca. +455/-162 Produktiv-LoC (Schätzung: ca. 12 Dateien). Inhalt: Briefing-Zeiten im Viertelstunden-Raster (00/15/30/45) statt Kappung auf die volle Stunde; unzulässige Minute → HTTP 400 (Trip-POST/PUT, Preset-PUT); Lesen normalisiert nicht mehr auf die Stunde (nicht rasterkonformer Altwert wird beim Lesen auf die vorige Viertelstunde abgerundet, nicht zurückgeschrieben). Cron `briefing_dispatch` alle 15 Minuten (vorher stündlich), Fälligkeit in Minuten, Nachholfenster 3 h, Dedupe je (Abo, Slot, Ortstag). Neues Feld `send_email` für Compare-Presets (Go `*bool` omitempty, Python `bool=True`, fehlend = true). Tech-Lead-Entscheidung: `send_email=false` nimmt nur die E-Mail aus dem Briefing und aus dem GEERBTEN Orts-Alarm-Satz; ein explizit gesetztes `alert_channels.email` bleibt wirksam (Briefing- und Alarm-Spalte der Kanal-Tabelle sind getrennt). `alert_metric_channels` („Kanäle je Wettergröße“) wirkt nicht mehr: Alarmziele ergeben sich nur aus `alert_channels` + `alert_channel_thresholds`, auch alte `alert_rules[].channels` wirken nicht mehr; Go hält das Feld lesetolerant. `trip_alert.py` musste nicht geändert werden (liest `alert_metric_channels` nicht mehr). Migration `scripts/migrate_2795_alert_metric_channels.py` (Read-Modify-Write, Sicherung vorher, idempotent). Nutzertext-Änderung: i18n `versand.json` `"{stunde}:00"` → `"{stunde}"` (Uhrzeit jetzt HH:MM; Golden-Texte zeigen „06:00“ statt „6:00“). Bis 1b schreibt die alte Oberfläche noch `alert_metric_channels`, ohne Wirkung. Neue Tests: Zwei-Nutzer-Test Kanal-Auflösung (`tests/test_2795_alert_metric_channels_ignoriert.py`, Ersatz für das gelöschte ac24), Go-Test Trip-POST 06:50 → 400 (`internal/handler/zustellung_2795_test.go`).
