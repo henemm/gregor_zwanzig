@@ -1,3 +1,4 @@
+# PARITAET-BEGRUENDUNG: E-Mail und SMS haben je eigene Versandwege und Sperren, die Herkunftssperre wird deshalb je Kanal an seinem eigenen Netzrand geprueft.
 """Issue #1476 AC-6 — Herkunftssperre gilt auch für E-Mail und SMS.
 
 Messergebnis (vor dieser Aenderung, per Codelesen belegt): BEIDE Kanaele

@@ -1,3 +1,4 @@
+# PARITAET-BEGRUENDUNG: Langform und Kurzform haben je eigene Wortform, geprueft wird nur der gleiche Zahleninhalt, ein Zusammenfuehren wuerde die Kanalformen verwischen.
 """TDD RED — Issue #2051 Scheibe S2b: Langform und Kurzform nennen DIESELBEN
 km-Grenzen in derselben Reihenfolge.
 

@@ -1,4 +1,5 @@
 # doc-compliance-test
+# PARITAET-BEGRUENDUNG: Python-Core und Go-API sind zwei Prozesse mit je eigenem Empfaenger-Regelwerk, die gemeinsame Falltabelle ist der Zwang zur Gleichheit.
 """Empfaenger-Regelwerk-Paritaet Python <-> Go (Issue #1412, Scheibe S2a).
 
 Teilweise Werkzeug-Klasse (CLAUDE.md-Ausnahme `# doc-compliance-test`,

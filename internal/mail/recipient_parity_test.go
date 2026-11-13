@@ -1,5 +1,7 @@
 package mail
 
+// PARITAET-BEGRUENDUNG: Go-API und Python-Core sind zwei Prozesse mit je eigenem Empfaenger-Regelwerk, die gemeinsame Falltabelle ist der Zwang zur Gleichheit.
+
 // Empfaenger-Regelwerk-Paritaet Python <-> Go (Issue #1412, Scheibe S2a).
 //
 // Spec: docs/specs/modules/fix_1412_s2a_regelwerk_paritaet.md

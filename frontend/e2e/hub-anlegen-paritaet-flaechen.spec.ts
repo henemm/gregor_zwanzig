@@ -1,3 +1,4 @@
+// PARITAET-BEGRUENDUNG: Der Rahmen von Trip und Vergleich ist bereits geteilt, dieser Test ist der Regressionswaechter gegen ein Auseinanderlaufen.
 // E2E — Issue #2880 (Epic #2345, ADR-0097/ADR-0110): Parität Trip/Vergleich bei der Reiterfläche
 // im Hub (P1) und bei Feld-Bausteinen und Schritt-Reitern beim Anlegen (P3).
 //

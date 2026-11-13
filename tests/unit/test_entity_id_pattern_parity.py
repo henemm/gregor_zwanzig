@@ -1,3 +1,4 @@
+# PARITAET-BEGRUENDUNG: Python-Core und Go-API sind zwei Prozesse mit je eigenem entity_id-Muster, die gemeinsame Wahrheitstabelle ist der Zwang zur Gleichheit.
 """entity_id-Muster-Paritaet Python <-> Go (Issue #2140 Scheibe 2, AC-10).
 
 Das Zulassungsmuster fuer ENTITAETS-Kennungen (Trip/Ort/Vergleichs-Preset)

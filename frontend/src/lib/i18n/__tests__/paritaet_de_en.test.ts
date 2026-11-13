@@ -1,4 +1,5 @@
 // doc-compliance-test (Paritaetstest: liest die Katalogdateien als DATEN)
+// PARITAET-BEGRUENDUNG: Prueft die Vollstaendigkeit der Frontend-Kataloge de und en, es gibt keinen Doppelcode, nur zwei Sprachdateien je Bereich.
 //
 // Issue #2647 (i18n S2) — AC-3: je Bereichsdatei sind Schluesselmenge und
 // Platzhaltermenge in `de` und `en` gleich. Die Pruefung laeuft erst gegen
