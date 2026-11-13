@@ -82,5 +82,9 @@
   "mail.hinweis.reset.entfernt": "These sign-in methods were also removed: {liste}.",
   "mail.hinweis.reset.passkeys": "passkeys ({anzahl})",
   "mail.hinweis.reset.google": "Google sign-in",
-  "mail.hinweis.reset.bleiben": "Your passkeys and a linked Google sign-in remain in place."
+  "mail.hinweis.reset.bleiben": "Your passkeys and a linked Google sign-in remain in place.",
+  "mail.hinweis.adresse_angefordert.betreff": "Gregor 20 — Change of your account address requested",
+  "mail.hinweis.adresse_angefordert.text": "A change of the email address of your Gregor 20 account to {adresse} was requested. It only takes effect once the confirmation link sent to the new address is opened. If this wasn't you, change your password right away — the change has not happened yet.",
+  "mail.hinweis.kennung_angefordert.betreff": "Gregor 20 — Change of your sign-in address requested",
+  "mail.hinweis.kennung_angefordert.text": "A change of the sign-in address of your Gregor 20 account to {adresse} was requested. It only takes effect once the confirmation link sent to the new address is opened. If this wasn't you, change your password right away — the change has not happened yet."
 }

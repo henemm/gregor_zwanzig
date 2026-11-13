@@ -82,5 +82,9 @@
   "mail.hinweis.reset.entfernt": "Außerdem wurden diese Zugangswege entfernt: {liste}.",
   "mail.hinweis.reset.passkeys": "Passkeys ({anzahl})",
   "mail.hinweis.reset.google": "Google-Anmeldung",
-  "mail.hinweis.reset.bleiben": "Deine Passkeys und eine verknüpfte Google-Anmeldung bestehen weiter."
+  "mail.hinweis.reset.bleiben": "Deine Passkeys und eine verknüpfte Google-Anmeldung bestehen weiter.",
+  "mail.hinweis.adresse_angefordert.betreff": "Gregor 20 — Wechsel der Adresse deines Kontos angefordert",
+  "mail.hinweis.adresse_angefordert.text": "Für dein Gregor-20-Konto wurde ein Wechsel der E-Mail-Adresse auf {adresse} angefordert. Wirksam wird er erst, wenn der Bestätigungslink an die neue Adresse geöffnet wird. Warst du das nicht, ändere sofort dein Passwort — der Wechsel ist dann noch nicht erfolgt.",
+  "mail.hinweis.kennung_angefordert.betreff": "Gregor 20 — Wechsel deiner Anmelde-Adresse angefordert",
+  "mail.hinweis.kennung_angefordert.text": "Für dein Gregor-20-Konto wurde ein Wechsel der Anmelde-Adresse auf {adresse} angefordert. Wirksam wird er erst, wenn der Bestätigungslink an die neue Adresse geöffnet wird. Warst du das nicht, ändere sofort dein Passwort — der Wechsel ist dann noch nicht erfolgt."
 }

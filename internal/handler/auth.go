@@ -1481,6 +1481,9 @@ func UpdateProfileHandler(s *store.Store, cfg config.Config, mailLimiter *MailFl
 		adressStand := model.User{Email: user.Email, MailTo: user.MailTo,
 			PendingContactAddress: user.PendingContactAddress, PendingContactField: user.PendingContactField}
 		sendVerification := false
+		// Issue #2961 (F-F): Art der Hinweis-Mail, wenn hier ein Wechsel
+		// angefordert wird (leer: keiner).
+		angefordertArt := ""
 		// Issue #2404: die Adresse, an die die Bestaetigungsmail ginge — in
 		// beiden Zweigen, die sendVerification setzen, ist das die neue
 		// wirksame Adresse (Pending-Zweig schreibt sie nach
@@ -1515,6 +1518,7 @@ func UpdateProfileHandler(s *store.Store, cfg config.Config, mailLimiter *MailFl
 				sendVerification = user.EmailVerifiedAt == nil
 			case mailToFieldChanged && newEffective != oldEffective:
 				user.PendingContactField = "mail_to"
+				angefordertArt = hinweisAdresseAngefordert
 				user.PendingContactAddress = newEffective
 				// Ein gleichzeitig GELEERTES email wird sofort geschrieben,
 				// solange es das inaktive Feld ist. Eine neue Kennung braucht
@@ -1534,6 +1538,7 @@ func UpdateProfileHandler(s *store.Store, cfg config.Config, mailLimiter *MailFl
 				// Kennung wartet auf den Link an genau diese Adresse.
 				user.MailTo = newMailTo
 				user.PendingContactField = "email"
+				angefordertArt = hinweisKennungAngefordert
 				user.PendingContactAddress = newEmail
 				verificationAddress = newEmail
 				sendVerification = true
@@ -1670,6 +1675,11 @@ func UpdateProfileHandler(s *store.Store, cfg config.Config, mailLimiter *MailFl
 			return
 		}
 		user = gespeichert
+		if angefordertArt != "" {
+			// Hinweis an die bisherige bestaetigte Adresse schon beim Anstossen.
+			notifyAccountChange(user, confirmedNoticeAddress(user), angefordertArt,
+				i18n.Args{"adresse": user.PendingContactAddress}, nil)
+		}
 
 		if deleteSmsVerification {
 			if err := s.DeleteSmsVerification(userId); err != nil {

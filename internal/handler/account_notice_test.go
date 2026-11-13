@@ -147,7 +147,14 @@ func TestHinweis_MengenbremseFuenfJeNutzerUndStunde(t *testing.T) {
 func TestHinweis_UnbestaetigtesKontoBekommtKeine(t *testing.T) {
 	post := hinweisPostausgang(t, nil)
 	s := newTestStore(t)
-	setupUserWithPassword(t, s, "hinweis-unbestaetigt", "altes-pw-1")
+	// M16: MIT Adresse, aber unbestaetigt — sonst faengt der Test eine
+	// Verfaelschung von confirmedNoticeAddress nicht (ohne Adresse ginge
+	// ohnehin nichts hinaus).
+	h, _ := bcrypt.GenerateFromPassword([]byte("altes-pw-1"), bcrypt.MinCost)
+	if err := s.SaveUser(model.User{ID: "hinweis-unbestaetigt", Email: "unbestaetigt@beispiel.de",
+		MailTo: "unbestaetigt@beispiel.de", PasswordHash: string(h), CreatedAt: time.Now()}); err != nil {
+		t.Fatal(err)
+	}
 	if w := passwortAendern(s, "hinweis-unbestaetigt", "altes-pw-1", "neues-pw-1"); w.Code != http.StatusOK {
 		t.Fatalf("%d %s", w.Code, w.Body.String())
 	}
