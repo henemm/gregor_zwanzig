@@ -99,15 +99,17 @@ import {
 	request as apiRequest
 } from '@playwright/test';
 import { assertNotProdBaseURL } from './prodUrlGuard';
+import { ausUmgebung, wegwerfPasswort } from './stagingZugang';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = path.resolve(__dirname, '../..');
 
 const BASE = process.env.GZ_SVELTE_BASE ?? 'https://staging.gregor20.henemm.com';
-const NGINX_USER = ausUmgebung('GZ_VALIDATOR_USER', 'E2E_USER');
-const NGINX_PASS = ausUmgebung('GZ_VALIDATOR_PASS', 'E2E_PASS');
-const APP_USER = ausUmgebung('GZ_AUTH_USER', 'E2E_USER');
-const APP_PASS = ausUmgebung('GZ_AUTH_PASS', 'E2E_PASS');
+// #2961: Zugangsdaten erst bei der Ausfuehrung lesen, nie beim Sammeln der Datei.
+const NGINX_USER = (): string => ausUmgebung('GZ_VALIDATOR_USER', 'E2E_USER');
+const NGINX_PASS = (): string => ausUmgebung('GZ_VALIDATOR_PASS', 'E2E_PASS');
+const APP_USER = (): string => ausUmgebung('GZ_AUTH_USER', 'E2E_USER');
+const APP_PASS = (): string => ausUmgebung('GZ_AUTH_PASS', 'E2E_PASS');
 
 // Trip-Zeitzone: Innsbruck-Koordinaten -> tz_for_coords == Europe/Vienna.
 const TRIP_TZ = 'Europe/Vienna';
@@ -182,7 +184,7 @@ async function neuerKontext(): Promise<APIRequestContext> {
 	return apiRequest.newContext({
 		baseURL: BASE,
 		ignoreHTTPSErrors: true,
-		httpCredentials: { username: NGINX_USER, password: NGINX_PASS }
+		httpCredentials: { username: NGINX_USER(), password: NGINX_PASS() }
 	});
 }
 
@@ -261,7 +263,6 @@ if ids:
 imap.logout()
 print(json.dumps(treffer))
 `;
-import { ausUmgebung, wegwerfPasswort } from './stagingZugang';
 
 function mailsMitToken(token: string): Mail[] {
 	for (const pflicht of ['GZ_TEST_IMAP_USER', 'GZ_TEST_IMAP_PASS']) {
@@ -327,7 +328,7 @@ test.describe('Issue #2422 S3 AC-26: Abend aus im Editor => kein Abend-Briefing 
 		// --- Wegwerf-Nutzer -------------------------------------------------
 		admin = await neuerKontext();
 		const adminLogin = await admin.post('/api/auth/login', {
-			data: { username: APP_USER, password: APP_PASS }
+			data: { username: APP_USER(), password: APP_PASS() }
 		});
 		expect(adminLogin.ok(), `Admin-Login HTTP ${adminLogin.status()}`).toBeTruthy();
 		gast = await neuerKontext();
@@ -382,7 +383,7 @@ test.describe('Issue #2422 S3 AC-26: Abend aus im Editor => kein Abend-Briefing 
 		gastKontext = await browser.newContext({
 			baseURL: BASE,
 			ignoreHTTPSErrors: true,
-			httpCredentials: { username: NGINX_USER, password: NGINX_PASS },
+			httpCredentials: { username: NGINX_USER(), password: NGINX_PASS() },
 			storageState: await gast.storageState()
 		});
 		const page = await gastKontext.newPage();

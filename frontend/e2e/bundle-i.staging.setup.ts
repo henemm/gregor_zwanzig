@@ -17,14 +17,15 @@ import { ausUmgebung } from './stagingZugang';
 // nicht bei 429 — sonst verlängert jeder Auth-Hit das gleitende Limit-Fenster.
 const authFile = 'playwright/.auth/staging-bundle-i.json';
 const E2E_USER = 'bundle-i-e2e-user';
-const E2E_PASS = ausUmgebung('GZ_E2E_BUNDLE_I_PASS');
+// #2961: erst bei der Ausfuehrung lesen, nie beim Laden der Datei.
+const E2E_PASS = (): string => ausUmgebung('GZ_E2E_BUNDLE_I_PASS');
 
 function sleep(ms: number) {
 	return new Promise((r) => setTimeout(r, ms));
 }
 
 async function tryLogin(ctx: APIRequestContext) {
-	return ctx.post('/api/auth/login', { data: { username: E2E_USER, password: E2E_PASS } });
+	return ctx.post('/api/auth/login', { data: { username: E2E_USER, password: E2E_PASS() } });
 }
 
 setup('register + authenticate via API (staging) — Bündel I', async ({ playwright }) => {
@@ -49,7 +50,7 @@ setup('register + authenticate via API (staging) — Bündel I', async ({ playwr
 			res = await tryLogin(ctx);
 		} else {
 			// 401/400 → Nutzer existiert vermutlich noch nicht: registrieren, dann erneut.
-			await ctx.post('/api/auth/register', { data: { username: E2E_USER, password: E2E_PASS } }).catch(() => {});
+			await ctx.post('/api/auth/register', { data: { username: E2E_USER, password: E2E_PASS() } }).catch(() => {});
 			await sleep(2_000);
 			res = await tryLogin(ctx);
 		}
