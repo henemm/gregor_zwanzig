@@ -67,11 +67,40 @@ type NutzerBremse struct {
 	treffer  map[string][]time.Time
 }
 
+// bremsenUhr ist die Zeitquelle aller Nutzer-Bremsen; nur SetBremsenUhr
+// (Testnaht) ersetzt sie.
+var (
+	bremsenUhrMu sync.Mutex
+	bremsenUhrFn = time.Now
+)
+
+func bremsenUhr() time.Time {
+	bremsenUhrMu.Lock()
+	f := bremsenUhrFn
+	bremsenUhrMu.Unlock()
+	return f()
+}
+
+// SetBremsenUhr ersetzt die Zeitquelle der Nutzer-Bremsen (Testnaht, Muster
+// store.SetBriefingLockTimeout) und liefert die Rueckstell-Funktion. Sie
+// aendert keine Grenze und kann keine Bremse abschalten.
+func SetBremsenUhr(f func() time.Time) (restore func()) {
+	bremsenUhrMu.Lock()
+	alt := bremsenUhrFn
+	bremsenUhrFn = f
+	bremsenUhrMu.Unlock()
+	return func() {
+		bremsenUhrMu.Lock()
+		bremsenUhrFn = alt
+		bremsenUhrMu.Unlock()
+	}
+}
+
 // NewNutzerBremse baut eine Bremse; parallel darf nil sein.
 func NewNutzerBremse(variante string, limit int, fenster time.Duration, parallel *NutzerParallel) *NutzerBremse {
 	return &NutzerBremse{
 		limit: limit, fenster: fenster, variante: variante, parallel: parallel,
-		jetzt: time.Now, treffer: make(map[string][]time.Time),
+		jetzt: func() time.Time { return bremsenUhr() }, treffer: make(map[string][]time.Time),
 	}
 }
 
