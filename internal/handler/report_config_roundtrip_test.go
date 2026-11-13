@@ -281,8 +281,9 @@ func TestReportConfigRoundtrip_KappungTeilPutUndPerReport(t *testing.T) {
 		ReportConfig: seedRC,
 	})
 
-	// 1) Teil-PUT: nur morning_time mit Minuten.
-	w1 := rcAnfrage(h, "PUT", id, nutzer, rcBody(t, map[string]interface{}{"morning_time": "07:30:00"}))
+	// 1) Teil-PUT: nur morning_time mit Minuten und Sekunden. Seit #2795
+	// (Viertelstunden-Raster) bleibt die Minute, nur die Sekunden werden :00.
+	w1 := rcAnfrage(h, "PUT", id, nutzer, rcBody(t, map[string]interface{}{"morning_time": "07:30:30"}))
 	if w1.Code != 200 {
 		t.Fatalf("PUT 1: erwartet 200, war %d: %s", w1.Code, w1.Body.String())
 	}
@@ -290,7 +291,7 @@ func TestReportConfigRoundtrip_KappungTeilPutUndPerReport(t *testing.T) {
 	for k, v := range seedRC {
 		erwartet[k] = v
 	}
-	erwartet["morning_time"] = "07:00:00" // gekappt auf die volle Stunde
+	erwartet["morning_time"] = "07:30:00" // Sekunden -> :00, Minute bleibt (#2795)
 	rcGleich(t, "PUT 1 Antwort", rcAusBody(t, w1, "PUT 1"), erwartet)
 	rcGleich(t, "PUT 1 Datei", rcDateiRC(t, s, nutzer, id), erwartet)
 

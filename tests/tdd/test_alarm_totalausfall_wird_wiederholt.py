@@ -1285,75 +1285,15 @@ class _VergleichDisjunkt(_VergleichBasis):
         ).check_all_compare_presets()
 
 
-def test_f005_disjunkte_gruppe_mit_totalausfall_wird_nach_backoff_nachgeholt(rig):
-    """F005 (AC-10 je Gruppe im Ortsvergleich): GIVEN zwei Orte mit disjunkten
-    Kanal-Gruppen -- Ort A per E-Mail (stellt zu), Ort B per Telegram
-    (Totalausfall) / WHEN der Aenderungsalarm laeuft / THEN ist A gebucht, B
-    im Backoff, und die Preset-Sperrzeit wird NICHT gebucht; bei +31 Min wird
-    B zugestellt, A NICHT erneut gesendet; bei +62 Min geht nichts mehr raus."""
-    from services.throttle_store import ThrottleStore
-
-    uid = _uid("f005")
-    rig.modus["telegram"] = "fehler"
-    p = _VergleichDisjunkt(rig, uid, ("email",))
-    p.lauf(_T0)
-    assert rig.anzahl_angenommen("email") == 1, f"Voraussetzung: Ort A per E-Mail: {rig!r}"
-    # Telegram-Versuche = Sprechblase + Unvollstaendig-Hinweis (#1370-Muster).
-    tg_versuche = rig.anzahl_versuche("telegram")
-    assert tg_versuche >= 1 and rig.anzahl_angenommen("telegram") == 0, (
-        f"Voraussetzung: Ort B per Telegram, Totalausfall: {rig!r}"
-    )
-    assert wiederholungs_eintraege(uid), "F005: Gruppe B ohne Backoff"
-    assert ThrottleStore(uid).last_sent("compare_preset", p.entity_id) is None, (
-        "F005: Preset-Sperrzeit trotz gescheiterter Gruppe gebucht -- B verloere seinen Retry"
-    )
-    rig.modus["telegram"] = "ok"
-    p.lauf(_T0 + timedelta(minutes=10))
-    assert rig.anzahl_versuche("telegram") == tg_versuche, f"F005: Versuch waehrend Backoff: {rig!r}"
-    p.lauf(_T0 + timedelta(minutes=31))
-    assert rig.anzahl_angenommen("telegram") == 1, f"F005: Gruppe B nicht nachgeholt: {rig!r}"
-    assert rig.anzahl_versuche("email") == 1, f"F005: Ort A doppelt versendet: {rig!r}"
-    assert wiederholungs_eintraege(uid) == {}, "F005: Backoff nach Zustellung nicht geloescht"
-    vorher = rig.alle_versuche()
-    p.lauf(_T0 + timedelta(minutes=62))
-    assert rig.alle_versuche() == vorher, f"F005: Versand nach Abschluss: {rig!r}"
+# Issue #2795 (AC-29): F005 (disjunkte Kanal-Gruppen je Ort) und F101
+# (verschachtelte Gruppen) sind entfallen. Beide Szenarien entstanden
+# ausschliesslich ueber ``alert_metric_channels`` (Kanaele je Wettergroesse);
+# seit dem Wegfall gilt EINE Kanalmenge je Preset fuer alle Orte und Metriken,
+# unterschiedliche Kanal-Gruppen je Ort sind nicht mehr konfigurierbar.
+# Backoff je Ereignis bleibt durch F201 (eine E-Mail-Gruppe, zwei Orte) bewacht.
 
 
 # ═══════════════ Nachtraege Adversary-Durchgang 2 (F101-F103) ════════════════
-
-
-class _VergleichVerschachtelt(_VergleichDisjunkt):
-    """Verschachtelte Kanal-Gruppen: Ort B (Regen) geht an E-Mail UND
-    Telegram, Ort A (Boee) nur an E-Mail ⇒ Gruppen E-Mail(A,B) + Telegram(B)."""
-
-    name = "compare_alert_verschachtelt"
-    regen_kanaele = {"email": True, "telegram": True}
-
-
-def test_f101_verschachtelte_gruppe_behaelt_backoff_nach_teilzustellung(rig):
-    """F101 (AC-11/AC-18, Ortsvergleich): GIVEN E-Mail(A,B) scheitert,
-    Telegram(B) stellt zu -- B ist finalisiert, die E-Mail-Gruppe schrumpft auf
-    (A) / WHEN die Pruefung im 15-Minuten-Takt laeuft / THEN kein zweiter
-    E-Mail-Versuch und kein zweiter Protokolleintrag bei +15; beim ersten Lauf
-    nach Ablauf (+30) mit repariertem Draht wird A genau einmal zugestellt;
-    danach kein Versand mehr, B nie ein zweites Mal."""
-    uid = _uid("f101")
-    rig.modus["email"] = "fehler"
-    p = _VergleichVerschachtelt(rig, uid, ("email",))
-    p.lauf(_T0)
-    assert rig.anzahl_versuche("email") == 1, f"Voraussetzung: E-Mail(A,B): {rig!r}"
-    assert rig.anzahl_angenommen("telegram") == 1, f"Voraussetzung: Telegram(B): {rig!r}"
-    p.lauf(_T0 + timedelta(minutes=15))
-    assert rig.anzahl_versuche("email") == 1, f"F101: zweiter Versuch nach 15 Min: {rig!r}"
-    assert _protokoll_zahl(uid) == 1, f"F101: zweiter Protokolleintrag: {read_log(uid)!r}"
-    rig.modus["email"] = "ok"
-    p.lauf(_T0 + timedelta(minutes=30))
-    assert rig.anzahl_angenommen("email") == 1, f"F101: A nicht nachgeholt: {rig!r}"
-    for minuten in (45, 60, 75):
-        p.lauf(_T0 + timedelta(minutes=minuten))
-    assert rig.anzahl_versuche("email") == 2, f"F101: Versand nach Abschluss: {rig!r}"
-    assert rig.anzahl_versuche("telegram") == 1, f"F101: B ein zweites Mal: {rig!r}"
-    assert wiederholungs_eintraege(uid) == {}, wiederholungs_eintraege(uid)
 
 
 @pytest.mark.parametrize("pfad", list(_AUFRUFER))

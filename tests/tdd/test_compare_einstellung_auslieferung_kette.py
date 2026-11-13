@@ -340,20 +340,27 @@ def test_kanalmatrix_briefing_nach_optin_faehigkeit_und_tarif(mit, tier, kann_tg
     assert kontrolle.snap.empfaenger("email") == [f"{kontrolle.uid}@example.invalid"]
 
 
-def test_email_ist_immer_aktiv_auch_bei_allen_schaltern_aus(mit):
-    """AC-8: alle ``send_*`` fehlen/falsch, Rohschluessel ``send_email: false`` -> E-Mail
-    geht hinaus und ist der einzige Kanal."""
+def test_email_bei_fehlendem_send_email_aktiv_bei_false_aus(mit):
+    """AC-8, seit #2795 (AC-22) angepasst: alle ``send_*`` fehlen -> E-Mail geht
+    hinaus und ist der einzige Kanal (fehlendes ``send_email`` = true). Mit
+    ``send_email: false`` und sonst keinem Kanal geht NICHTS hinaus
+    (``no_channels``) -- bis #2795 war die Orts-Mail hier immer an."""
+    from services.send_outcomes import SendOutcomeError
+
     fehlen = fixture_dict("basis")
     for k in ("send_telegram", "send_sms", "send_premium_sms"):
         fehlen.pop(k)
-    falsch = fixture_dict("basis")
+    falsch = copy.deepcopy(fehlen)
     falsch["send_email"] = False
-    for vorlage in (fehlen, falsch):
-        for tier in ("premium", "standard"):
-            lauf = _lauf(mit, vorlage, tier, optins=False)
-            compare_vorbedingung_pruefen(lauf.snap, ("email",))
-            assert lauf.snap.kanaele == ["email"], f"nur E-Mail erwartet, bedient: {lauf.snap.kanaele}"
-            assert lauf.snap.empfaenger("email") == [f"{lauf.uid}@example.invalid"]
+    for tier in ("premium", "standard"):
+        lauf = _lauf(mit, fehlen, tier, optins=False)
+        compare_vorbedingung_pruefen(lauf.snap, ("email",))
+        assert lauf.snap.kanaele == ["email"], f"nur E-Mail erwartet, bedient: {lauf.snap.kanaele}"
+        assert lauf.snap.empfaenger("email") == [f"{lauf.uid}@example.invalid"]
+        with pytest.raises(SendOutcomeError) as fehler:
+            _lauf(mit, falsch, tier, optins=False)
+        assert fehler.value.code == "no_channels", fehler.value.code
+        assert mit.kanaele == [], f"send_email=false: keine Sendung erwartet, bedient: {mit.kanaele}"
     assert "send_email" not in fehlen
 
 

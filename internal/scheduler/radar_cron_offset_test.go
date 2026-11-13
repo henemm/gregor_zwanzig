@@ -74,14 +74,14 @@ func TestRadarJobsCronOffsetMinutes(t *testing.T) {
 	// robfig/cron/v3-Semantik (spec.go: Next() startet bei t+1s, liefert
 	// also NIE denselben Zeitpunkt wie das Argument) ist die erste
 	// tatsaechliche Feuer-Minute danach fuer "*/15 * * * *" 15, nicht 0.
-	// briefing_dispatch ("0 * * * *") feuert dagegen zur naechsten vollen
-	// Stunde, also Minute 0 (11:00 Uhr) -- eigene erwartete Minute je Job,
-	// nicht ein gemeinsamer Wert fuer alle.
+	// briefing_dispatch lief bis #2795 stuendlich ("0 * * * *", Minute 0);
+	// seit dem Viertelstunden-Raster (#2795) ebenfalls "*/15 * * * *", also
+	// Minute 15 -- weiterhin auf dem 15er-Raster, nie auf dem Radar-Versatz.
 	untouchedExpectations := map[string]int{
 		"alert_checks":         15,
 		"data_write_selftest":  15,
 		"compare_alert_checks": 15,
-		"briefing_dispatch":    0,
+		"briefing_dispatch":    15,
 	}
 	for id, wantMinute := range untouchedExpectations {
 		var schedule cronSchedule

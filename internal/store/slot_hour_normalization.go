@@ -1,5 +1,9 @@
 package store
 
+// Issue #2795 — seit S3b Teil 1a gilt das VIERTELSTUNDEN-Raster statt der
+// vollen Stunde (siehe Block unten); der folgende Text beschreibt die
+// Herkunft (#1280) und die unveraenderte Aufteilung Schreiben/Lesen.
+//
 // Issue #1280 — Versandzeit-Eingabe auf volle Stunden begrenzen.
 // Der Scheduler (Go-Cron, stuendlicher Takt; Faelligkeit ueber .hour) versendet
 // Briefings ohnehin nur zur vollen Stunde — Minuten werden serverseitig
@@ -29,59 +33,123 @@ import (
 	"github.com/henemm/gregor-api/internal/model"
 )
 
-// TruncateTimeStringToHour kappt "HH:MM"/"HH:MM:SS" auf die volle Stunde davor
-// (Minuten UND Sekunden -> :00). Truncate, kein Runden — die Realitaet ist die
-// volle Stunde davor. Nicht parsebare Werte bleiben unveraendert (Validierung
-// findet an anderer Stelle statt).
-func TruncateTimeStringToHour(value string) string {
+// Issue #2795 (Viertelstunden-Raster, PO 2026-11-12): Briefing-Zeiten sind
+// nicht mehr auf die volle Stunde gekappt. Zulaessig sind die Minuten
+// 00/15/30/45 (der Go-Cron `briefing_dispatch` laeuft alle 15 Minuten, Python
+// vergleicht die Faelligkeit in Minuten).
+//   - Schreiben: ValidateQuarterHourSlotTime / ValidateReportConfigSlotTimes —
+//     eine Minute ausserhalb des Rasters wird mit Fehler (HTTP 400) abgelehnt,
+//     NICHT still gerundet; Sekunden werden zu :00.
+//   - Lesen: TruncateTimeStringToQuarterHour rundet einen (theoretisch) nicht
+//     rasterkonformen Altwert auf die VORHERIGE Viertelstunde ab, ohne
+//     Rueckschreiben. Rasterkonforme Werte bleiben unveraendert.
+
+// parseSlotTime liest "HH:MM" oder "HH:MM:SS" (Stunde 0..23, Minute/Sekunde
+// 0..59).
+func parseSlotTime(value string) (time.Time, bool) {
 	v := value
 	if len(v) == 5 { // "HH:MM" -> Sekunden ergaenzen
 		v += ":00"
 	}
+	if len(v) != 8 {
+		return time.Time{}, false
+	}
 	t, err := time.Parse("15:04:05", v)
 	if err != nil {
-		return value
+		return time.Time{}, false
 	}
-	if t.Minute() == 0 && t.Second() == 0 {
-		return value // bereits volle Stunde — Originalformat beibehalten
-	}
-	return fmt.Sprintf("%02d:00:00", t.Hour())
+	return t, true
 }
 
-// TruncateTimePtrToHour ist die Pointer-sichere Variante von
-// TruncateTimeStringToHour: nil bleibt nil, ein gesetzter Wert wird gekappt
-// (neuer Pointer, Original unangetastet).
-func TruncateTimePtrToHour(v *string) *string {
+// ValidateQuarterHourSlotTime prueft eine Briefing-Uhrzeit beim Schreiben:
+// Format "HH:MM" oder "HH:MM:SS", Minute 00/15/30/45. Liefert den Wert als
+// "HH:MM:SS" mit Sekunden :00 (z. B. "06:45:30" -> "06:45:00"). Eine
+// unzulaessige Minute (z. B. 06:50) ist ein Fehler — keine stille Rundung.
+func ValidateQuarterHourSlotTime(fieldName, value string) (string, error) {
+	t, ok := parseSlotTime(value)
+	if !ok {
+		return "", fmt.Errorf("%s must match HH:MM or HH:MM:SS", fieldName)
+	}
+	if t.Minute()%15 != 0 {
+		return "", fmt.Errorf("%s must be on the quarter hour (minutes 00, 15, 30, 45), got %q", fieldName, value)
+	}
+	return fmt.Sprintf("%02d:%02d:00", t.Hour(), t.Minute()), nil
+}
+
+// TruncateTimeStringToQuarterHour rundet "HH:MM"/"HH:MM:SS" auf die
+// vorherige Viertelstunde ab (Lese-Heilung fuer Altwerte, 07:20 -> 07:15:00).
+// Rasterkonforme Werte ohne Sekunden bleiben im Originalformat unveraendert;
+// nicht parsebare Werte ebenfalls (Validierung findet beim Schreiben statt).
+func TruncateTimeStringToQuarterHour(value string) string {
+	t, ok := parseSlotTime(value)
+	if !ok {
+		return value
+	}
+	if t.Minute()%15 == 0 && t.Second() == 0 {
+		return value // bereits im Raster — Originalformat beibehalten
+	}
+	return fmt.Sprintf("%02d:%02d:00", t.Hour(), t.Minute()-t.Minute()%15)
+}
+
+// TruncateTimePtrToQuarterHour ist die Pointer-sichere Variante von
+// TruncateTimeStringToQuarterHour: nil bleibt nil, ein gesetzter Wert wird
+// abgerundet (neuer Pointer, Original unangetastet).
+func TruncateTimePtrToQuarterHour(v *string) *string {
 	if v == nil {
 		return nil
 	}
-	h := TruncateTimeStringToHour(*v)
+	h := TruncateTimeStringToQuarterHour(*v)
 	return &h
 }
 
-// HealComparePresetSlotTimes kappt die beiden Slot-Zeitfelder eines geladenen
-// Presets auf die volle Stunde (Read-Heilung fuer Bestandsdaten). Wird von
-// LoadComparePresets/LoadComparePreset aufgerufen — jeder Aufrufer bekommt
-// automatisch geheilte Daten, kein Write-Back auf die Platte.
+// HealComparePresetSlotTimes rundet die beiden Slot-Zeitfelder eines
+// geladenen Presets auf das Viertelstunden-Raster ab (Read-Heilung fuer
+// Bestandsdaten, #2795). Wird von LoadComparePresets/LoadComparePreset
+// aufgerufen — kein Write-Back auf die Platte.
 func HealComparePresetSlotTimes(p *model.ComparePreset) {
-	p.MorningTime = TruncateTimePtrToHour(p.MorningTime)
-	p.EveningTime = TruncateTimePtrToHour(p.EveningTime)
+	p.MorningTime = TruncateTimePtrToQuarterHour(p.MorningTime)
+	p.EveningTime = TruncateTimePtrToQuarterHour(p.EveningTime)
 }
 
-// NormalizeReportConfigSlotTimes kappt AUSSCHLIESSLICH report_config.morning_time
-// und report_config.evening_time auf die volle Stunde. Alle anderen
-// report_config-Keys bleiben unberuehrt (RMW-Merge, kein Replace). Wird sowohl
-// von den Trip-Schreib-Seams (CreateTripHandler, UpdateTripHandler) als auch
-// von der Read-Heilung (healTripSlotTimes) genutzt.
+// NormalizeReportConfigSlotTimes rundet AUSSCHLIESSLICH report_config.morning_time
+// und report_config.evening_time auf das Viertelstunden-Raster ab (Read-Heilung,
+// healTripSlotTimes). Alle anderen report_config-Keys bleiben unberuehrt.
 func NormalizeReportConfigSlotTimes(rc map[string]interface{}) {
 	if rc == nil {
 		return
 	}
 	for _, key := range []string{"morning_time", "evening_time"} {
 		if v, ok := rc[key].(string); ok && v != "" {
-			rc[key] = TruncateTimeStringToHour(v)
+			rc[key] = TruncateTimeStringToQuarterHour(v)
 		}
 	}
+}
+
+// ValidateReportConfigSlotTimes ist die Schreib-Pruefung (CreateTripHandler,
+// UpdateTripHandler, #2795): report_config.morning_time/evening_time muessen
+// im Viertelstunden-Raster liegen; Sekunden werden zu :00. Bei einem Fehler
+// bleibt die Map unveraendert und der Aufrufer antwortet mit 400. Alle
+// anderen report_config-Keys bleiben unberuehrt.
+func ValidateReportConfigSlotTimes(rc map[string]interface{}) error {
+	if rc == nil {
+		return nil
+	}
+	normalized := map[string]string{}
+	for _, key := range []string{"morning_time", "evening_time"} {
+		if v, ok := rc[key].(string); ok && v != "" {
+			n, err := ValidateQuarterHourSlotTime("report_config."+key, v)
+			if err != nil {
+				return err
+			}
+			normalized[key] = n
+		}
+	}
+	for key, n := range normalized {
+		if t, _ := parseSlotTime(rc[key].(string)); t.Second() != 0 {
+			rc[key] = n // nur Sekunden -> :00; rasterkonforme Werte behalten ihr Format
+		}
+	}
+	return nil
 }
 
 // ClampReportConfigDayWindow validiert/klemmt report_config.day_window_start_hour
@@ -149,9 +217,10 @@ func toIntHour(v interface{}) (int, bool) {
 	}
 }
 
-// healTripSlotTimes kappt sowohl das verschachtelte report_config.morning_time/
+// healTripSlotTimes rundet sowohl das verschachtelte report_config.morning_time/
 // evening_time ALS AUCH die daraus abgeleiteten obersten Flach-Felder
-// (trip.MorningTime/EveningTime, s. deriveFlatFields) auf die volle Stunde.
+// (trip.MorningTime/EveningTime, s. deriveFlatFields) auf das
+// Viertelstunden-Raster ab (#2795; vorher volle Stunde, #1280).
 // Muss NACH deriveFlatFields laufen (die Flach-Felder existieren erst danach).
 // Aufgerufen ausschliesslich von LoadTrip/LoadTrips (Read-Pfad) — SaveTrip ruft
 // dies NICHT, damit roh geseedete Testdaten unnormalisiert auf der Platte
@@ -159,6 +228,6 @@ func toIntHour(v interface{}) (int, bool) {
 func healTripSlotTimes(trip *model.Trip) {
 	NormalizeReportConfigSlotTimes(trip.ReportConfig)
 	ClampReportConfigDayWindow(trip.ReportConfig)
-	trip.MorningTime = TruncateTimePtrToHour(trip.MorningTime)
-	trip.EveningTime = TruncateTimePtrToHour(trip.EveningTime)
+	trip.MorningTime = TruncateTimePtrToQuarterHour(trip.MorningTime)
+	trip.EveningTime = TruncateTimePtrToQuarterHour(trip.EveningTime)
 }

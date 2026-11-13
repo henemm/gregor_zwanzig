@@ -338,7 +338,10 @@ func New(cfg *config.Config, st *store.Store) (*Scheduler, error) {
 		// Eintrag briefing_dispatch, der beide Fan-outs sequenziell auslöst
 		// (s. briefingDispatch()). tripReports()/comparePresetsDaily() bleiben
 		// unverändert; Status() expandiert diesen Eintrag weiterhin zu 2 Zeilen.
-		{"0 * * * *", s.briefingDispatch, "briefing_dispatch", "Briefing Dispatch (hourly)", []jobMeta{
+		// Issue #2795: Viertelstunden-Raster der Briefing-Zeiten — der Eintrag
+		// feuert alle 15 Minuten statt stuendlich (Python entscheidet weiter die
+		// Faelligkeit, ein Slot geht je Tag genau einmal raus).
+		{"*/15 * * * *", s.briefingDispatch, "briefing_dispatch", "Briefing Dispatch (every 15 min)", []jobMeta{
 			{id: "trip_reports_hourly", name: "Trip Reports (hourly check)"},
 			{id: "compare_presets_daily", name: "Compare Presets Slot-Check (hourly)"},
 		}},

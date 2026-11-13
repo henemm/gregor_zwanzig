@@ -795,6 +795,10 @@ def test_ac8b_wind_gust_metric_level_trip_gets_delta_alert(telegram_sink, clean_
     trip.alert_rules = [channel_rule]
     trip.report_config = None
     trip.alert_cooldown_minutes = 0
+    # Issue #2795 (Spec §4.3): Regel-Kanaele wirken nicht mehr -- die Zustellung
+    # per Telegram kommt aus der Kanal-Tabelle. Die Regel bleibt im Trip und
+    # belegt, dass ihr Kanal-Feld (telegram) nichts verschiebt.
+    trip.alert_channels = {"email": False, "telegram": True, "sms": False, "premium_sms": False}
 
     # Briefing-Snapshot: Böen 20 km/h
     cached = [_data(gust_max_kmh=20.0)]

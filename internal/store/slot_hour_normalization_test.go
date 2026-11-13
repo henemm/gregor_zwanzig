@@ -1,6 +1,6 @@
 package store
 
-// Issue #1280 — Versandzeit-Eingabe auf volle Stunden begrenzen.
+// Issue #1280 — Versandzeit-Eingabe auf volle Stunden begrenzen. (Seit #2795: Viertelstunden-Raster; die Heilung rundet einen Altwert wie 07:20 auf 07:15 ab.)
 // Tech-Lead-Entscheidung (Adversary-Nachtrag F002-F005): Read-Heilung ist
 // zentral im store-Paket (LoadTrip/LoadTrips/LoadComparePreset/
 // LoadComparePresets) verankert, statt an jedem einzelnen Handler-
@@ -34,7 +34,7 @@ func TestSaveTripThenLoadTrip_HealsMorningTimeInReportConfigAndFlatField(t *test
 		},
 		ReportConfig: map[string]interface{}{
 			"enabled":      true,
-			"morning_time": "07:30:00",
+			"morning_time": "07:20:00",
 		},
 	}
 	// SaveTrip normalisiert die Slot-Zeit NICHT (nur der Handler-Schreibpfad
@@ -48,11 +48,11 @@ func TestSaveTripThenLoadTrip_HealsMorningTimeInReportConfigAndFlatField(t *test
 		t.Fatalf("LoadTrip failed: err=%v loaded=%v", err, loaded)
 	}
 
-	if loaded.ReportConfig["morning_time"] != "07:00:00" {
-		t.Errorf("report_config.morning_time: erwartet 07:00:00 (geheilt), got %v", loaded.ReportConfig["morning_time"])
+	if loaded.ReportConfig["morning_time"] != "07:15:00" {
+		t.Errorf("report_config.morning_time: erwartet 07:15:00 (geheilt), got %v", loaded.ReportConfig["morning_time"])
 	}
-	if loaded.MorningTime == nil || *loaded.MorningTime != "07:00:00" {
-		t.Errorf("oberstes Flach-Feld MorningTime: erwartet 07:00:00 (geheilt), got %v", loaded.MorningTime)
+	if loaded.MorningTime == nil || *loaded.MorningTime != "07:15:00" {
+		t.Errorf("oberstes Flach-Feld MorningTime: erwartet 07:15:00 (geheilt), got %v", loaded.MorningTime)
 	}
 }
 
@@ -63,7 +63,7 @@ func TestSaveComparePresetsThenLoadComparePresets_HealsMorningTime(t *testing.T)
 	s := New(tmpDir, "heal-user")
 
 	trueVal := true
-	morningTime := "07:30:00"
+	morningTime := "07:20:00"
 	preset := model.ComparePreset{
 		ID:             "cp-heal-store",
 		Name:           "Store-Level Heal Preset",
@@ -90,8 +90,8 @@ func TestSaveComparePresetsThenLoadComparePresets_HealsMorningTime(t *testing.T)
 	if len(loaded) != 1 {
 		t.Fatalf("expected 1 preset, got %d", len(loaded))
 	}
-	if loaded[0].MorningTime == nil || *loaded[0].MorningTime != "07:00:00" {
-		t.Errorf("morning_time: erwartet 07:00:00 (geheilt), got %v", loaded[0].MorningTime)
+	if loaded[0].MorningTime == nil || *loaded[0].MorningTime != "07:15:00" {
+		t.Errorf("morning_time: erwartet 07:15:00 (geheilt), got %v", loaded[0].MorningTime)
 	}
 }
 

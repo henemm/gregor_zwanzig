@@ -183,7 +183,7 @@ def _dispatch_due_preset(
 
     preset_id = preset.get("id", "")
     now_utc = now_utc or _datetime.now(_timezone_mod.utc)
-    slot, slot_hour = _compare_slot(preset, tage_ab_ortstag, None, None)
+    slot, slot_hour, slot_minute = _compare_slot(preset, tage_ab_ortstag, None, None)
     if all_locations_cache is None:
         all_locations_cache = load_all_locations(user_id=user_id)
     by_loc = {loc.id: loc for loc in all_locations_cache}
@@ -214,7 +214,8 @@ def _dispatch_due_preset(
         logger.error("Compare preset %s failed: %s", preset_id, e)
         ausgang = None
     if ausgang == "no_weather":  # #1777 AC-12: Nachlieferung ueber den Marker
-        _mark_compare_undelivered(user_id, preset_id, slot, target_date, slot_hour)
+        _mark_compare_undelivered(user_id, preset_id, slot, target_date, slot_hour,
+                                  slot_minute=slot_minute)
     return _vermerk_abschliessen(store, schluessel[:3], ausgang)
 
 
@@ -261,11 +262,13 @@ def compare_vermerk_schluessel(preset: dict, by_loc: dict, now_utc: _datetime, s
 
 
 def _compare_slot(preset: dict, tage_ab_ortstag: int, report_type: str | None,
-                  slot_hour: int | None) -> tuple[str, int | None]:
-    """Slot (``morning``/``evening``) und Slot-Stunde eines Versands.
+                  slot_hour: int | None, slot_minute: int | None = None,
+                  ) -> tuple[str, int | None, int | None]:
+    """Slot (``morning``/``evening``), Slot-Stunde und -Minute eines Versands.
 
-    Ein Nachholversand reicht beides aus dem Vermerk durch (sonst gaelte ein
-    Abend-Nachholer nach Mitternacht als ``morning``, AC-8); der regulaere
+    Ein Nachholversand reicht alles aus dem Vermerk durch (sonst gaelte ein
+    Abend-Nachholer nach Mitternacht als ``morning``, AC-8; #2795: die Minute
+    haengt nie vom inzwischen geaenderten Preset ab); der regulaere
     Versand leitet sie aus dem Versatz und den Preset-Slots ab.
     """
     from services.compare_slot_scheduler import resolve_preset_slots
@@ -274,15 +277,17 @@ def _compare_slot(preset: dict, tage_ab_ortstag: int, report_type: str | None,
     if slot_hour is None:
         try:
             slots = resolve_preset_slots(preset)
-            slot_hour = (slots.evening_time if rt == "evening" else slots.morning_time).hour
+            zeit = slots.evening_time if rt == "evening" else slots.morning_time
+            slot_hour, slot_minute = zeit.hour, zeit.minute
         except (ValueError, TypeError):
             slot_hour = None
-    return rt, slot_hour
+    return rt, slot_hour, slot_minute
 
 
 def _mark_compare_undelivered(user_id: str, preset_id: str, report_type: str,
                               target_date: date, slot_hour: int | None,
-                              retry_of: dict | None = None) -> None:
+                              retry_of: dict | None = None,
+                              slot_minute: int | None = None) -> None:
     """Vermerkt einen vollstaendig gescheiterten Zeitplan-Versand (AC-1/AC-2).
 
     ``retry_of`` (nur no_weather-Wiederholung, F008): ``created_at`` des
@@ -302,6 +307,7 @@ def _mark_compare_undelivered(user_id: str, preset_id: str, report_type: str,
     marker = {
         "kind": pb.KIND_VERGLEICH, "preset_id": preset_id, "report_type": report_type,
         "date": target_date.isoformat(), "slot_hour": slot_hour,
+        "slot_minute": slot_minute,  # #2795, additiv (Bestand ohne Feld = :00)
         "reason": pb.DISPATCH_ERROR, "failed_segment_ids": [], "attempts": 0,
         "created_at": _datetime.now(_tz.utc).isoformat(),
     }
@@ -431,14 +437,17 @@ def _send_catchup(preset: dict, marker: dict, ortstag: date, settings: Settings,
             # Tagesbezug aus EINER Zeitabfrage (Vertrag #1661).
             target_date=target, tage_ab_ortstag=(target - ortstag).days,
             report_type=marker.get("report_type"), slot_hour=marker.get("slot_hour"),
-            catchup_hint=pb.dispatch_error_hint(marker.get("slot_hour"), lang=lang),
+            slot_minute=marker.get("slot_minute"),  # #2795: Minute nur aus dem Vermerk
+            catchup_hint=pb.dispatch_error_hint(
+                marker.get("slot_hour"), marker.get("slot_minute"), lang=lang),
             weather_failure_as_outcome=True, lang=lang,
         )
         return "sent"
     except SendOutcomeError as e:
         if e.code == "no_weather":  # F008: voruebergehend -> naechste Stunde erneut
             _mark_compare_undelivered(user_id, preset.get("id", ""), marker.get("report_type"),
-                                      target, marker.get("slot_hour"), retry_of=marker)
+                                      target, marker.get("slot_hour"), retry_of=marker,
+                                      slot_minute=marker.get("slot_minute"))
         return e.code
     except Exception as e:
         logger.error("Compare-Nachholversand %s gescheitert: %s", preset.get("id", "?"), e)
@@ -726,9 +735,8 @@ def _effective_compare_briefing_channels(preset: dict, settings: Settings, user_
     bleiben. Aufruf ueber den Modul-Namensraum, damit Tests das importierte
     Symbol im VERBRAUCHENDEN Modul patchen koennen (AC-6).
 
-    `send_email` ist auf Preset-Ebene bewusst NICHT beruecksichtigt: es wird gar
-    nicht persistiert (vorbestehende Altlast, `versand_tab_vergleich.md` KL-6) —
-    E-Mail bleibt daher wie bisher immer aktiv.
+    Issue #2795 (AC-22): `send_email` wird seitdem persistiert und vom
+    Briefing-Resolver gelesen (`false` -> keine Orts-Mail; fehlend = true).
     """
     return effective_compare_briefing_channels(preset, settings, user_id)
 
@@ -783,6 +791,7 @@ def send_one_compare_preset(
     orte_ohne_wetter: list | None = None,
     report_type: str | None = None,
     slot_hour: int | None = None,
+    slot_minute: int | None = None,
     catchup_hint: str | None = None,
     lang: Lang | None = None,
 ) -> tuple:
@@ -873,6 +882,9 @@ def send_one_compare_preset(
     if not effective_channels:
         # Vor der Ortspruefung: die Reihenfolge der Fehlerpfade bleibt (#1727 AC-7).
         raise SendOutcomeError("no_channels", (
+            f"Preset {preset_id}: kein Versandweg — E-Mail im Abo ausgeschaltet "
+            "(send_email=false) und kein anderer Kanal aktiv"
+            if preset.get("send_email") is False else
             f"Preset {preset_id}: kein Empfaenger — mail_to fehlt in den "
             "Konto-Settings und kein anderer Versandweg ist wirksam"
         ))
@@ -914,7 +926,8 @@ def send_one_compare_preset(
         target_date = local_dt(_datetime.now(_timezone.utc), zone).date()
         tage_ab_ortstag = 0
     # Issue #2587: Slot + Stunde fuer Vermerk und Versand-Historie.
-    report_type, slot_hour = _compare_slot(preset, tage_ab_ortstag, report_type, slot_hour)
+    report_type, slot_hour, slot_minute = _compare_slot(
+        preset, tage_ab_ortstag, report_type, slot_hour, slot_minute)
 
     profil_str = preset.get("profil", "").lower()
     profile = _parse_activity_profile(profil_str)
@@ -1091,7 +1104,8 @@ def send_one_compare_preset(
             user_id=user_id, kind="vergleich", entity_id=preset_id, error=exc,
         )
         if not on_demand:  # Issue #2587 AC-1/AC-3: nur der Zeitplan-Versand
-            _mark_compare_undelivered(user_id, preset_id, report_type, target_date, slot_hour)
+            _mark_compare_undelivered(user_id, preset_id, report_type, target_date, slot_hour,
+                                      slot_minute=slot_minute)
         _anchor_and_reset()
         raise
 
@@ -1111,7 +1125,8 @@ def send_one_compare_preset(
             user_id=user_id, kind="vergleich", entity_id=preset_id,
             error=SendOutcomeError(outcome),
         )
-        _mark_compare_undelivered(user_id, preset_id, report_type, target_date, slot_hour)
+        _mark_compare_undelivered(user_id, preset_id, report_type, target_date, slot_hour,
+                                  slot_minute=slot_minute)
     if outcome != "sent":
         raise SendOutcomeError(outcome)
     if not on_demand:  # Issue #2587 AC-11/AC-9a

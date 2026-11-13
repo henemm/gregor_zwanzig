@@ -38,7 +38,8 @@ def _termin(vor_ort: datetime, slot: str) -> dict:
     return {
         "at": vor_ort.isoformat(),
         "local_date": vor_ort.date().isoformat(),
-        "local_time": vor_ort.strftime("%H:00"),
+        # #2795: Viertelstunden-Raster -- die Minute gehoert zur Anzeige (06:45).
+        "local_time": vor_ort.strftime("%H:%M"),
         "tz": _zonenname(vor_ort.tzinfo),
         "tz_abbr": vor_ort.tzname() or "UTC",
         "slot": slot,
@@ -81,14 +82,14 @@ def _trip_kandidat_utc(trip: "Trip", ortstag: date, slot: str) -> datetime:
     """Slot-Stunde am Ortstag in der Zone DIESES Tages (DST-Offset des Tages);
     weicht die Anker-Zone des Scheduler-Praedikats ab, wird in ihr neu gerechnet."""
     from services.trip_day import anchor_tz, display_tz
-    from services.trip_report_scheduler import _slot_stunde
+    from services.trip_report_scheduler import _slot_zeit
 
-    stunde = _slot_stunde(trip, slot)
+    zeit = _slot_zeit(trip, slot)  # #2795: inkl. Minute (Viertelstunden-Raster)
     zone = display_tz(trip, ortstag)
-    kandidat = datetime(ortstag.year, ortstag.month, ortstag.day, stunde, tzinfo=zone)
+    kandidat = datetime(ortstag.year, ortstag.month, ortstag.day, zeit.hour, zeit.minute, tzinfo=zone)
     anker = anchor_tz(trip, to_utc(kandidat))
     if anker != zone:
-        kandidat = datetime(ortstag.year, ortstag.month, ortstag.day, stunde, tzinfo=anker)
+        kandidat = datetime(ortstag.year, ortstag.month, ortstag.day, zeit.hour, zeit.minute, tzinfo=anker)
     return to_utc(kandidat)
 
 
@@ -97,13 +98,14 @@ def _trip_treffer(
 ) -> Iterator[tuple]:
     """Faellige Slots in Zeitfolge — jeder vom Scheduler-Praedikat bestaetigt."""
     from services.trip_day import trip_local_now
-    from services.trip_report_scheduler import _slot_stunde, trip_slot_due
+    from services.trip_report_scheduler import _slot_zeit, trip_slot_due
 
     if not strict_after:
         for slot in _SLOTS:
             if trip_slot_due(trip, slot, now_utc, store=store):
                 vor_ort = trip_local_now(trip, now_utc)
-                at = vor_ort.replace(hour=_slot_stunde(trip, slot), minute=0, second=0, microsecond=0)
+                zeit = _slot_zeit(trip, slot)
+                at = vor_ort.replace(hour=zeit.hour, minute=zeit.minute, second=0, microsecond=0)
                 yield at, slot, at < now_utc
     kandidaten = []
     for ortstag, slot in _trip_kandidaten(trip, now_utc):
@@ -195,9 +197,9 @@ def _compare_jetzt_faellig(preset: dict, locations: dict, now_utc: datetime,
     from services.compare_slot_scheduler import presets_due_for_hour
 
     due = presets_due_for_hour([preset], locations, now_utc, store=slot_store)
-    for stunde, slot, versatz in aktiv:
+    for (stunde, minute), slot, versatz in aktiv:
         if any(d.tage_ab_ortstag == versatz for d in due):
-            at = local_dt(now_utc, zone).replace(hour=stunde, minute=0, second=0, microsecond=0)
+            at = local_dt(now_utc, zone).replace(hour=stunde, minute=minute, second=0, microsecond=0)
             return _aus_treffer((at, slot, at < now_utc))
     return None
 
@@ -223,9 +225,9 @@ def next_compare_briefing(
     heute = local_dt(now_utc, zone).date()
     aktiv = []
     if slots.morning_enabled:
-        aktiv.append((slots.morning_time.hour, "morning", MORGEN_SLOT_VERSATZ))
+        aktiv.append(((slots.morning_time.hour, slots.morning_time.minute), "morning", MORGEN_SLOT_VERSATZ))
     if slots.evening_enabled:
-        aktiv.append((slots.evening_time.hour, "evening", ABEND_SLOT_VERSATZ))
+        aktiv.append(((slots.evening_time.hour, slots.evening_time.minute), "evening", ABEND_SLOT_VERSATZ))
     aktiv.sort()
     if not strict_after:
         jetzt = _compare_jetzt_faellig(preset, locations, now_utc, aktiv, zone, slot_store)
@@ -233,8 +235,8 @@ def next_compare_briefing(
             return jetzt
     for i in range(_COMPARE_SUCHTAGE + 1):
         tag = heute + timedelta(days=i)
-        for stunde, slot, versatz in aktiv:
-            vor_ort = datetime(tag.year, tag.month, tag.day, stunde, tzinfo=zone)
+        for (stunde, minute), slot, versatz in aktiv:
+            vor_ort = datetime(tag.year, tag.month, tag.day, stunde, minute, tzinfo=zone)
             moment = to_utc(vor_ort)
             if moment < now_utc or (strict_after and moment == now_utc):
                 continue

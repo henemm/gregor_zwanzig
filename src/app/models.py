@@ -1353,6 +1353,9 @@ class ComparePreset:
     # Bare-Konstruktor (Neuanlage) -> {"enabled": False}; ueber app.loader
     # geladene Bestandsdaten ohne Schluessel bleiben None (noch nicht migriert).
     official_warnings: Optional[dict] = field(default_factory=lambda: {"enabled": False})
+    # Issue #2795 (AC-22): Orts-Mail an/aus; FEHLENDES Feld = true (Alt-Presets
+    # verstummen nicht). Go: `SendEmail *bool` mit omitempty.
+    send_email: bool = True
     send_telegram: Optional[bool] = None
     send_sms: Optional[bool] = None
     # Issue #2293 Scheibe S2 — Modellparität zu Go (internal/model/compare_preset.go),

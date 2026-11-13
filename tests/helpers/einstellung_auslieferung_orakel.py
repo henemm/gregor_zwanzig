@@ -980,9 +980,9 @@ def compare_alarm_kanaele(
     Regel (ADR-0021/0046/0049/0077):
     1. Basis: die truthy Kanaele in ``alert_channels`` (auch wenn leer); fehlt das
        Sub-Objekt: E-Mail plus die ``send_*``-Opt-ins des Briefings.
-    2. Nur beim Abweichungsalarm (``metric_id`` gesetzt): ein NICHT-leerer Eintrag
-       ``alert_metric_channels[metric_id]`` ersetzt die Basis; ein leerer/fehlender
-       Eintrag erbt sie.
+    2. Issue #2795 (AC-29): ``alert_metric_channels`` („Kanaele je Wettergroesse")
+       entfaellt und wird IGNORIERT -- auch beim Abweichungsalarm gilt allein die
+       Basis aus Schritt 1; ``metric_id`` bleibt nur der Signatur wegen.
     3. Tarif: SMS nur standard/premium, Premium-SMS nur premium.
     4. Schwelle je Kanal (Startwert LOW): der Kanal wird nur bedient, wenn die
        Dringlichkeit sie erreicht -- die Schwelle regelt das WIE, nie das OB des
@@ -993,12 +993,6 @@ def compare_alarm_kanaele(
         basis = {k for k in COMPARE_KANAELE if ac.get(k)}
     else:
         basis = {"email"} | {k for k in ("telegram", "sms", "premium_sms") if preset_json.get(f"send_{k}")}
-    if metric_id is not None:
-        eintrag = (preset_json.get("alert_metric_channels") or {}).get(metric_id)
-        if isinstance(eintrag, dict):
-            ersatz = {k for k in COMPARE_KANAELE if eintrag.get(k)}
-            if ersatz:
-                basis = ersatz
     if tier not in _TIER_SMS:
         basis.discard("sms")
     if tier not in _TIER_PREMIUM_SMS:

@@ -350,6 +350,9 @@ def test_ac1_info_severity_alert_is_no_longer_silently_swallowed(
     # ueber `_effective_alert_channels`: mit und ohne `report_config` exakt
     # {'telegram'}.
     trip = _trip(rule, report_config=_briefing_config("tdd-638-trip"))
+    # Issue #2795 (Spec §4.3): Regel-Kanaele wirken nicht mehr; der Telegram-Weg
+    # kommt jetzt aus der Kanal-Tabelle (`alert_channels`).
+    trip.alert_channels = {"email": False, "telegram": True, "sms": False, "premium_sms": False}
 
     result = _run_alert(trip, _settings(smtp_refuse.port), user_id="tdd-638-ac1")
 
@@ -361,10 +364,12 @@ def test_ac1_info_severity_alert_is_no_longer_silently_swallowed(
 
 # ───────────────────────── AC-2: Pro-Alert-Kanal-Override ────────────────────
 
-def test_ac2_per_alert_channel_override_beats_briefing_channel(
+def test_ac2_per_alert_channel_override_hat_keine_wirkung_mehr(
     telegram_sink, smtp_refuse, tmp_path
 ):
-    """AC-2: rule.channels=[telegram] gewinnt über report_config (email an, telegram aus)."""
+    """AC-2, abgeloest durch #2795 (Spec §4.3): rule.channels=[telegram] gewinnt
+    NICHT mehr ueber report_config (email an, telegram aus) -- der Alarm folgt
+    dem geerbten Satz (E-Mail), die alte Regel hat keine Wirkung."""
     rule = _wind_rule(AlertSeverity.WARNING, channels=["telegram"])
     report_config = TripReportConfig(
         trip_id="tdd-638-trip",
@@ -374,12 +379,13 @@ def test_ac2_per_alert_channel_override_beats_briefing_channel(
     )
     trip = _trip(rule, report_config=report_config)
 
-    result = _run_alert(trip, _settings(smtp_refuse.port), user_id="tdd-638-ac2")
+    _run_alert(trip, _settings(smtp_refuse.port), user_id="tdd-638-ac2")
 
-    assert result is True
-    assert telegram_sink.send_count() == 1, "Override-Kanal Telegram hat nicht zugestellt"
-    assert smtp_refuse.attempts == 0, (
-        "E-Mail wurde trotz Telegram-Override versucht — Routing folgt noch report_config"
+    assert telegram_sink.send_count() == 0, (
+        "#2795: der alte Regel-Override Telegram darf nicht mehr zustellen"
+    )
+    assert smtp_refuse.attempts >= 1, (
+        "#2795: der Alarm muss dem geerbten Satz (E-Mail) folgen"
     )
 
 
@@ -472,11 +478,10 @@ def test_ac5_per_user_alert_channels_are_isolated(tmp_path):
 
 # ───────────────────────── Mixed-Rule-Fall ───────────────────────────────────
 
-def test_mixed_rules_union_both_channels(telegram_sink, smtp_refuse, tmp_path):
-    """Mixed-Rule: Regel-A=[telegram] + Regel-B=[]/briefing-email → BEIDE Kanäle bedient.
-
-    Ohne Union-Semantik würde _effective_alert_channels bei has_any_override auf {"telegram"}
-    short-circuiten und den geerbten E-Mail-Kanal von Regel-B still verwerfen.
+def test_mixed_rules_keine_union_mehr_nur_geerbter_satz(telegram_sink, smtp_refuse, tmp_path):
+    """Mixed-Rule, abgeloest durch #2795 (Spec §4.3): Regel-A=[telegram] +
+    Regel-B=[] -> es gibt keine Regel-Union mehr; der Alarm folgt allein dem
+    geerbten Briefing-Satz (E-Mail), Telegram bleibt aus.
     """
     from app.trip import Stage, Trip, Waypoint
 
@@ -531,14 +536,13 @@ def test_mixed_rules_union_both_channels(telegram_sink, smtp_refuse, tmp_path):
     service = TripAlertService(settings=_settings(smtp_refuse.port), user_id=mit_profil_chat("tdd-638-mixed", _settings(smtp_refuse.port)))
     cached = [_data(gust_max_kmh=25.0)]   # Δ=35 > MetricCatalog-Schwelle 20
     fresh = [_data(gust_max_kmh=60.0)]
-    result = service.check_and_send_alerts(trip, cached, fresh_weather=fresh)
+    service.check_and_send_alerts(trip, cached, fresh_weather=fresh)
 
-    assert result is True
-    assert telegram_sink.send_count() == 1, (
-        "Regel-A=[telegram] hat nicht über Telegram zugestellt"
+    assert telegram_sink.send_count() == 0, (
+        "#2795: Regel-A=[telegram] darf nicht mehr ueber Telegram zustellen"
     )
     assert smtp_refuse.attempts >= 1, (
-        "Regel-B=[]/briefing-email hätte E-Mail versuchen müssen — Union-Semantik fehlt"
+        "#2795: der geerbte Briefing-Satz (E-Mail) muss versucht werden"
     )
 
 
@@ -633,6 +637,9 @@ def test_telegram_only_user_without_smtp_still_gets_alert(telegram_sink, tmp_pat
     # Alarm zeitweise ab, und der SMTP-Guard-Fall waere ungemessen. Die
     # Kanal-Aufloesung bleibt {'telegram'} (expliziter Override, s. AC-1).
     trip = _trip(rule, report_config=_briefing_config("tdd-638-trip"))
+    # Issue #2795 (Spec §4.3): Telegram-Weg aus der Kanal-Tabelle statt aus der
+    # (wirkungslosen) alten Regel.
+    trip.alert_channels = {"email": False, "telegram": True, "sms": False, "premium_sms": False}
 
     # State-Bereinigung für Idempotenz (Issue #816: alert_state persistiert;
     # alert_daily_count.json zusaetzlich seit #1070, siehe Kommentar oben).

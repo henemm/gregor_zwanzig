@@ -137,16 +137,17 @@ def test_trip_alert_channels_legacy_unchanged():
         "report_config erben (unveraendert)."
     )
 
-    # (c) aktive Regel mit eigenem channels-Override gewinnt weiter (#638).
+    # (c) Issue #2795 (Spec §4.3): ein alter Regel-Override (#638) wirkt NICHT
+    #     mehr -- es bleibt beim geerbten Briefing-Satz (hier E-Mail).
     trip_with_rule = Trip(
         id="t-legacy-c", name="Legacy C", stages=[stage],
         alert_channels=None,
         alert_rules=[_rule(["telegram"])],
         report_config=TripReportConfig(trip_id="t-legacy-c"),  # send_email default True
     )
-    assert svc._effective_alert_channels(trip_with_rule) == {"telegram"}, (
-        "RED: eine Regel mit eigenem channels-Override muss weiterhin gewinnen, "
-        "unabhaengig von alert_channels=None (#638-Verhalten unveraendert)."
+    assert svc._effective_alert_channels(trip_with_rule) == {"email"}, (
+        "#2795: der alte Regel-Override darf den geerbten Satz nicht mehr "
+        "ersetzen."
     )
 
 
@@ -180,12 +181,11 @@ def test_trip_alert_channels_replaces_briefing_inheritance():
     )
 
 
-def test_trip_alert_channels_rule_override_still_wins():
-    """AC-25: Given ein Trip mit gesetztem `alert_channels` (nur Telegram)
-    UND einer zusaetzlichen aktiven Regel mit eigenem `channels=["email"]`
-    / When die effektiven Kanaele berechnet werden / Then ist das Ergebnis
-    die Union {telegram, email} -- der explizite Regel-Override gewinnt
-    weiterhin neben dem (ersetzten) geerbten Set."""
+def test_trip_alert_channels_rule_override_wirkt_nicht_mehr():
+    """AC-25, abgeloest durch #2795 (Spec §4.3): Given ein Trip mit gesetztem
+    `alert_channels` (nur Telegram) UND einer zusaetzlichen aktiven Regel mit
+    eigenem `channels=["email"]` / When die effektiven Kanaele berechnet werden
+    / Then gilt allein die Kanal-Tabelle {telegram} -- keine Regel-Union mehr."""
     from app.trip import Trip
 
     stage = _stage()
@@ -197,9 +197,9 @@ def test_trip_alert_channels_rule_override_still_wins():
         alert_rules=[_rule([]), _rule(["email"])],
     )
     channels = svc._effective_alert_channels(trip)
-    assert channels == {"telegram", "email"}, (
-        "RED: Union aus geerbtem (ersetztem) alert_channels-Set {telegram} und "
-        f"explizitem Regel-Override {{email}} erwartet, bekommen: {channels!r}"
+    assert channels == {"telegram"}, (
+        "#2795: nur die Kanal-Tabelle {telegram}, der Regel-Override {email} "
+        f"wirkt nicht mehr, bekommen: {channels!r}"
     )
 
 

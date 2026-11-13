@@ -1,6 +1,6 @@
 package handler
 
-// Issue #1280 — Versandzeit-Eingabe auf volle Stunden begrenzen (Trip-Pfad).
+// Issue #1280 — Versandzeit-Eingabe auf volle Stunden begrenzen (Trip-Pfad). Seit #2795 Viertelstunden-Raster: Schreiben behaelt die Minute (Sekunden -> :00), Lesen heilt Altwerte auf die vorherige Viertelstunde.
 // Spec: docs/specs/modules/fix_1280_versandzeit_stunden_raster.md (AC-2, AC-3)
 //
 // Co-located Handler-Tests gegen echten Store (t.TempDir, keine Mocks), Muster
@@ -20,7 +20,7 @@ import (
 // AC-2: PUT /api/trips/{id} mit report_config.morning_time=18:45 kappt den Wert
 // auf die volle Stunde (18:00) UND laesst die uebrigen report_config-Keys
 // (enabled, send_email) unberuehrt (RMW-Merge, kein Replace).
-func TestUpdateTripHandler_ReportConfigMorningTimeTruncatedToFullHourOnWrite(t *testing.T) {
+func TestUpdateTripHandler_ReportConfigMorningTimeQuarterHourOnWrite(t *testing.T) {
 	s := newTestStore(t)
 
 	trip := model.Trip{
@@ -37,7 +37,7 @@ func TestUpdateTripHandler_ReportConfigMorningTimeTruncatedToFullHourOnWrite(t *
 		t.Fatalf("seed failed: %v", err)
 	}
 
-	body := `{"report_config":{"morning_time":"18:45:00"}}`
+	body := `{"report_config":{"morning_time":"18:45:30"}}`
 
 	r := chi.NewRouter()
 	r.Put("/api/trips/{id}", UpdateTripHandler(s))
@@ -53,8 +53,8 @@ func TestUpdateTripHandler_ReportConfigMorningTimeTruncatedToFullHourOnWrite(t *
 	if err != nil || got == nil {
 		t.Fatalf("LoadTrip failed: %v", err)
 	}
-	if got.ReportConfig["morning_time"] != "18:00:00" {
-		t.Errorf("report_config.morning_time: erwartet 18:00:00 (gekappt), got %v", got.ReportConfig["morning_time"])
+	if got.ReportConfig["morning_time"] != "18:45:00" {
+		t.Errorf("report_config.morning_time: erwartet 18:45:00 (Sekunden :00, #2795), got %v", got.ReportConfig["morning_time"])
 	}
 	// RMW-Merge: die anderen Keys ueberleben.
 	if got.ReportConfig["enabled"] != true {
@@ -78,7 +78,7 @@ func TestTripHandler_ReadHealsReportConfigEveningTime(t *testing.T) {
 		}},
 		ReportConfig: map[string]interface{}{
 			"enabled":      true,
-			"evening_time": "19:30:00",
+			"evening_time": "19:40:00",
 		},
 	}
 	if err := s.SaveTrip(&trip); err != nil {
@@ -99,14 +99,14 @@ func TestTripHandler_ReadHealsReportConfigEveningTime(t *testing.T) {
 	if err := json.Unmarshal(w.Body.Bytes(), &got); err != nil {
 		t.Fatalf("unmarshal response: %v", err)
 	}
-	if got.ReportConfig["evening_time"] != "19:00:00" {
-		t.Errorf("GET report_config.evening_time: erwartet 19:00:00 (geheilt), got %v", got.ReportConfig["evening_time"])
+	if got.ReportConfig["evening_time"] != "19:30:00" {
+		t.Errorf("GET report_config.evening_time: erwartet 19:30:00 (geheilt), got %v", got.ReportConfig["evening_time"])
 	}
 	// Adversary F001: das oberste, aus report_config ABGELEITETE Flach-Feld
 	// (trip.evening_time) muss ebenfalls geheilt sein — sonst widerspricht die
 	// Response sich selbst (verschachtelt 19:00, oben noch 19:30).
-	if got.EveningTime == nil || *got.EveningTime != "19:00:00" {
-		t.Errorf("GET oberstes evening_time-Flach-Feld: erwartet 19:00:00 (geheilt), got %v", got.EveningTime)
+	if got.EveningTime == nil || *got.EveningTime != "19:30:00" {
+		t.Errorf("GET oberstes evening_time-Flach-Feld: erwartet 19:30:00 (geheilt), got %v", got.EveningTime)
 	}
 }
 
@@ -125,7 +125,7 @@ func TestTripsHandler_ReadHealsReportConfigMorningTimeInList(t *testing.T) {
 		}},
 		ReportConfig: map[string]interface{}{
 			"enabled":      true,
-			"morning_time": "07:30:00",
+			"morning_time": "07:20:00",
 		},
 	}
 	if err := s.SaveTrip(&trip); err != nil {
@@ -155,12 +155,12 @@ func TestTripsHandler_ReadHealsReportConfigMorningTimeInList(t *testing.T) {
 	if found == nil {
 		t.Fatalf("trip-1280-list-heal not found in list response")
 	}
-	if found.ReportConfig["morning_time"] != "07:00:00" {
-		t.Errorf("GET-Liste report_config.morning_time: erwartet 07:00:00 (geheilt), got %v", found.ReportConfig["morning_time"])
+	if found.ReportConfig["morning_time"] != "07:15:00" {
+		t.Errorf("GET-Liste report_config.morning_time: erwartet 07:15:00 (geheilt), got %v", found.ReportConfig["morning_time"])
 	}
 	// Adversary F001: das oberste Flach-Feld muss ebenfalls geheilt sein.
-	if found.MorningTime == nil || *found.MorningTime != "07:00:00" {
-		t.Errorf("GET-Liste oberstes morning_time-Flach-Feld: erwartet 07:00:00 (geheilt), got %v", found.MorningTime)
+	if found.MorningTime == nil || *found.MorningTime != "07:15:00" {
+		t.Errorf("GET-Liste oberstes morning_time-Flach-Feld: erwartet 07:15:00 (geheilt), got %v", found.MorningTime)
 	}
 }
 
@@ -170,13 +170,13 @@ func TestTripsHandler_ReadHealsReportConfigMorningTimeInList(t *testing.T) {
 // (TripNewEditor.svelte) POSTet direkt an diesen Endpoint; ohne
 // Write-Normalisierung im Anlege-Pfad wuerde eine krumme Versandzeit
 // unnormalisiert gespeichert.
-func TestCreateTripHandler_ReportConfigMorningTimeTruncatedToFullHourOnWrite(t *testing.T) {
+func TestCreateTripHandler_ReportConfigMorningTimeQuarterHourOnWrite(t *testing.T) {
 	s := newTestStore(t)
 
 	body := `{"id":"trip-1280-create","name":"Create Truncate Trip",` +
 		`"stages":[{"id":"S1","name":"D1","date":"2026-05-01",` +
 		`"waypoints":[{"id":"W1","name":"P","lat":47.0,"lon":11.0,"elevation_m":500}]}],` +
-		`"report_config":{"enabled":true,"morning_time":"07:30:00"}}`
+		`"report_config":{"enabled":true,"morning_time":"07:30:30"}}`
 
 	h := CreateTripHandler(s)
 	req := httptest.NewRequest("POST", "/api/trips", strings.NewReader(body))
@@ -192,16 +192,16 @@ func TestCreateTripHandler_ReportConfigMorningTimeTruncatedToFullHourOnWrite(t *
 	if err := json.Unmarshal(w.Body.Bytes(), &resp); err != nil {
 		t.Fatalf("unmarshal response: %v", err)
 	}
-	if resp.ReportConfig["morning_time"] != "07:00:00" {
-		t.Errorf("Response report_config.morning_time: erwartet 07:00:00 (gekappt), got %v", resp.ReportConfig["morning_time"])
+	if resp.ReportConfig["morning_time"] != "07:30:00" {
+		t.Errorf("Response report_config.morning_time: erwartet 07:30:00 (Sekunden :00, #2795), got %v", resp.ReportConfig["morning_time"])
 	}
 
 	got, err := s.LoadTrip("trip-1280-create")
 	if err != nil || got == nil {
 		t.Fatalf("LoadTrip failed: %v", err)
 	}
-	if got.ReportConfig["morning_time"] != "07:00:00" {
-		t.Errorf("Persistiert report_config.morning_time: erwartet 07:00:00 (gekappt), got %v", got.ReportConfig["morning_time"])
+	if got.ReportConfig["morning_time"] != "07:30:00" {
+		t.Errorf("Persistiert report_config.morning_time: erwartet 07:30:00 (Sekunden :00, #2795), got %v", got.ReportConfig["morning_time"])
 	}
 }
 
@@ -221,7 +221,7 @@ func TestUpdateTripStateHandler_ResponseCarriesHealedReportConfigAndFlatField(t 
 		}},
 		ReportConfig: map[string]interface{}{
 			"enabled":      true,
-			"morning_time": "07:30:00",
+			"morning_time": "07:20:00",
 		},
 	}
 	// SaveTrip normalisiert die Slot-Zeit NICHT — roh geseedete Bestandsdaten.
@@ -245,10 +245,10 @@ func TestUpdateTripStateHandler_ResponseCarriesHealedReportConfigAndFlatField(t 
 	if err := json.Unmarshal(w.Body.Bytes(), &got); err != nil {
 		t.Fatalf("unmarshal response: %v", err)
 	}
-	if got.ReportConfig["morning_time"] != "07:00:00" {
-		t.Errorf("PATCH-state Response report_config.morning_time: erwartet 07:00:00 (geheilt), got %v", got.ReportConfig["morning_time"])
+	if got.ReportConfig["morning_time"] != "07:15:00" {
+		t.Errorf("PATCH-state Response report_config.morning_time: erwartet 07:15:00 (geheilt), got %v", got.ReportConfig["morning_time"])
 	}
-	if got.MorningTime == nil || *got.MorningTime != "07:00:00" {
-		t.Errorf("PATCH-state Response oberstes MorningTime-Flach-Feld: erwartet 07:00:00 (geheilt), got %v", got.MorningTime)
+	if got.MorningTime == nil || *got.MorningTime != "07:15:00" {
+		t.Errorf("PATCH-state Response oberstes MorningTime-Flach-Feld: erwartet 07:15:00 (geheilt), got %v", got.MorningTime)
 	}
 }
