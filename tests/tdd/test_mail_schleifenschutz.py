@@ -126,9 +126,11 @@ def test_fehlerantworten_auf_unbekannte_befehle_hoechstens_fuenf_je_stunde(monke
 class _Postfach:
     """IMAP-Gegenstelle: beantwortet Kopf- und Vollabruf getrennt, wie ein Server."""
 
-    def __init__(self, mails: dict[bytes, bytes], groessen: dict[bytes, int] | None = None):
+    def __init__(self, mails: dict[bytes, bytes], groessen: dict[bytes, int] | None = None,
+                 *, ohne_groesse: bool = False):
         self.mails = mails
         self.groessen = groessen or {}
+        self.ohne_groesse = ohne_groesse
         self.abrufe: list[tuple[bytes, str]] = []
         self.gelesen: set[bytes] = set()
 
@@ -150,7 +152,8 @@ class _Postfach:
         size = self.groessen.get(uid, len(raw))
         if "HEADER" in spec.upper():
             kopf = raw.split(b"\r\n\r\n", 1)[0] + b"\r\n\r\n"
-            return "OK", [(b"%s (RFC822.SIZE %d BODY[HEADER] {%d}" % (uid, size, len(kopf)), kopf), b")"]
+            groesse = b"" if self.ohne_groesse else b"RFC822.SIZE %d " % size
+            return "OK", [(b"%s (%sBODY[HEADER] {%d}" % (uid, groesse, len(kopf)), kopf), b")"]
         return "OK", [(b"%s (RFC822 {%d}" % (uid, len(raw)), raw), b")"]
 
     def store(self, uid, _flags, value):
@@ -199,3 +202,14 @@ def test_mail_ueber_2_mb_wird_uebersprungen(monkeypatch, user_ids):
     assert postfach.gelesen == {b"1"}
     assert rec.emails == []
 
+
+
+def test_mail_ohne_groessenangabe_wird_uebersprungen(monkeypatch, user_ids):
+    """F005: fehlt RFC822.SIZE in der Serverantwort, wird nicht geraten (fail-closed)."""
+    rec = install_transport_fakes(monkeypatch)
+    nutzer = lege_lage_an(user_ids, "L2")
+    postfach = _Postfach({b"1": _befehlsmail(nutzer)}, ohne_groesse=True)
+    assert _poll(monkeypatch, postfach) == 0
+    assert postfach.voll_abgerufen() == set()
+    assert postfach.gelesen == {b"1"}
+    assert rec.emails == []

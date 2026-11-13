@@ -171,7 +171,7 @@ class _FakeImap:
         self.stored: list[tuple] = []
 
     def fetch(self, uid, spec):
-        return "OK", [(b"1 (RFC822 {n})", self._raw)]
+        return "OK", [(b"1 (RFC822.SIZE %d RFC822 {n})" % len(self._raw), self._raw)]
 
     def store(self, uid, flags, value):
         self.stored.append((uid, flags, value))

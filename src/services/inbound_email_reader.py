@@ -421,8 +421,10 @@ class InboundEmailReader:
         if not self._authorize(from_addr, user_settings, msg):
             imap.store(uid, "+FLAGS", "\\Seen")
             return 0, 0
-        if (groesse if groesse is not None else len(kopf)) > MAX_MAIL_BYTES:
-            logger.warning("Mail ueber %d Bytes uebersprungen (uid=%s)", MAX_MAIL_BYTES, uid)
+        # #2961: ohne Groessenangabe des Servers wird nicht geraten (fail-closed).
+        if groesse is None or groesse > MAX_MAIL_BYTES:
+            logger.warning("Mail ohne Groesse oder ueber %d Bytes uebersprungen (uid=%s)",  # i18n-log
+                           MAX_MAIL_BYTES, uid)
             imap.store(uid, "+FLAGS", "\\Seen")
             return 0, 0
         voll, _ = _fetch_message(imap, uid, "(RFC822)")

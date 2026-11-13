@@ -118,7 +118,7 @@ class _Verbindung:
 
     def fetch(self, uid, spec):
         raw = self._p.mails[uid]
-        return "OK", [(b"1 (RFC822 {%d})" % len(raw), raw)]
+        return "OK", [(b"1 (RFC822.SIZE %d RFC822 {%d})" % (len(raw), len(raw)), raw)]
 
     def store(self, uid, flags, value):
         if "Seen" in value:

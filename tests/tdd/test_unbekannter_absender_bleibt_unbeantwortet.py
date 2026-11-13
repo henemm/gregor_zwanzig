@@ -96,7 +96,8 @@ class _FakeImap:
         self.store_aufrufe: list[tuple] = []
 
     def fetch(self, uid, spec):
-        return ("OK", [(None, self._raw)])
+        # #2961: der Reader verlangt die Groessenangabe des Servers.
+        return ("OK", [(b"1 (RFC822.SIZE %d)" % len(self._raw), self._raw)])
 
     def store(self, uid, flags, val):
         self.store_aufrufe.append((uid, flags, val))
