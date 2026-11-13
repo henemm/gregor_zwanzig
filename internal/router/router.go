@@ -147,6 +147,16 @@ func New(deps Deps) chi.Router {
 	r.Post("/api/auth/account/delete-code",
 		deleteCodeLimiter.Middleware(handler.RequestDeleteCodeHandler(deps.Store, *deps.Config, deleteCodeMailLimiter)).ServeHTTP,
 	)
+	// Issue #2961 (ADR-0115): frischer Nachweis vor Kontoaenderungen (Adresse,
+	// Passkeys). Gleiche Bremsen wie beim Lösch-Code, eigene Instanzen.
+	secret := deps.Config.SessionSecret
+	reauthLimiter := authmw.NewIPRateLimiter(10, 15*time.Minute)
+	r.Post("/api/auth/reauth", reauthLimiter.Middleware(handler.ReauthHandler(deps.Store, secret)).ServeHTTP)
+	reauthCodeLimiter := authmw.NewIPRateLimiter(3, 15*time.Minute)
+	reauthCodeMailLimiter := handler.NewMailFloodLimiter(1, time.Minute)
+	r.Post("/api/auth/reauth/code",
+		reauthCodeLimiter.Middleware(handler.RequestReauthCodeHandler(deps.Store, *deps.Config, reauthCodeMailLimiter)).ServeHTTP,
+	)
 	// Issue #2270: Datenexport nach DSGVO Art. 20 — authentifiziert, bewusst
 	// NICHT in der Public-Allowlist von AuthMiddleware.
 	r.Get("/api/auth/export", handler.ExportUserDataHandler(deps.Store))
@@ -158,7 +168,9 @@ func New(deps Deps) chi.Router {
 	// eigenstaendige Instanz: SMS kostet Geld, und ein Angriff auf den einen
 	// Kanal darf das Kontingent des anderen nicht leerlaufen lassen.
 	smsFloodLimiter := handler.NewMailFloodLimiter(3, time.Hour)
-	r.Put("/api/auth/profile", handler.UpdateProfileHandler(deps.Store, *deps.Config, mailFloodLimiter, smsFloodLimiter))
+	// Issue #2961: Adress-/Kennungswechsel nur mit frischem Nachweis.
+	r.Put("/api/auth/profile", handler.RequireReauthForAddressChange(deps.Store, secret,
+		handler.UpdateProfileHandler(deps.Store, *deps.Config, mailFloodLimiter, smsFloodLimiter)).ServeHTTP)
 	// Issue #2406 — Bestaetigungscode einloesen / erneut anfordern.
 	// Anmeldepflichtig (nicht in der Public-Allowlist): die Kennung kommt aus
 	// der Sitzung, nie aus dem Rumpf.
@@ -233,14 +245,15 @@ func New(deps Deps) chi.Router {
 		passkeyLimiter.Middleware(handler.PasskeyLoginDiscoverableFinishHandler(deps.Store, deps.WebAuthn, deps.ChallengeStore, deps.Config.SessionSecret, deps.Config.PublicHost)).ServeHTTP,
 	)
 	// Authenticated endpoints (cookie required via AuthMiddleware)
+	// Issue #2961 (ADR-0115): Passkey hinzufuegen/entfernen nur mit frischem Nachweis.
 	r.Post("/api/auth/passkey/register/begin",
-		passkeyLimiter.Middleware(handler.PasskeyRegisterBeginHandler(deps.Store, deps.WebAuthn, deps.ChallengeStore)).ServeHTTP,
+		passkeyLimiter.Middleware(handler.RequireFreshReauth(secret, handler.PasskeyRegisterBeginHandler(deps.Store, deps.WebAuthn, deps.ChallengeStore))).ServeHTTP,
 	)
 	r.Post("/api/auth/passkey/register/finish",
-		passkeyLimiter.Middleware(handler.PasskeyRegisterFinishHandler(deps.Store, deps.WebAuthn, deps.ChallengeStore)).ServeHTTP,
+		passkeyLimiter.Middleware(handler.RequireFreshReauth(secret, handler.PasskeyRegisterFinishHandler(deps.Store, deps.WebAuthn, deps.ChallengeStore))).ServeHTTP,
 	)
 	r.Delete("/api/auth/passkey/credentials/{id}",
-		passkeyLimiter.Middleware(handler.PasskeyDeleteCredentialHandler(deps.Store)).ServeHTTP,
+		passkeyLimiter.Middleware(handler.RequireFreshReauth(secret, handler.PasskeyDeleteCredentialHandler(deps.Store))).ServeHTTP,
 	)
 	passkeyRegPubLimiter := authmw.NewIPRateLimiter(5, time.Hour)
 	r.Post("/api/auth/passkey/register/public/begin",

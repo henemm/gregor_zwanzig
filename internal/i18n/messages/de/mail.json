@@ -52,5 +52,16 @@
   "mail.google_link.plain.z3": "Warst du das nicht, melde dich bitte umgehend bei uns.",
   "mail.google_link.html.z1": "Hallo,",
   "mail.google_link.html.z2": "dein Gregor-20-Konto wurde soeben mit einer Google-Anmeldung verkn&uuml;pft. Du kannst dich ab jetzt auch mit &bdquo;Mit Google anmelden&ldquo; anmelden.",
-  "mail.google_link.html.z3": "Warst du das nicht, melde dich bitte umgehend bei uns."
+  "mail.google_link.html.z3": "Warst du das nicht, melde dich bitte umgehend bei uns.",
+
+  "mail.reauth.betreff": "Gregor 20 — Dein Bestätigungscode",
+  "mail.reauth.plain.z1": "Hallo,",
+  "mail.reauth.plain.z2": "Dein Bestätigungscode für Gregor 20: {code}",
+  "mail.reauth.plain.z3": "Mit diesem Code bestätigst du eine Änderung an deinem Konto (Adresse oder Passkey). Der Code ist 15 Minuten gültig.",
+  "mail.reauth.plain.z4": "Falls du keine Änderung angefordert hast, gib den Code nicht weiter und ändere dein Passwort — jemand hat Zugriff auf eine deiner Anmeldungen.",
+  "mail.reauth.html.z1": "Hallo,",
+  "mail.reauth.html.z2": "Dein Best&auml;tigungscode f&uuml;r {betont}:",
+  "mail.reauth.html.z3": "Mit diesem Code best&auml;tigst du {betont}. Der Code ist 15 Minuten g&uuml;ltig.",
+  "mail.reauth.html.betont": "eine &Auml;nderung an deinem Konto",
+  "mail.reauth.html.z4": "Falls du keine &Auml;nderung angefordert hast, gib den Code nicht weiter und &auml;ndere dein Passwort."
 }

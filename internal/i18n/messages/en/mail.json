@@ -52,5 +52,16 @@
   "mail.google_link.plain.z3": "If this wasn't you, please contact us right away.",
   "mail.google_link.html.z1": "Hello,",
   "mail.google_link.html.z2": "Your Gregor 20 account was just linked to a Google sign-in. From now on you can also sign in with &ldquo;Sign in with Google&rdquo;.",
-  "mail.google_link.html.z3": "If this wasn't you, please contact us right away."
+  "mail.google_link.html.z3": "If this wasn't you, please contact us right away.",
+
+  "mail.reauth.betreff": "Gregor 20 — Your confirmation code",
+  "mail.reauth.plain.z1": "Hello,",
+  "mail.reauth.plain.z2": "Your confirmation code for Gregor 20: {code}",
+  "mail.reauth.plain.z3": "This code confirms a change to your account (address or passkey). The code is valid for 15 minutes.",
+  "mail.reauth.plain.z4": "If you did not request a change, do not share the code and change your password — someone has access to one of your sign-ins.",
+  "mail.reauth.html.z1": "Hello,",
+  "mail.reauth.html.z2": "Your confirmation code for {betont}:",
+  "mail.reauth.html.z3": "This code confirms {betont}. The code is valid for 15 minutes.",
+  "mail.reauth.html.betont": "a change to your account",
+  "mail.reauth.html.z4": "If you did not request a change, do not share the code and change your password."
 }
