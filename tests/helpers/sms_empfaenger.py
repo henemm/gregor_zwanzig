@@ -74,7 +74,33 @@ def profil_rueckadresse(
     elif gelernt_vor is not None:
         werte["premium_sms_reply_at"] = zeitstempel(datetime.now(timezone.utc) - gelernt_vor)
     werte.update(felder)
+    if nummer:
+        rueckadresse_bei_anderen_entfernen(user_id, nummer)
     _profil_rmw(user_id, werte)
+
+
+def rueckadresse_bei_anderen_entfernen(user_id: str, nummer: str) -> None:
+    """ADR-0116: eine Rueckadresse gehoert hoechstens einem Konto. Der Helfer
+    bildet ab, was der Go-Lernpfad beim Zuordnen tut -- dieselbe Nummer
+    verschwindet bei allen anderen Profilen der Testdatenwurzel."""
+    from app.loader import list_all_user_ids
+
+    from output.channels.recipient import normalize_premium_number
+
+    key = normalize_premium_number(nummer)
+    for other in list_all_user_ids():
+        if other == user_id:
+            continue
+        pfad = get_data_dir(other) / "user.json"
+        try:
+            profil = json.loads(pfad.read_text())
+        except (OSError, ValueError):
+            continue
+        roh = profil.get("premium_sms_reply_to") if isinstance(profil, dict) else None
+        if isinstance(roh, str) and normalize_premium_number(roh) == key:
+            profil.pop("premium_sms_reply_to", None)
+            profil.pop("premium_sms_reply_at", None)
+            pfad.write_text(json.dumps(profil))
 
 
 def mit_profil_sms(user_id: str, settings) -> str:

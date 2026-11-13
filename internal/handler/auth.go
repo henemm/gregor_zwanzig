@@ -205,9 +205,23 @@ func RegisterHandlerWithInvites(s *store.Store, bcryptCost int, cfg config.Confi
 			WriteError(w, r, http.StatusInternalServerError, "internal_error", nil)
 			return
 		}
-		if taken { // Restrisiko wie oben (auth_haertung_go_2163.md, ADR-0003, #2147 B1)
-			WriteError(w, r, http.StatusConflict, "email_taken", nil)
-			return
+		// Issue #2961 (GA2a, ADR-0115): halten nur leere unbestaetigte
+		// Anmeldungen die Adresse, ersetzt diese Registrierung sie — geplant
+		// wird hier, verdraengt erst unmittelbar vor der Kontoanlage.
+		var verdraengen []*model.User
+		if taken {
+			var ok bool
+			var rerr error
+			verdraengen, ok, rerr = planUnconfirmedReplacement(s, normalizedEmail, time.Now())
+			if rerr != nil {
+				log.Printf("register: replacing unconfirmed holders failed: %v", rerr)
+				WriteError(w, r, http.StatusInternalServerError, "internal_error", nil)
+				return
+			}
+			if !ok { // Restrisiko wie oben (auth_haertung_go_2163.md, ADR-0003, #2147 B1)
+				WriteError(w, r, http.StatusConflict, "email_taken", nil)
+				return
+			}
 		}
 
 		userID := req.Username
@@ -263,9 +277,27 @@ func RegisterHandlerWithInvites(s *store.Store, bcryptCost int, cfg config.Confi
 			}
 		}
 		model.MarkOnboardingPending(&user)
+		// Issue #2961 (GA2a): alle Pruefungen bestanden — jetzt verdraengen;
+		// scheitert die Anlage danach, kommen die Verdraengten zurueck.
+		zurueck := func() {}
+		if len(verdraengen) > 0 {
+			z, verr := verdraengeUnbestaetigte(s, verdraengen, time.Now())
+			if verr != nil {
+				rollbackInvite()
+				if istVerdraengenAbgelehnt(verr) {
+					WriteError(w, r, http.StatusConflict, "email_taken", nil)
+					return
+				}
+				log.Printf("register: replacing unconfirmed holders failed: %v", verr)
+				WriteError(w, r, http.StatusInternalServerError, "internal_error", nil)
+				return
+			}
+			zurueck = z
+		}
 		// Issue #2961: exklusive Anlage — ein vorhandener (auch verwaister)
 		// Kontoordner oder eine gleichzeitige Anlage derselben Kennung ergibt 409.
-		if err := s.CreateUser(user); err != nil {
+		if err := createUserFn(s, user); err != nil {
+			zurueck()
 			rollbackInvite()
 			if errors.Is(err, store.ErrUserIDTaken) {
 				WriteError(w, r, http.StatusConflict, "user_already_exists", nil)
@@ -275,6 +307,10 @@ func RegisterHandlerWithInvites(s *store.Store, bcryptCost int, cfg config.Confi
 			return
 		}
 
+		if len(verdraengen) > 0 {
+			merkeErsetzung(normalizedEmail, time.Now())
+			log.Printf("register: %d unbestaetigte Anmeldung(en) fuer die Adresse ersetzt (in die Ablage verschoben)", len(verdraengen))
+		}
 		s.ProvisionUserDirs(userID)
 
 		// Issue #1226: nach erfolgreicher Persistenz denselben #1219-Verifikations-
@@ -292,6 +328,10 @@ func RegisterHandlerWithInvites(s *store.Store, bcryptCost int, cfg config.Confi
 		json.NewEncoder(w).Encode(map[string]string{"id": userID})
 	}
 }
+
+// createUserFn ist die Kontoanlage der Registrierung — Test-Naht, um eine
+// nach dem Verdraengen scheiternde Anlage nachzustellen (Issue #2961).
+var createUserFn = func(s *store.Store, u model.User) error { return s.CreateUser(u) }
 
 // isPrivilegedUserID: die Kennung steht in GZ_ADMIN_USER_IDS oder
 // GZ_QUOTA_EXEMPT_USER_IDS (Vergleich ohne Gross-/Kleinschreibung).
@@ -405,6 +445,10 @@ func issueSessionWithoutVerificationGate(w http.ResponseWriter, r *http.Request,
 		WriteError(w, r, http.StatusInternalServerError, "store_error", nil)
 		return false
 	}
+	// Issue #2961 (ADR-0115): eine frische Anmeldung ist selbst ein Nachweis
+	// (Passwort, Passkey, Code an die Adresse oder Google) — 10 Minuten lang
+	// verlangt eine Kontoaenderung in DIESER Sitzung keinen weiteren.
+	grantReauth(userId, sessionId, time.Now())
 	middleware.SetSessionCookie(w, r, middleware.SignSessionWithID(userId, sessionId, secret), publicHost)
 	// Issue #2675 (G1 AC-6): EINE Stelle fuer alle Anmeldewege (Passwort,
 	// Magic-Link, Passkey, Google) — gz_lang nur bei gespeicherter Sprache.
@@ -551,6 +595,7 @@ func deleteAccountCascade(s *store.Store, ts *TelegramTokenStore, user *model.Us
 	}
 	removeLoginOTPs(user.Email, user.MailTo, user.PendingContactAddress)
 	deleteCodeStore.Delete(user.ID)
+	reauthCodeStore.Delete(user.ID)
 	return s.DeleteUser(user.ID)
 }
 
@@ -717,6 +762,9 @@ func ResetPasswordHandler(s *store.Store, bcryptCost int) http.HandlerFunc {
 			Username    string `json:"username"`
 			Token       string `json:"token"`
 			NewPassword string `json:"new_password"`
+			// Issue #2961 (ADR-0115): alle anderen Zugangswege (Passkeys,
+			// Google-Verknuepfung) entfernen. Fehlt das Feld, gilt ja.
+			RemoveOtherAccess *bool `json:"remove_other_access"`
 		}
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 			WriteError(w, r, http.StatusBadRequest, "invalid_request", nil)
@@ -769,8 +817,24 @@ func ResetPasswordHandler(s *store.Store, bcryptCost int) http.HandlerFunc {
 			return
 		}
 
-		user.PasswordHash = string(newHash)
-		if err := s.SaveUser(*user); err != nil {
+		// Issue #2961 (GA6): Passwort-Hash nur frisch geladen schreiben.
+		// GA2/GA3: auf Wunsch (Vorgabe ja) und bei einem unbestaetigten Konto
+		// immer zusaetzlich Passkeys und Google-Verknuepfung entfernen.
+		entfernen := req.RemoveOtherAccess == nil || *req.RemoveOtherAccess
+		var entferntePasskeys int
+		var googleEntfernt, andereBleiben bool
+		geaendert, err := s.UpdateUser(req.Username, func(u *model.User) error {
+			u.PasswordHash = string(newHash)
+			if entfernen || u.EmailVerifiedAt == nil {
+				entferntePasskeys, googleEntfernt = len(u.PasskeyCredentials), u.OAuthSub != ""
+				u.PasskeyCredentials = nil
+				u.OAuthProvider, u.OAuthSub = "", ""
+			} else {
+				andereBleiben = len(u.PasskeyCredentials) > 0 || u.OAuthSub != ""
+			}
+			return nil
+		})
+		if err != nil {
 			WriteError(w, r, http.StatusInternalServerError, "store_error", nil)
 			return
 		}
@@ -783,6 +847,9 @@ func ResetPasswordHandler(s *store.Store, bcryptCost int) http.HandlerFunc {
 		}
 
 		s.DeleteResetToken(req.Username)
+
+		notifyAccountChange(geaendert, confirmedNoticeAddress(geaendert), hinweisReset, nil,
+			resetRemovedLines(i18n.Parse(geaendert.Language), entferntePasskeys, googleEntfernt, andereBleiben))
 
 		w.Write([]byte(`{"status":"ok"}`))
 	}
@@ -853,6 +920,16 @@ func VerifyEmailHandler(s *store.Store) http.HandlerFunc {
 		}
 
 		pending := store.NormalizeEmailAddress(user.PendingContactAddress)
+		// Issue #2961 (ADR-0115): Hinweis an die ALTE bestaetigte Adresse,
+		// wenn hier eine ausstehende Aenderung wirksam wird.
+		var hinweisAn, hinweisArt string
+		if user.EmailVerifiedAt != nil && pending != "" {
+			hinweisAn = store.EffectiveContactAddress(user)
+			hinweisArt = hinweisAdresse
+			if user.PendingContactField == "email" {
+				hinweisArt = hinweisKennung
+			}
+		}
 		switch {
 		case address == "" && pending != "":
 			// Alt-Token (ohne Adresse) gegen ein Konto mit ausstehender
@@ -881,10 +958,14 @@ func VerifyEmailHandler(s *store.Store) http.HandlerFunc {
 			}
 			if taken {
 				// Zwischenzeitlich an ein anderes Konto vergeben (AC-8/AC-9):
-				// nichts uebernehmen, ausstehende Aenderung + Token verwerfen.
-				user.PendingContactAddress = ""
-				user.PendingContactField = ""
-				if err := s.SaveUser(*user); err != nil {
+				// nichts uebernehmen, ausstehende Aenderung + Token verwerfen —
+				// frisch geladen (Issue #2961 F-C), nur wenn sie noch dieselbe ist.
+				if _, err := s.UpdateUser(req.User, func(u *model.User) error {
+					if store.NormalizeEmailAddress(u.PendingContactAddress) == pending {
+						u.PendingContactAddress, u.PendingContactField = "", ""
+					}
+					return nil
+				}); err != nil {
 					WriteError(w, r, http.StatusInternalServerError, "store_error", nil)
 					return
 				}
@@ -892,34 +973,59 @@ func VerifyEmailHandler(s *store.Store) http.HandlerFunc {
 				WriteError(w, r, http.StatusConflict, "address_taken", nil)
 				return
 			}
-			switch user.PendingContactField {
-			case "mail_to":
-				if pending == store.NormalizeEmailAddress(user.Email) {
-					user.MailTo = "" // "mail_to leeren"-Sonderfall (B2 §1/AC-4)
-				} else {
-					user.MailTo = pending
-				}
-			case "email":
-				user.Email = pending
-			default:
+			if user.PendingContactField != "mail_to" && user.PendingContactField != "email" {
 				WriteError(w, r, http.StatusBadRequest, "invalid_token", nil)
 				return
 			}
-			user.PendingContactAddress = ""
-			user.PendingContactField = ""
 		}
 
+		// Issue #2961 (GA6, F-C): Bestaetigung und Adressfelder werden auf dem
+		// unter der Nutzersperre FRISCH geladenen Stand angewandt; hat er sich
+		// seit der Pruefung oben veraendert, gilt der Link als ueberholt.
+		feld := user.PendingContactField
 		now := time.Now().UTC()
-		user.EmailVerifiedAt = &now
-		if err := s.SaveUser(*user); err != nil {
+		bestaetigt, err := s.UpdateUser(req.User, func(u *model.User) error {
+			if store.NormalizeEmailAddress(u.PendingContactAddress) != pending || (pending != "" && u.PendingContactField != feld) {
+				return errLinkUeberholt
+			}
+			switch {
+			case pending == "":
+				if address != "" && address != store.EffectiveContactAddress(u) {
+					return errLinkUeberholt
+				}
+			case feld == "mail_to":
+				if pending == store.NormalizeEmailAddress(u.Email) {
+					u.MailTo = "" // "mail_to leeren"-Sonderfall (B2 §1/AC-4)
+				} else {
+					u.MailTo = pending
+				}
+			default: // "email"
+				u.Email = pending
+			}
+			u.PendingContactAddress, u.PendingContactField = "", ""
+			u.EmailVerifiedAt = &now
+			return nil
+		})
+		if errors.Is(err, errLinkUeberholt) {
+			WriteError(w, r, http.StatusBadRequest, "token_expired", nil)
+			return
+		}
+		if err != nil {
 			WriteError(w, r, http.StatusInternalServerError, "store_error", nil)
 			return
 		}
 		s.DeleteVerificationToken(req.User)
+		if hinweisAn != "" {
+			notifyAccountChange(bestaetigt, hinweisAn, hinweisArt, i18n.Args{"adresse": pending}, nil)
+		}
 
 		w.Write([]byte(`{"status":"ok"}`))
 	}
 }
+
+// errLinkUeberholt: der Kontostand hat sich seit der Pruefung des
+// Bestaetigungslinks veraendert (neuerer Wechsel) — der Link wirkt nicht.
+var errLinkUeberholt = errors.New("verification link superseded")
 
 // LogoutHandler meldet GENAU DIESES Geraet ab: der Eintrag der Anmelde-Kennung
 // verlaesst die Gaesteliste des Nutzers. Weil das dateibasiert geschieht, wirkt
@@ -1370,7 +1476,14 @@ func UpdateProfileHandler(s *store.Store, cfg config.Config, mailLimiter *MailFl
 		// 3. Konto bestaetigt, neue wirksame Adresse -> email/mail_to bleiben
 		//    auf den alten Werten, die Aenderung wartet als Pending-Feld auf
 		//    den Bestaetigungslink (VerifyEmailHandler).
+		// Issue #2961 (F-C): Adressstand, auf dem die Entscheidung unten beruht
+		// (Vorbedingung des Schreibens).
+		adressStand := model.User{Email: user.Email, MailTo: user.MailTo,
+			PendingContactAddress: user.PendingContactAddress, PendingContactField: user.PendingContactField}
 		sendVerification := false
+		// Issue #2961 (F-F): Art der Hinweis-Mail, wenn hier ein Wechsel
+		// angefordert wird (leer: keiner).
+		angefordertArt := ""
 		// Issue #2404: die Adresse, an die die Bestaetigungsmail ginge — in
 		// beiden Zweigen, die sendVerification setzen, ist das die neue
 		// wirksame Adresse (Pending-Zweig schreibt sie nach
@@ -1389,9 +1502,13 @@ func UpdateProfileHandler(s *store.Store, cfg config.Config, mailLimiter *MailFl
 			oldEffective := store.EffectiveContactAddress(user)
 			newEffective := store.EffectiveContactAddress(&model.User{Email: newEmail, MailTo: newMailTo})
 			verificationAddress = newEffective
+			// Issue #2961 (GA9, ADR-0115): eine neue Login-Kennung eines
+			// bestaetigten Kontos wird erst mit dem Bestaetigungslink an die
+			// neue Adresse wirksam — auch wenn mail_to gleich bleibt.
+			emailNeedsProof := user.EmailVerifiedAt != nil && emailChanged
 
 			switch {
-			case newEffective == oldEffective:
+			case newEffective == oldEffective && !emailNeedsProof:
 				user.Email, user.MailTo = newEmail, newMailTo
 			case user.EmailVerifiedAt == nil || newEffective == "":
 				// Unbestaetigt: wie bisher direkt. Beide Felder leer: es gibt
@@ -1399,24 +1516,31 @@ func UpdateProfileHandler(s *store.Store, cfg config.Config, mailLimiter *MailFl
 				user.Email, user.MailTo = newEmail, newMailTo
 				user.PendingContactAddress, user.PendingContactField = "", ""
 				sendVerification = user.EmailVerifiedAt == nil
-			default:
-				if mailToFieldChanged {
-					user.PendingContactField = "mail_to"
-					// Ein gleichzeitig geaendertes email wird sofort geschrieben,
-					// solange es das inaktive Feld ist. Ist es heute die
-					// wirksame Adresse (mail_to leer), bliebe sie sonst
-					// unbestaetigt wirksam — dann wird es nicht uebernommen.
-					if emailFieldChanged {
-						if store.NormalizeEmailAddress(user.MailTo) != "" {
-							user.Email = newEmail
-						} else {
-							log.Printf("profile update: email change for %s not applied while mail_to change is pending", userId)
-						}
-					}
-				} else {
-					user.PendingContactField = "email"
-				}
+			case mailToFieldChanged && newEffective != oldEffective:
+				user.PendingContactField = "mail_to"
+				angefordertArt = hinweisAdresseAngefordert
 				user.PendingContactAddress = newEffective
+				// Ein gleichzeitig GELEERTES email wird sofort geschrieben,
+				// solange es das inaktive Feld ist. Eine neue Kennung braucht
+				// einen eigenen Nachweis (GA9) und wird hier nicht uebernommen
+				// — es gibt nur eine ausstehende Aenderung je Konto.
+				if emailFieldChanged {
+					if !emailChanged && store.NormalizeEmailAddress(user.MailTo) != "" {
+						user.Email = newEmail
+					} else {
+						log.Printf("profile update: email change for %s not applied while mail_to change is pending", userId)
+					}
+				}
+				sendVerification = true
+			default:
+				// Neue Login-Kennung (GA9): die Zustelladresse bleibt wirksam
+				// (ein mitgeschicktes mail_to aendert sie hier nicht), die neue
+				// Kennung wartet auf den Link an genau diese Adresse.
+				user.MailTo = newMailTo
+				user.PendingContactField = "email"
+				angefordertArt = hinweisKennungAngefordert
+				user.PendingContactAddress = newEmail
+				verificationAddress = newEmail
 				sendVerification = true
 			}
 		} else {
@@ -1440,8 +1564,9 @@ func UpdateProfileHandler(s *store.Store, cfg config.Config, mailLimiter *MailFl
 		// Nummer: beim Leeren ("Nummer entfernen") ist PendingSmsTo haeufig
 		// selbst leer — eine unbedingte Gleichheitspruefung wuerde genau die
 		// Aufraeum-Aenderung aus AC-9 verschlucken.
-		if update.SmsTo != nil && newSmsTo != user.SmsTo &&
-			(newSmsTo == "" || newSmsTo != user.PendingSmsTo) {
+		smsGeaendert := update.SmsTo != nil && newSmsTo != user.SmsTo &&
+			(newSmsTo == "" || newSmsTo != user.PendingSmsTo)
+		if smsGeaendert {
 			switch {
 			case newSmsTo == "":
 				// AC-9: vollstaendig aufraeumen — keine ueberlebende
@@ -1516,9 +1641,44 @@ func UpdateProfileHandler(s *store.Store, cfg config.Config, mailLimiter *MailFl
 			return
 		}
 
-		if err := s.SaveUser(*user); err != nil {
+		// Issue #2961 (F-C): nur die Felder, die dieser PUT aendert, werden auf
+		// den unter der Nutzersperre FRISCH geladenen Stand geschrieben — ein
+		// veralteter Stand dreht Adresse, Kennung oder ausstehende Aenderung
+		// nie zurueck. Hat sich der Adressstand seit dem Laden veraendert
+		// (z. B. gleichzeitig eingeloester Bestaetigungslink), wird nichts
+		// geschrieben (412).
+		adressAenderung := emailFieldChanged || mailToFieldChanged
+		gespeichert, err := s.UpdateUser(userId, func(u *model.User) error {
+			if adressAenderung {
+				if u.Email != adressStand.Email || u.MailTo != adressStand.MailTo ||
+					u.PendingContactAddress != adressStand.PendingContactAddress ||
+					u.PendingContactField != adressStand.PendingContactField {
+					return errProfilVeraltet
+				}
+				u.Email, u.MailTo = user.Email, user.MailTo
+				u.PendingContactAddress, u.PendingContactField = user.PendingContactAddress, user.PendingContactField
+			}
+			uebernehmeProfilFelder(u, user, profilFelderGesendet{
+				displayName: update.DisplayName != nil, sms: smsGeaendert,
+				telegram:      update.TelegramChatID != nil && *update.TelegramChatID == "",
+				passkeyPrompt: update.PasskeyPromptDismissed != nil, language: update.Language != nil,
+				onboarding: update.OnboardingDismissed != nil, checklist: update.ChecklistDismissed != nil,
+			})
+			return nil
+		})
+		if errors.Is(err, errProfilVeraltet) {
+			WriteError(w, r, http.StatusPreconditionFailed, "precondition_failed", nil)
+			return
+		}
+		if err != nil {
 			WriteError(w, r, http.StatusInternalServerError, "store_error", nil)
 			return
+		}
+		user = gespeichert
+		if angefordertArt != "" {
+			// Hinweis an die bisherige bestaetigte Adresse schon beim Anstossen.
+			notifyAccountChange(user, confirmedNoticeAddress(user), angefordertArt,
+				i18n.Args{"adresse": user.PendingContactAddress}, nil)
 		}
 
 		if deleteSmsVerification {
@@ -1538,6 +1698,42 @@ func UpdateProfileHandler(s *store.Store, cfg config.Config, mailLimiter *MailFl
 
 		w.Header().Set("Content-Type", "application/json")
 		json.NewEncoder(w).Encode(toProfileResponse(user))
+	}
+}
+
+// errProfilVeraltet: der Adressstand hat sich zwischen Laden und Schreiben
+// des Profil-PUT veraendert.
+var errProfilVeraltet = errors.New("profile address state changed concurrently")
+
+// profilFelderGesendet: welche Nicht-Adress-Felder ein Profil-PUT aendert.
+type profilFelderGesendet struct {
+	displayName, sms, telegram, passkeyPrompt, language, onboarding, checklist bool
+}
+
+// uebernehmeProfilFelder kopiert genau die gesendeten Felder von neu nach u
+// (Issue #2961 F-C: Delta statt Ganzobjekt).
+func uebernehmeProfilFelder(u, neu *model.User, g profilFelderGesendet) {
+	if g.displayName {
+		u.DisplayName = neu.DisplayName
+	}
+	if g.sms {
+		u.SmsTo, u.PendingSmsTo = neu.SmsTo, neu.PendingSmsTo
+		u.SmsVerifiedNumber, u.SmsVerifiedAt = neu.SmsVerifiedNumber, neu.SmsVerifiedAt
+	}
+	if g.telegram {
+		u.TelegramChatID = ""
+	}
+	if g.passkeyPrompt {
+		u.PasskeyPromptDismissed = neu.PasskeyPromptDismissed
+	}
+	if g.language {
+		u.Language = neu.Language
+	}
+	if g.onboarding {
+		u.OnboardingDismissed = neu.OnboardingDismissed
+	}
+	if g.checklist {
+		u.ChecklistDismissed = neu.ChecklistDismissed
 	}
 }
 
@@ -1617,26 +1813,32 @@ func selfHealEmailVerification(s *store.Store, userId, provenAddress string) {
 	if proven == "" {
 		return
 	}
-	user, err := s.LoadUser(userId) // RMW: vollständiges Objekt laden
-	if err != nil || user == nil {
+	if u, err := s.LoadUser(userId); err != nil || u == nil {
 		return
 	}
-	if user.EmailVerifiedAt != nil {
-		return
-	}
-	contact := user.MailTo
-	if contact == "" {
-		contact = user.Email
-	}
-	if !strings.EqualFold(strings.TrimSpace(contact), proven) {
-		return
-	}
-	now := time.Now().UTC()
-	user.EmailVerifiedAt = &now
-	if err := s.SaveUser(*user); err != nil {
+	// Issue #2961 (GA6): frisch geladen unter der Nutzersperre (UpdateUser).
+	_, err := s.UpdateUser(userId, func(user *model.User) error {
+		if user.EmailVerifiedAt != nil {
+			return errNichtsZuTun
+		}
+		contact := user.MailTo
+		if contact == "" {
+			contact = user.Email
+		}
+		if !strings.EqualFold(strings.TrimSpace(contact), proven) {
+			return errNichtsZuTun
+		}
+		now := time.Now().UTC()
+		user.EmailVerifiedAt = &now
+		return nil
+	})
+	if err != nil && !errors.Is(err, errNichtsZuTun) {
 		log.Printf("email verification self-heal: SaveUser failed for %s: %v", userId, err)
 	}
 }
+
+// errNichtsZuTun bricht ein UpdateUser ohne Schreiben ab (kein Fehlerfall).
+var errNichtsZuTun = errors.New("nothing to do")
 
 // ResendVerificationHandler verschickt die Bestätigungsmail erneut (Issue
 // #2304, AC-7/AC-8). Nutzlast ist die Kennung, nicht die Adresse — analog
@@ -1838,11 +2040,16 @@ func ChangePasswordHandler(s *store.Store, bcryptCost int, secret, publicHost st
 			return
 		}
 
-		user.PasswordHash = string(newHash)
-		if err := s.SaveUser(*user); err != nil {
+		geaendert, err := s.UpdateUser(userId, func(u *model.User) error {
+			u.PasswordHash = string(newHash)
+			return nil
+		})
+		if err != nil {
 			WriteError(w, r, http.StatusInternalServerError, "internal_error", nil)
 			return
 		}
+		// Issue #2961 (ADR-0115): Hinweis an die bestaetigte Adresse.
+		notifyAccountChange(geaendert, confirmedNoticeAddress(geaendert), hinweisPasswort, nil, nil)
 
 		// Issue #2129 AC-8: Der Passwortwechsel meldet auf allen ANDEREN
 		// Geraeten ab. Bislang hatte er ueberhaupt keine Session-Wirkung — es

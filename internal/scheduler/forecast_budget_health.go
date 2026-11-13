@@ -25,6 +25,25 @@ const forecastDailyBudget = 9000
 const forecastPollingThreshold = 0.80
 const forecastBriefingOnlyThreshold = 0.95
 
+// forecastInteractiveThreshold mirrors ForecastBudgetGate.INTERACTIVE_THRESHOLD
+// (ADR-0117, #2961): interaktive Abrufe buchen global hoechstens bis zu
+// diesem Anteil der Tagesmenge. Display-only wie die Schwellen oben.
+const forecastInteractiveThreshold = 0.70
+
+// forecastInteractiveBudget ist die daraus abgeleitete Obergrenze in Einheiten.
+func forecastInteractiveBudget() int {
+	return int(forecastInteractiveThreshold * forecastDailyBudget)
+}
+
+// forecastManualThreshold mirrors ForecastBudgetGate.MANUAL_THRESHOLD
+// (ADR-0117 Nachtrag): Handversand und Antwort-Befehle (user_manual) buchen
+// global hoechstens bis zu diesem Anteil. Display-only.
+const forecastManualThreshold = 0.90
+
+func forecastManualBudget() int {
+	return int(forecastManualThreshold * forecastDailyBudget)
+}
+
 // forecastThrottleLevel derives the AC-8 display stage from usage_ratio.
 func forecastThrottleLevel(usageRatio float64) string {
 	if usageRatio >= forecastBriefingOnlyThreshold {
@@ -46,6 +65,13 @@ type forecastBudgetFile struct {
 	ActiveUsers []string       `json:"active_users"`
 	CacheHits   int            `json:"cache_hits"`
 	CacheMisses int            `json:"cache_misses"`
+	// ADR-0117: interaktiver Anteil an Calls (global), getrennt gezaehlt.
+	InteractiveCalls map[string]int `json:"interactive_calls"`
+	// ADR-0117: interaktiver Anteil im Nutzer-Topf.
+	Interactive map[string]int `json:"interactive"`
+	// ADR-0117 Nachtrag: user_manual global bzw. im Nutzer-Topf.
+	ManualCalls map[string]int `json:"manual_calls"`
+	Manual      map[string]int `json:"manual"`
 }
 
 // forecastBudgetSnapshot reads path (data/diagnostics/forecast_budget.json)
@@ -69,6 +95,13 @@ func forecastBudgetSnapshot(path string) map[string]any {
 		"fair_share":            forecastDailyBudget,
 		"max_user_calls":        0,
 		"users_over_fair_share": 0,
+
+		"interactive_calls_today": 0,
+		"interactive_budget":      forecastInteractiveBudget(),
+		"interactive_throttled":   false,
+		"manual_calls_today":      0,
+		"manual_budget":           forecastManualBudget(),
+		"manual_throttled":        false,
 	}
 	if path == "" {
 		return unavailable
@@ -95,10 +128,12 @@ func forecastBudgetSnapshot(path string) map[string]any {
 	// UTC date means the counters are logically reset -- reporting
 	// yesterday's calls_today as "heute" would be factually wrong.
 	today := time.Now().UTC().Format("2006-01-02")
-	calls, cacheHits, cacheMisses, activePots := 0, 0, 0, 0
+	calls, cacheHits, cacheMisses, activePots, interactive, manual := 0, 0, 0, 0, 0, 0
 	if file.Date == today {
 		activePots = len(file.ActiveUsers) // nur die Zahl, nie die Kennungen
 		calls = file.Calls["openmeteo"]    // zero value if key absent, s. spec
+		interactive = file.InteractiveCalls["openmeteo"]
+		manual = file.ManualCalls["openmeteo"]
 		cacheHits = file.CacheHits
 		cacheMisses = file.CacheMisses
 	}
@@ -128,6 +163,16 @@ func forecastBudgetSnapshot(path string) map[string]any {
 		"fair_share":            fairShare,
 		"max_user_calls":        maxUser,
 		"users_over_fair_share": over,
+
+		// ADR-0117: interaktiver Verbrauch getrennt; "interactive_throttled"
+		// = die globale interaktive Obergrenze ist erreicht (Python bucht
+		// interaktiv nur, solange calls + Einheiten <= Obergrenze).
+		"interactive_calls_today": interactive,
+		"interactive_budget":      forecastInteractiveBudget(),
+		"interactive_throttled":   calls >= forecastInteractiveBudget(),
+		"manual_calls_today":      manual,
+		"manual_budget":           forecastManualBudget(),
+		"manual_throttled":        calls >= forecastManualBudget(),
 	}
 }
 
@@ -135,21 +180,28 @@ func forecastBudgetSnapshot(path string) map[string]any {
 // <dataDir>/users/<uid>/diagnostics/forecast_budget.json. Ungueltige Kennung,
 // fehlende/kaputte Datei oder anderes Datum liefern 0 (Issue #2475).
 func userForecastCalls(dataDir, uid string) int {
+	gesamt, _, _ := userForecastUsage(dataDir, uid)
+	return gesamt
+}
+
+// userForecastUsage liefert (gesamt, davon interaktiv, davon manuell) eines
+// Nutzers fuer heute (ADR-0117); dieselben Rueckfaelle auf 0 wie userForecastCalls.
+func userForecastUsage(dataDir, uid string) (int, int, int) {
 	if dataDir == "" || !store.ValidUserID(uid) {
-		return 0
+		return 0, 0, 0
 	}
 	data, err := os.ReadFile(filepath.Join(dataDir, "users", uid, "diagnostics", "forecast_budget.json"))
 	if err != nil {
-		return 0
+		return 0, 0, 0
 	}
 	var file forecastBudgetFile
 	if err := json.Unmarshal(data, &file); err != nil {
-		return 0
+		return 0, 0, 0
 	}
 	if file.Date != time.Now().UTC().Format("2006-01-02") {
-		return 0
+		return 0, 0, 0
 	}
-	return file.Calls["openmeteo"]
+	return file.Calls["openmeteo"], file.Interactive["openmeteo"], file.Manual["openmeteo"]
 }
 
 // userUsageAggregates liefert nur Aggregate ueber alle Nutzerzaehler:
@@ -196,4 +248,24 @@ func (s *Scheduler) UserForecastCalls(uid string) int {
 		return 0
 	}
 	return userForecastCalls(s.store.DataDir, uid)
+}
+
+// UserForecastInteractiveCalls liefert den heutigen interaktiven Anteil des
+// open-meteo-Verbrauchs eines Nutzers (Admin-Sicht, ADR-0117); ohne Store 0.
+func (s *Scheduler) UserForecastInteractiveCalls(uid string) int {
+	if s == nil || s.store == nil {
+		return 0
+	}
+	_, interaktiv, _ := userForecastUsage(s.store.DataDir, uid)
+	return interaktiv
+}
+
+// UserForecastManualCalls liefert den heutigen user_manual-Anteil eines
+// Nutzers (Handversand, Antwort-Befehle; ADR-0117 Nachtrag); ohne Store 0.
+func (s *Scheduler) UserForecastManualCalls(uid string) int {
+	if s == nil || s.store == nil {
+		return 0
+	}
+	_, _, manuell := userForecastUsage(s.store.DataDir, uid)
+	return manuell
 }

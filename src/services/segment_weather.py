@@ -149,8 +149,12 @@ class SegmentWeatherService:
             ProviderRequestError: If the provider request fails
             ValueError: If segment time window is invalid
         """
-        from services.forecast_budget import ForecastBudgetGate
+        from services.forecast_budget import ForecastBudgetGate, wirksame_prioritaet
         from providers.base import ProviderRequestError
+
+        # Issue #2961 (ADR-0117): innerhalb einer interaktiven Anfrage
+        # (Vergleich, Etappenwetter, Vorschau) bucht jeder Abruf interaktiv.
+        priority = wirksame_prioritaet(priority)
 
         # Issue #2387: die Kennung entscheidet, WEN eine erreichte Schwelle
         # trifft. `None` heisst ausdruecklich "unattributiert" -- dann gilt
@@ -228,6 +232,10 @@ class SegmentWeatherService:
         # + #1539 S1b) -- NUR bei Cache-Miss, ein Hit verbraucht kein Kontingent.
         if not budget_gate.reserve(priority):
             self._debug.add(f"budget.throttled: priority={priority}")
+            # ADR-0117: die markierte Anfrage erfaehrt davon (Vorschau -> 429,
+            # Handversand/Befehl -> Abbruch vor jeder Zustellung).
+            from services.forecast_budget import melde_drosselung
+            melde_drosselung()
             return _Raw("throttled")
 
         # Step 2 & 3: Log segment info and create Location

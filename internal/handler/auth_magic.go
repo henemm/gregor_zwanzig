@@ -23,6 +23,7 @@ import (
 	"crypto/subtle"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log"
 	"math/big"
@@ -323,27 +324,28 @@ func resolveMagicLinkAccount(w http.ResponseWriter, r *http.Request, s *store.St
 		if magicLinkBeforeTakeoverReload != nil {
 			magicLinkBeforeTakeoverReload(owner.ID)
 		}
-		// Credential-less, unconfirmed account: confirm it (read-modify-write)
-		// and end its old sessions BEFORE issuing the new one.
-		user, err := s.LoadUser(owner.ID)
-		if err == nil && user == nil {
-			err = fmt.Errorf("account vanished")
-		}
-		if err == nil {
+		// Credential-less, unconfirmed account: confirm it (read-modify-write
+		// unter der Nutzersperre, Issue #2961 GA6) and end its old sessions
+		// BEFORE issuing the new one.
+		_, err := s.UpdateUser(owner.ID, func(user *model.User) error {
 			// Issue #2147 Scheibe B1 (AC-12): das frisch geladene Konto muss X
 			// weiterhin als wirksame Kontaktadresse tragen und weiterhin OHNE
 			// Zugangsdaten sein — sonst hat es die Zwischenzeit veraendert und
 			// die Uebernahme wird verweigert (dieselbe neutrale Antwort wie bei
 			// jeder anderen Mehrdeutigkeit).
 			if store.HasLoginCredentials(user) || store.EffectiveContactAddress(user) != address {
-				log.Printf("magic-link: takeover of account %s refused — account changed since assignment", owner.ID)
-				return fail(http.StatusBadRequest, "invalid_or_expired_code")
+				return errTakeoverChanged
 			}
 			now := time.Now().UTC()
 			user.EmailVerifiedAt = &now
-			if err = s.SaveUser(*user); err == nil {
-				err = s.ClearSessions(owner.ID)
-			}
+			return nil
+		})
+		if errors.Is(err, errTakeoverChanged) {
+			log.Printf("magic-link: takeover of account %s refused — account changed since assignment", owner.ID)
+			return fail(http.StatusBadRequest, "invalid_or_expired_code")
+		}
+		if err == nil {
+			err = s.ClearSessions(owner.ID)
 		}
 		if err != nil {
 			log.Printf("magic-link: takeover of unconfirmed account %s failed: %v", owner.ID, err)
@@ -354,6 +356,10 @@ func resolveMagicLinkAccount(w http.ResponseWriter, r *http.Request, s *store.St
 	log.Printf("magic-link: address not uniquely assignable — login refused")
 	return fail(http.StatusBadRequest, "invalid_or_expired_code")
 }
+
+// errTakeoverChanged: das Konto hat sich zwischen Zuordnung und Uebernahme
+// veraendert (Zugangsdaten oder Adresse) — Uebernahme verweigert.
+var errTakeoverChanged = errors.New("account changed since assignment")
 
 // createMagicLinkUser provisions a new user with ID format "m-{8hex}".
 // Tries up to 3 random IDs before giving up (collision is extremely unlikely).

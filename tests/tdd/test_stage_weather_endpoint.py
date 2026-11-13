@@ -305,10 +305,11 @@ def test_f001_unexpected_compute_error_returns_500_store_error(monkeypatch):
     trip = Trip(id="f001-trip", name="F001", stages=[stage])
     save_trip(trip, user_id=user_id)
 
-    def _raise(trip, provider):
+    def _raise(trip, provider, **_kw):
         raise RuntimeError("simulated unexpected compute failure")
 
-    monkeypatch.setattr(internal_router, "compute_stage_weather", _raise)
+    # #2961 (ADR-0117): der Router ruft die Variante mit Kontingent-Status.
+    monkeypatch.setattr(internal_router, "compute_stage_weather_mit_status", _raise)
 
     client = TestClient(app)
     resp = client.get(

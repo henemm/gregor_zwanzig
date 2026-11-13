@@ -648,8 +648,14 @@ class RadarNowcastService:
         self._openmeteo_unavailable_this_call = False
         self._budget_throttled_this_call = False
         self._inca_unavailable_this_call = False
+        from services.forecast_budget import ForecastBudgetGate, kontext_zurechnung
+        # Issue #2961 (ADR-0117 Nachtrag, F3): innerhalb einer markierten
+        # interaktiven/manuellen Anfrage zaehlt auch dieser Abruf (z. B. die
+        # Gewitter-Anreicherung im Anbieter, sonst nutzerfrei) beim
+        # ausloesenden Nutzer mit dessen Prioritaet. Lehnt das Kontingent ab,
+        # gilt das uebliche "ohne Anreicherung" (throttled, Health-Journal).
+        priority, user_id = kontext_zurechnung(priority, user_id)
         self._priority = priority
-        from services.forecast_budget import ForecastBudgetGate
         # Issue #2387: die Kennung entscheidet, WEN eine erreichte Schwelle
         # trifft. `None` heisst ausdruecklich "unattributiert" (bewusst
         # nutzerfreie Provider-Schicht, ADR-0075 Punkt 4) -- dann gilt das

@@ -164,6 +164,11 @@ Bereits entschiedener Ansatz (keine Alternativen offen), fünf Schritte:
   mit HTTP 200, aktualisiert `PremiumSmsReplyTo`/`PremiumSmsReplyAt` exakt
   bei dem Nutzer, dessen Code passt, und lässt den anderen Nutzer
   unverändert — die Kollision sperrt niemanden dauerhaft aus.
+  > **Teilweise abgelöst durch ADR-0116 (Issue #2961, 2026-11-13):** der
+  > Teilsatz „lässt den anderen Nutzer unverändert" gilt nicht mehr. Seit
+  > ADR-0116 gehört eine Rückadresse höchstens einem Konto: der andere Nutzer
+  > verliert `PremiumSmsReplyTo`/`PremiumSmsReplyAt` (alle übrigen Felder
+  > bleiben). Spec `security_haertung_2026_11_premium_sms_rueckkanal.md`.
   - Test: Zwei Fixture-Nutzer wie in AC-1, einer mit erzeugtem
     Verknüpfungs-Code, Lernaufruf mit diesem Code, HTTP-Status und
     `user_id` im Antwortkörper prüfen, `user.json` beider Nutzer danach

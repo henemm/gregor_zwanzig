@@ -10,6 +10,7 @@ Spec: docs/specs/modules/stage_weather_python_endpoint.md
 """
 from __future__ import annotations
 
+import contextvars
 import logging
 from concurrent.futures import ThreadPoolExecutor
 from datetime import date as date_type
@@ -149,6 +150,20 @@ def compute_stage_weather(
     alle Stages hinweg gefetcht (Regel 10/Confidence bewusst nicht gefetcht --
     siehe Spec Known Limitations).
     """
+    return compute_stage_weather_mit_status(trip, provider, user_id=user_id)[0]
+
+
+def _gedrosselt(sw: Optional[SegmentWeatherData]) -> bool:
+    return sw is not None and sw.has_error and sw.error_message == "budget_throttled"
+
+
+def compute_stage_weather_mit_status(
+    trip: "Trip", provider: "WeatherProvider", *, user_id: str,
+) -> tuple[dict[str, Optional[dict]], list[str]]:
+    """Wie ``compute_stage_weather``, zusaetzlich die Etappen, fuer die das
+    Abruf-Kontingent mindestens einen Abschnitt abgelehnt hat (ADR-0117).
+    Eine solche Etappe liefert ``None`` statt einer Bewertung aus
+    unvollstaendigen Daten -- nichts wird still aus Teilen zusammengesetzt."""
     stages = [s for s in trip.stages if s.id != ""]
 
     # F001 (Adversary, Issue #1212): Segmentbildung kann pro Stage werfen
@@ -179,7 +194,10 @@ def compute_stage_weather(
     if flat:
         with ThreadPoolExecutor(max_workers=min(len(flat), 8)) as executor:
             future_to_idx = {
+                # ADR-0117: copy_context traegt die Markierung einer
+                # interaktiven Anfrage in die Arbeiter.
                 executor.submit(
+                    contextvars.copy_context().run,
                     _fetch_one, services_by_stage[stage_id], seg, user_id,
                 ): idx
                 for idx, (stage_id, seg) in enumerate(flat)
@@ -192,8 +210,9 @@ def compute_stage_weather(
         weather_by_stage[stage_id].append(sw)
 
     results: dict[str, Optional[dict]] = {}
+    gedrosselt = [s.id for s in stages if any(_gedrosselt(w) for w in weather_by_stage[s.id])]
     for stage in stages:
-        if stage.id in broken_stages:
+        if stage.id in broken_stages or stage.id in gedrosselt:
             results[stage.id] = None
             continue
         try:
@@ -206,4 +225,4 @@ def compute_stage_weather(
                 exc_info=True,
             )
             results[stage.id] = None
-    return results
+    return results, gedrosselt

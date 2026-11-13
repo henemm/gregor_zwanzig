@@ -76,6 +76,7 @@ import { test, expect } from '@playwright/test';
 import type { APIRequestContext, BrowserContext, CDPSession, Page } from '@playwright/test';
 import { assertNotProdBaseURL } from './prodUrlGuard.ts';
 import { wegwerfPasswort } from './stagingZugang';
+import { bestaetigeKontoaenderung } from './helpers.ts';
 
 const HANDY = { width: 375, height: 812 };
 const BANNER = 'passkey-angebot';
@@ -170,8 +171,11 @@ async function setzeAngebotZurueck(request: APIRequestContext): Promise<void> {
 		passkey_prompt_dismissed?: boolean;
 		passkeys?: { id: string; label?: string }[];
 	};
+	// Issue #2961 (ADR-0115): Passkey entfernen nur mit frischem Nachweis.
+	if ((daten.passkeys ?? []).length > 0) await bestaetigeKontoaenderung(request, PASSWORT);
 	for (const pk of daten.passkeys ?? []) {
-		await request.delete(`/api/auth/passkey/credentials/${encodeURIComponent(pk.id)}`);
+		const geloescht = await request.delete(`/api/auth/passkey/credentials/${encodeURIComponent(pk.id)}`);
+		expect(geloescht.status(), `Passkey entfernen: ${geloescht.status()}`).toBe(200);
 	}
 
 	const nachher = await (await request.get('/api/auth/profile')).json();

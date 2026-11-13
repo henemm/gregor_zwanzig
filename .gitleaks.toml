@@ -49,6 +49,7 @@ paths = [
   '''(^|/)internal/handler/auth_traversal_test\.go$''',
   '''(^|/)internal/handler/data_export_test\.go$''',
   '''(^|/)internal/handler/google_login_address_linking_test\.go$''',
+  '''(^|/)internal/handler/konto_nachweis_hilfe_test\.go$''',
   '''(^|/)internal/handler/login_email_log_ohne_adresse_test\.go$''',
   '''(^|/)internal/handler/onboarding_account_creation_test\.go$''',
   '''(^|/)internal/handler/passkey_public_test\.go$''',

@@ -11,10 +11,13 @@ logger = logging.getLogger("user_tier")
 # bleibt, wenn Briefings das Kontingent zuerst beanspruchen.
 SMS_ALARM_RESERVE = 2
 PREMIUM_SMS_ALARM_RESERVE = 3
-PREMIUM_SMS_REPLY_OVERSHOOT = 3
 
 _DAILY_SMS_LIMIT = {"free": 0, "standard": 10, "premium": 10}
 _DAILY_PREMIUM_SMS_LIMIT = {"free": 0, "standard": 0, "premium": 15}
+# ADR-0116 (Issue #2961 Welle 2): Antworten auf eingehende Premium-SMS-Befehle
+# haben ein EIGENES Tageskontingent und verbrauchen nie das Alarm-Kontingent
+# (vorher: Antwort-Grenze = Grundlimit + 3 auf demselben Zaehler).
+_DAILY_PREMIUM_SMS_REPLY_LIMIT = {"free": 0, "standard": 0, "premium": 15}
 _KNOWN_TIERS = ("free", "standard", "premium")
 
 
@@ -73,6 +76,12 @@ def daily_sms_limit(user_id: str) -> int:
 def daily_premium_sms_limit(user_id: str) -> int:
     """Issue #2412 S4a: Tages-Kostendeckel fuer den Kanal Premium-SMS je Tier."""
     return _DAILY_PREMIUM_SMS_LIMIT.get(_tier(user_id), 0)
+
+
+def daily_premium_sms_reply_limit(user_id: str) -> int:
+    """ADR-0116: Tageskontingent fuer Antworten auf eingehende Premium-SMS-
+    Befehle je Tier, getrennt vom Alarm-/Briefing-Kontingent."""
+    return _DAILY_PREMIUM_SMS_REPLY_LIMIT.get(_tier(user_id), 0)
 
 
 def sms_allowed(user_id: str) -> bool:

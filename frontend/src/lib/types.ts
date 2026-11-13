@@ -671,6 +671,10 @@ export interface StageWeatherResult {
 
 export interface StagesWeatherResponse {
 	results: Record<string, StageWeatherResult | null>;
+	// Issue #2961 (ADR-0117): nur wenn das Abruf-Kontingent einzelne Etappen
+	// abgelehnt hat — übersetzter Hinweis und die betroffenen Etappen.
+	hinweis?: string;
+	gedrosselt?: string[];
 }
 
 // Issue #393 — Cockpit-Kacheln: Versandstatus + Alarm-Historie.

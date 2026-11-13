@@ -42,6 +42,23 @@
 					required
 					minlength="8"
 				/>
+				<!-- Issue #2961 (ADR-0115): Vorgabe aktiv. Die Marke zeigt der Action,
+				     dass die Auswahl mitgeschickt wurde (ein abgewaehltes Kaestchen fehlt im Formular). -->
+				<input type="hidden" name="andere_zugangswege_gewaehlt" value="1" />
+				<label class="flex items-start gap-2 text-sm">
+					<input
+						type="checkbox"
+						name="remove_other_access"
+						value="1"
+						checked
+						class="mt-1"
+						data-testid="reset-remove-other-access"
+					/>
+					<span>
+						{$t('auth.reset.andere_zugangswege')}
+						<span class="block text-muted-foreground">{$t('auth.reset.andere_zugangswege_hinweis')}</span>
+					</span>
+				</label>
 				<button type="submit" class="w-full rounded-md bg-primary px-3 py-2 text-sm text-primary-foreground">
 					{$t('auth.reset.knopf')}
 				</button>

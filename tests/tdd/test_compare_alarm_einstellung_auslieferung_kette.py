@@ -46,6 +46,7 @@ from tests.helpers.einstellung_auslieferung_orakel import (
     compare_vorbedingung_pruefen,
 )
 from tests.helpers.transport_mitschrift import Kanalmitschrift, aufzeichner_installieren
+from tests.tdd._einstellung_auslieferung_fixtures import premium_rueckadresse
 from tests.tdd._compare_kette_fixtures import (
     ORTE,
     alle_orte,
@@ -569,7 +570,7 @@ def test_premium_sms_ist_alarmkanal_in_allen_drei_arten_nur_im_premium_tarif(mit
     snap_p, gemeldet, _ = _lauf(mit, art, prem, "HIGH")
     assert gemeldet == 1
     assert "premium_sms" in _pruefen(snap_p, prem, art, "HIGH")
-    assert snap_p.empfaenger("premium_sms") == ["+490000000008"]
+    assert snap_p.empfaenger("premium_sms") == [premium_rueckadresse(prem.uid)]
     snap_s, gemeldet, _ = _lauf(mit, art, std, "HIGH")
     assert gemeldet == 1
     assert "premium_sms" not in _pruefen(snap_s, std, art, "HIGH")

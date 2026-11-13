@@ -217,21 +217,24 @@ Fehlerantworten der Go-API, die über `handler.WriteError`/`WriteErrorWith` lauf
 | `/api/auth/logout-all` | POST |
 | `/api/auth/magic-link` | POST |
 | `/api/auth/magic-link/verify` | POST |
-| `/api/auth/passkey/credentials/{id}` | DELETE |
+| `/api/auth/passkey/credentials/{id}` | DELETE — nur mit frischem Nachweis (403 `reauth_required`, #2961, ADR-0115) |
 | `/api/auth/passkey/discoverable/begin` | POST |
 | `/api/auth/passkey/discoverable/finish` | POST |
 | `/api/auth/passkey/login/begin` | POST |
 | `/api/auth/passkey/login/finish` | POST |
-| `/api/auth/passkey/register/begin` | POST |
-| `/api/auth/passkey/register/finish` | POST |
+| `/api/auth/passkey/register/begin` | POST — nur mit frischem Nachweis (403 `reauth_required`, #2961) |
+| `/api/auth/passkey/register/finish` | POST — nur mit frischem Nachweis (403 `reauth_required`, #2961) |
 | `/api/auth/passkey/register/public/begin` | POST |
 | `/api/auth/passkey/register/public/finish` | POST |
 | `/api/auth/password` | PUT |
-| `/api/auth/premium-sms-link-code` | GET, POST (Issue #2154 Scheibe A — POST erzeugt/erneuert den Verknüpfungs-Code und gibt ihn EINMAL im Klartext zurück `{"code":"XXABC234"}`; GET meldet nur `{"exists":true\|false}`, nie den Code oder dessen Hash. Code-Format seit Issue #2323: `XX`+3+3, s.u.) |
-| `/api/auth/profile` | GET, PUT (`language` seit #2646, s. „Nutzerprofil und Sprache“) |
+| `/api/auth/premium-sms-link-code` | GET, POST (Issue #2154 Scheibe A — POST erzeugt/erneuert den Verknüpfungs-Code und gibt ihn EINMAL im Klartext zurück `{"code":"XXABC234"}`; GET meldet nur `{"exists":true\|false,"legacy_format":true\|false}` (`legacy_format`: gespeicherter Code im alten, kürzeren Format, ADR-0116), nie den Code oder dessen Hash. Code-Format seit Issue #2323: `XX`+3+3, s.u.) |
+| `/api/auth/premium-sms-reply` | DELETE (Issue #2961 Welle 2, ADR-0116 — „Verbindung trennen": löscht `premium_sms_reply_to`/`premium_sms_reply_at` des angemeldeten Kontos, Kennung nur aus dem Auth-Kontext; der Verknüpfungs-Code bleibt. 204 ohne Rumpf, 401 ohne Sitzung, 404 Konto fehlt) |
+| `/api/auth/profile` | GET, PUT (`language` seit #2646, s. „Nutzerprofil und Sprache“; Änderung von `email`/`mail_to` nur mit frischem Nachweis, 403 `reauth_required`, #2961) |
+| `/api/auth/reauth` | POST — frischer Nachweis (Passwort oder Code) für 10 Minuten je Sitzung (#2961, ADR-0115) |
+| `/api/auth/reauth/code` | POST — Nachweis-Code an die bisherige wirksame Adresse (#2961) |
 | `/api/auth/invite/check` | POST — öffentlich, rate-limited 30/h/IP, Token im Body; Vorab-Check einer Einladung (#2519) |
 | `/api/auth/register` | POST (optional `language` seit #2646) |
-| `/api/auth/reset-password` | POST |
+| `/api/auth/reset-password` | POST (optional `remove_other_access`, Vorgabe `true`, #2961) |
 | `/api/auth/sms-daily-usage` | GET (Issue #2412, Sammel-Issue #2153 S4b — liefert das tägliche SMS-/Premium-SMS-Tageskontingent zur Anzeige auf /account; Fail-Soft 204 bei nicht erreichbarem Python-Core) |
 | `/api/auth/sms/resend` | POST (Issue #2406 — stellt den Bestätigungscode für die ausstehende Nummer erneut zu; Mengenbremse 3/h je Nutzer, sonst 429 mit `Retry-After`) |
 | `/api/auth/sms/staging-code` | POST (nur `GZ_ENV=staging`, sonst nicht registriert → 404; liefert den Klartext-Code der angemeldeten Sitzung, ignoriert den Body) |
@@ -1823,6 +1826,44 @@ never leaks another user's error text. No recorded run for the caller yet →
 
 ---
 
+### 0.7) Abruf-Kontingent für interaktive Auslöser (Issue #2961, ADR-0117, seit 2026-11-13)
+
+Spec: `docs/specs/modules/security_haertung_2026_11_abruf_kontingent_interaktiv.md`.
+Sofortvergleich, Etappenwetter, SMS-Vorschau, Alarm-Vorschau (Trip und Ortsvergleich) und
+`GET /api/forecast` buchen das Open-Meteo-Tageskontingent mit der Priorität `user_interactive`:
+je Nutzer höchstens 1500 Einheiten am Tag (fest, Nachtrag der Fix-Runde), global nur bis 70 % der
+Tagesmenge (6300 von 9000). **Nachtrag:** Handversand (`POST /api/briefings/{id}/send`,
+`/api/trips/{id}/send`, `/api/compare/presets/{id}/send`) und Antwort-Befehle aller Kanäle buchen
+`user_manual`: je Nutzer 1500 Einheiten, global nur bis 90 % (8100); ein Versand bucht beim ersten
+Abruf seine ganze Obergrenze und wird abgelehnt, bevor etwas abgerufen oder zugestellt wird, wenn
+sie nicht mehr passt (ungenutzter Rest wird erstattet). Nur der Zeitplan-Versand bucht
+`user_briefing`. Cache-Treffer buchen nichts und werden auch bei erschöpftem Kontingent geliefert.
+`GET /api/forecast` ist je Nutzer gebremst wie die übrigen Abrufwege (60 je Minute, Variante
+`rate_limit_exceeded_abruf`, höchstens 4 gleichzeitig).
+
+| Route | Status | `code` / Feld | Fall |
+|---|---|---|---|
+| `GET /api/compare` | 200 | je Ort `error` (übersetzter Text) und **neu** `error_code: "abruf_kontingent_erschoepft"` (sonst `null`) | Kontingent erschöpft, Ort nicht im Cache; andere Orte liefern Daten |
+| `GET /api/compare` | 429 | `abruf_kontingent_erschoepft` (Python-Fehlerform `{"detail","code"}`), Header `Retry-After` (Sekunden bis UTC-Mitternacht) | kein einziger Ort lieferbar, weil das Kontingent erschöpft ist |
+| `GET /api/compare` | 422 | `vergleich_parameter_ungueltig` | `forecast_hours` außerhalb 1–96, `time_window_start`/`time_window_end` außerhalb 0–23 oder `target_date` nicht `YYYY-MM-DD`; kein Abruf |
+| `GET /api/compare` | 422 | `limit_exceeded` (Text `fach.fehler.limit_exceeded_orte_vergleich`), Zusatzfelder `limit`, `current` | mehr verschiedene Orte (`*` = alle gespeicherten) als die Orte-Quote des Tarifs (10/50/200); Admins und `GZ_QUOTA_EXEMPT_USER_IDS` frei; Prüfung in Go vor dem Core |
+| `GET /api/trips/{id}/stages/weather` | 200 | **neu, nur bei Teilausfall:** `hinweis` (übersetzter Text), `gedrosselt` (Liste der Etappen-IDs, deren Ergebnis `null` ist) | einzelne Abschnitte vom Kontingent abgelehnt; eine solche Etappe wird nicht aus Teildaten bewertet |
+| `GET /api/trips/{id}/stages/weather` | 429 | `abruf_kontingent_erschoepft`, `Retry-After` (Go reicht den Header durch) | keine Etappe lieferbar |
+| `GET /api/preview/{trip_id}/sms`, `POST /api/trips/{id}/alert-preview`, `POST /api/briefings/{id}/alert-preview` | 429 | `abruf_kontingent_erschoepft`, `Retry-After` | mindestens ein Abruf der Vorschau vom Kontingent abgelehnt (keine still unvollständige Vorschau) |
+| `POST /api/_internal/forecast-budget/reserve` | 200 | `priority=user_interactive` zulässig | Go-Vorhersage bucht seit ADR-0117 interaktiv |
+| `POST /api/briefings/{id}/send` (und Alt-Routen) | 429 | `kontingent_erschoepft` (Text `versand.ergebnis.kontingent_erschoepft`, Form `{"detail","code"}`), `Retry-After` | manuelles Tageskontingent reicht für diesen Versand nicht; nichts abgerufen, nichts zugestellt |
+| Antwort-Befehle (Telegram, E-Mail, SMS, Premium-SMS) | — | Antworttext `inbound.antwort.kontingent.*` | dasselbe für Befehle; Kurzform-Kanäle englisch, unter 160 Zeichen |
+
+**Statusfelder (additiv):** `GET /api/scheduler/status` → `forecast_budget` trägt
+`interactive_calls_today` (int), `interactive_budget` (int, 6300) und `interactive_throttled`
+(bool, Tageszähler hat die interaktive Obergrenze erreicht), dazu `manual_calls_today`,
+`manual_budget` (8100) und `manual_throttled`; `throttle_level` ist unverändert.
+`GET /api/admin/users` → `AdminUser.open_meteo_interactive_calls_today` und
+`open_meteo_manual_calls_today` (int).
+Zählerdateien: global zusätzlich `interactive_calls: {"openmeteo": n}`, je Nutzer
+`interactive: {"openmeteo": n}` und `interactive_warned` (bool, eine Warnzeile je Tag);
+`manual_calls` bzw. `manual` analog für `user_manual`.
+
 ### Admin-API Nutzerverwaltung (Issue #2155 S3, ADR-0080)
 
 Alle drei Routen: ohne Session 401, ohne Admin 403 `{"error":"forbidden"}`.
@@ -1832,7 +1873,7 @@ vorhanden, kein `omitempty`): `id`, `email`, `display_name`, `tier`, `requested_
 `requested_at`, `email_verified_at`, `created_at`, `disabled` (bool), `is_test_user` (bool),
 `last_trip_report_run` (`{"time","status","error"}` oder `null`), `open_meteo_calls_today`
 (int, heutiger Open-Meteo-Verbrauch des Nutzers, UTC-Tag; 0 bei fehlender/kaputter/gestriger
-Zaehlerdatei, #2475). Nie `password_hash`,
+Zaehlerdatei, #2475), `open_meteo_interactive_calls_today` (int, davon interaktiv; ADR-0117, #2961), `open_meteo_manual_calls_today` (int, davon Handversand/Befehle). Nie `password_hash`,
 Passkey- oder Token-/Code-Felder.
 
 **`PUT /api/admin/users/{id}/tier`**, Body `{"tier":"free|standard|premium"}` -> 200 mit
@@ -1933,7 +1974,7 @@ Fetches normalized weather forecast for a given coordinate.
 
 **Note (Issue #2391, ADR-0076):** Vor dem eigentlichen Abruf reserviert der Go-Handler das
 Tageskontingent beim Python-Core über den neuen internen Endpunkt `POST
-/api/_internal/forecast-budget/reserve?user_id=...&priority=polling` (`api/routers/internal.py`,
+/api/_internal/forecast-budget/reserve?user_id=...&priority=user_interactive` (seit ADR-0117/#2961; vorher `polling`; `api/routers/internal.py`,
 Section 23-Muster — kein Go-Proxy, `X-GZ-Core-Auth`-geschützt). Antwort `{"allowed": bool,
 "retry_after_s"?: int}` — `retry_after_s` ist nur bei `allowed: false` gesetzt. Ein Erfolg bucht
 2 Einheiten (ein Forecast-Abruf kostet Vorhersage- **und** UV-Abruf) gegen dieselbe
@@ -3947,11 +3988,15 @@ stored, fresh reply address or a valid link code) and persists the address on th
 ```
 
 - `from` (string, required): The sender phone number from the SMS.
-- `code` (string, optional): Link code in the format `XX` + 3 letters (no I/L/O) + 3 digits (no
-  0/1), case-insensitive (Issue #2323; previously a 7-character alphanumeric code) issued by
-  `POST /api/auth/premium-sms-link-code`. If a stored reply address exists and is within the
-  `PremiumSmsReplyTTL` (30 days), `code` is ignored and the stored match confirms without
-  verification. Otherwise, `code` is required for resolution.
+- `code` (string, optional): Link code in the format `XX` + 5 letters (no I/L/O) + 3 digits (no
+  0/1), or the older `XX` + 3 letters + 3 digits, case-insensitive (ADR-0116, Issue #2323)
+  issued by `POST /api/auth/premium-sms-link-code`. Since ADR-0116 (Issue #2961) a **valid code
+  always wins**, even against a fresh stored reply address of another account; a wrong code
+  counts as a failed attempt but does not override the sender's own unique fresh stored match.
+  Without code, exactly one fresh stored match (within `PremiumSmsReplyTTL`, 30 days) confirms.
+  Rate limit before any comparison: 3 failed attempts per sender number and 30 overall per
+  sliding hour (429 `link_code_rate_limited`). On success the address is stored on the target
+  and **removed from every other account** (a reply address belongs to at most one account).
 - `dry_run` (bool, optional): If `true`, the endpoint returns the resolution outcome without
   calling `SaveUser` — structurally unreachable, independent of success or failure.
 
@@ -4080,6 +4125,70 @@ einmalig, max. 3 Fehlversuche. Eine neue Anforderung ersetzt den alten Code.
 | 502 | `{"error":"mail_failed"}` | SMTP nicht konfiguriert oder Versand gescheitert — kein Code gespeichert |
 
 Das Frontend behandelt beide 429-Codes gleich.
+
+#### Nachweis vor Kontoänderungen (Issue #2961, ADR-0115)
+
+Verallgemeinert den Nachweis der Kontolöschung. Ohne frischen Nachweis antworten mit
+`403 {"code":"reauth_required"}` (Katalogtext DE/EN):
+
+- `PUT /api/auth/profile`, wenn `email` oder `mail_to` gesendet wird und sich normalisiert
+  (Trim + Kleinschreibung) vom gespeicherten Wert unterscheidet (auch Leeren). Andere Felder
+  und ein unveränderter `mail_to`-Wert brauchen keinen Nachweis.
+- `POST /api/auth/passkey/register/begin`, `POST /api/auth/passkey/register/finish`,
+  `DELETE /api/auth/passkey/credentials/{id}`.
+
+Ein Nachweis gilt **10 Minuten für genau die Sitzung** (Nutzer + Anmelde-Kennung), in der er
+erbracht wurde; mehrere Änderungen direkt hintereinander brauchen keinen zweiten. Eine **frisch
+ausgestellte Sitzung** (Anmeldung, Passwortwechsel) trägt ihn bereits. Der Nachweis lebt im
+Prozess (Neustart verlangt ihn erneut).
+
+**POST /api/auth/reauth** — Request `{"password": "…"}` ODER `{"code": "123456"}`. Antwort
+`200 {"status":"ok","valid_until":"<RFC3339>"}`.
+
+| Status | Body | Wann |
+|--------|------|------|
+| 400 | `{"code":"reauth_required"}` | weder `password` noch `code` |
+| 401 | `{"code":"unauthorized"}` | nicht angemeldet |
+| 403 | `{"code":"wrong_password"}` | falsches Passwort / Passwort bei passwortlosem Konto |
+| 403 | `{"code":"invalid_code"}` | Code falsch, abgelaufen (15 min), verbraucht oder nach 3 Fehlversuchen gesperrt |
+| 429 | `{"code":"rate_limit_exceeded"}` | mehr als 30 Aufrufe je IP in 15 min; oder 5 falsche Passwörter je Nutzer in 15 min (`Retry-After: 900`) |
+
+**POST /api/auth/reauth/code** — wie `POST /api/auth/account/delete-code` (gleiche Antworten,
+gleiche Bremsen), aber eigener Code-Store und eigene Mail: der Code bestätigt eine Änderung,
+löscht nichts. Ein Lösch-Code ist kein Nachweis-Code und umgekehrt. Empfänger ist die bisherige
+wirksame Adresse (`mail_to`, sonst `email`; nie `pending_contact_address`).
+
+**Login-Kennung (`email`, GA9).** Bei einem bestätigten Konto wird eine neue `email` immer zur
+ausstehenden Änderung (`pending_contact_field: "email"`, Bestätigungslink an die neue Adresse),
+auch wenn `mail_to` gleich bleibt; bis dahin blockiert sie keine fremde Registrierung. Ändern
+`email` und `mail_to` zugleich, wartet nur `mail_to`; die neue `email` wird nicht übernommen.
+
+**Hinweis-Mails.** Passwort geändert/zurückgesetzt, Passkey hinzugefügt/entfernt und Google
+verknüpft melden sich an die aktuelle bestätigte Adresse; ein wirksam gewordener Adress- bzw.
+Kennungswechsel (Einlösen des Bestätigungslinks) an die **alte** bestätigte Adresse.
+Zusätzlich meldet sich schon das **Anstoßen** eines Adress- bzw. Kennungswechsels (es entsteht
+eine ausstehende Änderung) an die bisherige bestätigte Adresse.
+Höchstens 5 je Nutzer und Stunde, fail-soft (ein Mailfehler bricht die Änderung nicht ab).
+Hat sich der Adressstand zwischen Laden und Schreiben eines Profil-PUT verändert (z. B.
+gleichzeitig eingelöster Bestätigungslink), antwortet der PUT `412 precondition_failed` und
+schreibt nichts.
+
+**Passwort-Reset** (`POST /api/auth/reset-password`): optionales Feld `remove_other_access`
+(Vorgabe `true`, auch wenn es fehlt). `true` entfernt zusätzlich alle Passkeys und die
+Google-Verknüpfung (`oauth_provider`/`oauth_sub`); bei einem unbestätigten Konto geschieht das
+immer. Sitzungen werden in jedem Fall geleert. Antwort unverändert `{"status":"ok"}`.
+
+**Registrierung über eine unbestätigte Anmeldung** (`POST /api/auth/register`,
+`POST /api/auth/passkey/register/public/*`): halten ausschließlich unbestätigte Anmeldungen
+(kein Testkonto, keine bestätigte Adresse, angelegt ab 2026-09-12, mit Bestätigungstoken) **mit
+leerem Kontoordner** die Adresse, ersetzt die neue Registrierung diese Konten (201); ihr Ordner
+wird nach `<Datenwurzel>/.entfernt-unbestaetigt/` verschoben, nicht gelöscht. `409 email_taken`
+gilt weiter, wenn ein anderes Konto oder eine Anmeldung mit Nutzinhalten die Adresse hält. Der
+Store-Reaper verschiebt leere unbestätigte Anmeldungen höchstens stündlich in die Ablage, wenn ihr
+Bestätigungstoken seit mehr als 24 Stunden abgelaufen ist, und entfernt Ablage-Einträge nach 30
+Tagen (Playbook, Betriebs-Backup). Verdrängt wird erst unmittelbar vor der Kontoanlage (scheitert
+sie, kommt die Anmeldung zurück); je Adresse höchstens eine Ersetzung pro Stunde, darüber
+`409 email_taken`.
 
 #### GET /api/auth/export
 
@@ -4260,14 +4369,16 @@ one-time TTL-less deep-link code to a `user_id` and generates a new link code, r
 **Response 200:**
 ```json
 {
-  "code": "XXABC234"
+  "code": "XXABCDE234"
 }
 ```
 
-The code has a fixed prefix `XX` followed by 3 letters (no I/L/O) and 3 digits (no 0/1),
-case-insensitive on input (Issue #2323; previously a 7-character alphanumeric code without the
-fixed prefix). Returned **only once**; subsequent `GET /api/auth/premium-sms-link-code` calls
-never expose it.
+The code has a fixed prefix `XX` followed by 5 letters (no I/L/O) and 3 digits (no 0/1),
+case-insensitive on input (ADR-0116 / Issue #2961, key space ~3.3e9; Issue #2323 used 3 letters,
+and such existing codes stay valid; before that a 7-character alphanumeric code without the fixed
+prefix). The code does not expire and may be used repeatedly (it is the only way to re-link a
+device without web access); renewing invalidates the previous one. Returned **only once**;
+subsequent `GET /api/auth/premium-sms-link-code` calls never expose it.
 
 **Error Responses:**
 

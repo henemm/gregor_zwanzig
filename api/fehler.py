@@ -39,6 +39,16 @@ def api_fehler(status: int, code: str, nutzer: str | None, **params: object) -> 
     return ApiFehler(status, t(f"api.fehler.{code}", _lang(nutzer), **params), code)
 
 
+def kontingent_erschoepft(nutzer: str | None) -> ApiFehler:
+    """429 ``abruf_kontingent_erschoepft`` mit ``Retry-After`` bis zum
+    UTC-Tageswechsel des Zaehlers (Issue #2961, ADR-0117)."""
+    from services.forecast_budget import sekunden_bis_utc_mitternacht
+
+    fehler = api_fehler(429, "abruf_kontingent_erschoepft", nutzer)
+    fehler.headers = {"Retry-After": str(sekunden_bis_utc_mitternacht())}
+    return fehler
+
+
 def meldung_aus(exc: Exception, nutzer: str | None) -> str:
     """Lokalisierter Text einer ``fehler_mit_code``-Ausnahme, sonst Katalogtext."""
     code = getattr(exc, "code", None)

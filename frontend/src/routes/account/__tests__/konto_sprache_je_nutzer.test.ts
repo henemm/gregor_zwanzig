@@ -128,7 +128,8 @@ describe('Konto-Seite auf Englisch (de -> en ohne Neuladen)', () => {
 			'SMS quota (today)',
 			'SMS 3 of 10',
 			'of which up to 8 briefings, 2 alert reserve',
-			'Premium-SMS 4 of 4 (+2 replies)',
+			'Premium-SMS 4 of 4',
+			'Premium SMS command replies 2 of 4',
 			'of which up to 3 briefings, 1 alert reserve',
 			'Notifications',
 			'Weather models',
@@ -157,13 +158,13 @@ describe('Konto-Seite auf Englisch (de -> en ohne Neuladen)', () => {
 		hat(h, 'aria-label="Delete"');
 	});
 
-	test('Plural der Antworten exakt: genau eine Antwort -> „(+1 reply)"', () => {
-		const daten = kontoDaten({ smsDailyUsage: { sms: { used: 0, limit: 0, reserve: 0 }, premium_sms: { used: 5, limit: 4, reserve: 1 } } });
+	test('Antwort-Kontingent als eigene Zeile (ADR-0116), DE und EN', () => {
+		const daten = kontoDaten({ smsDailyUsage: { sms: { used: 0, limit: 0, reserve: 0 }, premium_sms: { used: 4, limit: 4, reserve: 1, reply_used: 1, reply_limit: 15 } } });
 		const t = sichtbarerText(enNachDe(() => kontoRendern(daten)));
-		hat(t, 'Premium-SMS 4 of 4 (+1 reply)');
-		assert.doesNotMatch(t, /replies/);
+		hat(t, 'Premium SMS command replies 1 of 15');
+		assert.doesNotMatch(t, /replies\)/);
 		locale.set('de');
-		hat(sichtbarerText(kontoRendern(daten)), 'Premium-SMS 4 von 4 (+1 Antworten)');
+		hat(sichtbarerText(kontoRendern(daten)), 'Premium-SMS-Antworten auf Befehle 1 von 15');
 	});
 
 	test('Leerzustaende englisch: keine Passkeys, keine Profile, keine Orte, kein Zeitplan', () => {

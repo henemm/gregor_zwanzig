@@ -29,6 +29,9 @@ SEND_OUTCOMES: dict[str, tuple[int, str]] = {
         ("invalid_preset", 422),
         # Unerwarteter Fehler im Versand (Ausnahme, Traceback im Log) — bewusst 500.
         ("send_failed", 500),
+        # Issue #2961 (ADR-0117 Nachtrag): Tageskontingent user_manual erschoepft,
+        # VOR jeder Zustellung abgebrochen (keine Teil-Briefings).
+        ("kontingent_erschoepft", 429),
     )
 }
 

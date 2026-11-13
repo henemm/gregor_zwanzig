@@ -45,6 +45,11 @@ const (
 // It does not start the scheduler or the HTTP server.
 func New(deps Deps) chi.Router {
 	r := chi.NewRouter()
+	// Issue #2961 (ADR-0115): Mail-Konfiguration der Konto-Hinweis-Mails fuer
+	// Handler ohne eigene Config (Passkey, Passwort, Bestaetigung).
+	if deps.Config != nil {
+		handler.SetAccountNoticeConfig(*deps.Config)
+	}
 	// Issue #2961: Zugriffslog ohne Pfad-/Query-Geheimnisse (statt chimw.Logger).
 	r.Use(authmw.AccessLog())
 	// Issue #2961 (ADR-0113): globale Schutzschicht fuer schreibende
@@ -147,6 +152,18 @@ func New(deps Deps) chi.Router {
 	r.Post("/api/auth/account/delete-code",
 		deleteCodeLimiter.Middleware(handler.RequestDeleteCodeHandler(deps.Store, *deps.Config, deleteCodeMailLimiter)).ServeHTTP,
 	)
+	// Issue #2961 (ADR-0115): frischer Nachweis vor Kontoaenderungen (Adresse,
+	// Passkeys). Nachweis: 30 Anfragen je IP und 15 Minuten (falsche Passwoerter
+	// bremst zusaetzlich der Handler mit 5 je Nutzer); Code-Anforderung wie
+	// beim Lösch-Code. Eigene Instanzen.
+	secret := deps.Config.SessionSecret
+	reauthLimiter := authmw.NewIPRateLimiter(30, 15*time.Minute)
+	r.Post("/api/auth/reauth", reauthLimiter.Middleware(handler.ReauthHandler(deps.Store, secret)).ServeHTTP)
+	reauthCodeLimiter := authmw.NewIPRateLimiter(3, 15*time.Minute)
+	reauthCodeMailLimiter := handler.NewMailFloodLimiter(1, time.Minute)
+	r.Post("/api/auth/reauth/code",
+		reauthCodeLimiter.Middleware(handler.RequestReauthCodeHandler(deps.Store, *deps.Config, reauthCodeMailLimiter)).ServeHTTP,
+	)
 	// Issue #2270: Datenexport nach DSGVO Art. 20 — authentifiziert, bewusst
 	// NICHT in der Public-Allowlist von AuthMiddleware.
 	r.Get("/api/auth/export", handler.ExportUserDataHandler(deps.Store))
@@ -158,7 +175,9 @@ func New(deps Deps) chi.Router {
 	// eigenstaendige Instanz: SMS kostet Geld, und ein Angriff auf den einen
 	// Kanal darf das Kontingent des anderen nicht leerlaufen lassen.
 	smsFloodLimiter := handler.NewMailFloodLimiter(3, time.Hour)
-	r.Put("/api/auth/profile", handler.UpdateProfileHandler(deps.Store, *deps.Config, mailFloodLimiter, smsFloodLimiter))
+	// Issue #2961: Adress-/Kennungswechsel nur mit frischem Nachweis.
+	r.Put("/api/auth/profile", handler.RequireReauthForAddressChange(deps.Store, secret,
+		handler.UpdateProfileHandler(deps.Store, *deps.Config, mailFloodLimiter, smsFloodLimiter)).ServeHTTP)
 	// Issue #2406 — Bestaetigungscode einloesen / erneut anfordern.
 	// Anmeldepflichtig (nicht in der Public-Allowlist): die Kennung kommt aus
 	// der Sitzung, nie aus dem Rumpf.
@@ -193,6 +212,8 @@ func New(deps Deps) chi.Router {
 	// ueber die globale AuthMiddleware, bewusst NICHT in der Public-Allowlist.
 	r.Post("/api/auth/premium-sms-link-code", handler.PostPremiumSmsLinkCodeHandler(deps.Store, bcrypt.DefaultCost))
 	r.Get("/api/auth/premium-sms-link-code", handler.GetPremiumSmsLinkCodeHandler(deps.Store))
+	// Issue #2961 Welle 2 (ADR-0116): Premium-SMS-Verbindung trennen.
+	r.Delete("/api/auth/premium-sms-reply", handler.DeletePremiumSmsReplyHandler(deps.Store))
 	// Issue #637: Telegram Inbound Webhook (public, secret-header-protected).
 	// Issue #1814: registrierte URL ist die statische Route /inbound (kein Secret
 	// im Pfad); Auth-Traeger ist allein der Header X-Telegram-Bot-Api-Secret-Token.
@@ -233,14 +254,15 @@ func New(deps Deps) chi.Router {
 		passkeyLimiter.Middleware(handler.PasskeyLoginDiscoverableFinishHandler(deps.Store, deps.WebAuthn, deps.ChallengeStore, deps.Config.SessionSecret, deps.Config.PublicHost)).ServeHTTP,
 	)
 	// Authenticated endpoints (cookie required via AuthMiddleware)
+	// Issue #2961 (ADR-0115): Passkey hinzufuegen/entfernen nur mit frischem Nachweis.
 	r.Post("/api/auth/passkey/register/begin",
-		passkeyLimiter.Middleware(handler.PasskeyRegisterBeginHandler(deps.Store, deps.WebAuthn, deps.ChallengeStore)).ServeHTTP,
+		passkeyLimiter.Middleware(handler.RequireFreshReauth(secret, handler.PasskeyRegisterBeginHandler(deps.Store, deps.WebAuthn, deps.ChallengeStore))).ServeHTTP,
 	)
 	r.Post("/api/auth/passkey/register/finish",
-		passkeyLimiter.Middleware(handler.PasskeyRegisterFinishHandler(deps.Store, deps.WebAuthn, deps.ChallengeStore)).ServeHTTP,
+		passkeyLimiter.Middleware(handler.RequireFreshReauth(secret, handler.PasskeyRegisterFinishHandler(deps.Store, deps.WebAuthn, deps.ChallengeStore))).ServeHTTP,
 	)
 	r.Delete("/api/auth/passkey/credentials/{id}",
-		passkeyLimiter.Middleware(handler.PasskeyDeleteCredentialHandler(deps.Store)).ServeHTTP,
+		passkeyLimiter.Middleware(handler.RequireFreshReauth(secret, handler.PasskeyDeleteCredentialHandler(deps.Store))).ServeHTTP,
 	)
 	passkeyRegPubLimiter := authmw.NewIPRateLimiter(5, time.Hour)
 	r.Post("/api/auth/passkey/register/public/begin",
@@ -261,7 +283,6 @@ func New(deps Deps) chi.Router {
 	r.Get("/api/templates", handler.ProxyHandler(deps.Config.PythonCoreURL, "/templates"))
 	// Issue #1318 AC-9: read-only SMS-Kuerzel-Katalog (Metriken + Gefahrenarten).
 	r.Get("/api/sms-symbols", handler.ProxyHandler(deps.Config.PythonCoreURL, "/sms-symbols"))
-	r.Get("/api/forecast", handler.ForecastHandler(deps.WeatherProvider, deps.Config.PythonCoreURL))
 	r.Get("/api/locations", handler.LocationsHandler(deps.Store))
 	r.Get("/api/locations/{id}", handler.LocationHandler(deps.Store))
 	// Issue #2961 (ADR-0114): Mengenbremsen je Nutzer fuer interaktive
@@ -269,6 +290,8 @@ func New(deps Deps) chi.Router {
 	// (CI-Stack) nicht eingehaengt, auf Staging zehnfache Grenzen.
 	bremsen := handler.NeueNutzerBremsen(deps.Config.TestFixtureDir != "", deps.Config.Env == "staging")
 	r.Post("/api/locations/resolve", bremsen.Aufloesen(handler.ResolveLocationHandler()))
+	// Issue #2961 (ADR-0117 Nachtrag): Vorhersage mit Mengenbremse je Nutzer.
+	r.Get("/api/forecast", bremsen.Vorhersage(handler.ForecastHandler(deps.WeatherProvider, deps.Config.PythonCoreURL)))
 	r.Post("/api/locations", handler.CreateLocationHandler(deps.Store))
 	r.Put("/api/locations/{id}", handler.UpdateLocationHandler(deps.Store))
 	r.Patch("/api/locations/{id}", handler.PatchLocationHandler(deps.Store))
@@ -294,7 +317,8 @@ func New(deps Deps) chi.Router {
 	r.Put("/api/locations/{id}/weather-config", handler.PutLocationWeatherConfigHandler(deps.Store))
 	r.Post(gpxUploadPath, bremsen.Gpx(handler.GpxProxyHandler(deps.Config.PythonCoreURL)))
 	r.Post("/api/notify/test", bremsen.Testnachricht(handler.NotifyTestHandler(deps.Store, deps.Config.PythonCoreURL)))
-	r.Get("/api/compare", bremsen.Vergleich(handler.CompareProxyHandler(deps.Config.PythonCoreURL)))
+	// Issue #2961 (ADR-0117): hoechstens so viele Orte wie die Tarif-Quote.
+	r.Get("/api/compare", bremsen.Vergleich(handler.VergleichOrteGrenze(deps.Store, handler.CompareProxyHandler(deps.Config.PythonCoreURL))))
 	// Issue #1350 Teil 1: read-only Compare-Metrik-Katalog (statisch, kein user_id-Bezug).
 	r.Get("/api/compare/metrics", handler.ProxyHandler(deps.Config.PythonCoreURL, "/api/compare/metrics"))
 	r.Get("/api/_internal/trip/{id}/loaded", handler.LoadedTripProxyHandler(deps.Config.PythonCoreURL))

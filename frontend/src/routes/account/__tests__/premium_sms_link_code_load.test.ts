@@ -121,6 +121,7 @@ describe('F002: load()-Rückgabeobjekt enthält NIEMALS ein Code-Klartext-Feld',
 		'locations',
 		'metricPresets',
 		'premiumSmsLinkCodeExists',
+		'premiumSmsLinkCodeLegacy',
 		'smsDailyUsage'
 	].sort();
 

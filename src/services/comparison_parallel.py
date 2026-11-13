@@ -19,6 +19,7 @@ Spec: docs/specs/modules/fix_1765_b1_compare_vorschau_parallel.md
 """
 from __future__ import annotations
 
+import contextvars
 import logging
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import nullcontext
@@ -123,8 +124,12 @@ def run_comparison_parallel(
         with ThreadPoolExecutor(
             max_workers=min(len(locations), MAX_PARALLEL_LOCATIONS)
         ) as executor:
+            # ADR-0117: copy_context je Ort, damit die Markierung einer
+            # interaktiven Anfrage (forecast_budget.interaktiver_abruf) die
+            # Arbeiter erreicht; ohne Markierung bleibt alles wie bisher.
             future_to_idx = {
                 executor.submit(
+                    contextvars.copy_context().run,
                     _run_one_location,
                     loc,
                     time_window=time_window,

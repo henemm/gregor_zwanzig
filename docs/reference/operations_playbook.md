@@ -568,6 +568,37 @@ sudo systemctl start gregor-python gregor-api gregor-frontend
 dem letzten Backup entstanden ist, und die einzige Grundlage für die Frage, was überhaupt
 kaputtging.
 
+### Ablage entfernter unbestätigter Anmeldungen (#2961, ADR-0115)
+
+Neben `users/` liegt in jeder Datenwurzel (`/var/lib/gregor`, `/var/lib/gregor-staging`) das
+Verzeichnis **`.entfernt-unbestaetigt/`**. Dorthin verschiebt die Go-API (per Rename, Rechte
+bleiben) den Kontoordner einer unbestätigten Anmeldung, wenn eine neue Registrierung dieselbe
+Adresse übernimmt oder der Reaper sie räumt (Token seit mehr als 24 h abgelaufen). Behandelt
+werden nur Ordner ohne Nutzinhalte (Positivliste: `user.json`, `sessions.json`,
+`email_verification.json`, `password_reset.json`, leere `locations/`, `gpx/`,
+`weather_snapshots/`); jeder andere Ordner bleibt stehen, das Journal zeigt dann
+`reaper: WARNUNG unbestaetigte Anmeldung <kennung gekürzt>*** hat Nutzinhalte — bleibt stehen`.
+
+- **Name:** `<kennung>-<UTC-Zeitstempel>`, z. B. `u-1a2b3c4d-20261113T020000Z`.
+- **Aufbewahrung:** 30 Tage, danach entfernt der Reaper den Eintrag endgültig. Die Ablage liegt
+  in der Datenwurzel und wird damit vom täglichen Backup oben mitgesichert.
+- **Unsichtbar:** kein Loader (Go-Nutzerliste, Adress-Eindeutigkeit, Scheduler, Python-Core)
+  liest außerhalb von `users/`.
+
+**Zurückholen** (als `claude-gregor`, Dienst darf laufen; nur wenn unter der Kennung kein neues
+Konto existiert):
+
+```bash
+ls /var/lib/gregor/.entfernt-unbestaetigt/
+test ! -e /var/lib/gregor/users/<kennung> && \
+  mv /var/lib/gregor/.entfernt-unbestaetigt/<kennung>-<zeitstempel> /var/lib/gregor/users/<kennung>
+```
+
+Das Konto ist danach unverändert wieder da (unbestätigt). Bestätigt der Inhaber seine Adresse
+nicht, räumt der Reaper es nach Ablauf erneut; ggf. vorher per Resend einen neuen Link schicken.
+Hält inzwischen ein neues Konto dieselbe Adresse, entsteht ein Bestandsduplikat — dann den Ordner
+in der Ablage lassen und den Fall einzeln klären.
+
 ### Restore-Test
 
 `sudo bash /home/hem/henemm-infra/scripts/restore-test-gregor.sh` — läuft sonntags automatisch
@@ -656,6 +687,38 @@ Abschnitt 0.6). Admins und `GZ_QUOTA_EXEMPT_USER_IDS` sind ausgenommen, im Fixtu
 sind die Bremsen aus, auf Staging (`GZ_ENV=staging`) gelten die zehnfachen Grenzen — E2E-Läufe und
 Validator-Werkzeuge brauchen dort keinen Ausnahme-Eintrag. Der Zustand liegt im Arbeitsspeicher;
 ein Neustart setzt ihn zurück.
+
+## Abruf-Kontingent: Verbrauch und Drosselung diagnostizieren (#2961, ADR-0117)
+
+Das Open-Meteo-Tageskontingent (9000 Einheiten, UTC-Tag) teilt sich in drei Klassen:
+Zeitplan-Versand und Alarm-Prüfungen (ADR-0075), **interaktive** Abrufe (Sofortvergleich,
+Etappenwetter, Vorschauen, `/api/forecast`; global bis 70 % = 6300, je Nutzer 1500) und
+**manuelle** (Handversand und Antwort-Befehle aller Kanäle, `user_manual`; global bis 90 % = 8100,
+je Nutzer 1500). Ein manueller Versand bucht seine Obergrenze vorab und bekommt den Rest
+zurück; passt sie nicht mehr, wird nichts abgerufen und nichts zugestellt (Web 429
+`kontingent_erschoepft`, Befehl: kurze Kontingent-Antwort).
+
+1. **Gesamtbild:** `GET /api/scheduler/status` (Maschinen-Token) → `forecast_budget`:
+   `calls_today`, `interactive_calls_today`, `interactive_budget`, `interactive_throttled`,
+   `manual_calls_today`, `manual_budget`, `manual_throttled`, `max_user_calls`,
+   `users_over_fair_share`. `manual_throttled: true` heißt: heute keine Handversände und
+   Antwort-Befehle mit neuem Abruf mehr; Zeitplan-Briefings und Alarme laufen weiter. `interactive_throttled: true` heißt: niemand bekommt
+   heute mehr neue interaktive Abrufe, nur Cache-Daten; Briefings und Alarme laufen weiter.
+2. **Wer verbraucht:** Admin-Oberfläche bzw. `GET /api/admin/users` →
+   `open_meteo_calls_today`, `open_meteo_interactive_calls_today` und
+   `open_meteo_manual_calls_today` je Konto. Im Python-Log
+   (`journalctl -u gregor-python`) steht einmal je Tag und Konto
+   `Nutzer <xy***hash> stellt n von m interaktiven Abrufen heute (mehr als 50 %)`; die maskierte
+   Kennung ist zwei Zeichen plus die ersten acht Stellen von SHA-256 der Kennung (zum Abgleich
+   lokal nachrechnen, nie die Kennung ins Ticket schreiben).
+3. **Rohdaten:** `data/diagnostics/forecast_budget.json` (`calls`, `interactive_calls`,
+   `manual_calls`, `active_users`) und `data/users/<id>/diagnostics/forecast_budget.json`
+   (`calls`, `interactive`, `manual`, `interactive_warned`). Nur lesen; der Zähler gehört allein dem Python-Core
+   (ADR-0076).
+4. **Nutzer meldet „Kontingent aufgebraucht":** das ist die 429/der Hinweis aus ADR-0117. Er löst
+   sich um Mitternacht UTC. Eine Ausnahme für einzelne Konten gibt es bewusst nicht; wird die
+   Grenze im Normalbetrieb erreicht, Sockel bzw. Schwelle per ADR anpassen, nicht im Code
+   umgehen.
 
 ## Beschädigte `briefing_slots.json` / `briefing_log.json` (#2231)
 

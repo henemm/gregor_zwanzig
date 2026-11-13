@@ -40,6 +40,33 @@ export function passkeyAngebotFaellig({
 }
 
 /**
+ * Issue #2961 (ADR-0115): Passkey hinzufuegen verlangt einen frischen Nachweis.
+ * Scheitert das Einrichten aus dem Angebot daran, fuehrt das Layout zur
+ * Passkey-Karte der Konto-Seite; dort oeffnet der Nachweis-Dialog von selbst
+ * und danach der Anlegen-Dialog. Merkmal in der Adresse: `?passkey=einrichten`.
+ */
+export const KONTO_PASSKEY_EINRICHTEN = '/account?passkey=einrichten';
+
+/** Steht das Merkmal „Passkey einrichten" in der Adresse der Konto-Seite? */
+export function passkeyEinrichtenAngefordert(suche: URLSearchParams): boolean {
+	return suche.get('passkey') === 'einrichten';
+}
+
+/** Was nach einem gescheiterten Einrichten aus dem Angebot geschieht. */
+export type AngebotFehlerFolge = 'nachweis' | 'abgebrochen' | 'fehler';
+
+/**
+ * `nachweis`: der Server verlangt einen frischen Nachweis (zur Konto-Seite);
+ * `abgebrochen`: Zeremonie abgebrochen/abgelaufen; `fehler`: alles andere.
+ */
+export function angebotFehlerFolge(e: unknown): AngebotFehlerFolge {
+	if (e instanceof Error && e.message === 'reauth_required') return 'nachweis';
+	const name = (e as { name?: string } | null)?.name;
+	if (name === 'NotAllowedError' || name === 'AbortError' || name === 'TimeoutError') return 'abgebrochen';
+	return 'fehler';
+}
+
+/**
  * Haengt den Anmelde-Marker als eigenstaendigen Query-Parameter an einen
  * relativen Pfad, der bereits eine Query tragen kann.
  *

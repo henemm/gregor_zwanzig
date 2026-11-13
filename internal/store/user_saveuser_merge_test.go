@@ -216,9 +216,13 @@ func TestSaveUserMerge_AC6_PasskeyAlsGanzesErsetzt(t *testing.T) {
 	if len(u.PasskeyCredentials) != 1 {
 		t.Fatalf("Passkey nicht geladen: %+v", u.PasskeyCredentials)
 	}
-	u.PasskeyCredentials[0].Label = "neu"
-	if err := s.SaveUser(*u); err != nil {
-		t.Fatalf("SaveUser: %v", err)
+	// Issue #2961 (GA6): Passkeys sind ein Sicherheitsfeld und werden nur
+	// ueber UpdateUser geschrieben (frisch geladen, unter der Nutzersperre).
+	if _, err := s.UpdateUser("gina", func(f *model.User) error {
+		f.PasskeyCredentials[0].Label = "neu"
+		return nil
+	}); err != nil {
+		t.Fatalf("UpdateUser: %v", err)
 	}
 
 	m := smRawLesen(t, s, "gina")
@@ -259,8 +263,13 @@ func TestSaveUserMerge_AC7_RoundTripVollerNutzer(t *testing.T) {
 		Language:               "en",
 	}
 	smAltdatei(t, s, "hans", map[string]interface{}{"zukunftsfeld": smFremdfeld()})
-	if err := s.SaveUser(u); err != nil {
-		t.Fatalf("SaveUser: %v", err)
+	// Issue #2961 (GA6): der volle Round-Trip inklusive Sicherheitsfeldern
+	// laeuft ueber UpdateUser; SaveUser laesst diese Felder auf dem Plattenstand.
+	if _, err := s.UpdateUser("hans", func(f *model.User) error {
+		*f = u
+		return nil
+	}); err != nil {
+		t.Fatalf("UpdateUser: %v", err)
 	}
 	got, err := s.LoadUser("hans")
 	if err != nil || got == nil {

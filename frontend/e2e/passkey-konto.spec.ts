@@ -71,6 +71,7 @@
 import { test, expect } from '@playwright/test';
 import type { CDPSession, Page } from '@playwright/test';
 import { assertNotProdBaseURL } from './prodUrlGuard.ts';
+import { bestaetigeKontoaenderung } from './helpers.ts';
 
 /** CDP-Antwort von WebAuthn.addVirtualAuthenticator. */
 type VirtuellerAuthenticator = { authenticatorId: string };
@@ -278,6 +279,9 @@ test.describe('Passkey-Karte auf der Konto-Seite (#2246)', () => {
 		// haengen Reste frueherer Laeufe am Konto und verfaelschen jede
 		// Zaehlung — besonders den Leerzustand (AC-3).
 		await page.goto('/account');
+		// Issue #2961 (ADR-0115): Passkey hinzufuegen/entfernen nur mit frischem
+		// Nachweis dieser Sitzung (10 Minuten).
+		await bestaetigeKontoaenderung(page.request);
 		await alleServerPasskeysEntfernen(page);
 	});
 
